@@ -22,7 +22,7 @@ for try=1L,ntry do begin
 endfor
 cmd= 'tar cvf for_chris_n_sam.tar *.txt'
 spawn, cmd
-cmd= 'gzip -v --best for_chris_n_sam.tar'
+cmd= 'gzip -fv --best for_chris_n_sam.tar'
 spawn, cmd
 return
 end
