@@ -9,7 +9,7 @@
 ;   2004-02-25  started - Hogg (NYU)
 ;-
 pro astrom_fake
-seed= -1L
+seed= -2L
 nstars= 1000000L
 filename= 'catalog.txt'
 astrom_fake_catalog, seed,nstars,filename,id=id,xx=xx,yy=yy,zz=zz
@@ -20,7 +20,9 @@ for try=1L,ntry do begin
     radius= 1.0*randomu(seed)+0.2
     astrom_fake_image_list, seed,id,xx,yy,zz,radius,filename1
 endfor
-cmd= 'gzip -fv *.txt'
+cmd= 'tar cvf for_chris_n_sam.tar *.txt'
+spawn, cmd
+cmd= 'gzip -v --best for_chris_n_sam.tar'
 spawn, cmd
 return
 end
