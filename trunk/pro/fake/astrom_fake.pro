@@ -17,10 +17,10 @@ ntry=1000
 for try=1L,ntry do begin
     trystr= string(try,format='(I9.9)')
     filename1= trystr+'.txt'
-    radius= 2.0*randomn(seed)
+    radius= 1.0*randomu(seed)+0.2
     astrom_fake_image_list, seed,id,xx,yy,zz,radius,filename1
 endfor
-cmd= 'gzip -fv *.txt'
+;cmd= 'gzip -fv *.txt'
 spawn, cmd
 return
 end

@@ -10,9 +10,9 @@
 ;-
 pro astrom_fake_catalog, seed,nstars,filename,id=id,xx=xx,yy=yy,zz=zz
 id= lindgen(nstars)+1L
-xx= randomu(seed,nstars,/double)-0.5
-yy= randomu(seed,nstars,/double)-0.5
-zz= randomu(seed,nstars,/double)-0.5
+xx= randomn(seed,nstars,/double)
+yy= randomn(seed,nstars,/double)
+zz= randomn(seed,nstars,/double)
 norm= sqrt(xx^2+yy^2+zz^2)
 xx= xx/norm
 yy= yy/norm

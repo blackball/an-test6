@@ -1,3 +1,4 @@
+
 ;+
 ; NAME:
 ;   astrom_fake_image_list
@@ -53,10 +54,30 @@ zaxis2= xcen*yaxis1-ycen*xaxis1
 ximage= (xtan*xaxis1+ytan*yaxis1+ztan*zaxis1)/sin(radius/degperrad)
 yimage= (xtan*xaxis2+ytan*yaxis2+ztan*zaxis2)/sin(radius/degperrad)
 ; add interloper stars
+ninterloper= 0
+ntarget= 100
+if (ninimage LT ntarget) then begin
+    nrandom= round(float(ntarget-ninimage)*4.0/!PI)
+    ximage2= 2.0*randomu(seed,nrandom)-1.0
+    yimage2= 2.0*randomu(seed,nrandom)-1.0
+    interloper= where((ximage2^2+yimage2^2) LT 1.0,ninterloper)
+    if (ninterloper GT 0) then begin
+        idd= [idd,(lonarr(ninterloper)-1L)]
+        ximage= [ximage,ximage2[interloper]]
+        yimage= [yimage,yimage2[interloper]]
+    endif
+endif
+; randomize order
+ntotal= n_elements(idd)
+sindx= shuffle_indx(ntotal)
+idd= idd[sindx]
+ximage= ximage[sindx]
+yimage= yimage[sindx]
+; add jitter
 ; write output
-splog, 'writing file '+filename
+splog, 'writing',ninimage,' catalog stars and',ninterloper,' interloper stars to file '+filename
 openw, wlun,filename,/get_lun
-for ii=0L,ninimage-1L do printf, wlun,idd[ii],ximage[ii],yimage[ii], $
+for ii=0L,ntotal-1L do printf, wlun,idd[ii],ximage[ii],yimage[ii], $
   format='(I9.0,2(F13.9))'
 close, wlun
 free_lun, wlun
