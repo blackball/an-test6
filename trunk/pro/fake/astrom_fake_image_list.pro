@@ -1,4 +1,3 @@
-
 ;+
 ; NAME:
 ;   astrom_fake_image_list
@@ -74,6 +73,9 @@ idd= idd[sindx]
 ximage= ximage[sindx]
 yimage= yimage[sindx]
 ; add jitter
+jamp= 3D-4
+ximage= ximage+jamp*randomn(seed,ntotal)
+yimage= yimage+jamp*randomn(seed,ntotal)
 ; write output
 splog, 'writing',ninimage,' catalog stars and',ninterloper,' interloper stars to file '+filename
 openw, wlun,filename,/get_lun
