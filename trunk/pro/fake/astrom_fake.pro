@@ -24,5 +24,7 @@ cmd= 'tar cvf for_chris_n_sam.tar *.txt'
 spawn, cmd
 cmd= 'gzip -fv --best for_chris_n_sam.tar'
 spawn, cmd
+cmd= '/bin/rm -fv *.txt'
+spawn, cmd
 return
 end
