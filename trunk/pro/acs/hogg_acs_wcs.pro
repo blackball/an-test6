@@ -56,18 +56,21 @@ newastr.crpix= oldastr.crpix-offset
 
 ; make figure, if desired
 if keyword_set(jpeg) then begin
+    secnx= 4000
+    secx1= naxis1/2-secnx/2
+    secx2= secx1+secnx-1
+    secny= 4000
+    secy1= naxis2/2-secny/2
+    secy2= secy1+secny-1
+    secimage= image[secx1:secx2,secy1:secy2]
     ad2xy, usno.ra,usno.dec,newastr,x3,y3
-    hogg_usersym, 20
-    hogg_image_overlay_plot, x3,y3,naxis1,naxis2,overlay, $
-      psym=8,symsize=3.0,factor=1
-;    hogg_image_overlay_plot, x2,y2,naxis1,naxis2,overlay, $
-;      psym=6,symsize=3.0,factor=1
-;    hogg_image_overlay_plot, x1,y1,naxis1,naxis2,overlay, $
-;      psym=1,symsize=3.0,factor=1
-    rebin= 2
+    hogg_usersym, 20,thick=4
+    hogg_image_overlay_plot, x3-secx1,y3-secy1,secnx,secny,overlay, $
+      psym=8,symsize=4.0,factor=1
+    rebin= 4
     overlay= 1.-nw_rebin_image(overlay,rebin)
-    nw_rgb_make, image,image,image,name=jpeg,overlay=overlay, $
-      scales=[100.,80.,60.],nonlinearity=3.,rebinfactor=rebin,quality=90
+    nw_rgb_make, secimage,secimage,secimage,name=jpeg,overlay=overlay, $
+      scales=[50.,40.,30.],nonlinearity=3.,rebinfactor=rebin,quality=90
 endif
 
 ; write fits file and return
