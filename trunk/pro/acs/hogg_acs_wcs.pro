@@ -21,18 +21,17 @@
 ; REVISION HISTORY:
 ;   2005-04-06  first quasi-working version - Hogg
 ;-
-function shag_acs_wcs, filename,newfilename,hdu=hdu,jpeg=jpeg
+function hogg_acs_wcs, filename,newfilename,hdu=hdu,jpeg=jpeg
 
 ; read ACS image and WCS
 if (n_elements(hdu) eq 0) then hdu= 1
 image= mrdfits(filename,hdu,hdr)
-nx= sxpar(hdr,'NAXIS1')
-ny= sxpar(hdr,'NAXIS2')
+naxis1= sxpar(hdr,'NAXIS1')
+naxis2= sxpar(hdr,'NAXIS2')
 extast, hdr,oldastr
-xy2ad, nx/2,ny/2,oldastr,racen,deccen
+xy2ad, naxis1/2,naxis2/2,oldastr,racen,deccen
 
 ; grab all USNO-B stars in the region
-; restore, 'usno.sav'
 usno= usno_read(racen,deccen,3.0/60.0,catname='USNO-B1.0')
 
 ; find all compact sources in the ACS image
@@ -59,10 +58,16 @@ newastr.crpix= oldastr.crpix-offset
 if keyword_set(jpeg) then begin
     ad2xy, usno.ra,usno.dec,newastr,x3,y3
     hogg_usersym, 20
-    hogg_image_overlay_plot, nx,ny,overlay,x3,y3,psym=8,symsize=3.0
-    nw_rgb_make, image,image,image,name=jpeg, $
-      overlay=overlay, $
-      scales=[100.,90.,80.],nonlinearity=3.,rebinfactor=2,quality=90
+    hogg_image_overlay_plot, x3,y3,naxis1,naxis2,overlay, $
+      psym=8,symsize=3.0,factor=1
+;    hogg_image_overlay_plot, x2,y2,naxis1,naxis2,overlay, $
+;      psym=6,symsize=3.0,factor=1
+;    hogg_image_overlay_plot, x1,y1,naxis1,naxis2,overlay, $
+;      psym=1,symsize=3.0,factor=1
+    rebin= 2
+    overlay= 1.-nw_rebin_image(overlay,rebin)
+    nw_rgb_make, image,image,image,name=jpeg,overlay=overlay, $
+      scales=[100.,80.,60.],nonlinearity=3.,rebinfactor=rebin,quality=90
 endif
 
 ; write fits file and return
