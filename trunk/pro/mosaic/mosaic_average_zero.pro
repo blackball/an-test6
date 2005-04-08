@@ -25,7 +25,7 @@ xsize=sxpar(hdr,'NAXIS1')
 ysize=sxpar(hdr,'NAXIS2')
 zero=intarr(xsize,ysize,nfiles)
 
-for i=0,nfiles-1 do zero[*,*,i]=mrdfits(filelist[i],hdu)
+for i=0,nfiles-1 do zero[*,*,i]=mosaic_mrdfits(filelist[i],hdu)
 
 avsigclip=djs_avsigclip(zero,sigre=3,maxiter=10)
 
