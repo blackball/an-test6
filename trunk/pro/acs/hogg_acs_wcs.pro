@@ -68,7 +68,7 @@ if keyword_set(jpeg) then begin
     hogg_image_overlay_plot, x3-secx1,y3-secy1,secnx,secny,overlay, $
       psym=8,symsize=4.0,factor=1
     rebin= 4
-    overlay= 1.-nw_rebin_image(overlay,rebin)
+    overlay= nw_rebin_image(overlay,rebin)
     nw_rgb_make, secimage,secimage,secimage,name=jpeg,overlay=overlay, $
       scales=[50.,40.,30.],nonlinearity=3.,rebinfactor=rebin,quality=90
 endif
