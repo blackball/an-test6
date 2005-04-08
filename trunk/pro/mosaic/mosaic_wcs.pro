@@ -8,47 +8,53 @@
 ;   newfilename - name (ie, full path) for output image
 ; BUGS:
 ;   - Comment header not yet fully written.
-;   - Some things hard-wired.
+;   - MANY things hard-coded.
 ; REVISION HISTORY:
 ;   2005-04-07  started - Hogg (NYU)
 ;-
-function mosaic_onechip_wcs,image,hdr,jpeg=jpeg
+function mosaic_onechip_wcs,image,hdr,usno,jpeg=jpeg
 naxis1= sxpar(hdr,'NAXIS1')
 naxis2= sxpar(hdr,'NAXIS2')
-extast, hdr,astr
-
-; initialize GSSS WCS approximately
-gsa= mosaic_gsainit(astr.cd,astr.crval,astr.crpix)
-gsssxyad, gsa,1000.0,2000.0,racen,deccen ; position hard-wired
-
-; get usno stars
-usno= usno_read(racen,deccen,10.0/60.0,catname='USNO-B1.0') ; 10 arcmin
 
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
 fwhm= 4.0                     ; hard-wired at 1 arcsec
-hmin= 3.0*sigma              ; hard-wired, don't know what this means
+hmin= 10.0*sigma              ; hard-wired, don't know what this means
 sharplim= [0.2,0.5]           ; don't know what this means
 roundlim= [-1.0,1.0]          ; don't know what this means
 find, image,xx,yy,flux,sharp,round,hmin,fwhm,roundlim,sharplim,/silent
+okay= where((xx GT 63.) AND (xx LT 2110.)) ; hard-coded
+xx= xx[okay]
+yy= yy[okay]
+splog, 'FIND found',n_elements(xx),' stars in the image'
 
-; find and apply best shift, then re-fit, iterate
-gsssadxy, gsa,usno.ra,usno.dec,usnox,usnoy
+; do a first shift with the tangent projection
+extast, hdr,astr
+astr.ctype[0]= 'RA---TAN'  ; hard-coded fix/hack
+astr.ctype[1]= 'DEC--TAN'
+pixscale= 0.258D0
+astr.cd= -astr.cd          ; TERRIBLE HACK
+ad2xy, usno.ra,usno.dec,astr,usnox,usnoy
 offset= offset_from_pairs(xx,yy,usnox,usnoy, $
-                          dmax=100.0/0.26,binsz=5.0/0.26,/verbose)
-gsa.ppo3= gsa.ppo3-gsa.xsz*offset[0]
-gsa.ppo6= gsa.ppo6-gsa.ysz*offset[1]
-niter=9
+                          dmax=100.0/pixscale,binsz=5.0/pixscale,/verbose)
+print, offset
+astr.crpix= astr.crpix-offset
+
+; initialize gsa based on this shifted tangent WCS
+gsa= mosaic_gsainit(astr.cd,astr.crpix,astr.crval)
+
+; iterate fit to tweak it up
+niter=6
 for ii=0,niter do begin
     order= 1
-    dtheta= 6.0
+    dtheta= 5.0
     if (ii ge (niter/3)) then begin
         order=2
-        dtheta= 3.0
+        dtheta= 5.0
     endif
     if (ii ge (2*niter/3)) then begin
         order=3
-        dtheta= 1.5
+        dtheta= 5.0
     endif
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
                                /verbose)
@@ -57,10 +63,10 @@ endfor
 
 if keyword_set(jpeg) then begin
     simage= (image-median(image))
-    hogg_usersym, 20,thick=2
     overlay=0
-    hogg_image_overlay_plot, xx,yy,naxis1,naxis2,overlay, $
-      psym=8,symsize=4.0,factor=1
+;    hogg_usersym, 20,thick=2
+;    hogg_image_overlay_plot, xx,yy,naxis1,naxis2,overlay, $
+;      psym=8,symsize=4.0,factor=1
     gsssadxy, gsa,usno.ra,usno.dec,usnox,usnoy
     hogg_usersym, 4,thick=4
     hogg_image_overlay_plot, usnox,usnoy,naxis1,naxis2,overlay, $
@@ -70,7 +76,7 @@ if keyword_set(jpeg) then begin
     overlay[*,*,0]= 0
     overlay[*,*,2]= 0
     nw_rgb_make, simage,simage,simage,name=jpeg,overlay=overlay, $
-      scales=[0.010,0.008,0.006],nonlinearity=3,rebinfactor=rbf, $
+      scales=[0.4,0.3,0.2]/sigma,nonlinearity=3,rebinfactor=rbf, $
       quality=90
 endif
 
@@ -88,9 +94,22 @@ if (newfilename EQ filename) then begin
 endif
 hdr0= headfits(filename)
 mwrfits, 0,newfilename,hdr0
+
 for hdu=1,8 do begin
+    splog, 'working on hdu',hdu
     image= mrdfits(filename,hdu,hdr)
-    newhdr= mosaic_onechip_wcs(image,hdr)
+
+; get usno stars
+    if (NOT keyword_set(usno)) then begin
+        racen= sxpar(hdr,'CRVAL1')
+        deccen= sxpar(hdr,'CRVAL2')
+        usno= usno_read(racen,deccen,0.5,catname='USNO-B1.0')
+        splog, 'USNO_READ found',n_elements(usno),' stars near the image'
+    endif
+
+    if (hdu EQ 8) then jpeg='chip'+strtrim(string(hdu),2)+'.jpg' $
+      else jpeg=0
+    newhdr= mosaic_onechip_wcs(image,hdr,usno,jpeg=jpeg)
     mwrfits, image,newfilename,newhdr
 endfor
 return

@@ -23,10 +23,7 @@
 ;-
 ;------------------------------------------------------------------------------
 
-function mosaic_gsainit, cd,crval,crpix
-
-  if (NOT keyword_set(racard))  then racard  = 'RADEG'
-  if (NOT keyword_set(deccard)) then deccard = 'DECDEG'
+function mosaic_gsainit, cd,crpix,crval
 
 ; empty gsss_astrometry structure
   gsa = {gsss_astrometry, CTYPE: strarr(2), XLL:0, YLL:0, XSZ:0.D, YSZ:0.D, $
@@ -38,18 +35,18 @@ function mosaic_gsainit, cd,crval,crpix
 
   gsa.xll = 0
   gsa.yll = 0
-  gsa.xsz =  1.d
-  gsa.ysz =  1.d
-  gsa.ppo3 = gsa.xsz*(crpix[0]-0.5)  ; treat orientation coeffs as CRPIX
-  gsa.ppo6 = gsa.ysz*(crpix[1]-0.5)
+  gsa.xsz =   1d3
+  gsa.ysz =  -1d3
+  gsa.ppo3 = crpix[0]*gsa.xsz
+  gsa.ppo6 = crpix[1]*gsa.ysz
 
 ; Map CD matrix onto coefficients, including cubic and quintic terms
 
-  gsa.amdx[0] = cd[0, 0] *3600. ; x  coeff
-  gsa.amdx[1] = cd[0, 1] *3600. ; y  
+  gsa.amdx[0] = cd[0, 0] *3.6D6/gsa.xsz ; x  coeff
+  gsa.amdx[1] = cd[0, 1] *3.6D6/(-gsa.ysz) ; y  
 
-  gsa.amdy[0] = cd[1, 1] *3600. ; y  coeff (not a typo!)
-  gsa.amdy[1] = cd[1, 0] *3600. ; x
+  gsa.amdy[0] = cd[1, 1] *3.6D6/(-gsa.ysz) ; y  coeff (not a typo!)
+  gsa.amdy[1] = cd[1, 0] *3.6D6/gsa.xsz ; x
 
   gsa.pltscl = 1.d
 
