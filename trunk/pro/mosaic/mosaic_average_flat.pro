@@ -37,7 +37,8 @@ endfor
 
 avsigclip=djs_avsigclip(temporary(flat),sigre=3,maxiter=10)
 
-mwrfits,avsigclip,flatname
+
+mwrfits,avsigclip/median(avsigclip),flatname
 
 endfor
 

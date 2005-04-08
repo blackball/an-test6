@@ -1,41 +1,34 @@
 pro mosaic_flatten,infile,avzero,avdark,avflat,flattenname
 
 
-hdr0=headfits(filelist[0])
-naxis=sxpar(hdr0,'NAXIS')
+hdr=headfits(infile)
+naxis=sxpar(hdr,'NAXIS')
 if (naxis eq 2) then begin
     firsthdu=0
 endif else begin
-    mwrfits,0,flatname,/create
+    mwrfits,hdr,flattenname,/create
     firsthdu=1
 endelse
 
-lasthdu=sxpar(hdr0,'NEXTEND')
+lasthdu=sxpar(hdr,'NEXTEND')
 
 for hdu=firsthdu,lasthdu do begin
 splog, 'working on hdu',hdu
 
 zero=mrdfits(avzero,hdu)
 dark=mrdfits(avdark,hdu)
+flat=mrdfits(avflat,hdu)
 
-hdr=headfits(filelist[0],exten=hdu)
-xsize=sxpar(hdr,'NAXIS1')
-ysize=sxpar(hdr,'NAXIS2')
-flat=intarr(xsize,ysize,nfiles)
 
-for i=0,nfiles-1 do begin
-splog, 'reading file', filelist[i]
-hdr=headfits(filelist[i])
 darktime=sxpar(hdr,'DARKTIME')
 exptime=sxpar(hdr,'EXPTIME')
 splog, 'darktime',darktime
 
-flat[*,*,i]=(mosaic_mrdfits(filelist[i],hdu)-zero-dark*darktime)/exptime
-endfor
+flatten=(mosaic_mrdfits(infile,hdu)-zero-dark*darktime)/(exptime*(flat+(flat le 0.)))
 
-avsigclip=djs_avsigclip(temporary(flat),sigre=3,maxiter=10)
+sxaddhist,'zero substracted, flat substracted and flattened by M. Masjedi',hdr
 
-mwrfits,avsigclip,flatname
+mwrfits,flatten,flattenname,hdr
 
 endfor
 
