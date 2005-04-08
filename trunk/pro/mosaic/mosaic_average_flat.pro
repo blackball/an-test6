@@ -1,7 +1,6 @@
 pro mosaic_average_flat,filelist,avzero,avdark,flatname
 
 nfiles=n_elements(filelist)
-
    
 hdr0=headfits(filelist[0])
 naxis=sxpar(hdr0,'NAXIS')
@@ -37,8 +36,8 @@ endfor
 
 avsigclip=djs_avsigclip(temporary(flat),sigre=3,maxiter=10)
 
-
-mwrfits,avsigclip/median(avsigclip),flatname
+if (not keyword_set(norm)) then norm= median(avsigclip)
+mwrfits,avsigclip/norm,flatname
 
 endfor
 
