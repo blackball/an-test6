@@ -1,7 +1,7 @@
 pro mosaic_flatten,infile,avzero,avdark,avflat,flattenname
 
 hdr0=headfits(infile)
-naxis=sxpar(hdr,'NAXIS')
+naxis=sxpar(hdr0,'NAXIS')
 firsthdu=1
 lasthdu=sxpar(hdr0,'NEXTEND')
 darktime=sxpar(hdr0,'DARKTIME')
