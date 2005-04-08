@@ -3,6 +3,9 @@
 ;   mosaic_wcs
 ; PURPOSE:
 ;   Put correct WCS into KPNO Mosaic camera images.
+; INPUTS:
+;   filename    - name (ie, full path) of input image
+;   newfilename - name (ie, full path) for output image
 ; BUGS:
 ;   - Comment header not yet fully written.
 ;   - Some things hard-wired.
@@ -20,7 +23,6 @@ gsssxyad, gsa,1000.0,2000.0,racen,deccen ; position hard-wired
 
 ; get usno stars
 usno= usno_read(racen,deccen,10.0/60.0,catname='USNO-B1.0') ; 10 arcmin
-gsssadxy, gsa,usno.ra,usno.dec,usnox,usnoy
 
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
@@ -30,23 +32,37 @@ sharplim= [0.2,0.5]           ; don't know what this means
 roundlim= [-1.0,1.0]          ; don't know what this means
 find, image,xx,yy,flux,sharp,round,hmin,fwhm,roundlim,sharplim,/silent
 
-; find and apply best shift
+; find and apply best shift, then re-fit, iterate
+gsssadxy, gsa,usno.ra,usno.dec,usnox,usnoy
 offset= offset_from_pairs(xx,yy,usnox,usnoy, $
                           dmax=100.0/0.26,binsz=5.0/0.26,/verbose)
 gsa.ppo3= gsa.ppo3-gsa.xsz*offset[0]
 gsa.ppo6= gsa.ppo6-gsa.ysz*offset[1]
-
-; tweak up coordinate system
-; [TBD]
+niter=9
+for ii=0,niter do begin
+    order= 1
+    dtheta= 6.0
+    if (ii ge (niter/3)) then begin
+        order=2
+        dtheta= 3.0
+    endif
+    if (ii ge (2*niter/3)) then begin
+        order=3
+        dtheta= 1.5
+    endif
+    newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
+                               /verbose)
+    gsa= newgsa
+endfor
 
 if keyword_set(jpeg) then begin
     simage= (image-median(image))
-    hogg_usersym, 20,thick=4
+    hogg_usersym, 20,thick=2
     overlay=0
     hogg_image_overlay_plot, xx,yy,naxis1,naxis2,overlay, $
       psym=8,symsize=4.0,factor=1
     gsssadxy, gsa,usno.ra,usno.dec,usnox,usnoy
-    hogg_usersym, 3,thick=4
+    hogg_usersym, 4,thick=4
     hogg_image_overlay_plot, usnox,usnoy,naxis1,naxis2,overlay, $
       psym=8,symsize=4.0,factor=1
     rbf= 2
@@ -61,13 +77,11 @@ endif
 ; make new header and return
 newhdr= hdr
 gsssputast, newhdr,gsa
-sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team'
+sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 return, newhdr
 end
 
 pro mosaic_wcs, filename,newfilename
-filename= 'obj082.fits'
-newfilename= 'hogg082.fits'
 if (newfilename EQ filename) then begin
     splog, 'ERROR: no over-writing allowed'
     return
