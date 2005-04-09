@@ -66,19 +66,29 @@ dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 ; make mosaics
 racen= 162.343
 deccen= 51.051
-dra=  0.02
-ddec= 0.02
-filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj138.fits']
-filename= 'Willman1-g.fits'
-mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
-filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj179.fits']
-filename= 'Willman1-r.fits'
-mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
-filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj226.fits']
-filename= 'Willman1-i.fits'
-mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
+dra=  0.05
+ddec= 0.05
+indir= '/global/data/scr/mm1330/4meter/redux/Willman1'
+filelist= indir+'/af_obj'+['138','139','140','141','142']+'.fits'
+gfilename= indir+'/Willman1-g.fits'
+mosaic_mosaic, racen,deccen,dra,ddec,filelist,gfilename
+filelist= indir+'/af_obj'+['179','180']+'.fits'
+rfilename= indir+'/Willman1-r.fits'
+mosaic_mosaic, racen,deccen,dra,ddec,filelist,rfilename
+filelist= indir+'/af_obj'+['226']+'.fits'
+ifilename= indir+'/Willman1-i.fits'
+mosaic_mosaic, racen,deccen,dra,ddec,filelist,ifilename
 
-
+; make jpg
+rim= mrdfits(ifilename)
+rim= rim-median(rim)
+gim= mrdfits(rfilename)
+gim= gim-median(gim)
+bim= mrdfits(gfilename)
+bim= bim-median(bim)
+nw_rgb_make, rim,gim,bim,name='Willman1-irg.jpg', $
+  scales=[3,3,3],nonlinearity=3, $
+  quality=90
 
 return
 end
