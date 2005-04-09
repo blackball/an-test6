@@ -9,6 +9,7 @@
 ;   filelist      - list of files to use
 ;   filename      - name of output file
 ; BUGS:
+;   - only uses hdu number 7!!
 ;   - uses stoopid nearest-neighbor interpolation!
 ;   - invvar is totally made up
 ; REVISION HISTORY:
