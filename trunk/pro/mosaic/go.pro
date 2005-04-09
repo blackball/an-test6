@@ -55,6 +55,11 @@ filelist=['obj179.fits']
 for i=180,183 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
 for i=0,4 do mosaic_flatten,path+'2005-04-08/'+filelist[i],avzero,avdark,rflat,path+'redux/Willman1/flatten_'+filelist[i]
 
+;i-band
+filelist=['obj226.fits']
+for i=227,232 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
+for i=0,6 do mosaic_flatten,path+'2005-04-09/'+filelist[i],avzero,avdark,iflat,path+'redux/Willman1/flatten_'+filelist[i]
+
 ; measure / fix / install astrometric headers (GSSS!)
 dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 
@@ -72,6 +77,7 @@ mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
 filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj226.fits']
 filename= 'Willman1-i.fits'
 mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
+
 
 
 return
