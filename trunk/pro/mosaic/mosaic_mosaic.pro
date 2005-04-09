@@ -44,12 +44,17 @@ for ii=0L,nfile-1 do begin
     datanaxis2= sxpar(hdr,'NAXIS2')
     gsssextast, hdr,gsa
     
-; create inverse variance map
+; create inverse variance map and crush bad pixels
     invvar= fltarr(datanaxis1,datanaxis2)+exptime
     bad= where(((exptime*data) GT 17000.0) OR $
                (bitmask NE 0),nbad)
     help, nbad
     if (nbad GT 0) then invvar[bad]= 0.0
+    seeingsigma= 4.0/2.35 ; guess
+    psfvals= exp(-0.5*[1.0,sqrt(2.0)]^2/seeingsigma^2)
+    reject_cr, data,invvar,psfvals,cr,nrejects=ncr
+    help, ncr
+    if (ncr GT 0) then invvar[cr]= 0.0
 
 ; find data x,y values for the mosaic pixels
     gsssadxy, gsa,pixra,pixdec,datax,datay
