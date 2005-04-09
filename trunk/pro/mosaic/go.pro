@@ -60,6 +60,11 @@ filelist=['obj226.fits']
 for i=227,232 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
 for i=0,6 do mosaic_flatten,path+'2005-04-09/'+filelist[i],avzero,avdark,iflat,path+'redux/Willman1/flatten_'+filelist[i]
 
+;make bitmask
+ bitmaskname='mosaic_bitmask.fits' 
+ mosaic_bitmask,avzero,avdark,gflat,bitmaskname
+
+
 ; measure / fix / install astrometric headers (GSSS!)
 dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 
