@@ -73,8 +73,8 @@ dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 ; make mosaics
 racen= 162.343
 deccen= 51.051
-dra=  0.06
-ddec= 0.06
+dra=  10.0/60.0
+ddec= 10.0/60.0
 indir= '/global/data/scr/mm1330/4meter/redux/Willman1'
 filelist= indir+'/af_obj'+['138','139','140','141','142']+'.fits'
 gfilename= indir+'/Willman1-g.fits'
