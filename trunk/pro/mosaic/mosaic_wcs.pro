@@ -91,6 +91,7 @@ if (newfilename EQ filename) then begin
     return
 endif
 hdr0= headfits(filename)
+splog, 'starting to make file '+newfilename
 mwrfits, 0,newfilename,hdr0
 
 for hdu=1,8 do begin
@@ -106,8 +107,8 @@ for hdu=1,8 do begin
     endif
 
 ; make JPEG name (not necessary)
-    prefix= strmid(newfilename,0,strpos(newfilename,'.fit',/reverse_search))
-    jpeg= prefix+'_chip'+strtrim(string(hdu),2)+'.jpg'
+;    prefix= strmid(newfilename,0,strpos(newfilename,'.fit',/reverse_search))
+;    jpeg= prefix+'_chip'+strtrim(string(hdu),2)+'.jpg'
 
 ; get WCS and write fits
     newhdr= mosaic_onechip_wcs(image,hdr,usno,jpeg=jpeg)
