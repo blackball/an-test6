@@ -7,7 +7,11 @@ bitmask=((zero gt (1.2*medzero)) or (zero lt (.8*medzero)))
 dark=mrdfits(avdark,hdu)
 bitmask=bitmask+2*((dark gt .01) or (zero lt -.01))
 flat=mrdfits(gflat,hdu)
-bitmask=bitmask+4*((flat gt 3.) or (flat lt .1))
+medflat=median(flat,9)
+flatmask=((flat gt 3.) or (flat lt .1) or $
+          (flat gt (1.2*medflat)) or (flat lt (.8*medflat) ))
+flatmask=(smooth(float(flatmask),3) gt 0.)
+bitmask=bitmask+4*flatmask
 mwrfits,byte(bitmask),bitmaskname
 endfor
 return
