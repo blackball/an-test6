@@ -55,5 +55,8 @@ filelist=['obj179.fits']
 for i=180,183 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
 for i=0,4 do mosaic_flatten,path+'2005-04-08/'+filelist[i],avzero,avdark,rflat,path+'redux/Willman1/flatten_'+filelist[i]
 
+; measure / fix / install astrometric headers (GSSS!)
+dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
+
 return
 end
