@@ -106,8 +106,7 @@ for hdu=1,8 do begin
     endif
 
 ; make JPEG name (not necessary)
-    prefix= strmid(filename,strpos(filename,'/',/reverse_search)+1,100)
-    prefix= strmid(prefix,0,strpos(prefix,'.fit',/reverse_search))
+    prefix= strmid(newfilename,0,strpos(newfilename,'.fit',/reverse_search))
     jpeg= prefix+'_chip'+strtrim(string(hdu),2)+'.jpg'
 
 ; get WCS and write fits
