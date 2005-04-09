@@ -17,14 +17,6 @@
 ;-
 pro mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
 
-if (not keyword_set(racen)) then racen=162.343
-if (not keyword_set(deccen)) then deccen=51.051
-if (not keyword_set(dra)) then dra=.02
-if (not keyword_set(ddec)) then ddec=.02
-if (not keyword_set(filelist)) then $
-  filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj138.fits']
-if (not keyword_set(filename)) then filename= 'Willman1.fits'
-
 ; create RA---TAN, DEC--TAN wcs header for mosaic
 pixscale=.26/3600.0
 bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
@@ -38,9 +30,14 @@ xx= indgen(naxis1)#(intarr(naxis2)+1)
 yy= (intarr(naxis1)+1)#indgen(naxis2)
 xy2ad, xx,yy,bigast,pixra,pixdec
 
+; get bitmask
+bitmask= mrdfits('/global/data/scr/mm1330/4meter/redux/mosaic_bitmask.fits',7)
+
 nfile= n_elements(filelist)
 for ii=0L,nfile-1 do begin
-    
+    hdr0= headfits(filelist[ii])
+    exptime= sxpar(hdr0,'EXPTIME')
+
 ; read in Mosaic data image and extract astrometry
     data= mrdfits(filelist[ii],7,hdr)
     datanaxis1= sxpar(hdr,'NAXIS1')
@@ -48,8 +45,12 @@ for ii=0L,nfile-1 do begin
     gsssextast, hdr,gsa
     
 ; create inverse variance map
-    invvar= fltarr(datanaxis1,datanaxis2)+1
-    
+    invvar= fltarr(datanaxis1,datanaxis2)+exptime
+    bad= where(((exptime*data) GT 17000.0) AND $
+               (bitmask NE 0),nbad)
+    help, nbad
+    if (nbad GT 0) then invvar[bad]= 0.0
+
 ; find data x,y values for the mosaic pixels
     gsssadxy, gsa,pixra,pixdec,datax,datay
     inimage= where((datax GT (-0.5)) AND $
