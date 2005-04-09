@@ -1,5 +1,6 @@
 pro mosaic_flatten,infile,avzero,avdark,avflat,flattenname
 
+print,infile
 hdr0=headfits(infile)
 naxis=sxpar(hdr0,'NAXIS')
 firsthdu=1
