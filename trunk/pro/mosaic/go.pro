@@ -58,5 +58,21 @@ for i=0,4 do mosaic_flatten,path+'2005-04-08/'+filelist[i],avzero,avdark,rflat,p
 ; measure / fix / install astrometric headers (GSSS!)
 dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 
+; make mosaics
+racen= 162.343
+deccen= 51.051
+dra=  0.02
+ddec= 0.02
+filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj138.fits']
+filename= 'Willman1-g.fits'
+mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
+filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj179.fits']
+filename= 'Willman1-r.fits'
+mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
+filelist=['/global/data/scr/mm1330/4meter/redux/Willman1/af_obj226.fits']
+filename= 'Willman1-i.fits'
+mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
+
+
 return
 end
