@@ -1,5 +1,5 @@
-pro mosaic_data_section, filename,hdu,xmin,xmax,ymin,ymax
-hdr= headfits(filename,exten=hdu)
+pro mosaic_data_section, filename,hdu,xmin,xmax,ymin,ymax,hdr=hdr
+if (NOT keyword_set(hdr)) then hdr= headfits(filename,exten=hdu)
 string= sxpar(hdr,'DATASEC')
 startxmin= strpos(string,'[')
 startxmax= strpos(string,':')

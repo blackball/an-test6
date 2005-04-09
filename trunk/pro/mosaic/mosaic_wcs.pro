@@ -9,6 +9,7 @@
 ; BUGS:
 ;   - Comment header not yet fully written.
 ;   - MANY things hard-coded.
+;   - Are there zero-index issues with FIND or my image section?
 ; REVISION HISTORY:
 ;   2005-04-07  started - Hogg (NYU)
 ;-
@@ -16,16 +17,19 @@ function mosaic_onechip_wcs,image,hdr,usno,jpeg=jpeg
 naxis1= sxpar(hdr,'NAXIS1')
 naxis2= sxpar(hdr,'NAXIS2')
 
+; read image *data* section
+mosaic_data_section, 'foo',bar,x1,x2,y1,y2,hdr=hdr
+
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
 fwhm= 4.0                     ; hard-wired at 1 arcsec
 hmin= 10.0*sigma              ; hard-wired, don't know what this means
 sharplim= [0.2,0.5]           ; don't know what this means
 roundlim= [-1.0,1.0]          ; don't know what this means
-find, image,xx,yy,flux,sharp,round,hmin,fwhm,roundlim,sharplim,/silent
-okay= where((xx GT 63.) AND (xx LT 2110.)) ; hard-coded
-xx= xx[okay]
-yy= yy[okay]
+find, image[x1:x2,y1:y2],xx,yy,flux,sharp,round, $
+  hmin,fwhm,roundlim,sharplim,/silent
+xx= xx+x1
+yy= yy+y1
 splog, 'FIND found',n_elements(xx),' stars in the image'
 
 ; do a first shift with the tangent projection
@@ -46,16 +50,10 @@ gsa= mosaic_gsainit(astr.cd,astr.crpix,astr.crval)
 ; iterate fit to tweak it up
 niter=6
 for ii=0,niter do begin
+    dtheta= 3.0
     order= 1
-    dtheta= 5.0
-    if (ii ge (niter/3)) then begin
-        order=2
-        dtheta= 5.0
-    endif
-    if (ii ge (2*niter/3)) then begin
-        order=3
-        dtheta= 5.0
-    endif
+    if (ii ge (niter/3)) then order=2
+    if (ii ge (2*niter/3)) then order=3
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
                                /verbose)
     gsa= newgsa
@@ -64,9 +62,9 @@ endfor
 if keyword_set(jpeg) then begin
     simage= (image-median(image))
     overlay=0
-;    hogg_usersym, 20,thick=2
-;    hogg_image_overlay_plot, xx,yy,naxis1,naxis2,overlay, $
-;      psym=8,symsize=4.0,factor=1
+    hogg_usersym, 20,thick=2
+    hogg_image_overlay_plot, xx,yy,naxis1,naxis2,overlay, $
+      psym=8,symsize=4.0,factor=1
     gsssadxy, gsa,usno.ra,usno.dec,usnox,usnoy
     hogg_usersym, 4,thick=4
     hogg_image_overlay_plot, usnox,usnoy,naxis1,naxis2,overlay, $
@@ -107,8 +105,12 @@ for hdu=1,8 do begin
         splog, 'USNO_READ found',n_elements(usno),' stars near the image'
     endif
 
-    if (hdu EQ 8) then jpeg='chip'+strtrim(string(hdu),2)+'.jpg' $
-      else jpeg=0
+; make JPEG name (not necessary)
+    prefix= strmid(filename,strpos(filename,'/',/reverse_search)+1,100)
+    prefix= strmid(prefix,0,strpos(prefix,'.fit',/reverse_search))
+    jpeg= prefix+'_chip'+strtrim(string(hdu),2)+'.jpg'
+
+; get WCS and write fits
     newhdr= mosaic_onechip_wcs(image,hdr,usno,jpeg=jpeg)
     mwrfits, image,newfilename,newhdr
 endfor
