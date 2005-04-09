@@ -40,17 +40,18 @@ for ii=0L,nfile-1 do begin
 
 ; read in Mosaic data image and extract GSSS astrometry
     data= mrdfits(filelist[ii],7,hdr)
+    data= data-median(data)
     datanaxis1= sxpar(hdr,'NAXIS1')
     datanaxis2= sxpar(hdr,'NAXIS2')
     gsssextast, hdr,gsa
-    
+
 ; create inverse variance map and crush bad pixels
     invvar= fltarr(datanaxis1,datanaxis2)+exptime
     bad= where(((exptime*data) GT 17000.0) OR $
                (bitmask NE 0),nbad)
     help, nbad
     if (nbad GT 0) then invvar[bad]= 0.0
-    seeingsigma= 4.0/2.35 ; guess
+    seeingsigma= 2.5 ; guess
     psfvals= exp(-0.5*[1.0,sqrt(2.0)]^2/seeingsigma^2)
     reject_cr, data,invvar,psfvals,cr,nrejects=ncr
     help, ncr

@@ -67,11 +67,14 @@ for i=0,6 do mosaic_flatten,path+'2005-04-09/'+filelist[i],avzero,avdark,iflat,p
 ; measure / fix / install astrometric headers (GSSS!)
 dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 
+; calibrate images by comparison with SDSS
+; [THIS NEEDS TO BE DONE]
+
 ; make mosaics
 racen= 162.343
 deccen= 51.051
-dra=  0.05
-ddec= 0.05
+dra=  0.06
+ddec= 0.06
 indir= '/global/data/scr/mm1330/4meter/redux/Willman1'
 filelist= indir+'/af_obj'+['138','139','140','141','142']+'.fits'
 gfilename= indir+'/Willman1-g.fits'
