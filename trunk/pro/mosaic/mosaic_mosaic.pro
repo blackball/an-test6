@@ -38,7 +38,7 @@ for ii=0L,nfile-1 do begin
     hdr0= headfits(filelist[ii])
     exptime= sxpar(hdr0,'EXPTIME')
 
-; read in Mosaic data image and extract astrometry
+; read in Mosaic data image and extract GSSS astrometry
     data= mrdfits(filelist[ii],7,hdr)
     datanaxis1= sxpar(hdr,'NAXIS1')
     datanaxis2= sxpar(hdr,'NAXIS2')
@@ -46,7 +46,7 @@ for ii=0L,nfile-1 do begin
     
 ; create inverse variance map
     invvar= fltarr(datanaxis1,datanaxis2)+exptime
-    bad= where(((exptime*data) GT 17000.0) AND $
+    bad= where(((exptime*data) GT 17000.0) OR $
                (bitmask NE 0),nbad)
     help, nbad
     if (nbad GT 0) then invvar[bad]= 0.0
