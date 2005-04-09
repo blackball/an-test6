@@ -64,7 +64,6 @@ for i=0,6 do mosaic_flatten,path+'2005-04-09/'+filelist[i],avzero,avdark,iflat,p
  bitmaskname='mosaic_bitmask.fits' 
  mosaic_bitmask,avzero,avdark,gflat,bitmaskname
 
-
 ; measure / fix / install astrometric headers (GSSS!)
 dowcs, '/global/data/scr/mm1330/4meter/redux/Willman1'
 
@@ -77,10 +76,10 @@ indir= '/global/data/scr/mm1330/4meter/redux/Willman1'
 filelist= indir+'/af_obj'+['138','139','140','141','142']+'.fits'
 gfilename= indir+'/Willman1-g.fits'
 mosaic_mosaic, racen,deccen,dra,ddec,filelist,gfilename
-filelist= indir+'/af_obj'+['179','180']+'.fits'
+filelist= indir+'/af_obj'+['179','180','181','182','183']+'.fits'
 rfilename= indir+'/Willman1-r.fits'
 mosaic_mosaic, racen,deccen,dra,ddec,filelist,rfilename
-filelist= indir+'/af_obj'+['226']+'.fits'
+filelist= indir+'/af_obj'+['226','227','228','229','230','231','232']+'.fits'
 ifilename= indir+'/Willman1-i.fits'
 mosaic_mosaic, racen,deccen,dra,ddec,filelist,ifilename
 
