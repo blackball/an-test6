@@ -4,10 +4,14 @@
 ; PURPOSE:
 ;   Mosaic together KPNO Mosaic data.
 ; INPUTS:
-;   racen,deccen  - center of image (J2000 deg)
-;   dra,ddec      - size of image (deg)
 ;   filelist      - list of files to use
 ;   filename      - name of output file
+;   racen,deccen  - center of image (J2000 deg)
+;   dra,ddec      - size of image (deg)
+; OPTIONAL INPUTS:
+;   bigast        - *big* astrometry structure returned by smosaic_hdr
+;                   or equivalent; if set, this *over-rules* racen,
+;                   deccen, dra, and ddec
 ; BUGS:
 ;   - only uses hdu number 7!!
 ;   - uses stoopid nearest-neighbor interpolation!
@@ -15,11 +19,15 @@
 ; REVISION HISTORY:
 ;   2005-04-09  started - Hogg and Masjedi
 ;-
-pro mosaic_mosaic, racen,deccen,dra,ddec,filelist,filename
+pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec,bigast=bigast
 
 ; create RA---TAN, DEC--TAN wcs header for mosaic
-pixscale=.26/3600.0
-bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
+if (NOT keyword_set(bigast)) then begin
+    pixscale=.26/3600.0
+    bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
+endif
+
+; initialize mosaic
 naxis1= bigast.naxis1
 naxis2= bigast.naxis2
 image= fltarr(naxis1,naxis2)

@@ -78,13 +78,13 @@ ddec= 10.0/60.0
 indir= '/global/data/scr/mm1330/4meter/redux/Willman1'
 filelist= indir+'/af_obj'+['138','139','140','141','142']+'.fits'
 gfilename= indir+'/Willman1-g.fits'
-mosaic_mosaic, racen,deccen,dra,ddec,filelist,gfilename
+mosaic_mosaic, filelist,gfilename,racen,deccen,dra,ddec
 filelist= indir+'/af_obj'+['179','180','181','182','183']+'.fits'
 rfilename= indir+'/Willman1-r.fits'
-mosaic_mosaic, racen,deccen,dra,ddec,filelist,rfilename
+mosaic_mosaic, filelist,rfilename,racen,deccen,dra,ddec
 filelist= indir+'/af_obj'+['226','227','228','229','230','231','232']+'.fits'
 ifilename= indir+'/Willman1-i.fits'
-mosaic_mosaic, racen,deccen,dra,ddec,filelist,ifilename
+mosaic_mosaic, filelist,ifilename,racen,deccen,dra,ddec
 
 ; make jpg
 rim= mrdfits(ifilename)
