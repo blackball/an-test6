@@ -25,7 +25,7 @@ pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec,bigast=bigast
 
 ; create RA---TAN, DEC--TAN wcs header for mosaic
 if (NOT keyword_set(bigast)) then begin
-    pixscale=.26/3600.0
+    pixscale=.25/3600.0
     bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
 endif
 
@@ -61,7 +61,7 @@ for ii=0L,nfile-1 do begin
 
 ; check for overlap
 ; NOT ROBUST
-        tmpn= 1000.0
+        tmpn= 10000
         tmpx= float(datanaxis1)*randomu(seed,tmpn)
         tmpy= float(datanaxis2)*randomu(seed,tmpn)
         gsssxyad, gsa,tmpx,tmpy,tmpa,tmpd
