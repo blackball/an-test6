@@ -6,8 +6,8 @@
 ; INPUTS:
 ;   filelist      - list of files to use
 ;   prefix        - prefix to use for output file names
-;   racen,deccen  - center of image (J2000 deg)
-;   dra,ddec      - size of image (deg)
+;   racen,deccen  - center (J2000 deg) of central image
+;   dra,ddec      - size (deg) of each individual image in the grid
 ;   nra,ndec      - numbers of image to make in the RA and Dec
 ;                   directions; must be odd
 ; BUGS:
@@ -15,6 +15,14 @@
 ;   - 2005-04-10  started under duress - Hogg
 ;-
 pro mosaic_mosaic_grid, filelist,prefix,racen,deccen,dra,ddec,nra,ndec
+
+if (NOT keyword_set(prefix)) then prefix= 'UMa_dwarf_g_'
+if (NOT keyword_set(racen)) then racen= 158.72
+if (NOT keyword_set(deccen)) then deccen= 51.92
+if (NOT keyword_set(dra)) then dra= 6.0/60.0
+if (NOT keyword_set(ddec)) then ddec= dra
+if (NOT keyword_set(nra)) then nra= 7
+if (NOT keyword_set(ndec)) then ndec= nra
 
 pixscale=.26/3600.0
 center= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
@@ -27,6 +35,7 @@ for ii=-(nra-1)/2,(nra-1)/2 do begin
         if (jj GE 0) then iistr= '+'+jjstr
 
         filename= prefix+iistr+jjstr+'.fits'
+        splog, 'starting work on '+filename
         bigast= center
         bigast.crpix= center.crpix-[double(ii)*double(center.naxis1), $
                                     double(jj)*double(center.naxis2)]
