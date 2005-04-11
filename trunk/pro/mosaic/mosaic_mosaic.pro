@@ -112,7 +112,7 @@ for ii=0L,nfile-1 do begin
 endfor
 
 ; make image and write fits file
-image= image/weight
+image= image/(weight+(weight EQ 0))
 mwrfits, image,filename,/create
 mwrfits, weight,filename
 return

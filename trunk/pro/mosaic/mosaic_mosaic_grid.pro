@@ -34,7 +34,7 @@ for ii=-(nx-1)/2,(nx-1)/2 do begin
         jjstr= strtrim(string(jj),2)
         if (jj GE 0) then jjstr= '+'+jjstr
 
-        filename= prefix+iistr+jjstr+'.fits'
+        filename= prefix+'_'+iistr+jjstr+'.fits'
         splog, 'starting work on '+filename
         bigast= center
         bigast.crpix= center.crpix+[double(ii)*double(center.naxis1), $

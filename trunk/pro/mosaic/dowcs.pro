@@ -1,4 +1,5 @@
 pro dowcs, indir,outdir
+if (NOT keyword_set(outdir)) then outdir= indir
 filelist= file_search(indir+'/flatten_obj???.fits*')
 nfile= n_elements(filelist)
 for ii=0L,nfile-1 do begin
