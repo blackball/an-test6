@@ -8,13 +8,13 @@
 ;   prefix        - prefix to use for output file names
 ;   racen,deccen  - center (J2000 deg) of central image
 ;   dra,ddec      - size (deg) of each individual image in the grid
-;   nra,ndec      - numbers of image to make in the RA and Dec
+;   nx,ny         - numbers of image to make in the RA and Dec
 ;                   directions; must be odd
 ; BUGS:
 ; REVISION HISTORY:
 ;   - 2005-04-10  started under duress - Hogg
 ;-
-pro mosaic_mosaic_grid, filelist,prefix,racen,deccen,dra,ddec,nra,ndec
+pro mosaic_mosaic_grid, filelist,prefix,racen,deccen,dra,ddec,nx,ny
 
 if (NOT keyword_set(prefix)) then prefix= 'UMa_dwarf_g_'
 if (NOT keyword_set(racen)) then racen= 158.72
@@ -27,10 +27,10 @@ if (NOT keyword_set(ndec)) then ndec= nra
 pixscale=.26/3600.0
 center= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
 
-for ii=-(nra-1)/2,(nra-1)/2 do begin
+for ii=-(nx-1)/2,(nx-1)/2 do begin
     iistr= strtrim(string(ii),2)
     if (ii GE 0) then iistr= '+'+iistr
-    for jj=-(ndec-1)/2,(ndec-1)/2 do begin
+    for jj=-(ny-1)/2,(ny-1)/2 do begin
         jjstr= strtrim(string(jj),2)
         if (jj GE 0) then iistr= '+'+jjstr
 
