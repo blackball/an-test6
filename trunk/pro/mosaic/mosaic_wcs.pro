@@ -96,7 +96,7 @@ mwrfits, 0,newfilename,hdr0
 
 for hdu=1,8 do begin
     splog, 'working on hdu',hdu
-    image= mrdfits(filename,hdu,hdr)
+    image= float(mrdfits(filename,hdu,hdr))
 
 ; get usno stars
     if (NOT keyword_set(usno)) then begin
