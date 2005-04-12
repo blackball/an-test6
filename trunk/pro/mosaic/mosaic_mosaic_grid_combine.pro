@@ -21,14 +21,19 @@ for ii=-(nx-1)/2,(nx-1)/2 do begin
         if (jj GE 0) then jjstr= '+'+jjstr
 
         filename= prefix+'_'+iistr+jjstr+'.fits'
-        if (NOT keyword_set(column)) then column= mrdfits(filename) $
+        if (NOT keyword_set(column)) then column= mrdfits(filename,0,hdr) $
         else column= [[mrdfits(filename)],[column]]
         help, column
+
+        if (NOT keyword_set(besthdr)) then besthdr= hdr
+        if ((sxpar(hdr,'crpix1') GT sxpar(besthdr,'crpix1')) AND $
+            (sxpar(hdr,'crpix2') GT sxpar(besthdr,'crpix2'))) then $
+          besthdr= hdr
     endfor
 
     if (NOT keyword_set(canvas)) then canvas= temporary(column) $
     else canvas= [temporary(column),canvas]
     help, canvas
 endfor
-mwrfits, canvas,prefix+'.fits',/create
+mwrfits, canvas,prefix+'.fits',besthdr,/create
 end

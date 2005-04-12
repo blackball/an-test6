@@ -13,6 +13,7 @@
 ;                   or equivalent; if set, this *over-rules* racen,
 ;                   deccen, dra, and ddec
 ; BUGS:
+;   - Doesn't put WCS header in output FITS file!
 ;   - Uses stoopid nearest-neighbor interpolation!
 ;   - Invvar is totally made up.
 ;   - Method for finding overlapping data is approximate and not

@@ -16,14 +16,6 @@
 ;-
 pro mosaic_mosaic_grid, filelist,prefix,racen,deccen,dra,ddec,nx,ny
 
-if (NOT keyword_set(prefix)) then prefix= 'UMa_dwarf_g_'
-if (NOT keyword_set(racen)) then racen= 158.72
-if (NOT keyword_set(deccen)) then deccen= 51.92
-if (NOT keyword_set(dra)) then dra= 6.0/60.0
-if (NOT keyword_set(ddec)) then ddec= dra
-if (NOT keyword_set(nx)) then nx= 7
-if (NOT keyword_set(ny)) then ny= nx
-
 pixscale=.26/3600.0
 center= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
 
