@@ -83,8 +83,11 @@ endif
 newhdr= hdr
 gsssputast, newhdr,gsa
 sxaddpar, newhdr,'MWCNMTCH',nmatch,'mosaic_wcs.pro number of matched stars'
-sxaddpar, newhdr,'MWCXRMS',sigmax,'mosaic_wcs.pro rms in x direction'
-sxaddpar, newhdr,'MWCYRMS',sigmax,'mosaic_wcs.pro rms in y direction'
+splog, 'MWCNMTCH',nmatch
+sxaddpar, newhdr,'MWCXRMS',sigmax,'mosaic_wcs.pro rms in x direction (pix)'
+splog, 'MWCXRMS',sigmax
+sxaddpar, newhdr,'MWCYRMS',sigmay,'mosaic_wcs.pro rms in y direction (pix)'
+splog, 'MWCYRMS',sigmay
 sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 return, newhdr
 end
