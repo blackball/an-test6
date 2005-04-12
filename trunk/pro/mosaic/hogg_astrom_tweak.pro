@@ -7,7 +7,7 @@
 ;
 ; CALLING SEQUENCE:
 ;   gsa_out = hogg_astrom_tweak( gsa_in, catra, catdec, imx, imy, $
-;    [ dtheta=, errflag=, nmatch=, catind=, obsind=, /verbose ] )
+;    [ dtheta=, errflag=, nmatch=, catind=, obsind=, /verbose, etc ] )
 ;
 ; INPUTS:
 ;   gsa_in        - Initial guess for astrometric solution (struct)
@@ -29,6 +29,8 @@
 ;   nmatch     - Number of matched stars
 ;   catind     - Indices of CATLON,CATLAT for matched objects.
 ;   obsind     - Indices of XPOS,YPOS for matched objects.
+;   sigmax     - sigma of matched stars in delta-x
+;   sigmay     - sigma of matched stars in delta-y
 ;
 ; COMMENTS:
 ;   Uses preliminary solution given in astr structure to match image
@@ -51,7 +53,7 @@
 ;-----------------------------------------------------------------------------
 function hogg_astrom_tweak, gsa_in, catra, catdec, imx, imy, dtheta=dtheta, $
  errflag=errflag, nmatch=nmatch, catind=catind, obsind=obsind, order=order, $
- verbose=verbose
+ verbose=verbose, sigmax=sigmax, sigmay=sigmay
 
    errflag = 0
    if (NOT keyword_set(dtheta)) then dtheta = 5./3600.
@@ -161,25 +163,22 @@ function hogg_astrom_tweak, gsa_in, catra, catdec, imx, imy, dtheta=dtheta, $
    ;----------
    ; Report the RMS differences between catalog and CCD positions
 
+   gsssadxy, gsa_out, catra[catind], catdec[catind], catx, caty
+   xdiff = imx[obsind] - catx
+   ydiff = imy[obsind] - caty
+   sigmax= sqrt(mean(xdiff^2))
+   sigmay= sqrt(mean(ydiff^2))
+
    if (keyword_set(verbose)) then begin
       gsssadxy, gsa_in, catra[catind], catdec[catind], catx, caty
-      xdiff = imx[obsind] - catx
-      ydiff = imy[obsind] - caty
-      splog, 'Input mean/stdev offset in X = ', mean(xdiff), stdev(xdiff)
-      splog, 'Input mean/stdev offset in Y = ', mean(ydiff), stdev(ydiff)
+      oxdiff = imx[obsind] - catx
+      oydiff = imy[obsind] - caty
+      splog, 'Input mean/rms offset in X = ',mean(oxdiff),sqrt(mean(oxdiff^2))
+      splog, 'Input mean/rms offset in Y = ',mean(oydiff),sqrt(mean(oydiff^2))
 
-      gsssadxy, gsa_out, catra[catind], catdec[catind], catx, caty
-      xdiff = imx[obsind] - catx
-      ydiff = imy[obsind] - caty
-      splog, 'Output mean/stdev offset in X = ', mean(xdiff), stdev(xdiff)
-      splog, 'Output mean/stdev offset in Y = ', mean(ydiff), stdev(ydiff)
+      splog, 'Output mean/rms offset in X = ',mean(xdiff), sigmax
+      splog, 'Output mean/rms offset in Y = ',mean(ydiff), sigmay
    endif
-
-;gsssadxy,gsa_in,catra[catind],catdec[catind],catx,caty
-;splot, imx,imy,ps=4
-;soplot,catx,caty,ps=5,color='red'
-;gsssadxy,gsa_out,catra[catind],catdec[catind],outx,outy
-;soplot,outx,outy,ps=4,color='green'
 
    return, gsa_out
 end 

@@ -55,7 +55,8 @@ for ii=0,niter do begin
     if (ii ge (niter/3)) then order=2
     if (ii ge (2*niter/3)) then order=3
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
-                               /verbose)
+                               /verbose,nmatch=nmatch, $
+                               sigmax=sigmax,sigmay=sigmay)
     gsa= newgsa
 endfor
 
@@ -81,6 +82,9 @@ endif
 ; make new header and return
 newhdr= hdr
 gsssputast, newhdr,gsa
+sxaddpar, newhdr,'MWCNMTCH',nmatch,'mosaic_wcs.pro number of matched stars'
+sxaddpar, newhdr,'MWCXRMS',sigmax,'mosaic_wcs.pro rms in x direction'
+sxaddpar, newhdr,'MWCYRMS',sigmax,'mosaic_wcs.pro rms in y direction'
 sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 return, newhdr
 end

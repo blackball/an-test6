@@ -13,21 +13,20 @@
 ;                   or equivalent; if set, this *over-rules* racen,
 ;                   deccen, dra, and ddec
 ; BUGS:
-;   - Doesn't put WCS header in output FITS file!
-;   - Uses stoopid nearest-neighbor interpolation!
+;   - Uses stoopid nearest-neighbor interpolation.
 ;   - Invvar is totally made up.
 ;   - Method for finding overlapping data is approximate and not
 ;     robust.
 ;   - Bitmask filename hard-coded.
 ; REVISION HISTORY:
-;   2005-04-09  started - Hogg and Masjedi
+;   2005-04-09  written - Hogg and Masjedi
 ;-
 pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec,bigast=bigast
 
 ; create RA---TAN, DEC--TAN wcs header for mosaic
 if (NOT keyword_set(bigast)) then begin
     pixscale=.25/3600.0
-    bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
+    bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
 endif
 
 ; initialize mosaic
@@ -114,7 +113,10 @@ endfor
 
 ; make image and write fits file
 image= image/(weight+(weight EQ 0))
-mwrfits, image,filename,/create
+mkhdr, hdr,image
+putast, hdr,bigast
+sxaddhist, 'KPNO Mosaic data mosaiced by Hogg and Masjedi',hdr
+mwrfits, image,filename,hdr,/create
 mwrfits, weight,filename
 return
 end
