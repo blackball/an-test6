@@ -88,7 +88,8 @@ if (((sigmax > sigmay) GT 5.0) AND keyword_set(jpeg)) then begin
     hogg_usersym, 4,thick=4
     hogg_image_overlay_plot, usnox,usnoy,naxis1,naxis2,overlay, $
       psym=8,symsize=4.0,factor=1
-    hogg_image_overlay_grid, newhdr,dra=0.05,ddec=0.05,/gsss,factor=1
+    hogg_image_overlay_grid, newhdr,overlay,dra=0.10,ddec=0.05, $
+      nra=3,ndec=3,/gsss,factor=1
     rbf= 2
     overlay= nw_rebin_image(overlay,rbf)
     overlay[*,*,0]= 0
