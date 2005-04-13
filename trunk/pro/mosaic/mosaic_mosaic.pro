@@ -12,6 +12,8 @@
 ;   bigast        - *big* astrometry structure returned by smosaic_hdr
 ;                   or equivalent; if set, this *over-rules* racen,
 ;                   deccen, dra, and ddec
+;   saturation    - pixel value (above bias) to use for saturation;
+;                   default 1.7e4
 ; BUGS:
 ;   - Uses stoopid nearest-neighbor interpolation.
 ;   - Invvar is totally made up.
@@ -21,13 +23,15 @@
 ; REVISION HISTORY:
 ;   2005-04-09  written - Hogg and Masjedi
 ;-
-pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec,bigast=bigast
+pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec, $
+                   bigast=bigast,saturation=saturation
 
 ; create RA---TAN, DEC--TAN wcs header for mosaic
 if (NOT keyword_set(bigast)) then begin
     pixscale=.25/3600.0
     bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
 endif
+if (NOT keyword_set(saturation)) then saturation= 1.7e4
 
 ; initialize mosaic
 naxis1= bigast.naxis1
@@ -77,11 +81,11 @@ for ii=0L,nfile-1 do begin
         endif else begin
             splog, 'using '+filelist[ii]+' EXTEN='+hdustr
             data= mrdfits(filelist[ii],hdu,hdr)
-            data= data-median(data)
 
 ; create inverse variance map and crush bad pixels
             invvar= fltarr(datanaxis1,datanaxis2)+exptime
-            bad= where((bitmask[*,*,(hdu-1)] NE 0),nbad)
+            bad= where(((exptime*data) GT saturation) OR $
+                       (bitmask[*,*,(hdu-1)] NE 0),nbad)
             help, nbad
             if (nbad GT 0) then invvar[bad]= 0.0
             seeingsigma= 2.5    ; guess
@@ -89,6 +93,10 @@ for ii=0L,nfile-1 do begin
             reject_cr, data,invvar,psfvals,cr,nrejects=ncr
             help, ncr
             if (ncr GT 0) then invvar[cr]= 0.0
+
+; subtract sky
+            bw_est_sky, data,sky
+            data= data-temporary(sky)
 
 ; find data x,y values for the mosaic pixels
             gsssadxy, gsa,pixra,pixdec,datax,datay
