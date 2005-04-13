@@ -60,7 +60,7 @@ for ii=0,niter do begin
     gsa= newgsa
 endfor
 
-if keyword_set(jpeg) then begin
+if (((sigmax > sigmay) GT 5.0) AND keyword_set(jpeg)) then begin
     simage= (image-median(image))
     overlay=0
     hogg_usersym, 20,thick=2
@@ -114,8 +114,8 @@ for hdu=1,8 do begin
     endif
 
 ; make JPEG name (not necessary)
-;    prefix= strmid(newfilename,0,strpos(newfilename,'.fit',/reverse_search))
-;    jpeg= prefix+'_chip'+strtrim(string(hdu),2)+'.jpg'
+   prefix= strmid(newfilename,0,strpos(newfilename,'.fit',/reverse_search))
+   jpeg= prefix+'_chip'+strtrim(string(hdu),2)+'.jpg'
 
 ; get WCS and write fits
     newhdr= mosaic_onechip_wcs(image,hdr,usno,jpeg=jpeg)
