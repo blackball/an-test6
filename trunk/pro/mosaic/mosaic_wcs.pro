@@ -6,7 +6,11 @@
 ; INPUTS:
 ;   filename    - name (ie, full path) of input image
 ;   newfilename - name (ie, full path) for output image
+; COMMENTS:
+;   - This makes a jpeg file for any image whose astrometric solution is
+;     suspect.
 ; BUGS:
+;   - Takes CD matrix and make it -CD!  Aargh!
 ;   - Comment header not yet fully written.
 ;   - MANY things hard-coded.
 ;   - Are there zero-index issues with FIND or my image section?
@@ -52,14 +56,28 @@ niter=6
 for ii=0,niter do begin
     dtheta= 3.0
     order= 1
-    if (ii ge (niter/3)) then order=2
-    if (ii ge (2*niter/3)) then order=3
+    if (ii ge (niter/3)) then order= 2
+    if (ii ge (2*niter/3)) then order= 5
+    verbose= 0
+    if (ii eq niter) then verbose= 1
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
-                               /verbose,nmatch=nmatch, $
+                               verbose=verbose,nmatch=nmatch, $
                                sigmax=sigmax,sigmay=sigmay)
     gsa= newgsa
 endfor
 
+; make new header
+newhdr= hdr
+gsssputast, newhdr,gsa
+sxaddpar, newhdr,'MWCNMTCH',nmatch,'mosaic_wcs.pro number of matched stars'
+splog, 'MWCNMTCH',nmatch
+sxaddpar, newhdr,'MWCXRMS',sigmax,'mosaic_wcs.pro rms in x direction (pix)'
+splog, 'MWCXRMS',sigmax
+sxaddpar, newhdr,'MWCYRMS',sigmay,'mosaic_wcs.pro rms in y direction (pix)'
+splog, 'MWCYRMS',sigmay
+sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
+
+; make QA plot if the fit is bad and jpeg is set
 if (((sigmax > sigmay) GT 5.0) AND keyword_set(jpeg)) then begin
     simage= (image-median(image))
     overlay=0
@@ -70,6 +88,7 @@ if (((sigmax > sigmay) GT 5.0) AND keyword_set(jpeg)) then begin
     hogg_usersym, 4,thick=4
     hogg_image_overlay_plot, usnox,usnoy,naxis1,naxis2,overlay, $
       psym=8,symsize=4.0,factor=1
+    hogg_image_overlay_grid, newhdr,dra=0.05,ddec=0.05,/gsss,factor=1
     rbf= 2
     overlay= nw_rebin_image(overlay,rbf)
     overlay[*,*,0]= 0
@@ -79,16 +98,6 @@ if (((sigmax > sigmay) GT 5.0) AND keyword_set(jpeg)) then begin
       quality=90
 endif
 
-; make new header and return
-newhdr= hdr
-gsssputast, newhdr,gsa
-sxaddpar, newhdr,'MWCNMTCH',nmatch,'mosaic_wcs.pro number of matched stars'
-splog, 'MWCNMTCH',nmatch
-sxaddpar, newhdr,'MWCXRMS',sigmax,'mosaic_wcs.pro rms in x direction (pix)'
-splog, 'MWCXRMS',sigmax
-sxaddpar, newhdr,'MWCYRMS',sigmay,'mosaic_wcs.pro rms in y direction (pix)'
-splog, 'MWCYRMS',sigmay
-sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 return, newhdr
 end
 

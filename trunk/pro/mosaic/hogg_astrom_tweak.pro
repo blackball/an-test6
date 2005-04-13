@@ -59,8 +59,14 @@ function hogg_astrom_tweak, gsa_in, catra, catdec, imx, imy, dtheta=dtheta, $
    if (NOT keyword_set(dtheta)) then dtheta = 5./3600.
    if (n_elements(order) EQ 0) then order = 1
    if (order GT 3) then begin
-       splog, 'WARNING: order > 3; setting order to 3'
-       order= 3
+       splog, 'WARNING: order > 3; there is only one term at order > 3, and it is a fifth-order radial term'
+   endif
+   if (order EQ 4) then begin
+       splog, 'WARNING: in the future, set order to 3 or 5, but never 4'
+   endif
+   if (order GT 5) then begin
+       splog, 'WARNING: order > 5; setting order to 5'
+       order= 5
    endif
    if (order LT 1) then begin
        splog, 'WARNING: order < 1; setting order to 1'
@@ -118,6 +124,7 @@ function hogg_astrom_tweak, gsa_in, catra, catdec, imx, imy, dtheta=dtheta, $
    if (order GE 1) then fitindx= [0,1,2]
    if (order GE 2) then fitindx= [fitindx,3,4,5]
    if (order GE 3) then fitindx= [fitindx,7,8,9,10]
+   if (order GE 5) then fitindx= [fitindx,12]
 
    AA= dblarr(13,n_elements(obx))
    AA[0,*]= obx
