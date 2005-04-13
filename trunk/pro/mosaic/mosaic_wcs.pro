@@ -26,8 +26,8 @@ mosaic_data_section, 'foo',bar,x1,x2,y1,y2,hdr=hdr
 
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
-fwhm= 4.0                     ; hard-wired at 1 arcsec
-hmin= 10.0*sigma              ; hard-wired, don't know what this means
+fwhm= 6.0                     ; hard-coded at 1.5 arcsec
+hmin= 5.0*sigma               ; hard-coded, don't know what this means
 sharplim= [0.2,0.5]           ; don't know what this means
 roundlim= [-1.0,1.0]          ; don't know what this means
 find, image[x1:x2,y1:y2],xx,yy,flux,sharp,round, $
@@ -56,8 +56,7 @@ niter=6
 for ii=0,niter do begin
     dtheta= 3.0
     order= 1
-    if (ii ge (niter/3)) then order= 2
-    if (ii ge (2*niter/3)) then order= 5
+    if (ii ge (niter/2)) then order= 2
     verbose= 0
     if (ii eq niter) then verbose= 1
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
@@ -78,7 +77,9 @@ splog, 'MWCYRMS',sigmay
 sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 
 ; make QA plot if the fit is bad and jpeg is set
-if (((sigmax > sigmay) GT 5.0) AND keyword_set(jpeg)) then begin
+if ((((sigmax > sigmay) GT 5.0) OR $
+     (nmatch LT 50)) AND $
+    keyword_set(jpeg)) then begin
     simage= (image-median(image))
     overlay=0
     hogg_usersym, 20,thick=2
