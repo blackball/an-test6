@@ -9,6 +9,9 @@
 ; COMMENTS:
 ;   - This makes a jpeg file for any image whose astrometric solution is
 ;     suspect.
+;   - Solutions were improved markedly when I removed close groups of
+;     stars from FIND; they are generally saturated stars and bleed
+;     trails.
 ; BUGS:
 ;   - Takes CD matrix and make it -CD!  Aargh!
 ;   - Comment header not yet fully written.
@@ -27,14 +30,24 @@ mosaic_data_section, 'foo',bar,x1,x2,y1,y2,hdr=hdr
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
 fwhm= 6.0                     ; hard-coded at 1.5 arcsec
-hmin= 5.0*sigma               ; hard-coded, don't know what this means
-sharplim= [0.2,0.5]           ; don't know what this means
-roundlim= [-1.0,1.0]          ; don't know what this means
+hmin= 0.4                     ; hard-coded, don't know what this means
+sharplim= [-1.0,1.0]          ; don't know what this means
+roundlim= [-2.0,2.0]          ; don't know what this means
 find, image[x1:x2,y1:y2],xx,yy,flux,sharp,round, $
   hmin,fwhm,roundlim,sharplim,/silent
 xx= xx+x1
 yy= yy+y1
 splog, 'FIND found',n_elements(xx),' stars in the image'
+
+; hack out large groups of close stars
+range= (max(xx)-min(xx)) > (max(yy)-min(yy))
+; HACK to make spheregroup run as a 2d planar FOF
+ingroup= spheregroup((xx-mean(xx))/range,(yy-mean(yy))/range,3.0*fwhm/range, $
+                     multgroup=multgroup)
+good= where(multgroup[ingroup] EQ 1)
+xx= xx[good]
+yy= yy[good]
+splog, 'FOF left',n_elements(xx),' stars in the image'
 
 ; do a first shift with the tangent projection
 extast, hdr,astr
@@ -77,7 +90,7 @@ splog, 'MWCYRMS',sigmay
 sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 
 ; make QA plot if the fit is bad and jpeg is set
-if ((((sigmax > sigmay) GT 5.0) OR $
+if ((((sigmax > sigmay) GT 3.0) OR $
      (nmatch LT 50)) AND $
     keyword_set(jpeg)) then begin
     simage= (image-median(image))
@@ -109,10 +122,10 @@ if (newfilename EQ filename) then begin
     return
 endif
 hdr0= headfits(filename)
-splog, 'starting to make file '+newfilename
 mwrfits, 0,newfilename,hdr0
 
 for hdu=1,8 do begin
+    splog, 'working on '+newfilename
     splog, 'working on hdu',hdu
     image= float(mrdfits(filename,hdu,hdr))
 
