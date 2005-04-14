@@ -66,7 +66,10 @@ for i=0,6 do mosaic_flatten,path+'2005-04-09/'+filelist[i],avzero,avdark,iflat,p
 
 ; measure / fix / install astrometric headers (GSSS!)
 dowcs, '/global/data/scr/morad/4meter/flatten', $
-       '/global/data/scr/morad/4meter/af'
+       '/global/data/scr/morad/4meter/newaf'
+spawn, '\rm -rfv /global/data/scr/morad/4meter/oldaf'
+spawn, '\mv -fv /global/data/scr/morad/4meter/af /global/data/scr/morad/4meter/oldaf'
+spawn, '\mv -fv /global/data/scr/morad/4meter/newaf /global/data/scr/morad/4meter/af'
 
 ; calibrate images by comparison with SDSS
 ; [THIS NEEDS TO BE DONE]
