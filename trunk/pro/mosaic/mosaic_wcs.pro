@@ -23,6 +23,7 @@
 function mosaic_onechip_wcs,image,hdr,usno,jpeg=jpeg
 naxis1= sxpar(hdr,'NAXIS1')
 naxis2= sxpar(hdr,'NAXIS2')
+filter= strmid(sxpar(hdr,'FILTER'),0,1)
 
 ; read image *data* section
 mosaic_data_section, 'foo',bar,x1,x2,y1,y2,hdr=hdr
@@ -30,8 +31,10 @@ mosaic_data_section, 'foo',bar,x1,x2,y1,y2,hdr=hdr
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
 fwhm= 6.0                     ; hard-coded at 1.5 arcsec
-hmin= 0.4                     ; hard-coded, don't know what this means
-sharplim= [-1.0,1.0]          ; don't know what this means
+if (filter EQ 'g') then hmin= 0.2 ; hard-coded, don't know what this means
+if (filter EQ 'r') then hmin= 0.3
+if (filter EQ 'i') then hmin= 0.6
+sharplim= [-0.1,1.0]          ; don't know what this means
 roundlim= [-2.0,2.0]          ; don't know what this means
 find, image[x1:x2,y1:y2],xx,yy,flux,sharp,round, $
   hmin,fwhm,roundlim,sharplim,/silent
@@ -47,7 +50,15 @@ ingroup= spheregroup((xx-mean(xx))/range,(yy-mean(yy))/range,3.0*fwhm/range, $
 good= where(multgroup[ingroup] EQ 1)
 xx= xx[good]
 yy= yy[good]
-splog, 'FOF left',n_elements(xx),' stars in the image'
+splog, '2-d FOF left',n_elements(xx),' stars in the image'
+
+; hack out vertical lines of stars
+ingroup= spheregroup((xx-mean(xx))/range,0.0*xx,3.0*fwhm/range/2048.0, $
+                     multgroup=multgroup)
+good= where(multgroup[ingroup] EQ 1)
+xx= xx[good]
+yy= yy[good]
+splog, '1-d FOF left',n_elements(xx),' stars in the image'
 
 ; do a first shift with the tangent projection
 extast, hdr,astr
@@ -90,7 +101,7 @@ splog, 'MWCYRMS',sigmay
 sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 
 ; make QA plot if the fit is bad and jpeg is set
-if ((((sigmax > sigmay) GT 3.0) OR $
+if ((((sigmax > sigmay) GT 4.0) OR $
      (nmatch LT 50)) AND $
     keyword_set(jpeg)) then begin
     simage= (image-median(image))
