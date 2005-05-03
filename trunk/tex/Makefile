@@ -15,4 +15,3 @@ all: xymatch.ps.gz
 	latex $<
 	latex $<
 	latex $<
-	/bin/rm $*.log
