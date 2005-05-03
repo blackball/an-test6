@@ -1,0 +1,92 @@
+\documentclass[12pt,preprint]{aastex}
+\newcommand{\latin}[1]{\textit{#1}}
+\newcommand{\ie}{\latin{i.e.}}
+\newcommand{\eg}{\latin{e.g.}}
+\newcommand{\cf}{\latin{cf.}}
+\newcommand{\etc}{\latin{etc.}}
+\newcommand{\etal}{\latin{et~al.}}
+\begin{document}
+
+\title{
+  Automated Astrometry I:\\
+  Blind matching of image positions to stars on the sky.
+}
+\author{
+  [tba]
+}
+
+\begin{abstract}
+We report on the first stage in an ambitious project in ``blind
+astrometry,'' \ie, the determination of the precise relationship
+between $x$--$y$ positions in an image and RA--Dec positions on the
+sky with no prior knowledge of the pointing, orientation, or scale of
+the image.  Our long-term goals are \textsl{(1)}~to relieve the
+astronomical community of the onerous task of solving for precise
+``world coordinate system'' (WCS) information, and \textsl{(2)}~to
+maintain standards for the recording and transmission of WCS
+information for the new era of distributed, heterogeneous, and
+multi-wavelength data sets.
+
+In this first stage, we demonstrate that we can determine the
+pointing, orientation, and scale of public Sloan Digital Sky Survey
+(SDSS) images, and public KPNO 4-m Mosaic camera individual chip
+(Mosaic) images, using only the positions of unresolved sources, with
+no first guess or prior information of any kind.  Our system employs
+geometric properties of quadrangles of stars in the USNO-B1.0
+astrometric catalog, and methods for fast searching.  No solutions
+(\ie, determinations of pointing, orientation, and scale) are
+considered ``good'' unless they pass statistical tests designed to
+flag false positives.  Our system gets good matches for
+[DWH:??]~percent of SDSS images and [DWH:??]~percent of Mosaic images.
+
+[DWH: \etc??]
+\end{abstract}
+
+\keywords{
+  methods: statistical
+}
+
+\section{Introduction}
+
+We are entering the brave new world of enormous, heterogeneous,
+distributed astronomical data sets, from many large surveys and many
+data archives, including large-angle homogeneous surveys such as SDSS,
+2MASS, and GALEX, and pointed observatories with large public data
+archives, such as HST, Spitzer, Chandra, and KPNO.  Straightforward
+interoperability of these data (\eg, comparisons, matching,
+variability and proper-motion studies) requires that they all have
+correct, standards-compliant astrometric (WCS) information.  The data
+are not so supplied; the community needs an automated astrometry
+system that will provide.
+
+In addition, for individudal investigators using data from
+observatories, determination and storage of WCS information can be a
+significant obstacle to science.  For example, even the
+well-understood HST images have systematic astrometric offsets, and
+every HST image user must re-solve the astrometry locally to do
+precise source matching.  There are much more serious issues with
+telescope data, where the observatory-installed WCS headers are
+approximate and often grossly wrong.  In general, many person-hours go
+into the construction of the WCS for a typical observing run, and in
+the end, the investigators often do not encode their results in a
+standards-compliant way or in a community-accessible repository, so
+later users (re-users) must spend those person-hours all over again.
+An automated system available to all investigators would save the
+community enormous amounts of research time, and remove a significant
+barrier to science.
+
+Finally, there are many legacy data sets, such as photographic plate
+archives, that lie in archival disarray.  These data have enormous
+untapped value for astronomy in the time-domain.  Oddly, for many
+organizations, the scanning (digitization) of the plate material is
+less onerous than the manual data entry of pointing and rotation.  An
+automated system solves this problem.
+
+For these reasons we have begun the project of making a
+
+\acknowledgements
+It is a pleasure to thank\ldots
+
+[DWH: grant numbers??]
+
+\end{document}
