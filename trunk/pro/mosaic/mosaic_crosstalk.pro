@@ -11,8 +11,8 @@
 function mosaic_crosstalk_one, image1,image2
 
 ; make masks of bright pixels
-quantile= weighted_quantile(image2,quant=0.75)
-mask2= (image2 LE quantile)
+quantile= weighted_quantile(image2,quant=[0.25,0.75])
+mask2= ((image2 GE quantile[0]) AND (image2 LE quantile[1]))
 
 ; find amplitude by least-squares?
 mean2= total(image2*mask2,/double)/total(mask2,/double)
@@ -48,11 +48,14 @@ for hdu1=1,8 do begin
 
 ; read in all hdu1 and hdu2
         mosaic_data_section, filename,hdu1,xmin,xmax,ymin,ymax,hdr=hdr
-        image1= (mosaic_mrdfits(filename,hdu1))[xmin:xmax,ymin:ymax]
+        image1= (mosaic_mrdfits(filename,hdu1,hdr1))[xmin:xmax,ymin:ymax]
         npix= n_elements(image1)
         image1= reform(image1,npix)
         mosaic_data_section, filename,hdu2,xmin,xmax,ymin,ymax,hdr=hdr
-        image2= (mosaic_mrdfits(filename,hdu2))[xmin:xmax,ymin:ymax]
+        image2= (mosaic_mrdfits(filename,hdu2,hdr2))[xmin:xmax,ymin:ymax]
+        if (((sxpar(hdr1,'ATM1_1')*sxpar(hdr2,'ATM1_1')) EQ (-1)) AND $
+            ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
+          image2= rotate(image2,2)
         image2= reform(image2,npix)
 
         crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2)
