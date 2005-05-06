@@ -9,9 +9,8 @@
 function mosaic_crosstalk_one, image1,image2
 
 ; make masks of bright pixels
-mask2= 0*byte(image2)+1
-indx= where(image2 GT (weighted_quantile(image2,quant=0.75)))
-mask2[indx]= 0
+quantile= weighted_quantile(image2,quant=0.75)
+mask2= (image2 LE quantile)
 
 ; find amplitude by least-squares?
 mean2= total(image2*mask2,/double)/total(mask2,/double)
