@@ -27,20 +27,18 @@ for hdu1=1,8 do begin
         image2= reform(image2,npix)
 
 ; make masks of bright pixels
-        mask1= 0*byte(image1)+1
-        indx= where(image1 GT (weighted_quantile(image1,quant=0.75)))
-        mask1[indx]= 0
         mask2= 0*byte(image2)+1
         indx= where(image2 GT (weighted_quantile(image2,quant=0.75)))
         mask2[indx]= 0
 
 ; find amplitude by least-squares?
-        aa= [[double(image1*mask1)],[double(mask1)]]
+        mean2= total(image2*mask2,/double)/total(mask2,/double)
+        aa= [[double(image1*mask2)],[double(mean2*mask2)]]
         aataa= transpose(aa)#aa
         aataainvaa= invert(aataa,/double)
         aatyy= aa##[[double(image2)]]
         xx= aataainvaa##aatyy
-        splog, 'crosstalk between',hdu1,' and',hdu2,' is',xx[0]
+        splog, 'contribution of',hdu1,' to',hdu2,' is',xx[0]
 
         crosstalk[hdu1-1,hdu2-1]= xx[0]
     endif
