@@ -34,9 +34,12 @@ fwhm= 6.0                     ; hard-coded at 1.5 arcsec
 if (filter EQ 'g') then hmin= 0.2 ; hard-coded, don't know what this means
 if (filter EQ 'r') then hmin= 0.3
 if (filter EQ 'i') then hmin= 0.6
-sharplim= [-0.1,1.0]          ; don't know what this means
-roundlim= [-2.0,2.0]          ; don't know what this means
-find, image[x1:x2,y1:y2],xx,yy,flux,sharp,round, $
+sharplim= [-10,10.0]          ; don't know what this means
+roundlim= [-10.0,10.0]          ; don't know what this means
+tmpimage= image[x1:x2,y1:y2]
+bw_est_sky, tmpimage,tmpsky
+tmpimage= tmpimage-temporary(tmpsky)
+find, tmpimage,xx,yy,flux,sharp,round, $
   hmin,fwhm,roundlim,sharplim,/silent
 xx= xx+x1
 yy= yy+y1

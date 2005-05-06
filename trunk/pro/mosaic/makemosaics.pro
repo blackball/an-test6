@@ -13,8 +13,8 @@ prefix= indir+'/Ursa_Major_dwarf_KPNO'
 filelist= indir+'/af_obj'+['059','060','061','062','063', $
                            '185','186','187','188','189']+'.fits'
 gprefix= prefix+'_g'
-;mosaic_mosaic_grid, filelist,gprefix,racen,deccen,dra,ddec,nx,ny 
-;mosaic_mosaic_grid_combine, gprefix,nx,ny 
+mosaic_mosaic_grid, filelist,gprefix,racen,deccen,dra,ddec,nx,ny 
+mosaic_mosaic_grid_combine, gprefix,nx,ny 
 
 filelist= indir+'/af_obj'+['064','065','066','067','068', $
                            '191','192','193','194']+'.fits'
@@ -29,11 +29,13 @@ iprefix= prefix+'_i'
 mosaic_mosaic_grid, filelist,iprefix,racen,deccen,dra,ddec,nx,ny
 mosaic_mosaic_grid_combine, iprefix,nx,ny
 
-; hdr= headfits(gprefix+'fits')
-sprefix= indir+'/Ursa_Major_dwarf_SDSS'
 ; make smosaics from SDSS data
+hdr= headfits(gprefix+'fits')
+sprefix= indir+'/Ursa_Major_dwarf_SDSS'
+smosaic_make
+
 ; calibrate KPNO images
-; combine to replace saturated pixels
+; combine SDSS with KPNO to replace saturated pixels
 
 ; make jpg
 rim= mrdfits(iprefix+'.fits')
