@@ -6,16 +6,44 @@
 ; INPUTS:
 ;   filename   - name of a raw Mosaic filename to read/test
 ;-
+function mosaic_crosstalk_one, image1,image2
+
+; make masks of bright pixels
+mask2= 0*byte(image2)+1
+indx= where(image2 GT (weighted_quantile(image2,quant=0.75)))
+mask2[indx]= 0
+
+; find amplitude by least-squares?
+mean2= total(image2*mask2,/double)/total(mask2,/double)
+aa= [[double(image1*mask2)],[double(mean2*mask2)]]
+aataa= transpose(aa)#aa
+aataainvaa= invert(aataa,/double)
+aatyy= aa##[[double(image2)]]
+xx= aataainvaa##aatyy
+
+return, xx[0]
+end
+
 pro mosaic_crosstalk, filename
 crosstalk= dblarr(8,8)
+
+; deal with file names
 tmp= strsplit(filename,'/',/extract)
 prefix= tmp[n_elements(tmp)-1]
 prefix= strmid(prefix,0,strpos(prefix,'.fit'))
+crosstalkname= prefix+'_crosstalk.fits'
+
+; no clobber
+if file_test(crosstalkname) then begin
+    splog, 'file '+crosstalkname+' already exists; returning'
+    return
+endif
+
 splog, 'working on '+filename
 
 ; loop over all eligible pairs
 for hdu1=1,8 do begin
-    for hdu2=1,8 do if (hdu1 NE hdu2) then begin
+    for hdu2=hdu1+1,8 do begin
 
 ; read in all hdu1 and hdu2
         mosaic_data_section, filename,hdu1,xmin,xmax,ymin,ymax,hdr=hdr
@@ -26,26 +54,14 @@ for hdu1=1,8 do begin
         image2= (mosaic_mrdfits(filename,hdu2))[xmin:xmax,ymin:ymax]
         image2= reform(image2,npix)
 
-; make masks of bright pixels
-        mask2= 0*byte(image2)+1
-        indx= where(image2 GT (weighted_quantile(image2,quant=0.75)))
-        mask2[indx]= 0
-
-; find amplitude by least-squares?
-        mean2= total(image2*mask2,/double)/total(mask2,/double)
-        aa= [[double(image1*mask2)],[double(mean2*mask2)]]
-        aataa= transpose(aa)#aa
-        aataainvaa= invert(aataa,/double)
-        aatyy= aa##[[double(image2)]]
-        xx= aataainvaa##aatyy
-        splog, 'contribution of',hdu1,' to',hdu2,' is',xx[0]
-
-        crosstalk[hdu1-1,hdu2-1]= xx[0]
-    endif
+        crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2)
+        crosstalk[hdu2-1,hdu1-1]= mosaic_crosstalk_one(image2,image1)
+        splog, 'contribution of',hdu1,' to',hdu2,' is',crosstalk[hdu1-1,hdu2-1]
+        splog, 'contribution of',hdu2,' to',hdu1,' is',crosstalk[hdu2-1,hdu1-1]
+    endfor
 endfor
 
 ; write output
-crosstalkname= prefix+'_crosstalk.fits'
 splog, 'writing '+crosstalkname
 mwrfits, crosstalk,crosstalkname,/create
 return
