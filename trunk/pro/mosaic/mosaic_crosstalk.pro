@@ -5,6 +5,8 @@
 ;   Estimate all 64-8 mosaic chip crosstalk terms
 ; INPUTS:
 ;   filename   - name of a raw Mosaic filename to read/test
+; REVISION HISTORY:
+;   2005-05-05  started - Hogg
 ;-
 function mosaic_crosstalk_one, image1,image2
 
