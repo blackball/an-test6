@@ -26,12 +26,15 @@ hogg_plot_defaults, axis_char_scale=axis_char_scale
 tiny= 1.d-4
 !P.MULTI= [0,8,8]
 
-for ii=0,7 do for jj=0,7 do $
-  plot, crosstalk[ii,jj,*],psym=6, $
-  yrange=[-0.01,0.01]
+for ii=0,7 do for jj=0,7 do begin
+    if (jj EQ 0) then ycharsize=1.0 else ycharsize=tiny
+    quant= weighted_quantile(crosstalk[ii,jj,*],quant=[0.16,0.5,0.84])
+    plot, crosstalk[ii,jj,*],psym=1,symsize=0.1,thick=3*!P.THICK, $
+      yrange=[-0.003,0.003],ycharsize=ycharsize
+    for kk=0,2 do oplot, [-100,100],[quant[kk],quant[kk]], $
+      color=djs_icolor('grey')
+endfor
 
 device,/close
-
-stop
 return
 end
