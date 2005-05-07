@@ -33,6 +33,7 @@ for ii=0,7 do for jj=0,7 do begin
       yrange=[-0.003,0.003],ycharsize=ycharsize
     for kk=0,2 do oplot, [-100,100],[quant[kk],quant[kk]], $
       color=djs_icolor('grey')
+    oplot, crosstalk[ii,jj,*],psym=1,symsize=0.1,thick=3*!P.THICK
 endfor
 
 device,/close

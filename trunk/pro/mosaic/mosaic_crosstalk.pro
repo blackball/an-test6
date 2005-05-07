@@ -10,21 +10,13 @@
 ; REVISION HISTORY:
 ;   2005-05-05  started - Hogg
 ;-
-function mosaic_crosstalk_one, image1,image2
+function mosaic_crosstalk_one, vec1,vec2
 
 ; make masks of bright pixels
-quantile= weighted_quantile(image2,quant=[0.05,0.95])
-mask2= ((image2 GE quantile[0]) AND (image2 LE quantile[1]))
-
-; estimate sky
-bw_est_sky, image2,sky2
-help, sky2
+quantile= weighted_quantile(vec2,quant=[0.05,0.95])
+mask2= ((vec2 GE quantile[0]) AND (vec2 LE quantile[1]))
 
 ; find amplitude by least-squares?
-npix= n_elements(image1)
-vec1= reform(image1,npix)
-vec2= reform(image2-sky2,npix)
-mask2= reform(mask2,npix)
 aa= [[double(vec1*mask2)],[double(mask2)]]
 aataa= transpose(aa)#aa
 aataainvaa= invert(aataa,/double)
@@ -64,6 +56,18 @@ for hdu1=1,8 do begin
             ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
           image2= rotate(image2,2)
 
+; estimate and subtract sky
+        bw_est_sky, image1,sky1
+        image1= image1-temporary(sky1)
+        bw_est_sky, image2,sky2
+        image2= image2-temporary(sky2)
+
+; reform
+        npix= n_elements(image1)
+        image1= reform(image1,npix)
+        image2= reform(image2,npix)
+
+; compute and store
         crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2)
         crosstalk[hdu2-1,hdu1-1]= mosaic_crosstalk_one(image2,image1)
         splog, 'contribution of',hdu1,' to',hdu2,' is',crosstalk[hdu1-1,hdu2-1]

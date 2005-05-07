@@ -1,3 +1,11 @@
+;+
+; BUGS:
+;   - computes sky in hard-coded 256x256 boxes.
+;   - skyerr is made up.
+;   - uses for loops.
+; REVISION HISTORY:
+;   2005-04-??  written - Beth Willman (NYU)
+;-
 pro bw_est_sky, image, sky, skyerr
 
 ;--------------------;
@@ -9,30 +17,6 @@ pro bw_est_sky, image, sky, skyerr
 ;--------------------;
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
-
-;-------------------------;
-; Try to exclude objects
-;
-; taken from Blanton's
-; scatlight_west
-;-------------------------;
-;fwhm=5.
-;back=median(image)
-;noise=sqrt(back)
-;nsig=10.
-;hmin=nsig*noise
-;find, image-back, sx, sy, sflux, sharp, round, hmin, fwhm, [-1., 1.], [0.2, 1.], /silent
-;wt=image*0.+1.
-;for j=0L, n_elements(sx)-1L do begin
-;   xst=(sx[j]-8L)>0
-;   xnd=(sx[j]+8L)<(nx-1L)
-;   yst=(sy[j]-8L)>0
-;   ynd=(sy[j]+8L)<(ny-1L)
-;   wt[xst:xnd,yst:ynd]=0.
-;endfor
-;img_noobj = wt*image
-;ii = where (img_noobj eq 0)
-;img_noobj[ii] = back
 
 img_noobj = image
 
