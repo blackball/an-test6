@@ -6,8 +6,9 @@ naxis=sxpar(hdr0,'NAXIS')
 firsthdu=1
 lasthdu=sxpar(hdr0,'NEXTEND')
 darktime=sxpar(hdr0,'DARKTIME')
-exptime=sxpar(hdr0,'EXPTIME')
 splog, 'darktime',darktime
+exptime=sxpar(hdr0,'EXPTIME')
+splog, 'exptime',exptime
 
 sxaddhist, $
   'zero substracted, flat substracted and flattened by M. Masjedi', $
