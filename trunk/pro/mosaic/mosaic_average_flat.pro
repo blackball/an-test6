@@ -28,8 +28,9 @@ for i=0,nfiles-1 do begin
 splog, 'reading file', filelist[i]
 hdr=headfits(filelist[i])
 darktime=sxpar(hdr,'DARKTIME')
-exptime=sxpar(hdr,'EXPTIME')
 splog, 'darktime',darktime
+exptime=sxpar(hdr,'EXPTIME')
+splog, 'exptime',exptime
 
 flat[*,*,i]=(mosaic_mrdfits(filelist[i],hdu,crosstalk=crosstalk) $
              -zero-dark*darktime)/exptime

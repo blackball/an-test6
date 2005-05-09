@@ -8,13 +8,12 @@ path='/global/data/scr/morad/4meter/'
 mosaic_crosstalk_analyze
 
 ; make the averaged zero:
-filelist=file_search(path+'/2005-04-08/zero*')
+filelist=file_search(path+'/2005-04-08/zero*.fits')
 avzero='zero_av168to177.fits'
 mosaic_average_zero,filelist,avzero
 
 ; make the averaged dark
-filelist=file_search(path+'/2005-04-07/dar12*)
-filelist=[filelist,path+'/2005-04-07/dar158.fits',path+'/2005-04-07/dar159.fits',path+'/2005-04-07/dar160.fits']
+filelist=file_search(path+'/2005-04-07/dark*.fits')
 avdark='dark_av121to123-158to160.fits'
 mosaic_average_dark,filelist,avzero,avdark
 

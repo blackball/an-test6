@@ -2,7 +2,6 @@ pro mosaic_average_dark,filelist,avzero,darkname
 
 nfiles=n_elements(filelist)
 
-   
 hdr0=headfits(filelist[0])
 naxis=sxpar(hdr0,'NAXIS')
 if (naxis eq 2) then begin
