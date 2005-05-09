@@ -22,12 +22,12 @@ if bitpix ne 16 then begin
     return, -1
 endif
 splog, 'reading HDU',hdu,' of '+filename
-image= mrdfits(filename,hdu)+32768.0
+image= mrdfits(filename,hdu,/silent)+32768.0
 crosstalkers= where(crosstalk[*,hdu-1] GT 1d-4,ncross)
 for ii=0,ncross-1 do begin
     splog, 'removing HDU',crosstalkers[ii]+1,' crosstalk'
     image= image-float(crosstalk[crosstalkers[ii],hdu-1]) $
-      *(mrdfits(filename,(crosstalkers[ii]+1))+32768.0)
+      *(mrdfits(filename,(crosstalkers[ii]+1),/silent)+32768.0)
 endfor
 return, image
 end
