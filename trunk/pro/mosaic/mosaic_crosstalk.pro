@@ -6,18 +6,48 @@
 ; INPUTS:
 ;   filename   - name of a raw Mosaic filename to read/test
 ; BUGS:
-;   - sky grid size hard-coded.
+;   - image size hard-coded
+;   - sub-section size hard-coded
 ; REVISION HISTORY:
 ;   2005-05-05  started - Hogg
 ;-
-function mosaic_crosstalk_one, vec1,vec2
+function mosaic_crosstalk_one, image1,image2,x1=x1,y1=y1
 
-; make masks of bright pixels
-quantile= weighted_quantile(vec2,quant=[0.05,0.95])
-mask2= ((vec2 GE quantile[0]) AND (vec2 LE quantile[1]))
+; find best subsection
+nx= 256L
+ny= 512L
+if (n_elements(x1) EQ 0) then begin
+    bestsig= 0.
+    for x1=nx/2,2048-3*nx/2,nx/2 do for y1=ny/2,4096-3*ny/2,ny/2 do begin
+        sig= djsig(image1[x1:x1+nx-1,y1:y1+ny-1],sigrej=100.0,maxiter=1)
+        if (sig GT bestsig) then begin
+            bestsig= sig
+            bestx1= x1
+            besty1= y1
+        endif
+    endfor
+    x1= bestx1
+    y1= besty1
+endif
+splog, 'best section starts at',x1,y1
+
+; reform
+npix= nx*ny
+vec1= reform(image1[x1:x1+nx-1,y1:y1+ny-1],npix)
+vec2= reform(image2[x1:x1+nx-1,y1:y1+ny-1],npix)
+xxx= reform(dindgen(nx)#(dblarr(ny)+1),npix)-(double(nx-1)/2)
+yyy= reform((dblarr(nx)+1)#dindgen(ny),npix)-(double(ny-1)/2)
+
+; make masks of extreme pixels -- NB that we DON'T want extreme pixels
+;                                 in vec2, and we DO want extreme
+;                                 pixels in vec1
+quant1= weighted_quantile(vec1,quant=[0.05,0.95])
+quant2= weighted_quantile(vec2,quant=[0.01,0.99])
+mask= (((vec1 LE quant1[0]) OR (vec1 GE quant1[1])) AND $
+       (vec2 GE quant2[0]) AND (vec2 LE quant2[1]))
 
 ; find amplitude by least-squares?
-aa= [[double(vec1*mask2)],[double(mask2)]]
+aa= [[double(vec1*mask)],[double(mask)],[xxx*mask],[yyy*mask]]
 aataa= transpose(aa)#aa
 aataainvaa= invert(aataa,/double)
 aatyy= aa##[[double(vec2)]]
@@ -45,32 +75,26 @@ splog, 'working on '+filename
 
 ; loop over all eligible pairs
 for hdu1=1,8 do begin
-    for hdu2=hdu1+1,8 do begin
+    if (n_elements(im1x) GT 0) then foo= temporary(im1x)
+    if (n_elements(im1y) GT 0) then foo= temporary(im1y)
 
-; read in all hdu1 and hdu2
-        mosaic_data_section, filename,hdu1,xmin,xmax,ymin,ymax,hdr=hdr
-        image1= (mosaic_mrdfits(filename,hdu1,hdr1))[xmin:xmax,ymin:ymax]
+; read in hdu1
+    mosaic_data_section, filename,hdu1,xmin,xmax,ymin,ymax,hdr=hdr
+    image1= (mosaic_mrdfits(filename,hdu1,hdr1))[xmin:xmax,ymin:ymax]
+
+; read in hdu2
+    for hdu2=hdu1+1,8 do begin
         mosaic_data_section, filename,hdu2,xmin,xmax,ymin,ymax,hdr=hdr
         image2= (mosaic_mrdfits(filename,hdu2,hdr2))[xmin:xmax,ymin:ymax]
         if (((sxpar(hdr1,'ATM1_1')*sxpar(hdr2,'ATM1_1')) EQ (-1)) AND $
             ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
           image2= rotate(image2,2)
 
-; estimate and subtract sky
-        bw_est_sky, image1,sky1
-        image1= image1-temporary(sky1)
-        bw_est_sky, image2,sky2
-        image2= image2-temporary(sky2)
-
-; reform
-        npix= n_elements(image1)
-        image1= reform(image1,npix)
-        image2= reform(image2,npix)
-
 ; compute and store
-        crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2)
-        crosstalk[hdu2-1,hdu1-1]= mosaic_crosstalk_one(image2,image1)
+        crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2, $
+                                                       x1=im1x,y1=im1y)
         splog, 'contribution of',hdu1,' to',hdu2,' is',crosstalk[hdu1-1,hdu2-1]
+        crosstalk[hdu2-1,hdu1-1]= mosaic_crosstalk_one(image2,image1)
         splog, 'contribution of',hdu2,' to',hdu1,' is',crosstalk[hdu2-1,hdu1-1]
     endfor
 endfor
