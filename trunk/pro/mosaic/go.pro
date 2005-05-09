@@ -6,13 +6,13 @@ path='/global/data/scr/morad/4meter/'
 
 filelist=file_search(path+'/2005-04-??/obj*.fits*')
 for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
+mosaic_crosstalk_analyze
 
 ;making the averaged zero:
 
 filelist=file_search(path+'/2005-04-08/zero*')
 avzero='zero_av168to177.fits'
 mosaic_average_zero,filelist,avzero
-
 
 ;making the averaged dark
 
