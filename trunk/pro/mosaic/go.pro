@@ -8,65 +8,80 @@ path='/global/data/scr/morad/4meter/'
 mosaic_crosstalk_analyze
 
 ; make the averaged zero:
-filelist=file_search(path+'/2005-04-08/zero*.fits')
 avzero='zero_av168to177.fits'
-mosaic_average_zero,filelist,avzero
+if (NOT file_test(avzero)) then begin
+    filelist=file_search(path+'/2005-04-08/zero*.fits')
+    mosaic_average_zero,filelist,avzero
+endif
 
 ; make the averaged dark
-filelist=file_search(path+'/2005-04-07/dark*.fits')
 avdark='dark_av121to123-158to160.fits'
-mosaic_average_dark,filelist,avzero,avdark
+if (NOT file_test(avdark)) then begin
+    filelist=file_search(path+'/2005-04-07/dark*.fits')
+    mosaic_average_dark,filelist,avzero,avdark
+endif
 
 ; make the averaged flats
 ; g-band
-filelist=[path+'/2005-04-07/dflat091.fits',path+'/2005-04-07/dflat092.fits',path+'/2005-04-07/dflat093.fits',path+'/2005-04-07/dflat094.fits',path+'/2005-04-07/dflat095.fits']
-gflat='flat_g_091to095.fits'
-mosaic_average_flat,filelist,avzero,avdark,gflat
+gflat= 'flat_g_091to095.fits'
+if (NOT file_test(gflat)) then begin
+    filelist= path+'2005-04-07/dflat'+['091','092','093','094','095']+'.fits'
+    mosaic_average_flat,filelist,avzero,avdark,gflat
+endif
 
 ; r-band
-filelist=[path+'/2005-04-07/dflat096.fits',path+'/2005-04-07/dflat097.fits',path+'/2005-04-07/dflat098.fits',path+'/2005-04-07/dflat099.fits',path+'/2005-04-07/dflat100.fits']
-rflat='flat_r_096to100.fits'
-mosaic_average_flat,filelist,avzero,avdark,rflat
+rflat= 'flat_r_096to100.fits'
+if (NOT file_test(rflat)) then begin
+    filelist= path+'2005-04-07/dflat'+['096','097','098','099','100']+'.fits'
+    mosaic_average_flat,filelist,avzero,avdark,rflat
+endif
 
 ; i-band
-filelist=[path+'/2005-04-07/dflat101.fits',path+'/2005-04-07/dflat102.fits',path+'/2005-04-07/dflat103.fits',path+'/2005-04-07/dflat104.fits',path+'/2005-04-07/dflat105.fits']
-iflat='flat_i_101to105.fits'
-mosaic_average_flat,filelist,avzero,avdark,iflat
+iflat= 'flat_i_101to105.fits'
+if (NOT file_test(iflat)) then begin
+    filelist= path+'2005-04-07/dflat'+['101','102','103','104','105']+'.fits'
+    mosaic_average_flat,filelist,avzero,avdark,iflat
+endif
 
-; making the flattened willman 1
-; g-band
-filelist=['obj125.fits']
-for i=126,130 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
-for i=138,142 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
-for i=0,11 do mosaic_flatten,path+'2005-04-07/'+filelist[i],avzero,avdark,gflat,path+'redux/Willman1/flatten_'+filelist[i]
-
-; r-band
-filelist=['obj132.fits']
-for i=133,136 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
-for i=0,4 do mosaic_flatten,path+'2005-04-07/'+filelist[i],avzero,avdark,rflat,path+'redux/Willman1/flatten_'+filelist[i]
- 
-filelist=['obj179.fits']
-for i=180,183 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
-for i=0,4 do mosaic_flatten,path+'2005-04-08/'+filelist[i],avzero,avdark,rflat,path+'redux/Willman1/flatten_'+filelist[i]
-
-; i-band
-filelist=['obj226.fits']
-for i=227,232 do filelist=[filelist,'obj'+string(i,format='(I3.1)')+'.fits']
-for i=0,6 do mosaic_flatten,path+'2005-04-09/'+filelist[i],avzero,avdark,iflat,path+'redux/Willman1/flatten_'+filelist[i]
-
-; make bitmask
- bitmaskname='mosaic_bitmask.fits' 
- mosaic_bitmask,avzero,avdark,gflat,bitmaskname
+; flatten obj files
+flatdir= path+'f'
+cmd= 'mkdir -p '+flatdir
+splog, cmd
+spawn, cmd
+filelist=file_search(path+'/2005-04-??/obj*.fits*')
+for ii=0,n_elements(filelist)-1 do begin
+    tmp= strsplit(filelist[ii],'/',/extract)
+    outfile= flatdir+'/f'+tmp[n_elements(tmp)-1]
+    if (NOT file_test(outfile)) then begin
+        filter= sxpar(headfits(filelist[ii]),'FILTER')
+        if (strmid(filter,0,1) EQ 'g') then flat= gflat $
+        else if (strmid(filter,0,1) EQ 'r') then flat= rflat $
+        else if (strmid(filter,0,1) EQ 'i') then flat= iflat $
+        else begin
+            splog, 'ERROR: unrecognized filter: '+filter
+            return
+        endelse
+        splog, 'making '+outfile+' from '+filelist[ii]+' using '+flat
+        mosaic_flatten,filelist[ii],avzero,avdark,flat,outfile
+    endif else begin
+        splog, outfile+' already exists, skipping'
+    endelse
+endfor
 
 ; measure / fix / install astrometric headers (GSSS!)
-dowcs, '/global/data/scr/morad/4meter/flatten', $
-       '/global/data/scr/morad/4meter/newaf'
+dowcs, flatdir,'/global/data/scr/morad/4meter/newaf'
 spawn, '\rm -rfv /global/data/scr/morad/4meter/oldaf'
 spawn, '\mv -fv /global/data/scr/morad/4meter/af /global/data/scr/morad/4meter/oldaf'
 spawn, '\mv -fv /global/data/scr/morad/4meter/newaf /global/data/scr/morad/4meter/af'
 
 ; calibrate images by comparison with SDSS
 ; [THIS NEEDS TO BE DONE]
+
+; make bitmask
+bitmaskname= 'mosaic_bitmask.fits' 
+if (NOT file_test(bitmaskname)) then begin
+    mosaic_bitmask,avzero,avdark,gflat,bitmaskname
+endif
 
 ; make mosaics
 ; makemosaics
