@@ -29,7 +29,7 @@ splog, 'reading file', filelist[i]
 hdr=headfits(filelist[i])
 darktime=sxpar(hdr,'DARKTIME')
 splog, 'darktime',darktime
-dark[*,*,i]=(mosaic_mrdfits(filelist[i],hdu)-zero)/darktime
+dark[*,*,i]=(mosaic_mrdfits(filelist[i],hdu,crosstalk=crosstalk)-zero)/darktime
 endfor
 
 avsigclip=djs_avsigclip(temporary(dark),sigre=3,maxiter=10)

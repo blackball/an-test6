@@ -31,7 +31,8 @@ darktime=sxpar(hdr,'DARKTIME')
 exptime=sxpar(hdr,'EXPTIME')
 splog, 'darktime',darktime
 
-flat[*,*,i]=(mosaic_mrdfits(filelist[i],hdu)-zero-dark*darktime)/exptime
+flat[*,*,i]=(mosaic_mrdfits(filelist[i],hdu,crosstalk=crosstalk) $
+             -zero-dark*darktime)/exptime
 endfor
 
 avsigclip=djs_avsigclip(temporary(flat),sigre=3,maxiter=10)
