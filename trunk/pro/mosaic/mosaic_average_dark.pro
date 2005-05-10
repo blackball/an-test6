@@ -31,7 +31,7 @@ for hdu=firsthdu,lasthdu do begin
         dark[*,*,i]=(mosaic_mrdfits(filelist[i],hdu,crosstalk=crosstalk) $
                      -zero)/darktime
     endfor
-    avsigclip=djs_avsigclip(temporary(dark),sigre=3,maxiter=10)
+    avsigclip= float(djs_avsigclip(temporary(dark),sigre=3,maxiter=10))
     mwrfits,avsigclip,darkname
 endfor
 return

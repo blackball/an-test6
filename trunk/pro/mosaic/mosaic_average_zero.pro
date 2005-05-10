@@ -25,7 +25,7 @@ for hdu=firsthdu,lasthdu do begin
     zero=intarr(xsize,ysize,nfiles)
     for i=0,nfiles-1 do zero[*,*,i]= mosaic_mrdfits(filelist[i],hdu, $
                                                     crosstalk=crosstalk)
-    avsigclip=djs_avsigclip(zero,sigre=3,maxiter=10)
+    avsigclip= float(djs_avsigclip(zero,sigre=3,maxiter=10))
     mwrfits,avsigclip,zeroname
 endfor
 return

@@ -37,8 +37,8 @@ for hdu=firsthdu,lasthdu do begin
                      -zero-dark*darktime)/exptime
     endfor
 
-    avsigclip=djs_avsigclip(temporary(flat),sigre=3,maxiter=10)
-    if (not keyword_set(norm)) then norm= median(avsigclip)
+    avsigclip= float(djs_avsigclip(temporary(flat),sigre=3,maxiter=10))
+    if (not keyword_set(norm)) then norm= float(median(avsigclip))
     mwrfits,avsigclip/norm,flatname
 endfor
 return
