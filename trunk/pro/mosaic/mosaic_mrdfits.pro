@@ -22,7 +22,9 @@ if bitpix ne 16 then begin
     return, -1
 endif
 splog, 'reading HDU',hdu,' of '+filename
-image= mrdfits(filename,hdu,/silent)+32768.0
+image= mrdfits(filename,hdu,hdr,/silent)+32768.0
+mosaic_data_section, filename,hdu,xmin,xmax,ymin,ymax,hdr=hdr
+image= image[xmin:xmax,ymin:ymax]
 crosstalkers= where(crosstalk[*,hdu-1] GT 1d-4,ncross)
 for ii=0,ncross-1 do begin
     splog, 'removing HDU',crosstalkers[ii]+1,' crosstalk'

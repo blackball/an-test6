@@ -24,6 +24,7 @@ for hdu=firsthdu,lasthdu do begin
     flatten=(mosaic_mrdfits(infile,hdu,hdr,crosstalk=crosstalk) $
              -zero-dark*darktime) $
       /(exptime*(flat+(flat le 0.)))
+
     mwrfits,flatten,flattenname,hdr
 endfor
 return

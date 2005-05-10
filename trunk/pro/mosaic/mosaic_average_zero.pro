@@ -17,24 +17,17 @@ endif else begin
 endelse
 
 lasthdu=sxpar(hdr0,'NEXTEND')
-
 for hdu=firsthdu,lasthdu do begin
-
-hdr=headfits(filelist[0],exten=hdu)
-xsize=sxpar(hdr,'NAXIS1')
-ysize=sxpar(hdr,'NAXIS2')
-zero=intarr(xsize,ysize,nfiles)
-
-for i=0,nfiles-1 do zero[*,*,i]= mosaic_mrdfits(filelist[i],hdu, $
-                                                crosstalk=crosstalk)
-
-avsigclip=djs_avsigclip(zero,sigre=3,maxiter=10)
-
-mwrfits,avsigclip,zeroname
-
+    hdr=headfits(filelist[0],exten=hdu)
+    mosaic_data_section, filelist[0],hdu,xmin,xmax,ymin,ymax,hdr=hdr
+    xsize= xmax-xmin+1
+    ysize= ymax-ymin+1
+    zero=intarr(xsize,ysize,nfiles)
+    for i=0,nfiles-1 do zero[*,*,i]= mosaic_mrdfits(filelist[i],hdu, $
+                                                    crosstalk=crosstalk)
+    avsigclip=djs_avsigclip(zero,sigre=3,maxiter=10)
+    mwrfits,avsigclip,zeroname
 endfor
-
 return
-
 end
 

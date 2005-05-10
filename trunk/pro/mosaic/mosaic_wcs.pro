@@ -25,9 +25,6 @@ naxis1= sxpar(hdr,'NAXIS1')
 naxis2= sxpar(hdr,'NAXIS2')
 filter= strmid(sxpar(hdr,'FILTER'),0,1)
 
-; read image *data* section
-mosaic_data_section, 'foo',bar,x1,x2,y1,y2,hdr=hdr
-
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
 fwhm= 6.0                     ; hard-coded at 1.5 arcsec
@@ -36,13 +33,11 @@ if (filter EQ 'r') then hmin= 0.3
 if (filter EQ 'i') then hmin= 0.6
 sharplim= [-10,10.0]          ; don't know what this means
 roundlim= [-10.0,10.0]          ; don't know what this means
-tmpimage= image[x1:x2,y1:y2]
+tmpimage= image
 bw_est_sky, tmpimage,tmpsky
 tmpimage= tmpimage-temporary(tmpsky)
-find, tmpimage,xx,yy,flux,sharp,round, $
+find, temporary(tmpimage),xx,yy,flux,sharp,round, $
   hmin,fwhm,roundlim,sharplim,/silent
-xx= xx+x1
-yy= yy+y1
 splog, 'FIND found',n_elements(xx),' stars in the image'
 
 ; hack out large groups of close stars
