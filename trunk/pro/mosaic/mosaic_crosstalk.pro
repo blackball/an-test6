@@ -79,15 +79,13 @@ for hdu1=1,8 do begin
     if (n_elements(im1y) GT 0) then foo= temporary(im1y)
 
 ; read in hdu1
-    mosaic_data_section, filename,hdu1,xmin,xmax,ymin,ymax,hdr=hdr
-    image1= (mosaic_mrdfits(filename,hdu1,hdr1, $
-                            crosstalk=dblarr(8,8)))[xmin:xmax,ymin:ymax]
+    image1= mosaic_mrdfits(filename,hdu1,hdr1, $
+                           crosstalk=dblarr(8,8))
 
 ; read in hdu2
     for hdu2=hdu1+1,8 do begin
-        mosaic_data_section, filename,hdu2,xmin,xmax,ymin,ymax,hdr=hdr
-        image2= (mosaic_mrdfits(filename,hdu2,hdr2, $
-                                crosstalk=dblarr(8,8)))[xmin:xmax,ymin:ymax]
+        image2= mosaic_mrdfits(filename,hdu2,hdr2, $
+                               crosstalk=dblarr(8,8))
         if (((sxpar(hdr1,'ATM1_1')*sxpar(hdr2,'ATM1_1')) EQ (-1)) AND $
             ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
           image2= rotate(image2,2)
