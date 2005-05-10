@@ -27,36 +27,45 @@ filter= strmid(sxpar(hdr,'FILTER'),0,1)
 
 ; find stars in this image
 sigma= djsig(image[500:1500,1500:2500]) ; section hard-wired
-fwhm= 6.0                     ; hard-coded at 1.5 arcsec
+fwhm= 6.0   ; hard-coded at random
 if (filter EQ 'g') then hmin= 0.2 ; hard-coded, don't know what this means
 if (filter EQ 'r') then hmin= 0.3
 if (filter EQ 'i') then hmin= 0.6
-sharplim= [-10,10.0]          ; don't know what this means
-roundlim= [-10.0,10.0]          ; don't know what this means
+nstarrange= [200,600]  ; hard-coded range of star catalog size
+sharplim= [-10.0,10.0]  ; don't know what this means -- CR rejection
+roundlim= [-100.0,100.0]  ; don't know what this means
 tmpimage= image
 bw_est_sky, tmpimage,tmpsky
 tmpimage= tmpimage-temporary(tmpsky)
-find, temporary(tmpimage),xx,yy,flux,sharp,round, $
-  hmin,fwhm,roundlim,sharplim,/silent
-splog, 'FIND found',n_elements(xx),' stars in the image'
+repeat begin
+    find, tmpimage,xx,yy,flux,sharp,round, $
+      hmin,fwhm,roundlim,sharplim,/silent
+    splog, 'FIND found',n_elements(xx),' "stars" in the image'
 
 ; hack out large groups of close stars
-range= (max(xx)-min(xx)) > (max(yy)-min(yy))
+    range= (max(xx)-min(xx)) > (max(yy)-min(yy))
 ; HACK to make spheregroup run as a 2d planar FOF
-ingroup= spheregroup((xx-mean(xx))/range,(yy-mean(yy))/range,3.0*fwhm/range, $
-                     multgroup=multgroup)
-good= where(multgroup[ingroup] EQ 1)
-xx= xx[good]
-yy= yy[good]
-splog, '2-d FOF left',n_elements(xx),' stars in the image'
+    linklen= 0.1/sqrt(n_elements(xx))
+    ingroup= spheregroup((xx-mean(xx))/range,(yy-mean(yy))/range, $
+                         linklen,multgroup=multgroup)
+    good= where(multgroup[ingroup] EQ 1)
+    xx= xx[good]
+    yy= yy[good]
+    splog, '2-d FOF left',n_elements(xx),' "stars" in the image'
 
 ; hack out vertical lines of stars
-ingroup= spheregroup((xx-mean(xx))/range,0.0*xx,3.0*fwhm/range/2048.0, $
-                     multgroup=multgroup)
-good= where(multgroup[ingroup] EQ 1)
-xx= xx[good]
-yy= yy[good]
-splog, '1-d FOF left',n_elements(xx),' stars in the image'
+    ingroup= spheregroup((xx-mean(xx))/range,0.0*xx,linklen/2048.0, $
+                         multgroup=multgroup)
+    good= where(multgroup[ingroup] EQ 1)
+    xx= xx[good]
+    yy= yy[good]
+    splog, '1-d FOF left',n_elements(xx),' "stars" in the image'
+
+; get numbers right
+    nstars= n_elements(xx)
+    if (nstars LT nstarrange[0]) then hmin= 0.8*hmin
+    if (nstars GT nstarrange[1]) then hmin= 2*hmin
+endrep until ((nstars GE nstarrange[0]) AND (nstars LE nstarrange[1]))
 
 ; do a first shift with the tangent projection
 extast, hdr,astr
@@ -76,14 +85,15 @@ gsa= mosaic_gsainit(astr.cd,astr.crpix,astr.crval)
 ; iterate fit to tweak it up
 niter=6
 for ii=0,niter do begin
-    dtheta= 3.0
+    dtheta= 6.0/3600.0
+    if (ii ge (niter/2)) then dtheta= 2.0/3600.0
     order= 1
     if (ii ge (niter/2)) then order= 2
     verbose= 0
     if (ii eq niter) then verbose= 1
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
                                verbose=verbose,nmatch=nmatch, $
-                               sigmax=sigmax,sigmay=sigmay)
+                               sigmax=sigmax,sigmay=sigmay,dtheta=dtheta)
     gsa= newgsa
 endfor
 

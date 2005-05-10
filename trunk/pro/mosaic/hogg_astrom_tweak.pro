@@ -15,8 +15,8 @@
 ;   imx,imy       - image star positions
 ;
 ; OPTIONAL KEYWORDS:
-;   dtheta     - Match distance between catalog and image stars;
-;                default to 5 arcsec
+;   dtheta     - Match distance between catalog and image stars (deg);
+;                default to 5/3600.
 ;   order      - default to 1; maximum 3.
 ;   verbose    - If set, then print sizes of offsets
 ;  
