@@ -2,9 +2,9 @@
 ; NAME:
 ;   mosaic_crosstalk_analyze
 ; PURPOSE:
-;   Estimate all 64-8 mosaic chip crosstalk terms
+;   Estimate all 64-8 mosaic chip crosstalk terms from files created
+;   by mosaic_crosstalk.
 ; INPUTS:
-;   filename   - name of a raw Mosaic filename to read/test
 ; REVISION HISTORY:
 ;   2005-05-05  started - Hogg
 ;-
