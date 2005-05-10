@@ -1,10 +1,10 @@
 pro go
 
-path='/global/data/scr/morad/4meter/'
+path='/global/data/scr/morad/4meter'
 
 ; estimate cross-talk:
-;filelist=file_search(path+'/2005-04-??/obj*.fits*')
-;for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
+filelist=file_search(path+'/2005-04-??/obj*.fits*')
+for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
 mosaic_crosstalk_analyze
 
 ; make the averaged zero:
@@ -25,26 +25,26 @@ endif
 ; g-band
 gflat= 'flat_g_091to095.fits'
 if (NOT file_test(gflat)) then begin
-    filelist= path+'2005-04-07/dflat'+['091','092','093','094','095']+'.fits'
+    filelist= path+'/2005-04-07/dflat'+['091','092','093','094','095']+'.fits'
     mosaic_average_flat,filelist,avzero,avdark,gflat
 endif
 
 ; r-band
 rflat= 'flat_r_096to100.fits'
 if (NOT file_test(rflat)) then begin
-    filelist= path+'2005-04-07/dflat'+['096','097','098','099','100']+'.fits'
+    filelist= path+'/2005-04-07/dflat'+['096','097','098','099','100']+'.fits'
     mosaic_average_flat,filelist,avzero,avdark,rflat
 endif
 
 ; i-band
 iflat= 'flat_i_101to105.fits'
 if (NOT file_test(iflat)) then begin
-    filelist= path+'2005-04-07/dflat'+['101','102','103','104','105']+'.fits'
+    filelist= path+'/2005-04-07/dflat'+['101','102','103','104','105']+'.fits'
     mosaic_average_flat,filelist,avzero,avdark,iflat
 endif
 
 ; flatten obj files
-flatdir= path+'f'
+flatdir= path+'/f'
 cmd= 'mkdir -p '+flatdir
 splog, cmd
 spawn, cmd
@@ -69,20 +69,23 @@ for ii=0,n_elements(filelist)-1 do begin
 endfor
 
 ; measure / fix / install astrometric headers (GSSS!)
-spawn, 'mkdir -p /global/data/scr/morad/4meter/newaf'
-dowcs, flatdir,'/global/data/scr/morad/4meter/newaf'
-spawn, '\rm -rfv /global/data/scr/morad/4meter/oldaf'
-spawn, '\mv -fv /global/data/scr/morad/4meter/af /global/data/scr/morad/4meter/oldaf'
-spawn, '\mv -fv /global/data/scr/morad/4meter/newaf /global/data/scr/morad/4meter/af'
-
-; calibrate images by comparison with SDSS
-; [THIS NEEDS TO BE DONE]
+spawn, 'mkdir -p '+path+'/newaf'
+dowcs, flatdir,path+'/newaf'
+spawn, '\rm -rfv '+path+'/oldaf'
+spawn, '\mv -fv '+path+'/af '+path+'/oldaf'
+spawn, '\mv -fv '+path+'/newaf '+path+'/af'
 
 ; make bitmask
 bitmaskname= 'mosaic_bitmask.fits' 
 if (NOT file_test(bitmaskname)) then begin
     mosaic_bitmask,avzero,avdark,gflat,bitmaskname
 endif
+
+; update the flats on large scales using comparisons to SDSS sources
+
+; readjust flattening
+
+; calibrate to SDSS
 
 ; make mosaics
 ; makemosaics
