@@ -69,6 +69,7 @@ for ii=0,n_elements(filelist)-1 do begin
 endfor
 
 ; measure / fix / install astrometric headers (GSSS!)
+spawn, 'mkdir -p /global/data/scr/morad/4meter/newaf'
 dowcs, flatdir,'/global/data/scr/morad/4meter/newaf'
 spawn, '\rm -rfv /global/data/scr/morad/4meter/oldaf'
 spawn, '\mv -fv /global/data/scr/morad/4meter/af /global/data/scr/morad/4meter/oldaf'
