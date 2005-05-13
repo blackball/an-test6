@@ -91,7 +91,7 @@ for hdu1=1,8 do begin
 ; read in hdu2
     for hdu2=hdu1+1,8 do begin
         if keyword_set(redo) then $
-          image2= mrdfits(filename,hdu2,hdr2)
+          image2= mrdfits(filename,hdu2,hdr2) $
         else $
           image2= mosaic_mrdfits(filename,hdu2,hdr2, $
                                  crosstalk=dblarr(8,8))
