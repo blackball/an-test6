@@ -15,11 +15,16 @@
 ;   2005-05-05  started - Hogg
 ;-
 pro mosaic_crosstalk_analyze, filelist,redo=redo
-
-; deal with file names (and old crosstalk values if "redo" is set)
 prefix= 'mosaic_crosstalk'
-if keyword_set(redo) then oldcrosstalk= mrdfits(prefix+'.fits')
+
+; read old/existing crosstalk values if this is a re-do
+if keyword_set(redo) then begin
+    oldcrosstalk= mrdfits(prefix+'.fits')
+    oldcrosstalk[where(oldcrosstalk LE 1d-4)]= 0.0
+endif
 if keyword_set(redo) then prefix= 'redo_'+prefix
+
+; file names
 crosstalkname= prefix+'.fits'
 psfilename= prefix+'.ps'
 htmlname= prefix+'.html'
