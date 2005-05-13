@@ -5,6 +5,9 @@
 ;   Estimate all 64-8 mosaic chip crosstalk terms
 ; INPUTS:
 ;   filename   - name of a raw Mosaic filename to read/test
+; KEYWORDS:
+;   redo       - assume that this is a flattened file, not a raw file,
+;                and this is a re-do of the calculation.
 ; BUGS:
 ;   - image size hard-coded
 ;   - sub-section size hard-coded
@@ -56,7 +59,7 @@ xx= aataainvaa##aatyy
 return, xx[0]
 end
 
-pro mosaic_crosstalk, filename
+pro mosaic_crosstalk, filename,redo=redo
 crosstalk= dblarr(8,8)
 
 ; deal with file names
@@ -79,13 +82,19 @@ for hdu1=1,8 do begin
     if (n_elements(im1y) GT 0) then foo= temporary(im1y)
 
 ; read in hdu1
-    image1= mosaic_mrdfits(filename,hdu1,hdr1, $
-                           crosstalk=dblarr(8,8))
+    if keyword_set(redo) then $
+      image1= mrdfits(filename,hdu1,hdr1) $
+    else $
+      image1= mosaic_mrdfits(filename,hdu1,hdr1, $
+                             crosstalk=dblarr(8,8))
 
 ; read in hdu2
     for hdu2=hdu1+1,8 do begin
-        image2= mosaic_mrdfits(filename,hdu2,hdr2, $
-                               crosstalk=dblarr(8,8))
+        if keyword_set(redo) then $
+          image2= mrdfits(filename,hdu2,hdr2)
+        else $
+          image2= mosaic_mrdfits(filename,hdu2,hdr2, $
+                                 crosstalk=dblarr(8,8))
         if (((sxpar(hdr1,'ATM1_1')*sxpar(hdr2,'ATM1_1')) EQ (-1)) AND $
             ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
           image2= rotate(image2,2)

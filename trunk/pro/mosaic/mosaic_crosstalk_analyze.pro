@@ -5,14 +5,28 @@
 ;   Estimate all 64-8 mosaic chip crosstalk terms from files created
 ;   by mosaic_crosstalk.
 ; INPUTS:
+;   filelist   - list of files made by mosaic_crosstalk
+; KEYWORDS:
+;   redo       - if set, assume that crosstalk is already computed,
+;                and we are looking at the residuals in the crosstalk,
+;                to be added to the existing crosstalk calculation for
+;                future use.
 ; REVISION HISTORY:
 ;   2005-05-05  started - Hogg
 ;-
-pro mosaic_crosstalk_analyze
+pro mosaic_crosstalk_analyze, filelist,redo=redo
 
-filelist=file_search('*_crosstalk.fits')
+; deal with file names (and old crosstalk values if "redo" is set)
+prefix= 'mosaic_crosstalk'
+if keyword_set(redo) then oldcrosstalk= mrdfits(prefix+'.fits')
+if keyword_set(redo) then prefix= 'redo_'+prefix
+crosstalkname= prefix+'.fits'
+psfilename= prefix+'.ps'
+htmlname= prefix+'.html'
+
 for ii=0,n_elements(filelist)-1 do begin
     this= mrdfits(filelist[ii],/silent)
+    if keyword_set(redo) then this= oldcrosstalk+this
     if keyword_set(crosstalk) then crosstalk= [[[crosstalk]],[[this]]] $
     else crosstalk= this
 endfor
@@ -21,7 +35,6 @@ median= 1
 crosstalk_quant= dblarr(8,8,n_elements(quantiles))
 
 ; open postscript file
-psfilename= 'mosaic_crosstalk.ps'
 xsize= 7.5 & ysize= 7.5
 set_plot, "PS"
 device, file=psfilename,/inches,xsize=xsize,ysize=ysize, $
@@ -31,7 +44,6 @@ tiny= 1.d-4
 !P.MULTI= [0,8,8]
 
 ; open HTML file
-htmlname= 'mosaic_crosstalk.html'
 openw, wlun,htmlname,/get_lun
 printf, wlun,'<html><head><title>'
 title= 'KPNO Mosaic chip-chip cross-talk coefficients'
@@ -93,7 +105,6 @@ close, wlun
 free_lun, wlun
 
 ; write fits file
-crosstalkname= 'mosaic_crosstalk.fits'
 ; splog, 'writing '+crosstalkname
 mwrfits, crosstalk_quant[*,*,median],crosstalkname,/create,/silent
 return
