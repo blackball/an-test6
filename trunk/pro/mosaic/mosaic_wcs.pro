@@ -110,7 +110,7 @@ sxaddhist, 'GSSS WCS added by the http://astrometry.net/ team',newhdr
 
 ; make QA plot if the fit is bad and jpeg is set
 if ((((sigmax > sigmay) GT 4.0) OR $
-     (nmatch LT 50)) AND $
+     (nmatch LT 30)) AND $
     keyword_set(jpeg)) then begin
     simage= (image-median(image))
     overlay=0
