@@ -5,7 +5,7 @@ path='/global/data/scr/morad/4meter'
 ; estimate cross-talk:
 filelist=file_search(path+'/2005-04-??/obj*.fits*')
 for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
-mosaic_crosstalk_analyze
+mosaic_crosstalk_analyze, file_search('obj*_crosstalk.fits')
 
 ; make the averaged zero:
 avzero='zero_av168to177.fits'
@@ -80,6 +80,11 @@ bitmaskname= 'mosaic_bitmask.fits'
 if (NOT file_test(bitmaskname)) then begin
     mosaic_bitmask,avzero,avdark,gflat,bitmaskname
 endif
+
+; re-estimate cross-talk:
+filelist=file_search(path+'/f/fobj*.fits*')
+for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii],/redo
+mosaic_crosstalk_analyze, file_search('fobj*_crosstalk.fits'),/redo
 
 ; update the flats on large scales using comparisons to SDSS sources
 
