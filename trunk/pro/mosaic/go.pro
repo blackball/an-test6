@@ -68,6 +68,19 @@ for ii=0,n_elements(filelist)-1 do begin
     endelse
 endfor
 
+; re-estimate cross-talk:
+filelist=file_search(path+'/f/fobj*.fits*')
+for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii],/redo
+mosaic_crosstalk_analyze, file_search('fobj*_crosstalk.fits'),/redo
+; IF YOU LIKE THE NEW COEFFS BETTER THAN THE OLD THEN DO THE FOLLOWING
+; spawn, '\mv redo_mosaic_crosstalk.fits mosaic_crosstalk.fits'
+; spawn, '\mv redo_mosaic_crosstalk.ps   mosaic_crosstalk.ps'
+; spawn, '\mv redo_mosaic_crosstalk.html mosaic_crosstalk.html'
+; spawn, '\rm zero*.fits dark*.fits flat*.fits'
+; spawn, '\rm -rvf '+path+'/oldf'
+; spawn, '\mv '+path+'/f '+path+'/oldf'
+; go
+
 ; measure / fix / install astrometric headers (GSSS!)
 spawn, 'mkdir -p '+path+'/newaf'
 dowcs, flatdir,path+'/newaf'
@@ -80,11 +93,6 @@ bitmaskname= 'mosaic_bitmask.fits'
 if (NOT file_test(bitmaskname)) then begin
     mosaic_bitmask,avzero,avdark,gflat,bitmaskname
 endif
-
-; re-estimate cross-talk:
-filelist=file_search(path+'/f/fobj*.fits*')
-for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii],/redo
-mosaic_crosstalk_analyze, file_search('fobj*_crosstalk.fits'),/redo
 
 ; update the flats on large scales using comparisons to SDSS sources
 
