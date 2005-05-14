@@ -20,7 +20,7 @@ prefix= 'mosaic_crosstalk'
 ; read old/existing crosstalk values if this is a re-do
 if keyword_set(redo) then begin
     oldcrosstalk= mrdfits(prefix+'.fits')
-    oldcrosstalk[where(oldcrosstalk LE 1d-4)]= 0.0
+    oldcrosstalk[where(oldcrosstalk LT mosaic_crosstalk_minimum())]= 0.0
 endif
 if keyword_set(redo) then prefix= 'redo_'+prefix
 

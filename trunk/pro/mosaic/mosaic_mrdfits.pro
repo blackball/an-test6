@@ -24,7 +24,7 @@ endif
 splog, 'reading HDU',hdu,' of '+filename
 image= float(mrdfits(filename,hdu,hdr,/silent))+32768.0
 mosaic_data_section, filename,hdu,xmin,xmax,ymin,ymax,hdr=hdr
-crosstalkers= where(crosstalk[*,hdu-1] GT 1d-4,ncross)
+crosstalkers= where(crosstalk[*,hdu-1] GE mosaic_crosstalk_minimum(),ncross)
 for ii=0,ncross-1 do begin
     coeff= float(crosstalk[crosstalkers[ii],hdu-1])
     splog, 'removing HDU',crosstalkers[ii]+1,' crosstalk with coeff',coeff
