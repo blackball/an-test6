@@ -3,9 +3,11 @@ pro go
 path='/global/data/scr/morad/4meter'
 
 ; estimate cross-talk:
-filelist=file_search(path+'/2005-04-??/obj*.fits*')
-for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
-mosaic_crosstalk_analyze, file_search('obj*_crosstalk.fits')
+if (NOT file_test('mosaic_crosstalk.fits') then begin
+    filelist=file_search(path+'/2005-04-??/obj*.fits*')
+    for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
+    mosaic_crosstalk_analyze, file_search('obj*_crosstalk.fits')
+endif
 
 ; make the averaged zero:
 avzero='zero_av168to177.fits'
@@ -69,24 +71,30 @@ for ii=0,n_elements(filelist)-1 do begin
 endfor
 
 ; re-estimate cross-talk:
-filelist=file_search(path+'/f/fobj*.fits*')
-for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii],/redo
-mosaic_crosstalk_analyze, file_search('fobj*_crosstalk.fits'),/redo
+if (NOT file_test('redo_mosaic_crosstalk.fits') then begin
+    filelist=file_search(path+'/f/fobj*.fits*')
+    for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii],/redo
+    mosaic_crosstalk_analyze, file_search('fobj*_crosstalk.fits'),/redo
+endif
+if 0 then begin ; DON'T do this except with adult supervision!!
 ; IF YOU LIKE THE NEW COEFFS BETTER THAN THE OLD THEN DO THE FOLLOWING
-; spawn, '\mv redo_mosaic_crosstalk.fits mosaic_crosstalk.fits'
-; spawn, '\mv redo_mosaic_crosstalk.ps   mosaic_crosstalk.ps'
-; spawn, '\mv redo_mosaic_crosstalk.html mosaic_crosstalk.html'
-; spawn, '\rm zero*.fits dark*.fits flat*.fits'
-; spawn, '\rm -rvf '+path+'/oldf'
-; spawn, '\mv '+path+'/f '+path+'/oldf'
-; go
+    spawn, '\mv redo_mosaic_crosstalk.fits mosaic_crosstalk.fits'
+    spawn, '\mv redo_mosaic_crosstalk.ps   mosaic_crosstalk.ps'
+    spawn, '\mv redo_mosaic_crosstalk.html mosaic_crosstalk.html'
+    spawn, '\rm -rf zero*.fits dark*.fits flat*.fits fobj*_crosstalk.fits'
+    spawn, '\rm -rf '+path+'/oldf'
+    spawn, '\mv '+path+'/f '+path+'/oldf'
+    spawn, '\rm -rf '+path+'/oldaf'
+    spawn, '\mv '+path+'/af '+path+'/oldaf'
+    go
+endif
 
 ; measure / fix / install astrometric headers (GSSS!)
 spawn, 'mkdir -p '+path+'/newaf'
 dowcs, flatdir,path+'/newaf'
-spawn, '\rm -rfv '+path+'/oldaf'
-spawn, '\mv -fv '+path+'/af '+path+'/oldaf'
-spawn, '\mv -fv '+path+'/newaf '+path+'/af'
+spawn, '\rm -rf '+path+'/oldaf'
+spawn, '\mv '+path+'/af '+path+'/oldaf'
+spawn, '\mv '+path+'/newaf '+path+'/af'
 
 ; make bitmask
 bitmaskname= 'mosaic_bitmask.fits' 
