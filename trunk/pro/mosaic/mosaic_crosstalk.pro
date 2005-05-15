@@ -9,13 +9,12 @@
 ;   redo       - assume that this is a flattened file, not a raw file,
 ;                and this is a re-do of the calculation.
 ; BUGS:
-;   - image size hard-coded
-;   - sub-section size hard-coded
-;   - only does neighboring HDUs to save time (since we know that
-;     there is only cross-talk on neighbors)
+;   - Image size hard-coded.
+;   - Sub-section size hard-coded.
+;   - Only does pairs of HDUs *known* to cross-talk (to save time).
 ; REVISION HISTORY:
 ;   2005-05-05  started - Hogg
-;   2005-05-15  only do neighboring HDUs - Hogg
+;   2005-05-15  only do crossing pairs of HDUs - Hogg
 ;-
 function mosaic_crosstalk_one, image1,image2,x1=x1,y1=y1
 
@@ -80,7 +79,7 @@ endif
 splog, 'working on '+filename
 
 ; loop over all eligible pairs
-for hdu1=1,8 do begin
+for hdu1=1,8,2 do begin
     if (n_elements(im1x) GT 0) then foo= temporary(im1x)
     if (n_elements(im1y) GT 0) then foo= temporary(im1y)
 
