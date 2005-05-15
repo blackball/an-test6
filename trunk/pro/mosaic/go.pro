@@ -3,7 +3,7 @@ pro go
 path='/global/data/scr/morad/4meter'
 
 ; estimate cross-talk:
-if (NOT file_test('mosaic_crosstalk.fits') then begin
+if (NOT file_test('mosaic_crosstalk.fits')) then begin
     filelist=file_search(path+'/2005-04-??/obj*.fits*')
     for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii]
     mosaic_crosstalk_analyze, file_search('obj*_crosstalk.fits')
@@ -71,7 +71,7 @@ for ii=0,n_elements(filelist)-1 do begin
 endfor
 
 ; re-estimate cross-talk:
-if (NOT file_test('redo_mosaic_crosstalk.fits') then begin
+if (NOT file_test('redo_mosaic_crosstalk.fits')) then begin
     filelist=file_search(path+'/f/fobj*.fits*')
     for ii=0,n_elements(filelist)-1 do mosaic_crosstalk, filelist[ii],/redo
     mosaic_crosstalk_analyze, file_search('fobj*_crosstalk.fits'),/redo
@@ -86,7 +86,7 @@ if 0 then begin ; DON'T do this except with adult supervision!!
     spawn, '\mv '+path+'/f '+path+'/oldf'
     spawn, '\rm -rf '+path+'/oldaf'
     spawn, '\mv '+path+'/af '+path+'/oldaf'
-    go
+;    go
 endif
 
 ; measure / fix / install astrometric headers (GSSS!)
