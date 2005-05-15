@@ -2,7 +2,7 @@
 ; NAME:
 ;   mosaic_crosstalk
 ; PURPOSE:
-;   Estimate all 64-8 mosaic chip crosstalk terms
+;   Estimate all mosaic chip crosstalk terms
 ; INPUTS:
 ;   filename   - name of a raw Mosaic filename to read/test
 ; KEYWORDS:
@@ -11,8 +11,11 @@
 ; BUGS:
 ;   - image size hard-coded
 ;   - sub-section size hard-coded
+;   - only does neighboring HDUs to save time (since we know that
+;     there is only cross-talk on neighbors)
 ; REVISION HISTORY:
 ;   2005-05-05  started - Hogg
+;   2005-05-15  only do neighboring HDUs - Hogg
 ;-
 function mosaic_crosstalk_one, image1,image2,x1=x1,y1=y1
 
@@ -89,23 +92,22 @@ for hdu1=1,8 do begin
                              crosstalk=dblarr(8,8))
 
 ; read in hdu2
-    for hdu2=hdu1+1,8 do begin
-        if keyword_set(redo) then $
-          image2= mrdfits(filename,hdu2,hdr2) $
-        else $
-          image2= mosaic_mrdfits(filename,hdu2,hdr2, $
-                                 crosstalk=dblarr(8,8))
-        if (((sxpar(hdr1,'ATM1_1')*sxpar(hdr2,'ATM1_1')) EQ (-1)) AND $
-            ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
-          image2= rotate(image2,2)
+    hdu2= hdu1+1
+    if keyword_set(redo) then $
+      image2= mrdfits(filename,hdu2,hdr2) $
+    else $
+      image2= mosaic_mrdfits(filename,hdu2,hdr2, $
+                             crosstalk=dblarr(8,8))
+    if (((sxpar(hdr1,'ATM1_1')*sxpar(hdr2,'ATM1_1')) EQ (-1)) AND $
+        ((sxpar(hdr1,'ATM2_2')*sxpar(hdr2,'ATM2_2')) EQ (-1))) then $
+      image2= rotate(image2,2)
 
 ; compute and store
-        crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2, $
-                                                       x1=im1x,y1=im1y)
-        splog, 'contribution of',hdu1,' to',hdu2,' is',crosstalk[hdu1-1,hdu2-1]
-        crosstalk[hdu2-1,hdu1-1]= mosaic_crosstalk_one(image2,image1)
-        splog, 'contribution of',hdu2,' to',hdu1,' is',crosstalk[hdu2-1,hdu1-1]
-    endfor
+    crosstalk[hdu1-1,hdu2-1]= mosaic_crosstalk_one(image1,image2, $
+                                                   x1=im1x,y1=im1y)
+    splog, 'contribution of',hdu1,' to',hdu2,' is',crosstalk[hdu1-1,hdu2-1]
+    crosstalk[hdu2-1,hdu1-1]= mosaic_crosstalk_one(image2,image1)
+    splog, 'contribution of',hdu2,' to',hdu1,' is',crosstalk[hdu2-1,hdu1-1]
 endfor
 
 ; write output
