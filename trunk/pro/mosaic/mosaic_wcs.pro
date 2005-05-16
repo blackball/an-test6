@@ -86,9 +86,10 @@ gsa= mosaic_gsainit(astr.cd,astr.crpix,astr.crval)
 niter=6
 for ii=0,niter do begin
     dtheta= 6.0/3600.0
-    if (ii ge (niter/2)) then dtheta= 2.0/3600.0
+    if (ii ge (niter/3)) then dtheta= 2.0/3600.0
     order= 1
-    if (ii ge (niter/2)) then order= 2
+    if (ii ge (niter/3)) then order= 2
+    if (ii ge (2*niter/3)) then order= 3
     verbose= 0
     if (ii eq niter) then verbose= 1
     newgsa = hogg_astrom_tweak(gsa,usno.ra,usno.dec,xx,yy,order=order, $
