@@ -7,11 +7,14 @@
 ;   prefix        - prefix to use for output file names
 ;   nx,ny         - numbers of images in the RA and Dec directions;
 ;                   must be odd
+; OPTIONAL INPUTS:
+;   rebinfactor   - rebin images by this integer factor (makes images smaller)
 ; BUGS:
+;   - Assumes the images will be in integer factor of rebin in size
 ; REVISION HISTORY:
 ;   2005-04-10  started under duress - Hogg
 ;-
-pro mosaic_mosaic_grid_combine, prefix,nx,ny
+pro mosaic_mosaic_grid_combine, prefix,nx,ny,rebinfactor=rebinfactor
 
 for ii=-(nx-1)/2,(nx-1)/2 do begin
     iistr= strtrim(string(ii),2)
@@ -21,8 +24,11 @@ for ii=-(nx-1)/2,(nx-1)/2 do begin
         if (jj GE 0) then jjstr= '+'+jjstr
 
         filename= prefix+'_'+iistr+jjstr+'.fits'
-        if (NOT keyword_set(column)) then column= mrdfits(filename,0,hdr) $
-        else column= [[mrdfits(filename)],[column]]
+        this= mrdfits(filename,0,hdr)
+        if keyword_set(rebinfactor) then $
+          this= rebin(this,size(this,/dimens)/rebinfactor)
+        if (NOT keyword_set(column)) then column= this $
+        else column= [[this],[column]]
         help, column
 
         if (NOT keyword_set(besthdr)) then besthdr= hdr
