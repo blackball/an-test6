@@ -1,3 +1,8 @@
+;+
+; BUGS:
+;  - No comment header.
+;  - Everything hard-coded.
+;-
 pro mosaic_bitmask,avzero,avdark,gflat,bitmaskname
 mwrfits,0,bitmaskname,/create
 for hdu=1,8 do begin
