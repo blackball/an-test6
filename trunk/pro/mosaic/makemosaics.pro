@@ -3,31 +3,31 @@ pro makemosaics
 
 racen= 158.72
 deccen= 51.92
-dra=  4.0/60.0
-ddec= 4.0/60.0
-nx= 11
-ny= 11
+dra=  8.0/60.0
+ddec= 8.0/60.0
+nx= 5
+ny= 5
 indir= '/global/data/scr/morad/4meter/af'
 prefix= indir+'/Ursa_Major_dwarf_KPNO'
 
-filelist= indir+'/af_obj'+['059','060','061','062','063', $
+filelist= indir+'/afobj'+['059','060','061','062','063', $
                            '185','186','187','188','189']+'.fits'
 gprefix= prefix+'_g'
 mosaic_mosaic_grid, filelist,gprefix,racen,deccen,dra,ddec,nx,ny 
-mosaic_mosaic_grid_combine, gprefix,nx,ny 
+mosaic_mosaic_grid_combine, gprefix,nx,ny,rebinfactor=4
 
-filelist= indir+'/af_obj'+['064','065','066','067','068', $
+filelist= indir+'/afobj'+['064','065','066','067','068', $
                            '191','192','193','194']+'.fits'
 rprefix= prefix+'_r'
 mosaic_mosaic_grid, filelist,rprefix,racen,deccen,dra,ddec,nx,ny
-mosaic_mosaic_grid_combine, rprefix,nx,ny
+mosaic_mosaic_grid_combine, rprefix,nx,ny,rebinfactor=4
 
-; filelist= indir+'/af_obj'+['226','227','228','229','230','231','232']+'.fits'
-filelist= indir+'/af_obj'+['070','071','072','073','074', $
+; filelist= indir+'/afobj'+['226','227','228','229','230','231','232']+'.fits'
+filelist= indir+'/afobj'+['070','071','072','073','074', $
                            '223','224','225']+'.fits'
 iprefix= prefix+'_i'
 mosaic_mosaic_grid, filelist,iprefix,racen,deccen,dra,ddec,nx,ny
-mosaic_mosaic_grid_combine, iprefix,nx,ny
+mosaic_mosaic_grid_combine, iprefix,nx,ny,rebinfactor=4
 
 ; make smosaics from SDSS data
 hdr= headfits(gprefix+'fits')
