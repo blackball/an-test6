@@ -15,7 +15,6 @@
 ;   saturation    - pixel value (above bias) to use for saturation;
 ;                   default 1.7e4
 ; BUGS:
-;   - Uses stoopid nearest-neighbor interpolation.
 ;   - Invvar is totally made up.
 ;   - Method for finding overlapping data is approximate and not
 ;     robust.
@@ -45,7 +44,7 @@ yy= (intarr(naxis1)+1)#indgen(naxis2)
 xy2ad, xx,yy,bigast,pixra,pixdec
 
 ; get bitmask
-bitmaskname= '/global/data/scr/mm1330/4meter/redux/mosaic_bitmask.fits'
+bitmaskname= 'mosaic_bitmask.fits'
 bitmask= mrdfits(bitmaskname,1)
 for hdu=2,8 do bitmask= [[[bitmask]],[[mrdfits(bitmaskname,hdu)]]]
 help, bitmask
@@ -83,38 +82,44 @@ for ii=0L,nfile-1 do begin
             data= mrdfits(filelist[ii],hdu,hdr)
 
 ; create inverse variance map and crush bad pixels
-            invvar= fltarr(datanaxis1,datanaxis2)+exptime
-            bad= where(((exptime*data) GT saturation) OR $
-                       (bitmask[*,*,(hdu-1)] NE 0),nbad)
-            help, nbad
-            if (nbad GT 0) then invvar[bad]= 0.0
+            sigma= djsig(data[501:1500,1501:2500])
+            help, sigma
+            invvar= fltarr(datanaxis1,datanaxis2)+1.0/(sigma^2)
+            mask= where(bitmask[*,*,(hdu-1)] GE 1,nmask)
+            help, nmask
+            if (nmask GT 0) then invvar[mask]= 0.0
+            saturmask= ((exptime*data) GT saturation)
+            saturmask= (smooth(float(saturmask),3,/edge_truncate) GT 0.01)
+            satur= where(temporary(saturmask),nsatur)
+            help, nsatur
+            if (nsatur GT 0) then invvar[satur]= 0.0
             seeingsigma= 2.5    ; guess
             psfvals= exp(-0.5*[1.0,sqrt(2.0)]^2/seeingsigma^2)
             reject_cr, data,invvar,psfvals,cr,nrejects=ncr
             help, ncr
-            if (ncr GT 0) then invvar[cr]= 0.0
+            if (ncr GT 0) then begin
+                crmask= bytarr(naxis1,naxis2)
+                crmask[cr]= 1
+                crmask= (smooth(float(crmask),3,/edge_truncate) GT 0.01)
+                invvar[where(temporary(crmask) GT 0,ncr)]= 0.0
+            endif
+            help, ncr
 
 ; subtract sky
             bw_est_sky, data,sky
             data= data-temporary(sky)
 
-; find data x,y values for the mosaic pixels
-            gsssadxy, gsa,pixra,pixdec,datax,datay
-            inimage= where((datax GT (-0.5)) AND $
-                           (datax LT (datanaxis1-0.5)) AND $
-                           (datay GT (-0.5)) AND $
-                           (datay LT (datanaxis2-0.5)),nin)
-
-; increment arrays
-            if (nin GT 0) then begin
-                image[xx[inimage],yy[inimage]]= $
-                  image[xx[inimage],yy[inimage]] $
-                  +data[datax[inimage],datay[inimage]] $
-                  *invvar[datax[inimage],datay[inimage]]
-                weight[xx[inimage],yy[inimage]]= $
-                  weight[xx[inimage],yy[inimage]] $
-                  +invvar[datax[inimage],datay[inimage]]
-            endif
+; find data x,y values for the mosaic pixels and insert
+            smosaic_remap, (data*invvar),gsa,bigast,outimg,offset, $
+              degree=3, $
+              weight=invvar,outweight=outwgt, $
+              reflimits=reflim,outlimits=outlim
+            image[reflim[0,0]:reflim[0,1],reflim[1,0]:reflim[1,1]] = $
+              image[reflim[0,0]:reflim[0,1],reflim[1,0]:reflim[1,1]] + $
+              outimg[outlim[0,0]:outlim[0,1],outlim[1,0]:outlim[1,1]]
+            weight[reflim[0,0]:reflim[0,1],reflim[1,0]:reflim[1,1]] = $
+              weight[reflim[0,0]:reflim[0,1],reflim[1,0]:reflim[1,1]] + $
+              outwgt[outlim[0,0]:outlim[0,1],outlim[1,0]:outlim[1,1]]
         endelse
     endfor
 endfor
