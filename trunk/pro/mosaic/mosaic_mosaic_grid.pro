@@ -16,8 +16,8 @@
 ;-
 pro mosaic_mosaic_grid, filelist,prefix,racen,deccen,dra,ddec,nx,ny
 
-pixscale=.26/3600.0
-center= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale)
+pixscale=.40/3600.0
+center= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
 
 for ii=-(nx-1)/2,(nx-1)/2 do begin
     iistr= strtrim(string(ii),2)
