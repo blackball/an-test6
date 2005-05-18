@@ -110,7 +110,7 @@ endif
 ; calibrate to SDSS
 
 ; make mosaics
-; makemosaics
+makemosaics
 
 return
 end
