@@ -93,21 +93,23 @@ for ii=0L,nfile-1 do begin
             satur= where(temporary(saturmask),nsatur)
             help, nsatur
             if (nsatur GT 0) then invvar[satur]= 0.0
-            seeingsigma= 2.5    ; guess
-            psfvals= exp(-0.5*[1.0,sqrt(2.0)]^2/seeingsigma^2)
-            reject_cr, data,invvar,psfvals,cr,nrejects=ncr
-            help, ncr
-            if (ncr GT 0) then begin
-                crmask= bytarr(naxis1,naxis2)
-                crmask[cr]= 1
-                crmask= (smooth(float(crmask),3,/edge_truncate) GT 0.01)
-                invvar[where(temporary(crmask) GT 0,ncr)]= 0.0
-            endif
-            help, ncr
 
 ; subtract sky
             bw_est_sky, data,sky
             data= data-temporary(sky)
+
+; reject CRs
+            seeingsigma= 2.5    ; guess
+            psfvals= exp(-0.5*[1.0,sqrt(2.0)]^2/seeingsigma^2)
+            reject_cr, data,invvar,psfvals,cr,nrejects=ncr,nsig=3.0
+            help, ncr
+            if (ncr GT 0) then begin
+                crmask= 0*byte(invvar)
+                crmask[cr]= 1
+                invvar[where(smooth(float(temporary(crmask)),3, $
+                                    /edge_truncate) GT 0.01,ncr)]= 0.0
+            endif
+            help, ncr
 
 ; find data x,y values for the mosaic pixels and insert
             smosaic_remap, (data*invvar),gsa,bigast,outimg,offset, $
