@@ -26,7 +26,7 @@
 ;   2005-??-??  original script written - Burles (MIT)
 ;   2005-05-24  made a procedure - Hogg (NYU)
 ;-
-pro hogg_acs_distort, inx,iny,hdr,outx,outy
+pro hogg_acs_distort, hdr,inx,iny,outx,outy
 xd= inx-(sxpar(hdr,'CRPIX1')-1)
 yd= iny-(sxpar(hdr,'CRPIX2')-1)
 aorder= sxpar(hdr,'A_ORDER')

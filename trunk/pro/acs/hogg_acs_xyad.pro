@@ -18,6 +18,6 @@
 ;-
 pro hogg_acs_xyad, hdr,x,y,a,d
 hogg_acs_distort, hdr,x,y,sqx,sqy
-adxy, hdr,sqx,sqy,a,d
+xyad, hdr,sqx,sqy,a,d
 return
 end
