@@ -16,6 +16,8 @@
 ;     tangent plane.
 ;   - The input x,y and output x,y should be zero-indexed, so the
 ;     center of the first pixel in the array should be (0,0).
+;   - DO NOT apply this to an already-drizzled or already-distortion-
+;     corrected frame!
 ; BUGS:
 ;   - Doesn't read or return header information in any useful way.
 ;   - Relies on sxpar() returning zero when hdr doesn't contain the
@@ -27,8 +29,8 @@
 pro hogg_acs_distort, inx,iny,hdr,outx,outy
 xd= inx-(sxpar(hdr,'CRPIX1')-1)
 yd= iny-(sxpar(hdr,'CRPIX2')-1)
-aorder= sxpar(hdr,'AORDER')
-border= sxpar(hdr,'BORDER')
+aorder= sxpar(hdr,'A_ORDER')
+border= sxpar(hdr,'B_ORDER')
 maxorder= aorder>border
 outx= inx
 outy= iny
