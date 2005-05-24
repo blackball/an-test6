@@ -6,8 +6,8 @@
 ;   positions and return output x,y positions that are on a square,
 ;   tangent-plane coordinate system.
 ; INPUTS:
-;   inx,iny    - input x,y position vectors
 ;   hdr        - ACS image header as read by headfits() or equiv
+;   inx,iny    - input x,y position vectors
 ; OUTPUTS:
 ;   outx,outy  - output x,y positions, after distortions have been
 ;                applied.
