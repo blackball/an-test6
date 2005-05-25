@@ -32,6 +32,7 @@ repeat begin
         y= -1
         newsqx= sqx
         newsqy= sqy
+    endif
 endrep until (max([newsqx-sqx,newsqy-sqy]) LT tiny)
 return
 end
