@@ -19,9 +19,12 @@
 ;   - DO NOT apply this to an already-drizzled or already-distortion-
 ;     corrected frame!
 ; BUGS:
-;   - Doesn't read or return header information in any useful way.
+;   - Doesn't read or return header information in any useful or
+;     reusable way, like it should.
 ;   - Relies on sxpar() returning zero when hdr doesn't contain the
 ;     asked-for coefficient.
+;   - Ought to not ever take powers; it should multiply in xd and yd
+;     with each iteration.
 ; REVISION HISTORY:
 ;   2005-??-??  original script written - Burles (MIT)
 ;   2005-05-24  made a procedure - Hogg (NYU)

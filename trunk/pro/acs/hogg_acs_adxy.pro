@@ -13,6 +13,7 @@
 ; COMMENTS:
 ;   - calls hogg_acs_distort iteratively!
 ; BUGS:
+;   - Is slow.
 ; REVISION HISTORY:
 ;   2005-05-24  started - Hogg (NYU)
 ;-
