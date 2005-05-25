@@ -19,16 +19,19 @@
 ;-
 pro hogg_acs_adxy, hdr,a,d,x,y
 tiny= 1d-8 ; pixels
-splog, a
 adxy, hdr,a,d,sqx,sqy
 x= sqx
 y= sqy
 repeat begin
-    splog, x
     hogg_acs_distort, hdr,x,y,newsqx,newsqy
     x= x-(newsqx-sqx)
     y= y-(newsqy-sqy)
+    foo= where(finite(x) EQ 0,ninfinite)
+    if (ninfinite GT 0) then begin
+        x= -1
+        y= -1
+        newsqx= sqx
+        newsqy= sqy
 endrep until (max([newsqx-sqx,newsqy-sqy]) LT tiny)
-splog, x
 return
 end
