@@ -27,12 +27,15 @@
 ;     time.
 ;   - Uses *nearest neighbor* interpolation; use only for input astr
 ;     with tiny pixel scale (eg 0.025 or smaller).
+;   - Depends on photoop -- it wouldn't if I made an equivalent of
+;     smosaic_hdr in idlutils (there should be one there anyway).
 ; COMMENTS:
 ; DEPENDENCIES:
 ;   idlutils
 ;   photoop (ugh)
 ; REVISION HISTORY:
 ;   2005-05-25  started - Hogg (NYU)
+;   2005-06-01  made ready for public abuse - Hogg
 ;-
 function hogg_acs_cutout, fltname,exten,astr,naxis,error=error, $
                           hdr=hdr,exhdr=exhdr, $
