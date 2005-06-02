@@ -44,7 +44,7 @@ bim= bim-median(bim)
 rim= mrdfits(prefix+'_F814W.fits')
 rim= rim-median(rim)
 nw_rgb_make,rim,rim+bim,bim,name=prefix+'.jpg', $
-  scales=[0.02,0.01,0.02],nonlinearity=3,rebinfactor=1
+  scales=[0.02,0.01,0.02],nonlinearity=3,rebinfactor=2
 
 return
 end
