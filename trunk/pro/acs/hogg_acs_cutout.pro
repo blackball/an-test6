@@ -60,12 +60,12 @@ if (nin GT 0) then begin
     inimage= mrdfits(fltname,exten)
     image= fltarr(naxis[0],naxis[1])
     image[round(xx[inimage]),round(yy[inimage])]= $
-      image[xflt[inimage],yflt[inimage]]
+      inimage[xflt[inimage],yflt[inimage]]
     if arg_present(error) then begin
         inerror= mrdfits(fltname,exten+1)
         error= fltarr(naxis[0],naxis[1])
         error[round(xx[inimage]),round(yy[inimage])]= $
-          error[xflt[inimage],yflt[inimage]]
+          inerror[xflt[inimage],yflt[inimage]]
     endif
 endif else begin
     splog, 'WARNING: no overlapping pixels, returning -1'
