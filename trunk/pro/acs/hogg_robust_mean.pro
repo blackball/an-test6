@@ -45,6 +45,14 @@ if keyword_set(qa) then begin
     !Y.MARGIN= !Y.OMARGIN
     !y.OMARGIN= [0,0]
 endif
+good= dblarr(nx,nxvec)
+bad= good
+for ii=0L,nx-1L do begin
+    good[ii,*]= exp(-0.5*x_ivar[ii]*(xvec-x[ii])^2)
+    bad[ii,*]= replicate(1,nxvec)
+    good[ii,*]= good[ii,*]/total(good[ii,*])
+    bad[ii,*]= bad[ii,*]/total(bad[ii,*])
+endfor
 x_pdf= dblarr(nxvec)
 p_pdf= dblarr(np)
 u_pdf= dblarr(nx)
@@ -52,10 +60,7 @@ for trial=2L^nx-1L,0L,-1L do begin
     use= ((trial AND 2L^lindgen(nx)) < 1) ; measurements to use
     !P.TITLE= 'trial '+strtrim(string(trial),2)+'; ' $
       +strjoin(string(use,format='(I1.1)'),' ')
-    thispdf= dblarr(nx,nxvec)
-    for ii=0L,nx-1L do thispdf[ii,*]= $
-      use[ii]*exp(-0.5*x_ivar[ii]*(xvec-x[ii])^2) $
-      +(1.0-use[ii])*replicate(1,nxvec)
+    thispdf= (use#replicate(1,nxvec))*good+((1-use)#replicate(1,nxvec))*bad
     thispdf= thispdf/(total(thispdf,2)#replicate(1,nxvec))
     if keyword_set(qa) then begin
         plot, xvec,thispdf[0,*],psym=10, $
