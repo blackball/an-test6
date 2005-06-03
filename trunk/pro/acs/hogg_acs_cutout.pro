@@ -24,7 +24,8 @@
 ; BUGS:
 ;   - Error output not yet tested.
 ;   - Super-dumb implementation; many things could be done to save
-;     time.
+;     time; for instance: the xy2ad and hogg_acs_xyad steps could be
+;     done on a coarse grid and then interpolated to the fine grid.
 ;   - Uses *nearest neighbor* interpolation; use only for input astr
 ;     with tiny pixel scale (eg 0.025 or smaller).
 ;   - Depends on photoop -- it wouldn't if I made an equivalent of

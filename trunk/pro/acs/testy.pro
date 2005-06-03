@@ -5,6 +5,9 @@ deccen= -1.0*(12D0+31./60.+57.0/3600.)
 dra= 0.30/60.0
 pixscale= 0.025/3600.0
 astr= smosaic_hdr(racen,deccen,dra,dra,pixscale=pixscale)
+
+stop
+
 filelist= findfile('./*_flt.fit*')
 for ii=0,n_elements(filelist)-1 do begin
     filename= filelist[ii]
