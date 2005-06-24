@@ -1,3 +1,4 @@
+pro sdssfield
 
 ;this file might pick a field which is not in sam's index file(
 ;i.e. not in the north ) so check for the ra and dec!
