@@ -2,6 +2,13 @@ pro usno_select
 
 path='/scratch/usnob_fits'
 
+;defining the cuts
+minmag=18.5 ; faintest R-band  magnitude accepted 
+maxmag=5.0   ; objects brighter that maxmag in any band (B,R,I) are rejecdted
+poserror=200. ; maximum error allowed in the RA or Dec in milli arcsec
+propcut=10.   ; the maximum proper motion allowed in milli arcsec per year 
+
+
 sweeptype={ra:0d, dec:0d,mag:fltarr(5)}
 
 glactc,ngpra,ngpdec,2000,0,90,2,/degree
@@ -16,11 +23,11 @@ for subdir = 57,179 do begin
         sdsscut=where(djs_diff_angle(star.ra,star.dec,ngpra,ngpdec) lt 60)
         if sdsscut[0] ne -1 then begin
             sdssstar=star[sdsscut]
-            mcut=where(sdssstar.mag[3] lt 18.5)
-            sdeccut=where(sdssstar[mcut].sde lt 200)
+            mcut=where(sdssstar.mag[3] lt minmag)
+            sdeccut=where((sdssstar[mcut].sde lt poserror) and (sdssstar[mcut].sre lt poserror))
             prop=sqrt(sdssstar[mcut[sdeccut]].mura^2+sdssstar[mcut[sdeccut]].mudec^2)
-            propcut=where(prop lt 10)
-            allmagcut=where((sdssstar[mcut[sdeccut[propcut]]].mag[2] gt 5) and (sdssstar[mcut[sdeccut[propcut]]].mag[3] gt 5) and (sdssstar[mcut[sdeccut[propcut]]].mag[4] gt 5))
+            propcut=where(prop lt propcut)
+            allmagcut=where((sdssstar[mcut[sdeccut[propcut]]].mag[2] gt maxmag) and (sdssstar[mcut[sdeccut[propcut]]].mag[3] gt maxmag) and (sdssstar[mcut[sdeccut[propcut]]].mag[4] gt maxmag))
             temp_sweep=replicate(sweeptype,n_elements(allmagcut))
             temp_sweep.ra=sdssstar[mcut[sdeccut[propcut[allmagcut]]]].ra
             temp_sweep.dec=sdssstar[mcut[sdeccut[propcut[allmagcut]]]].dec
