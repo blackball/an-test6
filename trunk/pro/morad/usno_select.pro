@@ -1,12 +1,15 @@
-pro usno_select
+pro usno_select,minmag=minmag,maxmag=maxmag,poserror=poserror,propcut=propcut
 
 path='/scratch/usnob_fits'
 
+
+;set defaults
+
 ;defining the cuts
-minmag=18.5 ; faintest R-band  magnitude accepted 
-maxmag=5.0   ; objects brighter that maxmag in any band (B,R,I) are rejecdted
-poserror=200. ; maximum error allowed in the RA or Dec in milli arcsec
-propcut=10.   ; the maximum proper motion allowed in milli arcsec per year 
+if not keyword_set(minmag) then minmag=18.5 ; faintest R-band  magnitude accepted 
+if not keyword_set(maxmag) then maxmag=14.0   ; objects brighter that maxmag in any band (B,R,I) are rejecdted
+if not keyword_set(poserror) then poserror=200. ; maximum error allowed in the RA or Dec in milli arcsec
+if not keyword_set(propcut) then propcut=10.   ; the maximum proper motion allowed in milli arcsec per year 
 
 
 sweeptype={ra:0d, dec:0d,mag:fltarr(5)}
