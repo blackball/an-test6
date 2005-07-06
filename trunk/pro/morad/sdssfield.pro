@@ -1,26 +1,33 @@
-pro sdssfield
+pro sdssfield,seed=seed,nfields=nfields
 
-;this file might pick a field which is not in sam's index file(
-;i.e. not in the north ) so check for the ra and dec!
-startype={ifield:0d, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d, rmag:0d}
+
+objtype={ifield:0d, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d, rmag:0d}
 
 if(n_tags(flist) eq 0) then window_read,flist=flist
-read,prompt='give me a seed:  ',seed
 
-r=floor(randomu(seed)*n_elements(flist))
+if not keyword_set(seed) then seed=7l
+if not keyword_set(nfields) then nfields=1l
 
-obj=sdss_readobj(flist[r].run,flist[r].camcol,flist[r].field,rerun=flist[r].rerun)
+glactc,ngpra,ngpdec,2000,0,90,2,/degree
+nn=1l
+while (nn lt nfields) do begin
+    
+    r=floor(randomu(seed)*n_elements(flist))
+    if (djs_diff_angle(flist[r].ra,flist[r].dec,ngpra,ngpdec) lt 60) then begin
+        field=sdss_readobj(flist[r].run,flist[r].camcol,flist[r].field,rerun=flist[r].rerun)
 
-ind=sdss_selectobj(obj,objtype='star',/trim)
 
-star=replicate(startype,n_elements(ind))
-star.ifield=obj[ind].ifield
-star.ra=obj[ind].ra
-star.dec=obj[ind].dec
-star.rowc=obj[ind].rowc[2]
-star.colc=obj[ind].colc[2]
-star.rpsfflux=obj[ind].psfflux[2]
-star.rmag=22.5-2.5*alog10(obj[ind].psfflux[2])
-mwrfits,star,'field-'+string(star[0].ifield)+'.fits'
+
+        ind=sdss_selectobj(field,objtype=['star','galaxy'],/trim)
+        obj=replicate(objtype,n_elements(ind))
+        obj.ifield=field[ind].ifield
+        obj.ra=field[ind].ra
+        obj.dec=field[ind].dec
+        obj.rowc=field[ind].rowc[2]
+        obj.colc=field[ind].colc[2]
+
+obj[.rpsfflux=field[ind].psfflux[2]
+obj.rmag=22.5-2.5*alog10(field[ind].psfflux[2])
+mwrfits,obj,'field-'+string(obj[0].ifield)+'.fits'
 
 end
