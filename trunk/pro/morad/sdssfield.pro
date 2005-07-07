@@ -11,7 +11,7 @@ if not keyword_set(nfields) then nfields=1l
 glactc,ngpra,ngpdec,2000,0,90,2,/degree
 nn=0l
 while (nn lt nfields) do begin
-    
+    print,nn
     r=floor(randomu(seed)*n_elements(flist))
     if (djs_diff_angle(flist[r].ra,flist[r].dec,ngpra,ngpdec) lt 60) then begin
         field=sdss_readobj(flist[r].run,flist[r].camcol,flist[r].field,rerun=flist[r].rerun)
@@ -27,7 +27,7 @@ while (nn lt nfields) do begin
         obj.colc=field[ind].colc[2]
 	obj.rpsfflux=field[ind].psfflux[2]
 	obj.rmag=22.5-2.5*alog10(field[ind].psfflux[2])
-	mwrfits,obj,'field-'+string(obj[0].ifield)+'.fits'
+	mwrfits,obj,'field-'+string(format='(I6.6)',obj[0].ifield)+'.fits'
 	nn=nn+1
 endif
 endwhile
