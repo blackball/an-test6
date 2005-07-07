@@ -9,7 +9,7 @@ if not keyword_set(seed) then seed=7l
 if not keyword_set(nfields) then nfields=1l
 
 glactc,ngpra,ngpdec,2000,0,90,2,/degree
-nn=1l
+nn=0l
 while (nn lt nfields) do begin
     
     r=floor(randomu(seed)*n_elements(flist))
@@ -25,9 +25,10 @@ while (nn lt nfields) do begin
         obj.dec=field[ind].dec
         obj.rowc=field[ind].rowc[2]
         obj.colc=field[ind].colc[2]
-
-obj[.rpsfflux=field[ind].psfflux[2]
-obj.rmag=22.5-2.5*alog10(field[ind].psfflux[2])
-mwrfits,obj,'field-'+string(obj[0].ifield)+'.fits'
-
+	obj.rpsfflux=field[ind].psfflux[2]
+	obj.rmag=22.5-2.5*alog10(field[ind].psfflux[2])
+	mwrfits,obj,'field-'+string(obj[0].ifield)+'.fits'
+	nn=nn+1
+endif
+endwhile
 end
