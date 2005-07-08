@@ -28,6 +28,7 @@
 ; REVISION HISTORY:
 ;   2005-??-??  original script written - Burles (MIT)
 ;   2005-05-24  made a procedure - Hogg (NYU)
+;   2005-07-07  huge bugfix found when I found Shupe et al - Hogg
 ;-
 pro hogg_acs_distort, hdr,inx,iny,outx,outy
 xd= inx-(sxpar(hdr,'CRPIX1')-1)
@@ -37,12 +38,12 @@ border= sxpar(hdr,'B_ORDER')
 maxorder= aorder>border
 outx= inx
 outy= iny
-for ii=0,maxorder do begin
-    for jj=0,(maxorder-ii) do begin
-        a= sxpar(hdr,string('A_',ii,'_',jj,format='(a,i1,a,i1)'))
-        outx= outx+a*xd^jj*yd^ii
-        b= sxpar(hdr,string('B_',ii,'_',jj,format='(a,i1,a,i1)'))
-        outy= outy+b*xd^jj*yd^ii
+for pp=0,maxorder do begin
+    for qq=0,(maxorder-pp) do begin
+        a= sxpar(hdr,string('A_',pp,'_',qq,format='(a,i1,a,i1)'))
+        outx= outx+a*xd^pp*yd^qq
+        b= sxpar(hdr,string('B_',pp,'_',qq,format='(a,i1,a,i1)'))
+        outy= outy+b*xd^pp*yd^qq
     endfor
 endfor
 return
