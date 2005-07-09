@@ -12,7 +12,7 @@ if not keyword_set(poserror) then poserror=200. ; maximum error allowed in the R
 if not keyword_set(propcut) then prcut=10.   ; the maximum proper motion allowed in milli arcsec per year 
 
 
-sweeptype={ra:0d, dec:0d,mag:fltarr(5)}
+sweeptype={ra:0d, dec:0d,mag:0.0}
 
 glactc,ngpra,ngpdec,2000,0,90,2,/degree
 
@@ -34,10 +34,10 @@ for subdir = 57,179 do begin
             temp_sweep=replicate(sweeptype,n_elements(allmagcut))
             temp_sweep.ra=sdssstar[mcut[sdeccut[propcut[allmagcut]]]].ra
             temp_sweep.dec=sdssstar[mcut[sdeccut[propcut[allmagcut]]]].dec
-            temp_sweep.mag=sdssstar[mcut[sdeccut[propcut[allmagcut]]]].mag
+            temp_sweep.mag=sdssstar[mcut[sdeccut[propcut[allmagcut]]]].mag[3]
             if (n_elements(sweep) gt 1 ) then sweep=[sweep,temp_sweep] else sweep=temp_sweep
         endif
-        print, fname,n_elements(sdsscut),n_elements(mcut),n_elements(sdeccut),n_elements(propcut),n_elements(temp_sweep)
+        print, fname,n_elements(sdsscut),n_elements(mcut),n_elements(sdeccut),n_elements(propcut),n_elements(temp_sweep),n_elements(sweep)
     endfor
 if (n_elements(sweep) gt 1 ) then mwrfits,sweep,path+'/'+dirstr+'/'+dirstr+'sweep.fit',/create
 endfor
