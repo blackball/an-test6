@@ -1,7 +1,9 @@
 ;INPUTS
 ;
 ;  seed      -the seed for the random sequence (if not set seed=7l)
-;  nfields   -number of fields wanted (if not set set nfields=1)
+;  nfields   -number of fields wanted (if not set  nfields=1)
+;  minmag    -the faint end cut on the r-band magnitude(if not set
+;  minmag=19.) this is one magnetude fanter that USNO cut.  
 ; this code only returns fields within 60 degree of the north galactic pole
 
 
@@ -37,6 +39,7 @@ while (nn lt nfields) do begin
         obj.rpsfflux=field[ind[good]].psfflux[2]
         obj.rmag=rmag[good]
         mwrfits,obj,'field-'+string(format='(I6.6)',obj[0].ifield)+'.fits',/creat
+print,'# objects which made the cuts',n_elements(good)
         nn=nn+1
     endif
 endwhile
