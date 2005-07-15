@@ -11,7 +11,7 @@
 
 pro sdssfield,seed=seed,nfields=nfields,minmag=minmag
 
-
+openw,1,'sdssfield.xyls'
 objtype={ifield:0d, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d, rmag:0d}
 
 if(n_tags(flist) eq 0) then window_read,flist=flist
@@ -19,6 +19,9 @@ if(n_tags(flist) eq 0) then window_read,flist=flist
 if not keyword_set(seed) then seed=7l
 if not keyword_set(nfields) then nfields=1l
 if not keyword_set(minmag) then minmag=19.0
+
+printf,1,'NumFields='+strtrim(string(nfields),2)
+
 glactc,ngpra,ngpdec,2000,0,90,2,/degree
 nn=0l
 while (nn lt nfields) do begin
@@ -39,8 +42,15 @@ while (nn lt nfields) do begin
         obj.rpsfflux=field[ind[good]].psfflux[2]
         obj.rmag=rmag[good]
         mwrfits,obj,'field-'+string(format='(I6.6)',obj[0].ifield)+'.fits',/creat
-print,'# objects which made the cuts',n_elements(good)
+        print,'# objects which made the cuts',n_elements(good)
+;        printf,1,'# ifield: '+string(obj[0].ifield)
+        tmp_str=strtrim(string(n_elements(obj)),2)
+        for kk=0,n_elements(obj)-1 do begin
+            tmp_str=tmp_str+','+strtrim(string(obj[i].rowc),2)+','+strtrim(string(obj[i].colc),2)
+        endfor
+        printf,1,tmp_str
         nn=nn+1
     endif
 endwhile
+close,1
 end
