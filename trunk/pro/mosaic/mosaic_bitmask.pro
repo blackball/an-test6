@@ -2,6 +2,7 @@
 ; BUGS:
 ;  - No comment header.
 ;  - Everything hard-coded.
+;  - Note HDU 6 insanity.
 ;-
 pro mosaic_bitmask,avzero,avdark,gflat,bitmaskname
 mwrfits,0,bitmaskname,/create
@@ -17,6 +18,11 @@ flatmask=((flat gt 3.) or (flat lt .1) or $
           (flat gt (1.2*medflat)) or (flat lt (.8*medflat) ))
 flatmask=(smooth(float(flatmask),3) gt 0.)
 bitmask=bitmask+4*flatmask
+
+if (hdu EQ 6) then begin
+    bitmask[1885:1902,*]=bitmask[1885:1902,*]+8
+endif
+
 mwrfits,byte(bitmask),bitmaskname
 endfor
 return

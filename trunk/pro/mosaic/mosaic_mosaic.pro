@@ -14,16 +14,17 @@
 ;                   deccen, dra, and ddec
 ;   saturation    - pixel value (above bias) to use for saturation;
 ;                   default 1.7e4
+;   bitmaskname   - name of bitmask file; default stoopid
 ; BUGS:
 ;   - Invvar is totally made up.
 ;   - Method for finding overlapping data is approximate and not
 ;     robust.
-;   - Bitmask filename hard-coded.
 ; REVISION HISTORY:
 ;   2005-04-09  written - Hogg and Masjedi
 ;-
 pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec, $
-                   bigast=bigast,saturation=saturation
+                   bigast=bigast,saturation=saturation, $
+                   bitmaskname=bitmaskname
 
 ; create RA---TAN, DEC--TAN wcs header for mosaic
 if (NOT keyword_set(bigast)) then begin
@@ -44,7 +45,7 @@ yy= (intarr(naxis1)+1)#indgen(naxis2)
 xy2ad, xx,yy,bigast,pixra,pixdec
 
 ; get bitmask
-bitmaskname= 'mosaic_bitmask.fits'
+if NOT keyword_set(bitmaskname) then bitmaskname= 'mosaic_bitmask.fits'
 bitmask= mrdfits(bitmaskname,1)
 for hdu=2,8 do bitmask= [[[bitmask]],[[mrdfits(bitmaskname,hdu)]]]
 help, bitmask

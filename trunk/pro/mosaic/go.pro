@@ -91,16 +91,20 @@ if 0 then begin ; DON'T do this except with adult supervision!!
 endif
 
 ; measure / fix / install astrometric headers (GSSS!)
-spawn, 'mkdir -p '+path+'/newaf'
-dowcs, flatdir,path+'/newaf'
-spawn, '\rm -rf '+path+'/oldaf'
-spawn, '\mv '+path+'/af '+path+'/oldaf'
-spawn, '\mv '+path+'/newaf '+path+'/af'
+dowcs, flatdir,path+'/af'
 
 ; make bitmask
-bitmaskname= 'mosaic_bitmask.fits' 
-if (NOT file_test(bitmaskname)) then begin
-    mosaic_bitmask,avzero,avdark,gflat,bitmaskname
+gbitmaskname= 'mosaic_bitmask_g.fits' 
+rbitmaskname= 'mosaic_bitmask_r.fits' 
+ibitmaskname= 'mosaic_bitmask_i.fits' 
+if (NOT file_test(gbitmaskname)) then begin
+    mosaic_bitmask,avzero,avdark,gflat,gbitmaskname
+endif
+if (NOT file_test(rbitmaskname)) then begin
+    mosaic_bitmask,avzero,avdark,rflat,rbitmaskname
+endif
+if (NOT file_test(ibitmaskname)) then begin
+    mosaic_bitmask,avzero,avdark,iflat,ibitmaskname
 endif
 
 ; update the flats on large scales using comparisons to SDSS sources
@@ -111,6 +115,7 @@ endif
 
 ; make mosaics
 makemosaics
+makejpgs
 
 return
 end
