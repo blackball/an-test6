@@ -1,0 +1,20 @@
+
+//gen_gauss(); // gaussian random vars
+
+// int_random(maxint);
+
+// dyv_array *newarray = mk_dyv_array(length);
+
+//int dyv_size(dyv* this_dyv); // length of a vector
+
+//explain_kdtree(kd);  // prints out stuff about a kd tree
+
+// dyv *copy = mk_copy_dyv(dyv *source);
+
+// double ans = dyv_ref(dyv *thevector, int pos);
+
+// dyv_set(dyv *thevector, int pos, double newval);
+
+//  int secs = global_time();
+
+
