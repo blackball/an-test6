@@ -82,7 +82,8 @@ kdtree *fread_kdtree(FILE *fid)
 unsigned int fwrite_node(node *n,FILE *fid)
 {
   if(n==NULL) {
-    fwrite(0,sizeof(int),1,fid);
+    int nullsize=0;
+    fwrite(&nullsize,sizeof(int),1,fid);
     return(0);
   }
   else {
