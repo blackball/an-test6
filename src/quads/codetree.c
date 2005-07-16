@@ -150,7 +150,7 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
 
 int readonecode(FILE *codefid, code *tmpcode, dimension Dim_Codes, char ASCII)
 {
-  int rez;
+  int rez=0;
   if(ASCII) {
     if(Dim_Codes==4)
       rez=fscanf(codefid,"%lf,%lf,%lf,%lf\n",tmpcode->farr,

@@ -134,7 +134,7 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
   double xx,yy;
   star *randstar;
   double scale=sqrt(2-2*cos(radscale/2));
-  double pixxmin,pixymin,pixxmax,pixymax;
+  double pixxmin=0,pixymin=0,pixxmax=0,pixymax=0;
   kquery *kq = mk_kquery("rangesearch","",KD_UNDEF,scale,kd->rmin);
 		
   fprintf(pix0fid,"NumFields=%lu\n",maxPix);
