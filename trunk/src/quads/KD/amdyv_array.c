@@ -83,7 +83,6 @@ dyv *safe_dyv_array_ref(const dyv_array *da,int idx)
   dyv *result;
   if ( idx < 0 || idx >= dyv_array_size(da) )
   {
-    fprintf(stderr,"safe_dyv_array_ref: size=%d, idx=%d\n",dyv_array_size(da),idx);
     result = NULL;
     my_error("dyv_array_ref");
   }
