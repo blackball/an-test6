@@ -507,6 +507,9 @@ void add_point_to_kdtree(kdtree *kd, dyv *x){
 	free_ivec(tmp_pindexes);
 	*ptr_loc_to_closest = closest_to_x_split;
 
+	kd->num_nodes+=(num_nodes-1);
+	kd->max_depth=max_depth_below_node(kd->root);
+
   }
 }
 
