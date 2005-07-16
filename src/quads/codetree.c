@@ -3,6 +3,7 @@
 #include "starutil.h"
 
 #define OPTIONS "hR:f:B:"
+#define MEM_LOAD 1000000000
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -21,7 +22,7 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
   int kd_Rmin=50;
-  qidx buffsize=(qidx)floor(1000000000.0/(sizeof(double)*DIM_CODES*2.0));
+  qidx buffsize=(qidx)floor(MEM_LOAD/(sizeof(double)+sizeof(int))*DIM_CODES);
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
