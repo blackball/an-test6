@@ -78,6 +78,8 @@ int main(int argc,char *argv[])
     for(ii=0;ii<(numcodes-buffsize);ii++) {
       readonecode(codefid,tmpcode,Dim_Codes,ASCII);
       add_point_to_kdtree(codekd,(dyv *)tmpcode);
+      if(is_power_of_two(ii+1)) 
+	fprintf(stderr,"    %lu / %lu of rest done\r",ii+1,numcodes-buffsize);
     }
     free_code(tmpcode);
   }
