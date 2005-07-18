@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include "starutil.h"
 
-#define OPTIONS "hf:o:t:"
+#define OPTIONS "hpf:o:t:"
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes);
+xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip);
 void solve_pix(xyarray *thepix, sizev *pixsizes, 
 	       kdtree *codekd, double codetol, FILE *fid);
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
@@ -20,6 +20,7 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
   double codetol=0.01;
+  char ParityFlip=0;
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -36,6 +37,9 @@ int main(int argc,char *argv[])
 	break;
       case 't':
 	codetol=strtod(optarg,NULL);
+	break;
+      case 'p':
+	ParityFlip=1;
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -58,9 +62,10 @@ int main(int argc,char *argv[])
   fprintf(stderr,"solvexy: solving fields in %s using %s\n",
 	  pixfname,treefname);
 
+  if(ParityFlip) fprintf(stderr,"  Flipping parity.\n");
   fprintf(stderr,"  Reading fields...");fflush(stderr);
   fopenin(pixfname,pixfid); fnfree(pixfname);
-  xyarray *thepix = readxy(pixfid,&numpix,&pixsizes);
+  xyarray *thepix = readxy(pixfid,&numpix,&pixsizes,ParityFlip);
   fclose(pixfid);
   if(thepix==NULL) return(1);
   fprintf(stderr,"got %lu fields.\n",numpix);
@@ -93,7 +98,7 @@ int main(int argc,char *argv[])
 
 
 
-xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes)
+xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
 {
   char ASCII = 0;
   qidx ii,jj,numxy;
@@ -135,6 +140,11 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes)
     }
     else
       fread(thepix->array[ii]->farr,sizeof(double),DIM_XY*numxy,fid);
+
+    if(ParityFlip) 
+      for(jj=0;jj<numxy;jj++)
+	*((thepix->array[ii]->farr)+2*jj)*=-1;
+
   }
   return thepix;
 }
