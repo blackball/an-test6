@@ -45,7 +45,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"solvexy [-f fname] [-o fieldname] [-t tol]\n");
+	"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol]\n");
 	return(1);
       default:
 	return(2);
