@@ -1,5 +1,7 @@
 #include "starutil.h"
 
+void set_array_ptrs_below_node(node *n,dyv_array *da);
+
 
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax)
@@ -210,8 +212,9 @@ void star_coords(star *s,star *r,double *x,double *y)
 #endif
 
 #if PLANAR_GEOMETRY==1
-  *x=star_ref(s,0); 
-  *y=star_ref(s,1);
+  *x=star_ref(s,0)-star_ref(r,0); 
+  *y=star_ref(s,1)-star_ref(r,1);
+  return;
 #else
   double sdotr = star_ref(s,0)*star_ref(r,0) + 
                  star_ref(s,1)*star_ref(r,1) +
@@ -253,11 +256,67 @@ void star_coords(star *s,star *r,double *x,double *y)
          //+star_ref(s,2)*etaz/sdotr;
   }
 
+  return;
 #endif
 
+}
+
+
+
+void star_midpoint(star *M,star *A,star *B)
+{
+#if PLANAR_GEOMETRY==1
+  star_set(M,0,(star_ref(A,0)+star_ref(B,0))/2);
+  star_set(M,1,(star_ref(A,1)+star_ref(B,1))/2);
   return;
+#else
+  star_set(M,0,(star_ref(A,0)+star_ref(B,0))/2);
+  star_set(M,1,(star_ref(A,1)+star_ref(B,1))/2);
+  star_set(M,2,(star_ref(A,2)+star_ref(B,2))/2);
+  len=sqrt(star_ref(M,0)*star_ref(M,0)+star_ref(M,1)*star_ref(M,1)+
+	   star_ref(M,2)*star_ref(M,2));
+  star_set(M,0,star_ref(M,0)/len);
+  star_set(M,1,star_ref(M,1)/len);
+  star_set(M,2,star_ref(M,2)/len);
+  return;
+#endif
+}
 
 
+dyv_array *mk_dyv_array_from_kdtree(kdtree *kd)
+{
+  if(kd->root->num_points==0) return (dyv_array *)NULL;
+  dyv_array *da=AM_MALLOC( dyv_array);
+  if(da==NULL) return (dyv_array *)NULL;
+  da->size = kd->root->num_points;
+  da->array_size = da->size;
+  da->array = AM_MALLOC_ARRAY( dyv_ptr, da->size);
+  if(da->array==NULL) {AM_FREE(da,dyv_array); return (dyv_array *)NULL;}
+  set_array_ptrs_below_node(kd->root,da);
+  return da;
+}
+
+void set_array_ptrs_below_node(node *n,dyv_array *da)
+{
+  if(n==NULL) return;
+  unsigned int ii;
+  if(node_is_leaf(n)) {
+    for(ii=0;ii<dyv_array_size(n->points);ii++)
+      da->array[ivec_ref(n->pindexes,ii)]=dyv_array_ref(n->points,ii);
+  }
+  else {
+    set_array_ptrs_below_node(n->child1,da);
+    set_array_ptrs_below_node(n->child2,da);
+  }
+  return;
+}
+
+
+void free_dyv_array_from_kdtree(dyv_array *da)
+{
+  AM_FREE_ARRAY(da->array,dyv_ptr,da->array_size);
+  AM_FREE(da,dyv_array);
+  return;
 }
 
 

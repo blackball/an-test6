@@ -36,9 +36,9 @@ int main(int argc,char *argv[])
       case 'h':
 	fprintf(stderr, 
 	"pixquads [-f fname] [-o pixname]\n");
-	return(1);
+	return(HELP_ERR);
       default:
-	return(2);
+	return(OPT_ERR);
       }
 
   for (argidx = optind; argidx < argc; argidx++)
@@ -136,12 +136,14 @@ quadarray *readquadlist(FILE *fid,qidx *numquads)
   char ASCII = 0;
   qidx ii;
   dimension Dim_Quads;
+  double index_scale;
   magicval magic;
   fread(&magic,sizeof(magic),1,fid);
   if(magic==ASCII_VAL) {
     ASCII=1;
     fscanf(fid,"mQuads=%lu\n",numquads);
     fscanf(fid,"DimQuads=%hu\n",&Dim_Quads);
+    fscanf(fid,"IndexScale=%lf\n",&index_scale);
   }
   else {
     if(magic!=MAGIC_VAL) {
@@ -151,6 +153,7 @@ quadarray *readquadlist(FILE *fid,qidx *numquads)
     ASCII=0;
     fread(numquads,sizeof(*numquads),1,fid);
     fread(&Dim_Quads,sizeof(Dim_Quads),1,fid);
+    fread(&index_scale,sizeof(index_scale),1,fid);
   }
   quadarray *thequads = mk_quadarray(*numquads);
   for(ii=0;ii<*numquads;ii++) {

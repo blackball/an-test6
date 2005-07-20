@@ -1,36 +1,45 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "starutil.h"
 
-#define OPTIONS "hs:q:R:f:"
+#define OPTIONS "has:q:f:"
 extern char *optarg;
 extern int optind, opterr, optopt;
-
-#define mk_starkdtree(s,r) mk_kdtree_from_points((dyv_array *)s,r)
 
 qidx get_quads(FILE *quadfid,FILE *codefid,
 	       stararray *thestars,kdtree *kd,double index_scale,
 	       double ramin,double ramax,double decmin, double decmax,
-	       qidx maxCodes);
+	       qidx maxCodes,char ASCII);
 
-char *catfname=NULL;
+void deduplicate_quads(FILE *quadfid, qidx maxQuads,
+		       double index_scale,char ASCII);
+
+char *treefname=NULL;
 char *quadfname=NULL;
 char *codefname=NULL;
+char ASCII=0;
+qidx *thedata,*thesortorder;
+char buff[100],maxstarWidth;
+
+
 
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-  dimension Dim_Stars;
+
   qidx maxQuads=0;
-  int kd_Rmin=50;
   double index_scale=1.0/10.0;
   double ramin,ramax,decmin,decmax;
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
       {
-      case 'R':
-	kd_Rmin = (int)strtoul(optarg,NULL,0);
+      case 'a':
+	ASCII = 1;
+	break;
+      case 'b':
+	ASCII = 0;
 	break;
       case 's':
 	index_scale = (double)strtoul(optarg,NULL,0);
@@ -40,10 +49,10 @@ int main(int argc,char *argv[])
 	maxQuads = strtoul(optarg,NULL,0);
 	break;
       case 'f':
-	catfname = malloc(strlen(optarg)+6);
+	treefname = malloc(strlen(optarg)+6);
 	quadfname = malloc(strlen(optarg)+6);
 	codefname = malloc(strlen(optarg)+6);
-	sprintf(catfname,"%s.objs",optarg);
+	sprintf(treefname,"%s.skdt",optarg);
 	sprintf(quadfname,"%s.quad",optarg);
 	sprintf(codefname,"%s.code",optarg);
 	break;
@@ -51,7 +60,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"getquads [-s 1/scale] [-q maxQuads] [-f fname] [-R KD_RMIN]\n");
+	"getquads [-s 1/scale] [-q maxQuads] [-a|-b] [-f fname]\n");
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
@@ -63,65 +72,54 @@ int main(int argc,char *argv[])
 #define RANDSEED 888
   am_srand(RANDSEED); 
 
-  FILE *catfid=NULL,*quadfid=NULL,*codefid=NULL;
+  FILE *treefid=NULL,*quadfid=NULL,*codefid=NULL;
   sidx numstars;
   qidx numtries;
 
   fprintf(stderr,"getquads: finding %lu quads in %s [RANDSEED=%d]\n",
-	  maxQuads,catfname,RANDSEED);
+	  maxQuads,treefname,RANDSEED);
 
-  fprintf(stderr,"  Reading star catalogue...");fflush(stderr);
-  fopenin(catfname,catfid); fnfree(catfname);
-  stararray *thestars = readcat(catfid,&numstars,&Dim_Stars,
-				&ramin,&ramax,&decmin,&decmax);
-  fclose(catfid);
-  if(thestars==NULL) return(1);
-  fprintf(stderr,"got %lu stars.\n",numstars);
-  fprintf(stderr,"    (dim %hu) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
-	  Dim_Stars,ramin,ramax,decmin,decmax);
-
-  fprintf(stderr,"  Building star KD tree...");fflush(stderr);
-  kdtree *starkd = mk_starkdtree(thestars,kd_Rmin);
+  fprintf(stderr,"  Reading star KD tree from ");
+  if(treefname) fprintf(stderr,"%s...",treefname);
+  else fprintf(stderr,"stdin...");  fflush(stderr);
+  fopenin(treefname,treefid); fnfree(treefname);
+  kdtree *starkd = fread_kdtree(treefid);
+  fread(&ramin,sizeof(double),1,treefid);
+  fread(&ramax,sizeof(double),1,treefid);
+  fread(&decmin,sizeof(double),1,treefid);
+  fread(&decmax,sizeof(double),1,treefid);
+  fclose(treefid);
   if(starkd==NULL) return(2);
-  fprintf(stderr,"done (%d nodes, depth %d).\n",
-	  starkd->num_nodes,starkd->max_depth);
+  numstars=starkd->root->num_points;
+  if(ASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
+  fprintf(stderr,"done (%lu stars, %d nodes, depth %d).\n",
+	  numstars,starkd->num_nodes,starkd->max_depth);
+  fprintf(stderr,"    (dim %d) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
+	  kdtree_num_dims(starkd),ramin,ramax,decmin,decmax);
+
+
+  stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
 
   fprintf(stderr,"  Finding %lu quads at scale %g arcmin...\n",
 	  maxQuads,180.0*60.0*index_scale/(double)PIl); fflush(stderr);
-  fopenout(quadfname,quadfid); fnfree(quadfname);
+  fopenout(quadfname,quadfid); //fnfree(quadfname);
   fopenout(codefname,codefid); fnfree(codefname);
   numtries=get_quads(quadfid,codefid,thestars,starkd,index_scale,
-		     ramin,ramax,decmin,decmax,maxQuads);
+		     ramin,ramax,decmin,decmax,maxQuads,ASCII);
   fclose(quadfid); fclose(codefid);
   fprintf(stderr,"  got %lu codes in %lu tries.\n", maxQuads,numtries);
 
-  free_stararray(thestars); 
+  free_dyv_array_from_kdtree((dyv_array *)thestars);
   free_kdtree(starkd); 
 
-  /*
-  DONT FORGET THAT WE FREED quadfname above
-  fprintf(stderr,"  Deduplicating quads..."); fflush(stderr);
-  sidx iA,iB,iC,iD,ii;
-  dimension Dim_Quads;
-  qidx *thequads;
-  fopenin(quadfname,quadfid); fnfree(quadfname);
-  fscanf(quadfid,"NumQuads=%lu\n",&ii);
-  if(ii!=maxQuads) 
-  fprintf(stderr,"ERROR (getquads) -- numquads!=ii re-reading %s\n",quadfname);
-  fscanf(quadfid,"DimQuads=%hu\n",&Dim_Quads);
-  thequads = (qidx *)malloc(Dim_Quads*maxQuads*sizeof(qidx));
-  for(ii=0;ii<maxQuads;ii++)
-    fscanf(quadfid,"%lu,%lu,%lu,%lu\n",
-	   thequads+ii*(Dim_Quads*sizeof(qidx))   ,
-	   thequads+ii*(Dim_Quads*sizeof(qidx))+sizeof(qidx),
-	   thequads+ii*(Dim_Quads*sizeof(qidx))+2*sizeof(qidx),
-	   thequads+ii*(Dim_Quads*sizeof(qidx))+3*sizeof(qidx));
-  //qsort(thequads,maxQuads,DimQuads*sizeof(qidx),???);
-  fprintf(stderr,"done.\n");
-  free(thequads);
-asdsd
-  fclose(quadfid);*/
+  //fprintf(stderr,"  Deduplicating quads...\n"); fflush(stderr);
+  //fopenin(quadfname,quadfid); 
+  //deduplicate_quads(quadfid,maxQuads,index_scale,ASCII);
+  //fclose(quadfid); 
+  fnfree(quadfname);
   
+
+
   //basic_am_malloc_report();
   return(0);
 }
@@ -130,20 +128,36 @@ asdsd
 qidx get_quads(FILE *quadfid,FILE *codefid,
 	       stararray *thestars,kdtree *kd,double index_scale,
 	       double ramin,double ramax,double decmin, double decmax,
-	       qidx maxCodes)
+	       qidx maxCodes,char ASCII)
 {
   char still_not_done;
-  int count;
+  int count,idxwrite;
   qidx numtries=0,ii;
   sidx iA,iB,iC,iD,jj,kk,numS;
-  double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,xbar,ybar,zbar;
+  double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double scale,thisx,thisy,xxtmp,costheta,sintheta;
   star *midpoint=mk_star();
   kquery *kq = mk_kquery("rangesearch","",KD_UNDEF,index_scale,kd->rmin);
-  fprintf(codefid,"NumCodes=%lu\n",maxCodes);
-  fprintf(codefid,"DimCodes=%hu\n",DIM_CODES);
-  fprintf(quadfid,"NumQuads=%lu\n",maxCodes);
-  fprintf(quadfid,"DimQuads=%hu\n",DIM_QUADS);
+  if(ASCII) {
+    fprintf(codefid,"NumCodes=%lu\n",maxCodes);
+    fprintf(codefid,"DimCodes=%hu\n",DIM_CODES);
+    fprintf(codefid,"IndexScale=%f\n",index_scale);
+    fprintf(quadfid,"NumQuads=%lu\n",maxCodes);
+    fprintf(quadfid,"DimQuads=%hu\n",DIM_QUADS);
+    fprintf(quadfid,"IndexScale=%f\n",index_scale);
+  }
+  else {
+    dimension DimCodes=DIM_CODES,DimQuads=DIM_QUADS;
+    magicval magic=MAGIC_VAL;
+    fwrite(&magic,sizeof(magic),1,codefid);
+    fwrite(&maxCodes,sizeof(maxCodes),1,codefid);
+    fwrite(&DimCodes,sizeof(DimCodes),1,codefid);
+    fwrite(&index_scale,sizeof(index_scale),1,codefid);
+    fwrite(&magic,sizeof(magic),1,quadfid);
+    fwrite(&maxCodes,sizeof(maxCodes),1,quadfid);
+    fwrite(&DimCodes,sizeof(DimQuads),1,quadfid);
+    fwrite(&index_scale,sizeof(index_scale),1,quadfid);
+  }
 
   for(ii=0;ii<maxCodes;ii++) {
     still_not_done=1;
@@ -166,13 +180,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
           Bx-=Ax; By-=Ay; // probably don't need this
 	  scale = sqrt(2*(Bx*Bx+By*By));
 	  if(scale>index_scale) {
-        xbar = star_ref(thestars->array[iA],0)+star_ref(thestars->array[iB],0);
-        ybar = star_ref(thestars->array[iA],1)+star_ref(thestars->array[iB],1);
-        zbar = star_ref(thestars->array[iA],2)+star_ref(thestars->array[iB],2);
-	  xxtmp = sqrt(xbar*xbar+ybar*ybar+zbar*zbar);
-          star_set(midpoint,0,xbar/xxtmp);
-          star_set(midpoint,1,ybar/xxtmp);
-          star_set(midpoint,2,zbar/xxtmp);
+          star_midpoint(midpoint,thestars->array[iA],thestars->array[iB]);
           star_coords(thestars->array[iA],midpoint,&Ax,&Ay);
           star_coords(thestars->array[iB],midpoint,&Bx,&By);
 	  Bx-=Ax; By-=Ay;  
@@ -200,11 +208,22 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 	    if(i2>=i1) i2++;
 	    iC=(sidx)ivec_ref(candidates,i1); 
 	    iD=(sidx)ivec_ref(candidates,i2);
-	    Cx=dyv_ref(candidatesX,i1); Dx=dyv_ref(candidatesX,i2);
-	    Cy=dyv_ref(candidatesY,i1); Dy=dyv_ref(candidatesY,i2);
-
-	    fprintf(codefid,"%f,%f,%f,%f\n",Cx,Cy,Dx,Dy);
-	    fprintf(quadfid,"%lu,%lu,%lu,%lu\n",iA,iB,iC,iD);
+	    Cx=dyv_ref(candidatesX,i1); Cy=dyv_ref(candidatesY,i1); 
+	    Dx=dyv_ref(candidatesX,i2); Dy=dyv_ref(candidatesY,i2);
+	    
+	    if(ASCII) {
+	      fprintf(codefid,"%f,%f,%f,%f\n",Cx,Cy,Dx,Dy);
+	      fprintf(quadfid,"%2$*1$lu,%3$*1$lu,%4$*1$lu,%5$*1$lu\n",
+		      maxstarWidth,iA,iB,iC,iD);
+	    }
+	    else {
+             fwrite(&Cx,sizeof(Cx),1,codefid);fwrite(&Cy,sizeof(Cy),1,codefid);
+             fwrite(&Dx,sizeof(Dx),1,codefid);fwrite(&Dy,sizeof(Dy),1,codefid);
+	     idxwrite=(int)iA; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
+	     idxwrite=(int)iB; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
+	     idxwrite=(int)iC; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
+	     idxwrite=(int)iD; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
+	    }
 
 	    //if(iA>*maxID) *maxID=iA;
 	    //if(iB>*maxID) *maxID=iB;
@@ -234,6 +253,113 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 }
 
 
+
+signed int compare_qidx(const void *a,const void *b) {
+  unsigned long int aval,bval,adata,bdata;
+
+  aval=*(unsigned long int *)a;
+  bval=*(unsigned long int *)b;
+  adata = thedata[aval];
+  bdata = thedata[bval];
+
+  if(adata>bdata) return(1);
+  else if(adata<bdata) return(-1);
+  else return(0);
+
+}
+
+
+
+
+void deduplicate_quads(FILE *quadfid, qidx maxQuads,
+		       double index_scale,char ASCII)
+{
+  sidx iA,iB,iC,iD,liA,liB,liC,liD;
+  qidx ii,lastAB,lastii;
+  dimension Dim_Quads;
+  long posmarker;
+  if(ASCII) {
+    fscanf(quadfid,"NumQuads=%lu\n",&ii);
+    fscanf(quadfid,"DimQuads=%hu\n",&Dim_Quads);
+    fscanf(quadfid,"IndexScale=%lf\n",&index_scale);
+  }
+  else {
+    magicval magic;
+    fread(&magic,sizeof(magic),1,quadfid);
+    fread(&ii,sizeof(ii),1,quadfid);
+    fread(&Dim_Quads,sizeof(Dim_Quads),1,quadfid);
+    fread(&index_scale,sizeof(index_scale),1,quadfid);
+  }
+  posmarker=ftell(quadfid);
+    
+  if(ii!=maxQuads)
+    fprintf(stderr,"ERROR (getquads) -- NumQuads wrong when re-reading %s\n",
+	    quadfname);
+
+  thedata = (qidx *)malloc(maxQuads*sizeof(qidx));
+  thesortorder = (qidx *)malloc(maxQuads*sizeof(qidx));
+  for(ii=0;ii<maxQuads;ii++) {
+    if(ASCII)
+      fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
+    else {
+      fread(&iA,sizeof(iA),1,quadfid);
+      fread(&iB,sizeof(iB),1,quadfid);
+      fread(&iC,sizeof(iC),1,quadfid);
+      fread(&iD,sizeof(iD),1,quadfid);
+    }
+    thedata[ii]=iA+iB;
+    thesortorder[ii]=ii;
+  }
+  qsort(thesortorder,maxQuads,sizeof(qidx),compare_qidx);
+  if(thedata[thesortorder[0]]) lastAB=0; else lastAB=1;
+  for(ii=0;ii<maxQuads;ii++) {
+    fprintf(stderr,"idx: %lu \t iA+iB: %lu --",
+	    thesortorder[ii],
+	    thedata[thesortorder[ii]]);
+    if(thedata[thesortorder[ii]]!=lastAB) {
+      lastii=thesortorder[ii];
+      lastAB=thedata[lastii];
+      fprintf(stderr,"***\n");
+    }
+    else {
+      if(ASCII) {
+	fseek(quadfid,posmarker+lastii*
+	   (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
+	fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&liA,&liB,&liC,&liD);
+	fseek(quadfid,posmarker+thesortorder[ii]*
+	   (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
+	fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
+      }
+      else {
+	fseek(quadfid,posmarker+lastii*
+	      (DIM_QUADS*sizeof(liA)),SEEK_SET);
+	fread(&liA,sizeof(liA),1,quadfid);
+	fread(&liB,sizeof(liB),1,quadfid);
+	fread(&liC,sizeof(liC),1,quadfid);
+	fread(&liD,sizeof(liD),1,quadfid);
+	fseek(quadfid,posmarker+thesortorder[ii]*
+	      (DIM_QUADS*sizeof(iA)),SEEK_SET);
+	fread(&iA,sizeof(iA),1,quadfid);
+	fread(&iB,sizeof(iB),1,quadfid);
+	fread(&iC,sizeof(iC),1,quadfid);
+	fread(&iD,sizeof(iD),1,quadfid);
+      }
+      if((iA==liA && iB==liB && iC==liC && iD==liD) ||
+	 (iA==liB && iB==liA && iC==liC && iD==liD) ||
+	 (iA==liA && iB==liB && iC==liD && iD==liC) ||
+	 (iA==liB && iB==liA && iC==liD && iD==liC))
+	fprintf(stderr,"DUPLICATE\n");
+      else
+	fprintf(stderr,"\n");
+      //fprintf(stderr,"iA=%lu,iB=%lu,iC=%lu,iD=%lu --- ",iA,iB,iC,iD);
+      //fprintf(stderr,"liA=%lu,liB=%lu,liC=%lu,liD=%lu\n",liA,liB,liC,liD);
+    }
+  }
+  fprintf(stderr,"done.\n");
+  free(thedata); free(thesortorder);
+}
+
+  
 
 
 
