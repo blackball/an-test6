@@ -5,7 +5,7 @@
 #include "KD/kdtree.h"
 #include "KD/kquery.h"
 
-#define PLANAR_GEOMETRY 1
+#define PLANAR_GEOMETRY 0
 
 #if PLANAR_GEOMETRY==1
   #define DIM_STARS 2

@@ -270,6 +270,7 @@ void star_midpoint(star *M,star *A,star *B)
   star_set(M,1,(star_ref(A,1)+star_ref(B,1))/2);
   return;
 #else
+  double len;
   star_set(M,0,(star_ref(A,0)+star_ref(B,0))/2);
   star_set(M,1,(star_ref(A,1)+star_ref(B,1))/2);
   star_set(M,2,(star_ref(A,2)+star_ref(B,2))/2);
