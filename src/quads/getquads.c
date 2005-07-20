@@ -184,7 +184,12 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
           star_coords(thestars->array[iA],midpoint,&Ax,&Ay);
           star_coords(thestars->array[iB],midpoint,&Bx,&By);
 	  Bx-=Ax; By-=Ay;  
+	  scale = sqrt(2*(Bx*Bx+By*By));
 	  costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
+fprintf(stdout,"Bx=%f,By=%f\n",
+2*(Bx*costheta+By*sintheta)/scale,
+2*(-Bx*sintheta+By*costheta)/scale);
+
 	  count=0;
 	  for(kk=1;kk<numS;kk++) {
 	    if(kk!=jj) {
