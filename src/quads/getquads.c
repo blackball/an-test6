@@ -178,18 +178,14 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 	  iB=(sidx)krez->pindexes->iarr[jj];
 	  star_coords(thestars->array[iB],thestars->array[iA],&Bx,&By);
           Bx-=Ax; By-=Ay; // probably don't need this
-	  scale = sqrt(2*(Bx*Bx+By*By));
-	  if(scale>index_scale) {
+	  scale = Bx*Bx+By*By;
+	  if(sqrt(2.0*scale)>index_scale) { // ?? is this right?
           star_midpoint(midpoint,thestars->array[iA],thestars->array[iB]);
           star_coords(thestars->array[iA],midpoint,&Ax,&Ay);
           star_coords(thestars->array[iB],midpoint,&Bx,&By);
 	  Bx-=Ax; By-=Ay;  
-	  scale = sqrt(2*(Bx*Bx+By*By));
+	  scale = Bx*Bx+By*By;
 	  costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
-fprintf(stdout,"Bx=%f,By=%f\n",
-2*(Bx*costheta+By*sintheta)/scale,
-2*(-Bx*sintheta+By*costheta)/scale);
-
 	  count=0;
 	  for(kk=1;kk<numS;kk++) {
 	    if(kk!=jj) {
@@ -197,8 +193,8 @@ fprintf(stdout,"Bx=%f,By=%f\n",
 			  midpoint,&thisx,&thisy);
 	      thisx-=Ax; thisy-=Ay;
 	      xxtmp=thisx;
-	      thisx=2*(thisx*costheta+thisy*sintheta)/scale; 
-	      thisy=2*(-xxtmp*sintheta+thisy*costheta)/scale;
+	      thisx=thisx*costheta+thisy*sintheta;
+	      thisy=-xxtmp*sintheta+thisy*costheta;
 	      if((thisx<1.0)&&(thisx>0.0)&&(thisy<1.0)&&(thisy>0.0)) {
 		ivec_set(candidates,count,krez->pindexes->iarr[kk]);
 		dyv_set(candidatesX,count,thisx);

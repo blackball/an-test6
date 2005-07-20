@@ -57,6 +57,7 @@ int main(int argc,char *argv[])
 
   FILE *pixfid=NULL,*treefid=NULL,*hitfid=NULL;
   qidx numpix;
+  double index_scale;
   sizev *pixsizes;
 
   fprintf(stderr,"solvexy: solving fields in %s using %s\n",
@@ -75,11 +76,12 @@ int main(int argc,char *argv[])
   else fprintf(stderr,"stdin...");  fflush(stderr);
   fopenin(treefname,treefid); fnfree(treefname);
   kdtree *codekd = fread_kdtree(treefid);
+  fread(&index_scale,sizeof(index_scale),1,treefid);
   fclose(treefid);
   if(codekd==NULL) return(2);
   fprintf(stderr,"done (%d quads, %d nodes, depth %d).\n",
 	  codekd->root->num_points,codekd->num_nodes,codekd->max_depth);
-  // ?? should have scale also
+  fprintf(stderr,"    (index scale = %f\n",index_scale);
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
@@ -119,7 +121,6 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
   xyarray *thepix = mk_xyarray(*numpix);
   *pixsizes = mk_sizev(*numpix);
   for(ii=0;ii<*numpix;ii++) {
-    // ?? read in how many xy points in this pic
     if(ASCII)
       fscanf(fid,"%lu",&numxy);
     else
@@ -174,7 +175,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes,
 	Bx=xy_refx(thepix->array[ii],iB); By=xy_refy(thepix->array[ii],iB);
 	xy_setx(ABCDpix,1,Bx); xy_sety(ABCDpix,1,By);
 	Bx-=Ax; By-=Ay;
-	scale = sqrt(2*(Bx*Bx+By*By));
+	scale = Bx*Bx+By*By;
 	costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
 	for(iC=0;iC<(numxy-1);iC++) {
 	  if(iC!=iA && iC!=iB) {
@@ -182,20 +183,18 @@ void solve_pix(xyarray *thepix, sizev *pixsizes,
 	  xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
 	  Cx-=Ax; Cy-=Ay;
 	  xxtmp=Cx;
-	  Cx=2*(Cx*costheta+Cy*sintheta)/scale; 
-	  Cy=2*(-xxtmp*sintheta+Cy*costheta)/scale;
+	  Cx=Cx*costheta+Cy*sintheta;
+	  Cy=-xxtmp*sintheta+Cy*costheta;
 	  if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) {
-	    //if(1) {
 	  for(iD=iC+1;iD<numxy;iD++) {
 	    if(iD!=iA && iD!=iB) {
             Dx=xy_refx(thepix->array[ii],iD); Dy=xy_refy(thepix->array[ii],iD);
     	    xy_setx(ABCDpix,3,Dx); xy_sety(ABCDpix,3,Dy);
 	    Dx-=Ax; Dy-=Ay;
 	    xxtmp=Dx;
-	    Dx=2*(Dx*costheta+Dy*sintheta)/scale; 
-	    Dy=2*(-xxtmp*sintheta+Dy*costheta)/scale;
+	    Dx=Dx*costheta+Dy*sintheta;
+	    Dy=-xxtmp*sintheta+Dy*costheta;
 	    if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) {
-	    //if(1) {
 	      //fprintf(fid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
 	      try_all_codes(Cx,Cy,Dx,Dy,ABCDpix,kq,codekd,fid);
 	    }
@@ -239,9 +238,9 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
   }
   free_kresult(krez);
   
-  code_set(thequery,0,-Cx); code_set(thequery,1,-Cy);
-  code_set(thequery,2,-Dx); code_set(thequery,3,-Dy);
-  //fprintf(fid,"code:%f,%f,%f,%f\n",-Cx,-Cy,-Dx,-Dy);
+  code_set(thequery,0,1.0-Cx); code_set(thequery,1,1.0-Cy);
+  code_set(thequery,2,1.0-Dx); code_set(thequery,3,1.0-Dy);
+  //fprintf(fid,"code:%f,%f,%f,%f\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(fid,"BACD gives %d matches:",krez->count);
@@ -273,9 +272,9 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
   }
   free_kresult(krez);
   
-  code_set(thequery,0,-Dx); code_set(thequery,1,-Dy);
-  code_set(thequery,2,-Cx); code_set(thequery,3,-Cy);
-  //fprintf(fid,"code:%f,%f,%f,%f\n",-Dx,-Dy,-Cx,-Cy);
+  code_set(thequery,0,1.0-Dx); code_set(thequery,1,1.0-Dy);
+  code_set(thequery,2,1.0-Cx); code_set(thequery,3,1.0-Cy);
+  //fprintf(fid,"code:%f,%f,%f,%f\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(fid,"BADC gives %d matches:",krez->count);
