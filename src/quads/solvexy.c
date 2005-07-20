@@ -46,9 +46,9 @@ int main(int argc,char *argv[])
       case 'h':
 	fprintf(stderr, 
 	"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol]\n");
-	return(1);
+	return(HELP_ERR);
       default:
-	return(2);
+	return(OPT_ERR);
       }
 
   for (argidx = optind; argidx < argc; argidx++)
@@ -77,9 +77,9 @@ int main(int argc,char *argv[])
   kdtree *codekd = fread_kdtree(treefid);
   fclose(treefid);
   if(codekd==NULL) return(2);
-  fprintf(stderr,"done (%d nodes, depth %d).\n",
-	  codekd->num_nodes,codekd->max_depth);
-  // ?? should have scale and numquads also
+  fprintf(stderr,"done (%d quads, %d nodes, depth %d).\n",
+	  codekd->root->num_points,codekd->num_nodes,codekd->max_depth);
+  // ?? should have scale also
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
@@ -167,7 +167,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes,
     //fprintf(fid,"field %lu has %lu stars: 4*%lu quads will be checked\n",
     //	    ii,numxy,choose(numxy,DIM_QUADS));
     fprintf(fid,"%lu:\n",ii);
-    for(iA=0;iA<numxy;iA++) {
+    for(iA=0;iA<(numxy-1);iA++) {
       Ax=xy_refx(thepix->array[ii],iA); Ay=xy_refy(thepix->array[ii],iA);
       xy_setx(ABCDpix,0,Ax); xy_sety(ABCDpix,0,Ay);
       for(iB=iA+1;iB<numxy;iB++) {
@@ -176,7 +176,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes,
 	Bx-=Ax; By-=Ay;
 	scale = sqrt(2*(Bx*Bx+By*By));
 	costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
-	for(iC=0;iC<numxy;iC++) {
+	for(iC=0;iC<(numxy-1);iC++) {
 	  if(iC!=iA && iC!=iB) {
           Cx=xy_refx(thepix->array[ii],iC); Cy=xy_refy(thepix->array[ii],iC);
 	  xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
@@ -185,6 +185,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes,
 	  Cx=2*(Cx*costheta+Cy*sintheta)/scale; 
 	  Cy=2*(-xxtmp*sintheta+Cy*costheta)/scale;
 	  if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) {
+	    //if(1) {
 	  for(iD=iC+1;iD<numxy;iD++) {
 	    if(iD!=iA && iD!=iB) {
             Dx=xy_refx(thepix->array[ii],iD); Dy=xy_refy(thepix->array[ii],iD);
@@ -194,6 +195,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes,
 	    Dx=2*(Dx*costheta+Dy*sintheta)/scale; 
 	    Dy=2*(-xxtmp*sintheta+Dy*costheta)/scale;
 	    if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) {
+	    //if(1) {
 	      //fprintf(fid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
 	      try_all_codes(Cx,Cy,Dx,Dy,ABCDpix,kq,codekd,fid);
 	    }

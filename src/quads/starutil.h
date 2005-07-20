@@ -5,7 +5,7 @@
 #include "KD/kdtree.h"
 #include "KD/kquery.h"
 
-#define PLANAR_GEOMETRY 0
+#define PLANAR_GEOMETRY 1
 
 #if PLANAR_GEOMETRY==1
   #define DIM_STARS 2
@@ -16,6 +16,9 @@
 #define DIM_CODES 4
 #define DIM_QUADS 4
 #define DIM_XY 2
+
+#define SIDX_MAX ULONG_MAX
+#define QIDX_MAX ULONG_MAX
 
 typedef unsigned long int qidx;
 typedef unsigned long int sidx;
@@ -88,6 +91,7 @@ star *make_rand_star(double ramin, double ramax,
 		     double decmin, double decmax);
 
 void star_coords(star *s,star *r,double *x,double *y);
+void star_midpoint(star *M,star *A,star *B);
 
 unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid);
 kdtree *fread_kdtree(FILE *fid);
@@ -95,6 +99,9 @@ unsigned int fwrite_node(node *n,FILE *fid);
 node *fread_node(int pointdim,FILE *fid);
 void free_nodedebug(node *x);
 void free_kdtreedebug(kdtree *x);
+
+dyv_array *mk_dyv_array_from_kdtree(kdtree *kd);
+void free_dyv_array_from_kdtree(dyv_array *da);
 
 unsigned long int choose(unsigned int nn,unsigned int mm);
 

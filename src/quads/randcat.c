@@ -54,10 +54,10 @@ int main(int argc,char *argv[])
 	fprintf (stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"randcat [-a|-b] [-n numstars] [-f catfile]\n");
-	return(1);
+	"randcat [-a|-b] [-n numstars] [-f catfile] [-r/R RAmin/max] [-d/R DECmin/max]\n");
+	return(HELP_ERR);
       default:
-	return(2);
+	return(OPT_ERR);
       }
 
   for (argidx = optind; argidx < argc; argidx++)

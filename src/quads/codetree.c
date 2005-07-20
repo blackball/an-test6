@@ -10,7 +10,7 @@ extern int optind, opterr, optopt;
 #define mk_codekdtree(c,r) mk_kdtree_from_points((dyv_array *)c,r)
 
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes, 
-		     char *ASCII,qidx buffsize);
+		     char *ASCII,double *index_scale,qidx buffsize);
 
 int readonecode(FILE *codefid, code *tmpcode, 
 		 dimension Dim_Codes, char ASCII);
@@ -44,9 +44,9 @@ int main(int argc,char *argv[])
       case 'h':
 	fprintf(stderr, 
 	"codetree [-f fname] [-B buffer_length] [-R KD_RMIN]\n");
-	return(1);
+	return(HELP_ERR);
       default:
-	return(2);
+	return(OPT_ERR);
       }
 
   for (argidx = optind; argidx < argc; argidx++)
@@ -56,13 +56,15 @@ int main(int argc,char *argv[])
   qidx numcodes,ii;
   code *tmpcode;
   dimension Dim_Codes;
+  double index_scale;
   char ASCII;
 
   fprintf(stderr,"codetree: building KD tree for %s\n",codefname);
 
   fprintf(stderr,"  Reading codes...");fflush(stderr);
   fopenin(codefname,codefid); fnfree(codefname);
-  codearray *thecodes=readcodes(codefid,&numcodes,&Dim_Codes,&ASCII,buffsize);
+  codearray *thecodes=readcodes(codefid,&numcodes,&Dim_Codes,
+				&ASCII,&index_scale,buffsize);
   if(thecodes==NULL) return(1);
   fprintf(stderr,"got %d codes (dim %hu).\n",thecodes->size,Dim_Codes);
 
@@ -93,6 +95,7 @@ int main(int argc,char *argv[])
   fflush(stderr);
   fopenout(treefname,treefid); fnfree(treefname);
   fwrite_kdtree(codekd,treefid);
+  fwrite(&index_scale,sizeof(index_scale),1,treefid);
   fprintf(stderr,"done.\n");
   fclose(treefid);
 
@@ -107,7 +110,7 @@ int main(int argc,char *argv[])
 
 
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes, 
-		     char *ASCII,qidx buffsize)
+		     char *ASCII,double *index_scale,qidx buffsize)
 {
   qidx ii;
   magicval magic;
@@ -116,6 +119,7 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
     *ASCII=1;
     fscanf(fid,"mCodes=%lu\n",numcodes);
     fscanf(fid,"DimCodes=%hu\n",Dim_Codes);
+    fscanf(fid,"IndexScale=%lf\n",index_scale);
   }
   else {
     if(magic!=MAGIC_VAL) {
@@ -125,6 +129,7 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
     *ASCII=0;
     fread(numcodes,sizeof(*numcodes),1,fid);
     fread(Dim_Codes,sizeof(*Dim_Codes),1,fid);
+    fread(index_scale,sizeof(*index_scale),1,fid);
   }
   if(*numcodes< buffsize) buffsize=*numcodes;
   codearray *thecodes = mk_codearray(buffsize);
