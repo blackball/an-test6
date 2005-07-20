@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "starutil.h"
 
-#define OPTIONS "has:q:f:"
+#define OPTIONS "habs:q:f:"
 extern char *optarg;
 extern int optind, opterr, optopt;
 
