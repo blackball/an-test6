@@ -92,7 +92,7 @@ int main(int argc,char *argv[])
   if(starkd==NULL) return(2);
   numstars=starkd->root->num_points;
   if(ASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
-  fprintf(stderr,"done (%lu stars, %d nodes, depth %d).\n",
+  fprintf(stderr,"done\n    (%lu stars, %d nodes, depth %d).\n",
 	  numstars,starkd->num_nodes,starkd->max_depth);
   fprintf(stderr,"    (dim %d) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
 	  kdtree_num_dims(starkd),ramin,ramax,decmin,decmax);
@@ -131,7 +131,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 	       qidx maxCodes,char ASCII)
 {
   char still_not_done;
-  int count,idxwrite;
+  sidx count;
   qidx numtries=0,ii;
   sidx iA,iB,iC,iD,jj,kk,numS;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
@@ -207,7 +207,9 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 	    sidx i1=(sidx)int_random(count); 
 	    sidx i2=(sidx)int_random(count-1); 
 	    if(i2>=i1) i2++;
-	    iC=(sidx)ivec_ref(candidates,i1); 
+	    if(ivec_ref(candidates,i2)<ivec_ref(candidates,i1))
+	      {sidx itmp=i1; i1=i2; i2=itmp;}
+	    iC=(sidx)ivec_ref(candidates,i1);
 	    iD=(sidx)ivec_ref(candidates,i2);
 	    Cx=dyv_ref(candidatesX,i1); Cy=dyv_ref(candidatesY,i1); 
 	    Dx=dyv_ref(candidatesX,i2); Dy=dyv_ref(candidatesY,i2);
@@ -220,10 +222,10 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 	    else {
              fwrite(&Cx,sizeof(Cx),1,codefid);fwrite(&Cy,sizeof(Cy),1,codefid);
              fwrite(&Dx,sizeof(Dx),1,codefid);fwrite(&Dy,sizeof(Dy),1,codefid);
-	     idxwrite=(int)iA; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
-	     idxwrite=(int)iB; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
-	     idxwrite=(int)iC; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
-	     idxwrite=(int)iD; fwrite(&idxwrite,sizeof(idxwrite),1,quadfid);
+	     fwrite(&iA,sizeof(iA),1,quadfid);
+	     fwrite(&iB,sizeof(iB),1,quadfid);
+	     fwrite(&iC,sizeof(iC),1,quadfid);
+	     fwrite(&iD,sizeof(iD),1,quadfid);
 	    }
 
 	    //if(iA>*maxID) *maxID=iA;
@@ -276,7 +278,7 @@ void deduplicate_quads(FILE *quadfid, qidx maxQuads,
 		       double index_scale,char ASCII)
 {
   sidx iA,iB,iC,iD,liA,liB,liC,liD;
-  qidx ii,lastAB,lastii;
+  qidx ii,lastAB,lastii=0;
   dimension Dim_Quads;
   long posmarker;
   if(ASCII) {

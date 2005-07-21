@@ -1,13 +1,13 @@
 .PHONY: all allclean clean
 
-CC = /pkgs/gcc-3.2/linux/bin/gcc
+CC = gcc
 LFLAGS = -lm
                 
 #fast
-CFLAGS	= -O2 -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM
+#CFLAGS	= -O2 -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM
 
 #debug
-#CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM
+CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM
 
 OBJ = starutil.o KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o
 

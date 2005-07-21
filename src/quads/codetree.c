@@ -12,7 +12,7 @@ extern int optind, opterr, optopt;
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes, 
 		     char *ASCII,double *index_scale,qidx buffsize);
 
-int readonecode(FILE *codefid, code *tmpcode, 
+dimension readonecode(FILE *codefid, code *tmpcode, 
 		 dimension Dim_Codes, char ASCII);
 
 char *treefname=NULL;
@@ -155,16 +155,19 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
 }
 
 
-int readonecode(FILE *codefid, code *tmpcode, dimension Dim_Codes, char ASCII)
+dimension readonecode(FILE *codefid, code *tmpcode, 
+		      dimension Dim_Codes, char ASCII)
 {
-  int rez=0;
+  dimension rez=0;
   if(ASCII) {
     if(Dim_Codes==4)
-      rez=fscanf(codefid,"%lf,%lf,%lf,%lf\n",tmpcode->farr,
+      rez=(dimension)fscanf(codefid,"%lf,%lf,%lf,%lf\n",tmpcode->farr,
 	     tmpcode->farr+1,tmpcode->farr+2,tmpcode->farr+3   );
+    else
+      fprintf(stderr,"ERROR (codetree) -- only DimCodes=4 supported.\n");
   }
   else
-    rez=fread(tmpcode->farr,sizeof(double),Dim_Codes,codefid);
+    rez=(dimension)fread(tmpcode->farr,sizeof(double),Dim_Codes,codefid);
 
   if(rez!=Dim_Codes) 
     fprintf(stderr,"ERROR (codetree) -- can't read next code\n"); 
