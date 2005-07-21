@@ -94,7 +94,7 @@ int main(int argc,char *argv[])
   fclose(treefid);
   if(starkd==NULL) return(1);
   numstars=starkd->root->num_points;
-  fprintf(stderr,"done (%lu stars, %d nodes, depth %d).\n",
+  fprintf(stderr,"done\n    (%lu stars, %d nodes, depth %d).\n",
 	  numstars,starkd->num_nodes,starkd->max_depth);
   fprintf(stderr,"    (dim %d) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
 	  kdtree_num_dims(starkd),ramin,ramax,decmin,decmax);

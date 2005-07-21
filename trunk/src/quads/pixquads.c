@@ -135,6 +135,7 @@ quadarray *readquadlist(FILE *fid,qidx *numquads)
 {
   char ASCII = 0;
   qidx ii;
+  sidx iA,iB,iC,iD;
   dimension Dim_Quads;
   double index_scale;
   magicval magic;
@@ -163,15 +164,18 @@ quadarray *readquadlist(FILE *fid,qidx *numquads)
       free_quadarray(thequads);
       return (quadarray *)NULL;
     }
-    if(ASCII) {
-      fscanf(fid,"%d,%d,%d,%d\n",
-	     (thequads->array[ii]->iarr),
-	     (thequads->array[ii]->iarr)+1,
-	     (thequads->array[ii]->iarr)+2,
-	     (thequads->array[ii]->iarr)+3);
+    if(ASCII)
+      fscanf(fid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
+    else {
+      fread(&iA,sizeof(iA),1,fid);
+      fread(&iB,sizeof(iB),1,fid);
+      fread(&iC,sizeof(iC),1,fid);
+      fread(&iD,sizeof(iD),1,fid);
     }
-    else
-      fread(thequads->array[ii]->iarr,sizeof(int),DIM_QUADS,fid);
+    thequads->array[ii]->iarr[0]=(int)iA;
+    thequads->array[ii]->iarr[1]=(int)iB;
+    thequads->array[ii]->iarr[2]=(int)iC;
+    thequads->array[ii]->iarr[3]=(int)iD;
   }
   return thequads;
 }

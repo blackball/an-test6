@@ -111,6 +111,7 @@ unsigned long int choose(unsigned int nn,unsigned int mm);
 #define fopenout(n,f) {if(n){f = fopen(n,"w"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n);return(FOPEN_ERR);}} else f=stdout;}
 #define fopenin(n,f) {if(n){f = fopen(n,"r"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n);return(FOPEN_ERR);}} else f=stdin;}
 #define fnfree(n) {if(n) free(n);}
+#define fopenoutplus(n,f) {if(n){f = fopen(n,"w+"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing+.\n",n);return(FOPEN_ERR);}} else f=stdout;}
 
 #define MAGIC_VAL 0xFF00
 #define ASCII_VAL 0x754E
