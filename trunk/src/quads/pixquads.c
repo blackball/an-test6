@@ -135,7 +135,7 @@ quadarray *readquadlist(FILE *fid,qidx *numquads)
 {
   char ASCII = 0;
   qidx ii;
-  sidx iA,iB,iC,iD;
+  sidx iA,iB,iC,iD,numstars;
   dimension Dim_Quads;
   double index_scale;
   magicval magic;
@@ -145,6 +145,7 @@ quadarray *readquadlist(FILE *fid,qidx *numquads)
     fscanf(fid,"mQuads=%lu\n",numquads);
     fscanf(fid,"DimQuads=%hu\n",&Dim_Quads);
     fscanf(fid,"IndexScale=%lf\n",&index_scale);
+    fscanf(fid,"NumStars=%lu\n",&numstars);
   }
   else {
     if(magic!=MAGIC_VAL) {
