@@ -113,6 +113,7 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
 		     char *ASCII,double *index_scale,qidx buffsize)
 {
   qidx ii;
+  sidx numstars;
   magicval magic;
   fread(&magic,sizeof(magic),1,fid);
   if(magic==ASCII_VAL) {
@@ -120,6 +121,7 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
     fscanf(fid,"mCodes=%lu\n",numcodes);
     fscanf(fid,"DimCodes=%hu\n",Dim_Codes);
     fscanf(fid,"IndexScale=%lf\n",index_scale);
+    fscanf(fid,"NumStars=%lu\n",&numstars);
   }
   else {
     if(magic!=MAGIC_VAL) {

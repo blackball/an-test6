@@ -119,7 +119,7 @@ int main(int argc,char *argv[])
   qposmarker=ftell(quadfid);
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
-  fopenoutplus(hitfname,hitfid); fnfree(hitfname);
+  fopenout(hitfname,hitfid); fnfree(hitfname);
   solve_pix(thepix,pixsizes,codekd,codetol,ASCII,hitfid,quadfid);
   fprintf(stderr,"done.\n");
   free_xyarray(thepix); 
