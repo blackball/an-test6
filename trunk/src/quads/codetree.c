@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "starutil.h"
+#include "kdutil.h"
 
 #define OPTIONS "hR:f:B:"
 #define MEM_LOAD 1000000000

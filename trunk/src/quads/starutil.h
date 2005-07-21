@@ -2,8 +2,6 @@
 #define starutil_H
 #include "KD/ambs.h"
 #include "KD/amdyv_array.h"
-#include "KD/kdtree.h"
-#include "KD/kquery.h"
 
 #define PLANAR_GEOMETRY 0
 
@@ -77,13 +75,6 @@ typedef dyv_array xyarray;
 #define mk_starcopy(s) (star *)mk_copy_dyv((const dyv *)s)
 #define copy_codeptr(cc,dd,i) dyv_array_set_no_copy(cc,i,dyv_array_ref((dyv_array *)dd,i))
 
-#define fread_dyv(d,f) fread(d->farr,sizeof(double),dyv_size(d),f)
-#define fread_ivec(i,f) fread(i->iarr,sizeof(int),ivec_size(i),f)
-#define fwrite_dyv(d,f) fwrite(d->farr,sizeof(double),dyv_size(d),f)
-#define fwrite_ivec(i,f) fwrite(i->iarr,sizeof(int),ivec_size(i),f)
-
-extern kresult *mk_kresult_from_kquery(kquery *kq,kdtree *kd,dyv *query);
-
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax);
 
@@ -92,16 +83,6 @@ star *make_rand_star(double ramin, double ramax,
 
 void star_coords(star *s,star *r,double *x,double *y);
 void star_midpoint(star *M,star *A,star *B);
-
-unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid);
-kdtree *fread_kdtree(FILE *fid);
-unsigned int fwrite_node(node *n,FILE *fid);
-node *fread_node(int pointdim,FILE *fid);
-void free_nodedebug(node *x);
-void free_kdtreedebug(kdtree *x);
-
-dyv_array *mk_dyv_array_from_kdtree(kdtree *kd);
-void free_dyv_array_from_kdtree(dyv_array *da);
 
 unsigned long int choose(unsigned int nn,unsigned int mm);
 
@@ -113,9 +94,10 @@ unsigned long int choose(unsigned int nn,unsigned int mm);
 #define fnfree(n) {if(n) free(n);}
 #define fopenoutplus(n,f) {if(n){f = fopen(n,"w+"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing+.\n",n);return(FOPEN_ERR);}} else f=stdout;}
 
+typedef unsigned short int magicval;
+
 #define MAGIC_VAL 0xFF00
 #define ASCII_VAL 0x754E
-#define KD_UNDEF 0
 
 #ifndef TRUE
 #define TRUE 1
@@ -127,7 +109,5 @@ unsigned long int choose(unsigned int nn,unsigned int mm);
 
 #define PIl          3.1415926535897932384626433832795029L  /* pi */
 
-typedef unsigned short int magicval;
 
-
-#endif // starutil_H
+#endif 

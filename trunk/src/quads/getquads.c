@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "starutil.h"
+#include "kdutil.h"
 
 #define OPTIONS "habs:q:f:"
 extern char *optarg;
@@ -42,8 +43,8 @@ int main(int argc,char *argv[])
 	ASCII = 0;
 	break;
       case 's':
-	index_scale = (double)strtoul(optarg,NULL,0);
-	index_scale = 1.0/index_scale;
+	index_scale = (double)strtod(optarg,NULL);
+	if(index_scale>=1.0) index_scale = index_scale*(double)PIl/(180.0*60);
 	break;
       case 'q':
 	maxQuads = strtoul(optarg,NULL,0);
@@ -60,7 +61,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"getquads [-s 1/scale] [-q maxQuads] [-a|-b] [-f fname]\n");
+	"getquads [-s scale(arcmin)] [-q maxQuads] [-a|-b] [-f fname]\n");
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);

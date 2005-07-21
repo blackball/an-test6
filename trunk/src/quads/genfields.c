@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <math.h>
 #include "starutil.h"
+#include "kdutil.h"
 
-#define OPTIONS "hn:s:z:R:f:o:w:x:q:"
+#define OPTIONS "hpn:s:z:R:f:o:w:x:q:"
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -16,6 +17,7 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 	     double radscale,qidx maxPix);
 
 char *treefname=NULL,*listfname=NULL,*pix0fname=NULL,*pixfname=NULL;
+char FlipParity=0;
 
 int main(int argc,char *argv[])
 {
@@ -30,9 +32,12 @@ int main(int argc,char *argv[])
       case 'n':
 	maxPix = strtoul(optarg,NULL,0);
 	break;
+      case 'p':
+	FlipParity = 1;
+	break;
       case 's':
-	radscale = (double)strtoul(optarg,NULL,0);
-	radscale = 1.0/radscale;
+	radscale = (double)strtod(optarg,NULL);
+	if(radscale>=1.0) radscale = radscale*(double)PIl/(180.0*60);
 	break;
       case 'z':
 	aspect = strtod(optarg,NULL);
@@ -62,7 +67,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"genfields  [-n numFields] [-z aspectRatio] [-s 1/scale] [-w noise] [-x distractors] [-q dropouts] [-f fname] [-o fieldname]\n");
+	"genfields  [-n numFields] [-s scale(arcmin)] [-p] [-w noise] [-x distractors] [-q dropouts] [-f fname] [-o fieldname]\n");
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
@@ -169,6 +174,7 @@ star_ref(randstar,0),star_ref(randstar,1),star_ref(randstar,2));
 	  fprintf(listfid,",%d",krez->pindexes->iarr[jj]);
 	  star_coords(thestars->array[(krez->pindexes->iarr[jj])],
 	  	    randstar,&xx,&yy);
+	  if(FlipParity) xx=-xx;
 	  if(jj==0) {pixxmin=pixxmax=xx; pixymin=pixymax=yy;}
 	  if(xx>pixxmax) pixxmax=xx; if(xx<pixxmin) pixxmin=xx;
 	  if(yy>pixymax) pixymax=yy; if(yy<pixymin) pixymin=yy;
