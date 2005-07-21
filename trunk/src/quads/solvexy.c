@@ -101,7 +101,7 @@ int main(int argc,char *argv[])
   if(codekd==NULL) return(2);
   fprintf(stderr,"done\n    (%d quads, %d nodes, depth %d).\n",
 	  codekd->root->num_points,codekd->num_nodes,codekd->max_depth);
-  fprintf(stderr,"    (index scale = %f\n",index_scale);
+  fprintf(stderr,"    (index scale = %f)\n",index_scale);
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
   fread(&magic,sizeof(magic),1,quadfid);
