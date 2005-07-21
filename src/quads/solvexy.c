@@ -1,8 +1,9 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "starutil.h"
+#include "kdutil.h"
 
-#define OPTIONS "hpf:o:t:"
+#define OPTIONS "hpf:o:t:k:"
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -33,7 +34,7 @@ char buff[100],maxstarWidth;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-  double codetol=0.01;
+  double codetol=10;
   char ParityFlip=0;
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -51,8 +52,12 @@ int main(int argc,char *argv[])
 	sprintf(pixfname,"%s.xyls",optarg);
 	sprintf(hitfname,"%s.hits",optarg);
 	break;
+      case 'k':
+	codetol=(double)strtoul(optarg,NULL,0);
+	break;
       case 't':
 	codetol=strtod(optarg,NULL);
+	if(codetol>=1) codetol=1.0;
 	break;
       case 'p':
 	ParityFlip=1;
@@ -61,7 +66,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol]\n");
+	"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol | -k kNN]\n");
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
@@ -194,8 +199,12 @@ void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   qidx ii,numxy,nummatches,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,costheta,sintheta,scale,xxtmp;
   long posmarker;
-  kquery *kq = mk_kquery("rangesearch","",KD_UNDEF,
-			 codetol,codekd->rmin);
+  kquery *kq;
+  if(codetol<1.0)
+    kq = mk_kquery("rangesearch","",KD_UNDEF,codetol,codekd->rmin);
+  else
+    kq = mk_kquery("knn","",(int)codetol,KD_UNDEF,codekd->rmin);
+
   xy *ABCDpix=mk_xy(DIM_QUADS);
 
   for(ii=0;ii<thepix->size;ii++) {
