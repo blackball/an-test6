@@ -159,9 +159,11 @@ void output_star(FILE *fid, sidx i, star *s)
 #if DIM_STARS==2
   fprintf(fid,"%lu: %f,%f\n",i,star_ref(s,0),star_ref(s,1));
 #else
+  double ttt=atan2(star_ref(s,1),star_ref(s,0));
+  if(ttt<0.0) ttt=2*(double)PIl+ttt;
   fprintf(fid,"%lu: %f,%f,%f (%f,%f)\n",
 	  i,star_ref(s,0),star_ref(s,1),star_ref(s,2),
-	  180.0*atan2(star_ref(s,1),star_ref(s,0))/(double)PIl,
+	  180.0*ttt/(double)PIl,
 	  180.0*asin(star_ref(s,2))/(double)PIl);
 #endif
   return;
