@@ -122,15 +122,15 @@ int main(int argc,char *argv[])
   else if(whichset && kset)
     fprintf(stderr,"  getting %lu stars nearest %lu\n",K,whichstar);
   else if(whichset && dtolset)
-    fprintf(stderr,"  getting stars within %f of %lu ",dtol,whichstar);
+    fprintf(stderr,"  getting stars within %f of %lu\n",dtol,whichstar);
   else if(radecset && kset)
-    fprintf(stderr,"  getting %lu stars closest to ra=%f,dec=%f ",K,ra,dec);
+    fprintf(stderr,"  getting %lu stars closest to ra=%f,dec=%f\n",K,ra,dec);
   else if(radecset && dtolset)
-    fprintf(stderr,"  getting stars within %f of ra=%f,dec=%f ",dtol,ra,dec);
+    fprintf(stderr,"  getting stars within %f of ra=%f,dec=%f\n",dtol,ra,dec);
   else if(xyzset && kset)
-   fprintf(stderr,"  getting %lu stars closest to x=%f,y=%f,z=%f ",K,xx,yy,zz);
+  fprintf(stderr,"  getting %lu stars closest to x=%f,y=%f,z=%f\n",K,xx,yy,zz);
   else if(xyzset && dtolset)
-    fprintf(stderr," stars within %f of x=%f,y=%f,z=%f ",dtol,xx,yy,zz);
+    fprintf(stderr," stars within %f of x=%f,y=%f,z=%f\n",dtol,xx,yy,zz);
   else
     fprintf(stderr," --- error --- ");
 
@@ -154,13 +154,15 @@ int main(int argc,char *argv[])
 }
 
 
-
 void output_star(FILE *fid, sidx i, star *s)
 {
 #if DIM_STARS==2
   fprintf(fid,"%lu: %f,%f\n",i,star_ref(s,0),star_ref(s,1));
 #else
-  fprintf(fid,"%lu: %f,%f,%f\n",i,star_ref(s,0),star_ref(s,1),star_ref(s,2));
+  fprintf(fid,"%lu: %f,%f,%f (%f,%f)\n",
+	  i,star_ref(s,0),star_ref(s,1),star_ref(s,2),
+	  180.0*atan2(star_ref(s,1),star_ref(s,2))/(double)PIl,
+	  180.0*asin(star_ref(s,2))/(double)PIl);
 #endif
   return;
 }
