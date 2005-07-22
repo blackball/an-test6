@@ -15,6 +15,15 @@
 #define DIM_QUADS 4
 #define DIM_XY 2
 
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#define PIl          3.1415926535897932384626433832795029L  /* pi */
+
 #define SIDX_MAX ULONG_MAX
 #define QIDX_MAX ULONG_MAX
 
@@ -72,11 +81,13 @@ typedef dyv_array xyarray;
 #define free_codearray(c) free_dyv_array((dyv_array *)c)
 #define free_xyarray(s) free_dyv_array((dyv_array *)s)
 
-#define mk_starcopy(s) (star *)mk_copy_dyv((const dyv *)s)
-#define copy_codeptr(cc,dd,i) dyv_array_set_no_copy(cc,i,dyv_array_ref((dyv_array *)dd,i))
-
-stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
-	   double *ramin, double *ramax, double *decmin, double *decmax);
+#define rad2deg(r) (180.0*r/(double)PIl)
+#define deg2rad(d) (d*(double)PIl/180.0)
+#define radec2x(r,d) (cos(d)*cos(r))
+#define radec2y(r,d) (cos(d)*sin(r))
+#define radec2z(r,d) (sin(d))
+#define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x)))
+#define z2dec(z) (asin(z))
 
 star *make_rand_star(double ramin, double ramax, 
 		     double decmin, double decmax);
@@ -84,47 +95,9 @@ star *make_rand_star(double ramin, double ramax,
 void star_coords(star *s,star *r,double *x,double *y);
 void star_midpoint(star *M,star *A,star *B);
 
-char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars, 
-             double *ramin,double *ramax,double *decmin,double *decmax);
-char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
-		      dimension *DimCodes, double *index_scale);
-char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
-		      dimension *DimQuads, double *index_scale);
-void write_objs_header(FILE *fid, char ASCII, sidx numstars,
-    dimension DimStars, double ramin,double ramax,double decmin,double decmax);
-void write_code_header(FILE *codefid, char ASCII, qidx numCodes, 
-		       sidx numstars, dimension DimCodes, double index_scale);
-void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
-		       dimension DimQuads, double index_scale);
-
-
-
 unsigned long int choose(unsigned int nn,unsigned int mm);
 
 #define HELP_ERR -101
 #define OPT_ERR -201
-#define FOPEN_ERR -301
-#define fopenout(n,f) {if(n){f = fopen(n,"w"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n);return(FOPEN_ERR);}} else f=stdout;}
-#define fopenin(n,f) {if(n){f = fopen(n,"r"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n);return(FOPEN_ERR);}} else f=stdin;}
-#define fnfree(n) {if(n) free(n);}
-#define fopenoutplus(n,f) {if(n){f = fopen(n,"w+"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing+.\n",n);return(FOPEN_ERR);}} else f=stdout;}
-
-typedef unsigned short int magicval;
-
-#define MAGIC_VAL 0xFF00
-#define ASCII_VAL 0x754E
-
-#define READ_FAIL -1
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#define PIl          3.1415926535897932384626433832795029L  /* pi */
-
 
 #endif 

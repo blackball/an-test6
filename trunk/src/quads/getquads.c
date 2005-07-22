@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "starutil.h"
 #include "kdutil.h"
+#include "fileutil.h"
 
 #define OPTIONS "habs:q:f:"
 extern char *optarg;

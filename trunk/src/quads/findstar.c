@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "starutil.h"
 #include "kdutil.h"
+#include "fileutil.h"
 
 #define OPTIONS "hf:i:x:y:z:r:d:t:k:"
 extern char *optarg;
@@ -15,7 +16,7 @@ int main(int argc,char *argv[])
   int argidx,argchar;//  opterr = 0;
 
   char whichset=0,xyzset=0,radecset=0,kset=0,dtolset=0;
-  sidx whichstar;
+  sidx whichstar=0;
   sidx K=1;
   double dtol=0.0,xx=0.0,yy=0.0,zz=0.0,ra=-10.0,dec=-10.0;
      
@@ -106,11 +107,11 @@ int main(int argc,char *argv[])
     thequery = thestars->array[whichstar];
   else if(radecset) {
     thequery = mk_star();
-    ra*=(double)PIl/180.0;
-    dec*=(double)PIl/180.0;
-    star_set(thequery,0,cos(dec)*cos(ra));
-    star_set(thequery,1,cos(dec)*sin(ra));
-    star_set(thequery,2,sin(dec));
+    //ra*=(double)PIl/180.0;
+    //dec*=(double)PIl/180.0;
+    star_set(thequery,0,radec2x(deg2rad(ra),deg2rad(dec)));
+    star_set(thequery,1,radec2y(deg2rad(ra),deg2rad(dec)));
+    star_set(thequery,2,radec2z(deg2rad(ra),deg2rad(dec)));
   }
   else if(xyzset) {
     thequery=mk_star();
@@ -159,12 +160,10 @@ void output_star(FILE *fid, sidx i, star *s)
 #if DIM_STARS==2
   fprintf(fid,"%lu: %f,%f\n",i,star_ref(s,0),star_ref(s,1));
 #else
-  double ttt=atan2(star_ref(s,1),star_ref(s,0));
-  if(ttt<0.0) ttt=2*(double)PIl+ttt;
   fprintf(fid,"%lu: %f,%f,%f (%f,%f)\n",
 	  i,star_ref(s,0),star_ref(s,1),star_ref(s,2),
-	  180.0*ttt/(double)PIl,
-	  180.0*asin(star_ref(s,2))/(double)PIl);
+	  rad2deg(xy2ra(star_ref(s,0),star_ref(s,1))),
+	  rad2deg(z2dec(star_ref(s,2))));
 #endif
   return;
 }
