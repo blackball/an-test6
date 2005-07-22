@@ -87,23 +87,8 @@ int main(int argc,char *argv[])
 
   fopenout(fname,fid); fnfree(fname);
 
-  if(ASCII) {
-    fprintf(fid,"NumStars=%lu\n",numstars);
-    fprintf(fid,"DimStars=%d\n",DIM_STARS);
-    fprintf(fid,"Limits=%f,%f,%f,%f\n",ramin,ramax,decmin,decmax);
-  }
-  else {
-    magicval magic=MAGIC_VAL;
-    dimension Dim_Stars=DIM_STARS;
-    fwrite(&magic,sizeof(magic),1,fid);
-    fwrite(&numstars,sizeof(numstars),1,fid);
-    fwrite(&Dim_Stars,sizeof(Dim_Stars),1,fid);
-    fwrite(&ramin,sizeof(ramin),1,fid);
-    fwrite(&ramax,sizeof(ramin),1,fid);
-    fwrite(&decmin,sizeof(ramin),1,fid);
-    fwrite(&decmax,sizeof(ramin),1,fid);
-  }
-    
+  write_objs_header(fid,ASCII,numstars,DIM_STARS,ramin,ramax,decmin,decmax);
+  
   for(ii=0;ii<numstars;ii++) {
     thestar = make_rand_star(ramin,ramax,decmin,decmax);
     if(thestar==NULL) {
