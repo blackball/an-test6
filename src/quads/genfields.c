@@ -3,6 +3,7 @@
 #include <math.h>
 #include "starutil.h"
 #include "kdutil.h"
+#include "fileutil.h"
 
 #define OPTIONS "hpn:s:z:R:f:o:w:x:q:"
 extern char *optarg;

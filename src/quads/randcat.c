@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "starutil.h"
+#include "fileutil.h"
 
 #define OPTIONS "habn:f:r:R:d:D:"
 extern char *optarg;

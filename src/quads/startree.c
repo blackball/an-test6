@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "starutil.h"
 #include "kdutil.h"
+#include "fileutil.h"
 
 #define OPTIONS "hR:f:"
 #define MEM_LOAD 1000000000
