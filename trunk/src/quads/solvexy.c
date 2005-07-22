@@ -80,7 +80,6 @@ int main(int argc,char *argv[])
   qidx numpix,numquads;
   sidx numstars;
   double index_scale;
-  magicval magic;
   char ASCII;
   dimension Dim_Quads;
   sizev *pixsizes;
@@ -109,29 +108,20 @@ int main(int argc,char *argv[])
   fprintf(stderr,"    (index scale = %f)\n",index_scale);
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
-  fread(&magic,sizeof(magic),1,quadfid);
-  if(magic==ASCII_VAL) {ASCII=1;
-    fscanf(quadfid,"mQuads=%lu\n",&numquads);
-    fscanf(quadfid,"DimQuads=%hu\n",&Dim_Quads);
-    fscanf(quadfid,"IndexScale=%lf\n",&index_scale);
-    fscanf(quadfid,"NumStars=%lu\n",&numstars);
-    sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
-  else {  ASCII=0; if(magic!=MAGIC_VAL) {fprintf(stderr,
-    "ERROR (solvexy) -- bad magic value in quad file.\n");return(3);}
-    fread(&numquads,sizeof(numquads),1,quadfid);
-    fread(&Dim_Quads,sizeof(Dim_Quads),1,quadfid);
-    fread(&index_scale,sizeof(index_scale),1,quadfid);}
+  ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
+  if(ASCII==READ_FAIL) return(3);
+  if(ASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
   qposmarker=ftell(quadfid);
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
   solve_pix(thepix,pixsizes,codekd,codetol,ASCII,hitfid,quadfid);
+  fclose(hitfid); fclose(quadfid);
   fprintf(stderr,"done.\n");
+
   free_xyarray(thepix); 
   free_sizev(pixsizes);
   free_kdtree(codekd); 
-  fclose(quadfid);
-  fclose(hitfid);
 
   //basic_am_malloc_report();
   return(0);
@@ -391,26 +381,9 @@ void fill_ids(FILE *hitfid, FILE *quadfid)
 
   rewind(hitfid); rewind(quadfid);
 
-  fread(&magic,sizeof(magic),1,quadfid);
-  if(magic==ASCII_VAL) {
-    ASCII=1;
-    fscanf(quadfid,"mQuads=%lu\n",&numquads);
-    fscanf(quadfid,"DimQuads=%hu\n",&Dim_Quads);
-    fscanf(quadfid,"IndexScale=%lf\n",&index_scale);
-    fscanf(quadfid,"NumStars=%lu\n",&numstars);
-    sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);
-  }
-  else {
-    if(magic!=MAGIC_VAL) {
-      fprintf(stderr,"ERROR (solvexy) -- bad magic value in quad file.\n");
-      return;
-    }
-    ASCII=0;
-    fread(&numquads,sizeof(numquads),1,quadfid);
-    fread(&Dim_Quads,sizeof(Dim_Quads),1,quadfid);
-    fread(&index_scale,sizeof(index_scale),1,quadfid);
-  }
-
+  ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
+  if(ASCII==READ_FAIL) {fail somewhow}
+  if(ASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
   qposmarker=ftell(quadfid);
   while(!feof(hitfid)) {
     if(!fscanf(hitfid,"field %lu: ",&ii))

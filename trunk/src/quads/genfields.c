@@ -8,8 +8,6 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-#define mk_starkdtree(s,r) mk_kdtree_from_points((dyv_array *)s,r)
-
 qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 	     stararray *thestars,kdtree *kd,
 	     double aspect,double noise, double distractors, double dropouts,
@@ -174,6 +172,7 @@ star_ref(randstar,0),star_ref(randstar,1),star_ref(randstar,2));
 	  fprintf(listfid,",%d",krez->pindexes->iarr[jj]);
 	  star_coords(thestars->array[(krez->pindexes->iarr[jj])],
 	  	    randstar,&xx,&yy);
+	  // should add random rotation here ???
 	  if(FlipParity) xx=-xx;
 	  if(jj==0) {pixxmin=pixxmax=xx; pixymin=pixymax=yy;}
 	  if(xx>pixxmax) pixxmax=xx; if(xx<pixxmin) pixxmin=xx;

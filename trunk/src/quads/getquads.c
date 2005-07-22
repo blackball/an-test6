@@ -13,8 +13,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
 	       double ramin,double ramax,double decmin, double decmax,
 	       qidx maxCodes,char ASCII);
 
-void deduplicate_quads(FILE *quadfid, qidx maxQuads,
-		       double index_scale,char ASCII);
+void deduplicate_quads(FILE *quadfid, qidx maxQuads,double index_scale);
 
 char *treefname=NULL;
 char *quadfname=NULL;
@@ -115,7 +114,7 @@ int main(int argc,char *argv[])
 
   //fprintf(stderr,"  Deduplicating quads...\n"); fflush(stderr);
   //fopenin(quadfname,quadfid); 
-  //deduplicate_quads(quadfid,maxQuads,index_scale,ASCII);
+  //deduplicate_quads(quadfid,maxQuads,index_scale);
   //fclose(quadfid); 
   fnfree(quadfname);
   
@@ -139,28 +138,11 @@ qidx get_quads(FILE *quadfid,FILE *codefid,
   double scale,thisx,thisy,xxtmp,costheta,sintheta;
   star *midpoint=mk_star();
   kquery *kq = mk_kquery("rangesearch","",KD_UNDEF,index_scale,kd->rmin);
-  if(ASCII) {
-    fprintf(codefid,"NumCodes=%lu\n",maxCodes);
-    fprintf(codefid,"DimCodes=%hu\n",DIM_CODES);
-    fprintf(codefid,"IndexScale=%f\n",index_scale);
-    fprintf(codefid,"NumStars=%lu\n",(sidx)thestars->size);
-    fprintf(quadfid,"NumQuads=%lu\n",maxCodes);
-    fprintf(quadfid,"DimQuads=%hu\n",DIM_QUADS);
-    fprintf(quadfid,"IndexScale=%f\n",index_scale);
-    fprintf(quadfid,"NumStars=%lu\n",(sidx)thestars->size);
-  }
-  else {
-    dimension DimCodes=DIM_CODES,DimQuads=DIM_QUADS;
-    magicval magic=MAGIC_VAL;
-    fwrite(&magic,sizeof(magic),1,codefid);
-    fwrite(&maxCodes,sizeof(maxCodes),1,codefid);
-    fwrite(&DimCodes,sizeof(DimCodes),1,codefid);
-    fwrite(&index_scale,sizeof(index_scale),1,codefid);
-    fwrite(&magic,sizeof(magic),1,quadfid);
-    fwrite(&maxCodes,sizeof(maxCodes),1,quadfid);
-    fwrite(&DimCodes,sizeof(DimQuads),1,quadfid);
-    fwrite(&index_scale,sizeof(index_scale),1,quadfid);
-  }
+
+  write_code_header(codefid,ASCII,maxCodes,(sidx)thestars->size,
+		    DIM_CODES,index_scale);
+  write_quad_header(quadfid,ASCII,maxCodes,(sidx)thestars->size,
+		    DIM_QUADS,index_scale);
 
   for(ii=0;ii<maxCodes;ii++) {
     still_not_done=1;
@@ -276,27 +258,17 @@ signed int compare_qidx(const void *a,const void *b) {
 
 
 
-
-void deduplicate_quads(FILE *quadfid, qidx maxQuads,
-		       double index_scale,char ASCII)
+void deduplicate_quads(FILE *quadfid, qidx maxQuads,double index_scale)
 {
   sidx iA,iB,iC,iD,liA,liB,liC,liD,numstars;
   qidx ii,lastAB,lastii=0;
   dimension Dim_Quads;
   long posmarker;
-  if(ASCII) {
-    fscanf(quadfid,"NumQuads=%lu\n",&ii);
-    fscanf(quadfid,"DimQuads=%hu\n",&Dim_Quads);
-    fscanf(quadfid,"IndexScale=%lf\n",&index_scale);
-    fscanf(quadfid,"NumStars=%lu\n",&numstars);
-  }
-  else {
-    magicval magic;
-    fread(&magic,sizeof(magic),1,quadfid);
-    fread(&ii,sizeof(ii),1,quadfid);
-    fread(&Dim_Quads,sizeof(Dim_Quads),1,quadfid);
-    fread(&index_scale,sizeof(index_scale),1,quadfid);
-  }
+  char ASCII;
+
+  ASCII=read_quad_header(quadfid,&ii,&numstars,&Dim_Quads,&index_scale);
+  if(ASCII==READ_FAIL)
+    fprintf(stderr,"ERROR (getquads) -- read_quad_header failed\n");
   posmarker=ftell(quadfid);
     
   if(ii!=maxQuads)
@@ -365,11 +337,4 @@ void deduplicate_quads(FILE *quadfid, qidx maxQuads,
   fprintf(stderr,"done.\n");
   free(thedata); free(thesortorder);
 }
-
-  
-
-
-
-
-
 

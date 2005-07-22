@@ -110,49 +110,34 @@ int main(int argc,char *argv[])
 
 
 
-codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes, 
+codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes, 
 		     char *ASCII,double *index_scale,qidx buffsize)
 {
   qidx ii;
   sidx numstars;
-  magicval magic;
-  fread(&magic,sizeof(magic),1,fid);
-  if(magic==ASCII_VAL) {
-    *ASCII=1;
-    fscanf(fid,"mCodes=%lu\n",numcodes);
-    fscanf(fid,"DimCodes=%hu\n",Dim_Codes);
-    fscanf(fid,"IndexScale=%lf\n",index_scale);
-    fscanf(fid,"NumStars=%lu\n",&numstars);
-  }
-  else {
-    if(magic!=MAGIC_VAL) {
-      fprintf(stderr,"ERROR (codetree) -- bad magic value in %s\n",codefname);
-      return((codearray *)NULL);
-    }
-    *ASCII=0;
-    fread(numcodes,sizeof(*numcodes),1,fid);
-    fread(Dim_Codes,sizeof(*Dim_Codes),1,fid);
-    fread(index_scale,sizeof(*index_scale),1,fid);
-  }
+
+  *ASCII= read_code_header(fid,numcodes,&numstars,DimCodes,index_scale);
+  if(*ASCII==READ_FAIL) return((codearray *)NULL);
+
   if(*numcodes< buffsize) buffsize=*numcodes;
   codearray *thecodes = mk_codearray(buffsize);
   
   for(ii=0;ii<buffsize;ii++) {
-    thecodes->array[ii] = mk_coded(*Dim_Codes);
+    thecodes->array[ii] = mk_coded(*DimCodes);
     if(thecodes->array[ii]==NULL) {
       fprintf(stderr,"ERROR (codetree) -- out of memory at code %lu\n",ii);
       free_codearray(thecodes);
       return (codearray *)NULL;
     }
     if(*ASCII) {
-      if(*Dim_Codes==4)
+      if(*DimCodes==4)
 	fscanf(fid,"%lf,%lf,%lf,%lf\n",thecodes->array[ii]->farr,
   	       thecodes->array[ii]->farr+1,
   	       thecodes->array[ii]->farr+2,
   	       thecodes->array[ii]->farr+3   );
     }
     else
-      fread(thecodes->array[ii]->farr,sizeof(double),*Dim_Codes,fid);
+      fread(thecodes->array[ii]->farr,sizeof(double),*DimCodes,fid);
   }
   return thecodes;
 }

@@ -133,30 +133,15 @@ quadarray *readidlist(FILE *fid,qidx *numpix,sizev **pixsizes)
 
 quadarray *readquadlist(FILE *fid,qidx *numquads)
 {
-  char ASCII = 0;
   qidx ii;
   sidx iA,iB,iC,iD,numstars;
-  dimension Dim_Quads;
+  dimension DimQuads;
   double index_scale;
-  magicval magic;
-  fread(&magic,sizeof(magic),1,fid);
-  if(magic==ASCII_VAL) {
-    ASCII=1;
-    fscanf(fid,"mQuads=%lu\n",numquads);
-    fscanf(fid,"DimQuads=%hu\n",&Dim_Quads);
-    fscanf(fid,"IndexScale=%lf\n",&index_scale);
-    fscanf(fid,"NumStars=%lu\n",&numstars);
-  }
-  else {
-    if(magic!=MAGIC_VAL) {
-      fprintf(stderr,"ERROR (pixquads) -- bad magic value in %s\n",pixfname);
-      return((quadarray *)NULL);
-    }
-    ASCII=0;
-    fread(numquads,sizeof(*numquads),1,fid);
-    fread(&Dim_Quads,sizeof(Dim_Quads),1,fid);
-    fread(&index_scale,sizeof(index_scale),1,fid);
-  }
+  char ASCII;
+
+  ASCII = read_quad_header(fid,numquads,&numstars,&DimQuads,&index_scale);
+  if(ASCII==READ_FAIL) return((quadarray *)NULL);
+
   quadarray *thequads = mk_quadarray(*numquads);
   for(ii=0;ii<*numquads;ii++) {
     thequads->array[ii] = mk_quad();
