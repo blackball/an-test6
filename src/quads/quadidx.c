@@ -10,7 +10,7 @@ extern int optind, opterr, optopt;
 
 qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 		       FILE *newquadfid, FILE *newcodefid, FILE *idxfid,
-		       qidx numQuads, sidx numStars);
+		       qidx numQuads, sidx numStars, sidx *numused);
 bool insertquad(ivec_array *qlist, qidx ii, 
 		sidx iA, sidx iB, sidx iC, sidx iD);
 void getquadids(FILE *quadfid,qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
@@ -67,7 +67,7 @@ int main(int argc,char *argv[])
   FILE *newquadfid=NULL,*newcodefid=NULL;
   FILE *idxfid=NULL,*quadfid=NULL,*codefid=NULL;
 
-  fprintf(stderr,"quadidx: deduplicating and indexing quads in %s\n",
+  fprintf(stderr,"quadidx: deduplicating and indexing quads in %s...\n",
 	  quadfname);
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
@@ -90,7 +90,7 @@ int main(int argc,char *argv[])
    write_quad_header(newquadfid,qASCII,numquads,numstars,DimQuads,index_scale);
    write_code_header(newcodefid,qASCII,numquads,numstars,DimCodes,index_scale);
    nq2=deduplicate_quads(quadfid,codefid,newquadfid,newcodefid,idxfid,
-		     numquads,numstars);
+		     numquads,numstars,&ns2);
    if(qASCII) sprintf(buff,"%lu",numquads);
    fix_quad_header(newquadfid,qASCII,nq2,strlen(buff));
    fix_code_header(newcodefid,qASCII,nq2,strlen(buff));
@@ -98,6 +98,9 @@ int main(int argc,char *argv[])
   fclose(quadfid); fclose(newquadfid); fclose(newcodefid); fclose(idxfid);
   fnfree(newquadfname); fnfree(newcodefname); fnfree(idxfname);
   
+  fprintf(stderr,"  done (%lu unique codes, %lu unique stars involved).\n",
+	  nq2,ns2);
+
   //basic_am_malloc_report();
   return(0);
 }
@@ -105,10 +108,10 @@ int main(int argc,char *argv[])
 
 qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 		       FILE *newquadfid, FILE *newcodefid, FILE *idxfid,
-		       qidx numQuads, sidx numStars)
+		       qidx numQuads, sidx numStars, sidx *numused)
 {
   qidx ii,kk,thisnumq,uniqueQuads=0;
-  sidx iA,iB,iC,iD,jj,numused=0;
+  sidx iA,iB,iC,iD,jj,*numused=0;
   ivec *tmpivec;
   double Cx,Cy,Dx,Dy;
   magicval magic=MAGIC_VAL;
@@ -148,13 +151,13 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
     fprintf(idxfid,"NumIndexedStars=%lu\n",numStars);
   else {
     fwrite(&magic,sizeof(magic),1,idxfid);
-    fwrite(&numused,sizeof(numused),1,idxfid);
+    fwrite(numused,sizeof(*numused),1,idxfid);
   }
 
   for(jj=0;jj<numStars;jj++) {
     tmpivec=ivec_array_ref(qlist,jj);
     if(tmpivec!=NULL) {
-      numused++;
+      (*numused)++;
       thisnumq=(qidx)ivec_size(tmpivec);
       if(ASCII)
 	fprintf(idxfid,"%lu:%lu",jj,thisnumq);
@@ -175,11 +178,11 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
   rewind(idxfid);
   if(ASCII) {
     sprintf(buff,"%lu",numStars);
-    fprintf(idxfid,"NumIndexedStars=%2$*1$lu\n",strlen(buff),numused);
+    fprintf(idxfid,"NumIndexedStars=%2$*1$lu\n",strlen(buff),*numused);
   }
   else {
     fwrite(&magic,sizeof(magic),1,idxfid);
-    fwrite(&numused,sizeof(numused),1,idxfid);
+    fwrite(numused,sizeof(*numused),1,idxfid);
   }
 
   
