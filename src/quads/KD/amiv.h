@@ -193,7 +193,9 @@ int ivec_nonmatch(const ivec *x1, const ivec *x2);
 void ivec_malloc_report(void);
 void add_to_ivec(ivec *iv,int val);
 void add_to_ivec_unique(ivec *iv,int val);
+int add_to_ivec_unique2(ivec *iv,int val);
 void add_to_sorted_ivec(ivec *siv, int val);
+int add_to_sorted_ivec2(ivec *siv, int val);
 
 /* Increases the ivec length by one. Inserts val as the index'th element
    in the ivec and moves all items previously with array index greater
@@ -327,6 +329,7 @@ int sum_of_ivec_array_sizes(ivec_array *iva);
 
 ivec *safe_ivec_array_ref (ivec_array *ivecarr, int idx);
 void ivec_array_set (ivec_array *iva, int idx, const ivec *iv);
+void ivec_array_set_no_copy(ivec_array *iva, int idx, ivec *iv);
 void fprintf_ivec_array (FILE *s, char *m1, ivec_array *ivecarr, char *m2);
 void free_ivec_array (ivec_array *ivecarr);
 int ivec_array_num_bytes(ivec_array *iva);
