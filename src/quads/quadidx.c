@@ -111,7 +111,7 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 		       qidx numQuads, sidx numStars, sidx *numused)
 {
   qidx ii,kk,thisnumq,uniqueQuads=0;
-  sidx iA,iB,iC,iD,jj,*numused=0;
+  sidx iA,iB,iC,iD,jj;
   ivec *tmpivec;
   double Cx,Cy,Dx,Dy;
   magicval magic=MAGIC_VAL;
@@ -154,6 +154,7 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
     fwrite(numused,sizeof(*numused),1,idxfid);
   }
 
+  *numused=0;
   for(jj=0;jj<numStars;jj++) {
     tmpivec=ivec_array_ref(qlist,jj);
     if(tmpivec!=NULL) {
