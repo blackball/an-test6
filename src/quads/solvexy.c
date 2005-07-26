@@ -13,7 +13,6 @@ extern int optind, opterr, optopt;
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
 
-xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip);
 void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
 	       double codetol, char ASCII, FILE *hitfid, FILE*quadfid);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
@@ -130,57 +129,6 @@ int main(int argc,char *argv[])
 }
 
 
-
-
-xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
-{
-  char ASCII = 0;
-  qidx ii,jj,numxy;
-  magicval magic;
-  fread(&magic,sizeof(magic),1,fid);
-  if(magic==ASCII_VAL) {
-    ASCII=1;
-    fscanf(fid,"mFields=%lu\n",numpix);
-  }
-  else {
-    if(magic!=MAGIC_VAL) {
-      fprintf(stderr,"ERROR (readxy) -- bad magic value in %s\n",pixfname);
-      return((xyarray *)NULL);
-    }
-    ASCII=0;
-    fread(numpix,sizeof(*numpix),1,fid);
-  }
-  xyarray *thepix = mk_xyarray(*numpix);
-  *pixsizes = mk_sizev(*numpix);
-  for(ii=0;ii<*numpix;ii++) {
-    if(ASCII)
-      fscanf(fid,"%lu",&numxy);
-    else
-      fread(&numxy,sizeof(numxy),1,fid);
-    sizev_set(*pixsizes,ii,numxy);
-    thepix->array[ii] = mk_xy(numxy);
-    if(xya_ref(thepix,ii)==NULL) {
-      fprintf(stderr,"ERROR (readxy) - out of memory at field %lu\n",ii);
-      free_xyarray(thepix);
-      free_sizev(*pixsizes);
-      return (xyarray *)NULL;
-    }
-    if(ASCII) {
-      for(jj=0;jj<numxy;jj++)
-	fscanf(fid,",%lf,%lf",(xya_ref(thepix,ii)->farr)+2*jj,
-  	       (xya_ref(thepix,ii)->farr)+2*jj+1   );
-      fscanf(fid,"\n");
-    }
-    else
-      fread(xya_ref(thepix,ii)->farr,sizeof(double),DIM_XY*numxy,fid);
-
-    if(ParityFlip) 
-      for(jj=0;jj<numxy;jj++)
-	*((xya_ref(thepix,ii)->farr)+2*jj)*=-1;
-
-  }
-  return thepix;
-}
 
 
 
