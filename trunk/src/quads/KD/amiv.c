@@ -900,12 +900,12 @@ void add_to_ivec_unique(ivec *iv,int val) {
 }
 
 int add_to_ivec_unique2(ivec *iv,int val) {
-  if (!is_in_ivec(iv, val)) {
-    add_to_ivec(iv, val);
-    return(1);
+  int rez = find_index_in_ivec(iv,val);
+  if(rez==-1) {
+    rez=iv->size;
+    add_to_ivec(iv,val);
   }
-  else
-    return(0);
+  return(rez);
 }
 
      /* Increases iv in length by 1 and shifts all elements

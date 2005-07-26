@@ -120,9 +120,9 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 
   for(ii=0;ii<numQuads;ii++) {
     getquadids(quadfid,ii,&iA,&iB,&iC,&iD);
-    //    fprintf(stderr,"checking quad %lu (%lu,%lu,%lu,%lu)\n",
+    //fprintf(stderr,"checking quad %lu (%lu,%lu,%lu,%lu)\n",
     //	    ii,iA,iB,iC,iD);
-    if(insertquad(qlist,ii,iA,iB,iC,iD)) {
+    if(insertquad(qlist,uniqueQuads,iA,iB,iC,iD)) {
       uniqueQuads++;
       if(qASCII) {
 	fscanf(codefid,"%lf,%lf,%lf,%lf\n",&Cx,&Cy,&Dx,&Dy);
