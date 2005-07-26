@@ -67,7 +67,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol | -k kNN]\n");
+"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol | -k kNN]\n");
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
@@ -105,7 +105,8 @@ int main(int argc,char *argv[])
   fclose(treefid);
   if(codekd==NULL) return(2);
   fprintf(stderr,"done\n    (%d quads, %d nodes, depth %d).\n",
-	  codekd->root->num_points,codekd->num_nodes,codekd->max_depth);
+	  kdtree_num_points(codekd),kdtree_num_nodes(codekd),
+	  kdtree_max_depth(codekd));
   fprintf(stderr,"    (index scale = %f)\n",index_scale);
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
@@ -158,7 +159,7 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
       fread(&numxy,sizeof(numxy),1,fid);
     sizev_set(*pixsizes,ii,numxy);
     thepix->array[ii] = mk_xy(numxy);
-    if(thepix->array[ii]==NULL) {
+    if(xya_ref(thepix,ii)==NULL) {
       fprintf(stderr,"ERROR (readxy) - out of memory at field %lu\n",ii);
       free_xyarray(thepix);
       free_sizev(*pixsizes);
@@ -166,16 +167,16 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
     }
     if(ASCII) {
       for(jj=0;jj<numxy;jj++)
-	fscanf(fid,",%lf,%lf",(thepix->array[ii]->farr)+2*jj,
-  	       (thepix->array[ii]->farr)+2*jj+1   );
+	fscanf(fid,",%lf,%lf",(xya_ref(thepix,ii)->farr)+2*jj,
+  	       (xya_ref(thepix,ii)->farr)+2*jj+1   );
       fscanf(fid,"\n");
     }
     else
-      fread(thepix->array[ii]->farr,sizeof(double),DIM_XY*numxy,fid);
+      fread(xya_ref(thepix,ii)->farr,sizeof(double),DIM_XY*numxy,fid);
 
     if(ParityFlip) 
       for(jj=0;jj<numxy;jj++)
-	*((thepix->array[ii]->farr)+2*jj)*=-1;
+	*((xya_ref(thepix,ii)->farr)+2*jj)*=-1;
 
   }
   return thepix;
@@ -192,25 +193,25 @@ void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   long posmarker;
   kquery *kq;
   if(codetol<1.0)
-    kq = mk_kquery("rangesearch","",KD_UNDEF,codetol,codekd->rmin);
+    kq = mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
   else
-    kq = mk_kquery("knn","",(int)codetol,KD_UNDEF,codekd->rmin);
+    kq = mk_kquery("knn","",(int)codetol,KD_UNDEF,kdtree_rmin(codekd));
 
   xy *ABCDpix=mk_xy(DIM_QUADS);
 
-  for(ii=0;ii<thepix->size;ii++) {
+  for(ii=0;ii<dyv_array_size(thepix);ii++) {
     nummatches=0;
     numxy=sizev_ref(pixsizes,ii);
-    thispix=thepix->array[ii];
+    thispix=xya_ref(thepix,ii);
     //fprintf(hitfid,"field %lu has %lu stars: 4*%lu quads will be checked\n",
     //	    ii,numxy,choose(numxy,DIM_QUADS));
 
     // find min and max coordinates in field
     if(numxy<DIM_QUADS) fprintf(hitfid,"field %lu: no matches\n",ii); else {
-    Cx=xy_refx(thepix->array[ii],0); Cy=xy_refy(thepix->array[ii],0);
-    Dx=xy_refx(thepix->array[ii],0); Dy=xy_refy(thepix->array[ii],0);
+    Cx=xy_refx(xya_ref(thepix,ii),0); Cy=xy_refy(xya_ref(thepix,ii),0);
+    Dx=xy_refx(xya_ref(thepix,ii),0); Dy=xy_refy(xya_ref(thepix,ii),0);
     for(iA=0;iA<numxy;iA++) {
-      Ax=xy_refx(thepix->array[ii],iA); Ay=xy_refy(thepix->array[ii],iA);
+      Ax=xy_refx(xya_ref(thepix,ii),iA); Ay=xy_refy(xya_ref(thepix,ii),iA);
       if(Ax<Cx) Cx=Ax; if(Ax>Dx) Dx=Ax;
       if(Ay<Cy) Cy=Ay; if(Ay>Dy) Dy=Ay;
     }
@@ -218,17 +219,17 @@ void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
     fprintf(hitfid,"field %lu: %f,%f,%f,%f\n",ii,Cx,Cy,Dx,Dy);
 
     for(iA=0;iA<(numxy-1);iA++) {
-      Ax=xy_refx(thepix->array[ii],iA); Ay=xy_refy(thepix->array[ii],iA);
+      Ax=xy_refx(xya_ref(thepix,ii),iA); Ay=xy_refy(xya_ref(thepix,ii),iA);
       xy_setx(ABCDpix,0,Ax); xy_sety(ABCDpix,0,Ay);
       for(iB=iA+1;iB<numxy;iB++) {
-	Bx=xy_refx(thepix->array[ii],iB); By=xy_refy(thepix->array[ii],iB);
+	Bx=xy_refx(xya_ref(thepix,ii),iB); By=xy_refy(xya_ref(thepix,ii),iB);
 	xy_setx(ABCDpix,1,Bx); xy_sety(ABCDpix,1,By);
 	Bx-=Ax; By-=Ay;
 	scale = Bx*Bx+By*By;
 	costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
 	for(iC=0;iC<(numxy-1);iC++) {
 	  if(iC!=iA && iC!=iB) {
-          Cx=xy_refx(thepix->array[ii],iC); Cy=xy_refy(thepix->array[ii],iC);
+          Cx=xy_refx(xya_ref(thepix,ii),iC); Cy=xy_refy(xya_ref(thepix,ii),iC);
 	  xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
 	  Cx-=Ax; Cy-=Ay;
 	  xxtmp=Cx;
@@ -237,7 +238,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 	  if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) {
 	  for(iD=iC+1;iD<numxy;iD++) {
 	    if(iD!=iA && iD!=iB) {
-            Dx=xy_refx(thepix->array[ii],iD); Dy=xy_refy(thepix->array[ii],iD);
+          Dx=xy_refx(xya_ref(thepix,ii),iD); Dy=xy_refy(xya_ref(thepix,ii),iD);
     	    xy_setx(ABCDpix,3,Dx); xy_sety(ABCDpix,3,Dy);
 	    Dx-=Ax; Dy-=Ay;
 	    xxtmp=Dx;

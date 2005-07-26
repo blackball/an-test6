@@ -8,7 +8,7 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 quadarray *readidlist(FILE *fid,qidx *numpix,sizev **pixsizes);
-void find_fieldquads(FILE *qlistfid, quadarray *thepids,
+void find_fieldquads(FILE *qlistfid, quadarray *thepids, sidx numstars,
 		     sidx *starlist, qidx *starnumq, qidx **starquads);
 
 char *pixfname=NULL;
@@ -74,7 +74,7 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Finding quads in fields (slow)...");fflush(stderr);
   fopenout(qlistfname,qlistfid); fnfree(qlistfname);
-  find_fieldquads(qlistfid,thepids,starlist,starnumq,starquads);
+  find_fieldquads(qlistfid,thepids,numstars,starlist,starnumq,starquads);
   fclose(qlistfid);
   fprintf(stderr,"done.\n");
 
@@ -141,33 +141,49 @@ quadarray *readidlist(FILE *fid,qidx *numpix,sizev **pixsizes)
 
 
 
-void find_fieldquads(FILE *qlistfid, quadarray *thepids,
+void find_fieldquads(FILE *qlistfid, quadarray *thepids, sidx numstars,
 		     sidx *starlist, qidx *starnumq, qidx **starquads)
 {
-  qidx ii,jj;
-  sidx kk,thisstar;
-  quad *thispids,*thisquad;
+  qidx ii,jj,newpos;
+  sidx kk,*thisstar,starno,mm;
+  quad *thispids;
+  ivec *quadlist,*quadcount;
+
   for(ii=0;ii<thepids->size;ii++) {
     thispids=thepids->array[ii];
     fprintf(qlistfid,"%lu:",ii);
+    quadlist=mk_ivec(0); quadcount=mk_ivec(0);
     for(kk=0;kk<ivec_size(thispids);kk++) {
-      /*
-      thisstar=find(ivec_ref(thispids,kk),starlist);
-      if(found) {add all starnumq[thisstar] quads in starquads[thisstar][?]
-		   to the running quadlist;}
-      foreach(item on quadlist) {
-	check if all stars in this pic have that item on their list;
+      starno = (sidx)ivec_ref(thispids,kk);
+      thisstar = (sidx *)bsearch(&starno,starlist,numstars,
+				  sizeof(sidx *),compare_sidx);
+      if(thisstar!=NULL) {
+	mm=(sidx)(thisstar-starlist);
+	fprintf(qlistfid,"matched star %lu to pos %lu in starlist\n",
+		starno,mm);
+	for(jj=0;jj<starnumq[mm];jj++) {
+	  newpos = add_to_ivec_unique2(quadlist,*(starquads[mm]+jj));
+	  fprintf(qlistfid,"  adding quad %lu\n",*(starquads[mm]+jj));
+	  if(newpos>=quadcount->size) {
+	    add_to_ivec(quadcount,1);
+	  }
+	  else 
+	    quadcount->iarr[newpos]++;
+	}
       }
-      for(jj=0;jj<???;jj++) {
-
-      }
-      */
     }
 
-    //	if(???) fprintf(qlistfid,",%lu",jj);
-
+    for(jj=0;jj<quadlist->size;jj++) {
+      if(quadcount->iarr[jj]>=DIM_QUADS) 
+	fprintf(qlistfid," %d",quadlist->iarr[jj]);
+    }
     fprintf(qlistfid,"\n");
+
+    free_ivec(quadlist); 
+    free_ivec(quadcount);
+
   }
+
   return;
 }
 
