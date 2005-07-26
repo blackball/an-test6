@@ -1,0 +1,10 @@
+*.o
+randcat
+startree
+findstar
+getquads
+quadidx
+codetree
+genfields
+fieldquads
+solvexy
