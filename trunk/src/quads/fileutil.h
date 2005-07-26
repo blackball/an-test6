@@ -30,7 +30,8 @@ void write_code_header(FILE *codefid, char ASCII, qidx numCodes,
 		       sidx numstars, dimension DimCodes, double index_scale);
 void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
 		       dimension DimQuads, double index_scale);
-
+void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len);
+void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len);
 
 
 

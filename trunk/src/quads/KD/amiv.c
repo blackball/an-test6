@@ -899,6 +899,15 @@ void add_to_ivec_unique(ivec *iv,int val) {
   if (!is_in_ivec(iv, val)) add_to_ivec(iv, val);
 }
 
+int add_to_ivec_unique2(ivec *iv,int val) {
+  if (!is_in_ivec(iv, val)) {
+    add_to_ivec(iv, val);
+    return(1);
+  }
+  else
+    return(0);
+}
+
      /* Increases iv in length by 1 and shifts all elements
         with original index greater or equal to index one to the
         right and inserts val at index. */
@@ -988,6 +997,16 @@ void add_to_sorted_ivec(ivec *siv, int val)
   for (i = ivec_size(siv) - 2; i >= 0 && val < ivec_ref(siv, i); i--)
     ivec_set(siv, i + 1, ivec_ref(siv, i));
   ivec_set(siv, i + 1, val);
+}
+
+int add_to_sorted_ivec2(ivec *siv, int val)
+{
+  int i;
+  add_to_ivec(siv, 0);
+  for (i = ivec_size(siv) - 2; i >= 0 && val < ivec_ref(siv, i); i--)
+    ivec_set(siv, i + 1, ivec_ref(siv, i));
+  ivec_set(siv, i + 1, val);
+  return(i+1);
 }
 
 bool is_in_ivec(ivec *iv,int value)
@@ -1392,6 +1411,20 @@ void ivec_array_set(ivec_array *iva, int idx, const ivec *iv)
         free_ivec(iva->array[idx]);
   iva->array[idx] = (iv == NULL) ? NULL : mk_copy_ivec(iv);
 }
+
+/* Use this function at your peril! */
+void ivec_array_set_no_copy(ivec_array *iva, int idx, ivec *iv)
+{
+  if ((idx < 0) || (iva == NULL) || (idx >= iva->size)) {
+    my_errorf( "ivec_array_set_no_copy: index %d is out of bounds [0,%d]\n",
+	       idx, iva->size);
+  }
+  if (iva->array[idx] != NULL) free_ivec(iva->array[idx]);
+  iva->array[idx] = iv;
+  return;
+}
+
+
 
 void fprintf_ivec_array(FILE *s,char *m1,ivec_array *ivecarr,char *m2)
 {

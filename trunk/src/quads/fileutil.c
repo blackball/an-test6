@@ -68,6 +68,7 @@ void write_code_header(FILE *codefid, char ASCII, qidx numCodes,
     fwrite(&numCodes,sizeof(numCodes),1,codefid);
     fwrite(&DimCodes,sizeof(DimCodes),1,codefid);
     fwrite(&index_scale,sizeof(index_scale),1,codefid);
+    fwrite(&numstars,sizeof(numstars),1,codefid);
   }
   return;
 
@@ -88,9 +89,39 @@ void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
     fwrite(&numQuads,sizeof(numQuads),1,quadfid);
     fwrite(&DimQuads,sizeof(DimQuads),1,quadfid);
     fwrite(&index_scale,sizeof(index_scale),1,quadfid);
+    fwrite(&numstars,sizeof(numstars),1,quadfid);
   }
   return;
 }
+
+void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len)
+{
+  rewind(codefid);
+  if(ASCII) {
+    fprintf(codefid,"NumCodes=%2$*1$lu\n",len,numCodes);
+  }
+  else {
+    magicval magic=MAGIC_VAL;
+    fwrite(&magic,sizeof(magic),1,codefid);
+    fwrite(&numCodes,sizeof(numCodes),1,codefid);
+  }
+  return;
+}
+
+void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len)
+{
+  rewind(quadfid);
+  if(ASCII) {
+    fprintf(quadfid,"NumQuads=%2$*1$lu\n",len,numQuads);
+  }
+  else {
+    magicval magic=MAGIC_VAL;
+    fwrite(&magic,sizeof(magic),1,quadfid);
+    fwrite(&numQuads,sizeof(numQuads),1,quadfid);
+  }
+  return;
+}
+
 
 char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars, 
 		 double *ramin,double *ramax,double *decmin,double *decmax)
@@ -145,6 +176,7 @@ char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
     fread(numcodes,sizeof(*numcodes),1,fid);
     fread(DimCodes,sizeof(*DimCodes),1,fid);
     fread(index_scale,sizeof(*index_scale),1,fid);
+    fread(numstars,sizeof(*numstars),1,fid);
   }
   return(ASCII);
 
@@ -172,9 +204,8 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
     fread(numquads,sizeof(*numquads),1,fid);
     fread(DimQuads,sizeof(*DimQuads),1,fid);
     fread(index_scale,sizeof(*index_scale),1,fid);
+    fread(numstars,sizeof(*numstars),1,fid);
   }
   return(ASCII);
 
 }
-
-
