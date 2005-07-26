@@ -10,8 +10,6 @@ extern int optind, opterr, optopt;
 quadarray *readidlist(FILE *fid,qidx *numpix,sizev **pixsizes);
 void find_fieldquads(FILE *qlistfid, quadarray *thepids,
 		     sidx *starlist, qidx *starnumq, qidx **starquads);
-sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
-		 qidx ***starquads);
 
 char *pixfname=NULL;
 char *qidxfname=NULL;
@@ -175,54 +173,3 @@ void find_fieldquads(FILE *qlistfid, quadarray *thepids,
 
 
 
-sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
-		 qidx ***starquads)
-{
-  char ASCII=READ_FAIL;
-  magicval magic;
-  sidx numStars,thisstar,jj;
-  qidx thisnumq,ii;
-
-  fread(&magic,sizeof(magic),1,fid);
-  if(magic==ASCII_VAL) {
-    ASCII=1;
-    fscanf(fid,"mIndexedStars=%lu\n",&numStars);
-  }
-  else {
-    if(magic!=MAGIC_VAL) {
-      fprintf(stderr,"ERROR (fieldquads) -- bad magic value in quad index\n");
-      return(0);
-    }
-    ASCII=0;
-    fread(&numStars,sizeof(numStars),1,fid);
-  }
-  *starlist=malloc(numStars*sizeof(sidx)); 
-  if(*starlist==NULL) return(0);
-  *starnumq=malloc(numStars*sizeof(qidx)); 
-  if(*starnumq==NULL) {free(*starlist); return(0);}
-  *starquads=malloc(numStars*sizeof(qidx *));
-  if(*starquads==NULL) {free(*starlist); free(*starnumq); return(0);}
-
-  for(jj=0;jj<numStars;jj++) {
-    if(ASCII) {
-      fscanf(fid,"%lu:%lu",&thisstar,&thisnumq);
-    }
-    else {
-      fread(&thisstar,sizeof(thisstar),1,fid);
-      fread(&thisnumq,sizeof(thisnumq),1,fid);
-    }
-    (*starlist)[jj]=thisstar;
-    (*starnumq)[jj]=thisnumq;
-    (*starquads)[jj]=malloc(thisnumq*sizeof(qidx));
-    if((*starquads)[jj]==NULL) return(0);
-    for(ii=0;ii<thisnumq;ii++) {
-      if(ASCII)
-	fscanf(fid,",%lu",((*starquads)[jj])+ii);
-      else
-	fread(((*starquads)[jj])+ii,sizeof(qidx),1,fid);
-    }
-    if(ASCII) fscanf(fid,"\n");
-  }
-
-  return(numStars);
-}

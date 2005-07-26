@@ -281,70 +281,14 @@ void getquadids(FILE *quadfid,qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
   }
   else {
     fseek(quadfid,posmarker+ii*
-	  (DIM_QUADS*sizeof(iA)),SEEK_SET);
-    fread(iA,sizeof(iA),1,quadfid);
-    fread(iB,sizeof(iB),1,quadfid);
-    fread(iC,sizeof(iC),1,quadfid);
-    fread(iD,sizeof(iD),1,quadfid);
+	  (DIM_QUADS*sizeof(*iA)),SEEK_SET);
+    fread(iA,sizeof(*iA),1,quadfid);
+    fread(iB,sizeof(*iB),1,quadfid);
+    fread(iC,sizeof(*iC),1,quadfid);
+    fread(iD,sizeof(*iD),1,quadfid);
   } 
   return;
 }
 
 
 
-/*
-signed int compare_qidx(const void *x,const void *y) 
-{
-  qidx xidx,yidx;
-  sidx xiA,xiB,xiC,xiD;
-  sidx yiA,yiB,yiC,yiD;
-
-  xidx=*(qidx *)x;  
-  yidx=*(qidx *)y;
-
-  getquadids(xidx,&xiA,&xiB,&xiC,&xiD);
-  getquadids(yidx,&yiA,&yiB,&yiC,&yiD);
-
-  if(xiA>yiA) return(1);
-  else if(xiA<yiA) return(-1);
-  else { // xiA==yiA
-    if(xiB>yiB) return(1);
-    else if(xiB<yiB) return(-1);
-    else { // xiB==yiB
-      if(xiC>yiC) return(1);
-      else if(xiC<yiC) return(-1);
-      else { // xiC==yiD
-	if(xiD>yiD) return(1);
-	else if(xiD<yiD) return(-1);
-	else return(0); 
-      }
-    }
-  }
-
-
-}
-
-
-
-
-void deduplicate_quads(qidx numQuads)
-{
-  qidx ii;
-  if(numQuads<=1) return;
-    
-  thesortorder = (qidx *)malloc(numQuads*sizeof(qidx));
-  for(ii=0;ii<numQuads;ii++)
-    thesortorder[ii]=ii;
-  fprintf(stderr,"sorting quads..."); fflush(stderr);
-  qsort(thesortorder,numQuads,sizeof(qidx),compare_qidx);
-  fprintf(stderr,"done\n");
-  fprintf(stderr,"deduping..."); fflush(stderr);
-  for(ii=1;ii<numQuads;ii++) {
-    if(compare_qidx(thesortorder+ii,thesortorder+(ii-1))==0)
-      fprintf(stdout,"idx: %lu is a DUPLICATE\n",ii);
-  }
-  fprintf(stderr,"done.\n");
-  free(thesortorder);
-}
-
- */
