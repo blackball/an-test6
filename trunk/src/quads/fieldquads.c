@@ -72,7 +72,7 @@ int main(int argc,char *argv[])
      fprintf(stderr,"ERROR (fieldquads) -- out of memory\n"); return(2);}
   fprintf(stderr,"got %lu star ids.\n",numstars);
 
-  fprintf(stderr,"  Finding quads in fields (slow)...");fflush(stderr);
+  fprintf(stderr,"  Finding quads in fields...");fflush(stderr);
   fopenout(qlistfname,qlistfid); fnfree(qlistfname);
   find_fieldquads(qlistfid,thepids,numstars,starlist,starnumq,starquads);
   fclose(qlistfid);
@@ -159,11 +159,8 @@ void find_fieldquads(FILE *qlistfid, quadarray *thepids, sidx numstars,
 				  sizeof(sidx *),compare_sidx);
       if(thisstar!=NULL) {
 	mm=(sidx)(thisstar-starlist);
-	fprintf(qlistfid,"matched star %lu to pos %lu in starlist\n",
-		starno,mm);
 	for(jj=0;jj<starnumq[mm];jj++) {
 	  newpos = add_to_ivec_unique2(quadlist,*(starquads[mm]+jj));
-	  fprintf(qlistfid,"  adding quad %lu\n",*(starquads[mm]+jj));
 	  if(newpos>=quadcount->size) {
 	    add_to_ivec(quadcount,1);
 	  }

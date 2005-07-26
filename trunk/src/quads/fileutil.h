@@ -33,6 +33,8 @@ void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
 void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len);
 void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len);
 
+xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip);
+
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
 		 qidx ***starquads);
 signed int compare_sidx(const void *x,const void *y);
