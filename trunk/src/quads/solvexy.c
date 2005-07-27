@@ -5,6 +5,9 @@
 #include "fileutil.h"
 
 #define OPTIONS "hpf:o:t:k:"
+const char HelpString[]=
+"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol | -k kNN]\n";
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -34,8 +37,10 @@ char buff[100],maxstarWidth;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-  double codetol=10;
+  double codetol=-1.0;
   char ParityFlip=0;
+
+  if(argc<=3) {fprintf(stderr,HelpString); return(HELP_ERR);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -64,13 +69,15 @@ int main(int argc,char *argv[])
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-      case 'h':
-	fprintf(stderr, 
-"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol | -k kNN]\n");
+      case 'h': 
+      	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
+
+  if(treefname==NULL || pixfname==NULL || codetol<0)
+    {fprintf(stderr,HelpString);return(HELP_ERR);}
 
   for (argidx = optind; argidx < argc; argidx++)
     fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
@@ -231,6 +238,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,Dx); code_set(thequery,3,Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
+    //fprintf(hitfid,"  abcd code:%f,%f,%f,%f\n",Cx,Cy,Dx,Dy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,ABCD_ORDER); 
     numrez+=krez->count;
   }
@@ -241,6 +249,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,1.0-Dx); code_set(thequery,3,1.0-Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
+    //fprintf(hitfid,"  bacd code:%f,%f,%f,%f\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,BACD_ORDER); 
     numrez+=krez->count;
   }
@@ -251,6 +260,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,Cx); code_set(thequery,3,Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
+    //fprintf(hitfid,"  abdc code:%f,%f,%f,%f\n",Dx,Dy,Cx,Cy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,ABDC_ORDER); 
     numrez+=krez->count;
   }
@@ -261,6 +271,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,1.0-Cx); code_set(thequery,3,1.0-Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
+    //fprintf(hitfid,"  badc code:%f,%f,%f,%f\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,BADC_ORDER); 
     numrez+=krez->count;
   }
@@ -288,7 +299,7 @@ void output_match(FILE *hitfid,FILE *quadfid, char ASCII,
 	    xy_refx(ABCDpix,oB),xy_refy(ABCDpix,oB),
 	    xy_refx(ABCDpix,oC),xy_refy(ABCDpix,oC),
 	    xy_refx(ABCDpix,oD),xy_refy(ABCDpix,oD));
-    //fprintf("%lu\n",(unsigned long int)krez->pindexes->iarr[jj]);
+  //fprintf(hitfid,"quad# %lu\n",(unsigned long int)krez->pindexes->iarr[jj]);
     output_ids(hitfid,quadfid,ASCII,(qidx)krez->pindexes->iarr[jj]);
   }
 

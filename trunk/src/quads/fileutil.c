@@ -246,16 +246,16 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
     }
     if(ASCII) {
       for(jj=0;jj<numxy;jj++)
-	fscanf(fid,",%lf,%lf",(xya_ref(thepix,ii)->farr)+2*jj,
-  	       (xya_ref(thepix,ii)->farr)+2*jj+1   );
+	fscanf(fid,",%lf,%lf",(thepix->array[ii]->farr)+2*jj,
+  	       (thepix->array[ii]->farr)+2*jj+1   );
       fscanf(fid,"\n");
     }
     else
-      fread(xya_ref(thepix,ii)->farr,sizeof(double),DIM_XY*numxy,fid);
+      fread(thepix->array[ii]->farr,sizeof(double),DIM_XY*numxy,fid);
 
     if(ParityFlip) 
       for(jj=0;jj<numxy;jj++)
-	*((xya_ref(thepix,ii)->farr)+2*jj)*=-1;
+	*((thepix->array[ii]->farr)+2*jj)*=-1;
 
   }
   return thepix;

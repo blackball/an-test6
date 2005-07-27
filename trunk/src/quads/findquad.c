@@ -8,6 +8,7 @@ extern int optind, opterr, optopt;
 
 char *qidxfname=NULL;
 char *quadfname=NULL;
+char *codefname=NULL;
 sidx thestar;
 qidx thequad;
 bool starset=FALSE,quadset=FALSE;
@@ -23,8 +24,10 @@ int main(int argc,char *argv[])
       case 'f':
 	qidxfname = malloc(strlen(optarg)+6);
 	quadfname = malloc(strlen(optarg)+6);
+	codefname = malloc(strlen(optarg)+6);
 	sprintf(qidxfname,"%s.qidx",optarg);
 	sprintf(quadfname,"%s.quad",optarg);
+	sprintf(codefname,"%s.code",optarg);
 	break;
       case 'i':
 	thestar = strtoul(optarg,NULL,0);
@@ -51,8 +54,8 @@ int main(int argc,char *argv[])
   sidx ii,numstars,numstars2;
   qidx numquads,iA,iB,iC,iD,jj;
   dimension DimQuads;
-  double index_scale;
-  FILE *qidxfid=NULL,*quadfid=NULL;
+  double index_scale,Cx,Cy,Dx,Dy;
+  FILE *qidxfid=NULL,*quadfid=NULL,*codefid=NULL;
   sidx *starlist,*matchstar;
   qidx *starnumq;
   qidx **starquads;
@@ -61,8 +64,8 @@ int main(int argc,char *argv[])
   fprintf(stderr,"findquad: looking up quads in %s\n",qidxfname);
 
   if(starset==FALSE) {
-    fprintf(stderr,"  Reading quad file...");fflush(stderr);
-    fopenin(quadfname,quadfid); fnfree(quadfname);
+    fprintf(stderr,"  Reading code/quad files...");fflush(stderr);
+    fopenin(quadfname,quadfid);
     qASCII = read_quad_header(quadfid, 
 			      &numquads, &numstars, &DimQuads, &index_scale);
     if(qASCII==READ_FAIL) return(1);
@@ -85,11 +88,32 @@ int main(int argc,char *argv[])
       }
       fprintf(stderr,"quad %lu : A=%lu,B=%lu,C=%lu,D=%lu\n",
 	      thequad,iA,iB,iC,iD);
+
+      fopenin(codefname,codefid);
+      qASCII = read_code_header(codefid, 
+				&numquads, &numstars, &DimQuads, &index_scale);
+      if(qASCII==READ_FAIL) return(1);
+      if(qASCII){sprintf(buff,"%f",1.0/(double)PIl);maxstarWidth=strlen(buff);}
+      if(qASCII) {
+	fseek(codefid,ftell(codefid)+thequad*
+	      (DIM_CODES*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
+	fscanf(quadfid,"%lf,%lf,%lf,%lf\n",&Cx,&Cy,&Dx,&Dy);
+      }
+      else {
+	fseek(codefid,ftell(codefid)+thequad*
+	      (DIM_CODES*sizeof(Cx)),SEEK_SET);
+	fread(&Cx,sizeof(Cx),1,codefid);
+	fread(&Cy,sizeof(Cy),1,codefid);
+	fread(&Dx,sizeof(Dx),1,codefid);
+	fread(&Dy,sizeof(Dy),1,codefid);
+      }
+      fprintf(stderr,"     code = %lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
+
     }
   }
   if(quadset==FALSE) {
     fprintf(stderr,"  Reading quad index...");fflush(stderr);
-    fopenin(qidxfname,qidxfid); fnfree(qidxfname);
+    fopenin(qidxfname,qidxfid); 
     numstars2=readquadidx(qidxfid,&starlist,&starnumq,&starquads);
     if(numstars2==0) {
      fprintf(stderr,"ERROR (findquad) -- out of memory\n"); return(2);}
@@ -118,7 +142,9 @@ int main(int argc,char *argv[])
     free(starlist);
   }
 
-
+  fnfree(codefname);
+  fnfree(qidxfname);
+  fnfree(quadfname);
   //basic_am_malloc_report();
   return(0);
 }
