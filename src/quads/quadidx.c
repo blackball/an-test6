@@ -13,14 +13,15 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 		       qidx numQuads, sidx numStars, sidx *numused);
 bool insertquad(ivec_array *qlist, qidx ii, 
 		sidx iA, sidx iB, sidx iC, sidx iD);
-void getquadids(FILE *quadfid,qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
+void getquadids(FILE *quadfid, FILE *codefid,
+		qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
 bool newquad(ivec_array *qlist,sidx iA,sidx iB,sidx iC,sidx iD);
 
 char *idxfname=NULL; char *quadfname=NULL; char *codefname=NULL;
 char *newquadfname=NULL; char *newcodefname=NULL;
 char qASCII,qA2,ASCII=0;
-char buff[100],maxstarWidth;
-long posmarker;
+char buff[100],maxstarWidth,codeWidth;
+long posmarker,cposmarker;
 
 int main(int argc,char *argv[])
 {
@@ -82,7 +83,9 @@ int main(int argc,char *argv[])
     {fprintf(stderr,"ERROR (quadidx) -- codefile and quadfile disagree\n");
     return(2);}
   posmarker=ftell(quadfid);
+  cposmarker=ftell(codefid);
   if(qASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
+  if(qA2){sprintf(buff,"%lf",1.0/(double)PIl);codeWidth=strlen(buff);}
   if(numquads>1) {
     fopenout(newquadfname,newquadfid);
     fopenout(newcodefname,newcodefid);
@@ -119,7 +122,7 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
   ivec_array *qlist=mk_ivec_array(numStars);
 
   for(ii=0;ii<numQuads;ii++) {
-    getquadids(quadfid,ii,&iA,&iB,&iC,&iD);
+    getquadids(quadfid,codefid,ii,&iA,&iB,&iC,&iD);
     //fprintf(stderr,"checking quad %lu (%lu,%lu,%lu,%lu)\n",
     //	    ii,iA,iB,iC,iD);
     if(insertquad(qlist,uniqueQuads,iA,iB,iC,iD)) {
@@ -272,14 +275,19 @@ bool newquad(ivec_array *qlist,sidx iA,sidx iB,sidx iC,sidx iD)
 }
 
 
-void getquadids(FILE *quadfid,qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
+void getquadids(FILE *quadfid, FILE *codefid,
+		qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
   if(qASCII) {
+    fseek(codefid,cposmarker+ii*
+	  (DIM_CODES*(codeWidth+1)*sizeof(char)),SEEK_SET); 
     fseek(quadfid,posmarker+ii*
 	  (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
     fscanf(quadfid,"%lu,%lu,%lu,%lu\n",iA,iB,iC,iD);
   }
   else {
+    fseek(codefid,cposmarker+ii*
+	  (DIM_CODES*sizeof(double)),SEEK_SET);
     fseek(quadfid,posmarker+ii*
 	  (DIM_QUADS*sizeof(*iA)),SEEK_SET);
     fread(iA,sizeof(*iA),1,quadfid);
