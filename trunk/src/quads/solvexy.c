@@ -16,7 +16,7 @@ extern int optind, opterr, optopt;
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
 
-void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
+unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
 	       double codetol, char ASCII, FILE *hitfid, FILE*quadfid);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		   xy *ABCDpix, kquery *kq,kdtree *codekd, 
@@ -90,6 +90,7 @@ int main(int argc,char *argv[])
   char ASCII;
   dimension Dim_Quads;
   sizev *pixsizes;
+  unsigned long int numtries;
 
   fprintf(stderr,"solvexy: solving fields in %s using %s\n",
 	  pixfname,treefname);
@@ -123,9 +124,9 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
-  solve_pix(thepix,pixsizes,codekd,codetol,ASCII,hitfid,quadfid);
+  numtries=solve_pix(thepix,pixsizes,codekd,codetol,ASCII,hitfid,quadfid);
   fclose(hitfid); fclose(quadfid);
-  fprintf(stderr,"done.\n");
+  fprintf(stderr,"done (tried %lu quads).\n",numtries);
 
   free_xyarray(thepix); 
   free_sizev(pixsizes);
@@ -139,9 +140,10 @@ int main(int argc,char *argv[])
 
 
 
-void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
+unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
 	       double codetol, char ASCII, FILE *hitfid, FILE*quadfid)
 {
+  unsigned long int numtries=0;
   xy *thispix;
   qidx ii,numxy,nummatches,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,costheta,sintheta,scale,xxtmp;
@@ -201,6 +203,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 	    Dy=-xxtmp*sintheta+Dy*costheta;
 	    if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) {
 	      //fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
+	      numtries++;
 	      nummatches+=try_all_codes(Cx,Cy,Dx,Dy,ABCDpix,kq,codekd,
 					ASCII,hitfid,quadfid);
 	    }
@@ -221,7 +224,7 @@ void solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   free_kquery(kq);
   free_xy(ABCDpix);
 
-  return;
+  return numtries;
 }
 
 
