@@ -5,7 +5,7 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hpn:s:z:R:f:o:w:x:q:"
+#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:"
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -13,7 +13,7 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 	     stararray *thestars,kdtree *kd,
 	     double aspect,double noise, double distractors, double dropouts,
 	     double ramin,double ramax,double decmin,double decmax,
-	     double radscale,qidx maxPix);
+	     double radscale,qidx numFields);
 
 char *treefname=NULL,*listfname=NULL,*pix0fname=NULL,*pixfname=NULL;
 char FlipParity=0;
@@ -22,14 +22,15 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
 
-  qidx maxPix=0;
+  qidx numFields=0;
   double radscale=1.0/10.0,aspect=1.0,distractors=0.0,dropouts=0.0,noise=0.0;
-     
+  double centre_ra,centre_dec;
+
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
       {
       case 'n':
-	maxPix = strtoul(optarg,NULL,0);
+	numFields = strtoul(optarg,NULL,0);
 	break;
       case 'p':
 	FlipParity = 1;
@@ -50,6 +51,12 @@ int main(int argc,char *argv[])
       case 'q':
 	dropouts = strtod(optarg,NULL);
 	break;
+      case 'r':
+	centre_ra = strtod(optarg,NULL);
+	break;
+      case 'd':
+	centre_dec = strtod(optarg,NULL);
+	break;
       case 'f':
 	treefname = malloc(strlen(optarg)+6);
 	sprintf(treefname,"%s.skdt",optarg);
@@ -66,7 +73,7 @@ int main(int argc,char *argv[])
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
 	fprintf(stderr, 
-	"genfields  [-n numFields] [-s scale(arcmin)] [-p] [-w noise] [-x distractors] [-q dropouts] [-f fname] [-o fieldname]\n");
+	"genfields  [-n numFields | -r RA -d DEC] [-s scale(arcmin)] [-p] [-w noise] [-x distractors] [-q dropouts] [-f fname] [-o fieldname]\n");
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
@@ -83,8 +90,14 @@ int main(int argc,char *argv[])
   sidx numstars;
   double ramin,ramax,decmin,decmax;
 
+  if(numFields)
   fprintf(stderr,"genfields: making %lu random fields from %s [RANDSEED=%d]\n",
-	  maxPix,treefname,RANDSEED);
+	  numFields,treefname,RANDSEED);
+  else {
+  fprintf(stderr,"genfields: making fields from %s around ra=%lf,dec=%lf\n",
+	  treefname,centre_ra,centre_dec);
+  numFields=1;
+  }
 
   fprintf(stderr,"  Reading star KD tree from ");
   if(treefname) fprintf(stderr,"%s...",treefname);
@@ -105,18 +118,26 @@ int main(int argc,char *argv[])
 
   stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
 
+  if(numFields>1)
   fprintf(stderr,"  Generating %lu fields at scale %g arcmin...\n",
-	  maxPix,180.0*60.0*radscale/(double)PIl);
+	  numFields,180.0*60.0*radscale/(double)PIl);
   fflush(stderr);
   fopenout(listfname,listfid); fnfree(listfname);
   fopenout(pix0fname,pix0fid); fnfree(pix0fname);
   fopenout(pixfname,pixfid); fnfree(pixfname);
+  if(numFields>1)
   numtries=gen_pix(listfid,pix0fid,pixfid,thestars,starkd,aspect,
 		   noise,distractors,dropouts,
-		   ramin,ramax,decmin,decmax,radscale,maxPix);
+		   ramin,ramax,decmin,decmax,radscale,numFields);
+  else
+  numtries=gen_pix(listfid,pix0fid,pixfid,thestars,starkd,aspect,
+		   noise,distractors,dropouts,
+		   centre_ra,centre_ra,centre_dec,centre_dec,
+		   radscale,numFields);
   fclose(listfid); fclose(pix0fid); fclose(pixfid);
+  if(numFields>1)
   fprintf(stderr,"  made %lu nonempty fields in %lu tries.\n",
-	  maxPix,numtries);
+	  numFields,numtries);
 
   free_dyv_array_from_kdtree((dyv_array *)thestars);
   free_kdtree(starkd); 
@@ -131,7 +152,7 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 	     stararray *thestars,kdtree *kd,
 	     double aspect,double noise, double distractors, double dropouts,
 	     double ramin,double ramax,double decmin,double decmax,
-	     double radscale,qidx maxPix)
+	     double radscale,qidx numFields)
 {
   sidx jj,numS,numX;
   qidx numtries=0,ii;
@@ -145,11 +166,11 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
   double pixxmin=0,pixymin=0,pixxmax=0,pixymax=0;
   kquery *kq = mk_kquery("rangesearch","",KD_UNDEF,scale,kd->rmin);
 		
-  fprintf(pix0fid,"NumFields=%lu\n",maxPix);
-  fprintf(pixfid,"NumFields=%lu\n",maxPix);
-  fprintf(listfid,"NumFields=%lu\n",maxPix);
+  fprintf(pix0fid,"NumFields=%lu\n",numFields);
+  fprintf(pixfid,"NumFields=%lu\n",numFields);
+  fprintf(listfid,"NumFields=%lu\n",numFields);
 
-  for(ii=0;ii<maxPix;ii++) {
+  for(ii=0;ii<numFields;ii++) {
     numS=0;
     while(!numS) {
       randstar=make_rand_star(ramin,ramax,decmin,decmax);
