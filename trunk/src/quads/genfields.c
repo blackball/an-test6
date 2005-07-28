@@ -52,10 +52,10 @@ int main(int argc,char *argv[])
 	dropouts = strtod(optarg,NULL);
 	break;
       case 'r':
-	centre_ra = strtod(optarg,NULL);
+	centre_ra = deg2rad(strtod(optarg,NULL));
 	break;
       case 'd':
-	centre_dec = strtod(optarg,NULL);
+	centre_dec = deg2rad(strtod(optarg,NULL));
 	break;
       case 'f':
 	treefname = malloc(strlen(optarg)+6);
