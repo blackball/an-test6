@@ -1,11 +1,10 @@
-#include <stdio.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hf:x:y:z:w:t:k:"
 const char HelpString[]=
-"findcode [-f fname] [-t dist | -k kNN] c1 c2 c3 c4\n";
+"findcode -f fname [-t dist | -k kNN] c1 c2 c3 c4\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;

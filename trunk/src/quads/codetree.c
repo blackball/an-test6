@@ -1,10 +1,11 @@
-#include <unistd.h>
-#include <stdio.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hR:f:B:"
+const char HelpString[]=
+"codetree -f fname [-B buffer_length] [-R KD_RMIN]\n";
+
 #define MEM_LOAD 1000000000
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -25,6 +26,8 @@ int main(int argc,char *argv[])
   int argidx,argchar;//  opterr = 0;
   int kd_Rmin=50;
   qidx buffsize=(qidx)floor(MEM_LOAD/(sizeof(double)+sizeof(int))*DIM_CODES);
+
+  if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -44,15 +47,18 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"codetree [-f fname] [-B buffer_length] [-R KD_RMIN]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
   FILE *codefid=NULL,*treefid=NULL;
   qidx numcodes,ii;

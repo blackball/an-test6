@@ -1,9 +1,10 @@
-#include <unistd.h>
-#include <stdio.h>
 #include "starutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "habn:f:r:R:d:D:"
+const char HelpString[]=
+"randcat -f catfile -n numstars [-a|-b] [-r/R RAmin/max] [-d/R DECmin/max]\n";
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 void output_star(star *thestar, char ASCII, FILE *fid);
@@ -12,6 +13,8 @@ void output_star(star *thestar, char ASCII, FILE *fid);
 int main(int argc,char *argv[])
 {
   int argidx,argchar; //  opterr = 0;
+  
+  if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   sidx numstars=10;
   char ASCII = 1;
@@ -54,15 +57,18 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf (stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"randcat [-a|-b] [-n numstars] [-f catfile] [-r/R RAmin/max] [-d/R DECmin/max]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
 #define RANDSEED 999
   am_srand(RANDSEED);

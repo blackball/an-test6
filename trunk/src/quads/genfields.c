@@ -1,11 +1,11 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <math.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:"
+const char HelpString[]=
+"genfields -f fname -o fieldname -s scale(arcmin) [-n num_rand_fields | -r RA -d DEC]  [-p] [-w noise] [-x distractors] [-q dropouts]\n";
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -72,15 +72,18 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"genfields  [-n numFields | -r RA -d DEC] [-s scale(arcmin)] [-p] [-w noise] [-x distractors] [-q dropouts] [-f fname] [-o fieldname]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
 #define RANDSEED 777
   am_srand(RANDSEED);
