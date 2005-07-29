@@ -21,7 +21,7 @@ char *idxfname=NULL; char *quadfname=NULL; char *codefname=NULL;
 char *newquadfname=NULL; char *newcodefname=NULL;
 char qASCII,qA2,ASCII=0;
 char buff[100],maxstarWidth,codeWidth;
-long posmarker,cposmarker;
+off_t posmarker,cposmarker;
 
 int main(int argc,char *argv[])
 {
@@ -82,8 +82,8 @@ int main(int argc,char *argv[])
   if((qA2!=qASCII) || (nq2!=numquads) || (ns2!=numstars) || (is2!=index_scale))
     {fprintf(stderr,"ERROR (quadidx) -- codefile and quadfile disagree\n");
     return(2);}
-  posmarker=ftell(quadfid);
-  cposmarker=ftell(codefid);
+  posmarker=ftello(quadfid);
+  cposmarker=ftello(codefid);
   if(qASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
   if(qA2){sprintf(buff,"%lf",1.0/(double)PIl);codeWidth=strlen(buff);}
   if(numquads>1) {
@@ -279,16 +279,16 @@ void getquadids(FILE *quadfid, FILE *codefid,
 		qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
   if(qASCII) {
-    fseek(codefid,cposmarker+ii*
+    fseeko(codefid,cposmarker+ii*
 	  (DIM_CODES*(codeWidth+1)*sizeof(char)),SEEK_SET); 
-    fseek(quadfid,posmarker+ii*
+    fseeko(quadfid,posmarker+ii*
 	  (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
     fscanf(quadfid,"%lu,%lu,%lu,%lu\n",iA,iB,iC,iD);
   }
   else {
-    fseek(codefid,cposmarker+ii*
+    fseeko(codefid,cposmarker+ii*
 	  (DIM_CODES*sizeof(double)),SEEK_SET);
-    fseek(quadfid,posmarker+ii*
+    fseeko(quadfid,posmarker+ii*
 	  (DIM_QUADS*sizeof(*iA)),SEEK_SET);
     fread(iA,sizeof(*iA),1,quadfid);
     fread(iB,sizeof(*iB),1,quadfid);

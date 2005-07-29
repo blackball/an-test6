@@ -3,7 +3,11 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:i:x:y:z:r:d:t:k:"
+#define OPTIONS "hf:ix:y:z:r:d:t:k:"
+const char HelpString[]=
+"findstar [-f fname] [-t dist | -k kNN] [-i idx | -x x -y y -z z | -r RA -d DEC]\n";
+
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -24,7 +28,6 @@ int main(int argc,char *argv[])
     switch (argchar)
       {
       case 'i':
-	whichstar = strtoul(optarg,NULL,0);
 	whichset=1;
 	break;
       case 'k':
@@ -62,15 +65,11 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"findstar [-f fname] [-i idx | -x x -y y -z z | -r RA -d DEC] [-t dist | -k kNN]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
-
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
 
   FILE *treefid=NULL;
   sidx numstars,ii;
@@ -103,22 +102,19 @@ int main(int argc,char *argv[])
   else if(dtolset) 
     kq = mk_kquery("rangesearch","",KD_UNDEF,dtol,starkd->rmin);
 
-  if(whichset)
-    thequery = thestars->array[whichstar];
-  else if(radecset) {
-    thequery = mk_star();
-    //ra*=(double)PIl/180.0;
-    //dec*=(double)PIl/180.0;
+  thequery = mk_star();
+  if(!whichset && radecset) {
     star_set(thequery,0,radec2x(deg2rad(ra),deg2rad(dec)));
     star_set(thequery,1,radec2y(deg2rad(ra),deg2rad(dec)));
     star_set(thequery,2,radec2z(deg2rad(ra),deg2rad(dec)));
   }
   else if(xyzset) {
-    thequery=mk_star();
-    star_set(thequery,0,xx); star_set(thequery,1,yy); star_set(thequery,2,zz);
+    star_set(thequery,0,xx); 
+    star_set(thequery,1,yy); 
+    star_set(thequery,2,zz);
   }
 
-  if(whichset && !dtolset && !kset)
+  if(whichset && !dtolset && !kset && argc<2)
     fprintf(stderr,"  getting star %lu\n",whichstar);
   else if(whichset && kset)
     fprintf(stderr,"  getting %lu stars nearest %lu\n",K,whichstar);
@@ -135,9 +131,15 @@ int main(int argc,char *argv[])
   else
     fprintf(stderr," --- error --- ");
 
-  if(whichset && !dtolset && !kset)
-    output_star(stdout,whichstar,thestars->array[whichstar]);
+  if(whichset && !dtolset && !kset) {
+    for (argidx = optind; argidx < argc; argidx++) {
+      whichstar = strtoul(argv[argidx],NULL,0);
+      output_star(stdout,whichstar,thestars->array[whichstar]);
+    }
+  }
   else {
+    whichstar = strtoul(argv[optind],NULL,0);
+    thequery = thestars->array[whichstar];
     kresult *krez =  mk_kresult_from_kquery(kq,starkd,thequery);
     for(ii=0;ii<krez->count;ii++)
       output_star(stdout,krez->pindexes->iarr[ii],

@@ -30,7 +30,7 @@ char *pixfname=NULL;
 char *treefname=NULL;
 char *hitfname=NULL;
 char *quadfname=NULL;
-long qposmarker;
+off_t qposmarker;
 char buff[100],maxstarWidth;
 
 
@@ -120,7 +120,7 @@ int main(int argc,char *argv[])
   ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
   if(ASCII==READ_FAIL) return(3);
   if(ASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
-  qposmarker=ftell(quadfid);
+  qposmarker=ftello(quadfid);
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
@@ -147,7 +147,7 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   xy *thispix;
   qidx ii,numxy,nummatches,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,costheta,sintheta,scale,xxtmp;
-  long posmarker;
+  off_t posmarker;
   kquery *kq;
   if(codetol<1.0)
     kq = mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
@@ -172,7 +172,7 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
       if(Ax<Cx) Cx=Ax; if(Ax>Dx) Dx=Ax;
       if(Ay<Cy) Cy=Ay; if(Ay>Dy) Dy=Ay;
     }
-    posmarker=ftell(hitfid);
+    posmarker=ftello(hitfid);
     fprintf(hitfid,"field %lu: %f,%f,%f,%f\n",ii,Cx,Cy,Dx,Dy);
 
     for(iA=0;iA<(numxy-1);iA++) {
@@ -212,7 +212,7 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
       }
     }
     if(nummatches==0) {
-      fseek(hitfid,posmarker,SEEK_SET); 
+      fseeko(hitfid,posmarker,SEEK_SET); 
       fprintf(hitfid,"field %lu: no matches\n",ii);
     }
     }
@@ -313,12 +313,12 @@ void output_ids(FILE *hitfid, FILE *quadfid, char ASCII, qidx quadno)
 {
   sidx iA,iB,iC,iD;
   if(ASCII) {
-    fseek(quadfid,qposmarker+quadno*
+    fseeko(quadfid,qposmarker+quadno*
 	  (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
     fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
   }
   else {
-    fseek(quadfid,qposmarker+quadno*
+    fseeko(quadfid,qposmarker+quadno*
 	  (DIM_QUADS*sizeof(iA)),SEEK_SET);
     fread(&iA,sizeof(iA),1,quadfid);
     fread(&iB,sizeof(iB),1,quadfid);
@@ -333,7 +333,7 @@ void output_ids(FILE *hitfid, FILE *quadfid, char ASCII, qidx quadno)
 /*
 void fill_ids(FILE *hitfid, FILE *quadfid)
 {
-  long qposmarker;
+  off_t qposmarker;
   char ASCII = 0;
   qidx ii=999,numquads,thismatch;
   sidx iA,iB,iC,iD;
@@ -348,7 +348,7 @@ void fill_ids(FILE *hitfid, FILE *quadfid)
   ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
   if(ASCII==READ_FAIL) {fail somewhow}
   if(ASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
-  qposmarker=ftell(quadfid);
+  qposmarker=ftello(quadfid);
   while(!feof(hitfid)) {
     if(!fscanf(hitfid,"field %lu: ",&ii))
       {fscanf(hitfid,"%s\n",buff); fprintf(stderr,"***%s***\n",buff);}
@@ -359,12 +359,12 @@ void fill_ids(FILE *hitfid, FILE *quadfid)
 	    &junk,&junk,&junk,&junk,&junk,&junk,&junk,&junk)) {
 	fscanf(hitfid,"%lu\n",&thismatch);
 	if(ASCII) {
-	  fseek(quadfid,qposmarker+thismatch*
+	  fseeko(quadfid,qposmarker+thismatch*
 		(DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
 	  fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
 	}
 	else {
-	  fseek(quadfid,qposmarker+thismatch*
+	  fseeko(quadfid,qposmarker+thismatch*
 		(DIM_QUADS*sizeof(iA)),SEEK_SET);
 	  fread(&iA,sizeof(iA),1,quadfid);
 	  fread(&iB,sizeof(iB),1,quadfid);

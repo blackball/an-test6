@@ -5,7 +5,7 @@
 #include "fileutil.h"
 
 #define OPTIONS "hR:f:"
-#define MEM_LOAD 1000000000
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 

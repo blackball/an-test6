@@ -74,12 +74,12 @@ int main(int argc,char *argv[])
     if(quadset==TRUE) {
       if(qASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
       if(qASCII) {
-	fseek(quadfid,ftell(quadfid)+thequad*
+	fseeko(quadfid,ftello(quadfid)+thequad*
 	      (DimQuads*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
 	fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
       }
       else {
-	fseek(quadfid,ftell(quadfid)+thequad*
+	fseeko(quadfid,ftello(quadfid)+thequad*
 	      (DimQuads*sizeof(iA)),SEEK_SET);
 	fread(&iA,sizeof(iA),1,quadfid);
 	fread(&iB,sizeof(iB),1,quadfid);
@@ -95,12 +95,12 @@ int main(int argc,char *argv[])
       if(qASCII==READ_FAIL) return(1);
       if(qASCII){sprintf(buff,"%f",1.0/(double)PIl);maxstarWidth=strlen(buff);}
       if(qASCII) {
-	fseek(codefid,ftell(codefid)+thequad*
+	fseeko(codefid,ftello(codefid)+thequad*
 	      (DIM_CODES*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
 	fscanf(quadfid,"%lf,%lf,%lf,%lf\n",&Cx,&Cy,&Dx,&Dy);
       }
       else {
-	fseek(codefid,ftell(codefid)+thequad*
+	fseeko(codefid,ftello(codefid)+thequad*
 	      (DIM_CODES*sizeof(Cx)),SEEK_SET);
 	fread(&Cx,sizeof(Cx),1,codefid);
 	fread(&Cy,sizeof(Cy),1,codefid);
