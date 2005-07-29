@@ -1,11 +1,10 @@
-#include <stdio.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hf:ix:y:z:r:d:t:k:"
 const char HelpString[]=
-"findstar [-f fname] [-t dist | -k kNN] [-i idx | -x x -y y -z z | -r RA -d DEC]\n";
+"findstar -f fname [-i idx | -x x -y y -z z | -r RA -d DEC] [-t dist | -k kNN]\n";
 
 
 extern char *optarg;
@@ -18,6 +17,8 @@ char *treefname=NULL;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
+
+  if(argc<=5) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   char whichset=0,xyzset=0,radecset=0,kset=0,dtolset=0;
   sidx whichstar=0;

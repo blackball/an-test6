@@ -1,9 +1,10 @@
-#include <unistd.h>
-#include <stdio.h>
 #include "starutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hf:o:"
+const char HelpString[]="fieldquads -f fname -o fieldname\n";
+
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -18,6 +19,8 @@ char *qlistfname=NULL;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
+
+  if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -35,16 +38,18 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"fieldquads [-f fname] [-o fieldname]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
   qidx numpix;
   sidx ii,numstars;

@@ -1,12 +1,10 @@
-#include <unistd.h>
-#include <stdio.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hpf:o:t:k:"
 const char HelpString[]=
-"solvexy [-f fname] [-o fieldname] [-p flip_parity] [-t tol | -k kNN]\n";
+"solvexy -f fname -o fieldname [-t tol | -k kNN] [-p flip_parity]\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -40,7 +38,7 @@ int main(int argc,char *argv[])
   double codetol=-1.0;
   char ParityFlip=0;
 
-  if(argc<=3) {fprintf(stderr,HelpString); return(HELP_ERR);}
+  if(argc<=3) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -77,10 +75,14 @@ int main(int argc,char *argv[])
       }
 
   if(treefname==NULL || pixfname==NULL || codetol<0)
-    {fprintf(stderr,HelpString);return(HELP_ERR);}
+    {fprintf(stderr,HelpString);return(OPT_ERR);}
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
 
   FILE *pixfid=NULL,*treefid=NULL,*hitfid=NULL,*quadfid=NULL;

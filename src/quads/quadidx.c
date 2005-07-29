@@ -1,10 +1,10 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "starutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "habf:"
+const char HelpString[]="quadidx -f fname [-a|-b]\n";
+
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -26,6 +26,8 @@ off_t posmarker,cposmarker;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
+
+  if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -51,15 +53,18 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"quadidx [-a|-b] [-f fname]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
   sidx numstars,ns2;
   qidx numquads,nq2;

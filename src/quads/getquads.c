@@ -1,10 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "habs:q:f:"
+const char HelpString[]=
+"getquads -f fname -s scale(arcmin) -q numQuads [-a|-b]\n";
+
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -29,8 +31,10 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
 
+  if(argc<=6) {fprintf(stderr,HelpString); return(OPT_ERR);}
+
   qidx maxQuads=0;
-  double index_scale=1.0/10.0;
+  double index_scale=5.0;
   double ramin,ramax,decmin,decmax;
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -60,15 +64,18 @@ int main(int argc,char *argv[])
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
       case 'h':
-	fprintf(stderr, 
-	"getquads [-s scale(arcmin)] [-q maxQuads] [-a|-b] [-f fname]\n");
+	fprintf(stderr,HelpString);
 	return(HELP_ERR);
       default:
 	return(OPT_ERR);
       }
 
-  for (argidx = optind; argidx < argc; argidx++)
-    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+  if(argidx<argc) {
+    for (argidx = optind; argidx < argc; argidx++)
+      fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+    fprintf(stderr,HelpString);
+    return(OPT_ERR);
+  }
 
 #define RANDSEED 888
   am_srand(RANDSEED); 
