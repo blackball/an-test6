@@ -27,7 +27,8 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
 
-  if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
+  if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);
+  fprintf(stderr,"argc=%d\n",argc);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
