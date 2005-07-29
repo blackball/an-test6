@@ -294,9 +294,6 @@ void getquadids(FILE *quadfid, FILE *codefid,
     fread(iB,sizeof(*iB),1,quadfid);
     fread(iC,sizeof(*iC),1,quadfid);
     fread(iD,sizeof(*iD),1,quadfid);
-    if(*iA>=qidx->size||*iB>=qidx->size||*iC>=qidx->size||*iD>=qidx->size)
-      fprintf("just read %lu as (%lu,%lu,%lu,%lu) from pos %l\n",ii,
-	      *iA,*iB,*iC,*iD,posmarker+ii*(DIM_QUADS*sizeof(*iA)));
   } 
   return;
 }
