@@ -77,7 +77,7 @@ int main(int argc,char *argv[])
   if(treefname==NULL || pixfname==NULL || codetol<0)
     {fprintf(stderr,HelpString);return(OPT_ERR);}
 
-  if(argidx<argc) {
+  if(optind<argc) {
     for (argidx = optind; argidx < argc; argidx++)
       fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
     fprintf(stderr,HelpString);
