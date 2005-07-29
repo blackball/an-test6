@@ -46,7 +46,7 @@ while (nn lt nfields) do begin
 ;        printf,1,'# ifield: '+string(obj[0].ifield)
         tmp_str=strtrim(string(n_elements(obj)),2)
         for kk=0,n_elements(obj)-1 do begin
-            tmp_str=tmp_str+','+strtrim(string(obj[i].rowc),2)+','+strtrim(string(obj[i].colc),2)
+            tmp_str=tmp_str+','+strtrim(string(obj[kk].rowc),2)+','+strtrim(string(obj[kk].colc),2)
         endfor
         printf,1,tmp_str
         nn=nn+1
