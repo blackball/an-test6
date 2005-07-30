@@ -13,7 +13,7 @@ extern int optind, opterr, optopt;
 qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
 	       stararray *thestars,kdtree *kd,double index_scale,
 	       double ramin,double ramax,double decmin, double decmax,
-	       qidx maxCodes);
+	       qidx maxCodes, qidx *numtries);
 
 void accept_quad(sidx iA,sidx iB,sidx iC, sidx iD, 
 		 double Cx, double Cy, double Dx, double Dy,
@@ -82,7 +82,7 @@ int main(int argc,char *argv[])
 
   FILE *treefid=NULL,*quadfid=NULL,*codefid=NULL;
   sidx numstars;
-  qidx numtries;
+  qidx numtries,numfound;
 
   fprintf(stderr,"getquads: finding %lu quads in %s [RANDSEED=%d]\n",
 	  maxQuads,treefname,RANDSEED);
@@ -112,10 +112,10 @@ int main(int argc,char *argv[])
 	  maxQuads,180.0*60.0*index_scale/(double)PIl); fflush(stderr);
   fopenout(quadfname,quadfid); fnfree(quadfname);
   fopenout(codefname,codefid); fnfree(codefname);
-  numtries=get_quads(quadfid,codefid,ASCII,thestars,starkd,index_scale,
-		     ramin,ramax,decmin,decmax,maxQuads);
+  numfound=get_quads(quadfid,codefid,ASCII,thestars,starkd,index_scale,
+		     ramin,ramax,decmin,decmax,maxQuads,&numtries);
   fclose(quadfid); fclose(codefid);
-  fprintf(stderr,"  got %lu codes in %lu tries.\n", maxQuads,numtries);
+  fprintf(stderr,"  got %lu codes in %lu tries.\n",numfound,numtries);
 
   free_dyv_array_from_kdtree((dyv_array *)thestars);
   free_kdtree(starkd); 
@@ -129,11 +129,11 @@ int main(int argc,char *argv[])
 qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
 	       stararray *thestars,kdtree *kd,double index_scale,
 	       double ramin,double ramax,double decmin, double decmax,
-	       qidx maxCodes)
+	       qidx maxCodes, qidx *numtries)
 {
   char still_not_done;
   sidx count;
-  qidx numtries=0,ii;
+  qidx ii,numfound;
   sidx iA,iB,iC,iD,jj,kk,numS;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double scale,thisx,thisy,xxtmp,costheta,sintheta;
@@ -145,9 +145,10 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
   write_quad_header(quadfid,ASCII,maxCodes,(sidx)thestars->size,
 		    DIM_QUADS,index_scale);
 
+  numfound=0; (*numtries)=0;
   for(ii=0;ii<maxCodes;ii++) {
     still_not_done=1;
-    while(still_not_done && numtries<5*maxCodes) { 
+    while(still_not_done && ((*numtries)<5*maxCodes)) { 
       star *randstar=make_rand_star(ramin,ramax,decmin,decmax); 
                         // better to actively select...
       kresult *krez = mk_kresult_from_kquery(kq,kd,randstar);
@@ -200,6 +201,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
 	    
 	    accept_quad(iA,iB,iC,iD,Cx,Cy,Dx,Dy,codefid,quadfid,ASCII);
 	    still_not_done=0;
+	    numfound++;
 
 	  } // if count>=2
 	}} // if scale and for jj
@@ -209,16 +211,18 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
       } //if numS>=DIM_QUADS
       free_star(randstar);
       free_kresult(krez);
-      numtries++;
+      (*numtries)++;
     } // while(still_not_done)
-   if(is_power_of_two(ii+1))
- fprintf(stderr,"  got %lu codes in %lu tries\r",ii+1,numtries);fflush(stdout);
+    if(is_power_of_two(ii+1)) {
+     fprintf(stderr,"  got %lu codes in %lu tries\r",numfound,*numtries);
+     fflush(stdout);
+    }
   }
   
   free_kquery(kq);
   free_star(midpoint);
 
-  return numtries;
+  return numfound;
 }
 
 

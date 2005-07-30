@@ -24,7 +24,7 @@ int main(int argc,char *argv[])
 
   qidx numFields=0;
   double radscale=1.0/10.0,aspect=1.0,distractors=0.0,dropouts=0.0,noise=0.0;
-  double centre_ra,centre_dec;
+  double centre_ra=0.0,centre_dec=0.0;
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
