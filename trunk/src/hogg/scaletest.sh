@@ -16,3 +16,4 @@ for scale in 0.01 0.03 0.10 0.30 1.00
   echo running quadidx ;
   ../quads/quadidx -f allstarsweep.$scale > quadidx.$scale.log 2> quadidx.$scale.errlog ;
 done
+
