@@ -26,7 +26,7 @@ gim= rim
 rim= mrdfits(iprefix+'.fits')
 bw_est_sky, rim,sky
 rim= rim-temporary(sky)
-scales= [10.0,8.0,16.0]
+scales= [8.0,8.0,20.0]
 nw_rgb_make, rim,gim,bim,name=prefix+'_gri.jpg', $
   scales=scales,nonlinearity=nonlinearity,rebinfactor=rebinfactor, $
   quality=quality
