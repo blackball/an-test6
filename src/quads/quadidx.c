@@ -296,10 +296,7 @@ void getquadids(FILE *quadfid, FILE *codefid,
 	  (DIM_CODES*sizeof(double)),SEEK_SET);
     fseeko(quadfid,posmarker+ii*
 	  (DIM_QUADS*sizeof(*iA)),SEEK_SET);
-    fread(iA,sizeof(*iA),1,quadfid);
-    fread(iB,sizeof(*iB),1,quadfid);
-    fread(iC,sizeof(*iC),1,quadfid);
-    fread(iD,sizeof(*iD),1,quadfid);
+    readonequad(quadfid,iA,iB,iC,iD);
   } 
   return;
 }

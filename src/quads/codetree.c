@@ -102,8 +102,7 @@ int main(int argc,char *argv[])
   else fprintf(stderr,"stdout..."); 
   fflush(stderr);
   fopenout(treefname,treefid); fnfree(treefname);
-  fwrite_kdtree(codekd,treefid);
-  fwrite(&index_scale,sizeof(index_scale),1,treefid);
+  write_codekd(treefid,codekd,index_scale);
   fprintf(stderr,"done.\n");
   fclose(treefid);
 

@@ -109,14 +109,13 @@ int main(int argc,char *argv[])
   if(treefname) fprintf(stderr,"%s...",treefname);
   else fprintf(stderr,"stdin...");  fflush(stderr);
   fopenin(treefname,treefid); fnfree(treefname);
-  kdtree *codekd = fread_kdtree(treefid);
-  fread(&index_scale,sizeof(index_scale),1,treefid);
+  kdtree *codekd = read_codekd(treefid,&index_scale);
   fclose(treefid);
   if(codekd==NULL) return(2);
   fprintf(stderr,"done\n    (%d quads, %d nodes, depth %d).\n",
 	  kdtree_num_points(codekd),kdtree_num_nodes(codekd),
 	  kdtree_max_depth(codekd));
-  fprintf(stderr,"    (index scale = %f)\n",index_scale);
+  fprintf(stderr,"    (index scale = %f)\n",rad2arcmin(index_scale));
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
   ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
@@ -322,10 +321,7 @@ void output_ids(FILE *hitfid, FILE *quadfid, char ASCII, qidx quadno)
   else {
     fseeko(quadfid,qposmarker+quadno*
 	  (DIM_QUADS*sizeof(iA)),SEEK_SET);
-    fread(&iA,sizeof(iA),1,quadfid);
-    fread(&iB,sizeof(iB),1,quadfid);
-    fread(&iC,sizeof(iC),1,quadfid);
-    fread(&iD,sizeof(iD),1,quadfid);
+    readonequad(quadfid,&iA,&iB,&iC,&iD);
   }
   
   fprintf(hitfid,"%lu,%lu,%lu,%lu (%lu)\n",iA,iB,iC,iD,quadno);
@@ -367,11 +363,8 @@ void fill_ids(FILE *hitfid, FILE *quadfid)
 	}
 	else {
 	  fseeko(quadfid,qposmarker+thismatch*
-		(DIM_QUADS*sizeof(iA)),SEEK_SET);
-	  fread(&iA,sizeof(iA),1,quadfid);
-	  fread(&iB,sizeof(iB),1,quadfid);
-	  fread(&iC,sizeof(iC),1,quadfid);
-	  fread(&iD,sizeof(iD),1,quadfid);
+	         (DIM_QUADS*sizeof(iA)),SEEK_SET);
+	  readonequad(quadfid,&iA,&iB,&iC,&iD);
 	}
 	fprintf(stdout,"found quad %lu --> (%lu,%lu,%lu,%lu)\n",
 		thismatch,iA,iB,iC,iD);

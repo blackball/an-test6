@@ -91,11 +91,7 @@ int main(int argc,char *argv[])
   if(treefname) fprintf(stderr,"%s...",treefname);
   else fprintf(stderr,"stdin...");  fflush(stderr);
   fopenin(treefname,treefid); fnfree(treefname);
-  kdtree *starkd = fread_kdtree(treefid);
-  fread(&ramin,sizeof(double),1,treefid);
-  fread(&ramax,sizeof(double),1,treefid);
-  fread(&decmin,sizeof(double),1,treefid);
-  fread(&decmax,sizeof(double),1,treefid);
+  kdtree *starkd=read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
   fclose(treefid);
   if(starkd==NULL) return(2);
   numstars=starkd->root->num_points;

@@ -87,10 +87,7 @@ int main(int argc,char *argv[])
       else {
 	fseeko(quadfid,ftello(quadfid)+thequad*
 	      (DimQuads*sizeof(iA)),SEEK_SET);
-	fread(&iA,sizeof(iA),1,quadfid);
-	fread(&iB,sizeof(iB),1,quadfid);
-	fread(&iC,sizeof(iC),1,quadfid);
-	fread(&iD,sizeof(iD),1,quadfid);
+	readonequad(quadfid,&iA,&iB,&iC,&iD);
       }
       fprintf(stderr,"quad %lu : A=%lu,B=%lu,C=%lu,D=%lu\n",
 	      thequad,iA,iB,iC,iD);

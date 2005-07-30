@@ -79,11 +79,7 @@ int main(int argc,char *argv[])
   else fprintf(stderr,"stdout..."); 
   fflush(stderr);
   fopenout(treefname,treefid); fnfree(treefname);
-  fwrite_kdtree(starkd,treefid);
-  fwrite(&ramin,sizeof(double),1,treefid);
-  fwrite(&ramax,sizeof(double),1,treefid);
-  fwrite(&decmin,sizeof(double),1,treefid);
-  fwrite(&decmax,sizeof(double),1,treefid);
+  write_starkd(treefid,starkd,ramin,ramax,decmin,decmax);
   fprintf(stderr,"done.\n");
   fclose(treefid);
 

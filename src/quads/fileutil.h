@@ -1,6 +1,7 @@
 #ifndef fileutil_H
 #define fileutil_H
 #include "starutil.h"
+#include "KD/kdtree.h"
 
 #define FOPEN_ERR -301
 #define fopenout(n,f) {if(n){f = fopen(n,"w"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n);return(FOPEN_ERR);}} else f=stdout;}
@@ -14,6 +15,9 @@ typedef unsigned short int magicval;
 #define ASCII_VAL 0x754E
 
 #define READ_FAIL -1
+
+void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD);
+void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD);
 
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax);
@@ -34,6 +38,14 @@ void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len);
 void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len);
 
 xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip);
+
+kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax, 
+		    double *decmin, double *decmax);
+kdtree *read_codekd(FILE *treefid,double *index_scale);
+void write_starkd(FILE *treefid, kdtree *starkd,
+		  double ramin, double ramax, double decmin, double decmax);
+void write_codekd(FILE *treefid, kdtree *codekd,double index_scale);
+
 
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
 		 qidx ***starquads);
