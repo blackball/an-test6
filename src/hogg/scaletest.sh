@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # make tree for USNO-B1.0 stars
-../quads/startree -f allstarsweep ;
+../quads/startree -f allstarsweep > startree.log 2> startree.errlog ;
 
 # find lots of quads, saving std and err out
 \rm -rvf *?.[01].[013][013].?*
