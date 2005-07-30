@@ -213,7 +213,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
       free_kresult(krez);
       (*numtries)++;
     } // while(still_not_done)
-    if(is_power_of_two(ii+1)) {
+    if(is_power_of_two(numfound)) {
      fprintf(stderr,"  got %lu codes in %lu tries\r",numfound,*numtries);
      fflush(stdout);
     }
