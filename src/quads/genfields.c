@@ -23,7 +23,7 @@ int main(int argc,char *argv[])
   int argidx,argchar;//  opterr = 0;
 
   qidx numFields=0;
-  double radscale=1.0/10.0,aspect=1.0,distractors=0.0,dropouts=0.0,noise=0.0;
+  double radscale=10.0,aspect=1.0,distractors=0.0,dropouts=0.0,noise=0.0;
   double centre_ra=0.0,centre_dec=0.0;
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -37,7 +37,7 @@ int main(int argc,char *argv[])
 	break;
       case 's':
 	radscale = (double)strtod(optarg,NULL);
-	if(radscale>=1.0) radscale = radscale*(double)PIl/(180.0*60);
+	radscale = arcmin2rad(radscale);
 	break;
       case 'z':
 	aspect = strtod(optarg,NULL);
@@ -123,7 +123,7 @@ int main(int argc,char *argv[])
 
   if(numFields>1)
   fprintf(stderr,"  Generating %lu fields at scale %g arcmin...\n",
-	  numFields,180.0*60.0*radscale/(double)PIl);
+	  numFields,rad2arcmin(radscale));
   fflush(stderr);
   fopenout(listfname,listfid); fnfree(listfname);
   fopenout(pix0fname,pix0fid); fnfree(pix0fname);

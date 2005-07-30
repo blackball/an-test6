@@ -76,7 +76,7 @@ int main(int argc,char *argv[])
 			      &numquads, &numstars, &DimQuads, &index_scale);
     if(qASCII==READ_FAIL) return(1);
     fprintf(stderr,"  (%lu quads, %lu total stars, scale=%f)\n",
-	    numquads,numstars,index_scale);
+	    numquads,numstars,rad2arcmin(index_scale));
     if(quadset==TRUE) {
       if(qASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
       if(qASCII) {
