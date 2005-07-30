@@ -48,7 +48,7 @@ int main(int argc,char *argv[])
 	break;
       case 's':
 	index_scale = (double)strtod(optarg,NULL);
-	index_scale = index_scale*(double)PIl/(180.0*60);
+	index_scale = arcmin2rad(index_scale);
 	break;
       case 'q':
 	maxQuads = strtoul(optarg,NULL,0);
@@ -109,7 +109,7 @@ int main(int argc,char *argv[])
   stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
 
   fprintf(stderr,"  Finding %lu quads at scale %g arcmin...\n",
-	  maxQuads,180.0*60.0*index_scale/(double)PIl); fflush(stderr);
+	  maxQuads,rad2arcmin(index_scale)); fflush(stderr);
   fopenout(quadfname,quadfid); fnfree(quadfname);
   fopenout(codefname,codefid); fnfree(codefname);
   numfound=get_quads(quadfid,codefid,ASCII,thestars,starkd,index_scale,
