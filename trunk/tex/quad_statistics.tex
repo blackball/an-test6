@@ -1,0 +1,92 @@
+\documentclass[letterpaper]{article}
+\newcommand{\starlabel}[1]{\mathsf{#1}}
+\newcommand{\AAA}{\starlabel{A}}
+\newcommand{\BBB}{\starlabel{B}}
+\newcommand{\CCC}{\starlabel{C}}
+\newcommand{\DDD}{\starlabel{D}}
+\newcommand{\thetaAB}{\theta_{\AAA\BBB}}
+\newcommand{\dtheta}{\mathrm{d}\theta}
+\newcommand{\OmegaAB}{\Omega_{\AAA\BBB}}
+\newcommand{\ENCD}{E(N_{\CCC\DDD})}
+\newcommand{\ENB}{E(N_{\BBB})}
+\newcommand{\ENBCD}{E(N_{\BBB\CCC\DDD})}
+\newcommand{\ENABCD}{E(N_{\AAA\BBB\CCC\DDD})}
+\newcommand{\Ntotal}{N_\mathrm{tot}}
+\newcommand{\Omegatotal}{\Omega_\mathrm{tot}}
+\newcommand{\thetamin}{\theta_\mathrm{min}}
+\newcommand{\thetamax}{\theta_\mathrm{max}}
+\begin{document}
+\section{A note on the statistics of stellar quadrangles}
+
+Recall that we are making quadrangles $\AAA\BBB\CCC\DDD$ of stars,
+where $\AAA$ and $\BBB$ are the two most widely separated, and $\CCC$
+and $\DDD$ are two more stars, required to fall within the square box
+of which $\AAA$ and $\BBB$ define the diagonally separated corners.
+
+If the angular separation of $\AAA$ and $\BBB$ is $\thetaAB$, then in
+the small-angle approximation, the square in which $\CCC$ and $\DDD$
+must fall has solid angle
+\begin{equation}
+\OmegaAB = \frac{1}{2}\,\thetaAB^2 = Q\,\thetaAB^2 \quad ,
+\end{equation}
+where the factor $1/2$ has been symbolized ``$Q$'' in case we switch
+to a different-shaped restriction on $\CCC$ and $\DDD$.  If the
+density of stars on the sky (number per solid angle) is $\Gamma$, and
+we assume that \emph{there is no angular clustering of stars}, then
+the mean number of stars $\nu$ in this angular patch is
+$\nu=\Gamma\,\OmegaAB$, and the actual number $n$ of stars in the
+patch is (again assuming no clustering) drawn from the Poisson
+distribution, to wit
+\begin{equation}
+p(n) = \frac{\nu^N\,e^{\nu}}{n!} \quad .
+\end{equation}
+We can only make a quad if $n\geq2$, in which case in fact we have
+${n\choose 2}$ unique choices for $\CCC$ and $\DDD$.
+
+Once $\AAA$ and $\BBB$ have been chosen, the expectation value $\ENCD$
+for the number of unique quads (choices of $\CCC$ and $\DDD$) is found
+by summing over all values of $n$, or
+\begin{eqnarray}\displaystyle
+\ENCD & = & \sum_{n=2}^{\infty} {n\choose 2}\,
+              \frac{\nu^n\,e^{\nu}}{n!} \\
+      & = & \frac{1}{2}\,\nu^2 \sum_{n=0}^{\infty} 
+              \frac{\nu^n\,e^{\nu}}{n!} \\
+      & = & \frac{1}{2}\,\nu^2 \\
+      & = & \frac{1}{2}\,Q^2\,\Gamma^2\,\thetaAB^4 \quad ,
+\end{eqnarray}
+where the sum from 2 to $\infty$ is converted to a sum from 0 to
+$\infty$ by dividing out a $\nu^2$ and some combinatoric factors.  I
+(DWH) feel certain that we could have guessed this result up-front
+with some clever argument.
+
+We now know how many $\CCC\DDD$ pairs there are, given an $\AAA\BBB$
+pair.  How many $\AAA\BBB$ pairs are there?  For each choice of $\AAA$
+(\emph{again} assuming no clustering), the expectation value $\ENB$ of
+the number of choices of $\BBB$ in an annulus of radius $\thetaAB$ and
+width $\dtheta$ is (again in the small-angle approximation)
+\begin{equation}
+\ENB = 2\pi\,\Gamma\,\thetaAB\,\dtheta \quad .
+\end{equation}
+The expectation value $\ENBCD$ of the number of quads that can be made
+with this choice of $\AAA$ at this angular separation is then
+\begin{equation}
+\ENBCD = \pi\,Q^2\,\Gamma^3\,\thetaAB^5\,\dtheta \quad .
+\end{equation}
+
+The total number of choices for $\AAA$ is the density $\Gamma$ times
+the total survey solid angle $\Omegatotal$; the total number of unique
+quads is the product of this and \emph{half} of $\ENBCD$ (because each
+$\AAA\BBB$ choice can be swapped).  So the expectation value $\ENABCD$
+for the total number of quads is
+\begin{eqnarray}\displaystyle
+\ENABCD & = & \frac{\pi\,Q^2}{2}\,\Omegatotal\,\Gamma^4\,
+                \int_{\thetamin}^{\thetamax}\,\theta^5\,\dtheta \\
+\ENABCD & = & \frac{\pi\,Q^2}{2}\,\frac{\Ntotal^4}{\Omegatotal^3}\,
+                \int_{\thetamin}^{\thetamax}\,\theta^5\,\dtheta \quad ,
+\end{eqnarray}
+where the first form is in terms of $\Gamma$ and the second is in
+terms of the total number of stars $\Ntotal$ and the total survey
+solid angle $\Omegatotal$, and where $\AAA\BBB$ pairs are allowed to
+come from any angular separation from $\thetamin$ to $\thetamax$.
+
+\end{document}
