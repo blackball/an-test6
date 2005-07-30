@@ -84,6 +84,8 @@ typedef dyv_array xyarray;
 
 #define rad2deg(r) (180.0*r/(double)PIl)
 #define deg2rad(d) (d*(double)PIl/180.0)
+#define rad2arcmin(r) (10800.0*r/(double)PIl)
+#define arcmin2rad(a) (a*(double)PIl/10800.0)
 #define radec2x(r,d) (cos(d)*cos(r))
 #define radec2y(r,d) (cos(d)*sin(r))
 #define radec2z(r,d) (sin(d))

@@ -60,8 +60,7 @@ int main(int argc,char *argv[])
   fprintf(stderr,"findcode: getting codes from %s\n",treefname);
   fprintf(stderr,"  Reading code KD tree...");  fflush(stderr);
   fopenin(treefname,treefid); fnfree(treefname);
-  kdtree *codekd = fread_kdtree(treefid);
-  fread(&index_scale,sizeof(index_scale),1,treefid);
+  kdtree *codekd = read_codekd(treefid,&index_scale);
   fclose(treefid);
   if(codekd==NULL) return(2);
   fprintf(stderr,"done\n    (%d codes, %d nodes, depth %d).\n",

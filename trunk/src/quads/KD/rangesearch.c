@@ -61,3 +61,26 @@ ivec *mk_rangesearch_pindexes(kdtree *kd,dyv *query,double range)
 }
 
 
+/*
+ivec *mk_rangesearch_pindexes_dsq(kdtree *kd,dyv *query,double range,
+				  dyv **dsqd_array)
+{
+  ivec *unsorted_pindexes = mk_ivec(0);
+  *dsqd_array = mk_dyv(0);
+  double range_dsqd = range * range;
+  ivec *indexes;
+  ivec *sorted_pindexes;
+
+  rangesearch_node(query,kd->root,range_dsqd,unsorted_pindexes,*dsqd_array);
+
+  indexes = mk_indices_of_sorted_dyv(*dsqd_array);
+  sorted_pindexes = mk_ivec_subset(unsorted_pindexes,indexes);
+
+  free_ivec(unsorted_pindexes);
+  //free_dyv(dsqd_array);
+  free_ivec(indexes);
+
+  return sorted_pindexes;
+}
+
+*/

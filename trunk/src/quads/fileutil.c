@@ -1,4 +1,24 @@
 #include "fileutil.h"
+#include "kdutil.h"
+
+
+void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD)
+{
+  fread(iA,sizeof(*iA),1,fid);
+  fread(iB,sizeof(*iB),1,fid);
+  fread(iC,sizeof(*iC),1,fid);
+  fread(iD,sizeof(*iD),1,fid);
+  return;
+}
+
+void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD)
+{
+  fwrite(&iA,sizeof(iA),1,fid);
+  fwrite(&iB,sizeof(iB),1,fid);
+  fwrite(&iC,sizeof(iC),1,fid);
+  fwrite(&iD,sizeof(iD),1,fid);
+  return;
+}
 
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax)
@@ -262,7 +282,41 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
 }
 
 
+kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax, 
+		    double *decmin, double *decmax)
+{
+  kdtree *starkd = fread_kdtree(treefid);
+  fread(ramin,sizeof(double),1,treefid);
+  fread(ramax,sizeof(double),1,treefid);
+  fread(decmin,sizeof(double),1,treefid);
+  fread(decmax,sizeof(double),1,treefid);
+  return starkd;
+}
 
+kdtree *read_codekd(FILE *treefid,double *index_scale)
+{
+  kdtree *codekd = fread_kdtree(treefid);
+  fread(index_scale,sizeof(double),1,treefid);
+  return codekd;
+}
+
+void write_starkd(FILE *treefid, kdtree *starkd,
+		  double ramin, double ramax, double decmin, double decmax)
+{
+  fwrite_kdtree(starkd,treefid);
+  fwrite(&ramin,sizeof(double),1,treefid);
+  fwrite(&ramax,sizeof(double),1,treefid);
+  fwrite(&decmin,sizeof(double),1,treefid);
+  fwrite(&decmax,sizeof(double),1,treefid);
+  return;
+}
+
+void write_codekd(FILE *treefid, kdtree *codekd,double index_scale)
+{
+  fwrite_kdtree(codekd,treefid);
+  fwrite(&index_scale,sizeof(double),1,treefid);
+  return;
+}
 
 
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
