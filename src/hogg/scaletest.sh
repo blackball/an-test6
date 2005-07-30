@@ -5,8 +5,10 @@
 
 # find lots of quads, saving std and err out
 numquads=100 ;
-scale=1.00 ;
-\ln -s allstarsweep.objs allstarsweep.$scale.objs ;
-\ln -s allstarsweep.skdt allstarsweep.$scale.skdt ;
-../quads/getquads -f allstarsweep.$scale -s $scale -q $numquads ; # > getquads.$scale.log 2> getquads.$scale.errlog ;
-../quads/quadidx -f allstarsweep.$scale ;
+for scale in 0.01 0.03 0.10 0.30 1.00
+  do
+  \ln -s allstarsweep.objs allstarsweep.$scale.objs ;
+  \ln -s allstarsweep.skdt allstarsweep.$scale.skdt ;
+  echo "../quads/getquads -f allstarsweep.$scale -s $scale -q $numquads > getquads.$scale.log 2> getquads.$scale.errlog" ;
+  echo "../quads/quadidx -f allstarsweep.$scale > quadidx.$scale.log 2> quadidx.$scale.errlog" ;
+done
