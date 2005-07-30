@@ -48,7 +48,7 @@ int main(int argc,char *argv[])
 	break;
       case 's':
 	index_scale = (double)strtod(optarg,NULL);
-	if(index_scale>=1.0) index_scale = index_scale*(double)PIl/(180.0*60);
+	index_scale = index_scale*(double)PIl/(180.0*60);
 	break;
       case 'q':
 	maxQuads = strtoul(optarg,NULL,0);
@@ -166,7 +166,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
 	  star_coords(thestars->array[iB],thestars->array[iA],&Bx,&By);
           Bx-=Ax; By-=Ay; // probably don't need this
 	  scale = Bx*Bx+By*By;
-	  if(2.0*sqrt(scale)>index_scale) { // ?? is this right?
+	  if(4.0*scale>(index_scale*index_scale)) { // ?? is this right?
           star_midpoint(midpoint,thestars->array[iA],thestars->array[iB]);
           star_coords(thestars->array[iA],midpoint,&Ax,&Ay);
           star_coords(thestars->array[iB],midpoint,&Bx,&By);
