@@ -13,7 +13,7 @@ char *quadfname=NULL;
 char *codefname=NULL;
 sidx thestar;
 qidx thequad;
-bool starset=FALSE,quadset=FALSE;
+char starset=FALSE,quadset=FALSE;
 char buff[100],maxstarWidth;
 
 int main(int argc,char *argv[])
@@ -105,10 +105,7 @@ int main(int argc,char *argv[])
       else {
 	fseeko(codefid,ftello(codefid)+thequad*
 	      (DIM_CODES*sizeof(Cx)),SEEK_SET);
-	fread(&Cx,sizeof(Cx),1,codefid);
-	fread(&Cy,sizeof(Cy),1,codefid);
-	fread(&Dx,sizeof(Dx),1,codefid);
-	fread(&Dy,sizeof(Dy),1,codefid);
+        readonecode(codefid,&Cx,&Cy,&Dx,&Dy);
       }
       fprintf(stderr,"     code = %lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
 

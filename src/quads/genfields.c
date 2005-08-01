@@ -112,7 +112,7 @@ int main(int argc,char *argv[])
   numstars=starkd->root->num_points;
   fprintf(stderr,"done\n    (%lu stars, %d nodes, depth %d).\n",
 	  numstars,starkd->num_nodes,starkd->max_depth);
-  fprintf(stderr,"    (dim %d) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
+  fprintf(stderr,"    (dim %d) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
 	  kdtree_num_dims(starkd),ramin,ramax,decmin,decmax);
 
   stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
@@ -180,10 +180,11 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 
       if(numS) {
 #if DIM_STARS==2
-fprintf(pix0fid,"centre %f,%f\n",star_ref(randstar,0),star_ref(randstar,1));
+	fprintf(pix0fid,"centre %lf,%lf\n",
+	star_ref(randstar,0),star_ref(randstar,1));
 #else
-fprintf(pix0fid,"centre %f,%f,%f\n",
-star_ref(randstar,0),star_ref(randstar,1),star_ref(randstar,2));
+	fprintf(pix0fid,"centre %lf,%lf,%lf\n",
+	star_ref(randstar,0),star_ref(randstar,1),star_ref(randstar,2));
 #endif
 	numX=floor(numS*distractors);
         fprintf(pixfid,"%lu",numS+numX); 
@@ -198,16 +199,16 @@ star_ref(randstar,0),star_ref(randstar,1),star_ref(randstar,2));
 	  if(jj==0) {pixxmin=pixxmax=xx; pixymin=pixymax=yy;}
 	  if(xx>pixxmax) pixxmax=xx; if(xx<pixxmin) pixxmin=xx;
 	  if(yy>pixymax) pixymax=yy; if(yy<pixymin) pixymin=yy;
-	  fprintf(pix0fid,",%f,%f",xx,yy);
+	  fprintf(pix0fid,",%lf,%lf",xx,yy);
 	  if(noise)
-	    fprintf(pixfid,",%f,%f",
+	    fprintf(pixfid,",%lf,%lf",
 		    xx+noise*scale*gen_gauss(),
 		    yy+noise*scale*gen_gauss() );
 	  else
-	    fprintf(pixfid,",%f,%f",xx,yy);
+	    fprintf(pixfid,",%lf,%lf",xx,yy);
 	}
 	for(jj=0;jj<numX;jj++)
-	  fprintf(pixfid,",%f,%f",
+	  fprintf(pixfid,",%lf,%lf",
 		  range_random(pixxmin,pixxmax),
 		  range_random(pixymin,pixymax));
 	  

@@ -20,6 +20,24 @@ void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD)
   return;
 }
 
+void readonecode(FILE *fid,double *Cx, double *Cy, double *Dx, double *Dy)
+{
+  fread(Cx,sizeof(*Cx),1,fid);
+  fread(Cy,sizeof(*Cy),1,fid);
+  fread(Dx,sizeof(*Dx),1,fid);
+  fread(Dy,sizeof(*Dy),1,fid);
+  return;
+}
+
+void writeonecode(FILE *fid,double Cx, double Cy, double Dx, double Dy)
+{
+  fwrite(&Cx,sizeof(Cx),1,fid);
+  fwrite(&Cy,sizeof(Cy),1,fid);
+  fwrite(&Dx,sizeof(Dx),1,fid);
+  fwrite(&Dy,sizeof(Dy),1,fid);
+  return;
+}
+
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax)
 {
@@ -50,6 +68,51 @@ stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
       fread(thestars->array[ii]->farr,sizeof(double),*Dim_Stars,fid);
   }
   return thestars;
+}
+
+quadarray *readidlist(FILE *fid,qidx *numfields,sizev **pixsizes)
+{
+  char ASCII = 0;
+  qidx ii,jj,numS;
+  magicval magic;
+  fread(&magic,sizeof(magic),1,fid);
+  if(magic==ASCII_VAL) {
+    ASCII=1;
+    fscanf(fid,"mFields=%lu\n",numfields);
+  }
+  else {
+    if(magic!=MAGIC_VAL) {
+      fprintf(stderr,"ERROR (readidlist) -- bad magic value id list\n");
+      return((quadarray *)NULL);
+    }
+    ASCII=0;
+    fread(numfields,sizeof(*numfields),1,fid);
+  }
+  quadarray *thepids = mk_quadarray(*numfields);
+  *pixsizes = mk_sizev(*numfields);
+  for(ii=0;ii<*numfields;ii++) {
+    // read in how many stars in this pic
+    if(ASCII)
+      fscanf(fid,"%lu",&numS);
+    else
+      fread(&numS,sizeof(numS),1,fid);
+    sizev_set(*pixsizes,ii,numS);
+    thepids->array[ii] = mk_quadd(numS);
+    if(thepids->array[ii]==NULL) {
+      fprintf(stderr,"ERROR (fieldquads) -- out of memory at field %lu\n",ii);
+      free_quadarray(thepids);
+      free_sizev(*pixsizes);
+      return (quadarray *)NULL;
+    }
+    if(ASCII) {
+      for(jj=0;jj<numS;jj++)
+	fscanf(fid,",%d",thepids->array[ii]->iarr+jj);
+      fscanf(fid,"\n");
+    }
+    else
+      fread(thepids->array[ii]->iarr,sizeof(int),numS,fid);
+  }
+  return thepids;
 }
 
 void write_objs_header(FILE *fid, char ASCII, sidx numstars,
@@ -231,7 +294,7 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
 }
 
 
-xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
+xyarray *readxy(FILE *fid,qidx *numfields,sizev **pixsizes, char ParityFlip)
 {
   char ASCII = 0;
   qidx ii,jj,numxy;
@@ -239,7 +302,7 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
   fread(&magic,sizeof(magic),1,fid);
   if(magic==ASCII_VAL) {
     ASCII=1;
-    fscanf(fid,"mFields=%lu\n",numpix);
+    fscanf(fid,"mFields=%lu\n",numfields);
   }
   else {
     if(magic!=MAGIC_VAL) {
@@ -247,11 +310,11 @@ xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip)
       return((xyarray *)NULL);
     }
     ASCII=0;
-    fread(numpix,sizeof(*numpix),1,fid);
+    fread(numfields,sizeof(*numfields),1,fid);
   }
-  xyarray *thepix = mk_xyarray(*numpix);
-  *pixsizes = mk_sizev(*numpix);
-  for(ii=0;ii<*numpix;ii++) {
+  xyarray *thepix = mk_xyarray(*numfields);
+  *pixsizes = mk_sizev(*numfields);
+  for(ii=0;ii<*numfields;ii++) {
     if(ASCII)
       fscanf(fid,"%lu",&numxy);
     else

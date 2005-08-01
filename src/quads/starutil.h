@@ -15,6 +15,10 @@
 #define DIM_QUADS 4
 #define DIM_XY 2
 
+#define DEFAULT_KDRMIN 50
+#define DEFAULT_IDXSCALE 5.0
+#define DEFAULT_OVERSAMPLE 5
+
 #ifndef TRUE
 #define TRUE 1
 #endif

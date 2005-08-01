@@ -34,7 +34,7 @@ int main(int argc,char *argv[])
   if(argc<=6) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   qidx maxQuads=0;
-  double index_scale=5.0;
+  double index_scale=DEFAULT_IDXSCALE;
   double ramin,ramax,decmin,decmax;
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -98,7 +98,7 @@ int main(int argc,char *argv[])
   if(ASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
   fprintf(stderr,"done\n    (%lu stars, %d nodes, depth %d).\n",
 	  numstars,starkd->num_nodes,starkd->max_depth);
-  fprintf(stderr,"    (dim %d) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
+  fprintf(stderr,"    (dim %d) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
 	  kdtree_num_dims(starkd),ramin,ramax,decmin,decmax);
 
 
@@ -144,7 +144,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
   numfound=0; (*numtries)=0;
   for(ii=0;ii<maxCodes;ii++) {
     still_not_done=1;
-    while(still_not_done && ((*numtries)<5*maxCodes)) { 
+    while(still_not_done && ((*numtries)<DEFAULT_OVERSAMPLE*maxCodes)) { 
       star *randstar=make_rand_star(ramin,ramax,decmin,decmax); 
                         // better to actively select...
       kresult *krez = mk_kresult_from_kquery(kq,kd,randstar);
@@ -241,19 +241,13 @@ void accept_quad(sidx iA,sidx iB,sidx iC, sidx iD,
   }
 
   if(ASCII) {
-    fprintf(codefid,"%f,%f,%f,%f\n",Cx,Cy,Dx,Dy);
+    fprintf(codefid,"%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
     fprintf(quadfid,"%2$*1$lu,%3$*1$lu,%4$*1$lu,%5$*1$lu\n",
 	    maxstarWidth,iA,iB,iC,iD);
   }
   else {
-    fwrite(&Cx,sizeof(Cx),1,codefid);
-    fwrite(&Cy,sizeof(Cy),1,codefid);
-    fwrite(&Dx,sizeof(Dx),1,codefid);
-    fwrite(&Dy,sizeof(Dy),1,codefid);
-    fwrite(&iA,sizeof(iA),1,quadfid);
-    fwrite(&iB,sizeof(iB),1,quadfid);
-    fwrite(&iC,sizeof(iC),1,quadfid);
-    fwrite(&iD,sizeof(iD),1,quadfid);
+    writeonecode(codefid,Cx,Cy,Dx,Dy);
+    writeonequad(quadfid,iA,iB,iC,iD);
   }
   
   return;

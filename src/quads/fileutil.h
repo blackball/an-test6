@@ -18,9 +18,13 @@ typedef unsigned short int magicval;
 
 void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD);
 void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD);
+void readonecode(FILE *fid,double *Cx, double *Cy, double *Dx, double *Dy);
+void writeonecode(FILE *fid,double Cx, double Cy, double Dx, double Dy);
 
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax);
+
+quadarray *readidlist(FILE *fid,qidx *numpix,sizev **pixsizes);
 
 char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars, 
              double *ramin,double *ramax,double *decmin,double *decmax);

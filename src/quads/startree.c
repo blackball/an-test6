@@ -17,7 +17,7 @@ char *catfname=NULL;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-  int kd_Rmin=50;
+  int kd_Rmin=DEFAULT_KDRMIN;
 
   if(argc<=2) {fprintf(stderr,HelpString);return(HELP_ERR);}
      

@@ -15,7 +15,7 @@ extern int optind, opterr, optopt;
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes, 
 		     char *ASCII,double *index_scale,qidx buffsize);
 
-dimension readonecode(FILE *codefid, code *tmpcode, 
+dimension readnextcode(FILE *codefid, code *tmpcode, 
 		 dimension Dim_Codes, char ASCII);
 
 char *treefname=NULL;
@@ -24,7 +24,7 @@ char *codefname=NULL;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-  int kd_Rmin=50;
+  int kd_Rmin=DEFAULT_KDRMIN;
   qidx buffsize=(qidx)floor(MEM_LOAD/(sizeof(double)+sizeof(int))*DIM_CODES);
 
   if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
@@ -86,7 +86,7 @@ int main(int argc,char *argv[])
 	    codekd->num_nodes,codekd->max_depth);
     tmpcode=mk_coded(Dim_Codes);
     for(ii=0;ii<(numcodes-buffsize);ii++) {
-      readonecode(codefid,tmpcode,Dim_Codes,ASCII);
+      readnextcode(codefid,tmpcode,Dim_Codes,ASCII);
       add_point_to_kdtree(codekd,(dyv *)tmpcode);
       if(is_power_of_two(ii+1)) 
 	fprintf(stderr,"    %lu / %lu of rest done\r",ii+1,numcodes-buffsize);
@@ -141,6 +141,9 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
   	       thecodes->array[ii]->farr+1,
   	       thecodes->array[ii]->farr+2,
   	       thecodes->array[ii]->farr+3   );
+      else
+	fprintf(stderr,"ERROR (codetree) -- only DimCodes=4 supported.\n");
+
     }
     else
       fread(thecodes->array[ii]->farr,sizeof(double),*DimCodes,fid);
@@ -149,7 +152,7 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
 }
 
 
-dimension readonecode(FILE *codefid, code *tmpcode, 
+dimension readnextcode(FILE *codefid, code *tmpcode, 
 		      dimension Dim_Codes, char ASCII)
 {
   dimension rez=0;
