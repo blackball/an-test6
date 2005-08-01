@@ -11,11 +11,11 @@ extern int optind, opterr, optopt;
 qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 		       FILE *newquadfid, FILE *newcodefid, FILE *idxfid,
 		       qidx numQuads, sidx numStars, sidx *numused);
-bool insertquad(ivec_array *qlist, qidx ii, 
+char insertquad(ivec_array *qlist, qidx ii, 
 		sidx iA, sidx iB, sidx iC, sidx iD);
 void getquadids(FILE *quadfid, FILE *codefid,
 		qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
-bool newquad(ivec_array *qlist,sidx iA,sidx iB,sidx iC,sidx iD);
+char newquad(ivec_array *qlist,sidx iA,sidx iB,sidx iC,sidx iD);
 
 char *idxfname=NULL; char *quadfname=NULL; char *codefname=NULL;
 char *newquadfname=NULL; char *newcodefname=NULL;
@@ -135,23 +135,14 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
       uniqueQuads++;
       if(qASCII) {
 	fscanf(codefid,"%lf,%lf,%lf,%lf\n",&Cx,&Cy,&Dx,&Dy);
-	fprintf(newcodefid,"%f,%f,%f,%f\n",Cx,Cy,Dx,Dy);
+	fprintf(newcodefid,"%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
 	fprintf(newquadfid,"%2$*1$lu,%3$*1$lu,%4$*1$lu,%5$*1$lu\n",
 		maxstarWidth,iA,iB,iC,iD);
       }
       else {
-	fread(&Cx,sizeof(Cx),1,codefid);
-	fread(&Cy,sizeof(Cy),1,codefid);
-	fread(&Dx,sizeof(Dx),1,codefid);
-	fread(&Dy,sizeof(Dy),1,codefid);
-	fwrite(&Cx,sizeof(Cx),1,newcodefid);
-	fwrite(&Cy,sizeof(Cy),1,newcodefid);
-	fwrite(&Dx,sizeof(Dx),1,newcodefid);
-	fwrite(&Dy,sizeof(Dy),1,newcodefid);
-	fwrite(&iA,sizeof(iA),1,newquadfid);
-	fwrite(&iB,sizeof(iB),1,newquadfid);
-	fwrite(&iC,sizeof(iC),1,newquadfid);
-	fwrite(&iD,sizeof(iD),1,newquadfid);
+        readonecode(codefid,&Cx,&Cy,&Dx,&Dy);
+        writeonecode(newcodefid,Cx,Cy,Dx,Dy);
+	writeonequad(newquadfid,iA,iB,iC,iD);
       }
     }
   }
@@ -201,10 +192,10 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
   return uniqueQuads;
 }
 
-bool insertquad(ivec_array *qlist, qidx ii, 
+char insertquad(ivec_array *qlist, qidx ii, 
 		sidx iA, sidx iB, sidx iC, sidx iD)
 {
-  bool new=FALSE;
+  char new=FALSE;
   ivec *Alist,*Blist,*Clist,*Dlist;
   Alist = ivec_array_ref(qlist,iA);
   Blist = ivec_array_ref(qlist,iB);
@@ -247,7 +238,7 @@ bool insertquad(ivec_array *qlist, qidx ii,
   return(new);
 }
 
-bool newquad(ivec_array *qlist,sidx iA,sidx iB,sidx iC,sidx iD)
+char newquad(ivec_array *qlist,sidx iA,sidx iB,sidx iC,sidx iD)
 {
   int minlength,thislength,whichmin=1;
   ivec *walkivec,*thisivec;

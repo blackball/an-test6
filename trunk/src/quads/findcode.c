@@ -4,7 +4,8 @@
 
 #define OPTIONS "hf:x:y:z:w:t:k:"
 const char HelpString[]=
-"findcode -f fname [-t dist | -k kNN] c1 c2 c3 c4\n";
+"findcode -f fname [-t dist | -k kNN] c1 c2 c3 c4  OR\n"
+"findcode -f fname [-t dist | -k kNN] and read stdin\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -18,7 +19,7 @@ int main(int argc,char *argv[])
   int argidx,argchar;//  opterr = 0;
 
   char kset=0,dtolset=0;
-  sidx K=1;
+  sidx K=0;
   double dtol=0.0;
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -52,7 +53,7 @@ int main(int argc,char *argv[])
   kresult *krez=NULL;
   code *thequery=mk_code();
 
-  if((argc-optind)<4) {
+  if((argc-optind)<DIM_CODES) {
     fprintf(stderr,HelpString);
     return(HELP_ERR);
   }    

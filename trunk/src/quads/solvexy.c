@@ -115,7 +115,7 @@ int main(int argc,char *argv[])
   fprintf(stderr,"done\n    (%d quads, %d nodes, depth %d).\n",
 	  kdtree_num_points(codekd),kdtree_num_nodes(codekd),
 	  kdtree_max_depth(codekd));
-  fprintf(stderr,"    (index scale = %f)\n",rad2arcmin(index_scale));
+  fprintf(stderr,"    (index scale = %lf)\n",rad2arcmin(index_scale));
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
   ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
@@ -174,7 +174,7 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
       if(Ay<Cy) Cy=Ay; if(Ay>Dy) Dy=Ay;
     }
     posmarker=ftello(hitfid);
-    fprintf(hitfid,"field %lu: %f,%f,%f,%f\n",ii,Cx,Cy,Dx,Dy);
+    fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,Cx,Cy,Dx,Dy);
 
     for(iA=0;iA<(numxy-1);iA++) {
       Ax=xy_refx(xya_ref(thepix,ii),iA); Ay=xy_refy(xya_ref(thepix,ii),iA);
@@ -242,7 +242,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,Dx); code_set(thequery,3,Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
-    //fprintf(hitfid,"  abcd code:%f,%f,%f,%f\n",Cx,Cy,Dx,Dy);
+    //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,ABCD_ORDER); 
     numrez+=krez->count;
   }
@@ -253,7 +253,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,1.0-Dx); code_set(thequery,3,1.0-Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
-    //fprintf(hitfid,"  bacd code:%f,%f,%f,%f\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
+ //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,BACD_ORDER); 
     numrez+=krez->count;
   }
@@ -264,7 +264,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,Cx); code_set(thequery,3,Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
-    //fprintf(hitfid,"  abdc code:%f,%f,%f,%f\n",Dx,Dy,Cx,Cy);
+    //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,ABDC_ORDER); 
     numrez+=krez->count;
   }
@@ -275,7 +275,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   code_set(thequery,2,1.0-Cx); code_set(thequery,3,1.0-Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
-    //fprintf(hitfid,"  badc code:%f,%f,%f,%f\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
+ //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
     output_match(hitfid,quadfid,ASCII,ABCDpix,krez,BADC_ORDER); 
     numrez+=krez->count;
   }
@@ -298,7 +298,7 @@ void output_match(FILE *hitfid,FILE *quadfid, char ASCII,
   if(order==BADC_ORDER) {oA=1; oB=0; oC=3; oD=2;}
 
   for(jj=0;jj<krez->count;jj++) {
-    fprintf(hitfid,"%f,%f,%f,%f,%f,%f,%f,%f,",
+    fprintf(hitfid,"%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,",
 	    xy_refx(ABCDpix,oA),xy_refy(ABCDpix,oA),
 	    xy_refx(ABCDpix,oB),xy_refy(ABCDpix,oB),
 	    xy_refx(ABCDpix,oC),xy_refy(ABCDpix,oC),
@@ -333,7 +333,7 @@ void fill_ids(FILE *hitfid, FILE *quadfid)
 {
   off_t qposmarker;
   char ASCII = 0;
-  qidx ii=999,numquads,thismatch;
+  qidx ii,numquads,thismatch;
   sidx iA,iB,iC,iD;
   dimension Dim_Quads;
   double index_scale;
