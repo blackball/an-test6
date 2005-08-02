@@ -515,7 +515,7 @@ void add_point_to_kdtree(kdtree *kd, dyv *x){
 
 
 
-double add_point_to_kdtree_dsq(kdtree *kd, dyv *x){
+double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, int *minii){
 
   // modified by STR to return distance of point to nearest neighbour
   
@@ -554,23 +554,18 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x){
 	  4) adjusting the hrect to include this point
    */
 
-  double insertdist=-999.0;
-  dyv *tmpdv=mk_dyv(closest_to_x->num_points);
-  if(tmpdv!=NULL) {
-    int ii,jj;
-    double tmp,tmp2;
-    for(ii=0;ii<tmpdv->size;ii++) {
-      tmp=0.0;
-      for(jj=0;jj<x->size;jj++) {
-	tmp2=dyv_ref(dyv_array_ref(closest_to_x->points,ii),jj);
-	tmp2-=dyv_ref(x,jj);
-	tmp2*=tmp2;
-	tmp+=tmp2;
-      }
-      dyv_set(tmpdv,ii,tmp);
+  double insertdist=1e20,tmp,tmp2;
+  int ii,jj;
+  for(ii=0;ii<closest_to_x->num_points;ii++) {
+    tmp=0.0;
+    for(jj=0;jj<x->size;jj++) {
+      tmp2=dyv_ref(dyv_array_ref(closest_to_x->points,ii),jj);
+      tmp2-=dyv_ref(x,jj);
+      tmp2*=tmp2;
+      tmp+=tmp2;
     }
-    insertdist=dyv_min(tmpdv);
-    free_dyv(tmpdv);
+    if(ii==0) {insertdist=tmp; *minii=0;}
+    else if(tmp<insertdist) {insertdist=tmp; *minii=ii;}
   }
 
   closest_to_x->num_points++;

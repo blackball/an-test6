@@ -153,7 +153,7 @@ kdtree *mk_kdtree_from_points(dyv_array *pindex_to_point,int rmin);
 
 /* Adds a point to a kdtree. */
 void add_point_to_kdtree(kdtree *kd, dyv *x);
-double add_point_to_kdtree_dsq(kdtree *kd, dyv *x);
+double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, int *minii);
 
 /* Helper function for adding point to kdtree */
 void replace_pindexes(node *subtree, ivec *new_pindexes);

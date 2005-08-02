@@ -40,6 +40,7 @@ char buff[100],maxstarWidth,oneobjWidth;
 kdtree *hitkd=NULL;
 dyv *hitdyv=NULL;
 double dsq=0.0;
+int whichmatch;
 
 int main(int argc,char *argv[])
 {
@@ -388,20 +389,22 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
       hitkd=mk_kdtree_from_points(tmp,50);
       free_dyv_array(tmp);
     }
-    else {
-      dsq=add_point_to_kdtree_dsq(hitkd,hitdyv);
-      if(dsq<1.0e-9)
-	fprintf(stdout,"quad=%lu, dist=%.10g\n",thisquad,dsq);
-    }
+    else
+      dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,&whichmatch);
 
-    fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	    star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
+    if(dsq<1.0e-9) {
+	fprintf(stdout,"quad=%lu, dist=%.10g match=%lu\n",thisquad,dsq,whichmatch);
+
+	fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+		star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
 		xy2ra(star_ref(sMin,0),star_ref(sMin,1)),
 		z2dec(star_ref(sMin,2)));
-    fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	    star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
+	fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+		star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
 		xy2ra(star_ref(sMax,0),star_ref(sMax,1)),
 		z2dec(star_ref(sMax,2)));
+    }
+
     free(transform); 
     
   }
