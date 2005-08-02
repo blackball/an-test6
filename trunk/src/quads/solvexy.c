@@ -39,8 +39,9 @@ char buff[100],maxstarWidth,oneobjWidth;
 
 kdtree *hitkd=NULL;
 dyv *hitdyv=NULL;
-double dsq=0.0;
+double dsq=1e20;
 int whichmatch;
+ivec *hitquads;
 
 int main(int argc,char *argv[])
 {
@@ -172,6 +173,9 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   double costheta,sintheta,scale,xxtmp,yytmp;
   double xxmin,xxmax,yymin,yymax;
   off_t posmarker;
+  hitquads = mk_ivec(0);
+  fprintf(stderr,"hitquads size 0=%d\n",hitquads->size);
+
   kquery *kq;
   if(codetol<1.0)
     kq = mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
@@ -321,6 +325,7 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 		  FILE *catfid, char cASCII, 
 		  kresult *krez, xy *ABCDpix, char order)
 {
+  int numq;
   qidx jj,thisquad;
   sidx iA,iB,iC,iD;
   double tmpx,tmpy,tmpz,*transform;
@@ -328,9 +333,11 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
   sA=mk_star(); if(sA==NULL) return;  sB=mk_star(); if(sB==NULL) return;
   sC=mk_star(); if(sC==NULL) return;  sD=mk_star(); if(sD==NULL) return;
   sMin=mk_star();if(sMin==NULL) return; sMax=mk_star();if(sMax==NULL) return;
-
   for(jj=0;jj<krez->count;jj++) {
-    thisquad = (qidx)krez->pindexes->iarr[jj];
+  thisquad = (qidx)krez->pindexes->iarr[jj];
+  numq=hitquads->size;
+  if(add_to_ivec_unique2(hitquads,thisquad) >= numq) {
+
     if(qASCII) {
       fseeko(quadfid,qposmarker+thisquad*
 	     (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
@@ -393,7 +400,8 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
       dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,&whichmatch);
 
     if(dsq<1.0e-9) {
-	fprintf(stdout,"quad=%lu, dist=%.10g match=%lu\n",thisquad,dsq,whichmatch);
+	fprintf(stdout,"quad=%lu, dist=%.10g match=%d\n",
+		thisquad,dsq,ivec_ref(hitquads,whichmatch));
 
 	fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
 		star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
@@ -407,6 +415,7 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 
     free(transform); 
     
+  }
   }
 
   free_star(sA);free_star(sB);free_star(sC);free_star(sD);
