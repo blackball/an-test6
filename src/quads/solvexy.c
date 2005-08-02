@@ -448,7 +448,7 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
   // take the inverse of Q in-place, so Q=inv(M*M')
   det = inverse_3by3(matQ);
 
-  fprintf(stderr,"det=%.12g\n",det);
+  //fprintf(stderr,"det=%.12g\n",det);
 
   if(det==0.0) {
     fprintf(stderr,"ERROR (fit_transform) -- determinant zero\n");
