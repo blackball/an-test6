@@ -357,7 +357,7 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
     else
       dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,(int)thisquad,&whichmatch);
 
-    if(dsq<1.0e-9) {
+    if((thisquad !=whichmatch) && (dsq<1.0e-9)) {
       fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
     	       thisquad,iA,iB,iC,iD);
       fprintf(hitfid,"  dist=%.10g match=%d\n",
