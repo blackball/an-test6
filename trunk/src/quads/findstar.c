@@ -70,7 +70,7 @@ int main(int argc,char *argv[])
   kresult *krez=NULL;
   star *thequery=NULL;
   kdtree *starkd=NULL;
-  stararray *thestars;
+  stararray *thestars=NULL;
   off_t catposmarker;
   char cASCII=READ_FAIL;
 
