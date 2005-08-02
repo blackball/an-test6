@@ -140,4 +140,3 @@ unsigned long int choose(unsigned int nn,unsigned int mm)
   return rr;
 }
 
-

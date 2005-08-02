@@ -2,7 +2,9 @@
 #include "fileutil.h"
 
 #define OPTIONS "habf:"
-const char HelpString[]="quadidx -f fname [-a|-b]\n";
+const char HelpString[]=
+"quadidx -f fname [-a|-b]\n"
+"  -a sets ASCII output, -b sets BINARY output (default)\n";
 
 
 extern char *optarg;
