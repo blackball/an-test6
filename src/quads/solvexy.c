@@ -337,8 +337,8 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 	     (DIM_QUADS*sizeof(iA)),SEEK_SET);
       readonequad(quadfid,&iA,&iB,&iC,&iD);
     }
-    fprintf(hitfid,"  match %lu: quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
-    	    jj,thisquad,iA,iB,iC,iD);
+    fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
+    	       thisquad,iA,iB,iC,iD);
 
     if(cASCII) {
       fseeko(catfid,cposmarker+iA*oneobjWidth*sizeof(char),SEEK_SET); 
@@ -419,6 +419,21 @@ void image_to_xyz(double uu, double vv, star *s, double *transform)
 }
 
 
+/*
+void image_to_xyz2(double uu, double vv, star *s, double *transform2)
+{
+  double length,ra,dec;
+  if(s==NULL || transform==NULL) return;
+  ra  = uu*(*(transform2+0)) + vv*(*(transform2+1)) + *(transform2+2);
+  dec = uu*(*(transform2+3)) + vv*(*(transform2+4)) + *(transform2+5);
+  star_set(s,0,radec2x(ra,dec));
+  star_set(s,1,radec2y(ra,dec));
+  star_set(s,2,radec2z(ra,dec));
+
+  return;
+}
+*/
+
 double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
 {
   double det,uu,uv,vv,sumu,sumv;
@@ -442,83 +457,88 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
   Bu=xy_refx(ABCDpix,oB); Bv=xy_refy(ABCDpix,oB);
   Cu=xy_refx(ABCDpix,oC); Cv=xy_refy(ABCDpix,oC);
   Du=xy_refx(ABCDpix,oD); Dv=xy_refy(ABCDpix,oD);
+
   //fprintf(stderr,"Image ABCD = (%lf,%lf) (%lf,%lf) (%lf,%lf) (%lf,%lf)\n",
   //  	    Au,Av,Bu,Bv,Cu,Cv,Du,Dv);
 
+  /*
+  fprintf(stderr,"\n%.10lf,%.10lf\n",Au,Av);
+  fprintf(stderr,"%.10lf,%.10lf\n",Bu,Bv);
+  fprintf(stderr,"%.10lf,%.10lf\n",Cu,Cv);
+  fprintf(stderr,"%.10lf,%.10lf\n",Du,Dv);
+  fprintf(stderr,"\n%.10lf,%.10lf,%.10lf\n",
+	  star_ref(A,0),star_ref(A,1),star_ref(A,2));
+  fprintf(stderr,"%.10lf,%.10lf,%.10lf\n",
+	  star_ref(B,0),star_ref(B,1),star_ref(B,2));
+  fprintf(stderr,"%.10lf,%.10lf,%.10lf\n",
+	  star_ref(C,0),star_ref(C,1),star_ref(C,2));
+  fprintf(stderr,"%.10lf,%.10lf,%.10lf\n",
+	  star_ref(D,0),star_ref(D,1),star_ref(D,2));
+  */
 
-  if(0) {
+  // define M to be the 3x4 matrix [Au,Bu,Cu,Du;ones(1,4)]
+  // define X to be the 3x4 matrix [Ax,Bx,Cx,Dx;Ay,By,Cy,Dy;Az,Bz,Cz,Dz]
 
+  // set Q to be the 3x3 matrix  M*M'
   uu = Au*Au + Bu*Bu + Cu*Cu + Du*Du;
   uv = Au*Av + Bu*Bv + Cu*Cv + Du*Dv;
   vv = Av*Av + Bv*Bv + Cv*Cv + Dv*Dv;
-
   sumu = Au+Bu+Cu+Du;  sumv = Av+Bv+Cv+Dv;
-
   *(matQ+0)=uu;   *(matQ+1)=uv;   *(matQ+2)=sumu;
   *(matQ+3)=uv;   *(matQ+4)=vv;   *(matQ+5)=sumv;
   *(matQ+6)=sumu; *(matQ+7)=sumv; *(matQ+8)=4.0;
 
+  // take the inverse of Q in-place, so Q=inv(M*M')
   det = inverse_3by3(matQ);
+
+  fprintf(stderr,"det=%.12g\n",det);
 
   if(det==0.0) {
     fprintf(stderr,"ERROR (fit_transform) -- determinant zero\n");
     if(matQ) free(matQ); if(matR) free(matR); return(NULL); }
 
-  *(matR+0)=
-    *(matQ+0)*star_ref(A,0)+*(matQ+1)*star_ref(A,1)+*(matQ+2)*star_ref(A,2);
-  *(matR+1)=
-    *(matQ+0)*star_ref(B,0)+*(matQ+1)*star_ref(B,1)+*(matQ+2)*star_ref(B,2);
-  *(matR+2)=
-    *(matQ+0)*star_ref(C,0)+*(matQ+1)*star_ref(C,1)+*(matQ+2)*star_ref(C,2);
-  *(matR+3)=
-    *(matQ+0)*star_ref(D,0)+*(matQ+1)*star_ref(D,1)+*(matQ+2)*star_ref(D,2);
+  // set R to be the 4x3 matrix M'*inv(M*M')=M'*Q
+  *(matR+0) = *(matQ+0)*Au + *(matQ+3)*Av + *(matQ+6);
+  *(matR+1) = *(matQ+1)*Au + *(matQ+4)*Av + *(matQ+7);
+  *(matR+2) = *(matQ+2)*Au + *(matQ+5)*Av + *(matQ+8);
+  *(matR+3) = *(matQ+0)*Bu + *(matQ+3)*Bv + *(matQ+6);
+  *(matR+4) = *(matQ+1)*Bu + *(matQ+4)*Bv + *(matQ+7);
+  *(matR+5) = *(matQ+2)*Bu + *(matQ+5)*Bv + *(matQ+8);
+  *(matR+6) = *(matQ+0)*Cu + *(matQ+3)*Cv + *(matQ+6);
+  *(matR+7) = *(matQ+1)*Cu + *(matQ+4)*Cv + *(matQ+7);
+  *(matR+8) = *(matQ+2)*Cu + *(matQ+5)*Cv + *(matQ+8);
+  *(matR+9) = *(matQ+0)*Du + *(matQ+3)*Dv + *(matQ+6);
+  *(matR+10)= *(matQ+1)*Du + *(matQ+4)*Dv + *(matQ+7);
+  *(matR+11)= *(matQ+2)*Du + *(matQ+5)*Dv + *(matQ+8);
 
-  *(matR+4)=
-    *(matQ+3)*star_ref(A,0)+*(matQ+4)*star_ref(A,1)+*(matQ+5)*star_ref(A,2);
-  *(matR+5)=
-    *(matQ+3)*star_ref(B,0)+*(matQ+4)*star_ref(B,1)+*(matQ+5)*star_ref(B,2);
-  *(matR+6)=
-    *(matQ+3)*star_ref(C,0)+*(matQ+4)*star_ref(C,1)+*(matQ+5)*star_ref(C,2);
-  *(matR+7)=
-    *(matQ+3)*star_ref(D,0)+*(matQ+4)*star_ref(D,1)+*(matQ+5)*star_ref(D,2);
+  // set Q to be the 3x3 matrix X*R
 
-  *(matR+8)=
-    *(matQ+6)*star_ref(A,0)+*(matQ+7)*star_ref(A,1)+*(matQ+8)*star_ref(A,2);
-  *(matR+9)=
-    *(matQ+6)*star_ref(B,0)+*(matQ+7)*star_ref(B,1)+*(matQ+8)*star_ref(B,2);
-  *(matR+10)=
-    *(matQ+6)*star_ref(C,0)+*(matQ+7)*star_ref(C,1)+*(matQ+8)*star_ref(C,2);
-  *(matR+11)=
-    *(matQ+6)*star_ref(D,0)+*(matQ+7)*star_ref(D,1)+*(matQ+8)*star_ref(D,2);
+  *(matQ+0) = star_ref(A,0)*(*(matR+0)) + star_ref(B,0)*(*(matR+3)) +
+              star_ref(C,0)*(*(matR+6)) + star_ref(D,0)*(*(matR+9));
+  *(matQ+1) = star_ref(A,0)*(*(matR+1)) + star_ref(B,0)*(*(matR+4)) +
+              star_ref(C,0)*(*(matR+7)) + star_ref(D,0)*(*(matR+10));
+  *(matQ+2) = star_ref(A,0)*(*(matR+2)) + star_ref(B,0)*(*(matR+5)) +
+              star_ref(C,0)*(*(matR+8)) + star_ref(D,0)*(*(matR+11));
 
+  *(matQ+3) = star_ref(A,1)*(*(matR+0)) + star_ref(B,1)*(*(matR+3)) +
+              star_ref(C,1)*(*(matR+6)) + star_ref(D,1)*(*(matR+9));
+  *(matQ+4) = star_ref(A,1)*(*(matR+1)) + star_ref(B,1)*(*(matR+4)) +
+              star_ref(C,1)*(*(matR+7)) + star_ref(D,1)*(*(matR+10));
+  *(matQ+5) = star_ref(A,1)*(*(matR+2)) + star_ref(B,1)*(*(matR+5)) +
+              star_ref(C,1)*(*(matR+8)) + star_ref(D,1)*(*(matR+11));
 
-  *(matQ+0) = Au*(*(matR+0))+Bu*(*(matR+1))+Cu*(*(matR+2))+Du*(*(matR+3));
-  *(matQ+3) = Au*(*(matR+4))+Bu*(*(matR+5))+Cu*(*(matR+6))+Du*(*(matR+7));
-  *(matQ+6) = Au*(*(matR+8))+Bu*(*(matR+9))+Cu*(*(matR+10))+Du*(*(matR+11));
-  *(matQ+1) = Av*(*(matR+0))+Bv*(*(matR+1))+Cv*(*(matR+2))+Dv*(*(matR+3));
-  *(matQ+4) = Av*(*(matR+4))+Bv*(*(matR+5))+Cv*(*(matR+6))+Dv*(*(matR+7));
-  *(matQ+7) = Av*(*(matR+8))+Bv*(*(matR+9))+Cv*(*(matR+10))+Dv*(*(matR+11));
-
-  *(matQ+2) = *(matR+0)+*(matR+1)+*(matR+2)+*(matR+3);
-  *(matQ+5) = *(matR+4)+*(matR+5)+*(matR+6)+*(matR+7);
-  *(matQ+8) = *(matR+8)+*(matR+9)+*(matR+10)+*(matR+11);
-  }
-  else {
-    *(matQ+0)=0.0;*(matQ+1)=0.0;
-    *(matQ+3)=0.0;*(matQ+4)=0.0;
-    *(matQ+6)=0.0;*(matQ+7)=0.0;
-    *(matQ+2)=(star_ref(A,0)+star_ref(B,0)+star_ref(C,0)+star_ref(D,0))/4.0;
-    *(matQ+5)=(star_ref(A,1)+star_ref(B,1)+star_ref(C,1)+star_ref(D,1))/4.0;
-    *(matQ+8)=(star_ref(A,2)+star_ref(B,2)+star_ref(C,2)+star_ref(D,2))/4.0;
-  }
-
+  *(matQ+6) = star_ref(A,2)*(*(matR+0)) + star_ref(B,2)*(*(matR+3)) +
+              star_ref(C,2)*(*(matR+6)) + star_ref(D,2)*(*(matR+9));
+  *(matQ+7) = star_ref(A,2)*(*(matR+1)) + star_ref(B,2)*(*(matR+4)) +
+              star_ref(C,2)*(*(matR+7)) + star_ref(D,2)*(*(matR+10));
+  *(matQ+8) = star_ref(A,2)*(*(matR+2)) + star_ref(B,2)*(*(matR+5)) +
+              star_ref(C,2)*(*(matR+8)) + star_ref(D,2)*(*(matR+11));
 
   free(matR);
 
   return(matQ);
   
 }
-
 
 double inverse_3by3(double *matrix)
 {
