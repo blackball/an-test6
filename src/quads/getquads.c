@@ -4,7 +4,9 @@
 
 #define OPTIONS "habs:q:f:"
 const char HelpString[]=
-"getquads -f fname -s scale(arcmin) -q numQuads [-a|-b]\n";
+"getquads -f fname -s scale(arcmin) -q numQuads [-a|-b]\n"
+"  scale is the scale to look for quads, numQuads is the #darts to throw\n"
+"  -a sets ASCII output, -b sets BINARY output (default)\n";
 
 
 extern char *optarg;

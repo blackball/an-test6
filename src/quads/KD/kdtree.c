@@ -513,3 +513,91 @@ void add_point_to_kdtree(kdtree *kd, dyv *x){
   }
 }
 
+
+
+double add_point_to_kdtree_dsq(kdtree *kd, dyv *x){
+
+  // modified by STR to return distance of point to nearest neighbour
+  
+   node *closest_to_x = kd->root, **ptr_loc_to_closest=&kd->root, *closest_to_x_split;
+   double child1_min_dsqd, child2_min_dsqd;
+   int num_nodes;
+   ivec *tmp_pindexes;
+
+   /* Find the nearest node n to the query x. Increase the number
+	  of points owned by all the nodes and the size of the hrect
+	  on the way to n. Keep track of the location of the pointer
+	  to the leaf (&parent->child) use in replacing that child
+	  with a new child.
+   */
+  while ( !node_is_leaf(closest_to_x) ){
+	closest_to_x->num_points++;
+	maybe_expand_hrect(closest_to_x->box,x);
+
+	child1_min_dsqd = node_dyv_min_dsqd(closest_to_x->child1, x);
+	child2_min_dsqd = node_dyv_min_dsqd(closest_to_x->child2, x);
+	
+	if ( child1_min_dsqd < child2_min_dsqd ){
+	  ptr_loc_to_closest = &closest_to_x->child1;
+	  closest_to_x = closest_to_x->child1;
+	}else{
+	  ptr_loc_to_closest = &closest_to_x->child2;
+	  closest_to_x = closest_to_x->child2;
+	}
+  }
+
+   /* Now, add the query to this node by
+          0) finding its NN
+	  1) increasing the number of nodes
+	  2) listing it in the ivec
+	  3) and adding it to the list of points for this node
+	  4) adjusting the hrect to include this point
+   */
+
+  double insertdist=-1.0;
+  dyv *tmpdv=mk_dyv(closest_to_x->num_points);
+  if(tmpdv!=NULL) {
+    int ii,jj;
+    double tmp,tmp2;
+    for(ii=0;ii<tmpdv->size;ii++) {
+      tmp=0.0;
+      for(jj=0;jj<x->size;jj++) {
+	tmp2=dyv_ref(dyv_array_ref(closest_to_x->points,ii),jj);
+	tmp2-=dyv_ref(x,jj);
+	tmp2*=tmp2;
+	tmp+=tmp2;
+      }
+      dyv_set(tmpdv,ii,tmp);
+    }
+    insertdist=dyv_min(tmpdv);
+    free_dyv(tmpdv);
+  }
+
+  closest_to_x->num_points++;
+  add_to_ivec(closest_to_x->pindexes, kd->root->num_points-1);
+
+  add_to_dyv_array(closest_to_x->points, x);
+  maybe_expand_hrect(closest_to_x->box, x);
+
+  /* If we've exceeded the number of points allowed per leaf,
+	 split the current leaf into two. Free the node closest_to_x
+	 and replace the pointer to it by a pointer to the new node.
+  */
+  if (closest_to_x->num_points > kd->rmin){
+	num_nodes = 0;
+	tmp_pindexes = mk_identity_ivec(closest_to_x->num_points);
+	closest_to_x_split = mk_node_from_pindexes(closest_to_x->points, 
+					   tmp_pindexes, kd->rmin, &num_nodes);
+	replace_pindexes(closest_to_x_split, closest_to_x->pindexes);
+	free_node(closest_to_x);
+	free_ivec(tmp_pindexes);
+	*ptr_loc_to_closest = closest_to_x_split;
+
+	kd->num_nodes+=(num_nodes-1);
+	kd->max_depth=max_depth_below_node(kd->root);
+
+  }
+
+  return insertdist;
+}
+

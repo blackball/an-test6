@@ -4,7 +4,8 @@
 
 #define OPTIONS "hpf:o:t:k:"
 const char HelpString[]=
-"solvexy -f fname -o fieldname [-t tol | -k kNN] [-p flip_parity]\n";
+"solvexy -f fname -o fieldname [-t tol] [-p]\n"
+"  tol == code_tolerance, -p flips parity\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -14,22 +15,27 @@ extern int optind, opterr, optopt;
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
 
-unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
-	       double codetol, char ASCII, FILE *hitfid, FILE*quadfid);
+qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
+			    double codetol, FILE *hitfid, 
+		    FILE *quadfid, char qASCII, FILE *catfid, char cASCII);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd, 
-		   char ASCII, FILE *hitfid, FILE *quadfid);
-void output_match(FILE *hitfid,FILE *quadfid, char ASCII,
-		  xy *ABCDpix, kresult *krez, char order);
-void output_ids(FILE *hitfid, FILE *quadfid, char ASCII, qidx quadno);
-//void fill_ids(FILE *hitfid, FILE *quadfid);
+		   double xxmin, double xxmax, double yymin, double yymax,
+		   xy *ABCDpix, kquery *kq,kdtree *codekd,  FILE *hitfid, 
+		   FILE *quadfid, char qASCII, FILE *catfid, char cASCII);
+void output_match(double xxmin, double xxmax, double yymin, double yymax,
+		  FILE *hitfid,FILE *quadfid, char qASCII,
+		  FILE *catfid, char cASCII, 
+		  kresult *krez, xy *ABCDpix, char order);
+void image_to_xyz(double uu, double vv, star *s, double *transform);
+double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D);
+double inverse_3by3(double *matrix);
 
-char *pixfname=NULL;
-char *treefname=NULL;
-char *hitfname=NULL;
-char *quadfname=NULL;
-off_t qposmarker;
-char buff[100],maxstarWidth;
+
+
+char *pixfname=NULL,*treefname=NULL,*hitfname=NULL;
+char *quadfname=NULL,*catfname=NULL;
+off_t qposmarker,cposmarker;
+char buff[100],maxstarWidth,oneobjWidth;
 
 
 int main(int argc,char *argv[])
@@ -46,8 +52,10 @@ int main(int argc,char *argv[])
       case 'f':
 	treefname = malloc(strlen(optarg)+6);
 	quadfname = malloc(strlen(optarg)+6);
+	catfname = malloc(strlen(optarg)+6);
 	sprintf(treefname,"%s.ckdt",optarg);
 	sprintf(quadfname,"%s.quad",optarg);
+	sprintf(catfname,"%s.objs",optarg);
 	break;
       case 'o':
 	pixfname = malloc(strlen(optarg)+6);
@@ -85,14 +93,13 @@ int main(int argc,char *argv[])
   }
 
 
-  FILE *pixfid=NULL,*treefid=NULL,*hitfid=NULL,*quadfid=NULL;
-  qidx numpix,numquads;
+  FILE *pixfid=NULL,*treefid=NULL,*hitfid=NULL,*quadfid=NULL,*catfid=NULL;
+  qidx numpix,numquads,numtries;
   sidx numstars;
-  double index_scale;
-  char ASCII;
-  dimension Dim_Quads;
+  double index_scale,ramin,ramax,decmin,decmax;
+  char qASCII,cASCII;
+  dimension Dim_Quads,Dim_Stars;
   sizev *pixsizes;
-  unsigned long int numtries;
 
   fprintf(stderr,"solvexy: solving fields in %s using %s\n",
 	  pixfname,treefname);
@@ -118,15 +125,24 @@ int main(int argc,char *argv[])
   fprintf(stderr,"    (index scale = %lf)\n",rad2arcmin(index_scale));
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
-  ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
-  if(ASCII==READ_FAIL) return(3);
-  if(ASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
+  qASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
+  if(qASCII==READ_FAIL) return(3);
+  if(qASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
   qposmarker=ftello(quadfid);
+
+  fopenin(catfname,catfid); fnfree(catfname);
+  cASCII=read_objs_header(catfid,&numstars,&Dim_Stars,
+			 &ramin,&ramax,&decmin,&decmax);
+  if(cASCII==READ_FAIL) return(4);
+  if(cASCII) {sprintf(buff,"%lf,%lf,%lf\n",0.0,0.0,0.0);
+              oneobjWidth=strlen(buff);}
+  cposmarker=ftello(catfid);
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
-  numtries=solve_pix(thepix,pixsizes,codekd,codetol,ASCII,hitfid,quadfid);
-  fclose(hitfid); fclose(quadfid);
+  numtries=solve_pix(thepix,pixsizes,codekd,codetol,
+		     hitfid,quadfid,qASCII,catfid,cASCII);
+  fclose(hitfid); fclose(quadfid); fclose(catfid);
   fprintf(stderr,"done (tried %lu quads).\n",numtries);
 
   free_xyarray(thepix); 
@@ -141,13 +157,16 @@ int main(int argc,char *argv[])
 
 
 
-unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
-	       double codetol, char ASCII, FILE *hitfid, FILE*quadfid)
+qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
+			    double codetol, FILE *hitfid, 
+		      FILE *quadfid, char qASCII, FILE *catfid, char cASCII)
 {
-  unsigned long int numtries=0;
+  qidx numtries=0;
   xy *thispix;
-  qidx ii,numxy,nummatches,iA,iB,iC,iD;
-  double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,costheta,sintheta,scale,xxtmp;
+  qidx ii,jj,numxy,nummatches,iA,iB,iC,iD;
+  double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
+  double costheta,sintheta,scale,xxtmp,yytmp;
+  double xxmin,xxmax,yymin,yymax;
   off_t posmarker;
   kquery *kq;
   if(codetol<1.0)
@@ -166,15 +185,16 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 
     // find min and max coordinates in field
     if(numxy<DIM_QUADS) fprintf(hitfid,"field %lu: no matches\n",ii); else {
-    Cx=xy_refx(xya_ref(thepix,ii),0); Cy=xy_refy(xya_ref(thepix,ii),0);
-    Dx=xy_refx(xya_ref(thepix,ii),0); Dy=xy_refy(xya_ref(thepix,ii),0);
-    for(iA=0;iA<numxy;iA++) {
-      Ax=xy_refx(xya_ref(thepix,ii),iA); Ay=xy_refy(xya_ref(thepix,ii),iA);
-      if(Ax<Cx) Cx=Ax; if(Ax>Dx) Dx=Ax;
-      if(Ay<Cy) Cy=Ay; if(Ay>Dy) Dy=Ay;
+    xxmin=xy_refx(xya_ref(thepix,ii),0); yymin=xy_refy(xya_ref(thepix,ii),0);
+    xxmax=xy_refx(xya_ref(thepix,ii),0); yymax=xy_refy(xya_ref(thepix,ii),0);
+    for(jj=0;jj<numxy;jj++) {
+     xxtmp=xy_refx(xya_ref(thepix,ii),jj);yytmp=xy_refy(xya_ref(thepix,ii),jj);
+      if(xxtmp<xxmin) xxmin=xxtmp; if(xxtmp>xxmax) xxmax=xxtmp;
+      if(yytmp<yymin) yymin=yytmp; if(yytmp>yymax) yymax=yytmp;
     }
     posmarker=ftello(hitfid);
-    fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,Cx,Cy,Dx,Dy);
+    fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,xxmin,yymin,xxmax,yymax);
+
 
     for(iA=0;iA<(numxy-1);iA++) {
       Ax=xy_refx(xya_ref(thepix,ii),iA); Ay=xy_refy(xya_ref(thepix,ii),iA);
@@ -205,8 +225,8 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 	    if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) {
 	      //fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
 	      numtries++;
-	      nummatches+=try_all_codes(Cx,Cy,Dx,Dy,ABCDpix,kq,codekd,
-					ASCII,hitfid,quadfid);
+	      nummatches+=try_all_codes(Cx,Cy,Dx,Dy,xxmin,xxmax,yymin,yymax,
+                        ABCDpix,kq,codekd,hitfid,quadfid,qASCII,catfid,cASCII);
 	    }
 	    }}}
 	  }}
@@ -230,8 +250,9 @@ unsigned long int solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd, 
-		   char ASCII, FILE *hitfid, FILE *quadfid)
+		   double xxmin, double xxmax, double yymin, double yymax,
+		   xy *ABCDpix, kquery *kq,kdtree *codekd,  FILE *hitfid, 
+		   FILE *quadfid, char qASCII, FILE *catfid, char cASCII)
 {
   kresult *krez;
   code *thequery = mk_code();
@@ -243,7 +264,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
-    output_match(hitfid,quadfid,ASCII,ABCDpix,krez,ABCD_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,
+                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,ABCD_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -254,7 +276,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
-    output_match(hitfid,quadfid,ASCII,ABCDpix,krez,BACD_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,
+                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,BACD_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -265,7 +288,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
-    output_match(hitfid,quadfid,ASCII,ABCDpix,krez,ABDC_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,
+                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,ABDC_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -276,7 +300,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
-    output_match(hitfid,quadfid,ASCII,ABCDpix,krez,BADC_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,
+                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,BADC_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -287,92 +312,252 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
 }
 
 
-void output_match(FILE *hitfid,FILE *quadfid, char ASCII,
-		  xy *ABCDpix, kresult *krez, char order)
+void output_match(double xxmin, double xxmax, double yymin, double yymax,
+                  FILE *hitfid,FILE *quadfid, char qASCII,
+		  FILE *catfid, char cASCII, 
+		  kresult *krez, xy *ABCDpix, char order)
 {
-  qidx jj;
+  qidx jj,thisquad;
+  sidx iA,iB,iC,iD;
+  double tmpx,tmpy,tmpz,*transform;
+  star *sA,*sB,*sC,*sD,*sMin,*sMax;
+  sA=mk_star(); if(sA==NULL) return;  sB=mk_star(); if(sB==NULL) return;
+  sC=mk_star(); if(sC==NULL) return;  sD=mk_star(); if(sD==NULL) return;
+  sMin=mk_star();if(sMin==NULL) return; sMax=mk_star();if(sMax==NULL) return;
+
+  for(jj=0;jj<krez->count;jj++) {
+    thisquad = (qidx)krez->pindexes->iarr[jj];
+    if(qASCII) {
+      fseeko(quadfid,qposmarker+thisquad*
+	     (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
+      fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
+    }
+    else {
+      fseeko(quadfid,qposmarker+thisquad*
+	     (DIM_QUADS*sizeof(iA)),SEEK_SET);
+      readonequad(quadfid,&iA,&iB,&iC,&iD);
+    }
+    fprintf(hitfid,"  match %lu: quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
+    	    jj,thisquad,iA,iB,iC,iD);
+
+    if(cASCII) {
+      fseeko(catfid,cposmarker+iA*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sA,0,tmpx); star_set(sA,1,tmpy); star_set(sA,2,tmpz);
+      fseeko(catfid,cposmarker+iB*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sB,0,tmpx); star_set(sB,1,tmpy); star_set(sB,2,tmpz);
+      fseeko(catfid,cposmarker+iC*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sC,0,tmpx); star_set(sC,1,tmpy); star_set(sC,2,tmpz);
+      fseeko(catfid,cposmarker+iD*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sD,0,tmpx); star_set(sD,1,tmpy); star_set(sD,2,tmpz);
+    }
+    else {
+      fseeko(catfid,cposmarker+iA*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sA->farr,sizeof(double),DIM_STARS,catfid);
+      fseeko(catfid,cposmarker+iB*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sB->farr,sizeof(double),DIM_STARS,catfid);
+      fseeko(catfid,cposmarker+iC*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sC->farr,sizeof(double),DIM_STARS,catfid);
+      fseeko(catfid,cposmarker+iD*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sD->farr,sizeof(double),DIM_STARS,catfid);
+    }
+    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iA,
+    //	    star_ref(iA,0),star_ref(iA,1),star_ref(iA,2));
+    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iB,
+    //	    star_ref(iB,0),star_ref(iB,1),star_ref(iB,2));
+    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iC,
+    //	    star_ref(iC,0),star_ref(iC,1),star_ref(iC,2));
+    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iD,
+    //	    star_ref(iD,0),star_ref(iD,1),star_ref(iD,2));
+
+    transform=fit_transform(ABCDpix,order,sA,sB,sC,sD);
+    if(transform==NULL) {fprintf(stderr,"ERROR (solvey) == transform NULL\n");}
+    image_to_xyz(xxmin,yymin,sMin,transform);
+    image_to_xyz(xxmax,yymax,sMax,transform);
+
+    fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	    star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
+		xy2ra(star_ref(sMin,0),star_ref(sMin,1)),
+		z2dec(star_ref(sMin,2)));
+    fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	    star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
+		xy2ra(star_ref(sMax,0),star_ref(sMax,1)),
+		z2dec(star_ref(sMax,2)));
+    free(transform); 
+    
+  }
+
+  free_star(sA);free_star(sB);free_star(sC);free_star(sD);
+  free_star(sMin); free_star(sMax);
+  
+  return;
+}
+
+
+
+
+
+void image_to_xyz(double uu, double vv, star *s, double *transform)
+{
+  double length;
+  if(s==NULL || transform==NULL) return;
+  star_set(s,0,uu*(*(transform+0)) + 
+                  vv*(*(transform+1)) + *(transform+2));
+  star_set(s,1,uu*(*(transform+3)) + 
+                  vv*(*(transform+4)) + *(transform+5));
+  star_set(s,2,uu*(*(transform+6)) + 
+                  vv*(*(transform+7)) + *(transform+8));
+  length=sqrt(star_ref(s,0)*star_ref(s,0)+star_ref(s,1)*star_ref(s,1)+
+	      star_ref(s,2)*star_ref(s,2));
+  star_set(s,0,star_ref(s,0)/length);
+  star_set(s,1,star_ref(s,1)/length);
+  star_set(s,2,star_ref(s,2)/length);
+  return;
+}
+
+
+double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
+{
+  double det,uu,uv,vv,sumu,sumv;
   char oA=0,oB=1,oC=2,oD=3;
+  double Au,Av,Bu,Bv,Cu,Cv,Du,Dv;
+  double *matQ = (double *)malloc(9*sizeof(double));
+  double *matR = (double *)malloc(12*sizeof(double));
+  if(matQ==NULL || matR==NULL) {
+    if(matQ) free(matQ);
+    if(matR) free(matR);
+    return(NULL);
+  }
+
   if(order==ABCD_ORDER) {oA=0; oB=1; oC=2; oD=3;}
   if(order==BACD_ORDER) {oA=1; oB=0; oC=2; oD=3;}
   if(order==ABDC_ORDER) {oA=0; oB=1; oC=3; oD=2;}
   if(order==BADC_ORDER) {oA=1; oB=0; oC=3; oD=2;}
 
-  for(jj=0;jj<krez->count;jj++) {
-    fprintf(hitfid,"%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,",
-	    xy_refx(ABCDpix,oA),xy_refy(ABCDpix,oA),
-	    xy_refx(ABCDpix,oB),xy_refy(ABCDpix,oB),
-	    xy_refx(ABCDpix,oC),xy_refy(ABCDpix,oC),
-	    xy_refx(ABCDpix,oD),xy_refy(ABCDpix,oD));
-  //fprintf(hitfid,"quad# %lu\n",(unsigned long int)krez->pindexes->iarr[jj]);
-    output_ids(hitfid,quadfid,ASCII,(qidx)krez->pindexes->iarr[jj]);
-  }
+  // image plane coordinates of A,B,C,D
+  Au=xy_refx(ABCDpix,oA); Av=xy_refy(ABCDpix,oA);
+  Bu=xy_refx(ABCDpix,oB); Bv=xy_refy(ABCDpix,oB);
+  Cu=xy_refx(ABCDpix,oC); Cv=xy_refy(ABCDpix,oC);
+  Du=xy_refx(ABCDpix,oD); Dv=xy_refy(ABCDpix,oD);
+  //fprintf(stderr,"Image ABCD = (%lf,%lf) (%lf,%lf) (%lf,%lf) (%lf,%lf)\n",
+  //  	    Au,Av,Bu,Bv,Cu,Cv,Du,Dv);
 
-  return;
-}
 
-void output_ids(FILE *hitfid, FILE *quadfid, char ASCII, qidx quadno)
-{
-  sidx iA,iB,iC,iD;
-  if(ASCII) {
-    fseeko(quadfid,qposmarker+quadno*
-	  (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-    fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
+  if(0) {
+
+  uu = Au*Au + Bu*Bu + Cu*Cu + Du*Du;
+  uv = Au*Av + Bu*Bv + Cu*Cv + Du*Dv;
+  vv = Av*Av + Bv*Bv + Cv*Cv + Dv*Dv;
+
+  sumu = Au+Bu+Cu+Du;  sumv = Av+Bv+Cv+Dv;
+
+  *(matQ+0)=uu;   *(matQ+1)=uv;   *(matQ+2)=sumu;
+  *(matQ+3)=uv;   *(matQ+4)=vv;   *(matQ+5)=sumv;
+  *(matQ+6)=sumu; *(matQ+7)=sumv; *(matQ+8)=4.0;
+
+  det = inverse_3by3(matQ);
+
+  if(det==0.0) {
+    fprintf(stderr,"ERROR (fit_transform) -- determinant zero\n");
+    if(matQ) free(matQ); if(matR) free(matR); return(NULL); }
+
+  *(matR+0)=
+    *(matQ+0)*star_ref(A,0)+*(matQ+1)*star_ref(A,1)+*(matQ+2)*star_ref(A,2);
+  *(matR+1)=
+    *(matQ+0)*star_ref(B,0)+*(matQ+1)*star_ref(B,1)+*(matQ+2)*star_ref(B,2);
+  *(matR+2)=
+    *(matQ+0)*star_ref(C,0)+*(matQ+1)*star_ref(C,1)+*(matQ+2)*star_ref(C,2);
+  *(matR+3)=
+    *(matQ+0)*star_ref(D,0)+*(matQ+1)*star_ref(D,1)+*(matQ+2)*star_ref(D,2);
+
+  *(matR+4)=
+    *(matQ+3)*star_ref(A,0)+*(matQ+4)*star_ref(A,1)+*(matQ+5)*star_ref(A,2);
+  *(matR+5)=
+    *(matQ+3)*star_ref(B,0)+*(matQ+4)*star_ref(B,1)+*(matQ+5)*star_ref(B,2);
+  *(matR+6)=
+    *(matQ+3)*star_ref(C,0)+*(matQ+4)*star_ref(C,1)+*(matQ+5)*star_ref(C,2);
+  *(matR+7)=
+    *(matQ+3)*star_ref(D,0)+*(matQ+4)*star_ref(D,1)+*(matQ+5)*star_ref(D,2);
+
+  *(matR+8)=
+    *(matQ+6)*star_ref(A,0)+*(matQ+7)*star_ref(A,1)+*(matQ+8)*star_ref(A,2);
+  *(matR+9)=
+    *(matQ+6)*star_ref(B,0)+*(matQ+7)*star_ref(B,1)+*(matQ+8)*star_ref(B,2);
+  *(matR+10)=
+    *(matQ+6)*star_ref(C,0)+*(matQ+7)*star_ref(C,1)+*(matQ+8)*star_ref(C,2);
+  *(matR+11)=
+    *(matQ+6)*star_ref(D,0)+*(matQ+7)*star_ref(D,1)+*(matQ+8)*star_ref(D,2);
+
+
+  *(matQ+0) = Au*(*(matR+0))+Bu*(*(matR+1))+Cu*(*(matR+2))+Du*(*(matR+3));
+  *(matQ+3) = Au*(*(matR+4))+Bu*(*(matR+5))+Cu*(*(matR+6))+Du*(*(matR+7));
+  *(matQ+6) = Au*(*(matR+8))+Bu*(*(matR+9))+Cu*(*(matR+10))+Du*(*(matR+11));
+  *(matQ+1) = Av*(*(matR+0))+Bv*(*(matR+1))+Cv*(*(matR+2))+Dv*(*(matR+3));
+  *(matQ+4) = Av*(*(matR+4))+Bv*(*(matR+5))+Cv*(*(matR+6))+Dv*(*(matR+7));
+  *(matQ+7) = Av*(*(matR+8))+Bv*(*(matR+9))+Cv*(*(matR+10))+Dv*(*(matR+11));
+
+  *(matQ+2) = *(matR+0)+*(matR+1)+*(matR+2)+*(matR+3);
+  *(matQ+5) = *(matR+4)+*(matR+5)+*(matR+6)+*(matR+7);
+  *(matQ+8) = *(matR+8)+*(matR+9)+*(matR+10)+*(matR+11);
   }
   else {
-    fseeko(quadfid,qposmarker+quadno*
-	  (DIM_QUADS*sizeof(iA)),SEEK_SET);
-    readonequad(quadfid,&iA,&iB,&iC,&iD);
+    *(matQ+0)=0.0;*(matQ+1)=0.0;
+    *(matQ+3)=0.0;*(matQ+4)=0.0;
+    *(matQ+6)=0.0;*(matQ+7)=0.0;
+    *(matQ+2)=(star_ref(A,0)+star_ref(B,0)+star_ref(C,0)+star_ref(D,0))/4.0;
+    *(matQ+5)=(star_ref(A,1)+star_ref(B,1)+star_ref(C,1)+star_ref(D,1))/4.0;
+    *(matQ+8)=(star_ref(A,2)+star_ref(B,2)+star_ref(C,2)+star_ref(D,2))/4.0;
   }
+
+
+  free(matR);
+
+  return(matQ);
   
-  fprintf(hitfid,"%lu,%lu,%lu,%lu (%lu)\n",iA,iB,iC,iD,quadno);
-
 }
 
-/*
-void fill_ids(FILE *hitfid, FILE *quadfid)
+
+double inverse_3by3(double *matrix)
 {
-  off_t qposmarker;
-  char ASCII = 0;
-  qidx ii,numquads,thismatch;
-  sidx iA,iB,iC,iD;
-  dimension Dim_Quads;
-  double index_scale;
-  magicval magic;
-  char buff[100],maxstarWidth;
-  double junk;
+  double det;
+  double a11,a12,a13,a21,a22,a23,a31,a32,a33;
+  double b11,b12,b13,b21,b22,b23,b31,b32,b33;
 
-  rewind(hitfid); rewind(quadfid);
+  a11=*(matrix+0); a12=*(matrix+1); a13=*(matrix+2);
+  a21=*(matrix+3); a22=*(matrix+4); a23=*(matrix+5);
+  a31=*(matrix+6); a32=*(matrix+7); a33=*(matrix+8);
 
-  ASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
-  if(ASCII==READ_FAIL) {fail somewhow}
-  if(ASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
-  qposmarker=ftello(quadfid);
-  while(!feof(hitfid)) {
-    if(!fscanf(hitfid,"field %lu: ",&ii))
-      {fscanf(hitfid,"%s\n",buff); fprintf(stderr,"***%s***\n",buff);}
-    fprintf(stdout,"now on pic %lu\n",ii);
-    if(!fscanf(hitfid,"no matches\n")) {
-      fscanf(hitfid,"%lf,%lf,%lf,%lf\n",&junk,&junk,&junk,&junk);
-      while(fscanf(hitfid,"%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,",
-	    &junk,&junk,&junk,&junk,&junk,&junk,&junk,&junk)) {
-	fscanf(hitfid,"%lu\n",&thismatch);
-	if(ASCII) {
-	  fseeko(quadfid,qposmarker+thismatch*
-		(DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-	  fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
-	}
-	else {
-	  fseeko(quadfid,qposmarker+thismatch*
-	         (DIM_QUADS*sizeof(iA)),SEEK_SET);
-	  readonequad(quadfid,&iA,&iB,&iC,&iD);
-	}
-	fprintf(stdout,"found quad %lu --> (%lu,%lu,%lu,%lu)\n",
-		thismatch,iA,iB,iC,iD);
+  det = a11 * ( a22 * a33 - a23 * a32 ) +
+        a12 * ( a23 * a31 - a21 * a33 ) +
+        a13 * ( a21 * a32 - a22 * a31 );
 
-      } // while more matches
-    } // if not "no matches"
-  } // while not feof
+  if(det!=0) {
+
+    b11 = + ( a22 * a33 - a23 * a32 ) / det;
+    b12 = - ( a12 * a33 - a13 * a32 ) / det;
+    b13 = + ( a12 * a23 - a13 * a22 ) / det;
+
+    b21 = - ( a21 * a33 - a23 * a31 ) / det;
+    b22 = + ( a11 * a33 - a13 * a31 ) / det;
+    b23 = - ( a11 * a23 - a13 * a21 ) / det;
+
+    b31 = + ( a21 * a32 - a22 * a31 ) / det;
+    b32 = - ( a11 * a32 - a12 * a31 ) / det;
+    b33 = + ( a11 * a22 - a12 * a21 ) / det;
+
+    *(matrix+0)=b11; *(matrix+1)=b12; *(matrix+2)=b13;
+    *(matrix+3)=b21; *(matrix+4)=b22; *(matrix+5)=b23;
+    *(matrix+6)=b31; *(matrix+7)=b32; *(matrix+8)=b33;
+
+  }
+
+  //fprintf(stderr,"transform determinant = %g\n",det);
+
+  return(det);
 
 }
 
-*/
+
