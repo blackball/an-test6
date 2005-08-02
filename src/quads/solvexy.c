@@ -37,6 +37,9 @@ char *quadfname=NULL,*catfname=NULL;
 off_t qposmarker,cposmarker;
 char buff[100],maxstarWidth,oneobjWidth;
 
+kdtree *hitkd=NULL;
+dyv *hitdyv=NULL;
+double dsq=0.0;
 
 int main(int argc,char *argv[])
 {
@@ -364,19 +367,31 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
       fseeko(catfid,cposmarker+iD*(DIM_STARS*sizeof(double)),SEEK_SET);
       fread(sD->farr,sizeof(double),DIM_STARS,catfid);
     }
-    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iA,
-    //	    star_ref(iA,0),star_ref(iA,1),star_ref(iA,2));
-    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iB,
-    //	    star_ref(iB,0),star_ref(iB,1),star_ref(iB,2));
-    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iC,
-    //	    star_ref(iC,0),star_ref(iC,1),star_ref(iC,2));
-    //fprintf(hitfid,"  starid: %lu, xyz=(%lf,%lf,%lf)\n",iD,
-    //	    star_ref(iD,0),star_ref(iD,1),star_ref(iD,2));
 
     transform=fit_transform(ABCDpix,order,sA,sB,sC,sD);
     if(transform==NULL) {fprintf(stderr,"ERROR (solvey) == transform NULL\n");}
     image_to_xyz(xxmin,yymin,sMin,transform);
     image_to_xyz(xxmax,yymax,sMax,transform);
+
+    if(hitdyv==NULL) hitdyv=mk_dyv(6);
+
+    dyv_set(hitdyv,0,star_ref(sMin,0));
+    dyv_set(hitdyv,1,star_ref(sMin,1));
+    dyv_set(hitdyv,2,star_ref(sMin,2));
+    dyv_set(hitdyv,3,star_ref(sMax,0));
+    dyv_set(hitdyv,4,star_ref(sMax,1));
+    dyv_set(hitdyv,5,star_ref(sMax,2));
+
+    if(hitkd==NULL) {
+      dyv_array *tmp=mk_dyv_array(1);
+      dyv_array_set(tmp,0,hitdyv);
+      hitkd=mk_kdtree_from_points(tmp,50);
+      free_dyv_array(tmp);
+    }
+    else {
+      dsq=add_point_to_kdtree_dsq(hitkd,hitdyv);
+      fprintf(stdout,"dist=%.10g\n",dsq);
+    }
 
     fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
 	    star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
@@ -419,21 +434,6 @@ void image_to_xyz(double uu, double vv, star *s, double *transform)
 }
 
 
-/*
-void image_to_xyz2(double uu, double vv, star *s, double *transform2)
-{
-  double length,ra,dec;
-  if(s==NULL || transform==NULL) return;
-  ra  = uu*(*(transform2+0)) + vv*(*(transform2+1)) + *(transform2+2);
-  dec = uu*(*(transform2+3)) + vv*(*(transform2+4)) + *(transform2+5);
-  star_set(s,0,radec2x(ra,dec));
-  star_set(s,1,radec2y(ra,dec));
-  star_set(s,2,radec2z(ra,dec));
-
-  return;
-}
-*/
-
 double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
 {
   double det,uu,uv,vv,sumu,sumv;
@@ -460,21 +460,6 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
 
   //fprintf(stderr,"Image ABCD = (%lf,%lf) (%lf,%lf) (%lf,%lf) (%lf,%lf)\n",
   //  	    Au,Av,Bu,Bv,Cu,Cv,Du,Dv);
-
-  /*
-  fprintf(stderr,"\n%.10lf,%.10lf\n",Au,Av);
-  fprintf(stderr,"%.10lf,%.10lf\n",Bu,Bv);
-  fprintf(stderr,"%.10lf,%.10lf\n",Cu,Cv);
-  fprintf(stderr,"%.10lf,%.10lf\n",Du,Dv);
-  fprintf(stderr,"\n%.10lf,%.10lf,%.10lf\n",
-	  star_ref(A,0),star_ref(A,1),star_ref(A,2));
-  fprintf(stderr,"%.10lf,%.10lf,%.10lf\n",
-	  star_ref(B,0),star_ref(B,1),star_ref(B,2));
-  fprintf(stderr,"%.10lf,%.10lf,%.10lf\n",
-	  star_ref(C,0),star_ref(C,1),star_ref(C,2));
-  fprintf(stderr,"%.10lf,%.10lf,%.10lf\n",
-	  star_ref(D,0),star_ref(D,1),star_ref(D,2));
-  */
 
   // define M to be the 3x4 matrix [Au,Bu,Cu,Du;ones(1,4)]
   // define X to be the 3x4 matrix [Ax,Bx,Cx,Dx;Ay,By,Cy,Dy;Az,Bz,Cz,Dz]
