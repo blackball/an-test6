@@ -15,17 +15,18 @@ extern int optind, opterr, optopt;
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
 
-qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
-			    double codetol, FILE *hitfid, 
-		    FILE *quadfid, char qASCII, FILE *catfid, char cASCII);
+qidx solve_pix(xyarray *thepix, sizev *pixsizes, 
+	       kdtree *codekd, double codetol);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		   double xxmin, double xxmax, double yymin, double yymax,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd,  FILE *hitfid, 
-		   FILE *quadfid, char qASCII, FILE *catfid, char cASCII);
+		   xy *ABCDpix, kquery *kq,kdtree *codekd);
 void output_match(double xxmin, double xxmax, double yymin, double yymax,
-		  FILE *hitfid,FILE *quadfid, char qASCII,
-		  FILE *catfid, char cASCII, 
 		  kresult *krez, xy *ABCDpix, char order);
+
+void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
+void getstarcoords(star *sA, star *sB, star *sC, star *sD,
+		   sidx iA, sidx iB, sidx iC, sidx iD);
+
 void image_to_xyz(double uu, double vv, star *s, double *transform);
 double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D);
 double inverse_3by3(double *matrix);
@@ -34,6 +35,8 @@ double inverse_3by3(double *matrix);
 
 char *pixfname=NULL,*treefname=NULL,*hitfname=NULL;
 char *quadfname=NULL,*catfname=NULL;
+FILE *hitfid=NULL,*quadfid=NULL,*catfid=NULL;
+char qASCII,cASCII;
 off_t qposmarker,cposmarker;
 char buff[100],maxstarWidth,oneobjWidth;
 
@@ -41,7 +44,6 @@ kdtree *hitkd=NULL;
 dyv *hitdyv=NULL;
 double dsq=1e20;
 int whichmatch;
-ivec *hitquads;
 
 int main(int argc,char *argv[])
 {
@@ -98,11 +100,10 @@ int main(int argc,char *argv[])
   }
 
 
-  FILE *pixfid=NULL,*treefid=NULL,*hitfid=NULL,*quadfid=NULL,*catfid=NULL;
+  FILE *pixfid=NULL,*treefid=NULL;
   qidx numpix,numquads,numtries;
   sidx numstars;
   double index_scale,ramin,ramax,decmin,decmax;
-  char qASCII,cASCII;
   dimension Dim_Quads,Dim_Stars;
   sizev *pixsizes;
 
@@ -145,8 +146,8 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
-  numtries=solve_pix(thepix,pixsizes,codekd,codetol,
-		     hitfid,quadfid,qASCII,catfid,cASCII);
+  numtries=solve_pix(thepix,pixsizes,codekd,codetol);
+		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
   fprintf(stderr,"done (tried %lu quads).\n",numtries);
 
@@ -162,9 +163,8 @@ int main(int argc,char *argv[])
 
 
 
-qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd, 
-			    double codetol, FILE *hitfid, 
-		      FILE *quadfid, char qASCII, FILE *catfid, char cASCII)
+qidx solve_pix(xyarray *thepix, sizev *pixsizes, 
+	       kdtree *codekd, double codetol)
 {
   qidx numtries=0;
   xy *thispix;
@@ -173,7 +173,6 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   double costheta,sintheta,scale,xxtmp,yytmp;
   double xxmin,xxmax,yymin,yymax;
   off_t posmarker;
-  hitquads = mk_ivec(0);
 
   kquery *kq;
   if(codetol<1.0)
@@ -190,8 +189,11 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
     //fprintf(hitfid,"field %lu has %lu stars: 4*%lu quads will be checked\n",
     //	    ii,numxy,choose(numxy,DIM_QUADS));
 
-    // find min and max coordinates in field
-    if(numxy<DIM_QUADS) fprintf(hitfid,"field %lu: no matches\n",ii); else {
+    posmarker=ftello(hitfid);
+
+    if(numxy>=DIM_QUADS) {
+
+    // find min and max coordinates in this field
     xxmin=xy_refx(xya_ref(thepix,ii),0); yymin=xy_refy(xya_ref(thepix,ii),0);
     xxmax=xy_refx(xya_ref(thepix,ii),0); yymax=xy_refy(xya_ref(thepix,ii),0);
     for(jj=0;jj<numxy;jj++) {
@@ -199,7 +201,6 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
       if(xxtmp<xxmin) xxmin=xxtmp; if(xxtmp>xxmax) xxmax=xxtmp;
       if(yytmp<yymin) yymin=yytmp; if(yytmp>yymax) yymax=yytmp;
     }
-    posmarker=ftello(hitfid);
     fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,xxmin,yymin,xxmax,yymax);
 
 
@@ -233,7 +234,7 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 	      //fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
 	      numtries++;
 	      nummatches+=try_all_codes(Cx,Cy,Dx,Dy,xxmin,xxmax,yymin,yymax,
-                        ABCDpix,kq,codekd,hitfid,quadfid,qASCII,catfid,cASCII);
+					ABCDpix,kq,codekd);
 	    }
 	    }}}
 	  }}
@@ -258,8 +259,7 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		   double xxmin, double xxmax, double yymin, double yymax,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd,  FILE *hitfid, 
-		   FILE *quadfid, char qASCII, FILE *catfid, char cASCII)
+		   xy *ABCDpix, kquery *kq,kdtree *codekd)
 {
   kresult *krez;
   code *thequery = mk_code();
@@ -271,8 +271,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
-    output_match(xxmin,xxmax,yymin,yymax,
-                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,ABCD_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,ABCD_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -283,8 +282,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
-    output_match(xxmin,xxmax,yymin,yymax,
-                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,BACD_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,BACD_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -295,8 +293,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
-    output_match(xxmin,xxmax,yymin,yymax,
-                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,ABDC_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,ABDC_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -307,8 +304,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
-    output_match(xxmin,xxmax,yymin,yymax,
-                 hitfid,quadfid,qASCII,catfid,cASCII,krez,ABCDpix,BADC_ORDER); 
+    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,BADC_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -320,61 +316,26 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
 
 
 void output_match(double xxmin, double xxmax, double yymin, double yymax,
-                  FILE *hitfid,FILE *quadfid, char qASCII,
-		  FILE *catfid, char cASCII, 
 		  kresult *krez, xy *ABCDpix, char order)
 {
-  int numq;
   qidx jj,thisquad;
   sidx iA,iB,iC,iD;
-  double tmpx,tmpy,tmpz,*transform;
+  double *transform;
   star *sA,*sB,*sC,*sD,*sMin,*sMax;
+
   sA=mk_star(); if(sA==NULL) return;  sB=mk_star(); if(sB==NULL) return;
   sC=mk_star(); if(sC==NULL) return;  sD=mk_star(); if(sD==NULL) return;
   sMin=mk_star();if(sMin==NULL) return; sMax=mk_star();if(sMax==NULL) return;
+
   for(jj=0;jj<krez->count;jj++) {
-  thisquad = (qidx)krez->pindexes->iarr[jj];
-  numq=hitquads->size;
-  if(add_to_ivec_unique2(hitquads,thisquad) >= numq) {
-
-    if(qASCII) {
-      fseeko(quadfid,qposmarker+thisquad*
-	     (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-      fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
-    }
-    else {
-      fseeko(quadfid,qposmarker+thisquad*
-	     (DIM_QUADS*sizeof(iA)),SEEK_SET);
-      readonequad(quadfid,&iA,&iB,&iC,&iD);
-    }
-
-    if(cASCII) {
-      fseeko(catfid,cposmarker+iA*oneobjWidth*sizeof(char),SEEK_SET); 
-      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
-      star_set(sA,0,tmpx); star_set(sA,1,tmpy); star_set(sA,2,tmpz);
-      fseeko(catfid,cposmarker+iB*oneobjWidth*sizeof(char),SEEK_SET); 
-      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
-      star_set(sB,0,tmpx); star_set(sB,1,tmpy); star_set(sB,2,tmpz);
-      fseeko(catfid,cposmarker+iC*oneobjWidth*sizeof(char),SEEK_SET); 
-      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
-      star_set(sC,0,tmpx); star_set(sC,1,tmpy); star_set(sC,2,tmpz);
-      fseeko(catfid,cposmarker+iD*oneobjWidth*sizeof(char),SEEK_SET); 
-      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
-      star_set(sD,0,tmpx); star_set(sD,1,tmpy); star_set(sD,2,tmpz);
-    }
-    else {
-      fseeko(catfid,cposmarker+iA*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sA->farr,sizeof(double),DIM_STARS,catfid);
-      fseeko(catfid,cposmarker+iB*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sB->farr,sizeof(double),DIM_STARS,catfid);
-      fseeko(catfid,cposmarker+iC*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sC->farr,sizeof(double),DIM_STARS,catfid);
-      fseeko(catfid,cposmarker+iD*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sD->farr,sizeof(double),DIM_STARS,catfid);
-    }
+    thisquad = (qidx)krez->pindexes->iarr[jj];
+  
+    getquadids(thisquad,&iA,&iB,&iC,&iD);
+    getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
 
     transform=fit_transform(ABCDpix,order,sA,sB,sC,sD);
     if(transform==NULL) {fprintf(stderr,"ERROR (solvey) == transform NULL\n");}
+
     image_to_xyz(xxmin,yymin,sMin,transform);
     image_to_xyz(xxmax,yymax,sMax,transform);
 
@@ -394,13 +355,13 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
       free_dyv_array(tmp);
     }
     else
-      dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,&whichmatch);
+      dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,(int)thisquad,&whichmatch);
 
     if(dsq<1.0e-9) {
       fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
     	       thisquad,iA,iB,iC,iD);
       fprintf(hitfid,"  dist=%.10g match=%d\n",
-	      dsq,ivec_ref(hitquads,whichmatch));
+	      dsq,whichmatch);
       fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
 	      star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
 	      rad2deg(xy2ra(star_ref(sMin,0),star_ref(sMin,1))),
@@ -413,7 +374,7 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 
     free(transform); 
     
-  }
+//}
   }
 
   free_star(sA);free_star(sB);free_star(sC);free_star(sD);
@@ -487,7 +448,7 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
   // take the inverse of Q in-place, so Q=inv(M*M')
   det = inverse_3by3(matQ);
 
-  //fprintf(stderr,"det=%.12g\n",det);
+  fprintf(stderr,"det=%.12g\n",det);
 
   if(det==0.0) {
     fprintf(stderr,"ERROR (fit_transform) -- determinant zero\n");
@@ -577,3 +538,50 @@ double inverse_3by3(double *matrix)
 }
 
 
+void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
+{
+  if(qASCII) {
+    fseeko(quadfid,qposmarker+thisquad*
+	   (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
+    fscanf(quadfid,"%lu,%lu,%lu,%lu\n",iA,iB,iC,iD);
+  }
+  else {
+    fseeko(quadfid,qposmarker+thisquad*
+	   (DIM_QUADS*sizeof(iA)),SEEK_SET);
+    readonequad(quadfid,iA,iB,iC,iD);
+  }
+  return;
+}
+
+
+void getstarcoords(star *sA, star *sB, star *sC, star *sD,
+		   sidx iA, sidx iB, sidx iC, sidx iD)
+{
+  double tmpx,tmpy,tmpz;
+
+    if(cASCII) {
+      fseeko(catfid,cposmarker+iA*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sA,0,tmpx); star_set(sA,1,tmpy); star_set(sA,2,tmpz);
+      fseeko(catfid,cposmarker+iB*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sB,0,tmpx); star_set(sB,1,tmpy); star_set(sB,2,tmpz);
+      fseeko(catfid,cposmarker+iC*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sC,0,tmpx); star_set(sC,1,tmpy); star_set(sC,2,tmpz);
+      fseeko(catfid,cposmarker+iD*oneobjWidth*sizeof(char),SEEK_SET); 
+      fscanf(catfid,"%lf,%lf,%lf\n",&tmpx,&tmpy,&tmpz);
+      star_set(sD,0,tmpx); star_set(sD,1,tmpy); star_set(sD,2,tmpz);
+    }
+    else {
+      fseeko(catfid,cposmarker+iA*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sA->farr,sizeof(double),DIM_STARS,catfid);
+      fseeko(catfid,cposmarker+iB*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sB->farr,sizeof(double),DIM_STARS,catfid);
+      fseeko(catfid,cposmarker+iC*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sC->farr,sizeof(double),DIM_STARS,catfid);
+      fseeko(catfid,cposmarker+iD*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fread(sD->farr,sizeof(double),DIM_STARS,catfid);
+    }
+    return;
+}
