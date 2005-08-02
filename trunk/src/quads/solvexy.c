@@ -390,7 +390,8 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
     }
     else {
       dsq=add_point_to_kdtree_dsq(hitkd,hitdyv);
-      fprintf(stdout,"dist=%.10g\n",dsq);
+      if(dsq<1.0e-9)
+	fprintf(stdout,"quad=%lu, dist=%.10g\n",thisquad,dsq);
     }
 
     fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
