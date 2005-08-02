@@ -12,8 +12,10 @@
 ;              routines
 ; BUGS:
 ;   - Fixes the tangent point automatically; ought to take an input
-;   tangent point in U,V coordinates.  Unfortunately, this will make
-;   the code substantially more complicated.
+;     tangent point in U,V coordinates.  Unfortunately, this will make
+;     the code substantially more complicated.
+;   - The signs to apply to the sin() terms in the CD matrix are a
+;     guess at this point.
 ; REVISION HISTORY:
 ;   2005-08-01  started - Hogg (NYU)
 ;-
@@ -26,12 +28,11 @@ return, [vec1[1]*vec2[2],vec1[2]*vec2[0],vec1[0]*vec2[1]]
 end
 
 function hogg_points2astr, coords,parity
-if keyword_set(parity) then uinx= 1 else uindx= 0
 
 ; split input into vectors, "im" for in image, "sp" for on sphere,
 ; and "tp" for on tangent plane
-imE= double(reform(coords[0,uindx:1-uindx],2))
-imF= double(reform(coords[1,uindx:1-uindx],2))
+imE= double(reform(coords[0,0:1],2))
+imF= double(reform(coords[1,0:1],2))
 spE= double(reform(coords[0,2:4],3))
 spE= spE/hogg_pta_norm(spE) ; not necessary
 spF= double(reform(coords[1,2:4],3))
@@ -62,12 +63,12 @@ foo= spZ-(transpose(spT)#spZ)*spT
 eta= foo/hogg_pta_norm(foo)
 xi= hogg_pta_cross(spT,eta)
 splog, "testing:",hogg_pta_norm(xi),hogg_pta_norm(eta)
-rotation= atan(transpose(eta)#(tpF-tpE),transpose(xi)#(tpF-tpE)) $
-  -atan(imF[1]-imE[1],imF[0]-imE[0])
+if keyword_set(parity) then sgn= 1D0 else sgn= -1D0
+rotation= atan(transpose(eta)#(tpF-tpE),-1D0*transpose(xi)#(tpF-tpE)) $
+  -atan(imF[1]-imE[1],sgn*(imF[0]-imE[0]))
 splog, "rotation:",rotation
 
 ; make header
-if keyword_set(parity) then sgn= 1D0 else sgn= -1D0
 if keyword_set(orthographic) then ctype= ['RA---SIN','DEC--SIN'] else $
   ctype= ['RA---TAN','DEC--TAN']
 make_astr, astr, $
