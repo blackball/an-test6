@@ -403,12 +403,12 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 	      dsq,ivec_ref(hitquads,whichmatch));
       fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
 	      star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
-	      xy2ra(star_ref(sMin,0),star_ref(sMin,1)),
-	      z2dec(star_ref(sMin,2)));
+	      rad2deg(xy2ra(star_ref(sMin,0),star_ref(sMin,1))),
+	      rad2deg(z2dec(star_ref(sMin,2))));
       fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
 	      star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
-	      xy2ra(star_ref(sMax,0),star_ref(sMax,1)),
-	      z2dec(star_ref(sMax,2)));
+	      rad2deg(xy2ra(star_ref(sMax,0),star_ref(sMax,1))),
+	      rad2deg(z2dec(star_ref(sMax,2))));
     }
 
     free(transform); 

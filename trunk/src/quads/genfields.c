@@ -185,8 +185,8 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 #else
 	fprintf(pix0fid,"centre xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
    	        star_ref(randstar,0),star_ref(randstar,1),star_ref(randstar,2),
-		xy2ra(star_ref(randstar,0),star_ref(randstar,1)),
-		z2dec(star_ref(randstar,2)));
+		rad2deg(xy2ra(star_ref(randstar,0),star_ref(randstar,1))),
+		rad2deg(z2dec(star_ref(randstar,2))));
 #endif
 	numX=floor(numS*distractors);
         fprintf(pixfid,"%lu",numS+numX); 
