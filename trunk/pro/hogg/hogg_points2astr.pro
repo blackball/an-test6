@@ -46,12 +46,15 @@ if ((transpose(spZ)#spT) EQ 1.0) then begin
     imT= imE
     spT= spE
 endif
-splog, "pointing: image point",imT," points in direction",spT
+hogg_xyz2ad, spT[0],spT[1],spT[2],aa,dd
+adT= [aa,dd]
+splog, "pointing: image point",imT," points in direction",adT
 
 ; compute scale
 tpE= spE/(transpose(spT)#spE)
 tpF= spF/(transpose(spT)#spF)
 scale= hogg_pta_norm(tpF-tpE)/hogg_pta_norm(imE-imF)
+scale= scale*3.6D3*1.8D2/!DPI
 splog, "scale:",scale
 
 ; compute rotation
@@ -63,5 +66,20 @@ rotation= atan(transpose(eta)#(tpF-tpE),transpose(xi)#(tpF-tpE)) $
   -atan(imF[1]-imE[1],imF[0]-imE[0])
 splog, "rotation:",rotation
 
-return, -1
+; make header
+if keyword_set(parity) then sgn= 1D0 else sgn= -1D0
+if keyword_set(orthographic) then ctype= ['RA---SIN','DEC--SIN'] else $
+  ctype= ['RA---TAN','DEC--TAN']
+make_astr, astr, $
+  CD       = double([[sgn*scale*cos(rotation),sgn*sin(rotation)], $
+                     [-1D0*sin(rotation),scale*cos(rotation)]]), $
+  DELT     = double([1.0,1.0]), $
+  CRPIX    = double([0.5,0.5])+imT, $ ; NB: FITS CONVENTION (should this be [1,1]?
+  CRVAL    = adT, $
+  CTYPE    = ctype, $
+  LONGPOLE = 1.8D2, $
+  PROJP1   = -1D0, $
+  PROJP2   = -2D0
+
+return, astr
 end
