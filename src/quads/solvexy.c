@@ -174,7 +174,6 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes, kdtree *codekd,
   double xxmin,xxmax,yymin,yymax;
   off_t posmarker;
   hitquads = mk_ivec(0);
-  fprintf(stderr,"hitquads size 0=%d\n",hitquads->size);
 
   kquery *kq;
   if(codetol<1.0)
@@ -348,8 +347,6 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 	     (DIM_QUADS*sizeof(iA)),SEEK_SET);
       readonequad(quadfid,&iA,&iB,&iC,&iD);
     }
-    fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
-    	       thisquad,iA,iB,iC,iD);
 
     if(cASCII) {
       fseeko(catfid,cposmarker+iA*oneobjWidth*sizeof(char),SEEK_SET); 
@@ -400,17 +397,18 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
       dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,&whichmatch);
 
     if(dsq<1.0e-9) {
-	fprintf(stdout,"quad=%lu, dist=%.10g match=%d\n",
-		thisquad,dsq,ivec_ref(hitquads,whichmatch));
-
-	fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-		star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
-		xy2ra(star_ref(sMin,0),star_ref(sMin,1)),
-		z2dec(star_ref(sMin,2)));
-	fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-		star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
-		xy2ra(star_ref(sMax,0),star_ref(sMax,1)),
-		z2dec(star_ref(sMax,2)));
+      fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
+    	       thisquad,iA,iB,iC,iD);
+      fprintf(hitfid,"  dist=%.10g match=%d\n",
+	      dsq,ivec_ref(hitquads,whichmatch));
+      fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	      star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
+	      xy2ra(star_ref(sMin,0),star_ref(sMin,1)),
+	      z2dec(star_ref(sMin,2)));
+      fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	      star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
+	      xy2ra(star_ref(sMax,0),star_ref(sMax,1)),
+	      z2dec(star_ref(sMax,2)));
     }
 
     free(transform); 
