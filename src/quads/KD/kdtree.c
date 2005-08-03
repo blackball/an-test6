@@ -515,8 +515,7 @@ void add_point_to_kdtree(kdtree *kd, dyv *x){
 
 
 
-double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, 
-			       int newpindex, int *nearestpindex)
+double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, int *nearestpindex)
 {
 
   // modified by STR to return distance of point to nearest neighbour
@@ -560,8 +559,6 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x,
   dyv *thispoint;
   int ii,jj;
   for(ii=0;ii<closest_to_x->num_points;ii++) {
-    if(ivec_ref(closest_to_x->pindexes,ii)==newpindex)
-      fprintf(stderr,"WARNING --- duplicating %d into tree\n",newpindex);
     tmp=0.0;
     thispoint = dyv_array_ref(closest_to_x->points,ii);
     for(jj=0;jj<x->size;jj++) {
@@ -572,10 +569,9 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x,
     if(ii==0) {insertdist=tmp; *nearestpindex=0;}
     else if(tmp<insertdist) {insertdist=tmp; *nearestpindex=ii;}
   }
-  *nearestpindex = ivec_ref(closest_to_x->pindexes,*nearestpindex);
 
   closest_to_x->num_points++;
-  add_to_ivec(closest_to_x->pindexes, newpindex);
+  add_to_ivec(closest_to_x->pindexes, kd->root->num_points-1);
 
   add_to_dyv_array(closest_to_x->points, x);
   maybe_expand_hrect(closest_to_x->box, x);
