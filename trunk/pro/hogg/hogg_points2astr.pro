@@ -72,8 +72,8 @@ splog, "rotation:",rotation
 if keyword_set(orthographic) then ctype= ['RA---SIN','DEC--SIN'] else $
   ctype= ['RA---TAN','DEC--TAN']
 make_astr, astr, $
-  CD       = double([[sgn*scale*cos(rotation),sgn*sin(rotation)], $
-                     [-1D0*sin(rotation),scale*cos(rotation)]]), $
+  CD       = double([[ sgn*scale*cos(rotation),sgn*scale*sin(rotation)], $
+                     [-1D0*scale*sin(rotation),    scale*cos(rotation)]]), $
   DELT     = double([1.0,1.0]), $
   CRPIX    = double([0.5,0.5])+imT, $ ; NB: FITS CONVENTION (should this be [1,1]?
   CRVAL    = adT, $
