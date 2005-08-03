@@ -311,7 +311,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
   for(jj=0;jj<krez->count;jj++) {
     thisquad = (qidx)krez->pindexes->iarr[jj];
 
-    //fprintf(stdout,"trying quad %lu\n",thisquad);
+    fprintf(stdout,"trying quad %lu\n",thisquad);
   
     getquadids(thisquad,&iA,&iB,&iC,&iD);
     getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
