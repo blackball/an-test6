@@ -45,7 +45,7 @@ char qASCII,cASCII;
 off_t qposmarker,cposmarker;
 char buff[100],maxstarWidth,oneobjWidth;
 kdtree *hitkd=NULL;
-
+ivec *qlist=NULL;
 
 int main(int argc,char *argv[])
 {
@@ -175,6 +175,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 
   for(ii=0;ii<dyv_array_size(thefields);ii++) {
     if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
+    if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
     nummatches=0;
     thisfield=xya_ref(thefields,ii);
     numxy=xy_size(thisfield);
@@ -236,6 +237,8 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
   
   free_kquery(kq);
   free_xy(ABCDpix);
+  if(hitkd!=NULL) free_kdtree(hitkd);
+  if(qlist!=NULL) free_ivec(qlist);
 
   return numtries;
 }
@@ -359,6 +362,7 @@ double add_transformed_corners(star *sMin, star *sMax, qidx thisquad,
 {
   double dist_sq=-1.0;
   dyv *hitdyv;
+  int tmpmatch;
 
   hitdyv=mk_dyv(2*DIM_STARS);
   dyv_set(hitdyv,0,star_ref(sMin,0));
@@ -373,11 +377,14 @@ double add_transformed_corners(star *sMin, star *sMax, qidx thisquad,
     dyv_array_set(tmp,0,hitdyv);
     *kdt=mk_kdtree_from_points(tmp,DEFAULT_KDRMIN);
     free_dyv_array(tmp);
+    qlist=mk_ivec_1((int)thisquad);
     *whichmatch = (qidx)-1;
   }
-  else
-    dist_sq=add_point_to_kdtree_dsq(*kdt,hitdyv,
-				    (int)thisquad,(int *)whichmatch);
+  else {
+    dist_sq=add_point_to_kdtree_dsq(*kdt,hitdyv,&tmpmatch);
+    add_to_ivec(qlist,thisquad);
+    *whichmatch = (qidx)ivec_ref(qlist,tmpmatch);
+  }
 
   free_dyv(hitdyv);
   return(dist_sq);
