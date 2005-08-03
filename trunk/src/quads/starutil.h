@@ -39,7 +39,6 @@ typedef ivec quad;
 typedef dyv code;
 typedef dyv star;
 typedef dyv xy;
-typedef ivec sizev;
 
 typedef ivec_array quadarray;
 typedef dyv_array codearray;
@@ -53,12 +52,10 @@ typedef dyv_array xyarray;
 #define mk_quad() (quad *)mk_ivec(DIM_CODES)
 #define mk_quadd(d) (quad *)mk_ivec(d)
 #define mk_xy(n) (xy *)mk_dyv(DIM_XY*n)
-#define mk_sizev(q) (sizev *)mk_ivec(q)
 #define free_star(s) free_dyv((dyv *)s)
 #define free_code(c) free_dyv((dyv *)c)
 #define free_quad(q) free_ivec((ivec *)q)
 #define free_xy(s) free_dyv((dyv *)s)
-#define free_sizev(s) free_ivec((ivec *)s)
 
 #define star_ref(s,i) dyv_ref((dyv *)s,i)
 #define code_ref(c,i) dyv_ref((dyv *)c,i)
@@ -67,7 +64,7 @@ typedef dyv_array xyarray;
 #define xy_ref(s,i) dyv_ref((dyv *)s,i)
 #define xy_refx(s,i) dyv_ref((dyv *)s,DIM_XY*i)
 #define xy_refy(s,i) dyv_ref((dyv *)s,DIM_XY*i+1)
-#define sizev_ref(s,i) ivec_ref((ivec *)s,i)
+#define xy_size(s) (dyv_size(s)/2)
 
 #define star_set(s,i,v) dyv_set((dyv *)s,i,v)
 #define code_set(c,i,v) dyv_set((dyv *)c,i,v)
@@ -75,7 +72,6 @@ typedef dyv_array xyarray;
 #define xy_set(s,i,v) dyv_set((dyv *)s,i,v)
 #define xy_setx(s,i,v) dyv_set((dyv *)s,DIM_XY*i,v)
 #define xy_sety(s,i,v) dyv_set((dyv *)s,DIM_XY*i+1,v)
-#define sizev_set(s,i,v) ivec_set((ivec *)s,i,v)
 
 #define mk_stararray(n) (stararray *)mk_dyv_array(n)
 #define mk_quadarray(n) (quadarray *)mk_ivec_array(n)

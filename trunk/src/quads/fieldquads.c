@@ -52,7 +52,6 @@ int main(int argc,char *argv[])
 
   qidx numpix;
   sidx ii,numstars;
-  sizev *pixsizes;
   FILE *pixfid=NULL,*qidxfid=NULL,*qlistfid=NULL;
   sidx *starlist;
   qidx *starnumq;
@@ -63,7 +62,7 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Reading star ids...");fflush(stderr);
   fopenin(pixfname,pixfid); fnfree(pixfname);
-  quadarray *thepids = readidlist(pixfid,&numpix,&pixsizes);
+  quadarray *thepids = readidlist(pixfid,&numpix);
   fclose(pixfid);
   if(thepids==NULL) return(1);
   fprintf(stderr,"processed %lu fields.\n",numpix);
@@ -83,7 +82,6 @@ int main(int argc,char *argv[])
   fprintf(stderr,"done.\n");
 
   free_quadarray(thepids); 
-  free_sizev(pixsizes);
   for(ii=0;ii<numstars;ii++)
     free(starquads[ii]);
   free(starquads);

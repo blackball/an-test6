@@ -560,6 +560,8 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x,
   dyv *thispoint;
   int ii,jj;
   for(ii=0;ii<closest_to_x->num_points;ii++) {
+    if(ivec_ref(closest_to_x->pindexes,ii)==newpindex)
+      fprintf(stderr,"WARNING --- duplicating %d into tree\n",newpindex);
     tmp=0.0;
     thispoint = dyv_array_ref(closest_to_x->points,ii);
     for(jj=0;jj<x->size;jj++) {

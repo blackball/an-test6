@@ -24,7 +24,7 @@ void writeonecode(FILE *fid,double Cx, double Cy, double Dx, double Dy);
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax);
 
-quadarray *readidlist(FILE *fid,qidx *numpix,sizev **pixsizes);
+quadarray *readidlist(FILE *fid,qidx *numpix);
 
 char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars, 
              double *ramin,double *ramax,double *decmin,double *decmax);
@@ -41,7 +41,7 @@ void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
 void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len);
 void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len);
 
-xyarray *readxy(FILE *fid,qidx *numpix,sizev **pixsizes, char ParityFlip);
+xyarray *readxy(FILE *fid, char ParityFlip);
 
 kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax, 
 		    double *decmin, double *decmax);

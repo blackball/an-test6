@@ -70,7 +70,7 @@ stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
   return thestars;
 }
 
-quadarray *readidlist(FILE *fid,qidx *numfields,sizev **pixsizes)
+quadarray *readidlist(FILE *fid,qidx *numfields)
 {
   char ASCII = 0;
   qidx ii,jj,numS;
@@ -89,19 +89,16 @@ quadarray *readidlist(FILE *fid,qidx *numfields,sizev **pixsizes)
     fread(numfields,sizeof(*numfields),1,fid);
   }
   quadarray *thepids = mk_quadarray(*numfields);
-  *pixsizes = mk_sizev(*numfields);
   for(ii=0;ii<*numfields;ii++) {
     // read in how many stars in this pic
     if(ASCII)
       fscanf(fid,"%lu",&numS);
     else
       fread(&numS,sizeof(numS),1,fid);
-    sizev_set(*pixsizes,ii,numS);
     thepids->array[ii] = mk_quadd(numS);
     if(thepids->array[ii]==NULL) {
       fprintf(stderr,"ERROR (fieldquads) -- out of memory at field %lu\n",ii);
       free_quadarray(thepids);
-      free_sizev(*pixsizes);
       return (quadarray *)NULL;
     }
     if(ASCII) {
@@ -294,15 +291,15 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
 }
 
 
-xyarray *readxy(FILE *fid,qidx *numfields,sizev **pixsizes, char ParityFlip)
+xyarray *readxy(FILE *fid, char ParityFlip)
 {
   char ASCII = 0;
-  qidx ii,jj,numxy;
+  qidx ii,jj,numxy,numfields;
   magicval magic;
   fread(&magic,sizeof(magic),1,fid);
   if(magic==ASCII_VAL) {
     ASCII=1;
-    fscanf(fid,"mFields=%lu\n",numfields);
+    fscanf(fid,"mFields=%lu\n",&numfields);
   }
   else {
     if(magic!=MAGIC_VAL) {
@@ -310,21 +307,18 @@ xyarray *readxy(FILE *fid,qidx *numfields,sizev **pixsizes, char ParityFlip)
       return((xyarray *)NULL);
     }
     ASCII=0;
-    fread(numfields,sizeof(*numfields),1,fid);
+    fread(&numfields,sizeof(numfields),1,fid);
   }
-  xyarray *thepix = mk_xyarray(*numfields);
-  *pixsizes = mk_sizev(*numfields);
-  for(ii=0;ii<*numfields;ii++) {
+  xyarray *thepix = mk_xyarray(numfields);
+  for(ii=0;ii<numfields;ii++) {
     if(ASCII)
       fscanf(fid,"%lu",&numxy);
     else
       fread(&numxy,sizeof(numxy),1,fid);
-    sizev_set(*pixsizes,ii,numxy);
     thepix->array[ii] = mk_xy(numxy);
     if(xya_ref(thepix,ii)==NULL) {
       fprintf(stderr,"ERROR (readxy) - out of memory at field %lu\n",ii);
       free_xyarray(thepix);
-      free_sizev(*pixsizes);
       return (xyarray *)NULL;
     }
     if(ASCII) {

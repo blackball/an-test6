@@ -2,7 +2,7 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hpf:o:t:k:"
+#define OPTIONS "hpf:o:t:"
 const char HelpString[]=
 "solvexy -f fname -o fieldname [-t tol] [-p]\n"
 "  tol == code_tolerance, -p flips parity\n";
@@ -10,18 +10,23 @@ const char HelpString[]=
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+#define MATCH_TOL 1.0e-9
+
 #define ABCD_ORDER 0
 #define BACD_ORDER 1
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
 
-qidx solve_pix(xyarray *thepix, sizev *pixsizes, 
-	       kdtree *codekd, double codetol);
-qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
-		   double xxmin, double xxmax, double yymin, double yymax,
+qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
+qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 		   xy *ABCDpix, kquery *kq,kdtree *codekd);
-void output_match(double xxmin, double xxmax, double yymin, double yymax,
-		  kresult *krez, xy *ABCDpix, char order);
+void resolve_matches(xy *cornerpix,kresult *krez, xy *ABCDpix, char order);
+void output_match(sidx iA, sidx iB, sidx iC, sidx iD, double dist_sq, 
+		  star *sMin, star *sMax, qidx thisquad, qidx whichmatch);
+double add_transformed_corners(star *sMin, star *sMax, qidx thisquad,
+			       kdtree **kdt, qidx *whichmatch);
+
+void find_corners(xy *thisfield, xy *cornerpix);
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
@@ -33,17 +38,14 @@ double inverse_3by3(double *matrix);
 
 
 
-char *pixfname=NULL,*treefname=NULL,*hitfname=NULL;
+char *fieldfname=NULL,*treefname=NULL,*hitfname=NULL;
 char *quadfname=NULL,*catfname=NULL;
 FILE *hitfid=NULL,*quadfid=NULL,*catfid=NULL;
 char qASCII,cASCII;
 off_t qposmarker,cposmarker;
 char buff[100],maxstarWidth,oneobjWidth;
-
 kdtree *hitkd=NULL;
-dyv *hitdyv=NULL;
-double dsq=1e20;
-int whichmatch;
+
 
 int main(int argc,char *argv[])
 {
@@ -65,17 +67,13 @@ int main(int argc,char *argv[])
 	sprintf(catfname,"%s.objs",optarg);
 	break;
       case 'o':
-	pixfname = malloc(strlen(optarg)+6);
+	fieldfname = malloc(strlen(optarg)+6);
 	hitfname = malloc(strlen(optarg)+6);
-	sprintf(pixfname,"%s.xyls",optarg);
+	sprintf(fieldfname,"%s.xyls",optarg);
 	sprintf(hitfname,"%s.hits",optarg);
-	break;
-      case 'k':
-	codetol=(double)strtoul(optarg,NULL,0);
 	break;
       case 't':
 	codetol=strtod(optarg,NULL);
-	if(codetol>=1) codetol=1.0;
 	break;
       case 'p':
 	ParityFlip=1;
@@ -89,7 +87,7 @@ int main(int argc,char *argv[])
 	return(OPT_ERR);
       }
 
-  if(treefname==NULL || pixfname==NULL || codetol<0)
+  if(treefname==NULL || fieldfname==NULL || codetol<0)
     {fprintf(stderr,HelpString);return(OPT_ERR);}
 
   if(optind<argc) {
@@ -100,23 +98,23 @@ int main(int argc,char *argv[])
   }
 
 
-  FILE *pixfid=NULL,*treefid=NULL;
-  qidx numpix,numquads,numtries;
+  FILE *fieldfid=NULL,*treefid=NULL;
+  qidx numfields,numquads,numtries;
   sidx numstars;
   double index_scale,ramin,ramax,decmin,decmax;
   dimension Dim_Quads,Dim_Stars;
-  sizev *pixsizes;
 
   fprintf(stderr,"solvexy: solving fields in %s using %s\n",
-	  pixfname,treefname);
+	  fieldfname,treefname);
 
   if(ParityFlip) fprintf(stderr,"  Flipping parity.\n");
   fprintf(stderr,"  Reading fields...");fflush(stderr);
-  fopenin(pixfname,pixfid); fnfree(pixfname);
-  xyarray *thepix = readxy(pixfid,&numpix,&pixsizes,ParityFlip);
-  fclose(pixfid);
-  if(thepix==NULL) return(1);
-  fprintf(stderr,"got %lu fields.\n",numpix);
+  fopenin(fieldfname,fieldfid); fnfree(fieldfname);
+  xyarray *thefields = readxy(fieldfid,ParityFlip);
+  fclose(fieldfid);
+  if(thefields==NULL) return(1);
+  numfields=(qidx)thefields->size;
+  fprintf(stderr,"got %lu fields.\n",numfields);
 
   fprintf(stderr,"  Reading code KD tree from ");
   if(treefname) fprintf(stderr,"%s...",treefname);
@@ -144,15 +142,14 @@ int main(int argc,char *argv[])
               oneobjWidth=strlen(buff);}
   cposmarker=ftello(catfid);
 
-  fprintf(stderr,"  Solving %lu fields...",numpix); fflush(stderr);
+  fprintf(stderr,"  Solving %lu fields...",numfields); fflush(stderr);
   fopenout(hitfname,hitfid); fnfree(hitfname);
-  numtries=solve_pix(thepix,pixsizes,codekd,codetol);
+  numtries=solve_fields(thefields,codekd,codetol);
 		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
   fprintf(stderr,"done (tried %lu quads).\n",numtries);
 
-  free_xyarray(thepix); 
-  free_sizev(pixsizes);
+  free_xyarray(thefields); 
   free_kdtree(codekd); 
 
   //basic_am_malloc_report();
@@ -163,91 +160,78 @@ int main(int argc,char *argv[])
 
 
 
-qidx solve_pix(xyarray *thepix, sizev *pixsizes, 
-	       kdtree *codekd, double codetol)
+qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 {
-  qidx numtries=0;
-  xy *thispix;
-  qidx ii,jj,numxy,nummatches,iA,iB,iC,iD;
+  qidx numtries=0,numAB,ii,numxy,nummatches,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
-  double costheta,sintheta,scale,xxtmp,yytmp;
-  double xxmin,xxmax,yymin,yymax;
-  off_t posmarker;
-
-  kquery *kq;
-  if(codetol<1.0)
-    kq = mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
-  else
-    kq = mk_kquery("knn","",(int)codetol,KD_UNDEF,kdtree_rmin(codekd));
-
+  double costheta,sintheta,scale,xxtmp;
+  off_t hposmarker;
+  xy *thisfield;
   xy *ABCDpix=mk_xy(DIM_QUADS);
+  xy *cornerpix=mk_xy(2);
 
-  for(ii=0;ii<dyv_array_size(thepix);ii++) {
+  kquery *kq=mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
+
+
+  for(ii=0;ii<dyv_array_size(thefields);ii++) {
+    if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
     nummatches=0;
-    numxy=sizev_ref(pixsizes,ii);
-    thispix=xya_ref(thepix,ii);
-    //fprintf(hitfid,"field %lu has %lu stars: 4*%lu quads will be checked\n",
-    //	    ii,numxy,choose(numxy,DIM_QUADS));
+    thisfield=xya_ref(thefields,ii);
+    numxy=xy_size(thisfield);
 
-    posmarker=ftello(hitfid);
+    if(numxy>=DIM_QUADS) { //if there are<4 objects in field, forget it
 
-    if(numxy>=DIM_QUADS) {
+    find_corners(thisfield,cornerpix);
 
-    // find min and max coordinates in this field
-    xxmin=xy_refx(xya_ref(thepix,ii),0); yymin=xy_refy(xya_ref(thepix,ii),0);
-    xxmax=xy_refx(xya_ref(thepix,ii),0); yymax=xy_refy(xya_ref(thepix,ii),0);
-    for(jj=0;jj<numxy;jj++) {
-     xxtmp=xy_refx(xya_ref(thepix,ii),jj);yytmp=xy_refy(xya_ref(thepix,ii),jj);
-      if(xxtmp<xxmin) xxmin=xxtmp; if(xxtmp>xxmax) xxmax=xxtmp;
-      if(yytmp<yymin) yymin=yytmp; if(yytmp>yymax) yymax=yytmp;
-    }
-    fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,xxmin,yymin,xxmax,yymax);
+    hposmarker=ftello(hitfid);
+    fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,
+	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
+	    xy_refx(cornerpix,1),xy_refy(cornerpix,1));
 
-
+    // try ALL POSSIBLE pairs AB with all possible pairs CD
+    numAB=0;
     for(iA=0;iA<(numxy-1);iA++) {
-      Ax=xy_refx(xya_ref(thepix,ii),iA); Ay=xy_refy(xya_ref(thepix,ii),iA);
+      Ax=xy_refx(thisfield,iA); Ay=xy_refy(thisfield,iA);
       xy_setx(ABCDpix,0,Ax); xy_sety(ABCDpix,0,Ay);
       for(iB=iA+1;iB<numxy;iB++) {
-	Bx=xy_refx(xya_ref(thepix,ii),iB); By=xy_refy(xya_ref(thepix,ii),iB);
+	Bx=xy_refx(thisfield,iB); By=xy_refy(thisfield,iB);
 	xy_setx(ABCDpix,1,Bx); xy_sety(ABCDpix,1,By);
 	Bx-=Ax; By-=Ay;
 	scale = Bx*Bx+By*By;
 	costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
 	for(iC=0;iC<(numxy-1);iC++) {
 	  if(iC!=iA && iC!=iB) {
-          Cx=xy_refx(xya_ref(thepix,ii),iC); Cy=xy_refy(xya_ref(thepix,ii),iC);
-	  xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
-	  Cx-=Ax; Cy-=Ay;
-	  xxtmp=Cx;
-	  Cx=Cx*costheta+Cy*sintheta;
-	  Cy=-xxtmp*sintheta+Cy*costheta;
-	  if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) {
-	  for(iD=iC+1;iD<numxy;iD++) {
-	    if(iD!=iA && iD!=iB) {
-          Dx=xy_refx(xya_ref(thepix,ii),iD); Dy=xy_refy(xya_ref(thepix,ii),iD);
-    	    xy_setx(ABCDpix,3,Dx); xy_sety(ABCDpix,3,Dy);
-	    Dx-=Ax; Dy-=Ay;
-	    xxtmp=Dx;
-	    Dx=Dx*costheta+Dy*sintheta;
-	    Dy=-xxtmp*sintheta+Dy*costheta;
-	    if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) {
-	      //fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
-	      numtries++;
-	      nummatches+=try_all_codes(Cx,Cy,Dx,Dy,xxmin,xxmax,yymin,yymax,
-					ABCDpix,kq,codekd);
-	    }
-	    }}}
-	  }}
-      }
-    }
+	    Cx=xy_refx(thisfield,iC); Cy=xy_refy(thisfield,iC);
+	    xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
+	    Cx-=Ax; Cy-=Ay;
+	    xxtmp=Cx;
+	    Cx=Cx*costheta+Cy*sintheta;
+	    Cy=-xxtmp*sintheta+Cy*costheta;
+	    if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) { //C inside AB box?
+	      for(iD=iC+1;iD<numxy;iD++) {
+		if(iD!=iA && iD!=iB) {
+		  Dx=xy_refx(thisfield,iD); Dy=xy_refy(thisfield,iD);
+		  xy_setx(ABCDpix,3,Dx); xy_sety(ABCDpix,3,Dy);
+		  Dx-=Ax; Dy-=Ay;
+		  xxtmp=Dx;
+		  Dx=Dx*costheta+Dy*sintheta;
+		  Dy=-xxtmp*sintheta+Dy*costheta;
+		  if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) { //D inside box?
+//fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
+		    numtries++; // let's try it!
+		    nummatches+=
+		      try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,kq,codekd);
+		  }}}}}}
+	fprintf(stderr,"field: %lu, done %lu of %lu AB pairs           \r",
+		ii,++numAB,choose(numxy,2));
+      }}
+
     if(nummatches==0) {
-      fseeko(hitfid,posmarker,SEEK_SET); 
+      fseeko(hitfid,hposmarker,SEEK_SET); 
       fprintf(hitfid,"field %lu: no matches\n",ii);
     }
     }
 
-    //if(is_power_of_two(ii))
-    //  fprintf(stderr,"  solved %lu fields\r",ii);fflush(stdout);
   }
   
   free_kquery(kq);
@@ -257,8 +241,7 @@ qidx solve_pix(xyarray *thepix, sizev *pixsizes,
 }
 
 
-qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
-		   double xxmin, double xxmax, double yymin, double yymax,
+qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 		   xy *ABCDpix, kquery *kq,kdtree *codekd)
 {
   kresult *krez;
@@ -271,7 +254,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
-    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,ABCD_ORDER); 
+    resolve_matches(cornerpix,krez,ABCDpix,ABCD_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -282,7 +265,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
-    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,BACD_ORDER); 
+    resolve_matches(cornerpix,krez,ABCDpix,BACD_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -293,7 +276,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
-    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,ABDC_ORDER); 
+    resolve_matches(cornerpix,krez,ABCDpix,ABDC_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -304,7 +287,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
-    output_match(xxmin,xxmax,yymin,yymax,krez,ABCDpix,BADC_ORDER); 
+    resolve_matches(cornerpix,krez,ABCDpix,BADC_ORDER); 
     numrez+=krez->count;
   }
   free_kresult(krez);
@@ -315,66 +298,36 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy,
 }
 
 
-void output_match(double xxmin, double xxmax, double yymin, double yymax,
-		  kresult *krez, xy *ABCDpix, char order)
+void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
 {
-  qidx jj,thisquad;
+  qidx jj,thisquad,whichmatch;
   sidx iA,iB,iC,iD;
-  double *transform;
+  double dist_sq,*transform;
   star *sA,*sB,*sC,*sD,*sMin,*sMax;
 
-  sA=mk_star(); if(sA==NULL) return;  sB=mk_star(); if(sB==NULL) return;
-  sC=mk_star(); if(sC==NULL) return;  sD=mk_star(); if(sD==NULL) return;
-  sMin=mk_star();if(sMin==NULL) return; sMax=mk_star();if(sMax==NULL) return;
+  sA=mk_star(); sB=mk_star(); sC=mk_star(); sD=mk_star(); 
+  sMin=mk_star(); sMax=mk_star();
 
   for(jj=0;jj<krez->count;jj++) {
     thisquad = (qidx)krez->pindexes->iarr[jj];
+
+    //fprintf(stdout,"trying quad %lu\n",thisquad);
   
     getquadids(thisquad,&iA,&iB,&iC,&iD);
     getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
 
     transform=fit_transform(ABCDpix,order,sA,sB,sC,sD);
-    if(transform==NULL) {fprintf(stderr,"ERROR (solvey) == transform NULL\n");}
 
-    image_to_xyz(xxmin,yymin,sMin,transform);
-    image_to_xyz(xxmax,yymax,sMax,transform);
+    image_to_xyz(xy_refx(cornerpix,0),xy_refy(cornerpix,0),sMin,transform);
+    image_to_xyz(xy_refx(cornerpix,1),xy_refy(cornerpix,1),sMax,transform);
 
-    if(hitdyv==NULL) hitdyv=mk_dyv(6);
+    dist_sq = add_transformed_corners(sMin,sMax,thisquad,&hitkd,&whichmatch);
 
-    dyv_set(hitdyv,0,star_ref(sMin,0));
-    dyv_set(hitdyv,1,star_ref(sMin,1));
-    dyv_set(hitdyv,2,star_ref(sMin,2));
-    dyv_set(hitdyv,3,star_ref(sMax,0));
-    dyv_set(hitdyv,4,star_ref(sMax,1));
-    dyv_set(hitdyv,5,star_ref(sMax,2));
-
-    if(hitkd==NULL) {
-      dyv_array *tmp=mk_dyv_array(1);
-      dyv_array_set(tmp,0,hitdyv);
-      hitkd=mk_kdtree_from_points(tmp,50);
-      free_dyv_array(tmp);
-    }
-    else
-      dsq=add_point_to_kdtree_dsq(hitkd,hitdyv,(int)thisquad,&whichmatch);
-
-    if((thisquad !=whichmatch) && (dsq<1.0e-9)) {
-      fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
-    	       thisquad,iA,iB,iC,iD);
-      fprintf(hitfid,"  dist=%.10g match=%d\n",
-	      dsq,whichmatch);
-      fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	      star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
-	      rad2deg(xy2ra(star_ref(sMin,0),star_ref(sMin,1))),
-	      rad2deg(z2dec(star_ref(sMin,2))));
-      fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	      star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
-	      rad2deg(xy2ra(star_ref(sMax,0),star_ref(sMax,1))),
-	      rad2deg(z2dec(star_ref(sMax,2))));
-    }
+    if((thisquad !=whichmatch) && (dist_sq<MATCH_TOL) && (dist_sq>=0.0))
+      output_match(iA,iB,iC,iD,dist_sq,sMin,sMax,thisquad,whichmatch);
 
     free(transform); 
     
-//}
   }
 
   free_star(sA);free_star(sB);free_star(sC);free_star(sD);
@@ -384,6 +337,76 @@ void output_match(double xxmin, double xxmax, double yymin, double yymax,
 }
 
 
+void output_match(sidx iA, sidx iB, sidx iC, sidx iD, double dist_sq, 
+		  star *sMin, star *sMax, qidx thisquad, qidx whichmatch)
+{
+      fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
+    	       thisquad,iA,iB,iC,iD);
+      fprintf(hitfid,"  dist=%.10g match=%lu\n",dist_sq,whichmatch);
+      fprintf(hitfid," min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	      star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
+	      rad2deg(xy2ra(star_ref(sMin,0),star_ref(sMin,1))),
+	      rad2deg(z2dec(star_ref(sMin,2))));
+      fprintf(hitfid," max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	      star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
+	      rad2deg(xy2ra(star_ref(sMax,0),star_ref(sMax,1))),
+	      rad2deg(z2dec(star_ref(sMax,2))));
+      return;
+}
+
+double add_transformed_corners(star *sMin, star *sMax, qidx thisquad,
+			kdtree **kdt, qidx *whichmatch)
+{
+  double dist_sq=-1.0;
+  dyv *hitdyv;
+
+  hitdyv=mk_dyv(2*DIM_STARS);
+  dyv_set(hitdyv,0,star_ref(sMin,0));
+  dyv_set(hitdyv,1,star_ref(sMin,1));
+  dyv_set(hitdyv,2,star_ref(sMin,2));
+  dyv_set(hitdyv,3,star_ref(sMax,0));
+  dyv_set(hitdyv,4,star_ref(sMax,1));
+  dyv_set(hitdyv,5,star_ref(sMax,2));
+
+  if(*kdt==NULL) {
+    dyv_array *tmp=mk_dyv_array(1);
+    dyv_array_set(tmp,0,hitdyv);
+    *kdt=mk_kdtree_from_points(tmp,DEFAULT_KDRMIN);
+    free_dyv_array(tmp);
+    *whichmatch = (qidx)-1;
+  }
+  else
+    dist_sq=add_point_to_kdtree_dsq(*kdt,hitdyv,
+				    (int)thisquad,(int *)whichmatch);
+
+  free_dyv(hitdyv);
+  return(dist_sq);
+}
+
+
+
+void find_corners(xy *thisfield, xy *cornerpix)
+{
+  double xxtmp,yytmp;
+  qidx jj;
+
+  // find min and max coordinates in this field
+  
+  xxtmp=xy_refx(thisfield,0); yytmp=xy_refy(thisfield,0);
+  xy_setx(cornerpix,0,xxtmp); xy_sety(cornerpix,0,yytmp);
+  xy_setx(cornerpix,1,xxtmp); xy_sety(cornerpix,1,yytmp);
+
+  for(jj=0;jj<xy_size(thisfield);jj++) {
+    xxtmp=xy_refx(thisfield,jj);yytmp=xy_refy(thisfield,jj);
+    if(xxtmp<xy_refx(cornerpix,0)) xy_setx(cornerpix,0,xxtmp);
+    if(yytmp<xy_refy(cornerpix,0)) xy_sety(cornerpix,0,yytmp);
+    if(xxtmp>xy_refx(cornerpix,1)) xy_setx(cornerpix,1,xxtmp);
+    if(yytmp>xy_refy(cornerpix,1)) xy_sety(cornerpix,1,yytmp);
+  }
+
+  return;
+
+}
 
 
 
@@ -416,6 +439,7 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
   if(matQ==NULL || matR==NULL) {
     if(matQ) free(matQ);
     if(matR) free(matR);
+    fprintf(stderr,"ERROR (solvey) == memory error in fit_transform\n");
     return(NULL);
   }
 
