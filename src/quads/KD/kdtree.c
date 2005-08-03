@@ -555,7 +555,7 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, int *nearestpindex)
 	  4) adjusting the hrect to include this point
    */
 
-  double insertdist,tmp,tmp2;
+  double insertdist=-1.0,tmp,tmp2;
   dyv *thispoint;
   int ii,jj;
   for(ii=0;ii<closest_to_x->num_points;ii++) {
