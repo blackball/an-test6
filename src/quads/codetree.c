@@ -135,18 +135,11 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
       free_codearray(thecodes);
       return (codearray *)NULL;
     }
-    if(*ASCII) {
-      if(*DimCodes==4)
-	fscanf(fid,"%lf,%lf,%lf,%lf\n",thecodes->array[ii]->farr,
-  	       thecodes->array[ii]->farr+1,
-  	       thecodes->array[ii]->farr+2,
-  	       thecodes->array[ii]->farr+3   );
-      else
-	fprintf(stderr,"ERROR (codetree) -- only DimCodes=4 supported.\n");
-
-    }
+    // assert *DimCodes==DIM_CODES
+    if(*ASCII)
+      fscanfcode(thecodes->array[ii],fid);
     else
-      fread(thecodes->array[ii]->farr,sizeof(double),*DimCodes,fid);
+      freadcode(thecodes->array[ii],fid);
   }
   return thecodes;
 }
@@ -156,15 +149,11 @@ dimension readnextcode(FILE *codefid, code *tmpcode,
 		      dimension Dim_Codes, char ASCII)
 {
   dimension rez=0;
-  if(ASCII) {
-    if(Dim_Codes==4)
-      rez=(dimension)fscanf(codefid,"%lf,%lf,%lf,%lf\n",tmpcode->farr,
-	     tmpcode->farr+1,tmpcode->farr+2,tmpcode->farr+3   );
-    else
-      fprintf(stderr,"ERROR (codetree) -- only DimCodes=4 supported.\n");
-  }
+  //assert Dim_Codes==DIM_CODES
+  if(ASCII)
+    rez=(dimension)fscanfcode(tmpcode,codefid);
   else
-    rez=(dimension)fread(tmpcode->farr,sizeof(double),Dim_Codes,codefid);
+    rez=(dimension)freadcode(tmpcode,codefid);
 
   if(rez!=Dim_Codes) 
     fprintf(stderr,"ERROR (codetree) -- can't read next code\n"); 

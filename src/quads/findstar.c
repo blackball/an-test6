@@ -71,7 +71,7 @@ int main(int argc,char *argv[])
   star *thequery=NULL;
   kdtree *starkd=NULL;
   stararray *thestars=NULL;
-  off_t catposmarker;
+  off_t catposmarker=0;
   char cASCII=READ_FAIL;
 
 
