@@ -126,5 +126,5 @@ void output_star(star *thestar, char ASCII, FILE *fid)
 	    star_ref(thestar,0),star_ref(thestar,1),star_ref(thestar,2));
 #endif
   else if(!ASCII)
-    fwrite((double *)thestar->farr,sizeof(double),DIM_STARS,fid);
+    fwritestar(thestar,fid);
 }

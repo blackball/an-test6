@@ -314,7 +314,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
   for(jj=0;jj<krez->count;jj++) {
     thisquad = (qidx)krez->pindexes->iarr[jj];
 
-    fprintf(stdout,"trying quad %lu\n",thisquad);
+    //fprintf(stdout,"trying quad %lu\n",thisquad);
   
     getquadids(thisquad,&iA,&iB,&iC,&iD);
     getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
@@ -606,13 +606,13 @@ void getstarcoords(star *sA, star *sB, star *sC, star *sD,
     }
     else {
       fseeko(catfid,cposmarker+iA*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sA->farr,sizeof(double),DIM_STARS,catfid);
+      freadstar(sA,catfid);
       fseeko(catfid,cposmarker+iB*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sB->farr,sizeof(double),DIM_STARS,catfid);
+      freadstar(sB,catfid);
       fseeko(catfid,cposmarker+iC*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sC->farr,sizeof(double),DIM_STARS,catfid);
+      freadstar(sC,catfid);
       fseeko(catfid,cposmarker+iD*(DIM_STARS*sizeof(double)),SEEK_SET);
-      fread(sD->farr,sizeof(double),DIM_STARS,catfid);
+      freadstar(sD,catfid);
     }
     return;
 }
