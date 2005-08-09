@@ -79,13 +79,13 @@ int main(int argc,char *argv[])
   fprintf(stderr,"[RANDSEED=%d]\n",RANDSEED);
   if(ramin>0.0 || ramax< 1.0 || decmin>0.0 || decmax<1.0)
     fprintf(stderr,"  using limits %f<=x<=%f ; %f<=y<=%f.\n",
-	    ramin,ramax,decmin,decmax);
+	   ramin,ramax,decmin,decmax);
 #else
   fprintf(stderr," on the unit sphere ");
   fprintf(stderr,"[RANDSEED=%d]\n",RANDSEED);
   if(ramin>0.0 || ramax< 2*PIl || decmin>-PIl/2.0 || decmax<PIl/2.0)
-    fprintf(stderr,"  using limits %f<=RA<=%f ; %f<=DEC<=%f radians.\n",
-	    ramin,ramax,decmin,decmax);
+    fprintf(stderr,"  using limits %f<=RA<=%f ; %f<=DEC<=%f deg.\n",
+	    rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 #endif
 
   sidx ii;

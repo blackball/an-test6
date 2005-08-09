@@ -65,7 +65,7 @@ int main(int argc,char *argv[])
   if(thestars==NULL) return(1);
   fprintf(stderr,"got %lu stars.\n",numstars);
   fprintf(stderr,"    (dim %hu) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
-	  Dim_Stars,ramin,ramax,decmin,decmax);
+      Dim_Stars,rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 
   fprintf(stderr,"  Building star KD tree...");fflush(stderr);
   kdtree *starkd = mk_starkdtree(thestars,kd_Rmin);

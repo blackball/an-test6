@@ -113,7 +113,8 @@ int main(int argc,char *argv[])
   fprintf(stderr,"done\n    (%lu stars, %d nodes, depth %d).\n",
 	  numstars,starkd->num_nodes,starkd->max_depth);
   fprintf(stderr,"    (dim %d) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
-	  kdtree_num_dims(starkd),ramin,ramax,decmin,decmax);
+             kdtree_num_dims(starkd),
+	  rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 
   stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
 
