@@ -4,7 +4,7 @@
 #define OPTIONS "habf:"
 const char HelpString[]=
 "quadidx -f fname [-a|-b]\n"
-"  -a sets ASCII output, -b sets BINARY output (default)\n";
+"  -a sets ASCII output, -b (default) sets BINARY output\n";
 
 
 extern char *optarg;

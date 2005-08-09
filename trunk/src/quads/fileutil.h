@@ -9,11 +9,6 @@
 #define fnfree(n) {if(n) free(n);}
 #define fopenoutplus(n,f) {if(n){f = fopen(n,"w+"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing+.\n",n);return(FOPEN_ERR);}} else f=stdout;}
 
-typedef unsigned short int magicval;
-
-#define MAGIC_VAL 0xFF00
-#define ASCII_VAL 0x754E
-
 #define READ_FAIL -1
 
 #define freadcode(c,f) fread(c->farr,sizeof(double),DIM_CODES,f)
@@ -63,7 +58,18 @@ sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
 		 qidx ***starquads);
 signed int compare_sidx(const void *x,const void *y);
 
+typedef struct file_struct
+{
+  FILE *fid;
+  char *fname;
+  char ASCII;
+  char itemSize;
+} FileObj;
 
+
+typedef unsigned short int magicval;
+#define MAGIC_VAL 0xFF00
+#define ASCII_VAL 0x754E
 
 
 #endif

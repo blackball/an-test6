@@ -6,7 +6,7 @@
 const char HelpString[]=
 "getquads -f fname -s scale(arcmin) -q numQuads [-a|-b]\n"
 "  scale is the scale to look for quads, numQuads is the #darts to throw\n"
-"  -a sets ASCII output, -b sets BINARY output (default)\n";
+"  -a sets ASCII output, -b (default) sets BINARY output\n";
 
 
 extern char *optarg;

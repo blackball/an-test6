@@ -4,7 +4,13 @@
 
 #define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:"
 const char HelpString[]=
-"genfields -f fname -o fieldname -s scale(arcmin) [-n num_rand_fields | -r RA -d DEC]  [-p] [-w noise] [-x distractors] [-q dropouts]\n";
+"genfields -f fname -o fieldname {-n num_rand_fields | -r RA -d DEC}\n"
+"    -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts]\n\n"
+"    -r RA -d DEC generates a single field centred at RA,DEC\n"
+"    -n N generates N randomly centred fields\n"
+"    -p flips parity, -q (default 0) sets the fraction of real stars removed\n"
+"    -x (default 0) sets the fraction of real stars added as random stars\n"
+"    -w (default 0) sets the fraction of scale by which to jitter positions\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;

@@ -4,7 +4,8 @@
 
 #define OPTIONS "hR:f:"
 const char HelpString[]=
-"startree -f fname [-R KD_RMIN]\n";
+"startree -f fname [-R KD_RMIN]\n"
+"  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
