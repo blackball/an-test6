@@ -136,7 +136,7 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
     if(insertquad(qlist,uniqueQuads,iA,iB,iC,iD)) {
       uniqueQuads++;
       if(qASCII) {
-	fscanf(codefid,"%lf,%lf,%lf,%lf\n",&Cx,&Cy,&Dx,&Dy);
+	fscanfonecode(codefid,&Cx,&Cy,&Dx,&Dy);
 	fprintf(newcodefid,"%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
 	fprintf(newquadfid,"%2$*1$lu,%3$*1$lu,%4$*1$lu,%5$*1$lu\n",
 		maxstarWidth,iA,iB,iC,iD);
@@ -282,7 +282,7 @@ void getquadids(FILE *quadfid, FILE *codefid,
 	  (DIM_CODES*(codeWidth+1)*sizeof(char)),SEEK_SET); 
     fseeko(quadfid,posmarker+ii*
 	  (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-    fscanf(quadfid,"%lu,%lu,%lu,%lu\n",iA,iB,iC,iD);
+    fscanfonequad(quadfid,iA,iB,iC,iD);
   }
   else {
     fseeko(codefid,cposmarker+ii*

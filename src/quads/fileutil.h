@@ -20,6 +20,9 @@ typedef unsigned short int magicval;
 #define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
 #define fwritestar(s,f) fwrite((double *)s->farr,sizeof(double),DIM_STARS,f)
 #define fscanfcode(c,f) fscanf(f,"%lf,%lf,%lf,%lf\n",c->farr,c->farr+1,c->farr+2,c->farr+3)
+#define fscanfcodes(a,b,c,d,f) fscanf(f,"%lf,%lf,%lf,%lf\n",a,b,c,d)
+#define fscanfonequad(f,a,b,c,d) fscanf(f,"%ld,%ld,%ld,%ld\n",a,b,c,d)
+#define fscanfonecode(f,a,b,c,d) fscanf(f,"%lf,%lf,%lf,%lf\n",a,b,c,d)
 
 void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD);
 void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD);

@@ -126,7 +126,7 @@ int main(int argc,char *argv[])
   fprintf(stderr,"done\n    (%d quads, %d nodes, depth %d).\n",
 	  kdtree_num_points(codekd),kdtree_num_nodes(codekd),
 	  kdtree_max_depth(codekd));
-  fprintf(stderr,"    (index scale = %lf)\n",rad2arcmin(index_scale));
+  fprintf(stderr,"    (index scale = %lf arcmin)\n",rad2arcmin(index_scale));
 
   fopenin(quadfname,quadfid); fnfree(quadfname);
   qASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
@@ -574,7 +574,7 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
   if(qASCII) {
     fseeko(quadfid,qposmarker+thisquad*
 	   (DIM_QUADS*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-    fscanf(quadfid,"%lu,%lu,%lu,%lu\n",iA,iB,iC,iD);
+    fscanfonequad(quadfid,iA,iB,iC,iD);
   }
   else {
     fseeko(quadfid,qposmarker+thisquad*

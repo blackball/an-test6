@@ -75,14 +75,14 @@ int main(int argc,char *argv[])
     qASCII = read_quad_header(quadfid, 
 			      &numquads, &numstars, &DimQuads, &index_scale);
     if(qASCII==READ_FAIL) return(1);
-    fprintf(stderr,"  (%lu quads, %lu total stars, scale=%f)\n",
+    fprintf(stderr,"  (%lu quads, %lu total stars, scale=%f arcmin)\n",
 	    numquads,numstars,rad2arcmin(index_scale));
     if(quadset==TRUE) {
       if(qASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
       if(qASCII) {
 	fseeko(quadfid,ftello(quadfid)+thequad*
 	      (DimQuads*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-	fscanf(quadfid,"%lu,%lu,%lu,%lu\n",&iA,&iB,&iC,&iD);
+	fscanfonequad(quadfid,&iA,&iB,&iC,&iD);
       }
       else {
 	fseeko(quadfid,ftello(quadfid)+thequad*
@@ -100,7 +100,7 @@ int main(int argc,char *argv[])
       if(qASCII) {
 	fseeko(codefid,ftello(codefid)+thequad*
 	      (DIM_CODES*(maxstarWidth+1)*sizeof(char)),SEEK_SET); 
-	fscanf(quadfid,"%lf,%lf,%lf,%lf\n",&Cx,&Cy,&Dx,&Dy);
+	fscanfonecode(codefid,&Cx,&Cy,&Dx,&Dy);
       }
       else {
 	fseeko(codefid,ftello(codefid)+thequad*

@@ -67,7 +67,7 @@ int main(int argc,char *argv[])
   fprintf(stderr,"done\n    (%d codes, %d nodes, depth %d).\n",
 	  kdtree_num_points(codekd),kdtree_num_nodes(codekd),
 	  kdtree_max_depth(codekd));
-  fprintf(stderr,"    (index scale = %f)\n",rad2arcmin(index_scale));
+  fprintf(stderr,"    (index scale = %f arcmin)\n",rad2arcmin(index_scale));
 
   codearray *thecodes = (codearray *)mk_dyv_array_from_kdtree(codekd);
 
