@@ -4,7 +4,9 @@
 
 #define OPTIONS "hR:f:B:"
 const char HelpString[]=
-"codetree -f fname [-B buffer_length] [-R KD_RMIN]\n";
+"codetree -f fname [-B buffer_length] [-R KD_RMIN]\n"
+"  -B sets the number of stars to read into memory at once\n"
+"  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
 
 #define MEM_LOAD 1000000000
 extern char *optarg;

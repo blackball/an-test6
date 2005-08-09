@@ -2,10 +2,11 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hpf:o:t:"
+#define OPTIONS "hpf:o:t:m:"
 const char HelpString[]=
-"solvexy -f fname -o fieldname [-t tol] [-p]\n"
+"solvexy -f fname -o fieldname -m mtol -t tol [-p]\n"
 "  tol == code_tolerance, -p flips parity\n";
+
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -46,6 +47,7 @@ off_t qposmarker,cposmarker;
 char buff[100],maxstarWidth,oneobjWidth;
 kdtree *hitkd=NULL;
 ivec *qlist=NULL;
+double MatchTol=MATCH_TOL;
 
 int main(int argc,char *argv[])
 {
@@ -74,6 +76,9 @@ int main(int argc,char *argv[])
 	break;
       case 't':
 	codetol=strtod(optarg,NULL);
+	break;
+      case 'm':
+	MatchTol=strtod(optarg,NULL);
 	break;
       case 'p':
 	ParityFlip=1;
@@ -142,12 +147,14 @@ int main(int argc,char *argv[])
               oneobjWidth=strlen(buff);}
   cposmarker=ftello(catfid);
 
-  fprintf(stderr,"  Solving %lu fields...",numfields); fflush(stderr);
+  fprintf(stderr,"  Solving %lu fields (codetol=%lg,matchtol=%lg)...\n",
+	  numfields,codetol,MatchTol);
   fopenout(hitfname,hitfid); fnfree(hitfname);
   numtries=solve_fields(thefields,codekd,codetol);
 		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
-  fprintf(stderr,"done (tried %lu quads).\n",numtries);
+  fprintf(stderr,"done (tried %lu quads).                                  \n",
+	  numtries);
 
   free_xyarray(thefields); 
   free_kdtree(codekd); 
@@ -184,6 +191,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 
     find_corners(thisfield,cornerpix);
 
+    fprintf(hitfid,"--------------------\n");
     hposmarker=ftello(hitfid);
     fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,
 	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
@@ -223,7 +231,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 		    nummatches+=
 		      try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,kq,codekd);
 		  }}}}}}
-	fprintf(stderr,"field: %lu, done %lu of %lu AB pairs           \r",
+	fprintf(stderr,"field %lu: done %lu of %lu AB pairs           \r",
 		ii,++numAB,choose(numxy,2));
       }}
 
@@ -326,7 +334,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
 
     dist_sq = add_transformed_corners(sMin,sMax,thisquad,&hitkd,&whichmatch);
 
-    if((thisquad !=whichmatch) && (dist_sq<MATCH_TOL) && (dist_sq>=0.0))
+    if((thisquad !=whichmatch) && (dist_sq<MatchTol) && (dist_sq>=0.0))
       output_match(iA,iB,iC,iD,dist_sq,sMin,sMax,thisquad,whichmatch);
 
     free(transform); 

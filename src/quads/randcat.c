@@ -3,7 +3,9 @@
 
 #define OPTIONS "habn:f:r:R:d:D:"
 const char HelpString[]=
-"randcat -f catfile -n numstars [-a|-b] [-r/R RAmin/max] [-d/R DECmin/max]\n";
+"randcat -f catfile -n numstars [-a|-b] [-r/R RAmin/max] [-d/D DECmin/max]\n"
+"  -r -R -d -D set ra and dec limits in radians\n"
+"  -a sets ASCII output, -b (default) sets BINARY output\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
