@@ -20,8 +20,8 @@ extern int optind, opterr, optopt;
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd);
-void resolve_matches(xy *cornerpix,kresult *krez, xy *ABCDpix, char order);
+		   xy *ABCDpix, kquery *kq,kdtree *codekd, qidx *numgood);
+qidx resolve_matches(xy *cornerpix,kresult *krez, xy *ABCDpix, char order);
 void output_match(sidx iA, sidx iB, sidx iC, sidx iD, double dist_sq, 
 		  star *sMin, star *sMax, qidx thisquad, qidx whichmatch);
 double add_transformed_corners(star *sMin, star *sMax, qidx thisquad,
@@ -104,7 +104,7 @@ int main(int argc,char *argv[])
 
 
   FILE *fieldfid=NULL,*treefid=NULL;
-  qidx numfields,numquads,numtries;
+  qidx numfields,numquads,numsolved;
   sidx numstars;
   double index_scale,ramin,ramax,decmin,decmax;
   dimension Dim_Quads,Dim_Stars;
@@ -150,11 +150,11 @@ int main(int argc,char *argv[])
   fprintf(stderr,"  Solving %lu fields (codetol=%lg,matchtol=%lg)...\n",
 	  numfields,codetol,MatchTol);
   fopenout(hitfname,hitfid); fnfree(hitfname);
-  numtries=solve_fields(thefields,codekd,codetol);
+  numsolved=solve_fields(thefields,codekd,codetol);
 		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
-  fprintf(stderr,"done (tried %lu quads).                                  \n",
-	  numtries);
+  fprintf(stderr,"done (solved %lu).                                  \n",
+	  numsolved);
 
   free_xyarray(thefields); 
   free_kdtree(codekd); 
@@ -169,7 +169,7 @@ int main(int argc,char *argv[])
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 {
-  qidx numtries=0,numAB,ii,numxy,nummatches,iA,iB,iC,iD;
+  qidx numtries,nummatches,numgood,numsolved,numAB,ii,numxy,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double costheta,sintheta,scale,xxtmp;
   off_t hposmarker;
@@ -178,12 +178,12 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
   xy *cornerpix=mk_xy(2);
 
   kquery *kq=mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
-
+  numsolved=dyv_array_size(thefields);
 
   for(ii=0;ii<dyv_array_size(thefields);ii++) {
+    numtries=0; nummatches=0; numgood=0;
     if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
     if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
-    nummatches=0;
     thisfield=xya_ref(thefields,ii);
     numxy=xy_size(thisfield);
 
@@ -229,18 +229,21 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 //fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
 		    numtries++; // let's try it!
 		    nummatches+=
-		      try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,kq,codekd);
+               try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,kq,codekd,&numgood);
 		  }}}}}}
-	fprintf(stderr,"field %lu: done %lu of %lu AB pairs           \r",
+	fprintf(stderr,"field %lu: done %lu of %lu AB pairs                \r",
 		ii,++numAB,choose(numxy,2));
       }}
 
-    if(nummatches==0) {
+    if(numgood==0) {
       fseeko(hitfid,hposmarker,SEEK_SET); 
       fprintf(hitfid,"field %lu: no matches\n",ii);
+      numsolved--;
     }
     }
 
+    fprintf(stderr,"field %lu: tried %lu, codematch %lu, match=%lu\n",
+	    ii,numtries,nummatches,numgood);
   }
   
   free_kquery(kq);
@@ -248,16 +251,16 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
   if(hitkd!=NULL) free_kdtree(hitkd);
   if(qlist!=NULL) free_ivec(qlist);
 
-  return numtries;
+  return numsolved;
 }
 
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd)
+		   xy *ABCDpix, kquery *kq,kdtree *codekd, qidx *numgood)
 {
   kresult *krez;
   code *thequery = mk_code();
-  qidx numrez=0;
+  qidx nummatch=0;
 
   // ABCD
   code_set(thequery,0,Cx); code_set(thequery,1,Cy);
@@ -265,8 +268,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
-    resolve_matches(cornerpix,krez,ABCDpix,ABCD_ORDER); 
-    numrez+=krez->count;
+    nummatch+=krez->count;
+    *numgood+=resolve_matches(cornerpix,krez,ABCDpix,ABCD_ORDER); 
   }
   free_kresult(krez);
   
@@ -276,8 +279,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
-    resolve_matches(cornerpix,krez,ABCDpix,BACD_ORDER); 
-    numrez+=krez->count;
+    nummatch+=krez->count;
+    *numgood+=resolve_matches(cornerpix,krez,ABCDpix,BACD_ORDER); 
   }
   free_kresult(krez);
   
@@ -287,8 +290,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
     //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
-    resolve_matches(cornerpix,krez,ABCDpix,ABDC_ORDER); 
-    numrez+=krez->count;
+    nummatch+=krez->count;
+    *numgood+=resolve_matches(cornerpix,krez,ABCDpix,ABDC_ORDER); 
   }
   free_kresult(krez);
 
@@ -298,20 +301,20 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
  //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
-    resolve_matches(cornerpix,krez,ABCDpix,BADC_ORDER); 
-    numrez+=krez->count;
+    nummatch+=krez->count;
+    *numgood+=resolve_matches(cornerpix,krez,ABCDpix,BADC_ORDER); 
   }
   free_kresult(krez);
 
   free_code(thequery);
 
-  return numrez;
+  return nummatch;
 }
 
 
-void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
+qidx resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
 {
-  qidx jj,thisquad,whichmatch;
+  qidx jj,thisquad,whichmatch,numgood=0;
   sidx iA,iB,iC,iD;
   double dist_sq,*transform;
   star *sA,*sB,*sC,*sD,*sMin,*sMax;
@@ -322,7 +325,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
   for(jj=0;jj<krez->count;jj++) {
     thisquad = (qidx)krez->pindexes->iarr[jj];
 
-    //fprintf(stdout,"trying quad %lu\n",thisquad);
+    //fprintf(stdout,"resolving quad %lu\n",thisquad);
   
     getquadids(thisquad,&iA,&iB,&iC,&iD);
     getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
@@ -334,8 +337,10 @@ void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
 
     dist_sq = add_transformed_corners(sMin,sMax,thisquad,&hitkd,&whichmatch);
 
-    if((thisquad !=whichmatch) && (dist_sq<MatchTol) && (dist_sq>=0.0))
+    if((thisquad !=whichmatch) && (dist_sq<MatchTol) && (dist_sq>=0.0)) {
       output_match(iA,iB,iC,iD,dist_sq,sMin,sMax,thisquad,whichmatch);
+      numgood++;
+    }
 
     free(transform); 
     
@@ -344,7 +349,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, xy *ABCDpix, char order)
   free_star(sA);free_star(sB);free_star(sC);free_star(sD);
   free_star(sMin); free_star(sMax);
   
-  return;
+  return(numgood);
 }
 
 
@@ -488,6 +493,7 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
   det = inverse_3by3(matQ);
 
   //fprintf(stderr,"det=%.12g\n",det);
+  if(det<0) fprintf(stderr,"WARNING (fit_transform) -- determinant<0\n");
 
   if(det==0.0) {
     fprintf(stderr,"ERROR (fit_transform) -- determinant zero\n");
