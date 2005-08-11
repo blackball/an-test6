@@ -158,7 +158,7 @@ int main(int argc,char *argv[])
   free_xyarray(thefields); 
   free_kdtree(codekd); 
 
-  basic_am_malloc_report();
+  //basic_am_malloc_report();
   return(0);
 }
 
@@ -229,22 +229,21 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 		  }}}}}}
 fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
 		ii,++numAB,choose(numxy,2));
-      }}
+      }}}
 
     if(numgood==0) {
       fprintf(hitfid,"No matches.\n");
       numsolved--;
     }
     else
-      output_good_matches(firstMatch,lastMatch->idx);
-    }
+      output_good_matches(firstMatch,(lastMatch->idx)+1);
+    
 
     fprintf(stderr,"    field %lu: tried %lu quads, matched %lu codes, "
 	           "resolved %lu\n", ii,numtries,nummatches,numgood);
 
     if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
     if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
-    //if(goodlist!=NULL) {free_ivec(goodlist); goodlist=NULL;}
     free_matchlist(firstMatch); firstMatch=NULL; lastMatch=NULL;
 
   }
@@ -350,14 +349,8 @@ qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
     //mo->code_err=0.0;
     // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
     mo->nearlist = add_transformed_corners(sMin,sMax,thisquadno,&hitkd);
-    if(mo->nearlist!=NULL && mo->nearlist->size > MIN_NEARBY) {
-      //if(goodlist==NULL)
-      //	goodlist=mk_copy_ivec(mo->nearlist);
-      //else 
-      //for(ii=0;ii<mo->nearlist->size;ii++)
-      //	  add_to_ivec_unique(goodlist,ivec_ref(mo->nearlist,ii));
+    if(mo->nearlist!=NULL && mo->nearlist->size > MIN_NEARBY)
       numgood++;
-    }
 
     free(transform); 
     //free_star(sMin); free_star(sMax); // will be freed with MatchObj
