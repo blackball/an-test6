@@ -5,7 +5,7 @@
 #define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:"
 const char HelpString[]=
 "genfields -f fname -o fieldname {-n num_rand_fields | -r RA -d DEC}\n"
-"    -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts]\n\n"
+"          -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts]\n\n"
 "    -r RA -d DEC generates a single field centred at RA,DEC\n"
 "    -n N generates N randomly centred fields\n"
 "    -p flips parity, -q (default 0) sets the fraction of real stars removed\n"
@@ -31,6 +31,8 @@ int main(int argc,char *argv[])
   qidx numFields=0;
   double radscale=10.0,aspect=1.0,distractors=0.0,dropouts=0.0,noise=0.0;
   double centre_ra=0.0,centre_dec=0.0;
+
+  if(argc<=8) {fprintf(stderr,HelpString);return(HELP_ERR);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
