@@ -895,7 +895,7 @@ void add_to_ivec(ivec *iv,int new_val)
 
 
 void add_to_ivec_unique(ivec *iv,int val) {
-  printf("AWM comments: You should probably be using sivecs\n");
+  //printf("AWM comments: You should probably be using sivecs\n");
   if (!is_in_ivec(iv, val)) add_to_ivec(iv, val);
 }
 
