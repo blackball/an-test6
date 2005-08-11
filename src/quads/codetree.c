@@ -41,10 +41,8 @@ int main(int argc,char *argv[])
 	buffsize = strtoul(optarg,NULL,0);
 	break;
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	codefname = malloc(strlen(optarg)+6);
-	sprintf(treefname,"%s.ckdt",optarg);
-	sprintf(codefname,"%s.code",optarg);
+	treefname = mk_ctreefn(optarg);
+	codefname = mk_codefn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -72,7 +70,7 @@ int main(int argc,char *argv[])
   fprintf(stderr,"codetree: building KD tree for %s\n",codefname);
 
   fprintf(stderr,"  Reading codes...");fflush(stderr);
-  fopenin(codefname,codefid); fnfree(codefname);
+  fopenin(codefname,codefid); free_fn(codefname);
   codearray *thecodes=readcodes(codefid,&numcodes,&Dim_Codes,
 				&ASCII,&index_scale,buffsize);
   if(thecodes==NULL) return(1);
@@ -99,11 +97,8 @@ int main(int argc,char *argv[])
 	  codekd->num_nodes,codekd->max_depth);
   fclose(codefid);
 
-  fprintf(stderr,"  Writing code KD tree to ");
-  if(treefname) fprintf(stderr,"%s...",treefname); 
-  else fprintf(stderr,"stdout..."); 
-  fflush(stderr);
-  fopenout(treefname,treefid); fnfree(treefname);
+  fprintf(stderr,"  Writing code KD tree to %s...",treefname); fflush(stderr);
+  fopenout(treefname,treefid); free_fn(treefname);
   write_codekd(treefid,codekd,index_scale);
   fprintf(stderr,"done.\n");
   fclose(treefid);

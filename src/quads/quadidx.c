@@ -42,16 +42,11 @@ int main(int argc,char *argv[])
 	ASCII = 0;
 	break;
       case 'f':
-	idxfname = malloc(strlen(optarg)+6);
-	quadfname = malloc(strlen(optarg)+7);
-	codefname = malloc(strlen(optarg)+7);
-	newquadfname = malloc(strlen(optarg)+6);
-	newcodefname = malloc(strlen(optarg)+6);
-	sprintf(idxfname,"%s.qidx",optarg);
-	sprintf(quadfname,"%s.quad0",optarg);
-	sprintf(codefname,"%s.code0",optarg);
-	sprintf(newquadfname,"%s.quad",optarg);
-	sprintf(newcodefname,"%s.code",optarg);
+	idxfname = mk_qidxfn(optarg);
+	quadfname = mk_quad0fn(optarg);
+	codefname = mk_code0fn(optarg);
+	newquadfname = mk_quadfn(optarg);
+	newcodefname = mk_codefn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -79,11 +74,11 @@ int main(int argc,char *argv[])
   fprintf(stderr,"quadidx: deduplicating and indexing quads in %s...\n",
 	  quadfname);
 
-  fopenin(quadfname,quadfid); fnfree(quadfname);
+  fopenin(quadfname,quadfid); free_fn(quadfname);
   qASCII=read_quad_header(quadfid,&numquads,&numstars,&DimQuads,&index_scale);
   if(qASCII==READ_FAIL)
     fprintf(stderr,"ERROR (quadidx) -- read_quad_header failed\n");
-  fopenin(codefname,codefid); fnfree(codefname);
+  fopenin(codefname,codefid); free_fn(codefname);
   qA2=read_code_header(codefid,&nq2,&ns2,&DimCodes,&is2);
   if(qA2==READ_FAIL)
     fprintf(stderr,"ERROR (quadidx) -- read_code_header failed\n");
@@ -107,7 +102,7 @@ int main(int argc,char *argv[])
    fix_code_header(newcodefid,qASCII,nq2,strlen(buff));
   }
   fclose(quadfid); fclose(newquadfid); fclose(newcodefid); fclose(idxfid);
-  fnfree(newquadfname); fnfree(newcodefname); fnfree(idxfname);
+  free_fn(newquadfname); free_fn(newcodefname); free_fn(idxfname);
   
   fprintf(stderr,"  done (%lu unique codes, %lu unique stars involved).\n",
 	  nq2,ns2);

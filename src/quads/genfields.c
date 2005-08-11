@@ -64,16 +64,12 @@ int main(int argc,char *argv[])
 	centre_dec = deg2rad(strtod(optarg,NULL));
 	break;
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	sprintf(treefname,"%s.skdt",optarg);
+	treefname = mk_streefn(optarg);
 	break;
       case 'o':
-	listfname = malloc(strlen(optarg)+6);
-	pix0fname = malloc(strlen(optarg)+6);
-	pixfname = malloc(strlen(optarg)+6);
-	sprintf(listfname,"%s.ids0",optarg);
-	sprintf(pix0fname,"%s.xyl0",optarg);
-	sprintf(pixfname,"%s.xyls",optarg);
+	listfname = mk_idlistfn(optarg);
+	pix0fname = mk_field0fn(optarg);
+	pixfname = mk_fieldfn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -108,10 +104,8 @@ int main(int argc,char *argv[])
   numFields=1;
   }
 
-  fprintf(stderr,"  Reading star KD tree from ");
-  if(treefname) fprintf(stderr,"%s...",treefname);
-  else fprintf(stderr,"stdin...");  fflush(stderr);
-  fopenin(treefname,treefid); fnfree(treefname);
+  fprintf(stderr,"  Reading star KD tree from %s...",treefname);fflush(stderr);
+  fopenin(treefname,treefid); free_fn(treefname);
   kdtree *starkd=read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
   fclose(treefid);
   if(starkd==NULL) return(1);
@@ -128,9 +122,9 @@ int main(int argc,char *argv[])
   fprintf(stderr,"  Generating %lu fields at scale %g arcmin...\n",
 	  numFields,rad2arcmin(radscale));
   fflush(stderr);
-  fopenout(listfname,listfid); fnfree(listfname);
-  fopenout(pix0fname,pix0fid); fnfree(pix0fname);
-  fopenout(pixfname,pixfid); fnfree(pixfname);
+  fopenout(listfname,listfid); free_fn(listfname);
+  fopenout(pix0fname,pix0fid); free_fn(pix0fname);
+  fopenout(pixfname,pixfid); free_fn(pixfname);
   if(numFields>1)
   numtries=gen_pix(listfid,pix0fid,pixfid,thestars,starkd,aspect,
 		   noise,distractors,dropouts,
@@ -228,7 +222,7 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
       numtries++;
     }
   //if(is_power_of_two(ii))
-  //fprintf(stderr,"  made %lu pix in %lu tries\r",ii,numtries);fflush(stdout);
+  //fprintf(stderr,"  made %lu pix in %lu tries\r",ii,numtries);fflush(stderr);
   }
   
   free_kquery(kq);

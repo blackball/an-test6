@@ -4,12 +4,25 @@
 #include "KD/kdtree.h"
 
 #define FOPEN_ERR -301
-#define fopenout(n,f) {if(n){f = fopen(n,"w"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n);return(FOPEN_ERR);}} else f=stdout;}
-#define fopenin(n,f) {if(n){f = fopen(n,"r"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n);return(FOPEN_ERR);}} else f=stdin;}
-#define fnfree(n) {if(n) free(n);}
-#define fopenoutplus(n,f) {if(n){f = fopen(n,"w+"); if(!f) {fprintf(stderr,"ERROR OPENING FILE %s for writing+.\n",n);return(FOPEN_ERR);}} else f=stdout;}
-
 #define READ_FAIL -1
+
+#define fopenout(n,f) {if(n){f=fopen(n,"w");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n); return(FOPEN_ERR);}}
+#define fopenin(n,f)  {if(n){f=fopen(n,"r");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n); return(FOPEN_ERR);}}
+#define free_fn(n) {if(n) free(n);}
+
+#define mk_catfn(s)    mk_filename(s,".objs")
+#define mk_streefn(s)  mk_filename(s,".skdt")
+#define mk_ctreefn(s)  mk_filename(s,".ckdt")
+#define mk_quadfn(s)   mk_filename(s,".quad")
+#define mk_quad0fn(s)  mk_filename(s,".quad_")
+#define mk_codefn(s)   mk_filename(s,".code")
+#define mk_code0fn(s)  mk_filename(s,".code_")
+#define mk_qidxfn(s)   mk_filename(s,".qidx")
+#define mk_hitfn(s)    mk_filename(s,".hits")
+#define mk_fieldfn(s)  mk_filename(s,".xyls")
+#define mk_field0fn(s) mk_filename(s,".xyl0")
+#define mk_idlistfn(s) mk_filename(s,".ids0")
+#define mk_qlistfn(s)  mk_filename(s,".qds0")
 
 #define freadcode(c,f) fread(c->farr,sizeof(double),DIM_CODES,f)
 #define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
@@ -53,6 +66,7 @@ void write_starkd(FILE *treefid, kdtree *starkd,
 		  double ramin, double ramax, double decmin, double decmax);
 void write_codekd(FILE *treefid, kdtree *codekd,double index_scale);
 
+char *mk_filename(const char *basename, const char *extension);
 
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
 		 qidx ***starquads);

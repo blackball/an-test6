@@ -375,6 +375,15 @@ void write_codekd(FILE *treefid, kdtree *codekd,double index_scale)
   return;
 }
 
+char *mk_filename(const char *basename, const char *extension)
+{
+  char *fname;
+  fname = (char *)malloc(strlen(basename)+strlen(extension)+1);
+  sprintf(fname,"%s%s",basename,extension);
+  return fname;
+}
+
+
 
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
 		 qidx ***starquads)

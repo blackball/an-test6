@@ -60,18 +60,13 @@ int main(int argc,char *argv[])
     switch (argchar)
       {
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	quadfname = malloc(strlen(optarg)+6);
-	catfname = malloc(strlen(optarg)+6);
-	sprintf(treefname,"%s.ckdt",optarg);
-	sprintf(quadfname,"%s.quad",optarg);
-	sprintf(catfname,"%s.objs",optarg);
+	treefname = mk_ctreefn(optarg);
+	quadfname = mk_quadfn(optarg);
+	catfname = mk_catfn(optarg);
 	break;
       case 'o':
-	fieldfname = malloc(strlen(optarg)+6);
-	hitfname = malloc(strlen(optarg)+6);
-	sprintf(fieldfname,"%s.xyls",optarg);
-	sprintf(hitfname,"%s.hits",optarg);
+	fieldfname = mk_fieldfn(optarg);
+	hitfname = mk_hitfn(optarg);
 	break;
       case 't':
 	codetol=strtod(optarg,NULL);
@@ -113,17 +108,15 @@ int main(int argc,char *argv[])
 
   if(ParityFlip) fprintf(stderr,"  Flipping parity.\n");
   fprintf(stderr,"  Reading fields...");fflush(stderr);
-  fopenin(fieldfname,fieldfid); fnfree(fieldfname);
+  fopenin(fieldfname,fieldfid); free_fn(fieldfname);
   xyarray *thefields = readxy(fieldfid,ParityFlip);
   fclose(fieldfid);
   if(thefields==NULL) return(1);
   numfields=(qidx)thefields->size;
   fprintf(stderr,"got %lu fields.\n",numfields);
 
-  fprintf(stderr,"  Reading code KD tree from ");
-  if(treefname) fprintf(stderr,"%s...",treefname);
-  else fprintf(stderr,"stdin...");  fflush(stderr);
-  fopenin(treefname,treefid); fnfree(treefname);
+  fprintf(stderr,"  Reading code KD tree from %s...",treefname);fflush(stderr);
+  fopenin(treefname,treefid); free_fn(treefname);
   kdtree *codekd = read_codekd(treefid,&index_scale);
   fclose(treefid);
   if(codekd==NULL) return(2);
@@ -132,13 +125,13 @@ int main(int argc,char *argv[])
 	  kdtree_max_depth(codekd));
   fprintf(stderr,"    (index scale = %lf arcmin)\n",rad2arcmin(index_scale));
 
-  fopenin(quadfname,quadfid); fnfree(quadfname);
+  fopenin(quadfname,quadfid); free_fn(quadfname);
   qASCII=read_quad_header(quadfid,&numquads,&numstars,&Dim_Quads,&index_scale);
   if(qASCII==READ_FAIL) return(3);
   if(qASCII) {sprintf(buff,"%lu",numstars-1); maxstarWidth=strlen(buff);}
   qposmarker=ftello(quadfid);
 
-  fopenin(catfname,catfid); fnfree(catfname);
+  fopenin(catfname,catfid); free_fn(catfname);
   cASCII=read_objs_header(catfid,&numstars,&Dim_Stars,
 			 &ramin,&ramax,&decmin,&decmax);
   if(cASCII==READ_FAIL) return(4);
@@ -148,7 +141,7 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Solving %lu fields (codetol=%lg,matchtol=%lg)...\n",
 	  numfields,codetol,MatchTol);
-  fopenout(hitfname,hitfid); fnfree(hitfname);
+  fopenout(hitfname,hitfid); free_fn(hitfname);
   numsolved=solve_fields(thefields,codekd,codetol);
 		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
