@@ -15,11 +15,6 @@ extern int optind, opterr, optopt;
 #define MATCH_TOL 1.0e-9
 #define MIN_NEARBY 2
 
-#define ABCD_ORDER 0
-#define BACD_ORDER 1
-#define ABDC_ORDER 2
-#define BADC_ORDER 3
-
 qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 		   xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
@@ -27,6 +22,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
 void output_match(MatchObj *mo);
+void output_good_matches(MatchObj *first, ivec *glist);
 ivec *add_transformed_corners(star *sMin, star *sMax, 
 			     qidx thisquad, kdtree **kdt);
 void free_matchlist(MatchObj *first);
@@ -47,7 +43,7 @@ char buff[100],maxstarWidth,oneobjWidth;
 
 kdtree *hitkd=NULL;
 kquery *matchquery;
-ivec *qlist=NULL;
+ivec *qlist=NULL,*goodlist=NULL;
 double MatchTol=MATCH_TOL;
 MatchObj *lastMatch=NULL;
 MatchObj *firstMatch=NULL;
@@ -162,7 +158,7 @@ int main(int argc,char *argv[])
   free_xyarray(thefields); 
   free_kdtree(codekd); 
 
-  basic_am_malloc_report();
+  //basic_am_malloc_report();
   return(0);
 }
 
@@ -175,7 +171,6 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
   qidx numtries,nummatches,numgood,numsolved,numAB,ii,numxy,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double costheta,sintheta,scale,xxtmp;
-  off_t hposmarker;
   xy *thisfield;
   xy *ABCDpix=mk_xy(DIM_QUADS);
   xy *cornerpix=mk_xy(2);
@@ -190,16 +185,14 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     numxy=xy_size(thisfield);
 
     fprintf(hitfid,"--------------------\n");
-    fprintf(hitfid,"field %lu\n",ii);
-    hposmarker=ftello(hitfid);
-
-    if(numxy>=DIM_QUADS) { //if there are<4 objects in field, forget it
-
+    fprintf(hitfid,"field %lu\n",ii); fflush(hitfid);
     find_corners(thisfield,cornerpix);
-
     fprintf(hitfid,"  image corners: %lf,%lf,%lf,%lf\n",
 	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
 	    xy_refx(cornerpix,1),xy_refy(cornerpix,1));
+
+
+    if(numxy>=DIM_QUADS) { //if there are<4 objects in field, forget it
 
     // try ALL POSSIBLE pairs AB with all possible pairs CD
     numAB=0;
@@ -234,22 +227,24 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 		    nummatches+=try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,
 					      iA,iB,iC,iD,kq,codekd,&numgood);
 		  }}}}}}
-fprintf(stderr,"field %lu: done %lu of %lu AB pairs                \r",
+fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
 		ii,++numAB,choose(numxy,2));
       }}
 
     if(numgood==0) {
-      fseeko(hitfid,hposmarker,SEEK_SET); 
       fprintf(hitfid,"No matches.\n");
       numsolved--;
     }
+    else
+      output_good_matches(firstMatch,goodlist);
     }
 
-    fprintf(stderr,"field %lu: tried %lu, codematch %lu, match=%lu\n",
+    fprintf(stderr,"    field %lu: tried %lu, codematch %lu, match=%lu\n",
 	    ii,numtries,nummatches,numgood);
 
     if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
     if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
+    if(goodlist!=NULL) {free_ivec(goodlist); goodlist=NULL;}
     free_matchlist(firstMatch); firstMatch=NULL; lastMatch=NULL;
 
   }
@@ -276,7 +271,6 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   code_set(thequery,2,Dx); code_set(thequery,3,Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
-    //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
     nummatch+=krez->count;
     *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,ABCD_ORDER,
 			      iA,iB,iC,iD); 
@@ -288,7 +282,6 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   code_set(thequery,2,1.0-Dx); code_set(thequery,3,1.0-Dy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
- //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
     nummatch+=krez->count;
     *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,BACD_ORDER,
 			      iB,iA,iC,iD); 
@@ -300,7 +293,6 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   code_set(thequery,2,Cx); code_set(thequery,3,Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
-    //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
     nummatch+=krez->count;
     *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,ABDC_ORDER,
 			      iA,iB,iD,iC);
@@ -312,7 +304,6 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   code_set(thequery,2,1.0-Cx); code_set(thequery,3,1.0-Cy);
   krez = mk_kresult_from_kquery(kq,codekd,thequery);
   if(krez->count) {
- //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
     nummatch+=krez->count;
     *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,BADC_ORDER,
 			      iB,iA,iD,iC); 
@@ -328,7 +319,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD)
 {
-  qidx jj,thisquadno,numgood=0;
+  qidx ii,jj,thisquadno,numgood=0;
   sidx iA,iB,iC,iD;
   double *transform;
   star *sA,*sB,*sC,*sD,*sMin,*sMax;
@@ -337,8 +328,7 @@ qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
   sA=mk_star(); sB=mk_star(); sC=mk_star(); sD=mk_star(); 
 
   for(jj=0;jj<krez->count;jj++) {
-    mo = (MatchObj *)malloc(sizeof(MatchObj));
-    if(mo==NULL) fprintf(stderr,"ERROR (resolve_matches) NULL matchobj ptr\n");
+    mo = mk_MatchObj();
     mo->next=NULL;
     if(firstMatch==NULL) {mo->idx=0; firstMatch=mo;}
     else {mo->idx=(lastMatch->idx)+1; lastMatch->next=mo;}
@@ -349,8 +339,6 @@ qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
     getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
     transform=fit_transform(ABCDpix,order,sA,sB,sC,sD);
     sMin=mk_star(); sMax=mk_star();
-    if(sMin==NULL || sMax==NULL) 
-      fprintf(stderr,"ERROR (resolve_matches) NULL sMin/sMax ptr\n");
     image_to_xyz(xy_refx(cornerpix,0),xy_refy(cornerpix,0),sMin,transform);
     image_to_xyz(xy_refx(cornerpix,1),xy_refy(cornerpix,1),sMax,transform);
 
@@ -359,12 +347,15 @@ qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
     mo->nearlist=NULL;
     mo->sMin=sMin; mo->sMax=sMax;
     mo->fA=fA; mo->fB=fB; mo->fC=fC; mo->fD=fD;
-    //set mo->coderr to dist between query->farr and point corresponding to
-    //           krez->pindexes->iarr[jj]
+    //mo->code_err=0.0;
+    // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
     mo->nearlist = add_transformed_corners(sMin,sMax,thisquadno,&hitkd);
-
     if(mo->nearlist!=NULL && mo->nearlist->size > MIN_NEARBY) {
-      output_match(mo);
+      if(goodlist==NULL)
+	goodlist=mk_copy_ivec(mo->nearlist);
+      else 
+	for(ii=0;ii<mo->nearlist->size;ii++)
+	  add_to_ivec_unique(goodlist,ivec_ref(mo->nearlist,ii));
       numgood++;
     }
 
@@ -420,8 +411,11 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
 void output_match(MatchObj *mo)
 {
   int jj;
-  fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
-	  mo->quadno,mo->iA,mo->iB,mo->iC,mo->iD);
+  fprintf(hitfid,"quad=%lu\n",mo->quadno);
+  fprintf(hitfid,"  starids(ABCD)=%lu,%lu,%lu,%lu\n",
+	  mo->iA,mo->iB,mo->iC,mo->iD);
+  fprintf(hitfid,"  field_objects(ABDC)=%lu,%lu,%lu,%lu\n",
+	  mo->fA,mo->fB,mo->fC,mo->fD);
   fprintf(hitfid,"  min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
 	  star_ref(mo->sMin,0),star_ref(mo->sMin,1),star_ref(mo->sMin,2),
 	  rad2deg(xy2ra(star_ref(mo->sMin,0),star_ref(mo->sMin,1))),
@@ -430,13 +424,25 @@ void output_match(MatchObj *mo)
 	  star_ref(mo->sMax,0),star_ref(mo->sMax,1),star_ref(mo->sMax,2),
 	  rad2deg(xy2ra(star_ref(mo->sMax,0),star_ref(mo->sMax,1))),
 	  rad2deg(z2dec(star_ref(mo->sMax,2))));
+  /*
   fprintf(hitfid,"  matches");
   if(mo->nearlist!=NULL && mo->nearlist->size>MIN_NEARBY)
   for(jj=0;jj<mo->nearlist->size;jj++)
     fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
   fprintf(hitfid,"\n");
+  */
   return;
 
+}
+
+void output_good_matches(MatchObj *first, ivec *glist)
+{
+  while(first!=NULL) {
+    if(is_in_ivec(glist,first->idx))
+      output_match(first);
+    first=first->next;
+  }
+  return;
 }
 
 
@@ -449,7 +455,7 @@ void free_matchlist(MatchObj *first)
     free_star(mo->sMax);
     if(mo->nearlist!=NULL) free_ivec(mo->nearlist);
     tmp=mo->next;
-    free(mo);
+    free_MatchObj(mo);
     mo=tmp;
   }
   return;
