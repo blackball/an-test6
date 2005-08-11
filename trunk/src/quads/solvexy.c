@@ -1,6 +1,7 @@
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
+#include "mathutil.h"
 
 #define OPTIONS "hpf:o:t:m:"
 const char HelpString[]=
@@ -12,6 +13,7 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 #define MATCH_TOL 1.0e-9
+#define MIN_NEARBY 2
 
 #define ABCD_ORDER 0
 #define BACD_ORDER 1
@@ -20,22 +22,19 @@ extern int optind, opterr, optopt;
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd, qidx *numgood);
+		   xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
+		   kquery *kq,kdtree *codekd, qidx *numgood);
 qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
-		     xy *ABCDpix, char order);
-void output_match(sidx iA, sidx iB, sidx iC, sidx iD, 
-		  star *sMin, star *sMax, qidx thisquad, qidx numnear);
-qidx add_transformed_corners(star *sMin, star *sMax, 
+	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
+void output_match(MatchObj *mo);
+ivec *add_transformed_corners(star *sMin, star *sMax, 
 			     qidx thisquad, kdtree **kdt);
+void free_matchlist(MatchObj *first);
 void find_corners(xy *thisfield, xy *cornerpix);
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 		   sidx iA, sidx iB, sidx iC, sidx iD);
-
-void image_to_xyz(double uu, double vv, star *s, double *transform);
-double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D);
-double inverse_3by3(double *matrix);
 
 
 
@@ -45,10 +44,13 @@ FILE *hitfid=NULL,*quadfid=NULL,*catfid=NULL;
 char qASCII,cASCII;
 off_t qposmarker,cposmarker;
 char buff[100],maxstarWidth,oneobjWidth;
+
 kdtree *hitkd=NULL;
+kquery *matchquery;
 ivec *qlist=NULL;
 double MatchTol=MATCH_TOL;
-kquery *matchquery;
+MatchObj *lastMatch=NULL;
+MatchObj *firstMatch=NULL;
 
 int main(int argc,char *argv[])
 {
@@ -148,8 +150,6 @@ int main(int argc,char *argv[])
               oneobjWidth=strlen(buff);}
   cposmarker=ftello(catfid);
 
- matchquery=mk_kquery("rangesearch","",KD_UNDEF,sqrt(MatchTol),DEFAULT_KDRMIN);
-
   fprintf(stderr,"  Solving %lu fields (codetol=%lg,matchtol=%lg)...\n",
 	  numfields,codetol,MatchTol);
   fopenout(hitfname,hitfid); fnfree(hitfname);
@@ -162,7 +162,7 @@ int main(int argc,char *argv[])
   free_xyarray(thefields); 
   free_kdtree(codekd); 
 
-  //basic_am_malloc_report();
+  basic_am_malloc_report();
   return(0);
 }
 
@@ -181,22 +181,23 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
   xy *cornerpix=mk_xy(2);
 
   kquery *kq=mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
+ matchquery=mk_kquery("rangesearch","",KD_UNDEF,sqrt(MatchTol),DEFAULT_KDRMIN);
   numsolved=dyv_array_size(thefields);
 
   for(ii=0;ii<dyv_array_size(thefields);ii++) {
     numtries=0; nummatches=0; numgood=0;
-    if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
-    if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
     thisfield=xya_ref(thefields,ii);
     numxy=xy_size(thisfield);
+
+    fprintf(hitfid,"--------------------\n");
+    fprintf(hitfid,"field %lu\n",ii);
+    hposmarker=ftello(hitfid);
 
     if(numxy>=DIM_QUADS) { //if there are<4 objects in field, forget it
 
     find_corners(thisfield,cornerpix);
 
-    fprintf(hitfid,"--------------------\n");
-    hposmarker=ftello(hitfid);
-    fprintf(hitfid,"field %lu: %lf,%lf,%lf,%lf\n",ii,
+    fprintf(hitfid,"  image corners: %lf,%lf,%lf,%lf\n",
 	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
 	    xy_refx(cornerpix,1),xy_refy(cornerpix,1));
 
@@ -229,37 +230,42 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 		  Dx=Dx*costheta+Dy*sintheta;
 		  Dy=-xxtmp*sintheta+Dy*costheta;
 		  if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) { //D inside box?
-//fprintf(hitfid,"iA:%lu,iB:%lu,iC:%lu,iD:%lu\n",iA,iB,iC,iD);
-		    numtries++; // let's try it!
-		    nummatches+=
-               try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,kq,codekd,&numgood);
+		    numtries++;                   // let's try it!
+		    nummatches+=try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,
+					      iA,iB,iC,iD,kq,codekd,&numgood);
 		  }}}}}}
-	fprintf(stderr,"field %lu: done %lu of %lu AB pairs                \r",
+fprintf(stderr,"field %lu: done %lu of %lu AB pairs                \r",
 		ii,++numAB,choose(numxy,2));
       }}
 
     if(numgood==0) {
       fseeko(hitfid,hposmarker,SEEK_SET); 
-      fprintf(hitfid,"field %lu: no matches\n",ii);
+      fprintf(hitfid,"No matches.\n");
       numsolved--;
     }
     }
 
     fprintf(stderr,"field %lu: tried %lu, codematch %lu, match=%lu\n",
 	    ii,numtries,nummatches,numgood);
+
+    if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
+    if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
+    free_matchlist(firstMatch); firstMatch=NULL; lastMatch=NULL;
+
   }
   
   free_kquery(kq);
+  free_kquery(matchquery);
   free_xy(ABCDpix);
-  if(hitkd!=NULL) free_kdtree(hitkd);
-  if(qlist!=NULL) free_ivec(qlist);
+  free_xy(cornerpix);
 
   return numsolved;
 }
 
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
-		   xy *ABCDpix, kquery *kq,kdtree *codekd, qidx *numgood)
+		   xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
+		   kquery *kq,kdtree *codekd, qidx *numgood)
 {
   kresult *krez;
   code *thequery = mk_code();
@@ -272,7 +278,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   if(krez->count) {
     //fprintf(hitfid,"  abcd code:%lf,%lf,%lf,%lf\n",Cx,Cy,Dx,Dy);
     nummatch+=krez->count;
-    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,ABCD_ORDER); 
+    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,ABCD_ORDER,
+			      iA,iB,iC,iD); 
   }
   free_kresult(krez);
   
@@ -283,7 +290,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   if(krez->count) {
  //fprintf(hitfid,"  bacd code:%lf,%lf,%lf,%lf\n",1.0-Cx,1.0-Cy,1.0-Dx,1.0-Dy);
     nummatch+=krez->count;
-    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,BACD_ORDER); 
+    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,BACD_ORDER,
+			      iB,iA,iC,iD); 
   }
   free_kresult(krez);
   
@@ -294,7 +302,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   if(krez->count) {
     //fprintf(hitfid,"  abdc code:%lf,%lf,%lf,%lf\n",Dx,Dy,Cx,Cy);
     nummatch+=krez->count;
-    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,ABDC_ORDER); 
+    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,ABDC_ORDER,
+			      iA,iB,iD,iC);
   }
   free_kresult(krez);
 
@@ -305,7 +314,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   if(krez->count) {
  //fprintf(hitfid,"  badc code:%lf,%lf,%lf,%lf\n",1.0-Dx,1.0-Dy,1.0-Cx,1.0-Cy);
     nummatch+=krez->count;
-    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,BADC_ORDER); 
+    *numgood+=resolve_matches(cornerpix,krez,thequery,ABCDpix,BADC_ORDER,
+			      iB,iA,iD,iC); 
   }
   free_kresult(krez);
 
@@ -316,72 +326,66 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 
 
 qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
-		     xy *ABCDpix, char order)
+	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD)
 {
-  qidx jj,thisquad,numgood=0,numnear;
+  qidx jj,thisquadno,numgood=0;
   sidx iA,iB,iC,iD;
   double *transform;
   star *sA,*sB,*sC,*sD,*sMin,*sMax;
+  MatchObj *mo;
 
   sA=mk_star(); sB=mk_star(); sC=mk_star(); sD=mk_star(); 
-  sMin=mk_star(); sMax=mk_star();
 
   for(jj=0;jj<krez->count;jj++) {
-    //error between query->farr and point corresponding to
-    //           krez->pindexes->iarr[jj]
-    thisquad = (qidx)krez->pindexes->iarr[jj];
+    mo = (MatchObj *)malloc(sizeof(MatchObj));
+    if(mo==NULL) fprintf(stderr,"ERROR (resolve_matches) NULL matchobj ptr\n");
+    mo->next=NULL;
+    if(firstMatch==NULL) {mo->idx=0; firstMatch=mo;}
+    else {mo->idx=(lastMatch->idx)+1; lastMatch->next=mo;}
+    lastMatch=mo;
 
-    //fprintf(stdout,"resolving quad %lu\n",thisquad);
-  
-    getquadids(thisquad,&iA,&iB,&iC,&iD);
+    thisquadno = (qidx)krez->pindexes->iarr[jj];
+    getquadids(thisquadno,&iA,&iB,&iC,&iD);
     getstarcoords(sA,sB,sC,sD,iA,iB,iC,iD);
-
     transform=fit_transform(ABCDpix,order,sA,sB,sC,sD);
-
+    sMin=mk_star(); sMax=mk_star();
+    if(sMin==NULL || sMax==NULL) 
+      fprintf(stderr,"ERROR (resolve_matches) NULL sMin/sMax ptr\n");
     image_to_xyz(xy_refx(cornerpix,0),xy_refy(cornerpix,0),sMin,transform);
     image_to_xyz(xy_refx(cornerpix,1),xy_refy(cornerpix,1),sMax,transform);
 
-    numnear = add_transformed_corners(sMin,sMax,thisquad,&hitkd);
+    mo->quadno=thisquadno;
+    mo->iA=iA; mo->iB=iB; mo->iC=iC; mo->iD=iD;
+    mo->nearlist=NULL;
+    mo->sMin=sMin; mo->sMax=sMax;
+    mo->fA=fA; mo->fB=fB; mo->fC=fC; mo->fD=fD;
+    //set mo->coderr to dist between query->farr and point corresponding to
+    //           krez->pindexes->iarr[jj]
+    mo->nearlist = add_transformed_corners(sMin,sMax,thisquadno,&hitkd);
 
-    if(numnear > 2) {
-      output_match(iA,iB,iC,iD,sMin,sMax,thisquad,numnear);
+    if(mo->nearlist!=NULL && mo->nearlist->size > MIN_NEARBY) {
+      output_match(mo);
       numgood++;
     }
 
     free(transform); 
+    //free_star(sMin); free_star(sMax); // will be freed with MatchObj
+  
     
   }
 
   free_star(sA);free_star(sB);free_star(sC);free_star(sD);
-  free_star(sMin); free_star(sMax);
-  
   return(numgood);
 }
 
-void output_match(sidx iA, sidx iB, sidx iC, sidx iD, 
-		  star *sMin, star *sMax, qidx thisquad, qidx numnear)
-{
-      fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu, numnear=%lu\n",
-    	       thisquad,iA,iB,iC,iD,numnear);
-      fprintf(hitfid,"  min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	      star_ref(sMin,0),star_ref(sMin,1),star_ref(sMin,2),
-	      rad2deg(xy2ra(star_ref(sMin,0),star_ref(sMin,1))),
-	      rad2deg(z2dec(star_ref(sMin,2))));
-      fprintf(hitfid,"  max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	      star_ref(sMax,0),star_ref(sMax,1),star_ref(sMax,2),
-	      rad2deg(xy2ra(star_ref(sMax,0),star_ref(sMax,1))),
-	      rad2deg(z2dec(star_ref(sMax,2))));
-      return;
-}
-
-qidx add_transformed_corners(star *sMin, star *sMax, 
+ivec *add_transformed_corners(star *sMin, star *sMax, 
 			     qidx thisquad, kdtree **kdt)
 {
   double dist_sq;
   dyv *hitdyv;
   int tmpmatch;
-  qidx numnear=0,whichmatch;
   kresult *kr;
+  ivec *nearlist=NULL;
 
   hitdyv=mk_dyv(2*DIM_STARS);
   dyv_set(hitdyv,0,star_ref(sMin,0));
@@ -400,17 +404,55 @@ qidx add_transformed_corners(star *sMin, star *sMax,
   }
   else {
     dist_sq=add_point_to_kdtree_dsq(*kdt,hitdyv,&tmpmatch);
-    add_to_ivec(qlist,thisquad);
-    whichmatch = (qidx)ivec_ref(qlist,tmpmatch);
-    if((dist_sq<MatchTol) || (whichmatch!=thisquad)) {
+    add_to_ivec(qlist,(int)thisquad);
+    if((dist_sq<MatchTol) || ((qidx)ivec_ref(qlist,tmpmatch)!=thisquad)) {
         kr=mk_kresult_from_kquery(matchquery,hitkd,hitdyv);
-	numnear=kr->count;
+	nearlist=mk_copy_ivec(kr->pindexes);
 	free_kresult(kr);
     }
   }
 
   free_dyv(hitdyv);
-  return(numnear);
+  return(nearlist);
+}
+
+
+void output_match(MatchObj *mo)
+{
+  int jj;
+  fprintf(hitfid,"quad=%lu, starids(ABCD)=%lu,%lu,%lu,%lu\n",
+	  mo->quadno,mo->iA,mo->iB,mo->iC,mo->iD);
+  fprintf(hitfid,"  min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	  star_ref(mo->sMin,0),star_ref(mo->sMin,1),star_ref(mo->sMin,2),
+	  rad2deg(xy2ra(star_ref(mo->sMin,0),star_ref(mo->sMin,1))),
+	  rad2deg(z2dec(star_ref(mo->sMin,2))));
+  fprintf(hitfid,"  max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	  star_ref(mo->sMax,0),star_ref(mo->sMax,1),star_ref(mo->sMax,2),
+	  rad2deg(xy2ra(star_ref(mo->sMax,0),star_ref(mo->sMax,1))),
+	  rad2deg(z2dec(star_ref(mo->sMax,2))));
+  fprintf(hitfid,"  matches");
+  if(mo->nearlist!=NULL && mo->nearlist->size>MIN_NEARBY)
+  for(jj=0;jj<mo->nearlist->size;jj++)
+    fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
+  fprintf(hitfid,"\n");
+  return;
+
+}
+
+
+void free_matchlist(MatchObj *first)
+{
+  MatchObj *mo,*tmp;
+  mo=first;
+  while(mo!=NULL) {
+    free_star(mo->sMin);
+    free_star(mo->sMax);
+    if(mo->nearlist!=NULL) free_ivec(mo->nearlist);
+    tmp=mo->next;
+    free(mo);
+    mo=tmp;
+  }
+  return;
 }
 
 
@@ -438,159 +480,6 @@ void find_corners(xy *thisfield, xy *cornerpix)
 
 }
 
-
-
-void image_to_xyz(double uu, double vv, star *s, double *transform)
-{
-  double length;
-  if(s==NULL || transform==NULL) return;
-  star_set(s,0,uu*(*(transform+0)) + 
-                  vv*(*(transform+1)) + *(transform+2));
-  star_set(s,1,uu*(*(transform+3)) + 
-                  vv*(*(transform+4)) + *(transform+5));
-  star_set(s,2,uu*(*(transform+6)) + 
-                  vv*(*(transform+7)) + *(transform+8));
-  length=sqrt(star_ref(s,0)*star_ref(s,0)+star_ref(s,1)*star_ref(s,1)+
-	      star_ref(s,2)*star_ref(s,2));
-  star_set(s,0,star_ref(s,0)/length);
-  star_set(s,1,star_ref(s,1)/length);
-  star_set(s,2,star_ref(s,2)/length);
-  return;
-}
-
-
-double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
-{
-  double det,uu,uv,vv,sumu,sumv;
-  char oA=0,oB=1,oC=2,oD=3;
-  double Au,Av,Bu,Bv,Cu,Cv,Du,Dv;
-  double *matQ = (double *)malloc(9*sizeof(double));
-  double *matR = (double *)malloc(12*sizeof(double));
-  if(matQ==NULL || matR==NULL) {
-    if(matQ) free(matQ);
-    if(matR) free(matR);
-    fprintf(stderr,"ERROR (solvey) == memory error in fit_transform\n");
-    return(NULL);
-  }
-
-  if(order==ABCD_ORDER) {oA=0; oB=1; oC=2; oD=3;}
-  if(order==BACD_ORDER) {oA=1; oB=0; oC=2; oD=3;}
-  if(order==ABDC_ORDER) {oA=0; oB=1; oC=3; oD=2;}
-  if(order==BADC_ORDER) {oA=1; oB=0; oC=3; oD=2;}
-
-  // image plane coordinates of A,B,C,D
-  Au=xy_refx(ABCDpix,oA); Av=xy_refy(ABCDpix,oA);
-  Bu=xy_refx(ABCDpix,oB); Bv=xy_refy(ABCDpix,oB);
-  Cu=xy_refx(ABCDpix,oC); Cv=xy_refy(ABCDpix,oC);
-  Du=xy_refx(ABCDpix,oD); Dv=xy_refy(ABCDpix,oD);
-
-  //fprintf(stderr,"Image ABCD = (%lf,%lf) (%lf,%lf) (%lf,%lf) (%lf,%lf)\n",
-  //  	    Au,Av,Bu,Bv,Cu,Cv,Du,Dv);
-
-  // define M to be the 3x4 matrix [Au,Bu,Cu,Du;ones(1,4)]
-  // define X to be the 3x4 matrix [Ax,Bx,Cx,Dx;Ay,By,Cy,Dy;Az,Bz,Cz,Dz]
-
-  // set Q to be the 3x3 matrix  M*M'
-  uu = Au*Au + Bu*Bu + Cu*Cu + Du*Du;
-  uv = Au*Av + Bu*Bv + Cu*Cv + Du*Dv;
-  vv = Av*Av + Bv*Bv + Cv*Cv + Dv*Dv;
-  sumu = Au+Bu+Cu+Du;  sumv = Av+Bv+Cv+Dv;
-  *(matQ+0)=uu;   *(matQ+1)=uv;   *(matQ+2)=sumu;
-  *(matQ+3)=uv;   *(matQ+4)=vv;   *(matQ+5)=sumv;
-  *(matQ+6)=sumu; *(matQ+7)=sumv; *(matQ+8)=4.0;
-
-  // take the inverse of Q in-place, so Q=inv(M*M')
-  det = inverse_3by3(matQ);
-
-  //fprintf(stderr,"det=%.12g\n",det);
-  if(det<0) fprintf(stderr,"WARNING (fit_transform) -- determinant<0\n");
-
-  if(det==0.0) {
-    fprintf(stderr,"ERROR (fit_transform) -- determinant zero\n");
-    if(matQ) free(matQ); if(matR) free(matR); return(NULL); }
-
-  // set R to be the 4x3 matrix M'*inv(M*M')=M'*Q
-  *(matR+0) = *(matQ+0)*Au + *(matQ+3)*Av + *(matQ+6);
-  *(matR+1) = *(matQ+1)*Au + *(matQ+4)*Av + *(matQ+7);
-  *(matR+2) = *(matQ+2)*Au + *(matQ+5)*Av + *(matQ+8);
-  *(matR+3) = *(matQ+0)*Bu + *(matQ+3)*Bv + *(matQ+6);
-  *(matR+4) = *(matQ+1)*Bu + *(matQ+4)*Bv + *(matQ+7);
-  *(matR+5) = *(matQ+2)*Bu + *(matQ+5)*Bv + *(matQ+8);
-  *(matR+6) = *(matQ+0)*Cu + *(matQ+3)*Cv + *(matQ+6);
-  *(matR+7) = *(matQ+1)*Cu + *(matQ+4)*Cv + *(matQ+7);
-  *(matR+8) = *(matQ+2)*Cu + *(matQ+5)*Cv + *(matQ+8);
-  *(matR+9) = *(matQ+0)*Du + *(matQ+3)*Dv + *(matQ+6);
-  *(matR+10)= *(matQ+1)*Du + *(matQ+4)*Dv + *(matQ+7);
-  *(matR+11)= *(matQ+2)*Du + *(matQ+5)*Dv + *(matQ+8);
-
-  // set Q to be the 3x3 matrix X*R
-
-  *(matQ+0) = star_ref(A,0)*(*(matR+0)) + star_ref(B,0)*(*(matR+3)) +
-              star_ref(C,0)*(*(matR+6)) + star_ref(D,0)*(*(matR+9));
-  *(matQ+1) = star_ref(A,0)*(*(matR+1)) + star_ref(B,0)*(*(matR+4)) +
-              star_ref(C,0)*(*(matR+7)) + star_ref(D,0)*(*(matR+10));
-  *(matQ+2) = star_ref(A,0)*(*(matR+2)) + star_ref(B,0)*(*(matR+5)) +
-              star_ref(C,0)*(*(matR+8)) + star_ref(D,0)*(*(matR+11));
-
-  *(matQ+3) = star_ref(A,1)*(*(matR+0)) + star_ref(B,1)*(*(matR+3)) +
-              star_ref(C,1)*(*(matR+6)) + star_ref(D,1)*(*(matR+9));
-  *(matQ+4) = star_ref(A,1)*(*(matR+1)) + star_ref(B,1)*(*(matR+4)) +
-              star_ref(C,1)*(*(matR+7)) + star_ref(D,1)*(*(matR+10));
-  *(matQ+5) = star_ref(A,1)*(*(matR+2)) + star_ref(B,1)*(*(matR+5)) +
-              star_ref(C,1)*(*(matR+8)) + star_ref(D,1)*(*(matR+11));
-
-  *(matQ+6) = star_ref(A,2)*(*(matR+0)) + star_ref(B,2)*(*(matR+3)) +
-              star_ref(C,2)*(*(matR+6)) + star_ref(D,2)*(*(matR+9));
-  *(matQ+7) = star_ref(A,2)*(*(matR+1)) + star_ref(B,2)*(*(matR+4)) +
-              star_ref(C,2)*(*(matR+7)) + star_ref(D,2)*(*(matR+10));
-  *(matQ+8) = star_ref(A,2)*(*(matR+2)) + star_ref(B,2)*(*(matR+5)) +
-              star_ref(C,2)*(*(matR+8)) + star_ref(D,2)*(*(matR+11));
-
-  free(matR);
-
-  return(matQ);
-  
-}
-
-double inverse_3by3(double *matrix)
-{
-  double det;
-  double a11,a12,a13,a21,a22,a23,a31,a32,a33;
-  double b11,b12,b13,b21,b22,b23,b31,b32,b33;
-
-  a11=*(matrix+0); a12=*(matrix+1); a13=*(matrix+2);
-  a21=*(matrix+3); a22=*(matrix+4); a23=*(matrix+5);
-  a31=*(matrix+6); a32=*(matrix+7); a33=*(matrix+8);
-
-  det = a11 * ( a22 * a33 - a23 * a32 ) +
-        a12 * ( a23 * a31 - a21 * a33 ) +
-        a13 * ( a21 * a32 - a22 * a31 );
-
-  if(det!=0) {
-
-    b11 = + ( a22 * a33 - a23 * a32 ) / det;
-    b12 = - ( a12 * a33 - a13 * a32 ) / det;
-    b13 = + ( a12 * a23 - a13 * a22 ) / det;
-
-    b21 = - ( a21 * a33 - a23 * a31 ) / det;
-    b22 = + ( a11 * a33 - a13 * a31 ) / det;
-    b23 = - ( a11 * a23 - a13 * a21 ) / det;
-
-    b31 = + ( a21 * a32 - a22 * a31 ) / det;
-    b32 = - ( a11 * a32 - a12 * a31 ) / det;
-    b33 = + ( a11 * a22 - a12 * a21 ) / det;
-
-    *(matrix+0)=b11; *(matrix+1)=b12; *(matrix+2)=b13;
-    *(matrix+3)=b21; *(matrix+4)=b22; *(matrix+5)=b23;
-    *(matrix+6)=b31; *(matrix+7)=b32; *(matrix+8)=b33;
-
-  }
-
-  //fprintf(stderr,"transform determinant = %g\n",det);
-
-  return(det);
-
-}
 
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)

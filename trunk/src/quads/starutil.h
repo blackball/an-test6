@@ -92,13 +92,24 @@ typedef dyv_array xyarray;
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x)))
 #define z2dec(z) (asin(z))
 
+typedef struct match_struct
+{
+  qidx quadno;
+  sidx iA,iB,iC,iD;
+  qidx idx;
+  star *sMin,*sMax;
+  sidx fA,fB,fC,fD;
+  double coderrr;
+  ivec *nearlist;
+  struct match_struct *next;
+} MatchObj;
+
+
 star *make_rand_star(double ramin, double ramax, 
 		     double decmin, double decmax);
 
 void star_coords(star *s,star *r,double *x,double *y);
 void star_midpoint(star *M,star *A,star *B);
-
-unsigned long int choose(unsigned int nn,unsigned int mm);
 
 #define HELP_ERR -101
 #define OPT_ERR -201
