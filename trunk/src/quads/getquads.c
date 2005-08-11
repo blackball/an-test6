@@ -56,12 +56,9 @@ int main(int argc,char *argv[])
 	maxQuads = strtoul(optarg,NULL,0);
 	break;
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	quadfname = malloc(strlen(optarg)+7);
-	codefname = malloc(strlen(optarg)+7);
-	sprintf(treefname,"%s.skdt",optarg);
-	sprintf(quadfname,"%s.quad0",optarg);
-	sprintf(codefname,"%s.code0",optarg);
+	treefname = mk_streefn(optarg);
+	quadfname = mk_quad0fn(optarg);
+	codefname = mk_code0fn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -89,10 +86,8 @@ int main(int argc,char *argv[])
   fprintf(stderr,"getquads: finding %lu quads in %s [RANDSEED=%d]\n",
 	  maxQuads,treefname,RANDSEED);
 
-  fprintf(stderr,"  Reading star KD tree from ");
-  if(treefname) fprintf(stderr,"%s...",treefname);
-  else fprintf(stderr,"stdin...");  fflush(stderr);
-  fopenin(treefname,treefid); fnfree(treefname);
+  fprintf(stderr,"  Reading star KD tree from %s...",treefname);fflush(stderr);
+  fopenin(treefname,treefid); free_fn(treefname);
   kdtree *starkd=read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
   fclose(treefid);
   if(starkd==NULL) return(2);
@@ -108,8 +103,8 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Finding %lu quads at scale %g arcmin...(be patient)\n",
 	  maxQuads,rad2arcmin(index_scale)); fflush(stderr);
-  fopenout(quadfname,quadfid); fnfree(quadfname);
-  fopenout(codefname,codefid); fnfree(codefname);
+  fopenout(quadfname,quadfid); free_fn(quadfname);
+  fopenout(codefname,codefid); free_fn(codefname);
   numfound=get_quads(quadfid,codefid,ASCII,thestars,starkd,index_scale,
 		     ramin,ramax,decmin,decmax,maxQuads,&numtries);
   fclose(quadfid); fclose(codefid);
@@ -213,7 +208,7 @@ qidx get_quads(FILE *quadfid,FILE *codefid, char ASCII,
     } // while(still_not_done)
     if(is_power_of_two(numfound)) {
      fprintf(stderr,"  got %lu codes in %lu tries\r",numfound,*numtries);
-     fflush(stdout);
+     fflush(stderr);
     }
   }
   

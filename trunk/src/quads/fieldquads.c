@@ -11,7 +11,7 @@ extern int optind, opterr, optopt;
 void find_fieldquads(FILE *qlistfid, quadarray *thepids, sidx numstars,
 		     sidx *starlist, qidx *starnumq, qidx **starquads);
 
-char *pixfname=NULL;
+char *idsfname=NULL;
 char *qidxfname=NULL;
 char *qlistfname=NULL;
 
@@ -25,14 +25,11 @@ int main(int argc,char *argv[])
     switch (argchar)
       {
       case 'f':
-	qidxfname = malloc(strlen(optarg)+6);
-	sprintf(qidxfname,"%s.qidx",optarg);
+	qidxfname = mk_qidxfn(optarg);
 	break;
       case 'o':
-	pixfname = malloc(strlen(optarg)+6);
-	qlistfname = malloc(strlen(optarg)+6);
-	sprintf(pixfname,"%s.ids0",optarg);
-	sprintf(qlistfname,"%s.qds0",optarg);
+	idsfname = mk_idlistfn(optarg);
+	qlistfname = mk_qlistfn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -50,25 +47,25 @@ int main(int argc,char *argv[])
     return(OPT_ERR);
   }
 
-  qidx numpix;
+  qidx numfields;
   sidx ii,numstars;
-  FILE *pixfid=NULL,*qidxfid=NULL,*qlistfid=NULL;
+  FILE *idsfid=NULL,*qidxfid=NULL,*qlistfid=NULL;
   sidx *starlist;
   qidx *starnumq;
   qidx **starquads;
 
   fprintf(stderr,"fieldquads: finding quads from %s appearing in %s\n",
-	  qidxfname,pixfname);
+	  qidxfname,idsfname);
 
   fprintf(stderr,"  Reading star ids...");fflush(stderr);
-  fopenin(pixfname,pixfid); fnfree(pixfname);
-  quadarray *thepids = readidlist(pixfid,&numpix);
-  fclose(pixfid);
+  fopenin(idsfname,idsfid); free_fn(idsfname);
+  quadarray *thepids = readidlist(idsfid,&numfields);
+  fclose(idsfid);
   if(thepids==NULL) return(1);
-  fprintf(stderr,"processed %lu fields.\n",numpix);
+  fprintf(stderr,"processed %lu fields.\n",numfields);
 
   fprintf(stderr,"  Reading quad index...");fflush(stderr);
-  fopenin(qidxfname,qidxfid); fnfree(qidxfname);
+  fopenin(qidxfname,qidxfid); free_fn(qidxfname);
   numstars=readquadidx(qidxfid,&starlist,&starnumq,&starquads);
   fclose(qidxfid);
   if(numstars==0) {
@@ -76,7 +73,7 @@ int main(int argc,char *argv[])
   fprintf(stderr,"got %lu star ids.\n",numstars);
 
   fprintf(stderr,"  Finding quads in fields...");fflush(stderr);
-  fopenout(qlistfname,qlistfid); fnfree(qlistfname);
+  fopenout(qlistfname,qlistfid); free_fn(qlistfname);
   find_fieldquads(qlistfid,thepids,numstars,starlist,starnumq,starquads);
   fclose(qlistfid);
   fprintf(stderr,"done.\n");

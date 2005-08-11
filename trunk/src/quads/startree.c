@@ -29,10 +29,8 @@ int main(int argc,char *argv[])
 	kd_Rmin = (int)strtoul(optarg,NULL,0);
 	break;
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	catfname = malloc(strlen(optarg)+6);
-	sprintf(treefname,"%s.skdt",optarg);
-	sprintf(catfname,"%s.objs",optarg);
+	treefname = mk_streefn(optarg);
+	catfname = mk_catfn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -59,7 +57,7 @@ int main(int argc,char *argv[])
 
 
   fprintf(stderr,"  Reading star catalogue...");fflush(stderr);
-  fopenin(catfname,catfid); fnfree(catfname);
+  fopenin(catfname,catfid); free_fn(catfname);
   stararray *thestars = readcat(catfid,&numstars,&Dim_Stars,
 				&ramin,&ramax,&decmin,&decmax);
   fclose(catfid);
@@ -75,11 +73,8 @@ int main(int argc,char *argv[])
   fprintf(stderr,"done (%d nodes, depth %d).\n",
 	  starkd->num_nodes,starkd->max_depth);
 
-  fprintf(stderr,"  Writing star KD tree to ");
-  if(treefname) fprintf(stderr,"%s...",treefname); 
-  else fprintf(stderr,"stdout..."); 
-  fflush(stderr);
-  fopenout(treefname,treefid); fnfree(treefname);
+  fprintf(stderr,"  Writing star KD tree to %s...",treefname); fflush(stderr);
+  fopenout(treefname,treefid); free_fn(treefname);
   write_starkd(treefid,starkd,ramin,ramax,decmin,decmax);
   fprintf(stderr,"done.\n");
   fclose(treefid);

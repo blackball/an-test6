@@ -34,8 +34,7 @@ int main(int argc,char *argv[])
 	dtolset=1;
 	break;
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	sprintf(treefname,"%s.ckdt",optarg);
+	treefname = mk_ctreefn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -60,7 +59,7 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"findcode: getting codes from %s\n",treefname);
   fprintf(stderr,"  Reading code KD tree...");  fflush(stderr);
-  fopenin(treefname,treefid); fnfree(treefname);
+  fopenin(treefname,treefid); free_fn(treefname);
   kdtree *codekd = read_codekd(treefid,&index_scale);
   fclose(treefid);
   if(codekd==NULL) return(2);

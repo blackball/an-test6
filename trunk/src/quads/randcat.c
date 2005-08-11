@@ -53,8 +53,7 @@ int main(int argc,char *argv[])
 	decmax = strtod(optarg,NULL);
 	break;
       case 'f':
-	fname = malloc(strlen(optarg)+6);
-	sprintf(fname,"%s.objs",optarg);
+	fname = mk_catfn(optarg);
 	break;
       case '?':
 	fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -94,7 +93,7 @@ int main(int argc,char *argv[])
   star *thestar;
   FILE *fid=NULL;
 
-  fopenout(fname,fid); fnfree(fname);
+  fopenout(fname,fid); free_fn(fname);
 
   write_objs_header(fid,ASCII,numstars,DIM_STARS,ramin,ramax,decmin,decmax);
   

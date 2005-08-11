@@ -26,12 +26,9 @@ int main(int argc,char *argv[])
     switch (argchar)
       {
       case 'f':
-	qidxfname = malloc(strlen(optarg)+6);
-	quadfname = malloc(strlen(optarg)+6);
-	codefname = malloc(strlen(optarg)+6);
-	sprintf(qidxfname,"%s.qidx",optarg);
-	sprintf(quadfname,"%s.quad",optarg);
-	sprintf(codefname,"%s.code",optarg);
+	qidxfname = mk_qidxfn(optarg);
+	quadfname = mk_quadfn(optarg);
+	codefname = mk_codefn(optarg);
 	break;
       case 'i':
 	thestar = strtoul(optarg,NULL,0);
@@ -70,12 +67,12 @@ int main(int argc,char *argv[])
   fprintf(stderr,"findquad: looking up quads in %s\n",qidxfname);
 
   if(starset==FALSE) {
-    fprintf(stderr,"  Reading code/quad files...");fflush(stderr);
+    fprintf(stderr,"  Reading code/quad files...\n");fflush(stderr);
     fopenin(quadfname,quadfid);
     qASCII = read_quad_header(quadfid, 
 			      &numquads, &numstars, &DimQuads, &index_scale);
     if(qASCII==READ_FAIL) return(1);
-    fprintf(stderr,"  (%lu quads, %lu total stars, scale=%f arcmin)\n",
+    fprintf(stderr,"    (%lu quads, %lu total stars, scale=%f arcmin)\n",
 	    numquads,numstars,rad2arcmin(index_scale));
     if(quadset==TRUE) {
       if(qASCII){sprintf(buff,"%lu",numstars-1);maxstarWidth=strlen(buff);}
@@ -142,9 +139,9 @@ int main(int argc,char *argv[])
     free(starlist);
   }
 
-  fnfree(codefname);
-  fnfree(qidxfname);
-  fnfree(quadfname);
+  free_fn(codefname);
+  free_fn(quadfname);
+  free_fn(qidxfname);
   //basic_am_malloc_report();
   return(0);
 }

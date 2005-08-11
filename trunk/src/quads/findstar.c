@@ -5,7 +5,7 @@
 
 #define OPTIONS "hf:ixrt:k:"
 const char HelpString[]=
-//"findstar -f fname [-t dist | -k kNN] {-i idx | -x x y z | -r RA DEC}  OR\n"
+"findstar -f fname [-t dist | -k kNN] {-i idx | -x x y z | -r RA DEC}  OR\n"
 "findstar -f fname [-t dist | -k kNN] {-i | -x | -r} then read stdin\n";
 
 extern char *optarg;
@@ -52,10 +52,8 @@ int main(int argc,char *argv[])
 	radecset=1; whichset=0; xyzset=0;
 	break;
       case 'f':
-	treefname = malloc(strlen(optarg)+6);
-	catfname = malloc(strlen(optarg)+6);
-	sprintf(treefname,"%s.skdt",optarg);
-	sprintf(catfname,"%s.objs",optarg);
+	treefname = mk_streefn(optarg);
+	catfname = mk_catfn(optarg);
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -81,7 +79,7 @@ int main(int argc,char *argv[])
   if(whichset && kset && (K==0)) {
     dimension DimStars;
     fprintf(stderr,"findstar: getting stars from %s\n",catfname);
-    fopenin(catfname,catfid); fnfree(catfname);
+    fopenin(catfname,catfid); free_fn(catfname);
     cASCII = read_objs_header(catfid,&numstars,&DimStars,
 			      &ramin,&ramax,&decmin,&decmax);
     if(cASCII==READ_FAIL) return(1);
@@ -94,7 +92,7 @@ int main(int argc,char *argv[])
   else {
     fprintf(stderr,"findstar: getting stars from %s\n",treefname);
     fprintf(stderr,"  Reading star KD tree...");  fflush(stderr);
-    fopenin(treefname,treefid); fnfree(treefname);
+    fopenin(treefname,treefid); free_fn(treefname);
     starkd=read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
     fclose(treefid);
     if(starkd==NULL) return(2);
@@ -120,7 +118,7 @@ int main(int argc,char *argv[])
   else if(dtolset)
     kq = mk_kquery("rangesearch","",KD_UNDEF,dtol,starkd->rmin);
 
-  fprintf(stderr,"optind=%d,argc=%d\n",optind,argc);
+  //fprintf(stderr,"optind=%d,argc=%d\n",optind,argc);
 
   if(optind<argc){
     argidx=optind;
