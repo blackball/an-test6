@@ -22,7 +22,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
 void output_match(MatchObj *mo);
-void output_good_matches(MatchObj *first, ivec *glist);
+void output_good_matches(MatchObj *first, int nummatches);
 ivec *add_transformed_corners(star *sMin, star *sMax, 
 			     qidx thisquad, kdtree **kdt);
 void free_matchlist(MatchObj *first);
@@ -43,7 +43,7 @@ char buff[100],maxstarWidth,oneobjWidth;
 
 kdtree *hitkd=NULL;
 kquery *matchquery;
-ivec *qlist=NULL,*goodlist=NULL;
+ivec *qlist=NULL;
 double MatchTol=MATCH_TOL;
 MatchObj *lastMatch=NULL;
 MatchObj *firstMatch=NULL;
@@ -158,7 +158,7 @@ int main(int argc,char *argv[])
   free_xyarray(thefields); 
   free_kdtree(codekd); 
 
-  //basic_am_malloc_report();
+  basic_am_malloc_report();
   return(0);
 }
 
@@ -236,15 +236,15 @@ fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
       numsolved--;
     }
     else
-      output_good_matches(firstMatch,goodlist);
+      output_good_matches(firstMatch,lastMatch->idx);
     }
 
-    fprintf(stderr,"    field %lu: tried %lu, codematch %lu, match=%lu\n",
-	    ii,numtries,nummatches,numgood);
+    fprintf(stderr,"    field %lu: tried %lu quads, matched %lu codes, "
+	           "resolved %lu\n", ii,numtries,nummatches,numgood);
 
     if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
     if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
-    if(goodlist!=NULL) {free_ivec(goodlist); goodlist=NULL;}
+    //if(goodlist!=NULL) {free_ivec(goodlist); goodlist=NULL;}
     free_matchlist(firstMatch); firstMatch=NULL; lastMatch=NULL;
 
   }
@@ -319,7 +319,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD)
 {
-  qidx ii,jj,thisquadno,numgood=0;
+  qidx jj,thisquadno,numgood=0;
   sidx iA,iB,iC,iD;
   double *transform;
   star *sA,*sB,*sC,*sD,*sMin,*sMax;
@@ -351,11 +351,11 @@ qidx resolve_matches(xy *cornerpix, kresult *krez, code *query,
     // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
     mo->nearlist = add_transformed_corners(sMin,sMax,thisquadno,&hitkd);
     if(mo->nearlist!=NULL && mo->nearlist->size > MIN_NEARBY) {
-      if(goodlist==NULL)
-	goodlist=mk_copy_ivec(mo->nearlist);
-      else 
-	for(ii=0;ii<mo->nearlist->size;ii++)
-	  add_to_ivec_unique(goodlist,ivec_ref(mo->nearlist,ii));
+      //if(goodlist==NULL)
+      //	goodlist=mk_copy_ivec(mo->nearlist);
+      //else 
+      //for(ii=0;ii<mo->nearlist->size;ii++)
+      //	  add_to_ivec_unique(goodlist,ivec_ref(mo->nearlist,ii));
       numgood++;
     }
 
@@ -397,7 +397,7 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
     dist_sq=add_point_to_kdtree_dsq(*kdt,hitdyv,&tmpmatch);
     add_to_ivec(qlist,(int)thisquad);
     if((dist_sq<MatchTol) || ((qidx)ivec_ref(qlist,tmpmatch)!=thisquad)) {
-        kr=mk_kresult_from_kquery(matchquery,hitkd,hitdyv);
+        kr=mk_kresult_from_kquery(matchquery,*kdt,hitdyv);
 	nearlist=mk_copy_ivec(kr->pindexes);
 	free_kresult(kr);
     }
@@ -410,38 +410,58 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
 
 void output_match(MatchObj *mo)
 {
-  fprintf(hitfid,"quad=%lu\n",mo->quadno);
-  fprintf(hitfid,"  starids(ABCD)=%lu,%lu,%lu,%lu\n",
-	  mo->iA,mo->iB,mo->iC,mo->iD);
-  fprintf(hitfid,"  field_objects(ABDC)=%lu,%lu,%lu,%lu\n",
-	  mo->fA,mo->fB,mo->fC,mo->fD);
-  fprintf(hitfid,"  min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	  star_ref(mo->sMin,0),star_ref(mo->sMin,1),star_ref(mo->sMin,2),
-	  rad2deg(xy2ra(star_ref(mo->sMin,0),star_ref(mo->sMin,1))),
-	  rad2deg(z2dec(star_ref(mo->sMin,2))));
-  fprintf(hitfid,"  max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-	  star_ref(mo->sMax,0),star_ref(mo->sMax,1),star_ref(mo->sMax,2),
-	  rad2deg(xy2ra(star_ref(mo->sMax,0),star_ref(mo->sMax,1))),
-	  rad2deg(z2dec(star_ref(mo->sMax,2))));
-  /*
-  int jj;
-  fprintf(hitfid,"  matches");
-  if(mo->nearlist!=NULL && mo->nearlist->size>MIN_NEARBY)
-  for(jj=0;jj<mo->nearlist->size;jj++)
-    fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
-  fprintf(hitfid,"\n");
-  */
+  if(mo==NULL)
+    fprintf(hitfid,"No Match.\n");
+  else {
+    fprintf(hitfid,"quad=%lu\n",mo->quadno);
+    fprintf(hitfid,"  starids(ABCD)=%lu,%lu,%lu,%lu\n",
+	    mo->iA,mo->iB,mo->iC,mo->iD);
+    fprintf(hitfid,"  field_objects(ABDC)=%lu,%lu,%lu,%lu\n",
+	    mo->fA,mo->fB,mo->fC,mo->fD);
+    fprintf(hitfid,"  min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	    star_ref(mo->sMin,0),star_ref(mo->sMin,1),star_ref(mo->sMin,2),
+	    rad2deg(xy2ra(star_ref(mo->sMin,0),star_ref(mo->sMin,1))),
+	    rad2deg(z2dec(star_ref(mo->sMin,2))));
+    fprintf(hitfid,"  max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+	    star_ref(mo->sMax,0),star_ref(mo->sMax,1),star_ref(mo->sMax,2),
+	    rad2deg(xy2ra(star_ref(mo->sMax,0),star_ref(mo->sMax,1))),
+	    rad2deg(z2dec(star_ref(mo->sMax,2))));
+    /*
+      int jj;
+      fprintf(hitfid,"  matches");
+      if(mo->nearlist!=NULL && mo->nearlist->size>MIN_NEARBY)
+      for(jj=0;jj<mo->nearlist->size;jj++)
+      fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
+      fprintf(hitfid,"\n");
+    */
+  }
   return;
 
 }
 
-void output_good_matches(MatchObj *first, ivec *glist)
+void output_good_matches(MatchObj *first, int nummatches)
 {
-  while(first!=NULL) {
-    if(is_in_ivec(glist,first->idx))
-      output_match(first);
-    first=first->next;
+  MatchObj *mo,*bestone,**plist;
+  int ii,bestidx,bestnum=0;
+
+  plist=(MatchObj **)malloc(nummatches*sizeof(MatchObj *));
+  mo=first; ii=0; bestone=NULL;
+  while(mo!=NULL) {
+    *(plist+ii)=mo;
+    if(mo->nearlist !=NULL && (mo->nearlist->size)>bestnum)
+      {bestnum=mo->nearlist->size; bestidx=ii; bestone=mo;}
+    mo=mo->next;
+    ii++;
   }
+  if(bestone==NULL) 
+    output_match(NULL);
+  else {
+    for(ii=0;ii<bestnum;ii++)
+      output_match(*(plist+ivec_ref(bestone->nearlist,ii)));
+  }
+
+  free(plist);
+
   return;
 }
 
