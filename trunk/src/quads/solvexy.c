@@ -410,7 +410,6 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
 
 void output_match(MatchObj *mo)
 {
-  int jj;
   fprintf(hitfid,"quad=%lu\n",mo->quadno);
   fprintf(hitfid,"  starids(ABCD)=%lu,%lu,%lu,%lu\n",
 	  mo->iA,mo->iB,mo->iC,mo->iD);
@@ -425,6 +424,7 @@ void output_match(MatchObj *mo)
 	  rad2deg(xy2ra(star_ref(mo->sMax,0),star_ref(mo->sMax,1))),
 	  rad2deg(z2dec(star_ref(mo->sMax,2))));
   /*
+  int jj;
   fprintf(hitfid,"  matches");
   if(mo->nearlist!=NULL && mo->nearlist->size>MIN_NEARBY)
   for(jj=0;jj<mo->nearlist->size;jj++)
