@@ -5,14 +5,14 @@
 
 #define OPTIONS "hpf:o:t:m:"
 const char HelpString[]=
-"solvexy -f fname -o fieldname -m mtol -t tol [-p]\n"
-"  tol == code_tolerance, -p flips parity\n";
+"solvexy -f fname -o fieldname -m agree_tol(arcsec) -t code_tol [-p]\n"
+"   -p flips parity\n";
 
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-#define AGREE_TOL 1.0e-5
+#define AGREE_TOL 1
 //#define MIN_NEARBY 2
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, 
@@ -54,7 +54,7 @@ int main(int argc,char *argv[])
   int argidx,argchar;//  opterr = 0;
   double codetol=-1.0;
   char ParityFlip=0;
-  double AgreeTol=AGREE_TOL;
+  double AgreeTol=arcsec2rad(AGREE_TOL);
 
   if(argc<=3) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
@@ -75,6 +75,7 @@ int main(int argc,char *argv[])
 	break;
       case 'm':
 	AgreeTol=strtod(optarg,NULL);
+	AgreeTol=arcsec2rad(AgreeTol);
 	break;
       case 'p':
 	ParityFlip=1;
@@ -142,8 +143,8 @@ int main(int argc,char *argv[])
   cposmarker=ftello(catfid);
 
   fprintf(stderr,
-	  "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg)...\n",
-	  numfields,codetol,AgreeTol);
+  "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
+	  numfields,codetol,rad2arcsec(AgreeTol));
   fopenout(hitfname,hitfid); free_fn(hitfname);
   numsolved=solve_fields(thefields,codekd,codetol,AgreeTol);
 		     
