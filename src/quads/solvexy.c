@@ -5,17 +5,15 @@
 
 #define OPTIONS "hpf:o:t:m:"
 const char HelpString[]=
-"solvexy -f fname -o fieldname -m agree_tol(arcsec) -t code_tol [-p]\n"
+"solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
 "   -p flips parity\n";
 
+#define DEFAULT_AGREE_TOL 10.0
+#define DEFAULT_CODE_TOL .003
+#define DEFAULT_PARITY_FLIP 0
 
-extern char *optarg;
-extern int optind, opterr, optopt;
 
-#define AGREE_TOL 1.0e-4
-
-qidx solve_fields(xyarray *thefields, kdtree *codekd, 
-		  double codetol,double agreetol);
+qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 		   xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
 		   kquery *kq,kdtree *codekd);
@@ -46,15 +44,19 @@ kquery *nearquery;
 ivec *qlist=NULL;
 MatchObj *lastMatch=NULL;
 MatchObj *firstMatch=NULL;
-double AgreeTol=arcsec2rad(AGREE_TOL);
+double AgreeArcSec=DEFAULT_AGREE_TOL;
+double AgreeTol;
+
+extern char *optarg;
+extern int optind, opterr, optopt;
 
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-  double codetol=-1.0;
-  char ParityFlip=0;
+  double codetol=DEFAULT_CODE_TOL;
+  char ParityFlip=DEFAULT_PARITY_FLIP;
 
-  if(argc<=3) {fprintf(stderr,HelpString); return(OPT_ERR);}
+  if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -72,8 +74,7 @@ int main(int argc,char *argv[])
 	codetol=strtod(optarg,NULL);
 	break;
       case 'm':
-	AgreeTol=strtod(optarg,NULL);
-	AgreeTol=arcsec2rad(AgreeTol);
+	AgreeArcSec=strtod(optarg,NULL);
 	break;
       case 'p':
 	ParityFlip=1;
@@ -140,11 +141,12 @@ int main(int argc,char *argv[])
               oneobjWidth=strlen(buff);}
   cposmarker=ftello(catfid);
 
+  AgreeTol=sqrt(2.0)*radscale2xyzscale(arcsec2rad(AgreeArcSec));
   fprintf(stderr,
   "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
-	  numfields,codetol,rad2arcsec(AgreeTol));
+	  numfields,codetol,AgreeArcSec);
   fopenout(hitfname,hitfid); free_fn(hitfname);
-  numsolved=solve_fields(thefields,codekd,codetol,AgreeTol);
+  numsolved=solve_fields(thefields,codekd,codetol);
 		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
   fprintf(stderr,"done (solved %lu).                                  \n",
@@ -161,8 +163,7 @@ int main(int argc,char *argv[])
 
 
 
-qidx solve_fields(xyarray *thefields, kdtree *codekd, 
-		  double codetol,double agreetol)
+qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 {
   qidx numtries,nummatches,numsolved,numgood,numAB,ii,numxy,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
@@ -172,7 +173,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd,
   xy *cornerpix=mk_xy(2);
 
   kquery *kq=mk_kquery("rangesearch","",KD_UNDEF,codetol,kdtree_rmin(codekd));
-  nearquery=mk_kquery("rangesearch","",KD_UNDEF,sqrt(AgreeTol),DEFAULT_KDRMIN);
+  nearquery=mk_kquery("rangesearch","",KD_UNDEF,AgreeTol,DEFAULT_KDRMIN);
   numsolved=dyv_array_size(thefields);
 
   for(ii=0;ii<dyv_array_size(thefields);ii++) {
@@ -359,7 +360,7 @@ this bit goes in solve_fields...
 
   //ivec *good_list; int sizeofnextbest;
 
-    good_list=check_match_agreement(agreetol,agreetol,&sizeofnextbest);
+    good_list=check_match_agreement(AgreeTol??,AgreeTol??,&sizeofnextbest);
     if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
     else numgood=good_list->size;
 
@@ -486,7 +487,8 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
   else {
     dist_sq=add_point_to_kdtree_dsq(*kdt,hitdyv,&tmpmatch);
     add_to_ivec(qlist,(int)thisquad);
-    if((dist_sq<AgreeTol) || ((qidx)ivec_ref(qlist,tmpmatch)!=thisquad)) {
+    if((dist_sq<(AgreeTol*AgreeTol)) &&
+       ((qidx)ivec_ref(qlist,tmpmatch)!=thisquad)) {
         kr=mk_kresult_from_kquery(nearquery,*kdt,hitdyv);
 	nearlist=mk_copy_ivec(kr->pindexes);
 	free_kresult(kr);
@@ -553,7 +555,7 @@ int output_good_matches(MatchObj *first, MatchObj *last)
   if(bestone==NULL) 
     output_match(NULL);
   else {
-    fprintf(hitfid,"  %d matches agree on resolving of image:\n",bestnum);
+    fprintf(hitfid,"  %d matches agree on resolving of the field:\n",bestnum);
     for(ii=0;ii<bestnum;ii++)
       output_match(*(plist+ivec_ref(bestone->nearlist,ii)));
   }
