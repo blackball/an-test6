@@ -168,3 +168,72 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
 }
 
 
+ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
+			   int *numwithbest, int *nextbestnumpoints)
+{
+  ivec *sortx,*sorty,*inboxx,*inboxy,*inbothbox,*bestbox;
+  int ii,jj,kk,N,bestnumpoints;
+  double x0,y0;
+  if(x->size != y->size) {
+    fprintf(stderr,"ERROR (box_containing_most_points) -- xsize!=ysize\n");
+    return(NULL);
+  }
+  N=x->size;
+
+
+  if(bx<=0.0 || by<=0.0) {
+    fprintf(stderr,"ERROR (box_containing_most_points) -- bx<0 or by<0\n");
+    return(NULL);
+  }
+
+  bestnumpoints=0; *nextbestnumpoints=0; *numwithbest=N;
+  bestbox=NULL;
+
+  sortx = mk_ivec_sorted_dyv_indices(x); 
+  sorty = mk_ivec_sorted_dyv_indices(y);
+
+  for(ii=0;ii<N;ii++) {
+    if((N-ii)<bestnumpoints) break;
+
+    kk=ivec_ref(sortx,ii);
+
+    inboxx=mk_ivec_1(kk);
+    inboxy=mk_ivec_1(kk);
+
+    x0=dyv_ref(x,kk);
+    y0=dyv_ref(y,kk);
+
+    jj=ii;
+    while((jj<(N-1)) && (dyv_ref(x,ivec_ref(sortx,jj+1))-x0)<bx) {
+      jj++;
+      add_to_sorted_ivec(inboxx,ivec_ref(sortx,jj+1));
+    }
+
+    jj=find_index_in_ivec(sorty,kk);
+    while((jj<(N-1)) && (dyv_ref(y,ivec_ref(sorty,jj+1))-y0)<by) {
+      jj++;
+      add_to_sorted_ivec(inboxy,ivec_ref(sorty,jj+1));
+    }
+
+    inbothbox=mk_ivec_diff_ordered(inboxx,inboxy);
+    if(inbothbox->size == bestnumpoints)
+      *numwithbest++;
+    else if(inbothbox->size > bestnumpoints) {
+      *nextbestnumpoints=bestnumpoints;
+      bestnumpoints=inbothbox->size;
+      *numwithbest=1;
+      if(bestbox!=NULL) free_ivec(bestbox);
+      bestbox=inbothbox;
+      inbothbox=NULL;
+    }
+   
+    free_ivec(inboxx); free_ivec(inboxy); 
+    if(inbothbox!=NULL) free_ivec(inbothbox);
+    
+  }
+
+  free_ivec(sortx); free_ivec(sorty);
+
+  return(bestbox);
+
+}
