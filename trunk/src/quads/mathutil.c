@@ -186,14 +186,14 @@ ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
     return(NULL);
   }
 
-  bestnumpoints=0; *nextbestnumpoints=0; *numwithbest=N;
+  bestnumpoints=0; *nextbestnumpoints=0; *numwithbest=0;
   bestbox=NULL;
 
   sortx = mk_ivec_sorted_dyv_indices(x); 
   sorty = mk_ivec_sorted_dyv_indices(y);
 
   for(ii=0;ii<N;ii++) {
-    if((N-ii)<bestnumpoints) break;
+    //if((N-ii)<bestnumpoints) break;
 
     kk=ivec_ref(sortx,ii);
 
@@ -215,7 +215,7 @@ ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
       add_to_sorted_ivec(inboxy,ivec_ref(sorty,jj+1));
     }
 
-    inbothbox=mk_ivec_diff_ordered(inboxx,inboxy);
+    inbothbox=mk_ivec_intersect_ordered(inboxx,inboxy);
     if(inbothbox->size == bestnumpoints)
       *numwithbest++;
     else if(inbothbox->size > bestnumpoints) {

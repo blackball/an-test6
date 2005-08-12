@@ -1174,6 +1174,29 @@ ivec *mk_ivec_union_ordered(ivec *v1, ivec *v2)
   }
   return(result);
 }
+
+/*Pre ivecs are ordered*/
+ivec *mk_ivec_intersect_ordered(ivec *v1, ivec *v2)
+{
+  ivec *rez=mk_ivec(0);
+  int i1=0,i2=0;
+  int N1=v1->size -1;  int N2=v2->size -1;
+  int z1=ivec_ref(v1,i1); int z2=ivec_ref(v2,i2);
+  while(i1<N1 || i2<N2) {
+    if(z1<z2) {if(i1<N1) {i1++; z1=ivec_ref(v1,i1);}}
+    else if(z1>z2) {if(i2<N2) {i2++; z2=ivec_ref(v2,i2);}}
+    else {//z1==z2
+      add_to_sorted_ivec(rez,z1);
+      if(i1<N1) {i1++; z1=ivec_ref(v1,i1);}
+      if(i2<N2) {i2++; z2=ivec_ref(v2,i2);}
+    }
+  }
+  if(ivec_ref(v1,i1)==ivec_ref(v2,i2))
+      add_to_sorted_ivec(rez,ivec_ref(v1,i1));
+  if(rez->size==0) {free_ivec(rez); rez=NULL;}
+  return(rez);
+}
+
   
 
 /*Pre ivecs are ordered*/
