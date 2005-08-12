@@ -8,6 +8,7 @@ const char HelpString[]=
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
 "   -p flips parity\n";
 
+#define MIN_MATCHES_TO_AGREE 3
 #define DEFAULT_AGREE_TOL 10.0
 #define DEFAULT_CODE_TOL .003
 #define DEFAULT_PARITY_FLIP 0
@@ -552,6 +553,9 @@ int output_good_matches(MatchObj *first, MatchObj *last)
     mo=mo->next;
     ii++;
   }
+
+  if(bestnum<MIN_MATCHES_TO_AGREE) {bestnum=0; bestone=NULL;}
+
   if(bestone==NULL) 
     output_match(NULL);
   else {
