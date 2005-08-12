@@ -174,6 +174,7 @@ ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
   ivec *sortx,*sorty,*inboxx,*inboxy,*inbothbox,*bestbox;
   int ii,jj,kk,N,bestnumpoints;
   double x0,y0;
+  if(x==NULL || y==NULL) return(NULL);
   if(x->size != y->size) {
     fprintf(stderr,"ERROR (box_containing_most_points) -- xsize!=ysize\n");
     return(NULL);
@@ -206,19 +207,19 @@ ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
     jj=ii;
     while((jj<(N-1)) && (dyv_ref(x,ivec_ref(sortx,jj+1))-x0)<bx) {
       jj++;
-      add_to_sorted_ivec(inboxx,ivec_ref(sortx,jj+1));
+      add_to_sorted_ivec(inboxx,ivec_ref(sortx,jj));
     }
 
     jj=find_index_in_ivec(sorty,kk);
     while((jj<(N-1)) && (dyv_ref(y,ivec_ref(sorty,jj+1))-y0)<by) {
       jj++;
-      add_to_sorted_ivec(inboxy,ivec_ref(sorty,jj+1));
+      add_to_sorted_ivec(inboxy,ivec_ref(sorty,jj));
     }
 
     inbothbox=mk_ivec_intersect_ordered(inboxx,inboxy);
-    if(inbothbox->size == bestnumpoints)
+    if(inbothbox!=NULL && inbothbox->size == bestnumpoints)
       *numwithbest++;
-    else if(inbothbox->size > bestnumpoints) {
+    else if(inbothbox!=NULL && inbothbox->size > bestnumpoints) {
       *nextbestnumpoints=bestnumpoints;
       bestnumpoints=inbothbox->size;
       *numwithbest=1;

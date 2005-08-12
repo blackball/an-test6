@@ -376,9 +376,8 @@ ivec *check_match_agreement(double ra_tol,double dec_tol)
   qidx ii,nummatches;
   int numwithbest,nextbestnumpoints;
 
-  if(firstMatch==NULL) return(NULL);
+  if(firstMatch==NULL || firstMatch==lastMatch) return(NULL);
   nummatches=lastMatch->idx+1;
-  if(nummatches==1) return(NULL);
 
   dyv *raminvotes=mk_dyv(nummatches);
   dyv *ramaxvotes=mk_dyv(nummatches);
@@ -397,22 +396,24 @@ ivec *check_match_agreement(double ra_tol,double dec_tol)
   }
 
   minagree = box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol,
-			     &numwithbest,&nextbestnumpoints);
+					&numwithbest,&nextbestnumpoints);
+  if(minagree!=NULL) 
   fprintf(stderr,"  %d agree on min (%d others, next %d)\n",
 	  minagree->size,numwithbest,nextbestnumpoints);
   maxagree = box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol,
-			     &numwithbest,&nextbestnumpoints);
+					&numwithbest,&nextbestnumpoints);
+  if(maxagree!=NULL) 
   fprintf(stderr,"  %d agree on max (%d others, next %d)\n",
 	  maxagree->size,numwithbest,nextbestnumpoints);
 
   bothagree=mk_ivec_intersect_ordered(minagree,maxagree);
+  free_ivec(minagree); free_ivec(maxagree);
+
   if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
   if(bothagree!=NULL && bothagree->size<=1) {
     free_ivec(bothagree); 
     bothagree=NULL;
   }
-  free_ivec(minagree);
-  free_ivec(maxagree);
 
   return(bothagree);
   
