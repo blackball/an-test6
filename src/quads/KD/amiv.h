@@ -264,6 +264,7 @@ ivec *mk_ivec_union(ivec *v1, ivec *v2);
 */
 ivec *mk_ivec_union_ordered(ivec *v1, ivec *v2);
 ivec *mk_ivec_diff_ordered(ivec *v1, ivec *v2);
+ivec *mk_ivec_intersect_ordered(ivec *v1, ivec *v2);
 
 /* x := x with y appended on the end */
 void append_to_ivec(ivec *x,ivec *y);

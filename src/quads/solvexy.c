@@ -405,7 +405,7 @@ ivec *check_match_agreement(double ra_tol,double dec_tol)
   fprintf(stderr,"  %d agree on max (%d others, next %d)\n",
 	  maxagree->size,numwithbest,nextbestnumpoints);
 
-  bothagree=mk_ivec_diff_ordered(minagree,maxagree);
+  bothagree=mk_ivec_intersect_ordered(minagree,maxagree);
   if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
   if(bothagree!=NULL && bothagree->size<=1) {
     free_ivec(bothagree); 
