@@ -22,7 +22,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 		   kquery *kq,kdtree *codekd);
 void resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
-ivec *check_match_agreement(double ra_tol,double dec_tol);
+ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest);
 void output_match(MatchObj *mo);
 //void output_good_matches(MatchObj *first, int nummatches);
 //ivec *add_transformed_corners(star *sMin, star *sMax, 
@@ -169,7 +169,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd,
   qidx numtries,nummatches,numsolved,numgood,numAB,ii,numxy,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double costheta,sintheta,scale,xxtmp;
-  ivec *good_list;
+  ivec *good_list; int sizeofnextbest;
   xy *thisfield;
   xy *ABCDpix=mk_xy(DIM_QUADS);
   xy *cornerpix=mk_xy(2);
@@ -230,16 +230,13 @@ fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
 		ii,++numAB,choose(numxy,2));
       }}}
 
-    good_list=check_match_agreement(agreetol,agreetol);
+    good_list=check_match_agreement(agreetol,agreetol,&sizeofnextbest);
     if(good_list==NULL) numgood=0; else numgood=good_list->size;
 
-    if(numgood==0) {
-      fprintf(hitfid,"No matches.\n");
-      numsolved--;
-    }
+    if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
     else {
-      MatchObj *mo;
-      mo=firstMatch;
+      MatchObj *mo,*prev;
+      mo=firstMatch; prev=NULL;
       while(mo!=NULL) {
 	if(is_in_ivec(good_list,mo->idx))
 	  output_match(mo);
@@ -250,7 +247,7 @@ fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
     
 
     fprintf(stderr,"    field %lu: tried %lu quads, matched %lu codes, "
-	           "%lu agree\n", ii,numtries,nummatches,numgood);
+      "%lu agree (%d next)\n", ii,numtries,nummatches,numgood,sizeofnextbest);
 
     //if(hitkd!=NULL) {free_kdtree(hitkd); hitkd=NULL;}
     if(qlist!=NULL) {free_ivec(qlist); qlist=NULL;}
@@ -369,13 +366,12 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
 }
 
 
-ivec *check_match_agreement(double ra_tol,double dec_tol)
+ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
 {
-  ivec *minagree,*maxagree,*bothagree;
+  ivec *minagree,*maxagree,*bothagree,*nextbest;
   double xx,yy,zz;
   MatchObj *mo;
   qidx ii,nummatches;
-  int numwithbest,nextbestnumpoints;
 
   if(firstMatch==NULL || firstMatch==lastMatch) return(NULL);
   nummatches=lastMatch->idx+1;
@@ -396,25 +392,43 @@ ivec *check_match_agreement(double ra_tol,double dec_tol)
     mo=mo->next;
   }
 
-  minagree = box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol,
-					&numwithbest,&nextbestnumpoints);
-  if(minagree!=NULL) 
-  fprintf(stderr,"  %d agree on min (%d others, next %d)\n",
-	  minagree->size,numwithbest,nextbestnumpoints);
-  maxagree = box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol,
-					&numwithbest,&nextbestnumpoints);
-  if(maxagree!=NULL) 
-  fprintf(stderr,"  %d agree on max (%d others, next %d)\n",
-	  maxagree->size,numwithbest,nextbestnumpoints);
-
+  minagree = box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
+//if(minagree!=NULL)  fprintf(stderr,"  %d agree on min\n",minagree->size);
+  maxagree = box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
+//if(maxagree!=NULL)  fprintf(stderr,"  %d agree on max\n",maxagree->size);
   bothagree=mk_ivec_intersect_ordered(minagree,maxagree);
+//if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
+
   free_ivec(minagree); free_ivec(maxagree);
 
-  if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
   if(bothagree!=NULL && bothagree->size<=1) {
     free_ivec(bothagree); 
     bothagree=NULL;
   }
+
+  if(bothagree!=NULL && sizeofnextbest!=NULL) {
+    int kk,correction=0;
+    for(ii=0;ii<bothagree->size;ii++) {
+      kk=ivec_ref(bothagree,ii)-correction;
+      dyv_remove(raminvotes,kk);
+      dyv_remove(ramaxvotes,kk);
+      dyv_remove(decminvotes,kk);
+      dyv_remove(decmaxvotes,kk);
+      correction++;
+    }
+    minagree=box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
+    maxagree=box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
+    nextbest=mk_ivec_intersect_ordered(minagree,maxagree);
+    free_ivec(minagree); free_ivec(maxagree);
+    if(nextbest==NULL) 
+      *sizeofnextbest=0; 
+    else {
+      *sizeofnextbest=nextbest->size;
+      free_ivec(nextbest);
+    }
+  }
+  free_dyv(raminvotes);  free_dyv(ramaxvotes);
+  free_dyv(decminvotes); free_dyv(decmaxvotes);
 
   return(bothagree);
   

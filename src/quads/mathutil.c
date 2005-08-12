@@ -168,8 +168,7 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
 }
 
 
-ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
-			   int *numwithbest, int *nextbestnumpoints)
+ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by)
 {
   ivec *sortx,*sorty,*inboxx,*inboxy,*inbothbox,*bestbox;
   int ii,jj,kk,N,bestnumpoints;
@@ -187,7 +186,7 @@ ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
     return(NULL);
   }
 
-  bestnumpoints=0; *nextbestnumpoints=0; *numwithbest=0;
+  bestnumpoints=0;
   bestbox=NULL;
 
   sortx = mk_ivec_sorted_dyv_indices(x); 
@@ -217,12 +216,8 @@ ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by,
     }
 
     inbothbox=mk_ivec_intersect_ordered(inboxx,inboxy);
-    if(inbothbox!=NULL && inbothbox->size == bestnumpoints)
-      *numwithbest++;
-    else if(inbothbox!=NULL && inbothbox->size > bestnumpoints) {
-      *nextbestnumpoints=bestnumpoints;
+    if(inbothbox!=NULL && inbothbox->size > bestnumpoints) {
       bestnumpoints=inbothbox->size;
-      *numwithbest=1;
       if(bestbox!=NULL) free_ivec(bestbox);
       bestbox=inbothbox;
       inbothbox=NULL;
