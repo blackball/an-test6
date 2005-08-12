@@ -12,8 +12,7 @@ const char HelpString[]=
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-#define AGREE_TOL 1.0e-9
-//#define MIN_NEARBY 2
+#define AGREE_TOL 1.0e-4
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, 
 		  double codetol,double agreetol);
@@ -22,7 +21,6 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 		   kquery *kq,kdtree *codekd);
 void resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
-//ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest);
 void output_match(MatchObj *mo);
 int output_good_matches(MatchObj *first, MatchObj *last);
 ivec *add_transformed_corners(star *sMin, star *sMax, 
@@ -169,7 +167,6 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd,
   qidx numtries,nummatches,numsolved,numgood,numAB,ii,numxy,iA,iB,iC,iD;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double costheta,sintheta,scale,xxtmp;
-  //ivec *good_list; int sizeofnextbest;
   xy *thisfield;
   xy *ABCDpix=mk_xy(DIM_QUADS);
   xy *cornerpix=mk_xy(2);
@@ -182,14 +179,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd,
     numtries=0; nummatches=0;
     thisfield=xya_ref(thefields,ii);
     numxy=xy_size(thisfield);
-
-    fprintf(hitfid,"--------------------\n");
-    fprintf(hitfid,"field %lu\n",ii); fflush(hitfid);
     find_corners(thisfield,cornerpix);
-    fprintf(hitfid,"  image corners: %lf,%lf,%lf,%lf\n",
-	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
-	    xy_refx(cornerpix,1),xy_refy(cornerpix,1));
-
 
     if(numxy>=DIM_QUADS) { //if there are<4 objects in field, forget it
 
@@ -226,27 +216,19 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd,
 		    nummatches+=try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,
 					      iA,iB,iC,iD,kq,codekd);
 		  }}}}}}
-fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
+    fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
 		ii,++numAB,choose(numxy,2));
       }}}
 
-    /*
-    good_list=check_match_agreement(agreetol,agreetol,&sizeofnextbest);
-    if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
-    else numgood=good_list->size;
-
-    if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
-    else {
-      MatchObj *mo,*prev;
-      mo=firstMatch; prev=NULL;
-      while(mo!=NULL) {
-	if(is_in_ivec(good_list,mo->idx))
-	  output_match(mo);
-	mo=mo->next;
-      }
-      free_ivec(good_list);
-    }
-    */
+    fprintf(hitfid,"--------------------\n");
+    fprintf(hitfid,"field %lu\n",ii); 
+    fprintf(hitfid,"  %lu objects in field\n",numxy);
+    fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
+	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
+	    xy_refx(cornerpix,1),xy_refy(cornerpix,1));
+    fprintf(hitfid,"  solver tried %lu quads, matched %lu codes\n",
+	    numtries,nummatches);
+    fflush(hitfid);
 
     numgood=output_good_matches(firstMatch,lastMatch);
 
@@ -353,8 +335,6 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
     mo->fA=fA; mo->fB=fB; mo->fC=fC; mo->fD=fD;
     mo->sMin=sMin; mo->sMax=sMax;
     mo->nearlist=add_transformed_corners(sMin,sMax,thisquadno,&hitkd);
-    //if(mo->nearlist!=NULL && mo->nearlist->size > MIN_NEARBY) numgood++;
-
     mo->code_err=0.0;
     // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
 
@@ -367,6 +347,36 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
   free_star(sA);free_star(sB);free_star(sC);free_star(sD);
   return;
 }
+
+
+//ivec *check_match_agreement(double ra_tol,double dec_tol,
+//                            int *sizeofnextbest);
+
+
+/*
+
+this bit goes in solve_fields...
+
+  //ivec *good_list; int sizeofnextbest;
+
+    good_list=check_match_agreement(agreetol,agreetol,&sizeofnextbest);
+    if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
+    else numgood=good_list->size;
+
+    if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
+    else {
+      MatchObj *mo,*prev;
+      mo=firstMatch; prev=NULL;
+      while(mo!=NULL) {
+	if(is_in_ivec(good_list,mo->idx))
+	  output_match(mo);
+	mo=mo->next;
+      }
+      free_ivec(good_list);
+    }
+
+*/
+
 
 
 /*
@@ -507,14 +517,16 @@ void output_match(MatchObj *mo)
 	    star_ref(mo->sMax,0),star_ref(mo->sMax,1),star_ref(mo->sMax,2),
 	    rad2deg(xy2ra(star_ref(mo->sMax,0),star_ref(mo->sMax,1))),
 	    rad2deg(z2dec(star_ref(mo->sMax,2))));
+
     /*
       int jj;
       fprintf(hitfid,"  matches");
-      if(mo->nearlist!=NULL && mo->nearlist->size>MIN_NEARBY)
-      for(jj=0;jj<mo->nearlist->size;jj++)
-      fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
+      if(mo->nearlist!=NULL)
+	for(jj=0;jj<mo->nearlist->size;jj++)
+	  fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
       fprintf(hitfid,"\n");
     */
+
   }
   return;
 
@@ -541,6 +553,7 @@ int output_good_matches(MatchObj *first, MatchObj *last)
   if(bestone==NULL) 
     output_match(NULL);
   else {
+    fprintf(hitfid,"  %d matches agree on resolving of image:\n",bestnum);
     for(ii=0;ii<bestnum;ii++)
       output_match(*(plist+ivec_ref(bestone->nearlist,ii)));
   }
