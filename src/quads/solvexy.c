@@ -231,7 +231,8 @@ fprintf(stderr,"    field %lu: done %lu of %lu AB pairs                \r",
       }}}
 
     good_list=check_match_agreement(agreetol,agreetol,&sizeofnextbest);
-    if(good_list==NULL) numgood=0; else numgood=good_list->size;
+    if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
+    else numgood=good_list->size;
 
     if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
     else {
@@ -398,6 +399,10 @@ ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
 //if(maxagree!=NULL)  fprintf(stderr,"  %d agree on max\n",maxagree->size);
   bothagree=mk_ivec_intersect_ordered(minagree,maxagree);
 //if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
+
+  privec(minagree);
+  privec(maxagree);
+  privec(bothagree);
 
   free_ivec(minagree); free_ivec(maxagree);
 
