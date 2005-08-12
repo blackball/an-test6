@@ -233,6 +233,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     fflush(hitfid);
 
     numgood=output_good_matches(firstMatch,lastMatch);
+    if(numgood==0) numsolved--;
 
     fprintf(stderr,"    field %lu: tried %lu quads, matched %lu codes, "
       "%lu agree\n", ii,numtries,nummatches,numgood);
@@ -505,7 +506,7 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
 void output_match(MatchObj *mo)
 {
   if(mo==NULL)
-    fprintf(hitfid,"No Match.\n");
+    fprintf(hitfid,"No agreement between matches. Could not resolve field.\n");
   else {
     fprintf(hitfid,"quad=%lu\n",mo->quadno);
     fprintf(hitfid,"  starids(ABCD)=%lu,%lu,%lu,%lu\n",
