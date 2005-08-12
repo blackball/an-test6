@@ -155,7 +155,7 @@ int main(int argc,char *argv[])
   free_xyarray(thefields); 
   free_kdtree(codekd); 
 
-  basic_am_malloc_report();
+  //basic_am_malloc_report();
   return(0);
 }
 
