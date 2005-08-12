@@ -99,6 +99,9 @@ typedef dyv_array xyarray;
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x)))
 #define z2dec(z) (asin(z))
 
+#define radscale2xyzscale(r) sqrt(2.0-2.0*cos(r/2.0))
+
+
 typedef struct match_struct
 {
   qidx quadno;

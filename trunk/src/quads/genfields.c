@@ -163,7 +163,8 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 #if PLANAR_GEOMETRY==1
   double scale=radscale;
 #else
-  double scale=sqrt(2-2*cos(radscale/2));
+  double scale=radscale2xyzscale(radscale);
+  //double scale=sqrt(2-2*cos(radscale/2));
 #endif
   double pixxmin=0,pixymin=0,pixxmax=0,pixymax=0;
   kquery *kq = mk_kquery("rangesearch","",KD_UNDEF,scale,kd->rmin);
