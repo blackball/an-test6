@@ -398,10 +398,15 @@ ivec *check_match_agreement(double ra_tol,double dec_tol)
 
   minagree = box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol,
 			     &numwithbest,&nextbestnumpoints);
+  fprintf(stderr,"  %d agree on min (%d others, next %d)\n",
+	  minagree->size,numwithbest,nextbestnumpoints);
   maxagree = box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol,
 			     &numwithbest,&nextbestnumpoints);
+  fprintf(stderr,"  %d agree on max (%d others, next %d)\n",
+	  maxagree->size,numwithbest,nextbestnumpoints);
 
   bothagree=mk_ivec_diff_ordered(minagree,maxagree);
+  if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
   if(bothagree!=NULL && bothagree->size<=1) {
     free_ivec(bothagree); 
     bothagree=NULL;
