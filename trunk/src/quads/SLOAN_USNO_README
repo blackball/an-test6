@@ -25,14 +25,14 @@ PART 1 -- Building an index based on a cut of USNO
    several indices on this same catalogue):
 >> ln -s ./usno.objs ./usno10M.objs
 >> ln -s ./usno.skdt ./usno10M.skdt
-   Now, build the quads (should be run on a machine with reasonable memory):
+   Now, build the quads (this is the time bottleneck):
 >> getquads -f usno10M -b -s 5.0 -q 10000000
 
 4) Now, we deduplicate and build an inverted index:
 >> quadidx  -f usno10M -b
 >> rm ./usno10M.code_; rm ./usno10M.quad_;
 
-5) Finally, build a KD-tree in code space:
+5) Finally, build a KD-tree in code space (this is the memory bottleneck):
 >> codetree -f usno10M
 
 
