@@ -7,10 +7,11 @@ const char HelpString[]=
 "  -r -R -d -D set ra and dec limits in radians\n"
 "  -a sets ASCII output, -b (default) sets BINARY output\n";
 
-extern char *optarg;
-extern int optind, opterr, optopt;
 void output_star(star *thestar, char ASCII, FILE *fid);
 
+
+extern char *optarg;
+extern int optind, opterr, optopt;
 
 int main(int argc,char *argv[])
 {
@@ -21,12 +22,9 @@ int main(int argc,char *argv[])
   sidx numstars=10;
   char ASCII = 1;
   char *fname=NULL;
-#if PLANAR_GEOMETRY==1
-  double ramin=0.0,ramax=1.0,decmin=0.0,decmax=1.0;
-#else
-  double ramin=0.0,ramax=2*PIl,decmin=-PIl/2.0,decmax=PIl/2.0;
-#endif
-  
+  double ramin=DEFAULT_RAMIN,ramax=DEFAULT_RAMAX;
+  double decmin=DEFAULT_DECMIN,decmax=DEFAULT_DECMAX;
+
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -77,14 +75,16 @@ int main(int argc,char *argv[])
   fprintf(stderr, "randcat: Making %lu random stars",numstars);
 #if PLANAR_GEOMETRY==1
   fprintf(stderr," in the unit square ");
+#else
+  fprintf(stderr," on the unit sphere ");
+#endif
   fprintf(stderr,"[RANDSEED=%d]\n",RANDSEED);
-  if(ramin>0.0 || ramax< 1.0 || decmin>0.0 || decmax<1.0)
+  if(ramin>DEFAULT_RAMIN || ramax<DEFAULT_RAMAX || 
+     decmin>DEFAULT_DECMIN || decmax<DEFAULT_DECMAX)
+#if PLANAR_GEOMETRY==1
     fprintf(stderr,"  using limits %f<=x<=%f ; %f<=y<=%f.\n",
 	   ramin,ramax,decmin,decmax);
 #else
-  fprintf(stderr," on the unit sphere ");
-  fprintf(stderr,"[RANDSEED=%d]\n",RANDSEED);
-  if(ramin>0.0 || ramax< 2*PIl || decmin>-PIl/2.0 || decmax<PIl/2.0)
     fprintf(stderr,"  using limits %f<=RA<=%f ; %f<=DEC<=%f deg.\n",
 	    rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 #endif
@@ -119,13 +119,7 @@ int main(int argc,char *argv[])
 void output_star(star *thestar, char ASCII, FILE *fid)
 {
   if(ASCII)
-#if DIM_STARS==2
-    fprintf(fid,"%lf,%lf\n",
-	    star_ref(thestar,0),star_ref(thestar,1));
-#elif DIM_STARS==3
-    fprintf(fid,"%lf,%lf,%lf\n",
-	    star_ref(thestar,0),star_ref(thestar,1),star_ref(thestar,2));
-#endif
+    fprintfstar(thestar,fid);
   else if(!ASCII)
     fwritestar(thestar,fid);
 }

@@ -10,6 +10,9 @@
 #define fwrite_dyv(d,f) fwrite(d->farr,sizeof(double),dyv_size(d),f)
 #define fwrite_ivec(i,f) fwrite(i->iarr,sizeof(int),ivec_size(i),f)
 
+#define mk_starkdtree(s,r) mk_kdtree_from_points((dyv_array *)s,r)
+#define mk_codekdtree(c,r) mk_kdtree_from_points((dyv_array *)c,r)
+
 extern kresult *mk_kresult_from_kquery(kquery *kq,kdtree *kd,dyv *query);
 
 unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid);

@@ -1,6 +1,9 @@
 #include "starutil.h"
 
-
+/* makes a star object located uniformly at random within the limits given
+   NB: if the code is compiled with PLANAR_GEOMETRY=1, then ra/dec refer
+   to abstract 2d coordinates in the plane, otherwise, everything is done
+   on the sphere and they have the usual meaning                    */
 star *make_rand_star(double ramin, double ramax, 
 		     double decmin, double decmax)
 {
@@ -35,6 +38,8 @@ star *make_rand_star(double ramin, double ramax,
 
 
 
+/* computes the 2D coordinates (x,y)  that star s would have in a 
+   TANGENTIAL PROJECTION defined by (centred at) star r.     */
 
 void star_coords(star *s,star *r,double *x,double *y)
 {
@@ -106,12 +111,15 @@ void star_coords(star *s,star *r,double *x,double *y)
 }
 
 
-
+/* sets the coordinates of star M to be the midpoint of the coordinates
+   of stars A,B. DOES NOT allocate a new star object for M.
+   does this by averaging and then (if PLANAR_GEOMETRY=0) projecting
+   back onto the surface of the sphere                            */
 void star_midpoint(star *M,star *A,star *B)
 {
 #if PLANAR_GEOMETRY==1
-  star_set(M,0,(star_ref(A,0)+star_ref(B,0))/2);
-  star_set(M,1,(star_ref(A,1)+star_ref(B,1))/2);
+  star_set(M,0,(star_ref(A,0)+star_ref(B,0))/2.0);
+  star_set(M,1,(star_ref(A,1)+star_ref(B,1))/2.0);
   return;
 #else
   double len;

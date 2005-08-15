@@ -294,7 +294,7 @@ void output_star(FILE *fid, sidx i, stararray *sa)
       star_set(tmps,0,tmpx); star_set(tmps,1,tmpy); star_set(tmps,2,tmpz);
     }
     else {
-      fseeko(catfid,catposmarker+i*(DIM_STARS*sizeof(double)),SEEK_SET);
+      fseekocat(i,catposmarker,catfid);
       freadstar(tmps,catfid);
     }
   }

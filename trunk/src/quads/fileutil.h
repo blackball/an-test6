@@ -31,6 +31,12 @@
 #define fscanfcodes(a,b,c,d,f) fscanf(f,"%lf,%lf,%lf,%lf\n",a,b,c,d)
 #define fscanfonequad(f,a,b,c,d) fscanf(f,"%ld,%ld,%ld,%ld\n",a,b,c,d)
 #define fscanfonecode(f,a,b,c,d) fscanf(f,"%lf,%lf,%lf,%lf\n",a,b,c,d)
+#if DIM_STARS==2
+#define fprintfstar(s,f) fprintf(f,"%lf,%lf\n",star_ref(s,0),star_ref(s,1))
+#elif DIM_STARS==3
+#define fprintfstar(s,f) fprintf(f,"%lf,%lf,%lf\n",star_ref(s,0),star_ref(s,1),star_ref(s,2))
+#endif
+#define fseekocat(i,p,f) fseeko(f,p+i*(DIM_STARS*sizeof(double)),SEEK_SET)
 
 void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD);
 void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD);

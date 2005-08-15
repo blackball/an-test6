@@ -7,13 +7,12 @@ const char HelpString[]=
 "startree -f fname [-R KD_RMIN]\n"
 "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
 
-extern char *optarg;
-extern int optind, opterr, optopt;
-
-#define mk_starkdtree(s,r) mk_kdtree_from_points((dyv_array *)s,r)
-
 char *treefname=NULL;
 char *catfname=NULL;
+
+
+extern char *optarg;
+extern int optind, opterr, optopt;
 
 int main(int argc,char *argv[])
 {

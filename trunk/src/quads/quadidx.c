@@ -95,8 +95,10 @@ int main(int argc,char *argv[])
     fopenout(idxfname,idxfid);
    write_quad_header(newquadfid,qASCII,numquads,numstars,DimQuads,index_scale);
    write_code_header(newcodefid,qASCII,numquads,numstars,DimCodes,index_scale);
+
    nq2=deduplicate_quads(quadfid,codefid,newquadfid,newcodefid,idxfid,
 		     numquads,numstars,&ns2);
+
    if(qASCII) sprintf(buff,"%lu",numquads);
    fix_quad_header(newquadfid,qASCII,nq2,strlen(buff));
    fix_code_header(newcodefid,qASCII,nq2,strlen(buff));

@@ -2,15 +2,15 @@ August 2005 (Sam)
 
 Here's a very brief recipe for how to solve
 a Sloan field using the quads system and an index
-built based on a small subset of USNO.
-(This requires about 1.5GB of disk and should take about
-10 minutes on a reasonable machine.)
+built based on a small subset (10^6 stars) of USNO-B.
+(This procedure requires about 1.5GB of disk and should take about
+10 minutes on a reasonably fast machine.)
 
 PART 1 -- Building an index based on a cut of USNO
 ==================================================
 
 1) Get the catalogue to index.
-  (Morad and Hogg have made a cut of USNOB which covers roughly
+  (Morad and Hogg have made a cut of USNO-B which covers roughly
   the same parts of the sky and the same magnitudes as SDSS.
   It was produced by the program in astrometry/pro/morad/usno_select.pro
   This will be our object catalogue. Just link the file 
@@ -22,10 +22,10 @@ PART 1 -- Building an index based on a cut of USNO
 
 3) Let's build a 10 million quad index at a scale of 5 arcmin.
    First, link the files we just made (in case we later want to build 
-   several indices on this same catalogue):
+   several indices of different sizes/scales for this same catalogue):
 >> ln -s ./usno.objs ./usno10M.objs
 >> ln -s ./usno.skdt ./usno10M.skdt
-   Now, build the quads (this is the time bottleneck):
+   Now, find the quads by throwing darts (this is the time bottleneck):
 >> getquads -f usno10M -b -s 5.0 -q 10000000
 
 4) Now, we deduplicate and build an inverted index:
@@ -43,12 +43,12 @@ PART 2 -- Solving a Sloan Field
    positions of objects in the field to solve. It does not use
    magnitude information, nor does it accept any hints about where
    the fields might be. Therefore, the input is simply an xy list.
-   The file format is very simple: create a file field.xyls whose
+   The file format is very simple: create an ASCII file field.xyls whose
    first line reads "NumFields=K" where K is the number of fields
    (could be just 1). Then for each field, there is a line of the form:
     N,x0,y0,x1,y1, ... ,xN-1,yN-1
    where N is the number of objects in the field and the x,y pairs are
-   their coordinates in the image (arbitrary units).
+   their coordinates in the image (arbitrary units, fscanf-able doubles).
 
    You can find one such file in 
    /global/data/scr/roweis/field-217166.xyls, 
