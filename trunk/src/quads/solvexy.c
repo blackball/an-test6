@@ -342,7 +342,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
     mo->fA=fA; mo->fB=fB; mo->fC=fC; mo->fD=fD;
     mo->sMin=sMin; mo->sMax=sMax;
     mo->nearlist=add_transformed_corners(sMin,sMax,thisquadno,&hitkd);
-    if(mo->nearlist!=NULL && mo->nearlist->size >MIN_MATCHES_TO_AGREE
+    if(mo->nearlist!=NULL && mo->nearlist->size>=MIN_MATCHES_TO_AGREE
        && mo->nearlist->size>mostAgree) mostAgree=mo->nearlist->size;
     mo->code_err=0.0;
     // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
