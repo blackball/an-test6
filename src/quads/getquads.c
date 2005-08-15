@@ -226,12 +226,12 @@ void accept_quad(sidx iA,sidx iB,sidx iC, sidx iD,
 {
   sidx itmp;
   double tmp;
-  if(iC>iD) {
+  if(iC>iD) { // swap C and D if iC>iD, involves swapping Cxy/Dxy
     itmp=iC; iC=iD; iD=itmp; 
     tmp=Cx; Cx=Dx; Dx=tmp;
     tmp=Cy; Cy=Dy; Dy=tmp;
   }
-  if(iA>iB) { //??? IS THIS REALLY OK???
+  if(iA>iB) { //swap A,B if iA>iB, involves C/Dxy->1-C/Dxy (??HOPE THIS IS OK)
     itmp=iA; iA=iB; iB=itmp; 
     Cx=1.0-Cx; Cy=1.0-Cy;
     Dx=1.0-Dx; Dy=1.0-Dy;

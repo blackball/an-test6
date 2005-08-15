@@ -12,8 +12,6 @@ const char HelpString[]=
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-#define mk_codekdtree(c,r) mk_kdtree_from_points((dyv_array *)c,r)
-
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes, 
 		     char *ASCII,double *index_scale,qidx buffsize);
 

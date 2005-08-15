@@ -30,7 +30,7 @@ kdtree *fread_kdtree(FILE *fid)
   return(kdt);
 }
 
-
+/* write a node AND ALL THE NODES BELOW IT to disk*/
 unsigned int fwrite_node(node *n,FILE *fid)
 {
   if(n==NULL) {
@@ -59,6 +59,7 @@ unsigned int fwrite_node(node *n,FILE *fid)
   }
 }
 
+/* read a node AND ALL NODES BELOW IT from disk */
 node *fread_node(int pointdim,FILE *fid)
 {
   int numpoints;
@@ -107,6 +108,10 @@ node *fread_node(int pointdim,FILE *fid)
 }
 
 
+/* make a flat array of points by traversing a KD tree and taking
+   the points field out of each leaf node struct 
+   just makes an array object and points to the same dyvs as the
+   KD tree is pointing to; DOES NOT copy the dyv's                */
 dyv_array *mk_dyv_array_from_kdtree(kdtree *kd)
 {
   if(kd->root->num_points==0) return (dyv_array *)NULL;
@@ -136,6 +141,8 @@ void set_array_ptrs_below_node(node *n,dyv_array *da)
 }
 
 
+/* free a flat array of points originally made by traversing a KD tree 
+   just frees the array object but none of the dyv's it points to */
 void free_dyv_array_from_kdtree(dyv_array *da)
 {
   AM_FREE_ARRAY(da->array,dyv_ptr,da->array_size);
@@ -145,6 +152,7 @@ void free_dyv_array_from_kdtree(dyv_array *da)
 
 
 
+/*
 
 void free_kdtreedebug(kdtree *x)
 {
@@ -188,3 +196,4 @@ void free_nodedebug(node *x)
 }
 
 
+*/

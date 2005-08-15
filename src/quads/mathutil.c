@@ -1,11 +1,13 @@
 #include "mathutil.h"
 
+/* computes A choose B, but slowly and won't work for huge vals */
 unsigned long int choose(unsigned int nn,unsigned int mm)
 {
   if(nn<=0) return 0;
   else if(mm<=0) return 0;
   else if(mm>nn) return 0;
   else if(mm==1) return nn;
+  else if(mm==nn) return 1;
   unsigned int rr=1;
   unsigned int qq;
   for(qq=nn;qq>(nn-mm);qq--) rr *= qq;
@@ -13,6 +15,9 @@ unsigned long int choose(unsigned int nn,unsigned int mm)
   return rr;
 }
 
+/* computes IN PLACE the inverse of a 3x3 matrix stored as a 9-vector
+   with the first ROW of the matrix in positions 0-2, the second ROW
+   in positions 3-5, and the last ROW in positions 6-8. */
 double inverse_3by3(double *matrix)
 {
   double det;
@@ -47,14 +52,15 @@ double inverse_3by3(double *matrix)
 
   }
 
-  //fprintf(stderr,"transform determinant = %g\n",det);
+  //fprintf(stderr,"matrix determinant = %g\n",det);
 
   return(det);
 
 }
 
 
-
+/* applies the given transform to uu,vv to produce xx,yy,zz and puts
+   these values into the star object s */
 void image_to_xyz(double uu, double vv, star *s, double *transform)
 {
   double length;
@@ -73,7 +79,9 @@ void image_to_xyz(double uu, double vv, star *s, double *transform)
   return;
 }
 
-
+/* takes four image locations from ABCDpix, maps them to stars ABCD
+   using the order given, and finally fits a transform to go
+   from image locations to xyz positions based on these four datapoints */
 double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
 {
   double det,uu,uv,vv,sumu,sumv;
@@ -167,7 +175,9 @@ double *fit_transform(xy *ABCDpix,char order,star *A,star *B,star *C,star *D)
   
 }
 
-
+/* returns an ivec with the indices of the subset of points captured
+   by the box of size no more than bx by by which contains the most
+   points from the pointset represented by x,y */
 ivec *box_containing_most_points(dyv *x,dyv *y,double bx, double by)
 {
   ivec *sortx,*sorty,*inboxx,*inboxy,*inbothbox,*bestbox;
