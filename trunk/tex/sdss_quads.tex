@@ -1,45 +1,64 @@
 \documentclass[12pt,preprint]{aastex}
+
 \newcommand{\latin}[1]{\textit{#1}}
 \newcommand{\ie}{\latin{i.e.}}
 \newcommand{\eg}{\latin{e.g.}}
 \newcommand{\cf}{\latin{cf.}}
 \newcommand{\etc}{\latin{etc.}}
 \newcommand{\etal}{\latin{et~al.}}
+
+\newcommand{\usnob}{USNO-B1.0}
+
+\newcommand{\starlabel}[1]{\mathsf{#1}}
+\newcommand{\AAA}{\starlabel{A}}
+\newcommand{\BBB}{\starlabel{B}}
+\newcommand{\CCC}{\starlabel{C}}
+\newcommand{\DDD}{\starlabel{D}}
+\newcommand{\NABCD}{N_{\AAA\BBB\CCC\DDD}}
+\newcommand{\ENABCD}{E(\NABCD)}
+\newcommand{\thetaAB}{\theta_{\AAA\BBB}}
+\newcommand{\thetamin}{\theta_\mathrm{min}}
+\newcommand{\thetamax}{\theta_\mathrm{max}}
+
 \begin{document}
 
 \title{
   Automated Astrometry I:\\
-  Blind matching of image positions to stars on the sky.
+  Blind determination of image pointing, rotation, and scale
 }
 \author{
   [tba]
 }
 
 \begin{abstract}
-We report on the first stage in an ambitious project in ``blind
-astrometry,'' \ie, the determination of the precise relationship
-between $x$--$y$ positions in an image and RA--Dec positions on the
-sky with no prior knowledge of the pointing, orientation, or scale of
-the image.  Our long-term goals are \textsl{(1)}~to relieve the
-astronomical community of the onerous task of solving for precise
-``world coordinate system'' (WCS) information, and \textsl{(2)}~to
-maintain standards for the recording and transmission of WCS
-information for the new era of distributed, heterogeneous, and
-multi-wavelength data sets.
+We report on the first stage of an ambitious project in the automated
+determination of image world coordinate systems (WCS), \ie, automated
+determination of the precise relationship between $(x,y)$ positions in
+an image and (RA,Dec) positions on the sky.  Our long-term goals are
+\textsl{(1)}~to relieve the astronomical community of the onerous task
+of solving for precise WCS, and \textsl{(2)}~to maintain standards for
+the recording and transmission of WCS information for the new era of
+distributed, heterogeneous, and multi-wavelength data sets.
 
-In this first stage, we demonstrate that we can determine the
-pointing, orientation, and scale of public Sloan Digital Sky Survey
-(SDSS) images, and public KPNO 4-m Mosaic camera individual chip
-(Mosaic) images, using only the positions of unresolved sources, with
-no first guess or prior information of any kind.  Our system employs
-geometric properties of quadrangles of stars in the USNO-B1.0
-astrometric catalog, and methods for fast searching.  No solutions
-(\ie, determinations of pointing, orientation, and scale) are
-considered ``good'' unless they pass statistical tests designed to
-flag false positives.  Our system gets good matches for
-[DWH:??]~percent of SDSS images and [DWH:??]~percent of Mosaic images.
+In this first stage, we demonstrate that we can determine the WCS for
+public Sloan Digital Sky Survey (SDSS) images, and public KPNO 4-m
+Mosaic camera individual chip (Mosaic) images, using only the $(x,y)$
+positions in the image of compact sources, even when we have \emph{no
+first guess} or prior information of any kind as to pointing,
+rotation, or scale (although in fact such images do not span a large
+range in scale).  Our system works by matching quadrangles of compact
+sources in the \usnob\ astrometric catalog to quadrangles of compact
+sources in the input image.  We employ tree methods for fast
+searching.  No solutions (\ie, determinations of pointing,
+orientation, and scale) are considered ``good'' unless they lead to
+successful, precise WCS parameter fits and pass a strong statistical
+test designed to flag false positives.  Our system gets good solutions
+for [DWH:??]~percent of SDSS images and [DWH:??]~percent of Mosaic
+images, and the time to go from the $x,y$ list of source locations in
+the input image to pointing, rotation, and scale ranges from [DWH:??]
+to [DWH:??]~s.  By taking sub-frames of SDSS images, we show that we
+can reliably get good solutions for images as small as [DWH??].
 
-[DWH: \etc??]
 \end{abstract}
 
 \keywords{
@@ -76,17 +95,225 @@ all investigators would save the community enormous amounts of
 research time, and remove a significant barrier to science.
 
 Finally, there are many legacy data sets, such as photographic plate
-archives, that lie in archival disarray.  These data have enormous
-untapped value for astronomy in the time-domain.  Oddly, for many
-organizations, the scanning (digitization) of the plate material is
-less onerous than the manual data entry of pointing and rotation.  An
-automated system solves this problem.
+archives, that are scanned (digitized), or will be scanned in the near
+future.  Once in electronic form, these data have enormously increased
+value for astronomy in the time-domain.  Oddly, for many
+organizations, the scanning of the plate material is less onerous than
+the manual data entry of pointing and rotation.  An automated system
+solves this problem.
 
-For these reasons we have begun the project of making a
+For these reasons we have begun the project of making an ``astrometry
+engine'' that determines pointing, rotation, and scale for any input
+image, finds best-fit values for WCS parameters, and stores that WCS
+solution in the image header in a standards-compliant form.  In
+principle, we would like this system to work even in cases in which
+the user does not know anything about the pointing, rotation or scale
+of the input image, such as when plates are newly scanned, when images
+have been badly archived, or when instruments have output corrupted or
+incorrect image headers.
+
+There are several technical challenges for this project, but perhaps
+the greatest is the ``blind astrometry'' problem: to determine an
+image's pointing, rotation, and scale with no prior guess whatsoever.
+Indeed, it is not obviously possible.  However, in a pilot project,
+blind astrometry has been shown to be theoretically possible for at
+least some kinds of astronomical images \citep{harvey04a}.  In cases
+where scale \emph{is} known, and the images span large angles, it is
+easily solved; this is the ``lost in space'' problem, solved for
+satellites that need to re-determine their orientation using images
+taken of star fields after a loss of control [DWH: citation].  It has
+also been shown that it is possible to determine the \emph{relative}
+rotation and scale of two images that are known to overlap, even if
+nothing else is known in advance \citep{groth86a}; indeed this latter
+problem is the blind astrometry problem on a small scale and its
+solution bears some resemblance to the solution to the much harder
+problem presented below.
+
+In this work we use SDSS and KPNO 4-m Mosaic images to show that the
+hardest form of the blind astrometry problem---no prior information at
+all about image pointing, rotation, or scale---is solvable for real,
+science-grade astronomical images of varying sizes, bandpasses, and
+depths.
+
+\section{Method}
+
+[DWH: should this paragraph be in the introduction?]  In what follows,
+we will describe how we determine the pointing, rotation, and scale of
+an \textit{input image}, in the astrometric system defined by a
+standard \textit{catalog} (here the \usnob\ catalog [DWH:
+reference??]), by comparing the configurations of compact sources in
+the input image to configurations in the catalog.  For the purposes of
+what follows, we refer to any compact source as a ``\textit{star}'',
+for the reason that in fact the astrometrically measured sources in
+deep astrometric catalogs (in particular in the the \usnob\ catalog)
+are not overwhelmingly stars.
+
+The basic method we employ is to locate stars in the input image, and
+look up sets of four (\textit{quadrangles}) in an \textit{index} of
+quadrangles created from stars in the catalog.
+
+\subsection{Stellar quadrangles}
+
+The goal of the project is to determine---without prior
+knowledge---the pointing, rotation, and scale of the input image, so
+we desire a geometric description of a quadrangle of stars that does
+not depend on any of these.  Additionally, to simplify the indexing
+and search of the quadrangle database we construct, we desire the
+parameters of the geometric description to be uniformly distributed in
+a compact volume of parameter space.  The parameterization of
+quadrangles we settled on is the following:
+
+Choose four stars (all nearby on the sky) from the catalog.  The most
+widely separated pair is labeled $\AAA$ and $\BBB$ (with the choice of
+which is $\AAA$ arbitrary) and the two remaining stars are labeled
+$\CCC$ and $\DDD$ (again with the choice arbitrary).  Use the
+mid-point between $\AAA$ and $\BBB$ as a tangent point and project all
+four stars to the tangent plane so defined using the tangent
+(pinhole-camera) projection.  On the tangent plane, make star $\AAA$
+the point $(\AAA_u,\AAA_v)=(0,0)$ and star $\BBB$ the point
+$(\BBB_u,\BBB_v)=(1,1)$ in an orthonormal coordinate system $(u,v)$.
+The parameterization of the quadrangle is then the $(u,v)$ coordinates
+of stars $\CCC$ and $\DDD$, or $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$.
+
+In addition to the above description, we require that all indexed
+quadrangles have all four coordinates $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$
+each on the interval $[0,1]$ (\ie, we require that the stars $\CCC$
+and $\DDD$ lie in the square box of which $\AAA$ and $\BBB$ define
+opposite corners.  Figure~\ref{fig:quad} shows this parameterization
+for sixteen legal quadrangles, randomly produced.
+
+Stellar quads parameterized this way have two ambiguities:  Stars
+$\AAA$ and $\BBB$ can be swapped; this effectively rotates the $u,v$
+coordinate system by $\pi$, or it transforms
+\begin{equation}
+(\CCC_u,\CCC_v,\DDD_u,\DDD_v) \stackrel{\AAA\BBB}{\rightarrow}
+  (1-\CCC_u,1-\CCC_v,1-\DDD_u,1-\DDD_v) \quad ;
+\end{equation}
+and stars $\CCC$ and $\DDD$ can be swapped; this exchanges $\CCC$ and
+$\DDD$ in the parameter space or it transforms
+\begin{equation}
+(\CCC_u,\CCC_v,\DDD_u,\DDD_v) \stackrel{\CCC\DDD}{\rightarrow}
+  (\DDD_u,\DDD_v,\CCC_u,\CCC_v,) \quad .
+\end{equation}
+There is also a third possible ambiguity: The image being solved can
+have a parity opposite to that assumed.  This parity swap is an
+ambiguity not for each individual quadrangle, but for the coordinate
+system of all indexed quadrangles (or all quadrangles in the input
+image); it effectively swaps coordinates $u$ and $v$ or it transforms
+\begin{equation}
+(\CCC_u,\CCC_v,\DDD_u,\DDD_v) \stackrel{\mathrm{parity}}{\rightarrow}
+  (\CCC_v,\CCC_u,\DDD_v,\DDD_u) \quad .
+\end{equation}
+
+If stars are unclustered at small scales (this assumption is not valid
+for any real catalog, though clustering is small in \usnob), and if
+the quadrangles all span small angles, the chosen quads will fill the
+four-dimensional space $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$ uniformly.  If
+the angular number density (number per solid angle) of stars in the
+catalog is $\Gamma$ and the catalog stars are uniformly distributed on
+the sky (this assumption is also not valid for any real catalog), and
+if quadrangles are considered only when the angle $\thetaAB$ between
+stars $\AAA$ and $\BBB$ is between $\thetamin$ and $\thetamax$, then
+the expectation value $\ENABCD$ of the total number $\NABCD$ of valid
+stellar quadrangles in a large sky region is
+\begin{equation}
+\ENABCD = \frac{\pi}{48}\,\Gamma^4\,\Omega_\mathrm{total}\,
+  [\thetamax^6-\thetamin^6] \quad ,
+\end{equation}
+where $\Omega_\mathrm{total}$ is the solid angle of the sky covered by
+the catalog, $4\pi$~ster if the catalog is all-sky.  Because the
+expectation $\ENABCD$ scales so strongly with the stellar density
+$\Gamma$, the true number of allowed quads in any real stellar catalog
+(which has variations in $\Gamma$ over the sky) will in fact be very
+different from this homogeneous prediction.
+
+\subsection{Index}
+
+We do not index all possible quadrangles in the catalog, but rather we
+make a subsample that has a limited range in $\thetaAB$, and good
+coverage in parameter space and pointing on the sky.  The smallest
+angular sizes $\thetaAB$ on which we can make large numbers of
+quadrangles are on the order of $\thetaAB\sim\Gamma^{-(1/2)}$, or of
+order arcmin with the \usnob\ catalog outside the Galactic plane.
+There are of order $10^8$ patches of this size on the sky; ideally the
+index ought to contain at least this many quadrangles and fully cover
+the sky.
+
+[DWH: how do we choose quadrangles to index?]
+
+[DWH: KD tree]
+
+[DWH: Figure showing example catalog on sky and in code space?]
+
+\subsection{Test}
+
+Each parameter in the set $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$ can be
+determined with an uncertainty of about $\Delta\theta/\thetaAB$, where
+$\Delta\theta$ represents the combined uncertainties of the \usnob\
+catalog, the stellar position determinations in the input image, and
+non-square distortions in the input image.  This combined uncertainty
+$\Delta\theta$ is usually of order arcsec, so for the smallest
+quadrangles we can index, the uncertainty on each of the four
+parameters $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$ is of order $1/60$.  The
+probability that a quandrangle in the index will incorrectly match by
+accident any particular quadrangle in the image is about $10^{-7}$.
+If the index contains $10^8$ quadrangles, each quadrangle from the
+input image will match of order 10 indexed quadrangles; finding the
+image pointing, rotation, and scale is a task of finding two or more
+image quadrangles that match index quadrangles that \emph{agree} on
+the pointing, rotation, and scale.
+
+[DWH: how do we make a list of compact sources in the $x,y$ coordinate
+  system of the input image?]
+
+[DWH: in what order do we loop over quadrangles?  I think we need to
+  order them by brightness as reported by our star finder.]
+
+[DWH: by what criterion do we consider a quadrangle matched?]
+
+[DWH: how do we decide that two quadrangle matches ``agree''?]
+
+\subsection{Tweak and check}
+
+[DWH: how do we encode WCS?]
+
+[DWH: how do we tweak up to a precise WCS?  To what order do we go?]
+
+[DWH: on what basis do we decide that we tweaked to a correct WCS
+  solution?]
+
+\subsection{Limitations}
+
+[DWH: no use of magnitudes/brightnesses except to order the stars at
+  test time.]
+
+[DWH: $\AAA$--$\BBB$ swaps, $\CCC$--$\DDD$ swaps.]
+
+[DWH: parity]
+
+[DWH: scalings]
+
+\section{Results}
+
+\section{Discussion}
 
 \acknowledgements
 It is a pleasure to thank\ldots
 
 [DWH: grant numbers??]
+
+\bibliographystyle{apj}
+\bibliography{apj-jour,ccpp}
+
+\clearpage
+\begin{figure}
+\plotone{quad.ps}
+\caption{Sixteen example quadrangles of stars.  The stars are
+  represented by black boxes labeled $\AAA$, $\BBB$, $\CCC$, and
+  $\DDD$.  The coordinates of stars $\CCC$ and $\DDD$ in the $u,v$
+  coordinate systems defined by stars $\AAA$ and $\BBB$ are shown
+  graphically with grey lines and also given numerically for each
+  quadrangle.\label{fig:quad}}
+\end{figure}
 
 \end{document}
