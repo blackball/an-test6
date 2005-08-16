@@ -36,28 +36,27 @@ determination of image world coordinate systems (WCS), \ie, automated
 determination of the precise relationship between $(x,y)$ positions in
 an image and (RA,Dec) positions on the sky.  Our long-term goals are
 \textsl{(1)}~to relieve the astronomical community of the onerous task
-of solving for precise WCS, and \textsl{(2)}~to maintain standards for
-the recording and transmission of WCS information for the new era of
-distributed, heterogeneous, and multi-wavelength data sets.
+of solving for precise WCS, \textsl{(2)}~to locate, recover, and
+repair badly archived or corrupted data, and \textsl{(3)}~to propagate
+standards for the recording and transmission of WCS information.
 
 In this first stage, we demonstrate that we can determine the WCS for
-public Sloan Digital Sky Survey (SDSS) images, and public KPNO 4-m
-Mosaic camera individual chip (Mosaic) images, using only the $(x,y)$
+public Sloan Digital Sky Survey (SDSS) images using only the $(x,y)$
 positions in the image of compact sources, even when we have \emph{no
 first guess} or prior information of any kind as to pointing,
-rotation, or scale (although in fact such images do not span a large
-range in scale).  Our system works by matching quadrangles of compact
-sources in the \usnob\ astrometric catalog to quadrangles of compact
-sources in the input image.  We employ tree methods for fast
-searching.  No solutions (\ie, determinations of pointing,
-orientation, and scale) are considered ``good'' unless they lead to
-successful, precise WCS parameter fits and pass a strong statistical
-test designed to flag false positives.  Our system gets good solutions
-for [DWH:??]~percent of SDSS images and [DWH:??]~percent of Mosaic
-images, and the time to go from the $x,y$ list of source locations in
-the input image to pointing, rotation, and scale ranges from [DWH:??]
-to [DWH:??]~s.  By taking sub-frames of SDSS images, we show that we
-can reliably get good solutions for images as small as [DWH??].
+rotation, or plate scale (although in fact the configurations we
+consider do not span much range in scale).  Our system works by
+matching quadrangles of compact sources in the \usnob\ astrometric
+catalog to quadrangles of compact sources in the input image.  We
+employ tree methods for fast searching.  No solutions (\ie,
+determinations of pointing, orientation, and scale) are considered
+``good'' unless they lead to successful, precise WCS parameter fits
+and pass a strong statistical test designed to flag false positives.
+Our system gets good solutions for [DWH:??]~percent of SDSS images,
+and the time to go from the $x,y$ list of source locations in the
+input image to pointing, rotation, and scale ranges from [DWH:??]  to
+[DWH:??]~s.  By taking sub-frames of SDSS images, we show that we can
+reliably get good solutions for images as small as [DWH??].
 
 \end{abstract}
 
@@ -84,7 +83,7 @@ significant obstacle to science.  For example, even well-understood
 HST images have systematic astrometric offsets (relative to the
 USNO-B1.0 system, for example), and every HST image user must re-solve
 the astrometry locally to do precise source matching.  There are much
-more serious issues with telescope data, where the
+more serious issues with ground-based telescope data, where the
 observatory-installed WCS headers are approximate and often grossly
 wrong.  In general, many person-hours go into the construction of the
 WCS for a typical observing run, and in the end, the investigators
@@ -100,7 +99,7 @@ future.  Once in electronic form, these data have enormously increased
 value for astronomy in the time-domain.  Oddly, for many
 organizations, the scanning of the plate material is less onerous than
 the manual data entry of pointing and rotation.  An automated system
-solves this problem.
+obviates this need.
 
 For these reasons we have begun the project of making an ``astrometry
 engine'' that determines pointing, rotation, and scale for any input
@@ -118,22 +117,22 @@ image's pointing, rotation, and scale with no prior guess whatsoever.
 Indeed, it is not obviously possible.  However, in a pilot project,
 blind astrometry has been shown to be theoretically possible for at
 least some kinds of astronomical images \citep{harvey04a}.  In cases
-where scale \emph{is} known, and the images span large angles, it is
-easily solved; this is the ``lost in space'' problem, solved for
-satellites that need to re-determine their orientation using images
-taken of star fields after a loss of control [DWH: citation].  It has
-also been shown that it is possible to determine the \emph{relative}
-rotation and scale of two images that are known to overlap, even if
-nothing else is known in advance \citep{groth86a}; indeed this latter
-problem is the blind astrometry problem on a small scale and its
-solution bears some resemblance to the solution to the much harder
-problem presented below.
+where scale \emph{is} known, and (importantly) the images span very
+large angles (tens of degrees), it is easily solved; this is the
+``lost in space'' problem, solved for satellites that need to
+re-determine their orientation using images taken of star fields after
+a loss of control [DWH: citation].  It has also been shown that it is
+possible to determine the \emph{relative} pointing, rotation, and
+scale of two images that are known to overlap, even if nothing else is
+known in advance \citep{groth86a}; indeed this latter problem is the
+blind astrometry problem on a small scale and its solution bears some
+resemblance to the solution to the much harder problem presented
+here.
 
-In this work we use SDSS and KPNO 4-m Mosaic images to show that the
-hardest form of the blind astrometry problem---no prior information at
-all about image pointing, rotation, or scale---is solvable for real,
-science-grade astronomical images of varying sizes, bandpasses, and
-depths.
+In this work we use SDSS images to show that the hardest form of the
+blind astrometry problem---no prior information at all about image
+pointing, rotation, or scale---is solvable for real, science-grade
+astronomical images of varying sizes, bandpasses, and depths.
 
 \section{Method}
 
@@ -171,9 +170,10 @@ mid-point between $\AAA$ and $\BBB$ as a tangent point and project all
 four stars to the tangent plane so defined using the tangent
 (pinhole-camera) projection.  On the tangent plane, make star $\AAA$
 the point $(\AAA_u,\AAA_v)=(0,0)$ and star $\BBB$ the point
-$(\BBB_u,\BBB_v)=(1,1)$ in an orthonormal coordinate system $(u,v)$.
-The parameterization of the quadrangle is then the $(u,v)$ coordinates
-of stars $\CCC$ and $\DDD$, or $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$.
+$(\BBB_u,\BBB_v)=(1,1)$ in a right-handed orthonormal coordinate
+system $(u,v)$.  The parameterization of the quadrangle is then the
+$(u,v)$ coordinates of stars $\CCC$ and $\DDD$, or
+$(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$.
 
 In addition to the above description, we require that all indexed
 quadrangles have all four coordinates $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$
@@ -236,7 +236,7 @@ angular sizes $\thetaAB$ on which we can make large numbers of
 quadrangles are on the order of $\thetaAB\sim\Gamma^{-(1/2)}$, or of
 order arcmin with the \usnob\ catalog outside the Galactic plane.
 There are of order $10^8$ patches of this size on the sky; ideally the
-index ought to contain at least this many quadrangles and fully cover
+index ought to contain roughly this many quadrangles and fully cover
 the sky.
 
 [DWH: how do we choose quadrangles to index?]
