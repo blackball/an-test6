@@ -4,7 +4,7 @@
 ; PURPOSE:
 ;   use 2 image points to construct an approximate astrometric header
 ; INPUTS:
-;   coords   - [2,5] array of U,V (image coords) and x,y,z (unit-vector
+;   coords   - [5,2] array of U,V (image coords) and x,y,z (unit-vector
 ;              on the sphere coords) of 2 points.
 ;   parity   - 0 if parity is the usual astronomical parity, 1 if not
 ; OUTPUTS:
@@ -24,19 +24,22 @@ return, sqrt(total(vec^2))
 end
 
 function hogg_pta_cross, vec1,vec2
-return, [vec1[1]*vec2[2],vec1[2]*vec2[0],vec1[0]*vec2[1]]
+return, [vec1[1]*vec2[2]-vec1[2]*vec2[1], $
+         vec1[2]*vec2[0]-vec1[0]*vec2[2], $
+         vec1[0]*vec2[1]-vec1[1]*vec2[0]]
 end
 
 function hogg_points2astr, coords,parity
+help, coords
 
 ; split input into vectors, "im" for in image, "sp" for on sphere,
 ; and "tp" for on tangent plane
-imE= double(reform(coords[0,0:1],2))
-imF= double(reform(coords[1,0:1],2))
-spE= double(reform(coords[0,2:4],3))
+imE= double(reform(coords[0:1,0],2))
+imF= double(reform(coords[0:1,1],2))
+spE= double(reform(coords[2:4,0],3))
 spE= spE/hogg_pta_norm(spE) ; not necessary
-spF= double(reform(coords[1,2:4],3))
-spF= spE/hogg_pta_norm(spF) ; not necessary
+spF= double(reform(coords[2:4,1],3))
+spF= spF/hogg_pta_norm(spF) ; not necessary
 
 ; compute pointing
 imT= 0.5*(imE+imF)
@@ -52,17 +55,19 @@ adT= [aa,dd]
 splog, "pointing: image point",imT," points in direction",adT
 
 ; compute scale
-tpE= spE/(transpose(spT)#spE)
-tpF= spF/(transpose(spT)#spF)
-scale= hogg_pta_norm(tpF-tpE)/hogg_pta_norm(imE-imF)
-scale= scale*3.6D3*1.8D2/!DPI
-splog, "scale:",scale
+tpE= spE/(transpose(spT)#spE)[0]
+tpF= spF/(transpose(spT)#spF)[0]
+print, tpE,tpF,(tpF-tpE)
+scale= hogg_pta_norm(tpF-tpE)/hogg_pta_norm(imF-imE)
+scale= scale*1.8D2/!DPI
+splog, "scale:",scale*3.6D3
 
 ; compute rotation
-foo= spZ-(transpose(spT)#spZ)*spT
+foo= spZ-(transpose(spT)#spZ)[0]*spT
 eta= foo/hogg_pta_norm(foo)
 xi= hogg_pta_cross(spT,eta)
-splog, "testing:",hogg_pta_norm(xi),hogg_pta_norm(eta)
+splog, "testing:",hogg_pta_norm(xi),hogg_pta_norm(eta) $
+  ,(transpose(xi)#eta)[0],(transpose(xi)#spT)[0]
 if keyword_set(parity) then sgn= 1D0 else sgn= -1D0
 rotation= atan(transpose(eta)#(tpF-tpE),-1D0*transpose(xi)#(tpF-tpE)) $
   -atan(imF[1]-imE[1],sgn*(imF[0]-imE[0]))
