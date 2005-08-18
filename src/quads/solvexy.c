@@ -50,6 +50,7 @@ MatchObj *firstMatch=NULL;
 double AgreeArcSec=DEFAULT_AGREE_TOL;
 double AgreeTol;
 qidx mostAgree;
+char ParityFlip=DEFAULT_PARITY_FLIP;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -58,7 +59,6 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
   double codetol=DEFAULT_CODE_TOL;
-  char ParityFlip=DEFAULT_PARITY_FLIP;
 
   if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
@@ -119,7 +119,7 @@ int main(int argc,char *argv[])
   if(thefields==NULL) return(1);
   numfields=(qidx)thefields->size;
   fprintf(stderr,"got %lu fields.\n",numfields);
-  if(ParityFlip) fprintf(stderr,"  Flipping parity.\n");
+  if(ParityFlip) fprintf(stderr,"  Flipping parity (swapping u,v image coordinates).\n");
 
   fprintf(stderr,"  Reading code KD tree from %s...",treefname);fflush(stderr);
   fopenin(treefname,treefid); free_fn(treefname);
@@ -150,6 +150,12 @@ int main(int argc,char *argv[])
   "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
 	  numfields,codetol,AgreeArcSec);
   fopenout(hitfname,hitfid); free_fn(hitfname);
+ fprintf(hitfid,"SOLVER PARAMS:\n");
+ fprintf(hitfid,"  %lu fields, %lu quads, %lu objects in catalog\n",
+	 numfields,(qidx)kdtree_num_points(codekd),numstars);
+ fprintf(hitfid,"  code_tol=%lf, agree_tol=%lf\n",codetol,AgreeArcSec);
+ if(ParityFlip) fprintf(hitfid,"  flipping parity (swapping u,v image coordinates)\n");
+
   numsolved=solve_fields(thefields,codekd,codetol);
 		     
   fclose(hitfid); fclose(quadfid); fclose(catfid);
@@ -229,14 +235,18 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     fprintf(hitfid,"--------------------\n");
     fprintf(hitfid,"field %lu\n",ii); 
     fprintf(hitfid,"  %lu objects in field\n",numxy);
-    fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
-	    xy_refx(cornerpix,0),xy_refy(cornerpix,0),
-	    xy_refx(cornerpix,1),xy_refy(cornerpix,1));
+    if(ParityFlip)
+      fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
+	      xy_refy(cornerpix,0),xy_refx(cornerpix,0),
+	      xy_refy(cornerpix,1),xy_refx(cornerpix,1));
+    else
+      fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
+	      xy_refx(cornerpix,0),xy_refy(cornerpix,0),
+	      xy_refx(cornerpix,1),xy_refy(cornerpix,1));
     fprintf(hitfid,"  solver tried %lu quads, matched %lu codes\n",
 	    numtries,nummatches);
-    fflush(hitfid);
 
-    numgood=output_good_matches(firstMatch,lastMatch);
+    numgood=output_good_matches(firstMatch,lastMatch); fflush(hitfid);
     if(numgood==0) numsolved--;
 
     fprintf(stderr,"    field %lu: tried %lu quads, matched %lu codes, "

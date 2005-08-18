@@ -196,7 +196,7 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
 	  star_coords(thestars->array[(krez->pindexes->iarr[jj])],
 	  	    randstar,&xx,&yy);
 	  // should add random rotation here ???
-	  if(FlipParity) xx=-xx;
+	  if(FlipParity) {double swaptmp=xx; xx=yy; yy=swaptmp;}
 	  if(jj==0) {pixxmin=pixxmax=xx; pixymin=pixymax=yy;}
 	  if(xx>pixxmax) pixxmax=xx; if(xx<pixxmin) pixxmin=xx;
 	  if(yy>pixymax) pixymax=yy; if(yy<pixymin) pixymin=yy;
