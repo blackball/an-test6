@@ -330,10 +330,15 @@ xyarray *readxy(FILE *fid, char ParityFlip)
     else
       fread(thepix->array[ii]->farr,sizeof(double),DIM_XY*numxy,fid);
 
-    if(ParityFlip) 
-      for(jj=0;jj<numxy;jj++)
-	*((thepix->array[ii]->farr)+2*jj)*=-1;
-
+    if(ParityFlip) {
+      double swaptmp;
+      for(jj=0;jj<numxy;jj++) {
+	swaptmp=*((thepix->array[ii]->farr)+2*jj+1);
+	*((thepix->array[ii]->farr)+2*jj+1)=	
+	  *((thepix->array[ii]->farr)+2*jj);
+	*((thepix->array[ii]->farr)+2*jj)=swaptmp;
+      }
+    }
   }
   return thepix;
 }
