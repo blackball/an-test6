@@ -5,11 +5,13 @@ void set_array_ptrs_below_node(node *n,dyv_array *da);
 /* Write kdtree to disk */
 unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid)
 {
-  int pointdim=kdtree_num_dims(kdt);
-  fwrite(&(kdt->num_nodes),sizeof(kdt->num_nodes),1,fid);
-  if(kdt->num_nodes==0) return(0);
+  int numnodes,pointdim;
+  if(kdt==NULL) numnodes=0; else numnodes=kdt->num_nodes;
+  fwrite(&numnodes,sizeof(numnodes),1,fid);
+  if(numnodes==0) return(0);
   fwrite(&(kdt->max_depth),sizeof(kdt->max_depth),1,fid);
   fwrite(&(kdt->rmin),sizeof(kdt->rmin),1,fid);
+  pointdim=kdtree_num_dims(kdt);
   fwrite(&pointdim,sizeof(pointdim),1,fid);
   return fwrite_node(kdt->root,fid);
 }
@@ -17,8 +19,7 @@ unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid)
 /* Read kdtree from disk */
 kdtree *fread_kdtree(FILE *fid)
 {
-  int numnodes;
-  int pointdim;
+  int numnodes,pointdim;
   fread(&numnodes,sizeof(numnodes),1,fid);
   if(numnodes==0) return((kdtree *)NULL);
   kdtree *kdt = AM_MALLOC(kdtree);
