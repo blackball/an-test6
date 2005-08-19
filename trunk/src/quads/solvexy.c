@@ -9,8 +9,8 @@ const char HelpString[]=
 "   -p flips parity, default agree_tol is 10arcsec, default code tol .003\n";
 
 #define MIN_MATCHES_TO_AGREE 3
-#define DEFAULT_AGREE_TOL 10.0
-#define DEFAULT_CODE_TOL .003
+#define DEFAULT_AGREE_TOL 7.0
+#define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
 
 
@@ -81,7 +81,7 @@ int main(int argc,char *argv[])
 	AgreeArcSec=strtod(optarg,NULL);
 	break;
       case 'p':
-	ParityFlip=1;
+	ParityFlip=1-ParityFlip;
 	break;
       case '?':
 	fprintf(stderr, "Unknown option `-%c'.\n", optopt);
