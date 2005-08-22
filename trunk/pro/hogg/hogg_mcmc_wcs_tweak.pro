@@ -24,7 +24,8 @@ xy2ad, xx,yy,astr,aa,dd
 chisq= 0D0
 for ii=0L,nx-1L do begin
     err= djs_diff_angle(usno.ra,usno.dec,aa[ii],dd[ii])*3600.0 ; arcsec
-    chisq= chisq+err^2/((err/nsigma)^2+jitter^2)
+    chisq= chisq+total(err^2/((err/nsigma)^2+jitter^2)) $
+      -nsigma^2*n_elements(err)
 endfor
 chisq= total((yy-mean)*yy_ivar*(yy-mean),/double)
 like= exp(-0.5*(chisq-n_elements(yy)))
@@ -32,7 +33,15 @@ return, like
 end
 
 function hogg_mcmc_wcs_tweak_step, seed,astr
-return, astr
+common hogg_mcmc_wcs_tweak_block, jitter,nsigma,usno,nu,xx,yy,nx
+hogg_ad2xyz, astr.crval[0],astr.crval[1],crx,cry,crz
+radianjitter= jitter*!DPI/(180D0*3600D0) ; arcsec to radians
+crx= crx+radianjitter*randomn(seed)
+cry= cry+radianjitter*randomn(seed)
+crz= crz+radianjitter*randomn(seed)
+hogg_xyz2ad, crx,cry,crz,aa,dd
+newastr= hogg_tp_shift(astr,[aa,dd])
+return, newastr
 end
 
 pro hogg_mcmc_wcs_tweak, astr,uu,vv,nlink,astrchain,astrlike
