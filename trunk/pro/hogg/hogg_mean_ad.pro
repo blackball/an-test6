@@ -2,7 +2,8 @@
 ; BUGS:
 ;   - No proper header.
 ;-
-hogg_mean_ad, aa,dd,meanaa,meandd,weight=weight
+pro hogg_mean_ad, aa,dd,meanaa,meandd,weight=weight
+if (NOT keyword_set(weight)) then weight= 1D0
 hogg_ad2xyz, aa,dd,xx,yy,zz
 xx= total(xx*weight)
 yy= total(yy*weight)
