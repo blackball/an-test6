@@ -5,8 +5,8 @@
 ;   Shift tangent point on the sphere (CRVAL, in RA, Dec units),
 ;   adjusting simultaneously the CD matrix (to deal with coordinate
 ;   issues near the celestial poles).  The idea is to shift the WCS
-;   without substantially rotating the WCS, even when near the
-;   poles.
+;   without substantially rotating the tangent-plane coordinates, even
+;   when near the poles.
 ; INPUTS:
 ;   astr   - astrometry structure
 ;   crval  - new crval (tangent point on the sphere) to insert
