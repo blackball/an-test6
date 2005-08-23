@@ -12,6 +12,7 @@
 ;   astrchain - chain of WCS structures, best first
 ;   like      - likelihoods for the chain
 ; BUGS:
+;   - SUPER-SLOW because this is NOT the right problem for MCMC.
 ;   - Hard-coded to use the USNO-B1.0 catalog.
 ;   - Positional jitter and sigma limits hard coded.
 ;   - Soft sigma-clipping (see "like" function) is a hack.
