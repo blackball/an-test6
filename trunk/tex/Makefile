@@ -1,8 +1,8 @@
 .SUFFIXES: .tex .dvi .ps .pdf .mp .eps
 
-all: quad_statistics.pdf xymatch.pdf
+all: quad_statistics.pdf sdss_quads.pdf
 
-xymatch.dvi: quad.ps
+sdss_quads.dvi: quad.ps
 
 %.pdf: %.ps
 	ps2pdf -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true $<
