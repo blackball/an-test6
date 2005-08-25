@@ -51,8 +51,8 @@ splog, 'using',nusno,' USNO stars'
 ; find star matches
 spherematch, aa,dd,usno.ra,usno.dec,(jitter*nsigma/3.6D3), $
   match1,match2,distance12,maxmatch=0
-xxsub= xx[match1]
-yysub= yy[match1]
+xxsub= xx[match1]-astr.crpix[0]
+yysub= yy[match1]-astr.crpix[1]
 usnosub= usno[match2]
 nmatch= n_elements(match1)
 chisq= total((distance12/jitter)^2)
@@ -67,20 +67,24 @@ newastr.ctype= ['RA---TAN','DEC--TAN']
 ; make trivial tangent-plane coordinates
 ad2xy, usnosub.ra,usnosub.dec,newastr,uu,vv
 
-; set-up for fit of the form uu = AA . pars, vv = AA . pars
+; linear fit (of the form uu = AA . upars, vv = AA . vpars)
 ndata= nmatch
-AA1= [1D0,xx,yy]
-for order= 2,siporder do for jj=0,order do AA1= [AA1,xx^(order-jj)*yy^jj]
+AA1= [1D0,xxsub,yysub]
+for order= 2,siporder do for jj=0,order do AA1= [AA1,xxsub^(order-jj)*yysub^jj]
 nparam= n_elements(AA1)
 AA= AA1#replicate(1D0,ndata)
 AAtAA= transpose(AA)##AA
 AAtAAinv= invert(AAtAA)
+upars= transpose(AAtAAinv##(transpose(AA)##uu))
+vpars= transpose(AAtAAinv##(transpose(AA)##vv))
 
-; fit
+; interpret and load into structure
+newastr.cd= [[upars[1],upars[2]],[vpars[1],vpars[2]]]
+cdinv= invert(newastr.cd)
 
-; interpret
-
-; load into structure
+; update tangent point
+; [blah blah]
+; newastr= hogg_tp_shift(newastr,[])
 
 ; return
 return, newastr
