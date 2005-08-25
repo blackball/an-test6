@@ -79,12 +79,12 @@ upars= transpose(AAtAAinv##(transpose(AA)##uu))
 vpars= transpose(AAtAAinv##(transpose(AA)##vv))
 
 ; interpret and load into structure
+xy2ad, upars[0],vpars[0],newastr,crval0,crval1 ; NB: using trivial newastr
 newastr.cd= [[upars[1],upars[2]],[vpars[1],vpars[2]]]
 cdinv= invert(newastr.cd)
 
 ; update tangent point
-; [blah blah]
-; newastr= hogg_tp_shift(newastr,[])
+newastr= hogg_tp_shift(newastr,[crval0,crval1])
 
 ; return
 return, newastr
