@@ -11,6 +11,9 @@
 ;     is not *guaranteed* to improve the WCS.
 ;   - This code does a single iteration, to iterate, just re-run the
 ;     code (save time by calling with "usno=usno").
+;   - IF you *believe* the input distortions (eg, with ACS images) but
+;     don't believe the pointing and rotation, then simply run with
+;     siporder=1, which will preserve distortion information.
 ; INPUTS:
 ;   astr     - starting WCS structure (from extast or equivalent)
 ;   xx,yy    - positions of stars in the image
@@ -25,12 +28,16 @@
 ;   usno     - USNO catalog entries used for fit
 ;   chisq    - chisq
 ; BUGS:
-;   - SIP part not written or functional; only adjusts CD and CRVAL.
+;   - SIP part doesn't work at all right now, run only with siporder=1!!
+;   - can only handle (as input or output) SIP distortions.
+;   - doesn't correctly load ap and bp coeffs with inverse of a and b.
+;   - hard-codes duplicate of "extast.pro" code to make SIP structure.
 ;   - Requires USNO in usno_read() format.
 ;   - Doesn't allow hard specification of which star is which.
 ;   - Doesn't allow different stars to have different jitters.
+;   - Doesn't use any information other than position to match stars.
 ; REVISION HISTORY:
-;   2005-08-24  started - Hogg (NYU)
+;   2005-08-24  first cut - Hogg (NYU)
 ;-
 function hogg_wcs_tweak, astr,xx,yy,siporder=siporder, $
                          jitter=jitter,nsigma=nsigma,usno=usno,chisq=chisq
@@ -59,30 +66,65 @@ chisq= total(((distance12*3.6d3)/jitter)^2)
 splog, 'BEFORE the fit there are',nmatch,' matches and a chisq of',chisq
 
 ; make trivial newastr structure, preserving only the tangent point
-newastr= astr
-newastr.cd= [[1.0,0.0],[0.0,1.0]]
-newastr.cdelt= [1.0,1.0]
-newastr.ctype= ['RA---TAN','DEC--TAN']
+trivastr= struct_trimtags(astr,except_tags='DISTORT')
+trivastr.crpix= [0,0]
+trivastr.cd= [[1.0,0.0],[0.0,1.0]]
+trivastr.cdelt= [1.0,1.0]
+trivastr.ctype= ['RA---TAN','DEC--TAN']
 
 ; make trivial tangent-plane coordinates
-ad2xy, usnosub.ra,usnosub.dec,newastr,uu,vv
+ad2xy, usnosub.ra,usnosub.dec,trivastr,uu,vv
 
 ; linear fit (of the form uu = AA . upars, vv = AA . vpars)
 AA= transpose([[replicate(1D0,nmatch)],[xxsub],[yysub]])
 for order= 2,siporder do for jj=0,order do $
-  AA= [[AA],[xxsub^(order-jj)*yysub^jj]]
+  AA= [AA,transpose(xxsub^(order-jj)*yysub^jj)]
 AAtAA= transpose(AA)##AA
 AAtAAinv= invert(AAtAA)
 upars= transpose(AAtAAinv##(transpose(AA)##uu))
 vpars= transpose(AAtAAinv##(transpose(AA)##vv))
 
 ; interpret and load into structure
-xy2ad, upars[0],vpars[0],newastr,crval0,crval1 ; NB: using trivial newastr
+xy2ad, upars[0],vpars[0],trivastr,crval0,crval1 ; NB: using trivial newastr
+newastr= astr
 newastr.cd= [[upars[1],upars[2]],[vpars[1],vpars[2]]]
-; cdinv= invert(newastr.cd)
-
-; update tangent point
 newastr= hogg_tp_shift(newastr,[crval0,crval1])
+
+; deal with SIP structure
+if (siporder GT 1) then begin
+    distort_flag= 'SIP'
+    acoeffs= dblarr(siporder+1,siporder+1)
+    bcoeffs= dblarr(siporder+1,siporder+1)
+    ap= dblarr(siporder+1,siporder+1)
+    bp= dblarr(siporder+1,siporder+1)
+
+; get a and b coeffs by applying cdinv to the fit output
+    cdinv= invert([[upars[1],upars[2]],[vpars[1],vpars[2]]])
+    kk= 3
+    for order= 2,siporder do for jj=0,order do begin
+        abvec= cdinv#[upars[kk],vpars[kk]]
+        acoeffs[order-jj,jj]= abvec[0]
+        bcoeffs[order-jj,jj]= abvec[1]
+        kk= kk+1
+    endfor
+
+splog, acoeffs
+splog, bcoeffs
+
+; get ap coeffs by inverting the polynomial
+; TO BE DONE
+    ap= -acoeffs
+    bp= -bcoeffs
+
+; store in structure (code copied from extast.pro)
+    distort = {name:distort_flag,a:acoeffs,b:bcoeffs,ap:ap,bp:bp}
+    if (where(tag_names(newastr) EQ 'DISTORT') EQ -1) then begin
+        splog, 'adding DISTORT parameters to newastr'
+        newastr= create_struct(temporary(newastr),'distort',distort)
+    endif else begin
+        newastr.distort= distort
+    endelse
+endif
 
 ; return
 return, newastr
