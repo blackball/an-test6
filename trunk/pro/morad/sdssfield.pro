@@ -4,6 +4,7 @@
 ;  nfields   -number of fields wanted (default 1)
 ;  maxobj    -the number of sources to return per field (default 100)
 ;  band      -band to use to sort sources by psfflux (default 2)
+;  run       -all fields for the specified run will be returned
 ;
 ; KEYWORDS:
 ;  /order    -return nfields in order.
@@ -18,7 +19,7 @@
 ;-
 
 pro sdssfield, seed=seed,nfields=nfields,maxobj=maxobj,band=band, $
-               order=order,ngc=ngc
+               order=order,ngc=ngc,run=run
 
 ; set filenames
 outfile='sdssfield'
@@ -47,8 +48,14 @@ printf,1,'NumFields='+strtrim(string(nfields),2)
 print,nfields
 
 ; shuffle
-if not keyword_set(order) then $
+if not (keyword_set(order) or keyword_set(run)) then $
   flist= flist[shuffle_indx(n_elements(flist),seed=seed)]
+
+;specific run
+if keyword_set(run) then begin
+    flist=flist[where(flist.run eq run)]
+    nfields=n_elements(flist)
+endif
 
 nn=0L
 rr=0L
