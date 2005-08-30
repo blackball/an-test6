@@ -59,7 +59,7 @@ endif
 
 nn=0L
 rr=0L
-while (nn LT nfields) do begin
+while ((nn LT nfields) and (rr LT n_elements(flist))) do begin
     field=sdss_readobj(flist[rr].run,flist[rr].camcol,flist[rr].field, $
                        rerun=flist[rr].rerun)
     if (n_tags(field) GT 1) then begin
