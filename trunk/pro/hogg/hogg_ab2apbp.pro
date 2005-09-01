@@ -2,8 +2,8 @@
 ; NAME:
 ;   hogg_ab2apbp
 ; PURPOSE:
-;   Find best "reverse" polynomial terms given "forward" polynomial
-;   terms for a TAN-SIP WCS header.
+;   Find best "reverse" polynomial terms (AP,BP) given "forward"
+;   polynomial terms (A,B) for a TAN-SIP WCS header.
 ; INPUTS:
 ;   astr   - input WCS structure of SIP form with distort.a and
 ;            distort.b set
@@ -32,8 +32,8 @@ xx= reform((dindgen(ng)*naxis[0]/(ng-1))#replicate(1D0,ng),ng*ng)
 yy= reform(replicate(1D0,ng)#(dindgen(ng)*naxis[1]/(ng-1)),ng*ng)
 xy2ad, xx,yy,newastr,aa,dd
 ad2xy, aa,dd,newastr,xxback,yyback
-splog, 'mean square error (pix) before AP, BP set:', $
-  (total((xxback-xx)^2)+total((yyback-yy)^2))/n_elements(xx)
+splog, 'rms error (pix) before AP, BP set:', $
+  sqrt((total((xxback-xx)^2)+total((yyback-yy)^2))/n_elements(xx))
 amatrix= dblarr((siporder+1)*(siporder+2)/2-3,ng*ng)
 kk= 0
 xdif= xxback-(newastr.crval[0]-1)
@@ -51,8 +51,9 @@ for order=2,siporder do for jj=0,order do begin
     newastr.distort.bp[order-jj,jj]= yypars[kk]
     kk= kk+1
 endfor
-ad2xy, aa,dd,newastr,xxback,yyback
-splog, 'mean square error (pix) after AP, BP set:', $
-  (total((xxback-xx)^2)+total((yyback-yy)^2))/n_elements(xx)
+ad2xy, aa,dd,newastr,xxback2,yyback2
+splog, 'rms error (pix) after AP, BP set:', $
+  sqrt((total((xxback2-xx)^2)+total((yyback2-yy)^2))/n_elements(xx))
+stop
 return, newastr
 end
