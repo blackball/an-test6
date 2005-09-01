@@ -23,8 +23,8 @@ Some options are common to all programs:
                      (.xyls,.hits,.xyl0,.ids0,.qds0)
 [-a|-b]              specifies ASCII or BINARY format files when possible
 
-Running a program with no arguments produces a list of the
-command line arguments it wants. Arguments like this [q] mean that q
+Running a program with no arguments produces a help message with a list of the
+command line arguments it wants. Arguments listed like this [q] mean that q
 is optional, arguments like this {u|v} mean that one of u,v are required.
 
 
