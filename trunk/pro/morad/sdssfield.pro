@@ -25,7 +25,7 @@ pro sdssfield, seed=seed,nfields=nfields,maxobj=maxobj,band=band, $
 outfile='sdssfield'
 openw,1,outfile+'.xyls'
 
-objtype={ifield:0d, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d}
+objtype={run:0L, rerun:0L, camcol:0, field:0L, filter:0, ifield:0L, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d}
 
 ; read fields
 if(n_tags(flist) eq 0) then window_read,flist=flist
@@ -67,6 +67,11 @@ while ((nn LT nfields) and (rr LT n_elements(flist))) do begin
         sindx= reverse(sort(field[ind].psfflux[band]))
         good= sindx[0:((maxobj < n_elements(sindx))-1)]
         obj=replicate(objtype,n_elements(good))
+        obj.run=field[ind[good]].run
+        obj.rerun=field[ind[good]].rerun
+        obj.camcol=field[ind[good]].camcol
+        obj.field=field[ind[good]].field
+        obj.filter=band
         obj.ifield=field[ind[good]].ifield
         obj.ra=field[ind[good]].ra
         obj.dec=field[ind[good]].dec
