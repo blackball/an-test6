@@ -29,8 +29,15 @@ endfor
 distort = {name:distort_flag,a:acoeffs,b:bcoeffs,ap:apcoeffs,bp:bpcoeffs}
 astr= create_struct(temporary(astr),'distort',distort)
 
+; check that I *can* invert the distortion
+ng= 3
+xx= reform((dindgen(ng)*naxis1/(ng-1))#replicate(1D0,ng),ng*ng)
+yy= reform(replicate(1D0,ng)#(dindgen(ng)*naxis2/(ng-1)),ng*ng)
+xy2ad, xx,yy,astr,aa,dd
+hogg_iterated_ad2xy, aa,dd,astr,xx,yy
+
 ; make "backward" distortion parameters
-astr= hogg_ab2apbp(temporary(astr),[naxis1,naxis2])
+; astr= hogg_ab2apbp(temporary(astr),[naxis1,naxis2])
 
 ; make FITS header
 ; image= fltarr(naxis1,naxis2)
