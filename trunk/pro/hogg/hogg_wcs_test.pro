@@ -8,10 +8,10 @@ pro hogg_wcs_test
 
 ; make vanilla WCS
 racen= 190.0
-deccen= 10.0
+deccen= 39.9
 astr= hogg_make_astr(racen,deccen,0.5,0.5,pixscale=1.0/3600.,orientation=30.)
-naxis1= astr.naxis1
-naxis2= astr.naxis2
+naxis1= astr.naxis[0]
+naxis2= astr.naxis[1]
 astr.ctype= ['RA-','DEC']+'--TAN-SIP'
 
 ; make "forward" distortion parameters -- randomly
@@ -33,11 +33,13 @@ astr= create_struct(temporary(astr),'distort',distort)
 ng= 3
 xx= reform((dindgen(ng)*naxis1/(ng-1))#replicate(1D0,ng),ng*ng)
 yy= reform(replicate(1D0,ng)#(dindgen(ng)*naxis2/(ng-1)),ng*ng)
+print, xx,yy
 xy2ad, xx,yy,astr,aa,dd
-hogg_iterated_ad2xy, aa,dd,astr,xx,yy
+hogg_iterated_ad2xy, aa,dd,astr,xxxx,yyyy
+print, xxxx,yyyy
 
 ; make "backward" distortion parameters
-; astr= hogg_ab2apbp(temporary(astr),[naxis1,naxis2])
+astr= hogg_ab2apbp(temporary(astr),[naxis1,naxis2])
 
 ; make FITS header
 ; image= fltarr(naxis1,naxis2)

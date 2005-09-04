@@ -34,11 +34,11 @@ xy2ad, xx,yy,newastr,aa,dd
 ad2xy, aa,dd,newastr,xxback,yyback
 splog, 'rms error (pix) before AP, BP set:', $
   sqrt((total((xxback-xx)^2)+total((yyback-yy)^2))/n_elements(xx))
-amatrix= dblarr((siporder+1)*(siporder+2)/2-3,ng*ng)
+amatrix= dblarr((siporder+1)*(siporder+2)/2,ng*ng)
 kk= 0
-xdif= xxback-(newastr.crval[0]-1)
-ydif= yyback-(newastr.crval[0]-1)
-for order=2,siporder do for jj=0,order do begin
+xdif= xxback-(newastr.crpix[0]-1)
+ydif= yyback-(newastr.crpix[1]-1)
+for order=0,siporder do for jj=0,order do begin
     amatrix[kk,*]= xdif^(order-jj)*ydif^jj
     kk= kk+1
 endfor
@@ -46,7 +46,7 @@ atainv= invert(transpose(amatrix)##amatrix)
 xxpars= atainv##(transpose(amatrix)##(xx-xxback))
 yypars= atainv##(transpose(amatrix)##(yy-yyback))
 kk= 0
-for order=2,siporder do for jj=0,order do begin
+for order=0,siporder do for jj=0,order do begin
     newastr.distort.ap[order-jj,jj]= xxpars[kk]
     newastr.distort.bp[order-jj,jj]= yypars[kk]
     kk= kk+1
@@ -54,6 +54,5 @@ endfor
 ad2xy, aa,dd,newastr,xxback2,yyback2
 splog, 'rms error (pix) after AP, BP set:', $
   sqrt((total((xxback2-xx)^2)+total((yyback2-yy)^2))/n_elements(xx))
-stop
 return, newastr
 end
