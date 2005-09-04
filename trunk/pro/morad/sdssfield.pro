@@ -51,7 +51,7 @@ print,nfields
 if not (keyword_set(order) or keyword_set(run)) then $
   flist= flist[shuffle_indx(n_elements(flist),seed=seed)]
 
-;specific run
+; specific run
 if keyword_set(run) then begin
     flist=flist[where(flist.run eq run)]
     nfields=n_elements(flist)
