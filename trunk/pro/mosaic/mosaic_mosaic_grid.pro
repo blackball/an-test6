@@ -20,7 +20,7 @@ pro mosaic_mosaic_grid, filelist,prefix,racen,deccen,dra,ddec,nx,ny, $
                         bitmaskname=bitmaskname
 
 pixscale=.40/3600.0
-center= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
+center= hogg_make_astr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
 
 for ii=-(nx-1)/2,(nx-1)/2 do begin
     iistr= strtrim(string(ii),2)
@@ -32,8 +32,8 @@ for ii=-(nx-1)/2,(nx-1)/2 do begin
         filename= prefix+'_'+iistr+jjstr+'.fits'
         splog, 'starting work on '+filename
         bigast= center
-        bigast.crpix= center.crpix+[double(ii)*double(center.naxis1), $
-                                    double(jj)*double(center.naxis2)]
+        bigast.crpix= center.crpix+[double(ii)*double(center.naxis[0]), $
+                                    double(jj)*double(center.naxis[1])]
         mosaic_mosaic, filelist,filename,bigast=bigast, $
           bitmaskname=bitmaskname
     endfor

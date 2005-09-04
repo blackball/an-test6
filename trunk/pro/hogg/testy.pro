@@ -4,9 +4,9 @@ racen= 15D0*(11.+31./60.+51.6/3600.)
 deccen= -1.0*(12D0+31./60.+57.0/3600.)
 dra= 0.30/60.0
 pixscale= 0.03/3600.0
-bigast= smosaic_hdr(racen,deccen,dra,dra,pixscale=pixscale)
-xx= dindgen(bigast.naxis1)#replicate(1,bigast.naxis2)
-yy= replicate(1,bigast.naxis1)#dindgen(bigast.naxis2)
+bigast= hogg_make_astr(racen,deccen,dra,dra,pixscale=pixscale)
+xx= dindgen(bigast.naxis[0])#replicate(1,bigast.naxis[1])
+yy= replicate(1,bigast.naxis[0])#dindgen(bigast.naxis[1])
 xy2ad, xx,yy,bigast,aa,dd
 filelist= findfile('~/lens/data/hogghogg77799/*_flt.fit*')
 for ii=0,n_elements(filelist)-1 do begin
@@ -27,7 +27,7 @@ for ii=0,n_elements(filelist)-1 do begin
         splog, nin,' pixels in exten',exten,' of '+filename+' '+thisfilter
         if (nin GT 0) then begin
             image= mrdfits(filename,exten)
-            thisoutimage= fltarr(bigast.naxis1,bigast.naxis2)
+            thisoutimage= fltarr(bigast.naxis[0],bigast.naxis[1])
             thisoutimage[round(xx[inimage]),round(yy[inimage])]= $
               image[xflt[inimage],yflt[inimage]]
             if (NOT keyword_set(outimage)) then outimage= thisoutimage $

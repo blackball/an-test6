@@ -28,8 +28,6 @@
 ;     done on a coarse grid and then interpolated to the fine grid.
 ;   - Uses *nearest neighbor* interpolation; use only for input astr
 ;     with tiny pixel scale (eg 0.025 or smaller).
-;   - Depends on photoop -- it wouldn't if I made an equivalent of
-;     smosaic_hdr in idlutils (there should be one there anyway).
 ; COMMENTS:
 ; DEPENDENCIES:
 ;   idlutils

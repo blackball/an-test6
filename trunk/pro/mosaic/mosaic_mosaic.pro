@@ -9,7 +9,7 @@
 ;   racen,deccen  - center of image (J2000 deg)
 ;   dra,ddec      - size of image (deg)
 ; OPTIONAL INPUTS:
-;   bigast        - *big* astrometry structure returned by smosaic_hdr
+;   bigast        - *big* astrometry structure returned by hogg_make_astr
 ;                   or equivalent; if set, this *over-rules* racen,
 ;                   deccen, dra, and ddec
 ;   saturation    - pixel value (above bias) to use for saturation;
@@ -29,13 +29,13 @@ pro mosaic_mosaic, filelist,filename,racen,deccen,dra,ddec, $
 ; create RA---TAN, DEC--TAN wcs header for mosaic
 if (NOT keyword_set(bigast)) then begin
     pixscale=.25/3600.0
-    bigast= smosaic_hdr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
+    bigast= hogg_make_astr(racen,deccen,dra,ddec,pixscale=pixscale,npixround=8)
 endif
 if (NOT keyword_set(saturation)) then saturation= 1.7e4
 
 ; initialize mosaic
-naxis1= bigast.naxis1
-naxis2= bigast.naxis2
+naxis1= bigast.naxis[0]
+naxis2= bigast.naxis[1]
 image= fltarr(naxis1,naxis2)
 weight= fltarr(naxis1,naxis2)
 

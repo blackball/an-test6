@@ -4,7 +4,7 @@ racen= 15D0*(11.+31./60.+51.6/3600.)
 deccen= -1.0*(12D0+31./60.+57.0/3600.)
 dra= 0.30/60.0
 pixscale= 0.025/3600.0
-astr= smosaic_hdr(racen,deccen,dra,dra,pixscale=pixscale)
+astr= hogg_make_astr(racen,deccen,dra,dra,pixscale=pixscale)
 filelist= findfile('./*_flt.fit*')
 for ii=0,n_elements(filelist)-1 do begin
     filename= filelist[ii]
@@ -14,7 +14,7 @@ for ii=0,n_elements(filelist)-1 do begin
         splog, filename+' is not an ACS image, apparently; skipping'
     endif else for exten=1,sxpar(hdr0,'NEXTEND'),3 do begin
         thisoutimage= hogg_acs_cutout(filename,exten,astr, $
-                                      [astr.naxis1,astr.naxis2], $
+                                      astr.naxis, $
                                       xx=xx,yy=yy,aa=aa,dd=dd)
         if (n_elements(thisoutimage) EQ n_elements(xx)) then begin
             if (NOT keyword_set(outimage)) then outimage= thisoutimage $

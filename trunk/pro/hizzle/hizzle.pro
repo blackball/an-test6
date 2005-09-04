@@ -48,10 +48,9 @@ if (type(orig_astr,/name) EQ 'STRING') then begin
     naxis2= sxpar(orig_astr,'NAXIS2')
 endif else begin
     astr= orig_astr
-    if (tag_exists(orig_astr,'naxis1') and $
-        tag_exists(orig_astr,'naxis2')) then begin
-        naxis1= orig_astr.naxis1
-        naxis2= orig_astr.naxis2
+    if tag_exists(orig_astr,'naxis') then begin
+        naxis1= orig_astr.naxis[0]
+        naxis2= orig_astr.naxis[1]
     endif
 endelse
 if (not keyword_set(naxis1)) then begin
