@@ -58,8 +58,8 @@ splog, 'using',nusno,' USNO stars'
 ; find star matches
 spherematch, aa,dd,usno.ra,usno.dec,(jitter*nsigma/3.6D3), $
   match1,match2,distance12,maxmatch=0
-xxsub= xx[match1]-astr.crpix[0]
-yysub= yy[match1]-astr.crpix[1]
+xxsub= xx[match1]-(astr.crpix[0]-1.0)
+yysub= yy[match1]-(astr.crpix[1]-1.0)
 usnosub= usno[match2]
 nmatch= n_elements(match1)
 chisq= total(((distance12*3.6d3)/jitter)^2)
@@ -108,14 +108,6 @@ if (siporder GT 1) then begin
         kk= kk+1
     endfor
 
-splog, acoeffs
-splog, bcoeffs
-
-; get ap coeffs by inverting the polynomial
-; TO BE DONE
-    ap= -acoeffs
-    bp= -bcoeffs
-
 ; store in structure (code copied from extast.pro)
     distort = {name:distort_flag,a:acoeffs,b:bcoeffs,ap:ap,bp:bp}
     if (where(tag_names(newastr) EQ 'DISTORT') EQ -1) then begin
@@ -125,6 +117,9 @@ splog, bcoeffs
         newastr.distort= distort
     endelse
 endif
+
+; get ap coeffs by inverting the polynomial
+newastr= hogg_ab2apbp(newastr,[max(xx),max(yy)])
 
 ; return
 return, newastr

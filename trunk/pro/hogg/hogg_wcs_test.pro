@@ -15,7 +15,7 @@ naxis2= astr.naxis[1]
 astr.ctype= ['RA-','DEC']+'--TAN-SIP'
 
 ; make "forward" distortion parameters -- randomly
-siporder= 2
+siporder= 3
 distort_flag= 'SIP'
 acoeffs= dblarr(siporder+1,siporder+1)
 bcoeffs= dblarr(siporder+1,siporder+1)
@@ -30,7 +30,7 @@ distort = {name:distort_flag,a:acoeffs,b:bcoeffs,ap:apcoeffs,bp:bpcoeffs}
 astr= create_struct(temporary(astr),'distort',distort)
 
 ; check that I *can* invert the distortion
-ng= 3
+ng= 7
 xx= reform((dindgen(ng)*naxis1/(ng-1))#replicate(1D0,ng),ng*ng)
 yy= reform(replicate(1D0,ng)#(dindgen(ng)*naxis2/(ng-1)),ng*ng)
 print, xx,yy
@@ -40,6 +40,19 @@ print, xxxx,yyyy
 
 ; make "backward" distortion parameters
 astr= hogg_ab2apbp(temporary(astr),[naxis1,naxis2])
+
+; try to find "forward" parameters by fitting
+usno= {usno, ra:aa[0], dec:dd[0]}
+usno= replicate(usno,n_elements(aa))
+usno.ra= aa
+usno.dec= dd
+fitastr= struct_trimtags(astr,except_tags='DISTORT')
+fitastr.crval= astr.crval+(2.0/3600.0)*randomn(seed,2)
+fitastr= hogg_wcs_tweak(fitastr,xx,yy,siporder=siporder,usno=usno,chisq=chisq)
+fitastr= hogg_wcs_tweak(fitastr,xx,yy,siporder=siporder,usno=usno,chisq=chisq)
+fitastr= hogg_wcs_tweak(fitastr,xx,yy,siporder=siporder,usno=usno,chisq=chisq)
+print, fitastr.distort.a
+print, astr.distort.a
 
 ; make FITS header
 ; image= fltarr(naxis1,naxis2)
