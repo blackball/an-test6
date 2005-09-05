@@ -9,7 +9,7 @@
 ; INPUT:
 ;   coords   - [5,2] array of U,V (image coords) and x,y,z (unit-vector
 ;              on the sphere coords) of 2 points.
-;   uu,vv    - positions of compact sources in image coords
+;   uu,vv    - catalog including positions of compact sources in image coords
 ; OPTIONAL INPUT:
 ;   parity   - 0 (default) if parity is the usual astronomical parity,
 ;              1 if not
@@ -29,9 +29,7 @@ astr= hogg_wcs_tweak(astr,uu,vv,siporder=0,jitter=2.0, $
                      nsigma=5.0,usno=usno,chisq=chisq)
 astr= hogg_wcs_tweak(astr,uu,vv,siporder=0,jitter=2.0, $
                      nsigma=5.0,usno=usno,chisq=chisq)
-astr= hogg_wcs_tweak(astr,uu,vv,siporder=2,jitter=2.0, $
-                     nsigma=5.0,usno=usno,chisq=chisq)
-astr= hogg_wcs_tweak(astr,uu,vv,siporder=2,jitter=2.0, $
+astr= hogg_wcs_tweak(astr,uu,vv,siporder=siporder,jitter=2.0, $
                      nsigma=5.0,usno=usno,chisq=chisq)
 astr= hogg_wcs_tweak(astr,uu,vv,siporder=2,jitter=2.0, $
                      nsigma=5.0,usno=usno,chisq=chisq)

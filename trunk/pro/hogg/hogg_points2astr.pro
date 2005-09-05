@@ -83,9 +83,7 @@ make_astr, astr, $
   CRPIX    = double([0.5,0.5])+imT, $ ; NB: FITS CONVENTION (should this be [1,1]?
   CRVAL    = adT, $
   CTYPE    = ctype, $
-  LONGPOLE = 1.8D2, $
-  PROJP1   = -1D0, $
-  PROJP2   = -2D0
+  LONGPOLE = 1.8D2
 
 return, astr
 end
