@@ -19,7 +19,7 @@
 ;   - Various things hard-coded.
 ;   - Assumes APORDER = BPORDER.
 ; REVISION HISTORY:
-;   2005-08-31  started - Hogg (NYU)
+;   2005-09-04  first working version - Hogg (NYU)
 ;-
 function hogg_ab2apbp, astr,naxis
 newastr= astr

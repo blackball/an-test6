@@ -11,9 +11,6 @@
 ;     is not *guaranteed* to improve the WCS.
 ;   - This code does a single iteration, to iterate, just re-run the
 ;     code (save time by calling with "usno=usno").
-;   - IF you *believe* the input distortions (eg, with ACS images) but
-;     don't believe the pointing and rotation, then simply run with
-;     siporder=1, which will preserve distortion information.
 ; INPUTS:
 ;   astr     - starting WCS structure (from extast or equivalent)
 ;   xx,yy    - positions of stars in the image
@@ -29,16 +26,17 @@
 ;   usno     - USNO catalog entries used for fit
 ;   chisq    - chisq
 ; BUGS:
-;   - SIP part doesn't work at all right now, run only with siporder=1!!
-;   - can only handle (as input or output) SIP distortions.
-;   - doesn't correctly load ap and bp coeffs with inverse of a and b.
-;   - hard-codes duplicate of "extast.pro" code to make SIP structure.
+;   - Can only handle (as input or output) SIP distortions.
+;   - If you *believe* the input distortions (eg, with ACS images) but
+;     don't believe the pointing and rotation, you will want to
+;     preserve distortion information; this is not currently possible.
+;   - Hard-codes duplicate of "extast.pro" code to make SIP structure.
 ;   - Requires USNO in usno_read() format.
 ;   - Doesn't allow hard specification of which star is which.
 ;   - Doesn't allow different stars to have different jitters.
 ;   - Doesn't use any information other than position to match stars.
 ; REVISION HISTORY:
-;   2005-08-24  first cut - Hogg (NYU)
+;   2005-09-05  tested on SDSS fields and works - Hogg (NYU)
 ;-
 function hogg_wcs_tweak, astr,xx,yy,siporder=siporder, $
                          jitter=jitter,nsigma=nsigma,usno=usno, $
