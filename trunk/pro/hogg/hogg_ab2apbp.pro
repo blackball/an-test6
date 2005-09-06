@@ -23,6 +23,15 @@
 ;-
 function hogg_ab2apbp, astr,naxis
 newastr= astr
+if (where(tag_names(astr) EQ 'DISTORT') EQ -1) then begin
+    splog, 'no distortions in WCS structure, returning WCS unchanged'
+    return, astr
+endif
+if (astr.distort.name NE 'SIP') then begin
+    splog, 'distortion type not "SIP", returning WCS unchanged'
+    stop
+    return, astr
+endif
 newastr.distort.ap[*,*]= 0.0
 newastr.distort.bp[*,*]= 0.0
 siporder= (size(newastr.distort.ap,/dimens))[0]-1
