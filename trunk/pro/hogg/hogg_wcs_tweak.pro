@@ -103,7 +103,7 @@ if (siporder GT 1) then begin
     bp= dblarr(siporder+1,siporder+1)
 
 ; get a and b coeffs by applying cdinv to the fit output
-    cdinv= invert([[upars[1],upars[2]],[vpars[1],vpars[2]]])
+    cdinv= invert([[upars[1],vpars[1]],[upars[2],vpars[2]]])
     kk= 3
     for order= 2,siporder do for jj=0,order do begin
         abvec= cdinv#[upars[kk],vpars[kk]]
