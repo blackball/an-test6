@@ -4,6 +4,8 @@ my $name = $ARGV[0];
 my $input = `cat $name.hits`;
 my $parity= 0;
 @records = split "--------------------\n", $input;
+printf("set_plot, \'PS\'\n");
+printf("device");
 foreach $record (@records){
     if ($record =~ /field\s(\d+)\s/){
 	my $field = $1;
@@ -52,7 +54,7 @@ foreach $record (@records){
 	    $maxy/= $maxnorm;
 	    $maxz/= $maxnorm;
 	
-	    printf("; field %d\n",$field);
+	    printf("!P.TITLE=\'field %d\'\n",$field);
 	    printf("; min u , v = %f , %f\n",$minu,$minv);
 	    printf("; min x , y , z = %f , %f , %f\n",$minx,$miny,$minz);
 	    printf("; max u , v = %f , %f\n",$maxu,$maxv);
@@ -62,10 +64,11 @@ foreach $record (@records){
 		   $minu,$minv,$minx,$miny,$minz);
             printf("                  [%f,%f,%f,%f,%f]], \$\n",
 		   $maxu,$maxv,$maxx,$maxy,$maxz);
-	    printf("                 cat.rowc,cat.colc, \$\n");
+	    printf("                 cat.rowc,cat.colc,siporder=2, \$\n");
 	    printf("                 parity=%d)\n",
 		   $parity);
 	    printf(";\n");
 	}
     }
 }
+printf("device, /close\n");

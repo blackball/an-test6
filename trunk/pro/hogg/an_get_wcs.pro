@@ -26,7 +26,8 @@ function an_get_wcs, coords,uu,vv,parity=parity,siporder=siporder
 if (not keyword_set(parity)) then parity=0
 if (not keyword_set(siporder)) then siporder=1
 startastr= hogg_points2astr(coords,parity)
-nsigma= 3.0
+jitter= 1.5
+nsigma= 4.0
 astr= hogg_wcs_tweak(startastr,uu,vv,siporder=1,jitter=2.0, $
                      nsigma=nsigma,usno=usno,chisq=chisq)
 astr= hogg_wcs_tweak(astr,uu,vv,siporder=1,jitter=2.0, $
@@ -39,7 +40,6 @@ astr= hogg_wcs_tweak(astr,uu,vv,siporder=siporder,jitter=2.0, $
                      nsigma=nsigma,usno=usno)
 astr= hogg_wcs_tweak(astr,uu,vv,siporder=siporder,jitter=2.0, $
                      nsigma=nsigma,usno=usno)
-hogg_plot_defaults
 plot, uu,vv,psym=1
 ad2xy, usno.ra,usno.dec,astr,xx,yy
 oplot, xx,yy,psym=6
