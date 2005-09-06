@@ -22,6 +22,7 @@
 ;   jitter   - jitter (uncertainty) to assume (arcsec; default 2.0)
 ;   nsigma   - number of multiples of jitter to allow (default 5.0)
 ;   usno     - USNO catalog entries used for fit (speeds operation)
+; KEYWORDS:
 ; OUTPUTS:
 ;            - improved WCS
 ; OPTIONAL OUTPUTS:
@@ -40,7 +41,8 @@
 ;   2005-08-24  first cut - Hogg (NYU)
 ;-
 function hogg_wcs_tweak, astr,xx,yy,siporder=siporder, $
-                         jitter=jitter,nsigma=nsigma,usno=usno,chisq=chisq
+                         jitter=jitter,nsigma=nsigma,usno=usno, $
+                         chisq=chisq
 if (not keyword_set(siporder)) then siporder= 1
 if (not keyword_set(jitter)) then jitter= 2D0
 if (not keyword_set(nsigma)) then nsigma= 5D0
@@ -58,12 +60,14 @@ splog, 'using',nusno,' USNO stars'
 ; find star matches
 spherematch, aa,dd,usno.ra,usno.dec,(jitter*nsigma/3.6D3), $
   match1,match2,distance12,maxmatch=0
-xxsub= xx[match1]-(astr.crpix[0]-1.0)
-yysub= yy[match1]-(astr.crpix[1]-1.0)
-usnosub= usno[match2]
 nmatch= n_elements(match1)
 chisq= total(((distance12*3.6d3)/jitter)^2)
 splog, 'BEFORE the fit there are',nmatch,' matches and a chisq of',chisq
+
+; restrict vectors to matched stars
+xxsub= xx[match1]-(astr.crpix[0]-1.0)
+yysub= yy[match1]-(astr.crpix[1]-1.0)
+usnosub= usno[match2]
 
 ; make trivial newastr structure, preserving only the tangent point
 trivastr= struct_trimtags(astr,except_tags='DISTORT')
@@ -87,8 +91,8 @@ vpars= transpose(AAtAAinv##(transpose(AA)##vv))
 ; interpret and load into structure
 xy2ad, upars[0],vpars[0],trivastr,crval0,crval1 ; NB: using trivial newastr
 newastr= astr
-newastr.cd= [[upars[1],upars[2]],[vpars[1],vpars[2]]]
 newastr= hogg_tp_shift(newastr,[crval0,crval1])
+newastr.cd= [[upars[1],vpars[1]],[upars[2],vpars[2]]]
 
 ; deal with SIP structure
 if (siporder GT 1) then begin
@@ -116,10 +120,10 @@ if (siporder GT 1) then begin
     endif else begin
         newastr.distort= distort
     endelse
-endif
 
 ; get ap coeffs by inverting the polynomial
-newastr= hogg_ab2apbp(newastr,[max(xx),max(yy)])
+    newastr= hogg_ab2apbp(newastr,[max(xx),max(yy)])
+endif
 
 ; return
 return, newastr
