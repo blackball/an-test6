@@ -3,11 +3,11 @@ OPEN:
 
 For the Quads Indexing System:
 
+get a .xyls file representing all available sloan fields
+(entered by Sam, Sept6/05, target Hogg; Hogg is doing this now...)
+
 look at numerical stability of star_coords
 (entered by Sam, Sept6/05, target Sam)
-
-get a .xyls file representing all available sloan fields
-(entered by Sam, Sept6/05, target Hogg)
 
 figure out why fields that didn't solve didn't solve
 (entered by Sam, Sept6/05, target Hogg/Sam)
@@ -27,15 +27,15 @@ implement a portable fits image to xy-list star finder
 
 For the Website:
 
-get a permanent ip for "astrometry" and set up URL cloaking so
-that astrometry.net does not appear as a redirect
+get a permanent ip for "astrometry" and set up URL cloaking so that
+astrometry.net does not appear as a redirect
 (entered by Sam, Sept6/05, target Hogg/Blanton/Mulin)
 
 set up a machine for web server and get an account on it for Keir
 (entered by Sam, Sept9/05, target Hogg/Blanton/Mulin)
 
-get a list of catalogs for which we want to get complete
-field footprint lists 
+get a list of catalogs for which we want to get complete field
+footprint lists
 (entered by Sam, Sept6/05, target Hogg/Morad)
 
 
@@ -44,10 +44,8 @@ RESOLVED:
 
 For the Quads Indexing System:
 
-look at difference between swapping u,v
-and taking -u for parity flip 
-(entered by Sam, Sept6/05, target Sam;
- resolved by sam Sept8/05)
+look at difference between swapping u,v and taking -u for parity flip
+(entered by Sam, Sept6/05, target Sam; resolved by sam Sept8/05)
 
 
 For the Website:
