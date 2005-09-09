@@ -119,7 +119,8 @@ int main(int argc,char *argv[])
   if(thefields==NULL) return(1);
   numfields=(qidx)thefields->size;
   fprintf(stderr,"got %lu fields.\n",numfields);
-  if(ParityFlip) fprintf(stderr,"  Flipping parity (negative u image coordinates).\n");
+  if(ParityFlip) 
+   fprintf(stderr,"  Flipping parity (swapping row/col image coordinates).\n");
 
   fprintf(stderr,"  Reading code KD tree from %s...",treefname);fflush(stderr);
   fopenin(treefname,treefid); free_fn(treefname);
@@ -154,7 +155,8 @@ int main(int argc,char *argv[])
  fprintf(hitfid,"  %lu fields, %lu quads, %lu objects in catalog\n",
 	 numfields,(qidx)kdtree_num_points(codekd),numstars);
  fprintf(hitfid,"  code_tol=%lf, agree_tol=%lf\n",codetol,AgreeArcSec);
- if(ParityFlip) fprintf(hitfid,"  flipping parity (neagtive u image coordinates)\n");
+ if(ParityFlip) 
+   fprintf(hitfid,"  flipping parity (swapping row/col image coordinates)\n");
 
   numsolved=solve_fields(thefields,codekd,codetol);
 		     
@@ -236,12 +238,9 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     fprintf(hitfid,"field %lu\n",ii); 
     fprintf(hitfid,"  %lu objects in field\n",numxy);
     if(ParityFlip)
-      //fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
-      //      xy_refy(cornerpix,0),xy_refx(cornerpix,0),
-      //      xy_refy(cornerpix,1),xy_refx(cornerpix,1));
       fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
-            -xy_refx(cornerpix,0),xy_refy(cornerpix,0),
-            -xy_refx(cornerpix,1),xy_refy(cornerpix,1));
+	      xy_refy(cornerpix,0),xy_refx(cornerpix,0),
+	      xy_refy(cornerpix,1),xy_refx(cornerpix,1));
     else
       fprintf(hitfid,"  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
 	      xy_refx(cornerpix,0),xy_refy(cornerpix,0),
