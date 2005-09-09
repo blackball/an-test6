@@ -1,5 +1,6 @@
 OPEN:
 
+
 For the Quads Indexing System:
 
 look at numerical stability of star_coords
@@ -40,12 +41,14 @@ field footprint lists
 
 RESOLVED:
 
+
 For the Quads Indexing System:
 
 look at difference between swapping u,v
 and taking -u for parity flip 
 (entered by Sam, Sept6/05, target Sam;
  resolved by sam Sept8/05)
+
 
 For the Website:
 
