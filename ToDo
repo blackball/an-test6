@@ -6,13 +6,32 @@ look at numerical stability of star_coords
 (entered by Sam, Sept6/05, target Sam)
 
 get a .xyls file representing all available sloan fields
-(entered by Sam, Sept6/05, target Morad)
+(entered by Sam, Sept6/05, target Hogg)
+
+figure out why fields that didn't solve didn't solve
+(entered by Sam, Sept6/05, target Hogg/Sam)
+
+update IDL code for making USNO catalogue to output .objs format directly
+(entered by Sam, Sept9/05, target Sam/Hogg)
+
+make all-sky USNO objs file and make corresponding index
+(entered by Sam, Sept9/05, target Sam/Hogg)
+
+solve fields by considering objects in order of brightness 
+(entered by Sam, Sept9/05, target Hogg/Sam)
+
+implement a portable fits image to xy-list star finder
+(entered by Sam, Sept9/05, target Blanton)
+
 
 For the Website:
 
-get a permanent server and set up URL cloaking so
+get a permanent ip for "astrometry" and set up URL cloaking so
 that astrometry.net does not appear as a redirect
 (entered by Sam, Sept6/05, target Hogg/Blanton/Mulin)
+
+set up a machine for web server and get an account on it for Keir
+(entered by Sam, Sept9/05, target Hogg/Blanton/Mulin)
 
 get a list of catalogs for which we want to get complete
 field footprint lists 
