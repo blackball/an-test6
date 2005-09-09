@@ -1,12 +1,15 @@
+OPEN:
+
 For the Quads Indexing System:
-look at numerical stability and difference between swapping u,v
-and taking -u for parity flip 
+
+look at numerical stability of star_coords
 (entered by Sam, Sept6/05, target Sam)
 
 get a .xyls file representing all available sloan fields
 (entered by Sam, Sept6/05, target Morad)
 
 For the Website:
+
 get a permanent server and set up URL cloaking so
 that astrometry.net does not appear as a redirect
 (entered by Sam, Sept6/05, target Hogg/Blanton/Mulin)
@@ -14,4 +17,16 @@ that astrometry.net does not appear as a redirect
 get a list of catalogs for which we want to get complete
 field footprint lists 
 (entered by Sam, Sept6/05, target Hogg/Morad)
+
+
+RESOLVED:
+
+For the Quads Indexing System:
+
+look at difference between swapping u,v
+and taking -u for parity flip 
+(entered by Sam, Sept6/05, target Sam;
+ resolved by sam Sept8/05)
+
+For the Website:
 
