@@ -1,4 +1,13 @@
 ;+
+; NAME:
+;  sdssfield
+;
+; PURPOSE:
+;  Extract x,y list from an SDSS field for the astrometry.net demo
+;  project.
+;
+; INPUTS:
+;
 ; OPTIONAL INPUTS:
 ;  seed      -the seed for the random sequence (default 7l)
 ;  nfields   -number of fields wanted (default 1)
@@ -11,19 +20,18 @@
 ;  /ngc      -return only fields in the NGC
 ;
 ; BUGS:
-;  - I (DWH) removed the "all" field because I found that some fields
-;    don't read properly; when I drop those fields that don't read, I
-;    get a total number of fields that is smaller than the number we
-;    *say* in the file we are going to make, and that's bad.
 ;  - No proper code header!!
+;
+; REVISION HISTORY:
+;  2005-08-??  started by Masjedi (NYU)
 ;-
-
 pro sdssfield, seed=seed,nfields=nfields,maxobj=maxobj,band=band, $
                order=order,ngc=ngc,run=run
 
 ; set filenames
-outfile='sdssfield'
-openw,1,outfile+'.xyls'
+outfile= 'sdssfield'
+wlun= 1
+openw, wlun,outfile+'.xyls'
 
 objtype={run:0L, rerun:0L, camcol:0, field:0L, filter:0, ifield:0L, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d}
 
@@ -44,8 +52,8 @@ if not keyword_set(seed) then seed=7l
 if not keyword_set(nfields) then nfields=1l
 if not keyword_set(maxobj) then maxobj=100
 if not keyword_set(band) then band=2
-printf,1,'NumFields='+strtrim(string(nfields),2)
-print,nfields
+printf, wlun,'NumFields='+strtrim(string(nfields),2)
+splog, nfields
 
 ; shuffle
 if not (keyword_set(order) or keyword_set(run)) then $
@@ -53,8 +61,8 @@ if not (keyword_set(order) or keyword_set(run)) then $
 
 ; specific run
 if keyword_set(run) then begin
-    flist=flist[where(flist.run eq run)]
-    nfields=n_elements(flist)
+    flist= flist[where(flist.run eq run)]
+    nfields= n_elements(flist)
 endif
 
 nn=0L
@@ -64,32 +72,34 @@ while ((nn LT nfields) and (rr LT n_elements(flist))) do begin
                        rerun=flist[rr].rerun)
     if (n_tags(field) GT 1) then begin
         ind=sdss_selectobj(field,objtype=['star','galaxy'],/trim)
-        sindx= reverse(sort(field[ind].psfflux[band]))
-        good= sindx[0:((maxobj < n_elements(sindx))-1)]
-        obj=replicate(objtype,n_elements(good))
-        obj.run=field[ind[good]].run
-        obj.rerun=field[ind[good]].rerun
-        obj.camcol=field[ind[good]].camcol
-        obj.field=field[ind[good]].field
-        obj.filter=band
-        obj.ifield=field[ind[good]].ifield
-        obj.ra=field[ind[good]].ra
-        obj.dec=field[ind[good]].dec
-        obj.rowc=field[ind[good]].rowc[band]
-        obj.colc=field[ind[good]].colc[band]
-        obj.rpsfflux=field[ind[good]].psfflux[band]
-        if (nn eq 0) then mwrfits,obj,outfile+'.fits',/creat $
-        else mwrfits,obj,outfile+'.fits'
-        print,'# objects which made the cuts',n_elements(good)
-        printf,1,'# ifield: '+string(obj[0].ifield)
-        tmp_str=strtrim(string(n_elements(obj)),2)
-        for kk=0,n_elements(obj)-1 do begin
-            tmp_str=tmp_str+','+strtrim(string(obj[kk].rowc),2)+','+strtrim(string(obj[kk].colc),2)
-        endfor
-        printf,1,tmp_str
-        nn= nn+1
+        if (ind[0] GE 0) then begin
+            sindx= reverse(sort(field[ind].psfflux[band]))
+            good= sindx[0:((maxobj < n_elements(sindx))-1)]
+            obj=replicate(objtype,n_elements(good))
+            obj.run=field[ind[good]].run
+            obj.rerun=field[ind[good]].rerun
+            obj.camcol=field[ind[good]].camcol
+            obj.field=field[ind[good]].field
+            obj.filter=band
+            obj.ifield=field[ind[good]].ifield
+            obj.ra=field[ind[good]].ra
+            obj.dec=field[ind[good]].dec
+            obj.rowc=field[ind[good]].rowc[band]
+            obj.colc=field[ind[good]].colc[band]
+            obj.rpsfflux=field[ind[good]].psfflux[band]
+            if (nn eq 0) then mwrfits,obj,outfile+'.fits',/creat $
+            else mwrfits,obj,outfile+'.fits'
+            splog, n_elements(good),' objects made the cuts'
+            printf, wlun,'# ifield: '+string(obj[0].ifield)
+            tmp_str=strtrim(string(n_elements(obj)),2)
+            for kk=0,n_elements(obj)-1 do begin
+                tmp_str=tmp_str+','+strtrim(string(obj[kk].rowc),2)+','+strtrim(string(obj[kk].colc),2)
+            endfor
+            printf, wlun,tmp_str
+            nn= nn+1
+        endif
     endif
     rr= rr+1
 endwhile
-close,1
+close, wlun
 end
