@@ -33,7 +33,17 @@ outfile= 'sdssfield'
 wlun= 1
 openw, wlun,outfile+'.xyls'
 
-objtype={run:0L, rerun:0L, camcol:0, field:0L, filter:0, ifield:0L, ra:0d, dec:0d, rowc:0d, colc:0d, rpsfflux:0d}
+objtype= {run:0L, $
+          rerun:0L, $
+          camcol:0, $
+          field:0L, $
+          filter:0, $
+          ifield:0L, $
+          ra:0d, $
+          dec:0d, $
+          rowc:0d, $
+          colc:0d, $
+          psfflux:0d}
 
 ; read fields
 if(n_tags(flist) eq 0) then window_read,flist=flist
@@ -71,24 +81,27 @@ while ((nn LT nfields) and (rr LT n_elements(flist))) do begin
     field=sdss_readobj(flist[rr].run,flist[rr].camcol,flist[rr].field, $
                        rerun=flist[rr].rerun)
     if (n_tags(field) GT 1) then begin
-        ind=sdss_selectobj(field,objtype=['star','galaxy'],/trim)
+        ind= sdss_selectobj(field,objtype=['star','galaxy'],/trim)
         if (ind[0] GE 0) then begin
             sindx= reverse(sort(field[ind].psfflux[band]))
             good= sindx[0:((maxobj < n_elements(sindx))-1)]
-            obj=replicate(objtype,n_elements(good))
-            obj.run=field[ind[good]].run
-            obj.rerun=field[ind[good]].rerun
-            obj.camcol=field[ind[good]].camcol
-            obj.field=field[ind[good]].field
-            obj.filter=band
-            obj.ifield=field[ind[good]].ifield
-            obj.ra=field[ind[good]].ra
-            obj.dec=field[ind[good]].dec
-            obj.rowc=field[ind[good]].rowc[band]
-            obj.colc=field[ind[good]].colc[band]
-            obj.rpsfflux=field[ind[good]].psfflux[band]
-            if (nn eq 0) then mwrfits,obj,outfile+'.fits',/creat $
-            else mwrfits,obj,outfile+'.fits'
+            obj= replicate(objtype,n_elements(good))
+            obj.run=    field[ind[good]].run
+            obj.rerun=  field[ind[good]].rerun
+            obj.camcol= field[ind[good]].camcol
+            obj.field=  field[ind[good]].field
+            obj.filter= band
+            obj.ifield= field[ind[good]].ifield
+            obj.ra=     field[ind[good]].ra
+            obj.dec=    field[ind[good]].dec
+            obj.rowc=   field[ind[good]].rowc[band]
+            obj.colc=   field[ind[good]].colc[band]
+            obj.psfflux=field[ind[good]].psfflux[band]
+            if ((nn mod 10000L) EQ 0) then begin
+                filename= outfile+string(nn,format='(I6.6)')+'.fits'
+                splog, 'starting file '+filename
+                mwrfits, obj,filename,/create
+            endif else mwrfits,obj,filename
             splog, n_elements(good),' objects made the cuts'
             printf, wlun,'# ifield: '+string(obj[0].ifield)
             tmp_str=strtrim(string(n_elements(obj)),2)
