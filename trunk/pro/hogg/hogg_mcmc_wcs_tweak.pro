@@ -34,12 +34,13 @@ end
 
 function hogg_mcmc_wcs_tweak_step, seed,astr
 common hogg_mcmc_wcs_tweak_block, jitter,nsigma,usno,nu,xx,yy,nx,ch2norm,cdnorm
-hogg_ad2xyz, astr.crval[0],astr.crval[1],crx,cry,crz
+angles_to_xyz, 1D0,astr.crval[0],9D1-astr.crval[1],crx,cry,crz
 radianjitter= jitter*!DPI/(180D0*3600D0) ; arcsec to radians
 crx= crx+radianjitter*randomn(seed)
 cry= cry+radianjitter*randomn(seed)
 crz= crz+radianjitter*randomn(seed)
-hogg_xyz2ad, crx,cry,crz,aa,dd
+xyz_to_angles, crx,cry,crz,aa,tt
+dd= 9D1-temporary(tt)
 newastr= hogg_tp_shift(astr,[aa,dd])
 if (not keyword_set(cdnorm)) then $
   cdnorm= sqrt(abs(astr.cd[0,0]*astr.cd[1,1]-astr.cd[0,1]*astr.cd[1,0]))
