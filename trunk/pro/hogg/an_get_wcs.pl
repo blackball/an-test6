@@ -5,7 +5,7 @@ my $input = `cat $name.hits`;
 my $parity= 0;
 @records = split "--------------------\n", $input;
 printf("set_plot, \'PS\'\n");
-printf("device");
+printf("device\n");
 foreach $record (@records){
     if ($record =~ /field\s(\d+)\s/){
 	my $field = $1;
