@@ -50,7 +50,8 @@ if ((transpose(spZ)#spT) EQ 1.0) then begin
     imT= imE
     spT= spE
 endif
-hogg_xyz2ad, spT[0],spT[1],spT[2],aa,dd
+xyz_to_angles, spT[0],spT[1],spT[2],aa,tt
+dd= 9D1-temporary(tt)
 adT= [aa,dd]
 splog, "pointing: image point",imT," points in direction",adT
 
