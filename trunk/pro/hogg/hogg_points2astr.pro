@@ -67,8 +67,8 @@ splog, "scale:",scale*3.6D3
 foo= spZ-(transpose(spT)#spZ)[0]*spT
 eta= foo/hogg_pta_norm(foo)
 xi= hogg_pta_cross(spT,eta)
-splog, "testing:",hogg_pta_norm(xi),hogg_pta_norm(eta) $
-  ,(transpose(xi)#eta)[0],(transpose(xi)#spT)[0]
+; splog, "testing:",hogg_pta_norm(xi),hogg_pta_norm(eta) $
+;   ,(transpose(xi)#eta)[0],(transpose(xi)#spT)[0]
 if keyword_set(parity) then sgn= 1D0 else sgn= -1D0
 rotation= atan(transpose(eta)#(tpF-tpE),-1D0*transpose(xi)#(tpF-tpE)) $
   -atan(imF[1]-imE[1],sgn*(imF[0]-imE[0]))
