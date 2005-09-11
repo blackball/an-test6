@@ -39,7 +39,7 @@ radianjitter= jitter*!DPI/(180D0*3600D0) ; arcsec to radians
 crx= crx+radianjitter*randomn(seed)
 cry= cry+radianjitter*randomn(seed)
 crz= crz+radianjitter*randomn(seed)
-xyz_to_angles, crx,cry,crz,aa,tt
+xyz_to_angles, crx,cry,crz,rr,aa,tt
 dd= 9D1-temporary(tt)
 newastr= hogg_tp_shift(astr,[aa,dd])
 if (not keyword_set(cdnorm)) then $

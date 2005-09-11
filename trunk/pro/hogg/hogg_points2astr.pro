@@ -50,7 +50,7 @@ if ((transpose(spZ)#spT) EQ 1.0) then begin
     imT= imE
     spT= spE
 endif
-xyz_to_angles, spT[0],spT[1],spT[2],aa,tt
+xyz_to_angles, spT[0],spT[1],spT[2],rr,aa,tt
 dd= 9D1-temporary(tt)
 adT= [aa,dd]
 splog, "pointing: image point",imT," points in direction",adT
@@ -58,7 +58,6 @@ splog, "pointing: image point",imT," points in direction",adT
 ; compute scale
 tpE= spE/(transpose(spT)#spE)[0]
 tpF= spF/(transpose(spT)#spF)[0]
-print, tpE,tpF,(tpF-tpE)
 scale= hogg_pta_norm(tpF-tpE)/hogg_pta_norm(imF-imE)
 scale= scale*1.8D2/!DPI
 splog, "scale:",scale*3.6D3
