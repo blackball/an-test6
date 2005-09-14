@@ -125,7 +125,13 @@ for chunk=1L,nchunks do begin
                         mwrfits, obj,fitsname,/create
                     endif else mwrfits,obj,fitsname
                     splog, n_elements(good),' objects made the cuts'
-                    printf, wlun,'# ifield: '+string(obj[0].ifield)
+                    printf, wlun,'#' $
+                      +' '+strtrim(string(obj[0].run),2) $
+                      +' '+strtrim(string(obj[0].rerun),2) $
+                      +' '+strtrim(string(obj[0].camcol),2) $
+                      +' '+strtrim(string(obj[0].field),2) $
+                      +' '+strtrim(string(obj[0].filter),2) $
+                      +' '+strtrim(string(obj[0].ifield),2)
                     tmp_str=strtrim(string(n_elements(obj)),2)
                     for kk=0,n_elements(obj)-1 do begin
                         tmp_str=tmp_str $
