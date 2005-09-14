@@ -11,7 +11,7 @@
 ; OPTIONAL INPUTS:
 ;  seed      -the seed for the random sequence (default 7l)
 ;  nfields   -number of fields wanted (default 1)
-;  maxobj    -the number of sources to return per field (default 100)
+;  maxobj    -the number of sources to return per field (default 300)
 ;  band      -band to use to sort sources by psfflux (default 2)
 ;  run       -all fields for the specified run will be returned
 ;
@@ -60,7 +60,7 @@ endelse
 ; set defaults
 if not keyword_set(seed) then seed=7l
 if not keyword_set(nfields) then nfields=1l
-if not keyword_set(maxobj) then maxobj=100
+if not keyword_set(maxobj) then maxobj=300
 if not keyword_set(band) then band=2
 printf, wlun,'NumFields='+strtrim(string(nfields),2)
 splog, nfields
