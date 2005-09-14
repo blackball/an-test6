@@ -9,29 +9,29 @@
 ; INPUTS:
 ;
 ; OPTIONAL INPUTS:
-;  seed      -the seed for the random sequence (default 7l)
-;  nfields   -number of fields wanted (default 1)
-;  maxobj    -the number of sources to return per field (default 300)
-;  band      -band to use to sort sources by psfflux (default 2)
-;  run       -all fields for the specified run will be returned
+;  seed      - the seed for the random sequence (default 7l)
+;  nfields   - number of fields wanted (default 1)
+;  nchunk    - number of chunks (separate files) in which to return the
+;              result (default 1)
+;  maxobj    - the number of sources to return per field (default 300)
+;  band      - band to use to sort sources by psfflux (default 2)
+;  run       - all fields for the specified run will be returned
 ;
 ; KEYWORDS:
-;  /order    -return nfields in order.
-;  /ngc      -return only fields in the NGC
+;  /order    - return nfields in order.
+;  /ngc      - return only fields in the NGC
 ;
 ; BUGS:
-;  - No proper code header!!
+;  - Won't, in general, give you back *exactly* the number of fields
+;    you requested!  This is for dumb reasons, but trust us, it's for
+;    your own good.
 ;
 ; REVISION HISTORY:
 ;  2005-08-??  started by Masjedi (NYU)
+;  2005-09-14  chunks - Hogg
 ;-
 pro sdssfield, seed=seed,nfields=nfields,maxobj=maxobj,band=band, $
-               order=order,ngc=ngc,run=run
-
-; set filenames
-outfile= 'sdssfield'
-wlun= 1
-openw, wlun,outfile+'.xyls'
+               order=order,ngc=ngc,run=run,nchunks=nchunks
 
 objtype= {run:0L, $
           rerun:0L, $
@@ -58,11 +58,11 @@ endif else begin
 endelse
 
 ; set defaults
-if not keyword_set(seed) then seed=7l
-if not keyword_set(nfields) then nfields=1l
+if not keyword_set(seed) then seed=7L
+if not keyword_set(nfields) then nfields=1L
+if not keyword_set(nchunks) then nchunks=1L
 if not keyword_set(maxobj) then maxobj=300
 if not keyword_set(band) then band=2
-printf, wlun,'NumFields='+strtrim(string(nfields),2)
 splog, nfields
 
 ; shuffle
@@ -75,44 +75,72 @@ if keyword_set(run) then begin
     nfields= n_elements(flist)
 endif
 
+; loop over chunks, setting filenames
 nn=0L
 rr=0L
-while ((nn LT nfields) and (rr LT n_elements(flist))) do begin
-    field=sdss_readobj(flist[rr].run,flist[rr].camcol,flist[rr].field, $
-                       rerun=flist[rr].rerun)
-    if (n_tags(field) GT 1) then begin
-        ind= sdss_selectobj(field,objtype=['star','galaxy'],/trim)
-        if (ind[0] GE 0) then begin
-            sindx= reverse(sort(field[ind].psfflux[band]))
-            good= sindx[0:((maxobj < n_elements(sindx))-1)]
-            obj= replicate(objtype,n_elements(good))
-            obj.run=    field[ind[good]].run
-            obj.rerun=  field[ind[good]].rerun
-            obj.camcol= field[ind[good]].camcol
-            obj.field=  field[ind[good]].field
-            obj.filter= band
-            obj.ifield= field[ind[good]].ifield
-            obj.ra=     field[ind[good]].ra
-            obj.dec=    field[ind[good]].dec
-            obj.rowc=   field[ind[good]].rowc[band]
-            obj.colc=   field[ind[good]].colc[band]
-            obj.psfflux=field[ind[good]].psfflux[band]
-            if ((nn mod 10000L) EQ 0) then begin
-                filename= outfile+string(nn,format='(I6.6)')+'.fits'
-                splog, 'starting file '+filename
-                mwrfits, obj,filename,/create
-            endif else mwrfits,obj,filename
-            splog, n_elements(good),' objects made the cuts'
-            printf, wlun,'# ifield: '+string(obj[0].ifield)
-            tmp_str=strtrim(string(n_elements(obj)),2)
-            for kk=0,n_elements(obj)-1 do begin
-                tmp_str=tmp_str+','+strtrim(string(obj[kk].rowc),2)+','+strtrim(string(obj[kk].colc),2)
-            endfor
-            printf, wlun,tmp_str
-            nn= nn+1
-        endif
+prefix= 'sdssfield'
+for chunk=1L,nchunks do begin
+    outfile= prefix
+    nfieldschunk= nfields
+    if (nchunks GT 1) then begin
+        ndigit= ceil(alog10(nchunks+1.0))
+        format= '(I'+string(ndigit,'(I1)')+'.'+string(ndigit,'(I1)')+')'
+        splog, format
+        outfile= prefix+string(chunk,format=format)
+        nfieldschunk= ceil(float(nfields)/float(nchunks))
     endif
-    rr= rr+1
-endwhile
-close, wlun
+
+    txtfile= outfile+'.xyls'
+    if file_test(txtfile) then begin
+        splog, 'file '+txtfile+' already exists; skipping'
+    endif else begin
+        wlun= 1
+        openw, wlun,txtfile
+        printf, wlun,'NumFields='+strtrim(string(nfieldschunk),2)
+
+        while ((nn LT ((chunk*nfieldschunk) < nfields)) and $
+               (rr LT n_elements(flist))) do begin
+            field=sdss_readobj(flist[rr].run,flist[rr].camcol, $
+                               flist[rr].field,rerun=flist[rr].rerun)
+            if (n_tags(field) GT 1) then begin
+                ind= sdss_selectobj(field,objtype=['star','galaxy'],/trim)
+                if (ind[0] GE 0) then begin
+                    sindx= reverse(sort(field[ind].psfflux[band]))
+                    good= sindx[0:((maxobj < n_elements(sindx))-1)]
+                    obj= replicate(objtype,n_elements(good))
+                    obj.run=    field[ind[good]].run
+                    obj.rerun=  field[ind[good]].rerun
+                    obj.camcol= field[ind[good]].camcol
+                    obj.field=  field[ind[good]].field
+                    obj.filter= band
+                    obj.ifield= field[ind[good]].ifield
+                    obj.ra=     field[ind[good]].ra
+                    obj.dec=    field[ind[good]].dec
+                    obj.rowc=   field[ind[good]].rowc[band]
+                    obj.colc=   field[ind[good]].colc[band]
+                    obj.psfflux=field[ind[good]].psfflux[band]
+                    if (nn EQ ((chunk-1)*nfieldschunk)) then begin
+                        fitsname= outfile+'.fits'
+                        splog, 'starting file '+fitsname
+                        mwrfits, obj,fitsname,/create
+                    endif else mwrfits,obj,fitsname
+                    splog, n_elements(good),' objects made the cuts'
+                    printf, wlun,'# ifield: '+string(obj[0].ifield)
+                    tmp_str=strtrim(string(n_elements(obj)),2)
+                    for kk=0,n_elements(obj)-1 do begin
+                        tmp_str=tmp_str $
+                          +','+strtrim(string(obj[kk].rowc, $
+                                              format='(F8.1)'),2) $
+                          +','+strtrim(string(obj[kk].colc, $
+                                              format='(F8.1)'),2)
+                    endfor
+                    printf, wlun,tmp_str
+                    nn= nn+1
+                endif
+            endif
+            rr= rr+1
+        endwhile
+        close, wlun
+    endelse
+endfor
 end
