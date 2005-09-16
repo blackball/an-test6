@@ -63,6 +63,7 @@ if not keyword_set(nfields) then nfields=1L
 if not keyword_set(nchunks) then nchunks=1L
 if not keyword_set(maxobj) then maxobj=300
 if not keyword_set(band) then band=2
+prefix= 'sdssfield'
 splog, nfields
 
 ; shuffle
@@ -76,9 +77,6 @@ if keyword_set(run) then begin
 endif
 
 ; loop over chunks, setting filenames
-nn=0L
-rr=0L
-prefix= 'sdssfield'
 for chunk=1L,nchunks do begin
     outfile= prefix
     nfieldschunk= nfields
@@ -98,8 +96,8 @@ for chunk=1L,nchunks do begin
         openw, wlun,txtfile
         printf, wlun,'NumFields='+strtrim(string(nfieldschunk),2)
 
-        while ((nn LT ((chunk*nfieldschunk) < nfields)) and $
-               (rr LT n_elements(flist))) do begin
+        created= 0
+        for rr=(chunk-1L)*nfieldschunk,((chunk*nfieldschunk-1L)<(nfields-1L)) do begin
             field=sdss_readobj(flist[rr].run,flist[rr].camcol, $
                                flist[rr].field,rerun=flist[rr].rerun)
             if (n_tags(field) GT 1) then begin
@@ -119,10 +117,11 @@ for chunk=1L,nchunks do begin
                     obj.rowc=   field[ind[good]].rowc[band]
                     obj.colc=   field[ind[good]].colc[band]
                     obj.psfflux=field[ind[good]].psfflux[band]
-                    if (nn EQ ((chunk-1)*nfieldschunk)) then begin
+                    if (created EQ 0) then begin
                         fitsname= outfile+'.fits'
                         splog, 'starting file '+fitsname
                         mwrfits, obj,fitsname,/create
+                        created= 1
                     endif else mwrfits,obj,fitsname
                     splog, n_elements(good),' objects made the cuts'
                     printf, wlun,'#' $
@@ -141,11 +140,9 @@ for chunk=1L,nchunks do begin
                                               format='(F8.1)'),2)
                     endfor
                     printf, wlun,tmp_str
-                    nn= nn+1
                 endif
             endif
-            rr= rr+1
-        endwhile
+        endfor
         close, wlun
     endelse
 endfor
