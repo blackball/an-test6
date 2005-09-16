@@ -296,10 +296,16 @@ xyarray *readxy(FILE *fid, char ParityFlip)
   char ASCII = 0;
   qidx ii,jj,numxy,numfields;
   magicval magic;
-  fread(&magic,sizeof(magic),1,fid);
+  if(fread(&magic,sizeof(magic),1,fid)!=1) {
+    fprintf(stderr,"ERROR (readxy) -- bad magic value in field file.\n");
+    return((xyarray *)NULL);
+  }
   if(magic==ASCII_VAL) {
     ASCII=1;
-    fscanf(fid,"mFields=%lu\n",&numfields);
+    if(fscanf(fid,"mFields=%lu\n",&numfields)!=1) {
+      fprintf(stderr,"ERROR (readxy) -- bad first line in field file.\n");
+      return((xyarray *)NULL);
+    }
   }
   else {
     if(magic!=MAGIC_VAL) {
@@ -307,14 +313,25 @@ xyarray *readxy(FILE *fid, char ParityFlip)
       return((xyarray *)NULL);
     }
     ASCII=0;
-    fread(&numfields,sizeof(numfields),1,fid);
+    if(fread(&numfields,sizeof(numfields),1,fid)!=1) {
+      fprintf(stderr,"ERROR (readxy) -- bad numfields fread in field file.\n");
+      return((xyarray *)NULL);
+    }
   }
   xyarray *thepix = mk_xyarray(numfields);
+  int tmpchar;
   for(ii=0;ii<numfields;ii++) {
-    if(ASCII)
-      fscanf(fid,"%lu",&numxy);
+    if(ASCII) {
+      tmpchar=fgetc(fid);
+      while(tmpchar==COMMENT_CHAR) {
+	fscanf(fid,"%*s\n");
+	tmpchar=fgetc(fid);
+      }
+      ungetc(tmpchar,fid);
+      fscanf(fid,"%lu",&numxy); // CHECK THE RETURN VALUE MORON!
+    }
     else
-      fread(&numxy,sizeof(numxy),1,fid);
+      fread(&numxy,sizeof(numxy),1,fid); // CHECK THE RETURN VALUE MORON!
     thepix->array[ii] = mk_xy(numxy);
     if(xya_ref(thepix,ii)==NULL) {
       fprintf(stderr,"ERROR (readxy) - out of memory at field %lu\n",ii);
