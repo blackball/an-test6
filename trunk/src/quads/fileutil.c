@@ -323,12 +323,15 @@ xyarray *readxy(FILE *fid, char ParityFlip)
   for(ii=0;ii<numfields;ii++) {
     if(ASCII) {
       tmpchar=fgetc(fid);
+      fprintf(stderr,"got char %c\n",(char)tmpchar);
       while(tmpchar==COMMENT_CHAR) {
 	fprintf(stderr,"found comment in field %d\n",ii);
 	fscanf(fid,"%*s\n");
 	tmpchar=fgetc(fid);
+	fprintf(stderr,"got char %c\n",(char)tmpchar);
       }
       ungetc(tmpchar,fid);
+      fprintf(stderr,"pushed back char %c\n",(char)tmpchar);
       fscanf(fid,"%lu",&numxy); // CHECK THE RETURN VALUE MORON!
     }
     else
