@@ -237,7 +237,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     fprintf(stderr,
     "    field %lu: done %lu of %lu AB pairs (%lu agree so far)            \r",
 		ii,++numAB,choose(numxy,2),mostAgree);
-           if(mostAgree>MAX_MATCHES_NEEDED) break;
+              if(mostAgree>MAX_MATCHES_NEEDED) {iA=numxy; fieldidx=numxy;}
       }}}}
 
     fprintf(hitfid,"--------------------\n");
