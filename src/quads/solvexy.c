@@ -6,9 +6,10 @@
 #define OPTIONS "hpf:o:t:m:"
 const char HelpString[]=
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
-"   -p flips parity, default agree_tol is 10arcsec, default code tol .003\n";
+"   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n";
 
 #define MIN_MATCHES_TO_AGREE 3
+#define MAX_MATCHES_NEEDED 10
 #define DEFAULT_AGREE_TOL 7.0
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
@@ -157,6 +158,8 @@ int main(int argc,char *argv[])
  fprintf(hitfid,"  code_tol=%lf, agree_tol=%lf\n",codetol,AgreeArcSec);
  if(ParityFlip) 
    fprintf(hitfid,"  flipping parity (swapping row/col image coordinates)\n");
+ fprintf(hitfid,"min matches to agree: %u\n",MIN_MATCHES_TO_AGREE);
+ fprintf(hitfid,"max matches needed: %u\n",MAX_MATCHES_NEEDED);
 
   numsolved=solve_fields(thefields,codekd,codetol);
 		     
@@ -177,7 +180,8 @@ int main(int argc,char *argv[])
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 {
-  qidx numtries,nummatches,numsolved,numgood,numAB,ii,numxy,iA,iB,iC,iD;
+  qidx numtries,nummatches,numsolved,numgood,numAB,ii;
+  sidx numxy,iA,iB,iC,iD,fieldidx;
   double Ax,Ay,Bx,By,Cx,Cy,Dx,Dy;
   double costheta,sintheta,scale,xxtmp;
   xy *thisfield;
@@ -198,16 +202,17 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 
     // try ALL POSSIBLE pairs AB with all possible pairs CD
     numAB=0;
-    for(iA=0;iA<(numxy-1);iA++) {
+    for(fieldidx=3;fieldidx<numxy;fieldidx++) {
+    for(iA=0;iA<(fieldidx-1);iA++) {
       Ax=xy_refx(thisfield,iA); Ay=xy_refy(thisfield,iA);
       xy_setx(ABCDpix,0,Ax); xy_sety(ABCDpix,0,Ay);
-      for(iB=iA+1;iB<numxy;iB++) {
+      iB=fieldidx; {
 	Bx=xy_refx(thisfield,iB); By=xy_refy(thisfield,iB);
 	xy_setx(ABCDpix,1,Bx); xy_sety(ABCDpix,1,By);
 	Bx-=Ax; By-=Ay;
 	scale = Bx*Bx+By*By;
 	costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
-	for(iC=0;iC<(numxy-1);iC++) {
+	for(iC=0;iC<(fieldidx-2);iC++) {
 	  if(iC!=iA && iC!=iB) {
 	    Cx=xy_refx(thisfield,iC); Cy=xy_refy(thisfield,iC);
 	    xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
@@ -216,7 +221,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 	    Cx=Cx*costheta+Cy*sintheta;
 	    Cy=-xxtmp*sintheta+Cy*costheta;
 	    if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) { //C inside AB box?
-	      for(iD=iC+1;iD<numxy;iD++) {
+	      for(iD=iC+1;iD<(fieldidx-1);iD++) {
 		if(iD!=iA && iD!=iB) {
 		  Dx=xy_refx(thisfield,iD); Dy=xy_refy(thisfield,iD);
 		  xy_setx(ABCDpix,3,Dx); xy_sety(ABCDpix,3,Dy);
@@ -232,7 +237,8 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     fprintf(stderr,
     "    field %lu: done %lu of %lu AB pairs (%lu agree so far)            \r",
 		ii,++numAB,choose(numxy,2),mostAgree);
-      }}}
+           if(mostAgree>MAX_MATCHES_NEEDED) break;
+      }}}}
 
     fprintf(hitfid,"--------------------\n");
     fprintf(hitfid,"field %lu\n",ii); 
