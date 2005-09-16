@@ -201,6 +201,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     if(numxy>=DIM_QUADS) { //if there are<4 objects in field, forget it
 
     // try ALL POSSIBLE pairs AB with all possible pairs CD
+    // actually there is a bug now and we don't try the first few
     numAB=0;
     for(fieldidx=3;fieldidx<numxy;fieldidx++) {
     for(iA=0;iA<(fieldidx-1);iA++) {
@@ -236,8 +237,8 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 					      iA,iB,iC,iD,kq,codekd);
 		  }}}}}}
     fprintf(stderr,
-    "    field %lu: done %lu of %lu AB pairs (%lu agree so far)            \r",
-		ii,++numAB,choose(numxy,2),mostAgree);
+    "    field %lu: using %lu of %lu objects (%lu quads agree so far)      \r",
+		ii,fieldidx,numxy,mostAgree);
               if(mostAgree>=MAX_MATCHES_NEEDED) {iA=numxy; fieldidx=numxy;}
       }}}}
 
