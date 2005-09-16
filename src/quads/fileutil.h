@@ -3,6 +3,7 @@
 #include "starutil.h"
 #include "KD/kdtree.h"
 
+#define COMMENT_CHAR 35 // #
 #define FOPEN_ERR -301
 #define READ_FAIL -1
 
