@@ -326,7 +326,7 @@ xyarray *readxy(FILE *fid, char ParityFlip)
       fprintf(stderr,"got char %c\n",(char)tmpchar);
       while(tmpchar==COMMENT_CHAR) {
 	fprintf(stderr,"found comment in field %d\n",ii);
-	fscanf(fid,"%[^\n]"); fgetc(fid);
+	fscanf(fid,"%*[^\n]"); fgetc(fid);
 	tmpchar=fgetc(fid);
 	fprintf(stderr,"got char %c\n",(char)tmpchar);
       }
