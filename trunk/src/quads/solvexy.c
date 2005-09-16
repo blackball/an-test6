@@ -238,7 +238,7 @@ fprintf(stderr,"trying (%lu,%lu,%lu,%lu)\n",iA,iB,iC,iD);
     fprintf(stderr,
     "    field %lu: done %lu of %lu AB pairs (%lu agree so far)            \r",
 		ii,++numAB,choose(numxy,2),mostAgree);
-              if(mostAgree>MAX_MATCHES_NEEDED) {iA=numxy; fieldidx=numxy;}
+              if(mostAgree>=MAX_MATCHES_NEEDED) {iA=numxy; fieldidx=numxy;}
       }}}}
 
     fprintf(hitfid,"--------------------\n");
