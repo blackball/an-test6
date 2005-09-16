@@ -231,6 +231,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 		  Dy=-xxtmp*sintheta+Dy*costheta;
 		  if((Dx<1.0)&&(Dx>0.0)&&(Dy<1.0)&&(Dy>0.0)) { //D inside box?
 		    numtries++;                   // let's try it!
+fprintf(stderr,"trying (%lu,%lu,%lu,%lu)\n",iA,iB,iC,iD);
 		    nummatches+=try_all_codes(Cx,Cy,Dx,Dy,cornerpix,ABCDpix,
 					      iA,iB,iC,iD,kq,codekd);
 		  }}}}}}
