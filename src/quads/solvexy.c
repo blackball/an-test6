@@ -114,7 +114,7 @@ int main(int argc,char *argv[])
 	  fieldfname,treefname);
 
   fprintf(stderr,"  Reading fields...");fflush(stderr);
-  fopenin(fieldfname,fieldfid); free_fn(fieldfname);
+  fopenin(fieldfname,fieldfid); 
   xyarray *thefields = readxy(fieldfid,ParityFlip);
   fclose(fieldfid);
   if(thefields==NULL) return(1);
@@ -124,7 +124,7 @@ int main(int argc,char *argv[])
    fprintf(stderr,"  Flipping parity (swapping row/col image coordinates).\n");
 
   fprintf(stderr,"  Reading code KD tree from %s...",treefname);fflush(stderr);
-  fopenin(treefname,treefid); free_fn(treefname);
+  fopenin(treefname,treefid); 
   kdtree *codekd = read_codekd(treefid,&index_scale);
   fclose(treefid);
   if(codekd==NULL) return(2);
@@ -153,6 +153,8 @@ int main(int argc,char *argv[])
 	  numfields,codetol,AgreeArcSec);
   fopenout(hitfname,hitfid); free_fn(hitfname);
  fprintf(hitfid,"SOLVER PARAMS:\n");
+ fprintf(hitfid,"solving fields in %s using %s\n",fieldfname,treefname);
+ free_fn(fieldfname); free_fn(treefname);
  fprintf(hitfid,"  %lu fields, %lu quads, %lu objects in catalog\n",
 	 numfields,(qidx)kdtree_num_points(codekd),numstars);
  fprintf(hitfid,"  code_tol=%lf, agree_tol=%lf\n",codetol,AgreeArcSec);
