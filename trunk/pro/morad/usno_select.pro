@@ -1,20 +1,22 @@
+;+
+; NAME:
+;   Morad: comment your code!
+;-
 pro usno_select,minmag=minmag,maxmag=maxmag,poserror=poserror,prcut=prcut
 
 path='/scratch/usnob_fits'
 
-
 ;set defaults
 
 ;defining the cuts
-if not keyword_set(minmag) then minmag=18.5 ; faintest R-band  magnitude accepted 
+if not keyword_set(minmag) then minmag=17.5 ; faintest R-band  magnitude accepted 
 if not keyword_set(maxmag) then maxmag=14.0   ; objects brighter that maxmag in any band (B,R,I) are rejecdted
 if not keyword_set(poserror) then poserror=200. ; maximum error allowed in the RA or Dec in milli arcsec
 if not keyword_set(propcut) then prcut=10.   ; the maximum proper motion allowed in milli arcsec per year 
 
-
 sweeptype={ra:0d, dec:0d,mag:0.0}
 
-glactc,ngpra,ngpdec,2000,0,90,2,/degree
+; glactc,ngpra,ngpdec,2000,0,90,2,/degree
 
 for subdir = 57,179 do begin
     sweep=0
@@ -23,10 +25,11 @@ for subdir = 57,179 do begin
         dirstr=string(subdir, format='(I3.3)')
         fitsfile= path+'/'+dirstr+'/'+fname+'.fit'
         star=mrdfits(fitsfile,1,/silent)
-        sdsscut=where(djs_diff_angle(star.ra,star.dec,ngpra,ngpdec) lt 60)
+;        sdsscut=where(djs_diff_angle(star.ra,star.dec,ngpra,ngpdec) lt 60)
+        sdsscut= lindgen(n_elements(star))
         if sdsscut[0] ne -1 then begin
             sdssstar=star[sdsscut]
-            mcut=where(sdssstar.mag[3] lt minmag)
+            qmcut=where(sdssstar.mag[3] lt minmag)
             sdeccut=where((sdssstar[mcut].sde lt poserror) and (sdssstar[mcut].sra lt poserror))
             prop=sqrt(sdssstar[mcut[sdeccut]].mura^2+sdssstar[mcut[sdeccut]].mudec^2)
             propcut=where(prop lt prcut)
@@ -39,7 +42,7 @@ for subdir = 57,179 do begin
         endif
         print, fname,n_elements(sdsscut),n_elements(mcut),n_elements(sdeccut),n_elements(propcut),n_elements(temp_sweep),n_elements(sweep)
     endfor
-if (n_elements(sweep) gt 1 ) then mwrfits,sweep,path+'/'+dirstr+'/'+dirstr+'sweep.fit',/create
+    if (n_elements(sweep) gt 1 ) then mwrfits,sweep,path+'/'+dirstr+'/'+dirstr+'sweep.fit',/create
 endfor
 return
 end

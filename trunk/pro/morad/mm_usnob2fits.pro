@@ -1,3 +1,7 @@
+;+
+; NAME:
+;   Morad: comment your code!
+;-
 pro usnob2fits_1, path, subdir, fname, outpath, hash
 
   rec_len = 80L
@@ -34,7 +38,6 @@ outpath='/scratch/usnob_fits'
   ep = mrdfits(epochfile, 1)
   hash = fltarr(10000)
   hash[ep.field] = ep.epoch
-
 
  for subdir = 0, 179 do begin 
      for i=0, 9 do begin 
