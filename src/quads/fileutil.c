@@ -43,11 +43,12 @@ stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 {
   char ASCII = READ_FAIL;
   sidx ii;
+  stararray *thestars = NULL;
 
   ASCII=read_objs_header(fid,numstars,Dim_Stars,ramin,ramax,decmin,decmax);
   if(ASCII==READ_FAIL) return((stararray *)NULL);
 
-  stararray *thestars = mk_stararray(*numstars);
+  thestars = mk_stararray(*numstars);
   for(ii=0;ii<*numstars;ii++) {
     thestars->array[ii] = mk_stard(*Dim_Stars);
     if(thestars->array[ii]==NULL) {
@@ -75,6 +76,7 @@ quadarray *readidlist(FILE *fid,qidx *numfields)
   char ASCII = 0;
   qidx ii,jj,numS;
   magicval magic;
+  quadarray *thepids = NULL;
   fread(&magic,sizeof(magic),1,fid);
   if(magic==ASCII_VAL) {
     ASCII=1;
@@ -88,7 +90,7 @@ quadarray *readidlist(FILE *fid,qidx *numfields)
     ASCII=0;
     fread(numfields,sizeof(*numfields),1,fid);
   }
-  quadarray *thepids = mk_quadarray(*numfields);
+  thepids = mk_quadarray(*numfields);
   for(ii=0;ii<*numfields;ii++) {
     // read in how many stars in this pic
     if(ASCII)
@@ -178,7 +180,7 @@ void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len)
 {
   rewind(codefid);
   if(ASCII) {
-    fprintf(codefid,"NumCodes=%2$*1$lu\n",len,numCodes);
+    fprintf(codefid,"NumCodes=%2$*1$lu\n",(int)len,numCodes);
   }
   else {
     magicval magic=MAGIC_VAL;
@@ -296,6 +298,8 @@ xyarray *readxy(FILE *fid, char ParityFlip)
   char ASCII = 0;
   qidx ii,jj,numxy,numfields;
   magicval magic;
+  xyarray *thepix = NULL;
+  int tmpchar;
   if(fread(&magic,sizeof(magic),1,fid)!=1) {
     fprintf(stderr,"ERROR (readxy) -- bad magic value in field file.\n");
     return((xyarray *)NULL);
@@ -318,8 +322,7 @@ xyarray *readxy(FILE *fid, char ParityFlip)
       return((xyarray *)NULL);
     }
   }
-  xyarray *thepix = mk_xyarray(numfields);
-  int tmpchar;
+  thepix = mk_xyarray(numfields);
   for(ii=0;ii<numfields;ii++) {
     if(ASCII) {
       tmpchar=fgetc(fid);

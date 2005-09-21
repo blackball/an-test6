@@ -22,12 +22,18 @@ char buff[100],oneobjWidth;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-
-  if(argc<=3) {fprintf(stderr,HelpString); return(OPT_ERR);}
-
   char whichset=0,xyzset=0,radecset=0,kset=1,dtolset=0;
   sidx K=0;
   double dtol=0.0;
+  sidx numstars,whichstar,ii;
+  double xx,yy,zz,ra,dec,ramin,ramax,decmin,decmax;
+  kquery *kq=NULL;
+  kresult *krez=NULL;
+  star *thequery=NULL;
+  kdtree *starkd=NULL;
+  stararray *thestars=NULL;
+
+  if(argc<=3) {fprintf(stderr,HelpString); return(OPT_ERR);}
      
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
@@ -66,15 +72,6 @@ int main(int argc,char *argv[])
 
   if(!xyzset && !radecset && !whichset) {
     fprintf(stderr,HelpString); return(OPT_ERR);}
-
-  sidx numstars,whichstar,ii;
-  double xx,yy,zz,ra,dec,ramin,ramax,decmin,decmax;
-  kquery *kq=NULL;
-  kresult *krez=NULL;
-  star *thequery=NULL;
-  kdtree *starkd=NULL;
-  stararray *thestars=NULL;
-
 
   if(whichset && kset && (K==0)) {
     dimension DimStars;

@@ -20,9 +20,10 @@ unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid)
 kdtree *fread_kdtree(FILE *fid)
 {
   int numnodes,pointdim;
+  kdtree *kdt = NULL;
   fread(&numnodes,sizeof(numnodes),1,fid);
   if(numnodes==0) return((kdtree *)NULL);
-  kdtree *kdt = AM_MALLOC(kdtree);
+  kdt = AM_MALLOC(kdtree);
   kdt->num_nodes=numnodes;
   fread(&(kdt->max_depth),sizeof(kdt->max_depth),1,fid);
   fread(&(kdt->rmin),sizeof(kdt->rmin),1,fid);
@@ -66,6 +67,9 @@ node *fread_node(int pointdim,FILE *fid)
   int numpoints;
   unsigned int ii;
   char isleaf=1;
+  node *n = NULL;
+  dyv *boxlo = NULL;
+  dyv *boxhi = NULL;
   fread(&numpoints,sizeof(numpoints),1,fid);
   if(numpoints==0) return((node *)NULL);
   if(numpoints<0) {
@@ -73,10 +77,10 @@ node *fread_node(int pointdim,FILE *fid)
     isleaf=0;
   }
 
-  node *n=AM_MALLOC(node); //?? should check if it is null
+  n = AM_MALLOC(node); //?? should check if it is null
   n->num_points=numpoints;
-  dyv *boxlo = mk_dyv(pointdim); //?? should check if it is null
-  dyv *boxhi = mk_dyv(pointdim); //?? should check if it is null
+  boxlo = mk_dyv(pointdim); //?? should check if it is null
+  boxhi = mk_dyv(pointdim); //?? should check if it is null
   fread_dyv(boxlo,fid);
   fread_dyv(boxhi,fid);
   n->box = mk_hrect(boxlo,boxhi); //?? should check if it is null
@@ -115,8 +119,9 @@ node *fread_node(int pointdim,FILE *fid)
    KD tree is pointing to; DOES NOT copy the dyv's                */
 dyv_array *mk_dyv_array_from_kdtree(kdtree *kd)
 {
+  dyv_array *da=NULL;
   if(kd->root->num_points==0) return (dyv_array *)NULL;
-  dyv_array *da=AM_MALLOC( dyv_array);
+  da=AM_MALLOC( dyv_array);
   if(da==NULL) return (dyv_array *)NULL;
   da->size = kd->root->num_points;
   da->array_size = da->size;
@@ -128,8 +133,8 @@ dyv_array *mk_dyv_array_from_kdtree(kdtree *kd)
 
 void set_array_ptrs_below_node(node *n,dyv_array *da)
 {
-  if(n==NULL) return;
   unsigned int ii;
+  if(n==NULL) return;
   if(node_is_leaf(n)) {
     for(ii=0;ii<dyv_array_size(n->points);ii++)
       da->array[ivec_ref(n->pindexes,ii)]=dyv_array_ref(n->points,ii);

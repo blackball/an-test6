@@ -32,13 +32,17 @@ char buff[100],maxstarWidth;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-
-  if(argc<=6) {fprintf(stderr,HelpString); return(OPT_ERR);}
-
   qidx maxQuads=0;
   double index_scale=DEFAULT_IDXSCALE;
   double ramin,ramax,decmin,decmax;
-     
+  FILE *treefid=NULL,*quadfid=NULL,*codefid=NULL;
+  sidx numstars;
+  qidx numtries,numfound;
+  kdtree *starkd = NULL;
+  stararray *thestars = NULL;
+
+  if(argc<=6) {fprintf(stderr,HelpString); return(OPT_ERR);}
+
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
       {
@@ -79,16 +83,12 @@ int main(int argc,char *argv[])
 #define RANDSEED 888
   am_srand(RANDSEED); 
 
-  FILE *treefid=NULL,*quadfid=NULL,*codefid=NULL;
-  sidx numstars;
-  qidx numtries,numfound;
-
   fprintf(stderr,"getquads: finding %lu quads in %s [RANDSEED=%d]\n",
 	  maxQuads,treefname,RANDSEED);
 
   fprintf(stderr,"  Reading star KD tree from %s...",treefname);fflush(stderr);
   fopenin(treefname,treefid); free_fn(treefname);
-  kdtree *starkd=read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
+  starkd = read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
   fclose(treefid);
   if(starkd==NULL) return(2);
   numstars=starkd->root->num_points;
@@ -99,7 +99,7 @@ int main(int argc,char *argv[])
              kdtree_num_dims(starkd),
 	  rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 
-  stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
+  thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
 
   fprintf(stderr,"  Finding %lu quads at scale %g arcmin...(be patient)\n",
 	  maxQuads,rad2arcmin(index_scale)); fflush(stderr);

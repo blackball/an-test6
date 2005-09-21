@@ -18,6 +18,13 @@ char *qlistfname=NULL;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
+  qidx numfields;
+  sidx ii,numstars;
+  FILE *idsfid=NULL,*qidxfid=NULL,*qlistfid=NULL;
+  sidx *starlist;
+  qidx *starnumq;
+  qidx **starquads;
+  quadarray *thepids = NULL;
 
   if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
@@ -47,19 +54,12 @@ int main(int argc,char *argv[])
     return(OPT_ERR);
   }
 
-  qidx numfields;
-  sidx ii,numstars;
-  FILE *idsfid=NULL,*qidxfid=NULL,*qlistfid=NULL;
-  sidx *starlist;
-  qidx *starnumq;
-  qidx **starquads;
-
   fprintf(stderr,"fieldquads: finding quads from %s appearing in %s\n",
 	  qidxfname,idsfname);
 
   fprintf(stderr,"  Reading star ids...");fflush(stderr);
   fopenin(idsfname,idsfid); free_fn(idsfname);
-  quadarray *thepids = readidlist(idsfid,&numfields);
+  thepids = readidlist(idsfid,&numfields);
   fclose(idsfid);
   if(thepids==NULL) return(1);
   fprintf(stderr,"processed %lu fields.\n",numfields);

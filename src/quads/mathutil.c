@@ -3,13 +3,13 @@
 /* computes A choose B, but slowly and won't work for huge vals */
 unsigned long int choose(unsigned int nn,unsigned int mm)
 {
+  unsigned int rr=1;
+  unsigned int qq;
   if(nn<=0) return 0;
   else if(mm<=0) return 0;
   else if(mm>nn) return 0;
   else if(mm==1) return nn;
   else if(mm==nn) return 1;
-  unsigned int rr=1;
-  unsigned int qq;
   for(qq=nn;qq>(nn-mm);qq--) rr *= qq;
   for(qq=mm;qq>1;qq--) rr/=qq;
   return rr;

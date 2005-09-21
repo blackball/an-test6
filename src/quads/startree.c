@@ -18,6 +18,12 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
   int kd_Rmin=DEFAULT_KDRMIN;
+  FILE *catfid=NULL,*treefid=NULL;
+  sidx numstars;
+  dimension Dim_Stars;
+  double ramin,ramax,decmin,decmax;
+  stararray *thestars = NULL;
+  kdtree *starkd = NULL;
 
   if(argc<=2) {fprintf(stderr,HelpString);return(HELP_ERR);}
      
@@ -47,18 +53,13 @@ int main(int argc,char *argv[])
     return(HELP_ERR);
   }
 
-  FILE *catfid=NULL,*treefid=NULL;
-  sidx numstars;
-  dimension Dim_Stars;
-  double ramin,ramax,decmin,decmax;
-
   fprintf(stderr,"startree: building KD tree for %s\n",catfname);
 
 
   fprintf(stderr,"  Reading star catalogue...");fflush(stderr);
   fopenin(catfname,catfid); free_fn(catfname);
-  stararray *thestars = readcat(catfid,&numstars,&Dim_Stars,
-				&ramin,&ramax,&decmin,&decmax);
+  thestars = readcat(catfid,&numstars,&Dim_Stars,
+			&ramin,&ramax,&decmin,&decmax);
   fclose(catfid);
   if(thestars==NULL) return(1);
   fprintf(stderr,"got %lu stars.\n",numstars);
@@ -66,7 +67,7 @@ int main(int argc,char *argv[])
       Dim_Stars,rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 
   fprintf(stderr,"  Building star KD tree...");fflush(stderr);
-  kdtree *starkd = mk_starkdtree(thestars,kd_Rmin);
+  starkd = mk_starkdtree(thestars,kd_Rmin);
   free_stararray(thestars);
   if(starkd==NULL) return(2);
   fprintf(stderr,"done (%d nodes, depth %d).\n",

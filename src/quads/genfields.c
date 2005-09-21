@@ -31,6 +31,12 @@ int main(int argc,char *argv[])
   qidx numFields=0;
   double radscale=10.0,aspect=1.0,distractors=0.0,dropouts=0.0,noise=0.0;
   double centre_ra=0.0,centre_dec=0.0;
+  FILE *treefid=NULL,*listfid=NULL,*pix0fid=NULL,*pixfid=NULL;
+  qidx numtries;
+  sidx numstars;
+  double ramin,ramax,decmin,decmax;
+  kdtree *starkd = NULL;
+  stararray *thestars = NULL;
 
   if(argc<=8) {fprintf(stderr,HelpString);return(HELP_ERR);}
 
@@ -92,11 +98,6 @@ int main(int argc,char *argv[])
 #define RANDSEED 777
   am_srand(RANDSEED);
 
-  FILE *treefid=NULL,*listfid=NULL,*pix0fid=NULL,*pixfid=NULL;
-  qidx numtries;
-  sidx numstars;
-  double ramin,ramax,decmin,decmax;
-
   if(numFields)
   fprintf(stderr,"genfields: making %lu random fields from %s [RANDSEED=%d]\n",
 	  numFields,treefname,RANDSEED);
@@ -108,7 +109,7 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Reading star KD tree from %s...",treefname);fflush(stderr);
   fopenin(treefname,treefid); free_fn(treefname);
-  kdtree *starkd=read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
+  starkd = read_starkd(treefid,&ramin,&ramax,&decmin,&decmax);
   fclose(treefid);
   if(starkd==NULL) return(1);
   numstars=starkd->root->num_points;
@@ -118,7 +119,7 @@ int main(int argc,char *argv[])
              kdtree_num_dims(starkd),
 	  rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 
-  stararray *thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
+  thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
 
   if(numFields>1)
   fprintf(stderr,"  Generating %lu fields at scale %g arcmin...\n",
@@ -169,10 +170,11 @@ qidx gen_pix(FILE *listfid,FILE *pix0fid,FILE *pixfid,
   fprintf(listfid,"NumFields=%lu\n",numFields);
 
   for(ii=0;ii<numFields;ii++) {
+    kresult *krez = NULL;
     numS=0;
     while(!numS) {
       randstar=make_rand_star(ramin,ramax,decmin,decmax);
-      kresult *krez = mk_kresult_from_kquery(kq,kd,randstar);
+      krez = mk_kresult_from_kquery(kq,kd,randstar);
 
       numS=krez->count;
       //fprintf(stderr,"random location: %lu within scale.\n",numS);

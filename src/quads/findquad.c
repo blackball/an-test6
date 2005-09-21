@@ -19,6 +19,15 @@ char buff[100],maxstarWidth;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
+  sidx ii,numstars,numstars2;
+  qidx numquads,iA,iB,iC,iD,jj;
+  dimension DimQuads;
+  double index_scale,Cx,Cy,Dx,Dy;
+  FILE *qidxfid=NULL,*quadfid=NULL,*codefid=NULL;
+  sidx *starlist,*matchstar;
+  qidx *starnumq;
+  qidx **starquads;
+  char qASCII;
 
   if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
@@ -53,16 +62,6 @@ int main(int argc,char *argv[])
     fprintf(stderr,HelpString);
     return(OPT_ERR);
   }
-
-  sidx ii,numstars,numstars2;
-  qidx numquads,iA,iB,iC,iD,jj;
-  dimension DimQuads;
-  double index_scale,Cx,Cy,Dx,Dy;
-  FILE *qidxfid=NULL,*quadfid=NULL,*codefid=NULL;
-  sidx *starlist,*matchstar;
-  qidx *starnumq;
-  qidx **starquads;
-  char qASCII;
 
   fprintf(stderr,"findquad: looking up quads in %s\n",qidxfname);
 

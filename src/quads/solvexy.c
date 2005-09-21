@@ -60,6 +60,13 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
   double codetol=DEFAULT_CODE_TOL;
+  FILE *fieldfid=NULL,*treefid=NULL;
+  qidx numfields,numquads,numsolved;
+  sidx numstars;
+  double index_scale,ramin,ramax,decmin,decmax;
+  dimension Dim_Quads,Dim_Stars;
+  xyarray *thefields = NULL;
+  kdtree *codekd = NULL;
 
   if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
 
@@ -104,18 +111,12 @@ int main(int argc,char *argv[])
   }
 
 
-  FILE *fieldfid=NULL,*treefid=NULL;
-  qidx numfields,numquads,numsolved;
-  sidx numstars;
-  double index_scale,ramin,ramax,decmin,decmax;
-  dimension Dim_Quads,Dim_Stars;
-
   fprintf(stderr,"solvexy: solving fields in %s using %s\n",
 	  fieldfname,treefname);
 
   fprintf(stderr,"  Reading fields...");fflush(stderr);
   fopenin(fieldfname,fieldfid); 
-  xyarray *thefields = readxy(fieldfid,ParityFlip);
+  thefields = readxy(fieldfid,ParityFlip);
   fclose(fieldfid);
   if(thefields==NULL) return(1);
   numfields=(qidx)thefields->size;
@@ -125,7 +126,7 @@ int main(int argc,char *argv[])
 
   fprintf(stderr,"  Reading code KD tree from %s...",treefname);fflush(stderr);
   fopenin(treefname,treefid); 
-  kdtree *codekd = read_codekd(treefid,&index_scale);
+  codekd = read_codekd(treefid,&index_scale);
   fclose(treefid);
   if(codekd==NULL) return(2);
   fprintf(stderr,"done\n    (%d quads, %d nodes, depth %d).\n",
@@ -479,6 +480,7 @@ int output_good_matches(MatchObj *first, MatchObj *last)
     output_match(NULL);
   else {
     int corresp_ok=1;
+    ivec *sortidx = NULL;
     ivec *slist=mk_ivec(0);
     ivec *flist=mk_ivec(0);
     ivec *bestlist=mk_copy_ivec(bestone->nearlist);
@@ -497,7 +499,7 @@ int output_good_matches(MatchObj *first, MatchObj *last)
     fprintf(hitfid,"Field Object <--> Catalogue Object Mapping Table\n");
     if(!corresp_ok) fprintf(hitfid,
           "  (warning -- some matches agree on resolve but not on mapping\n");
-    ivec *sortidx=mk_sorted_ivec_indices(flist);
+    sortidx = mk_sorted_ivec_indices(flist);
     for(ii=0;ii<slist->size;ii++)
       fprintf(hitfid,"  field object: %lu <--> cataloge object id: %lu\n",
 	      (sidx)ivec_ref(flist,ivec_ref(sortidx,ii)),

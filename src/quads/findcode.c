@@ -19,13 +19,20 @@ FILE *treefid=NULL;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
-
-  if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
-
   char kset=1,dtolset=0;
   sidx K=1;
   double dtol=0.0;
-     
+  qidx numcodes,ii;
+  double c1,c2,c3,c4;
+  kquery *kq=NULL;
+  kresult *krez=NULL;
+  code *thequery=NULL;
+  kdtree *codekd=NULL;
+  codearray *thecodes=NULL;
+  double index_scale;
+
+  if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
+
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
       {
@@ -53,16 +60,6 @@ int main(int argc,char *argv[])
 
   //  if(??) {
   //    fprintf(stderr,HelpString); return(OPT_ERR);}
-
-  qidx numcodes,ii;
-  double c1,c2,c3,c4;
-  kquery *kq=NULL;
-  kresult *krez=NULL;
-  code *thequery=NULL;
-  kdtree *codekd=NULL;
-  codearray *thecodes=NULL;
-  double index_scale;
-
 
  {
     fprintf(stderr,"findcode: getting codes from %s\n",treefname);

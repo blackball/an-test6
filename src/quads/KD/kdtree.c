@@ -520,10 +520,13 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, int *nearestpindex)
 
   // modified by STR to return distance of point to nearest neighbour
   
-   node *closest_to_x = kd->root, **ptr_loc_to_closest=&kd->root, *closest_to_x_split;
-   double child1_min_dsqd, child2_min_dsqd;
-   int num_nodes;
-   ivec *tmp_pindexes;
+  node *closest_to_x = kd->root, **ptr_loc_to_closest=&kd->root, *closest_to_x_split;
+  double child1_min_dsqd, child2_min_dsqd;
+  int num_nodes;
+  ivec *tmp_pindexes;
+  double insertdist=-1.0,tmp,tmp2;
+  dyv *thispoint;
+  int ii,jj;
 
    /* Find the nearest node n to the query x. Increase the number
 	  of points owned by all the nodes and the size of the hrect
@@ -555,9 +558,6 @@ double add_point_to_kdtree_dsq(kdtree *kd, dyv *x, int *nearestpindex)
 	  4) adjusting the hrect to include this point
    */
 
-  double insertdist=-1.0,tmp,tmp2;
-  dyv *thispoint;
-  int ii,jj;
   for(ii=0;ii<closest_to_x->num_points;ii++) {
     tmp=0.0;
     thispoint = dyv_array_ref(closest_to_x->points,ii);

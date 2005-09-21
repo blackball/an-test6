@@ -25,7 +25,15 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
   int kd_Rmin=DEFAULT_KDRMIN;
+  FILE *codefid=NULL,*treefid=NULL;
+  qidx numcodes,ii;
+  code *tmpcode;
+  dimension Dim_Codes;
+  double index_scale;
+  char ASCII;
   qidx buffsize=(qidx)floor(MEM_LOAD/(sizeof(double)+sizeof(int))*DIM_CODES);
+  codearray *thecodes = NULL;
+  kdtree *codekd = NULL;
 
   if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);}
      
@@ -58,24 +66,17 @@ int main(int argc,char *argv[])
     return(OPT_ERR);
   }
 
-  FILE *codefid=NULL,*treefid=NULL;
-  qidx numcodes,ii;
-  code *tmpcode;
-  dimension Dim_Codes;
-  double index_scale;
-  char ASCII;
-
   fprintf(stderr,"codetree: building KD tree for %s\n",codefname);
 
   fprintf(stderr,"  Reading codes...");fflush(stderr);
   fopenin(codefname,codefid); free_fn(codefname);
-  codearray *thecodes=readcodes(codefid,&numcodes,&Dim_Codes,
-				&ASCII,&index_scale,buffsize);
+  thecodes = readcodes(codefid,&numcodes,&Dim_Codes,
+			&ASCII,&index_scale,buffsize);
   if(thecodes==NULL) return(1);
   fprintf(stderr,"got %d codes (dim %hu).\n",thecodes->size,Dim_Codes);
 
   fprintf(stderr,"  Building code KD tree...\n");fflush(stderr);
-  kdtree *codekd = mk_codekdtree(thecodes,kd_Rmin);
+  codekd = mk_codekdtree(thecodes,kd_Rmin);
   free_codearray(thecodes);
   if(codekd==NULL) return(2);
 
@@ -116,12 +117,13 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
 {
   qidx ii;
   sidx numstars;
+  codearray *thecodes = NULL;
 
   *ASCII= read_code_header(fid,numcodes,&numstars,DimCodes,index_scale);
   if(*ASCII==READ_FAIL) return((codearray *)NULL);
 
   if(*numcodes< buffsize) buffsize=*numcodes;
-  codearray *thecodes = mk_codearray(buffsize);
+  thecodes = mk_codearray(buffsize);
   
   for(ii=0;ii<buffsize;ii++) {
     thecodes->array[ii] = mk_coded(*DimCodes);

@@ -28,6 +28,12 @@ off_t posmarker,cposmarker;
 int main(int argc,char *argv[])
 {
   int argidx,argchar;//  opterr = 0;
+  sidx numstars,ns2;
+  qidx numquads,nq2;
+  dimension DimQuads,DimCodes;
+  double index_scale,is2;
+  FILE *newquadfid=NULL,*newcodefid=NULL;
+  FILE *idxfid=NULL,*quadfid=NULL,*codefid=NULL;
 
   if(argc<=2) {fprintf(stderr,HelpString); return(OPT_ERR);
   fprintf(stderr,"argc=%d\n",argc);}
@@ -63,13 +69,6 @@ int main(int argc,char *argv[])
     fprintf(stderr,HelpString);
     return(OPT_ERR);
   }
-
-  sidx numstars,ns2;
-  qidx numquads,nq2;
-  dimension DimQuads,DimCodes;
-  double index_scale,is2;
-  FILE *newquadfid=NULL,*newcodefid=NULL;
-  FILE *idxfid=NULL,*quadfid=NULL,*codefid=NULL;
 
   fprintf(stderr,"quadidx: deduplicating and indexing quads in %s...\n",
 	  quadfname);

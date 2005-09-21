@@ -17,15 +17,17 @@ int main(int argc,char *argv[])
 {
   int argidx,argchar; //  opterr = 0;
   
-  if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
-
   sidx numstars=10;
   char ASCII = 1;
   char *fname=NULL;
   double ramin=DEFAULT_RAMIN,ramax=DEFAULT_RAMAX;
   double decmin=DEFAULT_DECMIN,decmax=DEFAULT_DECMAX;
+  sidx ii;
+  star *thestar;
+  FILE *fid=NULL;
 
-     
+  if(argc<=4) {fprintf(stderr,HelpString); return(OPT_ERR);}
+
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
     switch (argchar)
       {
@@ -88,10 +90,6 @@ int main(int argc,char *argv[])
     fprintf(stderr,"  using limits %f<=RA<=%f ; %f<=DEC<=%f deg.\n",
 	    rad2deg(ramin),rad2deg(ramax),rad2deg(decmin),rad2deg(decmax));
 #endif
-
-  sidx ii;
-  star *thestar;
-  FILE *fid=NULL;
 
   fopenout(fname,fid); free_fn(fname);
 
