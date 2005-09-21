@@ -20,11 +20,11 @@ star *make_rand_star(double ramin, double ramax,
   return thestar;
 #else
   double decval,raval;
+  star *thestar = mk_star();
   if(ramin<0.0) ramin=0.0;
   if(ramax>(2*PIl)) ramax=2*PIl;
   if(decmin<-PIl/2.0) decmin=-PIl/2.0;
   if(decmax>PIl/2.0) decmax=PIl/2.0;
-  star *thestar = mk_star();
   if(thestar!=NULL) {
     decval=asin(range_random(sin(decmin),sin(decmax)));
     raval=range_random(ramin,ramax);
