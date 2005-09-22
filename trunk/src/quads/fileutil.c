@@ -1,43 +1,23 @@
 #include "fileutil.h"
 #include "kdutil.h"
 
+/* The binary files all start with the unsigned short int MAGIC_VAL
+   which helps identify them as binary and also sort out endian issues.
+*/
 
-void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD)
-{
-  fread(iA,sizeof(*iA),1,fid);
-  fread(iB,sizeof(*iB),1,fid);
-  fread(iC,sizeof(*iC),1,fid);
-  fread(iD,sizeof(*iD),1,fid);
-  return;
-}
-
-void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD)
-{
-  fwrite(&iA,sizeof(iA),1,fid);
-  fwrite(&iB,sizeof(iB),1,fid);
-  fwrite(&iC,sizeof(iC),1,fid);
-  fwrite(&iD,sizeof(iD),1,fid);
-  return;
-}
-
-void readonecode(FILE *fid,double *Cx, double *Cy, double *Dx, double *Dy)
-{
-  fread(Cx,sizeof(*Cx),1,fid);
-  fread(Cy,sizeof(*Cy),1,fid);
-  fread(Dx,sizeof(*Dx),1,fid);
-  fread(Dy,sizeof(*Dy),1,fid);
-  return;
-}
-
-void writeonecode(FILE *fid,double Cx, double Cy, double Dx, double Dy)
-{
-  fwrite(&Cx,sizeof(Cx),1,fid);
-  fwrite(&Cy,sizeof(Cy),1,fid);
-  fwrite(&Dx,sizeof(Dx),1,fid);
-  fwrite(&Dy,sizeof(Dy),1,fid);
-  return;
-}
-
+/* The binary catalogue format (.objs) is as follows:
+   unsigned short int = MAGIC_VAL
+   unsigned long int = number_of_stars_in_catalogue
+   unsigned short int = dimension_of_space (almost always==3)
+   double ramin = minimum RA value of all stars
+   double ramax = maximum RA value of all stars
+   double decmin = minimum DEC value of all stars
+   double decmax = maximum DEC value of all stars
+   double x0, double y0, double z0
+   double x1, double y1, double z1
+   ...
+*/
+   
 stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
 	   double *ramin, double *ramax, double *decmin, double *decmax)
 {
@@ -71,6 +51,10 @@ stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
   return thestars;
 }
 
+
+
+/* This function reads an id list, which is used mostly
+   for debugging purposes, ie with fieldquads */
 quadarray *readidlist(FILE *fid,qidx *numfields)
 {
   char ASCII = 0;
@@ -463,6 +447,44 @@ sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
 }
 
 
+void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD)
+{
+  fread(iA,sizeof(*iA),1,fid);
+  fread(iB,sizeof(*iB),1,fid);
+  fread(iC,sizeof(*iC),1,fid);
+  fread(iD,sizeof(*iD),1,fid);
+  return;
+}
+
+void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD)
+{
+  fwrite(&iA,sizeof(iA),1,fid);
+  fwrite(&iB,sizeof(iB),1,fid);
+  fwrite(&iC,sizeof(iC),1,fid);
+  fwrite(&iD,sizeof(iD),1,fid);
+  return;
+}
+
+void readonecode(FILE *fid,double *Cx, double *Cy, double *Dx, double *Dy)
+{
+  fread(Cx,sizeof(*Cx),1,fid);
+  fread(Cy,sizeof(*Cy),1,fid);
+  fread(Dx,sizeof(*Dx),1,fid);
+  fread(Dy,sizeof(*Dy),1,fid);
+  return;
+}
+
+void writeonecode(FILE *fid,double Cx, double Cy, double Dx, double Dy)
+{
+  fwrite(&Cx,sizeof(Cx),1,fid);
+  fwrite(&Cy,sizeof(Cy),1,fid);
+  fwrite(&Dx,sizeof(Dx),1,fid);
+  fwrite(&Dy,sizeof(Dy),1,fid);
+  return;
+}
+
+
+
 signed int compare_sidx(const void *x,const void *y)
 {
   sidx xval,yval;
@@ -472,3 +494,4 @@ signed int compare_sidx(const void *x,const void *y)
   else if(xval<yval) return(-1);
   else return(0);
 }
+
