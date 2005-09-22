@@ -205,6 +205,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 
     // try ALL POSSIBLE pairs AB with all possible pairs CD
     // actually there is a bug now and we don't try the first few
+    // in particular we don't examine iAiBiCiD=0123 or =0213 or =1203
     numAB=0;
     for(fieldidx=3;fieldidx<numxy;fieldidx++) {
     for(iA=0;iA<fieldidx;iA++) {
