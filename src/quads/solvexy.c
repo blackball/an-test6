@@ -207,7 +207,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
     // actually there is a bug now and we don't try the first few
     numAB=0;
     for(fieldidx=3;fieldidx<numxy;fieldidx++) {
-    for(iA=0;iA<(fieldidx-1);iA++) {
+    for(iA=0;iA<fieldidx;iA++) {
       Ax=xy_refx(thisfield,iA); Ay=xy_refy(thisfield,iA);
       xy_setx(ABCDpix,0,Ax); xy_sety(ABCDpix,0,Ay);
       iB=fieldidx; {
@@ -216,7 +216,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 	Bx-=Ax; By-=Ay;
 	scale = Bx*Bx+By*By;
 	costheta=(Bx+By)/scale; sintheta=(By-Bx)/scale;
-	for(iC=0;iC<(fieldidx-2);iC++) {
+	for(iC=0;iC<(fieldidx-1);iC++) {
 	  if(iC!=iA && iC!=iB) {
 	    Cx=xy_refx(thisfield,iC); Cy=xy_refy(thisfield,iC);
 	    xy_setx(ABCDpix,2,Cx); xy_sety(ABCDpix,2,Cy);
@@ -225,7 +225,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 	    Cx=Cx*costheta+Cy*sintheta;
 	    Cy=-xxtmp*sintheta+Cy*costheta;
 	    if((Cx<1.0)&&(Cx>0.0)&&(Cy<1.0)&&(Cy>0.0)) { //C inside AB box?
-	      for(iD=iC+1;iD<(fieldidx-1);iD++) {
+	      for(iD=iC+1;iD<fieldidx;iD++) {
 		if(iD!=iA && iD!=iB) {
 		  Dx=xy_refx(thisfield,iD); Dy=xy_refy(thisfield,iD);
 		  xy_setx(ABCDpix,3,Dx); xy_sety(ABCDpix,3,Dy);
