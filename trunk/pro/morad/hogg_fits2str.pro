@@ -1,13 +1,13 @@
 ;+
 ; PURPOSE:
-;   convert USNO-B1.0 fits file to a binary file STR can read
+;   convert USNO-B1.0 fits files to a binary file STR can read
 ; BUGS:
 ;   - not written
 ;   - no header
 ;   - path hard-coded!
 ;-
 pro hogg_fits2str, outfile
-if (not keyword_set(blimit)) then blimit= [1.0,15.0] ; mag
+if (not keyword_set(blimit)) then blimit= [1.0,14.0] ; mag
 if (not keyword_set(outfile)) then outfile= 'for_str.bin'
 file= findfile('/global/pogson1/usnob_fits/*/b*.fit*',count=nfile)
 for ii=0L,nfile-1L do begin
