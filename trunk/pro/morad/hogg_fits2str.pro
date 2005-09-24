@@ -7,7 +7,7 @@
 ;   - path hard-coded!
 ;-
 pro hogg_fits2str, outfile
-if (not keyword_set(blimit)) then blimit= [10.0,15.0] ; mag
+if (not keyword_set(blimit)) then blimit= [1.0,15.0] ; mag
 if (not keyword_set(outfile)) then outfile= 'for_str.bin'
 file= findfile('/global/pogson1/usnob_fits/*/b*.fit*',count=nfile)
 for ii=0L,nfile-1L do begin
