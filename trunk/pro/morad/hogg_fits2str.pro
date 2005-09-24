@@ -7,16 +7,23 @@
 ;   - path hard-coded!
 ;-
 pro hogg_fits2str, outfile
-if (not keyword_set(blimit)) then blimit= [1.0,14.0] ; mag
+if (not keyword_set(blimit)) then blimit= [1.0,14.5] ; mag
+if (not keyword_set(maxerr)) then maxerr=700. ; max position error
+if (not keyword_set(maxpm)) then maxpm=70. ; max proper motion
 if (not keyword_set(outfile)) then outfile= 'for_str.bin'
 file= findfile('/global/pogson1/usnob_fits/*/b*.fit*',count=nfile)
 for ii=0L,nfile-1L do begin
     thisusno= mrdfits(file[ii],1)
     good= where((thisusno.mag[2] GT blimit[0]) AND $
-                (thisusno.mag[2] LT blimit[1]),ngood)
+                (thisusno.mag[2] LT blimit[1]) AND $
+                (thisusno.sde LT maxerr) AND $
+                (thisusno.sra LT maxerr) AND $
+                (thisusno.mura LT maxpm) AND $
+                (thisusno.mudec LT maxpm),ngood)
     if (ngood GT 0) then begin
-        if keyword_set(usno) then usno= [temporary(usno),thisusno[good]] $
-        else usno= thisusno[good]
+        thisusno= (temporary(thisusno))[good]
+        if keyword_set(usno) then usno= [temporary(usno),thisusno] $
+        else usno= thisusno
     endif
     help, file[ii],usno
 endfor
