@@ -12,6 +12,12 @@ if (not keyword_set(maxerr)) then maxerr=700. ; max position error
 if (not keyword_set(maxpm)) then maxpm=70. ; max proper motion
 if (not keyword_set(outfile)) then outfile= 'for_str.bin'
 file= findfile('/global/pogson1/usnob_fits/*/b*.fit*',count=nfile)
+oneusno= create_struct({ra:0D0,dec:0D0,mag:0.0})
+help, oneusno,/struc
+jj= 0L
+kk= 0L
+chunksize= 1000000L
+usno= replicate(oneusno,chunksize)
 for ii=0L,nfile-1L do begin
     thisusno= mrdfits(file[ii],1)
     good= where((thisusno.mag[2] GT blimit[0]) AND $
@@ -22,12 +28,20 @@ for ii=0L,nfile-1L do begin
                 (thisusno.mudec LT maxpm),ngood)
     if (ngood GT 0) then begin
         thisusno= (temporary(thisusno))[good]
-        if keyword_set(usno) then usno= [temporary(usno),thisusno] $
-        else usno= thisusno
+        kk= jj+ngood
+        while (kk GT n_elements(usno)) do begin
+            splog, 'lengthening usno by',chunksize
+            usno= [temporary(usno),replicate(oneusno,chunksize)]
+        endwhile
+        usno[jj:kk-1].ra=  thisusno.ra
+        usno[jj:kk-1].dec= thisusno.dec
+        usno[jj:kk-1].mag= thisusno.mag[2]
+        jj= kk
     endif
-    help, file[ii],usno
+    help, file[ii],usno,jj
 endfor
-sindx= sort(usno.mag[2])
+usno= (temporary(usno))[0:jj-1]
+sindx= sort(usno.mag)
 usno= usno[sindx]
 openw, wlun,outfile,/get_lun
 magic= uint('FF00'X)
