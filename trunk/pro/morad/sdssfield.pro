@@ -11,8 +11,7 @@
 ; OPTIONAL INPUTS:
 ;  seed      - the seed for the random sequence (default 7l)
 ;  nfields   - number of fields wanted (default 1)
-;  nchunk    - number of chunks (separate files) in which to return the
-;              result (default 1)
+;  chunksize - number of fields to return in each chunk (default 10000)
 ;  maxobj    - the number of sources to return per field (default 300)
 ;  band      - band to use to sort sources by psfflux (default 2)
 ;  run       - all fields for the specified run will be returned
@@ -31,7 +30,7 @@
 ;  2005-09-14  chunks - Hogg
 ;-
 pro sdssfield, seed=seed,nfields=nfields,maxobj=maxobj,band=band, $
-               order=order,ngc=ngc,run=run,nchunks=nchunks
+               order=order,ngc=ngc,run=run,chunksize=chunksize
 
 objtype= {run:0L, $
           rerun:0L, $
@@ -56,11 +55,12 @@ if keyword_set(ngc) then begin
 endif else begin
     maxfields= n_elements(flist)
 endelse
+nfields= nfields < maxfields
 
 ; set defaults
 if not keyword_set(seed) then seed=7L
 if not keyword_set(nfields) then nfields=1L
-if not keyword_set(nchunks) then nchunks=1L
+if not keyword_set(chunksize) then chunksize=10000L
 if not keyword_set(maxobj) then maxobj=300
 if not keyword_set(band) then band=2
 prefix= 'sdssfield'
@@ -77,15 +77,14 @@ if keyword_set(run) then begin
 endif
 
 ; loop over chunks, setting filenames
+nchunks= ceil(float(nfields)/float(chunksize))
 for chunk=1L,nchunks do begin
     outfile= prefix
-    nfieldschunk= nfields
     if (nchunks GT 1) then begin
         ndigit= ceil(alog10(nchunks+1.0))
         format= '(I'+string(ndigit,'(I1)')+'.'+string(ndigit,'(I1)')+')'
         splog, format
         outfile= prefix+string(chunk,format=format)
-        nfieldschunk= ceil(float(nfields)/float(nchunks))
     endif
 
     txtfile= outfile+'.xyls'
@@ -94,10 +93,10 @@ for chunk=1L,nchunks do begin
     endif else begin
         wlun= 1
         openw, wlun,txtfile
-        printf, wlun,'NumFields='+strtrim(string(nfieldschunk),2)
+        printf, wlun,'NumFields='+strtrim(string(chunksize),2)
 
         created= 0
-        for rr=(chunk-1L)*nfieldschunk,((chunk*nfieldschunk-1L)<(nfields-1L)) do begin
+        for rr=(chunk-1L)*chunksize,((chunk*chunksize-1L)<(nfields-1L)) do begin
             field=sdss_readobj(flist[rr].run,flist[rr].camcol, $
                                flist[rr].field,rerun=flist[rr].rerun)
             if (n_tags(field) GT 1) then begin
