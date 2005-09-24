@@ -1,10 +1,13 @@
 ;+
 ; NAME:
 ;   Morad: comment your code!
+; BUGS:
+;   - no comment header
+;   - hard-coded path NOT on global/data system!
 ;-
 pro usno_select,minmag=minmag,maxmag=maxmag,poserror=poserror,prcut=prcut
 
-path='/scratch/usnob_fits'
+path='/global/pogson1/usnob_fits/'
 
 ;set defaults
 
@@ -42,7 +45,8 @@ for subdir = 57,179 do begin
         endif
         print, fname,n_elements(sdsscut),n_elements(mcut),n_elements(sdeccut),n_elements(propcut),n_elements(temp_sweep),n_elements(sweep)
     endfor
-    if (n_elements(sweep) gt 1 ) then mwrfits,sweep,path+'/'+dirstr+'/'+dirstr+'sweep.fit',/create
+    if (n_elements(sweep) ge 1 ) then $
+      mwrfits,sweep,path+'/'+dirstr+'/'+dirstr+'sweep.fit',/create
 endfor
 return
 end
