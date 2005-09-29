@@ -9,7 +9,7 @@ const char HelpString[]=
 "   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n";
 
 #define MIN_MATCHES_TO_AGREE 3
-#define MAX_MATCHES_NEEDED 10
+#define MAX_MATCHES_NEEDED 3
 #define DEFAULT_AGREE_TOL 7.0
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
