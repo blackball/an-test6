@@ -1,19 +1,33 @@
 ;+
 ; PURPOSE:
 ;   convert USNO-B1.0 fits files to a binary file STR can read
+; KEYWORDS:
+;   You MUST SET one of these keywords:
+;   galex    - good for GALEX
+;   sdss     - good for SDSS
 ; BUGS:
 ;   - not written
 ;   - no header
 ;   - path hard-coded!
 ;-
-pro hogg_fits2str
-galex= 1
+pro hogg_fits2str, galex=galex,sdss=sdss
 if keyword_set(galex) then begin
     maglimit= [1.0,14.5]        ; mag
     band= 2                     ; B band, second epoch?
     maxerr=700.                 ; max position error
     maxpm=70.                   ; max proper motion
     outfile= 'usno_galex.bin'
+endif
+if keyword_set(sdss) then begin
+    maglimit= [14.0,17.5]       ; mag
+    band= 3                     ; R band, second epoch?
+    maxerr=700.                 ; max position error
+    maxpm=70.                   ; max proper motion
+    outfile= 'usno_sdss.bin'
+endif
+if (not keyword_set(outfile)) then begin
+    splog, 'ERROR: must set GALEX or SDSS or [other] keyword; see code'
+    return
 endif
 file= findfile('/global/pogson1/usnob_fits/*/b*.fit*',count=nfile)
 oneusno= create_struct({ra:0D0,dec:0D0,mag:0.0})
