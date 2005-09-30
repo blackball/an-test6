@@ -6,12 +6,15 @@
 ;   - no header
 ;   - path hard-coded!
 ;-
-pro hogg_fits2str, outfile
-if (not keyword_set(maglimit)) then maglimit= [1.0,14.5] ; mag
-if (not keyword_set(band)) then band= 2 ; B band, second epoch?
-if (not keyword_set(maxerr)) then maxerr=700. ; max position error
-if (not keyword_set(maxpm)) then maxpm=70. ; max proper motion
-if (not keyword_set(outfile)) then outfile= 'for_str.bin'
+pro hogg_fits2str
+galex= 1
+if keyword_set(galex) then begin
+    maglimit= [1.0,14.5]        ; mag
+    band= 2                     ; B band, second epoch?
+    maxerr=700.                 ; max position error
+    maxpm=70.                   ; max proper motion
+    outfile= 'usno_galex.bin'
+endif
 file= findfile('/global/pogson1/usnob_fits/*/b*.fit*',count=nfile)
 oneusno= create_struct({ra:0D0,dec:0D0,mag:0.0})
 help, oneusno,/struc
@@ -47,12 +50,12 @@ usno= (temporary(usno))[0:jj-1]
 sindx= sort(usno.mag)
 usno= usno[sindx]
 openw, wlun,outfile,/get_lun,/stdio
-magic= fix('FF00'X)
+magic= uint('FF00'X)
 help, magic
 writeu, wlun,magic
 nstars= long(n_elements(usno))
 writeu, wlun,nstars
-writeu, wlun,fix(3),0D0,3.6D2,-9D1,9D1
+writeu, wlun,fix(3),double(0),double(2)*!DPI,double(-0.5)*!DPI,double(0.5)*!DPI
 angles_to_xyz, 1D0,usno.ra,9D1-usno.dec,xx,yy,zz
 for ii=0L,nstars-1L do writeu, wlun,xx[ii],yy[ii],zz[ii]
 close, wlun
