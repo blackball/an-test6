@@ -19,7 +19,7 @@ if keyword_set(galex) then begin
     outfile= 'usno_galex.bin'
 endif
 if keyword_set(sdss) then begin
-    maglimit= [14.0,17.5]       ; mag
+    maglimit= [14.0,17.0]       ; mag
     band= 3                     ; R band, second epoch?
     maxerr=700.                 ; max position error
     maxpm=70.                   ; max proper motion
