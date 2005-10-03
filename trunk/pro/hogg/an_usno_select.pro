@@ -42,7 +42,7 @@ ra= dblarr(nstars)-99.0
 dec= dblarr(nstars)-99.0
 mag= fltarr(nstars)+9999.0
 radperdeg= !DPI/1.8D2
-for ii=0L,npix do begin
+for ii=0L,npix-1L do begin
     usno= usno_read(rap[ii],decp[ii],thetamax)
     if (n_tags(usno) GT 1) then begin
         if (band EQ 2) then usnomag= usno.bmag
