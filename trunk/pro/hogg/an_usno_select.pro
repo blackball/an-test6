@@ -43,18 +43,18 @@ dec= dblarr(nstars)-99.0
 mag= fltarr(nstars)+9999.0
 radperdeg= !DPI/1.8D2
 for ii=0L,npix-1L do begin
+    splog, 'working on pixel',ii,' of',npix,' at',rap[ii],decp[ii]
     usno= usno_read(rap[ii],decp[ii],thetamax)
     if (n_tags(usno) GT 1) then begin
         if (band EQ 2) then usnomag= usno.bmag
         if (band EQ 3) then usnomag= usno.rmag
         ang2pix_ring, nside,(9D1-usno.dec)*radperdeg,usno.ra*radperdeg,ind
-        splog, ii,median(ind)
         inside= where((ind EQ ii) AND $
                       (usnomag GT minmag),ninside)
-;                   (usno.sde LT maxerr) AND $
-;                   (usno.sra LT maxerr) AND $
-;                   (usno.mura LT maxpm) AND $
-;                   (usno.mudec LT maxpm) AND $
+; ;                      (usno.sde LT maxerr) AND $
+; ;                      (usno.sra LT maxerr) AND $
+; ;                      (usno.mura LT maxpm) AND $
+; ;                      (usno.mudec LT maxpm) AND $
         splog, 'found',ninside,' good USNO-B1.0 stars in pixel',ii
         if (ninside GT 1) then begin
             sindx= inside[sort(usnomag[inside])]
