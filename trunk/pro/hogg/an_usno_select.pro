@@ -92,7 +92,7 @@ writeu, wlun,magic,nstars,fix(3)
 writeu, wlun,double(0),double(2)*!DPI,double(-0.5)*!DPI,double(0.5)*!DPI
 for ii=0L,nstars-1L do begin ; this loop is slow but memory-safe
     angles_to_xyz, 1D0,ra[ii],9D1-dec[ii],xx,yy,zz
-    writeu, wlun,xx[ii],yy[ii],zz[ii]
+    writeu, wlun,xx,yy,zz
 endfor
 close, wlun
 free_lun, wlun
