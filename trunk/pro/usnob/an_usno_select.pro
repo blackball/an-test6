@@ -30,8 +30,10 @@ if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; min mag
 ; if (NOT keyword_set(maxerr)) then maxerr= 700.0 ; max position error
 ; if (NOT keyword_set(maxpm)) then maxpm= 70.0 ; max proper motion
-if (NOT keyword_set(filename)) then filename= 'an_usno_' $
-  +strtrim(string(band),2)+'.bin'
+if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
+  +strtrim(string(band),2)
+if (NOT keyword_set(filename)) then filename= prefix+'.bin'
+if (NOT keyword_set(savefile)) then savefile= prefix+'.sav'
 nside= 2L^6L
 healgen_lb,nside,rap,decp
 npix= n_elements(rap)
@@ -68,11 +70,18 @@ for ii=0L,npix-1L do begin
             mag[jj:kk]= usnomag[sindx]
         endif
     endif
+    if ((ii MOD 4096) EQ 0) then save, filename=savefile
 endfor
+save, filename=savefile
+good= where(mag LT 90.0,nstars)
+ra= (temporary(ra))[good]
+dec= (temporary(dec))[good]
+mag= (temporary(mag))[good]
 sindx= sort(mag)
 ra= (temporary(ra))[sindx]
 dec= (temporary(dec))[sindx]
 mag= (temporary(mag))[sindx]
+save, filename=savefile
 openw, wlun,filename,/get_lun,/stdio
 magic= uint('FF00'X)
 nstars= long(n_elements(ra))
