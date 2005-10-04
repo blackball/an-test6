@@ -77,18 +77,23 @@ good= where(mag LT 90.0,nstars)
 ra= (temporary(ra))[good]
 dec= (temporary(dec))[good]
 mag= (temporary(mag))[good]
+good= 0 ; free memory
 sindx= sort(mag)
 ra= (temporary(ra))[sindx]
 dec= (temporary(dec))[sindx]
 mag= (temporary(mag))[sindx]
+sindx= 0 ; free memory
 save, filename=savefile
+mag= 0 ; free memory
 openw, wlun,filename,/get_lun,/stdio
 magic= uint('FF00'X)
 nstars= long(n_elements(ra))
 writeu, wlun,magic,nstars,fix(3)
 writeu, wlun,double(0),double(2)*!DPI,double(-0.5)*!DPI,double(0.5)*!DPI
-angles_to_xyz, 1D0,temporary(ra),9D1-temporary(dec),xx,yy,zz
-for ii=0L,nstars-1L do writeu, wlun,xx[ii],yy[ii],zz[ii]
+for ii=0L,nstars-1L do begin ; this loop is slow but memory-safe
+    angles_to_xyz, 1D0,ra[ii],9D1-dec[ii],xx,yy,zz
+    writeu, wlun,xx[ii],yy[ii],zz[ii]
+endfor
 close, wlun
 free_lun, wlun
 return
