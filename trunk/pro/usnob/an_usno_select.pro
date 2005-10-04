@@ -15,8 +15,8 @@
 ;   nstars   - number of stars *actually* produced
 ; COMMENTS:
 ;   - Ranks stars by brightness in a particular band.
-;   - Returns a number of stars within a factor of 4 of the number you
-;     ask for.
+;   - Returns a number of stars close to what you ask for but not
+;     exactly, because there are some gaps/crap in USNO-B1.0.
 ; BUGS:
 ;   - code not tested
 ;   - No cuts on PM error or position error because usno_read does
