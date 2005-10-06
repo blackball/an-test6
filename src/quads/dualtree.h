@@ -23,12 +23,23 @@
 #include "KD/kdtree.h"
 
 typedef bool (*decision_function)(void* extra, node* search, node* query);
+typedef void (*start_of_results_function)(void* extra, node* query);
 typedef void (*result_function)(void* extra, node* search, node* query);
+typedef void (*end_of_results_function)(void* extra, node* query);
 
+struct dualtree_callbacks {
+	decision_function          decision;
+	void*                      decision_extra;
+	start_of_results_function  start_results;
+	void*                      start_extra;
+	result_function            result;
+	void*                      result_extra;
+	end_of_results_function    end_results;
+	void*                      end_extra;
+};
+typedef struct dualtree_callbacks dualtree_callbacks;
 
-void dual_tree_search(kdtree* search, kdtree* query,
-                      decision_function decision,
-                      void* decision_extra,
-                      result_function result,
-                      void* result_extra);
+void dualtree_search(kdtree* search, kdtree* query,
+					 dualtree_callbacks* callbacks);
+
 

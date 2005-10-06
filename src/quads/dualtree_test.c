@@ -138,6 +138,9 @@ int main()
 	dyv_array* sarray = NULL;
 	dyv_array* qarray = NULL;
 
+	// dual-tree search callback functions
+	dualtree_callbacks callbacks;
+
 	int i, d;
 
 	params range_params;
@@ -184,11 +187,14 @@ int main()
 	// set search params
 	range_params.maxdistsq = radius * radius;
 
-	// run dual-tree search
-	dual_tree_search(stree, qtree,
-	                 within_range, &range_params,
-	                 print_result, &range_params);
+	memset(&callbacks, 0, sizeof(dualtree_callbacks));
+	callbacks.decision = within_range;
+	callbacks.decision_extra = &range_params;
+	callbacks.result = print_result;
+	callbacks.result_extra = &range_params;
 
+	// run dual-tree search
+	dualtree_search(stree, qtree, &callbacks);
 
 	// print stats
 	printf("\n\nStats:\n");

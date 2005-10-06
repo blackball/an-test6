@@ -31,4 +31,6 @@ clean:
 
 dualtree_test :: %: %.o $(OBJ) dualtree.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJ) dualtree.o $< -o $@
+all_quads :: %: %.o $(OBJ) dualtree.o
+	$(CC) $(CFLAGS) $(LFLAGS) $(OBJ) dualtree.o $< -o $@
 
