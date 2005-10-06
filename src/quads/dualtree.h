@@ -1,21 +1,21 @@
 /**
-   \file
+  \file
 
-   Dual-tree search.
+  Dual-tree search.
 
-   Input:
-   -a search tree
-   -a query tree
-   -a function that takes two nodes and returns true if the result set should
-    contain that pair of nodes.
-   -an extra value that will be passed to the decision function.
-   -a function that is called for each pair of leaf nodes.
-     (** actually, at least one of the nodes will be a leaf. **)
-   -an extra value that will be passed to the leaf-node function
+  Input:
+  -a search tree
+  -a query tree
+  -a function that takes two nodes and returns true if the result set should
+   contain that pair of nodes.
+  -an extra value that will be passed to the decision function.
+  -a function that is called for each pair of leaf nodes.
+    (** actually, at least one of the nodes will be a leaf. **)
+  -an extra value that will be passed to the leaf-node function
 
-   The query tree is a kd-tree built out of the points you want to query.
+  The query tree is a kd-tree built out of the points you want to query.
 
-   The search and query trees can be the same tree.
+  The search and query trees can be the same tree.
 */
 
 //     (** query node will be a leaf; search node may not be. **)

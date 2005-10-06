@@ -13,12 +13,12 @@
 #define mk_starkdtree(s,r) mk_kdtree_from_points((dyv_array *)s,r)
 #define mk_codekdtree(c,r) mk_kdtree_from_points((dyv_array *)c,r)
 
-extern kresult *mk_kresult_from_kquery(kquery *kq,kdtree *kd,dyv *query);
+extern kresult *mk_kresult_from_kquery(kquery *kq, kdtree *kd, dyv *query);
 
 unsigned int fwrite_kdtree(kdtree *kdt, FILE *fid);
 kdtree *fread_kdtree(FILE *fid);
-unsigned int fwrite_node(node *n,FILE *fid);
-node *fread_node(int pointdim,FILE *fid);
+unsigned int fwrite_node(node *n, FILE *fid);
+node *fread_node(int pointdim, FILE *fid);
 void free_nodedebug(node *x);
 void free_kdtreedebug(kdtree *x);
 

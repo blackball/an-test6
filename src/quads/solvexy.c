@@ -1,9 +1,9 @@
 /*******************************************************************************
- * 
- *   Solve fields
- *   
- *   Conforms to astyle -clpt
- */
+* 
+*   Solve fields
+*   
+*   Conforms to astyle -clpt
+*/
 
 #include "starutil.h"
 #include "kdutil.h"
@@ -421,6 +421,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
 	sC = mk_star();
 	sD = mk_star();
 
+	// This should normally only loop once; only one match should be foun
 	for (jj = 0;jj < krez->count;jj++) {
 		mo = mk_MatchObj();
 		mo->next = NULL;
@@ -883,7 +884,3 @@ ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
  
  
 */
-
-
-
-
