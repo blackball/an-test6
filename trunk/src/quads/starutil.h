@@ -6,9 +6,9 @@
 #define PLANAR_GEOMETRY 0
 
 #if PLANAR_GEOMETRY==1
-  #define DIM_STARS 2
+ #define DIM_STARS 2
 #else
-  #define DIM_STARS 3
+ #define DIM_STARS 3
 #endif
 
 #define DIM_CODES 4
@@ -122,25 +122,26 @@ typedef dyv_array xyarray;
 
 typedef struct match_struct
 {
-  qidx quadno;
-  sidx iA,iB,iC,iD;
-  qidx idx;
-  star *sMin,*sMax;
-  sidx fA,fB,fC,fD;
-  double code_err;
-  ivec *nearlist;
-  struct match_struct *next;
-} MatchObj;
+	qidx quadno;
+	sidx iA, iB, iC, iD;
+	qidx idx;
+	star *sMin, *sMax;
+	sidx fA, fB, fC, fD;
+	double code_err;
+	ivec *nearlist;
+	struct match_struct *next;
+}
+MatchObj;
 
 #define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
 #define free_MatchObj(m) free(m)
 
-star *make_rand_star(double ramin, double ramax, 
-		     double decmin, double decmax);
-void star_coords(star *s,star *r,double *x,double *y);
-void star_midpoint(star *M,star *A,star *B);
+star *make_rand_star(double ramin, double ramax,
+                     double decmin, double decmax);
+void star_coords(star *s, star *r, double *x, double *y);
+void star_midpoint(star *M, star *A, star *B);
 
 #define HELP_ERR -101
 #define OPT_ERR -201
 
-#endif 
+#endif

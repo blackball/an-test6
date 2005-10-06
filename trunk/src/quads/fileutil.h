@@ -39,53 +39,54 @@
 #endif
 #define fseekocat(i,p,f) fseeko(f,p+i*(DIM_STARS*sizeof(double)),SEEK_SET)
 
-void readonequad(FILE *fid,qidx *iA,qidx *iB,qidx *iC,qidx *iD);
-void writeonequad(FILE *fid,qidx iA,qidx iB,qidx iC,qidx iD);
-void readonecode(FILE *fid,double *Cx, double *Cy, double *Dx, double *Dy);
-void writeonecode(FILE *fid,double Cx, double Cy, double Dx, double Dy);
+void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD);
+void writeonequad(FILE *fid, qidx iA, qidx iB, qidx iC, qidx iD);
+void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
+void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
-stararray *readcat(FILE *fid,sidx *numstars, dimension *Dim_Stars,
-	   double *ramin, double *ramax, double *decmin, double *decmax);
+stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
+                   double *ramin, double *ramax, double *decmin, double *decmax);
 
-quadarray *readidlist(FILE *fid,qidx *numpix);
+quadarray *readidlist(FILE *fid, qidx *numpix);
 
-char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars, 
-             double *ramin,double *ramax,double *decmin,double *decmax);
+char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
+                      double *ramin, double *ramax, double *decmin, double *decmax);
 char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
-		      dimension *DimCodes, double *index_scale);
+                      dimension *DimCodes, double *index_scale);
 char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
-		      dimension *DimQuads, double *index_scale);
+                      dimension *DimQuads, double *index_scale);
 void write_objs_header(FILE *fid, char ASCII, sidx numstars,
-    dimension DimStars, double ramin,double ramax,double decmin,double decmax);
-void write_code_header(FILE *codefid, char ASCII, qidx numCodes, 
-		       sidx numstars, dimension DimCodes, double index_scale);
+                       dimension DimStars, double ramin, double ramax, double decmin, double decmax);
+void write_code_header(FILE *codefid, char ASCII, qidx numCodes,
+                       sidx numstars, dimension DimCodes, double index_scale);
 void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
-		       dimension DimQuads, double index_scale);
+                       dimension DimQuads, double index_scale);
 void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len);
 void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len);
 
 xyarray *readxy(FILE *fid, char ParityFlip);
 
-kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax, 
-		    double *decmin, double *decmax);
-kdtree *read_codekd(FILE *treefid,double *index_scale);
+kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax,
+                    double *decmin, double *decmax);
+kdtree *read_codekd(FILE *treefid, double *index_scale);
 void write_starkd(FILE *treefid, kdtree *starkd,
-		  double ramin, double ramax, double decmin, double decmax);
-void write_codekd(FILE *treefid, kdtree *codekd,double index_scale);
+                  double ramin, double ramax, double decmin, double decmax);
+void write_codekd(FILE *treefid, kdtree *codekd, double index_scale);
 
 char *mk_filename(const char *basename, const char *extension);
 
-sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq, 
-		 qidx ***starquads);
-signed int compare_sidx(const void *x,const void *y);
+sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
+                 qidx ***starquads);
+signed int compare_sidx(const void *x, const void *y);
 
 typedef struct file_struct
 {
-  FILE *fid;
-  char *fname;
-  char ASCII;
-  char itemSize;
-} FileObj;
+	FILE *fid;
+	char *fname;
+	char ASCII;
+	char itemSize;
+}
+FileObj;
 
 
 typedef unsigned short int magicval;
