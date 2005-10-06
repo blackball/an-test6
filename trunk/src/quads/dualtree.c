@@ -77,13 +77,9 @@ void list_free_nodes(list* l)
   At each step of the recursion, we have a query node and a list of
   candidate search nodes.
 */
-void dual_tree_recurse(list* nodes, list* leaves,
+void dualtree_recurse(list* nodes, list* leaves,
                        node* query,
-                       decision_function decision,
-                       void* decision_extra,
-                       result_function result,
-                       void* result_extra)
-{
+					   dualtree_callbacks* callbacks) {
 	// general idea:
 	//   for each element in search list:
 	//     if decision(elem, query)
@@ -110,10 +106,21 @@ void dual_tree_recurse(list* nodes, list* leaves,
 	list* childleaves;
 	list_node* leavesoldtail;
 
+	decision_function decision;
+	void* decision_extra;
 
 	// if the query node is a leaf, run the result function on each
 	// search node.
 	if (node_is_leaf(query)) {
+		start_of_results_function start = callbacks->start_results;
+		end_of_results_function end = callbacks->end_results;
+		result_function result = callbacks->result;
+		void* result_extra = callbacks->result_extra;
+
+		if (start) {
+			start(callbacks->start_extra, query);
+		}
+
 		// non-leaf nodes
 		for (e = nodes->head; e; e = e->next) {
 			node * sn = (node*)e->data;
@@ -124,17 +131,36 @@ void dual_tree_recurse(list* nodes, list* leaves,
 			node * sn = (node*)e->data;
 			result(result_extra, sn, query);
 		}
+
+		if (end) {
+			end(callbacks->end_extra, query);
+		}
+
 		return ;
 	}
 
 	// if there are search leaves but no search nodes, run the result
 	// function on each leaf.  (Note that the query node is not a leaf!)
 	if (!nodes->head) {
+		start_of_results_function start = callbacks->start_results;
+		end_of_results_function   end   = callbacks->end_results;
+		result_function result = callbacks->result;
+		void* result_extra = callbacks->result_extra;
+
+		if (start) {
+			start(callbacks->start_extra, query);
+		}
+
 		// leaf nodes
 		for (e = leaves->head; e; e = e->next) {
 			node * sn = (node*)e->data;
 			result(result_extra, sn, query);
 		}
+
+		if (end) {
+			end(callbacks->end_extra, query);
+		}
+
 		return ;
 	}
 
@@ -142,6 +168,8 @@ void dual_tree_recurse(list* nodes, list* leaves,
 	//childleaves = list_allocate(sizeof(list));
 	childleaves = leaves;
 	leavesoldtail = leaves->tail;
+	decision = callbacks->decision;
+	decision_extra = callbacks->decision_extra;
 
 	list_init(childnodes);
 
@@ -164,13 +192,9 @@ void dual_tree_recurse(list* nodes, list* leaves,
 	}
 
 	// recurse on the children!
-	dual_tree_recurse(childnodes, childleaves, query->child1,
-	                  decision, decision_extra,
-	                  result, result_extra);
+	dualtree_recurse(childnodes, childleaves, query->child1, callbacks);
 
-	dual_tree_recurse(childnodes, childleaves, query->child2,
-	                  decision, decision_extra,
-	                  result, result_extra);
+	dualtree_recurse(childnodes, childleaves, query->child2, callbacks);
 
 	// put the "leaves" list back the way it was...
 	{
@@ -197,22 +221,21 @@ void dual_tree_recurse(list* nodes, list* leaves,
 	list_free(childnodes);
 }
 
-void dual_tree_search(kdtree* search, kdtree* query,
-                      decision_function decision,
-                      void* decision_extra,
-                      result_function result,
-                      void* result_extra)
-{
+void dualtree_search(kdtree* search, kdtree* query,
+					  dualtree_callbacks* callbacks) {
 	list sn;
 	list sl;
 	list_init(&sl);
 	list_init(&sn);
 	list_prepend((node_is_leaf(search->root) ? &sl : &sn), search->root);
-	dual_tree_recurse(&sn, &sl, query->root, decision, decision_extra,
-	                  result, result_extra);
+
+	dualtree_recurse(&sn, &sl, query->root, callbacks);
+
 	list_free_nodes(&sn);
 	list_free_nodes(&sl);
 }
+
+
 
 
 
