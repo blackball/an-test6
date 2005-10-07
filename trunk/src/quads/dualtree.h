@@ -18,8 +18,6 @@
   The search and query trees can be the same tree.
 */
 
-//     (** query node will be a leaf; search node may not be. **)
-
 #include "KD/kdtree.h"
 
 typedef bool (*decision_function)(void* extra, node* search, node* query);
