@@ -10,13 +10,16 @@
 ;   band     - band to use for brightness ranking; 2 for B, 3 for R, 4
 ;              for I (default 3)
 ;   minmag   - minimum (brightest) magnitude to consider (default 14.0)
-;   filename - output filename (default sensible)
+; KEYWORDS:
+;   sdss     - over-ride all inputs to SDSS-optimized values
+;   galex    - over-ride all inputs to GALEX-optimized values
 ; OUTPUTS:
 ;   nstars   - number of stars *actually* produced
 ; COMMENTS:
 ;   - Ranks stars by brightness in a particular band.
 ;   - Returns a number of stars close to what you ask for but not
 ;     exactly, because there are some gaps/crap in USNO-B1.0.
+;   - The SDSS and GALEX keywords over-ride any manual inputs.
 ; BUGS:
 ;   - code not tested
 ;   - No cuts on PM error or position error because usno_read does
@@ -24,12 +27,24 @@
 ; REVISION HISTORY:
 ;   2005-10-02  started - Hogg (NYU)
 ;-
-pro an_usno_select, nstars=nstars,band=band,minmag=minmag,filename=filename
+pro an_usno_select, nstars=nstars,band=band,minmag=minmag
 if (NOT keyword_set(nstars)) then nstars= 12L*4L^11L
 if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; min mag
 ; if (NOT keyword_set(maxerr)) then maxerr= 700.0 ; max position error
 ; if (NOT keyword_set(maxpm)) then maxpm= 70.0 ; max proper motion
+if (keyword_set(sdss)) then begin
+    nstars= 12L*4L^11L
+    band= 3                     ; R band
+    minmag= 14.0                ; min mag
+    prefix= 'an_usno_sdss'
+endif
+if (keyword_set(galex)) then begin
+    nstars= 12L*4L^9L
+    band= 2                     ; B band
+    minmag= 2.0                 ; min mag
+    prefix= 'an_usno_galex'
+endif
 if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
   +strtrim(string(band),2)
 if (NOT keyword_set(filename)) then filename= prefix+'.bin'
