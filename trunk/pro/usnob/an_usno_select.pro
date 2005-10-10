@@ -27,7 +27,8 @@
 ; REVISION HISTORY:
 ;   2005-10-02  started - Hogg (NYU)
 ;-
-pro an_usno_select, nstars=nstars,band=band,minmag=minmag
+pro an_usno_select, nstars=nstars,band=band,minmag=minmag, $
+                    sdss=sdss,galex=galex
 if (NOT keyword_set(nstars)) then nstars= 12L*4L^11L
 if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; min mag
