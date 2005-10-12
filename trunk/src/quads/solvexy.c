@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 	free_fn(treefname);
 	fprintf(hitfid, "nfields = %lu\nnquads=%lu\nobjects_in_catalog=%lu\n",
 	        numfields, (qidx)kdtree_num_points(codekd), numstars);
-	fprintf(hitfid, "code_tol=%lf\nagree_tol=%lf\n", codetol, AgreeArcSec);
+	fprintf(hitfid, "code_tol = %lf\nagree_tol = %lf\n", codetol, AgreeArcSec);
 	if (ParityFlip) {
 		fprintf(hitfid, "# flipping parity (swapping row/col image coordinates)\n");
 		fprintf(hitfid, "parity_flip = True\n");
@@ -321,7 +321,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
 			        xy_refx(cornerpix, 0), xy_refy(cornerpix, 0),
 			        xy_refx(cornerpix, 1), xy_refy(cornerpix, 1));
-		fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu\n,",
+		fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu,\n",
 		        numtries, nummatches);
 
 		numgood = output_good_matches(firstMatch, lastMatch);
@@ -631,13 +631,13 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 
 		fprintf(hitfid, "    field2catalog={,\n");
 		for (ii = 0;ii < slist->size;ii++)
-			fprintf(hitfid, "        %lu : %lu\n",
+			fprintf(hitfid, "        %lu : %lu,\n",
 			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
 			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
 		fprintf(hitfid, "    },\n");
 		fprintf(hitfid, "    catalog2field={,\n");
 		for (ii = 0;ii < slist->size;ii++)
-			fprintf(hitfid, "        %lu : %lu\n",
+			fprintf(hitfid, "        %lu : %lu,\n",
 			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
 			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)));
 		fprintf(hitfid, "    },\n");
