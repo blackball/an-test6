@@ -178,17 +178,21 @@ int main(int argc, char *argv[])
 	        numfields, codetol, AgreeArcSec);
 	fopenout(hitfname, hitfid);
 	free_fn(hitfname);
-	fprintf(hitfid, "SOLVER PARAMS:\n");
-	fprintf(hitfid, "solving fields in %s using %s\n", fieldfname, treefname);
+	fprintf(hitfid, "# SOLVER PARAMS:\n");
+	fprintf(hitfid, "# solving fields in %s using %s\n", fieldfname, treefname);
+	fprintf(hitfid, "field_to_solve = '%s'\n", fieldfname);
+	fprintf(hitfid, "index_used = '%s'\n", treefname);
 	free_fn(fieldfname);
 	free_fn(treefname);
-	fprintf(hitfid, "  %lu fields, %lu quads, %lu objects in catalog\n",
+	fprintf(hitfid, "nfields = %lu\nnquads=%lu\nobjects_in_catalog=%lu\n",
 	        numfields, (qidx)kdtree_num_points(codekd), numstars);
-	fprintf(hitfid, "  code_tol=%lf, agree_tol=%lf\n", codetol, AgreeArcSec);
-	if (ParityFlip)
-		fprintf(hitfid, "  flipping parity (swapping row/col image coordinates)\n");
-	fprintf(hitfid, "min matches to agree: %u\n", MIN_MATCHES_TO_AGREE);
-	fprintf(hitfid, "max matches needed: %u\n", MAX_MATCHES_NEEDED);
+	fprintf(hitfid, "code_tol=%lf\nagree_tol=%lf\n", codetol, AgreeArcSec);
+	if (ParityFlip) {
+		fprintf(hitfid, "# flipping parity (swapping row/col image coordinates)\n");
+		fprintf(hitfid, "parity_flip = True\n");
+	}
+	fprintf(hitfid, "min_matches_to_agree = %u\n", MIN_MATCHES_TO_AGREE);
+	fprintf(hitfid, "max_matches_needed = %u\n", MAX_MATCHES_NEEDED);
 
 	numsolved = solve_fields(thefields, codekd, codetol);
 
@@ -222,6 +226,10 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 	kquery *kq = mk_kquery("rangesearch", "", KD_UNDEF, codetol, kdtree_rmin(codekd));
 	nearquery = mk_kquery("rangesearch", "", KD_UNDEF, AgreeTol, DEFAULT_KDRMIN);
 	numsolved = dyv_array_size(thefields);
+
+	fprintf(hitfid, "############################################################\n");
+	fprintf(hitfid, "# Result data, stored as a list of dictionaries\n");
+	fprintf(hitfid, "results = [ \n");
 
 	for (ii = 0;ii < dyv_array_size(thefields);ii++) {
 		numtries = 0;
@@ -300,21 +308,24 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 			}
 		}
 
-		fprintf(hitfid, "--------------------\n");
-		fprintf(hitfid, "field %lu\n", ii);
-		fprintf(hitfid, "  %lu objects in field\n", numxy);
+		fprintf(hitfid, "# --------------------\n");
+		fprintf(hitfid, "dict(\n");
+		fprintf(hitfid, "    field=%lu,\n", ii);
+		fprintf(hitfid, "    objects_in_field=%lu,\n", numxy);
+		fprintf(hitfid, "    # Image corners\n");
 		if (ParityFlip)
-			fprintf(hitfid, "  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
+			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
 			        xy_refy(cornerpix, 0), xy_refx(cornerpix, 0),
 			        xy_refy(cornerpix, 1), xy_refx(cornerpix, 1));
 		else
-			fprintf(hitfid, "  image corners: min uv=(%lf,%lf) max uv=(%lf,%lf)\n",
+			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
 			        xy_refx(cornerpix, 0), xy_refy(cornerpix, 0),
 			        xy_refx(cornerpix, 1), xy_refy(cornerpix, 1));
-		fprintf(hitfid, "  solver tried %lu quads, matched %lu codes\n",
+		fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu\n,",
 		        numtries, nummatches);
 
 		numgood = output_good_matches(firstMatch, lastMatch);
+
 		fflush(hitfid);
 		if (numgood == 0)
 			numsolved--;
@@ -335,6 +346,10 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 		lastMatch = NULL;
 
 	}
+
+	fprintf(hitfid, "] \n");
+	fprintf(hitfid, "# END OF RESULTS\n");
+	fprintf(hitfid, "############################################################\n");
 
 	free_kquery(kq);
 	free_kquery(nearquery);
@@ -519,21 +534,23 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
 void output_match(MatchObj *mo)
 {
 	if (mo == NULL)
-		fprintf(hitfid, "No agreement between matches. Could not resolve field.\n");
+		fprintf(hitfid, "        # No agreement between matches. Could not resolve field.\n");
 	else {
-		fprintf(hitfid, "quad=%lu\n", mo->quadno);
-		fprintf(hitfid, "  starids(ABCD)=%lu,%lu,%lu,%lu\n",
+		fprintf(hitfid, "        dict(\n");
+		fprintf(hitfid, "            quad=%lu,\n", mo->quadno);
+		fprintf(hitfid, "            starids_ABCD=(%lu,%lu,%lu,%lu),\n",
 		        mo->iA, mo->iB, mo->iC, mo->iD);
-		fprintf(hitfid, "  field_objects(ABDC)=%lu,%lu,%lu,%lu\n",
+		fprintf(hitfid, "            field_objects_ABDC=(%lu,%lu,%lu,%lu),\n",
 		        mo->fA, mo->fB, mo->fC, mo->fD);
-		fprintf(hitfid, "  min xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+		fprintf(hitfid, "            min_xyz=(%lf,%lf,%lf), radec=(%lf,%lf),\n",
 		        star_ref(mo->sMin, 0), star_ref(mo->sMin, 1), star_ref(mo->sMin, 2),
 		        rad2deg(xy2ra(star_ref(mo->sMin, 0), star_ref(mo->sMin, 1))),
 		        rad2deg(z2dec(star_ref(mo->sMin, 2))));
-		fprintf(hitfid, "  max xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
+		fprintf(hitfid, "            max_xyz=(%lf,%lf,%lf), radec=(%lf,%lf),\n",
 		        star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
 		        rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 		        rad2deg(z2dec(star_ref(mo->sMax, 2))));
+		fprintf(hitfid, "        ),\n");
 
 		/*
 		  int jj;
@@ -591,22 +608,40 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 				ivec_union((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist, bestlist);
 
 		bestnum = bestlist->size;
-		fprintf(hitfid, "  %d matches agree on resolving of the field:\n", bestnum);
+		fprintf(hitfid, "    # %d matches agree on resolving of the field:\n", bestnum);
+		fprintf(hitfid, "    matches_agree=%d,\n", bestnum);
 
+		// Output quad data
+		fprintf(hitfid, "    quads=[\n");
 		for (ii = 0;ii < bestnum;ii++) {
 			output_match(*(plist + ivec_ref(bestlist, ii)));
 			corresp_ok *=
 			    add_star_correspondences(*(plist + ivec_ref(bestlist, ii)), slist, flist);
 		}
-		fprintf(hitfid, "Field Object <--> Catalogue Object Mapping Table\n");
-		if (!corresp_ok)
+		fprintf(hitfid, "    ],\n");
+
+		fprintf(hitfid, "    # Field Object <--> Catalogue Object Mapping Table\n");
+		if (!corresp_ok) {
 			fprintf(hitfid,
-			        "  (warning -- some matches agree on resolve but not on mapping\n");
+			        "    # warning -- some matches agree on resolve but not on mapping\n");
+			fprintf(hitfid,
+			        "    resolve_mapping_mismatch=True,\n");
+		}
 		sortidx = mk_sorted_ivec_indices(flist);
+
+		fprintf(hitfid, "    field2catalog={,\n");
 		for (ii = 0;ii < slist->size;ii++)
-			fprintf(hitfid, "  field object: %lu <--> cataloge object id: %lu\n",
+			fprintf(hitfid, "        %lu : %lu\n",
 			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
 			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
+		fprintf(hitfid, "    },\n");
+		fprintf(hitfid, "    catalog2field={,\n");
+		for (ii = 0;ii < slist->size;ii++)
+			fprintf(hitfid, "        %lu : %lu\n",
+			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
+			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)));
+		fprintf(hitfid, "    },\n");
+
 		free_ivec(slist);
 		free_ivec(flist);
 		free_ivec(sortidx);
