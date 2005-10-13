@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
 	if (whichset && kset && (K == 0)) {
 		dimension DimStars;
-		fprintf(stderr, "findstar: getting stars from %s\n", catfname);
+		fprintf(stderr, "# findstar: getting stars from %s\n", catfname);
 		fopenin(catfname, catfid);
 		free_fn(catfname);
 		cASCII = read_objs_header(catfid, &numstars, &DimStars,

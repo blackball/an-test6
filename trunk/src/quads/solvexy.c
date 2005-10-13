@@ -326,6 +326,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 
 		numgood = output_good_matches(firstMatch, lastMatch);
 
+		fprintf(hitfid, "),\n");
 		fflush(hitfid);
 		if (numgood == 0)
 			numsolved--;
