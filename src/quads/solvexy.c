@@ -540,7 +540,7 @@ void output_match(MatchObj *mo)
 		fprintf(hitfid, "            quad=%lu,\n", mo->quadno);
 		fprintf(hitfid, "            starids_ABCD=(%lu,%lu,%lu,%lu),\n",
 		        mo->iA, mo->iB, mo->iC, mo->iD);
-		fprintf(hitfid, "            field_objects_ABDC=(%lu,%lu,%lu,%lu),\n",
+		fprintf(hitfid, "            field_objects_ABCD=(%lu,%lu,%lu,%lu),\n",
 		        mo->fA, mo->fB, mo->fC, mo->fD);
 		fprintf(hitfid, "            min_xyz=(%lf,%lf,%lf), radec=(%lf,%lf),\n",
 		        star_ref(mo->sMin, 0), star_ref(mo->sMin, 1), star_ref(mo->sMin, 2),
