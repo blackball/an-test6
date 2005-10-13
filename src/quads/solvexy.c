@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 	fprintf(hitfid, "index_used = '%s'\n", treefname);
 	free_fn(fieldfname);
 	free_fn(treefname);
-	fprintf(hitfid, "nfields = %lu\nnquads=%lu\nobjects_in_catalog=%lu\n",
+	fprintf(hitfid, "nfields = %lu\nnquads = %lu\nobjects_in_catalog = %lu\n",
 	        numfields, (qidx)kdtree_num_points(codekd), numstars);
 	fprintf(hitfid, "code_tol = %lf\nagree_tol = %lf\n", codetol, AgreeArcSec);
 	if (ParityFlip) {
@@ -543,11 +543,11 @@ void output_match(MatchObj *mo)
 		        mo->iA, mo->iB, mo->iC, mo->iD);
 		fprintf(hitfid, "            field_objects_ABCD=(%lu,%lu,%lu,%lu),\n",
 		        mo->fA, mo->fB, mo->fC, mo->fD);
-		fprintf(hitfid, "            min_xyz=(%lf,%lf,%lf), radec=(%lf,%lf),\n",
+		fprintf(hitfid, "            min_xyz=(%lf,%lf,%lf), min_radec=(%lf,%lf),\n",
 		        star_ref(mo->sMin, 0), star_ref(mo->sMin, 1), star_ref(mo->sMin, 2),
 		        rad2deg(xy2ra(star_ref(mo->sMin, 0), star_ref(mo->sMin, 1))),
 		        rad2deg(z2dec(star_ref(mo->sMin, 2))));
-		fprintf(hitfid, "            max_xyz=(%lf,%lf,%lf), radec=(%lf,%lf),\n",
+		fprintf(hitfid, "            max_xyz=(%lf,%lf,%lf), max_radec=(%lf,%lf),\n",
 		        star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
 		        rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 		        rad2deg(z2dec(star_ref(mo->sMax, 2))));
@@ -630,13 +630,13 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 		}
 		sortidx = mk_sorted_ivec_indices(flist);
 
-		fprintf(hitfid, "    field2catalog={,\n");
+		fprintf(hitfid, "    field2catalog={\n");
 		for (ii = 0;ii < slist->size;ii++)
 			fprintf(hitfid, "        %lu : %lu,\n",
 			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
 			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
 		fprintf(hitfid, "    },\n");
-		fprintf(hitfid, "    catalog2field={,\n");
+		fprintf(hitfid, "    catalog2field={\n");
 		for (ii = 0;ii < slist->size;ii++)
 			fprintf(hitfid, "        %lu : %lu,\n",
 			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
