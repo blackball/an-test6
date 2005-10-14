@@ -27,5 +27,7 @@ set xrange [0.009:0.11]
 
 set terminal postscript
 set output "nquads.ps"
+#set terminal png size 420,320
+#set output "nquads.png"
 
 plot "nquads" using ($1):($2) title "Data", exp(f(log(x))) title "Best linear fit (slope~=5.8)", exp(g(log(x))) title "Linear fit, slope=6"

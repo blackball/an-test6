@@ -26,7 +26,7 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
 	stararray *thestars = NULL;
 
 	ASCII = read_objs_header(fid, numstars, Dim_Stars, ramin, ramax, decmin, decmax);
-	if (ASCII == READ_FAIL)
+	if (ASCII == (char)READ_FAIL)
 		return ((stararray *)NULL);
 
 	thestars = mk_stararray(*numstars);
