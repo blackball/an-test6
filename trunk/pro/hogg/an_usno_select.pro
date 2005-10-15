@@ -16,7 +16,9 @@
 ; OUTPUTS:
 ;   nstars   - number of stars *actually* produced
 ; COMMENTS:
-;   - Ranks stars by brightness in a particular band.
+;   - Ranks stars by in-pixel brightness rank, with a sub-ranking by
+;     absolute brightness; see in-code definition of variable
+;     "ranking_value".
 ;   - Returns a number of stars close to what you ask for but not
 ;     exactly, because there are some gaps/crap in USNO-B1.0.
 ;   - The SDSS and GALEX keywords over-ride any manual inputs.
@@ -58,7 +60,7 @@ nperpix= round(float(nstars)/float(npix))
 nstars= long(npix)*long(nperpix)
 ra= dblarr(nstars)-99.0
 dec= dblarr(nstars)-99.0
-mag= fltarr(nstars)+9999.0
+ranking_value= fltarr(nstars)-99.0
 radperdeg= !DPI/1.8D2
 for ii=0L,npix-1L do begin
     splog, 'working on pixel',ii,' of',npix,' at',rap[ii],decp[ii]
@@ -83,24 +85,24 @@ for ii=0L,npix-1L do begin
             kk= jj+djj
             ra[jj:kk]= usno[sindx].ra
             dec[jj:kk]= usno[sindx].dec
-            mag[jj:kk]= usnomag[sindx]
+            ranking_value[jj:kk]= findgen(djj+1)+0.001*usnomag[sindx]
         endif
     endif
     if ((ii MOD 4096) EQ 0) then save, filename=savefile
 endfor
 save, filename=savefile
-good= where(mag LT 90.0,nstars)
+good= where(ranking_value GE 0.0,nstars)
 ra= (temporary(ra))[good]
 dec= (temporary(dec))[good]
-mag= (temporary(mag))[good]
+ranking_value= (temporary(ranking_value))[good]
 good= 0 ; free memory
-sindx= sort(mag)
+sindx= sort(ranking_value)
 ra= (temporary(ra))[sindx]
 dec= (temporary(dec))[sindx]
-mag= (temporary(mag))[sindx]
+ranking_value= (temporary(ranking_value))[sindx]
 sindx= 0 ; free memory
 save, filename=savefile
-mag= 0 ; free memory
+ranking_value= 0 ; free memory
 openw, wlun,filename,/get_lun,/stdio
 magic= uint('FF00'X)
 nstars= long(n_elements(ra))
