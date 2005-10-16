@@ -36,7 +36,8 @@ ynpix= xnpix
 hogg_scatterplot, temporary(ra),sdec, $
   xnpix=xnpix,xrange=xrange,xtitle='RA (deg)', $
   ynpix=ynpix,yrange=yrange,ytitle='sin(Dec)', $
-  levels=1D0-double([1.0,0.1])/double(49152)
+  levels=1D0-double([1.0,0.1])/double(dra)/double(dsd), $
+  /internal_weight
 device,/close
 splog, 'done'
 return
