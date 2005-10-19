@@ -1,17 +1,18 @@
 /**
 
-   -read a kdtree of stars
+   -generate a random catalogue of stars
+   -build a kdtree
    -for each star A, find all stars X within range [0, 2s].
-    In X, build each quad using star B if |B-A| is in [s/2, 2s],
-	and choose stars C, D in the box that has AB as the diagonal.
+   -build each quad with diagonal B in X if |B-A| is in [s/2, 2s],
+    and all C, D in X and in the box with AB as the diagonal.
+
+   -running this program with a set of different search distances "s" will
+    yield a nice set of "# quads" vs "quad scale" values.
 
  */
 
 #include <math.h>
 #include <stdio.h>
-#include <errno.h>
-#include "starutil.h"
-#include "fileutil.h"
 #include "dualtree.h"
 #include "KD/ambs.h"
 #include "KD/distances.h"
