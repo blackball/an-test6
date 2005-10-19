@@ -24,6 +24,7 @@ void first_result(void* vparams, node* query);
 void last_result(void* vparams, node* query);
 
 #define printf_stats(a,...)
+//#define printf_stats printf
 
 struct params
 {
@@ -64,73 +65,205 @@ result_info rinfo;
 // dimension of the space
 int D = 2;
 
-int main(int argc, char** args) {
-	kdtree* startree = NULL;
+#define OPTIONS "hf:s:t:n:k:"
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+char *catfname = NULL;
+FILE *catfid = NULL;
+off_t catposmarker = 0;
+char cASCII = (char)READ_FAIL;
+char buff[100], oneobjWidth;
+
+int main(int argc, char *argv[]) {
+  char* progname;
+  int argchar; //  opterr = 0;
+  double ramin, ramax, decmin, decmax;
+  sidx numstars;
+  int i;
+  int nkeep = 0;
+
+  kdtree* startree = NULL;
+  // arrays for points
+  dyv_array* stararray = NULL;
+
+  // radius of the search (arcmin?)
+  //double radius = 5.0;
+  double radius = 0.04;
+
+  double step = 1.0;
+  int nsteps = 1;
+
+  params range_params;
+
+  // dual-tree search callback functions
+  dualtree_callbacks callbacks;
   
-	// maximum number of points in a leaf node.
-	int Nleaf = 5;
-	// number of stars.
-	int Nstars = 1000;
-	// arrays for points
-	dyv_array* stararray = NULL;
+  // maximum number of points in a leaf node.
+  int Nleaf = 5;
 
-	// radius of the search (arcmin?)
-	//double radius = 5.0;
-	double radius = 0.04;
+  progname = argv[0];
 
-	int i, d;
-
-	params range_params;
-
-	// dual-tree search callback functions
-	dualtree_callbacks callbacks;
-
-
-    if (argc == 2) {
-        radius = atof(args[1]);
-        printf("set radius to %g\n", radius);
-    }
-
-	// seed random number generator.
-	am_randomize();
-
-	// create random search points.
-	stararray = mk_dyv_array(Nstars);
-	for (i = 0; i < Nstars; i++) {
-		dyv* v = mk_dyv(D);
-		for (d = 0; d < D; d++) {
-			dyv_ref(v, d) = range_random(0.0, 1.0);
-		}
-		dyv_array_ref(stararray, i) = v;
+  while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+	switch (argchar) {
+	case 'f':
+	  catfname = mk_catfn(optarg);
+	  break;
+	case 's':
+	  radius = atof(optarg);
+	  if (radius == 0.0) {
+		printf("Couldn't parse desired scale \"%s\"\n", optarg);
+		exit(-1);
+	  }
+	  break;
+	case 't':
+	  step = atof(optarg);
+	  if (step == 0.0) {
+		printf("Couldn't parse desired scale step: \"%s\"\n", optarg);
+		exit(-1);
+	  }
+	  break;
+	case 'n':
+	  nsteps = atoi(optarg);
+	  if (nsteps == 0) {
+		printf("Couldn't parse desired number of steps: \"%s\"\n", optarg);
+		exit(-1);
+	  }
+	  break;
+	case 'k':
+	  nkeep = atoi(optarg);
+	  if (nkeep == 0) {
+		printf("Couldn't parse desired number of stars: \"%s\"\n", optarg);
+		exit(-1);
+	  }
+	  break;
+	default:
+	  return (OPT_ERR);
 	}
-	// create search tree
-	startree = mk_kdtree_from_points(stararray, Nleaf);
+    
+  dimension DimStars;
+  fprintf(stderr, "%s: reading catalogue  %s\n", progname, catfname);
+  if (catfname == NULL) {
+	fprintf(stderr, "\nYou must specify input catalogue file (-f <input>), without the .objs suffix)\n\n");
+	exit(0);
+  }
+  fopenin(catfname, catfid);
+  free_fn(catfname);
 
-	// set search params
-    range_params.radius = radius;
-	range_params.maxdistsq = 4.0  * radius * radius;
-    range_params.stararray = stararray;
-	range_params.nquads = 0;
+  cASCII = read_objs_header(catfid, &numstars, &DimStars,
+							&ramin, &ramax, &decmin, &decmax);
+  if (cASCII == (char)READ_FAIL)
+	return (1);
+  if (cASCII) {
+	sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
+	oneobjWidth = strlen(buff);
+  }
+  catposmarker = ftello(catfid);
 
-	memset(&callbacks, 0, sizeof(dualtree_callbacks));
-	callbacks.decision = within_range;
-	callbacks.decision_extra = &range_params;
-	callbacks.result = handle_result;
-	callbacks.result_extra = &range_params;
-	callbacks.start_results = first_result;
-	callbacks.start_extra = &range_params;
-	callbacks.end_results = last_result;
-	callbacks.end_extra = &range_params;
+  fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
+		  numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
 
-	// run dual-tree search
+  printf("dimension: %i\n", DimStars);
+  if (DimStars != 3) {
+	printf("DimStars isn't 3!\n");
+	exit(-1);
+  }
+
+  if (nkeep && (nkeep < numstars)) {
+	printf("Keeping only the first %i stars.\n", nkeep);
+	numstars = nkeep;
+  }
+
+  printf("Allocating star array...\n");
+  // create stars array
+  stararray = mk_dyv_array(numstars);
+  if (!stararray) {
+	printf("Couldn't create stararray.\n");
+	exit(-1);
+  }
+  // first (try to) allocate memory...
+  for (i=0; i<numstars; i++) {
+	dyv* star = mk_dyv(DimStars);
+	if (i % 100000 == 0) { printf("."); fflush(stdout); }
+	dyv_array_ref(stararray, i) = star;
+	if (!star) {
+	  printf("Couldn't allocate memory for star %i.", i);
+	  exit(-1);
+	}
+  }
+  printf("\n");
+  {
+	double minx, miny, minz, maxx, maxy, maxz;
+	minx = miny = minz = 1e100;
+	maxx = maxy = maxz = -1e100;
+	// then read the catalogue.
+	for (i=0; i<numstars; i++) {
+	  dyv* star = dyv_array_ref(stararray, i);
+	  if (cASCII) {
+		double tmpx, tmpy, tmpz;
+		fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
+		star_set(star, 0, tmpx);
+		star_set(star, 1, tmpy);
+		star_set(star, 2, tmpz);
+	  } else {
+		freadstar(star, catfid);
+	  }
+	  {
+		double v;
+		v = dyv_ref(star, 0);
+		if (v > maxx) maxx = v;
+		if (v < minx) minx = v;
+		v = dyv_ref(star, 1);
+		if (v > maxy) maxy = v;
+		if (v < miny) miny = v;
+		v = dyv_ref(star, 1);
+		if (v > maxz) maxz = v;
+		if (v < minz) minz = v;
+	  }
+	}
+	printf("ranges: x = [%g, %g], y = [%g, %g], z = [%g, %g]\n",
+		   minx, maxx, miny, maxy, minz, maxz);
+  }
+
+  // create search tree
+  printf("Creating kdtree of stars...\n");
+  startree = mk_kdtree_from_points(stararray, Nleaf);
+  printf("Done creating kdtree.\n");
+
+  // set search params
+  range_params.radius = radius;
+  range_params.maxdistsq = 4.0  * radius * radius;
+  range_params.stararray = stararray;
+  range_params.nquads = 0;
+
+  memset(&callbacks, 0, sizeof(dualtree_callbacks));
+  callbacks.decision = within_range;
+  callbacks.decision_extra = &range_params;
+  callbacks.result = handle_result;
+  callbacks.result_extra = &range_params;
+  callbacks.start_results = first_result;
+  callbacks.start_extra = &range_params;
+  callbacks.end_results = last_result;
+  callbacks.end_extra = &range_params;
+
+  // run dual-tree search
+  for (i=0; i<nsteps; i++) {
+	printf("Running dual-tree search (scale %g)...\n", radius);
 	dualtree_search(startree, startree, &callbacks);
+	printf("Quads: %i.\n", range_params.nquads);
+	printf("%g %i\n", radius, range_params.nquads);
+	radius *= step;
+	range_params.radius = radius;
+	range_params.maxdistsq = 4.0  * radius * radius;
+	range_params.nquads = 0;
+  }
+  printf("Done doing dual-tree search.\n");
+  
+  //printf("%i\n", range_params.nquads);
 
-    //printf("created %i quads total.\n", range_params.nquads);
-    printf("%i\n", range_params.nquads);
-
-	return 0;
+  return 0;
 }
-
 
 bool within_range(void* vparams, node* search, node* query) {
 	params* p = (params*)vparams;
@@ -237,7 +370,6 @@ void last_result(void* vparams, node* query) {
 	int npoints;
 	cnode* n;
 	//int* allpinds;
-	//int* pinds;
 	ivec* pinds;
 	params* p = (params*)vparams;
 
@@ -254,7 +386,6 @@ void last_result(void* vparams, node* query) {
 
 	// collect all the points.
 	//allpinds = (int*)malloc(sizeof(int) * npoints);
-	//pinds    = (int*)malloc(sizeof(int) * npoints);
 	pinds = mk_ivec(npoints);
 
 	// look at individual points in the query tree.
@@ -287,6 +418,8 @@ void last_result(void* vparams, node* query) {
 
         p->nquads += nquads;
 	}
+
+	free_ivec(pinds);
 
 	// free the list.
 	for (n = rinfo.cands; n;) {
