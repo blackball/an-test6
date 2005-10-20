@@ -164,7 +164,9 @@ qidx get_quads(FILE *quadfid, FILE *codefid, char ASCII,
 				ivec *candidates = mk_ivec(numS - 2);
 				dyv *candidatesX = mk_dyv(numS - 2);
 				dyv *candidatesY = mk_dyv(numS - 2);
+				// A is closest star to the dart we threw
 				iA = (sidx)krez->pindexes->iarr[0];
+				// Do tangential projection
 				star_coords(thestars->array[iA], thestars->array[iA], &Ax, &Ay);
 				// Ax,Ay will be almost exactly zero for now
 				for (jj = (numS - 1);jj > 0 && still_not_done;jj--) { // try all iB's
