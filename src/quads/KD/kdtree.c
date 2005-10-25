@@ -8,6 +8,42 @@
 
 #include "kdtree.h"
 
+
+unsigned long allocated_pindexes = 0;
+unsigned long allocated_points = 0;
+unsigned long allocated_nodes = 0;
+unsigned long allocated_other = 0;
+
+void ACCOUNTING_INIT() {
+  allocated_pindexes = 0;
+  allocated_nodes = 0;
+  allocated_other = 0;
+  allocated_points = 0;
+}
+void ACCOUNTING_OTHER(unsigned int sz) {
+  allocated_other += sz;
+}
+void ACCOUNTING_PINDEX(unsigned int nelems) {
+  allocated_pindexes += sizeof(int)*nelems + sizeof(ivec);
+}
+void ACCOUNTING_FREE_PINDEX(unsigned int nelems) {
+  allocated_pindexes -= sizeof(int)*nelems + sizeof(ivec);
+}
+void ACCOUNTING_POINTS(unsigned int nelems) {
+  allocated_points += sizeof(double)*nelems + sizeof(dyv);
+}
+void ACCOUNTING_NODE() {
+  allocated_nodes += sizeof(node);
+}
+void ACCOUNTING_REPORT() {
+  printf("Bytes allocated:\n");
+  printf("  pindexes: %lu\n", allocated_pindexes);
+  printf("  points: %lu\n", allocated_points);
+  printf("  nodes: %lu\n", allocated_nodes);
+  printf("  other: %lu\n", allocated_other);
+}
+
+
 /* Returns TRUE iff n is a leaf (i.e. has no children) */
 bool slow_node_is_leaf(node *n)
 {
@@ -215,11 +251,14 @@ node *mk_node_from_pindexes(dyv_array *pindex_to_point,ivec *pindexes,int rmin,
 			    int *r_nodes_so_far)
 {
   node *n = AM_MALLOC(node);
+  ACCOUNTING_NODE();
+
   int split_dim = -777;
   int num_points = ivec_size(pindexes);
   bool leaf = num_points <= rmin;
 
   n -> box = mk_hrect_bounding_dyv_array_rows(pindex_to_point,pindexes);
+  ACCOUNTING_OTHER(sizeof(hrect) + 2*sizeof(dyv) /*+ 2*k*sizeof(double)*/);
 
   if ( !leaf )
   {
@@ -250,7 +289,9 @@ node *mk_node_from_pindexes(dyv_array *pindex_to_point,ivec *pindexes,int rmin,
   if ( leaf )
   {
     n -> pindexes = mk_copy_ivec(pindexes);
+	ACCOUNTING_PINDEX(ivec_size(pindexes));
     n -> points = mk_dyv_array_subset(pindex_to_point,pindexes);
+	ACCOUNTING_POINTS(ivec_size(pindexes));
   }
   else
   {
@@ -259,15 +300,21 @@ node *mk_node_from_pindexes(dyv_array *pindex_to_point,ivec *pindexes,int rmin,
 
     make_child_pindexes(pindex_to_point,pindexes,n->box,split_dim,
 			&child1_pindexes,&child2_pindexes);
+	ACCOUNTING_PINDEX(ivec_size(child1_pindexes));
+	ACCOUNTING_PINDEX(ivec_size(child2_pindexes));
 
-/*     if ( is_power_of_two(*r_nodes_so_far) ) */
-/*       printf("Made %d kdtree nodes\n",*r_nodes_so_far); */
+	if ( is_power_of_two(*r_nodes_so_far) ) {
+	  printf("Made %d kdtree nodes\n",*r_nodes_so_far);
+	  ACCOUNTING_REPORT();
+	}
 
     n -> child1 = mk_node_from_pindexes(pindex_to_point,child1_pindexes,rmin,
 					r_nodes_so_far);
     n -> child2 = mk_node_from_pindexes(pindex_to_point,child2_pindexes,rmin,
 					r_nodes_so_far);
 
+	ACCOUNTING_FREE_PINDEX(ivec_size(child1_pindexes));
+	ACCOUNTING_FREE_PINDEX(ivec_size(child2_pindexes));
     free_ivec(child1_pindexes);
     free_ivec(child2_pindexes);
   }
@@ -335,9 +382,15 @@ kdtree *mk_copy_kdtree(kdtree *old)
 */
 kdtree *mk_kdtree_from_points(dyv_array *pindex_to_point,int rmin)
 {
+  ACCOUNTING_INIT();
+
   kdtree *kd = AM_MALLOC(kdtree);
+  ACCOUNTING_OTHER(sizeof(kdtree));
+
   int num_points = dyv_array_size(pindex_to_point);
   ivec *pindexes = mk_identity_ivec(num_points);
+  ACCOUNTING_PINDEX(num_points);
+
   int num_nodes = 0;
 
   kd -> root = mk_node_from_pindexes(pindex_to_point,pindexes,rmin,&num_nodes);
@@ -352,7 +405,10 @@ kdtree *mk_kdtree_from_points(dyv_array *pindex_to_point,int rmin)
   kd -> rmin = rmin;
 
   free_ivec(pindexes);
-  
+  ACCOUNTING_FREE_PINDEX(num_points);
+
+  ACCOUNTING_REPORT();
+
   return kd;
 }
 
