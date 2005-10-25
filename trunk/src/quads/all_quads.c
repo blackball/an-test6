@@ -47,8 +47,9 @@ struct params
 {
     double radius;
 
-	// radius-squared of the search range.
-	double maxdistsq;
+  // radius-squared of the search range.
+  double mindistsq;
+  double maxdistsq;
 
     // all the stars.
 	dyv_array* stararray;
@@ -99,7 +100,7 @@ result_info rinfo;
 */
 
 
-#define OPTIONS "habf:s:k:"
+#define OPTIONS "habuf:s:k:"
 //t:n:"
 
 extern char *optarg;
@@ -117,6 +118,7 @@ FILE *codefid = NULL;
 char cASCII = (char)READ_FAIL;
 char ASCII = 0;
 char buff[100], oneobjWidth;
+bool upto = 0;
 
 int main(int argc, char *argv[]) {
   char* progname;
@@ -157,6 +159,9 @@ int main(int argc, char *argv[]) {
 	case 'b':
 	  ASCII = 0;
 	  break;
+	case 'u':
+	  upto = 1;
+	  break;
 	case 'f':
 	  catfname = mk_catfn(optarg);
 	  quadfname = mk_quad0fn(optarg);
@@ -168,7 +173,7 @@ int main(int argc, char *argv[]) {
 		printf("Couldn't parse desired scale \"%s\"\n", optarg);
 		exit(-1);
 	  }
-	  radius = arcmin2rad(radius);
+ 	  radius = arcmin2rad(radius);
 	  break;
 	case 'k':
 	  nkeep = atoi(optarg);
@@ -242,6 +247,14 @@ int main(int argc, char *argv[]) {
 					  DIM_CODES, radius);
 	write_quad_header(quadfid, ASCII, nelems, numstars,
 					  DIM_QUADS, radius);
+  }
+
+
+  //radius = arcmin2rad(radius);
+  if (upto) {
+	printf("Creating all quads of scale up to two times %g arcmin\n", rad2arcmin(radius));
+  } else {
+	printf("Creating all quads with scale within a factor of two of %g arcmin\n", rad2arcmin(radius));
   }
 
   printf("Allocating star array...\n");
@@ -367,12 +380,6 @@ int main(int argc, char *argv[]) {
   startree = mk_kdtree_from_points(stararray, Nleaf);
   printf("Done creating kdtree.\n");
 
-  // set search params
-  range_params.radius = radius;
-  range_params.maxdistsq = 4.0  * radius * radius;
-  range_params.stararray = stararray;
-  range_params.nquads = 0;
-
   memset(&callbacks, 0, sizeof(dualtree_callbacks));
   callbacks.decision = within_range;
   callbacks.decision_extra = &range_params;
@@ -385,19 +392,28 @@ int main(int argc, char *argv[]) {
 
   // run dual-tree search
   for (i=0; i<nsteps; i++) {
+
+	// set search params
+	range_params.radius = radius;
+	range_params.maxdistsq = 4.0  * radius * radius;
+	if (upto) {
+	  range_params.mindistsq = 0.0;
+	} else {
+	  range_params.mindistsq = 0.25  * radius * radius;
+	}
+	range_params.stararray = stararray;
+	range_params.nquads = 0;
+
 	printf("Running dual-tree search (scale %g)...\n", radius);
 	dualtree_search(startree, startree, &callbacks);
 	printf("Quads: %i.\n", range_params.nquads);
 	printf("%g %i\n", radius, range_params.nquads);
+
 	radius *= step;
-	range_params.radius = radius;
-	range_params.maxdistsq = 4.0  * radius * radius;
-	range_params.nquads = 0;
   }
   printf("Done doing dual-tree search.\n");
   
   //printf("%i\n", range_params.nquads);
-
 
   // fix output file headers.
   fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
@@ -465,10 +481,9 @@ void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
 }
 
 void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
-                 double radius, int* pnquads) {
+                 double minrsq, double maxrsq, int* pnquads) {
     int b;
     dyv* pA;
-    double minrsq, maxrsq;
     ivec* cdinds;
 	dyv* cdx;
 	dyv* cdy;
@@ -489,18 +504,22 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     cdinds = mk_ivec(ninds);
 	cdx = mk_dyv(ninds);
 	cdy = mk_dyv(ninds);
-    minrsq = 0.25 * radius * radius;
-    maxrsq = 4.0  * radius * radius;
     midAB = mk_dyv(dyv_size(pA));
     delt = mk_dyv(dyv_size(pA));
 
 	star_coords(pA, pA, &AAx, &AAy);
 
-    // find all points B that are in [r/2, 2r].
+    // find all points B that are in [r/2, 2r] (if !upto).
+    //                               [0,   2r] (if upto)
     for (b=0; b<ninds; b++) {
         int iB = ivec_ref(inds, b);
-        dyv* pB = dyv_array_ref(points, iB);
+        dyv* pB;
         int c, d, iC, iD;
+
+		// avoid creating permutations
+		if (iB < iA) continue;
+
+		pB = dyv_array_ref(points, iB);
         //double distAB;
 
 		star_coords(pB, pA, &ABx, &ABy);
@@ -658,7 +677,8 @@ void last_result(void* vparams, node* query) {
 
 		printf_stats("    collected %i points.\n", pi);
 
-		build_quads(p->stararray, pinds, pi, qi, p->radius, &nquads);
+		build_quads(p->stararray, pinds, pi, qi,
+					p->mindistsq, p->maxdistsq, &nquads);
 
         p->nquads += nquads;
 	}
