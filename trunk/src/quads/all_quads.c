@@ -1,15 +1,32 @@
 /**
+   Author: Dustin Lang
 
-   -read a kdtree of stars
-   -for each star A, find all stars X within range [0, 2s].
-    In X, build each quad using star B if |B-A| is in [s/2, 2s],
-	and choose stars C, D in the box that has AB as the diagonal.
+   -read a catalogue of stars
+   -create a kdtree
+   -use dual-tree search to do:
+     -for each star A, find all stars X within range [0, 2s].
+      In X, build each quad using star B if |B-A| is in [s/2, 2s],
+  	  and choose stars C, D in the box that has AB as the diagonal.
 
+   -write quad and code output files.
+
+
+(NO)
+   -write an output file that lists the quads created.
+    Format:
+	  header:
+	  32-bit unsigned int, in network byte order: the number of quads.
+	  data:
+	  4 x 32-bit unsigned int: the star indices
+	  4 x double: the code
  */
 
 #include <math.h>
 #include <stdio.h>
 #include <errno.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <sys/mman.h>
 #include "starutil.h"
 #include "fileutil.h"
 #include "dualtree.h"
@@ -60,12 +77,32 @@ typedef struct result_info result_info;
 
 result_info rinfo;
 
+/*
+  struct codelist_header {
+  uint32 ncodes;
+  };
+  typedef struct codelist_header codelist_header;
+  
+  struct codelist_entry {
+  uint32 iA;
+  uint32 iB;
+  uint32 iC;
+  uint32 iD;
+  double Cx;
+  double Cy;
+  double Dx;
+  double Dy;
+  };
+  typedef struct codelist_entry codelist_entry;
+
+  void write_codelist_entry()
+*/
 
 
 // dimension of the space
 int D = 2;
 
-#define OPTIONS "hf:s:t:n:k:"
+#define OPTIONS "hf:o:s:t:n:k:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -73,6 +110,9 @@ extern int optind, opterr, optopt;
 char *catfname = NULL;
 FILE *catfid = NULL;
 off_t catposmarker = 0;
+char *outfname = NULL;
+FILE *outfid = NULL;
+off_t outheader = 0;
 char cASCII = (char)READ_FAIL;
 char buff[100], oneobjWidth;
 
@@ -109,6 +149,9 @@ int main(int argc, char *argv[]) {
 	switch (argchar) {
 	case 'f':
 	  catfname = mk_catfn(optarg);
+	  break;
+	case 'o':
+	  outfname = optarg;
 	  break;
 	case 's':
 	  radius = atof(optarg);
@@ -148,8 +191,19 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "\nYou must specify input catalogue file (-f <input>), without the .objs suffix)\n\n");
 	exit(0);
   }
+  if (outfname == NULL) {
+	fprintf(stderr, "\nYou must specify the output file name (-o <output>)\n\n");
+	exit(0);
+  }
   fopenin(catfname, catfid);
   free_fn(catfname);
+
+  fopenout(outfname, outfid);
+  // we have to write an updated header after we've processed all the quads.
+  // record the position of the header (even though it's zero)...
+  outheader = ftello(outfid);
+  // HACK - what happens if the compiler pads the struct?
+  fseeko(outfid, outheader + sizeof(codelist_header), SEEK_CUR);
 
   cASCII = read_objs_header(catfid, &numstars, &DimStars,
 							&ramin, &ramax, &decmin, &decmax);
@@ -176,6 +230,73 @@ int main(int argc, char *argv[]) {
   }
 
   printf("Allocating star array...\n");
+  {
+	unsigned long datasize = numstars * sizeof(double) * DimStars;
+	unsigned long structsize = numstars * sizeof(dyv); // for the "dyv* star" structs
+	structsize += sizeof(dyv_array) + numstars * sizeof(dyv*); // for the "dyv_array* stararray" struct
+	/*
+	  printf("(will require %lu bytes)\n", numstars * (sizeof(dyv) + sizeof(double) * DimStars) +
+	  sizeof(dyv_array) + numstars * sizeof(dyv*));
+	*/
+	printf("Will require:\n");
+	printf("  %lu bytes for raw data\n", datasize);
+	printf("  %lu bytes for structs\n", structsize);
+	printf("  %lu bytes total\n", datasize + structsize);
+  }
+
+  /**
+	 mmap experimentation.
+
+	 The result seems to be that you can't mmap more than about 2 gigs,
+	 so it doesn't really buy anything over plain malloc in terms of
+	 address space size.
+  */
+  /*
+	{
+	size_t length;
+	char* bigmem;
+	int fd;
+	off_t offset;
+	printf("sizeof void*: %i, size_t: %i\n", sizeof(void*), sizeof(size_t));
+	//length = 0x80000000;
+	length = 0x10000000;
+	fd = 0;
+	offset = 0;
+	bigmem = NULL;
+	while (!bigmem) {
+	printf("trying to mmap %u bytes\n", length);
+	bigmem = mmap(0, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, fd, offset);
+	if (bigmem == MAP_FAILED) {
+	printf("mmap failed.\n");
+	bigmem = NULL;
+	} else {
+	int Nmaps = 10;
+	int i;
+	char* maps[Nmaps];
+	printf("mapped %u bytes at %p\n", length, bigmem);
+	munmap(bigmem, length);
+	bigmem = NULL;
+	printf("\ntrying to map multiple chunks...\n");
+	for (i=0; i<Nmaps; i++) {
+	maps[i] = mmap(0, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, fd, offset);
+	if (maps[i] == MAP_FAILED) {
+	printf("mmap #%i failed.\n", i);
+	break;
+	} else {
+	printf("mapped %u bytes at %p\n", length, maps[i]);
+	}
+	}
+	while (i>0) {
+	munmap(maps[i], length);
+	i--;
+	}
+	break;
+	}
+	length /= 2;
+	}
+	}
+  */
+
   // create stars array
   stararray = mk_dyv_array(numstars);
   if (!stararray) {
@@ -262,6 +383,24 @@ int main(int argc, char *argv[]) {
   
   //printf("%i\n", range_params.nquads);
 
+  // write output file header.
+  {
+	codelist_header hdr;
+	// record current offset
+	off_t offend = ftello(outfid);
+	// seek back to header
+	fseeko(outfid, outheader, SEEK_SET);
+	hdr.ncodes = htonl(range_params.nquads);
+	fwrite(&hdr, 1, sizeof(hdr), outfid);
+	// seek back to the end:
+	fseeko(outfid, offend, SEEK_SET);
+  }
+  // close output file.
+  if (fclose(outfid)) {
+	printf("Couldn't write output file: %s\n", strerror(errno));
+	exit(-1);
+  }
+
   return 0;
 }
 
@@ -282,6 +421,36 @@ void first_result(void* vparams, node* query) {
 	rinfo.cands = NULL;
 }
 
+void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
+                 double Cx, double Cy, double Dx, double Dy) {
+  sidx itmp;
+  double tmp;
+  if (iC > iD) { // swap C and D if iC>iD, involves swapping Cxy/Dxy
+	itmp = iC;
+	iC = iD;
+	iD = itmp;
+	tmp = Cx;
+	Cx = Dx;
+	Dx = tmp;
+	tmp = Cy;
+	Cy = Dy;
+	Dy = tmp;
+  }
+  if (iA > iB) { //swap A,B if iA>iB, involves C/Dxy->1-C/Dxy (??HOPE THIS IS OK)
+	itmp = iA;
+	iA = iB;
+	iB = itmp;
+	Cx = 1.0 - Cx;
+	Cy = 1.0 - Cy;
+	Dx = 1.0 - Dx;
+	Dy = 1.0 - Dy;
+  }
+
+  writeonecode(outfid, Cx, Cy, Dx, Dy);
+  writeonequad(outfid, iA, iB, iC, iD);
+
+  return ;
+}
 
 void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
                  double radius, int* pnquads) {
@@ -289,67 +458,128 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     dyv* pA;
     double minrsq, maxrsq;
     ivec* cdinds;
+	dyv* cdx;
+	dyv* cdy;
+
     int ncd;
     dyv* midAB;
     dyv* delt;
     int i;
     int nquads = 0;
+	// projected coordinates:
+	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
+	double AAx, AAy;
+	double ABx, ABy;
+	double ABx, ABy;
+	double scale, costheta, sintheta;
 
     pA = dyv_array_ref(points, iA);
     cdinds = mk_ivec(ninds);
+	cdx = mk_dyv(ninds);
+	cdy = mk_dyv(ninds);
     minrsq = 0.25 * radius * radius;
     maxrsq = 4.0  * radius * radius;
     midAB = mk_dyv(dyv_size(pA));
     delt = mk_dyv(dyv_size(pA));
 
+	star_coords(pA, pA, &AAx, &AAy);
+
     // find all points B that are in [r/2, 2r].
     for (b=0; b<ninds; b++) {
         int iB = ivec_ref(inds, b);
         dyv* pB = dyv_array_ref(points, iB);
-        double distsq = dyv_dyv_dsqd(pA, pB);
         int c, d, iC, iD;
         double distAB;
+
+		star_coords(pB, pA, &ABx, &ABy);
+		distsq = (ABx-AAx)*(ABx-AAx) + (ABy-AAy)*(ABy-AAy);
+        //double distsq = dyv_dyv_dsqd(pA, pB);
         if ((distsq <= minrsq) || (distsq >= maxrsq)) {
-            /*printf_stats("AB dist %g out of range [%g, %g]\n",
-              sqrt(distsq), sqrt(minrsq), sqrt(maxrsq));
-            */
-            continue;
+		  /*printf_stats("AB dist %g out of range [%g, %g]\n",
+			sqrt(distsq), sqrt(minrsq), sqrt(maxrsq));
+		  */
+		  continue;
         }
-        distAB = sqrt(distsq);
-        // compute the midpoint between A and B.
-        dyv_plus(pA, pB, midAB);
-        dyv_scalar_mult(midAB, 0.5, midAB);
+
+		star_midpoint(midAB, pA, pB);
+		star_coords(pA, midAB, &Ax, &Ay);
+		star_coords(pB, midAB, &Bx, &By);
+
+		ABx = Bx - Ax;
+		ABy = By - Ay;
+
+		scale = (ABx*ABx) + (ABy*ABy);
+		costheta = (ABx + ABy) / scale;
+		sintheta = (ABy - ABx) / scale;
+
+		/*
+		  distAB = sqrt(distsq);
+		  // compute the midpoint between A and B.
+		  dyv_plus(pA, pB, midAB);
+		  dyv_scalar_mult(midAB, 0.5, midAB);
+		*/
         ncd = 0;
         // find all points C,D that are inside the box with AB diagonal.
         for (c=0; c<ninds; c++) {
-            double onenorm;
-            dyv* pC;
-            if (c == b) continue;
-            iC = ivec_ref(inds, c);
-            if (iC == iA) continue;
-            pC = dyv_array_ref(points, iC);
+		  double ACx, ACy;
+		  double thisx, thisy;
+		  dyv* pC;
+		  if (c == b) continue;
+		  iC = ivec_ref(inds, c);
+		  if (iC == iA) continue;
+		  pC = dyv_array_ref(points, iC);
+
+		  star_coords(pC, midAB, &Cx, &Cy);
+
+		  ACx = Cx - Ax;
+		  ACy = Cy - Ay;
+
+		  thisx = ACx * costheta + ACy * sintheta;
+		  thisy = -ACx * sintheta + ACy * costheta;
+		  if (!((thisx < 1.0) && (thisx > 0.0) &&
+				(thisy < 1.0) && (thisy > 0.0))) {
+			continue;
+		  }
+
+		  ivec_ref(cdinds, ncd) = iC;
+		  dyv_ref(cdx, ncd) = thisx;
+		  dyv_ref(cdy, ncd) = thisy;
+		  ncd++;
+
+		  /*
+			;
+			double onenorm;
             // delt = pC - midAB
             dyv_subtract(pC, midAB, delt);
             // 1-norm of delt
             onenorm = 0.0;
             for (i=0; i<dyv_size(delt); i++) {
-                onenorm += real_abs(dyv_ref(delt, i));
+			onenorm += real_abs(dyv_ref(delt, i));
             }
             // is pC inside the diamond?
             if (onenorm > (distAB/2)) {
-                continue;
+			continue;
             }
             ivec_ref(cdinds, ncd) = iC;
             ncd++;
+		  */
         }
         for (c=0; c<ncd; c++) {
-            iC = ivec_ref(cdinds, c);
-            for (d=0; d<ncd; d++) {
-                if (d == c) continue;
-                iD = ivec_ref(cdinds, d);
-                //printf_stats("    quad inds %i, %i, %i, %i\n", iA, iB, iC, iD);
-                nquads++;
-            }
+		  iC = ivec_ref(cdinds, c);
+		  Cx = dyv_ref(cdx, c);
+		  Cy = dyv_ref(cdy, c);
+		  for (d=0; d<ncd; d++) {
+			if (d == c) continue;
+			iD = ivec_ref(cdinds, d);
+			Dx = dyv_ref(cdx, d);
+			Dy = dyv_ref(cdy, d);
+			//printf_stats("    quad inds %i, %i, %i, %i\n", iA, iB, iC, iD);
+
+			accept_quad(iA, iB, iC, iD,
+						Cx, Cy, Dx, Dy);
+
+			nquads++;
+		  }
         }
     }
 
@@ -360,6 +590,8 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     free_dyv(delt);
     free_dyv(midAB);
     free_ivec(cdinds);
+	free_dyv(cdx);
+	free_dyv(cdy);
 }
 
 // all the candidate leaf nodes have been gathered.
