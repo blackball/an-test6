@@ -99,21 +99,23 @@ result_info rinfo;
 */
 
 
-// dimension of the space
-int D = 2;
-
-#define OPTIONS "hf:o:s:t:n:k:"
+#define OPTIONS "habf:s:k:"
+//t:n:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 char *catfname = NULL;
+char *quadfname = NULL;
+char *codefname = NULL;
 FILE *catfid = NULL;
-off_t catposmarker = 0;
-char *outfname = NULL;
-FILE *outfid = NULL;
-off_t outheader = 0;
+FILE *quadfid = NULL;
+FILE *codefid = NULL;
+
+//off_t catposmarker = 0;
+
 char cASCII = (char)READ_FAIL;
+char ASCII = 0;
 char buff[100], oneobjWidth;
 
 int main(int argc, char *argv[]) {
@@ -123,6 +125,8 @@ int main(int argc, char *argv[]) {
   sidx numstars;
   int i;
   int nkeep = 0;
+  int hdrlength = 0;
+  dimension DimStars;
 
   kdtree* startree = NULL;
   // arrays for points
@@ -147,11 +151,16 @@ int main(int argc, char *argv[]) {
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 	switch (argchar) {
+	case 'a':
+	  ASCII = 1;
+	  break;
+	case 'b':
+	  ASCII = 0;
+	  break;
 	case 'f':
 	  catfname = mk_catfn(optarg);
-	  break;
-	case 'o':
-	  outfname = optarg;
+	  quadfname = mk_quad0fn(optarg);
+	  codefname = mk_code0fn(optarg);
 	  break;
 	case 's':
 	  radius = atof(optarg);
@@ -159,20 +168,7 @@ int main(int argc, char *argv[]) {
 		printf("Couldn't parse desired scale \"%s\"\n", optarg);
 		exit(-1);
 	  }
-	  break;
-	case 't':
-	  step = atof(optarg);
-	  if (step == 0.0) {
-		printf("Couldn't parse desired scale step: \"%s\"\n", optarg);
-		exit(-1);
-	  }
-	  break;
-	case 'n':
-	  nsteps = atoi(optarg);
-	  if (nsteps == 0) {
-		printf("Couldn't parse desired number of steps: \"%s\"\n", optarg);
-		exit(-1);
-	  }
+	  radius = arcmin2rad(radius);
 	  break;
 	case 'k':
 	  nkeep = atoi(optarg);
@@ -181,29 +177,33 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	  }
 	  break;
+	  /*
+		case 't':
+		step = atof(optarg);
+		if (step == 0.0) {
+		printf("Couldn't parse desired scale step: \"%s\"\n", optarg);
+		exit(-1);
+		}
+		break;
+		case 'n':
+		nsteps = atoi(optarg);
+		if (nsteps == 0) {
+		printf("Couldn't parse desired number of steps: \"%s\"\n", optarg);
+		exit(-1);
+		}
+		break;
+	  */
 	default:
 	  return (OPT_ERR);
 	}
     
-  dimension DimStars;
   fprintf(stderr, "%s: reading catalogue  %s\n", progname, catfname);
   if (catfname == NULL) {
-	fprintf(stderr, "\nYou must specify input catalogue file (-f <input>), without the .objs suffix)\n\n");
-	exit(0);
-  }
-  if (outfname == NULL) {
-	fprintf(stderr, "\nYou must specify the output file name (-o <output>)\n\n");
+	fprintf(stderr, "\nYou must specify the file names to use (-f <prefix>), (without the .objs suffix)\n\n");
 	exit(0);
   }
   fopenin(catfname, catfid);
   free_fn(catfname);
-
-  fopenout(outfname, outfid);
-  // we have to write an updated header after we've processed all the quads.
-  // record the position of the header (even though it's zero)...
-  outheader = ftello(outfid);
-  // HACK - what happens if the compiler pads the struct?
-  fseeko(outfid, outheader + sizeof(codelist_header), SEEK_CUR);
 
   cASCII = read_objs_header(catfid, &numstars, &DimStars,
 							&ramin, &ramax, &decmin, &decmax);
@@ -213,7 +213,7 @@ int main(int argc, char *argv[]) {
 	sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
 	oneobjWidth = strlen(buff);
   }
-  catposmarker = ftello(catfid);
+  //  catposmarker = ftello(catfid);
 
   fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
 		  numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
@@ -227,6 +227,21 @@ int main(int argc, char *argv[]) {
   if (nkeep && (nkeep < numstars)) {
 	printf("Keeping only the first %i stars.\n", nkeep);
 	numstars = nkeep;
+  }
+
+  fopenout(quadfname, quadfid);
+  fopenout(codefname, codefid);
+
+  // we have to write an updated header after we've processed all the quads.
+  // for now, be sure that enough characters are reserved (ASCII) for the final
+  // value.
+  {
+	uint nelems = 1000000000;
+	hdrlength = 10;
+	write_code_header(codefid, ASCII, nelems, numstars,
+					  DIM_CODES, radius);
+	write_quad_header(quadfid, ASCII, nelems, numstars,
+					  DIM_QUADS, radius);
   }
 
   printf("Allocating star array...\n");
@@ -383,21 +398,18 @@ int main(int argc, char *argv[]) {
   
   //printf("%i\n", range_params.nquads);
 
-  // write output file header.
-  {
-	codelist_header hdr;
-	// record current offset
-	off_t offend = ftello(outfid);
-	// seek back to header
-	fseeko(outfid, outheader, SEEK_SET);
-	hdr.ncodes = htonl(range_params.nquads);
-	fwrite(&hdr, 1, sizeof(hdr), outfid);
-	// seek back to the end:
-	fseeko(outfid, offend, SEEK_SET);
+
+  // fix output file headers.
+  fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
+  fix_quad_header(quadfid, ASCII, range_params.nquads, hdrlength);
+
+  // close output files
+  if (fclose(codefid)) {
+	printf("Couldn't write code output file: %s\n", strerror(errno));
+	exit(-1);
   }
-  // close output file.
-  if (fclose(outfid)) {
-	printf("Couldn't write output file: %s\n", strerror(errno));
+  if (fclose(quadfid)) {
+	printf("Couldn't write quad output file: %s\n", strerror(errno));
 	exit(-1);
   }
 
@@ -446,8 +458,8 @@ void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
 	Dy = 1.0 - Dy;
   }
 
-  writeonecode(outfid, Cx, Cy, Dx, Dy);
-  writeonequad(outfid, iA, iB, iC, iD);
+  writeonecode(codefid, Cx, Cy, Dx, Dy);
+  writeonequad(quadfid, iA, iB, iC, iD);
 
   return ;
 }
@@ -464,12 +476,12 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     int ncd;
     dyv* midAB;
     dyv* delt;
-    int i;
+    //int i;
     int nquads = 0;
+	double distsq;
 	// projected coordinates:
 	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
 	double AAx, AAy;
-	double ABx, ABy;
 	double ABx, ABy;
 	double scale, costheta, sintheta;
 
@@ -489,7 +501,7 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
         int iB = ivec_ref(inds, b);
         dyv* pB = dyv_array_ref(points, iB);
         int c, d, iC, iD;
-        double distAB;
+        //double distAB;
 
 		star_coords(pB, pA, &ABx, &ABy);
 		distsq = (ABx-AAx)*(ABx-AAx) + (ABy-AAy)*(ABy-AAy);
