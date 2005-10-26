@@ -1,15 +1,17 @@
 #include "fileutil.h"
 #include "math.h"
 #define N 3000
-#define OPTIONS "bf:"
-char* help = "usage: plotcat [-b] -f catalog.objs\n";
+#define OPTIONS "bhf:"
+
+char* help = "usage: plotcat [-b] [-h] -f catalog.objs\n";
 unsigned int projection[N][N];
 extern char *optarg;
 extern int optind, opterr, optopt;
+
 int main(int argc, char *argv[])
 {
 	char ASCII = READ_FAIL;
-	int ii, jj, reverse=0;
+	int ii, jj, reverse=0, hammer=0;
 	sidx numstars;
 	dimension Dim_Stars;
 	double ramin, ramax, decmin, decmax;
@@ -26,6 +28,9 @@ int main(int argc, char *argv[])
 		switch (argchar) {
 		case 'b':
 			reverse = 1;
+			break;
+		case 'h':
+			hammer = 1;
 			break;
 		case 'f':
 			fid = fopen(optarg,"r");
@@ -68,11 +73,39 @@ int main(int argc, char *argv[])
 			fread(&y, sizeof(double), 1, fid);
 			fread(&z, sizeof(double), 1, fid);
 		}
-		if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
-			continue;
 
-		if (reverse)
-			z = -z;
+		if (!hammer) {
+			if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+				continue;
+
+			if (reverse)
+				z = -z;
+		} else {
+			/* Hammer-Aitoff projection */
+			double theta = atan(x/z);
+			if (z < 0) {
+				if (x < 0) {
+					//theta = PI - theta;
+					theta = theta - PI;
+				} else {
+					theta = PI + theta;
+				}
+			}
+			theta /= 2.0;
+
+			double r = sqrt(x*x+z*z);
+			double zp, xp;
+			zp = r*cos(theta);
+			xp = r*sin(theta);
+			if (zp < -0.01) {
+				fprintf(stderr,
+					"BAIL: Hammer projection, got negative z: "
+					"z=%lf; x=%lf; zp=%lf; xp=%lf\n", z,x,zp, xp);
+				exit(1);
+			}
+			z = zp;
+			x = xp;
+		}
 
 		X = x*sqrt(1./(1. + z));
 		Y = y*sqrt(1./(1. + z));
