@@ -602,8 +602,9 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		  iC = ivec_ref(cdinds, c);
 		  Cx = dyv_ref(cdx, c);
 		  Cy = dyv_ref(cdy, c);
-		  for (d=0; d<ncd; d++) {
-			if (d == c) continue;
+		  //for (d=0; d<ncd; d++) {
+		  //if (d == c) continue;
+		  for (d=c+1; d<ncd; d++) {
 			iD = ivec_ref(cdinds, d);
 			Dx = dyv_ref(cdx, d);
 			Dy = dyv_ref(cdy, d);
