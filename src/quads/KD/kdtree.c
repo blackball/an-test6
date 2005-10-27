@@ -322,9 +322,10 @@ node *mk_node_from_pindexes(dyv_array *pindex_to_point,ivec *pindexes,int rmin,
 	ACCOUNTING_PINDEX(ivec_size(child2_pindexes));
 
 	if ( is_power_of_two(*r_nodes_so_far) ) {
-	  printf("Made %d kdtree nodes\n",*r_nodes_so_far);
+	  //printf("Made %d kdtree nodes\n",*r_nodes_so_far);
 	  ACCOUNTING_REPORT();
 	}
+
 
     n -> child1 = mk_node_from_pindexes(pindex_to_point,child1_pindexes,rmin,
 					r_nodes_so_far);
