@@ -3,6 +3,8 @@
 
    -read a catalogue of stars
    -create a kdtree
+   -(should read a star kdtree instead)
+
    -use dual-tree search to do:
      -for each star A, find all stars X within range [0, 2s].
       In X, build each quad using star B if |B-A| is in [s/2, 2s],
@@ -12,6 +14,7 @@
 
 
 (NO)
+
    -write an output file that lists the quads created.
     Format:
 	  header:
@@ -45,16 +48,16 @@ void last_result(void* vparams, node* query);
 
 struct params
 {
-    double radius;
+  //double radius;
 
   // radius-squared of the search range.
   double mindistsq;
   double maxdistsq;
 
-    // all the stars.
-	dyv_array* stararray;
+  // all the stars.
+  dyv_array* stararray;
 
-    // total number of quads created.
+  // total number of quads created.
   int nquads;
 };
 typedef struct params params;
@@ -78,30 +81,7 @@ typedef struct result_info result_info;
 
 result_info rinfo;
 
-/*
-  struct codelist_header {
-  uint32 ncodes;
-  };
-  typedef struct codelist_header codelist_header;
-  
-  struct codelist_entry {
-  uint32 iA;
-  uint32 iB;
-  uint32 iC;
-  uint32 iD;
-  double Cx;
-  double Cy;
-  double Dx;
-  double Dy;
-  };
-  typedef struct codelist_entry codelist_entry;
-
-  void write_codelist_entry()
-*/
-
-
-#define OPTIONS "habuf:s:k:"
-//t:n:"
+#define OPTIONS "acqf:s:k:l:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -113,16 +93,15 @@ FILE *catfid = NULL;
 FILE *quadfid = NULL;
 FILE *codefid = NULL;
 
-//off_t catposmarker = 0;
-
 char cASCII = (char)READ_FAIL;
 char ASCII = 0;
 char buff[100], oneobjWidth;
-bool upto = 0;
 
 sidx numstars;
 int nstarsdone = 0;
 int lastpercent = 0;
+int justcount = 0;
+int quiet = 0;
 
 int main(int argc, char *argv[]) {
   char* progname;
@@ -137,9 +116,11 @@ int main(int argc, char *argv[]) {
   // arrays for points
   dyv_array* stararray = NULL;
 
-  // radius of the search (arcmin?)
-  //double radius = 5.0;
-  double radius = 0.04;
+  // max radius of the search (in radians)
+  double radius;
+
+  // lower bound of quad scale (fraction of radius)
+  double lower = 0.0;
 
   double step = 1.0;
   int nsteps = 1;
@@ -154,16 +135,37 @@ int main(int argc, char *argv[]) {
 
   progname = argv[0];
 
+  radius = arcmin2rad(5.0);
+
+  if (argc == 1) {
+	printf("\nUsage:\n"
+		   "  %s -f <filename-base>\n"
+		   "     [-s <scale>]         (default scale is 5 arcmin)\n"
+		   "     [-k <keep>]          (keep the first \"k\" stars in the catalogue)\n"
+		   "     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
+		   "     [-c]                 (just count the quads, don't write anything)\n"
+		   "     [-a]                 (ASCII output format - default is binary)\n"
+		   "     [-q]                 (be quiet!  No progress reports)\n"
+		   "\n"
+		   , progname);
+	exit(0);
+  }
+
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 	switch (argchar) {
 	case 'a':
 	  ASCII = 1;
 	  break;
-	case 'b':
-	  ASCII = 0;
+	  /*
+		case 'b':
+		ASCII = 0;
+		break;
+	  */
+	case 'c':
+	  justcount = 1;
 	  break;
-	case 'u':
-	  upto = 1;
+	case 'q':
+	  quiet = 1;
 	  break;
 	case 'f':
 	  catfname = mk_catfn(optarg);
@@ -177,6 +179,13 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	  }
  	  radius = arcmin2rad(radius);
+	  break;
+	case 'l':
+	  lower = atof(optarg);
+	  if (lower > 1.0) {
+		printf("You really don't want to make lower > 1.\n");
+		exit(-1);
+	  }
 	  break;
 	case 'k':
 	  nkeep = atoi(optarg);
@@ -221,54 +230,50 @@ int main(int argc, char *argv[]) {
 	sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
 	oneobjWidth = strlen(buff);
   }
-  //  catposmarker = ftello(catfid);
 
   fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
 		  numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
 
-  printf("dimension: %i\n", DimStars);
-  if (DimStars != 3) {
+  /*
+	printf("dimension: %i\n", DimStars);
+	if (DimStars != 3) {
 	printf("DimStars isn't 3!\n");
 	exit(-1);
-  }
+	}
+  */
 
   if (nkeep && (nkeep < numstars)) {
 	printf("Keeping only the first %i stars.\n", nkeep);
 	numstars = nkeep;
   }
 
-  fopenout(quadfname, quadfid);
-  fopenout(codefname, codefid);
+  if (!justcount) {
 
-  // we have to write an updated header after we've processed all the quads.
-  // for now, be sure that enough characters are reserved (ASCII) for the final
-  // value.
-  {
-	uint nelems = 1000000000;
-	hdrlength = 10;
-	write_code_header(codefid, ASCII, nelems, numstars,
-					  DIM_CODES, radius);
-	write_quad_header(quadfid, ASCII, nelems, numstars,
-					  DIM_QUADS, radius);
+	fopenout(quadfname, quadfid);
+	fopenout(codefname, codefid);
+
+	// we have to write an updated header after we've processed all the quads.
+	// for now, be sure that enough characters are reserved (ASCII) for the final
+	// value.
+	{
+	  uint nelems = 1000000000;
+	  hdrlength = 10;
+	  write_code_header(codefid, ASCII, nelems, numstars,
+						DIM_CODES, radius);
+	  write_quad_header(quadfid, ASCII, nelems, numstars,
+						DIM_QUADS, radius);
+	}
   }
 
+  printf("%sing all quads in the range [%f, %f] arcmin\n", (justcount ? "Count" : "Creat"),
+		 lower * rad2arcmin(radius), rad2arcmin(radius));
 
-  //radius = arcmin2rad(radius);
-  if (upto) {
-	printf("Creating all quads of scale up to two times %g arcmin\n", rad2arcmin(radius));
-  } else {
-	printf("Creating all quads with scale within a factor of two of %g arcmin\n", rad2arcmin(radius));
-  }
-
-  printf("Allocating star array...\n");
+  if (!quiet)
+	printf("Allocating star array...\n");
   {
 	unsigned long datasize = numstars * sizeof(double) * DimStars;
 	unsigned long structsize = numstars * sizeof(dyv); // for the "dyv* star" structs
 	structsize += sizeof(dyv_array) + numstars * sizeof(dyv*); // for the "dyv_array* stararray" struct
-	/*
-	  printf("(will require %lu bytes)\n", numstars * (sizeof(dyv) + sizeof(double) * DimStars) +
-	  sizeof(dyv_array) + numstars * sizeof(dyv*));
-	*/
 	printf("Will require:\n");
 	printf("  %lu bytes for raw data\n", datasize);
 	printf("  %lu bytes for structs\n", structsize);
@@ -337,14 +342,16 @@ int main(int argc, char *argv[]) {
   // first (try to) allocate memory...
   for (i=0; i<numstars; i++) {
 	dyv* star = mk_dyv(DimStars);
-	if (i % 100000 == 0) { printf("."); fflush(stdout); }
+	if (!quiet)
+	  if (i % 100000 == 0) { printf("."); fflush(stdout); }
 	dyv_array_ref(stararray, i) = star;
 	if (!star) {
 	  printf("Couldn't allocate memory for star %i.", i);
 	  exit(-1);
 	}
   }
-  printf("\n");
+  if (!quiet)
+	printf("\n");
   {
 	double minx, miny, minz, maxx, maxy, maxz;
 	minx = miny = minz = 1e100;
@@ -374,14 +381,17 @@ int main(int argc, char *argv[]) {
 		if (v < minz) minz = v;
 	  }
 	}
-	printf("ranges: x = [%g, %g], y = [%g, %g], z = [%g, %g]\n",
-		   minx, maxx, miny, maxy, minz, maxz);
+	if (!quiet)
+	  printf("ranges: x = [%g, %g], y = [%g, %g], z = [%g, %g]\n",
+			 minx, maxx, miny, maxy, minz, maxz);
   }
 
   // create search tree
-  printf("Creating kdtree of stars...\n");
+  if (!quiet)
+	printf("Creating kdtree of stars...\n");
   startree = mk_kdtree_from_points(stararray, Nleaf);
-  printf("Done creating kdtree.\n");
+  if (!quiet)
+	printf("Done creating kdtree.\n");
 
   memset(&callbacks, 0, sizeof(dualtree_callbacks));
   callbacks.decision = within_range;
@@ -397,39 +407,39 @@ int main(int argc, char *argv[]) {
   for (i=0; i<nsteps; i++) {
 
 	// set search params
-	range_params.radius = radius;
-	range_params.maxdistsq = 4.0  * radius * radius;
-	if (upto) {
-	  range_params.mindistsq = 0.0;
-	} else {
-	  range_params.mindistsq = 0.25  * radius * radius;
-	}
+	//range_params.radius = radius;
+	range_params.maxdistsq = radius * radius;
+	range_params.mindistsq = radius * radius * lower * lower;
 	range_params.stararray = stararray;
 	range_params.nquads = 0;
 
-	printf("Running dual-tree search (scale %g)...\n", radius);
+	if (!quiet)
+	  printf("Running dual-tree search (scale %g)...\n", radius);
 	dualtree_search(startree, startree, &callbacks);
 	printf("Quads: %i.\n", range_params.nquads);
-	printf("%g %i\n", radius, range_params.nquads);
+	printf("%g %i\n", rad2arcmin(radius), range_params.nquads);
 
 	radius *= step;
   }
-  printf("Done doing dual-tree search.\n");
+  if (!quiet)
+	printf("Done doing dual-tree search.\n");
   
   //printf("%i\n", range_params.nquads);
 
-  // fix output file headers.
-  fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
-  fix_quad_header(quadfid, ASCII, range_params.nquads, hdrlength);
+  if (!justcount) {
+	// fix output file headers.
+	fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
+	fix_quad_header(quadfid, ASCII, range_params.nquads, hdrlength);
 
-  // close output files
-  if (fclose(codefid)) {
-	printf("Couldn't write code output file: %s\n", strerror(errno));
-	exit(-1);
-  }
-  if (fclose(quadfid)) {
-	printf("Couldn't write quad output file: %s\n", strerror(errno));
-	exit(-1);
+	// close output files
+	if (fclose(codefid)) {
+	  printf("Couldn't write code output file: %s\n", strerror(errno));
+	  exit(-1);
+	}
+	if (fclose(quadfid)) {
+	  printf("Couldn't write quad output file: %s\n", strerror(errno));
+	  exit(-1);
+	}
   }
 
   return 0;
@@ -456,6 +466,7 @@ void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
                  double Cx, double Cy, double Dx, double Dy) {
   sidx itmp;
   double tmp;
+  if (justcount) return;
   if (iC > iD) { // swap C and D if iC>iD, involves swapping Cxy/Dxy
 	itmp = iC;
 	iC = iD;
@@ -494,7 +505,6 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     int ncd;
     dyv* midAB;
     dyv* delt;
-    //int i;
     int nquads = 0;
 	double distsq;
 	// projected coordinates:
@@ -512,8 +522,7 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 
 	star_coords(pA, pA, &AAx, &AAy);
 
-    // find all points B that are in [r/2, 2r] (if !upto).
-    //                               [0,   2r] (if upto)
+    // find all points B that are in [lower*r, r]
     for (b=0; b<ninds; b++) {
         int iB = ivec_ref(inds, b);
         dyv* pB;
@@ -523,11 +532,10 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		if (iB < iA) continue;
 
 		pB = dyv_array_ref(points, iB);
-        //double distAB;
 
 		star_coords(pB, pA, &ABx, &ABy);
 		distsq = (ABx-AAx)*(ABx-AAx) + (ABy-AAy)*(ABy-AAy);
-        //double distsq = dyv_dyv_dsqd(pA, pB);
+
         if ((distsq <= minrsq) || (distsq >= maxrsq)) {
 		  /*printf_stats("AB dist %g out of range [%g, %g]\n",
 			sqrt(distsq), sqrt(minrsq), sqrt(maxrsq));
@@ -546,12 +554,6 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		costheta = (ABx + ABy) / scale;
 		sintheta = (ABy - ABx) / scale;
 
-		/*
-		  distAB = sqrt(distsq);
-		  // compute the midpoint between A and B.
-		  dyv_plus(pA, pB, midAB);
-		  dyv_scalar_mult(midAB, 0.5, midAB);
-		*/
         ncd = 0;
         // find all points C,D that are inside the box with AB diagonal.
         for (c=0; c<ninds; c++) {
@@ -579,24 +581,6 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		  dyv_ref(cdx, ncd) = thisx;
 		  dyv_ref(cdy, ncd) = thisy;
 		  ncd++;
-
-		  /*
-			;
-			double onenorm;
-            // delt = pC - midAB
-            dyv_subtract(pC, midAB, delt);
-            // 1-norm of delt
-            onenorm = 0.0;
-            for (i=0; i<dyv_size(delt); i++) {
-			onenorm += real_abs(dyv_ref(delt, i));
-            }
-            // is pC inside the diamond?
-            if (onenorm > (distAB/2)) {
-			continue;
-            }
-            ivec_ref(cdinds, ncd) = iC;
-            ncd++;
-		  */
         }
         for (c=0; c<ncd; c++) {
 		  iC = ivec_ref(cdinds, c);
@@ -604,6 +588,7 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		  Cy = dyv_ref(cdy, c);
 		  //for (d=0; d<ncd; d++) {
 		  //if (d == c) continue;
+		  // avoid C-D permutations
 		  for (d=c+1; d<ncd; d++) {
 			iD = ivec_ref(cdinds, d);
 			Dx = dyv_ref(cdx, d);
@@ -686,7 +671,7 @@ void last_result(void* vparams, node* query) {
 
         p->nquads += nquads;
 
-		{
+		if (!quiet) {
 		  int pct;
 		  nstarsdone++;
 		  pct = (int)(0.5 + 100.0 * (double)nstarsdone / (double)numstars);
