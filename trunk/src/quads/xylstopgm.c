@@ -63,7 +63,7 @@ int main(int argc, char** args) {
           exit(-1);
       }
 
-      printf("    %f, %f\n", points[i*2], points[i*2+1]);
+      printf("    %i:  %f, %f\n", i, points[i*2], points[i*2+1]);
 
       if (i != (npoints-1)) {
           fscanf(f, ",");

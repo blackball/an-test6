@@ -6,6 +6,10 @@
   [0, 360], [-90, 90].  This program reads a catalogue, finds the range of actual
   RA,DEC values, and writes the contents to a new file.  The body of the file is
   unchanged.
+
+  If you use the same filename for input and output, it will fix the header in-place,
+  which is much faster than copying the file, but of course has the potential to mess
+  up your file.
 */
 #include <byteswap.h>
 #include <errno.h>
@@ -96,6 +100,7 @@ int main(int argc, char *argv[])
 	sidx numstars, whichstar, ii;
 	int i;
 	star* mystar;
+	bool inplace;
     //obj_header header;
     //bool byteswap = false;
 
@@ -119,9 +124,21 @@ int main(int argc, char *argv[])
 	if ((catfname == NULL) || (outfname == NULL)) {
 	  fprintf(stderr, "\nYou must specify input and output file (-f <input> -o <output>), without the .objs suffix)\n\n");
 	}
-    fopenin(catfname, catfid);
-    fopenout(outfname, outfid);
-    free_fn(outfname);
+	inplace = (strcmp(catfname, outfname) == 0);
+
+	if (inplace) {
+	  catfid = fopen(catfname, "rw");
+	  if (!catfid) {
+		printf("Couldn't open catalogue file %s\n",
+			   catfname);
+		exit(-1);
+	  }
+	  outfid = catfid;
+	} else {
+	  fopenin(catfname, catfid);
+	  fopenout(outfname, outfid);
+	}
+	free_fn(outfname);
     free_fn(catfname);
 
     cASCII = read_objs_header(catfid, &numstars, &DimStars,
@@ -130,6 +147,11 @@ int main(int argc, char *argv[])
 
     if (cASCII == (char)READ_FAIL)
         return (1);
+	if (cASCII && inplace) {
+	  printf("Can't fix ASCII headers in-place.\n");
+	  exit(-1);
+	}
+
     if (cASCII) {
         sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
         oneobjWidth = strlen(buff);
@@ -162,46 +184,56 @@ int main(int argc, char *argv[])
 	printf("Dec range %g, %g\n", rad2deg(decmin), rad2deg(decmax));
 
 	printf("\nWriting output...\n");
+	if (inplace) {
+	  fseek(outfid, 0, SEEK_SET);
+	}
 	write_objs_header(outfid, cASCII, numstars, DimStars,
 					  ramin, ramax, decmin, decmax);
 
-	if (!cASCII) {
-	  char* block;
-	  int blocksize = 10000;
-	  int starsize = (DIM_STARS * sizeof(double));
-	  int nblocks = numstars/blocksize;
-	  int nleft;
-	  block = malloc(starsize * blocksize);
-	  fseek(catfid, catposmarker, SEEK_SET);
-	  for (i=0; i<nblocks; i++) {
-		fread(block, 1, starsize * blocksize, catfid);
-		fwrite(block, 1, starsize * blocksize, outfid);
-		if (i % 10 == 0) {
-		  printf(".");
-		  fflush(stdout);
+	if (!inplace) {
+	  // write the contents...
+	  if (!cASCII) {
+		char* block;
+		int blocksize = 10000;
+		int starsize = (DIM_STARS * sizeof(double));
+		int nblocks = numstars/blocksize;
+		int nleft;
+		block = malloc(starsize * blocksize);
+		fseek(catfid, catposmarker, SEEK_SET);
+		for (i=0; i<nblocks; i++) {
+		  fread(block, 1, starsize * blocksize, catfid);
+		  fwrite(block, 1, starsize * blocksize, outfid);
+		  if (i % 10 == 0) {
+			printf(".");
+			fflush(stdout);
+		  }
 		}
-	  }
-	  nleft = numstars % blocksize;
-	  fread (block, 1, starsize * nleft, catfid);
-	  fwrite(block, 1, starsize * nleft, outfid);
-	  printf("\n");
-	} else {
-	  // one star at a time...
-	  mystar = mk_star();
-	  for (i=0; i<numstars; i++) {
-		get_star(catfid, catposmarker, oneobjWidth, i, mystar);
-		fwritestar(mystar, outfid);
-		if (i % 100000 == 0) {
-		  printf("."); fflush(stdout);
+		nleft = numstars % blocksize;
+		fread (block, 1, starsize * nleft, catfid);
+		fwrite(block, 1, starsize * nleft, outfid);
+		printf("\n");
+	  } else {
+		// one star at a time...
+		mystar = mk_star();
+		for (i=0; i<numstars; i++) {
+		  get_star(catfid, catposmarker, oneobjWidth, i, mystar);
+		  fwritestar(mystar, outfid);
+		  if (i % 100000 == 0) {
+			printf("."); fflush(stdout);
+		  }
 		}
+		printf("\n");
+		free_star(mystar);
 	  }
-	  printf("\n");
-	  free_star(mystar);
 	}
 
 	if (fclose(outfid)) {
 	  printf("Error closing output file.\n");
 	  return 1;
+	}
+
+	if (!inplace) {
+	  fclose(catfid);
 	}
 
     return 0;

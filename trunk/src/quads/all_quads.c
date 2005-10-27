@@ -55,7 +55,7 @@ struct params
 	dyv_array* stararray;
 
     // total number of quads created.
-    int nquads;
+  int nquads;
 };
 typedef struct params params;
 
@@ -120,11 +120,14 @@ char ASCII = 0;
 char buff[100], oneobjWidth;
 bool upto = 0;
 
+sidx numstars;
+int nstarsdone = 0;
+int lastpercent = 0;
+
 int main(int argc, char *argv[]) {
   char* progname;
   int argchar; //  opterr = 0;
   double ramin, ramax, decmin, decmax;
-  sidx numstars;
   int i;
   int nkeep = 0;
   int hdrlength = 0;
@@ -681,6 +684,20 @@ void last_result(void* vparams, node* query) {
 					p->mindistsq, p->maxdistsq, &nquads);
 
         p->nquads += nquads;
+
+		{
+		  int pct;
+		  nstarsdone++;
+		  pct = (int)(0.5 + 100.0 * (double)nstarsdone / (double)numstars);
+		  if (pct != lastpercent) {
+			printf("%i of %i (%i%%) done.\n", nstarsdone, (int)numstars,
+				   pct);
+			lastpercent = pct;
+		  }
+		}
+		/*
+		  printf("%i of %i (%.02f%%) done.\n", nstarsdone, (int)numstars,100.0 * (double)nstarsdone / (double)numstars);
+		*/
 	}
 
 	free_ivec(pinds);
