@@ -1,21 +1,62 @@
 #include "fileutil.h"
+#include "starutil.h"
 #include "math.h"
 #define N 3000
-#define OPTIONS "bhf:"
+#define OPTIONS "bhgf:"
 
-char* help = "usage: plotcat [-b] [-h] -f catalog.objs\n";
+char* help = "usage: plotcat [-b] [-h] [-g] -f catalog.objs\n";
 unsigned int projection[N][N];
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+inline void project_equal_area(double x, double y, double z, int *X, int *Y)
+{
+	double Xp = x*sqrt(1./(1. + z));
+	double Yp = y*sqrt(1./(1. + z));
+	*X = (unsigned int) floor(N*0.5*(1+0.9*Xp));
+	*Y = (unsigned int) floor(N*0.5*(1+0.9*Yp));
+	if (*X > N || *Y > N) {
+		fprintf(stderr, "BAIL: xind=%d, yind=%d\n", *X, *Y);
+		exit(1);
+	}
+}
+
+inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y)
+{
+	/* Hammer-Aitoff projection with x-z plane compressed to purely +z side
+	 * of xz plane */
+	double theta = atan(x/z);
+	if (z < 0) {
+		if (x < 0) {
+			theta = theta - PI;
+		} else {
+			theta = PI + theta;
+		}
+	}
+	theta /= 2.0;
+
+	double r = sqrt(x*x+z*z);
+	double zp, xp;
+	zp = r*cos(theta);
+	xp = r*sin(theta);
+	if (zp < -0.01) {
+		fprintf(stderr,
+			"BAIL: Hammer projection, got negative z: "
+			"z=%lf; x=%lf; zp=%lf; xp=%lf\n", z,x,zp, xp);
+		exit(1);
+	}
+	project_equal_area(xp,y,zp, X, Y);
+}
+
 int main(int argc, char *argv[])
 {
 	char ASCII = READ_FAIL;
-	int ii, jj, reverse=0, hammer=0;
+	int ii, jj, reverse=0, hammer=0, grid=0;
 	sidx numstars;
 	dimension Dim_Stars;
 	double ramin, ramax, decmin, decmax;
-	double x,y,z,X,Y;
+	double x,y,z;
+	int X,Y;
 	FILE* fid = NULL;
 	int argidx, argchar; //  opterr = 0;
 
@@ -31,6 +72,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'h':
 			hammer = 1;
+			break;
+		case 'g':
+			grid = 1;
 			break;
 		case 'f':
 			fid = fopen(optarg,"r");
@@ -80,43 +124,65 @@ int main(int argc, char *argv[])
 
 			if (reverse)
 				z = -z;
+			project_equal_area(x, y, z, &X, &Y);
 		} else {
 			/* Hammer-Aitoff projection */
-			double theta = atan(x/z);
-			if (z < 0) {
-				if (x < 0) {
-					//theta = PI - theta;
-					theta = theta - PI;
+			project_hammer_aitoff_x(x, y, z, &X, &Y);
+		}
+		projection[X][Y] += 1;
+	}
+
+	if (grid) {
+		/* Draw a line for ra=-160...+160 in 10 degree sections */
+		for (ii=-160; ii <= 160; ii+= 10) {
+			int RES = 10000;
+			for (jj=-RES; jj<RES; jj++) {
+				/* Draw a bunch of points for dec -90...90*/
+
+				double ra = deg2rad(ii);
+				double dec = jj/(double)RES * PI/2.0;
+				x = radec2x(ra,dec);
+				y = radec2y(ra,dec);
+				z = radec2z(ra,dec);
+
+				if (!hammer) {
+					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+						continue;
+					if (reverse)
+						z = -z;
+					project_equal_area(x, y, z, &X, &Y);
 				} else {
-					theta = PI + theta;
+					/* Hammer-Aitoff projection */
+					project_hammer_aitoff_x(x, y, z, &X, &Y);
 				}
+				projection[X][Y] = 255;
 			}
-			theta /= 2.0;
+		}
+		/* Draw a line for dec=-80...+80 in 10 degree sections */
+		for (ii=-80; ii <= 80; ii+= 10) {
+			int RES = 10000;
+			for (jj=-RES; jj<RES; jj++) {
+				/* Draw a bunch of points for dec -90...90*/
 
-			double r = sqrt(x*x+z*z);
-			double zp, xp;
-			zp = r*cos(theta);
-			xp = r*sin(theta);
-			if (zp < -0.01) {
-				fprintf(stderr,
-					"BAIL: Hammer projection, got negative z: "
-					"z=%lf; x=%lf; zp=%lf; xp=%lf\n", z,x,zp, xp);
-				exit(1);
+				double ra = jj/(double)RES * PI;
+				double dec = deg2rad(ii);
+				x = radec2x(ra,dec);
+				y = radec2y(ra,dec);
+				z = radec2z(ra,dec);
+
+				if (!hammer) {
+					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+						continue;
+					if (reverse)
+						z = -z;
+					project_equal_area(x, y, z, &X, &Y);
+				} else {
+					/* Hammer-Aitoff projection */
+					project_hammer_aitoff_x(x, y, z, &X, &Y);
+				}
+				projection[X][Y] = 255;
 			}
-			z = zp;
-			x = xp;
 		}
-
-		X = x*sqrt(1./(1. + z));
-		Y = y*sqrt(1./(1. + z));
-		unsigned int xind, yind;
-		xind = (unsigned int) floor(N*0.5*(1+0.9*X));
-		yind = (unsigned int) floor(N*0.5*(1+0.9*Y));
-		if (xind > N || yind > N) {
-			fprintf(stderr, "BAIL: xind=%d, yind=%d\n", xind, yind);
-			exit(1);
-		}
-		projection[xind][yind] += 1;
 	}
 
 	// Output PGM format
