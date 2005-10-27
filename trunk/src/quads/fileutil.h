@@ -45,7 +45,8 @@ void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
 void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
 stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
-                   double *ramin, double *ramax, double *decmin, double *decmax);
+                   double *ramin, double *ramax, double *decmin, double *decmax,
+				   int nkeep);
 
 quadarray *readidlist(FILE *fid, qidx *numpix);
 

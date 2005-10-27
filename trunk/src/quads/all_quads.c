@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/mman.h>
+#include "kdutil.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "dualtree.h"
@@ -55,7 +56,7 @@ struct params
   double maxdistsq;
 
   // all the stars.
-  dyv_array* stararray;
+  stararray* stars;
 
   // total number of quads created.
   int nquads;
@@ -81,21 +82,14 @@ typedef struct result_info result_info;
 
 result_info rinfo;
 
-#define OPTIONS "acqf:s:k:l:"
+#define OPTIONS "acqf:s:l:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-char *catfname = NULL;
-char *quadfname = NULL;
-char *codefname = NULL;
-FILE *catfid = NULL;
 FILE *quadfid = NULL;
 FILE *codefid = NULL;
-
-char cASCII = (char)READ_FAIL;
 char ASCII = 0;
-char buff[100], oneobjWidth;
 
 sidx numstars;
 int nstarsdone = 0;
@@ -103,18 +97,16 @@ int lastpercent = 0;
 int justcount = 0;
 int quiet = 0;
 
+
 int main(int argc, char *argv[]) {
   char* progname;
   int argchar; //  opterr = 0;
   double ramin, ramax, decmin, decmax;
   int i;
-  int nkeep = 0;
   int hdrlength = 0;
-  dimension DimStars;
 
   kdtree* startree = NULL;
-  // arrays for points
-  dyv_array* stararray = NULL;
+  stararray* stars = NULL;
 
   // max radius of the search (in radians)
   double radius;
@@ -130,8 +122,13 @@ int main(int argc, char *argv[]) {
   // dual-tree search callback functions
   dualtree_callbacks callbacks;
   
-  // maximum number of points in a leaf node.
-  int Nleaf = 5;
+  char *treefname = NULL;
+  char *quadfname = NULL;
+  char *codefname = NULL;
+  FILE *treefid = NULL;
+
+
+
 
   progname = argv[0];
 
@@ -141,7 +138,6 @@ int main(int argc, char *argv[]) {
 	printf("\nUsage:\n"
 		   "  %s -f <filename-base>\n"
 		   "     [-s <scale>]         (default scale is 5 arcmin)\n"
-		   "     [-k <keep>]          (keep the first \"k\" stars in the catalogue)\n"
 		   "     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
 		   "     [-c]                 (just count the quads, don't write anything)\n"
 		   "     [-a]                 (ASCII output format - default is binary)\n"
@@ -156,11 +152,6 @@ int main(int argc, char *argv[]) {
 	case 'a':
 	  ASCII = 1;
 	  break;
-	  /*
-		case 'b':
-		ASCII = 0;
-		break;
-	  */
 	case 'c':
 	  justcount = 1;
 	  break;
@@ -168,7 +159,7 @@ int main(int argc, char *argv[]) {
 	  quiet = 1;
 	  break;
 	case 'f':
-	  catfname = mk_catfn(optarg);
+	  treefname = mk_streefn(optarg);
 	  quadfname = mk_quad0fn(optarg);
 	  codefname = mk_code0fn(optarg);
 	  break;
@@ -184,13 +175,6 @@ int main(int argc, char *argv[]) {
 	  lower = atof(optarg);
 	  if (lower > 1.0) {
 		printf("You really don't want to make lower > 1.\n");
-		exit(-1);
-	  }
-	  break;
-	case 'k':
-	  nkeep = atoi(optarg);
-	  if (nkeep == 0) {
-		printf("Couldn't parse desired number of stars: \"%s\"\n", optarg);
 		exit(-1);
 	  }
 	  break;
@@ -214,38 +198,26 @@ int main(int argc, char *argv[]) {
 	  return (OPT_ERR);
 	}
     
-  fprintf(stderr, "%s: reading catalogue  %s\n", progname, catfname);
-  if (catfname == NULL) {
-	fprintf(stderr, "\nYou must specify the file names to use (-f <prefix>), (without the .objs suffix)\n\n");
+  fprintf(stderr, "%s: reading star kd-tree %s\n", progname, treefname);
+  if (treefname == NULL) {
+	fprintf(stderr, "\nYou must specify the file names to use (-f <prefix>), (without the suffix)\n\n");
 	exit(0);
   }
-  fopenin(catfname, catfid);
-  free_fn(catfname);
+  fopenin(treefname, treefid);
+  free_fn(treefname);
+  startree = read_starkd(treefid, &ramin, &ramax, &decmin, &decmax);
+  fclose(treefid);
+  if (startree == NULL)
+	return (2);
+  numstars = startree->root->num_points;
 
-  cASCII = read_objs_header(catfid, &numstars, &DimStars,
-							&ramin, &ramax, &decmin, &decmax);
-  if (cASCII == (char)READ_FAIL)
-	return (1);
-  if (cASCII) {
-	sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
-	oneobjWidth = strlen(buff);
-  }
+  fprintf(stderr, "done\n    (%lu stars, %d nodes, depth %d).\n",
+		  numstars, startree->num_nodes, startree->max_depth);
+  fprintf(stderr, "    (dim %d) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
+		  kdtree_num_dims(startree),
+		  rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
 
-  fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
-		  numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
-
-  /*
-	printf("dimension: %i\n", DimStars);
-	if (DimStars != 3) {
-	printf("DimStars isn't 3!\n");
-	exit(-1);
-	}
-  */
-
-  if (nkeep && (nkeep < numstars)) {
-	printf("Keeping only the first %i stars.\n", nkeep);
-	numstars = nkeep;
-  }
+  stars = (stararray *)mk_dyv_array_from_kdtree(startree);
 
   if (!justcount) {
 
@@ -268,130 +240,7 @@ int main(int argc, char *argv[]) {
   printf("%sing all quads in the range [%f, %f] arcmin\n", (justcount ? "Count" : "Creat"),
 		 lower * rad2arcmin(radius), rad2arcmin(radius));
 
-  if (!quiet)
-	printf("Allocating star array...\n");
-  {
-	unsigned long datasize = numstars * sizeof(double) * DimStars;
-	unsigned long structsize = numstars * sizeof(dyv); // for the "dyv* star" structs
-	structsize += sizeof(dyv_array) + numstars * sizeof(dyv*); // for the "dyv_array* stararray" struct
-	printf("Will require:\n");
-	printf("  %lu bytes for raw data\n", datasize);
-	printf("  %lu bytes for structs\n", structsize);
-	printf("  %lu bytes total\n", datasize + structsize);
-  }
 
-  /**
-	 mmap experimentation.
-
-	 The result seems to be that you can't mmap more than about 2 gigs,
-	 so it doesn't really buy anything over plain malloc in terms of
-	 address space size.
-  */
-  /*
-	{
-	size_t length;
-	char* bigmem;
-	int fd;
-	off_t offset;
-	printf("sizeof void*: %i, size_t: %i\n", sizeof(void*), sizeof(size_t));
-	//length = 0x80000000;
-	length = 0x10000000;
-	fd = 0;
-	offset = 0;
-	bigmem = NULL;
-	while (!bigmem) {
-	printf("trying to mmap %u bytes\n", length);
-	bigmem = mmap(0, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, fd, offset);
-	if (bigmem == MAP_FAILED) {
-	printf("mmap failed.\n");
-	bigmem = NULL;
-	} else {
-	int Nmaps = 10;
-	int i;
-	char* maps[Nmaps];
-	printf("mapped %u bytes at %p\n", length, bigmem);
-	munmap(bigmem, length);
-	bigmem = NULL;
-	printf("\ntrying to map multiple chunks...\n");
-	for (i=0; i<Nmaps; i++) {
-	maps[i] = mmap(0, length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, fd, offset);
-	if (maps[i] == MAP_FAILED) {
-	printf("mmap #%i failed.\n", i);
-	break;
-	} else {
-	printf("mapped %u bytes at %p\n", length, maps[i]);
-	}
-	}
-	while (i>0) {
-	munmap(maps[i], length);
-	i--;
-	}
-	break;
-	}
-	length /= 2;
-	}
-	}
-  */
-
-  // create stars array
-  stararray = mk_dyv_array(numstars);
-  if (!stararray) {
-	printf("Couldn't create stararray.\n");
-	exit(-1);
-  }
-  // first (try to) allocate memory...
-  for (i=0; i<numstars; i++) {
-	dyv* star = mk_dyv(DimStars);
-	if (!quiet)
-	  if (i % 100000 == 0) { printf("."); fflush(stdout); }
-	dyv_array_ref(stararray, i) = star;
-	if (!star) {
-	  printf("Couldn't allocate memory for star %i.", i);
-	  exit(-1);
-	}
-  }
-  if (!quiet)
-	printf("\n");
-  {
-	double minx, miny, minz, maxx, maxy, maxz;
-	minx = miny = minz = 1e100;
-	maxx = maxy = maxz = -1e100;
-	// then read the catalogue.
-	for (i=0; i<numstars; i++) {
-	  dyv* star = dyv_array_ref(stararray, i);
-	  if (cASCII) {
-		double tmpx, tmpy, tmpz;
-		fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-		star_set(star, 0, tmpx);
-		star_set(star, 1, tmpy);
-		star_set(star, 2, tmpz);
-	  } else {
-		freadstar(star, catfid);
-	  }
-	  {
-		double v;
-		v = dyv_ref(star, 0);
-		if (v > maxx) maxx = v;
-		if (v < minx) minx = v;
-		v = dyv_ref(star, 1);
-		if (v > maxy) maxy = v;
-		if (v < miny) miny = v;
-		v = dyv_ref(star, 1);
-		if (v > maxz) maxz = v;
-		if (v < minz) minz = v;
-	  }
-	}
-	if (!quiet)
-	  printf("ranges: x = [%g, %g], y = [%g, %g], z = [%g, %g]\n",
-			 minx, maxx, miny, maxy, minz, maxz);
-  }
-
-  // create search tree
-  if (!quiet)
-	printf("Creating kdtree of stars...\n");
-  startree = mk_kdtree_from_points(stararray, Nleaf);
-  if (!quiet)
-	printf("Done creating kdtree.\n");
 
   memset(&callbacks, 0, sizeof(dualtree_callbacks));
   callbacks.decision = within_range;
@@ -410,22 +259,22 @@ int main(int argc, char *argv[]) {
 	//range_params.radius = radius;
 	range_params.maxdistsq = radius * radius;
 	range_params.mindistsq = radius * radius * lower * lower;
-	range_params.stararray = stararray;
+	range_params.stars = stars;
 	range_params.nquads = 0;
 
 	if (!quiet)
 	  printf("Running dual-tree search (scale %g)...\n", radius);
 	dualtree_search(startree, startree, &callbacks);
 	printf("Quads: %i.\n", range_params.nquads);
-	printf("%g %i\n", rad2arcmin(radius), range_params.nquads);
+	printf("%g %g %i\n",
+		   rad2arcmin(radius * lower),
+		   rad2arcmin(radius), range_params.nquads);
 
 	radius *= step;
   }
   if (!quiet)
 	printf("Done doing dual-tree search.\n");
   
-  //printf("%i\n", range_params.nquads);
-
   if (!justcount) {
 	// fix output file headers.
 	fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
@@ -666,7 +515,7 @@ void last_result(void* vparams, node* query) {
 
 		printf_stats("    collected %i points.\n", pi);
 
-		build_quads(p->stararray, pinds, pi, qi,
+		build_quads(p->stars, pinds, pi, qi,
 					p->mindistsq, p->maxdistsq, &nquads);
 
         p->nquads += nquads;
