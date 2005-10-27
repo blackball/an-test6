@@ -106,11 +106,11 @@ typedef dyv_array xyarray;
 #define arcmin2rad(a) (a*(double)PIl/10800.0)
 #define rad2arcsec(r) (648000.0*r/(double)PIl)
 #define arcsec2rad(a) (a*(double)PIl/648000.0)
-#define radec2x(r,d) (cos(d)*cos(r))
-#define radec2y(r,d) (cos(d)*sin(r))
-#define radec2z(r,d) (sin(d))
-#define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x)))
-#define z2dec(z) (asin(z))
+#define radec2x(r,d) (cos(d)*cos(r)) // r,d in radians
+#define radec2y(r,d) (cos(d)*sin(r)) // r,d in radians
+#define radec2z(r,d) (sin(d))        // d in radians
+#define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
+#define z2dec(z) (asin(z)) // result in radians
 
 #if PLANAR_GEOMETRY==1
 #define radscale2xyzscale(r) (r)
