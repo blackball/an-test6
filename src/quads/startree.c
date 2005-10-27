@@ -2,10 +2,11 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hR:f:"
+#define OPTIONS "hR:f:k:"
 const char HelpString[] =
-    "startree -f fname [-R KD_RMIN]\n"
-    "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
+    "startree -f fname [-R KD_RMIN] [-k keep]\n"
+    "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n"
+    "  keep is the number of stars read from the catalogue\n";
 
 char *treefname = NULL;
 char *catfname = NULL;
@@ -24,6 +25,7 @@ int main(int argc, char *argv[])
 	double ramin, ramax, decmin, decmax;
 	stararray *thestars = NULL;
 	kdtree *starkd = NULL;
+	int nkeep = 0;
 
 	if (argc <= 2) {
 		fprintf(stderr, HelpString);
@@ -35,6 +37,13 @@ int main(int argc, char *argv[])
 		case 'R':
 			kd_Rmin = (int)strtoul(optarg, NULL, 0);
 			break;
+		case 'k':
+		  nkeep = atoi(optarg);
+		  if (nkeep == 0) {
+			printf("Couldn't parse \'keep\': \"%s\"\n", optarg);
+			exit(-1);
+		  }
+		  break;
 		case 'f':
 			treefname = mk_streefn(optarg);
 			catfname = mk_catfn(optarg);
@@ -57,13 +66,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "startree: building KD tree for %s\n", catfname);
 
+	if (nkeep) {
+	  fprintf(stderr, "keeping at most %i stars.\n", nkeep);
+	}
 
 	fprintf(stderr, "  Reading star catalogue...");
 	fflush(stderr);
 	fopenin(catfname, catfid);
 	free_fn(catfname);
 	thestars = readcat(catfid, &numstars, &Dim_Stars,
-	                   &ramin, &ramax, &decmin, &decmax);
+	                   &ramin, &ramax, &decmin, &decmax, nkeep);
 	fclose(catfid);
 	if (thestars == NULL)
 		return (1);

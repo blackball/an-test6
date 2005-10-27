@@ -19,7 +19,8 @@
 */
 
 stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
-                   double *ramin, double *ramax, double *decmin, double *decmax)
+                   double *ramin, double *ramax, double *decmin, double *decmax,
+				   int nkeep)
 {
 	char ASCII = READ_FAIL;
 	sidx ii;
@@ -28,6 +29,11 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
 	ASCII = read_objs_header(fid, numstars, Dim_Stars, ramin, ramax, decmin, decmax);
 	if (ASCII == (char)READ_FAIL)
 		return ((stararray *)NULL);
+
+	if (nkeep && (nkeep < *numstars)) {
+	  // switcheroo!
+	  *numstars = nkeep;
+	}
 
 	thestars = mk_stararray(*numstars);
 	for (ii = 0;ii < *numstars;ii++) {
@@ -48,6 +54,9 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
 		} else
 			fread(thestars->array[ii]->farr, sizeof(double), *Dim_Stars, fid);
 	}
+
+	// if nkeep is set, should we read and discard the rest?
+
 	return thestars;
 }
 
