@@ -1,10 +1,12 @@
 #include "fileutil.h"
 #include "starutil.h"
 #include "math.h"
-#define N 3000
-#define OPTIONS "bhgf:"
+#define OPTIONS "bhgf:N:"
 
-char* help = "usage: plotcat [-b] [-h] [-g] -f catalog.objs\n";
+char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] -f catalog.objs\n"
+"> outfile.pgm\n"
+"  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n";
+
 unsigned int projection[N][N];
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -58,6 +60,7 @@ int main(int argc, char *argv[])
 	double x,y,z;
 	int X,Y;
 	FILE* fid = NULL;
+	unsigned long N=3000;
 	int argidx, argchar; //  opterr = 0;
 
 	if (argc <= 2) {
@@ -76,6 +79,9 @@ int main(int argc, char *argv[])
 		case 'g':
 			grid = 1;
 			break;
+		case 'N':
+		  N=strtoul(optarg, NULL, 0);
+		  break;
 		case 'f':
 			fid = fopen(optarg,"r");
 			break;
