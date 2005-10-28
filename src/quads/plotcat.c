@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Output PGM format
-	printf("P5 %d %d %d\n", N, N, 255);
+	printf("P5 %d %d %d\n",(int)N,(int)N, 255);
 	for (ii = 0; ii < N; ii++) {
 		for (jj = 0; jj < N; jj++) {
 			if (projection[ii][jj] < 255)
