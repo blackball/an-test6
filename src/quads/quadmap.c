@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	char qASCII,cASCII;
 	star *tmps = NULL;
 
-	if (argc <= 3) {
+	if (argc <= 2) {
 		fprintf(stderr, HelpString);
 		return (OPT_ERR);
 	}
