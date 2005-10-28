@@ -7,7 +7,7 @@ char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] -f catalog.objs\n"
 "> outfile.pgm\n"
 "  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n";
 
-unsigned int projection[N][N];
+unsigned int **projection;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -112,9 +112,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	for (ii = 0; ii < N; ii++)
-		for (jj = 0; jj < N; jj++)
-			projection[ii][jj] = 0;
+	projection=calloc(sizeof(unsigned int),N*N);
 
 	for (ii = 0; ii < numstars; ii++) {
 	  if(is_power_of_two(ii+1))
