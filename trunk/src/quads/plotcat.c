@@ -11,6 +11,8 @@ unsigned int projection[N][N];
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+unsigned long N=3000;
+
 inline void project_equal_area(double x, double y, double z, int *X, int *Y)
 {
 	double Xp = x*sqrt(1./(1. + z));
@@ -60,7 +62,6 @@ int main(int argc, char *argv[])
 	double x,y,z;
 	int X,Y;
 	FILE* fid = NULL;
-	unsigned long N=3000;
 	int argidx, argchar; //  opterr = 0;
 
 	if (argc <= 2) {
