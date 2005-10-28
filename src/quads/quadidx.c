@@ -157,7 +157,7 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 	double Cx, Cy, Dx, Dy;
 
 	for (ii = 0;ii < numQuads;ii++) {
-	  //if (is_power_of_two(ii + 1))
+	  if (is_power_of_two(ii + 1))
 		 fprintf(stderr,"done %lu/%lu quads\r",ii+1,numQuads);
 		getquadids(quadfid, codefid, ii, &iA, &iB, &iC, &iD);
 		//fprintf(stderr,"checking quad %lu (%lu,%lu,%lu,%lu)\n",
