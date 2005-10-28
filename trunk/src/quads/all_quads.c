@@ -90,6 +90,7 @@ extern int optind, opterr, optopt;
 FILE *quadfid = NULL;
 FILE *codefid = NULL;
 char ASCII = 0;
+ivec_array *qlist = NULL;
 
 sidx numstars;
 int nstarsdone = 0;
@@ -125,8 +126,10 @@ int main(int argc, char *argv[]) {
   char *treefname = NULL;
   char *quadfname = NULL;
   char *codefname = NULL;
-  FILE *treefid = NULL;
+  char *qidxfname = NULL;
 
+  FILE *treefid = NULL;
+  FILE *qidxfid = NULL;
 
 
 
@@ -160,8 +163,9 @@ int main(int argc, char *argv[]) {
 	  break;
 	case 'f':
 	  treefname = mk_streefn(optarg);
-	  quadfname = mk_quad0fn(optarg);
-	  codefname = mk_code0fn(optarg);
+	  quadfname = mk_quadfn(optarg);
+	  codefname = mk_codefn(optarg);
+	  qidxfname = mk_qidxfn(optarg);
 	  break;
 	case 's':
 	  radius = atof(optarg);
@@ -223,6 +227,7 @@ int main(int argc, char *argv[]) {
 
 	fopenout(quadfname, quadfid);
 	fopenout(codefname, codefid);
+	fopenout(qidxfname, qidxfid);
 
 	// we have to write an updated header after we've processed all the quads.
 	// for now, be sure that enough characters are reserved (ASCII) for the final
@@ -256,11 +261,12 @@ int main(int argc, char *argv[]) {
   for (i=0; i<nsteps; i++) {
 
 	// set search params
-	//range_params.radius = radius;
 	range_params.maxdistsq = radius * radius;
 	range_params.mindistsq = radius * radius * lower * lower;
 	range_params.stars = stars;
 	range_params.nquads = 0;
+
+	qlist = mk_ivec_array(numstars);
 
 	if (!quiet)
 	  printf("Running dual-tree search (scale %g)...\n", radius);
@@ -276,9 +282,55 @@ int main(int argc, char *argv[]) {
 	printf("Done doing dual-tree search.\n");
   
   if (!justcount) {
+	int i, j, numused = 0;
+	magicval magic = MAGIC_VAL;
+
 	// fix output file headers.
 	fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
 	fix_quad_header(quadfid, ASCII, range_params.nquads, hdrlength);
+
+	// write qidx (adapted from quadidx.c)
+	// first count numused.
+	for (i=0; i<numstars; i++) {
+	  ivec* tmpivec = ivec_array_ref(qlist, i);
+	  if (tmpivec != NULL)
+		numused++;
+	}
+	printf("%i stars used\n", numused);
+	if (ASCII) {
+	  fprintf(qidxfid, "NumIndexedStars=%u\n", numused);
+	} else {
+	  fwrite(&magic, sizeof(magic), 1, qidxfid);
+	  fwrite(&numused, sizeof(numused), 1, qidxfid);
+	}
+	for (i=0; i<numstars; i++) {
+	  int thisnumq;
+	  ivec* tmpivec = ivec_array_ref(qlist, i);
+	  if (tmpivec == NULL)
+		continue;
+	  thisnumq = (qidx)ivec_size(tmpivec);
+	  if (ASCII)
+		fprintf(qidxfid, "%u:%u", i, thisnumq);
+	  else {
+		fwrite(&i, sizeof(i), 1, qidxfid);
+		fwrite(&thisnumq, sizeof(thisnumq), 1, qidxfid);
+	  }
+	  for (j=0; j<thisnumq; j++) {
+		int kk = (qidx)ivec_ref(tmpivec, j);
+		if (ASCII)
+		  fprintf(qidxfid, ",%u", kk);
+		else
+		  fwrite(&kk, sizeof(kk), 1, qidxfid);
+	  }
+	  if (ASCII)
+		fprintf(qidxfid, "\n");
+	}
+	free_ivec_array(qlist);
+
+	if (fclose(qidxfid)) {
+	  printf("Couldn't write quad index file: %s\n", strerror(errno));
+	  exit(-1);
+	}
 
 	// close output files
 	if (fclose(codefid)) {
@@ -311,7 +363,56 @@ void first_result(void* vparams, node* query) {
 	rinfo.cands = NULL;
 }
 
-void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
+
+// from quadidx.c
+void insertquad(ivec_array *qlist, qidx ii,
+                sidx iA, sidx iB, sidx iC, sidx iD) {
+  char new = FALSE;
+  ivec *Alist, *Blist, *Clist, *Dlist;
+  Alist = ivec_array_ref(qlist, iA);
+  Blist = ivec_array_ref(qlist, iB);
+  Clist = ivec_array_ref(qlist, iC);
+  Dlist = ivec_array_ref(qlist, iD);
+  if (Alist == NULL) {
+	ivec_array_set_no_copy(qlist, iA, mk_ivec(0));
+	Alist = ivec_array_ref(qlist, iA);
+	new = TRUE;
+	//fprintf(stderr,"  star %lu previously NULL\n",iA);
+  }
+  if (Blist == NULL) {
+	ivec_array_set_no_copy(qlist, iB, mk_ivec(0));
+	Blist = ivec_array_ref(qlist, iB);
+	new = TRUE;
+	//fprintf(stderr,"  star %lu previously NULL\n",iB);
+  }
+  if (Clist == NULL) {
+	ivec_array_set_no_copy(qlist, iC, mk_ivec(0));
+	Clist = ivec_array_ref(qlist, iC);
+	new = TRUE;
+	//fprintf(stderr,"  star %lu previously NULL\n",iC);
+  }
+  if (Dlist == NULL) {
+	ivec_array_set_no_copy(qlist, iD, mk_ivec(0));
+	Dlist = ivec_array_ref(qlist, iD);
+	new = TRUE;
+	//fprintf(stderr,"  star %lu previously NULL\n",iD);
+  }
+
+  /*
+	if (new == FALSE)
+	new = newquad(qlist, iA, iB, iC, iD);
+  */
+
+  if (new == TRUE) {
+	add_to_ivec_unique2(Alist, ii);
+	add_to_ivec_unique2(Blist, ii);
+	add_to_ivec_unique2(Clist, ii);
+	add_to_ivec_unique2(Dlist, ii);
+  }
+}
+
+
+void accept_quad(int quadnum, sidx iA, sidx iB, sidx iC, sidx iD,
                  double Cx, double Cy, double Dx, double Dy) {
   sidx itmp;
   double tmp;
@@ -340,6 +441,8 @@ void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
   writeonecode(codefid, Cx, Cy, Dx, Dy);
   writeonequad(quadfid, iA, iB, iC, iD);
 
+  insertquad(qlist, quadnum, iA, iB, iC, iD);
+
   return ;
 }
 
@@ -354,7 +457,7 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     int ncd;
     dyv* midAB;
     dyv* delt;
-    int nquads = 0;
+    //int nquads = 0;
 	double distsq;
 	// projected coordinates:
 	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -444,17 +547,17 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 			Dy = dyv_ref(cdy, d);
 			//printf_stats("    quad inds %i, %i, %i, %i\n", iA, iB, iC, iD);
 
-			accept_quad(iA, iB, iC, iD,
+			accept_quad(*pnquads, iA, iB, iC, iD,
 						Cx, Cy, Dx, Dy);
-
-			nquads++;
+			(*pnquads)++;
+			//nquads++;
 		  }
         }
     }
 
-    printf_stats("    created %i quads.\n", nquads);
+    printf_stats("    created %i quads.\n", *pnquads);
 
-    if (pnquads) *pnquads = nquads;
+    //if (pnquads) *pnquads = nquads;
 
     free_dyv(delt);
     free_dyv(midAB);
@@ -493,7 +596,7 @@ void last_result(void* vparams, node* query) {
 	for (i = 0; i < query->num_points; i++) {
 		dyv* qp = dyv_array_ref(query->points, i);
         int qi  = ivec_ref(query->pindexes, i);
-        int nquads;
+        //int nquads;
 
 		printf_stats("  query point %i:\n", i);
 		pi = 0;
@@ -516,9 +619,10 @@ void last_result(void* vparams, node* query) {
 		printf_stats("    collected %i points.\n", pi);
 
 		build_quads(p->stars, pinds, pi, qi,
-					p->mindistsq, p->maxdistsq, &nquads);
+					p->mindistsq, p->maxdistsq,
+					&(p->nquads));
 
-        p->nquads += nquads;
+        //p->nquads += nquads;
 
 		if (!quiet) {
 		  int pct;
