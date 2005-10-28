@@ -191,6 +191,9 @@ int main(int argc, char *argv[])
 		fprintf(hitfid, "# flipping parity (swapping row/col image coordinates)\n");
 		fprintf(hitfid, "parity_flip = True\n");
 	}
+	else {
+	  fprintf(hitfid, "parity_flip = False\n");
+	}
 	fprintf(hitfid, "min_matches_to_agree = %u\n", MIN_MATCHES_TO_AGREE);
 	fprintf(hitfid, "max_matches_needed = %u\n", MAX_MATCHES_NEEDED);
 
