@@ -51,12 +51,11 @@ if (keyword_set(galex)) then begin
 endif
 if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
   +strtrim(string(band),2)
-if (NOT keyword_set(filename)) then filename= prefix+'.bin'
-if (NOT keyword_set(savefile)) then savefile= prefix+'.sav'
 nside= 2L^7L
 healgen_lb,nside,rap,decp
 thetamax= 2.0D0*sqrt(4D0*1.8D2^2/!DPI/double(n_elements(rap)))
 if keyword_set(ngc) then begin
+    prefix= prefix+'_ngc'
     glactc, ngpra,ngpdec,2000,0,90,2,/degree
     goodpix= where(djs_diff_angle(rap,decp,ngpra,ngpdec) LT 60.0)
     rap= rap[goodpix]
@@ -64,6 +63,8 @@ if keyword_set(ngc) then begin
 endif else begin
     goodpix= lindgen(n_elements(rap))
 endelse
+if (NOT keyword_set(filename)) then filename= prefix+'.objs'
+if (NOT keyword_set(savefile)) then savefile= prefix+'.sav'
 npix= n_elements(rap)
 nperpix= round(float(nstars)/float(npix))
 nstars= long(npix)*long(nperpix)
