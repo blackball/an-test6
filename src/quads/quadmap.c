@@ -97,6 +97,8 @@ int main(int argc, char *argv[])
 
 	tmps = mk_star();
 	for(ii=0;ii<numquads;ii++) {
+	  if(is_power_of_two(ii+1))
+	    fprintf(stderr,"  done %lu\%lu quads\r",ii+1,numquads);
 	  readonequad(quadfid,&iA,&iB,&iC,&iD);
 	  fseekocat(iA, catposmarker, catfid);
 	  freadstar(tmps, catfid); fwritestar(tmps, qmapfid);
