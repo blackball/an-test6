@@ -13,6 +13,7 @@
 ; KEYWORDS:
 ;   sdss     - over-ride all inputs to SDSS-optimized values
 ;   galex    - over-ride all inputs to GALEX-optimized values
+;   ngc      - only do healpix pixels in the North Galactic Cap
 ; OUTPUTS:
 ;   nstars   - number of stars *actually* produced
 ; COMMENTS:
@@ -30,14 +31,14 @@
 ;   2005-10-02  started - Hogg (NYU)
 ;-
 pro an_usno_select, nstars=nstars,band=band,minmag=minmag, $
-                    sdss=sdss,galex=galex
+                    sdss=sdss,galex=galex,ngc=ngc
 if (NOT keyword_set(nstars)) then nstars= 12L*4L^11L
 if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; min mag
 ; if (NOT keyword_set(maxerr)) then maxerr= 700.0 ; max position error
 ; if (NOT keyword_set(maxpm)) then maxpm= 70.0 ; max proper motion
 if (keyword_set(sdss)) then begin
-    nstars= 12L*4L^11L
+    nstars= 12L*4L^10L
     band= 3                     ; R band
     minmag= 14.0                ; min mag
     prefix= 'an_usno_sdss'
@@ -52,10 +53,18 @@ if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
   +strtrim(string(band),2)
 if (NOT keyword_set(filename)) then filename= prefix+'.bin'
 if (NOT keyword_set(savefile)) then savefile= prefix+'.sav'
-nside= 2L^6L
+nside= 2L^7L
 healgen_lb,nside,rap,decp
+thetamax= 2.0D0*sqrt(4D0*1.8D2^2/!DPI/double(n_elements(rap)))
+if keyword_set(ngc) then begin
+    glactc, ngpra,ngpdec,2000,0,90,2,/degree
+    goodpix= where(djs_diff_angle(rap,decp,ngpra,ngpdec) LT 60.0)
+    rap= rap[goodpix]
+    decp= decp[goodpix]
+endif else begin
+    goodpix= lindgen(n_elements(rap))
+endelse
 npix= n_elements(rap)
-thetamax= 2.0D0*sqrt(4D0*1.8D2^2/!DPI/double(npix))
 nperpix= round(float(nstars)/float(npix))
 nstars= long(npix)*long(nperpix)
 ra= dblarr(nstars)-99.0
@@ -69,7 +78,7 @@ for ii=0L,npix-1L do begin
         if (band EQ 2) then usnomag= usno.bmag
         if (band EQ 3) then usnomag= usno.rmag
         ang2pix_ring, nside,(9D1-usno.dec)*radperdeg,usno.ra*radperdeg,ind
-        inside= where((ind EQ ii) AND $
+        inside= where((ind EQ goodpix[ii]) AND $
                       (usnomag GT minmag),ninside)
 ; ;                      (usno.sde LT maxerr) AND $
 ; ;                      (usno.sra LT maxerr) AND $
