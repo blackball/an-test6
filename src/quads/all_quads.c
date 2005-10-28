@@ -529,9 +529,9 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 			continue;
 		  }
 
-		  ivec_ref(cdinds, ncd) = iC;
-		  dyv_ref(cdx, ncd) = thisx;
-		  dyv_ref(cdy, ncd) = thisy;
+		  ivec_set(cdinds, ncd, iC);
+		  dyv_set(cdx, ncd, thisx);
+		  dyv_set(cdy, ncd, thisy);
 		  ncd++;
         }
         for (c=0; c<ncd; c++) {
@@ -611,7 +611,7 @@ void last_result(void* vparams, node* query) {
 			}
 			// copy pindices.
 			for (k=0; k<search->num_points; k++) {
-				ivec_ref(pinds, pi + k) = ivec_ref(search->pindexes, k);
+			  ivec_set(pinds, pi + k, ivec_ref(search->pindexes, k));
 			}
 			pi += k;
 		}
