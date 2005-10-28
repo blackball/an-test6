@@ -1,17 +1,19 @@
 #include "fileutil.h"
 #include "starutil.h"
-#include "math.h"
-#define OPTIONS "bhgf:N:"
+#include <math.h>
+#define OPTIONS "bhgf:N:I:"
 
-char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] -f catalog.objs\n"
-"> outfile.pgm\n"
-"  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n";
+char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] [-I intensity]"
+" -f catalog.objs > outfile.pgm\n"
+"  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n"
+"  -N sets edge size of output image, -I sets intensity scale for pixels\n";
 
-unsigned int **projection;
+double *projection;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-unsigned long N=3000;
+int N=3000;
+double Increment=1.0;
 
 inline void project_equal_area(double x, double y, double z, int *X, int *Y)
 {
@@ -81,7 +83,10 @@ int main(int argc, char *argv[])
 			grid = 1;
 			break;
 		case 'N':
-		  N=strtoul(optarg, NULL, 0);
+		  N=(int)strtoul(optarg, NULL, 0);
+		  break;
+		case 'I':
+		  Increment=strtod(optarg, NULL);
 		  break;
 		case 'f':
 			fid = fopen(optarg,"r");
@@ -112,7 +117,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	projection=calloc(sizeof(unsigned int),N*N);
+	projection=calloc(sizeof(double),N*N);
 
 	for (ii = 0; ii < numstars; ii++) {
 	  if(is_power_of_two(ii+1))
@@ -137,7 +142,8 @@ int main(int argc, char *argv[])
 			/* Hammer-Aitoff projection */
 			project_hammer_aitoff_x(x, y, z, &X, &Y);
 		}
-		projection[X][Y] += 1;
+		if(projection[X+N*Y]<255)
+		  projection[X+N*Y] += Increment;
 	}
 
 	if (grid) {
@@ -163,7 +169,7 @@ int main(int argc, char *argv[])
 					/* Hammer-Aitoff projection */
 					project_hammer_aitoff_x(x, y, z, &X, &Y);
 				}
-				projection[X][Y] = 255;
+				projection[X+N*Y] = 255;
 			}
 		}
 		/* Draw a line for dec=-80...+80 in 10 degree sections */
@@ -188,17 +194,17 @@ int main(int argc, char *argv[])
 					/* Hammer-Aitoff projection */
 					project_hammer_aitoff_x(x, y, z, &X, &Y);
 				}
-				projection[X][Y] = 255;
+				projection[X+N*Y] = 255;
 			}
 		}
 	}
 
 	// Output PGM format
-	printf("P5 %d %d %d\n",(int)N,(int)N, 255);
+	printf("P5 %d %d %d\n",N,N, 255);
 	for (ii = 0; ii < N; ii++) {
 		for (jj = 0; jj < N; jj++) {
-			if (projection[ii][jj] < 255)
-				putchar(projection[ii][jj]);
+			if (projection[ii+N*jj] < 255)
+				putchar(ceil(projection[ii+N*jj]));
 				
 			else
 				putchar(255);
