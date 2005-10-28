@@ -94,15 +94,15 @@ void get_star(FILE *fid, off_t marker, int objsize,
 
 int main(int argc, char *argv[])
 {
-    dimension DimStars;
-	int argidx, argchar; //  opterr = 0;
-	double xx, yy, zz, ra, dec, ramin, ramax, decmin, decmax;
-	sidx numstars, whichstar, ii;
-	int i;
-	star* mystar;
-	bool inplace;
-    //obj_header header;
-    //bool byteswap = false;
+  dimension DimStars;
+  int argchar; //  opterr = 0;
+  double ramin, ramax, decmin, decmax;
+  sidx numstars;
+  int i;
+  star* mystar;
+  bool inplace;
+  //obj_header header;
+  //bool byteswap = false;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
