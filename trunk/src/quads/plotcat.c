@@ -55,8 +55,8 @@ inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y
 int main(int argc, char *argv[])
 {
 	char ASCII = READ_FAIL;
-	int ii, jj, reverse=0, hammer=0, grid=0;
-	sidx numstars;
+	sidx ii,jj,numstars;
+	int reverse=0, hammer=0, grid=0;
 	dimension Dim_Stars;
 	double ramin, ramax, decmin, decmax;
 	double x,y,z;
