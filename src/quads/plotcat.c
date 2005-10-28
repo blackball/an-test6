@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 
 	for (ii = 0; ii < numstars; ii++) {
 	  if(is_power_of_two(ii+1))
-	    fprintf(stderr,"  done %lu\%lu stars\r",ii+1,numstars);
+	    fprintf(stderr,"  done %lu/%lu stars\r",ii+1,numstars);
 
 		if (ASCII) {
 			fscanf(fid, "%lf,%lf,%lf\n", &x, &y, &z);
