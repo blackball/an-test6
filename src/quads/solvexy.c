@@ -10,18 +10,20 @@
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpf:o:t:m:"
+#define OPTIONS "hpf:o:t:m:n:x:"
 const char HelpString[] =
-    "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
-    "   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n"
-"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
+"solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
+"   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
+"   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n"
+"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n"
+"   default matches_needed_to_agree is 3\n"
+"   default max_matches_needed is 8\n";
 
-#define MIN_MATCHES_TO_AGREE 4
-#define MAX_MATCHES_NEEDED 4
+#define DEFAULT_MIN_MATCHES_TO_AGREE 3
+#define DEFAULT_MAX_MATCHES_NEEDED 8
 #define DEFAULT_AGREE_TOL 7.0
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
-
 
 qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
 
@@ -60,6 +62,8 @@ double AgreeArcSec = DEFAULT_AGREE_TOL;
 double AgreeTol;
 qidx mostAgree;
 char ParityFlip = DEFAULT_PARITY_FLIP;
+unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
+unsigned int max_matches_needed = DEFAULT_MAX_MATCHES_NEEDED;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -101,6 +105,12 @@ int main(int argc, char *argv[])
 		case 'p':
 			ParityFlip = 1 - ParityFlip;
 			break;
+		case 'n':
+		  min_matches_to_agree = (unsigned int) strtol(optarg, NULL, 0);
+		  break;
+		case 'x':
+		  max_matches_needed = (unsigned int) strtol(optarg, NULL, 0);
+		  break;
 		case '?':
 			fprintf(stderr, "Unknown option `-%c'.\n", optopt);
 		case 'h':
@@ -195,8 +205,8 @@ int main(int argc, char *argv[])
 	else {
 	  fprintf(hitfid, "parity_flip = False\n");
 	}
-	fprintf(hitfid, "min_matches_to_agree = %u\n", MIN_MATCHES_TO_AGREE);
-	fprintf(hitfid, "max_matches_needed = %u\n", MAX_MATCHES_NEEDED);
+	fprintf(hitfid, "min_matches_to_agree = %u\n", min_matches_to_agree);
+	fprintf(hitfid, "max_matches_needed = %u\n", max_matches_needed);
 
 	numsolved = solve_fields(thefields, codekd, codetol);
 
@@ -303,7 +313,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 						fprintf(stderr,
 						        "    field %lu: using %lu of %lu objects (%lu quads agree so far)      \r",
 						        ii, fieldidx, numxy, mostAgree);
-						if (mostAgree >= MAX_MATCHES_NEEDED) {
+						if (mostAgree >= max_matches_needed) {
 							iA = numxy;
 							fieldidx = numxy;
 						}
@@ -475,7 +485,7 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
 		mo->sMin = sMin;
 		mo->sMax = sMax;
 		mo->nearlist = add_transformed_corners(sMin, sMax, thisquadno, &hitkd);
-		if (mo->nearlist != NULL && mo->nearlist->size >= MIN_MATCHES_TO_AGREE
+		if (mo->nearlist != NULL && mo->nearlist->size >= min_matches_to_agree
 		        && mo->nearlist->size > mostAgree)
 			mostAgree = mo->nearlist->size;
 		mo->code_err = 0.0;
@@ -595,7 +605,7 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 		ii++;
 	}
 
-	if (bestnum < MIN_MATCHES_TO_AGREE) {
+	if (bestnum < min_matches_to_agree) {
 		bestnum = 0;
 		bestone = NULL;
 	}
