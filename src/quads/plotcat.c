@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
 	double ramin, ramax, decmin, decmax;
 	double x,y,z;
 	int X,Y;
+	unsigned long int saturated=0;
 	FILE* fid = NULL;
 	int argidx, argchar; //  opterr = 0;
 
@@ -203,12 +204,17 @@ int main(int argc, char *argv[])
 	printf("P5 %d %d %d\n",N,N, 255);
 	for (ii = 0; ii < N; ii++) {
 		for (jj = 0; jj < N; jj++) {
-			if (projection[ii+N*jj] < 255)
+			if (projection[ii+N*jj] <= 255)
 				putchar(ceil(projection[ii+N*jj]));
 				
-			else
+			else {
 				putchar(255);
+				saturated++;
+			}
 		}
 	}
+
+	fprintf(stderr," %.1f percent of pixels saturated\n",
+		100.0*(double)saturated/((double)N*(double)N));
 	return 0;
 }
