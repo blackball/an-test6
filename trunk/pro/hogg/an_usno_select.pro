@@ -51,7 +51,7 @@ if (keyword_set(galex)) then begin
 endif
 if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
   +strtrim(string(band),2)
-nside= 2L^7L
+nside= 2L^8L                    ; 2L^6L makes approx 1 deg^2 pixels
 healgen_lb,nside,rap,decp
 thetamax= 2.0D0*sqrt(4D0*1.8D2^2/!DPI/double(n_elements(rap)))
 if keyword_set(ngc) then begin
