@@ -389,8 +389,6 @@ char *mk_filename(const char *basename, const char *extension)
 	return fname;
 }
 
-
-
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
                  qidx ***starquads)
 {
