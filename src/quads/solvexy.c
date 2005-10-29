@@ -13,7 +13,8 @@
 #define OPTIONS "hpf:o:t:m:"
 const char HelpString[] =
     "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
-    "   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n";
+    "   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n"
+"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
 
 #define MIN_MATCHES_TO_AGREE 4
 #define MAX_MATCHES_NEEDED 4
