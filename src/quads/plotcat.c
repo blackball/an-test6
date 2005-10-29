@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	fprintf(stderr," %.1f percent of pixels saturated\n",
-		100.0*(double)saturated/((double)N*(double)N));
+	fprintf(stderr," %lu/%lu pixels saturated\n",
+		saturated,((unsigned long int)N*(unsigned long int)N));
 	return 0;
 }
