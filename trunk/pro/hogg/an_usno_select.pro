@@ -14,6 +14,7 @@
 ;   sdss     - over-ride all inputs to SDSS-optimized values
 ;   galex    - over-ride all inputs to GALEX-optimized values
 ;   ngc      - only do healpix pixels in the North Galactic Cap
+;   continue - pick up where you left off using save file
 ; OUTPUTS:
 ;   nstars   - number of stars *actually* produced
 ; COMMENTS:
@@ -31,7 +32,7 @@
 ;   2005-10-02  started - Hogg (NYU)
 ;-
 pro an_usno_select, nstars=nstars,band=band,minmag=minmag, $
-                    sdss=sdss,galex=galex,ngc=ngc
+                    sdss=sdss,galex=galex,ngc=ngc,continue=continue
 if (NOT keyword_set(nstars)) then nstars= 12L*4L^11L
 if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; min mag
@@ -73,7 +74,11 @@ dec= dblarr(nstars)-99.0
 ranking_value= fltarr(nstars)-99.0
 radperdeg= !DPI/1.8D2
 for ii=0L,npix-1L do begin
-    splog, 'working on pixel',ii,' of',npix,' at',rap[ii],decp[ii]
+    if keyword_set(continue) then begin
+        restore, savefile
+        continue= 0
+    endif
+;    splog, 'working on pixel',ii,' of',npix,' at',rap[ii],decp[ii]
     usno= usno_read(rap[ii],decp[ii],thetamax)
     if (n_tags(usno) GT 1) then begin
         if (band EQ 2) then usnomag= usno.bmag
@@ -85,7 +90,7 @@ for ii=0L,npix-1L do begin
 ; ;                      (usno.sra LT maxerr) AND $
 ; ;                      (usno.mura LT maxpm) AND $
 ; ;                      (usno.mudec LT maxpm) AND $
-        splog, 'found',ninside,' good USNO-B1.0 stars in pixel',ii
+;        splog, 'found',ninside,' good USNO-B1.0 stars in pixel',ii
         if (ninside GT 1) then begin
             sindx= inside[sort(usnomag[inside])]
             jj= ii*nperpix
