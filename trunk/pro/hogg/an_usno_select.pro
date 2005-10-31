@@ -110,7 +110,7 @@ for bigpix= 0L,n_elements(bigrap)-1L do begin
 ; ;                      (usno.sra LT maxerr) AND $
 ; ;                      (usno.mura LT maxpm) AND $
 ; ;                      (usno.mudec LT maxpm) AND $
-            splog, 'found',ninside,' good USNO-B1.0 stars in pixel',ii
+;             splog, 'found',ninside,' good USNO-B1.0 stars in pixel',goodpix[ii]
             if (ninside GT 1) then begin
                 sindx= inside[sort(usnomag[inside])]
                 jj= ii*nperpix
