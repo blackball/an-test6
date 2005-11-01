@@ -55,11 +55,11 @@ if keyword_set(ngc) then begin
 endif else begin
     maxfields= n_elements(flist)
 endelse
-nfields= nfields < maxfields
 
 ; set defaults
 if not keyword_set(seed) then seed=7L
 if not keyword_set(nfields) then nfields=1L
+nfields= nfields < maxfields
 if not keyword_set(chunksize) then chunksize=10000L
 if not keyword_set(maxobj) then maxobj=300
 if not keyword_set(band) then band=2
@@ -122,7 +122,7 @@ for chunk=1L,nchunks do begin
                         mwrfits, obj,fitsname,/create
                         created= 1
                     endif else mwrfits,obj,fitsname
-                    splog, n_elements(good),' objects made the cuts'
+                    splog, n_elements(good),' objects made the cuts, brightest has flux',field[ind[good[0]]].psfflux[band]
                     printf, wlun,'#' $
                       +' '+strtrim(string(obj[0].run),2) $
                       +' '+strtrim(string(obj[0].rerun),2) $
