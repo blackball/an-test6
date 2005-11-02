@@ -1,7 +1,7 @@
 #include "starutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:q:i:"
+#define OPTIONS "hf:q:i::"
 const char HelpString[] =
     "findquad -f fname {-q quad# | -i starID}\n";
 
@@ -13,7 +13,7 @@ char *quadfname = NULL;
 char *codefname = NULL;
 sidx thestar;
 qidx thequad;
-char starset = FALSE, quadset = FALSE;
+char starset = FALSE, quadset = FALSE, readstaridx = FALSE;
 char buff[100], maxstarWidth;
 
 int main(int argc, char *argv[])
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	qidx **starquads;
 	char qASCII;
 
-	if (argc <= 4) {
+	if (argc <= 3) {
 		fprintf(stderr, HelpString);
 		return (OPT_ERR);
 	}
@@ -42,7 +42,10 @@ int main(int argc, char *argv[])
 			codefname = mk_codefn(optarg);
 			break;
 		case 'i':
-			thestar = strtoul(optarg, NULL, 0);
+			if (optarg)
+				thestar = strtoul(optarg, NULL, 0);
+			else
+				readstaridx = TRUE;
 			starset = TRUE;
 			break;
 		case 'q':
@@ -128,17 +131,37 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  (%lu unique stars used in quads)\n", numstars2);
 		fclose(qidxfid);
 		if (starset == TRUE) {
-			matchstar = (sidx *)bsearch(&thestar, starlist, numstars2,
-			                            sizeof(sidx *), compare_sidx);
-			if (matchstar == NULL)
-				fprintf(stderr, "no match for star %lu\n", thestar);
-			else {
-				ii = (sidx)(matchstar - starlist);
-				fprintf(stderr, "star %lu appears in %lu quads:\n",
-				        starlist[ii], starnumq[ii]);
-				for (jj = 0;jj < starnumq[ii];jj++)
-					fprintf(stderr, "%lu ", *(starquads[ii] + jj));
-				fprintf(stderr, "\n");
+
+			if (readstaridx) {
+				char scanrez = 1;
+				while (!feof(stdin) && scanrez) {
+					scanrez = fscanf(stdin, "%lu", &thestar);
+					matchstar = (sidx *)bsearch(&thestar, starlist, numstars2,
+								    sizeof(sidx *), compare_sidx);
+					if (matchstar == NULL)
+						fprintf(stdout, "[]\n", thestar);
+					else {
+						ii = (sidx)(matchstar - starlist);
+						fprintf(stdout, "[");
+						for (jj = 0;jj < starnumq[ii];jj++)
+							fprintf(stdout, "%lu, ", *(starquads[ii] + jj));
+						fprintf(stdout, "]\n");
+					}
+					fflush(stdout);
+				}
+			} else {
+				matchstar = (sidx *)bsearch(&thestar, starlist, numstars2,
+							    sizeof(sidx *), compare_sidx);
+				if (matchstar == NULL)
+					fprintf(stderr, "no match for star %lu\n", thestar);
+				else {
+					ii = (sidx)(matchstar - starlist);
+					fprintf(stderr, "star %lu appears in %lu quads:\n",
+						starlist[ii], starnumq[ii]);
+					for (jj = 0;jj < starnumq[ii];jj++)
+						fprintf(stderr, "%lu ", *(starquads[ii] + jj));
+					fprintf(stderr, "\n");
+				}
 			}
 
 		}

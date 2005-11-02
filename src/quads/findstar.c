@@ -3,15 +3,16 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:ixrt:k:"
+#define OPTIONS "hf:ixrRt:k:"
 const char HelpString[] =
     "findstar -f fname [-t dist | -k kNN] {-i idx | -x x y z | -r RA DEC}  OR\n"
-    "findstar -f fname [-t dist | -k kNN] {-i | -x | -r} then read stdin\n";
+    "findstar -f fname [-t dist | -k kNN] {-i | -x | -r | -R} then read stdin\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 void output_star(FILE *fid, sidx i, stararray *sa);
+void output_results(FILE *fid, kquery *kq, kdtree *starkd, star *thequery, stararray *thestars);
 
 char *treefname = NULL, *catfname = NULL;
 FILE *treefid = NULL, *catfid = NULL;
@@ -22,13 +23,12 @@ char buff[100], oneobjWidth;
 int main(int argc, char *argv[])
 {
 	int argidx, argchar; //  opterr = 0;
-	char whichset = 0, xyzset = 0, radecset = 0, kset = 1, dtolset = 0;
+	char whichset = 0, xyzset = 0, radecset = 0, kset = 1, dtolset = 0, read_dtol = 0;
 	sidx K = 0;
 	double dtol = 0.0;
-	sidx numstars, whichstar, ii;
+	sidx numstars, whichstar;
 	double xx, yy, zz, ra, dec, ramin, ramax, decmin, decmax;
 	kquery *kq = NULL;
-	kresult *krez = NULL;
 	star *thequery = NULL;
 	kdtree *starkd = NULL;
 	stararray *thestars = NULL;
@@ -68,6 +68,12 @@ int main(int argc, char *argv[])
 			radecset = 1;
 			whichset = 0;
 			xyzset = 0;
+			break;
+		case 'R':
+			radecset = 1;
+			whichset = 0;
+			xyzset = 0;
+			read_dtol = 1;
 			break;
 		case 'f':
 			treefname = mk_streefn(optarg);
@@ -156,12 +162,7 @@ int main(int argc, char *argv[])
 					else if (dtolset)
 						fprintf(stderr, "  getting stars within %lf of %lu\n", dtol, whichstar);
 					thequery = thestars->array[whichstar];
-					krez = mk_kresult_from_kquery(kq, starkd, thequery);
-					if (krez != NULL) {
-						for (ii = 0;ii < krez->count;ii++)
-							output_star(stdout, krez->pindexes->iarr[ii], thestars);
-						free_kresult(krez);
-					}
+					output_results(stdout, kq, starkd, thequery, thestars);
 				}
 			} else if (radecset) {
 				if (argidx < (argc - 1)) {
@@ -177,12 +178,7 @@ int main(int argc, char *argv[])
 					else if (dtolset)
 						fprintf(stderr, "  getting stars within %lf of ra=%lf,dec=%lf\n",
 						        dtol, ra, dec);
-					krez = mk_kresult_from_kquery(kq, starkd, thequery);
-					if (krez != NULL) {
-						for (ii = 0;ii < krez->count;ii++)
-							output_star(stdout, krez->pindexes->iarr[ii], thestars);
-						free_kresult(krez);
-					}
+					output_results(stdout, kq, starkd, thequery, thestars);
 				}
 			} else { //xyzset
 				if (argidx < (argc - 2)) {
@@ -200,12 +196,7 @@ int main(int argc, char *argv[])
 						fprintf(stderr, " stars within %lf of x=%lf,y=%lf,z=%lf\n",
 						        dtol, xx, yy, zz);
 
-					krez = mk_kresult_from_kquery(kq, starkd, thequery);
-					if (krez != NULL) {
-						for (ii = 0;ii < krez->count;ii++)
-							output_star(stdout, krez->pindexes->iarr[ii], thestars);
-						free_kresult(krez);
-					}
+					output_results(stdout, kq, starkd, thequery, thestars);
 				}
 			}
 		}
@@ -227,17 +218,21 @@ int main(int argc, char *argv[])
 						else if (dtolset)
 							fprintf(stderr, "  getting stars within %lf of %lu\n", dtol, whichstar);
 						thequery = thestars->array[whichstar];
-						krez = mk_kresult_from_kquery(kq, starkd, thequery);
-						if (krez != NULL) {
-							for (ii = 0;ii < krez->count;ii++)
-								output_star(stdout, krez->pindexes->iarr[ii], thestars);
-							free_kresult(krez);
-						}
+						output_results(stdout, kq, starkd, thequery, thestars);
 					}
 				}
 			} else if (radecset) {
-				scanrez = fscanf(stdin, "%lf %lf", &ra, &dec);
-				if (scanrez == 2) {
+				if (read_dtol) {
+					scanrez = fscanf(stdin, "%lf %lf %lf", &ra, &dec, &dtol);
+
+					if (kq)
+						free_kquery(kq);
+					kq = mk_kquery("rangesearch", "", KD_UNDEF, dtol, starkd->rmin);
+				}
+				else
+					scanrez = fscanf(stdin, "%lf %lf", &ra, &dec);
+				if ((scanrez == 2 && !read_dtol) || (scanrez ==
+							3 && read_dtol)) {
 					//fprintf(stderr,"read ra=%lf,dec=%lf\n",ra,dec);
 					star_set(thequery, 0, radec2x(deg2rad(ra), deg2rad(dec)));
 					star_set(thequery, 1, radec2y(deg2rad(ra), deg2rad(dec)));
@@ -248,12 +243,8 @@ int main(int argc, char *argv[])
 					else if (dtolset)
 						fprintf(stderr, "  getting stars within %lf of ra=%lf,dec=%lf\n",
 						        dtol, ra, dec);
-					krez = mk_kresult_from_kquery(kq, starkd, thequery);
-					if (krez != NULL) {
-						for (ii = 0;ii < krez->count;ii++)
-							output_star(stdout, krez->pindexes->iarr[ii], thestars);
-						free_kresult(krez);
-					}
+					output_results(stdout, kq, starkd, thequery, thestars);
+					fflush(stdout);
 				}
 			} else { //xyzset
 				scanrez = fscanf(stdin, "%lf %lf %lf", &xx, &yy, &zz);
@@ -269,12 +260,7 @@ int main(int argc, char *argv[])
 						fprintf(stderr, " stars within %lf of x=%lf,y=%lf,z=%lf\n",
 						        dtol, xx, yy, zz);
 
-					krez = mk_kresult_from_kquery(kq, starkd, thequery);
-					if (krez != NULL) {
-						for (ii = 0;ii < krez->count;ii++)
-							output_star(stdout, krez->pindexes->iarr[ii], thestars);
-						free_kresult(krez);
-					}
+					output_results(stdout, kq, starkd, thequery, thestars);
 				}
 			}
 		}
@@ -293,6 +279,21 @@ int main(int argc, char *argv[])
 
 	//basic_am_malloc_report();
 	return (0);
+}
+
+void output_results(FILE* fid, kquery *kq, kdtree *starkd, star *thequery, stararray *thestars)
+{
+	int ii;
+	kresult *krez = NULL;
+	krez = mk_kresult_from_kquery(kq, starkd, thequery);
+	fprintf(fid, "{\n");
+	if (krez != NULL) {
+		for (ii = 0;ii < krez->count;ii++)
+			output_star(fid, krez->pindexes->iarr[ii], thestars);
+		free_kresult(krez);
+	}
+	fprintf(fid, "}\n");
+	fflush(stdin);
 }
 
 
@@ -320,10 +321,10 @@ void output_star(FILE *fid, sidx i, stararray *sa)
 
 #if DIM_STARS==2
 
-	fprintf(fid, "%lu: %lf,%lf\n", i, star_ref(tmps, 0), star_ref(tmps, 1));
+	fprintf(fid, "%lu: (%lf, %lf)\n", i, star_ref(tmps, 0), star_ref(tmps, 1));
 #else
 
-	fprintf(fid, "%lu: %lf,%lf,%lf (%lf,%lf)\n",
+	fprintf(fid, "%lu: ((%lf, %lf, %lf), (%lf, %lf)),\n",
 			i, star_ref(tmps, 0), star_ref(tmps, 1), star_ref(tmps, 2),
 			rad2deg(xy2ra(star_ref(tmps, 0), star_ref(tmps, 1))),
 			rad2deg(z2dec(star_ref(tmps, 2))));
@@ -334,5 +335,3 @@ void output_star(FILE *fid, sidx i, stararray *sa)
 
 	return ;
 }
-
-
