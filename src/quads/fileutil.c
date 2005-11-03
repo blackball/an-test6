@@ -22,7 +22,7 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
                    double *ramin, double *ramax, double *decmin, double *decmax,
 				   int nkeep)
 {
-	char ASCII = READ_FAIL;
+	char ASCII;
 	sidx ii;
 	stararray *thestars = NULL;
 
@@ -43,16 +43,7 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
 			free_stararray(thestars);
 			return (stararray *)NULL;
 		}
-		if (ASCII) {
-			if (*Dim_Stars == 2)
-				fscanf(fid, "%lf,%lf\n", thestars->array[ii]->farr,
-				       thestars->array[ii]->farr + 1 );
-			else if (*Dim_Stars == 3)
-				fscanf(fid, "%lf,%lf,%lf\n", thestars->array[ii]->farr,
-				       thestars->array[ii]->farr + 1,
-				       thestars->array[ii]->farr + 2 );
-		} else
-			fread(thestars->array[ii]->farr, sizeof(double), *Dim_Stars, fid);
+		fread(thestars->array[ii]->farr, sizeof(double), *Dim_Stars, fid);
 	}
 
 	// if nkeep is set, should we read and discard the rest?
@@ -66,148 +57,102 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
    for debugging purposes, ie with fieldquads */
 quadarray *readidlist(FILE *fid, qidx *numfields)
 {
-	char ASCII = 0;
-	qidx ii, jj, numS;
+	qidx ii, numS;
 	magicval magic;
 	quadarray *thepids = NULL;
 	fread(&magic, sizeof(magic), 1, fid);
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		fscanf(fid, "mFields=%lu\n", numfields);
-	} else {
+	{
 		if (magic != MAGIC_VAL) {
 			fprintf(stderr, "ERROR (readidlist) -- bad magic value id list\n");
 			return ((quadarray *)NULL);
 		}
-		ASCII = 0;
 		fread(numfields, sizeof(*numfields), 1, fid);
 	}
 	thepids = mk_quadarray(*numfields);
 	for (ii = 0;ii < *numfields;ii++) {
 		// read in how many stars in this pic
-		if (ASCII)
-			fscanf(fid, "%lu", &numS);
-		else
-			fread(&numS, sizeof(numS), 1, fid);
+	  fread(&numS, sizeof(numS), 1, fid);
 		thepids->array[ii] = mk_quadd(numS);
 		if (thepids->array[ii] == NULL) {
 			fprintf(stderr, "ERROR (fieldquads) -- out of memory at field %lu\n", ii);
 			free_quadarray(thepids);
 			return (quadarray *)NULL;
 		}
-		if (ASCII) {
-			for (jj = 0;jj < numS;jj++)
-				fscanf(fid, ",%d", thepids->array[ii]->iarr + jj);
-			fscanf(fid, "\n");
-		} else
-			fread(thepids->array[ii]->iarr, sizeof(int), numS, fid);
+		fread(thepids->array[ii]->iarr, sizeof(int), numS, fid);
 	}
 	return thepids;
 }
 
-void write_objs_header(FILE *fid, char ASCII, sidx numstars,
-                       dimension DimStars, double ramin, double ramax, double decmin, double decmax)
+void write_objs_header(FILE *fid, sidx numstars,
+                       dimension DimStars, double ramin, double ramax, 
+							  double decmin, double decmax)
 {
-	if (ASCII) {
-		fprintf(fid, "NumStars=%lu\n", numstars);
-		fprintf(fid, "DimStars=%d\n", DimStars);
-		fprintf(fid, "Limits=%f,%f,%f,%f\n", ramin, ramax, decmin, decmax);
-	} else {
-		magicval magic = MAGIC_VAL;
-		fwrite(&magic, sizeof(magic), 1, fid);
-		fwrite(&numstars, sizeof(numstars), 1, fid);
-		fwrite(&DimStars, sizeof(DimStars), 1, fid);
-		fwrite(&ramin, sizeof(ramin), 1, fid);
-		fwrite(&ramax, sizeof(ramin), 1, fid);
-		fwrite(&decmin, sizeof(ramin), 1, fid);
-		fwrite(&decmax, sizeof(ramin), 1, fid);
-	}
-	return ;
+  magicval magic = MAGIC_VAL;
+  fwrite(&magic, sizeof(magic), 1, fid);
+  fwrite(&numstars, sizeof(numstars), 1, fid);
+  fwrite(&DimStars, sizeof(DimStars), 1, fid);
+  fwrite(&ramin, sizeof(ramin), 1, fid);
+  fwrite(&ramax, sizeof(ramin), 1, fid);
+  fwrite(&decmin, sizeof(ramin), 1, fid);
+  fwrite(&decmax, sizeof(ramin), 1, fid);
+  return ;
 }
 
-void write_code_header(FILE *codefid, char ASCII, qidx numCodes,
+void write_code_header(FILE *codefid, qidx numCodes,
                        sidx numstars, dimension DimCodes, double index_scale)
 {
-	if (ASCII) {
-		fprintf(codefid, "NumCodes=%lu\n", numCodes);
-		fprintf(codefid, "DimCodes=%hu\n", DimCodes);
-		fprintf(codefid, "IndexScale=%f\n", index_scale);
-		fprintf(codefid, "NumStars=%lu\n", numstars);
-	} else {
-		magicval magic = MAGIC_VAL;
-		fwrite(&magic, sizeof(magic), 1, codefid);
-		fwrite(&numCodes, sizeof(numCodes), 1, codefid);
-		fwrite(&DimCodes, sizeof(DimCodes), 1, codefid);
-		fwrite(&index_scale, sizeof(index_scale), 1, codefid);
-		fwrite(&numstars, sizeof(numstars), 1, codefid);
-	}
-	return ;
+  magicval magic = MAGIC_VAL;
+  fwrite(&magic, sizeof(magic), 1, codefid);
+  fwrite(&numCodes, sizeof(numCodes), 1, codefid);
+  fwrite(&DimCodes, sizeof(DimCodes), 1, codefid);
+  fwrite(&index_scale, sizeof(index_scale), 1, codefid);
+  fwrite(&numstars, sizeof(numstars), 1, codefid);
+  return ;
 
 }
 
-void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
+void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
                        dimension DimQuads, double index_scale)
 {
-	if (ASCII) {
-		fprintf(quadfid, "NumQuads=%lu\n", numQuads);
-		fprintf(quadfid, "DimQuads=%hu\n", DimQuads);
-		fprintf(quadfid, "IndexScale=%f\n", index_scale);
-		fprintf(quadfid, "NumStars=%lu\n", numstars);
-	} else {
-		magicval magic = MAGIC_VAL;
-		fwrite(&magic, sizeof(magic), 1, quadfid);
-		fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
-		fwrite(&DimQuads, sizeof(DimQuads), 1, quadfid);
-		fwrite(&index_scale, sizeof(index_scale), 1, quadfid);
-		fwrite(&numstars, sizeof(numstars), 1, quadfid);
-	}
-	return ;
+  magicval magic = MAGIC_VAL;
+  fwrite(&magic, sizeof(magic), 1, quadfid);
+  fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
+  fwrite(&DimQuads, sizeof(DimQuads), 1, quadfid);
+  fwrite(&index_scale, sizeof(index_scale), 1, quadfid);
+  fwrite(&numstars, sizeof(numstars), 1, quadfid);
+  return ;
 }
 
-void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len)
+void fix_code_header(FILE *codefid, qidx numCodes, size_t len)
 {
 	rewind(codefid);
-	if (ASCII) {
-		fprintf(codefid, "NumCodes=%2$*1$lu\n", (int)len, numCodes);
-	} else {
-		magicval magic = MAGIC_VAL;
-		fwrite(&magic, sizeof(magic), 1, codefid);
-		fwrite(&numCodes, sizeof(numCodes), 1, codefid);
-	}
+	magicval magic = MAGIC_VAL;
+	fwrite(&magic, sizeof(magic), 1, codefid);
+	fwrite(&numCodes, sizeof(numCodes), 1, codefid);
 	return ;
 }
 
-void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len)
+void fix_quad_header(FILE *quadfid, qidx numQuads, size_t len)
 {
 	rewind(quadfid);
-	if (ASCII) {
-		fprintf(quadfid, "NumQuads=%2$*1$lu\n", len, numQuads);
-	} else {
-		magicval magic = MAGIC_VAL;
-		fwrite(&magic, sizeof(magic), 1, quadfid);
-		fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
-	}
+	magicval magic = MAGIC_VAL;
+	fwrite(&magic, sizeof(magic), 1, quadfid);
+	fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
 	return ;
 }
 
 
 char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
-                      double *ramin, double *ramax, double *decmin, double *decmax)
+                      double *ramin, double *ramax, 
+							 double *decmin, double *decmax)
 {
-	char ASCII = READ_FAIL;
 	magicval magic;
 	fread(&magic, sizeof(magic), 1, fid);
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		fscanf(fid, "mStars=%lu\n", numstars);
-		fscanf(fid, "DimStars=%hu\n", DimStars);
-		fscanf(fid, "Limits=%lf,%lf,%lf,%lf\n", ramin, ramax, decmin, decmax);
-	} else {
+	{
 		if (magic != MAGIC_VAL) {
 			fprintf(stderr, "ERROR (read_objs_header) -- bad magic value\n");
 			return (READ_FAIL);
 		}
-		ASCII = 0;
 		fread(numstars, sizeof(*numstars), 1, fid);
 		fread(DimStars, sizeof(*DimStars), 1, fid);
 		fread(ramin, sizeof(*ramin), 1, fid);
@@ -216,7 +161,7 @@ char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
 		fread(decmax, sizeof(*decmax), 1, fid);
 	}
 
-	return (ASCII);
+	return (0);
 }
 
 
@@ -224,81 +169,56 @@ char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
 char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
                       dimension *DimCodes, double *index_scale)
 {
-	char ASCII = READ_FAIL;
 	magicval magic;
 	fread(&magic, sizeof(magic), 1, fid);
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		fscanf(fid, "mCodes=%lu\n", numcodes);
-		fscanf(fid, "DimCodes=%hu\n", DimCodes);
-		fscanf(fid, "IndexScale=%lf\n", index_scale);
-		fscanf(fid, "NumStars=%lu\n", numstars);
-	} else {
+	{
 		if (magic != MAGIC_VAL) {
 			fprintf(stderr, "ERROR (read_code_header) -- bad magic value\n");
 			return (READ_FAIL);
 		}
-		ASCII = 0;
 		fread(numcodes, sizeof(*numcodes), 1, fid);
 		fread(DimCodes, sizeof(*DimCodes), 1, fid);
 		fread(index_scale, sizeof(*index_scale), 1, fid);
 		fread(numstars, sizeof(*numstars), 1, fid);
 	}
-	return (ASCII);
+	return (0);
 
 }
 
 char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
                       dimension *DimQuads, double *index_scale)
 {
-	char ASCII = READ_FAIL;
 	magicval magic;
 	fread(&magic, sizeof(magic), 1, fid);
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		fscanf(fid, "mQuads=%lu\n", numquads);
-		fscanf(fid, "DimQuads=%hu\n", DimQuads);
-		fscanf(fid, "IndexScale=%lf\n", index_scale);
-		fscanf(fid, "NumStars=%lu\n", numstars);
-	} else {
+	{
 		if (magic != MAGIC_VAL) {
 			fprintf(stderr, "ERROR (read_quad_header) -- bad magic value\n");
 			return (READ_FAIL);
 		}
-		ASCII = 0;
 		fread(numquads, sizeof(*numquads), 1, fid);
 		fread(DimQuads, sizeof(*DimQuads), 1, fid);
 		fread(index_scale, sizeof(*index_scale), 1, fid);
 		fread(numstars, sizeof(*numstars), 1, fid);
 	}
-	return (ASCII);
+	return (0);
 
 }
 
 
 xyarray *readxy(FILE *fid, char ParityFlip)
 {
-	char ASCII = 0;
 	qidx ii, jj, numxy, numfields;
 	magicval magic;
 	xyarray *thepix = NULL;
-	int tmpchar;
 	if (fread(&magic, sizeof(magic), 1, fid) != 1) {
 		fprintf(stderr, "ERROR (readxy) -- bad magic value in field file.\n");
 		return ((xyarray *)NULL);
 	}
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		if (fscanf(fid, "mFields=%lu\n", &numfields) != 1) {
-			fprintf(stderr, "ERROR (readxy) -- bad first line in field file.\n");
-			return ((xyarray *)NULL);
-		}
-	} else {
+	{
 		if (magic != MAGIC_VAL) {
 			fprintf(stderr, "ERROR (readxy) -- bad magic value in field file.\n");
 			return ((xyarray *)NULL);
 		}
-		ASCII = 0;
 		if (fread(&numfields, sizeof(numfields), 1, fid) != 1) {
 			fprintf(stderr, "ERROR (readxy) -- bad numfields fread in field file.\n");
 			return ((xyarray *)NULL);
@@ -306,30 +226,14 @@ xyarray *readxy(FILE *fid, char ParityFlip)
 	}
 	thepix = mk_xyarray(numfields);
 	for (ii = 0;ii < numfields;ii++) {
-		if (ASCII) {
-			tmpchar = fgetc(fid);
-			while (tmpchar == COMMENT_CHAR) {
-				fscanf(fid, "%*[^\n]");
-				fgetc(fid);
-				tmpchar = fgetc(fid);
-			}
-			ungetc(tmpchar, fid);
-			fscanf(fid, "%lu", &numxy); // CHECK THE RETURN VALUE MORON!
-		} else
-			fread(&numxy, sizeof(numxy), 1, fid); // CHECK THE RETURN VALUE MORON!
-		thepix->array[ii] = mk_xy(numxy);
+	  fread(&numxy, sizeof(numxy), 1, fid); // CHECK THE RETURN VALUE MORON!
+	  thepix->array[ii] = mk_xy(numxy);
 		if (xya_ref(thepix, ii) == NULL) {
 			fprintf(stderr, "ERROR (readxy) - out of memory at field %lu\n", ii);
 			free_xyarray(thepix);
 			return (xyarray *)NULL;
 		}
-		if (ASCII) {
-			for (jj = 0;jj < numxy;jj++)
-				fscanf(fid, ",%lf,%lf", (thepix->array[ii]->farr) + 2*jj,
-				       (thepix->array[ii]->farr) + 2*jj + 1 );
-			fscanf(fid, "\n");
-		} else
-			fread(thepix->array[ii]->farr, sizeof(double), DIM_XY*numxy, fid);
+		fread(thepix->array[ii]->farr, sizeof(double), DIM_XY*numxy, fid);
 
 		if (ParityFlip) {
 			double swaptmp;
@@ -392,21 +296,16 @@ char *mk_filename(const char *basename, const char *extension)
 sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
                  qidx ***starquads)
 {
-	char ASCII = READ_FAIL;
 	magicval magic;
 	sidx numStars, thisstar, jj;
 	qidx thisnumq, ii;
 
 	fread(&magic, sizeof(magic), 1, fid);
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		fscanf(fid, "mIndexedStars=%lu\n", &numStars);
-	} else {
+	{
 		if (magic != MAGIC_VAL) {
 			fprintf(stderr, "ERROR (fieldquads) -- bad magic value in quad index\n");
 			return (0);
 		}
-		ASCII = 0;
 		fread(&numStars, sizeof(numStars), 1, fid);
 	}
 	*starlist = malloc(numStars * sizeof(sidx));
@@ -425,25 +324,16 @@ sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
 	}
 
 	for (jj = 0;jj < numStars;jj++) {
-		if (ASCII) {
-			fscanf(fid, "%lu:%lu", &thisstar, &thisnumq);
-		} else {
-			fread(&thisstar, sizeof(thisstar), 1, fid);
-			fread(&thisnumq, sizeof(thisnumq), 1, fid);
-		}
+	  fread(&thisstar, sizeof(thisstar), 1, fid);
+	  fread(&thisnumq, sizeof(thisnumq), 1, fid);
 		(*starlist)[jj] = thisstar;
 		(*starnumq)[jj] = thisnumq;
 		(*starquads)[jj] = malloc(thisnumq * sizeof(qidx));
 		if ((*starquads)[jj] == NULL)
 			return (0);
 		for (ii = 0;ii < thisnumq;ii++) {
-			if (ASCII)
-				fscanf(fid, ",%lu", ((*starquads)[jj]) + ii);
-			else
-				fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
+		  fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
 		}
-		if (ASCII)
-			fscanf(fid, "\n");
 	}
 
 	return (numStars);

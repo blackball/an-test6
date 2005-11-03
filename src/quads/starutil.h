@@ -3,14 +3,7 @@
 #include "KD/ambs.h"
 #include "KD/amdyv_array.h"
 
-#define PLANAR_GEOMETRY 0
-
-#if PLANAR_GEOMETRY==1
- #define DIM_STARS 2
-#else
- #define DIM_STARS 3
-#endif
-
+#define DIM_STARS 3
 #define DIM_CODES 4
 #define DIM_QUADS 4
 #define DIM_XY 2
@@ -31,17 +24,10 @@
 #define SIDX_MAX ULONG_MAX
 #define QIDX_MAX ULONG_MAX
 
-#if PLANAR_GEOMETRY==1
-#define DEFAULT_RAMIN 0.0
-#define DEFAULT_RAMAX 1.0
-#define DEFAULT_DECMIN 0.0
-#define DEFAULT_DECMAX 1.0
-#else
 #define DEFAULT_RAMIN 0.0
 #define DEFAULT_RAMAX (2.0*PIl)
 #define DEFAULT_DECMIN (-PIl/2.0)
 #define DEFAULT_DECMAX (+PIl/2.0)
-#endif
 
 
 #define ABCD_ORDER 0
@@ -112,11 +98,7 @@ typedef dyv_array xyarray;
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
 #define z2dec(z) (asin(z)) // result in radians
 
-#if PLANAR_GEOMETRY==1
-#define radscale2xyzscale(r) (r)
-#else
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
-#endif
 
 
 

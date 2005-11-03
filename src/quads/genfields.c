@@ -190,16 +190,11 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 			//fprintf(stderr,"random location: %lu within scale.\n",numS);
 
 			if (numS) {
-#if DIM_STARS==2
-				fprintf(pix0fid, "centre %lf,%lf\n",
-				        star_ref(randstar, 0), star_ref(randstar, 1));
-#else
-
 				fprintf(pix0fid, "centre xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-						star_ref(randstar, 0), star_ref(randstar, 1), star_ref(randstar, 2),
+						star_ref(randstar, 0), star_ref(randstar, 1), 
+						  star_ref(randstar, 2),
 						rad2deg(xy2ra(star_ref(randstar, 0), star_ref(randstar, 1))),
 						rad2deg(z2dec(star_ref(randstar, 2))));
-#endif
 
 				numX = floor(numS * distractors);
 				fprintf(pixfid, "%lu", numS + numX);

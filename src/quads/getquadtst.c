@@ -13,7 +13,6 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 char *catfname = NULL;
-char ASCII = 0;
 char buff[100], maxstarWidth;
 off_t catposmarker = 0;
 FILE *catfid = NULL;

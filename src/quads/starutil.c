@@ -1,29 +1,10 @@
 #include "starutil.h"
 
 /* makes a star object located uniformly at random within the limits given
-   NB: if the code is compiled with PLANAR_GEOMETRY=1, then ra/dec refer
-   to abstract 2d coordinates in the plane, otherwise, everything is done
-   on the sphere and they have the usual meaning                    */
+   on the sphere */
 star *make_rand_star(double ramin, double ramax,
                      double decmin, double decmax)
 {
-#if PLANAR_GEOMETRY==1
-	if (ramin < 0.0)
-		ramin = 0.0;
-	if (ramax > 1.0)
-		ramax = 1.0;
-	if (decmin < 0.0)
-		decmin = 0.0;
-	if (decmax > 1.0)
-		decmax = 1.0;
-	star *thestar = mk_star();
-	if (thestar != NULL) {
-		star_set(thestar, 0, range_random(ramin, ramax));
-		star_set(thestar, 1, range_random(ramin, ramax));
-	}
-	return thestar;
-#else
-
 	double decval, raval;
 	star *thestar = mk_star();
 	if (ramin < 0.0)
@@ -42,7 +23,6 @@ star *make_rand_star(double ramin, double ramax,
 		star_set(thestar, 2, sin(decval));
 	}
 	return thestar;
-#endif
 }
 
 
@@ -74,13 +54,6 @@ void star_coords(star *s, star *r, double *x, double *y)
 	if (fabs(chklen - 1.0) > 0.0001)
 		fprintf(stderr, "ERROR (star_coords) -- r has length %f\n", chklen);
 #endif
-
-#if PLANAR_GEOMETRY==1
-
-	*x = star_ref(s, 0) - star_ref(r, 0);
-	*y = star_ref(s, 1) - star_ref(r, 1);
-	return ;
-#else
 
 	double sdotr = star_ref(s, 0) * star_ref(r, 0) +
 	               star_ref(s, 1) * star_ref(r, 1) +
@@ -124,23 +97,15 @@ void star_coords(star *s, star *r, double *x, double *y)
 	}
 
 	return ;
-#endif
-
 }
 
 
 /* sets the coordinates of star M to be the midpoint of the coordinates
    of stars A,B. DOES NOT allocate a new star object for M.
-   does this by averaging and then (if PLANAR_GEOMETRY=0) projecting
+   does this by averaging and then projecting
    back onto the surface of the sphere                            */
 void star_midpoint(star *M, star *A, star *B)
 {
-#if PLANAR_GEOMETRY==1
-	star_set(M, 0, (star_ref(A, 0) + star_ref(B, 0)) / 2.0);
-	star_set(M, 1, (star_ref(A, 1) + star_ref(B, 1)) / 2.0);
-	return ;
-#else
-
 	double len;
 	star_set(M, 0, (star_ref(A, 0) + star_ref(B, 0)) / 2);
 	star_set(M, 1, (star_ref(A, 1) + star_ref(B, 1)) / 2);
@@ -151,6 +116,5 @@ void star_midpoint(star *M, star *A, star *B)
 	star_set(M, 1, star_ref(M, 1) / len);
 	star_set(M, 2, star_ref(M, 2) / len);
 	return ;
-#endif
 }
 

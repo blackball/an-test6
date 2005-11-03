@@ -1,13 +1,10 @@
 #include "starutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "habn:f:r:R:d:D:"
+#define OPTIONS "hn:f:r:R:d:D:"
 const char HelpString[] =
-    "randcat -f catfile -n numstars [-a|-b] [-r/R RAmin/max] [-d/D DECmin/max]\n"
-    "  -r -R -d -D set ra and dec limits in radians\n"
-    "  -a sets ASCII output, -b (default) sets BINARY output\n";
-
-void output_star(star *thestar, char ASCII, FILE *fid);
+  "randcat -f catfile -n numstars [-a|-b] [-r/R RAmin/max] [-d/D DECmin/max]\n"
+    "  -r -R -d -D set ra and dec limits in radians\n";
 
 
 extern char *optarg;
@@ -18,7 +15,6 @@ int main(int argc, char *argv[])
 	int argidx, argchar; //  opterr = 0;
 
 	sidx numstars = 10;
-	char ASCII = 1;
 	char *fname = NULL;
 	double ramin = DEFAULT_RAMIN, ramax = DEFAULT_RAMAX;
 	double decmin = DEFAULT_DECMIN, decmax = DEFAULT_DECMAX;
@@ -33,12 +29,6 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'a':
-			ASCII = 1;
-			break;
-		case 'b':
-			ASCII = 0;
-			break;
 		case 'n':
 			numstars = strtoul(optarg, NULL, 0);
 			break;
@@ -77,31 +67,17 @@ int main(int argc, char *argv[])
 	am_srand(RANDSEED);
 
 	fprintf(stderr, "randcat: Making %lu random stars", numstars);
-#if PLANAR_GEOMETRY==1
-
-	fprintf(stderr, " in the unit square ");
-#else
-
 	fprintf(stderr, " on the unit sphere ");
-#endif
-
 	fprintf(stderr, "[RANDSEED=%d]\n", RANDSEED);
 	if (ramin > DEFAULT_RAMIN || ramax < DEFAULT_RAMAX ||
 	        decmin > DEFAULT_DECMIN || decmax < DEFAULT_DECMAX)
-#if PLANAR_GEOMETRY==1
-
-		fprintf(stderr, "  using limits %f<=x<=%f ; %f<=y<=%f.\n",
-		        ramin, ramax, decmin, decmax);
-#else
-
 		fprintf(stderr, "  using limits %f<=RA<=%f ; %f<=DEC<=%f deg.\n",
 				rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
-#endif
-
 	fopenout(fname, fid);
 	free_fn(fname);
 
-	write_objs_header(fid, ASCII, numstars, DIM_STARS, ramin, ramax, decmin, decmax);
+	write_objs_header(fid, numstars, DIM_STARS, 
+							ramin, ramax, decmin, decmax);
 
 	for (ii = 0;ii < numstars;ii++) {
 		thestar = make_rand_star(ramin, ramax, decmin, decmax);
@@ -109,8 +85,8 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "ERROR (randcat) -- out of memory at star %lu\n", ii);
 			return (1);
 		} else {
-			output_star(thestar, ASCII, fid);
-			free_star(thestar);
+		  fwritestar(thestar, fid);
+		  free_star(thestar);
 		}
 	}
 	fclose(fid);
@@ -121,10 +97,3 @@ int main(int argc, char *argv[])
 
 
 
-void output_star(star *thestar, char ASCII, FILE *fid)
-{
-	if (ASCII)
-		fprintfstar(thestar, fid);
-	else if (!ASCII)
-		fwritestar(thestar, fid);
-}

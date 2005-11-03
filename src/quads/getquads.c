@@ -2,30 +2,28 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "habs:q:f:"
+#define OPTIONS "hs:q:f:"
 const char HelpString[] =
     "getquads -f fname -s scale(arcmin) -q numQuads [-a|-b]\n"
-    "  scale is the scale to look for quads, numQuads is the #darts to throw\n"
-    "  -a sets ASCII output, -b (default) sets BINARY output\n";
+   "  scale is the scale to look for quads, numQuads is the #darts to throw\n";
 
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-qidx get_quads(FILE *quadfid, FILE *codefid, char ASCII,
+qidx get_quads(FILE *quadfid, FILE *codefid,
                stararray *thestars, kdtree *kd, double index_scale,
                double ramin, double ramax, double decmin, double decmax,
                qidx maxCodes, qidx *numtries);
 
 void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
                  double Cx, double Cy, double Dx, double Dy,
-                 FILE *codefid, FILE *quadfid, char ASCII);
+                 FILE *codefid, FILE *quadfid);
 
 
 char *treefname = NULL;
 char *quadfname = NULL;
 char *codefname = NULL;
-char ASCII = 0;
 char buff[100], maxstarWidth;
 
 
@@ -48,12 +46,6 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'a':
-			ASCII = 1;
-			break;
-		case 'b':
-			ASCII = 0;
-			break;
 		case 's':
 			index_scale = (double)strtod(optarg, NULL);
 			index_scale = arcmin2rad(index_scale);
@@ -97,10 +89,6 @@ int main(int argc, char *argv[])
 	if (starkd == NULL)
 		return (2);
 	numstars = starkd->root->num_points;
-	if (ASCII) {
-		sprintf(buff, "%lu", numstars - 1);
-		maxstarWidth = strlen(buff);
-	}
 	fprintf(stderr, "done\n    (%lu stars, %d nodes, depth %d).\n",
 	        numstars, starkd->num_nodes, starkd->max_depth);
 	fprintf(stderr, "    (dim %d) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
@@ -116,7 +104,7 @@ int main(int argc, char *argv[])
 	free_fn(quadfname);
 	fopenout(codefname, codefid);
 	free_fn(codefname);
-	numfound = get_quads(quadfid, codefid, ASCII, thestars, starkd, index_scale,
+	numfound = get_quads(quadfid, codefid, thestars, starkd, index_scale,
 	                     ramin, ramax, decmin, decmax, maxQuads, &numtries);
 	fclose(quadfid);
 	fclose(codefid);
@@ -131,7 +119,7 @@ int main(int argc, char *argv[])
 
 
 
-qidx get_quads(FILE *quadfid, FILE *codefid, char ASCII,
+qidx get_quads(FILE *quadfid, FILE *codefid,
                stararray *thestars, kdtree *kd, double index_scale,
                double ramin, double ramax, double decmin, double decmax,
                qidx maxCodes, qidx *numtries)
@@ -145,9 +133,9 @@ qidx get_quads(FILE *quadfid, FILE *codefid, char ASCII,
 	star *midpoint = mk_star();
 	kquery *kq = mk_kquery("rangesearch", "", KD_UNDEF, index_scale, kd->rmin);
 
-	write_code_header(codefid, ASCII, maxCodes, (sidx)thestars->size,
+	write_code_header(codefid, maxCodes, (sidx)thestars->size,
 	                  DIM_CODES, index_scale);
-	write_quad_header(quadfid, ASCII, maxCodes, (sidx)thestars->size,
+	write_quad_header(quadfid, maxCodes, (sidx)thestars->size,
 	                  DIM_QUADS, index_scale);
 
 	numfound = 0;
@@ -216,7 +204,8 @@ qidx get_quads(FILE *quadfid, FILE *codefid, char ASCII,
 							Dx = dyv_ref(candidatesX, i2);
 							Dy = dyv_ref(candidatesY, i2);
 
-							accept_quad(iA, iB, iC, iD, Cx, Cy, Dx, Dy, codefid, quadfid, ASCII);
+							accept_quad(iA, iB, iC, iD, Cx, Cy, Dx, Dy, 
+											codefid, quadfid);
 							still_not_done = 0;
 							numfound++;
 
@@ -247,7 +236,7 @@ qidx get_quads(FILE *quadfid, FILE *codefid, char ASCII,
 
 void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
                  double Cx, double Cy, double Dx, double Dy,
-                 FILE *codefid, FILE *quadfid, char ASCII)
+                 FILE *codefid, FILE *quadfid)
 {
 	sidx itmp;
 	double tmp;
@@ -272,14 +261,8 @@ void accept_quad(sidx iA, sidx iB, sidx iC, sidx iD,
 		Dy = 1.0 - Dy;
 	}
 
-	if (ASCII) {
-		fprintf(codefid, "%lf,%lf,%lf,%lf\n", Cx, Cy, Dx, Dy);
-		fprintf(quadfid, "%2$*1$lu,%3$*1$lu,%4$*1$lu,%5$*1$lu\n",
-		        maxstarWidth, iA, iB, iC, iD);
-	} else {
-		writeonecode(codefid, Cx, Cy, Dx, Dy);
-		writeonequad(quadfid, iA, iB, iC, iD);
-	}
+	writeonecode(codefid, Cx, Cy, Dx, Dy);
+	writeonequad(quadfid, iA, iB, iC, iD);
 
 	return ;
 }

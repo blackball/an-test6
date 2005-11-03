@@ -62,10 +62,6 @@ int main(int argc, char *argv[])
 	  fprintf(stderr,"quadmap: read error on %s\n",quadfname);
 	  return (1);
 	}
-	if(qASCII==1) {
-	  fprintf(stderr,"quadmap: ascii not supported for %s\n",quadfname);
-	  return (1);
-	}
 	fprintf(stderr, "    (%lu quads, %lu total stars, scale=%f arcmin)\n",
 		numquads, numstars, rad2arcmin(index_scale));
 	free_fn(quadfname);
@@ -76,10 +72,6 @@ int main(int argc, char *argv[])
 				  &ramin, &ramax, &decmin, &decmax);
 	if(cASCII == READ_FAIL) {
 	  fprintf(stderr,"quadmap: read error on %s\n",catfname);
-	  return (1);
-	}
-	if(cASCII==1) {
-	  fprintf(stderr,"quadmap: ascii not supported for %s\n",catfname);
 	  return (1);
 	}
 	fprintf(stderr, "  (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",

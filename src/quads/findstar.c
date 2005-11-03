@@ -102,10 +102,6 @@ int main(int argc, char *argv[])
 		                          &ramin, &ramax, &decmin, &decmax);
 		if (cASCII == READ_FAIL)
 			return (1);
-		if (cASCII) {
-			sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
-			oneobjWidth = strlen(buff);
-		}
 		fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
 		        numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
 		catposmarker = ftello(catfid);
@@ -300,35 +296,20 @@ void output_results(FILE* fid, kquery *kq, kdtree *starkd, star *thequery, stara
 void output_star(FILE *fid, sidx i, stararray *sa)
 {
 	star *tmps = NULL;
-	double tmpx, tmpy, tmpz;
 
 	if (sa == NULL) {
 		tmps = mk_star();
 		if (tmps == NULL)
 			return ;
-		if (cASCII) {
-			fseeko(catfid, catposmarker + i*oneobjWidth*sizeof(char), SEEK_SET);
-			fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-			star_set(tmps, 0, tmpx);
-			star_set(tmps, 1, tmpy);
-			star_set(tmps, 2, tmpz);
-		} else {
-			fseekocat(i, catposmarker, catfid);
-			freadstar(tmps, catfid);
-		}
+		fseekocat(i, catposmarker, catfid);
+		freadstar(tmps, catfid);
 	} else
 		tmps = sa->array[i];
-
-#if DIM_STARS==2
-
-	fprintf(fid, "%lu: (%lf, %lf)\n", i, star_ref(tmps, 0), star_ref(tmps, 1));
-#else
 
 	fprintf(fid, "%lu: ((%lf, %lf, %lf), (%lf, %lf)),\n",
 			i, star_ref(tmps, 0), star_ref(tmps, 1), star_ref(tmps, 2),
 			rad2deg(xy2ra(star_ref(tmps, 0), star_ref(tmps, 1))),
 			rad2deg(z2dec(star_ref(tmps, 2))));
-#endif
 
 	if (sa == NULL)
 		free_star(tmps);
