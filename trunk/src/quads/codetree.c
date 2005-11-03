@@ -126,10 +126,11 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
 	qidx ii;
 	sidx numstars;
 	codearray *thecodes = NULL;
-	char ASCII;
+	char readStatus;
 
-	ASCII = read_code_header(fid, numcodes, &numstars, DimCodes, index_scale);
-	if (ASCII == READ_FAIL)
+	readStatus = read_code_header(fid, numcodes, &numstars, 
+				      DimCodes, index_scale);
+	if (readStatus == READ_FAIL)
 		return ((codearray *)NULL);
 
 	if (*numcodes < buffsize)

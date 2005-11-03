@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	sidx *starlist, *matchstar;
 	qidx *starnumq;
 	qidx **starquads;
-	char qASCII;
+	char readStatus;
 
 	if (argc <= 3) {
 		fprintf(stderr, HelpString);
@@ -74,9 +74,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  Reading code/quad files...\n");
 		fflush(stderr);
 		fopenin(quadfname, quadfid);
-		qASCII = read_quad_header(quadfid,
-		                          &numquads, &numstars, &DimQuads, &index_scale);
-		if (qASCII == READ_FAIL)
+		readStatus = read_quad_header(quadfid, &numquads, &numstars, 
+					      &DimQuads, &index_scale);
+		if (readStatus == READ_FAIL)
 			return (1);
 		fprintf(stderr, "    (%lu quads, %lu total stars, scale=%f arcmin)\n",
 		        numquads, numstars, rad2arcmin(index_scale));
@@ -88,9 +88,10 @@ int main(int argc, char *argv[])
 			        thequad, iA, iB, iC, iD);
 
 			fopenin(codefname, codefid);
-			qASCII = read_code_header(codefid, &numquads, &numstars, 
-											  &DimQuads, &index_scale);
-			if (qASCII == READ_FAIL)
+			readStatus = read_code_header(codefid, &numquads, 
+						      &numstars, &DimQuads, 
+						      &index_scale);
+			if (readStatus == READ_FAIL)
 				return (1);
 			fseeko(codefid, ftello(codefid) + thequad*
 					 (DIM_CODES*sizeof(Cx)), SEEK_SET);

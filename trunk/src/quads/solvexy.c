@@ -49,7 +49,6 @@ void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
-char qASCII, cASCII;
 off_t qposmarker, cposmarker;
 char buff[100], maxstarWidth, oneobjWidth;
 
@@ -75,6 +74,7 @@ int main(int argc, char *argv[])
 	FILE *fieldfid = NULL, *treefid = NULL;
 	qidx numfields, numquads, numsolved;
 	sidx numstars;
+	char readStatus;
 	double index_scale, ramin, ramax, decmin, decmax;
 	dimension Dim_Quads, Dim_Stars;
 	xyarray *thefields = NULL;
@@ -162,16 +162,17 @@ int main(int argc, char *argv[])
 
 	fopenin(quadfname, quadfid);
 	free_fn(quadfname);
-	qASCII = read_quad_header(quadfid, &numquads, &numstars, &Dim_Quads, &index_scale);
-	if (qASCII == READ_FAIL)
+	readStatus = read_quad_header(quadfid, &numquads, &numstars, 
+				      &Dim_Quads, &index_scale);
+	if (readStatus == READ_FAIL)
 		return (3);
 	qposmarker = ftello(quadfid);
 
 	fopenin(catfname, catfid);
 	free_fn(catfname);
-	cASCII = read_objs_header(catfid, &numstars, &Dim_Stars,
+	readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
 	                          &ramin, &ramax, &decmin, &decmax);
-	if (cASCII == READ_FAIL)
+	if (readStatus == READ_FAIL)
 		return (4);
 	cposmarker = ftello(catfid);
 

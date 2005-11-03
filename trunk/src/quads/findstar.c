@@ -17,13 +17,12 @@ void output_results(FILE *fid, kquery *kq, kdtree *starkd, star *thequery, stara
 char *treefname = NULL, *catfname = NULL;
 FILE *treefid = NULL, *catfid = NULL;
 off_t catposmarker = 0;
-char cASCII = READ_FAIL;
 char buff[100], oneobjWidth;
 
 int main(int argc, char *argv[])
 {
 	int argidx, argchar; //  opterr = 0;
-	char whichset = 0, xyzset = 0, radecset = 0, kset = 1, dtolset = 0, read_dtol = 0;
+	char whichset = 0, xyzset = 0, radecset = 0, kset = 1, dtolset = 0, read_dtol = 0,readStatus;
 	sidx K = 0;
 	double dtol = 0.0;
 	sidx numstars, whichstar;
@@ -98,9 +97,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "# findstar: getting stars from %s\n", catfname);
 		fopenin(catfname, catfid);
 		free_fn(catfname);
-		cASCII = read_objs_header(catfid, &numstars, &DimStars,
+		readStatus = read_objs_header(catfid, &numstars, &DimStars,
 		                          &ramin, &ramax, &decmin, &decmax);
-		if (cASCII == READ_FAIL)
+		if (readStatus == READ_FAIL)
 			return (1);
 		fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
 		        numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));

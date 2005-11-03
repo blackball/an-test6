@@ -23,7 +23,6 @@ char *quadfname = NULL;
 char *codefname = NULL;
 char *newquadfname = NULL;
 char *newcodefname = NULL;
-char qASCII,cASCII;
 char buff[100], maxstarWidth, codeWidth;
 off_t posmarker, cposmarker;
 
@@ -37,6 +36,7 @@ int main(int argc, char *argv[])
 	qidx numquads, nq2;
 	dimension DimQuads, DimCodes;
 	double index_scale, is2;
+	char readStatus;
 	FILE *newquadfid = NULL, *newcodefid = NULL;
 	FILE *idxfid = NULL, *quadfid = NULL, *codefid = NULL;
 
@@ -76,14 +76,14 @@ int main(int argc, char *argv[])
 
 	fopenin(quadfname, quadfid);
 	free_fn(quadfname);
-	qASCII = read_quad_header(quadfid, &numquads, &numstars, 
-									  &DimQuads, &index_scale);
-	if (qASCII == READ_FAIL)
+	readStatus = read_quad_header(quadfid, &numquads, &numstars, 
+				      &DimQuads, &index_scale);
+	if (readStatus == READ_FAIL)
 		fprintf(stderr, "ERROR (quadidx) -- read_quad_header failed\n");
 	fopenin(codefname, codefid);
 	free_fn(codefname);
-	cASCII = read_code_header(codefid, &nq2, &ns2, &DimCodes, &is2);
-	if (cASCII == READ_FAIL)
+	readStatus = read_code_header(codefid, &nq2, &ns2, &DimCodes, &is2);
+	if (readStatus == READ_FAIL)
 		fprintf(stderr, "ERROR (quadidx) -- read_code_header failed\n");
 	if ((nq2 != numquads) || (ns2 != numstars) || (is2 != index_scale)) {
 		fprintf(stderr, "ERROR (quadidx) -- codefile and quadfile disagree\n");

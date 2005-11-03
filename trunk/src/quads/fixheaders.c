@@ -23,7 +23,6 @@ extern int optind, opterr, optopt;
 
 char *outfname = NULL, *catfname = NULL;
 FILE *outfid = NULL, *catfid = NULL;
-char cASCII = (char)READ_FAIL;
 char buff[100], oneobjWidth;
 bool byteswap;
 off_t catposmarker = 0;
@@ -73,7 +72,7 @@ off_t catposmarker = 0;
   fread(decmax, sizeof(*decmax), 1, fid);
   }
   if (swap) byteswap_header(header);
-  return (ASCII);
+  return ();
   }
 */
 
@@ -89,6 +88,7 @@ int main(int argc, char *argv[])
   double ramin, ramax, decmin, decmax;
   sidx numstars;
   int i;
+  char readStatus;
   star* mystar;
   bool inplace;
   //obj_header header;
@@ -131,11 +131,9 @@ int main(int argc, char *argv[])
 	free_fn(outfname);
     free_fn(catfname);
 
-    cASCII = read_objs_header(catfid, &numstars, &DimStars,
+    readStatus = read_objs_header(catfid, &numstars, &DimStars,
                               &ramin, &ramax, &decmin, &decmax);
-    //cASCII = read_header(catfid, &header, byteswap);
-
-    if (cASCII == (char)READ_FAIL)
+    if (readStatus == READ_FAIL)
         return (1);
 
     fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
@@ -174,7 +172,6 @@ int main(int argc, char *argv[])
 
 	if (!inplace) {
 	  // write the contents...
-	  if (!cASCII) {
 		char* block;
 		int blocksize = 10000;
 		int starsize = (DIM_STARS * sizeof(double));
@@ -207,7 +204,6 @@ int main(int argc, char *argv[])
 		printf("\n");
 		free_star(mystar);
 	  }
-	}
 
 	if (fclose(outfid)) {
 	  printf("Error closing output file.\n");
@@ -234,7 +230,6 @@ void get_star(FILE *fid, off_t marker, int objsize,
 void get_star_radec(FILE *fid, off_t marker, int objsize,
 			  sidx i, double* pra, double* pdec) {
 	star *tmps = NULL;
-	double tmpx, tmpy, tmpz;
 	double x, y, z, ra, dec;
 
 	tmps = mk_star();

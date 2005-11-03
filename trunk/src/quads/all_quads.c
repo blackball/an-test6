@@ -303,6 +303,7 @@ int main(int argc, char *argv[]) {
 	  for (j=0; j<thisnumq; j++) {
 		int kk = (qidx)ivec_ref(tmpivec, j);
 		fwrite(&kk, sizeof(kk), 1, qidxfid);
+	  }
 	}
 	free_ivec_array(qlist);
 
@@ -323,7 +324,7 @@ int main(int argc, char *argv[]) {
   }
 
   return 0;
-}
+  }
 
 bool within_range(void* vparams, node* search, node* query) {
 	params* p = (params*)vparams;

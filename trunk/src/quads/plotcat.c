@@ -56,7 +56,7 @@ inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y
 
 int main(int argc, char *argv[])
 {
-	char ASCII = READ_FAIL;
+  char readStatus;
 	sidx ii,jj,numstars;
 	int reverse=0, hammer=0, grid=0;
 	dimension Dim_Stars;
@@ -107,8 +107,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	ASCII = read_objs_header(fid, &numstars, &Dim_Stars, &ramin, &ramax, &decmin, &decmax);
-	if (ASCII == (char)READ_FAIL) {
+	readStatus = read_objs_header(fid, &numstars, &Dim_Stars, 
+				      &ramin, &ramax, &decmin, &decmax);
+	if (readStatus == (char)READ_FAIL) {
 		fprintf(stderr, "ERROR: Failed to read catalog\n");
 		return 1;
 	}
