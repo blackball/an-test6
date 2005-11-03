@@ -22,12 +22,13 @@ stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
                    double *ramin, double *ramax, double *decmin, double *decmax,
 				   int nkeep)
 {
-	char ASCII;
+	char readStatus;
 	sidx ii;
 	stararray *thestars = NULL;
 
-	ASCII = read_objs_header(fid, numstars, Dim_Stars, ramin, ramax, decmin, decmax);
-	if (ASCII == (char)READ_FAIL)
+	readStatus = read_objs_header(fid, numstars, 
+				      Dim_Stars, ramin, ramax, decmin, decmax);
+	if (readStatus == READ_FAIL)
 		return ((stararray *)NULL);
 
 	if (nkeep && (nkeep < *numstars)) {

@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 	dimension DimStars,DimQuads;
 	double index_scale,ramin,ramax,decmin,decmax;
 	off_t catposmarker = 0;
-	char qASCII,cASCII;
+	char readStatus;
 	star *tmps = NULL;
 
 	if (argc <= 2) {
@@ -56,9 +56,9 @@ int main(int argc, char *argv[])
 		quadfname,qmapfname);
 
 	fopenin(quadfname, quadfid);
-	qASCII = read_quad_header(quadfid,&numquads, &numstars, 
+	readStatus = read_quad_header(quadfid,&numquads, &numstars, 
 				  &DimQuads, &index_scale);
-	if(qASCII == READ_FAIL) {
+	if(readStatus == READ_FAIL) {
 	  fprintf(stderr,"quadmap: read error on %s\n",quadfname);
 	  return (1);
 	}
@@ -68,9 +68,9 @@ int main(int argc, char *argv[])
 
 
 	fopenin(catfname, catfid);
-	cASCII = read_objs_header(catfid, &numstars, &DimStars,
+        readStatus = read_objs_header(catfid, &numstars, &DimStars,
 				  &ramin, &ramax, &decmin, &decmax);
-	if(cASCII == READ_FAIL) {
+	if(readStatus == READ_FAIL) {
 	  fprintf(stderr,"quadmap: read error on %s\n",catfname);
 	  return (1);
 	}

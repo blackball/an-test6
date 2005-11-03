@@ -74,19 +74,9 @@ sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
                  qidx ***starquads);
 signed int compare_sidx(const void *x, const void *y);
 
-typedef struct file_struct
-{
-	FILE *fid;
-	char *fname;
-	char ASCII;
-	char itemSize;
-}
-FileObj;
-
 
 typedef unsigned short int magicval;
 #define MAGIC_VAL 0xFF00
-#define ASCII_VAL 0x754E
 
 
 #endif
