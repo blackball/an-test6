@@ -1,11 +1,9 @@
 #include "starutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "habf:"
+#define OPTIONS "hf:"
 const char HelpString[] =
-    "quadidx -f fname [-a|-b]\n"
-    "  -a sets ASCII output, -b (default) sets BINARY output\n";
-
+    "quadidx -f fname\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -25,7 +23,7 @@ char *quadfname = NULL;
 char *codefname = NULL;
 char *newquadfname = NULL;
 char *newcodefname = NULL;
-char qASCII, qA2, ASCII = 0;
+char qASCII,cASCII;
 char buff[100], maxstarWidth, codeWidth;
 off_t posmarker, cposmarker;
 
@@ -50,12 +48,6 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'a':
-			ASCII = 1;
-			break;
-		case 'b':
-			ASCII = 0;
-			break;
 		case 'f':
 			idxfname = mk_qidxfn(optarg);
 			quadfname = mk_quad0fn(optarg);
@@ -84,28 +76,21 @@ int main(int argc, char *argv[])
 
 	fopenin(quadfname, quadfid);
 	free_fn(quadfname);
-	qASCII = read_quad_header(quadfid, &numquads, &numstars, &DimQuads, &index_scale);
+	qASCII = read_quad_header(quadfid, &numquads, &numstars, 
+									  &DimQuads, &index_scale);
 	if (qASCII == READ_FAIL)
 		fprintf(stderr, "ERROR (quadidx) -- read_quad_header failed\n");
 	fopenin(codefname, codefid);
 	free_fn(codefname);
-	qA2 = read_code_header(codefid, &nq2, &ns2, &DimCodes, &is2);
-	if (qA2 == READ_FAIL)
+	cASCII = read_code_header(codefid, &nq2, &ns2, &DimCodes, &is2);
+	if (cASCII == READ_FAIL)
 		fprintf(stderr, "ERROR (quadidx) -- read_code_header failed\n");
-	if ((qA2 != qASCII) || (nq2 != numquads) || (ns2 != numstars) || (is2 != index_scale)) {
+	if ((nq2 != numquads) || (ns2 != numstars) || (is2 != index_scale)) {
 		fprintf(stderr, "ERROR (quadidx) -- codefile and quadfile disagree\n");
 		return (2);
 	}
 	posmarker = ftello(quadfid);
 	cposmarker = ftello(codefid);
-	if (qASCII) {
-		sprintf(buff, "%lu", numstars - 1);
-		maxstarWidth = strlen(buff);
-	}
-	if (qA2) {
-		sprintf(buff, "%lf", 1.0 / (double)PIl);
-		codeWidth = strlen(buff);
-	}
 
 	qlist = mk_ivec_array(numstars);
 	if(qlist==NULL) {
@@ -116,16 +101,14 @@ int main(int argc, char *argv[])
 	if (numquads > 1) {
 		fopenout(newquadfname, newquadfid);
 		fopenout(newcodefname, newcodefid);
-		write_quad_header(newquadfid, qASCII, numquads, numstars, DimQuads, index_scale);
-		write_code_header(newcodefid, qASCII, numquads, numstars, DimCodes, index_scale);
+		write_quad_header(newquadfid, numquads, numstars, DimQuads, index_scale);
+		write_code_header(newcodefid, numquads, numstars, DimCodes, index_scale);
 
 		nq2 = deduplicate_quads(quadfid, codefid, newquadfid, newcodefid, 
 		                        numquads);
 
-		if (qASCII)
-			sprintf(buff, "%lu", numquads);
-		fix_quad_header(newquadfid, qASCII, nq2, strlen(buff));
-		fix_code_header(newcodefid, qASCII, nq2, strlen(buff));
+		fix_quad_header(newquadfid, nq2, strlen(buff));
+		fix_code_header(newcodefid, nq2, strlen(buff));
 		fclose(newquadfid);
 		fclose(newcodefid);
 		free_fn(newquadfname);
@@ -164,16 +147,9 @@ qidx deduplicate_quads(FILE *quadfid, FILE *codefid,
 		//	    ii,iA,iB,iC,iD);
 		if (insertquad(qlist, uniqueQuads, iA, iB, iC, iD)) {
 			uniqueQuads++;
-			if (qASCII) {
-				fscanfonecode(codefid, &Cx, &Cy, &Dx, &Dy);
-				fprintf(newcodefid, "%lf,%lf,%lf,%lf\n", Cx, Cy, Dx, Dy);
-				fprintf(newquadfid, "%2$*1$lu,%3$*1$lu,%4$*1$lu,%5$*1$lu\n",
-				        maxstarWidth, iA, iB, iC, iD);
-			} else {
-				readonecode(codefid, &Cx, &Cy, &Dx, &Dy);
-				writeonecode(newcodefid, Cx, Cy, Dx, Dy);
-				writeonequad(newquadfid, iA, iB, iC, iD);
-			}
+			readonecode(codefid, &Cx, &Cy, &Dx, &Dy);
+			writeonecode(newcodefid, Cx, Cy, Dx, Dy);
+			writeonequad(newquadfid, iA, iB, iC, iD);
 		}
 	}
 
@@ -190,12 +166,8 @@ sidx build_inverted_index(FILE *idxfid, sidx numStars)
   ivec *tmpivec;
   magicval magic = MAGIC_VAL;
 
-	if (ASCII)
-		fprintf(idxfid, "NumIndexedStars=%lu\n", numStars);
-	else {
-		fwrite(&magic, sizeof(magic), 1, idxfid);
-		fwrite(&numused, sizeof(numused), 1, idxfid);
-	}
+  fwrite(&magic, sizeof(magic), 1, idxfid);
+  fwrite(&numused, sizeof(numused), 1, idxfid);
 
 	for (jj = 0;jj < numStars;jj++) {
 	  if (is_power_of_two(jj + 1))
@@ -204,33 +176,18 @@ sidx build_inverted_index(FILE *idxfid, sidx numStars)
 		if (tmpivec != NULL) {
 			numused++;
 			thisnumq = (qidx)ivec_size(tmpivec);
-			if (ASCII)
-				fprintf(idxfid, "%lu:%lu", jj, thisnumq);
-			else {
-				fwrite(&jj, sizeof(jj), 1, idxfid);
-				fwrite(&thisnumq, sizeof(thisnumq), 1, idxfid);
-			}
+			fwrite(&jj, sizeof(jj), 1, idxfid);
+			fwrite(&thisnumq, sizeof(thisnumq), 1, idxfid);
 			for (ii = 0;ii < thisnumq;ii++) {
 				kk = (qidx)ivec_ref(tmpivec, ii);
-				if (ASCII)
-					fprintf(idxfid, ",%lu", kk);
-				else
-					fwrite(&kk, sizeof(kk), 1, idxfid);
+				fwrite(&kk, sizeof(kk), 1, idxfid);
 			}
-			if (ASCII)
-				fprintf(idxfid, "\n");
 		}
 	}
 	rewind(idxfid);
-	if (ASCII) {
-		sprintf(buff, "%lu", numStars);
-		fprintf(idxfid, "NumIndexedStars=%2$*1$lu\n", strlen(buff), numused);
-	} else {
-		fwrite(&magic, sizeof(magic), 1, idxfid);
-		fwrite(&numused, sizeof(numused), 1, idxfid);
-	}
-
-
+	fwrite(&magic, sizeof(magic), 1, idxfid);
+	fwrite(&numused, sizeof(numused), 1, idxfid);
+	
 	return(numused);
 
 }
@@ -337,21 +294,11 @@ char newquad(ivec_array *qlist, sidx iA, sidx iB, sidx iC, sidx iD)
 void getquadids(FILE *quadfid, FILE *codefid,
                 qidx ii, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
-	if (qASCII) {
-		fseeko(codefid, cposmarker + ii*
-		       (DIM_CODES*(codeWidth + 1)*sizeof(char)), SEEK_SET);
-		fseeko(quadfid, posmarker + ii*
-		       (DIM_QUADS*(maxstarWidth + 1)*sizeof(char)), SEEK_SET);
-		fscanfonequad(quadfid, iA, iB, iC, iD);
-	} else {
-		fseeko(codefid, cposmarker + ii*
-		       (DIM_CODES*sizeof(double)), SEEK_SET);
-		fseeko(quadfid, posmarker + ii*
-		       (DIM_QUADS*sizeof(*iA)), SEEK_SET);
-		readonequad(quadfid, iA, iB, iC, iD);
-	}
-	return ;
+  fseeko(codefid, cposmarker + ii*
+			(DIM_CODES*sizeof(double)), SEEK_SET);
+  fseeko(quadfid, posmarker + ii*
+			(DIM_QUADS*sizeof(*iA)), SEEK_SET);
+  readonequad(quadfid, iA, iB, iC, iD);
+  return ;
 }
-
-
 

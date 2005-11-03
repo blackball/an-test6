@@ -58,23 +58,13 @@ off_t catposmarker = 0;
   }
 
   void read_header(FILE* fid, obj_header* header, bool swap) {
-  char ASCII = READ_FAIL;
   magicval magic;
   fread(&magic, sizeof(magic), 1, fid);
   if (swap) magic = swap_magic(magic);
-  if (magic == ASCII_VAL) {
-  ASCII = 1;
-  fscanf(fid, "mStars=%lu\n", &(header->numstars));
-  fscanf(fid, "DimStars=%hu\n", &(header->dimstars));
-  fscanf(fid, "Limits=%lf,%lf,%lf,%lf\n", 
-  &(header->ramin),  &(header->ramax),
-  &(header->decmin), &(header->decmax));
-  } else {
   if (magic != MAGIC_VAL) {
   fprintf(stderr, "ERROR (read_objs_header) -- bad magic value\n");
   return (READ_FAIL);
   }
-  ASCII = 0;
   fread(numstars, sizeof(*numstars), 1, fid);
   fread(DimStars, sizeof(*DimStars), 1, fid);
   fread(ramin, sizeof(*ramin), 1, fid);
@@ -147,15 +137,7 @@ int main(int argc, char *argv[])
 
     if (cASCII == (char)READ_FAIL)
         return (1);
-	if (cASCII && inplace) {
-	  printf("Can't fix ASCII headers in-place.\n");
-	  exit(-1);
-	}
 
-    if (cASCII) {
-        sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
-        oneobjWidth = strlen(buff);
-    }
     fprintf(stderr, "    (%lu stars) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
             numstars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
     catposmarker = ftello(catfid);
@@ -187,7 +169,7 @@ int main(int argc, char *argv[])
 	if (inplace) {
 	  fseek(outfid, 0, SEEK_SET);
 	}
-	write_objs_header(outfid, cASCII, numstars, DimStars,
+	write_objs_header(outfid, numstars, DimStars,
 					  ramin, ramax, decmin, decmax);
 
 	if (!inplace) {
@@ -241,18 +223,10 @@ int main(int argc, char *argv[])
 
 void get_star(FILE *fid, off_t marker, int objsize,
 			  sidx i, star* s) {
-  if (cASCII) {
-	double tmpx, tmpy, tmpz;
-	fseeko(fid, marker + i*objsize, SEEK_SET);
-	fscanf(fid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-	star_set(s, 0, tmpx);
-	star_set(s, 1, tmpy);
-	star_set(s, 2, tmpz);
-  } else {
-	fseekocat(i, marker, fid);
-	freadstar(s, fid);
-  }
+  fseekocat(i, marker, fid);
+  freadstar(s, fid);
 }
+
 
 /**
    Returns the RA,DEC (in radians) of the star with index 'i'.
@@ -266,22 +240,9 @@ void get_star_radec(FILE *fid, off_t marker, int objsize,
 	tmps = mk_star();
 	if (tmps == NULL)
 	  return ;
-	if (cASCII) {
-	  fseeko(fid, marker + i*objsize, SEEK_SET);
-	  fscanf(fid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-	  star_set(tmps, 0, tmpx);
-	  star_set(tmps, 1, tmpy);
-	  star_set(tmps, 2, tmpz);
-	} else {
-	  fseekocat(i, marker, fid);
-	  freadstar(tmps, fid);
-	}
+	fseekocat(i, marker, fid);
+	freadstar(tmps, fid);
 	
-	if (DIM_STARS != 3) {
-	  printf("dim_stars %i\n", DIM_STARS);
-	  exit(-1);
-	}
-
 	x = star_ref(tmps, 0);
 	y = star_ref(tmps, 1);
 	z = star_ref(tmps, 2);

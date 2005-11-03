@@ -13,10 +13,10 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *Dim_Codes,
-                     char *ASCII, double *index_scale, qidx buffsize);
+                     double *index_scale, qidx buffsize);
 
 dimension readnextcode(FILE *codefid, code *tmpcode,
-                       dimension Dim_Codes, char ASCII);
+                       dimension Dim_Codes);
 
 char *treefname = NULL;
 char *codefname = NULL;
@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
 	code *tmpcode;
 	dimension Dim_Codes;
 	double index_scale;
-	char ASCII;
 	qidx buffsize = (qidx)floor(MEM_LOAD / (sizeof(double) + sizeof(int)) * DIM_CODES);
 	codearray *thecodes = NULL;
 	kdtree *codekd = NULL;
@@ -75,7 +74,7 @@ int main(int argc, char *argv[])
 	fopenin(codefname, codefid);
 	free_fn(codefname);
 	thecodes = readcodes(codefid, &numcodes, &Dim_Codes,
-	                     &ASCII, &index_scale, buffsize);
+								&index_scale, buffsize);
 	if (thecodes == NULL)
 		return (1);
 	fprintf(stderr, "got %d codes (dim %hu).\n", thecodes->size, Dim_Codes);
@@ -92,7 +91,7 @@ int main(int argc, char *argv[])
 		        codekd->num_nodes, codekd->max_depth);
 		tmpcode = mk_coded(Dim_Codes);
 		for (ii = 0;ii < (numcodes - buffsize);ii++) {
-			readnextcode(codefid, tmpcode, Dim_Codes, ASCII);
+			readnextcode(codefid, tmpcode, Dim_Codes);
 			add_point_to_kdtree(codekd, (dyv *)tmpcode);
 			if (is_power_of_two(ii + 1))
 				fprintf(stderr, "    %lu / %lu of rest done\r", ii + 1, numcodes - buffsize);
@@ -122,14 +121,15 @@ int main(int argc, char *argv[])
 
 
 codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
-                     char *ASCII, double *index_scale, qidx buffsize)
+                     double *index_scale, qidx buffsize)
 {
 	qidx ii;
 	sidx numstars;
 	codearray *thecodes = NULL;
+	char ASCII;
 
-	*ASCII = read_code_header(fid, numcodes, &numstars, DimCodes, index_scale);
-	if (*ASCII == READ_FAIL)
+	ASCII = read_code_header(fid, numcodes, &numstars, DimCodes, index_scale);
+	if (ASCII == READ_FAIL)
 		return ((codearray *)NULL);
 
 	if (*numcodes < buffsize)
@@ -144,24 +144,17 @@ codearray *readcodes(FILE *fid, qidx *numcodes, dimension *DimCodes,
 			return (codearray *)NULL;
 		}
 		// assert *DimCodes==DIM_CODES
-		if (*ASCII)
-			fscanfcode(thecodes->array[ii], fid);
-		else
-			freadcode(thecodes->array[ii], fid);
+		freadcode(thecodes->array[ii], fid);
 	}
 	return thecodes;
 }
 
 
-dimension readnextcode(FILE *codefid, code *tmpcode,
-                       dimension Dim_Codes, char ASCII)
+dimension readnextcode(FILE *codefid, code *tmpcode, dimension Dim_Codes)
 {
 	dimension rez = 0;
 	//assert Dim_Codes==DIM_CODES
-	if (ASCII)
-		rez = (dimension)fscanfcode(tmpcode, codefid);
-	else
-		rez = (dimension)freadcode(tmpcode, codefid);
+	rez = (dimension)freadcode(tmpcode, codefid);
 
 	if (rez != Dim_Codes)
 		fprintf(stderr, "ERROR (codetree) -- can't read next code\n");

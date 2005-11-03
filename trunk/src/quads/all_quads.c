@@ -89,7 +89,6 @@ extern int optind, opterr, optopt;
 
 FILE *quadfid = NULL;
 FILE *codefid = NULL;
-char ASCII = 0;
 ivec_array *qlist = NULL;
 
 sidx numstars;
@@ -139,22 +138,18 @@ int main(int argc, char *argv[]) {
 
   if (argc == 1) {
 	printf("\nUsage:\n"
-		   "  %s -f <filename-base>\n"
-		   "     [-s <scale>]         (default scale is 5 arcmin)\n"
-		   "     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
-		   "     [-c]                 (just count the quads, don't write anything)\n"
-		   "     [-a]                 (ASCII output format - default is binary)\n"
-		   "     [-q]                 (be quiet!  No progress reports)\n"
-		   "\n"
+		"  %s -f <filename-base>\n"
+		"     [-s <scale>]         (default scale is 5 arcmin)\n"
+		"     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
+		"     [-c]                 (just count the quads, don't write anything)\n"
+		"     [-q]                 (be quiet!  No progress reports)\n"
+		"\n"
 		   , progname);
 	exit(0);
   }
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 	switch (argchar) {
-	case 'a':
-	  ASCII = 1;
-	  break;
 	case 'c':
 	  justcount = 1;
 	  break;
@@ -230,14 +225,12 @@ int main(int argc, char *argv[]) {
 	fopenout(qidxfname, qidxfid);
 
 	// we have to write an updated header after we've processed all the quads.
-	// for now, be sure that enough characters are reserved (ASCII) for the final
-	// value.
 	{
 	  uint nelems = 1000000000;
 	  hdrlength = 10;
-	  write_code_header(codefid, ASCII, nelems, numstars,
+	  write_code_header(codefid, nelems, numstars,
 						DIM_CODES, radius);
-	  write_quad_header(quadfid, ASCII, nelems, numstars,
+	  write_quad_header(quadfid, nelems, numstars,
 						DIM_QUADS, radius);
 	}
   }
@@ -286,8 +279,8 @@ int main(int argc, char *argv[]) {
 	magicval magic = MAGIC_VAL;
 
 	// fix output file headers.
-	fix_code_header(codefid, ASCII, range_params.nquads, hdrlength);
-	fix_quad_header(quadfid, ASCII, range_params.nquads, hdrlength);
+	fix_code_header(codefid, range_params.nquads, hdrlength);
+	fix_quad_header(quadfid, range_params.nquads, hdrlength);
 
 	// write qidx (adapted from quadidx.c)
 	// first count numused.
@@ -297,33 +290,19 @@ int main(int argc, char *argv[]) {
 		numused++;
 	}
 	printf("%i stars used\n", numused);
-	if (ASCII) {
-	  fprintf(qidxfid, "NumIndexedStars=%u\n", numused);
-	} else {
-	  fwrite(&magic, sizeof(magic), 1, qidxfid);
-	  fwrite(&numused, sizeof(numused), 1, qidxfid);
-	}
+	fwrite(&magic, sizeof(magic), 1, qidxfid);
+	fwrite(&numused, sizeof(numused), 1, qidxfid);
 	for (i=0; i<numstars; i++) {
 	  int thisnumq;
 	  ivec* tmpivec = ivec_array_ref(qlist, i);
 	  if (tmpivec == NULL)
 		continue;
 	  thisnumq = (qidx)ivec_size(tmpivec);
-	  if (ASCII)
-		fprintf(qidxfid, "%u:%u", i, thisnumq);
-	  else {
-		fwrite(&i, sizeof(i), 1, qidxfid);
-		fwrite(&thisnumq, sizeof(thisnumq), 1, qidxfid);
-	  }
+	  fwrite(&i, sizeof(i), 1, qidxfid);
+	  fwrite(&thisnumq, sizeof(thisnumq), 1, qidxfid);
 	  for (j=0; j<thisnumq; j++) {
 		int kk = (qidx)ivec_ref(tmpivec, j);
-		if (ASCII)
-		  fprintf(qidxfid, ",%u", kk);
-		else
-		  fwrite(&kk, sizeof(kk), 1, qidxfid);
-	  }
-	  if (ASCII)
-		fprintf(qidxfid, "\n");
+		fwrite(&kk, sizeof(kk), 1, qidxfid);
 	}
 	free_ivec_array(qlist);
 

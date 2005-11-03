@@ -29,15 +29,7 @@
 #define freadcode(c,f) fread(c->farr,sizeof(double),DIM_CODES,f)
 #define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
 #define fwritestar(s,f) fwrite((double *)s->farr,sizeof(double),DIM_STARS,f)
-#define fscanfcode(c,f) fscanf(f,"%lf,%lf,%lf,%lf\n",c->farr,c->farr+1,c->farr+2,c->farr+3)
-#define fscanfcodes(a,b,c,d,f) fscanf(f,"%lf,%lf,%lf,%lf\n",a,b,c,d)
-#define fscanfonequad(f,a,b,c,d) fscanf(f,"%ld,%ld,%ld,%ld\n",a,b,c,d)
-#define fscanfonecode(f,a,b,c,d) fscanf(f,"%lf,%lf,%lf,%lf\n",a,b,c,d)
-#if DIM_STARS==2
-#define fprintfstar(s,f) fprintf(f,"%lf,%lf\n",star_ref(s,0),star_ref(s,1))
-#elif DIM_STARS==3
 #define fprintfstar(s,f) fprintf(f,"%lf,%lf,%lf\n",star_ref(s,0),star_ref(s,1),star_ref(s,2))
-#endif
 #define fseekocat(i,p,f) fseeko(f,p+i*(DIM_STARS*sizeof(double)),SEEK_SET)
 
 void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD);
@@ -46,25 +38,26 @@ void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
 void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
 stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
-                   double *ramin, double *ramax, double *decmin, double *decmax,
+                  double *ramin, double *ramax, double *decmin, double *decmax,
 				   int nkeep);
 
 quadarray *readidlist(FILE *fid, qidx *numpix);
 
 char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
-                      double *ramin, double *ramax, double *decmin, double *decmax);
+                double *ramin, double *ramax, double *decmin, double *decmax);
 char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
                       dimension *DimCodes, double *index_scale);
 char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
                       dimension *DimQuads, double *index_scale);
-void write_objs_header(FILE *fid, char ASCII, sidx numstars,
-                       dimension DimStars, double ramin, double ramax, double decmin, double decmax);
-void write_code_header(FILE *codefid, char ASCII, qidx numCodes,
+void write_objs_header(FILE *fid, sidx numstars,
+							  dimension DimStars, double ramin, double ramax, 
+							  double decmin, double decmax);
+void write_code_header(FILE *codefid, qidx numCodes,
                        sidx numstars, dimension DimCodes, double index_scale);
-void write_quad_header(FILE *quadfid, char ASCII, qidx numQuads, sidx numstars,
+void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
                        dimension DimQuads, double index_scale);
-void fix_code_header(FILE *codefid, char ASCII, qidx numCodes, size_t len);
-void fix_quad_header(FILE *quadfid, char ASCII, qidx numQuads, size_t len);
+void fix_code_header(FILE *codefid, qidx numCodes, size_t len);
+void fix_quad_header(FILE *quadfid, qidx numQuads, size_t len);
 
 xyarray *readxy(FILE *fid, char ParityFlip);
 

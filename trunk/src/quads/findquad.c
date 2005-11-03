@@ -81,40 +81,20 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "    (%lu quads, %lu total stars, scale=%f arcmin)\n",
 		        numquads, numstars, rad2arcmin(index_scale));
 		if (quadset == TRUE) {
-			if (qASCII) {
-				sprintf(buff, "%lu", numstars - 1);
-				maxstarWidth = strlen(buff);
-			}
-			if (qASCII) {
-				fseeko(quadfid, ftello(quadfid) + thequad*
-				       (DimQuads*(maxstarWidth + 1)*sizeof(char)), SEEK_SET);
-				fscanfonequad(quadfid, &iA, &iB, &iC, &iD);
-			} else {
-				fseeko(quadfid, ftello(quadfid) + thequad*
-				       (DimQuads*sizeof(iA)), SEEK_SET);
-				readonequad(quadfid, &iA, &iB, &iC, &iD);
-			}
+		  fseeko(quadfid, ftello(quadfid) + thequad*
+					(DimQuads*sizeof(iA)), SEEK_SET);
+		  readonequad(quadfid, &iA, &iB, &iC, &iD);
 			fprintf(stderr, "quad %lu : A=%lu,B=%lu,C=%lu,D=%lu\n",
 			        thequad, iA, iB, iC, iD);
 
 			fopenin(codefname, codefid);
-			qASCII = read_code_header(codefid,
-			                          &numquads, &numstars, &DimQuads, &index_scale);
+			qASCII = read_code_header(codefid, &numquads, &numstars, 
+											  &DimQuads, &index_scale);
 			if (qASCII == READ_FAIL)
 				return (1);
-			if (qASCII) {
-				sprintf(buff, "%f", 1.0 / (double)PIl);
-				maxstarWidth = strlen(buff);
-			}
-			if (qASCII) {
-				fseeko(codefid, ftello(codefid) + thequad*
-				       (DIM_CODES*(maxstarWidth + 1)*sizeof(char)), SEEK_SET);
-				fscanfonecode(codefid, &Cx, &Cy, &Dx, &Dy);
-			} else {
-				fseeko(codefid, ftello(codefid) + thequad*
-				       (DIM_CODES*sizeof(Cx)), SEEK_SET);
-				readonecode(codefid, &Cx, &Cy, &Dx, &Dy);
-			}
+			fseeko(codefid, ftello(codefid) + thequad*
+					 (DIM_CODES*sizeof(Cx)), SEEK_SET);
+			readonecode(codefid, &Cx, &Cy, &Dx, &Dy);
 			fprintf(stderr, "     code = %lf,%lf,%lf,%lf\n", Cx, Cy, Dx, Dy);
 
 		}

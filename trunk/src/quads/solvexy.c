@@ -165,10 +165,6 @@ int main(int argc, char *argv[])
 	qASCII = read_quad_header(quadfid, &numquads, &numstars, &Dim_Quads, &index_scale);
 	if (qASCII == READ_FAIL)
 		return (3);
-	if (qASCII) {
-		sprintf(buff, "%lu", numstars - 1);
-		maxstarWidth = strlen(buff);
-	}
 	qposmarker = ftello(quadfid);
 
 	fopenin(catfname, catfid);
@@ -177,10 +173,6 @@ int main(int argc, char *argv[])
 	                          &ramin, &ramax, &decmin, &decmax);
 	if (cASCII == READ_FAIL)
 		return (4);
-	if (cASCII) {
-		sprintf(buff, "%lf,%lf,%lf\n", 0.0, 0.0, 0.0);
-		oneobjWidth = strlen(buff);
-	}
 	cposmarker = ftello(catfid);
 
 	AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
@@ -757,15 +749,9 @@ void find_corners(xy *thisfield, xy *cornerpix)
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
-	if (qASCII) {
-		fseeko(quadfid, qposmarker + thisquad*
-		       (DIM_QUADS*(maxstarWidth + 1)*sizeof(char)), SEEK_SET);
-		fscanfonequad(quadfid, iA, iB, iC, iD);
-	} else {
-		fseeko(quadfid, qposmarker + thisquad*
-		       (DIM_QUADS*sizeof(iA)), SEEK_SET);
-		readonequad(quadfid, iA, iB, iC, iD);
-	}
+  fseeko(quadfid, qposmarker + thisquad*
+			(DIM_QUADS*sizeof(iA)), SEEK_SET);
+  readonequad(quadfid, iA, iB, iC, iD);
 	return ;
 }
 
@@ -773,49 +759,16 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
                    sidx iA, sidx iB, sidx iC, sidx iD)
 {
-	double tmpx, tmpy, tmpz;
-
-	if (cASCII) {
-		fseeko(catfid, cposmarker + iA*oneobjWidth*sizeof(char), SEEK_SET);
-		fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-		star_set(sA, 0, tmpx);
-		star_set(sA, 1, tmpy);
-		star_set(sA, 2, tmpz);
-		fseeko(catfid, cposmarker + iB*oneobjWidth*sizeof(char), SEEK_SET);
-		fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-		star_set(sB, 0, tmpx);
-		star_set(sB, 1, tmpy);
-		star_set(sB, 2, tmpz);
-		fseeko(catfid, cposmarker + iC*oneobjWidth*sizeof(char), SEEK_SET);
-		fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-		star_set(sC, 0, tmpx);
-		star_set(sC, 1, tmpy);
-		star_set(sC, 2, tmpz);
-		fseeko(catfid, cposmarker + iD*oneobjWidth*sizeof(char), SEEK_SET);
-		fscanf(catfid, "%lf,%lf,%lf\n", &tmpx, &tmpy, &tmpz);
-		star_set(sD, 0, tmpx);
-		star_set(sD, 1, tmpy);
-		star_set(sD, 2, tmpz);
-	} else {
-		fseekocat(iA, cposmarker, catfid);
-		freadstar(sA, catfid);
-		fseekocat(iB, cposmarker, catfid);
-		freadstar(sB, catfid);
-		fseekocat(iC, cposmarker, catfid);
-		freadstar(sC, catfid);
-		fseekocat(iD, cposmarker, catfid);
-		freadstar(sD, catfid);
-	}
+	fseekocat(iA, cposmarker, catfid);
+	freadstar(sA, catfid);
+	fseekocat(iB, cposmarker, catfid);
+	freadstar(sB, catfid);
+	fseekocat(iC, cposmarker, catfid);
+	freadstar(sC, catfid);
+	fseekocat(iD, cposmarker, catfid);
+	freadstar(sD, catfid);
 	return ;
 }
-
-
-
-
-
-
-
-
 
 
 
