@@ -4,9 +4,10 @@
 #define OPTIONS "bhgf:N:I:"
 
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] [-I intensity]"
-" -f catalog.objs > outfile.pgm\n"
+" [-f catalog.objs] > outfile.pgm\n"
 "  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n"
-"  -N sets edge size of output image, -I sets intensity scale for pixels\n";
+"  -N sets edge size of output image, -I sets intensity scale for pixels\n"
+" if -f is absent, reads from stdin\n";
 
 double *projection;
 extern char *optarg;
@@ -29,9 +30,14 @@ inline void project_equal_area(double x, double y, double z, int *X, int *Y)
 
 inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y)
 {
+
+	double theta = atan(x/z);
+	double r = sqrt(x*x+z*z);
+	double zp, xp;
+
 	/* Hammer-Aitoff projection with x-z plane compressed to purely +z side
 	 * of xz plane */
-	double theta = atan(x/z);
+
 	if (z < 0) {
 		if (x < 0) {
 			theta = theta - PI;
@@ -41,8 +47,6 @@ inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y
 	}
 	theta /= 2.0;
 
-	double r = sqrt(x*x+z*z);
-	double zp, xp;
 	zp = r*cos(theta);
 	xp = r*sin(theta);
 	if (zp < -0.01) {
@@ -64,13 +68,8 @@ int main(int argc, char *argv[])
 	double x,y,z;
 	int X,Y;
 	unsigned long int saturated=0;
-	FILE* fid = NULL;
+	FILE* fid = stdin;
 	int argidx, argchar; //  opterr = 0;
-
-	if (argc <= 2) {
-		fprintf(stderr, help);
-		return 1;
-	} 
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {

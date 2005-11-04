@@ -24,7 +24,6 @@
 #define mk_field0fn(s) mk_filename(s,".xyl0")
 #define mk_idlistfn(s) mk_filename(s,".ids0")
 #define mk_qlistfn(s)  mk_filename(s,".qds0")
-#define mk_qmapfn(s)   mk_filename(s,".qmap")
 
 #define freadcode(c,f) fread(c->farr,sizeof(double),DIM_CODES,f)
 #define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
