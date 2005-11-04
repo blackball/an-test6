@@ -100,9 +100,9 @@ int main(int argc, char** args) {
 	for (i = 0; i < Nstars; i++) {
 		dyv* v = mk_dyv(D);
 		for (d = 0; d < D; d++) {
-			dyv_ref(v, d) = range_random(0.0, 1.0);
+			dyv_set(v, d, range_random(0.0, 1.0));
 		}
-		dyv_array_ref(stararray, i) = v;
+		dyv_array_set(stararray, i, v);
 	}
 	// create search tree
 	startree = mk_kdtree_from_points(stararray, Nleaf);
