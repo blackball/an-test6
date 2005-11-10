@@ -126,8 +126,8 @@ void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
 
 void fix_code_header(FILE *codefid, qidx numCodes, size_t len)
 {
-	rewind(codefid);
 	magicval magic = MAGIC_VAL;
+	rewind(codefid);
 	fwrite(&magic, sizeof(magic), 1, codefid);
 	fwrite(&numCodes, sizeof(numCodes), 1, codefid);
 	return ;
@@ -135,8 +135,8 @@ void fix_code_header(FILE *codefid, qidx numCodes, size_t len)
 
 void fix_quad_header(FILE *quadfid, qidx numQuads, size_t len)
 {
-	rewind(quadfid);
 	magicval magic = MAGIC_VAL;
+	rewind(quadfid);
 	fwrite(&magic, sizeof(magic), 1, quadfid);
 	fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
 	return ;
