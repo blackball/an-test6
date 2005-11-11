@@ -37,8 +37,6 @@ void last_result(void* vparams, node* query);
 
 struct params
 {
-  //double radius;
-
   // radius-squared of the search range.
   double mindistsq;
   double maxdistsq;
@@ -589,15 +587,19 @@ void last_result(void* vparams, node* query) {
 					p->mindistsq, p->maxdistsq,
 					&(p->nquads));
 
-        //p->nquads += nquads;
-
 		if (!quiet) {
 		  int pct;
+		  double percent;
 		  nstarsdone++;
-		  pct = (int)(0.5 + 100.0 * (double)nstarsdone / (double)numstars);
+		  percent = 100.0 * (double)nstarsdone / (double)numstars;
+		  pct = (int)(0.5 + percent);
 		  if (pct != lastpercent) {
-			printf("%i of %i (%i%%) done.\n", nstarsdone, (int)numstars,
-				   pct);
+			//int pct2 = (int)(0.5 + 10 * percent);
+			double quadest = (100.0 / percent) * (double)(p->nquads);
+			//printf("%i of %i (%i.%i%%) done.  %i quads created, rough estimate %i total.\n", nstarsdone,
+			//(int)numstars, pct2/10, pct2%10, p->nquads, (int)quadest);
+			printf("%i of %i (%i%%) done.  %i quads created, rough estimate %i total.\n", nstarsdone, (int)numstars,
+				   pct, p->nquads, (int)quadest);
 			lastpercent = pct;
 		  }
 		}
