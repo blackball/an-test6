@@ -1,27 +1,15 @@
 /**
    Author: Dustin Lang
 
-   -read a catalogue of stars
-   -create a kdtree
-   -(should read a star kdtree instead)
+   -read a star kdtree
 
    -use dual-tree search to do:
-     -for each star A, find all stars X within range [0, 2s].
-      In X, build each quad using star B if |B-A| is in [s/2, 2s],
+     -scale 's', lower-limit scale factor 'l':
+     -for each star A, find all stars X within range [0, s].
+      In X, build each quad using star B if |B-A| is in [l*s, s],
   	  and choose stars C, D in the box that has AB as the diagonal.
 
-   -write quad and code output files.
-
-
-(NO)
-
-   -write an output file that lists the quads created.
-    Format:
-	  header:
-	  32-bit unsigned int, in network byte order: the number of quads.
-	  data:
-	  4 x 32-bit unsigned int: the star indices
-	  4 x double: the code
+   -write .quad, .code, .qidx output files.
  */
 
 #include <math.h>
@@ -527,17 +515,16 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 			Dy = dyv_ref(cdy, d);
 			//printf_stats("    quad inds %i, %i, %i, %i\n", iA, iB, iC, iD);
 
-			accept_quad(*pnquads, iA, iB, iC, iD,
-						Cx, Cy, Dx, Dy);
+			if (!justcount) {
+				accept_quad(*pnquads, iA, iB, iC, iD,
+							Cx, Cy, Dx, Dy);
+			}
 			(*pnquads)++;
-			//nquads++;
 		  }
         }
     }
 
     printf_stats("    created %i quads.\n", *pnquads);
-
-    //if (pnquads) *pnquads = nquads;
 
     free_dyv(delt);
     free_dyv(midAB);
