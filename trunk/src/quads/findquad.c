@@ -3,7 +3,7 @@
 
 #define OPTIONS "hf:q:i::"
 const char HelpString[] =
-    "findquad -f fname {-q quad# | -i starID}\n";
+    "findquad -f fname {-q quad# | -i<starID>}\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
