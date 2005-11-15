@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 					matchstar = (sidx *)bsearch(&thestar, starlist, numstars2,
 								    sizeof(sidx *), compare_sidx);
 					if (matchstar == NULL)
-						fprintf(stdout, "[]\n", thestar);
+						fprintf(stdout, "[]\n");
 					else {
 						ii = (sidx)(matchstar - starlist);
 						fprintf(stdout, "[");
