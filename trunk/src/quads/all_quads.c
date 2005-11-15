@@ -80,6 +80,7 @@ ivec_array *qlist = NULL;
 sidx numstars;
 int nstarsdone = 0;
 int lastpercent = 0;
+int lastcount = 0;
 int justcount = 0;
 int quiet = 0;
 
@@ -593,14 +594,16 @@ void last_result(void* vparams, node* query) {
 		  nstarsdone++;
 		  percent = 100.0 * (double)nstarsdone / (double)numstars;
 		  pct = (int)(0.5 + percent);
-		  if (pct != lastpercent) {
+		  if ((pct != lastpercent) ||
+			  ((p->nquads - lastcount) > 1000000)) {
 			//int pct2 = (int)(0.5 + 10 * percent);
 			double quadest = (100.0 / percent) * (double)(p->nquads);
 			//printf("%i of %i (%i.%i%%) done.  %i quads created, rough estimate %i total.\n", nstarsdone,
 			//(int)numstars, pct2/10, pct2%10, p->nquads, (int)quadest);
-			printf("%i of %i (%i%%) done.  %i quads created, rough estimate %i total.\n", nstarsdone, (int)numstars,
-				   pct, p->nquads, (int)quadest);
+			printf("%i of %i (%i%%) done.  %i quads created, rough estimate %.2g total.\n", nstarsdone, (int)numstars,
+				   pct, p->nquads, quadest);
 			lastpercent = pct;
+			lastcount = p->nquads;
 		  }
 		}
 		/*

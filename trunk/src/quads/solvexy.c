@@ -10,10 +10,11 @@
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpf:o:t:m:n:x:"
+#define OPTIONS "hpef:o:t:m:n:x:"
 const char HelpString[] =
-"solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
-"   [-n matches_needed_to_agree] [-x max_matches_needed]\n";
+"solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
+"   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
+"       (-e : compute the code errors)";
 //"   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n"
 //"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n"
 //"   default matches_needed_to_agree is 3\n"
@@ -25,12 +26,12 @@ const char HelpString[] =
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
 
-qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol);
+qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, double codetol);
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
-                   kquery *kq, kdtree *codekd);
-void resolve_matches(xy *cornerpix, kresult *krez, code *query,
+                   kquery *kq, kdtree *codekd, dyv_array* codearray);
+void resolve_matches(xy *cornerpix, kresult *krez, dyv_array* codearray, code *query,
                      xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
 ivec *add_transformed_corners(star *sMin, star *sMax,
                               qidx thisquad, kdtree **kdt);
@@ -79,6 +80,8 @@ int main(int argc, char *argv[])
 	dimension Dim_Quads, Dim_Stars;
 	xyarray *thefields = NULL;
 	kdtree *codekd = NULL;
+	dyv_array* codearray = NULL;
+	int do_codeerr = 0;
 
 	if (argc <= 4) {
 		fprintf(stderr, HelpString);
@@ -87,6 +90,9 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'e':
+		  do_codeerr = 1;
+		  break;
 		case 'f':
 			treefname = mk_ctreefn(optarg);
 			quadfname = mk_quadfn(optarg);
@@ -159,6 +165,10 @@ int main(int argc, char *argv[])
 	        kdtree_num_points(codekd), kdtree_num_nodes(codekd),
 	        kdtree_max_depth(codekd));
 	fprintf(stderr, "    (index scale = %lf arcmin)\n", rad2arcmin(index_scale));
+	if (do_codeerr) {
+	  fprintf(stderr, "  Making dyv_array from kdtree...\n");
+	  codearray = mk_dyv_array_from_kdtree(codekd);
+	}
 
 	fopenin(quadfname, quadfid);
 	free_fn(quadfname);
@@ -201,7 +211,7 @@ int main(int argc, char *argv[])
 	fprintf(hitfid, "min_matches_to_agree = %u\n", min_matches_to_agree);
 	fprintf(hitfid, "max_matches_needed = %u\n", max_matches_needed);
 
-	numsolved = solve_fields(thefields, codekd, codetol);
+	numsolved = solve_fields(thefields, codekd, codearray, codetol);
 
 	fclose(hitfid);
 	fclose(quadfid);
@@ -220,7 +230,7 @@ int main(int argc, char *argv[])
 
 
 
-qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
+qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, double codetol)
 {
 	qidx numtries, nummatches, numsolved, numgood, numAB, ii;
 	sidx numxy, iA, iB, iC, iD, fieldidx;
@@ -296,7 +306,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 												numtries++;                   // let's try it!
 												//fprintf(stderr,"trying (%lu,%lu,%lu,%lu)\n",iA,iB,iC,iD);
 												nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
-												                            iA, iB, iC, iD, kq, codekd);
+												                            iA, iB, iC, iD, kq, codekd, codearray);
 											}
 										}
 									}
@@ -370,7 +380,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, double codetol)
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
-                   kquery *kq, kdtree *codekd)
+                   kquery *kq, kdtree *codekd, dyv_array* codearray)
 {
 	kresult *krez;
 	code *thequery = mk_code();
@@ -384,7 +394,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 	krez = mk_kresult_from_kquery(kq, codekd, thequery);
 	if (krez->count) {
 		nummatch += krez->count;
-		resolve_matches(cornerpix, krez, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
+		resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
 	}
 	free_kresult(krez);
 
@@ -396,7 +406,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 	krez = mk_kresult_from_kquery(kq, codekd, thequery);
 	if (krez->count) {
 		nummatch += krez->count;
-		resolve_matches(cornerpix, krez, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
+		resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
 	}
 	free_kresult(krez);
 
@@ -408,7 +418,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 	krez = mk_kresult_from_kquery(kq, codekd, thequery);
 	if (krez->count) {
 		nummatch += krez->count;
-		resolve_matches(cornerpix, krez, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
+		resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
 	}
 	free_kresult(krez);
 
@@ -420,7 +430,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 	krez = mk_kresult_from_kquery(kq, codekd, thequery);
 	if (krez->count) {
 		nummatch += krez->count;
-		resolve_matches(cornerpix, krez, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
+		resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
 	}
 	free_kresult(krez);
 
@@ -430,7 +440,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 }
 
 
-void resolve_matches(xy *cornerpix, kresult *krez, code *query,
+void resolve_matches(xy *cornerpix, kresult *krez, dyv_array* codearray, code *query,
                      xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD)
 {
 	qidx jj, thisquadno;
@@ -481,8 +491,17 @@ void resolve_matches(xy *cornerpix, kresult *krez, code *query,
 		if (mo->nearlist != NULL && mo->nearlist->size >= min_matches_to_agree
 		        && mo->nearlist->size > mostAgree)
 			mostAgree = mo->nearlist->size;
-		mo->code_err = 0.0;
-		// should be |query->farr - point(krez->pindexes->iarr[jj])|^2
+		if (!codearray) {
+		  mo->code_err = 0.0;
+		} else {
+		  dyv* matchedcode;
+		  // the code that was matched:
+		  matchedcode = dyv_array_ref(codearray, ivec_ref(krez->pindexes, jj));
+		  // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
+		  // code* is a dyv*
+		  // NOTE: it's actually code error SQUARED!
+		  mo->code_err = dyv_dyv_dsqd(query, matchedcode);
+		}
 
 		free(transform);
 		//free_star(sMin); free_star(sMax); // will be freed with MatchObj
@@ -558,6 +577,9 @@ void output_match(MatchObj *mo)
 		        star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
 		        rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 		        rad2deg(z2dec(star_ref(mo->sMax, 2))));
+		if (mo->code_err > 0.0) {
+		  fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
+		}
 		fprintf(hitfid, "        ),\n");
 
 		/*
