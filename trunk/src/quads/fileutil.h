@@ -76,6 +76,6 @@ signed int compare_sidx(const void *x, const void *y);
 
 typedef unsigned short int magicval;
 #define MAGIC_VAL 0xFF00
-
+#define ASCII_VAL 0x754E
 
 #endif
