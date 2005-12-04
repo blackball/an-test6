@@ -16,8 +16,6 @@
 ;   idlutils
 ;   photoop
 ; BUGS:
-;   - Not written.
-;   - Not tested.
 ;   - Depends on photoop.
 ; REVISION HISTORY:
 ;   2005-12-04  started - Hogg (NYU)
@@ -25,15 +23,15 @@
 function an_sdss_read, racen,deccen,rad,rerun=rerun
 if (NOT keyword_set(rerun)) then rerun= 137
 fields= SDSS_ASTR2FIELDS(radeg=racen,decdeg=deccen,radius=rad,rerun=rerun)
+struct_print, fields
 if (n_tags(fields) GT 1) then begin
     obj= SDSS_READOBJ(fields.run,fields.camcol,fields.field,rerun=rerun)
     spherematch, racen,deccen,obj.ra,obj.dec,rad, $
       match1,match2,maxmatch=0
     if (match2[0] NE -1) then begin
         obj= obj[match2]
-        sindx= sort(obj.petroflux)
-        obj= obj[sindx]
-        return, obj
+        sindx= reverse(sort(obj.petroflux[2]))
+        return, obj[sindx]
     endif
 endif
 splog, 'ERROR: no matches'

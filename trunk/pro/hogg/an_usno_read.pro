@@ -16,11 +16,11 @@
 ; DEPENDENCIES:
 ;   idlutils
 ; BUGS:
-;   - Not tested.
 ; REVISION HISTORY:
 ;   2005-12-04  started - Hogg (NYU)
 ;-
 function an_usno_read, racen,deccen,rad
-usno= usno_read(racen,deccen,rad)
-return, usno_read
+usno= usno_read(racen,deccen,rad,catname='USNO-B1.0')
+sindx= sort(usno.rmag)
+return, usno[sindx]
 end
