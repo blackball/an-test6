@@ -10,6 +10,7 @@
 ;   rad       - radius of region (deg)
 ; OPTIONAL INPUTS:
 ;   rerun     - SDSS rerun (default 137)
+;   band      - band (index) for flux ranking (default 2 for r)
 ; OUTPUTS:
 ;   []        - structure of SDSS objects; -1 if no matches
 ; DEPENDENCIES:
@@ -20,8 +21,9 @@
 ; REVISION HISTORY:
 ;   2005-12-04  started - Hogg (NYU)
 ;-
-function an_sdss_read, racen,deccen,rad,rerun=rerun
+function an_sdss_read, racen,deccen,rad,rerun=rerun,band=band
 if (NOT keyword_set(rerun)) then rerun= 137
+if (NOT keyword_set(band)) then band= 2
 fields= SDSS_ASTR2FIELDS(radeg=racen,decdeg=deccen,radius=rad,rerun=rerun)
 struct_print, fields
 if (n_tags(fields) GT 1) then begin
@@ -30,7 +32,7 @@ if (n_tags(fields) GT 1) then begin
       match1,match2,maxmatch=0
     if (match2[0] NE -1) then begin
         obj= obj[match2]
-        sindx= reverse(sort(obj.petroflux[2]))
+        sindx= reverse(sort(obj.petroflux[band]))
         return, obj[sindx]
     endif
 endif
