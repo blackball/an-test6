@@ -45,7 +45,7 @@ if (not keyword_set(siporder)) then siporder= 1
 if (not keyword_set(jitter)) then jitter= 2D0
 if (not keyword_set(nsigma)) then nsigma= 5D0
 
-; get relevant USNO stars
+; get relevant catalog stars
 xy2ad, xx,yy,astr,aa,dd
 if (not keyword_set(usno)) then begin
     hogg_mean_ad, aa,dd,meanaa,meandd
@@ -53,7 +53,7 @@ if (not keyword_set(usno)) then begin
     usno= usno_read(meanaa,meandd,1.1*maxangle)
 endif
 nusno= n_elements(usno)
-splog, 'using',nusno,' USNO stars'
+splog, 'using',nusno,' catalog stars'
 
 ; find star matches
 spherematch, aa,dd,usno.ra,usno.dec,(jitter*nsigma/3.6D3), $
