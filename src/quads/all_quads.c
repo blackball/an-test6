@@ -68,7 +68,7 @@ typedef struct result_info result_info;
 
 result_info rinfo;
 
-#define OPTIONS "acqf:s:l:"
+#define OPTIONS "hacqf:s:l:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -84,6 +84,17 @@ int lastcount = 0;
 int justcount = 0;
 int quiet = 0;
 
+
+void print_help(char* progname) {
+    printf("\nUsage:\n"
+	   "  %s -f <filename-base>\n"
+	   "     [-s <scale>]         (default scale is 5 arcmin)\n"
+	   "     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
+	   "     [-c]                 (just count the quads, don't write anything)\n"
+	   "     [-q]                 (be quiet!  No progress reports)\n"
+	   "\n"
+	   , progname);
+}
 
 int main(int argc, char *argv[]) {
   char* progname;
@@ -117,26 +128,20 @@ int main(int argc, char *argv[]) {
   FILE *treefid = NULL;
   FILE *qidxfid = NULL;
 
-
-
   progname = argv[0];
 
   radius = arcmin2rad(5.0);
 
   if (argc == 1) {
-	printf("\nUsage:\n"
-		"  %s -f <filename-base>\n"
-		"     [-s <scale>]         (default scale is 5 arcmin)\n"
-		"     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
-		"     [-c]                 (just count the quads, don't write anything)\n"
-		"     [-q]                 (be quiet!  No progress reports)\n"
-		"\n"
-		   , progname);
-	exit(0);
+      print_help(progname);
+      exit(0);
   }
 
   while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 	switch (argchar) {
+	case 'h':
+	    print_help(progname);
+	    exit(0);
 	case 'c':
 	  justcount = 1;
 	  break;

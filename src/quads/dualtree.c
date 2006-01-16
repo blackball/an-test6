@@ -122,14 +122,16 @@ void dualtree_recurse(list* nodes, list* leaves,
 		}
 
 		// non-leaf nodes
-		for (e = nodes->head; e; e = e->next) {
+		if (result) {
+		    for (e = nodes->head; e; e = e->next) {
 			node * sn = (node*)e->data;
 			result(result_extra, sn, query);
-		}
-		// leaf nodes
-		for (e = leaves->head; e; e = e->next) {
+		    }
+		    // leaf nodes
+		    for (e = leaves->head; e; e = e->next) {
 			node * sn = (node*)e->data;
 			result(result_extra, sn, query);
+		    }
 		}
 
 		if (end) {
@@ -142,19 +144,21 @@ void dualtree_recurse(list* nodes, list* leaves,
 	// if there are search leaves but no search nodes, run the result
 	// function on each leaf.  (Note that the query node is not a leaf!)
 	if (!nodes->head) {
-		start_of_results_function start = callbacks->start_results;
-		end_of_results_function   end   = callbacks->end_results;
-		result_function result = callbacks->result;
-		void* result_extra = callbacks->result_extra;
+	    start_of_results_function start = callbacks->start_results;
+	    end_of_results_function   end   = callbacks->end_results;
+	    result_function result = callbacks->result;
+	    void* result_extra = callbacks->result_extra;
 
 		if (start) {
 			start(callbacks->start_extra, query);
 		}
 
 		// leaf nodes
-		for (e = leaves->head; e; e = e->next) {
+		if (result) {
+		    for (e = leaves->head; e; e = e->next) {
 			node * sn = (node*)e->data;
 			result(result_extra, sn, query);
+		    }
 		}
 
 		if (end) {
@@ -234,8 +238,4 @@ void dualtree_search(kdtree* search, kdtree* query,
 	list_free_nodes(&sn);
 	list_free_nodes(&sl);
 }
-
-
-
-
 
