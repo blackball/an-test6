@@ -9,12 +9,16 @@ CFLAGS	= -O2 -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LA
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
-OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o \
-	dualtree.o
+OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
+	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
+	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
+	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o
 
-EXECS = randcat startree getquads quadidx codetree genfields solvexy fieldquads findstar findquad findcode \
-	all_quads fixheaders
-MYOBJS = randcat.o startree.o getquads.o quadidx.o codetree.o genfields.o solvexy.o fieldquads.o findstar.o findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o
+EXECS = randcat startree getquads quadidx codetree genfields solvexy fieldquads findstar findquad \
+	findcode codedensity all_quads fixheaders
+
+MYOBJS = randcat.o startree.o getquads.o quadidx.o codetree.o genfields.o solvexy.o fieldquads.o findstar.o \
+	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o
 
 all: $(EXECS)
 
@@ -29,8 +33,4 @@ allclean:
 
 clean:
 	rm -f $(EXECS) $(MYOBJS)
-
-
-#dualtree_test :: %: %.o $(OBJ) dualtree.o
-#	$(CC) $(CFLAGS) $(LFLAGS) $(OBJ) dualtree.o $< -o $@
 
