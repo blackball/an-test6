@@ -4,7 +4,7 @@
 
 #define OPTIONS "hs:q:f:"
 const char HelpString[] =
-    "getquads -f fname -s scale(arcmin) -q numQuads [-a|-b]\n"
+    "getquads -f fname -s scale(arcmin) -q numQuads\n"
    "  scale is the scale to look for quads, numQuads is the #darts to throw\n";
 
 

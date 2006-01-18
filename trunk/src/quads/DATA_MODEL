@@ -1,0 +1,184 @@
+The quads system uses a variety of files, which I'll describe below.
+
+The binary files all start with the unsigned short int MAGIC_VAL
+(#defined at the end of fileutil.h) which helps identify them as
+binary and also sort out endian issues. 
+
+1) Catalogue Files (.objs) -- binary
+
+The binary catalogue format (.objs) is as follows:
+   unsigned short int = MAGIC_VAL
+   unsigned long int = number_of_stars_in_catalogue
+   unsigned short int = dimension_of_space (almost always==3)
+   double ramin = minimum RA value of all stars
+   double ramax = maximum RA value of all stars
+   double decmin = minimum DEC value of all stars
+   double decmax = maximum DEC value of all stars
+   double x0, double y0, double z0
+   double x1, double y1, double z1
+   ...
+
+
+2) KD Tree Files (.skdt .ckdt) -- binary
+
+The binary star KD-tree (.skdt) files have this format:
+
+   KD-tree-in-binary-format (see below)
+   double ramin = minimum RA value of all stars
+   double ramax = maximum RA value of all stars
+   double decmin = minimum DEC value of all stars
+   double decmax = maximum DEC value of all stars
+
+The binary code KD-tree (.ckdt) files have this format:
+
+   KD-tree-in-binary-format (see below)
+   double scale = scale of quads in arcmin
+
+(Notice -- and this is a bug -- that these files DO NOT start with MAGIC_VAL)
+
+The binary format for a KD-tree is as follows:
+
+   int numnodes = total number of nodes (leaf+nonleaf+root) in KD-tree
+   int maxdepth = maximum depth (number of levels; root is level 1)
+   int rmin = maximum number of points per leaf node (why is it called rmin?)
+   node1 (see below)
+   node2
+   ...
+   nodeN
+
+where the order of nodes is a DEPTH FIRST traversal of the
+binary tree, starting at the left and expanding left children
+then right children
+
+The binary format for a node in a KD-tree is as follows
+
+   int numpoints = 0 if node is null
+                 = +K for a leaf node containing K points directly
+                 = -K for an interior node whose subtree contains K points
+   double min_x  = minimum corner of bounding box
+   double min_y    which surrounds all points living in node (if leaf)
+   double min_z    or in subtree rooted by this node (if nonleaf)
+   double max_x  = maximum corner of bounding box
+   double max_y
+   double max_z
+
+and, if the node is a leaf node, this is followed by
+
+   int idx1   indices of K points living in this leaf node
+   int idx2
+   ...
+   int idxK  
+   double x1  x,y,z coordinates of K points living in this leaf node
+   double y1
+   double z1
+   double x2
+   double y2
+   double z2
+   ...
+   double xK
+   double yK
+   double zK
+
+
+3) Code (.code) files
+
+   these files store the codes (ie the 4-vectors in codespace) for each quad
+
+   unsigned short int = MAGIC_VAL
+   unsigned long int numCodes = number of codes (quads) in this codefile
+   unsigned short int DimCodes = dimension of codes (almost always 4)
+   double index_scale = scale of quads (arcmin)
+   unsigned long int numstars = number of stars in original catalogue (unclear)
+   double c11 code elements for first quad
+   double c12
+   double c13
+   double c14
+   double c21 code elements for second quad
+   double c22
+   double c23
+   double c24
+   ...
+   double cN1 code elements for last (Nth) quad
+   double cN2
+   double cN3
+   double cN4
+
+
+4) Quad (.quad) files
+
+   these files store the identities of the stars (acording to the
+   order the appeared in the catalogue) which make up each quad
+
+   unsigned short int = MAGIC_VAL
+   unsigned long int numQuads = number of quads (codes) in this quadfile
+   unsigned short int DimQuads = number of stars per quad (almost always 4)
+   double index_scale = scale of quads (arcmin)
+   unsigned long int numstars = number of stars in original catalogue (unclear)
+   unsigned long int idxA1 = index of A star in quad 1 
+   unsigned long int idxB1 = index of B star in quad 1 
+   unsigned long int idxC1 = index of C star in quad 1 
+   unsigned long int idxD1 = index of D star in quad 1 
+   unsigned long int idxA2 = index of A star in quad 2 
+   unsigned long int idxB2 = index of B star in quad 2 
+   unsigned long int idxC2 = index of C star in quad 2 
+   unsigned long int idxD2 = index of D star in quad 2 
+   ...
+   unsigned long int idxAN = index of A star in quad N 
+   unsigned long int idxBN = index of B star in quad N 
+   unsigned long int idxCN = index of C star in quad N 
+   unsigned long int idxDN = index of D star in quad N 
+
+
+5) Inverted Index (.qidx) files
+
+   these file store, for each star in the original catalogue which was
+   used, a list of which quads the star appears in
+
+   unsigned short int = MAGIC_VAL
+   unsigned long int numQuads = number of quads (codes) in this index
+   unsigned long int star_idx_1 = index of first star used
+   unsigned long int num_quads_1 = number of quads this star appears in
+   unsigned long int quad_num_11 = first quad it appears in
+   unsigned long int quad_num_12
+     ...
+   unsigned long int quad_num_1K1 = last quad it appears in
+   unsigned long int star_idx_2 = index of second star used
+   unsigned long int num_quads_2   etc...
+   unsigned long int quad_num_21
+   unsigned long int quad_num_22
+     ...
+   unsigned long int quad_num_2K2
+   ...
+   unsigned long int star_idx_N
+   unsigned long int num_quads_N
+   unsigned long int quad_num_N1
+   unsigned long int quad_num_N2
+   ...
+   unsigned long int quad_num_NKN
+
+
+6) Hits (.hits) files
+
+This format should be described by Keir since it is now some
+python readable format...
+
+
+
+7) XY List (.xyls) files
+
+	These are ASCII files, which hold the xy positions of detected
+	sources and have the following format:
+
+   NumFields=N
+   S1,x11,y11,x12,y12,...,x1K1,y1K1
+   S2,x21,y21,x22,y22,...,x2K2,y2K2
+   ...
+   SN,xN1,yN1,xN2,yN2,...,xNKN,yNKN
+
+each line after the first corresponds to a single field and
+holds an integer saying how many sources are in that field and then
+a sequence of pairs of reals giving the xy positions of those sources
+
+the file should have exactly N+1 lines if it describes N fields,
+and commas should be used to separate, as above
+

@@ -14,9 +14,10 @@
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
-"       (-e : compute the code errors)";
+"       (-e : compute the code errors)\n"
+"   -p flips parity\n"
+"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
 //"   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n"
-//"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n"
 //"   default matches_needed_to_agree is 3\n"
 //"   default max_matches_needed is 8\n";
 
