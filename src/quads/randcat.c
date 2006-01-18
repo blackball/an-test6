@@ -3,7 +3,7 @@
 
 #define OPTIONS "hn:f:r:R:d:D:"
 const char HelpString[] =
-  "randcat -f catfile -n numstars [-a|-b] [-r/R RAmin/max] [-d/D DECmin/max]\n"
+  "randcat -f fname -n numstars [-r/R RAmin/max] [-d/D DECmin/max]\n"
     "  -r -R -d -D set ra and dec limits in radians\n";
 
 
