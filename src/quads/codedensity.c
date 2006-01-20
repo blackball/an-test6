@@ -19,7 +19,8 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 void print_help(char* progname) {
-    fprintf(stderr, "Usage: %s -t <tree-file> [-c]\n\n-c = check results against naive search.",
+    fprintf(stderr, "Usage: %s -t <tree-file> [-c]\n\n"
+	    "-c = check results against naive search.\n",
 	    progname);
 }
 
