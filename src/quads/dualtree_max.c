@@ -4,7 +4,7 @@
 #define BAIL_OUT() printf("Bailing out: file %s, line %i", __FILE__, __LINE__)
 
 #define debug(...) {}
-// #define debug printf
+//#define debug printf
 
 struct candidate {
     node* n;
@@ -55,7 +55,7 @@ void dualtree_max_recurse(blocklist* nodes, blocklist* leaves,
     void* bounds_extra = callbacks->bounds_extra;
 
     debug("query %p: %i points; %i node candidates, %i leaves.\n",
-	   query, query->num_points, blocklist_count(nodes), blocklist_count(leaves));
+	  query, query->num_points, blocklist_count(nodes), blocklist_count(leaves));
 
     // if all the candidates are leaves:
     if (!blocklist_count(nodes)) {
@@ -101,6 +101,10 @@ void dualtree_max_recurse(blocklist* nodes, blocklist* leaves,
 		    // recompute bounds wrt this query node...
 		    double lower, upper;
 		    bounds(bounds_extra, query, cand->n, pruning_threshold, &lower, &upper);
+		    if (upper < pruning_threshold) {
+			continue;
+		    }
+		    // (careful - lower doesn't have to be computed unless upper > threshold...)
 		    if (lower > pruning_threshold) {
 			pruning_threshold = lower;
 		    }
@@ -120,13 +124,15 @@ void dualtree_max_recurse(blocklist* nodes, blocklist* leaves,
 		}
 		result(result_extra, query, cand->n, &pruning_threshold, cand->lower, cand->upper);
 	    }
+
+	    blocklist_free(keepleaves);
 	}
 	if (end) {
 	    end(callbacks->end_extra, query);
 	}
 
     } else {
-	bool yleaf = node_is_leaf(query);
+	bool yleaf;
 	int NYC;
 	int i, j;
 	int leaflength;
@@ -136,15 +142,20 @@ void dualtree_max_recurse(blocklist* nodes, blocklist* leaves,
 	childnodes = blocklist_new(256, sizeof(candidate));
 	leaflength = blocklist_count(leaves);
 
+	yleaf = node_is_leaf(query);
 	NYC = (yleaf ? 1 : 2);
 
 	for (i=0; i<NYC; i++) {
 	    node* ychild;
 	    candidate childcand;
 
-	    ychild = (yleaf ? query :
-		      (i==0 ? query->child1 :
-		       query->child2));
+	    if (yleaf) {
+		ychild = query;
+	    } else {
+		if (i == 0) ychild = query->child1;
+		else ychild = query->child2;
+	    }
+	    // ychild = (yleaf ? query : (i==0 ? query->child1 : query->child2));
 
 	    childthresh = pruning_threshold;
 	    childcand.query = ychild;
@@ -155,7 +166,6 @@ void dualtree_max_recurse(blocklist* nodes, blocklist* leaves,
 		// 
 		double lower, upper;
 		candidate* cand = blocklist_access(nodes, j);
-		candidate childcand;
 		int xc;
 
 		if (cand->upper < childthresh) {
