@@ -33,5 +33,5 @@ allclean:
 	rm -f KD/*.o *.o $(EXECS) *~
 
 clean:
-	rm -f $(EXECS) $(MYOBJS)
+	rm -f $(EXECS) $(MYOBJS) $(OBJ)
 

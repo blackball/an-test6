@@ -1,0 +1,30 @@
+graph solvepipeline {
+	graph [ rankdir = LR ];
+	node [ shape=box ];
+	edge [ dir=forward ];
+	node [ style=filled, fillcolor=azure2 ];
+	objs [ label="Healpix-ified catalogue\n(.objs)" ];
+	ckdt [ label="Code kd-tree\n(.ckdt)" ];
+	quad [ label="Quads\n(.quad)" ];
+	node [ style=filled, fillcolor=lightyellow2 ];
+	xyls [ label="Input field\n(.xyls)" ];
+	node [ style="" ];
+	hits [ label="Hit list\n(.hits)" ];
+
+	node [ shape=ellipse ];
+	solvexy [ label="solvexy" ];
+
+	objs -- solvexy
+	ckdt -- solvexy
+	quad -- solvexy
+	xyls -- solvexy
+
+	solvexy -- hits
+}
+
+// render with:
+//   dot -Tps2 -o pipeline2.ps pipeline2.dot
+// to get bounding box:
+//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=bbox pipeline2.ps
+// to render as png:
+//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=png16m -sOutputFile=pipeline2.png -g355x225 pipeline2.ps
