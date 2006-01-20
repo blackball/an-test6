@@ -4,6 +4,12 @@ The binary files all start with the unsigned short int MAGIC_VAL
 (#defined at the end of fileutil.h) which helps identify them as
 binary and also sort out endian issues. 
 
+[dstn note:
+   "unsigned short int" => u16_t
+   "unsigned long int"  => u32_t
+   "int"                => probably i32_t
+]
+
 1) Catalogue Files (.objs) -- binary
 
 The binary catalogue format (.objs) is as follows:
