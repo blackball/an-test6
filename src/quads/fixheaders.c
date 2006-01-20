@@ -11,12 +11,13 @@
   which is much faster than copying the file, but of course has the potential to mess
   up your file.
 */
+
 #include <byteswap.h>
 #include <errno.h>
 #include "starutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:o:b"
+#define OPTIONS "hf:o:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -27,72 +28,32 @@ char buff[100], oneobjWidth;
 bool byteswap;
 off_t catposmarker = 0;
 
-/*
-  struct obj_header {
-  magicval magic;
-  sidx numstars;
-  dimension dimstars;
-  double ramin;
-  double ramax;
-  double decmin;
-  double decmax;
-  };
-  typedef struct obj_header obj_header;
-
-  #define swap_magic bswap_16
-  #define swap_numstars bswap_32
-  #define swap_sidx bswap_32
-  #define swap_dimension bswap_16
-*/
-/**
-   Caution, this changes the header in-place!
-   
-   Calling this twice should give you back the original header.
-*/
-/*
-  void byteswap_header(obj_header* header) {
-  header->magic = swap_magic(header->magic);
-  header->numstars = swap_sidx(header->numstars);
-  header->dimstars = swap_dimension(header->dimstars);
-  }
-
-  void read_header(FILE* fid, obj_header* header, bool swap) {
-  magicval magic;
-  fread(&magic, sizeof(magic), 1, fid);
-  if (swap) magic = swap_magic(magic);
-  if (magic != MAGIC_VAL) {
-  fprintf(stderr, "ERROR (read_objs_header) -- bad magic value\n");
-  return (READ_FAIL);
-  }
-  fread(numstars, sizeof(*numstars), 1, fid);
-  fread(DimStars, sizeof(*DimStars), 1, fid);
-  fread(ramin, sizeof(*ramin), 1, fid);
-  fread(ramax, sizeof(*ramax), 1, fid);
-  fread(decmin, sizeof(*decmin), 1, fid);
-  fread(decmax, sizeof(*decmax), 1, fid);
-  }
-  if (swap) byteswap_header(header);
-  return ();
-  }
-*/
-
 void get_star_radec(FILE *fid, off_t marker, int objsize,
 					sidx i, double* pra, double* pdec);
 void get_star(FILE *fid, off_t marker, int objsize,
 			  sidx i, star* s);
 
+void print_help(char* progname) {
+    printf("\nUsage: %s -f <input-file> -o <output-file>\n\n"
+	   "  <input-file> and <output-file> should be "
+	   "catalogues, and should be specified without "
+	   "their .objs suffixes.\n\n"
+	   "  <input-file> and be the same as <output-file>;"
+	   "in this case, the file will be "
+	   "modified in-place, which is much faster than "
+	   "creating a copy.\n\n", progname);
+}
+
 int main(int argc, char *argv[])
 {
   dimension DimStars;
-  int argchar; //  opterr = 0;
+  int argchar;
   double ramin, ramax, decmin, decmax;
   sidx numstars;
   int i;
   char readStatus;
   star* mystar;
   bool inplace;
-  //obj_header header;
-  //bool byteswap = false;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
@@ -102,18 +63,20 @@ int main(int argc, char *argv[])
         case 'o':
             outfname = mk_catfn(optarg);
             break;
-        case 'b':
-		  //byteswap = true;
-            break;
+	case 'h':
+	    print_help(argv[0]);
+	    exit(0);
         default:
             return (OPT_ERR);
         }
     
-    fprintf(stderr, "fixheaders: reading catalogue  %s\n", catfname);
-    fprintf(stderr, "            writing results to %s\n", outfname);
-	if ((catfname == NULL) || (outfname == NULL)) {
-	  fprintf(stderr, "\nYou must specify input and output file (-f <input> -o <output>), without the .objs suffix)\n\n");
-	}
+    if ((catfname == NULL) || (outfname == NULL)) {
+	print_help(argv[0]);
+	exit(-1);
+    }
+
+	fprintf(stderr, "fixheaders: reading catalogue  %s\n", catfname);
+	fprintf(stderr, "            writing results to %s\n", outfname);
 	inplace = (strcmp(catfname, outfname) == 0);
 
 	if (inplace) {
