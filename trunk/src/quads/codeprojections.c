@@ -1,26 +1,18 @@
 /**
-   Reads a .code file and writes it out as Matlab literals.
+   Reads a .code file, projects each code onto each pair of axes, and
+   histograms the results.  Writes out the histograms as Matlab literals.
 
-   The format is:
+   Pipe the output to a file like "hists.m", then in Matlab, do
 
-   unsigned short int = MAGIC_VAL
-   unsigned long int numCodes = number of codes (quads) in this codefile
-   unsigned short int DimCodes = dimension of codes (almost always 4)
-   double index_scale = scale of quads (arcmin)
-   unsigned long int numstars = number of stars in original catalogue (unclear)
-   double c11 code elements for first quad
-   double c12
-   double c13
-   double c14
-   double c21 code elements for second quad
-   double c22
-   double c23
-   double c24
-   ...
-   double cN1 code elements for last (Nth) quad
-   double cN2
-   double cN3
-   double cN4
+   hists
+   clf;
+   for i=1:3,
+    for j=0:(i-1),
+     subplot(3,3,(i-1)*3+j+1);
+     mesh(eval(sprintf('hist_%i_%i', i, j)));
+    end;
+   end
+
 */
 
 #include <errno.h>
@@ -148,6 +140,9 @@ int main(int argc, char *argv[]) {
 	    hists[d*Dims + e] = (int*)malloc(Nbins * Nbins * sizeof(int));
 	    memset(hists[d*Dims + e], 0, Nbins * Nbins * sizeof(int));
 	}
+	for (; e<Dims; e++) {
+	    hists[d*Dims + e] = NULL;
+	}
     }
 
     for (i=0; i<header.numcodes; i++) {
@@ -179,8 +174,10 @@ int main(int argc, char *argv[]) {
 		}
 		printf("];\n");
 	    }
+	    free(hist);
 	}
     }
+    free(hists);
 
     fprintf(stderr, "Done!\n");
 
