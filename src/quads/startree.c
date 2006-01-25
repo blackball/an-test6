@@ -2,15 +2,16 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hR:f:k:"
+#define OPTIONS "hR:f:k:d:"
 const char HelpString[] =
-    "startree -f fname [-R KD_RMIN] [-k keep]\n"
-    "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n"
-    "  keep is the number of stars read from the catalogue\n";
+    "startree -f fname [-R KD_RMIN] [-k keep] [-d radius]\n"
+    "  KD_RMIN: (default 50) is the max# points per leaf in KD tree\n"
+    "  keep: is the number of stars read from the catalogue\n"
+    "  radius: is the de-duplication radius: a star found within this radius "
+       "of another star will be discarded\n";
 
 char *treefname = NULL;
 char *catfname = NULL;
-
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
 	stararray *thestars = NULL;
 	kdtree *starkd = NULL;
 	int nkeep = 0;
+	double duprad;
 
 	if (argc <= 2) {
 		fprintf(stderr, HelpString);
@@ -44,6 +46,13 @@ int main(int argc, char *argv[])
 			exit(-1);
 		  }
 		  break;
+		case 'd':
+		    duprad = atof(optarg);
+		    if (duprad < 0.0) {
+			printf("Couldn't parse \'radius\': \"%s\"\n", optarg);
+			exit(-1);
+		    }
+		    break;
 		case 'f':
 			treefname = mk_streefn(optarg);
 			catfname = mk_catfn(optarg);

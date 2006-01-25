@@ -12,8 +12,8 @@ struct kdtree_hr {
 typedef struct kdtree_hr kdtree_hr_t;
 
 struct kdtree_node {
-	int dim;              /* Splitting dimension */
-	int l,r;              /* data(l:r) are coordinates below this node */
+    unsigned int dim;              /* Splitting dimension */
+    unsigned int l,r;              /* data(l:r) are coordinates below this node */
 	real pivot;           /* Pivot location */
 	/* Implicit hyperrectangle 
 	real HR[sizeof(real)*D] Lower
@@ -26,9 +26,9 @@ struct kdtree {
 	kdtree_node_t *tree;   /* Flat tree storing nodes and HR's */
 	real *data;            /* Raw coordinate data as xyzxyzxyz */
 	unsigned int *perm;    /* Permutation index */
-	int ndata;             /* Number of items */
-	int ndim;              /* Number of dimensions */
-	int nnodes;            /* Number of internal nodes */
+    unsigned int ndata;             /* Number of items */
+    unsigned int ndim;              /* Number of dimensions */
+    unsigned int nnodes;            /* Number of internal nodes */
 };
 typedef struct kdtree kdtree_t;
 
