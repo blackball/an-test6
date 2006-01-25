@@ -82,6 +82,8 @@ void blocklist_int_append(blocklist* list, int data);
 int blocklist_int_access(blocklist* list, int n);
 void blocklist_int_copy(blocklist* list, int start, int length, int* vdest);
 void blocklist_int_print(blocklist* list);
+void blocklist_int_insert_ascending(blocklist* list, int n);
+void blocklist_int_insert_descending(blocklist* list, int n);
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //

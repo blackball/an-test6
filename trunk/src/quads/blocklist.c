@@ -679,6 +679,21 @@ void blocklist_copy(blocklist* list, int start, int length, void* vdest) {
   list->last_access_n = nskipped;
 }
 
+int compare_ints_ascending(void* v1, void* v2) {
+    int i1 = *(int*)v1;
+    int i2 = *(int*)v2;
+    if (i1 < i2) return 1;
+    else if (i1 > i2) return -1;
+    else return 0;
+}
+
+int compare_ints_descending(void* v1, void* v2) {
+    int i1 = *(int*)v1;
+    int i2 = *(int*)v2;
+    if (i1 < i2) return -1;
+    else if (i1 > i2) return 1;
+    else return 0;
+}
 
 // special-case integer list accessors...
 blocklist* blocklist_int_new(int blocksize) {
@@ -694,6 +709,12 @@ int blocklist_int_access(blocklist* list, int n) {
   int* ptr;
   ptr = (int*)blocklist_access(list, n);
   return *ptr;
+}
+void blocklist_int_insert_ascending(blocklist* list, int n) {
+    blocklist_insert_sorted(list, &n, compare_ints_ascending);
+}
+void blocklist_int_insert_descending(blocklist* list, int n) {
+    blocklist_insert_sorted(list, &n, compare_ints_descending);
 }
 void blocklist_int_copy(blocklist* list, int start, int length, int* vdest) {
   blocklist_copy(list, start, length, vdest);
