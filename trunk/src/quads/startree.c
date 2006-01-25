@@ -6,6 +6,8 @@
 #include "dualtree_rangesearch.h"
 #include "blocklist.h"
 
+#include "KD/amma.h"
+
 #define OPTIONS "hR:f:k:d:"
 const char HelpString[] =
     "startree -f fname [-R KD_RMIN] [-k keep] [-d radius]\n"
@@ -118,8 +120,6 @@ int main(int argc, char *argv[])
 	    radians = (duprad / (60.0 * 60.0)) * (M_PI / 180.0);
 	    dist = sqrt(2.0*(1.0 - cos(radians)));
 
-	    //printf("dist=%g\n", dist);
-
 	    duplicates = blocklist_int_new(256);
 
 	    // de-duplicate.
@@ -127,25 +127,38 @@ int main(int argc, char *argv[])
 				 RANGESEARCH_NO_LIMIT, dist,
 				 duplicate_found, NULL);
 
-	    if (blocklist_count(duplicates) == 0) break;
+	    if (blocklist_count(duplicates) == 0) {
+		fprintf(stderr, "No duplicate stars found.\n");
+		blocklist_int_free(duplicates);
+		duplicates = NULL;
+		break;
+	    }
 
 	    free_kdtree(starkd);
 	    starkd = NULL;
 
-	    /*
-	      printf("duplicates:\n");
-	      blocklist_int_print(duplicates);
-	    */
-
 	    // remove duplicate entries from the star array.
-	    printf("Removing %i duplicate stars (%i stars remain)...\n",
-		   blocklist_count(duplicates), dyv_array_size(thestars) - blocklist_count(duplicates));
+	    fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
+		    blocklist_count(duplicates), dyv_array_size(thestars) - blocklist_count(duplicates));
+	    fflush(stderr);
 	    {
 		int dupind = 0;
 		int skipind = -1;
 		int srcind;
 		int destind = 0;
-		int N;
+		int i, N;
+
+		// remove repeated entries from "duplicates"
+		// (yes, it can happen)
+		for (i=0; i<blocklist_count(duplicates)-1; i++) {
+		    int a, b;
+		    a = blocklist_int_access(duplicates, i);
+		    b = blocklist_int_access(duplicates, i+1);
+		    if (a == b) {
+			blocklist_remove_index(duplicates, i);
+			i--;
+		    }
+		}
 
 		N = dyv_array_size(thestars);
 		for (srcind=0; srcind<N; srcind++) {
@@ -155,8 +168,18 @@ int main(int argc, char *argv[])
 			    skipind = blocklist_int_access(duplicates, dupind);
 			    dupind++;
 			}
+			// shouldn't happen, I think...
+			if ((skipind > 0) && (skipind < srcind)) {
+			    fprintf(stderr, "Warning: duplicate index %i skipped.  ", skipind);
+			    fprintf(stderr, "skipind=%i, srcind=%i\n", skipind, srcind);
+			    skipind = -1;
+			}
 		    }
 		    if (srcind == skipind) {
+			dyv* v;
+			v = dyv_array_ref(thestars, srcind);
+			thestars->array[srcind] = NULL;
+			free_dyv(v);
 			skipind = -1;
 			continue;
 		    }
@@ -167,8 +190,8 @@ int main(int argc, char *argv[])
 			continue;
 		    }
 
-		    dyv_array_set(thestars, destind,
-				  dyv_array_ref(thestars, srcind));
+		    thestars->array[destind] = dyv_array_ref(thestars, srcind);
+
 		    destind++;
 		}
 		thestars->size -= blocklist_count(duplicates);
@@ -189,7 +212,6 @@ int main(int argc, char *argv[])
 
 	    break;
 	}
-
 	free_stararray(thestars);
 
 	fprintf(stderr, "  Writing star KD tree to %s...", treefname);
@@ -203,13 +225,15 @@ int main(int argc, char *argv[])
 	free_kdtree(starkd);
 
 	//basic_am_malloc_report();
-	return (0);
-
+#if !defined(USE_OS_MEMORY_MANAGEMENT)
+	// free Andrew Moore's memory pool (so Valgrind works)
+	am_free_to_os();
+#endif
+	return 0;
 }
 
 void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
     if (ind1 <= ind2) return;
-    //printf("total %i duplicates found: %i, %i, dist %g\n", ndups, ind1, ind2, sqrt(dist2));
     // append the larger of the two.
     blocklist_int_insert_ascending(duplicates, ind1);
 }
