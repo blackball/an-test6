@@ -33,6 +33,7 @@ void list_init(list* l)
 void list_prepend(list* l, void* data)
 {
 	list_node* n = list_allocate_node(sizeof(list_node));
+	//printf("allocated %p\n", n);
 	n->data = data;
 	n->next = l->head;
 	if (!l->head) {
@@ -45,6 +46,7 @@ void list_prepend(list* l, void* data)
 void list_append(list* l, void* data)
 {
 	list_node* n = list_allocate_node(sizeof(list_node));
+	//printf("allocated %p\n", n);
 	n->data = data;
 	n->next = NULL;
 	if (l->tail) {
@@ -63,6 +65,7 @@ void list_free_nodes(list* l)
 	for (n = l->head; n;) {
 		list_node* tmp = n->next;
 		list_free_node(n);
+		//printf("freeing %p\n", n);
 		n = tmp;
 	}
 	l->head = NULL;
@@ -72,6 +75,8 @@ void list_free_nodes(list* l)
 /*
   The actual dual-tree stuff.
 */
+
+//int level = 0;
 
 /*
   At each step of the recursion, we have a query node and a list of
@@ -169,13 +174,33 @@ void dualtree_recurse(list* nodes, list* leaves,
 	}
 
 	childnodes = list_allocate(sizeof(list));
-	//childleaves = list_allocate(sizeof(list));
 	childleaves = leaves;
 	leavesoldtail = leaves->tail;
 	decision = callbacks->decision;
 	decision_extra = callbacks->decision_extra;
 
 	list_init(childnodes);
+
+	/*
+	  printf("\nBEFORE CHECKING NODES...\n");
+	  printf("level %i\n", level);
+	  printf("childnodes: ");
+	  for (e=childnodes->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leavesoldtail=%p\n", leavesoldtail);
+	  printf("childleaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	*/
 
 	for (e = nodes->head; e; e = e->next) {
 		node * sn = (node*)e->data;
@@ -195,31 +220,99 @@ void dualtree_recurse(list* nodes, list* leaves,
 		}
 	}
 
+	/*
+	  printf("\nBEFORE RECURSING...\n");
+	  printf("level %i\n", level);
+	  printf("childnodes: ");
+	  for (e=childnodes->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leavesoldtail=%p\n", leavesoldtail);
+	  printf("childleaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  level++;
+	*/
+
 	// recurse on the children!
 	dualtree_recurse(childnodes, childleaves, query->child1, callbacks);
 
 	dualtree_recurse(childnodes, childleaves, query->child2, callbacks);
 
+	/*
+	  level--;
+	  printf("\nAFTER RECURSING...\n");
+	  printf("level %i\n", level);
+	  printf("childnodes: ");
+	  for (e=childnodes->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leavesoldtail=%p\n", leavesoldtail);
+	  printf("childleaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	*/
+
 	// put the "leaves" list back the way it was...
 	{
-		// create a temp list containing all the elements we appended...
+	    // create a temp list containing all the elements we appended...
+	    if (leavesoldtail && leavesoldtail->next) {
 		list fakelist;
 		list_init(&fakelist);
-		if (leavesoldtail && leavesoldtail->next)
-		{
-			fakelist.head = leavesoldtail->next;
-		}
+
+		fakelist.head = leavesoldtail->next;
 		fakelist.tail = childleaves->tail;
 		// free all the nodes in the temp list...
 		list_free_nodes(&fakelist);
-		// put the leaves list back the way it was.
-		leaves->tail = leavesoldtail;
-		if (leavesoldtail)
-		{
-			leavesoldtail->next = NULL;
-		}
-		childleaves = NULL;
+	    } else if (!leavesoldtail) {
+		// there was no leaflist; remove everything from the childleaves list.
+		list_free_nodes(childleaves);
+		leaves->head = NULL;
+	    }
+	    // put the leaves list back the way it was.
+	    leaves->tail = leavesoldtail;
+	    if (leavesoldtail) {
+		leavesoldtail->next = NULL;
+	    }
+	    childleaves = NULL;
 	}
+
+	/*
+	  printf("\nAFTER CLEANING UP...\n");
+	  printf("level %i\n", level);
+	  printf("childnodes: ");
+	  for (e=childnodes->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	  printf("leavesoldtail=%p\n", leavesoldtail);
+	  printf("childleaves: ");
+	  for (e=leaves->head; e; e=e->next) {
+	  printf("%p ", e);
+	  }
+	  printf("\n");
+	*/
 
 	list_free_nodes(childnodes);
 	list_free(childnodes);
