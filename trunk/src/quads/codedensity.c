@@ -24,7 +24,7 @@ void print_help(char* progname) {
     fprintf(stderr, "Usage: %s -t <tree-file> [-c] [-p]\n\n"
 	    "-c = check results against naive search.\n"
 	    "-p = write out a Matlab-literals file containing the positions of the stars.\n"
-	    "-r = convert XYZ to RA-DEC (this only make sense with -p, and for star kdtrees.\n",
+	    "-r = convert XYZ to RA-DEC (this only make sense with -p, and for star kdtrees).\n",
 	    progname);
 }
 
