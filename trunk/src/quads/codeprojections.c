@@ -13,6 +13,15 @@
     end;
    end
 
+   or
+
+   for i=1:3,for j=0:(i-1),subplot(3,3,(i-1)*3+j+1);surf(eval(sprintf('hist_%i_%i', i, j)));set(gca,'XTickLabel',{});set(gca,'YTickLabel',{});set(gca,'ZTickLabel',{}); end; end
+
+  for i=1:3,for j=0:(i-1),subplot(3,3,(i-1)*3+j+1);surf(eval(sprintf('hist_%i_%i', i, j)));set(gca,'XTickLabel',{});set(gca,'YTickLabel',{});set(gca,'ZTickLabel',{});view(2);axis tight; end; end
+
+  For the one-d projections, try something like
+  for i=1:4, subplot(4,1,i); bar(eval(sprintf('hist_%i', (i-1)))); axis([0 100 0 1.5e5]); set(gca,'XTickLabel',{}); end
+
 */
 
 #include <errno.h>
@@ -52,6 +61,23 @@ int read_field(void* ptr, int size, FILE* fid) {
 int** hists;
 int Nbins = 20;
 int Dims;
+// single-dimension hists
+int Nsingle = 100;
+int* single;
+
+void add_to_single_histogram(int dim, double val) {
+    int* hist = single + Nsingle * dim;
+    int bin = (int)(val * Nsingle);
+    if (bin >= Nsingle) {
+	bin = Nsingle;
+	printf("truncating value %g\n", val);
+    }
+    if (bin < 0) {
+	bin = 0;
+	printf("truncating (up) value %g\n", val);
+    }
+    hist[bin]++;
+}
 
 void add_to_histogram(int dim1, int dim2, double val1, double val2) {
     int xbin, ybin;
@@ -145,6 +171,11 @@ int main(int argc, char *argv[]) {
 	}
     }
 
+    single = (int*)malloc(Dims * Nsingle * sizeof(int));
+    for (i=0; i<(Dims * Nsingle); i++) {
+	single[i] = 0;
+    }
+
     for (i=0; i<header.numcodes; i++) {
 	nread = fread(onecode, sizeof(double), header.dim, codefid);
 	if (nread != header.dim) {
@@ -155,6 +186,7 @@ int main(int argc, char *argv[]) {
 	    for (e=0; e<d; e++) {
 		add_to_histogram(d, e, onecode[d], onecode[e]);
 	    }
+	    add_to_single_histogram(d, onecode[d]);
 	}
     }
 
@@ -176,10 +208,19 @@ int main(int argc, char *argv[]) {
 	    }
 	    free(hist);
 	}
+	printf("hist_%i=[", d);
+	for (i=0; i<Nsingle; i++) {
+	    printf("%i,", single[d*Nsingle + i]);
+	}
+	printf("];\n");
     }
     free(hists);
+    free(single);
 
     fprintf(stderr, "Done!\n");
 
     return 0;
 }
+
+
+
