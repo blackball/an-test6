@@ -10,10 +10,11 @@
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:"
+#define OPTIONS "hpef:o:t:m:n:x:H:"
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
+"   [-H hits-file-name.hits]\n"
 "       (-e : compute the code errors)\n"
 "   -p flips parity\n"
 "   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
@@ -94,6 +95,10 @@ int main(int argc, char *argv[])
 		case 'e':
 		  do_codeerr = 1;
 		  break;
+		case 'H':
+		    if (hitfname) free_fn(hitfname);
+		    hitfname = strdup(optarg);
+		    break;
 		case 'f':
 			treefname = mk_ctreefn(optarg);
 			quadfname = mk_quadfn(optarg);
@@ -101,7 +106,8 @@ int main(int argc, char *argv[])
 			break;
 		case 'o':
 			fieldfname = mk_fieldfn(optarg);
-			hitfname = mk_hitfn(optarg);
+			if (!hitfname)
+			    hitfname = mk_hitfn(optarg);
 			break;
 		case 't':
 			codetol = strtod(optarg, NULL);
@@ -191,6 +197,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr,
 	        "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
 	        numfields, codetol, AgreeArcSec);
+	fprintf(stderr, "Using HITS output file %s\n", hitfname);
 	fopenout(hitfname, hitfid);
 	free_fn(hitfname);
 	fprintf(hitfid, "# SOLVER PARAMS:\n");

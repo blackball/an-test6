@@ -607,6 +607,7 @@ void last_result(void* vparams, node* query) {
 			//(int)numstars, pct2/10, pct2%10, p->nquads, (int)quadest);
 			printf("%i of %i (%i%%) done.  %i quads created, rough estimate %.2g total.\n", nstarsdone, (int)numstars,
 				   pct, p->nquads, quadest);
+			fflush(stdout);
 			lastpercent = pct;
 			lastcount = p->nquads;
 		  }
