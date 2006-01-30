@@ -15,16 +15,23 @@
 #include "dualtree.h"
 #include "dualtree_max.h"
 
-#define OPTIONS "ht:cpr"
+#define OPTIONS "ht:cprn:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
+
+bool radec = FALSE;
+bool write_nearby = FALSE;
+double nearby_radius = -1.0;
+dyv_array* array = NULL;
 
 void print_help(char* progname) {
     fprintf(stderr, "Usage: %s -t <tree-file> [-c] [-p]\n\n"
 	    "-c = check results against naive search.\n"
 	    "-p = write out a Matlab-literals file containing the positions of the stars.\n"
-	    "-r = convert XYZ to RA-DEC (this only make sense with -p, and for star kdtrees).\n",
+	    "-n <radius> = write out Matlab literals containing the positions of nearby stars\n"
+	    "      where 'nearby' is defined as being within <radius> units.\n"
+	    "-r = convert XYZ to RA-DEC (this only make sense with -p or -n, and for star kdtrees).\n",
 	    progname);
 }
 
@@ -228,6 +235,51 @@ void max_results(void* extra, node* query, node* search, double* pruning_thresho
     }
 }
 
+void write_nearby_positions(char* fn, double radius, bool radec, dyv_array* array) {
+    FILE* fout;
+    int i;
+    fout = fopen(fn, "w");
+    if (!fout) {
+	printf("Couldn't open output file %s\n", fn);
+	return;
+    }
+    fprintf(fout, "nnposns=[");
+    for (i=0; i<Ntotal; i++) {
+	dyv* v;
+	int d, D;
+	if (nninds[i] < 0) continue;
+	if (nndists[i] > radius) continue;
+	v = dyv_array_ref(array, i);
+	D = v->size;
+	for (d=0; d<D; d++) {
+	    double x = dyv_ref(v, d);
+	    fprintf(fout,"%s%g", (d?",":""), x);
+	}
+	fprintf(fout, ";\n");
+    }
+    fprintf(fout, "];");
+    if (radec) {
+	fprintf(fout, "nnposnsradec=[");
+	for (i=0; i<Ntotal; i++) {
+	    double x,y,z,ra,dec;
+	    dyv* v;
+	    if (nninds[i] < 0) continue;
+	    if (nndists[i] > radius) continue;
+	    v = dyv_array_ref(array, i);
+	    x = dyv_ref(v, 0);
+	    y = dyv_ref(v, 1);
+	    z = dyv_ref(v, 2);
+	    ra  = xy2ra(x, y);
+	    dec = z2dec(z);
+	    fprintf(fout, "%g,%g;\n", ra, dec);
+	}
+	fprintf(fout, "];");
+	fprintf(fout, "ra=nnposnsradec(:,1); dec=nnposnsradec(:,2);\n");
+    }
+    fclose(fout);
+    printf("Wrote positions to %s\n", fn);
+}
+
 void write_array(char* fn) {
     FILE* fout;
     int i;
@@ -343,6 +395,11 @@ void max_end_results(void* extra, node* query) {
 	char fn[256];
 	sprintf(fn, "/tmp/nnhists_%i.m", (Ndone+N)/100000);
 	write_histogram(fn);
+
+	if (write_nearby) {
+	    sprintf(fn, "/tmp/nearby_%i.m", (Ndone+N)/100000);
+	    write_nearby_positions(fn, nearby_radius, radec, array);
+	}
     }
     Ndone += N;
 }
@@ -359,10 +416,8 @@ int main(int argc, char *argv[]) {
       double maxdist2;
       dualtree_callbacks callbacks;
     */
-    dyv_array* array = NULL;
     bool check = FALSE;
     bool write_points = FALSE;
-    bool radec = FALSE;
 
     if (argc <= 2) {
 	print_help(argv[0]);
@@ -376,6 +431,15 @@ int main(int argc, char *argv[]) {
 	    break;
 	case 'p':
 	    write_points = TRUE;
+	    break;
+	case 'n':
+	    write_nearby = TRUE;
+	    nearby_radius = atof(optarg);
+	    if (nearby_radius == 0.0) {
+		printf("Couldn't parse nearby-radius: %s\n", optarg);
+		print_help(argv[0]);
+		exit(-1);
+	    }
 	    break;
 	case 'r':
 	    radec = TRUE;
@@ -395,8 +459,8 @@ int main(int argc, char *argv[]) {
 	return(OPT_ERR);
     }
 
-    if (radec && !write_points) {
-	printf("Warning: -r only makes sense when -p is set.  Ignoring -r.\n");
+    if (radec && !(write_points || write_nearby)) {
+	printf("Warning: -r only makes sense when -p or -n is set.  Ignoring -r.\n");
     }
 
     fprintf(stdout, "  Reading KD tree from %s...", treefname);
@@ -411,7 +475,7 @@ int main(int argc, char *argv[]) {
 	    kdtree_num_points(tree), kdtree_num_nodes(tree),
 	    kdtree_max_depth(tree));
 
-    if (check || write_points) {
+    if (check || write_points || write_nearby) {
 	array = mk_dyv_array_from_kdtree(tree);
     }
 
@@ -486,6 +550,10 @@ int main(int argc, char *argv[]) {
 
     dualtree_max(tree, tree, &max_callbacks);
 
+    if (write_nearby) {
+	write_nearby_positions("/tmp/nearby.m", nearby_radius, radec, array);
+    }
+
     write_histogram("/tmp/nnhists.m");
 
     write_array("/tmp/nndists.m");
@@ -529,7 +597,8 @@ int main(int argc, char *argv[]) {
 	printf("Correctness check complete.\n");
     }
 
-    if (check || write_points) {
+    //if (check || write_points) {
+    if (array) {
 	free_dyv_array_from_kdtree(array);
     }
 
