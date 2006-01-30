@@ -1,3 +1,13 @@
+/**
+   deduplicate: finds pairs of stars within a given distance of each other and removes
+     one of the stars (the one that appears second).
+
+   input: .objs catalogue
+   output: .objs catalogue
+
+   original author: dstn
+ */
+
 #include <math.h>
 
 #include "starutil.h"
