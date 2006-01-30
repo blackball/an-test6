@@ -370,11 +370,6 @@ void insertquad(ivec_array *qlist, qidx ii,
 	//fprintf(stderr,"  star %lu previously NULL\n",iD);
   }
 
-  /*
-	if (new == FALSE)
-	new = newquad(qlist, iA, iB, iC, iD);
-  */
-
   if (new == TRUE) {
 	add_to_ivec_unique2(Alist, ii);
 	add_to_ivec_unique2(Blist, ii);
@@ -429,7 +424,6 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
     int ncd;
     dyv* midAB;
     dyv* delt;
-    //int nquads = 0;
 	double distsq;
 	// projected coordinates:
 	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -510,8 +504,6 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		  iC = ivec_ref(cdinds, c);
 		  Cx = dyv_ref(cdx, c);
 		  Cy = dyv_ref(cdy, c);
-		  //for (d=0; d<ncd; d++) {
-		  //if (d == c) continue;
 		  // avoid C-D permutations
 		  for (d=c+1; d<ncd; d++) {
 			iD = ivec_ref(cdinds, d);
@@ -544,7 +536,6 @@ void last_result(void* vparams, node* query) {
 	int nnodes;
 	int npoints;
 	cnode* n;
-	//int* allpinds;
 	ivec* pinds;
 	params* p = (params*)vparams;
 
@@ -560,14 +551,12 @@ void last_result(void* vparams, node* query) {
 		   query->num_points, nnodes, npoints);
 
 	// collect all the points.
-	//allpinds = (int*)malloc(sizeof(int) * npoints);
 	pinds = mk_ivec(npoints);
 
 	// look at individual points in the query tree.
 	for (i = 0; i < query->num_points; i++) {
 		dyv* qp = dyv_array_ref(query->points, i);
         int qi  = ivec_ref(query->pindexes, i);
-        //int nquads;
 
 		printf_stats("  query point %i:\n", i);
 		pi = 0;
@@ -601,20 +590,14 @@ void last_result(void* vparams, node* query) {
 		  pct = (int)(0.5 + percent);
 		  if ((pct != lastpercent) ||
 			  ((p->nquads - lastcount) > 1000000)) {
-			//int pct2 = (int)(0.5 + 10 * percent);
 			double quadest = (100.0 / percent) * (double)(p->nquads);
-			//printf("%i of %i (%i.%i%%) done.  %i quads created, rough estimate %i total.\n", nstarsdone,
-			//(int)numstars, pct2/10, pct2%10, p->nquads, (int)quadest);
-			printf("%i of %i (%i%%) done.  %i quads created, rough estimate %.2g total.\n", nstarsdone, (int)numstars,
-				   pct, p->nquads, quadest);
+			printf("%i of %i (%i%%) done.  %i quads created, rough estimate %.2g total.\n",
+			       nstarsdone, (int)numstars, pct, p->nquads, quadest);
 			fflush(stdout);
 			lastpercent = pct;
 			lastcount = p->nquads;
 		  }
 		}
-		/*
-		  printf("%i of %i (%.02f%%) done.\n", nstarsdone, (int)numstars,100.0 * (double)nstarsdone / (double)numstars);
-		*/
 	}
 
 	free_ivec(pinds);
