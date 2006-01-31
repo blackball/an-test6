@@ -1,7 +1,10 @@
 #ifndef fileutil_H
 #define fileutil_H
 #include "starutil.h"
+
+#if !defined(NO_KD_INCLUDES)
 #include "KD/kdtree.h"
+#endif
 
 #define COMMENT_CHAR 35 // #
 #define FOPEN_ERR -301
@@ -13,7 +16,9 @@
 
 #define mk_catfn(s)    mk_filename(s,".objs")
 #define mk_streefn(s)  mk_filename(s,".skdt")
+#define mk_stree2fn(s)  mk_filename(s,".skdt2")
 #define mk_ctreefn(s)  mk_filename(s,".ckdt")
+#define mk_ctree2fn(s)  mk_filename(s,".ckdt2")
 #define mk_quadfn(s)   mk_filename(s,".quad")
 #define mk_quad0fn(s)  mk_filename(s,".quad_")
 #define mk_codefn(s)   mk_filename(s,".code")
@@ -60,12 +65,14 @@ void fix_quad_header(FILE *quadfid, qidx numQuads, size_t len);
 
 xyarray *readxy(FILE *fid, char ParityFlip);
 
+#if !defined(NO_KD_INCLUDES)
 kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax,
                     double *decmin, double *decmax);
 kdtree *read_codekd(FILE *treefid, double *index_scale);
 void write_starkd(FILE *treefid, kdtree *starkd,
                   double ramin, double ramax, double decmin, double decmax);
 void write_codekd(FILE *treefid, kdtree *codekd, double index_scale);
+#endif
 
 char *mk_filename(const char *basename, const char *extension);
 

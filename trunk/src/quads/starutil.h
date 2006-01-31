@@ -1,5 +1,6 @@
 #ifndef starutil_H
 #define starutil_H
+
 #include "KD/ambs.h"
 #include "KD/amdyv_array.h"
 
@@ -99,7 +100,6 @@ typedef dyv_array xyarray;
 #define z2dec(z) (asin(z)) // result in radians
 
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
-
 
 
 typedef struct match_struct
