@@ -312,7 +312,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				costheta = (Bx + By) / scale;
 				sintheta = (By - Bx) / scale;
 				for (iC = 0;iC < (fieldidx - 1);iC++) {
-					if ((iC == iA) && (iC == iB))
+					if ((iC == iA) || (iC == iB))
 						continue;
 					Cx = xy_refx(thisfield, iC);
 					Cy = xy_refy(thisfield, iC);
