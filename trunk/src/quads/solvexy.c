@@ -1,19 +1,21 @@
 /*******************************************************************************
-* 
-*   Solve fields
-*   
-*   Conforms to astyle -clpt
-*/
+ * 
+ *   Solve fields
+ *   
+ *   Conforms to astyle -clpt
+ */
 
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:H:"
+#define OPTIONS "hpef:o:t:m:n:x:H:F:T:"
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
+"   [-F maximum-number-of-field-objects-to-process]\n"
+"   [-T maximum-number-of-field-quads-to-try]\n"
 "   [-H hits-file-name.hits]\n"
 "       (-e : compute the code errors)\n"
 "   -p flips parity\n"
@@ -28,7 +30,8 @@ const char HelpString[] =
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
 
-qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, double codetol);
+qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
+				  kdtree *codekd, dyv_array* codearray, double codetol);
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
@@ -84,6 +87,8 @@ int main(int argc, char *argv[])
 	kdtree *codekd = NULL;
 	dyv_array* codearray = NULL;
 	int do_codeerr = 0;
+	int fieldobjs = 0;
+	int fieldtries = 0;
 
 	if (argc <= 4) {
 		fprintf(stderr, HelpString);
@@ -92,9 +97,25 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'F':
+			fieldobjs = atoi(optarg);
+			if (!fieldobjs) {
+				fprintf(stderr, "Couldn't parse -F argument: %s\n",
+						optarg);
+				exit(-1);
+			}
+			break;
+		case 'T':
+			fieldtries = atoi(optarg);
+			if (!fieldtries) {
+				fprintf(stderr, "Couldn't parse -T argument: %s\n",
+						optarg);
+				exit(-1);
+			}
+			break;
 		case 'e':
-		  do_codeerr = 1;
-		  break;
+			do_codeerr = 1;
+			break;
 		case 'H':
 		    if (hitfname) free_fn(hitfname);
 		    hitfname = strdup(optarg);
@@ -119,11 +140,11 @@ int main(int argc, char *argv[])
 			ParityFlip = 1 - ParityFlip;
 			break;
 		case 'n':
-		  min_matches_to_agree = (unsigned int) strtol(optarg, NULL, 0);
-		  break;
+			min_matches_to_agree = (unsigned int) strtol(optarg, NULL, 0);
+			break;
 		case 'x':
-		  max_matches_needed = (unsigned int) strtol(optarg, NULL, 0);
-		  break;
+			max_matches_needed = (unsigned int) strtol(optarg, NULL, 0);
+			break;
 		case '?':
 			fprintf(stderr, "Unknown option `-%c'.\n", optopt);
 		case 'h':
@@ -173,14 +194,14 @@ int main(int argc, char *argv[])
 	        kdtree_max_depth(codekd));
 	fprintf(stderr, "    (index scale = %lf arcmin)\n", rad2arcmin(index_scale));
 	if (do_codeerr) {
-	  fprintf(stderr, "  Making dyv_array from kdtree...\n");
-	  codearray = mk_dyv_array_from_kdtree(codekd);
+		fprintf(stderr, "  Making dyv_array from kdtree...\n");
+		codearray = mk_dyv_array_from_kdtree(codekd);
 	}
 
 	fopenin(quadfname, quadfid);
 	free_fn(quadfname);
 	readStatus = read_quad_header(quadfid, &numquads, &numstars, 
-				      &Dim_Quads, &index_scale);
+								  &Dim_Quads, &index_scale);
 	if (readStatus == READ_FAIL)
 		return (3);
 	qposmarker = ftello(quadfid);
@@ -188,7 +209,7 @@ int main(int argc, char *argv[])
 	fopenin(catfname, catfid);
 	free_fn(catfname);
 	readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
-	                          &ramin, &ramax, &decmin, &decmax);
+								  &ramin, &ramax, &decmin, &decmax);
 	if (readStatus == READ_FAIL)
 		return (4);
 	cposmarker = ftello(catfid);
@@ -214,12 +235,13 @@ int main(int argc, char *argv[])
 		fprintf(hitfid, "parity_flip = True\n");
 	}
 	else {
-	  fprintf(hitfid, "parity_flip = False\n");
+		fprintf(hitfid, "parity_flip = False\n");
 	}
 	fprintf(hitfid, "min_matches_to_agree = %u\n", min_matches_to_agree);
 	fprintf(hitfid, "max_matches_needed = %u\n", max_matches_needed);
 
-	numsolved = solve_fields(thefields, codekd, codearray, codetol);
+	numsolved = solve_fields(thefields, fieldobjs, fieldtries,
+							 codekd, codearray, codetol);
 
 	fclose(hitfid);
 	fclose(quadfid);
@@ -238,8 +260,8 @@ int main(int argc, char *argv[])
 
 
 
-qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, double codetol)
-{
+qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
+				  kdtree *codekd, dyv_array* codearray, double codetol) {
 	qidx numtries, nummatches, numsolved, numgood, numAB, ii;
 	sidx numxy, iA, iB, iC, iD, fieldidx;
 	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -262,75 +284,82 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, doub
 		mostAgree = 0;
 		thisfield = xya_ref(thefields, ii);
 		numxy = xy_size(thisfield);
+		if (maxfieldobjs && (numxy > maxfieldobjs))
+			numxy = maxfieldobjs;
 		find_corners(thisfield, cornerpix);
 
-		if (numxy >= DIM_QUADS) { //if there are<4 objects in field, forget it
+		if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
+			continue;
 
-			// try ALL POSSIBLE pairs AB with all possible pairs CD
-			// actually there is a bug now and we don't try the first few
-			// in particular we don't examine iAiBiCiD=0123 or =0213 or =1203
-			numAB = 0;
-			for (fieldidx = 3;fieldidx < numxy;fieldidx++) {
-				for (iA = 0;iA < fieldidx;iA++) {
-					Ax = xy_refx(thisfield, iA);
-					Ay = xy_refy(thisfield, iA);
-					xy_setx(ABCDpix, 0, Ax);
-					xy_sety(ABCDpix, 0, Ay);
-					iB = fieldidx;
-					{
-						Bx = xy_refx(thisfield, iB);
-						By = xy_refy(thisfield, iB);
-						xy_setx(ABCDpix, 1, Bx);
-						xy_sety(ABCDpix, 1, By);
-						Bx -= Ax;
-						By -= Ay;
-						scale = Bx * Bx + By * By;
-						costheta = (Bx + By) / scale;
-						sintheta = (By - Bx) / scale;
-						for (iC = 0;iC < (fieldidx - 1);iC++) {
-							if (iC != iA && iC != iB) {
-								Cx = xy_refx(thisfield, iC);
-								Cy = xy_refy(thisfield, iC);
-								xy_setx(ABCDpix, 2, Cx);
-								xy_sety(ABCDpix, 2, Cy);
-								Cx -= Ax;
-								Cy -= Ay;
-								xxtmp = Cx;
-								Cx = Cx * costheta + Cy * sintheta;
-								Cy = -xxtmp * sintheta + Cy * costheta;
-								if ((Cx < 1.0) && (Cx > 0.0) && (Cy < 1.0) && (Cy > 0.0)) { //C inside AB box?
-									for (iD = iC + 1;iD < fieldidx;iD++) {
-										if (iD != iA && iD != iB) {
-											Dx = xy_refx(thisfield, iD);
-											Dy = xy_refy(thisfield, iD);
-											xy_setx(ABCDpix, 3, Dx);
-											xy_sety(ABCDpix, 3, Dy);
-											Dx -= Ax;
-											Dy -= Ay;
-											xxtmp = Dx;
-											Dx = Dx * costheta + Dy * sintheta;
-											Dy = -xxtmp * sintheta + Dy * costheta;
-											if ((Dx < 1.0) && (Dx > 0.0) && (Dy < 1.0) && (Dy > 0.0)) { //D inside box?
-												numtries++;                   // let's try it!
-												//fprintf(stderr,"trying (%lu,%lu,%lu,%lu)\n",iA,iB,iC,iD);
-												nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
-												                            iA, iB, iC, iD, kq, codekd, codearray);
-											}
-										}
-									}
-								}
-							}
-						}
-						fprintf(stderr,
-						        "    field %lu: using %lu of %lu objects (%lu quads agree so far)      \r",
-						        ii, fieldidx, numxy, mostAgree);
-						if (mostAgree >= max_matches_needed) {
-							iA = numxy;
-							fieldidx = numxy;
-						}
+		// try ALL POSSIBLE pairs AB with all possible pairs CD
+		// actually there is a bug now and we don't try the first few
+		// in particular we don't examine iAiBiCiD=0123 or =0213 or =1203
+		numAB = 0;
+		for (fieldidx = 3;fieldidx < numxy;fieldidx++) {
+			for (iA = 0;iA < fieldidx;iA++) {
+				Ax = xy_refx(thisfield, iA);
+				Ay = xy_refy(thisfield, iA);
+				xy_setx(ABCDpix, 0, Ax);
+				xy_sety(ABCDpix, 0, Ay);
+				iB = fieldidx;
+				Bx = xy_refx(thisfield, iB);
+				By = xy_refy(thisfield, iB);
+				xy_setx(ABCDpix, 1, Bx);
+				xy_sety(ABCDpix, 1, By);
+				Bx -= Ax;
+				By -= Ay;
+				scale = Bx * Bx + By * By;
+				costheta = (Bx + By) / scale;
+				sintheta = (By - Bx) / scale;
+				for (iC = 0;iC < (fieldidx - 1);iC++) {
+					if ((iC == iA) && (iC == iB))
+						continue;
+					Cx = xy_refx(thisfield, iC);
+					Cy = xy_refy(thisfield, iC);
+					xy_setx(ABCDpix, 2, Cx);
+					xy_sety(ABCDpix, 2, Cy);
+					Cx -= Ax;
+					Cy -= Ay;
+					xxtmp = Cx;
+					Cx = Cx * costheta + Cy * sintheta;
+					Cy = -xxtmp * sintheta + Cy * costheta;
+					if ((Cx >= 1.0) || (Cx <= 0.0) ||
+						(Cy >= 1.0) || (Cy <= 0.0)) //C inside AB box?
+						continue;
+
+					for (iD = iC + 1;iD < fieldidx;iD++) {
+						if ((iD == iA) || (iD == iB))
+							continue;
+						Dx = xy_refx(thisfield, iD);
+						Dy = xy_refy(thisfield, iD);
+						xy_setx(ABCDpix, 3, Dx);
+						xy_sety(ABCDpix, 3, Dy);
+						Dx -= Ax;
+						Dy -= Ay;
+						xxtmp = Dx;
+						Dx = Dx * costheta + Dy * sintheta;
+						Dy = -xxtmp * sintheta + Dy * costheta;
+						if ((Dx >= 1.0) || (Dx <= 0.0) ||
+							(Dy >= 1.0) || (Dy <= 0.0)) //D inside box?
+							continue;
+						numtries++;                   // let's try it!
+						//fprintf(stderr,"trying (%lu,%lu,%lu,%lu)\n",iA,iB,iC,iD);
+						nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
+													iA, iB, iC, iD, kq, codekd, codearray);
 					}
 				}
+				fprintf(stderr,
+						"    field %lu: using %lu of %lu objects (%lu quads agree so far)      \r",
+						ii, fieldidx, numxy, mostAgree);
+				if (mostAgree >= max_matches_needed) {
+					iA = numxy;
+					fieldidx = numxy;
+				}
+				if (maxtries && (numtries >= maxtries))
+					break;
 			}
+			if (maxtries && (numtries >= maxtries))
+				break;
 		}
 
 		fprintf(hitfid, "# --------------------\n");
@@ -340,14 +369,14 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, doub
 		fprintf(hitfid, "    # Image corners\n");
 		if (ParityFlip)
 			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
-			        xy_refy(cornerpix, 0), xy_refx(cornerpix, 0),
-			        xy_refy(cornerpix, 1), xy_refx(cornerpix, 1));
+					xy_refy(cornerpix, 0), xy_refx(cornerpix, 0),
+					xy_refy(cornerpix, 1), xy_refx(cornerpix, 1));
 		else
 			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
-			        xy_refx(cornerpix, 0), xy_refy(cornerpix, 0),
-			        xy_refx(cornerpix, 1), xy_refy(cornerpix, 1));
+					xy_refx(cornerpix, 0), xy_refy(cornerpix, 0),
+					xy_refx(cornerpix, 1), xy_refy(cornerpix, 1));
 		fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu,\n",
-		        numtries, nummatches);
+				numtries, nummatches);
 
 		numgood = output_good_matches(firstMatch, lastMatch);
 
@@ -357,7 +386,7 @@ qidx solve_fields(xyarray *thefields, kdtree *codekd, dyv_array* codearray, doub
 			numsolved--;
 
 		fprintf(stderr, "    field %lu: tried %lu quads, matched %lu codes, "
-		        "%lu agree\n", ii, numtries, nummatches, numgood);
+				"%lu agree\n", ii, numtries, nummatches, numgood);
 
 		if (hitkd != NULL) {
 			free_kdtree(hitkd);
@@ -497,18 +526,18 @@ void resolve_matches(xy *cornerpix, kresult *krez, dyv_array* codearray, code *q
 		mo->sMax = sMax;
 		mo->nearlist = add_transformed_corners(sMin, sMax, thisquadno, &hitkd);
 		if (mo->nearlist != NULL && mo->nearlist->size >= min_matches_to_agree
-		        && mo->nearlist->size > mostAgree)
+			&& mo->nearlist->size > mostAgree)
 			mostAgree = mo->nearlist->size;
 		if (!codearray) {
-		  mo->code_err = 0.0;
+			mo->code_err = 0.0;
 		} else {
-		  dyv* matchedcode;
-		  // the code that was matched:
-		  matchedcode = dyv_array_ref(codearray, ivec_ref(krez->pindexes, jj));
-		  // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
-		  // code* is a dyv*
-		  // NOTE: it's actually code error SQUARED!
-		  mo->code_err = dyv_dyv_dsqd(query, matchedcode);
+			dyv* matchedcode;
+			// the code that was matched:
+			matchedcode = dyv_array_ref(codearray, ivec_ref(krez->pindexes, jj));
+			// should be |query->farr - point(krez->pindexes->iarr[jj])|^2
+			// code* is a dyv*
+			// NOTE: it's actually code error SQUARED!
+			mo->code_err = dyv_dyv_dsqd(query, matchedcode);
 		}
 
 		free(transform);
@@ -553,7 +582,7 @@ ivec *add_transformed_corners(star *sMin, star *sMax,
 		dist_sq = add_point_to_kdtree_dsq(*kdt, hitdyv, &tmpmatch);
 		add_to_ivec(qlist, (int)thisquad);
 		if ((dist_sq < (AgreeTol*AgreeTol)) &&
-		        ((qidx)ivec_ref(qlist, tmpmatch) != thisquad)) {
+			((qidx)ivec_ref(qlist, tmpmatch) != thisquad)) {
 			kr = mk_kresult_from_kquery(nearquery, *kdt, hitdyv);
 			nearlist = mk_copy_ivec(kr->pindexes);
 			free_kresult(kr);
@@ -586,7 +615,7 @@ void output_match(MatchObj *mo)
 		        rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 		        rad2deg(z2dec(star_ref(mo->sMax, 2))));
 		if (mo->code_err > 0.0) {
-		  fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
+			fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
 		}
 		fprintf(hitfid, "        ),\n");
 
@@ -594,8 +623,8 @@ void output_match(MatchObj *mo)
 		  int jj;
 		  fprintf(hitfid,"  matches");
 		  if(mo->nearlist!=NULL)
-		for(jj=0;jj<mo->nearlist->size;jj++)
-		fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
+		  for(jj=0;jj<mo->nearlist->size;jj++)
+		  fprintf(hitfid," %d",ivec_ref(qlist,ivec_ref(mo->nearlist,jj)));
 		  fprintf(hitfid,"\n");
 		*/
 
@@ -780,9 +809,9 @@ void find_corners(xy *thisfield, xy *cornerpix)
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
-  fseeko(quadfid, qposmarker + thisquad*
-			(DIM_QUADS*sizeof(iA)), SEEK_SET);
-  readonequad(quadfid, iA, iB, iC, iD);
+	fseeko(quadfid, qposmarker + thisquad*
+		   (DIM_QUADS*sizeof(iA)), SEEK_SET);
+	readonequad(quadfid, iA, iB, iC, iD);
 	return ;
 }
 
@@ -821,31 +850,31 @@ void getstarcoords(star *sA, star *sB, star *sC, star *sD,
  
 this bit goes in solve_fields...
  
-  //ivec *good_list; int sizeofnextbest;
+//ivec *good_list; int sizeofnextbest;
  
-    good_list=check_match_agreement(AgreeTol??,AgreeTol??,&sizeofnextbest);
-    if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
-    else numgood=good_list->size;
+good_list=check_match_agreement(AgreeTol??,AgreeTol??,&sizeofnextbest);
+if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
+else numgood=good_list->size;
  
-    if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
-    else {
-      MatchObj *mo,*prev;
-      mo=firstMatch; prev=NULL;
-      while(mo!=NULL) {
-	if(is_in_ivec(good_list,mo->idx))
-	  output_match(mo);
-	mo=mo->next;
-      }
-      free_ivec(good_list);
-    }
+if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
+else {
+MatchObj *mo,*prev;
+mo=firstMatch; prev=NULL;
+while(mo!=NULL) {
+if(is_in_ivec(good_list,mo->idx))
+output_match(mo);
+mo=mo->next;
+}
+free_ivec(good_list);
+}
  
 */
 
 
 
 /*
-ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
-{
+  ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
+  {
   ivec *minagree,*maxagree,*bothagree,*nextbest;
   double xx,yy,zz;
   MatchObj *mo;
@@ -861,21 +890,21 @@ ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
  
   mo=firstMatch;
   for(ii=0;ii<nummatches;ii++) {
-    xx=star_ref(mo->sMin,0); yy=star_ref(mo->sMin,1); zz=star_ref(mo->sMin,2);
-    dyv_set(raminvotes, ii,xy2ra(xx,yy));
-    dyv_set(decminvotes,ii,z2dec(zz));
-    xx=star_ref(mo->sMax,0); yy=star_ref(mo->sMax,1); zz=star_ref(mo->sMax,2);
-    dyv_set(ramaxvotes, ii,xy2ra(xx,yy));
-    dyv_set(decmaxvotes,ii,z2dec(zz));
-    mo=mo->next;
+  xx=star_ref(mo->sMin,0); yy=star_ref(mo->sMin,1); zz=star_ref(mo->sMin,2);
+  dyv_set(raminvotes, ii,xy2ra(xx,yy));
+  dyv_set(decminvotes,ii,z2dec(zz));
+  xx=star_ref(mo->sMax,0); yy=star_ref(mo->sMax,1); zz=star_ref(mo->sMax,2);
+  dyv_set(ramaxvotes, ii,xy2ra(xx,yy));
+  dyv_set(decmaxvotes,ii,z2dec(zz));
+  mo=mo->next;
   }
  
   minagree = box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
-//if(minagree!=NULL)  fprintf(stderr,"  %d agree on min\n",minagree->size);
+  //if(minagree!=NULL)  fprintf(stderr,"  %d agree on min\n",minagree->size);
   maxagree = box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
-//if(maxagree!=NULL)  fprintf(stderr,"  %d agree on max\n",maxagree->size);
+  //if(maxagree!=NULL)  fprintf(stderr,"  %d agree on max\n",maxagree->size);
   bothagree=mk_ivec_intersect_ordered(minagree,maxagree);
-//if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
+  //if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
  
   privec(minagree);
   privec(maxagree);
@@ -884,37 +913,37 @@ ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
   free_ivec(minagree); free_ivec(maxagree);
  
   if(bothagree!=NULL && bothagree->size<=1) {
-    free_ivec(bothagree); 
-    bothagree=NULL;
+  free_ivec(bothagree); 
+  bothagree=NULL;
   }
  
   if(bothagree!=NULL && sizeofnextbest!=NULL) {
-    int kk,correction=0;
-    for(ii=0;ii<bothagree->size;ii++) {
-      kk=ivec_ref(bothagree,ii)-correction;
-      dyv_remove(raminvotes,kk);
-      dyv_remove(ramaxvotes,kk);
-      dyv_remove(decminvotes,kk);
-      dyv_remove(decmaxvotes,kk);
-      correction++;
-    }
-    minagree=box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
-    maxagree=box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
-    nextbest=mk_ivec_intersect_ordered(minagree,maxagree);
-    free_ivec(minagree); free_ivec(maxagree);
-    if(nextbest==NULL) 
-      *sizeofnextbest=0; 
-    else {
-      *sizeofnextbest=nextbest->size;
-      free_ivec(nextbest);
-    }
+  int kk,correction=0;
+  for(ii=0;ii<bothagree->size;ii++) {
+  kk=ivec_ref(bothagree,ii)-correction;
+  dyv_remove(raminvotes,kk);
+  dyv_remove(ramaxvotes,kk);
+  dyv_remove(decminvotes,kk);
+  dyv_remove(decmaxvotes,kk);
+  correction++;
+  }
+  minagree=box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
+  maxagree=box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
+  nextbest=mk_ivec_intersect_ordered(minagree,maxagree);
+  free_ivec(minagree); free_ivec(maxagree);
+  if(nextbest==NULL) 
+  *sizeofnextbest=0; 
+  else {
+  *sizeofnextbest=nextbest->size;
+  free_ivec(nextbest);
+  }
   }
   free_dyv(raminvotes);  free_dyv(ramaxvotes);
   free_dyv(decminvotes); free_dyv(decmaxvotes);
  
   return(bothagree);
   
-}
+  }
  
  
 */
