@@ -1,0 +1,54 @@
+#!/bin/bash
+# This script is used to generate indexes out of Healpix-ified catalogues.
+# Run it like   "script 0 1 2 3 4 5" to generate catalogues zero through 5.
+echo "Args: $*"
+
+# The filename of the catalogues.
+CATALOGUE=an_usno_sdss_%02i
+
+# star kd-tree creation: how many stars to keep.
+KEEP="-k 2500000"
+
+# startree de-duplication radius (arcsec):
+DEDUP="-d 8"
+
+# quad scale (arcmin)
+SCALE="-s 5"
+
+# lower-bound factor of quad scale
+LOWER="-l 0.25"
+
+for i in $@; do
+	# Input files:
+	FN=`printf $CATALOGUE $i`
+	echo filename is $FN
+	if [ -e $FN.skdt ]; then
+		echo Star kdtree already exists:
+		echo    $FN.skdt
+	else
+		echo Creating star kdtree;
+		echo Running: startree -f $FN $KEEP $DEDUP
+		time startree -f $FN $KEEP $DEDUP  ||  continue
+	fi
+	if [ -e $FN.code ] && [ -e $FN.quad ] && [ -e $FN.qidx ]; then
+		echo Code and quad and qidx files already exist:
+		echo     $FN.code
+		echo     $FN.quad
+		echo     $FN.qidx
+	else
+		echo Running all_quads to generate quads...
+		echo Running: all_quads $SCALE $LOWER -f $FN
+		time all_quads $SCALE $LOWER -f $FN  ||  continue
+	fi
+	if [ -e $FN.ckdt ]; then
+		echo Code kdtree already exists:
+		echo     $FN.ckdt
+	else
+		echo Generating code tree...
+		echo Running: codetree -f $FN
+		time codetree -f $FN  ||  continue
+	fi
+done
+echo
+echo "Done!"
+echo
