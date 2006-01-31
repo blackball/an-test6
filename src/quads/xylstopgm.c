@@ -3,14 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 int main(int argc, char** args) {
   FILE* f;
   FILE* outf;
   char* filename;
   char* outfile;
-  int BUFSIZE = 65536;
-  char buffer[BUFSIZE];
   int numfields;
   int npoints;
   double* points;
@@ -112,17 +111,10 @@ int main(int argc, char** args) {
   fprintf(outf, "P5 %i %i 255\n", W, H);
   fwrite(image, 1, W*H, outf);
 
-  /*
-    ;
-    // first line: numfields
-    if (!fgets(buffer, BUFSIZE, f)) {
-    printf("Read error: %s\n", strerror(errno));
-    exit(-1);
-    }
-  */
-
   fclose(outf);
   free(image);
   free(points);
   fclose(f);
+
+  return 0;
 }
