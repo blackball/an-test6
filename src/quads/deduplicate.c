@@ -17,11 +17,13 @@
 #include "blocklist.h"
 #include "KD/amma.h"
 
-#define OPTIONS "hi:o:d:"
+#define OPTIONS "hi:o:d:k:"
 const char HelpString[] =
-"deduplicate -d dist -i <input-file> -o <output-file>\n"
+"deduplicate -d dist -i <input-file> -o <output-file> [-k keep]\n"
 "  radius: (in arcseconds) is the de-duplication radius: a star found within\n"
-"      this radius of another star will be discarded\n";
+"      this radius of another star will be discarded\n"
+"  keep: read this number of stars from the catalogue and deduplicate them;\n"
+"      ignore the rest of the catalogue.\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -42,6 +44,7 @@ int main(int argc, char *argv[]) {
     double radians;
     double dist;
     int i;
+    int keep = 0;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 	switch (argchar) {
@@ -49,6 +52,13 @@ int main(int argc, char *argv[]) {
 	    duprad = atof(optarg);
 	    if (duprad < 0.0) {
 		printf("Couldn't parse \'radius\': \"%s\"\n", optarg);
+		exit(-1);
+	    }
+	    break;
+	case 'k':
+	    keep = atoi(optarg);
+	    if (keep < 0) {
+		printf("Couldn't parse \'keep\': \"%s\"\n", optarg);
 		exit(-1);
 	    }
 	    break;
@@ -87,7 +97,7 @@ int main(int argc, char *argv[]) {
     fopenout(outfname, fout);
 
     thestars = readcat(fin, &numstars, &Dim_Stars,
-		       &ramin, &ramax, &decmin, &decmax, 0);
+		       &ramin, &ramax, &decmin, &decmax, keep);
     fclose(fin);
     if (thestars == NULL)
 	return (1);
