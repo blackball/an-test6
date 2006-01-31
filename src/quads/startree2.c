@@ -14,25 +14,10 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-//#include "starutil.h"
-//#include "fileutil.h"
 
-#define mk_stree2fn(s)  mk_filename(s,".skdt2")
-#define mk_catfn(s)    mk_filename(s,".objs")
-
-#define FOPEN_ERR -1
-#define READ_FAIL -1
-#define fopenin(n,f)  {if(n){f=fopen(n,"r");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n); return(FOPEN_ERR);}}
-#define fopenout(n,f) {if(n){f=fopen(n,"w");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n); return(FOPEN_ERR);}}
-#define free_fn(n) {if(n) free(n);}
-
-typedef unsigned long int sidx;
-typedef unsigned short int dimension;
-char *mk_filename(const char *basename, const char *extension);
-char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
-		      double *ramin, double *ramax, double *decmin, double *decmax);
-
-
+#define NO_KD_INCLUDES 1
+#include "starutil.h"
+#include "fileutil.h"
 
 #define OPTIONS "hR:f:k:d:"
 const char HelpString[] =

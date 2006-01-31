@@ -18,11 +18,11 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 
 EXECS = randcat startree getquads quadidx codetree genfields solvexy fieldquads findstar findquad \
 	findcode codedensity all_quads fixheaders codetomatlab \
-	codeprojections startree2 deduplicate
+	codeprojections startree2 deduplicate codetree2
 
 MYOBJS = randcat.o startree.o getquads.o quadidx.o codetree.o genfields.o solvexy.o fieldquads.o findstar.o \
 	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
-	deduplicate.o
+	deduplicate.o codetree2.o
 
 all: $(EXECS)
 
