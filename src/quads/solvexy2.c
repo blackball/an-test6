@@ -39,14 +39,9 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
 		   kdtree_t *codekd, double codetol);
-/*
-  void resolve_matches(xy *cornerpix, kresult *krez, dyv_array* codearray, code *query,
-  xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
-*/
-/*
-  ivec *add_transformed_corners(star *sMin, star *sMax,
-  qidx thisquad, kdtree **kdt);
-*/
+void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double *query,
+		     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
+ivec *add_transformed_corners(star *sMin, star *sMax, qidx thisquad);
 void find_corners(xy *thisfield, xy *cornerpix);
 
 void output_match(MatchObj *mo);
@@ -81,6 +76,8 @@ bool quitNow = FALSE;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
+
+void signal_handler(int sig);
 
 int main(int argc, char *argv[]) {
     int argidx, argchar; //  opterr = 0;
@@ -254,6 +251,8 @@ int main(int argc, char *argv[]) {
     }
     fprintf(hitfid, "min_matches_to_agree = %u\n", min_matches_to_agree);
     fprintf(hitfid, "max_matches_needed = %u\n", max_matches_needed);
+
+    signal(SIGINT, signal_handler);
 
     numsolved = solve_fields(thefields, fieldobjs, fieldtries,
 			     codekd, codetol);
@@ -525,75 +524,67 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
 		   kdtree_t *codekd, double codetol) {
-    //kresult *krez;
-    code *thequery = mk_code();
+    double thequery[4];
     qidx nummatch = 0;
+    kdtree_qres_t* result;
 
     // ABCD
-    code_set(thequery, 0, Cx);
-    code_set(thequery, 1, Cy);
-    code_set(thequery, 2, Dx);
-    code_set(thequery, 3, Dy);
-    /*
-      krez = mk_kresult_from_kquery(kq, codekd, thequery);
-      if (krez->count) {
-      nummatch += krez->count;
-      resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
-      }
-      free_kresult(krez);
-    */
+    thequery[0] = Cx;
+    thequery[1] = Cy;
+    thequery[2] = Dx;
+    thequery[3] = Dy;
+
+    result = kdtree_rangesearch(codekd, thequery, codetol);
+    if (result->nres) {
+	nummatch += result->nres;
+	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
+    }
+    kdtree_free_query(result);
 
     // BACD
-    code_set(thequery, 0, 1.0 - Cx);
-    code_set(thequery, 1, 1.0 - Cy);
-    code_set(thequery, 2, 1.0 - Dx);
-    code_set(thequery, 3, 1.0 - Dy);
-    /*
-      krez = mk_kresult_from_kquery(kq, codekd, thequery);
-      if (krez->count) {
-      nummatch += krez->count;
-      resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
-      }
-      free_kresult(krez);
-    */
+    thequery[0] = 1.0 - Cx;
+    thequery[1] = 1.0 - Cy;
+    thequery[2] = 1.0 - Dx;
+    thequery[3] = 1.0 - Dy;
+
+    result = kdtree_rangesearch(codekd, thequery, codetol);
+    if (result->nres) {
+	nummatch += result->nres;
+	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
+    }
+    kdtree_free_query(result);
 
     // ABDC
-    code_set(thequery, 0, Dx);
-    code_set(thequery, 1, Dy);
-    code_set(thequery, 2, Cx);
-    code_set(thequery, 3, Cy);
-    /*
-      krez = mk_kresult_from_kquery(kq, codekd, thequery);
-      if (krez->count) {
-      nummatch += krez->count;
-      resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
-      }
-      free_kresult(krez);
-    */
+    thequery[0] = Dx;
+    thequery[1] = Dy;
+    thequery[2] = Cx;
+    thequery[3] = Cy;
+
+    result = kdtree_rangesearch(codekd, thequery, codetol);
+    if (result->nres) {
+	nummatch += result->nres;
+	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
+    }
+    kdtree_free_query(result);
 
     // BADC
-    code_set(thequery, 0, 1.0 - Dx);
-    code_set(thequery, 1, 1.0 - Dy);
-    code_set(thequery, 2, 1.0 - Cx);
-    code_set(thequery, 3, 1.0 - Cy);
-    /*
-      krez = mk_kresult_from_kquery(kq, codekd, thequery);
-      if (krez->count) {
-      nummatch += krez->count;
-      resolve_matches(cornerpix, krez, codearray, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
-      }
-      free_kresult(krez);
-    */
+    thequery[0] = 1.0 - Dx;
+    thequery[1] = 1.0 - Dy;
+    thequery[2] = 1.0 - Cx;
+    thequery[3] = 1.0 - Cy;
 
-    free_code(thequery);
+    result = kdtree_rangesearch(codekd, thequery, codetol);
+    if (result->nres) {
+	nummatch += result->nres;
+	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
+    }
+    kdtree_free_query(result);
 
     return nummatch;
 }
 
-/*
-  void resolve_matches(xy *cornerpix, kresult *krez, dyv_array* codearray, code *query,
-  xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD)
-  {
+void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double *query,
+		     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD) {
   qidx jj, thisquadno;
   sidx iA, iB, iC, iD;
   double *transform;
@@ -606,56 +597,49 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   sD = mk_star();
 
   // This should normally only loop once; only one match should be foun
-  for (jj = 0;jj < krez->count;jj++) {
-  mo = mk_MatchObj();
-  mo->next = NULL;
-  if (firstMatch == NULL) {
-  mo->idx = 0;
-  firstMatch = mo;
-  } else {
-  mo->idx = (lastMatch->idx) + 1;
-  lastMatch->next = mo;
-  }
-  lastMatch = mo;
+  for (jj=0; jj<krez->nres; jj++) {
+      mo = mk_MatchObj();
+      mo->next = NULL;
+      if (firstMatch == NULL) {
+	  mo->idx = 0;
+	  firstMatch = mo;
+      } else {
+	  mo->idx = (lastMatch->idx) + 1;
+	  lastMatch->next = mo;
+      }
+      lastMatch = mo;
 
-  thisquadno = (qidx)krez->pindexes->iarr[jj];
-  getquadids(thisquadno, &iA, &iB, &iC, &iD);
-  getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
-  transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
-  sMin = mk_star();
-  sMax = mk_star();
-  image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
-  image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
+      thisquadno = (qidx)krez->inds[jj];
 
-  mo->quadno = thisquadno;
-  mo->iA = iA;
-  mo->iB = iB;
-  mo->iC = iC;
-  mo->iD = iD;
-  mo->fA = fA;
-  mo->fB = fB;
-  mo->fC = fC;
-  mo->fD = fD;
-  mo->sMin = sMin;
-  mo->sMax = sMax;
-  mo->nearlist = add_transformed_corners(sMin, sMax, thisquadno, &hitkd);
-  if (mo->nearlist != NULL && mo->nearlist->size >= min_matches_to_agree
-  && mo->nearlist->size > mostAgree)
-  mostAgree = mo->nearlist->size;
-  if (!codearray) {
-  mo->code_err = 0.0;
-  } else {
-  dyv* matchedcode;
-  // the code that was matched:
-  matchedcode = dyv_array_ref(codearray, ivec_ref(krez->pindexes, jj));
-  // should be |query->farr - point(krez->pindexes->iarr[jj])|^2
-  // code* is a dyv*
-  // NOTE: it's actually code error SQUARED!
-  mo->code_err = dyv_dyv_dsqd(query, matchedcode);
-  }
+      getquadids(thisquadno, &iA, &iB, &iC, &iD);
+      getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
+      transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
+      sMin = mk_star();
+      sMax = mk_star();
+      image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
+      image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
 
-  free(transform);
-  //free_star(sMin); free_star(sMax); // will be freed with MatchObj
+      mo->quadno = thisquadno;
+      mo->iA = iA;
+      mo->iB = iB;
+      mo->iC = iC;
+      mo->iD = iD;
+      mo->fA = fA;
+      mo->fB = fB;
+      mo->fC = fC;
+      mo->fD = fD;
+      mo->sMin = sMin;
+      mo->sMax = sMax;
+      //mo->nearlist = add_transformed_corners(sMin, sMax, thisquadno, &hitkd);
+      mo->nearlist = add_transformed_corners(sMin, sMax, thisquadno);
+      if (mo->nearlist != NULL && mo->nearlist->size >= min_matches_to_agree
+	  && mo->nearlist->size > mostAgree)
+	  mostAgree = mo->nearlist->size;
+
+      mo->code_err = krez->sdists[jj];
+
+      free(transform);
+      //free_star(sMin); free_star(sMax); // will be freed with MatchObj
   }
 
   free_star(sA);
@@ -663,49 +647,46 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
   free_star(sC);
   free_star(sD);
   return ;
-  }
-*/
+}
 
+ivec *add_transformed_corners(star *sMin, star *sMax, qidx thisquad) {
+    /*
+      double dist_sq;
+      dyv *hitdyv;
+      int tmpmatch;
+      kresult *kr;
+      ivec *nearlist = NULL;
 
-/*
-  ivec *add_transformed_corners(star *sMin, star *sMax,
-  qidx thisquad, kdtree **kdt)
-  {
-  double dist_sq;
-  dyv *hitdyv;
-  int tmpmatch;
-  kresult *kr;
-  ivec *nearlist = NULL;
+      hitdyv = mk_dyv(2 * DIM_STARS);
+      dyv_set(hitdyv, 0, star_ref(sMin, 0));
+      dyv_set(hitdyv, 1, star_ref(sMin, 1));
+      dyv_set(hitdyv, 2, star_ref(sMin, 2));
+      dyv_set(hitdyv, 3, star_ref(sMax, 0));
+      dyv_set(hitdyv, 4, star_ref(sMax, 1));
+      dyv_set(hitdyv, 5, star_ref(sMax, 2));
 
-  hitdyv = mk_dyv(2 * DIM_STARS);
-  dyv_set(hitdyv, 0, star_ref(sMin, 0));
-  dyv_set(hitdyv, 1, star_ref(sMin, 1));
-  dyv_set(hitdyv, 2, star_ref(sMin, 2));
-  dyv_set(hitdyv, 3, star_ref(sMax, 0));
-  dyv_set(hitdyv, 4, star_ref(sMax, 1));
-  dyv_set(hitdyv, 5, star_ref(sMax, 2));
+      if (*kdt == NULL) {
+      dyv_array *tmp = mk_dyv_array(1);
+      dyv_array_set(tmp, 0, hitdyv);
+      *kdt = mk_kdtree_from_points(tmp, DEFAULT_KDRMIN);
+      free_dyv_array(tmp);
+      qlist = mk_ivec_1((int)thisquad);
+      } else {
+      dist_sq = add_point_to_kdtree_dsq(*kdt, hitdyv, &tmpmatch);
+      add_to_ivec(qlist, (int)thisquad);
+      if ((dist_sq < (AgreeTol*AgreeTol)) &&
+      ((qidx)ivec_ref(qlist, tmpmatch) != thisquad)) {
+      kr = mk_kresult_from_kquery(nearquery, *kdt, hitdyv);
+      nearlist = mk_copy_ivec(kr->pindexes);
+      free_kresult(kr);
+      }
+      }
 
-  if (*kdt == NULL) {
-  dyv_array *tmp = mk_dyv_array(1);
-  dyv_array_set(tmp, 0, hitdyv);
-  *kdt = mk_kdtree_from_points(tmp, DEFAULT_KDRMIN);
-  free_dyv_array(tmp);
-  qlist = mk_ivec_1((int)thisquad);
-  } else {
-  dist_sq = add_point_to_kdtree_dsq(*kdt, hitdyv, &tmpmatch);
-  add_to_ivec(qlist, (int)thisquad);
-  if ((dist_sq < (AgreeTol*AgreeTol)) &&
-  ((qidx)ivec_ref(qlist, tmpmatch) != thisquad)) {
-  kr = mk_kresult_from_kquery(nearquery, *kdt, hitdyv);
-  nearlist = mk_copy_ivec(kr->pindexes);
-  free_kresult(kr);
-  }
-  }
-
-  free_dyv(hitdyv);
-  return (nearlist);
-  }
-*/
+      free_dyv(hitdyv);
+      return (nearlist);
+    */
+    return NULL;
+}
 
 
 void output_match(MatchObj *mo)

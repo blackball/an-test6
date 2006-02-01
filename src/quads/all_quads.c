@@ -394,6 +394,10 @@ void accept_quad(int quadnum, sidx iA, sidx iB, sidx iC, sidx iD,
     return ;
 }
 
+/**
+   \c inds contains real star indices.
+   \c iA   is a real star index.
+ */
 void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
                  double minrsq, double maxrsq, int* pnquads) {
     int b;
@@ -562,7 +566,7 @@ void last_result(void* vparams, node* query) {
 	    for (k=0; k<search->num_points; k++) {
 		ivec_set(pinds, pi + k, ivec_ref(search->pindexes, k));
 	    }
-	    pi += k;
+	    pi += search->num_points;
 	}
 
 	printf_stats("    collected %i points.\n", pi);
