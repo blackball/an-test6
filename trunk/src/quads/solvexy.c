@@ -93,8 +93,7 @@ bool quitNow = FALSE;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int argidx, argchar; //  opterr = 0;
     double codetol = DEFAULT_CODE_TOL;
     FILE *fieldfid = NULL, *treefid = NULL;
@@ -861,6 +860,28 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 			      dyv_ref(plist[ii]->sMax,1));
 		maxdec = z2dec(dyv_ref(plist[ii]->sMax,2));
 
+		// convert to degrees - Debugging{RA,Dec}{Min,Max} are specified in degrees.
+		minra  *= 180/M_PI;
+		mindec *= 180/M_PI;
+		maxra  *= 180/M_PI;
+		maxdec *= 180/M_PI;
+
+		/*
+		  printf("min (ra,dec) = (%g, %g)\n", minra, mindec);
+		  printf("max (ra,dec) = (%g, %g)\n", maxra, maxdec);
+		  printf("Debug min (ra, dec) = (%g, %g)\n", DebuggingRAMin, DebuggingDecMin);
+		  printf("Debug max (ra, dec) = (%g, %g)\n", DebuggingRAMax, DebuggingDecMax);
+		  printf("inrange %i %i %i %i %i %i %i %i\n",
+		  inrange(mindec, DebuggingDecMin, DebuggingDecMax),
+		  inrange(minra, DebuggingRAMin, DebuggingRAMax),
+		  inrange(maxdec, DebuggingDecMin, DebuggingDecMax),
+		  inrange(maxra, DebuggingRAMin, DebuggingRAMax),
+		  inrange(mindec, DebuggingDecMin, DebuggingDecMax),
+		  inrange(maxra, DebuggingRAMin, DebuggingRAMax),
+		  inrange(maxdec, DebuggingDecMin, DebuggingDecMax),
+		  inrange(minra, DebuggingRAMin, DebuggingRAMax));
+		*/
+
                 /* If any of the corners are in the range, go for it */
 
                 if ( (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
@@ -871,7 +892,6 @@ int output_good_matches(MatchObj *first, MatchObj *last)
                       inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
                      (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
                       inrange(minra, DebuggingRAMin, DebuggingRAMax))) {
-
 		    add_to_ivec_unique(bestlist, ii);
                 }
 				
