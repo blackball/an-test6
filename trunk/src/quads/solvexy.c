@@ -6,6 +6,7 @@
  */
 
 #include <assert.h>
+#include <signal.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
@@ -39,6 +40,8 @@ const char HelpString[] =
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
 #define DEFAULT_DEBUGGING 0
+
+void signal_handler(int sig);
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree *codekd, dyv_array* codearray, double codetol);
@@ -84,6 +87,8 @@ double DebuggingDecMin;
 double DebuggingDecMax;
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 unsigned int max_matches_needed = DEFAULT_MAX_MATCHES_NEEDED;
+
+bool quitNow = FALSE;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -296,6 +301,8 @@ int main(int argc, char *argv[])
 	}
 	fflush(hitfid);
 
+	signal(SIGINT, signal_handler);
+
 	numsolved = solve_fields(thefields, fieldobjs, fieldtries,
 							 codekd, codearray, codetol);
 
@@ -309,13 +316,15 @@ int main(int argc, char *argv[])
 	free_xyarray(thefields);
 	free_kdtree(codekd);
 
-	//basic_am_malloc_report();
 	return (0);
 }
 
 
-
-
+void signal_handler(int sig) {
+	if (sig != SIGINT) return;
+	fprintf(stderr, "Received signal SIGINT - stopping ASAP...\n");
+	quitNow = TRUE;
+}
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree *codekd, dyv_array* codearray, double codetol) {
@@ -414,8 +423,12 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				}
 				if (maxtries && (numtries >= maxtries))
 					break;
+				if (quitNow)
+					break;
 			}
 			if (maxtries && (numtries >= maxtries))
+				break;
+			if (quitNow)
 				break;
 		}
 
@@ -457,10 +470,15 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		firstMatch = NULL;
 		lastMatch = NULL;
 
+		if (quitNow)
+			break;
 	}
 
 	fprintf(hitfid, "], \n");
-	fprintf(hitfid, "# END OF RESULTS\n");
+	if (quitNow)
+		fprintf(hitfid, "# QUITTING BECAUSE USER HIT CTRL-C\n");
+	else
+		fprintf(hitfid, "# END OF RESULTS\n");
 	fprintf(hitfid, "############################################################\n");
 
 	free_kquery(kq);
