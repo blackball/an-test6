@@ -1,5 +1,9 @@
 #include "starutil.h"
 
+inline double square(double d) {
+    return d*d;
+}
+
 /* makes a star object located uniformly at random within the limits given
    on the sphere */
 star *make_rand_star(double ramin, double ramax,

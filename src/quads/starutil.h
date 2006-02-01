@@ -50,6 +50,8 @@ typedef dyv_array codearray;
 typedef dyv_array stararray;
 typedef dyv_array xyarray;
 
+inline double square(double d);
+
 #define mk_star() (star *)mk_dyv(DIM_STARS)
 #define mk_stard(d) (star *)mk_dyv(d)
 #define mk_code() (code *)mk_dyv(DIM_CODES)

@@ -14,18 +14,22 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
-	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o
+	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o
 
 EXECS = randcat startree getquads quadidx codetree genfields solvexy fieldquads findstar findquad \
 	findcode codedensity all_quads fixheaders codetomatlab \
-	codeprojections startree2 deduplicate codetree2 printheaders
+	codeprojections startree2 deduplicate codetree2 printheaders \
+	test_healpix
 
 	# doesn't build quite yet...
 	# solvexy2
 
 MYOBJS = randcat.o startree.o getquads.o quadidx.o codetree.o genfields.o solvexy.o fieldquads.o findstar.o \
 	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
-	deduplicate.o codetree2.o solvexy2.o printheaders.o
+	deduplicate.o codetree2.o printheaders.o test_healpix.o
+
+	# solvexy2.o 
+
 
 all: $(EXECS)
 
