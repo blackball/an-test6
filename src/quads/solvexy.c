@@ -5,20 +5,29 @@
  *   Conforms to astyle -clpt
  */
 
+#include <assert.h>
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:H:F:T:"
+#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:"
+
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
 "   [-F maximum-number-of-field-objects-to-process]\n"
 "   [-T maximum-number-of-field-quads-to-try]\n"
 "   [-H hits-file-name.hits]\n"
-"       (-e : compute the code errors)\n"
+"   [-F maximum-number-of-field-objects-to-process]\n"
+"   [-r minimum-ra-for-debug-output]\n"
+"   [-R maximum-ra-for-debug-output]\n"
+"   [-d minimum-dec-for-debug-output]\n"
+"   [-D maximum-dec-for-debug-output]\n"
+"   [-e compute the code errors]\n"
 "   -p flips parity\n"
+"   -d min -D max Dec min/max and outputs info for non-solved fields \n"
+"   -r min -R max RA min/max and outputs info for non-solved fields \n"
 "   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
 //"   -p flips parity, default agree_tol is 7arcsec, default code tol .002\n"
 //"   default matches_needed_to_agree is 3\n"
@@ -29,6 +38,7 @@ const char HelpString[] =
 #define DEFAULT_AGREE_TOL 7.0
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
+#define DEFAULT_DEBUGGING 0
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree *codekd, dyv_array* codearray, double codetol);
@@ -67,6 +77,11 @@ double AgreeArcSec = DEFAULT_AGREE_TOL;
 double AgreeTol;
 qidx mostAgree;
 char ParityFlip = DEFAULT_PARITY_FLIP;
+char Debugging = DEFAULT_DEBUGGING;
+double DebuggingRAMin;
+double DebuggingRAMax;
+double DebuggingDecMin;
+double DebuggingDecMax;
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 unsigned int max_matches_needed = DEFAULT_MAX_MATCHES_NEEDED;
 
@@ -139,6 +154,22 @@ int main(int argc, char *argv[])
 		case 'p':
 			ParityFlip = 1 - ParityFlip;
 			break;
+		case 'd':
+			Debugging++;
+			DebuggingDecMin = strtod(optarg, NULL);
+			break;
+		case 'D':
+			Debugging++;
+			DebuggingDecMax = strtod(optarg, NULL);
+			break;
+		case 'r':
+			Debugging++;
+			DebuggingRAMin = strtod(optarg, NULL);
+			break;
+		case 'R':
+			Debugging++;
+			DebuggingRAMax = strtod(optarg, NULL);
+			break;
 		case 'n':
 			min_matches_to_agree = (unsigned int) strtol(optarg, NULL, 0);
 			break;
@@ -166,6 +197,10 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
+	if (Debugging != 0 && Debugging != 4) {
+		fprintf(stderr, "When debugging need all of -d -D -r -R\n");
+		return (OPT_ERR);
+	}
 
 	fprintf(stderr, "solvexy: solving fields in %s using %s\n",
 	        fieldfname, treefname);
@@ -221,28 +256,50 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Using HITS output file %s\n", hitfname);
 	fopenout(hitfname, hitfid);
 	free_fn(hitfname);
+
+	/* All output is in one giant python dictionary so it can be read into
+	 * python simply via:
+	 * >>> hits = eval(file('my_hits_file.hits').read())
+	 * >>> hits['fields_to_solve']
+	 * 23
+	 * >>> 
+	 * Since most of our non-C code is in Python, this is convienent. */
+	fprintf(hitfid, "# This is a hits file which records the results from a\n");
+	fprintf(hitfid, "# solvexy run. It is a valid python literal and is easily\n");
+	fprintf(hitfid, "# loaded into python via \n");
+	fprintf(hitfid, "# >>> results = eval(file('myfile.hits').read())\n");
+	fprintf(hitfid, "# >>> results['fields_to_solve']\n");
+	fprintf(hitfid, "# 23\n\n");
+	fprintf(hitfid, "dict(\n");
 	fprintf(hitfid, "# SOLVER PARAMS:\n");
 	fprintf(hitfid, "# solving fields in %s using %s\n", fieldfname, treefname);
-	fprintf(hitfid, "field_to_solve = '%s'\n", fieldfname);
-	fprintf(hitfid, "index_used = '%s'\n", treefname);
+	fprintf(hitfid, "field_to_solve = '%s',\n", fieldfname);
+	fprintf(hitfid, "index_used = '%s',\n", treefname);
 	free_fn(fieldfname);
 	free_fn(treefname);
-	fprintf(hitfid, "nfields = %lu\nnquads = %lu\nobjects_in_catalog = %lu\n",
+	fprintf(hitfid, "nfields = %lu,\nnquads = %lu,\nobjects_in_catalog = %lu,\n",
 	        numfields, (qidx)kdtree_num_points(codekd), numstars);
-	fprintf(hitfid, "code_tol = %lf\nagree_tol = %lf\n", codetol, AgreeArcSec);
+	fprintf(hitfid, "code_tol = %lf,\nagree_tol = %lf,\n", codetol, AgreeArcSec);
 	if (ParityFlip) {
 		fprintf(hitfid, "# flipping parity (swapping row/col image coordinates)\n");
-		fprintf(hitfid, "parity_flip = True\n");
+		fprintf(hitfid, "parity_flip = True,\n");
 	}
 	else {
-		fprintf(hitfid, "parity_flip = False\n");
+		fprintf(hitfid, "parity_flip = False,\n");
 	}
-	fprintf(hitfid, "min_matches_to_agree = %u\n", min_matches_to_agree);
-	fprintf(hitfid, "max_matches_needed = %u\n", max_matches_needed);
+	fprintf(hitfid, "min_matches_to_agree = %u,\n", min_matches_to_agree);
+	fprintf(hitfid, "max_matches_needed = %u,\n", max_matches_needed);
+	if (Debugging) {
+		fprintf(hitfid, "# debugging of failed matches enabled; outputting matches in region:\n");
+		fprintf(hitfid, "debug_ra = (%lf, %lf),\n", DebuggingRAMin, DebuggingRAMax);
+		fprintf(hitfid, "debug_dec = (%lf, %lf),\n", DebuggingDecMin, DebuggingDecMax);
+	}
+	fflush(hitfid);
 
 	numsolved = solve_fields(thefields, fieldobjs, fieldtries,
 							 codekd, codearray, codetol);
 
+	fprintf(hitfid, "\n)\n"); /* Close the dictionary */
 	fclose(hitfid);
 	fclose(quadfid);
 	fclose(catfid);
@@ -402,7 +459,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 	}
 
-	fprintf(hitfid, "] \n");
+	fprintf(hitfid, "], \n");
 	fprintf(hitfid, "# END OF RESULTS\n");
 	fprintf(hitfid, "############################################################\n");
 
@@ -633,6 +690,20 @@ void output_match(MatchObj *mo)
 
 }
 
+int inrange(double ra, double ralow, double rahigh)
+{
+    if (ralow < rahigh) {
+       if (ra > ralow && ra < rahigh)
+            return 1;
+        return 0;
+    }
+
+    /* handle wraparound properly */
+    if (ra < ralow && ra > rahigh)
+        return 1;
+    return 0;
+}
+
 int output_good_matches(MatchObj *first, MatchObj *last)
 {
 	MatchObj *mo, *bestone, **plist;
@@ -662,56 +733,105 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 		bestone = NULL;
 	}
 
-	if (bestone == NULL)
+	if (bestone == NULL && !Debugging) {
 		output_match(NULL);
-	else {
+	} else {
 		int corresp_ok = 1;
 		ivec *sortidx = NULL;
 		ivec *slist = mk_ivec(0);
 		ivec *flist = mk_ivec(0);
-		ivec *bestlist = mk_copy_ivec(bestone->nearlist);
-		for (ii = 0;ii < bestnum;ii++)
-			if ((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist != NULL)
-				ivec_union((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist, bestlist);
+		ivec *bestlist;
+		if (bestone) {
+			bestlist = mk_copy_ivec(bestone->nearlist);
+			for (ii = 0;ii < bestnum;ii++)
+				if ((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist != NULL)
+					ivec_union((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist,
+								bestlist);
+		} else {
+			/* Ok, there is no agreeing matches, but we're in debug
+			 * mode. So, we output all matched quads that fall inside the debug
+			 * range. The condition is that if either of the stars
+			 * corners fall inside the specified radec square, we
+			 * output the quad. */
 
+			assert(Debugging);
+			bestlist = mk_zero_ivec(0);
+			for (ii = 0; ii < nummatches; ii++) {
+				double minra, maxra, mindec, maxdec;
+				minra = xy2ra(dyv_ref(plist[ii]->sMin,0),
+				              dyv_ref(plist[ii]->sMin,1));
+				mindec = z2dec(dyv_ref(plist[ii]->sMin,2));
+				maxra = xy2ra(dyv_ref(plist[ii]->sMax,0),
+				              dyv_ref(plist[ii]->sMax,1));
+				maxdec = z2dec(dyv_ref(plist[ii]->sMax,2));
+
+                /* If any of the corners are in the range, go for it */
+
+                if ( (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
+                      inrange(minra, DebuggingRAMin, DebuggingRAMax)) ||
+                     (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
+                      inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
+                     (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
+                      inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
+                     (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
+                      inrange(minra, DebuggingRAMin, DebuggingRAMax))) {
+
+					add_to_ivec_unique(bestlist, ii);
+                }
+				
+			}
+		}
 		bestnum = bestlist->size;
-		fprintf(hitfid, "    # %d matches agree on resolving of the field:\n", bestnum);
-		fprintf(hitfid, "    matches_agree=%d,\n", bestnum);
+		if (bestone) {
+			fprintf(hitfid, "    # %d matches agree on resolving of the field:\n", bestnum);
+			fprintf(hitfid, "    matches_agree=%d,\n", bestnum);
+		} else {
+			fprintf(hitfid, "    # %d matches occur in specified debug window:\n", bestnum);
+			fprintf(hitfid, "    matches_in_window=%d,\n", bestnum);
+		}
 
-		// Output quad data
+		/* Output quad data */
 		fprintf(hitfid, "    quads=[\n");
 		for (ii = 0;ii < bestnum;ii++) {
 			output_match(*(plist + ivec_ref(bestlist, ii)));
-			corresp_ok *=
-			    add_star_correspondences(*(plist + ivec_ref(bestlist, ii)), slist, flist);
+			if (bestone) { 
+				corresp_ok *= add_star_correspondences(*(plist + ivec_ref(bestlist, ii)), slist, flist);
+			}
 		}
 		fprintf(hitfid, "    ],\n");
 
-		fprintf(hitfid, "    # Field Object <--> Catalogue Object Mapping Table\n");
-		if (!corresp_ok) {
-			fprintf(hitfid,
-			        "    # warning -- some matches agree on resolve but not on mapping\n");
-			fprintf(hitfid,
-			        "    resolve_mapping_mismatch=True,\n");
-		}
-		sortidx = mk_sorted_ivec_indices(flist);
+		if (bestone) {
+			fprintf(hitfid, "    # Field Object <--> Catalogue Object Mapping Table\n");
+			if (!corresp_ok) {
+				fprintf(hitfid,
+					"    # warning -- some matches agree on resolve but not on mapping\n");
+				fprintf(hitfid,
+					"    resolve_mapping_mismatch=True,\n");
+			}
+			sortidx = mk_sorted_ivec_indices(flist);
 
-		fprintf(hitfid, "    field2catalog={\n");
-		for (ii = 0;ii < slist->size;ii++)
-			fprintf(hitfid, "        %lu : %lu,\n",
-			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
-			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
-		fprintf(hitfid, "    },\n");
-		fprintf(hitfid, "    catalog2field={\n");
-		for (ii = 0;ii < slist->size;ii++)
-			fprintf(hitfid, "        %lu : %lu,\n",
-			        (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
-			        (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)));
-		fprintf(hitfid, "    },\n");
+			fprintf(hitfid, "    field2catalog={\n");
+			for (ii = 0;ii < slist->size;ii++)
+				fprintf(hitfid, "        %lu : %lu,\n",
+					(sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
+					(sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
+			fprintf(hitfid, "    },\n");
+			fprintf(hitfid, "    catalog2field={\n");
+			for (ii = 0;ii < slist->size;ii++)
+				fprintf(hitfid, "        %lu : %lu,\n",
+					(sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
+					(sidx)ivec_ref(flist, ivec_ref(sortidx, ii)));
+			fprintf(hitfid, "    },\n");
+		} else {
+			fprintf(hitfid, "    # Omitting Field <--> Catalogue Object Mapping because there was no agreeing matches\n");
+		}
+
 
 		free_ivec(slist);
 		free_ivec(flist);
-		free_ivec(sortidx);
+        if (bestone) {
+            free_ivec(sortidx);
+        }
 		free_ivec(bestlist);
 	}
 

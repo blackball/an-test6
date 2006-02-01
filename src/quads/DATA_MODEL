@@ -165,10 +165,112 @@ and, if the node is a leaf node, this is followed by
 
 6) Hits (.hits) files
 
-This format should be described by Keir since it is now some
-python readable format...
+Hits files describe the results of a solver run, i.e. solvexy outputs a single
+.hits file each time it runs. The format is a Python dictionary, such that the
+.hits file can be loaded and eval'd to get at the information.
+
+The files start with a header describing the details of this particular run.
+
+-------------------------------------------------------------------------------
+dict(
+# SOLVER PARAMS:
+# solving fields in astrom_galex_blind_test_ais_01.FUVtop100.xyls using ../an_usno                  _galex_04.ckdt
+field_to_solve = 'astrom_galex_blind_test_ais_01.FUVtop100.xyls',
+index_used = '../an_usno_galex_04.ckdt',
+nfields = 1,
+nquads = 13055630,
+objects_in_catalog = 786432,
+code_tol = 0.001000,
+agree_tol = 5.000000,
+parity_flip = False,
+min_matches_to_agree = 6,
+max_matches_needed = 8,
+# debugging of failed matches enabled; outputting matches in region:
+debug_ra = (359.500000, 0.580000),
+debug_dec = (-11.400000, -10.200000),
+--------------------------------------------------------------------------------
+
+The fields are pretty self-describing.
+
+If debugging is enabled (-d -D -r -R all specified), then the debugging window
+is enabled. For fields that don't solve, any hits in that region get reported
+despite the field not solving.
+
+Then, the results for each field are stored as a list of dictionaries.
+
+--------------------------------------------------------------------------------
+results = [ 
+# --------------------
+dict(
+    field=0,
+    objects_in_field=100,
+    # Image corners
+    min_uv_corner=(565.648438,577.835449), max_uv_corner=(3134.257080,3360.867432),
+    quads_tried=22297, codes_matched=32,
+    # 19 matches agree on resolving of the field:
+    matches_agree=19,
+
+          For fields that matched, each quad is listed with details about. The
+          quads are in a list, with each quad a dictionary like the one below.
+
+    quads=[
+        dict(
+            quad=3034834,
+            starids_ABCD=(13024,28552,22497,58679),
+            field_objects_ABCD=(7,47,25,14),
+            min_xyz=(0.980323,0.009857,-0.197152), min_radec=(0.576064,-11.370458),
+            max_xyz=(0.984121,-0.008832,-0.177282), max_radec=(359.485823,-10.211463),
+        ),
+	
+	.... more dictionaries for each matched quad in the field
+
+    ],
+
+          Then there is two more dictionaries to map between stars and catalog
+          objects.
+
+    # Field Object <--> Catalogue Object Mapping Table
+    field2catalog={
+        2 : 25521,
+        4 : 14047,
+        7 : 13024,
+        10 : 13025,
+        12 : 36182,
+        14 : 58679,
+        18 : 43428,
+        19 : 13014,
+        21 : 71187,
+        25 : 22497,
+        26 : 14884,
+        47 : 28552,
+    },
+    catalog2field={
+        25521 : 2,
+        14047 : 4,
+        13024 : 7,
+        13025 : 10,
+        36182 : 12,
+        58679 : 14,
+        43428 : 18,
+        13014 : 19,
+        71187 : 21,
+        22497 : 25,
+        14884 : 26,
+        28552 : 47,
+    },
+),
 
 
+         ... This is repeated for each field
+
+], 
+# END OF RESULTS
+############################################################
+
+)
+--------------------------------------------------------------------------------
+
+And that's all there is to the .hits files.
 
 7) XY List (.xyls) files
 
@@ -187,4 +289,5 @@ a sequence of pairs of reals giving the xy positions of those sources
 
 the file should have exactly N+1 lines if it describes N fields,
 and commas should be used to separate, as above
+
 
