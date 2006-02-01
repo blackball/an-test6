@@ -35,10 +35,6 @@ void print_help(char* progname) {
 	    progname);
 }
 
-inline double square(double d) {
-    return d*d;
-}
-
 /*
   ;
   This code was for looking at the distances of ALL pairs of points.
