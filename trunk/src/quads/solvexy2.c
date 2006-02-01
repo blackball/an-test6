@@ -299,6 +299,49 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
     fprintf(hitfid, "# Result data, stored as a list of dictionaries\n");
     fprintf(hitfid, "results = [ \n");
 
+    /*
+    //
+    for (fieldidx=3; fieldidx<numxy; fieldidx++) {
+	iB = fieldidx;
+	for (iA=0; iA<fieldidx; iA++) {
+	    for (iC = 0;iC < (fieldidx - 1);iC++) {
+		if ((iC == iA) || (iC == iB))
+		    continue;
+		// C in box?
+		for (iD = iC + 1;iD < fieldidx;iD++) {
+		    if ((iD == iA) || (iD == iB))
+			continue;
+		    // D in box?
+		}
+	    }
+	}
+	iC = fieldidx;
+	for (iA=0; iA<fieldidx; iA++) {
+	    for (iB=iA+1; iB<fieldidx; iB++) {
+		// C in box?
+		for (iD=0; iD<fieldidx; iD++) {
+		    if ((iD == iA) || (iD == iB))
+			continue;
+		    // D in box?
+		}
+	    }
+	}
+    }
+
+    for (iA=0; iA<numxy; iA++) {
+	for (iB=iA+1; iB<numxy; iB++) {
+	    for (iC=0; iC<numxy; iC++) {
+		if ((iC == iA) || (iC == iB))
+		    continue;
+		for (iD=iC+1; iD<numxy; iD++) {
+		    if ((iD == iA) || (iD == iB))
+			continue;
+		}
+	    }
+	}
+    }
+    */
+
     for (ii=0; ii< dyv_array_size(thefields); ii++) {
 	numtries = 0;
 	nummatches = 0;
