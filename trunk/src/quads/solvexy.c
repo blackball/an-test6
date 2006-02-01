@@ -731,6 +731,7 @@ int output_good_matches(MatchObj *first, MatchObj *last)
 	if (bestnum < min_matches_to_agree) {
 		bestnum = 0;
 		bestone = NULL;
+		fprintf(hitfid, "    failure=True,\n");
 	}
 
 	if (bestone == NULL && !Debugging) {
