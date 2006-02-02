@@ -69,7 +69,7 @@ typedef struct result_info result_info;
 
 result_info rinfo;
 
-#define OPTIONS "hacqf:s:l:"
+#define OPTIONS "hcqf:s:l:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -105,7 +105,6 @@ int main(int argc, char *argv[]) {
     char* progname;
     int argchar; //  opterr = 0;
     double ramin, ramax, decmin, decmax;
-    int i;
     int hdrlength = 0;
 
     kdtree* startree = NULL;
@@ -116,9 +115,6 @@ int main(int argc, char *argv[]) {
 
     // lower bound of quad scale (fraction of radius)
     double lower = 0.0;
-
-    double step = 1.0;
-    int nsteps = 1;
 
     params range_params;
 
@@ -230,32 +226,35 @@ int main(int argc, char *argv[]) {
     callbacks.end_extra = &range_params;
 
     // run dual-tree search
-    for (i=0; i<nsteps; i++) {
 
-		// set search params
-		range_params.maxdistsq = radius * radius;
-		range_params.mindistsq = radius * radius * lower * lower;
-		range_params.stars = stars;
-		range_params.nquads = 0;
+	// set search params
+	range_params.maxdistsq = radius * radius;
+	range_params.mindistsq = radius * radius * lower * lower;
+	range_params.stars = stars;
+	range_params.nquads = 0;
 
-		quadlist = (blocklist**)malloc(numstars * sizeof(blocklist*));
-		memset(quadlist, 0, numstars * sizeof(blocklist*));
+	quadlist = (blocklist**)malloc(numstars * sizeof(blocklist*));
+	memset(quadlist, 0, numstars * sizeof(blocklist*));
 
-		if (!quiet)
-			printf("Running dual-tree search (scale %g)...\n", radius);
-		dualtree_search(startree, startree, &callbacks);
-		printf("Quads: %i.\n", range_params.nquads);
-		printf("%g %g %i\n",
-			   rad2arcmin(radius * lower),
-			   rad2arcmin(radius), range_params.nquads);
+	if (!quiet)
+		printf("Running dual-tree search (scale %g)...\n", radius);
+	dualtree_search(startree, startree, &callbacks);
+	printf("Quads: %i.\n", range_params.nquads);
+	printf("%g %g %i\n",
+		   rad2arcmin(radius * lower),
+		   rad2arcmin(radius), range_params.nquads);
 
-		radius *= step;
-    }
     if (!quiet) {
 		printf("Done doing dual-tree search.\n");
 		fflush(stdout);
 	}
-  
+
+	free_kdtree(startree);
+	startree = NULL;
+
+	free_dyv_array_from_kdtree(stars);
+	stars = NULL;
+
     if (!justcount) {
 		int i, j;
 		sidx numused = 0;
