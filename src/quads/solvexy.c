@@ -41,6 +41,22 @@ const char HelpString[] =
 #define DEFAULT_PARITY_FLIP 0
 #define DEFAULT_DEBUGGING 0
 
+typedef struct match_struct
+{
+	qidx quadno;
+	sidx iA, iB, iC, iD;
+	qidx idx;
+	star *sMin, *sMax;
+	sidx fA, fB, fC, fD;
+	double code_err;
+    ivec *nearlist;
+	struct match_struct *next;
+}
+MatchObj;
+
+#define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
+#define free_MatchObj(m) free(m)
+
 void signal_handler(int sig);
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,

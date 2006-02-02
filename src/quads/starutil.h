@@ -103,23 +103,6 @@ inline double square(double d);
 
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
 
-
-typedef struct match_struct
-{
-	qidx quadno;
-	sidx iA, iB, iC, iD;
-	qidx idx;
-	star *sMin, *sMax;
-	sidx fA, fB, fC, fD;
-	double code_err;
-	ivec *nearlist;
-	struct match_struct *next;
-}
-MatchObj;
-
-#define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
-#define free_MatchObj(m) free(m)
-
 star *make_rand_star(double ramin, double ramax,
                      double decmin, double decmax);
 void star_coords(star *s, star *r, double *x, double *y);
