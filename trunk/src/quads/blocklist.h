@@ -86,6 +86,16 @@ void blocklist_int_insert_ascending(blocklist* list, int n);
 void blocklist_int_insert_descending(blocklist* list, int n);
 
 ///////////////////////////////////////////////
+// special-case functions for pointer lists. //
+///////////////////////////////////////////////
+blocklist* blocklist_pointer_new(int blocksize);
+void blocklist_pointer_free(blocklist* list);
+void blocklist_pointer_append(blocklist* list, void* data);
+void* blocklist_pointer_access(blocklist* list, int n);
+void blocklist_pointer_copy(blocklist* list, int start, int length, void** dest);
+void blocklist_pointer_print(blocklist* list);
+
+///////////////////////////////////////////////
 // special-case functions for double lists. //
 ///////////////////////////////////////////////
 blocklist* blocklist_double_new(int blocksize);

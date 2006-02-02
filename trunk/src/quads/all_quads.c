@@ -249,7 +249,8 @@ int main(int argc, char *argv[]) {
 	printf("Done doing dual-tree search.\n");
   
     if (!justcount) {
-	int i, j, numused = 0;
+	int i, j;
+	sidx numused = 0;
 	magicval magic = MAGIC_VAL;
 
 	// fix output file headers.
@@ -263,19 +264,21 @@ int main(int argc, char *argv[]) {
 	    if (tmpivec != NULL)
 		numused++;
 	}
-	printf("%i stars used\n", numused);
+	printf("%li stars used\n", numused);
 	fwrite(&magic, sizeof(magic), 1, qidxfid);
 	fwrite(&numused, sizeof(numused), 1, qidxfid);
 	for (i=0; i<numstars; i++) {
-	    int thisnumq;
+	    qidx thisnumq;
+	    sidx thisstar;
 	    ivec* tmpivec = ivec_array_ref(qlist, i);
 	    if (tmpivec == NULL)
 		continue;
 	    thisnumq = (qidx)ivec_size(tmpivec);
-	    fwrite(&i, sizeof(i), 1, qidxfid);
+	    thisstar = i;
+	    fwrite(&thisstar, sizeof(thisstar), 1, qidxfid);
 	    fwrite(&thisnumq, sizeof(thisnumq), 1, qidxfid);
 	    for (j=0; j<thisnumq; j++) {
-		int kk = (qidx)ivec_ref(tmpivec, j);
+		qidx kk = (qidx)ivec_ref(tmpivec, j);
 		fwrite(&kk, sizeof(kk), 1, qidxfid);
 	    }
 	}

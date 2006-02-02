@@ -745,6 +745,37 @@ void blocklist_int_print(blocklist* list) {
 
 
 
+// special-case pointer list accessors...
+blocklist* blocklist_pointer_new(int blocksize) {
+    return blocklist_new(blocksize, sizeof(void*));
+}
+void blocklist_pointer_free(blocklist* list) {
+    blocklist_free(list);
+}
+void blocklist_pointer_append(blocklist* list, void* data) {
+    blocklist_append(list, &data);
+}
+void* blocklist_pointer_access(blocklist* list, int n) {
+    void** ptr;
+    ptr = (void**)blocklist_access(list, n);
+    return *ptr;
+}
+void blocklist_pointer_copy(blocklist* list, int start, int length, void** vdest) {
+    blocklist_copy(list, start, length, vdest);
+}
+void blocklist_pointer_print(blocklist* list) {
+    blnode* n;
+    int i;
+    for (n=list->head; n; n=n->next) {
+	printf("[ ");
+	for (i=0; i<n->N; i++)
+	    printf("%p ", ((void**)n->data)[i]);
+	printf("] ");
+    }
+}
+
+
+
 // special-case double list accessors...
 blocklist* blocklist_double_new(int blocksize) {
   return blocklist_new(blocksize, sizeof(double));
