@@ -69,7 +69,7 @@ typedef struct result_info result_info;
 
 result_info rinfo;
 
-#define OPTIONS "hcqf:s:l:"
+#define OPTIONS "hcqf:s:l:x"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -88,7 +88,7 @@ int lastpercent = 0;
 int lastcount = 0;
 int justcount = 0;
 int quiet = 0;
-
+bool writeqidx = TRUE;
 
 void print_help(char* progname) {
     printf("\nUsage:\n"
@@ -97,6 +97,7 @@ void print_help(char* progname) {
 		   "     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
 		   "     [-c]                 (just count the quads, don't write anything)\n"
 		   "     [-q]                 (be quiet!  No progress reports)\n"
+		   "     [-x]                 (don't write quad index .qidx file)\n"
 		   "\n"
 		   , progname);
 }
@@ -143,6 +144,9 @@ int main(int argc, char *argv[]) {
 		case 'h':
 			print_help(progname);
 			exit(0);
+		case 'x':
+			writeqidx = FALSE;
+			break;
 		case 'c':
 			justcount = 1;
 			break;
@@ -199,7 +203,6 @@ int main(int argc, char *argv[]) {
 
 		fopenout(quadfname, quadfid);
 		fopenout(codefname, codefid);
-		fopenout(qidxfname, qidxfid);
 
 		// we have to write an updated header after we've processed all the quads.
 		{
@@ -274,60 +277,62 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		// write qidx (adapted from quadidx.c)
+		if (writeqidx) {
+			fopenout(qidxfname, qidxfid);
+			// write qidx (adapted from quadidx.c)
 
-		printf("Writing qidx file...\n");
-		fflush(stdout);
+			printf("Writing qidx file...\n");
+			fflush(stdout);
 
-		// first count numused:
-		// how many stars are members of quads.
-		for (i=0; i<numstars; i++) {
-			blocklist* list = quadlist[i];
-			if (!list) continue;
-			numused++;
-		}
-		printf("%li stars used\n", numused);
-		if (fwrite(&magic, sizeof(magic), 1, qidxfid) != 1) {
-			printf("Error writing magic: %s\n", strerror(errno));
-			exit(-1);
-		}
-		if (fwrite(&numused, sizeof(numused), 1, qidxfid) != 1) {
-			printf("Error writing numused: %s\n", strerror(errno));
-			exit(-1);
-		}
-		for (i=0; i<numstars; i++) {
-			qidx thisnumq;
-			sidx thisstar;
-			blocklist* list = quadlist[i];
-			if (!list) continue;
-			thisnumq = (qidx)blocklist_count(list);
-			thisstar = i;
-			if ((fwrite(&thisstar, sizeof(thisstar), 1, qidxfid) != 1) ||
-				(fwrite(&thisnumq, sizeof(thisnumq), 1, qidxfid) != 1)) {
-				printf("Error writing qidx entry for star %i: %s\n", i,
-					   strerror(errno));
+			// first count numused:
+			// how many stars are members of quads.
+			for (i=0; i<numstars; i++) {
+				blocklist* list = quadlist[i];
+				if (!list) continue;
+				numused++;
+			}
+			printf("%li stars used\n", numused);
+			if (fwrite(&magic, sizeof(magic), 1, qidxfid) != 1) {
+				printf("Error writing magic: %s\n", strerror(errno));
 				exit(-1);
 			}
-			for (j=0; j<thisnumq; j++) {
-				qidx kk;
-				blocklist_get(list, j, &kk);
-				if (fwrite(&kk, sizeof(kk), 1, qidxfid) != 1) {
-					printf("Error writing qidx quads for star %i: %s\n",
-						   i, strerror(errno));
+			if (fwrite(&numused, sizeof(numused), 1, qidxfid) != 1) {
+				printf("Error writing numused: %s\n", strerror(errno));
+				exit(-1);
+			}
+			for (i=0; i<numstars; i++) {
+				qidx thisnumq;
+				sidx thisstar;
+				blocklist* list = quadlist[i];
+				if (!list) continue;
+				thisnumq = (qidx)blocklist_count(list);
+				thisstar = i;
+				if ((fwrite(&thisstar, sizeof(thisstar), 1, qidxfid) != 1) ||
+					(fwrite(&thisnumq, sizeof(thisnumq), 1, qidxfid) != 1)) {
+					printf("Error writing qidx entry for star %i: %s\n", i,
+						   strerror(errno));
 					exit(-1);
 				}
+				for (j=0; j<thisnumq; j++) {
+					qidx kk;
+					blocklist_get(list, j, &kk);
+					if (fwrite(&kk, sizeof(kk), 1, qidxfid) != 1) {
+						printf("Error writing qidx quads for star %i: %s\n",
+							   i, strerror(errno));
+						exit(-1);
+					}
+				}
+				blocklist_free(list);
+				quadlist[i] = NULL;
 			}
-			blocklist_free(list);
-			quadlist[i] = NULL;
+		
+			if (fclose(qidxfid)) {
+				printf("Couldn't write quad index file: %s\n", strerror(errno));
+				exit(-1);
+			}
 		}
-		free(quadlist);
-
-		if (fclose(qidxfid)) {
-			printf("Couldn't write quad index file: %s\n", strerror(errno));
-			exit(-1);
-		}
-
     }
+	free(quadlist);
 
 	printf("Done.\n");
 	fflush(stdout);
@@ -372,7 +377,7 @@ void insertquad(qidx quadid,
 		list = quadlist[starind];
 		// create the list if necessary
 		if (!list) {
-			list = blocklist_new(1000, sizeof(qidx));
+			list = blocklist_new(10, sizeof(qidx));
 			quadlist[starind] = list;
 		}
 		blocklist_append(list, &quadid);
@@ -407,7 +412,8 @@ void accept_quad(int quadnum, sidx iA, sidx iB, sidx iC, sidx iD,
     writeonecode(codefid, Cx, Cy, Dx, Dy);
     writeonequad(quadfid, iA, iB, iC, iD);
 
-    insertquad(quadnum, iA, iB, iC, iD);
+	if (writeqidx)
+		insertquad(quadnum, iA, iB, iC, iD);
 
     return ;
 }
