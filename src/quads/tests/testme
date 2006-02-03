@@ -1,0 +1,49 @@
+#!/bin/bash
+
+F=testme_cat_orig
+#rm ${F}.*
+
+CMD="randcat -f $F -n 1000 -r 0.1745 -R 0.1920 -d 0.1745 -D 0.1920"
+echo $CMD
+$CMD
+
+startree -f $F
+
+O=testme_field
+
+#ADD=0.1
+#REM=0.1
+#POSN_NOISE=0.01
+
+ADD=0.1
+REM=0.1
+POSN_NOISE=0
+
+genfields -f $F -o $O -x $ADD -q $REM -w $POSN_NOISE \
+	-r 10.5 -d 10.5 -s 30
+
+#	-r 0.1833 -d 0.1833 -s 30
+FN=testmet_cat
+
+DEDUP=10
+
+deduplicate -i $F.objs -o $FN.objs -d $DEDUP
+
+startree -f $FN
+
+SCALE=10
+LOWER=0.25
+
+all_quads -f $FN -s $SCALE -l $LOWER -q
+
+codetree2 -f $FN
+
+# agreement tolerance: arcseconds
+AGREE=100
+# code match tolerance: 6-d distance
+MATCH=0.001
+
+CMD="solvexy2 -f $FN -o $O -m $AGREE -t $MATCH -F 100 -H ${O}.hits -v"
+echo $CMD
+$CMD
+
