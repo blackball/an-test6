@@ -82,21 +82,32 @@ double inverse_3by3(double *matrix)
    these values into the star object s */
 void image_to_xyz(double uu, double vv, star *s, double *transform)
 {
+	double x, y, z;
 	double length;
 	if (s == NULL || transform == NULL)
 		return ;
-	star_set(s, 0, uu*(*(transform + 0)) +
-	         vv*(*(transform + 1)) + *(transform + 2));
-	star_set(s, 1, uu*(*(transform + 3)) +
-	         vv*(*(transform + 4)) + *(transform + 5));
-	star_set(s, 2, uu*(*(transform + 6)) +
-	         vv*(*(transform + 7)) + *(transform + 8));
-	length = sqrt(star_ref(s, 0) * star_ref(s, 0) + star_ref(s, 1) * star_ref(s, 1) +
-	              star_ref(s, 2) * star_ref(s, 2));
-	star_set(s, 0, star_ref(s, 0) / length);
-	star_set(s, 1, star_ref(s, 1) / length);
-	star_set(s, 2, star_ref(s, 2) / length);
-	return ;
+
+	x = uu * transform[0] +
+		vv * transform[1] +
+		transform[2];
+
+	y = uu * transform[3] +
+		vv * transform[4] +
+		transform[5];
+
+	z = uu * transform[6] +
+		vv * transform[7] +
+		transform[8];
+
+	length = sqrt(x*x + y*y + z*z);
+
+	x /= length;
+	y /= length;
+	z /= length;
+
+	star_set(s, 0, x);
+	star_set(s, 1, y);
+	star_set(s, 2, z);
 }
 
 /* takes four image locations from ABCDpix, maps them to stars ABCD
@@ -107,16 +118,8 @@ double *fit_transform(xy *ABCDpix, char order, star *A, star *B, star *C, star *
 	double det, uu, uv, vv, sumu, sumv;
 	char oA = 0, oB = 1, oC = 2, oD = 3;
 	double Au, Av, Bu, Bv, Cu, Cv, Du, Dv;
-	double *matQ = (double *)malloc(9 * sizeof(double));
-	double *matR = (double *)malloc(12 * sizeof(double));
-	if (matQ == NULL || matR == NULL) {
-		if (matQ)
-			free(matQ);
-		if (matR)
-			free(matR);
-		fprintf(stderr, "ERROR (solvey) == memory error in fit_transform\n");
-		return (NULL);
-	}
+	double matQ[9];
+	double matR[12];
 
 	if (order == ABCD_ORDER) {
 		oA = 0;
@@ -184,10 +187,6 @@ double *fit_transform(xy *ABCDpix, char order, star *A, star *B, star *C, star *
 
 	if (det == 0.0) {
 		fprintf(stderr, "ERROR (fit_transform) -- determinant zero\n");
-		if (matQ)
-			free(matQ);
-		if (matR)
-			free(matR);
 		return (NULL);
 	}
 
@@ -228,10 +227,12 @@ double *fit_transform(xy *ABCDpix, char order, star *A, star *B, star *C, star *
 	*(matQ + 8) = star_ref(A, 2) * (*(matR + 2)) + star_ref(B, 2) * (*(matR + 5)) +
 	              star_ref(C, 2) * (*(matR + 8)) + star_ref(D, 2) * (*(matR + 11));
 
-	free(matR);
-
-	return (matQ);
-
+	{
+		double* copyQ = (double*)malloc(9 * sizeof(double));
+		memset(copyQ, matQ, 9 * sizeof(double));
+		return copyQ;
+	}
+	//return (matQ);
 }
 
 /* returns an ivec with the indices of the subset of points captured
