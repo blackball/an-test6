@@ -18,7 +18,7 @@
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:H:F:T:"
+#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:"
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
@@ -51,21 +51,19 @@ typedef struct match_struct {
 #define free_MatchObj(m) free(m)
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
-		  kdtree_t *codekd, double codetol);
+				  kdtree_t *codekd, double codetol);
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
-		   kdtree_t *codekd, double codetol);
+				   kdtree_t *codekd, double codetol);
 void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double *query,
-		     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
-//int add_transformed_corners(star *sMin, star *sMax, qidx thisquad);
+					 xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD);
 int find_matching_hit(MatchObj* mo);
 void find_corners(xy *thisfield, xy *cornerpix);
 
 void output_match(MatchObj *mo);
 int output_good_matches();
 int add_star_correspondences(MatchObj *mo, ivec *slist, ivec *flist);
-//void free_matchlist(MatchObj *first);
 void free_hitlist();
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
@@ -81,19 +79,18 @@ char buff[100], maxstarWidth, oneobjWidth;
 
 blocklist* hitlist;
 
-//kdtree *hitkd = NULL;
-//kquery *nearquery;
-//ivec *qlist = NULL;
-/*
-  MatchObj *lastMatch = NULL;
-  MatchObj *firstMatch = NULL;
-*/
 double AgreeArcSec = DEFAULT_AGREE_TOL;
 double AgreeTol;
 qidx mostAgree;
 char ParityFlip = DEFAULT_PARITY_FLIP;
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 unsigned int max_matches_needed = DEFAULT_MAX_MATCHES_NEEDED;
+
+double DebuggingRAMin;
+double DebuggingRAMax;
+double DebuggingDecMin;
+double DebuggingDecMax;
+int Debugging = 0;
 
 bool quitNow = FALSE;
 
@@ -122,84 +119,105 @@ int main(int argc, char *argv[]) {
     void* mmapped = NULL;
 
     if (argc <= 4) {
-	fprintf(stderr, HelpString);
-	return (OPT_ERR);
+		fprintf(stderr, HelpString);
+		return (OPT_ERR);
     }
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
-	switch (argchar) {
-	case 'F':
-	    fieldobjs = atoi(optarg);
-	    if (!fieldobjs) {
-		fprintf(stderr, "Couldn't parse -F argument: %s\n",
-			optarg);
-		exit(-1);
-	    }
-	    break;
-	case 'T':
-	    fieldtries = atoi(optarg);
-	    if (!fieldtries) {
-		fprintf(stderr, "Couldn't parse -T argument: %s\n",
-			optarg);
-		exit(-1);
-	    }
-	    break;
-	case 'e':
-	    do_codeerr = 1;
-	    break;
-	case 'H':
-	    if (hitfname) free_fn(hitfname);
-	    hitfname = strdup(optarg);
-	    break;
-	case 'f':
-	    treefname = mk_ctree2fn(optarg);
-	    quadfname = mk_quadfn(optarg);
-	    catfname = mk_catfn(optarg);
-	    break;
-	case 'o':
-	    fieldfname = mk_fieldfn(optarg);
-	    if (!hitfname)
-		hitfname = mk_hitfn(optarg);
-	    break;
-	case 't':
-	    codetol = strtod(optarg, NULL);
-	    break;
-	case 'm':
-	    AgreeArcSec = strtod(optarg, NULL);
-	    break;
-	case 'p':
-	    ParityFlip = 1 - ParityFlip;
-	    break;
-	case 'n':
-	    min_matches_to_agree = (unsigned int) strtol(optarg, NULL, 0);
-	    break;
-	case 'x':
-	    max_matches_needed = (unsigned int) strtol(optarg, NULL, 0);
-	    break;
-	case '?':
-	    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-	case 'h':
-	    fprintf(stderr, HelpString);
-	    return (HELP_ERR);
-	default:
-	    return (OPT_ERR);
-	}
+		switch (argchar) {
+		case 'd':
+			Debugging++;
+			DebuggingDecMin = strtod(optarg, NULL);
+			break;
+		case 'D':
+			Debugging++;
+			DebuggingDecMax = strtod(optarg, NULL);
+			break;
+		case 'r':
+			Debugging++;
+			DebuggingRAMin = strtod(optarg, NULL);
+			break;
+		case 'R':
+			Debugging++;
+			DebuggingRAMax = strtod(optarg, NULL);
+			break;
+		case 'F':
+			fieldobjs = atoi(optarg);
+			if (!fieldobjs) {
+				fprintf(stderr, "Couldn't parse -F argument: %s\n",
+						optarg);
+				exit(-1);
+			}
+			break;
+		case 'T':
+			fieldtries = atoi(optarg);
+			if (!fieldtries) {
+				fprintf(stderr, "Couldn't parse -T argument: %s\n",
+						optarg);
+				exit(-1);
+			}
+			break;
+		case 'e':
+			do_codeerr = 1;
+			break;
+		case 'H':
+			if (hitfname) free_fn(hitfname);
+			hitfname = strdup(optarg);
+			break;
+		case 'f':
+			treefname = mk_ctree2fn(optarg);
+			quadfname = mk_quadfn(optarg);
+			catfname = mk_catfn(optarg);
+			break;
+		case 'o':
+			fieldfname = mk_fieldfn(optarg);
+			if (!hitfname)
+				hitfname = mk_hitfn(optarg);
+			break;
+		case 't':
+			codetol = strtod(optarg, NULL);
+			break;
+		case 'm':
+			AgreeArcSec = strtod(optarg, NULL);
+			break;
+		case 'p':
+			ParityFlip = 1 - ParityFlip;
+			break;
+		case 'n':
+			min_matches_to_agree = (unsigned int) strtol(optarg, NULL, 0);
+			break;
+		case 'x':
+			max_matches_needed = (unsigned int) strtol(optarg, NULL, 0);
+			break;
+		case '?':
+			fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+		case 'h':
+			fprintf(stderr, HelpString);
+			return (HELP_ERR);
+		default:
+			return (OPT_ERR);
+		}
+
+    if (Debugging != 0 && Debugging != 4) {
+		fprintf(stderr, "When debugging need all of -d -D -r -R\n");
+		return (OPT_ERR);
+    }
 
     if (treefname == NULL || fieldfname == NULL || codetol < 0) {
-	fprintf(stderr, HelpString);
-	return (OPT_ERR);
+		fprintf(stderr, HelpString);
+		return (OPT_ERR);
     }
 
     if (optind < argc) {
-	for (argidx = optind; argidx < argc; argidx++)
-	    fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-	fprintf(stderr, HelpString);
-	return (OPT_ERR);
+		for (argidx = optind; argidx < argc; argidx++)
+			fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
+		fprintf(stderr, HelpString);
+		return (OPT_ERR);
     }
 
 
     fprintf(stderr, "solvexy: solving fields in %s using %s\n",
-	    fieldfname, treefname);
+			fieldfname, treefname);
 
     fprintf(stderr, "  Reading fields...");
     fflush(stderr);
@@ -207,11 +225,11 @@ int main(int argc, char *argv[]) {
     thefields = readxy(fieldfid, ParityFlip);
     fclose(fieldfid);
     if (thefields == NULL)
-	return (1);
+		return (1);
     numfields = (qidx)thefields->size;
     fprintf(stderr, "got %lu fields.\n", numfields);
     if (ParityFlip)
-	fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
+		fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 
     fprintf(stderr, "  Reading code KD tree from %s...", treefname);
     fflush(stderr);
@@ -220,9 +238,9 @@ int main(int argc, char *argv[]) {
     codekd = kdtree_read(treefid, use_mmap, &mmapped, &mmapped_size);
     fclose(treefid);
     if (!codekd)
-	return (2);
+		return (2);
     fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
-	    codekd->ndata, codekd->nnodes, codekd->ndim);
+			codekd->ndata, codekd->nnodes, codekd->ndim);
     /*
       fprintf(stderr, "    (index scale = %lf arcmin)\n", rad2arcmin(index_scale));
       if (do_codeerr) {
@@ -234,23 +252,23 @@ int main(int argc, char *argv[]) {
     fopenin(quadfname, quadfid);
     free_fn(quadfname);
     readStatus = read_quad_header(quadfid, &numquads, &numstars, 
-				  &Dim_Quads, &index_scale);
+								  &Dim_Quads, &index_scale);
     if (readStatus == READ_FAIL)
-	return (3);
+		return (3);
     qposmarker = ftello(quadfid);
 
     fopenin(catfname, catfid);
     free_fn(catfname);
     readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
-				  &ramin, &ramax, &decmin, &decmax);
+								  &ramin, &ramax, &decmin, &decmax);
     if (readStatus == READ_FAIL)
-	return (4);
+		return (4);
     cposmarker = ftello(catfid);
 
     AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
     fprintf(stderr,
-	    "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
-	    numfields, codetol, AgreeArcSec);
+			"  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
+			numfields, codetol, AgreeArcSec);
     fprintf(stderr, "Using HITS output file %s\n", hitfname);
     fopenout(hitfname, hitfid);
     free_fn(hitfname);
@@ -266,11 +284,11 @@ int main(int argc, char *argv[]) {
     */
     fprintf(hitfid, "code_tol = %lf\nagree_tol = %lf\n", codetol, AgreeArcSec);
     if (ParityFlip) {
-	fprintf(hitfid, "# flipping parity (swapping row/col image coordinates)\n");
-	fprintf(hitfid, "parity_flip = True\n");
+		fprintf(hitfid, "# flipping parity (swapping row/col image coordinates)\n");
+		fprintf(hitfid, "parity_flip = True\n");
     }
     else {
-	fprintf(hitfid, "parity_flip = False\n");
+		fprintf(hitfid, "parity_flip = False\n");
     }
     fprintf(hitfid, "min_matches_to_agree = %u\n", min_matches_to_agree);
     fprintf(hitfid, "max_matches_needed = %u\n", max_matches_needed);
@@ -280,7 +298,7 @@ int main(int argc, char *argv[]) {
     hitlist = blocklist_pointer_new(256);
 
     numsolved = solve_fields(thefields, fieldobjs, fieldtries,
-			     codekd, codetol);
+							 codekd, codetol);
 
     blocklist_pointer_free(hitlist);
 
@@ -288,14 +306,14 @@ int main(int argc, char *argv[]) {
     fclose(quadfid);
     fclose(catfid);
     fprintf(stderr, "done (solved %lu).                                  \n",
-	    numsolved);
+			numsolved);
 
     free_xyarray(thefields);
 
     if (use_mmap) {
-	munmap(mmapped, mmapped_size);
+		munmap(mmapped, mmapped_size);
     } else {
-	kdtree_free(codekd);
+		kdtree_free(codekd);
     }
 
     return (0);
@@ -311,11 +329,11 @@ void signal_handler(int sig) {
 qidx numtries, nummatches;
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-		      char* inbox, int maxind,
-		      xy *thisfield,
-		      xy *cornerpix,
-		      kdtree_t* codekd,
-		      double codetol) {
+					  char* inbox, int maxind,
+					  xy *thisfield,
+					  xy *cornerpix,
+					  kdtree_t* codekd,
+					  double codetol) {
     int i;
     int iC, iD;
     double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -343,43 +361,43 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 
     // check which C, D points are inside the square.
     for (i=0; i<maxind; i++) {
-	if (!inbox[i]) continue;
-	Cx = xy_refx(thisfield, i);
-	Cy = xy_refy(thisfield, i);
-	Cx -= Ax;
-	Cy -= Ay;
-	xxtmp = Cx;
-	Cx = Cx * costheta + Cy * sintheta;
-	Cy = -xxtmp * sintheta + Cy * costheta;
-	if ((Cx >= 1.0) || (Cx <= 0.0) ||
-	    (Cy >= 1.0) || (Cy <= 0.0)) { //C inside AB box?
-	    inbox[i] = 0;
-	} else {
-	    xs[i] = Cx;
-	    ys[i] = Cy;
-	}
+		if (!inbox[i]) continue;
+		Cx = xy_refx(thisfield, i);
+		Cy = xy_refy(thisfield, i);
+		Cx -= Ax;
+		Cy -= Ay;
+		xxtmp = Cx;
+		Cx = Cx * costheta + Cy * sintheta;
+		Cy = -xxtmp * sintheta + Cy * costheta;
+		if ((Cx >= 1.0) || (Cx <= 0.0) ||
+			(Cy >= 1.0) || (Cy <= 0.0)) { //C inside AB box?
+			inbox[i] = 0;
+		} else {
+			xs[i] = Cx;
+			ys[i] = Cy;
+		}
     }
 
     for (i=0; i<ncd; i++) {
-	iC = iCs[i];
-	iD = iDs[i];
-	// are both C and D in the box?
-	if (!inbox[iC]) continue;
-	if (!inbox[iD]) continue;
+		iC = iCs[i];
+		iD = iDs[i];
+		// are both C and D in the box?
+		if (!inbox[iC]) continue;
+		if (!inbox[iD]) continue;
 
-	Cx = xs[iC];
-	Cy = ys[iC];
-	Dx = xs[iD];
-	Dy = ys[iD];
+		Cx = xs[iC];
+		Cy = ys[iC];
+		Dx = xs[iD];
+		Dy = ys[iD];
 
-	xy_setx(ABCDpix, 2, Cx);
-	xy_sety(ABCDpix, 2, Cy);
-	xy_setx(ABCDpix, 3, Dx);
-	xy_sety(ABCDpix, 3, Dy);
+		xy_setx(ABCDpix, 2, Cx);
+		xy_sety(ABCDpix, 2, Cy);
+		xy_setx(ABCDpix, 3, Dx);
+		xy_sety(ABCDpix, 3, Dy);
 
-	numtries++;
-	nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
-				    iA, iB, iC, iD, codekd, codetol);
+		numtries++;
+		nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
+									iA, iB, iC, iD, codekd, codetol);
     }
 
     free_xy(ABCDpix);
@@ -387,7 +405,7 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 }
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
-		  kdtree_t *codekd, double codetol) {
+				  kdtree_t *codekd, double codetol) {
     qidx numsolved, numgood, ii;
     sidx numxy, iA, iB, iC, iD, newpoint;
     xy *thisfield;
@@ -396,10 +414,6 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
     char *iunion;
     int ncd;
 
-    /*
-      kquery *kq = mk_kquery("rangesearch", "", KD_UNDEF, codetol, kdtree_rmin(codekd));
-      nearquery = mk_kquery("rangesearch", "", KD_UNDEF, AgreeTol, DEFAULT_KDRMIN);
-    */
     numsolved = dyv_array_size(thefields);
 
     fprintf(hitfid, "############################################################\n");
@@ -407,149 +421,124 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
     fprintf(hitfid, "results = [ \n");
 
     for (ii=0; ii< dyv_array_size(thefields); ii++) {
-	numtries = 0;
-	nummatches = 0;
-	mostAgree = 0;
-	thisfield = xya_ref(thefields, ii);
-	numxy = xy_size(thisfield);
-	if (maxfieldobjs && (numxy > maxfieldobjs))
-	    numxy = maxfieldobjs;
-	find_corners(thisfield, cornerpix);
+		numtries = 0;
+		nummatches = 0;
+		mostAgree = 0;
+		thisfield = xya_ref(thefields, ii);
+		numxy = xy_size(thisfield);
+		if (maxfieldobjs && (numxy > maxfieldobjs))
+			numxy = maxfieldobjs;
+		find_corners(thisfield, cornerpix);
 
-	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
-	    continue;
-
-	iCs = (int*)malloc(numxy * numxy * sizeof(int));
-	iDs = (int*)malloc(numxy * numxy * sizeof(int));
-	iunion = (char*)malloc(numxy * sizeof(char));
-
-	// We keep the invariants that iA < iB and iC < iD.
-	// We try the A<->B and C<->D permutation in try_all_points.
-	for (newpoint=3; newpoint<numxy; newpoint++) {
-	    iB = newpoint;
-	    for (iA=0; iA<newpoint; iA++) {
-
-		ncd = 0;
-		memset(iunion, 0, newpoint);
-
-		for (iC=0; iC<newpoint; iC++) {
-		    if ((iC == iA) || (iC == iB))
+		if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
 			continue;
 
-		    iunion[iC] = 1;
+		iCs = (int*)malloc(numxy * numxy * sizeof(int));
+		iDs = (int*)malloc(numxy * numxy * sizeof(int));
+		iunion = (char*)malloc(numxy * sizeof(char));
 
-		    for (iD=iC+1; iD<newpoint; iD++) {
-			if ((iD == iA) || (iD == iB))
-			    continue;
+		// We keep the invariants that iA < iB and iC < iD.
+		// We try the A<->B and C<->D permutation in try_all_points.
+		for (newpoint=3; newpoint<numxy; newpoint++) {
+			iB = newpoint;
+			for (iA=0; iA<newpoint; iA++) {
 
-			iCs[ncd] = iC;
-			iDs[ncd] = iD;
-			ncd++;
-		    }
+				ncd = 0;
+				memset(iunion, 0, newpoint);
+
+				for (iC=0; iC<newpoint; iC++) {
+					if ((iC == iA) || (iC == iB))
+						continue;
+
+					iunion[iC] = 1;
+
+					for (iD=iC+1; iD<newpoint; iD++) {
+						if ((iD == iA) || (iD == iB))
+							continue;
+
+						iCs[ncd] = iC;
+						iDs[ncd] = iD;
+						ncd++;
+					}
+				}
+
+				try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint,
+						  thisfield, cornerpix, codekd, codetol);
+
+			}
+
+			iD = newpoint;
+			for (iA=0; iA<newpoint; iA++) {
+				for (iB=iA+1; iB<newpoint; iB++) {
+
+					ncd = 0;
+					memset(iunion, 0, newpoint+1);
+
+					iunion[iD] = 1;
+
+					for (iC=0; iC<newpoint; iC++) {
+						if ((iC == iA) || (iC == iB))
+							continue;
+
+						iunion[iC] = 1;
+
+						iCs[ncd] = iC;
+						iDs[ncd] = iD;
+						ncd++;
+					}
+
+					try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1,
+							  thisfield, cornerpix, codekd, codetol);
+				}
+			}
+
+			fprintf(stderr,
+					"    field %lu: using %lu of %lu objects (%lu quads agree so far; %lu tried, %lu matched)      \r",
+					ii, newpoint, numxy, mostAgree, numtries, nummatches);
+
+			if ((mostAgree >= max_matches_needed) ||
+				(maxtries && (numtries >= maxtries)) ||
+				(quitNow))
+				break;
 		}
-
-		try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint,
-			  thisfield, cornerpix, codekd, codetol);
-
-	    }
-
-	    iD = newpoint;
-	    for (iA=0; iA<newpoint; iA++) {
-		for (iB=iA+1; iB<newpoint; iB++) {
-
-		    ncd = 0;
-		    memset(iunion, 0, newpoint+1);
-
-		    iunion[iD] = 1;
-
-		    for (iC=0; iC<newpoint; iC++) {
-			if ((iC == iA) || (iC == iB))
-			    continue;
-
-			iunion[iC] = 1;
-
-			iCs[ncd] = iC;
-			iDs[ncd] = iD;
-			ncd++;
-		    }
-
-		    try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1,
-			      thisfield, cornerpix, codekd, codetol);
-		}
-	    }
-
-	    fprintf(stderr,
-		    "    field %lu: using %lu of %lu objects (%lu quads agree so far; %lu tried, %lu matched)      \r",
-		    ii, newpoint, numxy, mostAgree, numtries, nummatches);
-
-	    if ((mostAgree >= max_matches_needed) ||
-		(maxtries && (numtries >= maxtries)) ||
-		(quitNow))
-		break;
-	}
-	free(iCs);
-	free(iDs);
-	free(iunion);
+		free(iCs);
+		free(iDs);
+		free(iunion);
 
 
-	fprintf(hitfid, "# --------------------\n");
-	fprintf(hitfid, "dict(\n");
-	fprintf(hitfid, "    field=%lu,\n", ii);
-	fprintf(hitfid, "    objects_in_field=%lu,\n", numxy);
-	fprintf(hitfid, "    # Image corners\n");
-	if (ParityFlip)
-	    fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
-		    xy_refy(cornerpix, 0), xy_refx(cornerpix, 0),
-		    xy_refy(cornerpix, 1), xy_refx(cornerpix, 1));
-	else
-	    fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
-		    xy_refx(cornerpix, 0), xy_refy(cornerpix, 0),
-		    xy_refx(cornerpix, 1), xy_refy(cornerpix, 1));
-	fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu,\n",
-		numtries, nummatches);
+		fprintf(hitfid, "# --------------------\n");
+		fprintf(hitfid, "dict(\n");
+		fprintf(hitfid, "    field=%lu,\n", ii);
+		fprintf(hitfid, "    objects_in_field=%lu,\n", numxy);
+		fprintf(hitfid, "    # Image corners\n");
+		if (ParityFlip)
+			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
+					xy_refy(cornerpix, 0), xy_refx(cornerpix, 0),
+					xy_refy(cornerpix, 1), xy_refx(cornerpix, 1));
+		else
+			fprintf(hitfid, "    min_uv_corner=(%lf,%lf), max_uv_corner=(%lf,%lf),\n",
+					xy_refx(cornerpix, 0), xy_refy(cornerpix, 0),
+					xy_refx(cornerpix, 1), xy_refy(cornerpix, 1));
+		fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu,\n",
+				numtries, nummatches);
 
-	numgood = output_good_matches();
+		numgood = output_good_matches();
 
-	fprintf(hitfid, "),\n");
-	fflush(hitfid);
-	if (numgood == 0)
-	    numsolved--;
+		fprintf(hitfid, "),\n");
+		fflush(hitfid);
+		if (numgood == 0)
+			numsolved--;
 
-	fprintf(stderr, "    field %lu: tried %lu quads, matched %lu codes, "
-		"%lu agree\n", ii, numtries, nummatches, numgood);
+		fprintf(stderr, "    field %lu: tried %lu quads, matched %lu codes, "
+				"%lu agree\n", ii, numtries, nummatches, numgood);
 
-	/*
-	  if (hitkd != NULL) {
-	  free_kdtree(hitkd);
-	  hitkd = NULL;
-	  }
-	*/
-	/*
-	  if (qlist != NULL) {
-	  free_ivec(qlist);
-	  qlist = NULL;
-	  }
-	*/
-	/*
-	  free_matchlist(firstMatch);
-	  firstMatch = NULL;
-	  lastMatch = NULL;
-	*/
-
-	free_hitlist();
-
-	// FIXME - free hitlist.
-
+		free_hitlist();
     }
 
     fprintf(hitfid, "] \n");
     fprintf(hitfid, "# END OF RESULTS\n");
     fprintf(hitfid, "############################################################\n");
 
-    /*
-      free_kquery(kq);
-      free_kquery(nearquery);
-    */
     free_xy(cornerpix);
 
     return numsolved;
@@ -558,7 +547,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
-		   kdtree_t *codekd, double codetol) {
+				   kdtree_t *codekd, double codetol) {
     double thequery[4];
     qidx nummatch = 0;
     kdtree_qres_t* result;
@@ -571,8 +560,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 
     result = kdtree_rangesearch(codekd, thequery, codetol);
     if (result->nres) {
-	nummatch += result->nres;
-	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
+		nummatch += result->nres;
+		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
     }
     kdtree_free_query(result);
 
@@ -584,8 +573,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 
     result = kdtree_rangesearch(codekd, thequery, codetol);
     if (result->nres) {
-	nummatch += result->nres;
-	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
+		nummatch += result->nres;
+		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
     }
     kdtree_free_query(result);
 
@@ -597,8 +586,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 
     result = kdtree_rangesearch(codekd, thequery, codetol);
     if (result->nres) {
-	nummatch += result->nres;
-	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
+		nummatch += result->nres;
+		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
     }
     kdtree_free_query(result);
 
@@ -610,8 +599,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 
     result = kdtree_rangesearch(codekd, thequery, codetol);
     if (result->nres) {
-	nummatch += result->nres;
-	resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
+		nummatch += result->nres;
+		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
     }
     kdtree_free_query(result);
 
@@ -619,7 +608,7 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
 }
 
 void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double *query,
-		     xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD) {
+					 xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD) {
     qidx jj, thisquadno;
     sidx iA, iB, iC, iD;
     double *transform;
@@ -633,66 +622,47 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 
     // This should normally only loop once; only one match should be foun
     for (jj=0; jj<krez->nres; jj++) {
-	int nagree;
+		int nagree;
 
-	mo = mk_MatchObj();
-	/*
-	  mo->next = NULL;
-	  if (firstMatch == NULL) {
-	  mo->idx = 0;
-	  firstMatch = mo;
-	  } else {
-	  mo->idx = (lastMatch->idx) + 1;
-	  lastMatch->next = mo;
-	  }
-	  lastMatch = mo;
-	*/
+		mo = mk_MatchObj();
 
-	thisquadno = (qidx)krez->inds[jj];
+		thisquadno = (qidx)krez->inds[jj];
+		getquadids(thisquadno, &iA, &iB, &iC, &iD);
+		getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
+		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
+		sMin = mk_star();
+		sMax = mk_star();
+		image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
+		image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
 
-	getquadids(thisquadno, &iA, &iB, &iC, &iD);
-	getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
-	transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
-	sMin = mk_star();
-	sMax = mk_star();
-	image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
-	image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
+		mo->quadno = thisquadno;
+		mo->iA = iA;
+		mo->iB = iB;
+		mo->iC = iC;
+		mo->iD = iD;
+		mo->fA = fA;
+		mo->fB = fB;
+		mo->fC = fC;
+		mo->fD = fD;
 
-	mo->quadno = thisquadno;
-	mo->iA = iA;
-	mo->iB = iB;
-	mo->iC = iC;
-	mo->iD = iD;
-	mo->fA = fA;
-	mo->fB = fB;
-	mo->fC = fC;
-	mo->fD = fD;
+		mo->sMin = sMin;
+		mo->sMax = sMax;
 
-	mo->sMin = sMin;
-	mo->sMax = sMax;
+		mo->vector[0] = star_ref(sMin, 0);
+		mo->vector[1] = star_ref(sMin, 1);
+		mo->vector[2] = star_ref(sMin, 2);
+		mo->vector[3] = star_ref(sMax, 0);
+		mo->vector[4] = star_ref(sMax, 1);
+		mo->vector[5] = star_ref(sMax, 2);
 
-	mo->vector[0] = star_ref(sMin, 0);
-	mo->vector[1] = star_ref(sMin, 1);
-	mo->vector[2] = star_ref(sMin, 2);
-	mo->vector[3] = star_ref(sMax, 0);
-	mo->vector[4] = star_ref(sMax, 1);
-	mo->vector[5] = star_ref(sMax, 2);
+		mo->code_err = krez->sdists[jj];
 
-	mo->code_err = krez->sdists[jj];
+		nagree = find_matching_hit(mo);
+		if (nagree >= mostAgree) {
+			mostAgree = nagree;
+		}
 
-	/*
-	  mo->nearlist = add_transformed_corners(sMin, sMax, thisquadno, &hitkd);
-	  if (mo->nearlist != NULL && mo->nearlist->size >= min_matches_to_agree
-	  && mo->nearlist->size > mostAgree)
-	  mostAgree = mo->nearlist->size;
-	*/
-
-	nagree = find_matching_hit(mo);
-	if (nagree >= mostAgree) {
-	    mostAgree = nagree;
-	}
-
-	free(transform);
+		free(transform);
     }
 
     free_star(sA);
@@ -706,7 +676,7 @@ double distsq(double* d1, double* d2, int D) {
     int i;
     dist2 = 0.0;
     for (i=0; i<D; i++) {
-	dist2 += square(d1[i] - d2[i]);
+		dist2 += square(d1[i] - d2[i]);
     }
     return dist2;
 }
@@ -716,18 +686,18 @@ int find_matching_hit(MatchObj* mo) {
     int i, N;
     N = blocklist_count(hitlist);
     for (i=0; i<N; i++) {
-	int j, M;
-	blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-	M = blocklist_count(hits);
-	for (j=0; j<M; j++) {
-	    double d2;
-	    MatchObj* m = (MatchObj*)blocklist_pointer_access(hits, j);
-	    d2 = distsq(mo->vector, m->vector, sizeof(mo->vector)/sizeof(double));
-	    if (d2 < square(AgreeTol)) {
-		blocklist_pointer_append(hits, mo);
-		return blocklist_count(hits);
-	    }
-	}
+		int j, M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
+		M = blocklist_count(hits);
+		for (j=0; j<M; j++) {
+			double d2;
+			MatchObj* m = (MatchObj*)blocklist_pointer_access(hits, j);
+			d2 = distsq(mo->vector, m->vector, sizeof(mo->vector)/sizeof(double));
+			if (d2 < square(AgreeTol)) {
+				blocklist_pointer_append(hits, mo);
+				return blocklist_count(hits);
+			}
+		}
     }
 
     // no agreement - create new list.
@@ -818,174 +788,165 @@ int find_matching_hit(MatchObj* mo) {
 void output_match(MatchObj *mo)
 {
     if (mo == NULL)
-	fprintf(hitfid, "        # No agreement between matches. Could not resolve field.\n");
+		fprintf(hitfid, "        # No agreement between matches. Could not resolve field.\n");
     else {
-	fprintf(hitfid, "        dict(\n");
-	fprintf(hitfid, "            quad=%lu,\n", mo->quadno);
-	fprintf(hitfid, "            starids_ABCD=(%lu,%lu,%lu,%lu),\n",
-		mo->iA, mo->iB, mo->iC, mo->iD);
-	fprintf(hitfid, "            field_objects_ABCD=(%lu,%lu,%lu,%lu),\n",
-		mo->fA, mo->fB, mo->fC, mo->fD);
-	fprintf(hitfid, "            min_xyz=(%lf,%lf,%lf), min_radec=(%lf,%lf),\n",
-		star_ref(mo->sMin, 0), star_ref(mo->sMin, 1), star_ref(mo->sMin, 2),
-		rad2deg(xy2ra(star_ref(mo->sMin, 0), star_ref(mo->sMin, 1))),
-		rad2deg(z2dec(star_ref(mo->sMin, 2))));
-	fprintf(hitfid, "            max_xyz=(%lf,%lf,%lf), max_radec=(%lf,%lf),\n",
-		star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
-		rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
-		rad2deg(z2dec(star_ref(mo->sMax, 2))));
-	if (mo->code_err > 0.0) {
-	    fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
-	}
-	fprintf(hitfid, "        ),\n");
+		fprintf(hitfid, "        dict(\n");
+		fprintf(hitfid, "            quad=%lu,\n", mo->quadno);
+		fprintf(hitfid, "            starids_ABCD=(%lu,%lu,%lu,%lu),\n",
+				mo->iA, mo->iB, mo->iC, mo->iD);
+		fprintf(hitfid, "            field_objects_ABCD=(%lu,%lu,%lu,%lu),\n",
+				mo->fA, mo->fB, mo->fC, mo->fD);
+		fprintf(hitfid, "            min_xyz=(%lf,%lf,%lf), min_radec=(%lf,%lf),\n",
+				star_ref(mo->sMin, 0), star_ref(mo->sMin, 1), star_ref(mo->sMin, 2),
+				rad2deg(xy2ra(star_ref(mo->sMin, 0), star_ref(mo->sMin, 1))),
+				rad2deg(z2dec(star_ref(mo->sMin, 2))));
+		fprintf(hitfid, "            max_xyz=(%lf,%lf,%lf), max_radec=(%lf,%lf),\n",
+				star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
+				rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
+				rad2deg(z2dec(star_ref(mo->sMax, 2))));
+		if (mo->code_err > 0.0) {
+			fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
+		}
+		fprintf(hitfid, "        ),\n");
 
     }
     return ;
 
 }
 
+int inrange(double ra, double ralow, double rahigh)
+{
+    if (ralow < rahigh) {
+	if (ra > ralow && ra < rahigh)
+            return 1;
+        return 0;
+    }
+
+    /* handle wraparound properly */
+    if (ra < ralow && ra > rahigh)
+        return 1;
+    return 0;
+}
+
 int output_good_matches() {
     int i, N;
     MatchObj* mo;
     int bestnum;
+	blocklist* bestlist;
+	int corresp_ok = 1;
+	ivec *sortidx = NULL;
+	ivec *slist = NULL;
+	ivec *flist = NULL;
+	blocklist* allocated_list = NULL;
 
+	bestnum = 0;
+	bestlist = NULL;
     N = blocklist_count(hitlist);
     for (i=0; i<N; i++) {
-	int j, M;
-	blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-	M = blocklist_count(hits);
-	for (j=0; j<M; j++) {
-	    mo = (MatchObj*)blocklist_pointer_access(hits, j);
+		int M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
+		M = blocklist_count(hits);
 
-
+		if (M > bestnum) {
+			bestnum = M;
+			bestlist = hits;
+		}
 	}
-    }
 
-    bestnum = -1;
-    return bestnum;
-    /*
-      if (bestnum < min_matches_to_agree) {
-      }
+	if (bestnum < min_matches_to_agree) {
 
-      fprintf(hitfid, "    # %d matches agree on resolving of the field:\n", bestnum);
-      fprintf(hitfid, "    matches_agree=%d,\n", bestnum);
-      
-      fprintf(hitfid, "    quads=[\n");
-      for (ii = 0;ii < bestnum;ii++) {
-      output_match(*(plist + ivec_ref(bestlist, ii)));
-      corresp_ok *=
-      add_star_correspondences(*(plist + ivec_ref(bestlist, ii)), slist, flist);
-      }
-      fprintf(hitfid, "    ],\n");
-      
-      fprintf(hitfid, "    # Field Object <--> Catalogue Object Mapping Table\n");
-      if (!corresp_ok) {
-      fprintf(hitfid,
-      "    # warning -- some matches agree on resolve but not on mapping\n");
-      fprintf(hitfid,
-      "    resolve_mapping_mismatch=True,\n");
-      }
-      sortidx = mk_sorted_ivec_indices(flist);
+		if (!Debugging) {
+			return -1;
+		}
+
+		// We're debugging.
+		allocated_list = blocklist_pointer_new(256);
+		bestlist = allocated_list;
+		for (i=0; i<N; i++) {
+			int j, M;
+			blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
+			M = blocklist_count(hits);
+			for (j=0; j<M; j++) {
+				double minra, maxra, mindec, maxdec;
+				double x, y, z;
+				mo = (MatchObj*)blocklist_pointer_access(hits, j);
+				x = dyv_ref(mo->sMin, 0);
+				y = dyv_ref(mo->sMin, 1);
+				z = dyv_ref(mo->sMin, 2);
+				minra = xy2ra(x, y);
+				mindec = z2dec(z);
+				x = dyv_ref(mo->sMax, 0);
+				y = dyv_ref(mo->sMax, 1);
+				z = dyv_ref(mo->sMax, 2);
+				maxra = xy2ra(x, y);
+				maxdec = z2dec(z);
+
+				// convert to degrees - Debugging{RA,Dec}{Min,Max} are specified in degrees.
+				minra  *= 180/M_PI;
+				mindec *= 180/M_PI;
+				maxra  *= 180/M_PI;
+				maxdec *= 180/M_PI;
+
+				// If any of the corners are in the range, go for it
+				if ( (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
+					  inrange(minra, DebuggingRAMin, DebuggingRAMax)) ||
+					 (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
+					  inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
+					 (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
+					  inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
+					 (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
+					  inrange(minra, DebuggingRAMin, DebuggingRAMax))) {
+					blocklist_pointer_append(bestlist, mo);
+				}
+			}
+		}
+		bestnum = blocklist_count(bestlist);
+	}
+
+	fprintf(hitfid, "    # %d matches agree on resolving of the field:\n", bestnum);
+	fprintf(hitfid, "    matches_agree=%d,\n", bestnum);
+
+	slist = mk_ivec(0);
+	flist = mk_ivec(0);
+
+	fprintf(hitfid, "    quads=[\n");
+	for (i=0; i<bestnum; i++) {
+		mo = (MatchObj*)blocklist_pointer_access(bestlist, i);
+		output_match(mo);
+		corresp_ok *= add_star_correspondences(mo, slist, flist);
+	}
+	fprintf(hitfid, "    ],\n");
+
+	fprintf(hitfid, "    # Field Object <--> Catalogue Object Mapping Table\n");
+	if (!corresp_ok) {
+		fprintf(hitfid,
+				"    # warning -- some matches agree on resolve but not on mapping\n");
+		fprintf(hitfid,
+				"    resolve_mapping_mismatch=True,\n");
+	}
+	sortidx = mk_sorted_ivec_indices(flist);
     
-      fprintf(hitfid, "    field2catalog={\n");
-      for (ii = 0;ii < slist->size;ii++)
-      fprintf(hitfid, "        %lu : %lu,\n",
-      (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
-      (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
-      fprintf(hitfid, "    },\n");
-      fprintf(hitfid, "    catalog2field={\n");
-      for (ii = 0;ii < slist->size;ii++)
-      fprintf(hitfid, "        %lu : %lu,\n",
-      (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
-      (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)));
-      fprintf(hitfid, "    },\n");
-    */
+	fprintf(hitfid, "    field2catalog={\n");
+	for (i= 0 ; i<slist->size; i++)
+		fprintf(hitfid, "        %lu : %lu,\n",
+				(sidx)ivec_ref(flist, ivec_ref(sortidx, i)),
+				(sidx)ivec_ref(slist, ivec_ref(sortidx, i)));
+	fprintf(hitfid, "    },\n");
+	fprintf(hitfid, "    catalog2field={\n");
+	for (i=0; i<slist->size; i++)
+		fprintf(hitfid, "        %lu : %lu,\n",
+				(sidx)ivec_ref(slist, ivec_ref(sortidx, i)),
+				(sidx)ivec_ref(flist, ivec_ref(sortidx, i)));
+	fprintf(hitfid, "    },\n");
 
-    /*
-      MatchObj *mo, *bestone, **plist;
-      int ii, bestidx, bestnum = 0;
-      int nummatches;
-      if (first == NULL || last == NULL)
-      return (0);
-      nummatches = last->idx + 1;
+	if (allocated_list) {
+		blocklist_pointer_free(allocated_list);
+	}
 
-      plist = (MatchObj **)malloc(nummatches * sizeof(MatchObj *));
-      mo = first;
-      ii = 0;
-      bestone = NULL;
-      while (mo != NULL) {
-      *(plist + ii) = mo;
-      if (mo->nearlist != NULL && (mo->nearlist->size) > bestnum) {
-      bestnum = mo->nearlist->size;
-      bestidx = ii;
-      bestone = mo;
-      }
-      mo = mo->next;
-      ii++;
-      }
+	free_ivec(slist);
+	free_ivec(flist);
 
-      if (bestnum < min_matches_to_agree) {
-      bestnum = 0;
-      bestone = NULL;
-      }
-
-      if (bestone == NULL)
-      output_match(NULL);
-      else {
-      int corresp_ok = 1;
-      ivec *sortidx = NULL;
-      ivec *slist = mk_ivec(0);
-      ivec *flist = mk_ivec(0);
-      ivec *bestlist = mk_copy_ivec(bestone->nearlist);
-      for (ii = 0;ii < bestnum;ii++)
-      if ((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist != NULL)
-      ivec_union((*(plist + ivec_ref(bestone->nearlist, ii)))->nearlist, bestlist);
-
-      bestnum = bestlist->size;
-      fprintf(hitfid, "    # %d matches agree on resolving of the field:\n", bestnum);
-      fprintf(hitfid, "    matches_agree=%d,\n", bestnum);
-
-      // Output quad data
-      fprintf(hitfid, "    quads=[\n");
-      for (ii = 0;ii < bestnum;ii++) {
-      output_match(*(plist + ivec_ref(bestlist, ii)));
-      corresp_ok *=
-      add_star_correspondences(*(plist + ivec_ref(bestlist, ii)), slist, flist);
-      }
-      fprintf(hitfid, "    ],\n");
-
-      fprintf(hitfid, "    # Field Object <--> Catalogue Object Mapping Table\n");
-      if (!corresp_ok) {
-      fprintf(hitfid,
-      "    # warning -- some matches agree on resolve but not on mapping\n");
-      fprintf(hitfid,
-      "    resolve_mapping_mismatch=True,\n");
-      }
-      sortidx = mk_sorted_ivec_indices(flist);
-
-      fprintf(hitfid, "    field2catalog={\n");
-      for (ii = 0;ii < slist->size;ii++)
-      fprintf(hitfid, "        %lu : %lu,\n",
-      (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)),
-      (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)));
-      fprintf(hitfid, "    },\n");
-      fprintf(hitfid, "    catalog2field={\n");
-      for (ii = 0;ii < slist->size;ii++)
-      fprintf(hitfid, "        %lu : %lu,\n",
-      (sidx)ivec_ref(slist, ivec_ref(sortidx, ii)),
-      (sidx)ivec_ref(flist, ivec_ref(sortidx, ii)));
-      fprintf(hitfid, "    },\n");
-
-      free_ivec(slist);
-      free_ivec(flist);
-      free_ivec(sortidx);
-      free_ivec(bestlist);
-      }
-
-      free(plist);
-
-      return (bestnum);
-    */
+    return bestnum;
 }
 
 
@@ -994,13 +955,13 @@ int add_star_correspondences(MatchObj *mo, ivec *slist, ivec *flist)
 {
     int rez = 0;
     if (mo == NULL || slist == NULL || flist == NULL)
-	fprintf(stderr, "ERROR (add_star_corresp) -- NULL input\n");
+		fprintf(stderr, "ERROR (add_star_corresp) -- NULL input\n");
     else {
-	rez = 1;
-	rez *= add_one_star_corresp(mo->iA, mo->fA, slist, flist);
-	rez *= add_one_star_corresp(mo->iB, mo->fB, slist, flist);
-	rez *= add_one_star_corresp(mo->iC, mo->fC, slist, flist);
-	rez *= add_one_star_corresp(mo->iD, mo->fD, slist, flist);
+		rez = 1;
+		rez *= add_one_star_corresp(mo->iA, mo->fA, slist, flist);
+		rez *= add_one_star_corresp(mo->iB, mo->fB, slist, flist);
+		rez *= add_one_star_corresp(mo->iC, mo->fC, slist, flist);
+		rez *= add_one_star_corresp(mo->iD, mo->fD, slist, flist);
     }
     return (rez);
 }
@@ -1012,51 +973,32 @@ int add_one_star_corresp(sidx ii, sidx ff, ivec *slist, ivec *flist)
     inspos_ii = add_to_ivec_unique2(slist, ii);
     inspos_ff = add_to_ivec_unique2(flist, ff);
     if (inspos_ii == inspos_ff)
-	return (1);
+		return (1);
     else {
-	if (inspos_ii != listsize)
-	    add_to_ivec(slist, ii);
-	if (inspos_ff != listsize)
-	    add_to_ivec(flist, ff);
-	return (0);
+		if (inspos_ii != listsize)
+			add_to_ivec(slist, ii);
+		if (inspos_ff != listsize)
+			add_to_ivec(flist, ff);
+		return (0);
     }
 }
 
-
-
-/*
-  void free_matchlist(MatchObj *first)
-  {
-  MatchObj *mo, *tmp;
-  mo = first;
-  while (mo != NULL) {
-  free_star(mo->sMin);
-  free_star(mo->sMax);
-  if (mo->nearlist != NULL)
-  free_ivec(mo->nearlist);
-  tmp = mo->next;
-  free_MatchObj(mo);
-  mo = tmp;
-  }
-  return ;
-  }
-*/
 
 void free_hitlist() {
     int i, N;
     N = blocklist_count(hitlist);
     for (i=0; i<N; i++) {
-	int j, M;
-	blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-	M = blocklist_count(hits);
-	for (j=0; j<M; j++) {
-	    MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
+		int j, M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
+		M = blocklist_count(hits);
+		for (j=0; j<M; j++) {
+			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
 
-	    free_star(mo->sMin);
-	    free_star(mo->sMax);
-	    free_MatchObj(mo);
-	}
-	blocklist_pointer_free(hits);
+			free_star(mo->sMin);
+			free_star(mo->sMax);
+			free_MatchObj(mo);
+		}
+		blocklist_pointer_free(hits);
     }
     blocklist_remove_all(hitlist);
 }
@@ -1078,16 +1020,16 @@ void find_corners(xy *thisfield, xy *cornerpix)
     xy_sety(cornerpix, 1, yytmp);
 
     for (jj = 0;jj < xy_size(thisfield);jj++) {
-	xxtmp = xy_refx(thisfield, jj);
-	yytmp = xy_refy(thisfield, jj);
-	if (xxtmp < xy_refx(cornerpix, 0))
-	    xy_setx(cornerpix, 0, xxtmp);
-	if (yytmp < xy_refy(cornerpix, 0))
-	    xy_sety(cornerpix, 0, yytmp);
-	if (xxtmp > xy_refx(cornerpix, 1))
-	    xy_setx(cornerpix, 1, xxtmp);
-	if (yytmp > xy_refy(cornerpix, 1))
-	    xy_sety(cornerpix, 1, yytmp);
+		xxtmp = xy_refx(thisfield, jj);
+		yytmp = xy_refy(thisfield, jj);
+		if (xxtmp < xy_refx(cornerpix, 0))
+			xy_setx(cornerpix, 0, xxtmp);
+		if (yytmp < xy_refy(cornerpix, 0))
+			xy_sety(cornerpix, 0, yytmp);
+		if (xxtmp > xy_refx(cornerpix, 1))
+			xy_setx(cornerpix, 1, xxtmp);
+		if (yytmp > xy_refy(cornerpix, 1))
+			xy_sety(cornerpix, 1, yytmp);
     }
 
     return ;
@@ -1099,7 +1041,7 @@ void find_corners(xy *thisfield, xy *cornerpix)
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
     fseeko(quadfid, qposmarker + thisquad*
-	   (DIM_QUADS*sizeof(iA)), SEEK_SET);
+		   (DIM_QUADS*sizeof(iA)), SEEK_SET);
     readonequad(quadfid, iA, iB, iC, iD);
     return ;
 }
