@@ -26,6 +26,9 @@ CMD="genfields -f $F -o $O -x $ADD -q $REM -w $POSN_NOISE -r 10.5 -d 10.5 -s 30"
 echo $CMD
 $CMD
 
+printheaders -f $F -m > catalog.m
+xylstomatlab testme_field.rdls fieldradec 2> field.m
+
 FN=testme_cat
 
 DEDUP=10

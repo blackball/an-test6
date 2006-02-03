@@ -48,6 +48,16 @@ typedef struct match_struct {
     double code_err;
     star *sMin, *sMax;
     double vector[6];
+	double* transform;
+	double corners[4];
+	double starA[3];
+	double starB[3];
+	double starC[3];
+	double starD[3];
+	double fieldA[2];
+	double fieldB[2];
+	double fieldC[2];
+	double fieldD[2];
 } MatchObj;
 
 #define MATCH_VECTOR_SIZE 6
@@ -762,6 +772,28 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 		image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
 
+		mo->starA[0] = star_ref(sA, 0);
+		mo->starA[1] = star_ref(sA, 1);
+		mo->starA[2] = star_ref(sA, 2);
+		mo->starB[0] = star_ref(sB, 0);
+		mo->starB[1] = star_ref(sB, 1);
+		mo->starB[2] = star_ref(sB, 2);
+		mo->starC[0] = star_ref(sC, 0);
+		mo->starC[1] = star_ref(sC, 1);
+		mo->starC[2] = star_ref(sC, 2);
+		mo->starD[0] = star_ref(sD, 0);
+		mo->starD[1] = star_ref(sD, 1);
+		mo->starD[2] = star_ref(sD, 2);
+
+		mo->fieldA[0] = xy_refx(ABCDpix, 0);
+		mo->fieldA[1] = xy_refy(ABCDpix, 0);
+		mo->fieldB[0] = xy_refx(ABCDpix, 1);
+		mo->fieldB[1] = xy_refy(ABCDpix, 1);
+		mo->fieldC[0] = xy_refx(ABCDpix, 2);
+		mo->fieldC[1] = xy_refy(ABCDpix, 2);
+		mo->fieldD[0] = xy_refx(ABCDpix, 3);
+		mo->fieldD[1] = xy_refy(ABCDpix, 3);
+
 		mo->quadno = thisquadno;
 		mo->iA = iA;
 		mo->iB = iB;
@@ -774,6 +806,13 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 
 		mo->sMin = sMin;
 		mo->sMax = sMax;
+
+		mo->transform = transform;
+
+		mo->corners[0] = xy_refx(cornerpix, 0);
+		mo->corners[1] = xy_refy(cornerpix, 0);
+		mo->corners[2] = xy_refx(cornerpix, 1);
+		mo->corners[3] = xy_refy(cornerpix, 1);
 
 		mo->vector[0] = star_ref(sMin, 0);
 		mo->vector[1] = star_ref(sMin, 1);
@@ -789,7 +828,7 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 			mostAgree = nagree;
 		}
 
-		free(transform);
+		//free(transform);
     }
 
     free_star(sA);
@@ -889,6 +928,35 @@ void output_match(MatchObj *mo)
 				star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
 				rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 				rad2deg(z2dec(star_ref(mo->sMax, 2))));
+		fprintf(hitfid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
+				mo->transform[0], mo->transform[1], mo->transform[2],
+				mo->transform[3], mo->transform[4], mo->transform[5],
+				mo->transform[6], mo->transform[7], mo->transform[8]);
+		fprintf(hitfid, "            corner1=[%.12g,%.12g],\n",
+				mo->corners[0], mo->corners[1]);
+		fprintf(hitfid, "            corner2=[%.12g,%.12g],\n",
+				mo->corners[2], mo->corners[3]);
+
+		fprintf(hitfid, "            starA=[%.12g,%.12g,%.12g],\n",
+				mo->starA[0], mo->starA[1], mo->starA[2]);
+		fprintf(hitfid, "            fieldA=[%.12g,%.12g],\n",
+				mo->fieldA[0], mo->fieldA[1]);
+
+		fprintf(hitfid, "            starB=[%.12g,%.12g,%.12g],\n",
+				mo->starB[0], mo->starB[1], mo->starB[2]);
+		fprintf(hitfid, "            fieldB=[%.12g,%.12g],\n",
+				mo->fieldB[0], mo->fieldB[1]);
+
+		fprintf(hitfid, "            starC=[%.12g,%.12g,%.12g],\n",
+				mo->starC[0], mo->starC[1], mo->starC[2]);
+		fprintf(hitfid, "            fieldC=[%.12g,%.12g],\n",
+				mo->fieldC[0], mo->fieldC[1]);
+
+		fprintf(hitfid, "            starD=[%.12g,%.12g,%.12g],\n",
+				mo->starD[0], mo->starD[1], mo->starD[2]);
+		fprintf(hitfid, "            fieldD=[%.12g,%.12g],\n",
+				mo->fieldD[0], mo->fieldD[1]);
+
 		if (mo->code_err > 0.0) {
 			fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
 		}
@@ -954,7 +1022,7 @@ int output_good_matches() {
 				dec1 *= 180.0/M_PI;
 				ra2  *= 180.0/M_PI;
 				dec2 *= 180.0/M_PI;
-				fprintf(stderr, "%g,%g,%g,%g;", ra1, dec1, ra2, dec2);
+				fprintf(stderr, "%.12g,%.12g,%.12g,%.12g;", ra1, dec1, ra2, dec2);
 				//fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
 				//fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
 			}
@@ -1120,35 +1188,29 @@ void free_hitlist() {
 
 
 
-void find_corners(xy *thisfield, xy *cornerpix)
-{
-    double xxtmp, yytmp;
-    qidx jj;
+// find min and max coordinates in this field;
+// place them in "cornerpix"
+void find_corners(xy *thisfield, xy *cornerpix) {
+	double minx, maxx, miny, maxy;
+	double x, y;
+	qidx i;
 
-    // find min and max coordinates in this field
+	minx = miny = 1e308;
+	maxx = maxy = -1e308;
+	
+	for (i=0; i<xy_size(thisfield); i++) {
+		x = xy_refx(thisfield, i);
+		y = xy_refy(thisfield, i);
+		if (x < minx) minx = x;
+		if (x > maxx) maxx = x;
+		if (y < miny) miny = y;
+		if (y > maxy) maxy = y;
+	}
 
-    xxtmp = xy_refx(thisfield, 0);
-    yytmp = xy_refy(thisfield, 0);
-    xy_setx(cornerpix, 0, xxtmp);
-    xy_sety(cornerpix, 0, yytmp);
-    xy_setx(cornerpix, 1, xxtmp);
-    xy_sety(cornerpix, 1, yytmp);
-
-    for (jj = 0;jj < xy_size(thisfield);jj++) {
-		xxtmp = xy_refx(thisfield, jj);
-		yytmp = xy_refy(thisfield, jj);
-		if (xxtmp < xy_refx(cornerpix, 0))
-			xy_setx(cornerpix, 0, xxtmp);
-		if (yytmp < xy_refy(cornerpix, 0))
-			xy_sety(cornerpix, 0, yytmp);
-		if (xxtmp > xy_refx(cornerpix, 1))
-			xy_setx(cornerpix, 1, xxtmp);
-		if (yytmp > xy_refy(cornerpix, 1))
-			xy_sety(cornerpix, 1, yytmp);
-    }
-
-    return ;
-
+    xy_setx(cornerpix, 0, minx);
+    xy_sety(cornerpix, 0, miny);
+    xy_setx(cornerpix, 1, maxx);
+    xy_sety(cornerpix, 1, maxy);
 }
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
@@ -1183,9 +1245,6 @@ void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 	if (iD >= maxstar) {
 		fprintf(stderr, "iD %lu > maxstar %lu\n", iD, maxstar);
 	}
-
-	//#define fseekocat(i,p,f) fseeko(f,p+i*(DIM_STARS*sizeof(double)),SEEK_SET)
-	//#define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
 
 	if (use_mmap) {
 

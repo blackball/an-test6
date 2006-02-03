@@ -189,6 +189,8 @@ double *fit_transform(xy *ABCDpix, char order, star *A, star *B, star *C, star *
 		return (NULL);
 	}
 
+	//fprintf(stderr, "det=%g\n", det);
+
 	// set R to be the 4x3 matrix M'*inv(M*M')=M'*Q
 	matR[0]  = matQ[0] * Au + matQ[3] * Av + matQ[6];
 	matR[1]  = matQ[1] * Au + matQ[4] * Av + matQ[7];
