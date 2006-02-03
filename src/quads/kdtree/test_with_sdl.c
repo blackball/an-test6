@@ -272,16 +272,16 @@ int main(int argc, char* argv[])
                                                   255, 0, 0);
                                                   */
                            for(i=0;i<kr->nres;i++)
-                               printf("ind: %d\n",kr->inds[i]);
-                           printf("done %d res\n",kr->nres);
+                               printf("ind: %u\n",kr->inds[i]);
+                           printf("done %u res\n",kr->nres);
                            for(i=0;i<kd->ndata;i++)
                                printf("per: %d\n",kd->perm[i]);
                            printf("done %d perms\n",kr->nres);
-                           setpixel(mainScreen,  (int)(data_orig[kr->inds[0]])+1,
-                                                 (int)(data_orig[kr->inds[0]+1])+1,
+                           setpixel(mainScreen,  (int)(data_orig[2*kr->inds[0]])+1,
+                                                 (int)(data_orig[2*kr->inds[0]+1])+1,
                                                   255, 0, 0);
-                            setpixel(mainScreen, (int)(data_orig[kr->inds[0]+0])-1,
-                                                 (int)(data_orig[kr->inds[0]+1])-1,
+                            setpixel(mainScreen, (int)(data_orig[2*kr->inds[0]+0])-1,
+                                                 (int)(data_orig[2*kr->inds[0]+1])-1,
                                                   255, 0, 0);
                         }
 
