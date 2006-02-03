@@ -7,6 +7,8 @@
 
 #include <sys/mman.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
@@ -75,6 +77,10 @@ char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
 off_t qposmarker, cposmarker;
+// the largest star and quad available in the corresponding files.
+sidx maxstar;
+qidx maxquad;
+
 char buff[100], maxstarWidth, oneobjWidth;
 
 blocklist* hitlist;
@@ -117,6 +123,9 @@ int main(int argc, char *argv[]) {
     bool use_mmap = TRUE;
     int mmapped_size = 0;
     void* mmapped = NULL;
+
+	off_t endoffset;
+	//int i;
 
     if (argc <= 4) {
 		fprintf(stderr, HelpString);
@@ -236,9 +245,41 @@ int main(int argc, char *argv[]) {
     fopenin(treefname, treefid);
 
     codekd = kdtree_read(treefid, use_mmap, &mmapped, &mmapped_size);
-    fclose(treefid);
     if (!codekd)
 		return (2);
+
+	/*
+	  for (i=0; i<10; i++) {
+	  fprintf(stderr, "perm[%i] = %i\n", i, codekd->perm[i]);
+	  }
+	  for (i=0; i<10; i++) {
+	  fprintf(stderr, "data[%i] = %g\n", i, codekd->data[i]);
+	  }
+	  for (i=0; i<256; i++) {
+	  if (i && (i % 32 == 0)) {
+	  fprintf(stderr, "\n");
+	  }
+	  fprintf(stderr, "%02x ", (unsigned int)(((unsigned char*)(codekd->tree))[i]));
+	  }
+	*/
+
+    fclose(treefid);
+
+	/*
+	  for (i=0; i<10; i++) {
+	  fprintf(stderr, "perm[%i] = %i\n", i, codekd->perm[i]);
+	  }
+	  for (i=0; i<10; i++) {
+	  fprintf(stderr, "data[%i] = %g\n", i, codekd->data[i]);
+	  }
+	  for (i=0; i<256; i++) {
+	  if (i && (i % 32 == 0)) {
+	  fprintf(stderr, "\n");
+	  }
+	  fprintf(stderr, "%02x ", (unsigned int)(((unsigned char*)(codekd->tree))[i]));
+	  }
+	*/
+
     fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 			codekd->ndata, codekd->nnodes, codekd->ndim);
     /*
@@ -257,13 +298,34 @@ int main(int argc, char *argv[]) {
 		return (3);
     qposmarker = ftello(quadfid);
 
-    fopenin(catfname, catfid);
+	fseeko(quadfid, 0, SEEK_END);
+	endoffset = ftello(quadfid) - qposmarker;
+	maxquad = endoffset / (DIM_QUADS * sizeof(sidx));
+
+    //fopenin(catfname, catfid);
+	catfid = fopen(catfname, "rb");
+	if (!catfid) {
+		fprintf(stderr, "Couldn't open catalogue %s for reading: %s\n",
+				catfname, strerror(errno));
+		exit(-1);
+	}
     free_fn(catfname);
     readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
 								  &ramin, &ramax, &decmin, &decmax);
-    if (readStatus == READ_FAIL)
-		return (4);
+    if (readStatus == READ_FAIL) {
+		exit(-1);
+	}
     cposmarker = ftello(catfid);
+
+	fseeko(catfid, 0, SEEK_END);
+	endoffset = ftello(catfid) - cposmarker;
+	maxstar = endoffset / (DIM_STARS * sizeof(double));
+
+	fprintf(stderr, "maxstar = %li\n", maxstar);
+	fprintf(stderr, "maxquad = %li\n", maxquad);
+
+	fprintf(stderr, "numstars = %li\n", numstars);
+	fprintf(stderr, "numquads = %li\n", numquads);
 
     AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
     fprintf(stderr,
@@ -529,7 +591,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		if (numgood == 0)
 			numsolved--;
 
-		fprintf(stderr, "    field %lu: tried %lu quads, matched %lu codes, "
+		fprintf(stderr, "\n    field %lu: tried %lu quads, matched %lu codes, "
 				"%lu agree\n", ii, numtries, nummatches, numgood);
 
 		free_hitlist();
@@ -544,6 +606,24 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
     return numsolved;
 }
 
+/*
+  kdtree_qres_t* rangesearch(kdtree_t* tree, double* query, double tol) {
+  kdtree_qres_t* result;
+  int i;
+  result = kdtree_rangesearch(tree, query, square(tol));
+  if (!result) {
+  fprintf(stderr, "NULL result from kdtree_rangesearch.\n");
+  return result;
+  }
+  if (result->nres > 0) {
+  fprintf(stderr, "%u results:\n", result->nres);
+  for (i=0; i<result->nres; i++) {
+  fprintf(stderr, " %u\n", result->inds[i]);
+  }
+  }
+  return result;
+  }
+*/
 
 qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
                    xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
@@ -558,7 +638,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = Dx;
     thequery[3] = Dy;
 
-    result = kdtree_rangesearch(codekd, thequery, codetol);
+    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    //result = rangesearch(codekd, thequery, codetol);
     if (result->nres) {
 		nummatch += result->nres;
 		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD);
@@ -571,7 +652,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = 1.0 - Dx;
     thequery[3] = 1.0 - Dy;
 
-    result = kdtree_rangesearch(codekd, thequery, codetol);
+    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    //result = rangesearch(codekd, thequery, codetol);
     if (result->nres) {
 		nummatch += result->nres;
 		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD);
@@ -584,7 +666,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = Cx;
     thequery[3] = Cy;
 
-    result = kdtree_rangesearch(codekd, thequery, codetol);
+    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    //result = rangesearch(codekd, thequery, codetol);
     if (result->nres) {
 		nummatch += result->nres;
 		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC);
@@ -597,7 +680,8 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = 1.0 - Cx;
     thequery[3] = 1.0 - Cy;
 
-    result = kdtree_rangesearch(codekd, thequery, codetol);
+    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    //result = rangesearch(codekd, thequery, codetol);
     if (result->nres) {
 		nummatch += result->nres;
 		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC);
@@ -628,6 +712,10 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 
 		thisquadno = (qidx)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
+		/*
+		  fprintf(stderr, "iA=%lu, iB=%lu, iC=%lu, iD=%lu\n",
+		  iA, iB, iC, iD);
+		*/
 		getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
 		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
 		sMin = mk_star();
@@ -684,24 +772,50 @@ double distsq(double* d1, double* d2, int D) {
 
 int find_matching_hit(MatchObj* mo) {
     int i, N;
+
+	fprintf(stderr, "\n\nFinding matching hit to:\n");
+	fprintf(stderr, " min (%g, %g, %g)\n", mo->vector[0], mo->vector[1], mo->vector[2]);
+	fprintf(stderr, " max (%g, %g, %g)\n", mo->vector[3], mo->vector[4], mo->vector[5]);
+	{
+		double ra1, dec1, ra2, dec2;
+		ra1 = xy2ra(mo->vector[0], mo->vector[1]);
+		dec1 = z2dec(mo->vector[2]);
+		ra2 = xy2ra(mo->vector[3], mo->vector[4]);
+		dec2 = z2dec(mo->vector[5]);
+		ra1  *= 180.0/M_PI;
+		dec1 *= 180.0/M_PI;
+		ra2  *= 180.0/M_PI;
+		dec2 *= 180.0/M_PI;
+		fprintf(stderr, "ra,dec (%g, %g), (%g, %g)\n",
+				ra1, dec1, ra2, dec2);
+	}
+
     N = blocklist_count(hitlist);
+	fprintf(stderr, "%i other hits.\n", N);
+
     for (i=0; i<N; i++) {
 		int j, M;
 		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
 		M = blocklist_count(hits);
+		fprintf(stderr, "  hit %i: %i elements.\n", i, M);
 		for (j=0; j<M; j++) {
 			double d2;
 			MatchObj* m = (MatchObj*)blocklist_pointer_access(hits, j);
 			d2 = distsq(mo->vector, m->vector, sizeof(mo->vector)/sizeof(double));
+			fprintf(stderr, "    el %i: dist %g (thresh %g)\n", j, sqrt(d2), AgreeTol);
 			if (d2 < square(AgreeTol)) {
 				blocklist_pointer_append(hits, mo);
+				fprintf(stderr, "match!  (now %i agree)\n",
+						blocklist_count(hits));
 				return blocklist_count(hits);
 			}
 		}
     }
 
+	fprintf(stderr, "no agreement.\n");
+
     // no agreement - create new list.
-    blocklist* newlist = blocklist_pointer_new(256);
+    blocklist* newlist = blocklist_pointer_new(10);
     blocklist_pointer_append(newlist, mo);
     blocklist_pointer_append(hitlist, newlist);
 
@@ -817,7 +931,7 @@ void output_match(MatchObj *mo)
 int inrange(double ra, double ralow, double rahigh)
 {
     if (ralow < rahigh) {
-	if (ra > ralow && ra < rahigh)
+		if (ra > ralow && ra < rahigh)
             return 1;
         return 0;
     }
@@ -856,7 +970,7 @@ int output_good_matches() {
 	if (bestnum < min_matches_to_agree) {
 
 		if (!Debugging) {
-			return -1;
+			return 0;
 		}
 
 		// We're debugging.
@@ -1040,6 +1154,10 @@ void find_corners(xy *thisfield, xy *cornerpix)
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 {
+	if (thisquad >= maxquad) {
+		fprintf(stderr, "thisquad %lu >= maxquad %lu\n",
+				thisquad, maxquad);
+	}
     fseeko(quadfid, qposmarker + thisquad*
 		   (DIM_QUADS*sizeof(iA)), SEEK_SET);
     readonequad(quadfid, iA, iB, iC, iD);
@@ -1050,14 +1168,30 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD)
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
                    sidx iA, sidx iB, sidx iC, sidx iD)
 {
-    fseekocat(iA, cposmarker, catfid);
-    freadstar(sA, catfid);
-    fseekocat(iB, cposmarker, catfid);
-    freadstar(sB, catfid);
-    fseekocat(iC, cposmarker, catfid);
-    freadstar(sC, catfid);
-    fseekocat(iD, cposmarker, catfid);
-    freadstar(sD, catfid);
-    return ;
+	if (iA >= maxstar) {
+		fprintf(stderr, "iA %lu > maxstar %lu\n",
+				iA, maxstar);
+	}
+	if (iB >= maxstar) {
+		fprintf(stderr, "iB %lu > maxstar %lu\n",
+				iB, maxstar);
+	}
+	if (iC >= maxstar) {
+		fprintf(stderr, "iC %lu > maxstar %lu\n",
+				iC, maxstar);
+	}
+	if (iD >= maxstar) {
+		fprintf(stderr, "iD %lu > maxstar %lu\n",
+				iD, maxstar);
+	}
+
+	fseekocat(iA, cposmarker, catfid);
+	freadstar(sA, catfid);
+	fseekocat(iB, cposmarker, catfid);
+	freadstar(sB, catfid);
+	fseekocat(iC, cposmarker, catfid);
+	freadstar(sC, catfid);
+	fseekocat(iD, cposmarker, catfid);
+	freadstar(sD, catfid);
 }
 

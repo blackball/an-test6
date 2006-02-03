@@ -44,7 +44,7 @@ typedef struct kdtree_qres kdtree_qres_t;
 kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
 
 /* Range seach */
-kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdist);
+kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
 
 /* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
 void kdtree_optimize(kdtree_t *kd);
