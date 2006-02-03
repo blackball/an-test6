@@ -22,6 +22,8 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
              double radscale, qidx numFields);
 
 char *treefname = NULL, *listfname = NULL, *pix0fname = NULL, *pixfname = NULL;
+char *rdlsfname = NULL;
+FILE *rdlsfid = NULL;
 char FlipParity = 0;
 
 int main(int argc, char *argv[])
@@ -80,6 +82,7 @@ int main(int argc, char *argv[])
 			listfname = mk_idlistfn(optarg);
 			pix0fname = mk_field0fn(optarg);
 			pixfname = mk_fieldfn(optarg);
+			rdlsfname = mk_rdlsfn(optarg);
 			break;
 		case '?':
 			fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -136,6 +139,8 @@ int main(int argc, char *argv[])
 	free_fn(pix0fname);
 	fopenout(pixfname, pixfid);
 	free_fn(pixfname);
+	fopenout(rdlsfname, rdlsfid);
+	free_fn(rdlsfname);
 	if (numFields > 1)
 		numtries = gen_pix(listfid, pix0fid, pixfid, thestars, starkd, aspect,
 		                   noise, distractors, dropouts,
@@ -148,6 +153,7 @@ int main(int argc, char *argv[])
 	fclose(listfid);
 	fclose(pix0fid);
 	fclose(pixfid);
+	fclose(rdlsfid);
 	if (numFields > 1)
 		fprintf(stderr, "  made %lu nonempty fields in %lu tries.\n",
 		        numFields, numtries);
@@ -178,6 +184,7 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 	fprintf(pix0fid, "NumFields=%lu\n", numFields);
 	fprintf(pixfid, "NumFields=%lu\n", numFields);
 	fprintf(listfid, "NumFields=%lu\n", numFields);
+	fprintf(rdlsfid, "NumFields=%lu\n", numFields);
 
 	for (ii = 0;ii < numFields;ii++) {
 		kresult *krez = NULL;
@@ -200,10 +207,22 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 				fprintf(pixfid, "%lu", numS + numX);
 				fprintf(pix0fid, "%lu", numS);
 				fprintf(listfid, "%lu", numS);
+				fprintf(rdlsfid, "%lu", numS);
 				for (jj = 0;jj < numS;jj++) {
 					fprintf(listfid, ",%d", krez->pindexes->iarr[jj]);
 					star_coords(thestars->array[(krez->pindexes->iarr[jj])],
 					            randstar, &xx, &yy);
+
+					{
+						double x, y, z, ra, dec;
+						x = star_ref(thestars->array[(krez->pindexes->iarr[jj])], 0);
+						y = star_ref(thestars->array[(krez->pindexes->iarr[jj])], 1);
+						z = star_ref(thestars->array[(krez->pindexes->iarr[jj])], 2);
+						ra = rad2deg(xy2ra(x,y));
+						dec = rad2deg(z2dec(z));
+						fprintf(rdlsfid, ",%lf,%lf", ra, dec);
+					}
+
 					// should add random rotation here ???
 					if (FlipParity) {
 						double swaptmp = xx;
