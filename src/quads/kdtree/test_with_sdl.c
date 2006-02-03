@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
 	int xinc = 0;
 #define NPTS 16
     double data[2*NPTS];
+    double data_orig[2*NPTS];
 	int i;
 	kdtree_t *kd = (kdtree_t*)0xdeadbeef;
 	
@@ -207,6 +208,7 @@ int main(int argc, char* argv[])
                         data[xinc++] = (double)event.button.y;
                         if (xinc >= 2*NPTS) {
                             printf("Building kd tree\n");
+                            memcpy(data_orig, data, sizeof(double)*2*NPTS);
                             kd = kdtree_build(data, NPTS, 2, 4);
 			    kdtree_optimize(kd);
                             printf("...done\n");
@@ -261,11 +263,25 @@ int main(int argc, char* argv[])
                                     kr->nres);
                             printf("---- %d x %d y -----\n",  (int)kr->results[0],
                                                   (int)kr->results[1]);
+                            /*
                            setpixel(mainScreen,  (int)kr->results[0]+1,
                                                   (int)kr->results[1]+1,
                                                   255, 0, 0);
                             setpixel(mainScreen,  (int)kr->results[0]-1,
                                                   (int)kr->results[1]-1,
+                                                  255, 0, 0);
+                                                  */
+                           for(i=0;i<kr->nres;i++)
+                               printf("ind: %d\n",kr->inds[i]);
+                           printf("done %d res\n",kr->nres);
+                           for(i=0;i<kd->ndata;i++)
+                               printf("per: %d\n",kd->perm[i]);
+                           printf("done %d perms\n",kr->nres);
+                           setpixel(mainScreen,  (int)(data_orig[kr->inds[0]])+1,
+                                                 (int)(data_orig[kr->inds[0]+1])+1,
+                                                  255, 0, 0);
+                            setpixel(mainScreen, (int)(data_orig[kr->inds[0]+0])-1,
+                                                 (int)(data_orig[kr->inds[0]+1])-1,
                                                   255, 0, 0);
                         }
 

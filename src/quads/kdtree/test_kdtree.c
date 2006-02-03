@@ -103,6 +103,8 @@ void test_1d_nn_2(CuTest *tc)
 	CuAssertIntEquals(tc, 2, kr->nres);
 	CuAssertIntEquals(tc, 35.0, kr->results[0]);
 	CuAssertIntEquals(tc, 36.0, kr->results[1]);
+	CuAssertIntEquals(tc, 4, kr->inds[0]);
+	CuAssertIntEquals(tc, 2, kr->inds[1]);
 }
 
 void test_2d_lots(CuTest *tc)
