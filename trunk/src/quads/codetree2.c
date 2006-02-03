@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
     double* codearray = NULL;
     kdtree_t *codekd = NULL;
     int levels;
+	//int i;
 
     if (argc <= 2) {
 	fprintf(stderr, HelpString);
@@ -105,6 +106,22 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
     fopenout(treefname, treefid);
     free_fn(treefname);
+
+	/*
+	  for (i=0; i<10; i++) {
+	  fprintf(stderr, "perm[%i] = %i\n", i, codekd->perm[i]);
+	  }
+	  for (i=0; i<10; i++) {
+	  fprintf(stderr, "data[%i] = %g\n", i, codekd->data[i]);
+	  }
+	  for (i=0; i<256; i++) {
+	  if (i && (i % 32 == 0)) {
+	  fprintf(stderr, "\n");
+	  }
+	  fprintf(stderr, "%02x ", (unsigned int)(((unsigned char*)(codekd->tree))[i]));
+	  }
+	*/
+
 
     if (kdtree_write(treefid, codekd)) {
 	fprintf(stderr, "Couldn't write star kdtree.\n");
