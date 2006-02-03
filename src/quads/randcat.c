@@ -1,7 +1,7 @@
 #include "starutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hn:f:r:R:d:D:"
+#define OPTIONS "hn:f:r:R:d:D:S:"
 const char HelpString[] =
   "randcat -f fname -n numstars [-r/R RAmin/max] [-d/D DECmin/max]\n"
     "  -r -R -d -D set ra and dec limits in radians\n";
@@ -9,6 +9,8 @@ const char HelpString[] =
 
 extern char *optarg;
 extern int optind, opterr, optopt;
+
+int RANDSEED = 999;
 
 int main(int argc, char *argv[])
 {
@@ -29,6 +31,9 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'S':
+			RANDSEED = atoi(optarg);
+			break;
 		case 'n':
 			numstars = strtoul(optarg, NULL, 0);
 			break;
@@ -63,7 +68,6 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
-#define RANDSEED 999
 	am_srand(RANDSEED);
 
 	fprintf(stderr, "randcat: Making %lu random stars", numstars);

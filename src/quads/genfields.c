@@ -2,15 +2,16 @@
 #include "kdutil.h"
 #include "fileutil.h"
 
-#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:"
+#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:"
 const char HelpString[] =
     "genfields -f fname -o fieldname {-n num_rand_fields | -r RA -d DEC}\n"
-    "          -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts]\n\n"
+    "          -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts] [-S seed]\n\n"
     "    -r RA -d DEC generates a single field centred at RA,DEC\n"
     "    -n N generates N randomly centred fields\n"
     "    -p flips parity, -q (default 0) sets the fraction of real stars removed\n"
     "    -x (default 0) sets the fraction of real stars added as random stars\n"
-    "    -w (default 0) sets the fraction of scale by which to jitter positions\n";
+    "    -w (default 0) sets the fraction of scale by which to jitter positions\n"
+    "    -S random seed\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -25,6 +26,8 @@ char *treefname = NULL, *listfname = NULL, *pix0fname = NULL, *pixfname = NULL;
 char *rdlsfname = NULL;
 FILE *rdlsfid = NULL;
 char FlipParity = 0;
+
+int RANDSEED = 777;
 
 int main(int argc, char *argv[])
 {
@@ -47,6 +50,9 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'S':
+			RANDSEED = atoi(optarg);
+			break;
 		case 'n':
 			numFields = strtoul(optarg, NULL, 0);
 			break;
@@ -100,7 +106,6 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
-#define RANDSEED 777
 	am_srand(RANDSEED);
 
 	if (numFields)

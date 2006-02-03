@@ -58,6 +58,7 @@ typedef struct match_struct {
 	double fieldB[2];
 	double fieldC[2];
 	double fieldD[2];
+	int abcdorder;
 } MatchObj;
 
 #define MATCH_VECTOR_SIZE 6
@@ -794,6 +795,8 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 		mo->fieldD[0] = xy_refx(ABCDpix, 3);
 		mo->fieldD[1] = xy_refy(ABCDpix, 3);
 
+		mo->abcdorder = ABCD_ORDER;
+
 		mo->quadno = thisquadno;
 		mo->iA = iA;
 		mo->iB = iB;
@@ -932,30 +935,37 @@ void output_match(MatchObj *mo)
 				mo->transform[0], mo->transform[1], mo->transform[2],
 				mo->transform[3], mo->transform[4], mo->transform[5],
 				mo->transform[6], mo->transform[7], mo->transform[8]);
-		fprintf(hitfid, "            corner1=[%.12g,%.12g],\n",
+		fprintf(hitfid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
+				mo->transform[0], mo->transform[1], mo->transform[2],
+				mo->transform[3], mo->transform[4], mo->transform[5],
+				mo->transform[6], mo->transform[7], mo->transform[8]);
+		fprintf(hitfid, "            corner1=[%.12g,%.12g,1.0],\n",
 				mo->corners[0], mo->corners[1]);
-		fprintf(hitfid, "            corner2=[%.12g,%.12g],\n",
+		fprintf(hitfid, "            corner2=[%.12g,%.12g,1.0],\n",
 				mo->corners[2], mo->corners[3]);
 
 		fprintf(hitfid, "            starA=[%.12g,%.12g,%.12g],\n",
 				mo->starA[0], mo->starA[1], mo->starA[2]);
-		fprintf(hitfid, "            fieldA=[%.12g,%.12g],\n",
+		fprintf(hitfid, "            fieldA=[%.12g,%.12g,1.0],\n",
 				mo->fieldA[0], mo->fieldA[1]);
 
 		fprintf(hitfid, "            starB=[%.12g,%.12g,%.12g],\n",
 				mo->starB[0], mo->starB[1], mo->starB[2]);
-		fprintf(hitfid, "            fieldB=[%.12g,%.12g],\n",
+		fprintf(hitfid, "            fieldB=[%.12g,%.12g,1.0],\n",
 				mo->fieldB[0], mo->fieldB[1]);
 
 		fprintf(hitfid, "            starC=[%.12g,%.12g,%.12g],\n",
 				mo->starC[0], mo->starC[1], mo->starC[2]);
-		fprintf(hitfid, "            fieldC=[%.12g,%.12g],\n",
+		fprintf(hitfid, "            fieldC=[%.12g,%.12g,1.0],\n",
 				mo->fieldC[0], mo->fieldC[1]);
 
 		fprintf(hitfid, "            starD=[%.12g,%.12g,%.12g],\n",
 				mo->starD[0], mo->starD[1], mo->starD[2]);
-		fprintf(hitfid, "            fieldD=[%.12g,%.12g],\n",
+		fprintf(hitfid, "            fieldD=[%.12g,%.12g,1.0],\n",
 				mo->fieldD[0], mo->fieldD[1]);
+
+		fprintf(hitfid, "            abcdorder=%i,\n",
+				mo->abcdorder);
 
 		if (mo->code_err > 0.0) {
 			fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));

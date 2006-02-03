@@ -33,8 +33,8 @@ void handle_result(void* params, node* search, node* query);
 void first_result(void* vparams, node* query);
 void last_result(void* vparams, node* query);
 
-#define printf_stats(a,...)
-//#define printf_stats printf
+//#define printf_stats(a,...)
+#define printf_stats printf
 
 struct params
 {
@@ -352,11 +352,6 @@ bool within_range(void* vparams, node* search, node* query) {
 }
 
 
-void first_result(void* vparams, node* query) {
-    // init "result_info" struct.
-    rinfo.cands = NULL;
-}
-
 
 // from quadidx.c
 void insertquad(qidx quadid,
@@ -442,6 +437,13 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 
     pA = dyv_array_ref(points, iA);
 
+	printf_stats("iA=%i\n", iA);
+	printf_stats("pA=(%g,%g,%g)\n",
+				dyv_ref(pA,0),
+				dyv_ref(pA,1),
+				dyv_ref(pA,2));
+
+
     midAB = mk_dyv(dyv_size(pA));
     delt = mk_dyv(dyv_size(pA));
     if (!justcount) {
@@ -459,12 +461,25 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
         int c, d, iC=0, iD;
 
 		// avoid creating permutations
-		if (iB < iA) continue;
+		//if (iB < iA) continue;
+		if (iB <= iA) continue;
 
 		pB = dyv_array_ref(points, iB);
 
+		printf_stats("  iB=%i\n", iB);
+		printf_stats("  pB=(%g,%g,%g)\n",
+					dyv_ref(pB,0),
+					dyv_ref(pB,1),
+					dyv_ref(pB,2));
+
 		star_coords(pB, pA, &ABx, &ABy);
+
+		printf_stats("  coords (%g, %g)\n", ABx, ABy);
+
 		distsq = (ABx-AAx)*(ABx-AAx) + (ABy-AAy)*(ABy-AAy);
+
+		printf_stats("  distsq %g   range [%g, %g]\n", distsq,
+					minrsq, maxrsq);
 
         if ((distsq < minrsq) || (distsq > maxrsq)) {
 			/*printf_stats("AB dist %g out of range [%g, %g]\n",
@@ -497,15 +512,27 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 
 			star_coords(pC, midAB, &Cx, &Cy);
 
+			printf_stats("    iC=%i\n", iC);
+			printf_stats("    pC (%g, %g, %g)\n",
+						 dyv_ref(pC, 0),
+						 dyv_ref(pC, 1),
+						 dyv_ref(pC, 2));
+			printf_stats("    coords (%g, %g)\n", Cx, Cy);
+
 			ACx = Cx - Ax;
 			ACy = Cy - Ay;
 
 			thisx =  ACx * costheta + ACy * sintheta;
 			thisy = -ACx * sintheta + ACy * costheta;
+
+			printf_stats("    box (%g, %g)\n", thisx, thisy);
+
 			if (!((thisx <= 1.0) && (thisx >= 0.0) &&
 				  (thisy <= 1.0) && (thisy >= 0.0))) {
+				printf_stats("    -> outside box.\n");
 				continue;
 			}
+			printf_stats("    -> inside box.\n");
 
 			if (!justcount) {
 				ivec_set(cdinds, ncd, iC);
@@ -545,6 +572,12 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 		free_dyv(cdy);
     }
 }
+
+void first_result(void* vparams, node* query) {
+    // init "result_info" struct.
+    rinfo.cands = NULL;
+}
+
 
 // all the candidate leaf nodes have been gathered.
 // form all the quads.
