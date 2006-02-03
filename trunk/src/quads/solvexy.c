@@ -1041,16 +1041,16 @@ void find_corners(xy *thisfield, xy *cornerpix)
     xy_sety(cornerpix, 1, yytmp);
 
     for (jj = 0;jj < xy_size(thisfield);jj++) {
-	xxtmp = xy_refx(thisfield, jj);
-	yytmp = xy_refy(thisfield, jj);
-	if (xxtmp < xy_refx(cornerpix, 0))
-	    xy_setx(cornerpix, 0, xxtmp);
-	if (yytmp < xy_refy(cornerpix, 0))
-	    xy_sety(cornerpix, 0, yytmp);
-	if (xxtmp > xy_refx(cornerpix, 1))
-	    xy_setx(cornerpix, 1, xxtmp);
-	if (yytmp > xy_refy(cornerpix, 1))
-	    xy_sety(cornerpix, 1, yytmp);
+		xxtmp = xy_refx(thisfield, jj);
+		yytmp = xy_refy(thisfield, jj);
+		if (xxtmp < xy_refx(cornerpix, 0))
+			xy_setx(cornerpix, 0, xxtmp);
+		if (yytmp < xy_refy(cornerpix, 0))
+			xy_sety(cornerpix, 0, yytmp);
+		if (xxtmp > xy_refx(cornerpix, 1))
+			xy_setx(cornerpix, 1, xxtmp);
+		if (yytmp > xy_refy(cornerpix, 1))
+			xy_sety(cornerpix, 1, yytmp);
     }
 
     return ;

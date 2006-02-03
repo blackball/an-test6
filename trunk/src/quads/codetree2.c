@@ -97,10 +97,17 @@ int main(int argc, char *argv[]) {
     codekd = kdtree_build(codearray, numcodes, Dim_Codes, levels);
 
     if (!codekd)
-	return (2);
+		exit(-1);
 
     fprintf(stderr, "done (%d nodes)\n", codekd->nnodes);
     fclose(codefid);
+
+	/*
+	  fprintf(stderr, "Optimizing...\n");
+	  fflush(stderr);
+	  kdtree_optimize(codekd);
+	  fprintf(stderr, "Done.\n");
+	*/
 
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);

@@ -296,12 +296,6 @@ int main(int argc, char *argv[]) {
       }
     */
 
-	/*
-	  fprintf(stderr, "Optimizing...\n");
-	  kdtree_optimize(codekd);
-	  fprintf(stderr, "Done.\n");
-	*/
-
     fopenin(quadfname, quadfid);
     free_fn(quadfname);
     readStatus = read_quad_header(quadfid, &numquads, &numstars, 
@@ -606,6 +600,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		fprintf(hitfid, "    quads_tried=%lu, codes_matched=%lu,\n",
 				numtries, nummatches);
 
+		fprintf(stderr,"\n");
 		numgood = output_good_matches();
 
 		fprintf(hitfid, "),\n");
@@ -987,19 +982,36 @@ int output_good_matches() {
 	bestnum = 0;
 	bestlist = NULL;
     N = blocklist_count(hitlist);
+	fprintf(stderr, "radecs=[");
     for (i=0; i<N; i++) {
 		int M;
 		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
 		M = blocklist_count(hits);
 
-		if (M >= min_matches_to_agree) {
+		if ((M >= min_matches_to_agree) ||
+			1) {
 			double ra1, dec1;
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, 0);
-			ra1 = xy2ra(0.5 * (mo->vector[0] + mo->vector[3]), 0.5 * (mo->vector[1] + mo->vector[4]));
-			dec1 = z2dec( 0.5 * (mo->vector[2] + mo->vector[5]));
-			ra1  *= 180.0/M_PI;
-			dec1 *= 180.0/M_PI;
-			fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
+			double ra2, dec2;
+			int lim = 1, j;
+			if (verbose) lim=M;
+			for (j=0; j<lim; j++) {
+				MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
+				/*
+				  ra1 = xy2ra(0.5 * (mo->vector[0] + mo->vector[3]), 0.5 * (mo->vector[1] + mo->vector[4]));
+				  dec1 = z2dec( 0.5 * (mo->vector[2] + mo->vector[5]));
+				*/
+				ra1 = xy2ra(mo->vector[0], mo->vector[1]);
+				dec1 = z2dec(mo->vector[2]);
+				ra1  *= 180.0/M_PI;
+				dec1 *= 180.0/M_PI;
+				ra2 = xy2ra(mo->vector[3], mo->vector[4]);
+				dec2 = z2dec(mo->vector[5]);
+				ra2  *= 180.0/M_PI;
+				dec2 *= 180.0/M_PI;
+				fprintf(stderr, "%g,%g,%g,%g;", ra1, dec1, ra2, dec2);
+				//fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
+				//fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
+			}
 		}
 
 		if (M > bestnum) {
@@ -1007,6 +1019,7 @@ int output_good_matches() {
 			bestlist = hits;
 		}
 	}
+	fprintf(stderr, "];\n");
 
 	if (bestnum < min_matches_to_agree) {
 
