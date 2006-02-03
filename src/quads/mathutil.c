@@ -31,50 +31,49 @@ double inverse_3by3(double *matrix)
 	double a11, a12, a13, a21, a22, a23, a31, a32, a33;
 	double b11, b12, b13, b21, b22, b23, b31, b32, b33;
 
-	a11 = *(matrix + 0);
-	a12 = *(matrix + 1);
-	a13 = *(matrix + 2);
-	a21 = *(matrix + 3);
-	a22 = *(matrix + 4);
-	a23 = *(matrix + 5);
-	a31 = *(matrix + 6);
-	a32 = *(matrix + 7);
-	a33 = *(matrix + 8);
+	a11 = matrix[0];
+	a12 = matrix[1];
+	a13 = matrix[2];
+	a21 = matrix[3];
+	a22 = matrix[4];
+	a23 = matrix[5];
+	a31 = matrix[6];
+	a32 = matrix[7];
+	a33 = matrix[8];
 
 	det = a11 * ( a22 * a33 - a23 * a32 ) +
 	      a12 * ( a23 * a31 - a21 * a33 ) +
 	      a13 * ( a21 * a32 - a22 * a31 );
 
-	if (det != 0) {
-
-		b11 = + ( a22 * a33 - a23 * a32 ) / det;
-		b12 = - ( a12 * a33 - a13 * a32 ) / det;
-		b13 = + ( a12 * a23 - a13 * a22 ) / det;
-
-		b21 = - ( a21 * a33 - a23 * a31 ) / det;
-		b22 = + ( a11 * a33 - a13 * a31 ) / det;
-		b23 = - ( a11 * a23 - a13 * a21 ) / det;
-
-		b31 = + ( a21 * a32 - a22 * a31 ) / det;
-		b32 = - ( a11 * a32 - a12 * a31 ) / det;
-		b33 = + ( a11 * a22 - a12 * a21 ) / det;
-
-		*(matrix + 0) = b11;
-		*(matrix + 1) = b12;
-		*(matrix + 2) = b13;
-		*(matrix + 3) = b21;
-		*(matrix + 4) = b22;
-		*(matrix + 5) = b23;
-		*(matrix + 6) = b31;
-		*(matrix + 7) = b32;
-		*(matrix + 8) = b33;
-
+	if (det == 0.0) {
+		return det;
 	}
+
+	b11 = + ( a22 * a33 - a23 * a32 ) / det;
+	b12 = - ( a12 * a33 - a13 * a32 ) / det;
+	b13 = + ( a12 * a23 - a13 * a22 ) / det;
+
+	b21 = - ( a21 * a33 - a23 * a31 ) / det;
+	b22 = + ( a11 * a33 - a13 * a31 ) / det;
+	b23 = - ( a11 * a23 - a13 * a21 ) / det;
+
+	b31 = + ( a21 * a32 - a22 * a31 ) / det;
+	b32 = - ( a11 * a32 - a12 * a31 ) / det;
+	b33 = + ( a11 * a22 - a12 * a21 ) / det;
+
+	matrix[0] = b11;
+	matrix[1] = b12;
+	matrix[2] = b13;
+	matrix[3] = b21;
+	matrix[4] = b22;
+	matrix[5] = b23;
+	matrix[6] = b31;
+	matrix[7] = b32;
+	matrix[8] = b33;
 
 	//fprintf(stderr,"matrix determinant = %g\n",det);
 
 	return (det);
-
 }
 
 
@@ -225,14 +224,13 @@ double *fit_transform(xy *ABCDpix, char order, star *A, star *B, star *C, star *
 	matQ[7] = star_ref(A, 2) * matR[1] + star_ref(B, 2) * matR[4] +
 	          star_ref(C, 2) * matR[7] + star_ref(D, 2) * matR[10];
 	matQ[8] = star_ref(A, 2) * matR[2] + star_ref(B, 2) * matR[5] +
-		  star_ref(C, 2) * matR[8] + star_ref(D, 2) * matR[11];
+		      star_ref(C, 2) * matR[8] + star_ref(D, 2) * matR[11];
 
 	{
 		double* copyQ = (double*)malloc(9 * sizeof(double));
 		memcpy(copyQ, matQ, 9 * sizeof(double));
 		return copyQ;
 	}
-	//return (matQ);
 }
 
 /* returns an ivec with the indices of the subset of points captured
