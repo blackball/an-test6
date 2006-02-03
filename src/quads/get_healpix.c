@@ -9,9 +9,11 @@
 
 void print_help(char* progname) {
     printf("usage:\n"
-	   "  %s [-d] ra dec\n"
-	   "     (-d means values are in degree; by default they're in radians)\n"
-	   "  %s x y z\n", progname, progname);
+		   "  %s [-d] ra dec\n"
+		   "     (-d means values are in degree; by default they're in radians)\n"
+		   "  %s x y z\n\n"
+		   "If your values are negative, add \"--\" in between \"-d\" (if you're using it) and \"ra\" or \"x\".\n\n",
+		   progname, progname);
 }
 
 int main(int argc, char** args) {
