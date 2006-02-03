@@ -20,7 +20,7 @@
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:"
+#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:v"
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p] [-e]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
@@ -43,11 +43,11 @@ typedef struct match_struct {
     qidx idx;
     sidx fA, fB, fC, fD;
     double code_err;
-    //ivec *nearlist;
-    //struct match_struct *next;
     star *sMin, *sMax;
     double vector[6];
 } MatchObj;
+
+#define MATCH_VECTOR_SIZE 6
 
 #define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
 #define free_MatchObj(m) free(m)
@@ -98,6 +98,9 @@ double DebuggingDecMin;
 double DebuggingDecMax;
 int Debugging = 0;
 
+bool verbose = FALSE;
+
+int nctrlcs = 0;
 bool quitNow = FALSE;
 
 extern char *optarg;
@@ -134,6 +137,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'v':
+			verbose = TRUE;
+			break;
 		case 'd':
 			Debugging++;
 			DebuggingDecMin = strtod(optarg, NULL);
@@ -290,6 +296,12 @@ int main(int argc, char *argv[]) {
       }
     */
 
+	/*
+	  fprintf(stderr, "Optimizing...\n");
+	  kdtree_optimize(codekd);
+	  fprintf(stderr, "Done.\n");
+	*/
+
     fopenin(quadfname, quadfid);
     free_fn(quadfname);
     readStatus = read_quad_header(quadfid, &numquads, &numstars, 
@@ -384,7 +396,17 @@ int main(int argc, char *argv[]) {
 
 void signal_handler(int sig) {
     if (sig != SIGINT) return;
-    fprintf(stderr, "Received signal SIGINT - stopping ASAP...\n");
+	nctrlcs++;
+	switch (nctrlcs) {
+	case 1:
+		fprintf(stderr, "Received signal SIGINT - stopping ASAP...\n");
+		break;
+	case 2:
+		fprintf(stderr, "Hit ctrl-C again to hard-quit - warning, hits file won't be written.\n");
+		break;
+	default:
+		exit(-1);
+	}
     quitNow = TRUE;
 }
 
@@ -773,46 +795,55 @@ double distsq(double* d1, double* d2, int D) {
 int find_matching_hit(MatchObj* mo) {
     int i, N;
 
-	fprintf(stderr, "\n\nFinding matching hit to:\n");
-	fprintf(stderr, " min (%g, %g, %g)\n", mo->vector[0], mo->vector[1], mo->vector[2]);
-	fprintf(stderr, " max (%g, %g, %g)\n", mo->vector[3], mo->vector[4], mo->vector[5]);
-	{
-		double ra1, dec1, ra2, dec2;
-		ra1 = xy2ra(mo->vector[0], mo->vector[1]);
-		dec1 = z2dec(mo->vector[2]);
-		ra2 = xy2ra(mo->vector[3], mo->vector[4]);
-		dec2 = z2dec(mo->vector[5]);
-		ra1  *= 180.0/M_PI;
-		dec1 *= 180.0/M_PI;
-		ra2  *= 180.0/M_PI;
-		dec2 *= 180.0/M_PI;
-		fprintf(stderr, "ra,dec (%g, %g), (%g, %g)\n",
-				ra1, dec1, ra2, dec2);
-	}
-
     N = blocklist_count(hitlist);
-	fprintf(stderr, "%i other hits.\n", N);
+
+	if (verbose) {
+		fprintf(stderr, "\n\nFinding matching hit to:\n");
+		fprintf(stderr, " min (%g, %g, %g)\n", mo->vector[0], mo->vector[1], mo->vector[2]);
+		fprintf(stderr, " max (%g, %g, %g)\n", mo->vector[3], mo->vector[4], mo->vector[5]);
+		{
+			double ra1, dec1, ra2, dec2;
+			ra1 = xy2ra(mo->vector[0], mo->vector[1]);
+			dec1 = z2dec(mo->vector[2]);
+			ra2 = xy2ra(mo->vector[3], mo->vector[4]);
+			dec2 = z2dec(mo->vector[5]);
+			ra1  *= 180.0/M_PI;
+			dec1 *= 180.0/M_PI;
+			ra2  *= 180.0/M_PI;
+			dec2 *= 180.0/M_PI;
+			fprintf(stderr, "ra,dec (%g, %g), (%g, %g)\n",
+					ra1, dec1, ra2, dec2);
+		}
+		fprintf(stderr, "%i other hits.\n", N);
+	}
 
     for (i=0; i<N; i++) {
 		int j, M;
 		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
 		M = blocklist_count(hits);
-		fprintf(stderr, "  hit %i: %i elements.\n", i, M);
+		if (verbose)
+			fprintf(stderr, "  hit %i: %i elements.\n", i, M);
 		for (j=0; j<M; j++) {
 			double d2;
+			//double arcsec;
 			MatchObj* m = (MatchObj*)blocklist_pointer_access(hits, j);
-			d2 = distsq(mo->vector, m->vector, sizeof(mo->vector)/sizeof(double));
-			fprintf(stderr, "    el %i: dist %g (thresh %g)\n", j, sqrt(d2), AgreeTol);
+			d2 = distsq(mo->vector, m->vector, MATCH_VECTOR_SIZE);
+			// DEBUG
+			//arcsec = sqrt(d2) / sqrt(2.0)
+			if (verbose)
+				fprintf(stderr, "    el %i: dist %g (thresh %g)\n", j, sqrt(d2), AgreeTol);
 			if (d2 < square(AgreeTol)) {
 				blocklist_pointer_append(hits, mo);
-				fprintf(stderr, "match!  (now %i agree)\n",
-						blocklist_count(hits));
+				if (verbose)
+					fprintf(stderr, "match!  (now %i agree)\n",
+							blocklist_count(hits));
 				return blocklist_count(hits);
 			}
 		}
     }
 
-	fprintf(stderr, "no agreement.\n");
+	if (verbose)
+		fprintf(stderr, "no agreement.\n");
 
     // no agreement - create new list.
     blocklist* newlist = blocklist_pointer_new(10);
@@ -960,6 +991,16 @@ int output_good_matches() {
 		int M;
 		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
 		M = blocklist_count(hits);
+
+		if (M >= min_matches_to_agree) {
+			double ra1, dec1;
+			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, 0);
+			ra1 = xy2ra(0.5 * (mo->vector[0] + mo->vector[3]), 0.5 * (mo->vector[1] + mo->vector[4]));
+			dec1 = z2dec( 0.5 * (mo->vector[2] + mo->vector[5]));
+			ra1  *= 180.0/M_PI;
+			dec1 *= 180.0/M_PI;
+			fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
+		}
 
 		if (M > bestnum) {
 			bestnum = M;
