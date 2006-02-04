@@ -395,21 +395,29 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     }
 
     for (i=0; i<ncd; i++) {
+		double Cfx, Cfy, Dfx, Dfy;
 		iC = iCs[i];
 		iD = iDs[i];
 		// are both C and D in the box?
 		if (!inbox[iC]) continue;
 		if (!inbox[iD]) continue;
 
+		// field coordinates.
+		Cfx = xy_refx(thisfield, iC);
+		Cfy = xy_refy(thisfield, iC);
+		Dfx = xy_refx(thisfield, iD);
+		Dfy = xy_refy(thisfield, iD);
+
+		xy_setx(ABCDpix, 2, Cfx);
+		xy_sety(ABCDpix, 2, Cfy);
+		xy_setx(ABCDpix, 3, Dfx);
+		xy_sety(ABCDpix, 3, Dfy);
+
+		// projected (box) coordinates
 		Cx = xs[iC];
 		Cy = ys[iC];
 		Dx = xs[iD];
 		Dy = ys[iD];
-
-		xy_setx(ABCDpix, 2, Cx);
-		xy_sety(ABCDpix, 2, Cy);
-		xy_setx(ABCDpix, 3, Dx);
-		xy_sety(ABCDpix, 3, Dy);
 
 		numtries++;
 		nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
