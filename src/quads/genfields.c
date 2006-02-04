@@ -28,6 +28,8 @@ FILE *rdlsfid = NULL;
 char FlipParity = 0;
 
 int RANDSEED = 777;
+/* Number of times a field can fail to be created before bailing */
+int FAILURES = 30;
 
 int main(int argc, char *argv[])
 {
@@ -266,6 +268,14 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 			free_star(randstar);
 			free_kresult(krez);
 			numtries++;
+
+		    if (numtries >= FAILURES) {
+			/* We've failed too many times; something is wrong. Bail
+			 * gracefully. */
+			fprintf(stderr, "  ERROR: Too many failures: %d fails\n",
+			        numtries);
+			return numtries;
+		    }
 		}
 		//if(is_power_of_two(ii))
 		//fprintf(stderr,"  made %lu pix in %lu tries\r",ii,numtries);fflush(stderr);
