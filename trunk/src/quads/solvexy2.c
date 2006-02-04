@@ -463,6 +463,14 @@ void signal_handler(int sig) {
 
 qidx numtries, nummatches;
 
+/*
+  void print_abcdpix(xy *abcd) {
+  fprintf(stderr, "ABCDpix=[%8g, %8g, %8g, %8g, %8g, %8g, %8g, %8g]\n",
+  abcd->farr[0], abcd->farr[1], abcd->farr[2], abcd->farr[3],
+  abcd->farr[4], abcd->farr[5], abcd->farr[6], abcd->farr[7]);
+  }
+*/
+
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 					  char* inbox, int maxind,
 					  xy *thisfield,
@@ -475,6 +483,9 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     double costheta, sintheta, scale, xxtmp;
     double xs[maxind];
     double ys[maxind];
+	double fieldxs[maxind];
+	double fieldys[maxind];
+	
     xy *ABCDpix;
 
     ABCDpix = mk_xy(DIM_QUADS);
@@ -500,6 +511,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		if (!inbox[i]) continue;
 		Cx = xy_refx(thisfield, i);
 		Cy = xy_refy(thisfield, i);
+
+		fieldxs[i] = Cx;
+		fieldys[i] = Cy;
+
 		Cx -= Ax;
 		Cy -= Ay;
 		xxtmp = Cx;
@@ -515,6 +530,7 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     }
 
     for (i=0; i<ncd; i++) {
+		double Cfx, Cfy, Dfx, Dfy;
 		iC = iCs[i];
 		iD = iDs[i];
 		// are both C and D in the box?
@@ -526,10 +542,20 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		Dx = xs[iD];
 		Dy = ys[iD];
 
-		xy_setx(ABCDpix, 2, Cx);
-		xy_sety(ABCDpix, 2, Cy);
-		xy_setx(ABCDpix, 3, Dx);
-		xy_sety(ABCDpix, 3, Dy);
+		Cfx = fieldxs[iC];
+		Cfy = fieldys[iC];
+		Dfx = fieldxs[iD];
+		Dfy = fieldys[iD];
+
+		xy_setx(ABCDpix, 2, Cfx);
+		xy_sety(ABCDpix, 2, Cfx);
+		xy_setx(ABCDpix, 3, Dfx);
+		xy_sety(ABCDpix, 3, Dfy);
+
+		/*
+		  printf("iA=%i, iB=%i, iC=%i, iD=%i\n", iA, iB, iC, iD);
+		  print_abcdpix(ABCDpix);
+		*/
 
 		numtries++;
 		nummatches += try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
