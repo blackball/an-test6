@@ -33,8 +33,8 @@ void handle_result(void* params, node* search, node* query);
 void first_result(void* vparams, node* query);
 void last_result(void* vparams, node* query);
 
-//#define printf_stats(a,...)
-#define printf_stats printf
+#define printf_stats(a,...)
+//#define printf_stats printf
 
 struct params
 {

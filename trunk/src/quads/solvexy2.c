@@ -548,7 +548,7 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		Dfy = fieldys[iD];
 
 		xy_setx(ABCDpix, 2, Cfx);
-		xy_sety(ABCDpix, 2, Cfx);
+		xy_sety(ABCDpix, 2, Cfy);
 		xy_setx(ABCDpix, 3, Dfx);
 		xy_sety(ABCDpix, 3, Dfy);
 
@@ -1038,7 +1038,7 @@ int output_good_matches() {
 		M = blocklist_count(hits);
 
 		if ((M >= min_matches_to_agree) ||
-			1) {
+			0) {
 			double ra1, dec1;
 			double ra2, dec2;
 			int lim = 1, j;

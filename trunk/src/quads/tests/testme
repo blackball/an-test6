@@ -4,8 +4,8 @@ VALGRIND="valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-
 
 F=testme_cat_orig
 
-#Nstars=1000
-Nstars=4
+Nstars=200
+#Nstars=4
 
 SEED1=500
 
@@ -26,8 +26,8 @@ O=testme_field
 ADD=0
 REM=0
 POSN_NOISE=0
-#FIELDSIZE=30
-FIELDSIZE=1000
+FIELDSIZE=30
+#FIELDSIZE=1000
 
 SEED2=514
 
@@ -50,9 +50,9 @@ CMD="startree -f $FN"
 echo $CMD
 $CMD
 
-#SCALE=10
+SCALE=10
 #LOWER=0.25
-SCALE=1000
+#SCALE=1000
 LOWER=0
 
 CMD="all_quads -f $FN -s $SCALE -l $LOWER -q"
