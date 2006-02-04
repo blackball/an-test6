@@ -20,7 +20,7 @@
 #include "fileutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:v"
+#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:"
 const char HelpString[] =
 "solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
@@ -31,6 +31,7 @@ const char HelpString[] =
 "   [-R maximum-ra-for-debug-output]\n"
 "   [-d minimum-dec-for-debug-output]\n"
 "   [-D maximum-dec-for-debug-output]\n"
+"   [-S first-field]\n"
 "   -p flips parity\n"
 "   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
 
@@ -123,6 +124,8 @@ bool verbose = FALSE;
 int nctrlcs = 0;
 bool quitNow = FALSE;
 
+int firstfield = 0;
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -159,6 +162,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'S':
+			firstfield = atoi(optarg);
+			break;
 		case 'v':
 			verbose = TRUE;
 			break;
@@ -582,7 +588,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
     fprintf(hitfid, "# Result data, stored as a list of dictionaries\n");
     fprintf(hitfid, "results = [ \n");
 
-    for (ii=0; ii< dyv_array_size(thefields); ii++) {
+    for (ii=firstfield; ii< dyv_array_size(thefields); ii++) {
 		numtries = 0;
 		nummatches = 0;
 		mostAgree = 0;
