@@ -8,12 +8,14 @@
 ; REVISION HISTORY:
 ;   2006-02-05  started - Hogg
 ;-
-pro quad_statistics, xx,yy,thetaAB
-seed= -1L
+pro quad_statistics, xx,yy,thetaAB,seed=seed,ntrial=ntrial
+if (not keyword_set(seed)) then seed= -1L
+if (not keyword_set(ntrial)) then ntrial= 100L
 tiny= 1D-5
+nquadthresh= 3
 
 ; loop over trials
-ntrial= 100L
+solved= 0L
 for tt=0L,ntrial-1L do begin
     nquad= 0L
 
@@ -45,11 +47,16 @@ for tt=0L,ntrial-1L do begin
                        (vv GT tiny) AND $
                        (vv LT (1D0-tiny)),nfoo)
 ;            splog, trial,aa,bb,'nfoo',nfoo
-            if (nfoo GE 2) then nquad= nquad+nfoo*(nfoo-1L)/2L
+            if (nfoo GE 2) then begin
+                nquad1= nfoo*(nfoo-1L)/2L
+                nquad= nquad+nquad1
+            endif
 
         endif
     endfor
     splog, trial,'nquad',nquad
+    if (nquad GE nquadthresh) then solved= solved+1L
 endfor
+splog, 'solve fraction:',float(solved)/float(ntrial)
 return
 end
