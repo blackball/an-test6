@@ -45,10 +45,12 @@ void hits_field_init(hits_field* h) {
 	h->user_quit = FALSE;
 	h->field = 0;
 	h->objects_in_field = 0;
+	h->objects_examined = 0;
 	h->field_corners = NULL;
 	h->ntries = 0;
 	h->nmatches = 0;
 	h->nagree = 0;
+	h->parity = FALSE;
 }
 
 void hits_write_field_header(FILE* fid, hits_field* h) {
@@ -57,6 +59,7 @@ void hits_write_field_header(FILE* fid, hits_field* h) {
 	fprintf(fid, "    user_quit=%s,\n", (h->user_quit?"True":"False"));
 	fprintf(fid, "    field=%u,\n", h->field);
 	fprintf(fid, "    objects_in_field=%u,\n", h->objects_in_field);
+	fprintf(fid, "    objects_examined=%u,\n", h->objects_examined);
 	fprintf(fid, "    # Image corners\n");
 	if (h->field_corners) {
 		xy* c = h->field_corners;

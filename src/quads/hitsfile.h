@@ -21,6 +21,7 @@ struct hitsfieldentry {
 	bool user_quit;
 	unsigned int field;
 	unsigned int objects_in_field;
+	unsigned int objects_examined;
 	xy* field_corners;
 	unsigned int ntries;
 	unsigned int nmatches;

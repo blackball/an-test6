@@ -5,7 +5,7 @@ LFLAGS = -lm
 
 #fast
 CFLAGS	= -O2 -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
-	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_OS_MEMORY_MANAGEMENT
+	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_OS_MEMORY_MANAGEMENT -I.
 
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
@@ -15,7 +15,7 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
 	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
-	hitsfile.o
+	hitsfile.o ioutils.o suspend.o
 
 #	solver2.o
 

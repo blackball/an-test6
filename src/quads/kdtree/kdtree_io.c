@@ -3,79 +3,18 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <netinet/in.h>
 
 #include <sys/mman.h>
 
 #include "kdtree_io.h"
-
-unsigned int ENDIAN_DETECTOR = 0x01020304;
-
-int write_u8(FILE* fout, unsigned char val) {
-    if (fwrite(&val, 1, 1, fout) == 1) {
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't write u8: %s\n", strerror(errno));
-		return 1;
-    }
-}
-
-int write_u32(FILE* fout, unsigned int val) {
-    uint32_t v = htonl((uint32_t)val);
-    if (fwrite(&v, 4, 1, fout) == 1) {
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't write u32: %s\n", strerror(errno));
-		return 1;
-    }
-}
-
-int write_u32s(FILE* fout, unsigned int* val, int n) {
-    int i;
-    uint32_t* v = (uint32_t*)malloc(sizeof(uint32_t) * n);
-    if (!v) {
-		fprintf(stderr, "Couldn't write u32s: couldn't allocate temp array.\n");
-		return 1;
-    }
-    for (i=0; i<n; i++) {
-		v[i] = htonl((uint32_t)val[i]);
-    }
-    if (fwrite(v, sizeof(uint32_t), n, fout) == n) {
-		free(v);
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't write u32s: %s\n", strerror(errno));
-		free(v);
-		return 1;
-    }
-}
-
-int write_u32_native(FILE* fout, unsigned int val) {
-    uint32_t v = (uint32_t)val;
-    if (fwrite(&v, 4, 1, fout) == 1) {
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't write u32: %s\n", strerror(errno));
-		return 1;
-    }
-}
-
-int write_uints_native(FILE* fout, unsigned int* val, int n) {
-    if (fwrite(val, sizeof(unsigned int), n, fout) == n) {
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't write uints: %s\n", strerror(errno));
-		return 1;
-    }
-}
+#include "ioutils.h"
 
 int write_real(FILE* fout, real val) {
-    if (fwrite(&val, sizeof(real), 1, fout) == 1) {
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't write real: %s\n", strerror(errno));
-		return 1;
-    }
+	if (sizeof(real) == sizeof(double)) {
+		return write_double(fout, (double)val);
+	} else {
+		return write_float(fout, (float)val);
+	}
 }
 
 int write_reals(FILE* fout, real* val, int nelems) {
@@ -86,6 +25,7 @@ int write_reals(FILE* fout, real* val, int nelems) {
 		return 1;
     }
 }
+
 
 int write_kdtree_node(FILE* fout, kdtree_node_t* node, int D) {
     real* bbox;
@@ -99,57 +39,6 @@ int write_kdtree_node(FILE* fout, kdtree_node_t* node, int D) {
 		return 1;
     }
     return 0;
-}
-
-int read_u8(FILE* fin, unsigned char* val) {
-    if (fread(val, 1, 1, fin) == 1) {
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't read u8: %s\n", strerror(errno));
-		return 1;
-    }
-}
-
-int read_u32(FILE* fin, unsigned int* val) {
-    uint32_t u;
-    if (fread(&u, 4, 1, fin) == 1) {
-		*val = ntohl(u);
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't read u32: %s\n", strerror(errno));
-		return 1;
-    }
-}
-
-int read_u32_native(FILE* fin, unsigned int* val) {
-    uint32_t u;
-    if (fread(&u, 4, 1, fin) == 1) {
-		*val = (unsigned int)u;
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't read u32 native: %s\n", strerror(errno));
-		return 1;
-    }
-}
-
-int read_u32s(FILE* fin, unsigned int* val, int n) {
-    int i;
-    uint32_t* u = (uint32_t*)malloc(sizeof(uint32_t) * n);
-    if (!u) {
-		fprintf(stderr, "Couldn't real uint32s: couldn't allocate temp array.\n");
-		return 1;
-    }
-    if (fread(u, sizeof(uint32_t), n, fin) == n) {
-		for (i=0; i<n; i++) {
-			val[i] = ntohl(u[i]);
-		}
-		free(u);
-		return 0;
-    } else {
-		fprintf(stderr, "Couldn't read u32: %s\n", strerror(errno));
-		free(u);
-		return 1;
-    }
 }
 
 int read_reals(FILE* fin, real* val, int n, int realsize) {
@@ -263,19 +152,6 @@ int kdtree_portable_write(FILE* fout, kdtree_t* kdtree) {
 		write_u32(fout, kdtree->nnodes))
 		return 1;
 
-    /* (nope)
-	   u8    sizeof(kdtree_node_t)
-	   u8    offset of kdtree_node_t.dim
-	   u8    offset of kdtree_node_t.l
-	   u8    offset of kdtree_node_t.r
-	   u8    offset of kdtree_node_t.pivot
-	   write_u8(sizeof(kdtree_node_t)) ||
-	   write_u8(offsetof(kdtree_node_t, dim)) ||
-	   write_u8(offsetof(kdtree_node_t, l)) ||
-	   write_u8(offsetof(kdtree_node_t, r)) ||
-	   write_u8(offsetof(kdtree_node_t, pivot)))
-    */
-
     if (write_u32s(fout, kdtree->perm, kdtree->ndata)) {
 		fprintf(stderr, "Couldn't write kdtree permutation vector.\n");
 		return 1;
@@ -359,12 +235,7 @@ kdtree_t* kdtree_portable_read(FILE* fin, int use_mmap,
 		void* map;
 		off_t offset = (off_t)ftell(fin);
 		size_t size = realsize * N * D;
-		/*
-		  map = mmap(0, size, PROT_READ, MAP_SHARED,
-		  fileno(fin), offset);
-		*/
-		map = mmap(0, size + offset, PROT_READ, MAP_SHARED,
-				   fileno(fin), 0);
+		map = mmap(0, size + offset, PROT_READ, MAP_SHARED, fileno(fin), 0);
 		if (map == MAP_FAILED) {
 			fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
 			free(tree);
@@ -385,10 +256,6 @@ kdtree_t* kdtree_portable_read(FILE* fin, int use_mmap,
 			return NULL;
 		}
     }
-
-    // check if we can use the kdtree nodes in-place.
-    // (would have to be big-endian...)
-    //if (offsetof(kdtree_node_t, 
 
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * D * 2;
     tree->tree = (kdtree_node_t*)malloc(nodesize * nnodes);

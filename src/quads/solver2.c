@@ -32,7 +32,7 @@ int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double
 					xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD,
 					blocklist* hitlist, double AgreeTol);
 
-int find_matching_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol);
+int solver_add_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol);
 
 
 
@@ -42,7 +42,7 @@ void solve_field(xy *thisfield,
 				 kdtree_t *codekd, double codetol, blocklist* hitlist,
 				 bool* pQuitNow, double AgreeTol,
 				 int* pnumtries, int* pnummatches, int* pmostAgree,
-				 xy* cornerpix) {
+				 xy* cornerpix, int* pobjsused) {
     sidx numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
@@ -107,7 +107,7 @@ void solve_field(xy *thisfield,
 
 		fprintf(stderr,
 				"    using %lu of %lu objects (%i quads agree so far; %i tried, %i matched)      \r",
-				newpoint, numxy, mostAgree, numtries, nummatches);
+				newpoint+1, numxy, mostAgree, numtries, nummatches);
 
 		if ((mostAgree >= max_matches_needed) ||
 			(maxtries && (numtries >= maxtries)) ||
@@ -118,6 +118,8 @@ void solve_field(xy *thisfield,
 	free(iDs);
 	free(iunion);
 
+	if (pobjsused)
+		*pobjsused = newpoint;
 	if (pnumtries)
 		*pnumtries += numtries;
 	if (pnummatches)
@@ -375,7 +377,7 @@ int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double
 		  mo->abcdorder = ABCD_ORDER;
 		*/
 
-		nagree = find_matching_hit(hitlist, mo, AgreeTol);
+		nagree = solver_add_hit(hitlist, mo, AgreeTol);
 		if (nagree >= mostAgree) {
 			mostAgree = nagree;
 		}
@@ -401,7 +403,7 @@ double distsq(double* d1, double* d2, int D) {
 }
 
 
-int find_matching_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol) {
+int solver_add_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol) {
     int i, N;
 
     N = blocklist_count(hitlist);
