@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
 	char* indexname = NULL;
 	char* fieldname = NULL;
-	char* statedir = NULL;
+	char* statedir = "";
 	char* workfn = NULL;
 	FILE* workfile;
 	int Nfields;
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 			exit(0);
 		}
 
-	if (!indexname || !fieldname || !statedir || !workfn) {
+	if (!indexname || !fieldname || !workfn) {
 		printHelp(argv[0]);
 		exit(-1);
 	}
@@ -237,24 +237,37 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		// we mark these fields with our start_time,
+		// mark these fields with our start_time, sync the file,
 		// drop the lock, and begin working on them.
 		now = time(NULL);
 		for  (i=0; i<ninds; i++) {
 			work[inds[i]*Nindexes + index].start_time = now;
 		}
 
+		synchronize_workfile(mmapped_work, mmapped_work_size);
+
 		unlock_workfile(workfile, workfilesize);
 
-
 		// DO THE WORK...
+		for (i=0; i<ninds; i++) {
+			workstatus* w = work + inds[i]*Nindexes + index;
+			char resumefn[256];
+			sprintf(resumefn, "%s%si%i_f%i.suspend",
+					statedir, (statedir && strlen(statedir) &&
+							   statedir[strlen(statedir)-1] != '/') ? "/":"",
+					w->healpix, w->field);
+			printf("using suspend/resume file %s\n", resumefn);
 
+			// create xyarray of the fields
+			// solve_fields(...)
+
+		}
 
 		// once we're done, we again grab the lock,
 		// set the start_time back to zero, and update
 		// the 'nobjects' and 'nagree' fields.
 		// (note that 'nobjects' may not be the same as
- 		// our target because of "early bailout").
+ 		// our target because of "early (successful) bailout").
 		lock_workfile(workfile, workfilesize);
 
 		for  (i=0; i<ninds; i++) {
