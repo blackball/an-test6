@@ -14,12 +14,15 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
-	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o
+	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
+	hitsfile.o
+
+#	solver2.o
 
 EXECS = randcat startree getquads quadidx codetree genfields solvexy fieldquads findstar findquad \
 	findcode codedensity all_quads fixheaders codetomatlab \
 	codeprojections startree2 deduplicate codetree2 printheaders \
-	get_healpix solvexy2 quadidx2 xylstomatlab rdlstohealpix workernode
+	get_healpix quadidx2 xylstomatlab rdlstohealpix workernode
 
 	#test_healpix
 
@@ -29,7 +32,10 @@ MYOBJS = randcat.o startree.o getquads.o quadidx.o codetree.o genfields.o solvex
 	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o workernode.o
 
 
-all: $(EXECS)
+all: $(EXECS) solvexy2
+
+solvexy2: solvexy2.o solver2.o $(OBJ)
+	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJ) $< -o $@
