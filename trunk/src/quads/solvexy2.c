@@ -1037,7 +1037,7 @@ int output_good_matches() {
 	bestnum = 0;
 	bestlist = NULL;
     N = blocklist_count(hitlist);
-	fprintf(stderr, "radecs=[");
+	//fprintf(stderr, "radecs=[");
     for (i=0; i<N; i++) {
 		int M;
 		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
@@ -1064,7 +1064,7 @@ int output_good_matches() {
 				dec1 *= 180.0/M_PI;
 				ra2  *= 180.0/M_PI;
 				dec2 *= 180.0/M_PI;
-				fprintf(stderr, "%.12g,%.12g,%.12g,%.12g;", ra1, dec1, ra2, dec2);
+				//fprintf(stderr, "%.12g,%.12g,%.12g,%.12g;", ra1, dec1, ra2, dec2);
 				//fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
 				//fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
 			}
@@ -1075,7 +1075,7 @@ int output_good_matches() {
 			bestlist = hits;
 		}
 	}
-	fprintf(stderr, "];\n");
+	//fprintf(stderr, "];\n");
 
 	if (bestnum < min_matches_to_agree) {
 
