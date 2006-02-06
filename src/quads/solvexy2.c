@@ -145,8 +145,8 @@ int main(int argc, char *argv[]) {
     int fieldobjs = 0;
     int fieldtries = 0;
 
-    int mmapped_size = 0;
-    void* mmapped = NULL;
+    void*  mmapped_tree = NULL;
+    size_t mmapped_tree_size = 0;
 	void*  mmap_cat = NULL;
 	size_t mmap_cat_size = 0;
 	void*  mmap_quad = NULL;
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
     fopenin(treefname, treefid);
 
-    codekd = kdtree_read(treefid, use_mmap, &mmapped, &mmapped_size);
+    codekd = kdtree_read(treefid, use_mmap, &mmapped_tree, &mmapped_tree_size);
     if (!codekd)
 		return (2);
 
@@ -436,9 +436,8 @@ int main(int argc, char *argv[]) {
     free_xyarray(thefields);
 
     if (use_mmap) {
-		munmap(mmapped, mmapped_size);
+		munmap(mmapped_tree, mmapped_tree_size);
 		free(codekd);
-
 		munmap(mmap_quad, mmap_quad_size);
 		munmap(mmap_cat, mmap_cat_size);
     } else {
