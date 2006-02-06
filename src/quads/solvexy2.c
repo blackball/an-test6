@@ -49,17 +49,19 @@ typedef struct match_struct {
     double code_err;
     star *sMin, *sMax;
     double vector[6];
-	double* transform;
-	double corners[4];
-	double starA[3];
-	double starB[3];
-	double starC[3];
-	double starD[3];
-	double fieldA[2];
-	double fieldB[2];
-	double fieldC[2];
-	double fieldD[2];
-	int abcdorder;
+	/*
+	  double* transform;
+	  double corners[4];
+	  double starA[3];
+	  double starB[3];
+	  double starC[3];
+	  double starD[3];
+	  double fieldA[2];
+	  double fieldB[2];
+	  double fieldC[2];
+	  double fieldD[2];
+	  int abcdorder;
+	*/
 } MatchObj;
 
 #define MATCH_VECTOR_SIZE 6
@@ -804,30 +806,6 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 		image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
 
-		mo->starA[0] = star_ref(sA, 0);
-		mo->starA[1] = star_ref(sA, 1);
-		mo->starA[2] = star_ref(sA, 2);
-		mo->starB[0] = star_ref(sB, 0);
-		mo->starB[1] = star_ref(sB, 1);
-		mo->starB[2] = star_ref(sB, 2);
-		mo->starC[0] = star_ref(sC, 0);
-		mo->starC[1] = star_ref(sC, 1);
-		mo->starC[2] = star_ref(sC, 2);
-		mo->starD[0] = star_ref(sD, 0);
-		mo->starD[1] = star_ref(sD, 1);
-		mo->starD[2] = star_ref(sD, 2);
-
-		mo->fieldA[0] = xy_refx(ABCDpix, 0);
-		mo->fieldA[1] = xy_refy(ABCDpix, 0);
-		mo->fieldB[0] = xy_refx(ABCDpix, 1);
-		mo->fieldB[1] = xy_refy(ABCDpix, 1);
-		mo->fieldC[0] = xy_refx(ABCDpix, 2);
-		mo->fieldC[1] = xy_refy(ABCDpix, 2);
-		mo->fieldD[0] = xy_refx(ABCDpix, 3);
-		mo->fieldD[1] = xy_refy(ABCDpix, 3);
-
-		mo->abcdorder = ABCD_ORDER;
-
 		mo->quadno = thisquadno;
 		mo->iA = iA;
 		mo->iB = iB;
@@ -841,13 +819,6 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 		mo->sMin = sMin;
 		mo->sMax = sMax;
 
-		mo->transform = transform;
-
-		mo->corners[0] = xy_refx(cornerpix, 0);
-		mo->corners[1] = xy_refy(cornerpix, 0);
-		mo->corners[2] = xy_refx(cornerpix, 1);
-		mo->corners[3] = xy_refy(cornerpix, 1);
-
 		mo->vector[0] = star_ref(sMin, 0);
 		mo->vector[1] = star_ref(sMin, 1);
 		mo->vector[2] = star_ref(sMin, 2);
@@ -857,12 +828,46 @@ void resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, doubl
 
 		mo->code_err = krez->sdists[jj];
 
+
+		/*
+		  mo->transform = transform;
+
+		  mo->corners[0] = xy_refx(cornerpix, 0);
+		  mo->corners[1] = xy_refy(cornerpix, 0);
+		  mo->corners[2] = xy_refx(cornerpix, 1);
+		  mo->corners[3] = xy_refy(cornerpix, 1);
+
+		  mo->starA[0] = star_ref(sA, 0);
+		  mo->starA[1] = star_ref(sA, 1);
+		  mo->starA[2] = star_ref(sA, 2);
+		  mo->starB[0] = star_ref(sB, 0);
+		  mo->starB[1] = star_ref(sB, 1);
+		  mo->starB[2] = star_ref(sB, 2);
+		  mo->starC[0] = star_ref(sC, 0);
+		  mo->starC[1] = star_ref(sC, 1);
+		  mo->starC[2] = star_ref(sC, 2);
+		  mo->starD[0] = star_ref(sD, 0);
+		  mo->starD[1] = star_ref(sD, 1);
+		  mo->starD[2] = star_ref(sD, 2);
+
+		  mo->fieldA[0] = xy_refx(ABCDpix, 0);
+		  mo->fieldA[1] = xy_refy(ABCDpix, 0);
+		  mo->fieldB[0] = xy_refx(ABCDpix, 1);
+		  mo->fieldB[1] = xy_refy(ABCDpix, 1);
+		  mo->fieldC[0] = xy_refx(ABCDpix, 2);
+		  mo->fieldC[1] = xy_refy(ABCDpix, 2);
+		  mo->fieldD[0] = xy_refx(ABCDpix, 3);
+		  mo->fieldD[1] = xy_refy(ABCDpix, 3);
+
+		  mo->abcdorder = ABCD_ORDER;
+		*/
+
 		nagree = find_matching_hit(mo);
 		if (nagree >= mostAgree) {
 			mostAgree = nagree;
 		}
 
-		//free(transform);
+		free(transform);
     }
 
     free_star(sA);
@@ -962,42 +967,38 @@ void output_match(MatchObj *mo)
 				star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
 				rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 				rad2deg(z2dec(star_ref(mo->sMax, 2))));
-		fprintf(hitfid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
-				mo->transform[0], mo->transform[1], mo->transform[2],
-				mo->transform[3], mo->transform[4], mo->transform[5],
-				mo->transform[6], mo->transform[7], mo->transform[8]);
-		fprintf(hitfid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
-				mo->transform[0], mo->transform[1], mo->transform[2],
-				mo->transform[3], mo->transform[4], mo->transform[5],
-				mo->transform[6], mo->transform[7], mo->transform[8]);
-		fprintf(hitfid, "            corner1=[%.12g,%.12g,1.0],\n",
-				mo->corners[0], mo->corners[1]);
-		fprintf(hitfid, "            corner2=[%.12g,%.12g,1.0],\n",
-				mo->corners[2], mo->corners[3]);
-
-		fprintf(hitfid, "            starA=[%.12g,%.12g,%.12g],\n",
-				mo->starA[0], mo->starA[1], mo->starA[2]);
-		fprintf(hitfid, "            fieldA=[%.12g,%.12g,1.0],\n",
-				mo->fieldA[0], mo->fieldA[1]);
-
-		fprintf(hitfid, "            starB=[%.12g,%.12g,%.12g],\n",
-				mo->starB[0], mo->starB[1], mo->starB[2]);
-		fprintf(hitfid, "            fieldB=[%.12g,%.12g,1.0],\n",
-				mo->fieldB[0], mo->fieldB[1]);
-
-		fprintf(hitfid, "            starC=[%.12g,%.12g,%.12g],\n",
-				mo->starC[0], mo->starC[1], mo->starC[2]);
-		fprintf(hitfid, "            fieldC=[%.12g,%.12g,1.0],\n",
-				mo->fieldC[0], mo->fieldC[1]);
-
-		fprintf(hitfid, "            starD=[%.12g,%.12g,%.12g],\n",
-				mo->starD[0], mo->starD[1], mo->starD[2]);
-		fprintf(hitfid, "            fieldD=[%.12g,%.12g,1.0],\n",
-				mo->fieldD[0], mo->fieldD[1]);
-
-		fprintf(hitfid, "            abcdorder=%i,\n",
-				mo->abcdorder);
-
+		/*
+		  fprintf(hitfid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
+		  mo->transform[0], mo->transform[1], mo->transform[2],
+		  mo->transform[3], mo->transform[4], mo->transform[5],
+		  mo->transform[6], mo->transform[7], mo->transform[8]);
+		  fprintf(hitfid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
+		  mo->transform[0], mo->transform[1], mo->transform[2],
+		  mo->transform[3], mo->transform[4], mo->transform[5],
+		  mo->transform[6], mo->transform[7], mo->transform[8]);
+		  fprintf(hitfid, "            corner1=[%.12g,%.12g,1.0],\n",
+		  mo->corners[0], mo->corners[1]);
+		  fprintf(hitfid, "            corner2=[%.12g,%.12g,1.0],\n",
+		  mo->corners[2], mo->corners[3]);
+		  fprintf(hitfid, "            starA=[%.12g,%.12g,%.12g],\n",
+		  mo->starA[0], mo->starA[1], mo->starA[2]);
+		  fprintf(hitfid, "            fieldA=[%.12g,%.12g,1.0],\n",
+		  mo->fieldA[0], mo->fieldA[1]);
+		  fprintf(hitfid, "            starB=[%.12g,%.12g,%.12g],\n",
+		  mo->starB[0], mo->starB[1], mo->starB[2]);
+		  fprintf(hitfid, "            fieldB=[%.12g,%.12g,1.0],\n",
+		  mo->fieldB[0], mo->fieldB[1]);
+		  fprintf(hitfid, "            starC=[%.12g,%.12g,%.12g],\n",
+		  mo->starC[0], mo->starC[1], mo->starC[2]);
+		  fprintf(hitfid, "            fieldC=[%.12g,%.12g,1.0],\n",
+		  mo->fieldC[0], mo->fieldC[1]);
+		  fprintf(hitfid, "            starD=[%.12g,%.12g,%.12g],\n",
+		  mo->starD[0], mo->starD[1], mo->starD[2]);
+		  fprintf(hitfid, "            fieldD=[%.12g,%.12g,1.0],\n",
+		  mo->fieldD[0], mo->fieldD[1]);
+		  fprintf(hitfid, "            abcdorder=%i,\n",
+		  mo->abcdorder);
+		*/
 		if (mo->code_err > 0.0) {
 			fprintf(hitfid, "            code_err=%lf,\n", sqrt(mo->code_err));
 		}
