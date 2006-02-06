@@ -45,6 +45,7 @@ extern void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 						  sidx iA, sidx iB, sidx iC, sidx iD);
 
 
+int solver_add_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol);
 
 void solve_field(xy *thisfield,
 				 int startfieldobj, int endfieldobj,
@@ -52,7 +53,7 @@ void solve_field(xy *thisfield,
 				 kdtree_t *codekd, double codetol, blocklist* hitlist,
 				 bool* pQuitNow, double AgreeTol,
 				 int* pnumtries, int* pnummatches, int* pmostAgree,
-				 xy* cornerpix);
+				 xy* cornerpix, int* pobjsused);
 
 
 #endif

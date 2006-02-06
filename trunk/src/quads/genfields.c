@@ -272,7 +272,7 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 		    if (numtries >= FAILURES) {
 			/* We've failed too many times; something is wrong. Bail
 			 * gracefully. */
-			fprintf(stderr, "  ERROR: Too many failures: %d fails\n",
+			fprintf(stderr, "  ERROR: Too many failures: %lu fails\n",
 			        numtries);
 			return numtries;
 		    }

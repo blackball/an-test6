@@ -22,10 +22,11 @@
 
 #include "solver2.h"
 #include "hitsfile.h"
+#include "suspend.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:"
+#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:a:b:"
 const char HelpString[] =
-"solvexy -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
+"solvexy2 -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
 "   [-F maximum-number-of-field-objects-to-process]\n"
 "   [-T maximum-number-of-field-quads-to-try]\n"
@@ -35,6 +36,8 @@ const char HelpString[] =
 "   [-d minimum-dec-for-debug-output]\n"
 "   [-D maximum-dec-for-debug-output]\n"
 "   [-S first-field]\n"
+"   [-a resume (from) file]\n"
+"   [-b suspend (to) file]\n"
 "   -p flips parity\n"
 "   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
 
@@ -47,14 +50,14 @@ const char HelpString[] =
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree_t *codekd, double codetol);
 
-blocklist* get_best_hits();
+blocklist* get_best_hits(blocklist* hitlist);
 
-void debugging_gather_hits(blocklist* outputlist);
+void debugging_gather_hits(blocklist* hitlist, blocklist* outputlist);
 
 int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 						 int* p_ok);
 
-void free_hitlist();
+void clear_hitlist(blocklist* hitlist);
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
@@ -66,6 +69,11 @@ char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
 off_t qposmarker, cposmarker;
 
+char *resumefname = NULL;
+FILE* resumefid;
+char *suspendfname = NULL;
+FILE* suspendfid;
+
 double* catalogue;
 sidx*   quadindex;
 
@@ -76,8 +84,6 @@ sidx maxstar;
 qidx maxquad;
 
 char buff[100], maxstarWidth, oneobjWidth;
-
-blocklist* hitlist;
 
 double AgreeArcSec = DEFAULT_AGREE_TOL;
 double AgreeTol;
@@ -126,7 +132,6 @@ int main(int argc, char *argv[]) {
 	size_t mmap_quad_size = 0;
 
 	off_t endoffset;
-	//int i;
 	hits_header hitshdr;
 
     if (argc <= 4) {
@@ -136,6 +141,12 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'a':
+			resumefname = optarg;
+			break;
+		case 'b':
+			suspendfname = optarg;
+			break;
 		case 'S':
 			firstfield = atoi(optarg);
 			break;
@@ -228,19 +239,25 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, HelpString);
 		return (OPT_ERR);
     }
+	if (resumefname && suspendfname && (strcmp(resumefname, suspendfname) == 0)) {
+		fprintf(stderr, "Suspend and resume file can't be the same.\n");
+		exit(-1);
+	}
 
 
-	fprintf(stderr, "sizeof(int)    = %i\n", sizeof(int));
-	fprintf(stderr, "sizeof(long)   = %i\n", sizeof(long));
-	fprintf(stderr, "sizeof(int*)   = %i\n", sizeof(int*));
-	fprintf(stderr, "sizeof(sidx)   = %i\n", sizeof(sidx));
-	fprintf(stderr, "sizeof(qidx)   = %i\n", sizeof(qidx));
-	fprintf(stderr, "sizeof(double) = %i\n", sizeof(double));
+	/*
+	  fprintf(stderr, "sizeof(int)    = %i\n", sizeof(int));
+	  fprintf(stderr, "sizeof(long)   = %i\n", sizeof(long));
+	  fprintf(stderr, "sizeof(int*)   = %i\n", sizeof(int*));
+	  fprintf(stderr, "sizeof(sidx)   = %i\n", sizeof(sidx));
+	  fprintf(stderr, "sizeof(qidx)   = %i\n", sizeof(qidx));
+	  fprintf(stderr, "sizeof(double) = %i\n", sizeof(double));
+	*/
 
-
-    fprintf(stderr, "solvexy: solving fields in %s using %s\n",
+    fprintf(stderr, "solvexy2: solving fields in %s using %s\n",
 			fieldfname, treefname);
 
+	// Read .xyls file...
     fprintf(stderr, "  Reading fields...");
     fflush(stderr);
     fopenin(fieldfname, fieldfid);
@@ -253,22 +270,20 @@ int main(int argc, char *argv[]) {
     if (ParityFlip)
 		fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 
+
+	// Read .ckdt2 file...
     fprintf(stderr, "  Reading code KD tree from %s...", treefname);
     fflush(stderr);
     fopenin(treefname, treefid);
-
     codekd = kdtree_read(treefid, use_mmap, &mmapped_tree, &mmapped_tree_size);
     if (!codekd)
 		return (2);
-
     fclose(treefid);
-
     fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 			codekd->ndata, codekd->nnodes, codekd->ndim);
-    /*
-      fprintf(stderr, "    (index scale = %lf arcmin)\n", rad2arcmin(index_scale));
-    */
 
+
+	// Read .quad file...
     fopenin(quadfname, quadfid);
     free_fn(quadfname);
     readStatus = read_quad_header(quadfid, &numquads, &numstars, 
@@ -276,11 +291,16 @@ int main(int argc, char *argv[]) {
     if (readStatus == READ_FAIL)
 		return (3);
     qposmarker = ftello(quadfid);
-
+	// check that the quads file is the right size.
 	fseeko(quadfid, 0, SEEK_END);
 	endoffset = ftello(quadfid) - qposmarker;
 	maxquad = endoffset / (DIM_QUADS * sizeof(sidx));
-
+	if (maxquad != numquads) {
+		fprintf(stderr, "Error: numquads=%li (specified in .quad file header) does "
+				"not match maxquad=%li (computed from size of .quad file).\n",
+				numquads, maxquad);
+		exit(-1);
+	}
 	if (use_mmap) {
 		mmap_quad_size = endoffset;
 		mmap_quad = mmap(0, mmap_quad_size, PROT_READ, MAP_SHARED,
@@ -290,10 +310,11 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 		fclose(quadfid);
-
 		quadindex = (sidx*)(((char*)(mmap_quad)) + qposmarker);
 	}
 
+
+	// Read .objs file...
     fopenin(catfname, catfid);
     free_fn(catfname);
     readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
@@ -302,47 +323,56 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
     cposmarker = ftello(catfid);
-
+	// check that the catalogue file is the right size.
 	fseeko(catfid, 0, SEEK_END);
 	endoffset = ftello(catfid) - cposmarker;
 	maxstar = endoffset / (DIM_STARS * sizeof(double));
-
-	if (use_mmap) {
-		mmap_cat_size = endoffset;
-		mmap_cat = mmap(0, mmap_cat_size, PROT_READ, MAP_SHARED,
-						fileno(catfid), 0);
-		if (mmap_cat == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
-			exit(-1);
-		}
-		fclose(catfid);
-
-		catalogue = (double*)(((char*)(mmap_cat)) + cposmarker);
-	}
-
 	if (maxstar != numstars) {
 		fprintf(stderr, "Error: numstars=%li (specified in .objs file header) does "
 				"not match maxstars=%li (computed from size of .objs file).\n",
 				numstars, maxstar);
 		exit(-1);
 	}
-	if (maxquad != numquads) {
-		fprintf(stderr, "Error: numquads=%li (specified in .quad file header) does "
-				"not match maxquad=%li (computed from size of .quad file).\n",
-				numquads, maxquad);
-		exit(-1);
+	if (use_mmap) {
+		mmap_cat_size = endoffset;
+		mmap_cat = mmap(0, mmap_cat_size, PROT_READ, MAP_SHARED, fileno(catfid), 0);
+		if (mmap_cat == MAP_FAILED) {
+			fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
+			exit(-1);
+		}
+		fclose(catfid);
+		catalogue = (double*)(((char*)(mmap_cat)) + cposmarker);
 	}
 
     AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
-    fprintf(stderr,
-			"  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
+    fprintf(stderr, "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
 			numfields, codetol, AgreeArcSec);
+
+
+	if (resumefname) {
+		// read resume file.
+		double index_scale;
+		char oldfieldname[256];
+		char oldtreename[256];
+		uint nfields;
+		fopenin(resumefname, resumefid);
+		if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
+			fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
+			exit(-1);
+		}
+	}
+	if (suspendfname) {
+		fopenout(suspendfname, suspendfid);
+		suspend_write_header(suspendfid, index_scale, fieldfname,
+							 treefname, dyv_array_size(thefields));
+	}
+
+
+	// write HITS header.
     fprintf(stderr, "Using HITS output file %s\n", hitfname);
     fopenout(hitfname, hitfid);
     free_fn(hitfname);
-
 	hits_header_init(&hitshdr);
-
 	hitshdr.field_file_name = fieldfname;
 	hitshdr.tree_file_name = treefname;
 	hitshdr.nfields = numfields;
@@ -353,28 +383,29 @@ int main(int argc, char *argv[]) {
 	hitshdr.parity = ParityFlip;
 	hitshdr.min_matches_to_agree = min_matches_to_agree;
 	hitshdr.max_matches_needed = max_matches_needed;
-
 	hits_write_header(hitfid, &hitshdr);
-
     free_fn(fieldfname);
     free_fn(treefname);
 
+
     signal(SIGINT, signal_handler);
 
-    hitlist = blocklist_pointer_new(256);
 
     numsolved = solve_fields(thefields, fieldobjs, fieldtries,
 							 codekd, codetol);
-
-    blocklist_pointer_free(hitlist);
-
-	hits_write_tailer(hitfid);
-
-    fclose(hitfid);
     fprintf(stderr, "\nDone (solved %lu).\n", numsolved);
 
-    free_xyarray(thefields);
 
+	// finish up HITS file...
+	hits_write_tailer(hitfid);
+    fclose(hitfid);
+
+	// clean up...
+	if (resumefid)
+		fclose(resumefid);
+	if (suspendfid)
+		fclose(suspendfid);
+    free_xyarray(thefields);
     if (use_mmap) {
 		munmap(mmapped_tree, mmapped_tree_size);
 		free(codekd);
@@ -418,13 +449,18 @@ int numtries, nummatches;
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree_t *codekd, double codetol) {
+	uint resume_fieldnum;
+	uint resume_nobjs;
+	uint resume_ntried;
+	blocklist* resume_hits = NULL;
+
     qidx numsolved, ii;
     sidx numxy;
     xy *thisfield;
     xy *cornerpix = mk_xy(2);
+	blocklist* hitlist = blocklist_pointer_new(256);
 
     numsolved = 0;
-
     for (ii=firstfield; ii< dyv_array_size(thefields); ii++) {
 		hits_field fieldhdr;
 		blocklist* bestlist;
@@ -434,19 +470,74 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		int correspond_ok = 1;
 		int Ncorrespond;
 		int i, bestnum;
+		sidx startobject;
+		int objsused;
 
 		numtries = 0;
 		nummatches = 0;
 		mostAgree = 0;
 		thisfield = xya_ref(thefields, ii);
 		numxy = xy_size(thisfield);
+		startobject = 3;
 
-		solve_field(thisfield, 3, maxfieldobjs, maxtries,
+		if (resumefid && !resume_hits) {
+			blocklist* slist = blocklist_pointer_new(256);
+			// read the next suspended record from the file...
+			if (suspend_read_field(resumefid, &resume_fieldnum, &resume_nobjs, &resume_ntried, slist)) {
+				fprintf(stderr, "Couldn't read a suspended field: %s\n", strerror(errno));
+				blocklist_pointer_free(slist);
+				fclose(resumefid);
+				resumefid = NULL;
+			} else {
+				resume_hits = slist;
+			}
+		}
+
+		if (resume_hits && (ii == resume_fieldnum)) {
+			int i;
+			int nhits;
+			// Resume where we left off...
+			numtries = resume_ntried;
+			startobject = resume_nobjs;
+			for (i=0; i<blocklist_count(resume_hits); i++) {
+				MatchObj* mo = (MatchObj*)blocklist_pointer_access(resume_hits, i);
+				solver_add_hit(hitlist, mo, AgreeTol);
+			}
+			nhits = blocklist_count(resume_hits);
+			blocklist_pointer_free(resume_hits);
+			resume_hits = NULL;
+			fprintf(stderr, "Resuming at field object %i (%i quads tried, %i hits found so far)\n",
+					(int)startobject, (int)numtries, nhits);
+		}
+
+		if (!thisfield) {
+			clear_hitlist(hitlist);
+			continue;
+		}
+
+		solve_field(thisfield, startobject, maxfieldobjs, maxtries,
 					max_matches_needed, codekd, codetol, hitlist,
 					&quitNow, AgreeTol, &numtries, &nummatches,
-					&mostAgree, cornerpix);
+					&mostAgree, cornerpix, &objsused);
 
-		bestlist = get_best_hits();
+		if (suspendfid) {
+			int i, j, M, N;
+			blocklist* hits = blocklist_pointer_new(256);
+			N = blocklist_count(hitlist);
+			for (i=0; i<N; i++) {
+				blocklist* lst = (blocklist*)blocklist_pointer_access(hitlist, i);
+				M = blocklist_count(lst);
+				for (j=0; j<M; j++) {
+					MatchObj* mo = (MatchObj*)blocklist_pointer_access(lst, j);
+					blocklist_pointer_append(hits, mo);
+				}
+			}
+			suspend_write_field(suspendfid, (uint)ii, objsused, (uint)numtries, hits);
+			blocklist_free(hits);
+		}
+
+
+		bestlist = get_best_hits(hitlist);
 
 		if (!bestlist)
 			bestnum = 0;
@@ -457,26 +548,34 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			if (Debugging) {
 				bestlist = blocklist_pointer_new(256);
 				allocated_list = bestlist;
-				debugging_gather_hits(bestlist);
+				debugging_gather_hits(hitlist, bestlist);
 			}
 		} else {
 			numsolved++;
 		}
 
-		bestnum = blocklist_count(bestlist);
+		if (bestlist)
+			bestnum = blocklist_count(bestlist);
 
 		hits_field_init(&fieldhdr);
 		fieldhdr.user_quit = quitNow;
 		fieldhdr.field = ii;
 		fieldhdr.objects_in_field = numxy;
+		fieldhdr.objects_examined = objsused;
 		fieldhdr.field_corners = cornerpix;
 		fieldhdr.ntries = numtries;
 		fieldhdr.nmatches = nummatches;
 		fieldhdr.nagree = bestnum;
+		fieldhdr.parity = ParityFlip;
 		hits_write_field_header(hitfid, &fieldhdr);
 
-		if (!bestnum) {
+		fprintf(stderr, "\n    field %lu: tried %i quads, matched %i codes, "
+				"%i agree\n", ii, numtries, nummatches, bestnum);
+
+		if (bestnum < min_matches_to_agree) {
 			hits_write_hit(hitfid, NULL);
+			hits_write_field_tailer(hitfid);
+			fflush(hitfid);
 			continue;
 		}
 
@@ -499,14 +598,13 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		if (allocated_list)
 			blocklist_pointer_free(allocated_list);
 
-		fprintf(stderr, "\n    field %lu: tried %i quads, matched %i codes, "
-				"%i agree\n", ii, numtries, nummatches, bestnum);
-
-		free_hitlist();
+		clear_hitlist(hitlist);
 		//quitNow = false;
     }
 
     free_xy(cornerpix);
+	blocklist_free(hitlist);
+
     return numsolved;
 }
 
@@ -523,7 +621,7 @@ int inrange(double ra, double ralow, double rahigh) {
     return 0;
 }
 
-void debugging_gather_hits(blocklist* outputlist) {
+void debugging_gather_hits(blocklist* hitlist, blocklist* outputlist) {
 	int i, N;
 
 	N = blocklist_count(hitlist);
@@ -570,7 +668,7 @@ void debugging_gather_hits(blocklist* outputlist) {
 }
 
 
-blocklist* get_best_hits() {
+blocklist* get_best_hits(blocklist* hitlist) {
     int i, N;
     int bestnum;
 	blocklist* bestlist;
@@ -630,8 +728,8 @@ inline void add_correspondence(sidx* starids, sidx* fieldids,
 			ok = 0;
 		}
 	}
-	starids[*p_nids] = fieldid;
-	fieldids[*p_nids] = starid;
+	starids[*p_nids] = starid;
+	fieldids[*p_nids] = fieldid;
 	(*p_nids)++;
 	if (p_ok && !ok) *p_ok = 0;
 }
@@ -642,21 +740,22 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 	int M;
 	int ok = 1;
 	MatchObj* mo;
+	if (!hits) return 0;
 	N = blocklist_count(hits);
 	M = 0;
 	for (i=0; i<N; i++) {
 		mo = (MatchObj*)blocklist_pointer_access(hits, i);
-		add_correspondence(starids, fieldids, mo->iA, mo->fA, &M, &ok);
-		add_correspondence(starids, fieldids, mo->iB, mo->fB, &M, &ok);
-		add_correspondence(starids, fieldids, mo->iC, mo->fC, &M, &ok);
-		add_correspondence(starids, fieldids, mo->iD, mo->fD, &M, &ok);
+		add_correspondence(starids, fieldids, mo->fA, mo->iA, &M, &ok);
+		add_correspondence(starids, fieldids, mo->fB, mo->iB, &M, &ok);
+		add_correspondence(starids, fieldids, mo->fC, mo->iC, &M, &ok);
+		add_correspondence(starids, fieldids, mo->fD, mo->iD, &M, &ok);
 	}
 	if (p_ok && !ok) *p_ok = 0;
 	return M;
 }
 
 
-void free_hitlist() {
+void clear_hitlist(blocklist* hitlist) {
     int i, N;
     N = blocklist_count(hitlist);
     for (i=0; i<N; i++) {
