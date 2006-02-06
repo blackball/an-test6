@@ -3,16 +3,24 @@
 ;   xx,yy    - dimensions of rectangular field in units of the mean
 ;              inter-star separation on the sky
 ;   thetaAB  - max theta_AB for quads being in index
+; OPTIONAL INPUTS:
+;   ntrial       - number of fake fields to make and test (default 1000)
+;   nquadthresh  - minimum number of quads required for a field to be
+;                  "solved" or "solveable" (default 3)
+; OUTPUTS:
+;   ntrial   - number of trials
+;   solved   - number solved
 ; BUGS:
 ;   - No proper code header.
 ; REVISION HISTORY:
 ;   2006-02-05  started - Hogg
 ;-
-pro quad_statistics, xx,yy,thetaAB,seed=seed,ntrial=ntrial
+pro quad_statistics, xx,yy,thetaAB,seed=seed,ntrial=ntrial, $
+                     nquadthresh=nquadthresh,solved=solved
 if (not keyword_set(seed)) then seed= -1L
-if (not keyword_set(ntrial)) then ntrial= 100L
-tiny= 1D-5
-nquadthresh= 3
+if (not keyword_set(ntrial)) then ntrial= 1000L
+if (not keyword_set(nquadthresh)) then nquadthresh= 3
+tiny= 1d-5
 
 ; loop over trials
 solved= 0L
@@ -54,9 +62,10 @@ for tt=0L,ntrial-1L do begin
 
         endif
     endfor
-    splog, trial,'nquad',nquad
+;    splog, trial,'nquad',nquad
     if (nquad GE nquadthresh) then solved= solved+1L
 endfor
-splog, 'solve fraction:',float(solved)/float(ntrial)
+fraction= float(solved)/float(ntrial)
+splog, 'solve fraction:',fraction
 return
 end
