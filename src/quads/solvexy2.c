@@ -44,7 +44,6 @@ const char HelpString[] =
 typedef struct match_struct {
     qidx quadno;
     sidx iA, iB, iC, iD;
-    qidx idx;
     sidx fA, fB, fC, fD;
     double code_err;
     star *sMin, *sMax;
@@ -289,37 +288,7 @@ int main(int argc, char *argv[]) {
     if (!codekd)
 		return (2);
 
-	/*
-	  for (i=0; i<10; i++) {
-	  fprintf(stderr, "perm[%i] = %i\n", i, codekd->perm[i]);
-	  }
-	  for (i=0; i<10; i++) {
-	  fprintf(stderr, "data[%i] = %g\n", i, codekd->data[i]);
-	  }
-	  for (i=0; i<256; i++) {
-	  if (i && (i % 32 == 0)) {
-	  fprintf(stderr, "\n");
-	  }
-	  fprintf(stderr, "%02x ", (unsigned int)(((unsigned char*)(codekd->tree))[i]));
-	  }
-	*/
-
     fclose(treefid);
-
-	/*
-	  for (i=0; i<10; i++) {
-	  fprintf(stderr, "perm[%i] = %i\n", i, codekd->perm[i]);
-	  }
-	  for (i=0; i<10; i++) {
-	  fprintf(stderr, "data[%i] = %g\n", i, codekd->data[i]);
-	  }
-	  for (i=0; i<256; i++) {
-	  if (i && (i % 32 == 0)) {
-	  fprintf(stderr, "\n");
-	  }
-	  fprintf(stderr, "%02x ", (unsigned int)(((unsigned char*)(codekd->tree))[i]));
-	  }
-	*/
 
     fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 			codekd->ndata, codekd->nnodes, codekd->ndim);
@@ -377,13 +346,6 @@ int main(int argc, char *argv[]) {
 
 		catalogue = (double*)(((char*)(mmap_cat)) + cposmarker);
 	}
-
-	/*
-	  fprintf(stderr, "maxstar = %li\n", maxstar);
-	  fprintf(stderr, "maxquad = %li\n", maxquad);
-	  fprintf(stderr, "numstars = %li\n", numstars);
-	  fprintf(stderr, "numquads = %li\n", numquads);
-	*/
 
 	if (maxstar != numstars) {
 		fprintf(stderr, "Error: numstars=%li (specified in .objs file header) does "
