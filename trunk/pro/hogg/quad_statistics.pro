@@ -66,6 +66,6 @@ for tt=0L,ntrial-1L do begin
     if (nquad GE nquadthresh) then solved= solved+1L
 endfor
 fraction= float(solved)/float(ntrial)
-splog, 'solve fraction:',fraction
+;splog, 'solve fraction:',fraction
 return
 end
