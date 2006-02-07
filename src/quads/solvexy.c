@@ -808,20 +808,6 @@ void output_match(MatchObj *mo)
 
 }
 
-int inrange(double ra, double ralow, double rahigh)
-{
-    if (ralow < rahigh) {
-		if (ra > ralow && ra < rahigh)
-            return 1;
-        return 0;
-    }
-
-    /* handle wraparound properly */
-    if (ra < ralow && ra > rahigh)
-        return 1;
-    return 0;
-}
-
 int output_good_matches(MatchObj *first, MatchObj *last)
 {
     MatchObj *mo, *bestone, **plist;

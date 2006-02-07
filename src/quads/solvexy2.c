@@ -21,6 +21,7 @@
 #include "mathutil.h"
 
 #include "solver2.h"
+#include "solver2_callbacks.h"
 #include "hitsfile.h"
 #include "suspend.h"
 
@@ -59,11 +60,6 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 
 void clear_hitlist(blocklist* hitlist);
 
-void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
-void getstarcoords(star *sA, star *sB, star *sC, star *sD,
-                   sidx iA, sidx iB, sidx iC, sidx iD);
-
-
 char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
@@ -101,7 +97,7 @@ int Debugging = 0;
 bool verbose = FALSE;
 
 int nctrlcs = 0;
-bool quitNow = FALSE;
+bool *p_quitnow = NULL;
 
 int firstfield = 0;
 
@@ -434,10 +430,9 @@ void signal_handler(int sig) {
 	default:
 		exit(-1);
 	}
-    quitNow = TRUE;
+	if (p_quitnow)
+		*p_quitnow = TRUE;
 }
-
-int numtries, nummatches;
 
 /*
   void print_abcdpix(xy *abcd) {
@@ -453,12 +448,21 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	uint resume_nobjs;
 	uint resume_ntried;
 	blocklist* resume_hits = NULL;
-
     qidx numsolved, ii;
     sidx numxy;
-    xy *thisfield;
-    xy *cornerpix = mk_xy(2);
 	blocklist* hitlist = blocklist_pointer_new(256);
+	solver_params params;
+
+	params.codekd = codekd;
+	params.endobj = maxfieldobjs;
+	params.maxtries = maxtries;
+	params.max_matches_needed = max_matches_needed;
+	params.agreetol = AgreeTol;
+	params.codetol = codetol;
+	params.cornerpix = mk_xy(2);
+	params.hitlist = hitlist;
+	params.quitNow = FALSE;
+	p_quitnow = &params.quitNow;
 
     numsolved = 0;
     for (ii=firstfield; ii< dyv_array_size(thefields); ii++) {
@@ -470,15 +474,16 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		int correspond_ok = 1;
 		int Ncorrespond;
 		int i, bestnum;
-		sidx startobject;
-		int objsused;
+		xy *thisfield;
 
-		numtries = 0;
-		nummatches = 0;
-		mostAgree = 0;
+		params.numtries = 0;
+		params.nummatches = 0;
+		params.mostagree = 0;
+		params.startobj = 3;
+
 		thisfield = xya_ref(thefields, ii);
 		numxy = xy_size(thisfield);
-		startobject = 3;
+		params.field = thisfield;
 
 		if (resumefid && !resume_hits) {
 			blocklist* slist = blocklist_pointer_new(256);
@@ -495,19 +500,18 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 		if (resume_hits && (ii == resume_fieldnum)) {
 			int i;
-			int nhits;
 			// Resume where we left off...
-			numtries = resume_ntried;
-			startobject = resume_nobjs;
+			params.numtries = resume_ntried;
+			params.startobj = resume_nobjs;
+			params.nummatches = blocklist_count(resume_hits);
 			for (i=0; i<blocklist_count(resume_hits); i++) {
 				MatchObj* mo = (MatchObj*)blocklist_pointer_access(resume_hits, i);
 				solver_add_hit(hitlist, mo, AgreeTol);
 			}
-			nhits = blocklist_count(resume_hits);
 			blocklist_pointer_free(resume_hits);
 			resume_hits = NULL;
 			fprintf(stderr, "Resuming at field object %i (%i quads tried, %i hits found so far)\n",
-					(int)startobject, (int)numtries, nhits);
+					params.startobj, params.numtries, params.nummatches);
 		}
 
 		/*
@@ -518,10 +522,13 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		*/
 
 		if (thisfield) {
-			solve_field(thisfield, startobject, maxfieldobjs, maxtries,
-						max_matches_needed, codekd, codetol, hitlist,
-						&quitNow, AgreeTol, &numtries, &nummatches,
-						&mostAgree, cornerpix, &objsused);
+			solve_field(&params);
+			/*
+			  thisfield, startobject, maxfieldobjs, maxtries,
+			  max_matches_needed, codekd, codetol, hitlist,
+			  &quitNow, AgreeTol, &numtries, &nummatches,
+			  &mostAgree, cornerpix, &objsused);
+			*/
 		}
 
 		if (suspendfid) {
@@ -536,7 +543,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 					blocklist_pointer_append(hits, mo);
 				}
 			}
-			suspend_write_field(suspendfid, (uint)ii, objsused, (uint)numtries, hits);
+			suspend_write_field(suspendfid, (uint)ii, params.objsused, params.numtries, hits);
 			blocklist_free(hits);
 		}
 
@@ -561,19 +568,19 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			bestnum = blocklist_count(bestlist);
 
 		hits_field_init(&fieldhdr);
-		fieldhdr.user_quit = quitNow;
+		fieldhdr.user_quit = params.quitNow;
 		fieldhdr.field = ii;
 		fieldhdr.objects_in_field = numxy;
-		fieldhdr.objects_examined = objsused;
-		fieldhdr.field_corners = cornerpix;
-		fieldhdr.ntries = numtries;
-		fieldhdr.nmatches = nummatches;
+		fieldhdr.objects_examined = params.objsused;
+		fieldhdr.field_corners = params.cornerpix;
+		fieldhdr.ntries = params.numtries;
+		fieldhdr.nmatches = params.nummatches;
 		fieldhdr.nagree = bestnum;
 		fieldhdr.parity = ParityFlip;
 		hits_write_field_header(hitfid, &fieldhdr);
 
 		fprintf(stderr, "\n    field %lu: tried %i quads, matched %i codes, "
-				"%i agree\n", ii, numtries, nummatches, bestnum);
+				"%i agree\n", ii, params.numtries, params.nummatches, bestnum);
 
 		if (bestnum < min_matches_to_agree) {
 			hits_write_hit(hitfid, NULL);
@@ -605,24 +612,14 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		//quitNow = false;
     }
 
-    free_xy(cornerpix);
+	p_quitnow = NULL;
+
+    free_xy(params.cornerpix);
 	blocklist_free(hitlist);
 
     return numsolved;
 }
 
-int inrange(double ra, double ralow, double rahigh) {
-    if (ralow < rahigh) {
-		if (ra > ralow && ra < rahigh)
-            return 1;
-        return 0;
-    }
-
-    /* handle wraparound properly */
-    if (ra < ralow && ra > rahigh)
-        return 1;
-    return 0;
-}
 
 void debugging_gather_hits(blocklist* hitlist, blocklist* outputlist) {
 	int i, N;

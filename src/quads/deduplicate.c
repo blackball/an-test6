@@ -17,13 +17,16 @@
 #include "blocklist.h"
 #include "KD/amma.h"
 
-#define OPTIONS "hi:o:d:k:"
+#define OPTIONS "hi:o:d:k:A:B:C:D:"
 const char HelpString[] =
 "deduplicate -d dist -i <input-file> -o <output-file> [-k keep]\n"
+"            [-A ra-min -B ra-max -C dec-min -D dec-max]\n"
 "  radius: (in arcseconds) is the de-duplication radius: a star found within\n"
 "      this radius of another star will be discarded\n"
 "  keep: read this number of stars from the catalogue and deduplicate them;\n"
-"      ignore the rest of the catalogue.\n";
+"      ignore the rest of the catalogue.\n"
+"  (ra,dec)-(min,max): (in degrees) ignore any stars outside this range of RA, DEC.\n";
+
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -36,18 +39,36 @@ int main(int argc, char *argv[]) {
     FILE *fin = NULL, *fout = NULL;
     sidx numstars;
     dimension Dim_Stars;
-    double ramin, ramax, decmin, decmax;
+    double ind_ramin, ind_ramax, ind_decmin, ind_decmax;
     stararray *thestars = NULL;
     kdtree *starkd = NULL;
-    double duprad = -1.0;
+    double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
     double radians;
     double dist;
     int i;
     int keep = 0;
+	double ramin = -1e300, decmin = -1e300, ramax = 1e300, decmax = 1e300;
+	bool radecrange = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'A':
+			ramin = atof(optarg);
+			radecrange = TRUE;
+			break;
+		case 'B':
+			ramax = atof(optarg);
+			radecrange = TRUE;
+			break;
+		case 'C':
+			decmin = atof(optarg);
+			radecrange = TRUE;
+			break;
+		case 'D':
+			decmax = atof(optarg);
+			radecrange = TRUE;
+			break;
 		case 'd':
 			duprad = atof(optarg);
 			if (duprad < 0.0) {
@@ -88,22 +109,63 @@ int main(int argc, char *argv[]) {
 		return (HELP_ERR);
     }
 
-    fprintf(stderr, "Reading catalogue %s...", infname);
+	if (radecrange) {
+		fprintf(stderr, "Will keep stars in range RA=[%g, %g], DEC=[%g, %g] degrees.\n",
+				ramin, ramax, decmin, decmax);
+	}
+
+    fprintf(stderr, "Reading catalogue %s...\n", infname);
     fflush(stderr);
 
     fopenin(infname, fin);
 
-    fprintf(stderr, "Writing to catalogue %s...\n", outfname);
+    fprintf(stderr, "Will write to catalogue %s...\n", outfname);
     fopenout(outfname, fout);
 
     thestars = readcat(fin, &numstars, &Dim_Stars,
-					   &ramin, &ramax, &decmin, &decmax, keep);
+					   &ind_ramin, &ind_ramax, &ind_decmin, &ind_decmax, keep);
     fclose(fin);
     if (thestars == NULL)
 		return (1);
     fprintf(stderr, "got %lu stars.\n", numstars);
     fprintf(stderr, "    (dim %hu) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
-			Dim_Stars, rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
+			Dim_Stars, rad2deg(ind_ramin), rad2deg(ind_ramax), rad2deg(ind_decmin), rad2deg(ind_decmax));
+
+	if (radecrange) {
+		stararray* window = mk_stararray(numstars);
+		int wi = 0;
+
+		// ra,dec min,max were specified in degrees...
+		ramin  = deg2rad(ramin);
+		ramax  = deg2rad(ramax);
+		decmin = deg2rad(decmin);
+		decmax = deg2rad(decmax);
+
+		//fprintf(stderr, "ra [%g, %g], dec [%g, %g]\n", ramin, ramax, decmin, decmax);
+
+		for (i=0; i<numstars; i++) {
+			double x, y, z, ra, dec;
+			star* s = star_array_ref(thestars, i);
+			x = star_ref(s, 0);
+			y = star_ref(s, 1);
+			z = star_ref(s, 2);
+			ra = xy2ra(x, y);
+			dec = z2dec(z);
+			if (inrange(ra,  ramin,  ramax) &&
+				inrange(dec, decmin, decmax)) {
+				dyv_array_set_no_copy(window, wi, s);
+				wi++;
+				//printf("%g,%g\n", rad2deg(ra), rad2deg(dec));
+			} else {
+				free_star(s);
+			}
+		}
+		free(thestars->array);
+		free(thestars);
+		window->size = wi;
+		thestars = window;
+		fprintf(stderr, "There are %i stars in the RA,DEC window you requested.\n", wi);
+	}
 
     fprintf(stderr, "Building KD tree...");
     fflush(stderr);

@@ -7,52 +7,39 @@
 #include "fileutil.h"
 #include "mathutil.h"
 #include "blocklist.h"
-
 #include "kdtree/kdtree.h"
 
 #include "solver2.h"
+#include "solver2_callbacks.h"
 
 void find_corners(xy *thisfield, xy *cornerpix);
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-					  char* inbox, int maxind,
-					  xy *thisfield,
-					  xy *cornerpix,
-					  kdtree_t* codekd,
-					  double codetol,
-					  int* pnumtries, int* pnummatches, blocklist* hitlist,
-					  double AgreeTol);
+					  char* inbox, int maxind, solver_params* params);
 
-qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
-                   xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
-				   kdtree_t *codekd, double codetol, blocklist* hitlist,
-				   double AgreeTol);
+void try_all_codes(double Cx, double Cy, double Dx, double Dy,
+				   sidx iA, sidx iB, sidx iC, sidx iD,
+                   xy *ABCDpix, solver_params* params);
 
-int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double *query,
-					xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD,
-					blocklist* hitlist, double AgreeTol);
+void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
+					 char order, sidx fA, sidx fB, sidx fC, sidx fD,
+					 solver_params* params);
 
 int solver_add_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol);
 
 
 
-void solve_field(xy *thisfield,
-				 int startfieldobj, int endfieldobj,
-				 int maxtries, int max_matches_needed,
-				 kdtree_t *codekd, double codetol, blocklist* hitlist,
-				 bool* pQuitNow, double AgreeTol,
-				 int* pnumtries, int* pnummatches, int* pmostAgree,
-				 xy* cornerpix, int* pobjsused) {
+void solve_field(solver_params* params) {
     sidx numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
     int ncd;
-	int numtries = 0, nummatches = 0, mostAgree = 0;
 
-	numxy = xy_size(thisfield);
-	if (endfieldobj && (numxy > endfieldobj))
-		numxy = endfieldobj;
-	find_corners(thisfield, cornerpix);
+	numxy = xy_size(params->field);
+	if (params->endobj && (numxy > params->endobj))
+		numxy = params->endobj;
+
+	find_corners(params->field, params->cornerpix);
 
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
 		return;
@@ -61,9 +48,35 @@ void solve_field(xy *thisfield,
 	iDs = (int*)malloc(numxy * numxy * sizeof(int));
 	iunion = (char*)malloc(numxy * sizeof(char));
 
+	/*
+	  Each time through the "for" loop below, we consider a new
+	  star ("newpoint").  First, we try building all quads that
+	  have the new star on the diagonal (star B).  Then, we try
+	  building all quads that have the star not on the diagonal
+	  (star D).
+
+	  In each of the loops, we first consider a pair of A, B stars,
+	  and gather all the stars that could be C and D stars.  We add
+	  the indices of the C and D stars to the arrays "iCs" and "iDs".
+	  That is, iCs[0] and iDs[0] contain the first pair of C,D stars.
+	  Both arrays can contain duplicates.
+
+	  We also mark "iunion" of these indices to TRUE, so if index "i"
+	  appears in "iCs" or "iDs", then "iunion[i]" is true.
+
+	  We then call "try_quads" with stars A,B and the sets of stars
+	  C,D.  For each element in "iunion" that is true, "try_quads"
+	  checks whether that star is inside the box formed by AB; if not,
+	  it marks iunion back to FALSE.  If then iterates through "iCs"
+	  and "iDs", skipping any for which the corresponding "iunion"
+	  element is FALSE.
+	*/
+
+
 	// We keep the invariants that iA < iB and iC < iD.
 	// We try the A<->B and C<->D permutation in try_all_points.
-	for (newpoint=startfieldobj; newpoint<numxy; newpoint++) {
+	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
+		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
 			ncd = 0;
@@ -80,11 +93,12 @@ void solve_field(xy *thisfield,
 					ncd++;
 				}
 			}
-			try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint,
-					  thisfield, cornerpix, codekd, codetol,
-					  &numtries, &nummatches, hitlist, AgreeTol);
+			// note: "newpoint" is used as an upper-bound on the largest
+			// TRUE element in "iunion".
+			try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, params);
 		}
 
+		// quads with the new star not on the diagonal:
 		iD = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
@@ -99,43 +113,29 @@ void solve_field(xy *thisfield,
 					iDs[ncd] = iD;
 					ncd++;
 				}
-				try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1,
-						  thisfield, cornerpix, codekd, codetol,
-						  &numtries, &nummatches, hitlist, AgreeTol);
+				// note: "newpoint+1" is used because "iunion[newpoint]" is TRUE.
+				try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1, params);
 			}
 		}
 
 		fprintf(stderr,
 				"    using %lu of %lu objects (%i quads agree so far; %i tried, %i matched)      \r",
-				newpoint+1, numxy, mostAgree, numtries, nummatches);
+				newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
 
-		if ((mostAgree >= max_matches_needed) ||
-			(maxtries && (numtries >= maxtries)) ||
-			(pQuitNow && *pQuitNow))
+		if ((params->mostagree >= params->max_matches_needed) ||
+			(params->maxtries && (params->numtries >= params->maxtries)) ||
+			(params->quitNow))
 			break;
 	}
 	free(iCs);
 	free(iDs);
 	free(iunion);
 
-	if (pobjsused)
-		*pobjsused = newpoint;
-	if (pnumtries)
-		*pnumtries += numtries;
-	if (pnummatches)
-		*pnummatches += nummatches;
-	if (pmostAgree)
-		*pmostAgree += mostAgree;
+	params->objsused = newpoint;
 }
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-					  char* inbox, int maxind,
-					  xy *thisfield,
-					  xy *cornerpix,
-					  kdtree_t* codekd,
-					  double codetol,
-					  int* pnumtries, int* pnummatches, blocklist* hitlist,
-					  double AgreeTol) {
+					  char* inbox, int maxind, solver_params* params) {
     int i;
     int iC, iD;
     double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -149,10 +149,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 
     ABCDpix = mk_xy(DIM_QUADS);
 
-    Ax = xy_refx(thisfield, iA);
-    Ay = xy_refy(thisfield, iA);
-    Bx = xy_refx(thisfield, iB);
-    By = xy_refy(thisfield, iB);
+    Ax = xy_refx(params->field, iA);
+    Ay = xy_refy(params->field, iA);
+    Bx = xy_refx(params->field, iB);
+    By = xy_refy(params->field, iB);
 
     xy_setx(ABCDpix, 0, Ax);
     xy_sety(ABCDpix, 0, Ay);
@@ -168,8 +168,8 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     // check which C, D points are inside the square.
     for (i=0; i<maxind; i++) {
 		if (!inbox[i]) continue;
-		Cx = xy_refx(thisfield, i);
-		Cy = xy_refy(thisfield, i);
+		Cx = xy_refx(params->field, i);
+		Cy = xy_refy(params->field, i);
 
 		fieldxs[i] = Cx;
 		fieldys[i] = Cy;
@@ -190,7 +190,6 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 
     for (i=0; i<ncd; i++) {
 		double Cfx, Cfy, Dfx, Dfy;
-		int nmatches;
 		iC = iCs[i];
 		iD = iDs[i];
 		// are both C and D in the box?
@@ -217,24 +216,20 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		  print_abcdpix(ABCDpix);
 		*/
 
-		if (pnumtries)
-			(*pnumtries)++;
+		params->numtries++;
 
-		nmatches = try_all_codes(Cx, Cy, Dx, Dy, cornerpix, ABCDpix,
-								 iA, iB, iC, iD, codekd, codetol, hitlist, AgreeTol);
-		if (pnummatches)
-			(*pnummatches) += nmatches;
+		try_all_codes(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params);
     }
 
     free_xy(ABCDpix);
 }
 
-qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
-                   xy *ABCDpix, sidx iA, sidx iB, sidx iC, sidx iD,
-				   kdtree_t *codekd, double codetol, blocklist* hitlist, double AgreeTol) {
+void try_all_codes(double Cx, double Cy, double Dx, double Dy,
+				   sidx iA, sidx iB, sidx iC, sidx iD,
+                   xy *ABCDpix, solver_params* params) {
     double thequery[4];
-    qidx nummatch = 0;
     kdtree_qres_t* result;
+	double tol = square(params->codetol);
 
     // ABCD
     thequery[0] = Cx;
@@ -242,10 +237,10 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = Dx;
     thequery[3] = Dy;
 
-    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
-		nummatch += result->nres;
-		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD, hitlist, AgreeTol);
+		params->nummatches += result->nres;
+		resolve_matches(result, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD, params);
     }
     kdtree_free_query(result);
 
@@ -255,10 +250,10 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = 1.0 - Dx;
     thequery[3] = 1.0 - Dy;
 
-    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
-		nummatch += result->nres;
-		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD, hitlist, AgreeTol);
+		params->nummatches += result->nres;
+		resolve_matches(result, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD, params);
     }
     kdtree_free_query(result);
 
@@ -268,10 +263,10 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = Cx;
     thequery[3] = Cy;
 
-    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
-		nummatch += result->nres;
-		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC, hitlist, AgreeTol);
+		params->nummatches += result->nres;
+		resolve_matches(result, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC, params);
     }
     kdtree_free_query(result);
 
@@ -281,25 +276,22 @@ qidx try_all_codes(double Cx, double Cy, double Dx, double Dy, xy *cornerpix,
     thequery[2] = 1.0 - Cx;
     thequery[3] = 1.0 - Cy;
 
-    result = kdtree_rangesearch(codekd, thequery, square(codetol));
+    result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
-		nummatch += result->nres;
-		resolve_matches(cornerpix, result, codekd, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC, hitlist, AgreeTol);
+		params->nummatches += result->nres;
+		resolve_matches(result, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC, params);
     }
     kdtree_free_query(result);
-
-    return nummatch;
 }
 
-int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double *query,
-					xy *ABCDpix, char order, sidx fA, sidx fB, sidx fC, sidx fD,
-					blocklist* hitlist, double AgreeTol) {
+void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
+					 char order, sidx fA, sidx fB, sidx fC, sidx fD,
+					 solver_params* params) {
     qidx jj, thisquadno;
     sidx iA, iB, iC, iD;
     double *transform;
     star *sA, *sB, *sC, *sD, *sMin, *sMax;
     MatchObj *mo;
-	int mostAgree = 0;
 
     sA = mk_star();
     sB = mk_star();
@@ -318,8 +310,8 @@ int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double
 		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
 		sMin = mk_star();
 		sMax = mk_star();
-		image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
-		image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
+		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
+		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
 
 		mo->quadno = thisquadno;
 		mo->iA = iA;
@@ -377,9 +369,10 @@ int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double
 		  mo->abcdorder = ABCD_ORDER;
 		*/
 
-		nagree = solver_add_hit(hitlist, mo, AgreeTol);
-		if (nagree >= mostAgree) {
-			mostAgree = nagree;
+		nagree = solver_add_hit(params->hitlist, mo, params->agreetol);
+
+		if (nagree > params->mostagree) {
+			params->mostagree = nagree;
 		}
 
 		free(transform);
@@ -389,7 +382,6 @@ int resolve_matches(xy *cornerpix, kdtree_qres_t* krez, kdtree_t* codekd, double
     free_star(sB);
     free_star(sC);
     free_star(sD);
-	return mostAgree;
 }
 
 double distsq(double* d1, double* d2, int D) {

@@ -3,11 +3,38 @@
 
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
-
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-
 #include "blocklist.h"
+
+struct solver_params {
+
+	// Inputs:
+	xy* field;
+	kdtree_t* codekd;
+	int startobj;
+	int endobj;
+	int maxtries;
+	int max_matches_needed;
+	double agreetol;
+	double codetol;
+	bool quitNow;
+
+	// Must be initialized by caller; will contain outputs:
+	xy* cornerpix;
+	blocklist* hitlist;
+
+	// Outputs:
+	// NOTE: these are only incremented, not initialized.  It's up to
+	// you to set them to zero before calling, if you're starting from scratch.
+	int numtries;
+	int nummatches;
+	int mostagree;
+	// this is set to an absolute value.
+	int objsused;
+};
+typedef struct solver_params solver_params;
+
 
 typedef struct match_struct {
     qidx quadno;
@@ -32,28 +59,11 @@ typedef struct match_struct {
 } MatchObj;
 #define MATCH_VECTOR_SIZE 6
 
-
 #define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
 #define free_MatchObj(m) free(m)
 
-
-/**
-   You have to define these two functions!
-*/
-extern void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
-extern void getstarcoords(star *sA, star *sB, star *sC, star *sD,
-						  sidx iA, sidx iB, sidx iC, sidx iD);
-
-
 int solver_add_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol);
 
-void solve_field(xy *thisfield,
-				 int startfieldobj, int endfieldobj,
-				 int maxtries, int max_matches_needed,
-				 kdtree_t *codekd, double codetol, blocklist* hitlist,
-				 bool* pQuitNow, double AgreeTol,
-				 int* pnumtries, int* pnummatches, int* pmostAgree,
-				 xy* cornerpix, int* pobjsused);
-
+void solve_field(solver_params* params);
 
 #endif

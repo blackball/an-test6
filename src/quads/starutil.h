@@ -54,6 +54,8 @@ typedef dyv_array xyarray;
 
 inline double square(double d);
 
+inline int inrange(double ra, double ralow, double rahigh);
+
 #define mk_star() (star *)mk_dyv(DIM_STARS)
 #define mk_stard(d) (star *)mk_dyv(d)
 #define mk_code() (code *)mk_dyv(DIM_CODES)
@@ -82,6 +84,9 @@ inline double square(double d);
 #define xy_set(s,i,v) dyv_set((dyv *)s,i,v)
 #define xy_setx(s,i,v) dyv_set((dyv *)s,DIM_XY*i,v)
 #define xy_sety(s,i,v) dyv_set((dyv *)s,DIM_XY*i+1,v)
+
+#define star_array_ref(s, i) (star*)dyv_array_ref(s, i)
+#define star_array_set(s, i, v) (star*)dyv_array_set(s, i, v)
 
 #define mk_stararray(n) (stararray *)mk_dyv_array(n)
 #define mk_quadarray(n) (quadarray *)mk_ivec_array(n)
