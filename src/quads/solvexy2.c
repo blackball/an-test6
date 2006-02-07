@@ -79,14 +79,11 @@ bool use_mmap = TRUE;
 sidx maxstar;
 qidx maxquad;
 
-char buff[100], maxstarWidth, oneobjWidth;
-
 double AgreeArcSec = DEFAULT_AGREE_TOL;
-double AgreeTol;
-int mostAgree;
 char ParityFlip = DEFAULT_PARITY_FLIP;
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 unsigned int max_matches_needed = DEFAULT_MAX_MATCHES_NEEDED;
+double AgreeTol;
 
 double DebuggingRAMin;
 double DebuggingRAMax;
@@ -434,14 +431,6 @@ void signal_handler(int sig) {
 		*p_quitnow = TRUE;
 }
 
-/*
-  void print_abcdpix(xy *abcd) {
-  fprintf(stderr, "ABCDpix=[%8g, %8g, %8g, %8g, %8g, %8g, %8g, %8g]\n",
-  abcd->farr[0], abcd->farr[1], abcd->farr[2], abcd->farr[3],
-  abcd->farr[4], abcd->farr[5], abcd->farr[6], abcd->farr[7]);
-  }
-*/
-
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree_t *codekd, double codetol) {
 	uint resume_fieldnum;
@@ -500,6 +489,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 		if (resume_hits && (ii == resume_fieldnum)) {
 			int i;
+			blocklist* best;
 			// Resume where we left off...
 			params.numtries = resume_ntried;
 			params.startobj = resume_nobjs;
@@ -508,27 +498,16 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				MatchObj* mo = (MatchObj*)blocklist_pointer_access(resume_hits, i);
 				solver_add_hit(hitlist, mo, AgreeTol);
 			}
+			best = get_best_hits(hitlist);
+			params.mostagree = (best ? blocklist_count(best) : 0);
 			blocklist_pointer_free(resume_hits);
 			resume_hits = NULL;
 			fprintf(stderr, "Resuming at field object %i (%i quads tried, %i hits found so far)\n",
 					params.startobj, params.numtries, params.nummatches);
 		}
 
-		/*
-		  if (!thisfield) {
-		  clear_hitlist(hitlist);
-		  continue;
-		  }
-		*/
-
 		if (thisfield) {
 			solve_field(&params);
-			/*
-			  thisfield, startobject, maxfieldobjs, maxtries,
-			  max_matches_needed, codekd, codetol, hitlist,
-			  &quitNow, AgreeTol, &numtries, &nummatches,
-			  &mostAgree, cornerpix, &objsused);
-			*/
 		}
 
 		if (suspendfid) {
