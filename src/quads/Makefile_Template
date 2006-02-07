@@ -22,7 +22,7 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 EXECS = randcat startree getquads quadidx codetree genfields solvexy fieldquads findstar findquad \
 	findcode codedensity all_quads fixheaders codetomatlab \
 	codeprojections startree2 deduplicate codetree2 printheaders \
-	get_healpix quadidx2 xylstomatlab rdlstohealpix workernode
+	get_healpix quadidx2 xylstomatlab rdlstohealpix
 
 	#test_healpix
 
@@ -32,9 +32,12 @@ MYOBJS = randcat.o startree.o getquads.o quadidx.o codetree.o genfields.o solvex
 	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o workernode.o
 
 
-all: $(EXECS) solvexy2
+all: $(EXECS) solvexy2 workernode
 
 solvexy2: solvexy2.o solver2.o $(OBJ)
+	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
+
+workernode: workernode.o solver2.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 $(EXECS) :: %: %.o $(OBJ)

@@ -70,6 +70,7 @@ inline double square(double d);
 #define code_ref(c,i) dyv_ref((dyv *)c,i)
 #define quad_ref(q,i) ivec_ref((ivec *)q,i)
 #define xya_ref(a,i) dyv_array_ref(a,i)
+#define xya_set(a,i,v) dyv_array_set(a,i,v)
 #define xy_ref(s,i) dyv_ref((dyv *)s,i)
 #define xy_refx(s,i) dyv_ref((dyv *)s,DIM_XY*i)
 #define xy_refy(s,i) dyv_ref((dyv *)s,DIM_XY*i+1)
