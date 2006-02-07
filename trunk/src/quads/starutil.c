@@ -4,6 +4,20 @@ inline double square(double d) {
     return d*d;
 }
 
+inline int inrange(double ra, double ralow, double rahigh) {
+    if (ralow < rahigh) {
+		if (ra >= ralow && ra <= rahigh)
+            return 1;
+        return 0;
+    }
+
+    /* handle wraparound properly */
+    //if (ra <= ralow && ra >= rahigh)
+    if (ra >= ralow || ra <= rahigh)
+        return 1;
+    return 0;
+}
+
 /* makes a star object located uniformly at random within the limits given
    on the sphere */
 star *make_rand_star(double ramin, double ramax,
