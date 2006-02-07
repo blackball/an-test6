@@ -335,9 +335,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 		mo->code_err = krez->sdists[jj];
 
+		mo->transform = transform;
 
 		/*
-		  mo->transform = transform;
 
 		  mo->corners[0] = xy_refx(cornerpix, 0);
 		  mo->corners[1] = xy_refy(cornerpix, 0);
@@ -368,6 +368,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 		  mo->abcdorder = ABCD_ORDER;
 		*/
+		//free(transform);
 
 		nagree = solver_add_hit(params->hitlist, mo, params->agreetol);
 
@@ -375,7 +376,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 			params->mostagree = nagree;
 		}
 
-		free(transform);
     }
 
     free_star(sA);
