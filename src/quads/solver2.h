@@ -43,8 +43,9 @@ typedef struct match_struct {
     double code_err;
     star *sMin, *sMax;
     double vector[6];
+
+	double* transform;
 	/*
-	  double* transform;
 	  double corners[4];
 	  double starA[3];
 	  double starB[3];

@@ -105,6 +105,16 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 			star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
 			rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 			rad2deg(z2dec(star_ref(mo->sMax, 2))));
+	
+	fprintf(fid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
+			mo->transform[0], mo->transform[1], mo->transform[2],
+			mo->transform[3], mo->transform[4], mo->transform[5],
+			mo->transform[6], mo->transform[7], mo->transform[8]);
+	fprintf(fid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
+			mo->transform[0], mo->transform[1], mo->transform[2],
+			mo->transform[3], mo->transform[4], mo->transform[5],
+			mo->transform[6], mo->transform[7], mo->transform[8]);
+
 	/*
 	  fprintf(fid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
 	  mo->transform[0], mo->transform[1], mo->transform[2],
@@ -163,7 +173,3 @@ void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
 	fprintf(fid, "    },\n");
 }
 
-/*
-  void hits_write_hit(FILE* fid, hits_hit hit) {
-  }
-*/
