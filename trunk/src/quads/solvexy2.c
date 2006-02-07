@@ -510,15 +510,19 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 					(int)startobject, (int)numtries, nhits);
 		}
 
-		if (!thisfield) {
-			clear_hitlist(hitlist);
-			continue;
-		}
+		/*
+		  if (!thisfield) {
+		  clear_hitlist(hitlist);
+		  continue;
+		  }
+		*/
 
-		solve_field(thisfield, startobject, maxfieldobjs, maxtries,
-					max_matches_needed, codekd, codetol, hitlist,
-					&quitNow, AgreeTol, &numtries, &nummatches,
-					&mostAgree, cornerpix, &objsused);
+		if (thisfield) {
+			solve_field(thisfield, startobject, maxfieldobjs, maxtries,
+						max_matches_needed, codekd, codetol, hitlist,
+						&quitNow, AgreeTol, &numtries, &nummatches,
+						&mostAgree, cornerpix, &objsused);
+		}
 
 		if (suspendfid) {
 			int i, j, M, N;
@@ -535,7 +539,6 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			suspend_write_field(suspendfid, (uint)ii, objsused, (uint)numtries, hits);
 			blocklist_free(hits);
 		}
-
 
 		bestlist = get_best_hits(hitlist);
 
