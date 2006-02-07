@@ -97,7 +97,6 @@ void hits_write_field_header(FILE* fid, hits_field* h) {
 
 
 void hits_write_field_tailer(FILE* fid) {
-	fprintf(fid, "    ],\n");
 	fprintf(fid, "),\n");
 }
 
@@ -121,7 +120,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 			rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
 			rad2deg(z2dec(star_ref(mo->sMax, 2))));
 	
-	fprintf(fid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
+	fprintf(fid, "            transform=[%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g],\n",
 			mo->transform[0], mo->transform[1], mo->transform[2],
 			mo->transform[3], mo->transform[4], mo->transform[5],
 			mo->transform[6], mo->transform[7], mo->transform[8]);
@@ -171,6 +170,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
 								int Nids, int ok) {
 	int i;
+	fprintf(fid, "    ],\n"); /* Close previous quads list */
 	fprintf(fid, "    # Field Object <--> Catalogue Object Mapping Table\n");
 	if (!ok) {
 		fprintf(fid, "    # warning: some matches agree on resolve but not on mapping\n");
