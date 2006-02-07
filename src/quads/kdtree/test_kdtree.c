@@ -137,10 +137,10 @@ void test_kd_invalid_args(CuTest *tc)
 
 void test_kd_massive_build(CuTest *tc)
 {
-    srandom(0);
+	srandom(0);
 	int n=100000, d=4, i;
 	real *data = malloc(sizeof(real)*n*d);
-    for (i=0; i < n*d; i++) 
+	for (i=0; i < n*d; i++) 
         data[i] = random() / (real)RAND_MAX;
 	kdtree_t *kd = kdtree_build(data, n, d, 16);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);

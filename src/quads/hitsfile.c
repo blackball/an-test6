@@ -14,31 +14,46 @@ void hits_header_init(hits_header* h) {
 }
 
 void hits_write_header(FILE* fid, hits_header* h) {
-    fprintf(fid, "# SOLVER PARAMS:\n");
-    fprintf(fid, "# solving fields in %s using %s\n",
+	/* All output is in one giant python dictionary so it can be read into
+	 * python simply via:
+	 * >>> hits = eval(file('my_hits_file.hits').read())
+	 * >>> hits['fields_to_solve']
+	 * 23
+	 * >>> 
+	 * Since most of our non-C code is in Python, this is convienent. */
+	fprintf(fid, "# This is a hits file which records the results from a\n");
+	fprintf(fid, "# solvexy run. It is a valid python literal and is easily\n");
+	fprintf(fid, "# loaded into python via \n");
+	fprintf(fid, "# >>> results = eval(file('myfile.hits').read())\n");
+	fprintf(fid, "# >>> results['fields_to_solve']\n");
+	fprintf(fid, "# 23\n\n");
+	fprintf(fid, "dict(\n");
+	fprintf(fid, "# SOLVER PARAMS:\n");
+	fprintf(fid, "# solving fields in %s using %s\n",
 			h->field_file_name, h->tree_file_name);
-    fprintf(fid, "field_to_solve = '%s'\n", h->field_file_name);
-    fprintf(fid, "index_used = '%s'\n", h->tree_file_name);
-	fprintf(fid, "nfields = %u\n", h->nfields);
-	fprintf(fid, "ncodes = %u\n", h->ncodes);
-	fprintf(fid, "nstars = %u\n", h->nstars);
-    fprintf(fid, "code_tol = %g\n", h->codetol);
-    fprintf(fid, "agree_tol = %g\n", h->agreetol);
-	fprintf(fid, "parity_flip = %s\n", (h->parity ? "True" : "False"));
+	fprintf(fid, "field_to_solve = '%s',\n", h->field_file_name);
+	fprintf(fid, "index_used = '%s',\n", h->tree_file_name);
+	fprintf(fid, "nfields = %u,\n", h->nfields);
+	fprintf(fid, "ncodes = %u,\n", h->ncodes);
+	fprintf(fid, "nstars = %u,\n", h->nstars);
+	fprintf(fid, "code_tol = %g,\n", h->codetol);
+	fprintf(fid, "agree_tol = %g,\n", h->agreetol);
+	fprintf(fid, "parity_flip = %s,\n", (h->parity ? "True" : "False"));
 	if (h->parity)
 		fprintf(fid, "# flipping parity (swapping row/col image coordinates)\n");
-    fprintf(fid, "min_matches_to_agree = %u\n", h->min_matches_to_agree);
-    fprintf(fid, "max_matches_needed = %u\n", h->max_matches_needed);
+	fprintf(fid, "min_matches_to_agree = %u,\n", h->min_matches_to_agree);
+	fprintf(fid, "max_matches_needed = %u,\n", h->max_matches_needed);
 
-    fprintf(fid, "############################################################\n");
-    fprintf(fid, "# Result data, stored as a list of dictionaries\n");
-    fprintf(fid, "results = [ \n");
+	fprintf(fid, "############################################################\n");
+	fprintf(fid, "# Result data, stored as a list of dictionaries\n");
+	fprintf(fid, "results = [ \n");
 }
 
 void hits_write_tailer(FILE* fid) {
-    fprintf(fid, "] \n");
-    fprintf(fid, "# END OF RESULTS\n");
-    fprintf(fid, "############################################################\n");
+	fprintf(fid, "], \n");
+	fprintf(fid, ") \n");
+	fprintf(fid, "# END OF RESULTS\n");
+	fprintf(fid, "############################################################\n");
 }
 
 void hits_field_init(hits_field* h) {
@@ -158,10 +173,9 @@ void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
 	int i;
 	fprintf(fid, "    # Field Object <--> Catalogue Object Mapping Table\n");
 	if (!ok) {
-		fprintf(fid,
-				"    # warning -- some matches agree on resolve but not on mapping\n");
+		fprintf(fid, "    # warning: some matches agree on resolve but not on mapping\n");
+		fprintf(fid, "    resolve_mapping_mismatch=True,\n");
 	}
-	fprintf(fid, "    resolve_mapping_mismatch=%s,\n", (ok?"False":"True"));
     
 	fprintf(fid, "    field2catalog={\n");
 	for (i= 0 ; i<Nids; i++)
