@@ -70,7 +70,7 @@ AGREE=100
 # code match tolerance: 6-d distance
 MATCH=0.001
 
-CMD="solvexy2 -f $FN -o $O -m $AGREE -t $MATCH -F 100 -H ${O}.hits"
+CMD="solvexy2 -f $FN -o $O -m $AGREE -t $MATCH -F 100 -H ${O}.hits -n 1000"
 echo $CMD
 $CMD
 
