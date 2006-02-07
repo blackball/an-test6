@@ -25,7 +25,7 @@
 #include "hitsfile.h"
 #include "suspend.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:a:b:"
+#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:a:b:IL:"
 const char HelpString[] =
 "solvexy2 -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
 "   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
@@ -37,8 +37,10 @@ const char HelpString[] =
 "   [-d minimum-dec-for-debug-output]\n"
 "   [-D maximum-dec-for-debug-output]\n"
 "   [-S first-field]\n"
-"   [-a resume (from) file]\n"
-"   [-b suspend (to) file]\n"
+"   [-L last-field]\n"
+"   [-a resume-(from)-file]\n"
+"   [-b suspend-(to)-file]\n"
+"   [-I: interactive mode (probably only useful from Python)\n"
 "   -p flips parity\n"
 "   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
 
@@ -59,6 +61,8 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 						 int* p_ok);
 
 void clear_hitlist(blocklist* hitlist);
+
+int get_next_assignment();
 
 char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
@@ -90,13 +94,15 @@ double DebuggingRAMax;
 double DebuggingDecMin;
 double DebuggingDecMax;
 int Debugging = 0;
-
 bool verbose = FALSE;
+int firstfield = 0;
+int lastfield = -1;
+bool interactive = FALSE;
+bool rename_suspend;
+int maxfieldobjs = 0;
 
 int nctrlcs = 0;
 bool *p_quitnow = NULL;
-
-int firstfield = 0;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -114,7 +120,6 @@ int main(int argc, char *argv[]) {
     dimension Dim_Quads, Dim_Stars;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
-    int fieldobjs = 0;
     int fieldtries = 0;
 
     void*  mmapped_tree = NULL;
@@ -134,14 +139,20 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'I':
+			interactive = TRUE;
+			break;
 		case 'a':
-			resumefname = optarg;
+			resumefname = strdup(optarg);
 			break;
 		case 'b':
-			suspendfname = optarg;
+			suspendfname = strdup(optarg);
 			break;
 		case 'S':
 			firstfield = atoi(optarg);
+			break;
+		case 'L':
+			lastfield = atoi(optarg);
 			break;
 		case 'v':
 			verbose = TRUE;
@@ -163,8 +174,8 @@ int main(int argc, char *argv[]) {
 			DebuggingRAMax = strtod(optarg, NULL);
 			break;
 		case 'F':
-			fieldobjs = atoi(optarg);
-			if (!fieldobjs) {
+			maxfieldobjs = atoi(optarg);
+			if (!maxfieldobjs) {
 				fprintf(stderr, "Couldn't parse -F argument: %s\n",
 						optarg);
 				exit(-1);
@@ -232,11 +243,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, HelpString);
 		return (OPT_ERR);
     }
-	if (resumefname && suspendfname && (strcmp(resumefname, suspendfname) == 0)) {
-		fprintf(stderr, "Suspend and resume file can't be the same.\n");
-		exit(-1);
-	}
-
 
 	/*
 	  fprintf(stderr, "sizeof(int)    = %i\n", sizeof(int));
@@ -341,63 +347,101 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
 			numfields, codetol, AgreeArcSec);
 
+	do {
 
-	if (resumefname) {
-		// read resume file.
-		double index_scale;
-		char oldfieldname[256];
-		char oldtreename[256];
-		uint nfields;
-		fopenin(resumefname, resumefid);
-		if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
-			fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
-			exit(-1);
+		if (interactive) {
+			if (get_next_assignment())
+				break;
+			fprintf(stderr, "Running!\n");
 		}
-	}
-	if (suspendfname) {
-		fopenout(suspendfname, suspendfid);
-		suspend_write_header(suspendfid, index_scale, fieldfname,
-							 treefname, dyv_array_size(thefields));
-	}
 
+		if (resumefname && suspendfname &&
+			(strcmp(resumefname, suspendfname) == 0)) {
+			char buffer[1024];
+			rename_suspend = TRUE;
+			free(suspendfname);
+			snprintf(buffer, sizeof(buffer), "%s.tmp", resumefname);
+			suspendfname = strdup(buffer);
+		} else {
+			rename_suspend = FALSE;
+		}
 
-	// write HITS header.
-    fprintf(stderr, "Using HITS output file %s\n", hitfname);
-    fopenout(hitfname, hitfid);
-    free_fn(hitfname);
-	hits_header_init(&hitshdr);
-	hitshdr.field_file_name = fieldfname;
-	hitshdr.tree_file_name = treefname;
-	hitshdr.nfields = numfields;
-	hitshdr.ncodes = codekd->ndata;
-	hitshdr.nstars = numstars;
-	hitshdr.codetol = codetol;
-	hitshdr.agreetol = AgreeArcSec;
-	hitshdr.parity = ParityFlip;
-	hitshdr.min_matches_to_agree = min_matches_to_agree;
-	hitshdr.max_matches_needed = max_matches_needed;
-	hits_write_header(hitfid, &hitshdr);
-    free_fn(fieldfname);
-    free_fn(treefname);
+		if (resumefname) {
+			// read resume file.
+			double index_scale;
+			char oldfieldname[256];
+			char oldtreename[256];
+			uint nfields;
+			fopenin(resumefname, resumefid);
+			if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
+				fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
+				exit(-1);
+			}
+		}
+		if (suspendfname) {
+			fopenout(suspendfname, suspendfid);
+			suspend_write_header(suspendfid, index_scale, fieldfname,
+								 treefname, dyv_array_size(thefields));
+		}
 
+		// write HITS header.
+		if (interactive) {
+			fprintf(stderr, "Writing HITS output to stdout.\n");
+			hitfid = stdout;
+		} else {
+			fprintf(stderr, "Using HITS output file %s\n", hitfname);
+			fopenout(hitfname, hitfid);
+		}
+		hits_header_init(&hitshdr);
+		hitshdr.field_file_name = fieldfname;
+		hitshdr.tree_file_name = treefname;
+		hitshdr.nfields = numfields;
+		hitshdr.ncodes = codekd->ndata;
+		hitshdr.nstars = numstars;
+		hitshdr.codetol = codetol;
+		hitshdr.agreetol = AgreeArcSec;
+		hitshdr.parity = ParityFlip;
+		hitshdr.min_matches_to_agree = min_matches_to_agree;
+		hitshdr.max_matches_needed = max_matches_needed;
+		hits_write_header(hitfid, &hitshdr);
 
-    signal(SIGINT, signal_handler);
+		signal(SIGINT, signal_handler);
 
+		numsolved = solve_fields(thefields, maxfieldobjs, fieldtries,
+								 codekd, codetol);
+		fprintf(stderr, "\nDone (solved %lu).\n", numsolved);
 
-    numsolved = solve_fields(thefields, fieldobjs, fieldtries,
-							 codekd, codetol);
-    fprintf(stderr, "\nDone (solved %lu).\n", numsolved);
+		// finish up HITS file...
+		hits_write_tailer(hitfid);
+		if (interactive)
+			fflush(hitfid);
+		else
+			fclose(hitfid);
 
+		// clean up...
+		if (resumefid)
+			fclose(resumefid);
+		if (suspendfid)
+			fclose(suspendfid);
 
-	// finish up HITS file...
-	hits_write_tailer(hitfid);
-    fclose(hitfid);
+		signal(SIGINT, SIG_DFL);
 
-	// clean up...
-	if (resumefid)
-		fclose(resumefid);
-	if (suspendfid)
-		fclose(suspendfid);
+		if (rename_suspend) {
+			if (rename(suspendfname, resumefname)) {
+				fprintf(stderr, "Couldn't rename suspend file from %s to %s: %s\n",
+						suspendfname, resumefname, strerror(errno));
+			}
+		}
+
+	} while (interactive);
+
+	free_fn(hitfname);
+	free_fn(fieldfname);
+	free_fn(treefname);
+
+	free(suspendfname);
+	free(resumefname);
+
     free_xyarray(thefields);
     if (use_mmap) {
 		munmap(mmapped_tree, mmapped_tree_size);
@@ -413,6 +457,56 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+int get_next_assignment() {
+	for (;;) {
+		char buffer[1024];
+		fprintf(stderr,
+				"\nAwaiting your command:\n"
+				"    suspend <suspend-file-name>\n"
+				"    resume  <resume-file-name>\n"
+				"    field <field-number>\n"
+				"    depth <maximum-field-object>\n"
+				"    run\n");
+		if (!fgets(buffer, sizeof(buffer), stdin)) {
+			return -1;
+		}
+		// strip off newline
+		if (buffer[strlen(buffer) - 1] == '\n')
+			buffer[strlen(buffer) - 1] = '\0';
+		fprintf(stderr, "Command: %s\n", buffer);
+
+		if (strncmp(buffer, "suspend ", 8) == 0) {
+			free(suspendfname);
+			suspendfname = strdup(buffer + 8);
+			fprintf(stderr, "Set suspend file to \"%s\".\n", suspendfname);
+			if (strlen(suspendfname) == 0) {
+				free(suspendfname);
+				suspendfname = NULL;
+			}
+		} else if (strncmp(buffer, "resume ", 7) == 0) {
+			free(resumefname);
+			resumefname = strdup(buffer + 7);
+			fprintf(stderr, "Set resume file to \"%s\".\n", resumefname);
+			if (strlen(resumefname) == 0) {
+				free(resumefname);
+				resumefname = NULL;
+			}
+		} else if (strncmp(buffer, "field ", 6) == 0) {
+			int fld = atoi(buffer + 6);
+			fprintf(stderr, "Set field to %i\n", fld);
+			firstfield = fld;
+			lastfield = fld + 1;
+		} else if (strncmp(buffer, "depth ", 6) == 0) {
+			int d = atoi(buffer + 6);
+			fprintf(stderr, "Set depth to %i\n", d);
+			maxfieldobjs = d;
+		} else if (strncmp(buffer, "run", 3) == 0) {
+			return 0;
+		} else {
+			fprintf(stderr, "I didn't understand that command.\n");
+		}
+	}
+}
 
 void signal_handler(int sig) {
     if (sig != SIGINT) return;
@@ -441,6 +535,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
     sidx numxy;
 	blocklist* hitlist = blocklist_pointer_new(256);
 	solver_params params;
+	int last;
 
 	params.codekd = codekd;
 	params.endobj = maxfieldobjs;
@@ -453,8 +548,13 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	params.quitNow = FALSE;
 	p_quitnow = &params.quitNow;
 
+	last = dyv_array_size(thefields);
+	if ((lastfield != -1) && (last > lastfield)) {
+		last = lastfield;
+	}
+
     numsolved = 0;
-    for (ii=firstfield; ii< dyv_array_size(thefields); ii++) {
+    for (ii=firstfield; ii<last; ii++) {
 		hits_field fieldhdr;
 		blocklist* bestlist;
 		blocklist* allocated_list = NULL;
