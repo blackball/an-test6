@@ -18,13 +18,13 @@
 
 void printHelp(char* progname) {
 	printf("usage: %s -f <index-prefix> -o <field-prefix> "
-		   "-s <state-directory> -w <work-file> -i <index>\n"
+		   "-s <state-directory> -w <work-file> -i <index-number>\n"
 		   "  [-h] (help)\n\n", progname);
 }
 
 typedef unsigned int uint;
 
-int Nindexes = 12;
+int Nhealpix = 12;
 
 struct workstatus {
 	// if non-zero, some worker is working on this.
@@ -95,10 +95,9 @@ int main(int argc, char *argv[]) {
 	char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 	char *quadfname = NULL, *catfname = NULL;
 
-	char* indexname = NULL;
-	char* fieldname = NULL;
+	//char* indexname = NULL;
 	char* statedir = "";
-	char* workfn = NULL;
+	char* workfname = NULL;
 	FILE* workfile;
 	int Nfields;
 	FILE* fieldfid = NULL;
@@ -110,7 +109,7 @@ int main(int argc, char *argv[]) {
 	xyarray* fields = NULL;
 	workstatus* work;
 	int i;
-	int index = -1;
+	int healpix = -1;
 	char parity = 0;
 	//xyarray* subfields;
 	xy* cornerpix = NULL;
@@ -140,10 +139,10 @@ int main(int argc, char *argv[]) {
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
 		case 'i':
-			index = atoi(optarg);
+			healpix = atoi(optarg);
 			break;
 		case 'f':
-			indexname = optarg;
+			//indexname = optarg;
 			treefname = mk_ctree2fn(optarg);
 			quadfname = mk_quadfn(optarg);
 			catfname = mk_catfn(optarg);
@@ -152,7 +151,6 @@ int main(int argc, char *argv[]) {
 			fieldfname = mk_fieldfn(optarg);
 			if (!hitfname)
 				hitfname = mk_hitfn(optarg);
-			fieldname = optarg;
 			break;
 		case 's':
 			statedir = optarg;
@@ -173,7 +171,7 @@ int main(int argc, char *argv[]) {
 			max_matches_needed = (unsigned int) strtol(optarg, NULL, 0);
 			break;
 		case 'w':
-			workfn = optarg;
+			workfname = optarg;
 			break;
 		case 'F':
 			maxobjs = atoi(optarg);
@@ -187,18 +185,13 @@ int main(int argc, char *argv[]) {
 			exit(0);
 		}
 
-	if (!indexname || !fieldname || !workfn) {
-		printHelp(argv[0]);
-		exit(-1);
-	}
-
-    if (treefname == NULL || fieldfname == NULL || codetol < 0) {
+    if (!treefname || !fieldfname || !workfname || (codetol < 0.0)) {
 		printHelp(argv[0]);
 		exit(-1);
     }
 
-	if (index == -1) {
-		printf("You must specify the index number (-i)\n");
+	if (healpix == -1) {
+		printf("You must specify the index (healpix) number (-i)\n");
 		printHelp(argv[0]);
 		exit(-1);
 	}
@@ -284,7 +277,6 @@ int main(int argc, char *argv[]) {
 			codekd->ndata, codekd->nnodes, codekd->ndim);
 
 	// read the fields (to find Nfields)
-	//fopenin(fieldname, fieldfid);
 	fopenin(fieldfname, fieldfid);
 	fields = readxy(fieldfid, parity);
 	if (!fields) {
@@ -295,19 +287,20 @@ int main(int argc, char *argv[]) {
 	//free_xy(fields);
 	fclose(fieldfid);
 
-	workfile = fopen(workfn, "w+b");
+	workfile = fopen(workfname, "w+b");
 	if (!workfile) {
 		fprintf(stderr, "Couldn't open work file %s: %s\n",
-			   workfn, strerror(errno));
+			   workfname, strerror(errno));
 		exit(-1);
 	}
 	// check if the file existed.
-	workfilesize = Nfields * Nindexes * sizeof(workstatus);
+	workfilesize = Nfields * Nhealpix * sizeof(workstatus);
 
 	lock_workfile(workfile, workfilesize);
 
 	fseeko(workfile, 0, SEEK_END);
 	offset = ftello(workfile);
+	fprintf(stderr, "Workfile is %i bytes long.\n", (int)offset);
 	if (!offset) {
 		char blank[sizeof(workstatus)];
 
@@ -315,7 +308,7 @@ int main(int argc, char *argv[]) {
 
 		fseeko(workfile, 0, SEEK_SET);
 		memset(blank, 0, sizeof(workstatus));
-		for (i=0; i<(Nfields * Nindexes); i++) {
+		for (i=0; i<(Nfields * Nhealpix); i++) {
 			fwrite(blank, 1, sizeof(workstatus), workfile);
 		}
 		/*
@@ -337,9 +330,10 @@ int main(int argc, char *argv[]) {
 	mmapped_work_size = workfilesize;
 	mmapped_work = mmap(0, workfilesize, PROT_READ | PROT_WRITE,
 						MAP_SHARED, fileno(workfile), 0);
+	//fclose(workfile);
 	if (mmapped_work == MAP_FAILED) {
 		fprintf(stderr, "Failed to mmap work file: %s\n", strerror(errno));
-		goto cleanup;
+		exit(-1);
 	}
 	work = (workstatus*)mmapped_work;
 
@@ -350,9 +344,9 @@ int main(int argc, char *argv[]) {
 		//fseeko(workfile, 0, SEEK_SET);
 
 		for (i=0; i<Nfields; i++) {
-			for (j=0; j<Nindexes; j++) {
+			for (j=0; j<Nhealpix; j++) {
 				workstatus* w;
-				w = work + i*Nindexes + j;
+				w = work + i*Nhealpix + j;
 				w->start_time = 0;
 				w->healpix = j;
 				w->field = i;
@@ -385,6 +379,9 @@ int main(int argc, char *argv[]) {
 		int ninds;
 		int nextdepth;
 
+		int all_objsused[Natonce];
+		int all_mostagree[Natonce];
+
 		// at each step, we find a set of fields which
 		// have the smallest "nobjects" value, and which
 		// have "start_time" = 0, and also have no other
@@ -398,22 +395,22 @@ int main(int argc, char *argv[]) {
 		ninds = 0;
 		d = 1000000;
 		for (i=0; i<Nfields; i++) {
-			workstatus* w = work + i*Nindexes;
-			if ((w[index].nobjects > d) ||
-				(w[index].start_time)) {
+			workstatus* w = work + i*Nhealpix;
+			if ((w[healpix].nobjects > d) ||
+				(w[healpix].start_time)) {
 				continue;
 			}
 			solved = FALSE;
-			for (j=0; j<Nindexes; j++) {
+			for (j=0; j<Nhealpix; j++) {
 				if (w[j].nagree > Nagree) {
 					solved = TRUE;
 					break;
 				}
 			}
 			if (solved) continue;
-			if (w[index].nobjects == d) {
+			if (w[healpix].nobjects == d) {
 			} else {
-				d = w[index].nobjects;
+				d = w[healpix].nobjects;
 				ninds = 0;
 			}
 			if (ninds < Natonce) {
@@ -424,15 +421,17 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "Smallest depth: %i.  Ninds %i\n", d, ninds);
 
-		if (d < depths[0]) {
-			nextdepth = 0;
-		} else {
-			// find the next-highest depth.
-			for (nextdepth=0; nextdepth<Ndepths; nextdepth++) {
-				if (d > depths[nextdepth])
-					break;
-			}
+		/*
+		  if (d < depths[0]) {
+		  nextdepth = 0;
+		  } else {
+		*/
+		// find the next-highest depth.
+		for (nextdepth=0; nextdepth<Ndepths; nextdepth++) {
+			if (d < depths[nextdepth])
+				break;
 		}
+		//}
 		fprintf(stderr, "Next depth %i\n", nextdepth);
 		if (nextdepth == Ndepths) {
 			break;
@@ -444,7 +443,7 @@ int main(int argc, char *argv[]) {
 		// drop the lock, and begin working on them.
 		now = time(NULL);
 		for  (i=0; i<ninds; i++) {
-			work[inds[i]*Nindexes + index].start_time = now;
+			work[inds[i]*Nhealpix + healpix].start_time = now;
 		}
 
 		synchronize_workfile(mmapped_work, mmapped_work_size);
@@ -461,7 +460,7 @@ int main(int argc, char *argv[]) {
 			bool quitNow = FALSE;
 			int ntries;
 
-			workstatus* w = work + inds[i]*Nindexes + index;
+			workstatus* w = work + inds[i]*Nhealpix + healpix;
 			char resumefn[256];
 			char suspendfn[256];
 
@@ -492,7 +491,6 @@ int main(int argc, char *argv[]) {
 				char oldtreename[256];
 				uint nfields;
 
-				//fopenin(resumefn, resumefid);
 				resumefid = fopen(resumefn, "r");
 				if (!resumefid && (errno == ENOENT)) {
 					fprintf(stderr, "Resume file %s does not exist; starting from the beginning.\n", resumefn);
@@ -536,9 +534,6 @@ int main(int argc, char *argv[]) {
 				fclose(resumefid);
 			} while (0);
 
-			// create xyarray of the fields
-			// solve_fields(...)
-
 			ntries = (int)numtries;
 			
 			solve_field(xya_ref(fields, w->field),
@@ -549,11 +544,66 @@ int main(int argc, char *argv[]) {
 						&ntries, &nummatches, &mostagree,
 						cornerpix, &objsused);
 			numtries = ntries;
+
+			fprintf(stderr, "\n");
+
+			all_objsused[i] = objsused;
+			all_mostagree[i] = mostagree;
+
+			do {
+				// write the suspend file.
+				FILE* suspendfid;
+				blocklist* tmplist;
+				int i, N, j, M;
+
+				fprintf(stderr, "Writing suspend file %s...\n", suspendfn);
+				fopenout(suspendfn, suspendfid);
+				suspend_write_header(suspendfid, index_scale, fieldfname,
+									 treefname, 1);
+				tmplist = blocklist_pointer_new(256);
+				N = blocklist_count(hitlist);
+				for (i=0; i<N; i++) {
+					blocklist* lst = (blocklist*)blocklist_pointer_access(hitlist, i);
+					if (!lst) continue;
+					M = blocklist_count(lst);
+					for (j=0; j<M; j++) {
+						MatchObj* mo = (MatchObj*)blocklist_pointer_access(lst, j);
+						blocklist_pointer_append(tmplist, mo);
+					}
+				}
+
+				suspend_write_field(suspendfid, w->field, objsused,
+									numtries, tmplist);
+
+				blocklist_pointer_free(tmplist);
+
+				fclose(suspendfid);
+
+				// rename the new suspend file to the resume file name.
+				fprintf(stderr, "Renaming suspend file %s to %s ...\n", suspendfn, resumefn);
+				if (rename(suspendfn, resumefn)) {
+					fprintf(stderr, "Couldn't rename suspend file %s to resume file %s: %s\n",
+							suspendfn, resumefn, strerror(errno));
+				}
+				fprintf(stderr, "Done.\n");
+			} while (0);
+
+			/*
+			  {
+			  blocklist* bestlist = get_best_hits(hitlist);
+			  if (!bestlist) {
+			  mostagree = 0;
+			*/
+
+			/*
+			  if (mostagree > min_matches_to_agree) {
+			  // write hits entry
+			  }
+			*/
+
+			clear_hitlist(hitlist);
 		}
 
-		// write the suspend file
-
-		// rename the new suspend file to the resume file name.
 
 		/*
 		  for (i=0; i<Nfields; i++) {
@@ -585,10 +635,10 @@ int main(int argc, char *argv[]) {
 		lock_workfile(workfile, workfilesize);
 
 		for  (i=0; i<ninds; i++) {
-			workstatus* w = work + inds[i]*Nindexes + index;
+			workstatus* w = work + inds[i]*Nhealpix + healpix;
 			w->start_time = 0;
-			// w->nobjects = ...;
-			// w->nagree = ...;
+			w->nobjects = all_objsused[i];
+			w->nagree = all_mostagree[i];
 		}
 	}
 
@@ -611,11 +661,9 @@ int main(int argc, char *argv[]) {
 		fclose(catfid);
     }
 
- cleanup:
 	if (fields)
 		free_xyarray(fields);
 
-	//fprintf(stderr, "Unlocking work file...\n");
 	unlock_workfile(workfile, workfilesize);
 
 	fclose(workfile);
@@ -623,6 +671,24 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+blocklist* get_best_hits(blocklist* hitlist) {
+    int i, N;
+    int bestnum;
+	blocklist* bestlist;
+	bestnum = 0;
+	bestlist = NULL;
+    N = blocklist_count(hitlist);
+    for (i=0; i<N; i++) {
+		int M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
+		M = blocklist_count(hits);
+		if (M > bestnum) {
+			bestnum = M;
+			bestlist = hits;
+		}
+	}
+	return bestlist;
+}
 
 void clear_hitlist(blocklist* hitlist) {
     int i, N;
