@@ -387,7 +387,6 @@ int main(int argc, char *argv[]) {
 			char oldfieldname[256];
 			char oldtreename[256];
 			uint nfields;
-			//fopenin(resumefname, resumefid);
 			resumefid = fopen(resumefname, "rb");
 			if (!resumefid) {
 				fprintf(stderr, "Couldn't open resume file %s: %s\n",
@@ -399,7 +398,6 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "Starting from scratch.\n");
 					fclose(resumefid);
 					resumefid = NULL;
-					//exit(-1);
 				}
 			}
 		}
@@ -493,7 +491,9 @@ int get_next_assignment() {
 				"    resume  <resume-file-name>\n"
 				"    field <field-number>\n"
 				"    depth <maximum-field-object>\n"
-				"    run\n");
+				"    run\n"
+				"    quit\n");
+		fflush(stderr);
 		if (!fgets(buffer, sizeof(buffer), stdin)) {
 			return -1;
 		}
@@ -529,6 +529,8 @@ int get_next_assignment() {
 			maxfieldobjs = d;
 		} else if (strncmp(buffer, "run", 3) == 0) {
 			return 0;
+		} else if (strncmp(buffer, "quit", 4) == 0) {
+			return 1;
 		} else {
 			fprintf(stderr, "I didn't understand that command.\n");
 		}
