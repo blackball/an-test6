@@ -24,6 +24,7 @@
 #include "solver2_callbacks.h"
 #include "hitsfile.h"
 #include "suspend.h"
+#include "hitlist.h"
 
 #define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:a:b:IL:"
 const char HelpString[] =
@@ -51,16 +52,12 @@ const char HelpString[] =
 #define DEFAULT_PARITY_FLIP 0
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
-				  kdtree_t *codekd, double codetol);
+				  kdtree_t *codekd, double codetol, hitlist* hits);
 
-blocklist* get_best_hits(blocklist* hitlist);
-
-void debugging_gather_hits(blocklist* hitlist, blocklist* outputlist);
+void debugging_gather_hits(hitlist* hits, blocklist* outputlist);
 
 int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 						 int* p_ok);
-
-void clear_hitlist(blocklist* hitlist);
 
 int get_next_assignment();
 
@@ -131,6 +128,7 @@ int main(int argc, char *argv[]) {
 
 	off_t endoffset;
 	hits_header hitshdr;
+	hitlist* hitlist;
 
     if (argc <= 4) {
 		fprintf(stderr, HelpString);
@@ -347,6 +345,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
 			numfields, codetol, AgreeArcSec);
 
+	hitlist = hitlist_new();
+
 	do {
 
 		if (interactive) {
@@ -408,7 +408,7 @@ int main(int argc, char *argv[]) {
 		signal(SIGINT, signal_handler);
 
 		numsolved = solve_fields(thefields, maxfieldobjs, fieldtries,
-								 codekd, codetol);
+								 codekd, codetol, hitlist);
 		fprintf(stderr, "\nDone (solved %lu).\n", numsolved);
 
 		// finish up HITS file...
@@ -434,6 +434,8 @@ int main(int argc, char *argv[]) {
 		}
 
 	} while (interactive);
+
+	hitlist_free(hitlist);
 
 	free_fn(hitfname);
 	free_fn(fieldfname);
@@ -526,14 +528,15 @@ void signal_handler(int sig) {
 }
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
-				  kdtree_t *codekd, double codetol) {
+				  kdtree_t *codekd, double codetol, hitlist* hits) {
 	uint resume_fieldnum;
 	uint resume_nobjs;
 	uint resume_ntried;
 	blocklist* resume_hits = NULL;
     qidx numsolved, ii;
     sidx numxy;
-	blocklist* hitlist = blocklist_pointer_new(256);
+	//blocklist* hitlist = blocklist_pointer_new(256);
+	//hitlist* hitlist = hitlist_new();
 	solver_params params;
 	int last;
 
@@ -544,7 +547,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	params.agreetol = AgreeTol;
 	params.codetol = codetol;
 	params.cornerpix = mk_xy(2);
-	params.hitlist = hitlist;
+	params.hits = hits;
 	params.quitNow = FALSE;
 	p_quitnow = &params.quitNow;
 
@@ -588,17 +591,22 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		}
 
 		if (resume_hits && (ii == resume_fieldnum)) {
-			int i;
+			//int i;
 			blocklist* best;
 			// Resume where we left off...
 			params.numtries = resume_ntried;
 			params.startobj = resume_nobjs;
 			params.nummatches = blocklist_count(resume_hits);
-			for (i=0; i<blocklist_count(resume_hits); i++) {
-				MatchObj* mo = (MatchObj*)blocklist_pointer_access(resume_hits, i);
-				solver_add_hit(hitlist, mo, AgreeTol);
-			}
-			best = get_best_hits(hitlist);
+
+			hitlist_add_hits(hits, resume_hits);
+			/*
+			  for (i=0; i<blocklist_count(resume_hits); i++) {
+			  MatchObj* mo = (MatchObj*)blocklist_pointer_access(resume_hits, i);
+			  hitlist_add_hit(hitlist, mo);
+			  }
+			*/
+
+			best = hitlist_get_best(hits);
 			params.mostagree = (best ? blocklist_count(best) : 0);
 			blocklist_pointer_free(resume_hits);
 			resume_hits = NULL;
@@ -611,22 +619,25 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		}
 
 		if (suspendfid) {
-			int i, j, M, N;
-			blocklist* hits = blocklist_pointer_new(256);
-			N = blocklist_count(hitlist);
-			for (i=0; i<N; i++) {
-				blocklist* lst = (blocklist*)blocklist_pointer_access(hitlist, i);
-				M = blocklist_count(lst);
-				for (j=0; j<M; j++) {
-					MatchObj* mo = (MatchObj*)blocklist_pointer_access(lst, j);
-					blocklist_pointer_append(hits, mo);
-				}
-			}
-			suspend_write_field(suspendfid, (uint)ii, params.objsused, params.numtries, hits);
-			blocklist_free(hits);
+			blocklist* all = hitlist_get_all(hits);
+			/*
+			  int i, j, M, N;
+			  blocklist* hits = blocklist_pointer_new(256);
+			  N = blocklist_count(hitlist);
+			  for (i=0; i<N; i++) {
+			  blocklist* lst = (blocklist*)blocklist_pointer_access(hitlist, i);
+			  M = blocklist_count(lst);
+			  for (j=0; j<M; j++) {
+			  MatchObj* mo = (MatchObj*)blocklist_pointer_access(lst, j);
+			  blocklist_pointer_append(hits, mo);
+			  }
+			  }
+			*/
+			suspend_write_field(suspendfid, (uint)ii, params.objsused, params.numtries, all);
+			blocklist_free(all);
 		}
 
-		bestlist = get_best_hits(hitlist);
+		bestlist = hitlist_get_best(hits);
 
 		if (!bestlist)
 			bestnum = 0;
@@ -637,7 +648,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			if (Debugging) {
 				bestlist = blocklist_pointer_new(256);
 				allocated_list = bestlist;
-				debugging_gather_hits(hitlist, bestlist);
+				debugging_gather_hits(hits, bestlist);
 			}
 		} else {
 			numsolved++;
@@ -687,111 +698,71 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		if (allocated_list)
 			blocklist_pointer_free(allocated_list);
 
-		clear_hitlist(hitlist);
+		hitlist_clear(hits);
 		//quitNow = false;
     }
 
 	p_quitnow = NULL;
 
     free_xy(params.cornerpix);
-	blocklist_free(hitlist);
+	//hitlist_free(hitlist);
 
     return numsolved;
 }
 
 
-void debugging_gather_hits(blocklist* hitlist, blocklist* outputlist) {
-	int i, N;
+void debugging_gather_hits(hitlist* hits, blocklist* outputlist) {
+	int j, M;
+	blocklist* all = hitlist_get_all(hits);
+	M = blocklist_count(all);
+	/*
+	  int i, N;
+	  N = blocklist_count(hitlist);
+	  // We're debugging.  Gather all hits within our RA/DEC range.
+	  for (i=0; i<N; i++) {
+	  int j, M;
+	  blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
+	  M = blocklist_count(hits);
+	*/
+	for (j=0; j<M; j++) {
+		double minra, maxra, mindec, maxdec;
+		double x, y, z;
+		//MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
+		MatchObj* mo = (MatchObj*)blocklist_pointer_access(all, j);
+		x = dyv_ref(mo->sMin, 0);
+		y = dyv_ref(mo->sMin, 1);
+		z = dyv_ref(mo->sMin, 2);
+		minra = xy2ra(x, y);
+		mindec = z2dec(z);
+		x = dyv_ref(mo->sMax, 0);
+		y = dyv_ref(mo->sMax, 1);
+		z = dyv_ref(mo->sMax, 2);
+		maxra = xy2ra(x, y);
+		maxdec = z2dec(z);
 
-	N = blocklist_count(hitlist);
-	// We're debugging.  Gather all hits within our RA/DEC range.
-	for (i=0; i<N; i++) {
-		int j, M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-		M = blocklist_count(hits);
-		for (j=0; j<M; j++) {
-			double minra, maxra, mindec, maxdec;
-			double x, y, z;
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
-			x = dyv_ref(mo->sMin, 0);
-			y = dyv_ref(mo->sMin, 1);
-			z = dyv_ref(mo->sMin, 2);
-			minra = xy2ra(x, y);
-			mindec = z2dec(z);
-			x = dyv_ref(mo->sMax, 0);
-			y = dyv_ref(mo->sMax, 1);
-			z = dyv_ref(mo->sMax, 2);
-			maxra = xy2ra(x, y);
-			maxdec = z2dec(z);
+		// convert to degrees - Debugging{RA,Dec}{Min,Max} are specified in degrees.
+		minra  *= 180/M_PI;
+		mindec *= 180/M_PI;
+		maxra  *= 180/M_PI;
+		maxdec *= 180/M_PI;
 
-			// convert to degrees - Debugging{RA,Dec}{Min,Max} are specified in degrees.
-			minra  *= 180/M_PI;
-			mindec *= 180/M_PI;
-			maxra  *= 180/M_PI;
-			maxdec *= 180/M_PI;
+		// If any of the corners are in the range, go for it
+		if ( (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
+			  inrange(minra, DebuggingRAMin, DebuggingRAMax)) ||
+			 (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
+			  inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
+			 (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
+			  inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
+			 (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
+			  inrange(minra, DebuggingRAMin, DebuggingRAMax))) {
 
-			// If any of the corners are in the range, go for it
-			if ( (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
-				  inrange(minra, DebuggingRAMin, DebuggingRAMax)) ||
-				 (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
-				  inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
-				 (inrange(mindec, DebuggingDecMin, DebuggingDecMax) &&
-				  inrange(maxra, DebuggingRAMin, DebuggingRAMax)) ||
-				 (inrange(maxdec, DebuggingDecMin, DebuggingDecMax) &&
-				  inrange(minra, DebuggingRAMin, DebuggingRAMax))) {
-
-				blocklist_pointer_append(outputlist, mo);
-			}
+			blocklist_pointer_append(outputlist, mo);
 		}
+		//}
 	}
 }
 
 
-blocklist* get_best_hits(blocklist* hitlist) {
-    int i, N;
-    int bestnum;
-	blocklist* bestlist;
-
-	bestnum = 0;
-	bestlist = NULL;
-    N = blocklist_count(hitlist);
-	//fprintf(stderr, "radecs=[");
-    for (i=0; i<N; i++) {
-		int M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-		M = blocklist_count(hits);
-		if (M > bestnum) {
-			bestnum = M;
-			bestlist = hits;
-		}
-		/*
-		  if ((M >= min_matches_to_agree) ||
-		  0) {
-		  double ra1, dec1;
-		  double ra2, dec2;
-		  int lim = 1, j;
-		  //if (verbose)
-		  lim=M;
-		  for (j=0; j<lim; j++) {
-		  MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
-		  ra1  = xy2ra(mo->vector[0], mo->vector[1]);
-		  dec1 = z2dec(mo->vector[2]);
-		  ra2  = xy2ra(mo->vector[3], mo->vector[4]);
-		  dec2 = z2dec(mo->vector[5]);
-		  ra1  *= 180.0/M_PI;
-		  dec1 *= 180.0/M_PI;
-		  ra2  *= 180.0/M_PI;
-		  dec2 *= 180.0/M_PI;
-		  //fprintf(stderr, "%.12g,%.12g,%.12g,%.12g;", ra1, dec1, ra2, dec2);
-		  //fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
-		  //fprintf(stderr, "Match list %i: %i hits: ra,dec (%g, %g)\n", i, M, ra1, dec1);
-		  }
-		  }
-		*/
-	}
-	//fprintf(stderr, "];\n");
-	return bestlist;
-}
 
 inline void add_correspondence(sidx* starids, sidx* fieldids,
 							   sidx starid, sidx fieldid,
@@ -831,26 +802,6 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 	}
 	if (p_ok && !ok) *p_ok = 0;
 	return M;
-}
-
-
-void clear_hitlist(blocklist* hitlist) {
-    int i, N;
-    N = blocklist_count(hitlist);
-    for (i=0; i<N; i++) {
-		int j, M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-		M = blocklist_count(hits);
-		for (j=0; j<M; j++) {
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
-
-			free_star(mo->sMin);
-			free_star(mo->sMax);
-			free_MatchObj(mo);
-		}
-		blocklist_pointer_free(hits);
-    }
-    blocklist_remove_all(hitlist);
 }
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {

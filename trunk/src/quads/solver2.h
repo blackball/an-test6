@@ -6,6 +6,7 @@
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
 #include "blocklist.h"
+#include "hitlist.h"
 
 struct solver_params {
 
@@ -22,7 +23,7 @@ struct solver_params {
 
 	// Must be initialized by caller; will contain outputs:
 	xy* cornerpix;
-	blocklist* hitlist;
+	struct hitlist* hits;
 
 	// Outputs:
 	// NOTE: these are only incremented, not initialized.  It's up to
@@ -34,36 +35,6 @@ struct solver_params {
 	int objsused;
 };
 typedef struct solver_params solver_params;
-
-
-typedef struct match_struct {
-    qidx quadno;
-    sidx iA, iB, iC, iD;
-    sidx fA, fB, fC, fD;
-    double code_err;
-    star *sMin, *sMax;
-    double vector[6];
-
-	double* transform;
-	/*
-	  double corners[4];
-	  double starA[3];
-	  double starB[3];
-	  double starC[3];
-	  double starD[3];
-	  double fieldA[2];
-	  double fieldB[2];
-	  double fieldC[2];
-	  double fieldD[2];
-	  int abcdorder;
-	*/
-} MatchObj;
-#define MATCH_VECTOR_SIZE 6
-
-#define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
-#define free_MatchObj(m) free(m)
-
-int solver_add_hit(blocklist* hitlist, MatchObj* mo, double AgreeTol);
 
 void solve_field(solver_params* params);
 
