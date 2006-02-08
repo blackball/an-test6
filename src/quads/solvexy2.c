@@ -387,10 +387,20 @@ int main(int argc, char *argv[]) {
 			char oldfieldname[256];
 			char oldtreename[256];
 			uint nfields;
-			fopenin(resumefname, resumefid);
-			if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
-				fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
-				exit(-1);
+			//fopenin(resumefname, resumefid);
+			resumefid = fopen(resumefname, "rb");
+			if (!resumefid) {
+				fprintf(stderr, "Couldn't open resume file %s: %s\n",
+						resumefname, strerror(errno));
+				fprintf(stderr, "Starting from scratch.\n");
+			} else {
+				if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
+					fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
+					fprintf(stderr, "Starting from scratch.\n");
+					fclose(resumefid);
+					resumefid = NULL;
+					//exit(-1);
+				}
 			}
 		}
 		if (suspendfname) {
