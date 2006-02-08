@@ -3,7 +3,28 @@ typedef blocklist hitlist;
 #define DONT_DEFINE_HITLIST
 #include "hitlist.h"
 
-extern double AgreeTol;
+#define DEFAULT_AGREE_TOL 7.0
+
+double AgreeArcSec = DEFAULT_AGREE_TOL;
+double AgreeTol = 0.0;
+
+char* hitlist_get_parameter_help() {
+	return "   [-m agree_tol(arcsec)]\n";
+}
+
+char* hitlist_get_parameter_options() {
+	return "m:";
+}
+
+int hitlist_process_parameter(char argchar, char* optarg) {
+	switch (argchar) {
+	case 'm':
+		AgreeArcSec = strtod(optarg, NULL);
+		AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
+		break;
+	}
+	return 0;
+}
 
 hitlist* hitlist_new() {
 	return blocklist_pointer_new(256);

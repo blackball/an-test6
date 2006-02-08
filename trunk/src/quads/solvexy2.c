@@ -26,28 +26,33 @@
 #include "suspend.h"
 #include "hitlist.h"
 
-#define OPTIONS "hpef:o:t:m:n:x:d:r:R:D:H:F:T:vS:a:b:IL:"
-const char HelpString[] =
-"solvexy2 -f fname -o fieldname [-m agree_tol(arcsec)] [-t code_tol] [-p]\n"
-"   [-n matches_needed_to_agree] [-x max_matches_needed]\n"
-"   [-F maximum-number-of-field-objects-to-process]\n"
-"   [-T maximum-number-of-field-quads-to-try]\n"
-"   [-H hits-file-name.hits]\n"
-"   [-r minimum-ra-for-debug-output]\n"
-"   [-R maximum-ra-for-debug-output]\n"
-"   [-d minimum-dec-for-debug-output]\n"
-"   [-D maximum-dec-for-debug-output]\n"
-"   [-S first-field]\n"
-"   [-L last-field]\n"
-"   [-a resume-(from)-file]\n"
-"   [-b suspend-(to)-file]\n"
-"   [-I: interactive mode (probably only useful from Python)\n"
-"   -p flips parity\n"
-"   code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n";
+char* OPTIONS = "hpef:o:t:n:x:d:r:R:D:H:F:T:vS:L:a:b:I";
+
+void printHelp(char* progname) {
+	fprintf(stderr, "Usage: %s -f fname -o fieldname\n"
+			"   [-t code_tol]\n"
+			"   [-p] (flip field parity)\n"
+			"   [-n matches_needed_to_agree]\n"
+			"   [-x max_matches_needed]\n"
+			"   [-F maximum-number-of-field-objects-to-process]\n"
+			"   [-T maximum-number-of-field-quads-to-try]\n"
+			"   [-H hits-file-name.hits]\n"
+			"   [-r minimum-ra-for-debug-output]\n"
+			"   [-R maximum-ra-for-debug-output]\n"
+			"   [-d minimum-dec-for-debug-output]\n"
+			"   [-D maximum-dec-for-debug-output]\n"
+			"   [-S first-field]\n"
+			"   [-L last-field]\n"
+			"   [-a resume-from-file]\n"
+			"   [-b suspend-to-file]\n"
+			"   [-I] (interactive mode - probably only useful from Python)\n"
+			"%s"
+			"     code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n",
+			progname, hitlist_get_parameter_help());
+}
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
 #define DEFAULT_MAX_MATCHES_NEEDED 8
-#define DEFAULT_AGREE_TOL 7.0
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP 0
 
@@ -80,11 +85,9 @@ bool use_mmap = TRUE;
 sidx maxstar;
 qidx maxquad;
 
-double AgreeArcSec = DEFAULT_AGREE_TOL;
 char ParityFlip = DEFAULT_PARITY_FLIP;
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 unsigned int max_matches_needed = DEFAULT_MAX_MATCHES_NEEDED;
-double AgreeTol;
 
 double DebuggingRAMin;
 double DebuggingRAMax;
@@ -129,13 +132,27 @@ int main(int argc, char *argv[]) {
 	off_t endoffset;
 	hits_header hitshdr;
 	hitlist* hitlist;
+	char* progname = argv[0];
+	char alloptions[256];
+	char* hitlist_options;
 
     if (argc <= 4) {
-		fprintf(stderr, HelpString);
+		printHelp(progname);
 		return (OPT_ERR);
     }
 
-    while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+	hitlist_options = hitlist_get_parameter_options();
+	sprintf(alloptions, "%s%s", OPTIONS, hitlist_options);
+
+    while ((argchar = getopt (argc, argv, alloptions)) != -1) {
+		char* ind = index(hitlist_options, argchar);
+		if (ind) {
+			if (hitlist_process_parameter(argchar, optarg)) {
+				printHelp(progname);
+				exit(-1);
+			}
+			continue;
+		}
 		switch (argchar) {
 		case 'I':
 			interactive = TRUE;
@@ -204,9 +221,6 @@ int main(int argc, char *argv[]) {
 		case 't':
 			codetol = strtod(optarg, NULL);
 			break;
-		case 'm':
-			AgreeArcSec = strtod(optarg, NULL);
-			break;
 		case 'p':
 			ParityFlip = 1 - ParityFlip;
 			break;
@@ -219,28 +233,28 @@ int main(int argc, char *argv[]) {
 		case '?':
 			fprintf(stderr, "Unknown option `-%c'.\n", optopt);
 		case 'h':
-			fprintf(stderr, HelpString);
+			printHelp(progname);
 			return (HELP_ERR);
 		default:
 			return (OPT_ERR);
 		}
-
-    if (Debugging != 0 && Debugging != 4) {
+	}
+	if (Debugging != 0 && Debugging != 4) {
 		fprintf(stderr, "When debugging need all of -d -D -r -R\n");
 		return (OPT_ERR);
-    }
+	}
 
-    if (treefname == NULL || fieldfname == NULL || codetol < 0) {
-		fprintf(stderr, HelpString);
+	if (treefname == NULL || fieldfname == NULL || codetol < 0) {
+		printHelp(progname);
 		return (OPT_ERR);
-    }
+	}
 
-    if (optind < argc) {
+	if (optind < argc) {
 		for (argidx = optind; argidx < argc; argidx++)
 			fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-		fprintf(stderr, HelpString);
+		printHelp(progname);
 		return (OPT_ERR);
-    }
+	}
 
 	/*
 	  fprintf(stderr, "sizeof(int)    = %i\n", sizeof(int));
@@ -251,43 +265,43 @@ int main(int argc, char *argv[]) {
 	  fprintf(stderr, "sizeof(double) = %i\n", sizeof(double));
 	*/
 
-    fprintf(stderr, "solvexy2: solving fields in %s using %s\n",
+	fprintf(stderr, "solvexy2: solving fields in %s using %s\n",
 			fieldfname, treefname);
 
 	// Read .xyls file...
-    fprintf(stderr, "  Reading fields...");
-    fflush(stderr);
-    fopenin(fieldfname, fieldfid);
-    thefields = readxy(fieldfid, ParityFlip);
-    fclose(fieldfid);
-    if (thefields == NULL)
+	fprintf(stderr, "  Reading fields...");
+	fflush(stderr);
+	fopenin(fieldfname, fieldfid);
+	thefields = readxy(fieldfid, ParityFlip);
+	fclose(fieldfid);
+	if (thefields == NULL)
 		return (1);
-    numfields = (qidx)thefields->size;
-    fprintf(stderr, "got %lu fields.\n", numfields);
-    if (ParityFlip)
+	numfields = (qidx)thefields->size;
+	fprintf(stderr, "got %lu fields.\n", numfields);
+	if (ParityFlip)
 		fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 
 
 	// Read .ckdt2 file...
-    fprintf(stderr, "  Reading code KD tree from %s...", treefname);
-    fflush(stderr);
-    fopenin(treefname, treefid);
-    codekd = kdtree_read(treefid, use_mmap, &mmapped_tree, &mmapped_tree_size);
-    if (!codekd)
+	fprintf(stderr, "  Reading code KD tree from %s...", treefname);
+	fflush(stderr);
+	fopenin(treefname, treefid);
+	codekd = kdtree_read(treefid, use_mmap, &mmapped_tree, &mmapped_tree_size);
+	if (!codekd)
 		return (2);
-    fclose(treefid);
-    fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
+	fclose(treefid);
+	fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 			codekd->ndata, codekd->nnodes, codekd->ndim);
 
 
 	// Read .quad file...
-    fopenin(quadfname, quadfid);
-    free_fn(quadfname);
-    readStatus = read_quad_header(quadfid, &numquads, &numstars, 
+	fopenin(quadfname, quadfid);
+	free_fn(quadfname);
+	readStatus = read_quad_header(quadfid, &numquads, &numstars, 
 								  &Dim_Quads, &index_scale);
-    if (readStatus == READ_FAIL)
+	if (readStatus == READ_FAIL)
 		return (3);
-    qposmarker = ftello(quadfid);
+	qposmarker = ftello(quadfid);
 	// check that the quads file is the right size.
 	fseeko(quadfid, 0, SEEK_END);
 	endoffset = ftello(quadfid) - qposmarker;
@@ -312,14 +326,14 @@ int main(int argc, char *argv[]) {
 
 
 	// Read .objs file...
-    fopenin(catfname, catfid);
-    free_fn(catfname);
-    readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
+	fopenin(catfname, catfid);
+	free_fn(catfname);
+	readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
 								  &ramin, &ramax, &decmin, &decmax);
-    if (readStatus == READ_FAIL) {
+	if (readStatus == READ_FAIL) {
 		exit(-1);
 	}
-    cposmarker = ftello(catfid);
+	cposmarker = ftello(catfid);
 	// check that the catalogue file is the right size.
 	fseeko(catfid, 0, SEEK_END);
 	endoffset = ftello(catfid) - cposmarker;
@@ -341,9 +355,10 @@ int main(int argc, char *argv[]) {
 		catalogue = (double*)(((char*)(mmap_cat)) + cposmarker);
 	}
 
-    AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
-    fprintf(stderr, "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
-			numfields, codetol, AgreeArcSec);
+	/*
+	  fprintf(stderr, "  Solving %lu fields (code_match_tol=%lg,agreement_tol=%lg arcsec)...\n",
+	  numfields, codetol, AgreeArcSec);
+	*/
 
 	hitlist = hitlist_new();
 
@@ -399,7 +414,7 @@ int main(int argc, char *argv[]) {
 		hitshdr.ncodes = codekd->ndata;
 		hitshdr.nstars = numstars;
 		hitshdr.codetol = codetol;
-		hitshdr.agreetol = AgreeArcSec;
+		//hitshdr.agreetol = AgreeArcSec;
 		hitshdr.parity = ParityFlip;
 		hitshdr.min_matches_to_agree = min_matches_to_agree;
 		hitshdr.max_matches_needed = max_matches_needed;
@@ -444,19 +459,19 @@ int main(int argc, char *argv[]) {
 	free(suspendfname);
 	free(resumefname);
 
-    free_xyarray(thefields);
-    if (use_mmap) {
+	free_xyarray(thefields);
+	if (use_mmap) {
 		munmap(mmapped_tree, mmapped_tree_size);
 		free(codekd);
 		munmap(mmap_quad, mmap_quad_size);
 		munmap(mmap_cat, mmap_cat_size);
-    } else {
+	} else {
 		kdtree_free(codekd);
 		fclose(quadfid);
 		fclose(catfid);
-    }
+	}
 
-    return 0;
+	return 0;
 }
 
 int get_next_assignment() {
@@ -511,7 +526,7 @@ int get_next_assignment() {
 }
 
 void signal_handler(int sig) {
-    if (sig != SIGINT) return;
+	if (sig != SIGINT) return;
 	nctrlcs++;
 	switch (nctrlcs) {
 	case 1:
@@ -533,8 +548,8 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	uint resume_nobjs;
 	uint resume_ntried;
 	blocklist* resume_hits = NULL;
-    qidx numsolved, ii;
-    sidx numxy;
+	qidx numsolved, ii;
+	sidx numxy;
 	//blocklist* hitlist = blocklist_pointer_new(256);
 	//hitlist* hitlist = hitlist_new();
 	solver_params params;
@@ -544,7 +559,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	params.endobj = maxfieldobjs;
 	params.maxtries = maxtries;
 	params.max_matches_needed = max_matches_needed;
-	params.agreetol = AgreeTol;
+	//params.agreetol = AgreeTol;
 	params.codetol = codetol;
 	params.cornerpix = mk_xy(2);
 	params.hits = hits;
@@ -556,8 +571,8 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		last = lastfield;
 	}
 
-    numsolved = 0;
-    for (ii=firstfield; ii<last; ii++) {
+	numsolved = 0;
+	for (ii=firstfield; ii<last; ii++) {
 		hits_field fieldhdr;
 		blocklist* bestlist;
 		blocklist* allocated_list = NULL;
@@ -700,14 +715,14 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 		hitlist_clear(hits);
 		//quitNow = false;
-    }
+	}
 
 	p_quitnow = NULL;
 
-    free_xy(params.cornerpix);
+	free_xy(params.cornerpix);
 	//hitlist_free(hitlist);
 
-    return numsolved;
+	return numsolved;
 }
 
 
@@ -822,7 +837,7 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
 }
 
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
-                   sidx iA, sidx iB, sidx iC, sidx iD)
+				   sidx iA, sidx iB, sidx iC, sidx iD)
 {
 	if (iA >= maxstar) {
 		fprintf(stderr, "iA %lu > maxstar %lu\n", iA, maxstar);
@@ -856,3 +871,4 @@ void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 	}
 }
 
+	

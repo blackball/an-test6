@@ -3,6 +3,16 @@ typedef blocklist hitlist;
 #define DONT_DEFINE_HITLIST
 #include "hitlist.h"
 
+char* hitlist_get_parameter_help() {
+	return "";
+}
+char* hitlist_get_parameter_options() {
+	return "";
+}
+int hitlist_process_parameter(char argchar, char* optarg) {
+	return 0;
+}
+
 hitlist* hitlist_new() {
 	return blocklist_pointer_new(256);
 }

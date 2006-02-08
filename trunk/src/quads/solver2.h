@@ -17,7 +17,7 @@ struct solver_params {
 	int endobj;
 	int maxtries;
 	int max_matches_needed;
-	double agreetol;
+	//double agreetol;
 	double codetol;
 	bool quitNow;
 
