@@ -39,12 +39,13 @@ int suspend_read_header(FILE* fid, double* index_scale, char* fieldfname,
 	unsigned int endian;
 	char fn[256];
 	if (!err) err |= read_u32(fid, &magic);
+	if (!err) err |= read_u32_native(fid, &endian);
+	if (err) goto readerr;
 	if (magic != SUSPEND_MAGIC) {
 		fprintf(stderr, "Suspend file does not contain the correct magic number (0x%x)\n",
 				SUSPEND_MAGIC);
 		return 1;
 	}
-	if (!err) err |= read_u32_native(fid, &endian);
 	if (endian != ENDIAN_DETECTOR) {
 		fprintf(stderr, "Suspend file: endianness looks wrong: 0x%x vs 0x%x\n",
 				endian, ENDIAN_DETECTOR);
@@ -61,6 +62,7 @@ int suspend_read_header(FILE* fid, double* index_scale, char* fieldfname,
 		strcpy(treefname, fn);
 
 	if (!err) err |= read_u32_native(fid, nfields);
+		readerr:
 	if (err) {
 		fprintf(stderr, "Couldn't read suspend file header.\n");
 	}
