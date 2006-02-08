@@ -9,6 +9,11 @@
 typedef void hitlist;
 #endif
 
+char* hitlist_get_parameter_help();
+char* hitlist_get_parameter_options();
+int hitlist_process_parameter(char argchar, char* optarg);
+
+
 hitlist* hitlist_new();
 
 void hitlist_clear(hitlist* hlist);

@@ -10,6 +10,7 @@ struct hitsfileheader {
 	unsigned int ncodes;
 	unsigned int nstars;
 	double codetol;
+	// DEPRECATE: agreetol
 	double agreetol;
 	bool parity;
 	unsigned int min_matches_to_agree;

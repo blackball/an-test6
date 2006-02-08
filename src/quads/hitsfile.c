@@ -7,6 +7,7 @@ void hits_header_init(hits_header* h) {
 	h->ncodes = 0;
 	h->nstars = 0;
 	h->codetol = 0.0;
+	// DEPRECATE
 	h->agreetol = 0.0;
 	h->parity = FALSE;
 	h->min_matches_to_agree = 0;
@@ -37,6 +38,7 @@ void hits_write_header(FILE* fid, hits_header* h) {
 	fprintf(fid, "ncodes = %u,\n", h->ncodes);
 	fprintf(fid, "nstars = %u,\n", h->nstars);
 	fprintf(fid, "code_tol = %g,\n", h->codetol);
+	// DEPRECATE
 	fprintf(fid, "agree_tol = %g,\n", h->agreetol);
 	fprintf(fid, "parity_flip = %s,\n", (h->parity ? "True" : "False"));
 	if (h->parity)
