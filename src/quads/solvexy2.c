@@ -100,6 +100,7 @@ int lastfield = -1;
 bool interactive = FALSE;
 bool rename_suspend;
 int maxfieldobjs = 0;
+int* list_of_fields = NULL;
 
 int nctrlcs = 0;
 bool *p_quitnow = NULL;
@@ -433,6 +434,13 @@ int main(int argc, char *argv[]) {
 		numsolved = solve_fields(thefields, maxfieldobjs, fieldtries,
 								 codekd, codetol, hitlist);
 		fprintf(stderr, "\nDone (solved %lu).\n", numsolved);
+		fprintf(stderr, "Done solving.\n");
+		fflush(stderr);
+
+		if (list_of_fields) {
+			free(list_of_fields);
+			list_of_fields = NULL;
+		}
 
 		// finish up HITS file...
 		hits_write_tailer(hitfid);
@@ -484,15 +492,8 @@ int main(int argc, char *argv[]) {
 
 int get_next_assignment() {
 	for (;;) {
-		char buffer[1024];
-		fprintf(stderr,
-				"\nAwaiting your command:\n"
-				"    suspend <suspend-file-name>\n"
-				"    resume  <resume-file-name>\n"
-				"    field <field-number>\n"
-				"    depth <maximum-field-object>\n"
-				"    run\n"
-				"    quit\n");
+		char buffer[10240];
+		fprintf(stderr, "\nAwaiting your command:\n");
 		fflush(stderr);
 		if (!fgets(buffer, sizeof(buffer), stdin)) {
 			return -1;
@@ -501,8 +502,20 @@ int get_next_assignment() {
 		if (buffer[strlen(buffer) - 1] == '\n')
 			buffer[strlen(buffer) - 1] = '\0';
 		fprintf(stderr, "Command: %s\n", buffer);
+		fflush(stderr);
 
-		if (strncmp(buffer, "suspend ", 8) == 0) {
+		if (strncmp(buffer, "help", 4) == 0) {
+			fprintf(stderr, "Commands:\n"
+					"    suspend <suspend-file-name>\n"
+					"    resume  <resume-file-name>\n"
+					"    field <field-number>\n"
+					"    fields <field-number> <field-number> ...]\n"
+					"    depth <maximum-field-object>\n"
+					"    run\n"
+					"    quit\n"
+					"    help\n");
+			fflush(stderr);
+		} else if (strncmp(buffer, "suspend ", 8) == 0) {
 			free(suspendfname);
 			suspendfname = strdup(buffer + 8);
 			fprintf(stderr, "Set suspend file to \"%s\".\n", suspendfname);
@@ -520,19 +533,51 @@ int get_next_assignment() {
 			}
 		} else if (strncmp(buffer, "field ", 6) == 0) {
 			int fld = atoi(buffer + 6);
-			fprintf(stderr, "Set field to %i\n", fld);
 			firstfield = fld;
 			lastfield = fld + 1;
+			fprintf(stderr, "Set field to %i\n", fld);
+			fflush(stderr);
+		} else if (strncmp(buffer, "fields ", 7) == 0) {
+			char* str = buffer + 7;
+			char* endp;
+			int nflds;
+			blocklist* flds = blocklist_int_new(256);
+			fprintf(stderr, "Addings fields: ");
+			fflush(stderr);
+			for (;;) {
+				int fld = strtol(str, &endp, 10);
+				if (str == endp) {
+					// non-numeric value
+					fprintf(stderr, "\nCouldn't parse: %.20s [etc]\n", str);
+					break;
+				}
+				blocklist_int_append(flds, fld);
+				fprintf(stderr, "%i ", fld);
+				fflush(stderr);
+				if (*endp == '\0')
+					// end of string
+					break;
+				str = endp + 1;
+			}
+			nflds = blocklist_count(flds);
+			list_of_fields = (int*)malloc(nflds * sizeof(int));
+			blocklist_int_copy(flds, 0, nflds, list_of_fields);
+			firstfield = 0;
+			lastfield = nflds;
+			fprintf(stderr, "\nAdded %i fields.\n", nflds);
+			fflush(stderr);
 		} else if (strncmp(buffer, "depth ", 6) == 0) {
 			int d = atoi(buffer + 6);
-			fprintf(stderr, "Set depth to %i\n", d);
 			maxfieldobjs = d;
+			fprintf(stderr, "Set depth to %i\n", d);
+			fflush(stderr);
 		} else if (strncmp(buffer, "run", 3) == 0) {
 			return 0;
 		} else if (strncmp(buffer, "quit", 4) == 0) {
 			return 1;
 		} else {
 			fprintf(stderr, "I didn't understand that command.\n");
+			fflush(stderr);
 		}
 	}
 }
@@ -594,13 +639,19 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		int Ncorrespond;
 		int i, bestnum;
 		xy *thisfield;
+		int fieldnum;
 
 		params.numtries = 0;
 		params.nummatches = 0;
 		params.mostagree = 0;
 		params.startobj = 3;
 
-		thisfield = xya_ref(thefields, ii);
+		if (list_of_fields)
+			fieldnum = list_of_fields[ii];
+		else
+			fieldnum = ii;
+
+		thisfield = xya_ref(thefields, fieldnum);
 		numxy = xy_size(thisfield);
 		params.field = thisfield;
 
@@ -617,7 +668,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			}
 		}
 
-		if (resume_hits && (ii == resume_fieldnum)) {
+		if (resume_hits && (fieldnum == resume_fieldnum)) {
 			//int i;
 			blocklist* best;
 			// Resume where we left off...
@@ -660,7 +711,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			  }
 			  }
 			*/
-			suspend_write_field(suspendfid, (uint)ii, params.objsused, params.numtries, all);
+			suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
 			blocklist_free(all);
 		}
 
@@ -686,7 +737,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 		hits_field_init(&fieldhdr);
 		fieldhdr.user_quit = params.quitNow;
-		fieldhdr.field = ii;
+		fieldhdr.field = fieldnum;
 		fieldhdr.objects_in_field = numxy;
 		fieldhdr.objects_examined = params.objsused;
 		fieldhdr.field_corners = params.cornerpix;
@@ -696,8 +747,8 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		fieldhdr.parity = ParityFlip;
 		hits_write_field_header(hitfid, &fieldhdr);
 
-		fprintf(stderr, "\n    field %lu: tried %i quads, matched %i codes, "
-				"%i agree\n", ii, params.numtries, params.nummatches, bestnum);
+		fprintf(stderr, "\n    field %i: tried %i quads, matched %i codes, "
+				"%i agree\n", fieldnum, params.numtries, params.nummatches, bestnum);
 
 		if (bestnum < min_matches_to_agree) {
 			hits_write_hit(hitfid, NULL);
