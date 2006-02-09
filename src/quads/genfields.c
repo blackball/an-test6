@@ -269,13 +269,13 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 			free_kresult(krez);
 			numtries++;
 
-		    if (numtries >= FAILURES) {
-			/* We've failed too many times; something is wrong. Bail
-			 * gracefully. */
-			fprintf(stderr, "  ERROR: Too many failures: %lu fails\n",
-			        numtries);
-			return numtries;
-		    }
+			if (numtries >= FAILURES) {
+				/* We've failed too many times; something is wrong. Bail
+				 * gracefully. */
+				fprintf(stderr, "  ERROR: Too many failures: %lu fails\n",
+					numtries);
+				exit(1);
+			}
 		}
 		//if(is_power_of_two(ii))
 		//fprintf(stderr,"  made %lu pix in %lu tries\r",ii,numtries);fflush(stderr);
