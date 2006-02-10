@@ -1,6 +1,8 @@
 #ifndef MATCHOBJ_H_
 #define MATCHOBJ_H_
 
+#include "starutil.h"
+
 struct match_struct {
     qidx quadno;
     sidx iA, iB, iC, iD;

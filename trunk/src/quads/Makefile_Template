@@ -15,7 +15,7 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
 	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
-	hitsfile.o ioutils.o suspend.o
+	hitsfile.o ioutils.o suspend.o matchfile.o
 
 EXECS = randcat startree genfields quadidx solvexy fieldquads findstar findquad \
 	findcode all_quads fixheaders codetomatlab startree2 deduplicate codetree2  \
@@ -28,11 +28,11 @@ EXECS = randcat startree genfields quadidx solvexy fieldquads findstar findquad 
 MYOBJS = randcat.o startree.o quadidx.o genfields.o solvexy.o fieldquads.o findstar.o \
 	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
 	deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
-	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o
+	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o slave.o
 
 # getquads.o codetree.o 
 
-all: $(EXECS) solvexy2 slave agreeable
+all: $(EXECS) solvexy2 agreeable slave
 
 solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
@@ -40,7 +40,7 @@ solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
 agreeable: agreeable.o hitlist_agreement.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-slave: solvexy2.o solver2.o hitlist_flat.o $(OBJ)
+slave: slave.o solver2.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 $(EXECS) :: %: %.o $(OBJ)

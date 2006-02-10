@@ -6,7 +6,6 @@
 
 #include "ioutils.h"
 
-
 unsigned int ENDIAN_DETECTOR = 0x01020304;
 
 int read_u8(FILE* fin, unsigned char* val) {
@@ -72,6 +71,53 @@ int read_u32s(FILE* fin, unsigned int* val, int n) {
 int read_fixed_length_string(FILE* fin, char* s, int length) {
 	if (fread(s, 1, length, fin) != length) {
 		fprintf(stderr, "Couldn't read fixed-length string: %s\n", strerror(errno));
+		return 1;
+	}
+	return 0;
+}
+
+char* read_string(FILE* fin) {
+	int step = 1024;
+	int i = 0;
+	int size = 0;
+	char* rtn = NULL;
+	for (;;) {
+		int c = fgetc(fin);
+		if (i == size) {
+			// expand
+			size += step;
+			rtn = (char*)realloc(rtn, size);
+			if (!rtn) {
+				fprintf(stderr, "Couldn't allocate buffer: %i.\n", size+step);
+				return rtn;
+			}
+			step *= 2;
+		}
+		// treat end-of-file like end-of-string.
+		if (c == EOF)
+			c = '\0';
+		rtn[i] = (char)c;
+		i++;
+		if (!c)
+			break;
+	}
+	if (ferror(fin)) {
+		fprintf(stderr, "Error reading string from file: %s\n", strerror(errno));
+		free(rtn);
+		return NULL;
+	}
+	rtn = (char*)realloc(rtn, i);
+	// shouldn't happen - we're shrinking.
+	if (!rtn) {
+		fprintf(stderr, "Couldn't realloc buffer: %i\n", i);
+	}
+	return rtn;
+}
+
+int write_string(FILE* fout, char* s) {
+	int len = strlen(s) + 1;
+	if (fwrite(s, 1, len, fout) != len) {
+		fprintf(stderr, "Couldn't write string: %s\n", strerror(errno));
 		return 1;
 	}
 	return 0;

@@ -103,6 +103,7 @@ int maxfieldobjs = 0;
 int firstfield = 0;
 int lastfield = -1;
 int* list_of_fields = NULL;
+hitlist* hits;
 
 int nctrlcs = 0;
 bool *p_quitnow = NULL;
@@ -134,7 +135,6 @@ int main(int argc, char *argv[]) {
 
 	off_t endoffset;
 	hits_header hitshdr;
-	hitlist* hitlist;
 	char* progname = argv[0];
 	char alloptions[256];
 	char* hitlist_options;
@@ -383,7 +383,7 @@ int main(int argc, char *argv[]) {
 	  numfields, codetol, AgreeArcSec);
 	*/
 
-	hitlist = hitlist_new();
+	hits = hitlist_new();
 
 	do {
 
@@ -454,7 +454,7 @@ int main(int argc, char *argv[]) {
 		signal(SIGINT, signal_handler);
 
 		numsolved = solve_fields(thefields, maxfieldobjs, fieldtries,
-								 codekd, codetol, hitlist);
+								 codekd, codetol, hits);
 		fprintf(stderr, "\nDone (solved %lu).\n", numsolved);
 		fprintf(stderr, "Done solving.\n");
 		fflush(stderr);
@@ -499,7 +499,7 @@ int main(int argc, char *argv[]) {
 	  fclose(matchfid);
 	*/
 
-	hitlist_free(hitlist);
+	hitlist_free(hits);
 
 	free_fn(hitfname);
 	free_fn(fieldfname);
@@ -632,6 +632,10 @@ void signal_handler(int sig) {
 		*p_quitnow = TRUE;
 }
 
+int handlehit(solver_params* params, MatchObj* mo) {
+	return hitlist_add_hit(hits, mo);
+}
+
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree_t *codekd, double codetol, hitlist* hits) {
 	uint resume_fieldnum;
@@ -650,7 +654,8 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	//params.agreetol = AgreeTol;
 	params.codetol = codetol;
 	params.cornerpix = mk_xy(2);
-	params.hits = hits;
+	//params.hits = hits;
+	params.handlehit = handlehit;
 	params.quitNow = FALSE;
 	p_quitnow = &params.quitNow;
 

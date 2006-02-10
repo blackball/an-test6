@@ -362,7 +362,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		*/
 		//free(transform);
 
-		nagree = hitlist_add_hit(params->hits, mo);
+		//nagree = hitlist_add_hit(params->hits, mo);
+		nagree = params->handlehit(params, mo);
 
 		if (nagree > params->mostagree) {
 			params->mostagree = nagree;
