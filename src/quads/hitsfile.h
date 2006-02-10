@@ -42,9 +42,14 @@ void hits_field_init(hits_field* h);
 
 void hits_write_field_header(FILE* fid, hits_field* h);
 
-void hits_write_field_tailer(FILE* fid);
+void hits_start_hits_list(FILE* fid);
 
 void hits_write_hit(FILE* fid, MatchObj* mo);
+
+void hits_end_hits_list(FILE* fid);
+
+void hits_write_field_tailer(FILE* fid);
+
 
 void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
 								int Nids, int ok);

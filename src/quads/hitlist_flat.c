@@ -12,6 +12,8 @@ char* hitlist_get_parameter_options() {
 int hitlist_process_parameter(char argchar, char* optarg) {
 	return 0;
 }
+void hitlist_set_default_parameters() {
+}
 
 hitlist* hitlist_new() {
 	return blocklist_pointer_new(256);

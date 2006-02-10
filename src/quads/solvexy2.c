@@ -12,21 +12,19 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-
-#include "blocklist.h"
-
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-
+#include "blocklist.h"
 #include "solver2.h"
 #include "solver2_callbacks.h"
 #include "hitsfile.h"
 #include "suspend.h"
 #include "hitlist.h"
 
-char* OPTIONS = "hpef:o:t:n:x:d:r:R:D:H:F:T:vS:L:a:b:I";
+char* OPTIONS = "hpef:o:t:n:x:d:r:R:D:H:F:T:vS:L:a:b:IB:";
+// M:
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s -f fname -o fieldname\n"
@@ -46,6 +44,8 @@ void printHelp(char* progname) {
 			"   [-a resume-from-file]\n"
 			"   [-b suspend-to-file]\n"
 			"   [-I] (interactive mode - probably only useful from Python)\n"
+			//"   [-M match-file-name]\n"
+			"   [-B batch-file-name]\n"
 			"%s"
 			"     code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n",
 			progname, hitlist_get_parameter_help());
@@ -69,6 +69,7 @@ int get_next_assignment();
 char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
+//FILE* matchfid = NULL;
 off_t qposmarker, cposmarker;
 
 char *resumefname = NULL;
@@ -95,11 +96,12 @@ double DebuggingDecMin;
 double DebuggingDecMax;
 int Debugging = 0;
 bool verbose = FALSE;
-int firstfield = 0;
-int lastfield = -1;
 bool interactive = FALSE;
 bool rename_suspend;
+bool batchmode = FALSE;
 int maxfieldobjs = 0;
+int firstfield = 0;
+int lastfield = -1;
 int* list_of_fields = NULL;
 
 int nctrlcs = 0;
@@ -137,11 +139,15 @@ int main(int argc, char *argv[]) {
 	char alloptions[256];
 	char* hitlist_options;
 
+	//char* matchfname = NULL;
+	char* batchfname = NULL;
+
     if (argc <= 4) {
 		printHelp(progname);
 		return (OPT_ERR);
     }
 
+	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
 	sprintf(alloptions, "%s%s", OPTIONS, hitlist_options);
 
@@ -155,6 +161,15 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
+			/*
+			  case 'M':
+			  matchfname = optarg;
+			  break;
+			*/
+		case 'B':
+			batchfname = optarg;
+			batchmode = TRUE;
+			break;
 		case 'I':
 			interactive = TRUE;
 			break;
@@ -268,6 +283,13 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "solvexy2: solving fields in %s using %s\n",
 			fieldfname, treefname);
+
+	/*
+	  if (matchfname) {
+	  fprintf("Writing matches to file %s...\n", matchfname);
+	  fopenout(matchfname, matchfid);
+	  }
+	*/
 
 	// Read .xyls file...
 	fprintf(stderr, "  Reading fields...");
@@ -466,6 +488,17 @@ int main(int argc, char *argv[]) {
 
 	} while (interactive);
 
+	if (batchfname) {
+		FILE* batchfid;
+		fprintf(stderr, "Writing marker file %s...\n", batchfname);
+		fopenout(batchfname, batchfid);
+		fclose(batchfid);
+	}
+	/*
+	  if (matchfid)
+	  fclose(matchfid);
+	*/
+
 	hitlist_free(hitlist);
 
 	free_fn(hitfname);
@@ -607,8 +640,6 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	blocklist* resume_hits = NULL;
 	qidx numsolved, ii;
 	sidx numxy;
-	//blocklist* hitlist = blocklist_pointer_new(256);
-	//hitlist* hitlist = hitlist_new();
 	solver_params params;
 	int last;
 
@@ -669,7 +700,6 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		}
 
 		if (resume_hits && (fieldnum == resume_fieldnum)) {
-			//int i;
 			blocklist* best;
 			// Resume where we left off...
 			params.numtries = resume_ntried;
@@ -677,12 +707,6 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			params.nummatches = blocklist_count(resume_hits);
 
 			hitlist_add_hits(hits, resume_hits);
-			/*
-			  for (i=0; i<blocklist_count(resume_hits); i++) {
-			  MatchObj* mo = (MatchObj*)blocklist_pointer_access(resume_hits, i);
-			  hitlist_add_hit(hitlist, mo);
-			  }
-			*/
 
 			best = hitlist_get_best(hits);
 			params.mostagree = (best ? blocklist_count(best) : 0);
@@ -696,21 +720,18 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			solve_field(&params);
 		}
 
+		/*
+		  if (suspendfid || matchfid) {
+		  blocklist* all = hitlist_get_all(hits);
+		  if (suspendfid)
+		  suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
+		  if (matchfid)
+		  suspend_write_field(matchfid, (uint)fieldnum, params.objsused, params.numtries, all);
+		  blocklist_free(all);
+		  }
+		*/
 		if (suspendfid) {
 			blocklist* all = hitlist_get_all(hits);
-			/*
-			  int i, j, M, N;
-			  blocklist* hits = blocklist_pointer_new(256);
-			  N = blocklist_count(hitlist);
-			  for (i=0; i<N; i++) {
-			  blocklist* lst = (blocklist*)blocklist_pointer_access(hitlist, i);
-			  M = blocklist_count(lst);
-			  for (j=0; j<M; j++) {
-			  MatchObj* mo = (MatchObj*)blocklist_pointer_access(lst, j);
-			  blocklist_pointer_append(hits, mo);
-			  }
-			  }
-			*/
 			suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
 			blocklist_free(all);
 		}
@@ -750,8 +771,10 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		fprintf(stderr, "\n    field %i: tried %i quads, matched %i codes, "
 				"%i agree\n", fieldnum, params.numtries, params.nummatches, bestnum);
 
+		hits_start_hits_list(hitfid);
 		if (bestnum < min_matches_to_agree) {
 			hits_write_hit(hitfid, NULL);
+			hits_end_hits_list(hitfid);
 			hits_write_field_tailer(hitfid);
 			fflush(hitfid);
 			continue;
@@ -761,6 +784,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(bestlist, i);
 			hits_write_hit(hitfid, mo);
 		}
+		hits_end_hits_list(hitfid);
 
 		starids  = (sidx*)malloc(bestnum * 4 * sizeof(sidx));
 		fieldids = (sidx*)malloc(bestnum * 4 * sizeof(sidx));
@@ -779,12 +803,8 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		hitlist_clear(hits);
 		//quitNow = false;
 	}
-
 	p_quitnow = NULL;
-
 	free_xy(params.cornerpix);
-	//hitlist_free(hitlist);
-
 	return numsolved;
 }
 
@@ -793,19 +813,9 @@ void debugging_gather_hits(hitlist* hits, blocklist* outputlist) {
 	int j, M;
 	blocklist* all = hitlist_get_all(hits);
 	M = blocklist_count(all);
-	/*
-	  int i, N;
-	  N = blocklist_count(hitlist);
-	  // We're debugging.  Gather all hits within our RA/DEC range.
-	  for (i=0; i<N; i++) {
-	  int j, M;
-	  blocklist* hits = (blocklist*)blocklist_pointer_access(hitlist, i);
-	  M = blocklist_count(hits);
-	*/
 	for (j=0; j<M; j++) {
 		double minra, maxra, mindec, maxdec;
 		double x, y, z;
-		//MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
 		MatchObj* mo = (MatchObj*)blocklist_pointer_access(all, j);
 		x = dyv_ref(mo->sMin, 0);
 		y = dyv_ref(mo->sMin, 1);
@@ -836,7 +846,6 @@ void debugging_gather_hits(hitlist* hits, blocklist* outputlist) {
 
 			blocklist_pointer_append(outputlist, mo);
 		}
-		//}
 	}
 }
 

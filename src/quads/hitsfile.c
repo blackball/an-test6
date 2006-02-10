@@ -70,6 +70,14 @@ void hits_field_init(hits_field* h) {
 	h->parity = FALSE;
 }
 
+void hits_start_hits_list(FILE* fid) {
+	fprintf(fid, "    quads=[\n");
+}
+
+void hits_end_hits_list(FILE* fid) {
+	fprintf(fid, "    ];");
+}
+
 void hits_write_field_header(FILE* fid, hits_field* h) {
 	fprintf(fid, "# --------------------\n");
 	fprintf(fid, "dict(\n");
@@ -94,7 +102,6 @@ void hits_write_field_header(FILE* fid, hits_field* h) {
 	fprintf(fid, "    codes_matched=%i,\n", h->nmatches);
 	fprintf(fid, "    # %d matches agree on resolving of the field:\n", h->nagree);
 	fprintf(fid, "    matches_agree=%d,\n", h->nagree);
-	fprintf(fid, "    quads=[\n");
 }
 
 
@@ -172,7 +179,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
 								int Nids, int ok) {
 	int i;
-	fprintf(fid, "    ],\n"); /* Close previous quads list */
+	//fprintf(fid, "    ],\n"); /* Close previous quads list */
 	fprintf(fid, "    # Field Object <--> Catalogue Object Mapping Table\n");
 	if (!ok) {
 		fprintf(fid, "    # warning: some matches agree on resolve but not on mapping\n");

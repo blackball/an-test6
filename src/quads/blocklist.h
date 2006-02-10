@@ -45,6 +45,8 @@ void blocklist_append_list(blocklist* list1, blocklist* list2);
 
 void blocklist_insert(blocklist* list, int indx, void* data);
 
+void blocklist_set(blocklist* list, int indx, void* data);
+
 void blocklist_insert_sorted(blocklist* list, void* data,
 			     int (*compare)(void* v1, void* v2));
 
@@ -88,6 +90,7 @@ void blocklist_int_insert_descending(blocklist* list, int n);
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
 ///////////////////////////////////////////////
+void blocklist_pointer_set(blocklist* list, int index, void* data);
 blocklist* blocklist_pointer_new(int blocksize);
 void blocklist_pointer_free(blocklist* list);
 void blocklist_pointer_append(blocklist* list, void* data);
