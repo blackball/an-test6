@@ -6,7 +6,13 @@
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
 #include "blocklist.h"
-#include "hitlist.h"
+//#include "hitlist.h"
+#include "matchobj.h"
+
+struct solver_params;
+//struct MatchObj;
+
+typedef int (*handle_hit)(struct solver_params*, MatchObj*);
 
 struct solver_params {
 
@@ -17,13 +23,13 @@ struct solver_params {
 	int endobj;
 	int maxtries;
 	int max_matches_needed;
-	//double agreetol;
 	double codetol;
 	bool quitNow;
 
 	// Must be initialized by caller; will contain outputs:
 	xy* cornerpix;
-	struct hitlist* hits;
+	//struct hitlist* hits;
+	handle_hit handlehit;
 
 	// Outputs:
 	// NOTE: these are only incremented, not initialized.  It's up to

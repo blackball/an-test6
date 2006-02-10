@@ -14,6 +14,7 @@ int write_double(FILE* fout, double val);
 int write_float(FILE* fout, float val);
 int write_double(FILE* fout, double val);
 int write_fixed_length_string(FILE* fout, char* s, int length);
+int write_string(FILE* fout, char* s);
 
 int read_u8(FILE* fin, unsigned char* val);
 int read_u32(FILE* fin, unsigned int* val);
@@ -21,5 +22,6 @@ int read_u32_native(FILE* fin, unsigned int* val);
 int read_u32s(FILE* fin, unsigned int* val, int n);
 int read_double(FILE* fin, double* val);
 int read_fixed_length_string(FILE* fin, char* s, int length);
+char* read_string(FILE* fin);
 
 #endif
