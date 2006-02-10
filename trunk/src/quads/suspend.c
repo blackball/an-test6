@@ -11,9 +11,10 @@ void suspend_write_header(FILE* fid, double index_scale, char* fieldfname,
 						  char* treefname, unsigned int nfields) {
 	int err = 0;
 	int len;
-	if (!err) err |= write_u32(fid, SUSPEND_MAGIC);
-	if (!err) err |= write_u32_native(fid, ENDIAN_DETECTOR);
-	if (!err) err |= write_double(fid, index_scale);
+	err =
+		write_u32(fid, SUSPEND_MAGIC) ||
+		write_u32_native(fid, ENDIAN_DETECTOR) ||
+		write_double(fid, index_scale);
 
 	len = strlen(fieldfname);
 	if (len > 255) {
@@ -25,8 +26,8 @@ void suspend_write_header(FILE* fid, double index_scale, char* fieldfname,
 	if (len > 255) {
 		fprintf(stderr, "Warning: in suspend_write_header: tree filename is too long (%i > 255); truncating.\n", len);
 	}
-	if (!err) err |= write_fixed_length_string(fid, treefname, 256);
-	if (!err) err |= write_u32_native(fid, nfields);
+	if (!err) err |= (write_fixed_length_string(fid, treefname, 256) ||
+					  write_u32_native(fid, nfields));
 	if (err) {
 		fprintf(stderr, "Error writing suspend file header.\n");
 	}
@@ -38,8 +39,9 @@ int suspend_read_header(FILE* fid, double* index_scale, char* fieldfname,
 	unsigned int magic;
 	unsigned int endian;
 	char fn[256];
-	if (!err) err |= read_u32(fid, &magic);
-	if (!err) err |= read_u32_native(fid, &endian);
+	err =
+		read_u32(fid, &magic) ||
+		read_u32_native(fid, &endian);
 	if (err) goto readerr;
 	if (magic != SUSPEND_MAGIC) {
 		fprintf(stderr, "Suspend file does not contain the correct magic number (0x%x)\n",
@@ -51,18 +53,19 @@ int suspend_read_header(FILE* fid, double* index_scale, char* fieldfname,
 				endian, ENDIAN_DETECTOR);
 		return 1;
 	}
-	if (!err) err |= read_double(fid, index_scale);
-	if (!err) err |= read_fixed_length_string(fid, fn, 256);
+	err |=
+		read_double(fid, index_scale) ||
+		read_fixed_length_string(fid, fn, 256);
+	if (err) goto readerr;
 	fn[255] = '\0';
-	if (!err)
-		strcpy(fieldfname, fn);
-	if (!err) err |= read_fixed_length_string(fid, fn, 256);
+	strcpy(fieldfname, fn);
+	err |= read_fixed_length_string(fid, fn, 256);
+	if (err) goto readerr;
 	fn[255] = '\0';
-	if (!err)
-		strcpy(treefname, fn);
+	strcpy(treefname, fn);
+	err |= read_u32_native(fid, nfields);
 
-	if (!err) err |= read_u32_native(fid, nfields);
-		readerr:
+ readerr:
 	if (err) {
 		fprintf(stderr, "Couldn't read suspend file header.\n");
 	}
@@ -72,16 +75,18 @@ int suspend_read_header(FILE* fid, double* index_scale, char* fieldfname,
 int write_match_object(FILE* fid, MatchObj* mo) {
 	int err = 0;
 	int i;
-	if (!err) err |= write_u32_native(fid, mo->quadno);
-	if (!err) err |= write_u32_native(fid, mo->iA);
-	if (!err) err |= write_u32_native(fid, mo->iB);
-	if (!err) err |= write_u32_native(fid, mo->iC);
-	if (!err) err |= write_u32_native(fid, mo->iD);
-	if (!err) err |= write_u32_native(fid, mo->fA);
-	if (!err) err |= write_u32_native(fid, mo->fB);
-	if (!err) err |= write_u32_native(fid, mo->fC);
-	if (!err) err |= write_u32_native(fid, mo->fD);
-	if (!err) err |= write_double(fid, mo->code_err);
+	err |=
+		write_u32_native(fid, mo->quadno) ||
+		write_u32_native(fid, mo->iA) ||
+		write_u32_native(fid, mo->iB) ||
+		write_u32_native(fid, mo->iC) ||
+		write_u32_native(fid, mo->iD) ||
+		write_u32_native(fid, mo->fA) ||
+		write_u32_native(fid, mo->fB) ||
+		write_u32_native(fid, mo->fC) ||
+		write_u32_native(fid, mo->fD) ||
+		write_double(fid, mo->code_err);
+
 	for (i=0; i<MATCH_VECTOR_SIZE; i++) {
 		if (!err) err |= write_double(fid, mo->vector[i]);
 	}
@@ -150,10 +155,11 @@ void suspend_write_field(FILE* fid, unsigned int fieldnum,
 	int nhits, i;
 	if (!hits) nhits = 0;
 	else nhits = blocklist_count(hits);
-	if (!err) err |= write_u32_native(fid, fieldnum);
-	if (!err) err |= write_u32_native(fid, objs_used);
-	if (!err) err |= write_u32_native(fid, ntried);
-	if (!err) err |= write_u32_native(fid, nhits);
+	err |= 
+		write_u32_native(fid, fieldnum) ||
+		write_u32_native(fid, objs_used) ||
+		write_u32_native(fid, ntried) ||
+		write_u32_native(fid, nhits);
 	for (i=0; i<nhits; i++) {
 		MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, i);
 		if (!err) err |= write_match_object(fid, mo);
@@ -168,10 +174,11 @@ int suspend_read_field(FILE* fid, uint* fieldnum, uint* objs_used,
 	int err = 0;
 	unsigned int nhits, i;
 
-	if (!err) err |= read_u32_native(fid, fieldnum);
-	if (!err) err |= read_u32_native(fid, objs_used);
-	if (!err) err |= read_u32_native(fid, ntried);
-	if (!err) err |= read_u32_native(fid, &nhits);
+	err |= 
+		read_u32_native(fid, fieldnum) ||
+		read_u32_native(fid, objs_used) ||
+		read_u32_native(fid, ntried) ||
+		read_u32_native(fid, &nhits);
 	for (i=0; i<nhits; i++) {
 		MatchObj* mo = read_match_object(fid);
 		if (!mo) {

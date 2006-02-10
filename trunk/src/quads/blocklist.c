@@ -479,6 +479,19 @@ void blocklist_insert_sorted(blocklist* list, void* data,
 }
 
 
+void blocklist_set(blocklist* list, int index, void* data) {
+	blnode* node;
+	int nskipped;
+	void* dataloc;
+
+	node = blocklist_find_node(list, index, &nskipped);
+	dataloc = (char*)node->data + (index - nskipped) * list->datasize;
+	memcpy(dataloc, data, list->datasize);
+	// update the last_access member...
+	list->last_access = node;
+	list->last_access_n = nskipped;
+}
+
 
 /**
  * Insert the element "data" into the list, such that its index is "index".
@@ -751,6 +764,9 @@ blocklist* blocklist_pointer_new(int blocksize) {
 }
 void blocklist_pointer_free(blocklist* list) {
     blocklist_free(list);
+}
+void blocklist_pointer_set(blocklist* list, int index, void* data) {
+	blocklist_set(list, index, &data);
 }
 void blocklist_pointer_append(blocklist* list, void* data) {
     blocklist_append(list, &data);

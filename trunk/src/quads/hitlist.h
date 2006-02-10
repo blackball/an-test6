@@ -12,7 +12,7 @@ typedef void hitlist;
 char* hitlist_get_parameter_help();
 char* hitlist_get_parameter_options();
 int hitlist_process_parameter(char argchar, char* optarg);
-
+void hitlist_set_default_parameters();
 
 hitlist* hitlist_new();
 

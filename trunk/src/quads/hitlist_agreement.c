@@ -26,6 +26,10 @@ int hitlist_process_parameter(char argchar, char* optarg) {
 	return 0;
 }
 
+void hitlist_set_default_parameters() {
+	AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
+}
+
 hitlist* hitlist_new() {
 	return blocklist_pointer_new(256);
 }
