@@ -119,7 +119,7 @@ void solve_field(solver_params* params) {
 				newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
 				//"    using %lu of %lu objects (%i quads agree so far; %i tried, %i matched)      \r",
 
-		if ((params->mostagree >= params->max_matches_needed) ||
+		if ((params->max_matches_needed && (params->mostagree >= params->max_matches_needed)) ||
 			(params->maxtries && (params->numtries >= params->maxtries)) ||
 			(params->quitNow))
 			break;
