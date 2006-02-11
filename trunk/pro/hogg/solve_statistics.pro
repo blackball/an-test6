@@ -19,7 +19,7 @@ if (not file_test(savefile)) then begin
     dx= 0.1
     dy= 0.1
     xbin= -1.5+dx*findgen(nx)
-    ybin= -1.0+dy*findgen(ny)
+    ybin= -0.5+dy*findgen(ny)
     fraction= fltarr(nx,ny)
     indexsize= fltarr(nx,ny)
 
@@ -57,17 +57,28 @@ hogg_plot_defaults, axis_char_scale=2.0
 
 help, fraction, xbin, ybin
 
+; plot completeness
 contour, fraction,xbin,ybin, $
   levels= [0.90,0.99,0.999],c_thick=[2,2,5], $
   xrange= minmax(xbin)+0.5*[-dx,dx], $
   xtitle= 'log!d10!n number of stars per square arcmin', $
   yrange= minmax(ybin)+0.5*[-dy,dy], $
   ytitle= 'log!d10!n max theta_AB (arcmin)'
+
+; plot lines of constant index size
 contour, alog10(indexsize),xbin,ybin, $
-  levels=[0,1,2],c_thick=[2,2,2], $
+  levels=[-1,0,1,2,3],c_thick=[2,2,2,2,2], $
   color=djs_icolor('red'), $
   /overplot
-  
+
+; plot the "full index" line
+; note conversion to per-arcmin units
+maxindexsize= replicate(1.0,nx)#((10.0^ybin*40.0)^4.0/(4E4*3600.0))
+contour, (indexsize/maxindexsize),xbin,ybin, $
+  levels=[1],c_thick=[4], $
+  color=djs_icolor('red'), $
+  /overplot
+
 device,/close
 
 return
