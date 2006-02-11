@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+//#include <glob.h>
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
@@ -42,7 +43,7 @@ char* donefname = NULL;
 bool parity = DEFAULT_PARITY_FLIP;
 double codetol = DEFAULT_CODE_TOL;
 int startdepth = 0;
-int enddepth = -1;
+int enddepth = 0;
 blocklist* fieldlist = NULL;
 
 matchfile_entry matchfile;
@@ -62,6 +63,30 @@ sidx*   quadindex;
 // the largest star and quad available in the corresponding files.
 sidx maxstar;
 qidx maxquad;
+
+char* get_pathname(char* fname) {
+	char resolved[PATH_MAX];
+	if (!realpath(matchfname, resolved)) {
+		fprintf(stderr, "Couldn't resolve real path of %s: %s\n", fname, strerror(errno));
+		return NULL;
+	}
+	return strdup(resolved);
+	/*
+	  glob_t g;
+	  char* rtn;
+	  if (glob(fname, 0, NULL, &g)) {
+	  fprintf(stderr, "glob() call failed.\n");
+	  return NULL;
+	  }
+	  if (g.gl_pathc != 1) {
+	  fprintf(stderr, "filename %s matched %i paths (not 1)!\n", fname, g.gl_pathc);
+	  return NULL;
+	  }
+	  rtn = strdup(g.gl_pathv[0]);
+	  globfree(&g);
+	  return rtn;
+	*/
+}
 
 int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
@@ -83,6 +108,7 @@ int main(int argc, char *argv[]) {
 	off_t endoffset;
 	char* progname = argv[0];
 	int i;
+	char* path;
 
     if (argc != 1) {
 		printHelp(progname);
@@ -95,7 +121,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	fprintf(stderr, "%s params:", progname);
+	fprintf(stderr, "%s params:\n", progname);
 	fprintf(stderr, "fieldfname %s\n", fieldfname);
 	fprintf(stderr, "treefname %s\n", treefname);
 	fprintf(stderr, "quadfname %s\n", quadfname);
@@ -203,14 +229,22 @@ int main(int argc, char *argv[]) {
 	}
 
 	matchfile.parity = parity;
-	matchfile.indexpath = treefname;
-	matchfile.fieldpath = fieldfname;
+	path = get_pathname(treefname);
+	if (path)
+		matchfile.indexpath = path;
+	else
+		matchfile.indexpath = treefname;
+	path = get_pathname(fieldfname);
+	if (path)
+		matchfile.fieldpath = path;
+	else
+		matchfile.fieldpath = fieldfname;
 	matchfile.codetol = codetol;
 
 	solve_fields(thefields, codekd);
 
 	if (donefname) {
-		FILE* batchfid;
+		FILE* batchfid = NULL;
 		fprintf(stderr, "Writing marker file %s...\n", donefname);
 		fopenout(donefname, batchfid);
 		fclose(batchfid);
@@ -343,9 +377,10 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 			fprintf(stderr, "Field %i is null.\n", fieldnum);
 			continue;
 		}
-		//numxy = xy_size(thisfield);
 
 		matchfile.fieldnum = fieldnum;
+
+		//if (startdepth < 3) startdepth = 3;
 
 		solver.numtries = 0;
 		solver.nummatches = 0;
@@ -355,7 +390,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 		solve_field(&solver);
 
-		fprintf(stderr, "\n    field %i: tried %i quads, matched %i codes.\n",
+		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
 	}
 	free_xy(solver.cornerpix);
