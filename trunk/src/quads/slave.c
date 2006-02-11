@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-//#include <glob.h>
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
@@ -71,21 +70,6 @@ char* get_pathname(char* fname) {
 		return NULL;
 	}
 	return strdup(resolved);
-	/*
-	  glob_t g;
-	  char* rtn;
-	  if (glob(fname, 0, NULL, &g)) {
-	  fprintf(stderr, "glob() call failed.\n");
-	  return NULL;
-	  }
-	  if (g.gl_pathc != 1) {
-	  fprintf(stderr, "filename %s matched %i paths (not 1)!\n", fname, g.gl_pathc);
-	  return NULL;
-	  }
-	  rtn = strdup(g.gl_pathv[0]);
-	  globfree(&g);
-	  return rtn;
-	*/
 }
 
 int main(int argc, char *argv[]) {
@@ -379,8 +363,6 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		}
 
 		matchfile.fieldnum = fieldnum;
-
-		//if (startdepth < 3) startdepth = 3;
 
 		solver.numtries = 0;
 		solver.nummatches = 0;
