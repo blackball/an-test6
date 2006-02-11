@@ -37,3 +37,6 @@ int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	return err;
 }
 
+int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
+	return 0;
+}

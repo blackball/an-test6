@@ -19,4 +19,6 @@ typedef struct matchfile_entry matchfile_entry;
 
 int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me);
 
+int matchfile_read_match(FILE* fid, MatchObj** mo, matchfile_entry* me);
+
 #endif
