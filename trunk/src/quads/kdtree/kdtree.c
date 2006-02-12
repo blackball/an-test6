@@ -84,6 +84,10 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel) 
 {
 	int i;
+	kdtree_t *kd; 
+	int nnodes; 
+	int level = 0, dim, t, m;
+	real pivot;
 
     /* Parameters checking */
 	if (!data || !N || !D)
@@ -93,8 +97,8 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
         return NULL;
 
     /* Set the tree fields */
-	kdtree_t *kd = malloc(sizeof(kdtree_t));
-	int nnodes = (1<<maxlevel) - 1;
+	kd = malloc(sizeof(kdtree_t));
+	nnodes = (1<<maxlevel) - 1;
 	kd->ndata = N;
 	kd->ndim = D;
 	kd->nnodes = nnodes;
@@ -121,8 +125,6 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	/* And in one shot, make the kdtree. Each iteration we set our
 	 * children's hyperrectangles and [l,r] array indexes and sort our own
 	 * subset. */
-	int level = 0, dim, t, m;
-	real pivot;
 	for (i=0; i<nnodes; i++) {
 
         /* Sanity */
@@ -288,9 +290,10 @@ int kdtree_qsort_results(kdtree_qres_t *kq, int D)
 /* Range seach */
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 {
+    kdtree_qres_t *res; 
     if (!kd || !pt)
         return NULL;
-    kdtree_qres_t *res = malloc(sizeof(kdtree_qres_t));
+    res = malloc(sizeof(kdtree_qres_t));
     res->nres = 0;
 	overflow = 0;
 
@@ -400,9 +403,9 @@ void kdtree_free(kdtree_t *kd)
 /* Output a graphviz style description of the tree, for input to dot program */
 void kdtree_output_dot(FILE* fid, kdtree_t* kd)
 {
+	int i, j, D = kd->ndim;
     fprintf(fid, "digraph {\nnode [shape = record];\n");
 
-	int i, j, D = kd->ndim;
 	for (i=0; i<kd->nnodes; i++) {
         fprintf(fid, "node%d [ label =\"<f0> %d | <f1> (%d) D%d p=%.2lf \\n L=(",
                 i, NODE(i)->l, i, NODE(i)->dim, NODE(i)->pivot);
