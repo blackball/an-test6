@@ -277,8 +277,9 @@ int main(int argc, char *argv[]) {
 	{
 		double utime, stime;
 		long rss;
+		int dtime;
 		endtime = time(NULL);
-		int dtime = (int)(endtime - starttime);
+		dtime = (int)(endtime - starttime);
 		if (!get_resource_stats(&utime, &stime, &rss)) {
 			fprintf(stderr, "Finished: used %g s user, %g s system (%g s total), %i s wall time, max rss %li\n",
 					utime, stime, utime+stime, dtime, rss);
