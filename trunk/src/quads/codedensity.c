@@ -577,13 +577,14 @@ int main(int argc, char *argv[]) {
 		printf("Checking against exhaustive search...\n");
 		fflush(stdout);
 		for (i=0; i<N; i++) {
+			dyv* point1;
 			if (i && (i % 1000 == 0)) {
 				printf("%i checked.\n", i);
 				fflush(stdout);
 			}
 			best = 1e300;
 			bestind = -1;
-			dyv* point1 = dyv_array_ref(array, i);
+			point1 = dyv_array_ref(array, i);
 			if (do_perms) {
 				for (j=0; j<N; j++) {
 					dyv* point2;

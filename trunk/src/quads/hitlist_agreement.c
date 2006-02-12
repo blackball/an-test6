@@ -122,6 +122,7 @@ blocklist* hitlist_get_all(hitlist* bl) {
 int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 	//, double AgreeTol) {
     int i, N;
+    blocklist* newlist;
 
     N = blocklist_count(hlist);
 
@@ -184,7 +185,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 	*/
 
     // no agreement - create new list.
-    blocklist* newlist = blocklist_pointer_new(10);
+    newlist = blocklist_pointer_new(10);
     blocklist_pointer_append(newlist, mo);
     blocklist_pointer_append(hlist, newlist);
 
