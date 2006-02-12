@@ -6,6 +6,9 @@
  */
 
 #include <sys/mman.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -72,6 +75,24 @@ char* get_pathname(char* fname) {
 	return strdup(resolved);
 }
 
+int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss) {
+	struct rusage usage;
+	if (getrusage(RUSAGE_SELF, &usage)) {
+		fprintf(stderr, "getrusage failed: %s\n", strerror(errno));
+		return 1;
+	}
+	if (p_usertime) {
+		*p_usertime = usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
+	}
+	if (p_systime) {
+		*p_systime = usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
+	}
+	if (p_maxrss) {
+		*p_maxrss = usage.ru_maxrss;
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
     qidx numfields, numquads;
@@ -93,6 +114,9 @@ int main(int argc, char *argv[]) {
 	char* progname = argv[0];
 	int i;
 	char* path;
+	time_t starttime, endtime;
+
+	starttime = time(NULL);
 
     if (argc != 1) {
 		printHelp(progname);
@@ -250,6 +274,17 @@ int main(int argc, char *argv[]) {
 		fclose(catfid);
 	}
 
+	{
+		double utime, stime;
+		long rss;
+		endtime = time(NULL);
+		int dtime = (int)(endtime - starttime);
+		if (!get_resource_stats(&utime, &stime, &rss)) {
+			fprintf(stderr, "Finished: used %g s user, %g s system (%g s total), %i s wall time, max rss %li\n",
+					utime, stime, utime+stime, dtime, rss);
+		}
+	}
+
 	return 0;
 }
 
@@ -323,7 +358,7 @@ int read_parameters() {
 					if (firstfld > fld) {
 						fprintf(stderr, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
 					} else {
-						for (i=fld+1; i<=fld; i++) {
+						for (i=firstfld+1; i<=fld; i++) {
 							blocklist_int_append(fieldlist, i);
 						}
 					}
@@ -355,6 +390,9 @@ int handlehit(struct solver_params* p, MatchObj* mo) {
 void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	int i;
 	solver_params solver;
+	double last_utime, last_stime;
+
+	get_resource_stats(&last_utime, &last_stime, NULL);
 
 	solver.codekd = codekd;
 	solver.endobj = enddepth;
@@ -368,6 +406,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	for (i=0; i<blocklist_count(fieldlist); i++) {
 		xy *thisfield;
 		int fieldnum;
+		double utime, stime;
 
 		fieldnum = blocklist_int_access(fieldlist, i);
 		thisfield = xya_ref(thefields, fieldnum);
@@ -388,6 +427,12 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
+
+		get_resource_stats(&utime, &stime, NULL);
+		fprintf(stderr, "    spent %g s user, %g s system, %g s total.\n",
+				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime));
+		last_utime = utime;
+		last_stime = stime;
 	}
 	free_xy(solver.cornerpix);
 }
