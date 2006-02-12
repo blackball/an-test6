@@ -271,9 +271,9 @@ int read_parameters() {
 		if (strncmp(buffer, "help", 4) == 0) {
 			fprintf(stderr, "Commands:\n"
 					"    index <index-file-name>\n"
-					"    field <field-file-name>\n"
 					"    match <match-file-name>\n"
-					"    fields <field-number> [<field-number> ...]\n"
+					"    field <field-file-name>\n"
+					"    fields [<field-number> or <start range>/<end range>...]\n"
 					"    sdepth <start-field-object>\n"
 					"    depth <end-field-object>\n"
 					"    parity <0 || 1>\n"
@@ -309,14 +309,27 @@ int read_parameters() {
 		} else if (strncmp(buffer, "fields ", 7) == 0) {
 			char* str = buffer + 7;
 			char* endp;
+			int i, firstfld = -1;
 			for (;;) {
 				int fld = strtol(str, &endp, 10);
 				if (str == endp) {
 					// non-numeric value
-					fprintf(stderr, "\nCouldn't parse: %.20s [etc]\n", str);
+					fprintf(stderr, "Couldn't parse: %.20s [etc]\n", str);
 					break;
 				}
 				blocklist_int_append(fieldlist, fld);
+				if (firstfld != -1) {
+					if (firstfld > fld) {
+						fprintf(stderr, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
+					} else {
+						for (i=fld+1; i<=fld; i++) {
+							blocklist_int_append(fieldlist, i);
+						}
+					}
+					firstfld = -1;
+				}
+				if (*endp == '/')
+					firstfld = fld;
 				if (*endp == '\0')
 					// end of string
 					break;
