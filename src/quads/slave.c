@@ -272,6 +272,7 @@ int read_parameters() {
 			fprintf(stderr, "Commands:\n"
 					"    index <index-file-name>\n"
 					"    match <match-file-name>\n"
+					"    done <done-file-name>\n"
 					"    field <field-file-name>\n"
 					"    fields [<field-number> or <start range>/<end range>...]\n"
 					"    sdepth <start-field-object>\n"
