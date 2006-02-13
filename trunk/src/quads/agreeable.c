@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
 	for (i=0; i<ninputfiles; i++) {
 		FILE* infile = NULL;
 		char* fname;
+		int nread;
 		//double index_scale;
 		//char oldfieldname[256];
 		//char oldtreename[256];
@@ -110,7 +111,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		fprintf(stderr, "Reading from %s...\n", fname);
-
+		nread = 0;
 		for (;;) {
 			MatchObj* mo;
 			matchfile_entry me;
@@ -121,11 +122,9 @@ int main(int argc, char *argv[]) {
 
 			if (matchfile_read_match(infile, &mo, &me)) {
 				fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
-				if (!fromstdin)
-					fclose(infile);
 				break;
 			}
-
+			nread++;
 			fieldnum = me.fieldnum;
 
 			// get the existing hitlist for this field...
@@ -153,6 +152,7 @@ int main(int argc, char *argv[]) {
 			else
 				ungetc(c, infile);
 		}
+		fprintf(stderr, "Read %i matches.\n", nread);
 
 		if (!fromstdin)
 			fclose(infile);
@@ -232,7 +232,6 @@ int main(int argc, char *argv[]) {
 		fflush(hitfid);
 
 		blocklist_free(all);
-		//blocklist_free(best);
 		hitlist_free(hl);
 	}
 
