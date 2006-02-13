@@ -19,7 +19,7 @@ void printHelp(char* progname) {
 			"   [-H hits-file]\n"
 			"   [-n matches_needed_to_agree]\n"
 			"%s"
-			"\nIf no suspend files are given, will read from stdin.\n",
+			"\nIf no match files are given, will read from stdin.\n",
 			progname, hitlist_get_parameter_help());
 }
 
