@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
 	bool fromstdin = FALSE;
 	int i;
 	blocklist* hitlists;
+	blocklist *solved, *unsolved;
 
 	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
@@ -174,6 +175,9 @@ int main(int argc, char *argv[]) {
 	hitshdr.min_matches_to_agree = min_matches_to_agree;
 	hits_write_header(hitfid, &hitshdr);
 
+	solved = blocklist_int_new(256);
+	unsolved = blocklist_int_new(256);
+
 	for (i=0; i<blocklist_count(hitlists); i++) {
 		blocklist* all;
 		blocklist* best;
@@ -208,13 +212,15 @@ int main(int argc, char *argv[]) {
 
 		hits_start_hits_list(hitfid);
 		if (nbest < min_matches_to_agree) {
-			hits_write_hit(hitfid, NULL);
+			//hits_write_hit(hitfid, NULL);
+			blocklist_int_append(unsolved, fieldnum);
 		} else {
 			int j;
 			sidx* starids;
 			sidx* fieldids;
 			int correspond_ok = 1;
 			int Ncorrespond;
+			blocklist_int_append(solved, fieldnum);
 			for (j=0; j<nbest; j++) {
 				MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
 				hits_write_hit(hitfid, mo);
@@ -236,6 +242,32 @@ int main(int argc, char *argv[]) {
 	}
 
 	blocklist_free(hitlists);
+
+	// print out Python literals of the solved and unsolved fields.
+	printf("# nsolved = %i\n# nunsolved = %i\n", blocklist_count(solved), blocklist_count(unsolved));
+	printf("solved=array([");
+	for (i=0; i<blocklist_count(solved); i++) {
+		printf("%i,", blocklist_int_access(solved, i));
+	}
+	printf("]);\n");
+	printf("unsolved=array([");
+	for (i=0; i<blocklist_count(unsolved); i++) {
+		printf("%i,", blocklist_int_access(unsolved, i));
+	}
+	printf("]);\n");
+
+	// DEBUG - matlab
+	printf("# solved=[");
+	for (i=0; i<blocklist_count(solved); i++) {
+		printf("%i,", blocklist_int_access(solved, i));
+	}
+	printf("];\n");
+	printf("# unsolved=[");
+	for (i=0; i<blocklist_count(unsolved); i++) {
+		printf("%i,", blocklist_int_access(unsolved, i));
+	}
+	printf("];\n");
+
 
 	// finish up HITS file...
 	hits_write_tailer(hitfid);
