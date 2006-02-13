@@ -354,8 +354,9 @@ int read_parameters() {
 					fprintf(stderr, "Couldn't parse: %.20s [etc]\n", str);
 					break;
 				}
-				blocklist_int_append(fieldlist, fld);
-				if (firstfld != -1) {
+				if (firstfld == -1) {
+					blocklist_int_append(fieldlist, fld);
+				} else {
 					if (firstfld > fld) {
 						fprintf(stderr, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
 					} else {
@@ -392,6 +393,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	int i;
 	solver_params solver;
 	double last_utime, last_stime;
+	int nfields;
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 
@@ -404,12 +406,18 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	solver.handlehit = handlehit;
 	solver.quitNow = FALSE;
 
+	nfields = dyv_array_size(thefields);
+
 	for (i=0; i<blocklist_count(fieldlist); i++) {
 		xy *thisfield;
 		int fieldnum;
 		double utime, stime;
 
 		fieldnum = blocklist_int_access(fieldlist, i);
+		if (fieldnum >= nfields) {
+			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
+			continue;
+		}
 		thisfield = xya_ref(thefields, fieldnum);
 		if (!thisfield) {
 			fprintf(stderr, "Field %i is null.\n", fieldnum);

@@ -108,7 +108,7 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 		free(fieldpath);
 		free_star(mo->sMin);
 		free_star(mo->sMax);
-		free_star(mo);
+		free_MatchObj(mo);
 		return 1;
 	}
 
