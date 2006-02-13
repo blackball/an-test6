@@ -9,13 +9,13 @@
 #include "blocklist.h"
 #include "matchobj.h"
 #include "hitsfile.h"
-#include "suspend.h"
 #include "hitlist.h"
+#include "matchfile.h"
 
 char* OPTIONS = "hH:n:";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s [options] [<input-suspend-file> ...]\n"
+	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
 			"   [-H hits-file]\n"
 			"   [-n matches_needed_to_agree]\n"
 			"%s"
@@ -23,8 +23,7 @@ void printHelp(char* progname) {
 			progname, hitlist_get_parameter_help());
 }
 
-int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
-						 int* p_ok);
+int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_ok);
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
 
@@ -94,13 +93,13 @@ int main(int argc, char *argv[]) {
 	for (i=0; i<ninputfiles; i++) {
 		FILE* infile = NULL;
 		char* fname;
-		double index_scale;
-		char oldfieldname[256];
-		char oldtreename[256];
-		uint nfields;
-		uint fieldnum;
-		uint nobjs;
-		uint ntried;
+		//double index_scale;
+		//char oldfieldname[256];
+		//char oldtreename[256];
+		//uint nfields;
+		//uint fieldnum;
+		//uint nobjs;
+		//uint ntried;
 
 		if (fromstdin) {
 			infile = stdin;
@@ -112,26 +111,22 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "Reading from %s...\n", fname);
 
-		if (suspend_read_header(infile, &index_scale, oldfieldname, oldtreename, &nfields)) {
-			fprintf(stderr, "Couldn't read resume file %s: %s\n", fname, strerror(errno));
-			if (!fromstdin)
-				fclose(infile);
-			continue;
-		}
-
-		//for (j=0; j<nfields; j++) {
 		for (;;) {
+			MatchObj* mo;
+			matchfile_entry me;
 			hitlist* hl;
 			int c;
-			blocklist* slist = blocklist_pointer_new(256);
-			// read the next suspended record from the file...
-			if (suspend_read_field(infile, &fieldnum, &nobjs, &ntried, slist)) {
-				fprintf(stderr, "Couldn't read a suspended field: %s\n", strerror(errno));
-				blocklist_pointer_free(slist);
+			//blocklist* slist = blocklist_pointer_new(256);
+			int fieldnum;
+
+			if (matchfile_read_match(infile, &mo, &me)) {
+				fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
 				if (!fromstdin)
 					fclose(infile);
 				break;
 			}
+
+			fieldnum = me.fieldnum;
 
 			// get the existing hitlist for this field...
 			if (fieldnum < blocklist_count(hitlists)) {
@@ -148,19 +143,15 @@ int main(int argc, char *argv[]) {
 				blocklist_pointer_append(hitlists, hl);
 			}
 
-			// add the matches we read from the file...
-			fprintf(stderr, "  Adding %i hits to field %i.\n", blocklist_count(slist), fieldnum);
-			hitlist_add_hits(hl, slist);
+			// add the match...
+			hitlist_add_hit(hl, mo);
 
+			// detect EOF and exit gracefully...
 			c = fgetc(infile);
 			if (c == EOF)
 				break;
 			else
 				ungetc(c, infile);
-			/*
-			  if (feof(infile))
-			  break;
-			*/
 		}
 
 		if (!fromstdin)
