@@ -68,7 +68,7 @@ qidx maxquad;
 
 char* get_pathname(char* fname) {
 	char resolved[PATH_MAX];
-	if (!realpath(matchfname, resolved)) {
+	if (!realpath(fname, resolved)) {
 		fprintf(stderr, "Couldn't resolve real path of %s: %s\n", fname, strerror(errno));
 		return NULL;
 	}
