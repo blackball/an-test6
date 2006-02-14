@@ -12,10 +12,12 @@
 #include "hitlist.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:";
+char* OPTIONS = "hH:n:A:B:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
+			"   [-A first-field]\n"
+			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
 			"   [-n matches_needed_to_agree]\n"
 			"%s"
@@ -47,6 +49,7 @@ int main(int argc, char *argv[]) {
 	int i;
 	blocklist* hitlists;
 	blocklist *solved, *unsolved;
+	int firstfield=-1, lastfield=INT_MAX;
 
 	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
@@ -62,6 +65,12 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
+		case 'A':
+			firstfield = atoi(optarg);
+			break;
+		case 'B':
+			lastfield = atoi(optarg);
+			break;
 		case 'H':
 			hitfname = optarg;
 			break;
@@ -83,6 +92,11 @@ int main(int argc, char *argv[]) {
 		ninputfiles = 1;
 	}
 
+	if (lastfield < firstfield) {
+		fprintf(stderr, "Last field (-B) must be at least as big as first field (-A)\n");
+		exit(-1);
+	}
+
 	if (hitfname) {
 		fopenout(hitfname, hitfid);
 	} else {
@@ -95,13 +109,6 @@ int main(int argc, char *argv[]) {
 		FILE* infile = NULL;
 		char* fname;
 		int nread;
-		//double index_scale;
-		//char oldfieldname[256];
-		//char oldtreename[256];
-		//uint nfields;
-		//uint fieldnum;
-		//uint nobjs;
-		//uint ntried;
 
 		if (fromstdin) {
 			infile = stdin;
@@ -112,21 +119,38 @@ int main(int argc, char *argv[]) {
 		}
 
 		fprintf(stderr, "Reading from %s...\n", fname);
+		fflush(stderr);
 		nread = 0;
 		for (;;) {
 			MatchObj* mo;
 			matchfile_entry me;
 			hitlist* hl;
 			int c;
-			//blocklist* slist = blocklist_pointer_new(256);
 			int fieldnum;
+
+			// detect EOF and exit gracefully...
+			c = fgetc(infile);
+			if (c == EOF)
+				break;
+			else
+				ungetc(c, infile);
 
 			if (matchfile_read_match(infile, &mo, &me)) {
 				fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
+				fflush(stderr);
 				break;
 			}
 			nread++;
 			fieldnum = me.fieldnum;
+
+			if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
+				free_star(mo->sMin);
+				free_star(mo->sMax);
+				free_MatchObj(mo);
+				free(me.indexpath);
+				free(me.fieldpath);
+				continue;
+			}
 
 			// get the existing hitlist for this field...
 			if (fieldnum < blocklist_count(hitlists)) {
@@ -146,14 +170,11 @@ int main(int argc, char *argv[]) {
 			// add the match...
 			hitlist_add_hit(hl, mo);
 
-			// detect EOF and exit gracefully...
-			c = fgetc(infile);
-			if (c == EOF)
-				break;
-			else
-				ungetc(c, infile);
+			free(me.indexpath);
+			free(me.fieldpath);
 		}
 		fprintf(stderr, "Read %i matches.\n", nread);
+		fflush(stderr);
 
 		if (!fromstdin)
 			fclose(infile);
@@ -210,7 +231,6 @@ int main(int argc, char *argv[]) {
 		fieldhdr.nagree = nbest;
 		hits_write_field_header(hitfid, &fieldhdr);
 
-		hits_start_hits_list(hitfid);
 		if (nbest < min_matches_to_agree) {
 			//hits_write_hit(hitfid, NULL);
 			blocklist_int_append(unsolved, fieldnum);
@@ -220,6 +240,7 @@ int main(int argc, char *argv[]) {
 			sidx* fieldids;
 			int correspond_ok = 1;
 			int Ncorrespond;
+			hits_start_hits_list(hitfid);
 			blocklist_int_append(solved, fieldnum);
 			for (j=0; j<nbest; j++) {
 				MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
@@ -231,13 +252,14 @@ int main(int argc, char *argv[]) {
 			hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 			free(starids);
 			free(fieldids);
+			hits_end_hits_list(hitfid);
 		}
-		hits_end_hits_list(hitfid);
 
 		hits_write_field_tailer(hitfid);
 		fflush(hitfid);
 
 		blocklist_free(all);
+		hitlist_clear(hl);
 		hitlist_free(hl);
 	}
 
@@ -268,6 +290,8 @@ int main(int argc, char *argv[]) {
 	}
 	printf("];\n");
 
+	blocklist_free(solved);
+	blocklist_free(unsolved);
 
 	// finish up HITS file...
 	hits_write_tailer(hitfid);

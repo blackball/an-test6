@@ -35,6 +35,7 @@ hitlist* hitlist_new() {
 }
 
 void hitlist_free(hitlist* hl) {
+	//hitlist_clear(hl);
 	blocklist_free(hl);
 }
 
