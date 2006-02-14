@@ -8,11 +8,21 @@
 
 unsigned int ENDIAN_DETECTOR = 0x01020304;
 
+void read_complain(FILE* fin, char* attempted) {
+	if (feof(fin)) {
+		fprintf(stderr, "Couldn't read %s: end-of-file.\n", attempted);
+	} else if (ferror(fin)) {
+		fprintf(stderr, "Couldn't read %s: error: %s\n", attempted, strerror(errno));
+	} else {
+		fprintf(stderr, "Couldn't read %s: %s\n", attempted, strerror(errno));
+	}
+}
+
 int read_u8(FILE* fin, unsigned char* val) {
     if (fread(val, 1, 1, fin) == 1) {
 		return 0;
     } else {
-		fprintf(stderr, "Couldn't read u8: %s\n", strerror(errno));
+		read_complain(fin, "u8");
 		return 1;
     }
 }
@@ -23,7 +33,7 @@ int read_u32(FILE* fin, unsigned int* val) {
 		*val = ntohl(u);
 		return 0;
     } else {
-		fprintf(stderr, "Couldn't read u32: %s\n", strerror(errno));
+		read_complain(fin, "u32");
 		return 1;
     }
 }
@@ -32,7 +42,7 @@ int read_double(FILE* fin, double* val) {
     if (fread(val, sizeof(double), 1, fin) == 1) {
 		return 0;
     } else {
-		fprintf(stderr, "Couldn't read double: %s\n", strerror(errno));
+		read_complain(fin, "double");
 		return 1;
     }
 }
@@ -43,7 +53,7 @@ int read_u32_native(FILE* fin, unsigned int* val) {
 		*val = (unsigned int)u;
 		return 0;
     } else {
-		fprintf(stderr, "Couldn't read u32 native: %s\n", strerror(errno));
+		read_complain(fin, "u32 native");
 		return 1;
     }
 }
@@ -62,7 +72,7 @@ int read_u32s(FILE* fin, unsigned int* val, int n) {
 		free(u);
 		return 0;
     } else {
-		fprintf(stderr, "Couldn't read u32: %s\n", strerror(errno));
+		read_complain(fin, "uint32s");
 		free(u);
 		return 1;
     }
@@ -70,7 +80,7 @@ int read_u32s(FILE* fin, unsigned int* val, int n) {
 
 int read_fixed_length_string(FILE* fin, char* s, int length) {
 	if (fread(s, 1, length, fin) != length) {
-		fprintf(stderr, "Couldn't read fixed-length string: %s\n", strerror(errno));
+		read_complain(fin, "fixed-length string");
 		return 1;
 	}
 	return 0;
@@ -102,7 +112,7 @@ char* read_string(FILE* fin) {
 			break;
 	}
 	if (ferror(fin)) {
-		fprintf(stderr, "Error reading string from file: %s\n", strerror(errno));
+		read_complain(fin, "string");
 		free(rtn);
 		return NULL;
 	}

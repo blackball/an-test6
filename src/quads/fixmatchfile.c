@@ -82,6 +82,13 @@ int main(int argc, char *argv[]) {
 			matchfile_entry me;
 			int c;
 
+			// detect EOF and exit gracefully...
+			c = fgetc(infile);
+			if (c == EOF)
+				break;
+			else
+				ungetc(c, infile);
+
 			if (matchfile_read_match(infile, &mo, &me)) {
 				fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
 				break;
@@ -98,12 +105,6 @@ int main(int argc, char *argv[]) {
 			
 			nread++;
 
-			// detect EOF and exit gracefully...
-			c = fgetc(infile);
-			if (c == EOF)
-				break;
-			else
-				ungetc(c, infile);
 		}
 		fprintf(stderr, "Read %i matches.\n", nread);
 
