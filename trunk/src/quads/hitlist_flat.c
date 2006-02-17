@@ -23,6 +23,14 @@ void hitlist_free(hitlist* hl) {
 	blocklist_free(hl);
 }
 
+int hitlist_count_best(hitlist* hl) {
+	return 1;
+}
+
+int hitlist_count_all(hitlist* hl) {
+	return blocklist_count(hl);
+}
+
 blocklist* hitlist_get_best(hitlist* hl) {
 	blocklist* bestlist;
 

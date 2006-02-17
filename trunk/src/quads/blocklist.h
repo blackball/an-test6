@@ -81,6 +81,7 @@ void* blocklist_find(blocklist* list, void* data,
 blocklist* blocklist_int_new(int blocksize);
 void blocklist_int_free(blocklist* list);
 void blocklist_int_append(blocklist* list, int data);
+int blocklist_int_contains(blocklist* list, int data);
 int blocklist_int_access(blocklist* list, int n);
 void blocklist_int_copy(blocklist* list, int start, int length, int* vdest);
 void blocklist_int_print(blocklist* list);

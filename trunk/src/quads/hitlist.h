@@ -28,6 +28,8 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo);
 
 void hitlist_add_hits(hitlist* hlist, blocklist* hits);
 
-int hitlist_get_n_best(hitlist* hitlist);
+int hitlist_count_best(hitlist* hitlist);
+
+int hitlist_count_all(hitlist* hitlist);
 
 #endif
