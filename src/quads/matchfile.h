@@ -14,6 +14,9 @@ struct matchfile_entry {
 	char* indexpath;
 	char* fieldpath;
 	double codetol;
+	// currently we don't use these!
+	double fieldunits_lower;
+	double fieldunits_upper;
 };
 typedef struct matchfile_entry matchfile_entry;
 

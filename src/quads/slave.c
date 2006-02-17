@@ -260,6 +260,9 @@ int main(int argc, char *argv[]) {
 		matchfile.fieldpath = fieldfname;
 	matchfile.codetol = codetol;
 
+	matchfile.fieldunits_lower = funits_lower;
+	matchfile.fieldunits_upper = funits_upper;
+
 	// Do it!
 	solve_fields(thefields, codekd);
 
