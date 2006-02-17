@@ -7,6 +7,18 @@
 
 #include "healpix.h"
 
+char* OPTIONS = "hH:";
+
+void printHelp(char* progname) {
+	fprintf(stderr, "Usage: %s [options] <rdls-file>\n"
+			"   [-h] print help msg\n"
+			"   [-H healpix]: print the fields with stars in a healpix.\n",
+			progname);
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 int main(int argc, char** args) {
   FILE* f;
   char* filename;
@@ -14,13 +26,30 @@ int main(int argc, char** args) {
   int npoints;
   int i, j;
   int healpixes[12];
+  int argchar;
+  char* progname = args[0];
+  int target = -1;
 
-  if (argc != 2) {
-	printf("%s <rdls-file>\n", args[0]);
-	exit(-1);
+  if (argc < 2) {
+	  printHelp(progname);
+	  exit(-1);
   }
 
-  filename = args[1];
+  while ((argchar = getopt (argc, args, OPTIONS)) != -1)
+	  switch (argchar) {
+	  case 'h':
+		  printHelp(progname);
+		  exit(0);
+	  case 'H':
+		  target = atoi(optarg);
+		  break;
+	  case '?':
+		  fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+	  default:
+		  exit(-1);
+	  }
+
+  filename = args[optind];
 
   f = fopen(filename, "r");
   if (!f) {
@@ -32,6 +61,10 @@ int main(int argc, char** args) {
   if (fscanf(f, "NumFields=%i\n", &numfields) != 1) {
       printf("parse error: numfields\n");
       exit(-1);
+  }
+
+  if (target != -1) {
+	  printf("Printing the indices of fields in healpix %i to stderr...\n", target);
   }
 
   printf("Numfields = %i\n", numfields);
@@ -75,6 +108,10 @@ int main(int argc, char** args) {
 			  printf("%i  ", i);
 	  }
 	  printf("\n");
+
+	  if ((target != -1) && (healpixes[target])) {
+		  fprintf(stderr, "%i ", j);
+	  }
   }
 
   fclose(f);
