@@ -174,7 +174,7 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
 
-	if ((scale < minAB*minAB) || (scale > maxAB*maxAB))
+	if ((scale < square(params->minAB)) || (scale > square(params->maxAB)))
 		return;
 
     xy_setx(ABCDpix, 0, Ax);

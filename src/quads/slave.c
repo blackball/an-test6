@@ -50,6 +50,7 @@ blocklist* fieldlist = NULL;
 double funits_lower = 0.0;
 double funits_upper = 0.0;
 double index_scale;
+double index_scale_lower = 0.0;
 
 matchfile_entry matchfile;
 
@@ -118,8 +119,6 @@ int main(int argc, char *argv[]) {
 	int i;
 	char* path;
 	time_t starttime, endtime;
-
-	double minAB=0.0, maxAB=0.0;
 
 	starttime = time(NULL);
 
@@ -429,15 +428,13 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	solver.handlehit = handlehit;
 	solver.quitNow = FALSE;
 
+	if (funits_upper != 0.0) {
+		solver.minAB = index_scale * index_scale_lower / funits_upper;
+		fprintf(stderr, "Set minAB to %g\n", solver.minAB);
+	}
 	if (funits_lower != 0.0) {
 		solver.maxAB = index_scale / funits_lower;
-	}
-	if (funits_upper != 0.0) {
-		solver.minAB = index_scale / funits_upper;
-	}
-
-	if ((funits_lower > 0.0) || (funits_upper > 0.0)) {
-		
+		fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
 
 	nfields = dyv_array_size(thefields);
