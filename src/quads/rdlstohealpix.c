@@ -6,13 +6,16 @@
 #include <string.h>
 
 #include "healpix.h"
+#include "starutil.h"
 
-char* OPTIONS = "hH:";
+char* OPTIONS = "hH:q";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s [options] <rdls-file>\n"
+	fprintf(stderr, "Usage: %s [options] [<rdls-file>]\n"
 			"   [-h] print help msg\n"
-			"   [-H healpix]: print the fields with stars in a healpix.\n",
+			"   [-q] quiet mode\n"
+			"   [-H healpix]: print the fields with stars in a healpix.\n"
+			"\nIf <rdls-file> is not provided, will read from stdin.\n",
 			progname);
 }
 
@@ -29,17 +32,17 @@ int main(int argc, char** args) {
   int argchar;
   char* progname = args[0];
   int target = -1;
-
-  if (argc < 2) {
-	  printHelp(progname);
-	  exit(-1);
-  }
+  bool fromstdin = FALSE;
+  bool quiet = FALSE;
 
   while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 	  switch (argchar) {
 	  case 'h':
 		  printHelp(progname);
 		  exit(0);
+	  case 'q':
+		  quiet = TRUE;
+		  break;
 	  case 'H':
 		  target = atoi(optarg);
 		  break;
@@ -49,12 +52,21 @@ int main(int argc, char** args) {
 		  exit(-1);
 	  }
 
-  filename = args[optind];
+  if (optind < argc) {
+	  filename = args[optind];
+  } else {
+	  fromstdin = TRUE;
+  }
 
-  f = fopen(filename, "r");
-  if (!f) {
-      printf("Couldn't open %s: %s\n", filename, strerror(errno));
-      exit(-1);
+  if (fromstdin) {
+	  printf("Reading from stdin...\n");
+	  f = stdin;
+  } else {
+	  f = fopen(filename, "r");
+	  if (!f) {
+		  printf("Couldn't open %s: %s\n", filename, strerror(errno));
+		  exit(-1);
+	  }
   }
 
   // first line: numfields
@@ -102,18 +114,21 @@ int main(int argc, char** args) {
 		  }
 		  healpixes[hp] = 1;
 	  }
-	  printf("Field %i: healpixes  ", j);
-	  for (i=0; i<12; i++) {
-		  if (healpixes[i])
-			  printf("%i  ", i);
+	  if (!quiet) {
+		  printf("Field %i: healpixes  ", j);
+		  for (i=0; i<12; i++) {
+			  if (healpixes[i])
+				  printf("%i  ", i);
+		  }
+		  printf("\n");
 	  }
-	  printf("\n");
 
 	  if ((target != -1) && (healpixes[target])) {
 		  fprintf(stderr, "%i ", j);
 	  }
   }
 
-  fclose(f);
+  if (!fromstdin)
+	  fclose(f);
   return 0;
 }
