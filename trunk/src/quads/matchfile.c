@@ -21,6 +21,10 @@ int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 		write_u32_native(fid, mo->fC) ||
 		write_u32_native(fid, mo->fD) ||
 		write_double(fid, mo->code_err);
+	/* ticket #111
+	  write_double(fid, mo->fieldunits_lower) ||
+	  write_double(fid, mo->fieldunits_upper);
+	*/
 
 	for (i=0; i<MATCH_VECTOR_SIZE; i++) {
 		if (!err) err |= write_double(fid, mo->vector[i]);
@@ -48,7 +52,10 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 	uint quad, iA, iB, iC, iD, fA, fB, fC, fD;
 	double codeerr;
 	MatchObj* mo;
-
+	/* ticket #111
+	   double funits_lower;
+	   double funits_upper;
+	*/
 	err |=
 		read_u32_native(fid, &endian) ||
 		read_u32_native(fid, &fieldnum) ||
@@ -83,6 +90,11 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 		read_u32_native(fid, &fC) ||
 		read_u32_native(fid, &fD) ||
 		read_double(fid, &codeerr);
+	/*
+	  ticket #111
+	  read_double(fid, &funits_lower) ||
+	  read_double(fid, &funits_upper);
+	*/
 
 	mo = mk_MatchObj();
 	mo->sMin = mk_star();
