@@ -647,6 +647,8 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 	solver_params params;
 	int last;
 
+	solver_default_params(&params);
+
 	params.codekd = codekd;
 	params.endobj = maxfieldobjs;
 	params.maxtries = maxtries;

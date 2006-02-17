@@ -12,6 +12,25 @@
 #include "solver2.h"
 #include "solver2_callbacks.h"
 
+void solver_default_params(solver_params* params) {
+	params->field = NULL;
+	params->codekd = NULL;
+	params->startobj = 0;
+	params->endobj = 0;
+	params->maxtries = 0;
+	params->max_matches_needed = 0;
+	params->codetol = 0.0;
+	params->quitNow = FALSE;
+	params->minAB = 0.0;
+	params->maxAB = 1e300;
+	params->cornerpix = NULL;
+	params->handlehit = NULL;
+	params->numtries = 0;
+	params->nummatches = 0;
+	params->mostagree = 0;
+	params->objsused = 0;
+}
+
 void find_corners(xy *thisfield, xy *cornerpix);
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
@@ -136,12 +155,12 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     int i;
     int iC, iD;
     double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
+	double dx, dy;
     double costheta, sintheta, scale, xxtmp;
     double xs[maxind];
     double ys[maxind];
 	double fieldxs[maxind];
 	double fieldys[maxind];
-	
     xy *ABCDpix;
 
     ABCDpix = mk_xy(DIM_QUADS);
@@ -151,16 +170,20 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     Bx = xy_refx(params->field, iB);
     By = xy_refy(params->field, iB);
 
+	dx = Bx - Ax;
+	dy = By - Ay;
+	scale = dx*dx + dy*dy;
+
+	if ((scale < minAB*minAB) || (scale > maxAB*maxAB))
+		return;
+
     xy_setx(ABCDpix, 0, Ax);
     xy_sety(ABCDpix, 0, Ay);
     xy_setx(ABCDpix, 1, Bx);
     xy_sety(ABCDpix, 1, By);
 
-    Bx -= Ax;
-    By -= Ay;
-    scale = Bx * Bx + By * By;
-    costheta = (Bx + By) / scale;
-    sintheta = (By - Bx) / scale;
+    costheta = (dx + dy) / scale;
+    sintheta = (dy - dx) / scale;
 
     // check which C, D points are inside the square.
     for (i=0; i<maxind; i++) {

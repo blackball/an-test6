@@ -2,7 +2,7 @@
  *   Solve fields (using Keir's kdtrees)
  *
  * Inputs: .ckdt2 .objs .quad
- * Output: .hits
+ * Output: .match
  */
 
 #include <sys/mman.h>
@@ -47,6 +47,9 @@ double codetol = DEFAULT_CODE_TOL;
 int startdepth = 0;
 int enddepth = 0;
 blocklist* fieldlist = NULL;
+double funits_lower = 0.0;
+double funits_upper = 0.0;
+double index_scale;
 
 matchfile_entry matchfile;
 
@@ -98,7 +101,7 @@ int main(int argc, char *argv[]) {
     qidx numfields, numquads;
     sidx numstars;
     char readStatus;
-    double index_scale, ramin, ramax, decmin, decmax;
+	double ramin, ramax, decmin, decmax;
     dimension Dim_Quads, Dim_Stars;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
@@ -115,6 +118,8 @@ int main(int argc, char *argv[]) {
 	int i;
 	char* path;
 	time_t starttime, endtime;
+
+	double minAB=0.0, maxAB=0.0;
 
 	starttime = time(NULL);
 
@@ -140,6 +145,9 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "codetol %g\n", codetol);
 	fprintf(stderr, "startdepth %i\n", startdepth);
 	fprintf(stderr, "enddepth %i\n", enddepth);
+	fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
+	fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
+
 	fprintf(stderr, "fields ");
 	for (i=0; i<blocklist_count(fieldlist); i++)
 		fprintf(stderr, "%i ", blocklist_int_access(fieldlist, i));
@@ -206,6 +214,10 @@ int main(int argc, char *argv[]) {
 		quadindex = (sidx*)(((char*)(mmap_quad)) + qposmarker);
 	}
 
+	// index_scale is specified in radians - switch to arcsec.
+	index_scale *= (180.0 / M_PI) * 60 * 60;
+	fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
+
 	// Read .objs file...
 	fopenin(catfname, catfid);
 	free_fn(catfname);
@@ -249,6 +261,7 @@ int main(int argc, char *argv[]) {
 		matchfile.fieldpath = fieldfname;
 	matchfile.codetol = codetol;
 
+	// Do it!
 	solve_fields(thefields, codekd);
 
 	if (donefname) {
@@ -315,6 +328,8 @@ int read_parameters() {
 					"    depth <end-field-object>\n"
 					"    parity <0 || 1>\n"
 					"    tol <code-tolerance>\n"
+					"    fieldunits_lower <arcsec-per-pixel>\n"
+					"    fieldunits_upper <arcsec-per-pixel>\n"
 					"    run\n"
 					"    help\n");
 		} else if (strncmp(buffer, "index ", 6) == 0) {
@@ -343,6 +358,12 @@ int read_parameters() {
 		} else if (strncmp(buffer, "parity ", 7) == 0) {
 			int d = atoi(buffer + 7);
 			parity = (d ? TRUE : FALSE);
+		} else if (strncmp(buffer, "fieldunits_lower ", 17) == 0) {
+			double d = atof(buffer + 17);
+			funits_lower = d;
+		} else if (strncmp(buffer, "fieldunits_upper ", 17) == 0) {
+			double d = atof(buffer + 17);
+			funits_upper = d;
 		} else if (strncmp(buffer, "fields ", 7) == 0) {
 			char* str = buffer + 7;
 			char* endp;
@@ -397,6 +418,8 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 
+	solver_default_params(&solver);
+
 	solver.codekd = codekd;
 	solver.endobj = enddepth;
 	solver.maxtries = 0;
@@ -405,6 +428,17 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	solver.cornerpix = mk_xy(2);
 	solver.handlehit = handlehit;
 	solver.quitNow = FALSE;
+
+	if (funits_lower != 0.0) {
+		solver.maxAB = index_scale / funits_lower;
+	}
+	if (funits_upper != 0.0) {
+		solver.minAB = index_scale / funits_upper;
+	}
+
+	if ((funits_lower > 0.0) || (funits_upper > 0.0)) {
+		
+	}
 
 	nfields = dyv_array_size(thefields);
 
@@ -432,6 +466,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		solver.startobj = startdepth;
 		solver.field = thisfield;
 
+		// The real thing
 		solve_field(&solver);
 
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",

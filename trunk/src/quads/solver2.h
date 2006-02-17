@@ -6,11 +6,9 @@
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
 #include "blocklist.h"
-//#include "hitlist.h"
 #include "matchobj.h"
 
 struct solver_params;
-//struct MatchObj;
 
 typedef int (*handle_hit)(struct solver_params*, MatchObj*);
 
@@ -26,9 +24,13 @@ struct solver_params {
 	double codetol;
 	bool quitNow;
 
+	// The limits on the size, in field coordinates,
+	// of the quads to find.
+	double minAB;
+	double maxAB;
+
 	// Must be initialized by caller; will contain outputs:
 	xy* cornerpix;
-	//struct hitlist* hits;
 	handle_hit handlehit;
 
 	// Outputs:
@@ -41,6 +43,8 @@ struct solver_params {
 	int objsused;
 };
 typedef struct solver_params solver_params;
+
+void solver_default_params(solver_params* params);
 
 void solve_field(solver_params* params);
 
