@@ -39,6 +39,34 @@ void hitlist_free(hitlist* hl) {
 	blocklist_free(hl);
 }
 
+int hitlist_count_best(hitlist* hl) {
+    int i, N;
+	int bestnum = 0;
+    N = blocklist_count(hl);
+    for (i=0; i<N; i++) {
+		int M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
+		M = blocklist_count(hits);
+		if (M > bestnum) {
+			bestnum = M;
+		}
+	}
+	return bestnum;
+}
+
+int hitlist_count_all(hitlist* hl) {
+    int i, N;
+	int sum = 0;
+    N = blocklist_count(hl);
+    for (i=0; i<N; i++) {
+		int M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
+		M = blocklist_count(hits);
+		sum += M;
+	}
+	return sum;
+}
+
 double distsq(double* d1, double* d2, int D) {
     double dist2;
     int i;

@@ -742,18 +742,19 @@ void blocklist_int_print(blocklist* list) {
       printf("%i ", ((int*)n->data)[i]);
     printf("] ");
   }
-  /*
-    printf("tail: ");
-    n = list->tail;
-    if (!n)
-    printf("(null)");
-    else {
-    printf("[ ");
-    for (i=0; i<n->N; i++)
-    printf("%i ", ((int*)n->data)[i]);
-    printf("] ");
-    }
-  */
+}
+
+int blocklist_int_contains(blocklist* list, int data) {
+  blnode* n;
+  int i;
+  int* idata;
+  for (n=list->head; n; n=n->next) {
+	  idata = (int*)n->data;
+	  for (i=0; i<n->N; i++)
+		  if (idata[i] == data)
+			  return 1;
+  }
+  return 0;
 }
 
 

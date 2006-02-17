@@ -12,20 +12,25 @@
 #include "hitlist.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:";
+char* OPTIONS = "hH:n:A:B:F:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
 			"   [-A first-field]\n"
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
-			"   [-n matches_needed_to_agree]\n"
+			"   [-F flush-interval]\n"
+ 			"   [-n matches_needed_to_agree]\n"
 			"%s"
+			"\nIf filename FLUSH is specified, agreeing matches will"
+			" be written out.\n"
 			"\nIf no match files are given, will read from stdin.\n",
 			progname, hitlist_get_parameter_help());
 }
 
 int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_ok);
+
+void flush_solved_fields();
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
 
@@ -33,6 +38,9 @@ unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 
 FILE *hitfid = NULL;
 char *hitfname = NULL;
+blocklist* hitlists;
+blocklist *solved;
+blocklist* flushed;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -47,9 +55,9 @@ int main(int argc, char *argv[]) {
 	int ninputfiles = 0;
 	bool fromstdin = FALSE;
 	int i;
-	blocklist* hitlists;
-	blocklist *solved, *unsolved;
+	blocklist *unsolved;
 	int firstfield=-1, lastfield=INT_MAX;
+	int flushinterval = 0;
 
 	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
@@ -70,6 +78,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'B':
 			lastfield = atoi(optarg);
+			break;
+		case 'F':
+			flushinterval = atoi(optarg);
 			break;
 		case 'H':
 			hitfname = optarg;
@@ -104,6 +115,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	hitlists = blocklist_pointer_new(256);
+	flushed = blocklist_int_new(256);
+	solved = blocklist_int_new(256);
+	unsolved = blocklist_int_new(256);
 
 	for (i=0; i<ninputfiles; i++) {
 		FILE* infile = NULL;
@@ -111,10 +125,21 @@ int main(int argc, char *argv[]) {
 		int nread;
 
 		if (fromstdin) {
-			infile = stdin;
 			fname = "stdin";
 		} else {
 			fname = inputfiles[i];
+		}
+
+		if ((strcmp(fname, "FLUSH") == 0) ||
+			(flushinterval && ((i-1) % (flushinterval) == 0))) {
+			printf("# flushing after file %i\n", i);
+			flush_solved_fields();
+			continue;
+		}
+
+		if (fromstdin) {
+			infile = stdin;
+		} else {
 			fopenin(fname, infile);
 		}
 
@@ -156,6 +181,13 @@ int main(int argc, char *argv[]) {
 			if (fieldnum < blocklist_count(hitlists)) {
 				hl = (hitlist*)blocklist_pointer_access(hitlists, fieldnum);
 				if (!hl) {
+					// check if it's NULL because it's been flushed.
+					if (blocklist_int_contains(flushed, fieldnum)) {
+						//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
+						free(me.indexpath);
+						free(me.fieldpath);
+						continue;
+					}
 					hl = hitlist_new();
 					blocklist_pointer_set(hitlists, fieldnum, hl);
 				}
@@ -196,9 +228,6 @@ int main(int argc, char *argv[]) {
 	hitshdr.min_matches_to_agree = min_matches_to_agree;
 	hits_write_header(hitfid, &hitshdr);
 
-	solved = blocklist_int_new(256);
-	unsolved = blocklist_int_new(256);
-
 	for (i=0; i<blocklist_count(hitlists); i++) {
 		blocklist* all;
 		blocklist* best;
@@ -217,20 +246,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Field %i: %i hits total, %i in best agreement.\n",
 				fieldnum, blocklist_count(all), nbest);
 
-		hits_field_init(&fieldhdr);
-		/*
-		  fieldhdr.user_quit = 0;
-		  fieldhdr.field = fieldnum;
-		  fieldhdr.objects_in_field = 0;
-		  fieldhdr.objects_examined = 0;
-		  fieldhdr.field_corners = params.cornerpix;
-		  fieldhdr.ntries = params.numtries;
-		  fieldhdr.parity = ParityFlip;
-		*/
- 		fieldhdr.nmatches = blocklist_count(all);
-		fieldhdr.nagree = nbest;
-		hits_write_field_header(hitfid, &fieldhdr);
-
 		if (nbest < min_matches_to_agree) {
 			//hits_write_hit(hitfid, NULL);
 			blocklist_int_append(unsolved, fieldnum);
@@ -240,6 +255,21 @@ int main(int argc, char *argv[]) {
 			sidx* fieldids;
 			int correspond_ok = 1;
 			int Ncorrespond;
+
+			hits_field_init(&fieldhdr);
+			/*
+			  fieldhdr.user_quit = 0;
+			  fieldhdr.objects_in_field = 0;
+			  fieldhdr.objects_examined = 0;
+			  fieldhdr.field_corners = params.cornerpix;
+			  fieldhdr.ntries = params.numtries;
+			  fieldhdr.parity = ParityFlip;
+			*/
+			fieldhdr.field = fieldnum;
+			fieldhdr.nmatches = blocklist_count(all);
+			fieldhdr.nagree = nbest;
+			hits_write_field_header(hitfid, &fieldhdr);
+
 			hits_start_hits_list(hitfid);
 			blocklist_int_append(solved, fieldnum);
 			for (j=0; j<nbest; j++) {
@@ -253,9 +283,10 @@ int main(int argc, char *argv[]) {
 			free(starids);
 			free(fieldids);
 			hits_end_hits_list(hitfid);
+
+			hits_write_field_tailer(hitfid);
 		}
 
-		hits_write_field_tailer(hitfid);
 		fflush(hitfid);
 
 		blocklist_free(all);
@@ -264,6 +295,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	blocklist_free(hitlists);
+	blocklist_free(flushed);
 
 	// print out Python literals of the solved and unsolved fields.
 	printf("# nsolved = %i\n# nunsolved = %i\n", blocklist_count(solved), blocklist_count(unsolved));
@@ -299,6 +331,100 @@ int main(int argc, char *argv[]) {
 		fclose(hitfid);
 
 	return 0;
+}
+
+void flush_solved_fields() {
+	int k;
+	hits_header hitshdr;
+	fprintf(stderr, "Flushing solved fields...\n");
+	blocklist* flushsolved = blocklist_int_new(256);
+
+	// Here, we could also just dump all but the best agreeing
+	// matches rather than writing them out right away...
+	
+	// write HITS header.
+	hits_header_init(&hitshdr);
+	hitshdr.nfields = blocklist_count(hitlists);
+	hitshdr.min_matches_to_agree = min_matches_to_agree;
+	hits_write_header(hitfid, &hitshdr);
+
+	for (k=0; k<blocklist_count(hitlists); k++) {
+		blocklist* best;
+		hits_field fieldhdr;
+		int nbest;
+		int fieldnum = k;
+		int j;
+		sidx* starids;
+		sidx* fieldids;
+		int correspond_ok = 1;
+		int Ncorrespond;
+
+		hitlist* hl = (hitlist*)blocklist_pointer_access(hitlists, k);
+		if (!hl) continue;
+		best = hitlist_get_best(hl);
+		if (!best)
+			continue;
+		nbest = blocklist_count(best);
+		if (nbest < min_matches_to_agree)
+			continue;
+		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
+
+		blocklist_int_append(flushsolved, fieldnum);
+		blocklist_int_append(solved, fieldnum);
+		blocklist_int_append(flushed, fieldnum);
+
+		hits_field_init(&fieldhdr);
+		fieldhdr.field = fieldnum;
+		fieldhdr.nmatches = hitlist_count_all(hl);
+		fieldhdr.nagree = nbest;
+		hits_write_field_header(hitfid, &fieldhdr);
+
+		hits_start_hits_list(hitfid);
+
+		for (j=0; j<nbest; j++) {
+			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
+			hits_write_hit(hitfid, mo);
+		}
+		starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
+		fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
+		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
+		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
+		free(starids);
+		free(fieldids);
+		hits_end_hits_list(hitfid);
+
+		hits_write_field_tailer(hitfid);
+		fflush(hitfid);
+
+		// free this hitlist.
+		hitlist_clear(hl);
+		hitlist_free(hl);
+		// put it back to NULL.
+		blocklist_pointer_set(hitlists, fieldnum, NULL);
+	}
+	printf("# nsolved = %i\n", blocklist_count(flushsolved));
+	printf("solved=array([");
+	for (k=0; k<blocklist_count(flushsolved); k++) {
+		printf("%i,", blocklist_int_access(flushsolved, k));
+	}
+	printf("]);\n");		
+
+	// DEBUG - matlab
+	printf("# solved=[");
+	for (k=0; k<blocklist_count(flushsolved); k++) {
+		printf("%i,", blocklist_int_access(flushsolved, k));
+	}
+	printf("];\n");
+	fflush(stdout);
+
+	fprintf(stderr, "Flushed %i fields.\n", blocklist_count(flushsolved));
+	fprintf(stderr, "So far, %i fields have been solved.\n", blocklist_count(solved));
+
+	blocklist_free(flushsolved);
+
+	// finish up HITS file...
+	hits_write_tailer(hitfid);
+	fflush(hitfid);
 }
 
 inline void add_correspondence(sidx* starids, sidx* fieldids,
