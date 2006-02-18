@@ -134,7 +134,8 @@ int main(int argc, char *argv[]) {
 			(flushinterval && ((i-1) % (flushinterval) == 0))) {
 			printf("# flushing after file %i\n", i);
 			flush_solved_fields();
-			continue;
+			if (strcmp(fname, "FLUSH") == 0)
+				continue;
 		}
 
 		if (fromstdin) {
