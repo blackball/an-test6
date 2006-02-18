@@ -124,6 +124,7 @@ blocklist* hitlist_get_all(hitlist* bl) {
 int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
     int i, N;
     blocklist* newlist;
+	blocklist* mergelist = NULL;
 
     N = blocklist_count(hlist);
 
@@ -136,11 +137,22 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 			MatchObj* m = (MatchObj*)blocklist_pointer_access(hits, j);
 			d2 = distsq(mo->vector, m->vector, MATCH_VECTOR_SIZE);
 			if (d2 < square(AgreeTol)) {
-				blocklist_pointer_append(hits, mo);
-				return blocklist_count(hits);
+				if (!mergelist) {
+					blocklist_pointer_append(hits, mo);
+					mergelist = hits;
+				} else {
+					// transitive merging...
+					blocklist_append_list(mergelist, hits);
+					blocklist_remove_index(hlist, i);
+					i--;
+				}
+				break;
 			}
 		}
     }
+	if (mergelist) {
+		return blocklist_count(mergelist);
+	}
 
     // no agreement - create new list.
     newlist = blocklist_pointer_new(10);
