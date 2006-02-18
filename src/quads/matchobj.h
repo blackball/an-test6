@@ -24,6 +24,8 @@ struct match_struct {
 	  double fieldD[2];
 	  int abcdorder;
 	*/
+
+	void* extra;
 };
 typedef struct match_struct MatchObj;
 

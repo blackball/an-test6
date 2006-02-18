@@ -12,7 +12,7 @@
 #include "hitlist.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:";
+char* OPTIONS = "hH:n:A:B:F:L:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -20,6 +20,7 @@ void printHelp(char* progname) {
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
 			"   [-F flush-interval]\n"
+			"   [-L write-leftover-matches]\n"
  			"   [-n matches_needed_to_agree]\n"
 			"%s"
 			"\nIf filename FLUSH is specified, agreeing matches will"
@@ -58,6 +59,9 @@ int main(int argc, char *argv[]) {
 	blocklist *unsolved;
 	int firstfield=-1, lastfield=INT_MAX;
 	int flushinterval = 0;
+	char* leftoverfname = NULL;
+	FILE* leftoverfid = NULL;
+	bool leftovers = FALSE;
 
 	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
@@ -73,6 +77,9 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
+		case 'L':
+			leftoverfname = optarg;
+			break;
 		case 'A':
 			firstfield = atoi(optarg);
 			break;
@@ -114,6 +121,11 @@ int main(int argc, char *argv[]) {
 		hitfid = stdout;
 	}
 
+	if (leftoverfname) {
+		fopenout(leftoverfname, leftoverfid);
+		leftovers = TRUE;
+	}
+
 	hitlists = blocklist_pointer_new(256);
 	flushed = blocklist_int_new(256);
 	solved = blocklist_int_new(256);
@@ -150,6 +162,7 @@ int main(int argc, char *argv[]) {
 		for (;;) {
 			MatchObj* mo;
 			matchfile_entry me;
+			matchfile_entry* mecopy;
 			hitlist* hl;
 			int c;
 			int fieldnum;
@@ -200,11 +213,18 @@ int main(int argc, char *argv[]) {
 				blocklist_pointer_append(hitlists, hl);
 			}
 
+			if (leftovers) {
+				mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
+				memcpy(mecopy, &me, sizeof(matchfile_entry));
+				mo->extra = mecopy;
+			} else {
+				mo->extra = NULL;
+				free(me.indexpath);
+				free(me.fieldpath);
+			}
+
 			// add the match...
 			hitlist_add_hit(hl, mo);
-
-			free(me.indexpath);
-			free(me.fieldpath);
 		}
 		fprintf(stderr, "Read %i matches.\n", nread);
 		fflush(stderr);
@@ -250,6 +270,28 @@ int main(int argc, char *argv[]) {
 		if (nbest < min_matches_to_agree) {
 			//hits_write_hit(hitfid, NULL);
 			blocklist_int_append(unsolved, fieldnum);
+
+			if (leftovers) {
+				int j;
+				int NA;
+				NA = blocklist_count(all);
+				fprintf(stderr, "Writing %i leftovers...\n", NA);
+				// write the leftovers...
+				for (j=0; j<NA; j++) {
+					matchfile_entry* me;
+					MatchObj* mo = (MatchObj*)blocklist_pointer_access(all, j);
+					me = (matchfile_entry*)mo->extra;
+
+					if (matchfile_write_match(leftoverfid, mo, me)) {
+						fprintf(stderr, "Error writing a match to %s: %s\n", leftoverfname, strerror(errno));
+						break;
+					}
+					free(me->fieldpath);
+					free(me->indexpath);
+					free(me);
+				}
+			}
+
 		} else {
 			int j;
 			sidx* starids;
@@ -330,6 +372,9 @@ int main(int argc, char *argv[]) {
 	hits_write_tailer(hitfid);
 	if (hitfname)
 		fclose(hitfid);
+
+	if (leftoverfid)
+		fclose(leftoverfid);
 
 	return 0;
 }
