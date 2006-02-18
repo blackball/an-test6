@@ -387,6 +387,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 		//nagree = hitlist_add_hit(params->hits, mo);
 		nagree = params->handlehit(params, mo);
+		// Note - after this call returns, the "mo" may
+		// have been freed!
 
 		if (nagree > params->mostagree) {
 			params->mostagree = nagree;
