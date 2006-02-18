@@ -163,8 +163,6 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	double fieldys[maxind];
     xy *ABCDpix;
 
-    ABCDpix = mk_xy(DIM_QUADS);
-
     Ax = xy_refx(params->field, iA);
     Ay = xy_refy(params->field, iA);
     Bx = xy_refx(params->field, iB);
@@ -176,6 +174,8 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 
 	if ((scale < square(params->minAB)) || (scale > square(params->maxAB)))
 		return;
+
+    ABCDpix = mk_xy(DIM_QUADS);
 
     xy_setx(ABCDpix, 0, Ax);
     xy_sety(ABCDpix, 0, Ay);
@@ -350,7 +350,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 		mo->code_err = krez->sdists[jj];
 
-		mo->transform = transform;
+		//mo->transform = transform;
+		free(transform);
 
 		/*
 
@@ -383,7 +384,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 		  mo->abcdorder = ABCD_ORDER;
 		*/
-		//free(transform);
 
 		//nagree = hitlist_add_hit(params->hits, mo);
 		nagree = params->handlehit(params, mo);
