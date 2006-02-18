@@ -409,6 +409,11 @@ int handlehit(struct solver_params* p, MatchObj* mo) {
 	if (matchfile_write_match(matchfid, mo, &matchfile)) {
 		fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
 	}
+
+	free_star(mo->sMin);
+	free_star(mo->sMax);
+	free_MatchObj(mo);
+
 	return 1;
 }
 
