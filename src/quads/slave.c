@@ -146,6 +146,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "enddepth %i\n", enddepth);
 	fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
 	fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
+	fprintf(stderr, "index_lower %g\n", index_scale_lower);
 
 	fprintf(stderr, "fields ");
 	for (i=0; i<blocklist_count(fieldlist); i++)
@@ -332,6 +333,7 @@ int read_parameters() {
 					"    tol <code-tolerance>\n"
 					"    fieldunits_lower <arcsec-per-pixel>\n"
 					"    fieldunits_upper <arcsec-per-pixel>\n"
+					"    index_lower <index-size-lower-bound-fraction>\n"
 					"    run\n"
 					"    help\n");
 		} else if (strncmp(buffer, "index ", 6) == 0) {
@@ -360,6 +362,9 @@ int read_parameters() {
 		} else if (strncmp(buffer, "parity ", 7) == 0) {
 			int d = atoi(buffer + 7);
 			parity = (d ? TRUE : FALSE);
+		} else if (strncmp(buffer, "index_lower ", 12) == 0) {
+			double d = atof(buffer + 12);
+			index_scale_lower = d;
 		} else if (strncmp(buffer, "fieldunits_lower ", 17) == 0) {
 			double d = atof(buffer + 17);
 			funits_lower = d;
