@@ -70,6 +70,15 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
     return 1;
 }
 
+void hitlist_free_extra(hitlist* hlist, void (*free_function)(MatchObj* mo)) {
+    int i, N;
+    N = blocklist_count(hlist);
+	for (i=0; i<N; i++) {
+		MatchObj* mo = (MatchObj*)blocklist_pointer_access(hlist, i);
+		free_function(mo);
+	}
+}
+
 void hitlist_clear(hitlist* hl) {
     int i, N;
     N = blocklist_count(hl);
