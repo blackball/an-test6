@@ -12,7 +12,7 @@
 #include "hitlist.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:L:";
+char* OPTIONS = "hH:n:A:B:F:L:M:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
