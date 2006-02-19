@@ -143,6 +143,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 				} else {
 					// transitive merging...
 					blocklist_append_list(mergelist, hits);
+					blocklist_free(hits);
 					blocklist_remove_index(hlist, i);
 					i--;
 				}
