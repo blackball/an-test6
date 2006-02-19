@@ -109,6 +109,21 @@ inline int inrange(double ra, double ralow, double rahigh);
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
 #define z2dec(z) (asin(z)) // result in radians
 
+// Converts a distance-squared between two points on the
+// surface of the unit sphere into the angle between the
+// rays from the center of the sphere to the points, in
+// radians.
+double distsq2arc(double dist2) {
+	// cosine law: c^2 = a^2 + b^2 - 2 a b cos C
+	// c^2 is dist2.  We want C.
+	// a = b = 1
+	// c^2 = 1 + 1 - 2 cos C
+	// dist2 = 2( 1 - cos C )
+	// 1 - (dist2 / 2) = cos C
+	// C = acos(1 - dist2 / 2)
+	return acos(1.0 - dist2 / 2.0);
+}
+
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
 
 star *make_rand_star(double ramin, double ramax,
