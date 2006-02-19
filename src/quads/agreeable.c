@@ -20,7 +20,8 @@ void printHelp(char* progname) {
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
 			"   [-F flush-interval]\n"
-			"   [-L write-leftover-matches]\n"
+			"   [-L write-leftover-matches-file]\n"
+			"   [-M write-successful-matches-file]\n"
  			"   [-n matches_needed_to_agree]\n"
 			"%s"
 			"\nIf filename FLUSH is specified, agreeing matches will"
@@ -63,6 +64,10 @@ int main(int argc, char *argv[]) {
 	FILE* leftoverfid = NULL;
 	bool leftovers = FALSE;
 
+	char* agreefname = NULL;
+	FILE* agreefid = NULL;
+	bool agree = FALSE;
+
 	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
 	sprintf(alloptions, "%s%s", OPTIONS, hitlist_options);
@@ -77,6 +82,9 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
+		case 'M':
+			agreefname = optarg;
+			break;
 		case 'L':
 			leftoverfname = optarg;
 			break;
@@ -124,6 +132,10 @@ int main(int argc, char *argv[]) {
 	if (leftoverfname) {
 		fopenout(leftoverfname, leftoverfid);
 		leftovers = TRUE;
+	}
+	if (agreefname) {
+		fopenout(agreefname, agreefid);
+		agree = TRUE;
 	}
 
 	hitlists = blocklist_pointer_new(256);
@@ -213,7 +225,7 @@ int main(int argc, char *argv[]) {
 				blocklist_pointer_append(hitlists, hl);
 			}
 
-			if (leftovers) {
+			if (leftovers || agree) {
 				mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
 				memcpy(mecopy, &me, sizeof(matchfile_entry));
 				mo->extra = mecopy;
@@ -318,6 +330,17 @@ int main(int argc, char *argv[]) {
 			for (j=0; j<nbest; j++) {
 				MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
 				hits_write_hit(hitfid, mo);
+
+				if (agree) {
+					matchfile_entry* me;
+					me = (matchfile_entry*)mo->extra;
+					if (matchfile_write_match(agreefid, mo, me)) {
+						fprintf(stderr, "Error writing a match to %s: %s\n", agreefname, strerror(errno));
+					}
+					free(me->fieldpath);
+					free(me->indexpath);
+					free(me);
+				}
 			}
 			starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
 			fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
@@ -375,6 +398,9 @@ int main(int argc, char *argv[]) {
 
 	if (leftoverfid)
 		fclose(leftoverfid);
+
+	if (agreefid)
+		fclose(agreefid);
 
 	return 0;
 }
