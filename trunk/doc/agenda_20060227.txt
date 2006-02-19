@@ -31,7 +31,7 @@ New York University
    4.6 read and write and use SIP headers
    4.7 least-squares and etc for tweak
 
-5. Long-term WWW capabilities
+5. Eventual WWW capabilities
 
    5.1 meta-tweak
    5.2 archiving of input
@@ -39,7 +39,7 @@ New York University
    5.4 use of (trusted) archived data
    5.5 other image-processing tasks (satellites, flat-fielding, etc)
 
-6. Science projects
+6. Eventual science projects
 
    6.1 re-solve PMM data to make AN-1.0
    6.2 cross-identification of sources, including moving soures
