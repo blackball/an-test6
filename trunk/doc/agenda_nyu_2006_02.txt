@@ -11,19 +11,20 @@ New York University
 
    2.1 What have you done?
    2.2 What are you currently working on?
-   2.3 What is your principal interest in the project?
-   2.4 How far can our current funding take us and how should
+   2.3 What's your biggest obstacle right now?
+   2.4 What is your principal interest in the project?
+   2.5 How far can our current funding take us and how should
        we maximize our chances of getting refunded?
 
 3. Tweak & Solvexy: Going alpha on the WWW
 
-   3.0 What do you imagine the alpha site to be and do?
-   3.1 site, WWW pages, front-end
-   3.2 managing/controlling cluster
-   3.3 Do users upload x,y lists or images?
-   3.4 Do we need to avoid IDL?
-   3.5 privacy policy
-   3.6 data archiving requirements and data model
+   3.1 What do you imagine the alpha site to be and do?
+   3.2 site, WWW pages, front-end
+   3.3 managing/controlling cluster
+   3.4 Do users upload x,y lists or images?
+   3.5 Do we need to avoid IDL?
+   3.6 privacy policy
+   3.7 data archiving requirements and data model
 
 4. Tweak & Solvexy: Migrating to open source implementations
 
@@ -43,8 +44,9 @@ New York University
    5.3 "best possible" heterogeneous-source astrometric catalog
    5.4 structure of the galaxy
    5.5 statistical anomalies on the sky
-   5.6 super-resolution multi-wavelength astronomy
-   5.7 "social networks" of astronomy: who is looking at what parts
+   5.6 transient searches
+   5.7 super-resolution multi-wavelength astronomy
+   5.8 "social networks" of astronomy: who is looking at what parts
        of the sky that who else is looking at and who is writing what
        papers about what
 
@@ -55,5 +57,5 @@ New York University
    6.3 calibration
    6.4 use of (trusted) archived data
    6.5 other image-processing tasks (satellites, flat-fielding, etc)
-
-
+   6.6 delivering transient information to users up-front
+   6.7 delivering GRB and other interesting counterparts
