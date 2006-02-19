@@ -1,5 +1,16 @@
 #include "starutil.h"
 
+inline double distsq2arc(double dist2) {
+	// cosine law: c^2 = a^2 + b^2 - 2 a b cos C
+	// c^2 is dist2.  We want C.
+	// a = b = 1
+	// c^2 = 1 + 1 - 2 cos C
+	// dist2 = 2( 1 - cos C )
+	// 1 - (dist2 / 2) = cos C
+	// C = acos(1 - dist2 / 2)
+	return acos(1.0 - dist2 / 2.0);
+}
+
 inline double square(double d) {
     return d*d;
 }

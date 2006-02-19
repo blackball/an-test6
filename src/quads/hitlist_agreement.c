@@ -80,6 +80,7 @@ blocklist* hitlist_get_best(hitlist* hl) {
     int i, N;
     int bestnum;
 	blocklist* bestlist;
+	blocklist* bestcopy;
 
 	bestnum = 0;
 	bestlist = NULL;
@@ -93,7 +94,16 @@ blocklist* hitlist_get_best(hitlist* hl) {
 			bestlist = hits;
 		}
 	}
-	return bestlist;
+
+	// shallow copy...
+	bestcopy = blocklist_pointer_new(256);
+	if (bestlist) {
+		for (i=0; i<bestnum; i++) {
+			MatchObj* mo = (MatchObj*)blocklist_pointer_access(bestlist, i);
+			blocklist_pointer_append(bestcopy, mo);
+		}
+	}
+	return bestcopy;
 }
 
 void hitlist_add_hits(hitlist* hl, blocklist* hits) {
@@ -162,6 +172,20 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
     blocklist_pointer_append(hlist, newlist);
 
     return 1;
+}
+
+void hitlist_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {
+    int i, N;
+    N = blocklist_count(hl);
+    for (i=0; i<N; i++) {
+		int j, M;
+		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
+		M = blocklist_count(hits);
+		for (j=0; j<M; j++) {
+			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
+			free_function(mo);
+		}
+	}
 }
 
 void hitlist_clear(hitlist* hl) {

@@ -18,10 +18,16 @@ hitlist* hitlist_new();
 
 void hitlist_clear(hitlist* hlist);
 
+void hitlist_free_extra(hitlist* hlist, void (*free_function)(MatchObj* mo));
+
 void hitlist_free(hitlist* hlist);
 
+// returns a shallow copy of the best set of hits.
+// you are responsible for calling blocklist_free.
 blocklist* hitlist_get_best(hitlist* hlist);
 
+// returns a shallow copy of the whole set of results.
+// you are responsible for calling blocklist_free.
 blocklist* hitlist_get_all(hitlist* hlist);
 
 int hitlist_add_hit(hitlist* hlist, MatchObj* mo);
