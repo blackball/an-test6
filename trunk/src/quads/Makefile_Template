@@ -20,7 +20,7 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 EXECS = randcat startree genfields quadidx solvexy fieldquads findstar findquad \
 	findcode all_quads fixheaders codetomatlab startree2 deduplicate codetree2  \
 	printheaders get_healpix quadidx2 xylstomatlab rdlstohealpix codedensity \
-	codeprojections fixmatchfile printmatchfile rdls2hpls
+	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable
 
 # Deprecated:
 #   getquads codetree 
@@ -29,7 +29,7 @@ MYOBJS = randcat.o startree.o quadidx.o genfields.o solvexy.o fieldquads.o finds
 	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
 	deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
 	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o slave.o \
-	fixmatchfile.o printmatchfile rdls2hpls.o
+	fixmatchfile.o printmatchfile rdls2hpls.o certifiable.o
 
 # getquads.o codetree.o 
 

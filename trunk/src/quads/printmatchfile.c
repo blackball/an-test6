@@ -100,7 +100,44 @@ int main(int argc, char *argv[]) {
 			printf("Stars %i %i %i %i\n", (int)mo->iA, (int)mo->iB, (int)mo->iC, (int)mo->iD);
 			printf("FieldObjs %i %i %i %i\n", (int)mo->fA, (int)mo->fB, (int)mo->fC, (int)mo->fD);
 			printf("CodeErr %g\n", mo->code_err);
+			{
+				double x1,y1,z1;
+				double x2,y2,z2;
+				double ra,dec;
+				double dist2, r;
+				double arc;
+				x1 = star_ref(mo->sMin, 0);
+				y1 = star_ref(mo->sMin, 1);
+				z1 = star_ref(mo->sMin, 2);
+				// normalize.
+				r = sqrt(square(x1) + square(y1) + square(z1));
+				x1 /= r;
+				y1 /= r;
+				z1 /= r;
+				ra =  rad2deg(xy2ra(x1, y1));
+				dec = rad2deg(z2dec(z1));
+				printf("RaDecMin %8.3f, %8.3f degrees\n", ra, dec);
+				x2 = star_ref(mo->sMax, 0);
+				y2 = star_ref(mo->sMax, 1);
+				z2 = star_ref(mo->sMax, 2);
+				r = sqrt(square(x2) + square(y2) + square(z2));
+				x2 /= r;
+				y2 /= r;
+				z2 /= r;
+				ra =  rad2deg(xy2ra(x2, y2));
+				dec = rad2deg(z2dec(z2));
+				printf("RaDecMax %8.3f, %8.3f degrees\n", ra, dec);
+				ra  = rad2deg(xy2ra((x1+x2)/2.0, (y1+y2)/2.0));
+				dec = rad2deg(z2dec((z1+z2)/2.0));
+				printf("Center   %8.3f, %8.3f degrees\n", ra, dec);
+				dist2 = square(x2 - x1) + square(y2 - y1) + square(z2 - z1);
+				arc = rad2deg(distsq2arc(dist2));
+				printf("Arc %g arcmin\n", arc*60.0);
+			}
 
+			free_star(mo->sMin);
+			free_star(mo->sMax);
+			free_MatchObj(mo);
 			free(me.indexpath);
 			free(me.fieldpath);
 		}
@@ -110,7 +147,6 @@ int main(int argc, char *argv[]) {
 		if (!fromstdin)
 			fclose(infile);
 	}
-
 
 	return 0;
 }
