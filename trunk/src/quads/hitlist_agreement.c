@@ -146,6 +146,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 					blocklist_free(hits);
 					blocklist_remove_index(hlist, i);
 					i--;
+					N--;
 				}
 				break;
 			}
