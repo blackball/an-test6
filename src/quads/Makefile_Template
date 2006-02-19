@@ -29,7 +29,7 @@ MYOBJS = randcat.o startree.o quadidx.o genfields.o solvexy.o fieldquads.o finds
 	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
 	deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
 	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o slave.o \
-	fixmatchfile.o printmatchfile
+	fixmatchfile.o printmatchfile rdls2hpls.o
 
 # getquads.o codetree.o 
 

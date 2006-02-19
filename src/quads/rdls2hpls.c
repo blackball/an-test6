@@ -7,6 +7,8 @@
 
 #include "healpix.h"
 #include "starutil.h"
+#include "lsfile.h"
+#include "blocklist.h"
 
 int convert_file(char* fn)
 {
@@ -43,19 +45,24 @@ int convert_file(char* fn)
 		fprintf(stderr, "Couldn't open %s for writing: %s\n", hpfn, strerror(errno));
 		return 1;
 	}
+	free(hpfn);
+	hpfn = NULL;
 
 	// First line: numfields
-	if (fscanf(rdf, "NumFields=%i\n", &numfields) != 1) {
+	numfields = read_ls_file_header(rdf);
+	if (!numfields == -1) {
 		fprintf(stderr, "parse error in %s: numfields\n", fn);
 		return 1;
 	}
 
-	fprintf(hpf, "Numfields=%i\n", numfields);
+	fprintf(hpf, "NumFields=%i\n", numfields);
 
 	for (j = 0; j < numfields; j++) {
+		int nhp;
 		// Second line and subsequent lines: npoints,ra,dec,ra,dec,...
-		if (fscanf(rdf, "%i,", &npoints) != 1) {
-			fprintf(stderr, "parse error in %s: npoints\n", fn);
+		blocklist* points = read_ls_file_field(rdf, 2);
+		if (!points) {
+			fprintf(stderr, "parse error in %s: field %i\n", fn, j);
 			return 1;
 		}
 
@@ -63,16 +70,14 @@ int convert_file(char* fn)
 			healpixes[i] = 0;
 		}
 
+		npoints = blocklist_count(points) / 2;
+
 		for (i = 0; i < npoints; i++) {
 			double ra, dec;
 			int hp;
-			if (fscanf(rdf, "%lf,%lf", &ra, &dec) != 2) {
-				printf("parse error: points %i\n", i);
-				exit( -1);
-			}
-			if (i != npoints - 1) {
-				fscanf(rdf, ",");
-			}
+
+			ra = blocklist_double_access(points, i*2);
+			dec = blocklist_double_access(points, i*2 + 1);
 
 			ra *= M_PI / 180.0;
 			dec *= M_PI / 180.0;
@@ -84,12 +89,19 @@ int convert_file(char* fn)
 			}
 			healpixes[hp] = 1;
 		}
+		nhp = 0;
 		for (i = 0; i < 12; i++) {
 			if (healpixes[i])
-				fprintf(hpf, "%i ", i);
+				nhp++;
+		}
+		fprintf(hpf, "%i", nhp);
+		for (i = 0; i < 12; i++) {
+			if (healpixes[i])
+				fprintf(hpf, ",%i", i);
 		}
 		fprintf(hpf, "\n");
 
+		blocklist_free(points);
 	}
 
 	fclose(rdf);
