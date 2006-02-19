@@ -11,16 +11,9 @@ New York University
    2.2 What are you currently working on?
    2.3 What is your principal interest in the project?
 
-   - Blanton
-   - Hogg
-   - Lang
-   - Masjedi
-   - Mierle
-   - Roweis
-   - others (Burles? Finkbeiner? Marshall?)
-
 3. Going alpha on the WWW
 
+   3.0 What do you imagine the alpha site to be and do?
    3.1 site, WWW pages, front-end
    3.2 managing/controlling cluster
    3.3 Do users upload x,y lists or images?
@@ -30,8 +23,27 @@ New York University
 
 4. Migrating to open source implementations
 
-   4.1 
+   4.1 reading usno and using flags
+   4.2 object detection
+   4.3 cosmic-ray rejection
+   4.4 offset from pairs (Hough transform)
+   4.5 read and write and use regular astrom headers
+   4.6 read and write and use SIP headers
+   4.7 least-squares and etc for tweak
 
 5. Long-term WWW capabilities
 
+   5.1 meta-tweak
+   5.2 archiving of input
+   5.3 calibration
+   5.4 use of (trusted) archived data
+   5.5 other image-processing tasks (satellites, flat-fielding, etc)
+
 6. Science projects
+
+   6.1 re-solve PMM data to make AN-1.0
+   6.2 cross-identification of sources, including moving soures
+   6.3 best possible heterogeneous-source astrometric catalog
+   6.4 structure of the galaxy
+   6.5 statistical anomalies on the sky
+   6.6 super-resolution multi-wavelength astronomy
