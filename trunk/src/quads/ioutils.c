@@ -127,11 +127,16 @@ char* read_string_terminated(FILE* fin, char* terminators, int nterminators) {
 		free(rtn);
 		return NULL;
 	}
+	if (rtn[i-1] != '\0') {
+		// add \0 if it isn't already there...
+		i++;
+	}
 	rtn = (char*)realloc(rtn, i);
 	// shouldn't happen - we're shrinking.
 	if (!rtn) {
 		fprintf(stderr, "Couldn't realloc buffer: %i\n", i);
 	}
+	rtn[i-1] = '\0';
 	return rtn;
 }
 
