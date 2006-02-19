@@ -1,0 +1,37 @@
+agenda
+Astrometry.net group meeting
+New York University
+2006-02-27 to 2006-03-03
+
+1. Meet and greet
+
+2. Current status
+
+   2.1 What have you done?
+   2.2 What are you currently working on?
+   2.3 What is your principal interest in the project?
+
+   - Blanton
+   - Hogg
+   - Lang
+   - Masjedi
+   - Mierle
+   - Roweis
+   - others (Burles? Finkbeiner? Marshall?)
+
+3. Going alpha on the WWW
+
+   3.1 site, WWW pages, front-end
+   3.2 managing/controlling cluster
+   3.3 Do users upload x,y lists or images?
+   3.4 Do we need to avoid IDL?
+   3.5 privacy policy
+   3.6 data archiving requirements and data model
+
+4. Migrating to open source implementations
+
+   4.1 
+
+5. Long-term WWW capabilities
+
+6. Science projects
