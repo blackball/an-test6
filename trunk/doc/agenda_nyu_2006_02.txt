@@ -4,14 +4,18 @@ New York University
 2006-02-27 to 2006-03-03
 
 1. Meet and greet
+   expected attendance: 
+   Dustin, Keir, Morad, David, Mike, Sam (March2/3 only)
 
 2. Current status
 
    2.1 What have you done?
    2.2 What are you currently working on?
    2.3 What is your principal interest in the project?
+   2.4 How far can our current funding take us and how should
+       we maximize our chances of getting refunded?
 
-3. Going alpha on the WWW
+3. Tweak & Solvexy: Going alpha on the WWW
 
    3.0 What do you imagine the alpha site to be and do?
    3.1 site, WWW pages, front-end
@@ -21,7 +25,7 @@ New York University
    3.5 privacy policy
    3.6 data archiving requirements and data model
 
-4. Migrating to open source implementations
+4. Tweak & Solvexy: Migrating to open source implementations
 
    4.1 reading usno and using flags
    4.2 object detection
@@ -31,19 +35,25 @@ New York University
    4.6 read and write and use SIP headers
    4.7 least-squares and etc for tweak
 
-5. Eventual WWW capabilities
+5. Other Data Sets and Future Potential Scientific Projects
 
-   5.1 meta-tweak
-   5.2 archiving of input
-   5.3 calibration
-   5.4 use of (trusted) archived data
-   5.5 other image-processing tasks (satellites, flat-fielding, etc)
+   5.1 re-solve PMM data to make AN-1.0 (USNO C)
+   5.2 cross-identification of sources, including moving soures
+       across multiple catalogues/instruments
+   5.3 "best possible" heterogeneous-source astrometric catalog
+   5.4 structure of the galaxy
+   5.5 statistical anomalies on the sky
+   5.6 super-resolution multi-wavelength astronomy
+   5.7 "social networks" of astronomy: who is looking at what parts
+       of the sky that who else is looking at and who is writing what
+       papers about what
 
-6. Eventual science projects
+6. Eventual Extensions of WWW capabilities
 
-   6.1 re-solve PMM data to make AN-1.0
-   6.2 cross-identification of sources, including moving soures
-   6.3 best possible heterogeneous-source astrometric catalog
-   6.4 structure of the galaxy
-   6.5 statistical anomalies on the sky
-   6.6 super-resolution multi-wavelength astronomy
+   6.1 meta-tweak
+   6.2 archiving of input (privacy issues)
+   6.3 calibration
+   6.4 use of (trusted) archived data
+   6.5 other image-processing tasks (satellites, flat-fielding, etc)
+
+
