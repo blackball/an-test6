@@ -23,5 +23,6 @@ int read_u32s(FILE* fin, unsigned int* val, int n);
 int read_double(FILE* fin, double* val);
 int read_fixed_length_string(FILE* fin, char* s, int length);
 char* read_string(FILE* fin);
+char* read_string_terminated(FILE* fin, char* terminators, int nterminators);
 
 #endif

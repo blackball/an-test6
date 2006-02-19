@@ -87,7 +87,12 @@ int read_fixed_length_string(FILE* fin, char* s, int length) {
 }
 
 char* read_string(FILE* fin) {
+	return read_string_terminated(fin, "\0", 1);
+}
+
+char* read_string_terminated(FILE* fin, char* terminators, int nterminators) {
 	int step = 1024;
+	int maxstep = 1024*1024;
 	int i = 0;
 	int size = 0;
 	char* rtn = NULL;
@@ -101,15 +106,21 @@ char* read_string(FILE* fin) {
 				fprintf(stderr, "Couldn't allocate buffer: %i.\n", size+step);
 				return rtn;
 			}
-			step *= 2;
+			if (step < maxstep)
+				step *= 2;
 		}
 		// treat end-of-file like end-of-string.
 		if (c == EOF)
 			c = '\0';
 		rtn[i] = (char)c;
 		i++;
-		if (!c)
+
+		if (memchr(terminators, c, nterminators))
 			break;
+		/*
+		  if (!c)
+		  break;
+		*/
 	}
 	if (ferror(fin)) {
 		read_complain(fin, "string");

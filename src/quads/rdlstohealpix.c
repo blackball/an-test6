@@ -7,6 +7,7 @@
 
 #include "healpix.h"
 #include "starutil.h"
+#include "lsfile.h"
 
 char* OPTIONS = "hH:q";
 
@@ -69,40 +70,47 @@ int main(int argc, char** args) {
 	  }
   }
 
+  /*
   // first line: numfields
   if (fscanf(f, "NumFields=%i\n", &numfields) != 1) {
-      printf("parse error: numfields\n");
-      exit(-1);
+  printf("parse error: numfields\n");
+  exit(-1);
   }
+  */
 
   if (target != -1) {
 	  printf("Printing the indices of fields in healpix %i to stderr...\n", target);
   }
 
-  printf("Numfields = %i\n", numfields);
+  numfields = read_ls_file_header(f);
+  if (numfields == -1) {
+	  fprintf(stderr, "Couldn't read rdls file.\n");
+	  exit(-1);
+  }
+
+  printf("NumFields %i.\n", numfields);
 
   for (j=0; j<numfields; j++) {
-	  // second line: first field
-	  if (fscanf(f, "%i,", &npoints) != 1) {
-		  printf("parse error: npoints\n");
-		  exit(-1);
+	  blocklist* points;
+
+	  points = read_ls_file_field(f, 2);
+	  if (!points) {
+		  printf("error reading field %i\n", j);
+		  break;
 	  }
-	  //printf("number of points = %i\n", npoints);
 
 	  for (i=0; i<12; i++) {
 		  healpixes[i] = 0;
 	  }
 
+	  npoints = blocklist_count(points) / 2;
+
 	  for (i=0; i<npoints; i++) {
 		  double ra, dec;
 		  int hp;
-		  if (fscanf(f, "%lf,%lf", &ra, &dec) != 2) {
-			  printf("parse error: points %i\n", i);
-			  exit(-1);
-		  }
-		  if (i != (npoints-1)) {
-			  fscanf(f, ",");
-		  }
+
+		  ra = blocklist_double_access(points, i*2);
+		  dec = blocklist_double_access(points, i*2 + 1);
 
 		  ra  *= M_PI / 180.0;
 		  dec *= M_PI / 180.0;
@@ -126,6 +134,8 @@ int main(int argc, char** args) {
 	  if ((target != -1) && (healpixes[target])) {
 		  fprintf(stderr, "%i ", j);
 	  }
+
+	  blocklist_free(points);
   }
 
   if (!fromstdin)
