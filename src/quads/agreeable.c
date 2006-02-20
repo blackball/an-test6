@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
 			// add the match...
 			hitlist_add_hit(hl, mo);
 		}
-		fprintf(stderr, "Read %i matches.\n", nread);
+		fprintf(stderr, "\nRead %i matches.\n", nread);
 		fflush(stderr);
 
 		if (!fromstdin)
