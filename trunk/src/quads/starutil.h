@@ -97,7 +97,7 @@ inline int inrange(double ra, double ralow, double rahigh);
 #define free_codearray(c) free_dyv_array((dyv_array *)c)
 #define free_xyarray(s) free_dyv_array((dyv_array *)s)
 
-#define rad2deg(r) (180.0*r/(double)PIl)
+#define rad2deg(r) (180.0*(r)/(double)PIl)
 #define deg2rad(d) (d*(double)PIl/180.0)
 #define rad2arcmin(r) (10800.0*r/(double)PIl)
 #define arcmin2rad(a) (a*(double)PIl/10800.0)
