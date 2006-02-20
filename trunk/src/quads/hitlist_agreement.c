@@ -154,6 +154,9 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 					// transitive merging...
 					blocklist_append_list(mergelist, hits);
 					blocklist_free(hits);
+					// DEBUG
+					blocklist_pointer_set(hlist, i, NULL);
+					
 					blocklist_remove_index(hlist, i);
 					i--;
 					N--;
@@ -167,7 +170,8 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 	}
 
     // no agreement - create new list.
-    newlist = blocklist_pointer_new(10);
+    //newlist = blocklist_pointer_new(10);
+    newlist = blocklist_pointer_new(1);
     blocklist_pointer_append(newlist, mo);
     blocklist_pointer_append(hlist, newlist);
 

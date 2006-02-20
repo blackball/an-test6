@@ -11,11 +11,12 @@
 #include "matchfile.h"
 #include "lsfile.h"
 
-char* OPTIONS = "hR:";
+char* OPTIONS = "hR:P";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
-			"   -R rdls-file\n",
+			"   -R rdls-file\n"
+			"   [-P] print info about each hit\n",
 			progname);
 }
 
@@ -32,12 +33,16 @@ int main(int argc, char *argv[]) {
 	blocklist* rdls;
 	int i;
 	int correct, incorrect;
+	bool printhits = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'h':
 			printHelp(progname);
 			return (HELP_ERR);
+		case 'P':
+			printhits = TRUE;
+			break;
 		case 'R':
 			rdlsfname = optarg;
 			break;
@@ -112,19 +117,19 @@ int main(int argc, char *argv[]) {
 			nread++;
 			fieldnum = me.fieldnum;
 
-			/*
-			  printf("\n");
-			  printf("Field %i\n", fieldnum);
-			  printf("Parity %i\n", me.parity);
-			  printf("IndexPath %s\n", me.indexpath);
-			  printf("FieldPath %s\n", me.fieldpath);
-			  printf("CodeTol %g\n", me.codetol);
-			  //printf("FieldUnits [%g, %g]\n", me.fieldunits_lower, me.fieldunits_upper);
-			  printf("Quad %i\n", (int)mo->quadno);
-			  printf("Stars %i %i %i %i\n", (int)mo->iA, (int)mo->iB, (int)mo->iC, (int)mo->iD);
-			  printf("FieldObjs %i %i %i %i\n", (int)mo->fA, (int)mo->fB, (int)mo->fC, (int)mo->fD);
-			  printf("CodeErr %g\n", mo->code_err);
-			*/
+			if (printhits) {
+				fprintf(stderr, "\n");
+				fprintf(stderr, "Field %i\n", fieldnum);
+				fprintf(stderr, "Parity %i\n", me.parity);
+				fprintf(stderr, "IndexPath %s\n", me.indexpath);
+				fprintf(stderr, "FieldPath %s\n", me.fieldpath);
+				fprintf(stderr, "CodeTol %g\n", me.codetol);
+				//fprintf(stderr, "FieldUnits [%g, %g]\n", me.fieldunits_lower, me.fieldunits_upper);
+				fprintf(stderr, "Quad %i\n", (int)mo->quadno);
+				fprintf(stderr, "Stars %i %i %i %i\n", (int)mo->iA, (int)mo->iB, (int)mo->iC, (int)mo->iD);
+				fprintf(stderr, "FieldObjs %i %i %i %i\n", (int)mo->fA, (int)mo->fB, (int)mo->fC, (int)mo->fD);
+				fprintf(stderr, "CodeErr %g\n", mo->code_err);
+			}
 
 			x1 = star_ref(mo->sMin, 0);
 			y1 = star_ref(mo->sMin, 1);
@@ -134,6 +139,11 @@ int main(int argc, char *argv[]) {
 			x1 /= r;
 			y1 /= r;
 			z1 /= r;
+			if (printhits) {
+				ra =  rad2deg(xy2ra(x1, y1));
+				dec = rad2deg(z2dec(z1));
+				fprintf(stderr, "RaDecMin %8.3f, %8.3f degrees\n", ra, dec);
+			}
 			x2 = star_ref(mo->sMax, 0);
 			y2 = star_ref(mo->sMax, 1);
 			z2 = star_ref(mo->sMax, 2);
@@ -141,6 +151,11 @@ int main(int argc, char *argv[]) {
 			x2 /= r;
 			y2 /= r;
 			z2 /= r;
+			if (printhits) {
+				ra =  rad2deg(xy2ra(x2, y2));
+				dec = rad2deg(z2dec(z2));
+				fprintf(stderr, "RaDecMax %8.3f, %8.3f degrees\n", ra, dec);
+			}
 
 			xc = (x1 + x2) / 2.0;
 			yc = (y1 + y2) / 2.0;
@@ -149,11 +164,19 @@ int main(int argc, char *argv[]) {
 			xc /= r;
 			yc /= r;
 			zc /= r;
+			if (printhits) {
+				ra =  rad2deg(xy2ra(xc, yc));
+				dec = rad2deg(z2dec(zc));
+				fprintf(stderr, "Center   %8.3f, %8.3f degrees\n", ra, dec);
+			}
 
 			radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
 			rac  = rad2deg(xy2ra(xc, yc));
 			decc = rad2deg(z2dec(zc));
 			arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
+			if (printhits) {
+				fprintf(stderr, "Scale %g arcmin\n", arc);
+			}
 
 			rdlist = (blocklist*)blocklist_pointer_access(rdls, fieldnum);
 			if (!rdlist) {
@@ -178,9 +201,9 @@ int main(int argc, char *argv[]) {
 
 				// 1.1 is a "fudge factor"
 				if (dist2 > (radius2 * 1.1)) {
-					fprintf(stderr, "\nField %i: matchfile says center is (%g, %g) degrees and scale is %g arcmin,\n",
+					fprintf(stderr, "\nField %i: match says center (%g, %g), scale %g arcmin, but\n",
 							fieldnum, rac, decc, arc);
-					fprintf(stderr, "  but rdls entry %i is at (%g, %g).\n", j, rad2deg(ra), rad2deg(dec));
+					fprintf(stderr, "rdls %i is (%g, %g).\n", j, rad2deg(ra), rad2deg(dec));
 					ok = FALSE;
 					break;
 				}
