@@ -32,6 +32,7 @@ struct hitsfieldentry {
 	unsigned int nmatches;
 	unsigned int nagree;
 	bool parity;
+	char* fieldpath;
 };
 typedef struct hitsfieldentry hits_field;
 

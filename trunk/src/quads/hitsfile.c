@@ -68,6 +68,7 @@ void hits_field_init(hits_field* h) {
 	h->nmatches = 0;
 	h->nagree = 0;
 	h->parity = FALSE;
+	h->fieldpath = NULL;
 }
 
 void hits_start_hits_list(FILE* fid) {
@@ -81,6 +82,8 @@ void hits_end_hits_list(FILE* fid) {
 void hits_write_field_header(FILE* fid, hits_field* h) {
 	fprintf(fid, "# --------------------\n");
 	fprintf(fid, "dict(\n");
+	if (h->fieldpath)
+		fprintf(fid, "    field_to_solve = '%s',\n", h->fieldpath);
 	fprintf(fid, "    user_quit=%s,\n", (h->user_quit?"True":"False"));
 	fprintf(fid, "    field=%u,\n", h->field);
 	fprintf(fid, "    objects_in_field=%u,\n", h->objects_in_field);
@@ -117,8 +120,10 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	fprintf(fid, "        dict(\n");
 
 	if (me) {
-		if (me->fieldpath)
-			fprintf(fid, "            field_to_solve = '%s',\n", me->fieldpath);
+		/*
+		  if (me->fieldpath)
+		  fprintf(fid, "            field_to_solve = '%s',\n", me->fieldpath);
+		*/
 		if (me->indexpath)
 			fprintf(fid, "            index_used = '%s',\n", me->indexpath);
 		if (me->parity)

@@ -427,13 +427,21 @@ void flush_solved_fields(bool doleftovers,
 		fieldhdr.field = fieldnum;
 		fieldhdr.nmatches = hitlist_count_all(hl);
 		fieldhdr.nagree = nbest;
-		hits_write_field_header(hitfid, &fieldhdr);
-		hits_start_hits_list(hitfid);
+		//hits_write_field_header(hitfid, &fieldhdr);
+		//hits_start_hits_list(hitfid);
 
 		for (j=0; j<nbest; j++) {
 			matchfile_entry* me;
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
 			me = (matchfile_entry*)mo->extra;
+
+			if (j == 0) {
+				if (me)
+					fieldhdr.fieldpath = me->fieldpath;
+				hits_write_field_header(hitfid, &fieldhdr);
+				hits_start_hits_list(hitfid);
+			}
+
 			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
