@@ -459,8 +459,10 @@ void flush_solved_fields(bool doleftovers,
 		hits_start_hits_list(hitfid);
 
 		for (j=0; j<nbest; j++) {
+			matchfile_entry* me;
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
-			hits_write_hit(hitfid, mo);
+			me = (matchfile_entry*)mo->extra;
+			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
 				matchfile_entry* me;

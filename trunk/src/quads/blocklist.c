@@ -489,6 +489,46 @@ void blocklist_insert_sorted(blocklist* list, void* data,
 	blocklist_insert(list, lower+1, data);
 }
 
+int blocklist_insert_unique_sorted(blocklist* list, void* data,
+								   int (*compare)(void* v1, void* v2)) {
+	// This is just straightforward binary search - really should
+	// use the block structure...
+	int lower, upper;
+	lower = -1;
+	upper = list->N;
+	while (lower < (upper-1)) {
+		int mid;
+		int cmp;
+		mid = (upper + lower) / 2;
+		cmp = compare(data, blocklist_access(list, mid));
+		if (cmp > 0) {
+			upper = mid;
+		} else {
+			lower = mid;
+		}
+	}
+
+	/*
+	  printf("lower=%i.\n", lower);
+	  if (lower > 0)
+	  printf("[lower-1] = %i\n", blocklist_int_access(list, lower-1));
+	  if (lower >= 0)
+	  printf("[lower] = %i\n", blocklist_int_access(list, lower));
+	  if (lower < list->N-1)
+	  printf("[lower+1] = %i\n", blocklist_int_access(list, lower+1));
+	  if (lower < list->N-2)
+	  printf("[lower+2] = %i\n", blocklist_int_access(list, lower+2));
+	*/
+
+	if (lower >= 0) {
+		if (compare(data, blocklist_access(list, lower)) == 0) {
+			return -1;
+		}
+	}
+	blocklist_insert(list, lower+1, data);
+	return lower+1;
+}
+
 
 void blocklist_set(blocklist* list, int index, void* data) {
 	blnode* node;
@@ -720,6 +760,10 @@ int compare_ints_descending(void* v1, void* v2) {
 }
 
 // special-case integer list accessors...
+void blocklist_int_set(blocklist* list, int index, int value) {
+	blocklist_set(list, index, &value);
+}
+
 blocklist* blocklist_int_new(int blocksize) {
 	return blocklist_new(blocksize, sizeof(int));
 }
@@ -739,6 +783,9 @@ void blocklist_int_insert_ascending(blocklist* list, int n) {
 }
 void blocklist_int_insert_descending(blocklist* list, int n) {
     blocklist_insert_sorted(list, &n, compare_ints_descending);
+}
+int blocklist_int_insert_unique_ascending(blocklist* list, int n) {
+    return blocklist_insert_unique_sorted(list, &n, compare_ints_ascending);
 }
 void blocklist_int_copy(blocklist* list, int start, int length, int* vdest) {
 	blocklist_copy(list, start, length, vdest);
@@ -769,8 +816,19 @@ int blocklist_int_contains(blocklist* list, int data) {
 }
 
 
-
 // special-case pointer list accessors...
+int compare_pointers_ascending(void* v1, void* v2) {
+    void* p1 = *(void**)v1;
+    void* p2 = *(void**)v2;
+    if (p1 < p2) return 1;
+    else if (p1 > p2) return -1;
+    else return 0;
+}
+
+int blocklist_pointer_insert_unique_ascending(blocklist* list, void* p) {
+    return blocklist_insert_unique_sorted(list, &p, compare_pointers_ascending);
+}
+
 blocklist* blocklist_pointer_new(int blocksize) {
     return blocklist_new(blocksize, sizeof(void*));
 }

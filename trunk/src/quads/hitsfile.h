@@ -1,7 +1,11 @@
+#ifndef HITSFILE_H_
+#define HITSFILE_H_
+
 #include <stdio.h>
 
 #include "starutil.h"
 #include "solver2.h"
+#include "matchfile.h"
 
 struct hitsfileheader {
 	char* field_file_name;
@@ -44,7 +48,7 @@ void hits_write_field_header(FILE* fid, hits_field* h);
 
 void hits_start_hits_list(FILE* fid);
 
-void hits_write_hit(FILE* fid, MatchObj* mo);
+void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me);
 
 void hits_end_hits_list(FILE* fid);
 
@@ -53,3 +57,5 @@ void hits_write_field_tailer(FILE* fid);
 
 void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
 								int Nids, int ok);
+
+#endif

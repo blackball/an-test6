@@ -75,7 +75,7 @@ void hits_start_hits_list(FILE* fid) {
 }
 
 void hits_end_hits_list(FILE* fid) {
-	fprintf(fid, "    ];");
+	fprintf(fid, "    ],");
 }
 
 void hits_write_field_header(FILE* fid, hits_field* h) {
@@ -109,12 +109,23 @@ void hits_write_field_tailer(FILE* fid) {
 	fprintf(fid, "),\n");
 }
 
-void hits_write_hit(FILE* fid, MatchObj* mo) {
+void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	if (!mo) {
 		fprintf(fid, "        # No agreement between matches. Could not resolve field.\n");
 		return;
 	}
 	fprintf(fid, "        dict(\n");
+
+	if (me) {
+		if (me->fieldpath)
+			fprintf(fid, "            field_to_solve = '%s',\n", me->fieldpath);
+		if (me->indexpath)
+			fprintf(fid, "            index_used = '%s',\n", me->indexpath);
+		if (me->parity)
+			fprintf(fid, "            parity = True,\n");
+		fprintf(fid, "            field = %i,\n", me->fieldnum);
+	}
+
 	fprintf(fid, "            quad=%lu,\n", mo->quadno);
 	fprintf(fid, "            starids_ABCD=(%lu,%lu,%lu,%lu),\n",
 			mo->iA, mo->iB, mo->iC, mo->iD);
