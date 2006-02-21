@@ -91,8 +91,7 @@ int convert_file(char* fn)
 		}
 		nhp = 0;
 		for (i = 0; i < 12; i++) {
-			if (healpixes[i])
-				nhp++;
+			nhp++;
 		}
 		fprintf(hpf, "%i", nhp);
 		for (i = 0; i < 12; i++) {
