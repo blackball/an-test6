@@ -780,7 +780,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 		hits_start_hits_list(hitfid);
 		if (bestnum < min_matches_to_agree) {
-			hits_write_hit(hitfid, NULL);
+			hits_write_hit(hitfid, NULL, NULL);
 			hits_end_hits_list(hitfid);
 			hits_write_field_tailer(hitfid);
 			fflush(hitfid);
@@ -789,7 +789,7 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 
 		for (i=0; i<bestnum; i++) {
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(bestlist, i);
-			hits_write_hit(hitfid, mo);
+			hits_write_hit(hitfid, mo, NULL);
 		}
 		hits_end_hits_list(hitfid);
 

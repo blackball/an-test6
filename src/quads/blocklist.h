@@ -50,6 +50,14 @@ void blocklist_set(blocklist* list, int indx, void* data);
 void blocklist_insert_sorted(blocklist* list, void* data,
 			     int (*compare)(void* v1, void* v2));
 
+/**
+   If the item already existed in the list (ie, the compare function
+   returned zero), then -1 is returned.  Otherwise, the index at which
+   the item was inserted is returned.
+ */
+int blocklist_insert_unique_sorted(blocklist* list, void* data,
+								   int (*compare)(void* v1, void* v2));
+
 // Copies the nth element into the destination location.
 void blocklist_get(blocklist* list, int n, void* dest);
 
@@ -87,6 +95,8 @@ void blocklist_int_copy(blocklist* list, int start, int length, int* vdest);
 void blocklist_int_print(blocklist* list);
 void blocklist_int_insert_ascending(blocklist* list, int n);
 void blocklist_int_insert_descending(blocklist* list, int n);
+int blocklist_int_insert_unique_ascending(blocklist* list, int p);
+void blocklist_int_set(blocklist* list, int index, int value);
 
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
@@ -98,6 +108,7 @@ void blocklist_pointer_append(blocklist* list, void* data);
 void* blocklist_pointer_access(blocklist* list, int n);
 void blocklist_pointer_copy(blocklist* list, int start, int length, void** dest);
 void blocklist_pointer_print(blocklist* list);
+int blocklist_pointer_insert_unique_ascending(blocklist* list, void* p);
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //

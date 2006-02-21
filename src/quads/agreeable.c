@@ -52,6 +52,37 @@ blocklist* flushed;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+// returns a newly-allocated string with all instances of "from"
+// converted to "to".  Note, find-and-replace is performed iteratively.
+char* find_and_replace(char* string, char* from, char* to) {
+	// efficiency is not the goal of this exercise...
+	char* tmpcopy;
+	char* searchstart;
+	int fromlen = strlen(from);
+	int lendiff = strlen(to) - fromlen;
+	tmpcopy = strdup(string);
+	string = tmpcopy;
+	searchstart = string;
+	for (;;) {
+		int newlen;
+		char* start = strstr(searchstart, from);
+		if (!start) break;
+		//printf("searching for \"%s\" in \"%s\", found \"%s\".\n", from, searchstart, start);
+		newlen = strlen(string) + lendiff;
+		tmpcopy = (char*)malloc(newlen + 1);
+		/*
+		  printf("writing: \"%.*s\"\n", start-string, string);
+		  printf("writing: \"%s\"\n", to);
+		  printf("writing: \"%s\"\n", start + fromlen);
+		*/
+		sprintf(tmpcopy, "%.*s%s%s", start - string, string, to, start + fromlen);
+		searchstart = tmpcopy + (start - string);
+		string = tmpcopy;
+	}
+	return string;
+}
+
+
 int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
@@ -251,9 +282,32 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (leftovers || agree) {
+				char* newpath;
 				mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
+
+				// DEBUG - tweak pathnames.
+				newpath = find_and_replace(me.indexpath,
+										   "/home/dstn",
+										   "/p/learning/stars");
+				free(me.indexpath);
+				me.indexpath = newpath;
+
+				newpath = find_and_replace(me.indexpath,
+										   "/scruser/10/dstn",
+										   "/p/learning/stars/INDEXES");
+				free(me.indexpath);
+				me.indexpath = newpath;
+
+				newpath = find_and_replace(me.fieldpath,
+										   "/home/dstn",
+										   "/p/learning/stars");
+				free(me.fieldpath);
+				me.fieldpath = newpath;
+
+
 				memcpy(mecopy, &me, sizeof(matchfile_entry));
 				mo->extra = mecopy;
+
 			} else {
 				mo->extra = NULL;
 				free(me.indexpath);
@@ -297,6 +351,10 @@ void free_extra(MatchObj* mo) {
 	me = (matchfile_entry*)mo->extra;
 	free(me->indexpath);
 	free(me->fieldpath);
+	// DEBUG
+	me->indexpath = NULL;
+	me->fieldpath = NULL;
+	//
 	free(me);
 	mo->extra = NULL;
 }
@@ -373,8 +431,10 @@ void flush_solved_fields(bool doleftovers,
 		hits_start_hits_list(hitfid);
 
 		for (j=0; j<nbest; j++) {
+			matchfile_entry* me;
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
-			hits_write_hit(hitfid, mo);
+			me = (matchfile_entry*)mo->extra;
+			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
 				matchfile_entry* me;

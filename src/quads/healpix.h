@@ -9,6 +9,8 @@
 
 int radectohealpix(double ra, double dec);
 
+int radectohealpix_nside(double ra, double dec, int nside);
+
 int xyztohealpix(double x, double y, double z);
 
 #endif
