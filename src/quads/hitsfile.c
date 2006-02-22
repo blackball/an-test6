@@ -76,7 +76,7 @@ void hits_start_hits_list(FILE* fid) {
 }
 
 void hits_end_hits_list(FILE* fid) {
-	fprintf(fid, "    ],");
+	fprintf(fid, "    ],\n");
 }
 
 void hits_write_field_header(FILE* fid, hits_field* h) {

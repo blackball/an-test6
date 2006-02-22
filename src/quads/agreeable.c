@@ -452,6 +452,7 @@ void flush_solved_fields(bool doleftovers,
 				}
 			}
 		}
+		hits_end_hits_list(hitfid);
 
 		starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
 		fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
@@ -459,7 +460,6 @@ void flush_solved_fields(bool doleftovers,
 		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 		free(starids);
 		free(fieldids);
-		hits_end_hits_list(hitfid);
 		hits_write_field_tailer(hitfid);
 		fflush(hitfid);
 		blocklist_free(best);
