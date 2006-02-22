@@ -3,13 +3,426 @@
 #include "healpix.h"
 #include "starutil.h"
 
+int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir);
+
+bool ispolar(int healpix) {
+	// the north polar healpixes are 0,1,2,3
+	// the south polar healpixes are 8,9,10,11
+	return (healpix <= 3) || (healpix >= 8);
+}
+
+bool isequatorial(int healpix) {
+	// the north polar healpixes are 0,1,2,3
+	// the south polar healpixes are 8,9,10,11
+	return (healpix >= 4) && (healpix <= 7);
+}
+
+bool isnorthpolar(int healpix) {
+	return (healpix <= 3);
+}
+
+bool issouthpolar(int healpix) {
+	return (healpix >= 8);
+}
+
+void pnprime_to_xy(uint pnprime, uint* px, uint* py, int Nside) {
+	uint xbitmask, ybitmask;
+	uint x, y;
+	int bit;
+
+	x = y = 0;
+	// oh, those wacky physicists...
+	xbitmask = 1;
+	ybitmask = 2;
+	for (bit=0; bit<32; bit+=2) {
+		x |= (pnprime & xbitmask);
+		y |= (pnprime & ybitmask);
+		xbitmask = xbitmask << 2;
+		ybitmask = ybitmask << 2;
+	}
+
+	if (px) *px = x;
+	if (py) *py = y;
+}
+
+uint xy_to_pnprime(uint x, uint y, int Nside) {
+	uint pnprime = 0;
+	uint mask;
+	int bit;
+
+	mask = 1;
+	for (bit=0; bit<16; bit++) {
+		pnprime |=
+			((x & mask) << bit) |
+			((y & mask) << (bit + 1));
+		mask = mask << 1;
+	}
+	return pnprime;
+}
+
+int healpix_get_neighbour(int hp, int dx, int dy) {
+	if (isnorthpolar(hp)) {
+		if ((dx == 1) && (dy == 0))
+			return (hp + 1) % 4;
+		if ((dx == 0) && (dy == 1))
+			return (hp + 3) % 4;
+		if ((dx == 1) && (dy == 1))
+			return (hp + 2) % 4;
+		if ((dx == -1) && (dy == 0))
+			return (hp + 4);
+		if ((dx == 0) && (dy == -1))
+			return 4 + ((hp + 1) % 4);
+		if ((dx == -1) && (dy == -1))
+			return hp + 8;
+		return -1;
+	} else if (issouthpolar(hp)) {
+		if ((dx == 1) && (dy == 0))
+			return 4 + ((hp + 1) % 4);
+		if ((dx == 0) && (dy == 1))
+			return hp - 4;
+		if ((dx == -1) && (dy == 0))
+			return 8 + ((hp + 3) % 4);
+		if ((dx == 0) && (dy == -1))
+			return 8 + ((hp + 1) % 4);
+		if ((dx == -1) && (dy == -1))
+			return 8 + ((hp + 2) % 4);
+		if ((dx == 1) && (dy == 1))
+			return hp - 8;
+		return -1;
+	} else {
+		if ((dx == 1) && (dy == 0))
+			return hp - 4;
+		if ((dx == 0) && (dy == 1))
+			return (hp + 3) % 4;
+		if ((dx == -1) && (dy == 0))
+			return 8 + ((hp + 3) % 4);
+		if ((dx == 0) && (dy == -1))
+			return hp + 4;
+		if ((dx == 1) && (dy == -1))
+			return 4 + ((hp + 1) % 4);
+		if ((dx == -1) && (dy == 1))
+			return 4 + ((hp - 1) % 4);
+		return -1;
+	}
+	return -1;
+}
+
+int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
+	int base;
+	uint pnprime;
+	uint x, y;
+	int nn = 0;
+	int nbase;
+	int Ns2 = Nside*Nside;
+
+	base = pix / (Nside*Nside);
+	pnprime = pix % (Nside*Nside);
+
+	pnprime_to_xy(pnprime, &x, &y, Nside);
+
+
+
+
+
+
+
+
+
+
+	if (x == 0) {
+
+		// get neighbour (-1, 0).
+		nbase = healpix_get_neighbour(base, -1, 0);
+
+		// ask for pixels (x=Nside-1, y={y-1,y,y+1})
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, y, Nside);
+		nn++;
+		if (y > 0) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, y-1, Nside);
+			nn++;
+		}
+		if (y < (Nside-1)) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, y+1, Nside);
+			nn++;
+		}
+
+	} else if (x == (Nside-1)) {
+
+		// get neighbour (1, 0).
+		nbase = healpix_get_neighbour(base, 1, 0);
+
+		// ask for pixels (x=0, y={y-1,y,y+1})
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, y, Nside);
+		nn++;
+		if (y > 0) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, y-1, Nside);
+			nn++;
+		}
+		if (y < (Nside-1)) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, y+1, Nside);
+			nn++;
+		}
+
+	}
+
+	if (y == 0) {
+
+		// get neighbour (0, -1).
+		nbase = healpix_get_neighbour(base, 0, -1);
+
+		// ask for pixels (x={x-1,x,x+1}, y=Nside-1)
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x, Nside-1, Nside);
+		nn++;
+		if (x > 0) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x-1, Nside-1, Nside);
+			nn++;
+		}
+		if (x < (Nside-1)) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x+1, Nside-1, Nside);
+			nn++;
+		}
+
+	} else if (y == (Nside-1)) {
+
+		// get neighbour (0, 1).
+		nbase = healpix_get_neighbour(base, 0, 1);
+
+		// ask for pixels (x={x-1,x,x+1}, y=0)
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x, 0, Nside);
+		nn++;
+		if (x > 0) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x-1, 0, Nside);
+			nn++;
+		}
+		if (x < (Nside-1)) {
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x+1, 0, Nside);
+			nn++;
+		}
+
+	}
+
+	if ((x == 0) && (y == 0)) {
+		if (isnorthpolar(base)) {
+
+			// get neighbour (-1, -1)
+			nbase = healpix_get_neighbour(base, -1, -1);
+			// ask for pixel (Nside-1, Nside-1)
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, Nside-1, Nside);
+			nn++;
+
+		} else if (issouthpolar(base)) {
+
+			// get neighbour (-1, -1)
+			nbase = healpix_get_neighbour(base, -1, -1);
+			// ask for pixel (0, 0)
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, 0, Nside);
+			nn++;
+
+		}
+	} else if ((x == 0) && (y == (Nside-1)) && isequatorial(base)) {
+
+		// get neighbour (-1, 1)
+		nbase = healpix_get_neighbour(base, -1, 1);
+		// ask for pixel (Nside-1, 0)
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, 0, Nside);
+		nn++;
+
+	} else if ((x == (Nside-1)) && (y == 0) && isequatorial(base)) {
+
+		// get neighbour (1, -1)
+		nbase = healpix_get_neighbour(base, 1, -1);
+		// ask for pixel (0, Nside-1)
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, Nside-1, Nside);
+		nn++;
+
+	} else if ((x == Nside-1) && (y == Nside-1)) {
+		if (issouthpolar(base)) {
+
+			// get neighbour (1, 1)
+			nbase = healpix_get_neighbour(base, 1, 1);
+			// ask for pixel (0, 0)
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, 0, Nside);
+			nn++;
+
+		} else if (isnorthpolar(base)) {
+
+			// get neighbour (1, 1)
+			nbase = healpix_get_neighbour(base, 1, 1);
+			// ask for pixel (Nside-1, Nside-1)
+			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, Nside-1, Nside);
+			nn++;
+
+		}
+	}
+	return nn;
+}
+
+/*
+  "x" points in the northeast direction
+  "y" points in the northwest direction
+ */
+int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir) {
+	int nn = 0;
+	if (isnorthpolar(hp)) {
+
+		// NE
+		neighbour[nn] = (hp + 1) % 4;
+		xdir[nn] = 1;
+		ydir[nn] = 0;
+		nn++;
+
+		/*
+		  ;
+		  // E = NE
+		  neighbour[nn] = (hp + 1) % 4;
+		  xdir[nn] = 1;
+		  ydir[nn] = -1;
+		  nn++;
+		*/
+
+		// NW
+		neighbour[nn] = (hp + 3) % 4;
+		xdir[nn] = 0;
+		ydir[nn] = 1;
+		nn++;
+
+		/*
+		  ;
+		  // W = NW
+		  neighbour[nn] = (hp + 3) % 4;
+		  xdir[nn] = -1;
+		  ydir[nn] = 1;
+		  nn++;
+		*/
+		  
+		// N
+		neighbour[nn] = (hp + 2) % 4;
+		xdir[nn] = 1;
+		ydir[nn] = 1;
+		nn++;
+
+		// SW
+		neighbour[nn] = (hp + 4);
+		xdir[nn] = -1;
+		ydir[nn] = 0;
+		nn++;
+
+		// SE
+		neighbour[nn] = 4 + ((hp + 1) % 4);
+		xdir[nn] = 0;
+		ydir[nn] = -1;
+		nn++;
+
+		// S
+		neighbour[nn] = hp + 8;
+		xdir[nn] = -1;
+		ydir[nn] = -1;
+		nn++;
+
+	} else if (issouthpolar(hp)) {
+
+		/*
+		  ;
+		  // E
+		  neighbour[nn] = 8 + ((hp + 1) % 4);
+		  xdir[nn] = 1;
+		  ydir[nn] = -1;
+		  nn++;
+		*/
+
+		// SE
+		neighbour[nn] = 8 + ((hp + 1) % 4);
+		xdir[nn] = 0;
+		ydir[nn] = -1;
+		nn++;
+
+		/*
+		  ;
+		  // W
+		  neighbour[nn] = 8 + ((hp + 3) % 4);
+		  xdir[nn] = -1;
+		  ydir[nn] = 1;
+		  nn++;
+		*/
+
+		// SW
+		neighbour[nn] = 8 + ((hp + 3) % 4);
+		xdir[nn] = -1;
+		ydir[nn] = 0;
+		nn++;
+
+		// S
+		neighbour[nn] = 8 + ((hp + 2) % 4);
+		xdir[nn] = -1;
+		ydir[nn] = -1;
+		nn++;
+
+		// NW
+		neighbour[nn] = (hp - 4);
+		xdir[nn] = 0;
+		ydir[nn] = 1;
+		nn++;
+
+		// NE
+		neighbour[nn] = 4 + ((hp + 1) % 4);
+		xdir[nn] = 1;
+		ydir[nn] = 0;
+		nn++;
+
+		// N
+		neighbour[nn] = hp - 8;
+		xdir[nn] = 1;
+		ydir[nn] = 1;
+		nn++;
+
+	} else {
+		// equatorial.
+
+		// E
+		neighbour[nn] = 4 + ((hp + 1) % 4);
+		xdir[nn] = 1;
+		ydir[nn] = -1;
+		nn++;
+
+		// W
+		neighbour[nn] = 4 + ((hp - 1) % 4);
+		xdir[nn] = -1;
+		ydir[nn] = 1;
+		nn++;
+
+		// NE
+		neighbour[nn] = hp - 4;
+		xdir[nn] = 1;
+		ydir[nn] = 0;
+		nn++;
+
+		// NW
+		neighbour[nn] = (hp + 3) % 4;
+		xdir[nn] = 0;
+		ydir[nn] = 1;
+		nn++;
+
+		// SE
+		neighbour[nn] = hp + 4;
+		xdir[nn] = 0;
+		ydir[nn] = -1;
+		nn++;
+
+		// SW
+		neighbour[nn] = 8 + ((hp + 3) % 4);
+		xdir[nn] = -1;
+		ydir[nn] = 0;
+		nn++;
+	}
+	return nn;
+}
+
 int healpix_nested_to_ring_index(int nested,
 								 int* p_ring, int* p_longitude,
 								 int Nside) {
-	int f, pnprime;
+	int f;
+	uint pnprime;
 	int frow, F1, F2;
-	uint xbitmask, ybitmask;
-	int bit;
 	uint x, y;
 	uint v, h;
 	int ringind, longind;
@@ -26,16 +439,7 @@ int healpix_nested_to_ring_index(int nested,
 		return -1;
 	}
 
-	x = y = 0;
-	// oh, those wacky physicists...
-	xbitmask = 1;
-	ybitmask = 2;
-	for (bit=0; bit<32; bit+=2) {
-		x |= (pnprime & xbitmask);
-		y |= (pnprime & ybitmask);
-		xbitmask = xbitmask << 2;
-		ybitmask = ybitmask << 2;
-	}
+	pnprime_to_xy(pnprime, &x, &y, Nside);
 
 	v = x + y;
 	h = x - y;
@@ -70,12 +474,6 @@ int healpix_nested_to_ring_index(int nested,
 	return 0;
 }
 
-bool ispolar(int healpix) {
-	// the north polar healpixes are 0,1,2,3
-	// the south polar healpixes are 8,9,10,11
-	return (healpix <= 3) || (healpix >= 8);
-}
-
 int xyztohealpix_nside(double x, double y, double z, int Nside) {
     double phi;
     double phioverpi;
@@ -95,8 +493,6 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		double phit;
 		uint x,y;
 		uint pnprime;
-		int bit;
-		uint mask;
 		int column;
 		int basehp;
 		int hp;
@@ -137,14 +533,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 			y = tmp;
 		}
 
-		pnprime = 0;
-		mask = 1;
-		for (bit=0; bit<16; bit++) {
-			pnprime |=
-				((x & mask) << bit) |
-				((y & mask) << (bit + 1));
-			mask = mask << 1;
-		}
+		pnprime = xy_to_pnprime(x, y, Nside);
 
 		if (!north)
 			pnprime = Nside*Nside - 1 - pnprime;
@@ -171,8 +560,6 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		double zunits, phiunits;
 		int x, y;
 		uint pnprime;
-		int bit;
-		uint mask;
 		int hp;
 
 		phim = fmod(phi, M_PI/2.0);
@@ -191,14 +578,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		y %= Nside;
 		if (x < 0) x += Nside;
 		if (y < 0) y += Nside;
-		pnprime = 0;
-		mask = 1;
-		for (bit=0; bit<16; bit++) {
-			pnprime |=
-				((x & mask) << bit) |
-				((y & mask) << (bit + 1));
-			mask = mask << 1;
-		}
+		pnprime = xy_to_pnprime(x, y, Nside);
 
 		// now compute which big healpix it's in.
 		offset = (int)(phioverpi * 2.0);
