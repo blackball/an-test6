@@ -28,6 +28,7 @@ int radectohealpix_nside(double ra, double dec, int Nside);
 
 int xyztohealpix_nside(double x, double y, double z, int Nside);
 
+int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside);
 
 
 #endif

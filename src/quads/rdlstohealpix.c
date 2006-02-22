@@ -70,14 +70,6 @@ int main(int argc, char** args) {
 	  }
   }
 
-  /*
-  // first line: numfields
-  if (fscanf(f, "NumFields=%i\n", &numfields) != 1) {
-  printf("parse error: numfields\n");
-  exit(-1);
-  }
-  */
-
   if (target != -1) {
 	  printf("Printing the indices of fields in healpix %i to stderr...\n", target);
   }
