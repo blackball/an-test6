@@ -41,12 +41,8 @@ int healpix_nested_to_ring_index(int nested,
 	h = x - y;
 
 	frow = f / 4;
-
 	F1 = frow + 2;
-
 	ringind = F1 * Nside - v - 1;
-
-	F2 = 2 * (f % 4) - (frow % 2) + 1;
 
 	/*
 	  [1, Nside) : n pole
@@ -54,19 +50,17 @@ int healpix_nested_to_ring_index(int nested,
 	  (2Nside+1, 3Nside] : s equat
 	  (3Nside, 4Nside-1] : s pole
 	*/
-
 	if ((ringind < 1) || (ringind >= 4*Nside)) {
 		fprintf(stderr, "Invalid ring index: %i\n", ringind);
 		return -1;
 	}
-
 	if ((ringind < Nside) || (ringind > 3*Nside)) {
 		// polar.
 		s = 1;
 	} else {
 		s = (ringind - Nside + 1) % 2;
 	}
-
+	F2 = 2 * (f % 4) - (frow % 2) + 1;
 	longind = (F2 * Nside + h + s) / 2;
 
 	if (p_ring)
@@ -99,7 +93,6 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		bool north;
 		double zupper, zlower;
 		double phit;
-		int k;
 		uint x,y;
 		uint pnprime;
 		int bit;
@@ -120,16 +113,6 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		phit = fmod(phi, M_PI/2.0);
 		if (phit < 0.0)
 			phit += M_PI/2.0;
-
-		/*
-		  for (k=1; k<=Nside; k++) {
-		  zlower = 1.0 - (double)(k*k) / (double)(3*Nside*Nside) *
-		  square(M_PI / (2.0 * phit - M_PI));
-		  zupper = 1.0 - (double)(k*k) / (double)(3*Nside*Nside) *
-		  square(M_PI / (2.0 * phit));
-		  printf("k=%i, zlower=%g, zupper=%g\n", k, zlower, zupper);
-		  }
-		*/
 
 		// could do this in closed form...
 		for (x=1; x<=Nside; x++) {
@@ -166,12 +149,6 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		if (!north)
 			pnprime = Nside*Nside - 1 - pnprime;
 
-		/*
-		  printf("z=%g\n", z);
-		  printf("x=%i, y=%i, ", x, y);
-		  printf("pnprime = %i\n", pnprime);
-		*/
-
 		column = (int)(phi / (M_PI/2.0));
 
 		if (north)
@@ -181,15 +158,6 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 
 		hp = basehp * (Nside*Nside) + pnprime;
 
-		{
-			double ra,dec;
-			ra = xy2ra(x, y);
-			dec = z2dec(z);
-			//fprintf(stderr, "%g,%g,%i;\n", ra, dec, pnprime);
-			//fprintf(stderr, "text(%g,%g,'%i');\n", ra, dec, pnprime);
-			//fprintf(stderr, "text(%g,%g,'%i');\n", phi/M_PI, z, pnprime);
-			//fprintf(stderr, "text(%g,%g,'%i');\n", phi/M_PI, z, hp);
-		}
 		return hp;
 
     } else {
@@ -199,60 +167,30 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		double z1, z2;
 		int basehp;
 		double phim;
-
-		double v1z, v1phi, v2z, v2phi;
-		double r;
-
 		double u1, u2;
-
 		double zunits, phiunits;
-
 		int x, y;
 		uint pnprime;
 		int bit;
 		uint mask;
+		int hp;
 
 		phim = fmod(phi, M_PI/2.0);
 		if (phim < 0.0)
 			phim += M_PI/2.0;
 
-		/*
-		  v1z = (4.0/3.0);
-		  v1phi = (M_PI/2.0);
-		  r = sqrt(square(v1z) + square(v1phi));
-		*/
-		/*
-		  v1z /= r;
-		  v1phi /= r;
-		*/
-		/*
-		  v2z = (-4.0/3.0);
-		  v2phi = (M_PI/2.0);
-		*/
-		/*
-		  u1 = ((z+(2.0/3.0)) * v1z) + (phim * v1phi);
-		  u2 = ((z+(2.0/3.0)) * v2z) + (phim * v2phi);
-		  u1 /= (r*r);
-		  u2 /= (r*r);
-		*/
-
+		// project into the unit square z=[-2/3, 2/3], phi=[0, pi/2]
 		zunits = (z + twothirds) / (4.0/3.0);
 		phiunits = phim / (M_PI/2.0);
-
 		u1 = (zunits + phiunits) / 2.0;
 		u2 = (zunits - phiunits) / 2.0;
-
-		printf("z=%g, phim=%g, zunits=%g, phiunits=%g, u1=%g, u2=%g.\n", z, phim, zunits, phiunits, u1, u2);
-
-		x = (int)(u1 * 2.0 * Nside);
-		y = (int)(u2 * 2.0 * Nside);
+		// x is the northeast direction, y is the northwest.
+		x = (int)floor(u1 * 2.0 * Nside);
+		y = (int)floor(u2 * 2.0 * Nside);
 		x %= Nside;
 		y %= Nside;
 		if (x < 0) x += Nside;
 		if (y < 0) y += Nside;
-
-		printf("x=%i, y=%i\n", x, y);
-
 		pnprime = 0;
 		mask = 1;
 		for (bit=0; bit<16; bit++) {
@@ -262,24 +200,11 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 			mask = mask << 1;
 		}
 
-
-		{
-			double ra,dec;
-			ra = xy2ra(x, y);
-			dec = z2dec(z);
-			fprintf(stderr, "text(%g,%g,'%i');\n", phi/M_PI, z, pnprime);
-		}
-
-
-		return -1;
-
-
+		// now compute which big healpix it's in.
 		offset = (int)(phioverpi * 2.0);
 		phimod = phioverpi - offset * 0.5;
-
 		z1 =  twothirds - (8.0 / 3.0) * phimod;
 		z2 = -twothirds + (8.0 / 3.0) * phimod;
-
 		if ((z >= z1) && (z >= z2)) {
 			// north polar
 			basehp = offset;
@@ -294,32 +219,15 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 			basehp = ((offset+1)%4) + 4;
 		}
 
+		hp = basehp * Nside * Nside + pnprime;
 
-		for (x=-2*Nside; x<=2*Nside; x++) {
-			double zupper = 4.0/3.0 - 4.0*x / (3.0*Nside) + 8.0*phim/(3.0*M_PI);
-			if (z > zupper)
-				break;
-		}
-		for (y=-2*Nside; y<=2*Nside; y++) {
-			double zupper = 4.0/3.0 - 4.0*y / (3.0*Nside) - 8.0*phim/(3.0*M_PI);
-			if (z > zupper)
-				break;
-		}
-
-		printf("x=%i, y=%i\n", x, y);
-
-
-
-
+		return hp;
     }
 	return -1;
 }
 
 int radectohealpix_nside(double ra, double dec, int nside) {
     double x, y, z;
-
-	printf("ra=%g, dec=%g\n", ra, dec);
-
     x = radec2x(ra, dec);
     y = radec2y(ra, dec);
     z = radec2z(ra, dec);
