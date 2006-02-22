@@ -544,10 +544,10 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 	M = 0;
 	for (i=0; i<N; i++) {
 		mo = (MatchObj*)blocklist_pointer_access(hits, i);
-		add_correspondence(starids, fieldids, mo->fA, mo->iA, &M, &ok);
-		add_correspondence(starids, fieldids, mo->fB, mo->iB, &M, &ok);
-		add_correspondence(starids, fieldids, mo->fC, mo->iC, &M, &ok);
-		add_correspondence(starids, fieldids, mo->fD, mo->iD, &M, &ok);
+		add_correspondence(starids, fieldids, mo->iA, mo->fA, &M, &ok);
+		add_correspondence(starids, fieldids, mo->iB, mo->fB, &M, &ok);
+		add_correspondence(starids, fieldids, mo->iC, mo->fC, &M, &ok);
+		add_correspondence(starids, fieldids, mo->iD, mo->fD, &M, &ok);
 	}
 	if (p_ok && !ok) *p_ok = 0;
 	return M;
