@@ -128,7 +128,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 
 	pnprime_to_xy(pnprime, &x, &y, Nside);
 
-	printf("base=%i, x=%i, y=%i.\n", base, x, y);
+	//printf("base=%i, x=%i, y=%i.\n", base, x, y);
 
 
 	// ( + , 0 )
@@ -143,7 +143,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	} else
 		nbase = base;
 
-	printf("(+ 0): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(+ 0): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
 	nn++;
 
@@ -172,7 +172,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 			swap(&nx, &ny);
 	}
 
-	printf("(+ +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(+ +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
 		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
@@ -193,7 +193,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	} else
 		nbase = base;
 
-	printf("(0 +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(0 +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
 	nn++;
@@ -223,7 +223,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	} else
 		nbase = base;
 
-	printf("(- +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(- +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
 		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
@@ -243,7 +243,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	} else
 		nbase = base;
 
-	printf("(- 0): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(- 0): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
 	nn++;
@@ -274,7 +274,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 			swap(&nx, &ny);
 	}
 			
-	printf("(- -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(- -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
 		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
@@ -294,7 +294,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	} else
 		nbase = base;
 
-	printf("(0 -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(0 -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
 	nn++;
@@ -324,7 +324,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	} else
 		nbase = base;
 
-	printf("(+ -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
+	//printf("(+ -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
 		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
@@ -555,12 +555,23 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
     double phi;
     double phioverpi;
     double twothirds = 2.0 / 3.0;
+	double twopi = 2.0 * M_PI;
+	double pi = M_PI;
 
     phi = atan2(y, x);
-    if (phi < 0.0)
-		phi += 2.0 * M_PI;
+	if (phi < 0.0)
+		phi += twopi;
+    if (phi >= twopi)
+		phi -= twopi;
 
-    phioverpi = phi / M_PI;
+	// if it's more than 2pi off...
+	if (phi < 0.0 || phi >= twopi) {
+		phi = fmod(phi, twopi);
+		if (phi < 0.0)
+			phi += twopi;
+	}
+
+    phioverpi = phi / pi;
 
     if ((z >= twothirds) || (z <= -twothirds)) {
 		// definitely in the polar regions.
@@ -583,20 +594,20 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 			zfactor = -1.0;
 		}
 
-		phit = fmod(phi, M_PI/2.0);
+		phit = fmod(phi, pi/2.0);
 		if (phit < 0.0)
-			phit += M_PI/2.0;
+			phit += pi/2.0;
 
 		// could do this in closed form...
 		for (x=1; x<=Nside; x++) {
 			zlower = 1.0 - (double)(x*x) / (double)(3*Nside*Nside) *
-				square(M_PI / (2.0 * phit - M_PI));
+				square(pi / (2.0 * phit - pi));
 			if (z*zfactor >= zlower)
 				break;
 		}
 		for (y=1; y<=Nside; y++) {
 			zupper = 1.0 - (double)(y*y) / (double)(3*Nside*Nside) *
-				square(M_PI / (2.0 * phit));
+				square(pi / (2.0 * phit));
 			if (z*zfactor >= zupper)
 				break;
 		}
@@ -615,7 +626,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		if (!north)
 			pnprime = Nside*Nside - 1 - pnprime;
 
-		column = (int)(phi / (M_PI/2.0));
+		column = (int)(phi / (pi/2.0));
 
 		if (north)
 			basehp = column;
@@ -639,13 +650,13 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		uint pnprime;
 		int hp;
 
-		phim = fmod(phi, M_PI/2.0);
+		phim = fmod(phi, pi/2.0);
 		if (phim < 0.0)
-			phim += M_PI/2.0;
+			phim += pi/2.0;
 
 		// project into the unit square z=[-2/3, 2/3], phi=[0, pi/2]
 		zunits = (z + twothirds) / (4.0/3.0);
-		phiunits = phim / (M_PI/2.0);
+		phiunits = phim / (pi/2.0);
 		u1 = (zunits + phiunits) / 2.0;
 		u2 = (zunits - phiunits) / 2.0;
 		// x is the northeast direction, y is the northwest.
@@ -660,6 +671,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside) {
 		// now compute which big healpix it's in.
 		offset = (int)(phioverpi * 2.0);
 		phimod = phioverpi - offset * 0.5;
+		offset = ((offset % 4) + 4) % 4;
 		z1 =  twothirds - (8.0 / 3.0) * phimod;
 		z2 = -twothirds + (8.0 / 3.0) * phimod;
 		if ((z >= z1) && (z >= z2)) {
