@@ -3,7 +3,7 @@
 
 #include "CUnit/CUnit.h"
 #include "CUnit/Basic.h"
-
+#include "starutil.h"
 #include "healpix.h"
 
 void print_neighbours(int* n, int nn) {
@@ -34,6 +34,33 @@ void test_neighbours(int pix, int* true_neigh, int true_nn, int Nside) {
 
 	for (i=0; i<true_nn; i++) {
 		CU_ASSERT_EQUAL_FATAL(neigh[i], true_neigh[i]);
+	}
+}
+
+void print_node(double z, double phi, int Nside) {
+	double ra, dec;
+	int hp;
+	int nn;
+	int neigh[8];
+	int k;
+
+	double scale = 10.0;
+
+	ra = phi;
+	dec = asin(z);
+	while (ra < 0.0)
+		ra += 2.0 * M_PI;
+	while (ra > 2.0 * M_PI)
+		ra -= 2.0 * M_PI;
+
+	// find its healpix.
+	hp = radectohealpix_nside(ra, dec, Nside);
+	// find its neighbourhood.
+	nn = healpix_get_neighbours_nside(hp, neigh, Nside);
+	fprintf(stderr, "  N%i [ label=\"%i\", pos=\"%g,%g!\" ];\n", hp, hp,
+			scale * ra/M_PI, scale * z);
+	for (k=0; k<nn; k++) {
+		fprintf(stderr, "  N%i -- N%i\n", hp, neigh[k]);
 	}
 }
 
@@ -105,6 +132,78 @@ int main(int argc, char** args) {
 	CU_basic_run_tests();
 
 	CU_cleanup_registry();
+
+
+	fprintf(stderr, "graph Nside4 {\n");
+	{
+		int Nside = 8;
+		int i, j;
+		double z;
+		double phi;
+
+		// north polar
+		//for (i=1; i<Nside; i++) {
+		for (i=1; i<=Nside; i++) {
+			for (j=1; j<=(4*i); j++) {
+				// find the center of the pixel in ring i
+				// and longitude j.
+				z = 1.0 - square((double)i / (double)Nside)/3.0;
+				phi = M_PI / (2.0 * i) * ((double)j - 0.5);
+				fprintf(stderr, "  // North polar, i=%i, j=%i.  z=%g, phi=%g\n", i, j, z, phi);
+				print_node(z, phi, Nside);
+			}
+		}
+		// south polar
+		//for (i=1; i<Nside; i++) {
+		for (i=1; i<=Nside; i++) {
+			for (j=1; j<=(4*i); j++) {
+				z = 1.0 - square((double)i / (double)Nside)/3.0;
+				z *= -1.0;
+				phi = M_PI / (2.0 * i) * ((double)j - 0.5);
+				fprintf(stderr, "  // South polar, i=%i, j=%i.  z=%g, phi=%g\n", i, j, z, phi);
+				print_node(z, phi, Nside);
+			}
+		}
+		// north equatorial
+		//for (i=Nside; i<=2*Nside; i++) {
+		for (i=Nside+1; i<=2*Nside; i++) {
+			for (j=1; j<=(4*Nside); j++) {
+				int s;
+				z = 4.0/3.0 - 2.0 * i / (3.0 * Nside);
+				s = (i - Nside + 1) % 2;
+				s = (s + 2) % 2;
+				phi = M_PI / (2.0 * Nside) * ((double)j - (double)s / 2.0);
+				fprintf(stderr, "  // North equatorial, i=%i, j=%i.  z=%g, phi=%g, s=%i\n", i, j, z, phi, s);
+				print_node(z, phi, Nside);
+			}
+		}
+		// south equatorial
+		//for (i=Nside+1; i<=2*Nside; i++) {
+		//for (i=Nside+2; i<=2*Nside; i++) {
+		for (i=Nside+1; i<2*Nside; i++) {
+			for (j=1; j<=(4*Nside); j++) {
+				int s;
+				z = 4.0/3.0 - 2.0 * i / (3.0 * Nside);
+				z *= -1.0;
+				s = (i - Nside + 1) % 2;
+				s = (s + 2) % 2;
+				phi = M_PI / (2.0 * Nside) * ((double)j - s / 2.0);
+				fprintf(stderr, "  // South equatorial, i=%i, j=%i.  z=%g, phi=%g, s=%i\n", i, j, z, phi, s);
+				print_node(z, phi, Nside);
+			}
+		}
+
+
+
+
+	}
+	fprintf(stderr, "  node [ shape=point ]\n");
+	fprintf(stderr, "  C0 [ pos=\"0,-10!\" ];\n");
+	fprintf(stderr, "  C1 [ pos=\"20,-10!\" ];\n");
+	fprintf(stderr, "  C2 [ pos=\"20,10!\" ];\n");
+	fprintf(stderr, "  C3 [ pos=\"0,10!\" ];\n");
+	fprintf(stderr, "  C0 -- C1 -- C2 -- C3 -- C0\n");
+	fprintf(stderr, "}\n");
 
 
 	/*
