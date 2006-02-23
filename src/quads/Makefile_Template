@@ -35,6 +35,17 @@ MYOBJS = randcat.o startree.o quadidx.o genfields.o solvexy.o fieldquads.o finds
 
 all: $(EXECS) solvexy2 agreeable slave agreeable2
 
+tests: test_healpix
+
+CUNIT_I = -I/h/42/dstn/software/cunit/include
+CUNIT_L = -L/h/42/dstn/software/cunit/lib -lcunit
+
+test_healpix.o: test_healpix.c
+	$(CC) $(CFLAGS) $(CUNIT_I) -c $< -o $@
+
+test_healpix: test_healpix.o $(OBJ)
+	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@ $(CUNIT_L)
+
 solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
