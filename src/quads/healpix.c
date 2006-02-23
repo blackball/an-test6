@@ -34,9 +34,9 @@ void pnprime_to_xy(uint pnprime, uint* px, uint* py, int Nside) {
 	// oh, those wacky physicists...
 	xbitmask = 1;
 	ybitmask = 2;
-	for (bit=0; bit<32; bit+=2) {
-		x |= (pnprime & xbitmask);
-		y |= (pnprime & ybitmask);
+	for (bit=0; bit<16; bit++) {
+		x |= ( (pnprime & xbitmask) ? (1 << bit) : 0 );
+		y |= ( (pnprime & ybitmask) ? (1 << bit) : 0 );
 		xbitmask = xbitmask << 2;
 		ybitmask = ybitmask << 2;
 	}
@@ -114,146 +114,231 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside) {
 	int nn = 0;
 	int nbase;
 	int Ns2 = Nside*Nside;
+	int nx, ny, ntmp;
 
 	base = pix / (Nside*Nside);
 	pnprime = pix % (Nside*Nside);
 
 	pnprime_to_xy(pnprime, &x, &y, Nside);
 
+	printf("base=%i, x=%i, y=%i.\n", base, x, y);
 
 
 
-
-
-
-
-
-
-	if (x == 0) {
-
-		// get neighbour (-1, 0).
-		nbase = healpix_get_neighbour(base, -1, 0);
-
-		// ask for pixels (x=Nside-1, y={y-1,y,y+1})
-		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, y, Nside);
-		nn++;
-		if (y > 0) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, y-1, Nside);
-			nn++;
-		}
-		if (y < (Nside-1)) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, y+1, Nside);
-			nn++;
-		}
-
-	} else if (x == (Nside-1)) {
-
+	// ( + , 0 )
+	nx = (x + 1) % Nside;
+	ny = y;
+	if (x == (Nside-1)) {
 		// get neighbour (1, 0).
 		nbase = healpix_get_neighbour(base, 1, 0);
-
-		// ask for pixels (x=0, y={y-1,y,y+1})
-		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, y, Nside);
-		nn++;
-		if (y > 0) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, y-1, Nside);
-			nn++;
-		}
-		if (y < (Nside-1)) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, y+1, Nside);
-			nn++;
-		}
-
-	}
-
-	if (y == 0) {
-
-		// get neighbour (0, -1).
-		nbase = healpix_get_neighbour(base, 0, -1);
-
-		// ask for pixels (x={x-1,x,x+1}, y=Nside-1)
-		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x, Nside-1, Nside);
-		nn++;
-		if (x > 0) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x-1, Nside-1, Nside);
-			nn++;
-		}
-		if (x < (Nside-1)) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x+1, Nside-1, Nside);
-			nn++;
-		}
-
-	} else if (y == (Nside-1)) {
-
-		// get neighbour (0, 1).
-		nbase = healpix_get_neighbour(base, 0, 1);
-
-		// ask for pixels (x={x-1,x,x+1}, y=0)
-		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x, 0, Nside);
-		nn++;
-		if (x > 0) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x-1, 0, Nside);
-			nn++;
-		}
-		if (x < (Nside-1)) {
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(x+1, 0, Nside);
-			nn++;
-		}
-
-	}
-
-	if ((x == 0) && (y == 0)) {
 		if (isnorthpolar(base)) {
-
-			// get neighbour (-1, -1)
-			nbase = healpix_get_neighbour(base, -1, -1);
-			// ask for pixel (Nside-1, Nside-1)
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, Nside-1, Nside);
-			nn++;
-
-		} else if (issouthpolar(base)) {
-
-			// get neighbour (-1, -1)
-			nbase = healpix_get_neighbour(base, -1, -1);
-			// ask for pixel (0, 0)
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, 0, Nside);
-			nn++;
-
+			nx = y;
+			ny = Nside-1;
 		}
-	} else if ((x == 0) && (y == (Nside-1)) && isequatorial(base)) {
+	} else {
+		nbase = base;
+	}
 
-		// get neighbour (-1, 1)
-		nbase = healpix_get_neighbour(base, -1, 1);
-		// ask for pixel (Nside-1, 0)
-		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, 0, Nside);
-		nn++;
+	printf("(+ 0): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
 
-	} else if ((x == (Nside-1)) && (y == 0) && isequatorial(base)) {
+	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+	nn++;
 
-		// get neighbour (1, -1)
-		nbase = healpix_get_neighbour(base, 1, -1);
-		// ask for pixel (0, Nside-1)
-		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, Nside-1, Nside);
-		nn++;
 
-	} else if ((x == Nside-1) && (y == Nside-1)) {
+	// ( + , + )
+	nx = (x + 1) % Nside;
+	ny = (y + 1) % Nside;
+	if ((x == Nside-1) && (y == Nside-1)) {
 		if (issouthpolar(base)) {
-
 			// get neighbour (1, 1)
 			nbase = healpix_get_neighbour(base, 1, 1);
 			// ask for pixel (0, 0)
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(0, 0, Nside);
-			nn++;
 
 		} else if (isnorthpolar(base)) {
-
 			// get neighbour (1, 1)
 			nbase = healpix_get_neighbour(base, 1, 1);
 			// ask for pixel (Nside-1, Nside-1)
-			neighbour[nn] = nbase*Ns2 + xy_to_pnprime(Nside-1, Nside-1, Nside);
-			nn++;
+			nx = Nside-1;
+			ny = Nside-1;
+
+		} else {
+			nbase = -1;
 
 		}
+	} else if (x == (Nside-1)) {
+		// get neighbour (1, 0).
+		nbase = healpix_get_neighbour(base, 1, 0);
+		if (isnorthpolar(base)) {
+			nx = ny;
+			ny = x;
+		}
+	} else if (y == (Nside-1)) {
+		// get neighbour (0, 1).
+		nbase = healpix_get_neighbour(base, 0, 1);
+	} else {
+		nbase = base;
 	}
+
+	printf("(+ +): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	if (nbase != -1) {
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+		nn++;
+	}
+
+
+
+	// ( 0 , + )
+	nx = x;
+	ny = (y + 1) % Nside;
+	if (y == (Nside-1)) {
+		// get neighbour (0, 1).
+		nbase = healpix_get_neighbour(base, 0, 1);
+		if (isnorthpolar(base)) {
+			ny = x;
+			nx = Nside-1;
+		}
+	} else {
+		nbase = base;
+	}
+
+	printf("(0 +): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+	nn++;
+
+
+
+	// ( - , + )
+	nx = (x + Nside - 1) % Nside;
+	ny = (y + 1) % Nside;
+	if ((x == 0) && (y == (Nside-1))) {
+		if (isequatorial(base)) {
+			// get neighbour (1, -1)
+			nbase = healpix_get_neighbour(base, -1, 1);
+		} else {
+			nbase = -1;
+		}
+	} else if (x == 0) {
+		nbase = healpix_get_neighbour(base, -1, 0);
+	} else if (y == (Nside-1)) {
+		nbase = healpix_get_neighbour(base, 0, 1);
+	} else {
+		nbase = base;
+	}
+
+	printf("(- +): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	if (nbase != -1) {
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+		nn++;
+	}
+
+
+	// ( - , 0 )
+	if (x == 0) {
+		// get neighbour (-1, 0).
+		nbase = healpix_get_neighbour(base, -1, 0);
+	} else {
+		// stay in this healpix.
+		nbase = base;
+	}
+	nx = (x + Nside - 1) % Nside;
+	ny = y;
+
+	printf("(- 0): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+	nn++;
+
+
+
+	// ( - , - )
+	nx = (x + Nside - 1) % Nside;
+	ny = (y + Nside - 1) % Nside;
+	if ((x == 0) && (y == 0)) {
+		if (isnorthpolar(base)) {
+			// get neighbour (-1, -1)
+			nbase = healpix_get_neighbour(base, -1, -1);
+
+		} else if (issouthpolar(base)) {
+			// get neighbour (-1, -1)
+			nbase = healpix_get_neighbour(base, -1, -1);
+			// ask for pixel (0, 0)
+			nx = 0;
+			ny = 0;
+
+		} else {
+			nbase = -1;
+
+		}
+	} else if (x == 0) {
+		// get neighbour (-1, 0).
+		nbase = healpix_get_neighbour(base, -1, 0);
+	} else if (y == 0) {
+		// get neighbour (0, -1).
+		nbase = healpix_get_neighbour(base, 0, -1);
+	} else {
+		nbase = base;
+	}
+
+	printf("(- -): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	if (nbase != -1) {
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+		nn++;
+	}
+
+
+
+	// ( 0 , - )
+	if (y == 0) {
+		// get neighbour (0, -1).
+		nbase = healpix_get_neighbour(base, 0, -1);
+	} else {
+		nbase = base;
+	}
+	ny = (y + Nside - 1) % Nside;
+	nx = x;
+
+	printf("(0 -): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+	nn++;
+
+
+	// ( + , - )
+	nx = (x + 1) % Nside;
+	ny = (y + Nside - 1) % Nside;
+	if ((x == (Nside-1)) && (y == 0)) {
+		if (isequatorial(base)) {
+			// get neighbour (-1, 1)
+			nbase = healpix_get_neighbour(base, 1, -1);
+		} else {
+			nbase = -1;
+		}
+	} else if (x == (Nside-1)) {
+		// get neighbour (1, 0)
+		nbase = healpix_get_neighbour(base, 1, 0);
+		if (isnorthpolar(base)) {
+			ny = Nside-1;
+			nx = y - 1;
+		}
+	} else if (y == 0) {
+		// get neighbour (0, -1)
+		nbase = healpix_get_neighbour(base, 0, -1);
+	} else {
+		nbase = base;
+	}
+
+	printf("(+ -): nbase=%i, nx=%i, ny=%i\n", nbase, nx, ny);
+
+	if (nbase != -1) {
+		neighbour[nn] = nbase*Ns2 + xy_to_pnprime(nx, ny, Nside);
+		nn++;
+	}
+
+
 	return nn;
 }
 
