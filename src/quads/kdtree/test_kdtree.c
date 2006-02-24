@@ -146,6 +146,74 @@ void test_kd_massive_build(CuTest *tc)
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 }
 
+void test_kd_range_search(CuTest *tc) {
+	int n=10000;
+	int d=3, i, j;
+	int levels=10;
+	real range = 0.08;
+	real range2;
+	real *point;
+	real *data = malloc(sizeof(real)*n*d);
+	real *origdata = malloc(sizeof(real)*n*d);
+	kdtree_qres_t* results;
+	int nfound;
+	int ntimes = 10;
+	int t;
+
+	for (i=0; i < n*d; i++) 
+        data[i] = random() / (real)RAND_MAX;
+
+	memcpy(origdata, data, n*d*sizeof(real));
+
+	kdtree_t *kd = kdtree_build(data, n, d, levels);
+
+	point = malloc(sizeof(real)*d);
+
+	for (t=0; t<ntimes; t++) {
+
+		range = t * 0.02;
+		range2 = range*range;
+
+		for (i=0; i<d; i++)
+			point[i] = random() / (real)RAND_MAX;
+		results = kdtree_rangesearch(kd, point, range2);
+
+		CuAssertPtrNotNullMsg(tc, "null kdtree rangesearch result.", results);
+
+		nfound = 0;
+		for (i=0; i<n; i++) {
+			double d2;
+			int ok;
+			d2 = 0.0;
+			for (j=0; j<d; j++) {
+				double diff = (origdata[i*d + j] - point[j]);
+				d2 += (diff*diff);
+			}
+			if (d2 > range2) continue;
+			nfound++;
+			// make sure this hit is present in the results list.
+			ok = 0;
+			for (j=0; j<results->nres; j++) {
+				if (results->inds[j] == i) {
+					ok = 1;
+					break;
+				}
+			}
+			CuAssertIntEquals(tc, ok, 1);
+		}
+		// make sure the number of hits is equal.
+		CuAssertIntEquals(tc, nfound, results->nres);
+
+		fprintf(stderr, "range search: %i results.\n", results->nres);
+
+		kdtree_free_query(results);
+	}
+	free(origdata);
+	free(point);
+	kdtree_free(kd);
+}
+
+
 int main(void) {
 	/* Run all tests */
 	CuString *output = CuStringNew();
@@ -163,6 +231,7 @@ int main(void) {
 	SUITE_ADD_TEST(suite, test_1d_nn_2);
 	SUITE_ADD_TEST(suite, test_kd_size);
 	SUITE_ADD_TEST(suite, test_kd_invalid_args);
+	SUITE_ADD_TEST(suite, test_kd_range_search);
 	//SUITE_ADD_TEST(suite, test_kd_massive_build);
 
 	/* Run the suite, collect results and display */
