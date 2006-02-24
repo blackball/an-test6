@@ -1,8 +1,8 @@
 #!/bin/bash
 
-F=testme_cat_orig
-FN=testme_cat
-FIELD_NAME=testme_field
+F=$0_cat_orig
+FN=$0_cat
+FIELD_NAME=$0_field
 NSTARS=4
 
 # Parameters to genfields
