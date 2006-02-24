@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
 		nread = 0;
 
 		if (falsepos) {
-			fprintf(stdout, "false_positives=array([");
+			fprintf(stdout, "array([");
 			fflush(stdout);
 		}
 
