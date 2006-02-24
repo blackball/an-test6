@@ -340,10 +340,11 @@ int main(int argc, char *argv[]) {
 			  mo->vector[5] = 0.0;
 			*/
 
-			fprintf(stderr, "Pos (%6.2f, %6.2f), Scale %5.2f, Rot %6.2f\n",
-					rad2deg(rac), rad2deg(decc), arc,
-					rad2deg(rotation + ((rotation<0.0)? 2.0*M_PI : 0.0)));
-
+			/*
+			  fprintf(stderr, "Pos (%6.2f, %6.2f), Scale %5.2f, Rot %6.2f\n",
+			  rad2deg(rac), rad2deg(decc), arc,
+			  rad2deg(rotation + ((rotation<0.0)? 2.0*M_PI : 0.0)));
+			*/
 
 
 			// add the match...
@@ -446,6 +447,10 @@ void flush_solved_fields(bool doleftovers,
 		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
 		best = hitlist_get_best(hl);
+		/*
+		  best = hitlist_get_all_above_size(hl, min_matches_to_agree);
+		  nbest = blocklist_count(best);
+		*/
 
 		blocklist_int_append(flushsolved, fieldnum);
 		blocklist_int_append(solved, fieldnum);

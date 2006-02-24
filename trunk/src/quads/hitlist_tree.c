@@ -1,6 +1,8 @@
 #include "blocklist.h"
 #include "starutil.h"
 
+// Not currently being used...
+
 //const static int NBINS = 20;
 //const static int DIMS = 6;
 

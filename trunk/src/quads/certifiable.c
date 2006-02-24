@@ -38,6 +38,10 @@ int main(int argc, char *argv[]) {
 	bool falsepos = FALSE;
 	bool fromstdin = FALSE;
 
+	int nfields;
+	int *corrects = NULL;
+	int *incorrects = NULL;
+
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'F':
@@ -84,6 +88,13 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 	fclose(rdlsfid);
+
+	nfields = blocklist_count(rdls);
+	corrects = (int*)malloc(nfields * sizeof(int));
+	incorrects = (int*)malloc(nfields * sizeof(int));
+	for (i=0; i<nfields; i++) {
+		corrects[i] = incorrects[i] = 0;
+	}
 
 	correct = incorrect = 0;
 
@@ -276,10 +287,16 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (ok) {
+				if (fieldnum < nfields) {
+					corrects[fieldnum]++;
+				}
 				correct++;
 				fprintf(stderr, "Field %5i is correct: (%8.3f, %8.3f), scale %6.3f arcmin.\n", fieldnum, rac, decc, arc);
 			} else {
 				incorrect++;
+				if (fieldnum < nfields) {
+					incorrects[fieldnum]++;
+				}
 				if (falsepos) {
 					fprintf(stdout, "%i,", fieldnum);
 					fflush(stdout);
@@ -310,6 +327,57 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "%i hits correct, %i incorrect.\n",
 			correct, incorrect);
+
+	{
+		int nc, ni, no;
+		int maxc, maxi;
+		int *chist, *ihist;
+		nc = ni = no = 0;
+		for (i=0; i<nfields; i++) {
+			if (corrects[i] && incorrects[i])
+				no++;
+			else if (corrects[i])
+				nc++;
+			else if (incorrects[i])
+				ni++;
+		}
+		fprintf(stderr, "%i fields have only correct hits.\n", nc);
+		fprintf(stderr, "%i fields have only incorrect hits.\n", ni);
+		fprintf(stderr, "%i fields have both correct and incorrect hits.\n", no);
+
+		maxc = maxi = 0;
+		for (i=0; i<nfields; i++) {
+			if (corrects[i] > maxc)
+				maxc = corrects[i];
+			if (incorrects[i] > maxi)
+				maxi = incorrects[i];
+		}
+		chist = (int*)malloc((maxc + 1) * sizeof(int));
+		ihist = (int*)malloc((maxi + 1) * sizeof(int));
+		for (i=0; i<maxc; i++)
+			chist[i] = 0;
+		for (i=0; i<maxi; i++)
+			ihist[i] = 0;
+		for (i=0; i<nfields; i++) {
+			// skip fields that have no hits at all.
+			if (!corrects[i] && !incorrects[i])
+				continue;
+			chist[corrects[i]]++;
+			ihist[incorrects[i]]++;
+		}
+		fprintf(stderr, "Distribution of correct hits per field:\n");
+		for (i=0; i<maxc; i++)
+			if (chist[i])
+				fprintf(stderr, "  %i correct hits: %i fields.\n", i, chist[i]);
+		fprintf(stderr, "Distribution of incorrect hits per field:\n");
+		for (i=0; i<maxi; i++)
+			if (ihist[i])
+				fprintf(stderr, "  %i incorrect hits: %i fields.\n", i, ihist[i]);
+		free(chist);
+		free(ihist);
+	}
+	free(corrects);
+	free(incorrects);
 
 	return 0;
 }
