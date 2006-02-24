@@ -66,16 +66,6 @@ int hitlist_count_all(hitlist* hl) {
 	return sum;
 }
 
-double distsq(double* d1, double* d2, int D) {
-    double dist2;
-    int i;
-    dist2 = 0.0;
-    for (i=0; i<D; i++) {
-		dist2 += square(d1[i] - d2[i]);
-    }
-    return dist2;
-}
-
 blocklist* hitlist_get_best(hitlist* hl) {
     int i, N;
     int bestnum;

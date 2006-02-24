@@ -1,5 +1,15 @@
 #include "starutil.h"
 
+inline double distsq(double* d1, double* d2, int D) {
+    double dist2;
+    int i;
+    dist2 = 0.0;
+    for (i=0; i<D; i++) {
+		dist2 += square(d1[i] - d2[i]);
+    }
+    return dist2;
+}
+
 inline double distsq2arc(double dist2) {
 	// cosine law: c^2 = a^2 + b^2 - 2 a b cos C
 	// c^2 is dist2.  We want C.

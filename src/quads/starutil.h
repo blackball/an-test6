@@ -56,6 +56,8 @@ inline double square(double d);
 
 inline int inrange(double ra, double ralow, double rahigh);
 
+inline double distsq(double* d1, double* d2, int D);
+
 #define mk_star() (star *)mk_dyv(DIM_STARS)
 #define mk_stard(d) (star *)mk_dyv(d)
 #define mk_code() (code *)mk_dyv(DIM_CODES)
