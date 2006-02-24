@@ -36,39 +36,6 @@ MYOBJS = randcat.o startree.o quadidx.o genfields.o solvexy.o fieldquads.o finds
 
 all: $(EXECS) solvexy2 agreeable slave agreeable2
 
-CUNIT_I = -I/h/42/dstn/software/cunit/include
-CUNIT_L = /h/42/dstn/software/cunit/lib/libcunit.a
-#CUNIT_L = -L/h/42/dstn/software/cunit/lib -lcunit
-
-CUTEST_I = -Ikdtree/CuTest
-CUTEST_L = kdtree/CuTest/CuTest.o 
-
-#kdtree/CuTest/AllTests.o 
-
-$(CUTEST_L) :: %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
-
-CUNIT_TEST_DRIVERS = test_healpix
-CUTEST_TEST_DRIVERS = kdtree/test_kdtree
-TEST_DRIVERS = $(CUNIT_TEST_DRIVERS) $(CUTEST_TEST_DRIVERS)
-
-tests: $(TEST_DRIVERS)
-
-CUNIT_TEST_OBJS = $(addsuffix .o,$(CUNIT_TEST_DRIVERS))
-CUTEST_TEST_OBJS = $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
-
-$(CUNIT_TEST_DRIVERS) :: %: %.o $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(CUNIT_L) -lm
-
-$(CUNIT_TEST_OBJS) :: %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(CUNIT_I)
-
-$(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ -lm
-
-$(CUTEST_TEST_OBJS) :: %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
-
 solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
@@ -92,4 +59,36 @@ allclean:
 
 clean:
 	rm -f $(EXECS) $(MYOBJS) $(OBJ)
+
+CUTEST_I = -Ikdtree/CuTest
+CUTEST_L = kdtree/CuTest/CuTest.o 
+
+$(CUTEST_L) :: %.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
+
+CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix
+
+
+# Not actually used right now...
+CUNIT_I = -I/h/42/dstn/software/cunit/include
+CUNIT_L = /h/42/dstn/software/cunit/lib/libcunit.a
+CUNIT_TEST_DRIVERS = 
+CUNIT_TEST_OBJS = $(addsuffix .o,$(CUNIT_TEST_DRIVERS))
+$(CUNIT_TEST_DRIVERS) :: %: %.o $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(CUNIT_L) -lm
+$(CUNIT_TEST_OBJS) :: %.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(CUNIT_I)
+
+
+TEST_DRIVERS = $(CUNIT_TEST_DRIVERS) $(CUTEST_TEST_DRIVERS)
+
+tests: $(TEST_DRIVERS)
+
+CUTEST_TEST_OBJS = $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
+
+$(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^ -lm
+
+$(CUTEST_TEST_OBJS) :: %.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 

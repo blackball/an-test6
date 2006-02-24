@@ -1,9 +1,6 @@
 #ifndef DUALTREE_RANGE_SEARCH_H
 #define DUALTREE_RANGE_SEARCH_H
 
-//#define _GNU_SOURCE 1
-//#include <math.h>
-
 extern double RANGESEARCH_NO_LIMIT;
 
 #include "KD/kdtree.h"

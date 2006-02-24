@@ -184,6 +184,7 @@ void test_kd_range_search(CuTest *tc) {
 		for (i=0; i<n; i++) {
 			double d2;
 			int ok;
+			int hitind;
 			d2 = 0.0;
 			for (j=0; j<d; j++) {
 				double diff = (origdata[i*d + j] - point[j]);
@@ -192,14 +193,24 @@ void test_kd_range_search(CuTest *tc) {
 			if (d2 > range2) continue;
 			nfound++;
 			// make sure this hit is present in the results list.
+			hitind = -1;
 			ok = 0;
 			for (j=0; j<results->nres; j++) {
 				if (results->inds[j] == i) {
 					ok = 1;
+					hitind = j;
 					break;
 				}
 			}
 			CuAssertIntEquals(tc, ok, 1);
+			if (ok) {
+				// make sure the reported distance is right.
+				CuAssertDblEquals(tc, results->sdists[hitind], d2, 1e-10);
+				// make sure the reported results are right.
+				for (j=0; j<d; j++) {
+					CuAssertDblEquals(tc, results->results[hitind*d + j], origdata[i*d + j], 1e-30);
+				}
+			}
 		}
 		// make sure the number of hits is equal.
 		CuAssertIntEquals(tc, nfound, results->nres);
