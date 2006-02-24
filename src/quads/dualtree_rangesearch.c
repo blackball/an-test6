@@ -36,7 +36,6 @@ void dualtree_rangesearch(kdtree* xtree, kdtree* ytree,
     callbacks.result_extra = &params;
 
     // set search params
-    //if (isnan(mindist)) {
     if (mindist == RANGESEARCH_NO_LIMIT) {
 	params.usemin = 0;
     } else {
@@ -44,7 +43,6 @@ void dualtree_rangesearch(kdtree* xtree, kdtree* ytree,
 	params.mindistsq = mindist * mindist;
     }
 
-    //if (isnan(maxdist)) {
     if (maxdist == RANGESEARCH_NO_LIMIT) {
 	params.usemax = 0;
     } else {

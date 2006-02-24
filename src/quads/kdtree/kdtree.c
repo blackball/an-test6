@@ -312,36 +312,8 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
     res->inds = malloc(sizeof(unsigned int)*res->nres);
     memcpy(res->inds, results_inds, sizeof(unsigned int)*res->nres);
 
-	// DEBUG
-	/*
-	  if (res->nres) {
-	  int i;
-	  int M = 5;
-	  if (res->nres < M) M = res->nres;
-	  fprintf(stderr, "\nInds: ");
-	  for (i=0; i<M; i++) {
-	  fprintf(stderr, "%u ", res->inds[i]);
-	  }
-	  fprintf(stderr, "\n");
-	  }
-	*/
-
     /* Sort by ascending distance away from target point before returning */
     kdtree_qsort_results(res, kd->ndim);
-
-	// DEBUG
-	/*
-	  if (res->nres) {
-	  int i;
-	  int M = 5;
-	  if (res->nres < M) M = res->nres;
-	  fprintf(stderr, "\nSort: ");
-	  for (i=0; i<M; i++) {
-	  fprintf(stderr, "%u ", res->inds[i]);
-	  }
-	  fprintf(stderr, "\n");
-	  }
-	*/
 
     return res;
 }
