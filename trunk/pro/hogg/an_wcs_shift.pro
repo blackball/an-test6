@@ -16,7 +16,7 @@ offset= offset_from_pairs(xylist.x,xylist.y,x2,y2, $
 splog, 'offset:',offset
 tmpastr= astr
 tmpastr.crpix= astr.crpix-offset
-xy2ad, oldastr.crpix[0],oldastr.crpix[1],tmpastr,crval1,crval2
+xy2ad, astr.crpix[0],astr.crpix[1],tmpastr,crval1,crval2
 newastr= hogg_tp_shift(astr,[crval1,crval2])
 return, newastr
 end
