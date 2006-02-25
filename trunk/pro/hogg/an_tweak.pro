@@ -16,6 +16,7 @@
 ;   - Not written.
 ;   - Not tested.
 ;   - Dependencies.
+;   - xylist "optional" input is currently REQUIRED.
 ; REVISION HISTORY:
 ;-
 function an_tweak, imagefile,exten=exten, $
@@ -30,12 +31,12 @@ endif
 astr= originalastr
 
 ; get x,y list for image
-if (NOT keyword_set(xylist)) then begin
-    xylist= an_xylist(imagefile,exten=exten)
-endif
+;if (NOT keyword_set(xylist)) then begin
+;    xylist= an_xylist(imagefile,exten=exten)
+;endif
 
 ; get approximate sky location and size
-xy2ad xylist.x,xylist.y,astr,aa,dd
+xy2ad, xylist.x,xylist.y,astr,aa,dd
 hogg_mean_ad, aa,dd,meanaa,meandd
 maxangle= 2.0*max(djs_diff_angle(aa,dd,meanaa,meandd))
 
