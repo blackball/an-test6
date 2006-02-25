@@ -24,6 +24,7 @@ function an_tweak, imagefile,exten=exten, $
                    originalastr=originalastr,xylist=xylist, $
                    siporder=siporder,qa=qa
 if (not keyword_set(siporder)) then siporder= 1
+if (not keyword_set(nsigma)) then nsigma= 5.0
 
 ; get "original" WCS for image
 if (NOT keyword_set(originalastr)) then begin
@@ -47,7 +48,7 @@ splog, 'will get standards in',meanaa,meandd,maxangle
 
 ; read in "standards" from USNO, SDSS, or 2MASS
 standards= an_sdss_read(meanaa,meandd,maxangle)
-jitter= 1.0                     ; arcsec
+jitter= 0.2                     ; arcsec
 if (n_tags(standards) LT 2) then begin
     standards= an_usno_read(meanaa,meandd,maxangle)
     jitter= 1.0                 ; arcsec
@@ -56,9 +57,8 @@ splog, 'got standards list of size',n_elements(standards.ra)
 
 ; QA plot
 if keyword_set(qa) then begin
-    set_plot, 'ps'
     xsize= 7.5 & ysize= 7.5
-    set_plot, "PS"
+    set_plot, 'PS'
     device, file=qa,/inches,xsize=xsize,ysize=ysize, $
       xoffset=(8.5-xsize)/2.0,yoffset=(11.0-ysize)/2.0,/color, bits=8
     hogg_plot_defaults, axis_char_scale=axis_char_scale
@@ -69,7 +69,9 @@ if keyword_set(qa) then begin
 endif
 
 ; perform Fink-Hogg shift, preserving SIP terms
-shiftastr= an_wcs_shift(astr,xylist,standards)
+shiftastr= an_wcs_shift(astr,xylist,standards,dmax=2000.0,binsz=4.0)
+astr= shiftastr
+shiftastr= an_wcs_shift(astr,xylist,standards,dmax=8.0,binsz=0.5)
 astr= shiftastr
 splog, 'shifted ASTR'
 
@@ -81,31 +83,45 @@ if keyword_set(qa) then begin
     oplot, xylist.x,xylist.y,psym=1
 endif
 
-; perform linear tweak, preserving SIP terms
-nsigma= 5.0
-for log2jitter=3,0,-1 do begin
-    thisjitter= jitter*2.0^log2jitter
-    lineartweakastr= hogg_wcs_tweak(astr,xylist.x,xylist.y, $
-                                    siporder=1,jitter=thisjitter, $
-                                    nsigma=nsigma,usno=standards,chisq=chisq)
-    astr= lineartweakastr
-endfor
-splog, 'tweaked ASTR to linear order'
+; cut down standards list to nearby stuff
+xy2ad, xylist.x,xylist.y,astr,aa,dd
+spherematch, aa,dd,standards.ra,standards.dec,(10.0*jitter)/3600.0, $
+  match1,match2,distance12,maxmatch=0
+match2= match2[sort(match2)]
+match2= match2[uniq(match2)]
+shorts= standards[match2]
 
 ; QA plot
 if keyword_set(qa) then begin
-    !P.TITLE= 'linear tweaked WCS'
-    ad2xy, standards.ra,standards.dec,astr,sx,sy
+    !P.TITLE= 'shifted WCS'
+    ad2xy, shorts.ra,shorts.dec,astr,sx,sy
     plot, sx,sy,psym=6
     oplot, xylist.x,xylist.y,psym=1
 endif
+
+; perform linear tweak, preserving SIP terms
+for ii=0,3 do begin
+    lineartweakastr= hogg_wcs_tweak(astr,xylist.x,xylist.y, $
+                                    siporder=1,jitter=jitter, $
+                                    nsigma=nsigma,usno=shorts,chisq=chisq)
+    astr= lineartweakastr
+
+; QA plot
+    if keyword_set(qa) then begin
+        !P.TITLE= 'linear tweaked WCS'
+        ad2xy, shorts.ra,shorts.dec,astr,sx,sy
+        plot, sx,sy,psym=6
+        oplot, xylist.x,xylist.y,psym=1
+    endif
+endfor
+splog, 'tweaked ASTR to linear order'
 
 ; perform non-linear tweak, if requested
 if (siporder GT 1) then begin
     for ii=0,3 do begin
         tweakastr= hogg_wcs_tweak(astr,xylist.x,xylist.y, $
                                   siporder=siporder,jitter=jitter, $
-                                  nsigma=nsigma,usno=standards,chisq=chisq)
+                                  nsigma=nsigma,usno=shorts,chisq=chisq)
         astr= tweakastr
     endfor
     splog, 'tweaked ASTR to order',siporder
@@ -113,7 +129,7 @@ if (siporder GT 1) then begin
 ; QA plot
     if keyword_set(qa) then begin
         !P.TITLE= 'non-linear tweaked WCS'
-        ad2xy, standards.ra,standards.dec,astr,sx,sy
+        ad2xy, shorts.ra,shorts.dec,astr,sx,sy
         plot, sx,sy,psym=6
         oplot, xylist.x,xylist.y,psym=1
     endif

@@ -6,7 +6,8 @@ readcol, xyfile,starID,sx,sy,mag,magerr,skyval, $
 starlist= replicate({x:0,y:0},n_elements(sx))
 starlist.x= sx
 starlist.y= sy
-newastr= an_tweak(imagefile,xylist=starlist,qa='test_an_tweak.ps')
+newastr= an_tweak(imagefile,xylist=starlist,qa='test_an_tweak.ps', $
+                  siporder=1)
 return
 end
 
