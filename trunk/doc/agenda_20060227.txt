@@ -12,51 +12,57 @@ New York University
 
    2.1 What have you done?
    2.2 What are you currently working on?
-   2.3 What's your biggest obstacle right now?
-   2.4 What is your principal interest in the project?
-   2.5 How far can our current funding take us and how should
+   2.3 What is your principal interest in the project?
+   2.4 How far can our current funding take us and how should
        we maximize our chances of getting refunded?
 
-3. Tweak & Solvexy: Going alpha on the WWW
+3. Current demonstration projects: What's the next step for each?
 
-   3.1 What do you imagine the alpha site to be and do?
-   3.2 site, WWW pages, front-end
-   3.3 managing/controlling cluster
-   3.4 Do users upload x,y lists or images?
-   3.5 Do we need to avoid IDL?
-   3.6 privacy policy
-   3.7 data archiving requirements and data model
+   3.1 SDSS
+   3.2 GALEX
+   3.3 NOAO archive
+   3.4 HST archive
 
-4. Tweak & Solvexy: Migrating to open source implementations
+4. Tweak & Solvexy: Going alpha on the WWW
 
-   4.1 reading usno and using flags
-   4.2 object detection
-   4.3 cosmic-ray rejection
-   4.4 offset from pairs (Hough transform)
-   4.5 read and write and use regular astrom headers
-   4.6 read and write and use SIP headers
-   4.7 least-squares and etc for tweak
+   4.1 What do you imagine the alpha site to be and do?
+   4.2 site, WWW pages, front-end
+   4.3 managing/controlling cluster
+   4.4 Do users upload x,y lists or images?
+   4.5 Do we need to avoid IDL?
+   4.6 privacy policy
+   4.7 data archiving requirements and data model
 
-5. Other Data Sets and Future Potential Scientific Projects
+5. Tweak & Solvexy: Migrating to open source implementations
 
-   5.1 re-solve PMM data to make AN-1.0 (USNO C)
-   5.2 cross-identification of sources, including moving soures
+   5.1 reading usno and using flags
+   5.2 object detection
+   5.3 cosmic-ray rejection
+   5.4 offset from pairs (Hough transform)
+   5.5 read and write and use regular astrom headers
+   5.6 read and write and use SIP headers
+   5.7 least-squares and etc for tweak
+
+6. Other Data Sets and Future Potential Scientific Projects
+
+   6.1 re-solve PMM data to make AN-1.0 (USNO C)
+   6.2 cross-identification of sources, including moving soures
        across multiple catalogues/instruments
-   5.3 "best possible" heterogeneous-source astrometric catalog
-   5.4 structure of the galaxy
-   5.5 statistical anomalies on the sky
-   5.6 transient searches
-   5.7 super-resolution multi-wavelength astronomy
-   5.8 "social networks" of astronomy: who is looking at what parts
+   6.3 "best possible" heterogeneous-source astrometric catalog
+   6.4 structure of the galaxy
+   6.5 statistical anomalies on the sky
+   6.6 transient searches
+   6.7 super-resolution multi-wavelength astronomy
+   6.8 "social networks" of astronomy: who is looking at what parts
        of the sky that who else is looking at and who is writing what
        papers about what
 
-6. Eventual Extensions of WWW capabilities
+7. Eventual Extensions of WWW capabilities
 
-   6.1 meta-tweak
-   6.2 archiving of input (privacy issues)
-   6.3 calibration
-   6.4 use of (trusted) archived data
-   6.5 other image-processing tasks (satellites, flat-fielding, etc)
-   6.6 delivering transient information to users up-front
-   6.7 delivering GRB and other interesting counterparts
+   7.1 meta-tweak
+   7.2 archiving of input (privacy issues)
+   7.3 calibration
+   7.4 use of (trusted) archived data
+   7.5 other image-processing tasks (satellites, flat-fielding, etc)
+   7.6 delivering transient information to users up-front
+   7.7 delivering GRB and other interesting counterparts
