@@ -5,12 +5,11 @@
 ;  apply Fink-Hogg Hough-transform algorithm to shift (improve) close
 ;  WCS
 ; BUGS:
-;  - dmax and binsz hard-wired
 ;-
-function an_wcs_shift, astr,xylist,standards
+function an_wcs_shift, astr,xylist,standards,dmax=dmax,binsz=binsz
 ad2xy, standards.ra,standards.dec,astr,x2,y2
-dmax= 500.0
-binsz= 0.5
+if (not keyword_set(dmax)) then dmax= 1000.0
+if (not keyword_set(binsz)) then binsz= 1.0
 offset= offset_from_pairs(xylist.x,xylist.y,x2,y2, $
                           dmax=dmax,binsz=binsz,/verbose)
 splog, 'offset:',offset
