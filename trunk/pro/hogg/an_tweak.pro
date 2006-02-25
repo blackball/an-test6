@@ -3,9 +3,20 @@
 ;   an_tweak
 ; PURPOSE:
 ;   Run WCS tweak on a generic image.
+; INPUTS:
+;   imagefile    - FITS file name of image with roughly correct WCS
+; OPTIONAL INPUTS:
+;   exten        - which extension of FITS file to look at; default 0
+;   originalastr - the original astrometry header info; over-rides
+;                  header to FITS file
+;   xylist       - X,Y list of stars in image
+;   siporder     - order for SIP distortions; default 1 (ie, no
+;                  distortions)
 ; BUGS:
 ;   - Not written.
+;   - Not tested.
 ;   - Dependencies.
+; REVISION HISTORY:
 ;-
 function an_tweak, imagefile,exten=exten, $
                    originalastr=originalastr,xylist=xylist, $
