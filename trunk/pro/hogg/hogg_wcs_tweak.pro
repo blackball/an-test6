@@ -89,8 +89,9 @@ vpars= transpose(AAtAAinv##(transpose(AA)##vv))
 ; interpret and load into structure
 xy2ad, upars[0],vpars[0],trivastr,crval0,crval1 ; NB: using trivial newastr
 newastr= astr
-newastr= hogg_tp_shift(newastr,[crval0,crval1])
+newastr.cdelt= [1D0,1D0]
 newastr.cd= [[upars[1],vpars[1]],[upars[2],vpars[2]]]
+newastr= hogg_tp_shift(newastr,[crval0,crval1])
 
 ; deal with SIP structure
 if (siporder GT 1) then begin
