@@ -80,7 +80,7 @@ FILE *codefid = NULL;
 // this is an array of lists, one for each star.
 // each list contains the indices of the quads to which
 // that star belongs.
-blocklist** quadlist;
+blocklist** quadlist = NULL;
 
 sidx numstars;
 int nstarsdone = 0;
@@ -236,8 +236,10 @@ int main(int argc, char *argv[]) {
 	range_params.stars = stars;
 	range_params.nquads = 0;
 
-	quadlist = (blocklist**)malloc(numstars * sizeof(blocklist*));
-	memset(quadlist, 0, numstars * sizeof(blocklist*));
+	if (writeqidx) {
+		quadlist = (blocklist**)malloc(numstars * sizeof(blocklist*));
+		memset(quadlist, 0, numstars * sizeof(blocklist*));
+	}
 
 	if (!quiet)
 		printf("Running dual-tree search (scale %g)...\n", radius);
@@ -330,9 +332,9 @@ int main(int argc, char *argv[]) {
 				printf("Couldn't write quad index file: %s\n", strerror(errno));
 				exit(-1);
 			}
+			free(quadlist);
 		}
     }
-	free(quadlist);
 
 	printf("Done.\n");
 	fflush(stdout);
@@ -409,8 +411,6 @@ void accept_quad(int quadnum, sidx iA, sidx iB, sidx iC, sidx iD,
 
 	if (writeqidx)
 		insertquad(quadnum, iA, iB, iC, iD);
-
-    return ;
 }
 
 /**
