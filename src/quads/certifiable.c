@@ -11,12 +11,13 @@
 #include "matchfile.h"
 #include "lsfile.h"
 
-char* OPTIONS = "hR:PF";
+char* OPTIONS = "hR:PFD";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
 			"   -R rdls-file\n"
 			"   [-F] false-positive mode: read fields from stdin, write lists of false-positive fields.\n"
+			"   [-D] code distance distribution mode: print out the distance to the matching quad.\n"
 			"   [-P] print info about each hit\n",
 			progname);
 }
@@ -37,6 +38,9 @@ int main(int argc, char *argv[]) {
 	bool printhits = FALSE;
 	bool falsepos = FALSE;
 	bool fromstdin = FALSE;
+	bool codedist = FALSE;
+	blocklist* correct_dists = NULL;
+	blocklist* incorrect_dists = NULL;
 
 	int nfields;
 	int *corrects = NULL;
@@ -44,6 +48,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'D':
+			codedist = TRUE;
+			break;
 		case 'F':
 			falsepos = TRUE;
 			break;
@@ -67,13 +74,6 @@ int main(int argc, char *argv[]) {
 		fromstdin = TRUE;
 		ninputfiles = 1;
 	}
-	/*
-	  } else {
-	  fprintf(stderr, "You must specify at least one input match file.\n");
-	  printHelp(progname);
-	  exit(-1);
-	  }
-	*/
 	if (!rdlsfname) {
 		fprintf(stderr, "You must specify an RDLS file!\n");
 		printHelp(progname);
@@ -97,6 +97,17 @@ int main(int argc, char *argv[]) {
 	}
 
 	correct = incorrect = 0;
+
+	if (codedist) {
+		/*
+		  fprintf(stdout, "codedistsCorrect=[];");
+		  fprintf(stdout, "codedistsIncorrect=[];");
+		  fflush(stdout);
+		*/
+		correct_dists = blocklist_double_new(1024);
+		incorrect_dists = blocklist_double_new(1024);
+	}
+
 
 	for (i=0; i<ninputfiles; i++) {
 		FILE* infile = NULL;
@@ -178,7 +189,8 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "Quad %i\n", (int)mo->quadno);
 					fprintf(stderr, "Stars %i %i %i %i\n", (int)mo->iA, (int)mo->iB, (int)mo->iC, (int)mo->iD);
 					fprintf(stderr, "FieldObjs %i %i %i %i\n", (int)mo->fA, (int)mo->fB, (int)mo->fC, (int)mo->fD);
-					fprintf(stderr, "CodeErr %g\n", mo->code_err);
+					// the code_err values in the matchfile are actually squared.
+					fprintf(stderr, "CodeErr %g\n", sqrt(mo->code_err));
 				}
 
 			}
@@ -303,6 +315,22 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
+			if (codedist) {
+				if (ok) {
+					/*
+					  fprintf(stdout, "codedistsCorrect(%i)=%g;\n", 
+					  correct, mo->code_err);
+					*/
+					blocklist_double_append(correct_dists, sqrt(mo->code_err));
+				} else {
+					/*
+					  fprintf(stdout, "codedistsIncorrect(%i)=%g;\n", 
+					  incorrect, mo->code_err);
+					*/
+					blocklist_double_append(incorrect_dists, sqrt(mo->code_err));
+				}
+			}
+
 			if (!falsepos) {
 				free_star(mo->sMin);
 				free_star(mo->sMax);
@@ -316,6 +344,13 @@ int main(int argc, char *argv[]) {
 			fprintf(stdout, "])\n");
 			fflush(stdout);
 		}
+
+		/*
+		  if (codedist) {
+		  fprintf(stdout, "];");
+		  fflush(stdout);
+		  }
+		*/
 
 		fprintf(stderr, "Read %i matches.\n", nread);
 		fflush(stderr);
@@ -354,9 +389,9 @@ int main(int argc, char *argv[]) {
 		}
 		chist = (int*)malloc((maxc + 1) * sizeof(int));
 		ihist = (int*)malloc((maxi + 1) * sizeof(int));
-		for (i=0; i<maxc; i++)
+		for (i=0; i<=maxc; i++)
 			chist[i] = 0;
-		for (i=0; i<maxi; i++)
+		for (i=0; i<=maxi; i++)
 			ihist[i] = 0;
 		for (i=0; i<nfields; i++) {
 			// skip fields that have no hits at all.
@@ -366,11 +401,11 @@ int main(int argc, char *argv[]) {
 			ihist[incorrects[i]]++;
 		}
 		fprintf(stderr, "Distribution of correct hits per field:\n");
-		for (i=0; i<maxc; i++)
+		for (i=0; i<=maxc; i++)
 			if (chist[i])
 				fprintf(stderr, "  %i correct hits: %i fields.\n", i, chist[i]);
 		fprintf(stderr, "Distribution of incorrect hits per field:\n");
-		for (i=0; i<maxi; i++)
+		for (i=0; i<=maxi; i++)
 			if (ihist[i])
 				fprintf(stderr, "  %i incorrect hits: %i fields.\n", i, ihist[i]);
 		free(chist);
@@ -378,6 +413,29 @@ int main(int argc, char *argv[]) {
 	}
 	free(corrects);
 	free(incorrects);
+
+	if (codedist) {
+		int N;
+		N = blocklist_count(correct_dists);
+		printf("correctDists=[");
+		for (i=0; i<N; i++) {
+			double d = blocklist_double_access(correct_dists, i);
+			printf("%g,", d);
+		}
+		printf("];\n");
+
+		N = blocklist_count(incorrect_dists);
+		printf("incorrectDists=[");
+		for (i=0; i<N; i++) {
+			double d = blocklist_double_access(incorrect_dists, i);
+			printf("%g,", d);
+		}
+		printf("];\n");
+
+		blocklist_free(correct_dists);
+		blocklist_free(incorrect_dists);
+	}
+
 
 	return 0;
 }
