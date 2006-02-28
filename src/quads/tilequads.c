@@ -98,13 +98,16 @@ int main(int argc, char *argv[]) {
 	off_t endoffset;
     int hdrlength = 0;
 
-	int nquads = 0;
+	int i, nquads = 0;
+	int p;
+
 	time_t starttime, endtime;
 
-	double* starxyz;
+	double* starxyz = NULL;
 
 	// how many stars per healpix?
-	int PASSES = 2;
+	//int PASSES = 2;
+	int PASSES = 5;
 
 	// how many healpixes?
 	int Nside = 512;
@@ -220,18 +223,58 @@ int main(int argc, char *argv[]) {
 	}
 
 	for (i=0; i<numstars; i++) {
+		int hp;
+		//if (i % 10000 == 9999) {
+		if (i % 100000 == 99999) {
+			fprintf(stderr, ".");
+			fflush(stderr);
+		}
 		if (use_mmap) {
 			starxyz = catalogue + i * DIM_STARS;
 		} else {
 			fseekocat(i, cposmarker, catfid);
-			
-
-			//#define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
-
+			//fseeko(catfid, cposmarker + i*DIM_STARS*sizeof(double), SEEK_SET);
+			fread(starxyz, sizeof(double), DIM_STARS, catfid);
 		}
 
-
+		hp = xyztohealpix_nside(starxyz[0], starxyz[1],
+								starxyz[2], Nside);
+		for (p=0; p<PASSES; p++) {
+			if (starids[p*HEALPIXES + hp] == -1) {
+				starids[p*HEALPIXES + hp] = i;
+				break;
+			}
+		}
 	}
+	fprintf(stderr, "\n");
+	fflush(stderr);
+
+	for (p=0; p<PASSES; p++) {
+		int nfound = 0;
+		for (i=0; i<HEALPIXES; i++) {
+			if (starids[p*HEALPIXES + i] != -1) {
+				nfound++;
+			}
+		}
+		fprintf(stderr, "Pass %i: found stars in %i of %i healpixes (%i %%).\n",
+				p, nfound, HEALPIXES, (int)rint(100.0 * nfound / (double)HEALPIXES));
+	}
+
+	//for (p=0; p<PASSES; p++) {
+	{
+		int neigh[8];
+		int nn;
+		for (i=0; i<HEALPIXES; i++) {
+			if (starids[p*HEALPIXES + i] == -1) continue;
+
+			nn = healpix_get_neighbours_nside(i, neigh, Nside);
+
+			// create quads containing this one and some of its neighbours...
+
+			// set them to -1 ?
+		}
+	}
+
 
 	if (!use_mmap) {
 		free(starxyz);
