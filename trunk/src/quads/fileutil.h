@@ -61,8 +61,8 @@ void write_code_header(FILE *codefid, qidx numCodes,
                        sidx numstars, dimension DimCodes, double index_scale);
 void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
                        dimension DimQuads, double index_scale);
-void fix_code_header(FILE *codefid, qidx numCodes, size_t len);
-void fix_quad_header(FILE *quadfid, qidx numQuads, size_t len);
+void fix_code_header(FILE *codefid, qidx numCodes);
+void fix_quad_header(FILE *quadfid, qidx numQuads);
 
 xyarray *readxy(FILE *fid, char ParityFlip);
 

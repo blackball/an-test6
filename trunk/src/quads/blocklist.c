@@ -61,6 +61,16 @@ void blocklist_split(blocklist* src, blocklist* dest, int split) {
     src->last_access = NULL;
 }
 
+void blocklist_init(blocklist* list, int blocksize, int datasize) {
+	list->head = NULL;
+	list->tail = NULL;
+	list->N = 0;
+	list->blocksize = blocksize;
+	list->datasize  = datasize;
+	list->last_access = NULL;
+	list->last_access_n = 0;
+}
+
 blocklist* blocklist_new(int blocksize, int datasize) {
 	blocklist* rtn;
 	rtn = (blocklist*)malloc(sizeof(blocklist));
@@ -68,13 +78,7 @@ blocklist* blocklist_new(int blocksize, int datasize) {
 		printf("Couldn't allocate memory for a blocklist.\n");
 		return NULL;
 	}
-	rtn->head = NULL;
-	rtn->tail = NULL;
-	rtn->N = 0;
-	rtn->blocksize = blocksize;
-	rtn->datasize  = datasize;
-	rtn->last_access = NULL;
-	rtn->last_access_n = 0;
+	blocklist_init(rtn, blocksize, datasize);
 	return rtn;
 }
 
@@ -762,6 +766,10 @@ int compare_ints_descending(void* v1, void* v2) {
 // special-case integer list accessors...
 void blocklist_int_set(blocklist* list, int index, int value) {
 	blocklist_set(list, index, &value);
+}
+
+void blocklist_int_init(blocklist* list, int blocksize) {
+	blocklist_init(list, blocksize, sizeof(int));
 }
 
 blocklist* blocklist_int_new(int blocksize) {

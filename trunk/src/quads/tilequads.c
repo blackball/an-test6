@@ -336,7 +336,6 @@ int main(int argc, char *argv[]) {
 	char readStatus;
 	dimension Dim_Stars;
 	off_t endoffset;
-    int hdrlength = 0;
 
 	int i, nquads = 0;
 	int p;
@@ -429,14 +428,8 @@ int main(int argc, char *argv[]) {
 	fopenout(codefname, codefid);
 
 	// we have to write an updated header after we've processed all the quads.
-	{
-		uint nelems = 1000000000;
-		hdrlength = 10;
-		write_code_header(codefid, nelems, numstars,
-						  DIM_CODES, radius);
-		write_quad_header(quadfid, nelems, numstars,
-						  DIM_QUADS, radius);
-	}
+	write_code_header(codefid, 0, numstars, DIM_CODES, radius);
+	write_quad_header(quadfid, 0, numstars, DIM_QUADS, radius);
 
 	if (writeqidx) {
 		quadlist = (blocklist**)malloc(numstars * sizeof(blocklist*));
@@ -602,8 +595,8 @@ int main(int argc, char *argv[]) {
 		magicval magic = MAGIC_VAL;
 
 		// fix output file headers.
-		fix_code_header(codefid, nquads, hdrlength);
-		fix_quad_header(quadfid, nquads, hdrlength);
+		fix_code_header(codefid, nquads);
+		fix_quad_header(quadfid, nquads);
 
 		// close .code and .quad files
 		if (fclose(codefid)) {

@@ -23,7 +23,7 @@ char *quadfname = NULL;
 char *codefname = NULL;
 char *newquadfname = NULL;
 char *newcodefname = NULL;
-char buff[100], maxstarWidth, codeWidth;
+char maxstarWidth, codeWidth;
 off_t posmarker, cposmarker;
 
 ivec_array *qlist = NULL;
@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
 		nq2 = deduplicate_quads(quadfid, codefid, newquadfid, newcodefid, 
 		                        numquads);
 
-		fix_quad_header(newquadfid, nq2, strlen(buff));
-		fix_code_header(newcodefid, nq2, strlen(buff));
+		fix_quad_header(newquadfid, nq2);
+		fix_code_header(newcodefid, nq2);
 		fclose(newquadfid);
 		fclose(newcodefid);
 		free_fn(newquadfname);
