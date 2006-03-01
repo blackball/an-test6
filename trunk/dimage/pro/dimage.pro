@@ -17,6 +17,7 @@ nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
 ;; Preprocess: 
+;;   * try to guess whether it is background subtracted
 ;;   * try to guess saturation
 ;;   * try to guess PSF size
 ;;   - set noise level (and test, roughly)
@@ -28,24 +29,12 @@ invvar=dinvvar(image, hdr=hdr, satur=satur)
 ;;   - find small objects and their crude centers
 ;;   * find better centers
 ;;   * measure simple flux
-smooth=dmedsmooth(image, invvar, box=40L)
-simage=image-smooth
-dobjects, simage, invvar, object=oimage
-dextract, simage, invvar, object=oimage, extract=extract, small=31L
-dcenter, extract, xcen=xcen, ycen=ycen
-dpsfflux, extract, xcen=xcen, ycen=ycen, gauss=2., flux=flux
+msmooth=dmedsmooth(image, invvar, box=40L)
+simage=image-msmooth
+dobjects, simage, invvar, object=oimage, smooth=smooth
+dextract, smooth, invvar, object=oimage, extract=extract, small=31L
 
 stop
-
-;; Now fit PSF to these objects
-dfitpsf, simage, invvar, extract=extract
-
-;; Do second pass
-;;   * redetect and eliminate cosmics
-
-
-save
-
 
 end
 ;------------------------------------------------------------------------------

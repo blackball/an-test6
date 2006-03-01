@@ -19,13 +19,13 @@
 ;-
 ;------------------------------------------------------------------------------
 pro dobjects, image, invvar, objects=objects, dpsf=dpsf, sigma=sigma, $
-              plim=plim
+              plim=plim, smooth=smooth
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
 if(NOT keyword_set(dpsf)) then dpsf=1.
-if(NOT keyword_set(plim)) then plim=20. ;;*(4.*!DPI*dpsf^2)
+if(NOT keyword_set(plim)) then plim=5. ;;*(4.*!DPI*dpsf^2)
 if(NOT keyword_set(sigma)) then sigma=1./sqrt(median(invvar))
 
 ; Set source object name
@@ -34,9 +34,11 @@ soname=filepath('libdimage.'+idlutils_so_ext(), $
 
 nchild=0L
 objects=lonarr(nx,ny)
+smooth=fltarr(nx,ny)
 retval=call_external(soname, 'idl_dobjects', $
                      float(image), $
                      float(invvar), $
+                     float(smooth), $
                      long(nx), long(ny), $
                      float(dpsf), $
                      float(plim), $

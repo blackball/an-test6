@@ -18,7 +18,7 @@ function dinvvar, image, hdr=hdr, satur=satur
 
 invvar=1./float(image)
 
-ii=where(image le 0., nii)
+ii=where(image le 0. and image ne image, nii)
 if(nii gt 0) then $
   invvar[ii]=0.
 

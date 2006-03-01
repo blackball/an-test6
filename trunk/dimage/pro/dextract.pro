@@ -36,6 +36,8 @@ iuniq=uniq(object[isort])
 istart=iuniq[0]+1
 xcen=fltarr(max(object)+1)
 ycen=fltarr(max(object)+1)
+xfit=fltarr(max(object)+1)
+yfit=fltarr(max(object)+1)
 xst=lonarr(max(object)+1)
 yst=lonarr(max(object)+1)
 xnd=lonarr(max(object)+1)
@@ -65,7 +67,7 @@ for i=1L, n_elements(iuniq)-1L do begin
         subinv=invvar[ixlims[0]:ixlims[1], $
                       iylims[0]:iylims[1]]
         inot=where(suboim ge 0 and suboim ne i-1 and subinv gt 0, nnot)
-        sm=dsmooth(subimg, 2)
+        sm=dsmooth(subimg, 2.)
         smmax=max(sm, icen)
         xst[i-1]=ixlims[0]
         xnd[i-1]=ixlims[1]
@@ -73,6 +75,11 @@ for i=1L, n_elements(iuniq)-1L do begin
         ynd[i-1]=iylims[1]
         xcen[i-1]=(icen mod (ixlims[1]-ixlims[0]+1))+ixlims[0]
         ycen[i-1]=(icen / (ixlims[1]-ixlims[0]+1))+iylims[0]
+        dcen3x3, sm[xcen[i-1]-ixlims[0]-1:xcen[i-1]-ixlims[0]+1, $
+                    ycen[i-1]-iylims[0]-1:ycen[i-1]-iylims[0]+1], xx, yy
+        xfit[i-1]=xx+float(xcen[i-1])-1.
+        yfit[i-1]=yy+float(ycen[i-1])-1.
+        if(xx le -1. OR xx ge 3. OR yy le -1. OR yy ge 3.) then stop
 
         sigma=1./sqrt(median(subinv))
         atlas[*,*,i-1]=randomn(seed, asize,asize)*sigma
@@ -109,6 +116,8 @@ endfor
 igood=where(good, ngood)
 extract=replicate({xcen:0., $
                    ycen:0., $
+                   xfit:0., $
+                   yfit:0., $
                    xst:0L, $
                    yst:0L, $
                    xnd:0L, $
@@ -117,6 +126,8 @@ extract=replicate({xcen:0., $
                    atlas_ivar:fltarr(asize, asize)}, ngood)
 extract.xcen=xcen[igood]
 extract.ycen=ycen[igood]
+extract.xfit=xfit[igood]
+extract.yfit=yfit[igood]
 extract.xst=xst[igood]
 extract.yst=yst[igood]
 extract.xnd=xnd[igood]

@@ -42,8 +42,8 @@ if(NOT keyword_set(minpeak)) then minpeak=sigma
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
-xcen=fltarr(maxnchild)
-ycen=fltarr(maxnchild)
+xcen=lonarr(maxnchild)
+ycen=lonarr(maxnchild)
 children=fltarr(nx, ny, maxnchild)
 templates=fltarr(nx, ny, maxnchild)
 minvvar=median(invvar)
@@ -58,8 +58,8 @@ retval=call_external(soname, 'idl_deblend', float(image), $
                      float(invvar), $
                      long(nx), long(ny), $
                      long(nchild), $
-                     float(xcen), $
-                     float(ycen), $
+                     long(xcen), $
+                     long(ycen), $
                      float(children), $
                      float(templates), $
                      float(sigma), $

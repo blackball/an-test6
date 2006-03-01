@@ -34,6 +34,8 @@ OBJECTS = \
 	dselip.o \
 	dcen3x3.o \
 	idl_dcen3x3.o \
+	dallpeaks.o \
+	idl_dallpeaks.o \
 	idl_deblend.o \
 	deblend.o \
 	dcentral.o \

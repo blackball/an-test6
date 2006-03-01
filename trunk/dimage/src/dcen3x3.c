@@ -34,7 +34,6 @@ int dcen3(float f0, float f1, float f2, float *xcen)
 	sod=s/d;
 	(*xcen)=sod*(1.+kk*(0.25*d/aa)*(1.-4.*sod*sod))+1.;
 
-	printf("%e %e %e %e\n", f0, f1, f2, *xcen);
 	return(1);
 }
 
@@ -45,19 +44,12 @@ int dcen3x3(float *image, float *xcen, float *ycen)
 	float bx, by, mx ,my;
 	
 	dcen3(image[0+3*0], image[1+3*0], image[2+3*0], &mx0);
-	printf("%e\n",mx0);
 	dcen3(image[0+3*1], image[1+3*1], image[2+3*1], &mx1);
 	dcen3(image[0+3*2], image[1+3*2], image[2+3*2], &mx2);
 
 	dcen3(image[0+3*0], image[0+3*1], image[0+3*2], &my0);
 	dcen3(image[1+3*0], image[1+3*1], image[1+3*2], &my1);
 	dcen3(image[2+3*0], image[2+3*1], image[2+3*2], &my2);
-
-	printf("%e %e %e\n", image[0+3*0], image[0+3*1], image[0+3*2]);
-	printf("%e %e %e\n", image[1+3*0], image[1+3*1], image[1+3*2]);
-	printf("%e %e %e\n", image[2+3*0], image[2+3*1], image[2+3*2]);
-	printf("%e %e %e\n", mx0, mx1, mx2);
-	printf("%e %e %e\n", my0, my1, my2);
 
 	/* x = (y-1) mx + bx */
 	bx=(mx0+mx1+mx2)/3.;

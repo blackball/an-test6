@@ -31,8 +31,8 @@ static float *invcovar=NULL;
 static float *weights=NULL;
 static float *bb=NULL;
 static float *peak=NULL;
-static float *xtcen=NULL;
-static float *ytcen=NULL;
+static int *xtcen=NULL;
+static int *ytcen=NULL;
 static int *mask=NULL;
 static int *object=NULL;
 static float *sqnorms=NULL;
@@ -44,8 +44,8 @@ int deblend(float *image,
 						int nx, 
 						int ny,
 						int *nchild, 
-						float *xcen, 
-						float *ycen, 
+						int *xcen, 
+						int *ycen, 
 						float *cimages, 
 						float *templates, 
             float sigma, 
@@ -58,15 +58,18 @@ int deblend(float *image,
 						int maxnchild, 
             float minpeak)  
 {
-  int i,j,k,npeaks,ip,jp,di,dj,central,ntpeaks,kp,joined,maxiter,niter,
+  int i,j,k,npeaks,ip,jp,di,dj,ntpeaks,kp,joined,maxiter,niter,
     tmpnpeaks, closest;
   float v1,v2,level,cross,offset,tol,chi2,ss,r2,maxval,val,
     maxlevel, mindist, currdist;
+#if 0
+	int central;
+#endif
 
   mask=(int *) malloc(sizeof(int)*nx*ny);
   object=(int *) malloc(sizeof(int)*nx*ny);
-  xtcen=(float *) malloc(sizeof(int)*maxnchild);
-  ytcen=(float *) malloc(sizeof(int)*maxnchild);
+  xtcen=(int *) malloc(sizeof(int)*maxnchild);
+  ytcen=(int *) malloc(sizeof(int)*maxnchild);
   printf("%d %d %d\n",nx,ny,maxnchild); fflush(stdout);
 
   /* 1. find peaks */
@@ -119,6 +122,7 @@ int deblend(float *image,
 #if 1
     /* 2b. now remove smaller peaks from the template */
     printf("finding peaks in template %d.\n", k);
+		closest=-1;
     dpeaks(&(templates[nx*ny*k]), nx, ny, &ntpeaks, xtcen, ytcen, sigma, 
            dlim, saddle, maxnchild, 1, 1.*sigma);
     printf("trimming peaks in template %d.\n", k);

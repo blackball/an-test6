@@ -20,8 +20,8 @@
 #define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
 static float *smooth=NULL;
-static float *sxcen=NULL;
-static float *sycen=NULL;
+static int *sxcen=NULL;
+static int *sycen=NULL;
 
 int dcentral(float *image, 
              int nx, 
@@ -46,8 +46,8 @@ int dcentral(float *image,
   dmsmooth(image, nx, ny, box, smooth);
 
   /* 2. find brightest peak in smoothed image */
-  sxcen=(float *) malloc(sizeof(float)*1);
-  sycen=(float *) malloc(sizeof(float)*1);
+  sxcen=(int *) malloc(sizeof(int)*1);
+  sycen=(int *) malloc(sizeof(int)*1);
   dpeaks(image, nx, ny, &nspeaks, sxcen, sycen, sigma, dlim, saddle, 1, 1, 
          1.*sigma);
 
