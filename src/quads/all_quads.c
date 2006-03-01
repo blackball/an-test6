@@ -106,7 +106,6 @@ int main(int argc, char *argv[]) {
     char* progname;
     int argchar; //  opterr = 0;
     double ramin, ramax, decmin, decmax;
-    int hdrlength = 0;
 
     kdtree* startree = NULL;
     stararray* stars = NULL;
@@ -205,14 +204,8 @@ int main(int argc, char *argv[]) {
 		fopenout(codefname, codefid);
 
 		// we have to write an updated header after we've processed all the quads.
-		{
-			uint nelems = 1000000000;
-			hdrlength = 10;
-			write_code_header(codefid, nelems, numstars,
-							  DIM_CODES, radius);
-			write_quad_header(quadfid, nelems, numstars,
-							  DIM_QUADS, radius);
-		}
+		write_code_header(codefid, 0, numstars, DIM_CODES, radius);
+		write_quad_header(quadfid, 0, numstars, DIM_QUADS, radius);
     }
 
     printf("%sing all quads in the range [%f, %f] arcmin\n", (justcount ? "Count" : "Creat"),
@@ -266,8 +259,8 @@ int main(int argc, char *argv[]) {
 		magicval magic = MAGIC_VAL;
 
 		// fix output file headers.
-		fix_code_header(codefid, range_params.nquads, hdrlength);
-		fix_quad_header(quadfid, range_params.nquads, hdrlength);
+		fix_code_header(codefid, range_params.nquads);
+		fix_quad_header(quadfid, range_params.nquads);
 
 		// close .code and .quad files
 		if (fclose(codefid)) {

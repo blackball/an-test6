@@ -38,7 +38,11 @@ typedef struct blocklist blocklist;
 void blocklist_split(blocklist* src, blocklist* dest, int split);
 
 blocklist* blocklist_new(int blocksize, int datasize);
+
+void blocklist_init(blocklist* l, int blocksize, int datasize);
+
 void blocklist_free(blocklist* list);
+
 void blocklist_append(blocklist* list, void* data);
 
 void blocklist_append_list(blocklist* list1, blocklist* list2);
@@ -87,6 +91,7 @@ void* blocklist_find(blocklist* list, void* data,
 // special-case functions for integer lists. //
 ///////////////////////////////////////////////
 blocklist* blocklist_int_new(int blocksize);
+void blocklist_int_init(blocklist* list, int blocksize);
 void blocklist_int_free(blocklist* list);
 void blocklist_int_append(blocklist* list, int data);
 int blocklist_int_contains(blocklist* list, int data);

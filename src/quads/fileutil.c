@@ -96,7 +96,6 @@ void write_objs_header(FILE *fid, sidx numstars,
   fwrite(&ramax, sizeof(ramin), 1, fid);
   fwrite(&decmin, sizeof(ramin), 1, fid);
   fwrite(&decmax, sizeof(ramin), 1, fid);
-  return ;
 }
 
 void write_code_header(FILE *codefid, qidx numCodes,
@@ -108,8 +107,6 @@ void write_code_header(FILE *codefid, qidx numCodes,
   fwrite(&DimCodes, sizeof(DimCodes), 1, codefid);
   fwrite(&index_scale, sizeof(index_scale), 1, codefid);
   fwrite(&numstars, sizeof(numstars), 1, codefid);
-  return ;
-
 }
 
 void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
@@ -121,25 +118,22 @@ void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
   fwrite(&DimQuads, sizeof(DimQuads), 1, quadfid);
   fwrite(&index_scale, sizeof(index_scale), 1, quadfid);
   fwrite(&numstars, sizeof(numstars), 1, quadfid);
-  return ;
 }
 
-void fix_code_header(FILE *codefid, qidx numCodes, size_t len)
+void fix_code_header(FILE *codefid, qidx numCodes)
 {
 	magicval magic = MAGIC_VAL;
 	rewind(codefid);
 	fwrite(&magic, sizeof(magic), 1, codefid);
 	fwrite(&numCodes, sizeof(numCodes), 1, codefid);
-	return ;
 }
 
-void fix_quad_header(FILE *quadfid, qidx numQuads, size_t len)
+void fix_quad_header(FILE *quadfid, qidx numQuads)
 {
 	magicval magic = MAGIC_VAL;
 	rewind(quadfid);
 	fwrite(&magic, sizeof(magic), 1, quadfid);
 	fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
-	return ;
 }
 
 
