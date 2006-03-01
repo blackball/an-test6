@@ -39,7 +39,7 @@ bool issouthpolar(int healpix)
 }
 
 bool ispowerof4(int x) {
-	int bit, nbits=0, firstbit;
+	int bit, nbits=0, firstbit=-1;
 	for (bit=0; bit<16; bit++) {
 		if ((x >> bit) & 1) {
 			nbits++;
@@ -589,9 +589,8 @@ int xyztohealpix_nside(double x, double y, double z, int Nside)
 	if ((z >= twothirds) || (z <= -twothirds)) {
 		double zfactor;
 		bool north;
-		double zupper, zlower;
 		double phit;
-		uint x, y;
+		int x, y;
 		uint pnprime;
 		int column;
 		int basehp;
@@ -609,28 +608,38 @@ int xyztohealpix_nside(double x, double y, double z, int Nside)
 		phit = fmod(phi, pi / 2.0);
 		assert (phit >= 0.00);
 
-		// could do this in closed form...
-		for (x = 1; x <= Nside; x++) {
-			zlower = 1.0 - (double)(x * x) / (double)(3 * Nside * Nside) *
-			         square(pi / (2.0 * phit - pi));
-			if (z*zfactor >= zlower)
-				break;
-		}
-		for (y = 1; y <= Nside; y++) {
-			zupper = 1.0 - (double)(y * y) / (double)(3 * Nside * Nside) *
-			         square(pi / (2.0 * phit));
-			if (z*zfactor >= zupper)
-				break;
-		}
+		/*
+		  for (x = 1; x <= Nside; x++) {
+		  zlower = 1.0 - (double)(x * x) / (double)(3 * Nside * Nside) *
+		  square(pi / (2.0 * phit - pi));
+		  if (z*zfactor >= zlower)
+		  break;
+		  }
+		*/
+		x = (int)ceil(sqrt(1.0 - 3.0 * Nside * Nside * z*zfactor * square((2.0 * phit - pi) / pi)));
+
+		assert(x >= 1);
+		assert(x <= Nside);
+
+		y = (int)ceil(sqrt(1.0 - 3.0 * Nside * Nside * z*zfactor * square(2.0 * phit / pi)));
+
+		assert(y >= 1);
+		assert(y <= Nside);
+
+		/*
+		  for (y = 1; y <= Nside; y++) {
+		  zupper = 1.0 - (double)(y * y) / (double)(3 * Nside * Nside) *
+		  square(pi / (2.0 * phit));
+		  if (z*zfactor >= zupper)
+		  break;
+		  }
+		*/
 
 		x = Nside - x;
 		y = Nside - y;
 
-		if (!north) {
-			uint tmp = x;
-			x = y;
-			y = tmp;
-		}
+		if (!north)
+			swap(&x, &y);
 
 		pnprime = xy_to_pnprime(x, y, Nside);
 
