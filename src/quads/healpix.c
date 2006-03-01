@@ -38,9 +38,9 @@ bool issouthpolar(int healpix)
 	return (healpix >= 8);
 }
 
-bool ispowerof4(int x) {
+bool ispowerof4(uint x) {
 	int bit, nbits=0, firstbit=-1;
-	for (bit=0; bit<16; bit++) {
+	for (bit=0; bit<32; bit++) {
 		if ((x >> bit) & 1) {
 			nbits++;
 			firstbit = bit;
