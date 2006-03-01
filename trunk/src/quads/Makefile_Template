@@ -68,7 +68,7 @@ CUTEST_L = kdtree/CuTest/CuTest.o
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
-CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix
+CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_blocklist
 
 
 # Not actually used right now...
