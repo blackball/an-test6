@@ -14,5 +14,6 @@ Common:
       pathAppend(PYTHONPATH, ${UPS_PROD_DIR}/python)
       pathAppend(LD_LIBRARY_PATH, ${UPS_PROD_DIR}/lib)
       envPrepend(IDL_PATH, +${UPS_PROD_DIR}/pro)
+      envPrepend(IDL_PATH, +${UPS_PROD_DIR}/dimage/pro)
 End:
 
