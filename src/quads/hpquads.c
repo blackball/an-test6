@@ -13,7 +13,7 @@
 #include "blocklist.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:u:l:"
+#define OPTIONS "hf:u:l:n:r"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -37,6 +37,8 @@ int quadnum = 0;
 void print_help(char* progname) {
     printf("\nUsage:\n"
 		   "  %s -f <filename-base>\n"
+		   "     [-r]            re-bin the unused stars\n"
+		   "     [-n <nside>]    healpix nside (default 512)\n"
 		   "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 		   "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
 		  "\n"
@@ -124,10 +126,8 @@ void drop_quad(blocklist* stars, int iA, int iB, int iC, int iD) {
 	inC = iC;
 	inD = iD;
 
-
 	assert(iA < iB);
 	assert(iC < iD);
-
 	assert(blocklist_count(stars) >= 4);
 	assert(blocklist_count(stars) > iA);
 	assert(blocklist_count(stars) > iB);
@@ -142,20 +142,25 @@ void drop_quad(blocklist* stars, int iA, int iB, int iC, int iD) {
 
 	assert(iB >= 0);
 	assert(iB-1 < blocklist_count(stars));
+
 	blocklist_remove_index(stars, iB - 1);
 	if (inC > inA)
 		iC--;
 	if (inC > inB)
 		iC--;
+
 	assert(iC >= 0);
 	assert(iC < blocklist_count(stars));
+
 	blocklist_remove_index(stars, iC);
 	if (inD > inA)
 		iD--;
 	if (inD > inB)
 		iD--;
+
 	assert(iD >= 0);
 	assert(iD-1 < blocklist_count(stars));
+
 	blocklist_remove_index(stars, iD-1);
 }
 
@@ -163,11 +168,11 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			  char* inbox, int maxind, blocklist* stars) {
     int i;
     int iC=0, iD;
-    double Ax, Ay, Bx, By, Cx, Cy;
-	double ABx, ABy, ACx, ACy;
+    double Ax, Ay, Bx, By, Dx, Dy;
+	double ABx, ABy, ADx, ADy;
 	double cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0;
     double costheta, sintheta, scale;
-	double *sA, *sB, *sC;
+	double *sA, *sB, *sD;
 	double midAB[3];
 	int ninbox = 0;
 	int staridA, staridB, staridC=0, staridD;
@@ -199,12 +204,12 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 
 		iD = i;
 		staridD = blocklist_int_access(stars, i);
-		sC = get_star(staridD);
-		star_coords_2(sC, midAB, &Cx, &Cy);
-		ACx = Cx - Ax;
-		ACy = Cy - Ay;
-		dx =  ACx * costheta + ACy * sintheta;
-		dy = -ACx * sintheta + ACy * costheta;
+		sD = get_star(staridD);
+		star_coords_2(sD, midAB, &Dx, &Dy);
+		ADx = Dx - Ax;
+		ADy = Dy - Ay;
+		dx =  ADx * costheta + ADy * sintheta;
+		dy = -ADx * sintheta + ADy * costheta;
 
 		if ((dx >= 1.0) || (dx <= 0.0) ||
 			(dy >= 1.0) || (dy <= 0.0)) {
@@ -317,39 +322,150 @@ char find_a_quad(blocklist* stars) {
 }
 
 
+void create_quads_in_pixels(int numstars, blocklist* starindices,
+							blocklist* pixels, int Nside) {
+	int i;
+	int HEALPIXES = 12*Nside*Nside;
+	int Ninteresting = HEALPIXES;
+	char* interesting;
+	int* quadsmade;
+	int passes = 0;
+	int nused = 0;
 
+	interesting = malloc(HEALPIXES * sizeof(char));
+	memset(interesting, 1, HEALPIXES * sizeof(char));
+
+	quadsmade = malloc(HEALPIXES * sizeof(int));
+	memset(quadsmade, 0, HEALPIXES * sizeof(int));
+
+	for (i=0; i<numstars; i++) {
+		double* starxyz;
+		int hp;
+		int ind;
+
+		if (!(i % 10000)) {
+			fprintf(stderr, ".");
+			fflush(stderr);
+		}
+
+		if (!starindices)
+			ind  = i;
+		else
+			ind = blocklist_int_access(starindices, i);
+
+		starxyz  = get_star(ind);
+		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside);
+		blocklist_int_append(pixels + hp, ind);
+	}
+	fprintf(stderr, "\n");
+	fflush(stderr);
+
+	while (Ninteresting) {
+		int nusedthispass;
+		nusedthispass = 0;
+		for (i=0; i<HEALPIXES; i++) {
+
+			if (!(i % 10000)) {
+				fprintf(stderr, "+");
+				fflush(stderr);
+			}
+
+			if (!interesting[i])
+				continue;
+
+			if (!find_a_quad(pixels + i)) {
+				interesting[i] = 0;
+				Ninteresting--;
+
+			} else {
+				quadsmade[i]++;
+				nused += 4;
+				nusedthispass += 4;
+			}
+		}
+		passes++;
+		fprintf(stderr, "\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
+				passes, Ninteresting, nusedthispass, nused, (int)numstars);
+	}
+	fprintf(stderr, "\n");
+	fflush(stderr);
+
+	fprintf(stderr, "Took %i passes.\n", passes);
+	fprintf(stderr, "Made %i quads.\n", quadnum);
+	fprintf(stderr, "Used %i stars.\n", nused);
+	fprintf(stderr, "Didn't use %i stars.\n", (int)numstars - nused);
+
+	{
+		int maxmade = 0;
+		int* nmadehist;
+		for (i=0; i<HEALPIXES; i++) {
+			if (quadsmade[i] > maxmade)
+				maxmade = quadsmade[i];
+		}
+		nmadehist = malloc((maxmade+1)*sizeof(int));
+		memset(nmadehist, 0, (maxmade+1)*sizeof(int));
+		for (i=0; i<HEALPIXES; i++)
+			nmadehist[quadsmade[i]]++;
+		fprintf(stderr, "nmade=[");
+		for (i=0; i<=maxmade; i++)
+			fprintf(stderr, "%i,", nmadehist[i]);
+		fprintf(stderr, "];\n");
+
+		free(nmadehist);
+	}
+
+	{
+		int maxmade = 0;
+		int* nmadehist;
+		for (i=0; i<HEALPIXES; i++) {
+			if (blocklist_count(pixels + i) > maxmade)
+				maxmade = blocklist_count(pixels+i);
+		}
+		nmadehist = malloc((maxmade+1)*sizeof(int));
+		memset(nmadehist, 0, (maxmade+1)*sizeof(int));
+		for (i=0; i<HEALPIXES; i++)
+			nmadehist[blocklist_count(pixels+i)]++;
+		fprintf(stderr, "nleft=[");
+		for (i=0; i<=maxmade; i++)
+			fprintf(stderr, "%i,", nmadehist[i]);
+		fprintf(stderr, "];\n");
+
+		free(nmadehist);
+	}
+
+	free(interesting);
+	free(quadsmade);
+}
 
 
 int main(int argc, char** argv) {
     int argchar;
     double ramin, ramax, decmin, decmax;
-
     char *catfname  = NULL;
     char *quadfname = NULL;
     char *codefname = NULL;
 	char readStatus;
 	dimension Dim_Stars;
 	off_t endoffset;
-
 	time_t starttime, endtime;
 	off_t cposmarker;
 	blocklist* pixels;
-
 	int Nside = 512;
-	//int Nside = 128;
-
-	int HEALPIXES = 12*Nside*Nside;
+	int HEALPIXES;
 	int i;
-	char* interesting;
-	int Ninteresting = HEALPIXES;
-	int passes = 0;
 	sidx numstars;
-	int nused = 0;
+	int rebin = 0;
 
-	int* quadsmade;
+	int intlist_blocksize = 50;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'r':
+			rebin = 1;
+			break;
+		case 'n':
+			Nside = atoi(optarg);
+			break;
 		case 'h':
 			print_help(argv[0]);
 			exit(0);
@@ -379,18 +495,20 @@ int main(int argc, char** argv) {
 		print_help(argv[0]);
 		exit(-1);
 	}
+
+	HEALPIXES = 12*Nside*Nside;
+	{
+		double hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HEALPIXES;
+		fprintf(stderr, "Nside=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
+				Nside, HEALPIXES, hparea, sqrt(hparea));
+	}
+
 	starttime = time(NULL);
 
 	pixels = malloc(HEALPIXES * sizeof(blocklist));
 	for (i=0; i<HEALPIXES; i++) {
-		blocklist_int_init(pixels + i, 50);
+		blocklist_int_init(pixels + i, intlist_blocksize);
 	}
-
-	interesting = malloc(HEALPIXES * sizeof(char));
-	memset(interesting, 1, HEALPIXES * sizeof(char));
-
-	quadsmade = malloc(HEALPIXES * sizeof(int));
-	memset(quadsmade, 0, HEALPIXES * sizeof(int));
 
 	// Read .objs file...
 	fopenin(catfname, catfid);
@@ -432,56 +550,19 @@ int main(int argc, char** argv) {
 	write_code_header(codefid, 0, numstars, DIM_CODES, sqrt(quad_scale_upper2));
 	write_quad_header(quadfid, 0, numstars, DIM_QUADS, sqrt(quad_scale_upper2));
 
+	create_quads_in_pixels(numstars, NULL, pixels, Nside);
 
-	for (i=0; i<numstars; i++) {
-		double* starxyz;
-		int hp;
-
-		if (!(i % 10000)) {
-			fprintf(stderr, ".");
-			fflush(stderr);
-		}
-		   
-		starxyz  = get_star(i);
-		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside);
-		blocklist_int_append(pixels + hp, i);
-	}
-	fprintf(stderr, "\n");
-	fflush(stderr);
-
-	while (Ninteresting) {
-		int nusedthispass;
-		nusedthispass = 0;
+	if (rebin) {
+		// Gather up the leftover stars and re-bin.
+		blocklist* leftovers = blocklist_int_new(intlist_blocksize);
 		for (i=0; i<HEALPIXES; i++) {
-
-			if (!(i % 10000)) {
-				fprintf(stderr, "+");
-				fflush(stderr);
-			}
-
-			if (!interesting[i])
-				continue;
-
-			if (!find_a_quad(pixels + i)) {
-				interesting[i] = 0;
-				Ninteresting--;
-
-			} else {
-				quadsmade[i]++;
-				nused += 4;
-				nusedthispass += 4;
-			}
+			blocklist_append_list(leftovers, pixels+i);
 		}
-		passes++;
-		fprintf(stderr, "\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
-				passes, Ninteresting, nusedthispass, nused, (int)numstars);
+		Nside /= 2;
+		fprintf(stderr, "Rebinning with Nside=%i\n", Nside);
+		create_quads_in_pixels(blocklist_count(leftovers), leftovers, pixels, Nside);
+		blocklist_free(leftovers);
 	}
-	fprintf(stderr, "\n");
-	fflush(stderr);
-
-	fprintf(stderr, "Took %i passes.\n", passes);
-	fprintf(stderr, "Made %i quads.\n", quadnum);
-	fprintf(stderr, "Didn't use %i stars.\n", (int)numstars - nused);
 
 	munmap(mmap_cat, mmap_cat_size);
 
@@ -500,45 +581,6 @@ int main(int argc, char** argv) {
 	}
 
 	{
-		int maxmade = 0;
-		int* nmadehist;
-		for (i=0; i<HEALPIXES; i++) {
-			if (quadsmade[i] > maxmade)
-				maxmade = quadsmade[i];
-		}
-		nmadehist = malloc((maxmade+1)*sizeof(int));
-		memset(nmadehist, 0, (maxmade+1)*sizeof(int));
-		for (i=0; i<HEALPIXES; i++)
-			nmadehist[quadsmade[i]]++;
-		fprintf(stderr, "nmade=[");
-		for (i=0; i<=maxmade; i++)
-			fprintf(stderr, "%i,", nmadehist[i]);
-		fprintf(stderr, "];\n");
-
-		free(nmadehist);
-	}
-
-	{
-		int maxmade = 0;
-		int* nmadehist;
-		for (i=0; i<HEALPIXES; i++) {
-			if (blocklist_count(pixels + i) > maxmade)
-				maxmade = blocklist_count(pixels+i);
-		}
-		nmadehist = malloc((maxmade+1)*sizeof(int));
-		memset(nmadehist, 0, (maxmade+1)*sizeof(int));
-		for (i=0; i<HEALPIXES; i++)
-			nmadehist[blocklist_count(pixels+i)]++;
-		fprintf(stderr, "nleft=[");
-		for (i=0; i<=maxmade; i++)
-			fprintf(stderr, "%i,", nmadehist[i]);
-		fprintf(stderr, "];\n");
-
-		free(nmadehist);
-	}
-
-
-	{
 		double utime, stime;
 		long rss;
 		int dtime;
@@ -553,8 +595,6 @@ int main(int argc, char** argv) {
 	fprintf(stderr, "Done.\n");
 	fflush(stderr);
 
-	free(interesting);
-	free(quadsmade);
 	// empty blocklists.
 	for (i=0; i<HEALPIXES; i++) {
 		blocklist_remove_all(pixels + i);
