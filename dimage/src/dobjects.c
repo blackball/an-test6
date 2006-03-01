@@ -17,11 +17,11 @@
 
 #define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
-static float *smooth=NULL;
 static int *mask=NULL;
 
 int dobjects(float *image, 
              float *invvar,
+						 float *smooth,
              int nx, 
              int ny,
              float dpsf, 
@@ -34,7 +34,6 @@ int dobjects(float *image,
 
   limit=sigma*plim/(4.*PI*dpsf*dpsf);
 
-  smooth=(float *) malloc(nx*ny*sizeof(float));
   dsmooth(image, nx, ny, dpsf, smooth);
   
   mask=(int *) malloc(nx*ny*sizeof(int));
@@ -61,7 +60,6 @@ int dobjects(float *image,
       
   dfind(mask, nx, ny, objects);
 
-  FREEVEC(smooth);
   FREEVEC(mask);
     
 	return(1);

@@ -14,8 +14,8 @@ static void free_memory()
 IDL_LONG idl_deblend (int      argc,
 											void *   argv[])
 {
-	IDL_LONG nx,ny,*nchild, maxnchild;
-	float *xcen, *ycen, *cimages, *templates, *image, *invvar, dlim, sigma, 
+	IDL_LONG nx,ny,*nchild, maxnchild, *xcen, *ycen;
+	float *cimages, *templates, *image, *invvar, dlim, sigma, 
     tsmooth, tlimit, tfloor, saddle, parallel, minpeak; 
 	
 	IDL_LONG i;
@@ -28,8 +28,8 @@ IDL_LONG idl_deblend (int      argc,
 	nx=*((int *)argv[i]); i++;
 	ny=*((int *)argv[i]); i++;
 	nchild=((IDL_LONG *)argv[i]); i++;
-	xcen=((float *)argv[i]); i++;
-	ycen=((float *)argv[i]); i++;
+	xcen=((IDL_LONG *)argv[i]); i++;
+	ycen=((IDL_LONG *)argv[i]); i++;
 	cimages=((float *)argv[i]); i++;
 	templates=((float *)argv[i]); i++;
 	sigma=*((float *)argv[i]); i++;
@@ -43,8 +43,9 @@ IDL_LONG idl_deblend (int      argc,
 	minpeak=*((float *)argv[i]); i++;
 	
 	/* 1. run the fitting routine */
-	retval=(IDL_LONG) deblend(image, invvar, nx, ny, (int *) nchild, xcen, 
-                            ycen, cimages, templates, sigma, dlim, tsmooth,
+	retval=(IDL_LONG) deblend(image, invvar, nx, ny, (int *) nchild, 
+														(int *) xcen, (int *) ycen, cimages, templates, 
+														sigma, dlim, tsmooth,
                             tlimit, tfloor, saddle, parallel, maxnchild, 
                             minpeak);
 	
