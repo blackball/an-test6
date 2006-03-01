@@ -6,13 +6,14 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <assert.h>
 
 #include "healpix.h"
 #include "starutil.h"
 #include "blocklist.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:s:l:"
+#define OPTIONS "hf:u:l:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -36,8 +37,8 @@ int quadnum = 0;
 void print_help(char* progname) {
     printf("\nUsage:\n"
 		   "  %s -f <filename-base>\n"
-		   "     [-s <scale>]         (default scale is 5 arcmin)\n"
-		   "     [-l <range>]         (lower bound on scale of quads - fraction of the scale; default 0)\n"
+		   "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
+		   "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
 		  "\n"
 		   , progname);
 }
@@ -117,17 +118,44 @@ void star_midpoint_2(double* mid, double* A, double* B) {
 
 // warning, you must guarantee iA<iB and iC<iD
 void drop_quad(blocklist* stars, int iA, int iB, int iC, int iD) {
+	int inA, inB, inC, inD;
+	inA = iA;
+	inB = iB;
+	inC = iC;
+	inD = iD;
+
+
+	assert(iA < iB);
+	assert(iC < iD);
+
+	assert(blocklist_count(stars) >= 4);
+	assert(blocklist_count(stars) > iA);
+	assert(blocklist_count(stars) > iB);
+	assert(blocklist_count(stars) > iC);
+	assert(blocklist_count(stars) > iD);
+	assert(iA >= 0);
+	assert(iB >= 0);
+	assert(iC >= 0);
+	assert(iD >= 0);
+
 	blocklist_remove_index(stars, iA);
+
+	assert(iB >= 0);
+	assert(iB-1 < blocklist_count(stars));
 	blocklist_remove_index(stars, iB - 1);
-	if (iC < iA)
+	if (inC > inA)
 		iC--;
-	if (iC < iB)
+	if (inC > inB)
 		iC--;
+	assert(iC >= 0);
+	assert(iC < blocklist_count(stars));
 	blocklist_remove_index(stars, iC);
-	if (iD < iA)
+	if (inD > inA)
 		iD--;
-	if (iD < iB)
+	if (inD > inB)
 		iD--;
+	assert(iD >= 0);
+	assert(iD-1 < blocklist_count(stars));
 	blocklist_remove_index(stars, iD-1);
 }
 
@@ -190,7 +218,7 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			staridC = staridD;
 			iC = iD;
 		} else {
-			writeonecode(codefid, cx, cy, cx, cy);
+			writeonecode(codefid, cx, cy, dx, dy);
 			writeonequad(quadfid, staridA, staridB, staridC, staridD);
 			quadnum++;
 			drop_quad(stars, iA, iB, iC, iD);
@@ -200,7 +228,7 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	return 0;
 }
 
-bool find_a_quad(blocklist* stars) {
+char find_a_quad(blocklist* stars) {
     sidx numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
@@ -306,13 +334,19 @@ int main(int argc, char** argv) {
 	time_t starttime, endtime;
 	off_t cposmarker;
 	blocklist* pixels;
+
 	int Nside = 512;
+	//int Nside = 128;
+
 	int HEALPIXES = 12*Nside*Nside;
 	int i;
-	bool* interesting;
+	char* interesting;
 	int Ninteresting = HEALPIXES;
 	int passes = 0;
 	sidx numstars;
+	int nused = 0;
+
+	int* quadsmade;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -324,7 +358,7 @@ int main(int argc, char** argv) {
 			quadfname = mk_quadfn(optarg);
 			codefname = mk_codefn(optarg);
 			break;
-		case 's':
+		case 'u':
 			quad_scale_upper2 = atof(optarg);
 			if (quad_scale_upper2 == 0.0) {
 				printf("Couldn't parse desired scale \"%s\"\n", optarg);
@@ -340,6 +374,11 @@ int main(int argc, char** argv) {
 			return -1;
 		}
 
+	if (!catfname) {
+		printf("specify a catalogue file, bonehead.\n");
+		print_help(argv[0]);
+		exit(-1);
+	}
 	starttime = time(NULL);
 
 	pixels = malloc(HEALPIXES * sizeof(blocklist));
@@ -347,9 +386,11 @@ int main(int argc, char** argv) {
 		blocklist_int_init(pixels + i, 50);
 	}
 
-	interesting = malloc(HEALPIXES * sizeof(bool));
-	memset(interesting, 1, HEALPIXES);
+	interesting = malloc(HEALPIXES * sizeof(char));
+	memset(interesting, 1, HEALPIXES * sizeof(char));
 
+	quadsmade = malloc(HEALPIXES * sizeof(int));
+	memset(quadsmade, 0, HEALPIXES * sizeof(int));
 
 	// Read .objs file...
 	fopenin(catfname, catfid);
@@ -383,6 +424,9 @@ int main(int argc, char** argv) {
 
 	fopenout(quadfname, quadfid);
 	fopenout(codefname, codefid);
+	free_fn(quadfname);
+	free_fn(codefname);
+	quadfname = codefname = NULL;
 
 	// we have to write an updated header after we've processed all the quads.
 	write_code_header(codefid, 0, numstars, DIM_CODES, sqrt(quad_scale_upper2));
@@ -392,27 +436,52 @@ int main(int argc, char** argv) {
 	for (i=0; i<numstars; i++) {
 		double* starxyz;
 		int hp;
+
+		if (!(i % 10000)) {
+			fprintf(stderr, ".");
+			fflush(stderr);
+		}
+		   
 		starxyz  = get_star(i);
 		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside);
 		blocklist_int_append(pixels + hp, i);
 	}
+	fprintf(stderr, "\n");
+	fflush(stderr);
 
 	while (Ninteresting) {
+		int nusedthispass;
+		nusedthispass = 0;
 		for (i=0; i<HEALPIXES; i++) {
+
+			if (!(i % 10000)) {
+				fprintf(stderr, "+");
+				fflush(stderr);
+			}
+
 			if (!interesting[i])
 				continue;
+
 			if (!find_a_quad(pixels + i)) {
 				interesting[i] = 0;
 				Ninteresting--;
+
+			} else {
+				quadsmade[i]++;
+				nused += 4;
+				nusedthispass += 4;
 			}
 		}
 		passes++;
-		printf("End of pass %i: ninteresting=%i\n",
-			   passes, Ninteresting);
+		fprintf(stderr, "\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
+				passes, Ninteresting, nusedthispass, nused, (int)numstars);
 	}
+	fprintf(stderr, "\n");
+	fflush(stderr);
 
-	printf("Took %i passes.\n", passes);
-
+	fprintf(stderr, "Took %i passes.\n", passes);
+	fprintf(stderr, "Made %i quads.\n", quadnum);
+	fprintf(stderr, "Didn't use %i stars.\n", (int)numstars - nused);
 
 	munmap(mmap_cat, mmap_cat_size);
 
@@ -422,13 +491,52 @@ int main(int argc, char** argv) {
 
 	// close .code and .quad files
 	if (fclose(codefid)) {
-		printf("Couldn't write code output file: %s\n", strerror(errno));
+		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
 		exit(-1);
 	}
 	if (fclose(quadfid)) {
-		printf("Couldn't write quad output file: %s\n", strerror(errno));
+		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
 		exit(-1);
 	}
+
+	{
+		int maxmade = 0;
+		int* nmadehist;
+		for (i=0; i<HEALPIXES; i++) {
+			if (quadsmade[i] > maxmade)
+				maxmade = quadsmade[i];
+		}
+		nmadehist = malloc((maxmade+1)*sizeof(int));
+		memset(nmadehist, 0, (maxmade+1)*sizeof(int));
+		for (i=0; i<HEALPIXES; i++)
+			nmadehist[quadsmade[i]]++;
+		fprintf(stderr, "nmade=[");
+		for (i=0; i<=maxmade; i++)
+			fprintf(stderr, "%i,", nmadehist[i]);
+		fprintf(stderr, "];\n");
+
+		free(nmadehist);
+	}
+
+	{
+		int maxmade = 0;
+		int* nmadehist;
+		for (i=0; i<HEALPIXES; i++) {
+			if (blocklist_count(pixels + i) > maxmade)
+				maxmade = blocklist_count(pixels+i);
+		}
+		nmadehist = malloc((maxmade+1)*sizeof(int));
+		memset(nmadehist, 0, (maxmade+1)*sizeof(int));
+		for (i=0; i<HEALPIXES; i++)
+			nmadehist[blocklist_count(pixels+i)]++;
+		fprintf(stderr, "nleft=[");
+		for (i=0; i<=maxmade; i++)
+			fprintf(stderr, "%i,", nmadehist[i]);
+		fprintf(stderr, "];\n");
+
+		free(nmadehist);
+	}
+
 
 	{
 		double utime, stime;
@@ -442,8 +550,17 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	printf("Done.\n");
-	fflush(stdout);
+	fprintf(stderr, "Done.\n");
+	fflush(stderr);
+
+	free(interesting);
+	free(quadsmade);
+	// empty blocklists.
+	for (i=0; i<HEALPIXES; i++) {
+		blocklist_remove_all(pixels + i);
+	}
+	free(pixels);
+
 	return 0;
 }
 

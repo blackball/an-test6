@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
 	int flushfieldinterval = 0;
 	bool leftovers = FALSE;
 	bool agree = FALSE;
+	double ramin, ramax, decmin, decmax;
 
 	hitlist_set_default_parameters();
 	hitlist_options = hitlist_get_parameter_options();
@@ -83,6 +84,18 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
+		case 'r':
+			ramin = atof(optarg);
+			break;
+		case 'R':
+			ramax = atof(optarg);
+			break;
+		case 'd':
+			decmin = atof(optarg);
+			break;
+		case 'D':
+			decmax = atof(optarg);
+			break;
 		case 'f':
 			flushfieldinterval = atoi(optarg);
 			break;
@@ -406,9 +419,6 @@ void flush_solved_fields(bool doleftovers,
 	int k;
 	blocklist* flushsolved = blocklist_int_new(256);
 
-	// Here, we could also just dump all but the best agreeing
-	// matches rather than writing them out right away...
-	
 	for (k=0; k<blocklist_count(hitlists); k++) {
 		blocklist* best;
 		hits_field fieldhdr;
