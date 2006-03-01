@@ -12,7 +12,7 @@
 #include "hitlist.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:L:M:";
+char* OPTIONS = "hH:n:A:B:F:L:M:f:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -20,6 +20,7 @@ void printHelp(char* progname) {
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
 			"   [-F flush-interval]\n"
+			"   [-f flush-field-interval]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
  			"   [-n matches_needed_to_agree]\n"
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
 	int i;
 	int firstfield=-1, lastfield=INT_MAX;
 	int flushinterval = 0;
+	int flushfieldinterval = 0;
 	bool leftovers = FALSE;
 	bool agree = FALSE;
 
@@ -81,6 +83,9 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
+		case 'f':
+			flushfieldinterval = atoi(optarg);
+			break;
 		case 'M':
 			agreefname = optarg;
 			break;
@@ -213,6 +218,12 @@ int main(int argc, char *argv[]) {
 			if (nread % 10000 == 9999) {
 				fprintf(stderr, ".");
 				fflush(stderr);
+			}
+
+			if (flushfieldinterval &&
+				((nread % flushfieldinterval) == 0)) {
+				fprintf(stderr, "\nRead %i matches; flushing solved fields.\n", nread);
+				flush_solved_fields(FALSE, agree, FALSE, FALSE);
 			}
 
 			if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
@@ -460,13 +471,22 @@ void flush_solved_fields(bool doleftovers,
 		fieldhdr.field = fieldnum;
 		fieldhdr.nmatches = hitlist_count_all(hl);
 		fieldhdr.nagree = nbest;
-		hits_write_field_header(hitfid, &fieldhdr);
-		hits_start_hits_list(hitfid);
+
+		//hits_write_field_header(hitfid, &fieldhdr);
+		//hits_start_hits_list(hitfid);
 
 		for (j=0; j<nbest; j++) {
 			matchfile_entry* me;
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
 			me = (matchfile_entry*)mo->extra;
+
+			if (j == 0) {
+				if (me)
+					fieldhdr.fieldpath = me->fieldpath;
+				hits_write_field_header(hitfid, &fieldhdr);
+				hits_start_hits_list(hitfid);
+			}
+
 			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
@@ -477,6 +497,7 @@ void flush_solved_fields(bool doleftovers,
 				}
 			}
 		}
+		hits_end_hits_list(hitfid);
 
 		starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
 		fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
@@ -484,7 +505,6 @@ void flush_solved_fields(bool doleftovers,
 		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 		free(starids);
 		free(fieldids);
-		hits_end_hits_list(hitfid);
 		hits_write_field_tailer(hitfid);
 		fflush(hitfid);
 		blocklist_free(best);

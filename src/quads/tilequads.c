@@ -17,6 +17,9 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+void accept_quad(int quadnum, sidx iA, sidx iB, sidx iC, sidx iD,
+                 double Cx, double Cy, double Dx, double Dy);
+
 FILE *quadfid = NULL;
 FILE *codefid = NULL;
 FILE *catfid  = NULL;
@@ -45,6 +48,13 @@ int lastcount = 0;
 int justcount = 0;
 int quiet = 0;
 bool writeqidx = TRUE;
+
+// max radius of the search (in radians)
+double radius;
+
+// lower bound of quad scale (fraction of radius)
+double lower = 0.0;
+
 
 void print_help(char* progname) {
     printf("\nUsage:\n"
@@ -76,16 +86,246 @@ int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss) {
 	return 0;
 }
 
+// the star ids in each healpix.  size HEALPIXES * NSTARS.
+// healpix i, pass j is in starids[j*HEALPIXES + i].
+int* starids;
+
+// how many stars per healpix?
+//int PASSES = 2;
+int PASSES = 5;
+
+// how many healpixes?
+//int Nside = 512;
+#define Nside 512
+int HEALPIXES = 12*Nside*Nside;
+
+int get_starid(int hp, int pass) {
+	return starids[pass*HEALPIXES + hp];
+}
+
+void set_starid(int hp, int pass, int starid) {
+	starids[pass*HEALPIXES + hp] = starid;
+}
+
+int get_first_valid_starid(int hp) {
+	int p;
+	int id;
+	for (p=0; p<PASSES; p++) {
+		if ((id = get_starid(hp, p)) != -1)
+			return id;
+	}
+	return -1;
+}
+
+void set_first_valid_starid_invalid(int hp) {
+	int p;
+	int id;
+	for (p=0; p<PASSES; p++) {
+		if ((id = get_starid(hp, p)) != -1)
+			set_starid(hp, p, -1);
+	}
+}
+
+void get_star(int sid, double* xyz) {
+	if (use_mmap) {
+		memcpy(xyz, catalogue + sid * DIM_STARS, DIM_STARS*sizeof(double));
+	} else {
+		fseekocat(sid, cposmarker, catfid);
+		//fseeko(catfid, cposmarker + i*DIM_STARS*sizeof(double), SEEK_SET);
+		fread(xyz, sizeof(double), DIM_STARS, catfid);
+	}
+}
+
+/* computes the 2D coordinates (x,y)  that star s would have in a
+   TANGENTIAL PROJECTION defined by (centred at) star r.     */
+void star_coords_2(double *s, double *r, double *x, double *y) {
+	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
+	if (sdotr <= 0.0) {
+		fprintf(stderr, "ERROR (star_coords) -- s dot r <=0; undefined projection.\n");
+		return;
+	}
+
+	if (r[2] == 1.0) {
+		*x = s[0] / s[2];
+		*y = s[1] / s[2];
+	} else if (r[2] == -1.0) {
+		*x = s[0] / s[2];
+		*y = -s[1] / s[2];
+	} else {
+		double etax, etay, etaz, xix, xiy, xiz, eta_norm;
+		// eta is a vector perpendicular to r
+		etax = -r[1];
+		etay = + r[0];
+		etaz = 0.0;
+		eta_norm = sqrt(etax * etax + etay * etay);
+		etax /= eta_norm;
+		etay /= eta_norm;
+		// xi =  r cross eta
+		xix = -r[2] * etay;
+		xiy = r[2] * etax;
+		xiz = r[0] * etay - r[1] * etax;
+
+		*x = s[0] * xix / sdotr +
+			s[1] * xiy / sdotr +
+			s[2] * xiz / sdotr;
+		*y = s[0] * etax / sdotr +
+			s[1] * etay / sdotr;
+	}
+}
+
+void star_midpoint_2(double* mid, double* A, double* B) {
+	double len;
+	// we don't actually need to divide by 2 because
+	// we immediately renormalize it...
+	mid[0] = A[0] + B[0];
+	mid[1] = A[1] + B[1];
+	mid[2] = A[2] + B[2];
+	len = sqrt(square(mid[0]) + square(mid[1]) + square(mid[2]));
+	mid[0] /= len;
+	mid[1] /= len;
+	mid[2] /= len;
+}
+
+int can_create_quad(int s1, int s2, int s3, int s4, double* quad, int* stars) {
+	double p1[3];
+	double p2[3];
+	double p3[3];
+	double p4[3];
+	double midAB[3];
+	double *pA, *pB, *pC, *pD;
+    // projected coordinates:
+    double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
+    double AAx, AAy;
+    double ABx, ABy;
+    double scale, costheta, sintheta;
+	double maxdist2;
+	double d2;
+	int i, j;
+	int inds[4];
+	int bestinds[4];
+	double* points[4];
+	double cx, cy, dx, dy;
+	double ACx, ACy;
+	double ADx, ADy;
+	int starids[4];
+
+	points[0] = p1;
+	points[1] = p2;
+	points[2] = p3;
+	points[3] = p4;
+
+	starids[0] = s1;
+	starids[1] = s2;
+	starids[2] = s3;
+	starids[3] = s4;
+
+	get_star(s1, p1);
+	get_star(s2, p2);
+	get_star(s3, p3);
+	get_star(s4, p4);
+
+	// find largest dist...
+	maxdist2 = 0.0;
+	bestinds[0] = -1;
+
+	// which star is A?
+	for (i=0; i<4; i++) {
+		inds[0] = i;
+		// which star is B?
+		for (j=i+1; j<4; j++) {
+			int k;
+			// tmp
+			double *pA, *pB;
+
+			inds[1] = j;
+
+			pA = points[inds[0]];
+			pB = points[inds[1]];
+			star_coords_2(pA, pA, &AAx, &AAy);
+			star_coords_2(pB, pA, &ABx, &ABy);
+			d2 = (ABx-AAx)*(ABx-AAx) + (ABy-AAy)*(ABy-AAy);
+
+			//d2 = distsq(points[inds[0]], points[inds[1]], 3);
+
+			if (d2 > radius)
+
+			if (d2 < maxdist2)
+				continue;
+
+			//if ((distsq < minrsq) || (distsq > maxrsq)) {
+
+
+			// which star is C?
+			for (k=0; k<4; k++) {
+				if ((k != inds[0]) && (k != inds[1])) {
+					inds[2] = k;
+					break;
+				}
+			}
+			// which star is D?
+			for (; k<4; k++) {
+				if ((k != inds[0]) && (k != inds[1]) && (k != inds[2])) {
+					inds[3] = k;
+					break;
+				}
+			}
+
+			for (k=0; k<4; k++) {
+				bestinds[k] = inds[k];
+			}
+		}
+	}
+
+	if (bestinds[0] == -1)
+		return 0;
+
+	pA = points[bestinds[0]];
+	pB = points[bestinds[1]];
+	pC = points[bestinds[2]];
+	pD = points[bestinds[3]];
+
+	star_midpoint_2(midAB, pA, pB);
+	star_coords_2(pA, midAB, &Ax, &Ay);
+	star_coords_2(pB, midAB, &Bx, &By);
+
+	ABx = Bx - Ax;
+	ABy = By - Ay;
+
+	scale = (ABx*ABx) + (ABy*ABy);
+	costheta = (ABx + ABy) / scale;
+	sintheta = (ABy - ABx) / scale;
+	
+	star_coords_2(pC, midAB, &Cx, &Cy);
+	ACx = Cx - Ax;
+	ACy = Cy - Ay;
+	cx =  ACx * costheta + ACy * sintheta;
+	cy = -ACx * sintheta + ACy * costheta;
+
+	star_coords_2(pD, midAB, &Dx, &Dy);
+	ADx = Dx - Ax;
+	ADy = Dy - Ay;
+	dx =  ADx * costheta + ADy * sintheta;
+	dy = -ADx * sintheta + ADy * costheta;
+
+	// quad is [cx,cy,dx,dy]
+
+	quad[0] = cx;
+	quad[1] = cy;
+	quad[2] = dx;
+	quad[3] = dy;
+
+	stars[0] = starids[bestinds[0]];
+	stars[1] = starids[bestinds[1]];
+	stars[2] = starids[bestinds[2]];
+	stars[3] = starids[bestinds[3]];
+
+	return 1;
+}
+
 int main(int argc, char *argv[]) {
     char* progname;
     int argchar; //  opterr = 0;
     double ramin, ramax, decmin, decmax;
-
-    // max radius of the search (in radians)
-    double radius;
-
-    // lower bound of quad scale (fraction of radius)
-    double lower = 0.0;
 
     char *catfname  = NULL;
     char *quadfname = NULL;
@@ -105,17 +345,8 @@ int main(int argc, char *argv[]) {
 
 	double* starxyz = NULL;
 
-	// how many stars per healpix?
-	//int PASSES = 2;
-	int PASSES = 5;
+	int quadnum = 0;
 
-	// how many healpixes?
-	int Nside = 512;
-	int HEALPIXES = 12*Nside*Nside;
-
-	// the star ids in each healpix.  size HEALPIXES * NSTARS.
-	// healpix i, pass j is in starids[j*HEALPIXES + i].
-	int* starids;
 
 	starttime = time(NULL);
 
@@ -224,24 +455,18 @@ int main(int argc, char *argv[]) {
 
 	for (i=0; i<numstars; i++) {
 		int hp;
-		//if (i % 10000 == 9999) {
+
 		if (i % 100000 == 99999) {
 			fprintf(stderr, ".");
 			fflush(stderr);
 		}
-		if (use_mmap) {
-			starxyz = catalogue + i * DIM_STARS;
-		} else {
-			fseekocat(i, cposmarker, catfid);
-			//fseeko(catfid, cposmarker + i*DIM_STARS*sizeof(double), SEEK_SET);
-			fread(starxyz, sizeof(double), DIM_STARS, catfid);
-		}
+		get_star(i, starxyz);
 
 		hp = xyztohealpix_nside(starxyz[0], starxyz[1],
 								starxyz[2], Nside);
 		for (p=0; p<PASSES; p++) {
-			if (starids[p*HEALPIXES + hp] == -1) {
-				starids[p*HEALPIXES + hp] = i;
+			if (get_starid(hp, p) == -1) {
+				set_starid(hp, p, i);
 				break;
 			}
 		}
@@ -252,7 +477,7 @@ int main(int argc, char *argv[]) {
 	for (p=0; p<PASSES; p++) {
 		int nfound = 0;
 		for (i=0; i<HEALPIXES; i++) {
-			if (starids[p*HEALPIXES + i] != -1) {
+			if (get_starid(i, p) != -1) {
 				nfound++;
 			}
 		}
@@ -260,21 +485,109 @@ int main(int argc, char *argv[]) {
 				p, nfound, HEALPIXES, (int)rint(100.0 * nfound / (double)HEALPIXES));
 	}
 
-	//for (p=0; p<PASSES; p++) {
-	{
+	for (i=0; i<HEALPIXES; i++) {
 		int neigh[8];
 		int nn;
-		for (i=0; i<HEALPIXES; i++) {
-			if (starids[p*HEALPIXES + i] == -1) continue;
+		int s1, s2, s3, s4;
+		double code[4];
+		int starids[4];
 
-			nn = healpix_get_neighbours_nside(i, neigh, Nside);
+		/*
+		  for (p=0; p<PASSES; p++) {
+		  s1 = get_starid(i, p);
+		  if (s1 == -1) continue;
+		  }
+		  if (p == PASSES) continue;
+		*/
 
-			// create quads containing this one and some of its neighbours...
+		s1 = get_first_valid_starid(i);
+		if (s1 == -1) continue;
 
-			// set them to -1 ?
+		nn = healpix_get_neighbours_nside(i, neigh, Nside);
+
+		// try to create the quad containing this star plus
+		// neighbours 0, 1, and 2.
+		s2 = get_first_valid_starid(neigh[0]);
+		s3 = get_first_valid_starid(neigh[1]);
+		s4 = get_first_valid_starid(neigh[2]);
+		if ((s2 != -1) && (s3 != -1) && (s4 != -1)) {
+			// see if we can create a valid quad...
+			if (can_create_quad(s1, s2, s3, s4, code, starids)) {
+				// set them to -1.
+				set_first_valid_starid_invalid(i);
+				set_first_valid_starid_invalid(neigh[0]);
+				set_first_valid_starid_invalid(neigh[1]);
+				set_first_valid_starid_invalid(neigh[2]);
+
+				accept_quad(quadnum, starids[0], starids[1], starids[2], starids[3], code[0], code[1], code[2], code[3]);
+
+				s1 = get_first_valid_starid(i);
+				if (s1 == -1) continue;
+			}
+		}
+
+		// neighbours 2, 3, 4.
+		s2 = get_first_valid_starid(neigh[2]);
+		s3 = get_first_valid_starid(neigh[3]);
+		s4 = get_first_valid_starid(neigh[4]);
+		if ((s2 != -1) && (s3 != -1) && (s4 != -1)) {
+			// see if we can create a valid quad...
+			if (can_create_quad(s1, s2, s3, s4, code, starids)) {
+				// set them to -1.
+				set_first_valid_starid_invalid(i);
+				set_first_valid_starid_invalid(neigh[2]);
+				set_first_valid_starid_invalid(neigh[3]);
+				set_first_valid_starid_invalid(neigh[4]);
+
+				accept_quad(quadnum, starids[0], starids[1], starids[2], starids[3], code[0], code[1], code[2], code[3]);
+
+				s1 = get_first_valid_starid(i);
+				if (s1 == -1) continue;
+			}
+		}
+
+		if (nn < 7) continue;
+
+		// neighbours 4, 5, 6.
+		s2 = get_first_valid_starid(neigh[4]);
+		s3 = get_first_valid_starid(neigh[5]);
+		s4 = get_first_valid_starid(neigh[6]);
+		if ((s2 != -1) && (s3 != -1) && (s4 != -1)) {
+			// see if we can create a valid quad...
+			if (can_create_quad(s1, s2, s3, s4, code, starids)) {
+				// set them to -1.
+				set_first_valid_starid_invalid(i);
+				set_first_valid_starid_invalid(neigh[4]);
+				set_first_valid_starid_invalid(neigh[5]);
+				set_first_valid_starid_invalid(neigh[6]);
+
+				accept_quad(quadnum, starids[0], starids[1], starids[2], starids[3], code[0], code[1], code[2], code[3]);
+
+				s1 = get_first_valid_starid(i);
+				if (s1 == -1) continue;
+			}
+		}
+
+		// neighbours 6, 7, 0.
+		s2 = get_first_valid_starid(neigh[6]);
+		s3 = get_first_valid_starid(neigh[7]);
+		s4 = get_first_valid_starid(neigh[0]);
+		if ((s2 != -1) && (s3 != -1) && (s4 != -1)) {
+			// see if we can create a valid quad...
+			if (can_create_quad(s1, s2, s3, s4, code, starids)) {
+				// set them to -1.
+				set_first_valid_starid_invalid(i);
+				set_first_valid_starid_invalid(neigh[6]);
+				set_first_valid_starid_invalid(neigh[7]);
+				set_first_valid_starid_invalid(neigh[0]);
+
+				accept_quad(quadnum, starids[0], starids[1], starids[2], starids[3], code[0], code[1], code[2], code[3]);
+
+				s1 = get_first_valid_starid(i);
+				if (s1 == -1) continue;
+			}
 		}
 	}
-
 
 	if (!use_mmap) {
 		free(starxyz);

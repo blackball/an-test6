@@ -443,7 +443,6 @@ void build_quads(dyv_array* points, ivec* inds, int ninds, int iA,
 				dyv_ref(pA,1),
 				dyv_ref(pA,2));
 
-
     midAB = mk_dyv(dyv_size(pA));
     delt = mk_dyv(dyv_size(pA));
     if (!justcount) {

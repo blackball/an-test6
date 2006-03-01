@@ -142,7 +142,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* match) {
 	blocklist_int_append(hlist->memberlist, -1);
 	// add this MatchObj's index to its pixel's list.
 	if (!pinfo->matchinds) {
-		pinfo->matchinds = blocklist_int_new(32);
+		pinfo->matchinds = blocklist_int_new(4);
 	}
 	blocklist_int_append(pinfo->matchinds, matchind);
 
