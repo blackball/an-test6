@@ -48,9 +48,15 @@ OBJECTS = \
 	dpeaks.o \
 	nmf.o \
 	dran3.o \
-	idl_dpeaks.o 
+	idl_dpeaks.o
 
 all : $(LIB)/libdimage.$(SO_EXT)
+
+#fits2xy.o:
+#	$(CC) -c $(CCCHK) $(CFLAGS) $(X_CFLAGS) fits2xy.c # -o fits2xy.o -I../../src/cfitsio
+
+fits2xy: fits2xy.c ${LIB}/libdimage.${SO_EXT}  
+	$(CC) -o fits2xy fits2xy.c -ldimage -lcfitsio -I../../src/cfitsio -L../../src/cfitsio -L${LIB}
 
 $(LIB)/libdimage.$(SO_EXT): $(OBJECTS) 
 	$(LD) $(X_LD_FLAGS) -o $(LIB)/libdimage.$(SO_EXT) $(OBJECTS) -lm
