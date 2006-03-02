@@ -30,5 +30,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside);
 
 int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside);
 
+void healpix_to_xyz(double dx, double dy, unsigned int hp, unsigned int Nside,
+                    double* rx, double *ry, double *rz);
 
 #endif

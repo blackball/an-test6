@@ -788,3 +788,98 @@ int xyztohealpix(double x, double y, double z)
 		// the right pixel center is at (z,phi/pi) = (0, 1/2)
 	}
 }
+
+void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
+                    double* rx, double *ry, double *rz)
+{
+	uint chp = hp / Nside;
+	uint pnp = hp % Nside;
+	uint equatorial = 1;
+	uint zfactor = 1;
+	uint xp, yp;
+	double x, y, z;
+	double pi = PIl, phi;
+
+	pnprime_to_xy(pnp, &xp, &yp, Nside);
+
+	if (isnorthpolar(chp) &&
+		  ( ((xp+yp+1)/Nside > 1) ||
+		    ((xp+yp+1)/Nside == 1 && dx+dy >= 1.0))) {
+		equatorial = 0;
+		zfactor = 1;
+	}
+	if (issouthpolar(chp) &&
+		  ( ((xp+yp+1)/Nside < 1) ||
+		    ((xp+yp+1)/Nside == 1 && dx+dy <= 1.0))) {
+		equatorial = 0;
+		zfactor = -1;
+	}
+
+	x = xp+dx;
+	y = yp+dy;
+
+	if (equatorial) {
+		double zoff=0;
+		double phioff=0;
+		x /= Nside;
+		y /= Nside;
+
+		if (chp <= 3) {
+			phioff = pi/4.0;
+		} else if (chp <= 7) {
+			zoff = -1.0;
+			chp -= 4;
+		} else if (chp <= 11) {
+			phioff = 1.0;
+			zoff = -2.0;
+			chp -= 8;
+		} else {
+			// should never get here
+			assert(0);
+		}
+
+		z = 2.0/3.0*(x + y + zoff);
+		phi = pi/4*(y - x + phioff + 2*chp);
+
+
+	} else {
+		// do other magic
+
+		// get z/phi using magical equations
+		double phiP, phiN, phit, t;
+		if (zfactor == -1)
+			swap(&x, &y);
+
+		// We solve two equations in two unknows to get z,phit from
+		// x,y. They are of the form z = f(x,phit) and z = f(y,phit).
+		// The solution to phit is a quadratic so we take the one that
+		// falls in the right region.
+		phiP = (-pi+pi*x/y)/2.0/(x*x/y/y-1);
+		phiN = (-pi-pi*x/y)/2.0/(x*x/y/y-1);
+		if (0 <= phiP && phiP <= pi/2) {
+			phit = phiP;
+			assert(0 > phiN || phiN > pi/2);
+		} else {
+			phit = phiN;
+			assert(0 > phiP || phiP > pi/2);
+		}
+
+		// Now that we have phit we can get z
+		t = pi*y/2/phit/Nside;
+		z = 1-t*t/3;
+
+		// Need to get phi
+		if (issouthpolar(chp))
+			phi = pi/2*(chp-8) + phit;
+		else
+			phi = pi/2*chp + phit;
+
+	}
+
+	if (phi < 0.0)
+		phi += 2*pi;
+
+	*rx = cos(phi);
+	*ry = sin(phi);
+	*rz = z;
+}
