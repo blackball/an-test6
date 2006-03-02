@@ -595,6 +595,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside)
 		int column;
 		int basehp;
 		int hp;
+		double root;
 
 		// Which pole?
 		if (z >= twothirds) {
@@ -608,32 +609,23 @@ int xyztohealpix_nside(double x, double y, double z, int Nside)
 		phit = fmod(phi, pi / 2.0);
 		assert (phit >= 0.00);
 
-		/*
-		  for (x = 1; x <= Nside; x++) {
-		  zlower = 1.0 - (double)(x * x) / (double)(3 * Nside * Nside) *
-		  square(pi / (2.0 * phit - pi));
-		  if (z*zfactor >= zlower)
-		  break;
-		  }
-		*/
-		x = (int)ceil(sqrt(1.0 - 3.0 * Nside * Nside * z*zfactor * square((2.0 * phit - pi) / pi)));
+		root = (1.0 - z*zfactor) * 3.0 * square(Nside * (2.0 * phit - pi) / pi);
+		if (root <= 0.0)
+			x = 1;
+		else
+			x = (int)ceil(sqrt(root));
 
 		assert(x >= 1);
 		assert(x <= Nside);
 
-		y = (int)ceil(sqrt(1.0 - 3.0 * Nside * Nside * z*zfactor * square(2.0 * phit / pi)));
+		root = (1.0 - z*zfactor) * 3.0 * square(Nside * 2.0 * phit / pi);
+		if (root <= 0.0)
+			y = 1;
+		else
+			y = (int)ceil(sqrt(root));
 
 		assert(y >= 1);
 		assert(y <= Nside);
-
-		/*
-		  for (y = 1; y <= Nside; y++) {
-		  zupper = 1.0 - (double)(y * y) / (double)(3 * Nside * Nside) *
-		  square(pi / (2.0 * phit));
-		  if (z*zfactor >= zupper)
-		  break;
-		  }
-		*/
 
 		x = Nside - x;
 		y = Nside - y;
