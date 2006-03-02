@@ -56,8 +56,8 @@ int dallpeaks(float *image,
 
   indx=(int *) malloc(sizeof(int)*nx*ny);
   dobject=(int *) malloc(sizeof(int)*(nx*ny+1));
-  for(i=0;i<nx;i++)
-		for(j=0;j<ny;j++)
+	for(j=0;j<ny;j++)
+		for(i=0;i<nx;i++)
 			dobject[i+j*nx]=objects[i+j*nx];
   for(i=0;i<nx*ny;i++)
     indx[i]=i;
@@ -90,8 +90,8 @@ int dallpeaks(float *image,
 			/* make object cutout (if it is 3x3 or bigger) */
 			onx=xmax-xmin+1;
 			ony=ymax-ymin+1;
-			for(oi=0;oi<onx;oi++)
-				for(oj=0;oj<ony;oj++) {
+			for(oj=0;oj<ony;oj++) 
+				for(oi=0;oi<onx;oi++) {
 					oimage[oi+oj*onx]=0.;
 					i=oi+xmin;
 					j=oj+ymin;
