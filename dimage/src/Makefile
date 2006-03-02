@@ -15,6 +15,7 @@ SHELL = /bin/sh
 INC = ../../include
 CFLAGS  = $(SDSS_CFLAGS) -DCHECK_LEAKS -I$(INC)
 
+BIN = $(ASTROMETRY_DIR)/bin
 LIB = $(DIMAGE_DIR)/lib
 
 OBJECTS = \
@@ -50,13 +51,13 @@ OBJECTS = \
 	dran3.o \
 	idl_dpeaks.o
 
-all : $(LIB)/libdimage.$(SO_EXT)
+all : $(LIB)/libdimage.$(SO_EXT) ${BIN}/fits2xy
 
 #fits2xy.o:
 #	$(CC) -c $(CCCHK) $(CFLAGS) $(X_CFLAGS) fits2xy.c # -o fits2xy.o -I../../src/cfitsio
 
-fits2xy: fits2xy.c ${LIB}/libdimage.${SO_EXT}  
-	$(CC) -o fits2xy fits2xy.c -ldimage -lcfitsio -I../../src/cfitsio -L../../src/cfitsio -L${LIB}
+${BIN}/fits2xy: fits2xy.c ${LIB}/libdimage.${SO_EXT}  
+	$(CC) -o ${BIN}/fits2xy fits2xy.c -ldimage -lcfitsio -I../../src/cfitsio -L../../src/cfitsio -L${LIB}
 
 $(LIB)/libdimage.$(SO_EXT): $(OBJECTS) 
 	$(LD) $(X_LD_FLAGS) -o $(LIB)/libdimage.$(SO_EXT) $(OBJECTS) -lm
