@@ -248,6 +248,23 @@ void print_healpix_grid(int Nside) {
 	fflush(stderr);
 }
 
+void print_healpix_borders(int Nside) {
+	int i;
+	int j;
+	int k;
+	int N = 1;
+
+	fprintf(stderr, "x%i=[", Nside);
+	for (i=0; i<N; i++) {
+		for (j=0; j<N; j++) {
+			fprintf(stderr, "%i ", radectohealpix_nside(i*2*PIl/N, PIl*(j-N/2)/N, Nside));
+		}
+		fprintf(stderr, ";");
+	}
+	fprintf(stderr, "];\n\n");
+	fflush(stderr);
+}
+
 
 int main(int argc, char** args) {
 
