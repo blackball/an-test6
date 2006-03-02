@@ -13,7 +13,7 @@
 #include "blocklist.h"
 #include "fileutil.h"
 
-#define OPTIONS "hf:u:l:n:r"
+#define OPTIONS "hf:u:l:n:ro"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -37,6 +37,7 @@ int quadnum = 0;
 void print_help(char* progname) {
     printf("\nUsage:\n"
 		   "  %s -f <filename-base>\n"
+		   "     [-o]            overlapping bins\n"
 		   "     [-r]            re-bin the unused stars\n"
 		   "     [-n <nside>]    healpix nside (default 512)\n"
 		   "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
@@ -165,7 +166,8 @@ void drop_quad(blocklist* stars, int iA, int iB, int iC, int iD) {
 }
 
 int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-			  char* inbox, int maxind, blocklist* stars) {
+			  char* inbox, int maxind, blocklist* stars,
+			  int* used_stars) {
     int i;
     int iC=0, iD;
     double Ax, Ay, Bx, By, Dx, Dy;
@@ -227,13 +229,19 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			writeonequad(quadfid, staridA, staridB, staridC, staridD);
 			quadnum++;
 			drop_quad(stars, iA, iB, iC, iD);
+			if (used_stars) {
+				used_stars[0] = staridA;
+				used_stars[1] = staridB;
+				used_stars[2] = staridC;
+				used_stars[3] = staridD;
+			}
 			return 1;
 		}
 	}
 	return 0;
 }
 
-char find_a_quad(blocklist* stars) {
+char find_a_quad(blocklist* stars, int* used_stars) {
     sidx numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
@@ -291,7 +299,7 @@ char find_a_quad(blocklist* stars) {
 			}
 			// note: "newpoint" is used as an upper-bound on the largest
 			// TRUE element in "iunion".
-			if (try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, stars)) {
+			if (try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, stars, used_stars)) {
 				return 1;
 			}
 		}
@@ -312,7 +320,7 @@ char find_a_quad(blocklist* stars) {
 					ncd++;
 				}
 				// note: "newpoint+1" is used because "iunion[newpoint]" is TRUE.
-				if (try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1, stars)) {
+				if (try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1, stars, used_stars)) {
 					return 1;
 				}
 			}
@@ -323,7 +331,7 @@ char find_a_quad(blocklist* stars) {
 
 
 void create_quads_in_pixels(int numstars, blocklist* starindices,
-							blocklist* pixels, int Nside) {
+							blocklist* pixels, int Nside, int overlap) {
 	int i;
 	int HEALPIXES = 12*Nside*Nside;
 	int Ninteresting = HEALPIXES;
@@ -364,6 +372,7 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 		int nusedthispass;
 		nusedthispass = 0;
 		for (i=0; i<HEALPIXES; i++) {
+			int foundone;
 
 			if (!(i % 10000)) {
 				fprintf(stderr, "+");
@@ -373,14 +382,64 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 			if (!interesting[i])
 				continue;
 
-			if (!find_a_quad(pixels + i)) {
-				interesting[i] = 0;
-				Ninteresting--;
+			if (overlap) {
+				blocklist* merged;
+				int neigh[8];
+				int n, nn;
+				int j;
+				int used_stars[4];
+				blocklist* sourcelists[4];
+				int sourcelengths[4];
+				int maxlen;
 
+				// grab the neighbour's lists of stars...
+				nn = healpix_get_neighbours_nside(i, neigh, Nside);
+				sourcelists[0] = pixels + i;
+				for (n=0; n<3; n++)
+					sourcelists[n+1] = pixels + neigh[n];
+
+				// round-robin merge the lists...
+				merged = blocklist_int_new(32);
+				maxlen = 0;
+				for (n=0; n<4; n++) {
+					sourcelengths[n] = blocklist_count(sourcelists[n]);
+					if (sourcelengths[n] > maxlen)
+						maxlen = sourcelengths[n];
+				}
+				for (j=0; j<maxlen; j++)
+					for (n=0; n<4; n++) {
+						if (j >= sourcelengths[n])
+							continue;
+						blocklist_int_append(merged, blocklist_int_access(sourcelists[n], j));
+					}
+
+				foundone = find_a_quad(merged, used_stars);
+
+				if (foundone) {
+					int s;
+					// ugly hack: remove the stars we used from their
+					// source lists.
+					for (s=0; s<4; s++) {
+						for (n=0; n<4; n++)
+							if (blocklist_int_remove_value(sourcelists[n], used_stars[s]) != -1)
+								break;
+						// we should have removed each star from one of the source lists...
+						assert(n < 4);
+					}
+				}
+
+				blocklist_free(merged);
 			} else {
+				foundone = find_a_quad(pixels + i, NULL);
+			}
+
+			if (foundone) {
 				quadsmade[i]++;
 				nused += 4;
 				nusedthispass += 4;
+			} else {
+				interesting[i] = 0;
+				Ninteresting--;
 			}
 		}
 		passes++;
@@ -455,11 +514,15 @@ int main(int argc, char** argv) {
 	int i;
 	sidx numstars;
 	int rebin = 0;
+	int overlap = 0;
 
 	int intlist_blocksize = 50;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'o':
+			overlap = 1;
+			break;
 		case 'r':
 			rebin = 1;
 			break;
@@ -502,6 +565,10 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Nside=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
 				Nside, HEALPIXES, hparea, sqrt(hparea));
 	}
+
+	if (overlap)
+		Nside *= 2;
+	HEALPIXES = 12*Nside*Nside;
 
 	starttime = time(NULL);
 
@@ -550,7 +617,7 @@ int main(int argc, char** argv) {
 	write_code_header(codefid, 0, numstars, DIM_CODES, sqrt(quad_scale_upper2));
 	write_quad_header(quadfid, 0, numstars, DIM_QUADS, sqrt(quad_scale_upper2));
 
-	create_quads_in_pixels(numstars, NULL, pixels, Nside);
+	create_quads_in_pixels(numstars, NULL, pixels, Nside, overlap);
 
 	if (rebin) {
 		// Gather up the leftover stars and re-bin.
@@ -560,7 +627,7 @@ int main(int argc, char** argv) {
 		}
 		Nside /= 2;
 		fprintf(stderr, "Rebinning with Nside=%i\n", Nside);
-		create_quads_in_pixels(blocklist_count(leftovers), leftovers, pixels, Nside);
+		create_quads_in_pixels(blocklist_count(leftovers), leftovers, pixels, Nside, overlap);
 		blocklist_free(leftovers);
 	}
 

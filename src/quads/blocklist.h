@@ -103,6 +103,10 @@ void blocklist_int_insert_descending(blocklist* list, int n);
 int blocklist_int_insert_unique_ascending(blocklist* list, int p);
 void blocklist_int_set(blocklist* list, int index, int value);
 
+// returns the index of the removed value, or -1 if it didn't
+// exist in the list.
+int blocklist_int_remove_value(blocklist* list, int value);
+
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
 ///////////////////////////////////////////////
