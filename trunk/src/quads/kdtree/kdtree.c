@@ -41,7 +41,7 @@ int kdqsort_D;
 
 int kdqsort_compare(const void* v1, const void* v2) {
 	int i1, i2;
-	double val1, val2;
+	real val1, val2;
 	i1 = *((int*)v1);
 	i2 = *((int*)v2);
 	val1 = kdqsort_arr[i1*kdqsort_D];
@@ -65,18 +65,20 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d) {
 		permute[i] = i;
 	kdqsort_arr = arr + l*D + d;
 	kdqsort_D = D;
+
 	qsort(permute, N, sizeof(int), kdqsort_compare);
 
-	tmparr = malloc(N*D * sizeof(double));
+	tmparr = malloc(N*D * sizeof(real));
 	tmpparr = malloc(N * sizeof(int));
 	for (i=0; i<N; i++) {
 		int pi = permute[i];
-		for (j=0; j<D; j++)
+		for (j=0; j<D; j++) {
 			tmparr[i*D + j] = arr[(l + pi)*D + j];
+		}
 		tmpparr[i] = parr[l + pi];
 	}
-	memcpy(arr, tmparr, N*D*sizeof(double));
-	memcpy(parr, tmpparr, N*sizeof(int));
+	memcpy(arr + l*D, tmparr, N*D*sizeof(real));
+	memcpy(parr + l, tmpparr, N*sizeof(int));
 	free(tmparr);
 	free(tmpparr);
 	free(permute);
@@ -92,7 +94,7 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
     unsigned int piv_perm;
     real piv;
 
-	assert(l < r);
+	assert(l <= r);
 	assert(l >= 0);
 	assert(r >= 0);
 	assert(d < D);
@@ -154,6 +156,8 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	int level = 0, dim, t, m;
 	real pivot;
 
+	assert(maxlevel>0);
+
     /* Parameters checking */
 	if (!data || !N || !D)
         return NULL;
@@ -180,10 +184,12 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	//printf("n=%d;d=%d;maxlvl=%d;nnodes=%d\n",N,D,maxlevel,nnodes);
 
 	/* Root node owns the infinite hyperrectangle  and all data points */
-	for(i=0;i<D;i++)
-		*LOW_HR(0, i) = -KDT_INFTY;
-	for(i=0;i<D;i++)
-		*HIGH_HR(0, i) = KDT_INFTY;
+	/*
+	  for(i=0;i<D;i++)
+	  *LOW_HR(0, i) = -KDT_INFTY;
+	  for(i=0;i<D;i++)
+	  *HIGH_HR(0, i) = KDT_INFTY;
+	  */
 	NODE(0)->l = 0;
 	NODE(0)->r = N-1;
 
@@ -222,12 +228,15 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
             //printf("       children=(%d, %d)\n", 2*i+1,2*i+2);
             /* Split our hyperrectangle and pass the sides to our children.
              * The memcpy copies both high/low coords to the children. */
-			memcpy(LOW_HR(2*i+1,0), LOW_HR(i,0), sizeof(real)*2*D);
-			*HIGH_HR(2*i+1, dim) = pivot;
-			memcpy(LOW_HR(2*i+2,0), LOW_HR(i,0), sizeof(real)*2*D);
-			*LOW_HR(2*i+2, dim) = pivot;
+			/*
+			  memcpy(LOW_HR(2*i+1,0), LOW_HR(i,0), sizeof(real)*2*D);
+			  *HIGH_HR(2*i+1, dim) = pivot;
+			  memcpy(LOW_HR(2*i+2,0), LOW_HR(i,0), sizeof(real)*2*D);
+			  *LOW_HR(2*i+2, dim) = pivot;
+			  */
 		}
 	}
+	kdtree_optimize(kd);
 	return kd;
 }
 

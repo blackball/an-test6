@@ -339,7 +339,6 @@ void blocklist_append_list(blocklist* list1, blocklist* list2) {
 	list1->N += list2->N;
 	// remove everything from list2 (to avoid sharing nodes)
 	clear_list(list2);
-
 }
 
 

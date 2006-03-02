@@ -6,9 +6,16 @@
 
 int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir);
 
-void swap(int* i1, int* i2)
+void swap(uint* i1, uint* i2)
 {
-	int tmp;
+	uint tmp;
+	tmp = *i1;
+	*i1 = *i2;
+	*i2 = tmp;
+}
+
+void swap_double(double* i1, double* i2) {
+	double tmp;
 	tmp = *i1;
 	*i1 = *i2;
 	*i2 = tmp;
@@ -51,7 +58,7 @@ bool ispowerof4(uint x) {
 	return (firstbit % 2) == 0;
 }
 
-void pnprime_to_xy(uint pnprime, uint* px, uint* py, int Nside)
+void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
 {
 	uint xbitmask, ybitmask;
 	uint x, y;
@@ -81,7 +88,7 @@ void pnprime_to_xy(uint pnprime, uint* px, uint* py, int Nside)
 	*py = y;
 }
 
-uint xy_to_pnprime(uint x, uint y, int Nside)
+uint xy_to_pnprime(uint x, uint y, uint Nside)
 {
 	uint pnprime = 0;
 	uint mask;
@@ -98,6 +105,14 @@ uint xy_to_pnprime(uint x, uint y, int Nside)
 		mask = mask << 1;
 	}
 	return pnprime;
+}
+
+void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
+	uint bighp;
+	uint pnprime;
+	bighp   = finehp / (12 * Nside * Nside);
+	pnprime = finehp % (12 * Nside * Nside);
+	pnprime_to_xy(pnprime, px, py, Nside);
 }
 
 int healpix_get_neighbour(int hp, int dx, int dy)
@@ -130,7 +145,7 @@ int healpix_get_neighbour(int hp, int dx, int dy)
 	return -1;
 }
 
-int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside)
+uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 {
 	int base;
 	uint pnprime;
@@ -138,7 +153,7 @@ int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside)
 	int nn = 0;
 	int nbase;
 	int Ns2 = Nside * Nside;
-	int nx, ny;
+	uint nx, ny;
 
 	base = pix / (Nside * Nside);
 	pnprime = pix % (Nside * Nside);
@@ -514,7 +529,7 @@ int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir)
 
 int healpix_nested_to_ring_index(int nested,
                                  int* p_ring, int* p_longitude,
-                                 int Nside)
+                                 uint Nside)
 {
 	int f;
 	uint pnprime;
@@ -570,7 +585,7 @@ int healpix_nested_to_ring_index(int nested,
 	return 0;
 }
 
-int xyztohealpix_nside(double x, double y, double z, int Nside)
+uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 {
 	double phi;
 	double phioverpi;
@@ -590,7 +605,7 @@ int xyztohealpix_nside(double x, double y, double z, int Nside)
 		double zfactor;
 		bool north;
 		double phit;
-		int x, y;
+		uint x, y;
 		uint pnprime;
 		int column;
 		int basehp;
@@ -707,13 +722,13 @@ int xyztohealpix_nside(double x, double y, double z, int Nside)
 	return -1;
 }
 
-int radectohealpix_nside(double ra, double dec, int nside)
+uint radectohealpix_nside(double ra, double dec, uint Nside)
 {
 	double x, y, z;
 	x = radec2x(ra, dec);
 	y = radec2y(ra, dec);
 	z = radec2z(ra, dec);
-	return xyztohealpix_nside(x, y, z, nside);
+	return xyztohealpix_nside(x, y, z, Nside);
 }
 
 /*
@@ -848,7 +863,7 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 		// get z/phi using magical equations
 		double phiP, phiN, phit, t;
 		if (zfactor == -1)
-			swap(&x, &y);
+			swap_double(&x, &y);
 
 		// We solve two equations in two unknows to get z,phit from
 		// x,y. They are of the form z = f(x,phit) and z = f(y,phit).
