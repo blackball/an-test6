@@ -33,12 +33,71 @@
 /*****************************************************************************/
 /* Building routines                                                         */
 /*****************************************************************************/
+
+#ifdef AMNSLOW
+
+real* kdqsort_arr;
+int kdqsort_D;
+
+int kdqsort_compare(const void* v1, const void* v2) {
+	int i1, i2;
+	double val1, val2;
+	i1 = *((int*)v1);
+	i2 = *((int*)v2);
+	val1 = kdqsort_arr[i1*kdqsort_D];
+	val2 = kdqsort_arr[i2*kdqsort_D];
+	if (val1 < val2)
+		return -1;
+	else if (val1 > val2)
+		return 1;
+	return 0;
+}
+
+int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d) {
+	int* permute;
+	int i, j, N;
+	real* tmparr;
+	int* tmpparr;
+
+	N = r - l + 1;
+	permute = malloc(N * sizeof(int));
+	for (i=0; i<N; i++)
+		permute[i] = i;
+	kdqsort_arr = arr + l*D + d;
+	kdqsort_D = D;
+	qsort(permute, N, sizeof(int), kdqsort_compare);
+
+	tmparr = malloc(N*D * sizeof(double));
+	tmpparr = malloc(N * sizeof(int));
+	for (i=0; i<N; i++) {
+		int pi = permute[i];
+		for (j=0; j<D; j++)
+			tmparr[i*D + j] = arr[(l + pi)*D + j];
+		tmpparr[i] = parr[l + pi];
+	}
+	memcpy(arr, tmparr, N*D*sizeof(double));
+	memcpy(parr, tmpparr, N*sizeof(int));
+	free(tmparr);
+	free(tmpparr);
+	free(permute);
+	return 1;
+}
+
+#else
+
 int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 {
     int beg[KDTREE_MAX_LEVELS], end[KDTREE_MAX_LEVELS], i=0, j, L, R;
     static real piv_vec[KDTREE_MAX_DIM];
     unsigned int piv_perm;
     real piv;
+
+	assert(l < r);
+	assert(l >= 0);
+	assert(r >= 0);
+	assert(d < D);
+	assert(d >= 0);
+	assert(D >= 0);
 
     beg[0] = l; end[0] = r;
     while (i >= 0) {
@@ -53,18 +112,22 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
                 assert(0);
             while (L < R) {
                 while (arr[D*R+d] >= piv && L < R) R--;
+				assert(L<=R);
                 if (L < R) {
                     for(j=0;j<D;j++) 
                         arr[D*L + j] = arr[D*R + j];
                     parr[L] = parr[R];
                     L++;
+					assert(L<=R);
                 }
                 while (arr[D*L+d] <= piv && L < R) L++;
+				assert(L<=R);
                 if (L < R) {
                     for(j=0;j<D;j++) 
                         arr[D*R + j] = arr[D*L + j];
                     parr[R] = parr[L];
                     R--;
+					assert(L<=R);
                 }
             }
             for(j=0;j<D;j++)
@@ -72,12 +135,14 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
             parr[L] = piv_perm;
             beg[i+1] = L+1;
             end[i+1] = end[i];
-            end[i++] = L;
+            end[i] = L;
+			i++;
         } else 
             i--;
     }
     return 1;
 }
+#endif
 
 /* If the root node is level 0, then maxlevel is the level at which there may
  * not be enough points to keep the tree complete (i.e. last level) */

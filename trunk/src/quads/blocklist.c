@@ -141,6 +141,40 @@ void blocklist_remove_all_but_first(blocklist* list) {
 	list->last_access_n = 0;
 }
 
+void blocklist_remove_from_node(blocklist* list, blnode* node,
+								blnode* prev, int index_in_node) {
+	// if we're removing the last element at this node, then
+	// remove this node from the linked list.
+	if (node->N == 1) {
+		// if we're removing the first node...
+		if (prev == NULL) {
+			list->head = node->next;
+			// if it's the first and only node...
+			if (list->head == NULL) {
+				list->tail = NULL;
+			}
+		} else {
+			// if we're removing the last element from
+			// the tail node...
+			if (node == list->tail) {
+				list->tail = prev;
+			}
+			prev->next = node->next;
+		}
+		free(node);
+	} else {
+		int ncopy;
+		// just remove this element...
+		ncopy = node->N - index_in_node - 1;
+		if (ncopy > 0) {
+			memmove((char*)node->data + index_in_node * list->datasize,
+					(char*)node->data + (index_in_node+1) * list->datasize,
+					ncopy * list->datasize);
+		}
+		node->N--;
+	}
+	list->N--;
+}
 
 void blocklist_remove_index(blocklist* list, int index) {
 	// find the node (and previous node) at which element 'index'
@@ -162,39 +196,8 @@ void blocklist_remove_index(blocklist* list, int index) {
 		return;
 	}
 
-	// if we're removing the last element at this node, then
-	// remove this node from the linked list.
-	if (node->N == 1) {
-		// if we're removing the first node...
-		if (prev == NULL) {
-			list->head = node->next;
-			// if it's the first and only node...
-			if (list->head == NULL) {
-				list->tail = NULL;
-			}
-		} else {
-			// if we're removing the last element from
-			// the tail node...
-			if (node == list->tail) {
-				list->tail = prev;
-			}
-			prev->next = node->next;
-		}
-		free(node);
-	} else {
-		int i;
-		int ncopy;
-		// just remove this element...
-		i = index - nskipped;
-		ncopy = node->N - i - 1;
-		if (ncopy > 0) {
-			memmove((char*)node->data + i * list->datasize,
-					(char*)node->data + (i+1) * list->datasize,
-					ncopy * list->datasize);
-		}
-		node->N--;
-	}
-	list->N--;
+	blocklist_remove_from_node(list, node, prev, index-nskipped);
+
 	list->last_access = NULL;
 	list->last_access_n = 0;
 }
@@ -765,6 +768,27 @@ int compare_ints_descending(void* v1, void* v2) {
 }
 
 // special-case integer list accessors...
+int blocklist_int_remove_value(blocklist* list, int value) {
+	blnode *node, *prev;
+	int istart = 0;
+	for (node=list->head, prev=NULL;
+		 node;
+		 prev=node, node=node->next) {
+		int i;
+		int* idat;
+		idat = (int*)node->data;
+		for (i=0; i<node->N; i++)
+			if (idat[i] == value) {
+				blocklist_remove_from_node(list, node, prev, i);
+				list->last_access = prev;
+				list->last_access_n = istart;
+				return istart + i;
+			}
+		istart += node->N;
+	}
+	return -1;
+}
+
 void blocklist_int_set(blocklist* list, int index, int value) {
 	blocklist_set(list, index, &value);
 }
