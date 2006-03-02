@@ -85,7 +85,7 @@ endif
 
 ; cut down standards list to nearby stuff
 xy2ad, xylist.x,xylist.y,astr,aa,dd
-spherematch, aa,dd,standards.ra,standards.dec,(10.0*jitter)/3600.0, $
+spherematch, aa,dd,standards.ra,standards.dec,(30.0*jitter)/3600.0, $
   match1,match2,distance12,maxmatch=0
 match2= match2[sort(match2)]
 match2= match2[uniq(match2)]
