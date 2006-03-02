@@ -46,8 +46,8 @@ int dsigma(float *image,
 	
 	diff=(float *) malloc(2*nx*ny*sizeof(float));
 	ndiff=0;
-	for(i=0;i<nx;i+=dx) {
-		for(j=0;i<ny;i+=dy) {
+	for(j=0;i<ny;i+=dy) {
+		for(i=0;i<nx;i+=dx) {
 			if(i<nx-sp) {
 				diff[ndiff]=fabs(image[i+j*nx]-image[i+sp+j*nx]);
 				ndiff++;

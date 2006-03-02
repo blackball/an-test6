@@ -44,8 +44,8 @@ int simplexy(float *image,
 	/* determine sigma */
 	dsigma(image, nx, ny, sigma);
 	invvar=(float *) malloc(nx*ny*sizeof(float));
-	for(i=0;i<nx;i++)
-		for(j=0;j<ny;j++)
+	for(j=0;j<ny;j++)
+		for(i=0;i<nx;i++)
 			invvar[i+j*nx]=1./((*sigma)*(*sigma));
 	minpeak=(*sigma);
 	
@@ -53,8 +53,8 @@ int simplexy(float *image,
 	mimage=(float *) malloc(nx*ny*sizeof(float));
 	simage=(float *) malloc(nx*ny*sizeof(float));
 	dmedsmooth(image, invvar, nx, ny, 50, mimage);
-	for(i=0;i<nx;i++)
-		for(j=0;j<ny;j++)
+	for(j=0;j<ny;j++)
+		for(i=0;i<nx;i++)
 			simage[i+j*nx]=image[i+j*nx]-mimage[i+j*nx];
 
 	/* find objects */
