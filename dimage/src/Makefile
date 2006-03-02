@@ -27,6 +27,10 @@ OBJECTS = \
 	idl_dmsmooth.o \
 	dfitpsf.o \
 	idl_dfitpsf.o \
+	simplexy.o \
+	idl_simplexy.o \
+	dsigma.o \
+	idl_dsigma.o \
 	dmsmooth.o \
 	dnonneg.o \
 	dcholdc.o \

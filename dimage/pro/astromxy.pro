@@ -14,10 +14,18 @@
 ;   1-Mar-2006  Written by Blanton, NYU
 ;-
 ;------------------------------------------------------------------------------
-pro astromxy, image, x, y, flux
+pro astromxy, image, x, y, flux, proc=proc
 
-invvar=dinvvar(image, hdr=hdr, satur=satur)
-sigma=1./sqrt(median(invvar))
+nx=(size(image,/dim))[0]
+ny=(size(image,/dim))[1]
+
+if(NOT keyword_set(proc)) then begin
+    invvar=dinvvar(image, hdr=hdr, satur=satur)
+    sigma=1./sqrt(median(invvar))
+endif else begin
+    sigma=dsigma(image)
+    invvar=fltarr(nx, ny)+1./sigma^2
+endelse
 msmooth=dmedsmooth(image, invvar, box=50L)
 simage=image-msmooth
 dobjects, simage, invvar, object=oimage, smooth=smooth, plim=12.
