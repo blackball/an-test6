@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
     qidx numfields, numquads;
     char readStatus;
-    dimension Dim_Quads, Dim_Stars;
+    dimension Dim_Quads;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
 
@@ -116,6 +116,7 @@ int main(int argc, char *argv[]) {
 	int i;
 	char* path;
 	time_t starttime, endtime;
+	sidx numstars;
 
 	starttime = time(NULL);
 
@@ -313,7 +314,7 @@ int read_parameters() {
 			char* fname = buffer + 6;
 			treefname = mk_ctree2fn(fname);
 			quadfname = mk_quadfn(fname);
-			catfname = mk_catfn(fname);
+			catfname = strdup(fname);
 		} else if (strncmp(buffer, "field ", 6) == 0) {
 			char* fname = buffer + 6;
 			fieldfname = mk_fieldfn(fname);
