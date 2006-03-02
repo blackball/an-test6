@@ -55,7 +55,7 @@ int dallpeaks(float *image,
 	maxsize=150;
 
   indx=(int *) malloc(sizeof(int)*nx*ny);
-  dobject=(int *) malloc(sizeof(int)*nx*ny+1);
+  dobject=(int *) malloc(sizeof(int)*(nx*ny+1));
   for(i=0;i<nx;i++)
 		for(j=0;j<ny;j++)
 			dobject[i+j*nx]=objects[i+j*nx];
@@ -123,6 +123,13 @@ int dallpeaks(float *image,
 		l=lobj;
 		nobj++;
 	}
+
+	FREEVEC(indx);
+	FREEVEC(dobject);
+	FREEVEC(oimage);
+	FREEVEC(simage);
+	FREEVEC(xc);
+	FREEVEC(yc);
 
 	return(1);
 	

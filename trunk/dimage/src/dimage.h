@@ -34,3 +34,9 @@ int deblend(float *image,
 						int maxnchild, 
             float minpeak);
 int dcen3x3(float *image, float *xcen, float *ycen);
+int dsigma(float *image, int nx, int ny, float *sigma);
+int dmedsmooth(float *image, float *invvar, int nx, int ny, int box,
+							 float *smooth);
+int dallpeaks(float *image, int nx, int ny, int *objects, float *xcen, 
+							float *ycen, int *npeaks, float sigma, float dlim, float saddle, 
+							int maxper, int maxnpeaks, float minpeak);
