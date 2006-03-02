@@ -14,12 +14,14 @@
 ;   minmag   - minimum (brightest) magnitude to consider (default
 ;              14.0 mag)
 ;   scale    - scale on which to ensure uniformity of the catalog
-;              (default 0.25 deg)
+;              (default 4.0 deg)
 ; KEYWORDS:
 ;   sdss     - over-ride all inputs to SDSS-optimized values
 ;   galex    - over-ride all inputs to GALEX-optimized values
 ;   continue - pick up where you left off using save file - USE WITH
 ;              EXTREME CAUTION
+;   mwrfits  - write fits files for each of the small-scale healpix
+;              pixels - USE WITH EXTREME CAUTION
 ; OUTPUTS:
 ;   nstars   - number of stars *actually* produced
 ; COMMENTS:
@@ -38,29 +40,27 @@
 ;   2005-10-02  started - Hogg (NYU)
 ;-
 pro an_usno_select, nstars=nstars,band=band,minmag=minmag, $
-                    sdss=sdss,galex=galex,continue=continue
+                    sdss=sdss,galex=galex,continue=continue,mwrfits=mwrfits
 radperdeg= !DPI/1.8D2
 
 ; set defaults
 if (NOT keyword_set(nstars)) then nstars= 12L*4L^9L
 if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; mag
-if (NOT keyword_set(scale)) then scale= 0.25 ; deg
+if (NOT keyword_set(scale)) then scale= 4.0 ; deg
 ; if (NOT keyword_set(maxerr)) then maxerr= 700.0 ; max position error
 ; if (NOT keyword_set(maxpm)) then maxpm= 70.0 ; max proper motion
 if (keyword_set(sdss)) then begin
-    nstars= 12L*4L^10L
+    nstars= 12L*4L^11L
     band= 3                     ; R band
     minmag= 14.0                ; min mag
     prefix= 'an_usno_sdss'
-    scale= 10.0/60.0            ; 10 arcmin
 endif
 if (keyword_set(galex)) then begin
     nstars= 12L*4L^8L
     band= 2                     ; B band
     minmag= 2.0                 ; min mag
     prefix= 'an_usno_galex'
-    scale= 30.0/60.0            ; 20 arcmin
 endif
 nside= 2L^(6L-round(alog(scale)/alog(2.0)))
 if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
@@ -99,11 +99,19 @@ for bigpix= 0L,n_elements(bigrap)-1L do begin
             restore, savefile
             continue= 0
         endif
-        usno= usno_read(rap[ii],decp[ii],scale)
+        usno= an_usno_read(rap[ii],decp[ii],scale)
         if (n_tags(usno) GT 1) then begin
-            if (band EQ 2) then usnomag= usno.bmag
-            if (band EQ 3) then usnomag= usno.rmag
+            usnomag= usno.mag[band]
             ang2pix_ring, nside,(9D1-usno.dec)*radperdeg,usno.ra*radperdeg,ind
+
+            if keyword_set(mwrfits) then begin
+                prefix= 'an_usno_'
+                bigstr= string(bigpix,format="(I2.2)")
+                finestr= string(goodpix[ii],format="(I5.5)")
+                fitsname= prefix+bigstr+'_'+finestr+'.fits'
+                mwrfits, usno[where(ind EQ goodpix[ii])],fitsname
+            endif
+
             inside= where((ind EQ goodpix[ii]) AND $
                           (usnomag GT minmag),ninside)
 ; ;                      (usno.sde LT maxerr) AND $

@@ -21,6 +21,6 @@
 ;-
 function an_usno_read, racen,deccen,rad
 usno= usno_read(racen,deccen,rad,catname='USNO-B1.0')
-sindx= sort(usno.rmag)
+sindx= sort(usno.mag[3])
 return, usno[sindx]
 end
