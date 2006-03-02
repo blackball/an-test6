@@ -1,6 +1,10 @@
 #ifndef HEALPIX_H_
 #define HEALPIX_H_
 
+#ifndef uint
+typedef unsigned int uint;
+#endif
+
 /**
    The HEALPix paper:
 
@@ -24,13 +28,15 @@ int xyztohealpix(double x, double y, double z);
    NOTE: at the moment we can only handle Nside = a power of two.
 
  */
-int radectohealpix_nside(double ra, double dec, int Nside);
+uint radectohealpix_nside(double ra, double dec, uint Nside);
 
-int xyztohealpix_nside(double x, double y, double z, int Nside);
+uint xyztohealpix_nside(double x, double y, double z, uint Nside);
 
-int healpix_get_neighbours_nside(int pix, int* neighbour, int Nside);
+uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside);
 
-void healpix_to_xyz(double dx, double dy, unsigned int hp, unsigned int Nside,
+void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
                     double* rx, double *ry, double *rz);
+
+void healpix_decompose(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
 
 #endif

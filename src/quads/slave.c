@@ -24,6 +24,7 @@
 #include "solver2_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
+#include "catalog.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -52,22 +53,22 @@ double funits_upper = 0.0;
 double index_scale;
 double index_scale_lower = 0.0;
 
+catalog* cat;
+
 matchfile_entry matchfile;
 
-FILE *quadfid = NULL, *catfid = NULL;
+FILE *quadfid = NULL;
 FILE* matchfid = NULL;
 
 bool use_mmap = TRUE;
 
 // when not mmap'd
-off_t qposmarker, cposmarker;
+off_t qposmarker;
 
 // when mmap'd
-double* catalogue;
 sidx*   quadindex;
 
 // the largest star and quad available in the corresponding files.
-sidx maxstar;
 qidx maxquad;
 
 char* get_pathname(char* fname) {
@@ -100,17 +101,13 @@ int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss) {
 int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
     qidx numfields, numquads;
-    sidx numstars;
     char readStatus;
-	double ramin, ramax, decmin, decmax;
     dimension Dim_Quads, Dim_Stars;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
 
     void*  mmap_tree = NULL;
     size_t mmap_tree_size = 0;
-	void*  mmap_cat = NULL;
-	size_t mmap_cat_size = 0;
 	void*  mmap_quad = NULL;
 	size_t mmap_quad_size = 0;
 
@@ -218,34 +215,10 @@ int main(int argc, char *argv[]) {
 	index_scale *= (180.0 / M_PI) * 60 * 60;
 	fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
-	// Read .objs file...
-	fopenin(catfname, catfid);
-	free_fn(catfname);
-	readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
-								  &ramin, &ramax, &decmin, &decmax);
-	if (readStatus == READ_FAIL) {
+	cat = catalog_open(catfname);
+	if (!cat) {
+		fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
 		exit(-1);
-	}
-	cposmarker = ftello(catfid);
-	// check that the catalogue file is the right size.
-	fseeko(catfid, 0, SEEK_END);
-	endoffset = ftello(catfid) - cposmarker;
-	maxstar = endoffset / (DIM_STARS * sizeof(double));
-	if (maxstar != numstars) {
-		fprintf(stderr, "Error: numstars=%li (specified in .objs file header) does "
-				"not match maxstars=%li (computed from size of .objs file).\n",
-				numstars, maxstar);
-		exit(-1);
-	}
-	if (use_mmap) {
-		mmap_cat_size = endoffset;
-		mmap_cat = mmap(0, mmap_cat_size, PROT_READ, MAP_SHARED, fileno(catfid), 0);
-		if (mmap_cat == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
-			exit(-1);
-		}
-		fclose(catfid);
-		catalogue = (double*)(((char*)(mmap_cat)) + cposmarker);
 	}
 
 	matchfile.parity = parity;
@@ -283,12 +256,12 @@ int main(int argc, char *argv[]) {
 		munmap(mmap_tree, mmap_tree_size);
 		free(codekd);
 		munmap(mmap_quad, mmap_quad_size);
-		munmap(mmap_cat, mmap_cat_size);
 	} else {
 		kdtree_free(codekd);
 		fclose(quadfid);
-		fclose(catfid);
 	}
+
+	catalog_close(cat);
 
 	{
 		double utime, stime;
@@ -511,36 +484,10 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 				   sidx iA, sidx iB, sidx iC, sidx iD)
 {
-	if (iA >= maxstar) {
-		fprintf(stderr, "iA %lu > maxstar %lu\n", iA, maxstar);
-	}
-	if (iB >= maxstar) {
-		fprintf(stderr, "iB %lu > maxstar %lu\n", iB, maxstar);
-	}
-	if (iC >= maxstar) {
-		fprintf(stderr, "iC %lu > maxstar %lu\n", iC, maxstar);
-	}
-	if (iD >= maxstar) {
-		fprintf(stderr, "iD %lu > maxstar %lu\n", iD, maxstar);
-	}
-
-	if (use_mmap) {
-
-		memcpy(sA->farr, catalogue + iA * DIM_STARS, DIM_STARS * sizeof(double));
-		memcpy(sB->farr, catalogue + iB * DIM_STARS, DIM_STARS * sizeof(double));
-		memcpy(sC->farr, catalogue + iC * DIM_STARS, DIM_STARS * sizeof(double));
-		memcpy(sD->farr, catalogue + iD * DIM_STARS, DIM_STARS * sizeof(double));
-
-	} else {
-		fseekocat(iA, cposmarker, catfid);
-		freadstar(sA, catfid);
-		fseekocat(iB, cposmarker, catfid);
-		freadstar(sB, catfid);
-		fseekocat(iC, cposmarker, catfid);
-		freadstar(sC, catfid);
-		fseekocat(iD, cposmarker, catfid);
-		freadstar(sD, catfid);
-	}
+	memcpy(sA->farr, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
+	memcpy(sB->farr, catalog_get_star(cat, iB), DIM_STARS * sizeof(double));
+	memcpy(sC->farr, catalog_get_star(cat, iC), DIM_STARS * sizeof(double));
+	memcpy(sD->farr, catalog_get_star(cat, iD), DIM_STARS * sizeof(double));
 }
 
 	

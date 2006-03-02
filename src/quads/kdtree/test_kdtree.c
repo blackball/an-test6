@@ -2,10 +2,45 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 #include "kdtree.h"
 #include "CuTest/CuTest.h"
 
 #define MAXDEPTH 30
+
+void test_sort_random(CuTest *tc) {
+	int N;
+	/*
+	  int Nmax = 1000;
+	  int Nstep = 10;
+	  int tries = 100;
+	*/
+	int Nmax = 1000000;
+	int Nstep = 1000;
+	int tries = 1;
+	int D=3;
+	int i, t;
+	real* data = NULL;
+	kdtree_t* tree;
+	int levels;
+
+	//data = realloc(data, N*D*sizeof(real));
+	data = malloc(Nmax*D*sizeof(real));
+
+	for (N=1; N<Nmax; N+=Nstep) {
+		levels = (int)(log(N) / log(2.0));
+		if (!levels) levels=1;
+		for (t=0; t<tries; t++) {
+			printf("N=%i, try=%i\n", N, t);
+			srand(N*tries + t);
+			for (i=0; i<(N*D); i++)
+				data[i] = (real)rand() / (real)RAND_MAX;
+			tree = kdtree_build(data, N, D, levels);
+			kdtree_free(tree);
+		}
+	}
+	free(data);
+}
 
 void test_sort_1d_even(CuTest *tc)
 {
@@ -243,6 +278,7 @@ int main(void) {
 	SUITE_ADD_TEST(suite, test_kd_size);
 	SUITE_ADD_TEST(suite, test_kd_invalid_args);
 	SUITE_ADD_TEST(suite, test_kd_range_search);
+	SUITE_ADD_TEST(suite, test_sort_random);
 	//SUITE_ADD_TEST(suite, test_kd_massive_build);
 
 	/* Run the suite, collect results and display */

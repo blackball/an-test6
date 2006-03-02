@@ -2,9 +2,7 @@
 #include "starutil.h"
 #include "healpix.h"
 
-#define NSIDE 128
-//#define NSIDE 32
-//#define AGREE_DIST 0.001
+#define NSIDE 512
 
 #define DEFAULT_AGREE_TOL 7.0
 double AgreeArcSec = DEFAULT_AGREE_TOL;
@@ -19,7 +17,7 @@ struct pixinfo {
 	blocklist* matchinds;
 	// list of neighbouring healpixes.
 	int healpix;
-	int neighbours[8];
+	uint neighbours[8];
 	int nn;
 };
 
@@ -68,8 +66,7 @@ void hitlist_set_default_parameters() {
 void init_pixinfo(pixinfo* node, int pix) {
 	node->matchinds = NULL;
 	node->healpix = pix;
-	node->nn = healpix_get_neighbours_nside(pix, node->neighbours,
-											NSIDE);
+	node->nn = healpix_get_neighbours_nside(pix, node->neighbours, NSIDE);
 }
 
 hitlist* hitlist_new() {
