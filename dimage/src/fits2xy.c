@@ -79,8 +79,20 @@ int main(int argc, char *argv[])
       fits_read_pix(fptr,TFLOAT,fpixel,naxisn[0]*naxisn[1],NULL,thedata,
 		    NULL,&status);
 
-      for(jj=0;jj<naxisn[0]*naxisn[1];jj++)
-	printf("%f,",thedata[jj]);
+      int simplexy(float *image, 
+						 int nx, 
+						 int ny,
+						 float dpsf,  /* gaussian psf width; 1 is usually fine */
+						 float plim,  /* significance to keep; 8 is usually fine */
+						 float dlim,   /* closest two peaks can be; 1 is usually fine */
+						 float saddle,  /* saddle difference (in sig); 3 is usually fine */
+						 int maxper,   /* maximum number of peaks per object; 1000 */
+						 int maxnpeaks,  /* maximum number of peaks total; 100000 */
+						 float *sigma, 
+						 float *x,  
+						 float *y, 
+						 float *flux, 
+						 int *npeaks)
       
     }
 
