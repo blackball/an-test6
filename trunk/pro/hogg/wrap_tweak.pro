@@ -27,8 +27,8 @@ if not keyword_set(astr) then message,'an_tweak FAILED'
 ; update header
 putast,hdr,astr
 
-sxaddpar, hdr,'HISTORY', '* Astrometry header added by the ASTROMETRY.NET project         *'
-sxaddpar, hdr,'HISTORY', '* Blanton, Lang, Finkbeiner, Hogg, Mierle, Roweis               *'
+sxaddpar, hdr,'HISTORY', '* Astrometry header added by Astrometry.net                       *'
+sxaddpar, hdr,'HISTORY', '* Blanton, Lang, Finkbeiner, Hogg, Masjedi, Mierle, Roweis        *'
 
 djs_modfits,imagefile,dummydata,hdr,exten_no=exten
 
