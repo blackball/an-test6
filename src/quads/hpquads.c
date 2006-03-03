@@ -12,6 +12,7 @@
 #include "fileutil.h"
 #include "blocklist.h"
 #include "catalog.h"
+#include "tic.h"
 
 #define OPTIONS "hf:u:l:n:ros"
 
@@ -42,6 +43,7 @@ void print_help(char* progname)
 	       , progname);
 }
 
+/*
 int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss)
 {
 	struct rusage usage;
@@ -60,6 +62,7 @@ int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss)
 	}
 	return 0;
 }
+*/
 
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
@@ -537,7 +540,7 @@ int main(int argc, char** argv)
 	int argchar;
 	char *quadfname = NULL;
 	char *codefname = NULL;
-	time_t starttime, endtime;
+	//time_t starttime, endtime;
 	blocklist* pixels;
 	int Nside = 512;
 	int HEALPIXES;
@@ -600,7 +603,9 @@ int main(int argc, char** argv)
 		Nside *= 3;
 	HEALPIXES = 12 * Nside * Nside;
 
-	starttime = time(NULL);
+	//starttime = time(NULL);
+
+	tic();
 
 	pixels = malloc(HEALPIXES * sizeof(blocklist));
 	for (i = 0; i < HEALPIXES; i++) {
@@ -672,6 +677,9 @@ int main(int argc, char** argv)
 		exit( -1);
 	}
 
+	toc();
+
+		/*
 	{
 		double utime, stime;
 		long rss;
@@ -683,6 +691,7 @@ int main(int argc, char** argv)
 			        utime, stime, utime + stime, dtime, rss);
 		}
 	}
+	*/
 
 	fprintf(stderr, "Done.\n");
 	fflush(stderr);
