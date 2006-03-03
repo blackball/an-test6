@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include "codefile.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
 
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
     fopenin(codefname, codefid);
     free_fn(codefname);
-    codearray = readcodes(codefid, &numcodes, &Dim_Codes, &index_scale);
+    codearray = codefile_read(codefid, &numcodes, &Dim_Codes, &index_scale);
     if (!codearray)
 	return (1);
     fprintf(stderr, "got %d codes (dim %hu).\n", numcodes, Dim_Codes);
@@ -112,22 +113,6 @@ int main(int argc, char *argv[]) {
     fopenout(treefname, treefid);
     free_fn(treefname);
 
-	/*
-	  for (i=0; i<10; i++) {
-	  fprintf(stderr, "perm[%i] = %i\n", i, codekd->perm[i]);
-	  }
-	  for (i=0; i<10; i++) {
-	  fprintf(stderr, "data[%i] = %g\n", i, codekd->data[i]);
-	  }
-	  for (i=0; i<256; i++) {
-	  if (i && (i % 32 == 0)) {
-	  fprintf(stderr, "\n");
-	  }
-	  fprintf(stderr, "%02x ", (unsigned int)(((unsigned char*)(codekd->tree))[i]));
-	  }
-	*/
-
-
     if (kdtree_write(treefid, codekd)) {
 	fprintf(stderr, "Couldn't write star kdtree.\n");
 	fclose(treefid);
@@ -145,45 +130,6 @@ int main(int argc, char *argv[]) {
 }
 
 
-
-double* readcodes(FILE *fid, int *numcodes, int *Dim_Codes,
-		  double *index_scale) {
-    qidx ncodes;
-    dimension dimcodes;
-    sidx numstars;
-    double* codearray = NULL;
-    char readStatus;
-    int nitems, nread;
-
-    readStatus = read_code_header(fid, &ncodes, &numstars, 
-				  &dimcodes, index_scale);
-    if (readStatus == READ_FAIL)
-	return NULL;
-
-    *numcodes = ncodes;
-    *Dim_Codes = dimcodes;
-
-    fprintf(stderr, " %i x %i codes...", *numcodes, *Dim_Codes);
-    fflush(stderr);
-
-    nitems = (*numcodes) * (*Dim_Codes);
-
-    codearray = (double*)malloc(nitems * sizeof(double));
-
-    if (!codearray) {
-	fprintf(stderr, "Couldn't allocate code array: %i x %i\n", *numcodes, *Dim_Codes);
-	return NULL;
-    }
-
-    nread = fread(codearray, sizeof(double), nitems, fid);
-    if (nread != nitems) {
-	fprintf(stderr, "Couldn't read %i codes: %s\n", nitems, strerror(errno));
-	free(codearray);
-	return NULL;
-    }
-
-    return codearray;
-}
 
 
 

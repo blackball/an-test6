@@ -328,7 +328,7 @@ void healpix_bin_stars(int numstars, blocklist* starindices,
 		int hp;
 		int ind;
 
-		if (!(i % 10000)) {
+		if (!(i % 100000)) {
 			fprintf(stderr, ".");
 			fflush(stderr);
 		}
@@ -398,7 +398,7 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 		for (i=0; i<HEALPIXES; i++) {
 			int foundone;
 
-			if (!(i % 10000)) {
+			if (!(i % 100000)) {
 				fprintf(stderr, "+");
 				fflush(stderr);
 			}

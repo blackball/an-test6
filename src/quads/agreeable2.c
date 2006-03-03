@@ -10,6 +10,7 @@
 #include "matchobj.h"
 #include "hitsfile.h"
 #include "hitlist.h"
+#include "hitlist_healpix.h"
 #include "matchfile.h"
 
 char* OPTIONS = "hH:n:A:B:F:L:M:f:";
@@ -202,16 +203,6 @@ int main(int argc, char *argv[]) {
 			hitlist* hl;
 			int c;
 			int fieldnum;
-			double x1,y1,z1;
-			double x2,y2,z2;
-			double xc,yc,zc;
-			double dx, dy, dz;
-			double xn, yn, zn;
-			double xe, ye, ze;
-			double pn, pe;
-			double rac, decc, arc;
-			double r;
-			double rotation;
 
 			// detect EOF and exit gracefully...
 			c = fgetc(infile);
@@ -284,92 +275,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			// compute (x,y,z) center, scale, rotation.
-
-			x1 = star_ref(mo->sMin, 0);
-			y1 = star_ref(mo->sMin, 1);
-			z1 = star_ref(mo->sMin, 2);
-			// normalize.
-			r = sqrt(square(x1) + square(y1) + square(z1));
-			x1 /= r;
-			y1 /= r;
-			z1 /= r;
-
-			x2 = star_ref(mo->sMax, 0);
-			y2 = star_ref(mo->sMax, 1);
-			z2 = star_ref(mo->sMax, 2);
-			r = sqrt(square(x2) + square(y2) + square(z2));
-			x2 /= r;
-			y2 /= r;
-			z2 /= r;
-
-			xc = (x1 + x2) / 2.0;
-			yc = (y1 + y2) / 2.0;
-			zc = (z1 + z2) / 2.0;
-			r = sqrt(square(xc) + square(yc) + square(zc));
-			xc /= r;
-			yc /= r;
-			zc /= r;
-
-			/*
-			  radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
-			*/
-			arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
-
-			// we will characterise the rotation of the field with
-			// respect to the "North" vector - the vector tangent
-			// to the field pointing in the direction of increasing
-			// Dec.  We take the derivatives of (x,y,z) wrt Dec,
-			// at the center of the field.
-
-			// {x,y,z}(dec) = {cos(ra)cos(dec), sin(ra)cos(dec), sin(dec)}
-			// d{x,y,z}/ddec = {-cos(ra)sin(dec), -sin(ra)sin(dec), cos(dec)}
-
-			// center of the field...
-			rac  = xy2ra(xc, yc);
-			decc = z2dec(zc);
-
-			// North
-			xn = -cos(rac) * sin(decc);
-			yn = -sin(rac) * sin(decc);
-			zn =             cos(decc);
-
-			// "East" (maybe West - direction of increasing RA, whatever that is.)
-			xe = -sin(rac) * cos(decc);
-			ye =  cos(rac) * cos(decc);
-			ze = 0.0;
-
-			// Now we look at the vector from the center to sMin
-			dx = x1 - xc;
-			dy = y1 - yc;
-			dz = z1 - zc;
-
-			// Project that onto N, E: dot products
-			pn = (dx * xn) + (dy * yn) + (dz * zn);
-			pe = (dx * xe) + (dy * ye) + (dz * ze);
-
-			rotation = atan2(pn, pe);
-
-			r = sqrt(square(pn) + square(pe));
-			pn /= r;
-			pe /= r;
-
-			mo->vector[0] = xc;
-			mo->vector[1] = yc;
-			mo->vector[2] = zc;
-			mo->vector[3] = arc;
-			mo->vector[4] = pn;
-			mo->vector[5] = pe;
-			/*
-			  mo->vector[4] = rotation;
-			  mo->vector[5] = 0.0;
-			*/
-
-			/*
-			  fprintf(stderr, "Pos (%6.2f, %6.2f), Scale %5.2f, Rot %6.2f\n",
-			  rad2deg(rac), rad2deg(decc), arc,
-			  rad2deg(rotation + ((rotation<0.0)? 2.0*M_PI : 0.0)));
-			*/
-
+			hitlist_healpix_compute_vector(mo);
 
 			// add the match...
 			hitlist_add_hit(hl, mo);
@@ -500,8 +406,6 @@ void flush_solved_fields(bool doleftovers,
 			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
-				matchfile_entry* me;
-				me = (matchfile_entry*)mo->extra;
 				if (matchfile_write_match(agreefid, mo, me)) {
 					fprintf(stderr, "Error writing a match to %s: %s\n", agreefname, strerror(errno));
 				}

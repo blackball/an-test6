@@ -15,13 +15,13 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
 	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
-	hitsfile.o ioutils.o suspend.o matchfile.o lsfile.o catalog.o
+	hitsfile.o ioutils.o suspend.o matchfile.o lsfile.o catalog.o codefile.o
 
 EXECS = randcat startree genfields quadidx solvexy fieldquads findstar findquad \
 	findcode all_quads fixheaders codetomatlab startree2 deduplicate codetree2  \
 	printheaders get_healpix quadidx2 xylstomatlab rdlstohealpix codedensity \
 	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable tilequads \
-	hpquads
+	hpquads dedup_index
 
 # Deprecated:
 #   getquads codetree 
@@ -35,7 +35,7 @@ MYOBJS = randcat.o startree.o quadidx.o genfields.o solvexy.o fieldquads.o finds
 
 # getquads.o codetree.o 
 
-all: $(EXECS) solvexy2 agreeable slave agreeable2 slavish
+all: $(EXECS) solvexy2 agreeable slave agreeable2
 
 #solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
 solvexy2: solvexy2.o solver2.o hitlist_healpix.o $(OBJ)
@@ -47,10 +47,7 @@ agreeable: agreeable.o hitlist_agreement.o $(OBJ)
 agreeable2: agreeable2.o hitlist_healpix.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-slave: slave.o solver2.o $(OBJ)
-	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
-
-slavish: slave.o solver2.o hitlist_healpix.o $(OBJ)
+slave: slave.o solver2.o hitlist_healpix.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 $(EXECS) :: %: %.o $(OBJ)
