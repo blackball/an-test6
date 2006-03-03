@@ -28,6 +28,8 @@ void hitlist_free(hitlist* hlist);
 // you are responsible for calling blocklist_free.
 blocklist* hitlist_get_best(hitlist* hlist);
 
+blocklist* hitlist_get_all_best(hitlist* hlist);
+
 // returns a shallow copy of the whole set of results.
 // you are responsible for calling blocklist_free.
 blocklist* hitlist_get_all(hitlist* hlist);

@@ -20,6 +20,8 @@ catalog* catalog_open(char* basefn);
 
 double* catalog_get_star(catalog* cat, uint sid);
 
+double* catalog_get_base(catalog* cat);
+
 void catalog_close(catalog* cat);
 
 #endif

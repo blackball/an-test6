@@ -5,6 +5,10 @@
 #include "catalog.h"
 #include "fileutil.h"
 
+double* catalog_get_base(catalog* cat) {
+	return cat->stars;
+}
+
 catalog* catalog_open(char* basefn) {
 	FILE *catfid  = NULL;
 	char readStatus;
