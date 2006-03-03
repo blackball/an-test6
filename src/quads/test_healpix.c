@@ -16,7 +16,7 @@ void print_neighbours(int* n, int nn) {
 
 void test_neighbours(CuTest* ct, int pix, int* true_neigh, int true_nn, int Nside) {
 	int neigh[8];
-	int nn;
+	uint nn;
 	int i;
 	for (i=0; i<8; i++) {
 		neigh[i] = -1;

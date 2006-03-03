@@ -71,18 +71,7 @@ $(CUTEST_L) :: %.o : %.c
 CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_blocklist
 
 
-# Not actually used right now...
-CUNIT_I = -I/h/42/dstn/software/cunit/include
-CUNIT_L = /h/42/dstn/software/cunit/lib/libcunit.a
-CUNIT_TEST_DRIVERS = 
-CUNIT_TEST_OBJS = $(addsuffix .o,$(CUNIT_TEST_DRIVERS))
-$(CUNIT_TEST_DRIVERS) :: %: %.o $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(CUNIT_L) -lm
-$(CUNIT_TEST_OBJS) :: %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(CUNIT_I)
-
-
-TEST_DRIVERS = $(CUNIT_TEST_DRIVERS) $(CUTEST_TEST_DRIVERS)
+TEST_DRIVERS = $(CUTEST_TEST_DRIVERS)
 
 tests: $(TEST_DRIVERS)
 
