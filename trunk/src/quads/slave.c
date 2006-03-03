@@ -25,6 +25,8 @@
 #include "matchobj.h"
 #include "matchfile.h"
 #include "catalog.h"
+#include "hitlist.h"
+#include "hitlist_healpix.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -52,8 +54,13 @@ double funits_lower = 0.0;
 double funits_upper = 0.0;
 double index_scale;
 double index_scale_lower = 0.0;
+bool agreement = FALSE;
+int nagree = 4;
+double agreetol = 0.0;
 
 catalog* cat;
+
+hitlist* hits = NULL;
 
 matchfile_entry matchfile;
 
@@ -131,6 +138,14 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	hitlist_set_default_parameters();
+	if (agreetol != 0.0) {
+		char buf[256];
+		// total hack...
+		sprintf(buf, "%g", agreetol);
+		hitlist_process_parameter('m', buf);
+	}
+
 	fprintf(stderr, "%s params:\n", progname);
 	fprintf(stderr, "fieldfname %s\n", fieldfname);
 	fprintf(stderr, "treefname %s\n", treefname);
@@ -145,6 +160,9 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
 	fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
 	fprintf(stderr, "index_lower %g\n", index_scale_lower);
+	fprintf(stderr, "agreement %i\n", agreement);
+	fprintf(stderr, "num-to-agree %i\n", nagree);
+	fprintf(stderr, "agreetol %g\n", agreetol);
 
 	fprintf(stderr, "fields ");
 	for (i=0; i<blocklist_count(fieldlist); i++)
@@ -221,6 +239,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
 		exit(-1);
 	}
+	free(catfname);
 
 	matchfile.parity = parity;
 	path = get_pathname(treefname);
@@ -308,8 +327,19 @@ int read_parameters() {
 					"    fieldunits_lower <arcsec-per-pixel>\n"
 					"    fieldunits_upper <arcsec-per-pixel>\n"
 					"    index_lower <index-size-lower-bound-fraction>\n"
+					"    agreement\n"
+					"    nagree <min-to-agree>\n"
+					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    run\n"
 					"    help\n");
+		} else if (strncmp(buffer, "agreement", 9) == 0) {
+			agreement = TRUE;
+		} else if (strncmp(buffer, "nagree ", 7) == 0) {
+			char* nag = buffer + 7;
+			nagree = atoi(nag);
+		} else if (strncmp(buffer, "agreetol ", 9) == 0) {
+			char* ag = buffer + 9;
+			agreetol = atof(ag);
 		} else if (strncmp(buffer, "index ", 6) == 0) {
 			char* fname = buffer + 6;
 			treefname = mk_ctree2fn(fname);
@@ -385,14 +415,21 @@ int read_parameters() {
 }
 
 int handlehit(struct solver_params* p, MatchObj* mo) {
-	if (matchfile_write_match(matchfid, mo, &matchfile)) {
-		fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
+	if (agreement) {
+		// hack - share this struct between all the matches for this
+		// field...
+		mo->extra = &matchfile;
+		// compute (x,y,z) center, scale, rotation.
+		hitlist_healpix_compute_vector(mo);
+		hitlist_add_hit(hits, mo);
+	} else {
+		if (matchfile_write_match(matchfid, mo, &matchfile)) {
+			fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
+		}
+		free_star(mo->sMin);
+		free_star(mo->sMax);
+		free_MatchObj(mo);
 	}
-
-	free_star(mo->sMin);
-	free_star(mo->sMax);
-	free_MatchObj(mo);
-
 	return 1;
 }
 
@@ -450,11 +487,40 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		solver.startobj = startdepth;
 		solver.field = thisfield;
 
+		if (agreement) {
+			hits = hitlist_new();
+		}
+
 		// The real thing
 		solve_field(&solver);
 
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
+
+		if (agreement) {
+			int nbest, j;
+			blocklist* best;
+
+			nbest = hitlist_count_best(hits);
+			if (nbest >= nagree) {
+			}
+
+			fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
+
+			best = hitlist_get_best(hits);
+
+			for (j=0; j<nbest; j++) {
+				matchfile_entry* me;
+				MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
+				me = (matchfile_entry*)mo->extra;
+				if (matchfile_write_match(matchfid, mo, me)) {
+					fprintf(stderr, "Error writing a match: %s\n", strerror(errno));
+				}
+			}
+			blocklist_free(best);
+			hitlist_clear(hits);
+			hitlist_free(hits);
+		}
 
 		get_resource_stats(&utime, &stime, NULL);
 		fprintf(stderr, "    spent %g s user, %g s system, %g s total.\n",
