@@ -767,6 +767,12 @@ int compare_ints_descending(void* v1, void* v2) {
 }
 
 // special-case integer list accessors...
+
+/*
+  void blocklist_int_ensure_size(blocklist* list, int size, int fillvalue) {
+  }
+*/
+
 int blocklist_int_remove_value(blocklist* list, int value) {
 	blnode *node, *prev;
 	int istart = 0;

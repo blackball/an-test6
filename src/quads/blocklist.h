@@ -107,6 +107,8 @@ void blocklist_int_set(blocklist* list, int index, int value);
 // exist in the list.
 int blocklist_int_remove_value(blocklist* list, int value);
 
+//void blocklist_int_ensure_size(blocklist* list, int size, int fillvalue);
+
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
 ///////////////////////////////////////////////

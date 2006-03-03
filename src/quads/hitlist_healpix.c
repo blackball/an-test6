@@ -44,6 +44,20 @@ typedef struct hitlist_struct hitlist;
 #define DONT_DEFINE_HITLIST
 #include "hitlist.h"
 
+void hitlist_histogram_agreement_size(hitlist* hl, int* hist, int Nhist) {
+	int m, M;
+	int N;
+	M = blocklist_count(hl->agreelist);
+	for (m=0; m<M; m++) {
+		blocklist* lst = (blocklist*)blocklist_pointer_access(hl->agreelist, m);
+		if (!lst) continue;
+		N = blocklist_count(lst);
+		if (N >= Nhist)
+			N = Nhist-1;
+		hist[N]++;
+	}
+}
+
 
 
 void hitlist_healpix_compute_vector(MatchObj* mo) {
