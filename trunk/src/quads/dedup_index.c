@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 							codearray + perm[i+1]*Dim_Codes + 2,
 							2 * sizeof(double))) {
 
-					fprintf(stderr, "Codes %8i and %8i are equal.  (sorted %8i, %8i)\n", perm[i], perm[i+1], i, i+1);
+					//fprintf(stderr, "Codes %8i and %8i are equal.  (sorted %8i, %8i)\n", perm[i], perm[i+1], i, i+1);
 					nequal++;
 
 					blocklist_int_insert_unique_ascending(duplicates, perm[i+1]);

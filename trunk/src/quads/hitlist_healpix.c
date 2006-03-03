@@ -441,6 +441,16 @@ blocklist* hitlist_get_all_above_size(hitlist* hl, int len) {
 	return copy;
 }
 
+// returns shallow copies of all sets of hits with size
+// equal to the best.
+blocklist* hitlist_get_all_best(hitlist* hl) {
+	blocklist* copy;
+	int M;
+	copy = blocklist_pointer_new(16);
+	if (!hl->best) return copy;
+	M = blocklist_count(hl->best);
+	return copy;
+}
 
 // returns a shallow copy of the best set of hits.
 // you are responsible for calling blocklist_free.

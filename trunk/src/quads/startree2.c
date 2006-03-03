@@ -18,6 +18,7 @@
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
+#include "catalog.h"
 
 #define OPTIONS "hR:f:k:d:"
 const char HelpString[] =
