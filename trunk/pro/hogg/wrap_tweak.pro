@@ -27,10 +27,10 @@ if not keyword_set(astr) then message,'an_tweak FAILED'
 ; update header
 putast,hdr,astr
 
-nline=n_elements(hdr)
-for i=0,nline-1 do begin 
-    print,hdr[i]
-endfor
-    
+sxaddpar, hdr,'HISTORY', '* Astrometry header added by the ASTROMETRY.NET project         *'
+sxaddpar, hdr,'HISTORY', '* Blanton, Lang, Finkbeiner, Hogg, Mierle, Roweis               *'
+
+djs_modfits,imagefile,dummydata,hdr,exten_no=exten
+
 return
 end
