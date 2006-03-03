@@ -507,7 +507,14 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 			fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
-			best = hitlist_get_best(hits);
+			//best = hitlist_get_best(hits);
+			best = hitlist_get_all_best(hits);
+			//best = hitlist_get_all_above_size(hits, nagree);
+
+			fprintf(stderr, "(There are %i sets of agreeing hits of size %i.)\n",
+					blocklist_count(best) / nbest, nbest);
+
+			nbest = blocklist_count(best);
 
 			for (j=0; j<nbest; j++) {
 				matchfile_entry* me;

@@ -14,7 +14,7 @@ char* hitlist_get_parameter_options();
 int hitlist_process_parameter(char argchar, char* optarg);
 void hitlist_set_default_parameters();
 
-//blocklist* hitlist_get_all_above_size(hitlist* hl, int len);
+blocklist* hitlist_get_all_above_size(hitlist* hl, int len);
 
 hitlist* hitlist_new();
 
