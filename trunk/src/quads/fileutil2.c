@@ -1,5 +1,5 @@
 #include "fileutil.h"
-#include "kdutil.h"
+//#include "kdutil.h"
 
 /* The binary files all start with the unsigned short int MAGIC_VAL
    which helps identify them as binary and also sort out endian issues.
@@ -18,71 +18,6 @@
    ...
 */
 
-stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
-                   double *ramin, double *ramax, double *decmin, double *decmax,
-				   int nkeep)
-{
-	char readStatus;
-	sidx ii;
-	stararray *thestars = NULL;
-
-	readStatus = read_objs_header(fid, numstars, 
-				      Dim_Stars, ramin, ramax, decmin, decmax);
-	if (readStatus == READ_FAIL)
-		return ((stararray *)NULL);
-
-	if (nkeep && (nkeep < *numstars)) {
-	  // switcheroo!
-	  *numstars = nkeep;
-	}
-
-	thestars = mk_stararray(*numstars);
-	for (ii = 0;ii < *numstars;ii++) {
-		thestars->array[ii] = mk_stard(*Dim_Stars);
-		if (thestars->array[ii] == NULL) {
-			fprintf(stderr, "ERROR (readcat) -- out of memory at star %lu\n", ii);
-			free_stararray(thestars);
-			return (stararray *)NULL;
-		}
-		fread(thestars->array[ii]->farr, sizeof(double), *Dim_Stars, fid);
-	}
-
-	// if nkeep is set, should we read and discard the rest?
-
-	return thestars;
-}
-
-
-
-/* This function reads an id list, which is used mostly
-   for debugging purposes, ie with fieldquads */
-quadarray *readidlist(FILE *fid, qidx *numfields)
-{
-	qidx ii, numS;
-	magicval magic;
-	quadarray *thepids = NULL;
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (readidlist) -- bad magic value id list\n");
-			return ((quadarray *)NULL);
-		}
-		fread(numfields, sizeof(*numfields), 1, fid);
-	}
-	thepids = mk_quadarray(*numfields);
-	for (ii = 0;ii < *numfields;ii++) {
-		// read in how many stars in this pic
-	  fread(&numS, sizeof(numS), 1, fid);
-		thepids->array[ii] = mk_quadd(numS);
-		if (thepids->array[ii] == NULL) {
-			fprintf(stderr, "ERROR (fieldquads) -- out of memory at field %lu\n", ii);
-			free_quadarray(thepids);
-			return (quadarray *)NULL;
-		}
-		fread(thepids->array[ii]->iarr, sizeof(int), numS, fid);
-	}
-	return thepids;
-}
 
 void write_objs_header(FILE *fid, sidx numstars,
                        dimension DimStars, double ramin, double ramax, 
@@ -199,115 +134,6 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
 
 }
 
-
-xyarray *readxy(FILE *fid, char ParityFlip)
-{
-	char ASCII = 0;
-	qidx ii, jj, numxy, numfields;
-	magicval magic;
-	xyarray *thepix = NULL;
-	int tmpchar;
-
-	if (fread(&magic, sizeof(magic), 1, fid) != 1) {
-		fprintf(stderr, "ERROR (readxy) -- bad magic value in field file.\n");
-		return ((xyarray *)NULL);
-	}
-	if (magic == ASCII_VAL) {
-		ASCII = 1;
-		if (fscanf(fid, "mFields=%lu\n", &numfields) != 1) {
-			fprintf(stderr, "ERROR (readxy) -- bad first line in field file.\n");
-			return ((xyarray *)NULL);
-		}
-	} else {
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (readxy) -- bad magic value in field file.\n");
-			return ((xyarray *)NULL);
-		}
-		ASCII = 0;
-		if (fread(&numfields, sizeof(numfields), 1, fid) != 1) {
-			fprintf(stderr, "ERROR (readxy) -- bad numfields fread in field file.\n");
-			return ((xyarray *)NULL);
-		}
-	}
-	thepix = mk_xyarray(numfields);
-	for (ii = 0;ii < numfields;ii++) {
-		if (ASCII) {
-			tmpchar = fgetc(fid);
-			while (tmpchar == COMMENT_CHAR) {
-				fscanf(fid, "%*[^\n]");
-				fgetc(fid);
-				tmpchar = fgetc(fid);
-			}
-			ungetc(tmpchar, fid);
-			fscanf(fid, "%lu", &numxy); // CHECK THE RETURN VALUE MORON!
-		} else
-			fread(&numxy, sizeof(numxy), 1, fid); // CHECK THE RETURN VALUE MORON!
-		thepix->array[ii] = mk_xy(numxy);
-		if (xya_ref(thepix, ii) == NULL) {
-			fprintf(stderr, "ERROR (readxy) - out of memory at field %lu\n", ii);
-			free_xyarray(thepix);
-			return (xyarray *)NULL;
-		}
-		if (ASCII) {
-			for (jj = 0;jj < numxy;jj++)
-				fscanf(fid, ",%lf,%lf", (thepix->array[ii]->farr) + 2*jj,
-				       (thepix->array[ii]->farr) + 2*jj + 1 );
-			fscanf(fid, "\n");
-		} else
-			fread(thepix->array[ii]->farr, sizeof(double), DIM_XY*numxy, fid);
-
-		if (ParityFlip) {
-			double swaptmp;
-			for (jj = 0;jj < numxy;jj++) {
-				swaptmp = *((thepix->array[ii]->farr) + 2 * jj + 1);
-				*((thepix->array[ii]->farr) + 2*jj + 1) =
-				    *((thepix->array[ii]->farr) + 2 * jj);
-				*((thepix->array[ii]->farr) + 2*jj) = swaptmp;
-			}
-		}
-	}
-
-	return thepix;
-}
-
-
-#ifndef NO_AKM
-kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax,
-                    double *decmin, double *decmax)
-{
-	kdtree *starkd = fread_kdtree(treefid);
-	fread(ramin, sizeof(double), 1, treefid);
-	fread(ramax, sizeof(double), 1, treefid);
-	fread(decmin, sizeof(double), 1, treefid);
-	fread(decmax, sizeof(double), 1, treefid);
-	return starkd;
-}
-
-kdtree *read_codekd(FILE *treefid, double *index_scale)
-{
-	kdtree *codekd = fread_kdtree(treefid);
-	fread(index_scale, sizeof(double), 1, treefid);
-	return codekd;
-}
-
-void write_starkd(FILE *treefid, kdtree *starkd,
-                  double ramin, double ramax, double decmin, double decmax)
-{
-	fwrite_kdtree(starkd, treefid);
-	fwrite(&ramin, sizeof(double), 1, treefid);
-	fwrite(&ramax, sizeof(double), 1, treefid);
-	fwrite(&decmin, sizeof(double), 1, treefid);
-	fwrite(&decmax, sizeof(double), 1, treefid);
-	return ;
-}
-
-void write_codekd(FILE *treefid, kdtree *codekd, double index_scale)
-{
-	fwrite_kdtree(codekd, treefid);
-	fwrite(&index_scale, sizeof(double), 1, treefid);
-	return ;
-}
-#endif
 
 char *mk_filename(const char *basename, const char *extension)
 {
