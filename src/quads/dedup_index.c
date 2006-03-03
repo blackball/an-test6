@@ -216,10 +216,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		cx = codearray[i*Dim_Codes + 0];
-		cy = codearray[i*Dim_Codes + 1];
-		dx = codearray[i*Dim_Codes + 2];
-		dy = codearray[i*Dim_Codes + 3];
+		cx = codearray[i * Dim_Codes + 0];
+		cy = codearray[i * Dim_Codes + 1];
+		dx = codearray[i * Dim_Codes + 2];
+		dy = codearray[i * Dim_Codes + 3];
 		writeonecode(codeout, cx, cy, dx, dy);
 
 		iA = quadarray[i * DimQuads + 0];
