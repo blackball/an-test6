@@ -10,18 +10,20 @@
 ;   originalastr - the original astrometry header info; over-rides
 ;                  header to FITS file
 ;   xylist       - X,Y list of stars in image
+;   xyfile       - OR you can pass a ASCII file name with X,Y,FLUX
+;                   xyfile overrides xylist. 
 ;   siporder     - order for SIP distortions; default 1 (ie, no
 ;                  distortions)
 ;   qa           - name of PS file for QA plots
 ; BUGS:
 ;   - Not tested.
 ;   - Dependencies.
-;   - xylist "optional" input is currently REQUIRED.
+;   - xylist "optional" input is currently REQUIRED unless you pass xyfile
 ;   - jitter hard-wired.
 ; REVISION HISTORY:
 ;-
 function an_tweak, imagefile,exten=exten, $
-                   originalastr=originalastr,xylist=xylist, $
+                   originalastr=originalastr,xylist=xylist, xyfile=xyfile, $
                    siporder=siporder,qa=qa
 if (not keyword_set(siporder)) then siporder= 1
 if (not keyword_set(nsigma)) then nsigma= 5.0
@@ -30,9 +32,21 @@ if (not keyword_set(nsigma)) then nsigma= 5.0
 if (NOT keyword_set(originalastr)) then begin
     hdr= headfits(imagefile,exten=exten)
     extast, hdr,originalastr
+    if not keyword_set(originalastr) then begin 
+        print,'ERROR: Image file ',imagefile
+        print,'       does not appear to have an astrometric header'
+        return,0
+    endif
 endif
+
 astr= originalastr
 splog, 'got original ASTR structure'
+
+; read in xyfile if keyword is set -- this overrides xylist
+if keyword_set(xyfile) then begin 
+    readcol, xyfile, x_in, y_in, flux_in    ; read file
+    xylist={x:x_in, y:y_in, flux:flux_in}   ; pack in a structure
+endif 
 
 ; get x,y list for image
 ;if (NOT keyword_set(xylist)) then begin
