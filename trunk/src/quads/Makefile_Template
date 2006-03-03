@@ -15,7 +15,7 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
 	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
-	hitsfile.o ioutils.o suspend.o matchfile.o lsfile.o catalog.o codefile.o
+	hitsfile.o ioutils.o suspend.o matchfile.o lsfile.o catalog.o codefile.o tic.o
 
 EXECS = randcat startree genfields quadidx solvexy fieldquads findstar findquad \
 	findcode all_quads fixheaders codetomatlab startree2 deduplicate codetree2  \

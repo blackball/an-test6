@@ -27,6 +27,7 @@
 #include "catalog.h"
 #include "hitlist.h"
 #include "hitlist_healpix.h"
+#include "tic.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -92,24 +93,6 @@ char* get_pathname(char* fname) {
 	return strdup(resolved);
 }
 
-int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss) {
-	struct rusage usage;
-	if (getrusage(RUSAGE_SELF, &usage)) {
-		fprintf(stderr, "getrusage failed: %s\n", strerror(errno));
-		return 1;
-	}
-	if (p_usertime) {
-		*p_usertime = usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-	}
-	if (p_systime) {
-		*p_systime = usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-	}
-	if (p_maxrss) {
-		*p_maxrss = usage.ru_maxrss;
-	}
-	return 0;
-}
-
 int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
     qidx numfields, numquads;
@@ -127,10 +110,9 @@ int main(int argc, char *argv[]) {
 	char* progname = argv[0];
 	int i;
 	char* path;
-	time_t starttime, endtime;
 	sidx numstars;
 
-	starttime = time(NULL);
+	tic();
 
     if (argc != 1) {
 		printHelp(progname);
@@ -311,17 +293,7 @@ int main(int argc, char *argv[]) {
 		free(agreesizehist);
 	}
 
-	{
-		double utime, stime;
-		long rss;
-		int dtime;
-		endtime = time(NULL);
-		dtime = (int)(endtime - starttime);
-		if (!get_resource_stats(&utime, &stime, &rss)) {
-			fprintf(stderr, "Finished: used %g s user, %g s system (%g s total), %i s wall time, max rss %li\n",
-					utime, stime, utime+stime, dtime, rss);
-		}
-	}
+	toc();
 
 	return 0;
 }

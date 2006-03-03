@@ -11,6 +11,7 @@
 #include "starutil.h"
 #include "fileutil.h"
 #include "blocklist.h"
+#include "tic.h"
 
 #define OPTIONS "hcqf:s:l:x"
 
@@ -66,24 +67,6 @@ void print_help(char* progname) {
 		   "     [-x]                 (don't write quad index .qidx file)\n"
 		   "\n"
 		   , progname);
-}
-
-int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss) {
-	struct rusage usage;
-	if (getrusage(RUSAGE_SELF, &usage)) {
-		fprintf(stderr, "getrusage failed: %s\n", strerror(errno));
-		return 1;
-	}
-	if (p_usertime) {
-		*p_usertime = usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-	}
-	if (p_systime) {
-		*p_systime = usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-	}
-	if (p_maxrss) {
-		*p_maxrss = usage.ru_maxrss;
-	}
-	return 0;
 }
 
 // the star ids in each healpix.  size HEALPIXES * NSTARS.
@@ -340,14 +323,12 @@ int main(int argc, char *argv[]) {
 	int i, nquads = 0;
 	int p;
 
-	time_t starttime, endtime;
-
 	double* starxyz = NULL;
 
 	int quadnum = 0;
 
 
-	starttime = time(NULL);
+	tic();
 
     progname = argv[0];
 
@@ -675,17 +656,7 @@ int main(int argc, char *argv[]) {
 		fclose(catfid);
 	}
 
-	{
-		double utime, stime;
-		long rss;
-		int dtime;
-		endtime = time(NULL);
-		dtime = (int)(endtime - starttime);
-		if (!get_resource_stats(&utime, &stime, &rss)) {
-			fprintf(stderr, "Finished: used %g s user, %g s system (%g s total), %i s wall time, max rss %li\n",
-					utime, stime, utime+stime, dtime, rss);
-		}
-	}
+	toc();
 
 	return 0;
 
