@@ -78,6 +78,11 @@ sidx*   quadindex;
 // the largest star and quad available in the corresponding files.
 qidx maxquad;
 
+// histogram of the size of agreement clusters.
+int *agreesizehist;
+int Nagreehist;
+
+
 char* get_pathname(char* fname) {
 	char resolved[PATH_MAX];
 	if (!realpath(fname, resolved)) {
@@ -257,6 +262,11 @@ int main(int argc, char *argv[]) {
 	matchfile.fieldunits_lower = funits_lower;
 	matchfile.fieldunits_upper = funits_upper;
 
+	Nagreehist = 100;
+	agreesizehist = malloc(Nagreehist * sizeof(int));
+	for (i=0; i<Nagreehist; i++)
+		agreesizehist[i] = 0;
+
 	// Do it!
 	solve_fields(thefields, codekd);
 
@@ -282,6 +292,24 @@ int main(int argc, char *argv[]) {
 	}
 
 	catalog_close(cat);
+
+	{
+		int maxagree = 0;
+		for (i=0; i<Nagreehist; i++)
+			if (agreesizehist[i])
+				maxagree = i;
+		/*
+		  if (agreesizehist[i] > maxagree)
+		  maxagree = agreesizehist[i];
+		*/
+		fprintf(stderr, "Agreement cluster size histogram:\n");
+		fprintf(stderr, "nagreehist_total=[");
+		for (i=0; i<=maxagree; i++)
+			fprintf(stderr, "%i,", agreesizehist[i]);
+		fprintf(stderr, "];\n");
+
+		free(agreesizehist);
+	}
 
 	{
 		double utime, stime;
@@ -501,9 +529,30 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 			int nbest, j;
 			blocklist* best;
 
-			nbest = hitlist_count_best(hits);
-			if (nbest >= nagree) {
+			{
+				int* thisagreehist;
+				int maxagree = 0;
+				thisagreehist = malloc(Nagreehist * sizeof(int));
+				for (i=0; i<Nagreehist; i++)
+					thisagreehist[i] = 0;
+
+				hitlist_histogram_agreement_size(hits, thisagreehist, Nagreehist);
+
+				for (i=0; i<Nagreehist; i++)
+					if (thisagreehist[i]) {
+						// global total...
+						agreesizehist[i] += thisagreehist[i];
+						maxagree = i;
+					}
+				fprintf(stderr, "Agreement cluster size histogram:\n");
+				fprintf(stderr, "nagreehist=[");
+				for (i=0; i<=maxagree; i++)
+					fprintf(stderr, "%i,", thisagreehist[i]);
+				fprintf(stderr, "];\n");
+				free(thisagreehist);
 			}
+
+			nbest = hitlist_count_best(hits);
 
 			fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
