@@ -454,6 +454,8 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 	if (funits_upper != 0.0) {
 		solver.minAB = index_scale * index_scale_lower / funits_upper;
+		solver.arcsec_per_pixel_upper = funits_upper;
+		solver.arcsec_per_pixel_lower = funits_lower;
 		fprintf(stderr, "Set minAB to %g\n", solver.minAB);
 	}
 	if (funits_lower != 0.0) {

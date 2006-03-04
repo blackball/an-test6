@@ -23,6 +23,9 @@ void solver_default_params(solver_params* params) {
 	params->quitNow = FALSE;
 	params->minAB = 0.0;
 	params->maxAB = 1e300;
+	params->arcsec_per_pixel_lower = 0.0;
+	params->arcsec_per_pixel_upper = 1.0e300;
+	params->maxAB = 1e300;
 	params->cornerpix = NULL;
 	params->handlehit = NULL;
 	params->numtries = 0;
@@ -317,8 +320,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
 
-		mo = mk_MatchObj();
-
 		thisquadno = (qidx)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
 		getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
@@ -327,6 +328,34 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		sMax = mk_star();
 		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
+
+		free(transform);
+
+		// scale checking
+		// fieldunitsupper/lower is in arcseconds/pixel
+		{
+			double d, c;
+			d  = square(star_ref(sMax, 0) - star_ref(sMin, 0));
+			d += square(star_ref(sMax, 1) - star_ref(sMin, 1));
+			d += square(star_ref(sMax, 2) - star_ref(sMin, 2));
+			d = rad2deg(sqrt(d))*60.0*60.0;
+
+			c  = square(xy_refy(params->cornerpix, 1) - xy_refy(params->cornerpix, 0));
+		        c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
+			c = sqrt(c);
+
+			if ((d/c > params->arcsec_per_pixel_upper) || (d/c < params->arcsec_per_pixel_lower)) {
+				// remove this quad
+				free_star(sMin);
+				free_star(sMax);
+				free_star(sA);
+				free_star(sB);
+				free_star(sC);
+				free_star(sD);
+			}
+		}
+
+		mo = mk_MatchObj();
 
 		mo->quadno = thisquadno;
 		mo->iA = iA;
@@ -341,6 +370,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		mo->sMin = sMin;
 		mo->sMax = sMax;
 
+
 		mo->vector[0] = star_ref(sMin, 0);
 		mo->vector[1] = star_ref(sMin, 1);
 		mo->vector[2] = star_ref(sMin, 2);
@@ -349,9 +379,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		mo->vector[5] = star_ref(sMax, 2);
 
 		mo->code_err = krez->sdists[jj];
-
-		//mo->transform = transform;
-		free(transform);
 
 		/*
 

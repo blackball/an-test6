@@ -28,6 +28,8 @@ struct solver_params {
 	// of the quads to find.
 	double minAB;
 	double maxAB;
+	double arcsec_per_pixel_lower;
+	double arcsec_per_pixel_upper;
 
 	// Must be initialized by caller; will contain outputs:
 	xy* cornerpix;
