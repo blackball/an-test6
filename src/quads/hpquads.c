@@ -43,27 +43,6 @@ void print_help(char* progname)
 	       , progname);
 }
 
-/*
-int get_resource_stats(double* p_usertime, double* p_systime, long* p_maxrss)
-{
-	struct rusage usage;
-	if (getrusage(RUSAGE_SELF, &usage)) {
-		fprintf(stderr, "getrusage failed: %s\n", strerror(errno));
-		return 1;
-	}
-	if (p_usertime) {
-		*p_usertime = usage.ru_utime.tv_sec + 1e-6 * usage.ru_utime.tv_usec;
-	}
-	if (p_systime) {
-		*p_systime = usage.ru_stime.tv_sec + 1e-6 * usage.ru_stime.tv_usec;
-	}
-	if (p_maxrss) {
-		*p_maxrss = usage.ru_maxrss;
-	}
-	return 0;
-}
-*/
-
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
 void star_coords_2(double *s, double *r, double *x, double *y)
@@ -678,20 +657,6 @@ int main(int argc, char** argv)
 	}
 
 	toc();
-
-		/*
-	{
-		double utime, stime;
-		long rss;
-		int dtime;
-		endtime = time(NULL);
-		dtime = (int)(endtime - starttime);
-		if (!get_resource_stats(&utime, &stime, &rss)) {
-			fprintf(stderr, "Finished: used %g s user, %g s system (%g s total), %i s wall time, max rss %li\n",
-			        utime, stime, utime + stime, dtime, rss);
-		}
-	}
-	*/
 
 	fprintf(stderr, "Done.\n");
 	fflush(stderr);
