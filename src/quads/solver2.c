@@ -139,7 +139,6 @@ void solve_field(solver_params* params) {
 		fprintf(stderr,
 				"    using %lu of %lu objects (%i quads agree so far; %i tried, %i matched)      \n",
 				newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
-				//"    using %lu of %lu objects (%i quads agree so far; %i tried, %i matched)      \r",
 
 		if ((params->max_matches_needed && (params->mostagree >= params->max_matches_needed)) ||
 			(params->maxtries && (params->numtries >= params->maxtries)) ||
@@ -316,7 +315,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
     sC = mk_star();
     sD = mk_star();
 
-    // This should normally only loop once; only one match should be found
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
 

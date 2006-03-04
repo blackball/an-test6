@@ -69,6 +69,8 @@ int main(int argc, char *argv[]) {
 	if (readStatus == READ_FAIL)
 		fprintf(stderr, "ERROR (quadidx) -- read_quad_header failed\n");
 
+	fprintf(stderr, "%lu quads, %lu stars.\n", numquads, numstars);
+
 	posmarker = ftello(quadfid);
 
 	fopenout(idxfname, idxfid);

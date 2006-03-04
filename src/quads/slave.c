@@ -502,29 +502,28 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		if (agreement) {
 			int nbest, j;
 			blocklist* best;
+			int* thisagreehist;
+			int maxagree = 0;
+			int k;
+			thisagreehist = malloc(Nagreehist * sizeof(int));
+			for (k=0; k<Nagreehist; k++)
+				thisagreehist[k] = 0;
 
-			{
-				int* thisagreehist;
-				int maxagree = 0;
-				thisagreehist = malloc(Nagreehist * sizeof(int));
-				for (i=0; i<Nagreehist; i++)
-					thisagreehist[i] = 0;
+			hitlist_histogram_agreement_size(hits, thisagreehist, Nagreehist);
 
-				hitlist_histogram_agreement_size(hits, thisagreehist, Nagreehist);
-
-				for (i=0; i<Nagreehist; i++)
-					if (thisagreehist[i]) {
-						// global total...
-						agreesizehist[i] += thisagreehist[i];
-						maxagree = i;
-					}
-				fprintf(stderr, "Agreement cluster size histogram:\n");
-				fprintf(stderr, "nagreehist=[");
-				for (i=0; i<=maxagree; i++)
-					fprintf(stderr, "%i,", thisagreehist[i]);
-				fprintf(stderr, "];\n");
-				free(thisagreehist);
-			}
+			for (k=0; k<Nagreehist; k++)
+				if (thisagreehist[k]) {
+					// global total...
+					agreesizehist[k] += thisagreehist[k];
+					maxagree = k;
+				}
+			fprintf(stderr, "Agreement cluster size histogram:\n");
+			fprintf(stderr, "nagreehist=[");
+			for (k=0; k<=maxagree; k++)
+				fprintf(stderr, "%i,", thisagreehist[k]);
+			fprintf(stderr, "];\n");
+			free(thisagreehist);
+			thisagreehist = NULL;
 
 			nbest = hitlist_count_best(hits);
 
