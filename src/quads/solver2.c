@@ -348,10 +348,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 				// remove this quad
 				free_star(sMin);
 				free_star(sMax);
-				free_star(sA);
-				free_star(sB);
-				free_star(sC);
-				free_star(sD);
+				continue;
 			}
 		}
 
