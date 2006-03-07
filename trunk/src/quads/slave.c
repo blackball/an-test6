@@ -200,8 +200,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
 			exit(-1);
 		}
-
-		// index_scale is specified in radians - switch to arcsec.
 		index_scale = quadfile_get_index_scale_arcsec(quads);
 
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
@@ -244,7 +242,6 @@ int main(int argc, char *argv[]) {
 			fclose(batchfid);
 		}
 
-		blocklist_free(fieldlist);
 		free_xyarray(thefields);
 		fclose(matchfid);
 		free_fn(fieldfname);
@@ -270,6 +267,8 @@ int main(int argc, char *argv[]) {
 
 		toc();
 	}
+
+	blocklist_free(fieldlist);
 
 	return 0;
 }
