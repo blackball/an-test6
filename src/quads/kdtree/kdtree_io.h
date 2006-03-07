@@ -63,7 +63,7 @@ kdtree_t* kdtree_portable_read(FILE* fin, int use_mmap,
 */
 int kdtree_write(FILE* fout, kdtree_t* kdtree);
 
-kdtree_t* kdtree_read(FILE* fin, int use_mmap,
-					  void** mmapped, size_t* mmapped_size);
+kdtree_t* kdtree_read(FILE* fin);
+void kdtree_close(kdtree_t* kd);
 
 #endif

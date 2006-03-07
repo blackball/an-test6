@@ -78,8 +78,8 @@ void list_free_nodes(list* l)
   candidate search nodes.
 */
 void dualtree_recurse(list* nodes, list* leaves,
-                       node* query,
-					   dualtree_callbacks* callbacks) {
+                       node* query, dualtree_callbacks* callbacks) {
+
 	// general idea:
 	//   for each element in search list:
 	//     if decision(elem, query)

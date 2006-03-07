@@ -309,9 +309,9 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "  Reading code KD tree from %s...", treefname);
 	fflush(stderr);
 	fopenin(treefname, treefid);
-	codekd = kdtree_read(treefid, use_mmap, &mmapped_tree, &mmapped_tree_size);
+	codekd = kdtree_read(treefid);
 	if (!codekd)
-		return (2);
+		return 2;
 	fclose(treefid);
 	fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 			codekd->ndata, codekd->nnodes, codekd->ndim);
@@ -510,8 +510,7 @@ int main(int argc, char *argv[]) {
 
 	free_xyarray(thefields);
 	if (use_mmap) {
-		munmap(mmapped_tree, mmapped_tree_size);
-		free(codekd);
+		kdtree_close(codekd);
 		munmap(mmap_quad, mmap_quad_size);
 		munmap(mmap_cat, mmap_cat_size);
 	} else {

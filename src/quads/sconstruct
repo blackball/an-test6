@@ -3,36 +3,17 @@ if 'debug' in COMMAND_LINE_TARGETS:
 else:
     DEBUG = '-O2'
 
-env = Environment(LIBS='m', CCFLAGS=Split(DEBUG + ' -Wall'), CPPDEFINES='_LARGEFILE_SOURCE',
-                  CPPPATH=['kdtree', 'kdtree/CuTest/'])
+env = Environment(LIBS='m',
+                  CCFLAGS=Split(DEBUG + ' -Wall'),
+                  CPPDEFINES=Split('_LARGEFILE_SOURCE NO_KD_INCLUDES'),
+                  CPPPATH=Split('kdtree kdtree/CuTest/ .'))
 
+KD = 'kdtree/kdtree.c kdtree/kdtree_io.c ioutils.c'.split()
 env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c kdtree/test_kdtree.c'))
-#env.Program('test_with_sdl', Split('kdtree/kdtree.c kdtree/test_with_sdl.c'), LIBS='SDL')
-
-KD = 'kdtree/kdtree.c kdtree/kdtree_io.c'.split()
-AKM = 'KD/ambs.c KD/amdvy.c'.split()
-AKM = Split('''KD/ambs.c KD/amar.c KD/am_file.c KD/am_string.c 
-               KD/am_string_array.c KD/amdyv.c KD/amdyv_array.c KD/amma.c KD/amiv.c KD/am_proc.c''')
-#env.Program('codetree2',
-#    KD + AKM + Split('codetree2.c starutil.c ioutils.c fileutil.c kdutil.c KD/kdtree.c'))
-#env.Program('codetree2', KD + Split('codetree2.c ioutils.c fileutil.c'))
-env.Program('hpquads', Split('hpquads.c starutil2.c ioutils.c catalog.c fileutil2.c blocklist.c healpix.c'))
-
-EXECS = Split('''
-        randcat startree genfields quadidx solvexy fieldquads findstar findquad
-        findcode all_quads fixheaders codetomatlab startree2 deduplicate codetree2 
-        printheaders get_healpix quadidx2 xylstomatlab rdlstohealpix codedensity
-        codeprojections fixmatchfile printmatchfile rdls2hpls certifiable tilequads
-        ''')
-
-import glob
-objs = glob.glob('*.c')
-for e in EXECS:
-    objs.remove(e+'.c')
-objs.remove('all_quads_random.c')
-objs.remove('dualtree_test.c')
-objs.remove('workernode.c')
-
-for e in EXECS:
-    env.Program(e, [e+'.c']+ objs)
-
+env.Program('hpquads', Split('hpquads.c tic.c starutil2.c ioutils.c catalog.c fileutil2.c blocklist.c healpix.c'))
+env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil2.c'))
+env.Program('codetree2', KD + Split('codetree2.c fileutil2.c codefile.c'))
+env.Program('findquad', Split('findquad.c fileutil2.c'))
+env.Program('findcode', Split('findquad.c fileutil2.c'))
+env.Program('startree2', KD + Split('startree2.c fileutil2.c'))
+env.Program('randcat', KD + Split('startree2.c fileutil2.c'))

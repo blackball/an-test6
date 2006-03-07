@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		readStatus = read_quad_header(quadfid, &numquads, &numstars, 
 					      &DimQuads, &index_scale);
 		if (readStatus == READ_FAIL)
-			return (1);
+			return 1;
 		fprintf(stderr, "    (%lu quads, %lu total stars, scale=%f arcmin)\n",
 		        numquads, numstars, rad2arcmin(index_scale));
 		if (quadset == TRUE) {
