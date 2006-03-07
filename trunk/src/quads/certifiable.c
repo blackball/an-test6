@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
 				if (dist2 > fieldrad2)
 					fieldrad2 = dist2;
 			}
-			if (fieldrad2 * 1.1 < radius2) {
+			if (fieldrad2 * 1.2 < radius2) {
 				fprintf(stderr, "\nField %i: match says scale is %g, but field radius is %g.\n", fieldnum,
 						60.0 * rad2deg(distsq2arc(radius2)),
 						60.0 * rad2deg(distsq2arc(fieldrad2)));
