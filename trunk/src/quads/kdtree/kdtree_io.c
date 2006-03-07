@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <sys/mman.h>
 
@@ -241,8 +242,7 @@ kdtree_t* kdtree_portable_read(FILE* fin, int use_mmap,
 			free(tree);
 			return NULL;
 		}
-		if (mmapped)
-			*mmapped = map;
+		tree->mmapped = map;
 		if (mmapped_size)
 			*mmapped_size = size + offset;
 
@@ -330,14 +330,20 @@ int kdtree_write(FILE* fout, kdtree_t* kdtree) {
     return 0;
 }
 
-kdtree_t* kdtree_read(FILE* fin, int use_mmap,
-					  void** mmapped, size_t* mmapped_size) {
+kdtree_t* kdtree_read(FILE* fin) {
     unsigned char ver, rs, is, kdns;
     unsigned int endian, ns;
     unsigned int N, D, nnodes;
     kdtree_t* tree;
     int nodesize;
 	int err = 0;
+	char* map;
+	int permsize;
+	int datasize;
+	int treesize;
+	off_t offset;
+	size_t size;
+
 
     if (!err) err |= read_u8(fin, &ver);
 	if (!err) err |= read_u8(fin, &rs);
@@ -397,80 +403,48 @@ kdtree_t* kdtree_read(FILE* fin, int use_mmap,
     tree->ndim = D;
     tree->nnodes = nnodes;
 
-    if (use_mmap) {
-		char* map;
-		int permsize;
-		int datasize;
-		int treesize;
-		off_t offset;
-		size_t size;
+	offset = ftello(fin);
 
-		offset = ftello(fin);
+	// size of permutation array.
+	permsize = sizeof(unsigned int) * N;
+	// size of data block.
+	datasize = sizeof(real) * N * D;
+	// size of the kdtree nodes.
+	treesize = nodesize * nnodes;
 
-		// size of permutation array.
-		permsize = sizeof(unsigned int) * N;
-		// size of data block.
-		datasize = sizeof(real) * N * D;
-		// size of the kdtree nodes.
-		treesize = nodesize * nnodes;
+	size = permsize + datasize + treesize;
 
-		size = permsize + datasize + treesize;
+	/*
+	  fprintf(stderr, "kdtree_read: N=%i, D=%i, Nnodes=%i.\n",
+	  N, D, nnodes);
+	  fprintf(stderr, "  nodesize=%i, offset=%llu.\n",
+	  nodesize, offset);
+	  fprintf(stderr, "  permsize=%i, datasize=%i, treesize=%i.\n",
+	  permsize, datasize, treesize);
+	  fprintf(stderr, "  size=%lu\n", (long unsigned int)size);
+	*/
 
-		/*
-		  fprintf(stderr, "kdtree_read: N=%i, D=%i, Nnodes=%i.\n",
-		  N, D, nnodes);
-		  fprintf(stderr, "  nodesize=%i, offset=%llu.\n",
-		  nodesize, offset);
-		  fprintf(stderr, "  permsize=%i, datasize=%i, treesize=%i.\n",
-		  permsize, datasize, treesize);
-		  fprintf(stderr, "  size=%lu\n", (long unsigned int)size);
-		*/
+	map = mmap(0, size+offset, PROT_READ, MAP_SHARED,
+			   fileno(fin), 0);
 
-		map = mmap(0, size+offset, PROT_READ, MAP_SHARED,
-				   fileno(fin), 0);
+	if (map == MAP_FAILED) {
+		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
+		free(tree);
+		return NULL;
+	}
+	tree->mmapped = map;
+	tree->mmapped_size = size + offset;
 
-		if (map == MAP_FAILED) {
-			fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
-			free(tree);
-			return NULL;
-		}
-		if (mmapped)
-			*mmapped = map;
-		if (mmapped_size)
-			*mmapped_size = size + offset;
+	tree->perm = (unsigned int*) (map + offset);
+	tree->data = (real*)         (map + offset + permsize);
+	tree->tree = (kdtree_node_t*)(map + offset + permsize + datasize);
 
-		tree->perm = (unsigned int*) (map + offset);
-		tree->data = (real*)         (map + offset + permsize);
-		tree->tree = (kdtree_node_t*)(map + offset + permsize + datasize);
-
-    } else {
-
-		tree->perm = (unsigned int*) malloc(sizeof(unsigned int) * N);
-		tree->data = (real*)         malloc(sizeof(real) * N * D);
-		tree->tree = (kdtree_node_t*)malloc(nodesize * nnodes);
-
-		if (!tree->perm || !tree->data || !tree->tree) {
-			fprintf(stderr, "Couldn't allocate memory for kdtree structures.\n");
-			free(tree->perm);
-			free(tree->data);
-			free(tree->tree);
-			free(tree);
-			return NULL;
-		}
-
-		if (!err) err |= (fread(tree->perm, sizeof(unsigned int), N, fin) != N);
-		if (!err) err |= (fread(tree->data, sizeof(real), N*D, fin) != (N*D));
-		if (!err) err |= (fread(tree->tree, nodesize, nnodes, fin) != nnodes);
-		if (err) {
-			fprintf(stderr, "Couldn't read kdtree structures.\n");
-			free(tree->perm);
-			free(tree->data);
-			free(tree->tree);
-			free(tree);
-			return NULL;
-		}
-    }
     return tree;
 }
 
 
+void kdtree_close(kdtree_t* kd) {
+	assert(kd);
+	munmap(kd->mmapped, kd->mmapped_size);
+	free(kd);
+}

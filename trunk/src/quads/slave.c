@@ -101,8 +101,6 @@ int main(int argc, char *argv[]) {
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
 
-    void*  mmap_tree = NULL;
-    size_t mmap_tree_size = 0;
 	void*  mmap_quad = NULL;
 	size_t mmap_quad_size = 0;
 
@@ -180,7 +178,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "  Reading code KD tree from %s...", treefname);
 	fflush(stderr);
 	fopenin(treefname, treefid);
-	codekd = kdtree_read(treefid, use_mmap, &mmap_tree, &mmap_tree_size);
+	codekd = kdtree_read(treefid);
 	if (!codekd)
 		exit(-1);
 	fclose(treefid);
@@ -265,8 +263,7 @@ int main(int argc, char *argv[]) {
 	free_fn(fieldfname);
 	free_fn(treefname);
 	if (use_mmap) {
-		munmap(mmap_tree, mmap_tree_size);
-		free(codekd);
+		kdtree_close(codekd);
 		munmap(mmap_quad, mmap_quad_size);
 	} else {
 		kdtree_free(codekd);

@@ -26,9 +26,11 @@ struct kdtree {
 	kdtree_node_t *tree;   /* Flat tree storing nodes and HR's */
 	real *data;            /* Raw coordinate data as xyzxyzxyz */
 	unsigned int *perm;    /* Permutation index */
-    unsigned int ndata;             /* Number of items */
-    unsigned int ndim;              /* Number of dimensions */
-    unsigned int nnodes;            /* Number of internal nodes */
+	unsigned int ndata;    /* Number of items */
+	unsigned int ndim;     /* Number of dimensions */
+	unsigned int nnodes;   /* Number of internal nodes */
+	void* mmapped;         /* Next two are for mmap'd access */
+	unsigned int mmapped_size;  
 };
 typedef struct kdtree kdtree_t;
 
