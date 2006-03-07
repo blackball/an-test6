@@ -374,6 +374,7 @@ void flush_solved_fields(bool doleftovers,
 		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
 		best = hitlist_get_best(hl);
+		//best = hitlist_get_all_best(hl);
 		/*
 		  best = hitlist_get_all_above_size(hl, min_matches_to_agree);
 		  nbest = blocklist_count(best);

@@ -20,11 +20,11 @@
 #include "solver2.h"
 #include "solver2_callbacks.h"
 #include "hitsfile.h"
-#include "suspend.h"
 #include "hitlist.h"
+#include "catalog.h"
+#include "quadfile.h"
 
 char* OPTIONS = "hpef:o:t:n:x:d:r:R:D:H:F:T:vS:L:a:b:IB:";
-// M:
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s -f fname -o fieldname\n"
@@ -41,10 +41,9 @@ void printHelp(char* progname) {
 			"   [-D maximum-dec-for-debug-output]\n"
 			"   [-S first-field]\n"
 			"   [-L last-field]\n"
-			"   [-a resume-from-file]\n"
-			"   [-b suspend-to-file]\n"
+			//"   [-a resume-from-file]\n"
+			//"   [-b suspend-to-file]\n"
 			"   [-I] (interactive mode - probably only useful from Python)\n"
-			//"   [-M match-file-name]\n"
 			"   [-B batch-file-name]\n"
 			"%s"
 			"     code tol is the RADIUS (not diameter or radius^2) in 4d codespace\n",
@@ -69,22 +68,22 @@ int get_next_assignment();
 char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
-//FILE* matchfid = NULL;
-off_t qposmarker, cposmarker;
+off_t cposmarker;
 
-char *resumefname = NULL;
-FILE* resumefid;
-char *suspendfname = NULL;
-FILE* suspendfid;
+/*
+  char *resumefname = NULL;
+  FILE* resumefid;
+  char *suspendfname = NULL;
+  FILE* suspendfid;
+*/
 
-double* catalogue;
-sidx*   quadindex;
+catalog* cat;
+quadfile* quads;
 
 bool use_mmap = TRUE;
 
 // the largest star and quad available in the corresponding files.
 sidx maxstar;
-qidx maxquad;
 
 char ParityFlip = DEFAULT_PARITY_FLIP;
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
@@ -97,7 +96,7 @@ double DebuggingDecMax;
 int Debugging = 0;
 bool verbose = FALSE;
 bool interactive = FALSE;
-bool rename_suspend;
+//bool rename_suspend;
 bool batchmode = FALSE;
 int maxfieldobjs = 0;
 int firstfield = 0;
@@ -117,30 +116,19 @@ int main(int argc, char *argv[]) {
     int argidx, argchar; //  opterr = 0;
     double codetol = DEFAULT_CODE_TOL;
     FILE *fieldfid = NULL, *treefid = NULL;
-    qidx numfields, numquads, numsolved;
+    qidx numfields, numsolved;
     sidx numstars;
-    char readStatus;
-    double index_scale, ramin, ramax, decmin, decmax;
-    dimension Dim_Quads, Dim_Stars;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
     int fieldtries = 0;
 
-    void*  mmapped_tree = NULL;
-    size_t mmapped_tree_size = 0;
-	void*  mmap_cat = NULL;
-	size_t mmap_cat_size = 0;
-	void*  mmap_quad = NULL;
-	size_t mmap_quad_size = 0;
-
-	off_t endoffset;
 	hits_header hitshdr;
 	char* progname = argv[0];
 	char alloptions[256];
 	char* hitlist_options;
 
-	//char* matchfname = NULL;
 	char* batchfname = NULL;
+	char* basefname = NULL;
 
     if (argc <= 4) {
 		printHelp(progname);
@@ -161,11 +149,6 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		switch (argchar) {
-			/*
-			  case 'M':
-			  matchfname = optarg;
-			  break;
-			*/
 		case 'B':
 			batchfname = optarg;
 			batchmode = TRUE;
@@ -173,13 +156,15 @@ int main(int argc, char *argv[]) {
 		case 'I':
 			interactive = TRUE;
 			break;
-		case 'a':
-			resumefname = strdup(optarg);
-			break;
-		case 'b':
-			suspendfname = strdup(optarg);
-			break;
-		case 'S':
+			/*
+			  case 'a':
+			  resumefname = strdup(optarg);
+			  break;
+			  case 'b':
+			  suspendfname = strdup(optarg);
+			  break;
+			  case 'S':
+			*/
 			firstfield = atoi(optarg);
 			break;
 		case 'L':
@@ -225,9 +210,10 @@ int main(int argc, char *argv[]) {
 			hitfname = strdup(optarg);
 			break;
 		case 'f':
+			basefname = optarg;
 			treefname = mk_ctree2fn(optarg);
 			quadfname = mk_quadfn(optarg);
-			catfname = mk_catfn(optarg);
+			//catfname = mk_catfn(optarg);
 			break;
 		case 'o':
 			fieldfname = mk_fieldfn(optarg);
@@ -272,24 +258,8 @@ int main(int argc, char *argv[]) {
 		return (OPT_ERR);
 	}
 
-	/*
-	  fprintf(stderr, "sizeof(int)    = %i\n", sizeof(int));
-	  fprintf(stderr, "sizeof(long)   = %i\n", sizeof(long));
-	  fprintf(stderr, "sizeof(int*)   = %i\n", sizeof(int*));
-	  fprintf(stderr, "sizeof(sidx)   = %i\n", sizeof(sidx));
-	  fprintf(stderr, "sizeof(qidx)   = %i\n", sizeof(qidx));
-	  fprintf(stderr, "sizeof(double) = %i\n", sizeof(double));
-	*/
-
 	fprintf(stderr, "solvexy2: solving fields in %s using %s\n",
 			fieldfname, treefname);
-
-	/*
-	  if (matchfname) {
-	  fprintf("Writing matches to file %s...\n", matchfname);
-	  fopenout(matchfname, matchfid);
-	  }
-	*/
 
 	// Read .xyls file...
 	fprintf(stderr, "  Reading fields...");
@@ -317,65 +287,18 @@ int main(int argc, char *argv[]) {
 			codekd->ndata, codekd->nnodes, codekd->ndim);
 
 
-	// Read .quad file...
-	fopenin(quadfname, quadfid);
+	quads = quadfile_open(quadfname);
 	free_fn(quadfname);
-	readStatus = read_quad_header(quadfid, &numquads, &numstars, 
-								  &Dim_Quads, &index_scale);
-	if (readStatus == READ_FAIL)
-		return (3);
-	qposmarker = ftello(quadfid);
-	// check that the quads file is the right size.
-	fseeko(quadfid, 0, SEEK_END);
-	endoffset = ftello(quadfid) - qposmarker;
-	maxquad = endoffset / (DIM_QUADS * sizeof(sidx));
-	if (maxquad != numquads) {
-		fprintf(stderr, "Error: numquads=%li (specified in .quad file header) does "
-				"not match maxquad=%li (computed from size of .quad file).\n",
-				numquads, maxquad);
+	if (!quads) {
+		fprintf(stderr, "Couldn't open quads file.\n");
 		exit(-1);
 	}
-	if (use_mmap) {
-		mmap_quad_size = endoffset;
-		mmap_quad = mmap(0, mmap_quad_size, PROT_READ, MAP_SHARED,
-						 fileno(quadfid), 0);
-		if (mmap_quad == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap quad file: %s\n", strerror(errno));
-			exit(-1);
-		}
-		fclose(quadfid);
-		quadindex = (sidx*)(((char*)(mmap_quad)) + qposmarker);
-	}
+	numstars = quads->numstars;
 
-
-	// Read .objs file...
-	fopenin(catfname, catfid);
-	free_fn(catfname);
-	readStatus = read_objs_header(catfid, &numstars, &Dim_Stars,
-								  &ramin, &ramax, &decmin, &decmax);
-	if (readStatus == READ_FAIL) {
+	cat = catalog_open(basefname);
+	if (!cat) {
+		fprintf(stderr, "Couldn't open catalog file.\n");
 		exit(-1);
-	}
-	cposmarker = ftello(catfid);
-	// check that the catalogue file is the right size.
-	fseeko(catfid, 0, SEEK_END);
-	endoffset = ftello(catfid) - cposmarker;
-	maxstar = endoffset / (DIM_STARS * sizeof(double));
-	if (maxstar != numstars) {
-		fprintf(stderr, "Error: numstars=%li (specified in .objs file header) does "
-				"not match maxstars=%li (computed from size of .objs file).\n",
-				numstars, maxstar);
-		exit(-1);
-	}
-	if (use_mmap) {
-		mmap_cat_size = endoffset;
-		mmap_cat = mmap(0, mmap_cat_size, PROT_READ, MAP_SHARED, fileno(catfid), 0);
-		if (mmap_cat == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
-			exit(-1);
-		}
-		fclose(catfid);
-		catalogue = (double*)(((char*)(mmap_cat)) + cposmarker);
 	}
 
 	/*
@@ -393,42 +316,45 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Running!\n");
 		}
 
-		if (resumefname && suspendfname &&
-			(strcmp(resumefname, suspendfname) == 0)) {
-			char buffer[1024];
-			rename_suspend = TRUE;
-			free(suspendfname);
-			snprintf(buffer, sizeof(buffer), "%s.tmp", resumefname);
-			suspendfname = strdup(buffer);
-		} else {
-			rename_suspend = FALSE;
-		}
-
-		if (resumefname) {
-			// read resume file.
-			double index_scale;
-			char oldfieldname[256];
-			char oldtreename[256];
-			uint nfields;
-			resumefid = fopen(resumefname, "rb");
-			if (!resumefid) {
-				fprintf(stderr, "Couldn't open resume file %s: %s\n",
-						resumefname, strerror(errno));
-				fprintf(stderr, "Starting from scratch.\n");
-			} else {
-				if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
-					fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
-					fprintf(stderr, "Starting from scratch.\n");
-					fclose(resumefid);
-					resumefid = NULL;
-				}
-			}
-		}
-		if (suspendfname) {
-			fopenout(suspendfname, suspendfid);
-			suspend_write_header(suspendfid, index_scale, fieldfname,
-								 treefname, dyv_array_size(thefields));
-		}
+		/*
+		  if (resumefname && suspendfname &&
+		  (strcmp(resumefname, suspendfname) == 0)) {
+		  char buffer[1024];
+		  rename_suspend = TRUE;
+		  free(suspendfname);
+		  snprintf(buffer, sizeof(buffer), "%s.tmp", resumefname);
+		  suspendfname = strdup(buffer);
+		  } else {
+		  rename_suspend = FALSE;
+		  }
+		  if (resumefname) {
+		  // read resume file.
+		  double index_scale;
+		  char oldfieldname[256];
+		  char oldtreename[256];
+		  uint nfields;
+		  resumefid = fopen(resumefname, "rb");
+		  if (!resumefid) {
+		  fprintf(stderr, "Couldn't open resume file %s: %s\n",
+		  resumefname, strerror(errno));
+		  fprintf(stderr, "Starting from scratch.\n");
+		  } else {
+		  if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
+		  fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
+		  fprintf(stderr, "Starting from scratch.\n");
+		  fclose(resumefid);
+		  resumefid = NULL;
+		  }
+		  }
+		  }
+		*/
+		/*
+		  if (suspendfname) {
+		  fopenout(suspendfname, suspendfid);
+		  suspend_write_header(suspendfid, index_scale, fieldfname,
+		  treefname, dyv_array_size(thefields));
+		  }
+		*/
 
 		// write HITS header.
 		if (interactive) {
@@ -472,19 +398,23 @@ int main(int argc, char *argv[]) {
 			fclose(hitfid);
 
 		// clean up...
-		if (resumefid)
-			fclose(resumefid);
-		if (suspendfid)
-			fclose(suspendfid);
+		/*
+		  if (resumefid)
+		  fclose(resumefid);
+		  if (suspendfid)
+		  fclose(suspendfid);
+		*/
 
 		signal(SIGINT, SIG_DFL);
 
-		if (rename_suspend) {
-			if (rename(suspendfname, resumefname)) {
-				fprintf(stderr, "Couldn't rename suspend file from %s to %s: %s\n",
-						suspendfname, resumefname, strerror(errno));
-			}
-		}
+		/*
+		  if (rename_suspend) {
+		  if (rename(suspendfname, resumefname)) {
+		  fprintf(stderr, "Couldn't rename suspend file from %s to %s: %s\n",
+		  suspendfname, resumefname, strerror(errno));
+		  }
+		  }
+		*/
 
 	} while (interactive);
 
@@ -505,19 +435,16 @@ int main(int argc, char *argv[]) {
 	free_fn(fieldfname);
 	free_fn(treefname);
 
-	free(suspendfname);
-	free(resumefname);
+	/*
+	  free(suspendfname);
+	  free(resumefname);
+	*/
 
 	free_xyarray(thefields);
-	if (use_mmap) {
-		kdtree_close(codekd);
-		munmap(mmap_quad, mmap_quad_size);
-		munmap(mmap_cat, mmap_cat_size);
-	} else {
-		kdtree_free(codekd);
-		fclose(quadfid);
-		fclose(catfid);
-	}
+
+	catalog_close(cat);
+	kdtree_close(codekd);
+	quadfile_close(quads);
 
 	return 0;
 }
@@ -536,10 +463,11 @@ int get_next_assignment() {
 		fprintf(stderr, "Command: %s\n", buffer);
 		fflush(stderr);
 
+		//"    suspend <suspend-file-name>\n"
+		//"    resume  <resume-file-name>\n"
+
 		if (strncmp(buffer, "help", 4) == 0) {
 			fprintf(stderr, "Commands:\n"
-					"    suspend <suspend-file-name>\n"
-					"    resume  <resume-file-name>\n"
 					"    field <field-number>\n"
 					"    fields <field-number> <field-number> ...]\n"
 					"    depth <maximum-field-object>\n"
@@ -547,22 +475,24 @@ int get_next_assignment() {
 					"    quit\n"
 					"    help\n");
 			fflush(stderr);
-		} else if (strncmp(buffer, "suspend ", 8) == 0) {
-			free(suspendfname);
-			suspendfname = strdup(buffer + 8);
-			fprintf(stderr, "Set suspend file to \"%s\".\n", suspendfname);
-			if (strlen(suspendfname) == 0) {
-				free(suspendfname);
-				suspendfname = NULL;
-			}
-		} else if (strncmp(buffer, "resume ", 7) == 0) {
-			free(resumefname);
-			resumefname = strdup(buffer + 7);
-			fprintf(stderr, "Set resume file to \"%s\".\n", resumefname);
-			if (strlen(resumefname) == 0) {
-				free(resumefname);
-				resumefname = NULL;
-			}
+			/*
+			  } else if (strncmp(buffer, "suspend ", 8) == 0) {
+			  free(suspendfname);
+			  suspendfname = strdup(buffer + 8);
+			  fprintf(stderr, "Set suspend file to \"%s\".\n", suspendfname);
+			  if (strlen(suspendfname) == 0) {
+			  free(suspendfname);
+			  suspendfname = NULL;
+			  }
+			  } else if (strncmp(buffer, "resume ", 7) == 0) {
+			  free(resumefname);
+			  resumefname = strdup(buffer + 7);
+			  fprintf(stderr, "Set resume file to \"%s\".\n", resumefname);
+			  if (strlen(resumefname) == 0) {
+			  free(resumefname);
+			  resumefname = NULL;
+			  }
+			*/
 		} else if (strncmp(buffer, "field ", 6) == 0) {
 			int fld = atoi(buffer + 6);
 			firstfield = fld;
@@ -637,10 +567,12 @@ int handlehit(solver_params* params, MatchObj* mo) {
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree_t *codekd, double codetol, hitlist* hits) {
-	uint resume_fieldnum;
-	uint resume_nobjs;
-	uint resume_ntried;
-	blocklist* resume_hits = NULL;
+	/*
+	  uint resume_fieldnum;
+	  uint resume_nobjs;
+	  uint resume_ntried;
+	  blocklist* resume_hits = NULL;
+	*/
 	qidx numsolved, ii;
 	sidx numxy;
 	solver_params params;
@@ -692,35 +624,34 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		numxy = xy_size(thisfield);
 		params.field = thisfield;
 
-		if (resumefid && !resume_hits) {
-			blocklist* slist = blocklist_pointer_new(256);
-			// read the next suspended record from the file...
-			if (suspend_read_field(resumefid, &resume_fieldnum, &resume_nobjs, &resume_ntried, slist)) {
-				fprintf(stderr, "Couldn't read a suspended field: %s\n", strerror(errno));
-				blocklist_pointer_free(slist);
-				fclose(resumefid);
-				resumefid = NULL;
-			} else {
-				resume_hits = slist;
-			}
-		}
-
-		if (resume_hits && (fieldnum == resume_fieldnum)) {
-			blocklist* best;
-			// Resume where we left off...
-			params.numtries = resume_ntried;
-			params.startobj = resume_nobjs;
-			params.nummatches = blocklist_count(resume_hits);
-
-			hitlist_add_hits(hits, resume_hits);
-
-			best = hitlist_get_best(hits);
-			params.mostagree = (best ? blocklist_count(best) : 0);
-			blocklist_pointer_free(resume_hits);
-			resume_hits = NULL;
-			fprintf(stderr, "Resuming at field object %i (%i quads tried, %i hits found so far)\n",
-					params.startobj, params.numtries, params.nummatches);
-		}
+		/*
+		  if (resumefid && !resume_hits) {
+		  blocklist* slist = blocklist_pointer_new(256);
+		  // read the next suspended record from the file...
+		  if (suspend_read_field(resumefid, &resume_fieldnum, &resume_nobjs, &resume_ntried, slist)) {
+		  fprintf(stderr, "Couldn't read a suspended field: %s\n", strerror(errno));
+		  blocklist_pointer_free(slist);
+		  fclose(resumefid);
+		  resumefid = NULL;
+		  } else {
+		  resume_hits = slist;
+		  }
+		  }
+		  if (resume_hits && (fieldnum == resume_fieldnum)) {
+		  blocklist* best;
+		  // Resume where we left off...
+		  params.numtries = resume_ntried;
+		  params.startobj = resume_nobjs;
+		  params.nummatches = blocklist_count(resume_hits);
+		  hitlist_add_hits(hits, resume_hits);
+		  best = hitlist_get_best(hits);
+		  params.mostagree = (best ? blocklist_count(best) : 0);
+		  blocklist_pointer_free(resume_hits);
+		  resume_hits = NULL;
+		  fprintf(stderr, "Resuming at field object %i (%i quads tried, %i hits found so far)\n",
+		  params.startobj, params.numtries, params.nummatches);
+		  }
+		*/
 
 		if (thisfield) {
 			solve_field(&params);
@@ -735,12 +666,13 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		  suspend_write_field(matchfid, (uint)fieldnum, params.objsused, params.numtries, all);
 		  blocklist_free(all);
 		  }
+		  if (suspendfid) {
+		  blocklist* all = hitlist_get_all(hits);
+		  suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
+		  blocklist_free(all);
+		  }
 		*/
-		if (suspendfid) {
-			blocklist* all = hitlist_get_all(hits);
-			suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
-			blocklist_free(all);
-		}
+
 
 		bestlist = hitlist_get_best(hits);
 
@@ -898,55 +830,21 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
 }
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
-	if (thisquad >= maxquad) {
-		fprintf(stderr, "thisquad %lu >= maxquad %lu\n", thisquad, maxquad);
-	}
-	if (use_mmap) {
-
-		*iA = quadindex[thisquad*DIM_QUADS + 0];
-		*iB = quadindex[thisquad*DIM_QUADS + 1];
-		*iC = quadindex[thisquad*DIM_QUADS + 2];
-		*iD = quadindex[thisquad*DIM_QUADS + 3];
-
-	} else {
-		fseeko(quadfid, qposmarker + thisquad * DIM_QUADS * sizeof(sidx), SEEK_SET);
-		readonequad(quadfid, iA, iB, iC, iD);
-	}
+	uint sA, sB, sC, sD;
+	quadfile_get_starids(quads, thisquad, &sA, &sB, &sC, &sD);
+	*iA = sA;
+	*iB = sB;
+	*iC = sC;
+	*iD = sD;
 }
 
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
 				   sidx iA, sidx iB, sidx iC, sidx iD)
 {
-	if (iA >= maxstar) {
-		fprintf(stderr, "iA %lu > maxstar %lu\n", iA, maxstar);
-	}
-	if (iB >= maxstar) {
-		fprintf(stderr, "iB %lu > maxstar %lu\n", iB, maxstar);
-	}
-	if (iC >= maxstar) {
-		fprintf(stderr, "iC %lu > maxstar %lu\n", iC, maxstar);
-	}
-	if (iD >= maxstar) {
-		fprintf(stderr, "iD %lu > maxstar %lu\n", iD, maxstar);
-	}
-
-	if (use_mmap) {
-
-		memcpy(sA->farr, catalogue + iA * DIM_STARS, DIM_STARS * sizeof(double));
-		memcpy(sB->farr, catalogue + iB * DIM_STARS, DIM_STARS * sizeof(double));
-		memcpy(sC->farr, catalogue + iC * DIM_STARS, DIM_STARS * sizeof(double));
-		memcpy(sD->farr, catalogue + iD * DIM_STARS, DIM_STARS * sizeof(double));
-
-	} else {
-		fseekocat(iA, cposmarker, catfid);
-		freadstar(sA, catfid);
-		fseekocat(iB, cposmarker, catfid);
-		freadstar(sB, catfid);
-		fseekocat(iC, cposmarker, catfid);
-		freadstar(sC, catfid);
-		fseekocat(iD, cposmarker, catfid);
-		freadstar(sD, catfid);
-	}
+	memcpy(sA->farr, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
+	memcpy(sB->farr, catalog_get_star(cat, iB), DIM_STARS * sizeof(double));
+	memcpy(sC->farr, catalog_get_star(cat, iC), DIM_STARS * sizeof(double));
+	memcpy(sD->farr, catalog_get_star(cat, iD), DIM_STARS * sizeof(double));
 }
 
 	

@@ -28,6 +28,7 @@
 #include "hitlist.h"
 #include "hitlist_healpix.h"
 #include "tic.h"
+#include "quadfile.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -59,25 +60,14 @@ bool agreement = FALSE;
 int nagree = 4;
 double agreetol = 0.0;
 
-catalog* cat;
-
 hitlist* hits = NULL;
 
 matchfile_entry matchfile;
 
-FILE *quadfid = NULL;
 FILE* matchfid = NULL;
 
-bool use_mmap = TRUE;
-
-// when not mmap'd
-off_t qposmarker;
-
-// when mmap'd
-sidx*   quadindex;
-
-// the largest star and quad available in the corresponding files.
-qidx maxquad;
+catalog* cat;
+quadfile* quads;
 
 // histogram of the size of agreement clusters.
 int *agreesizehist;
@@ -95,22 +85,12 @@ char* get_pathname(char* fname) {
 
 int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
-    qidx numfields, numquads;
-    char readStatus;
-    dimension Dim_Quads;
+    qidx numfields;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
-
-	void*  mmap_quad = NULL;
-	size_t mmap_quad_size = 0;
-
-	off_t endoffset;
 	char* progname = argv[0];
 	int i;
 	char* path;
-	sidx numstars;
-
-	tic();
 
     if (argc != 1) {
 		printHelp(progname);
@@ -119,178 +99,177 @@ int main(int argc, char *argv[]) {
 
 	fieldlist = blocklist_int_new(256);
 
-	if (read_parameters()) {
-		exit(-1);
-	}
+	for (;;) {
+		
+		tic();
 
-	hitlist_set_default_parameters();
-	if (agreetol != 0.0) {
-		char buf[256];
-		// total hack...
-		sprintf(buf, "%g", agreetol);
-		hitlist_process_parameter('m', buf);
-	}
+		fieldfname = NULL;
+		treefname = NULL;
+		quadfname = NULL;
+		catfname = NULL;
+		matchfname = NULL;
+		donefname = NULL;
+		parity = DEFAULT_PARITY_FLIP;
+		codetol = DEFAULT_CODE_TOL;
+		startdepth = 0;
+		enddepth = 0;
+		blocklist_remove_all(fieldlist);
+		funits_lower = 0.0;
+		funits_upper = 0.0;
+		index_scale = 0.0;
+		index_scale_lower = 0.0;
+		agreement = FALSE;
+		nagree = 4;
+		agreetol = 0.0;
+		cat = NULL;
+		hits = NULL;
+		matchfid = NULL;
+		quads = NULL;
 
-	fprintf(stderr, "%s params:\n", progname);
-	fprintf(stderr, "fieldfname %s\n", fieldfname);
-	fprintf(stderr, "treefname %s\n", treefname);
-	fprintf(stderr, "quadfname %s\n", quadfname);
-	fprintf(stderr, "catfname %s\n", catfname);
-	fprintf(stderr, "matchfname %s\n", matchfname);
-	fprintf(stderr, "donefname %s\n", donefname);
-	fprintf(stderr, "parity %i\n", parity);
-	fprintf(stderr, "codetol %g\n", codetol);
-	fprintf(stderr, "startdepth %i\n", startdepth);
-	fprintf(stderr, "enddepth %i\n", enddepth);
-	fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
-	fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
-	fprintf(stderr, "index_lower %g\n", index_scale_lower);
-	fprintf(stderr, "agreement %i\n", agreement);
-	fprintf(stderr, "num-to-agree %i\n", nagree);
-	fprintf(stderr, "agreetol %g\n", agreetol);
-
-	fprintf(stderr, "fields ");
-	for (i=0; i<blocklist_count(fieldlist); i++)
-		fprintf(stderr, "%i ", blocklist_int_access(fieldlist, i));
-	fprintf(stderr, "\n");
-
-	if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
-		fprintf(stderr, "Invalid params... this message is useless.\n");
-		exit(-1);
-	}
-
-	fopenout(matchfname, matchfid);
-
-	// Read .xyls file...
-	fprintf(stderr, "  Reading fields...");
-	fflush(stderr);
-	fopenin(fieldfname, fieldfid);
-	thefields = readxy(fieldfid, parity);
-	fclose(fieldfid);
-	if (!thefields)
-		exit(-1);
-	numfields = (qidx)thefields->size;
-	fprintf(stderr, "got %lu fields.\n", numfields);
-	if (parity)
-		fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
-
-	// Read .ckdt2 file...
-	fprintf(stderr, "  Reading code KD tree from %s...", treefname);
-	fflush(stderr);
-	fopenin(treefname, treefid);
-	codekd = kdtree_read(treefid);
-	if (!codekd)
-		exit(-1);
-	fclose(treefid);
-	fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
-			codekd->ndata, codekd->nnodes, codekd->ndim);
-
-	// Read .quad file...
-	fopenin(quadfname, quadfid);
-	free_fn(quadfname);
-	readStatus = read_quad_header(quadfid, &numquads, &numstars, 
-								  &Dim_Quads, &index_scale);
-	if (readStatus == READ_FAIL)
-		exit(-1);
-	qposmarker = ftello(quadfid);
-	// check that the quads file is the right size.
-	fseeko(quadfid, 0, SEEK_END);
-	endoffset = ftello(quadfid) - qposmarker;
-	maxquad = endoffset / (DIM_QUADS * sizeof(sidx));
-	if (maxquad != numquads) {
-		fprintf(stderr, "Error: numquads=%li (specified in .quad file header) does "
-				"not match maxquad=%li (computed from size of .quad file).\n",
-				numquads, maxquad);
-		exit(-1);
-	}
-	if (use_mmap) {
-		mmap_quad_size = endoffset;
-		mmap_quad = mmap(0, mmap_quad_size, PROT_READ, MAP_SHARED,
-						 fileno(quadfid), 0);
-		if (mmap_quad == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap quad file: %s\n", strerror(errno));
+		if (read_parameters()) {
 			exit(-1);
 		}
-		fclose(quadfid);
-		quadindex = (sidx*)(((char*)(mmap_quad)) + qposmarker);
-	}
 
-	// index_scale is specified in radians - switch to arcsec.
-	index_scale *= (180.0 / M_PI) * 60 * 60;
-	fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
+		hitlist_set_default_parameters();
+		if (agreetol != 0.0) {
+			char buf[256];
+			// total hack...
+			sprintf(buf, "%g", agreetol);
+			hitlist_process_parameter('m', buf);
+		}
 
-	cat = catalog_open(catfname);
-	if (!cat) {
-		fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
-		exit(-1);
-	}
-	free(catfname);
+		fprintf(stderr, "%s params:\n", progname);
+		fprintf(stderr, "fieldfname %s\n", fieldfname);
+		fprintf(stderr, "treefname %s\n", treefname);
+		fprintf(stderr, "quadfname %s\n", quadfname);
+		fprintf(stderr, "catfname %s\n", catfname);
+		fprintf(stderr, "matchfname %s\n", matchfname);
+		fprintf(stderr, "donefname %s\n", donefname);
+		fprintf(stderr, "parity %i\n", parity);
+		fprintf(stderr, "codetol %g\n", codetol);
+		fprintf(stderr, "startdepth %i\n", startdepth);
+		fprintf(stderr, "enddepth %i\n", enddepth);
+		fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
+		fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
+		fprintf(stderr, "index_lower %g\n", index_scale_lower);
+		fprintf(stderr, "agreement %i\n", agreement);
+		fprintf(stderr, "num-to-agree %i\n", nagree);
+		fprintf(stderr, "agreetol %g\n", agreetol);
 
-	matchfile.parity = parity;
-	path = get_pathname(treefname);
-	if (path)
-		matchfile.indexpath = path;
-	else
-		matchfile.indexpath = treefname;
-	path = get_pathname(fieldfname);
-	if (path)
-		matchfile.fieldpath = path;
-	else
-		matchfile.fieldpath = fieldfname;
-	matchfile.codetol = codetol;
+		fprintf(stderr, "fields ");
+		for (i=0; i<blocklist_count(fieldlist); i++)
+			fprintf(stderr, "%i ", blocklist_int_access(fieldlist, i));
+		fprintf(stderr, "\n");
 
-	matchfile.fieldunits_lower = funits_lower;
-	matchfile.fieldunits_upper = funits_upper;
+		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
+			fprintf(stderr, "Invalid params... this message is useless.\n");
+			exit(-1);
+		}
 
-	Nagreehist = 100;
-	agreesizehist = malloc(Nagreehist * sizeof(int));
-	for (i=0; i<Nagreehist; i++)
-		agreesizehist[i] = 0;
+		fopenout(matchfname, matchfid);
 
-	// Do it!
-	solve_fields(thefields, codekd);
+		// Read .xyls file...
+		fprintf(stderr, "Reading fields file %s...", fieldfname);
+		fflush(stderr);
+		fopenin(fieldfname, fieldfid);
+		thefields = readxy(fieldfid, parity);
+		fclose(fieldfid);
+		if (!thefields)
+			exit(-1);
+		numfields = (qidx)thefields->size;
+		fprintf(stderr, "got %lu fields.\n", numfields);
+		if (parity)
+			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 
-	if (donefname) {
-		FILE* batchfid = NULL;
-		fprintf(stderr, "Writing marker file %s...\n", donefname);
-		fopenout(donefname, batchfid);
-		fclose(batchfid);
-	}
+		// Read .ckdt2 file...
+		fprintf(stderr, "Reading code KD tree from %s...", treefname);
+		fflush(stderr);
+		fopenin(treefname, treefid);
+		codekd = kdtree_read(treefid);
+		if (!codekd)
+			exit(-1);
+		fclose(treefid);
+		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
+				codekd->ndata, codekd->nnodes, codekd->ndim);
 
-	blocklist_free(fieldlist);
-	free_xyarray(thefields);
-	fclose(matchfid);
-	free_fn(fieldfname);
-	free_fn(treefname);
-	if (use_mmap) {
-		kdtree_close(codekd);
-		munmap(mmap_quad, mmap_quad_size);
-	} else {
-		kdtree_free(codekd);
-		fclose(quadfid);
-	}
+		// Read .quad file...
+		fprintf(stderr, "Reading quads file %s...\n", quadfname);
+		quads = quadfile_open(quadfname);
+		free_fn(quadfname);
+		if (!quads) {
+			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
+			exit(-1);
+		}
 
-	catalog_close(cat);
+		// index_scale is specified in radians - switch to arcsec.
+		index_scale = quadfile_get_index_scale_arcsec(quads);
 
-	{
-		int maxagree = 0;
+		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
+
+		cat = catalog_open(catfname);
+		if (!cat) {
+			fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
+			exit(-1);
+		}
+		free(catfname);
+
+		matchfile.parity = parity;
+		path = get_pathname(treefname);
+		if (path)
+			matchfile.indexpath = path;
+		else
+			matchfile.indexpath = treefname;
+		path = get_pathname(fieldfname);
+		if (path)
+			matchfile.fieldpath = path;
+		else
+			matchfile.fieldpath = fieldfname;
+		matchfile.codetol = codetol;
+
+		matchfile.fieldunits_lower = funits_lower;
+		matchfile.fieldunits_upper = funits_upper;
+
+		Nagreehist = 100;
+		agreesizehist = malloc(Nagreehist * sizeof(int));
 		for (i=0; i<Nagreehist; i++)
-			if (agreesizehist[i])
-				maxagree = i;
-		/*
-		  if (agreesizehist[i] > maxagree)
-		  maxagree = agreesizehist[i];
-		*/
-		fprintf(stderr, "Agreement cluster size histogram:\n");
-		fprintf(stderr, "nagreehist_total=[");
-		for (i=0; i<=maxagree; i++)
-			fprintf(stderr, "%i,", agreesizehist[i]);
-		fprintf(stderr, "];\n");
+			agreesizehist[i] = 0;
 
-		free(agreesizehist);
+		// Do it!
+		solve_fields(thefields, codekd);
+
+		if (donefname) {
+			FILE* batchfid = NULL;
+			fprintf(stderr, "Writing marker file %s...\n", donefname);
+			fopenout(donefname, batchfid);
+			fclose(batchfid);
+		}
+
+		blocklist_free(fieldlist);
+		free_xyarray(thefields);
+		fclose(matchfid);
+		free_fn(fieldfname);
+		free_fn(treefname);
+
+		kdtree_close(codekd);
+		catalog_close(cat);
+		quadfile_close(quads);
+
+		{
+			int maxagree = 0;
+			for (i=0; i<Nagreehist; i++)
+				if (agreesizehist[i])
+					maxagree = i;
+			fprintf(stderr, "Agreement cluster size histogram:\n");
+			fprintf(stderr, "nagreehist_total=[");
+			for (i=0; i<=maxagree; i++)
+				fprintf(stderr, "%i,", agreesizehist[i]);
+			fprintf(stderr, "];\n");
+
+			free(agreesizehist);
+		}
+
+		toc();
 	}
-
-	toc();
 
 	return 0;
 }
@@ -558,20 +537,12 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 }
 
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
-	if (thisquad >= maxquad) {
-		fprintf(stderr, "thisquad %lu >= maxquad %lu\n", thisquad, maxquad);
-	}
-	if (use_mmap) {
-
-		*iA = quadindex[thisquad*DIM_QUADS + 0];
-		*iB = quadindex[thisquad*DIM_QUADS + 1];
-		*iC = quadindex[thisquad*DIM_QUADS + 2];
-		*iD = quadindex[thisquad*DIM_QUADS + 3];
-
-	} else {
-		fseeko(quadfid, qposmarker + thisquad * DIM_QUADS * sizeof(sidx), SEEK_SET);
-		readonequad(quadfid, iA, iB, iC, iD);
-	}
+	uint sA, sB, sC, sD;
+	quadfile_get_starids(quads, thisquad, &sA, &sB, &sC, &sD);
+	*iA = sA;
+	*iB = sB;
+	*iC = sC;
+	*iD = sD;
 }
 
 void getstarcoords(star *sA, star *sB, star *sC, star *sD,
