@@ -2,7 +2,7 @@
 #include "starutil.h"
 #include "healpix.h"
 
-#define NSIDE 128
+#define DEFAULT_NSIDE 128
 
 #define DEFAULT_AGREE_TOL 7.0
 double AgreeArcSec = DEFAULT_AGREE_TOL;
@@ -22,11 +22,13 @@ struct pixinfo {
 };
 
 struct hitlist_struct {
+	int Nside;
+
 	int nbest;
 	int ntotal;
 	blocklist* best;
 	int npix;
-	pixinfo pix[12*NSIDE*NSIDE];
+	pixinfo* pix;
 	double agreedist2;
 
 	// master list of MatchObj*: matches
@@ -43,6 +45,7 @@ typedef struct hitlist_struct hitlist;
 
 #define DONT_DEFINE_HITLIST
 #include "hitlist.h"
+#include "hitlist_healpix.h"
 
 void hitlist_histogram_agreement_size(hitlist* hl, int* hist, int Nhist) {
 	int m, M;
@@ -72,22 +75,14 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 	double r;
 	double rotation;
 
+	// we don't have to normalize because it's already done by the solver.
 	x1 = star_ref(mo->sMin, 0);
 	y1 = star_ref(mo->sMin, 1);
 	z1 = star_ref(mo->sMin, 2);
-	// normalize.
-	r = sqrt(square(x1) + square(y1) + square(z1));
-	x1 /= r;
-	y1 /= r;
-	z1 /= r;
 
 	x2 = star_ref(mo->sMax, 0);
 	y2 = star_ref(mo->sMax, 1);
 	z2 = star_ref(mo->sMax, 2);
-	r = sqrt(square(x2) + square(y2) + square(z2));
-	x2 /= r;
-	y2 /= r;
-	z2 /= r;
 
 	xc = (x1 + x2) / 2.0;
 	yc = (y1 + y2) / 2.0;
@@ -97,9 +92,6 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 	yc /= r;
 	zc /= r;
 
-	/*
-	  radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
-	*/
 	arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
 
 	// we will characterise the rotation of the field with
@@ -120,7 +112,7 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 	yn = -sin(rac) * sin(decc);
 	zn =             cos(decc);
 
-	// "East" (maybe West - direction of increasing RA, whatever that is.)
+	// "East" (or maybe West - direction of increasing RA, whatever that is.)
 	xe = -sin(rac) * cos(decc);
 	ye =  cos(rac) * cos(decc);
 	ze = 0.0;
@@ -146,16 +138,6 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 	mo->vector[3] = arc;
 	mo->vector[4] = pn;
 	mo->vector[5] = pe;
-	/*
-	  mo->vector[4] = rotation;
-	  mo->vector[5] = 0.0;
-	*/
-
-	/*
-	  fprintf(stderr, "Pos (%6.2f, %6.2f), Scale %5.2f, Rot %6.2f\n",
-	  rad2deg(rac), rad2deg(decc), arc,
-	  rad2deg(rotation + ((rotation<0.0)? 2.0*M_PI : 0.0)));
-	*/
 }
 
 
@@ -179,34 +161,32 @@ void hitlist_set_default_parameters() {
 	AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
 }
 
-void init_pixinfo(pixinfo* node, int pix) {
+void init_pixinfo(pixinfo* node, int pix, int Nside) {
 	node->matchinds = NULL;
 	node->healpix = pix;
-	node->nn = healpix_get_neighbours_nside(pix, node->neighbours, NSIDE);
+	node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
 }
 
 hitlist* hitlist_new() {
+	return hitlist_healpix_new(DEFAULT_NSIDE);
+}
+
+hitlist* hitlist_healpix_new(int Nside) {
 	int p;
 	hitlist* hl = (hitlist*)malloc(sizeof(hitlist));
+	hl->Nside = Nside;
 	hl->ntotal = 0;
 	hl->nbest = 0;
 	hl->best = NULL;
-	hl->npix = 12 * NSIDE * NSIDE;
+	hl->npix = 12 * Nside * Nside;
+	hl->pix = malloc(hl->npix * sizeof(pixinfo));
 	for (p=0; p<hl->npix; p++) {
-		init_pixinfo(&(hl->pix[p]), p);
+		init_pixinfo(hl->pix + p, p, Nside);
 	}
 	hl->agreedist2 = square(AgreeTol);
-
-	/*
-	  hl->matchlist = blocklist_pointer_new(256);
-	  hl->memberlist = blocklist_int_new(256);
-	  hl->agreelist = blocklist_pointer_new(64);
-	*/
 	hl->matchlist = blocklist_pointer_new(16);
 	hl->memberlist = blocklist_int_new(16);
 	hl->agreelist = blocklist_pointer_new(16);
-
-
 	return hl;
 }
 
@@ -250,7 +230,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* match) {
 	x = match->vector[0];
 	y = match->vector[1];
 	z = match->vector[2];
-	pix = xyztohealpix_nside(x, y, z, NSIDE);
+	pix = xyztohealpix_nside(x, y, z, hlist->Nside);
 
 	pinfo = hlist->pix + pix;
 
@@ -429,6 +409,7 @@ void hitlist_free(hitlist* hl) {
 	blocklist_free(hl->matchlist);
 	blocklist_free(hl->memberlist);
 	blocklist_free(hl->agreelist);
+	free(hl->pix);
 	free(hl);
 }
 
