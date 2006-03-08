@@ -29,13 +29,14 @@ EXECS = randcat startree genfields fieldquads findstar findquad \
 # Deprecated:
 #   getquads codetree quadidx solvexy all_quads tilequads
 
-MYOBJS = randcat.o startree.o 
-	genfields.o solvexy.o fieldquads.o findstar.o \
-	findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
-	deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
-	solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o slave.o \
-	fixmatchfile.o printmatchfile rdls2hpls.o certifiable.o agreeable2.o \
-	hitlist_agreement.o hitlist_healpix.o tilequads.o hpquads.o
+MYOBJS = randcat.o startree.o \
+  genfields.o solvexy.o fieldquads.o findstar.o \
+  findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
+  deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
+  solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o slave.o \
+  fixmatchfile.o printmatchfile rdls2hpls.o certifiable.o agreeable2.o \
+  hitlist_agreement.o hitlist_healpix.o tilequads.o hpquads.o \
+  codeprojections.o codedensity.o startree2.o solver2.o
 
 # getquads.o codetree.o quadidx.o 
 
