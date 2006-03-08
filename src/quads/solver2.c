@@ -174,8 +174,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
 
-	if ((scale < square(params->minAB)) || (scale > square(params->maxAB)))
+	if ((scale < square(params->minAB)) || (scale > square(params->maxAB))) {
+		//fprintf(stderr, "Quad scale %g: not in allowable range [%g, %g].\n", scale, params->minAB, params->maxAB);
 		return;
+	}
 
     ABCDpix = mk_xy(DIM_QUADS);
 
@@ -336,10 +338,13 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 			d  = square(star_ref(sMax, 0) - star_ref(sMin, 0));
 			d += square(star_ref(sMax, 1) - star_ref(sMin, 1));
 			d += square(star_ref(sMax, 2) - star_ref(sMin, 2));
-			d = rad2deg(sqrt(d))*60.0*60.0;
+			// convert 'd' from squared distance on the unit sphere
+			// to arcseconds...
+			d = distsq2arc(d);
+			d = rad2deg(d) * 60.0 * 60.0;
 
 			c  = square(xy_refy(params->cornerpix, 1) - xy_refy(params->cornerpix, 0));
-		        c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
+			c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
 			c = sqrt(c);
 
 			if ((d/c > params->arcsec_per_pixel_upper) || (d/c < params->arcsec_per_pixel_lower)) {

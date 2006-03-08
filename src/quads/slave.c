@@ -428,12 +428,12 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	solver.quitNow = FALSE;
 
 	if (funits_upper != 0.0) {
-		solver.minAB = index_scale * index_scale_lower / funits_upper;
 		solver.arcsec_per_pixel_upper = funits_upper;
-		solver.arcsec_per_pixel_lower = funits_lower;
+		solver.minAB = index_scale * index_scale_lower / funits_upper;
 		fprintf(stderr, "Set minAB to %g\n", solver.minAB);
 	}
 	if (funits_lower != 0.0) {
+		solver.arcsec_per_pixel_lower = funits_lower;
 		solver.maxAB = index_scale / funits_lower;
 		fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
