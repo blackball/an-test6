@@ -36,6 +36,8 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_
 void flush_solved_fields(bool doleftovers, bool doagree, bool addunsolved, bool cleanup);
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
+#define DEFAULT_AGREE_TOL 7.0
+
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 
 FILE *hitfid = NULL;
@@ -66,7 +68,7 @@ int main(int argc, char *argv[]) {
 	bool leftovers = FALSE;
 	bool agree = FALSE;
 	double ramin, ramax, decmin, decmax;
-	double agreetolarcsec;
+	double agreetolarcsec = DEFAULT_AGREE_TOL;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {

@@ -200,6 +200,7 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
+		// Read .objs file...
 		cat = catalog_open(catfname);
 		if (!cat) {
 			fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
@@ -269,9 +270,18 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+inline int is_word(char* cmdline, char* keyword, char** cptr) {
+	int len = strlen(keyword);
+	if (strncmp(cmdline, keyword, len))
+		return 0;
+	*cptr = cmdline + len;
+	return 1;
+}
+
 int read_parameters() {
 	for (;;) {
 		char buffer[10240];
+		char* nextword;
 		fprintf(stderr, "\nAwaiting your command:\n");
 		fflush(stderr);
 		if (!fgets(buffer, sizeof(buffer), stdin)) {
@@ -284,7 +294,7 @@ int read_parameters() {
 		fprintf(stderr, "Command: %s\n", buffer);
 		fflush(stderr);
 
-		if (strncmp(buffer, "help", 4) == 0) {
+		if (is_word(buffer, "help", &nextword)) {
 			fprintf(stderr, "Commands:\n"
 					"    index <index-file-name>\n"
 					"    match <match-file-name>\n"
@@ -303,51 +313,49 @@ int read_parameters() {
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    run\n"
 					"    help\n");
-		} else if (strncmp(buffer, "agreement", 9) == 0) {
+		} else if (is_word(buffer, "agreement", &nextword)) {
 			agreement = TRUE;
-		} else if (strncmp(buffer, "nagree ", 7) == 0) {
-			char* nag = buffer + 7;
-			nagree = atoi(nag);
-		} else if (strncmp(buffer, "agreetol ", 9) == 0) {
-			char* ag = buffer + 9;
-			agreetol = atof(ag);
-		} else if (strncmp(buffer, "index ", 6) == 0) {
-			char* fname = buffer + 6;
+		} else if (is_word(buffer, "nagree ", &nextword)) {
+			nagree = atoi(nextword);
+		} else if (is_word(buffer, "agreetol ", &nextword)) {
+			agreetol = atof(nextword);
+		} else if (is_word(buffer, "index ", &nextword)) {
+			char* fname = nextword;
 			treefname = mk_ctree2fn(fname);
 			quadfname = mk_quadfn(fname);
 			catfname = strdup(fname);
-		} else if (strncmp(buffer, "field ", 6) == 0) {
-			char* fname = buffer + 6;
+		} else if (is_word(buffer, "field ", &nextword)) {
+			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
-		} else if (strncmp(buffer, "match ", 6) == 0) {
-			char* fname = buffer + 6;
+		} else if (is_word(buffer, "match ", &nextword)) {
+			char* fname = nextword;
 			matchfname = strdup(fname);
-		} else if (strncmp(buffer, "done ", 5) == 0) {
-			char* fname = buffer + 5;
+		} else if (is_word(buffer, "done ", &nextword)) {
+			char* fname = nextword;
 			donefname = strdup(fname);
-		} else if (strncmp(buffer, "sdepth ", 7) == 0) {
-			int d = atoi(buffer + 7);
+		} else if (is_word(buffer, "sdepth ", &nextword)) {
+			int d = atoi(nextword);
 			startdepth = d;
-		} else if (strncmp(buffer, "depth ", 6) == 0) {
-			int d = atoi(buffer + 6);
+		} else if (is_word(buffer, "depth ", &nextword)) {
+			int d = atoi(nextword);
 			enddepth = d;
-		} else if (strncmp(buffer, "tol ", 4) == 0) {
-			double t = atof(buffer + 4);
+		} else if (is_word(buffer, "tol ", &nextword)) {
+			double t = atof(nextword);
 			codetol = t;
-		} else if (strncmp(buffer, "parity ", 7) == 0) {
-			int d = atoi(buffer + 7);
+		} else if (is_word(buffer, "parity ", &nextword)) {
+			int d = atoi(nextword);
 			parity = (d ? TRUE : FALSE);
-		} else if (strncmp(buffer, "index_lower ", 12) == 0) {
-			double d = atof(buffer + 12);
+		} else if (is_word(buffer, "index_lower ", &nextword)) {
+			double d = atof(nextword);
 			index_scale_lower = d;
-		} else if (strncmp(buffer, "fieldunits_lower ", 17) == 0) {
-			double d = atof(buffer + 17);
+		} else if (is_word(buffer, "fieldunits_lower ", &nextword)) {
+			double d = atof(nextword);
 			funits_lower = d;
-		} else if (strncmp(buffer, "fieldunits_upper ", 17) == 0) {
-			double d = atof(buffer + 17);
+		} else if (is_word(buffer, "fieldunits_upper ", &nextword)) {
+			double d = atof(nextword);
 			funits_upper = d;
-		} else if (strncmp(buffer, "fields ", 7) == 0) {
-			char* str = buffer + 7;
+		} else if (is_word(buffer, "fields ", &nextword)) {
+			char* str = nextword;
 			char* endp;
 			int i, firstfld = -1;
 			for (;;) {
@@ -376,7 +384,7 @@ int read_parameters() {
 					break;
 				str = endp + 1;
 			}
-		} else if (strncmp(buffer, "run", 3) == 0) {
+		} else if (is_word(buffer, "run", &nextword)) {
 			return 0;
 		} else {
 			fprintf(stderr, "I didn't understand that command.\n");
