@@ -21,6 +21,15 @@ inline double distsq2arc(double dist2) {
 	return acos(1.0 - dist2 / 2.0);
 }
 
+inline double arc2distsq(double arcInRadians) {
+	// inverse of distsq2arc; cosine law.
+	return 2.0 * (1.0 - cos(arcInRadians));
+}
+
+inline double arcsec2distsq(double arcInArcSec) {
+	return arc2distsq(arcInArcSec * M_PI / (180.0 * 60.0 * 60.0));
+}
+
 inline double square(double d) {
     return d*d;
 }

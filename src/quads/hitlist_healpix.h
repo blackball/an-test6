@@ -1,13 +1,39 @@
 #ifndef HITLIST_HEALPIX_H
 #define HITLIST_HEALPIX_H
 
-#include "hitlist.h"
+//#include "hitlist.h"
 #include "matchobj.h"
+
+#ifndef DONT_DEFINE_HITLIST
+typedef void hitlist;
+#endif
 
 void hitlist_healpix_compute_vector(MatchObj* mo);
 
-void hitlist_histogram_agreement_size(hitlist* hl, int* hist, int Nhist);
+void hitlist_healpix_histogram_agreement_size(hitlist* hl, int* hist, int Nhist);
 
-hitlist* hitlist_healpix_new(int Nside);
+hitlist* hitlist_healpix_new(double AgreeTolArcSec);
+
+void hitlist_healpix_clear(hitlist* hlist);
+
+void hitlist_healpix_free_extra(hitlist* hlist, void (*free_function)(MatchObj* mo));
+
+void hitlist_healpix_free(hitlist* hlist);
+
+// returns a shallow copy of the best set of hits.
+// you are responsible for calling blocklist_free.
+blocklist* hitlist_healpix_get_best(hitlist* hlist);
+
+blocklist* hitlist_healpix_get_all_best(hitlist* hlist);
+
+// returns a shallow copy of the whole set of results.
+// you are responsible for calling blocklist_free.
+blocklist* hitlist_healpix_get_all(hitlist* hlist);
+
+int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* mo);
+
+int hitlist_healpix_count_best(hitlist* hitlist);
+
+int hitlist_healpix_count_all(hitlist* hitlist);
 
 #endif

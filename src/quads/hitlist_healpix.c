@@ -2,12 +2,12 @@
 #include "starutil.h"
 #include "healpix.h"
 
-#define DEFAULT_NSIDE 128
-
-#define DEFAULT_AGREE_TOL 7.0
-double AgreeArcSec = DEFAULT_AGREE_TOL;
-double AgreeTol = 0.0;
-
+/*
+  #define DEFAULT_NSIDE 128
+  #define DEFAULT_AGREE_TOL 7.0
+  double AgreeArcSec = DEFAULT_AGREE_TOL;
+  double AgreeTol = 0.0;
+*/
 struct pixinfo;
 typedef struct pixinfo pixinfo;
 
@@ -44,10 +44,10 @@ struct hitlist_struct {
 typedef struct hitlist_struct hitlist;
 
 #define DONT_DEFINE_HITLIST
-#include "hitlist.h"
+//#include "hitlist.h"
 #include "hitlist_healpix.h"
 
-void hitlist_histogram_agreement_size(hitlist* hl, int* hist, int Nhist) {
+void hitlist_healpix_histogram_agreement_size(hitlist* hl, int* hist, int Nhist) {
 	int m, M;
 	int N;
 	M = blocklist_count(hl->agreelist);
@@ -142,24 +142,32 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 
 
 
-char* hitlist_get_parameter_help() {
-	return "   [-m agree_tol(arcsec)]\n";
-}
-char* hitlist_get_parameter_options() {
-	return "m:";
-}
-int hitlist_process_parameter(char argchar, char* optarg) {
-	switch (argchar) {
-	case 'm':
-		AgreeArcSec = strtod(optarg, NULL);
-		AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
-		break;
-	}
-	return 0;
-}
-void hitlist_set_default_parameters() {
-	AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
-}
+/*
+  char* hitlist_get_parameter_help() {
+  return "   [-m agree_tol(arcsec)]\n";
+  }
+  char* hitlist_get_parameter_options() {
+  return "m:";
+  }
+  int hitlist_process_parameter(char argchar, char* optarg) {
+  switch (argchar) {
+  case 'm':
+  AgreeArcSec = strtod(optarg, NULL);
+  AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
+  break;
+  }
+  return 0;
+  }
+  void hitlist_set_default_parameters() {
+  AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
+  }
+*/
+/*
+  int hitlist_healpix_choose_nside(double agreetol) {
+  AgreeArcSec = strtod(optarg, NULL);
+  AgreeTol = sqrt(2.0) * radscale2xyzscale(arcsec2rad(AgreeArcSec));
+  }
+*/
 
 void init_pixinfo(pixinfo* node, int pix, int Nside) {
 	node->matchinds = NULL;
@@ -167,12 +175,32 @@ void init_pixinfo(pixinfo* node, int pix, int Nside) {
 	node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
 }
 
-hitlist* hitlist_new() {
-	return hitlist_healpix_new(DEFAULT_NSIDE);
-}
+/*
+  hitlist* hitlist_new() {
+  return hitlist_healpix_new(DEFAULT_NSIDE);
+  }
+*/
 
-hitlist* hitlist_healpix_new(int Nside) {
+//hitlist* hitlist_healpix_new(int Nside) {
+
+
+hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	int p;
+	double AgreeTol2;
+	int Nside;
+
+	AgreeTol2 = arcsec2distsq(AgreeArcSec);
+
+	// We want to choose Nside such that the small healpixes
+	// have side length about AgreeArcSec.  We do this by
+	// noting that there are 12 * Nside^2 healpixes which
+	// have equal area, and the surface area of a sphere
+	// is 4 pi radians^2.
+
+	Nside = (int)sqrt((4.0 * M_PI / 12.0) / square(arcsec2rad(AgreeArcSec)));
+	if (!Nside)
+		Nside = 1;
+
 	hitlist* hl = (hitlist*)malloc(sizeof(hitlist));
 	hl->Nside = Nside;
 	hl->ntotal = 0;
@@ -183,7 +211,7 @@ hitlist* hitlist_healpix_new(int Nside) {
 	for (p=0; p<hl->npix; p++) {
 		init_pixinfo(hl->pix + p, p, Nside);
 	}
-	hl->agreedist2 = square(AgreeTol);
+	hl->agreedist2 = AgreeTol2;
 	hl->matchlist = blocklist_pointer_new(16);
 	hl->memberlist = blocklist_int_new(16);
 	hl->agreelist = blocklist_pointer_new(16);
@@ -217,7 +245,7 @@ int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
 	return 0;
 }
 
-int hitlist_add_hit(hitlist* hlist, MatchObj* match) {
+int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 	int pix;
 	int p;
 	double x,y,z;
@@ -363,7 +391,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* match) {
 }
 
 
-void hitlist_clear(hitlist* hlist) {
+void hitlist_healpix_clear(hitlist* hlist) {
 	int p;
 	int m, M;
 	for (p=0; p<hlist->npix; p++) {
@@ -394,7 +422,7 @@ void hitlist_clear(hitlist* hlist) {
 	blocklist_remove_all(hlist->agreelist);
 }
 
-void hitlist_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {
+void hitlist_healpix_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {
 	int m, M;
 	M = blocklist_count(hl->matchlist);
 	for (m=0; m<M; m++) {
@@ -405,7 +433,7 @@ void hitlist_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {
 	}
 }
 
-void hitlist_free(hitlist* hl) {
+void hitlist_healpix_free(hitlist* hl) {
 	blocklist_free(hl->matchlist);
 	blocklist_free(hl->memberlist);
 	blocklist_free(hl->agreelist);
@@ -415,7 +443,7 @@ void hitlist_free(hitlist* hl) {
 
 
 // returns one big list containing all lists of agreers of length >= len.
-blocklist* hitlist_get_all_above_size(hitlist* hl, int len) {
+blocklist* hitlist_healpix_get_all_above_size(hitlist* hl, int len) {
 	blocklist* copy;
 	int m, M;
 	int i, N;
@@ -438,13 +466,13 @@ blocklist* hitlist_get_all_above_size(hitlist* hl, int len) {
 
 // returns shallow copies of all sets of hits with size
 // equal to the best.
-blocklist* hitlist_get_all_best(hitlist* hl) {
-	return hitlist_get_all_above_size(hl, hl->nbest);
+blocklist* hitlist_healpix_get_all_best(hitlist* hl) {
+	return hitlist_healpix_get_all_above_size(hl, hl->nbest);
 }
 
 // returns a shallow copy of the best set of hits.
 // you are responsible for calling blocklist_free.
-blocklist* hitlist_get_best(hitlist* hl) {
+blocklist* hitlist_healpix_get_best(hitlist* hl) {
 	blocklist* copy;
 	int m, M;
 
@@ -463,7 +491,7 @@ blocklist* hitlist_get_best(hitlist* hl) {
 
 // returns a shallow copy of the whole set of results.
 // you are responsible for calling blocklist_free.
-blocklist* hitlist_get_all(hitlist* hl) {
+blocklist* hitlist_healpix_get_all(hitlist* hl) {
 	blocklist* copy;
 	int m, M;
 
@@ -476,20 +504,22 @@ blocklist* hitlist_get_all(hitlist* hl) {
 	return copy;
 }
 
-void hitlist_add_hits(hitlist* hl, blocklist* hits) {
-	int i, N;
-	N = blocklist_count(hits);
-	for (i=0; i<N; i++) {
-		MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, i);
-		hitlist_add_hit(hl, mo);
-	}
-}
+/*
+  void hitlist_healpix_add_hits(hitlist* hl, blocklist* hits) {
+  int i, N;
+  N = blocklist_count(hits);
+  for (i=0; i<N; i++) {
+  MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, i);
+  hitlist_healpix_add_hit(hl, mo);
+  }
+  }
+*/
 
-int hitlist_count_best(hitlist* hitlist) {
+int hitlist_healpix_count_best(hitlist* hitlist) {
 	return hitlist->nbest;
 }
 
-int hitlist_count_all(hitlist* hitlist) {
+int hitlist_healpix_count_all(hitlist* hitlist) {
 	return hitlist->ntotal;
 }
 

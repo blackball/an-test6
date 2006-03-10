@@ -42,8 +42,8 @@ MYOBJS = randcat.o startree.o \
 
 all: $(EXECS) solvexy2 agreeable slave agreeable2
 
-#solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
-solvexy2: solvexy2.o solver2.o hitlist_healpix.o $(OBJ)
+#solvexy2: solvexy2.o solver2.o hitlist_healpix.o $(OBJ)
+solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 agreeable: agreeable.o hitlist_agreement.o $(OBJ)
