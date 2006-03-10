@@ -25,7 +25,6 @@
 #include "matchobj.h"
 #include "matchfile.h"
 #include "catalog.h"
-#include "hitlist.h"
 #include "hitlist_healpix.h"
 #include "tic.h"
 #include "quadfile.h"
@@ -130,12 +129,9 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		hitlist_set_default_parameters();
-		if (agreetol != 0.0) {
-			char buf[256];
-			// total hack...
-			sprintf(buf, "%g", agreetol);
-			hitlist_process_parameter('m', buf);
+		if (agreement && (agreetol <= 0.0)) {
+			fprintf(stderr, "If you set 'agreement', you must set 'agreetol'.\n");
+			exit(-1);
 		}
 
 		fprintf(stderr, "%s params:\n", progname);
@@ -396,7 +392,7 @@ int handlehit(struct solver_params* p, MatchObj* mo) {
 		mo->extra = &matchfile;
 		// compute (x,y,z) center, scale, rotation.
 		hitlist_healpix_compute_vector(mo);
-		hitlist_add_hit(hits, mo);
+		return hitlist_healpix_add_hit(hits, mo);
 	} else {
 		if (matchfile_write_match(matchfid, mo, &matchfile)) {
 			fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
@@ -465,7 +461,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		solver.field = thisfield;
 
 		if (agreement) {
-			hits = hitlist_new();
+			hits = hitlist_healpix_new(agreetol);
 		}
 
 		// The real thing
@@ -480,11 +476,12 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 			int* thisagreehist;
 			int maxagree = 0;
 			int k;
+			int nperlist;
 			thisagreehist = malloc(Nagreehist * sizeof(int));
 			for (k=0; k<Nagreehist; k++)
 				thisagreehist[k] = 0;
 
-			hitlist_histogram_agreement_size(hits, thisagreehist, Nagreehist);
+			hitlist_healpix_histogram_agreement_size(hits, thisagreehist, Nagreehist);
 
 			for (k=0; k<Nagreehist; k++)
 				if (thisagreehist[k]) {
@@ -500,18 +497,19 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 			free(thisagreehist);
 			thisagreehist = NULL;
 
-			nbest = hitlist_count_best(hits);
+			nbest = hitlist_healpix_count_best(hits);
+			nperlist = nbest;
 
 			fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
 			//best = hitlist_get_best(hits);
-			best = hitlist_get_all_best(hits);
+			best = hitlist_healpix_get_all_best(hits);
 			//best = hitlist_get_all_above_size(hits, nagree);
 
 			nbest = blocklist_count(best);
 			if (nbest)
 				fprintf(stderr, "(There are %i sets of agreeing hits of size %i.)\n",
-						blocklist_count(best) / nbest, nbest);
+						blocklist_count(best) / nperlist, nperlist);
 
 			for (j=0; j<nbest; j++) {
 				matchfile_entry* me;
@@ -522,8 +520,8 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 				}
 			}
 			blocklist_free(best);
-			hitlist_clear(hits);
-			hitlist_free(hits);
+			hitlist_healpix_clear(hits);
+			hitlist_healpix_free(hits);
 		}
 
 		get_resource_stats(&utime, &stime, NULL);

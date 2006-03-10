@@ -117,6 +117,10 @@ inline double distsq(double* d1, double* d2, int D);
 // radians.
 inline double distsq2arc(double dist2);
 
+inline double arc2distsq(double arcInRadians);
+
+inline double arcsec2distsq(double arcInArcSec);
+
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
 
 star *make_rand_star(double ramin, double ramax,

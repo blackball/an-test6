@@ -9,11 +9,10 @@
 #include "blocklist.h"
 #include "matchobj.h"
 #include "hitsfile.h"
-#include "hitlist.h"
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:L:M:f:";
+char* OPTIONS = "hH:n:A:B:F:L:M:f:m:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -24,12 +23,12 @@ void printHelp(char* progname) {
 			"   [-f flush-field-interval]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
+			"   [-m agreement-tolerance-in-arcsec]\n"
  			"   [-n matches_needed_to_agree]\n"
-			"%s"
 			"\nIf filename FLUSH is specified, agreeing matches will"
 			" be written out.\n"
 			"\nIf no match files are given, will read from stdin.\n",
-			progname, hitlist_get_parameter_help());
+			progname);
 }
 
 int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_ok);
@@ -37,7 +36,6 @@ int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_
 void flush_solved_fields(bool doleftovers, bool doagree, bool addunsolved, bool cleanup);
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
-
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 
 FILE *hitfid = NULL;
@@ -57,8 +55,6 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
-	char* hitlist_options;
-	char alloptions[256];
 	hits_header hitshdr;
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
@@ -70,21 +66,13 @@ int main(int argc, char *argv[]) {
 	bool leftovers = FALSE;
 	bool agree = FALSE;
 	double ramin, ramax, decmin, decmax;
+	double agreetolarcsec;
 
-	hitlist_set_default_parameters();
-	hitlist_options = hitlist_get_parameter_options();
-	sprintf(alloptions, "%s%s", OPTIONS, hitlist_options);
-
-    while ((argchar = getopt (argc, argv, alloptions)) != -1) {
-		char* ind = index(hitlist_options, argchar);
-		if (ind) {
-			if (hitlist_process_parameter(argchar, optarg)) {
-				printHelp(progname);
-				exit(-1);
-			}
-			continue;
-		}
+    while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'm':
+			agreetolarcsec = atof(optarg);
+			break;
 		case 'r':
 			ramin = atof(optarg);
 			break;
@@ -253,14 +241,14 @@ int main(int argc, char *argv[]) {
 						free(me.fieldpath);
 						continue;
 					}
-					hl = hitlist_new();
+					hl = hitlist_healpix_new(agreetolarcsec);
 					blocklist_pointer_set(hitlists, fieldnum, hl);
 				}
 			} else {
 				int k;
 				for (k=blocklist_count(hitlists); k<fieldnum; k++)
 					blocklist_pointer_append(hitlists, NULL);
-				hl = hitlist_new();
+				hl = hitlist_healpix_new(agreetolarcsec);
 				blocklist_pointer_append(hitlists, hl);
 			}
 
@@ -278,7 +266,7 @@ int main(int argc, char *argv[]) {
 			hitlist_healpix_compute_vector(mo);
 
 			// add the match...
-			hitlist_add_hit(hl, mo);
+			hitlist_healpix_add_hit(hl, mo);
 		}
 		fprintf(stderr, "\nRead %i matches.\n", nread);
 		fflush(stderr);
@@ -338,7 +326,7 @@ void flush_solved_fields(bool doleftovers,
 
 		hitlist* hl = (hitlist*)blocklist_pointer_access(hitlists, fieldnum);
 		if (!hl) continue;
-		nbest = hitlist_count_best(hl);
+		nbest = hitlist_healpix_count_best(hl);
 		if (nbest < min_matches_to_agree) {
 			if (addunsolved) {
 				blocklist_int_append(unsolved, fieldnum);
@@ -346,7 +334,7 @@ void flush_solved_fields(bool doleftovers,
 			if (doleftovers) {
 				int j;
 				int NA;
-				blocklist* all = hitlist_get_all(hl);
+				blocklist* all = hitlist_healpix_get_all(hl);
 				NA = blocklist_count(all);
 				fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
 				// write the leftovers...
@@ -363,18 +351,18 @@ void flush_solved_fields(bool doleftovers,
 				blocklist_free(all);
 			}
 			if (cleanup) {
-				hitlist_free_extra(hl, free_extra);
+				hitlist_healpix_free_extra(hl, free_extra);
 				// this frees the MatchObjs.
-				hitlist_clear(hl);
-				hitlist_free(hl);
+				hitlist_healpix_clear(hl);
+				hitlist_healpix_free(hl);
 				blocklist_pointer_set(hitlists, fieldnum, NULL);
 			}
 			continue;
 		}
 		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
-		best = hitlist_get_best(hl);
-		//best = hitlist_get_all_best(hl);
+		best = hitlist_healpix_get_best(hl);
+		//best = hitlist_healpix_get_all_best(hl);
 		/*
 		  best = hitlist_get_all_above_size(hl, min_matches_to_agree);
 		  nbest = blocklist_count(best);
@@ -386,7 +374,7 @@ void flush_solved_fields(bool doleftovers,
 
 		hits_field_init(&fieldhdr);
 		fieldhdr.field = fieldnum;
-		fieldhdr.nmatches = hitlist_count_all(hl);
+		fieldhdr.nmatches = hitlist_healpix_count_all(hl);
 		fieldhdr.nagree = nbest;
 
 		//hits_write_field_header(hitfid, &fieldhdr);
@@ -425,9 +413,9 @@ void flush_solved_fields(bool doleftovers,
 		blocklist_free(best);
 
 		// we now dump this hitlist.
-		hitlist_free_extra(hl, free_extra);
-		hitlist_clear(hl);
-		hitlist_free(hl);
+		hitlist_healpix_free_extra(hl, free_extra);
+		hitlist_healpix_clear(hl);
+		hitlist_healpix_free(hl);
 		blocklist_pointer_set(hitlists, fieldnum, NULL);
 	}
 	printf("# nsolved = %i\n", blocklist_count(flushsolved));
