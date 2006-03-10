@@ -1,4 +1,3 @@
-//#include <time.h>
 #include <errno.h>
 #include <string.h>
 
@@ -16,9 +15,11 @@ struct pixinfo {
 	// that belong to this pix.
 	blocklist* matchinds;
 	// list of neighbouring healpixes.
-	int healpix;
-	uint neighbours[8];
-	int nn;
+	//int healpix;
+	//uint neighbours[8];
+	//int nn;
+	// terminated by -1.
+	uint* neighbours;
 };
 
 // a hitlist (one per field)
@@ -77,7 +78,7 @@ struct hitlist_struct {
 	//    (which are lists of indices into "matchlist".)
 	blocklist* agreelist;
 
-	// same size as agreelist; contains "intmap" objects that hold the
+	// same size as agreelist; contains "intmap*" objects that hold the
 	// mapping between field and catalog objects.
 	// (IFF do_correspond is TRUE).
 	blocklist* correspondlist;
@@ -182,17 +183,39 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 
 void init_pixinfo(pixinfo* node, int pix, int Nside) {
 	node->matchinds = NULL;
-	node->healpix = pix;
+	//node->healpix = pix;
 	//node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
-	node->nn = -1;
+	//node->nn = -1;
+	node->neighbours = NULL;
 }
 
 void ensure_pixinfo_inited(pixinfo* node, int pix, int Nside) {
-	if (node->nn == -1) {
-		node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
+	uint neigh[8];
+	uint nn;
+	if (!node->neighbours) {
+		nn = healpix_get_neighbours_nside(pix, neigh, Nside);
+		node->neighbours = malloc((nn+1) * sizeof(int));
+		memcpy(node->neighbours, neigh, nn * sizeof(int));
+		node->neighbours[nn] = -1;
 	}
+	/*
+	  if (node->nn == -1) {
+	  node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
+	  }
+	*/
 	if (!node->matchinds) {
 		node->matchinds = blocklist_int_new(4);
+	}
+}
+
+void clear_pixinfo(pixinfo* node) {
+	if (node->neighbours) {
+		free(node->neighbours);
+		node->neighbours = NULL;
+	}
+	if (node->matchinds) {
+		blocklist_free(node->matchinds);
+		node->matchinds = NULL;
 	}
 }
 
@@ -200,9 +223,6 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	int p;
 	double AgreeTol2;
 	int Nside;
-
-	//time_t tstart, tend;
-	//tstart = time(NULL);
 
 	AgreeTol2 = arcsec2distsq(AgreeArcSec);
 
@@ -221,10 +241,10 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	Nside = (int)sqrt((4.0 * M_PI / 12.0) / square(arcsec2rad(AgreeArcSec)));
 	if (!Nside)
 		Nside = 1;
-	//if (Nside > 1024)
-	//Nside = 1024;
-	if (Nside > 256)
-		Nside = 256;
+	//if (Nside > 256)
+	//Nside = 256;
+	if (Nside > 128)
+		Nside = 128;
 	//fprintf(stderr, "Chose Nside=%i.\n", Nside);
 
 	hitlist* hl = (hitlist*)malloc(sizeof(hitlist));
@@ -239,6 +259,9 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 				hl->npix * sizeof(pixinfo), strerror(errno));
 		return NULL;
 	}
+
+	fprintf(stderr, "sizeof(pixinfo)=%i.  Nside=%i, npix=%i, total %i bytes.\n", sizeof(pixinfo), Nside, hl->npix, sizeof(pixinfo)*hl->npix);
+
 	for (p=0; p<hl->npix; p++) {
 		init_pixinfo(hl->pix + p, p, Nside);
 	}
@@ -246,14 +269,9 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	hl->matchlist = blocklist_pointer_new(16);
 	hl->memberlist = blocklist_int_new(16);
 	hl->agreelist = blocklist_pointer_new(8);
-	hl->correspondlist = blocklist_new(8, sizeof(intmap));
+	hl->correspondlist = blocklist_pointer_new(8);
 	hl->do_correspond = 1;
 
-	/*
-	  tend = time(NULL);
-	  fprintf(stderr, "hitlist_healpix_new took %i sec.\n",
-	  (int)(tend - tstart));
-	*/
 	return hl;
 }
 
@@ -290,6 +308,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 	double x,y,z;
 	int mergeind = -1;
 	int matchind;
+	int nn;
 	pixinfo* pinfo;
 	blocklist* mergelist;
 
@@ -318,9 +337,12 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 	mergelist = NULL;
 	mergeind = -1;
 
+	for (nn=0;; nn++)
+		if (pinfo->neighbours[nn] == -1)
+			break;
 
 	// for each neighbouring pixel...
-	for (p=-1; p<pinfo->nn; p++) {
+	for (p=-1; p<nn; p++) {
 		int m, M;
 		pixinfo* pixel;
 
@@ -356,7 +378,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 
 			// are we checking correspondence?
 			if (hlist->do_correspond) {
-				intmap* map = (intmap*)blocklist_access(hlist->correspondlist, agreeind);
+				intmap* map = (intmap*)blocklist_pointer_access(hlist->correspondlist, agreeind);
 				if (intmap_conflicts(map, match->fA, match->iA) ||
 					intmap_conflicts(map, match->fB, match->iB) ||
 					intmap_conflicts(map, match->fC, match->iC) ||
@@ -395,10 +417,11 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 				// merge the field->catalog correspondences:
 				if (hlist->do_correspond) {
 					intmap *map1, *map2;
-					map1 = (intmap*)blocklist_access(hlist->correspondlist, mergeind);
-					map2 = (intmap*)blocklist_access(hlist->correspondlist, agreeind);
+					map1 = (intmap*)blocklist_pointer_access(hlist->correspondlist, mergeind);
+					map2 = (intmap*)blocklist_pointer_access(hlist->correspondlist, agreeind);
 					intmap_merge(map1, map2);
-					intmap_clear(map2);
+					intmap_free(map2);
+					blocklist_pointer_set(hlist->correspondlist, agreeind, NULL);
 				}
 			}
 		}
@@ -409,17 +432,17 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 		int agreeind;
 		int a, A;
 		blocklist* newlist;
-		intmap newmap;
+		intmap* newmap = NULL;
 
 		// We didn't find any agreeing matches.  Create a new agreement
 		// list and add this MatchObj to it.
 		newlist = blocklist_int_new(4);
 		if (hlist->do_correspond) {
-			intmap_init(&newmap);
-			intmap_add(&newmap, match->fA, match->iA);
-			intmap_add(&newmap, match->fB, match->iB);
-			intmap_add(&newmap, match->fC, match->iC);
-			intmap_add(&newmap, match->fD, match->iD);
+			newmap = intmap_new();
+			intmap_add(newmap, match->fA, match->iA);
+			intmap_add(newmap, match->fB, match->iB);
+			intmap_add(newmap, match->fC, match->iC);
+			intmap_add(newmap, match->fD, match->iD);
 		}
 
 		// find an available spot in agreelist:
@@ -432,7 +455,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 			agreeind = a;
 			blocklist_pointer_set(hlist->agreelist, a, newlist);
 			if (hlist->do_correspond)
-				blocklist_set(hlist->correspondlist, a, &newmap);
+				blocklist_pointer_set(hlist->correspondlist, a, newmap);
 			break;
 		}
 		if (agreeind == -1) {
@@ -440,7 +463,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 			agreeind = blocklist_count(hlist->agreelist);
 			blocklist_pointer_append(hlist->agreelist, newlist);
 			if (hlist->do_correspond)
-				blocklist_append(hlist->correspondlist, &newmap);
+				blocklist_pointer_append(hlist->correspondlist, newmap);
 		}
 		blocklist_int_append(newlist, matchind);
 
@@ -470,10 +493,7 @@ void hitlist_healpix_clear(hitlist* hlist) {
 	int m, M;
 	for (p=0; p<hlist->npix; p++) {
 		pixinfo* pix = hlist->pix + p;
-		if (pix->matchinds) {
-			blocklist_free(pix->matchinds);
-			pix->matchinds = NULL;
-		}
+		clear_pixinfo(pix);
 	}
 	M = blocklist_count(hlist->matchlist);
 	for (m=0; m<M; m++) {
@@ -489,14 +509,13 @@ void hitlist_healpix_clear(hitlist* hlist) {
 	M = blocklist_count(hlist->agreelist);
 	for (m=0; m<M; m++) {
 		if (hlist->do_correspond) {
-			intmap* map = (intmap*)blocklist_access(hlist->correspondlist, m);
+			intmap* map = (intmap*)blocklist_pointer_access(hlist->correspondlist, m);
 			if (map)
-				intmap_clear(map);
+				intmap_free(map);
 		}
 		blocklist* list = (blocklist*)blocklist_pointer_access(hlist->agreelist, m);
-		if (!list)
-			continue;
-		blocklist_free(list);
+		if (list)
+			blocklist_free(list);
 	}
 	blocklist_remove_all(hlist->agreelist);
 	blocklist_remove_all(hlist->correspondlist);
