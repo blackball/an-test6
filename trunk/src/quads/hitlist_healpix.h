@@ -1,7 +1,6 @@
 #ifndef HITLIST_HEALPIX_H
 #define HITLIST_HEALPIX_H
 
-//#include "hitlist.h"
 #include "matchobj.h"
 
 #ifndef DONT_DEFINE_HITLIST
