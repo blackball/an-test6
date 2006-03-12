@@ -9,7 +9,6 @@
 */
 void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD);
 
-void getstarcoords(star *sA, star *sB, star *sC, star *sD,
-				   sidx iA, sidx iB, sidx iC, sidx iD);
+void getstarcoord(uint iA, double *star);
 
 #endif

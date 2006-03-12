@@ -8,7 +8,11 @@ struct match_struct {
     sidx iA, iB, iC, iD;
     sidx fA, fB, fC, fD;
     double code_err;
-    star *sMin, *sMax;
+    //star *sMin, *sMax;
+
+	double sMin[3];
+	double sMax[3];
+
     double vector[6];
 
 	double* transform;

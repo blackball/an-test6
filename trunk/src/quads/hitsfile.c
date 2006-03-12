@@ -137,13 +137,13 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	fprintf(fid, "            field_objects_ABCD=(%lu,%lu,%lu,%lu),\n",
 			mo->fA, mo->fB, mo->fC, mo->fD);
 	fprintf(fid, "            min_xyz=(%lf,%lf,%lf), min_radec=(%lf,%lf),\n",
-			star_ref(mo->sMin, 0), star_ref(mo->sMin, 1), star_ref(mo->sMin, 2),
-			rad2deg(xy2ra(star_ref(mo->sMin, 0), star_ref(mo->sMin, 1))),
-			rad2deg(z2dec(star_ref(mo->sMin, 2))));
+			mo->sMin[0], mo->sMin[1], mo->sMin[2],
+			rad2deg(xy2ra(mo->sMin[0], mo->sMin[1])),
+			rad2deg(z2dec(mo->sMin[2])));
 	fprintf(fid, "            max_xyz=(%lf,%lf,%lf), max_radec=(%lf,%lf),\n",
-			star_ref(mo->sMax, 0), star_ref(mo->sMax, 1), star_ref(mo->sMax, 2),
-			rad2deg(xy2ra(star_ref(mo->sMax, 0), star_ref(mo->sMax, 1))),
-			rad2deg(z2dec(star_ref(mo->sMax, 2))));
+			mo->sMax[0], mo->sMax[1], mo->sMax[2],
+			rad2deg(xy2ra(mo->sMax[0], mo->sMax[1])),
+			rad2deg(z2dec(mo->sMax[2])));
 	
 	if (mo->transform) {
 		fprintf(fid, "            transform=[%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g],\n",

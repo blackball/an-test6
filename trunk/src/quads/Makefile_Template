@@ -41,6 +41,8 @@ MYOBJS = randcat.o startree.o \
 
 # getquads.o codetree.o quadidx.o 
 
+ALLOBJS = $(OBJ) $(MYOBJS) 
+
 all: $(EXECS) solvexy2 agreeable slave agreeable2
 
 #solvexy2: solvexy2.o solver2.o hitlist_healpix.o $(OBJ)
@@ -59,16 +61,29 @@ slave: slave.o solver2.o hitlist_healpix.o $(OBJ)
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJ) $< -o $@
 
+
+CUTEST_I = -Ikdtree/CuTest
+
+CFLAGS += $(CUTEST_I)
+
 %.o:	%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Dependencies:           
+DEPS := $(subst .o,.dep,$(ALLOBJS))
+
+deps: $(DEPS)
+	cat *.dep > deps
+
+%.dep : %.c
+	gcc -MM $(CFLAGS) -c $< > $@
+
 allclean:
-	rm -f KD/*.o *.o $(EXECS) *~
+	rm -f KD/*.o *.o $(EXECS) *~ $(DEPS) deps
 
 clean:
-	rm -f $(EXECS) $(MYOBJS) $(OBJ)
+	rm -f $(EXECS) $(MYOBJS) $(OBJ) $(DEPS) deps
 
-CUTEST_I = -Ikdtree/CuTest
 CUTEST_L = kdtree/CuTest/CuTest.o 
 
 $(CUTEST_L) :: %.o : %.c
@@ -89,3 +104,8 @@ $(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
 $(CUTEST_TEST_OBJS) :: %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
+ifneq ($(MAKECMDGOALS),clean)
+  ifneq ($(MAKECMDGOALS),allclean)
+    include deps
+  endif
+endif

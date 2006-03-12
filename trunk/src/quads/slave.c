@@ -33,13 +33,13 @@ void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
 }
 
-#define DEFAULT_CODE_TOL .002
-#define DEFAULT_PARITY_FLIP FALSE
-
 void solve_fields(xyarray *thefields,
 				  kdtree_t *codekd);
 
 int read_parameters();
+
+#define DEFAULT_CODE_TOL .002
+#define DEFAULT_PARITY_FLIP FALSE
 
 // params:
 char *fieldfname = NULL, *treefname = NULL;
@@ -550,13 +550,7 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
 	*iD = sD;
 }
 
-void getstarcoords(star *sA, star *sB, star *sC, star *sD,
-				   sidx iA, sidx iB, sidx iC, sidx iD)
-{
-	memcpy(sA->farr, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
-	memcpy(sB->farr, catalog_get_star(cat, iB), DIM_STARS * sizeof(double));
-	memcpy(sC->farr, catalog_get_star(cat, iC), DIM_STARS * sizeof(double));
-	memcpy(sD->farr, catalog_get_star(cat, iD), DIM_STARS * sizeof(double));
+void getstarcoord(uint iA, double *sA) {
+	memcpy(sA, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
 }
-
 	
