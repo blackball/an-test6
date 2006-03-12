@@ -300,6 +300,31 @@ void test_delete_4(CuTest* tc) {
 	CuAssertPtrEquals(tc, bl->tail, NULL);
 }
 
+/******************************************************************************/
+/****************************** double lists **********************************/
+/******************************************************************************/
+
+
+void test_dl_push(CuTest* tc) {
+	dl* bl;
+	bl = dl_new(2);
+	CuAssertIntEquals(tc, il_size(bl), 0);
+	dl_push(bl, 42.0);
+	dl_push(bl, 43.0);
+	dl_push(bl, 47.0);
+	dl_push(bl, 49.0);
+
+	dl_set(bl, 0, 0.0);
+	dl_set(bl, 1, 1.0);
+	dl_set(bl, 2, 2.0);
+
+	CuAssertIntEquals(tc, il_size(bl), 4);
+	CuAssert(tc, "dl", 0.0 == dl_get(bl, 0));
+	CuAssert(tc, "dl", 1.0 == dl_get(bl, 1));
+	CuAssert(tc, "dl", 2.0 == dl_get(bl, 2));
+}
+
+
 
 
 int main(int argc, char** args) {
@@ -321,6 +346,7 @@ int main(int argc, char** args) {
 	SUITE_ADD_TEST(suite, test_il_insert_unique_ascending);
 	SUITE_ADD_TEST(suite, test_il_copy);
 	SUITE_ADD_TEST(suite, test_il_dupe);
+	SUITE_ADD_TEST(suite, test_dl_push);
 	SUITE_ADD_TEST(suite, test_set);
 	SUITE_ADD_TEST(suite, test_delete);
 	SUITE_ADD_TEST(suite, test_delete_2);

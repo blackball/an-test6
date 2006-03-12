@@ -920,20 +920,37 @@ void blocklist_pointer_print(blocklist* list) {
 
 
 // special-case double list accessors...
-blocklist* blocklist_double_new(int blocksize) {
+dl* dl_new(int blocksize) {
 	return blocklist_new(blocksize, sizeof(double));
 }
-void blocklist_double_free(blocklist* list) {
-	blocklist_free(list);
+void dl_free(dl* list) {
+	blocklist_free((blocklist*)list);
 }
-void blocklist_double_append(blocklist* list, double data) {
-	blocklist_append(list, &data);
+void dl_push(dl* list, double data) {
+	blocklist_append((blocklist*)list, &data);
 }
-double blocklist_double_access(blocklist* list, int n) {
+double dl_pop(il* list) {
+    double ret = dl_get(list, list->N-1);
+    blocklist_remove_index((blocklist*) list, list->N-1);
+    return ret;
+}
+double dl_get(dl* list, int n) {
 	double* ptr;
-	ptr = (double*)blocklist_access(list, n);
+	ptr = (double*)blocklist_access((blocklist*)list, n);
 	return *ptr;
 }
-void blocklist_double_copy(blocklist* list, int start, int length, double* vdest) {
+void dl_set(dl* list, int index, double value) {
+	blocklist_set((blocklist*)list, index, &value);
+}
+
+void dl_copy(blocklist* list, int start, int length, double* vdest) {
 	blocklist_copy(list, start, length, vdest);
 }
+dl* dl_dupe(dl* dlist) {
+    dl* ret = dl_new(dlist->blocksize);
+    int i;
+    for (i=0; i<dlist->N; i++)
+        il_push(ret, dl_get(dlist, i));
+    return ret; 
+}
+
