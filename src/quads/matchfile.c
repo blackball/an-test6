@@ -30,10 +30,10 @@ int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 		if (!err) err |= write_double(fid, mo->vector[i]);
 	}
 	for (i=0; i<DIM_STARS; i++) {
-		if (!err) err |= write_double(fid, star_ref(mo->sMin, i));
+		if (!err) err |= write_double(fid, mo->sMin[i]);
 	}
 	for (i=0; i<DIM_STARS; i++) {
-		if (!err) err |= write_double(fid, star_ref(mo->sMax, i));
+		if (!err) err |= write_double(fid, mo->sMax[i]);
 	}
 	if (err) {
 		fprintf(stderr, "Error writing match file entry: %s\n", strerror(errno));
@@ -97,8 +97,6 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 	*/
 
 	mo = mk_MatchObj();
-	mo->sMin = mk_star();
-	mo->sMax = mk_star();
 
 	for (i=0; i<MATCH_VECTOR_SIZE; i++) {
 		if (!err) err |= read_double(fid, mo->vector + i);
@@ -106,20 +104,18 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 	for (i=0; i<DIM_STARS; i++) {
 		double d;
 		if (!err) err |= read_double(fid, &d);
-		star_set(mo->sMin, i, d);
+		mo->sMin[i] = d;
 	}
 	for (i=0; i<DIM_STARS; i++) {
 		double d;
 		if (!err) err |= read_double(fid, &d);
-		star_set(mo->sMax, i, d);
+		mo->sMax[i] = d;
 	}
 
 	if (err) {
 		fprintf(stderr, "Error reading matchfile entry: %s\n", strerror(errno));
 		free(indexpath);
 		free(fieldpath);
-		free_star(mo->sMin);
-		free_star(mo->sMax);
 		free_MatchObj(mo);
 		return 1;
 	}

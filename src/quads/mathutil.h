@@ -5,7 +5,13 @@
 unsigned long int choose(unsigned int nn, unsigned int mm);
 double inverse_3by3(double *matrix);
 void image_to_xyz(double uu, double vv, star *s, double *transform);
+
+void image_to_xyz_2(double uu, double vv, double* s, double* transform);
+
 double *fit_transform(xy *ABCDpix, char order, star *A, star *B, star *C, star *D);
+
+double *fit_transform_2(xy *ABCDpix, char order,
+						double* A, double* B, double* C, double* D);
 
 ivec *box_containing_most_points(dyv *x, dyv *y, double bx, double by);
 

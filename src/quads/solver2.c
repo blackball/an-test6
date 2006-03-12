@@ -309,25 +309,22 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
     qidx jj, thisquadno;
     sidx iA, iB, iC, iD;
     double *transform;
-    star *sA, *sB, *sC, *sD, *sMin, *sMax;
     MatchObj *mo;
-
-    sA = mk_star();
-    sB = mk_star();
-    sC = mk_star();
-    sD = mk_star();
+	double sA[3], sB[3], sC[3], sD[3], sMin[3], sMax[3];
 
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
 
 		thisquadno = (qidx)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
-		getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
-		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
-		sMin = mk_star();
-		sMax = mk_star();
-		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
-		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
+		getstarcoord(iA, sA);
+		getstarcoord(iB, sB);
+		getstarcoord(iC, sC);
+		getstarcoord(iD, sD);
+
+		transform = fit_transform_2(ABCDpix, order, sA, sB, sC, sD);
+		image_to_xyz_2(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
+		image_to_xyz_2(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
 
 		free(transform);
 
@@ -335,9 +332,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		// fieldunitsupper/lower is in arcseconds/pixel
 		{
 			double d, c;
-			d  = square(star_ref(sMax, 0) - star_ref(sMin, 0));
-			d += square(star_ref(sMax, 1) - star_ref(sMin, 1));
-			d += square(star_ref(sMax, 2) - star_ref(sMin, 2));
+			d  = square(sMax[0] - sMin[0]);
+			d += square(sMax[1] - sMin[1]);
+			d += square(sMax[2] - sMin[2]);
 			// convert 'd' from squared distance on the unit sphere
 			// to arcseconds...
 			d = distsq2arc(d);
@@ -348,9 +345,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 			c = sqrt(c);
 
 			if ((d/c > params->arcsec_per_pixel_upper) || (d/c < params->arcsec_per_pixel_lower)) {
-				// remove this quad
-				free_star(sMin);
-				free_star(sMax);
+				// this quad has invalid scale.
 				continue;
 			}
 		}
@@ -367,16 +362,19 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		mo->fC = fC;
 		mo->fD = fD;
 
-		mo->sMin = sMin;
-		mo->sMax = sMax;
+		mo->sMin[0] = sMin[0];
+		mo->sMin[1] = sMin[1];
+		mo->sMin[2] = sMin[2];
+		mo->sMax[0] = sMax[0];
+		mo->sMax[1] = sMax[1];
+		mo->sMax[2] = sMax[2];
 
-
-		mo->vector[0] = star_ref(sMin, 0);
-		mo->vector[1] = star_ref(sMin, 1);
-		mo->vector[2] = star_ref(sMin, 2);
-		mo->vector[3] = star_ref(sMax, 0);
-		mo->vector[4] = star_ref(sMax, 1);
-		mo->vector[5] = star_ref(sMax, 2);
+		mo->vector[0] = sMin[0];
+		mo->vector[1] = sMin[1];
+		mo->vector[2] = sMin[2];
+		mo->vector[3] = sMax[0];
+		mo->vector[4] = sMax[1];
+		mo->vector[5] = sMax[2];
 
 		mo->code_err = krez->sdists[jj];
 
@@ -422,11 +420,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		}
 
     }
-
-    free_star(sA);
-    free_star(sB);
-    free_star(sC);
-    free_star(sD);
 }
 
 // find min and max coordinates in this field;

@@ -1,5 +1,7 @@
 Makefile
 *.o
+*.dep
+deps
 randcat
 startree
 findstar

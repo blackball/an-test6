@@ -755,14 +755,14 @@ void debugging_gather_hits(hitlist* hits, blocklist* outputlist) {
 		double minra, maxra, mindec, maxdec;
 		double x, y, z;
 		MatchObj* mo = (MatchObj*)blocklist_pointer_access(all, j);
-		x = dyv_ref(mo->sMin, 0);
-		y = dyv_ref(mo->sMin, 1);
-		z = dyv_ref(mo->sMin, 2);
+		x = mo->sMin[0];
+		y = mo->sMin[1];
+		z = mo->sMin[2];
 		minra = xy2ra(x, y);
 		mindec = z2dec(z);
-		x = dyv_ref(mo->sMax, 0);
-		y = dyv_ref(mo->sMax, 1);
-		z = dyv_ref(mo->sMax, 2);
+		x = mo->sMax[0];
+		y = mo->sMax[1];
+		z = mo->sMax[2];
 		maxra = xy2ra(x, y);
 		maxdec = z2dec(z);
 
@@ -838,13 +838,8 @@ void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
 	*iD = sD;
 }
 
-void getstarcoords(star *sA, star *sB, star *sC, star *sD,
-				   sidx iA, sidx iB, sidx iC, sidx iD)
-{
-	memcpy(sA->farr, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
-	memcpy(sB->farr, catalog_get_star(cat, iB), DIM_STARS * sizeof(double));
-	memcpy(sC->farr, catalog_get_star(cat, iC), DIM_STARS * sizeof(double));
-	memcpy(sD->farr, catalog_get_star(cat, iD), DIM_STARS * sizeof(double));
+void getstarcoord(uint iA, double *sA) {
+	memcpy(sA, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
 }
 
 	

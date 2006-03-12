@@ -58,19 +58,22 @@ inline int inrange(double ra, double ralow, double rahigh);
 
 inline double distsq(double* d1, double* d2, int D);
 
+// DEPRECATED
 #define mk_star() (star *)mk_dyv(DIM_STARS)
+#define free_star(s) free_dyv((dyv *)s)
+#define star_ref(s,i) dyv_ref((dyv *)s,i)
+#define star_set(s,i,v) dyv_set((dyv *)s,i,v)
+
 #define mk_stard(d) (star *)mk_dyv(d)
 #define mk_code() (code *)mk_dyv(DIM_CODES)
 #define mk_coded(d) (code *)mk_dyv(d)
 #define mk_quad() (quad *)mk_ivec(DIM_CODES)
 #define mk_quadd(d) (quad *)mk_ivec(d)
 #define mk_xy(n) (xy *)mk_dyv(DIM_XY*n)
-#define free_star(s) free_dyv((dyv *)s)
 #define free_code(c) free_dyv((dyv *)c)
 #define free_quad(q) free_ivec((ivec *)q)
 #define free_xy(s) free_dyv((dyv *)s)
 
-#define star_ref(s,i) dyv_ref((dyv *)s,i)
 #define code_ref(c,i) dyv_ref((dyv *)c,i)
 #define quad_ref(q,i) ivec_ref((ivec *)q,i)
 #define xya_ref(a,i) dyv_array_ref(a,i)
@@ -80,7 +83,6 @@ inline double distsq(double* d1, double* d2, int D);
 #define xy_refy(s,i) dyv_ref((dyv *)s,DIM_XY*i+1)
 #define xy_size(s) (dyv_size(s)/2)
 
-#define star_set(s,i,v) dyv_set((dyv *)s,i,v)
 #define code_set(c,i,v) dyv_set((dyv *)c,i,v)
 #define quad_set(q,i,j) ivec_set((ivec *)q,i,j)
 #define xy_set(s,i,v) dyv_set((dyv *)s,i,v)
