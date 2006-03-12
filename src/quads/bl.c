@@ -929,7 +929,7 @@ void dl_free(dl* list) {
 void dl_push(dl* list, double data) {
 	blocklist_append((blocklist*)list, &data);
 }
-double dl_pop(il* list) {
+double dl_pop(dl* list) {
     double ret = dl_get(list, list->N-1);
     blocklist_remove_index((blocklist*) list, list->N-1);
     return ret;
@@ -950,7 +950,7 @@ dl* dl_dupe(dl* dlist) {
     dl* ret = dl_new(dlist->blocksize);
     int i;
     for (i=0; i<dlist->N; i++)
-        il_push(ret, dl_get(dlist, i));
+        dl_push(ret, dl_get(dlist, i));
     return ret; 
 }
 
