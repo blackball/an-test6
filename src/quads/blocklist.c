@@ -293,7 +293,7 @@ void blocklist_remove_index_range(blocklist* list, int start, int length) {
 }
 
 
-void clear_list(blocklist* list) {
+void bl_clear(blocklist* list) {
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -325,7 +325,7 @@ void blocklist_append_list(blocklist* list1, blocklist* list2) {
 		list1->tail = list2->tail;
 		list1->N = list2->N;
 		// remove everything from list2 (to avoid sharing nodes)
-		clear_list(list2);
+		bl_clear(list2);
 		return;
 	}
 
@@ -338,7 +338,7 @@ void blocklist_append_list(blocklist* list1, blocklist* list2) {
 	list1->tail = list2->tail;
 	list1->N += list2->N;
 	// remove everything from list2 (to avoid sharing nodes)
-	clear_list(list2);
+	bl_clear(list2);
 }
 
 

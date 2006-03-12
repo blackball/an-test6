@@ -16,7 +16,7 @@ OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o
 	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
 	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o codefile.o tic.o quadfile.o \
-	intmap.o
+	intmap.o bl.o
 
 #suspend.o 
 
@@ -74,7 +74,7 @@ CUTEST_L = kdtree/CuTest/CuTest.o
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
-CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_blocklist
+CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_blocklist test_bl
 
 
 TEST_DRIVERS = $(CUTEST_TEST_DRIVERS)

@@ -10,16 +10,16 @@
 
 #include <stdlib.h>
 
-struct blocklist_node {
+struct blnode {
   // number of elements filled.
   int N;
   void* data;
-  struct blocklist_node* next;
+  struct blnode* next;
 };
-typedef struct blocklist_node blnode;
+typedef struct blnode blnode;
 
 // the top-level data structure of a blocklist.
-struct blocklist {
+struct bl {
   blnode* head;
   blnode* tail;
   int N;
@@ -28,30 +28,30 @@ struct blocklist {
   blnode* last_access;
   int last_access_n;
 };
-typedef struct blocklist blocklist;
+typedef struct bl bl;
 
 
 /**
    Removes elements from \c split
    to the end of the list from \c src and appends them to \c dest.
  */
-void blocklist_split(blocklist* src, blocklist* dest, int split);
+void bl_split(bl* src, bl* dest, int split);
 
-blocklist* blocklist_new(int blocksize, int datasize);
+bl* bl_new(int blocksize, int datasize);
 
-void blocklist_init(blocklist* l, int blocksize, int datasize);
+void bl_init(bl* l, int blocksize, int datasize);
 
-void blocklist_free(blocklist* list);
+void bl_free(bl* list);
 
-void blocklist_append(blocklist* list, void* data);
+void bl_append(bl* list, void* data);
 
-void blocklist_append_list(blocklist* list1, blocklist* list2);
+void bl_append_list(bl* list1, bl* list2);
 
-void blocklist_insert(blocklist* list, int indx, void* data);
+void bl_insert(bl* list, int indx, void* data);
 
-void blocklist_set(blocklist* list, int indx, void* data);
+void bl_set(bl* list, int indx, void* data);
 
-void blocklist_insert_sorted(blocklist* list, void* data,
+void bl_insert_sorted(bl* list, void* data,
 			     int (*compare)(void* v1, void* v2));
 
 /**
@@ -59,38 +59,44 @@ void blocklist_insert_sorted(blocklist* list, void* data,
    returned zero), then -1 is returned.  Otherwise, the index at which
    the item was inserted is returned.
  */
-int blocklist_insert_unique_sorted(blocklist* list, void* data,
+int bl_insert_unique_sorted(bl* list, void* data,
 								   int (*compare)(void* v1, void* v2));
 
 // Copies the nth element into the destination location.
-void blocklist_get(blocklist* list, int n, void* dest);
+void bl_get(bl* list, int n, void* dest);
 
-void blocklist_print_structure(blocklist* list);
+void bl_print_structure(bl* list);
 
 // Returns a pointer to the nth element.
-void* blocklist_access(blocklist* list, int n);
+void* bl_access(bl* list, int n);
 
-int blocklist_count(blocklist* list);
+int bl_count(bl* list);
 
-void blocklist_copy(blocklist* list, int start, int length, void* vdest);
+void bl_copy(bl* list, int start, int length, void* vdest);
 
-void blocklist_remove_all(blocklist* list);
+void bl_remove_all(bl* list);
 
-void blocklist_remove_all_but_first(blocklist* list);
+void bl_remove_all_but_first(bl* list);
 
-void blocklist_remove_index(blocklist* list, int indx);
+void bl_remove_index(bl* list, int indx);
 
-void blocklist_remove_index_range(blocklist* list, int start, int length);
+void bl_remove_index_range(bl* list, int start, int length);
 
-void* blocklist_find(blocklist* list, void* data,
+void* bl_find(bl* list, void* data,
 		     int (*compare)(void* v1, void* v2));
 
+// returns 0 if okay, 1 if an error is detected.
+int bl_check_consistency(bl* list);
 
+// returns 0 if okay, 1 if an error is detected.
+int bl_check_sorted(bl* list,
+						   int (*compare)(void* v1, void* v2),
+						   int isunique);
 
 ///////////////////////////////////////////////
 // special-case functions for integer lists. //
 ///////////////////////////////////////////////
-typedef blocklist il;
+typedef bl il;
 il*  il_new(int blocksize);
 int  il_size(il* list);
 void il_new_existing(il* list, int blocksize);
@@ -110,13 +116,20 @@ void il_remove(il* list, int index);
 
 // returns the index of the removed value, or -1 if it didn't
 // exist in the list.
-int il_remove_value(blocklist* list, int value);
+int il_remove_value(il* list, int value);
+
+int il_check_consistency(il* list);
+
+int il_check_sorted_ascending(il* list,
+							  int isunique);
+int il_check_sorted_descending(il* list,
+							   int isunique);
 
 
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
 ///////////////////////////////////////////////
-typedef blocklist pl;
+typedef bl pl;
 pl*   pl_new(int blocksize);
 void  pl_free(pl* list);
 void* pl_get(pl* list, int n);
@@ -130,13 +143,15 @@ void  pl_remove(pl* list, int index);
 ///////////////////////////////////////////////
 // special-case functions for double lists. //
 ///////////////////////////////////////////////
-typedef blocklist dl;
+typedef bl dl;
 dl*    dl_new(int blocksize);
 void   dl_free(dl* list);
 void   dl_push(dl* list, double data);
 double dl_pop(dl* list);
 double dl_get(dl* list, int n);
+void   dl_set(dl* list, int n, double val);
 void   dl_copy(dl* list, int start, int length, double* vdest);
 dl*    dl_dupe(dl* list);
+int    dl_check_consistency(dl* list);
 
 #endif
