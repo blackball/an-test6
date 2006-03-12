@@ -284,11 +284,13 @@ int main(int argc, char** args) {
 	CuSuiteDetails(suite, output);
 	printf("%s\n", output->buffer);
 
+    /*
 	print_healpix_grid(1);
 	print_healpix_grid(2);
 	print_healpix_grid(3);
 	print_healpix_grid(4);
 	print_healpix_grid(5);
+    */
 
 	//print_test_healpix_output();
 	

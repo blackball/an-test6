@@ -15,8 +15,8 @@ void test_sort_random(CuTest *tc) {
 	  int Nstep = 10;
 	  int tries = 100;
 	*/
-	int Nmax = 1000000;
-	int Nstep = 1000;
+	int Nmax = 100000;
+	int Nstep = 10000;
 	int tries = 1;
 	int D=3;
 	int i, t;

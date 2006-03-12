@@ -9,11 +9,23 @@ env = Environment(LIBS='m',
                   CPPPATH=Split('kdtree kdtree/CuTest/ .'))
 
 KD = 'kdtree/kdtree.c kdtree/kdtree_io.c ioutils.c'.split()
-env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c kdtree/test_kdtree.c'))
-env.Program('hpquads', Split('hpquads.c tic.c starutil2.c ioutils.c catalog.c fileutil2.c blocklist.c healpix.c'))
+
+env.Program('hpquads', Split('hpquads.c tic.c starutil2.c ioutils.c catalog.c '
+                             'fileutil2.c blocklist.c healpix.c'))
 env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil2.c'))
 env.Program('codetree2', KD + Split('codetree2.c fileutil2.c codefile.c'))
 env.Program('findquad', Split('findquad.c fileutil2.c'))
 env.Program('findcode', Split('findquad.c fileutil2.c'))
 env.Program('startree2', KD + Split('startree2.c fileutil2.c'))
 env.Program('randcat', KD + Split('startree2.c fileutil2.c'))
+
+tests = [
+env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c '
+                                 'kdtree/test_kdtree.c')),
+env.Program('test_healpix', Split('kdtree/CuTest/CuTest.c test_healpix.c '
+                                  'healpix.c starutil2.c')),
+env.Program('test_bl', Split('kdtree/CuTest/CuTest.c test_bl.c bl.c')),
+]
+cmd_tests = [env.Command('%s.out' % str(t[0]), str(t[0]), './%s > $TARGET' %
+                         str(t[0]))
+             for t in tests]
