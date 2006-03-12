@@ -5,8 +5,8 @@
    efficient insertions and deletions.
 */
 
-#ifndef BLOCKLIST_H
-#define BLOCKLIST_H
+#ifndef BL_H
+#define BL_H
 
 #include <stdlib.h>
 
@@ -128,10 +128,13 @@ int blocklist_pointer_insert_unique_ascending(blocklist* list, void* p);
 ///////////////////////////////////////////////
 // special-case functions for double lists. //
 ///////////////////////////////////////////////
-blocklist* blocklist_double_new(int blocksize);
-void blocklist_double_free(blocklist* list);
-void blocklist_double_append(blocklist* list, double data);
-double blocklist_double_access(blocklist* list, int n);
-void blocklist_double_copy(blocklist* list, int start, int length, double* vdest);
+typedef blocklist dl;
+dl*    dl_new(int blocksize);
+void   dl_free(dl* list);
+void   dl_push(dl* list, double data);
+double dl_pop(dl* list);
+double dl_get(dl* list, int n);
+void   dl_copy(dl* list, int start, int length, double* vdest);
+dl*    dl_dupe(dl* list);
 
 #endif

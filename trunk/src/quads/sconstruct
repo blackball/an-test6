@@ -18,6 +18,11 @@ env.Program('findquad', Split('findquad.c fileutil2.c'))
 env.Program('findcode', Split('findquad.c fileutil2.c'))
 env.Program('startree2', KD + Split('startree2.c fileutil2.c'))
 env.Program('randcat', KD + Split('startree2.c fileutil2.c'))
+"""
+env.Program('slave', KD + Split('slave.c catalog.c hitlist_agreement.c '
+				'hitlist_healpix.c blocklist.c solver2.c '
+				'fileutil2.c intmap.c starutil2.c tic.c'))
+"""
 
 tests = [
 env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c '
