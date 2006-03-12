@@ -5,18 +5,18 @@
 
 #include "bl.h"
 
-inline blnode* blocklist_find_node(blocklist* list, int n, int* rtn_nskipped);
-blnode* blocklist_new_node(blocklist* list);
+inline blnode* bl_find_node(bl* list, int n, int* rtn_nskipped);
+blnode* bl_new_node(bl* list);
 
 
-void blocklist_split(blocklist* src, blocklist* dest, int split) {
+void bl_split(bl* src, bl* dest, int split) {
     blnode* node;
     int nskipped;
     int ind;
     int ntaken = src->N - split;
-    node = blocklist_find_node(src, split, &nskipped);
+    node = bl_find_node(src, split, &nskipped);
     if (!node) {
-        printf("Error: in blocklist_split: node is null.\n");
+        printf("Error: in bl_split: node is null.\n");
         return;
     }
     ind = split - nskipped;
@@ -24,7 +24,7 @@ void blocklist_split(blocklist* src, blocklist* dest, int split) {
         // this whole node belongs to "dest".
         if (split) {
             // we need to get the previous node...
-            blnode* last = blocklist_find_node(src, split-1, NULL);
+            blnode* last = bl_find_node(src, split-1, NULL);
             last->next = NULL;
             src->tail = last;
         } else {
@@ -34,7 +34,7 @@ void blocklist_split(blocklist* src, blocklist* dest, int split) {
         }
     } else {
         // create a new node to hold the second half of the items in "node".
-        blnode* newnode = blocklist_new_node(dest);
+        blnode* newnode = bl_new_node(dest);
         newnode->N = (node->N - ind);
         newnode->next = node->next;
         memcpy((char*)newnode->data,
@@ -62,7 +62,7 @@ void blocklist_split(blocklist* src, blocklist* dest, int split) {
     src->last_access = NULL;
 }
 
-void blocklist_init(blocklist* list, int blocksize, int datasize) {
+void bl_init(bl* list, int blocksize, int datasize) {
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -72,18 +72,18 @@ void blocklist_init(blocklist* list, int blocksize, int datasize) {
 	list->last_access_n = 0;
 }
 
-blocklist* blocklist_new(int blocksize, int datasize) {
-	blocklist* rtn;
-	rtn = (blocklist*)malloc(sizeof(blocklist));
+bl* bl_new(int blocksize, int datasize) {
+	bl* rtn;
+	rtn = malloc(sizeof(bl));
 	if (!rtn) {
-		printf("Couldn't allocate memory for a blocklist.\n");
+		printf("Couldn't allocate memory for a bl.\n");
 		return NULL;
 	}
-	blocklist_init(rtn, blocksize, datasize);
+	bl_init(rtn, blocksize, datasize);
 	return rtn;
 }
 
-void blocklist_free(blocklist* list) {
+void bl_free(bl* list) {
 	blnode *n, *lastnode;
 	lastnode = NULL;
 	for (n=list->head; n; n=n->next) {
@@ -99,7 +99,7 @@ void blocklist_free(blocklist* list) {
 	list = NULL;
 }
 
-void blocklist_remove_all(blocklist* list) {
+void bl_remove_all(bl* list) {
 	blnode *n, *lastnode;
 	lastnode = NULL;
 	for (n=list->head; n; n=n->next) {
@@ -117,7 +117,7 @@ void blocklist_remove_all(blocklist* list) {
 	list->last_access_n = 0;
 }
 
-void blocklist_remove_all_but_first(blocklist* list) {
+void bl_remove_all_but_first(bl* list) {
 	blnode *n, *lastnode;
 	lastnode = NULL;
 
@@ -141,7 +141,7 @@ void blocklist_remove_all_but_first(blocklist* list) {
 	list->last_access_n = 0;
 }
 
-void blocklist_remove_from_node(blocklist* list, blnode* node,
+void bl_remove_from_node(bl* list, blnode* node,
 								blnode* prev, int index_in_node) {
 	// if we're removing the last element at this node, then
 	// remove this node from the linked list.
@@ -176,7 +176,7 @@ void blocklist_remove_from_node(blocklist* list, blnode* node,
 	list->N--;
 }
 
-void blocklist_remove_index(blocklist* list, int index) {
+void bl_remove_index(bl* list, int index) {
 	// find the node (and previous node) at which element 'index'
 	// can be found.
 	blnode *node, *prev;
@@ -192,18 +192,18 @@ void blocklist_remove_index(blocklist* list, int index) {
 	}
 
 	if (!node) {
-		fprintf(stderr, "Warning: blocklist_remove_index %i, but list is empty, or index is larger than the list.\n", index);
+		fprintf(stderr, "Warning: bl_remove_index %i, but list is empty, or index is larger than the list.\n", index);
 		return;
 	}
 
-	blocklist_remove_from_node(list, node, prev, index-nskipped);
+	bl_remove_from_node(list, node, prev, index-nskipped);
 
 	list->last_access = NULL;
 	list->last_access_n = 0;
 }
 
 
-void blocklist_remove_index_range(blocklist* list, int start, int length) {
+void bl_remove_index_range(bl* list, int start, int length) {
 	// find the node (and previous node) at which element 'start'
 	// can be found.
 	blnode *node, *prev;
@@ -288,7 +288,7 @@ void blocklist_remove_index_range(blocklist* list, int start, int length) {
 }
 
 
-void clear_list(blocklist* list) {
+void clear_list(bl* list) {
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -302,15 +302,15 @@ void clear_list(blocklist* list) {
  * Appends "list2" to the end of "list1", and removes all elements
  * from "list2".
  */
-void blocklist_append_list(blocklist* list1, blocklist* list2) {
+void bl_append_list(bl* list1, bl* list2) {
 	list1->last_access = NULL;
 	list1->last_access_n = 0;
 	if (list1->datasize != list2->datasize) {
-		printf("Error: cannot append blocklists with different data sizes!\n");
+		printf("Error: cannot append bls with different data sizes!\n");
 		exit(0);
 	}
 	if (list1->blocksize != list2->blocksize) {
-		printf("Error: cannot append blocklists with different block sizes!\n");
+		printf("Error: cannot append bls with different block sizes!\n");
 		exit(0);
 	}
 
@@ -337,17 +337,17 @@ void blocklist_append_list(blocklist* list1, blocklist* list2) {
 }
 
 
-int blocklist_count(blocklist* list) {
+int bl_count(bl* list) {
 	return list->N;
 }
 
-blnode* blocklist_new_node(blocklist* list) {
+blnode* bl_new_node(bl* list) {
 	blnode* rtn;
 
 	// merge the mallocs for the node and its data into one malloc.
 	rtn = (blnode*)malloc(sizeof(blnode) + list->datasize * list->blocksize);
 	if (!rtn) {
-		printf("Couldn't allocate memory for a blocklist node!\n");
+		printf("Couldn't allocate memory for a bl node!\n");
 		return NULL;
 	}
 	rtn->data = (char*)rtn + sizeof(blnode);
@@ -358,14 +358,14 @@ blnode* blocklist_new_node(blocklist* list) {
 }
 
 /*
- * Append an item to this blocklist node.  If this node is full, then create a new
+ * Append an item to this bl node.  If this node is full, then create a new
  * node and insert it into the list.
  */
-void blocklist_node_append(blocklist* list, blnode* node, void* data) {
+void bl_node_append(bl* list, blnode* node, void* data) {
 	if (node->N == list->blocksize) {
 		// create new node and insert it.
 		blnode* newnode;
-		newnode = blocklist_new_node(list);
+		newnode = bl_new_node(list);
 		newnode->next = node->next;
 		node->next = newnode;
 		node = newnode;
@@ -376,39 +376,39 @@ void blocklist_node_append(blocklist* list, blnode* node, void* data) {
 	list->N++;
 }
 
-void blocklist_append(blocklist* list, void* data) {
+void bl_append(bl* list, void* data) {
 	blnode* tail;
 	tail = list->tail;
 	if (!tail) {
 		// previously empty list.  create a new head-and-tail node.
-		tail = blocklist_new_node(list);
+		tail = bl_new_node(list);
 		list->head = tail;
 		list->tail = tail;
 	}
 	// append the item to the tail.  if the tail node is full, a new tail node may be created.
-	blocklist_node_append(list, tail, data);
+	bl_node_append(list, tail, data);
 	if (list->tail->next)
 		list->tail = list->tail->next;
 }
 
 
-void blocklist_print_structure(blocklist* list) {
+void bl_print_structure(bl* list) {
 	blnode* n;
-	printf("blocklist: head %p, tail %p, N %i\n", list->head, list->tail, list->N);
+	printf("bl: head %p, tail %p, N %i\n", list->head, list->tail, list->N);
 	for (n=list->head; n; n=n->next) {
 		printf("[N=%i] ", n->N);
 	}
 	printf("\n");
 }
 
-void blocklist_get(blocklist* list, int n, void* dest) {
+void bl_get(bl* list, int n, void* dest) {
 	char* src;
-	src = (char*)blocklist_access(list, n);
+	src = (char*)bl_access(list, n);
 	memcpy(dest, src, list->datasize);
 }
 
 /* internal use only - find the node in which element "n" can be found. */
-inline blnode* blocklist_find_node(blocklist* list, int n, int* rtn_nskipped) {
+inline blnode* bl_find_node(bl* list, int n, int* rtn_nskipped) {
 	blnode* node;
 	int nskipped;
 	if (list->last_access && n >= list->last_access_n) {
@@ -428,7 +428,7 @@ inline blnode* blocklist_find_node(blocklist* list, int n, int* rtn_nskipped) {
 	}
 
 	if (!node) {
-		printf("in blocklist_find_node: node is null!\n");
+		printf("in bl_find_node: node is null!\n");
 	}
 
 	if (rtn_nskipped)
@@ -442,7 +442,7 @@ inline blnode* blocklist_find_node(blocklist* list, int n, int* rtn_nskipped) {
  * returns zero when passed the given 'data' pointer
  * and elements from the list.
  */
-void* blocklist_find(blocklist* list, void* data,
+void* bl_find(bl* list, void* data,
 					 int (*compare)(void* v1, void* v2)) {
 	int lower, upper;
 	int cmp = -2;
@@ -452,7 +452,7 @@ void* blocklist_find(blocklist* list, void* data,
 	while (lower < (upper-1)) {
 		int mid;
 		mid = (upper + lower) / 2;
-		cmp = compare(data, blocklist_access(list, mid));
+		cmp = compare(data, bl_access(list, mid));
 		if (cmp > 0) {
 			upper = mid;
 		} else {
@@ -460,7 +460,7 @@ void* blocklist_find(blocklist* list, void* data,
 		}
 	}
   
-	if (lower == -1 || compare(data, (result = blocklist_access(list, lower))))
+	if (lower == -1 || compare(data, (result = bl_access(list, lower))))
 		return NULL;
 	return result;
 }
@@ -472,7 +472,7 @@ void* blocklist_find(blocklist* list, void* data,
  * stays sorted according to the given comparison function (assuming
  * it was sorted to begin with!).
  */
-void blocklist_insert_sorted(blocklist* list, void* data,
+void bl_insert_sorted(bl* list, void* data,
 							 int (*compare)(void* v1, void* v2)) {
 	int lower, upper;
 	lower = -1;
@@ -481,17 +481,17 @@ void blocklist_insert_sorted(blocklist* list, void* data,
 		int mid;
 		int cmp;
 		mid = (upper + lower) / 2;
-		cmp = compare(data, blocklist_access(list, mid));
+		cmp = compare(data, bl_access(list, mid));
 		if (cmp > 0) {
 			upper = mid;
 		} else {
 			lower = mid;
 		}
 	}
-	blocklist_insert(list, lower+1, data);
+	bl_insert(list, lower+1, data);
 }
 
-int blocklist_insert_unique_sorted(blocklist* list, void* data,
+int bl_insert_unique_sorted(bl* list, void* data,
 								   int (*compare)(void* v1, void* v2)) {
 	// This is just straightforward binary search - really should
 	// use the block structure...
@@ -502,7 +502,7 @@ int blocklist_insert_unique_sorted(blocklist* list, void* data,
 		int mid;
 		int cmp;
 		mid = (upper + lower) / 2;
-		cmp = compare(data, blocklist_access(list, mid));
+		cmp = compare(data, bl_access(list, mid));
 		if (cmp > 0) {
 			upper = mid;
 		} else {
@@ -511,21 +511,21 @@ int blocklist_insert_unique_sorted(blocklist* list, void* data,
 	}
 
 	if (lower >= 0) {
-		if (compare(data, blocklist_access(list, lower)) == 0) {
+		if (compare(data, bl_access(list, lower)) == 0) {
 			return -1;
 		}
 	}
-	blocklist_insert(list, lower+1, data);
+	bl_insert(list, lower+1, data);
 	return lower+1;
 }
 
 
-void blocklist_set(blocklist* list, int index, void* data) {
+void bl_set(bl* list, int index, void* data) {
 	blnode* node;
 	int nskipped;
 	void* dataloc;
 
-	node = blocklist_find_node(list, index, &nskipped);
+	node = bl_find_node(list, index, &nskipped);
 	dataloc = (char*)node->data + (index - nskipped) * list->datasize;
 	memcpy(dataloc, data, list->datasize);
 	// update the last_access member...
@@ -539,18 +539,18 @@ void blocklist_set(blocklist* list, int index, void* data) {
  * All elements that previously had indices "index" and above are moved
  * one position to the right.
  */
-void blocklist_insert(blocklist* list, int index, void* data) {
+void bl_insert(bl* list, int index, void* data) {
 	blnode* node;
 	int nskipped;
 
 	if (list->N == index) {
-		blocklist_append(list, data);
+		bl_append(list, data);
 		return;
 	}
 
 	// this may fail if we try to insert an element past the last element in the list
 	// (ie, append).  could detect this condition and pass the call the "append". [we do this above]
-	node = blocklist_find_node(list, index, &nskipped);
+	node = bl_find_node(list, index, &nskipped);
 
 	list->last_access = node;
 	list->last_access_n = nskipped;
@@ -593,7 +593,7 @@ void blocklist_insert(blocklist* list, int index, void* data) {
 			}
 		} else {
 			blnode* newnode;
-			newnode = blocklist_new_node(list);
+			newnode = bl_new_node(list);
 			newnode->next = node->next;
 			node->next = newnode;
 			if (newnode->next == NULL) {
@@ -634,12 +634,12 @@ void blocklist_insert(blocklist* list, int index, void* data) {
 }
 
 
-void* blocklist_access(blocklist* list, int n) {
+void* bl_access(bl* list, int n) {
 	blnode* node;
 	int nskipped;
 	void* rtn;
 
-	node = blocklist_find_node(list, n, &nskipped);
+	node = bl_find_node(list, n, &nskipped);
 
 	// grab the element.
 	rtn = (char*)node->data + (n - nskipped) * list->datasize;
@@ -649,7 +649,7 @@ void* blocklist_access(blocklist* list, int n) {
 	return rtn;
 }
 
-void blocklist_copy(blocklist* list, int start, int length, void* vdest) {
+void bl_copy(bl* list, int start, int length, void* vdest) {
 	blnode* node;
 	int nskipped;
 	char* dest;
@@ -701,7 +701,85 @@ void blocklist_copy(blocklist* list, int start, int length, void* vdest) {
 	list->last_access_n = nskipped;
 }
 
-int compare_ints_ascending(void* v1, void* v2) {
+int bl_check_consistency(bl* list) {
+	blnode* node;
+	int N;
+	int tailok = 1;
+	int nempty = 0;
+	int nnull = 0;
+	
+	// if one of head or tail is NULL, they had both better be NULL!
+	if (!list->head)
+		nnull++;
+	if (!list->tail)
+		nnull++;
+	if (nnull == 1) {
+		fprintf(stderr, "bl_check_consistency: head is %p, and tail is %p.\n",
+				list->head, list->tail);
+		return 1;
+	}
+
+	N = 0;
+	for (node=list->head; node; node=node->next) {
+		N += node->N;
+		if (!node->N) {
+			// this block is empty.
+			nempty++;
+		}
+		// are we at the last node?
+		if (!node->next) {
+			tailok = (list->tail == node) ? 1 : 0;
+		}
+	}
+	if (!tailok) {
+		fprintf(stderr, "bl_check_consistency: tail pointer is wrong.\n");
+		return 1;
+	}
+	if (nempty) {
+		fprintf(stderr, "bl_check_consistency: %i empty blocks.\n", nempty);
+		return 1;
+	}
+	if (N != list->N) {
+		fprintf(stderr, "bl_check_consistency: list->N is %i, but sum of blocks is %i.\n",
+				list->N, N);
+		return 1;
+	}
+	return 0;
+}
+
+int bl_check_sorted(bl* list,
+						   int (*compare)(void* v1, void* v2),
+						   int isunique) {
+	int i, N;
+	int nbad = 0;
+	void* v2 = NULL;
+	N = bl_count(list);
+	if (N)
+		v2 = bl_access(list, 0);
+	for (i=1; i<N; i++) {
+		void* v1;
+		int cmp;
+		v1 = v2;
+		v2 = bl_access(list, i);
+		cmp = compare(v1, v2);
+		if (isunique) {
+			if (cmp <= 0) {
+				nbad++;
+			}
+		} else {
+			if (cmp < 0) {
+				nbad++;
+			}
+		}
+	}
+	if (nbad) {
+		fprintf(stderr, "bl_check_sorted_ascending: %i are out of order.\n", nbad);
+		return 1;
+	}
+	return 0;
+}
+
+int bl_compare_ints_ascending(void* v1, void* v2) {
     int i1 = *(int*)v1;
     int i2 = *(int*)v2;
     if (i1 < i2) return 1;
@@ -709,7 +787,7 @@ int compare_ints_ascending(void* v1, void* v2) {
     else return 0;
 }
 
-int compare_ints_descending(void* v1, void* v2) {
+int bl_compare_ints_descending(void* v1, void* v2) {
     int i1 = *(int*)v1;
     int i2 = *(int*)v2;
     if (i1 < i2) return -1;
@@ -719,17 +797,31 @@ int compare_ints_descending(void* v1, void* v2) {
 
 // special-case integer list accessors...
 
+int il_check_consistency(il* list) {
+	return bl_check_consistency(list);
+}
+
+int il_check_sorted_ascending(il* list,
+							  int isunique) {
+	return bl_check_sorted(list, bl_compare_ints_ascending, isunique);
+}
+
+int il_check_sorted_descending(il* list,
+							   int isunique) {
+	return bl_check_sorted(list, bl_compare_ints_descending, isunique);
+}
+
 int il_size(il* list) {
-    return blocklist_count((blocklist*) list);
+    return bl_count((bl*) list);
 }
 
 void il_remove(il* ilist, int index) {
-    blocklist_remove_index((blocklist*) ilist, index);
+    bl_remove_index((bl*) ilist, index);
 }
 
 int il_pop(il* ilist) {
     int ret = il_get(ilist, ilist->N-1);
-    blocklist_remove_index((blocklist*) ilist, ilist->N-1);
+    bl_remove_index((bl*) ilist, ilist->N-1);
     return ret;
 }
 
@@ -742,7 +834,7 @@ il* il_dupe(il* ilist) {
 }
 
 int il_remove_value(il* ilist, int value) {
-    blocklist* list = (blocklist*) ilist;
+    bl* list = (bl*) ilist;
 	blnode *node, *prev;
 	int istart = 0;
 	for (node=list->head, prev=NULL;
@@ -753,7 +845,7 @@ int il_remove_value(il* ilist, int value) {
 		idat = (int*)node->data;
 		for (i=0; i<node->N; i++)
 			if (idat[i] == value) {
-				blocklist_remove_from_node(list, node, prev, i);
+				bl_remove_from_node(list, node, prev, i);
 				list->last_access = prev;
 				list->last_access_n = istart;
 				return istart + i;
@@ -764,37 +856,37 @@ int il_remove_value(il* ilist, int value) {
 }
 
 void il_set(il* list, int index, int value) {
-	blocklist_set((blocklist*)list, index, &value);
+	bl_set((bl*)list, index, &value);
 }
 
 il* il_new(int blocksize) {
-	return (il*) blocklist_new(blocksize, sizeof(int));
+	return (il*) bl_new(blocksize, sizeof(int));
 }
-void il_free(blocklist* list) {
-	blocklist_free((blocklist*)list);
+void il_free(il* list) {
+	bl_free(list);
 }
 void il_push(il* list, int data) {
-	blocklist_append((blocklist*)list, &data);
+	bl_append((bl*)list, &data);
 }
 int il_get(il* list, int n) {
 	int* ptr;
-	ptr = (int*)blocklist_access((blocklist*)list, n);
+	ptr = (int*)bl_access((bl*)list, n);
 	return *ptr;
 }
 void il_insert_ascending(il* list, int n) {
-    blocklist_insert_sorted((blocklist*)list, &n, compare_ints_ascending);
+    bl_insert_sorted((bl*)list, &n, bl_compare_ints_ascending);
 }
 void il_insert_descending(il* list, int n) {
-    blocklist_insert_sorted((blocklist*)list, &n, compare_ints_descending);
+    bl_insert_sorted((bl*)list, &n, bl_compare_ints_descending);
 }
 int il_insert_unique_ascending(il* list, int n) {
-    return blocklist_insert_unique_sorted((blocklist*)list, &n, compare_ints_ascending);
+    return bl_insert_unique_sorted((bl*)list, &n, bl_compare_ints_ascending);
 }
 void il_copy(il* list, int start, int length, int* vdest) {
-	blocklist_copy((blocklist*)list, start, length, vdest);
+	bl_copy((bl*)list, start, length, vdest);
 }
 
-void il_print(blocklist* list) {
+void il_print(bl* list) {
 	blnode* n;
 	int i;
 	for (n=list->head; n; n=n->next) {
@@ -820,7 +912,7 @@ int il_contains(il* list, int data) {
 
 
 // special-case pointer list accessors...
-int compare_pointers_ascending(void* v1, void* v2) {
+int bl_compare_pointers_ascending(void* v1, void* v2) {
     void* p1 = *(void**)v1;
     void* p2 = *(void**)v2;
     if (p1 < p2) return 1;
@@ -828,32 +920,32 @@ int compare_pointers_ascending(void* v1, void* v2) {
     else return 0;
 }
 
-int pl_insert_unique_ascending(blocklist* list, void* p) {
-    return blocklist_insert_unique_sorted(list, &p, compare_pointers_ascending);
+int pl_insert_unique_ascending(bl* list, void* p) {
+    return bl_insert_unique_sorted(list, &p, bl_compare_pointers_ascending);
 }
 
 pl* pl_new(int blocksize) {
-    return blocklist_new(blocksize, sizeof(void*));
+    return bl_new(blocksize, sizeof(void*));
 }
 void pl_free(pl* list) {
-    blocklist_free(list);
+    bl_free(list);
 }
 void  pl_remove(pl* list, int index) {
-	blocklist_remove_index(list, index);
+	bl_remove_index(list, index);
 }
 void pl_set(pl* list, int index, void* data) {
-	blocklist_set(list, index, &data);
+	bl_set(list, index, &data);
 }
 void pl_append(pl* list, void* data) {
-    blocklist_append(list, &data);
+    bl_append(list, &data);
 }
 void* pl_get(pl* list, int n) {
     void** ptr;
-    ptr = (void**)blocklist_access(list, n);
+    ptr = (void**)bl_access(list, n);
     return *ptr;
 }
 void pl_copy(pl* list, int start, int length, void** vdest) {
-    blocklist_copy(list, start, length, vdest);
+    bl_copy(list, start, length, vdest);
 }
 void pl_print(pl* list) {
     blnode* n;
@@ -870,30 +962,32 @@ void pl_print(pl* list) {
 
 // special-case double list accessors...
 dl* dl_new(int blocksize) {
-	return blocklist_new(blocksize, sizeof(double));
+	return bl_new(blocksize, sizeof(double));
 }
 void dl_free(dl* list) {
-	blocklist_free((blocklist*)list);
+	bl_free((bl*)list);
+}
+int dl_check_consistency(dl* list) {
+	return bl_check_consistency(list);
 }
 void dl_push(dl* list, double data) {
-	blocklist_append((blocklist*)list, &data);
+	bl_append((bl*)list, &data);
 }
 double dl_pop(dl* list) {
     double ret = dl_get(list, list->N-1);
-    blocklist_remove_index((blocklist*) list, list->N-1);
+    bl_remove_index((bl*) list, list->N-1);
     return ret;
 }
 double dl_get(dl* list, int n) {
 	double* ptr;
-	ptr = (double*)blocklist_access((blocklist*)list, n);
+	ptr = (double*)bl_access((bl*)list, n);
 	return *ptr;
 }
 void dl_set(dl* list, int index, double value) {
-	blocklist_set((blocklist*)list, index, &value);
+	bl_set((bl*)list, index, &value);
 }
-
-void dl_copy(blocklist* list, int start, int length, double* vdest) {
-	blocklist_copy(list, start, length, vdest);
+void dl_copy(bl* list, int start, int length, double* vdest) {
+	bl_copy(list, start, length, vdest);
 }
 dl* dl_dupe(dl* dlist) {
     dl* ret = dl_new(dlist->blocksize);

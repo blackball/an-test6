@@ -10,9 +10,11 @@ void test_il_new(CuTest* tc) {
 	il* x = NULL;
 	x = il_new(10);
 	CuAssert(tc, "new", x != NULL);
-	CuAssertIntEquals(tc, 0, il_size(x));
+	CuAssertIntEquals(tc, il_size(x), 0);
 	CuAssertPtrEquals(tc, x->head, NULL);
 	CuAssertPtrEquals(tc, x->tail, NULL);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
+	CuAssertIntEquals(tc, il_check_sorted_ascending(x, 0), 0);
 	il_free(x);
 }
 
@@ -33,6 +35,7 @@ void test_il_get_push(CuTest* tc) {
 	il_push(x,20);
 	CuAssertIntEquals(tc, 10, il_get(x, 0));
 	CuAssertIntEquals(tc, 20, il_get(x, 1));
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	il_free(x);
 }
 
@@ -45,6 +48,7 @@ void test_il_push_pop(CuTest* tc) {
 	CuAssertIntEquals(tc, 20, il_get(x, 1));
 	CuAssertIntEquals(tc, 20, il_pop(x));
 	CuAssertIntEquals(tc, 10, il_pop(x));
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	il_free(x);
 }
 
@@ -55,6 +59,7 @@ void test_il_push_pop2(CuTest* tc) {
 		il_push(x,i);
 	for (i=0; i<N; i++)
 		CuAssertIntEquals(tc, N-i-1, il_pop(x));
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	il_free(x);
 }
 
@@ -80,12 +85,14 @@ void test_il_remove_value(CuTest* tc) {
 	il_push(x,87);
 	il_push(x,87);
 	il_push(x,92);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	CuAssertIntEquals(tc, 8, il_remove_value(x, 92));
 	CuAssertIntEquals(tc, -1, il_remove_value(x, 37));
 	CuAssertIntEquals(tc, -1, il_remove_value(x, 0));
 	CuAssertIntEquals(tc, 2, il_remove_value(x, 30));
 	CuAssertIntEquals(tc, 0, il_remove_value(x, 10));
 	CuAssertIntEquals(tc, 0, il_remove_value(x, 20));
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	il_free(x);
 }
 
@@ -99,6 +106,7 @@ void test_il_contains(CuTest* tc) {
 	il_push(x,41);
 	il_push(x,30);
 	il_push(x,81);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	CuAssertIntEquals(tc, 1, il_contains(x, 10));
 	CuAssertIntEquals(tc, 1, il_contains(x, 20));
 	CuAssertIntEquals(tc, 1, il_contains(x, 30));
@@ -106,6 +114,7 @@ void test_il_contains(CuTest* tc) {
 	CuAssertIntEquals(tc, 1, il_contains(x, 41));
 	CuAssertIntEquals(tc, 0, il_contains(x, 42));
 	il_remove_value(x, 41);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	CuAssertIntEquals(tc, 0, il_contains(x, 41));
 	il_free(x);
 }
@@ -122,6 +131,8 @@ void test_il_insert_ascending(CuTest* tc) {
 	il_insert_ascending(x,1);
 	il_insert_ascending(x,3);
 	il_insert_ascending(x,0);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
+	CuAssertIntEquals(tc, il_check_sorted_ascending(x, 0), 0);
 	for (i=0;i<il_size(x);i++) 
 		CuAssertIntEquals(tc, i, il_get(x, i));
 	il_free(x);
@@ -139,6 +150,8 @@ void test_il_insert_descending(CuTest* tc) {
 	il_insert_descending(x,1);
 	il_insert_descending(x,3);
 	il_insert_descending(x,0);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
+	CuAssertIntEquals(tc, il_check_sorted_descending(x, 0), 0);
 	for (i=0;i<il_size(x);i++) 
 		CuAssertIntEquals(tc, il_size(x)-i-1, il_get(x, i));
 	il_free(x);
@@ -173,7 +186,9 @@ void test_il_insert_unique_ascending(CuTest* tc) {
 	il_insert_unique_ascending(x,1);
 	il_insert_unique_ascending(x,1);
 	il_insert_unique_ascending(x,0);
-	for (i=0;i<il_size(x);i++) 
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
+	CuAssertIntEquals(tc, il_check_sorted_ascending(x, 1), 0);
+	for (i=0;i<il_size(x);i++)
 		CuAssertIntEquals(tc, i, il_get(x, i));
 	il_free(x);
 }
@@ -188,6 +203,7 @@ void test_il_copy(CuTest* tc) {
 	il_copy(x, start, length, buf);
 	for (i=0;i<length;i++) 
 		CuAssertIntEquals(tc, start+i, buf[i]);
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	il_free(x);
 }
 
@@ -202,6 +218,7 @@ void test_il_dupe(CuTest* tc) {
 	for (i=0;i<N;i++) 
 		il_pop(x);
 	CuAssertIntEquals(tc, N, il_size(y));
+	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	il_free(x);
 	il_free(y);
 }
@@ -223,6 +240,7 @@ void test_delete(CuTest* tc) {
 	CuAssertIntEquals(tc, il_size(bl), 0);
 	CuAssertPtrEquals(tc, bl->head, NULL);
 	CuAssertPtrEquals(tc, bl->tail, NULL);
+	CuAssertIntEquals(tc, il_check_consistency(bl), 0);
 }
 
 void test_delete_2(CuTest* tc) {
@@ -240,6 +258,7 @@ void test_delete_2(CuTest* tc) {
 	CuAssertIntEquals(tc, il_size(bl), 0);
 	CuAssertPtrEquals(tc, bl->head, NULL);
 	CuAssertPtrEquals(tc, bl->tail, NULL);
+	CuAssertIntEquals(tc, il_check_consistency(bl), 0);
 }
 
 void test_delete_3(CuTest* tc) {
@@ -258,6 +277,7 @@ void test_delete_3(CuTest* tc) {
 	CuAssertIntEquals(tc, il_size(bl), 0);
 	CuAssertPtrEquals(tc, bl->head, NULL);
 	CuAssertPtrEquals(tc, bl->tail, NULL);
+	CuAssertIntEquals(tc, il_check_consistency(bl), 0);
 }
 
 void test_set(CuTest* tc) {
@@ -277,6 +297,7 @@ void test_set(CuTest* tc) {
 	CuAssertIntEquals(tc, 0, il_get(bl, 0));
 	CuAssertIntEquals(tc, 1, il_get(bl, 1));
 	CuAssertIntEquals(tc, 2, il_get(bl, 2));
+	CuAssertIntEquals(tc, il_check_consistency(bl), 0);
 }
 
 void test_delete_4(CuTest* tc) {
@@ -298,6 +319,7 @@ void test_delete_4(CuTest* tc) {
 	CuAssertIntEquals(tc, il_size(bl), 0);
 	CuAssertPtrEquals(tc, bl->head, NULL);
 	CuAssertPtrEquals(tc, bl->tail, NULL);
+	CuAssertIntEquals(tc, il_check_consistency(bl), 0);
 }
 
 /******************************************************************************/
@@ -322,6 +344,7 @@ void test_dl_push(CuTest* tc) {
 	CuAssert(tc, "dl", 0.0 == dl_get(bl, 0));
 	CuAssert(tc, "dl", 1.0 == dl_get(bl, 1));
 	CuAssert(tc, "dl", 2.0 == dl_get(bl, 2));
+	CuAssertIntEquals(tc, dl_check_consistency(bl), 0);
 }
 
 
