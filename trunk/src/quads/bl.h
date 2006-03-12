@@ -116,14 +116,15 @@ int il_remove_value(blocklist* list, int value);
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
 ///////////////////////////////////////////////
-void blocklist_pointer_set(blocklist* list, int index, void* data);
-blocklist* blocklist_pointer_new(int blocksize);
-void blocklist_pointer_free(blocklist* list);
-void blocklist_pointer_append(blocklist* list, void* data);
-void* blocklist_pointer_access(blocklist* list, int n);
-void blocklist_pointer_copy(blocklist* list, int start, int length, void** dest);
-void blocklist_pointer_print(blocklist* list);
-int blocklist_pointer_insert_unique_ascending(blocklist* list, void* p);
+typedef blocklist pl;
+void pl_set(pl* list, int index, void* data);
+pl* pl_new(int blocksize);
+void pl_free(pl* list);
+void pl_append(pl* list, void* data);
+void* pl_get(pl* list, int n);
+void pl_copy(pl* list, int start, int length, void** dest);
+void pl_print(pl* list);
+int pl_insert_unique_ascending(pl* list, void* p);
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //
