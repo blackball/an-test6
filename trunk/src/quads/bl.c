@@ -838,13 +838,16 @@ pl* pl_new(int blocksize) {
 void pl_free(pl* list) {
     blocklist_free(list);
 }
+void  pl_remove(pl* list, int index) {
+	blocklist_remove_index(list, index);
+}
 void pl_set(pl* list, int index, void* data) {
 	blocklist_set(list, index, &data);
 }
 void pl_append(pl* list, void* data) {
     blocklist_append(list, &data);
 }
-void* pl_access(pl* list, int n) {
+void* pl_get(pl* list, int n) {
     void** ptr;
     ptr = (void**)blocklist_access(list, n);
     return *ptr;
