@@ -223,8 +223,8 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 				fprintf(rdlsfid, "%lu", numS);
 				for (jj = 0;jj < numS;jj++) {
 					fprintf(listfid, ",%d", krez->pindexes->iarr[jj]);
-					star_coords(thestars->array[(krez->pindexes->iarr[jj])],
-					            randstar, &xx, &yy);
+					star_coords_old(thestars->array[(krez->pindexes->iarr[jj])],
+									randstar, &xx, &yy);
 
 					{
 						double x, y, z, ra, dec;

@@ -112,9 +112,9 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	sA = catalog_get_star(cat, staridA);
 	sB = catalog_get_star(cat, staridB);
 
-	star_midpoint_2(midAB, sA, sB);
-	star_coords_2(sA, midAB, &Ax, &Ay);
-	star_coords_2(sB, midAB, &Bx, &By);
+	star_midpoint(midAB, sA, sB);
+	star_coords(sA, midAB, &Ax, &Ay);
+	star_coords(sB, midAB, &Bx, &By);
 
 	ABx = Bx - Ax;
 	ABy = By - Ay;
@@ -136,7 +136,7 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		iD = i;
 		staridD = il_get(stars, i);
 		sD = catalog_get_star(cat, staridD);
-		star_coords_2(sD, midAB, &Dx, &Dy);
+		star_coords(sD, midAB, &Dx, &Dy);
 		ADx = Dx - Ax;
 		ADy = Dy - Ay;
 		dx = ADx * costheta + ADy * sintheta;

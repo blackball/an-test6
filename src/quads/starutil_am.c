@@ -3,7 +3,7 @@
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
 
-void star_coords(star *s, star *r, double *x, double *y)
+void star_coords_old(star *s, star *r, double *x, double *y)
 {
 #ifndef AMFAST
 	if (s == NULL) {
@@ -77,7 +77,7 @@ void star_coords(star *s, star *r, double *x, double *y)
    of stars A,B. DOES NOT allocate a new star object for M.
    does this by averaging and then projecting
    back onto the surface of the sphere                            */
-void star_midpoint(star *M, star *A, star *B)
+void star_midpoint_old(star *M, star *A, star *B)
 {
 	double len;
 	star_set(M, 0, (star_ref(A, 0) + star_ref(B, 0)) / 2);

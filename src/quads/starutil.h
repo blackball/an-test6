@@ -76,8 +76,8 @@ inline double arcsec2distsq(double arcInArcSec);
 #define HELP_ERR -101
 #define OPT_ERR -201
 
-void star_midpoint_2(double* mid, double* A, double* B);
-void star_coords_2(double *s, double *r, double *x, double *y);
+void star_midpoint(double* mid, double* A, double* B);
+void star_coords(double *s, double *r, double *x, double *y);
 
 void make_rand_star(double* star, double ramin, double ramax,
 					double decmin, double decmax);

@@ -66,7 +66,7 @@ typedef dyv_array stararray;
 #define free_quadarray(q) free_ivec_array((ivec_array *)q)
 #define free_codearray(c) free_dyv_array((dyv_array *)c)
 
-void star_coords(star *s, star *r, double *x, double *y);
-void star_midpoint(star *M, star *A, star *B);
+void star_coords_old(star *s, star *r, double *x, double *y);
+void star_midpoint_old(star *M, star *A, star *B);
 
 #endif
