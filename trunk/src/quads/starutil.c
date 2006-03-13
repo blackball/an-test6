@@ -77,7 +77,7 @@ inline int inrange(double ra, double ralow, double rahigh) {
 
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
-void star_coords_2(double *s, double *r, double *x, double *y)
+void star_coords(double *s, double *r, double *x, double *y)
 {
 	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
 	if (sdotr <= 0.0) {
@@ -113,7 +113,7 @@ void star_coords_2(double *s, double *r, double *x, double *y)
 	}
 }
 
-void star_midpoint_2(double* mid, double* A, double* B)
+void star_midpoint(double* mid, double* A, double* B)
 {
 	double len;
 	// we don't actually need to divide by 2 because

@@ -32,51 +32,6 @@ void matrix_vector_mult(double* X, double* M, double* x) {
   }
 }
 
-/*
-void star_coords(star *s, star *r, double *x, double *y)
-{
-	double sdotr = star_ref(s, 0) * star_ref(r, 0) +
-	               star_ref(s, 1) * star_ref(r, 1) +
-	               star_ref(s, 2) * star_ref(r, 2);
-	if (sdotr <= 0.0) {
-		fprintf(stderr, "ERROR (star_coords) -- s dot r <=0; undefined projection.\n");
-		return ;
-	}
-
-	if (star_ref(r, 2) == 1.0) {
-		*x = star_ref(s, 0) / star_ref(s, 2);
-		*y = star_ref(s, 1) / star_ref(s, 2);
-	} else if (star_ref(r, 2) == -1.0) { //???
-		*x = star_ref(s, 0) / star_ref(s, 2);
-		*y = -star_ref(s, 1) / star_ref(s, 2);
-	} else {
-		double etax, etay, etaz, xix, xiy, xiz, eta_norm;
-
-		// eta is a vector perpendicular to r
-		etax = -star_ref(r, 1);
-		etay = + star_ref(r, 0);
-		etaz = 0.0;
-		eta_norm = sqrt(etax * etax + etay * etay);
-		etax /= eta_norm;
-		etay /= eta_norm;
-
-		// xi =  r cross eta
-
-		//xix = star_ref(r,1)*etaz-star_ref(r,2)*etay;
-		xix = -star_ref(r, 2) * etay;
-		//xiy = star_ref(r,2)*etax-star_ref(r,0)*etaz;
-		xiy = star_ref(r, 2) * etax;
-		xiz = star_ref(r, 0) * etay - star_ref(r, 1) * etax;
-
-		*x = star_ref(s, 0) * xix / sdotr +
-		     star_ref(s, 1) * xiy / sdotr +
-		     star_ref(s, 2) * xiz / sdotr;
-		*y = star_ref(s, 0) * etax / sdotr +
-		     star_ref(s, 1) * etay / sdotr;
-		//+star_ref(s,2)*etaz/sdotr;
-	}
-}
-*/
 int main(int argc, char** args) {
   FILE* f;
   FILE* outf;

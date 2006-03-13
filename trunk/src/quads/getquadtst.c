@@ -93,11 +93,11 @@ void check_quad(sidx iA, sidx iB, sidx iC, sidx iD)
 	fseekocat(iD, catposmarker, catfid);
 	freadstar(sD, catfid);
 
-	star_midpoint(midpoint, sA, sB);
-	star_coords(sA,midpoint, &Ax, &Ay);
-	star_coords(sB,midpoint, &Bx, &By);
-	star_coords(sC,midpoint, &Cx, &Cy); 
-	star_coords(sD,midpoint, &Dx, &Dy); 
+	star_midpoint_old(midpoint, sA, sB);
+	star_coords_old(sA,midpoint, &Ax, &Ay);
+	star_coords_old(sB,midpoint, &Bx, &By);
+	star_coords_old(sC,midpoint, &Cx, &Cy); 
+	star_coords_old(sD,midpoint, &Dx, &Dy); 
 
 	fprintf(stdout,"A=[%+.12lf,%+.12lf]\n",Ax,Ay);
 	fprintf(stdout,"B=[%+.12lf,%+.12lf]\n",Bx,By);
