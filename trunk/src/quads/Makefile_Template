@@ -57,7 +57,7 @@ MY_OBJ = randcat.o startree.o \
 
 ALL_OBJ = $(OBJ) $(AM_OBJ) $(AMKD_OBJ) $(MY_OBJ) 
 
-all: $(EXECS) $(AM_EXECS) $(AMKM_EXECS) agreeable slave agreeable2
+all: $(EXECS) $(AM_EXECS) $(AMKD_EXECS) agreeable slave agreeable2
 
 #solvexy2 
 

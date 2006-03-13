@@ -1,30 +1,5 @@
 #include "starutil_am.h"
 
-/* makes a star object located uniformly at random within the limits given
-   on the sphere */
-star *make_rand_star_old(double ramin, double ramax,
-						 double decmin, double decmax)
-{
-	double decval, raval;
-	star *thestar = mk_star();
-	if (ramin < 0.0)
-		ramin = 0.0;
-	if (ramax > (2*PIl))
-		ramax = 2 * PIl;
-	if (decmin < -PIl / 2.0)
-		decmin = -PIl / 2.0;
-	if (decmax > PIl / 2.0)
-		decmax = PIl / 2.0;
-	if (thestar != NULL) {
-		decval = asin(range_random(sin(decmin), sin(decmax)));
-		raval = range_random(ramin, ramax);
-		star_set(thestar, 0, cos(decval)*cos(raval));
-		star_set(thestar, 1, cos(decval)*sin(raval));
-		star_set(thestar, 2, sin(decval));
-	}
-	return thestar;
-}
-
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
 
