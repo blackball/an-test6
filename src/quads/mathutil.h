@@ -16,4 +16,6 @@ double *fit_transform(xy *ABCDpix, char order,
 
 double uniform_sample(double low, double high);
 
+double gaussian_sample(double mean, double stddev);
+
 #endif

@@ -1,6 +1,9 @@
-#include "starutil_am.h"
-#include "kdutil.h"
-#include "fileutil_amkd.h"
+#include <math.h>
+#include "mathutil.h"
+#include "starutil.h"
+#include "fileutil.h"
+#include "kdtree/kdtree.h"
+#include "kdtree/kdtree_io.h"
 
 #define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:"
 const char HelpString[] =
@@ -17,7 +20,7 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
-             stararray *thestars, kdtree *kd,
+             kdtree_t* starkd,
              double aspect, double noise, double distractors, double dropouts,
              double ramin, double ramax, double decmin, double decmax,
              double radscale, qidx numFields);
@@ -33,17 +36,15 @@ int FAILURES = 30;
 
 int main(int argc, char *argv[])
 {
-	int argidx, argchar; //  opterr = 0;
-
+	int argidx, argchar;
 	qidx numFields = 0;
 	double radscale = 10.0, aspect = 1.0, distractors = 0.0, dropouts = 0.0, noise = 0.0;
 	double centre_ra = 0.0, centre_dec = 0.0;
-	FILE *treefid = NULL, *listfid = NULL, *pix0fid = NULL, *pixfid = NULL;
+	FILE *listfid = NULL, *pix0fid = NULL, *pixfid = NULL;
 	qidx numtries;
-	sidx numstars;
-	double ramin, ramax, decmin, decmax;
-	kdtree *starkd = NULL;
-	stararray *thestars = NULL;
+	uint numstars;
+	uint i;
+	kdtree_t* starkd = NULL;
 
 	if (argc <= 8) {
 		fprintf(stderr, HelpString);
@@ -108,7 +109,7 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
-	am_srand(RANDSEED);
+	srand(RANDSEED);
 
 	if (numFields)
 		fprintf(stderr, "genfields: making %lu random fields from %s [RANDSEED=%d]\n",
@@ -121,20 +122,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "  Reading star KD tree from %s...", treefname);
 	fflush(stderr);
-	fopenin(treefname, treefid);
-	free_fn(treefname);
-	starkd = read_starkd(treefid, &ramin, &ramax, &decmin, &decmax);
-	fclose(treefid);
-	if (starkd == NULL)
-		return (1);
-	numstars = starkd->root->num_points;
-	fprintf(stderr, "done\n    (%lu stars, %d nodes, depth %d).\n",
-	        numstars, starkd->num_nodes, starkd->max_depth);
-	fprintf(stderr, "    (dim %d) (limits %lf<=ra<=%lf;%lf<=dec<=%lf.)\n",
-	        kdtree_num_dims(starkd),
-	        rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
 
-	thestars = (stararray *)mk_dyv_array_from_kdtree(starkd);
+	starkd = kdtree_read_file(treefname);
+	free_fn(treefname);
+	if (!starkd) {
+		fprintf(stderr, "Couldn't read star kdtree.\n");
+		exit(-1);
+	}
+	numstars = starkd->ndata;
+	fprintf(stderr, "done\n    (%u stars, %d nodes).\n",
+	        numstars, starkd->nnodes);
 
 	if (numFields > 1)
 		fprintf(stderr, "  Generating %lu fields at scale %g arcmin...\n",
@@ -148,12 +145,25 @@ int main(int argc, char *argv[])
 	free_fn(pixfname);
 	fopenout(rdlsfname, rdlsfid);
 	free_fn(rdlsfname);
-	if (numFields > 1)
-		numtries = gen_pix(listfid, pix0fid, pixfid, thestars, starkd, aspect,
+	if (numFields > 1) {
+		double ramin, ramax, decmin, decmax;
+		decmin = ramin = 1e100;
+		decmax = ramax = -1e100;
+		for (i=0; i<starkd->ndata; i++) {
+			double ra, dec;
+			double* xyz = starkd->data + i*DIM_STARS;
+			ra = xy2ra(xyz[0], xyz[1]);
+			dec = z2dec(xyz[2]);
+			if (ra > ramax) ramax = ra;
+			if (ra < ramin) ramin = ra;
+			if (dec > decmax) decmax = dec;
+			if (dec < decmin) decmin = dec;
+		}
+		numtries = gen_pix(listfid, pix0fid, pixfid, starkd, aspect,
 		                   noise, distractors, dropouts,
 		                   ramin, ramax, decmin, decmax, radscale, numFields);
-	else
-		numtries = gen_pix(listfid, pix0fid, pixfid, thestars, starkd, aspect,
+	} else
+		numtries = gen_pix(listfid, pix0fid, pixfid, starkd, aspect,
 		                   noise, distractors, dropouts,
 		                   centre_ra, centre_ra, centre_dec, centre_dec,
 		                   radscale, numFields);
@@ -165,17 +175,14 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  made %lu nonempty fields in %lu tries.\n",
 		        numFields, numtries);
 
-	free_dyv_array_from_kdtree((dyv_array *)thestars);
-	free_kdtree(starkd);
-
-	//basic_am_malloc_report();
-	return (0);
+	kdtree_close(starkd);
+	return 0;
 }
 
 
 
 qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
-             stararray *thestars, kdtree *kd,
+             kdtree_t* starkd,
              double aspect, double noise, double distractors, double dropouts,
              double ramin, double ramax, double decmin, double decmax,
              double radscale, qidx numFields)
@@ -183,58 +190,49 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 	sidx jj, numS, numX;
 	qidx numtries = 0, ii;
 	double xx, yy;
-	star *randstar;
 	double scale = radscale2xyzscale(radscale);
 	double pixxmin = 0, pixymin = 0, pixxmax = 0, pixymax = 0;
-	kquery *kq = mk_kquery("rangesearch", "", KD_UNDEF, scale, kd->rmin);
+	double randstar[3];
+	kdtree_qres_t* krez = NULL;
 
 	fprintf(pix0fid, "NumFields=%lu\n", numFields);
 	fprintf(pixfid, "NumFields=%lu\n", numFields);
 	fprintf(listfid, "NumFields=%lu\n", numFields);
 	fprintf(rdlsfid, "NumFields=%lu\n", numFields);
 
-	randstar = mk_star();
-
 	for (ii = 0;ii < numFields;ii++) {
-		kresult *krez = NULL;
 		numS = 0;
 		while (!numS) {
-			double tmpstar[3];
-			make_rand_star(tmpstar, ramin, ramax, decmin, decmax);
-			star_set(randstar, 0, tmpstar[0]);
-			star_set(randstar, 0, tmpstar[1]);
-			star_set(randstar, 0, tmpstar[2]);
-			krez = mk_kresult_from_kquery(kq, kd, randstar);
+			make_rand_star(randstar, ramin, ramax, decmin, decmax);
 
-			numS = krez->count;
+			krez = kdtree_rangesearch(starkd, randstar, scale*scale);
+
+			numS = krez->nres;
 			//fprintf(stderr,"random location: %lu within scale.\n",numS);
 
 			if (numS) {
 				fprintf(pix0fid, "centre xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
-						star_ref(randstar, 0), star_ref(randstar, 1), 
-						  star_ref(randstar, 2),
-						rad2deg(xy2ra(star_ref(randstar, 0), star_ref(randstar, 1))),
-						rad2deg(z2dec(star_ref(randstar, 2))));
+						randstar[0], randstar[1], randstar[2],
+						rad2deg(xy2ra(randstar[0], randstar[1])),
+						rad2deg(z2dec(randstar[2])));
 
 				numX = floor(numS * distractors);
 				fprintf(pixfid, "%lu", numS + numX);
 				fprintf(pix0fid, "%lu", numS);
 				fprintf(listfid, "%lu", numS);
 				fprintf(rdlsfid, "%lu", numS);
-				for (jj = 0;jj < numS;jj++) {
-					fprintf(listfid, ",%d", krez->pindexes->iarr[jj]);
-					star_coords_old(thestars->array[(krez->pindexes->iarr[jj])],
-									randstar, &xx, &yy);
+				for (jj = 0; jj < numS; jj++) {
+					double x, y, z, ra, dec;
+					fprintf(listfid, ",%d", krez->inds[jj]);
+					star_coords(krez->results + jj*DIM_STARS,
+								randstar, &xx, &yy);
 
-					{
-						double x, y, z, ra, dec;
-						x = star_ref(thestars->array[(krez->pindexes->iarr[jj])], 0);
-						y = star_ref(thestars->array[(krez->pindexes->iarr[jj])], 1);
-						z = star_ref(thestars->array[(krez->pindexes->iarr[jj])], 2);
-						ra = rad2deg(xy2ra(x,y));
-						dec = rad2deg(z2dec(z));
-						fprintf(rdlsfid, ",%lf,%lf", ra, dec);
-					}
+					x = krez->results[jj*DIM_STARS + 0];
+					y = krez->results[jj*DIM_STARS + 1];
+					z = krez->results[jj*DIM_STARS + 2];
+					ra = rad2deg(xy2ra(x,y));
+					dec = rad2deg(z2dec(z));
+					fprintf(rdlsfid, ",%lf,%lf", ra, dec);
 
 					// should add random rotation here ???
 					if (FlipParity) {
@@ -257,22 +255,21 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 					fprintf(pix0fid, ",%lf,%lf", xx, yy);
 					if (noise)
 						fprintf(pixfid, ",%lf,%lf",
-						        xx + noise*scale*gen_gauss(),
-						        yy + noise*scale*gen_gauss() );
+						        gaussian_sample(xx, noise*scale),
+						        gaussian_sample(yy, noise*scale));
 					else
 						fprintf(pixfid, ",%lf,%lf", xx, yy);
 				}
 				for (jj = 0;jj < numX;jj++)
 					fprintf(pixfid, ",%lf,%lf",
-					        range_random(pixxmin, pixxmax),
-					        range_random(pixymin, pixymax));
+							uniform_sample(pixxmin, pixxmax),
+							uniform_sample(pixymin, pixymax));
 
 				fprintf(pixfid, "\n");
 				fprintf(listfid, "\n");
 				fprintf(pix0fid, "\n");
 			}
-			free_star(randstar);
-			free_kresult(krez);
+			kdtree_free_query(krez);
 			numtries++;
 
 			if (numtries >= FAILURES) {
@@ -283,13 +280,6 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 				exit(1);
 			}
 		}
-		//if(is_power_of_two(ii))
-		//fprintf(stderr,"  made %lu pix in %lu tries\r",ii,numtries);fflush(stderr);
 	}
-
-	free_star(randstar);
-
-	free_kquery(kq);
-
 	return numtries;
 }

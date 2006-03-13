@@ -29,20 +29,25 @@ AMKD_OBJ = KD/kdtree.o KD/knn.o KD/kquery.o KD/kresult.o KD/kresults.o \
 	kdutil.o fileutil_amkd.o
 
 # execs that need AM's kdtree stuff
-AMKD_EXECS = startree genfields findcode deduplicate findstar \
+AMKD_EXECS = startree findcode deduplicate findstar \
 	codedensity 
 
 # execs that need AM's non-kdtree stuff
-AM_EXECS = fieldquads findquad 
+AM_EXECS = findquad 
+
+# fieldquads
 
 # execs that don't need AM's stuff
 EXECS = get_healpix quadidx2 xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable \
 	hpquads dedup_index codetree2 startree2 codetomatlab \
-	printcatalog fixcatalogheader deduplicate2 randcat
+	printcatalog fixcatalogheader deduplicate2 randcat \
+	genfields
+
+# postmortem requires: findstar(2), findquad, certifiable
 
 MY_OBJ = randcat.o startree.o \
-  genfields.o fieldquads.o findstar.o \
+  genfields.o findstar.o \
   findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o \
   fixcatalogheader.o codedensity.o \
   deduplicate.o codetree2.o printcatalog.o get_healpix.o \
@@ -53,7 +58,7 @@ MY_OBJ = randcat.o startree.o \
   deduplicate2.o \
   test_healpix.o kdtree/test_kdtree.o
 
-# solvexy.o
+# solvexy.o fieldquads.o 
 
 ALL_OBJ = $(OBJ) $(AM_OBJ) $(AMKD_OBJ) $(MY_OBJ) 
 
