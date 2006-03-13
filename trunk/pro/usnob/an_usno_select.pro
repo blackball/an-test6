@@ -14,10 +14,11 @@
 ;   minmag   - minimum (brightest) magnitude to consider (default
 ;              14.0 mag)
 ;   scale    - scale on which to ensure uniformity of the catalog
-;              (default 4.0 deg)
+;              (default 2.9 deg)
 ; KEYWORDS:
 ;   sdss     - over-ride all inputs to SDSS-optimized values
-;   galex    - over-ride all inputs to GALEX-optimized values
+;   galex    - over-ride all inputs to GALEX-optimized values,
+;              including non-standard band setting!
 ;   continue - pick up where you left off using save file - USE WITH
 ;              EXTREME CAUTION
 ;   mwrfits  - write fits files for each of the small-scale healpix
@@ -47,7 +48,7 @@ radperdeg= !DPI/1.8D2
 if (NOT keyword_set(nstars)) then nstars= 12L*4L^9L
 if (NOT keyword_set(band)) then band= 3 ; R band
 if (NOT keyword_set(minmag)) then minmag= 14.0 ; mag
-if (NOT keyword_set(scale)) then scale= 4.0 ; deg
+if (NOT keyword_set(scale)) then scale= 2.9 ; deg
 ; if (NOT keyword_set(maxerr)) then maxerr= 700.0 ; max position error
 ; if (NOT keyword_set(maxpm)) then maxpm= 70.0 ; max proper motion
 if (keyword_set(sdss)) then begin
@@ -58,11 +59,22 @@ if (keyword_set(sdss)) then begin
 endif
 if (keyword_set(galex)) then begin
     nstars= 12L*4L^8L
-    band= 2                     ; B band
+    band= 2                     ; B
     minmag= 2.0                 ; min mag
     prefix= 'an_usno_galex'
+    scale= 1.0                  ; deg
 endif
+
+; set weights for photometric ranking
+if (NOT keyword_set(bandweight)) then begin
+    bandweight= fltarr(5)
+    bandweight[band]= 1.0
+endif
+
+; set nside
 nside= 2L^(6L-round(alog(scale)/alog(2.0)))
+
+; set prefix
 if (NOT keyword_set(prefix)) then prefix= 'an_usno_' $
   +strtrim(string(band),2)+'_'+strtrim(string(nside),2)
 
@@ -73,7 +85,7 @@ healgen_lb,nside,finerap,finedecp
 help, nstars,band,minmag,scale,nside,prefix,bigrap,finerap
 
 ; loop over big healpix pixels
-for bigpix= 0L,n_elements(bigrap)-1L do begin
+for bigpix= 7L,n_elements(bigrap)-1L do begin
     bigpixstr= string(bigpix,format='(I2.2)')
     objsfile= prefix+'_'+bigpixstr+'.objs'
     savefile= prefix+'_'+bigpixstr+'.sav'
@@ -101,9 +113,11 @@ for bigpix= 0L,n_elements(bigrap)-1L do begin
         endif
         usno= an_usno_read(rap[ii],decp[ii],scale)
         if (n_tags(usno) GT 1) then begin
-            usnomag= usno.mag[band]
+
+; what pixel?
             ang2pix_ring, nside,(9D1-usno.dec)*radperdeg,usno.ra*radperdeg,ind
 
+; write full-up USNO fits file?
             if keyword_set(mwrfits) then begin
                 prefix= 'an_usno_'
                 bigstr= string(bigpix,format="(I2.2)")
@@ -112,6 +126,13 @@ for bigpix= 0L,n_elements(bigrap)-1L do begin
                 mwrfits, usno[where(ind EQ goodpix[ii])],fitsname
             endif
 
+; deal with magnitudes
+            usnomag= usno.mag
+            bad= where(usnomag LT 0.01,nbad)
+            if (nbad GT 0) then usnomag[bad]= 99.0
+            usnomag= transpose(bandweight#usnomag)
+
+; keep for a.n internal file?
             inside= where((ind EQ goodpix[ii]) AND $
                           (usnomag GT minmag),ninside)
 ; ;                      (usno.sde LT maxerr) AND $
