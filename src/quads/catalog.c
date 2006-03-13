@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "catalog.h"
 #include "fileutil.h"
@@ -52,11 +53,35 @@ int catalog_rewrite_header(catalog* cat) {
 	return 0;
 }
 
+void catalog_compute_radecminmax(catalog* cat) {
+	double ramin, ramax, decmin, decmax;
+	int i;
+	ramin = 1e100;
+	ramax = -1e100;
+	decmin = 1e100;
+	decmax = -1e100;
+	for (i=0; i<cat->nstars; i++) {
+		double* xyz;
+		double ra, dec;
+		xyz = catalog_get_star(cat, i);
+		ra = xy2ra(xyz[0], xyz[1]);
+		dec = z2dec(xyz[2]);
+		if (ra > ramax) ramax = ra;
+		if (ra < ramin) ramin = ra;
+		if (dec > decmax) decmax = dec;
+		if (dec < decmin) decmin = dec;
+	}
+	cat->ramin = ramin;
+	cat->ramax = ramax;
+	cat->decmin = decmin;
+	cat->decmax = decmax;
+}
+
 double* catalog_get_base(catalog* cat) {
 	return cat->stars;
 }
 
-catalog* catalog_open(char* basefn) {
+catalog* catalog_open(char* basefn, int modifiable) {
 	char* tempfn;
 	catalog* cat;
 	/*
@@ -66,13 +91,13 @@ catalog* catalog_open(char* basefn) {
 	  sprintf(tempfn, "%s.objs", basefn);
 	*/
 	tempfn = mk_catfn(basefn);
-	cat = catalog_open_file(tempfn);
+	cat = catalog_open_file(tempfn, modifiable);
 	//free(tempfn);
 	free_fn(tempfn);
 	return cat;
 }
 
-catalog* catalog_open_file(char* catfn) {
+catalog* catalog_open_file(char* catfn, int modifiable) {
 	FILE *catfid  = NULL;
 	char readStatus;
 	dimension Dim_Stars;
@@ -81,6 +106,7 @@ catalog* catalog_open_file(char* catfn) {
 	uint maxstar;
 	catalog* cat;
 	sidx nstars_tmp;
+	int mode, flags;
 
 	cat = malloc(sizeof(catalog));
 	if (!cat) {
@@ -112,7 +138,14 @@ catalog* catalog_open_file(char* catfn) {
 	}
 
 	cat->mmap_cat_size = endoffset;
-	cat->mmap_cat = mmap(0, cat->mmap_cat_size, PROT_READ, MAP_SHARED, fileno(catfid), 0);
+	if (modifiable) {
+		mode = PROT_READ | PROT_WRITE;
+		flags = MAP_PRIVATE;
+	} else {
+		mode = PROT_READ;
+		flags = MAP_SHARED;
+	}
+	cat->mmap_cat = mmap(0, cat->mmap_cat_size, mode, flags, fileno(catfid), 0);
 	if (cat->mmap_cat == MAP_FAILED) {
 		fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
 		goto bail;

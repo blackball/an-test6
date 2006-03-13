@@ -858,6 +858,9 @@ int il_remove_value(il* ilist, int value) {
 void il_remove_all(il* list) {
 	bl_remove_all(list);
 }
+void il_remove_index_range(il* list, int start, int length) {
+	bl_remove_index_range(list, start, length);
+}
 
 void il_set(il* list, int index, int value) {
 	bl_set((bl*)list, index, &value);

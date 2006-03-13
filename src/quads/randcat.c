@@ -1,5 +1,5 @@
-#include "starutil.h"
-#include "fileutil.h"
+#include "starutil_am.h"
+#include "fileutil_am.h"
 
 #define OPTIONS "hn:f:r:R:d:D:S:"
 const char HelpString[] =

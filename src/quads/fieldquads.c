@@ -1,5 +1,5 @@
-#include "starutil.h"
-#include "fileutil.h"
+#include "starutil_am.h"
+#include "fileutil_am.h"
 
 #define OPTIONS "hf:o:"
 const char HelpString[] = "fieldquads -f fname -o fieldname\n";

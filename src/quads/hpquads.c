@@ -541,7 +541,7 @@ int main(int argc, char** argv)
 		il_new_existing(pixels + i, intlist_blocksize);
 	}
 
-	cat = catalog_open(basefname);
+	cat = catalog_open(basefname, 0);
 	if (!cat) {
 		fprintf(stderr, "Failed to open catalog %s\n", basefname);
 		exit( -1);

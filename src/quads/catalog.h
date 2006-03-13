@@ -16,15 +16,19 @@ struct catalog {
 };
 typedef struct catalog catalog;
 
-catalog* catalog_open(char* basefn);
+// if "modifiable" is non-zero, a private copy-on-write is made.
+// (changes don't automatically get written to the file.)
+catalog* catalog_open(char* basefn, int modifiable);
 
-catalog* catalog_open_file(char* catfn);
+catalog* catalog_open_file(char* catfn, int modifiable);
 
 double* catalog_get_star(catalog* cat, uint sid);
 
 double* catalog_get_base(catalog* cat);
 
 void catalog_close(catalog* cat);
+
+void catalog_compute_radecminmax(catalog* cat);
 
 int catalog_rewrite_header(catalog* cat);
 
