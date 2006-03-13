@@ -66,8 +66,8 @@ typedef dyv_array stararray;
 #define free_quadarray(q) free_ivec_array((ivec_array *)q)
 #define free_codearray(c) free_dyv_array((dyv_array *)c)
 
-star *make_rand_star(double ramin, double ramax,
-                     double decmin, double decmax);
+star *make_rand_star_old(double ramin, double ramax,
+						 double decmin, double decmax);
 void star_coords(star *s, star *r, double *x, double *y);
 void star_midpoint(star *M, star *A, star *B);
 

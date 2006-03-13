@@ -79,7 +79,7 @@ inline double arcsec2distsq(double arcInArcSec);
 void star_midpoint_2(double* mid, double* A, double* B);
 void star_coords_2(double *s, double *r, double *x, double *y);
 
-
-
+void make_rand_star(double* star, double ramin, double ramax,
+					double decmin, double decmax);
 
 #endif
