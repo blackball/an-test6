@@ -1,7 +1,7 @@
 #include <errno.h>
-#include "starutil.h"
+#include "starutil_am.h"
 #include "kdutil.h"
-#include "fileutil.h"
+#include "fileutil_amkd.h"
 
 #define OPTIONS "hf:ixrt:k:"
 const char HelpString[] =

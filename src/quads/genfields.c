@@ -1,6 +1,6 @@
-#include "starutil.h"
+#include "starutil_am.h"
 #include "kdutil.h"
-#include "fileutil.h"
+#include "fileutil_amkd.h"
 
 #define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:"
 const char HelpString[] =
@@ -193,11 +193,17 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 	fprintf(listfid, "NumFields=%lu\n", numFields);
 	fprintf(rdlsfid, "NumFields=%lu\n", numFields);
 
+	randstar = mk_star();
+
 	for (ii = 0;ii < numFields;ii++) {
 		kresult *krez = NULL;
 		numS = 0;
 		while (!numS) {
-			randstar = make_rand_star(ramin, ramax, decmin, decmax);
+			double tmpstar[3];
+			make_rand_star(tmpstar, ramin, ramax, decmin, decmax);
+			star_set(randstar, 0, tmpstar[0]);
+			star_set(randstar, 0, tmpstar[1]);
+			star_set(randstar, 0, tmpstar[2]);
 			krez = mk_kresult_from_kquery(kq, kd, randstar);
 
 			numS = krez->count;
@@ -280,6 +286,8 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 		//if(is_power_of_two(ii))
 		//fprintf(stderr,"  made %lu pix in %lu tries\r",ii,numtries);fflush(stderr);
 	}
+
+	free_star(randstar);
 
 	free_kquery(kq);
 

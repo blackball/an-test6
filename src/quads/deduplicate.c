@@ -10,9 +10,9 @@
 
 #include <math.h>
 
-#include "starutil.h"
+#include "starutil_am.h"
 #include "kdutil.h"
-#include "fileutil.h"
+#include "fileutil_am.h"
 #include "dualtree_rangesearch.h"
 #include "blocklist.h"
 #include "KD/amma.h"

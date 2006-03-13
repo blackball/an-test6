@@ -1,8 +1,8 @@
 #include <math.h>
 
-#include "starutil.h"
+#include "starutil_am.h"
 #include "kdutil.h"
-#include "fileutil.h"
+#include "fileutil_amkd.h"
 #include "KD/amma.h"
 
 #define OPTIONS "hl:f:k:"
