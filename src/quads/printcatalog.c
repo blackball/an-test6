@@ -20,10 +20,8 @@ void get_star_radec(FILE *fid, off_t marker,
 
 void print_help(char* progname) {
     printf("\nUsage: %s -f <input-file> [-m]\n\n"
-		   "  <input-file> should be "
-		   "catalogue files, and should be specified without "
-		   "its .objs suffix.\n"
-		   "  -m: print Matlab literals describing the RA,DEC of each object.\n\n",
+		   "  <input-file>  a catalog filename, specified without its .objs suffix.\n"
+		   "  [-m]          print Matlab literals describing the RA,DEC of each object.\n\n",
 		   progname);
 }
 

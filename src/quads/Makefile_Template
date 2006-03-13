@@ -32,20 +32,20 @@ AMKD_OBJ = KD/kdtree.o KD/knn.o KD/kquery.o KD/kresult.o KD/kresults.o \
 AMKD_EXECS = startree genfields findcode deduplicate
 
 # execs that need AM's non-kdtree stuff
-AM_EXECS = randcat fieldquads findstar findquad fixheaders \
+AM_EXECS = randcat fieldquads findstar findquad \
 	codedensity
 
 # execs that don't need AM's stuff
 EXECS = get_healpix quadidx2 xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable \
 	hpquads dedup_index codetree2 startree2 codetomatlab \
-	printcatalog
+	printcatalog fixcatalogheader
 
 
 MY_OBJ = randcat.o startree.o \
   genfields.o solvexy.o fieldquads.o findstar.o \
   findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
-  deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
+  deduplicate.o codetree2.o printcatalog.o test_healpix.o get_healpix.o \
   solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o agreeable.o slave.o \
   fixmatchfile.o printmatchfile rdls2hpls.o certifiable.o agreeable2.o \
   hitlist_agreement.o hitlist_healpix.o tilequads.o hpquads.o \

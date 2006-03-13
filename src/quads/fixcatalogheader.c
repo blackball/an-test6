@@ -14,6 +14,9 @@
 
 #include <byteswap.h>
 #include <errno.h>
+#include <string.h>
+#include <math.h>
+
 #include "starutil.h"
 #include "fileutil.h"
 #include "catalog.h"
@@ -23,16 +26,6 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-char *outfname = NULL, *catfname = NULL;
-FILE *outfid = NULL, *catfid = NULL;
-char buff[100], oneobjWidth;
-bool byteswap;
-off_t catposmarker = 0;
-
-void get_star_radec(FILE *fid, off_t marker, int objsize,
-					sidx i, double* pra, double* pdec);
-void get_star(FILE *fid, off_t marker, int objsize,
-			  sidx i, star* s);
 
 void print_help(char* progname) {
     printf("\nUsage: %s -f <input-file> -o <output-file>\n\n"
@@ -45,15 +38,11 @@ void print_help(char* progname) {
 	   "creating a copy.\n\n", progname);
 }
 
-int main(int argc, char *argv[])
-{
-  dimension DimStars;
+int main(int argc, char *argv[]) {
   int argchar;
+  char *outfname = NULL, *catfname = NULL;
   double ramin, ramax, decmin, decmax;
-  sidx numstars;
   int i;
-  char readStatus;
-  star* mystar;
   bool inplace;
   catalog* cat;
   int res;
@@ -98,7 +87,7 @@ int main(int argc, char *argv[])
   ramax = -1e100;
   decmin = 1e100;
   decmax = -1e100;
-  for (i=0; i<numstars; i++) {
+  for (i=0; i<cat->nstars; i++) {
 	  double* xyz;
 	  double ra, dec;
 	  xyz = catalog_get_star(cat, i);
