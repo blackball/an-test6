@@ -54,6 +54,8 @@ typedef struct match_struct
 }
 MatchObj;
 
+ivec *box_containing_most_points(dyv *x, dyv *y, double bx, double by);
+
 #define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
 #define free_MatchObj(m) free(m)
 
@@ -682,11 +684,11 @@ void resolve_matches(xy *cornerpix, kresult *krez, dyv_array* codearray, code *q
 		thisquadno = (qidx)krez->pindexes->iarr[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
 		getstarcoords(sA, sB, sC, sD, iA, iB, iC, iD);
-		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
+		transform = fit_transform_old(ABCDpix, order, sA, sB, sC, sD);
 		sMin = mk_star();
 		sMax = mk_star();
-		image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
-		image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
+		image_to_xyz_old(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), sMin, transform);
+		image_to_xyz_old(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), sMax, transform);
 
 		mo->quadno = thisquadno;
 		mo->iA = iA;
@@ -1076,120 +1078,76 @@ void getstarcoords(star *sA, star *sB, star *sC, star *sD,
     return ;
 }
 
+/* returns an ivec with the indices of the subset of points captured
+   by the box of size no more than bx by by which contains the most
+   points from the pointset represented by x,y */
+ivec *box_containing_most_points(dyv *x, dyv *y, double bx, double by)
+{
+	ivec *sortx, *sorty, *inboxx, *inboxy, *inbothbox, *bestbox;
+	int ii, jj, kk, N, bestnumpoints;
+	double x0, y0;
+	if (x == NULL || y == NULL)
+		return (NULL);
+	if (x->size != y->size) {
+		fprintf(stderr, "ERROR (box_containing_most_points) -- xsize!=ysize\n");
+		return (NULL);
+	}
+	N = x->size;
 
 
+	if (bx <= 0.0 || by <= 0.0) {
+		fprintf(stderr, "ERROR (box_containing_most_points) -- bx<0 or by<0\n");
+		return (NULL);
+	}
 
+	bestnumpoints = 0;
+	bestbox = NULL;
 
+	sortx = mk_ivec_sorted_dyv_indices(x);
+	sorty = mk_ivec_sorted_dyv_indices(y);
 
+	for (ii = 0;ii < N;ii++) {
+		//if((N-ii)<bestnumpoints) break;
 
+		kk = ivec_ref(sortx, ii);
 
+		inboxx = mk_ivec_1(kk);
+		inboxy = mk_ivec_1(kk);
 
+		x0 = dyv_ref(x, kk);
+		y0 = dyv_ref(y, kk);
 
+		jj = ii;
+		while ((jj < (N - 1)) && (dyv_ref(x, ivec_ref(sortx, jj + 1)) - x0) < bx) {
+			jj++;
+			add_to_sorted_ivec(inboxx, ivec_ref(sortx, jj));
+		}
 
+		jj = find_index_in_ivec(sorty, kk);
+		while ((jj < (N - 1)) && (dyv_ref(y, ivec_ref(sorty, jj + 1)) - y0) < by) {
+			jj++;
+			add_to_sorted_ivec(inboxy, ivec_ref(sorty, jj));
+		}
 
+		inbothbox = mk_ivec_intersect_ordered(inboxx, inboxy);
+		if (inbothbox != NULL && inbothbox->size > bestnumpoints) {
+			bestnumpoints = inbothbox->size;
+			if (bestbox != NULL)
+				free_ivec(bestbox);
+			bestbox = inbothbox;
+			inbothbox = NULL;
+		}
 
-//ivec *check_match_agreement(double ra_tol,double dec_tol,
-//                            int *sizeofnextbest);
+		free_ivec(inboxx);
+		free_ivec(inboxy);
+		if (inbothbox != NULL)
+			free_ivec(inbothbox);
 
+	}
 
-/*
- 
-this bit goes in solve_fields...
- 
-//ivec *good_list; int sizeofnextbest;
- 
-good_list=check_match_agreement(AgreeTol??,AgreeTol??,&sizeofnextbest);
-if(good_list==NULL) {numgood=0; sizeofnextbest=0;}
-else numgood=good_list->size;
- 
-if(numgood==0) {fprintf(hitfid,"No matches.\n"); numsolved--;}
-else {
-MatchObj *mo,*prev;
-mo=firstMatch; prev=NULL;
-while(mo!=NULL) {
-if(is_in_ivec(good_list,mo->idx))
-output_match(mo);
-mo=mo->next;
+	free_ivec(sortx);
+	free_ivec(sorty);
+
+	return (bestbox);
+
 }
-free_ivec(good_list);
-}
- 
-*/
-
-
-
-/*
-  ivec *check_match_agreement(double ra_tol,double dec_tol,int *sizeofnextbest)
-  {
-  ivec *minagree,*maxagree,*bothagree,*nextbest;
-  double xx,yy,zz;
-  MatchObj *mo;
-  qidx ii,nummatches;
- 
-  if(firstMatch==NULL || firstMatch==lastMatch) return(NULL);
-  nummatches=lastMatch->idx+1;
- 
-  dyv *raminvotes=mk_dyv(nummatches);
-  dyv *ramaxvotes=mk_dyv(nummatches);
-  dyv *decminvotes=mk_dyv(nummatches);
-  dyv *decmaxvotes=mk_dyv(nummatches);
- 
-  mo=firstMatch;
-  for(ii=0;ii<nummatches;ii++) {
-  xx=star_ref(mo->sMin,0); yy=star_ref(mo->sMin,1); zz=star_ref(mo->sMin,2);
-  dyv_set(raminvotes, ii,xy2ra(xx,yy));
-  dyv_set(decminvotes,ii,z2dec(zz));
-  xx=star_ref(mo->sMax,0); yy=star_ref(mo->sMax,1); zz=star_ref(mo->sMax,2);
-  dyv_set(ramaxvotes, ii,xy2ra(xx,yy));
-  dyv_set(decmaxvotes,ii,z2dec(zz));
-  mo=mo->next;
-  }
- 
-  minagree = box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
-  //if(minagree!=NULL)  fprintf(stderr,"  %d agree on min\n",minagree->size);
-  maxagree = box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
-  //if(maxagree!=NULL)  fprintf(stderr,"  %d agree on max\n",maxagree->size);
-  bothagree=mk_ivec_intersect_ordered(minagree,maxagree);
-  //if(bothagree!=NULL) fprintf(stderr,"  %d agree on both\n",bothagree->size);
- 
-  privec(minagree);
-  privec(maxagree);
-  privec(bothagree);
- 
-  free_ivec(minagree); free_ivec(maxagree);
- 
-  if(bothagree!=NULL && bothagree->size<=1) {
-  free_ivec(bothagree); 
-  bothagree=NULL;
-  }
- 
-  if(bothagree!=NULL && sizeofnextbest!=NULL) {
-  int kk,correction=0;
-  for(ii=0;ii<bothagree->size;ii++) {
-  kk=ivec_ref(bothagree,ii)-correction;
-  dyv_remove(raminvotes,kk);
-  dyv_remove(ramaxvotes,kk);
-  dyv_remove(decminvotes,kk);
-  dyv_remove(decmaxvotes,kk);
-  correction++;
-  }
-  minagree=box_containing_most_points(raminvotes,decminvotes,ra_tol,dec_tol);
-  maxagree=box_containing_most_points(ramaxvotes,decmaxvotes,ra_tol,dec_tol);
-  nextbest=mk_ivec_intersect_ordered(minagree,maxagree);
-  free_ivec(minagree); free_ivec(maxagree);
-  if(nextbest==NULL) 
-  *sizeofnextbest=0; 
-  else {
-  *sizeofnextbest=nextbest->size;
-  free_ivec(nextbest);
-  }
-  }
-  free_dyv(raminvotes);  free_dyv(ramaxvotes);
-  free_dyv(decminvotes); free_dyv(decmaxvotes);
- 
-  return(bothagree);
-  
-  }
- 
- 
-*/

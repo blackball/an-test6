@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
@@ -171,12 +172,12 @@ int main(int argc, char *argv[]) {
 					break;
 				}
 				fieldnum = me.fieldnum;
-				x1 = star_ref(mo->sMin, 0);
-				y1 = star_ref(mo->sMin, 1);
-				z1 = star_ref(mo->sMin, 2);
-				x2 = star_ref(mo->sMax, 0);
-				y2 = star_ref(mo->sMax, 1);
-				z2 = star_ref(mo->sMax, 2);
+				x1 = mo->sMin[0];
+				y1 = mo->sMin[1];
+				z1 = mo->sMin[2];
+				x2 = mo->sMax[0];
+				y2 = mo->sMax[1];
+				z2 = mo->sMax[2];
 
 				if (printhits) {
 					fprintf(stderr, "\n");
@@ -332,8 +333,6 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (!falsepos) {
-				free_star(mo->sMin);
-				free_star(mo->sMax);
 				free_MatchObj(mo);
 				free(me.indexpath);
 				free(me.fieldpath);

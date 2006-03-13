@@ -5,12 +5,12 @@
 
 #include "bl.h"
 
-inline blnode* bl_find_node(bl* list, int n, int* rtn_nskipped);
-blnode* bl_new_node(bl* list);
+inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
+bl_node* bl_new_node(bl* list);
 
 
 void bl_split(bl* src, bl* dest, int split) {
-    blnode* node;
+    bl_node* node;
     int nskipped;
     int ind;
     int ntaken = src->N - split;
@@ -24,7 +24,7 @@ void bl_split(bl* src, bl* dest, int split) {
         // this whole node belongs to "dest".
         if (split) {
             // we need to get the previous node...
-            blnode* last = bl_find_node(src, split-1, NULL);
+            bl_node* last = bl_find_node(src, split-1, NULL);
             last->next = NULL;
             src->tail = last;
         } else {
@@ -34,7 +34,7 @@ void bl_split(bl* src, bl* dest, int split) {
         }
     } else {
         // create a new node to hold the second half of the items in "node".
-        blnode* newnode = bl_new_node(dest);
+        bl_node* newnode = bl_new_node(dest);
         newnode->N = (node->N - ind);
         newnode->next = node->next;
         memcpy((char*)newnode->data,
@@ -84,7 +84,7 @@ bl* bl_new(int blocksize, int datasize) {
 }
 
 void bl_free(bl* list) {
-	blnode *n, *lastnode;
+	bl_node *n, *lastnode;
 	lastnode = NULL;
 	for (n=list->head; n; n=n->next) {
 		// see new_node - we merge data and node malloc requests, so they don't have
@@ -100,7 +100,7 @@ void bl_free(bl* list) {
 }
 
 void bl_remove_all(bl* list) {
-	blnode *n, *lastnode;
+	bl_node *n, *lastnode;
 	lastnode = NULL;
 	for (n=list->head; n; n=n->next) {
 		if (lastnode)
@@ -118,7 +118,7 @@ void bl_remove_all(bl* list) {
 }
 
 void bl_remove_all_but_first(bl* list) {
-	blnode *n, *lastnode;
+	bl_node *n, *lastnode;
 	lastnode = NULL;
 
 	if (list->head) {
@@ -141,8 +141,8 @@ void bl_remove_all_but_first(bl* list) {
 	list->last_access_n = 0;
 }
 
-void bl_remove_from_node(bl* list, blnode* node,
-								blnode* prev, int index_in_node) {
+void bl_remove_from_node(bl* list, bl_node* node,
+								bl_node* prev, int index_in_node) {
 	// if we're removing the last element at this node, then
 	// remove this node from the linked list.
 	if (node->N == 1) {
@@ -179,7 +179,7 @@ void bl_remove_from_node(bl* list, blnode* node,
 void bl_remove_index(bl* list, int index) {
 	// find the node (and previous node) at which element 'index'
 	// can be found.
-	blnode *node, *prev;
+	bl_node *node, *prev;
 	int nskipped = 0;
 	for (node=list->head, prev=NULL;
 		 node;
@@ -206,7 +206,7 @@ void bl_remove_index(bl* list, int index) {
 void bl_remove_index_range(bl* list, int start, int length) {
 	// find the node (and previous node) at which element 'start'
 	// can be found.
-	blnode *node, *prev;
+	bl_node *node, *prev;
 	int nskipped = 0;
 	list->last_access = NULL;
 	list->last_access_n = 0;
@@ -253,7 +253,7 @@ void bl_remove_index_range(bl* list, int start, int length) {
 	// remove complete blocks.
 	for (;;) {
 		int n;
-		blnode* todelete;
+		bl_node* todelete;
 		if (length == 0 || length < node->N)
 			break;
 		// we're skipping this whole block.
@@ -341,16 +341,16 @@ int bl_count(bl* list) {
 	return list->N;
 }
 
-blnode* bl_new_node(bl* list) {
-	blnode* rtn;
+bl_node* bl_new_node(bl* list) {
+	bl_node* rtn;
 
 	// merge the mallocs for the node and its data into one malloc.
-	rtn = (blnode*)malloc(sizeof(blnode) + list->datasize * list->blocksize);
+	rtn = malloc(sizeof(bl_node) + list->datasize * list->blocksize);
 	if (!rtn) {
 		printf("Couldn't allocate memory for a bl node!\n");
 		return NULL;
 	}
-	rtn->data = (char*)rtn + sizeof(blnode);
+	rtn->data = (char*)rtn + sizeof(bl_node);
 
 	rtn->N = 0;
 	rtn->next = NULL;
@@ -361,10 +361,10 @@ blnode* bl_new_node(bl* list) {
  * Append an item to this bl node.  If this node is full, then create a new
  * node and insert it into the list.
  */
-void bl_node_append(bl* list, blnode* node, void* data) {
+void bl_node_append(bl* list, bl_node* node, void* data) {
 	if (node->N == list->blocksize) {
 		// create new node and insert it.
-		blnode* newnode;
+		bl_node* newnode;
 		newnode = bl_new_node(list);
 		newnode->next = node->next;
 		node->next = newnode;
@@ -377,7 +377,7 @@ void bl_node_append(bl* list, blnode* node, void* data) {
 }
 
 void bl_append(bl* list, void* data) {
-	blnode* tail;
+	bl_node* tail;
 	tail = list->tail;
 	if (!tail) {
 		// previously empty list.  create a new head-and-tail node.
@@ -393,7 +393,7 @@ void bl_append(bl* list, void* data) {
 
 
 void bl_print_structure(bl* list) {
-	blnode* n;
+	bl_node* n;
 	printf("bl: head %p, tail %p, N %i\n", list->head, list->tail, list->N);
 	for (n=list->head; n; n=n->next) {
 		printf("[N=%i] ", n->N);
@@ -408,8 +408,8 @@ void bl_get(bl* list, int n, void* dest) {
 }
 
 /* internal use only - find the node in which element "n" can be found. */
-inline blnode* bl_find_node(bl* list, int n, int* rtn_nskipped) {
-	blnode* node;
+inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
+	bl_node* node;
 	int nskipped;
 	if (list->last_access && n >= list->last_access_n) {
 		// take the shortcut!
@@ -521,7 +521,7 @@ int bl_insert_unique_sorted(bl* list, void* data,
 
 
 void bl_set(bl* list, int index, void* data) {
-	blnode* node;
+	bl_node* node;
 	int nskipped;
 	void* dataloc;
 
@@ -540,7 +540,7 @@ void bl_set(bl* list, int index, void* data) {
  * one position to the right.
  */
 void bl_insert(bl* list, int index, void* data) {
-	blnode* node;
+	bl_node* node;
 	int nskipped;
 
 	if (list->N == index) {
@@ -566,7 +566,7 @@ void bl_insert(bl* list, int index, void* data) {
 		// if the next node exists and is not full, then insert the overflowing
 		// element at the front.  otherwise, create a new node.
 		if (node->next && (node->next->N < list->blocksize)) {
-			blnode* next;
+			bl_node* next;
 			next = node->next;
 			// shift...
 			memmove((char*)next->data + list->datasize,
@@ -592,7 +592,7 @@ void bl_insert(bl* list, int index, void* data) {
 					   data, list->datasize);
 			}
 		} else {
-			blnode* newnode;
+			bl_node* newnode;
 			newnode = bl_new_node(list);
 			newnode->next = node->next;
 			node->next = newnode;
@@ -635,7 +635,7 @@ void bl_insert(bl* list, int index, void* data) {
 
 
 void* bl_access(bl* list, int n) {
-	blnode* node;
+	bl_node* node;
 	int nskipped;
 	void* rtn;
 
@@ -650,7 +650,7 @@ void* bl_access(bl* list, int n) {
 }
 
 void bl_copy(bl* list, int start, int length, void* vdest) {
-	blnode* node;
+	bl_node* node;
 	int nskipped;
 	char* dest;
 
@@ -702,7 +702,7 @@ void bl_copy(bl* list, int start, int length, void* vdest) {
 }
 
 int bl_check_consistency(bl* list) {
-	blnode* node;
+	bl_node* node;
 	int N;
 	int tailok = 1;
 	int nempty = 0;
@@ -835,7 +835,7 @@ il* il_dupe(il* ilist) {
 
 int il_remove_value(il* ilist, int value) {
     bl* list = (bl*) ilist;
-	blnode *node, *prev;
+	bl_node *node, *prev;
 	int istart = 0;
 	for (node=list->head, prev=NULL;
 		 node;
@@ -887,7 +887,7 @@ void il_copy(il* list, int start, int length, int* vdest) {
 }
 
 void il_print(bl* list) {
-	blnode* n;
+	bl_node* n;
 	int i;
 	for (n=list->head; n; n=n->next) {
 		printf("[ ");
@@ -898,7 +898,7 @@ void il_print(bl* list) {
 }
 
 int il_contains(il* list, int data) {
-	blnode* n;
+	bl_node* n;
 	int i;
 	int* idata;
 	for (n=list->head; n; n=n->next) {
@@ -948,7 +948,7 @@ void pl_copy(pl* list, int start, int length, void** vdest) {
     bl_copy(list, start, length, vdest);
 }
 void pl_print(pl* list) {
-    blnode* n;
+    bl_node* n;
     int i;
     for (n=list->head; n; n=n->next) {
 		printf("[ ");
@@ -956,6 +956,9 @@ void pl_print(pl* list) {
 			printf("%p ", ((void**)n->data)[i]);
 		printf("] ");
     }
+}
+int   pl_size(pl* list) {
+	return bl_count(list);
 }
 
 
@@ -966,6 +969,9 @@ dl* dl_new(int blocksize) {
 }
 void dl_free(dl* list) {
 	bl_free((bl*)list);
+}
+int   dl_size(dl* list) {
+	return bl_count(list);
 }
 int dl_check_consistency(dl* list) {
 	return bl_check_consistency(list);

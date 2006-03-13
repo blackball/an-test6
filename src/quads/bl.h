@@ -10,22 +10,22 @@
 
 #include <stdlib.h>
 
-struct blnode {
+struct bl_node {
   // number of elements filled.
   int N;
   void* data;
-  struct blnode* next;
+  struct bl_node* next;
 };
-typedef struct blnode blnode;
+typedef struct bl_node bl_node;
 
 // the top-level data structure of a blocklist.
 struct bl {
-  blnode* head;
-  blnode* tail;
+  bl_node* head;
+  bl_node* tail;
   int N;
   int blocksize;
   int datasize;
-  blnode* last_access;
+  bl_node* last_access;
   int last_access_n;
 };
 typedef struct bl bl;
@@ -132,6 +132,7 @@ int il_check_sorted_descending(il* list,
 typedef bl pl;
 pl*   pl_new(int blocksize);
 void  pl_free(pl* list);
+int   pl_size(pl* list);
 void* pl_get(pl* list, int n);
 void  pl_set(pl* list, int index, void* data);
 void  pl_append(pl* list, void* data);
@@ -146,6 +147,7 @@ void  pl_remove(pl* list, int index);
 typedef bl dl;
 dl*    dl_new(int blocksize);
 void   dl_free(dl* list);
+int    dl_size(dl* list);
 void   dl_push(dl* list, double data);
 double dl_pop(dl* list);
 double dl_get(dl* list, int n);

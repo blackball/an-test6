@@ -1,9 +1,10 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "healpix.h"
-#include "starutil.h"
+#include "starutil2.h"
 
 #define OPTIONS "hd"
 

@@ -1,6 +1,8 @@
 #ifndef _KDTREE_H
 #define _KDTREE_H
 
+#include <stdio.h>
+
 #define KDTREE_MAX_LEVELS 1000
 #define KDT_INFTY 1e309
 

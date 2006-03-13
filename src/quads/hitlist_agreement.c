@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "blocklist.h"
 typedef blocklist hitlist;
 #define DONT_DEFINE_HITLIST
@@ -191,8 +193,6 @@ void hitlist_clear(hitlist* hl) {
 		M = blocklist_count(hits);
 		for (j=0; j<M; j++) {
 			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
-			free_star(mo->sMin);
-			free_star(mo->sMax);
 			free_MatchObj(mo);
 		}
 		blocklist_pointer_free(hits);

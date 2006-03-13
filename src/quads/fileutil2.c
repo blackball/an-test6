@@ -1,5 +1,6 @@
-#include "fileutil.h"
-//#include "kdutil.h"
+#include <stdlib.h>
+#include <string.h>
+#include "fileutil2.h"
 
 /* The binary files all start with the unsigned short int MAGIC_VAL
    which helps identify them as binary and also sort out endian issues.
@@ -48,6 +49,7 @@ void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
                        dimension DimQuads, double index_scale)
 {
   magicval magic = MAGIC_VAL;
+
   fwrite(&magic, sizeof(magic), 1, quadfid);
   fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
   fwrite(&DimQuads, sizeof(DimQuads), 1, quadfid);
@@ -143,52 +145,53 @@ char *mk_filename(const char *basename, const char *extension)
 	return fname;
 }
 
-sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
-                 qidx ***starquads)
-{
-	magicval magic;
-	sidx numStars, thisstar, jj;
-	qidx thisnumq, ii;
+/*
+  sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
+  qidx ***starquads)
+  {
+  magicval magic;
+  sidx numStars, thisstar, jj;
+  qidx thisnumq, ii;
 
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (fieldquads) -- bad magic value in quad index\n");
-			return (0);
-		}
-		fread(&numStars, sizeof(numStars), 1, fid);
-	}
-	*starlist = malloc(numStars * sizeof(sidx));
-	if (*starlist == NULL)
-		return (0);
-	*starnumq = malloc(numStars * sizeof(qidx));
-	if (*starnumq == NULL) {
-		free(*starlist);
-		return (0);
-	}
-	*starquads = malloc(numStars * sizeof(qidx *));
-	if (*starquads == NULL) {
-		free(*starlist);
-		free(*starnumq);
-		return (0);
-	}
+  fread(&magic, sizeof(magic), 1, fid);
+  {
+  if (magic != MAGIC_VAL) {
+  fprintf(stderr, "ERROR (fieldquads) -- bad magic value in quad index\n");
+  return (0);
+  }
+  fread(&numStars, sizeof(numStars), 1, fid);
+  }
+  *starlist = malloc(numStars * sizeof(sidx));
+  if (*starlist == NULL)
+  return (0);
+  *starnumq = malloc(numStars * sizeof(qidx));
+  if (*starnumq == NULL) {
+  free(*starlist);
+  return (0);
+  }
+  *starquads = malloc(numStars * sizeof(qidx *));
+  if (*starquads == NULL) {
+  free(*starlist);
+  free(*starnumq);
+  return (0);
+  }
 
-	for (jj = 0;jj < numStars;jj++) {
-	  fread(&thisstar, sizeof(thisstar), 1, fid);
-	  fread(&thisnumq, sizeof(thisnumq), 1, fid);
-		(*starlist)[jj] = thisstar;
-		(*starnumq)[jj] = thisnumq;
-		(*starquads)[jj] = malloc(thisnumq * sizeof(qidx));
-		if ((*starquads)[jj] == NULL)
-			return (0);
-		for (ii = 0;ii < thisnumq;ii++) {
-		  fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
-		}
-	}
+  for (jj = 0;jj < numStars;jj++) {
+  fread(&thisstar, sizeof(thisstar), 1, fid);
+  fread(&thisnumq, sizeof(thisnumq), 1, fid);
+  (*starlist)[jj] = thisstar;
+  (*starnumq)[jj] = thisnumq;
+  (*starquads)[jj] = malloc(thisnumq * sizeof(qidx));
+  if ((*starquads)[jj] == NULL)
+  return (0);
+  for (ii = 0;ii < thisnumq;ii++) {
+  fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
+  }
+  }
 
-	return (numStars);
-}
-
+  return (numStars);
+  }
+*/
 
 void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD)
 {
@@ -227,17 +230,19 @@ void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy)
 }
 
 
+/*
+  signed int compare_sidx(const void *x, const void *y)
+  {
+  sidx xval, yval;
+  xval = *(sidx *)x;
+  yval = *(sidx *)y;
+  if (xval > yval)
+  return (1);
+  else if (xval < yval)
+  return ( -1);
+  else
+  return (0);
+  }
+*/
 
-signed int compare_sidx(const void *x, const void *y)
-{
-	sidx xval, yval;
-	xval = *(sidx *)x;
-	yval = *(sidx *)y;
-	if (xval > yval)
-		return (1);
-	else if (xval < yval)
-		return ( -1);
-	else
-		return (0);
-}
 

@@ -12,10 +12,11 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-#define NO_KD_INCLUDES 1
+//#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
@@ -172,7 +173,8 @@ int main(int argc, char *argv[]) {
 		fclose(fieldfid);
 		if (!thefields)
 			exit(-1);
-		numfields = (qidx)thefields->size;
+		//numfields = (qidx)thefields->size;
+		numfields = xya_size(thefields);
 		fprintf(stderr, "got %lu fields.\n", numfields);
 		if (parity)
 			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
@@ -405,8 +407,6 @@ int handlehit(struct solver_params* p, MatchObj* mo) {
 		if (matchfile_write_match(matchfid, mo, &matchfile)) {
 			fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
 		}
-		free_star(mo->sMin);
-		free_star(mo->sMax);
 		free_MatchObj(mo);
 	}
 	return 1;
@@ -442,7 +442,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
 
-	nfields = dyv_array_size(thefields);
+	nfields = xya_size(thefields);
 
 	for (i=0; i<blocklist_count(fieldlist); i++) {
 		xy *thisfield;

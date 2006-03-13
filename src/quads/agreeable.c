@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
@@ -248,8 +249,6 @@ int main(int argc, char *argv[]) {
 			}
 
 			if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
-				free_star(mo->sMin);
-				free_star(mo->sMax);
 				free_MatchObj(mo);
 				free(me.indexpath);
 				free(me.fieldpath);
@@ -263,8 +262,6 @@ int main(int argc, char *argv[]) {
 					// check if it's NULL because it's been flushed.
 					if (blocklist_int_contains(flushed, fieldnum)) {
 						//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
-						free_star(mo->sMin);
-						free_star(mo->sMax);
 						free_MatchObj(mo);
 						free(me.indexpath);
 						free(me.fieldpath);
@@ -454,8 +451,8 @@ void flush_solved_fields(bool doleftovers,
 		}
 		hits_end_hits_list(hitfid);
 
-		starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
-		fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
+		starids  = malloc(nbest * 4 * sizeof(sidx));
+		fieldids = malloc(nbest * 4 * sizeof(sidx));
 		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
 		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 		free(starids);
