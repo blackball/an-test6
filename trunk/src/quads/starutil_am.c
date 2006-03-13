@@ -2,8 +2,8 @@
 
 /* makes a star object located uniformly at random within the limits given
    on the sphere */
-star *make_rand_star(double ramin, double ramax,
-                     double decmin, double decmax)
+star *make_rand_star_old(double ramin, double ramax,
+						 double decmin, double decmax)
 {
 	double decval, raval;
 	star *thestar = mk_star();

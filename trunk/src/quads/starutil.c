@@ -2,6 +2,29 @@
 #include <stdio.h>
 
 #include "starutil.h"
+#include "mathutil.h"
+
+/* makes a star object located uniformly at random within the limits given
+   on the sphere */
+void make_rand_star(double* star, double ramin, double ramax,
+					double decmin, double decmax)
+{
+	double decval, raval;
+	if (ramin < 0.0)
+		ramin = 0.0;
+	if (ramax > (2*PIl))
+		ramax = 2 * PIl;
+	if (decmin < -PIl / 2.0)
+		decmin = -PIl / 2.0;
+	if (decmax > PIl / 2.0)
+		decmax = PIl / 2.0;
+
+	decval = asin(uniform_sample(sin(decmin), sin(decmax)));
+	raval = uniform_sample(ramin, ramax);
+	star[0] = radec2x(raval, decval);
+	star[1] = radec2y(raval, decval);
+	star[2] = radec2z(raval, decval);
+}
 
 inline double arc2distsq(double arcInRadians) {
 	// inverse of distsq2arc; cosine law.

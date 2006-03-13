@@ -27,6 +27,10 @@ unsigned int qq;
 }
 */
 
+double uniform_sample(double low, double high) {
+	return low + (high - low)*((double)rand() / (double)RAND_MAX);
+}
+
 /* computes IN PLACE the inverse of a 3x3 matrix stored as a 9-vector
    with the first ROW of the matrix in positions 0-2, the second ROW
    in positions 3-5, and the last ROW in positions 6-8. */

@@ -1,11 +1,11 @@
-#include "starutil_am.h"
-#include "fileutil_am.h"
+#include "starutil.h"
+#include "fileutil.h"
+#include "catalog.h"
 
 #define OPTIONS "hn:f:r:R:d:D:S:"
 const char HelpString[] =
   "randcat -f fname -n numstars [-r/R RAmin/max] [-d/D DECmin/max]\n"
     "  -r -R -d -D set ra and dec limits in radians\n";
-
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -14,15 +14,13 @@ int RANDSEED = 999;
 
 int main(int argc, char *argv[])
 {
-	int argidx, argchar; //  opterr = 0;
-
-	sidx numstars = 10;
+	int argidx, argchar;
+	int numstars = 10;
 	char *fname = NULL;
 	double ramin = DEFAULT_RAMIN, ramax = DEFAULT_RAMAX;
 	double decmin = DEFAULT_DECMIN, decmax = DEFAULT_DECMAX;
-	sidx ii;
-	star *thestar;
-	FILE *fid = NULL;
+	int i;
+	catalog cat;
 
 	if (argc <= 4) {
 		fprintf(stderr, HelpString);
@@ -68,32 +66,31 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
-	am_srand(RANDSEED);
+	srand(RANDSEED);
 
-	fprintf(stderr, "randcat: Making %lu random stars", numstars);
-	fprintf(stderr, " on the unit sphere ");
+	fprintf(stderr, "randcat: Making %u random stars\n", numstars);
 	fprintf(stderr, "[RANDSEED=%d]\n", RANDSEED);
 	if (ramin > DEFAULT_RAMIN || ramax < DEFAULT_RAMAX ||
-	        decmin > DEFAULT_DECMIN || decmax < DEFAULT_DECMAX)
+		decmin > DEFAULT_DECMIN || decmax < DEFAULT_DECMAX)
 		fprintf(stderr, "  using limits %f<=RA<=%f ; %f<=DEC<=%f deg.\n",
 				rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
-	fopenout(fname, fid);
-	free_fn(fname);
 
-	write_objs_header(fid, numstars, DIM_STARS, 
-							ramin, ramax, decmin, decmax);
+	cat.nstars = numstars;
+	cat.stars = malloc(numstars * DIM_STARS * sizeof(double));
 
-	for (ii = 0;ii < numstars;ii++) {
-		thestar = make_rand_star(ramin, ramax, decmin, decmax);
-		if (thestar == NULL) {
-			fprintf(stderr, "ERROR (randcat) -- out of memory at star %lu\n", ii);
-			return (1);
-		} else {
-		  fwritestar(thestar, fid);
-		  free_star(thestar);
-		}
+	for (i=0; i <numstars; i++) {
+		make_rand_star(cat.stars + i*DIM_STARS, ramin, ramax, decmin, decmax);
 	}
-	fclose(fid);
+
+	catalog_compute_radecminmax(&cat);
+
+	if (catalog_write_to_file(&cat, fname)) {
+		fprintf(stderr, "Failed to write catalog.\n");
+		free(cat.stars);
+		exit(-1);
+	}
+
+	free(cat.stars);
 
 	return (0);
 
