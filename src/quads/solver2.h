@@ -3,6 +3,7 @@
 
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
+#include "xylist.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
 #include "blocklist.h"

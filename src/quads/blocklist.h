@@ -101,7 +101,7 @@ void blocklist_int_print(blocklist* list);
 void blocklist_int_insert_ascending(blocklist* list, int n);
 void blocklist_int_insert_descending(blocklist* list, int n);
 int blocklist_int_insert_unique_ascending(blocklist* list, int p);
-void blocklist_int_set(blocklist* list, int index, int value);
+void blocklist_int_set(blocklist* list, int ind, int value);
 
 // returns the index of the removed value, or -1 if it didn't
 // exist in the list.
@@ -112,7 +112,7 @@ int blocklist_int_remove_value(blocklist* list, int value);
 ///////////////////////////////////////////////
 // special-case functions for pointer lists. //
 ///////////////////////////////////////////////
-void blocklist_pointer_set(blocklist* list, int index, void* data);
+void blocklist_pointer_set(blocklist* list, int ind, void* data);
 blocklist* blocklist_pointer_new(int blocksize);
 void blocklist_pointer_free(blocklist* list);
 void blocklist_pointer_append(blocklist* list, void* data);

@@ -7,25 +7,25 @@ LFLAGS = -lm
 CFLAGS	= -O2 -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_OS_MEMORY_MANAGEMENT -I.
 
+#	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
+#	-Wmissing-declarations -Wredundant-decls
+
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
-OBJ = starutil.o fileutil.o mathutil.o \
-	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o \
-	healpix.o \
-	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o codefile.o tic.o quadfile.o \
-	intmap.o bl.o
+OBJ = starutil.o fileutil.o xylist.o mathutil.o \
+	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o healpix.o \
+	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o codefile.o tic.o \
+	quadfile.o intmap.o bl.o
 
 AM_OBJ = KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
 	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
-	KD/am_time.o KD/distances.o KD/genarray.o \
-	KD/hrect.o \
-	fileutil_am.o starutil_am.o mathutil_am.o \
-	dualtree_rangesearch.o \
+	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o \
+	fileutil_am.o starutil_am.o mathutil_am.o dualtree_rangesearch.o \
 	dualtree.o dualtree_max.o
 
-AMKD_OBJ = KD/kdtree.o KD/knn.o KD/kquery.o \
-	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o \
+AMKD_OBJ = KD/kdtree.o KD/knn.o KD/kquery.o KD/kresult.o KD/kresults.o \
+	KD/neighbors.o KD/rangesearch.o \
 	kdutil.o fileutil_amkd.o
 
 # execs that need AM's kdtree stuff
@@ -33,15 +33,16 @@ AMKD_EXECS = startree genfields findcode deduplicate
 
 # execs that need AM's non-kdtree stuff
 AM_EXECS = randcat fieldquads findstar findquad fixheaders \
-	codedensity \
-	codetomatlab startree2 codetree2 printheaders
+	codedensity
 
 # execs that don't need AM's stuff
 EXECS = get_healpix quadidx2 xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable \
-	hpquads dedup_index 
+	hpquads dedup_index codetree2 startree2 codetomatlab \
+	printcatalog
 
-MYOBJ = randcat.o startree.o \
+
+MY_OBJ = randcat.o startree.o \
   genfields.o solvexy.o fieldquads.o findstar.o \
   findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
   deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
@@ -50,7 +51,7 @@ MYOBJ = randcat.o startree.o \
   hitlist_agreement.o hitlist_healpix.o tilequads.o hpquads.o \
   codeprojections.o codedensity.o startree2.o solver2.o
 
-ALLOBJS = $(OBJ) $(AM_OBJ) $(AMKD_OBJ) $(MY_OBJ) 
+ALL_OBJ = $(OBJ) $(AM_OBJ) $(AMKD_OBJ) $(MY_OBJ) 
 
 all: $(EXECS) agreeable slave agreeable2
 
@@ -87,7 +88,7 @@ CFLAGS += $(CUTEST_I)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Dependencies:           
-DEPS := $(subst .o,.dep,$(ALLOBJS))
+DEPS := $(subst .o,.dep,$(ALL_OBJ))
 
 deps: $(DEPS)
 	cat *.dep > deps
@@ -99,7 +100,7 @@ allclean:
 	rm -f KD/*.o *.o $(EXECS) *~ $(DEPS) deps
 
 clean:
-	rm -f $(EXECS) $(MYOBJS) $(OBJ) $(DEPS) deps
+	rm -f $(EXECS) $(MY_OBJ) $(OBJ) $(DEPS) deps
 
 CUTEST_L = kdtree/CuTest/CuTest.o 
 
@@ -108,18 +109,15 @@ $(CUTEST_L) :: %.o : %.c
 
 CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_blocklist test_bl
 
-
-TEST_DRIVERS = $(CUTEST_TEST_DRIVERS)
-
-tests: $(TEST_DRIVERS)
+tests: $(CUTEST_TEST_DRIVERS)
 
 CUTEST_TEST_OBJS = $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
 
 $(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-$(CUTEST_TEST_OBJS) :: %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
+#$(CUTEST_TEST_OBJS) :: %.o: %.c
+#	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
 ifneq ($(MAKECMDGOALS),clean)
   ifneq ($(MAKECMDGOALS),allclean)

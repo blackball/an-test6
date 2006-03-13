@@ -14,9 +14,6 @@
 #include "codefile.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-
-#define NO_KD_INCLUDES 1
-//#include "starutil.h"
 #include "fileutil.h"
 
 #define OPTIONS "hR:f:"
@@ -27,22 +24,18 @@ const char HelpString[] =
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-double* readcodes(FILE *fid, int *numcodes, int *Dim_Codes,
-		  double *index_scale);
-
 char *treefname = NULL;
 char *codefname = NULL;
 
 int main(int argc, char *argv[]) {
-    int argidx, argchar; //  opterr = 0;
-    int kd_Rmin = DEFAULT_KDRMIN;
+    int argidx, argchar;
+	int Nleaf = 25;
     FILE *codefid = NULL, *treefid = NULL;
     int numcodes, Dim_Codes;
     double index_scale;
     double* codearray = NULL;
     kdtree_t *codekd = NULL;
     int levels;
-	//int i;
 
     if (argc <= 2) {
 	fprintf(stderr, HelpString);
@@ -52,7 +45,7 @@ int main(int argc, char *argv[]) {
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 	switch (argchar) {
 	case 'R':
-	    kd_Rmin = (int)strtoul(optarg, NULL, 0);
+	    Nleaf = (int)strtoul(optarg, NULL, 0);
 	    break;
 	case 'f':
 	    treefname = mk_ctree2fn(optarg);
@@ -89,7 +82,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Building code KD tree...\n");
     fflush(stderr);
 
-    levels = (int)((log((double)numcodes) - log((double)kd_Rmin))/log(2.0));
+    levels = (int)((log((double)numcodes) - log((double)Nleaf))/log(2.0));
     if (levels < 1) {
 	levels = 1;
     }

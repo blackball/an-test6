@@ -141,7 +141,7 @@ void blocklist_remove_all_but_first(blocklist* list) {
 	list->last_access_n = 0;
 }
 
-void blocklist_remove_from_node(blocklist* list, blnode* node,
+static void blocklist_remove_from_node(blocklist* list, blnode* node,
 								blnode* prev, int index_in_node) {
 	// if we're removing the last element at this node, then
 	// remove this node from the linked list.
@@ -293,7 +293,7 @@ void blocklist_remove_index_range(blocklist* list, int start, int length) {
 }
 
 
-void bl_clear(blocklist* list) {
+static void blocklist_clear(blocklist* list) {
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -325,7 +325,7 @@ void blocklist_append_list(blocklist* list1, blocklist* list2) {
 		list1->tail = list2->tail;
 		list1->N = list2->N;
 		// remove everything from list2 (to avoid sharing nodes)
-		bl_clear(list2);
+		blocklist_clear(list2);
 		return;
 	}
 
@@ -338,7 +338,7 @@ void blocklist_append_list(blocklist* list1, blocklist* list2) {
 	list1->tail = list2->tail;
 	list1->N += list2->N;
 	// remove everything from list2 (to avoid sharing nodes)
-	bl_clear(list2);
+	blocklist_clear(list2);
 }
 
 
@@ -366,7 +366,7 @@ blnode* blocklist_new_node(blocklist* list) {
  * Append an item to this blocklist node.  If this node is full, then create a new
  * node and insert it into the list.
  */
-void blocklist_node_append(blocklist* list, blnode* node, void* data) {
+static void blocklist_node_append(blocklist* list, blnode* node, void* data) {
 	if (node->N == list->blocksize) {
 		// create new node and insert it.
 		blnode* newnode;
@@ -750,7 +750,7 @@ void blocklist_copy(blocklist* list, int start, int length, void* vdest) {
 	list->last_access_n = nskipped;
 }
 
-int compare_ints_ascending(void* v1, void* v2) {
+static int compare_ints_ascending(void* v1, void* v2) {
     int i1 = *(int*)v1;
     int i2 = *(int*)v2;
     if (i1 < i2) return 1;
@@ -758,7 +758,7 @@ int compare_ints_ascending(void* v1, void* v2) {
     else return 0;
 }
 
-int compare_ints_descending(void* v1, void* v2) {
+static int compare_ints_descending(void* v1, void* v2) {
     int i1 = *(int*)v1;
     int i2 = *(int*)v2;
     if (i1 < i2) return -1;
@@ -855,7 +855,7 @@ int blocklist_int_contains(blocklist* list, int data) {
 
 
 // special-case pointer list accessors...
-int compare_pointers_ascending(void* v1, void* v2) {
+static int compare_pointers_ascending(void* v1, void* v2) {
     void* p1 = *(void**)v1;
     void* p2 = *(void**)v2;
     if (p1 < p2) return 1;

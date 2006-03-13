@@ -15,7 +15,7 @@
 #include "starutil.h"
 #include "kdutil.h"
 #include "fileutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "codefile.h"
 
 #define OPTIONS "hf:o:"
@@ -25,7 +25,7 @@ const char HelpString[] =
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-blocklist* duplicates = NULL;
+il* duplicates = NULL;
 
 double* qsort_array;
 int qsort_array_stride;
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 
 	perm = malloc(Dim_Codes * numcodes * sizeof(int));
 
-	duplicates = blocklist_int_new(1024);
+	duplicates = il_new(1024);
 
 	// across-the-diagonal permutations...
 	for (flip=0; flip<2; flip++) {
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
 					//fprintf(stderr, "Codes %8i and %8i are equal.  (sorted %8i, %8i)\n", perm[i], perm[i+1], i, i+1);
 					nequal++;
 
-					blocklist_int_insert_unique_ascending(duplicates, perm[i+1]);
+					il_insert_unique_ascending(duplicates, perm[i+1]);
 
 					break;
 
@@ -192,9 +192,9 @@ int main(int argc, char *argv[]) {
 
 
 	// we have to write an updated header after we've processed all the quads.
-	write_code_header(codeout, numquads - blocklist_count(duplicates),
+	write_code_header(codeout, numquads - il_size(duplicates),
 					  numstars, DIM_CODES, index_scale);
-	write_quad_header(quadout, numquads - blocklist_count(duplicates),
+	write_quad_header(quadout, numquads - il_size(duplicates),
 					  numstars, DIM_QUADS, index_scale);
 
 	nextskip = -1;
@@ -203,10 +203,10 @@ int main(int argc, char *argv[]) {
 		double cx, cy, dx, dy;
 		sidx iA, iB, iC, iD;
 		if (nextskip == -1) {
-			if (blocklist_count(duplicates) == skipind) {
+			if (il_size(duplicates) == skipind) {
 				nextskip = -2;
 			} else {
-				nextskip = blocklist_int_access(duplicates, skipind);
+				nextskip = il_get(duplicates, skipind);
 				skipind++;
 			}
 		}
@@ -244,6 +244,8 @@ int main(int argc, char *argv[]) {
 	free(codearray);
 
     fprintf(stderr, "Done!\n");
+
+	il_free(duplicates);
 
     return 0;
 }
