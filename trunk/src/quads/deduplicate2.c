@@ -1,5 +1,5 @@
 /**
-   deduplicate: finds pairs of stars within a given distance of each other and removes
+   deduplicate2: finds pairs of stars within a given distance of each other and removes
    one of the stars (the one that appears second).
 
    input: .objs catalogue
@@ -9,18 +9,18 @@
 */
 
 #include <math.h>
+#include <string.h>
 
 #include "starutil.h"
-#include "kdutil.h"
 #include "fileutil.h"
 #include "dualtree_rangesearch_2.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "catalog.h"
-#include "kdtree/kdtree.h"
+//#include "kdtree/kdtree.h"
 
 #define OPTIONS "hi:o:d:k:A:B:C:D:"
 const char HelpString[] =
-"deduplicate -d dist -i <input-file> -o <output-file> [-k keep]\n"
+"deduplicate2 -d dist -i <input-file> -o <output-file> [-k keep]\n"
 "            [-A ra-min -B ra-max -C dec-min -D dec-max]\n"
 "  radius: (in arcseconds) is the de-duplication radius: a star found within\n"
 "      this radius of another star will be discarded\n"
@@ -32,18 +32,13 @@ const char HelpString[] =
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-blocklist* duplicates = NULL;
+il* duplicates = NULL;
 void duplicate_found(void* nil, int ind1, int ind2, double dist2);
 
 int main(int argc, char *argv[]) {
     int argidx, argchar;
-    FILE *fout = NULL;
-    sidx numstars;
-    dimension Dim_Stars;
-    double ind_ramin, ind_ramax, ind_decmin, ind_decmax;
-
 	catalog* cat;
-    kdtree *starkd = NULL;
+    kdtree_t *starkd = NULL;
     double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
     double radians;
@@ -52,8 +47,9 @@ int main(int argc, char *argv[]) {
     int keep = 0;
 	double ramin = -1e300, decmin = -1e300, ramax = 1e300, decmax = 1e300;
 	bool radecrange = FALSE;
-	double* window = NULL;
 	double* thestars;
+	int levels;
+	int Nleaf;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -122,28 +118,23 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
 
     fprintf(stderr, "Will write to catalogue %s...\n", outfname);
-    fopenout(outfname, fout);
 
-	cat = catalog_open(infname);
-	numstars = cat->nstars;
-	ind_ramin = cat->ramin;
-	ind_ramax = cat->ramax;
-	ind_decmin = cat->decmin;
-	ind_decmax = cat->decmax;
-	Dim_Stars = DIM_STARS;
+	cat = catalog_open(infname, 1);
 
-	// keep...
     if (!cat) {
 		fprintf(stderr, "Couldn't open catalog %s.objs\n", infname);
 		exit(-1);
 	}
-    fprintf(stderr, "got %lu stars.\n", numstars);
-    fprintf(stderr, "    (dim %hu) (limits %f<=ra<=%f;%f<=dec<=%f.)\n",
-			Dim_Stars, rad2deg(ind_ramin), rad2deg(ind_ramax), rad2deg(ind_decmin), rad2deg(ind_decmax));
+    fprintf(stderr, "Got %u stars.\n"
+			"Limits RA=[%g, %g] DEC=[%g, %g] degrees.\n",
+            cat->nstars,
+			rad2deg(cat->ramin), rad2deg(cat->ramax),
+			rad2deg(cat->decmin), rad2deg(cat->decmax));
+
+	thestars = catalog_get_base(cat);
 
 	if (radecrange) {
-		int wi = 0;
-		window = malloc(numstars * 3 * sizeof(double));
+		int srcind, dstind;
 
 		// ra,dec min,max were specified in degrees...
 		ramin  = deg2rad(ramin);
@@ -151,12 +142,11 @@ int main(int argc, char *argv[]) {
 		decmin = deg2rad(decmin);
 		decmax = deg2rad(decmax);
 
-		//fprintf(stderr, "ra [%g, %g], dec [%g, %g]\n", ramin, ramax, decmin, decmax);
-
-		for (i=0; i<numstars; i++) {
+		dstind = 0;
+		for (srcind=0; srcind<cat->nstars; srcind++) {
 			double* s;
 			double x, y, z, ra, dec;
-			s = catalog_get_star(cat, i);
+			s = catalog_get_star(cat, srcind);
 			x = s[0];
 			y = s[1];
 			z = s[2];
@@ -165,41 +155,52 @@ int main(int argc, char *argv[]) {
 			if (inrange(ra,  ramin,  ramax) &&
 				inrange(dec, decmin, decmax)) {
 
-				window[wi*3 + 0] = x;
-				window[wi*3 + 1] = y;
-				window[wi*3 + 2] = z;
+				if (srcind == dstind)
+					continue;
 
-				wi++;
-				//printf("%g,%g\n", rad2deg(ra), rad2deg(dec));
+				memcpy(thestars + dstind*DIM_STARS,
+					   thestars + srcind*DIM_STARS,
+					   DIM_STARS * sizeof(double));
 			}
 		}
-		thestars = window;
-		fprintf(stderr, "There are %i stars in the RA,DEC window you requested.\n", wi);
-	} else {
-		thestars = catalog_get_base(cat);
+		cat->nstars = dstind;
+		fprintf(stderr, "There are %i stars in the RA,DEC window you requested.\n", cat->nstars);
+	}
+
+	if (keep && keep < cat->nstars) {
+		cat->nstars = keep;
+		fprintf(stderr, "Keeping %i stars.\n", cat->nstars);
 	}
 
     fprintf(stderr, "Building KD tree...");
     fflush(stderr);
 
-    starkd = mk_starkdtree(thestars, 10);
-    if (starkd == NULL)
-		return (2);
-    fprintf(stderr, "done (%d nodes, depth %d).\n",
-			starkd->num_nodes, starkd->max_depth);
+	Nleaf = 10;
+    levels = (int)((log((double)cat->nstars) - log((double)Nleaf))/log(2.0));
+    if (levels < 1) {
+		levels = 1;
+    }
+
+	starkd = kdtree_build(catalog_get_base(cat), cat->nstars, DIM_STARS, levels);
+	if (!starkd) {
+		fprintf(stderr, "Couldn't create star kdtree.\n");
+		catalog_close(cat);
+		exit(-1);
+	}
+    fprintf(stderr, "Done.\n");
 
     // convert from arcseconds to distance on the unit sphere.
     radians = (duprad / (60.0 * 60.0)) * (M_PI / 180.0);
     dist = sqrt(2.0*(1.0 - cos(radians)));
 
-    duplicates = blocklist_int_new(256);
+    duplicates = il_new(256);
 
     // de-duplicate.
-    dualtree_rangesearch(starkd, starkd,
-						 RANGESEARCH_NO_LIMIT, dist,
-						 duplicate_found, NULL);
+    dualtree_rangesearch_2(starkd, starkd,
+						   RANGESEARCH2_NO_LIMIT, dist,
+						   duplicate_found, NULL);
 
-    if (blocklist_count(duplicates) == 0) {
+    if (il_size(duplicates) == 0) {
 		fprintf(stderr, "No duplicate stars found.\n");
     } else {
 		int dupind = 0;
@@ -210,19 +211,18 @@ int main(int argc, char *argv[]) {
 
 		// remove repeated entries from "duplicates"
 		// (yes, it can happen)
-		for (i=0; i<blocklist_count(duplicates)-1; i++) {
+		for (i=0; i<il_size(duplicates)-1; i++) {
 			int a, b;
-			a = blocklist_int_access(duplicates, i);
-			b = blocklist_int_access(duplicates, i+1);
+			a = il_get(duplicates, i);
+			b = il_get(duplicates, i+1);
 			if (a == b) {
-				//fprintf(stderr, "Removed duplicate %i\n", a);
-				blocklist_remove_index(duplicates, i);
+				il_remove(duplicates, i);
 				i--;
 			}
 		}
 
-		N = dyv_array_size(thestars);
-		Ndup = blocklist_count(duplicates);
+		N = cat->nstars;
+		Ndup = il_size(duplicates);
 
 		// remove duplicate entries from the star array.
 		fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
@@ -231,8 +231,7 @@ int main(int argc, char *argv[]) {
 			// find the next index to skip
 			if (skipind == -1) {
 				if (dupind < Ndup) {
-					skipind = blocklist_int_access(duplicates, dupind);
-					//fprintf(stderr, "skipind=%i, srcind=%i\n", skipind, srcind);
+					skipind = il_get(duplicates, dupind);
 					dupind++;
 				}
 				// shouldn't happen, I think...
@@ -243,11 +242,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			if (srcind == skipind) {
-				dyv* v;
-				v = dyv_array_ref(thestars, srcind);
-				thestars->array[srcind] = NULL;
-				free_dyv(v);
-				skipind = -1;
 				continue;
 			}
 
@@ -257,78 +251,48 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 
-			thestars->array[destind] = dyv_array_ref(thestars, srcind);
-			/*
-			  dyv_array_set(thestars, destind,
-			  dyv_array_ref(thestars, srcind));
-			*/
+			memcpy(thestars + destind*DIM_STARS, thestars + srcind*DIM_STARS,
+				   DIM_STARS * sizeof(double));
+
 			destind++;
 		}
-		thestars->size -= blocklist_count(duplicates);
-
+		cat->nstars -= il_size(duplicates);
     }
-	blocklist_int_free(duplicates);
+	il_free(duplicates);
 	duplicates = NULL;
 
-	free_kdtree(starkd);
+	kdtree_free(starkd);
 	starkd = NULL;
 
     fprintf(stderr, "Finding new {ra,dec}{min,max}...\n");
     fflush(stderr);
-    {
-		int N;
-		double x,y,z;
-		double ra,dec;
 
-		N = thestars->size;
-		decmin = ramin =  1e300;
-		decmax = ramax = -1e300;
-		for (i=0; i<N; i++) {
-			dyv* v = dyv_array_ref(thestars, i);
-			x = dyv_ref(v, 0);
-			y = dyv_ref(v, 1);
-			z = dyv_ref(v, 2);
-			ra = xy2ra(x,y);
-			dec = z2dec(z);
-			if (ra > ramax) ramax = ra;
-			if (ra < ramin) ramin = ra;
-			if (dec > decmax) decmax = dec;
-			if (dec < decmin) decmin = dec;
-		}
-		fprintf(stderr, "  ra=[%g, %g], dec=[%g, %g]\n",
-				rad2deg(ramin),  rad2deg(ramax),
-				rad2deg(decmin), rad2deg(decmax));
-    }
+	catalog_compute_radecminmax(cat);
+
+	fprintf(stderr, "  ra=[%g, %g], dec=[%g, %g]\n",
+			rad2deg(cat->ramin),  rad2deg(cat->ramax),
+			rad2deg(cat->decmin), rad2deg(cat->decmax));
 
     fprintf(stderr, "Writing catalogue...\n");
     fflush(stderr);
 
-    numstars = thestars->size;
+	if (catalog_write_to_file(cat, outfname)) {
+		fprintf(stderr, "Couldn't write catalog to file %s.\n", outfname);
+		catalog_close(cat);
+		exit(-1);
+	}
 
-    write_objs_header(fout, numstars, DIM_STARS,
-					  ramin, ramax, decmin, decmax);
-
-    for (i=0; i<numstars; i++) {
-		dyv* thestar = dyv_array_ref(thestars, i);
-		fwritestar(thestar, fout);
-    }
-    fclose(fout);
-
-    free_stararray(thestars);
+	catalog_close(cat);
+	free_fn(outfname);
 
     fprintf(stderr, "Done!\n");
-
-#if !defined(USE_OS_MEMORY_MANAGEMENT)
-	// free Andrew Moore's memory pool (so Valgrind works)
-	am_free_to_os();
-#endif
     return 0;
 }
 
 void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
     if (ind1 <= ind2) return;
     // append the larger of the two.
-    blocklist_int_insert_ascending(duplicates, ind1);
+    il_insert_ascending(duplicates, ind1);
 }
 
 

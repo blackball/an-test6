@@ -116,6 +116,7 @@ void il_insert_descending(il* list, int n);
 int  il_insert_unique_ascending(il* list, int p);
 void il_set(il* list, int ind, int value);
 void il_remove(il* list, int ind);
+void il_remove_index_range(il* list, int start, int length);
 
 // returns the index of the removed value, or -1 if it didn't
 // exist in the list.

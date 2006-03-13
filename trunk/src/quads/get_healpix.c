@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "healpix.h"
-#include "starutil2.h"
+#include "starutil.h"
 
 #define OPTIONS "hd"
 

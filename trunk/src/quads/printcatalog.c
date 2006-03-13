@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
     }
 
-	cat = catalog_open(basefname);
+	cat = catalog_open(basefname, 0);
 	if (!cat) {
 		fprintf(stderr, "Couldn't read catalog.\n");
 		exit(-1);
