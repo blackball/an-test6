@@ -10,6 +10,20 @@
 #include "kdtree_io.h"
 #include "ioutils.h"
 
+kdtree_t* kdtree_read_file(char* fn) {
+	FILE* fid;
+	kdtree_t* kdtree;
+	fid = fopen(fn, "rb");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s to read kdtree: %s\n",
+				fn, strerror(errno));
+		return NULL;
+	}
+	kdtree = kdtree_read(fid);
+	fclose(fid);
+	return kdtree;
+}
+
 int write_real(FILE* fout, real val) {
 	if (sizeof(real) == sizeof(double)) {
 		return write_double(fout, (double)val);

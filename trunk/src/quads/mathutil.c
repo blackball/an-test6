@@ -3,29 +3,33 @@
 #include <string.h>
 #include "mathutil.h"
 
-/* computes A choose B, but slowly and won't work for huge vals
+double gaussian_sample(double mean, double stddev) {
+	// from http://www.taygeta.com/random/gaussian.html
+	// Algorithm by Dr. Everett (Skip) Carter, Jr.
+	const double INVALID = -1e300;
+	static double y2 = INVALID;
+	double x1, x2, w, y1;
 
-unsigned long int choose(unsigned int nn, unsigned int mm)
-{
-unsigned int rr = 1;
-unsigned int qq;
-	if (nn <= 0)
-		return 0;
-	else if (mm <= 0)
-		return 0;
-	else if (mm > nn)
-		return 0;
-	else if (mm == 1)
-		return nn;
-	else if (mm == nn)
-		return 1;
-	for (qq = nn;qq > (nn - mm);qq--)
-		rr *= qq;
-	for (qq = mm;qq > 1;qq--)
-		rr /= qq;
-	return rr;
+	// this algorithm generates random samples in pairs; the INVALID
+	// jibba-jabba stores the second value until the next time the
+	// function is called.
+
+	if (y2 != INVALID) {
+		y1 = y2;
+		y2 = INVALID;
+		return mean + y1 * stddev;
+	}
+	do {
+		x1 = uniform_sample(-0.5, 0.5);
+		x2 = uniform_sample(-0.5, 0.5);
+		w = x1 * x1 + x2 * x2;
+	} while ( w >= 1.0 );
+
+	w = sqrt( (-2.0 * log(w)) / w );
+	y1 = x1 * w;
+	y2 = x2 * w;
+	return mean + y1 * stddev;
 }
-*/
 
 double uniform_sample(double low, double high) {
 	return low + (high - low)*((double)rand() / (double)RAND_MAX);
