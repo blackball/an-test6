@@ -2,6 +2,7 @@
 #define MATHUTIL_AM_H
 
 #include "starutil_am.h"
+#include "xylist.h"
 
 //unsigned long int choose(unsigned int nn, unsigned int mm);
 

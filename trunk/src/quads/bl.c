@@ -855,6 +855,10 @@ int il_remove_value(il* ilist, int value) {
 	return -1;
 }
 
+void il_remove_all(il* list) {
+	bl_remove_all(list);
+}
+
 void il_set(il* list, int index, int value) {
 	bl_set((bl*)list, index, &value);
 }
@@ -862,11 +866,20 @@ void il_set(il* list, int index, int value) {
 il* il_new(int blocksize) {
 	return (il*) bl_new(blocksize, sizeof(int));
 }
+void il_new_existing(il* list, int blocksize) {
+	bl_init(list, blocksize, sizeof(int));
+}
 void il_free(il* list) {
 	bl_free(list);
 }
 void il_push(il* list, int data) {
 	bl_append((bl*)list, &data);
+}
+void il_append(il* list, int data) {
+	bl_append(list, &data);
+}
+void il_merge_lists(il* list1, il* list2) {
+	bl_append_list(list1, list2);
 }
 int il_get(il* list, int n) {
 	int* ptr;

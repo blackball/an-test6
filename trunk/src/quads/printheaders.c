@@ -7,6 +7,7 @@
 #include <errno.h>
 #include "starutil.h"
 #include "fileutil.h"
+#include "catalog.h"
 
 #define OPTIONS "hf:m"
 
@@ -15,14 +16,10 @@ extern int optind, opterr, optopt;
 
 char *catfname = NULL;
 FILE *catfid = NULL;
-off_t catposmarker = 0;
+catalog* cat = NULL;
 
 void get_star_radec(FILE *fid, off_t marker, 
 					sidx i, double* pra, double* pdec);
-/*
-  void get_star(FILE *fid, off_t marker, int objsize,
-  sidx i, star* s);
-*/
 
 void print_help(char* progname) {
     printf("\nUsage: %s -f <input-file> [-m]\n\n"
@@ -34,11 +31,8 @@ void print_help(char* progname) {
 }
 
 int main(int argc, char *argv[]) {
-	dimension DimStars;
 	int argchar;
-	double ramin, ramax, decmin, decmax;
-	sidx numstars;
-	char readStatus;
+	char* basefname;
 	bool printout = FALSE;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -47,7 +41,7 @@ int main(int argc, char *argv[]) {
 			printout = TRUE;
 			break;
         case 'f':
-            catfname = mk_catfn(optarg);
+            basefname = optarg;
             break;
 		case 'h':
 			print_help(argv[0]);

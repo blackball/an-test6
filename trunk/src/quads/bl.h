@@ -100,7 +100,10 @@ typedef bl il;
 il*  il_new(int blocksize);
 int  il_size(il* list);
 void il_new_existing(il* list, int blocksize);
+void il_remove_all(il* list);
 void il_free(il* list);
+void il_append(il* list, int data);
+void il_merge_lists(il* list1, il* list2);
 void il_push(il* list, int data);
 int  il_pop(il* list);
 int  il_contains(il* list, int data);
@@ -111,19 +114,16 @@ void il_print(il* list);
 void il_insert_ascending(il* list, int n);
 void il_insert_descending(il* list, int n);
 int  il_insert_unique_ascending(il* list, int p);
-void il_set(il* list, int index, int value);
-void il_remove(il* list, int index);
+void il_set(il* list, int ind, int value);
+void il_remove(il* list, int ind);
 
 // returns the index of the removed value, or -1 if it didn't
 // exist in the list.
 int il_remove_value(il* list, int value);
 
 int il_check_consistency(il* list);
-
-int il_check_sorted_ascending(il* list,
-							  int isunique);
-int il_check_sorted_descending(il* list,
-							   int isunique);
+int il_check_sorted_ascending(il* list, int isunique);
+int il_check_sorted_descending(il* list, int isunique);
 
 
 ///////////////////////////////////////////////
@@ -134,12 +134,12 @@ pl*   pl_new(int blocksize);
 void  pl_free(pl* list);
 int   pl_size(pl* list);
 void* pl_get(pl* list, int n);
-void  pl_set(pl* list, int index, void* data);
+void  pl_set(pl* list, int ind, void* data);
 void  pl_append(pl* list, void* data);
 void  pl_copy(pl* list, int start, int length, void** dest);
 void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
-void  pl_remove(pl* list, int index);
+void  pl_remove(pl* list, int ind);
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //

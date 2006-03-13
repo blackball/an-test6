@@ -11,7 +11,7 @@
 #include "healpix.h"
 #include "starutil.h"
 #include "fileutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "catalog.h"
 #include "tic.h"
 
@@ -44,60 +44,9 @@ void print_help(char* progname)
 	       , progname);
 }
 
-/* computes the 2D coordinates (x,y)  that star s would have in a
-   TANGENTIAL PROJECTION defined by (centred at) star r.     */
-void star_coords_2(double *s, double *r, double *x, double *y)
-{
-	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
-	if (sdotr <= 0.0) {
-		fprintf(stderr, "ERROR (star_coords) -- s dot r <=0; undefined projection.\n");
-		return ;
-	}
-
-	if (r[2] == 1.0) {
-		*x = s[0] / s[2];
-		*y = s[1] / s[2];
-	} else if (r[2] == -1.0) {
-		*x = s[0] / s[2];
-		*y = -s[1] / s[2];
-	} else {
-		double etax, etay, etaz, xix, xiy, xiz, eta_norm;
-		// eta is a vector perpendicular to r
-		etax = -r[1];
-		etay = + r[0];
-		etaz = 0.0;
-		eta_norm = sqrt(etax * etax + etay * etay);
-		etax /= eta_norm;
-		etay /= eta_norm;
-		// xi =  r cross eta
-		xix = -r[2] * etay;
-		xiy = r[2] * etax;
-		xiz = r[0] * etay - r[1] * etax;
-
-		*x = s[0] * xix / sdotr +
-		     s[1] * xiy / sdotr +
-		     s[2] * xiz / sdotr;
-		*y = s[0] * etax / sdotr +
-		     s[1] * etay / sdotr;
-	}
-}
-
-void star_midpoint_2(double* mid, double* A, double* B)
-{
-	double len;
-	// we don't actually need to divide by 2 because
-	// we immediately renormalize it...
-	mid[0] = A[0] + B[0];
-	mid[1] = A[1] + B[1];
-	mid[2] = A[2] + B[2];
-	len = sqrt(square(mid[0]) + square(mid[1]) + square(mid[2]));
-	mid[0] /= len;
-	mid[1] /= len;
-	mid[2] /= len;
-}
 
 // warning, you must guarantee iA<iB and iC<iD
-void drop_quad(blocklist* stars, int iA, int iB, int iC, int iD)
+void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 {
 	int inA, inB, inC, inD;
 	inA = iA;
@@ -107,44 +56,44 @@ void drop_quad(blocklist* stars, int iA, int iB, int iC, int iD)
 
 	assert(iA < iB);
 	assert(iC < iD);
-	assert(blocklist_count(stars) >= 4);
-	assert(blocklist_count(stars) > iA);
-	assert(blocklist_count(stars) > iB);
-	assert(blocklist_count(stars) > iC);
-	assert(blocklist_count(stars) > iD);
+	assert(il_size(stars) >= 4);
+	assert(il_size(stars) > iA);
+	assert(il_size(stars) > iB);
+	assert(il_size(stars) > iC);
+	assert(il_size(stars) > iD);
 	assert(iA >= 0);
 	assert(iB >= 0);
 	assert(iC >= 0);
 	assert(iD >= 0);
 
-	blocklist_remove_index(stars, iA);
+	il_remove(stars, iA);
 
 	assert(iB >= 0);
-	assert(iB - 1 < blocklist_count(stars));
+	assert(iB - 1 < il_size(stars));
 
-	blocklist_remove_index(stars, iB - 1);
+	il_remove(stars, iB - 1);
 	if (inC > inA)
 		iC--;
 	if (inC > inB)
 		iC--;
 
 	assert(iC >= 0);
-	assert(iC < blocklist_count(stars));
+	assert(iC < il_size(stars));
 
-	blocklist_remove_index(stars, iC);
+	il_remove(stars, iC);
 	if (inD > inA)
 		iD--;
 	if (inD > inB)
 		iD--;
 
 	assert(iD >= 0);
-	assert(iD - 1 < blocklist_count(stars));
+	assert(iD - 1 < il_size(stars));
 
-	blocklist_remove_index(stars, iD - 1);
+	il_remove(stars, iD - 1);
 }
 
 int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-              char* inbox, int maxind, blocklist* stars,
+              char* inbox, int maxind, il* stars,
               int* used_stars)
 {
 	int i;
@@ -158,8 +107,8 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	int ninbox = 0;
 	uint staridA, staridB, staridC = 0, staridD;
 
-	staridA = blocklist_int_access(stars, iA);
-	staridB = blocklist_int_access(stars, iB);
+	staridA = il_get(stars, iA);
+	staridB = il_get(stars, iB);
 	sA = catalog_get_star(cat, staridA);
 	sB = catalog_get_star(cat, staridB);
 
@@ -185,7 +134,7 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			continue;
 
 		iD = i;
-		staridD = blocklist_int_access(stars, i);
+		staridD = il_get(stars, i);
 		sD = catalog_get_star(cat, staridD);
 		star_coords_2(sD, midAB, &Dx, &Dy);
 		ADx = Dx - Ax;
@@ -221,14 +170,14 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	return 0;
 }
 
-char find_a_quad(blocklist* stars, int* used_stars)
+char find_a_quad(il* stars, int* used_stars)
 {
 	sidx numxy, iA, iB, iC, iD, newpoint;
 	int *iCs, *iDs;
 	char *iunion;
 	int ncd;
 
-	numxy = blocklist_count(stars);
+	numxy = il_size(stars);
 
 	iCs = alloca(numxy * numxy * sizeof(int));
 	iDs = alloca(numxy * numxy * sizeof(int));
@@ -310,8 +259,8 @@ char find_a_quad(blocklist* stars, int* used_stars)
 	return 0;
 }
 
-void healpix_bin_stars(int numstars, blocklist* starindices,
-                       blocklist* pixels, int Nside)
+void healpix_bin_stars(int numstars, il* starindices,
+                       il* pixels, int Nside)
 {
 	int i;
 	for (i = 0; i < numstars; i++) {
@@ -327,18 +276,18 @@ void healpix_bin_stars(int numstars, blocklist* starindices,
 		if (!starindices)
 			ind = i;
 		else
-			ind = blocklist_int_access(starindices, i);
+			ind = il_get(starindices, i);
 
 		starxyz = catalog_get_star(cat, ind);
 		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside);
-		blocklist_int_append(pixels + hp, ind);
+		il_append(pixels + hp, ind);
 	}
 	fprintf(stderr, "\n");
 	fflush(stderr);
 }
 
-void shifted_healpix_bin_stars(int numstars, blocklist* starindices,
-                               blocklist* pixels, int dx, int dy,
+void shifted_healpix_bin_stars(int numstars, il* starindices,
+                               il* pixels, int dx, int dy,
                                int Nside)
 {
 	int i;
@@ -354,13 +303,13 @@ void shifted_healpix_bin_stars(int numstars, blocklist* starindices,
 			continue;
 		nn = healpix_get_neighbours_nside(i, neigh, Nside);
 		for (n = 0; n < nn; n++) {
-			blocklist_append_list(pixels + i, pixels + neigh[n]);
+			il_merge_lists(pixels + i, pixels + neigh[n]);
 		}
 	}
 }
 
-void create_quads_in_pixels(int numstars, blocklist* starindices,
-                            blocklist* pixels, int Nside, int shifted,
+void create_quads_in_pixels(int numstars, il* starindices,
+                            il* pixels, int Nside, int shifted,
                             int dx, int dy)
 {
 	int i;
@@ -399,12 +348,12 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 				continue;
 
 			if (shifted) {
-				blocklist* merged;
+				il* merged;
 				uint neigh[8];
 				uint n, nn;
 				int j;
 				int used_stars[4];
-				blocklist* sourcelists[9];
+				il* sourcelists[9];
 				int sourcelengths[9];
 				int maxlen;
 
@@ -416,10 +365,10 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 				}
 
 				// round-robin merge the lists...
-				merged = blocklist_int_new(32);
+				merged = il_new(32);
 				maxlen = 0;
 				for (n = 0; n < nn+1; n++) {
-					sourcelengths[n] = blocklist_count(sourcelists[n]);
+					sourcelengths[n] = il_size(sourcelists[n]);
 					if (sourcelengths[n] > maxlen)
 						maxlen = sourcelengths[n];
 				}
@@ -427,7 +376,7 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 					for (n = 0; n < nn+1; n++) {
 						if (j >= sourcelengths[n])
 							continue;
-						blocklist_int_append(merged, blocklist_int_access(sourcelists[n], j));
+						il_append(merged, il_get(sourcelists[n], j));
 					}
 
 				foundone = find_a_quad(merged, used_stars);
@@ -438,7 +387,7 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 					// source lists.
 					for (s = 0; s < 4; s++) {
 						for (n = 0; n < nn+1; n++) {
-							if (blocklist_int_remove_value(sourcelists[n], used_stars[s]) != -1)
+							if (il_remove_value(sourcelists[n], used_stars[s]) != -1)
 								break;
 						}
 						// we should have removed each star from one of the source lists...
@@ -446,7 +395,7 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 					}
 				}
 
-				blocklist_free(merged);
+				il_free(merged);
 			} else {
 				foundone = find_a_quad(pixels + i, NULL);
 			}
@@ -495,13 +444,13 @@ void create_quads_in_pixels(int numstars, blocklist* starindices,
 		int maxmade = 0;
 		int* nmadehist;
 		for (i = 0; i < HEALPIXES; i++) {
-			if (blocklist_count(pixels + i) > maxmade)
-				maxmade = blocklist_count(pixels + i);
+			if (il_size(pixels + i) > maxmade)
+				maxmade = il_size(pixels + i);
 		}
 		nmadehist = malloc((maxmade + 1) * sizeof(int));
 		memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
 		for (i = 0; i < HEALPIXES; i++)
-			nmadehist[blocklist_count(pixels + i)]++;
+			nmadehist[il_size(pixels + i)]++;
 		fprintf(stderr, "nleft=[");
 		for (i = 0; i <= maxmade; i++)
 			fprintf(stderr, "%i,", nmadehist[i]);
@@ -521,7 +470,7 @@ int main(int argc, char** argv)
 	char *quadfname = NULL;
 	char *codefname = NULL;
 	//time_t starttime, endtime;
-	blocklist* pixels;
+	il* pixels;
 	int Nside = 512;
 	int HEALPIXES;
 	int i;
@@ -587,9 +536,9 @@ int main(int argc, char** argv)
 
 	tic();
 
-	pixels = malloc(HEALPIXES * sizeof(blocklist));
+	pixels = malloc(HEALPIXES * sizeof(il));
 	for (i = 0; i < HEALPIXES; i++) {
-		blocklist_int_init(pixels + i, intlist_blocksize);
+		il_new_existing(pixels + i, intlist_blocksize);
 	}
 
 	cat = catalog_open(basefname);
@@ -626,18 +575,18 @@ int main(int argc, char** argv)
 
 		if (rebin) {
 			// Gather up the leftover stars and re-bin.
-			blocklist* leftovers = blocklist_int_new(intlist_blocksize);
+			il* leftovers = il_new(intlist_blocksize);
 			for (i = 0; i < HEALPIXES; i++) {
-				blocklist_append_list(leftovers, pixels + i);
+				il_merge_lists(leftovers, pixels + i);
 			}
 			fprintf(stderr, "Rebinning with Nside=%i\n", Nside / 2);
-			create_quads_in_pixels(blocklist_count(leftovers), leftovers, pixels, Nside / 2, 0, dx, dy);
-			blocklist_free(leftovers);
+			create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, 0, dx, dy);
+			il_free(leftovers);
 		}
 
 		// empty blocklists.
 		for (i = 0; i < HEALPIXES; i++) {
-			blocklist_remove_all(pixels + i);
+			il_remove_all(pixels + i);
 		}
 	}
 

@@ -27,7 +27,7 @@ double* codefile_read(FILE *fid, int *numcodes, int *Dim_Codes,
 
     nitems = (*numcodes) * (*Dim_Codes);
 
-    codearray = (double*)malloc(nitems * sizeof(double));
+    codearray = malloc(nitems * sizeof(double));
 
     if (!codearray) {
 	fprintf(stderr, "Couldn't allocate code array: %i x %i\n", *numcodes, *Dim_Codes);

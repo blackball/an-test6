@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include "starutil.h"
+#include "xylist.h"
 
 #define COMMENT_CHAR 35 // #
 #define FOPEN_ERR -301
@@ -51,8 +52,6 @@ void fix_code_header(FILE *codefid, qidx numCodes);
 void fix_quad_header(FILE *quadfid, qidx numQuads);
 
 char *mk_filename(const char *basename, const char *extension);
-
-xyarray *readxy(FILE *fid, char ParityFlip);
 
 typedef unsigned short int magicval;
 #define MAGIC_VAL 0xFF00
