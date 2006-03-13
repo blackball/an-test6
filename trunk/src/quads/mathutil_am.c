@@ -1,92 +1,14 @@
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include "mathutil.h"
+#include "mathutil_am.h"
 
-/* computes A choose B, but slowly and won't work for huge vals
-
-unsigned long int choose(unsigned int nn, unsigned int mm)
+/* applies the given transform to uu,vv to produce xx,yy,zz and puts
+   these values into the star object s */
+// DEPRECATE
+void image_to_xyz_old(double uu, double vv, star *s, double *transform)
 {
-unsigned int rr = 1;
-unsigned int qq;
-	if (nn <= 0)
-		return 0;
-	else if (mm <= 0)
-		return 0;
-	else if (mm > nn)
-		return 0;
-	else if (mm == 1)
-		return nn;
-	else if (mm == nn)
-		return 1;
-	for (qq = nn;qq > (nn - mm);qq--)
-		rr *= qq;
-	for (qq = mm;qq > 1;qq--)
-		rr /= qq;
-	return rr;
-}
-*/
-
-/* computes IN PLACE the inverse of a 3x3 matrix stored as a 9-vector
-   with the first ROW of the matrix in positions 0-2, the second ROW
-   in positions 3-5, and the last ROW in positions 6-8. */
-double inverse_3by3(double *matrix)
-{
-	double det;
-	double a11, a12, a13, a21, a22, a23, a31, a32, a33;
-	double b11, b12, b13, b21, b22, b23, b31, b32, b33;
-
-	a11 = matrix[0];
-	a12 = matrix[1];
-	a13 = matrix[2];
-	a21 = matrix[3];
-	a22 = matrix[4];
-	a23 = matrix[5];
-	a31 = matrix[6];
-	a32 = matrix[7];
-	a33 = matrix[8];
-
-	det = a11 * ( a22 * a33 - a23 * a32 ) +
-	      a12 * ( a23 * a31 - a21 * a33 ) +
-	      a13 * ( a21 * a32 - a22 * a31 );
-
-	if (det == 0.0) {
-		return det;
-	}
-
-	b11 = + ( a22 * a33 - a23 * a32 ) / det;
-	b12 = - ( a12 * a33 - a13 * a32 ) / det;
-	b13 = + ( a12 * a23 - a13 * a22 ) / det;
-
-	b21 = - ( a21 * a33 - a23 * a31 ) / det;
-	b22 = + ( a11 * a33 - a13 * a31 ) / det;
-	b23 = - ( a11 * a23 - a13 * a21 ) / det;
-
-	b31 = + ( a21 * a32 - a22 * a31 ) / det;
-	b32 = - ( a11 * a32 - a12 * a31 ) / det;
-	b33 = + ( a11 * a22 - a12 * a21 ) / det;
-
-	matrix[0] = b11;
-	matrix[1] = b12;
-	matrix[2] = b13;
-	matrix[3] = b21;
-	matrix[4] = b22;
-	matrix[5] = b23;
-	matrix[6] = b31;
-	matrix[7] = b32;
-	matrix[8] = b33;
-
-	//fprintf(stderr,"matrix determinant = %g\n",det);
-
-	return (det);
-}
-
-
-void image_to_xyz(double uu, double vv, double* s, double* transform) {
 	double x, y, z;
 	double length;
 	if (s == NULL || transform == NULL)
-		return;
+		return ;
 
 	x = uu * transform[0] +
 		vv * transform[1] +
@@ -106,13 +28,15 @@ void image_to_xyz(double uu, double vv, double* s, double* transform) {
 	y /= length;
 	z /= length;
 
-	s[0] = x;
-	s[1] = y;
-	s[2] = z;
+	star_set(s, 0, x);
+	star_set(s, 1, y);
+	star_set(s, 2, z);
 }
 
-double *fit_transform(xy *ABCDpix, char order,
-					  double* A, double* B, double* C, double* D)
+/* takes four image locations from ABCDpix, maps them to stars ABCD
+   using the order given, and finally fits a transform to go
+   from image locations to xyz positions based on these four datapoints */
+double *fit_transform_old(xy *ABCDpix, char order, star *A, star *B, star *C, star *D)
 {
 	double det, uu, uv, vv, sumu, sumv;
 	char oA = 0, oB = 1, oC = 2, oD = 3;
@@ -207,26 +131,26 @@ double *fit_transform(xy *ABCDpix, char order,
 
 	// set Q to be the 3x3 matrix X*R
 
-	matQ[0] = A[0] * matR[0] + B[0] * matR[3] +
-	          C[0] * matR[6] + D[0] * matR[9];
-	matQ[1] = A[0] * matR[1] + B[0] * matR[4] +
-	          C[0] * matR[7] + D[0] * matR[10];
-	matQ[2] = A[0] * matR[2] + B[0] * matR[5] +
-	          C[0] * matR[8] + D[0] * matR[11];
+	matQ[0] = star_ref(A, 0) * matR[0] + star_ref(B, 0) * matR[3] +
+	          star_ref(C, 0) * matR[6] + star_ref(D, 0) * matR[9];
+	matQ[1] = star_ref(A, 0) * matR[1] + star_ref(B, 0) * matR[4] +
+	          star_ref(C, 0) * matR[7] + star_ref(D, 0) * matR[10];
+	matQ[2] = star_ref(A, 0) * matR[2] + star_ref(B, 0) * matR[5] +
+	          star_ref(C, 0) * matR[8] + star_ref(D, 0) * matR[11];
 
-	matQ[3] = A[1] * matR[0] + B[1] * matR[3] +
-	          C[1] * matR[6] + D[1] * matR[9];
-	matQ[4] = A[1] * matR[1] + B[1] * matR[4] +
-	          C[1] * matR[7] + D[1] * matR[10];
-	matQ[5] = A[1] * matR[2] + B[1] * matR[5] +
-	          C[1] * matR[8] + D[1] * matR[11];
+	matQ[3] = star_ref(A, 1) * matR[0] + star_ref(B, 1) * matR[3] +
+	          star_ref(C, 1) * matR[6] + star_ref(D, 1) * matR[9];
+	matQ[4] = star_ref(A, 1) * matR[1] + star_ref(B, 1) * matR[4] +
+	          star_ref(C, 1) * matR[7] + star_ref(D, 1) * matR[10];
+	matQ[5] = star_ref(A, 1) * matR[2] + star_ref(B, 1) * matR[5] +
+	          star_ref(C, 1) * matR[8] + star_ref(D, 1) * matR[11];
 
-	matQ[6] = A[2] * matR[0] + B[2] * matR[3] +
-	          C[2] * matR[6] + D[2] * matR[9];
-	matQ[7] = A[2] * matR[1] + B[2] * matR[4] +
-	          C[2] * matR[7] + D[2] * matR[10];
-	matQ[8] = A[2] * matR[2] + B[2] * matR[5] +
-		      C[2] * matR[8] + D[2] * matR[11];
+	matQ[6] = star_ref(A, 2) * matR[0] + star_ref(B, 2) * matR[3] +
+	          star_ref(C, 2) * matR[6] + star_ref(D, 2) * matR[9];
+	matQ[7] = star_ref(A, 2) * matR[1] + star_ref(B, 2) * matR[4] +
+	          star_ref(C, 2) * matR[7] + star_ref(D, 2) * matR[10];
+	matQ[8] = star_ref(A, 2) * matR[2] + star_ref(B, 2) * matR[5] +
+		      star_ref(C, 2) * matR[8] + star_ref(D, 2) * matR[11];
 
 	{
 		double* copyQ = (double*)malloc(9 * sizeof(double));
@@ -234,6 +158,4 @@ double *fit_transform(xy *ABCDpix, char order,
 		return copyQ;
 	}
 }
-
-
 

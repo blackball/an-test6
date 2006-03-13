@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 #include <string.h>
 
 #define NO_KD_INCLUDES 1
@@ -221,8 +222,6 @@ int main(int argc, char *argv[]) {
 			}
 
 			if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
-				free_star(mo->sMin);
-				free_star(mo->sMax);
 				free_MatchObj(mo);
 				free(me.indexpath);
 				free(me.fieldpath);
@@ -236,8 +235,6 @@ int main(int argc, char *argv[]) {
 					// check if it's NULL because it's been flushed.
 					if (blocklist_int_contains(flushed, fieldnum)) {
 						//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
-						free_star(mo->sMin);
-						free_star(mo->sMax);
 						free_MatchObj(mo);
 						free(me.indexpath);
 						free(me.fieldpath);

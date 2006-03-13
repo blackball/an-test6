@@ -1,10 +1,8 @@
-#ifndef fileutil_H
-#define fileutil_H
-#include "starutil.h"
+#ifndef FILEUTIL_H
+#define FILEUTIL_H
 
-#if !defined(NO_KD_INCLUDES)
-#include "KD/kdtree.h"
-#endif
+#include <stdio.h>
+#include "starutil.h"
 
 #define COMMENT_CHAR 35 // #
 #define FOPEN_ERR -301
@@ -31,32 +29,20 @@
 #define mk_qlistfn(s)  mk_filename(s,".qds0")
 #define mk_rdlsfn(s)  mk_filename(s,".rdls")
 
-#define freadcode(c,f) fread(c->farr,sizeof(double),DIM_CODES,f)
-#define freadstar(s,f) fread(s->farr,sizeof(double),DIM_STARS,f)
-#define fwritestar(s,f) fwrite((double *)s->farr,sizeof(double),DIM_STARS,f)
-#define fprintfstar(s,f) fprintf(f,"%lf,%lf,%lf\n",star_ref(s,0),star_ref(s,1),star_ref(s,2))
-#define fseekocat(i,p,f) fseeko(f,p+i*(DIM_STARS*sizeof(double)),SEEK_SET)
-
 void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD);
 void writeonequad(FILE *fid, qidx iA, qidx iB, qidx iC, qidx iD);
 void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
 void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
-stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
-                  double *ramin, double *ramax, double *decmin, double *decmax,
-				   int nkeep);
-
-quadarray *readidlist(FILE *fid, qidx *numpix);
-
 char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
-                double *ramin, double *ramax, double *decmin, double *decmax);
+					  double *ramin, double *ramax, double *decmin, double *decmax);
 char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
                       dimension *DimCodes, double *index_scale);
 char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
                       dimension *DimQuads, double *index_scale);
 void write_objs_header(FILE *fid, sidx numstars,
-							  dimension DimStars, double ramin, double ramax, 
-							  double decmin, double decmax);
+					   dimension DimStars, double ramin, double ramax, 
+					   double decmin, double decmax);
 void write_code_header(FILE *codefid, qidx numCodes,
                        sidx numstars, dimension DimCodes, double index_scale);
 void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
@@ -64,23 +50,9 @@ void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
 void fix_code_header(FILE *codefid, qidx numCodes);
 void fix_quad_header(FILE *quadfid, qidx numQuads);
 
-xyarray *readxy(FILE *fid, char ParityFlip);
-
-#if !defined(NO_KD_INCLUDES)
-kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax,
-                    double *decmin, double *decmax);
-kdtree *read_codekd(FILE *treefid, double *index_scale);
-void write_starkd(FILE *treefid, kdtree *starkd,
-                  double ramin, double ramax, double decmin, double decmax);
-void write_codekd(FILE *treefid, kdtree *codekd, double index_scale);
-#endif
-
 char *mk_filename(const char *basename, const char *extension);
 
-sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
-                 qidx ***starquads);
-signed int compare_sidx(const void *x, const void *y);
-
+xyarray *readxy(FILE *fid, char ParityFlip);
 
 typedef unsigned short int magicval;
 #define MAGIC_VAL 0xFF00

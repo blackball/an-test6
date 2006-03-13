@@ -1,5 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
 #include "fileutil.h"
-#include "kdutil.h"
 
 /* The binary files all start with the unsigned short int MAGIC_VAL
    which helps identify them as binary and also sort out endian issues.
@@ -18,71 +19,6 @@
    ...
 */
 
-stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
-                   double *ramin, double *ramax, double *decmin, double *decmax,
-				   int nkeep)
-{
-	char readStatus;
-	sidx ii;
-	stararray *thestars = NULL;
-
-	readStatus = read_objs_header(fid, numstars, 
-				      Dim_Stars, ramin, ramax, decmin, decmax);
-	if (readStatus == READ_FAIL)
-		return ((stararray *)NULL);
-
-	if (nkeep && (nkeep < *numstars)) {
-	  // switcheroo!
-	  *numstars = nkeep;
-	}
-
-	thestars = mk_stararray(*numstars);
-	for (ii = 0;ii < *numstars;ii++) {
-		thestars->array[ii] = mk_stard(*Dim_Stars);
-		if (thestars->array[ii] == NULL) {
-			fprintf(stderr, "ERROR (readcat) -- out of memory at star %lu\n", ii);
-			free_stararray(thestars);
-			return (stararray *)NULL;
-		}
-		fread(thestars->array[ii]->farr, sizeof(double), *Dim_Stars, fid);
-	}
-
-	// if nkeep is set, should we read and discard the rest?
-
-	return thestars;
-}
-
-
-
-/* This function reads an id list, which is used mostly
-   for debugging purposes, ie with fieldquads */
-quadarray *readidlist(FILE *fid, qidx *numfields)
-{
-	qidx ii, numS;
-	magicval magic;
-	quadarray *thepids = NULL;
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (readidlist) -- bad magic value id list\n");
-			return ((quadarray *)NULL);
-		}
-		fread(numfields, sizeof(*numfields), 1, fid);
-	}
-	thepids = mk_quadarray(*numfields);
-	for (ii = 0;ii < *numfields;ii++) {
-		// read in how many stars in this pic
-	  fread(&numS, sizeof(numS), 1, fid);
-		thepids->array[ii] = mk_quadd(numS);
-		if (thepids->array[ii] == NULL) {
-			fprintf(stderr, "ERROR (fieldquads) -- out of memory at field %lu\n", ii);
-			free_quadarray(thepids);
-			return (quadarray *)NULL;
-		}
-		fread(thepids->array[ii]->iarr, sizeof(int), numS, fid);
-	}
-	return thepids;
-}
 
 void write_objs_header(FILE *fid, sidx numstars,
                        dimension DimStars, double ramin, double ramax, 
@@ -113,6 +49,7 @@ void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
                        dimension DimQuads, double index_scale)
 {
   magicval magic = MAGIC_VAL;
+
   fwrite(&magic, sizeof(magic), 1, quadfid);
   fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
   fwrite(&DimQuads, sizeof(DimQuads), 1, quadfid);
@@ -200,6 +137,50 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
 }
 
 
+char *mk_filename(const char *basename, const char *extension)
+{
+	char *fname;
+	fname = (char *)malloc(strlen(basename) + strlen(extension) + 1);
+	sprintf(fname, "%s%s", basename, extension);
+	return fname;
+}
+
+void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD)
+{
+	fread(iA, sizeof(*iA), 1, fid);
+	fread(iB, sizeof(*iB), 1, fid);
+	fread(iC, sizeof(*iC), 1, fid);
+	fread(iD, sizeof(*iD), 1, fid);
+	return ;
+}
+
+void writeonequad(FILE *fid, qidx iA, qidx iB, qidx iC, qidx iD)
+{
+	fwrite(&iA, sizeof(iA), 1, fid);
+	fwrite(&iB, sizeof(iB), 1, fid);
+	fwrite(&iC, sizeof(iC), 1, fid);
+	fwrite(&iD, sizeof(iD), 1, fid);
+	return ;
+}
+
+void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy)
+{
+	fread(Cx, sizeof(*Cx), 1, fid);
+	fread(Cy, sizeof(*Cy), 1, fid);
+	fread(Dx, sizeof(*Dx), 1, fid);
+	fread(Dy, sizeof(*Dy), 1, fid);
+	return ;
+}
+
+void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy)
+{
+	fwrite(&Cx, sizeof(Cx), 1, fid);
+	fwrite(&Cy, sizeof(Cy), 1, fid);
+	fwrite(&Dx, sizeof(Dx), 1, fid);
+	fwrite(&Dy, sizeof(Dy), 1, fid);
+	return ;
+}
+
 xyarray *readxy(FILE *fid, char ParityFlip)
 {
 	char ASCII = 0;
@@ -242,176 +223,44 @@ xyarray *readxy(FILE *fid, char ParityFlip)
 			fscanf(fid, "%lu", &numxy); // CHECK THE RETURN VALUE MORON!
 		} else
 			fread(&numxy, sizeof(numxy), 1, fid); // CHECK THE RETURN VALUE MORON!
-		thepix->array[ii] = mk_xy(numxy);
+
+		xya_set(thepix, ii, mk_xy(numxy) );
+
 		if (xya_ref(thepix, ii) == NULL) {
 			fprintf(stderr, "ERROR (readxy) - out of memory at field %lu\n", ii);
 			free_xyarray(thepix);
 			return (xyarray *)NULL;
 		}
 		if (ASCII) {
-			for (jj = 0;jj < numxy;jj++)
-				fscanf(fid, ",%lf,%lf", (thepix->array[ii]->farr) + 2*jj,
-				       (thepix->array[ii]->farr) + 2*jj + 1 );
+			for (jj = 0;jj < numxy;jj++) {
+				double tmp1, tmp2;
+				fscanf(fid, ",%lf,%lf", &tmp1, &tmp2);
+				xy_setx(xya_ref(thepix, ii), jj, tmp1);
+				xy_sety(xya_ref(thepix, ii), jj, tmp2);
+			}
 			fscanf(fid, "\n");
-		} else
-			fread(thepix->array[ii]->farr, sizeof(double), DIM_XY*numxy, fid);
+		} else {
+			double tmp[DIM_XY*numxy];
+			fread(tmp, sizeof(double), DIM_XY*numxy, fid);
+			for (jj = 0; jj<numxy; jj++) {
+				double tmp1, tmp2;
+				tmp1 = tmp[2*jj];
+				tmp2 = tmp[2*jj+1];
+				xy_setx(xya_ref(thepix, ii), jj, tmp1);
+				xy_sety(xya_ref(thepix, ii), jj, tmp2);
+			}
+		}
 
 		if (ParityFlip) {
+			xy* xya = xya_ref(thepix, ii);
 			double swaptmp;
 			for (jj = 0;jj < numxy;jj++) {
-				swaptmp = *((thepix->array[ii]->farr) + 2 * jj + 1);
-				*((thepix->array[ii]->farr) + 2*jj + 1) =
-				    *((thepix->array[ii]->farr) + 2 * jj);
-				*((thepix->array[ii]->farr) + 2*jj) = swaptmp;
+				swaptmp = xy_refx(xya, jj);
+				xy_setx(xya, jj, xy_refy(xya, jj));
+				xy_sety(xya, jj, swaptmp);
 			}
 		}
 	}
 
 	return thepix;
 }
-
-
-#ifndef NO_AKM
-kdtree *read_starkd(FILE *treefid, double *ramin, double *ramax,
-                    double *decmin, double *decmax)
-{
-	kdtree *starkd = fread_kdtree(treefid);
-	fread(ramin, sizeof(double), 1, treefid);
-	fread(ramax, sizeof(double), 1, treefid);
-	fread(decmin, sizeof(double), 1, treefid);
-	fread(decmax, sizeof(double), 1, treefid);
-	return starkd;
-}
-
-kdtree *read_codekd(FILE *treefid, double *index_scale)
-{
-	kdtree *codekd = fread_kdtree(treefid);
-	fread(index_scale, sizeof(double), 1, treefid);
-	return codekd;
-}
-
-void write_starkd(FILE *treefid, kdtree *starkd,
-                  double ramin, double ramax, double decmin, double decmax)
-{
-	fwrite_kdtree(starkd, treefid);
-	fwrite(&ramin, sizeof(double), 1, treefid);
-	fwrite(&ramax, sizeof(double), 1, treefid);
-	fwrite(&decmin, sizeof(double), 1, treefid);
-	fwrite(&decmax, sizeof(double), 1, treefid);
-	return ;
-}
-
-void write_codekd(FILE *treefid, kdtree *codekd, double index_scale)
-{
-	fwrite_kdtree(codekd, treefid);
-	fwrite(&index_scale, sizeof(double), 1, treefid);
-	return ;
-}
-#endif
-
-char *mk_filename(const char *basename, const char *extension)
-{
-	char *fname;
-	fname = (char *)malloc(strlen(basename) + strlen(extension) + 1);
-	sprintf(fname, "%s%s", basename, extension);
-	return fname;
-}
-
-sidx readquadidx(FILE *fid, sidx **starlist, qidx **starnumq,
-                 qidx ***starquads)
-{
-	magicval magic;
-	sidx numStars, thisstar, jj;
-	qidx thisnumq, ii;
-
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (fieldquads) -- bad magic value in quad index\n");
-			return (0);
-		}
-		fread(&numStars, sizeof(numStars), 1, fid);
-	}
-	*starlist = malloc(numStars * sizeof(sidx));
-	if (*starlist == NULL)
-		return (0);
-	*starnumq = malloc(numStars * sizeof(qidx));
-	if (*starnumq == NULL) {
-		free(*starlist);
-		return (0);
-	}
-	*starquads = malloc(numStars * sizeof(qidx *));
-	if (*starquads == NULL) {
-		free(*starlist);
-		free(*starnumq);
-		return (0);
-	}
-
-	for (jj = 0;jj < numStars;jj++) {
-	  fread(&thisstar, sizeof(thisstar), 1, fid);
-	  fread(&thisnumq, sizeof(thisnumq), 1, fid);
-		(*starlist)[jj] = thisstar;
-		(*starnumq)[jj] = thisnumq;
-		(*starquads)[jj] = malloc(thisnumq * sizeof(qidx));
-		if ((*starquads)[jj] == NULL)
-			return (0);
-		for (ii = 0;ii < thisnumq;ii++) {
-		  fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
-		}
-	}
-
-	return (numStars);
-}
-
-
-void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD)
-{
-	fread(iA, sizeof(*iA), 1, fid);
-	fread(iB, sizeof(*iB), 1, fid);
-	fread(iC, sizeof(*iC), 1, fid);
-	fread(iD, sizeof(*iD), 1, fid);
-	return ;
-}
-
-void writeonequad(FILE *fid, qidx iA, qidx iB, qidx iC, qidx iD)
-{
-	fwrite(&iA, sizeof(iA), 1, fid);
-	fwrite(&iB, sizeof(iB), 1, fid);
-	fwrite(&iC, sizeof(iC), 1, fid);
-	fwrite(&iD, sizeof(iD), 1, fid);
-	return ;
-}
-
-void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy)
-{
-	fread(Cx, sizeof(*Cx), 1, fid);
-	fread(Cy, sizeof(*Cy), 1, fid);
-	fread(Dx, sizeof(*Dx), 1, fid);
-	fread(Dy, sizeof(*Dy), 1, fid);
-	return ;
-}
-
-void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy)
-{
-	fwrite(&Cx, sizeof(Cx), 1, fid);
-	fwrite(&Cy, sizeof(Cy), 1, fid);
-	fwrite(&Dx, sizeof(Dx), 1, fid);
-	fwrite(&Dy, sizeof(Dy), 1, fid);
-	return ;
-}
-
-
-
-signed int compare_sidx(const void *x, const void *y)
-{
-	sidx xval, yval;
-	xval = *(sidx *)x;
-	yval = *(sidx *)y;
-	if (xval > yval)
-		return (1);
-	else if (xval < yval)
-		return ( -1);
-	else
-		return (0);
-}
-

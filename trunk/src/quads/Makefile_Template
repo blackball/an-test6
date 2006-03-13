@@ -10,27 +10,38 @@ CFLAGS	= -O2 -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
-OBJ = starutil.o kdutil.o fileutil.o mathutil.o KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
-	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
-	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o KD/kdtree.o KD/knn.o KD/kquery.o \
-	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o dualtree.o dualtree_max.o \
-	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o dualtree_rangesearch.o healpix.o \
+OBJ = starutil.o fileutil.o mathutil.o \
+	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o \
+	healpix.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o codefile.o tic.o quadfile.o \
 	intmap.o bl.o
 
-#suspend.o 
+AM_OBJ = KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
+	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
+	KD/am_time.o KD/distances.o KD/genarray.o \
+	KD/hrect.o \
+	fileutil_am.o starutil_am.o mathutil_am.o \
+	dualtree_rangesearch.o \
+	dualtree.o dualtree_max.o
 
+AMKD_OBJ = KD/kdtree.o KD/knn.o KD/kquery.o \
+	KD/kresult.o KD/kresults.o KD/neighbors.o KD/rangesearch.o \
+	kdutil.o fileutil_amkd.o
 
-EXECS = randcat startree genfields fieldquads findstar findquad \
-	findcode fixheaders codetomatlab startree2 deduplicate codetree2  \
-	printheaders get_healpix quadidx2 xylstomatlab rdlstohealpix codedensity \
+# execs that need AM's kdtree stuff
+AMKD_EXECS = startree genfields findcode deduplicate
+
+# execs that need AM's non-kdtree stuff
+AM_EXECS = randcat fieldquads findstar findquad fixheaders \
+	codedensity \
+	codetomatlab startree2 codetree2 printheaders
+
+# execs that don't need AM's stuff
+EXECS = get_healpix quadidx2 xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable \
-	hpquads dedup_index
+	hpquads dedup_index 
 
-# Deprecated:
-#   getquads codetree quadidx solvexy all_quads tilequads
-
-MYOBJS = randcat.o startree.o \
+MYOBJ = randcat.o startree.o \
   genfields.o solvexy.o fieldquads.o findstar.o \
   findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o all_quads.o fixheaders.o codedensity.o \
   deduplicate.o codetree2.o printheaders.o test_healpix.o get_healpix.o \
@@ -39,28 +50,34 @@ MYOBJS = randcat.o startree.o \
   hitlist_agreement.o hitlist_healpix.o tilequads.o hpquads.o \
   codeprojections.o codedensity.o startree2.o solver2.o
 
-# getquads.o codetree.o quadidx.o 
+ALLOBJS = $(OBJ) $(AM_OBJ) $(AMKD_OBJ) $(MY_OBJ) 
 
-ALLOBJS = $(OBJ) $(MYOBJS) 
+all: $(EXECS) agreeable slave agreeable2
 
-all: $(EXECS) solvexy2 agreeable slave agreeable2
+#solvexy2 
+
 
 #solvexy2: solvexy2.o solver2.o hitlist_healpix.o $(OBJ)
-solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
+#solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
+#	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
+
+agreeable: agreeable.o hitlist_agreement.o $(AM_OBJ) $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-agreeable: agreeable.o hitlist_agreement.o $(OBJ)
+agreeable2: agreeable2.o hitlist_healpix.o $(AM_OBJ) $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-agreeable2: agreeable2.o hitlist_healpix.o $(OBJ)
+slave: slave.o solver2.o hitlist_healpix.o $(AM_OBJ) $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-slave: slave.o solver2.o hitlist_healpix.o $(OBJ)
+$(EXECS) :: %: %.o $(OBJ) $(NOAM_OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-$(EXECS) :: %: %.o $(OBJ)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OBJ) $< -o $@
+$(AM_EXECS) :: %: %.o $(OBJ) $(AM_OBJ)
+	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
+$(AMKD_EXECS) :: %: %.o $(OBJ) $(AMKD_OBJ) $(AM_OBJ)
+	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 CUTEST_I = -Ikdtree/CuTest
 

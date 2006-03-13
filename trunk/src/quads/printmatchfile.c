@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 
 #define NO_KD_INCLUDES 1
 #include "starutil.h"
@@ -106,9 +107,9 @@ int main(int argc, char *argv[]) {
 				double ra,dec;
 				double dist2, r;
 				double arc;
-				x1 = star_ref(mo->sMin, 0);
-				y1 = star_ref(mo->sMin, 1);
-				z1 = star_ref(mo->sMin, 2);
+				x1 = mo->sMin[0];
+				y1 = mo->sMin[1];
+				z1 = mo->sMin[2];
 				// normalize.
 				r = sqrt(square(x1) + square(y1) + square(z1));
 				x1 /= r;
@@ -117,9 +118,9 @@ int main(int argc, char *argv[]) {
 				ra =  rad2deg(xy2ra(x1, y1));
 				dec = rad2deg(z2dec(z1));
 				printf("RaDecMin %8.3f, %8.3f degrees\n", ra, dec);
-				x2 = star_ref(mo->sMax, 0);
-				y2 = star_ref(mo->sMax, 1);
-				z2 = star_ref(mo->sMax, 2);
+				x2 = mo->sMax[0];
+				y2 = mo->sMax[1];
+				z2 = mo->sMax[2];
 				r = sqrt(square(x2) + square(y2) + square(z2));
 				x2 /= r;
 				y2 /= r;
@@ -135,8 +136,6 @@ int main(int argc, char *argv[]) {
 				printf("Arc %g arcmin\n", arc*60.0);
 			}
 
-			free_star(mo->sMin);
-			free_star(mo->sMax);
 			free_MatchObj(mo);
 			free(me.indexpath);
 			free(me.fieldpath);

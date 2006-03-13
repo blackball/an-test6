@@ -24,7 +24,7 @@
 #include "catalog.h"
 #include "quadfile.h"
 
-char* OPTIONS = "hpef:o:t:n:x:d:r:R:D:H:F:T:vS:L:a:b:IB:";
+char* OPTIONS = "hpef:o:t:n:x:d:r:R:D:H:F:T:vS:L:IB:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s -f fname -o fieldname\n"
@@ -41,8 +41,6 @@ void printHelp(char* progname) {
 			"   [-D maximum-dec-for-debug-output]\n"
 			"   [-S first-field]\n"
 			"   [-L last-field]\n"
-			//"   [-a resume-from-file]\n"
-			//"   [-b suspend-to-file]\n"
 			"   [-I] (interactive mode - probably only useful from Python)\n"
 			"   [-B batch-file-name]\n"
 			"%s"
@@ -69,13 +67,6 @@ char *fieldfname = NULL, *treefname = NULL, *hitfname = NULL;
 char *quadfname = NULL, *catfname = NULL;
 FILE *hitfid = NULL, *quadfid = NULL, *catfid = NULL;
 off_t cposmarker;
-
-/*
-  char *resumefname = NULL;
-  FILE* resumefid;
-  char *suspendfname = NULL;
-  FILE* suspendfid;
-*/
 
 catalog* cat;
 quadfile* quads;
@@ -156,15 +147,7 @@ int main(int argc, char *argv[]) {
 		case 'I':
 			interactive = TRUE;
 			break;
-			/*
-			  case 'a':
-			  resumefname = strdup(optarg);
-			  break;
-			  case 'b':
-			  suspendfname = strdup(optarg);
-			  break;
-			  case 'S':
-			*/
+		case 'S':
 			firstfield = atoi(optarg);
 			break;
 		case 'L':
@@ -316,46 +299,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Running!\n");
 		}
 
-		/*
-		  if (resumefname && suspendfname &&
-		  (strcmp(resumefname, suspendfname) == 0)) {
-		  char buffer[1024];
-		  rename_suspend = TRUE;
-		  free(suspendfname);
-		  snprintf(buffer, sizeof(buffer), "%s.tmp", resumefname);
-		  suspendfname = strdup(buffer);
-		  } else {
-		  rename_suspend = FALSE;
-		  }
-		  if (resumefname) {
-		  // read resume file.
-		  double index_scale;
-		  char oldfieldname[256];
-		  char oldtreename[256];
-		  uint nfields;
-		  resumefid = fopen(resumefname, "rb");
-		  if (!resumefid) {
-		  fprintf(stderr, "Couldn't open resume file %s: %s\n",
-		  resumefname, strerror(errno));
-		  fprintf(stderr, "Starting from scratch.\n");
-		  } else {
-		  if (suspend_read_header(resumefid, &index_scale, oldfieldname, oldtreename, &nfields)) {
-		  fprintf(stderr, "Couldn't read resume file %s: %s\n", resumefname, strerror(errno));
-		  fprintf(stderr, "Starting from scratch.\n");
-		  fclose(resumefid);
-		  resumefid = NULL;
-		  }
-		  }
-		  }
-		*/
-		/*
-		  if (suspendfname) {
-		  fopenout(suspendfname, suspendfid);
-		  suspend_write_header(suspendfid, index_scale, fieldfname,
-		  treefname, dyv_array_size(thefields));
-		  }
-		*/
-
 		// write HITS header.
 		if (interactive) {
 			fprintf(stderr, "Writing HITS output to stdout.\n");
@@ -398,23 +341,7 @@ int main(int argc, char *argv[]) {
 			fclose(hitfid);
 
 		// clean up...
-		/*
-		  if (resumefid)
-		  fclose(resumefid);
-		  if (suspendfid)
-		  fclose(suspendfid);
-		*/
-
 		signal(SIGINT, SIG_DFL);
-
-		/*
-		  if (rename_suspend) {
-		  if (rename(suspendfname, resumefname)) {
-		  fprintf(stderr, "Couldn't rename suspend file from %s to %s: %s\n",
-		  suspendfname, resumefname, strerror(errno));
-		  }
-		  }
-		*/
 
 	} while (interactive);
 
@@ -424,21 +351,12 @@ int main(int argc, char *argv[]) {
 		fopenout(batchfname, batchfid);
 		fclose(batchfid);
 	}
-	/*
-	  if (matchfid)
-	  fclose(matchfid);
-	*/
 
 	hitlist_free(hits);
 
 	free_fn(hitfname);
 	free_fn(fieldfname);
 	free_fn(treefname);
-
-	/*
-	  free(suspendfname);
-	  free(resumefname);
-	*/
 
 	free_xyarray(thefields);
 
@@ -463,9 +381,6 @@ int get_next_assignment() {
 		fprintf(stderr, "Command: %s\n", buffer);
 		fflush(stderr);
 
-		//"    suspend <suspend-file-name>\n"
-		//"    resume  <resume-file-name>\n"
-
 		if (strncmp(buffer, "help", 4) == 0) {
 			fprintf(stderr, "Commands:\n"
 					"    field <field-number>\n"
@@ -475,24 +390,6 @@ int get_next_assignment() {
 					"    quit\n"
 					"    help\n");
 			fflush(stderr);
-			/*
-			  } else if (strncmp(buffer, "suspend ", 8) == 0) {
-			  free(suspendfname);
-			  suspendfname = strdup(buffer + 8);
-			  fprintf(stderr, "Set suspend file to \"%s\".\n", suspendfname);
-			  if (strlen(suspendfname) == 0) {
-			  free(suspendfname);
-			  suspendfname = NULL;
-			  }
-			  } else if (strncmp(buffer, "resume ", 7) == 0) {
-			  free(resumefname);
-			  resumefname = strdup(buffer + 7);
-			  fprintf(stderr, "Set resume file to \"%s\".\n", resumefname);
-			  if (strlen(resumefname) == 0) {
-			  free(resumefname);
-			  resumefname = NULL;
-			  }
-			*/
 		} else if (strncmp(buffer, "field ", 6) == 0) {
 			int fld = atoi(buffer + 6);
 			firstfield = fld;
@@ -567,12 +464,6 @@ int handlehit(solver_params* params, MatchObj* mo) {
 
 qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 				  kdtree_t *codekd, double codetol, hitlist* hits) {
-	/*
-	  uint resume_fieldnum;
-	  uint resume_nobjs;
-	  uint resume_ntried;
-	  blocklist* resume_hits = NULL;
-	*/
 	qidx numsolved, ii;
 	sidx numxy;
 	solver_params params;
@@ -624,55 +515,9 @@ qidx solve_fields(xyarray *thefields, int maxfieldobjs, int maxtries,
 		numxy = xy_size(thisfield);
 		params.field = thisfield;
 
-		/*
-		  if (resumefid && !resume_hits) {
-		  blocklist* slist = blocklist_pointer_new(256);
-		  // read the next suspended record from the file...
-		  if (suspend_read_field(resumefid, &resume_fieldnum, &resume_nobjs, &resume_ntried, slist)) {
-		  fprintf(stderr, "Couldn't read a suspended field: %s\n", strerror(errno));
-		  blocklist_pointer_free(slist);
-		  fclose(resumefid);
-		  resumefid = NULL;
-		  } else {
-		  resume_hits = slist;
-		  }
-		  }
-		  if (resume_hits && (fieldnum == resume_fieldnum)) {
-		  blocklist* best;
-		  // Resume where we left off...
-		  params.numtries = resume_ntried;
-		  params.startobj = resume_nobjs;
-		  params.nummatches = blocklist_count(resume_hits);
-		  hitlist_add_hits(hits, resume_hits);
-		  best = hitlist_get_best(hits);
-		  params.mostagree = (best ? blocklist_count(best) : 0);
-		  blocklist_pointer_free(resume_hits);
-		  resume_hits = NULL;
-		  fprintf(stderr, "Resuming at field object %i (%i quads tried, %i hits found so far)\n",
-		  params.startobj, params.numtries, params.nummatches);
-		  }
-		*/
-
 		if (thisfield) {
 			solve_field(&params);
 		}
-
-		/*
-		  if (suspendfid || matchfid) {
-		  blocklist* all = hitlist_get_all(hits);
-		  if (suspendfid)
-		  suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
-		  if (matchfid)
-		  suspend_write_field(matchfid, (uint)fieldnum, params.objsused, params.numtries, all);
-		  blocklist_free(all);
-		  }
-		  if (suspendfid) {
-		  blocklist* all = hitlist_get_all(hits);
-		  suspend_write_field(suspendfid, (uint)fieldnum, params.objsused, params.numtries, all);
-		  blocklist_free(all);
-		  }
-		*/
-
 
 		bestlist = hitlist_get_best(hits);
 

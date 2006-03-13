@@ -2,8 +2,8 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 
-#define NO_KD_INCLUDES 1
 #include "fileutil.h"
 #include "mathutil.h"
 #include "blocklist.h"
@@ -322,9 +322,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		getstarcoord(iC, sC);
 		getstarcoord(iD, sD);
 
-		transform = fit_transform_2(ABCDpix, order, sA, sB, sC, sD);
-		image_to_xyz_2(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
-		image_to_xyz_2(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
+		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
+		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
+		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
 
 		free(transform);
 

@@ -1,5 +1,7 @@
 #include <errno.h>
 #include <string.h>
+#include <math.h>
+#include <stdio.h>
 
 #include "blocklist.h"
 #include "starutil.h"
@@ -117,13 +119,13 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 	double rotation;
 
 	// we don't have to normalize because it's already done by the solver.
-	x1 = star_ref(mo->sMin, 0);
-	y1 = star_ref(mo->sMin, 1);
-	z1 = star_ref(mo->sMin, 2);
+	x1 = mo->sMin[0];
+	y1 = mo->sMin[1];
+	z1 = mo->sMin[2];
 
-	x2 = star_ref(mo->sMax, 0);
-	y2 = star_ref(mo->sMax, 1);
-	z2 = star_ref(mo->sMax, 2);
+	x2 = mo->sMax[0];
+	y2 = mo->sMax[1];
+	z2 = mo->sMax[2];
 
 	xc = (x1 + x2) / 2.0;
 	yc = (y1 + y2) / 2.0;
@@ -281,19 +283,19 @@ int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
 	double vec2[6];
 	double d2;
 
-	vec1[0] = star_ref(m1->sMin, 0);
-	vec1[1] = star_ref(m1->sMin, 1);
-	vec1[2] = star_ref(m1->sMin, 2);
-	vec1[3] = star_ref(m1->sMax, 0);
-	vec1[4] = star_ref(m1->sMax, 1);
-	vec1[5] = star_ref(m1->sMax, 2);
+	vec1[0] = m1->sMin[0];
+	vec1[1] = m1->sMin[1];
+	vec1[2] = m1->sMin[2];
+	vec1[3] = m1->sMax[0];
+	vec1[4] = m1->sMax[1];
+	vec1[5] = m1->sMax[2];
 
-	vec2[0] = star_ref(m2->sMin, 0);
-	vec2[1] = star_ref(m2->sMin, 1);
-	vec2[2] = star_ref(m2->sMin, 2);
-	vec2[3] = star_ref(m2->sMax, 0);
-	vec2[4] = star_ref(m2->sMax, 1);
-	vec2[5] = star_ref(m2->sMax, 2);
+	vec2[0] = m2->sMin[0];
+	vec2[1] = m2->sMin[1];
+	vec2[2] = m2->sMin[2];
+	vec2[3] = m2->sMax[0];
+	vec2[4] = m2->sMax[1];
+	vec2[5] = m2->sMax[2];
 
 	d2 = distsq(vec1, vec2, 6);
 	if (d2 < agreedist2) {
@@ -500,8 +502,6 @@ void hitlist_healpix_clear(hitlist* hlist) {
 		MatchObj* mo = (MatchObj*)blocklist_pointer_access(hlist->matchlist, m);
 		if (!mo)
 			continue;
-		free_star(mo->sMin);
-		free_star(mo->sMax);
 		free_MatchObj(mo);
 	}
 	blocklist_remove_all(hlist->matchlist);

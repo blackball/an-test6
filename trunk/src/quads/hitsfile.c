@@ -1,3 +1,4 @@
+#include <math.h>
 #include "hitsfile.h"
 
 void hits_header_init(hits_header* h) {
