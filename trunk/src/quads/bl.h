@@ -36,25 +36,15 @@ typedef struct bl bl;
    to the end of the list from \c src and appends them to \c dest.
  */
 void bl_split(bl* src, bl* dest, int split);
-
-bl* bl_new(int blocksize, int datasize);
-
-int bl_size(bl* list);
-
+bl*  bl_new(int blocksize, int datasize);
+int  bl_size(bl* list);
 void bl_init(bl* l, int blocksize, int datasize);
-
 void bl_free(bl* list);
-
 void bl_append(bl* list, void* data);
-
 void bl_append_list(bl* list1, bl* list2);
-
 void bl_insert(bl* list, int indx, void* data);
-
 void bl_set(bl* list, int indx, void* data);
-
-void bl_insert_sorted(bl* list, void* data,
-					  int (*compare)(void* v1, void* v2));
+void bl_insert_sorted(bl* list, void* data, int (*compare)(void* v1, void* v2));
 
 /**
    If the item already existed in the list (ie, the compare function
@@ -62,38 +52,26 @@ void bl_insert_sorted(bl* list, void* data,
    the item was inserted is returned.
  */
 int bl_insert_unique_sorted(bl* list, void* data,
-								   int (*compare)(void* v1, void* v2));
+                            int (*compare)(void* v1, void* v2));
 
 // Copies the nth element into the destination location.
-void bl_get(bl* list, int n, void* dest);
-
-void bl_print_structure(bl* list);
-
+void  bl_get(bl* list, int n, void* dest);
+void  bl_print_structure(bl* list);
 // Returns a pointer to the nth element.
 void* bl_access(bl* list, int n);
-
-int bl_count(bl* list);
-
-void bl_copy(bl* list, int start, int length, void* vdest);
-
-void bl_remove_all(bl* list);
-
-void bl_remove_all_but_first(bl* list);
-
-void bl_remove_index(bl* list, int indx);
-
-void bl_remove_index_range(bl* list, int start, int length);
-
-void* bl_find(bl* list, void* data,
-		     int (*compare)(void* v1, void* v2));
+int   bl_count(bl* list);
+void  bl_copy(bl* list, int start, int length, void* vdest);
+void  bl_remove_all(bl* list);
+void  bl_remove_all_but_first(bl* list);
+void  bl_remove_index(bl* list, int indx);
+void  bl_remove_index_range(bl* list, int start, int length);
+void* bl_find(bl* list, void* data, int (*compare)(void* v1, void* v2));
 
 // returns 0 if okay, 1 if an error is detected.
-int bl_check_consistency(bl* list);
+int   bl_check_consistency(bl* list);
 
 // returns 0 if okay, 1 if an error is detected.
-int bl_check_sorted(bl* list,
-						   int (*compare)(void* v1, void* v2),
-						   int isunique);
+int   bl_check_sorted(bl* list, int (*compare)(void* v1, void* v2), int isunique);
 
 ///////////////////////////////////////////////
 // special-case functions for integer lists. //
