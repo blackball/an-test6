@@ -21,7 +21,7 @@ env.Program('hpquads', Split('hpquads.c tic.c starutil.c ioutils.c catalog.c '
 env.Program('dedup_index', Split('dedup_index.c starutil.c fileutil.c mathutil.c codefile.c quadfile.c bl.c'))
 env.Program('codetree2', KD + Split('codetree2.c fileutil.c codefile.c'))
 env.Program('slave', KD + Split('slave.c catalog.c '
-				'hitlist_healpix.c bl.c solver2.c '
+				'hitlist_healpix.c bl.c solver.c '
 				'fileutil.c intmap.c starutil.c tic.c quadfile.c xylist.c matchfile.c mathutil.c healpix.c'))
 env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil.c'))
 env.Program('findquad', AM + Split('findquad.c fileutil_am.c fileutil.c starutil_am.c'))

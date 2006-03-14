@@ -47,6 +47,7 @@ gs -q -dNOPAUSE -dBATCH -dSAFER -dTextAlphaBits=4 \
 	-dGraphicsAlphaBits=4 -sDEVICE=png16m \
 	-sOutputFile=$TMP -g${XU}x${YU} $IN
 
+echo "pngtopnm $TMP | pnmcut -l $XL -b $H | pnmtopng \> $OUT"
 pngtopnm $TMP | pnmcut -l $XL -b $H | pnmtopng > $OUT
 
 rm $TMP

@@ -1,27 +1,22 @@
-graph indexpipeline2 {
+graph indexpipeline {
 	graph [ rankdir = LR ];
 	node [ shape=box ];
 	edge [ dir=forward ];
-	node [ style=filled, fillcolor=azure2 ];
 	objs [ label="Healpix-ified catalogue\n(.objs)" ];
+	ddobjs [ label="Deduplicated catalogue\n(.objs)" ];
 	ckdt [ label="Code kd-tree\n(.ckdt)" ];
 	quad [ label="Quads\n(.quad)" ];
 	node [ style="" ];
-	skdt [ label="Star kd-tree\n(.skdt)" ];
-	qidx [ label="Quad Index\n(.qidx)" ];
 	code [ label="Quad Codes\n(.code)" ];
 
 	node [ shape=ellipse ];
-	startree [ label="startree" ];
-	allquads [ label="all_quads" ];
 	codetree [ label="codetree" ];
 
-	objs -- startree
-	startree -- skdt
-	skdt -- allquads
-	allquads -- qidx
-	allquads -- code
-	allquads -- quad
+	objs -- deduplicate
+	deduplicate -- ddobjs
+	ddobjs -- hpquads
+	hpquads -- code
+	hpquads -- quad
 	code -- codetree
 	codetree -- ckdt
 }
@@ -34,20 +29,3 @@ graph indexpipeline2 {
 //   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=png16m -sOutputFile=pipeline.png -g850x162 pipeline.ps
 // (where 850x162 is determined by the output of the bounding-box stage)
 
-/*
-graph old_indexpipeline {
-	node [ shape=box ];
-	edge [ dir=forward ];
-	objs [ label="Healpix-ified Catalogue\n(.objs)" ];
-	skdt [ label="Star kd-tree\n(.skdt)" ];
-	objs -- skdt [ label="startree" ];
-	qidx [ label="Quad Index\n(.qidx)" ];
-	code [ label="Quad Codes\n(.code)" ];
-	quad [ label="Quads\n(.quad)" ];
-	skdt -- qidx
-	skdt -- code
-	skdt -- quad [ label="all_quads" ];
-	ckdt [ label="Code kd-tree\n(.ckdt)" ];
-	code -- ckdt [ label="codetree" ];
-}
-*/
