@@ -118,9 +118,10 @@ void test_1d_nn(CuTest *tc)
 	real data[]        = {5,9,36,84,7,56,4,8,4,120};
 	real qp[]          = {33};
 	int n=10, d=1;
+	kdtree_qres_t *kr;
 	kdtree_t *kd = kdtree_build(data, n, d, 2);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree", kd);
-	kdtree_qres_t *kr = kdtree_rangesearch(kd, qp, 9.2);
+	kr = kdtree_rangesearch(kd, qp, 9.2);
 	CuAssertPtrNotNullMsg(tc, "null query result", kr);
 	CuAssertIntEquals(tc, 1, kr->nres);
 	CuAssertIntEquals(tc, 36.0, kr->results[0]);
@@ -131,9 +132,10 @@ void test_1d_nn_2(CuTest *tc)
 	real data[]        = {5,9,36,84,35,7,56,4,8,4,120};
 	real qp[]          = {33};
 	int n=10, d=1;
+	kdtree_qres_t *kr;
 	kdtree_t *kd = kdtree_build(data, n, d, 2);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree", kd);
-	kdtree_qres_t *kr = kdtree_rangesearch(kd, qp, 9.2);
+	kr = kdtree_rangesearch(kd, qp, 9.2);
 	CuAssertPtrNotNullMsg(tc, "null query result", kr);
 	CuAssertIntEquals(tc, 2, kr->nres);
 	CuAssertIntEquals(tc, 35.0, kr->results[0]);
@@ -172,12 +174,13 @@ void test_kd_invalid_args(CuTest *tc)
 
 void test_kd_massive_build(CuTest *tc)
 {
-	srandom(0);
+	kdtree_t *kd;
 	int n=100000, d=4, i;
 	real *data = malloc(sizeof(real)*n*d);
+	srandom(0);
 	for (i=0; i < n*d; i++) 
         data[i] = random() / (real)RAND_MAX;
-	kdtree_t *kd = kdtree_build(data, n, d, 16);
+	kd = kdtree_build(data, n, d, 16);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 }
 
@@ -194,13 +197,14 @@ void test_kd_range_search(CuTest *tc) {
 	int nfound;
 	int ntimes = 10;
 	int t;
+	kdtree_t *kd;
 
 	for (i=0; i < n*d; i++) 
         data[i] = random() / (real)RAND_MAX;
 
 	memcpy(origdata, data, n*d*sizeof(real));
 
-	kdtree_t *kd = kdtree_build(data, n, d, levels);
+	kd = kdtree_build(data, n, d, levels);
 
 	point = malloc(sizeof(real)*d);
 

@@ -41,7 +41,9 @@ typedef unsigned long int qidx;
 typedef unsigned long int sidx;
 typedef unsigned short int dimension;
 
-typedef unsigned int uint;
+/*
+  typedef unsigned int uint;
+*/
 
 inline double square(double d);
 

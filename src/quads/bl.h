@@ -143,6 +143,7 @@ void  pl_copy(pl* list, int start, int length, void** dest);
 void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
 void  pl_remove(pl* list, int ind);
+void  pl_remove_all(pl* list);
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //

@@ -5,6 +5,7 @@
 
 void star_coords_old(star *s, star *r, double *x, double *y)
 {
+	double sdotr;
 #ifndef AMFAST
 	if (s == NULL) {
 		fprintf(stderr, "ERROR (star_coords) -- s NULL\n");
@@ -28,9 +29,9 @@ void star_coords_old(star *s, star *r, double *x, double *y)
 		fprintf(stderr, "ERROR (star_coords) -- r has length %f\n", chklen);
 #endif
 
-	double sdotr = star_ref(s, 0) * star_ref(r, 0) +
-	               star_ref(s, 1) * star_ref(r, 1) +
-	               star_ref(s, 2) * star_ref(r, 2);
+	sdotr = star_ref(s, 0) * star_ref(r, 0) +
+		star_ref(s, 1) * star_ref(r, 1) +
+		star_ref(s, 2) * star_ref(r, 2);
 	if (sdotr <= 0.0) {
 		fprintf(stderr, "ERROR (star_coords) -- s dot r <=0; undefined projection.\n");
 		return ;

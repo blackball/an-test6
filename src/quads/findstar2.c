@@ -1,4 +1,6 @@
 #include <errno.h>
+#include <math.h>
+#include <string.h>
 #include "starutil.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
@@ -84,7 +86,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (whichset) {
-		cat = catalog_open(basefname);
+		cat = catalog_open(basefname, 0);
 		if (!cat) {
 			fprintf(stderr, "ERROR: couldn't open catalog");
 		}
