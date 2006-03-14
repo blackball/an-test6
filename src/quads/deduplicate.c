@@ -1,5 +1,5 @@
 /**
-   deduplicate2: finds pairs of stars within a given distance of each other and removes
+   deduplicate: finds pairs of stars within a given distance of each other and removes
    one of the stars (the one that appears second).
 
    input: .objs catalogue
@@ -19,7 +19,7 @@
 
 #define OPTIONS "hi:o:d:k:A:B:C:D:"
 const char HelpString[] =
-"deduplicate2 -d dist -i <input-file> -o <output-file> [-k keep]\n"
+"deduplicate -d dist -i <input-file> -o <output-file> [-k keep]\n"
 "            [-A ra-min -B ra-max -C dec-min -D dec-max]\n"
 "  radius: (in arcseconds) is the de-duplication radius: a star found within\n"
 "      this radius of another star will be discarded\n"
