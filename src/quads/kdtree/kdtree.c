@@ -252,6 +252,58 @@ unsigned int results_inds[KDTREE_MAX_RESULTS];
 // DEBUG
 int overflow;
 
+real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node) {
+	return (real*)(node + 1);
+}
+
+real* kdtree_get_bb_high(kdtree_t* tree, kdtree_node_t* node) {
+	return (real*)((char*)(node + 1) + sizeof(real) * tree->ndim);
+}
+
+real kdtree_bb_mindist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2, int dim) {
+	real d2 = 0.0;
+	real delta;
+	int i;
+    for (i=0; i<dim; i++) {
+		real alo, ahi, blo, bhi;
+        alo = bblow1[i];
+        ahi = bbhigh1[i];
+        blo = bblow2[i];
+		bhi = bbhigh2[i];
+
+		if ( ahi < blo )
+			delta = blo - ahi;
+		else if ( bhi < alo )
+			delta = alo - bhi;
+		else
+			delta = 0.0;
+
+        d2 += delta * delta;
+	}
+	return d2;
+}
+
+real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2, int dim) {
+	real d2 = 0.0;
+	real delta;
+	int i;
+    for (i=0; i<dim; i++) {
+		real alo, ahi, blo, bhi;
+		real delta2;
+        alo = bblow1[i];
+        ahi = bbhigh1[i];
+        blo = bblow2[i];
+		bhi = bbhigh2[i];
+
+		delta = bhi - alo;
+		delta2 = ahi - blo;
+		if (delta2 > delta) delta = delta2;
+
+        d2 += delta * delta;
+	}
+	return d2;
+}
+
 inline int kdtree_node_to_nodeid(kdtree_t* kd, kdtree_node_t* node) {
 	return ((char*)node - (char*)kd->tree) / NODE_SIZE;
 }
@@ -303,9 +355,6 @@ int kdtree_node_npoints(kdtree_node_t* node) {
 
 real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
 							   kdtree_t* tree2, kdtree_node_t* node2) {
-	real d2 = 0.0;
-	real delta;
-	int i;
 	int dim = tree1->ndim;
 	real *hrloa, *hrhia, *hrlob, *hrhib;
 
@@ -314,31 +363,11 @@ real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
 	hrlob = (real*)((char*)node2 + sizeof(kdtree_node_t));
 	hrhib = (real*)((char*)node2 + sizeof(kdtree_node_t) + sizeof(real) * dim);
 
-    for (i=0; i<dim; i++) {
-		// for the LOW_HR macro:
-		real alo, ahi, blo, bhi;
-        alo = hrloa[i];
-        ahi = hrhib[i];
-        blo = hrlob[i];
-		bhi = hrhib[i];
-
-		if ( ahi < blo )
-			delta = blo - ahi;
-		else if ( bhi < alo )
-			delta = alo - bhi;
-		else
-			delta = 0.0;
-
-        d2 += delta * delta;
-	}
-	return d2;
+	return kdtree_bb_mindist2(hrloa, hrhia, hrlob, hrhib, dim);
 }
 
 real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 							   kdtree_t* tree2, kdtree_node_t* node2) {
-	real d2 = 0.0;
-	real delta;
-	int i;
 	int dim = tree1->ndim;
 	real *hrloa, *hrhia, *hrlob, *hrhib;
 
@@ -347,22 +376,7 @@ real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 	hrlob = (real*)((char*)node2 + sizeof(kdtree_node_t));
 	hrhib = (real*)((char*)node2 + sizeof(kdtree_node_t) + sizeof(real) * dim);
 
-    for (i=0; i<dim; i++) {
-		// for the LOW_HR macro:
-		real alo, ahi, blo, bhi;
-		real delta2;
-        alo = hrloa[i];
-        ahi = hrhib[i];
-        blo = hrlob[i];
-		bhi = hrhib[i];
-
-		delta = bhi - alo;
-		delta2 = ahi - blo;
-		if (delta2 > delta) delta = delta2;
-
-        d2 += delta * delta;
-	}
-	return d2;
+	return kdtree_bb_maxdist2(hrloa, hrhia, hrlob, hrhib, dim);
 }
 
 /* Range seach helper */
