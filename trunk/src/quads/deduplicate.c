@@ -13,7 +13,7 @@
 
 #include "starutil.h"
 #include "fileutil.h"
-#include "dualtree_rangesearch_2.h"
+#include "dualtree_rangesearch.h"
 #include "bl.h"
 #include "catalog.h"
 
@@ -40,7 +40,6 @@ int main(int argc, char *argv[]) {
     kdtree_t *starkd = NULL;
     double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
-    double radians;
     double dist;
     int i;
     int keep = 0;
@@ -189,8 +188,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Done.\n");
 
     // convert from arcseconds to distance on the unit sphere.
-    radians = (duprad / (60.0 * 60.0)) * (M_PI / 180.0);
-    dist = sqrt(2.0*(1.0 - cos(radians)));
+	dist = sqrt(arcsec2distsq(duprad));
 
     duplicates = il_new(256);
 
@@ -198,9 +196,9 @@ int main(int argc, char *argv[]) {
 	fflush(stderr);
 
     // de-duplicate.
-    dualtree_rangesearch_2(starkd, starkd,
-						   RANGESEARCH2_NO_LIMIT, dist,
-						   duplicate_found, NULL);
+    dualtree_rangesearch(starkd, starkd,
+						 RANGESEARCH_NO_LIMIT, dist,
+						 duplicate_found, NULL);
 
 	fprintf(stderr, "Done!");
 

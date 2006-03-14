@@ -69,8 +69,12 @@ inline double distsq(double* d1, double* d2, int D);
 // radians.
 inline double distsq2arc(double dist2);
 
+// Converts an angle (in radians) into the distance-squared
+// between two points on the unit sphere separated by that angle.
 inline double arc2distsq(double arcInRadians);
 
+// Converts an angle (in arcseconds) into the distance-squared
+// between two points on the unit sphere separated by that angle.
 inline double arcsec2distsq(double arcInArcSec);
 
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))

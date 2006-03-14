@@ -32,7 +32,7 @@ void printHelp(char* progname) {
 			progname);
 }
 
-int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_ok);
+int find_correspondences(pl* hits, sidx* starids, sidx* fieldids, int* p_ok);
 
 void flush_solved_fields(bool doleftovers, bool doagree, bool addunsolved, bool cleanup);
 
@@ -313,7 +313,7 @@ void flush_solved_fields(bool doleftovers,
 	blocklist* flushsolved = blocklist_int_new(256);
 
 	for (k=0; k<blocklist_count(hitlists); k++) {
-		blocklist* best;
+		pl* best;
 		hits_field fieldhdr;
 		int nbest;
 		int fieldnum = k;
@@ -333,13 +333,13 @@ void flush_solved_fields(bool doleftovers,
 			if (doleftovers) {
 				int j;
 				int NA;
-				blocklist* all = hitlist_healpix_get_all(hl);
-				NA = blocklist_count(all);
+				pl* all = hitlist_healpix_get_all(hl);
+				NA = pl_size(all);
 				fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
 				// write the leftovers...
 				for (j=0; j<NA; j++) {
 					matchfile_entry* me;
-					MatchObj* mo = (MatchObj*)blocklist_pointer_access(all, j);
+					MatchObj* mo = (MatchObj*)pl_get(all, j);
 					me = (matchfile_entry*)mo->extra;
 					if (matchfile_write_match(leftoverfid, mo, me)) {
 						fprintf(stderr, "Error writing a match to %s: %s\n", leftoverfname, strerror(errno));
@@ -347,7 +347,7 @@ void flush_solved_fields(bool doleftovers,
 					}
 				}
 				fflush(leftoverfid);
-				blocklist_free(all);
+				pl_free(all);
 			}
 			if (cleanup) {
 				hitlist_healpix_free_extra(hl, free_extra);
@@ -381,7 +381,7 @@ void flush_solved_fields(bool doleftovers,
 
 		for (j=0; j<nbest; j++) {
 			matchfile_entry* me;
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
+			MatchObj* mo = (MatchObj*)pl_get(best, j);
 			me = (matchfile_entry*)mo->extra;
 
 			if (j == 0) {
@@ -409,7 +409,7 @@ void flush_solved_fields(bool doleftovers,
 		free(fieldids);
 		hits_write_field_tailer(hitfid);
 		fflush(hitfid);
-		blocklist_free(best);
+		pl_free(best);
 
 		// we now dump this hitlist.
 		hitlist_healpix_free_extra(hl, free_extra);
@@ -460,17 +460,17 @@ inline void add_correspondence(sidx* starids, sidx* fieldids,
 	if (p_ok && !ok) *p_ok = 0;
 }
 
-int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
+int find_correspondences(pl* hits, sidx* starids, sidx* fieldids,
 						 int* p_ok) {
 	int i, N;
 	int M;
 	int ok = 1;
 	MatchObj* mo;
 	if (!hits) return 0;
-	N = blocklist_count(hits);
+	N = pl_size(hits);
 	M = 0;
 	for (i=0; i<N; i++) {
-		mo = (MatchObj*)blocklist_pointer_access(hits, i);
+		mo = (MatchObj*)pl_get(hits, i);
 		add_correspondence(starids, fieldids, mo->iA, mo->fA, &M, &ok);
 		add_correspondence(starids, fieldids, mo->iB, mo->fB, &M, &ok);
 		add_correspondence(starids, fieldids, mo->iC, mo->fC, &M, &ok);

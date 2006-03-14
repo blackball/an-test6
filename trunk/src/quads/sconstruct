@@ -11,11 +11,11 @@ env = Environment(LIBS='m',
 KD = 'kdtree/kdtree.c kdtree/kdtree_io.c ioutils.c'.split()
 # this is what you need to get dyv to link :)
 AM = 'KD/amdyv.c KD/ambs.c KD/amma.c KD/amar.c KD/am_string.c KD/amiv.c KD/am_file.c ' + \
-  'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c';
+  'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c KD/command.c';
 AM = AM.split()
 
-env.Program('deduplicate2', KD + Split('deduplicate2.c catalog.c fileutil.c mathutil.c bl.c '
-	'dualtree_rangesearch_2.c dualtree_2.c starutil.c'))
+env.Program('deduplicate', KD + Split('deduplicate.c catalog.c fileutil.c mathutil.c bl.c '
+	'dualtree_rangesearch.c dualtree.c starutil.c'))
 env.Program('hpquads', Split('hpquads.c tic.c starutil.c ioutils.c catalog.c '
                              'fileutil.c bl.c healpix.c mathutil.c'))
 env.Program('dedup_index', Split('dedup_index.c starutil.c fileutil.c mathutil.c codefile.c quadfile.c bl.c'))
