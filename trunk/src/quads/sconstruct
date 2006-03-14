@@ -10,9 +10,9 @@ env = Environment(LIBS='m',
 
 KD = 'kdtree/kdtree.c kdtree/kdtree_io.c ioutils.c'.split()
 # this is what you need to get dyv to link :)
-AM = 'KD/amdyv.c KD/ambs.c KD/amma.c KD/amar.c KD/am_string.c KD/amiv.c KD/am_file.c ' + \
-  'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c KD/command.c';
-AM = AM.split()
+#AM = 'KD/amdyv.c KD/ambs.c KD/amma.c KD/amar.c KD/am_string.c KD/amiv.c KD/am_file.c ' + \
+#  'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c KD/command.c';
+#AM = AM.split()
 
 env.Program('deduplicate', KD + Split('deduplicate.c catalog.c fileutil.c mathutil.c bl.c '
 	'dualtree_rangesearch.c dualtree.c starutil.c'))
@@ -23,11 +23,8 @@ env.Program('codetree', KD + Split('codetree.c fileutil.c codefile.c'))
 env.Program('slave', KD + Split('slave.c catalog.c '
 				'hitlist_healpix.c bl.c solver.c '
 				'fileutil.c intmap.c starutil.c tic.c quadfile.c xylist.c matchfile.c mathutil.c healpix.c'))
-env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil.c'))
-env.Program('findquad', AM + Split('findquad.c fileutil_am.c fileutil.c starutil_am.c'))
-"""
-env.Program('findcode', Split('findcode.c fileutil_amkd.c fileutil_am.c fileutil.c starutil_am.c starutil.c kdutil.c'))
-"""
+env.Program('findstar', KD + Split('findstar.c catalog.c fileutil.c'))
+env.Program('findquad', Split('findquad.c fileutil.c'))
 env.Program('startree', KD + Split('startree.c fileutil.c'))
 
 env.Program('randcat', KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c bl.c'))

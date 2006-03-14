@@ -39,6 +39,8 @@ char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
                       dimension *DimCodes, double *index_scale);
 char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
                       dimension *DimQuads, double *index_scale);
+sidx read_quadidx(FILE *fid, sidx **starlist, qidx **starnumq,
+                  qidx ***starquads);
 void write_objs_header(FILE *fid, sidx numstars,
 					   dimension DimStars, double ramin, double ramax, 
 					   double decmin, double decmax);

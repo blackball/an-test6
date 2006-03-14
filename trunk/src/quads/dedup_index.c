@@ -13,7 +13,6 @@
 #include <string.h>
 
 #include "starutil.h"
-#include "kdutil.h"
 #include "fileutil.h"
 #include "bl.h"
 #include "codefile.h"

@@ -136,6 +136,51 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
 
 }
 
+sidx read_quadidx(FILE *fid, sidx **starlist, qidx **starnumq,
+                 qidx ***starquads)
+{
+	magicval magic;
+	sidx numStars, thisstar, jj;
+	qidx thisnumq, ii;
+
+	fread(&magic, sizeof(magic), 1, fid);
+	{
+		if (magic != MAGIC_VAL) {
+			fprintf(stderr, "ERROR (fieldquads) -- bad magic value in quad index\n");
+			return (0);
+		}
+		fread(&numStars, sizeof(numStars), 1, fid);
+	}
+	*starlist = malloc(numStars * sizeof(sidx));
+	if (*starlist == NULL)
+		return (0);
+	*starnumq = malloc(numStars * sizeof(qidx));
+	if (*starnumq == NULL) {
+		free(*starlist);
+		return (0);
+	}
+	*starquads = malloc(numStars * sizeof(qidx *));
+	if (*starquads == NULL) {
+		free(*starlist);
+		free(*starnumq);
+		return (0);
+	}
+
+	for (jj = 0;jj < numStars;jj++) {
+	  fread(&thisstar, sizeof(thisstar), 1, fid);
+	  fread(&thisnumq, sizeof(thisnumq), 1, fid);
+		(*starlist)[jj] = thisstar;
+		(*starnumq)[jj] = thisnumq;
+		(*starquads)[jj] = malloc(thisnumq * sizeof(qidx));
+		if ((*starquads)[jj] == NULL)
+			return (0);
+		for (ii = 0;ii < thisnumq;ii++) {
+		  fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
+		}
+	}
+
+	return (numStars);
+}
 
 char *mk_filename(const char *basename, const char *extension)
 {
