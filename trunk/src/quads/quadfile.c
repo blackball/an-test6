@@ -29,7 +29,7 @@ quadfile* quadfile_open(char* quadfname) {
 		return NULL;
 	}
 	readStatus = read_quad_header(quadfid, &numquads, &numstars, &Dim_Quads, &index_scale);
-	if (readStatus == READ_FAIL)
+	if (readStatus == (char)READ_FAIL)
 		return NULL;
 	if (Dim_Quads != DIM_QUADS) {
 		fprintf(stderr, "Quad file %s is wrong: Dim_Quads=%i, not %i.\n", quadfname, Dim_Quads, DIM_QUADS);

@@ -23,7 +23,7 @@ int main(int argc, char** args) {
     int i;
     bool degrees = FALSE;
     int nargs;
-    char c;
+    int c;
 
     if (argc == 1) {
 	print_help(args[0]);
