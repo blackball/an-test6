@@ -12,19 +12,19 @@ char* get_next_line(FILE* fid) {
 	return line;
 }
 
-void free_all(blocklist* list) {
+void free_all(pl* list) {
 	int i,N;
-	N = blocklist_count(list);
+	N = pl_size(list);
 	for (i=0; i<N; i++) {
-		blocklist* plist = (blocklist*)blocklist_pointer_access(list, i);
+		dl* plist = (dl*)pl_get(list, i);
 		if (plist) {
-			blocklist_free(plist);
+			dl_free(plist);
 		}
 	}
-	blocklist_free(list);
+	pl_free(list);
 }
 
-void ls_file_free(blocklist* list) {
+void ls_file_free(pl* list) {
 	free_all(list);
 }
 
@@ -45,8 +45,8 @@ int read_ls_file_header(FILE* fid) {
 	return numfields;
 }
 
-blocklist* read_ls_file_field(FILE* fid, int dimension) {
-	blocklist* pointlist;
+dl* read_ls_file_field(FILE* fid, int dimension) {
+	dl* pointlist;
 	int offset;
 	int inc;
 	char* line;
@@ -65,36 +65,36 @@ blocklist* read_ls_file_field(FILE* fid, int dimension) {
 		return NULL;
 	}
 
-	pointlist = blocklist_double_new(32);
+	pointlist = dl_new(32);
 
 	for (i=0; i<(npoints * dimension); i++) {
 		double val;
 		if (sscanf(line+offset, ",%lf%n", &val, &inc) < 1) {
 			fprintf(stderr, "parse error: point %i\n", i);
-			blocklist_free(pointlist);
+			dl_free(pointlist);
 			free(line);
 			return NULL;
 		}
-		blocklist_double_append(pointlist, val);
+		dl_append(pointlist, val);
 		offset += inc;
 	}
 	free(line);
 	return pointlist;
 }
 
-blocklist* read_ls_file(FILE* fid, int dimension) {
+pl* read_ls_file(FILE* fid, int dimension) {
 	int j;
 	int numfields;
-	blocklist* list;
+	pl* list;
 
 	numfields = read_ls_file_header(fid);
 	if (numfields == -1)
 		return NULL;
 
-	list = blocklist_pointer_new(256);
+	list = pl_new(256);
 
 	for (j=0; j<numfields; j++) {
-		blocklist* pointlist;
+		dl* pointlist;
 
 		pointlist = read_ls_file_field(fid, dimension);
 
@@ -102,7 +102,7 @@ blocklist* read_ls_file(FILE* fid, int dimension) {
 			free_all(list);
 			return NULL;
 		}
-		blocklist_pointer_append(list, pointlist);
+		pl_append(list, pointlist);
 
 	}
 	return list;

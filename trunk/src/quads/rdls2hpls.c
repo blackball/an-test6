@@ -60,7 +60,7 @@ int convert_file(char* fn)
 	for (j = 0; j < numfields; j++) {
 		int nhp;
 		// Second line and subsequent lines: npoints,ra,dec,ra,dec,...
-		blocklist* points = read_ls_file_field(rdf, 2);
+		dl* points = read_ls_file_field(rdf, 2);
 		if (!points) {
 			fprintf(stderr, "parse error in %s: field %i\n", fn, j);
 			return 1;
@@ -70,14 +70,14 @@ int convert_file(char* fn)
 			healpixes[i] = 0;
 		}
 
-		npoints = blocklist_count(points) / 2;
+		npoints = dl_size(points) / 2;
 
 		for (i = 0; i < npoints; i++) {
 			double ra, dec;
 			int hp;
 
-			ra = blocklist_double_access(points, i*2);
-			dec = blocklist_double_access(points, i*2 + 1);
+			ra  = dl_get(points, i*2);
+			dec = dl_get(points, i*2 + 1);
 
 			ra *= M_PI / 180.0;
 			dec *= M_PI / 180.0;
@@ -100,7 +100,7 @@ int convert_file(char* fn)
 		}
 		fprintf(hpf, "\n");
 
-		blocklist_free(points);
+		dl_free(points);
 	}
 
 	fclose(rdf);

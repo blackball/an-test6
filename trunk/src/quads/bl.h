@@ -152,6 +152,7 @@ typedef bl dl;
 dl*    dl_new(int blocksize);
 void   dl_free(dl* list);
 int    dl_size(dl* list);
+void   dl_append(dl* list, double data);
 void   dl_push(dl* list, double data);
 double dl_pop(dl* list);
 double dl_get(dl* list, int n);

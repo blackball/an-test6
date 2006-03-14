@@ -816,16 +816,16 @@ int il_check_sorted_descending(il* list,
 }
 
 int il_size(il* list) {
-    return bl_count((bl*) list);
+    return bl_count(list);
 }
 
 void il_remove(il* ilist, int index) {
-    bl_remove_index((bl*) ilist, index);
+    bl_remove_index(ilist, index);
 }
 
 int il_pop(il* ilist) {
     int ret = il_get(ilist, ilist->N-1);
-    bl_remove_index((bl*) ilist, ilist->N-1);
+    bl_remove_index(ilist, ilist->N-1);
     return ret;
 }
 
@@ -838,7 +838,7 @@ il* il_dupe(il* ilist) {
 }
 
 int il_remove_value(il* ilist, int value) {
-    bl* list = (bl*) ilist;
+    bl* list = ilist;
 	bl_node *node, *prev;
 	int istart = 0;
 	for (node=list->head, prev=NULL;
@@ -867,7 +867,7 @@ void il_remove_index_range(il* list, int start, int length) {
 }
 
 void il_set(il* list, int index, int value) {
-	bl_set((bl*)list, index, &value);
+	bl_set(list, index, &value);
 }
 
 il* il_new(int blocksize) {
@@ -880,7 +880,7 @@ void il_free(il* list) {
 	bl_free(list);
 }
 void il_push(il* list, int data) {
-	bl_append((bl*)list, &data);
+	bl_append(list, &data);
 }
 void il_append(il* list, int data) {
 	bl_append(list, &data);
@@ -890,20 +890,20 @@ void il_merge_lists(il* list1, il* list2) {
 }
 int il_get(il* list, int n) {
 	int* ptr;
-	ptr = (int*)bl_access((bl*)list, n);
+	ptr = (int*)bl_access(list, n);
 	return *ptr;
 }
 void il_insert_ascending(il* list, int n) {
-    bl_insert_sorted((bl*)list, &n, bl_compare_ints_ascending);
+    bl_insert_sorted(list, &n, bl_compare_ints_ascending);
 }
 void il_insert_descending(il* list, int n) {
-    bl_insert_sorted((bl*)list, &n, bl_compare_ints_descending);
+    bl_insert_sorted(list, &n, bl_compare_ints_descending);
 }
 int il_insert_unique_ascending(il* list, int n) {
-    return bl_insert_unique_sorted((bl*)list, &n, bl_compare_ints_ascending);
+    return bl_insert_unique_sorted(list, &n, bl_compare_ints_ascending);
 }
 void il_copy(il* list, int start, int length, int* vdest) {
-	bl_copy((bl*)list, start, length, vdest);
+	bl_copy(list, start, length, vdest);
 }
 
 void il_print(bl* list) {
@@ -991,7 +991,7 @@ dl* dl_new(int blocksize) {
 	return bl_new(blocksize, sizeof(double));
 }
 void dl_free(dl* list) {
-	bl_free((bl*)list);
+	bl_free(list);
 }
 int   dl_size(dl* list) {
 	return bl_count(list);
@@ -1000,20 +1000,23 @@ int dl_check_consistency(dl* list) {
 	return bl_check_consistency(list);
 }
 void dl_push(dl* list, double data) {
-	bl_append((bl*)list, &data);
+	bl_append(list, &data);
+}
+void   dl_append(dl* list, double data) {
+	bl_append(list, &data);
 }
 double dl_pop(dl* list) {
     double ret = dl_get(list, list->N-1);
-    bl_remove_index((bl*) list, list->N-1);
+    bl_remove_index(list, list->N-1);
     return ret;
 }
 double dl_get(dl* list, int n) {
 	double* ptr;
-	ptr = (double*)bl_access((bl*)list, n);
+	ptr = (double*)bl_access(list, n);
 	return *ptr;
 }
 void dl_set(dl* list, int index, double value) {
-	bl_set((bl*)list, index, &value);
+	bl_set(list, index, &value);
 }
 void dl_copy(bl* list, int start, int length, double* vdest) {
 	bl_copy(list, start, length, vdest);

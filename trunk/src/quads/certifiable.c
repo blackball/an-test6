@@ -3,11 +3,10 @@
 #include <string.h>
 #include <math.h>
 
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "matchobj.h"
 #include "matchfile.h"
 #include "lsfile.h"
@@ -33,15 +32,15 @@ int main(int argc, char *argv[]) {
 	int ninputfiles = 0;
 	char* rdlsfname = NULL;
 	FILE* rdlsfid = NULL;
-	blocklist* rdls;
+	pl* rdls;
 	int i;
 	int correct, incorrect;
 	bool printhits = FALSE;
 	bool falsepos = FALSE;
 	bool fromstdin = FALSE;
 	bool codedist = FALSE;
-	blocklist* correct_dists = NULL;
-	blocklist* incorrect_dists = NULL;
+	dl* correct_dists = NULL;
+	dl* incorrect_dists = NULL;
 
 	int nfields;
 	int *corrects = NULL;
@@ -90,9 +89,9 @@ int main(int argc, char *argv[]) {
 	}
 	fclose(rdlsfid);
 
-	nfields = blocklist_count(rdls);
-	corrects = (int*)malloc(nfields * sizeof(int));
-	incorrects = (int*)malloc(nfields * sizeof(int));
+	nfields = pl_size(rdls);
+	corrects = malloc(nfields * sizeof(int));
+	incorrects = malloc(nfields * sizeof(int));
 	for (i=0; i<nfields; i++) {
 		corrects[i] = incorrects[i] = 0;
 	}
@@ -105,8 +104,8 @@ int main(int argc, char *argv[]) {
 		  fprintf(stdout, "codedistsIncorrect=[];");
 		  fflush(stdout);
 		*/
-		correct_dists = blocklist_double_new(1024);
-		incorrect_dists = blocklist_double_new(1024);
+		correct_dists = dl_new(1024);
+		incorrect_dists = dl_new(1024);
 	}
 
 
@@ -144,7 +143,7 @@ int main(int argc, char *argv[]) {
 			double ra,dec;
 			double dist2, r;
 			double radius2;
-			blocklist* rdlist;
+			dl* rdlist;
 			int j, M;
 			bool ok = TRUE;
 			double xavg, yavg, zavg;
@@ -238,7 +237,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Scale %g arcmin\n", arc);
 			}
 
-			rdlist = (blocklist*)blocklist_pointer_access(rdls, fieldnum);
+			rdlist = (dl*)pl_get(rdls, fieldnum);
 			if (!rdlist) {
 				fprintf(stderr, "Couldn't get RDLS entry for field %i!\n", fieldnum);
 				exit(-1);
@@ -246,12 +245,12 @@ int main(int argc, char *argv[]) {
 
 			// read the RDLS entries for this field and make sure they're all
 			// within radius of the center.
-			M = blocklist_count(rdlist) / 2;
+			M = dl_size(rdlist) / 2;
 			xavg = yavg = zavg = 0.0;
 			for (j=0; j<M; j++) {
 				double x, y, z;
-				ra  = blocklist_double_access(rdlist, j*2);
-				dec = blocklist_double_access(rdlist, j*2 + 1);
+				ra  = dl_get(rdlist, j*2);
+				dec = dl_get(rdlist, j*2 + 1);
 				// in degrees
 				ra  = deg2rad(ra);
 				dec = deg2rad(dec);
@@ -280,8 +279,8 @@ int main(int argc, char *argv[]) {
 			fieldrad2 = 0.0;
 			for (j=0; j<M; j++) {
 				double x, y, z;
-				ra  = blocklist_double_access(rdlist, j*2);
-				dec = blocklist_double_access(rdlist, j*2 + 1);
+				ra  = dl_get(rdlist, j*2);
+				dec = dl_get(rdlist, j*2 + 1);
 				// in degrees
 				ra  = deg2rad(ra);
 				dec = deg2rad(dec);
@@ -322,13 +321,13 @@ int main(int argc, char *argv[]) {
 					  fprintf(stdout, "codedistsCorrect(%i)=%g;\n", 
 					  correct, mo->code_err);
 					*/
-					blocklist_double_append(correct_dists, sqrt(mo->code_err));
+					dl_append(correct_dists, sqrt(mo->code_err));
 				} else {
 					/*
 					  fprintf(stdout, "codedistsIncorrect(%i)=%g;\n", 
 					  incorrect, mo->code_err);
 					*/
-					blocklist_double_append(incorrect_dists, sqrt(mo->code_err));
+					dl_append(incorrect_dists, sqrt(mo->code_err));
 				}
 			}
 
@@ -386,8 +385,8 @@ int main(int argc, char *argv[]) {
 			if (incorrects[i] > maxi)
 				maxi = incorrects[i];
 		}
-		chist = (int*)malloc((maxc + 1) * sizeof(int));
-		ihist = (int*)malloc((maxi + 1) * sizeof(int));
+		chist = malloc((maxc + 1) * sizeof(int));
+		ihist = malloc((maxi + 1) * sizeof(int));
 		for (i=0; i<=maxc; i++)
 			chist[i] = 0;
 		for (i=0; i<=maxi; i++)
@@ -415,24 +414,24 @@ int main(int argc, char *argv[]) {
 
 	if (codedist) {
 		int N;
-		N = blocklist_count(correct_dists);
+		N = dl_size(correct_dists);
 		printf("correctDists=[");
 		for (i=0; i<N; i++) {
-			double d = blocklist_double_access(correct_dists, i);
+			double d = dl_get(correct_dists, i);
 			printf("%g,", d);
 		}
 		printf("];\n");
 
-		N = blocklist_count(incorrect_dists);
+		N = dl_size(incorrect_dists);
 		printf("incorrectDists=[");
 		for (i=0; i<N; i++) {
-			double d = blocklist_double_access(incorrect_dists, i);
+			double d = dl_get(incorrect_dists, i);
 			printf("%g,", d);
 		}
 		printf("];\n");
 
-		blocklist_free(correct_dists);
-		blocklist_free(incorrect_dists);
+		dl_free(correct_dists);
+		dl_free(incorrect_dists);
 	}
 
 
