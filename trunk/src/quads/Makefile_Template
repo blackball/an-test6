@@ -39,7 +39,7 @@ AM_EXECS = findquad
 # fieldquads
 
 # execs that don't need AM's stuff
-EXECS = get_healpix quadidx2 xylstomatlab rdlstohealpix \
+EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls certifiable \
 	hpquads dedup_index codetree2 startree2 codetomatlab \
 	printcatalog fixcatalogheader deduplicate randcat \
@@ -52,7 +52,7 @@ MY_OBJ = randcat.o \
   findquad.o findcode.o starutil.o kdutil.o fileutil.o mathutil.o \
   fixcatalogheader.o codedensity.o \
   codetree2.o printcatalog.o get_healpix.o \
-  solvexy2.o quadidx2.o xylstomatlab.o rdlstohealpix.o slave.o \
+  solvexy2.o quadidx.o xylstomatlab.o rdlstohealpix.o slave.o \
   fixmatchfile.o printmatchfile rdls2hpls.o certifiable.o agreeable2.o \
   hitlist_agreement.o hitlist_healpix.o hpquads.o \
   codeprojections.o codedensity.o startree2.o solver2.o \

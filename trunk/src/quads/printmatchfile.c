@@ -3,11 +3,9 @@
 #include <string.h>
 #include <math.h>
 
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
 #include "matchobj.h"
 #include "hitsfile.h"
 #include "hitlist.h"

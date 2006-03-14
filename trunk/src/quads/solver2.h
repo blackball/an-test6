@@ -1,12 +1,11 @@
 #ifndef SOLVER2_H
 #define SOLVER2_H
 
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "xylist.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "matchobj.h"
 
 struct solver_params;
