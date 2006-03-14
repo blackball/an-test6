@@ -55,7 +55,7 @@ MY_OBJ = randcat.o \
   solvexy2.o quadidx.o xylstomatlab.o rdlstohealpix.o slave.o \
   fixmatchfile.o printmatchfile rdls2hpls.o certifiable.o agreeable2.o \
   hitlist_agreement.o hitlist_healpix.o hpquads.o \
-  codeprojections.o codedensity.o startree2.o solver2.o \
+  codeprojections.o codedensity.o startree2.o solver.o \
   deduplicate.o \
   test_healpix.o kdtree/test_kdtree.o
 
@@ -68,8 +68,8 @@ all: $(EXECS) $(AM_EXECS) $(AMKD_EXECS) slave agreeable2
 #solvexy2 agreeable
 
 
-#solvexy2: solvexy2.o solver2.o hitlist_healpix.o $(OBJ)
-#solvexy2: solvexy2.o solver2.o hitlist_agreement.o $(OBJ)
+#solvexy2: solvexy2.o solver.o hitlist_healpix.o $(OBJ)
+#solvexy2: solvexy2.o solver.o hitlist_agreement.o $(OBJ)
 #	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 #agreeable: agreeable.o hitlist_agreement.o $(AM_OBJ) $(OBJ)
@@ -78,7 +78,7 @@ all: $(EXECS) $(AM_EXECS) $(AMKD_EXECS) slave agreeable2
 agreeable2: agreeable2.o hitlist_healpix.o $(AM_OBJ) $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
-slave: slave.o solver2.o hitlist_healpix.o $(AM_OBJ) $(OBJ)
+slave: slave.o solver.o hitlist_healpix.o $(AM_OBJ) $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 $(EXECS) :: %: %.o $(OBJ) $(NOAM_OBJ)

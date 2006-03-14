@@ -2,7 +2,7 @@
 #define HITLIST_H_
 
 #include "bl.h"
-#include "solver2.h"
+#include "solver.h"
 #include "matchobj.h"
 
 #ifndef DONT_DEFINE_HITLIST
