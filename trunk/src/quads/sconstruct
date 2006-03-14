@@ -14,19 +14,24 @@ AM = 'KD/amdyv.c KD/ambs.c KD/amma.c KD/amar.c KD/am_string.c KD/amiv.c KD/am_fi
   'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c';
 AM = AM.split()
 
+env.Program('deduplicate2', KD + Split('deduplicate2.c catalog.c fileutil.c mathutil.c bl.c '
+	'dualtree_rangesearch_2.c dualtree_2.c starutil.c'))
 env.Program('hpquads', Split('hpquads.c tic.c starutil.c ioutils.c catalog.c '
                              'fileutil.c bl.c healpix.c mathutil.c'))
-env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil.c'))
+env.Program('dedup_index', Split('dedup_index.c starutil.c fileutil.c mathutil.c codefile.c quadfile.c bl.c'))
 env.Program('codetree2', KD + Split('codetree2.c fileutil.c codefile.c'))
+env.Program('slave', KD + Split('slave.c catalog.c '
+				'hitlist_healpix.c bl.c solver2.c '
+				'fileutil.c intmap.c starutil.c tic.c quadfile.c xylist.c matchfile.c mathutil.c healpix.c'))
+env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil.c'))
 env.Program('findquad', AM + Split('findquad.c fileutil_am.c fileutil.c starutil_am.c'))
 """
 env.Program('findcode', Split('findcode.c fileutil_amkd.c fileutil_am.c fileutil.c starutil_am.c starutil.c kdutil.c'))
 """
 env.Program('startree2', KD + Split('startree2.c fileutil.c'))
+
 env.Program('randcat', KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c bl.c'))
-env.Program('slave', KD + Split('slave.c catalog.c '
-				'hitlist_healpix.c bl.c solver2.c '
-				'fileutil.c intmap.c starutil.c tic.c quadfile.c xylist.c matchfile.c mathutil.c healpix.c'))
+env.Program('genfields', KD + Split('genfields.c mathutil.c starutil.c fileutil.c bl.c'))
 
 tests = [
 env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c '
