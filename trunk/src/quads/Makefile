@@ -81,7 +81,7 @@ CUTEST_L = kdtree/CuTest/CuTest.o
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
-CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_blocklist test_bl
+CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_bl
 
 tests: $(CUTEST_TEST_DRIVERS)
 
@@ -89,9 +89,6 @@ CUTEST_TEST_OBJS = $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
 
 $(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
-
-#$(CUTEST_TEST_OBJS) :: %.o: %.c
-#	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
 ifneq ($(MAKECMDGOALS),clean)
   ifneq ($(MAKECMDGOALS),allclean)
