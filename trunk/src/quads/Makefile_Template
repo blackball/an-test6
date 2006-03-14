@@ -17,7 +17,7 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 	blocklist.o kdtree/kdtree.o kdtree/kdtree_io.o healpix.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o codefile.o tic.o \
 	quadfile.o intmap.o bl.o dualtree_rangesearch.o dualtree.o \
-	dualtree_max_2.o
+	dualtree_max.o
 
 AM_OBJ = KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
 	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
