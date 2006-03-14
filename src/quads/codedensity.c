@@ -16,8 +16,7 @@
 #include "fileutil.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-//#include "dualtree.h"
-#include "dualtree_max_2.h"
+#include "dualtree_max.h"
 
 #define OPTIONS "ht:cpr4" // n:
 
@@ -438,7 +437,7 @@ void max_end_results(void* extra, kdtree_node_t* ynode) {
 int main(int argc, char *argv[]) {
     int argchar;
     char *treefname = NULL;
-    dualtree_max_callbacks_2 max_callbacks;
+    dualtree_max_callbacks max_callbacks;
     int i, N, D;
     bool check = FALSE;
     bool write_points = FALSE;
@@ -565,13 +564,13 @@ int main(int argc, char *argv[]) {
 		break;
     }
 
-    dualtree_max_2(tree, tree, &max_callbacks, 1);
+    dualtree_max(tree, tree, &max_callbacks, 1);
 	if (do_perms) {
 		int i;
 		for (i=1; i<4; i++) {
 			printf("Doing permutation %i...\n", i);
 			permnum = i;
-			dualtree_max_2(tree, tree, &max_callbacks, 1);
+			dualtree_max(tree, tree, &max_callbacks, 1);
 		}
 	}
 
