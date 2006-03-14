@@ -39,6 +39,8 @@ void bl_split(bl* src, bl* dest, int split);
 
 bl* bl_new(int blocksize, int datasize);
 
+int bl_size(bl* list);
+
 void bl_init(bl* l, int blocksize, int datasize);
 
 void bl_free(bl* list);
@@ -52,7 +54,7 @@ void bl_insert(bl* list, int indx, void* data);
 void bl_set(bl* list, int indx, void* data);
 
 void bl_insert_sorted(bl* list, void* data,
-			     int (*compare)(void* v1, void* v2));
+					  int (*compare)(void* v1, void* v2));
 
 /**
    If the item already existed in the list (ie, the compare function

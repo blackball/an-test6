@@ -1,5 +1,7 @@
 Makefile
 *.o
+KD/*.dep
+kdtree/*.dep
 *.dep
 deps
 randcat
