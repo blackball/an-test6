@@ -41,6 +41,8 @@ void kdtree_close(kdtree_t* kd);
 */
 int kdtree_write(FILE* fout, kdtree_t* kdtree);
 
+int kdtree_write_file(kdtree_t* kdtree, char* fn);
+
 
 
 

@@ -16,7 +16,7 @@ double* codefile_read(FILE *fid, int *numcodes, int *Dim_Codes,
 
     readStatus = read_code_header(fid, &ncodes, &numstars, 
 				  &dimcodes, index_scale);
-    if (readStatus == READ_FAIL)
+    if (readStatus == (char)READ_FAIL)
 	return NULL;
 
     *numcodes = ncodes;

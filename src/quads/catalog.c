@@ -130,7 +130,7 @@ catalog* catalog_open_file(char* catfn, int modifiable) {
 								  &cat->ramin, &cat->ramax,
 								  &cat->decmin, &cat->decmax);
 	cat->nstars = nstars_tmp;
-	if (readStatus == READ_FAIL) {
+	if (readStatus == (char)READ_FAIL) {
 		fprintf(stderr, "Failed to read catalog header.\n");
 		goto bail;
 	}

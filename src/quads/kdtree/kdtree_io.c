@@ -24,6 +24,27 @@ kdtree_t* kdtree_read_file(char* fn) {
 	return kdtree;
 }
 
+int kdtree_write_file(kdtree_t* kdtree, char* fn) {
+	FILE* fid;
+    int res;
+	fid = fopen(fn, "wb");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s to write kdtree: %s\n",
+				fn, strerror(errno));
+		return -1;
+	}
+	res = kdtree_write(fid, kdtree);
+    if (res) {
+        fprintf(stderr, "Couldn't write kdtree.\n");
+    }
+    if (fclose(fid)) {
+        fprintf(stderr, "Couldn't close file %s after writing kdtree: %s\n",
+                fn, strerror(errno));
+        return -1;
+    }
+    return res;
+}
+
 int write_real(FILE* fout, real val) {
 	if (sizeof(real) == sizeof(double)) {
 		return write_double(fout, (double)val);
