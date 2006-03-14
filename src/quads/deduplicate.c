@@ -170,101 +170,106 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Keeping %i stars.\n", cat->nstars);
 	}
 
-    fprintf(stderr, "Building KD tree...");
-    fflush(stderr);
+	if (duprad == 0.0) {
+		fprintf(stderr, "Not deduplicating - you specified a deduplication radius of zero.\n");
+	} else {
 
-	Nleaf = 10;
-    levels = (int)((log((double)cat->nstars) - log((double)Nleaf))/log(2.0));
-    if (levels < 1) {
-		levels = 1;
-    }
-
-	starkd = kdtree_build(catalog_get_base(cat), cat->nstars, DIM_STARS, levels);
-	if (!starkd) {
-		fprintf(stderr, "Couldn't create star kdtree.\n");
-		catalog_close(cat);
-		exit(-1);
-	}
-    fprintf(stderr, "Done.\n");
-
-    // convert from arcseconds to distance on the unit sphere.
-	dist = sqrt(arcsec2distsq(duprad));
-
-    duplicates = il_new(256);
-
-	fprintf(stderr, "Running dual-tree search to find duplicates...\n");
-	fflush(stderr);
-
-    // de-duplicate.
-    dualtree_rangesearch(starkd, starkd,
-						 RANGESEARCH_NO_LIMIT, dist,
-						 duplicate_found, NULL);
-
-	fprintf(stderr, "Done!");
-
-    if (il_size(duplicates) == 0) {
-		fprintf(stderr, "No duplicate stars found.\n");
-    } else {
-		int dupind = 0;
-		int skipind = -1;
-		int srcind;
-		int destind = 0;
-		int N, Ndup;
-
-		// remove repeated entries from "duplicates"
-		// (yes, it can happen)
-		for (i=0; i<il_size(duplicates)-1; i++) {
-			int a, b;
-			a = il_get(duplicates, i);
-			b = il_get(duplicates, i+1);
-			if (a == b) {
-				il_remove(duplicates, i);
-				i--;
-			}
+		Nleaf = 10;
+		levels = (int)((log((double)cat->nstars) - log((double)Nleaf))/log(2.0));
+		if (levels < 1) {
+			levels = 1;
 		}
 
-		N = cat->nstars;
-		Ndup = il_size(duplicates);
+		fprintf(stderr, "Building KD tree (with %i levels)...", levels);
+		fflush(stderr);
 
-		// remove duplicate entries from the star array.
-		fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
-				Ndup, N-Ndup);
-		for (srcind=0; srcind<N; srcind++) {
-			// find the next index to skip
-			if (skipind == -1) {
-				if (dupind < Ndup) {
-					skipind = il_get(duplicates, dupind);
-					dupind++;
-				}
-				// shouldn't happen, I think...
-				if ((skipind > 0) && (skipind < srcind)) {
-					fprintf(stderr, "Warning: duplicate index %i skipped\n", skipind);
-					fprintf(stderr, "skipind=%i, srcind=%i\n", skipind, srcind);
-					skipind = -1;
+		starkd = kdtree_build(catalog_get_base(cat), cat->nstars, DIM_STARS, levels);
+		if (!starkd) {
+			fprintf(stderr, "Couldn't create star kdtree.\n");
+			catalog_close(cat);
+			exit(-1);
+		}
+		fprintf(stderr, "Done.\n");
+
+		// convert from arcseconds to distance on the unit sphere.
+		dist = sqrt(arcsec2distsq(duprad));
+
+		duplicates = il_new(256);
+
+		fprintf(stderr, "Running dual-tree search to find duplicates...\n");
+		fflush(stderr);
+
+		// de-duplicate.
+		dualtree_rangesearch(starkd, starkd,
+							 RANGESEARCH_NO_LIMIT, dist,
+							 duplicate_found, NULL);
+
+		fprintf(stderr, "Done!");
+
+		if (il_size(duplicates) == 0) {
+			fprintf(stderr, "No duplicate stars found.\n");
+		} else {
+			int dupind = 0;
+			int skipind = -1;
+			int srcind;
+			int destind = 0;
+			int N, Ndup;
+
+			// remove repeated entries from "duplicates"
+			// (yes, it can happen)
+			for (i=0; i<il_size(duplicates)-1; i++) {
+				int a, b;
+				a = il_get(duplicates, i);
+				b = il_get(duplicates, i+1);
+				if (a == b) {
+					il_remove(duplicates, i);
+					i--;
 				}
 			}
-			if (srcind == skipind) {
-				continue;
-			}
 
-			// optimization: if source and dest are the same...
-			if (srcind == destind) {
+			N = cat->nstars;
+			Ndup = il_size(duplicates);
+
+			// remove duplicate entries from the star array.
+			fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
+					Ndup, N-Ndup);
+			for (srcind=0; srcind<N; srcind++) {
+				// find the next index to skip
+				if (skipind == -1) {
+					if (dupind < Ndup) {
+						skipind = il_get(duplicates, dupind);
+						dupind++;
+					}
+					// shouldn't happen, I think...
+					if ((skipind > 0) && (skipind < srcind)) {
+						fprintf(stderr, "Warning: duplicate index %i skipped\n", skipind);
+						fprintf(stderr, "skipind=%i, srcind=%i\n", skipind, srcind);
+						skipind = -1;
+					}
+				}
+				if (srcind == skipind)
+					continue;
+
+				// optimization: if source and dest are the same...
+				if (srcind == destind) {
+					destind++;
+					continue;
+				}
+
+				memcpy(thestars + destind*DIM_STARS, thestars + srcind*DIM_STARS,
+					   DIM_STARS * sizeof(double));
+
 				destind++;
-				continue;
 			}
-
-			memcpy(thestars + destind*DIM_STARS, thestars + srcind*DIM_STARS,
-				   DIM_STARS * sizeof(double));
-
-			destind++;
+			cat->nstars -= il_size(duplicates);
 		}
-		cat->nstars -= il_size(duplicates);
-    }
-	il_free(duplicates);
-	duplicates = NULL;
+		il_free(duplicates);
+		duplicates = NULL;
 
-	kdtree_free(starkd);
-	starkd = NULL;
+		kdtree_free(starkd);
+		starkd = NULL;
+
+	}
 
     fprintf(stderr, "Finding new {ra,dec}{min,max}...\n");
     fflush(stderr);
@@ -285,7 +290,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	catalog_close(cat);
-	free_fn(outfname);
 
     fprintf(stderr, "Done!\n");
     return 0;

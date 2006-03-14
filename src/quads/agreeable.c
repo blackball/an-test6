@@ -3,7 +3,6 @@
 #include <string.h>
 #include <limits.h>
 
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
