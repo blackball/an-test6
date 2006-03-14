@@ -116,6 +116,15 @@ catalog* catalog_open_file(char* catfn, int modifiable) {
 
 	cat->catfname = strdup(catfn);
 
+	catfid = fopen(cat->catfname, "rb");
+	if (!catfid) {
+		fprintf(stderr, "catalog_open: couldn't open file %s: %s.\n", cat->catfname,
+				strerror(errno));
+		free(cat->catfname);
+		free(cat);
+		return NULL;
+	}
+
 	// Read .objs file...
 	readStatus = read_objs_header(catfid, &nstars_tmp, &Dim_Stars,
 								  &cat->ramin, &cat->ramax,
