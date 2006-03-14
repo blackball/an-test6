@@ -1,5 +1,4 @@
 #include "fileutil_am.h"
-#include "kdutil.h"
 
 stararray *readcat(FILE *fid, sidx *numstars, dimension *Dim_Stars,
                    double *ramin, double *ramax, double *decmin, double *decmax,
