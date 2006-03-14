@@ -3,11 +3,10 @@
 #include <limits.h>
 #include <string.h>
 
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "matchobj.h"
 #include "hitsfile.h"
 #include "hitlist_healpix.h"
@@ -47,10 +46,10 @@ char* leftoverfname = NULL;
 FILE* leftoverfid = NULL;
 char* agreefname = NULL;
 FILE* agreefid = NULL;
-blocklist* hitlists;
-blocklist *solved;
-blocklist *unsolved;
-blocklist* flushed;
+pl* hitlists;
+il* solved;
+il* unsolved;
+il* flushed;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -147,10 +146,10 @@ int main(int argc, char *argv[]) {
 		agree = TRUE;
 	}
 
-	hitlists = blocklist_pointer_new(256);
-	flushed = blocklist_int_new(256);
-	solved = blocklist_int_new(256);
-	unsolved = blocklist_int_new(256);
+	hitlists = pl_new(256);
+	flushed = il_new(256);
+	solved = il_new(256);
+	unsolved = il_new(256);
 
 	// write HITS header.
 	hits_header_init(&hitshdr);
@@ -229,11 +228,11 @@ int main(int argc, char *argv[]) {
 			}
 
 			// get the existing hitlist for this field...
-			if (fieldnum < blocklist_count(hitlists)) {
-				hl = (hitlist*)blocklist_pointer_access(hitlists, fieldnum);
+			if (fieldnum < pl_size(hitlists)) {
+				hl = (hitlist*)pl_get(hitlists, fieldnum);
 				if (!hl) {
 					// check if it's NULL because it's been flushed.
-					if (blocklist_int_contains(flushed, fieldnum)) {
+					if (il_contains(flushed, fieldnum)) {
 						//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
 						free_MatchObj(mo);
 						free(me.indexpath);
@@ -241,14 +240,14 @@ int main(int argc, char *argv[]) {
 						continue;
 					}
 					hl = hitlist_healpix_new(agreetolarcsec);
-					blocklist_pointer_set(hitlists, fieldnum, hl);
+					pl_set(hitlists, fieldnum, hl);
 				}
 			} else {
 				int k;
-				for (k=blocklist_count(hitlists); k<fieldnum; k++)
-					blocklist_pointer_append(hitlists, NULL);
+				for (k=pl_size(hitlists); k<fieldnum; k++)
+					pl_append(hitlists, NULL);
 				hl = hitlist_healpix_new(agreetolarcsec);
-				blocklist_pointer_append(hitlists, hl);
+				pl_append(hitlists, hl);
 			}
 
 			if (leftovers || agree) {
@@ -276,10 +275,10 @@ int main(int argc, char *argv[]) {
 
 	flush_solved_fields(leftovers, agree, TRUE, TRUE);
 
-	blocklist_free(hitlists);
-	blocklist_free(flushed);
-	blocklist_free(solved);
-	blocklist_free(unsolved);
+	pl_free(hitlists);
+	il_free(flushed);
+	il_free(solved);
+	il_free(unsolved);
 
 	// finish up HITS file...
 	hits_write_tailer(hitfid);
@@ -310,9 +309,9 @@ void flush_solved_fields(bool doleftovers,
 						 bool addunsolved,
 						 bool cleanup) {
 	int k;
-	blocklist* flushsolved = blocklist_int_new(256);
+	il* flushsolved = il_new(256);
 
-	for (k=0; k<blocklist_count(hitlists); k++) {
+	for (k=0; k<pl_size(hitlists); k++) {
 		pl* best;
 		hits_field fieldhdr;
 		int nbest;
@@ -323,12 +322,12 @@ void flush_solved_fields(bool doleftovers,
 		int correspond_ok = 1;
 		int Ncorrespond;
 
-		hitlist* hl = (hitlist*)blocklist_pointer_access(hitlists, fieldnum);
+		hitlist* hl = (hitlist*)pl_get(hitlists, fieldnum);
 		if (!hl) continue;
 		nbest = hitlist_healpix_count_best(hl);
 		if (nbest < min_matches_to_agree) {
 			if (addunsolved) {
-				blocklist_int_append(unsolved, fieldnum);
+				il_append(unsolved, fieldnum);
 			}
 			if (doleftovers) {
 				int j;
@@ -354,7 +353,7 @@ void flush_solved_fields(bool doleftovers,
 				// this frees the MatchObjs.
 				hitlist_healpix_clear(hl);
 				hitlist_healpix_free(hl);
-				blocklist_pointer_set(hitlists, fieldnum, NULL);
+				pl_set(hitlists, fieldnum, NULL);
 			}
 			continue;
 		}
@@ -364,12 +363,11 @@ void flush_solved_fields(bool doleftovers,
 		//best = hitlist_healpix_get_all_best(hl);
 		/*
 		  best = hitlist_get_all_above_size(hl, min_matches_to_agree);
-		  nbest = blocklist_count(best);
 		*/
 
-		blocklist_int_append(flushsolved, fieldnum);
-		blocklist_int_append(solved, fieldnum);
-		blocklist_int_append(flushed, fieldnum);
+		il_append(flushsolved, fieldnum);
+		il_append(solved, fieldnum);
+		il_append(flushed, fieldnum);
 
 		hits_field_init(&fieldhdr);
 		fieldhdr.field = fieldnum;
@@ -415,27 +413,27 @@ void flush_solved_fields(bool doleftovers,
 		hitlist_healpix_free_extra(hl, free_extra);
 		hitlist_healpix_clear(hl);
 		hitlist_healpix_free(hl);
-		blocklist_pointer_set(hitlists, fieldnum, NULL);
+		pl_set(hitlists, fieldnum, NULL);
 	}
-	printf("# nsolved = %i\n", blocklist_count(flushsolved));
+	printf("# nsolved = %i\n", il_size(flushsolved));
 	printf("solved=array([");
-	for (k=0; k<blocklist_count(flushsolved); k++) {
-		printf("%i,", blocklist_int_access(flushsolved, k));
+	for (k=0; k<il_size(flushsolved); k++) {
+		printf("%i,", il_get(flushsolved, k));
 	}
 	printf("]);\n");		
 
 	// DEBUG - matlab
 	printf("# solved=[");
-	for (k=0; k<blocklist_count(flushsolved); k++) {
-		printf("%i,", blocklist_int_access(flushsolved, k));
+	for (k=0; k<il_size(flushsolved); k++) {
+		printf("%i,", il_get(flushsolved, k));
 	}
 	printf("];\n");
 	fflush(stdout);
 
-	fprintf(stderr, "Flushed %i fields.\n", blocklist_count(flushsolved));
-	fprintf(stderr, "So far, %i fields have been solved.\n", blocklist_count(solved));
+	fprintf(stderr, "Flushed %i fields.\n", il_size(flushsolved));
+	fprintf(stderr, "So far, %i fields have been solved.\n", il_size(solved));
 
-	blocklist_free(flushsolved);
+	il_free(flushsolved);
 
 	fflush(hitfid);
 }
