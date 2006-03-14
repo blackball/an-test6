@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'f':
 			basefname = optarg;
-			treefname = mk_ctree2fn(optarg);
+			treefname = mk_ctreefn(optarg);
 			quadfname = mk_quadfn(optarg);
 			//catfname = mk_catfn(optarg);
 			break;

@@ -322,7 +322,7 @@ int read_parameters() {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "index ", &nextword)) {
 			char* fname = nextword;
-			treefname = mk_ctree2fn(fname);
+			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			catfname = strdup(fname);
 		} else if (is_word(buffer, "field ", &nextword)) {
