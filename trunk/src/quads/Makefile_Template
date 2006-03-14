@@ -22,8 +22,7 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 AM_OBJ = KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
 	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o KD/am_string.o KD/am_string_array.o \
 	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o \
-	fileutil_am.o starutil_am.o mathutil_am.o \
-	dualtree_max.o
+	fileutil_am.o starutil_am.o mathutil_am.o
 
 AMKD_OBJ = KD/kdtree.o KD/knn.o KD/kquery.o KD/kresult.o KD/kresults.o \
 	KD/neighbors.o KD/rangesearch.o \
