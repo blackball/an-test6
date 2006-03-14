@@ -1,7 +1,7 @@
 #ifndef CATUTILS_H
 #define CATUTILS_H
 
-typedef unsigned int uint;
+#include "starutil.h"
 
 struct catalog {
 	void* mmap_cat;

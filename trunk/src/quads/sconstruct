@@ -5,30 +5,34 @@ else:
 
 env = Environment(LIBS='m',
                   CCFLAGS=Split(DEBUG + ' -Wall'),
-                  CPPDEFINES=Split('_LARGEFILE_SOURCE NO_KD_INCLUDES'),
+                  CPPDEFINES=Split('_LARGEFILE_SOURCE'),
                   CPPPATH=Split('kdtree kdtree/CuTest/ .'))
 
 KD = 'kdtree/kdtree.c kdtree/kdtree_io.c ioutils.c'.split()
+# this is what you need to get dyv to link :)
+AM = 'KD/amdyv.c KD/ambs.c KD/amma.c KD/amar.c KD/am_string.c KD/amiv.c KD/am_file.c ' + \
+  'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c';
+AM = AM.split()
 
-env.Program('hpquads', Split('hpquads.c tic.c starutil2.c ioutils.c catalog.c '
-                             'fileutil2.c blocklist.c healpix.c'))
-env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil2.c'))
-env.Program('codetree2', KD + Split('codetree2.c fileutil2.c codefile.c'))
-env.Program('findquad', Split('findquad.c fileutil2.c'))
-env.Program('findcode', Split('findquad.c fileutil2.c'))
-env.Program('startree2', KD + Split('startree2.c fileutil2.c'))
-env.Program('randcat', KD + Split('startree2.c fileutil2.c'))
+env.Program('hpquads', Split('hpquads.c tic.c starutil.c ioutils.c catalog.c '
+                             'fileutil.c bl.c healpix.c mathutil.c'))
+env.Program('findstar2', KD + Split('findstar2.c catalog.c fileutil.c'))
+env.Program('codetree2', KD + Split('codetree2.c fileutil.c codefile.c'))
+env.Program('findquad', AM + Split('findquad.c fileutil_am.c fileutil.c starutil_am.c'))
 """
-env.Program('slave', KD + Split('slave.c catalog.c hitlist_agreement.c '
-				'hitlist_healpix.c blocklist.c solver2.c '
-				'fileutil2.c intmap.c starutil2.c tic.c'))
+env.Program('findcode', Split('findcode.c fileutil_amkd.c fileutil_am.c fileutil.c starutil_am.c starutil.c kdutil.c'))
 """
+env.Program('startree2', KD + Split('startree2.c fileutil.c'))
+env.Program('randcat', KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c bl.c'))
+env.Program('slave', KD + Split('slave.c catalog.c '
+				'hitlist_healpix.c bl.c solver2.c '
+				'fileutil.c intmap.c starutil.c tic.c quadfile.c xylist.c matchfile.c mathutil.c healpix.c'))
 
 tests = [
 env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c '
                                  'kdtree/test_kdtree.c')),
 env.Program('test_healpix', Split('kdtree/CuTest/CuTest.c test_healpix.c '
-                                  'healpix.c starutil2.c')),
+                                  'healpix.c starutil.c mathutil.c bl.c')),
 env.Program('test_bl', Split('kdtree/CuTest/CuTest.c test_bl.c bl.c')),
 ]
 cmd_tests = [env.Command('%s.out' % str(t[0]), str(t[0]), './%s > $TARGET' %

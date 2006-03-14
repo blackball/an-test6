@@ -20,14 +20,14 @@ void hitlist_healpix_free_extra(hitlist* hlist, void (*free_function)(MatchObj* 
 void hitlist_healpix_free(hitlist* hlist);
 
 // returns a shallow copy of the best set of hits.
-// you are responsible for calling blocklist_free.
-blocklist* hitlist_healpix_get_best(hitlist* hlist);
+// you are responsible for calling pl_free.
+pl* hitlist_healpix_get_best(hitlist* hlist);
 
-blocklist* hitlist_healpix_get_all_best(hitlist* hlist);
+pl* hitlist_healpix_get_all_best(hitlist* hlist);
 
 // returns a shallow copy of the whole set of results.
-// you are responsible for calling blocklist_free.
-blocklist* hitlist_healpix_get_all(hitlist* hlist);
+// you are responsible for calling pl_free.
+pl* hitlist_healpix_get_all(hitlist* hlist);
 
 int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* mo);
 

@@ -1,11 +1,11 @@
 #ifndef INTMAP_H
 #define INTMAP_H
 
-#include "blocklist.h"
+#include "bl.h"
 
 struct intmap {
-	blocklist fromlist;
-	blocklist tolist;
+	il fromlist;
+	il tolist;
 };
 //struct intmap;
 typedef struct intmap intmap;

@@ -16,11 +16,10 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-//#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "solver2.h"
 #include "solver2_callbacks.h"
 #include "matchobj.h"
@@ -51,7 +50,7 @@ bool parity = DEFAULT_PARITY_FLIP;
 double codetol = DEFAULT_CODE_TOL;
 int startdepth = 0;
 int enddepth = 0;
-blocklist* fieldlist = NULL;
+il* fieldlist = NULL;
 double funits_lower = 0.0;
 double funits_upper = 0.0;
 double index_scale;
@@ -97,7 +96,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
     }
 
-	fieldlist = blocklist_int_new(256);
+	fieldlist = il_new(256);
 
 	for (;;) {
 		
@@ -113,7 +112,7 @@ int main(int argc, char *argv[]) {
 		codetol = DEFAULT_CODE_TOL;
 		startdepth = 0;
 		enddepth = 0;
-		blocklist_remove_all(fieldlist);
+		il_remove_all(fieldlist);
 		funits_lower = 0.0;
 		funits_upper = 0.0;
 		index_scale = 0.0;
@@ -154,8 +153,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "agreetol %g\n", agreetol);
 
 		fprintf(stderr, "fields ");
-		for (i=0; i<blocklist_count(fieldlist); i++)
-			fprintf(stderr, "%i ", blocklist_int_access(fieldlist, i));
+		for (i=0; i<il_size(fieldlist); i++)
+			fprintf(stderr, "%i ", il_get(fieldlist, i));
 		fprintf(stderr, "\n");
 
 		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -267,7 +266,7 @@ int main(int argc, char *argv[]) {
 		toc();
 	}
 
-	blocklist_free(fieldlist);
+	il_free(fieldlist);
 
 	return 0;
 }
@@ -368,13 +367,13 @@ int read_parameters() {
 					break;
 				}
 				if (firstfld == -1) {
-					blocklist_int_append(fieldlist, fld);
+					il_append(fieldlist, fld);
 				} else {
 					if (firstfld > fld) {
 						fprintf(stderr, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
 					} else {
 						for (i=firstfld+1; i<=fld; i++) {
-							blocklist_int_append(fieldlist, i);
+							il_append(fieldlist, i);
 						}
 					}
 					firstfld = -1;
@@ -444,12 +443,12 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 	nfields = xya_size(thefields);
 
-	for (i=0; i<blocklist_count(fieldlist); i++) {
+	for (i=0; i<il_size(fieldlist); i++) {
 		xy *thisfield;
 		int fieldnum;
 		double utime, stime;
 
-		fieldnum = blocklist_int_access(fieldlist, i);
+		fieldnum = il_get(fieldlist, i);
 		if (fieldnum >= nfields) {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			continue;
@@ -480,7 +479,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 		if (agreement) {
 			int nbest, j;
-			blocklist* best;
+			pl* best;
 			int* thisagreehist;
 			int maxagree = 0;
 			int k;
@@ -514,20 +513,20 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 			best = hitlist_healpix_get_all_best(hits);
 			//best = hitlist_get_all_above_size(hits, nagree);
 
-			nbest = blocklist_count(best);
+			nbest = pl_size(best);
 			if (nbest)
 				fprintf(stderr, "(There are %i sets of agreeing hits of size %i.)\n",
-						blocklist_count(best) / nperlist, nperlist);
+						pl_size(best) / nperlist, nperlist);
 
 			for (j=0; j<nbest; j++) {
 				matchfile_entry* me;
-				MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
+				MatchObj* mo = (MatchObj*)pl_get(best, j);
 				me = (matchfile_entry*)mo->extra;
 				if (matchfile_write_match(matchfid, mo, me)) {
 					fprintf(stderr, "Error writing a match: %s\n", strerror(errno));
 				}
 			}
-			blocklist_free(best);
+			pl_free(best);
 			hitlist_healpix_clear(hits);
 			hitlist_healpix_free(hits);
 		}

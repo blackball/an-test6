@@ -1,7 +1,7 @@
 #include "intmap.h"
 
 int intmap_length(intmap* m) {
-	return blocklist_count(&m->fromlist);
+	return il_size(&m->fromlist);
 }
 
 intmap* intmap_new() {
@@ -11,13 +11,13 @@ intmap* intmap_new() {
 }
 
 void intmap_init(intmap* c) {
-	blocklist_int_init(&c->fromlist, 4);
-	blocklist_int_init(&c->tolist, 4);
+	il_new_existing(&c->fromlist, 4);
+	il_new_existing(&c->tolist, 4);
 }
 
 void intmap_clear(intmap* m) {
-	blocklist_remove_all(&m->fromlist);
-	blocklist_remove_all(&m->tolist);
+	il_remove_all(&m->fromlist);
+	il_remove_all(&m->tolist);
 }
 
 void intmap_free(intmap* map) {
@@ -27,11 +27,11 @@ void intmap_free(intmap* map) {
 
 int intmap_conflicts(intmap* c, int from, int to) {
 	int i, len;
-	len = blocklist_count(&c->fromlist);
+	len = il_size(&c->fromlist);
 	for (i=0; i<len; i++) {
 		int f, t;
-		f = blocklist_int_access(&c->fromlist, i);
-		t = blocklist_int_access(&c->tolist  , i);
+		f = il_get(&c->fromlist, i);
+		t = il_get(&c->tolist  , i);
 		if ((from == f) && (to == t)) {
 			// okay.
 			continue;
@@ -45,11 +45,11 @@ int intmap_conflicts(intmap* c, int from, int to) {
 
 int intmap_add(intmap* c, int from, int to) {
 	int i, len;
-	len = blocklist_count(&c->fromlist);
+	len = il_size(&c->fromlist);
 	for (i=0; i<len; i++) {
 		int f, t;
-		f = blocklist_int_access(&c->fromlist, i);
-		t = blocklist_int_access(&c->tolist  , i);
+		f = il_get(&c->fromlist, i);
+		t = il_get(&c->tolist  , i);
 		if ((from == f) && (to == t)) {
 			// mapping exists.
 			return 1;
@@ -58,19 +58,19 @@ int intmap_add(intmap* c, int from, int to) {
 			return -1;
 		}
 	}
-	blocklist_int_append(&c->fromlist, from);
-	blocklist_int_append(&c->tolist, to);
+	il_append(&c->fromlist, from);
+	il_append(&c->tolist, to);
 	return 0;
 }
 
 int intmap_merge(intmap* map1, intmap* map2) {
 	int i, len;
 	int okay = 1;
-	len = blocklist_count(&map2->fromlist);
+	len = il_size(&map2->fromlist);
 	for (i=0; i<len; i++) {
 		int from, to;
-		from = blocklist_int_access(&map2->fromlist, i);
-		to   = blocklist_int_access(&map2->tolist  , i);
+		from = il_get(&map2->fromlist, i);
+		to   = il_get(&map2->tolist  , i);
 		if (intmap_add(map1, from, to) == -1) {
 			okay = 0;
 		}

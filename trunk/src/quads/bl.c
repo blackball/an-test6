@@ -953,6 +953,9 @@ void pl_free(pl* list) {
 void  pl_remove(pl* list, int index) {
 	bl_remove_index(list, index);
 }
+void  pl_remove_all(pl* list) {
+	bl_remove_all(list);
+}
 void pl_set(pl* list, int index, void* data) {
 	bl_set(list, index, &data);
 }
