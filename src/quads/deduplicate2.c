@@ -16,7 +16,6 @@
 #include "dualtree_rangesearch_2.h"
 #include "bl.h"
 #include "catalog.h"
-//#include "kdtree/kdtree.h"
 
 #define OPTIONS "hi:o:d:k:A:B:C:D:"
 const char HelpString[] =
@@ -119,7 +118,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Will write to catalogue %s...\n", outfname);
 
-	cat = catalog_open(infname, 1);
+	cat = catalog_open_file(infname, 1);
 
     if (!cat) {
 		fprintf(stderr, "Couldn't open catalog %s.objs\n", infname);

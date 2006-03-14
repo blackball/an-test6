@@ -3,20 +3,21 @@
 #include <string.h>
 #include "mathutil.h"
 
+#define GAUSSIAN_SAMPLE_INVALID -1e300
+
 double gaussian_sample(double mean, double stddev) {
 	// from http://www.taygeta.com/random/gaussian.html
 	// Algorithm by Dr. Everett (Skip) Carter, Jr.
-	const double INVALID = -1e300;
-	static double y2 = INVALID;
+	static double y2 = GAUSSIAN_SAMPLE_INVALID;
 	double x1, x2, w, y1;
 
 	// this algorithm generates random samples in pairs; the INVALID
 	// jibba-jabba stores the second value until the next time the
 	// function is called.
 
-	if (y2 != INVALID) {
+	if (y2 != GAUSSIAN_SAMPLE_INVALID) {
 		y1 = y2;
-		y2 = INVALID;
+		y2 = GAUSSIAN_SAMPLE_INVALID;
 		return mean + y1 * stddev;
 	}
 	do {
