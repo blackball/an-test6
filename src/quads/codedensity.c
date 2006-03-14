@@ -16,7 +16,7 @@
 #include "fileutil.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-#include "dualtree_2.h"
+//#include "dualtree.h"
 #include "dualtree_max_2.h"
 
 #define OPTIONS "ht:cpr4" // n:
