@@ -9,34 +9,44 @@ env = Environment(LIBS='m',
                   CPPPATH=Split('kdtree kdtree/CuTest/ .'))
 
 KD = 'kdtree/kdtree.c kdtree/kdtree_io.c ioutils.c'.split()
-# this is what you need to get dyv to link :)
-#AM = 'KD/amdyv.c KD/ambs.c KD/amma.c KD/amar.c KD/am_string.c KD/amiv.c KD/am_file.c ' + \
-#  'KD/am_proc.c KD/am_string_array.c KD/amdyv_array.c KD/command.c';
-#AM = AM.split()
 
-env.Program('deduplicate', KD + Split('deduplicate.c catalog.c fileutil.c mathutil.c bl.c '
-	'dualtree_rangesearch.c dualtree.c starutil.c'))
-env.Program('hpquads', Split('hpquads.c tic.c starutil.c ioutils.c catalog.c '
-                             'fileutil.c bl.c healpix.c mathutil.c'))
-env.Program('dedup_index', Split('dedup_index.c starutil.c fileutil.c mathutil.c codefile.c quadfile.c bl.c'))
-env.Program('codetree', KD + Split('codetree.c fileutil.c codefile.c'))
-env.Program('slave', KD + Split('slave.c catalog.c '
-				'hitlist_healpix.c bl.c solver.c '
-				'fileutil.c intmap.c starutil.c tic.c quadfile.c xylist.c matchfile.c mathutil.c healpix.c'))
-env.Program('findstar', KD + Split('findstar.c catalog.c fileutil.c'))
-env.Program('findquad', Split('findquad.c fileutil.c'))
-env.Program('startree', KD + Split('startree.c fileutil.c'))
-
-env.Program('randcat', KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c bl.c'))
-env.Program('genfields', KD + Split('genfields.c mathutil.c starutil.c fileutil.c bl.c'))
+env.Program('deduplicate',
+            KD + Split('deduplicate.c catalog.c fileutil.c mathutil.c bl.c '
+                       'starutil.c dualtree_rangesearch.c dualtree.c'))
+env.Program('hpquads',
+            Split('hpquads.c tic.c starutil.c ioutils.c catalog.c fileutil.c '
+                  'bl.c healpix.c mathutil.c'))
+env.Program('dedup_index',
+            Split('dedup_index.c starutil.c fileutil.c mathutil.c codefile.c '
+                  'quadfile.c bl.c'))
+env.Program('codetree',
+            KD + Split('codetree.c fileutil.c codefile.c'))
+env.Program('slave',
+            KD + Split('slave.c catalog.c  hitlist_healpix.c bl.c solver.c '
+                       'fileutil.c intmap.c starutil.c tic.c quadfile.c '
+                       'xylist.c matchfile.c mathutil.c healpix.c'))
+env.Program('findstar',
+            KD + Split('findstar.c catalog.c fileutil.c'))
+env.Program('findquad',
+            Split('findquad.c fileutil.c'))
+env.Program('startree',
+            KD + Split('startree.c fileutil.c'))
+env.Program('randcat',
+            KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c '
+                       'bl.c'))
+env.Program('genfields',
+            KD + Split('genfields.c mathutil.c starutil.c fileutil.c bl.c'))
 
 tests = [
-env.Program('test_kdtree', Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c '
-                                 'kdtree/test_kdtree.c')),
-env.Program('test_healpix', Split('kdtree/CuTest/CuTest.c test_healpix.c '
-                                  'healpix.c starutil.c mathutil.c bl.c')),
-env.Program('test_bl', Split('kdtree/CuTest/CuTest.c test_bl.c bl.c')),
+    env.Program('test_kdtree',
+                Split('kdtree/kdtree.c kdtree/CuTest/CuTest.c '
+                      'kdtree/test_kdtree.c')),
+    env.Program('test_healpix',
+                Split('kdtree/CuTest/CuTest.c test_healpix.c healpix.c '
+                      'starutil.c mathutil.c bl.c')),
+    env.Program('test_bl',
+                Split('kdtree/CuTest/CuTest.c test_bl.c bl.c')),
 ]
-cmd_tests = [env.Command('%s.out' % str(t[0]), str(t[0]), './%s > $TARGET' %
-                         str(t[0]))
+cmd_tests = [env.Command('%s.out' % str(t[0]), str(t[0]),
+                         './%s > $TARGET' % str(t[0]))
              for t in tests]
