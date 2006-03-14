@@ -83,7 +83,7 @@ int main(int argc, char** args) {
   printf("NumFields %i.\n", numfields);
 
   for (j=0; j<numfields; j++) {
-	  blocklist* points;
+	  dl* points;
 
 	  points = read_ls_file_field(f, 2);
 	  if (!points) {
@@ -95,14 +95,14 @@ int main(int argc, char** args) {
 		  healpixes[i] = 0;
 	  }
 
-	  npoints = blocklist_count(points) / 2;
+	  npoints = dl_size(points) / 2;
 
 	  for (i=0; i<npoints; i++) {
 		  double ra, dec;
 		  int hp;
 
-		  ra = blocklist_double_access(points, i*2);
-		  dec = blocklist_double_access(points, i*2 + 1);
+		  ra  = dl_get(points, i*2);
+		  dec = dl_get(points, i*2 + 1);
 
 		  ra  *= M_PI / 180.0;
 		  dec *= M_PI / 180.0;
@@ -127,7 +127,7 @@ int main(int argc, char** args) {
 		  fprintf(stderr, "%i ", j);
 	  }
 
-	  blocklist_free(points);
+	  dl_free(points);
   }
 
   if (!fromstdin)
