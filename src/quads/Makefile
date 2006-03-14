@@ -20,30 +20,21 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o 
 
-AM_OBJ = KD/command.o KD/amar.o KD/ambs.o KD/amdyv_array.o \
-	KD/amdyv.o KD/amma.o KD/amiv.o KD/am_file.o KD/am_proc.o \
-	KD/am_string.o KD/am_string_array.o \
-	KD/am_time.o KD/distances.o KD/genarray.o KD/hrect.o \
-	fileutil_am.o starutil_am.o mathutil_am.o
-
 SOLVER_OBJ = solver.o
-
-# execs that need AM's non-kdtree stuff
-AM_EXECS = findquad
 
 # execs that don't need AM's stuff
 EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls \
 	certifiable hpquads dedup_index codetree startree \
 	codetomatlab printcatalog fixcatalogheader deduplicate \
-	randcat genfields codedensity agreeable
+	randcat genfields codedensity agreeable findquad
 
 # execs that require solver.o
 SOLVER_EXECS = slave
 
 # postmortem requires: findstar(2), findquad, certifiable
 
-MY_OBJ = randcat.o genfields.o findstar.o findquad.o findcode.o \
+MY_OBJ = randcat.o genfields.o findstar.o findquad.o \
 	starutil.o fileutil.o mathutil.o fixcatalogheader.o \
 	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
 	xylstomatlab.o rdlstohealpix.o slave.o fixmatchfile.o \
@@ -53,14 +44,11 @@ MY_OBJ = randcat.o genfields.o findstar.o findquad.o findcode.o \
 
 # solvexy2.o 
 
-ALL_OBJ = $(OBJ) $(AM_OBJ) $(MY_OBJ) $(SOLVER_OBJ)
+ALL_OBJ = $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-all: $(EXECS) $(AM_EXECS) $(SOLVER_EXECS)
+all: $(EXECS) $(SOLVER_EXECS)
 
-$(EXECS) :: %: %.o $(OBJ) $(NOAM_OBJ)
-	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
-
-$(AM_EXECS) :: %: %.o $(OBJ) $(AM_OBJ)
+$(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)

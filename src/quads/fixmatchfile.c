@@ -7,7 +7,6 @@
 #include "mathutil.h"
 #include "matchobj.h"
 #include "hitsfile.h"
-#include "hitlist.h"
 #include "matchfile.h"
 
 char* OPTIONS = "hi:f:";
