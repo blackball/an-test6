@@ -12,11 +12,10 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "solver2.h"
 #include "solver2_callbacks.h"
 #include "hitsfile.h"

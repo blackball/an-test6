@@ -8,7 +8,6 @@
 #include "healpix.h"
 #include "starutil.h"
 #include "lsfile.h"
-#include "blocklist.h"
 
 int convert_file(char* fn)
 {

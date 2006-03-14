@@ -6,7 +6,6 @@
 
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
 #include "kdtree/kdtree.h"
 #include "matchobj.h"
 #include "solver2.h"

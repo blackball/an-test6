@@ -1,7 +1,7 @@
 #include <math.h>
 
-#include "blocklist.h"
-typedef blocklist hitlist;
+#include "bl.h"
+typedef pl hitlist;
 #define DONT_DEFINE_HITLIST
 #include "hitlist.h"
 
@@ -33,21 +33,21 @@ void hitlist_set_default_parameters() {
 }
 
 hitlist* hitlist_new() {
-	return blocklist_pointer_new(256);
+	return pl_new(256);
 }
 
 void hitlist_free(hitlist* hl) {
-	blocklist_free(hl);
+	pl_free(hl);
 }
 
 int hitlist_count_best(hitlist* hl) {
     int i, N;
 	int bestnum = 0;
-    N = blocklist_count(hl);
+    N = pl_size(hl);
     for (i=0; i<N; i++) {
 		int M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
-		M = blocklist_count(hits);
+		pl* hits = (pl*)pl_get(hl, i);
+		M = pl_size(hits);
 		if (M > bestnum) {
 			bestnum = M;
 		}
@@ -58,29 +58,29 @@ int hitlist_count_best(hitlist* hl) {
 int hitlist_count_all(hitlist* hl) {
     int i, N;
 	int sum = 0;
-    N = blocklist_count(hl);
+    N = pl_size(hl);
     for (i=0; i<N; i++) {
 		int M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
-		M = blocklist_count(hits);
+		pl* hits = (pl*)pl_get(hl, i);
+		M = pl_size(hits);
 		sum += M;
 	}
 	return sum;
 }
 
-blocklist* hitlist_get_best(hitlist* hl) {
+pl* hitlist_get_best(hitlist* hl) {
     int i, N;
     int bestnum;
-	blocklist* bestlist;
-	blocklist* bestcopy;
+	pl* bestlist;
+	pl* bestcopy;
 
 	bestnum = 0;
 	bestlist = NULL;
-    N = blocklist_count(hl);
+    N = pl_size(hl);
     for (i=0; i<N; i++) {
 		int M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
-		M = blocklist_count(hits);
+		pl* hits = (pl*)pl_get(hl, i);
+		M = pl_size(hits);
 		if (M > bestnum) {
 			bestnum = M;
 			bestlist = hits;
@@ -88,36 +88,38 @@ blocklist* hitlist_get_best(hitlist* hl) {
 	}
 
 	// shallow copy...
-	bestcopy = blocklist_pointer_new(256);
+	bestcopy = pl_new(256);
 	if (bestlist) {
 		for (i=0; i<bestnum; i++) {
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(bestlist, i);
-			blocklist_pointer_append(bestcopy, mo);
+			MatchObj* mo = (MatchObj*)pl_get(bestlist, i);
+			pl_append(bestcopy, mo);
 		}
 	}
 	return bestcopy;
 }
 
-void hitlist_add_hits(hitlist* hl, blocklist* hits) {
-	int i, N;
-	N = blocklist_count(hits);
-	for (i=0; i<N; i++) {
-		MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, i);
-		hitlist_add_hit(hl, mo);
-	}
-}
+/*
+  void hitlist_add_hits(hitlist* hl, blocklist* hits) {
+  int i, N;
+  N = pl_size(hits);
+  for (i=0; i<N; i++) {
+  MatchObj* mo = (MatchObj*)pl_get(hits, i);
+  hitlist_add_hit(hl, mo);
+  }
+  }
+*/
 
-blocklist* hitlist_get_all(hitlist* bl) {
+pl* hitlist_get_all(hitlist* bl) {
 	int i, j, M, N;
 
-	blocklist* all = blocklist_pointer_new(256);
-	N = blocklist_count(bl);
+	pl* all = pl_new(256);
+	N = pl_size(bl);
 	for (i=0; i<N; i++) {
-		blocklist* lst = (blocklist*)blocklist_pointer_access(bl, i);
-		M = blocklist_count(lst);
+		pl* lst = (pl*)pl_get(bl, i);
+		M = pl_size(lst);
 		for (j=0; j<M; j++) {
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(lst, j);
-			blocklist_pointer_append(all, mo);
+			MatchObj* mo = (MatchObj*)pl_get(lst, j);
+			pl_append(all, mo);
 		}
 	}
 	return all;
@@ -125,18 +127,18 @@ blocklist* hitlist_get_all(hitlist* bl) {
 
 int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
     int i, N;
-    blocklist* newlist;
-	blocklist* mergelist = NULL;
+    pl* newlist;
+	pl* mergelist = NULL;
 
-    N = blocklist_count(hlist);
+    N = pl_size(hlist);
 
     for (i=0; i<N; i++) {
 		int j, M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hlist, i);
-		M = blocklist_count(hits);
+		pl* hits = (pl*)pl_get(hlist, i);
+		M = pl_size(hits);
 		for (j=0; j<M; j++) {
 			double d2;
-			MatchObj* m = (MatchObj*)blocklist_pointer_access(hits, j);
+			MatchObj* m = (MatchObj*)pl_get(hits, j);
 			d2 = distsq(mo->vector, m->vector, MATCH_VECTOR_SIZE);
 			if (d2 < square(AgreeTol)) {
 				if (!mergelist) {
@@ -149,7 +151,7 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 					// DEBUG
 					blocklist_pointer_set(hlist, i, NULL);
 					
-					blocklist_remove_index(hlist, i);
+					pl_remove_index(hlist, i);
 					i--;
 					N--;
 				}
@@ -158,27 +160,27 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo) {
 		}
     }
 	if (mergelist) {
-		return blocklist_count(mergelist);
+		return pl_size(mergelist);
 	}
 
     // no agreement - create new list.
     //newlist = blocklist_pointer_new(10);
-    newlist = blocklist_pointer_new(1);
-    blocklist_pointer_append(newlist, mo);
-    blocklist_pointer_append(hlist, newlist);
+    newlist = pl_new(1);
+    pl_append(newlist, mo);
+    pl_append(hlist, newlist);
 
     return 1;
 }
 
 void hitlist_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {
     int i, N;
-    N = blocklist_count(hl);
+    N = pl_size(hl);
     for (i=0; i<N; i++) {
 		int j, M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
-		M = blocklist_count(hits);
+		pl* hits = (pl*)pl_get(hl, i);
+		M = pl_size(hits);
 		for (j=0; j<M; j++) {
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
+			MatchObj* mo = (MatchObj*)pl_get(hits, j);
 			free_function(mo);
 		}
 	}
@@ -186,16 +188,16 @@ void hitlist_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {
 
 void hitlist_clear(hitlist* hl) {
     int i, N;
-    N = blocklist_count(hl);
+    N = pl_size(hl);
     for (i=0; i<N; i++) {
 		int j, M;
-		blocklist* hits = (blocklist*)blocklist_pointer_access(hl, i);
-		M = blocklist_count(hits);
+		pl* hits = (pl*)pl_get(hl, i);
+		M = pl_size(hits);
 		for (j=0; j<M; j++) {
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(hits, j);
+			MatchObj* mo = (MatchObj*)pl_get(hits, j);
 			free_MatchObj(mo);
 		}
-		blocklist_pointer_free(hits);
+		pl_free(hits);
     }
-    blocklist_remove_all(hl);
+    pl_remove_all(hl);
 }
