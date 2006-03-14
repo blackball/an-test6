@@ -8,8 +8,8 @@
 #include "mathutil.h"
 #include "kdtree/kdtree.h"
 #include "matchobj.h"
-#include "solver2.h"
-#include "solver2_callbacks.h"
+#include "solver.h"
+#include "solver_callbacks.h"
 
 void solver_default_params(solver_params* params) {
 	params->field = NULL;

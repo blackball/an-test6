@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "starutil.h"
-#include "solver2.h"
+#include "solver.h"
 #include "matchfile.h"
 
 struct hitsfileheader {
