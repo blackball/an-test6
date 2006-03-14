@@ -28,7 +28,7 @@ env.Program('findquad', AM + Split('findquad.c fileutil_am.c fileutil.c starutil
 """
 env.Program('findcode', Split('findcode.c fileutil_amkd.c fileutil_am.c fileutil.c starutil_am.c starutil.c kdutil.c'))
 """
-env.Program('startree2', KD + Split('startree2.c fileutil.c'))
+env.Program('startree', KD + Split('startree.c fileutil.c'))
 
 env.Program('randcat', KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c bl.c'))
 env.Program('genfields', KD + Split('genfields.c mathutil.c starutil.c fileutil.c bl.c'))

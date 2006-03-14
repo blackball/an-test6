@@ -15,7 +15,6 @@
 
 #define mk_catfn(s)    mk_filename(s,".objs")
 #define mk_streefn(s)  mk_filename(s,".skdt")
-#define mk_stree2fn(s)  mk_filename(s,".skdt2")
 #define mk_ctreefn(s)  mk_filename(s,".ckdt")
 #define mk_quadfn(s)   mk_filename(s,".quad")
 #define mk_quad0fn(s)  mk_filename(s,".quad_")
