@@ -60,6 +60,16 @@ int kdtree_get_childid1(kdtree_t* tree, int nodeid);
 
 int kdtree_get_childid2(kdtree_t* tree, int nodeid);
 
+real kdtree_bb_mindist2(real* bblow1, real* bbhigh1,
+						real* bblow2, real* bbhigh2, int dim);
+
+real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1,
+						real* bblow2, real* bbhigh2, int dim);
+
+real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node);
+
+real* kdtree_get_bb_high(kdtree_t* tree, kdtree_node_t* node);
+
 real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
 							   kdtree_t* tree2, kdtree_node_t* node2);
 

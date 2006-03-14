@@ -4,19 +4,18 @@
 
    Author: dstn
 
-   Input:  .skdt or .ckdt
-   Output: 
+   Input:  .skdt2 or .ckdt2
+   Output: matlab literals
 */
 
 #include <errno.h>
 
 #include "starutil.h"
-#include "kdutil.h"
 #include "fileutil.h"
-#include "KD/kdtree.h"
-#include "KD/distances.h"
-#include "dualtree.h"
-#include "dualtree_max.h"
+#include "kdtree/kdtree.h"
+#include "kdtree/kdtree_io.h"
+#include "dualtree_2.h"
+#include "dualtree_max_2.h"
 
 #define OPTIONS "ht:cprn:4"
 
@@ -26,9 +25,10 @@ extern int optind, opterr, optopt;
 bool radec = FALSE;
 bool write_nearby = FALSE;
 double nearby_radius = -1.0;
-dyv_array* array = NULL;
 bool do_perms = FALSE;
 int permnum = 0;
+
+kdtree_t* tree = NULL;
 
 void print_help(char* progname) {
     fprintf(stderr, "Usage: %s -t <tree-file> [-c] [-p] [-4]\n\n"
@@ -41,27 +41,25 @@ void print_help(char* progname) {
 			progname);
 }
 
-hrect tmp_hrect;
-dyv* tmp_dyv;
 
-void swap_coords(dyv* v) {
+void swap_coords(double* v) {
 	double tmp;
 	if (permnum & 1) {
 		// swap C, D:  0-2, 1-3
-		tmp = dyv_ref(v, 0);
-		dyv_set(v, 0, dyv_ref(v, 2));
-		dyv_set(v, 2, tmp);
+		tmp = v[0];
+		v[0] = v[2];
+		v[2] = v[0];
 
-		tmp = dyv_ref(v, 1);
-		dyv_set(v, 1, dyv_ref(v, 3));
-		dyv_set(v, 3, tmp);
+		tmp = v[1];
+		v[1] = v[3];
+		v[3] = v[1];
 	}
 	if (permnum & 2) {
 		// swap A, B: x -> 1-x
-		dyv_set(v, 0, 1.0 - dyv_ref(v, 0));
-		dyv_set(v, 1, 1.0 - dyv_ref(v, 1));
-		dyv_set(v, 2, 1.0 - dyv_ref(v, 2));
-		dyv_set(v, 3, 1.0 - dyv_ref(v, 3));
+		v[0] = 1.0 - v[0];
+		v[1] = 1.0 - v[1];
+		v[2] = 1.0 - v[2];
+		v[3] = 1.0 - v[3];
 	}
 }
 
@@ -114,15 +112,17 @@ double point_to_point_dist2(dyv* a, dyv* b) {
 }
 
 
-void bounds_function(void* extra, node* query, node* search, double thresh,
-					 double* lower, double* upper) {
+void bounds_function(void* extra, kdtree_node_t* ynode,
+					 kdtree_node_t* xnode,
+					 double pruning_thresh, double* lower, double* upper)
+{
     double min2, max2;
-    min2 = -box_to_box_min_dist2(query->box, search->box);
+	min2 = -kdtree_node_node_mindist2(tree, xnode, tree, ynode);
     *upper = min2;
     if (min2 < thresh) {
 		return;
     }
-    max2 = -box_to_box_max_dist2(query->box, search->box);
+	max2 = -kdtree_node_node_maxdist2(tree, xnode, tree, ynode);
     *lower = max2;
 }
 
@@ -409,9 +409,7 @@ void max_end_results(void* extra, node* query) {
 int main(int argc, char *argv[]) {
     int argchar;
     char *treefname = NULL;
-    FILE *treefid = NULL;
-    kdtree *tree = NULL;
-    dualtree_max_callbacks max_callbacks;
+    dualtree_max_callbacks_2 max_callbacks;
     int i, N, D;
     bool check = FALSE;
     bool write_points = FALSE;
@@ -464,20 +462,14 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stdout, "  Reading KD tree from %s...", treefname);
-    fflush(stdout);
-    fopenin(treefname, treefid);
-    tree = fread_kdtree(treefid);
-    fclose(treefid);
-    treefid = NULL;
-    if (!tree)
-		return (2);
-    fprintf(stdout, "done\n    (%d points, %d nodes, depth %d).\n",
-			kdtree_num_points(tree), kdtree_num_nodes(tree),
-			kdtree_max_depth(tree));
 
-    if (check || write_points || write_nearby) {
-		array = mk_dyv_array_from_kdtree(tree);
-    }
+	tree = kdtree_read_file(treefname);
+	if (!tree) {
+		fprintf(stderr, "Couldn't read tree from file %s.\n", treefname);
+		exit(-1);
+	}
+    fprintf(stdout, "done\n    (%d points, %d nodes).\n",
+			tree->ndata, tree->nnodes);
 
     //
     memset(&max_callbacks, 0, sizeof(max_callbacks));
@@ -486,13 +478,12 @@ int main(int argc, char *argv[]) {
     max_callbacks.result = max_results;
     max_callbacks.end_results = max_end_results;
 
-    N = tree->root->num_points;
-    D = kdtree_num_dims(tree);
+    N = tree->ndata;
+    D = tree->ndim;
 
     nndists = (double*)malloc(N * sizeof(double));
     nninds = (int*)malloc(N * sizeof(int));
     for (i=0; i<N; i++) {
-		//nndists[i] = -1.0;
 		nndists[i] = 1e300;
 		nninds[i] = -1;
     }
@@ -515,11 +506,11 @@ int main(int argc, char *argv[]) {
 		fprintf(fout, "points=zeros([%i,%i]);\n", N, D);
 		for (i=0; i<N; i++) {
 			int d;
-			dyv* v;
+			double* v;
 			fprintf(fout, "points(%i,:)=[", (i+1));
-			v = dyv_array_ref(array, i);
+			v = tree->data + i*D;
 			for (d=0; d<D; d++) {
-				fprintf(fout, "%g,", dyv_ref(v, d));
+				fprintf(fout, "%g,", v[d]);
 			}
 			fprintf(fout, "];\n");
 		}
@@ -527,10 +518,10 @@ int main(int argc, char *argv[]) {
 			fprintf(fout, "radec=zeros([%i,2]);\n", N);
 			for (i=0; i<N; i++) {
 				double x,y,z,ra,dec;
-				dyv* v = dyv_array_ref(array, i);
-				x = dyv_ref(v, 0);
-				y = dyv_ref(v, 1);
-				z = dyv_ref(v, 2);
+				v = tree->data + i*D;
+				x = v[0];
+				y = v[1];
+				z = v[2];
 				ra  = xy2ra(x, y);
 				dec = z2dec(z);
 				fprintf(fout, "radec(%i,:)=[%g,%g];\n",
@@ -542,21 +533,13 @@ int main(int argc, char *argv[]) {
 		break;
     }
 
-	if (do_perms) {
-		//int D = dyv_size(dyv_array_ref(tree->root->points, 0));
-		int D = 4;
-		tmp_hrect.lo = mk_dyv(D);
-		tmp_hrect.hi = mk_dyv(D);
-		tmp_dyv = mk_dyv(D);
-	}
-
-    dualtree_max(tree, tree, &max_callbacks, 1);
+    dualtree_max_2(tree, tree, &max_callbacks, 1);
 	if (do_perms) {
 		int i;
 		for (i=1; i<4; i++) {
 			printf("Doing permutation %i...\n", i);
 			permnum = i;
-			dualtree_max(tree, tree, &max_callbacks, 1);
+			dualtree_max_2(tree, tree, &max_callbacks, 1);
 		}
 	}
 
@@ -577,22 +560,22 @@ int main(int argc, char *argv[]) {
 		printf("Checking against exhaustive search...\n");
 		fflush(stdout);
 		for (i=0; i<N; i++) {
-			dyv* point1;
+			double* point1;
 			if (i && (i % 1000 == 0)) {
 				printf("%i checked.\n", i);
 				fflush(stdout);
 			}
 			best = 1e300;
 			bestind = -1;
-			point1 = dyv_array_ref(array, i);
+			point1 = tree->data + i*D;
 			if (do_perms) {
 				for (j=0; j<N; j++) {
-					dyv* point2;
+					double* point2;
 					double d2;
 					if (i == j) continue;
-					point2 = dyv_array_ref(array, j);
+					point2 = tree->data + j*D;
 					for (permnum = 0; permnum<4; permnum++) {
-						d2 = point_to_point_dist2(point1, point2);
+						d2 = distsq(point1, point2, D);
 						if (d2 < best) {
 							best = d2;
 							bestind = j;
@@ -601,11 +584,11 @@ int main(int argc, char *argv[]) {
 				}
 			} else {
 				for (j=0; j<N; j++) {
-					dyv* point2;
+					double* point2;
 					double d2;
 					if (i == j) continue;
-					point2 = dyv_array_ref(array, j);
-					d2 = dyv_dyv_dsqd(point1, point2);
+					point2 = tree->data + j*D;
+					d2 = distsq(point1, point2, D);
 					if (d2 < best) {
 						best = d2;
 						bestind = j;
@@ -624,19 +607,8 @@ int main(int argc, char *argv[]) {
 		printf("Correctness check complete.\n");
     }
 
-	if (do_perms) {
-		free_dyv(tmp_hrect.lo);
-		free_dyv(tmp_hrect.hi);
-		free_dyv(tmp_dyv);
-	}
-
-    if (array) {
-		free_dyv_array_from_kdtree(array);
-    }
-
     free(nninds);
     free(nndists);
-    free_kdtree(tree);
+    kdtree_close(tree);
     return 0;
-
 }
