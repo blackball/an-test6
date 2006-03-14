@@ -85,7 +85,7 @@ healgen_lb,nside,finerap,finedecp
 help, nstars,band,minmag,scale,nside,prefix,bigrap,finerap
 
 ; loop over big healpix pixels
-for bigpix= 7L,n_elements(bigrap)-1L do begin
+for bigpix= 1L,n_elements(bigrap)-1L do begin
     bigpixstr= string(bigpix,format='(I2.2)')
     objsfile= prefix+'_'+bigpixstr+'.objs'
     savefile= prefix+'_'+bigpixstr+'.sav'
