@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <errno.h>
-#include <string.h>
 #include <limits.h>
+#include <string.h>
 
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
-#include "blocklist.h"
+#include "bl.h"
 #include "matchobj.h"
 #include "hitsfile.h"
-#include "hitlist.h"
+#include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:L:M:";
+char* OPTIONS = "hH:n:A:B:F:L:M:f:m:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -20,21 +20,23 @@ void printHelp(char* progname) {
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
 			"   [-F flush-interval]\n"
+			"   [-f flush-field-interval]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
+			"   [-m agreement-tolerance-in-arcsec]\n"
  			"   [-n matches_needed_to_agree]\n"
-			"%s"
 			"\nIf filename FLUSH is specified, agreeing matches will"
 			" be written out.\n"
 			"\nIf no match files are given, will read from stdin.\n",
-			progname, hitlist_get_parameter_help());
+			progname);
 }
 
-int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids, int* p_ok);
+int find_correspondences(pl* hits, sidx* starids, sidx* fieldids, int* p_ok);
 
 void flush_solved_fields(bool doleftovers, bool doagree, bool addunsolved, bool cleanup);
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
+#define DEFAULT_AGREE_TOL 7.0
 
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 
@@ -44,50 +46,17 @@ char* leftoverfname = NULL;
 FILE* leftoverfid = NULL;
 char* agreefname = NULL;
 FILE* agreefid = NULL;
-blocklist* hitlists;
-blocklist *solved;
-blocklist *unsolved;
-blocklist* flushed;
+pl* hitlists;
+il* solved;
+il* unsolved;
+il* flushed;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-// returns a newly-allocated string with all instances of "from"
-// converted to "to".  Note, find-and-replace is performed iteratively.
-char* find_and_replace(char* string, char* from, char* to) {
-	// efficiency is not the goal of this exercise...
-	char* tmpcopy;
-	char* searchstart;
-	int fromlen = strlen(from);
-	int lendiff = strlen(to) - fromlen;
-	tmpcopy = strdup(string);
-	string = tmpcopy;
-	searchstart = string;
-	for (;;) {
-		int newlen;
-		char* start = strstr(searchstart, from);
-		if (!start) break;
-		//printf("searching for \"%s\" in \"%s\", found \"%s\".\n", from, searchstart, start);
-		newlen = strlen(string) + lendiff;
-		tmpcopy = (char*)malloc(newlen + 1);
-		/*
-		  printf("writing: \"%.*s\"\n", start-string, string);
-		  printf("writing: \"%s\"\n", to);
-		  printf("writing: \"%s\"\n", start + fromlen);
-		*/
-		sprintf(tmpcopy, "%.*s%s%s", start - string, string, to, start + fromlen);
-		searchstart = tmpcopy + (start - string);
-		string = tmpcopy;
-	}
-	return string;
-}
-
-
 int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
-	char* hitlist_options;
-	char alloptions[256];
 	hits_header hitshdr;
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
@@ -95,23 +64,32 @@ int main(int argc, char *argv[]) {
 	int i;
 	int firstfield=-1, lastfield=INT_MAX;
 	int flushinterval = 0;
+	int flushfieldinterval = 0;
 	bool leftovers = FALSE;
 	bool agree = FALSE;
+	double ramin, ramax, decmin, decmax;
+	double agreetolarcsec = DEFAULT_AGREE_TOL;
 
-	hitlist_set_default_parameters();
-	hitlist_options = hitlist_get_parameter_options();
-	sprintf(alloptions, "%s%s", OPTIONS, hitlist_options);
-
-    while ((argchar = getopt (argc, argv, alloptions)) != -1) {
-		char* ind = index(hitlist_options, argchar);
-		if (ind) {
-			if (hitlist_process_parameter(argchar, optarg)) {
-				printHelp(progname);
-				exit(-1);
-			}
-			continue;
-		}
+    while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'm':
+			agreetolarcsec = atof(optarg);
+			break;
+		case 'r':
+			ramin = atof(optarg);
+			break;
+		case 'R':
+			ramax = atof(optarg);
+			break;
+		case 'd':
+			decmin = atof(optarg);
+			break;
+		case 'D':
+			decmax = atof(optarg);
+			break;
+		case 'f':
+			flushfieldinterval = atoi(optarg);
+			break;
 		case 'M':
 			agreefname = optarg;
 			break;
@@ -168,24 +146,13 @@ int main(int argc, char *argv[]) {
 		agree = TRUE;
 	}
 
-	hitlists = blocklist_pointer_new(256);
-	flushed = blocklist_int_new(256);
-	solved = blocklist_int_new(256);
-	unsolved = blocklist_int_new(256);
+	hitlists = pl_new(256);
+	flushed = il_new(256);
+	solved = il_new(256);
+	unsolved = il_new(256);
 
 	// write HITS header.
 	hits_header_init(&hitshdr);
-	//hitshdr.nfields = blocklist_count(hitlists);
-	/*
-	  hitshdr.field_file_name = fieldfname;
-	  hitshdr.tree_file_name = treefname;
-	  hitshdr.ncodes = codekd->ndata;
-	  hitshdr.nstars = numstars;
-	  hitshdr.codetol = codetol;
-	  //hitshdr.agreetol = AgreeArcSec;
-	  hitshdr.parity = ParityFlip;
-	  hitshdr.max_matches_needed = max_matches_needed;
-	*/
 	hitshdr.nfields = 0;
 	hitshdr.min_matches_to_agree = min_matches_to_agree;
 	hits_write_header(hitfid, &hitshdr);
@@ -247,6 +214,12 @@ int main(int argc, char *argv[]) {
 				fflush(stderr);
 			}
 
+			if (flushfieldinterval &&
+				((nread % flushfieldinterval) == 0)) {
+				fprintf(stderr, "\nRead %i matches; flushing solved fields.\n", nread);
+				flush_solved_fields(FALSE, agree, FALSE, FALSE);
+			}
+
 			if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
 				free_MatchObj(mo);
 				free(me.indexpath);
@@ -255,63 +228,43 @@ int main(int argc, char *argv[]) {
 			}
 
 			// get the existing hitlist for this field...
-			if (fieldnum < blocklist_count(hitlists)) {
-				hl = (hitlist*)blocklist_pointer_access(hitlists, fieldnum);
+			if (fieldnum < pl_size(hitlists)) {
+				hl = (hitlist*)pl_get(hitlists, fieldnum);
 				if (!hl) {
 					// check if it's NULL because it's been flushed.
-					if (blocklist_int_contains(flushed, fieldnum)) {
+					if (il_contains(flushed, fieldnum)) {
 						//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
 						free_MatchObj(mo);
 						free(me.indexpath);
 						free(me.fieldpath);
 						continue;
 					}
-					hl = hitlist_new();
-					blocklist_pointer_set(hitlists, fieldnum, hl);
+					hl = hitlist_healpix_new(agreetolarcsec);
+					pl_set(hitlists, fieldnum, hl);
 				}
 			} else {
 				int k;
-				for (k=blocklist_count(hitlists); k<fieldnum; k++)
-					blocklist_pointer_append(hitlists, NULL);
-				hl = hitlist_new();
-				blocklist_pointer_append(hitlists, hl);
+				for (k=pl_size(hitlists); k<fieldnum; k++)
+					pl_append(hitlists, NULL);
+				hl = hitlist_healpix_new(agreetolarcsec);
+				pl_append(hitlists, hl);
 			}
 
 			if (leftovers || agree) {
-				char* newpath;
 				mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
-
-				// DEBUG - tweak pathnames.
-				newpath = find_and_replace(me.indexpath,
-										   "/home/dstn",
-										   "/p/learning/stars");
-				free(me.indexpath);
-				me.indexpath = newpath;
-
-				newpath = find_and_replace(me.indexpath,
-										   "/scruser/10/dstn",
-										   "/p/learning/stars/INDEXES");
-				free(me.indexpath);
-				me.indexpath = newpath;
-
-				newpath = find_and_replace(me.fieldpath,
-										   "/home/dstn",
-										   "/p/learning/stars");
-				free(me.fieldpath);
-				me.fieldpath = newpath;
-
-
 				memcpy(mecopy, &me, sizeof(matchfile_entry));
 				mo->extra = mecopy;
-
 			} else {
 				mo->extra = NULL;
 				free(me.indexpath);
 				free(me.fieldpath);
 			}
 
+			// compute (x,y,z) center, scale, rotation.
+			hitlist_healpix_compute_vector(mo);
+
 			// add the match...
-			hitlist_add_hit(hl, mo);
+			hitlist_healpix_add_hit(hl, mo);
 		}
 		fprintf(stderr, "\nRead %i matches.\n", nread);
 		fflush(stderr);
@@ -322,10 +275,10 @@ int main(int argc, char *argv[]) {
 
 	flush_solved_fields(leftovers, agree, TRUE, TRUE);
 
-	blocklist_free(hitlists);
-	blocklist_free(flushed);
-	blocklist_free(solved);
-	blocklist_free(unsolved);
+	pl_free(hitlists);
+	il_free(flushed);
+	il_free(solved);
+	il_free(unsolved);
 
 	// finish up HITS file...
 	hits_write_tailer(hitfid);
@@ -347,10 +300,6 @@ void free_extra(MatchObj* mo) {
 	me = (matchfile_entry*)mo->extra;
 	free(me->indexpath);
 	free(me->fieldpath);
-	// DEBUG
-	me->indexpath = NULL;
-	me->fieldpath = NULL;
-	//
 	free(me);
 	mo->extra = NULL;
 }
@@ -360,13 +309,10 @@ void flush_solved_fields(bool doleftovers,
 						 bool addunsolved,
 						 bool cleanup) {
 	int k;
-	blocklist* flushsolved = blocklist_int_new(256);
+	il* flushsolved = il_new(256);
 
-	// Here, we could also just dump all but the best agreeing
-	// matches rather than writing them out right away...
-	
-	for (k=0; k<blocklist_count(hitlists); k++) {
-		blocklist* best;
+	for (k=0; k<pl_size(hitlists); k++) {
+		pl* best;
 		hits_field fieldhdr;
 		int nbest;
 		int fieldnum = k;
@@ -376,23 +322,23 @@ void flush_solved_fields(bool doleftovers,
 		int correspond_ok = 1;
 		int Ncorrespond;
 
-		hitlist* hl = (hitlist*)blocklist_pointer_access(hitlists, fieldnum);
+		hitlist* hl = (hitlist*)pl_get(hitlists, fieldnum);
 		if (!hl) continue;
-		nbest = hitlist_count_best(hl);
+		nbest = hitlist_healpix_count_best(hl);
 		if (nbest < min_matches_to_agree) {
 			if (addunsolved) {
-				blocklist_int_append(unsolved, fieldnum);
+				il_append(unsolved, fieldnum);
 			}
 			if (doleftovers) {
 				int j;
 				int NA;
-				blocklist* all = hitlist_get_all(hl);
-				NA = blocklist_count(all);
+				pl* all = hitlist_healpix_get_all(hl);
+				NA = pl_size(all);
 				fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
 				// write the leftovers...
 				for (j=0; j<NA; j++) {
 					matchfile_entry* me;
-					MatchObj* mo = (MatchObj*)blocklist_pointer_access(all, j);
+					MatchObj* mo = (MatchObj*)pl_get(all, j);
 					me = (matchfile_entry*)mo->extra;
 					if (matchfile_write_match(leftoverfid, mo, me)) {
 						fprintf(stderr, "Error writing a match to %s: %s\n", leftoverfname, strerror(errno));
@@ -400,35 +346,40 @@ void flush_solved_fields(bool doleftovers,
 					}
 				}
 				fflush(leftoverfid);
-				blocklist_free(all);
+				pl_free(all);
 			}
 			if (cleanup) {
-				hitlist_free_extra(hl, free_extra);
+				hitlist_healpix_free_extra(hl, free_extra);
 				// this frees the MatchObjs.
-				hitlist_clear(hl);
-				hitlist_free(hl);
-				blocklist_pointer_set(hitlists, fieldnum, NULL);
+				hitlist_healpix_clear(hl);
+				hitlist_healpix_free(hl);
+				pl_set(hitlists, fieldnum, NULL);
 			}
 			continue;
 		}
 		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
-		best = hitlist_get_best(hl);
+		best = hitlist_healpix_get_best(hl);
+		//best = hitlist_healpix_get_all_best(hl);
+		/*
+		  best = hitlist_get_all_above_size(hl, min_matches_to_agree);
+		*/
 
-		blocklist_int_append(flushsolved, fieldnum);
-		blocklist_int_append(solved, fieldnum);
-		blocklist_int_append(flushed, fieldnum);
+		il_append(flushsolved, fieldnum);
+		il_append(solved, fieldnum);
+		il_append(flushed, fieldnum);
 
 		hits_field_init(&fieldhdr);
 		fieldhdr.field = fieldnum;
-		fieldhdr.nmatches = hitlist_count_all(hl);
+		fieldhdr.nmatches = hitlist_healpix_count_all(hl);
 		fieldhdr.nagree = nbest;
+
 		//hits_write_field_header(hitfid, &fieldhdr);
 		//hits_start_hits_list(hitfid);
 
 		for (j=0; j<nbest; j++) {
 			matchfile_entry* me;
-			MatchObj* mo = (MatchObj*)blocklist_pointer_access(best, j);
+			MatchObj* mo = (MatchObj*)pl_get(best, j);
 			me = (matchfile_entry*)mo->extra;
 
 			if (j == 0) {
@@ -441,8 +392,6 @@ void flush_solved_fields(bool doleftovers,
 			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
-				matchfile_entry* me;
-				me = (matchfile_entry*)mo->extra;
 				if (matchfile_write_match(agreefid, mo, me)) {
 					fprintf(stderr, "Error writing a match to %s: %s\n", agreefname, strerror(errno));
 				}
@@ -450,41 +399,41 @@ void flush_solved_fields(bool doleftovers,
 		}
 		hits_end_hits_list(hitfid);
 
-		starids  = malloc(nbest * 4 * sizeof(sidx));
-		fieldids = malloc(nbest * 4 * sizeof(sidx));
+		starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
+		fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
 		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
 		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 		free(starids);
 		free(fieldids);
 		hits_write_field_tailer(hitfid);
 		fflush(hitfid);
-		blocklist_free(best);
+		pl_free(best);
 
 		// we now dump this hitlist.
-		hitlist_free_extra(hl, free_extra);
-		hitlist_clear(hl);
-		hitlist_free(hl);
-		blocklist_pointer_set(hitlists, fieldnum, NULL);
+		hitlist_healpix_free_extra(hl, free_extra);
+		hitlist_healpix_clear(hl);
+		hitlist_healpix_free(hl);
+		pl_set(hitlists, fieldnum, NULL);
 	}
-	printf("# nsolved = %i\n", blocklist_count(flushsolved));
+	printf("# nsolved = %i\n", il_size(flushsolved));
 	printf("solved=array([");
-	for (k=0; k<blocklist_count(flushsolved); k++) {
-		printf("%i,", blocklist_int_access(flushsolved, k));
+	for (k=0; k<il_size(flushsolved); k++) {
+		printf("%i,", il_get(flushsolved, k));
 	}
 	printf("]);\n");		
 
 	// DEBUG - matlab
 	printf("# solved=[");
-	for (k=0; k<blocklist_count(flushsolved); k++) {
-		printf("%i,", blocklist_int_access(flushsolved, k));
+	for (k=0; k<il_size(flushsolved); k++) {
+		printf("%i,", il_get(flushsolved, k));
 	}
 	printf("];\n");
 	fflush(stdout);
 
-	fprintf(stderr, "Flushed %i fields.\n", blocklist_count(flushsolved));
-	fprintf(stderr, "So far, %i fields have been solved.\n", blocklist_count(solved));
+	fprintf(stderr, "Flushed %i fields.\n", il_size(flushsolved));
+	fprintf(stderr, "So far, %i fields have been solved.\n", il_size(solved));
 
-	blocklist_free(flushsolved);
+	il_free(flushsolved);
 
 	fflush(hitfid);
 }
@@ -509,17 +458,17 @@ inline void add_correspondence(sidx* starids, sidx* fieldids,
 	if (p_ok && !ok) *p_ok = 0;
 }
 
-int find_correspondences(blocklist* hits, sidx* starids, sidx* fieldids,
+int find_correspondences(pl* hits, sidx* starids, sidx* fieldids,
 						 int* p_ok) {
 	int i, N;
 	int M;
 	int ok = 1;
 	MatchObj* mo;
 	if (!hits) return 0;
-	N = blocklist_count(hits);
+	N = pl_size(hits);
 	M = 0;
 	for (i=0; i<N; i++) {
-		mo = (MatchObj*)blocklist_pointer_access(hits, i);
+		mo = (MatchObj*)pl_get(hits, i);
 		add_correspondence(starids, fieldids, mo->iA, mo->fA, &M, &ok);
 		add_correspondence(starids, fieldids, mo->iB, mo->fB, &M, &ok);
 		add_correspondence(starids, fieldids, mo->iC, mo->fC, &M, &ok);
