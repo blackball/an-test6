@@ -44,9 +44,15 @@ struct kdtree_qres {
 };
 typedef struct kdtree_qres kdtree_qres_t;
 
+kdtree_node_t* kdtree_get_root(kdtree_t* kd);
+
 int kdtree_node_is_leaf(kdtree_t* tree, kdtree_node_t* node);
 
 int kdtree_nodeid_is_leaf(kdtree_t* tree, int nodeid);
+
+real* kdtree_node_get_point(kdtree_t* tree, kdtree_node_t* node, int ind);
+
+int kdtree_node_get_index(kdtree_t* tree, kdtree_node_t* node, int ind);
 
 inline kdtree_node_t* kdtree_nodeid_to_node(kdtree_t* kd, int nodeid);
 
@@ -65,6 +71,12 @@ real kdtree_bb_mindist2(real* bblow1, real* bbhigh1,
 
 real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1,
 						real* bblow2, real* bbhigh2, int dim);
+
+real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
+							  real* point, int dim);
+
+real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
+							  real* point, int dim);
 
 real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node);
 

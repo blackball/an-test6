@@ -9,6 +9,8 @@
 */
 
 #include <errno.h>
+#include <string.h>
+#include <math.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -17,7 +19,7 @@
 #include "dualtree_2.h"
 #include "dualtree_max_2.h"
 
-#define OPTIONS "ht:cprn:4"
+#define OPTIONS "ht:cpr4" // n:
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -42,7 +44,7 @@ void print_help(char* progname) {
 }
 
 
-void swap_coords(double* v) {
+void swap_coords(double* v, int permnum) {
 	double tmp;
 	if (permnum & 1) {
 		// swap C, D:  0-2, 1-3
@@ -63,52 +65,76 @@ void swap_coords(double* v) {
 	}
 }
 
-void swap_hrect(hrect* h) {
+void swap_hrect(double* dstlo, double* dsthi,
+				double* srclo, double* srchi,
+				int permnum) {
 	if (permnum & 2) {
 		// swap hi/lo box hrects.
-		copy_dyv(h->lo, tmp_hrect.hi);
-		copy_dyv(h->hi, tmp_hrect.lo);
+		memcpy(dstlo, srchi, 4*sizeof(double));
+		memcpy(dsthi, srclo, 4*sizeof(double));
 	} else {
-		copy_dyv(h->lo, tmp_hrect.lo);
-		copy_dyv(h->hi, tmp_hrect.hi);
+		memcpy(dstlo, srclo, 4*sizeof(double));
+		memcpy(dsthi, srchi, 4*sizeof(double));
 	}
-	swap_coords(tmp_hrect.lo);
-	swap_coords(tmp_hrect.hi);
+	swap_coords(dstlo, permnum);
+	swap_coords(dsthi, permnum);
 }
 
 // a=query, b=search
-double box_to_box_min_dist2(hrect* a, hrect* b) {
-	if (!do_perms)
-		return hrect_hrect_min_dsqd(a, b);
+double box_to_box_min_dist2(kdtree_t* tree1, kdtree_node_t* node1,
+							kdtree_t* tree2, kdtree_node_t* node2) {
+	double tmplo[4], tmphi[4];
+	double *lo1, *hi1, *lo2, *hi2;
 
-	swap_hrect(b);
-	return hrect_hrect_min_dsqd(a, &tmp_hrect);
+	lo1 = kdtree_get_bb_low(tree1, node1);
+	hi1 = kdtree_get_bb_high(tree1, node1);
+	lo2 = kdtree_get_bb_low(tree2, node2);
+	hi2 = kdtree_get_bb_high(tree2, node2);
+
+	if (do_perms) {
+		swap_hrect(tmplo, tmphi, lo1, hi1, permnum);
+		lo1 = tmplo;
+		hi1 = tmphi;
+	}
+	return kdtree_bb_mindist2(lo1, hi1, lo2, hi2, tree->ndim);
 }
 
-double box_to_box_max_dist2(hrect* a, hrect* b) {
-	if (!do_perms)
-		return hrect_hrect_max_dsqd(a, b);
+double box_to_box_max_dist2(kdtree_t* tree1, kdtree_node_t* node1,
+							kdtree_t* tree2, kdtree_node_t* node2) {
+	double tmplo[4], tmphi[4];
+	double *lo1, *hi1, *lo2, *hi2;
 
-	swap_hrect(b);
-	return hrect_hrect_max_dsqd(a, &tmp_hrect);
+	lo1 = kdtree_get_bb_low(tree1, node1);
+	hi1 = kdtree_get_bb_high(tree1, node1);
+	lo2 = kdtree_get_bb_low(tree2, node2);
+	hi2 = kdtree_get_bb_high(tree2, node2);
+
+	if (do_perms) {
+		swap_hrect(tmplo, tmphi, lo1, hi1, permnum);
+		lo1 = tmplo;
+		hi1 = tmphi;
+	}
+	return kdtree_bb_maxdist2(lo1, hi1, lo2, hi2, tree->ndim);
 }
 
-double box_to_point_min_dist2(hrect* b, dyv* a) {
-	// query point, search box.
-	if (!do_perms)
-		return hrect_dyv_min_dsqd(b, a);
-
-	swap_hrect(b);
-	return hrect_dyv_min_dsqd(&tmp_hrect, a);
+double box_to_point_min_dist2(double* bblo, double* bbhi, double* point) {
+	double tmplo[4], tmphi[4];
+	if (do_perms) {
+		swap_hrect(tmplo, tmphi, bblo, bbhi, permnum);
+		bblo = tmplo;
+		bbhi = tmphi;
+	}
+	return kdtree_bb_point_mindist2(bblo, bbhi, point, tree->ndim);
 }
 
-double point_to_point_dist2(dyv* a, dyv* b) {
-	if (!do_perms)
-		return dyv_dyv_dsqd(a, b);
-
-	copy_dyv(b, tmp_dyv);
-	swap_coords(tmp_dyv);
-	return dyv_dyv_dsqd(a, tmp_dyv);
+double point_to_point_dist2(double* a, double* b) {
+	double tmppt[4];
+	if (do_perms) {
+		memcpy(tmppt, b, 4*sizeof(double));
+		swap_coords(tmppt, permnum);
+		b = tmppt;
+	}
+	return distsq(a, b, 4);
 }
 
 
@@ -117,12 +143,12 @@ void bounds_function(void* extra, kdtree_node_t* ynode,
 					 double pruning_thresh, double* lower, double* upper)
 {
     double min2, max2;
-	min2 = -kdtree_node_node_mindist2(tree, xnode, tree, ynode);
+	min2 = -box_to_box_min_dist2(tree, xnode, tree, ynode);
     *upper = min2;
-    if (min2 < thresh) {
+    if (min2 < pruning_thresh) {
 		return;
     }
-	max2 = -kdtree_node_node_maxdist2(tree, xnode, tree, ynode);
+	max2 = -box_to_box_max_dist2(tree, xnode, tree, ynode);
     *lower = max2;
 }
 
@@ -139,13 +165,14 @@ int* bests;
    tree.  For each point in the query tree, we allocate space for a
    pruning threshold and the index of the best point in the search tree.
 */
-void max_start_results(void* extra, node* query, blocklist* leaves, double* pruning_thresh) {
+void max_start_results(void* extra, kdtree_node_t* ynode,
+					   /*pl* leaves,*/
+					   double* pruning_thresh) {
     int i, N;
-    //printf("start results for %p: threshold %g\n", query, *pruning_thresh);
 
-    N = query->num_points;
-    pruning_threshs = (double*)malloc(N * sizeof(double));
-    bests = (int*)malloc(N * sizeof(int));
+    N = kdtree_node_npoints(ynode);
+    pruning_threshs = malloc(N * sizeof(double));
+    bests = malloc(N * sizeof(int));
 
 	if (do_perms && permnum) {
 		// set the pruning threshold to be the nearest neighbour found
@@ -153,7 +180,8 @@ void max_start_results(void* extra, node* query, blocklist* leaves, double* prun
 		for (i=0; i<N; i++) {
 			double oldval;
 			double newval;
-			int ind = ivec_ref(query->pindexes, i);
+			//int ind = tree->inds[ynode->l + i];
+			int ind = ynode->l + i;
 			oldval = -square(nndists[ind]);
 			newval = *pruning_thresh;
 			if (oldval > newval)
@@ -173,29 +201,33 @@ void max_start_results(void* extra, node* query, blocklist* leaves, double* prun
 /**
    This callback is called once for each search node.
 */
-void max_results(void* extra, node* query, node* search, double* pruning_threshold,
-				 double lower, double upper) {
+void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
+				 double* pruning_threshold, double lower, double upper) {
     int i, N, j, M;
+	int ix, iy;
     double prune;
+	double *xbblo, *xbbhi;
 
-    //printf("  %p: %p (%i): [%g, %g]   %g\n",
-    //query, search, search->num_points, lower, upper, *pruning_threshold);
+	xbblo = kdtree_get_bb_low(tree, xnode);
+	xbbhi = kdtree_get_bb_high(tree, xnode);
 
-    N = query->num_points;
-    M = search->num_points;
+    N = kdtree_node_npoints(ynode);
+    M = kdtree_node_npoints(xnode);
+	ix = -1;
     for (i=0; i<N; i++) {
-		dyv* ypoint;
+		double* ypoint;
 		double d2;
 		if (upper < pruning_threshs[i]) {
 			continue;
 		}
-		ypoint = dyv_array_ref(query->points, i);
-		d2 = -box_to_point_min_dist2(search->box, ypoint);
+		ypoint = kdtree_node_get_point(tree, ynode, i);
+		iy     = kdtree_node_get_index(tree, ynode, i);
+		d2 = -box_to_point_min_dist2(xbblo, xbbhi, ypoint);
 		if (d2 < pruning_threshs[i]) {
 			continue;
 		}
 		for (j=0; j<M; j++) {
-			dyv* xpoint = dyv_array_ref(search->points, j);
+			double* xpoint = kdtree_node_get_point(tree, xnode, j);
 			d2 = -point_to_point_dist2(ypoint, xpoint);
 			/*
 			  if (d2 < pruning_threshs[i]) {
@@ -203,14 +235,17 @@ void max_results(void* extra, node* query, node* search, double* pruning_thresho
 			  }
 			*/
 			// nearest neighbour (except yourself)
-			if ((d2 == 0.0) && (ivec_ref(search->pindexes, j) == ivec_ref(query->pindexes, i))) {
-				continue;
+			if (d2 == 0.0) {
+				ix = kdtree_node_get_index(tree, xnode, i);
+				if (ix == iy)
+					continue;
 			}
 			if (d2 >= pruning_threshs[i]) {
-				if (do_perms && (ivec_ref(search->pindexes, j) == ivec_ref(query->pindexes, i)))
+				ix = kdtree_node_get_index(tree, xnode, i);
+				if ((do_perms) && (ix == iy))
 					continue;
 				pruning_threshs[i] = d2;
-				bests[i] = ivec_ref(search->pindexes, j);
+				bests[i] = ix;
 			}
 		}
     }
@@ -222,57 +257,57 @@ void max_results(void* extra, node* query, node* search, double* pruning_thresho
 			prune = pruning_threshs[i];
 		}
     }
-    //printf("prune=%g\n", prune);
     if (prune > *pruning_threshold) {
-		//printf("updated pruning threshold to %g\n", prune);
 		*pruning_threshold = prune;
     }
 }
 
-void write_nearby_positions(char* fn, double radius, bool radec, dyv_array* array) {
-    FILE* fout;
-    int i;
-    fout = fopen(fn, "w");
-    if (!fout) {
-		printf("Couldn't open output file %s\n", fn);
-		return;
-    }
-    fprintf(fout, "nnposns=[");
-    for (i=0; i<Ntotal; i++) {
-		dyv* v;
-		int d, D;
-		if (nninds[i] < 0) continue;
-		if (nndists[i] > radius) continue;
-		v = dyv_array_ref(array, i);
-		D = v->size;
-		for (d=0; d<D; d++) {
-			double x = dyv_ref(v, d);
-			fprintf(fout,"%s%g", (d?",":""), x);
-		}
-		fprintf(fout, ";\n");
-    }
-    fprintf(fout, "];");
-    if (radec) {
-		fprintf(fout, "nnposnsradec=[");
-		for (i=0; i<Ntotal; i++) {
-			double x,y,z,ra,dec;
-			dyv* v;
-			if (nninds[i] < 0) continue;
-			if (nndists[i] > radius) continue;
-			v = dyv_array_ref(array, i);
-			x = dyv_ref(v, 0);
-			y = dyv_ref(v, 1);
-			z = dyv_ref(v, 2);
-			ra  = xy2ra(x, y);
-			dec = z2dec(z);
-			fprintf(fout, "%g,%g;\n", ra, dec);
-		}
-		fprintf(fout, "];");
-		fprintf(fout, "ra=nnposnsradec(:,1); dec=nnposnsradec(:,2);\n");
-    }
-    fclose(fout);
-    printf("Wrote positions to %s\n", fn);
-}
+/*
+  void write_nearby_positions(char* fn, double radius, bool radec, dyv_array* array) {
+  FILE* fout;
+  int i;
+  fout = fopen(fn, "w");
+  if (!fout) {
+  printf("Couldn't open output file %s\n", fn);
+  return;
+  }
+  fprintf(fout, "nnposns=[");
+  for (i=0; i<Ntotal; i++) {
+  dyv* v;
+  int d, D;
+  if (nninds[i] < 0) continue;
+  if (nndists[i] > radius) continue;
+  v = dyv_array_ref(array, i);
+  D = v->size;
+  for (d=0; d<D; d++) {
+  double x = dyv_ref(v, d);
+  fprintf(fout,"%s%g", (d?",":""), x);
+  }
+  fprintf(fout, ";\n");
+  }
+  fprintf(fout, "];");
+  if (radec) {
+  fprintf(fout, "nnposnsradec=[");
+  for (i=0; i<Ntotal; i++) {
+  double x,y,z,ra,dec;
+  dyv* v;
+  if (nninds[i] < 0) continue;
+  if (nndists[i] > radius) continue;
+  v = dyv_array_ref(array, i);
+  x = dyv_ref(v, 0);
+  y = dyv_ref(v, 1);
+  z = dyv_ref(v, 2);
+  ra  = xy2ra(x, y);
+  dec = z2dec(z);
+  fprintf(fout, "%g,%g;\n", ra, dec);
+  }
+  fprintf(fout, "];");
+  fprintf(fout, "ra=nnposnsradec(:,1); dec=nnposnsradec(:,2);\n");
+  }
+  fclose(fout);
+  printf("Wrote positions to %s\n", fn);
+  }
+*/
 
 void write_array(char* fn) {
     FILE* fout;
@@ -351,24 +386,17 @@ void write_histogram(char* fn) {
     fflush(stdout);
 }
 
-void max_end_results(void* extra, node* query) {
+void max_end_results(void* extra, kdtree_node_t* ynode) {
     int i, N;
-    N = query->num_points;
+    N = kdtree_node_npoints(ynode);
     for (i=0; i<N; i++) {
 		int ind;
 		double newd;
 
-		ind = ivec_ref(query->pindexes, i);
+		ind = ynode->l + i;
 		newd = sqrt(-pruning_threshs[i]);
 
 		if (newd < nndists[ind]) {
-			/*
-			  printf("  %i (%i): best %i, dist %g (%g), nndist %g, nnind %i\n",
-			  i, ind,
-			  bests[i], sqrt(-pruning_threshs[i]),
-			  pruning_threshs[i], nndists[ind], nninds[ind]);
-			*/
-
 			nndists[ind] = newd;
 			nninds[ind] = bests[i];
 		}
@@ -396,11 +424,12 @@ void max_end_results(void* extra, node* query) {
 		char fn[256];
 		sprintf(fn, "/tmp/nnhists_%i.m", (Ndone+N)/100000);
 		write_histogram(fn);
-
-		if (write_nearby) {
-			sprintf(fn, "/tmp/nearby_%i.m", (Ndone+N)/100000);
-			write_nearby_positions(fn, nearby_radius, radec, array);
-		}
+		/*
+		  if (write_nearby) {
+		  sprintf(fn, "/tmp/nearby_%i.m", (Ndone+N)/100000);
+		  write_nearby_positions(fn, nearby_radius, radec, array);
+		  }
+		*/
     }
     Ndone += N;
 }
@@ -430,15 +459,17 @@ int main(int argc, char *argv[]) {
 		case 'p':
 			write_points = TRUE;
 			break;
-		case 'n':
-			write_nearby = TRUE;
-			nearby_radius = atof(optarg);
-			if (nearby_radius == 0.0) {
-				printf("Couldn't parse nearby-radius: %s\n", optarg);
-				print_help(argv[0]);
-				exit(-1);
-			}
-			break;
+			/*
+			  case 'n':
+			  write_nearby = TRUE;
+			  nearby_radius = atof(optarg);
+			  if (nearby_radius == 0.0) {
+			  printf("Couldn't parse nearby-radius: %s\n", optarg);
+			  print_help(argv[0]);
+			  exit(-1);
+			  }
+			  break;
+			*/
 		case 'r':
 			radec = TRUE;
 			break;
@@ -518,6 +549,7 @@ int main(int argc, char *argv[]) {
 			fprintf(fout, "radec=zeros([%i,2]);\n", N);
 			for (i=0; i<N; i++) {
 				double x,y,z,ra,dec;
+				double* v;
 				v = tree->data + i*D;
 				x = v[0];
 				y = v[1];
@@ -543,9 +575,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-    if (write_nearby) {
-		write_nearby_positions("/tmp/nearby.m", nearby_radius, radec, array);
-    }
+	/*
+	  if (write_nearby) {
+	  write_nearby_positions("/tmp/nearby.m", nearby_radius, radec, array);
+	  }
+	*/
 
     write_histogram("/tmp/nnhists.m");
 

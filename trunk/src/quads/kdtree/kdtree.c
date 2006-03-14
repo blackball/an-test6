@@ -252,6 +252,18 @@ unsigned int results_inds[KDTREE_MAX_RESULTS];
 // DEBUG
 int overflow;
 
+kdtree_node_t* kdtree_get_root(kdtree_t* kd) {
+	return kd->tree;
+}
+
+real* kdtree_node_get_point(kdtree_t* tree, kdtree_node_t* node, int ind) {
+	return tree->data + (node->l + ind) * tree->ndim;
+}
+
+int kdtree_node_get_index(kdtree_t* tree, kdtree_node_t* node, int ind) {
+	return tree->perm[(node->l + ind)];
+}
+
 real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node) {
 	return (real*)(node + 1);
 }
@@ -300,6 +312,48 @@ real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2
 		if (delta2 > delta) delta = delta2;
 
         d2 += delta * delta;
+	}
+	return d2;
+}
+
+real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
+							  real* point, int dim) {
+	real d2 = 0.0;
+	real delta;
+	int i;
+    for (i=0; i<dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+
+		if (point[i] < lo)
+			delta = lo - point[i];
+		else if (point[i] > hi)
+			delta = point[i] - hi;
+		else
+			continue;
+		d2 += delta * delta;
+	}
+	return d2;
+}
+
+real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
+							  real* point, int dim) {
+	real d2 = 0.0;
+	real delta1, delta2;
+	int i;
+    for (i=0; i<dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+
+		delta1 = (point[i] - lo) * (point[i] - lo);
+		delta2 = (point[i] - hi) * (point[i] - hi);
+
+		if (delta1 > delta2)
+			d2 += delta1;
+		else
+			d2 += delta2;
 	}
 	return d2;
 }

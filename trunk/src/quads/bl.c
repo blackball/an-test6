@@ -341,6 +341,10 @@ int bl_count(bl* list) {
 	return list->N;
 }
 
+int bl_size(bl* list) {
+	return bl_count(list);
+}
+
 bl_node* bl_new_node(bl* list) {
 	bl_node* rtn;
 
