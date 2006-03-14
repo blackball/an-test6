@@ -194,10 +194,15 @@ int main(int argc, char *argv[]) {
 
     duplicates = il_new(256);
 
+	fprintf(stderr, "Running dual-tree search to find duplicates...\n");
+	fflush(stderr);
+
     // de-duplicate.
     dualtree_rangesearch_2(starkd, starkd,
 						   RANGESEARCH2_NO_LIMIT, dist,
 						   duplicate_found, NULL);
+
+	fprintf(stderr, "Done!");
 
     if (il_size(duplicates) == 0) {
 		fprintf(stderr, "No duplicate stars found.\n");
