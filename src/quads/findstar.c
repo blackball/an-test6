@@ -15,7 +15,6 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 char *treefname = NULL, *catfname = NULL, *basefname = NULL;
-FILE *treefid = NULL;
 catalog* cat = NULL;
 
 int main(int argc, char *argv[])
@@ -95,11 +94,9 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "findstar: getting stars from %s\n", treefname);
 	fflush(stderr);
-	fopenin(treefname, treefid);
+    starkd = kdtree_read_file(treefname);
 	free_fn(treefname);
-	starkd = kdtree_read(treefid);
-	fclose(treefid);
-	if (starkd == NULL)
+	if (!starkd)
 		return 2;
 	numstars = starkd->ndata;
 	fprintf(stderr, "%lu stars, %d nodes\n", numstars, starkd->nnodes);
@@ -157,6 +154,8 @@ int main(int argc, char *argv[])
 
 	if (cat)
 		catalog_close(cat);
+
+    kdtree_close(starkd);
 
 	return 0;
 }

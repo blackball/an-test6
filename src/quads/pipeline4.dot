@@ -1,0 +1,37 @@
+graph solvepipeline {
+	graph [ rankdir = LR ];
+	node [ shape=box ];
+	edge [ dir=forward ];
+	node [ style=filled, fillcolor=lightyellow2 ];
+	xyls [ label="Input field\n(.xyls)" ];
+	subgraph cluster_0 {
+		style=filled;
+		color=lightgrey;
+		node [ style=filled, fillcolor=azure2 ];
+		objs [ label="Deduplicated catalogue\n(.objs)" ];
+		quad [ label="Quads\n(.quad)" ];
+		node [ style=filled, fillcolor=white ];
+		skdt [ label="Star kd-tree\n(.skdt)" ];
+		qidx [ label="Quad Index\n(.qidx)" ];
+
+		node [ shape=ellipse ];
+		objs -- startree
+		startree -- skdt
+		quad -- quadidx
+		quadidx -- qidx
+	} 
+	node [ style=filled, fillcolor=azure2 ];
+	hits [ label="Hits file\n(.hits)" ];
+
+	node [ shape=ellipse, fillcolor=white ];
+	xyls -- postmortem
+	hits -- postmortem
+	skdt -- findstar
+	findstar -- postmortem
+	qidx -- findquad
+	findquad -- postmortem
+}
+
+// render with:
+//   dot -Tps2 -o pipeline4.eps pipeline4.dot
+//   epstopng pipeline4.eps
