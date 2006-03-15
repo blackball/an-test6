@@ -4,7 +4,7 @@ CC = gcc
 LFLAGS = -lm
 
 #fast
-CFLAGS	= -g -Werror -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
+CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_OS_MEMORY_MANAGEMENT -I.
 
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
