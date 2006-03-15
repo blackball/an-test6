@@ -100,12 +100,12 @@ catalog* catalog_open(char* basefn, int modifiable) {
 catalog* catalog_open_file(char* catfn, int modifiable) {
 	FILE *catfid  = NULL;
 	char readStatus;
-	dimension Dim_Stars;
+	uint Dim_Stars;
 	off_t endoffset;
 	off_t headeroffset;
 	uint maxstar;
 	catalog* cat;
-	sidx nstars_tmp;
+	uint nstars_tmp;
 	int mode, flags;
 
 	cat = malloc(sizeof(catalog));

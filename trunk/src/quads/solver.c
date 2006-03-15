@@ -39,15 +39,15 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 					  char* inbox, int maxind, solver_params* params);
 
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
-				   sidx iA, sidx iB, sidx iC, sidx iD,
+				   uint iA, uint iB, uint iC, uint iD,
                    xy *ABCDpix, solver_params* params);
 
 void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
-					 char order, sidx fA, sidx fB, sidx fC, sidx fD,
+					 char order, uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params);
 
 void solve_field(solver_params* params) {
-    sidx numxy, iA, iB, iC, iD, newpoint;
+    uint numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
     int ncd;
@@ -136,7 +136,7 @@ void solve_field(solver_params* params) {
 		}
 
 		fprintf(stderr,
-				"    using %lu of %lu objects (%i quads agree so far; %i tried, %i matched)      \n",
+				"    using %u of %u objects (%i quads agree so far; %i tried, %i matched)      \n",
 				newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
 
 		if ((params->max_matches_needed && (params->mostagree >= params->max_matches_needed)) ||
@@ -243,7 +243,7 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 }
 
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
-				   sidx iA, sidx iB, sidx iC, sidx iD,
+				   uint iA, uint iB, uint iC, uint iD,
                    xy *ABCDpix, solver_params* params) {
     double thequery[4];
     kdtree_qres_t* result;
@@ -303,10 +303,10 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 }
 
 void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
-					 char order, sidx fA, sidx fB, sidx fC, sidx fD,
+					 char order, uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params) {
-    qidx jj, thisquadno;
-    sidx iA, iB, iC, iD;
+    uint jj, thisquadno;
+    uint iA, iB, iC, iD;
     double *transform;
     MatchObj *mo;
 	double sA[3], sB[3], sC[3], sD[3], sMin[3], sMax[3];
@@ -314,7 +314,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
 
-		thisquadno = (qidx)krez->inds[jj];
+		thisquadno = (uint)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
 		getstarcoord(iA, sA);
 		getstarcoord(iB, sB);
@@ -426,7 +426,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 void find_corners(xy *thisfield, xy *cornerpix) {
 	double minx, maxx, miny, maxy;
 	double x, y;
-	qidx i;
+	uint i;
 
 	minx = miny = 1e308;
 	maxx = maxy = -1e308;

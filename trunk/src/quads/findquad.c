@@ -9,15 +9,15 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 char *qidxfname = NULL;
-sidx thestar;
-qidx thequad;
+uint thestar;
+uint thequad;
 char buff[100], maxstarWidth;
 
 signed int compare_sidx(const void *x, const void *y)
 {
-	sidx xval, yval;
-	xval = *(sidx *)x;
-	yval = *(sidx *)y;
+	uint xval, yval;
+	xval = *(uint *)x;
+	yval = *(uint *)y;
 	if (xval > yval)
 		return (1);
 	else if (xval < yval)
@@ -30,11 +30,11 @@ int main(int argc, char *argv[])
 {
 	int argidx, argchar; 
         int jj;
-	sidx ii, numstars;
+	uint ii, numstars;
 	FILE *qidxfid = NULL; 
-	sidx *starlist, *matchstar;
-	qidx *starnumq;
-	qidx **starquads;
+	uint *starlist, *matchstar;
+	uint *starnumq;
+	uint **starquads;
         char scanrez = 1;
 
 	if (argc <= 3) {
@@ -73,20 +73,20 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "ERROR (findquad) -- out of memory\n");
                 return 2;
         }
-        fprintf(stderr, "  (%lu unique stars used in quads)\n", numstars);
+        fprintf(stderr, "  (%u unique stars used in quads)\n", numstars);
         fclose(qidxfid);
 
         while (!feof(stdin) && scanrez) {
-                scanrez = fscanf(stdin, "%lu", &thestar);
-                matchstar = (sidx *)bsearch(&thestar, starlist, numstars,
-                                            sizeof(sidx *), compare_sidx);
+                scanrez = fscanf(stdin, "%u", &thestar);
+                matchstar = (uint *)bsearch(&thestar, starlist, numstars,
+                                            sizeof(uint *), compare_sidx);
                 if (matchstar == NULL)
                         fprintf(stdout, "[]\n");
                 else {
-                        ii = (sidx)(matchstar - starlist);
+                        ii = (uint)(matchstar - starlist);
                         fprintf(stdout, "[");
                         for (jj = 0;jj < starnumq[ii];jj++)
-                                fprintf(stdout, "%lu, ", *(starquads[ii] + jj));
+                                fprintf(stdout, "%u, ", *(starquads[ii] + jj));
                         fprintf(stdout, "]\n");
                 }
                 fflush(stdout);

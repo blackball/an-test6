@@ -172,7 +172,7 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 
 char find_a_quad(il* stars, int* used_stars)
 {
-	sidx numxy, iA, iB, iC, iD, newpoint;
+	uint numxy, iA, iB, iC, iD, newpoint;
 	int *iCs, *iDs;
 	char *iunion;
 	int ncd;

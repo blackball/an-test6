@@ -4,9 +4,9 @@
 #include "starutil.h"
 
 struct match_struct {
-    qidx quadno;
-    sidx iA, iB, iC, iD;
-    sidx fA, fB, fC, fD;
+    uint quadno;
+    uint iA, iB, iC, iD;
+    uint fA, fB, fC, fD;
     double code_err;
     //star *sMin, *sMax;
 

@@ -18,6 +18,7 @@ typedef char bool;
 #ifndef TRUE
 #define TRUE 1
 #endif
+
 #ifndef FALSE
 #define FALSE 0
 #endif
@@ -36,14 +37,6 @@ typedef char bool;
 #define BACD_ORDER 1
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
-
-typedef unsigned long int qidx;
-typedef unsigned long int sidx;
-typedef unsigned short int dimension;
-
-/*
-  typedef unsigned int uint;
-*/
 
 inline double square(double d);
 

@@ -5,7 +5,7 @@
 xyarray *readxy(FILE *fid, char ParityFlip)
 {
 	char ASCII = 0;
-	qidx ii, jj, numxy, numfields;
+	uint ii, jj, numxy, numfields;
 	magicval magic;
 	xyarray *thepix = NULL;
 	int tmpchar;
@@ -16,7 +16,7 @@ xyarray *readxy(FILE *fid, char ParityFlip)
 	}
 	if (magic == ASCII_VAL) {
 		ASCII = 1;
-		if (fscanf(fid, "mFields=%lu\n", &numfields) != 1) {
+		if (fscanf(fid, "mFields=%u\n", &numfields) != 1) {
 			fprintf(stderr, "ERROR (readxy) -- bad first line in field file.\n");
 			return ((xyarray *)NULL);
 		}
@@ -41,14 +41,14 @@ xyarray *readxy(FILE *fid, char ParityFlip)
 				tmpchar = fgetc(fid);
 			}
 			ungetc(tmpchar, fid);
-			fscanf(fid, "%lu", &numxy); // CHECK THE RETURN VALUE MORON!
+			fscanf(fid, "%u", &numxy); // CHECK THE RETURN VALUE MORON!
 		} else
 			fread(&numxy, sizeof(numxy), 1, fid); // CHECK THE RETURN VALUE MORON!
 
 		xya_set(thepix, ii, mk_xy(numxy) );
 
 		if (xya_ref(thepix, ii) == NULL) {
-			fprintf(stderr, "ERROR (readxy) - out of memory at field %lu\n", ii);
+			fprintf(stderr, "ERROR (readxy) - out of memory at field %u\n", ii);
 			free_xyarray(thepix);
 			return (xyarray *)NULL;
 		}

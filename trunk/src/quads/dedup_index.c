@@ -51,10 +51,10 @@ int main(int argc, char *argv[]) {
     FILE *quadin = NULL, *quadout = NULL;
     int numstars;
 	int numcodes;
-	sidx nstars_tmp;
-	sidx numquads;
+	uint nstars_tmp;
+	uint numquads;
     int Dim_Codes;
-	dimension DimQuads;
+	uint DimQuads;
 	double index_scale;
     char *infname = NULL, *outfname = NULL;
     int i;
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 								  &DimQuads, &index_scale);
 	numstars = nstars_tmp;
 	if (numquads != numcodes) {
-		fprintf(stderr, "Quad file contains %lu quads, but code file contains %i codes!\n",
+		fprintf(stderr, "Quad file contains %u quads, but code file contains %i codes!\n",
 				numquads, numcodes);
 		exit(-1);
 	}
@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
 	skipind = 0;
 	for (i=0; i<numquads; i++) {
 		double cx, cy, dx, dy;
-		sidx iA, iB, iC, iD;
+		uint iA, iB, iC, iD;
 		if (nextskip == -1) {
 			if (il_size(duplicates) == skipind) {
 				nextskip = -2;

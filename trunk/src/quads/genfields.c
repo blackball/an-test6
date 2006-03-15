@@ -19,11 +19,11 @@ const char HelpString[] =
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
+uint gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
              kdtree_t* starkd,
              double aspect, double noise, double distractors, double dropouts,
              double ramin, double ramax, double decmin, double decmax,
-             double radscale, qidx numFields);
+             double radscale, uint numFields);
 
 char *treefname = NULL, *listfname = NULL, *pix0fname = NULL, *pixfname = NULL;
 char *rdlsfname = NULL;
@@ -37,11 +37,11 @@ int FAILURES = 30;
 int main(int argc, char *argv[])
 {
 	int argidx, argchar;
-	qidx numFields = 0;
+	uint numFields = 0;
 	double radscale = 10.0, aspect = 1.0, distractors = 0.0, dropouts = 0.0, noise = 0.0;
 	double centre_ra = 0.0, centre_dec = 0.0;
 	FILE *listfid = NULL, *pix0fid = NULL, *pixfid = NULL;
-	qidx numtries;
+	uint numtries;
 	uint numstars;
 	uint i;
 	kdtree_t* starkd = NULL;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 	srand(RANDSEED);
 
 	if (numFields)
-		fprintf(stderr, "genfields: making %lu random fields from %s [RANDSEED=%d]\n",
+		fprintf(stderr, "genfields: making %u random fields from %s [RANDSEED=%d]\n",
 		        numFields, treefname, RANDSEED);
 	else {
 		fprintf(stderr, "genfields: making fields from %s around ra=%lf,dec=%lf\n",
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 	        numstars, starkd->nnodes);
 
 	if (numFields > 1)
-		fprintf(stderr, "  Generating %lu fields at scale %g arcmin...\n",
+		fprintf(stderr, "  Generating %u fields at scale %g arcmin...\n",
 		        numFields, rad2arcmin(radscale));
 	fflush(stderr);
 	fopenout(listfname, listfid);
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 	fclose(pixfid);
 	fclose(rdlsfid);
 	if (numFields > 1)
-		fprintf(stderr, "  made %lu nonempty fields in %lu tries.\n",
+		fprintf(stderr, "  made %u nonempty fields in %u tries.\n",
 		        numFields, numtries);
 
 	kdtree_close(starkd);
@@ -181,24 +181,24 @@ int main(int argc, char *argv[])
 
 
 
-qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
+uint gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
              kdtree_t* starkd,
              double aspect, double noise, double distractors, double dropouts,
              double ramin, double ramax, double decmin, double decmax,
-             double radscale, qidx numFields)
+             double radscale, uint numFields)
 {
-	sidx jj, numS, numX;
-	qidx numtries = 0, ii;
+	uint jj, numS, numX;
+	uint numtries = 0, ii;
 	double xx, yy;
 	double scale = radscale2xyzscale(radscale);
 	double pixxmin = 0, pixymin = 0, pixxmax = 0, pixymax = 0;
 	double randstar[3];
 	kdtree_qres_t* krez = NULL;
 
-	fprintf(pix0fid, "NumFields=%lu\n", numFields);
-	fprintf(pixfid, "NumFields=%lu\n", numFields);
-	fprintf(listfid, "NumFields=%lu\n", numFields);
-	fprintf(rdlsfid, "NumFields=%lu\n", numFields);
+	fprintf(pix0fid, "NumFields=%u\n", numFields);
+	fprintf(pixfid, "NumFields=%u\n", numFields);
+	fprintf(listfid, "NumFields=%u\n", numFields);
+	fprintf(rdlsfid, "NumFields=%u\n", numFields);
 
 	for (ii = 0;ii < numFields;ii++) {
 		numS = 0;
@@ -208,7 +208,7 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 			krez = kdtree_rangesearch(starkd, randstar, scale*scale);
 
 			numS = krez->nres;
-			//fprintf(stderr,"random location: %lu within scale.\n",numS);
+			//fprintf(stderr,"random location: %u within scale.\n",numS);
 
 			if (numS) {
 				fprintf(pix0fid, "centre xyz=(%lf,%lf,%lf) radec=(%lf,%lf)\n",
@@ -217,10 +217,10 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 						rad2deg(z2dec(randstar[2])));
 
 				numX = floor(numS * distractors);
-				fprintf(pixfid, "%lu", numS + numX);
-				fprintf(pix0fid, "%lu", numS);
-				fprintf(listfid, "%lu", numS);
-				fprintf(rdlsfid, "%lu", numS);
+				fprintf(pixfid, "%u", numS + numX);
+				fprintf(pix0fid, "%u", numS);
+				fprintf(listfid, "%u", numS);
+				fprintf(rdlsfid, "%u", numS);
 				for (jj = 0; jj < numS; jj++) {
 					double x, y, z, ra, dec;
 					fprintf(listfid, ",%d", krez->inds[jj]);
@@ -275,7 +275,7 @@ qidx gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 			if (numtries >= FAILURES) {
 				/* We've failed too many times; something is wrong. Bail
 				 * gracefully. */
-				fprintf(stderr, "  ERROR: Too many failures: %lu fails\n",
+				fprintf(stderr, "  ERROR: Too many failures: %u fails\n",
 					numtries);
 				exit(1);
 			}

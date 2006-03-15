@@ -84,7 +84,7 @@ char* get_pathname(char* fname) {
 
 int main(int argc, char *argv[]) {
     FILE *fieldfid = NULL, *treefid = NULL;
-    qidx numfields;
+    uint numfields;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
 	char* progname = argv[0];
@@ -172,9 +172,9 @@ int main(int argc, char *argv[]) {
 		fclose(fieldfid);
 		if (!thefields)
 			exit(-1);
-		//numfields = (qidx)thefields->size;
+		//numfields = (uint)thefields->size;
 		numfields = xya_size(thefields);
-		fprintf(stderr, "got %lu fields.\n", numfields);
+		fprintf(stderr, "got %u fields.\n", numfields);
 		if (parity)
 			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 
@@ -540,7 +540,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 	free_xy(solver.cornerpix);
 }
 
-void getquadids(qidx thisquad, sidx *iA, sidx *iB, sidx *iC, sidx *iD) {
+void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
 	uint sA, sB, sC, sD;
 	quadfile_get_starids(quads, thisquad, &sA, &sB, &sC, &sD);
 	*iA = sA;

@@ -1,9 +1,7 @@
 #ifndef HEALPIX_H_
 #define HEALPIX_H_
 
-#ifndef uint
-typedef unsigned int uint;
-#endif
+#include <sys/types.h>
 
 /**
    The HEALPix paper:

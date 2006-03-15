@@ -10,10 +10,10 @@
 
 quadfile* quadfile_open(char* quadfname) {
 	quadfile* qf;
-    dimension Dim_Quads;
+    uint Dim_Quads;
 	FILE* quadfid;
     char readStatus;
-	sidx numquads, numstars;
+	uint numquads, numstars;
 	off_t headeroffset;
 	off_t endoffset;
 	uint maxquad;
@@ -39,9 +39,9 @@ quadfile* quadfile_open(char* quadfname) {
 	// check that the quads file is the right size.
 	fseeko(quadfid, 0, SEEK_END);
 	endoffset = ftello(quadfid);
-	maxquad = (endoffset - headeroffset) / (DIM_QUADS * sizeof(sidx));
+	maxquad = (endoffset - headeroffset) / (DIM_QUADS * sizeof(uint));
 	if (maxquad != numquads) {
-		fprintf(stderr, "Error: numquads=%li (specified in .quad file header) does "
+		fprintf(stderr, "Error: numquads=%u (specified in .quad file header) does "
 				"not match maxquad=%u (computed from size of .quad file).\n",
 				numquads, maxquad);
 		return NULL;

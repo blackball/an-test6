@@ -28,28 +28,28 @@
 #define mk_qlistfn(s)  mk_filename(s,".qds0")
 #define mk_rdlsfn(s)  mk_filename(s,".rdls")
 
-void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD);
-void writeonequad(FILE *fid, qidx iA, qidx iB, qidx iC, qidx iD);
+void readonequad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD);
+void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD);
 void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
 void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
-char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
+char read_objs_header(FILE *fid, uint *numstars, uint *DimStars,
 					  double *ramin, double *ramax, double *decmin, double *decmax);
-char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
-                      dimension *DimCodes, double *index_scale);
-char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
-                      dimension *DimQuads, double *index_scale);
-sidx read_quadidx(FILE *fid, sidx **starlist, qidx **starnumq,
-                  qidx ***starquads);
-void write_objs_header(FILE *fid, sidx numstars,
-					   dimension DimStars, double ramin, double ramax, 
+char read_code_header(FILE *fid, uint *numcodes, uint *numstars,
+                      uint *DimCodes, double *index_scale);
+char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
+                      uint *DimQuads, double *index_scale);
+uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
+                  uint ***starquads);
+void write_objs_header(FILE *fid, uint numstars,
+					   uint DimStars, double ramin, double ramax, 
 					   double decmin, double decmax);
-void write_code_header(FILE *codefid, qidx numCodes,
-                       sidx numstars, dimension DimCodes, double index_scale);
-void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
-                       dimension DimQuads, double index_scale);
-void fix_code_header(FILE *codefid, qidx numCodes);
-void fix_quad_header(FILE *quadfid, qidx numQuads);
+void write_code_header(FILE *codefid, uint numCodes,
+                       uint numstars, uint DimCodes, double index_scale);
+void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
+                       uint DimQuads, double index_scale);
+void fix_code_header(FILE *codefid, uint numCodes);
+void fix_quad_header(FILE *quadfid, uint numQuads);
 
 char *mk_filename(const char *basename, const char *extension);
 

@@ -1,9 +1,7 @@
 #ifndef QUADFILE_H
 #define QUADFILE_H
 
-#ifndef uint
-typedef unsigned int uint;
-#endif
+#include <sys/types.h>
 
 struct quadfile {
 	uint numquads;

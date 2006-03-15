@@ -30,7 +30,7 @@ env.Program('findstar',
 env.Program('findquad',
             Split('findquad.c fileutil.c'))
 env.Program('startree',
-            KD + Split('startree.c fileutil.c'))
+            KD + Split('startree.c fileutil.c catalog.c'))
 env.Program('randcat',
             KD + Split('randcat.c fileutil.c starutil.c mathutil.c catalog.c '
                        'bl.c'))
