@@ -27,7 +27,7 @@ int read_u8(FILE* fin, unsigned char* val) {
     }
 }
 
-int read_u32(FILE* fin, unsigned int* val) {
+int read_u32_portable(FILE* fin, unsigned int* val) {
     uint32_t u;
     if (fread(&u, 4, 1, fin) == 1) {
 		*val = ntohl(u);
@@ -47,7 +47,7 @@ int read_double(FILE* fin, double* val) {
     }
 }
 
-int read_u32_native(FILE* fin, unsigned int* val) {
+int read_u32(FILE* fin, unsigned int* val) {
     uint32_t u;
     if (fread(&u, 4, 1, fin) == 1) {
 		*val = (unsigned int)u;
@@ -58,7 +58,7 @@ int read_u32_native(FILE* fin, unsigned int* val) {
     }
 }
 
-int read_u32s(FILE* fin, unsigned int* val, int n) {
+int read_u32s_portable(FILE* fin, unsigned int* val, int n) {
     int i;
     uint32_t* u = (uint32_t*)malloc(sizeof(uint32_t) * n);
     if (!u) {
@@ -195,7 +195,7 @@ int write_u8(FILE* fout, unsigned char val) {
     }
 }
 
-int write_u32(FILE* fout, unsigned int val) {
+int write_u32_portable(FILE* fout, unsigned int val) {
     uint32_t v = htonl((uint32_t)val);
     if (fwrite(&v, 4, 1, fout) == 1) {
 		return 0;
@@ -205,7 +205,7 @@ int write_u32(FILE* fout, unsigned int val) {
     }
 }
 
-int write_u32s(FILE* fout, unsigned int* val, int n) {
+int write_u32s_portable(FILE* fout, unsigned int* val, int n) {
     int i;
     uint32_t* v = (uint32_t*)malloc(sizeof(uint32_t) * n);
     if (!v) {
@@ -225,7 +225,7 @@ int write_u32s(FILE* fout, unsigned int* val, int n) {
     }
 }
 
-int write_u32_native(FILE* fout, unsigned int val) {
+int write_u32(FILE* fout, unsigned int val) {
     uint32_t v = (uint32_t)val;
     if (fwrite(&v, 4, 1, fout) == 1) {
 		return 0;
@@ -235,7 +235,7 @@ int write_u32_native(FILE* fout, unsigned int val) {
     }
 }
 
-int write_uints_native(FILE* fout, unsigned int* val, int n) {
+int write_uints(FILE* fout, unsigned int* val, int n) {
     if (fwrite(val, sizeof(unsigned int), n, fout) == n) {
 		return 0;
     } else {

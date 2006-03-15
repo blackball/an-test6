@@ -99,10 +99,6 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 	int target;
 
 	real* data;
-	// permutation to apply at the end.
-	//int* perm;
-	//int*  allperm;
-
 	real median;
 
 	int N;
@@ -112,22 +108,18 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 
 	// DEBUG
 	int midind = 0;
-
 	int rank;
+
+	int il, ir;
 
 	N = r - l + 1;
 	rank = (N-1)/2;
 	data = malloc(N*sizeof(real));
-	//perm = malloc(N*sizeof(int));
-	//allperm = perm;
-	for (i=0; i<N; i++) {
+	for (i=0; i<N; i++)
 		data[i] = arr[(l+i)*D + d];
-		//perm[i] = i;
-	}
 
 	while ((upper != lower) && (N>2)) {
 		real* newdata;
-		//int*  newperm;
 		int il, ir, im, nm;
 
 		fprintf(stderr, "\nN=%i, rank=%i.\n", N, rank);
@@ -148,25 +140,17 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 				break;
 		}
 
-		/*
-		  if (N < 5) {
-		  fprintf(stderr, "data: ");
-		  for (i=0; i<N; i++) {
-		  fprintf(stderr, "%g,  ", data[i]);
-		  }
-		  fprintf(stderr, "\n");
-		  }
-		*/
-
 		// histogram the data.
 		binsize = (upper - lower) / ((double)BINS - 0.1);
 		for (i=0; i<BINS; i++)
 			counts[i] = 0;
 		for (i=0; i<N; i++) {
 			int bin = (data[i] - lower) / binsize;
-			if (N < 5) {
-				fprintf(stderr, "data=%g, bin=%i.\n", data[i], bin);
-			}
+			/*
+			  if (N < 5) {
+			  fprintf(stderr, "data=%g, bin=%i.\n", data[i], bin);
+			  }
+			*/
 			assert(bin >= 0);
 			assert(bin < BINS);
 			counts[bin]++;
@@ -217,195 +201,96 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 		// sort all points into the "left", "middle", and "right" regions.
 
 		newdata = malloc(Nmiddle*sizeof(real));
-		//newperm = malloc(N*sizeof(int));
 
-		/*
-		  il = 0;
-		  im = Nleft;
-		  ir = Nleft + Nmiddle;
-		*/
 		nm = 0;
 		for (i=0; i<N; i++) {
 			if ((data[i] >= newL) && (data[i] < newU)) {
 				newdata[nm] = data[i];
 				nm++;
 			}
-			/*
-			  if (data[i] < newL) {
-			  newperm[il] = perm[i];
-			  il++;
-			  } else if (data[i] >= newU) {
-			  newperm[ir] = perm[i];
-			  ir++;
-			  } else {
-			  newperm[im] = perm[i];
-			  im++;
-			  newdata[nm] = data[i];
-			  nm++;
-			  }
-			*/
 		}
-		/*
-		  assert(il == Nleft);
-		  assert(ir == N);
-		*/
 		assert(nm == Nmiddle);
-
-		/*
-		  ;
-		  // copy the left side of the permutation vector...
-		  memcpy(perm, newperm, Nleft*sizeof(int));
-		  // right side...
-		  memcpy(perm+Nleft+Nmiddle, newperm+Nleft+Nmiddle, Nright*sizeof(int));
-		*/
-
-		/*
-		  memcpy(perm, newperm, N*sizeof(int));
-		  perm = newperm + Nleft;
-		*/
 
 		free(data);
 		data = newdata;
 
 		midind += Nleft;
+		rank -= Nleft;
 
 		lower = newL;
 		upper = newU;
 		N = Nmiddle;
-		rank -= Nleft;
 	}
+
 	/*
-	  if (N > 2) {
+	  if (upper == lower) {
 	  // there are equal values.  set the median to be midway through them.
-	  midind += N/2;
-	  }
-	  if (N == 2) {
-	  if (data[0] > data[1]) {
-	  // swap
-	  int tmp = data[0];
-	  data[0] = data[1];
-	  data[1] = tmp;
-	  }
 	  }
 	*/
 	fprintf(stderr, "End of loop: N=%i, rank=%i, midind=%i\n", N, rank, midind);
 	median = data[rank];
-
 	midind += rank;
 
-	//median = data[N/2];
-	//median = data[0];
-	//median = data[midind];
-	//median = arr[(l+midind)*D + d];
+	assert(median == arr[(l+midind)*D+d]);
 
 	free(data);
 
-	// now apply the permutation to the real data.
 	N = r - l + 1;
 
-	//median = arr[m*D + d];
 
-	{
-		/*
-		  real* tmparr;
-		  int* tmpparr;
-		  tmparr = malloc(N*D*sizeof(real));
-		  tmpparr = malloc(N*sizeof(int));
-		*/
-		int il, ir;
-		int imid = l + midind;
- 		il=l;
-		ir=r;
-		for (;;) {
-			real tmpdata[D];
-			int tmpperm;
-
-			// scan from the left until we find an item out of place...
-			for (;; il++) {
-				if (arr[ il *D + d] > median)
-					break;
-			}
-			// scan from the right until we find an item out of place...
-			for (;; ir--) {
-				if (arr[ ir *D + d] < median)
-					break;
-			}
-			if (il >= ir)
+	il=l;
+	ir=r;
+	for (;;) {
+		real tmpdata[D];
+		int tmpperm;
+		
+		// scan from the left until we find an item out of place...
+		for (;; il++) {
+			if (arr[ il *D + d] > median)
 				break;
-
-			if ((il == imid) || (ir == imid)) {
-				for (i=il; i<=ir; i++) {
-					fprintf(stderr, "data[%i]=%g.  median=%g.  imid=%i\n", i, arr[i*D+d], median, imid);
-				}
-			}
-
-			assert(il<imid);
-			assert(ir>imid);
-
-			// swap 'em!
-			tmpperm = parr[il];
-			parr[il] = parr[ir];
-			parr[ir] = tmpperm;
-
-			memcpy(tmpdata,  arr+il*D, D*sizeof(real));
-			memcpy(arr+il*D, arr+ir*D, D*sizeof(real));
-			memcpy(arr+ir*D, tmpdata,  D*sizeof(real));
-
-			// ??
-			il++;
-			ir--;
 		}
-		fprintf(stderr, "il=%i, ir=%i.\n", il, ir);
-		/*
-		  for (i=0; i<N; i++) {
-		  int srcind = l + allperm[i];
-		  memcpy(tmparr + i*D, arr + srcind*D, D*sizeof(real));
-		  tmpparr[i] = parr[srcind];
-		  }
-		*/
-		/*
-		  memcpy(arr + l*D, tmparr, N*D*sizeof(real));
-		  memcpy(parr + l,  tmpparr, N*sizeof(int));
-		  free(tmparr);
-		  free(tmpparr);
-		*/
+		// scan from the right until we find an item out of place...
+		for (;; ir--) {
+			if (arr[ ir *D + d] <= median)
+				break;
+		}
+		if (il >= ir)
+			break;
+
+		// swap 'em!
+		tmpperm = parr[il];
+		parr[il] = parr[ir];
+		parr[ir] = tmpperm;
+
+		memcpy(tmpdata,  arr+il*D, D*sizeof(real));
+		memcpy(arr+il*D, arr+ir*D, D*sizeof(real));
+		memcpy(arr+ir*D, tmpdata,  D*sizeof(real));
+
+		// ??
+		il++;
+		ir--;
 	}
+	fprintf(stderr, "il=%i, ir=%i.\n", il, ir);
+
+	// HACK
+	m = (il+ir)/2;
+
 	/*
-	  {
-	  real* tmparr;
-	  int* tmpparr;
-	  tmparr = malloc(N*D*sizeof(real));
-	  tmpparr = malloc(N*sizeof(int));
-	  for (i=0; i<N; i++) {
-	  int srcind = l + allperm[i];
-	  memcpy(tmparr + i*D, arr + srcind*D, D*sizeof(real));
-	  tmpparr[i] = parr[srcind];
-	  }
-	  memcpy(arr + l*D, tmparr, N*D*sizeof(real));
-	  memcpy(parr + l,  tmpparr, N*sizeof(int));
-	  free(tmparr);
-	  free(tmpparr);
-	  }
-	  free(allperm);
+	  fprintf(stderr, "N=%i, midind=%i.  l=%i, r=%i.\n", N, midind, l, r);
+	  fprintf(stderr, "midind+l=%i, m=%i.\n", midind+l, m);
 	*/
-
-	//m = (r-l)/2 + l + 1;
-	m = midind;
-
-	fprintf(stderr, "N=%i, midind=%i.  l=%i, r=%i.\n", N, midind, l, r);
-	fprintf(stderr, "midind+l=%i, m=%i.\n", midind+l, m);
 
 	// check that it worked.
 	{
-		for (i=0; i<m; i++) {
+		//assert(arr[m*D+d] == median);
+		for (i=l; i<m; i++) {
 			assert(arr[i*D + d] <= median);
 		}
-		for (i=m+1; i<N; i++) {
-			assert(arr[i*D + d] >= median);
+		for (i=m+1; i<=r; i++) {
+			assert(arr[i*D + d] > median);
 		}
 	}
 
-	//kdtree_qsort(arr, parr, l, r, D, d);
 	return m;
 }
 

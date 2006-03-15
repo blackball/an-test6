@@ -16,7 +16,7 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 void get_star_radec(FILE *fid, off_t marker, 
-					sidx i, double* pra, double* pdec);
+					uint i, double* pra, double* pdec);
 
 void print_help(char* progname) {
     printf("\nUsage: %s -f <input-file> [-m]\n\n"
