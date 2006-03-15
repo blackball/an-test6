@@ -36,6 +36,11 @@ env.Program('randcat',
                        'bl.c'))
 env.Program('genfields',
             KD + Split('genfields.c mathutil.c starutil.c fileutil.c bl.c'))
+env.Program('codedensity',
+            KD + Split('codedensity.c dualtree.c dualtree_max.c '
+                       'starutil.c bl.c mathutil.c'))
+env.Program('codeprojections',
+            Split('codeprojections.c'))
 
 tests = [
     env.Program('test_kdtree',
@@ -45,8 +50,8 @@ tests = [
                 Split('kdtree/CuTest/CuTest.c test_healpix.c healpix.c '
                       'starutil.c mathutil.c bl.c')),
     env.Program('test_bl',
-                Split('kdtree/CuTest/CuTest.c test_bl.c bl.c')),
-]
+                Split('kdtree/CuTest/CuTest.c test_bl.c bl.c'))]
+
 cmd_tests = [env.Command('%s.out' % str(t[0]), str(t[0]),
                          './%s > $TARGET' % str(t[0]))
              for t in tests]
