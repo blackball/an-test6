@@ -14,15 +14,13 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
-
-#define NO_KD_INCLUDES 1
 #include "starutil.h"
 #include "fileutil.h"
 #include "catalog.h"
 
 #define OPTIONS "hR:f:k:d:"
 const char HelpString[] =
-"startree2 -f fname [-R KD_RMIN] [-k keep] [-d radius]\n"
+"startree -f fname [-R KD_RMIN] [-k keep] [-d radius]\n"
 "  KD_RMIN: (default 25) is the max# points per leaf in KD tree\n"
 "  keep: is the number of stars read from the catalogue\n"
 "  radius: is the de-duplication radius: a star found within this radius "

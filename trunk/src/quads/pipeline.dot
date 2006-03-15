@@ -2,11 +2,12 @@ graph indexpipeline {
 	graph [ rankdir = LR ];
 	node [ shape=box ];
 	edge [ dir=forward ];
-	objs [ label="Healpix-ified catalogue\n(.objs)" ];
+	node [ style=filled, fillcolor=azure2 ];
 	ddobjs [ label="Deduplicated catalogue\n(.objs)" ];
 	ckdt [ label="Code kd-tree\n(.ckdt)" ];
 	quad [ label="Quads\n(.quad)" ];
 	node [ style="" ];
+	objs [ label="Healpix-ified catalogue\n(.objs)" ];
 	code [ label="Quad Codes\n(.code)" ];
 
 	node [ shape=ellipse ];

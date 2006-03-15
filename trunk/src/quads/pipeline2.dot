@@ -2,24 +2,36 @@ graph solvepipeline {
 	graph [ rankdir = LR ];
 	node [ shape=box ];
 	edge [ dir=forward ];
-	node [ style=filled, fillcolor=azure2 ];
-	objs [ label="Healpix-ified catalogue\n(.objs)" ];
-	ckdt [ label="Code kd-tree\n(.ckdt)" ];
-	quad [ label="Quads\n(.quad)" ];
 	node [ style=filled, fillcolor=lightyellow2 ];
 	xyls [ label="Input field\n(.xyls)" ];
-	node [ style="" ];
-	hits [ label="Hit list\n(.hits)" ];
+	subgraph cluster_0 {
+		style=filled;
+		color=lightgrey;
+		node [ style=filled, fillcolor=azure2 ];
+		objs [ label="Deduplicated catalogue\n(.objs)" ];
+		ckdt [ label="Code kd-tree\n(.ckdt)" ];
+		quad [ label="Quads\n(.quad)" ];
+		node [ style=filled, fillcolor=white ];
+		match [ label="Match list\n(.match)" ];
 
+		node [ shape=ellipse ];
+		slave [ label="slave" ];
+
+		objs -- slave
+		ckdt -- slave
+		quad -- slave
+
+		slave -- match
+	} 
+	xyls -- slave
+	node [ shape=box fillcolor=white ];
+	agree [ label="Match list\n(.agree)" ];
+	hits [ label="Hits file\n(.hits)" ];
+	
 	node [ shape=ellipse ];
-	solvexy [ label="solvexy" ];
-
-	objs -- solvexy
-	ckdt -- solvexy
-	quad -- solvexy
-	xyls -- solvexy
-
-	solvexy -- hits
+	match -- agreeable
+	agreeable -- agree
+	agreeable -- hits
 }
 
 // render with:

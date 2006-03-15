@@ -1,3 +1,13 @@
+/**
+   Quadidx: create .qidx files from .quad files.
+
+   A .quad file lists, for each quad, the stars comprising the quad.
+   A .qidx file lists, for each star, the quads that star is a member of.
+
+   Input: .quad
+   Output: .qidx
+ */
+
 #include <errno.h>
 #include <string.h>
 
