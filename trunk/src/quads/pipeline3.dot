@@ -1,99 +1,24 @@
-graph solvepipeline {
-	// graph [ rankdir = LR ];
+graph debugpipeline {
 	graph [ rankdir = TB ];
 	node [ shape=box ];
 	edge [ dir=forward ];
 
-	node [ style=filled, fillcolor=azure2 ];
-	objs [ label="Healpix-ified catalogue\n(.objs)" ];
-
-	// sort of obsolete things
-	node [ fillcolor=lightpink ];
-	code_ [ label="Old Quad Codes\n(.code_)" ];
-	quad_ [ label="Old Quads\n(.quad_)" ];
-
-	// debugging-type things
-	node [ fillcolor=orchid1 ];
+	objs [ label="Star catalog\n(.objs)" ];
+	skdt [ label="Star kd-tree\n(.skdt)" ];
 	xyl0 [ label="Ground-truth field\n(.xyl0)" ];
 	ids0 [ label="Ground-truth star ids\n(.ids0)"];
 	qds0 [ label="Ground-truth quads list\n(.qds0)"];
-	qidx [ label="Quad Index\n(.qidx)" ];
 
-	node [ style="" ];
-	ckdt [ label="Code kd-tree\n(.ckdt)" ];
-	quad [ label="Quads\n(.quad)" ];
-	skdt [ label="Star kd-tree\n(.skdt)" ];
-	code [ label="Quad Codes\n(.code)" ];
-
-	node [ style=filled, fillcolor=lightyellow2 ];
-	xyls [ label="Input field\n(.xyls)" ];
-
-	node [ style=filled, fillcolor=darkseagreen1 ];
-	hits [ label="Hit list\n(.hits)" ];
-
-	node [ shape=ellipse, style="" ];
-	startree [ label="startree" ];
-	allquads [ label="all_quads" ];
-	codetree [ label="codetree" ];
-	solvexy [ label="solvexy" ];
-
-	objs -- startree
-	startree -- skdt
-
-	skdt -- allquads
-	allquads -- qidx
-	allquads -- code
-	allquads -- quad
-
-	code -- codetree
-	codetree -- ckdt
-
-	objs -- solvexy
-	ckdt -- solvexy
-	quad -- solvexy
-	xyls -- solvexy
-	solvexy -- hits
-
-	//node [ shape=ellipse, style=filled, fillcolor=gold2 ];
-
-	// debugging-type things
-	node [ shape=ellipse, style=filled, fillcolor=orchid1 ];
+	node [ shape=ellipse ];
 
 	randcat -- objs
 
 	skdt -- genfields
-	genfields -- xyls // [ constraint=false ];
 	genfields -- xyl0
 	genfields -- ids0
-
-	qidx -- fieldquads
-	ids0 -- fieldquads
-	fieldquads -- qds0
-
-	skdt -- findstar
-	objs -- findstar
-
-	qidx -- findquad
-	quad -- findquad
-	code -- findquad
-
-	ckdt -- findcode
-
-	node [ fillcolor=lightpink ];
-	skdt -- getquads
-	getquads -- code_
-	getquads -- quad_
-
-	code_ -- quadidx
-	quad_ -- quadidx
-	quadidx -- code
-	quadidx -- quad
-	quadidx -- qidx
-
+	genfields -- qds0
 }
+
 // render with:
-//   dot -Tps2 -o pipeline3.ps pipeline3.dot
-// to get bounding box:
-//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=bbox pipeline3.ps
-// to render as png:
-//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=png16m -sOutputFile=pipeline3.png -g355x225 pipeline3.ps
+//   dot -Tps2 -o pipeline3.eps pipeline3.dot
+//   epstopng pipeline3.eps

@@ -4,7 +4,7 @@
 
    Author: dstn
 
-   Input:  .skdt2 or .ckdt2
+   Input:  .skdt or .ckdt
    Output: matlab literals
 */
 
