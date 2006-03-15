@@ -194,7 +194,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	fprintf(fid, "        ),\n");
 }
 
-void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
+void hits_write_correspondences(FILE* fid, uint* starids, uint* fieldids,
 								int Nids, int ok) {
 	int i;
 	//fprintf(fid, "    ],\n"); /* Close previous quads list */
