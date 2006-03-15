@@ -6,6 +6,52 @@
 
 #include "catalog.h"
 #include "fileutil.h"
+#include "ioutils.h"
+
+int write_objs_header(FILE *fid, uint numstars,
+					  uint DimStars, double ramin, double ramax, 
+					  double decmin, double decmax)
+{
+	magicval magic = MAGIC_VAL;
+	if (write_u16(fid, magic) ||
+		write_u32(fid, numstars) ||
+		write_u16(fid, DimStars) ||
+		write_double(fid, ramin) ||
+		write_double(fid, ramax) ||
+		write_double(fid, decmin) ||
+		write_double(fid, decmax)) {
+		fprintf(stderr, "Couldn't write objs header.\n");
+		return 1;
+	}
+	return 0;
+}
+
+int read_objs_header(FILE *fid, uint *numstars, uint *DimStars,
+					 double *ramin, double *ramax, 
+					 double *decmin, double *decmax)
+{
+	uint magic;
+
+	if (read_u16(fid, &magic)) {
+		fprintf(stderr, "Couldn't read objs header.\n");
+		return 1;
+	}
+	if (magic != MAGIC_VAL) {
+		fprintf(stderr, "Error reading objs header: bad magic value.\n");
+		return 1;
+	}
+	if (read_u32(fid, numstars) ||
+		read_u16(fid, DimStars) ||
+		read_double(fid, ramin) ||
+		read_double(fid, ramax) ||
+		read_double(fid, decmin) ||
+		read_double(fid, decmax)) {
+		fprintf(stderr, "Couldn't read objs header.\n");
+		return 1;
+	}
+	return 0;
+}
+
 
 int catalog_write_to_file(catalog* cat, char* fn) {
 	FILE *catfid  = NULL;
@@ -84,15 +130,8 @@ double* catalog_get_base(catalog* cat) {
 catalog* catalog_open(char* basefn, int modifiable) {
 	char* tempfn;
 	catalog* cat;
-	/*
-	  int len;
-	  len = strlen(basefn);
-	  tempfn = malloc(len + 1 + 5);
-	  sprintf(tempfn, "%s.objs", basefn);
-	*/
 	tempfn = mk_catfn(basefn);
 	cat = catalog_open_file(tempfn, modifiable);
-	//free(tempfn);
 	free_fn(tempfn);
 	return cat;
 }

@@ -17,9 +17,9 @@
 #define mk_streefn(s)  mk_filename(s,".skdt")
 #define mk_ctreefn(s)  mk_filename(s,".ckdt")
 #define mk_quadfn(s)   mk_filename(s,".quad")
-#define mk_quad0fn(s)  mk_filename(s,".quad_")
+//#define mk_quad0fn(s)  mk_filename(s,".quad_")
 #define mk_codefn(s)   mk_filename(s,".code")
-#define mk_code0fn(s)  mk_filename(s,".code_")
+//#define mk_code0fn(s)  mk_filename(s,".code_")
 #define mk_qidxfn(s)   mk_filename(s,".qidx")
 #define mk_hitfn(s)    mk_filename(s,".hits")
 #define mk_fieldfn(s)  mk_filename(s,".xyls")
@@ -33,17 +33,12 @@ void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD);
 void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
 void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
-char read_objs_header(FILE *fid, uint *numstars, uint *DimStars,
-					  double *ramin, double *ramax, double *decmin, double *decmax);
 char read_code_header(FILE *fid, uint *numcodes, uint *numstars,
                       uint *DimCodes, double *index_scale);
 char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
                       uint *DimQuads, double *index_scale);
 uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
                   uint ***starquads);
-void write_objs_header(FILE *fid, uint numstars,
-					   uint DimStars, double ramin, double ramax, 
-					   double decmin, double decmax);
 void write_code_header(FILE *codefid, uint numCodes,
                        uint numstars, uint DimCodes, double index_scale);
 void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
