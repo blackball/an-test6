@@ -5,25 +5,34 @@ graph indexpipeline {
 	node [ style=filled, fillcolor=azure2 ];
 	ddobjs [ label="Deduplicated catalogue\n(.objs)" ];
 	ckdt [ label="Code kd-tree\n(.ckdt)" ];
-	quad [ label="Quads\n(.quad)" ];
+	ddquad [ label="Deduplicated quads\n(.quad)" ];
 	node [ style="" ];
+	quad [ label="Quads\n(.quad)" ];
 	objs [ label="Healpix-ified catalogue\n(.objs)" ];
 	code [ label="Quad Codes\n(.code)" ];
+	ddcode [ label="Deduplicated codes\n(.code)" ];
 
 	node [ shape=ellipse ];
 	codetree [ label="codetree" ];
 
-	objs -- deduplicate
-	deduplicate -- ddobjs
+	objs -- deduplicate -- ddobjs
+
 	ddobjs -- hpquads
 	hpquads -- code
 	hpquads -- quad
-	code -- codetree
-	codetree -- ckdt
+
+	code -- dedup_index
+	quad -- dedup_index
+	dedup_index -- ddcode
+	dedup_index -- ddquad
+
+	ddcode -- codetree -- ckdt
 }
 
 // render with:
-//   dot -Tps2 -o pipeline.ps pipeline.dot
+//   dot -Tps2 -o pipeline.eps pipeline.dot
+//   epstopng pipeline.eps
+
 // to get bounding box:
 //   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=bbox pipeline.ps
 // to render as png:

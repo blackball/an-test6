@@ -19,6 +19,10 @@ graph solvepipeline {
 		startree -- skdt
 		quad -- quadidx
 		quadidx -- qidx
+
+		skdt -- findstar
+		objs -- findstar
+		qidx -- findquad
 	} 
 	node [ style=filled, fillcolor=azure2 ];
 	hits [ label="Hits file\n(.hits)" ];
@@ -26,9 +30,7 @@ graph solvepipeline {
 	node [ shape=ellipse, fillcolor=white ];
 	xyls -- postmortem
 	hits -- postmortem
-	skdt -- findstar
 	findstar -- postmortem
-	qidx -- findquad
 	findquad -- postmortem
 }
 
