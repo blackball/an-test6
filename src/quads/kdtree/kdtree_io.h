@@ -74,10 +74,12 @@ int kdtree_write_file(kdtree_t* kdtree, char* fn);
 
    Original author: dstn
  */
-int kdtree_portable_write(FILE* fout, kdtree_t* kdtree);
-
-kdtree_t* kdtree_portable_read(FILE* fin, int use_mmap,
-			       void** mmapped, int* mmapped_size);
+/*
+  int kdtree_portable_write(FILE* fout, kdtree_t* kdtree);
+  
+  kdtree_t* kdtree_portable_read(FILE* fin, int use_mmap,
+  void** mmapped, int* mmapped_size);
+*/
 
 
 #endif

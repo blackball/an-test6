@@ -24,7 +24,7 @@ void write_objs_header(FILE *fid, uint numstars,
                        uint DimStars, double ramin, double ramax, 
 							  double decmin, double decmax)
 {
-  magicval magic = MAGIC_VAL;
+	magicval magic = MAGIC_VAL;
   fwrite(&magic, sizeof(magic), 1, fid);
   fwrite(&numstars, sizeof(numstars), 1, fid);
   fwrite(&DimStars, sizeof(DimStars), 1, fid);

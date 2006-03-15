@@ -5,21 +5,21 @@ int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	int err = 0;
 	int i;
 	err |=
-		write_u32_native(fid, ENDIAN_DETECTOR) ||
-		write_u32_native(fid, me->fieldnum) ||
+		write_u32(fid, ENDIAN_DETECTOR) ||
+		write_u32(fid, me->fieldnum) ||
 		write_double(fid, me->codetol) ||
 		write_u8(fid, me->parity) ||
 		write_string(fid, me->indexpath) ||
 		write_string(fid, me->fieldpath) ||
-		write_u32_native(fid, mo->quadno) ||
-		write_u32_native(fid, mo->iA) ||
-		write_u32_native(fid, mo->iB) ||
-		write_u32_native(fid, mo->iC) ||
-		write_u32_native(fid, mo->iD) ||
-		write_u32_native(fid, mo->fA) ||
-		write_u32_native(fid, mo->fB) ||
-		write_u32_native(fid, mo->fC) ||
-		write_u32_native(fid, mo->fD) ||
+		write_u32(fid, mo->quadno) ||
+		write_u32(fid, mo->iA) ||
+		write_u32(fid, mo->iB) ||
+		write_u32(fid, mo->iC) ||
+		write_u32(fid, mo->iD) ||
+		write_u32(fid, mo->fA) ||
+		write_u32(fid, mo->fB) ||
+		write_u32(fid, mo->fC) ||
+		write_u32(fid, mo->fD) ||
 		write_double(fid, mo->code_err);
 	/* ticket #111
 	  write_double(fid, mo->fieldunits_lower) ||
@@ -57,8 +57,8 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 	   double funits_upper;
 	*/
 	err |=
-		read_u32_native(fid, &endian) ||
-		read_u32_native(fid, &fieldnum) ||
+		read_u32(fid, &endian) ||
+		read_u32(fid, &fieldnum) ||
 		read_double(fid, &codetol) ||
 		read_u8(fid, &parity);
 	if (err) {
@@ -80,15 +80,15 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 	}
 
 	err |=
-		read_u32_native(fid, &quad) ||
-		read_u32_native(fid, &iA) ||
-		read_u32_native(fid, &iB) ||
-		read_u32_native(fid, &iC) ||
-		read_u32_native(fid, &iD) ||
-		read_u32_native(fid, &fA) ||
-		read_u32_native(fid, &fB) ||
-		read_u32_native(fid, &fC) ||
-		read_u32_native(fid, &fD) ||
+		read_u32(fid, &quad) ||
+		read_u32(fid, &iA) ||
+		read_u32(fid, &iB) ||
+		read_u32(fid, &iC) ||
+		read_u32(fid, &iD) ||
+		read_u32(fid, &fA) ||
+		read_u32(fid, &fB) ||
+		read_u32(fid, &fC) ||
+		read_u32(fid, &fD) ||
 		read_double(fid, &codeerr);
 	/*
 	  ticket #111
