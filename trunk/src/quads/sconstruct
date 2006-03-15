@@ -44,6 +44,9 @@ env.Program('codeprojections',
 env.Program('agreeable',
             Split('agreeable.c bl.c hitsfile.c hitlist_healpix.c matchfile.c '
                   'healpix.c ioutils.c intmap.c starutil.c mathutil.c'))
+env.Program('quadidx',
+            Split('quadidx.c fileutil.c starutil.c bl.c quadfile.c '
+                  'mathutil.c '))
 
 tests = [
     env.Program('test_kdtree',

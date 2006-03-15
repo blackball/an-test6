@@ -120,11 +120,11 @@ int main(int argc, char *argv[]) {
 	}
 	for (i=0; i<quads->numstars; i++) {
 		int j;
-		qidx thisnumq;
-		sidx thisstar;
+		uint thisnumq;
+		uint thisstar;
 		il* list = quadlist[i];
 		if (!list) continue;
-		thisnumq = (qidx)il_size(list);
+		thisnumq = (uint)il_size(list);
 		thisstar = i;
 		if ((fwrite(&thisstar, sizeof(thisstar), 1, idxfid) != 1) ||
 			(fwrite(&thisnumq, sizeof(thisnumq), 1, idxfid) != 1)) {
