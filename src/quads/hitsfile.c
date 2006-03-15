@@ -132,10 +132,10 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 		fprintf(fid, "            field = %i,\n", me->fieldnum);
 	}
 
-	fprintf(fid, "            quad=%lu,\n", mo->quadno);
-	fprintf(fid, "            starids_ABCD=(%lu,%lu,%lu,%lu),\n",
+	fprintf(fid, "            quad=%u,\n", mo->quadno);
+	fprintf(fid, "            starids_ABCD=(%u,%u,%u,%u),\n",
 			mo->iA, mo->iB, mo->iC, mo->iD);
-	fprintf(fid, "            field_objects_ABCD=(%lu,%lu,%lu,%lu),\n",
+	fprintf(fid, "            field_objects_ABCD=(%u,%u,%u,%u),\n",
 			mo->fA, mo->fB, mo->fC, mo->fD);
 	fprintf(fid, "            min_xyz=(%lf,%lf,%lf), min_radec=(%lf,%lf),\n",
 			mo->sMin[0], mo->sMin[1], mo->sMin[2],
@@ -206,11 +206,11 @@ void hits_write_correspondences(FILE* fid, uint* starids, uint* fieldids,
     
 	fprintf(fid, "    field2catalog={\n");
 	for (i= 0 ; i<Nids; i++)
-		fprintf(fid, "        %lu : %lu,\n", fieldids[i], starids[i]);
+		fprintf(fid, "        %u : %u,\n", fieldids[i], starids[i]);
 	fprintf(fid, "    },\n");
 	fprintf(fid, "    catalog2field={\n");
 	for (i=0; i<Nids; i++)
-		fprintf(fid, "        %lu : %lu,\n", starids[i], fieldids[i]);
+		fprintf(fid, "        %u : %u,\n", starids[i], fieldids[i]);
 	fprintf(fid, "    },\n");
 }
 
