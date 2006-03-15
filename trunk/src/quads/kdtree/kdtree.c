@@ -87,42 +87,45 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d) {
 
 #else
 
-int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
-					 int D, int d, real lower, real upper) {
+int kdtree_dstn_partition(real *arr, unsigned int *parr, int l, int r,
+						  int D, int d, real lower, real upper) {
 	// we need to find the median and partition the data
 	int BINS = 100;
 	int counts[BINS];
 	int i;
 	real binsize;
-	int bl, br;
 	int sum;
-	int target;
 
 	real* data;
 	real median;
 
 	int N;
 	int m;
-	int Nleft, Nright, Nmiddle;
+	int Nleft, Nmiddle;
 	real newL, newU;
-
-	// DEBUG
-	int midind = 0;
 	int rank;
 
 	int il, ir;
+	int midbin;
+
+	assert(r >= l);
+	for (i=l; i<=r; i++) {
+		assert(arr[i*D+d] >= lower);
+		assert(arr[i*D+d] <= upper);
+	}
 
 	N = r - l + 1;
 	rank = (N-1)/2;
+
 	data = malloc(N*sizeof(real));
 	for (i=0; i<N; i++)
 		data[i] = arr[(l+i)*D + d];
 
 	while ((upper != lower) && (N>2)) {
 		real* newdata;
-		int il, ir, im, nm;
+		int nm;
 
-		fprintf(stderr, "\nN=%i, rank=%i.\n", N, rank);
+		assert(rank >= 0);
 
 		// compute the new actual lower and upper bounds.
 		// HACK - check if it's worthwhile computing this.
@@ -146,62 +149,27 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 			counts[i] = 0;
 		for (i=0; i<N; i++) {
 			int bin = (data[i] - lower) / binsize;
-			/*
-			  if (N < 5) {
-			  fprintf(stderr, "data=%g, bin=%i.\n", data[i], bin);
-			  }
-			*/
 			assert(bin >= 0);
 			assert(bin < BINS);
 			counts[bin]++;
 		}
 
-		// bl is the largest index, from the left, of the bin that definitely
-		// does not contain the median.
+		// "midbin" is the bin that contains the 'rank' (median)
 		sum=0;
-		for (bl=0;; bl++) {
-			assert(bl<BINS);
-			if (sum + counts[bl] >= rank)
-				break;
-			sum += counts[bl];
-		}
-		bl--;
-		Nleft = sum;
-
-		// br is the smallest index, from the right, of the bin that definitely
-		// does not contain the median.
-		sum=0;
-		for (br=BINS-1;; br--) {
-			assert(br>=0);
-			if (sum + counts[br] >= (N-rank))
-				break;
-			sum += counts[br];
-		}
-		br++;
-		Nright = sum;
-
-		// Nleft is the cumulative sum from [0, bl].
-		// Nright is the sum from [br, N-1].
-
-		Nmiddle = N - Nleft - Nright;
-
-		fprintf(stderr, "bl=%i, br=%i.\n", bl, br);
-
-		fprintf(stderr, "Nleft=%i, Nmiddle=%i, Nright=%i.\n", Nleft, Nmiddle, Nright);
-
-		assert(bl < br);
+		midbin = 0;
+		do {
+			sum += counts[midbin];
+			midbin++;
+		} while (sum <= rank);
+		midbin--;
+		Nleft = sum - counts[midbin];
+		Nmiddle = counts[midbin];
 
 		// compute upper and lower bounds of the range of bins that could
 		// contain the median.
-		newL = lower + (bl+1) * binsize;
-		newU = lower +  br    * binsize;
-
-		fprintf(stderr, "binsize %g.  new bounds [%g, %g]\n", binsize, newL, newU);
-
-		// sort all points into the "left", "middle", and "right" regions.
-
+		newL = lower + (midbin  ) * binsize;
+		newU = lower + (midbin+1) * binsize;
 		newdata = malloc(Nmiddle*sizeof(real));
-
 		nm = 0;
 		for (i=0; i<N; i++) {
 			if ((data[i] >= newL) && (data[i] < newU)) {
@@ -210,55 +178,38 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 			}
 		}
 		assert(nm == Nmiddle);
-
 		free(data);
 		data = newdata;
 
-		midind += Nleft;
 		rank -= Nleft;
 
 		lower = newL;
 		upper = newU;
 		N = Nmiddle;
 	}
-
-	/*
-	  if (upper == lower) {
-	  // there are equal values.  set the median to be midway through them.
-	  }
-	*/
-	fprintf(stderr, "End of loop: N=%i, rank=%i, midind=%i\n", N, rank, midind);
 	median = data[rank];
-	midind += rank;
-
-	assert(median == arr[(l+midind)*D+d]);
-
 	free(data);
 
 	N = r - l + 1;
-
-
 	il=l;
 	ir=r;
-	for (;;) {
+	while (1) {
 		real tmpdata[D];
 		int tmpperm;
 		
 		// scan from the left until we find an item out of place...
-		for (;; il++) {
-			if (arr[ il *D + d] > median)
-				break;
-		}
+		while (arr[ il *D + d] <= median)
+			il++;
+
 		// scan from the right until we find an item out of place...
-		for (;; ir--) {
-			if (arr[ ir *D + d] <= median)
-				break;
-		}
+		while (arr[ ir *D + d] > median)
+			ir--;
+
 		if (il >= ir)
 			break;
 
 		// swap 'em!
-		tmpperm = parr[il];
+		tmpperm  = parr[il];
 		parr[il] = parr[ir];
 		parr[ir] = tmpperm;
 
@@ -266,33 +217,124 @@ int kdtree_partition(real *arr, unsigned int *parr, int l, int r,
 		memcpy(arr+il*D, arr+ir*D, D*sizeof(real));
 		memcpy(arr+ir*D, tmpdata,  D*sizeof(real));
 
-		// ??
 		il++;
 		ir--;
 	}
-	fprintf(stderr, "il=%i, ir=%i.\n", il, ir);
-
-	// HACK
-	m = (il+ir)/2;
-
-	/*
-	  fprintf(stderr, "N=%i, midind=%i.  l=%i, r=%i.\n", N, midind, l, r);
-	  fprintf(stderr, "midind+l=%i, m=%i.\n", midind+l, m);
-	*/
+	m = il;
 
 	// check that it worked.
-	{
-		//assert(arr[m*D+d] == median);
-		for (i=l; i<m; i++) {
-			assert(arr[i*D + d] <= median);
-		}
-		for (i=m+1; i<=r; i++) {
-			assert(arr[i*D + d] > median);
-		}
+	for (i=l; i<m; i++) {
+		assert(arr[i*D + d] <= median);
+	}
+	for (i=m; i<=r; i++) {
+		assert(arr[i*D + d] > median);
 	}
 
 	return m;
 }
+
+int kd_compare_reals(const void* v1, const void* v2) {
+    real i1 = *(real*)v1;
+    real i2 = *(real*)v2;
+    if (i1 < i2) return -1;
+    else if (i1 > i2) return 1;
+    else return 0;
+}
+
+int kdtree_sam_partition(real *arr, unsigned int *parr, int l, int r,
+						 int D, int d, real lower, real upper) {
+	int i;
+	int W; // windowsize
+	real* window;
+	int Nleft, Nright;
+	real median;
+	int N;
+	int m;
+	real L, U;
+	int il, ir;
+
+	assert(r >= l);
+	for (i=l; i<=r; i++) {
+		assert(arr[i*D+d] >= lower);
+		assert(arr[i*D+d] <= upper);
+	}
+
+	N = r - l + 1;
+
+	W = 10+(N/1000);
+	window = malloc(W*sizeof(real));
+	for (i=0; i<W; i++)
+		window[i] = arr[(l+i)*D + d];
+
+	qsort(window, W, sizeof(real), kd_compare_reals);
+
+	L = window[0];
+	U = window[W-1];
+	Nleft = 0;
+	Nright = 0;
+
+	while (1) {
+
+		for (i=W+1; i<N; i++) {
+			real val = arr[(l+i)*D+d];
+			if (val < L) {
+				Nleft++;
+			} else if (val > U) {
+				Nright++;
+			} else {
+				// binary search for where it belongs...
+			}
+		}
+
+	}
+
+	// haha, this is much easier:
+	median = (upper + lower) / 2.0;
+
+
+	N = r - l + 1;
+	il=l;
+	ir=r;
+	while (1) {
+		real tmpdata[D];
+		int tmpperm;
+		
+		// scan from the left until we find an item out of place...
+		while (arr[ il *D + d] <= median)
+			il++;
+
+		// scan from the right until we find an item out of place...
+		while (arr[ ir *D + d] > median)
+			ir--;
+
+		if (il >= ir)
+			break;
+
+		// swap 'em!
+		tmpperm  = parr[il];
+		parr[il] = parr[ir];
+		parr[ir] = tmpperm;
+
+		memcpy(tmpdata,  arr+il*D, D*sizeof(real));
+		memcpy(arr+il*D, arr+ir*D, D*sizeof(real));
+		memcpy(arr+ir*D, tmpdata,  D*sizeof(real));
+
+		il++;
+		ir--;
+	}
+	m = il;
+
+	// check that it worked.
+	for (i=l; i<m; i++) {
+		assert(arr[i*D + d] <= median);
+	}
+	for (i=m; i<=r; i++) {
+		assert(arr[i*D + d] > median);
+	}
+
+	return m;
+}
+
 
 int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 {
@@ -375,7 +417,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	kdtree_t *kd; 
 	int nnodes; 
 	int level = 0, dim, t, m;
-	real pivot;
+	int pivot;
 	real lowers[D];
 	real uppers[D];
 
@@ -454,7 +496,8 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 		  m = (NODE(i)->r - NODE(i)->l)/2 + NODE(i)->l + 1;
 		  pivot = NODE(i)->pivot = *COORD(m, dim);
 		*/
-		m = kdtree_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim, lowers[dim], uppers[dim]);
+		//m = kdtree_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim, lowers[dim], uppers[dim]);
+		m = kdtree_sam_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim, lowers[dim], uppers[dim]);
 
 		/* Only do child operations if we're not the last layer */
 		if (level < maxlevel-1) {

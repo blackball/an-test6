@@ -20,20 +20,6 @@
 */
 
 
-void write_objs_header(FILE *fid, uint numstars,
-                       uint DimStars, double ramin, double ramax, 
-							  double decmin, double decmax)
-{
-	magicval magic = MAGIC_VAL;
-  fwrite(&magic, sizeof(magic), 1, fid);
-  fwrite(&numstars, sizeof(numstars), 1, fid);
-  fwrite(&DimStars, sizeof(DimStars), 1, fid);
-  fwrite(&ramin, sizeof(ramin), 1, fid);
-  fwrite(&ramax, sizeof(ramin), 1, fid);
-  fwrite(&decmin, sizeof(ramin), 1, fid);
-  fwrite(&decmax, sizeof(ramin), 1, fid);
-}
-
 void write_code_header(FILE *codefid, uint numCodes,
                        uint numstars, uint DimCodes, double index_scale)
 {
@@ -72,31 +58,6 @@ void fix_quad_header(FILE *quadfid, uint numQuads)
 	fwrite(&magic, sizeof(magic), 1, quadfid);
 	fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
 }
-
-
-char read_objs_header(FILE *fid, uint *numstars, uint *DimStars,
-                      double *ramin, double *ramax, 
-							 double *decmin, double *decmax)
-{
-	magicval magic;
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (read_objs_header) -- bad magic value\n");
-			return (READ_FAIL);
-		}
-		fread(numstars, sizeof(*numstars), 1, fid);
-		fread(DimStars, sizeof(*DimStars), 1, fid);
-		fread(ramin, sizeof(*ramin), 1, fid);
-		fread(ramax, sizeof(*ramax), 1, fid);
-		fread(decmin, sizeof(*decmin), 1, fid);
-		fread(decmax, sizeof(*decmax), 1, fid);
-	}
-
-	return (0);
-}
-
-
 
 char read_code_header(FILE *fid, uint *numcodes, uint *numstars,
                       uint *DimCodes, double *index_scale)

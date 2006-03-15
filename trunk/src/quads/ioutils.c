@@ -27,6 +27,17 @@ int read_u8(FILE* fin, unsigned char* val) {
     }
 }
 
+int read_u16(FILE* fin, unsigned int* val) {
+	uint16_t v;
+    if (fread(&v, 2, 1, fin) == 1) {
+		*val = v;
+		return 0;
+    } else {
+		read_complain(fin, "u8");
+		return 1;
+    }
+}
+
 int read_u32_portable(FILE* fin, unsigned int* val) {
     uint32_t u;
     if (fread(&u, 4, 1, fin) == 1) {
@@ -228,6 +239,16 @@ int write_u32s_portable(FILE* fout, unsigned int* val, int n) {
 int write_u32(FILE* fout, unsigned int val) {
     uint32_t v = (uint32_t)val;
     if (fwrite(&v, 4, 1, fout) == 1) {
+		return 0;
+    } else {
+		fprintf(stderr, "Couldn't write u32: %s\n", strerror(errno));
+		return 1;
+    }
+}
+
+int write_u16(FILE* fout, unsigned int val) {
+    uint16_t v = (uint16_t)val;
+    if (fwrite(&v, 2, 1, fout) == 1) {
 		return 0;
     } else {
 		fprintf(stderr, "Couldn't write u32: %s\n", strerror(errno));

@@ -6,6 +6,7 @@
 extern unsigned int ENDIAN_DETECTOR;
 
 int write_u8(FILE* fout, unsigned char val);
+int write_u16(FILE* fout, unsigned int val);
 int write_u32(FILE* fout, unsigned int val);
 int write_uints(FILE* fout, unsigned int* val, int n);
 int write_double(FILE* fout, double val);
@@ -18,6 +19,7 @@ int write_u32_portable(FILE* fout, unsigned int val);
 int write_u32s_portable(FILE* fout, unsigned int* val, int n);
 
 int read_u8(FILE* fin, unsigned char* val);
+int read_u16(FILE* fout, unsigned int* val);
 int read_u32(FILE* fin, unsigned int* val);
 int read_double(FILE* fin, double* val);
 int read_fixed_length_string(FILE* fin, char* s, int length);
