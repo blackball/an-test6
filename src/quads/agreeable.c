@@ -31,7 +31,7 @@ void printHelp(char* progname) {
 			progname);
 }
 
-int find_correspondences(pl* hits, sidx* starids, sidx* fieldids, int* p_ok);
+int find_correspondences(pl* hits, uint* starids, uint* fieldids, int* p_ok);
 
 void flush_solved_fields(bool doleftovers, bool doagree, bool addunsolved, bool cleanup);
 
@@ -317,8 +317,8 @@ void flush_solved_fields(bool doleftovers,
 		int nbest;
 		int fieldnum = k;
 		int j;
-		sidx* starids;
-		sidx* fieldids;
+		uint* starids;
+		uint* fieldids;
 		int correspond_ok = 1;
 		int Ncorrespond;
 
@@ -399,8 +399,8 @@ void flush_solved_fields(bool doleftovers,
 		}
 		hits_end_hits_list(hitfid);
 
-		starids  = (sidx*)malloc(nbest * 4 * sizeof(sidx));
-		fieldids = (sidx*)malloc(nbest * 4 * sizeof(sidx));
+		starids  = (uint*)malloc(nbest * 4 * sizeof(uint));
+		fieldids = (uint*)malloc(nbest * 4 * sizeof(uint));
 		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
 		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 		free(starids);
@@ -438,8 +438,8 @@ void flush_solved_fields(bool doleftovers,
 	fflush(hitfid);
 }
 
-inline void add_correspondence(sidx* starids, sidx* fieldids,
-							   sidx starid, sidx fieldid,
+inline void add_correspondence(uint* starids, uint* fieldids,
+							   uint starid, uint fieldid,
 							   int* p_nids, int* p_ok) {
 	int i;
 	int ok = 1;
@@ -458,7 +458,7 @@ inline void add_correspondence(sidx* starids, sidx* fieldids,
 	if (p_ok && !ok) *p_ok = 0;
 }
 
-int find_correspondences(pl* hits, sidx* starids, sidx* fieldids,
+int find_correspondences(pl* hits, uint* starids, uint* fieldids,
 						 int* p_ok) {
 	int i, N;
 	int M;

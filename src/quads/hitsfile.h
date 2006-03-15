@@ -56,7 +56,7 @@ void hits_end_hits_list(FILE* fid);
 void hits_write_field_tailer(FILE* fid);
 
 
-void hits_write_correspondences(FILE* fid, sidx* starids, sidx* fieldids,
+void hits_write_correspondences(FILE* fid, uint* starids, uint* fieldids,
 								int Nids, int ok);
 
 #endif

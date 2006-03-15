@@ -41,6 +41,9 @@ env.Program('codedensity',
                        'starutil.c bl.c mathutil.c'))
 env.Program('codeprojections',
             Split('codeprojections.c'))
+env.Program('agreeable',
+            Split('agreeable.c bl.c hitsfile.c hitlist_healpix.c matchfile.c '
+                  'healpix.c ioutils.c intmap.c starutil.c mathutil.c'))
 
 tests = [
     env.Program('test_kdtree',
