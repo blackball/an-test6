@@ -7,9 +7,9 @@
 
 double* codefile_read(FILE *fid, int *numcodes, int *Dim_Codes,
 					  double *index_scale) {
-    qidx ncodes;
-    dimension dimcodes;
-    sidx numstars;
+    uint ncodes;
+    uint dimcodes;
+    uint numstars;
     double* codearray = NULL;
     char readStatus;
     int nitems, nread;

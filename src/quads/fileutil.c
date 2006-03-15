@@ -20,8 +20,8 @@
 */
 
 
-void write_objs_header(FILE *fid, sidx numstars,
-                       dimension DimStars, double ramin, double ramax, 
+void write_objs_header(FILE *fid, uint numstars,
+                       uint DimStars, double ramin, double ramax, 
 							  double decmin, double decmax)
 {
   magicval magic = MAGIC_VAL;
@@ -34,8 +34,8 @@ void write_objs_header(FILE *fid, sidx numstars,
   fwrite(&decmax, sizeof(ramin), 1, fid);
 }
 
-void write_code_header(FILE *codefid, qidx numCodes,
-                       sidx numstars, dimension DimCodes, double index_scale)
+void write_code_header(FILE *codefid, uint numCodes,
+                       uint numstars, uint DimCodes, double index_scale)
 {
   magicval magic = MAGIC_VAL;
   fwrite(&magic, sizeof(magic), 1, codefid);
@@ -45,8 +45,8 @@ void write_code_header(FILE *codefid, qidx numCodes,
   fwrite(&numstars, sizeof(numstars), 1, codefid);
 }
 
-void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
-                       dimension DimQuads, double index_scale)
+void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
+                       uint DimQuads, double index_scale)
 {
   magicval magic = MAGIC_VAL;
 
@@ -57,7 +57,7 @@ void write_quad_header(FILE *quadfid, qidx numQuads, sidx numstars,
   fwrite(&numstars, sizeof(numstars), 1, quadfid);
 }
 
-void fix_code_header(FILE *codefid, qidx numCodes)
+void fix_code_header(FILE *codefid, uint numCodes)
 {
 	magicval magic = MAGIC_VAL;
 	rewind(codefid);
@@ -65,7 +65,7 @@ void fix_code_header(FILE *codefid, qidx numCodes)
 	fwrite(&numCodes, sizeof(numCodes), 1, codefid);
 }
 
-void fix_quad_header(FILE *quadfid, qidx numQuads)
+void fix_quad_header(FILE *quadfid, uint numQuads)
 {
 	magicval magic = MAGIC_VAL;
 	rewind(quadfid);
@@ -74,7 +74,7 @@ void fix_quad_header(FILE *quadfid, qidx numQuads)
 }
 
 
-char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
+char read_objs_header(FILE *fid, uint *numstars, uint *DimStars,
                       double *ramin, double *ramax, 
 							 double *decmin, double *decmax)
 {
@@ -98,8 +98,8 @@ char read_objs_header(FILE *fid, sidx *numstars, dimension *DimStars,
 
 
 
-char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
-                      dimension *DimCodes, double *index_scale)
+char read_code_header(FILE *fid, uint *numcodes, uint *numstars,
+                      uint *DimCodes, double *index_scale)
 {
 	magicval magic;
 	fread(&magic, sizeof(magic), 1, fid);
@@ -117,8 +117,8 @@ char read_code_header(FILE *fid, qidx *numcodes, sidx *numstars,
 
 }
 
-char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
-                      dimension *DimQuads, double *index_scale)
+char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
+                      uint *DimQuads, double *index_scale)
 {
 	magicval magic;
 	fread(&magic, sizeof(magic), 1, fid);
@@ -136,12 +136,12 @@ char read_quad_header(FILE *fid, qidx *numquads, sidx *numstars,
 
 }
 
-sidx read_quadidx(FILE *fid, sidx **starlist, qidx **starnumq,
-                 qidx ***starquads)
+uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
+                 uint ***starquads)
 {
 	magicval magic;
-	sidx numStars, thisstar, jj;
-	qidx thisnumq, ii;
+	uint numStars, thisstar, jj;
+	uint thisnumq, ii;
 
 	fread(&magic, sizeof(magic), 1, fid);
 	{
@@ -151,15 +151,15 @@ sidx read_quadidx(FILE *fid, sidx **starlist, qidx **starnumq,
 		}
 		fread(&numStars, sizeof(numStars), 1, fid);
 	}
-	*starlist = malloc(numStars * sizeof(sidx));
+	*starlist = malloc(numStars * sizeof(uint));
 	if (*starlist == NULL)
 		return (0);
-	*starnumq = malloc(numStars * sizeof(qidx));
+	*starnumq = malloc(numStars * sizeof(uint));
 	if (*starnumq == NULL) {
 		free(*starlist);
 		return (0);
 	}
-	*starquads = malloc(numStars * sizeof(qidx *));
+	*starquads = malloc(numStars * sizeof(uint *));
 	if (*starquads == NULL) {
 		free(*starlist);
 		free(*starnumq);
@@ -171,11 +171,11 @@ sidx read_quadidx(FILE *fid, sidx **starlist, qidx **starnumq,
 	  fread(&thisnumq, sizeof(thisnumq), 1, fid);
 		(*starlist)[jj] = thisstar;
 		(*starnumq)[jj] = thisnumq;
-		(*starquads)[jj] = malloc(thisnumq * sizeof(qidx));
+		(*starquads)[jj] = malloc(thisnumq * sizeof(uint));
 		if ((*starquads)[jj] == NULL)
 			return (0);
 		for (ii = 0;ii < thisnumq;ii++) {
-		  fread(((*starquads)[jj]) + ii, sizeof(qidx), 1, fid);
+		  fread(((*starquads)[jj]) + ii, sizeof(uint), 1, fid);
 		}
 	}
 
@@ -190,7 +190,7 @@ char *mk_filename(const char *basename, const char *extension)
 	return fname;
 }
 
-void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD)
+void readonequad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD)
 {
 	fread(iA, sizeof(*iA), 1, fid);
 	fread(iB, sizeof(*iB), 1, fid);
@@ -199,7 +199,7 @@ void readonequad(FILE *fid, qidx *iA, qidx *iB, qidx *iC, qidx *iD)
 	return ;
 }
 
-void writeonequad(FILE *fid, qidx iA, qidx iB, qidx iC, qidx iD)
+void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD)
 {
 	fwrite(&iA, sizeof(iA), 1, fid);
 	fwrite(&iB, sizeof(iB), 1, fid);

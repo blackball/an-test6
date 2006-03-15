@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	int argchar; //  opterr = 0;
 	char whichset = 0, xyzset = 0, radecset = 0, dtolset = 0, read_dtol = 0;
 	double dtol = 0.0;
-	sidx numstars, whichstar;
+	uint numstars, whichstar;
 	double xx, yy, zz, ra, dec;
 	kdtree_qres_t *kq = NULL;
 	kdtree_t *starkd = NULL;
@@ -99,14 +99,14 @@ int main(int argc, char *argv[])
 	if (!starkd)
 		return 2;
 	numstars = starkd->ndata;
-	fprintf(stderr, "%lu stars, %d nodes\n", numstars, starkd->nnodes);
+	fprintf(stderr, "%u stars, %d nodes\n", numstars, starkd->nnodes);
 
 	while (!feof(stdin) && scanrez) {
 		if (whichset) {
-			scanrez = fscanf(stdin, "%lu", &whichstar);
+			scanrez = fscanf(stdin, "%u", &whichstar);
 			if (scanrez == 1) {
 				if (whichstar < 0 || whichstar >= numstars) {
-					fprintf(stdin, "ERROR: No such star %lu\n", whichstar);
+					fprintf(stdin, "ERROR: No such star %u\n", whichstar);
 					continue;
 				}
 				qpp = catalog_get_star(cat, whichstar);
