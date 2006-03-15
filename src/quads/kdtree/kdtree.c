@@ -241,6 +241,27 @@ int kd_compare_reals(const void* v1, const void* v2) {
     else return 0;
 }
 
+/**
+   Returns the index where 'x' must be inserted so that 'array'
+   will remain sorted.
+*/
+int binary_search(real* array, int N, real x) {
+	// stolen from google://"On The Goodness of Binary Search"
+	int high = N;
+	int low = -1;
+	int probe;
+	while ((high - low) > 1) {
+		probe = (high + low) / 2;
+		if (array[probe] > x)
+			high = probe;
+		else
+			low = probe;
+	}
+	if (low == -1)
+		low = 0;
+	return low;
+}
+
 int kdtree_sam_partition(real *arr, unsigned int *parr, int l, int r,
 						 int D, int d, real lower, real upper) {
 	int i;
@@ -283,6 +304,7 @@ int kdtree_sam_partition(real *arr, unsigned int *parr, int l, int r,
 				Nright++;
 			} else {
 				// binary search for where it belongs...
+				int ind = binary_search(window, W, val);
 			}
 		}
 
