@@ -13,12 +13,15 @@ CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
+QFITS_OBJ = qfits/tfits.o qfits/fits_h.o
+
 OBJ = starutil.o fileutil.o xylist.o mathutil.o \
-	kdtree/kdtree.o kdtree/kdtree_io.o healpix.o \
+	kdtree/kdtree.o kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
+	healpix.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \
 	codefile.o tic.o quadfile.o intmap.o bl.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
-	hitlist_healpix.o 
+	hitlist_healpix.o $(QFITS_OBJ)
 
 SOLVER_OBJ = solver.o
 
@@ -44,17 +47,24 @@ MY_OBJ = randcat.o genfields.o findstar.o findquad.o \
 
 # solvexy2.o 
 
+QFITS_I = -Iqfits
+QFITS_L = 
+
+CFLAGS += $(QFITS_I)
+LFLAGS += $(QFITS_L)
+
 ALL_OBJ = $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS)
 
 $(EXECS) :: %: %.o $(OBJ)
-	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
-	$(CC) $(CFLAGS) $(LFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I = -Ikdtree/CuTest
+CUTEST_L = kdtree/CuTest/CuTest.o 
 
 CFLAGS += $(CUTEST_I)
 
@@ -75,8 +85,6 @@ allclean:
 
 clean:
 	rm -f $(EXECS) $(MY_OBJ) $(OBJ) $(DEPS) deps
-
-CUTEST_L = kdtree/CuTest/CuTest.o 
 
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)

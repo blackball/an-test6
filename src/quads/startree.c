@@ -14,20 +14,18 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
+#include "kdtree/kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "catalog.h"
 
-#define OPTIONS "hR:f:k:d:"
+#define OPTIONS "hR:f:k:d:F"
 const char HelpString[] =
 "startree -f fname [-R KD_RMIN] [-k keep] [-d radius]\n"
 "  KD_RMIN: (default 25) is the max# points per leaf in KD tree\n"
 "  keep: is the number of stars read from the catalogue\n"
 "  radius: is the de-duplication radius: a star found within this radius "
 "of another star will be discarded\n";
-
-char *treefname = NULL;
-char *catfname = NULL;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -36,10 +34,14 @@ int main(int argc, char *argv[]) {
     int argidx, argchar;
     int nkeep = 0;
     double duprad;
-    kdtree_t *starkd = NULL;
+    kdtree_t* starkd = NULL;
     int levels;
     catalog* cat;
     int Nleaf = 25;
+    bool fits = FALSE;
+    char* fitstreefname = NULL;
+    char* treefname = NULL;
+    char* catfname = NULL;
 
     if (argc <= 2) {
         fprintf(stderr, HelpString);
@@ -48,6 +50,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'F':
+            fits = TRUE;
+            break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
             break;
@@ -66,6 +71,7 @@ int main(int argc, char *argv[]) {
             }
             break;
         case 'f':
+            fitstreefname = mk_fits_streefn(optarg);
             treefname = mk_streefn(optarg);
             catfname = mk_catfn(optarg);
             break;
@@ -120,12 +126,19 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Writing star KD tree to %s...", treefname);
     fflush(stderr);
 
-    if (kdtree_write_file(starkd, treefname)) {
-        fprintf(stderr, "Failed to write star kdtree.\n");
-        exit(-1);
+    if (fits) {
+        if (kdtree_fits_write_file(starkd, fitstreefname)) {
+            fprintf(stderr, "Failed to write FITS-format star kdtree.\n");
+            exit(-1);
+        }
+    } else {
+        if (kdtree_write_file(starkd, treefname)) {
+            fprintf(stderr, "Failed to write star kdtree.\n");
+            exit(-1);
+        }
     }
     free_fn(treefname);
-
+    free_fn(fitstreefname);
     fprintf(stderr, "done.\n");
 
     kdtree_free(starkd);
