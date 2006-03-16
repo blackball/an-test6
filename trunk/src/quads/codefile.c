@@ -59,7 +59,7 @@ int fix_code_header(FILE* fid, uint numcodes) {
     return rtn;
 }
 
-int readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy) {
+int read_one_code(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy) {
     if (read_double(fid, Cx) ||
         read_double(fid, Cy) ||
         read_double(fid, Dx) ||
@@ -70,7 +70,7 @@ int readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy) {
 	return 0;
 }
 
-int writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy) {
+int write_one_code(FILE *fid, double Cx, double Cy, double Dx, double Dy) {
     if (write_double(fid, Cx) ||
         write_double(fid, Cy) ||
         write_double(fid, Dx) ||

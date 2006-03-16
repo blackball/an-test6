@@ -28,17 +28,8 @@
 #define mk_qlistfn(s)  mk_filename(s,".qds0")
 #define mk_rdlsfn(s)  mk_filename(s,".rdls")
 
-void readonequad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD);
-
-void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD);
-
-char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
-                      uint *DimQuads, double *index_scale);
 uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
                   uint ***starquads);
-void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
-                       uint DimQuads, double index_scale);
-void fix_quad_header(FILE *quadfid, uint numQuads);
 
 char *mk_filename(const char *basename, const char *extension);
 

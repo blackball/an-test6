@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include "starutil.h"
 
-int readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
+int read_one_code(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
 
-int writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
+int write_one_code(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
 double* codefile_read(FILE *fid, int *numcodes, int *Dim_Codes,
 					  double *index_scale);

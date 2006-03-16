@@ -19,48 +19,6 @@
    ...
 */
 
-
-
-void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
-                       uint DimQuads, double index_scale)
-{
-  magicval magic = MAGIC_VAL;
-
-  fwrite(&magic, sizeof(magic), 1, quadfid);
-  fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
-  fwrite(&DimQuads, sizeof(DimQuads), 1, quadfid);
-  fwrite(&index_scale, sizeof(index_scale), 1, quadfid);
-  fwrite(&numstars, sizeof(numstars), 1, quadfid);
-}
-
-void fix_quad_header(FILE *quadfid, uint numQuads)
-{
-	magicval magic = MAGIC_VAL;
-	rewind(quadfid);
-	fwrite(&magic, sizeof(magic), 1, quadfid);
-	fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
-}
-
-
-char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
-                      uint *DimQuads, double *index_scale)
-{
-	magicval magic;
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (read_quad_header) -- bad magic value\n");
-			return (READ_FAIL);
-		}
-		fread(numquads, sizeof(*numquads), 1, fid);
-		fread(DimQuads, sizeof(*DimQuads), 1, fid);
-		fread(index_scale, sizeof(*index_scale), 1, fid);
-		fread(numstars, sizeof(*numstars), 1, fid);
-	}
-	return (0);
-
-}
-
 uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
                  uint ***starquads)
 {
@@ -113,24 +71,6 @@ char *mk_filename(const char *basename, const char *extension)
 	fname = (char *)malloc(strlen(basename) + strlen(extension) + 1);
 	sprintf(fname, "%s%s", basename, extension);
 	return fname;
-}
-
-void readonequad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD)
-{
-	fread(iA, sizeof(*iA), 1, fid);
-	fread(iB, sizeof(*iB), 1, fid);
-	fread(iC, sizeof(*iC), 1, fid);
-	fread(iD, sizeof(*iD), 1, fid);
-	return ;
-}
-
-void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD)
-{
-	fwrite(&iA, sizeof(iA), 1, fid);
-	fwrite(&iB, sizeof(iB), 1, fid);
-	fwrite(&iC, sizeof(iC), 1, fid);
-	fwrite(&iD, sizeof(iD), 1, fid);
-	return ;
 }
 
 

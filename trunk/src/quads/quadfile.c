@@ -7,6 +7,82 @@
 #include "quadfile.h"
 #include "starutil.h"
 #include "fileutil.h"
+#include "ioutils.h"
+
+int read_one_quad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD) {
+    if (read_u32(fid, iA) ||
+        read_u32(fid, iB) ||
+        read_u32(fid, iC) ||
+        read_u32(fid, iD)) {
+        fprintf(stderr, "Couldn't read a quad.\n");
+        return -1;
+    }
+    return 0;
+}
+
+int write_one_quad(FILE *fid, uint iA, uint iB, uint iC, uint iD) {
+    if (write_u32(fid, iA) ||
+        write_u32(fid, iB) ||
+        write_u32(fid, iC) ||
+        write_u32(fid, iD)) {
+        fprintf(stderr, "Couldn't write a quad.\n");
+        return -1;
+    }
+    return 0;
+}
+
+int read_quad_header(FILE *fid, uint *numquads, uint *numstars,
+                     uint *DimQuads, double *index_scale) {
+    uint magic;
+	if (read_u16(fid, &magic)) {
+		fprintf(stderr, "Couldn't read quad header.\n");
+		return 1;
+	}
+	if (magic != MAGIC_VAL) {
+		fprintf(stderr, "Error reading quad header: bad magic value.\n");
+		return 1;
+	}
+    if (read_u32(fid, numquads) ||
+        read_u16(fid, DimQuads) ||
+        read_double(fid, index_scale) ||
+        read_u32(fid, numstars)) {
+		fprintf(stderr, "Couldn't read quad header.\n");
+		return 1;
+	}
+	return 0;
+}
+
+int write_quad_header(FILE *fid, uint numQuads, uint numstars,
+                      uint DimQuads, double index_scale) {
+    magicval magic = MAGIC_VAL;
+    if (write_u16(fid, magic) ||
+        write_u32(fid, numQuads) ||
+        write_u16(fid, DimQuads) ||
+        write_double(fid, index_scale) ||
+        write_u32(fid, numstars)) {
+        fprintf(stderr, "Couldn't write quad header.\n");
+        return -1;
+    }
+    return 0;
+}
+
+int fix_quad_header(FILE *fid, uint numQuads) {
+    off_t off;
+    magicval magic = MAGIC_VAL;
+    int rtn;
+    off = ftello(fid);
+    // go back to the beginning...
+    fseek(fid, 0, SEEK_SET);
+    rtn = 0;
+    if (write_u16(fid, magic) ||
+        write_u32(fid, numQuads)) {
+        fprintf(stderr, "Couldn't fix quad header.\n");
+        rtn = -1;
+    }
+    // go back from whence we came...
+    fseek(fid, off, SEEK_SET);
+    return rtn;
+}
 
 quadfile* quadfile_open(char* quadfname) {
 	quadfile* qf;
