@@ -23,7 +23,7 @@ void quadfile_get_starids(quadfile* qf, uint quadid,
 						  uint* starA, uint* starB,
 						  uint* starC, uint* starD);
 
-//int readonequad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD);
+//int read_one_quad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD);
 
 int write_one_quad(FILE *fid, uint iA, uint iB, uint iC, uint iD);
 
