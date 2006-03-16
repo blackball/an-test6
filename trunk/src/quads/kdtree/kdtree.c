@@ -262,101 +262,99 @@ int binary_search(real* array, int N, real x) {
 	return low;
 }
 
-int kdtree_sam_partition(real *arr, unsigned int *parr, int l, int r,
-						 int D, int d, real lower, real upper) {
-	int i;
-	int W; // windowsize
-	real* window;
-	int Nleft, Nright;
-	real median;
-	int N;
-	int m;
-	real L, U;
-	int il, ir;
+#define GET(x) (arr[(x)*D+d])
+#define ELEM_SWAP(il, ir) { \
+	assert(tmpperm != -1); \
+	tmpperm  = parr[il]; \
+	parr[il] = parr[ir]; \
+	parr[ir] = tmpperm; \
+	memcpy(tmpdata,    arr+(il)*D, D*sizeof(real)); \
+	memcpy(arr+(il)*D, arr+(ir)*D, D*sizeof(real)); \
+	memcpy(arr+(ir)*D, tmpdata,    D*sizeof(real)); }
 
+int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
+                                 int D, int d, real lower, real upper) {
+	real* tmpdata = alloca(D*sizeof(real));
+	real medval;
+	int tmpperm = -1, i;
+
+	int low, high ;
+	int median;
+	int middle, ll, hh;
+
+	/* sanity is good */
 	assert(r >= l);
 	for (i=l; i<=r; i++) {
-		assert(arr[i*D+d] >= lower);
-		assert(arr[i*D+d] <= upper);
+		assert(GET(i) >= lower);
+		assert(GET(i) <= upper);
 	}
 
-	N = r - l + 1;
+	/* Now find the median; also, just to happen to partition the data */
+	low = l;
+	high = r;
+	median = (low + high) / 2;
+	for (;;) {
+		if (high <= low) /* One element only */
+			goto done;
 
-	W = 10+(N/1000);
-	window = malloc(W*sizeof(real));
-	for (i=0; i<W; i++)
-		window[i] = arr[(l+i)*D + d];
-
-	qsort(window, W, sizeof(real), kd_compare_reals);
-
-	L = window[0];
-	U = window[W-1];
-	Nleft = 0;
-	Nright = 0;
-
-	while (1) {
-
-		for (i=W+1; i<N; i++) {
-			real val = arr[(l+i)*D+d];
-			if (val < L) {
-				Nleft++;
-			} else if (val > U) {
-				Nright++;
-			} else {
-				// binary search for where it belongs...
-				int ind = binary_search(window, W, val);
-			}
+		if (high == low + 1) {  /* Two elements only */
+			if (GET(low) > GET(high))
+				ELEM_SWAP(low, high);
+			goto done;
 		}
 
+		/* Find median of low, middle and high items; swap into position low */
+		middle = (low + high) / 2;
+		if (GET(middle) > GET(high))
+			ELEM_SWAP(middle, high);
+		if (GET(low) > GET(high))
+			ELEM_SWAP(low, high);
+		if (GET(middle) > GET(low))
+			ELEM_SWAP(middle, low);
+
+		/* Swap low item (now in position middle) into position (low+1) */
+		ELEM_SWAP(middle, low + 1) ;
+
+		/* Nibble from each end towards middle, swapping items when stuck */
+		ll = low + 1;
+		hh = high;
+		for (;;) {
+			do ll++;
+			while (GET(low) > GET(ll)) ;
+			do hh--;
+			while (GET(hh) > GET(low)) ;
+
+			if (hh < ll)
+				break;
+
+			ELEM_SWAP(ll, hh) ;
+		}
+
+		/* Swap middle item (in position low) back into correct position */
+		ELEM_SWAP(low, hh) ;
+
+		/* Re-set active partition */
+		if (hh <= median)
+			low = ll;
+		if (hh >= median)
+			high = hh - 1;
 	}
 
-	// haha, this is much easier:
-	median = (upper + lower) / 2.0;
-
-
-	N = r - l + 1;
-	il=l;
-	ir=r;
-	while (1) {
-		real tmpdata[D];
-		int tmpperm;
-		
-		// scan from the left until we find an item out of place...
-		while (arr[ il *D + d] <= median)
-			il++;
-
-		// scan from the right until we find an item out of place...
-		while (arr[ ir *D + d] > median)
-			ir--;
-
-		if (il >= ir)
-			break;
-
-		// swap 'em!
-		tmpperm  = parr[il];
-		parr[il] = parr[ir];
-		parr[ir] = tmpperm;
-
-		memcpy(tmpdata,  arr+il*D, D*sizeof(real));
-		memcpy(arr+il*D, arr+ir*D, D*sizeof(real));
-		memcpy(arr+ir*D, tmpdata,  D*sizeof(real));
-
-		il++;
-		ir--;
-	}
-	m = il;
+done:
+	medval = GET(median);
 
 	// check that it worked.
-	for (i=l; i<m; i++) {
-		assert(arr[i*D + d] <= median);
+	for (i=l; i<median; i++) {
+		assert(GET(i) <= medval);
 	}
-	for (i=m; i<=r; i++) {
-		assert(arr[i*D + d] > median);
+	for (i=median; i<=r; i++) {
+		assert(GET(i) > medval);
 	}
 
-	return m;
+	return median;
 }
-
+#undef ELEM_SWAP
+#undef GET
 
 int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 {
@@ -440,6 +438,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	int nnodes; 
 	int level = 0, dim, t, m;
 	int pivot;
+	(void) pivot;
 	real lowers[D];
 	real uppers[D];
 
@@ -519,7 +518,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 		  pivot = NODE(i)->pivot = *COORD(m, dim);
 		*/
 		//m = kdtree_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim, lowers[dim], uppers[dim]);
-		m = kdtree_sam_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim, lowers[dim], uppers[dim]);
+		m = kdtree_quickselect_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim, lowers[dim], uppers[dim]);
 
 		/* Only do child operations if we're not the last layer */
 		if (level < maxlevel-1) {
