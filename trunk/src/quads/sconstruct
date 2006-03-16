@@ -1,6 +1,6 @@
-DEBUG = '-O2'
 DEBUG = '-g -O0 -ftest-coverage -fprofile-arcs'
 DEBUG = '-g -O0'
+DEBUG = '-O2'
 
 env = Environment(LIBS='m',
                   CCFLAGS=Split(DEBUG + ' -Wall'),
