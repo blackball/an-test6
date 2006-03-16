@@ -258,7 +258,7 @@ void test_kd_range_search(CuTest *tc) {
 		// make sure the number of hits is equal.
 		CuAssertIntEquals(tc, nfound, results->nres);
 
-		fprintf(stderr, "range search: %i results.\n", results->nres);
+		printf("range search: %i results.\n", results->nres);
 
 		kdtree_free_query(results);
 	}
