@@ -11,6 +11,7 @@
 #include "healpix.h"
 #include "starutil.h"
 #include "fileutil.h"
+#include "codefile.h"
 #include "bl.h"
 #include "catalog.h"
 #include "tic.h"

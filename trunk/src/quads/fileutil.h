@@ -29,21 +29,15 @@
 #define mk_rdlsfn(s)  mk_filename(s,".rdls")
 
 void readonequad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD);
-void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD);
-void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy);
-void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy);
 
-char read_code_header(FILE *fid, uint *numcodes, uint *numstars,
-                      uint *DimCodes, double *index_scale);
+void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD);
+
 char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
                       uint *DimQuads, double *index_scale);
 uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
                   uint ***starquads);
-void write_code_header(FILE *codefid, uint numCodes,
-                       uint numstars, uint DimCodes, double index_scale);
 void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
                        uint DimQuads, double index_scale);
-void fix_code_header(FILE *codefid, uint numCodes);
 void fix_quad_header(FILE *quadfid, uint numQuads);
 
 char *mk_filename(const char *basename, const char *extension);
