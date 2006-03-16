@@ -13,7 +13,9 @@ CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
-QFITS_OBJ = qfits/tfits.o qfits/fits_h.o
+QFITS_OBJ = qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
+	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
+	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
 
 OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 	kdtree/kdtree.o kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
