@@ -20,16 +20,6 @@
 */
 
 
-void write_code_header(FILE *codefid, uint numCodes,
-                       uint numstars, uint DimCodes, double index_scale)
-{
-  magicval magic = MAGIC_VAL;
-  fwrite(&magic, sizeof(magic), 1, codefid);
-  fwrite(&numCodes, sizeof(numCodes), 1, codefid);
-  fwrite(&DimCodes, sizeof(DimCodes), 1, codefid);
-  fwrite(&index_scale, sizeof(index_scale), 1, codefid);
-  fwrite(&numstars, sizeof(numstars), 1, codefid);
-}
 
 void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
                        uint DimQuads, double index_scale)
@@ -43,14 +33,6 @@ void write_quad_header(FILE *quadfid, uint numQuads, uint numstars,
   fwrite(&numstars, sizeof(numstars), 1, quadfid);
 }
 
-void fix_code_header(FILE *codefid, uint numCodes)
-{
-	magicval magic = MAGIC_VAL;
-	rewind(codefid);
-	fwrite(&magic, sizeof(magic), 1, codefid);
-	fwrite(&numCodes, sizeof(numCodes), 1, codefid);
-}
-
 void fix_quad_header(FILE *quadfid, uint numQuads)
 {
 	magicval magic = MAGIC_VAL;
@@ -59,24 +41,6 @@ void fix_quad_header(FILE *quadfid, uint numQuads)
 	fwrite(&numQuads, sizeof(numQuads), 1, quadfid);
 }
 
-char read_code_header(FILE *fid, uint *numcodes, uint *numstars,
-                      uint *DimCodes, double *index_scale)
-{
-	magicval magic;
-	fread(&magic, sizeof(magic), 1, fid);
-	{
-		if (magic != MAGIC_VAL) {
-			fprintf(stderr, "ERROR (read_code_header) -- bad magic value\n");
-			return (READ_FAIL);
-		}
-		fread(numcodes, sizeof(*numcodes), 1, fid);
-		fread(DimCodes, sizeof(*DimCodes), 1, fid);
-		fread(index_scale, sizeof(*index_scale), 1, fid);
-		fread(numstars, sizeof(*numstars), 1, fid);
-	}
-	return (0);
-
-}
 
 char read_quad_header(FILE *fid, uint *numquads, uint *numstars,
                       uint *DimQuads, double *index_scale)
@@ -169,21 +133,4 @@ void writeonequad(FILE *fid, uint iA, uint iB, uint iC, uint iD)
 	return ;
 }
 
-void readonecode(FILE *fid, double *Cx, double *Cy, double *Dx, double *Dy)
-{
-	fread(Cx, sizeof(*Cx), 1, fid);
-	fread(Cy, sizeof(*Cy), 1, fid);
-	fread(Dx, sizeof(*Dx), 1, fid);
-	fread(Dy, sizeof(*Dy), 1, fid);
-	return ;
-}
-
-void writeonecode(FILE *fid, double Cx, double Cy, double Dx, double Dy)
-{
-	fwrite(&Cx, sizeof(Cx), 1, fid);
-	fwrite(&Cy, sizeof(Cy), 1, fid);
-	fwrite(&Dx, sizeof(Dx), 1, fid);
-	fwrite(&Dy, sizeof(Dy), 1, fid);
-	return ;
-}
 

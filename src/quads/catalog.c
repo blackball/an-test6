@@ -138,7 +138,6 @@ catalog* catalog_open(char* basefn, int modifiable) {
 
 catalog* catalog_open_file(char* catfn, int modifiable) {
 	FILE *catfid  = NULL;
-	char readStatus;
 	uint Dim_Stars;
 	off_t endoffset;
 	off_t headeroffset;
@@ -165,14 +164,13 @@ catalog* catalog_open_file(char* catfn, int modifiable) {
 	}
 
 	// Read .objs file...
-	readStatus = read_objs_header(catfid, &nstars_tmp, &Dim_Stars,
-								  &cat->ramin, &cat->ramax,
-								  &cat->decmin, &cat->decmax);
-	cat->nstars = nstars_tmp;
-	if (readStatus == (char)READ_FAIL) {
+	if (read_objs_header(catfid, &nstars_tmp, &Dim_Stars,
+                         &cat->ramin, &cat->ramax,
+                         &cat->decmin, &cat->decmax)) {
 		fprintf(stderr, "Failed to read catalog header.\n");
 		goto bail;
-	}
+    }
+	cat->nstars = nstars_tmp;
 	headeroffset = ftello(catfid);
 	// check that the catalogue file is the right size.
 	fseeko(catfid, 0, SEEK_END);
