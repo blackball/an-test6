@@ -14,7 +14,7 @@ env.Program('deduplicate',
                        'starutil.c dualtree_rangesearch.c dualtree.c'))
 env.Program('hpquads',
             Split('hpquads.c tic.c starutil.c ioutils.c catalog.c fileutil.c '
-                  'bl.c healpix.c mathutil.c codefile.c'))
+                  'bl.c healpix.c mathutil.c codefile.c quadfile.c'))
 env.Program('dedup_index',
             Split('dedup_index.c starutil.c fileutil.c mathutil.c codefile.c '
                   'quadfile.c bl.c ioutils.c'))
@@ -45,7 +45,7 @@ env.Program('agreeable',
                   'healpix.c ioutils.c intmap.c starutil.c mathutil.c'))
 env.Program('quadidx',
             Split('quadidx.c fileutil.c starutil.c bl.c quadfile.c '
-                  'mathutil.c '))
+                  'mathutil.c ioutils.c'))
 
 tests = [
     env.Program('test_kdtree',

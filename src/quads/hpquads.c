@@ -10,8 +10,9 @@
 
 #include "healpix.h"
 #include "starutil.h"
-#include "fileutil.h"
 #include "codefile.h"
+#include "fileutil.h"
+#include "quadfile.h"
 #include "bl.h"
 #include "catalog.h"
 #include "tic.h"
@@ -155,8 +156,8 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			staridC = staridD;
 			iC = iD;
 		} else {
-			writeonecode(codefid, cx, cy, dx, dy);
-			writeonequad(quadfid, staridA, staridB, staridC, staridD);
+			write_one_code(codefid, cx, cy, dx, dy);
+			write_one_quad(quadfid, staridA, staridB, staridC, staridD);
 			quadnum++;
 			drop_quad(stars, iA, iB, iC, iD);
 			if (used_stars) {
