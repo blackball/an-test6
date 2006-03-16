@@ -42,6 +42,8 @@ void test_sort_random(CuTest *tc) {
 	free(data);
 }
 
+/* Commenting out-- no longer sorting; we're median pivoting */
+/*
 void test_sort_1d_even(CuTest *tc)
 {
 	real data[]        = {5,9,84,7,56,4,8,4,33,120};
@@ -53,7 +55,9 @@ void test_sort_1d_even(CuTest *tc)
 	    CuAssertIntEquals(tc, data[i], data_sorted[i]);
 	}
 }
+*/
 
+/* Commenting out-- no longer sorting; we're median pivoting */
 void test_sort_1d_odd(CuTest *tc)
 {
 	real data[]        = {5,9,84,7,56,4,8,4,33,120,1};
@@ -271,7 +275,7 @@ int main(void) {
 
 
 	/* Add new tests here */
-	SUITE_ADD_TEST(suite, test_sort_1d_even);
+	//SUITE_ADD_TEST(suite, test_sort_1d_even);
 	SUITE_ADD_TEST(suite, test_sort_1d_odd);
 	SUITE_ADD_TEST(suite, test_sort_1d_even_3);
 	SUITE_ADD_TEST(suite, test_sort_1d_even_too_many_levels);

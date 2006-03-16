@@ -1,7 +1,6 @@
-if 'debug' in COMMAND_LINE_TARGETS:
-    DEBUG = '-g -O0 -ftest-coverage -fprofile-arcs'
-else:
-    DEBUG = '-O2'
+DEBUG = '-O2'
+DEBUG = '-g -O0 -ftest-coverage -fprofile-arcs'
+DEBUG = '-g -O0'
 
 env = Environment(LIBS='m',
                   CCFLAGS=Split(DEBUG + ' -Wall'),

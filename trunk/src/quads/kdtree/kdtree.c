@@ -264,8 +264,8 @@ int binary_search(real* array, int N, real x) {
 
 #define GET(x) (arr[(x)*D+d])
 #define ELEM_SWAP(il, ir) { \
-	assert(tmpperm != -1); \
 	tmpperm  = parr[il]; \
+	assert(tmpperm != -1); \
 	parr[il] = parr[ir]; \
 	parr[ir] = tmpperm; \
 	memcpy(tmpdata,    arr+(il)*D, D*sizeof(real)); \
@@ -344,14 +344,14 @@ done:
 	medval = GET(median);
 
 	// check that it worked.
-	for (i=l; i<median; i++) {
+	for (i=l; i<=median; i++) {
 		assert(GET(i) <= medval);
 	}
-	for (i=median; i<=r; i++) {
+	for (i=median + 1; i<=r; i++) {
 		assert(GET(i) > medval);
 	}
 
-	return median;
+	return median + 1;
 }
 #undef ELEM_SWAP
 #undef GET
