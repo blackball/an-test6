@@ -91,13 +91,13 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 
 #define GET(x) (arr[(x)*D+d])
 #define ELEM_SWAP(il, ir) { \
-	tmpperm  = parr[il]; \
-	assert(tmpperm != -1); \
-	parr[il] = parr[ir]; \
-	parr[ir] = tmpperm; \
-	memcpy(tmpdata,    arr+(il)*D, D*sizeof(real)); \
-	memcpy(arr+(il)*D, arr+(ir)*D, D*sizeof(real)); \
-	memcpy(arr+(ir)*D, tmpdata,    D*sizeof(real)); }
+        tmpperm  = parr[il]; \
+        assert(tmpperm != -1); \
+        parr[il] = parr[ir]; \
+        parr[ir] = tmpperm; \
+        memcpy(tmpdata,    arr+(il)*D, D*sizeof(real)); \
+        memcpy(arr+(il)*D, arr+(ir)*D, D*sizeof(real)); \
+        memcpy(arr+(ir)*D, tmpdata,    D*sizeof(real)); }
 
 int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
                                  int D, int d)
