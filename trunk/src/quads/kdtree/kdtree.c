@@ -211,7 +211,8 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	kd->ndim = D;
 	kd->nnodes = nnodes;
 	kd->data = data;
-	/* perm stores the permutation indexes. This gets shuffeled around during
+
+	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
 	kd->perm = malloc(sizeof(unsigned int) * N);
 	for (i = 0;i < N;i++)
@@ -224,8 +225,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	NODE(0)->r = N - 1;
 
 	/* And in one shot, make the kdtree. Each iteration we set our
-	 * children's hyperrectangles and [l,r] array indexes and sort our own
-	 * subset. */
+	 * children's [l,r] array bounds and pivot our own subset. */
 	for (i = 0; i < nnodes; i++) {
 
 		/* Sanity */
@@ -242,7 +242,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 		while (t >>= 1)
 			level++;
 
-		/* Find split dimension and sort on it */
+		/* Find split dimension and pivot the data at the median */
 		dim = NODE(i)->dim = level % D;
 		m = kdtree_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
 
@@ -267,7 +267,6 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 real results[KDTREE_MAX_RESULTS];
 real results_sqd[KDTREE_MAX_RESULTS];
 unsigned int results_inds[KDTREE_MAX_RESULTS];
-//unsigned int results_inds2[KDTREE_MAX_RESULTS];
 
 // DEBUG
 int overflow;
