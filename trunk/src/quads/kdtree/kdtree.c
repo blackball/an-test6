@@ -106,26 +106,20 @@ int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
 	real medval;
 	int tmpperm = -1, i;
 
-	int low, high ;
+	int low, high;
 	int median;
 	int middle, ll, hh;
 
-	/* Find the median; also, just to happen to partition the data */
+	/* sanity is good */
+	assert(r >= l);
+
+	/* Find the median; also happens to partition the data */
 	low = l;
 	high = r;
 	median = (low + high) / 2;
 	while(1) {
-
-		/* One element only */
-		if (high <= low)
-			goto heaven;
-
-		/* Two elements only */
-		if (high == low + 1) { 
-			if (GET(low) > GET(high))
-				ELEM_SWAP(low, high);
-			goto heaven;
-		}
+        if (high <= (low+1))
+            break;
 
 		/* Find median of low, middle and high items; swap into position low */
 		middle = (low + high) / 2;
@@ -164,7 +158,10 @@ int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
 			high = hh - 1;
 	}
 
-heaven:
+    if (high == low + 1) {  /* Two elements only */
+        if (GET(low) > GET(high))
+            ELEM_SWAP(low, high);
+    }
 	medval = GET(median);
 
 	/* check that it worked. */
@@ -179,12 +176,6 @@ heaven:
 }
 #undef ELEM_SWAP
 #undef GET
-
-#ifdef AMNSLOW
-#define kdtree_partition kdtree_qsort
-#else
-#define kdtree_partition kdtree_quickselect_partition
-#endif
 
 /* If the root node is level 0, then maxlevel is the level at which there may
  * not be enough points to keep the tree complete (i.e. last level) */
@@ -244,7 +235,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 
 		/* Find split dimension and pivot the data at the median */
 		dim = NODE(i)->dim = level % D;
-		m = kdtree_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
+		m = kdtree_quickselect_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
 
 		/* Only do child operations if we're not the last layer */
 		if (level < maxlevel - 1) {
