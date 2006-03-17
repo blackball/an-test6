@@ -9,6 +9,7 @@
 #include "qfits.h"
 #include "kdtree_fits_io.h"
 #include "mathutil.h"
+#include "ioutils.h"
 
 // how many FITS blocks are required to hold 'size' bytes?
 int fits_size(int size) {
@@ -174,6 +175,7 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     FILE* fid;
     void* dataptr;
     char val[256];
+	uint endian;
 
     fid = fopen(fn, "wb");
     if (!fid) {
@@ -190,6 +192,24 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_header_add(header, "NDIM", val, "kdtree: number of dimensions", NULL);
     sprintf(val, "%i", kdtree->nnodes);
     qfits_header_add(header, "NNODES", val, "kdtree: number of nodes", NULL);
+	endian = ENDIAN_DETECTOR;
+	{
+		unsigned char* cptr = (unsigned char*)&endian;
+		sprintf(val, "%02x:%02x:%02x:%02x", (uint)cptr[0], (uint)cptr[1], (uint)cptr[2], (uint)cptr[3]);
+	}
+	qfits_header_add(header, "ENDIAN", val, "Endianness detector: u32 0x01020304 written ", NULL);
+	qfits_header_add(header, "", NULL, " in the order it is stored in memory.", NULL);
+	sprintf(val, "%i", sizeof(uint));
+	qfits_header_add(header, "UINT_SZ", val, "sizeof(uint)", NULL);
+	sprintf(val, "%i", sizeof(real));
+	qfits_header_add(header, "REAL_SZ", val, "sizeof(real)", NULL);
+	qfits_header_add(header, "", NULL, "The first extension contains the kdtree node ", NULL);
+	qfits_header_add(header, "", NULL, " structs.", NULL);
+	qfits_header_add(header, "", NULL, "The second extension contains the kdtree data, ", NULL);
+	qfits_header_add(header, "", NULL, " stored as little-endian, 8-byte doubles.", NULL);
+	qfits_header_add(header, "", NULL, "The third extension contains the kdtree", NULL);
+	qfits_header_add(header, "", NULL, " permutation array, stored as little-endian", NULL);
+	qfits_header_add(header, "", NULL, " 4-byte unsigned ints.", NULL);
 
     // first table: the kdtree structs.
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * kdtree->ndim * 2;
@@ -202,7 +222,8 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_col_fill(table->col,
                    datasize, 0, 1, TFITS_BIN_TYPE_A,
                    "kdtree_nodes",
-                   "(no units)", "(no nullval)", "(no display)",
+                   //"(no units)", "(no nullval)", "(no display)",
+				   "", "", "",
                    0, 0, 0, 0,
                    0);
     qfits_save_table_hdrdump(&dataptr, table, header);
@@ -222,7 +243,8 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_col_fill(table->col,
                    datasize, 0, 1, TFITS_BIN_TYPE_A,
                    "kdtree_data",
-                   "(no units)", "(no nullval)", "(no display)",
+                   //"(no units)", "(no nullval)", "(no display)",
+				   "", "", "",
                    0, 0, 0, 0,
                    0);
     qfits_table_append_xtension(fid, table, &dataptr);
@@ -239,7 +261,8 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_col_fill(table->col,
                    datasize, 0, 1, TFITS_BIN_TYPE_A,
                    "kdtree_perm",
-                   "(no units)", "(no nullval)", "(no display)",
+                   //"(no units)", "(no nullval)", "(no display)",
+				   "", "", "",
                    0, 0, 0, 0,
                    0);
     qfits_table_append_xtension(fid, table, &dataptr);
