@@ -256,7 +256,9 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 /* Querying routines                                                         */
 /*****************************************************************************/
 
-real results[KDTREE_MAX_RESULTS];
+// should be D-dimensional...
+//real results[KDTREE_MAX_RESULTS];
+real* results = NULL;
 real results_sqd[KDTREE_MAX_RESULTS];
 unsigned int results_inds[KDTREE_MAX_RESULTS];
 
@@ -272,12 +274,16 @@ int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 	dsum = 0.0;
 	bblo = kdtree_get_bb_low(kd, node);
 	bbhi = kdtree_get_bb_high(kd, node);
+
+	assert(node->l < kd->ndata);
+	assert(node->r < kd->ndata);
+	assert(node->l >= 0);
+	assert(node->r >= 0);
+
 	for (i=node->l; i<=node->r; i++) {
 		sum += kd->perm[i];
-		/*
-		  for (d=0; d<kd->ndim; d++)
-		  dsum += kd->data[i*kd->ndim + d];
-		*/
+		assert(kd->perm[i] >= 0);
+		assert(kd->perm[i] < kd->ndata);
 	}
 	if (ISLEAF(nodeid)) {
 		for (i=node->l; i<=node->r; i++) {
@@ -647,6 +653,8 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 	res->nres = 0;
 	overflow = 0;
 
+	results = malloc(KDTREE_MAX_RESULTS * kd->ndim * sizeof(real));
+
 	/* Do the real rangesearch */
 	kdtree_rangesearch_actual(kd, 0, pt, maxdistsquared, res);
 
@@ -664,6 +672,9 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 
 	/* Sort by ascending distance away from target point before returning */
 	kdtree_qsort_results(res, kd->ndim);
+
+	free(results);
+	results = NULL;
 
 	return res;
 }

@@ -88,7 +88,6 @@ quadfile* quadfile_open(char* quadfname) {
 	quadfile* qf;
     uint Dim_Quads;
 	FILE* quadfid;
-    char readStatus;
 	uint numquads, numstars;
 	off_t headeroffset;
 	off_t endoffset;
@@ -104,9 +103,10 @@ quadfile* quadfile_open(char* quadfname) {
 		fprintf(stderr, "Couldn't open quad file %s: %s\n", quadfname, strerror(errno));
 		return NULL;
 	}
-	readStatus = read_quad_header(quadfid, &numquads, &numstars, &Dim_Quads, &index_scale);
-	if (readStatus == (char)READ_FAIL)
+	if (read_quad_header(quadfid, &numquads, &numstars, &Dim_Quads, &index_scale)) {
+		fprintf(stderr, "Couldn't read quad header.\n");
 		return NULL;
+	}
 	if (Dim_Quads != DIM_QUADS) {
 		fprintf(stderr, "Quad file %s is wrong: Dim_Quads=%i, not %i.\n", quadfname, Dim_Quads, DIM_QUADS);
 		return NULL;

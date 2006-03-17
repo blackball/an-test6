@@ -125,13 +125,15 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	}
 
 	// launch!
-	size = imax(offnodes + sizenodes, offdata + sizedata);
+	size = offnodes + sizenodes;
+	size = imax(size, offdata + sizedata);
 	size = imax(size, offperm + sizeperm);
 
 	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
 	fclose(fid);
 	if (map == MAP_FAILED) {
 		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
+		return NULL;
 	}
 
     kdtree = malloc(sizeof(kdtree_t));
@@ -151,7 +153,6 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	kdtree->data = (real*)         (map + offdata);
 	kdtree->tree = (kdtree_node_t*)(map + offnodes);
 
-	// HACK -
 	/*
 	  fprintf(stderr, "Checking tree...\n");
 	  fflush(stderr);
@@ -163,17 +164,8 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	return kdtree;
 }
 
-/*
-  kdtree_t* kdtree_fits_read(FILE* fin) {
-  return NULL;
-  }
-*/
-
 int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
-    //int nelems;
     int nodesize;
-    //int nbytes;
-	//int err = 0;
     int ncols, nrows;
     int datasize;
     int tablesize;
@@ -260,43 +252,6 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     }
     return 0;
 }
-
-int kdtree_fits_write(FILE* fout, kdtree_t* kdtree) {
-
-
-    /*
-      if (!err) err |= write_u8(fout, 2);
-      if (!err) err |= write_u8(fout, sizeof(real));
-      if (!err) err |= write_u8(fout, sizeof(unsigned int));
-      if (!err) err |= write_u8(fout, sizeof(kdtree_node_t));
-      if (!err) err |= write_u32(fout, ENDIAN_DETECTOR);
-      if (!err) err |= write_u32(fout, nodesize);
-      if (!err) err |= write_u32(fout, kdtree->ndata);
-      if (!err) err |= write_u32(fout, kdtree->ndim);
-      if (!err) err |= write_u32(fout, kdtree->nnodes);
-      if (err) {
-      fprintf(stderr, "Couldn't write kdtree header.\n");
-      return 1;
-      }
-      if (write_uints(fout, kdtree->perm, kdtree->ndata)) {
-      fprintf(stderr, "Couldn't write kdtree permutation vector.\n");
-      return 1;
-      }
-      nelems = kdtree->ndata * kdtree->ndim;
-      if (write_reals(fout, kdtree->data, nelems)) {
-      fprintf(stderr, "Couldn't write kdtree data.\n");
-      return 1;
-      }
-      nbytes = nodesize * kdtree->nnodes;
-      if (fwrite(kdtree->tree, 1, nbytes, fout) != nbytes) {
-      fprintf(stderr, "Couldn't write kdtree nodes\n");
-      return 1;
-      }
-    */
-    return 0;
-}
-
-
 
 void kdtree_fits_close(kdtree_t* kd) {
 	assert(kd);

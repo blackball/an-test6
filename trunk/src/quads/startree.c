@@ -131,18 +131,16 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stderr, "done (%d nodes)\n", starkd->nnodes);
 
-	if (fits)
-		fprintf(stderr, "Writing FITS format output to %s ...\n", fitstreefname);
-	else
-		fprintf(stderr, "Writing output to %s ...\n", treefname);
-    fflush(stderr);
-
     if (fits) {
+		fprintf(stderr, "Writing FITS format output to %s\n", fitstreefname);
+		fflush(stderr);
         if (kdtree_fits_write_file(starkd, fitstreefname)) {
             fprintf(stderr, "Failed to write FITS-format star kdtree.\n");
             exit(-1);
         }
     } else {
+		fprintf(stderr, "Writing output to %s ...\n", treefname);
+		fflush(stderr);
         if (kdtree_write_file(starkd, treefname)) {
             fprintf(stderr, "Failed to write star kdtree.\n");
             exit(-1);
