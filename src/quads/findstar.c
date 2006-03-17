@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <math.h>
 #include <string.h>
+#include <assert.h>
+
 #include "starutil.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
@@ -96,7 +98,6 @@ int main(int argc, char *argv[])
 		if (!cat) {
 			fprintf(stderr, "ERROR: couldn't open catalog");
 		}
-		free(cat);
 	}
 
 	if (fits) {
@@ -113,7 +114,15 @@ int main(int argc, char *argv[])
 	if (!starkd)
 		return 2;
 	numstars = starkd->ndata;
-	fprintf(stderr, "%u stars, %d nodes\n", numstars, starkd->nnodes);
+	fprintf(stderr, "%u stars, %d nodes\n", starkd->ndata, starkd->nnodes);
+
+	// DEBUG
+	{
+		int i;
+		for (i=0; i<starkd->ndata; i++) {
+			assert(starkd->perm[i] < starkd->ndata);
+		}
+	}
 
 	while (!feof(stdin) && scanrez) {
 		if (whichset) {
