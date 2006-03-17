@@ -17,6 +17,12 @@ int fits_size(int size) {
 	return size - (size % FITS_BLOCK_SIZE);
 }
 
+void get_endian_string(char* str) {
+	uint endian = ENDIAN_DETECTOR;
+	unsigned char* cptr = (unsigned char*)&endian;
+	sprintf(str, "%02x:%02x:%02x:%02x", (uint)cptr[0], (uint)cptr[1], (uint)cptr[2], (uint)cptr[3]);
+}
+
 kdtree_t* kdtree_fits_read_file(char* fn) {
 	FILE* fid;
 	kdtree_t* kdtree = NULL;
@@ -29,6 +35,9 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
     int nodesize;
 	int size;
 	void* map;
+	char str[256];
+	char endian[256];
+	int uintsz, realsz;
 
 	if (!is_fits_file(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -52,8 +61,37 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	ndim   = qfits_header_getint(header, "NDIM", -1);
 	ndata  = qfits_header_getint(header, "NDATA", -1);
 	nnodes = qfits_header_getint(header, "NNODES", -1);
+	snprintf(endian, sizeof(endian), "%s", qfits_header_getstr(header, "ENDIAN"));
+	uintsz = qfits_header_getint(header, "UINT_SZ", -1);
+	realsz = qfits_header_getint(header, "REAL_SZ", -1);
 
 	qfits_header_destroy(header);
+
+	if ((ndim == -1) || (ndata == -1) || (nnodes == -1)) {
+		fprintf(stderr, "Couldn't find NDIM, NDATA, or NNODES entries in the startree FITS header.\n");
+		fclose(fid);
+		return NULL;
+	}
+	fprintf(stderr, "ndim %u, ndata %u, nnodes %u.\n", ndim, ndata, nnodes);
+
+	get_endian_string(str);
+	// "endian" contains ' characters around the string, like
+	// '04:03:02:01', so we start at index 1, and only compare the length of
+	// str.
+	if (strncmp(str, endian+1, strlen(str)) != 0) {
+		fprintf(stderr, "File was written with endianness %s, this machine has endianness %s.\n",
+				endian, str);
+		fclose(fid);
+		return NULL;
+	}
+
+	if ((sizeof(uint) != uintsz) || (sizeof(real) != realsz)) {
+		fprintf(stderr, "File was written with sizeof(uint)=%i, sizeof(real)=%i, but currently "
+				"sizeof(uint)=%i, sizeof(real)=%i.\n",
+				uintsz, realsz, sizeof(uint), sizeof(real));
+		fclose(fid);
+		return NULL;
+	}
 
 	nextens = qfits_query_n_ext(fn);
 	fprintf(stderr, "file has %i extensions.\n", nextens);
@@ -94,13 +132,6 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 			qfits_table_close(table);
 		}
 	}
-
-	if ((ndim == -1) || (ndata == -1) || (nnodes == -1)) {
-		fprintf(stderr, "Couldn't find NDIM, NDATA, or NNODES entries in the startree FITS header.\n");
-		fclose(fid);
-		return NULL;
-	}
-	fprintf(stderr, "ndim %u, ndata %u, nnodes %u.\n", ndim, ndata, nnodes);
 
 	if ((offnodes == -1) || (offdata == -1) || (offperm == -1)) {
 		fprintf(stderr, "Couldn't find nodes, data, or permutation table.\n");
@@ -175,7 +206,6 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     FILE* fid;
     void* dataptr;
     char val[256];
-	uint endian;
 
     fid = fopen(fn, "wb");
     if (!fid) {
@@ -192,11 +222,7 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_header_add(header, "NDIM", val, "kdtree: number of dimensions", NULL);
     sprintf(val, "%i", kdtree->nnodes);
     qfits_header_add(header, "NNODES", val, "kdtree: number of nodes", NULL);
-	endian = ENDIAN_DETECTOR;
-	{
-		unsigned char* cptr = (unsigned char*)&endian;
-		sprintf(val, "%02x:%02x:%02x:%02x", (uint)cptr[0], (uint)cptr[1], (uint)cptr[2], (uint)cptr[3]);
-	}
+	get_endian_string(val);
 	qfits_header_add(header, "ENDIAN", val, "Endianness detector: u32 0x01020304 written ", NULL);
 	qfits_header_add(header, "", NULL, " in the order it is stored in memory.", NULL);
 	sprintf(val, "%i", sizeof(uint));
