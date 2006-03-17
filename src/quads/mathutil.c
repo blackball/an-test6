@@ -3,6 +3,10 @@
 #include <string.h>
 #include "mathutil.h"
 
+inline int imax(int a, int b) {
+	return (a > b) ? a : b;
+}
+
 #define GAUSSIAN_SAMPLE_INVALID -1e300
 
 double gaussian_sample(double mean, double stddev) {

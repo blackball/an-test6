@@ -4,17 +4,19 @@
 #include "starutil.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
+#include "kdtree/kdtree_fits_io.h"
 #include "fileutil.h"
 #include "catalog.h"
 
-#define OPTIONS "hf:ixrRt:"
+#define OPTIONS "hf:ixrRt:F"
 const char HelpString[] =
-    "findstar -f fname -t dist {-i | -x | -r | -R} then read stdin\n";
+    "findstar -f fname -t dist [-F] {-i | -x | -r | -R} then read stdin\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 char *treefname = NULL, *catfname = NULL, *basefname = NULL;
+char* fitstreefname = NULL;
 catalog* cat = NULL;
 
 int main(int argc, char *argv[])
@@ -30,6 +32,7 @@ int main(int argc, char *argv[])
 	double* qpp = NULL;
 	char scanrez = 1;
 	int ii;
+	bool fits = FALSE;
 
 	if (argc <= 3) {
 		fprintf(stderr, HelpString);
@@ -38,6 +41,9 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'F':
+			fits = TRUE;
+			break;
 		case 't':
 			dtol = strtod(optarg, NULL);
 			if (dtol < 0.0)
@@ -67,6 +73,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'f':
 			treefname = mk_streefn(optarg);
+			fitstreefname = mk_fits_streefn(optarg);
 			catfname = mk_catfn(optarg);
 			basefname = strdup(optarg);
 			break;
@@ -92,9 +99,16 @@ int main(int argc, char *argv[])
 		free(cat);
 	}
 
-	fprintf(stderr, "findstar: getting stars from %s\n", treefname);
-	fflush(stderr);
-    starkd = kdtree_read_file(treefname);
+	if (fits) {
+		fprintf(stderr, "findstar: getting stars from %s\n", fitstreefname);
+		fflush(stderr);
+		starkd = kdtree_fits_read_file(fitstreefname);
+	} else {
+		fprintf(stderr, "findstar: getting stars from %s\n", treefname);
+		fflush(stderr);
+		starkd = kdtree_read_file(treefname);
+	}
+	free_fn(fitstreefname);
 	free_fn(treefname);
 	if (!starkd)
 		return 2;

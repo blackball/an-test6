@@ -7,6 +7,9 @@ LFLAGS = -lm
 CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_OS_MEMORY_MANAGEMENT -I.
 
+# to turn off asserts:
+# -DNDEBUG
+
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
 
@@ -27,12 +30,11 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 
 SOLVER_OBJ = solver.o
 
-# execs that don't need AM's stuff
 EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls \
 	certifiable hpquads dedup_index codetree startree \
 	codetomatlab printcatalog fixcatalogheader deduplicate \
-	randcat genfields codedensity agreeable findquad
+	randcat genfields codedensity agreeable findquad findstar
 
 # execs that require solver.o
 SOLVER_EXECS = slave

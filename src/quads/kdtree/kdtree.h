@@ -44,6 +44,10 @@ struct kdtree_qres {
 };
 typedef struct kdtree_qres kdtree_qres_t;
 
+int kdtree_check(kdtree_t* t);
+
+int kdtree_is_point_in_rect(real* bblo, real* bbhi, real* point, int dim);
+
 kdtree_node_t* kdtree_get_root(kdtree_t* kd);
 
 int kdtree_node_is_leaf(kdtree_t* tree, kdtree_node_t* node);

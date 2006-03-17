@@ -8,18 +8,158 @@
 
 #include "qfits.h"
 #include "kdtree_fits_io.h"
+#include "mathutil.h"
+
+// how many FITS blocks are required to hold 'size' bytes?
+int fits_size(int size) {
+	size += FITS_BLOCK_SIZE - 1;
+	return size - (size % FITS_BLOCK_SIZE);
+}
 
 kdtree_t* kdtree_fits_read_file(char* fn) {
 	FILE* fid;
-	kdtree_t* kdtree;
+	kdtree_t* kdtree = NULL;
+	qfits_header* header;
+	uint ndata, ndim, nnodes;
+	int nextens;
+	int offnodes, offdata, offperm;
+	int sizenodes, sizedata, sizeperm;
+	int i;
+    int nodesize;
+	int size;
+	void* map;
+
+	if (!is_fits_file(fn)) {
+		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
+		return NULL;
+	}
+
 	fid = fopen(fn, "rb");
 	if (!fid) {
 		fprintf(stderr, "Couldn't open file %s to read kdtree: %s\n",
 				fn, strerror(errno));
 		return NULL;
 	}
-	//kdtree = kdtree_fits_read(fid);
+
+	header = qfits_header_read(fn);
+	if (!header) {
+		fprintf(stderr, "Couldn't read startree FITS header from %s.\n", fn);
+		fclose(fid);
+		return NULL;
+	}
+
+	ndim   = qfits_header_getint(header, "NDIM", -1);
+	ndata  = qfits_header_getint(header, "NDATA", -1);
+	nnodes = qfits_header_getint(header, "NNODES", -1);
+
+	qfits_header_destroy(header);
+
+	nextens = qfits_query_n_ext(fn);
+	fprintf(stderr, "file has %i extensions.\n", nextens);
+
+	offnodes = -1;
+	offdata = -1;
+	offperm = -1;
+
+	for (i=0; i<=nextens; i++) {
+		int start, size;
+		int istable;
+		if (qfits_get_datinfo(fn, i, &start, &size) == -1) {
+			fprintf(stderr, "error getting start/size for ext %i.\n", i);
+			continue;
+		}
+		fprintf(stderr, "ext %i starts at %i, has size %i.\n",
+				i, start, size);
+		istable = qfits_is_table(fn, i);
+		fprintf(stderr, "ext %i is %sa table.\n", i,
+				(istable ? "" : "not "));
+		if (istable) {
+			qfits_table* table = qfits_table_open(fn, i);
+			int c;
+			for (c=0; c<table->nc; c++) {
+				qfits_col* col = table->col + c;
+				fprintf(stderr, "  col %i: %s\n", c, col->tlabel);
+				if (strcmp(col->tlabel, "kdtree_nodes") == 0) {
+					offnodes = start;
+					sizenodes = size;
+				} else if (strcmp(col->tlabel, "kdtree_data") == 0) {
+					offdata = start;
+					sizedata = size;
+				} else if (strcmp(col->tlabel, "kdtree_perm") == 0) {
+					offperm = start;
+					sizeperm = size;
+				}
+			}
+			qfits_table_close(table);
+		}
+	}
+
+	if ((ndim == -1) || (ndata == -1) || (nnodes == -1)) {
+		fprintf(stderr, "Couldn't find NDIM, NDATA, or NNODES entries in the startree FITS header.\n");
+		fclose(fid);
+		return NULL;
+	}
+	fprintf(stderr, "ndim %u, ndata %u, nnodes %u.\n", ndim, ndata, nnodes);
+
+	if ((offnodes == -1) || (offdata == -1) || (offperm == -1)) {
+		fprintf(stderr, "Couldn't find nodes, data, or permutation table.\n");
+		fclose(fid);
+		return NULL;
+	}
+	fprintf(stderr, "nodes offset %i, size %i\n", offnodes, sizenodes);
+	fprintf(stderr, "data  offset %i, size %i\n", offdata, sizedata);
+	fprintf(stderr, "perm  offset %i, size %i\n", offperm, sizeperm);
+
+    nodesize = sizeof(kdtree_node_t) + sizeof(real) * ndim * 2;
+
+	if ((fits_size(nodesize * nnodes) != sizenodes) ||
+		(fits_size(ndata * sizeof(int)) != sizeperm) ||
+		(fits_size(ndata * ndim * sizeof(real)) != sizedata)) {
+		fprintf(stderr, "Node, permutation, or data size doesn't jive!");
+		fprintf(stderr, "  (%i -> %i vs %i, %i -> %i vs %i, %i -> %i vs %i)\n",
+				nodesize * nnodes, fits_size(nodesize*nnodes),
+				sizenodes, fits_size(sizenodes), ndata * sizeof(int), sizeperm,
+				ndata * ndim * sizeof(real), fits_size(ndata*ndim&sizeof(real)), sizedata);
+		fclose(fid);
+		return NULL;
+	}
+
+	// launch!
+	size = imax(offnodes + sizenodes, offdata + sizedata);
+	size = imax(size, offperm + sizeperm);
+
+	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
 	fclose(fid);
+	if (map == MAP_FAILED) {
+		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
+	}
+
+    kdtree = malloc(sizeof(kdtree_t));
+    if (!kdtree) {
+		fprintf(stderr, "Couldn't allocate kdtree.\n");
+		return NULL;
+    }
+
+    kdtree->ndata  = ndata;
+    kdtree->ndim   = ndim;
+    kdtree->nnodes = nnodes;
+
+	kdtree->mmapped = map;
+	kdtree->mmapped_size = size;
+
+	kdtree->perm = (unsigned int*) (map + offperm);
+	kdtree->data = (real*)         (map + offdata);
+	kdtree->tree = (kdtree_node_t*)(map + offnodes);
+
+	// HACK -
+	/*
+	  fprintf(stderr, "Checking tree...\n");
+	  fflush(stderr);
+	  assert(kdtree_check(kdtree) == 0);
+	  fprintf(stderr, "Check completed.\n");
+	  fflush(stderr);
+	*/
+
 	return kdtree;
 }
 
@@ -53,11 +193,11 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     // the header
     header = qfits_table_prim_header_default();
     sprintf(val, "%i", kdtree->ndata);
-    qfits_header_add(header, "kdtree_ndata", val, "kdtree: number of data points", NULL);
+    qfits_header_add(header, "NDATA", val, "kdtree: number of data points", NULL);
     sprintf(val, "%i", kdtree->ndim);
-    qfits_header_add(header, "kdtree_ndim", val, "kdtree: number of dimensions", NULL);
+    qfits_header_add(header, "NDIM", val, "kdtree: number of dimensions", NULL);
     sprintf(val, "%i", kdtree->nnodes);
-    qfits_header_add(header, "kdtree_nnodes", val, "kdtree: number of nodes", NULL);
+    qfits_header_add(header, "NNODES", val, "kdtree: number of nodes", NULL);
 
     // first table: the kdtree structs.
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * kdtree->ndim * 2;
