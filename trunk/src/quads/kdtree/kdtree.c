@@ -169,7 +169,8 @@ int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
 		assert(GET(i) <= medval);
 	}
 	for (i = median + 1; i <= r; i++) {
-		assert(GET(i) > medval);
+		assert(GET(i) >= medval);
+		//assert(GET(i) > medval);
 	}
 
 	return median + 1;
@@ -262,6 +263,61 @@ unsigned int results_inds[KDTREE_MAX_RESULTS];
 // DEBUG
 int overflow;
 
+int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
+	int sum, i;
+	double dsum;
+	real *bblo, *bbhi;
+	// scan through the arrays owned by this node
+	sum = 0;
+	dsum = 0.0;
+	bblo = kdtree_get_bb_low(kd, node);
+	bbhi = kdtree_get_bb_high(kd, node);
+	for (i=node->l; i<=node->r; i++) {
+		sum += kd->perm[i];
+		/*
+		  for (d=0; d<kd->ndim; d++)
+		  dsum += kd->data[i*kd->ndim + d];
+		*/
+	}
+	if (ISLEAF(nodeid)) {
+		for (i=node->l; i<=node->r; i++) {
+			// check that the point is within the bounding box.
+			assert(kdtree_is_point_in_rect(bblo, bbhi, kd->data + i*kd->ndim, kd->ndim));
+			/*
+			  if (!kdtree_is_point_in_rect(bblo, bbhi, kd->data + i*kd->ndim, kd->ndim)) {
+			  fprintf(stderr, "point %i is not in bounding box.\n", i);
+			  return -1;
+			  }
+			*/
+		}
+	} else {
+		// check that the children's bounding box corners are within
+		// the parent's bounding box.
+		kdtree_node_t* child;
+		real* bb;
+		child = kdtree_get_child1(kd, node);
+		bb = kdtree_get_bb_low(kd, child);
+		assert(kdtree_is_point_in_rect(bblo, bbhi, bb, kd->ndim));
+		bb = kdtree_get_bb_high(kd, child);
+		assert(kdtree_is_point_in_rect(bblo, bbhi, bb, kd->ndim));
+		child = kdtree_get_child2(kd, node);
+		bb = kdtree_get_bb_low(kd, child);
+		assert(kdtree_is_point_in_rect(bblo, bbhi, bb, kd->ndim));
+		bb = kdtree_get_bb_high(kd, child);
+		assert(kdtree_is_point_in_rect(bblo, bbhi, bb, kd->ndim));
+	}
+	return 0;
+}
+
+int kdtree_check(kdtree_t* kd) {
+	int i;
+	for (i=0; i<kd->nnodes; i++) {
+		if (kdtree_node_check(kd, NODE(i), i))
+			return -1;
+	}
+	return 0;
+}
+
 kdtree_node_t* kdtree_get_root(kdtree_t* kd)
 {
 	return kd->tree;
@@ -285,6 +341,18 @@ real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node)
 real* kdtree_get_bb_high(kdtree_t* tree, kdtree_node_t* node)
 {
 	return (real*)((char*)(node + 1) + sizeof(real) * tree->ndim);
+}
+
+int kdtree_is_point_in_rect(real* bblo, real* bbhi, real* point, int dim) {
+	int i;
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblo[i];
+		hi = bbhi[i];
+		if (point[i] < lo) return 0;
+		if (point[i] > hi) return 0;
+	}
+	return 1;
 }
 
 real kdtree_bb_mindist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2, int dim)

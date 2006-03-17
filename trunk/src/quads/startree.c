@@ -20,12 +20,14 @@
 #include "catalog.h"
 
 #define OPTIONS "hR:f:k:d:F"
-const char HelpString[] =
-"startree -f fname [-R KD_RMIN] [-k keep] [-d radius]\n"
-"  KD_RMIN: (default 25) is the max# points per leaf in KD tree\n"
-"  keep: is the number of stars read from the catalogue\n"
-"  radius: is the de-duplication radius: a star found within this radius "
-"of another star will be discarded\n";
+
+void printHelp(char* progname) {
+	printf("%s -f <input-catalog-name>\n"
+		   "    [-R Nleaf]: number of points in a kdtree leaf node\n"
+		   "    [-k keep]:  number of points to keep\n"
+		   "    [-d radius]: deduplication radius (arcsec)\n"
+		   "    [-F]: write FITS format output.\n", progname);
+}
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -42,9 +44,10 @@ int main(int argc, char *argv[]) {
     char* fitstreefname = NULL;
     char* treefname = NULL;
     char* catfname = NULL;
+	char* progname = argv[0];
 
     if (argc <= 2) {
-        fprintf(stderr, HelpString);
+		printHelp(progname);
         return 0;
     }
 
@@ -78,7 +81,7 @@ int main(int argc, char *argv[]) {
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
         case 'h':
-            fprintf(stderr, HelpString);
+			printHelp(progname);
             return 0;
         default:
             return -1;
@@ -87,13 +90,18 @@ int main(int argc, char *argv[]) {
     if (optind < argc) {
         for (argidx = optind; argidx < argc; argidx++)
             fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-        fprintf(stderr, HelpString);
+		printHelp(progname);
         return 0;
     }
 
     fprintf(stderr, "%s: building KD tree for %s\n", argv[0], catfname);
 
-    fprintf(stderr, "  Reading star catalogue...");
+	if (fits)
+		fprintf(stderr, "Will write FITS format output to %s\n", fitstreefname);
+	else
+		fprintf(stderr, "Will write output to %s\n", treefname);
+
+    fprintf(stderr, "Reading star catalogue...");
     cat = catalog_open_file(catfname, 1);
     free_fn(catfname);
     if (!cat) {
@@ -123,7 +131,10 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stderr, "done (%d nodes)\n", starkd->nnodes);
 
-    fprintf(stderr, "  Writing star KD tree to %s...", treefname);
+	if (fits)
+		fprintf(stderr, "Writing FITS format output to %s ...\n", fitstreefname);
+	else
+		fprintf(stderr, "Writing output to %s ...\n", treefname);
     fflush(stderr);
 
     if (fits) {
