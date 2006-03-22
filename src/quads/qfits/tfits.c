@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.1 $
+   @version	$Revision: 1.2 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+	$Id: tfits.c,v 1.2 2006/03/22 16:34:28 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/16 22:10:26 $
-	$Revision: 1.1 $
+	$Date: 2006/03/22 16:34:28 $
+	$Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -751,7 +751,7 @@ unsigned char * qfits_query_column(
 
 	/* SWAP the bytes if necessary */
 #ifndef WORDS_BIGENDIAN
-    if (th->tab_t == QFITS_BINTABLE) {
+    if ((th->tab_t == QFITS_BINTABLE) && (col->atom_size > 1)) {
 		r = array ;
 		for (i=0 ; i<nb_rows * col->atom_nb ; i++) {
 			swap_bytes(r, col->atom_size);
@@ -844,7 +844,7 @@ unsigned char * qfits_query_column_seq(
 
 	/* SWAP the bytes if necessary */
 #ifndef WORDS_BIGENDIAN
-    if (th->tab_t == QFITS_BINTABLE) {
+    if ((th->tab_t == QFITS_BINTABLE) && (col->atom_size > 1)) {
 		r = array ;
 		for (i=0 ; i<nb_rows * col->atom_nb ; i++) {
 			swap_bytes(r, col->atom_size);
@@ -2335,11 +2335,13 @@ static int qfits_table_append_data(
 
             /* Byte swapping needed if on a little-endian machine */
 #ifndef WORDS_BIGENDIAN
-            r = array[i] ;
-            for (j=0 ; j<t->nr * curr_col->atom_nb ; j++) {
-                swap_bytes(r, curr_col->atom_size);
-                r += curr_col->atom_size ;
-            }
+			if (curr_col->atom_size > 1) {
+				r = array[i] ;
+				for (j=0 ; j<t->nr * curr_col->atom_nb ; j++) {
+					swap_bytes(r, curr_col->atom_size);
+					r += curr_col->atom_size ;
+				}
+			}
 #endif
         } else return -1 ;
         curr_col++ ;
