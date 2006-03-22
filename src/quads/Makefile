@@ -14,8 +14,8 @@ CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
 
-MACHINE=`uname -m`
-ifneq ($(MACHINE), "i686")
+MACHINE=$(shell uname -m)
+ifneq ($(MACHINE), i686)
 	CFLAGS += -DNOT_686
 endif
 
