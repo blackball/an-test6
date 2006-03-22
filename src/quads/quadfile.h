@@ -17,6 +17,8 @@ void quadfile_close(quadfile* qf);
 
 quadfile* quadfile_open(char* quadfname);
 
+quadfile* quadfile_fits_open(char* quadfname);
+
 double quadfile_get_index_scale_arcsec(quadfile* qf);
 
 void quadfile_get_starids(quadfile* qf, uint quadid,

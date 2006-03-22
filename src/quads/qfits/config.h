@@ -14,8 +14,9 @@
 #define CHAR_BIT	8
 #endif
 
-
+#if !defined(NOT_686)
 #define CPU_X86         686
+#endif
 
 #define OS_LINUX        1
 #endif

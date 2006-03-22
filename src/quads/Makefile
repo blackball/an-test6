@@ -5,13 +5,19 @@ LFLAGS = -lm
 
 #fast
 CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
-	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_OS_MEMORY_MANAGEMENT -I.
+	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
+	-DUSE_OS_MEMORY_MANAGEMENT -I.
 
 # to turn off asserts:
 # -DNDEBUG
 
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
+
+MACHINE=`uname -m`
+ifneq ($(MACHINE), "i686")
+	CFLAGS += -DNOT_686
+endif
 
 #debug
 #CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
@@ -26,7 +32,7 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \
 	codefile.o tic.o quadfile.o intmap.o bl.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
-	hitlist_healpix.o $(QFITS_OBJ)
+	hitlist_healpix.o fitsioutils.o $(QFITS_OBJ)
 
 SOLVER_OBJ = solver.o
 
