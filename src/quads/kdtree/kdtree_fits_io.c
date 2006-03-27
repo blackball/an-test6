@@ -161,9 +161,9 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
 	qfits_header_add(header, "", NULL, "The first extension contains the kdtree node ", NULL);
 	qfits_header_add(header, "", NULL, " structs.", NULL);
 	qfits_header_add(header, "", NULL, "The second extension contains the kdtree data, ", NULL);
-	qfits_header_add(header, "", NULL, " stored as little-endian, 8-byte doubles.", NULL);
+	qfits_header_add(header, "", NULL, " stored in native-endian, 8-byte doubles.", NULL);
 	qfits_header_add(header, "", NULL, "The third extension contains the kdtree", NULL);
-	qfits_header_add(header, "", NULL, " permutation array, stored as little-endian", NULL);
+	qfits_header_add(header, "", NULL, " permutation array, stored as native-endian", NULL);
 	qfits_header_add(header, "", NULL, " 4-byte unsigned ints.", NULL);
 
     // first table: the kdtree structs.

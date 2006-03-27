@@ -40,7 +40,8 @@ EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls \
 	certifiable hpquads dedup_index codetree startree \
 	codetomatlab printcatalog fixcatalogheader deduplicate \
-	randcat genfields codedensity agreeable findquad findstar
+	randcat genfields codedensity agreeable findquad findstar \
+	qftst
 
 # execs that require solver.o
 SOLVER_EXECS = slave
