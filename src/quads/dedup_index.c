@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     } else {
         codeinfname = mk_codefn(infname);
     }
-    codesin = codefile_open(codeinfname, fitsin);
+    codesin = codefile_open(codeinfname, fitsin, 0);
     free_fn(codeinfname);
     if (!codesin) {
         fprintf(stderr, "Couldn't read codefile.\n");
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		quadinfname = mk_quadfn(infname);
 	}
-    quadsin = quadfile_open(quadinfname, fitsin);
+	quadsin = quadfile_open(quadinfname, fitsin, 0);
     if (!quadsin) {
         fprintf(stderr, "Couldn't read quads input file %s\n", quadinfname);
         exit(-1);

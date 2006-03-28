@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Reading codes...");
     fflush(stderr);
 
-    codes = codefile_open(codefname, fitsin);
+    codes = codefile_open(codefname, fitsin, 1);
     free_fn(codefname);
     if (!codes) {
         exit(-1);
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
 		rtn = kdtree_write_file(codekd, treefname);
     free_fn(treefname);
 	if (rtn) {
-        fprintf(stderr, "Couldn't write star kdtree.\n");
+        fprintf(stderr, "Couldn't write code kdtree.\n");
         exit(-1);
     }
 

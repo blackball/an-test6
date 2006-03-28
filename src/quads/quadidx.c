@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "quadidx: indexing quads in %s...\n",
 	        quadfname);
 
-	quads = quadfile_open(quadfname, fits);
+	quads = quadfile_open(quadfname, fits, 0);
 	if (!quads) {
 		fprintf(stderr, "Couldn't open quads file %s.\n", quadfname);
 		exit(-1);

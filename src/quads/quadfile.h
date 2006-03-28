@@ -43,7 +43,7 @@ double quadfile_get_index_scale_lower_arcsec(quadfile* qf);
 
 // 
 
-quadfile* quadfile_open(char* fname, int fits);
+quadfile* quadfile_open(char* fname, int fits, int modifiable);
 
 quadfile* quadfile_open_for_writing(char* quadfname, int fits);
 
