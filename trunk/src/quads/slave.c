@@ -16,6 +16,7 @@
 
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
+#include "kdtree/kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
@@ -84,7 +85,7 @@ char* get_pathname(char* fname) {
 }
 
 int main(int argc, char *argv[]) {
-    FILE *fieldfid = NULL, *treefid = NULL;
+    FILE *fieldfid = NULL;
     uint numfields;
     xyarray *thefields = NULL;
     kdtree_t *codekd = NULL;
@@ -182,11 +183,14 @@ int main(int argc, char *argv[]) {
 		// Read .ckdt2 file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
 		fflush(stderr);
-		fopenin(treefname, treefid);
-		codekd = kdtree_read(treefid);
+        // HACK - if the filename ends in .fits, assume it's in FITS format
+        if (strcmp(treefname + strlen(treefname) - 5, ".fits") == 0) {
+            codekd = kdtree_fits_read_file(treefname);
+        } else {
+            codekd = kdtree_read_file(treefname);
+        }
 		if (!codekd)
 			exit(-1);
-		fclose(treefid);
 		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 				codekd->ndata, codekd->nnodes, codekd->ndim);
 
