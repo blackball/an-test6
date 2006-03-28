@@ -73,11 +73,11 @@ int main(int argc, char *argv[]) {
         return (OPT_ERR);
     }
 
-    treefname = mk_ctreefn(optarg);
+    treefname = mk_ctreefn(basename);
     if (fitsin) {
-        codefname = mk_fits_codefn(optarg);
+        codefname = mk_fits_codefn(basename);
     } else {
-        codefname = mk_codefn(optarg);
+        codefname = mk_codefn(basename);
     }
 
     fprintf(stderr, "codetree: building KD tree for %s\n", codefname);
