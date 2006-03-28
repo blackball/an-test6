@@ -21,8 +21,8 @@
 #define OPTIONS "hf:o:FG"
 const char HelpString[] =
 "dedup_index -f <input-prefix> -o <output-prefix>\n"
-"    [-F] : input is in FITS format\n"
-"    [-G] : write output in FITS format\n";
+"    [-F] : input is in traditional (non-FITS) format\n"
+"    [-G] : write output in traditional (non-FITS) format\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -51,7 +51,6 @@ int sort_permuted_array(const void* v1, const void* v2) {
 int main(int argc, char *argv[]) {
     int argidx, argchar;
     FILE *codein = NULL, *codeout = NULL;
-    FILE *quadout = NULL;
     int numstars;
 	int numcodes;
 	uint numquads;
@@ -68,16 +67,17 @@ int main(int argc, char *argv[]) {
     quadfile* quadsout = NULL;
 	int nextskip;
 	int skipind;
-	int fitsin = 0;
-	int fitsout = 0;
+	int fitsin = 1;
+	int fitsout = 1;
+    int rtn;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
 		case 'F':
-			fitsin = 1;
+			fitsin = 0;
 			break;
 		case 'G':
-			fitsout = 1;
+			fitsout = 0;
 			break;
 		case 'f':
 			infname = optarg;
@@ -105,17 +105,6 @@ int main(int argc, char *argv[]) {
 		return (HELP_ERR);
     }
 
-	if (fitsin) {
-		quadinfname = mk_fits_quadfn(infname);
-	} else {
-		quadinfname = mk_quadfn(infname);
-	}
-	if (fitsout) {
-		quadoutfname = mk_fits_quadfn(outfname);
-	} else {
-		quadoutfname = mk_quadfn(outfname);
-	}
-
  	codeinfname = mk_codefn(infname);
  	codeoutfname = mk_codefn(outfname);
 
@@ -132,8 +121,10 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Reading quads...");
 	if (fitsin) {
+		quadinfname = mk_fits_quadfn(infname);
 		quadsin = quadfile_fits_open(quadinfname);
 	} else {
+		quadinfname = mk_quadfn(infname);
 		quadsin = quadfile_open(quadinfname);
 	}
     if (!quadsin) {
@@ -152,13 +143,17 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "%i stars are used in %i quads.\n", numstars, numcodes);
 
 	if (fitsout) {
+		quadoutfname = mk_fits_quadfn(outfname);
 		quadsout = quadfile_fits_open_for_writing(quadoutfname);
-		if (!quadsout) {
-			exit(-1);
-		}
 	} else {
-		fopenout(quadoutfname, quadout);
+		quadoutfname = mk_quadfn(outfname);
+        quadsout = quadfile_open_for_writing(quadoutfname);
 	}
+    if (!quadsout) {
+        fprintf(stderr, "Couldn't open output quads file %s: %s\n", quadoutfname, strerror(errno));
+        exit(-1);
+    }
+
 	fopenout(codeoutfname, codeout);
 
 	qsort_array = codearray;
@@ -197,14 +192,9 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "%i codes are equal, out of %i codes.\n", nequal, numcodes);
 	free(perm);
 
-	write_code_header(codeout, numquads-il_size(duplicates),
+    write_code_header(codeout, numquads-il_size(duplicates),
 					  numstars, DIM_CODES, index_scale);
 	
-	if (!fitsout) {
-		write_quad_header(quadout, numquads - il_size(duplicates),
-						  numstars, DIM_QUADS, index_scale);
-	}
-
 	nextskip = -1;
 	skipind = 0;
 	for (i=0; i<numquads; i++) {
@@ -234,28 +224,26 @@ int main(int argc, char *argv[]) {
 		if (fitsout) {
 			quadfile_fits_write_quad(quadsout, iA, iB, iC, iD);
 		} else {
-			write_one_quad(quadout, iA, iB, iC, iD);
+			quadfile_write_quad(quadsout, iA, iB, iC, iD);
 		}
 	}
 
-	// close .code and .quad files
+    // fix .quad file header...
+    quadsout->numquads = numquads - il_size(duplicates);
+    quadsout->numstars = numstars;
+    quadsout->index_scale = index_scale;
+    quadsout->index_scale_lower = quadsin->index_scale_lower;
+
+    rtn = 0;
 	if (fitsout) {
-		// fix the header...
-		quadsout->numquads = numquads - il_size(duplicates);
-		quadsout->numstars = numstars;
-		quadsout->index_scale = index_scale;
-		quadsout->index_scale_lower = quadsin->index_scale_lower;
-		if (quadfile_fits_fix_header(quadsout)) {
-			printf("Couldn't write quad output file: %s\n", strerror(errno));
-			exit(-1);
-		}
-		quadfile_close(quadsout);
+		rtn = quadfile_fits_fix_header(quadsout);
 	} else {
-		if (fclose(quadout)) {
-			printf("Couldn't write quad output file: %s\n", strerror(errno));
-			exit(-1);
-		}
+        rtn = quadfile_fix_header(quadsout);
 	}
+    if (rtn || quadfile_close(quadsout)) {
+        printf("Couldn't write quad output file: %s\n", strerror(errno));
+        exit(-1);
+    }
 
 	if (fclose(codeout)) {
 		printf("Couldn't write code output file: %s\n", strerror(errno));

@@ -22,8 +22,10 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-FILE *quadfid = NULL;
+quadfile* quads = NULL;
 FILE *codefid = NULL;
+
+bool fitsout = TRUE;
 
 catalog* cat;
 
@@ -42,6 +44,7 @@ void print_help(char* progname)
 	       "     [-n <nside>]    healpix nside (default 512)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
+           "     [-F]            write traditional (non-FITS) output\n"
 	       "\n"
 	       , progname);
 }
@@ -157,7 +160,11 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			iC = iD;
 		} else {
 			write_one_code(codefid, cx, cy, dx, dy);
-			write_one_quad(quadfid, staridA, staridB, staridC, staridD);
+            if (fitsout) {
+                quadfile_fits_write_quad(quads, staridA, staridB, staridC, staridD);
+            } else {
+                quadfile_write_quad(quads, staridA, staridB, staridC, staridD);
+            }
 			quadnum++;
 			drop_quad(stars, iA, iB, iC, iD);
 			if (used_stars) {
@@ -549,7 +556,12 @@ int main(int argc, char** argv)
 		exit( -1);
 	}
 
-	fopenout(quadfname, quadfid);
+    if (fitsout) {
+        quads = quadfile_fits_open_for_writing(quadfname);
+    } else {
+        quads = quadfile_open_for_writing(quadfname);
+    }
+
 	fopenout(codefname, codefid);
 	free_fn(quadfname);
 	free_fn(codefname);
@@ -557,7 +569,10 @@ int main(int argc, char** argv)
 
 	// we have to write an updated header after we've processed all the quads.
 	write_code_header(codefid, 0, cat->nstars, DIM_CODES, sqrt(quad_scale_upper2));
-	write_quad_header(quadfid, 0, cat->nstars, DIM_QUADS, sqrt(quad_scale_upper2));
+
+    quads->numstars = cat->nstars;
+    quads->index_scale       = sqrt(quad_scale_upper2);
+    quads->index_scale_lower = sqrt(quad_scale_lower2);
 
 	if (shifted) {
 		npasses = 9;
@@ -596,15 +611,20 @@ int main(int argc, char** argv)
 
 	// fix output file headers.
 	fix_code_header(codefid, quadnum);
-	fix_quad_header(quadfid, quadnum);
+
+    if (fitsout) {
+        quadfile_fits_fix_header(quads);
+    } else {
+        quadfile_fix_header(quads);
+    }
+	if (quadfile_close(quads)) {
+		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
+		exit( -1);
+	}
 
 	// close .code and .quad files
 	if (fclose(codefid)) {
 		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
-		exit( -1);
-	}
-	if (fclose(quadfid)) {
-		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
 		exit( -1);
 	}
 
