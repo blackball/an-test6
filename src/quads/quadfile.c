@@ -11,19 +11,6 @@
 #include "fileutil.h"
 #include "ioutils.h"
 
-/*
-  int read_one_quad(FILE *fid, uint *iA, uint *iB, uint *iC, uint *iD) {
-  if (read_u32(fid, iA) ||
-  read_u32(fid, iB) ||
-  read_u32(fid, iC) ||
-  read_u32(fid, iD)) {
-  fprintf(stderr, "Couldn't read a quad.\n");
-  return -1;
-  }
-  return 0;
-  }
-*/
-
 static quadfile* new_quadfile() {
 	quadfile* qf = malloc(sizeof(quadfile));
 	if (!qf) {
@@ -34,7 +21,8 @@ static quadfile* new_quadfile() {
 	return qf;
 }
 
-int write_one_quad(FILE *fid, uint iA, uint iB, uint iC, uint iD) {
+int quadfile_write_quad(quadfile *qf, uint iA, uint iB, uint iC, uint iD) {
+    FILE* fid = qf->fid;
     if (write_u32(fid, iA) ||
         write_u32(fid, iB) ||
         write_u32(fid, iC) ||
@@ -66,8 +54,8 @@ int read_quad_header(FILE *fid, uint *numquads, uint *numstars,
 	return 0;
 }
 
-int write_quad_header(FILE *fid, uint numQuads, uint numstars,
-                      uint DimQuads, double index_scale) {
+int quadfile_write_header(FILE *fid, uint numQuads, uint numstars,
+                          uint DimQuads, double index_scale) {
     magicval magic = MAGIC_VAL;
     if (write_u16(fid, magic) ||
         write_u32(fid, numQuads) ||
@@ -80,21 +68,16 @@ int write_quad_header(FILE *fid, uint numQuads, uint numstars,
     return 0;
 }
 
-int fix_quad_header(FILE *fid, uint numQuads) {
+int quadfile_fix_header(quadfile* qf) {
     off_t off;
-    magicval magic = MAGIC_VAL;
     int rtn;
-    off = ftello(fid);
+    off = ftello(qf->fid);
     // go back to the beginning...
-    fseek(fid, 0, SEEK_SET);
-    rtn = 0;
-    if (write_u16(fid, magic) ||
-        write_u32(fid, numQuads)) {
-        fprintf(stderr, "Couldn't fix quad header.\n");
-        rtn = -1;
-    }
+    fseek(qf->fid, 0, SEEK_SET);
+    rtn = quadfile_write_header(qf->fid, qf->numquads, qf->numstars,
+                                DIM_QUADS, qf->index_scale);
     // go back from whence we came...
-    fseek(fid, off, SEEK_SET);
+    fseek(qf->fid, off, SEEK_SET);
     return rtn;
 }
 
@@ -238,13 +221,47 @@ quadfile* quadfile_fits_open(char* fn) {
     return NULL;
 }
 
-void quadfile_close(quadfile* qf) {
+int quadfile_close(quadfile* qf) {
+    int rtn = 0;
 	if (qf->mmap_quad)
-		munmap(qf->mmap_quad, qf->mmap_quad_size);
+		if (munmap(qf->mmap_quad, qf->mmap_quad_size)) {
+            fprintf(stderr, "Error munmapping quadfile: %s\n", strerror(errno));
+            rtn = -1;
+        }
 	if (qf->fid)
-		if (fclose(qf->fid))
+		if (fclose(qf->fid)) {
 			fprintf(stderr, "Error closing quadfile: %s\n", strerror(errno));
+            rtn = -1;
+        }
 	free(qf);
+    return rtn;
+}
+
+quadfile* quadfile_open_for_writing(char* fn) {
+	quadfile* qf;
+
+	qf = new_quadfile();
+	if (!qf)
+		goto bailout;
+
+	qf->fid = fopen(fn, "wb");
+	if (!qf->fid) {
+		fprintf(stderr, "Couldn't open file %s for quad FITS output: %s\n", fn, strerror(errno));
+		goto bailout;
+	}
+
+    quadfile_write_header(qf->fid, 0, 0, DIM_QUADS, 0.0);
+
+    return qf;
+
+ bailout:
+	if (qf) {
+		if (qf->fid)
+			fclose(qf->fid);
+		free(qf);
+	}
+	return NULL;
+
 }
 
 quadfile* quadfile_fits_open_for_writing(char* fn) {
@@ -369,6 +386,10 @@ int quadfile_fits_fix_header(quadfile* qf) {
 	qfits_header_mod(qf->header, "NQUADS", val, "Number of quads.");
 	sprintf(val, "%u", qf->numstars);
 	qfits_header_mod(qf->header, "NSTARS", val, "Number of stars.");
+	sprintf(val, "%.10f", qf->index_scale);
+	qfits_header_mod(qf->header, "SCALE_U", val, "Upper-bound index scale.");
+	sprintf(val, "%.10f", qf->index_scale_lower);
+	qfits_header_mod(qf->header, "SCALE_L", val, "Lower-bound index scale.");
 
     dataptr = NULL;
     datasize = 4 * sizeof(uint);
