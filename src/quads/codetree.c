@@ -12,14 +12,16 @@
 #include <string.h>
 
 #include "codefile.h"
-#include "kdtree/kdtree.h"
-#include "kdtree/kdtree_io.h"
+#include "kdtree.h"
+#include "kdtree_io.h"
+#include "kdtree_fits_io.h"
 #include "fileutil.h"
 
-#define OPTIONS "hR:f:F"
+#define OPTIONS "hR:f:FG"
 const char HelpString[] =
 "codetree -f fname [-R KD_RMIN]\n"
 "   [-F]   read traditional (non-FITS) input\n"
+"   [-G]   write traditional (non-FITS) output\n"
 "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
 
 extern char *optarg;
@@ -28,14 +30,15 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[]) {
     int argidx, argchar;
 	int Nleaf = 25;
-    FILE* treefid = NULL;
     kdtree_t *codekd = NULL;
     int levels;
-    int fitsin = 1;
+    bool fitsin = TRUE;
+	bool fitsout = TRUE;
     char* basename = NULL;
     char* treefname;
     char* codefname;
     codefile* codes;
+	int rtn;
 
     if (argc <= 2) {
         fprintf(stderr, HelpString);
@@ -45,7 +48,10 @@ int main(int argc, char *argv[]) {
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
         case 'F':
-            fitsin = 0;
+            fitsin = FALSE;
+            break;
+        case 'G':
+            fitsout = FALSE;
             break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
@@ -73,12 +79,15 @@ int main(int argc, char *argv[]) {
         return (OPT_ERR);
     }
 
-    treefname = mk_ctreefn(basename);
-    if (fitsin) {
+	if (fitsout)
+		treefname = mk_fits_ctreefn(basename);
+	else
+		treefname = mk_ctreefn(basename);
+
+    if (fitsin)
         codefname = mk_fits_codefn(basename);
-    } else {
+	else
         codefname = mk_codefn(basename);
-    }
 
     fprintf(stderr, "codetree: building KD tree for %s\n", codefname);
     fprintf(stderr, "       will write KD tree file %s\n", treefname);
@@ -112,23 +121,21 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
-    fopenout(treefname, treefid);
-    free_fn(treefname);
 
-    if (kdtree_write(treefid, codekd)) {
+	if (fitsout)
+		rtn = kdtree_fits_write_file(codekd, treefname);
+	else
+		rtn = kdtree_write_file(codekd, treefname);
+    free_fn(treefname);
+	if (rtn) {
         fprintf(stderr, "Couldn't write star kdtree.\n");
-        fclose(treefid);
-        codefile_close(codes);
-        kdtree_free(codekd);
         exit(-1);
     }
 
     fprintf(stderr, "done.\n");
     codefile_close(codes);
-    fclose(treefid);
     kdtree_free(codekd);
-
-    return (0);
+	return 0;
 }
 
 

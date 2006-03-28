@@ -16,6 +16,7 @@
 #define mk_catfn(s)    mk_filename(s,".objs")
 #define mk_fits_streefn(s)  mk_filename(s,".skdt.fits")
 #define mk_streefn(s)  mk_filename(s,".skdt")
+#define mk_fits_ctreefn(s)  mk_filename(s,".ckdt.fits")
 #define mk_ctreefn(s)  mk_filename(s,".ckdt")
 #define mk_quadfn(s)   mk_filename(s,".quad")
 #define mk_fits_quadfn(s)   mk_filename(s,".quad.fits")

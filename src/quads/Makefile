@@ -65,6 +65,8 @@ QFITS_L =
 CFLAGS += $(QFITS_I)
 LFLAGS += $(QFITS_L)
 
+CFLAGS += -Ikdtree
+
 ALL_OBJ = $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS)
