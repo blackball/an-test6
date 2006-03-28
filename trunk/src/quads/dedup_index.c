@@ -50,26 +50,23 @@ int sort_permuted_array(const void* v1, const void* v2) {
 
 int main(int argc, char *argv[]) {
     int argidx, argchar;
-    FILE *codein = NULL, *codeout = NULL;
-    int numstars;
-	int numcodes;
-	uint numquads;
-    int Dim_Codes;
-	double index_scale;
     char *infname = NULL, *outfname = NULL;
     int i;
 	char *codeinfname, *codeoutfname, *quadinfname, *quadoutfname;
-    double* codearray = NULL;
 	int* perm;
 	int nequal =0;
 	int flip;
+
     quadfile* quadsin;
-    quadfile* quadsout = NULL;
+    quadfile* quadsout;
+
+    codefile* codesin;
+    codefile* codesout;
+
 	int nextskip;
 	int skipind;
 	int fitsin = 1;
 	int fitsout = 1;
-    int rtn;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -105,81 +102,83 @@ int main(int argc, char *argv[]) {
 		return (HELP_ERR);
     }
 
- 	codeinfname = mk_codefn(infname);
- 	codeoutfname = mk_codefn(outfname);
-
     fprintf(stderr, "Reading codes...");
     fflush(stderr);
-    fopenin(codeinfname, codein);
+
+    if (fitsin) {
+        codeinfname = mk_fits_codefn(infname);
+    } else {
+        codeinfname = mk_codefn(infname);
+    }
+    codesin = codefile_open(codeinfname, fitsin);
     free_fn(codeinfname);
-    codearray = codefile_read(codein, &numcodes, &Dim_Codes, &index_scale);
-    if (!codearray) {
+    if (!codesin) {
         fprintf(stderr, "Couldn't read codefile.\n");
         exit(-1);
     }
-	fclose(codein);
 
     fprintf(stderr, "Reading quads...");
 	if (fitsin) {
 		quadinfname = mk_fits_quadfn(infname);
-		quadsin = quadfile_fits_open(quadinfname);
 	} else {
 		quadinfname = mk_quadfn(infname);
-		quadsin = quadfile_open(quadinfname);
 	}
+    quadsin = quadfile_open(quadinfname, fitsin);
     if (!quadsin) {
         fprintf(stderr, "Couldn't read quads input file %s\n", quadinfname);
         exit(-1);
     }
-    numstars = quadsin->numstars;
-    numquads = quadsin->numquads;
-	if (numquads != numcodes) {
+	if (quadsin->numquads != codesin->numcodes) {
 		fprintf(stderr, "Quad file contains %u quads, but code file contains %u codes!\n",
-				numquads, numcodes);
+				quadsin->numquads, codesin->numcodes);
 		exit(-1);
 	}
 	free_fn(quadinfname);
 
-	fprintf(stderr, "%i stars are used in %i quads.\n", numstars, numcodes);
+	fprintf(stderr, "%i stars are used in %i quads.\n", codesin->numstars, codesin->numcodes);
 
 	if (fitsout) {
 		quadoutfname = mk_fits_quadfn(outfname);
-		quadsout = quadfile_fits_open_for_writing(quadoutfname);
+        codeoutfname = mk_fits_codefn(outfname);
 	} else {
 		quadoutfname = mk_quadfn(outfname);
-        quadsout = quadfile_open_for_writing(quadoutfname);
+        codeoutfname = mk_codefn(outfname);
 	}
+    quadsout = quadfile_open_for_writing(quadoutfname, fitsout);
     if (!quadsout) {
         fprintf(stderr, "Couldn't open output quads file %s: %s\n", quadoutfname, strerror(errno));
         exit(-1);
     }
+    codesout = codefile_open_for_writing(codeoutfname, fitsout);
+    if (!codesout) {
+        fprintf(stderr, "Couldn't open output codes file %s: %s\n", codeoutfname, strerror(errno));
+        exit(-1);
+    }
 
-	fopenout(codeoutfname, codeout);
+	qsort_array = codesin->codearray;
+	qsort_array_stride = DIM_CODES;
 
-	qsort_array = codearray;
-	qsort_array_stride = Dim_Codes;
-
-	perm = malloc(Dim_Codes * numcodes * sizeof(int));
+	perm = malloc(DIM_CODES * codesin->numcodes * sizeof(int));
 	duplicates = il_new(1024);
 
 	// across-the-diagonal permutations...
 	for (flip=0; flip<2; flip++) {
 		int cdperm;
 		fprintf(stderr, "AB permutation %i...\n", flip);
-		for (i=0; i<numcodes; i++)
+		for (i=0; i<codesin->numcodes; i++)
 			perm[i] = i;
 
 		qsort_permutation = flip;
-		qsort(perm, numcodes, sizeof(int), sort_permuted_array);
+		qsort(perm, codesin->numcodes, sizeof(int), sort_permuted_array);
 
 		// CD / DC permutation.
-		for (i=0; i<(numcodes-1); i++) {
+		for (i=0; i<(codesin->numcodes-1); i++) {
 			for (cdperm=0; cdperm<2; cdperm++) {
-				if (!memcmp(codearray + perm[i  ]*Dim_Codes + (2*cdperm),
-							codearray + perm[i+1]*Dim_Codes,
+				if (!memcmp(codesin->codearray + perm[i  ]*DIM_CODES + (2*cdperm),
+							codesin->codearray + perm[i+1]*DIM_CODES,
 							2 * sizeof(double)) &&
-					!memcmp(codearray + perm[i  ]*Dim_Codes + (2 + 2*cdperm) % Dim_Codes,
-							codearray + perm[i+1]*Dim_Codes + 2,
+					!memcmp(codesin->codearray + perm[i  ]*DIM_CODES + (2 + 2*cdperm) % DIM_CODES,
+							codesin->codearray + perm[i+1]*DIM_CODES + 2,
 							2 * sizeof(double))) {
 					nequal++;
 
@@ -189,15 +188,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-	fprintf(stderr, "%i codes are equal, out of %i codes.\n", nequal, numcodes);
+	fprintf(stderr, "%i codes are equal, out of %i codes.\n", nequal, codesin->numcodes);
 	free(perm);
 
-    write_code_header(codeout, numquads-il_size(duplicates),
-					  numstars, DIM_CODES, index_scale);
-	
 	nextskip = -1;
 	skipind = 0;
-	for (i=0; i<numquads; i++) {
+	for (i=0; i<quadsin->numquads; i++) {
 		double cx, cy, dx, dy;
 		uint iA, iB, iC, iD;
 		if (nextskip == -1) {
@@ -214,43 +210,37 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		cx = codearray[i * Dim_Codes + 0];
-		cy = codearray[i * Dim_Codes + 1];
-		dx = codearray[i * Dim_Codes + 2];
-		dy = codearray[i * Dim_Codes + 3];
-		write_one_code(codeout, cx, cy, dx, dy);
+        codefile_get_code(codesin, i, &cx, &cy, &dx, &dy);
+        codefile_write_code(codesout, cx, cy, dx, dy);
 
         quadfile_get_starids(quadsin, i, &iA, &iB, &iC, &iD);
-		if (fitsout) {
-			quadfile_fits_write_quad(quadsout, iA, iB, iC, iD);
-		} else {
-			quadfile_write_quad(quadsout, iA, iB, iC, iD);
-		}
+        quadfile_write_quad(quadsout, iA, iB, iC, iD);
 	}
 
     // fix .quad file header...
-    quadsout->numquads = numquads - il_size(duplicates);
-    quadsout->numstars = numstars;
-    quadsout->index_scale = index_scale;
+    quadsout->numquads = quadsin->numquads - il_size(duplicates);
+    quadsout->numstars = quadsin->numstars;
+    quadsout->index_scale = quadsin->index_scale;
     quadsout->index_scale_lower = quadsin->index_scale_lower;
 
-    rtn = 0;
-	if (fitsout) {
-		rtn = quadfile_fits_fix_header(quadsout);
-	} else {
-        rtn = quadfile_fix_header(quadsout);
-	}
-    if (rtn || quadfile_close(quadsout)) {
+    if (quadfile_fix_header(quadsout) ||
+        quadfile_close(quadsout)) {
         printf("Couldn't write quad output file: %s\n", strerror(errno));
         exit(-1);
     }
 
-	if (fclose(codeout)) {
-		printf("Couldn't write code output file: %s\n", strerror(errno));
-		exit(-1);
-	}
+    codesout->numcodes = codesin->numcodes - il_size(duplicates);
+    codesout->numstars = codesin->numstars;
+    codesout->index_scale = codesin->index_scale;
+    codesout->index_scale_lower = codesin->index_scale_lower;
+    if (codefile_fix_header(codesout) ||
+        codefile_close(codesout)) {
+        printf("Couldn't write code output file: %s\n", strerror(errno));
+        exit(-1);
+    }
+
     quadfile_close(quadsin);
-	free(codearray);
+    codefile_close(codesin);
 	il_free(duplicates);
     fprintf(stderr, "Done!\n");
     return 0;

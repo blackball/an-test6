@@ -16,9 +16,10 @@
 #include "quadfile.h"
 #include "bl.h"
 
-#define OPTIONS "hf:"
+#define OPTIONS "hf:F"
 const char HelpString[] =
-"quadidx -f fname\n";
+"quadidx -f fname\n"
+"    [-F]   read traditional (non-FITS) format input.";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -34,6 +35,7 @@ int main(int argc, char *argv[]) {
 	int i;
 	uint numused;
 	magicval magic = MAGIC_VAL;
+    int fits = 1;
 	
 	if (argc <= 2) {
 		fprintf(stderr, HelpString);
@@ -43,6 +45,9 @@ int main(int argc, char *argv[]) {
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'F':
+            fits = 0;
+            break;
 		case 'f':
 			idxfname = mk_qidxfn(optarg);
 			quadfname = mk_quadfn(optarg);
@@ -66,7 +71,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "quadidx: indexing quads in %s...\n",
 	        quadfname);
 
-	quads = quadfile_open(quadfname);
+	quads = quadfile_open(quadfname, fits);
 	if (!quads) {
 		fprintf(stderr, "Couldn't open quads file %s.\n", quadfname);
 		exit(-1);

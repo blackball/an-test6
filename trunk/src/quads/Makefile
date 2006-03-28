@@ -39,8 +39,10 @@ SOLVER_OBJ = solver.o
 EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls \
 	certifiable hpquads dedup_index codetree startree \
-	codetomatlab printcatalog fixcatalogheader deduplicate \
+	printcatalog fixcatalogheader deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
+
+# codetomatlab 
 
 # execs that require solver.o
 SOLVER_EXECS = slave

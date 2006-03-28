@@ -54,7 +54,8 @@ il* fieldlist = NULL;
 double funits_lower = 0.0;
 double funits_upper = 0.0;
 double index_scale;
-double index_scale_lower = 0.0;
+double index_scale_lower;
+double index_scale_lower_factor = 0.0;
 bool agreement = FALSE;
 int nagree = 4;
 double agreetol = 0.0;
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
 		funits_lower = 0.0;
 		funits_upper = 0.0;
 		index_scale = 0.0;
-		index_scale_lower = 0.0;
+		index_scale_lower_factor = 0.0;
 		agreement = FALSE;
 		nagree = 4;
 		agreetol = 0.0;
@@ -147,7 +148,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "enddepth %i\n", enddepth);
 		fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
 		fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
-		fprintf(stderr, "index_lower %g\n", index_scale_lower);
+		fprintf(stderr, "index_lower %g\n", index_scale_lower_factor);
 		fprintf(stderr, "agreement %i\n", agreement);
 		fprintf(stderr, "num-to-agree %i\n", nagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
@@ -191,13 +192,29 @@ int main(int argc, char *argv[]) {
 
 		// Read .quad file...
 		fprintf(stderr, "Reading quads file %s...\n", quadfname);
-		quads = quadfile_open(quadfname);
+        // HACK - if the filename ends in .fits, assume it's in FITS format
+        if (strcmp(quadfname + strlen(quadfname) - 5, ".fits") == 0) {
+            fprintf(stderr, "Assume quads file is in FITS format.\n");
+            quads = quadfile_open(quadfname, 1);
+        } else {
+            quads = quadfile_open(quadfname, 0);
+        }
 		free_fn(quadfname);
 		if (!quads) {
 			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
 			exit(-1);
 		}
 		index_scale = quadfile_get_index_scale_arcsec(quads);
+		index_scale_lower = quadfile_get_index_scale_lower_arcsec(quads);
+
+        if ((index_scale_lower != 0.0) && (index_scale_lower_factor != 0.0) &&
+            ((index_scale_lower_factor * index_scale) != index_scale_lower)) {
+            fprintf(stderr, "You specified an index_scale, but the quad file contained a different index_scale_lower entry.\n");
+            fprintf(stderr, "Overriding your specification.\n");
+        }
+        if ((index_scale_lower == 0.0) && (index_scale_lower_factor != 0.0)) {
+            index_scale_lower = index_scale * index_scale_lower_factor;
+        }
 
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
@@ -348,7 +365,7 @@ int read_parameters() {
 			parity = (d ? TRUE : FALSE);
 		} else if (is_word(buffer, "index_lower ", &nextword)) {
 			double d = atof(nextword);
-			index_scale_lower = d;
+			index_scale_lower_factor = d;
 		} else if (is_word(buffer, "fieldunits_lower ", &nextword)) {
 			double d = atof(nextword);
 			funits_lower = d;
@@ -432,7 +449,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 	if (funits_upper != 0.0) {
 		solver.arcsec_per_pixel_upper = funits_upper;
-		solver.minAB = index_scale * index_scale_lower / funits_upper;
+		solver.minAB = index_scale_lower / funits_upper;
 		fprintf(stderr, "Set minAB to %g\n", solver.minAB);
 	}
 	if (funits_lower != 0.0) {
