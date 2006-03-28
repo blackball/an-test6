@@ -4,17 +4,19 @@
 #include "fileutil.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_io.h"
+#include "kdtree/kdtree_fits_io.h"
 
-#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:"
+#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:F"
 const char HelpString[] =
-    "genfields -f fname -o fieldname {-n num_rand_fields | -r RA -d DEC}\n"
+    "genfields -f fname -o fieldname [-F] {-n num_rand_fields | -r RA -d DEC}\n"
     "          -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts] [-S seed]\n\n"
     "    -r RA -d DEC generates a single field centred at RA,DEC\n"
     "    -n N generates N randomly centred fields\n"
     "    -p flips parity, -q (default 0) sets the fraction of real stars removed\n"
     "    -x (default 0) sets the fraction of real stars added as random stars\n"
     "    -w (default 0) sets the fraction of scale by which to jitter positions\n"
-    "    -S random seed\n";
+    "    -S random seed\n"
+    "    -F reads traditional (non-FITS) inputs.\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -45,6 +47,8 @@ int main(int argc, char *argv[])
 	uint numstars;
 	uint i;
 	kdtree_t* starkd = NULL;
+    int fits = 1;
+    char* basename = NULL;
 
 	if (argc <= 8) {
 		fprintf(stderr, HelpString);
@@ -53,6 +57,9 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'F':
+            fits = 0;
+            break;
 		case 'S':
 			RANDSEED = atoi(optarg);
 			break;
@@ -85,7 +92,7 @@ int main(int argc, char *argv[])
 			centre_dec = deg2rad(strtod(optarg, NULL));
 			break;
 		case 'f':
-			treefname = mk_streefn(optarg);
+			basename = optarg;
 			break;
 		case 'o':
 			listfname = mk_idlistfn(optarg);
@@ -108,6 +115,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, HelpString);
 		return (OPT_ERR);
 	}
+    if (!basename) {
+		fprintf(stderr, HelpString);
+        exit(-1);
+    }
 
 	srand(RANDSEED);
 
@@ -120,10 +131,19 @@ int main(int argc, char *argv[])
 		numFields = 1;
 	}
 
+    if (fits)
+        treefname = mk_fits_streefn(basename);
+    else
+        treefname = mk_streefn(basename);
+
 	fprintf(stderr, "  Reading star KD tree from %s...", treefname);
 	fflush(stderr);
 
-	starkd = kdtree_read_file(treefname);
+    if (fits)
+        starkd = kdtree_fits_read_file(treefname);
+    else
+        starkd = kdtree_read_file(treefname);
+
 	free_fn(treefname);
 	if (!starkd) {
 		fprintf(stderr, "Couldn't read star kdtree.\n");
