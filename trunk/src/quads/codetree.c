@@ -114,11 +114,6 @@ int main(int argc, char *argv[]) {
 		exit(-1);
     fprintf(stderr, "done (%d nodes)\n", codekd->nnodes);
 
-	fprintf(stderr, "Optimizing...\n");
-	fflush(stderr);
-	kdtree_optimize(codekd);
-	fprintf(stderr, "Done.\n");
-
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
 
