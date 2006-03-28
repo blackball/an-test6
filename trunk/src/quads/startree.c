@@ -26,7 +26,7 @@ void printHelp(char* progname) {
 		   "    [-R Nleaf]: number of points in a kdtree leaf node\n"
 		   "    [-k keep]:  number of points to keep\n"
 		   "    [-d radius]: deduplication radius (arcsec)\n"
-		   "    [-F]: write FITS format output.\n", progname);
+		   "    [-F]: write traditional (non-FITS) format output.\n", progname);
 }
 
 extern char *optarg;
@@ -40,8 +40,8 @@ int main(int argc, char *argv[]) {
     int levels;
     catalog* cat;
     int Nleaf = 25;
-    bool fits = FALSE;
-    char* fitstreefname = NULL;
+    bool fits = TRUE;
+    char* basename = NULL;
     char* treefname = NULL;
     char* catfname = NULL;
 	char* progname = argv[0];
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
         case 'F':
-            fits = TRUE;
+            fits = FALSE;
             break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
@@ -74,9 +74,7 @@ int main(int argc, char *argv[]) {
             }
             break;
         case 'f':
-            fitstreefname = mk_fits_streefn(optarg);
-            treefname = mk_streefn(optarg);
-            catfname = mk_catfn(optarg);
+            basename = optarg;
             break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -94,12 +92,21 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    if (!basename) {
+        printHelp(progname);
+        exit(-1);
+    }
+
     fprintf(stderr, "%s: building KD tree for %s\n", argv[0], catfname);
 
-	if (fits)
-		fprintf(stderr, "Will write FITS format output to %s\n", fitstreefname);
-	else
+    catfname = mk_catfn(basename);
+	if (fits) {
+        treefname = mk_fits_streefn(basename);
+		fprintf(stderr, "Will write FITS format output to %s\n", treefname);
+    } else {
+        treefname = mk_streefn(basename);
 		fprintf(stderr, "Will write output to %s\n", treefname);
+    }
 
     fprintf(stderr, "Reading star catalogue...");
     cat = catalog_open_file(catfname, 1);
@@ -132,9 +139,9 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "done (%d nodes)\n", starkd->nnodes);
 
     if (fits) {
-		fprintf(stderr, "Writing FITS format output to %s\n", fitstreefname);
+		fprintf(stderr, "Writing FITS format output to %s\n", treefname);
 		fflush(stderr);
-        if (kdtree_fits_write_file(starkd, fitstreefname)) {
+        if (kdtree_fits_write_file(starkd, treefname)) {
             fprintf(stderr, "Failed to write FITS-format star kdtree.\n");
             exit(-1);
         }
@@ -147,7 +154,6 @@ int main(int argc, char *argv[]) {
         }
     }
     free_fn(treefname);
-    free_fn(fitstreefname);
     fprintf(stderr, "done.\n");
 
     kdtree_free(starkd);
