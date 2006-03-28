@@ -17,13 +17,13 @@
 #include "catalog.h"
 #include "tic.h"
 
-#define OPTIONS "hf:u:l:n:ros"
+#define OPTIONS "hf:u:l:n:rosF"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 quadfile* quads = NULL;
-FILE *codefid = NULL;
+codefile* codes = NULL;
 
 bool fitsout = TRUE;
 
@@ -159,12 +159,8 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			staridC = staridD;
 			iC = iD;
 		} else {
-			write_one_code(codefid, cx, cy, dx, dy);
-            if (fitsout) {
-                quadfile_fits_write_quad(quads, staridA, staridB, staridC, staridD);
-            } else {
-                quadfile_write_quad(quads, staridA, staridB, staridC, staridD);
-            }
+			codefile_write_code(codes, cx, cy, dx, dy);
+            quadfile_write_quad(quads, staridA, staridB, staridC, staridD);
 			quadnum++;
 			drop_quad(stars, iA, iB, iC, iD);
 			if (used_stars) {
@@ -491,6 +487,9 @@ int main(int argc, char** argv)
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'F':
+            fitsout = 0;
+            break;
 		case 's':
 			shifted = 1;
 			break;
@@ -505,8 +504,6 @@ int main(int argc, char** argv)
 			exit(0);
 		case 'f':
 			basefname = optarg;
-			quadfname = mk_quadfn(optarg);
-			codefname = mk_codefn(optarg);
 			break;
 		case 'u':
 			quad_scale_upper2 = atof(optarg);
@@ -557,18 +554,23 @@ int main(int argc, char** argv)
 	}
 
     if (fitsout) {
-        quads = quadfile_fits_open_for_writing(quadfname);
+        quadfname = mk_fits_quadfn(optarg);
+        codefname = mk_fits_codefn(optarg);
     } else {
-        quads = quadfile_open_for_writing(quadfname);
+        quadfname = mk_quadfn(optarg);
+        codefname = mk_codefn(optarg);
     }
 
-	fopenout(codefname, codefid);
+    quads = quadfile_open_for_writing(quadfname, fitsout);
+    codes = codefile_open_for_writing(codefname, fitsout);
+
 	free_fn(quadfname);
 	free_fn(codefname);
 	quadfname = codefname = NULL;
 
-	// we have to write an updated header after we've processed all the quads.
-	write_code_header(codefid, 0, cat->nstars, DIM_CODES, sqrt(quad_scale_upper2));
+    codes->numstars = cat->nstars;
+    codes->index_scale       = sqrt(quad_scale_upper2);
+    codes->index_scale_lower = sqrt(quad_scale_lower2);
 
     quads->numstars = cat->nstars;
     quads->index_scale       = sqrt(quad_scale_upper2);
@@ -610,20 +612,14 @@ int main(int argc, char** argv)
 	catalog_close(cat);
 
 	// fix output file headers.
-	fix_code_header(codefid, quadnum);
-
-    if (fitsout) {
-        quadfile_fits_fix_header(quads);
-    } else {
-        quadfile_fix_header(quads);
-    }
+    quadfile_fix_header(quads);
 	if (quadfile_close(quads)) {
 		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
 		exit( -1);
 	}
 
-	// close .code and .quad files
-	if (fclose(codefid)) {
+	codefile_fix_header(codes);
+    if (codefile_close(codes)) {
 		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
 		exit( -1);
 	}
