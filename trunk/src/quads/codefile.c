@@ -12,7 +12,7 @@ int codefile_read_header(FILE *fid, uint *numcodes, uint *numstars,
                      uint *DimCodes, double *index_scale);
 int codefile_write_header(FILE *fid, uint numCodes,
                       uint numstars, uint DimCodes, double index_scale);
-codefile* codefile_fits_open(char* fn);
+codefile* codefile_fits_open(char* fn, int modifiable);
 codefile* codefile_fits_open_for_writing(char* fn);
 
 
@@ -54,21 +54,17 @@ int codefile_close(codefile* cf) {
     return rtn;
 }
 
-/*
-  void codefile_get_code(codefile* cf, uint codeid,
-  double* cx, double* cy, double* dx, double* dy);
-*/
-
-codefile* codefile_open(char* fn, int fits) {
+codefile* codefile_open(char* fn, int fits, int modifiable) {
     codefile* cf = NULL;
     uint dim;
 	off_t headeroffset;
 	off_t endoffset;
 	uint maxcode;
     FILE* fid;
+	int mode, flags;
 
     if (fits)
-        return codefile_fits_open(fn);
+        return codefile_fits_open(fn, modifiable);
     cf = new_codefile();
     if (!cf)
         goto bailout;
@@ -100,8 +96,15 @@ codefile* codefile_open(char* fn, int fits) {
 				cf->numcodes, maxcode);
         goto bailout;
 	}
+	if (modifiable) {
+		mode = PROT_READ | PROT_WRITE;
+		flags = MAP_PRIVATE;
+	} else {
+		mode = PROT_READ;
+		flags = MAP_SHARED;
+	}
 	cf->mmap_code_size = endoffset;
-	cf->mmap_code = mmap(0, cf->mmap_code_size, PROT_READ, MAP_SHARED, fileno(fid), 0);
+	cf->mmap_code = mmap(0, cf->mmap_code_size, mode, flags, fileno(fid), 0);
 	if (cf->mmap_code == MAP_FAILED) {
 		fprintf(stderr, "Failed to mmap code file: %s\n", strerror(errno));
         goto bailout;
@@ -120,11 +123,12 @@ codefile* codefile_open(char* fn, int fits) {
     return NULL;
 }
 
-codefile* codefile_fits_open(char* fn) {
+codefile* codefile_fits_open(char* fn, int modifiable) {
     codefile* cf = NULL;
 	FILE* fid = NULL;
 	qfits_header* header = NULL;
     int offcodes, sizecodes;
+	int mode, flags;
 
 	if (!is_fits_file(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -177,8 +181,16 @@ codefile* codefile_fits_open(char* fn) {
         goto bailout;
     }
 
+	if (modifiable) {
+		mode = PROT_READ | PROT_WRITE;
+		flags = MAP_PRIVATE;
+	} else {
+		mode = PROT_READ;
+		flags = MAP_SHARED;
+	}
+
     cf->mmap_code_size = offcodes + sizecodes;
-	cf->mmap_code = mmap(0, cf->mmap_code_size, PROT_READ, MAP_SHARED, fileno(fid), 0);
+	cf->mmap_code = mmap(0, cf->mmap_code_size, mode, flags, fileno(fid), 0);
 	fclose(fid);
     fid = NULL;
 	if (cf->mmap_code == MAP_FAILED) {

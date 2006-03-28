@@ -199,9 +199,9 @@ int main(int argc, char *argv[]) {
         // HACK - if the filename ends in .fits, assume it's in FITS format
         if (strcmp(quadfname + strlen(quadfname) - 5, ".fits") == 0) {
             fprintf(stderr, "Assume quads file is in FITS format.\n");
-            quads = quadfile_open(quadfname, 1);
+            quads = quadfile_open(quadfname, 1, 0);
         } else {
-            quads = quadfile_open(quadfname, 0);
+            quads = quadfile_open(quadfname, 0, 0);
         }
 		free_fn(quadfname);
 		if (!quads) {

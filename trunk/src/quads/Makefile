@@ -54,10 +54,8 @@ MY_OBJ = randcat.o genfields.o findstar.o findquad.o \
 	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
 	xylstomatlab.o rdlstohealpix.o slave.o fixmatchfile.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
-	hpquads.o codeprojections.o codedensity.o startree.o solver.o \
-	deduplicate.o test_healpix.o kdtree/test_kdtree.o
-
-# solvexy2.o 
+	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
+	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o
 
 QFITS_I = -Iqfits
 QFITS_L = 

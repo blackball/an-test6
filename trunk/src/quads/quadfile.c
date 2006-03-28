@@ -12,7 +12,7 @@
 #include "ioutils.h"
 
 quadfile* quadfile_fits_open_for_writing(char* fn);
-quadfile* quadfile_fits_open(char* fn);
+quadfile* quadfile_fits_open(char* fn, int modifiable);
 int quadfile_fits_fix_header(quadfile* qf);
 int quadfile_fits_write_quad(quadfile* qf,
 							 uint iA, uint iB, uint iC, uint iD);
@@ -95,7 +95,7 @@ int quadfile_fix_header(quadfile* qf) {
     return rtn;
 }
 
-quadfile* quadfile_open(char* quadfname, int fits) {
+quadfile* quadfile_open(char* quadfname, int fits, int modifiable) {
 	quadfile* qf;
     uint Dim_Quads;
 	FILE* quadfid;
@@ -107,9 +107,10 @@ quadfile* quadfile_open(char* quadfname, int fits) {
 	void* mmap_quad;
 	double index_scale;
 	uint* quadarray;
+	int mode, flags;
 
     if (fits) {
-        return quadfile_fits_open(quadfname);
+        return quadfile_fits_open(quadfname, modifiable);
     }
 
 	// Read .quad file...
@@ -137,8 +138,16 @@ quadfile* quadfile_open(char* quadfname, int fits) {
 				numquads, maxquad);
 		return NULL;
 	}
+
+	if (modifiable) {
+		mode = PROT_READ | PROT_WRITE;
+		flags = MAP_PRIVATE;
+	} else {
+		mode = PROT_READ;
+		flags = MAP_SHARED;
+	}
 	mmap_quad_size = endoffset;
-	mmap_quad = mmap(0, mmap_quad_size, PROT_READ, MAP_SHARED, fileno(quadfid), 0);
+	mmap_quad = mmap(0, mmap_quad_size, mode, flags, fileno(quadfid), 0);
 	if (mmap_quad == MAP_FAILED) {
 		fprintf(stderr, "Failed to mmap quad file: %s\n", strerror(errno));
 		return NULL;
@@ -158,13 +167,14 @@ quadfile* quadfile_open(char* quadfname, int fits) {
 	return qf;
 }
 
-quadfile* quadfile_fits_open(char* fn) {
+quadfile* quadfile_fits_open(char* fn, int modifiable) {
 	FILE* fid = NULL;
 	qfits_header* header = NULL;
     quadfile* qf = NULL;
     int offquads, sizequads;
 	int size;
 	void* map;
+	int mode, flags;
 
 	if (!is_fits_file(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -217,9 +227,15 @@ quadfile* quadfile_fits_open(char* fn) {
         goto bailout;
     }
 
+	if (modifiable) {
+		mode = PROT_READ | PROT_WRITE;
+		flags = MAP_PRIVATE;
+	} else {
+		mode = PROT_READ;
+		flags = MAP_SHARED;
+	}
     size = offquads + sizequads;
-
-	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
+	map = mmap(0, size, mode, flags, fileno(fid), 0);
 	fclose(fid);
     fid = NULL;
 	if (map == MAP_FAILED) {
