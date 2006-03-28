@@ -12,9 +12,13 @@ int fits_check_endian(qfits_header* header);
 
 int fits_check_uint_size(qfits_header* header);
 
+int fits_check_double_size(qfits_header* header);
+
 void fits_add_endian(qfits_header* header);
 
 void fits_add_uint_size(qfits_header* header);
+
+void fits_add_double_size(qfits_header* header);
 
 int fits_find_table_column(char* fn, char* colname, int* start, int* size);
 
