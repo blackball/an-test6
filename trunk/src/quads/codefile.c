@@ -142,8 +142,8 @@ codefile* codefile_fits_open(char* fn) {
 	}
 
     if (fits_check_endian(header) ||
-        fits_check_uint_size(header)) {
-		fprintf(stderr, "File %s was written with wrong endianness or uint size.\n", fn);
+        fits_check_double_size(header)) {
+		fprintf(stderr, "File %s was written with wrong endianness or double size.\n", fn);
         goto bailout;
     }
 
@@ -246,7 +246,7 @@ codefile* codefile_fits_open_for_writing(char* fn) {
     // the header
     cf->header = qfits_table_prim_header_default();
     fits_add_endian(cf->header);
-    fits_add_uint_size(cf->header);
+    fits_add_double_size(cf->header);
 	// these may be placeholder values...
 	sprintf(val, "%u", cf->numcodes);
 	qfits_header_add(cf->header, "NCODES", val, "Number of codes.", NULL);
@@ -257,7 +257,7 @@ codefile* codefile_fits_open_for_writing(char* fn) {
 	sprintf(val, "%.10f", cf->index_scale_lower);
 	qfits_header_add(cf->header, "SCALE_L", val, "Lower-bound index scale.", NULL);
 	qfits_header_add(cf->header, "", NULL, "The first extension contains the codes ", NULL);
-	qfits_header_add(cf->header, "", NULL, " stored as 4 native-endian uints.", NULL);
+	qfits_header_add(cf->header, "", NULL, " stored as 4 native-endian doubles.", NULL);
 
     // first table: the codes.
     dataptr = NULL;
