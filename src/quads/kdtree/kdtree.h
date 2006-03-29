@@ -50,6 +50,11 @@ kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
 /* Range seach */
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
 
+/* Range seach using callback */
+void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
+								 void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxdist2, real* computed_dist2, int indx, void* extra),
+								 void* extra);
+
 /* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
  * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
  * (kd->perm[ind]).

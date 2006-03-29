@@ -591,6 +591,46 @@ real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 	return kdtree_bb_maxdist2(hrloa, hrhia, hrlob, hrhib, dim);
 }
 
+void kdtree_rangesearch_cb_rec(kdtree_t *kd, kdtree_node_t* node,
+							   real *pt, real maxd2,
+							   void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxd2, real* computed_d2, int indx, void* extra),
+							   void* extra) {
+	real smallest_dsqd, largest_dsqd;
+	int i;
+	/* Early exit - FIXME benchmark to see if this actually helps */
+	smallest_dsqd = kdtree_node_point_mindist2_bailout(kd, node, pt, maxd2);
+	//smallest_dsqd = kdtree_node_point_mindist2(kd, node, pt);
+	if (smallest_dsqd > maxd2)
+		return;
+	/* FIXME benchmark to see if this helps: if the whole node is within
+	   range, grab all its points. */
+	largest_dsqd = kdtree_node_point_maxdist2_bailout(kd, node, pt, maxd2);
+	if (largest_dsqd <= maxd2) {
+		for (i=node->l; i<=node->r; i++)
+			rangesearch_callback(kd, pt, maxd2, NULL, i, extra);
+		return;
+	}
+	if (kdtree_node_is_leaf(kd, node))
+		for (i=node->l; i<=node->r; i++) {
+			real dsqd = dist2(kd->data + i*kd->ndim, pt, kd->ndim);
+			if (dsqd <= maxd2)
+				rangesearch_callback(kd, pt, maxd2, &dsqd, i, extra);
+		}
+	else {
+		kdtree_rangesearch_cb_rec(kd, kdtree_get_child1(kd, node), pt,
+								  maxd2, rangesearch_callback, extra);
+		kdtree_rangesearch_cb_rec(kd, kdtree_get_child2(kd, node), pt,
+								  maxd2, rangesearch_callback, extra);
+	}
+}
+
+void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
+								 void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxdist2, real* computed_d2, int indx, void* extra),
+								 void* extra) {
+	kdtree_rangesearch_cb_rec(kd, kdtree_get_root(kd), pt, maxdistsquared,
+							  rangesearch_callback, extra);
+}
+
 /* Range seach helper */
 void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdistsqd, kdtree_qres_t *res)
 {
