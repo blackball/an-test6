@@ -29,6 +29,13 @@
 #define ISLEAF(x)      ((2*(x)+1) >= kd->nnodes)
 #define COORD(n,d)     ((real*)(kd->data + kd->ndim*(n) + (d)))
 
+static inline real dist2(real* p1, real* p2, int d) {
+	int i;
+	real d2 = 0.0;
+	for (i=0; i<d; i++)
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+	return d2;
+}
 
 /*****************************************************************************/
 /* Building routines                                                         */
@@ -448,7 +455,7 @@ real kdtree_bb_point_mindist2_bailout(real* bblow, real* bbhigh,
 		else
 			continue;
 		d2 += delta * delta;
-		if (d2 >= bailout)
+		if (d2 > bailout)
 			return d2;
 	}
 	return d2;
@@ -472,6 +479,28 @@ real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
 			d2 += delta1;
 		else
 			d2 += delta2;
+	}
+	return d2;
+}
+
+real kdtree_bb_point_maxdist2_bailout(real* bblow, real* bbhigh,
+									  real* point, int dim, double bailout)
+{
+	real d2 = 0.0;
+	real delta1, delta2;
+	int i;
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+		delta1 = (point[i] - lo) * (point[i] - lo);
+		delta2 = (point[i] - hi) * (point[i] - hi);
+		if (delta1 > delta2)
+			d2 += delta1;
+		else
+			d2 += delta2;
+		if (d2 > bailout)
+			return d2;
 	}
 	return d2;
 }
@@ -563,54 +592,63 @@ real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 }
 
 /* Range seach helper */
-void kdtree_rangesearch_actual(kdtree_t *kd, int node, real *pt, real maxdistsqd, kdtree_qres_t *res)
+void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdistsqd, kdtree_qres_t *res)
 {
-	real smallest_dsqd = 0, delta;
+	real smallest_dsqd, largest_dsqd;
 	int i, j;
+	kdtree_node_t* node;
 
-	for ( i = 0; i < kd->ndim; i++ ) {
-		real alo = *LOW_HR(node, i);
-		real ahi = *HIGH_HR(node, i);
-		real b = pt[i];
-		if (ahi < b)
-			delta = b - ahi;
-		else if (b < alo)
-			delta = alo - b;
-		else
-			delta = 0.0;
-		smallest_dsqd += delta * delta;
-		/* Early exit - FIXME benchmark to see if this actually helps */
-		if (smallest_dsqd > maxdistsqd) {
-			return;
-		}
+	node = kdtree_nodeid_to_node(kd, nodeid);
+	/* Early exit - FIXME benchmark to see if this actually helps */
+	smallest_dsqd = kdtree_node_point_mindist2_bailout(kd, node, pt, maxdistsqd);
+	//smallest_dsqd = kdtree_node_point_mindist2(kd, node, pt);
+	if (smallest_dsqd > maxdistsqd) {
+		return;
 	}
 
-	if (smallest_dsqd < maxdistsqd) {
-		if (ISLEAF(node)) {
-			for (i = NODE(node)->l; i <= NODE(node)->r; i++) {
-				real dsqd = 0.0;
-				for (j = 0; j < kd->ndim; j++) {
-					delta = (pt[j]) - (*COORD(i, j));
-					dsqd += delta * delta;
-				}
-				if (dsqd < maxdistsqd) {
-					results_sqd[res->nres] = dsqd;
-					results_inds[res->nres] = kd->perm[i];
-					memcpy(results + res->nres*kd->ndim, COORD(i, 0), sizeof(real)*kd->ndim);
-					res->nres++;
-					if (res->nres >= KDTREE_MAX_RESULTS) {
-						fprintf(stderr, "\nkdtree rangesearch overflow.\n");
-						overflow = 1;
-						break;
-					}
+	/* FIXME benchmark to see if this helps: if the whole node is within
+	   range, grab all its points. */
+	largest_dsqd = kdtree_node_point_maxdist2_bailout(kd, node, pt, maxdistsqd);
+	if (largest_dsqd <= maxdistsqd) {
+		for (i=node->l; i<=node->r; i++) {
+			// HACK - some/many users don't care about the dist...
+			results_sqd[res->nres] = dist2(kd->data + i * kd->ndim, pt, kd->ndim);
+			results_inds[res->nres] = kd->perm[i];
+			memcpy(results + res->nres*kd->ndim, COORD(i, 0), sizeof(real)*kd->ndim);
+			res->nres++;
+			if (res->nres >= KDTREE_MAX_RESULTS) {
+				fprintf(stderr, "\nkdtree rangesearch overflow.\n");
+				overflow = 1;
+				break;
+			}
+		}
+		return;
+	}
+
+	if (ISLEAF(nodeid)) {
+		for (i=node->l; i<=node->r; i++) {
+			real dsqd = 0.0;
+			for (j = 0; j < kd->ndim; j++) {
+				real delta = pt[j] - (*COORD(i, j));
+				dsqd += delta * delta;
+			}
+			if (dsqd < maxdistsqd) {
+				results_sqd[res->nres] = dsqd;
+				results_inds[res->nres] = kd->perm[i];
+				memcpy(results + res->nres*kd->ndim, COORD(i, 0), sizeof(real)*kd->ndim);
+				res->nres++;
+				if (res->nres >= KDTREE_MAX_RESULTS) {
+					fprintf(stderr, "\nkdtree rangesearch overflow.\n");
+					overflow = 1;
+					break;
 				}
 			}
-		} else {
-			kdtree_rangesearch_actual(kd, 2*node + 1, pt, maxdistsqd, res);
-			if (overflow)
-				return;
-			kdtree_rangesearch_actual(kd, 2*node + 2, pt, maxdistsqd, res);
 		}
+	} else {
+		kdtree_rangesearch_actual(kd, 2*nodeid + 1, pt, maxdistsqd, res);
+		if (overflow)
+			return;
+		kdtree_rangesearch_actual(kd, 2*nodeid + 2, pt, maxdistsqd, res);
 	}
 }
 
@@ -703,22 +741,6 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 	return res;
 }
 
-inline real dist2(real* p1, real* p2, int d) {
-	int i;
-	real d2 = 0.0;
-	for (i=0; i<d; i++)
-		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
-	return d2;
-}
-
-real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
-										real* pt, real bailout) {
-	return kdtree_bb_point_mindist2_bailout
-		(kdtree_get_bb_low(kd, node),
-		 kdtree_get_bb_high(kd, node),
-		 pt, kd->ndim, bailout);
-}
-
 real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 	return kdtree_bb_point_mindist2(kdtree_get_bb_low(kd, node),
 									kdtree_get_bb_high(kd, node),
@@ -729,6 +751,22 @@ real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 	return kdtree_bb_point_maxdist2(kdtree_get_bb_low(kd, node),
 									kdtree_get_bb_high(kd, node),
 									pt, kd->ndim);
+}
+
+real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
+										real* pt, real bailout) {
+	return kdtree_bb_point_mindist2_bailout
+		(kdtree_get_bb_low(kd, node),
+		 kdtree_get_bb_high(kd, node),
+		 pt, kd->ndim, bailout);
+}
+
+real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
+										real* pt, real bailout) {
+	return kdtree_bb_point_maxdist2_bailout
+		(kdtree_get_bb_low(kd, node),
+		 kdtree_get_bb_high(kd, node),
+		 pt, kd->ndim, bailout);
 }
 
 int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
