@@ -188,6 +188,61 @@ void test_kd_massive_build(CuTest *tc)
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 }
 
+void test_kd_nn(CuTest *tc) {
+	int n=1000;
+	int levels=8;
+	int d=3, i, j;
+	kdtree_t* kd;
+	real* data;
+	real* point;
+	int ntimes = 100;
+	int t;
+
+	data = malloc(sizeof(real)*n*d);
+	for (i=0; i < n*d; i++) 
+        data[i] = random() / (real)RAND_MAX;
+	kd = kdtree_build(data, n, d, levels);
+	point = malloc(sizeof(real)*d);
+	CuAssertPtrNotNull(tc, kd);
+
+	for (t=0; t<ntimes; t++) {
+		int ibest;
+		real dbest2;
+		int icheck;
+		real dcheck2;
+		for (i=0; i<d; i++)
+			point[i] = random() / (real)RAND_MAX;
+
+		ibest = kdtree_nearest_neighbour(kd, point, &dbest2);
+
+		// check it...
+		dcheck2 = 1e300;
+		icheck = -1;
+		for (i=0; i<n; i++) {
+			real d2 = 0.0;
+			for (j=0; j<d; j++) {
+				real diff = (data[i*d + j] - point[j]);
+				d2 += (diff*diff);
+			}
+			if (d2 < dcheck2) {
+				dcheck2 = d2;
+				icheck = i;
+			}
+		}
+		if ((ibest != icheck) || (dbest2 != dcheck2)) {
+			printf("nn returned %i / %g, check returned %i / %g.\n",
+				   ibest, dbest2, icheck, dcheck2);
+		}
+		// make sure the reported best index is right.
+		CuAssertIntEquals(tc, ibest, icheck);
+		// make sure the reported distance is right.
+		CuAssertDblEquals(tc, dcheck2, dbest2, 1e-10);
+	}
+	free(point);
+	kdtree_free(kd);
+	free(data);
+}
+
 void test_kd_range_search(CuTest *tc) {
 	int n=10000;
 	int d=3, i, j;
@@ -265,6 +320,7 @@ void test_kd_range_search(CuTest *tc) {
 	free(origdata);
 	free(point);
 	kdtree_free(kd);
+	free(data);
 }
 
 
@@ -285,6 +341,7 @@ int main(void) {
 	SUITE_ADD_TEST(suite, test_1d_nn_2);
 	SUITE_ADD_TEST(suite, test_kd_size);
 	SUITE_ADD_TEST(suite, test_kd_invalid_args);
+	SUITE_ADD_TEST(suite, test_kd_nn);
 	SUITE_ADD_TEST(suite, test_kd_range_search);
 	SUITE_ADD_TEST(suite, test_sort_random);
 	//SUITE_ADD_TEST(suite, test_kd_massive_build);
