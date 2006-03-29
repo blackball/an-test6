@@ -133,8 +133,10 @@ void test_il_insert_ascending(CuTest* tc) {
 	il_insert_ascending(x,0);
 	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	CuAssertIntEquals(tc, il_check_sorted_ascending(x, 0), 0);
-	for (i=0;i<il_size(x);i++) 
+	for (i=0;i<il_size(x);i++)
 		CuAssertIntEquals(tc, i, il_get(x, i));
+	for (i=0;i<il_size(x);i++)
+		CuAssertIntEquals(tc, i, il_find_index_ascending(x, i));
 	il_free(x);
 }
 
@@ -152,7 +154,7 @@ void test_il_insert_descending(CuTest* tc) {
 	il_insert_descending(x,0);
 	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	CuAssertIntEquals(tc, il_check_sorted_descending(x, 0), 0);
-	for (i=0;i<il_size(x);i++) 
+	for (i=0;i<il_size(x);i++)
 		CuAssertIntEquals(tc, il_size(x)-i-1, il_get(x, i));
 	il_free(x);
 }
@@ -223,8 +225,6 @@ void test_il_dupe(CuTest* tc) {
 	il_free(x);
 	il_free(y);
 }
-
-
 
 void test_delete(CuTest* tc) {
 	il* bl = il_new(4);

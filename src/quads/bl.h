@@ -90,6 +90,7 @@ void  bl_remove_all_but_first(bl* list);
 void  bl_remove_index(bl* list, int indx);
 void  bl_remove_index_range(bl* list, int start, int length);
 void* bl_find(bl* list, void* data, int (*compare)(const void* v1, const void* v2));
+int   bl_find_index(bl* list, void* data, int (*compare)(const void* v1, const void* v2));
 
 // returns 0 if okay, 1 if an error is detected.
 int   bl_check_consistency(bl* list);
@@ -121,6 +122,7 @@ int  il_insert_unique_ascending(il* list, int p);
 void il_set(il* list, int ind, int value);
 void il_remove(il* list, int ind);
 void il_remove_index_range(il* list, int start, int length);
+int  il_find_index_ascending(il* list, int value);
 
 // returns the index of the removed value, or -1 if it didn't
 // exist in the list.
