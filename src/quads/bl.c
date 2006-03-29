@@ -5,7 +5,7 @@
 
 #include "bl.h"
 
-inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
+static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
 bl_node* bl_new_node(bl* list);
 
 
@@ -84,19 +84,8 @@ bl* bl_new(int blocksize, int datasize) {
 }
 
 void bl_free(bl* list) {
-	bl_node *n, *lastnode;
-	lastnode = NULL;
-	for (n=list->head; n; n=n->next) {
-		// see new_node - we merge data and node malloc requests, so they don't have
-		// to be freed separately.
-		if (lastnode)
-			free(lastnode);
-		lastnode = n;
-	}
-	if (lastnode)
-		free(lastnode);
+	bl_remove_all(list);
 	free(list);
-	list = NULL;
 }
 
 void bl_remove_all(bl* list) {
@@ -104,12 +93,13 @@ void bl_remove_all(bl* list) {
 	lastnode = NULL;
 	for (n=list->head; n; n=n->next) {
 		if (lastnode)
+			// see new_node - we merge data and node malloc requests, so they don't have
+			// to be freed separately.
 			free(lastnode);
 		lastnode = n;
 	}
 	if (lastnode)
 		free(lastnode);
-
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -141,7 +131,7 @@ void bl_remove_all_but_first(bl* list) {
 	list->last_access_n = 0;
 }
 
-void bl_remove_from_node(bl* list, bl_node* node,
+static void bl_remove_from_node(bl* list, bl_node* node,
 								bl_node* prev, int index_in_node) {
 	// if we're removing the last element at this node, then
 	// remove this node from the linked list.
@@ -201,7 +191,6 @@ void bl_remove_index(bl* list, int index) {
 	list->last_access = NULL;
 	list->last_access_n = 0;
 }
-
 
 void bl_remove_index_range(bl* list, int start, int length) {
 	// find the node (and previous node) at which element 'start'
@@ -287,8 +276,7 @@ void bl_remove_index_range(bl* list, int start, int length) {
 	}
 }
 
-
-void clear_list(bl* list) {
+static void clear_list(bl* list) {
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -296,12 +284,6 @@ void clear_list(bl* list) {
 	list->last_access_n = 0;
 }
 
-
-
-/*
- * Appends "list2" to the end of "list1", and removes all elements
- * from "list2".
- */
 void bl_append_list(bl* list1, bl* list2) {
 	list1->last_access = NULL;
 	list1->last_access_n = 0;
@@ -335,7 +317,6 @@ void bl_append_list(bl* list1, bl* list2) {
 	// remove everything from list2 (to avoid sharing nodes)
 	clear_list(list2);
 }
-
 
 int bl_count(bl* list) {
 	return list->N;
@@ -411,8 +392,8 @@ void bl_get(bl* list, int n, void* dest) {
 	memcpy(dest, src, list->datasize);
 }
 
-/* internal use only - find the node in which element "n" can be found. */
-inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
+/* find the node in which element "n" can be found. */
+static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
 	bl_node* node;
 	int nskipped;
 	if (list->last_access && n >= list->last_access_n) {
@@ -447,7 +428,7 @@ inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
  * and elements from the list.
  */
 void* bl_find(bl* list, void* data,
-					 int (*compare)(void* v1, void* v2)) {
+					 int (*compare)(const void* v1, const void* v2)) {
 	int lower, upper;
 	int cmp = -2;
 	void* result;
@@ -458,26 +439,18 @@ void* bl_find(bl* list, void* data,
 		mid = (upper + lower) / 2;
 		cmp = compare(data, bl_access(list, mid));
 		if (cmp > 0) {
-			upper = mid;
-		} else {
 			lower = mid;
+		} else {
+			upper = mid;
 		}
 	}
-  
 	if (lower == -1 || compare(data, (result = bl_access(list, lower))))
 		return NULL;
 	return result;
 }
 
-
-
-/**
- * Inserts the given datum into the list in such a way that the list
- * stays sorted according to the given comparison function (assuming
- * it was sorted to begin with!).
- */
 void bl_insert_sorted(bl* list, void* data,
-							 int (*compare)(void* v1, void* v2)) {
+							 int (*compare)(const void* v1, const void* v2)) {
 	int lower, upper;
 	lower = -1;
 	upper = list->N;
@@ -486,17 +459,17 @@ void bl_insert_sorted(bl* list, void* data,
 		int cmp;
 		mid = (upper + lower) / 2;
 		cmp = compare(data, bl_access(list, mid));
-		if (cmp > 0) {
-			upper = mid;
-		} else {
+		if (cmp >= 0) {
 			lower = mid;
+		} else {
+			upper = mid;
 		}
 	}
 	bl_insert(list, lower+1, data);
 }
 
 int bl_insert_unique_sorted(bl* list, void* data,
-								   int (*compare)(void* v1, void* v2)) {
+							int (*compare)(const void* v1, const void* v2)) {
 	// This is just straightforward binary search - really should
 	// use the block structure...
 	int lower, upper;
@@ -507,10 +480,10 @@ int bl_insert_unique_sorted(bl* list, void* data,
 		int cmp;
 		mid = (upper + lower) / 2;
 		cmp = compare(data, bl_access(list, mid));
-		if (cmp > 0) {
-			upper = mid;
-		} else {
+		if (cmp >= 0) {
 			lower = mid;
+		} else {
+			upper = mid;
 		}
 	}
 
@@ -522,7 +495,6 @@ int bl_insert_unique_sorted(bl* list, void* data,
 	bl_insert(list, lower+1, data);
 	return lower+1;
 }
-
 
 void bl_set(bl* list, int index, void* data) {
 	bl_node* node;
@@ -536,7 +508,6 @@ void bl_set(bl* list, int index, void* data) {
 	list->last_access = node;
 	list->last_access_n = nskipped;
 }
-
 
 /**
  * Insert the element "data" into the list, such that its index is "index".
@@ -636,7 +607,6 @@ void bl_insert(bl* list, int index, void* data) {
 		list->N++;
 	}
 }
-
 
 void* bl_access(bl* list, int n) {
 	bl_node* node;
@@ -752,8 +722,8 @@ int bl_check_consistency(bl* list) {
 }
 
 int bl_check_sorted(bl* list,
-						   int (*compare)(void* v1, void* v2),
-						   int isunique) {
+					int (*compare)(const void* v1, const void* v2),
+					int isunique) {
 	int i, N;
 	int nbad = 0;
 	void* v2 = NULL;
@@ -767,35 +737,35 @@ int bl_check_sorted(bl* list,
 		v2 = bl_access(list, i);
 		cmp = compare(v1, v2);
 		if (isunique) {
-			if (cmp <= 0) {
+			if (cmp >= 0) {
 				nbad++;
 			}
 		} else {
-			if (cmp < 0) {
+			if (cmp > 0) {
 				nbad++;
 			}
 		}
 	}
 	if (nbad) {
-		fprintf(stderr, "bl_check_sorted_ascending: %i are out of order.\n", nbad);
+		fprintf(stderr, "bl_check_sorted: %i are out of order.\n", nbad);
 		return 1;
 	}
 	return 0;
 }
 
-int bl_compare_ints_ascending(void* v1, void* v2) {
+int bl_compare_ints_ascending(const void* v1, const void* v2) {
     int i1 = *(int*)v1;
     int i2 = *(int*)v2;
-    if (i1 < i2) return 1;
-    else if (i1 > i2) return -1;
+    if (i1 > i2) return 1;
+    else if (i1 < i2) return -1;
     else return 0;
 }
 
-int bl_compare_ints_descending(void* v1, void* v2) {
+int bl_compare_ints_descending(const void* v1, const void* v2) {
     int i1 = *(int*)v1;
     int i2 = *(int*)v2;
-    if (i1 < i2) return -1;
-    else if (i1 > i2) return 1;
+    if (i1 > i2) return -1;
+    else if (i1 < i2) return 1;
     else return 0;
 }
 
@@ -862,6 +832,7 @@ int il_remove_value(il* ilist, int value) {
 void il_remove_all(il* list) {
 	bl_remove_all(list);
 }
+
 void il_remove_index_range(il* list, int start, int length) {
 	bl_remove_index_range(list, start, length);
 }
@@ -873,35 +844,45 @@ void il_set(il* list, int index, int value) {
 il* il_new(int blocksize) {
 	return (il*) bl_new(blocksize, sizeof(int));
 }
+
 void il_new_existing(il* list, int blocksize) {
 	bl_init(list, blocksize, sizeof(int));
 }
+
 void il_free(il* list) {
 	bl_free(list);
 }
+
 void il_push(il* list, int data) {
 	bl_append(list, &data);
 }
+
 void il_append(il* list, int data) {
 	bl_append(list, &data);
 }
+
 void il_merge_lists(il* list1, il* list2) {
 	bl_append_list(list1, list2);
 }
+
 int il_get(il* list, int n) {
 	int* ptr;
 	ptr = (int*)bl_access(list, n);
 	return *ptr;
 }
+
 void il_insert_ascending(il* list, int n) {
     bl_insert_sorted(list, &n, bl_compare_ints_ascending);
 }
+
 void il_insert_descending(il* list, int n) {
     bl_insert_sorted(list, &n, bl_compare_ints_descending);
 }
+
 int il_insert_unique_ascending(il* list, int n) {
     return bl_insert_unique_sorted(list, &n, bl_compare_ints_ascending);
 }
+
 void il_copy(il* list, int start, int length, int* vdest) {
 	bl_copy(list, start, length, vdest);
 }
@@ -930,13 +911,12 @@ int il_contains(il* list, int data) {
 	return 0;
 }
 
-
 // special-case pointer list accessors...
-int bl_compare_pointers_ascending(void* v1, void* v2) {
+int bl_compare_pointers_ascending(const void* v1, const void* v2) {
     void* p1 = *(void**)v1;
     void* p2 = *(void**)v2;
-    if (p1 < p2) return 1;
-    else if (p1 > p2) return -1;
+    if (p1 > p2) return 1;
+    else if (p1 < p2) return -1;
     else return 0;
 }
 
@@ -947,29 +927,37 @@ int pl_insert_unique_ascending(bl* list, void* p) {
 pl* pl_new(int blocksize) {
     return bl_new(blocksize, sizeof(void*));
 }
+
 void pl_free(pl* list) {
     bl_free(list);
 }
+
 void  pl_remove(pl* list, int index) {
 	bl_remove_index(list, index);
 }
+
 void  pl_remove_all(pl* list) {
 	bl_remove_all(list);
 }
+
 void pl_set(pl* list, int index, void* data) {
 	bl_set(list, index, &data);
 }
+
 void pl_append(pl* list, void* data) {
     bl_append(list, &data);
 }
+
 void* pl_get(pl* list, int n) {
     void** ptr;
     ptr = (void**)bl_access(list, n);
     return *ptr;
 }
+
 void pl_copy(pl* list, int start, int length, void** vdest) {
     bl_copy(list, start, length, vdest);
 }
+
 void pl_print(pl* list) {
     bl_node* n;
     int i;
@@ -980,47 +968,56 @@ void pl_print(pl* list) {
 		printf("] ");
     }
 }
+
 int   pl_size(pl* list) {
 	return bl_count(list);
 }
-
-
 
 // special-case double list accessors...
 dl* dl_new(int blocksize) {
 	return bl_new(blocksize, sizeof(double));
 }
+
 void dl_free(dl* list) {
 	bl_free(list);
 }
+
 int   dl_size(dl* list) {
 	return bl_count(list);
 }
+
 int dl_check_consistency(dl* list) {
 	return bl_check_consistency(list);
 }
+
 void dl_push(dl* list, double data) {
 	bl_append(list, &data);
 }
+
 void   dl_append(dl* list, double data) {
 	bl_append(list, &data);
 }
+
 double dl_pop(dl* list) {
     double ret = dl_get(list, list->N-1);
     bl_remove_index(list, list->N-1);
     return ret;
 }
+
 double dl_get(dl* list, int n) {
 	double* ptr;
 	ptr = (double*)bl_access(list, n);
 	return *ptr;
 }
+
 void dl_set(dl* list, int index, double value) {
 	bl_set(list, index, &value);
 }
+
 void dl_copy(bl* list, int start, int length, double* vdest) {
 	bl_copy(list, start, length, vdest);
 }
+
 dl* dl_dupe(dl* dlist) {
     dl* ret = dl_new(dlist->blocksize);
     int i;

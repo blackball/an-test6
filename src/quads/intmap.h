@@ -7,7 +7,6 @@ struct intmap {
 	il fromlist;
 	il tolist;
 };
-//struct intmap;
 typedef struct intmap intmap;
 
 int intmap_length(intmap* m);

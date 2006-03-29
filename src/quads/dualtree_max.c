@@ -19,17 +19,16 @@ struct candidate {
 };
 typedef struct candidate candidate;
 
-int compare_candidates(void* v1, void* v2) {
-    double diff;
+int compare_candidates(const void* v1, const void* v2) {
     candidate* c1 = (candidate*)v1;
     candidate* c2 = (candidate*)v2;
-    diff = c1->lower - c2->lower;
-    if (diff > 0.0)
-		return 1;
-    else if (diff < 0.0)
+	// we want the list sorted in DECREASING order of lower-bound,
+	// so this looks backward from what you'd expect.
+	if (c1->lower > c2->lower)
 		return -1;
-    else
-		return 0;
+	if (c1->lower < c2->lower)
+		return 1;
+	return 0;
 }
 
 /*
