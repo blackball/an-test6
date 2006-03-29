@@ -41,10 +41,28 @@ int  bl_size(bl* list);
 void bl_init(bl* l, int blocksize, int datasize);
 void bl_free(bl* list);
 void bl_append(bl* list, void* data);
+
+/*
+ * Appends "list2" to the end of "list1", and removes all elements
+ * from "list2".
+ */
 void bl_append_list(bl* list1, bl* list2);
 void bl_insert(bl* list, int indx, void* data);
 void bl_set(bl* list, int indx, void* data);
-void bl_insert_sorted(bl* list, void* data, int (*compare)(void* v1, void* v2));
+/**
+ * Inserts the given datum into the list in such a way that the list
+ * stays sorted in ascending order according to the given comparison
+ * function (assuming it was sorted to begin with!).
+ *
+ * The inserted element will be placed _after_ existing elements with
+ * the same value.
+ *
+ * The comparison function is the same as qsort's: it should return
+ * 1 if the first arg is greater than the second arg
+ * 0 if they're equal
+ * -1 if the first arg is smaller.
+ */
+void bl_insert_sorted(bl* list, void* data, int (*compare)(const void* v1, const void* v2));
 
 /**
    If the item already existed in the list (ie, the compare function
@@ -52,7 +70,7 @@ void bl_insert_sorted(bl* list, void* data, int (*compare)(void* v1, void* v2));
    the item was inserted is returned.
  */
 int bl_insert_unique_sorted(bl* list, void* data,
-                            int (*compare)(void* v1, void* v2));
+                            int (*compare)(const void* v1, const void* v2));
 
 // Copies the nth element into the destination location.
 void  bl_get(bl* list, int n, void* dest);
@@ -62,16 +80,22 @@ void* bl_access(bl* list, int n);
 int   bl_count(bl* list);
 void  bl_copy(bl* list, int start, int length, void* vdest);
 void  bl_remove_all(bl* list);
+/*
+  Removes all the elements, but doesn't free the first block, which makes
+  it slightly faster for the case when you're going to add more elements
+  right away, since you don't have to free() the old block then immediately
+  malloc() a new block.
+*/
 void  bl_remove_all_but_first(bl* list);
 void  bl_remove_index(bl* list, int indx);
 void  bl_remove_index_range(bl* list, int start, int length);
-void* bl_find(bl* list, void* data, int (*compare)(void* v1, void* v2));
+void* bl_find(bl* list, void* data, int (*compare)(const void* v1, const void* v2));
 
 // returns 0 if okay, 1 if an error is detected.
 int   bl_check_consistency(bl* list);
 
 // returns 0 if okay, 1 if an error is detected.
-int   bl_check_sorted(bl* list, int (*compare)(void* v1, void* v2), int isunique);
+int   bl_check_sorted(bl* list, int (*compare)(const void* v1, const void* v2), int isunique);
 
 ///////////////////////////////////////////////
 // special-case functions for integer lists. //
