@@ -422,13 +422,9 @@ static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
 	return node;
 }
 
-/**
- * Finds a node for which the given compare() function
- * returns zero when passed the given 'data' pointer
- * and elements from the list.
- */
-void* bl_find(bl* list, void* data,
-					 int (*compare)(const void* v1, const void* v2)) {
+static void bl_find_ind_and_element(bl* list, void* data,
+									int (*compare)(const void* v1, const void* v2),
+									void** presult, int* pindex) {
 	int lower, upper;
 	int cmp = -2;
 	void* result;
@@ -438,19 +434,44 @@ void* bl_find(bl* list, void* data,
 		int mid;
 		mid = (upper + lower) / 2;
 		cmp = compare(data, bl_access(list, mid));
-		if (cmp > 0) {
+		if (cmp >= 0) {
 			lower = mid;
 		} else {
 			upper = mid;
 		}
 	}
-	if (lower == -1 || compare(data, (result = bl_access(list, lower))))
-		return NULL;
-	return result;
+	if (lower == -1 || compare(data, (result = bl_access(list, lower)))) {
+		*presult = NULL;
+		*pindex = -1;
+		return;
+	}
+	*presult = result;
+	*pindex = lower;
+}
+
+/**
+ * Finds a node for which the given compare() function
+ * returns zero when passed the given 'data' pointer
+ * and elements from the list.
+ */
+void* bl_find(bl* list, void* data,
+			  int (*compare)(const void* v1, const void* v2)) {
+	void* rtn;
+	int ind;
+	bl_find_ind_and_element(list, data, compare, &rtn, &ind);
+	return rtn;
+}
+
+int bl_find_index(bl* list, void* data,
+				  int (*compare)(const void* v1, const void* v2)) {
+	void* val;
+	int ind;
+	bl_find_ind_and_element(list, data, compare, &val, &ind);
+	return ind;
 }
 
 void bl_insert_sorted(bl* list, void* data,
-							 int (*compare)(const void* v1, const void* v2)) {
+					  int (*compare)(const void* v1, const void* v2)) {
 	int lower, upper;
 	lower = -1;
 	upper = list->N;
@@ -770,6 +791,10 @@ int bl_compare_ints_descending(const void* v1, const void* v2) {
 }
 
 // special-case integer list accessors...
+
+int  il_find_index_ascending(il* list, int value) {
+	return bl_find_index(list, &value, bl_compare_ints_ascending);
+}
 
 int il_check_consistency(il* list) {
 	return bl_check_consistency(list);
