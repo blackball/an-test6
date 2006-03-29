@@ -874,6 +874,10 @@ void il_new_existing(il* list, int blocksize) {
 	bl_init(list, blocksize, sizeof(int));
 }
 
+void il_init(il* list, int blocksize) {
+	bl_init(list, blocksize, sizeof(int));
+}
+
 void il_free(il* list) {
 	bl_free(list);
 }
