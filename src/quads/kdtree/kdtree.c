@@ -681,6 +681,83 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 	return res;
 }
 
+inline real dist2(real* p1, real* p2, int d) {
+	int i;
+	real d2 = 0.0;
+	for (i=0; i<d; i++)
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+	return d2;
+}
+
+int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
+					  real* bestmaxdist2, int best_sofar) {
+	if (kdtree_node_is_leaf(kd, node)) {
+		// compute the distance to each point owned by this node and return
+		// the index of the best one.
+		int ind;
+		for (ind=node->l; ind<=node->r; ind++) {
+			real* p = kd->data + ind * kd->ndim;
+			real d2 = dist2(pt, p, kd->ndim);
+			if (d2 < *bestmaxdist2) {
+				*bestmaxdist2 = d2;
+				best_sofar = ind;
+			}
+		}
+		return best_sofar;
+	} else {
+		// compute the mindists to this node's children; recurse on the
+		// closer one.  if, after the recursion returns, the other one's
+		// mindist is less than the best maxdist found, then recurse on the
+		// further child.
+		kdtree_node_t *child1, *child2, *nearchild, *farchild;
+		real child1mindist2, child2mindist2, nearmindist2, farmindist2;
+
+		child1 = kdtree_get_child1(kd, node);
+		child2 = kdtree_get_child2(kd, node);
+		child1mindist2 = kdtree_bb_point_mindist2(kdtree_get_bb_low(kd, child1),
+												  kdtree_get_bb_high(kd, child1),
+												  pt, kd->ndim);
+		child2mindist2 = kdtree_bb_point_mindist2(kdtree_get_bb_low(kd, child2),
+												  kdtree_get_bb_high(kd, child2),
+												  pt, kd->ndim);
+		if (child1mindist2 < child2mindist2) {
+			nearchild = child1;
+			nearmindist2 = child1mindist2;
+			farchild = child2;
+			farmindist2 = child2mindist2;
+		} else {
+			nearchild = child2;
+			nearmindist2 = child2mindist2;
+			farchild = child1;
+			farmindist2 = child1mindist2;
+		}
+
+		if (nearmindist2 > *bestmaxdist2) {
+			// we can't do better than the existing best.
+			return best_sofar;
+		}
+		// recurse on the near child.
+		best_sofar = kdtree_nn_recurse(kd, nearchild, pt, bestmaxdist2, best_sofar);
+
+		// check if we should bother recursing on the far child.
+		if (farmindist2 > *bestmaxdist2) {
+			return best_sofar;
+		}
+		// recurse on the far child.
+		best_sofar = kdtree_nn_recurse(kd, farchild, pt, bestmaxdist2, best_sofar);
+		return best_sofar;
+	}
+}
+
+int kdtree_nearest_neighbour(kdtree_t* kd, real* pt, real* mindist2) {
+	real bestd2 = 1e300;
+	int ibest;
+	ibest = kdtree_nn_recurse(kd, kdtree_get_root(kd), pt, &bestd2, -1);
+	if (mindist2 && (ibest != -1))
+		*mindist2 = bestd2;
+	return ibest;
+}
+
 /* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
 void kdtree_optimize(kdtree_t *kd)
 {

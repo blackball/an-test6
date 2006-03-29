@@ -44,31 +44,39 @@ struct kdtree_qres {
 };
 typedef struct kdtree_qres kdtree_qres_t;
 
+/* Build a tree from an array of data, of size N*D*sizeof(real) */
+kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
+
+/* Range seach */
+kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
+
+/* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
+ * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
+ * (kd->perm[ind]).
+ *
+ * If "bestd2" is non-NULL, the distance to the nearest neighbour will be place
+ * there.
+ */
+int kdtree_nearest_neighbour(kdtree_t* kd, real *pt, real* bestd2);
+
+/* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
+void kdtree_optimize(kdtree_t *kd);
+
+/* Free results */
+void kdtree_free_query(kdtree_qres_t *kd);
+
+/* Free a tree; does not free kd->data */
+void kdtree_free(kdtree_t *kd);
+
+/* Output Graphviz .dot format version of the tree */
+void kdtree_output_dot(FILE* fid, kdtree_t* kd);
+
+/* Sanity-check a tree. */
 int kdtree_check(kdtree_t* t);
 
+/***   Utility functions   ***/
+
 int kdtree_is_point_in_rect(real* bblo, real* bbhi, real* point, int dim);
-
-kdtree_node_t* kdtree_get_root(kdtree_t* kd);
-
-int kdtree_node_is_leaf(kdtree_t* tree, kdtree_node_t* node);
-
-int kdtree_nodeid_is_leaf(kdtree_t* tree, int nodeid);
-
-real* kdtree_node_get_point(kdtree_t* tree, kdtree_node_t* node, int ind);
-
-int kdtree_node_get_index(kdtree_t* tree, kdtree_node_t* node, int ind);
-
-inline kdtree_node_t* kdtree_nodeid_to_node(kdtree_t* kd, int nodeid);
-
-int kdtree_node_npoints(kdtree_node_t* node);
-
-kdtree_node_t* kdtree_get_child1(kdtree_t* tree, kdtree_node_t* node);
-
-kdtree_node_t* kdtree_get_child2(kdtree_t* tree, kdtree_node_t* node);
-
-int kdtree_get_childid1(kdtree_t* tree, int nodeid);
-
-int kdtree_get_childid2(kdtree_t* tree, int nodeid);
 
 real kdtree_bb_mindist2(real* bblow1, real* bbhigh1,
 						real* bblow2, real* bbhigh2, int dim);
@@ -82,6 +90,34 @@ real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
 real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
 							  real* point, int dim);
 
+/***   Simple accessors   ***/
+
+kdtree_node_t* kdtree_get_root(kdtree_t* kd);
+
+int kdtree_node_npoints(kdtree_node_t* node);
+
+/***   Nodeid accessors   ***/
+
+int kdtree_nodeid_is_leaf(kdtree_t* tree, int nodeid);
+
+inline kdtree_node_t* kdtree_nodeid_to_node(kdtree_t* kd, int nodeid);
+
+int kdtree_get_childid1(kdtree_t* tree, int nodeid);
+
+int kdtree_get_childid2(kdtree_t* tree, int nodeid);
+
+/***   kdtree_node_t* accessors  ***/
+
+int kdtree_node_is_leaf(kdtree_t* tree, kdtree_node_t* node);
+
+real* kdtree_node_get_point(kdtree_t* tree, kdtree_node_t* node, int ind);
+
+int kdtree_node_get_index(kdtree_t* tree, kdtree_node_t* node, int ind);
+
+kdtree_node_t* kdtree_get_child1(kdtree_t* tree, kdtree_node_t* node);
+
+kdtree_node_t* kdtree_get_child2(kdtree_t* tree, kdtree_node_t* node);
+
 real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node);
 
 real* kdtree_get_bb_high(kdtree_t* tree, kdtree_node_t* node);
@@ -92,23 +128,6 @@ real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
 real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 							   kdtree_t* tree2, kdtree_node_t* node2);
 
-/* Build a tree from an array of data, of size N*D*sizeof(real) */
-kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
-
-/* Range seach */
-kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
-
-/* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
-void kdtree_optimize(kdtree_t *kd);
-
-/* Free results */
-void kdtree_free_query(kdtree_qres_t *kd);
-
-/* Free a tree; does not free kd->data */
-void kdtree_free(kdtree_t *kd);
-
-/* Output Graphviz .dot format version of the tree */
-void kdtree_output_dot(FILE* fid, kdtree_t* kd);
 
 /* Internal methods */
 int kdtree_qsort_results(kdtree_qres_t *kq, int D);
