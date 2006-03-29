@@ -269,7 +269,7 @@ int overflow;
 
 int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 	int sum, i;
-	double dsum;
+	real dsum;
 	real *bblo, *bbhi;
 	// scan through the arrays owned by this node
 	sum = 0;
@@ -428,6 +428,28 @@ real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
 		else
 			continue;
 		d2 += delta * delta;
+	}
+	return d2;
+}
+
+real kdtree_bb_point_mindist2_bailout(real* bblow, real* bbhigh,
+									  real* point, int dim, real bailout) {
+	real d2 = 0.0;
+	real delta;
+	int i;
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+		if (point[i] < lo)
+			delta = lo - point[i];
+		else if (point[i] > hi)
+			delta = point[i] - hi;
+		else
+			continue;
+		d2 += delta * delta;
+		if (d2 >= bailout)
+			return d2;
 	}
 	return d2;
 }
@@ -687,6 +709,14 @@ inline real dist2(real* p1, real* p2, int d) {
 	for (i=0; i<d; i++)
 		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
 	return d2;
+}
+
+real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
+										real* pt, real bailout) {
+	return kdtree_bb_point_mindist2_bailout
+		(kdtree_get_bb_low(kd, node),
+		 kdtree_get_bb_high(kd, node),
+		 pt, kd->ndim, bailout);
 }
 
 real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
