@@ -128,6 +128,9 @@ real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
 real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 							   kdtree_t* tree2, kdtree_node_t* node2);
 
+real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
+
+real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
 
 /* Internal methods */
 int kdtree_qsort_results(kdtree_qres_t *kq, int D);

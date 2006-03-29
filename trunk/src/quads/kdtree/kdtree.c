@@ -559,7 +559,7 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int node, real *pt, real maxdistsqd
 		smallest_dsqd += delta * delta;
 		/* Early exit - FIXME benchmark to see if this actually helps */
 		if (smallest_dsqd > maxdistsqd) {
-			return ;
+			return;
 		}
 	}
 
@@ -586,7 +586,7 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int node, real *pt, real maxdistsqd
 		} else {
 			kdtree_rangesearch_actual(kd, 2*node + 1, pt, maxdistsqd, res);
 			if (overflow)
-				return ;
+				return;
 			kdtree_rangesearch_actual(kd, 2*node + 2, pt, maxdistsqd, res);
 		}
 	}
@@ -689,6 +689,18 @@ inline real dist2(real* p1, real* p2, int d) {
 	return d2;
 }
 
+real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
+	return kdtree_bb_point_mindist2(kdtree_get_bb_low(kd, node),
+									kdtree_get_bb_high(kd, node),
+									pt, kd->ndim);
+}
+
+real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
+	return kdtree_bb_point_maxdist2(kdtree_get_bb_low(kd, node),
+									kdtree_get_bb_high(kd, node),
+									pt, kd->ndim);
+}
+
 int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
 					  real* bestmaxdist2, int best_sofar) {
 	if (kdtree_node_is_leaf(kd, node)) {
@@ -714,12 +726,9 @@ int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
 
 		child1 = kdtree_get_child1(kd, node);
 		child2 = kdtree_get_child2(kd, node);
-		child1mindist2 = kdtree_bb_point_mindist2(kdtree_get_bb_low(kd, child1),
-												  kdtree_get_bb_high(kd, child1),
-												  pt, kd->ndim);
-		child2mindist2 = kdtree_bb_point_mindist2(kdtree_get_bb_low(kd, child2),
-												  kdtree_get_bb_high(kd, child2),
-												  pt, kd->ndim);
+		child1mindist2 = kdtree_node_point_mindist2(kd, child1, pt);
+		child2mindist2 = kdtree_node_point_mindist2(kd, child2, pt);
+
 		if (child1mindist2 < child2mindist2) {
 			nearchild = child1;
 			nearmindist2 = child1mindist2;
