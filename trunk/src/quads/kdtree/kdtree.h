@@ -93,6 +93,9 @@ real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
 real kdtree_bb_point_mindist2_bailout(real* bblow, real* bbhigh,
 									  real* point, int dim, real bailout);
 
+real kdtree_bb_point_maxdist2_bailout(real* bblow, real* bbhigh,
+									  real* point, int dim, real bailout);
+
 /***   Simple accessors   ***/
 
 kdtree_node_t* kdtree_get_root(kdtree_t* kd);
@@ -137,6 +140,10 @@ real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
 
 /* if the mindist exceeds "bailout", return. */
 real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
+										real* pt, real bailout);
+
+/* if the maxdist exceeds "bailout", return. */
+real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
 										real* pt, real bailout);
 
 /* Internal methods */
