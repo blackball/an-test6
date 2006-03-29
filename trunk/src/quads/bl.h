@@ -105,6 +105,7 @@ typedef bl il;
 il*  il_new(int blocksize);
 int  il_size(il* list);
 void il_new_existing(il* list, int blocksize);
+void il_init(il* list, int blocksize);
 void il_remove_all(il* list);
 void il_free(il* list);
 void il_append(il* list, int data);
