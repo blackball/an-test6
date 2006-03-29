@@ -44,17 +44,17 @@ void test_sort_random(CuTest *tc) {
 
 /* Commenting out-- no longer sorting; we're median pivoting */
 /*
-void test_sort_1d_even(CuTest *tc)
-{
-	real data[]        = {5,9,84,7,56,4,8,4,33,120};
-	real data_sorted[] = {4,4,5,7,8,9,33,56,84,120};
-	int i, n=10, d=1;
-	kdtree_t *kd = kdtree_build(data, n, d, 2);
-	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
-	for (i=0;i<n*d;i++) {
-	    CuAssertIntEquals(tc, data[i], data_sorted[i]);
-	}
-}
+  void test_sort_1d_even(CuTest *tc)
+  {
+  real data[]        = {5,9,84,7,56,4,8,4,33,120};
+  real data_sorted[] = {4,4,5,7,8,9,33,56,84,120};
+  int i, n=10, d=1;
+  kdtree_t *kd = kdtree_build(data, n, d, 2);
+  CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
+  for (i=0;i<n*d;i++) {
+  CuAssertIntEquals(tc, data[i], data_sorted[i]);
+  }
+  }
 */
 
 /* Commenting out-- no longer sorting; we're median pivoting */
@@ -150,10 +150,10 @@ void test_1d_nn_2(CuTest *tc)
 
 void test_2d_lots(CuTest *tc)
 {/*
-	real data[]        = {5,9,    36,84,  7,56,  4,8,   4,33, 42,1,
-	                      22,20,  14,92,  32,22, 23,1,  89,2, 32,9,
-	                      93,33,  85,24,  46,21, 21,76, 99,39};
-	 int n=17, d=2;*/
+   real data[]        = {5,9,    36,84,  7,56,  4,8,   4,33, 42,1,
+   22,20,  14,92,  32,22, 23,1,  89,2, 32,9,
+   93,33,  85,24,  46,21, 21,76, 99,39};
+   int n=17, d=2;*/
 }
 
 void test_kd_size(CuTest *tc)
@@ -239,6 +239,72 @@ void test_kd_nn(CuTest *tc) {
 		CuAssertDblEquals(tc, dcheck2, dbest2, 1e-10);
 	}
 	free(point);
+	kdtree_free(kd);
+	free(data);
+}
+
+void rangesearch_callback(kdtree_t* kd, real* pt, real maxdist2,
+						  real* computed_dist2, int indx, void* extra) {
+	int* found = (int*)extra;
+	//found[indx]++;
+	found[kd->perm[indx]]++;
+}
+
+void test_kd_range_search_callback(CuTest *tc) {
+	int n=10000;
+	int d=3, i, j;
+	int levels=10;
+	real range;
+	real range2;
+	real *point;
+	real *data = malloc(sizeof(real)*n*d);
+	real *origdata = malloc(sizeof(real)*n*d);
+	int* points_found = malloc(n * sizeof(int));
+	int nfound, ntrue;
+	int ntimes = 10;
+	int t;
+	kdtree_t *kd;
+
+	for (i=0; i < n*d; i++) 
+        data[i] = random() / (real)RAND_MAX;
+	memcpy(origdata, data, n*d*sizeof(real));
+	kd = kdtree_build(data, n, d, levels);
+	point = malloc(sizeof(real)*d);
+	for (t=0; t<ntimes; t++) {
+		range = t * 0.02;
+		range2 = range*range;
+		for (i=0; i<d; i++)
+			point[i] = random() / (real)RAND_MAX;
+		memset(points_found, 0, n * sizeof(int));
+
+		kdtree_rangesearch_callback(kd, point, range2, rangesearch_callback,
+									points_found);
+
+		nfound = 0;
+		for (i=0; i<n; i++) {
+			CuAssertTrue(tc, (points_found[i] == 0) || (points_found[i] == 1));
+			nfound += points_found[i];
+		}
+
+		ntrue = 0;
+		for (i=0; i<n; i++) {
+			double d2 = 0.0;
+			for (j=0; j<d; j++) {
+				double diff = (origdata[i*d + j] - point[j]);
+				d2 += (diff*diff);
+			}
+			if (d2 > range2) continue;
+			ntrue++;
+			// make sure this point was found.
+			CuAssertTrue(tc, (points_found[i] == 1));
+		}
+		printf("range search: got %i results.\n", nfound);
+		// make sure the number of hits is equal.
+		CuAssertIntEquals(tc, nfound, ntrue);
+	}
+	free(origdata);
+	free(point);
+	free(points_found);
 	kdtree_free(kd);
 	free(data);
 }
@@ -343,6 +409,7 @@ int main(void) {
 	SUITE_ADD_TEST(suite, test_kd_invalid_args);
 	SUITE_ADD_TEST(suite, test_kd_nn);
 	SUITE_ADD_TEST(suite, test_kd_range_search);
+	SUITE_ADD_TEST(suite, test_kd_range_search_callback);
 	SUITE_ADD_TEST(suite, test_sort_random);
 	//SUITE_ADD_TEST(suite, test_kd_massive_build);
 
