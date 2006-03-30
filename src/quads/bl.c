@@ -940,6 +940,21 @@ int il_contains(il* list, int data) {
 	return 0;
 }
 
+int  il_index_of(il* list, int data) {
+	bl_node* n;
+	int i;
+	int* idata;
+	int npast = 0;
+	for (n=list->head; n; n=n->next) {
+		idata = (int*)n->data;
+		for (i=0; i<n->N; i++)
+			if (idata[i] == data)
+				return npast + i;
+		npast += n->N;
+	}
+	return -1;
+}
+
 // special-case pointer list accessors...
 int bl_compare_pointers_ascending(const void* v1, const void* v2) {
     void* p1 = *(void**)v1;
