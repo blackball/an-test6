@@ -113,6 +113,7 @@ void il_merge_lists(il* list1, il* list2);
 void il_push(il* list, int data);
 int  il_pop(il* list);
 int  il_contains(il* list, int data);
+int  il_index_of(il* list, int data);
 int  il_get(il* list, int n);
 void il_copy(il* list, int start, int length, int* vdest);
 il*  il_dupe(il* list);

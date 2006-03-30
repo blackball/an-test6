@@ -1,4 +1,23 @@
+#include <assert.h>
+
 #include "intmap.h"
+
+int intmap_get(intmap* map, int from, int fail) {
+	int indx = il_index_of(&map->fromlist, from);
+	if (indx == -1) return fail;
+	return il_get(&map->tolist, indx);
+}
+
+void intmap_get_entry(intmap* map, int indx, int* pfrom, int* pto) {
+	int from, to;
+	assert(indx < il_size(&map->fromlist));
+	assert(pfrom);
+	assert(pto);
+	from = il_get(&map->fromlist, indx);
+	to = il_get(&map->tolist, indx);
+	*pfrom = from;
+	*pto = to;
+}
 
 int intmap_length(intmap* m) {
 	return il_size(&m->fromlist);
