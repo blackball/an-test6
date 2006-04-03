@@ -1,4 +1,4 @@
-#include "kdtree/kdtree.h"
+#include "kdtree.h"
 #include "bl.h"
 
 typedef void (*max_bounds_function)(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,

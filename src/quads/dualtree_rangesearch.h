@@ -3,7 +3,7 @@
 
 extern double RANGESEARCH_NO_LIMIT;
 
-#include "kdtree/kdtree.h"
+#include "kdtree.h"
 
 typedef void (*result_callback)(void* extra, int xind, int yind,
 								double dist2);

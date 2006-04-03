@@ -1,10 +1,10 @@
-#ifndef SOLVER2_H
-#define SOLVER2_H
+#ifndef SOLVER_H
+#define SOLVER_H
 
 #include "starutil.h"
 #include "xylist.h"
-#include "kdtree/kdtree.h"
-#include "kdtree/kdtree_io.h"
+#include "kdtree.h"
+#include "kdtree_io.h"
 #include "bl.h"
 #include "matchobj.h"
 

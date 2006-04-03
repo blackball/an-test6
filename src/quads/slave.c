@@ -14,9 +14,9 @@
 #include <string.h>
 #include <limits.h>
 
-#include "kdtree/kdtree.h"
-#include "kdtree/kdtree_io.h"
-#include "kdtree/kdtree_fits_io.h"
+#include "kdtree.h"
+#include "kdtree_io.h"
+#include "kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
