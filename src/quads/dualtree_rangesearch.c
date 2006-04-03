@@ -71,10 +71,6 @@ void dualtree_rangecount(kdtree_t* xtree, kdtree_t* ytree,
 	params.counts = counts;
 
     dualtree_search(xtree, ytree, &callbacks);
-
-	if (xtree == ytree) {
-		// we'll double-count 
-	}
 }
 
 
