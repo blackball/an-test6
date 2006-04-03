@@ -13,4 +13,8 @@ void dualtree_rangesearch(kdtree_t* x, kdtree_t* y,
 						  result_callback callback,
 						  void* callback_param);
 
+void dualtree_rangecount(kdtree_t* x, kdtree_t* y,
+						 double mindist, double maxdist,
+						 int* counts);
+
 #endif
