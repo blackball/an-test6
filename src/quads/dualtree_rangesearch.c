@@ -54,6 +54,7 @@ void dualtree_rangecount(kdtree_t* xtree, kdtree_t* ytree,
     callbacks.result_extra = &params;
 
     // set search params
+	memset(&params, 0, sizeof(params));
     if (mindist == RANGESEARCH_NO_LIMIT) {
 		params.usemin = 0;
     } else {
@@ -89,6 +90,7 @@ void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
     callbacks.result_extra = &params;
 
     // set search params
+	memset(&params, 0, sizeof(params));
     if (mindist == RANGESEARCH_NO_LIMIT) {
 		params.usemin = 0;
     } else {
@@ -255,19 +257,33 @@ void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 	yl = ynode->l;
 	yr = ynode->r;
 
-	for (y=yl; y<=yr; y++) {
-		double* py = p->ytree->data + y * D;
-		int iy = p->ytree->perm[y];
-		for (x=xl; x<=xr; x++) {
-			double d2;
-			double* px;
-			px = p->xtree->data + x * D;
-			d2 = distsq(px, py, D);
-			if ((p->usemax) && (d2 > p->maxdistsq))
-				continue;
-			if ((p->usemin) && (d2 < p->mindistsq))
-				continue;
-			p->counts[iy]++;
+	if (p->usemax && !p->usemin) {
+		for (y=yl; y<=yr; y++) {
+			double* py = p->ytree->data + y * D;
+			int iy = p->ytree->perm[y];
+			for (x=xl; x<=xr; x++) {
+				double* px;
+				px = p->xtree->data + x * D;
+				if (distsq_exceeds(px, py, D, p->maxdistsq))
+					continue;
+				p->counts[iy]++;
+			}
+		}
+	} else {
+		for (y=yl; y<=yr; y++) {
+			double* py = p->ytree->data + y * D;
+			int iy = p->ytree->perm[y];
+			for (x=xl; x<=xr; x++) {
+				double d2;
+				double* px;
+				px = p->xtree->data + x * D;
+				d2 = distsq(px, py, D);
+				if ((p->usemax) && (d2 > p->maxdistsq))
+					continue;
+				if ((p->usemin) && (d2 < p->mindistsq))
+					continue;
+				p->counts[iy]++;
+			}
 		}
 	}
 }
@@ -325,21 +341,37 @@ void rc_self_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* y
 	yl = ynode->l;
 	yr = ynode->r;
 
-	for (y=yl; y<=yr; y++) {
-		double* py = p->ytree->data + y * D;
-		int iy = p->ytree->perm[y];
-		for (x=xl; x<=xr; x++) {
-			double d2;
-			double* px;
-			int ix = p->xtree->perm[x];
-			px = p->xtree->data + x * D;
-			d2 = distsq(px, py, D);
-			if ((p->usemax) && (d2 > p->maxdistsq))
-				continue;
-			if ((p->usemin) && (d2 < p->mindistsq))
-				continue;
-			p->counts[iy]++;
-			p->counts[ix]++;
+	if (p->usemax && !p->usemin) {
+		for (y=yl; y<=yr; y++) {
+			double* py = p->ytree->data + y * D;
+			int iy = p->ytree->perm[y];
+			for (x=xl; x<=xr; x++) {
+				double* px;
+				int ix = p->xtree->perm[x];
+				px = p->xtree->data + x * D;
+				if (distsq_exceeds(px, py, D, p->maxdistsq))
+					continue;
+				p->counts[iy]++;
+				p->counts[ix]++;
+			}
+		}
+	} else {
+		for (y=yl; y<=yr; y++) {
+			double* py = p->ytree->data + y * D;
+			int iy = p->ytree->perm[y];
+			for (x=xl; x<=xr; x++) {
+				double d2;
+				double* px;
+				int ix = p->xtree->perm[x];
+				px = p->xtree->data + x * D;
+				d2 = distsq(px, py, D);
+				if ((p->usemax) && (d2 > p->maxdistsq))
+					continue;
+				if ((p->usemin) && (d2 < p->mindistsq))
+					continue;
+				p->counts[iy]++;
+				p->counts[ix]++;
+			}
 		}
 	}
 }
