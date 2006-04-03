@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "healpix.h"
-#include "starutil.h"
+#include "mathutil.h"
 
 int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir);
 

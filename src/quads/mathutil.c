@@ -7,6 +7,46 @@ inline int imax(int a, int b) {
 	return (a > b) ? a : b;
 }
 
+inline double distsq_exceeds(double* d1, double* d2, int D, double limit) {
+    double dist2;
+    int i;
+    dist2 = 0.0;
+    for (i=0; i<D; i++) {
+		dist2 += square(d1[i] - d2[i]);
+		if (dist2 > limit)
+			return 1;
+    }
+	return 0;
+}
+
+inline double distsq(double* d1, double* d2, int D) {
+    double dist2;
+    int i;
+    dist2 = 0.0;
+    for (i=0; i<D; i++) {
+		dist2 += square(d1[i] - d2[i]);
+    }
+    return dist2;
+}
+
+inline double square(double d) {
+    return d*d;
+}
+
+inline int inrange(double ra, double ralow, double rahigh) {
+    if (ralow < rahigh) {
+		if (ra >= ralow && ra <= rahigh)
+            return 1;
+        return 0;
+    }
+
+    /* handle wraparound properly */
+    //if (ra <= ralow && ra >= rahigh)
+    if (ra >= ralow || ra <= rahigh)
+        return 1;
+    return 0;
+}
+
 #define GAUSSIAN_SAMPLE_INVALID -1e300
 
 double gaussian_sample(double mean, double stddev) {

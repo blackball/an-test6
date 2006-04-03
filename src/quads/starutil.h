@@ -38,12 +38,6 @@ typedef char bool;
 #define ABDC_ORDER 2
 #define BADC_ORDER 3
 
-inline double square(double d);
-
-inline int inrange(double ra, double ralow, double rahigh);
-
-inline double distsq(double* d1, double* d2, int D);
-
 #define rad2deg(r) (180.0*(r)/(double)PIl)
 #define deg2rad(d) (d*(double)PIl/180.0)
 #define rad2arcmin(r) (10800.0*r/(double)PIl)
