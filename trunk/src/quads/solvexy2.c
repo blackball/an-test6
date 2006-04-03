@@ -10,8 +10,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include "kdtree/kdtree.h"
-#include "kdtree/kdtree_io.h"
+#include "kdtree.h"
+#include "kdtree_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"

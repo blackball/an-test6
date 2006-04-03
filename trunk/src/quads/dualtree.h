@@ -19,7 +19,7 @@
 */
 
 #include "starutil.h"
-#include "kdtree/kdtree.h"
+#include "kdtree.h"
 
 typedef bool (*decision_function)(void* extra, kdtree_node_t* search, kdtree_node_t* query);
 typedef void (*start_of_results_function)(void* extra, kdtree_node_t* query);
