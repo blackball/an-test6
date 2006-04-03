@@ -14,6 +14,7 @@
 
 #include "starutil.h"
 #include "fileutil.h"
+#include "mathutil.h"
 #include "kdtree.h"
 #include "kdtree_io.h"
 #include "dualtree_max.h"

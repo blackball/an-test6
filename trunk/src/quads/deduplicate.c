@@ -13,6 +13,7 @@
 
 #include "starutil.h"
 #include "fileutil.h"
+#include "mathutil.h"
 #include "dualtree_rangesearch.h"
 #include "bl.h"
 #include "catalog.h"

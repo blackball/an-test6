@@ -12,6 +12,7 @@
 #include "starutil.h"
 #include "codefile.h"
 #include "fileutil.h"
+#include "mathutil.h"
 #include "quadfile.h"
 #include "bl.h"
 #include "catalog.h"
