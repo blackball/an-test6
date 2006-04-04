@@ -4,8 +4,6 @@
 #include "starutil.h"
 #include "bl.h"
 
-#define BAIL_OUT() printf("Bailing out: file %s, line %i", __FILE__, __LINE__)
-
 #define debug(...) {}
 //#define debug printf
 
@@ -19,7 +17,7 @@ struct candidate {
 };
 typedef struct candidate candidate;
 
-int compare_candidates(const void* v1, const void* v2) {
+int compare_candidates_lower(const void* v1, const void* v2) {
     candidate* c1 = (candidate*)v1;
     candidate* c2 = (candidate*)v2;
 	// we want the list sorted in DECREASING order of lower-bound,
@@ -30,6 +28,20 @@ int compare_candidates(const void* v1, const void* v2) {
 		return 1;
 	return 0;
 }
+
+int compare_candidates_upper(const void* v1, const void* v2) {
+    candidate* c1 = (candidate*)v1;
+    candidate* c2 = (candidate*)v2;
+	// we want the list sorted in DECREASING order of lower-bound,
+	// so this looks backward from what you'd expect.
+	if (c1->upper > c2->upper)
+		return -1;
+	if (c1->upper < c2->upper)
+		return 1;
+	return 0;
+}
+
+typedef int (*compare_function)(const void*, const void*);
 
 /*
   During the recursion, we maintain two lists of nodes from the search tree
@@ -54,10 +66,14 @@ void dualtree_max_recurse(kdtree_t* xtree,
 						  kdtree_node_t* ynode,
 						  double pruning_threshold,
 						  dualtree_max_callbacks* callbacks,
-						  int gotoleaves) {
+						  int gotoleaves,
+						  int sort_on_upper) {
 
     max_bounds_function bounds = callbacks->bounds;
     void* bounds_extra = callbacks->bounds_extra;
+	compare_function compare = (sort_on_upper ?
+								compare_candidates_upper :
+								compare_candidates_lower);
 
     debug("query %p: %i points; %i node candidates, %i leaves.\n",
 		  query, query->num_points, blocklist_count(nodes), blocklist_count(leaves));
@@ -75,10 +91,12 @@ void dualtree_max_recurse(kdtree_t* xtree,
 		if (gotoleaves && !kdtree_node_is_leaf(ytree, ynode)) {
 			dualtree_max_recurse(xtree, ytree, nodes, leaves,
 								 kdtree_get_child1(ytree, ynode),
-								 pruning_threshold, callbacks, gotoleaves);
+								 pruning_threshold, callbacks, gotoleaves,
+								 sort_on_upper);
 			dualtree_max_recurse(xtree, ytree, nodes, leaves,
 								 kdtree_get_child2(ytree, ynode),
-								 pruning_threshold, callbacks, gotoleaves);
+								 pruning_threshold, callbacks, gotoleaves,
+								 sort_on_upper);
 			return;
 		}
 
@@ -88,7 +106,7 @@ void dualtree_max_recurse(kdtree_t* xtree,
 		result_extra = callbacks->result_extra;
 
 		if (start) {
-			start(callbacks->start_extra, ynode, /*leaves,*/ &pruning_threshold);
+			start(callbacks->start_extra, ynode, &pruning_threshold);
 		}
 		if (result) {
 			bl* keepleaves;
@@ -123,7 +141,7 @@ void dualtree_max_recurse(kdtree_t* xtree,
 					keepcand.lower = lower;
 					keepcand.upper = upper;
 				}
-				bl_insert_sorted(keepleaves, &keepcand, compare_candidates);
+				bl_insert_sorted(keepleaves, &keepcand, compare);
 			}
 
 			N = pl_size(keepleaves);
@@ -203,7 +221,7 @@ void dualtree_max_recurse(kdtree_t* xtree,
 							bl_append(leaves, &childcand);
 							debug("Added leaf candidate.\n");
 						} else {
-							bl_insert_sorted(childnodes, &childcand, compare_candidates);
+							bl_insert_sorted(childnodes, &childcand, compare);
 							debug("Added node candidate.\n");
 						}
 					} else {
@@ -212,7 +230,7 @@ void dualtree_max_recurse(kdtree_t* xtree,
 				}
 			}
 
-			dualtree_max_recurse(xtree, ytree, childnodes, leaves, ychild, childthresh, callbacks, gotoleaves);
+			dualtree_max_recurse(xtree, ytree, childnodes, leaves, ychild, childthresh, callbacks, gotoleaves, sort_on_upper);
 
 			bl_remove_index_range(leaves, leaflength, bl_size(leaves) - leaflength);
 			if (i == 0) {
@@ -227,7 +245,7 @@ void dualtree_max_recurse(kdtree_t* xtree,
 
 void dualtree_max(kdtree_t* xtree, kdtree_t* ytree,
 				  dualtree_max_callbacks* callbacks,
-				  int go_to_leaves) {
+				  int go_to_leaves, int sort_on_upper) {
     bl *nodes, *leaves;
     candidate cand;
     double lower, upper;
@@ -254,7 +272,8 @@ void dualtree_max(kdtree_t* xtree, kdtree_t* ytree,
     }
 
     dualtree_max_recurse(xtree, ytree, nodes, leaves,
-						 yroot, lower, callbacks, go_to_leaves);
+						 yroot, lower, callbacks, go_to_leaves,
+						 sort_on_upper);
 
     bl_free(nodes);
     bl_free(leaves);
