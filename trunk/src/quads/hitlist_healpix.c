@@ -4,9 +4,9 @@
 #include <stdio.h>
 
 #include "bl.h"
-#include "starutil.h"
 #include "healpix.h"
 #include "intmap.h"
+#include "mathutil.h"
 
 struct pixinfo;
 typedef struct pixinfo pixinfo;
@@ -16,11 +16,7 @@ struct pixinfo {
 	// list of indexes into the master MatchObj list, of MatchObjects
 	// that belong to this pix.
 	il* matchinds;
-	// list of neighbouring healpixes.
-	//int healpix;
-	//uint neighbours[8];
-	//int nn;
-	// terminated by -1.
+	// list of neighbouring healpixes, terminated by -1.
 	uint* neighbours;
 };
 

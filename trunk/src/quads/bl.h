@@ -107,6 +107,7 @@ int  il_size(il* list);
 void il_new_existing(il* list, int blocksize);
 void il_init(il* list, int blocksize);
 void il_remove_all(il* list);
+void il_remove_all_reuse(il* list);
 void il_free(il* list);
 void il_append(il* list, int data);
 void il_merge_lists(il* list1, il* list2);

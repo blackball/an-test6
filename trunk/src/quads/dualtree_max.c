@@ -32,8 +32,6 @@ int compare_candidates_lower(const void* v1, const void* v2) {
 int compare_candidates_upper(const void* v1, const void* v2) {
     candidate* c1 = (candidate*)v1;
     candidate* c2 = (candidate*)v2;
-	// we want the list sorted in DECREASING order of lower-bound,
-	// so this looks backward from what you'd expect.
 	if (c1->upper > c2->upper)
 		return -1;
 	if (c1->upper < c2->upper)
