@@ -136,6 +136,9 @@ int kdtree_get_childid2(kdtree_t* tree, int nodeid);
 /***   kdtree_node_t* accessors  ***/
 
 inline
+real kdtree_node_volume(kdtree_t* tree, kdtree_node_t* node);
+
+inline
 int kdtree_node_is_leaf(kdtree_t* tree, kdtree_node_t* node);
 
 inline
