@@ -23,6 +23,6 @@ typedef struct dualtree_max_callbacks dualtree_max_callbacks;
 
 void dualtree_max(kdtree_t* xtree, kdtree_t* ytree,
 				  dualtree_max_callbacks* callbacks,
-				  int go_to_leaves);
+				  int go_to_leaves, int sort_on_upper_bound);
 
 

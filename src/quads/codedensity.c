@@ -565,13 +565,13 @@ int main(int argc, char *argv[]) {
 		break;
     }
 
-    dualtree_max(tree, tree, &max_callbacks, 1);
+    dualtree_max(tree, tree, &max_callbacks, 1, 0);
 	if (do_perms) {
 		int i;
 		for (i=1; i<4; i++) {
 			printf("Doing permutation %i...\n", i);
 			permnum = i;
-			dualtree_max(tree, tree, &max_callbacks, 1);
+			dualtree_max(tree, tree, &max_callbacks, 1, 0);
 		}
 	}
 
