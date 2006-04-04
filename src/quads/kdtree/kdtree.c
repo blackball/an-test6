@@ -195,6 +195,8 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	kdtree_t *kd;
 	int nnodes;
 	int level = 0, dim, t, m;
+	int lnext;
+	int oldlevel;
 
 	assert(maxlevel > 0);
 	assert(D <= KDTREE_MAX_DIM);
@@ -226,6 +228,9 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	NODE(0)->l = 0;
 	NODE(0)->r = N - 1;
 
+	lnext = 1;
+	level = 0;
+
 	/* And in one shot, make the kdtree. Each iteration we set our
 	 * children's [l,r] array bounds and pivot our own subset. */
 	for (i = 0; i < nnodes; i++) {
@@ -239,10 +244,16 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 			assert(NODE(i) == CHILD_POS((i - 1) / 2));
 
 		/* Calculate log2(i) inefficiently */
-		level = 0;
+		oldlevel = 0;
 		t = i + 1;
 		while (t >>= 1)
+			oldlevel++;
+
+		if (i == lnext) {
 			level++;
+			lnext = lnext * 2 + 1;
+		}
+		assert(level == oldlevel);
 
 		/* Find split dimension and pivot the data at the median */
 		dim = NODE(i)->dim = level % D;
