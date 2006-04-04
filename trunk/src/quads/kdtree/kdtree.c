@@ -642,6 +642,19 @@ int kdtree_node_npoints(kdtree_node_t* node)
 }
 
 inline
+real kdtree_node_volume(kdtree_t* kd, kdtree_node_t* node) {
+	real vol = 1.0;
+	int i, D;
+	real* lo, *hi;
+	D = kd->ndim;
+	lo = kdtree_get_bb_low(kd, node);
+	hi = kdtree_get_bb_high(kd, node);
+	for (i=0; i<D; i++)
+		vol *= (hi[i] - lo[i]);
+	return vol;
+}
+
+inline
 real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
                                kdtree_t* tree2, kdtree_node_t* node2)
 {
