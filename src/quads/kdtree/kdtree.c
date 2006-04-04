@@ -194,9 +194,8 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	int i;
 	kdtree_t *kd;
 	int nnodes;
-	int level = 0, dim, t, m;
+	int level = 0, dim, m;
 	int lnext;
-	int oldlevel;
 
 	assert(maxlevel > 0);
 	assert(D <= KDTREE_MAX_DIM);
@@ -243,17 +242,11 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 		else if (i)
 			assert(NODE(i) == CHILD_POS((i - 1) / 2));
 
-		/* Calculate log2(i) inefficiently */
-		oldlevel = 0;
-		t = i + 1;
-		while (t >>= 1)
-			oldlevel++;
-
+		/* Have we reached the next level in the tree? */
 		if (i == lnext) {
 			level++;
 			lnext = lnext * 2 + 1;
 		}
-		assert(level == oldlevel);
 
 		/* Find split dimension and pivot the data at the median */
 		dim = NODE(i)->dim = level % D;
