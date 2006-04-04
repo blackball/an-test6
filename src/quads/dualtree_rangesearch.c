@@ -246,8 +246,7 @@ void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 		yl = ynode->l;
 		yr = ynode->r;
 		for (y=yl; y<=yr; y++) {
-			int iy = p->ytree->perm[y];
-			p->counts[iy] += NX;
+			p->counts[y] += NX;
 		}
 		return;
 	}
@@ -260,19 +259,17 @@ void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 	if (p->usemax && !p->usemin) {
 		for (y=yl; y<=yr; y++) {
 			double* py = p->ytree->data + y * D;
-			int iy = p->ytree->perm[y];
 			for (x=xl; x<=xr; x++) {
 				double* px;
 				px = p->xtree->data + x * D;
 				if (distsq_exceeds(px, py, D, p->maxdistsq))
 					continue;
-				p->counts[iy]++;
+				p->counts[y]++;
 			}
 		}
 	} else {
 		for (y=yl; y<=yr; y++) {
 			double* py = p->ytree->data + y * D;
-			int iy = p->ytree->perm[y];
 			for (x=xl; x<=xr; x++) {
 				double d2;
 				double* px;
@@ -282,7 +279,7 @@ void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 					continue;
 				if ((p->usemin) && (d2 < p->mindistsq))
 					continue;
-				p->counts[iy]++;
+				p->counts[y]++;
 			}
 		}
 	}
@@ -314,24 +311,22 @@ void rc_self_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* y
 
 		for (x=xl; x<=xr; x++) {
 			double* px = p->xtree->data + x * D;
-			int ix = p->xtree->perm[x];
 			for (x2=x+1; x2<=xr; x2++) {
 				double d2;
 				double* px2;
-				int ix2 = p->xtree->perm[x2];
 				px2 = p->xtree->data + x2 * D;
 				d2 = distsq(px, px2, D);
 				if ((p->usemax) && (d2 > p->maxdistsq))
 					continue;
 				if ((p->usemin) && (d2 < p->mindistsq))
 					continue;
-				p->counts[ix]++;
-				p->counts[ix2]++;
+				p->counts[x]++;
+				p->counts[x2]++;
 			}
 			// the diagonal...
 			if ((p->usemin) && (0.0 < p->mindistsq))
 				continue;
-			p->counts[ix]++;
+			p->counts[x]++;
 		}
 		return;
 	}
@@ -344,33 +339,29 @@ void rc_self_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* y
 	if (p->usemax && !p->usemin) {
 		for (y=yl; y<=yr; y++) {
 			double* py = p->ytree->data + y * D;
-			int iy = p->ytree->perm[y];
 			for (x=xl; x<=xr; x++) {
 				double* px;
-				int ix = p->xtree->perm[x];
 				px = p->xtree->data + x * D;
 				if (distsq_exceeds(px, py, D, p->maxdistsq))
 					continue;
-				p->counts[iy]++;
-				p->counts[ix]++;
+				p->counts[y]++;
+				p->counts[x]++;
 			}
 		}
 	} else {
 		for (y=yl; y<=yr; y++) {
 			double* py = p->ytree->data + y * D;
-			int iy = p->ytree->perm[y];
 			for (x=xl; x<=xr; x++) {
 				double d2;
 				double* px;
-				int ix = p->xtree->perm[x];
 				px = p->xtree->data + x * D;
 				d2 = distsq(px, py, D);
 				if ((p->usemax) && (d2 > p->maxdistsq))
 					continue;
 				if ((p->usemin) && (d2 < p->mindistsq))
 					continue;
-				p->counts[iy]++;
-				p->counts[ix]++;
+				p->counts[y]++;
+				p->counts[x]++;
 			}
 		}
 	}
