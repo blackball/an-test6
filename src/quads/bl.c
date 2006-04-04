@@ -792,6 +792,10 @@ int bl_compare_ints_descending(const void* v1, const void* v2) {
 
 // special-case integer list accessors...
 
+void il_remove_all_reuse(il* list) {
+	bl_remove_all_but_first(list);
+}
+
 int  il_find_index_ascending(il* list, int value) {
 	return bl_find_index(list, &value, bl_compare_ints_ascending);
 }
