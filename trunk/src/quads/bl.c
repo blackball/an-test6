@@ -1023,6 +1023,10 @@ int   pl_size(pl* list) {
 }
 
 // special-case double list accessors...
+void  dl_remove_all(dl* list) {
+	bl_remove_all(list);
+}
+
 void dl_init(dl* list, int blocksize) {
 	bl_init(list, blocksize, sizeof(double));
 }
