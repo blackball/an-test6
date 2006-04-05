@@ -76,7 +76,7 @@ void kdtree_free(kdtree_t *kd);
 /* Output Graphviz .dot format version of the tree */
 void kdtree_output_dot(FILE* fid, kdtree_t* kd);
 
-/* Sanity-check a tree. */
+/* Sanity-check a tree. 0=okay. */
 int kdtree_check(kdtree_t* t);
 
 /***   Utility functions   ***/

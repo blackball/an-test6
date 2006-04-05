@@ -124,6 +124,7 @@ void test_1d_nn(CuTest *tc)
 	int n=10, d=1;
 	kdtree_qres_t *kr;
 	kdtree_t *kd = kdtree_build(data, n, d, 2);
+	CuAssertIntEquals(tc, 1, kdtree_check(kd));
 	CuAssertPtrNotNullMsg(tc, "null kd-tree", kd);
 	kr = kdtree_rangesearch(kd, qp, 9.2);
 	CuAssertPtrNotNullMsg(tc, "null query result", kr);

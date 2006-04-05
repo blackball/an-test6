@@ -233,6 +233,11 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	/* And in one shot, make the kdtree. Each iteration we set our
 	 * children's [l,r] array bounds and pivot our own subset. */
 	for (i = 0; i < nnodes; i++) {
+		real hi[D];
+		real lo[D];
+		int j, d;
+		real* pdata;
+		real maxrange;
 
 		/* Sanity */
 		assert(NODE(i) == PARENT(2*i + 1));
@@ -248,8 +253,46 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 			lnext = lnext * 2 + 1;
 		}
 
-		/* Find split dimension and pivot the data at the median */
-		dim = NODE(i)->dim = level % D;
+		/* Find the bounding-box for this node. */
+		for (d=0; d<D; d++) {
+			hi[d] = -KDT_INFTY;
+			lo[d] = KDT_INFTY;
+		}
+		// haha, how sick is this? Take advantage of the way data is stored.
+		pdata = kd->data + NODE(i)->l * D;
+		for (j=NODE(i)->l; j<=NODE(i)->r; j++) {
+			for (d=0; d<D; d++) {
+				if (*pdata > hi[d]) hi[d] = *pdata;
+				if (*pdata < lo[d]) lo[d] = *pdata;
+				pdata++;
+			}
+		}
+
+		for (d=0; d<D; d++) {
+			*LOW_HR(i, d) = lo[d];
+			*HIGH_HR(i, d) = hi[d];
+		}
+
+		/*
+		  for (j=NODE(i)->l; j<=NODE(i)->r; j++) {
+		  for (d=0; d<D; d++) {
+		  assert(*LOW_HR(i,d) <= *COORD(j, d));
+		  assert(*HIGH_HR(i,d) >= *COORD(j, d));
+		  }
+		  }
+		*/
+
+		/* Decide which dimension to split along: we use the dimension with
+		   largest range. */
+		maxrange = -1.0;
+		for (d=0; d<D; d++)
+			if ((hi[d] - lo[d]) > maxrange) {
+				maxrange = hi[d] - lo[d];
+				dim = d;
+			}
+		NODE(i)->dim = dim;
+
+		/* Pivot the data at the median */
 		m = kdtree_quickselect_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
 
 		/* Only do child operations if we're not the last layer */
@@ -262,7 +305,6 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 			CHILD_POS(i)->r	= NODE(i)->r;
 		}
 	}
-	kdtree_optimize(kd);
 	return kd;
 }
 
@@ -271,7 +313,6 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 /*****************************************************************************/
 
 // should be D-dimensional...
-//real results[KDTREE_MAX_RESULTS];
 real* results = NULL;
 real results_sqd[KDTREE_MAX_RESULTS];
 unsigned int results_inds[KDTREE_MAX_RESULTS];
@@ -293,6 +334,7 @@ int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 	assert(node->r < kd->ndata);
 	assert(node->l >= 0);
 	assert(node->r >= 0);
+	assert(node->l <= node->r);
 
 	for (i=node->l; i<=node->r; i++) {
 		sum += kd->perm[i];
@@ -303,12 +345,6 @@ int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 		for (i=node->l; i<=node->r; i++) {
 			// check that the point is within the bounding box.
 			assert(kdtree_is_point_in_rect(bblo, bbhi, kd->data + i*kd->ndim, kd->ndim));
-			/*
-			  if (!kdtree_is_point_in_rect(bblo, bbhi, kd->data + i*kd->ndim, kd->ndim)) {
-			  fprintf(stderr, "point %i is not in bounding box.\n", i);
-			  return -1;
-			  }
-			*/
 		}
 	} else {
 		// check that the children's bounding box corners are within
