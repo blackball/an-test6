@@ -169,5 +169,6 @@ void   dl_set(dl* list, int n, double val);
 void   dl_copy(dl* list, int start, int length, double* vdest);
 dl*    dl_dupe(dl* list);
 int    dl_check_consistency(dl* list);
+void   dl_insert(dl* list, int indx, double data);
 
 #endif
