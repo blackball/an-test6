@@ -470,8 +470,8 @@ int bl_find_index(bl* list, void* data,
 	return ind;
 }
 
-void bl_insert_sorted(bl* list, void* data,
-					  int (*compare)(const void* v1, const void* v2)) {
+int bl_insert_sorted(bl* list, void* data,
+					 int (*compare)(const void* v1, const void* v2)) {
 	int lower, upper;
 	lower = -1;
 	upper = list->N;
@@ -487,6 +487,7 @@ void bl_insert_sorted(bl* list, void* data,
 		}
 	}
 	bl_insert(list, lower+1, data);
+	return lower+1;
 }
 
 int bl_insert_unique_sorted(bl* list, void* data,
@@ -904,12 +905,12 @@ int il_get(il* list, int n) {
 	return *ptr;
 }
 
-void il_insert_ascending(il* list, int n) {
-    bl_insert_sorted(list, &n, bl_compare_ints_ascending);
+int il_insert_ascending(il* list, int n) {
+    return bl_insert_sorted(list, &n, bl_compare_ints_ascending);
 }
 
-void il_insert_descending(il* list, int n) {
-    bl_insert_sorted(list, &n, bl_compare_ints_descending);
+int il_insert_descending(il* list, int n) {
+    return bl_insert_sorted(list, &n, bl_compare_ints_descending);
 }
 
 int il_insert_unique_ascending(il* list, int n) {

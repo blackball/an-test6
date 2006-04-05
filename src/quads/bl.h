@@ -61,8 +61,10 @@ void bl_set(bl* list, int indx, void* data);
  * 1 if the first arg is greater than the second arg
  * 0 if they're equal
  * -1 if the first arg is smaller.
+ *
+ * The index where the element was inserted is returned.
  */
-void bl_insert_sorted(bl* list, void* data, int (*compare)(const void* v1, const void* v2));
+int bl_insert_sorted(bl* list, void* data, int (*compare)(const void* v1, const void* v2));
 
 /**
    If the item already existed in the list (ie, the compare function
@@ -119,8 +121,8 @@ int  il_get(il* list, int n);
 void il_copy(il* list, int start, int length, int* vdest);
 il*  il_dupe(il* list);
 void il_print(il* list);
-void il_insert_ascending(il* list, int n);
-void il_insert_descending(il* list, int n);
+int il_insert_ascending(il* list, int n);
+int il_insert_descending(il* list, int n);
 int  il_insert_unique_ascending(il* list, int p);
 void il_set(il* list, int ind, int value);
 void il_remove(il* list, int ind);
