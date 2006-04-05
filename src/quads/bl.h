@@ -159,6 +159,7 @@ void  pl_remove_all(pl* list);
 ///////////////////////////////////////////////
 typedef bl dl;
 dl*    dl_new(int blocksize);
+void   dl_init(dl* list, int blocksize);
 void   dl_free(dl* list);
 int    dl_size(dl* list);
 void   dl_append(dl* list, double data);
