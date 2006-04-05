@@ -1023,6 +1023,10 @@ int   pl_size(pl* list) {
 }
 
 // special-case double list accessors...
+void   dl_insert(dl* list, int indx, double data) {
+	bl_insert(list, indx, &data);
+}
+
 dl* dl_new(int blocksize) {
 	return bl_new(blocksize, sizeof(double));
 }
