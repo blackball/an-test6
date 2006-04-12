@@ -148,33 +148,6 @@ int main(int argc, char *argv[])
 		projection[X+N*Y] += Increment;
 	}
 
-	{
-		int r, d, R=100, D=100;
-		for (r=0; r<=R; r++)
-			for (d=0; d<=D; d++) {
-				double ra = 224.4 + ((double)(r-R/2) / (double)R) * 0.25;
-				double dec = -1.05 + ((double)(d-D/2) / (double)D) * 0.25;;
-				ra = deg2rad(ra);
-				dec = deg2rad(dec);
-				x = radec2x(ra, dec);
-				y = radec2y(ra, dec);
-				z = radec2z(ra, dec);
-				if (!hammer) {
-					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
-						fprintf(stderr, "\nack!\n");
-					if (reverse)
-						z = -z;
-					project_equal_area(x, y, z, &X, &Y);
-				} else {
-					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &X, &Y);
-				}
-				fprintf(stderr, "\nX,Y = %i,%i\n", X, Y);
-				projection[X+N*Y] = 255;
-			}
-	}
-
-
 	if (grid) {
 		/* Draw a line for ra=-160...+160 in 10 degree sections */
 		for (ii=-160; ii <= 160; ii+= 10) {
