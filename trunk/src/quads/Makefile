@@ -41,6 +41,7 @@ EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 	certifiable hpquads dedup_index codetree startree \
 	printcatalog fixcatalogheader deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
+	plotcat
 
 # codetomatlab 
 
