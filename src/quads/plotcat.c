@@ -1,13 +1,14 @@
+#include <math.h>
 #include "fileutil.h"
 #include "starutil.h"
-#include <math.h>
+#include "catalog.h"
 #define OPTIONS "bhgf:N:I:"
 
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] [-I intensity]"
 " [-f catalog.objs] > outfile.pgm\n"
 "  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n"
-"  -N sets edge size of output image, -I sets intensity scale for pixels\n"
-" if -f is absent, reads from stdin\n";
+"  -N sets edge size of output image, -I sets intensity scale for pixels\n";
+
 
 double *projection;
 extern char *optarg;
@@ -15,6 +16,8 @@ extern int optind, opterr, optopt;
 
 int N=3000;
 double Increment=1.0;
+
+#define PI M_PI
 
 inline void project_equal_area(double x, double y, double z, int *X, int *Y)
 {
@@ -58,18 +61,26 @@ inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y
 	project_equal_area(xp,y,zp, X, Y);
 }
 
+// borrowed from andrew moore...
+inline int is_power_of_two(int x) {
+    int result = (x > 0);
+	while (result && (x > 1)) {
+		result = ((x & 1) == 0);
+		x = x >> 1;
+	}
+	return result;
+}
+
 int main(int argc, char *argv[])
 {
-  char readStatus;
-	sidx ii,jj,numstars;
+	uint ii,jj,numstars;
 	int reverse=0, hammer=0, grid=0;
-	dimension Dim_Stars;
-	double ramin, ramax, decmin, decmax;
 	double x,y,z;
 	int X,Y;
 	unsigned long int saturated=0;
-	FILE* fid = stdin;
-	int argidx, argchar; //  opterr = 0;
+	catalog* cat;
+	char* basename = NULL;
+	int argidx, argchar;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -89,7 +100,7 @@ int main(int argc, char *argv[])
 		  Increment=strtod(optarg, NULL);
 		  break;
 		case 'f':
-			fid = fopen(optarg,"r");
+			basename = optarg;
 			break;
 		default:
 			return (OPT_ERR);
@@ -101,37 +112,32 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
-	if (!fid) {
-		fprintf(stderr, "ERROR: Failed to open catalog\n");
+	if (!basename) {
+		fprintf(stderr, help);
 		return 1;
 	}
-
-	readStatus = read_objs_header(fid, &numstars, &Dim_Stars, 
-				      &ramin, &ramax, &decmin, &decmax);
-	if (readStatus == (char)READ_FAIL) {
-		fprintf(stderr, "ERROR: Failed to read catalog\n");
+	cat = catalog_open(basename, 0);
+	if (!cat) {
+		fprintf(stderr, "Couldn't open catalog.\n");
 		return 1;
 	}
-
-	if (Dim_Stars != 3) {
-		fprintf(stderr, "ERROR: Catalog has dimension != 3\n");
-		return 1;
-	}
+	numstars = cat->nstars;
 
 	projection=calloc(sizeof(double),N*N);
 
 	for (ii = 0; ii < numstars; ii++) {
+		double* xyz;
 	  if(is_power_of_two(ii+1))
-	    fprintf(stderr,"  done %lu/%lu stars\r",ii+1,numstars);
+	    fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
 
-	  fread(&x, sizeof(double), 1, fid);
-	  fread(&y, sizeof(double), 1, fid);
-	  fread(&z, sizeof(double), 1, fid);
+		xyz = catalog_get_star(cat, ii);
+		x = xyz[0];
+		y = xyz[1];
+		z = xyz[2];
 
 		if (!hammer) {
 			if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
 				continue;
-
 			if (reverse)
 				z = -z;
 			project_equal_area(x, y, z, &X, &Y);
@@ -139,9 +145,35 @@ int main(int argc, char *argv[])
 			/* Hammer-Aitoff projection */
 			project_hammer_aitoff_x(x, y, z, &X, &Y);
 		}
-		if(projection[X+N*Y]<255)
-		  projection[X+N*Y] += Increment;
+		projection[X+N*Y] += Increment;
 	}
+
+	{
+		int r, d, R=100, D=100;
+		for (r=0; r<=R; r++)
+			for (d=0; d<=D; d++) {
+				double ra = 224.4 + ((double)(r-R/2) / (double)R) * 0.25;
+				double dec = -1.05 + ((double)(d-D/2) / (double)D) * 0.25;;
+				ra = deg2rad(ra);
+				dec = deg2rad(dec);
+				x = radec2x(ra, dec);
+				y = radec2y(ra, dec);
+				z = radec2z(ra, dec);
+				if (!hammer) {
+					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+						fprintf(stderr, "\nack!\n");
+					if (reverse)
+						z = -z;
+					project_equal_area(x, y, z, &X, &Y);
+				} else {
+					/* Hammer-Aitoff projection */
+					project_hammer_aitoff_x(x, y, z, &X, &Y);
+				}
+				fprintf(stderr, "\nX,Y = %i,%i\n", X, Y);
+				projection[X+N*Y] = 255;
+			}
+	}
+
 
 	if (grid) {
 		/* Draw a line for ra=-160...+160 in 10 degree sections */
@@ -202,7 +234,6 @@ int main(int argc, char *argv[])
 		for (jj = 0; jj < N; jj++) {
 			if (projection[ii+N*jj] <= 255)
 				putchar(ceil(projection[ii+N*jj]));
-				
 			else {
 				putchar(255);
 				saturated++;
@@ -212,5 +243,8 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr," %lu/%lu pixels saturated\n",
 		saturated,((unsigned long int)N*(unsigned long int)N));
+
+	catalog_close(cat);
+
 	return 0;
 }
