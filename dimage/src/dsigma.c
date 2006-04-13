@@ -72,7 +72,7 @@ int dsigma(float *image,
 		return(0);
 	}
 
-	(*sigma)=dselip((int) floor(ndiff*0.68),ndiff,diff);
+	(*sigma)=(dselip((int) floor(ndiff*0.68),ndiff,diff))/sqrt(2.);
 	
 	FREEVEC(diff);
 

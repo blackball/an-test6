@@ -27,7 +27,8 @@
 ;------------------------------------------------------------------------------
 pro deblend, image, invvar, nchild=nchild, xcen=xcen, ycen=ycen, $
              children=children, templates=templates, sigma=sigma, $
-             dlim=dlim, saddle=saddle, tlimit=tlimit, minpeak=minpeak
+             dlim=dlim, saddle=saddle, tlimit=tlimit, minpeak=minpeak, $
+             xpeaks=xpeaks, ypeaks=ypeaks
 
 if(NOT keyword_set(maxnchild)) then maxnchild=32L
 if(NOT keyword_set(dlim)) then dlim=1.
@@ -38,6 +39,7 @@ if(NOT keyword_set(saddle)) then saddle=3.
 if(NOT keyword_set(parallel)) then parallel=0.5
 if(NOT keyword_set(sigma)) then sigma=1./sqrt(median(invvar))
 if(NOT keyword_set(minpeak)) then minpeak=sigma
+
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
@@ -54,6 +56,11 @@ soname=filepath('libdimage.'+idlutils_so_ext(), $
                 root_dir=getenv('DIMAGE_DIR'), subdirectory='lib')
 
 nchild=0L
+if(n_elements(xpeaks) gt 0) then begin
+    nchild=n_elements(xpeaks)
+    xcen[0:nchild-1L]=xpeaks
+    ycen[0:nchild-1L]=ypeaks
+endif
 retval=call_external(soname, 'idl_deblend', float(image), $
                      float(invvar), $
                      long(nx), long(ny), $

@@ -74,8 +74,12 @@ int deblend(float *image,
 
   /* 1. find peaks */
   printf("finding peaks.\n"); fflush(stdout);
-  dpeaks(image, nx, ny, &npeaks, xcen, ycen, sigma, dlim, saddle, maxnchild,
-         0,minpeak);
+  if((*nchild)==0) {
+    dpeaks(image, nx, ny, &npeaks, xcen, ycen, sigma, dlim, 
+           saddle, maxnchild, 0,minpeak);
+  } else {
+    npeaks=(*nchild);
+  }
 
   /* 1.5 find "central" peak */
 #if 0
