@@ -10,7 +10,7 @@ int dnonneg(float *xx, float *invcovar, float *bb, float offset,
             int verbose);
 int dpeaks(float *image, int nx, int ny, int *npeaks, int *xcen, 
            int *ycen, float sigma, float dlim, float saddle, int maxnpeaks,
-           int smooth, float minpeak);
+           int smooth, int checkpeaks, float minpeak);
 int dcentral(float *image, int nx, int ny, int npeaks, float *xcen, 
              float *ycen, int *central, float sigma, float dlim,    
              float saddle, int maxnpeaks);

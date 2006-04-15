@@ -50,6 +50,7 @@ int dpeaks(float *image,
            float saddle,  /* number of sigma for allowed saddle */
            int maxnpeaks, 
            int smoothimage, 
+           int checkpeaks, 
            float minpeak)
 {
   int i,j,ip,jp,ist,jst,ind,jnd,highest,tmpnpeaks;
@@ -108,20 +109,22 @@ int dpeaks(float *image,
   for(i=(*npeaks)-1;i>=0;i--) {
     keep[i]=1;
 
-    /* look for peaks joined by a high saddle to brighter peaks */
-    level= (smooth[ fullxcen[i]+  fullycen[i]*nx]-saddle*sigma);
-    if(level<saddle*sigma) 
-      level=(smooth[ fullxcen[i]+  fullycen[i]*nx]-sigma);
-    for(jp=0;jp<ny;jp++)
-      for(ip=0;ip<nx;ip++)
-        mask[ip+jp*nx]=smooth[ip+jp*nx]>level;
-    dfind(mask, nx, ny, object);
-    for(j=i-1;j>=0;j--) 
-      if(object[ fullxcen[j]+ fullycen[j]*nx]==
-         object[ fullxcen[i]+ fullycen[i]*nx] || 
-         object[ fullxcen[i]+ fullycen[i]*nx]==-1 ) {
-        keep[i]=0;
-      }
+		if(checkpeaks) {
+			/* look for peaks joined by a high saddle to brighter peaks */
+			level= (smooth[ fullxcen[i]+  fullycen[i]*nx]-saddle*sigma);
+			if(level<saddle*sigma) 
+				level=(smooth[ fullxcen[i]+  fullycen[i]*nx]-sigma);
+			for(jp=0;jp<ny;jp++)
+				for(ip=0;ip<nx;ip++)
+					mask[ip+jp*nx]=smooth[ip+jp*nx]>level;
+			dfind(mask, nx, ny, object);
+			for(j=i-1;j>=0;j--) 
+				if(object[ fullxcen[j]+ fullycen[j]*nx]==
+					 object[ fullxcen[i]+ fullycen[i]*nx] || 
+					 object[ fullxcen[i]+ fullycen[i]*nx]==-1 ) {
+					keep[i]=0;
+				}
+		}
 
     /* look for close peaks */
     for(j=i-1;j>=0;j--) {
