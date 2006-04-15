@@ -38,7 +38,7 @@ IDL_LONG idl_dpeaks (int      argc,
 	/* 1. run the fitting routine */
 	retval=(IDL_LONG) dpeaks(image, nx, ny, (int *) npeaks, (int *) xcen, 
 													 (int *) ycen, sigma,
-                           dlim, saddle, maxnpeaks, smooth, minpeak);
+                           dlim, saddle, maxnpeaks, smooth, 1, minpeak);
 	
 	/* 2. free memory and leave */
 	free_memory();
