@@ -649,7 +649,7 @@ kdtree_node_t* kdtree_get_child1(kdtree_t* kd, kdtree_node_t* node)
 	//assert(ISLEAF(nodeid) == 0);
 	if (ISLEAF(nodeid))
 		return NULL;
-	return CHILD_POS(nodeid);
+	return CHILD_NEG(nodeid);
 }
 
 inline
@@ -659,7 +659,7 @@ kdtree_node_t* kdtree_get_child2(kdtree_t* kd, kdtree_node_t* node)
 	//assert(ISLEAF(nodeid) == 0);
 	if (ISLEAF(nodeid))
 		return NULL;
-	return CHILD_NEG(nodeid);
+	return CHILD_POS(nodeid);
 }
 
 inline
