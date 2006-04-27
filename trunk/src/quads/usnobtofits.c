@@ -5,38 +5,182 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <endian.h>
+#include <netinet/in.h>
+#include <byteswap.h>
+#include <assert.h>
 
 #include "usnob.h"
 #include "qfits.h"
+#include "healpix.h"
+#include "starutil.h"
 
-#define OPTIONS "hr:R:d:D:o:"
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define IS_LITTLE_ENDIAN 1
+#else
+#define IS_LITTLE_ENDIAN 0
+#endif
+
+#define OPTIONS "ho:"
+/* r:R:d:D:*/
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s -o <output-filename>\n"
-		   "  [-r <minimum RA>]\n"
-		   "  [-R <maximum RA>]\n"
-		   "  [-d <minimum DEC>]\n"
-		   "  [-D <maximum DEC>]\n"
-		   "           In units of degrees.\n"
-		   "           If your values are negative, add \"--\" in between the argument and value\n"
-		   "           eg,   -r -- -100\n"
+		   "  %s -o <output-filename-template>\n"
+		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
+		   /*
+			 "  [-r <minimum RA>]\n"
+			 "  [-R <maximum RA>]\n"
+			 "  [-d <minimum DEC>]\n"
+			 "  [-D <maximum DEC>]\n"
+			 "           In units of degrees.\n"
+			 "           If your values are negative, add \"--\" in between the argument and value\n"
+			 "           eg,   -r -- -100\n"
+		   */
 }
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+int fits_add_column(qfits_table* table, int column, tfits_type type,
+					int ncopies, char* units, char* label) {
+	int atomsize;
+	int colsize;
+	switch (type) {
+	case TFITS_BIN_TYPE_A:
+	case TFITS_BIN_TYPE_X:
+	case TFITS_BIN_TYPE_L:
+	case TFITS_BIN_TYPE_B:
+		atomsize = 1;
+		break;
+	case TFITS_BIN_TYPE_I:
+		atomsize = 2;
+		break;
+	case TFITS_BIN_TYPE_J:
+	case TFITS_BIN_TYPE_E:
+		atomsize = 4;
+		break;
+		//case TFITS_BIN_TYPE_K:
+	case TFITS_BIN_TYPE_D:
+		atomsize = 8;
+		break;
+	default:
+		fprintf(stderr, "Unknown atom size for type %i.\n", type);
+		return -1;
+	}
+	if (type == TFITS_BIN_TYPE_X)
+		// bit field.
+		colsize = (ncopies + 7) / 8;
+	else
+		colsize = atomsize * ncopies;
+
+	qfits_col_fill(table->col + column, ncopies, 0, atomsize, type, label, units,
+				   "", "", 0, 0, 0, 0, table->tab_w);
+	table->tab_w += colsize;
+	return 0;
+}
+
+static inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
+	unsigned char tmp = *c1;
+	*c1 = *c2;
+	*c2 = tmp;
+}
+
+static inline void hton64(void* ptr) {
+#if IS_LITTLE_ENDIAN
+	unsigned char* c = (unsigned char*)ptr;
+	dstn_swap_bytes(c+0, c+7);
+	dstn_swap_bytes(c+1, c+6);
+	dstn_swap_bytes(c+2, c+5);
+	dstn_swap_bytes(c+3, c+4);
+#endif
+}
+
+static inline void hton32(void* ptr) {
+#if IS_LITTLE_ENDIAN
+	unsigned char* c = (unsigned char*)ptr;
+	dstn_swap_bytes(c+0, c+3);
+	dstn_swap_bytes(c+1, c+2);
+#endif
+}
+
+static inline void hton16(void* ptr) {
+#if IS_LITTLE_ENDIAN
+	unsigned char* c = (unsigned char*)ptr;
+	dstn_swap_bytes(c+0, c+1);
+#endif
+}
+
+int fits_add_column_D(FILE* fid, double value) {
+	assert(sizeof(double) == 8);
+	hton64(&value);
+	if (fwrite(&value, 8, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a double to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_add_column_E(FILE* fid, float value) {
+	assert(sizeof(float) == 4);
+	hton32(&value);
+	if (fwrite(&value, 4, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a float to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_add_column_B(FILE* fid, unsigned char value) {
+	if (fwrite(&value, 1, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a bit array to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_add_column_X(FILE* fid, unsigned char value) {
+	return fits_add_column_B(fid, value);
+}
+
+int fits_add_column_I(FILE* fid, int16_t value) {
+	hton16(&value);
+	if (fwrite(&value, 2, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a short to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_add_column_J(FILE* fid, int32_t value) {
+	hton32(&value);
+	if (fwrite(&value, 4, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write an int to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int main(int argc, char** args) {
 	char* outfn = NULL;
-	double ramin = 0.0;
-	double ramax = 360.0;
-	double decmin = -90.0;
-	double decmax = 90.0;
+	/*
+	  double ramin = 0.0;
+	  double ramax = 360.0;
+	  double decmin = -90.0;
+	  double decmax = 90.0;
+	*/
     int c;
 	int startoptind;
 	uint nrecords, nobs, nfiles;
+	int Nside = 8;
+
+	FILE** fids;
+	uint* hprecords;
+	qfits_header** headers;
+
+	int i, HP;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -44,18 +188,22 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
-		case 'd':
-			decmin = atof(optarg);
-			break;
-		case 'D':
-			decmax = atof(optarg);
-			break;
-		case 'r':
-			ramin = atof(optarg);
-			break;
-		case 'R':
-			ramax = atof(optarg);
-			break;
+		case 'n':
+			Nside = atoi(optarg);
+			/*
+			  case 'd':
+			  decmin = atof(optarg);
+			  break;
+			  case 'D':
+			  decmax = atof(optarg);
+			  break;
+			  case 'r':
+			  ramin = atof(optarg);
+			  break;
+			  case 'R':
+			  ramax = atof(optarg);
+			  break;
+			*/
 		case 'o':
 			outfn = optarg;
 			break;
@@ -67,9 +215,123 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	if (Nside < 1) {
+		fprintf(stderr, "Nside must be >= 1.\n");
+		print_help(args[0]);
+		exit(-1);
+	}
+
+	printf("Opening FITS files for writing... ");
+	fflush(stdout);
+	HP = 12 * Nside * Nside;
+	fids = malloc(HP * sizeof(FILE*));
+	headers = malloc(HP * sizeof(qfits_header*));
+	hprecords = malloc(HP * sizeof(uint));
+	memset(hprecords, 0, HP*sizeof(uint));
+	for (i=0; i<HP; i++) {
+		char fn[256];
+		char val[256];
+		qfits_table* table;
+		qfits_header* tablehdr;
+		qfits_header* header;
+		uint datasize;
+		uint ncols, nrows, tablesize;
+		//off_t header_end;
+		int ob;
+		int col;
+
+		if (i && (i%100 == 0)) {
+			printf(".");
+			fflush(stdout);
+		}
+
+		sprintf(fn, outfn, i);
+		fids[i] = fopen(fn, "wb");
+		if (!fids[i]) {
+			fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+			exit(-1);
+		}
+
+		// the header
+		headers[i] = header = qfits_table_prim_header_default();
+
+		// header remarks...
+		sprintf(val, "%u", i);
+		qfits_header_add(header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
+		sprintf(val, "%u", Nside);
+		qfits_header_add(header, "NSIDE", val, "The healpix resolution.", NULL);
+		sprintf(val, "%u", 0);
+		qfits_header_add(header, "NOBJS", val, "Number of objects in this catalog.", NULL);
+		// etc...
+
+		// one big table: the sources.
+		// dummy values here...
+		datasize = 0;
+		ncols = 54;
+		nrows = 0;
+		tablesize = datasize * nrows * ncols;
+		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		table->tab_w = 0;
+		col = 0;
+		// col 0: RA (double)
+		fits_add_column(table, col++, TFITS_BIN_TYPE_D, 1, "Degrees", "RA");
+		// col 1: DEC (double)
+		fits_add_column(table, col++, TFITS_BIN_TYPE_D, 1, "Degrees", "DEC");
+		// col 2: flags (bit array)
+		//  -diffraction_spike
+		//  -motion_catalog
+		//  -ys4
+		//  -reject star ?
+		//  -Tycho2 star ?
+		fits_add_column(table, col++, TFITS_BIN_TYPE_X, 3, "(binary flags)", "FLAGS");
+		// col 3: sig_RA (float)
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_RA");
+		// col 4: sig_DEC (float)
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_DEC");
+
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_RA_fit");
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_DEC_fit");
+
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Years", "epoch");
+
+		// motion
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "(probability)", "mu_probability");
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "mu_RA");
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "mu_DEC");
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "sigma_mu_RA");
+		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "sigma_mu_DEC");
+
+		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "Num Detections");
+
+		for (ob=0; ob<5; ob++) {
+			fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Mag", "Magnitude");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_I, 1, "", "Field number");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "Survey number");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "Star/Galaxy");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "xi residual");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "eta residual");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "Calibration source");
+			fits_add_column(table, col++, TFITS_BIN_TYPE_J, 1, "", "PMM backpointer");
+		}
+
+		assert(col == ncols);
+		table->tab_w = datasize = qfits_compute_table_width(table);
+
+		qfits_header_dump(header, fids[i]);
+		tablehdr = qfits_table_ext_header_default(table);
+		qfits_header_dump(tablehdr, fids[i]);
+		qfits_table_close(table);
+		qfits_header_destroy(tablehdr);
+		//header_end = ftello(sf->fid);
+	}
+	printf("\n");
+
 	nrecords = 0;
 	nobs = 0;
 	nfiles = 0;
+
+	printf("Reading USNO files... ");
+	fflush(stdout);
 
 	startoptind = optind;
 	for (; optind<argc; optind++) {
@@ -114,13 +376,60 @@ int main(int argc, char** args) {
 
 		for (i=0; i<map_size; i+=USNOB_RECORD_SIZE) {
 			usnob_entry entry;
+			int hp;
+			FILE* fid;
+			unsigned char flags;
+			int ob;
+			
 			if (usnob_parse_entry(map + i, &entry)) {
 				fprintf(stderr, "Failed to parse USNOB entry: offset %i in file %s.\n",
 						i, infn);
 				exit(-1);
 			}
-			nrecords++;
 
+			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
+			fid = fids[hp];
+
+			hprecords[hp]++;
+
+			flags =
+				(entry.diffraction_spike << 7) |
+				(entry.motion_catalog    << 6) |
+				(entry.ys4               << 5);
+
+			if (fits_add_column_D(fid, entry.ra) ||
+				fits_add_column_D(fid, entry.dec) ||
+				fits_add_column_X(fid, flags) ||
+				fits_add_column_E(fid, entry.sigma_ra) ||
+				fits_add_column_E(fid, entry.sigma_dec) ||
+				fits_add_column_E(fid, entry.sigma_ra_fit) ||
+				fits_add_column_E(fid, entry.sigma_dec_fit) ||
+				fits_add_column_E(fid, entry.epoch) ||
+				fits_add_column_E(fid, entry.mu_prob) ||
+				fits_add_column_E(fid, entry.mu_ra) ||
+				fits_add_column_E(fid, entry.mu_dec) ||
+				fits_add_column_E(fid, entry.sigma_mu_ra) ||
+				fits_add_column_E(fid, entry.sigma_mu_dec) ||
+				fits_add_column_B(fid, entry.ndetections)) {
+				fprintf(stderr, "Failed to write FITS entry.\n");
+				exit(-1);
+			}
+
+			for (ob=0; ob<5; ob++) {
+				if (fits_add_column_E(fid, entry.obs[ob].mag) ||
+					fits_add_column_I(fid, entry.obs[ob].field) ||
+					fits_add_column_B(fid, entry.obs[ob].survey) ||
+					fits_add_column_B(fid, entry.obs[ob].star_galaxy) ||
+					fits_add_column_E(fid, entry.obs[ob].xi_resid) ||
+					fits_add_column_E(fid, entry.obs[ob].eta_resid) ||
+					fits_add_column_B(fid, entry.obs[ob].calibration) ||
+					fits_add_column_J(fid, entry.obs[ob].pmmscan)) {
+					fprintf(stderr, "Failed to write FITS entry.\n");
+					exit(-1);
+				}
+			}
+
+			nrecords++;
 			nobs += (entry.ndetections == 0 ? 1 : entry.ndetections);
 		}
 
@@ -132,8 +441,48 @@ int main(int argc, char** args) {
 	}
 	printf("\n");
 
+	// close all the files...
+	for (i=0; i<HP; i++) {
+		qfits_header* header;
+		char val[256];
+		off_t offset;
+		FILE* fid;
+		int npad;
+
+		fid = fids[i];
+		header = headers[i];
+
+		offset = ftello(fid);
+		fseeko(fid, 0, SEEK_SET);
+
+		sprintf(val, "%u", hprecords[i]);
+		qfits_header_mod(header, "NOBJS", val, "Number of objects in this catalog.");
+		qfits_header_dump(header, fid);
+        qfits_header_destroy(header);
+
+		fseek(fid, offset, SEEK_SET);
+
+		// pad with zeros up to a multiple of 2880 bytes.
+		npad = (offset % FITS_BLOCK_SIZE);
+		if (npad) {
+			char nil = '\0';
+			int i;
+			npad = FITS_BLOCK_SIZE - npad;
+			for (i=0; i<npad; i++)
+				fwrite(&nil, 1, 1, fid);
+		}
+
+		if (fclose(fid)) {
+			fprintf(stderr, "Failed to close file %i: %s\n", i, strerror(errno));
+		}
+	}
+
 	printf("Read %u files, %u records, %u observations.\n",
 		   nfiles, nrecords, nobs);
+
+	free(headers);
+	free(fids);
+	free(hprecords);
 	
 	return 0;
 }
