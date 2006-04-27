@@ -35,6 +35,7 @@ int main(int argc, char** args) {
 	double decmin = -90.0;
 	double decmax = 90.0;
     int c;
+	int startoptind;
 	uint nrecords, nobs, nfiles;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
@@ -70,6 +71,7 @@ int main(int argc, char** args) {
 	nobs = 0;
 	nfiles = 0;
 
+	startoptind = optind;
 	for (; optind<argc; optind++) {
 		char* infn;
 		FILE* fid;
@@ -82,6 +84,11 @@ int main(int argc, char** args) {
 		if (!fid) {
 			fprintf(stderr, "Couldn't open input file %s: %s\n", infn, strerror(errno));
 			exit(-1);
+		}
+
+		if ((optind > startoptind) && ((optind - startoptind) % 100 == 0)) {
+			printf("\nReading file %i of %i: %s\n", optind - startoptind,
+				   argc - startoptind, infn);
 		}
 
 		if (fseeko(fid, 0, SEEK_END)) {

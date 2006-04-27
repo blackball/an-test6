@@ -183,8 +183,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		// G: star-galaxy estimate.  0=galaxy, 11=star.
 		//assert(G <= 11);
 		if ((G > 11) && (G != 19)) {
-			fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but I got %u.\n", G);
-			return -1;
+			fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but found %u.\n", G);
 		}
 		usnob->obs[obs].star_galaxy = G;
 
