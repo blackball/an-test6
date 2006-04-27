@@ -77,7 +77,7 @@ $(EXECS) :: %: %.o $(OBJ)
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-usnobtofits: usnobtofits.o usnob.o $(QFITS)
+usnobtofits: usnobtofits.o usnob.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I = -Ikdtree/CuTest

@@ -45,24 +45,24 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	//    iPSSSSAAAA
 	ival = from_le32(*(uint*)(line + 8));
 	A = (ival % 10000);
-	ival /= 10000;
+	ival     /= 10000;
 	S = (ival % 10000);
-	ival /= 10000;
+	ival     /= 10000;
 	P = (ival % 10);
-	ival /= 10;
+	ival     /= 10;
 	i = (ival % 10);
 
 	// A: mu_RA, in units of 0.002 arcsec per year, offset by
 	//    -10 arcsec per year.
-	usnob->mra = -10.0 + (0.002 * A);
+	usnob->mu_ra = -10.0 + (0.002 * A);
 
 	// S: mu_SPD, in units of 0.002 arcsec per year, offset by
 	//    -10 arcsec per year.
 	// I assume this is a derivative so is equal to mu_DEC.
-	usnob->mdec = -10.0 + (0.002 * S);
+	usnob->mu_dec = -10.0 + (0.002 * S);
 
 	// P: total mu probability, in units of 0.1.
-	usnob->mprob = 0.1 * P;
+	usnob->mu_prob = 0.1 * P;
 
 	// i: motion catalog flag: 0=no, 1=yes.
 	assert((i == 0) || (i == 1));
@@ -73,15 +73,15 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	//     jMRQyyyxxx
 	ival = from_le32(*((uint*)(line + 12)));
 	x = (ival % 1000);
-	ival /= 1000;
+	ival     /= 1000;
 	y = (ival % 1000);
-	ival /= 1000;
+	ival     /= 1000;
 	Q = (ival % 10);
-	ival /= 10;
+	ival     /= 10;
 	R = (ival % 10);
-	ival /= 10;
+	ival     /= 10;
 	M = (ival % 10);
-	ival /= 10;
+	ival     /= 10;
 	j = (ival % 10);
 
 	/*
@@ -92,17 +92,17 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	*/
 
 	// x: sigma_mu_RA, in units of 0.001 arcsec per year.
-	usnob->sig_mra = 0.001 * x;
+	usnob->sigma_mu_ra = 0.001 * x;
 
 	// y: sigma_mu_SPD, in units of 0.001 arcsec per year.
 	// I assume this is equal to sigma_mu_DEC.
-	usnob->sig_mdec = 0.001 * y;
+	usnob->sigma_mu_dec = 0.001 * y;
 
 	// Q: sigma_RA_fit, in units of 0.1 arcsec.
-	usnob->sig_mra_fit = 0.1 * Q;
+	usnob->sigma_ra_fit = 0.1 * Q;
 
 	// R: sigma_SPD_fit, in units of 0.1 arcsec.
-	usnob->sig_mdec_fit = 0.1 * R;
+	usnob->sigma_dec_fit = 0.1 * R;
 
 	// M: number of detections; in [2, 5].
 	//assert(M >= 2);
@@ -124,19 +124,19 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	//     keeevvvuuu
 	ival = from_le32(*(uint*)(line + 16));
 	u = (ival % 1000);
-	ival /= 1000;
+	ival     /= 1000;
 	v = (ival % 1000);
-	ival /= 1000;
+	ival     /= 1000;
 	e = (ival % 1000);
-	ival /= 1000;
+	ival     /= 1000;
 	k = (ival % 10);
 
 	// u: sigma_RA, in units of 0.001 arcsec.
-	usnob->sig_ra = 0.001 * u;
+	usnob->sigma_ra = 0.001 * u;
 
 	// v: sigma_SPD, in units of 0.001 arcsec.
 	// I assume this is equal to sigma_DEC.
-	usnob->sig_dec = 0.001 * v;
+	usnob->sigma_dec = 0.001 * v;
 
 	// e: mean epoch, in 0.1 yr, offset by -1950.
 	usnob->epoch = 1950.0 + 0.1 * e;
@@ -152,11 +152,11 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		//     GGSFFFmmmm
 		ival = from_le32(*(uint*)(line + 20 + obs * 4));
 		m = (ival % 10000);
-		ival /= 10000;
+		ival     /= 10000;
 		F = (ival % 1000);
-		ival /= 1000;
+		ival     /= 1000;
 		S = (ival % 10);
-		ival /= 10;
+		ival     /= 10;
 		G = (ival % 100);
 
 		/*
@@ -181,6 +181,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		usnob->obs[obs].survey = S;
 
 		// G: star-galaxy estimate.  0=galaxy, 11=star.
+		//     -> but many records also have 12, 13, 14, 15, and 42!
 		//assert(G <= 11);
 		if ((G > 11) && (G != 19)) {
 			fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but found %u.\n", G);
@@ -192,9 +193,9 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		//     CrrrrRRRR
 		ival = from_le32(*(uint*)(line + 40 + obs * 4));
 		R = (ival % 10000);
-		ival /= 10000;
+		ival     /= 10000;
 		r = (ival % 10000);
-		ival /= 10000;
+		ival     /= 10000;
 		C = (ival % 10);
 
 		// R: xi residual, in units of 0.01 arcsec, offset by -50 arcsec.

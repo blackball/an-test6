@@ -13,6 +13,8 @@
 /**
    The following two functions convert (ra,dec) or (x,y,z) into the
    base-level healpix in the range [0, 11].
+
+   RA, DEC in radians.
 */
 int radectohealpix(double ra, double dec);
 
@@ -24,7 +26,6 @@ int xyztohealpix(double x, double y, double z);
    in the range [0, 12 Nside^2).
 
    NOTE: at the moment we can only handle Nside = a power of two.
-
  */
 uint radectohealpix_nside(double ra, double dec, uint Nside);
 
