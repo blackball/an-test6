@@ -32,7 +32,7 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \
 	codefile.o tic.o quadfile.o intmap.o bl.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
-	hitlist_healpix.o fitsioutils.o $(QFITS_OBJ)
+	hitlist_healpix.o fitsioutils.o $(QFITS_OBJ) \
 
 SOLVER_OBJ = solver.o
 
@@ -56,7 +56,8 @@ MY_OBJ = randcat.o genfields.o findstar.o findquad.o \
 	xylstomatlab.o rdlstohealpix.o slave.o fixmatchfile.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
-	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o
+	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
+	usnobtofits.o usnob.o
 
 QFITS_I = -Iqfits
 QFITS_L = 
@@ -68,12 +69,15 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ = $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-all: $(EXECS) $(SOLVER_EXECS)
+all: $(EXECS) $(SOLVER_EXECS) usnobtofits
 
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+usnobtofits: usnobtofits.o usnob.o $(QFITS)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I = -Ikdtree/CuTest
