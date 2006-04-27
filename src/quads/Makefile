@@ -4,12 +4,17 @@ CC = gcc
 LFLAGS = -lm
 
 #fast
-CFLAGS	= -g -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
+#CFLAGS	:= -g \
+CFLAGS	:= -g -O2 -DNDEBUG \
+	-Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-DUSE_OS_MEMORY_MANAGEMENT -I.
 
 # to turn off asserts:
 # -DNDEBUG
+
+#debug
+#CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
@@ -18,9 +23,6 @@ MACHINE=$(shell uname -m)
 ifneq ($(MACHINE), i686)
 	CFLAGS += -DNOT_686
 endif
-
-#debug
-#CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 QFITS_OBJ = qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
@@ -59,8 +61,8 @@ MY_OBJ = randcat.o genfields.o findstar.o findquad.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
 	usnobtofits.o usnob.o
 
-QFITS_I = -Iqfits
-QFITS_L = 
+QFITS_I := -Iqfits
+QFITS_L := 
 
 CFLAGS += $(QFITS_I)
 LFLAGS += $(QFITS_L)
@@ -80,8 +82,8 @@ $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 usnobtofits: usnobtofits.o usnob.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-CUTEST_I = -Ikdtree/CuTest
-CUTEST_L = kdtree/CuTest/CuTest.o 
+CUTEST_I := -Ikdtree/CuTest
+CUTEST_L := kdtree/CuTest/CuTest.o 
 
 CFLAGS += $(CUTEST_I)
 

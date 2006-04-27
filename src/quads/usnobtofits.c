@@ -163,6 +163,39 @@ int fits_add_column_J(FILE* fid, int32_t value) {
 	return 0;
 }
 
+int init_fits_file(FILE** fids, qfits_header** headers, char* outfn,
+				   int hp, qfits_table* table, int Nside) {
+	char fn[256];
+	char val[256];
+    qfits_header* tablehdr;
+    qfits_header* header;
+
+	sprintf(fn, outfn, hp);
+	fids[hp] = fopen(fn, "wb");
+	if (!fids[hp]) {
+		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+		return -1;
+	}
+
+	// the header
+	headers[hp] = header = qfits_table_prim_header_default();
+
+	// header remarks...
+	sprintf(val, "%u", hp);
+	qfits_header_add(header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
+	sprintf(val, "%u", Nside);
+	qfits_header_add(header, "NSIDE", val, "The healpix resolution.", NULL);
+	sprintf(val, "%u", 0);
+	qfits_header_add(header, "NOBJS", val, "Number of objects in this catalog.", NULL);
+	// etc...
+
+	qfits_header_dump(header, fids[hp]);
+	tablehdr = qfits_table_ext_header_default(table);
+	qfits_header_dump(tablehdr, fids[hp]);
+	qfits_header_destroy(tablehdr);
+	return 0;
+}
+
 int main(int argc, char** args) {
 	char* outfn = NULL;
 	/*
@@ -179,6 +212,8 @@ int main(int argc, char** args) {
 	FILE** fids;
 	uint* hprecords;
 	qfits_header** headers;
+
+	qfits_table* table;
 
 	int i, HP;
 
@@ -221,48 +256,22 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	printf("Opening FITS files for writing... ");
-	fflush(stdout);
 	HP = 12 * Nside * Nside;
 	fids = malloc(HP * sizeof(FILE*));
+	memset(fids, 0, HP * sizeof(FILE*));
+
 	headers = malloc(HP * sizeof(qfits_header*));
+	memset(headers, 0, HP * sizeof(qfits_header*));
+
 	hprecords = malloc(HP * sizeof(uint));
 	memset(hprecords, 0, HP*sizeof(uint));
-	for (i=0; i<HP; i++) {
-		char fn[256];
-		char val[256];
-		qfits_table* table;
-		qfits_header* tablehdr;
-		qfits_header* header;
+
+	// init FITS table definition...
+	{
 		uint datasize;
 		uint ncols, nrows, tablesize;
-		//off_t header_end;
 		int ob;
 		int col;
-
-		if (i && (i%100 == 0)) {
-			printf(".");
-			fflush(stdout);
-		}
-
-		sprintf(fn, outfn, i);
-		fids[i] = fopen(fn, "wb");
-		if (!fids[i]) {
-			fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
-			exit(-1);
-		}
-
-		// the header
-		headers[i] = header = qfits_table_prim_header_default();
-
-		// header remarks...
-		sprintf(val, "%u", i);
-		qfits_header_add(header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-		sprintf(val, "%u", Nside);
-		qfits_header_add(header, "NSIDE", val, "The healpix resolution.", NULL);
-		sprintf(val, "%u", 0);
-		qfits_header_add(header, "NOBJS", val, "Number of objects in this catalog.", NULL);
-		// etc...
 
 		// one big table: the sources.
 		// dummy values here...
@@ -270,7 +279,7 @@ int main(int argc, char** args) {
 		ncols = 54;
 		nrows = 0;
 		tablesize = datasize * nrows * ncols;
-		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
 		table->tab_w = 0;
 		col = 0;
 		// col 0: RA (double)
@@ -315,16 +324,9 @@ int main(int argc, char** args) {
 		}
 
 		assert(col == ncols);
-		table->tab_w = datasize = qfits_compute_table_width(table);
 
-		qfits_header_dump(header, fids[i]);
-		tablehdr = qfits_table_ext_header_default(table);
-		qfits_header_dump(tablehdr, fids[i]);
-		qfits_table_close(table);
-		qfits_header_destroy(tablehdr);
-		//header_end = ftello(sf->fid);
+		table->tab_w = datasize = qfits_compute_table_width(table);
 	}
-	printf("\n");
 
 	nrecords = 0;
 	nobs = 0;
@@ -388,8 +390,15 @@ int main(int argc, char** args) {
 			}
 
 			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
-			fid = fids[hp];
 
+			if (!fids[hp]) {
+				if (init_fits_file(fids, headers, outfn, hp, table, Nside)) {
+					fprintf(stderr, "Failed to initialized FITS file %i.\n", hp);
+					exit(-1);
+				}
+			}
+
+			fid = fids[hp];
 			hprecords[hp]++;
 
 			flags =
@@ -444,12 +453,14 @@ int main(int argc, char** args) {
 	// close all the files...
 	for (i=0; i<HP; i++) {
 		qfits_header* header;
+		qfits_header* tablehdr;
 		char val[256];
 		off_t offset;
 		FILE* fid;
 		int npad;
 
 		fid = fids[i];
+		if (!fid) continue;
 		header = headers[i];
 
 		offset = ftello(fid);
@@ -459,6 +470,11 @@ int main(int argc, char** args) {
 		qfits_header_mod(header, "NOBJS", val, "Number of objects in this catalog.");
 		qfits_header_dump(header, fid);
         qfits_header_destroy(header);
+
+		table->nr = hprecords[i];
+		tablehdr = qfits_table_ext_header_default(table);
+		qfits_header_dump(tablehdr, fid);
+		qfits_header_destroy(tablehdr);
 
 		fseek(fid, offset, SEEK_SET);
 
@@ -479,6 +495,8 @@ int main(int argc, char** args) {
 
 	printf("Read %u files, %u records, %u observations.\n",
 		   nfiles, nrecords, nobs);
+
+	qfits_table_close(table);
 
 	free(headers);
 	free(fids);

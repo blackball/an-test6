@@ -184,7 +184,7 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 		//     -> but many records also have 12, 13, 14, 15, and 42!
 		//assert(G <= 11);
 		if ((G > 11) && (G != 19)) {
-			fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but found %u.\n", G);
+			//fprintf(stderr, "USNOB: star/galaxy estimate should be in {[0, 11], 19}, but found %u.\n", G);
 		}
 		usnob->obs[obs].star_galaxy = G;
 
