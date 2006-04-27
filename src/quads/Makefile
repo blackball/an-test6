@@ -1,12 +1,16 @@
 .PHONY: all allclean clean
 
-CC = gcc
-LFLAGS = -lm
+CC := gcc
+LFLAGS := -lm
+
+CFLAGS :=
 
 #fast
 #CFLAGS	:= -g \
-CFLAGS	:= -g -O2 -DNDEBUG \
-	-Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
+#CFLAGS	:= -g -O2 \
+CFLAGS += -g -O2 -DNDEBUG
+
+CFLAGS += -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-DUSE_OS_MEMORY_MANAGEMENT -I.
 
@@ -24,11 +28,11 @@ ifneq ($(MACHINE), i686)
 	CFLAGS += -DNOT_686
 endif
 
-QFITS_OBJ = qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
+QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
 	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
 
-OBJ = starutil.o fileutil.o xylist.o mathutil.o \
+OBJ := starutil.o fileutil.o xylist.o mathutil.o \
 	kdtree/kdtree.o kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
 	healpix.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \
@@ -36,9 +40,9 @@ OBJ = starutil.o fileutil.o xylist.o mathutil.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o $(QFITS_OBJ) \
 
-SOLVER_OBJ = solver.o
+SOLVER_OBJ := solver.o
 
-EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
+EXECS := get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls \
 	certifiable hpquads dedup_index codetree startree \
 	printcatalog fixcatalogheader deduplicate \
@@ -48,11 +52,11 @@ EXECS = get_healpix quadidx xylstomatlab rdlstohealpix \
 # codetomatlab 
 
 # execs that require solver.o
-SOLVER_EXECS = slave
+SOLVER_EXECS := slave
 
 # postmortem requires: findstar(2), findquad, certifiable
 
-MY_OBJ = randcat.o genfields.o findstar.o findquad.o \
+MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	starutil.o fileutil.o mathutil.o fixcatalogheader.o \
 	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
 	xylstomatlab.o rdlstohealpix.o slave.o fixmatchfile.o \
@@ -69,7 +73,7 @@ LFLAGS += $(QFITS_L)
 
 CFLAGS += -Ikdtree
 
-ALL_OBJ = $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
+ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS) usnobtofits
 
@@ -97,7 +101,7 @@ deps: $(DEPS)
 	cat *.dep > deps
 
 %.dep : %.c
-	gcc -MM $(CFLAGS) -c $< > $@
+	$(CC) -MM $(CFLAGS) -c $< > $@
 
 allclean:
 	rm -f KD/*.o *.o $(EXECS) *~ $(DEPS) deps
@@ -108,11 +112,11 @@ clean:
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
-CUTEST_TEST_DRIVERS = kdtree/test_kdtree test_healpix test_bl
+CUTEST_TEST_DRIVERS := kdtree/test_kdtree test_healpix test_bl
 
 tests: $(CUTEST_TEST_DRIVERS)
 
-CUTEST_TEST_OBJS = $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
+CUTEST_TEST_OBJS := $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
 
 $(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ -lm

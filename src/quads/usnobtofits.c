@@ -71,10 +71,9 @@ int fits_add_column(qfits_table* table, int column, tfits_type type,
 		return -1;
 	}
 	if (type == TFITS_BIN_TYPE_X)
-		// bit field.
-		colsize = (ncopies + 7) / 8;
-	else
-		colsize = atomsize * ncopies;
+		// bit field: convert bits to bytes, rounding up.
+		ncopies = (ncopies + 7) / 8;
+	colsize = atomsize * ncopies;
 
 	qfits_col_fill(table->col + column, ncopies, 0, atomsize, type, label, units,
 				   "", "", 0, 0, 0, 0, table->tab_w);
@@ -382,6 +381,10 @@ int main(int argc, char** args) {
 			FILE* fid;
 			unsigned char flags;
 			int ob;
+
+			// debug
+			off_t offset1;
+			off_t offset2;
 			
 			if (usnob_parse_entry(map + i, &entry)) {
 				fprintf(stderr, "Failed to parse USNOB entry: offset %i in file %s.\n",
@@ -405,6 +408,8 @@ int main(int argc, char** args) {
 				(entry.diffraction_spike << 7) |
 				(entry.motion_catalog    << 6) |
 				(entry.ys4               << 5);
+
+			offset1 = ftello(fid);
 
 			if (fits_add_column_D(fid, entry.ra) ||
 				fits_add_column_D(fid, entry.dec) ||
@@ -437,6 +442,10 @@ int main(int argc, char** args) {
 					exit(-1);
 				}
 			}
+
+			offset2 = ftello(fid);
+
+			assert((offset2 - offset1) == table->tab_w);
 
 			nrecords++;
 			nobs += (entry.ndetections == 0 ? 1 : entry.ndetections);
