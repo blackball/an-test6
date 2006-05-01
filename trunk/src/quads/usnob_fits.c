@@ -4,40 +4,6 @@
 #include "usnob_fits.h"
 #include "fitsioutils.h"
 
-/*
-  struct usnob_column_name {
-  char colname[32];
-  int offset;
-  int size;
-  int special;
-  };
-
-  #define USNOB_COL(fld) { \
-  .colname=#fld, \
-  .offset=offsetof(usnob_entry, fld), \
-  .size=sizeof(usnob_entry.fld), \
-  .special=0 }
-
-  static struct usnob_column_name usnob_cols[USNOB_FITS_COLUMNS] = {
-  USNOB_COL(ra),
-  USNOB_COL(dec),
-  { .colname="Flags", .offset=-1, .size=-1, special=1 },
-  USNOB_COL(sigma_ra),
-  USNOB_COL(sigma_dec),
-  USNOB_COL(sigma_ra_fit),
-  USNOB_COL(sigma_dec_fit),
-  USNOB_COL(epoch),
-  USNOB_COL(mu_probability),
-  USNOB_COL(mu_RA),
-  USNOB_COL(mu_DEC),
-  USNOB_COL(sigma_mu_RA),
-  USNOB_COL(sigma_mu_DEC),
-  USNOB_COL(),
-  };
-*/
-
-
-
 // These entries MUST be listed in the same order as usnob_fits_get_table()
 // orders the tables.
 enum {
@@ -101,17 +67,12 @@ enum {
 	USNOB_CALIB4,
 	USNOB_PMM4
 };
-// number of fields per observation
-//#define USNOB_FIELDS_PER_OBS 8
-//#define USNOB_START_PER_OBS USNOB_MAG0
-
 
 #define SET_OFFSET(ind, fld) { \
 	usnob_entry x; \
     offsets[ind] = offsetof(usnob_entry, fld); \
     sizes[ind]   = sizeof(x.fld); \
 }
-//    sizes[ind]   = sizeof(usnob_entry.fld);
 
 int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
 							uint count, usnob_entry* entries) {
@@ -200,70 +161,12 @@ int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
 			continue;
 		}
 
-		/*
-		  if (c >= USNOB_START_PER_OBS) {
-		  int obs, off;
-		  obs = (c - USNOB_START_PER_OBS) / USNOB_FIELDS_PER_OBS;
-		  off = (c - USNOB_START_PER_OBS) % USNOB_FIELDS_PER_OBS;
-		  offset = obs * sizeof(offsets[USNOB_START_PER_OBS + off];
-		  }
-		  }
-		*/
-		/*
-		  switch (c) {
-		  // D format fields: ra, dec
-		  case USNOB_RA:
-		  offset = offsetof(usnob_entry, ra);
-		  break;
-		  case USNOB_DEC:
-		  offset = offsetof(usnob_entry, dec);
-		  size = sizeof(double);
-		  case USNOB_DEC:
-		*/
 		for (i=0; i<count; i++) {
 			memcpy(((unsigned char*)(entries + i)) + offsets[c],
 				   rawdata, sizes[c]);
 		}
 	}
 	return 0;
-
-
-
-
-	/*
-	  ixnay, can't assume we wrote the file!
-
-
-	  if (fits_read_data_D(fid, entry->ra) ||
-	  fits_read_data_D(fid, entry->dec) ||
-	  fits_read_data_X(fid, flags) ||
-	  fits_read_data_E(fid, entry->sigma_ra) ||
-	  fits_read_data_E(fid, entry->sigma_dec) ||
-	  fits_read_data_E(fid, entry->sigma_ra_fit) ||
-	  fits_read_data_E(fid, entry->sigma_dec_fit) ||
-	  fits_read_data_E(fid, entry->epoch) ||
-	  fits_read_data_E(fid, entry->mu_prob) ||
-	  fits_read_data_E(fid, entry->mu_ra) ||
-	  fits_read_data_E(fid, entry->mu_dec) ||
-	  fits_read_data_E(fid, entry->sigma_mu_ra) ||
-	  fits_read_data_E(fid, entry->sigma_mu_dec) ||
-	  fits_read_data_B(fid, entry->ndetections)) {
-	  return -1;
-	  }
-	  for (ob=0; ob<5; ob++) {
-	  if (fits_read_data_E(fid, entry->obs[ob].mag) ||
-	  fits_read_data_I(fid, entry->obs[ob].field) ||
-	  fits_read_data_B(fid, entry->obs[ob].survey) ||
-	  fits_read_data_B(fid, entry->obs[ob].star_galaxy) ||
-	  fits_read_data_E(fid, entry->obs[ob].xi_resid) ||
-	  fits_read_data_E(fid, entry->obs[ob].eta_resid) ||
-	  fits_read_data_B(fid, entry->obs[ob].calibration) ||
-	  fits_read_data_J(fid, entry->obs[ob].pmmscan)) {
-	  return -1;
-	  }
-	  }
-	  return 0;
-	*/
 }
 
 usnob_fits_file* usnob_fits_open(char* fn) {
