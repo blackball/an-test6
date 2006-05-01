@@ -33,5 +33,14 @@ int fits_write_data_I(FILE* fid, int16_t value);
 int fits_write_data_J(FILE* fid, int32_t value);
 int fits_write_data_X(FILE* fid, unsigned char value);
 
+/*
+  int fits_read_data_B(FILE* fid, unsigned char* value);
+  int fits_read_data_D(FILE* fid, double* value);
+  int fits_read_data_E(FILE* fid, float* value);
+  int fits_read_data_I(FILE* fid, int16_t* value);
+  int fits_read_data_J(FILE* fid, int32_t* value);
+  int fits_read_data_X(FILE* fid, unsigned char* value);
+*/
+
 #endif
 
