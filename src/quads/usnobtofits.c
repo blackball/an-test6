@@ -23,7 +23,8 @@ void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s -o <output-filename-template>\n"
 		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
-		   "  <input-file> [<input-file> ...]\n",
+		   "  <input-file> [<input-file> ...]\n"
+		   "\n\nNOTE: WE ASSUME THE FILES ARE PROCESSED IN ORDER: 000/b0000.cat, 000/b0001.cat, etc.\n",
 		   progname);
 }
 
@@ -77,6 +78,7 @@ int main(int argc, char** args) {
 	qfits_table* table;
 
 	int i, HP;
+	int slicecounts[180];
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -113,6 +115,8 @@ int main(int argc, char** args) {
 
 	hprecords = malloc(HP * sizeof(uint));
 	memset(hprecords, 0, HP*sizeof(uint));
+
+	memset(slicecounts, 0, 180 * sizeof(uint));
 
 	// get FITS table definition...
 	table = usnob_fits_get_table();
@@ -169,6 +173,7 @@ int main(int argc, char** args) {
 			usnob_entry entry;
 			int hp;
 			FILE* fid;
+			int slice;
 
 			// debug
 			off_t offset1;
@@ -184,6 +189,13 @@ int main(int argc, char** args) {
 						i, infn);
 				exit(-1);
 			}
+
+			// compute the usnob_id based on its DEC slice and index.
+			slice = (int)(entry.dec + 90.0);
+			assert(slice < 180);
+			assert((slicecounts[slice] & 0xff000000) == 0);
+			entry.usnob_id = (slice << 24) | (slicecounts[slice]);
+			slicecounts[slice]++;
 
 			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
 

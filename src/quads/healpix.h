@@ -1,5 +1,5 @@
-#ifndef HEALPIX_H_
-#define HEALPIX_H_
+#ifndef HEALPIX_H
+#define HEALPIX_H
 
 #include <sys/types.h>
 
@@ -24,8 +24,6 @@ int xyztohealpix(double x, double y, double z);
    The following functions convert (ra,dec) or (x,y,z) into a finely-
    pixelized healpix index, according to the HIERARCHICAL scheme,
    in the range [0, 12 Nside^2).
-
-   NOTE: at the moment we can only handle Nside = a power of two.
  */
 uint radectohealpix_nside(double ra, double dec, uint Nside);
 

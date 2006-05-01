@@ -11,7 +11,7 @@ int usnob_fits_write_entry(FILE* fid, usnob_entry* entry);
 qfits_table* usnob_fits_get_table();
 
 
-#define USNOB_FITS_COLUMNS 54
+#define USNOB_FITS_COLUMNS 55
 
 struct usnob_fits_file {
 	qfits_table* table;

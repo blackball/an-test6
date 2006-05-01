@@ -21,6 +21,14 @@ static inline uint from_le32(uint i) {
 #endif
 }
 
+int usnob_get_slice(usnob_entry* entry) {
+	return (entry->usnob_id >> 24) & 0xFF;
+}
+
+int usnob_get_index(usnob_entry* entry) {
+	return (entry->usnob_id & 0x00ffffff);
+}
+
 int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	uint ival, obs;
 	uint A, S, P, i, j, M, R, Q, y, x, k, e, v, u;
