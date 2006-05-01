@@ -5,7 +5,7 @@
 #include "fitsioutils.h"
 
 // These entries MUST be listed in the same order as usnob_fits_get_table()
-// orders the tables.
+// orders the columns.
 enum {
 	USNOB_RA,
 	USNOB_DEC,
@@ -21,6 +21,7 @@ enum {
 	USNOB_SIGMA_MU_RA,
 	USNOB_SIGMA_MU_DEC,
 	USNOB_NDETECTIONS,
+	USNOB_ID,
 
 	USNOB_MAG0,
 	USNOB_FIELD0,
@@ -95,6 +96,7 @@ int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
 	SET_OFFSET(USNOB_SIGMA_MU_RA, sigma_mu_ra);
 	SET_OFFSET(USNOB_SIGMA_MU_DEC, sigma_mu_dec);
 	SET_OFFSET(USNOB_NDETECTIONS, ndetections);
+	SET_OFFSET(USNOB_ID, usnob_id);
 
 	SET_OFFSET(USNOB_MAG0,         obs[0].mag);
 	SET_OFFSET(USNOB_FIELD0,       obs[0].field);
@@ -277,7 +279,10 @@ int usnob_fits_write_entry(FILE* fid, usnob_entry* entry) {
 		fits_write_data_E(fid, entry->mu_dec) ||
 		fits_write_data_E(fid, entry->sigma_mu_ra) ||
 		fits_write_data_E(fid, entry->sigma_mu_dec) ||
-		fits_write_data_B(fid, entry->ndetections)) {
+		fits_write_data_B(fid, entry->ndetections) ||
+		// NOTE, this field is slightly hacky since we're using it as an
+		// unsigned int 32, but FITS actually only supports signed int 32.
+		fits_write_data_J(fid, entry->usnob_id)) {
 		return -1;
 	}
 	for (ob=0; ob<5; ob++) {
@@ -378,6 +383,7 @@ qfits_table* usnob_fits_get_table() {
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "SIGMA_MU_DEC");
 
 	fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, nil, "NUM_DETECTIONS");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_J, 1, nil, "USNOB_ID");
 
 	for (ob=0; ob<5; ob++) {
 		char field[256];

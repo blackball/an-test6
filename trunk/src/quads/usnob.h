@@ -92,9 +92,19 @@ struct usnob_entry {
 	// YS4.0 correlation
 	bool ys4;
 
+	// this is our identifier; it's not in the USNO-B files.
+	// it allows us to point back to the USNO-B source.
+	// top byte: [0,180): south-polar distance slice.
+	// bottom 24 bits: [0, 12,271,141): index within slice.
+	uint usnob_id;
+
 	struct observation obs[5];
 };
 typedef struct usnob_entry usnob_entry;
+
+int usnob_get_slice(usnob_entry* entry);
+
+int usnob_get_index(usnob_entry* entry);
 
 int usnob_parse_entry(unsigned char* line, usnob_entry* usnob);
 
