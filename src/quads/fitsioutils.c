@@ -1,8 +1,117 @@
 #include <string.h>
+#include <errno.h>
+#include <assert.h>
 
 #include "qfits.h"
 #include "fitsioutils.h"
 #include "ioutils.h"
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define IS_LITTLE_ENDIAN 1
+#else
+#define IS_LITTLE_ENDIAN 0
+#endif
+
+int fits_pad_file(FILE* fid) {
+	off_t offset;
+	int npad;
+	
+	// pad with zeros up to a multiple of 2880 bytes.
+	offset = ftello(fid);
+	npad = (offset % FITS_BLOCK_SIZE);
+	if (npad) {
+		char nil = '\0';
+		int i;
+		npad = FITS_BLOCK_SIZE - npad;
+		for (i=0; i<npad; i++)
+			if (fwrite(&nil, 1, 1, fid) != 1) {
+				fprintf(stderr, "Failed to pad FITS file: %s\n", strerror(errno));
+				return -1;
+			}
+	}
+	return 0;
+}
+
+static inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
+	unsigned char tmp = *c1;
+	*c1 = *c2;
+	*c2 = tmp;
+}
+
+static inline void hton64(void* ptr) {
+#if IS_LITTLE_ENDIAN
+	unsigned char* c = (unsigned char*)ptr;
+	dstn_swap_bytes(c+0, c+7);
+	dstn_swap_bytes(c+1, c+6);
+	dstn_swap_bytes(c+2, c+5);
+	dstn_swap_bytes(c+3, c+4);
+#endif
+}
+
+static inline void hton32(void* ptr) {
+#if IS_LITTLE_ENDIAN
+	unsigned char* c = (unsigned char*)ptr;
+	dstn_swap_bytes(c+0, c+3);
+	dstn_swap_bytes(c+1, c+2);
+#endif
+}
+
+static inline void hton16(void* ptr) {
+#if IS_LITTLE_ENDIAN
+	unsigned char* c = (unsigned char*)ptr;
+	dstn_swap_bytes(c+0, c+1);
+#endif
+}
+
+int fits_write_data_D(FILE* fid, double value) {
+	assert(sizeof(double) == 8);
+	hton64(&value);
+	if (fwrite(&value, 8, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a double to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_write_data_E(FILE* fid, float value) {
+	assert(sizeof(float) == 4);
+	hton32(&value);
+	if (fwrite(&value, 4, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a float to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_write_data_B(FILE* fid, unsigned char value) {
+	if (fwrite(&value, 1, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a bit array to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_write_data_X(FILE* fid, unsigned char value) {
+	return fits_write_data_B(fid, value);
+}
+
+int fits_write_data_I(FILE* fid, int16_t value) {
+	hton16(&value);
+	if (fwrite(&value, 2, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write a short to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+int fits_write_data_J(FILE* fid, int32_t value) {
+	hton32(&value);
+	if (fwrite(&value, 4, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write an int to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
 
 // how many FITS blocks are required to hold 'size' bytes?
 int fits_blocks_needed(int size) {
@@ -39,7 +148,7 @@ void fits_add_endian(qfits_header* header) {
 
 int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
     int i, nextens, start, size;
-    int istable;
+    //int istable;
 
 	nextens = qfits_query_n_ext(fn);
 	for (i=0; i<=nextens; i++) {
@@ -120,3 +229,6 @@ int fits_check_endian(qfits_header* header) {
 	}
     return 0;
 }
+
+
+
