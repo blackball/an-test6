@@ -161,12 +161,19 @@ int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
 			continue;
 		}
 
+		assert(usnob->table->col[usnob->columns[c]].atom_size == sizes[c]);
+
 		for (i=0; i<count; i++) {
 			memcpy(((unsigned char*)(entries + i)) + offsets[c],
 				   rawdata, sizes[c]);
 		}
 	}
 	return 0;
+}
+
+void usnob_fits_close(usnob_fits_file* usnob) {
+	qfits_table_close(usnob->table);
+	free(usnob);
 }
 
 usnob_fits_file* usnob_fits_open(char* fn) {
@@ -210,7 +217,8 @@ usnob_fits_file* usnob_fits_open(char* fn) {
 			qfits_col* col = table->col + c;
 			for (c2=0; c2<USNOB_FITS_COLUMNS; c2++) {
 				if (rtnval->columns[c2] != -1) continue;
-				if (strcmp(col->tlabel, colnames[c2])) continue;
+				// allow case-insensitive matches.
+				if (strcasecmp(col->tlabel, colnames[c2])) continue;
 				rtnval->columns[c2] = c;
 			}
 		}
@@ -227,6 +235,14 @@ usnob_fits_file* usnob_fits_open(char* fn) {
 			break;
 		}
 		qfits_table_close(table);
+	}
+
+	if (!good) {
+		fprintf(stderr, "usnob_fits: didn't find the following required columns:\n    ");
+		for (c=0; c<USNOB_FITS_COLUMNS; c++)
+			if (rtnval->columns[c] == -1)
+				fprintf(stderr, "%s  ", colnames[c]);
+		fprintf(stderr, "\n");
 	}
 
 	// clean up
@@ -342,41 +358,41 @@ qfits_table* usnob_fits_get_table() {
 	//  -ys4
 	//  -reject star ?
 	//  -Tycho2 star ?
-	fits_add_column(table, col++, TFITS_BIN_TYPE_X, 3, "(binary flags)", "Flags");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_X, 3, "(binary flags)", "FLAGS");
 	// col 3: sig_RA (float)
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_RA");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "SIGMA_RA");
 	// col 4: sig_DEC (float)
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_DEC");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "SIGMA_DEC");
 
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_RA_fit");
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "sigma_DEC_fit");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "SIGMA_RA_FIT");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "SIGMA_DEC_FIT");
 
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Years", "epoch");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Years", "EPOCH");
 
 	// motion
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "(probability)", "mu_probability");
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "mu_RA");
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "mu_DEC");
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "sigma_mu_RA");
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "sigma_mu_DEC");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "(probability)", "MU_PROBABILITY");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "MU_RA");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "MU_DEC");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "SIGMA_MU_RA");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "SIGMA_MU_DEC");
 
-	fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "Num_Detections");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "NUM_DETECTIONS");
 
 	for (ob=0; ob<5; ob++) {
 		char field[256];
-		sprintf(field, "Magnitude_%i", ob);
+		sprintf(field, "MAGNITUDE_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Mag", field);
-		sprintf(field, "Field_%i", ob);
+		sprintf(field, "FIELD_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_I, 1, "", field);
-		sprintf(field, "Survey_%i", ob);
+		sprintf(field, "SURVEY_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", field);
-		sprintf(field, "Star_Galaxy_%i", ob);
+		sprintf(field, "STAR_GALAXY_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", field);
-		sprintf(field, "xi_residual_%i", ob);
+		sprintf(field, "XI_RESIDUAL_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", field);
-		sprintf(field, "eta_residual_%i", ob);
+		sprintf(field, "ETA_RESIDUAL_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", field);
-		sprintf(field, "Calibration_%i", ob);
+		sprintf(field, "CALIBRATION_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", field);
 		sprintf(field, "PMM_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_J, 1, "", field);

@@ -21,4 +21,9 @@ typedef struct usnob_fits_file usnob_fits_file;
 
 usnob_fits_file* usnob_fits_open(char* fn);
 
+int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
+							uint count, usnob_entry* entries);
+
+void usnob_fits_close(usnob_fits_file* usnob);
+
 #endif

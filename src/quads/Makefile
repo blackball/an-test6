@@ -75,7 +75,7 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-all: $(EXECS) $(SOLVER_EXECS) usnobtofits
+all: $(EXECS) $(SOLVER_EXECS) usnobtofits usnobprint
 
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
@@ -84,6 +84,9 @@ $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest
