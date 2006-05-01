@@ -63,7 +63,7 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
-	usnobtofits.o usnob.o usnob_fits.o
+	usnobtofits.o usnob.o usnob_fits.o usnobtoan.o
 
 QFITS_I := -Iqfits
 QFITS_L := 
@@ -75,12 +75,18 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-all: $(EXECS) $(SOLVER_EXECS) usnobtofits usnobprint
+all: usnobtoan \
+	usnobprint \
+	usnobtofits \
+	$(EXECS) $(SOLVER_EXECS) 
 
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+usnobtoan: usnobtoan.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
