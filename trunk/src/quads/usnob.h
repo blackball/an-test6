@@ -1,3 +1,6 @@
+#ifndef USNOB_H
+#define USNOB_H
+
 #include <stdint.h>
 
 #include "starutil.h"
@@ -141,3 +144,5 @@ struct usnob_entry {
 typedef struct usnob_entry usnob_entry;
 
 int usnob_parse_entry(unsigned char* line, usnob_entry* usnob);
+
+#endif

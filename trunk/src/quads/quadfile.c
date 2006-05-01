@@ -413,7 +413,6 @@ int quadfile_fits_fix_header(quadfile* qf) {
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	char* fn;
-	int npad;
 
 	if (!qf->fid) {
 		fprintf(stderr, "quadfile_fits_fix_header: fid is null.\n");
@@ -461,15 +460,7 @@ int quadfile_fits_fix_header(quadfile* qf) {
 
 	fseek(qf->fid, offset, SEEK_SET);
 
-	// pad with zeros up to a multiple of 2880 bytes.
-	npad = (offset % FITS_BLOCK_SIZE);
-	if (npad) {
-		char nil = '\0';
-		int i;
-		npad = FITS_BLOCK_SIZE - npad;
-		for (i=0; i<npad; i++)
-			fwrite(&nil, 1, 1, qf->fid);
-	}
+	fits_pad_file(qf->fid);
 
 	return 0;
 }

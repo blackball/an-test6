@@ -311,7 +311,6 @@ int codefile_fits_fix_header(codefile* cf) {
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	char* fn;
-	int npad;
 
 	if (!cf->fid)
 		return -1;
@@ -357,15 +356,7 @@ int codefile_fits_fix_header(codefile* cf) {
 
 	fseek(cf->fid, offset, SEEK_SET);
 
-	// pad with zeros up to a multiple of 2880 bytes.
-	npad = (offset % FITS_BLOCK_SIZE);
-	if (npad) {
-		char nil = '\0';
-		int i;
-		npad = FITS_BLOCK_SIZE - npad;
-		for (i=0; i<npad; i++)
-			fwrite(&nil, 1, 1, cf->fid);
-	}
+	fits_pad_file(cf->fid);
 
 	return 0;
 }

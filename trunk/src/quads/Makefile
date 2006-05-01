@@ -63,7 +63,7 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
-	usnobtofits.o usnob.o
+	usnobtofits.o usnob.o usnob_fits.o
 
 QFITS_I := -Iqfits
 QFITS_L := 
@@ -83,7 +83,7 @@ $(EXECS) :: %: %.o $(OBJ)
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-usnobtofits: usnobtofits.o usnob.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest
