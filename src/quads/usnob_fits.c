@@ -338,6 +338,7 @@ qfits_table* usnob_fits_get_table() {
 	int ob;
 	int col;
 	qfits_table* table;
+	char* nil = " ";
 
 	// one big table: the sources.
 	// dummy values here...
@@ -358,7 +359,7 @@ qfits_table* usnob_fits_get_table() {
 	//  -ys4
 	//  -reject star ?
 	//  -Tycho2 star ?
-	fits_add_column(table, col++, TFITS_BIN_TYPE_X, 3, "(binary flags)", "FLAGS");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_X, 3, nil, "FLAGS");
 	// col 3: sig_RA (float)
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", "SIGMA_RA");
 	// col 4: sig_DEC (float)
@@ -370,32 +371,32 @@ qfits_table* usnob_fits_get_table() {
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Years", "EPOCH");
 
 	// motion
-	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "(probability)", "MU_PROBABILITY");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, nil, "MU_PROBABILITY");
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "MU_RA");
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "MU_DEC");
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "SIGMA_MU_RA");
 	fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec/Yr", "SIGMA_MU_DEC");
 
-	fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", "NUM_DETECTIONS");
+	fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, nil, "NUM_DETECTIONS");
 
 	for (ob=0; ob<5; ob++) {
 		char field[256];
 		sprintf(field, "MAGNITUDE_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Mag", field);
 		sprintf(field, "FIELD_%i", ob);
-		fits_add_column(table, col++, TFITS_BIN_TYPE_I, 1, "", field);
+		fits_add_column(table, col++, TFITS_BIN_TYPE_I, 1, nil, field);
 		sprintf(field, "SURVEY_%i", ob);
-		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", field);
+		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, nil, field);
 		sprintf(field, "STAR_GALAXY_%i", ob);
-		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", field);
+		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, nil, field);
 		sprintf(field, "XI_RESIDUAL_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", field);
 		sprintf(field, "ETA_RESIDUAL_%i", ob);
 		fits_add_column(table, col++, TFITS_BIN_TYPE_E, 1, "Arcsec", field);
 		sprintf(field, "CALIBRATION_%i", ob);
-		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, "", field);
+		fits_add_column(table, col++, TFITS_BIN_TYPE_B, 1, nil, field);
 		sprintf(field, "PMM_%i", ob);
-		fits_add_column(table, col++, TFITS_BIN_TYPE_J, 1, "", field);
+		fits_add_column(table, col++, TFITS_BIN_TYPE_J, 1, nil, field);
 	}
 
 	assert(col == ncols);
