@@ -75,7 +75,7 @@ enum {
     sizes[ind]   = sizeof(x.fld); \
 }
 
-int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
+int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 							uint count, usnob_entry* entries) {
 	int i, c;
 	unsigned char* rawdata;
@@ -173,17 +173,21 @@ int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
 	return 0;
 }
 
-void usnob_fits_close(usnob_fits_file* usnob) {
+int usnob_fits_count_entries(usnob_fits* usnob) {
+	return usnob->table->nr;
+}
+
+void usnob_fits_close(usnob_fits* usnob) {
 	qfits_table_close(usnob->table);
 	free(usnob);
 }
 
-usnob_fits_file* usnob_fits_open(char* fn) {
+usnob_fits* usnob_fits_open(char* fn) {
 	int i, nextens;
 	char* colnames[USNOB_FITS_COLUMNS];
 	qfits_table* table;
 	int c;
-	usnob_fits_file* rtnval = NULL;
+	usnob_fits* rtnval = NULL;
 	int good = 0;
 
 	memset(colnames, 0, USNOB_FITS_COLUMNS * sizeof(char*));
@@ -200,7 +204,7 @@ usnob_fits_file* usnob_fits_open(char* fn) {
 		colnames[c] = strdup(table->col[c].tlabel);
 	qfits_table_close(table);
 
-	rtnval = malloc(sizeof(usnob_fits_file));
+	rtnval = malloc(sizeof(usnob_fits));
 
 	// find a table containing all the columns needed...
 	// (actually, find the indices of the columns we need.)

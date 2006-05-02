@@ -17,6 +17,8 @@ double gaussian_sample(double mean, double stddev);
 
 inline int imax(int a, int b);
 
+inline int imin(int a, int b);
+
 inline double distsq_exceeds(double* d1, double* d2, int D, double limit);
 
 inline double square(double d);

@@ -28,6 +28,7 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	int startoptind;
     int c;
+	an_catalog* cat;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -49,8 +50,33 @@ int main(int argc, char** args) {
 	startoptind = optind;
 	for (; optind<argc; optind++) {
 		char* infn;
+		usnob_fits* usnob;
+		int BLOCK = 1000;
+		usnob_entry entries[BLOCK];
+		int offset, n, i;
 
 		infn = args[optind];
+		usnob = usnob_fits_open(infn);
+		if (!usnob) {
+			fprintf(stderr, "Couldn't open input file %s.\n", infn);
+			exit(-1);
+		}
+
+		offset = 0;
+		while (offset < usnob_fits_count_entries(usnob)) {
+			n = imin(offset + BLOCK, usnob_fits_count_entries(usnob));
+			if (usnob_fits_read_entries(usnob, offset, n, entries) == -1) {
+				fprintf(stderr, "Error reading entries %i to %i in file %s.\n",
+						offset, offset+n-1, infn);
+				exit(-1);
+			}
+
+			for (i=0; i<n; i++) {
+			}
+
+			offset += n;
+		}
+
 	}
 
 	return 0;
