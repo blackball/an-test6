@@ -7,6 +7,10 @@ inline int imax(int a, int b) {
 	return (a > b) ? a : b;
 }
 
+inline int imin(int a, int b) {
+	return (a < b) ? a : b;
+}
+
 inline double distsq_exceeds(double* d1, double* d2, int D, double limit) {
     double dist2;
     int i;

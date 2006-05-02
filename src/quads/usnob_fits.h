@@ -13,17 +13,19 @@ qfits_table* usnob_fits_get_table();
 
 #define USNOB_FITS_COLUMNS 55
 
-struct usnob_fits_file {
+struct usnob_fits {
 	qfits_table* table;
 	int columns[USNOB_FITS_COLUMNS];
 };
-typedef struct usnob_fits_file usnob_fits_file;
+typedef struct usnob_fits usnob_fits;
 
-usnob_fits_file* usnob_fits_open(char* fn);
+usnob_fits* usnob_fits_open(char* fn);
 
-int usnob_fits_read_entries(usnob_fits_file* usnob, uint offset,
+int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 							uint count, usnob_entry* entries);
 
-void usnob_fits_close(usnob_fits_file* usnob);
+int usnob_fits_count_entries(usnob_fits* usnob);
+
+void usnob_fits_close(usnob_fits* usnob);
 
 #endif
