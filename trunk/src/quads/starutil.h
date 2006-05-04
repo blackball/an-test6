@@ -10,6 +10,7 @@
 #define DIM_XY 2
 
 typedef unsigned char bool;
+typedef unsigned char uchar;
 /*
   bool TRUE = 1;
   bool FALSE = 0;
