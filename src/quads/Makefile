@@ -6,21 +6,15 @@ LFLAGS := -lm
 CFLAGS :=
 
 #fast
-CFLAGS	:= -g
-#CFLAGS	:= -g -O2
-#CFLAGS += -g -O2 -DNDEBUG
-
-CFLAGS += -Werror
+CFLAGS	+= -g
+#CFLAGS	+= -O2
+# to turn off asserts:
+#CFLAGS += -DNDEBUG
+#CFLAGS += -Werror
 
 CFLAGS += -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-DUSE_OS_MEMORY_MANAGEMENT -I.
-
-# to turn off asserts:
-# -DNDEBUG
-
-#debug
-#CFLAGS	= -g -O0 -Wall -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
@@ -66,7 +60,8 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
-	usnobtofits.o usnob.o usnob_fits.o usnobtoan.o
+	usnobtofits.o usnob.o usnob_fits.o usnobtoan.o tycho2.o \
+	tycho2tofits.o
 
 QFITS_I := -Iqfits
 QFITS_L := 
@@ -81,6 +76,7 @@ ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 all: usnobtoan \
 	usnobprint \
 	usnobtofits \
+	tycho2tofits \
 	$(EXECS) $(SOLVER_EXECS) 
 
 $(EXECS) :: %: %.o $(OBJ)
@@ -93,6 +89,9 @@ usnobtoan: usnobtoan.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o ma
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+tycho2tofits: tycho2tofits.o tycho2.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
