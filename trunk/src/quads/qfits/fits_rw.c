@@ -3,16 +3,16 @@
    @file    fits_rw.c
    @author  N. Devillard
    @date    Mar 2000
-   @version $Revision: 1.1 $
+   @version $Revision: 1.2 $
    @brief   FITS header reading/writing.
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: fits_rw.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+    $Id: fits_rw.c,v 1.2 2006/05/04 18:44:15 dlang Exp $
     $Author: dlang $
-    $Date: 2006/03/16 22:10:26 $
-    $Revision: 1.1 $
+    $Date: 2006/05/04 18:44:15 $
+    $Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -25,8 +25,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "qfits.h"
 #include "fits_rw.h"
-#include "fits_h.h"
 #include "fits_p.h"
 #include "simple.h"
 #include "xmemory.h"

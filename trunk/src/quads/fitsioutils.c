@@ -33,7 +33,8 @@ int fits_pad_file(FILE* fid) {
 }
 
 static inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
-	unsigned char tmp = *c1;
+	unsigned char tmp;
+	tmp = *c1;
 	*c1 = *c2;
 	*c2 = tmp;
 }

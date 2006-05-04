@@ -1,8 +1,13 @@
 #include <assert.h>
 #include <stddef.h>
+#include <errno.h>
+#include <string.h>
 
 #include "usnob_fits.h"
 #include "fitsioutils.h"
+
+static qfits_table* usnob_fits_get_table();
+static usnob_fits* usnob_fits_new();
 
 // These entries MUST be listed in the same order as usnob_fits_get_table()
 // orders the columns.
@@ -148,8 +153,10 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 
 	for (c=0; c<USNOB_FITS_COLUMNS; c++) {
 		assert(usnob->columns[c] != -1);
+		assert(usnob->table);
 		rawdata = qfits_query_column_seq(usnob->table, usnob->columns[c],
 										 offset, count);
+		assert(rawdata);
 
 		if (c == USNOB_FLAGS) {
 			// special-case
@@ -169,6 +176,7 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 			memcpy(((unsigned char*)(entries + i)) + offsets[c],
 				   rawdata, sizes[c]);
 		}
+		free(rawdata);
 	}
 	return 0;
 }
@@ -177,9 +185,27 @@ int usnob_fits_count_entries(usnob_fits* usnob) {
 	return usnob->table->nr;
 }
 
-void usnob_fits_close(usnob_fits* usnob) {
-	qfits_table_close(usnob->table);
+int usnob_fits_close(usnob_fits* usnob) {
+	if (usnob->fid) {
+		fits_pad_file(usnob->fid);
+		if (fclose(usnob->fid)) {
+			fprintf(stderr, "Error closing USNO-B FITS file: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+	if (usnob->table) {
+		qfits_table_close(usnob->table);
+	}
+	if (usnob->header) {
+		qfits_header_destroy(usnob->header);
+	}
+	/*
+	  if (usnob->table_header) {
+	  qfits_header_destroy(usnob->table_header);
+	  }
+	*/
 	free(usnob);
+	return 0;
 }
 
 usnob_fits* usnob_fits_open(char* fn) {
@@ -187,7 +213,7 @@ usnob_fits* usnob_fits_open(char* fn) {
 	char* colnames[USNOB_FITS_COLUMNS];
 	qfits_table* table;
 	int c;
-	usnob_fits* rtnval = NULL;
+	usnob_fits* usnob = NULL;
 	int good = 0;
 
 	memset(colnames, 0, USNOB_FITS_COLUMNS * sizeof(char*));
@@ -204,40 +230,39 @@ usnob_fits* usnob_fits_open(char* fn) {
 		colnames[c] = strdup(table->col[c].tlabel);
 	qfits_table_close(table);
 
-	rtnval = malloc(sizeof(usnob_fits));
+	usnob = usnob_fits_new();
 
 	// find a table containing all the columns needed...
 	// (actually, find the indices of the columns we need.)
 	nextens = qfits_query_n_ext(fn);
 	for (i=0; i<=nextens; i++) {
-		qfits_table* table;
 		int c2;
 		if (!qfits_is_table(fn, i))
 			continue;
 		table = qfits_table_open(fn, i);
 
 		for (c=0; c<USNOB_FITS_COLUMNS; c++)
-			rtnval->columns[c] = -1;
+			usnob->columns[c] = -1;
 
 		for (c=0; c<table->nc; c++) {
 			qfits_col* col = table->col + c;
 			for (c2=0; c2<USNOB_FITS_COLUMNS; c2++) {
-				if (rtnval->columns[c2] != -1) continue;
+				if (usnob->columns[c2] != -1) continue;
 				// allow case-insensitive matches.
 				if (strcasecmp(col->tlabel, colnames[c2])) continue;
-				rtnval->columns[c2] = c;
+				usnob->columns[c2] = c;
 			}
 		}
 
 		good = 1;
 		for (c=0; c<USNOB_FITS_COLUMNS; c++) {
-			if (rtnval->columns[c] == -1) {
+			if (usnob->columns[c] == -1) {
 				good = 0;
 				break;
 			}
 		}
 		if (good) {
-			rtnval->table = table;
+			usnob->table = table;
 			break;
 		}
 		qfits_table_close(table);
@@ -246,7 +271,7 @@ usnob_fits* usnob_fits_open(char* fn) {
 	if (!good) {
 		fprintf(stderr, "usnob_fits: didn't find the following required columns:\n    ");
 		for (c=0; c<USNOB_FITS_COLUMNS; c++)
-			if (rtnval->columns[c] == -1)
+			if (usnob->columns[c] == -1)
 				fprintf(stderr, "%s  ", colnames[c]);
 		fprintf(stderr, "\n");
 	}
@@ -255,15 +280,16 @@ usnob_fits* usnob_fits_open(char* fn) {
 	for (c=0; c<USNOB_FITS_COLUMNS; c++)
 		free(colnames[c]);
 	if (!good) {
-		free(rtnval);
-		rtnval = NULL;
+		free(usnob);
+		usnob = NULL;
 	}
-	return rtnval;
+	return usnob;
 }
 
-int usnob_fits_write_entry(FILE* fid, usnob_entry* entry) {
+int usnob_fits_write_entry(usnob_fits* usnob, usnob_entry* entry) {
 	int ob;
 	unsigned char flags;
+	FILE* fid = usnob->fid;
 
 	flags =
 		(entry->diffraction_spike << 7) |
@@ -301,6 +327,9 @@ int usnob_fits_write_entry(FILE* fid, usnob_entry* entry) {
 			return -1;
 		}
 	}
+
+	usnob->nentries++;
+
 	return 0;
 }
 
@@ -341,7 +370,7 @@ static int fits_add_column(qfits_table* table, int column, tfits_type type,
 	return 0;
 }
 
-qfits_table* usnob_fits_get_table() {
+static qfits_table* usnob_fits_get_table() {
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	int ob;
@@ -415,4 +444,77 @@ qfits_table* usnob_fits_get_table() {
 	return table;
 }
 
-	
+usnob_fits* usnob_fits_open_for_writing(char* fn) {
+	usnob_fits* usnob;
+
+	usnob = usnob_fits_new();
+	usnob->fid = fopen(fn, "wb");
+	if (!usnob->fid) {
+		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+		goto bailout;
+	}
+	usnob->table = usnob_fits_get_table();
+	usnob->header = qfits_table_prim_header_default();
+	//usnob->table_header = qfits_table_ext_header_default(usnob->table);
+	return usnob;
+
+ bailout:
+	if (usnob) {
+		free(usnob);
+	}
+	return NULL;
+}
+
+int usnob_fits_write_headers(usnob_fits* usnob) {
+	qfits_header* table_header;
+	assert(usnob->fid);
+	assert(usnob->header);
+	//assert(usnob->table_header);
+	qfits_header_dump(usnob->header, usnob->fid);
+	table_header = qfits_table_ext_header_default(usnob->table);
+	//qfits_header_dump(usnob->table_header, usnob->fid);
+	qfits_header_dump(table_header, usnob->fid);
+	usnob->data_offset = ftello(usnob->fid);
+	return 0;
+}
+
+int usnob_fits_fix_headers(usnob_fits* usnob) {
+	off_t offset, datastart;
+	qfits_header* table_header;
+
+	assert(usnob->fid);
+
+	offset = ftello(usnob->fid);
+	fseeko(usnob->fid, 0, SEEK_SET);
+
+	assert(usnob->header);
+	//assert(usnob->table_header);
+
+	usnob->table->nr = usnob->nentries;
+
+	qfits_header_dump(usnob->header, usnob->fid);
+	table_header = qfits_table_ext_header_default(usnob->table);
+	//qfits_header_dump(usnob->table_header, usnob->fid);
+	qfits_header_dump(table_header, usnob->fid);
+
+	datastart = ftello(usnob->fid);
+	if (datastart != usnob->data_offset) {
+		fprintf(stderr, "Error: USNO-B FITS header size changed: was %u, but is now %u.  Corruption is likely!\n",
+				(uint)usnob->data_offset, (uint)datastart);
+		return -1;
+	}
+
+	fseek(usnob->fid, offset, SEEK_SET);
+	return 0;
+}
+
+usnob_fits* usnob_fits_new() {
+	usnob_fits* rtn = malloc(sizeof(usnob_fits));
+	if (!rtn) {
+		fprintf(stderr, "Couldn't allocate memory for a usnob_fits structure.\n");
+		exit(-1);
+	}
+	memset(rtn, 0, sizeof(usnob_fits));
+	return rtn;
+}
+

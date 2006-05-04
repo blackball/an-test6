@@ -10,6 +10,8 @@
 #include "qfits.h"
 #include "starutil.h"
 #include "fitsioutils.h"
+#include "an_catalog.h"
+#include "mathutil.h"
 
 #define OPTIONS "ho:"
 
@@ -28,7 +30,7 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	int startoptind;
     int c;
-	an_catalog* cat;
+	//an_catalog* cat;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {

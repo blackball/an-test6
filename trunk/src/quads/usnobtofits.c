@@ -31,31 +31,23 @@ void print_help(char* progname) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-int init_fits_file(FILE** fids, qfits_header** headers, char* outfn,
-				   int hp, qfits_table* table, int Nside) {
-	char fn[256];
-	char val[256];
-    qfits_header* tablehdr;
-    qfits_header* header;
+/*
+  int init_fits_file(FILE** fids, qfits_header** headers, char* outfn,
+  int hp, qfits_table* table, int Nside) {
+  char fn[256];
+  char val[256];
+  qfits_header* tablehdr;
+  qfits_header* header;
 
-	sprintf(fn, outfn, hp);
-	fids[hp] = fopen(fn, "wb");
-	if (!fids[hp]) {
-		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
-		return -1;
-	}
+  sprintf(fn, outfn, hp);
+  fids[hp] = fopen(fn, "wb");
+  if (!fids[hp]) {
+  fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
+  return -1;
+  }
 
-	// the header
-	headers[hp] = header = qfits_table_prim_header_default();
-
-	// header remarks...
-	sprintf(val, "%u", hp);
-	qfits_header_add(header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-	sprintf(val, "%u", Nside);
-	qfits_header_add(header, "NSIDE", val, "The healpix resolution.", NULL);
-	sprintf(val, "%u", 0);
-	qfits_header_add(header, "NOBJS", val, "Number of objects in this catalog.", NULL);
-	// etc...
+  // the header
+  headers[hp] = header = qfits_table_prim_header_default();
 
 	qfits_header_dump(header, fids[hp]);
 	tablehdr = qfits_table_ext_header_default(table);
@@ -63,6 +55,7 @@ int init_fits_file(FILE** fids, qfits_header** headers, char* outfn,
 	qfits_header_destroy(tablehdr);
 	return 0;
 }
+*/
 
 int main(int argc, char** args) {
 	char* outfn = NULL;
@@ -71,11 +64,14 @@ int main(int argc, char** args) {
 	uint nrecords, nobs, nfiles;
 	int Nside = 8;
 
-	FILE** fids;
-	uint* hprecords;
-	qfits_header** headers;
+	usnob_fits** usnobs;
 
-	qfits_table* table;
+	/*
+	  FILE** fids;
+	  uint* hprecords;
+	  qfits_header** headers;
+	  qfits_table* table;
+	*/
 
 	int i, HP;
 	int slicecounts[180];
@@ -107,19 +103,29 @@ int main(int argc, char** args) {
 	}
 
 	HP = 12 * Nside * Nside;
-	fids = malloc(HP * sizeof(FILE*));
-	memset(fids, 0, HP * sizeof(FILE*));
 
-	headers = malloc(HP * sizeof(qfits_header*));
-	memset(headers, 0, HP * sizeof(qfits_header*));
+	usnobs = malloc(HP * sizeof(usnob_fits*));
+	memset(usnobs, 0, HP * sizeof(usnob_fits*));
 
-	hprecords = malloc(HP * sizeof(uint));
-	memset(hprecords, 0, HP*sizeof(uint));
+	/*
+	  fids = malloc(HP * sizeof(FILE*));
+	  memset(fids, 0, HP * sizeof(FILE*));
+	*/
+	/*
+	  headers = malloc(HP * sizeof(qfits_header*));
+	  memset(headers, 0, HP * sizeof(qfits_header*));
+
+	  hprecords = malloc(HP * sizeof(uint));
+	  memset(hprecords, 0, HP*sizeof(uint));
+	*/
 
 	memset(slicecounts, 0, 180 * sizeof(uint));
 
-	// get FITS table definition...
-	table = usnob_fits_get_table();
+	/*
+	  ;
+	  // get FITS table definition...
+	  table = usnob_fits_get_table();
+	*/
 
 	nrecords = 0;
 	nobs = 0;
@@ -172,12 +178,12 @@ int main(int argc, char** args) {
 		for (i=0; i<map_size; i+=USNOB_RECORD_SIZE) {
 			usnob_entry entry;
 			int hp;
-			FILE* fid;
+			//FILE* fid;
 			int slice;
 
 			// debug
-			off_t offset1;
-			off_t offset2;
+			//off_t offset1;
+			//off_t offset2;
 
 			if (i && (i % 10000000 * USNOB_RECORD_SIZE == 0)) {
 				printf("o");
@@ -199,27 +205,54 @@ int main(int argc, char** args) {
 
 			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
 
-			if (!fids[hp]) {
-				if (init_fits_file(fids, headers, outfn, hp, table, Nside)) {
-					fprintf(stderr, "Failed to initialized FITS file %i.\n", hp);
+			if (!usnobs[hp]) {
+				char fn[256];
+				char val[256];
+				sprintf(fn, outfn, hp);
+				usnobs[hp] = usnob_fits_open_for_writing(fn);
+				if (!usnobs[hp]) {
+					fprintf(stderr, "Failed to initialized FITS file %i (filename %s).\n", hp, fn);
 					exit(-1);
 				}
-			}
 
-			fid = fids[hp];
-			hprecords[hp]++;
+				// header remarks...
+				sprintf(val, "%u", hp);
+				qfits_header_add(usnobs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
+				sprintf(val, "%u", Nside);
+				qfits_header_add(usnobs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
+				qfits_header_add(usnobs[hp]->header, "NOBJS", "0", "", NULL);
+				// etc...
+
+				if (usnob_fits_write_headers(usnobs[hp])) {
+					fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
+					exit(-1);
+				}
+				/*
+				  if (!fids[hp]) {
+				  if (init_fits_file(fids, headers, outfn, hp, table, Nside)) {
+				  fprintf(stderr, "Failed to initialized FITS file %i.\n", hp);
+				  exit(-1);
+				  }
+				  }
+				*/
+			}
+			/*
+			  fid = fids[hp];
+			  hprecords[hp]++;
+			*/
 
 			// debug
-			offset1 = ftello(fid);
+			//offset1 = ftello(fid);
 
-			if (usnob_fits_write_entry(fid, &entry)) {
+			//if (usnob_fits_write_entry(fid, &entry)) {
+			if (usnob_fits_write_entry(usnobs[hp], &entry)) {
 				fprintf(stderr, "Failed to write FITS entry.\n");
 				exit(-1);
 			}
 
 			// debug
-			offset2 = ftello(fid);
-			assert((offset2 - offset1) == table->tab_w);
+			//offset2 = ftello(fid);
+			//assert((offset2 - offset1) == table->tab_w);
 
 			nrecords++;
 			nobs += (entry.ndetections == 0 ? 1 : entry.ndetections);
@@ -235,34 +268,51 @@ int main(int argc, char** args) {
 
 	// close all the files...
 	for (i=0; i<HP; i++) {
-		qfits_header* header;
-		qfits_header* tablehdr;
+		/*
+		  qfits_header* header;
+		  qfits_header* tablehdr;
+		*/
 		char val[256];
-		FILE* fid;
-		off_t offset;
-	
-		fid = fids[i];
-		if (!fid) continue;
-		header = headers[i];
+		/*
+		  FILE* fid;
+		  off_t offset;
+		*/
 
-		offset = ftello(fid);
-		fseeko(fid, 0, SEEK_SET);
+		if (!usnobs[i])
+			continue;
+		/*
+		  fid = fids[i];
+		  if (!fid) continue;
+		  header = headers[i];
+		  
+		  offset = ftello(fid);
+		  fseeko(fid, 0, SEEK_SET);
+		*/
 
-		sprintf(val, "%u", hprecords[i]);
-		qfits_header_mod(header, "NOBJS", val, "Number of objects in this catalog.");
-		qfits_header_dump(header, fid);
-        qfits_header_destroy(header);
+		//sprintf(val, "%u", hprecords[i]);
+		sprintf(val, "%u", usnobs[i]->nentries);
+		qfits_header_mod(usnobs[i]->header, "NOBJS", val, "Number of objects in this catalog.");
+		/*
+		  qfits_header_dump(header, fid);
+		  qfits_header_destroy(header);
+		*/
+		usnob_fits_fix_headers(usnobs[i]);
 
-		table->nr = hprecords[i];
-		tablehdr = qfits_table_ext_header_default(table);
-		qfits_header_dump(tablehdr, fid);
-		qfits_header_destroy(tablehdr);
+		/*
+		  table->nr = hprecords[i];
+		  tablehdr = qfits_table_ext_header_default(table);
+		  qfits_header_dump(tablehdr, fid);
+		  qfits_header_destroy(tablehdr);
 
-		fseek(fid, offset, SEEK_SET);
+		  fseek(fid, offset, SEEK_SET);
 
-		fits_pad_file(fid);
+		  fits_pad_file(fid);
 
-		if (fclose(fid)) {
+		  if (fclose(fid)) {
+		  fprintf(stderr, "Failed to close file %i: %s\n", i, strerror(errno));
+		  }
+		*/
+		if (usnob_fits_close(usnobs[i])) {
 			fprintf(stderr, "Failed to close file %i: %s\n", i, strerror(errno));
 		}
 	}
@@ -270,11 +320,13 @@ int main(int argc, char** args) {
 	printf("Read %u files, %u records, %u observations.\n",
 		   nfiles, nrecords, nobs);
 
-	qfits_table_close(table);
+	//qfits_table_close(table);
 
-	free(headers);
-	free(fids);
-	free(hprecords);
+	//free(headers);
+	//free(fids);
+	//free(hprecords);
 	
+	free(usnobs);
+
 	return 0;
 }

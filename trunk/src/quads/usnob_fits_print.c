@@ -5,7 +5,7 @@
 int main(int argc, char** args) {
 	char* fn;
 	int i;
-	usnob_fits_file* usnob;
+	usnob_fits* usnob;
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <filename>\n", args[0]);
@@ -37,8 +37,8 @@ int main(int argc, char** args) {
 		printf("    epoch %g, ndetections %i\n",
 			   entry.epoch, (int)entry.ndetections);
 		printf("    diffraction = %i, ", entry.diffraction_spike);
-		printf("    motion = %i, ", entry.motion_catalog);
-		printf("    ys4 = %i\n", entry.ys4);
+		printf("motion = %i, ", entry.motion_catalog);
+		printf("ys4 = %i\n", entry.ys4);
 		printf("    USNO-B id = %u (slice=%i, index=%i)\n",
 			   entry.usnob_id, usnob_get_slice(&entry), usnob_get_index(&entry));
 		for (ob=0; ob<5; ob++) {
