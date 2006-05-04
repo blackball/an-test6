@@ -199,11 +199,6 @@ int usnob_fits_close(usnob_fits* usnob) {
 	if (usnob->header) {
 		qfits_header_destroy(usnob->header);
 	}
-	/*
-	  if (usnob->table_header) {
-	  qfits_header_destroy(usnob->table_header);
-	  }
-	*/
 	free(usnob);
 	return 0;
 }
@@ -455,7 +450,6 @@ usnob_fits* usnob_fits_open_for_writing(char* fn) {
 	}
 	usnob->table = usnob_fits_get_table();
 	usnob->header = qfits_table_prim_header_default();
-	//usnob->table_header = qfits_table_ext_header_default(usnob->table);
 	return usnob;
 
  bailout:
@@ -469,11 +463,10 @@ int usnob_fits_write_headers(usnob_fits* usnob) {
 	qfits_header* table_header;
 	assert(usnob->fid);
 	assert(usnob->header);
-	//assert(usnob->table_header);
 	qfits_header_dump(usnob->header, usnob->fid);
 	table_header = qfits_table_ext_header_default(usnob->table);
-	//qfits_header_dump(usnob->table_header, usnob->fid);
 	qfits_header_dump(table_header, usnob->fid);
+	qfits_header_destroy(table_header);
 	usnob->data_offset = ftello(usnob->fid);
 	return 0;
 }
@@ -488,14 +481,13 @@ int usnob_fits_fix_headers(usnob_fits* usnob) {
 	fseeko(usnob->fid, 0, SEEK_SET);
 
 	assert(usnob->header);
-	//assert(usnob->table_header);
 
 	usnob->table->nr = usnob->nentries;
 
 	qfits_header_dump(usnob->header, usnob->fid);
 	table_header = qfits_table_ext_header_default(usnob->table);
-	//qfits_header_dump(usnob->table_header, usnob->fid);
 	qfits_header_dump(table_header, usnob->fid);
+	qfits_header_destroy(table_header);
 
 	datastart = ftello(usnob->fid);
 	if (datastart != usnob->data_offset) {
