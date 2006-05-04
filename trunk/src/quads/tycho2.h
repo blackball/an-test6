@@ -12,6 +12,9 @@
 // ... 208 bytes total!
 #define TYCHO_RECORD_SIZE 208
 
+#define TYCHO_SUPPLEMENT_RECORD_SIZE_RAW 122
+#define TYCHO_SUPPLEMENT_RECORD_SIZE 124
+
 struct tycho2_entry {
 	//uint tyc1;
 	//uint tyc2;
@@ -30,6 +33,8 @@ struct tycho2_entry {
 	bool double_star;
 	// flag "P" ( DP)
 	bool photo_center_2;
+	// flag "H" (in supplements)
+	bool hipparcos_star;
 
 	// degrees
 	double RA;         // RAdeg
@@ -64,6 +69,11 @@ struct tycho2_entry {
 	float mag_VT;        // VT
 	float sigma_BT;      // e_BT
 	float sigma_VT;      // e_VT
+
+	// supplements only: Hp magnitude
+	float mag_HP;        // HP
+	float sigma_HP;      // e_HP
+
 	// arcsec
 	float prox;
 
@@ -74,8 +84,11 @@ struct tycho2_entry {
 };
 typedef struct tycho2_entry tycho2_entry;
 
+int tycho2_guess_is_supplement(char* line);
 
 int tycho2_parse_entry(char* line, tycho2_entry* entry);
+
+int tycho2_supplement_parse_entry(char* line, tycho2_entry* entry);
 
 #endif
 

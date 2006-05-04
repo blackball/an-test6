@@ -44,18 +44,6 @@ static int parse_optional_double(char* src, int n, double* data, double defaultv
 		fprintf(stderr, "Tycho2: couldn't parse optional double record: '%.*s'\n", n, buf);
 		return -1;
 	}
-	/*
-	  switch (sscanf(buf, " %lf", data)) {
-	  case 0:
-	  *data = defaultval;
-	  break;
-	  case 1:
-	  break;
-	  default:
-	  fprintf(stderr, "Tycho2: couldn't parse optional double record: '%.*s'\n", n, buf);
-	  return -1;
-	  }
-	*/
 	return 0;
 }
 
@@ -77,6 +65,26 @@ static int parse_optional_uint(char* src, int n, uint* data, uint defaultval) {
 	return 0;
 }
 
+int tycho2_guess_is_supplement(char* line) {
+	return (line[12] == '|' &&
+			line[14] == '|' &&
+			line[27] == '|' &&
+			line[40] == '|' &&
+			line[48] == '|' &&
+			line[56] == '|' &&
+			line[62] == '|' &&
+			line[68] == '|' &&
+			line[74] == '|' &&
+			line[80] == '|' &&
+			line[82] == '|' &&
+			line[89] == '|' &&
+			line[95] == '|' &&
+			line[102] == '|' &&
+			line[108] == '|' &&
+			line[112] == '|' &&
+			line[114]);
+}
+
 int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 	int len;
 	uint t1, t2, t3;
@@ -94,7 +102,6 @@ int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 				len, TYCHO_RECORD_SIZE_RAW);
 		return -1;
 	}
-	//sscanf(line, "%4.4i %5.5i %1.1i|
 
 	if (parse_uint(line + 0, 4, &t1) ||
 		parse_uint(line + 5, 5, &t2) ||
@@ -221,6 +228,113 @@ int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 	entry->sigma_RA = d5;
 	entry->sigma_DEC = d6;
 	entry->correlation = d7;
+
+	return 0;
+}
+
+int tycho2_supplement_parse_entry(char* line, tycho2_entry* entry) {
+	int len;
+	uint t1, t2, t3;
+	char htflag, tycho1, bvhflag;
+	double d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12;
+	uint u1, u2;
+
+	memset(entry, 0, sizeof(tycho2_entry));
+
+	for (len=0; len<TYCHO_SUPPLEMENT_RECORD_SIZE_RAW; len++)
+		if (!line[len]) break;
+	if (len != TYCHO_SUPPLEMENT_RECORD_SIZE_RAW) {
+		fprintf(stderr, "Tycho2: couldn't parse supplement record: length %i, not %i.\n",
+				len, TYCHO_SUPPLEMENT_RECORD_SIZE_RAW);
+		return -1;
+	}
+
+	if (parse_uint(line + 0, 4, &t1) ||
+		parse_uint(line + 5, 5, &t2) ||
+		parse_uint(line + 11, 1, &t3)) {
+		return -1;
+	}
+	assert(t1 >= 2);
+	assert(t1 <= 9529);
+	assert(t2 >= 1);
+	assert(t2 <= 12112);
+	assert(t3 >= 1);
+	assert(t3 <= 4);
+
+	entry->tyc1 = t1;
+	entry->tyc2 = t2;
+	entry->tyc3 = t3;
+
+	htflag = line[13];
+	switch (htflag) {
+	case 'H':
+		entry->hipparcos_star = TRUE;
+		break;
+	case 'T':
+		entry->tycho1_star = TRUE;
+		break;
+	default:
+		assert(0);
+	}
+
+	bvhflag = line[81];
+	switch (bvhflag) {
+	case 'B':
+	case 'V':
+	case 'H':
+	case ' ':
+		break;
+	default:
+		assert(0);
+	}
+
+	tycho1 = line[113];
+	switch (tycho1) {
+	case ' ':
+	case 'T':
+		break;
+	default:
+		assert(0);
+	}
+
+	if (parse_double(line + 15, 12, &d1) ||      // RAdeg
+		parse_double(line + 28, 12, &d2) ||      // DEdeg
+		parse_optional_double(line + 41, 7, &d3, 0.0) ||  // pmRA
+		parse_optional_double(line + 49, 7, &d4, 0.0) ||  // pmDE
+		parse_double(line + 57, 5, &d5) ||       // e_RA*
+		parse_double(line + 63, 5, &d6) ||       // e_DE
+		parse_optional_double(line + 69, 5, &d7, 0.0) ||  // e_pmRA
+		parse_optional_double(line + 75, 5, &d8, 0.0) ||  // e_pmDE
+		parse_optional_double(line + 83, 6, &d9, 0.0) ||  // BT
+		parse_optional_double(line + 90, 5, &d10, 0.0) || // e_BT
+		parse_optional_double(line + 96, 6, &d11, 0.0) || // VT
+		parse_optional_double(line + 103, 5, &d12, 0.0) || // e_VT
+		parse_optional_uint  (line + 109, 3, &u1, 0)   || // prox
+		parse_optional_uint  (line + 115, 6, &u2, 0)) {
+		return -1;
+	}
+	grab_substring(entry->hip_ccdm, line + 121, 1);
+
+	assert(u2 == 0 || (u2 >= 1 && u2 <= 120404));
+
+	entry->RA = d1;
+	entry->DEC = d2;
+	entry->pmRA = d3;
+	entry->pmDEC = d4;
+	entry->sigma_RA = d5;
+	entry->sigma_DEC = d6;
+	entry->sigma_pmRA = d7;
+	entry->sigma_pmDEC = d8;
+	if (bvhflag == 'H') {
+		entry->mag_HP = d11;
+		entry->sigma_HP = d12;
+	} else {
+		entry->mag_BT = d9;
+		entry->sigma_BT = d10;
+		entry->mag_VT = d11;
+		entry->sigma_VT = d12;
+	}
+	entry->prox = u1 * 0.1;
 
 	return 0;
 }

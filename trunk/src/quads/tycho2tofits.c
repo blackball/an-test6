@@ -30,7 +30,6 @@ int main(int argc, char** args) {
 	int Nside = 8;
 
 	//usnob_fits** usnobs;
-
 	//int i;
 	int HP;
 
@@ -81,6 +80,8 @@ int main(int argc, char** args) {
 		char* map;
 		size_t map_size;
 		int i;
+		bool supplement;
+		uint recsize;
 
 		infn = args[optind];
 		fid = fopen(infn, "rb");
@@ -110,22 +111,38 @@ int main(int argc, char** args) {
 		}
 		fclose(fid);
 
-		if (map_size % TYCHO_RECORD_SIZE) {
-			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-byte records.\n",
-					infn, map_size, TYCHO_RECORD_SIZE);
+		supplement = tycho2_guess_is_supplement(map);
+		printf("Supplement format: %s\n", (supplement ? "Yes" : "No"));
+
+		if (supplement) {
+			recsize = TYCHO_SUPPLEMENT_RECORD_SIZE;
+		} else {
+			recsize = TYCHO_RECORD_SIZE;
 		}
 
-		for (i=0; i<map_size; i+=TYCHO_RECORD_SIZE) {
+		if (map_size % recsize) {
+			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-byte records.\n",
+					infn, map_size, recsize);
+		}
+
+		for (i=0; i<map_size; i+=recsize) {
 			tycho2_entry entry;
 			//int hp;
 			//int slice;
 
-			if (tycho2_parse_entry(map + i, &entry)) {
-				fprintf(stderr, "Failed to parse TYCHO-2 entry: offset %i in file %s.\n",
-						i, infn);
-				exit(-1);
+			if (supplement) {
+				if (tycho2_supplement_parse_entry(map + i, &entry)) {
+					fprintf(stderr, "Failed to parse TYCHO-2 supplement entry: offset %i in file %s.\n",
+							i, infn);
+					exit(-1);
+				}
+			} else {
+				if (tycho2_parse_entry(map + i, &entry)) {
+					fprintf(stderr, "Failed to parse TYCHO-2 entry: offset %i in file %s.\n",
+							i, infn);
+					exit(-1);
+				}
 			}
-
 			printf("RA, DEC (%g, %g)\n", entry.RA, entry.DEC);
 
 			/*
