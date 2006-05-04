@@ -5,6 +5,10 @@
 
 #include "qfits.h"
 
+struct an_entry {
+};
+typedef struct an_entry an_entry;
+
 int an_write_entry(FILE* fid, usnob_entry* entry);
 
 qfits_table* an_get_table();

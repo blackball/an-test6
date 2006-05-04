@@ -3,7 +3,7 @@
    @file    ieeefp-compat.c
    @author  N. Devillard
    @date    Feb 2002
-   @version	$Revision: 1.1 $
+   @version	$Revision: 1.2 $
    @brief   This module implements the isnan() and isinf() macros.
   
    The isnan() and isinf() macros are unfortunately not yet part of
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: ieeefp-compat.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+	$Id: ieeefp-compat.c,v 1.2 2006/05/04 18:44:15 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/16 22:10:26 $
-	$Revision: 1.1 $
+	$Date: 2006/05/04 18:44:15 $
+	$Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -31,6 +31,7 @@
  -----------------------------------------------------------------------------*/
 
 #include "config.h"
+#include "qfits.h"
 
 /*-----------------------------------------------------------------------------
    								New types

@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.2 $
+   @version	$Revision: 1.3 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.2 2006/03/22 16:34:28 dlang Exp $
+	$Id: tfits.c,v 1.3 2006/05/04 18:44:15 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/22 16:34:28 $
-	$Revision: 1.2 $
+	$Date: 2006/05/04 18:44:15 $
+	$Revision: 1.3 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -26,7 +26,8 @@
 #include <unistd.h>
 #include <ctype.h>
 
-#include "tfits.h"
+#include "qfits.h"
+//#include "tfits.h"
 
 #include "ieeefp-compat.h"
 #include "fits_std.h"
@@ -34,7 +35,7 @@
 #include "simple.h"
 #include "t_iso8601.h"
 #include "config.h"
-#include "fits_rw.h"
+//#include "fits_rw.h"
 #include "fits_md5.h"
 #include "xmemory.h"
 #include "qerror.h"

@@ -1,11 +1,16 @@
 #ifndef _QFITS_H_
 #define _QFITS_H_
 
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+// dstn
+#include <endian.h>
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define WORDS_BIGENDIAN 1
+#endif
 
 extern char * qfits_version(void);
 
@@ -53,7 +58,7 @@ char * qfits_expand_keyword(const char * keyword);
   accessor functions.
  */
 /*----------------------------------------------------------------------------*/
-typedef struct qfits_header {
+typedef struct {
 	void *	first ;		/* Pointer to list start */
 	void *	last ;		/* Pointer to list end */
 	int			n ;			/* Number of cards in list */

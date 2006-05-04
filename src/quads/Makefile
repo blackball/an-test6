@@ -6,9 +6,11 @@ LFLAGS := -lm
 CFLAGS :=
 
 #fast
-#CFLAGS	:= -g \
-#CFLAGS	:= -g -O2 \
-CFLAGS += -g -O2 -DNDEBUG
+CFLAGS	:= -g
+#CFLAGS	:= -g -O2
+#CFLAGS += -g -O2 -DNDEBUG
+
+CFLAGS += -Werror
 
 CFLAGS += -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
@@ -50,6 +52,7 @@ EXECS := get_healpix quadidx xylstomatlab rdlstohealpix \
 	plotcat
 
 # codetomatlab 
+
 
 # execs that require solver.o
 SOLVER_EXECS := slave
