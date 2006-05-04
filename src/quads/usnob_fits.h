@@ -13,7 +13,6 @@ struct usnob_fits {
 	int columns[USNOB_FITS_COLUMNS];
 	// when writing:
 	qfits_header* header;
-	//qfits_header* table_header;
 	FILE* fid;
 	off_t data_offset;
 	uint nentries;
@@ -36,7 +35,5 @@ int usnob_fits_count_entries(usnob_fits* usnob);
 int usnob_fits_close(usnob_fits* usnob);
 
 int usnob_fits_write_entry(usnob_fits* usnob, usnob_entry* entry);
-
-//qfits_table* usnob_fits_get_table();
 
 #endif
