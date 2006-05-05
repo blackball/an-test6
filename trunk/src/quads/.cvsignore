@@ -1,7 +1,9 @@
 Makefile
+*.aux
+*.dvi
+*.log
+*.fits
 *.o
-KD/*.dep
-kdtree/*.dep
 *.dep
 deps
 randcat
