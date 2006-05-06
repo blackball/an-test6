@@ -114,6 +114,26 @@ int fits_write_data_J(FILE* fid, int32_t value) {
 	return 0;
 }
 
+int fits_write_data(FILE* fid, void* pvalue, tfits_type type) {
+	switch (type) {
+	case TFITS_BIN_TYPE_B:
+		return fits_write_data_B(fid, *(unsigned char*)pvalue);
+	case TFITS_BIN_TYPE_D:
+		return fits_write_data_D(fid, *(double*)pvalue);
+	case TFITS_BIN_TYPE_E:
+		return fits_write_data_E(fid, *(float*)pvalue);
+	case TFITS_BIN_TYPE_I:
+		return fits_write_data_I(fid, *(int16_t*)pvalue);
+	case TFITS_BIN_TYPE_J:
+		return fits_write_data_J(fid, *(int32_t*)pvalue);
+	case TFITS_BIN_TYPE_X:
+		return fits_write_data_X(fid, *(unsigned char*)pvalue);
+	default: break;
+	}
+	fprintf(stderr, "fitsioutils: fits_write_data: unknown data type %i.\n", type);
+	return -1;
+}
+
 // how many FITS blocks are required to hold 'size' bytes?
 int fits_blocks_needed(int size) {
 	size += FITS_BLOCK_SIZE - 1;
@@ -149,7 +169,6 @@ void fits_add_endian(qfits_header* header) {
 
 int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
     int i, nextens, start, size;
-    //int istable;
 
 	nextens = qfits_query_n_ext(fn);
 	for (i=0; i<=nextens; i++) {
@@ -159,17 +178,12 @@ int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
             return -1;
         }
 		fprintf(stderr, "ext %i starts at %i, has size %i.\n", i, start, size);
-		/*
-          fprintf(stderr, "ext %i is %sa table.\n", i,
-          (istable ? "" : "not "));
-        */
 		if (!qfits_is_table(fn, i))
             continue;
         table = qfits_table_open(fn, i);
         int c;
         for (c=0; c<table->nc; c++) {
             qfits_col* col = table->col + c;
-            //fprintf(stderr, "  col %i: %s\n", c, col->tlabel);
             if (strcmp(col->tlabel, colname) == 0) {
                 *pstart = start;
                 *psize = size;
