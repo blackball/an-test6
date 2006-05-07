@@ -218,7 +218,7 @@ int tycho2_parse_entry(char* line, tycho2_entry* entry) {
 	entry->prox = u1 * 0.1;
 	entry->tycho1_star = (tycho1 == 'T') ? TRUE : FALSE;
 	entry->double_star = (posflag == 'D') ? TRUE : FALSE;
-	entry->photo_center_2 = (posflag == 'P') ? TRUE : FALSE;
+	entry->photo_center_treatment = (posflag == 'P') ? TRUE : FALSE;
 	entry->hipparcos_id = u2;
 
 	entry->RA = d1;

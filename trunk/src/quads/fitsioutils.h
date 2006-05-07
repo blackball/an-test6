@@ -26,6 +26,7 @@ int fits_find_table_column(char* fn, char* colname, int* start, int* size);
 
 
 // write single column fields:
+int fits_write_data_A(FILE* fid, unsigned char value);
 int fits_write_data_B(FILE* fid, unsigned char value);
 int fits_write_data_D(FILE* fid, double value);
 int fits_write_data_E(FILE* fid, float value);
