@@ -9,12 +9,14 @@
 #include "tycho2.h"
 #include "tycho2_fits.h"
 #include "starutil.h"
+#include "healpix.h"
 
-#define OPTIONS "ho:"
+#define OPTIONS "ho:HN:"
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s -o <output-filename-template>\n"
+		   "  %s -o <output-filename(-template)>\n"
+		   "  [-H]: do healpixification.\n"
 		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
@@ -27,12 +29,11 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
     int c;
 	int startoptind;
-	uint nrecords, nobs, nfiles;
+	uint nrecords, nobs;
 	int Nside = 8;
-
-	//tycho2_fits** tycs;
-	tycho2_fits* tyc;
-	int HP;
+	tycho2_fits** tycs;
+	int i, HP;
+	int do_hp = 0;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -40,6 +41,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'H':
+			do_hp = 1;
+			break;
 		case 'n':
 			Nside = atoi(optarg);
 			break;
@@ -60,26 +64,17 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	HP = 12 * Nside * Nside;
-
-	/*
-	  usnobs = malloc(HP * sizeof(usnob_fits*));
-	  memset(usnobs, 0, HP * sizeof(usnob_fits*));
-	*/
+	if (do_hp) {
+		HP = 12 * Nside * Nside;
+	} else {
+		HP = 1;
+	}
+		
+	tycs = malloc(HP * sizeof(tycho2_fits*));
+	memset(tycs, 0, HP * sizeof(tycho2_fits*));
 
 	nrecords = 0;
 	nobs = 0;
-	nfiles = 0;
-
-	tyc = tycho2_fits_open_for_writing(outfn);
-	if (!tyc) {
-		fprintf(stderr, "Couldn't open output file %s.\n", outfn);
-		exit(-1);
-	}
-	if (tycho2_fits_write_headers(tyc)) {
-		fprintf(stderr, "Couldn't write Tycho-2 FITS headers.\n");
-		exit(-1);
-	}
 
 	printf("Reading Tycho-2 files... \n");
 	fflush(stdout);
@@ -130,7 +125,7 @@ int main(int argc, char** args) {
 
 		for (i=0; i<map_size; i+=recsize) {
 			tycho2_entry entry;
-			//int hp;
+			int hp;
 
 			if (supplement) {
 				if (tycho2_supplement_parse_entry(map + i, &entry)) {
@@ -147,7 +142,41 @@ int main(int argc, char** args) {
 			}
 			//printf("RA, DEC (%g, %g)\n", entry.RA, entry.DEC);
 
-			if (tycho2_fits_write_entry(tyc, &entry)) {
+			if (do_hp) {
+				hp = radectohealpix_nside(deg2rad(entry.RA), deg2rad(entry.DEC), Nside);
+			} else {
+				hp = 0;
+			}
+
+			if (!tycs[hp]) {
+				char fn[256];
+				char val[256];
+				sprintf(fn, outfn, hp);
+				tycs[hp] = tycho2_fits_open_for_writing(fn);
+				if (!tycs[hp]) {
+					fprintf(stderr, "Failed to initialized FITS output file %s.\n", fn);
+					exit(-1);
+				}
+
+				// header remarks...
+				qfits_header_add(tycs[hp]->header, "HEALPIXED", (do_hp ? "T" : "F"), "Is this catalog healpixified?", NULL);
+				if (do_hp) {
+					sprintf(val, "%u", hp);
+					qfits_header_add(tycs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
+					sprintf(val, "%u", Nside);
+					qfits_header_add(tycs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
+					qfits_header_add(tycs[hp]->header, "NOBJS", "0", "", NULL);
+					// etc...
+				}
+				qfits_header_add(tycs[hp]->header, "NOBJS", "0", "", NULL);
+
+				if (tycho2_fits_write_headers(tycs[hp])) {
+					fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
+					exit(-1);
+				}
+			}
+
+			if (tycho2_fits_write_entry(tycs[hp], &entry)) {
 				fprintf(stderr, "Failed to write Tycho-2 FITS entry.\n");
 				exit(-1);
 			}
@@ -157,77 +186,34 @@ int main(int argc, char** args) {
 				fflush(stdout);
 			}
 
-			/*
-			  hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
-
-			  if (!usnobs[hp]) {
-				char fn[256];
-				char val[256];
-				sprintf(fn, outfn, hp);
-				usnobs[hp] = usnob_fits_open_for_writing(fn);
-				if (!usnobs[hp]) {
-				fprintf(stderr, "Failed to initialized FITS file %i (filename %s).\n", hp, fn);
-				exit(-1);
-				}
-
-				// header remarks...
-				sprintf(val, "%u", hp);
-				qfits_header_add(usnobs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-				sprintf(val, "%u", Nside);
-				qfits_header_add(usnobs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-				qfits_header_add(usnobs[hp]->header, "NOBJS", "0", "", NULL);
-				// etc...
-
-				if (usnob_fits_write_headers(usnobs[hp])) {
-				fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
-				exit(-1);
-				}
-				}
-
-				if (usnob_fits_write_entry(usnobs[hp], &entry)) {
-				fprintf(stderr, "Failed to write FITS entry.\n");
-				exit(-1);
-				}
-			*/
-
 			nrecords++;
 			nobs += entry.nobs;
 		}
 
 		munmap(map, map_size);
 
-		nfiles++;
 		printf(".");
 		fflush(stdout);
 	}
 	printf("\n");
 
-	tycho2_fits_fix_headers(tyc);
-	if (tycho2_fits_close(tyc)) {
-		fprintf(stderr, "Failed to close Tycho-2 FITS file.\n");
-		exit(-1);
-	}
-
 	// close all the files...
-	/*
-	  for (i=0; i<HP; i++) {
-	  char val[256];
-	  if (!usnobs[i])
-	  continue;
-	  sprintf(val, "%u", usnobs[i]->nentries);
-	  qfits_header_mod(usnobs[i]->header, "NOBJS", val, "Number of objects in this catalog.");
-	  usnob_fits_fix_headers(usnobs[i]);
-	  if (usnob_fits_close(usnobs[i])) {
-	  fprintf(stderr, "Failed to close file %i: %s\n", i, strerror(errno));
-	  }
-	  }
-	*/
+	for (i=0; i<HP; i++) {
+		char val[256];
+		if (!tycs[i])
+			continue;
+		sprintf(val, "%u", tycs[i]->nentries);
+		qfits_header_mod(tycs[i]->header, "NOBJS", val, "Number of objects in this catalog.");
+		tycho2_fits_fix_headers(tycs[i]);
+		if (tycho2_fits_close(tycs[i])) {
+			fprintf(stderr, "Failed to close Tycho-2 FITS file.\n");
+			exit(-1);
+		}
+	}
 	
-	printf("Read %u files, %u records, %u observations.\n",
-		   nfiles, nrecords, nobs);
+	printf("Read %u records, %u observations.\n", nrecords, nobs);
 	
-	//free(usnobs);
-
+	free(tycs);
 	return 0;
 }
 
