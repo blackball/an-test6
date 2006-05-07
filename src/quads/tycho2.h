@@ -16,23 +16,21 @@
 #define TYCHO_SUPPLEMENT_RECORD_SIZE 124
 
 struct tycho2_entry {
-	//uint tyc1;
-	//uint tyc2;
-	//uint tyc3;
-	ushort tyc1;
-	ushort tyc2;
-	uchar  tyc3;
+	// together these form the star ID.
+	int16_t tyc1;  // [1, 9537] in main catalog; [2, 9529] in suppl.
+	int16_t tyc2;  // [1, 12121] main; [1,12112] suppl.
+	uchar  tyc3;  // [1, 3] main, [1, 4] suppl.
 
-	// flag "P"
+	// flag "P": photo-center of two stars was used for position
 	bool photo_center;
-	// flag "X"
+	// flag "X": no mean position, no proper motion
 	bool no_motion;
 	// flag "T"
 	bool tycho1_star;
 	// flag "D"
 	bool double_star;
 	// flag "P" ( DP)
-	bool photo_center_2;
+	bool photo_center_treatment;
 	// flag "H" (in supplements)
 	bool hipparcos_star;
 
@@ -42,15 +40,15 @@ struct tycho2_entry {
 	double meanRA;     // mRAdeg
 	double meanDEC;    // mDEdeg
 	// mas/yr
-	float pmRA;        // pmRA
+	float pmRA;        // pmRA*
 	float pmDEC;       // pmDE
 	// mas
-	float sigma_RA;    // e_RA
+	float sigma_RA;    // e_RA*
 	float sigma_DEC;   // e_DE
-	float sigma_mRA;   // e_mRA
+	float sigma_mRA;   // e_mRA*
 	float sigma_mDEC;  // e_mDE
 	// mas/yr
-	float sigma_pmRA;  // e_pmRA
+	float sigma_pmRA;  // e_pmRA*
 	float sigma_pmDEC; // e_pmDE
 	// yr
 	float epoch_RA;    // epRA
@@ -64,7 +62,7 @@ struct tycho2_entry {
 	float goodness_mDEC; // g_mDEC
 	float goodness_pmRA;  // g_pmRA
 	float goodness_pmDEC; // g_pmDEC
-	// mag
+	// mag (0.0 means unavailable)
 	float mag_BT;        // BT
 	float mag_VT;        // VT
 	float sigma_BT;      // e_BT
@@ -79,8 +77,8 @@ struct tycho2_entry {
 
 	float correlation;
 
-	uint hipparcos_id;
-	char hip_ccdm[4];
+	int32_t hipparcos_id;    // [1, 120404] (or zero)
+	char hip_ccdm[4];     // (up to three chars; null-terminated.)
 };
 typedef struct tycho2_entry tycho2_entry;
 

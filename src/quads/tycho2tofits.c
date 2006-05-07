@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include "tycho2.h"
+#include "tycho2_fits.h"
 #include "starutil.h"
 
 #define OPTIONS "ho:"
@@ -29,8 +30,8 @@ int main(int argc, char** args) {
 	uint nrecords, nobs, nfiles;
 	int Nside = 8;
 
-	//usnob_fits** usnobs;
-	//int i;
+	//tycho2_fits** tycs;
+	tycho2_fits* tyc;
 	int HP;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
@@ -70,7 +71,17 @@ int main(int argc, char** args) {
 	nobs = 0;
 	nfiles = 0;
 
-	printf("Reading Tycho-2 files... ");
+	tyc = tycho2_fits_open_for_writing(outfn);
+	if (!tyc) {
+		fprintf(stderr, "Couldn't open output file %s.\n", outfn);
+		exit(-1);
+	}
+	if (tycho2_fits_write_headers(tyc)) {
+		fprintf(stderr, "Couldn't write Tycho-2 FITS headers.\n");
+		exit(-1);
+	}
+
+	printf("Reading Tycho-2 files... \n");
 	fflush(stdout);
 
 	startoptind = optind;
@@ -90,20 +101,12 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 
-		if ((optind > startoptind) && ((optind - startoptind) % 100 == 0)) {
-			printf("\nReading file %i of %i: %s\n", optind - startoptind,
-				   argc - startoptind, infn);
-		}
-
 		if (fseeko(fid, 0, SEEK_END)) {
 			fprintf(stderr, "Couldn't seek to end of input file %s: %s\n", infn, strerror(errno));
 			exit(-1);
 		}
-
 		map_size = ftello(fid);
-
 		fseeko(fid, 0, SEEK_SET);
-
 		map = mmap(NULL, map_size, PROT_READ, MAP_SHARED, fileno(fid), 0);
 		if (map == MAP_FAILED) {
 			fprintf(stderr, "Couldn't mmap input file %s: %s\n", infn, strerror(errno));
@@ -112,7 +115,7 @@ int main(int argc, char** args) {
 		fclose(fid);
 
 		supplement = tycho2_guess_is_supplement(map);
-		printf("Supplement format: %s\n", (supplement ? "Yes" : "No"));
+		printf("File %s: supplement format: %s\n", infn, (supplement ? "Yes" : "No"));
 
 		if (supplement) {
 			recsize = TYCHO_SUPPLEMENT_RECORD_SIZE;
@@ -128,7 +131,6 @@ int main(int argc, char** args) {
 		for (i=0; i<map_size; i+=recsize) {
 			tycho2_entry entry;
 			//int hp;
-			//int slice;
 
 			if (supplement) {
 				if (tycho2_supplement_parse_entry(map + i, &entry)) {
@@ -143,7 +145,17 @@ int main(int argc, char** args) {
 					exit(-1);
 				}
 			}
-			printf("RA, DEC (%g, %g)\n", entry.RA, entry.DEC);
+			//printf("RA, DEC (%g, %g)\n", entry.RA, entry.DEC);
+
+			if (tycho2_fits_write_entry(tyc, &entry)) {
+				fprintf(stderr, "Failed to write Tycho-2 FITS entry.\n");
+				exit(-1);
+			}
+
+			if (i && ((i/recsize) % 100000 == 0)) {
+				printf(".");
+				fflush(stdout);
+			}
 
 			/*
 			  hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
@@ -189,6 +201,12 @@ int main(int argc, char** args) {
 		fflush(stdout);
 	}
 	printf("\n");
+
+	tycho2_fits_fix_headers(tyc);
+	if (tycho2_fits_close(tyc)) {
+		fprintf(stderr, "Failed to close Tycho-2 FITS file.\n");
+		exit(-1);
+	}
 
 	// close all the files...
 	/*

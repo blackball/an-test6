@@ -92,6 +92,10 @@ int fits_write_data_B(FILE* fid, unsigned char value) {
 	return 0;
 }
 
+int fits_write_data_A(FILE* fid, unsigned char value) {
+	return fits_write_data_B(fid, value);
+}
+
 int fits_write_data_X(FILE* fid, unsigned char value) {
 	return fits_write_data_B(fid, value);
 }
@@ -116,6 +120,8 @@ int fits_write_data_J(FILE* fid, int32_t value) {
 
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type) {
 	switch (type) {
+	case TFITS_BIN_TYPE_A:
+		return fits_write_data_A(fid, *(unsigned char*)pvalue);
 	case TFITS_BIN_TYPE_B:
 		return fits_write_data_B(fid, *(unsigned char*)pvalue);
 	case TFITS_BIN_TYPE_D:

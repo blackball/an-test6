@@ -60,7 +60,7 @@ codefile* codefile_open(char* fn, int fits, int modifiable) {
 	off_t headeroffset;
 	off_t endoffset;
 	uint maxcode;
-    FILE* fid;
+    FILE* fid = NULL;
 	int mode, flags;
 
     if (fits)

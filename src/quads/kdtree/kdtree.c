@@ -194,7 +194,7 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	int i;
 	kdtree_t *kd;
 	int nnodes;
-	int level = 0, dim, m;
+	int level = 0, dim=-1, m;
 	int lnext;
 
 	assert(maxlevel > 0);
