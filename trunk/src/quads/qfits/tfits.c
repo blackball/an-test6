@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.4 $
+   @version	$Revision: 1.5 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.4 2006/05/04 18:51:25 dlang Exp $
+	$Id: tfits.c,v 1.5 2006/05/07 16:20:34 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/04 18:51:25 $
-	$Revision: 1.4 $
+	$Date: 2006/05/07 16:20:34 $
+	$Revision: 1.5 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -106,7 +106,8 @@ qfits_header * qfits_table_prim_header_default(void)
 	qfits_header_append(fh, "BITPIX", "8", "ASCII or bytes array", NULL) ;
 	qfits_header_append(fh, "NAXIS", "0", "Minimal header", NULL) ;
 	qfits_header_append(fh, "EXTEND", "T", "There may be FITS ext", NULL);
-	qfits_header_append(fh, "BLOCKED", "T", "The file may be blocked", NULL) ;
+	// dstn - deprecated.
+	//qfits_header_append(fh, "BLOCKED", "T", "The file may be blocked", NULL) ;
 	qfits_header_append(fh, "END", NULL, NULL, NULL) ;
 
 	return fh ;
