@@ -21,6 +21,34 @@ static inline uint from_le32(uint i) {
 #endif
 }
 
+unsigned char usnob_get_survey_band(int survey) {
+	// from Tables 1 and 3 (esp footnote h) of the USNO-B paper.
+	switch (survey) {
+	case 0: // POSS-I O
+		return 'O';
+	case 1: // POSS-I E
+		return 'E';
+	case 2: // POSS-II J
+		return 'J';
+	case 3: // POSS-II F
+		return 'F';
+	case 4: // SERC-J or SERC-EJ
+		return 'J';
+	case 5: // ESO-R or SERC-ER
+		return 'F';
+	case 6: // AAO-R
+		return 'F';
+	case 7: // POSS-II N
+		return 'N';
+	case 8: // SERC-I
+		return 'N';
+	case 9: // SERC-I / POSS-II N
+		return 'N';
+	default:
+		return '\0';
+	}
+}
+
 int usnob_get_slice(usnob_entry* entry) {
 	return (entry->usnob_id >> 24) & 0xFF;
 }

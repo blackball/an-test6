@@ -108,4 +108,6 @@ int usnob_get_index(usnob_entry* entry);
 
 int usnob_parse_entry(unsigned char* line, usnob_entry* usnob);
 
+unsigned char usnob_get_survey_band(int survey);
+
 #endif

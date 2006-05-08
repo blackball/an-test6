@@ -160,6 +160,7 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
+				qfits_header_add(usnobs[hp]->header, "USNOB", "T", "This is a USNO-B 1.0 catalog.", NULL);
 				sprintf(val, "%u", hp);
 				qfits_header_add(usnobs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 				sprintf(val, "%u", Nside);
