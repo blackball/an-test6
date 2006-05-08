@@ -321,5 +321,15 @@ static qfits_table* an_catalog_get_table() {
 	return table;
 }
 
+int64_t an_catalog_get_id(int catversion, int64_t starid) {
+	int64_t mask = 0x000000ffffffffffLL;
+	int64_t catv = catversion;
+	int64_t id;
+	catv = (catv << 48);
+	assert((catv & (~mask)) == 0);
+	id = (starid & mask) | catv;
+	return id;
+}
+
 
 

@@ -159,6 +159,7 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
+				qfits_header_add(tycs[hp]->header, "TYCHO_2", "T", "This is a Tycho-2 catalog.", NULL);
 				qfits_header_add(tycs[hp]->header, "HEALPIXED", (do_hp ? "T" : "F"), "Is this catalog healpixified?", NULL);
 				if (do_hp) {
 					sprintf(val, "%u", hp);

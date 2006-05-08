@@ -8,6 +8,12 @@ typedef uint64_t uint64;
 
 #include "qfits.h"
 
+enum an_sources {
+	AN_SOURCE_UNKNOWN,
+	AN_SOURCE_USNOB,
+	AN_SOURCE_TYCHO2
+};
+
 struct an_observation {
 	unsigned char catalog;
 	unsigned char band;
@@ -63,5 +69,7 @@ int an_catalog_count_entries(an_catalog* cat);
 int an_catalog_close(an_catalog* cat);
 
 int an_catalog_write_entry(an_catalog* cat, an_entry* entry);
+
+int64_t an_catalog_get_id(int catversion, int64_t starid);
 
 #endif
