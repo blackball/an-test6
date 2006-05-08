@@ -93,7 +93,7 @@ static void init_tycho2_fitstruct() {
 
 int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 							uint count, tycho2_entry* entries) {
-	int i, c;
+	int i=-1, c;
 	unsigned char* rawdata;
 
 	if (!tycho2_fitstruct_inited)
