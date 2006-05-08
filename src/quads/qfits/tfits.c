@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.5 $
+   @version	$Revision: 1.6 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.5 2006/05/07 16:20:34 dlang Exp $
+	$Id: tfits.c,v 1.6 2006/05/08 16:48:43 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/07 16:20:34 $
-	$Revision: 1.5 $
+	$Date: 2006/05/08 16:48:43 $
+	$Revision: 1.6 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -534,6 +534,7 @@ qfits_table * qfits_table_open(
                 atom_size = 4 ;
 				atom_nb *= 2 ;
                 break ;
+            case TFITS_BIN_TYPE_K:
             case TFITS_BIN_TYPE_D:
             case TFITS_ASCII_TYPE_D:
                 atom_size = 8 ;
@@ -1080,13 +1081,23 @@ void * qfits_query_column_data(
 			}
 		}
 		break ;
-			
+
 		case TFITS_BIN_TYPE_J:
 		out_array = (int*)qfits_query_column(th, colnum, selection) ;
 		for (i=0 ; i<nb_rows * col->atom_nb ; i++) {
 			if (((col->nullval)[0] != (char)0) &&
                 (atoi(col->nullval)==((int*)out_array)[i])) { 	
 				((int*)out_array)[i] = inull ;
+			}
+		}
+		break ;
+
+	case TFITS_BIN_TYPE_K:
+		out_array = (int64_t*)qfits_query_column(th, colnum, selection) ;
+		for (i=0 ; i<nb_rows * col->atom_nb ; i++) {
+			if (((col->nullval)[0] != (char)0) &&
+                (atoll(col->nullval)==((int64_t*)out_array)[i])) { 	
+				((int64_t*)out_array)[i] = inull ;
 			}
 		}
 		break ;
@@ -1297,6 +1308,17 @@ void * qfits_query_column_seq_data(
 			}
 		}
 		break ;
+
+	case TFITS_BIN_TYPE_K:
+		out_array = (int64_t*)qfits_query_column_seq(th, colnum,
+													 start_ind, nb_rows) ;
+		for (i=0 ; i<nb_rows * col->atom_nb ; i++) {
+			if (((col->nullval)[0] != (char)0) &&
+                (atoll(col->nullval)==((int64_t*)out_array)[i])) { 	
+				((int64_t*)out_array)[i] = inull ;
+			}
+		}
+		break ;
 			
 		case TFITS_BIN_TYPE_P:
 		out_array = (int*)qfits_query_column_seq(th, colnum,
@@ -1464,6 +1486,20 @@ int * qfits_query_column_nulls(
 		}
 		if (tmp_array != NULL) free(tmp_array) ;
 		break ;
+
+		case TFITS_BIN_TYPE_K:
+			tmp_array = (int64_t*)qfits_query_column(th, colnum, selection) ;
+			out_array = calloc(nb_rows * col->atom_nb, sizeof(int64_t)) ;
+			*nb_vals = nb_rows * col->atom_nb ;
+			for (i=0 ; i<nb_rows * col->atom_nb ; i++) {
+				if (((col->nullval)[0] != (char)0) &&
+					(atoll(col->nullval)==((int64_t*)tmp_array)[i])) { 	
+					out_array[i] = 1 ;
+					(*nb_nulls)++ ;
+				}
+			}
+			if (tmp_array != NULL) free(tmp_array) ;
+			break ;
 			
 		default:
 		qfits_error("unrecognized data type") ;
@@ -1772,6 +1808,7 @@ static char * qfits_bintable_field_to_string(
     unsigned char   *       uccol ;
     char            *       ccol ;
     int             *       icol ;
+    int64_t         *       kcol ;
     short           *       scol ;
     float           *       fcol ;
     double          *       dcol ;
@@ -1950,6 +1987,32 @@ static char * qfits_bintable_field_to_string(
         }
         break ;
 
+        case TFITS_BIN_TYPE_K:
+			kcol = (int64_t*)field ;
+			/* Two cases: use col->zero and col->scale or not */
+			if (col->zero_present && col->scale_present && use_zero_scale) {
+				/* For each atom of the column */
+				for (i=0 ; i<col->atom_nb-1 ; i++) {
+					sprintf(ctmp, "%f, ", (float)(col->zero +
+												  (float)kcol[i] * col->scale)) ;
+					strcat(stmp, ctmp) ;
+				}
+				/* Handle the last atom differently: no ',' */
+				sprintf(ctmp, "%f", (float)(col->zero +
+											(float)kcol[col->atom_nb-1] * col->scale)) ;
+				strcat(stmp, ctmp) ;
+			} else {
+				/* For each atom of the column */
+				for (i=0 ; i<col->atom_nb-1 ; i++) {
+					sprintf(ctmp, "%lld, ", kcol[i]) ;
+					strcat(stmp, ctmp) ;
+				}
+				/* Handle the last atom differently: no ',' */
+				sprintf(ctmp, "%lld", kcol[col->atom_nb-1]);
+				strcat(stmp, ctmp) ;
+			}
+			break ;
+
         case TFITS_BIN_TYPE_L:
         ccol = (char*)field ;
         /* For each atom of the column */
@@ -2098,6 +2161,7 @@ static int qfits_table_interpret_type(
 			case 'E': *type = TFITS_BIN_TYPE_E ; break ;
 			case 'I': *type = TFITS_BIN_TYPE_I ; break ;
 			case 'J': *type = TFITS_BIN_TYPE_J ; break ;
+		    case 'K': *type = TFITS_BIN_TYPE_K ; break ;
 			case 'L': *type = TFITS_BIN_TYPE_L ; break ;
 			case 'M': *type = TFITS_BIN_TYPE_M ; break ;
 			case 'P': *type = TFITS_BIN_TYPE_P ; break ;
@@ -2155,6 +2219,7 @@ static char * qfits_build_format(qfits_col * col)
 		case TFITS_BIN_TYPE_C: nb=sprintf(sval, "%dC", 
                                        (int)(col->atom_nb/2)) ; break ;
 		case TFITS_BIN_TYPE_J: nb=sprintf(sval, "%dJ", col->atom_nb) ; break ;
+		case TFITS_BIN_TYPE_K: nb=sprintf(sval, "%dK", col->atom_nb) ; break ;
 		case TFITS_BIN_TYPE_L: nb=sprintf(sval, "%dL", col->atom_nb) ; break ;
 		case TFITS_BIN_TYPE_M: nb=sprintf(sval, "%dM", 
                                        (int)(col->atom_nb/2)) ; break ;
