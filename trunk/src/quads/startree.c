@@ -109,28 +109,28 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "Reading star catalogue...");
-    cat = catalog_open(catfname, 0, 1);
+    cat = catalog_open(catfname, 1);
     free_fn(catfname);
     if (!cat) {
         fprintf(stderr, "Couldn't read catalogue.\n");
         exit(-1);
     }
-    fprintf(stderr, "got %i stars.\n", cat->nstars);
+    fprintf(stderr, "got %i stars.\n", cat->numstars);
 
-    if (nkeep && (nkeep < cat->nstars)) {
-        cat->nstars = nkeep;
+    if (nkeep && (nkeep < cat->numstars)) {
+        cat->numstars = nkeep;
         fprintf(stderr, "keeping at most %i stars.\n", nkeep);
     }
 
     fprintf(stderr, "  Building star KD tree...");
     fflush(stderr);
 
-    levels = (int)((log((double)cat->nstars) - log((double)Nleaf))/log(2.0));
+    levels = (int)((log((double)cat->numstars) - log((double)Nleaf))/log(2.0));
     if (levels < 1)
         levels = 1;
     fprintf(stderr, "Requesting %i levels.\n", levels);
 
-    starkd = kdtree_build(catalog_get_base(cat), cat->nstars, DIM_STARS, levels);
+    starkd = kdtree_build(catalog_get_base(cat), cat->numstars, DIM_STARS, levels);
     if (!starkd) {
         catalog_close(cat);
         fprintf(stderr, "Couldn't build kdtree.\n");

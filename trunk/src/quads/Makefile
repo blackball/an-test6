@@ -42,7 +42,7 @@ SOLVER_OBJ := solver.o
 EXECS := get_healpix quadidx xylstomatlab rdlstohealpix \
 	codeprojections fixmatchfile printmatchfile rdls2hpls \
 	certifiable hpquads dedup_index codetree startree \
-	printcatalog fixcatalogheader deduplicate \
+	printcatalog deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
 	plotcat
 
@@ -55,7 +55,7 @@ SOLVER_EXECS := slave
 # postmortem requires: findstar(2), findquad, certifiable
 
 MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
-	starutil.o fileutil.o mathutil.o fixcatalogheader.o \
+	starutil.o fileutil.o mathutil.o \
 	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
 	xylstomatlab.o rdlstohealpix.o slave.o fixmatchfile.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \

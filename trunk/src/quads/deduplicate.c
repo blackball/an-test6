@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Will write to catalogue %s...\n", outfname);
 
-	cat = catalog_open(infname, 0, 1);
+	cat = catalog_open(infname, 1);
 
     if (!cat) {
 		fprintf(stderr, "Couldn't open catalog %s.objs\n", infname);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 	}
     fprintf(stderr, "Got %u stars.\n"
 			"Limits RA=[%g, %g] DEC=[%g, %g] degrees.\n",
-            cat->nstars,
+            cat->numstars,
 			rad2deg(cat->ramin), rad2deg(cat->ramax),
 			rad2deg(cat->decmin), rad2deg(cat->decmax));
 
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
 		decmax = deg2rad(decmax);
 
 		dstind = 0;
-		for (srcind=0; srcind<cat->nstars; srcind++) {
+		for (srcind=0; srcind<cat->numstars; srcind++) {
 			double* s;
 			double x, y, z, ra, dec;
 			s = catalog_get_star(cat, srcind);
@@ -162,13 +162,13 @@ int main(int argc, char *argv[]) {
 					   DIM_STARS * sizeof(double));
 			}
 		}
-		cat->nstars = dstind;
-		fprintf(stderr, "There are %i stars in the RA,DEC window you requested.\n", cat->nstars);
+		cat->numstars = dstind;
+		fprintf(stderr, "There are %i stars in the RA,DEC window you requested.\n", cat->numstars);
 	}
 
-	if (keep && keep < cat->nstars) {
-		cat->nstars = keep;
-		fprintf(stderr, "Keeping %i stars.\n", cat->nstars);
+	if (keep && keep < cat->numstars) {
+		cat->numstars = keep;
+		fprintf(stderr, "Keeping %i stars.\n", cat->numstars);
 	}
 
 	if (duprad == 0.0) {
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
 	} else {
 
 		Nleaf = 10;
-		levels = (int)((log((double)cat->nstars) - log((double)Nleaf))/log(2.0));
+		levels = (int)((log((double)cat->numstars) - log((double)Nleaf))/log(2.0));
 		if (levels < 1) {
 			levels = 1;
 		}
@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Building KD tree (with %i levels)...", levels);
 		fflush(stderr);
 
-		starkd = kdtree_build(catalog_get_base(cat), cat->nstars, DIM_STARS, levels);
+		starkd = kdtree_build(catalog_get_base(cat), cat->numstars, DIM_STARS, levels);
 		if (!starkd) {
 			fprintf(stderr, "Couldn't create star kdtree.\n");
 			catalog_close(cat);
@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
-			N = cat->nstars;
+			N = cat->numstars;
 			Ndup = il_size(duplicates);
 
 			// remove duplicate entries from the star array.
@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
 
 				destind++;
 			}
-			cat->nstars -= il_size(duplicates);
+			cat->numstars -= il_size(duplicates);
 		}
 		il_free(duplicates);
 		duplicates = NULL;
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Writing catalogue...\n");
     fflush(stderr);
 
-	if (catalog_write_to_file(cat, outfname, 0)) {
+	if (catalog_write_to_file(cat, outfname)) {
 		fprintf(stderr, "Couldn't write catalog to file %s.\n", outfname);
 		catalog_close(cat);
 		exit(-1);

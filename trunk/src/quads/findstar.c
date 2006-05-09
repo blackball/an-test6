@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
 	if (whichset) {
 		char* catfname = mk_catfn(basefname);
-		cat = catalog_open(catfname, 0, 0);
+		cat = catalog_open(catfname, 0);
 		if (!cat) {
 			fprintf(stderr, "ERROR: couldn't open catalog");
 		}

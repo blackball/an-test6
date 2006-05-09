@@ -550,7 +550,7 @@ int main(int argc, char** argv)
 	}
 
 	catfname = mk_catfn(basefname);
-	cat = catalog_open(catfname, 0, 0);
+	cat = catalog_open(catfname, 0);
 	if (!cat) {
 		fprintf(stderr, "Failed to open catalog file %s\n", catfname);
 		exit( -1);
@@ -576,11 +576,11 @@ int main(int argc, char** argv)
 	free_fn(codefname);
 	quadfname = codefname = NULL;
 
-    codes->numstars = cat->nstars;
+    codes->numstars = cat->numstars;
     codes->index_scale       = sqrt(quad_scale_upper2);
     codes->index_scale_lower = sqrt(quad_scale_lower2);
 
-    quads->numstars = cat->nstars;
+    quads->numstars = cat->numstars;
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
@@ -598,7 +598,7 @@ int main(int argc, char** argv)
 			fprintf(stderr, "Doing pass %i: dx=%i, dy=%i.\n", pass, dx, dy);
 		}
 
-		create_quads_in_pixels(cat->nstars, NULL, pixels, Nside, shifted, dx, dy);
+		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, shifted, dx, dy);
 
 		if (rebin) {
 			// Gather up the leftover stars and re-bin.

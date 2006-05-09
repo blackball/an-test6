@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  using limits %f<=RA<=%f ; %f<=DEC<=%f deg.\n",
 				rad2deg(ramin), rad2deg(ramax), rad2deg(decmin), rad2deg(decmax));
 
-	cat.nstars = numstars;
+	cat.numstars = numstars;
 	cat.stars = malloc(numstars * DIM_STARS * sizeof(double));
 
 	for (i=0; i <numstars; i++) {
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
 	catalog_compute_radecminmax(&cat);
 
-	if (catalog_write_to_file(&cat, fname, 0)) {
+	if (catalog_write_to_file(&cat, fname)) {
 		fprintf(stderr, "Failed to write catalog.\n");
 		free(cat.stars);
 		exit(-1);
