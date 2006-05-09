@@ -118,6 +118,15 @@ int fits_write_data_J(FILE* fid, int32_t value) {
 	return 0;
 }
 
+int fits_write_data_K(FILE* fid, int64_t value) {
+	hton64(&value);
+	if (fwrite(&value, 8, 1, fid) != 1) {
+		fprintf(stderr, "Failed to write an int64 to FITS file: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type) {
 	switch (type) {
 	case TFITS_BIN_TYPE_A:
@@ -132,6 +141,8 @@ int fits_write_data(FILE* fid, void* pvalue, tfits_type type) {
 		return fits_write_data_I(fid, *(int16_t*)pvalue);
 	case TFITS_BIN_TYPE_J:
 		return fits_write_data_J(fid, *(int32_t*)pvalue);
+	case TFITS_BIN_TYPE_K:
+		return fits_write_data_K(fid, *(int64_t*)pvalue);
 	case TFITS_BIN_TYPE_X:
 		return fits_write_data_X(fid, *(unsigned char*)pvalue);
 	default: break;
