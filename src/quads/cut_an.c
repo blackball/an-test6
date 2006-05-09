@@ -84,6 +84,8 @@ int main(int argc, char** args) {
 		int hp;
 		int i, N;
 		an_catalog* ancat;
+		int BLOCK = 1000;
+		int off, n;
 
 		infn = args[optind];
 		ancat = an_catalog_open(infn);
@@ -92,45 +94,53 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 		N = an_catalog_count_entries(ancat);
-		for (i=0; i<N; i++) {
-			an_entry an;
+		printf("Reading %i entries...\n", N);
+		off = 0;
+		while (off < N) {
+			an_entry an[BLOCK];
 			stardata sd;
 			int j;
 			double summag;
 			int nmag;
 
-			if (an_catalog_read_entries(ancat, i, 1, &an)) {
-				fprintf(stderr, "Error reading AN catalog entry.\n");
+			if (off + BLOCK > N)
+				n = N - off;
+			else
+				n = BLOCK;
+
+			if (an_catalog_read_entries(ancat, off, n, an)) {
+				fprintf(stderr, "Error reading %i AN catalog entries.\n", n);
 				exit(-1);
 			}
+			for (i=0; i<n; i++) {
+				hp = radectohealpix_nside(deg2rad(an[i].ra), deg2rad(an[i].dec), Nside);
 
-			hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				sd.ra = an[i].ra;
+				sd.dec = an[i].dec;
+				sd.id = an[i].id;
 
-			sd.ra = an.ra;
-			sd.dec = an.dec;
-			sd.id = an.id;
-
-			// dumbass magnitude averaging!
-			summag = 0.0;
-			nmag = 0;
-			for (j=0; j<an.nobs; j++) {
-				if (an.obs[j].catalog == AN_SOURCE_USNOB) {
-					if (an.obs[j].band == 'E' || an.obs[j].band == 'F') {
-						summag += an.obs[j].mag;
-						nmag++;
-					}
-				} else if (an.obs[j].catalog == AN_SOURCE_TYCHO2) {
-					if (an.obs[j].band == 'V' || an.obs[j].band == 'H') {
-						summag += an.obs[j].mag;
-						nmag++;
+				// dumbass magnitude averaging!
+				summag = 0.0;
+				nmag = 0;
+				for (j=0; j<an[i].nobs; j++) {
+					if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
+						if (an[i].obs[j].band == 'E' || an[i].obs[j].band == 'F') {
+							summag += an[i].obs[j].mag;
+							nmag++;
+						}
+					} else if (an[i].obs[j].catalog == AN_SOURCE_TYCHO2) {
+						if (an[i].obs[j].band == 'V' || an[i].obs[j].band == 'H') {
+							summag += an[i].obs[j].mag;
+							nmag++;
+						}
 					}
 				}
+
+				summag /= (double)nmag;
+				sd.mag = summag;
+
+				bl_append(starlists[hp], &sd);
 			}
-
-			summag /= (double)nmag;
-			sd.mag = summag;
-
-			bl_append(starlists[hp], &sd);
 		}
 
 		an_catalog_close(ancat);
