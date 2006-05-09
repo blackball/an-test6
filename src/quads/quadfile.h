@@ -13,9 +13,7 @@ struct quadfile {
 	// lower bound
 	double index_scale_lower;
 
-    int fits;
-
-    // when reading:
+	// when reading:
 	void*  mmap_quad;
 	size_t mmap_quad_size;
 	uint*   quadarray;
@@ -37,14 +35,14 @@ int quadfile_write_quad(quadfile* qf, uint iA, uint iB, uint iC, uint iD);
 
 int quadfile_fix_header(quadfile* qf);
 
+int quadfile_write_header(quadfile* qf);
+
 double quadfile_get_index_scale_arcsec(quadfile* qf);
 
 double quadfile_get_index_scale_lower_arcsec(quadfile* qf);
 
-// 
+quadfile* quadfile_open(char* fname, int modifiable);
 
-quadfile* quadfile_open(char* fname, int fits, int modifiable);
-
-quadfile* quadfile_open_for_writing(char* quadfname, int fits);
+quadfile* quadfile_open_for_writing(char* quadfname);
 
 #endif

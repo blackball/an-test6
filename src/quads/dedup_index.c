@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		quadinfname = mk_quadfn(infname);
 	}
-	quadsin = quadfile_open(quadinfname, fitsin, 0);
+	quadsin = quadfile_open(quadinfname, 0);
     if (!quadsin) {
         fprintf(stderr, "Couldn't read quads input file %s\n", quadinfname);
         exit(-1);
@@ -144,9 +144,13 @@ int main(int argc, char *argv[]) {
 		quadoutfname = mk_quadfn(outfname);
         codeoutfname = mk_codefn(outfname);
 	}
-    quadsout = quadfile_open_for_writing(quadoutfname, fitsout);
+    quadsout = quadfile_open_for_writing(quadoutfname);
     if (!quadsout) {
         fprintf(stderr, "Couldn't open output quads file %s: %s\n", quadoutfname, strerror(errno));
+        exit(-1);
+    }
+    if (quadfile_write_header(quadsout)) {
+        fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
         exit(-1);
     }
     codesout = codefile_open_for_writing(codeoutfname, fitsout);
