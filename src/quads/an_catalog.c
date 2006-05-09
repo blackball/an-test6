@@ -50,11 +50,19 @@ static void init_an_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_K, "ID", nil, id);
 
 	for (ob=0; ob<AN_N_OBSERVATIONS; ob++) {
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "CATALOG", nil, obs[ob].catalog);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "BAND", nil, obs[ob].band);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "ID", nil, obs[ob].id);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG", nil, obs[ob].mag);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MAG", nil, obs[ob].sigma_mag);
+		char fld[32];
+		// note, we memleak these strings because we can't share the static
+		// char array.
+		sprintf(fld, "CATALOG_%i", ob);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(fld), nil, obs[ob].catalog);
+		sprintf(fld, "BAND_%i", ob);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(fld), nil, obs[ob].band);
+		sprintf(fld, "ID_%i", ob);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, strdup(fld), nil, obs[ob].id);
+		sprintf(fld, "MAG_%i", ob);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(fld), nil, obs[ob].mag);
+		sprintf(fld, "SIGMA_MAG_%i", ob);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(fld), nil, obs[ob].sigma_mag);
 	}
 	assert(i == AN_FITS_COLUMNS);
 	an_fitstruct_inited = 1;
