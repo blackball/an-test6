@@ -3,7 +3,7 @@
   @file     xmemory.c
   @author   Nicolas Devillard
   @date     Oct 2000
-  @version  $Revision: 1.1 $
+  @version  $Revision: 1.2 $
   @brief    POSIX-compatible extended memory handling.
 
   xmemory is a small and efficient module offering memory extension 
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: xmemory.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+    $Id: xmemory.c,v 1.2 2006/05/09 13:56:06 dlang Exp $
     $Author: dlang $
-    $Date: 2006/03/16 22:10:26 $
-    $Revision: 1.1 $
+    $Date: 2006/05/09 13:56:06 $
+    $Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -39,6 +39,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+
+#include <assert.h>
 
 /*-----------------------------------------------------------------------------
                                 Defines
@@ -360,7 +362,8 @@ static int xmemory_addcell(
     if (xmemory_table.ncells >= XMEMORY_MAXPTRS) {
         fprintf(stderr, "fatal xmemory error: reached max pointers (%d)\n",
                 XMEMORY_MAXPTRS);
-        exit(-1);
+		assert(0);
+        //exit(-1);
     }
     /* Find an available slot */
     pos = PTR_HASH(pointer);
