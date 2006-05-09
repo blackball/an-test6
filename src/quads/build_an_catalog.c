@@ -131,6 +131,7 @@ int main(int argc, char** args) {
 		qfits_header_destroy(hdr);
 		if (!is_usnob && !is_tycho) {
 			// guess...
+			printf("Guessing catalog type (this may generate a warning)...\n");
 			usnob = usnob_fits_open(infn);
 			if (!usnob) {
 				tycho = tycho2_fits_open(infn);
@@ -161,108 +162,130 @@ int main(int argc, char** args) {
 		  Therefore, we don't need to correlate stars between the catalogs.
 		*/
 		if (usnob) {
-			usnob_entry entry;
+			int n, off, BLOCK = 1000;
+			usnob_entry entry[BLOCK];
 			int N = usnob_fits_count_entries(usnob);
-			for (i=0; i<N; i++) {
+			for (off=0; off<=N/BLOCK; off+=BLOCK) {
 				int j, ob;
-				usnob_fits_read_entries(usnob, i, 1, &entry);
-				if (!entry.ndetections)
-					// Tycho-2 star.  Ignore it.
-					continue;
-				if (entry.diffraction_spike)
-					// may be a diffraction spike.  Ignore it.
-					continue;
+				if (off + BLOCK > N)
+					n = N - off;
+				else
+					n = BLOCK;
 
-				memset(&an, 0, sizeof(an));
-
-				an.ra = entry.ra;
-				an.dec = entry.dec;
-				an.motion_ra = entry.mu_ra;
-				an.motion_dec = entry.mu_dec;
-				an.sigma_ra = entry.sigma_ra;
-				an.sigma_dec = entry.sigma_dec;
-				an.sigma_motion_ra = entry.sigma_mu_ra;
-				an.sigma_motion_dec = entry.sigma_mu_dec;
-
-				an.id = an_catalog_get_id(version, starid);
-				starid++;
-
-				ob = 0;
-				for (j=0; j<5; j++) {
-					//if (entry.obs[j].mag == 0.0)
-					if (entry.obs[j].field == 0)
+				if (usnob_fits_read_entries(usnob, off, n, entry)) {
+					fprintf(stderr, "Failed to read USNO-B entries.\n");
+					exit(-1);
+				}
+				for (i=0; i<n; i++) {
+					if (!entry[i].ndetections)
+						// Tycho-2 star.  Ignore it.
 						continue;
-					an.obs[ob].mag = entry.obs[j].mag;
-					// estimate from USNO-B paper section 5: photometric calibn
-					an.obs[ob].sigma_mag = 0.25;
-					an.obs[ob].id = entry.usnob_id;
-					an.obs[ob].catalog = AN_SOURCE_USNOB;
-					an.obs[ob].band = usnob_get_survey_band(entry.obs[j].survey);
-					ob++;
-				}
-				an.nobs = ob;
+					if (entry[i].diffraction_spike)
+						// may be a diffraction spike.  Ignore it.
+						continue;
 
-				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
-				if (!cats[hp]) {
-					init_catalog(cats, outfn, hp, Nside);
+					memset(&an, 0, sizeof(an));
+
+					an.ra = entry[i].ra;
+					an.dec = entry[i].dec;
+					an.motion_ra = entry[i].mu_ra;
+					an.motion_dec = entry[i].mu_dec;
+					an.sigma_ra = entry[i].sigma_ra;
+					an.sigma_dec = entry[i].sigma_dec;
+					an.sigma_motion_ra = entry[i].sigma_mu_ra;
+					an.sigma_motion_dec = entry[i].sigma_mu_dec;
+
+					an.id = an_catalog_get_id(version, starid);
+					starid++;
+
+					ob = 0;
+					for (j=0; j<5; j++) {
+						//if (entry.obs[j].mag == 0.0)
+						if (entry[i].obs[j].field == 0)
+							continue;
+						an.obs[ob].mag = entry[i].obs[j].mag;
+						// estimate from USNO-B paper section 5: photometric calibn
+						an.obs[ob].sigma_mag = 0.25;
+						an.obs[ob].id = entry[i].usnob_id;
+						an.obs[ob].catalog = AN_SOURCE_USNOB;
+						an.obs[ob].band = usnob_get_survey_band(entry[i].obs[j].survey);
+						ob++;
+					}
+					an.nobs = ob;
+
+					hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+					if (!cats[hp]) {
+						init_catalog(cats, outfn, hp, Nside);
+					}
+					an_catalog_write_entry(cats[hp], &an);
+					nusnob++;
 				}
-				an_catalog_write_entry(cats[hp], &an);
-				nusnob++;
 			}
 			usnob_fits_close(usnob);
 
 		} else if (tycho) {
-			tycho2_entry entry;
+			int n, off, BLOCK = 1000;
+			tycho2_entry entry[BLOCK];
 			int N = tycho2_fits_count_entries(tycho);
-			for (i=0; i<N; i++) {
+			for (off=0; off<=N/BLOCK; off+=BLOCK) {
 				int ob;
-				tycho2_fits_read_entries(tycho, i, 1, &entry);
+				if (off + BLOCK > N)
+					n = N - off;
+				else
+					n = BLOCK;
 
-				an.ra = entry.RA;
-				an.dec = entry.DEC;
-				an.sigma_ra = entry.sigma_RA;
-				an.sigma_dec = entry.sigma_DEC;
-				an.motion_ra = entry.pmRA;
-				an.motion_dec = entry.pmDEC;
-				an.sigma_motion_ra = entry.sigma_pmRA;
-				an.sigma_motion_dec = entry.sigma_pmDEC;
+				if (tycho2_fits_read_entries(tycho, off, n, entry)) {
+					fprintf(stderr, "Failed to read USNO-B entries.\n");
+					exit(-1);
+				}
 
-				an.id = an_catalog_get_id(version, starid);
-				starid++;
+				for (i=0; i<n; i++) {
+					an.ra = entry[i].RA;
+					an.dec = entry[i].DEC;
+					an.sigma_ra = entry[i].sigma_RA;
+					an.sigma_dec = entry[i].sigma_DEC;
+					an.motion_ra = entry[i].pmRA;
+					an.motion_dec = entry[i].pmDEC;
+					an.sigma_motion_ra = entry[i].sigma_pmRA;
+					an.sigma_motion_dec = entry[i].sigma_pmDEC;
 
-				ob = 0;
-				if (entry.mag_BT != 0.0) {
-					an.obs[ob].catalog = AN_SOURCE_TYCHO2;
-					an.obs[ob].band = 'B';
-					an.obs[ob].id = tycho2_id_to_int(entry.tyc1, entry.tyc2, entry.tyc3);
-					an.obs[ob].mag = entry.mag_BT;
-					an.obs[ob].sigma_mag = entry.sigma_BT;
-					ob++;
-				}
-				if (entry.mag_VT != 0.0) {
-					an.obs[ob].catalog = AN_SOURCE_TYCHO2;
-					an.obs[ob].band = 'V';
-					an.obs[ob].id = tycho2_id_to_int(entry.tyc1, entry.tyc2, entry.tyc3);
-					an.obs[ob].mag = entry.mag_VT;
-					an.obs[ob].sigma_mag = entry.sigma_VT;
-					ob++;
-				}
-				if (entry.mag_HP != 0.0) {
-					an.obs[ob].catalog = AN_SOURCE_TYCHO2;
-					an.obs[ob].band = 'H';
-					an.obs[ob].id = tycho2_id_to_int(entry.tyc1, entry.tyc2, entry.tyc3);
-					an.obs[ob].mag = entry.mag_HP;
-					an.obs[ob].sigma_mag = entry.sigma_HP;
-					ob++;
-				}
-				an.nobs = ob;
+					an.id = an_catalog_get_id(version, starid);
+					starid++;
 
-				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
-				if (!cats[hp]) {
-					init_catalog(cats, outfn, hp, Nside);
+					ob = 0;
+					if (entry[i].mag_BT != 0.0) {
+						an.obs[ob].catalog = AN_SOURCE_TYCHO2;
+						an.obs[ob].band = 'B';
+						an.obs[ob].id = tycho2_id_to_int(entry[i].tyc1, entry[i].tyc2, entry[i].tyc3);
+						an.obs[ob].mag = entry[i].mag_BT;
+						an.obs[ob].sigma_mag = entry[i].sigma_BT;
+						ob++;
+					}
+					if (entry[i].mag_VT != 0.0) {
+						an.obs[ob].catalog = AN_SOURCE_TYCHO2;
+						an.obs[ob].band = 'V';
+						an.obs[ob].id = tycho2_id_to_int(entry[i].tyc1, entry[i].tyc2, entry[i].tyc3);
+						an.obs[ob].mag = entry[i].mag_VT;
+						an.obs[ob].sigma_mag = entry[i].sigma_VT;
+						ob++;
+					}
+					if (entry[i].mag_HP != 0.0) {
+						an.obs[ob].catalog = AN_SOURCE_TYCHO2;
+						an.obs[ob].band = 'H';
+						an.obs[ob].id = tycho2_id_to_int(entry[i].tyc1, entry[i].tyc2, entry[i].tyc3);
+						an.obs[ob].mag = entry[i].mag_HP;
+						an.obs[ob].sigma_mag = entry[i].sigma_HP;
+						ob++;
+					}
+					an.nobs = ob;
+
+					hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+					if (!cats[hp]) {
+						init_catalog(cats, outfn, hp, Nside);
+					}
+					an_catalog_write_entry(cats[hp], &an);
+					ntycho++;
 				}
-				an_catalog_write_entry(cats[hp], &an);
-				ntycho++;
 			}
 			tycho2_fits_close(tycho);
 		}
