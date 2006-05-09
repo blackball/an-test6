@@ -1,6 +1,8 @@
 #ifndef FITSIO_UTILS_H
 #define FITSIO_UTILS_H
 
+#include "qfits.h"
+
 // how many FITS blocks are required to hold 'size' bytes?
 int fits_blocks_needed(int size);
 

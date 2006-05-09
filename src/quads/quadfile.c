@@ -310,9 +310,7 @@ quadfile* quadfile_fits_open_for_writing(char* fn) {
 	quadfile* qf;
     char val[256];
     qfits_table* table;
-    //qfits_header* header;
     qfits_header* tablehdr;
-	void* dataptr;
 	uint datasize;
 	uint ncols, nrows, tablesize;
 
@@ -343,7 +341,6 @@ quadfile* quadfile_fits_open_for_writing(char* fn) {
 	qfits_header_add(qf->header, "", NULL, " stored as 4 native-endian uints.", NULL);
 
     // first table: the quads.
-    dataptr = NULL; //qf->quadarray;
     datasize = DIM_QUADS * sizeof(uint);
     ncols = 1;
 	// may be dummy
@@ -359,22 +356,7 @@ quadfile* quadfile_fits_open_for_writing(char* fn) {
     qfits_header_dump(tablehdr, qf->fid);
     qfits_table_close(table);
     qfits_header_destroy(tablehdr);
-
 	qf->header_end = ftello(qf->fid);
-
-	/*
-	  table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
-	  qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-	  "quads",
-	  "", "", "", 0, 0, 0, 0, 0);
-	  //qfits_save_table_hdrdump(&dataptr, table, header);
-	  qfits_header_dump(header, qf->fid);
-
-	  qfits_table_append_xtension(qf->fid, table, &dataptr);
-	  qfits_table_close(table);
-	  qfits_header_destroy(header);
-	*/
-
 	return qf;
 
  bailout:

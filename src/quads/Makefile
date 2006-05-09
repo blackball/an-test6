@@ -61,7 +61,7 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
 	usnobtofits.o usnob.o usnob_fits.o usnobtoan.o tycho2.o \
-	tycho2tofits.o tycho2_fits.o
+	tycho2tofits.o tycho2_fits.o build_an_catalog.o cut_an.o
 
 QFITS_I := -Iqfits
 QFITS_L := 
@@ -78,6 +78,7 @@ all: usnobtoan \
 	usnobtofits \
 	tycho2tofits \
 	ancatalog \
+	cut_an \
 	$(EXECS) $(SOLVER_EXECS) 
 
 $(EXECS) :: %: %.o $(OBJ)
@@ -99,6 +100,9 @@ usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o heal
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 ancatalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+cut_an: cut_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest

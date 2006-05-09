@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Will write to catalogue %s...\n", outfname);
 
-	cat = catalog_open_file(infname, 1);
+	cat = catalog_open(infname, 0, 1);
 
     if (!cat) {
 		fprintf(stderr, "Couldn't open catalog %s.objs\n", infname);
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Writing catalogue...\n");
     fflush(stderr);
 
-	if (catalog_write_to_file(cat, outfname)) {
+	if (catalog_write_to_file(cat, outfname, 0)) {
 		fprintf(stderr, "Couldn't write catalog to file %s.\n", outfname);
 		catalog_close(cat);
 		exit(-1);

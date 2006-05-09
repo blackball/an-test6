@@ -5,8 +5,10 @@
 #include <math.h>
 
 #include "catalog.h"
+#include "fitsioutils.h"
 #include "fileutil.h"
 #include "ioutils.h"
+#include "mathutil.h"
 
 int write_objs_header(FILE *fid, uint numstars,
 					  uint DimStars, double ramin, double ramax, 
@@ -53,7 +55,7 @@ int read_objs_header(FILE *fid, uint *numstars, uint *DimStars,
 }
 
 
-int catalog_write_to_file(catalog* cat, char* fn) {
+int catalog_write_to_file(catalog* cat, char* fn, int fits) {
 	FILE *catfid  = NULL;
 	catfid = fopen(fn, "wb");
 	if (!catfid) {
@@ -61,8 +63,41 @@ int catalog_write_to_file(catalog* cat, char* fn) {
 				fn, strerror(errno));
 		return -1;
 	}
-	write_objs_header(catfid, cat->nstars, DIM_STARS,
-					  cat->ramin, cat->ramax, cat->decmin, cat->decmax);
+
+	if (fits) {
+		char val[256];
+		qfits_table* table;
+		qfits_header* tablehdr;
+		qfits_header* hdr;
+		uint datasize;
+		uint ncols, nrows, tablesize;
+		// the header
+	    hdr = qfits_table_prim_header_default();
+		fits_add_endian(hdr);
+		fits_add_double_size(hdr);
+		sprintf(val, "%u", cat->nstars);
+		qfits_header_add(hdr, "NSTARS", val, "Number of stars used.", NULL);
+		qfits_header_dump(hdr, catfid);
+		qfits_header_destroy(hdr);
+
+		// first table: the star locations.
+		datasize = DIM_STARS * sizeof(double);
+		ncols = 1;
+		// may be dummy
+		nrows = cat->nstars;
+		tablesize = datasize * nrows * ncols;
+		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
+					   "xyz", "", "", "", 0, 0, 0, 0, 0);
+		tablehdr = qfits_table_ext_header_default(table);
+		qfits_header_dump(tablehdr, catfid);
+		qfits_table_close(table);
+		qfits_header_destroy(tablehdr);
+		
+	} else {
+		write_objs_header(catfid, cat->nstars, DIM_STARS,
+						  cat->ramin, cat->ramax, cat->decmin, cat->decmax);
+	}
 
 	if (fwrite(cat->stars, sizeof(double), cat->nstars*DIM_STARS, catfid) !=
 		cat->nstars * DIM_STARS) {
@@ -71,6 +106,39 @@ int catalog_write_to_file(catalog* cat, char* fn) {
 		fclose(catfid);
 		return -1;
 	}
+
+	if (fits && cat->ids) {
+		qfits_table* table;
+		qfits_header* tablehdr;
+		int datasize, ncols, nrows, tablesize;
+
+		// second table: the star ids.
+		datasize = sizeof(int64_t);
+		ncols = 1;
+		// may be dummy
+		nrows = cat->nstars;
+		tablesize = datasize * nrows * ncols;
+		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
+					   "ids", "", "", "", 0, 0, 0, 0, 0);
+		tablehdr = qfits_table_ext_header_default(table);
+		qfits_header_dump(tablehdr, catfid);
+		qfits_table_close(table);
+		qfits_header_destroy(tablehdr);
+
+		if (fwrite(cat->ids, sizeof(int64_t), cat->nstars, catfid) !=
+			cat->nstars) {
+			fprintf(stderr, "Failed to write catalog data to file %s: %s.\n",
+					fn, strerror(errno));
+			fclose(catfid);
+			return -1;
+		}
+	}
+
+	if (fits) {
+		fits_pad_file(catfid);
+	}
+
 	if (fclose(catfid)) {
 		fprintf(stderr, "Couldn't close catalog file %s: %s\n",
 				cat->catfname, strerror(errno));
@@ -127,16 +195,18 @@ double* catalog_get_base(catalog* cat) {
 	return cat->stars;
 }
 
-catalog* catalog_open(char* basefn, int modifiable) {
-	char* tempfn;
-	catalog* cat;
-	tempfn = mk_catfn(basefn);
-	cat = catalog_open_file(tempfn, modifiable);
-	free_fn(tempfn);
-	return cat;
-}
+/*
+  catalog* catalog_open(char* basefn, int modifiable) {
+  char* tempfn;
+  catalog* cat;
+  tempfn = mk_catfn(basefn);
+  cat = catalog_open_file(tempfn, modifiable);
+  free_fn(tempfn);
+  return cat;
+  }
+*/
 
-catalog* catalog_open_file(char* catfn, int modifiable) {
+catalog* catalog_open(char* catfn, int fits, int modifiable) {
 	FILE *catfid  = NULL;
 	uint Dim_Stars;
 	off_t endoffset;
@@ -145,6 +215,7 @@ catalog* catalog_open_file(char* catfn, int modifiable) {
 	catalog* cat;
 	uint nstars_tmp;
 	int mode, flags;
+	int offxyz = -1, offids = -1;
 
 	cat = malloc(sizeof(catalog));
 	if (!cat) {
@@ -154,36 +225,88 @@ catalog* catalog_open_file(char* catfn, int modifiable) {
 
 	cat->catfname = strdup(catfn);
 
-	catfid = fopen(cat->catfname, "rb");
-	if (!catfid) {
-		fprintf(stderr, "catalog_open: couldn't open file %s: %s.\n", cat->catfname,
-				strerror(errno));
-		free(cat->catfname);
-		free(cat);
-		return NULL;
-	}
+	if (fits) {
+		int sizexyz, sizeids;
+		qfits_header* header;
 
-	// Read .objs file...
-	if (read_objs_header(catfid, &nstars_tmp, &Dim_Stars,
-                         &cat->ramin, &cat->ramax,
-                         &cat->decmin, &cat->decmax)) {
-		fprintf(stderr, "Failed to read catalog header.\n");
-		goto bail;
-    }
-	cat->nstars = nstars_tmp;
-	headeroffset = ftello(catfid);
-	// check that the catalogue file is the right size.
-	fseeko(catfid, 0, SEEK_END);
-	endoffset = ftello(catfid);
-	maxstar = (endoffset - headeroffset) / (3 * sizeof(double));
-	if (maxstar != cat->nstars) {
-		fprintf(stderr, "Error: numstars=%i (specified in .objs file header) does "
-				"not match maxstars=%i (computed from size of .objs file).\n",
-				cat->nstars, maxstar);
-		goto bail;
-	}
+		if (!is_fits_file(cat->catfname)) {
+			fprintf(stderr, "File %s doesn't look like a FITS file.\n", cat->catfname);
+			goto bail;
+		}
+		header = qfits_header_read(cat->catfname);
+		if (!header) {
+			fprintf(stderr, "Couldn't read FITS header from %s.\n", cat->catfname);
+			goto bail;
+		}
+		cat->nstars = qfits_header_getint(header, "NSTARS", -1);
+		if (fits_check_endian(header) ||
+			fits_check_double_size(header)) {
+			fprintf(stderr, "File %s was written with wrong endianness or double size.\n", cat->catfname);
+			qfits_header_destroy(header);
+			goto bail;
+		}
+		qfits_header_destroy(header);
+		if (cat->nstars == -1) {
+			fprintf(stderr, "Couldn't find NSTARS header in file %s\n", cat->catfname);
+			goto bail;
+		}
 
-	cat->mmap_cat_size = endoffset;
+		if (fits_find_table_column(cat->catfname, "xyz", &offxyz, &sizexyz) ||
+			fits_find_table_column(cat->catfname, "ids", &offids, &sizeids)) {
+			fprintf(stderr, "Couldn't find \"xyz\" or \"ids\" columns in "
+					"FITS file.");
+			goto bail;
+		}
+
+		if (fits_blocks_needed(cat->nstars * sizeof(double) * DIM_STARS) != sizexyz) {
+			fprintf(stderr, "Number of stars promised does jive with the xyz table size: %u vs %u.\n",
+					fits_blocks_needed(cat->nstars * sizeof(double) * DIM_STARS), sizexyz);
+			goto bail;
+		}
+		if (fits_blocks_needed(cat->nstars * sizeof(int64_t)) != sizeids) {
+			fprintf(stderr, "Number of stars promised does jive with the \"ids\" table size: %u vs %u.\n",
+					fits_blocks_needed(cat->nstars * sizeof(int64_t)), sizeids);
+			goto bail;
+		}
+
+		cat->mmap_cat_size = imax(offxyz + sizexyz, offids + sizeids);
+
+	} else {
+
+		catfid = fopen(cat->catfname, "rb");
+		if (!catfid) {
+			fprintf(stderr, "catalog_open: couldn't open file %s: %s.\n", cat->catfname,
+					strerror(errno));
+			free(cat->catfname);
+			free(cat);
+			return NULL;
+		}
+
+		// Read .objs file...
+		if (read_objs_header(catfid, &nstars_tmp, &Dim_Stars,
+							 &cat->ramin, &cat->ramax,
+							 &cat->decmin, &cat->decmax)) {
+			fprintf(stderr, "Failed to read catalog header.\n");
+			goto bail;
+		}
+		cat->nstars = nstars_tmp;
+		headeroffset = ftello(catfid);
+		offxyz = headeroffset;
+
+		// check that the catalogue file is the right size.
+		fseeko(catfid, 0, SEEK_END);
+		endoffset = ftello(catfid);
+		cat->mmap_cat_size = endoffset;
+
+		maxstar = (endoffset - headeroffset) / (3 * sizeof(double));
+		if (maxstar != cat->nstars) {
+			fprintf(stderr, "Error: nstars=%i (specified in .objs file header) does "
+					"not match maxstars=%i (computed from size of .objs file).\n",
+					cat->nstars, maxstar);
+			goto bail;
+		}
+
+	}
 	if (modifiable) {
 		mode = PROT_READ | PROT_WRITE;
 		flags = MAP_PRIVATE;
@@ -197,7 +320,12 @@ catalog* catalog_open_file(char* catfn, int modifiable) {
 		goto bail;
 	}
 	fclose(catfid);
-	cat->stars = (double*)(((char*)cat->mmap_cat) + headeroffset);
+
+	cat->stars = (double*)(((char*)cat->mmap_cat) + offxyz);
+	if (offids == -1)
+		cat->ids = NULL;
+	else
+		cat->ids = (int64_t*)(((char*)cat->mmap_cat) + offids);
 
 	return cat;
 
@@ -214,6 +342,12 @@ double* catalog_get_star(catalog* cat, uint sid) {
 		return NULL;
 	}
 	return cat->stars + sid * 3;
+}
+
+int64_t catalog_get_star_id(catalog* cat, uint sid) {
+	if (cat->ids)
+		return cat->ids[sid];
+	return -1;
 }
 
 void catalog_close(catalog* cat) {
