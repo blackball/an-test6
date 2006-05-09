@@ -2,23 +2,6 @@
 #include <string.h>
 #include "fileutil.h"
 
-/* The binary files all start with the unsigned short int MAGIC_VAL
-   which helps identify them as binary and also sort out endian issues.
-*/
-
-/* The binary catalogue format (.objs) is as follows:
-   unsigned short int = MAGIC_VAL
-   unsigned long int = number_of_stars_in_catalogue
-   unsigned short int = dimension_of_space (almost always==3)
-   double ramin = minimum RA value of all stars
-   double ramax = maximum RA value of all stars
-   double decmin = minimum DEC value of all stars
-   double decmax = maximum DEC value of all stars
-   double x0, double y0, double z0
-   double x1, double y1, double z1
-   ...
-*/
-
 uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
                  uint ***starquads)
 {
@@ -68,7 +51,7 @@ uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
 char *mk_filename(const char *basename, const char *extension)
 {
 	char *fname;
-	fname = (char *)malloc(strlen(basename) + strlen(extension) + 1);
+	fname = malloc(strlen(basename) + strlen(extension) + 1);
 	sprintf(fname, "%s%s", basename, extension);
 	return fname;
 }
