@@ -22,7 +22,7 @@
 #define mk_fits_quadfn(s)   mk_filename(s,".quad.fits")
 #define mk_codefn(s)   mk_filename(s,".code")
 #define mk_fits_codefn(s)   mk_filename(s,".code.fits")
-#define mk_qidxfn(s)   mk_filename(s,".qidx")
+#define mk_qidxfn(s)   mk_filename(s,".qidx.fits")
 #define mk_hitfn(s)    mk_filename(s,".hits")
 #define mk_fieldfn(s)  mk_filename(s,".xyls")
 #define mk_field0fn(s) mk_filename(s,".xyl0")
