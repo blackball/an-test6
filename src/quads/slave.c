@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
 		// Read .objs file...
-		cat = catalog_open(catfname, 0, 0);
+		cat = catalog_open(catfname, 0);
 		if (!cat) {
 			fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
 			exit(-1);

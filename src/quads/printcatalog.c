@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     }
 
 	catfname = mk_catfn(basefname);
-	cat = catalog_open(catfname, 0, 0);
+	cat = catalog_open(catfname, 0);
 	if (!cat) {
 		fprintf(stderr, "Couldn't read catalog.\n");
 		exit(-1);
@@ -62,16 +62,16 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Got %u stars.\n"
 			"Limits RA=[%g, %g] DEC=[%g, %g] degrees.\n",
-            cat->nstars,
+            cat->numstars,
 			rad2deg(cat->ramin), rad2deg(cat->ramax),
 			rad2deg(cat->decmin), rad2deg(cat->decmax));
 
 	if (printout) {
 		int i;
 
-		printf("radec=zeros([%u,2]);\n", cat->nstars);
+		printf("radec=zeros([%u,2]);\n", cat->numstars);
 		// read a star at a time...
-		for (i=0; i<cat->nstars; i++) {
+		for (i=0; i<cat->numstars; i++) {
 			double* xyz;
 			double ra, dec;
 			xyz = catalog_get_star(cat, i);
