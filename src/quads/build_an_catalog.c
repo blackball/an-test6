@@ -314,6 +314,17 @@ int main(int argc, char** args) {
 	printf("Read %i USNO-B objects and %i Tycho-2 objects.\n",
 		   nusnob, ntycho);
 
+	for (i=0; i<HP; i++) {
+		char val[32];
+		sprintf(val, "%u", cats[i]->nentries);
+		qfits_header_mod(cats[i]->header, "NOBJS", val, "Number of objects in this catalog.");
+		if (an_catalog_fix_headers(cats[i]) ||
+			an_catalog_close(cats[i])) {
+			fprintf(stderr, "Error fixing the header or closing AN catalog for healpix %i.\n", i);
+		}
+	}
+	free(cats);
+
 	return 0;
 }
 
