@@ -242,6 +242,8 @@ int main(int argc, char** args) {
 				}
 
 				for (i=0; i<n; i++) {
+					memset(an, 0, sizeof(an));
+
 					an.ra = entry[i].RA;
 					an.dec = entry[i].DEC;
 					an.sigma_ra = entry[i].sigma_RA;
@@ -280,6 +282,10 @@ int main(int argc, char** args) {
 						ob++;
 					}
 					an.nobs = ob;
+					if (!an.nobs) {
+						fprintf(stderr, "Tycho entry %i: no observations!\n", off + i);
+						continue;
+					}
 
 					hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
 					if (!cats[hp]) {
