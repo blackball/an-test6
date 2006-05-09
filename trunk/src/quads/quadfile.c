@@ -180,8 +180,10 @@ int quadfile_write_quad(quadfile* qf,
 	abcd[1] = iB;
 	abcd[2] = iC;
 	abcd[3] = iD;
-	if (fwrite(abcd, sizeof(uint), 4, qf->fid) == 4)
+	if (fwrite(abcd, sizeof(uint), 4, qf->fid) == 4) {
+		qf->numquads++;
 		return 0;
+	}
 	fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
 	return -1;
 }
