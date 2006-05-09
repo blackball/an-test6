@@ -565,7 +565,11 @@ int main(int argc, char** argv)
         codefname = mk_codefn(optarg);
     }
 
-    quads = quadfile_open_for_writing(quadfname, fitsout);
+    quads = quadfile_open_for_writing(quadfname);
+    if (quadfile_write_header(quads)) {
+        fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
+        exit(-1);
+    }
     codes = codefile_open_for_writing(codefname, fitsout);
 
 	free_fn(quadfname);
