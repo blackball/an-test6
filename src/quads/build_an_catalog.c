@@ -316,6 +316,7 @@ int main(int argc, char** args) {
 
 	for (i=0; i<HP; i++) {
 		char val[32];
+		if (!cats[i]) continue;
 		sprintf(val, "%u", cats[i]->nentries);
 		qfits_header_mod(cats[i]->header, "NOBJS", val, "Number of objects in this catalog.");
 		if (an_catalog_fix_headers(cats[i]) ||
