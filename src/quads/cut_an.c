@@ -2,6 +2,7 @@
 
 #include "an_catalog.h"
 #include "catalog.h"
+#include "idfile.h"
 #include "healpix.h"
 #include "starutil.h"
 
@@ -166,6 +167,9 @@ int main(int argc, char** args) {
 	for (j=0; j<12; j++) {
 		// for each big healpix, find the set of small healpixes it owns
 		// (including a bit of overlap)
+
+		// go through the healpixes, writing the star locations to the
+		// catalog file, and the star ids to the idfile.
 	}
 
 	free(starlists);

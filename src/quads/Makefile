@@ -103,7 +103,7 @@ usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o heal
 ancatalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-cut_an: cut_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+cut_an: cut_an.o an_catalog.o catalog.o idfile.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest
