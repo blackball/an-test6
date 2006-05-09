@@ -165,7 +165,7 @@ int main(int argc, char** args) {
 			int n, off, BLOCK = 1000;
 			usnob_entry entry[BLOCK];
 			int N = usnob_fits_count_entries(usnob);
-			for (off=0; off<=N/BLOCK; off+=BLOCK) {
+			for (off=0; off<N; off+=BLOCK) {
 				int j, ob;
 				if (off + BLOCK > N)
 					n = N - off;
@@ -227,7 +227,7 @@ int main(int argc, char** args) {
 			int n, off, BLOCK = 1000;
 			tycho2_entry entry[BLOCK];
 			int N = tycho2_fits_count_entries(tycho);
-			for (off=0; off<=N/BLOCK; off+=BLOCK) {
+			for (off=0; off<N; off+=BLOCK) {
 				int ob;
 				if (off + BLOCK > N)
 					n = N - off;
