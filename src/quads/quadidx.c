@@ -14,12 +14,12 @@
 #include "starutil.h"
 #include "fileutil.h"
 #include "quadfile.h"
+#include "qidxfile.h"
 #include "bl.h"
 
 #define OPTIONS "hf:F"
 const char HelpString[] =
-"quadidx -f fname\n"
-"    [-F]   read traditional (non-FITS) format input.";
+"quadidx -f fname\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -30,12 +30,10 @@ int main(int argc, char *argv[]) {
 	char *quadfname = NULL;
 	il** quadlist;
 	quadfile* quads;
-	FILE *idxfid = NULL;
+	qidxfile* qidx;
 	uint q;
 	int i;
 	uint numused;
-	magicval magic = MAGIC_VAL;
-    int fits = 1;
 	
 	if (argc <= 2) {
 		fprintf(stderr, HelpString);
@@ -45,9 +43,6 @@ int main(int argc, char *argv[]) {
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-        case 'F':
-            fits = 0;
-            break;
 		case 'f':
 			idxfname = mk_qidxfn(optarg);
 			quadfname = mk_quadfn(optarg);
@@ -78,9 +73,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	fprintf(stderr, "%u quads, %u stars.\n", quads->numquads, quads->numstars);
-
-	fopenout(idxfname, idxfid);
-	free_fn(idxfname);
 
 	quadlist = malloc(quads->numstars * sizeof(il*));
 	memset(quadlist, 0, quads->numstars * sizeof(il*));
@@ -115,47 +107,39 @@ int main(int argc, char *argv[]) {
 	}
 	printf("%u stars used\n", numused);
 
-	if (fwrite(&magic, sizeof(magic), 1, idxfid) != 1) {
-		printf("Error writing magic: %s\n", strerror(errno));
+	qidx = qidxfile_open_for_writing(idxfname, quads->numstars, quads->numquads);
+	if (!qidx) {
+		fprintf(stderr, "Couldn't open outfile qidx file %s.\n", idxfname);
 		exit(-1);
 	}
-	if (fwrite(&numused, sizeof(numused), 1, idxfid) != 1) {
-		printf("Error writing numused: %s\n", strerror(errno));
-		exit(-1);
-	}
+
 	for (i=0; i<quads->numstars; i++) {
-		int j;
 		uint thisnumq;
 		uint thisstar;
+		uint* stars; // bad variable name - list of quads this star is in.
 		il* list = quadlist[i];
 		if (!list) continue;
 		thisnumq = (uint)il_size(list);
 		thisstar = i;
-		if ((fwrite(&thisstar, sizeof(thisstar), 1, idxfid) != 1) ||
-			(fwrite(&thisnumq, sizeof(thisnumq), 1, idxfid) != 1)) {
-			printf("Error writing qidx entry for star %i: %s\n", i,
-				   strerror(errno));
-			exit(-1);
-		}
-		for (j=0; j<thisnumq; j++) {
-			int kk;
-			kk = il_get(list, j);
-			if (fwrite(&kk, sizeof(kk), 1, idxfid) != 1) {
-				printf("Error writing qidx quads for star %i: %s\n",
-					   i, strerror(errno));
-				exit(-1);
-			}
-		}
+
+		stars = malloc(thisnumq * sizeof(uint));
+		il_copy(list, 0, thisnumq, (int*)stars);
+
+		qidxfile_write_star(qidx,  stars, thisnumq);
+
+		free(stars);
 		il_free(list);
 		quadlist[i] = NULL;
 	}
 	free(quadlist);
-	
 	quadfile_close(quads);
-	fclose(idxfid);
+	if (qidxfile_close(qidx)) {
+		fprintf(stderr, "Failed to close qidx file.\n");
+		exit(-1);
+	}
+	free_fn(idxfname);
 
 	fprintf(stderr, "  done.\n");
-
 	return 0;
 }
 
