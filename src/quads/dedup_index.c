@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     } else {
         codeinfname = mk_codefn(infname);
     }
-    codesin = codefile_open(codeinfname, fitsin, 0);
+    codesin = codefile_open(codeinfname, 0);
     free_fn(codeinfname);
     if (!codesin) {
         fprintf(stderr, "Couldn't read codefile.\n");
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
         exit(-1);
     }
-    codesout = codefile_open_for_writing(codeoutfname, fitsout);
+    codesout = codefile_open_for_writing(codeoutfname);
     if (!codesout) {
         fprintf(stderr, "Couldn't open output codes file %s: %s\n", codeoutfname, strerror(errno));
         exit(-1);
@@ -222,7 +222,6 @@ int main(int argc, char *argv[]) {
 	}
 
     // fix .quad file header...
-    quadsout->numquads = quadsin->numquads - il_size(duplicates);
     quadsout->numstars = quadsin->numstars;
     quadsout->index_scale = quadsin->index_scale;
     quadsout->index_scale_lower = quadsin->index_scale_lower;
@@ -233,7 +232,6 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    codesout->numcodes = codesin->numcodes - il_size(duplicates);
     codesout->numstars = codesin->numstars;
     codesout->index_scale = codesin->index_scale;
     codesout->index_scale_lower = codesin->index_scale_lower;

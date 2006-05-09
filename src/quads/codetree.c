@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Reading codes...");
     fflush(stderr);
 
-    codes = codefile_open(codefname, fitsin, 1);
+    codes = codefile_open(codefname, 1);
     free_fn(codefname);
     if (!codes) {
         exit(-1);

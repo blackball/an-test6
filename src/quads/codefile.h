@@ -15,10 +15,7 @@ struct codefile {
 	// lower bound
 	double index_scale_lower;
 
-    // FITS format?
-    int fits;
-
-    // when reading:
+	// when reading:
 	void*  mmap_code;
 	size_t mmap_code_size;
 	double* codearray;
@@ -35,9 +32,9 @@ int codefile_close(codefile* qf);
 void codefile_get_code(codefile* qf, uint codeid,
                        double* cx, double* cy, double* dx, double* dy);
 
-codefile* codefile_open(char* codefname, int fits, int modifiable);
+codefile* codefile_open(char* codefname, int modifiable);
 
-codefile* codefile_open_for_writing(char* codefname, int fits);
+codefile* codefile_open_for_writing(char* codefname);
 
 int codefile_write_code(codefile* qf, double cx, double cy, double dx, double dy);
 

@@ -570,7 +570,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
         exit(-1);
     }
-    codes = codefile_open_for_writing(codefname, fitsout);
+    codes = codefile_open_for_writing(codefname);
 
 	free_fn(quadfname);
 	free_fn(codefname);
