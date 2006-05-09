@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
 	unsigned long int saturated=0;
 	catalog* cat;
 	char* basename = NULL;
+	char* catfname;
 	int argidx, argchar;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -116,7 +117,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, help);
 		return 1;
 	}
-	cat = catalog_open(basename, 0);
+	catfname = mk_catfn(basename);
+	cat = catalog_open(catfname, 0, 0);
 	if (!cat) {
 		fprintf(stderr, "Couldn't open catalog.\n");
 		return 1;
