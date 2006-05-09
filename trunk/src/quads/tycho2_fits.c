@@ -119,11 +119,13 @@ int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 				entries[i].hipparcos_star         = (flags >> 2) & 0x1;
 
 			}
+			free(rawdata);
 			continue;
 		}
 		if (c == TYCHO2_CCDM_INDEX) {
 			memcpy(entries[i].hip_ccdm, rawdata, 3);
 			entries[i].hip_ccdm[3] = '\0';
+			free(rawdata);
 			continue;
 		}
 

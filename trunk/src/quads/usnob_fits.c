@@ -110,6 +110,7 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 				entries[i].motion_catalog    = (flags >> 6) & 0x1;
 				entries[i].ys4               = (flags >> 5) & 0x1;
 			}
+			free(rawdata);
 			continue;
 		}
 
