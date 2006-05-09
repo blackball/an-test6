@@ -138,6 +138,7 @@ int main(int argc, char** args) {
 
 	// sort the stars within each fine healpix.
 	for (i=0; i<HP; i++) {
+		printf("big healpix %i has %i stars.\n", i, bl_size(starlists[i]));
 		if (bl_size(starlists[i]) == 0)
 			continue;
 		bl_sort(starlists[i], sort_stardata_mag);
