@@ -112,6 +112,8 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Error reading %i AN catalog entries.\n", n);
 				exit(-1);
 			}
+			off += n;
+
 			for (i=0; i<n; i++) {
 				hp = radectohealpix_nside(deg2rad(an[i].ra), deg2rad(an[i].dec), Nside);
 
