@@ -173,6 +173,11 @@ int main(int argc, char** args) {
 				else
 					n = BLOCK;
 
+				if (off % 10000 == 0) {
+					printf(".");
+					fflush(stdout);
+				}
+
 				if (usnob_fits_read_entries(usnob, off, n, entry)) {
 					fprintf(stderr, "Failed to read USNO-B entries.\n");
 					exit(-1);
@@ -223,6 +228,7 @@ int main(int argc, char** args) {
 				}
 			}
 			usnob_fits_close(usnob);
+			printf("\n");
 
 		} else if (tycho) {
 			int n, off, BLOCK = 1000;
@@ -236,13 +242,18 @@ int main(int argc, char** args) {
 				else
 					n = BLOCK;
 
+				if (off % 10000 == 0) {
+					printf(".");
+					fflush(stdout);
+				}
+
 				if (tycho2_fits_read_entries(tycho, off, n, entry)) {
 					fprintf(stderr, "Failed to read USNO-B entries.\n");
 					exit(-1);
 				}
 
 				for (i=0; i<n; i++) {
-					memset(an, 0, sizeof(an));
+					memset(&an, 0, sizeof(an));
 
 					an.ra = entry[i].RA;
 					an.dec = entry[i].DEC;
@@ -296,6 +307,7 @@ int main(int argc, char** args) {
 				}
 			}
 			tycho2_fits_close(tycho);
+			printf("\n");
 		}
 	}
 
