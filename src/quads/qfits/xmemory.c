@@ -3,7 +3,7 @@
   @file     xmemory.c
   @author   Nicolas Devillard
   @date     Oct 2000
-  @version  $Revision: 1.2 $
+  @version  $Revision: 1.3 $
   @brief    POSIX-compatible extended memory handling.
 
   xmemory is a small and efficient module offering memory extension 
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: xmemory.c,v 1.2 2006/05/09 13:56:06 dlang Exp $
+    $Id: xmemory.c,v 1.3 2006/05/09 13:59:11 dlang Exp $
     $Author: dlang $
-    $Date: 2006/05/09 13:56:06 $
-    $Revision: 1.2 $
+    $Date: 2006/05/09 13:59:11 $
+    $Revision: 1.3 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -66,7 +66,7 @@
   2   Fully use the xmemory functions
 */
 #ifndef XMEMORY_MODE
-#define XMEMORY_MODE        2
+#define XMEMORY_MODE        0
 #endif
 
 /** Initial number of entries in memory table */
