@@ -28,6 +28,7 @@ void print_help(char* progname) {
 int main(int argc, char *argv[]) {
 	int argchar;
 	char* basefname = NULL;
+	char* catfname;
 	catalog* cat = NULL;
 	bool printout = FALSE;
 
@@ -51,11 +52,13 @@ int main(int argc, char *argv[]) {
 		exit(-1);
     }
 
-	cat = catalog_open(basefname, 0);
+	catfname = mk_catfn(basefname);
+	cat = catalog_open(catfname, 0, 0);
 	if (!cat) {
 		fprintf(stderr, "Couldn't read catalog.\n");
 		exit(-1);
 	}
+	free_fn(catfname);
 
     fprintf(stderr, "Got %u stars.\n"
 			"Limits RA=[%g, %g] DEC=[%g, %g] degrees.\n",

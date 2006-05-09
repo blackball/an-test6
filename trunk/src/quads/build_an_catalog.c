@@ -213,7 +213,7 @@ int main(int argc, char** args) {
 
 		} else if (tycho) {
 			tycho2_entry entry;
-			int N = usnob_fits_count_entries(usnob);
+			int N = tycho2_fits_count_entries(tycho);
 			for (i=0; i<N; i++) {
 				int ob;
 				tycho2_fits_read_entries(tycho, i, 1, &entry);

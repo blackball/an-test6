@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "Reading star catalogue...");
-    cat = catalog_open_file(catfname, 1);
+    cat = catalog_open(catfname, 0, 1);
     free_fn(catfname);
     if (!cat) {
         fprintf(stderr, "Couldn't read catalogue.\n");

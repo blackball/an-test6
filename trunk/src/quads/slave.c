@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
 		// Read .objs file...
-		cat = catalog_open(catfname, 0);
+		cat = catalog_open(catfname, 0, 0);
 		if (!cat) {
 			fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
 			exit(-1);
@@ -345,7 +345,7 @@ int read_parameters() {
 			char* fname = nextword;
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
-			catfname = strdup(fname);
+			catfname = mk_catfn(fname);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);

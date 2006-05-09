@@ -74,6 +74,8 @@ int bl_insert_sorted(bl* list, void* data, int (*compare)(const void* v1, const 
 int bl_insert_unique_sorted(bl* list, void* data,
                             int (*compare)(const void* v1, const void* v2));
 
+void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2));
+
 // Copies the nth element into the destination location.
 void  bl_get(bl* list, int n, void* dest);
 void  bl_print_structure(bl* list);

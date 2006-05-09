@@ -94,10 +94,12 @@ int main(int argc, char *argv[])
 	}
 
 	if (whichset) {
-		cat = catalog_open(basefname, 0);
+		char* catfname = mk_catfn(basefname);
+		cat = catalog_open(catfname, 0, 0);
 		if (!cat) {
 			fprintf(stderr, "ERROR: couldn't open catalog");
 		}
+		free_fn(catfname);
 	}
 
 	if (fits) {

@@ -475,6 +475,7 @@ int main(int argc, char** argv)
 	int argchar;
 	char *quadfname = NULL;
 	char *codefname = NULL;
+	char* catfname;
 	//time_t starttime, endtime;
 	il* pixels;
 	int Nside = 512;
@@ -548,11 +549,13 @@ int main(int argc, char** argv)
 		il_new_existing(pixels + i, intlist_blocksize);
 	}
 
-	cat = catalog_open(basefname, 0);
+	catfname = mk_catfn(basefname);
+	cat = catalog_open(catfname, 0, 0);
 	if (!cat) {
-		fprintf(stderr, "Failed to open catalog %s\n", basefname);
+		fprintf(stderr, "Failed to open catalog file %s\n", catfname);
 		exit( -1);
 	}
+	free_fn(catfname);
 
     if (fitsout) {
         quadfname = mk_fits_quadfn(optarg);

@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "            writing results to %s\n", outfname);
 	inplace = (strcmp(catfname, outfname) == 0);
 
-	cat = catalog_open_file(catfname, 0);
+	cat = catalog_open(catfname, 0, 0);
 	if (!cat) {
 		fprintf(stderr, "Couldn't open catalog.\n");
 		exit(-1);
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	if (inplace) {
 		res = catalog_rewrite_header(cat);
 	} else {
-		res = catalog_write_to_file(cat, outfname);
+		res = catalog_write_to_file(cat, outfname, 0);
 	}
 	if (res) {
 		fprintf(stderr, "Couldn't write catalog to file %s.\n", outfname);

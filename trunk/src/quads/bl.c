@@ -8,6 +8,10 @@
 static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
 bl_node* bl_new_node(bl* list);
 
+void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2)) {
+	printf("bl_sort: implement me!\n");
+	assert(0);
+}
 
 void bl_split(bl* src, bl* dest, int split) {
     bl_node* node;

@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
 	catalog_compute_radecminmax(&cat);
 
-	if (catalog_write_to_file(&cat, fname)) {
+	if (catalog_write_to_file(&cat, fname, 0)) {
 		fprintf(stderr, "Failed to write catalog.\n");
 		free(cat.stars);
 		exit(-1);
