@@ -30,9 +30,6 @@
 #define mk_qlistfn(s)  mk_filename(s,".qds0")
 #define mk_rdlsfn(s)  mk_filename(s,".rdls")
 
-uint read_quadidx(FILE *fid, uint **starlist, uint **starnumq,
-                  uint ***starquads);
-
 char *mk_filename(const char *basename, const char *extension);
 
 typedef unsigned short int magicval;

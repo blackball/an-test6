@@ -1,9 +1,10 @@
 #include "starutil.h"
 #include "fileutil.h"
+#include "qidxfile.h"
 
 #define OPTIONS "hf:"
 const char HelpString[] =
-    "findquad -f fname \n";
+"findquad -f fname \n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -29,13 +30,9 @@ signed int compare_sidx(const void *x, const void *y)
 int main(int argc, char *argv[])
 {
 	int argidx, argchar; 
-        int jj;
-	uint ii, numstars;
-	FILE *qidxfid = NULL; 
-	uint *starlist, *matchstar;
-	uint *starnumq;
-	uint **starquads;
-        char scanrez = 1;
+	uint numstars;
+	char scanrez = 1;
+	qidxfile* qidx;
 
 	if (argc <= 3) {
 		fprintf(stderr, HelpString);
@@ -65,38 +62,37 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "findquad: looking up quads in %s\n", qidxfname);
 
-        fprintf(stderr, "  Reading quad index...");
-        fflush(stderr);
-        fopenin(qidxfname, qidxfid);
-        numstars = read_quadidx(qidxfid, &starlist, &starnumq, &starquads);
-        if (numstars == 0) {
-                fprintf(stderr, "ERROR (findquad) -- out of memory\n");
-                return 2;
-        }
-        fprintf(stderr, "  (%u unique stars used in quads)\n", numstars);
-        fclose(qidxfid);
+	fprintf(stderr, "  Reading quad index...");
+	fflush(stderr);
 
-        while (!feof(stdin) && scanrez) {
-                scanrez = fscanf(stdin, "%u", &thestar);
-                matchstar = (uint *)bsearch(&thestar, starlist, numstars,
-                                            sizeof(uint *), compare_sidx);
-                if (matchstar == NULL)
-                        fprintf(stdout, "[]\n");
-                else {
-                        ii = (uint)(matchstar - starlist);
-                        fprintf(stdout, "[");
-                        for (jj = 0;jj < starnumq[ii];jj++)
-                                fprintf(stdout, "%u, ", *(starquads[ii] + jj));
-                        fprintf(stdout, "]\n");
-                }
-                fflush(stdout);
-                for (ii = 0;ii < numstars; ii++)
-                        free(starquads[ii]);
-        }
+	qidx = qidxfile_open(qidxfname, 0);
+	if (!qidx) {
+		fprintf(stderr, "Failed to open qidxfile %s\n.", qidxfname);
+		exit(-1);
+	}
+	numstars = qidx->numstars;
+	fprintf(stderr, "  (%u stars)\n", numstars);
 
-        free(starquads);
-        free(starnumq);
-        free(starlist);
+	while (!feof(stdin) && scanrez) {
+		uint* quads;
+		uint nquads;
+		uint i;
+
+		scanrez = fscanf(stdin, "%u", &thestar);
+
+		if (qidxfile_get_quads(qidx, thestar, &quads, &nquads)) {
+			fprintf(stderr, "Couldn't get quads for star %u.\n", thestar);
+			fprintf(stdout, "[]\n");
+			continue;
+		}
+		fprintf(stdout, "[");
+		for (i=0; i<nquads; i++)
+			fprintf(stdout, "%u, ", quads[i]);
+		fprintf(stdout, "]\n");
+		fflush(stdout);
+	}
+
+	qidxfile_close(qidx);
 	free_fn(qidxfname);
 	return 0;
 }
