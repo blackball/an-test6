@@ -49,7 +49,7 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
-		case 'n':
+		case 'N':
 			Nside = atoi(optarg);
 			break;
 		case 'o':
