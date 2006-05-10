@@ -17,7 +17,7 @@
 #include "usnob_fits.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "ho:"
+#define OPTIONS "ho:N:"
 
 void print_help(char* progname) {
     printf("usage:\n"
