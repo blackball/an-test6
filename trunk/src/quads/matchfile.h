@@ -1,5 +1,5 @@
-#ifndef MATCHFILE_H_
-#define MATCHFILE_H_
+#ifndef MATCHFILE_H
+#define MATCHFILE_H
 
 #include <stdio.h>
 #include <errno.h>

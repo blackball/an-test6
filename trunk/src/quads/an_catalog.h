@@ -35,7 +35,7 @@ struct an_entry {
 	float sigma_dec;
 	float sigma_motion_ra;
 	float sigma_motion_dec;
-	int nobs;
+	unsigned char nobs;
 	an_observation obs[AN_N_OBSERVATIONS];
 };
 typedef struct an_entry an_entry;
