@@ -2,7 +2,9 @@
 #define XYLIST_H
 
 #include <stdio.h>
+
 #include "starutil.h"
+#include "qfits.h"
 #include "bl.h"
 
 typedef dl xy;
@@ -16,13 +18,51 @@ typedef dl xy;
 #define xy_setx(x,i,v) dl_set(x,2*(i),v)
 #define xy_sety(x,i,v) dl_set(x,2*(i)+1,v)
 
-typedef pl xyarray;
-#define mk_xyarray(n)         pl_new(n)
-#define free_xyarray(l)       pl_free(l)
-#define xya_ref(l, i)    (xy*)pl_get((l), (i))
-#define xya_set(l, i, v)      pl_set((l), (i), (v))
-#define xya_size(l)           pl_size(l)
+/*
+  One table per field.
+  One column.
+  One row per entry.
+*/
+struct xylist {
+	char* fn;
+	int nfields;
+	int parity;
 
-xyarray *readxy(FILE *fid, char ParityFlip);
+	// field we're currently reading/writing
+	uint field;
+	qfits_table* table;
+	int colnum;
+
+	// writing:
+	qfits_header* header;
+	FILE* fid;
+	off_t data_offset;
+	off_t table_offset;
+};
+typedef struct xylist xylist;
+
+xylist* xylist_open(char* fn);
+
+xy* xylist_get_field(xylist* ls, uint field);
+
+int xylist_n_entries(xylist* ls, uint field);
+
+int xylist_read_entries(xylist* ls, uint field,
+						uint offset, uint n,
+						double* vals);
+
+xylist* xylist_open_for_writing(char* fn);
+
+int xylist_write_header(xylist* ls);
+
+int xylist_fix_header(xylist* ls);
+
+int xylist_write_new_field(xylist* ls);
+
+int xylist_write_entries(xylist* ls, double* vals, uint nvals);
+
+int xylist_fix_field(xylist* ls);
+
+void xylist_close(xylist* ls);
 
 #endif

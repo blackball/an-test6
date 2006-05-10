@@ -104,8 +104,8 @@ double inverse_3by3(double *matrix)
 	a33 = matrix[8];
 
 	det = a11 * ( a22 * a33 - a23 * a32 ) +
-	      a12 * ( a23 * a31 - a21 * a33 ) +
-	      a13 * ( a21 * a32 - a22 * a31 );
+		a12 * ( a23 * a31 - a21 * a33 ) +
+		a13 * ( a21 * a32 - a22 * a31 );
 
 	if (det == 0.0) {
 		return det;
@@ -265,25 +265,25 @@ double *fit_transform(xy *ABCDpix, char order,
 	// set Q to be the 3x3 matrix X*R
 
 	matQ[0] = A[0] * matR[0] + B[0] * matR[3] +
-	          C[0] * matR[6] + D[0] * matR[9];
+		C[0] * matR[6] + D[0] * matR[9];
 	matQ[1] = A[0] * matR[1] + B[0] * matR[4] +
-	          C[0] * matR[7] + D[0] * matR[10];
+		C[0] * matR[7] + D[0] * matR[10];
 	matQ[2] = A[0] * matR[2] + B[0] * matR[5] +
-	          C[0] * matR[8] + D[0] * matR[11];
+		C[0] * matR[8] + D[0] * matR[11];
 
 	matQ[3] = A[1] * matR[0] + B[1] * matR[3] +
-	          C[1] * matR[6] + D[1] * matR[9];
+		C[1] * matR[6] + D[1] * matR[9];
 	matQ[4] = A[1] * matR[1] + B[1] * matR[4] +
-	          C[1] * matR[7] + D[1] * matR[10];
+		C[1] * matR[7] + D[1] * matR[10];
 	matQ[5] = A[1] * matR[2] + B[1] * matR[5] +
-	          C[1] * matR[8] + D[1] * matR[11];
+		C[1] * matR[8] + D[1] * matR[11];
 
 	matQ[6] = A[2] * matR[0] + B[2] * matR[3] +
-	          C[2] * matR[6] + D[2] * matR[9];
+		C[2] * matR[6] + D[2] * matR[9];
 	matQ[7] = A[2] * matR[1] + B[2] * matR[4] +
-	          C[2] * matR[7] + D[2] * matR[10];
+		C[2] * matR[7] + D[2] * matR[10];
 	matQ[8] = A[2] * matR[2] + B[2] * matR[5] +
-		      C[2] * matR[8] + D[2] * matR[11];
+		C[2] * matR[8] + D[2] * matR[11];
 
 	{
 		double* copyQ = (double*)malloc(9 * sizeof(double));

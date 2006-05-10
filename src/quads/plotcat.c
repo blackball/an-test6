@@ -118,12 +118,12 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	catfname = mk_catfn(basename);
-	cat = catalog_open(catfname, 0, 0);
+	cat = catalog_open(catfname, 0);
 	if (!cat) {
 		fprintf(stderr, "Couldn't open catalog.\n");
 		return 1;
 	}
-	numstars = cat->nstars;
+	numstars = cat->numstars;
 
 	projection=calloc(sizeof(double),N*N);
 
