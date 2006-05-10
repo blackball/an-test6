@@ -6,11 +6,93 @@
 #include "bl.h"
 
 static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
-bl_node* bl_new_node(bl* list);
+static bl_node* bl_new_node(bl* list);
+static void bl_free_node(bl_node* node);
+
+static void bl_sort_rec(bl* list, void* pivot,
+						int (*compare)(const void* v1, const void* v2)) {
+	bl* less;
+	bl* equal;
+	bl* greater;
+	int i; //, iless;
+    bl_node* node;
+	bl_node* next;
+
+	less = bl_new(list->blocksize, list->datasize);
+	equal = bl_new(list->blocksize, list->datasize);
+	greater = bl_new(list->blocksize, list->datasize);
+	//iless = 0;
+	for (node=list->head; node;) {
+		char* data = node->data;
+		for (i=0; i<node->N; i++) {
+			int val = compare(data, pivot);
+			if (val < 0) {
+				/*
+				  bl_set(list, iless, data);
+				  iless++;
+				*/
+				bl_append(less, data);
+			} else if (val > 0) {
+				bl_append(greater, data);
+			} else {
+				bl_append(equal, data);
+			}
+			data += list->datasize;
+		}
+		next = node->next;
+		bl_free_node(node);
+		node = next;
+	}
+	list->head = NULL;
+	list->tail = NULL;
+	list->N = 0;
+
+	bl_sort(less, compare);
+	bl_sort(greater, compare);
+
+	if (less->N) {
+		list->head = less->head;
+		list->tail = less->tail;
+		list->N = less->N;
+	}
+	//*iequal = list->N;
+	if (equal->N) {
+		if (list->N) {
+			list->tail->next = equal->head;
+			list->tail = equal->tail;
+		} else {
+			list->head = equal->head;
+			list->tail = equal->tail;
+		}
+		list->N += equal->N;
+	}
+	//*igreater = list->N;
+	if (greater->N) {
+		if (list->N) {
+			list->tail->next = greater->head;
+			list->tail = greater->tail;
+		} else {
+			list->head = greater->head;
+			list->tail = greater->tail;
+		}
+		list->N += greater->N;
+	}
+	free(less);
+	free(equal);
+	free(greater);
+}
 
 void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2)) {
-	printf("bl_sort: implement me!\n");
-	assert(0);
+	int ind;
+	int N = list->N;
+	if (N <= 1)
+		return;
+	//int iequal, igreater;
+	//printf("bl_sort: implement me!\n");
+	// should do median-of-3/5/... to select pivot when N is large.
+	ind = rand() % N;
+	bl_sort_rec(list, bl_access(list, ind), compare);
+	//assert(0);
 }
 
 void bl_split(bl* src, bl* dest, int split) {
@@ -97,13 +179,11 @@ void bl_remove_all(bl* list) {
 	lastnode = NULL;
 	for (n=list->head; n; n=n->next) {
 		if (lastnode)
-			// see new_node - we merge data and node malloc requests, so they don't have
-			// to be freed separately.
-			free(lastnode);
+			bl_free_node(lastnode);
 		lastnode = n;
 	}
 	if (lastnode)
-		free(lastnode);
+		bl_free_node(lastnode);
 	list->head = NULL;
 	list->tail = NULL;
 	list->N = 0;
@@ -118,11 +198,11 @@ void bl_remove_all_but_first(bl* list) {
 	if (list->head) {
 		for (n=list->head->next; n; n=n->next) {
 			if (lastnode)
-				free(lastnode);
+				bl_free_node(lastnode);
 			lastnode = n;
 		}
 		if (lastnode)
-			free(lastnode);
+			bl_free_node(lastnode);
 		list->head->next = NULL;
 		list->head->N = 0;
 		list->tail = list->head;
@@ -155,7 +235,7 @@ static void bl_remove_from_node(bl* list, bl_node* node,
 			}
 			prev->next = node->next;
 		}
-		free(node);
+		bl_free_node(node);
 	} else {
 		int ncopy;
 		// just remove this element...
@@ -257,7 +337,7 @@ void bl_remove_index_range(bl* list, int start, int length) {
 		nskipped += n;
 		todelete = node;
 		node = node->next;
-		free(todelete);
+		bl_free_node(todelete);
 	}
 	if (prev)
 		prev->next = node;
@@ -330,9 +410,12 @@ int bl_size(bl* list) {
 	return bl_count(list);
 }
 
-bl_node* bl_new_node(bl* list) {
-	bl_node* rtn;
+static void bl_free_node(bl_node* node) {
+	free(node);
+}
 
+static bl_node* bl_new_node(bl* list) {
+	bl_node* rtn;
 	// merge the mallocs for the node and its data into one malloc.
 	rtn = malloc(sizeof(bl_node) + list->datasize * list->blocksize);
 	if (!rtn) {
@@ -340,7 +423,6 @@ bl_node* bl_new_node(bl* list) {
 		return NULL;
 	}
 	rtn->data = (char*)rtn + sizeof(bl_node);
-
 	rtn->N = 0;
 	rtn->next = NULL;
 	return rtn;

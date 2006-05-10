@@ -119,7 +119,7 @@ int an_catalog_close(an_catalog* cat) {
 	if (cat->fid) {
 		fits_pad_file(cat->fid);
 		if (fclose(cat->fid)) {
-			fprintf(stderr, "Error closing Tycho-2 FITS file: %s\n", strerror(errno));
+			fprintf(stderr, "Error closing AN FITS file: %s\n", strerror(errno));
 			return -1;
 		}
 	}
