@@ -27,11 +27,18 @@ struct xylist {
 	char* fn;
 	int nfields;
 	int parity;
+	tfits_type xtype;
+	tfits_type ytype;
+	char* xname; // default "X"
+	char* yname; // default "Y"
 
 	// field we're currently reading/writing
 	uint field;
 	qfits_table* table;
-	int colnum;
+
+	// reading
+	int xcol;
+	int ycol;
 
 	// writing:
 	qfits_header* header;
