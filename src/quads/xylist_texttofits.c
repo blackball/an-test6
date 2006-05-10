@@ -1,7 +1,22 @@
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <assert.h>
+
+#include "fileutil.h"
 #include "xylist.h"
 #include "bl.h"
 
-xyarray *readxy(FILE *fid, char ParityFlip);
+#define OPTIONS "h"
+
+void print_help(char* progname) {
+    printf("usage:\n"
+		   "  %s <input-file> <output-file>\n",
+		   progname);
+}
 
 typedef pl xyarray;
 #define mk_xyarray(n)         pl_new(n)
@@ -10,13 +25,89 @@ typedef pl xyarray;
 #define xya_set(l, i, v)      pl_set((l), (i), (v))
 #define xya_size(l)           pl_size(l)
 
-xyarray *readxy(FILE *fid, char ParityFlip)
-{
+xyarray *readxy(char* fn);
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+int main(int argc, char** args) {
+	char* infn = NULL;
+	char* outfn = NULL;
+    int c;
+	xyarray* xya;
+	xylist* ls;
+	int i, N;
+
+    while ((c = getopt(argc, args, OPTIONS)) != -1) {
+        switch (c) {
+		case '?':
+        case 'h':
+			print_help(args[0]);
+			exit(0);
+		}
+    }
+
+	if ((optind+2) < argc) {
+		print_help(args[0]);
+		exit(-1);
+	}
+
+	infn = args[optind];
+	outfn = args[optind + 1];
+
+	if (!infn || !outfn) {
+		print_help(args[0]);
+		exit(-1);
+	}
+
+	printf("input %s, output %s.\n", infn, outfn);
+
+	printf("reading input...\n");
+	xya = readxy(infn);
+	if (!xya)
+		exit(-1);
+
+	ls = xylist_open_for_writing(outfn);
+	if (!ls || xylist_write_header(ls))
+		exit(-1);
+
+	N = xya_size(xya);
+	printf("writing %i fields...\n", N);
+	for (i=0; i<N; i++) {
+		int j, M;
+		xy* list = xya_ref(xya, i);
+		if (!list) {
+			fprintf(stderr, "list %i is null.", i);
+			continue;
+		}
+		xylist_write_new_field(ls);
+		M = xy_size(list);
+		for (j=0; j<M; j++) {
+			double vals[2];
+			vals[0] = xy_refx(list, j);
+			vals[1] = xy_refy(list, j);
+			xylist_write_entries(ls, vals, 1);
+		}
+		xylist_fix_field(ls);
+	}
+	xylist_fix_header(ls);
+	xylist_close(ls);
+
+	return 0;
+}
+
+xyarray *readxy(char* fn) {
 	uint ii, jj, numxy, numfields;
 	magicval magic;
 	xyarray *thepix = NULL;
 	int tmpchar;
+	FILE* fid;
 
+	fid = fopen(fn, "r");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s to read xylist.\n", fn);
+		return NULL;
+	}
 	if (fread(&magic, sizeof(magic), 1, fid) != 1) {
 		fprintf(stderr, "ERROR (readxy) -- bad magic value in field file.\n");
 		return NULL;
@@ -54,16 +145,6 @@ xyarray *readxy(FILE *fid, char ParityFlip)
 			xy_sety(xya_ref(thepix, ii), jj, tmp2);
 		}
 		fscanf(fid, "\n");
-		
-		if (ParityFlip) {
-			xy* xya = xya_ref(thepix, ii);
-			double swaptmp;
-			for (jj = 0;jj < numxy;jj++) {
-				swaptmp = xy_refx(xya, jj);
-				xy_setx(xya, jj, xy_refy(xya, jj));
-				xy_sety(xya, jj, swaptmp);
-			}
-		}
 	}
 	return thepix;
 }

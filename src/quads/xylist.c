@@ -210,7 +210,7 @@ int xylist_write_new_field(xylist* ls) {
 	ls->table->nr = 0;
 	table_header = qfits_table_ext_header_default(ls->table);
 	sprintf(val, "%u", ls->nfields);
-	qfits_header_add(ls->header, "FIELDNUM", val, "This table is field number...", NULL);
+	qfits_header_add(table_header, "FIELDNUM", val, "This table is field number...", NULL);
 	qfits_header_dump(table_header, ls->fid);
 	qfits_header_destroy(table_header);
 	ls->nfields++;
@@ -236,7 +236,7 @@ int xylist_fix_field(xylist* ls) {
 	fseeko(ls->fid, ls->table_offset, SEEK_SET);
 	table_header = qfits_table_ext_header_default(ls->table);
 	sprintf(val, "%u", ls->nfields - 1);
-	qfits_header_add(ls->header, "FIELDNUM", val, "This table is field number...", NULL);
+	qfits_header_add(table_header, "FIELDNUM", val, "This table is field number...", NULL);
 	qfits_header_dump(table_header, ls->fid);
 	qfits_header_destroy(table_header);
 	fseeko(ls->fid, offset, SEEK_SET);

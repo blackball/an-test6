@@ -1076,6 +1076,14 @@ void  pl_remove_all(pl* list) {
 }
 
 void pl_set(pl* list, int index, void* data) {
+	int i;
+	int nadd = (index+1) - list->N;
+	if (nadd > 0) {
+		// enlarge the list to hold 'nadd' more entries.
+		for (i=0; i<nadd; i++) {
+			pl_append(list, NULL);
+		}
+	}
 	bl_set(list, index, &data);
 }
 
@@ -1158,6 +1166,14 @@ double dl_get(dl* list, int n) {
 }
 
 void dl_set(dl* list, int index, double value) {
+	int i;
+	int nadd = (index+1) - list->N;
+	if (nadd > 0) {
+		// enlarge the list to hold 'nadd' more entries.
+		for (i=0; i<nadd; i++) {
+			dl_append(list, 0.0);
+		}
+	}
 	bl_set(list, index, &value);
 }
 
