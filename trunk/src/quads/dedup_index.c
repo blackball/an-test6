@@ -18,11 +18,9 @@
 #include "codefile.h"
 #include "quadfile.h"
 
-#define OPTIONS "hf:o:FG"
+#define OPTIONS "hf:o:"
 const char HelpString[] =
-"dedup_index -f <input-prefix> -o <output-prefix>\n"
-"    [-F] : input is in traditional (non-FITS) format\n"
-"    [-G] : write output in traditional (non-FITS) format\n";
+"dedup_index -f <input-prefix> -o <output-prefix>\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -65,17 +63,9 @@ int main(int argc, char *argv[]) {
 
 	int nextskip;
 	int skipind;
-	int fitsin = 1;
-	int fitsout = 1;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'F':
-			fitsin = 0;
-			break;
-		case 'G':
-			fitsout = 0;
-			break;
 		case 'f':
 			infname = optarg;
 			break;
@@ -105,11 +95,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Reading codes...");
     fflush(stderr);
 
-    if (fitsin) {
-        codeinfname = mk_fits_codefn(infname);
-    } else {
-        codeinfname = mk_codefn(infname);
-    }
+	codeinfname = mk_codefn(infname);
     codesin = codefile_open(codeinfname, 0);
     free_fn(codeinfname);
     if (!codesin) {
@@ -118,11 +104,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "Reading quads...");
-	if (fitsin) {
-		quadinfname = mk_fits_quadfn(infname);
-	} else {
-		quadinfname = mk_quadfn(infname);
-	}
+	quadinfname = mk_quadfn(infname);
 	quadsin = quadfile_open(quadinfname, 0);
     if (!quadsin) {
         fprintf(stderr, "Couldn't read quads input file %s\n", quadinfname);
@@ -137,13 +119,8 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "%i stars are used in %i quads.\n", codesin->numstars, codesin->numcodes);
 
-	if (fitsout) {
-		quadoutfname = mk_fits_quadfn(outfname);
-        codeoutfname = mk_fits_codefn(outfname);
-	} else {
-		quadoutfname = mk_quadfn(outfname);
-        codeoutfname = mk_codefn(outfname);
-	}
+	quadoutfname = mk_quadfn(outfname);
+	codeoutfname = mk_codefn(outfname);
     quadsout = quadfile_open_for_writing(quadoutfname);
     if (!quadsout) {
         fprintf(stderr, "Couldn't open output quads file %s: %s\n", quadoutfname, strerror(errno));

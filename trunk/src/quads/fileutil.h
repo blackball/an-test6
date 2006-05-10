@@ -16,12 +16,9 @@
 #define mk_catfn(s)    mk_filename(s,".objs")
 #define mk_fits_streefn(s)  mk_filename(s,".skdt.fits")
 #define mk_streefn(s)  mk_filename(s,".skdt")
-#define mk_fits_ctreefn(s)  mk_filename(s,".ckdt.fits")
-#define mk_ctreefn(s)  mk_filename(s,".ckdt")
-#define mk_quadfn(s)   mk_filename(s,".quad")
-#define mk_fits_quadfn(s)   mk_filename(s,".quad.fits")
-#define mk_codefn(s)   mk_filename(s,".code")
-#define mk_fits_codefn(s)   mk_filename(s,".code.fits")
+#define mk_ctreefn(s)  mk_filename(s,".ckdt.fits")
+#define mk_quadfn(s)   mk_filename(s,".quad.fits")
+#define mk_codefn(s)   mk_filename(s,".code.fits")
 #define mk_qidxfn(s)   mk_filename(s,".qidx.fits")
 #define mk_hitfn(s)    mk_filename(s,".hits")
 #define mk_fieldfn(s)  mk_filename(s,".xyls")
@@ -31,9 +28,5 @@
 #define mk_rdlsfn(s)  mk_filename(s,".rdls")
 
 char *mk_filename(const char *basename, const char *extension);
-
-typedef unsigned short int magicval;
-#define MAGIC_VAL 0xFF00
-#define ASCII_VAL 0x754E
 
 #endif

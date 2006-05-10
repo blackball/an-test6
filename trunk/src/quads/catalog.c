@@ -68,6 +68,11 @@ int catalog_write_to_file(catalog* cat, char* fn)
 	return 0;
 }
 
+int catalog_write_header(catalog* cat)
+{
+	return catalog_fix_header(cat);
+}
+
 int catalog_fix_header(catalog* cat)
 {
 	off_t offset;

@@ -17,11 +17,9 @@
 #include "kdtree_fits_io.h"
 #include "fileutil.h"
 
-#define OPTIONS "hR:f:FG"
+#define OPTIONS "hR:f:"
 const char HelpString[] =
 "codetree -f fname [-R KD_RMIN]\n"
-"   [-F]   read traditional (non-FITS) input\n"
-"   [-G]   write traditional (non-FITS) output\n"
 "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
 
 extern char *optarg;
@@ -32,8 +30,6 @@ int main(int argc, char *argv[]) {
 	int Nleaf = 25;
     kdtree_t *codekd = NULL;
     int levels;
-    bool fitsin = TRUE;
-	bool fitsout = TRUE;
     char* basename = NULL;
     char* treefname;
     char* codefname;
@@ -47,12 +43,6 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
-        case 'F':
-            fitsin = FALSE;
-            break;
-        case 'G':
-            fitsout = FALSE;
-            break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
             break;
@@ -79,15 +69,8 @@ int main(int argc, char *argv[]) {
         return (OPT_ERR);
     }
 
-	if (fitsout)
-		treefname = mk_fits_ctreefn(basename);
-	else
-		treefname = mk_ctreefn(basename);
-
-    if (fitsin)
-        codefname = mk_fits_codefn(basename);
-	else
-        codefname = mk_codefn(basename);
+	treefname = mk_ctreefn(basename);
+	codefname = mk_codefn(basename);
 
     fprintf(stderr, "codetree: building KD tree for %s\n", codefname);
     fprintf(stderr, "       will write KD tree file %s\n", treefname);
@@ -117,10 +100,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
 
-	if (fitsout)
-		rtn = kdtree_fits_write_file(codekd, treefname);
-	else
-		rtn = kdtree_write_file(codekd, treefname);
+	rtn = kdtree_fits_write_file(codekd, treefname);
     free_fn(treefname);
 	if (rtn) {
         fprintf(stderr, "Couldn't write code kdtree.\n");

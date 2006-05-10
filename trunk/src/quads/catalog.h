@@ -36,7 +36,9 @@ void catalog_close(catalog* cat);
 
 void catalog_compute_radecminmax(catalog* cat);
 
-int catalog_rewrite_header(catalog* cat);
+int catalog_write_header(catalog* cat);
+
+int catalog_fix_header(catalog* cat);
 
 int catalog_write_to_file(catalog* cat, char* fn);
 
