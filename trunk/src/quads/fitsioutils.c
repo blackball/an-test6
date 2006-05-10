@@ -32,6 +32,42 @@ int fits_pad_file(FILE* fid) {
 	return 0;
 }
 
+int fits_add_column(qfits_table* table, int column, tfits_type type,
+					int ncopies, char* units, char* label) {
+	int atomsize;
+	int colsize;
+	switch (type) {
+	case TFITS_BIN_TYPE_A:
+	case TFITS_BIN_TYPE_X:
+	case TFITS_BIN_TYPE_L:
+	case TFITS_BIN_TYPE_B:
+		atomsize = 1;
+		break;
+	case TFITS_BIN_TYPE_I:
+		atomsize = 2;
+		break;
+	case TFITS_BIN_TYPE_J:
+	case TFITS_BIN_TYPE_E:
+		atomsize = 4;
+		break;
+	case TFITS_BIN_TYPE_K:
+	case TFITS_BIN_TYPE_D:
+		atomsize = 8;
+		break;
+	default:
+		fprintf(stderr, "Unknown atom size for type %i.\n", type);
+		return -1;
+	}
+	if (type == TFITS_BIN_TYPE_X)
+		// bit field: convert bits to bytes, rounding up.
+		ncopies = (ncopies + 7) / 8;
+	colsize = atomsize * ncopies;
+	qfits_col_fill(table->col + column, ncopies, 0, atomsize, type, label, units,
+				   "", "", 0, 0, 0, 0, table->tab_w);
+	table->tab_w += colsize;
+	return 0;
+}
+
 static inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
 	unsigned char tmp;
 	tmp = *c1;

@@ -71,6 +71,8 @@ int main(int argc, char** args) {
 
 	HP = 12 * Nside * Nside;
 
+	printf("Nside = %i, using %i healpixes.\n", Nside, HP);
+
 	usnobs = malloc(HP * sizeof(usnob_fits*));
 	memset(usnobs, 0, HP * sizeof(usnob_fits*));
 

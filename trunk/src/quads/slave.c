@@ -34,7 +34,7 @@ void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
 }
 
-void solve_fields(xyarray *thefields,
+void solve_fields(xylist *thefields,
 				  kdtree_t *codekd);
 
 int read_parameters();
@@ -85,10 +85,9 @@ char* get_pathname(char* fname) {
 }
 
 int main(int argc, char *argv[]) {
-    FILE *fieldfid = NULL;
     uint numfields;
-    xyarray *thefields = NULL;
-    kdtree_t *codekd = NULL;
+	xylist* xy;
+    kdtree_t *codekd;
 	char* progname = argv[0];
 	int i;
 	char* path;
@@ -169,26 +168,22 @@ int main(int argc, char *argv[]) {
 		// Read .xyls file...
 		fprintf(stderr, "Reading fields file %s...", fieldfname);
 		fflush(stderr);
-		fopenin(fieldfname, fieldfid);
-		thefields = readxy(fieldfid, parity);
-		fclose(fieldfid);
-		if (!thefields)
+		xy = xylist_open(fieldfname);
+		if (!xy) {
+			fprintf(stderr, "Failed to read xylist.\n");
 			exit(-1);
-		//numfields = (uint)thefields->size;
-		numfields = xya_size(thefields);
+		}
+		numfields = xy->nfields;
 		fprintf(stderr, "got %u fields.\n", numfields);
-		if (parity)
+		if (parity) {
 			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
+			xy->parity = 1;
+		}
 
 		// Read .ckdt2 file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
 		fflush(stderr);
-        // HACK - if the filename ends in .fits, assume it's in FITS format
-        if (strcmp(treefname + strlen(treefname) - 5, ".fits") == 0) {
-            codekd = kdtree_fits_read_file(treefname);
-        } else {
-            codekd = kdtree_read_file(treefname);
-        }
+		codekd = kdtree_fits_read_file(treefname);
 		if (!codekd)
 			exit(-1);
 		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
@@ -196,13 +191,7 @@ int main(int argc, char *argv[]) {
 
 		// Read .quad file...
 		fprintf(stderr, "Reading quads file %s...\n", quadfname);
-        // HACK - if the filename ends in .fits, assume it's in FITS format
-        if (strcmp(quadfname + strlen(quadfname) - 5, ".fits") == 0) {
-            fprintf(stderr, "Assume quads file is in FITS format.\n");
-            quads = quadfile_open(quadfname, 0);
-        } else {
-            quads = quadfile_open(quadfname, 0);
-        }
+		quads = quadfile_open(quadfname, 0);
 		free_fn(quadfname);
 		if (!quads) {
 			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
@@ -252,7 +241,7 @@ int main(int argc, char *argv[]) {
 			agreesizehist[i] = 0;
 
 		// Do it!
-		solve_fields(thefields, codekd);
+		solve_fields(xy, codekd);
 
 		if (donefname) {
 			FILE* batchfid = NULL;
@@ -261,7 +250,7 @@ int main(int argc, char *argv[]) {
 			fclose(batchfid);
 		}
 
-		free_xyarray(thefields);
+		xylist_close(xy);
 		fclose(matchfid);
 		free_fn(fieldfname);
 		free_fn(treefname);
@@ -432,7 +421,7 @@ int handlehit(struct solver_params* p, MatchObj* mo) {
 	return 1;
 }
 
-void solve_fields(xyarray *thefields, kdtree_t* codekd) {
+void solve_fields(xylist *thefields, kdtree_t* codekd) {
 	int i;
 	solver_params solver;
 	double last_utime, last_stime;
@@ -462,7 +451,7 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 		fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
 
-	nfields = xya_size(thefields);
+	nfields = thefields->nfields;
 
 	for (i=0; i<il_size(fieldlist); i++) {
 		xy *thisfield;
@@ -474,9 +463,10 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			continue;
 		}
-		thisfield = xya_ref(thefields, fieldnum);
+
+		thisfield = xylist_get_field(thefields, fieldnum);
 		if (!thisfield) {
-			fprintf(stderr, "Field %i is null.\n", fieldnum);
+			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
 			continue;
 		}
 
@@ -494,6 +484,9 @@ void solve_fields(xyarray *thefields, kdtree_t* codekd) {
 
 		// The real thing
 		solve_field(&solver);
+
+		free_xy(thisfield);
+
 
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);

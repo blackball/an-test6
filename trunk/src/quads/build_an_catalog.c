@@ -105,6 +105,7 @@ int main(int argc, char** args) {
 	}
 
 	qfits_err_register(qfits_dispfn);
+	qfits_err_statset(1);
 
 	HP = 12 * Nside * Nside;
 

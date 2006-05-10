@@ -26,6 +26,8 @@ void fits_add_double_size(qfits_header* header);
 
 int fits_find_table_column(char* fn, char* colname, int* start, int* size);
 
+int fits_add_column(qfits_table* table, int column, tfits_type type,
+					int ncopies, char* units, char* label);
 
 // write single column fields:
 int fits_write_data_A(FILE* fid, unsigned char value);
