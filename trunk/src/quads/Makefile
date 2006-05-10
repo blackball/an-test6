@@ -7,7 +7,7 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-#CFLAGS	+= -O2
+CFLAGS	+= -O2
 # to turn off asserts:
 #CFLAGS += -DNDEBUG
 #CFLAGS += -Werror
@@ -74,13 +74,9 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-all: usnobprint \
-	usnobtofits \
-	tycho2tofits \
-	ancatalog \
-	cut_an \
-	xylist_texttofits \
-	$(EXECS) $(SOLVER_EXECS) 
+EXTRA_EXECS = usnobprint usnobtofits tycho2tofits ancatalog cut_an xylist_texttofits
+
+all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
@@ -124,10 +120,10 @@ deps: $(DEPS)
 	$(CC) -MM $(CFLAGS) -c $< > $@
 
 allclean:
-	rm -f KD/*.o *.o $(EXECS) *~ $(DEPS) deps
+	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) *~ $(DEPS) deps
 
 clean:
-	rm -f $(EXECS) $(MY_OBJ) $(OBJ) $(DEPS) deps
+	rm -f $(EXECS) $(SOLVER_EXECS) $(EXTRA_EXECS) $(MY_OBJ) $(OBJ) $(DEPS) deps
 
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
