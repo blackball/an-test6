@@ -18,15 +18,13 @@
 #include "catalog.h"
 #include "tic.h"
 
-#define OPTIONS "hf:u:l:n:rosF"
+#define OPTIONS "hf:u:l:n:ros"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 quadfile* quads = NULL;
 codefile* codes = NULL;
-
-bool fitsout = TRUE;
 
 catalog* cat;
 
@@ -45,7 +43,6 @@ void print_help(char* progname)
 	       "     [-n <nside>]    healpix nside (default 512)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
-           "     [-F]            write traditional (non-FITS) output\n"
 	       "\n"
 	       , progname);
 }
@@ -476,7 +473,6 @@ int main(int argc, char** argv)
 	char *quadfname = NULL;
 	char *codefname = NULL;
 	char* catfname;
-	//time_t starttime, endtime;
 	il* pixels;
 	int Nside = 512;
 	int HEALPIXES;
@@ -489,9 +485,6 @@ int main(int argc, char** argv)
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-        case 'F':
-            fitsout = 0;
-            break;
 		case 's':
 			shifted = 1;
 			break;
@@ -557,13 +550,8 @@ int main(int argc, char** argv)
 	}
 	free_fn(catfname);
 
-    if (fitsout) {
-        quadfname = mk_fits_quadfn(optarg);
-        codefname = mk_fits_codefn(optarg);
-    } else {
-        quadfname = mk_quadfn(optarg);
-        codefname = mk_codefn(optarg);
-    }
+	quadfname = mk_quadfn(optarg);
+	codefname = mk_codefn(optarg);
 
     quads = quadfile_open_for_writing(quadfname);
     if (quadfile_write_header(quads)) {

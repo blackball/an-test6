@@ -121,6 +121,10 @@ int main(int argc, char** args) {
 	return 0;
 }
 
+typedef unsigned short int magicval;
+#define MAGIC_VAL 0xFF00
+#define ASCII_VAL 0x754E
+
 xyarray *readxy(char* fn) {
 	uint ii, jj, numxy, numfields;
 	magicval magic;

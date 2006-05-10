@@ -3,7 +3,7 @@
   @file     xmemory.c
   @author   Nicolas Devillard
   @date     Oct 2000
-  @version  $Revision: 1.5 $
+  @version  $Revision: 1.6 $
   @brief    POSIX-compatible extended memory handling.
 
   xmemory is a small and efficient module offering memory extension 
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: xmemory.c,v 1.5 2006/05/10 18:23:41 dlang Exp $
+    $Id: xmemory.c,v 1.6 2006/05/10 19:31:23 dlang Exp $
     $Author: dlang $
-    $Date: 2006/05/10 18:23:41 $
-    $Revision: 1.5 $
+    $Date: 2006/05/10 19:31:23 $
+    $Revision: 1.6 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -55,8 +55,8 @@
   2   add lots of debug messages
 */
 #ifndef XMEMORY_DEBUG
-#define XMEMORY_DEBUG       0
-//#define XMEMORY_DEBUG       2
+//#define XMEMORY_DEBUG       0
+#define XMEMORY_DEBUG       2
 #endif
 
 /**
@@ -808,11 +808,13 @@ char * xmemory_falloc(
             else exit(1) ;
         }
 
-        xmem_debug(
-            fprintf(stderr,
-                    "xmem: falloc mmap succeeded for [%s] - %s (%d)\n",
-                    name, srcname, srclin);
-        );
+		/*
+		  xmem_debug(
+		  fprintf(stderr,
+		  "xmem: falloc mmap succeeded for [%s] - %s (%d)\n",
+		  name, srcname, srclin);
+		  );
+		*/
 
         if (size!=NULL) (*size) = sta.st_size ;
         

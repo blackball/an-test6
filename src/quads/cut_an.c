@@ -1,4 +1,4 @@
-
+#include <math.h>
 
 #include "an_catalog.h"
 #include "catalog.h"
@@ -14,6 +14,7 @@ void print_help(char* progname) {
 		   "  [-m <minimum-magnitude-to-use>]\n"
 		   "  [-M <maximum-magnitude-to-use>]\n"
 		   "  [-n <max-stars-per-(small)-healpix>]\n"
+		   "  [-S <max-stars-per-(big)-healpix]\n"
 		   "  [-N <nside>]: healpixelization at the fine-scale; default=100.\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
@@ -26,7 +27,7 @@ struct stardata {
 	double ra;
 	double dec;
 	float mag;
-	int64_t id;
+	uint64_t id;
 	//int small_hp;
 	//unsigned char big_hp;
 };
@@ -53,6 +54,7 @@ int main(int argc, char** args) {
 	double minmag = -1.0;
 	double maxmag = 30.0;
 	int* owned;
+	int maxperbighp = 0;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -60,6 +62,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'S':
+			maxperbighp = atoi(optarg);
+			break;
 		case 'N':
 			Nside = atoi(optarg);
 			break;
@@ -184,6 +189,7 @@ int main(int argc, char** args) {
 
 	// sort the stars within each fine healpix.
 	for (i=0; i<HP; i++) {
+		int j;
 		if (!starlists[i]) continue;
 		printf("small healpix %i has %i stars.\n", i, bl_size(starlists[i]));
 		/*
@@ -191,35 +197,109 @@ int main(int argc, char** args) {
 		  continue;
 		  bl_sort(starlists[i], sort_stardata_mag);
 		*/
-		{
-			stardata* d1, *d2;
-			d1 = (stardata*)bl_access(starlists[i], 0);
-			d2 = (stardata*)bl_access(starlists[i], 1);
-			printf("first two mags: %g, %g\n", d1->mag, d2->mag);
+		/*
+		  {
+		  stardata* d1, *d2;
+		  d1 = (stardata*)bl_access(starlists[i], 0);
+		  d2 = (stardata*)bl_access(starlists[i], 1);
+		  printf("first two mags: %g, %g\n", d1->mag, d2->mag);
+		  }
+		*/
+		printf("mags: ");
+		for (j=0; j<bl_size(starlists[i]); j++) {
+			stardata* d1 = (stardata*)bl_access(starlists[i], j);
+			printf("%g ", d1->mag);
 		}
+		printf("\n");
 	}
 
 	owned = malloc(HP * sizeof(int));
 
 	// go through the big healpixes...
 	for (j=0; j<12; j++) {
+		char fn[256];
+		uint nn, neigh[8], k;
+		catalog* cat;
+		idfile* id;
+		int nwritten;
+
 		// for each big healpix, find the set of small healpixes it owns
 		// (including a bit of overlap)
+		// (only set owned[i] if healpix 'i' actually contains stars.)
 		memset(owned, 0, HP * sizeof(int));
 		for (i=0; i<HP; i++) {
 			uint bighp, x, y;
+			if (!starlists[i]) continue;
 			healpix_decompose(i, &bighp, &x, &y, Nside);
 			if (bighp != j)
 				continue;
 			owned[i] = 1;
 			if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
 				// add its neighbours.
+				nn = healpix_get_neighbours_nside(i, neigh, Nside);
+				for (k=0; k<nn; k++) {
+					if (starlists[neigh[k]])
+						owned[neigh[k]] = 1;
+				}
 			}
 		}
-		
 
 		// go through the healpixes, writing the star locations to the
 		// catalog file, and the star ids to the idfile.
+		sprintf(fn, outfn, j);
+		cat = catalog_open_for_writing(fn);
+		if (!cat) {
+			fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
+			exit(-1);
+		}
+		catalog_write_header(cat);
+
+		id = idfile_open_for_writing(fn);
+		if (!id) {
+			fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
+			exit(-1);
+		}
+		idfile_write_header(id);
+
+		nwritten = 0;
+		for (k=0;; k++) {
+			int nowned = 0;
+			for (i=0; i<HP; i++) {
+				stardata* sd;
+				double xyz[3];
+				int N;
+				if (!owned[i]) continue;
+				N = bl_size(starlists[i]);
+				if (k >= N) {
+					owned[i] = 0;
+					continue;
+				}
+				nowned++;
+				sd = (stardata*)bl_access(starlists[i], k);
+
+				xyz[0] = radec2x(deg2rad(sd->ra), deg2rad(sd->dec));
+				xyz[1] = radec2y(deg2rad(sd->ra), deg2rad(sd->dec));
+				xyz[2] = radec2z(deg2rad(sd->ra), deg2rad(sd->dec));
+				catalog_write_star(cat, xyz);
+
+				idfile_write_anid(id, sd->id);
+
+				nwritten++;
+				if (nwritten == maxperbighp)
+					break;
+			}
+			printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
+			if (nwritten == maxperbighp)
+				break;
+			if (!nowned)
+				break;
+		}
+		printf("Made %i sweeps through the healpixes.\n", k);
+
+		catalog_fix_header(cat);
+		catalog_close(cat);
+		idfile_fix_header(id);
+		idfile_close(id);
 	}
 
 	free(starlists);

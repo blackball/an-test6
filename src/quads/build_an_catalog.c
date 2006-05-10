@@ -254,6 +254,7 @@ int main(int argc, char** args) {
 					fflush(stdout);
 				}
 
+				//printf("off=%i, n=%i, N=%i\n", off, n, N);
 				if (tycho2_fits_read_entries(tycho, off, n, entry)) {
 					fprintf(stderr, "Failed to read Tycho-2 entries.\n");
 					exit(-1);
