@@ -1,5 +1,5 @@
-#ifndef MATCHOBJ_H_
-#define MATCHOBJ_H_
+#ifndef MATCHOBJ_H
+#define MATCHOBJ_H
 
 #include "starutil.h"
 

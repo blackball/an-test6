@@ -133,7 +133,7 @@ int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 
 		for (i=0; i<count; i++) {
 			memcpy(((unsigned char*)(entries + i)) + tycho2_fitstruct[c].offset,
-				   rawdata, tycho2_fitstruct[c].size);
+				   rawdata + (i * tycho2_fitstruct[c].size), tycho2_fitstruct[c].size);
 		}
 		free(rawdata);
 	}

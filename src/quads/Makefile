@@ -7,7 +7,7 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS	+= -O2
+#CFLAGS	+= -O2
 # to turn off asserts:
 #CFLAGS += -DNDEBUG
 #CFLAGS += -Werror
@@ -61,7 +61,7 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
-	usnobtofits.o usnob.o usnob_fits.o usnobtoan.o tycho2.o \
+	usnobtofits.o usnob.o usnob_fits.o tycho2.o \
 	tycho2tofits.o tycho2_fits.o build_an_catalog.o cut_an.o
 
 QFITS_I := -Iqfits
@@ -74,8 +74,7 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-all: usnobtoan \
-	usnobprint \
+all: usnobprint \
 	usnobtofits \
 	tycho2tofits \
 	ancatalog \
@@ -90,9 +89,6 @@ $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 xylist_texttofits: xylist_texttofits.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
-
-usnobtoan: usnobtoan.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)

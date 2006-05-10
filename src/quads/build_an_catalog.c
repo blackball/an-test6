@@ -84,7 +84,7 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
-		case 'n':
+		case 'N':
 			Nside = atoi(optarg);
 			break;
 		case 'o':
@@ -255,7 +255,7 @@ int main(int argc, char** args) {
 				}
 
 				if (tycho2_fits_read_entries(tycho, off, n, entry)) {
-					fprintf(stderr, "Failed to read USNO-B entries.\n");
+					fprintf(stderr, "Failed to read Tycho-2 entries.\n");
 					exit(-1);
 				}
 

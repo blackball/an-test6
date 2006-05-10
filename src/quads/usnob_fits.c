@@ -119,7 +119,7 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 
 		for (i=0; i<count; i++) {
 			memcpy(((unsigned char*)(entries + i)) + usnob_fitstruct[c].offset,
-				   rawdata, usnob_fitstruct[c].size);
+				   rawdata + (i * usnob_fitstruct[c].size), usnob_fitstruct[c].size);
 		}
 		free(rawdata);
 	}
