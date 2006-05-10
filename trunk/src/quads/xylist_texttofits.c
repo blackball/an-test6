@@ -5,16 +5,20 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <libgen.h>
 
 #include "fileutil.h"
 #include "xylist.h"
 #include "bl.h"
 
-#define OPTIONS "h"
+#define OPTIONS "hdx:y:"
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s <input-file> <output-file>\n",
+		   "  %s [options] <input-file> <output-file>\n"
+		   "    [-d]: use double format (float format is default)\n"
+		   "    [-x <name-of-x-column>]\n"
+		   "    [-y <name-of-y-column>]\n",
 		   progname);
 }
 
@@ -37,6 +41,9 @@ int main(int argc, char** args) {
 	xyarray* xya;
 	xylist* ls;
 	int i, N;
+	int doubleformat = 0;
+	char* xname = NULL;
+	char* yname = NULL;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -44,6 +51,15 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'd':
+			doubleformat = 1;
+			break;
+		case 'x':
+			xname = optarg;
+			break;
+		case 'y':
+			yname = optarg;
+			break;
 		}
     }
 
@@ -68,7 +84,16 @@ int main(int argc, char** args) {
 		exit(-1);
 
 	ls = xylist_open_for_writing(outfn);
-	if (!ls || xylist_write_header(ls))
+	if (!ls)
+		exit(-1);
+	if (doubleformat)
+		ls->xtype = ls->ytype = TFITS_BIN_TYPE_D;
+	qfits_header_add(ls->header, "WRITER", basename(args[0]), "This file was written by the program...", NULL);
+	if (xname)
+		ls->xname = xname;
+	if (yname)
+		ls->yname = yname;
+	if (xylist_write_header(ls))
 		exit(-1);
 
 	N = xya_size(xya);
