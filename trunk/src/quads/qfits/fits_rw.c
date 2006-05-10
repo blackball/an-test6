@@ -3,16 +3,16 @@
    @file    fits_rw.c
    @author  N. Devillard
    @date    Mar 2000
-   @version $Revision: 1.2 $
+   @version $Revision: 1.3 $
    @brief   FITS header reading/writing.
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: fits_rw.c,v 1.2 2006/05/04 18:44:15 dlang Exp $
+    $Id: fits_rw.c,v 1.3 2006/05/10 02:45:06 dlang Exp $
     $Author: dlang $
-    $Date: 2006/05/04 18:44:15 $
-    $Revision: 1.2 $
+    $Date: 2006/05/10 02:45:06 $
+    $Revision: 1.3 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -271,25 +271,32 @@ qfits_header * qfits_header_readext(char * filename, int xtnum)
     size_t          size ;
 
     /* Check input */
-    if (filename==NULL || xtnum<0)
+    if (filename==NULL || xtnum<0) {
+		qfits_error("null string or invalid ext num.");
         return NULL ;
+	}
 
     /* Check that there are enough extensions */
     if (xtnum>0) {
         n_ext = qfits_query_n_ext(filename);
         if (xtnum>n_ext) {
+			qfits_error("invalid ext num: %i > %i.", xtnum, n_ext);
             return NULL ;
         }
     }
 
     /* Get offset to the extension header */
     if (qfits_get_hdrinfo(filename, xtnum, &seg_start, &seg_size)!=0) {
+		qfits_error("qfits_get_hdrinfo failed.");
         return NULL ;
     }
 
     /* Memory-map the input file */
     start = falloc(filename, seg_start, &size) ;
-    if (start==NULL) return NULL ;
+    if (start==NULL) {
+		qfits_error("mmapping input file failed.");
+		return NULL ;
+	}
 
     hdr   = qfits_header_new() ;
     where = start ;
