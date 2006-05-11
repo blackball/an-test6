@@ -46,6 +46,31 @@ int main(int argc, char** args) {
 	printf("Nside=%i, HP=%i.\n", Nside, HP);
 
 	{
+		//int hp = 674;
+		int i;
+		int mx = 10;
+		printf("radec=[");
+		for (i=0; i<=mx; i++) {
+			int j;
+			for (j=0; j<=mx; j++) {
+				double ra, dec;
+				double dx, dy;
+				double x,y,z;
+				dx = (double)i / (double)mx;
+				dy = (double)j / (double)mx;
+				//healpix_to_xyz(dx, dy, hp, Nside, &x, &y, &z);
+				healpix_to_xyz(dx, dy, 8, 1, &x, &y, &z);
+				ra = xy2ra(x, y);
+				dec = z2dec(z);
+				printf("%g,%g;", rad2deg(ra), rad2deg(dec));
+				//printf("%g,%g;", z, atan2(y,x));
+			}
+		}
+		printf("];\n");
+		//exit(0);
+	}
+
+	{
 		double x,y,z;
 		int hp;
 		x = 0.965926;
@@ -53,8 +78,15 @@ int main(int argc, char** args) {
 		z = -0.222222;
 		hp = xyztohealpix_nside(x,y,z,Nside);
 		printf("hp=%i\n", hp);
-	}
 
+		x = 0.93695;
+		y = 0.349464;
+		z = -0.502058;
+		hp = xyztohealpix_nside(x,y,z,Nside);
+		printf("hp=%i\n", hp);
+
+
+	}
 	{
 		int i;
 		for (i=0; i<HP; i++) {
@@ -68,7 +100,6 @@ int main(int argc, char** args) {
 		}
 	}
 
-	/*
 	  {
 		int i,j;
 		int seen[HP];
@@ -81,15 +112,13 @@ int main(int argc, char** args) {
 				seen[hp] = 1;
 			}
 		}
-		printf("Didn't see: ");
+		printf("Didn't see: [ ");
 		for (i=0; i<HP; i++) {
 			if (!seen[i])
 				printf("%i ", i);
 		}
-		exit(0);
-	}
-	*/
-
+		printf("]\n");
+		}
 
 
 	optstart = optind;

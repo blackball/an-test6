@@ -38,4 +38,6 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 
 void healpix_decompose(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
 
+uint healpix_compose(uint bighp, uint x, uint y, uint Nside);
+
 #endif
