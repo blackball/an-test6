@@ -66,8 +66,8 @@ void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
 	int bit;
 
 	if (!ispowerof4(Nside)) {
-		*px = pnprime / Nside;
-		*py = pnprime % Nside;
+		if (px) *px = pnprime / Nside;
+		if (py) *py = pnprime % (int)Nside;
 		return;
 	}
 
@@ -85,8 +85,8 @@ void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
 		ybitmask = ybitmask << 2;
 	}
 
-	*px = x;
-	*py = y;
+	if (px) *px = x;
+	if (py) *py = y;
 }
 
 uint xy_to_pnprime(uint x, uint y, uint Nside)
@@ -106,6 +106,11 @@ uint xy_to_pnprime(uint x, uint y, uint Nside)
 		mask = mask << 1;
 	}
 	return pnprime;
+}
+
+uint healpix_compose(uint bighp, uint x, uint y, uint Nside) {
+	uint pnprime = xy_to_pnprime(x, y, Nside);
+	return bighp * Nside*Nside + pnprime;
 }
 
 void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
@@ -813,22 +818,22 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 	
 	healpix_decompose(hp, &chp, &xp, &yp, Nside);
 
-	if (isnorthpolar(chp) &&
-		  ( ((xp+yp+1)/Nside > 1) ||
-		    ((xp+yp+1)/Nside == 1 && dx+dy >= 1.0))) {
-		equatorial = 0;
-		zfactor = 1.0;
-	}
-	if (issouthpolar(chp) &&
-		  ( ((xp+yp+1)/Nside < 1) ||
-		    ((xp+yp+1)/Nside == 1 && dx+dy <= 1.0))) {
-		equatorial = 0;
-		zfactor = -1.0;
-	}
-
 	// this is x,y position in the healpix reference frame
 	x = xp+dx;
 	y = yp+dy;
+
+	if (isnorthpolar(chp)) {
+		if ((x + y) > Nside) {
+			equatorial = 0;
+			zfactor = 1.0;
+		}
+	}
+	if (issouthpolar(chp)) {
+		if ((x + y) < Nside) {
+			equatorial = 0;
+			zfactor = -1.0;
+		}
+	}
 
 	if (equatorial) {
 		double zoff=0;
