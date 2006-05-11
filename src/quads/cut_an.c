@@ -242,9 +242,9 @@ int main(int argc, char** args) {
 
 				if (maxperhp && (bl_size(starlists[hp]) >= maxperhp)) {
 					// is this list full?
-					stardata* last = bl_access(starlists[hp], bl_size(starlists[hp])-1);
+					stardata* last = bl_access(starlists[hp], maxperhp-1);
 					if (sd.mag > last->mag)
-						// this new star is dimmer than the last one in the list...
+						// this new star is dimmer than the "maxperhp"th one in the list...
 						continue;
 				}
 				bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
