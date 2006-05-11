@@ -7,7 +7,7 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS	+= -O2
+#CFLAGS	+= -O2
 # to turn off asserts:
 #CFLAGS += -DNDEBUG
 #CFLAGS += -Werror
@@ -76,7 +76,8 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-EXTRA_EXECS = usnobprint usnobtofits tycho2tofits ancatalog cut_an xylist_texttofits
+EXTRA_EXECS = usnobprint usnobtofits tycho2tofits ancatalog cut_an \
+	xylist_texttofits split_an hplimits
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
@@ -102,6 +103,12 @@ ancatalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o u
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 cut_an: cut_an.o an_catalog.o catalog.o idfile.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+hplimits: hplimits.o healpix.o mathutil.o bl.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest
