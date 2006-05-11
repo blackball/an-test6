@@ -6,11 +6,12 @@
 #include "healpix.h"
 #include "starutil.h"
 
-#define OPTIONS "ho:i:N:n:m:M:"
+#define OPTIONS "ho:i:N:n:m:M:H:"
 
 void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s -o <output-filename-template> -i <output-idfile-template>\n"
+		   "  [-H <big healpix>]\n"
 		   "  [-m <minimum-magnitude-to-use>]\n"
 		   "  [-M <maximum-magnitude-to-use>]\n"
 		   "  [-n <max-stars-per-(small)-healpix>]\n"
@@ -26,8 +27,8 @@ extern int optind, opterr, optopt;
 struct stardata {
 	double ra;
 	double dec;
-	float mag;
 	uint64_t id;
+	float mag;
 };
 typedef struct stardata stardata;
 
@@ -45,7 +46,7 @@ int main(int argc, char** args) {
 	char* idfn = NULL;
 	int c;
 	int startoptind;
-	int i, j, HP;
+	int i, k, HP;
 	int Nside = 100;
 	bl** starlists;
 	int maxperhp = 0;
@@ -53,6 +54,12 @@ int main(int argc, char** args) {
 	double maxmag = 30.0;
 	int* owned;
 	int maxperbighp = 0;
+	int bighp = -1;
+	char fn[256];
+	catalog* cat;
+	idfile* id;
+	int nwritten;
+	int pixesowned;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -60,6 +67,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'H':
+			bighp = atoi(optarg);
+			break;
 		case 'S':
 			maxperbighp = atoi(optarg);
 			break;
@@ -84,7 +94,7 @@ int main(int argc, char** args) {
 		}
     }
 
-	if (!outfn || !idfn || (optind == argc)) {
+	if (!outfn || !idfn || (optind == argc) || (bighp == -1)) {
 		print_help(args[0]);
 		exit(-1);
 	}
@@ -93,8 +103,63 @@ int main(int argc, char** args) {
 
 	printf("Nside=%i, HP=%i, maxperhp=%i, HP*maxperhp=%i.\n", Nside, HP, maxperhp, HP*maxperhp);
 
+	printf("Writing big healpix %i.\n", bighp);
+
 	starlists = malloc(HP * sizeof(bl*));
 	memset(starlists, 0, HP * sizeof(bl*));
+
+	owned = malloc(HP * sizeof(int));
+	memset(owned, 0, HP * sizeof(int));
+	// for each big healpix, find the set of small healpixes it owns
+	// (including a bit of overlap)
+	// (only set owned[i] if healpix 'i' actually contains stars.)
+	for (i=0; i<HP; i++) {
+		uint big, x, y;
+		uint nn, neigh[8], k;
+		healpix_decompose(i, &big, &x, &y, Nside);
+		//printf("small hp %i -> big %i, (x,y) (%i, %i)\n", i, big, x, y);
+		if (big != bighp)
+			continue;
+		owned[i] = 1;
+		if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
+			// add its neighbours.
+			nn = healpix_get_neighbours_nside(i, neigh, Nside);
+			for (k=0; k<nn; k++)
+				owned[neigh[k]] = 1;
+		}
+	}
+	//printf("Big healpix %i owns:\n", bighp);
+	pixesowned = 0;
+	for (i=0; i<HP; i++) {
+		if (owned[i]) {
+			//printf("%i ", i);
+			pixesowned++;
+		}
+	}
+	//printf("\n");
+	printf("This big healpix owns %i small healpix.\n", pixesowned);
+
+	printf("Max stars in this catalog will be %i\n", pixesowned * maxperhp);
+
+	nwritten = 0;
+
+	// go through the healpixes, writing the star locations to the
+	// catalog file, and the star ids to the idfile.
+	sprintf(fn, outfn, bighp);
+	cat = catalog_open_for_writing(fn);
+	if (!cat) {
+		fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
+		exit(-1);
+	}
+	catalog_write_header(cat);
+
+	sprintf(fn, idfn, bighp);
+	id = idfile_open_for_writing(fn);
+	if (!id) {
+		fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
+		exit(-1);
+	}
+	idfile_write_header(id);
 
 	startoptind = optind;
 	for (; optind<argc; optind++) {
@@ -104,6 +169,7 @@ int main(int argc, char** args) {
 		an_catalog* ancat;
 		int BLOCK = 1000;
 		int off, n;
+		int ndiscarded;
 
 		infn = args[optind];
 		ancat = an_catalog_open(infn);
@@ -112,10 +178,10 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 		N = an_catalog_count_entries(ancat);
-		printf("Reading %i entries from %s...\n", N, infn);
+		printf("Reading   %i entries from %s...\n", N, infn);
 		fflush(stdout);
-		off = 0;
-		while (off < N) {
+		ndiscarded = 0;
+		for (off=0; off<N; off+=n) {
 			an_entry an[BLOCK];
 			stardata sd;
 			int j;
@@ -131,10 +197,14 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Error reading %i AN catalog entries.\n", n);
 				exit(-1);
 			}
-			off += n;
 
 			for (i=0; i<n; i++) {
 				hp = radectohealpix_nside(deg2rad(an[i].ra), deg2rad(an[i].dec), Nside);
+
+				if (!owned[hp]) {
+					ndiscarded++;
+					continue;
+				}
 
 				sd.ra = an[i].ra;
 				sd.dec = an[i].dec;
@@ -166,7 +236,7 @@ int main(int argc, char** args) {
 					continue;
 
 				if (!starlists[hp])
-					starlists[hp] = bl_new(32, sizeof(stardata));
+					starlists[hp] = bl_new(10, sizeof(stardata));
 
 				if (maxperhp && (bl_size(starlists[hp]) >= maxperhp)) {
 					// is this list full?
@@ -178,119 +248,96 @@ int main(int argc, char** args) {
 				bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
 			}
 		}
+		printf("Discarded %i stars not in this big healpix.\n", ndiscarded);
+
+		if (maxperhp) {
+			for (i=0; i<HP; i++) {
+				int size;
+				if (!starlists[i]) continue;
+				size = bl_size(starlists[i]);
+				if (size < maxperhp) continue;
+				bl_remove_index_range(starlists[i], maxperhp, size-maxperhp);
+			}
+		}
+
+		/*
+		  {
+		  int maxsize = 0;
+		  for (i=0; i<HP; i++) {
+		  if (!owned[i]) continue;
+		  if (!starlists[i]) continue;
+		  if (bl_size(starlists[i]) > maxsize)
+		  maxsize = bl_size(starlists[i]);
+		  }
+		  printf("Longest list has %i stars.\n", maxsize);
+		  {
+		  int hist[maxsize+1];
+		  memset(hist, 0, (maxsize+1)*sizeof(int));
+		  for (i=0; i<HP; i++) {
+		  if (!owned[i]) continue;
+		  if (!starlists[i])
+		  hist[0]++;
+		  else
+		  hist[bl_size(starlists[i])]++;
+		  }
+		  for (i=0; i<=maxsize; i++) {
+		  if (hist[i])
+		  printf("  %i stars: %i lists\n", i, hist[i]);
+		  }
+		  }
+		  }
+		*/
 
 		an_catalog_close(ancat);
 	}
 
-	/*
-	  for (i=0; i<HP; i++) {
-	  int j;
-	  if (!starlists[i]) continue;
-	  printf("small healpix %i has %i stars.\n", i, bl_size(starlists[i]));
-	  printf("mags: ");
-	  for (j=0; j<bl_size(starlists[i]); j++) {
-	  stardata* d1 = (stardata*)bl_access(starlists[i], j);
-	  printf("%g ", d1->mag);
-	  }
-	  printf("\n");
-	  }
-	*/
+	for (i=0; i<HP; i++)
+		if (!starlists[i])
+			owned[i] = 0;
 
-	owned = malloc(HP * sizeof(int));
-
-	// go through the big healpixes...
-	for (j=0; j<12; j++) {
-		char fn[256];
-		uint nn, neigh[8], k;
-		catalog* cat;
-		idfile* id;
-		int nwritten;
-
-		printf("Writing big healpix %i...\n", j);
-		fflush(stdout);
-
-		// for each big healpix, find the set of small healpixes it owns
-		// (including a bit of overlap)
-		// (only set owned[i] if healpix 'i' actually contains stars.)
-		memset(owned, 0, HP * sizeof(int));
+	// sweep through the healpixes...
+	for (k=0;; k++) {
+		int nowned = 0;
 		for (i=0; i<HP; i++) {
-			uint bighp, x, y;
-			if (!starlists[i]) continue;
-			healpix_decompose(i, &bighp, &x, &y, Nside);
-			if (bighp != j)
+			stardata* sd;
+			double xyz[3];
+			int N;
+			if (!owned[i]) continue;
+			N = bl_size(starlists[i]);
+			if (k >= N) {
+				owned[i] = 0;
 				continue;
-			owned[i] = 1;
-			if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
-				// add its neighbours.
-				nn = healpix_get_neighbours_nside(i, neigh, Nside);
-				for (k=0; k<nn; k++) {
-					if (starlists[neigh[k]])
-						owned[neigh[k]] = 1;
-				}
 			}
-		}
+			nowned++;
+			sd = (stardata*)bl_access(starlists[i], k);
 
-		// go through the healpixes, writing the star locations to the
-		// catalog file, and the star ids to the idfile.
-		sprintf(fn, outfn, j);
-		cat = catalog_open_for_writing(fn);
-		if (!cat) {
-			fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
-			exit(-1);
-		}
-		catalog_write_header(cat);
+			xyz[0] = radec2x(deg2rad(sd->ra), deg2rad(sd->dec));
+			xyz[1] = radec2y(deg2rad(sd->ra), deg2rad(sd->dec));
+			xyz[2] = radec2z(deg2rad(sd->ra), deg2rad(sd->dec));
+			catalog_write_star(cat, xyz);
 
-		sprintf(fn, idfn, j);
-		id = idfile_open_for_writing(fn);
-		if (!id) {
-			fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
-			exit(-1);
-		}
-		idfile_write_header(id);
+			idfile_write_anid(id, sd->id);
 
-		nwritten = 0;
-		for (k=0;; k++) {
-			int nowned = 0;
-			for (i=0; i<HP; i++) {
-				stardata* sd;
-				double xyz[3];
-				int N;
-				if (!owned[i]) continue;
-				N = bl_size(starlists[i]);
-				if (k >= N) {
-					owned[i] = 0;
-					continue;
-				}
-				nowned++;
-				sd = (stardata*)bl_access(starlists[i], k);
-
-				xyz[0] = radec2x(deg2rad(sd->ra), deg2rad(sd->dec));
-				xyz[1] = radec2y(deg2rad(sd->ra), deg2rad(sd->dec));
-				xyz[2] = radec2z(deg2rad(sd->ra), deg2rad(sd->dec));
-				catalog_write_star(cat, xyz);
-
-				idfile_write_anid(id, sd->id);
-
-				nwritten++;
-				if (nwritten == maxperbighp)
-					break;
-			}
-			printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
-			fflush(stdout);
+			nwritten++;
 			if (nwritten == maxperbighp)
 				break;
-			if (!nowned)
-				break;
 		}
-		printf("Made %i sweeps through the healpixes.\n", k);
+		printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
 		fflush(stdout);
-
-		catalog_fix_header(cat);
-		catalog_close(cat);
-		idfile_fix_header(id);
-		idfile_close(id);
+		if (nwritten == maxperbighp)
+			break;
+		if (!nowned)
+			break;
 	}
+	printf("Made %i sweeps through the healpixes.\n", k);
+	fflush(stdout);
 
+	catalog_fix_header(cat);
+	catalog_close(cat);
+	idfile_fix_header(id);
+	idfile_close(id);
+
+	free(owned);
 	free(starlists);
 
 	return 0;

@@ -70,17 +70,9 @@ int catalog_write_to_file(catalog* cat, char* fn)
 
 int catalog_write_header(catalog* cat)
 {
-	return catalog_fix_header(cat);
-}
-
-int catalog_fix_header(catalog* cat)
-{
-	off_t offset;
-	off_t new_header_end;
 	qfits_table* table;
 	qfits_header* tablehdr;
 	char val[256];
-	void* dataptr;
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	char* fn;
@@ -90,14 +82,10 @@ int catalog_fix_header(catalog* cat)
 		return -1;
 	}
 
-	offset = ftello(cat->fid);
-	fseeko(cat->fid, 0, SEEK_SET);
-
 	// fill in the real values...
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_mod(cat->header, "NSTARS", val, "Number of stars.");
 
-	dataptr = NULL;
 	datasize = DIM_STARS * sizeof(double);
 	ncols = 1;
 	nrows = cat->numstars;
@@ -112,18 +100,31 @@ int catalog_fix_header(catalog* cat)
 	qfits_header_dump(tablehdr, cat->fid);
 	qfits_table_close(table);
 	qfits_header_destroy(tablehdr);
+	return 0;
+}
 
-	new_header_end = ftello(cat->fid);
+int catalog_fix_header(catalog* cat)
+{
+	off_t offset;
+	off_t old_header_end;
 
-	if (new_header_end != cat->header_end) {
-		fprintf(stderr, "Warning: objfile header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)cat->header_end,
-		        (unsigned long)new_header_end);
+	if (!cat->fid) {
+		fprintf(stderr, "quadfile_fits_fix_header: fid is null.\n");
 		return -1;
 	}
+	offset = ftello(cat->fid);
+	fseeko(cat->fid, 0, SEEK_SET);
+	old_header_end = cat->header_end;
 
+	catalog_write_header(cat);
+
+	if (old_header_end != cat->header_end) {
+		fprintf(stderr, "Warning: objfile header used to end at %lu, "
+		        "now it ends at %lu.\n", (unsigned long)old_header_end,
+				(unsigned long)cat->header_end);
+		return -1;
+	}
 	fseek(cat->fid, offset, SEEK_SET);
-
 	return 0;
 }
 
@@ -245,8 +246,6 @@ bail:
 catalog* catalog_open_for_writing(char* fn) 
 {
 	catalog* qf;
-	char val[256];
-
 	qf = calloc(1, sizeof(catalog));
 	if (!qf) {
 		fprintf(stderr, "catalog_open_for_writing: malloc failed.\n");
@@ -262,10 +261,7 @@ catalog* catalog_open_for_writing(char* fn)
 	// the header
 	qf->header = qfits_table_prim_header_default();
 	fits_add_endian(qf->header);
-
-	// These may be placeholder values...
-	sprintf(val, "%u", qf->numstars);
-	qfits_header_add(qf->header, "NSTARS", val, "Number of stars used.", NULL);
+	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
 	qfits_header_add(qf->header, "", NULL, "This is a flat array of XYZ for each catalog star.", NULL);
 
 	return qf;

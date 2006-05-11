@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.6 $
+   @version	$Revision: 1.7 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.6 2006/05/08 16:48:43 dlang Exp $
+	$Id: tfits.c,v 1.7 2006/05/11 14:34:30 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/08 16:48:43 $
-	$Revision: 1.6 $
+	$Date: 2006/05/11 14:34:30 $
+	$Revision: 1.7 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -857,6 +857,93 @@ unsigned char * qfits_query_column_seq(
      /* Return allocated and converted array */
 	return array ;
 }
+
+
+
+
+int qfits_query_column_seq_to_array(
+									qfits_table	    *   th,
+									int                 colnum,
+									int                 start_ind,
+									int                 nb_rows,
+									unsigned char*      destination,
+									int                 dest_stride)
+{
+	char			*	start ;
+    qfits_col       *   col ;
+	int					field_size ;
+	unsigned char   *   r ;
+    unsigned char   *   inbuf ;
+    int                 table_width ;
+    size_t              size ;
+	int                 i ;
+	int do_swap;
+   
+    if (th->tab_w == -1) {
+        /* Compute the table width in bytes */
+        if ((table_width = qfits_compute_table_width(th)) == -1) {
+            qfits_error("cannot compute the table width") ;
+            return -1;
+        }
+    } else table_width = th->tab_w ;
+  
+    /* Check the validity of start_ind and nb_rows */
+    if ((start_ind<0) || (start_ind+nb_rows>th->nr)) { 
+        qfits_error("bad start index and number of rows") ;
+        return -1;
+    }
+    
+	/* Pointer to requested column */
+	col = th->col + colnum ;
+
+	/* Test if column is empty */
+	if (nb_rows * col->atom_size * col->atom_nb == 0) col->readable = 0 ;
+	
+	/* Test if column is readable */
+	if (col->readable == 0)  return -1;
+
+	/* Compute the size in bytes of one field stored in the file */
+    if ((field_size=qfits_table_get_field_size(th->tab_t,col))==-1)
+		return -1;
+	
+	/* Load input file */
+    if ((start=falloc(th->filename, 0, &size))==NULL) {
+        qfits_error("cannot open table for query [%s]", th->filename);
+        return -1;
+    }
+   
+    /* Position the input pointer at the begining of the column data */
+    r = destination;
+    inbuf = (unsigned char*)start + col->off_beg + table_width * start_ind;
+
+	do_swap = 0;
+#ifndef WORDS_BIGENDIAN
+    if ((th->tab_t == QFITS_BINTABLE) && (col->atom_size > 1))
+		do_swap = 1;
+#endif
+
+    /* Copy the values in array */
+    /* Get only the selected rows */
+    for (i=0 ; i<nb_rows ; i++) {
+        /* Copy all atoms on this field into array */
+        memcpy(r, inbuf, field_size);
+
+#ifndef WORDS_BIGENDIAN
+		if (do_swap)
+			swap_bytes(r, col->atom_size);
+#endif
+
+        r += dest_stride;
+        /* Jump to next line */
+        inbuf += table_width ;
+	}
+    fdealloc(start, 0, size) ;
+
+	return 0;
+}
+
+
+
 
 /*----------------------------------------------------------------------------*/
 /**
