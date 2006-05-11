@@ -2071,6 +2071,16 @@ unsigned char * qfits_query_column_seq(
         int                 start_ind,
         int                 nb_rows) ;
 
+
+int qfits_query_column_seq_to_array(
+									qfits_table	    *   th,
+									int                 colnum,
+									int                 start_ind,
+									int                 nb_rows,
+									unsigned char*      destination,
+									int                 dest_stride);
+
+
 /*----------------------------------------------------------------------------*/
 /**
   @brief    Compute the table width in bytes from the columns infos 

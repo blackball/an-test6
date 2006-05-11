@@ -70,34 +70,20 @@ static void init_an_fitstruct() {
 
 int an_catalog_read_entries(an_catalog* cat, uint offset,
 							uint count, an_entry* entries) {
-	int i, c;
-	unsigned char* rawdata;
+	int c;
 
 	if (!an_fitstruct_inited)
 		init_an_fitstruct();
 
 	for (c=0; c<AN_FITS_COLUMNS; c++) {
-		unsigned char* src, *dst;
-		int srcstride, dststride, size;
 		assert(cat->columns[c] != -1);
 		assert(cat->table);
-		rawdata = qfits_query_column_seq(cat->table, cat->columns[c],
-										 offset, count);
-		assert(rawdata);
 		assert(cat->table->col[cat->columns[c]].atom_size == an_fitstruct[c].size);
 
-		dst = ((unsigned char*)entries) + an_fitstruct[c].offset;
-		src = rawdata;
-		dststride = sizeof(an_entry);
-		srcstride = an_fitstruct[c].size;
-		size = srcstride;
-
-		for (i=0; i<count; i++) {
-			memcpy(dst, src, size);
-			dst += dststride;
-			src += srcstride;
-		}
-		free(rawdata);
+		qfits_query_column_seq_to_array
+			(cat->table, cat->columns[c], offset, count,
+			 ((unsigned char*)entries) + an_fitstruct[c].offset,
+			 sizeof(an_entry));
 	}
 	return 0;
 }

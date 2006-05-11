@@ -111,9 +111,11 @@ uint xy_to_pnprime(uint x, uint y, uint Nside)
 void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
 	uint bighp;
 	uint pnprime;
-	bighp   = finehp / (12 * Nside * Nside);
-	pnprime = finehp % (12 * Nside * Nside);
+	bighp   = finehp / (Nside * Nside);
+	pnprime = finehp % (Nside * Nside);
 	pnprime_to_xy(pnprime, px, py, Nside);
+	if (pbighp)
+		*pbighp = bighp;
 }
 
 int healpix_get_neighbour(int hp, int dx, int dy)
@@ -148,21 +150,14 @@ int healpix_get_neighbour(int hp, int dx, int dy)
 
 uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 {
-	int base;
-	uint pnprime;
+	uint base;
 	uint x, y;
 	int nn = 0;
 	int nbase;
 	int Ns2 = Nside * Nside;
 	uint nx, ny;
 
-	base = pix / (Nside * Nside);
-	pnprime = pix % (Nside * Nside);
-
-	pnprime_to_xy(pnprime, &x, &y, Nside);
-
-	//printf("base=%i, x=%i, y=%i.\n", base, x, y);
-
+	healpix_decompose(pix, &base, &x, &y, Nside);
 
 	// ( + , 0 )
 	nx = (x + 1) % Nside;

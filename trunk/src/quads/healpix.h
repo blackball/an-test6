@@ -24,6 +24,8 @@ int xyztohealpix(double x, double y, double z);
    The following functions convert (ra,dec) or (x,y,z) into a finely-
    pixelized healpix index, according to the HIERARCHICAL scheme,
    in the range [0, 12 Nside^2).
+
+   RA, DEC in radians.
  */
 uint radectohealpix_nside(double ra, double dec, uint Nside);
 
