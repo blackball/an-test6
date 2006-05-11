@@ -6,16 +6,13 @@
 #include "healpix.h"
 #include "starutil.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:"
+#define OPTIONS "ho:N:m:M:"
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s -o <output-filename-template> -i <output-idfile-template>\n"
-		   "  [-H <big healpix>]\n"
+		   "  %s -o <output-filename-template>\n"
 		   "  [-m <minimum-magnitude-to-use>]\n"
 		   "  [-M <maximum-magnitude-to-use>]\n"
-		   "  [-n <max-stars-per-(small)-healpix>]\n"
-		   "  [-S <max-stars-per-(big)-healpix]\n"
 		   "  [-N <nside>]: healpixelization at the fine-scale; default=100.\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
@@ -24,23 +21,6 @@ void print_help(char* progname) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-struct stardata {
-	double ra;
-	double dec;
-	uint64_t id;
-	float mag;
-};
-typedef struct stardata stardata;
-
-int sort_stardata_mag(const void* v1, const void* v2) {
-	stardata* d1 = (stardata*)v1;
-	stardata* d2 = (stardata*)v2;
-	float diff = d1->mag - d2->mag;
-	if (diff < 0.0) return -1;
-	if (diff == 0.0) return 0;
-	return 1;
-}
-
 int main(int argc, char** args) {
 	char* outfn = NULL;
 	char* idfn = NULL;
@@ -48,18 +28,12 @@ int main(int argc, char** args) {
 	int startoptind;
 	int i, k, HP;
 	int Nside = 100;
-	bl** starlists;
 	int maxperhp = 0;
 	double minmag = -1.0;
 	double maxmag = 30.0;
-	int* owned;
-	int maxperbighp = 0;
-	int bighp = -1;
+	unsigned char* owned;
 	char fn[256];
-	catalog* cat;
-	idfile* id;
-	int nwritten;
-	int pixesowned;
+	an_catalog** cats;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -67,23 +41,11 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
-		case 'H':
-			bighp = atoi(optarg);
-			break;
-		case 'S':
-			maxperbighp = atoi(optarg);
-			break;
 		case 'N':
 			Nside = atoi(optarg);
 			break;
 		case 'o':
 			outfn = optarg;
-			break;
-		case 'i':
-			idfn = optarg;
-			break;
-		case 'n':
-			maxperhp = atoi(optarg);
 			break;
 		case 'm':
 			minmag = atof(optarg);
@@ -94,14 +56,14 @@ int main(int argc, char** args) {
 		}
     }
 
-	if (!outfn || !idfn || (optind == argc) || (bighp == -1)) {
+	if (!outfn || (optind == argc)) {
 		print_help(args[0]);
 		exit(-1);
 	}
 
 	HP = 12 * Nside * Nside;
 
-	printf("Nside=%i, HP=%i, maxperhp=%i, HP*maxperhp=%i.\n", Nside, HP, maxperhp, HP*maxperhp);
+	printf("Nside=%i, HP=%i.\n", Nside, HP);
 
 	printf("Writing big healpix %i.\n", bighp);
 
