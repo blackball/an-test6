@@ -100,56 +100,44 @@ int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 		init_tycho2_fitstruct();
 
 	for (c=0; c<TYCHO2_FITS_COLUMNS; c++) {
-		unsigned char* src, *dst;
-		int srcstride, dststride, size;
 		assert(tycho2->columns[c] != -1);
 		assert(tycho2->table);
-		rawdata = qfits_query_column_seq(tycho2->table, tycho2->columns[c],
-										 offset, count);
-		assert(rawdata);
-
-		// special-cases
-		if (c == TYCHO2_FLAGS_INDEX) {
-			unsigned char flags;
-			for (i=0; i<count; i++) {
-				flags = rawdata[i];
-				entries[i].photo_center           = (flags >> 7) & 0x1;
-				entries[i].no_motion              = (flags >> 6) & 0x1;
-				entries[i].tycho1_star            = (flags >> 5) & 0x1;
-				entries[i].double_star            = (flags >> 4) & 0x1;
-				entries[i].photo_center_treatment = (flags >> 3) & 0x1;
-				entries[i].hipparcos_star         = (flags >> 2) & 0x1;
-
-			}
-			free(rawdata);
-			continue;
-		}
-		if (c == TYCHO2_CCDM_INDEX) {
-			for (i=0; i<count; i++) {
-				memcpy(entries[i].hip_ccdm, rawdata + i*3, 3);
-				entries[i].hip_ccdm[3] = '\0';
-			}
-			free(rawdata);
-			continue;
-		}
-
 		assert(tycho2->table->col[tycho2->columns[c]].atom_size == tycho2_fitstruct[c].size);
 
-		dst = ((unsigned char*)entries) + tycho2_fitstruct[c].offset;
-		src = rawdata;
-		dststride = sizeof(tycho2_entry);
-		srcstride = tycho2_fitstruct[c].size;
-		size = srcstride;
-		for (i=0; i<count; i++) {
-			/*
-			  memcpy(((unsigned char*)(entries + i)) + tycho2_fitstruct[c].offset,
-			  rawdata + (i * tycho2_fitstruct[c].size), tycho2_fitstruct[c].size);
-			*/
-			memcpy(dst, src, size);
-			dst += dststride;
-			src += srcstride;
+		// special-cases
+		if ((c == TYCHO2_FLAGS_INDEX) ||
+			(c == TYCHO2_CCDM_INDEX)) {
+
+			rawdata = qfits_query_column_seq(tycho2->table, tycho2->columns[c],
+											 offset, count);
+			assert(rawdata);
+
+			if (c == TYCHO2_FLAGS_INDEX) {
+				unsigned char flags;
+				for (i=0; i<count; i++) {
+					flags = rawdata[i];
+					entries[i].photo_center           = (flags >> 7) & 0x1;
+					entries[i].no_motion              = (flags >> 6) & 0x1;
+					entries[i].tycho1_star            = (flags >> 5) & 0x1;
+					entries[i].double_star            = (flags >> 4) & 0x1;
+					entries[i].photo_center_treatment = (flags >> 3) & 0x1;
+					entries[i].hipparcos_star         = (flags >> 2) & 0x1;
+				}
+			}
+			if (c == TYCHO2_CCDM_INDEX) {
+				for (i=0; i<count; i++) {
+					memcpy(entries[i].hip_ccdm, rawdata + i*3, 3);
+					entries[i].hip_ccdm[3] = '\0';
+				}
+			}
+			free(rawdata);
+			continue;
 		}
-		free(rawdata);
+
+		qfits_query_column_seq_to_array
+			(tycho2->table, tycho2->columns[c], offset, count,
+			 ((unsigned char*)entries) + tycho2_fitstruct[c].offset,
+			 sizeof(tycho2_entry));
 	}
 	return 0;
 }
