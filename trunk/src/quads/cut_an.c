@@ -117,7 +117,6 @@ int main(int argc, char** args) {
 		uint big, x, y;
 		uint nn, neigh[8], k;
 		healpix_decompose(i, &big, &x, &y, Nside);
-		//printf("small hp %i -> big %i, (x,y) (%i, %i)\n", i, big, x, y);
 		if (big != bighp)
 			continue;
 		owned[i] = 1;
@@ -128,6 +127,7 @@ int main(int argc, char** args) {
 				owned[neigh[k]] = 1;
 		}
 	}
+
 	//printf("Big healpix %i owns:\n", bighp);
 	pixesowned = 0;
 	for (i=0; i<HP; i++) {
@@ -248,6 +248,7 @@ int main(int argc, char** args) {
 				bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
 			}
 		}
+
 		printf("Discarded %i stars not in this big healpix.\n", ndiscarded);
 
 		if (maxperhp) {
