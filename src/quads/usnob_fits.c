@@ -95,17 +95,17 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 		init_usnob_fitstruct();
 
 	for (c=0; c<USNOB_FITS_COLUMNS; c++) {
-		unsigned char* src, *dst;
-		int srcstride, dststride, size;
 		assert(usnob->columns[c] != -1);
 		assert(usnob->table);
-		rawdata = qfits_query_column_seq(usnob->table, usnob->columns[c],
-										 offset, count);
-		assert(rawdata);
+		assert(usnob->table->col[usnob->columns[c]].atom_size == 
+			   usnob_fitstruct[c].size);
 
 		if (c == USNOB_FLAGS_INDEX) {
 			// special-case
 			unsigned char flags;
+			rawdata = qfits_query_column_seq(usnob->table, usnob->columns[c],
+											 offset, count);
+			assert(rawdata);
 			for (i=0; i<count; i++) {
 				flags = rawdata[i];
 				entries[i].diffraction_spike = (flags >> 7) & 0x1;
@@ -116,24 +116,10 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 			continue;
 		}
 
-		assert(usnob->table->col[usnob->columns[c]].atom_size == 
-			   usnob_fitstruct[c].size);
-
-		dst = ((unsigned char*)entries) + usnob_fitstruct[c].offset;
-		src = rawdata;
-		dststride = sizeof(usnob_entry);
-		srcstride = usnob_fitstruct[c].size;
-		size = srcstride;
-		for (i=0; i<count; i++) {
-			/*
-			  memcpy(((unsigned char*)(entries + i)) + usnob_fitstruct[c].offset,
-			  rawdata + (i * usnob_fitstruct[c].size), usnob_fitstruct[c].size);
-			*/
-			memcpy(dst, src, size);
-			dst += dststride;
-			src += srcstride;
-		}
-		free(rawdata);
+		qfits_query_column_seq_to_array
+			(usnob->table, usnob->columns[c], offset, count,
+			 ((unsigned char*)entries) + usnob_fitstruct[c].offset,
+			 sizeof(usnob_entry));
 	}
 	return 0;
 }
