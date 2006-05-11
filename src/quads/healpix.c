@@ -683,8 +683,9 @@ uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 		// x is the northeast direction, y is the northwest.
 		x = (int)floor(u1 * 2.0 * Nside);
 		y = (int)floor(u2 * 2.0 * Nside);
-		x %= Nside;
-		y %= Nside;
+		x %= (int)Nside;
+		y %= (int)Nside;
+
 		if (x < 0)
 			x += Nside;
 		if (y < 0)
