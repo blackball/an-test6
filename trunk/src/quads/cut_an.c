@@ -6,11 +6,11 @@
 #include "healpix.h"
 #include "starutil.h"
 
-#define OPTIONS "ho:N:n:m:M:"
+#define OPTIONS "ho:i:N:n:m:M:"
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s -o <output-filename-template>\n"
+		   "  %s -o <output-filename-template> -i <output-idfile-template>\n"
 		   "  [-m <minimum-magnitude-to-use>]\n"
 		   "  [-M <maximum-magnitude-to-use>]\n"
 		   "  [-n <max-stars-per-(small)-healpix>]\n"
@@ -28,8 +28,6 @@ struct stardata {
 	double dec;
 	float mag;
 	uint64_t id;
-	//int small_hp;
-	//unsigned char big_hp;
 };
 typedef struct stardata stardata;
 
@@ -44,11 +42,11 @@ int sort_stardata_mag(const void* v1, const void* v2) {
 
 int main(int argc, char** args) {
 	char* outfn = NULL;
+	char* idfn = NULL;
 	int c;
 	int startoptind;
 	int i, j, HP;
 	int Nside = 100;
-	//catalog* cats;
 	bl** starlists;
 	int maxperhp = 0;
 	double minmag = -1.0;
@@ -71,6 +69,9 @@ int main(int argc, char** args) {
 		case 'o':
 			outfn = optarg;
 			break;
+		case 'i':
+			idfn = optarg;
+			break;
 		case 'n':
 			maxperhp = atoi(optarg);
 			break;
@@ -83,23 +84,17 @@ int main(int argc, char** args) {
 		}
     }
 
-	if (!outfn || (optind == argc)) {
+	if (!outfn || !idfn || (optind == argc)) {
 		print_help(args[0]);
 		exit(-1);
 	}
 
 	HP = 12 * Nside * Nside;
 
+	printf("Nside=%i, HP=%i, maxperhp=%i, HP*maxperhp=%i.\n", Nside, HP, maxperhp, HP*maxperhp);
+
 	starlists = malloc(HP * sizeof(bl*));
 	memset(starlists, 0, HP * sizeof(bl*));
-	/*
-	  for (i=0; i<HP; i++)
-	  starlists[i] = bl_new(32, sizeof(stardata));
-	*/
-	/*
-	  cats = malloc(HP * sizeof(catalog*));
-	  memset(cats, 0, HP * sizeof(catalog*));
-	*/
 
 	startoptind = optind;
 	for (; optind<argc; optind++) {
@@ -117,7 +112,8 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 		N = an_catalog_count_entries(ancat);
-		printf("Reading %i entries...\n", N);
+		printf("Reading %i entries from %s...\n", N, infn);
+		fflush(stdout);
 		off = 0;
 		while (off < N) {
 			an_entry an[BLOCK];
@@ -179,7 +175,6 @@ int main(int argc, char** args) {
 						// this new star is dimmer than the last one in the list...
 						continue;
 				}
-				//bl_append(starlists[hp], &sd);
 				bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
 			}
 		}
@@ -187,31 +182,19 @@ int main(int argc, char** args) {
 		an_catalog_close(ancat);
 	}
 
-	// sort the stars within each fine healpix.
-	for (i=0; i<HP; i++) {
-		int j;
-		if (!starlists[i]) continue;
-		printf("small healpix %i has %i stars.\n", i, bl_size(starlists[i]));
-		/*
-		  if (bl_size(starlists[i]) == 0)
-		  continue;
-		  bl_sort(starlists[i], sort_stardata_mag);
-		*/
-		/*
-		  {
-		  stardata* d1, *d2;
-		  d1 = (stardata*)bl_access(starlists[i], 0);
-		  d2 = (stardata*)bl_access(starlists[i], 1);
-		  printf("first two mags: %g, %g\n", d1->mag, d2->mag);
-		  }
-		*/
-		printf("mags: ");
-		for (j=0; j<bl_size(starlists[i]); j++) {
-			stardata* d1 = (stardata*)bl_access(starlists[i], j);
-			printf("%g ", d1->mag);
-		}
-		printf("\n");
-	}
+	/*
+	  for (i=0; i<HP; i++) {
+	  int j;
+	  if (!starlists[i]) continue;
+	  printf("small healpix %i has %i stars.\n", i, bl_size(starlists[i]));
+	  printf("mags: ");
+	  for (j=0; j<bl_size(starlists[i]); j++) {
+	  stardata* d1 = (stardata*)bl_access(starlists[i], j);
+	  printf("%g ", d1->mag);
+	  }
+	  printf("\n");
+	  }
+	*/
 
 	owned = malloc(HP * sizeof(int));
 
@@ -222,6 +205,9 @@ int main(int argc, char** args) {
 		catalog* cat;
 		idfile* id;
 		int nwritten;
+
+		printf("Writing big healpix %i...\n", j);
+		fflush(stdout);
 
 		// for each big healpix, find the set of small healpixes it owns
 		// (including a bit of overlap)
@@ -254,6 +240,7 @@ int main(int argc, char** args) {
 		}
 		catalog_write_header(cat);
 
+		sprintf(fn, idfn, j);
 		id = idfile_open_for_writing(fn);
 		if (!id) {
 			fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
@@ -289,12 +276,14 @@ int main(int argc, char** args) {
 					break;
 			}
 			printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
+			fflush(stdout);
 			if (nwritten == maxperbighp)
 				break;
 			if (!nowned)
 				break;
 		}
 		printf("Made %i sweeps through the healpixes.\n", k);
+		fflush(stdout);
 
 		catalog_fix_header(cat);
 		catalog_close(cat);
