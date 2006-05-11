@@ -803,29 +803,29 @@ int xyztohealpix(double x, double y, double z)
 void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
                     double* rx, double *ry, double *rz)
 {
-	uint chp = hp / Nside;
-	uint pnp = hp % Nside;
+	uint chp;
 	uint equatorial = 1;
-	uint zfactor = 1;
+	double zfactor = 1.0;
 	uint xp, yp;
 	double x, y, z;
 	double pi = PIl, phi;
-
-	pnprime_to_xy(pnp, &xp, &yp, Nside);
+	
+	healpix_decompose(hp, &chp, &xp, &yp, Nside);
 
 	if (isnorthpolar(chp) &&
 		  ( ((xp+yp+1)/Nside > 1) ||
 		    ((xp+yp+1)/Nside == 1 && dx+dy >= 1.0))) {
 		equatorial = 0;
-		zfactor = 1;
+		zfactor = 1.0;
 	}
 	if (issouthpolar(chp) &&
 		  ( ((xp+yp+1)/Nside < 1) ||
 		    ((xp+yp+1)/Nside == 1 && dx+dy <= 1.0))) {
 		equatorial = 0;
-		zfactor = -1;
+		zfactor = -1.0;
 	}
 
+	// this is x,y position in the healpix reference frame
 	x = xp+dx;
 	y = yp+dy;
 
@@ -836,7 +836,7 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 		y /= Nside;
 
 		if (chp <= 3) {
-			phioff = pi/4.0;
+			phioff = 1.0;
 		} else if (chp <= 7) {
 			zoff = -1.0;
 			chp -= 4;
@@ -850,40 +850,60 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 		}
 
 		z = 2.0/3.0*(x + y + zoff);
-		phi = pi/4*(y - x + phioff + 2*chp);
-
+		phi = pi/4*(x - y + phioff + 2*chp);
 
 	} else {
 		// do other magic
 
 		// get z/phi using magical equations
-		double phiP, phiN, phit, t;
-		if (zfactor == -1)
-			swap_double(&x, &y);
+		double phiP, phiN, phit;
+		double A, B, a, b, c;
 
-		// We solve two equations in two unknows to get z,phit from
-		// x,y. They are of the form z = f(x,phit) and z = f(y,phit).
-		// The solution to phit is a quadratic so we take the one that
-		// falls in the right region.
-		phiP = (-pi+pi*x/y)/2.0/(x*x/y/y-1);
-		phiN = (-pi-pi*x/y)/2.0/(x*x/y/y-1);
-		if (0 <= phiP && phiP <= pi/2) {
-			phit = phiP;
-			assert(0 > phiN || phiN > pi/2);
-		} else {
-			phit = phiN;
-			assert(0 > phiP || phiP > pi/2);
+		if (zfactor == -1.0) {
+			swap_double(&x, &y);
+			x = (Nside - x);
+			y = (Nside - y);
 		}
 
-		// Now that we have phit we can get z
-		t = pi*y/2/phit/Nside;
-		z = 1-t*t/3;
+		A = square(Nside - y);
+		B = square(Nside - x);
+		a = (A - B);
+		b = -A * pi;
+		c = A * square(pi / 2.0);
+
+		if (a == 0.0) {
+			phit = pi / 4.0;
+		} else {
+			double disc = b*b - 4.0*a*c;
+			if (disc <= 0.0) {
+				phit = -b / (2.0 * a);
+				assert(0.0 <= phit && phit <= pi/2.0);
+			} else {
+				phiP = (-b + sqrt(disc)) / (2.0*a);
+				phiN = (-b - sqrt(disc)) / (2.0*a);
+				if (0.0 <= phiP && phiP <= pi/2.0) {
+					phit = phiP;
+				} else {
+					phit = phiN;
+					assert(0.0 <= phiN && phiN <= pi/2.0);
+				}
+			}
+		}
+
+		if (phit == 0.0) {
+			z = 1.0 - square(pi * (Nside - x) / ((2.0 * phit - pi) * Nside)) / 3.0;
+		} else {
+			z = 1.0 - square(pi * (Nside - y) / (2.0 * phit * Nside)) / 3.0;
+		}
+		assert(0.0 <= fabs(z) && fabs(z) <= 1.0);
+		z *= zfactor;
+		assert(0.0 <= fabs(z) && fabs(z) <= 1.0);
 
 		// Need to get phi
 		if (issouthpolar(chp))
-			phi = pi/2*(chp-8) + phit;
+			phi = pi/2.0* (chp-8) + phit;
 		else
-			phi = pi/2*chp + phit;
+			phi = pi/2.0 * chp + phit;
 
 	}
 
