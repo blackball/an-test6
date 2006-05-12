@@ -127,9 +127,6 @@ int main(int argc, char *argv[])
 {
 	int argchar;
 	char *codefname = NULL;
-	FILE *codefid = NULL;
-	int nread;
-	code_header header;
 	double* onecode;
 	int i, d, e;
 
