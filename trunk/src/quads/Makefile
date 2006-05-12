@@ -48,7 +48,7 @@ EXECS := get_healpix quadidx xylstomatlab rdlstohealpix \
 	certifiable hpquads dedup_index codetree startree \
 	printcatalog deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
-	plotcat codeprojections
+	plotcat codeprojections 
 
 #	codeprojections fixmatchfile printmatchfile 
 
