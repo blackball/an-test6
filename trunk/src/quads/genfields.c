@@ -131,18 +131,12 @@ int main(int argc, char *argv[])
 		numFields = 1;
 	}
 
-    if (fits)
-        treefname = mk_fits_streefn(basename);
-    else
-        treefname = mk_streefn(basename);
+	treefname = mk_streefn(basename);
 
 	fprintf(stderr, "  Reading star KD tree from %s...", treefname);
 	fflush(stderr);
 
-    if (fits)
-        starkd = kdtree_fits_read_file(treefname);
-    else
-        starkd = kdtree_read_file(treefname);
+	starkd = kdtree_fits_read_file(treefname);
 
 	free_fn(treefname);
 	if (!starkd) {

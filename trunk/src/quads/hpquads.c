@@ -18,7 +18,7 @@
 #include "catalog.h"
 #include "tic.h"
 
-#define OPTIONS "hf:u:l:n:ros"
+#define OPTIONS "hf:u:l:n:ro"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -40,7 +40,6 @@ void print_help(char* progname)
 {
 	printf("\nUsage:\n"
 	       "  %s -f <filename-base>\n"
-	       "     [-s]            shifted bins\n"
 	       "     [-r]            re-bin the unused stars\n"
 	       "     [-n <nside>]    healpix nside (default 512)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
@@ -318,11 +317,6 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 			// we're not doing this healpix in this pass.
 			continue;
 		nn = healpix_get_neighbours_nside(i, neigh, Nside);
-		/*
-		  for (n = 0; n < nn; n++) {
-		  il_merge_lists(pixels + i, pixels + neigh[n]);
-		  }
-		*/
 
 		// grab the neighbour's lists of stars...
 		sourcelists[0] = pixels + i;
@@ -353,7 +347,7 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 }
 
 void create_quads_in_pixels(int numstars, il* starindices,
-                            il* pixels, int Nside, int shifted,
+                            il* pixels, int Nside,
                             int dx, int dy)
 {
 	int i;
@@ -370,18 +364,14 @@ void create_quads_in_pixels(int numstars, il* starindices,
 	quadsmade = malloc(HEALPIXES * sizeof(int));
 	memset(quadsmade, 0, HEALPIXES * sizeof(int));
 
-	if (shifted) {
-		shifted_healpix_bin_stars(numstars, starindices, pixels,
-		                          dx, dy, Nside);
-	} else {
-		healpix_bin_stars(numstars, starindices, pixels, Nside);
-	}
+	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside);
 
 	while (Ninteresting) {
 		int nusedthispass;
 		nusedthispass = 0;
 		for (i = 0; i < HEALPIXES; i++) {
 			int foundone;
+			int used_stars[4];
 
 			if (!(i % 100000)) {
 				fprintf(stderr, "+");
@@ -391,25 +381,21 @@ void create_quads_in_pixels(int numstars, il* starindices,
 			if (!interesting[i])
 				continue;
 
-			printf("hp %i has %i stars.\n", i, il_size(pixels+i));
+			//printf("hp %i has %i stars.\n", i, il_size(pixels+i));
 
-			if (!il_size(pixels + i))
+			if (!il_size(pixels + i)) {
+				interesting[i] = 0;
+				Ninteresting--;
 				continue;
-
-			if (shifted) {
-				int used_stars[4];
-				foundone = find_a_quad(pixels + i, used_stars);
-				if (foundone) {
-					int s;
-					// remove the used stars.
-					for (s = 0; s < 4; s++)
-						il_remove_value(pixels + i, used_stars[s]);
-				}
-			} else {
-				foundone = find_a_quad(pixels + i, NULL);
 			}
 
+			foundone = find_a_quad(pixels + i, used_stars);
 			if (foundone) {
+				int s;
+				// remove the used stars.
+				for (s = 0; s < 4; s++)
+					il_remove_value(pixels + i, used_stars[s]);
+
 				quadsmade[i]++;
 				nused += 4;
 				nusedthispass += 4;
@@ -484,15 +470,11 @@ int main(int argc, char** argv)
 	int HEALPIXES;
 	int i;
 	int rebin = 0;
-	int shifted = 0;
 	char* basefname = NULL;
 	uint pass, npasses;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 's':
-			shifted = 1;
-			break;
 		case 'r':
 			rebin = 1;
 			break;
@@ -534,8 +516,9 @@ int main(int argc, char** argv)
 		        Nside, HEALPIXES, hparea, sqrt(hparea));
 	}
 
-	if (shifted)
-		Nside *= 3;
+	// fine healpixelization for shifting.
+	// "dx" and "dy" run from 0 to 2.
+	Nside *= 3;
 	HEALPIXES = 12 * Nside * Nside;
 
 	tic();
@@ -560,11 +543,24 @@ int main(int argc, char** argv)
 	printf("Writing quad file %s and code file %s\n", quadfname, codefname);
 
     quads = quadfile_open_for_writing(quadfname);
+	if (!quads) {
+		fprintf(stderr, "Couldn't open file %s to write quads.\n", quadfname);
+		exit(-1);
+	}
     if (quadfile_write_header(quads)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
         exit(-1);
     }
+
     codes = codefile_open_for_writing(codefname);
+	if (!codes) {
+		fprintf(stderr, "Couldn't open file %s to write codes.\n", quadfname);
+		exit(-1);
+	}
+    if (codefile_write_header(codes)) {
+        fprintf(stderr, "Couldn't write headers to code file %s\n", codefname);
+        exit(-1);
+    }
 
 	free_fn(quadfname);
 	free_fn(codefname);
@@ -578,21 +574,15 @@ int main(int argc, char** argv)
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
-	if (shifted) {
-		npasses = 9;
-	} else {
-		npasses = 1;
-	}
+	npasses = 9;
 	for (pass = 0; pass < npasses; pass++) {
 		int dx, dy;
 		dx = pass % 3;
 		dy = (pass / 3) % 3;
 
-		if (shifted) {
-			fprintf(stderr, "Doing pass %i of %i: dx=%i, dy=%i.\n", pass, npasses, dx, dy);
-		}
+		fprintf(stderr, "Doing pass %i of %i: dx=%i, dy=%i.\n", pass, npasses, dx, dy);
 
-		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, shifted, dx, dy);
+		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy);
 
 		if (rebin) {
 			// Gather up the leftover stars and re-bin.
@@ -601,14 +591,14 @@ int main(int argc, char** argv)
 				il_merge_lists(leftovers, pixels + i);
 			}
 			fprintf(stderr, "Rebinning with Nside=%i\n", Nside / 2);
-			create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, 0, dx, dy);
+			create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, dx, dy);
 			il_free(leftovers);
 		}
 
 		// empty blocklists.
-		for (i = 0; i < HEALPIXES; i++) {
+		for (i = 0; i < HEALPIXES; i++)
 			il_remove_all(pixels + i);
-		}
+
 	}
 
 	catalog_close(cat);

@@ -36,6 +36,8 @@ codefile* codefile_open(char* codefname, int modifiable);
 
 codefile* codefile_open_for_writing(char* codefname);
 
+int codefile_write_header(codefile* qf);
+
 int codefile_write_code(codefile* qf, double cx, double cy, double dx, double dy);
 
 int codefile_fix_header(codefile* qf);

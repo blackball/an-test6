@@ -13,20 +13,18 @@
 #include <string.h>
 
 #include "kdtree.h"
-#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "catalog.h"
 
-#define OPTIONS "hR:f:k:d:F"
+#define OPTIONS "hR:f:k:d:"
 
 void printHelp(char* progname) {
 	printf("%s -f <input-catalog-name>\n"
 		   "    [-R Nleaf]: number of points in a kdtree leaf node\n"
 		   "    [-k keep]:  number of points to keep\n"
-		   "    [-d radius]: deduplication radius (arcsec)\n"
-		   "    [-F]: write traditional (non-FITS) format output.\n", progname);
+		   "    [-d radius]: deduplication radius (arcsec)\n", progname);
 }
 
 extern char *optarg;
@@ -40,7 +38,6 @@ int main(int argc, char *argv[]) {
     int levels;
     catalog* cat;
     int Nleaf = 25;
-    bool fits = TRUE;
     char* basename = NULL;
     char* treefname = NULL;
     char* catfname = NULL;
@@ -53,9 +50,6 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
-        case 'F':
-            fits = FALSE;
-            break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
             break;
@@ -100,13 +94,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "%s: building KD tree for %s\n", argv[0], catfname);
 
     catfname = mk_catfn(basename);
-	if (fits) {
-        treefname = mk_fits_streefn(basename);
-		fprintf(stderr, "Will write FITS format output to %s\n", treefname);
-    } else {
-        treefname = mk_streefn(basename);
-		fprintf(stderr, "Will write output to %s\n", treefname);
-    }
+	treefname = mk_streefn(basename);
+	fprintf(stderr, "Will write output to %s\n", treefname);
 
     fprintf(stderr, "Reading star catalogue...");
     cat = catalog_open(catfname, 1);
@@ -138,21 +127,12 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stderr, "done (%d nodes)\n", starkd->nnodes);
 
-    if (fits) {
-		fprintf(stderr, "Writing FITS format output to %s\n", treefname);
-		fflush(stderr);
-        if (kdtree_fits_write_file(starkd, treefname)) {
-            fprintf(stderr, "Failed to write FITS-format star kdtree.\n");
-            exit(-1);
-        }
-    } else {
-		fprintf(stderr, "Writing output to %s ...\n", treefname);
-		fflush(stderr);
-        if (kdtree_write_file(starkd, treefname)) {
-            fprintf(stderr, "Failed to write star kdtree.\n");
-            exit(-1);
-        }
-    }
+	fprintf(stderr, "Writing output to %s ...\n", treefname);
+	fflush(stderr);
+	if (kdtree_fits_write_file(starkd, treefname, NULL)) {
+		fprintf(stderr, "Failed to write star kdtree.\n");
+		exit(-1);
+	}
     free_fn(treefname);
     fprintf(stderr, "done.\n");
 

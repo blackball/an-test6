@@ -9,9 +9,8 @@ CFLAGS :=
 CFLAGS	+= -g
 
 CFLAGS += -pg
-#LFLAGS += -lprof
+CFLAGS	+= -O2
 
-#CFLAGS	+= -O2
 # to turn off asserts:
 #CFLAGS += -DNDEBUG
 #CFLAGS += -Werror

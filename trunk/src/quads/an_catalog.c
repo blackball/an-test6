@@ -203,6 +203,7 @@ an_catalog* an_catalog_open_for_writing(char* fn) {
 	}
 	cat->table = an_catalog_get_table();
 	cat->header = qfits_table_prim_header_default();
+	qfits_header_add(cat->header, "AN_CATALOG", "T", "This is an Astrometry.net catalog.", NULL);
 	return cat;
  bailout:
 	if (cat) {

@@ -78,7 +78,7 @@ int catalog_write_header(catalog* cat)
 	char* fn;
 
 	if (!cat->fid) {
-		fprintf(stderr, "quadfile_fits_fix_header: fid is null.\n");
+		fprintf(stderr, "catalog_write_header: fid is null.\n");
 		return -1;
 	}
 
@@ -105,7 +105,7 @@ int catalog_write_header(catalog* cat)
 
 int catalog_fix_header(catalog* cat)
 {
-	off_t offset;
+ 	off_t offset;
 	off_t old_header_end;
 
 	if (!cat->fid) {
@@ -263,6 +263,7 @@ catalog* catalog_open_for_writing(char* fn)
 	fits_add_endian(qf->header);
 	fits_add_double_size(qf->header);
 	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
+	qfits_header_add(qf->header, "AN_FILETYPE", "OBJS", "This file has a list of object positions.", NULL);
 	qfits_header_add(qf->header, "", NULL, "This is a flat array of XYZ for each catalog star.", NULL);
 
 	return qf;

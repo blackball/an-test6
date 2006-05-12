@@ -46,17 +46,18 @@ bool issouthpolar(int healpix)
 	return (healpix >= 8);
 }
 
-bool ispowerof4(uint x) {
-	int bit, nbits=0, firstbit=-1;
-	for (bit=0; bit<32; bit++) {
-		if ((x >> bit) & 1) {
-			nbits++;
-			firstbit = bit;
-		}
-		if (nbits > 1)
-			return FALSE;
-	}
-	return (firstbit % 2) == 0;
+static inline bool ispowerof4(uint x) {
+	if (x >= 0x40000)
+		return (                    x == 0x40000   ||
+				 x == 0x100000   || x == 0x400000  ||
+				 x == 0x1000000  || x == 0x4000000 ||
+				 x == 0x10000000 || x == 0x40000000);
+	else 
+		return (x == 0x1        || x == 0x4       || 
+				x == 0x10       || x == 0x40      ||
+				x == 0x100      || x == 0x400     ||
+				x == 0x1000     || x == 0x4000    ||
+				x == 0x10000);
 }
 
 void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)

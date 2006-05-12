@@ -138,12 +138,6 @@ bailout:
 codefile* codefile_open_for_writing(char* fn)
 {
 	codefile* cf;
-	char val[256];
-	qfits_table* table;
-	qfits_header* tablehdr;
-	void* dataptr;
-	uint datasize;
-	uint ncols, nrows, tablesize;
 
 	cf = new_codefile();
 	if (!cf)
@@ -158,37 +152,15 @@ codefile* codefile_open_for_writing(char* fn)
 	cf->header = qfits_table_prim_header_default();
 	fits_add_endian(cf->header);
 	fits_add_double_size(cf->header);
-	// these may be placeholder values...
-	sprintf(val, "%u", cf->numcodes);
-	qfits_header_add(cf->header, "NCODES", val, "Number of codes.", NULL);
-	sprintf(val, "%u", cf->numstars);
-	qfits_header_add(cf->header, "NSTARS", val, "Number of stars used (or zero).", NULL);
-	sprintf(val, "%.10f", cf->index_scale);
-	qfits_header_add(cf->header, "SCALE_U", val, "Upper-bound index scale.", NULL);
-	sprintf(val, "%.10f", cf->index_scale_lower);
-	qfits_header_add(cf->header, "SCALE_L", val, "Lower-bound index scale.", NULL);
+	// placeholder values.
+	qfits_header_add(cf->header, "AN_FILETYPE", "CODE", "This file lists the code for each quad.", NULL);
+	qfits_header_add(cf->header, "NCODES", "0", "", NULL);
+	qfits_header_add(cf->header, "NSTARS", "0", "", NULL);
+	qfits_header_add(cf->header, "SCALE_U", "0.0", "", NULL);
+	qfits_header_add(cf->header, "SCALE_L", "0.0", "", NULL);
 	qfits_header_add(cf->header, "", NULL, "The first extension contains the codes ", NULL);
 	qfits_header_add(cf->header, "", NULL, " stored as 4 native-endian doubles.", NULL);
 
-	// first table: the codes.
-	dataptr = NULL;
-	datasize = DIM_CODES * sizeof(double);
-	ncols = 1;
-	// may be dummy
-	nrows = cf->numcodes;
-	tablesize = datasize * nrows * ncols;
-
-	table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
-	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-	               "codes",
-	               "", "", "", 0, 0, 0, 0, 0);
-	qfits_header_dump(cf->header, cf->fid);
-	tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, cf->fid);
-	qfits_table_close(table);
-	qfits_header_destroy(tablehdr);
-
-	cf->header_end = ftello(cf->fid);
 	return cf;
 
 bailout:
@@ -200,23 +172,16 @@ bailout:
 	return NULL;
 }
 
-int codefile_fix_header(codefile* cf)
-{
-	off_t offset;
-	off_t new_header_end;
+int codefile_write_header(codefile* cf) {
 	qfits_table* table;
 	qfits_header* tablehdr;
 	char val[256];
-	void* dataptr;
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	char* fn;
 
 	if (!cf->fid)
 		return -1;
-
-	offset = ftello(cf->fid);
-	fseeko(cf->fid, 0, SEEK_SET);
 
 	// fill in the real values...
 	sprintf(val, "%u", cf->numcodes);
@@ -228,7 +193,6 @@ int codefile_fix_header(codefile* cf)
 	sprintf(val, "%.10f", cf->index_scale_lower);
 	qfits_header_mod(cf->header, "SCALE_L", val, "Lower-bound index scale.");
 
-	dataptr = NULL;
 	datasize = DIM_CODES * sizeof(double);
 	ncols = 1;
 	nrows = cf->numcodes;
@@ -243,21 +207,33 @@ int codefile_fix_header(codefile* cf)
 	qfits_header_dump(tablehdr, cf->fid);
 	qfits_table_close(table);
 	qfits_header_destroy(tablehdr);
-	//qfits_header_destroy(header);
 
-	new_header_end = ftello(cf->fid);
+	cf->header_end = ftello(cf->fid);
+	return 0;
+}
 
-	if (new_header_end != cf->header_end) {
-		fprintf(stderr, "Warning: codefile header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)cf->header_end,
-		        (unsigned long)new_header_end);
+int codefile_fix_header(codefile* cf)
+{
+ 	off_t offset;
+	off_t old_header_end;
+
+	if (!cf->fid) {
+		fprintf(stderr, "codefile_fits_fix_header: fid is null.\n");
 		return -1;
 	}
+	offset = ftello(cf->fid);
+	fseeko(cf->fid, 0, SEEK_SET);
+	old_header_end = cf->header_end;
 
+	codefile_write_header(cf);
+
+	if (old_header_end != cf->header_end) {
+		fprintf(stderr, "Warning: codefile header used to end at %lu, "
+		        "now it ends at %lu.\n", (unsigned long)old_header_end,
+				(unsigned long)cf->header_end);
+		return -1;
+	}
 	fseek(cf->fid, offset, SEEK_SET);
-
-	fits_pad_file(cf->fid);
-
 	return 0;
 }
 
@@ -265,12 +241,12 @@ int codefile_write_code(codefile* cf, double Cx, double Cy, double Dx, double Dy
 {
 	FILE *fid = cf->fid;
 	if (write_double(fid, Cx) ||
-	        write_double(fid, Cy) ||
-	        write_double(fid, Dx) ||
-	        write_double(fid, Dy)) {
+		write_double(fid, Cy) ||
+		write_double(fid, Dx) ||
+		write_double(fid, Dy)) {
 		fprintf(stderr, "Error writing a code.\n");
-		cf->numcodes++;
 		return -1;
 	}
+	cf->numcodes++;
 	return 0;
 }
