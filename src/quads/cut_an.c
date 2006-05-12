@@ -60,6 +60,8 @@ int main(int argc, char** args) {
 	idfile* id;
 	int nwritten;
 	int pixesowned;
+	an_entry* entries;
+	int BLOCK = 100000;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -112,7 +114,6 @@ int main(int argc, char** args) {
 	memset(owned, 0, HP * sizeof(int));
 	// for each big healpix, find the set of small healpixes it owns
 	// (including a bit of overlap)
-	// (only set owned[i] if healpix 'i' actually contains stars.)
 	for (i=0; i<HP; i++) {
 		uint big, x, y;
 		uint nn, neigh[8], k;
@@ -138,10 +139,12 @@ int main(int argc, char** args) {
 	}
 	//printf("\n");
 	printf("This big healpix owns %i small healpix.\n", pixesowned);
-
-	printf("Max stars in this catalog will be %i\n", pixesowned * maxperhp);
+	if (maxperhp)
+		printf("Max stars in this catalog will be %i\n", pixesowned * maxperhp);
 
 	nwritten = 0;
+
+	entries = malloc(BLOCK * sizeof(an_entry));
 
 	// go through the healpixes, writing the star locations to the
 	// catalog file, and the star ids to the idfile.
@@ -167,7 +170,6 @@ int main(int argc, char** args) {
 		int hp;
 		int i, N;
 		an_catalog* ancat;
-		int BLOCK = 1000;
 		int off, n;
 		int ndiscarded;
 
@@ -182,11 +184,11 @@ int main(int argc, char** args) {
 		fflush(stdout);
 		ndiscarded = 0;
 		for (off=0; off<N; off+=n) {
-			an_entry an[BLOCK];
 			stardata sd;
 			int j;
 			double summag;
 			int nmag;
+			an_entry* an = entries;
 
 			if (off + BLOCK > N)
 				n = N - off;
@@ -300,6 +302,8 @@ int main(int argc, char** args) {
 
 		an_catalog_close(ancat);
 	}
+
+	free(entries);
 
 	for (i=0; i<HP; i++)
 		if (!starlists[i])

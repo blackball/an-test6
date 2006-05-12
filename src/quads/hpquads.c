@@ -533,8 +533,6 @@ int main(int argc, char** argv)
 		Nside *= 3;
 	HEALPIXES = 12 * Nside * Nside;
 
-	//starttime = time(NULL);
-
 	tic();
 
 	pixels = malloc(HEALPIXES * sizeof(il));
@@ -543,6 +541,7 @@ int main(int argc, char** argv)
 	}
 
 	catfname = mk_catfn(basefname);
+	printf("Reading catalog file %s ...\n", catfname);
 	cat = catalog_open(catfname, 0);
 	if (!cat) {
 		fprintf(stderr, "Failed to open catalog file %s\n", catfname);
@@ -550,8 +549,10 @@ int main(int argc, char** argv)
 	}
 	free_fn(catfname);
 
-	quadfname = mk_quadfn(optarg);
-	codefname = mk_codefn(optarg);
+	quadfname = mk_quadfn(basefname);
+	codefname = mk_codefn(basefname);
+
+	printf("Writing quad file %s and code file %s\n", quadfname, codefname);
 
     quads = quadfile_open_for_writing(quadfname);
     if (quadfile_write_header(quads)) {

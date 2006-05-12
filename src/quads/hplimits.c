@@ -41,9 +41,49 @@ int main(int argc, char** args) {
 			break;
 		}
 	}
+	optstart = optind;
+
 
 	HP = 12 * Nside * Nside;
 	printf("Nside=%i, HP=%i.\n", Nside, HP);
+
+	{
+		int* owned;
+		int i;
+		owned = malloc(HP * sizeof(int));
+		for (optind=optstart; optind<argc; optind++) {
+			int bighp = atoi(args[optind]);
+			memset(owned, 0, HP * sizeof(int));
+			// for each big healpix, find the set of small healpixes it owns
+			// (including a bit of overlap)
+			for (i=0; i<HP; i++) {
+				uint big, x, y;
+				uint nn, neigh[8], k;
+				healpix_decompose(i, &big, &x, &y, Nside);
+				if (big != bighp)
+					continue;
+				owned[i] = 1;
+				if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
+					// add its neighbours.
+					nn = healpix_get_neighbours_nside(i, neigh, Nside);
+					for (k=0; k<nn; k++)
+						owned[neigh[k]] = 1;
+				}
+			}
+			printf("HP %i owns:\n", bighp);
+			for (i=0; i<HP; i++) {
+				if (owned[i])
+					printf("%03i ", i);
+			}
+			printf("\n");
+		}
+		free(owned);
+	}
+	exit(0);
+
+
+
+
 
 	{
 		//int hp = 674;
@@ -120,8 +160,6 @@ int main(int argc, char** args) {
 		printf("]\n");
 		}
 
-
-	optstart = optind;
 
 	printf("rdc=[");
 	for (optind=optstart; optind<argc; optind++) {

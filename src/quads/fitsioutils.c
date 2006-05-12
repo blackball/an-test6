@@ -230,7 +230,7 @@ int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
 			fprintf(stderr, "error getting start/size for ext %i.\n", i);
             return -1;
         }
-		fprintf(stderr, "ext %i starts at %i, has size %i.\n", i, start, size);
+		//fprintf(stderr, "ext %i starts at %i, has size %i.\n", i, start, size);
 		if (!qfits_is_table(fn, i))
             continue;
         table = qfits_table_open(fn, i);
