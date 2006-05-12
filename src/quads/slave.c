@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 		quads = NULL;
 
 		if (read_parameters()) {
-			exit(-1);
+			break;
 		}
 
 		if (agreement && (agreetol <= 0.0)) {
@@ -179,6 +179,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 			xy->parity = 1;
 		}
+		xy->xname = "ROWC";
+		xy->yname = "COLC";
 
 		// Read .ckdt2 file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
@@ -249,6 +251,11 @@ int main(int argc, char *argv[]) {
 			fopenout(donefname, batchfid);
 			fclose(batchfid);
 		}
+		free(donefname);
+		free(matchfname);
+
+		free(matchfile.indexpath);
+		free(matchfile.fieldpath);
 
 		xylist_close(xy);
 		fclose(matchfid);
@@ -323,7 +330,8 @@ int read_parameters() {
 					"    nagree <min-to-agree>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    run\n"
-					"    help\n");
+					"    help\n"
+					"    quit\n");
 		} else if (is_word(buffer, "agreement", &nextword)) {
 			agreement = TRUE;
 		} else if (is_word(buffer, "nagree ", &nextword)) {
@@ -397,6 +405,8 @@ int read_parameters() {
 			}
 		} else if (is_word(buffer, "run", &nextword)) {
 			return 0;
+		} else if (is_word(buffer, "quit", &nextword)) {
+			return 1;
 		} else {
 			fprintf(stderr, "I didn't understand that command.\n");
 			fflush(stderr);
@@ -468,6 +478,12 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		if (!thisfield) {
 			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
 			continue;
+		}
+
+		if (xy_size(thisfield) >= 2) {
+			printf("first two points in field: (%g,%g), (%g,%g)\n",
+				   xy_refx(thisfield, 0), xy_refy(thisfield, 0),
+				   xy_refx(thisfield, 1), xy_refy(thisfield, 1));
 		}
 
 		matchfile.fieldnum = fieldnum;

@@ -20,7 +20,7 @@
 #define mk_codefn(s)   mk_filename(s,".code.fits")
 #define mk_qidxfn(s)   mk_filename(s,".qidx.fits")
 #define mk_hitfn(s)    mk_filename(s,".hits")
-#define mk_fieldfn(s)  mk_filename(s,".xyls.fits")
+#define mk_fieldfn(s)  mk_filename(s,".fits")
 #define mk_field0fn(s) mk_filename(s,".xyl0")
 #define mk_idlistfn(s) mk_filename(s,".ids0")
 #define mk_qlistfn(s)  mk_filename(s,".qds0")
