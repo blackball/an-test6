@@ -7,7 +7,7 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS += -O0
+CFLAGS += -O2
 
 #CFLAGS += -pg
 #CFLAGS	+= -O2

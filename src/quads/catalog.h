@@ -32,7 +32,7 @@ double* catalog_get_base(catalog* cat);
 
 int catalog_write_star(catalog* cat, double* star);
 
-void catalog_close(catalog* cat);
+int catalog_close(catalog* cat);
 
 void catalog_compute_radecminmax(catalog* cat);
 
