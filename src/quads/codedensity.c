@@ -1,11 +1,11 @@
 /**
-   codedensity: investigate the distribution
-   of codes in code space.
+  codedensity: investigate the distribution
+  of codes in code space.
 
-   Author: dstn
+  Author: dstn
 
-   Input:  .skdt or .ckdt
-   Output: matlab literals
+  Input:  .skdt or .ckdt
+  Output: matlab literals
 */
 
 #include <errno.h>
@@ -15,6 +15,7 @@
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
+#include "codefile.h"
 #include "kdtree.h"
 #include "kdtree_io.h"
 #include "dualtree_max.h"
@@ -32,19 +33,21 @@ int permnum = 0;
 
 kdtree_t* tree = NULL;
 
-void print_help(char* progname) {
-    fprintf(stderr, "Usage: %s -t <tree-file> [-c] [-p] [-4]\n\n"
-			"-c = check results against naive search.\n"
-			"-4 = check all four permutations of codes (this only makes sense for code kdtrees).\n"
-			"-p = write out a Matlab-literals file containing the positions of the stars.\n"
-			"-n <radius> = write out Matlab literals containing the positions of nearby stars\n"
-			"      where 'nearby' is defined as being within <radius> units.\n"
-			"-r = convert XYZ to RA-DEC (this only make sense with -p or -n, and for star kdtrees).\n",
-			progname);
+void print_help(char* progname)
+{
+	fprintf(stderr, "Usage: %s -t <tree-file> [-c] [-p] [-4]\n\n"
+	        "-c = check results against naive search.\n"
+	        "-4 = check all four permutations of codes (this only makes sense for code kdtrees).\n"
+	        "-p = write out a Matlab-literals file containing the positions of the stars.\n"
+	        "-n <radius> = write out Matlab literals containing the positions of nearby stars\n"
+	        "      where 'nearby' is defined as being within <radius> units.\n"
+	        "-r = convert XYZ to RA-DEC (this only make sense with -p or -n, and for star kdtrees).\n",
+	        progname);
 }
 
 
-void swap_coords(double* v, int permnum) {
+void swap_coords(double* v, int permnum)
+{
 	double tmp;
 	if (permnum & 1) {
 		// swap C, D:  0-2, 1-3
@@ -66,8 +69,9 @@ void swap_coords(double* v, int permnum) {
 }
 
 void swap_hrect(double* dstlo, double* dsthi,
-				double* srclo, double* srchi,
-				int permnum) {
+                double* srclo, double* srchi,
+                int permnum)
+{
 	if (permnum & 2) {
 		// swap hi/lo box hrects.
 		memcpy(dstlo, srchi, 4*sizeof(double));
@@ -82,7 +86,8 @@ void swap_hrect(double* dstlo, double* dsthi,
 
 // a=query, b=search
 double box_to_box_min_dist2(kdtree_t* tree1, kdtree_node_t* node1,
-							kdtree_t* tree2, kdtree_node_t* node2) {
+                            kdtree_t* tree2, kdtree_node_t* node2)
+{
 	double tmplo[4], tmphi[4];
 	double *lo1, *hi1, *lo2, *hi2;
 
@@ -100,7 +105,8 @@ double box_to_box_min_dist2(kdtree_t* tree1, kdtree_node_t* node1,
 }
 
 double box_to_box_max_dist2(kdtree_t* tree1, kdtree_node_t* node1,
-							kdtree_t* tree2, kdtree_node_t* node2) {
+                            kdtree_t* tree2, kdtree_node_t* node2)
+{
 	double tmplo[4], tmphi[4];
 	double *lo1, *hi1, *lo2, *hi2;
 
@@ -117,7 +123,8 @@ double box_to_box_max_dist2(kdtree_t* tree1, kdtree_node_t* node1,
 	return kdtree_bb_maxdist2(lo1, hi1, lo2, hi2, tree->ndim);
 }
 
-double box_to_point_min_dist2(double* bblo, double* bbhi, double* point) {
+double box_to_point_min_dist2(double* bblo, double* bbhi, double* point)
+{
 	double tmplo[4], tmphi[4];
 	if (do_perms) {
 		swap_hrect(tmplo, tmphi, bblo, bbhi, permnum);
@@ -127,7 +134,8 @@ double box_to_point_min_dist2(double* bblo, double* bbhi, double* point) {
 	return kdtree_bb_point_mindist2(bblo, bbhi, point, tree->ndim);
 }
 
-double point_to_point_dist2(double* a, double* b) {
+double point_to_point_dist2(double* a, double* b)
+{
 	double tmppt[4];
 	if (do_perms) {
 		memcpy(tmppt, b, 4*sizeof(double));
@@ -139,17 +147,17 @@ double point_to_point_dist2(double* a, double* b) {
 
 
 void bounds_function(void* extra, kdtree_node_t* ynode,
-					 kdtree_node_t* xnode,
-					 double pruning_thresh, double* lower, double* upper)
+                     kdtree_node_t* xnode,
+                     double pruning_thresh, double* lower, double* upper)
 {
-    double min2, max2;
+	double min2, max2;
 	min2 = -box_to_box_min_dist2(tree, xnode, tree, ynode);
-    *upper = min2;
-    if (min2 < pruning_thresh) {
-		return;
-    }
+	*upper = min2;
+	if (min2 < pruning_thresh) {
+		return ;
+	}
 	max2 = -box_to_box_max_dist2(tree, xnode, tree, ynode);
-    *lower = max2;
+	*lower = max2;
 }
 
 
@@ -166,18 +174,19 @@ int* bests;
    pruning threshold and the index of the best point in the search tree.
 */
 void max_start_results(void* extra, kdtree_node_t* ynode,
-					   /*pl* leaves,*/
-					   double* pruning_thresh) {
-    int i, N;
+                       /*pl* leaves,*/
+                       double* pruning_thresh)
+{
+	int i, N;
 
-    N = kdtree_node_npoints(ynode);
-    pruning_threshs = malloc(N * sizeof(double));
-    bests = malloc(N * sizeof(int));
+	N = kdtree_node_npoints(ynode);
+	pruning_threshs = malloc(N * sizeof(double));
+	bests = malloc(N * sizeof(int));
 
 	if (do_perms && permnum) {
 		// set the pruning threshold to be the nearest neighbour found
 		// so far.
-		for (i=0; i<N; i++) {
+		for (i = 0; i < N; i++) {
 			double oldval;
 			double newval;
 			//int ind = tree->inds[ynode->l + i];
@@ -190,7 +199,7 @@ void max_start_results(void* extra, kdtree_node_t* ynode,
 			bests[i] = -1;
 		}
 	} else {
-		for (i=0; i<N; i++) {
+		for (i = 0; i < N; i++) {
 			pruning_threshs[i] = *pruning_thresh;
 			bests[i] = -1;
 		}
@@ -202,38 +211,39 @@ void max_start_results(void* extra, kdtree_node_t* ynode,
    This callback is called once for each search node.
 */
 void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
-				 double* pruning_threshold, double lower, double upper) {
-    int i, N, j, M;
+                 double* pruning_threshold, double lower, double upper)
+{
+	int i, N, j, M;
 	int ix, iy;
-    double prune;
+	double prune;
 	double *xbblo, *xbbhi;
 
 	xbblo = kdtree_get_bb_low(tree, xnode);
 	xbbhi = kdtree_get_bb_high(tree, xnode);
 
-    N = kdtree_node_npoints(ynode);
-    M = kdtree_node_npoints(xnode);
+	N = kdtree_node_npoints(ynode);
+	M = kdtree_node_npoints(xnode);
 	ix = -1;
-    for (i=0; i<N; i++) {
+	for (i = 0; i < N; i++) {
 		double* ypoint;
 		double d2;
 		if (upper < pruning_threshs[i]) {
 			continue;
 		}
 		ypoint = kdtree_node_get_point(tree, ynode, i);
-		iy     = kdtree_node_get_index(tree, ynode, i);
+		iy = kdtree_node_get_index(tree, ynode, i);
 		d2 = -box_to_point_min_dist2(xbblo, xbbhi, ypoint);
 		if (d2 < pruning_threshs[i]) {
 			continue;
 		}
-		for (j=0; j<M; j++) {
+		for (j = 0; j < M; j++) {
 			double* xpoint = kdtree_node_get_point(tree, xnode, j);
 			d2 = -point_to_point_dist2(ypoint, xpoint);
 			/*
 			  if (d2 < pruning_threshs[i]) {
 			  continue;
 			  }
-			*/
+			*/ 
 			// nearest neighbour (except yourself)
 			if (d2 == 0.0) {
 				ix = kdtree_node_get_index(tree, xnode, i);
@@ -248,18 +258,18 @@ void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
 				bests[i] = ix;
 			}
 		}
-    }
+	}
 
-    // new pruning threshold for this query point is the smallest of the thresholds.
-    prune = 1e300;
-    for (i=0; i<N; i++) {
+	// new pruning threshold for this query point is the smallest of the thresholds.
+	prune = 1e300;
+	for (i = 0; i < N; i++) {
 		if (pruning_threshs[i] < prune) {
 			prune = pruning_threshs[i];
 		}
-    }
-    if (prune > *pruning_threshold) {
+	}
+	if (prune > *pruning_threshold) {
 		*pruning_threshold = prune;
-    }
+	}
 }
 
 /*
@@ -309,104 +319,111 @@ void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
   }
 */
 
-void write_array(char* fn) {
-    FILE* fout;
-    int i;
-    fout = fopen(fn, "w");
-    if (!fout) {
+void write_array(char* fn)
+{
+	FILE* fout;
+	int i;
+	fout = fopen(fn, "w");
+	if (!fout) {
 		printf("Couldn't open output file %s\n", fn);
-		return;
-    }
-    fprintf(fout, "nndists=[");
-    for (i=0; i<Ntotal; i++) {
+		return ;
+	}
+	fprintf(fout, "nndists=[");
+	for (i = 0; i < Ntotal; i++) {
 		fprintf(fout, "%g,", nndists[i]);
-    }
-    fprintf(fout, "];");
-    fprintf(fout, "nninds=[");
-    for (i=0; i<Ntotal; i++) {
+	}
+	fprintf(fout, "];");
+	fprintf(fout, "nninds=[");
+	for (i = 0; i < Ntotal; i++) {
 		fprintf(fout, "%i,", nninds[i]);
-    }
-    fprintf(fout, "];");
-    fclose(fout);
-    printf("Wrote array to %s\n", fn);
+	}
+	fprintf(fout, "];");
+	fclose(fout);
+	printf("Wrote array to %s\n", fn);
 }
 
-void write_histogram(char* fn) {
-    FILE* fout;
-    int Nbins = 200;
-    int i;
-    double bin_size;
-    int* bincounts;
-    double mn, mx;
+void write_histogram(char* fn)
+{
+	FILE* fout;
+	int Nbins = 200;
+	int i;
+	double bin_size;
+	int* bincounts;
+	double mn, mx;
 
-    fout = fopen(fn, "w");
-    if (!fout) {
+	fout = fopen(fn, "w");
+	if (!fout) {
 		printf("Couldn't open output file %s\n", fn);
-		return;
-    }
+		return ;
+	}
 
-    mn = 1e300;
-    mx = -1e300;
-    for (i=0; i<Ntotal; i++) {
+	mn = 1e300;
+	mx = -1e300;
+	for (i = 0; i < Ntotal; i++) {
 		double d = nndists[i];
-		if (d < 0.0) continue;
-		if (d > mx) mx = d;
-		if (d < mn) mn = d;
-    }
+		if (d < 0.0)
+			continue;
+		if (d > mx)
+			mx = d;
+		if (d < mn)
+			mn = d;
+	}
 
-    bin_size = mx / (double)(Nbins-1);
-    bincounts = (int*)malloc(Nbins * sizeof(int));
-    memset(bincounts, 0, Nbins * sizeof(int));
+	bin_size = mx / (double)(Nbins - 1);
+	bincounts = (int*)malloc(Nbins * sizeof(int));
+	memset(bincounts, 0, Nbins * sizeof(int));
 
-    for (i=0; i<Ntotal; i++) {
+	for (i = 0; i < Ntotal; i++) {
 		double d = nndists[i];
 		int bin;
-		if (d < 0.0) continue;
+		if (d < 0.0)
+			continue;
 		bin = (int)(d / bin_size);
 		bincounts[bin]++;
-    }
+	}
 
-    fprintf(fout, "binsize=%g;\n", bin_size);
-    fprintf(fout, "nbins=%i;\n", Nbins);
-    fprintf(fout, "bins=[");
-    for (i=0; i<Nbins; i++) {
+	fprintf(fout, "binsize=%g;\n", bin_size);
+	fprintf(fout, "nbins=%i;\n", Nbins);
+	fprintf(fout, "bins=[");
+	for (i = 0; i < Nbins; i++) {
 		fprintf(fout, "%g,", bin_size * i);
-    }
-    fprintf(fout, "];\n");
-    fprintf(fout, "counts=[");
-    for (i=0; i<Nbins; i++) {
+	}
+	fprintf(fout, "];\n");
+	fprintf(fout, "counts=[");
+	for (i = 0; i < Nbins; i++) {
 		fprintf(fout, "%i,", bincounts[i]);
-    }
-    fprintf(fout, "];\n");
+	}
+	fprintf(fout, "];\n");
 
-    free(bincounts);
+	free(bincounts);
 
-    fclose(fout);
-    printf("Wrote histogram to %s\n", fn);
-    fflush(stdout);
+	fclose(fout);
+	printf("Wrote histogram to %s\n", fn);
+	fflush(stdout);
 }
 
-void max_end_results(void* extra, kdtree_node_t* ynode) {
-    int i, N;
-    N = kdtree_node_npoints(ynode);
-    for (i=0; i<N; i++) {
+void max_end_results(void* extra, kdtree_node_t* ynode)
+{
+	int i, N;
+	N = kdtree_node_npoints(ynode);
+	for (i = 0; i < N; i++) {
 		int ind;
 		double newd;
 
 		ind = ynode->l + i;
-		newd = sqrt(-pruning_threshs[i]);
+		newd = sqrt( -pruning_threshs[i]);
 
 		if (newd < nndists[ind]) {
 			nndists[ind] = newd;
 			nninds[ind] = bests[i];
 		}
-    }
-    free(pruning_threshs);
-    free(bests);
-    if ((Ndone+N)/10000 > (Ndone/10000)) {
+	}
+	free(pruning_threshs);
+	free(bests);
+	if ((Ndone + N) / 10000 > (Ndone / 10000)) {
 		double mn = 1e300;
 		double mx = -1e300;
-		for (i=0; i<Ntotal; i++) {
+		for (i = 0; i < Ntotal; i++) {
 			if (nndists[i] > 0.0) {
 				if (nndists[i] > mx) {
 					mx = nndists[i];
@@ -416,13 +433,13 @@ void max_end_results(void* extra, kdtree_node_t* ynode) {
 				}
 			}
 		}
-		printf("%i done.  Range [%g, %g]\n", Ndone+N, mn, mx);
+		printf("%i done.  Range [%g, %g]\n", Ndone + N, mn, mx);
 		fflush(stdout);
-    }
-    if ((Ndone+N)/100000 > (Ndone/100000)) {
+	}
+	if ((Ndone + N) / 100000 > (Ndone / 100000)) {
 		// write partial result.
 		char fn[256];
-		sprintf(fn, "/tmp/nnhists_%i.m", (Ndone+N)/100000);
+		sprintf(fn, "/tmp/nnhists_%i.m", (Ndone + N) / 100000);
 		write_histogram(fn);
 		/*
 		  if (write_nearby) {
@@ -430,25 +447,26 @@ void max_end_results(void* extra, kdtree_node_t* ynode) {
 		  write_nearby_positions(fn, nearby_radius, radec, array);
 		  }
 		*/
-    }
-    Ndone += N;
+	}
+	Ndone += N;
 }
 
 
-int main(int argc, char *argv[]) {
-    int argchar;
-    char *treefname = NULL;
-    dualtree_max_callbacks max_callbacks;
-    int i, N, D;
-    bool check = FALSE;
-    bool write_points = FALSE;
+int main(int argc, char *argv[])
+{
+	int argchar;
+	char *treefname = NULL;
+	dualtree_max_callbacks max_callbacks;
+	int i, N, D;
+	bool check = FALSE;
+	bool write_points = FALSE;
 
-    if (argc <= 2) {
+	if (argc <= 2) {
 		print_help(argv[0]);
-		return(OPT_ERR);
-    }
+		return (OPT_ERR);
+	}
 
-    while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
 		case '4':
 			do_perms = TRUE;
@@ -478,50 +496,49 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'h':
 			print_help(argv[0]);
-			return(HELP_ERR);
+			return (HELP_ERR);
 		default:
 			return (OPT_ERR);
 		}
 
-    if (!treefname) {
+	if (!treefname) {
 		print_help(argv[0]);
-		return(OPT_ERR);
-    }
+		return (OPT_ERR);
+	}
 
-    if (radec && !(write_points || write_nearby)) {
+	if (radec && !(write_points || write_nearby)) {
 		printf("Warning: -r only makes sense when -p or -n is set.  Ignoring -r.\n");
-    }
+	}
 
-    fprintf(stdout, "  Reading KD tree from %s...", treefname);
+	fprintf(stdout, "  Reading KD tree from %s...", treefname);
 
-	tree = kdtree_read_file(treefname);
+	tree = kdtree_fits_read_file(treefname);
 	if (!tree) {
 		fprintf(stderr, "Couldn't read tree from file %s.\n", treefname);
-		exit(-1);
+		exit( -1);
 	}
-    fprintf(stdout, "done\n    (%d points, %d nodes).\n",
-			tree->ndata, tree->nnodes);
+	fprintf(stdout, "done\n    (%d points, %d nodes).\n",
+	        tree->ndata, tree->nnodes);
 
-    //
-    memset(&max_callbacks, 0, sizeof(max_callbacks));
-    max_callbacks.bounds = bounds_function;
-    max_callbacks.start_results = max_start_results;
-    max_callbacks.result = max_results;
-    max_callbacks.end_results = max_end_results;
+	memset(&max_callbacks, 0, sizeof(max_callbacks));
+	max_callbacks.bounds = bounds_function;
+	max_callbacks.start_results = max_start_results;
+	max_callbacks.result = max_results;
+	max_callbacks.end_results = max_end_results;
 
-    N = tree->ndata;
-    D = tree->ndim;
+	N = tree->ndata;
+	D = tree->ndim;
 
-    nndists = (double*)malloc(N * sizeof(double));
-    nninds = (int*)malloc(N * sizeof(int));
-    for (i=0; i<N; i++) {
+	nndists = (double*)malloc(N * sizeof(double));
+	nninds = (int*)malloc(N * sizeof(int));
+	for (i = 0; i < N; i++) {
 		nndists[i] = 1e300;
 		nninds[i] = -1;
-    }
-    Ndone = 0;
-    Ntotal = N;
+	}
+	Ndone = 0;
+	Ntotal = N;
 
-    while (write_points) {
+	while (write_points) {
 		FILE* fout;
 		char* fn = "/tmp/positions.m";
 		if (radec && (D != 3)) {
@@ -531,44 +548,44 @@ int main(int argc, char *argv[]) {
 		fout = fopen(fn, "w");
 		if (!fout) {
 			printf("Couldn't open file: %s: %s\n",
-				   fn, strerror(errno));
+			       fn, strerror(errno));
 			break;
 		}
 		fprintf(fout, "points=zeros([%i,%i]);\n", N, D);
-		for (i=0; i<N; i++) {
+		for (i = 0; i < N; i++) {
 			int d;
 			double* v;
-			fprintf(fout, "points(%i,:)=[", (i+1));
-			v = tree->data + i*D;
-			for (d=0; d<D; d++) {
+			fprintf(fout, "points(%i,:)=[", (i + 1));
+			v = tree->data + i * D;
+			for (d = 0; d < D; d++) {
 				fprintf(fout, "%g,", v[d]);
 			}
 			fprintf(fout, "];\n");
 		}
 		if (radec) {
 			fprintf(fout, "radec=zeros([%i,2]);\n", N);
-			for (i=0; i<N; i++) {
-				double x,y,z,ra,dec;
+			for (i = 0; i < N; i++) {
+				double x, y, z, ra, dec;
 				double* v;
-				v = tree->data + i*D;
+				v = tree->data + i * D;
 				x = v[0];
 				y = v[1];
 				z = v[2];
-				ra  = xy2ra(x, y);
+				ra = xy2ra(x, y);
 				dec = z2dec(z);
 				fprintf(fout, "radec(%i,:)=[%g,%g];\n",
-						(i+1), ra, dec);
+				        (i + 1), ra, dec);
 			}
 		}
 		fclose(fout);
 		printf("Wrote positions to %s.\n", fn);
 		break;
-    }
+	}
 
-    dualtree_max(tree, tree, &max_callbacks, 1, 0);
+	dualtree_max(tree, tree, &max_callbacks, 1, 0);
 	if (do_perms) {
 		int i;
-		for (i=1; i<4; i++) {
+		for (i = 1; i < 4; i++) {
 			printf("Doing permutation %i...\n", i);
 			permnum = i;
 			dualtree_max(tree, tree, &max_callbacks, 1, 0);
@@ -581,11 +598,11 @@ int main(int argc, char *argv[]) {
 	  }
 	*/
 
-    write_histogram("/tmp/nnhists.m");
+	write_histogram("/tmp/nnhists.m");
 
-    write_array("/tmp/nndists.m");
+	write_array("/tmp/nndists.m");
 
-    if (check) {
+	if (check) {
 		// make sure it agrees with naive search.
 		double best;
 		int bestind;
@@ -593,7 +610,7 @@ int main(int argc, char *argv[]) {
 		double eps = 1e-15;
 		printf("Checking against exhaustive search...\n");
 		fflush(stdout);
-		for (i=0; i<N; i++) {
+		for (i = 0; i < N; i++) {
 			double* point1;
 			if (i && (i % 1000 == 0)) {
 				printf("%i checked.\n", i);
@@ -601,14 +618,15 @@ int main(int argc, char *argv[]) {
 			}
 			best = 1e300;
 			bestind = -1;
-			point1 = tree->data + i*D;
+			point1 = tree->data + i * D;
 			if (do_perms) {
-				for (j=0; j<N; j++) {
+				for (j = 0; j < N; j++) {
 					double* point2;
 					double d2;
-					if (i == j) continue;
-					point2 = tree->data + j*D;
-					for (permnum = 0; permnum<4; permnum++) {
+					if (i == j)
+						continue;
+					point2 = tree->data + j * D;
+					for (permnum = 0; permnum < 4; permnum++) {
 						d2 = distsq(point1, point2, D);
 						if (d2 < best) {
 							best = d2;
@@ -617,11 +635,12 @@ int main(int argc, char *argv[]) {
 					}
 				}
 			} else {
-				for (j=0; j<N; j++) {
+				for (j = 0; j < N; j++) {
 					double* point2;
 					double d2;
-					if (i == j) continue;
-					point2 = tree->data + j*D;
+					if (i == j)
+						continue;
+					point2 = tree->data + j * D;
 					d2 = distsq(point1, point2, D);
 					if (d2 < best) {
 						best = d2;
@@ -632,17 +651,17 @@ int main(int argc, char *argv[]) {
 			best = sqrt(best);
 			if (fabs(best - nndists[i]) > eps) {
 				printf("Error: %i: %g, %g\n",
-					   i, best, nndists[i]);
+				       i, best, nndists[i]);
 			}
 			if (bestind != nninds[i]) {
 				printf("Index error: %i: %i, %i\n", i, bestind, nninds[i]);
 			}
 		}
 		printf("Correctness check complete.\n");
-    }
+	}
 
-    free(nninds);
-    free(nndists);
-    kdtree_close(tree);
-    return 0;
+	free(nninds);
+	free(nndists);
+	kdtree_close(tree);
+	return 0;
 }
