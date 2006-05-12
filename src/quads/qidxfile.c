@@ -118,11 +118,13 @@ int qidxfile_close(qidxfile* qf)
 			fprintf(stderr, "Error munmapping qidxfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
-	if (qf->fid)
+	if (qf->fid) {
+		fits_pad_file(qf->fid);
 		if (fclose(qf->fid)) {
 			fprintf(stderr, "Error closing qidxfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
+	}
 	if (qf->header)
 		qfits_header_destroy(qf->header);
 

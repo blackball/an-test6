@@ -8,8 +8,8 @@ CFLAGS :=
 #fast
 CFLAGS	+= -g
 
-CFLAGS += -pg
-CFLAGS	+= -O2
+#CFLAGS += -pg
+#CFLAGS	+= -O2
 
 # to turn off asserts:
 #CFLAGS += -DNDEBUG

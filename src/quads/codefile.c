@@ -37,11 +37,13 @@ int codefile_close(codefile* cf)
 			fprintf(stderr, "Error munmapping codefile: %s\n", strerror(errno));
 			rtn = -1;
 		}
-	if (cf->fid)
+	if (cf->fid) {
+		fits_pad_file(cf->fid);
 		if (fclose(cf->fid)) {
 			fprintf(stderr, "Error closing codefile: %s\n", strerror(errno));
 			rtn = -1;
 		}
+	}
 	if (cf->header)
 		qfits_header_destroy(cf->header);
 
@@ -153,7 +155,7 @@ codefile* codefile_open_for_writing(char* fn)
 	fits_add_endian(cf->header);
 	fits_add_double_size(cf->header);
 	// placeholder values.
-	qfits_header_add(cf->header, "AN_FILETYPE", "CODE", "This file lists the code for each quad.", NULL);
+	qfits_header_add(cf->header, "AN_FILE", "CODE", "This file lists the code for each quad.", NULL);
 	qfits_header_add(cf->header, "NCODES", "0", "", NULL);
 	qfits_header_add(cf->header, "NSTARS", "0", "", NULL);
 	qfits_header_add(cf->header, "SCALE_U", "0.0", "", NULL);

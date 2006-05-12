@@ -116,11 +116,13 @@ int quadfile_close(quadfile* qf) {
             fprintf(stderr, "Error munmapping quadfile: %s\n", strerror(errno));
             rtn = -1;
         }
-	if (qf->fid)
+	if (qf->fid) {
+		fits_pad_file(qf->fid);
 		if (fclose(qf->fid)) {
 			fprintf(stderr, "Error closing quadfile: %s\n", strerror(errno));
-            rtn = -1;
-        }
+			rtn = -1;
+		}
+	}
     if (qf->header)
         qfits_header_destroy(qf->header);
 
@@ -147,7 +149,7 @@ quadfile* quadfile_open_for_writing(char* fn) {
     fits_add_uint_size(qf->header);
 
 	// These may be placeholder values...
-	qfits_header_add(qf->header, "AN_FILETYPE", "QUAD", "This file lists, for each quad, its four stars.", NULL);
+	qfits_header_add(qf->header, "AN_FILE", "QUAD", "This file lists, for each quad, its four stars.", NULL);
 	sprintf(val, "%u", qf->numquads);
 	qfits_header_add(qf->header, "NQUADS", val, "Number of quads.", NULL);
 	sprintf(val, "%u", qf->numstars);
@@ -233,7 +235,6 @@ int quadfile_fix_header(quadfile* qf) {
     qfits_header_dump(tablehdr, qf->fid);
     qfits_table_close(table);
     qfits_header_destroy(tablehdr);
-    //qfits_header_destroy(header);
 
 	new_header_end = ftello(qf->fid);
 

@@ -113,11 +113,13 @@ int idfile_close(idfile* qf)
 			fprintf(stderr, "Error munmapping idfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
-	if (qf->fid)
+	if (qf->fid) {
+		fits_pad_file(qf->fid);
 		if (fclose(qf->fid)) {
 			fprintf(stderr, "Error closing idfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
+	}
 	if (qf->header)
 		qfits_header_destroy(qf->header);
 
@@ -145,7 +147,7 @@ idfile* idfile_open_for_writing(char* fn)
 
 	// These may be placeholder values...
 	sprintf(val, "%u", qf->numstars);
-	qfits_header_add(qf->header, "AN_FILETYPE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
+	qfits_header_add(qf->header, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
 	qfits_header_add(qf->header, "NSTARS", val, "Number of stars used.", NULL);
 	qfits_header_add(qf->header, "", NULL, "This is a flat array of ANIDs for each catalog star.", NULL);
 

@@ -135,6 +135,12 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Couldn't open output codes file %s: %s\n", codeoutfname, strerror(errno));
         exit(-1);
     }
+    if (codefile_write_header(codesout)) {
+        fprintf(stderr, "Couldn't write headers to code file %s\n", codeoutfname);
+        exit(-1);
+    }
+	free_fn(quadoutfname);
+	free_fn(codeoutfname);
 
 	qsort_array = codesin->codearray;
 	qsort_array_stride = DIM_CODES;
