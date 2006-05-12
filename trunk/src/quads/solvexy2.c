@@ -686,4 +686,8 @@ void getstarcoord(uint iA, double *sA) {
 	memcpy(sA, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
 }
 
+uint64_t getstarid(uint iA) {
+	return 0;
+}
+
 	
