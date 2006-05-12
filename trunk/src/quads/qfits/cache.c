@@ -3,7 +3,7 @@
   @file		cache.c
   @author	N. Devillard
   @date		Mar 2001
-  @version	$Revision: 1.1 $
+  @version	$Revision: 1.2 $
   @brief	FITS caching capabilities
 
   This modules implements a cache for FITS access routines.
@@ -14,10 +14,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: cache.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+	$Id: cache.c,v 1.2 2006/05/12 20:34:21 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/16 22:10:26 $
-	$Revision: 1.1 $
+	$Date: 2006/05/12 20:34:21 $
+	$Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -30,6 +30,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <assert.h>
+
 #include "static_sz.h"
 #include "xmemory.h"
 #include "cache.h"
@@ -405,8 +407,11 @@ int	qfits_query(char * filename, int what)
 static int qfits_cache_add(char * filename)
 {
 	FILE    *	in ;
-	int			off_hdr[QFITS_MAX_EXTS];
-	int			off_dat[QFITS_MAX_EXTS];
+	int *off_hdr = NULL;
+	int *off_dat = NULL;
+	int off_size = QFITS_MAX_EXTS;
+	//int			off_hdr[QFITS_MAX_EXTS];
+	//int			off_dat[QFITS_MAX_EXTS];
 	char		buf[FITS_BLOCK_SIZE] ;
 	char	*	buf_c ;
 	int			n_blocks ;
@@ -445,6 +450,7 @@ static int qfits_cache_add(char * filename)
 		);
 		return -1 ;
 	}
+	printf("in=%p\n", in);
 
 	/* Read first block in */
 	if (fread(buf, 1, FITS_BLOCK_SIZE, in)!=FITS_BLOCK_SIZE) {
@@ -585,9 +591,14 @@ static int qfits_cache_add(char * filename)
 	qc->inode= sta.st_ino ;
 
 	/* Set first HDU offsets */
+
+	off_hdr = malloc(off_size * sizeof(int));
+	off_dat = malloc(off_size * sizeof(int));
+	assert(off_hdr);
+	assert(off_dat);
 	off_hdr[0] = 0 ;
 	off_dat[0] = n_blocks ;
-	
+
 	/* Last is the pointer to the last added extension, plus one. */
 	last = 1 ;
 
@@ -618,6 +629,8 @@ static int qfits_cache_add(char * filename)
                     );
                     free(qc->name);
                     fclose(in);
+					free(off_hdr);
+					free(off_dat);
                     return -1 ;
                 }
                 /* Increase counter of current seen blocks. */
@@ -661,6 +674,8 @@ static int qfits_cache_add(char * filename)
 				) ;
                 free(qc->name);
 				fclose(in);
+				free(off_hdr);
+				free(off_dat);
 				return -1 ;
 			}
 			n_blocks -- ;
@@ -720,6 +735,13 @@ static int qfits_cache_add(char * filename)
 						off_dat[last] = n_blocks ;
 						last ++ ;
 						qc->exts ++ ;
+						if (last >= off_size) {
+							off_size *= 2;
+							off_hdr = realloc(off_hdr, off_size * sizeof(int));
+							off_dat = realloc(off_dat, off_size * sizeof(int));
+							assert(off_hdr);
+							assert(off_dat);
+						}
 						break ;
 					}
 					buf_c+=FITS_LINESZ ;
@@ -760,6 +782,10 @@ static int qfits_cache_add(char * filename)
     qdebug(
         qfits_cache_dump();
     );
+
+	free(off_hdr);
+	free(off_dat);
+
 	/* Return index of the added file in the cache */
 	return qfits_cache_last ;
 }
