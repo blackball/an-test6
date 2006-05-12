@@ -171,9 +171,19 @@ real kdtree_node_node_mindist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
 									   real bailout);
 
 inline
+int kdtree_node_node_mindist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
+									  kdtree_t* tree2, kdtree_node_t* node2,
+									  real maxd2);
+
+inline
 real kdtree_node_node_maxdist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
 									   kdtree_t* tree2, kdtree_node_t* node2,
 									   real bailout);
+
+inline
+real kdtree_node_node_maxdist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
+									   kdtree_t* tree2, kdtree_node_t* node2,
+									   real maxd2);
 
 inline
 real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt);

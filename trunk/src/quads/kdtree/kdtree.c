@@ -468,6 +468,32 @@ real kdtree_bb_mindist2_bailout(real* bblow1, real* bbhigh1,
 }
 
 inline
+real kdtree_bb_mindist2_exceeds(real* bblow1, real* bbhigh1,
+								real* bblow2, real* bbhigh2, int dim,
+								real maxd2) {
+	real d2 = 0.0;
+	real delta;
+	int i;
+	for (i = 0; i < dim; i++) {
+		real alo, ahi, blo, bhi;
+		alo = bblow1 [i];
+		blo = bblow2 [i];
+		ahi = bbhigh1[i];
+		bhi = bbhigh2[i];
+		if (ahi < blo)
+			delta = blo - ahi;
+		else if (bhi < alo)
+			delta = alo - bhi;
+		else
+			delta = 0.0;
+		d2 += delta * delta;
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
+}
+
+inline
 real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2, int dim)
 {
 	real d2 = 0.0;
@@ -515,6 +541,32 @@ real kdtree_bb_maxdist2_bailout(real* bblow1, real* bbhigh1,
 			return d2;
 	}
 	return d2;
+}
+
+inline
+real kdtree_bb_maxdist2_exceeds(real* bblow1, real* bbhigh1,
+								real* bblow2, real* bbhigh2, int dim,
+								real maxd2)
+{
+	real d2 = 0.0;
+	real delta;
+	int i;
+	for (i = 0; i < dim; i++) {
+		real alo, ahi, blo, bhi;
+		real delta2;
+		alo = bblow1 [i];
+		ahi = bbhigh1[i];
+		blo = bblow2 [i];
+		bhi = bbhigh2[i];
+		delta  = bhi - alo;
+		delta2 = ahi - blo;
+		if (delta2 > delta)
+			delta = delta2;
+		d2 += delta * delta;
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
 }
 
 
@@ -720,6 +772,19 @@ real kdtree_node_node_mindist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
 }
 
 inline
+int kdtree_node_node_mindist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
+									  kdtree_t* tree2, kdtree_node_t* node2,
+									  real maxd2) {
+	int dim = tree1->ndim;
+	real *lo1, *hi1, *lo2, *hi2;
+	lo1 = kdtree_get_bb_low (tree1, node1);
+	hi1 = kdtree_get_bb_high(tree1, node1);
+	lo2 = kdtree_get_bb_low (tree2, node2);
+	hi2 = kdtree_get_bb_high(tree2, node2);
+	return kdtree_bb_mindist2_exceeds(lo1, hi1, lo2, hi2, dim, maxd2);
+}
+
+inline
 real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
                                kdtree_t* tree2, kdtree_node_t* node2)
 {
@@ -730,6 +795,19 @@ real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 	lo2 = kdtree_get_bb_low (tree2, node2);
 	hi2 = kdtree_get_bb_high(tree2, node2);
 	return kdtree_bb_maxdist2(lo1, hi1, lo2, hi2, dim);
+}
+
+inline
+real kdtree_node_node_maxdist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
+									   kdtree_t* tree2, kdtree_node_t* node2,
+									   real maxd2) {
+	int dim = tree1->ndim;
+	real *lo1, *hi1, *lo2, *hi2;
+	lo1 = kdtree_get_bb_low (tree1, node1);
+	hi1 = kdtree_get_bb_high(tree1, node1);
+	lo2 = kdtree_get_bb_low (tree2, node2);
+	hi2 = kdtree_get_bb_high(tree2, node2);
+	return kdtree_bb_maxdist2_exceeds(lo1, hi1, lo2, hi2, dim, maxd2);
 }
 
 inline
