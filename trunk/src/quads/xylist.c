@@ -44,7 +44,7 @@ xylist* xylist_open(char* fn) {
 		goto bailout;
 	}
 
-	if (qfits_query_n_ext(fn) <= ls->nfields) {
+	if (qfits_query_n_ext(fn) != ls->nfields) {
 		fprintf(stderr, "xylist file %s supposedly has %u fields, but it only has %u FITS extensions.\n", fn,
 				ls->nfields, qfits_query_n_ext(fn));
 		goto bailout;

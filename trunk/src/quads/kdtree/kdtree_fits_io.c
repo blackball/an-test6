@@ -62,7 +62,7 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 		fclose(fid);
 		return NULL;
 	}
-	fprintf(stderr, "ndim %u, ndata %u, nnodes %u.\n", ndim, ndata, nnodes);
+	//fprintf(stderr, "ndim %u, ndata %u, nnodes %u.\n", ndim, ndata, nnodes);
 
 	if (sizeof(real) != realsz) {
 		fprintf(stderr, "File was written with sizeof(real)=%i, but currently sizeof(real)=%i.\n",
@@ -78,10 +78,11 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 		fclose(fid);
 		return NULL;
     }
-	fprintf(stderr, "nodes offset %i, size %i\n", offnodes, sizenodes);
-	fprintf(stderr, "data  offset %i, size %i\n", offdata, sizedata);
-	fprintf(stderr, "perm  offset %i, size %i\n", offperm, sizeperm);
-
+	/*
+	  fprintf(stderr, "nodes offset %i, size %i\n", offnodes, sizenodes);
+	  fprintf(stderr, "data  offset %i, size %i\n", offdata, sizedata);
+	  fprintf(stderr, "perm  offset %i, size %i\n", offperm, sizeperm);
+	*/
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * ndim * 2;
 
 	if ((fits_blocks_needed(nodesize * nnodes) != sizenodes) ||
