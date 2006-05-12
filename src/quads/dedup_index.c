@@ -17,7 +17,6 @@
 #include "bl.h"
 #include "codefile.h"
 #include "quadfile.h"
-#include "idfile.h"
 
 #define OPTIONS "hf:o:"
 const char HelpString[] =
@@ -52,7 +51,6 @@ int main(int argc, char *argv[]) {
     char *infname = NULL, *outfname = NULL;
     int i;
 	char *codeinfname, *codeoutfname, *quadinfname, *quadoutfname;
-	char *idinfn, *idoutfn;
 	int* perm;
 	int nequal =0;
 	int flip;
@@ -62,9 +60,6 @@ int main(int argc, char *argv[]) {
 
     codefile* codesin;
     codefile* codesout;
-
-	idfile* idin;
-	idfile* idout;
 
 	int nextskip;
 	int skipind;
@@ -121,31 +116,6 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 	free_fn(quadinfname);
-
-	idinfn = mk_idfn(infname);
-	idin = idfile_open(idinfn, 0);
-	if (!idin) {
-		fprintf(stderr, "Couldn't read id input file %s\n", idinfn);
-		idout = NULL;
-	} else {
-		if (idin->numstars != quadsin->numstars) {
-			fprintf(stderr, "ID file has %i stars, code/quad file has %i stars.\n",
-					idin->numstars, quadsin->numstars);
-			exit(-1);
-		}
-		idoutfn = mk_idfn(outfname);
-		idout = idfile_open_for_writing(idoutfn);
-		if (!idout) {
-			fprintf(stderr, "Couldn't open output id file %s.\n", idoutfn);
-			exit(-1);
-		}
-		if (idfile_write_header(idout)) {
-			fprintf(stderr, "Couldn't write id file header.\n");
-			exit(-1);
-		}
-		free_fn(idoutfn);
-		free_fn(idinfn);
-	}
 
 	fprintf(stderr, "%i stars are used in %i quads.\n", codesin->numstars, codesin->numcodes);
 
@@ -232,11 +202,6 @@ int main(int argc, char *argv[]) {
 
         quadfile_get_starids(quadsin, i, &iA, &iB, &iC, &iD);
         quadfile_write_quad(quadsout, iA, iB, iC, iD);
-
-		if (idin) {
-			uint64_t id = idfile_get_anid(idin, i);
-			idfile_write_anid(idout, id);
-		}
 	}
 
     // fix .quad file header...
@@ -258,15 +223,6 @@ int main(int argc, char *argv[]) {
         printf("Couldn't write code output file: %s\n", strerror(errno));
         exit(-1);
     }
-
-	if (idin) {
-		if (idfile_fix_header(idout) ||
-			idfile_close(idout)) {
-			fprintf(stderr, "Couldn't write id file.\n");
-			exit(-1);
-		}
-		idfile_close(idin);
-	}
 
     quadfile_close(quadsin);
     codefile_close(codesin);
