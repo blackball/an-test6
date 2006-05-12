@@ -32,6 +32,8 @@ catalog* cat;
 double quad_scale_upper2;
 double quad_scale_lower2;
 
+il hppass[9];
+
 #define IL_BLOCKSIZE 50
 
 int quadnum = 0;
@@ -292,34 +294,34 @@ void healpix_bin_stars(int numstars, il* starindices,
 
 void shifted_healpix_bin_stars(int numstars, il* starindices,
                                il* pixels, int dx, int dy,
-                               int Nside)
+                               int Nside, il* hps)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
 	il merged;
+	int N;
 
 	printf("Binning stars into %i healpixes...\n", HEALPIXES);
 	fflush(stdout);
 	healpix_bin_stars(numstars, starindices, pixels, Nside);
 
 	il_new_existing(&merged, IL_BLOCKSIZE);
-	for (i = 0; i < HEALPIXES; i++) {
-		uint bighp, x, y;
+	N = il_size(hps);
+	for (i=0; i<N; i++) {
 		uint neigh[8];
 		uint n, nn;
 		il* sourcelists[9];
 		int sourcelengths[9];
 		int maxlen;
 		int j;
+		int hp;
 
-		healpix_decompose(i, &bighp, &x, &y, Nside);
-		if (!((x % 3 == dx) && (y % 3 == dy)))
-			// we're not doing this healpix in this pass.
-			continue;
-		nn = healpix_get_neighbours_nside(i, neigh, Nside);
+		hp = il_get(hps, i);
+
+		nn = healpix_get_neighbours_nside(hp, neigh, Nside);
 
 		// grab the neighbour's lists of stars...
-		sourcelists[0] = pixels + i;
+		sourcelists[0] = pixels + hp;
 		for (n = 0; n < nn; n++) {
 			sourcelists[n + 1] = pixels + neigh[n];
 		}
@@ -327,28 +329,24 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 		maxlen = 0;
 		for (n = 0; n < nn+1; n++) {
 			sourcelengths[n] = il_size(sourcelists[n]);
-			//printf("sourcelength[%i] = %i.\n", n, sourcelengths[n]);
 			if (sourcelengths[n] > maxlen)
 				maxlen = sourcelengths[n];
 		}
-		//printf("\n");
 		for (j = 0; j < maxlen; j++)
 			for (n = 0; n < nn+1; n++) {
 				if (j >= sourcelengths[n])
 					continue;
 				il_append(&merged, il_get(sourcelists[n], j));
 			}
-
 		for (n = 0; n < nn+1; n++)
 			il_remove_all_reuse(sourcelists[n]);
-
-		il_merge_lists(pixels + i, &merged);
+		il_merge_lists(pixels + hp, &merged);
 	}
 }
 
 void create_quads_in_pixels(int numstars, il* starindices,
                             il* pixels, int Nside,
-                            int dx, int dy)
+                            int dx, int dy, il* hps)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
@@ -364,43 +362,48 @@ void create_quads_in_pixels(int numstars, il* starindices,
 	quadsmade = malloc(HEALPIXES * sizeof(int));
 	memset(quadsmade, 0, HEALPIXES * sizeof(int));
 
-	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside);
+	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside, hps);
+
+	Ninteresting = il_size(hps);
 
 	while (Ninteresting) {
 		int nusedthispass;
+		int N;
 		nusedthispass = 0;
-		for (i = 0; i < HEALPIXES; i++) {
+		N = il_size(hps);
+		for (i=0; i<N; i++) {
 			int foundone;
 			int used_stars[4];
+			int hp = il_get(hps, i);
 
 			if (!(i % 100000)) {
 				fprintf(stderr, "+");
 				fflush(stderr);
 			}
 
-			if (!interesting[i])
+			if (!interesting[hp])
 				continue;
 
 			//printf("hp %i has %i stars.\n", i, il_size(pixels+i));
 
-			if (!il_size(pixels + i)) {
-				interesting[i] = 0;
+			if (!il_size(pixels + hp)) {
+				interesting[hp] = 0;
 				Ninteresting--;
 				continue;
 			}
 
-			foundone = find_a_quad(pixels + i, used_stars);
+			foundone = find_a_quad(pixels + hp, used_stars);
 			if (foundone) {
 				int s;
 				// remove the used stars.
 				for (s = 0; s < 4; s++)
-					il_remove_value(pixels + i, used_stars[s]);
+					il_remove_value(pixels + hp, used_stars[s]);
 
-				quadsmade[i]++;
+				quadsmade[hp]++;
 				nused += 4;
 				nusedthispass += 4;
 			} else {
-				interesting[i] = 0;
+				interesting[hp] = 0;
 				Ninteresting--;
 			}
 		}
@@ -528,6 +531,17 @@ int main(int argc, char** argv)
 		il_new_existing(pixels + i, IL_BLOCKSIZE);
 	}
 
+	for (i = 0; i < 9; i++)
+		il_new_existing(hppass + i, 10000);
+
+	for (i = 0; i < HEALPIXES; i++) {
+		uint bighp, x, y;
+		int pass;
+		healpix_decompose(i, &bighp, &x, &y, Nside);
+		pass = (x % 3)*3 + (y % 3);
+		il_append(hppass + pass, i);
+	}
+
 	catfname = mk_catfn(basefname);
 	printf("Reading catalog file %s ...\n", catfname);
 	cat = catalog_open(catfname, 0);
@@ -582,24 +596,31 @@ int main(int argc, char** argv)
 
 		fprintf(stderr, "Doing pass %i of %i: dx=%i, dy=%i.\n", pass, npasses, dx, dy);
 
-		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy);
+		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy, hppass + pass);
 
-		if (rebin) {
-			// Gather up the leftover stars and re-bin.
-			il* leftovers = il_new(IL_BLOCKSIZE);
-			for (i = 0; i < HEALPIXES; i++) {
-				il_merge_lists(leftovers, pixels + i);
-			}
-			fprintf(stderr, "Rebinning with Nside=%i\n", Nside / 2);
-			create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, dx, dy);
-			il_free(leftovers);
-		}
+		/*
+		  Who knows if this works? 
+
+		  if (rebin) {
+		  // Gather up the leftover stars and re-bin.
+		  il* leftovers = il_new(IL_BLOCKSIZE);
+		  for (i = 0; i < HEALPIXES; i++) {
+		  il_merge_lists(leftovers, pixels + i);
+		  }
+		  fprintf(stderr, "Rebinning with Nside=%i\n", Nside / 2);
+		  create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, dx, dy, );
+		  il_free(leftovers);
+		  }
+		*/
 
 		// empty blocklists.
 		for (i = 0; i < HEALPIXES; i++)
 			il_remove_all(pixels + i);
 
 	}
+
+	for (i = 0; i < 9; i++)
+		il_remove_all(hppass + i);
 
 	catalog_close(cat);
 

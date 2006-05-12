@@ -23,8 +23,7 @@
 void printHelp(char* progname) {
 	printf("%s -f <input-catalog-name>\n"
 		   "    [-R Nleaf]: number of points in a kdtree leaf node\n"
-		   "    [-k keep]:  number of points to keep\n"
-		   "    [-d radius]: deduplication radius (arcsec)\n", progname);
+		   "    [-k keep]:  number of points to keep\n", progname);
 }
 
 extern char *optarg;
@@ -33,7 +32,6 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[]) {
     int argidx, argchar;
     int nkeep = 0;
-    double duprad;
     kdtree_t* starkd = NULL;
     int levels;
     catalog* cat;
@@ -42,6 +40,8 @@ int main(int argc, char *argv[]) {
     char* treefname = NULL;
     char* catfname = NULL;
 	char* progname = argv[0];
+	qfits_header* hdr;
+	char val[32];
 
     if (argc <= 2) {
 		printHelp(progname);
@@ -57,13 +57,6 @@ int main(int argc, char *argv[]) {
             nkeep = atoi(optarg);
             if (nkeep == 0) {
                 printf("Couldn't parse \'keep\': \"%s\"\n", optarg);
-                exit(-1);
-            }
-            break;
-        case 'd':
-            duprad = atof(optarg);
-            if (duprad < 0.0) {
-                printf("Couldn't parse \'radius\': \"%s\"\n", optarg);
                 exit(-1);
             }
             break;
@@ -129,10 +122,19 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
-	if (kdtree_fits_write_file(starkd, treefname, NULL)) {
+	hdr = qfits_header_new();
+	qfits_header_add(hdr, "AN_FILE", "SKDT", "This file is a star kdtree.", NULL);
+	sprintf(val, "%u", Nleaf);
+	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
+	sprintf(val, "%u", levels);
+	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
+	sprintf(val, "%u", nkeep);
+	qfits_header_add(hdr, "KEEP", val, "Number of stars kept.", NULL);
+	if (kdtree_fits_write_file(starkd, treefname, hdr)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");
 		exit(-1);
 	}
+	qfits_header_destroy(hdr);
     free_fn(treefname);
     fprintf(stderr, "done.\n");
 

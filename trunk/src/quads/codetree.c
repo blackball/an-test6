@@ -35,6 +35,8 @@ int main(int argc, char *argv[]) {
     char* codefname;
     codefile* codes;
 	int rtn;
+	qfits_header* hdr;
+	char val[32];
 
     if (argc <= 2) {
         fprintf(stderr, HelpString);
@@ -100,7 +102,14 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
 
-	rtn = kdtree_fits_write_file(codekd, treefname, NULL);
+	hdr = qfits_header_new();
+	qfits_header_add(hdr, "AN_FILE", "CKDT", "This file is a code kdtree.", NULL);
+	sprintf(val, "%u", Nleaf);
+	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
+	sprintf(val, "%u", levels);
+	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
+	rtn = kdtree_fits_write_file(codekd, treefname, hdr);
+	qfits_header_destroy(hdr);
     free_fn(treefname);
 	if (rtn) {
         fprintf(stderr, "Couldn't write code kdtree.\n");

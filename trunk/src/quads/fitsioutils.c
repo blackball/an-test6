@@ -234,6 +234,11 @@ int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
 		if (!qfits_is_table(fn, i))
             continue;
         table = qfits_table_open(fn, i);
+		if (!table) {
+			fprintf(stderr, "Couldn't read FITS table from file %s, extension %i.\n",
+					fn, i);
+			continue;
+		}
         int c;
         for (c=0; c<table->nc; c++) {
             qfits_col* col = table->col + c;
