@@ -313,6 +313,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
+		//uint64_t idA, idB, idC, idD;
 
 		thisquadno = (uint)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
@@ -349,6 +350,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 			}
 		}
 
+
 		mo = mk_MatchObj();
 
 		mo->quadno = thisquadno;
@@ -376,6 +378,13 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		mo->vector[5] = sMax[2];
 
 		mo->code_err = krez->sdists[jj];
+
+		/*
+		  idA = getstarid(iA);
+		  idB = getstarid(iB);
+		  idC = getstarid(iC);
+		  idD = getstarid(iD);
+		*/
 
 		/*
 

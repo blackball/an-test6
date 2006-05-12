@@ -29,6 +29,7 @@
 #include "hitlist_healpix.h"
 #include "tic.h"
 #include "quadfile.h"
+#include "idfile.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -45,6 +46,7 @@ int read_parameters();
 // params:
 char *fieldfname = NULL, *treefname = NULL;
 char *quadfname = NULL, *catfname = NULL;
+char *idfname = NULL;
 char* matchfname = NULL;
 char* donefname = NULL;
 bool parity = DEFAULT_PARITY_FLIP;
@@ -68,6 +70,7 @@ matchfile_entry matchfile;
 FILE* matchfid = NULL;
 
 catalog* cat;
+idfile* id;
 quadfile* quads;
 
 // histogram of the size of agreement clusters.
@@ -107,6 +110,7 @@ int main(int argc, char *argv[]) {
 		treefname = NULL;
 		quadfname = NULL;
 		catfname = NULL;
+		idfname = NULL;
 		matchfname = NULL;
 		donefname = NULL;
 		parity = DEFAULT_PARITY_FLIP;
@@ -140,6 +144,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "treefname %s\n", treefname);
 		fprintf(stderr, "quadfname %s\n", quadfname);
 		fprintf(stderr, "catfname %s\n", catfname);
+		fprintf(stderr, "idfname %s\n", idfname);
 		fprintf(stderr, "matchfname %s\n", matchfname);
 		fprintf(stderr, "donefname %s\n", donefname);
 		fprintf(stderr, "parity %i\n", parity);
@@ -221,6 +226,13 @@ int main(int argc, char *argv[]) {
 		}
 		free(catfname);
 
+		id = idfile_open(idfname, 0);
+		if (!id) {
+			fprintf(stderr, "Couldn't open id file %s.\n", idfname);
+			//exit(-1);
+		}
+		free(idfname);
+
 		matchfile.parity = parity;
 		path = get_pathname(treefname);
 		if (path)
@@ -264,6 +276,8 @@ int main(int argc, char *argv[]) {
 
 		kdtree_close(codekd);
 		catalog_close(cat);
+		if (id)
+			idfile_close(id);
 		quadfile_close(quads);
 
 		{
@@ -343,6 +357,7 @@ int read_parameters() {
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			catfname = mk_catfn(fname);
+			idfname = mk_idfn(fname);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
@@ -582,4 +597,9 @@ void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
 void getstarcoord(uint iA, double *sA) {
 	memcpy(sA, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
 }
-	
+
+uint64_t getstarid(uint iA) {
+	if (id)
+		return idfile_get_anid(id, iA);
+	return 0;
+}

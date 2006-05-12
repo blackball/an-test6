@@ -1,14 +1,17 @@
-#ifndef SOLVER2_CALLBACKS_H_
-#define SOLVER2_CALLBACKS_H_
+#ifndef SOLVER_CALLBACKS_H
+#define SOLVER_CALLBACKS_H
 
-#define NO_KD_INCLUDES 1
+#include <stdint.h>
+
 #include "starutil.h"
 
 /**
-   You have to define these two functions!
+   You have to define these three functions!
 */
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD);
 
 void getstarcoord(uint iA, double *star);
+
+uint64_t getstarid(uint iA);
 
 #endif
