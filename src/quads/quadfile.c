@@ -147,6 +147,7 @@ quadfile* quadfile_open_for_writing(char* fn) {
     fits_add_uint_size(qf->header);
 
 	// These may be placeholder values...
+	qfits_header_add(qf->header, "AN_FILETYPE", "QUAD", "This file lists, for each quad, its four stars.", NULL);
 	sprintf(val, "%u", qf->numquads);
 	qfits_header_add(qf->header, "NQUADS", val, "Number of quads.", NULL);
 	sprintf(val, "%u", qf->numstars);
@@ -180,12 +181,12 @@ int quadfile_write_quad(quadfile* qf,
 	abcd[1] = iB;
 	abcd[2] = iC;
 	abcd[3] = iD;
-	if (fwrite(abcd, sizeof(uint), 4, qf->fid) == 4) {
-		qf->numquads++;
-		return 0;
+	if (fwrite(abcd, sizeof(uint), 4, qf->fid) != 4) {
+		fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
+		return -1;
 	}
-	fprintf(stderr, "quadfile_fits_write_quad: failed to write: %s\n", strerror(errno));
-	return -1;
+	qf->numquads++;
+	return 0;
 }
 
 int quadfile_fix_header(quadfile* qf) {

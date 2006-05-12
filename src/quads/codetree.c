@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
 
-	rtn = kdtree_fits_write_file(codekd, treefname);
+	rtn = kdtree_fits_write_file(codekd, treefname, NULL);
     free_fn(treefname);
 	if (rtn) {
         fprintf(stderr, "Couldn't write code kdtree.\n");

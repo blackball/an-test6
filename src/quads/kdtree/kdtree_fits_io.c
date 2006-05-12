@@ -128,7 +128,7 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	return kdtree;
 }
 
-int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
+int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
     int nodesize;
     int ncols, nrows;
     int datasize;
@@ -166,6 +166,19 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
 	qfits_header_add(header, "", NULL, " permutation array, stored as native-endian", NULL);
 	qfits_header_add(header, "", NULL, " 4-byte unsigned ints.", NULL);
 
+	if (hdr) {
+		int i ;
+		char key[FITS_LINESZ+1] ;
+		char val[FITS_LINESZ+1] ;
+		char com[FITS_LINESZ+1] ;
+		char lin[FITS_LINESZ+1] ;
+		for (i=0 ; i<hdr->n ; i++) {
+			qfits_header_getitem(hdr, i, key, val, com, lin);
+			//printf("card[%d] key[%s] val[%s] com[%s]\n", i, key, val, com);
+			qfits_header_add(header, key, val, com, lin);
+		}
+	}
+
     // first table: the kdtree structs.
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * kdtree->ndim * 2;
     dataptr = kdtree->tree;
@@ -177,7 +190,6 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_col_fill(table->col,
                    datasize, 0, 1, TFITS_BIN_TYPE_A,
                    "kdtree_nodes",
-                   //"(no units)", "(no nullval)", "(no display)",
 				   "", "", "",
                    0, 0, 0, 0,
                    0);
@@ -198,7 +210,6 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_col_fill(table->col,
                    datasize, 0, 1, TFITS_BIN_TYPE_A,
                    "kdtree_data",
-                   //"(no units)", "(no nullval)", "(no display)",
 				   "", "", "",
                    0, 0, 0, 0,
                    0);
@@ -216,7 +227,6 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn) {
     qfits_col_fill(table->col,
                    datasize, 0, 1, TFITS_BIN_TYPE_A,
                    "kdtree_perm",
-                   //"(no units)", "(no nullval)", "(no display)",
 				   "", "", "",
                    0, 0, 0, 0,
                    0);

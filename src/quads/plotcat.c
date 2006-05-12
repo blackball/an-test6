@@ -2,9 +2,9 @@
 #include "fileutil.h"
 #include "starutil.h"
 #include "catalog.h"
-#define OPTIONS "bhgf:N:I:"
+#define OPTIONS "bhgf:N:"
 
-char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize] [-I intensity]"
+char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
 " [-f catalog.objs] > outfile.pgm\n"
 "  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n"
 "  -N sets edge size of output image, -I sets intensity scale for pixels\n";
@@ -15,7 +15,6 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 int N=3000;
-double Increment=1.0;
 
 #define PI M_PI
 
@@ -76,8 +75,9 @@ int main(int argc, char *argv[])
 	uint ii,jj,numstars;
 	int reverse=0, hammer=0, grid=0;
 	double x,y,z;
+	int maxval;
 	int X,Y;
-	unsigned long int saturated=0;
+	//unsigned long int saturated=0;
 	catalog* cat;
 	char* basename = NULL;
 	char* catfname;
@@ -96,9 +96,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'N':
 		  N=(int)strtoul(optarg, NULL, 0);
-		  break;
-		case 'I':
-		  Increment=strtod(optarg, NULL);
 		  break;
 		case 'f':
 			basename = optarg;
@@ -147,7 +144,7 @@ int main(int argc, char *argv[])
 			/* Hammer-Aitoff projection */
 			project_hammer_aitoff_x(x, y, z, &X, &Y);
 		}
-		projection[X+N*Y] += Increment;
+		projection[X+N*Y]++;
 	}
 
 	if (grid) {
@@ -203,21 +200,23 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	maxval = 0;
+	for (ii = 0; ii < (N*N); ii++)
+		if (projection[ii] > maxval)
+			maxval = projection[ii];
+
 	// Output PGM format
 	printf("P5 %d %d %d\n",N,N, 255);
 	for (ii = 0; ii < N; ii++) {
 		for (jj = 0; jj < N; jj++) {
-			if (projection[ii+N*jj] <= 255)
-				putchar(ceil(projection[ii+N*jj]));
-			else {
-				putchar(255);
-				saturated++;
-			}
+			putchar((int)(255.0 * projection[ii+N*jj] / (double)maxval));
 		}
 	}
-
-	fprintf(stderr," %lu/%lu pixels saturated\n",
-		saturated,((unsigned long int)N*(unsigned long int)N));
+	/*
+	  saturated++;
+	  fprintf(stderr," %lu/%lu pixels saturated\n",
+	  saturated,((unsigned long int)N*(unsigned long int)N));
+	*/
 
 	catalog_close(cat);
 

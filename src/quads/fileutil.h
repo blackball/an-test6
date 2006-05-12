@@ -13,9 +13,8 @@
 #define fopenin(n,f)  {if(n){f=fopen(n,"r");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n); return(FOPEN_ERR);}}
 #define free_fn(n) {if(n) free(n);}
 
-#define mk_catfn(s)    mk_filename(s,".cat.fits")
-#define mk_fits_streefn(s)  mk_filename(s,".skdt.fits")
-#define mk_streefn(s)  mk_filename(s,".skdt")
+#define mk_catfn(s)    mk_filename(s,".objs.fits")
+#define mk_streefn(s)  mk_filename(s,".skdt.fits")
 #define mk_ctreefn(s)  mk_filename(s,".ckdt.fits")
 #define mk_quadfn(s)   mk_filename(s,".quad.fits")
 #define mk_codefn(s)   mk_filename(s,".code.fits")

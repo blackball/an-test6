@@ -37,7 +37,6 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside) {
 		exit(-1);
 	}
 	// header remarks...
-	qfits_header_add(cats[hp]->header, "AN_CATALOG", "T", "This is an Astrometry.net catalog.", NULL);
 	sprintf(val, "%u", hp);
 	qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 	sprintf(val, "%u", Nside);
