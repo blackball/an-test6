@@ -261,6 +261,7 @@ catalog* catalog_open_for_writing(char* fn)
 	// the header
 	qf->header = qfits_table_prim_header_default();
 	fits_add_endian(qf->header);
+	fits_add_double_size(qf->header);
 	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
 	qfits_header_add(qf->header, "", NULL, "This is a flat array of XYZ for each catalog star.", NULL);
 
@@ -299,6 +300,7 @@ int catalog_write_star(catalog* cat, double* star)
 		        strerror(errno));
 		return -1;
 	}
+	cat->numstars++;
 	return 0;
 }
 
