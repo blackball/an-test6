@@ -21,6 +21,10 @@ struct rs_params {
     result_callback user_callback;
     void* user_callback_param;
 
+	progress_callback user_progress;
+	void* user_progress_param;
+	int ydone;
+
 	// for "count"
 	int* counts;
 };
@@ -28,6 +32,7 @@ typedef struct rs_params rs_params;
 
 bool rs_within_range(void* params, kdtree_node_t* search, kdtree_node_t* query);
 void rs_handle_result(void* params, kdtree_node_t* search, kdtree_node_t* query);
+void rs_start_results(void* params, kdtree_node_t* query);
 
 bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
 void rc_handle_result(void* params, kdtree_node_t* search, kdtree_node_t* query);
@@ -74,11 +79,12 @@ void dualtree_rangecount(kdtree_t* xtree, kdtree_t* ytree,
     dualtree_search(xtree, ytree, &callbacks);
 }
 
-
 void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
-							double mindist, double maxdist,
-							result_callback callback,
-							void* param) {
+						  double mindist, double maxdist,
+						  result_callback callback,
+						  void* param,
+						  progress_callback progress,
+						  void* progress_param) {
     // dual-tree search callback functions
     dualtree_callbacks callbacks;
     rs_params params;
@@ -109,8 +115,21 @@ void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
     params.user_callback_param = param;
 	params.xtree = xtree;
 	params.ytree = ytree;
+	if (progress) {
+		callbacks.start_results = rs_start_results;
+		callbacks.start_extra = &params;
+		params.user_progress = progress;
+		params.user_progress_param = progress_param;
+		params.ydone = 0;
+	}
 
     dualtree_search(xtree, ytree, &callbacks);
+}
+
+void rs_start_results(void* vparams, kdtree_node_t* ynode) {
+    rs_params* p = (rs_params*)vparams;
+	p->ydone += 1 + ynode->r - ynode->l;
+	p->user_progress(p->user_progress_param, p->ydone);
 }
 
 bool rs_within_range(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {

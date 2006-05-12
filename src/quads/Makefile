@@ -8,8 +8,8 @@ CFLAGS :=
 #fast
 CFLAGS	+= -g
 CFLAGS += -O2
+CFLAGS += -pg
 
-#CFLAGS += -pg
 #CFLAGS	+= -O2
 
 # to turn off asserts:

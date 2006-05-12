@@ -36,6 +36,9 @@ extern int optind, opterr, optopt;
 il* duplicates = NULL;
 void duplicate_found(void* nil, int ind1, int ind2, double dist2);
 
+int npoints = 0;
+void progress(void* nil, int ndone);
+
 int main(int argc, char *argv[]) {
     int argidx, argchar;
 	kdtree_t *starkd = NULL;
@@ -119,15 +122,14 @@ int main(int argc, char *argv[]) {
 				ramin, ramax, decmin, decmax);
 	}
 
-    fprintf(stderr, "Reading catalogue %s...\n", infname);
-    fflush(stderr);
-
 	fn = mk_catfn(infname);
 	cat = catalog_open(fn, 1);
     if (!cat) {
 		fprintf(stderr, "Couldn't open catalog %s\n", fn);
 		exit(-1);
 	}
+    fprintf(stderr, "Reading catalogue file %s...\n", fn);
+    fflush(stderr);
 	free_fn(fn);
 
 	fn = mk_idfn(infname);
@@ -136,6 +138,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Couldn'tn open idfile %s\n", fn);
 		exit(-1);
 	}
+    fprintf(stderr, "Reading id file %s...\n", fn);
+    fflush(stderr);
 	free_fn(fn);
 
 	fn = mk_catfn(outfname);
@@ -248,9 +252,11 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Running dual-tree search to find duplicates...\n");
 		fflush(stderr);
 		// de-duplicate.
+		npoints = cat->numstars;
 		dualtree_rangesearch(starkd, starkd,
 							 RANGESEARCH_NO_LIMIT, dist,
-							 duplicate_found, NULL);
+							 duplicate_found, NULL,
+							 progress, NULL);
 		fprintf(stderr, "Done!");
 	}
 
@@ -319,6 +325,17 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "Done!\n");
 	return 0;
+}
+
+int last_pct = 0;
+void progress(void* nil, int ndone) {
+	//int pct = (int)(100.0 * ndone / (double)npoints);
+	int pct = (int)(1000.0 * ndone / (double)npoints);
+	if (pct != last_pct) {
+		//printf("%i %% done.\n", pct);
+		printf("%.1f %% done.\n", 0.1 * pct);
+	}
+	last_pct = pct;
 }
 
 void duplicate_found(void* nil, int ind1, int ind2, double dist2) {

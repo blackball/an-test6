@@ -8,10 +8,14 @@ extern double RANGESEARCH_NO_LIMIT;
 typedef void (*result_callback)(void* extra, int xind, int yind,
 								double dist2);
 
+typedef void (*progress_callback)(void* extra, int ydone);
+
 void dualtree_rangesearch(kdtree_t* x, kdtree_t* y,
 						  double mindist, double maxdist,
 						  result_callback callback,
-						  void* callback_param);
+						  void* callback_param,
+						  progress_callback progress,
+						  void* progress_param);
 
 void dualtree_rangecount(kdtree_t* x, kdtree_t* y,
 						 double mindist, double maxdist,
