@@ -18,9 +18,10 @@
 #include "codefile.h"
 #include "kdtree.h"
 #include "kdtree_io.h"
+#include "kdtree_fits_io.h"
 #include "dualtree_max.h"
 
-#define OPTIONS "ht:cpr4" // n:
+#define OPTIONS "hf:H:D:cpr4" // n:
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -30,18 +31,21 @@ bool write_nearby = FALSE;
 double nearby_radius = -1.0;
 bool do_perms = FALSE;
 int permnum = 0;
+char* prefix;
 
 kdtree_t* tree = NULL;
 
 void print_help(char* progname)
 {
-	fprintf(stderr, "Usage: %s -t <tree-file> [-c] [-p] [-4]\n\n"
+	fprintf(stderr, "Usage: %s -f <prefix> [-c] [-p] [-4] [-H <hists.m>] [-D <dists.m>\n\n"
 	        "-c = check results against naive search.\n"
 	        "-4 = check all four permutations of codes (this only makes sense for code kdtrees).\n"
 	        "-p = write out a Matlab-literals file containing the positions of the stars.\n"
 	        "-n <radius> = write out Matlab literals containing the positions of nearby stars\n"
 	        "      where 'nearby' is defined as being within <radius> units.\n"
-	        "-r = convert XYZ to RA-DEC (this only make sense with -p or -n, and for star kdtrees).\n",
+	        "-r = convert XYZ to RA-DEC (this only make sense with -p or -n, and for star kdtrees).\n"
+	        "-H = File where histogram data should go (matlab).\n"
+	        "-D = File where distance data should go (matlab).\n",
 	        progname);
 }
 
@@ -397,6 +401,14 @@ void write_histogram(char* fn)
 
 	free(bincounts);
 
+	fprintf(fout, "bar(bins, counts);\n");
+	fprintf(fout, "xlabel(\"4D distance\");\n");
+	fprintf(fout, "ylabel(\"Count\");\n");
+	fprintf(fout, "title(\"Histogram of nearist neighbour distance in codespace\");\n");
+	fprintf(fout, "legend(\"hide\");\n");
+	fprintf(fout, "print(\"%s.nnhists.eps\");\n", prefix);
+	fprintf(fout, "print(\"%s.nnhists.png\", \"-color\");\n", prefix);
+
 	fclose(fout);
 	printf("Wrote histogram to %s\n", fn);
 	fflush(stdout);
@@ -456,6 +468,8 @@ int main(int argc, char *argv[])
 {
 	int argchar;
 	char *treefname = NULL;
+	char *distsfname = NULL;
+	char *histsfname = NULL;
 	dualtree_max_callbacks max_callbacks;
 	int i, N, D;
 	bool check = FALSE;
@@ -491,8 +505,15 @@ int main(int argc, char *argv[])
 		case 'r':
 			radec = TRUE;
 			break;
-		case 't':
-			treefname = optarg;
+		case 'f':
+			treefname = mk_ctreefn(optarg);
+			prefix = optarg;
+			break;
+		case 'H':
+			histsfname = optarg;
+			break;
+		case 'D':
+			distsfname = optarg;
 			break;
 		case 'h':
 			print_help(argv[0]);
@@ -598,9 +619,15 @@ int main(int argc, char *argv[])
 	  }
 	*/
 
-	write_histogram("/tmp/nnhists.m");
+	if (histsfname)
+		write_histogram(histsfname);
+	else
+		write_histogram("nnhists.m");
 
-	write_array("/tmp/nndists.m");
+	if (distsfname)
+		write_array(distsfname);
+	else
+		write_array("nndists.m");
 
 	if (check) {
 		// make sure it agrees with naive search.
