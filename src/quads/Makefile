@@ -7,6 +7,7 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
+CFLAGS += -O0
 
 #CFLAGS += -pg
 #CFLAGS	+= -O2
@@ -132,7 +133,7 @@ deps: $(DEPS)
 	$(CC) -MM $(CFLAGS) -c $< > $@
 
 allclean:
-	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) *~ $(DEPS) deps
+	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) *~ $(DEPS) deps $(QFITS_OBJ) $(OBJ)
 
 clean:
 	rm -f $(EXECS) $(SOLVER_EXECS) $(EXTRA_EXECS) $(MY_OBJ) $(OBJ) $(DEPS) deps

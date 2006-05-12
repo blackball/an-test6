@@ -180,7 +180,7 @@ catalog* catalog_open(char* catfn, int modifiable)
 
 	catfid = fopen(catfn, "rb");
 	if (!catfid) {
-		fprintf(stderr, "Couldn't open file %s to read quads: %s\n", catfn, strerror(errno));
+		fprintf(stderr, "Couldn't open catalog file %s: %s\n", catfn, strerror(errno));
 		goto bail;
 	}
 
