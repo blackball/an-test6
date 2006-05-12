@@ -9,8 +9,10 @@
 #include "an_catalog.h"
 #include "usnob_fits.h"
 #include "tycho2_fits.h"
+#include "fitsioutils.h"
 #include "starutil.h"
 #include "healpix.h"
+#include "mathutil.h"
 
 #define OPTIONS "ho:N:"
 
@@ -77,6 +79,10 @@ int main(int argc, char** args) {
 	int64_t starid;
 	int version = 0;
 	int nusnob = 0, ntycho = 0;
+
+	int BLOCK = 100000;
+	void* entries;
+	entries = malloc(BLOCK * imax(sizeof(usnob_entry), sizeof(tycho2_entry)));
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -169,8 +175,8 @@ int main(int argc, char** args) {
 		  Therefore, we don't need to correlate stars between the catalogs.
 		*/
 		if (usnob) {
-			int n, off, BLOCK = 1000;
-			usnob_entry entry[BLOCK];
+			int n, off;
+			usnob_entry* entry = (usnob_entry*)entries;
 			int N = usnob_fits_count_entries(usnob);
 			printf("Reading %i entries from USNO-B catalog file %s\n", N, infn);
 			for (off=0; off<N; off+=BLOCK) {
@@ -180,7 +186,7 @@ int main(int argc, char** args) {
 				else
 					n = BLOCK;
 
-				if (off % 10000 == 0) {
+				if (off % 100000 == 0) {
 					printf(".");
 					fflush(stdout);
 				}
@@ -238,8 +244,8 @@ int main(int argc, char** args) {
 			printf("\n");
 
 		} else if (tycho) {
-			int n, off, BLOCK = 1000;
-			tycho2_entry entry[BLOCK];
+			int n, off;
+			tycho2_entry* entry = (tycho2_entry*)entries;
 			int N = tycho2_fits_count_entries(tycho);
 			printf("Reading %i entries from Tycho-2 catalog file %s\n", N, infn);
 			for (off=0; off<N; off+=BLOCK) {
@@ -249,7 +255,7 @@ int main(int argc, char** args) {
 				else
 					n = BLOCK;
 
-				if (off % 10000 == 0) {
+				if (off % 100000 == 0) {
 					printf(".");
 					fflush(stdout);
 				}
@@ -317,10 +323,30 @@ int main(int argc, char** args) {
 			tycho2_fits_close(tycho);
 			printf("\n");
 		}
+
+		// update and sync each output file...
+		for (i=0; i<HP; i++) {
+			char val[32];
+			off_t offset;
+			if (!cats[i]) continue;
+			sprintf(val, "%u", cats[i]->nentries);
+			qfits_header_mod(cats[i]->header, "NOBJS", val, "Number of objects in this catalog.");
+			if (an_catalog_fix_headers(cats[i])) {
+				fprintf(stderr, "Error fixing the header or closing AN catalog for healpix %i.\n", i);
+			}
+			offset = ftello(cats[i]->fid);
+			if (fits_pad_file(cats[i]->fid) ||
+				fdatasync(fileno(cats[i]->fid))) {
+				fprintf(stderr, "Error padding and syncing AN catalog file for healpix %i.\n", i);
+			}
+			fseeko(cats[i]->fid, offset, SEEK_SET);
+		}
 	}
 
 	printf("Read %i USNO-B objects and %i Tycho-2 objects.\n",
 		   nusnob, ntycho);
+
+	free(entries);
 
 	for (i=0; i<HP; i++) {
 		char val[32];

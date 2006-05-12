@@ -102,7 +102,6 @@ int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 	for (c=0; c<TYCHO2_FITS_COLUMNS; c++) {
 		assert(tycho2->columns[c] != -1);
 		assert(tycho2->table);
-		assert(tycho2->table->col[tycho2->columns[c]].atom_size == tycho2_fitstruct[c].size);
 
 		// special-cases
 		if ((c == TYCHO2_FLAGS_INDEX) ||
@@ -133,6 +132,7 @@ int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 			free(rawdata);
 			continue;
 		}
+		assert(tycho2->table->col[tycho2->columns[c]].atom_size == tycho2_fitstruct[c].size);
 
 		qfits_query_column_seq_to_array
 			(tycho2->table, tycho2->columns[c], offset, count,

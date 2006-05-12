@@ -97,8 +97,6 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 	for (c=0; c<USNOB_FITS_COLUMNS; c++) {
 		assert(usnob->columns[c] != -1);
 		assert(usnob->table);
-		assert(usnob->table->col[usnob->columns[c]].atom_size == 
-			   usnob_fitstruct[c].size);
 
 		if (c == USNOB_FLAGS_INDEX) {
 			// special-case
@@ -115,6 +113,9 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 			free(rawdata);
 			continue;
 		}
+
+		assert(usnob->table->col[usnob->columns[c]].atom_size == 
+			   usnob_fitstruct[c].size);
 
 		qfits_query_column_seq_to_array
 			(usnob->table, usnob->columns[c], offset, count,
