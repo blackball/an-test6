@@ -115,17 +115,17 @@ void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
 
 bool rs_within_range(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
     rs_params* p = (rs_params*)vparams;
-    double mindistsq;
-    double maxdistsq;
 
     if (p->usemax) {
-		mindistsq = kdtree_node_node_mindist2(p->xtree, xnode, p->ytree, ynode);
-		if (mindistsq > p->maxdistsq)
+		if (kdtree_node_node_mindist2_exceeds(p->xtree, xnode,
+											  p->ytree, ynode,
+											  p->maxdistsq))
 			return FALSE;
     }
     if (p->usemin) {
-		maxdistsq = kdtree_node_node_maxdist2(p->xtree, xnode, p->ytree, ynode);
-		if (maxdistsq < p->mindistsq)
+		if (!kdtree_node_node_maxdist2_exceeds(p->xtree, xnode,
+											   p->ytree, ynode,
+											   p->mindistsq))
 			return FALSE;
     }
     return TRUE;
