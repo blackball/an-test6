@@ -93,7 +93,7 @@ inline int is_power_of_two(int x) {
 		        x == 0x10000000 ||
 		        x == 0x20000000 ||
 		        x == 0x40000000 ||
-		        x == 0x80000000)
+		        x == 0x80000000);
 }
 
 int main(int argc, char *argv[])
