@@ -290,7 +290,6 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 				maxrange = hi[d] - lo[d];
 				dim = d;
 			}
-		NODE(i)->dim = dim;
 
 		/* Pivot the data at the median */
 		m = kdtree_quickselect_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
@@ -1095,8 +1094,8 @@ void kdtree_output_dot(FILE* fid, kdtree_t* kd)
 	fprintf(fid, "digraph {\nnode [shape = record];\n");
 
 	for (i = 0; i < kd->nnodes; i++) {
-		fprintf(fid, "node%d [ label =\"<f0> %d | <f1> (%d) D%d p=%.2lf \\n L=(",
-		        i, NODE(i)->l, i, NODE(i)->dim, NODE(i)->pivot);
+		fprintf(fid, "node%d [ label =\"<f0> %d | <f1> (%d) \\n L=(",
+		        i, NODE(i)->l, i);
 		for (j = 0; j < D; j++) {
 			fprintf(fid, "%.2lf", *LOW_HR(i, j));
 			if (j < D - 1)
