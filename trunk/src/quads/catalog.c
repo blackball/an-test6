@@ -306,13 +306,26 @@ int catalog_write_star(catalog* cat, double* star)
 	return 0;
 }
 
-void catalog_close(catalog* cat)
+int catalog_close(catalog* cat)
 {
+	int rtn = 0;
 	if (cat->fid) {
-		fits_pad_file(cat->fid);
-		fclose(cat->fid); /* meow */
+		if (fits_pad_file(cat->fid)) {
+			fprintf(stderr, "Failed to pad catalog FITS file.\n");
+			rtn = -1;
+		}
+		if (fclose(cat->fid)) {
+			fprintf(stderr, "Failed to close catalog file.\n");
+			rtn = -1;
+		}
 	}
-	munmap(cat->mmap_cat, cat->mmap_cat_size);
+	if (cat->mmap_cat) {
+		if (munmap(cat->mmap_cat, cat->mmap_cat_size)) {
+			fprintf(stderr, "Failed to munmap catalog file.\n");
+			rtn = -1;
+		}
+	}
 	free(cat);
+	return rtn;
 }
 

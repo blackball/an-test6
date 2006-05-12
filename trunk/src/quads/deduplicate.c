@@ -17,6 +17,7 @@
 #include "dualtree_rangesearch.h"
 #include "bl.h"
 #include "catalog.h"
+#include "idfile.h"
 
 #define OPTIONS "hi:o:d:k:A:B:C:D:"
 const char HelpString[] =
@@ -37,8 +38,7 @@ void duplicate_found(void* nil, int ind1, int ind2, double dist2);
 
 int main(int argc, char *argv[]) {
     int argidx, argchar;
-	catalog* cat;
-    kdtree_t *starkd = NULL;
+	kdtree_t *starkd = NULL;
     double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
     double dist;
@@ -47,8 +47,14 @@ int main(int argc, char *argv[]) {
 	double ramin = -1e300, decmin = -1e300, ramax = 1e300, decmax = 1e300;
 	bool radecrange = FALSE;
 	double* thestars;
+	uint64_t* theids;
 	int levels;
 	int Nleaf;
+	catalog* cat;
+	idfile* id;
+	catalog* catout;
+	idfile* idout;
+	char* fn;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -116,21 +122,60 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Reading catalogue %s...\n", infname);
     fflush(stderr);
 
-    fprintf(stderr, "Will write to catalogue %s...\n", outfname);
-
-	cat = catalog_open(infname, 1);
-
+	fn = mk_catfn(infname);
+	cat = catalog_open(fn, 1);
     if (!cat) {
-		fprintf(stderr, "Couldn't open catalog %s.objs\n", infname);
+		fprintf(stderr, "Couldn't open catalog %s\n", fn);
 		exit(-1);
 	}
+	free_fn(fn);
+
+	fn = mk_idfn(infname);
+	id = idfile_open(fn, 1);
+	if (!id) {
+		fprintf(stderr, "Couldn'tn open idfile %s\n", fn);
+		exit(-1);
+	}
+	free_fn(fn);
+
+	fn = mk_catfn(outfname);
+	catout = catalog_open_for_writing(fn);
+	if (!catout) {
+		fprintf(stderr, "Couldn'tn open file %s for writing.\n", fn);
+		exit(-1);
+	}
+    fprintf(stderr, "Will write to catalogue %s\n", fn);
+	free_fn(fn);
+
+	fn = mk_idfn(outfname);
+	idout = idfile_open_for_writing(fn);
+	if (!idout) {
+		fprintf(stderr, "Couldn'tn open file %s for writing.\n", fn);
+		exit(-1);
+	}
+    fprintf(stderr, "                 idfile %s\n", fn);
+	free_fn(fn);
+
+	if (idfile_write_header(idout) ||
+		catalog_write_header(catout)) {
+		fprintf(stderr, "Couldn't write headers.\n");
+		exit(-1);
+	}
+
     fprintf(stderr, "Got %u stars.\n"
 			"Limits RA=[%g, %g] DEC=[%g, %g] degrees.\n",
             cat->numstars,
 			rad2deg(cat->ramin), rad2deg(cat->ramax),
 			rad2deg(cat->decmin), rad2deg(cat->decmax));
 
+	if (id->numstars != cat->numstars) {
+		fprintf(stderr, "Catalog has %i stars but idfile has %i stars.\n",
+				cat->numstars, id->numstars);
+		exit(-1);
+	}
+
 	thestars = catalog_get_base(cat);
+	theids = id->anidarray;
 
 	if (radecrange) {
 		int srcind, dstind;
@@ -160,27 +205,33 @@ int main(int argc, char *argv[]) {
 				memcpy(thestars + dstind*DIM_STARS,
 					   thestars + srcind*DIM_STARS,
 					   DIM_STARS * sizeof(double));
+
+				memcpy(theids + dstind,
+					   theids + srcind,
+					   sizeof(uint64_t));
 			}
 		}
 		cat->numstars = dstind;
+		id->numstars = dstind;
 		fprintf(stderr, "There are %i stars in the RA,DEC window you requested.\n", cat->numstars);
 	}
 
 	if (keep && keep < cat->numstars) {
 		cat->numstars = keep;
+		id->numstars = keep;
 		fprintf(stderr, "Keeping %i stars.\n", cat->numstars);
 	}
+
+	duplicates = il_new(256);
 
 	if (duprad == 0.0) {
 		fprintf(stderr, "Not deduplicating - you specified a deduplication radius of zero.\n");
 	} else {
-
 		Nleaf = 10;
 		levels = (int)((log((double)cat->numstars) - log((double)Nleaf))/log(2.0));
 		if (levels < 1) {
 			levels = 1;
 		}
-
 		fprintf(stderr, "Building KD tree (with %i levels)...", levels);
 		fflush(stderr);
 
@@ -194,112 +245,86 @@ int main(int argc, char *argv[]) {
 
 		// convert from arcseconds to distance on the unit sphere.
 		dist = sqrt(arcsec2distsq(duprad));
-
-		duplicates = il_new(256);
-
 		fprintf(stderr, "Running dual-tree search to find duplicates...\n");
 		fflush(stderr);
-
 		// de-duplicate.
 		dualtree_rangesearch(starkd, starkd,
 							 RANGESEARCH_NO_LIMIT, dist,
 							 duplicate_found, NULL);
-
 		fprintf(stderr, "Done!");
-
-		if (il_size(duplicates) == 0) {
-			fprintf(stderr, "No duplicate stars found.\n");
-		} else {
-			int dupind = 0;
-			int skipind = -1;
-			int srcind;
-			int destind = 0;
-			int N, Ndup;
-
-			// remove repeated entries from "duplicates"
-			// (yes, it can happen)
-			for (i=0; i<il_size(duplicates)-1; i++) {
-				int a, b;
-				a = il_get(duplicates, i);
-				b = il_get(duplicates, i+1);
-				if (a == b) {
-					il_remove(duplicates, i);
-					i--;
-				}
-			}
-
-			N = cat->numstars;
-			Ndup = il_size(duplicates);
-
-			// remove duplicate entries from the star array.
-			fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
-					Ndup, N-Ndup);
-			for (srcind=0; srcind<N; srcind++) {
-				// find the next index to skip
-				if (skipind == -1) {
-					if (dupind < Ndup) {
-						skipind = il_get(duplicates, dupind);
-						dupind++;
-					}
-					// shouldn't happen, I think...
-					if ((skipind > 0) && (skipind < srcind)) {
-						fprintf(stderr, "Warning: duplicate index %i skipped\n", skipind);
-						fprintf(stderr, "skipind=%i, srcind=%i\n", skipind, srcind);
-						skipind = -1;
-					}
-				}
-				if (srcind == skipind)
-					continue;
-
-				// optimization: if source and dest are the same...
-				if (srcind == destind) {
-					destind++;
-					continue;
-				}
-
-				memcpy(thestars + destind*DIM_STARS, thestars + srcind*DIM_STARS,
-					   DIM_STARS * sizeof(double));
-
-				destind++;
-			}
-			cat->numstars -= il_size(duplicates);
-		}
-		il_free(duplicates);
-		duplicates = NULL;
-
-		kdtree_free(starkd);
-		starkd = NULL;
-
 	}
 
-    fprintf(stderr, "Finding new {ra,dec}{min,max}...\n");
-    fflush(stderr);
+	if (il_size(duplicates) == 0) {
+		fprintf(stderr, "No duplicate stars found.\n");
+	}
+	{
+		int dupind = 0;
+		int skipind = -1;
+		int srcind;
+		int N, Ndup;
 
-	catalog_compute_radecminmax(cat);
+		// remove repeated entries from "duplicates"
+		// (yes, it can happen)
+		for (i=0; i<il_size(duplicates)-1; i++) {
+			int a, b;
+			a = il_get(duplicates, i);
+			b = il_get(duplicates, i+1);
+			if (a == b) {
+				il_remove(duplicates, i);
+				i--;
+			}
+		}
 
-	fprintf(stderr, "  ra=[%g, %g], dec=[%g, %g]\n",
-			rad2deg(cat->ramin),  rad2deg(cat->ramax),
-			rad2deg(cat->decmin), rad2deg(cat->decmax));
+		N = cat->numstars;
+		Ndup = il_size(duplicates);
 
-    fprintf(stderr, "Writing catalogue...\n");
-    fflush(stderr);
+		// remove duplicate entries from the star array.
+		fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
+				Ndup, N-Ndup);
+		for (srcind=0; srcind<N; srcind++) {
+			// find the next index to skip
+			if (skipind == -1) {
+				if (dupind < Ndup) {
+					skipind = il_get(duplicates, dupind);
+					dupind++;
+				}
+				// shouldn't happen, I think...
+				if ((skipind > 0) && (skipind < srcind)) {
+					fprintf(stderr, "Warning: duplicate index %i skipped\n", skipind);
+					fprintf(stderr, "skipind=%i, srcind=%i\n", skipind, srcind);
+					skipind = -1;
+				}
+			}
+			if (srcind == skipind)
+				continue;
 
-	if (catalog_write_to_file(cat, outfname)) {
-		fprintf(stderr, "Couldn't write catalog to file %s.\n", outfname);
-		catalog_close(cat);
+			catalog_write_star(catout, thestars + srcind * DIM_STARS);
+			idfile_write_anid(idout, theids[srcind]);
+		}
+	}
+	il_free(duplicates);
+	if (starkd)
+		kdtree_free(starkd);
+
+	if (catalog_fix_header(catout) ||
+		catalog_close(catout) ||
+		idfile_fix_header(idout) ||
+		idfile_close(idout)) {
+		fprintf(stderr, "Error closing output files.\n");
 		exit(-1);
 	}
 
 	catalog_close(cat);
+	idfile_close(id);
 
-    fprintf(stderr, "Done!\n");
-    return 0;
+	fprintf(stderr, "Done!\n");
+	return 0;
 }
 
 void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
-    if (ind1 <= ind2) return;
-    // append the larger of the two.
-    il_insert_ascending(duplicates, ind1);
+	if (ind1 <= ind2) return;
+	// append the larger of the two.
+	il_insert_ascending(duplicates, ind1);
 }
 
 
