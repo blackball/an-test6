@@ -3,7 +3,7 @@
   @file		cache.c
   @author	N. Devillard
   @date		Mar 2001
-  @version	$Revision: 1.2 $
+  @version	$Revision: 1.3 $
   @brief	FITS caching capabilities
 
   This modules implements a cache for FITS access routines.
@@ -14,10 +14,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: cache.c,v 1.2 2006/05/12 20:34:21 dlang Exp $
+	$Id: cache.c,v 1.3 2006/05/12 20:56:59 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/12 20:34:21 $
-	$Revision: 1.2 $
+	$Date: 2006/05/12 20:56:59 $
+	$Revision: 1.3 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -450,7 +450,6 @@ static int qfits_cache_add(char * filename)
 		);
 		return -1 ;
 	}
-	printf("in=%p\n", in);
 
 	/* Read first block in */
 	if (fread(buf, 1, FITS_BLOCK_SIZE, in)!=FITS_BLOCK_SIZE) {

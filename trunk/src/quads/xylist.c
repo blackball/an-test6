@@ -37,18 +37,21 @@ xylist* xylist_open(char* fn) {
 		fprintf(stderr, "Couldn't read FITS header from xylist %s.\n", fn);
         goto bailout;
 	}
-	ls->nfields = qfits_header_getint(header, "NFIELDS", -1);
 	qfits_header_destroy(header);
-	if (ls->nfields == -1) {
-		fprintf(stderr, "Didn't find the NFIELDS header field in xylist file %s\n", fn);
-		goto bailout;
-	}
+	/*
+	  ls->nfields = qfits_header_getint(header, "NFIELDS", -1);
+	  if (ls->nfields == -1) {
+	  fprintf(stderr, "Didn't find the NFIELDS header field in xylist file %s\n", fn);
+	  goto bailout;
+	  }
+	  if (qfits_query_n_ext(fn) != ls->nfields) {
+	  fprintf(stderr, "xylist file %s supposedly has %u fields, but it only has %u FITS extensions.\n", fn,
+	  ls->nfields, qfits_query_n_ext(fn));
+	  goto bailout;
+	  }
+	*/
+	ls->nfields = qfits_query_n_ext(fn);
 
-	if (qfits_query_n_ext(fn) != ls->nfields) {
-		fprintf(stderr, "xylist file %s supposedly has %u fields, but it only has %u FITS extensions.\n", fn,
-				ls->nfields, qfits_query_n_ext(fn));
-		goto bailout;
-	}
 	return ls;
 
  bailout:
@@ -63,13 +66,13 @@ static int xylist_find_field(xylist* ls, uint field) {
 	int c;
 	if (ls->table && ls->field == field)
 		return 0;
-	// the main FITS header is exteniosn 1
-	// the first FITS table is extension 2
+	// the main FITS header is extension 0
+	// the first FITS table is extension 1
 	if (ls->table) {
 		qfits_table_close(ls->table);
 		ls->table = NULL;
 	}
-	ls->table = qfits_table_open(ls->fn, field + 2);
+	ls->table = qfits_table_open(ls->fn, field + 1);
 	if (!ls->table) {
 		fprintf(stderr, "FITS extension %i in file %s is not a table.\n",
 				field+2, ls->fn);
