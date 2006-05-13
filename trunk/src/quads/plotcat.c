@@ -12,7 +12,7 @@
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
 " [-f catalog.objs] > outfile.pgm\n"
 "  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n"
-"  -N sets edge size of output image, -I sets intensity scale for pixels\n";
+"  -N sets edge size of output image\n";
 
 
 double *projection;
@@ -321,8 +321,14 @@ int main(int argc, char *argv[])
 	  fprintf(stderr," %lu/%lu pixels saturated\n",
 	  saturated,((unsigned long int)N*(unsigned long int)N));
 	*/
-
-	catalog_close(cat);
+	if (cat)
+		catalog_close(cat);
+	if (ancat)
+		an_catalog_close(ancat);
+	if (usnob)
+		usnob_fits_close(usnob);
+	if (tycho)
+		tycho2_fits_close(tycho);
 
 	return 0;
 }
