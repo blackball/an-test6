@@ -260,9 +260,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Done!");
 	}
 
-	if (il_size(duplicates) == 0) {
-		fprintf(stderr, "No duplicate stars found.\n");
-	}
 	{
 		int dupind = 0;
 		int skipind = -1;
@@ -283,10 +280,11 @@ int main(int argc, char *argv[]) {
 
 		N = cat->numstars;
 		Ndup = il_size(duplicates);
-
-		// remove duplicate entries from the star array.
 		fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
 				Ndup, N-Ndup);
+		fflush(stderr);
+
+		// remove duplicate entries from the star array.
 		for (srcind=0; srcind<N; srcind++) {
 			// find the next index to skip
 			if (skipind == -1) {
