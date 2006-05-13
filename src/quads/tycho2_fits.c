@@ -270,6 +270,8 @@ tycho2_fits* tycho2_fits_open(char* fn) {
 		return NULL;
 	}
 
+	tycho2->nentries = tycho2->table->nr;
+
 	return tycho2;
 }
 
