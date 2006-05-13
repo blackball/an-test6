@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
 		ancat = NULL;
 		usnob = NULL;
 		tycho = NULL;
+		numstars = 0;
 		fname = argv[optind];
 		fprintf(stderr, "Reading file %s...\n", fname);
 		fid = fopen(fname, "rb");

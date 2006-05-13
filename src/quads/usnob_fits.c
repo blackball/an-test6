@@ -241,6 +241,8 @@ usnob_fits* usnob_fits_open(char* fn) {
 		return NULL;
 	}
 
+	usnob->nentries = usnob->table->nr;
+
 	return usnob;
 }
 
