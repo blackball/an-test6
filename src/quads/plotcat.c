@@ -321,6 +321,8 @@ int main(int argc, char *argv[])
 	  fprintf(stderr," %lu/%lu pixels saturated\n",
 	  saturated,((unsigned long int)N*(unsigned long int)N));
 	*/
+	free(projection);
+
 	if (cat)
 		catalog_close(cat);
 	if (ancat)
