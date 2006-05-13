@@ -39,9 +39,6 @@ void duplicate_found(void* nil, int ind1, int ind2, double dist2);
 int npoints = 0;
 void progress(void* nil, int ndone);
 
-catalog* cat;
-double maxdist;
-
 int main(int argc, char *argv[]) {
     int argidx, argchar;
 	kdtree_t *starkd = NULL;
@@ -58,6 +55,8 @@ int main(int argc, char *argv[]) {
 	catalog* catout;
 	idfile* idout;
 	char* fn;
+	catalog* cat;
+	double maxdist;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -335,15 +334,6 @@ void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
 	if (ind1 <= ind2) return;
 	// append the larger of the two.
 	il_insert_unique_ascending(duplicates, ind1);
-	// debug
-	{
-		double *star1, *star2;
-		double dist2;
-		star1 = catalog_get_star(cat, ind1);
-		star2 = catalog_get_star(cat, ind2);
-		dist2 = distsq(star1, star2, 3);
-		assert(dist2 <= (maxdist*maxdist));
-	}
 }
 
 
