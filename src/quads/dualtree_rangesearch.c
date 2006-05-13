@@ -165,8 +165,20 @@ void rs_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 	yr = ynode->r;
 
 	for (y=yl; y<=yr; y++) {
+		int iy;
 		double* py = p->ytree->data + y * D;
-		int iy = p->ytree->perm[y];
+		// check if we can eliminate the whole box for this point...
+		if (p->usemax) {
+			if (kdtree_node_point_mindist2_exceeds(p->xtree, xnode,
+												   py, p->maxdistsq))
+				continue;
+		}
+		if (p->usemin) {
+			if (!kdtree_node_point_maxdist2_exceeds(p->xtree, xnode,
+													py, p->mindistsq))
+				continue;
+		}
+		iy = p->ytree->perm[y];
 		for (x=xl; x<=xr; x++) {
 			double d2;
 			double* px;

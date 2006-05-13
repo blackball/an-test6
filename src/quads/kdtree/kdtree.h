@@ -201,6 +201,13 @@ inline
 real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
 										real* pt, real bailout);
 
+inline
+int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
+									   real* pt, real maxd2);
+
+inline
+int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
+									   real* pt, real maxd2);
 
 /* Internal methods */
 int kdtree_qsort_results(kdtree_qres_t *kq, int D);

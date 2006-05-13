@@ -428,15 +428,13 @@ real kdtree_bb_mindist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2
 		ahi = bbhigh1[i];
 		blo = bblow2[i];
 		bhi = bbhigh2[i];
-
-		if ( ahi < blo )
+		if ( ahi < blo ) {
 			delta = blo - ahi;
-		else if ( bhi < alo )
+			d2 += delta * delta;
+		} else if ( bhi < alo ) {
 			delta = alo - bhi;
-		else
-			delta = 0.0;
-
-		d2 += delta * delta;
+			d2 += delta * delta;
+		} // else delta=0.0;
 	}
 	return d2;
 }
@@ -454,15 +452,17 @@ real kdtree_bb_mindist2_bailout(real* bblow1, real* bbhigh1,
 		blo = bblow2 [i];
 		ahi = bbhigh1[i];
 		bhi = bbhigh2[i];
-		if (ahi < blo)
+		if (ahi < blo) {
 			delta = blo - ahi;
-		else if (bhi < alo)
+			d2 += delta * delta;
+			if (d2 > bailout)
+				return d2;
+		} else if (bhi < alo) {
 			delta = alo - bhi;
-		else
-			delta = 0.0;
-		d2 += delta * delta;
-		if (d2 > bailout)
-			return d2;
+			d2 += delta * delta;
+			if (d2 > bailout)
+				return d2;
+		} // else delta = 0.0;
 	}
 	return d2;
 }
@@ -480,15 +480,17 @@ real kdtree_bb_mindist2_exceeds(real* bblow1, real* bbhigh1,
 		blo = bblow2 [i];
 		ahi = bbhigh1[i];
 		bhi = bbhigh2[i];
-		if (ahi < blo)
+		if (ahi < blo) {
 			delta = blo - ahi;
-		else if (bhi < alo)
+			d2 += delta * delta;
+			if (d2 > maxd2)
+				return 1;
+		} else if (bhi < alo) {
 			delta = alo - bhi;
-		else
-			delta = 0.0;
-		d2 += delta * delta;
-		if (d2 > maxd2)
-			return 1;
+			d2 += delta * delta;
+			if (d2 > maxd2)
+				return 1;
+		} // else delta = 0;
 	}
 	return 0;
 }
@@ -506,12 +508,10 @@ real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2
 		ahi = bbhigh1[i];
 		blo = bblow2[i];
 		bhi = bbhigh2[i];
-
 		delta = bhi - alo;
 		delta2 = ahi - blo;
 		if (delta2 > delta)
 			delta = delta2;
-
 		d2 += delta * delta;
 	}
 	return d2;
@@ -617,6 +617,29 @@ real kdtree_bb_point_mindist2_bailout(real* bblow, real* bbhigh,
 }
 
 inline
+int kdtree_bb_point_mindist2_exceeds(real* bblow, real* bbhigh,
+									 real* point, int dim, real maxd2) {
+	real d2 = 0.0;
+	real delta;
+	int i;
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+		if (point[i] < lo)
+			delta = lo - point[i];
+		else if (point[i] > hi)
+			delta = point[i] - hi;
+		else
+			continue;
+		d2 += delta * delta;
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
+}
+
+inline
 real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh, real* point, int dim)
 {
 	real d2 = 0.0;
@@ -660,6 +683,29 @@ real kdtree_bb_point_maxdist2_bailout(real* bblow, real* bbhigh,
 }
 
 inline
+real kdtree_bb_point_maxdist2_exceeds(real* bblow, real* bbhigh,
+									  real* point, int dim, double maxd2)
+{
+	real d2 = 0.0;
+	real delta1, delta2;
+	int i;
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+		delta1 = (point[i] - lo) * (point[i] - lo);
+		delta2 = (point[i] - hi) * (point[i] - hi);
+		if (delta1 > delta2)
+			d2 += delta1;
+		else
+			d2 += delta2;
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
+}
+
+inline
 int kdtree_node_to_nodeid(kdtree_t* kd, kdtree_node_t* node)
 {
 	return ((char*)node - (char*)kd->tree) / NODE_SIZE;
@@ -674,10 +720,6 @@ kdtree_node_t* kdtree_nodeid_to_node(kdtree_t* kd, int nodeid)
 inline
 int kdtree_get_childid1(kdtree_t* kd, int nodeid)
 {
-	/*
-	  if (ISLEAF(nodeid))
-	  return -1;
-	*/
 	assert(!ISLEAF(nodeid));
 	return 2*nodeid + 1;
 }
@@ -685,10 +727,6 @@ int kdtree_get_childid1(kdtree_t* kd, int nodeid)
 inline
 int kdtree_get_childid2(kdtree_t* kd, int nodeid)
 {
-	/*
-	  if (ISLEAF(nodeid))
-	  return -1;
-	*/
 	assert(!ISLEAF(nodeid));
 	return 2*nodeid + 2;
 }
@@ -697,7 +735,6 @@ inline
 kdtree_node_t* kdtree_get_child1(kdtree_t* kd, kdtree_node_t* node)
 {
 	int nodeid = kdtree_node_to_nodeid(kd, node);
-	//assert(ISLEAF(nodeid) == 0);
 	if (ISLEAF(nodeid))
 		return NULL;
 	return CHILD_NEG(nodeid);
@@ -707,7 +744,6 @@ inline
 kdtree_node_t* kdtree_get_child2(kdtree_t* kd, kdtree_node_t* node)
 {
 	int nodeid = kdtree_node_to_nodeid(kd, node);
-	//assert(ISLEAF(nodeid) == 0);
 	if (ISLEAF(nodeid))
 		return NULL;
 	return CHILD_POS(nodeid);
@@ -1021,13 +1057,6 @@ real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 }
 
 inline
-real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
-	return kdtree_bb_point_maxdist2(kdtree_get_bb_low(kd, node),
-									kdtree_get_bb_high(kd, node),
-									pt, kd->ndim);
-}
-
-inline
 real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
 										real* pt, real bailout) {
 	return kdtree_bb_point_mindist2_bailout
@@ -1037,12 +1066,37 @@ real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
 }
 
 inline
+int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
+									   real* pt, real maxd2) {
+	return kdtree_bb_point_mindist2_exceeds
+		(kdtree_get_bb_low(kd, node),
+		 kdtree_get_bb_high(kd, node),
+		 pt, kd->ndim, maxd2);
+}
+
+inline
+real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
+	return kdtree_bb_point_maxdist2(kdtree_get_bb_low(kd, node),
+									kdtree_get_bb_high(kd, node),
+									pt, kd->ndim);
+}
+
+inline
 real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
 										real* pt, real bailout) {
 	return kdtree_bb_point_maxdist2_bailout
 		(kdtree_get_bb_low(kd, node),
 		 kdtree_get_bb_high(kd, node),
 		 pt, kd->ndim, bailout);
+}
+
+inline
+real kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
+										real* pt, real maxd2) {
+	return kdtree_bb_point_maxdist2_exceeds
+		(kdtree_get_bb_low(kd, node),
+		 kdtree_get_bb_high(kd, node),
+		 pt, kd->ndim, maxd2);
 }
 
 int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
