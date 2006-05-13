@@ -5,6 +5,8 @@ extern double RANGESEARCH_NO_LIMIT;
 
 #include "kdtree.h"
 
+// note, 'xind' and 'yind' are indices IN THE KDTREE; to get back to
+// 'normal' ordering you must use the kdtree permutation vector.
 typedef void (*result_callback)(void* extra, int xind, int yind,
 								double dist2);
 
