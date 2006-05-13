@@ -299,8 +299,10 @@ int main(int argc, char *argv[]) {
 					skipind = -1;
 				}
 			}
-			if (srcind == skipind)
+			if (srcind == skipind) {
+				skipind = -1;
 				continue;
+			}
 
 			catalog_write_star(catout, thestars + srcind * DIM_STARS);
 			idfile_write_anid(idout, theids[srcind]);
