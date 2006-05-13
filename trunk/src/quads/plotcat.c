@@ -220,6 +220,7 @@ int main(int argc, char *argv[])
 			exit(-1);
 		}
 		qfits_header_destroy(hdr);
+		fprintf(stderr, "Reading %i stars...\n", numstars);
 
 		for (off=0; off<N; off+=n) {
 			if (off + BLOCK > numstars)
