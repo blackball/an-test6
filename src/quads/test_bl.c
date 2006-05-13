@@ -131,8 +131,6 @@ void test_il_insert_ascending(CuTest* tc) {
 	il_insert_ascending(x,1);
 	il_insert_ascending(x,3);
 	il_insert_ascending(x,0);
-	il_print(x);
-	printf("\n");
 	CuAssertIntEquals(tc, il_check_consistency(x), 0);
 	CuAssertIntEquals(tc, il_check_sorted_ascending(x, 0), 0);
 	for (i=0;i<il_size(x);i++)
