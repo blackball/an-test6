@@ -77,16 +77,13 @@ int catalog_write_header(catalog* cat)
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	char* fn;
-
 	if (!cat->fid) {
 		fprintf(stderr, "catalog_write_header: fid is null.\n");
 		return -1;
 	}
-
 	// fill in the real values...
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_mod(cat->header, "NSTARS", val, "Number of stars.");
-
 	datasize = DIM_STARS * sizeof(double);
 	ncols = 1;
 	nrows = cat->numstars;
@@ -94,8 +91,7 @@ int catalog_write_header(catalog* cat)
 	fn = "";
 	table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
 	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-	               "xyz",
-	               "", "", "", 0, 0, 0, 0, 0);
+	               "xyz", "", "", "", 0, 0, 0, 0, 0);
 	qfits_header_dump(cat->header, cat->fid);
 	tablehdr = qfits_table_ext_header_default(table);
 	qfits_header_dump(tablehdr, cat->fid);

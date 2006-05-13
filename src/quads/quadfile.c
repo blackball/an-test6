@@ -253,27 +253,20 @@ int quadfile_fix_header(quadfile* qf) {
 }
 
 int quadfile_write_header(quadfile* qf) {
-
     // first table: the quads.
     int datasize = DIM_QUADS * sizeof(uint);
     int ncols = 1;
-
-	// may be dummy
     int nrows = qf->numquads;
     int tablesize = datasize * nrows * ncols;
-
     qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
     qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-				   "quads",
-				   "", "", "", 0, 0, 0, 0, 0);
-
+				   "quads", "", "", "", 0, 0, 0, 0, 0);
     qfits_header_dump(qf->header, qf->fid);
 	qfits_header* tablehdr = qfits_table_ext_header_default(table);
     qfits_header_dump(tablehdr, qf->fid);
     qfits_table_close(table);
     qfits_header_destroy(tablehdr);
 	qf->header_end = ftello(qf->fid);
-
 	return 0;
 }
 

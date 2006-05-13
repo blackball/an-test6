@@ -222,6 +222,7 @@ int an_catalog_write_headers(an_catalog* cat) {
 	sprintf(val, "%u", cat->nentries);
 	qfits_header_mod(cat->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(cat->header, cat->fid);
+	cat->table->nr = cat->nentries;
 	table_header = qfits_table_ext_header_default(cat->table);
 	qfits_header_dump(table_header, cat->fid);
 	qfits_header_destroy(table_header);

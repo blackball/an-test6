@@ -276,6 +276,7 @@ int usnob_fits_write_headers(usnob_fits* usnob) {
 	sprintf(val, "%u", usnob->nentries);
 	qfits_header_mod(usnob->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(usnob->header, usnob->fid);
+	usnob->table->nr = usnob->nentries;
 	table_header = qfits_table_ext_header_default(usnob->table);
 	qfits_header_dump(table_header, usnob->fid);
 	qfits_header_destroy(table_header);

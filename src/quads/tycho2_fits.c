@@ -303,6 +303,7 @@ int tycho2_fits_write_headers(tycho2_fits* tycho2) {
 	sprintf(val, "%u", tycho2->nentries);
 	qfits_header_mod(tycho2->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(tycho2->header, tycho2->fid);
+	tycho2->table->nr = tycho2->nentries;
 	table_header = qfits_table_ext_header_default(tycho2->table);
 	qfits_header_dump(table_header, tycho2->fid);
 	qfits_header_destroy(table_header);
