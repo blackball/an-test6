@@ -6,6 +6,7 @@
 #include "an_catalog.h"
 #include "usnob_fits.h"
 #include "tycho2_fits.h"
+#include "mathutil.h"
 
 #define OPTIONS "bhgN:"
 
@@ -115,7 +116,8 @@ int main(int argc, char *argv[])
 	FILE* fid;
 	qfits_header* hdr;
 	char* valstr;
-
+	void* entries;
+	int BLOCK = 100000;
 	catalog* cat;
 	an_catalog* ancat;
 	usnob_fits* usnob;
@@ -146,7 +148,12 @@ int main(int argc, char *argv[])
 
 	projection=calloc(sizeof(double), N*N);
 
+	entries = malloc(BLOCK * imax(sizeof(usnob_entry),
+								  imax(sizeof(tycho2_entry),
+									   sizeof(an_entry))));
+
 	for (; optind<argc; optind++) {
+		int n, off, i;
 		cat = NULL;
 		ancat = NULL;
 		usnob = NULL;
@@ -214,47 +221,59 @@ int main(int argc, char *argv[])
 		}
 		qfits_header_destroy(hdr);
 
-		for (ii = 0; ii < numstars; ii++) {
-			if(is_power_of_two(ii+1))
-				fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
+		for (off=0; off<N; off+=n) {
+			if (off + BLOCK > numstars)
+				n = N - off;
+			else
+				n = BLOCK;
 
-			if (cat) {
-				double* xyz;
-				xyz = catalog_get_star(cat, ii);
-				x = xyz[0];
-				y = xyz[1];
-				z = xyz[2];
-			} else if (ancat) {
-				an_entry entry;
-				an_catalog_read_entries(ancat, ii, 1, &entry);
-				x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
-				y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
-				z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
+			if (ancat) {
+				an_catalog_read_entries(ancat, off, n, entries);
 			} else if (usnob) {
-				usnob_entry entry;
-				usnob_fits_read_entries(usnob, ii, 1, &entry);
-				x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
-				y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
-				z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
+				usnob_fits_read_entries(usnob, off, n, entries);
 			} else if (tycho) {
-				tycho2_entry entry;
-				tycho2_fits_read_entries(tycho, ii, 1, &entry);
-				x = radec2x(deg2rad(entry.RA), deg2rad(entry.DEC));
-				y = radec2y(deg2rad(entry.RA), deg2rad(entry.DEC));
-				z = radec2z(deg2rad(entry.RA), deg2rad(entry.DEC));
+				tycho2_fits_read_entries(tycho, off, n, entries);
 			}
 
-			if (!hammer) {
-				if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
-					continue;
-				if (reverse)
-					z = -z;
-				project_equal_area(x, y, z, &X, &Y);
-			} else {
-				/* Hammer-Aitoff projection */
-				project_hammer_aitoff_x(x, y, z, &X, &Y);
+			for (i=0; i<n; i++) {
+				if(is_power_of_two(off+i+1))
+					fprintf(stderr,"  done %u/%u stars\r",off+i+1,numstars);
+
+				if (cat) {
+					double* xyz;
+					xyz = catalog_get_star(cat, off+i);
+					x = xyz[0];
+					y = xyz[1];
+					z = xyz[2];
+				} else if (ancat) {
+					an_entry* entry = ((an_entry*)entries) + i;
+					x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
+					y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
+					z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
+				} else if (usnob) {
+					usnob_entry* entry = ((usnob_entry*)entries) + i;
+					x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
+					y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
+					z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
+				} else if (tycho) {
+					tycho2_entry* entry = ((tycho2_entry*)entries) + i;
+					x = radec2x(deg2rad(entry->RA), deg2rad(entry->DEC));
+					y = radec2y(deg2rad(entry->RA), deg2rad(entry->DEC));
+					z = radec2z(deg2rad(entry->RA), deg2rad(entry->DEC));
+				}
+
+				if (!hammer) {
+					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+						continue;
+					if (reverse)
+						z = -z;
+					project_equal_area(x, y, z, &X, &Y);
+				} else {
+					/* Hammer-Aitoff projection */
+					project_hammer_aitoff_x(x, y, z, &X, &Y);
+				}
+				projection[X+N*Y]++;
 			}
-			projection[X+N*Y]++;
 		}
 
 		if (cat)
@@ -319,6 +338,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	free(entries);
 
 	maxval = 0;
 	for (ii = 0; ii < (N*N); ii++)
