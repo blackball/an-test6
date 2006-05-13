@@ -41,7 +41,6 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside) {
 	qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 	sprintf(val, "%u", Nside);
 	qfits_header_add(cats[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-	qfits_header_add(cats[hp]->header, "NOBJS", "0", "", NULL);
 	// etc...
 
 	if (an_catalog_write_headers(cats[hp])) {
@@ -325,11 +324,8 @@ int main(int argc, char** args) {
 
 		// update and sync each output file...
 		for (i=0; i<HP; i++) {
-			char val[32];
 			off_t offset;
 			if (!cats[i]) continue;
-			sprintf(val, "%u", cats[i]->nentries);
-			qfits_header_mod(cats[i]->header, "NOBJS", val, "Number of objects in this catalog.");
 			if (an_catalog_fix_headers(cats[i])) {
 				fprintf(stderr, "Error fixing the header or closing AN catalog for healpix %i.\n", i);
 			}

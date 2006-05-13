@@ -204,6 +204,7 @@ an_catalog* an_catalog_open_for_writing(char* fn) {
 	cat->table = an_catalog_get_table();
 	cat->header = qfits_table_prim_header_default();
 	qfits_header_add(cat->header, "AN_CATALOG", "T", "This is an Astrometry.net catalog.", NULL);
+	qfits_header_add(cat->header, "NOBJS", "0", "(filler)", NULL);
 	return cat;
  bailout:
 	if (cat) {
@@ -214,41 +215,39 @@ an_catalog* an_catalog_open_for_writing(char* fn) {
 
 int an_catalog_write_headers(an_catalog* cat) {
 	qfits_header* table_header;
+	char val[32];
 	assert(cat->fid);
 	assert(cat->header);
+	sprintf(val, "%u", cat->nentries);
+	qfits_header_mod(cat->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(cat->header, cat->fid);
 	table_header = qfits_table_ext_header_default(cat->table);
 	qfits_header_dump(table_header, cat->fid);
 	qfits_header_destroy(table_header);
-	cat->data_offset = ftello(cat->fid);
+	cat->header_end = ftello(cat->fid);
 	return 0;
 }
 
 int an_catalog_fix_headers(an_catalog* cat) {
-	off_t offset, datastart;
-	qfits_header* table_header;
+ 	off_t offset;
+	off_t old_header_end;
 
-	assert(cat->fid);
-
-	offset = ftello(cat->fid);
-	fseeko(cat->fid, 0, SEEK_SET);
-
-	assert(cat->header);
-
-	cat->table->nr = cat->nentries;
-
-	qfits_header_dump(cat->header, cat->fid);
-	table_header = qfits_table_ext_header_default(cat->table);
-	qfits_header_dump(table_header, cat->fid);
-	qfits_header_destroy(table_header);
-
-	datastart = ftello(cat->fid);
-	if (datastart != cat->data_offset) {
-		fprintf(stderr, "Error: AN FITS header size changed: was %u, but is now %u.  Corruption is likely!\n",
-				(uint)cat->data_offset, (uint)datastart);
+	if (!cat->fid) {
+		fprintf(stderr, "an_catalog_fix_headers: fid is null.\n");
 		return -1;
 	}
+	offset = ftello(cat->fid);
+	fseeko(cat->fid, 0, SEEK_SET);
+	old_header_end = cat->header_end;
 
+	an_catalog_write_headers(cat);
+
+	if (old_header_end != cat->header_end) {
+		fprintf(stderr, "Warning: an_catalog header used to end at %lu, "
+		        "now it ends at %lu.\n", (unsigned long)old_header_end,
+				(unsigned long)cat->header_end);
+		return -1;
+	}
 	fseek(cat->fid, offset, SEEK_SET);
 	return 0;
 }

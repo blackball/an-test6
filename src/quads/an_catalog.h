@@ -48,7 +48,7 @@ struct an_catalog {
 	// when writing:
 	qfits_header* header;
 	FILE* fid;
-	off_t data_offset;
+	off_t header_end;
 	uint nentries;
 };
 typedef struct an_catalog an_catalog;
