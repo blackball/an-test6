@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	valstr = qfits_header_getstr(hdr, "AN_FILE");
 	if (valstr) {
 		fprintf(stderr, "Astrometry.net file type: \'%s\".\n", valstr);
-		if (strcasecmp(valstr, CATALOG_AN_FILETYPE) == 0) {
+		if (strncasecmp(valstr, CATALOG_AN_FILETYPE, strlen(CATALOG_AN_FILETYPE)) == 0) {
 			fprintf(stderr, "Looks like a catalog.\n");
 			cat = catalog_open(fname, 0);
 			if (!cat) {
@@ -174,6 +174,9 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 			numstars = cat->numstars;
+		} else {
+			fprintf(stderr, "Unknown Astrometry.net file type.\n");
+			exit(-1);
 		}
 	} else if (qfits_header_getboolean(hdr, "AN_CATALOG", 0)) {
 		fprintf(stderr, "File has AN_CATALOG = T header.\n");
@@ -209,11 +212,11 @@ int main(int argc, char *argv[])
 	projection=calloc(sizeof(double),N*N);
 
 	for (ii = 0; ii < numstars; ii++) {
-		double* xyz;
 		if(is_power_of_two(ii+1))
 			fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
 
 		if (cat) {
+			double* xyz;
 			xyz = catalog_get_star(cat, ii);
 			x = xyz[0];
 			y = xyz[1];
