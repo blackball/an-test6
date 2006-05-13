@@ -165,8 +165,10 @@ int main(int argc, char *argv[])
 	// look for AN_FILE (Astrometry.net filetype) in the FITS header.
 	valstr = qfits_header_getstr(hdr, "AN_FILE");
 	if (valstr) {
-		fprintf(stderr, "Astrometry.net file type: \'%s\".\n", valstr);
-		if (strncasecmp(valstr, CATALOG_AN_FILETYPE, strlen(CATALOG_AN_FILETYPE)) == 0) {
+		char* str = valstr;
+		fprintf(stderr, "Astrometry.net file type: \"%s\".\n", valstr);
+		if (str[0] == '\'') str++;
+		if (strncasecmp(str, CATALOG_AN_FILETYPE, strlen(CATALOG_AN_FILETYPE)) == 0) {
 			fprintf(stderr, "Looks like a catalog.\n");
 			cat = catalog_open(fname, 0);
 			if (!cat) {
