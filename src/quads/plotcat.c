@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
 
 	for (; optind<argc; optind++) {
 		int n, off, i;
+		char* key;
 		cat = NULL;
 		ancat = NULL;
 		usnob = NULL;
@@ -191,15 +192,21 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "Unknown Astrometry.net file type.\n");
 				exit(-1);
 			}
-		} else if (qfits_header_getboolean(hdr, "AN_CATALOG", 0)) {
-			fprintf(stderr, "File has AN_CATALOG = T header.\n");
-			ancat = an_catalog_open(fname);
-			if (!ancat) {
-				fprintf(stderr, "Couldn't open catalog.\n");
-				exit(-1);
+		}
+		// "AN_CATALOG" gets truncated...
+		key = qfits_header_findmatch(hdr, "AN_CAT");
+		if (key) {
+			if (qfits_header_getboolean(hdr, key, 0)) {
+				fprintf(stderr, "File has AN_CATALOG = T header.\n");
+				ancat = an_catalog_open(fname);
+				if (!ancat) {
+					fprintf(stderr, "Couldn't open catalog.\n");
+					exit(-1);
+				}
+				numstars = ancat->nentries;
 			}
-			numstars = ancat->nentries;
-		} else if (qfits_header_getboolean(hdr, "USNOB", 0)) {
+		}
+		if (qfits_header_getboolean(hdr, "USNOB", 0)) {
 			fprintf(stderr, "File has USNOB = T header.\n");
 			usnob = usnob_fits_open(fname);
 			if (!usnob) {
