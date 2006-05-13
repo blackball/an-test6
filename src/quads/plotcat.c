@@ -222,9 +222,9 @@ int main(int argc, char *argv[])
 		qfits_header_destroy(hdr);
 		fprintf(stderr, "Reading %i stars...\n", numstars);
 
-		for (off=0; off<N; off+=n) {
+		for (off=0; off<numstars; off+=n) {
 			if (off + BLOCK > numstars)
-				n = N - off;
+				n = numstars - off;
 			else
 				n = BLOCK;
 
