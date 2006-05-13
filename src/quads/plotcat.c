@@ -222,11 +222,13 @@ int main(int argc, char *argv[])
 				exit(-1);
 			}
 			numstars = tycho->nentries;
-		} else {
+		}
+		qfits_header_destroy(hdr);
+		if (!(cat || ancat || usnob || tycho)) {
 			fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
 			exit(-1);
 		}
-		qfits_header_destroy(hdr);
+
 		fprintf(stderr, "Reading %i stars...\n", numstars);
 
 		for (off=0; off<numstars; off+=n) {
