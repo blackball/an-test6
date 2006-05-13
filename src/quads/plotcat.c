@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
 	an_catalog* ancat;
 	usnob_fits* usnob;
 	tycho2_fits* tycho;
+	int backside = 0;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -246,8 +247,12 @@ int main(int argc, char *argv[])
 			}
 
 			for (i=0; i<n; i++) {
-				if(is_power_of_two(off+i+1))
+				if(is_power_of_two(off+i+1)) {
+					if (backside) {
+						fprintf(stderr, "%i stars project onto the opposite hemisphere.\n", backside);
+					}
 					fprintf(stderr,"  done %u/%u stars\r",off+i+1,numstars);
+				}
 
 				if (cat) {
 					double* xyz;
@@ -271,10 +276,13 @@ int main(int argc, char *argv[])
 					y = radec2y(deg2rad(entry->RA), deg2rad(entry->DEC));
 					z = radec2z(deg2rad(entry->RA), deg2rad(entry->DEC));
 				}
+				//fprintf(stderr, "xyz=(%g, %g, %g)\n", x, y, z);
 
 				if (!hammer) {
-					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) {
+						backside++;
 						continue;
+					}
 					if (reverse)
 						z = -z;
 					project_equal_area(x, y, z, &X, &Y);
@@ -282,6 +290,9 @@ int main(int argc, char *argv[])
 					/* Hammer-Aitoff projection */
 					project_hammer_aitoff_x(x, y, z, &X, &Y);
 				}
+
+				//fprintf(stderr, "XY=(%i,%i)\n", X, Y);
+
 				projection[X+N*Y]++;
 			}
 		}
