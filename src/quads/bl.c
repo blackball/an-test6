@@ -992,7 +992,49 @@ int il_get(il* list, int n) {
 }
 
 int il_insert_ascending(il* list, int n) {
-    return bl_insert_sorted(list, &n, bl_compare_ints_ascending);
+	bl_node *node;
+	int* iarray;
+	int lower, upper;
+	int nskipped;
+	// find the first node for which n <= the last element.
+	// we will insert n into that node.
+	if (list->last_access && list->last_access->N &&
+		(n >= ((int*)(list->last_access->data))[0])) {
+		node = list->last_access;
+		nskipped = list->last_access_n;
+	} else {
+		node = list->head;
+		nskipped = 0;
+	}
+	for (; node && (n > ((int*)(node->data))[node->N-1]);
+		 node=node->next)
+		nskipped += node->N;
+	if (!node) {
+		// either we're adding the first element, or we're appending since
+		// n is bigger than the largest element in the list.
+		il_append(list, n);
+		return list->N-1;
+	}
+
+	// find where in the node it should be inserted...
+	iarray = (int*)node->data;
+	lower = -1;
+	upper = node->N;
+	while (lower < (upper-1)) {
+		int mid;
+		mid = (upper + lower) / 2;
+		if (n >= iarray[mid])
+			lower = mid;
+		else
+			upper = mid;
+	}
+
+	// set the jump accessors...
+	list->last_access = node;
+	list->last_access_n = nskipped;
+	// ... so that this runs in O(1).
+	bl_insert(list, nskipped + lower + 1, &n);
+	return nskipped + lower + 1;
 }
 
 int il_insert_descending(il* list, int n) {
