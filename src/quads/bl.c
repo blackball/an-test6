@@ -1047,7 +1047,53 @@ int il_insert_descending(il* list, int n) {
 }
 
 int il_insert_unique_ascending(il* list, int n) {
-    return bl_insert_unique_sorted(list, &n, bl_compare_ints_ascending);
+	bl_node *node;
+	int* iarray;
+	int lower, upper;
+	int nskipped;
+
+	// find the first node for which n <= the last element.
+	// we will insert n into that node.
+	if (list->last_access && list->last_access->N &&
+		(n >= NODE_INTDATA(list->last_access)[0])) {
+		node = list->last_access;
+		nskipped = list->last_access_n;
+	} else {
+		node = list->head;
+		nskipped = 0;
+	}
+	for (; node && (n > NODE_INTDATA(node)[node->N-1]);
+		 node=node->next)
+		nskipped += node->N;
+	if (!node) {
+		// either we're adding the first element, or we're appending since
+		// n is bigger than the largest element in the list.
+		il_append(list, n);
+		return list->N-1;
+	}
+
+	// find where in the node it should be inserted...
+	iarray = NODE_INTDATA(node);
+	lower = -1;
+	upper = node->N;
+	while (lower < (upper-1)) {
+		int mid;
+		mid = (upper + lower) / 2;
+		if (n >= iarray[mid])
+			lower = mid;
+		else
+			upper = mid;
+	}
+
+	if (n == iarray[lower])
+		return -1;
+
+	// set the jump accessors...
+	list->last_access = node;
+	list->last_access_n = nskipped;
+	// ... so that this runs in O(1).
+	bl_insert(list, nskipped + lower + 1, &n);
+	return nskipped + lower + 1;
 }
 
 void il_copy(il* list, int start, int length, int* vdest) {
