@@ -1091,7 +1091,7 @@ real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
 }
 
 inline
-real kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
+int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
 										real* pt, real maxd2) {
 	return kdtree_bb_point_maxdist2_exceeds
 		(kdtree_get_bb_low(kd, node),
