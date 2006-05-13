@@ -1,7 +1,12 @@
 #include <math.h>
+
 #include "fileutil.h"
 #include "starutil.h"
 #include "catalog.h"
+#include "an_catalog.h"
+#include "usnob_fits.h"
+#include "tycho2_fits.h"
+
 #define OPTIONS "bhgf:N:"
 
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
@@ -60,7 +65,6 @@ inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y
 	project_equal_area(xp,y,zp, X, Y);
 }
 
-// borrowed from andrew moore...
 inline int is_power_of_two(int x) {
 		return (x == 0x00000001 ||
 		        x == 0x00000002 ||
@@ -98,16 +102,22 @@ inline int is_power_of_two(int x) {
 
 int main(int argc, char *argv[])
 {
-	uint ii,jj,numstars;
+	uint ii,jj,numstars=0;
 	int reverse=0, hammer=0, grid=0;
-	double x,y,z;
+	double x=0,y=0,z=0;
 	int maxval;
 	int X,Y;
 	//unsigned long int saturated=0;
-	catalog* cat;
-	char* basename = NULL;
-	char* catfname;
+	char* fname = NULL;
 	int argidx, argchar;
+	FILE* fid;
+	qfits_header* hdr;
+	char* valstr;
+
+	catalog* cat = NULL;
+	an_catalog* ancat = NULL;
+	usnob_fits* usnob = NULL;
+	tycho2_fits* tycho = NULL;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -124,7 +134,7 @@ int main(int argc, char *argv[])
 		  N=(int)strtoul(optarg, NULL, 0);
 		  break;
 		case 'f':
-			basename = optarg;
+			fname = optarg;
 			break;
 		default:
 			return (OPT_ERR);
@@ -136,29 +146,97 @@ int main(int argc, char *argv[])
 		return (OPT_ERR);
 	}
 
-	if (!basename) {
+	if (!fname) {
 		fprintf(stderr, help);
 		return 1;
 	}
-	catfname = mk_catfn(basename);
-	cat = catalog_open(catfname, 0);
-	if (!cat) {
-		fprintf(stderr, "Couldn't open catalog.\n");
-		return 1;
+	fid = fopen(fname, "rb");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s.  (Specify the complete filename with -f <filename>)\n", fname);
+		exit(-1);
 	}
-	numstars = cat->numstars;
+	fclose(fid);
+
+	hdr = qfits_header_read(fname);
+	if (!hdr) {
+		fprintf(stderr, "Couldn't read FITS header from file %s.\n", fname);
+		exit(-1);
+	}
+	// look for AN_FILE (Astrometry.net filetype) in the FITS header.
+	valstr = qfits_header_getstr(hdr, "AN_FILE");
+	if (valstr) {
+		printf("Astrometry.net file type: \'%s\".\n", valstr);
+		if (strcasecmp(valstr, CATALOG_AN_FILETYPE) == 0) {
+			printf("Looks like a catalog.\n");
+			cat = catalog_open(fname, 0);
+			if (!cat) {
+				fprintf(stderr, "Couldn't open catalog.\n");
+				return 1;
+			}
+			numstars = cat->numstars;
+		}
+	} else if (qfits_header_getboolean(hdr, "AN_CATALOG", 0)) {
+		printf("File has AN_CATALOG = T header.\n");
+		ancat = an_catalog_open(fname);
+		if (!ancat) {
+			fprintf(stderr, "Couldn't open catalog.\n");
+			exit(-1);
+		}
+		numstars = ancat->nentries;
+	} else if (qfits_header_getboolean(hdr, "USNOB", 0)) {
+		printf("File has USNOB = T header.\n");
+		usnob = usnob_fits_open(fname);
+		if (!usnob) {
+			fprintf(stderr, "Couldn't open catalog.\n");
+			exit(-1);
+		}
+		numstars = usnob->nentries;
+	} else if (qfits_header_getboolean(hdr, "TYCHO_2", 0)) {
+		printf("File has TYCHO_2 = T header.\n");
+		tycho = tycho2_fits_open(fname);
+		if (!tycho) {
+			fprintf(stderr, "Couldn't open catalog.\n");
+			exit(-1);
+		}
+		numstars = tycho->nentries;
+	} else {
+		printf("I can't figure out what kind of file %s is.\n", fname);
+		exit(-1);
+	}
+	qfits_header_destroy(hdr);
+
 
 	projection=calloc(sizeof(double),N*N);
 
 	for (ii = 0; ii < numstars; ii++) {
 		double* xyz;
-	  if(is_power_of_two(ii+1))
-	    fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
+		if(is_power_of_two(ii+1))
+			fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
 
-		xyz = catalog_get_star(cat, ii);
-		x = xyz[0];
-		y = xyz[1];
-		z = xyz[2];
+		if (cat) {
+			xyz = catalog_get_star(cat, ii);
+			x = xyz[0];
+			y = xyz[1];
+			z = xyz[2];
+		} else if (ancat) {
+			an_entry entry;
+			an_catalog_read_entries(ancat, ii, 1, &entry);
+			x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
+			y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
+			z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
+		} else if (usnob) {
+			usnob_entry entry;
+			usnob_fits_read_entries(usnob, ii, 1, &entry);
+			x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
+			y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
+			z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
+		} else if (tycho) {
+			tycho2_entry entry;
+			tycho2_fits_read_entries(tycho, ii, 1, &entry);
+			x = radec2x(deg2rad(entry.RA), deg2rad(entry.DEC));
+			y = radec2y(deg2rad(entry.RA), deg2rad(entry.DEC));
+			z = radec2z(deg2rad(entry.RA), deg2rad(entry.DEC));
+		}
 
 		if (!hammer) {
 			if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 

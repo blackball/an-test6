@@ -48,7 +48,7 @@ EXECS := get_healpix quadidx xylstomatlab rdlstohealpix \
 	certifiable hpquads dedup_index codetree startree \
 	printcatalog deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
-	plotcat codeprojections 
+	codeprojections 
 
 #	codeprojections fixmatchfile printmatchfile 
 
@@ -81,7 +81,7 @@ CFLAGS += -Ikdtree
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
 EXTRA_EXECS = usnobprint usnobtofits tycho2tofits ancatalog cut_an \
-	xylist_texttofits split_an hplimits
+	xylist_texttofits split_an hplimits plotcat
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
@@ -89,6 +89,9 @@ $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 xylist_texttofits: xylist_texttofits.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_OBJ)
