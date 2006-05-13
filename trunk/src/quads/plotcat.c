@@ -165,9 +165,9 @@ int main(int argc, char *argv[])
 	// look for AN_FILE (Astrometry.net filetype) in the FITS header.
 	valstr = qfits_header_getstr(hdr, "AN_FILE");
 	if (valstr) {
-		printf("Astrometry.net file type: \'%s\".\n", valstr);
+		fprintf(stderr, "Astrometry.net file type: \'%s\".\n", valstr);
 		if (strcasecmp(valstr, CATALOG_AN_FILETYPE) == 0) {
-			printf("Looks like a catalog.\n");
+			fprintf(stderr, "Looks like a catalog.\n");
 			cat = catalog_open(fname, 0);
 			if (!cat) {
 				fprintf(stderr, "Couldn't open catalog.\n");
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 			numstars = cat->numstars;
 		}
 	} else if (qfits_header_getboolean(hdr, "AN_CATALOG", 0)) {
-		printf("File has AN_CATALOG = T header.\n");
+		fprintf(stderr, "File has AN_CATALOG = T header.\n");
 		ancat = an_catalog_open(fname);
 		if (!ancat) {
 			fprintf(stderr, "Couldn't open catalog.\n");
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 		}
 		numstars = ancat->nentries;
 	} else if (qfits_header_getboolean(hdr, "USNOB", 0)) {
-		printf("File has USNOB = T header.\n");
+		fprintf(stderr, "File has USNOB = T header.\n");
 		usnob = usnob_fits_open(fname);
 		if (!usnob) {
 			fprintf(stderr, "Couldn't open catalog.\n");
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 		}
 		numstars = usnob->nentries;
 	} else if (qfits_header_getboolean(hdr, "TYCHO_2", 0)) {
-		printf("File has TYCHO_2 = T header.\n");
+		fprintf(stderr, "File has TYCHO_2 = T header.\n");
 		tycho = tycho2_fits_open(fname);
 		if (!tycho) {
 			fprintf(stderr, "Couldn't open catalog.\n");
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
 		}
 		numstars = tycho->nentries;
 	} else {
-		printf("I can't figure out what kind of file %s is.\n", fname);
+		fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
 		exit(-1);
 	}
 	qfits_header_destroy(hdr);
