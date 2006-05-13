@@ -190,6 +190,7 @@ an_catalog* an_catalog_open(char* fn) {
 		free(cat);
 		return NULL;
 	}
+	cat->nentries = cat->table->nr;
 	return cat;
 }
 
