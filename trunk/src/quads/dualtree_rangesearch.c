@@ -165,7 +165,7 @@ void rs_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 	yr = ynode->r;
 
 	for (y=yl; y<=yr; y++) {
-		int iy;
+		//int iy;
 		double* py = p->ytree->data + y * D;
 		// check if we can eliminate the whole box for this point...
 		if (p->usemax) {
@@ -178,19 +178,20 @@ void rs_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 													py, p->mindistsq))
 				continue;
 		}
-		iy = p->ytree->perm[y];
+		//iy = p->ytree->perm[y];
 		for (x=xl; x<=xr; x++) {
 			double d2;
 			double* px;
-			int ix;
+			//int ix;
 			px = p->xtree->data + x * D;
 			d2 = distsq(px, py, D);
 			if ((p->usemax) && (d2 > p->maxdistsq))
 				continue;
 			if ((p->usemin) && (d2 < p->mindistsq))
 				continue;
-			ix = p->xtree->perm[x];
-			p->user_callback(p->user_callback_param, ix, iy, d2);
+			//ix = p->xtree->perm[x];
+			//p->user_callback(p->user_callback_param, ix, iy, d2);
+			p->user_callback(p->user_callback_param, x, y, d2);
 		}
 	}
 }
