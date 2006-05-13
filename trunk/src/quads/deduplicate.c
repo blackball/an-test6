@@ -39,12 +39,14 @@ void duplicate_found(void* nil, int ind1, int ind2, double dist2);
 int npoints = 0;
 void progress(void* nil, int ndone);
 
+catalog* cat;
+double maxdist;
+
 int main(int argc, char *argv[]) {
     int argidx, argchar;
 	kdtree_t *starkd = NULL;
     double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
-    double dist;
     int keep = 0;
 	double ramin = -1e300, decmin = -1e300, ramax = 1e300, decmax = 1e300;
 	bool radecrange = FALSE;
@@ -52,7 +54,6 @@ int main(int argc, char *argv[]) {
 	uint64_t* theids;
 	int levels;
 	int Nleaf;
-	catalog* cat;
 	idfile* id;
 	catalog* catout;
 	idfile* idout;
@@ -247,13 +248,13 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Done.\n");
 
 		// convert from arcseconds to distance on the unit sphere.
-		dist = sqrt(arcsec2distsq(duprad));
+		maxdist = sqrt(arcsec2distsq(duprad));
 		fprintf(stderr, "Running dual-tree search to find duplicates...\n");
 		fflush(stderr);
 		// de-duplicate.
 		npoints = cat->numstars;
 		dualtree_rangesearch(starkd, starkd,
-							 RANGESEARCH_NO_LIMIT, dist,
+							 RANGESEARCH_NO_LIMIT, maxdist,
 							 duplicate_found, NULL,
 							 progress, NULL);
 		fprintf(stderr, "Done!");
@@ -334,6 +335,15 @@ void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
 	if (ind1 <= ind2) return;
 	// append the larger of the two.
 	il_insert_unique_ascending(duplicates, ind1);
+	// debug
+	{
+		double *star1, *star2;
+		double dist2;
+		star1 = catalog_get_star(cat, ind1);
+		star2 = catalog_get_star(cat, ind2);
+		dist2 = distsq(star1, star2, 3);
+		assert(dist2 <= (maxdist*maxdist));
+	}
 }
 
 
