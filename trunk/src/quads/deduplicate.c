@@ -45,7 +45,6 @@ int main(int argc, char *argv[]) {
     double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
     double dist;
-    int i;
     int keep = 0;
 	double ramin = -1e300, decmin = -1e300, ramax = 1e300, decmax = 1e300;
 	bool radecrange = FALSE;
@@ -266,18 +265,6 @@ int main(int argc, char *argv[]) {
 		int srcind;
 		int N, Ndup;
 
-		// remove repeated entries from "duplicates"
-		// (yes, it can happen)
-		for (i=0; i<il_size(duplicates)-1; i++) {
-			int a, b;
-			a = il_get(duplicates, i);
-			b = il_get(duplicates, i+1);
-			if (a == b) {
-				il_remove(duplicates, i);
-				i--;
-			}
-		}
-
 		N = cat->numstars;
 		Ndup = il_size(duplicates);
 		fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
@@ -346,7 +333,7 @@ void progress(void* nil, int ndone) {
 void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
 	if (ind1 <= ind2) return;
 	// append the larger of the two.
-	il_insert_ascending(duplicates, ind1);
+	il_insert_unique_ascending(duplicates, ind1);
 }
 
 
