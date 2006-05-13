@@ -7,13 +7,15 @@
 #include "usnob_fits.h"
 #include "tycho2_fits.h"
 
-#define OPTIONS "bhgf:N:"
+#define OPTIONS "bhgN:"
 
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
-" [-f catalog.objs] > outfile.pgm\n"
-"  -h sets Hammer-Aitoff, -b sets reverse, -g adds grid\n"
-"  -N sets edge size of output image\n";
-
+" <filename> [<filename> ...] > outfile.pgm\n"
+"  -h sets Hammer-Aitoff\n"
+"  -b sets reverse\n"
+"  -g adds grid\n"
+"  -N sets edge size of output image\n\n"
+"Can read Tycho2.fits, USNOB.fits, AN.fits, and AN.objs.fits files.\n";
 
 double *projection;
 extern char *optarg;
@@ -109,15 +111,15 @@ int main(int argc, char *argv[])
 	int X,Y;
 	//unsigned long int saturated=0;
 	char* fname = NULL;
-	int argidx, argchar;
+	int argchar;
 	FILE* fid;
 	qfits_header* hdr;
 	char* valstr;
 
-	catalog* cat = NULL;
-	an_catalog* ancat = NULL;
-	usnob_fits* usnob = NULL;
-	tycho2_fits* tycho = NULL;
+	catalog* cat;
+	an_catalog* ancat;
+	usnob_fits* usnob;
+	tycho2_fits* tycho;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -133,127 +135,135 @@ int main(int argc, char *argv[])
 		case 'N':
 		  N=(int)strtoul(optarg, NULL, 0);
 		  break;
-		case 'f':
-			fname = optarg;
-			break;
 		default:
 			return (OPT_ERR);
 		}
 
-	if (optind < argc) {
-		for (argidx = optind; argidx < argc; argidx++)
-			fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-		return (OPT_ERR);
-	}
-
-	if (!fname) {
+	if (optind == argc) {
 		fprintf(stderr, help);
-		return 1;
-	}
-	fid = fopen(fname, "rb");
-	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s.  (Specify the complete filename with -f <filename>)\n", fname);
 		exit(-1);
 	}
-	fclose(fid);
 
-	hdr = qfits_header_read(fname);
-	if (!hdr) {
-		fprintf(stderr, "Couldn't read FITS header from file %s.\n", fname);
-		exit(-1);
-	}
-	// look for AN_FILE (Astrometry.net filetype) in the FITS header.
-	valstr = qfits_header_getstr(hdr, "AN_FILE");
-	if (valstr) {
-		char* str = valstr;
-		fprintf(stderr, "Astrometry.net file type: \"%s\".\n", valstr);
-		if (str[0] == '\'') str++;
-		if (strncasecmp(str, CATALOG_AN_FILETYPE, strlen(CATALOG_AN_FILETYPE)) == 0) {
-			fprintf(stderr, "Looks like a catalog.\n");
-			cat = catalog_open(fname, 0);
-			if (!cat) {
-				fprintf(stderr, "Couldn't open catalog.\n");
-				return 1;
+	projection=calloc(sizeof(double), N*N);
+
+	for (; optind<argc; optind++) {
+		cat = NULL;
+		ancat = NULL;
+		usnob = NULL;
+		tycho = NULL;
+		fname = argv[optind];
+		fprintf(stderr, "Reading file %s...\n", fname);
+		fid = fopen(fname, "rb");
+		if (!fid) {
+			fprintf(stderr, "Couldn't open file %s.  (Specify the complete filename with -f <filename>)\n", fname);
+			exit(-1);
+		}
+		fclose(fid);
+
+		hdr = qfits_header_read(fname);
+		if (!hdr) {
+			fprintf(stderr, "Couldn't read FITS header from file %s.\n", fname);
+			exit(-1);
+		}
+		// look for AN_FILE (Astrometry.net filetype) in the FITS header.
+		valstr = qfits_header_getstr(hdr, "AN_FILE");
+		if (valstr) {
+			char* str = valstr;
+			fprintf(stderr, "Astrometry.net file type: \"%s\".\n", valstr);
+			if (str[0] == '\'') str++;
+			if (strncasecmp(str, CATALOG_AN_FILETYPE, strlen(CATALOG_AN_FILETYPE)) == 0) {
+				fprintf(stderr, "Looks like a catalog.\n");
+				cat = catalog_open(fname, 0);
+				if (!cat) {
+					fprintf(stderr, "Couldn't open catalog.\n");
+					return 1;
+				}
+				numstars = cat->numstars;
+			} else {
+				fprintf(stderr, "Unknown Astrometry.net file type.\n");
+				exit(-1);
 			}
-			numstars = cat->numstars;
+		} else if (qfits_header_getboolean(hdr, "AN_CATALOG", 0)) {
+			fprintf(stderr, "File has AN_CATALOG = T header.\n");
+			ancat = an_catalog_open(fname);
+			if (!ancat) {
+				fprintf(stderr, "Couldn't open catalog.\n");
+				exit(-1);
+			}
+			numstars = ancat->nentries;
+		} else if (qfits_header_getboolean(hdr, "USNOB", 0)) {
+			fprintf(stderr, "File has USNOB = T header.\n");
+			usnob = usnob_fits_open(fname);
+			if (!usnob) {
+				fprintf(stderr, "Couldn't open catalog.\n");
+				exit(-1);
+			}
+			numstars = usnob->nentries;
+		} else if (qfits_header_getboolean(hdr, "TYCHO_2", 0)) {
+			fprintf(stderr, "File has TYCHO_2 = T header.\n");
+			tycho = tycho2_fits_open(fname);
+			if (!tycho) {
+				fprintf(stderr, "Couldn't open catalog.\n");
+				exit(-1);
+			}
+			numstars = tycho->nentries;
 		} else {
-			fprintf(stderr, "Unknown Astrometry.net file type.\n");
+			fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
 			exit(-1);
 		}
-	} else if (qfits_header_getboolean(hdr, "AN_CATALOG", 0)) {
-		fprintf(stderr, "File has AN_CATALOG = T header.\n");
-		ancat = an_catalog_open(fname);
-		if (!ancat) {
-			fprintf(stderr, "Couldn't open catalog.\n");
-			exit(-1);
-		}
-		numstars = ancat->nentries;
-	} else if (qfits_header_getboolean(hdr, "USNOB", 0)) {
-		fprintf(stderr, "File has USNOB = T header.\n");
-		usnob = usnob_fits_open(fname);
-		if (!usnob) {
-			fprintf(stderr, "Couldn't open catalog.\n");
-			exit(-1);
-		}
-		numstars = usnob->nentries;
-	} else if (qfits_header_getboolean(hdr, "TYCHO_2", 0)) {
-		fprintf(stderr, "File has TYCHO_2 = T header.\n");
-		tycho = tycho2_fits_open(fname);
-		if (!tycho) {
-			fprintf(stderr, "Couldn't open catalog.\n");
-			exit(-1);
-		}
-		numstars = tycho->nentries;
-	} else {
-		fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
-		exit(-1);
-	}
-	qfits_header_destroy(hdr);
+		qfits_header_destroy(hdr);
 
+		for (ii = 0; ii < numstars; ii++) {
+			if(is_power_of_two(ii+1))
+				fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
 
-	projection=calloc(sizeof(double),N*N);
+			if (cat) {
+				double* xyz;
+				xyz = catalog_get_star(cat, ii);
+				x = xyz[0];
+				y = xyz[1];
+				z = xyz[2];
+			} else if (ancat) {
+				an_entry entry;
+				an_catalog_read_entries(ancat, ii, 1, &entry);
+				x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
+				y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
+				z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
+			} else if (usnob) {
+				usnob_entry entry;
+				usnob_fits_read_entries(usnob, ii, 1, &entry);
+				x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
+				y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
+				z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
+			} else if (tycho) {
+				tycho2_entry entry;
+				tycho2_fits_read_entries(tycho, ii, 1, &entry);
+				x = radec2x(deg2rad(entry.RA), deg2rad(entry.DEC));
+				y = radec2y(deg2rad(entry.RA), deg2rad(entry.DEC));
+				z = radec2z(deg2rad(entry.RA), deg2rad(entry.DEC));
+			}
 
-	for (ii = 0; ii < numstars; ii++) {
-		if(is_power_of_two(ii+1))
-			fprintf(stderr,"  done %u/%u stars\r",ii+1,numstars);
-
-		if (cat) {
-			double* xyz;
-			xyz = catalog_get_star(cat, ii);
-			x = xyz[0];
-			y = xyz[1];
-			z = xyz[2];
-		} else if (ancat) {
-			an_entry entry;
-			an_catalog_read_entries(ancat, ii, 1, &entry);
-			x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
-			y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
-			z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
-		} else if (usnob) {
-			usnob_entry entry;
-			usnob_fits_read_entries(usnob, ii, 1, &entry);
-			x = radec2x(deg2rad(entry.ra), deg2rad(entry.dec));
-			y = radec2y(deg2rad(entry.ra), deg2rad(entry.dec));
-			z = radec2z(deg2rad(entry.ra), deg2rad(entry.dec));
-		} else if (tycho) {
-			tycho2_entry entry;
-			tycho2_fits_read_entries(tycho, ii, 1, &entry);
-			x = radec2x(deg2rad(entry.RA), deg2rad(entry.DEC));
-			y = radec2y(deg2rad(entry.RA), deg2rad(entry.DEC));
-			z = radec2z(deg2rad(entry.RA), deg2rad(entry.DEC));
+			if (!hammer) {
+				if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
+					continue;
+				if (reverse)
+					z = -z;
+				project_equal_area(x, y, z, &X, &Y);
+			} else {
+				/* Hammer-Aitoff projection */
+				project_hammer_aitoff_x(x, y, z, &X, &Y);
+			}
+			projection[X+N*Y]++;
 		}
 
-		if (!hammer) {
-			if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
-				continue;
-			if (reverse)
-				z = -z;
-			project_equal_area(x, y, z, &X, &Y);
-		} else {
-			/* Hammer-Aitoff projection */
-			project_hammer_aitoff_x(x, y, z, &X, &Y);
-		}
-		projection[X+N*Y]++;
+		if (cat)
+			catalog_close(cat);
+		if (ancat)
+			an_catalog_close(ancat);
+		if (usnob)
+			usnob_fits_close(usnob);
+		if (tycho)
+			tycho2_fits_close(tycho);
 	}
 
 	if (grid) {
@@ -327,15 +337,6 @@ int main(int argc, char *argv[])
 	  saturated,((unsigned long int)N*(unsigned long int)N));
 	*/
 	free(projection);
-
-	if (cat)
-		catalog_close(cat);
-	if (ancat)
-		an_catalog_close(ancat);
-	if (usnob)
-		usnob_fits_close(usnob);
-	if (tycho)
-		tycho2_fits_close(tycho);
 
 	return 0;
 }
