@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include "qfits.h"
 
+#define CATALOG_AN_FILETYPE "OBJS"
+
 struct catalog {
 	FILE* fid;
 	void* mmap_cat;
