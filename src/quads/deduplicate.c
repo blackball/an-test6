@@ -333,7 +333,12 @@ void progress(void* nil, int ndone) {
 	int pct = (int)(1000.0 * ndone / (double)npoints);
 	if (pct != last_pct) {
 		//printf("%i %% done.\n", pct);
-		printf("%.1f %% done.\n", 0.1 * pct);
+		//printf("%.1f %% done.\n", 0.1 * pct);
+		if (pct % 10 == 0)
+			printf("(%i %%)", pct/10);
+		else
+			printf(".");
+		fflush(stdout);
 	}
 	last_pct = pct;
 }
