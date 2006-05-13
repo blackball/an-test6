@@ -11,6 +11,8 @@ static void bl_free_node(bl_node* node);
 
 // data follows the bl_node*.
 #define NODE_DATA(node) ((void*)(((bl_node*)(node)) + 1))
+#define NODE_CHARDATA(node) ((char*)(((bl_node*)(node)) + 1))
+#define NODE_INTDATA(node) ((int*)(((bl_node*)(node)) + 1))
 
 static void bl_sort_rec(bl* list, void* pivot,
 						int (*compare)(const void* v1, const void* v2)) {
@@ -26,8 +28,7 @@ static void bl_sort_rec(bl* list, void* pivot,
 	greater = bl_new(list->blocksize, list->datasize);
 	//iless = 0;
 	for (node=list->head; node;) {
-		//char* data = node->data;
-		char* data = NODE_DATA(node);
+		char* data = NODE_CHARDATA(node);
 		for (i=0; i<node->N; i++) {
 			int val = compare(data, pivot);
 			if (val < 0) {
@@ -127,13 +128,8 @@ void bl_split(bl* src, bl* dest, int split) {
         bl_node* newnode = bl_new_node(dest);
         newnode->N = (node->N - ind);
         newnode->next = node->next;
-		/*
-		  memcpy((char*)newnode->data,
-		  (char*)node->data + (ind * src->datasize),
-		  newnode->N * src->datasize);
-		*/
-		memcpy((char*)NODE_DATA(newnode),
-			   (char*)NODE_DATA(node) + (ind * src->datasize),
+		memcpy(NODE_CHARDATA(newnode),
+			   NODE_CHARDATA(node) + (ind * src->datasize),
 			   newnode->N * src->datasize);
         node->N -= (node->N - ind);
         node->next = NULL;
@@ -250,13 +246,8 @@ static void bl_remove_from_node(bl* list, bl_node* node,
 		// just remove this element...
 		ncopy = node->N - index_in_node - 1;
 		if (ncopy > 0) {
-			/*
-			  memmove((char*)node->data + index_in_node * list->datasize,
-			  (char*)node->data + (index_in_node+1) * list->datasize,
-			  ncopy * list->datasize);
-			*/
-			memmove((char*)NODE_DATA(node) + index_in_node * list->datasize,
-					(char*)NODE_DATA(node) + (index_in_node+1) * list->datasize,
+			memmove(NODE_CHARDATA(node) + index_in_node * list->datasize,
+					NODE_CHARDATA(node) + (index_in_node+1) * list->datasize,
 					ncopy * list->datasize);
 		}
 		node->N--;
@@ -316,13 +307,8 @@ void bl_remove_index_range(bl* list, int start, int length) {
 		if ((istart + length) < node->N) {
 			// we're removing a chunk of elements from the middle of this
 			// block.  move elements from the end into the removed chunk.
-			/*
-			  memmove((char*)node->data + istart * list->datasize,
-			  (char*)node->data + (istart + length) * list->datasize,
-			  (node->N - (istart + length)) * list->datasize);
-			*/
-			memmove((char*)NODE_DATA(node) + istart * list->datasize,
-					(char*)NODE_DATA(node) + (istart + length) * list->datasize,
+			memmove(NODE_CHARDATA(node) + istart * list->datasize,
+					NODE_CHARDATA(node) + (istart + length) * list->datasize,
 					(node->N - (istart + length)) * list->datasize);
 			// we're done!
 			node->N -= length;
@@ -371,13 +357,8 @@ void bl_remove_index_range(bl* list, int start, int length) {
 	// no "node" may be null.
 	if (node && length>0) {
 		//printf("removing %i from end.\n", length);
-		/*
-		  memmove((char*)node->data,
-		  (char*)node->data + length * list->datasize,
-		  (node->N - length) * list->datasize);
-		*/
-		memmove((char*)NODE_DATA(node),
-				(char*)NODE_DATA(node) + length * list->datasize,
+		memmove(NODE_CHARDATA(node),
+				NODE_CHARDATA(node) + length * list->datasize,
 				(node->N - length) * list->datasize);
 		node->N -= length;
 		list->N -= length;
@@ -466,8 +447,7 @@ void bl_node_append(bl* list, bl_node* node, void* data) {
 		node = newnode;
 	}
 	// space remains at this node.  add item.
-	//memcpy((char*)node->data + node->N * list->datasize, data, list->datasize);
-	memcpy((char*)NODE_DATA(node) + node->N * list->datasize, data, list->datasize);
+	memcpy(NODE_CHARDATA(node) + node->N * list->datasize, data, list->datasize);
 	node->N++;
 	list->N++;
 }
@@ -635,8 +615,7 @@ void bl_set(bl* list, int index, void* data) {
 	void* dataloc;
 
 	node = bl_find_node(list, index, &nskipped);
-	//dataloc = (char*)node->data + (index - nskipped) * list->datasize;
-	dataloc = (char*)NODE_DATA(node) + (index - nskipped) * list->datasize;
+	dataloc = NODE_CHARDATA(node) + (index - nskipped) * list->datasize;
 	memcpy(dataloc, data, list->datasize);
 	// update the last_access member...
 	list->last_access = node;
@@ -678,13 +657,8 @@ void bl_insert(bl* list, int index, void* data) {
 			bl_node* next;
 			next = node->next;
 			// shift...
-			/*
-			  memmove((char*)next->data + list->datasize,
-			  (char*)next->data,
-			  next->N * list->datasize);
-			*/
-			memmove((char*)NODE_DATA(next) + list->datasize,
-					(char*)NODE_DATA(next),
+			memmove(NODE_CHARDATA(next) + list->datasize,
+					NODE_CHARDATA(next),
 					next->N * list->datasize);
 
 			next->N++;
@@ -692,28 +666,17 @@ void bl_insert(bl* list, int index, void* data) {
 
 			if (localindex == node->N) {
 				// the new element is inserted into the next node.
-				//memcpy((char*)next->data, data, list->datasize);
-				memcpy((char*)NODE_DATA(next), data, list->datasize);
+				memcpy(NODE_CHARDATA(next), data, list->datasize);
 			} else {
 				// the last element in this node is added to the next node.
-				//memcpy((char*)next->data, (char*)node->data + (node->N-1)*list->datasize, list->datasize);
-				memcpy((char*)NODE_DATA(next), (char*)NODE_DATA(node) + (node->N-1)*list->datasize, list->datasize);
+				memcpy(NODE_CHARDATA(next), NODE_CHARDATA(node) + (node->N-1)*list->datasize, list->datasize);
 				// shift
 				nshift = node->N - localindex - 1;
-				/*
-				  memmove((char*)node->data + (localindex+1) * list->datasize,
-				  (char*)node->data + localindex * list->datasize,
-				  nshift * list->datasize);
-				*/
-				memmove((char*)NODE_DATA(node) + (localindex+1) * list->datasize,
-						(char*)NODE_DATA(node) + localindex * list->datasize,
+				memmove(NODE_CHARDATA(node) + (localindex+1) * list->datasize,
+						NODE_CHARDATA(node) + localindex * list->datasize,
 						nshift * list->datasize);
 				// insert...
-				/*
-				  memcpy((char*)node->data + localindex * list->datasize,
-				  data, list->datasize);
-				*/
-				memcpy((char*)NODE_DATA(node) + localindex * list->datasize,
+				memcpy(NODE_CHARDATA(node) + localindex * list->datasize,
 					   data, list->datasize);
 			}
 		} else {
@@ -726,27 +689,17 @@ void bl_insert(bl* list, int index, void* data) {
 			}
 			if (localindex == node->N) {
 				// the new element is added to the new node.
-				//memcpy((char*)newnode->data, data, list->datasize);
-				memcpy((char*)NODE_DATA(newnode), data, list->datasize);
+				memcpy(NODE_CHARDATA(newnode), data, list->datasize);
 			} else {
 				// the last element in this node is added to the new node.
-				//memcpy((char*)newnode->data, (char*)node->data + (node->N-1)*list->datasize, list->datasize);
-				memcpy((char*)NODE_DATA(newnode), (char*)NODE_DATA(node) + (node->N-1)*list->datasize, list->datasize);
+				memcpy(NODE_CHARDATA(newnode), NODE_CHARDATA(node) + (node->N-1)*list->datasize, list->datasize);
 				// shift and insert.
 				nshift = node->N - localindex - 1;
-				/*
-				  memmove((char*)node->data + (localindex+1) * list->datasize,
-				  (char*)node->data + localindex * list->datasize,
-				  nshift * list->datasize);
-				  // insert...
-				  memcpy((char*)node->data + localindex * list->datasize,
-				  data, list->datasize);
-				*/
-				memmove((char*)NODE_DATA(node) + (localindex+1) * list->datasize,
-						(char*)NODE_DATA(node) + localindex * list->datasize,
+				memmove(NODE_CHARDATA(node) + (localindex+1) * list->datasize,
+						NODE_CHARDATA(node) + localindex * list->datasize,
 						nshift * list->datasize);
 				// insert...
-				memcpy((char*)NODE_DATA(node) + localindex * list->datasize,
+				memcpy(NODE_CHARDATA(node) + localindex * list->datasize,
 					   data, list->datasize);
 			}
 			newnode->N++;
@@ -757,19 +710,11 @@ void bl_insert(bl* list, int index, void* data) {
 		int localindex, nshift;
 		localindex = index - nskipped;
 		nshift = node->N - localindex;
-		/*
-		  memmove((char*)node->data + (localindex+1) * list->datasize,
-		  (char*)node->data + localindex * list->datasize,
-		  nshift * list->datasize);
-		  // insert...
-		  memcpy((char*)node->data + localindex * list->datasize,
-		  data, list->datasize);
-		*/
-		memmove((char*)NODE_DATA(node) + (localindex+1) * list->datasize,
-				(char*)NODE_DATA(node) + localindex * list->datasize,
+		memmove(NODE_CHARDATA(node) + (localindex+1) * list->datasize,
+				NODE_CHARDATA(node) + localindex * list->datasize,
 				nshift * list->datasize);
 		// insert...
-		memcpy((char*)NODE_DATA(node) + localindex * list->datasize,
+		memcpy(NODE_CHARDATA(node) + localindex * list->datasize,
 			   data, list->datasize);
 		node->N++;
 		list->N++;
@@ -784,8 +729,7 @@ void* bl_access(bl* list, int n) {
 	node = bl_find_node(list, n, &nskipped);
 
 	// grab the element.
-	//rtn = (char*)node->data + (n - nskipped) * list->datasize;
-	rtn = (char*)NODE_DATA(node) + (n - nskipped) * list->datasize;
+	rtn = NODE_CHARDATA(node) + (n - nskipped) * list->datasize;
 	// update the last_access member...
 	list->last_access = node;
 	list->last_access_n = nskipped;
@@ -829,8 +773,7 @@ void bl_copy(bl* list, int start, int length, void* vdest) {
 		avail = node->N - (start - nskipped);
 		if (take > avail)
 			take = avail;
-		//src = (char*)node->data + (start - nskipped) * list->datasize;
-		src = (char*)NODE_DATA(node) + (start - nskipped) * list->datasize;
+		src = NODE_CHARDATA(node) + (start - nskipped) * list->datasize;
 		memcpy(dest, src, take * list->datasize);
 
 		dest += take * list->datasize;
@@ -994,7 +937,6 @@ int il_remove_value(il* ilist, int value) {
 		 prev=node, node=node->next) {
 		int i;
 		int* idat;
-		//idat = (int*)node->data;
 		idat = (int*)NODE_DATA(node);
 		for (i=0; i<node->N; i++)
 			if (idat[i] == value) {
@@ -1062,16 +1004,14 @@ int il_insert_ascending(il* list, int n) {
 	// find the first node for which n <= the last element.
 	// we will insert n into that node.
 	if (list->last_access && list->last_access->N &&
-		(n >= ((int*)(NODE_DATA(list->last_access)))[0])) {
-		//(n >= ((int*)(list->last_access->data))[0])) {
+		(n >= NODE_INTDATA(list->last_access)[0])) {
 		node = list->last_access;
 		nskipped = list->last_access_n;
 	} else {
 		node = list->head;
 		nskipped = 0;
 	}
-	//for (; node && (n > ((int*)(node->data))[node->N-1]);
-	for (; node && (n > ((int*)(NODE_DATA(node)))[node->N-1]);
+	for (; node && (n > NODE_INTDATA(node)[node->N-1]);
 		 node=node->next)
 		nskipped += node->N;
 	if (!node) {
@@ -1082,8 +1022,7 @@ int il_insert_ascending(il* list, int n) {
 	}
 
 	// find where in the node it should be inserted...
-	//iarray = (int*)node->data;
-	iarray = (int*)NODE_DATA(node);
+	iarray = NODE_INTDATA(node);
 	lower = -1;
 	upper = node->N;
 	while (lower < (upper-1)) {
@@ -1121,8 +1060,7 @@ void il_print(bl* list) {
 	for (n=list->head; n; n=n->next) {
 		printf("[ ");
 		for (i=0; i<n->N; i++)
-			//printf("%i, ", ((int*)n->data)[i]);
-			printf("%i, ", ((int*)NODE_DATA(n))[i]);
+			printf("%i, ", NODE_INTDATA(n)[i]);
 		printf("] ");
 	}
 }
@@ -1132,8 +1070,7 @@ int il_contains(il* list, int data) {
 	int i;
 	int* idata;
 	for (n=list->head; n; n=n->next) {
-		//idata = (int*)n->data;
-		idata = (int*)NODE_DATA(n);
+		idata = NODE_INTDATA(n);
 		for (i=0; i<n->N; i++)
 			if (idata[i] == data)
 				return 1;
@@ -1147,8 +1084,7 @@ int  il_index_of(il* list, int data) {
 	int* idata;
 	int npast = 0;
 	for (n=list->head; n; n=n->next) {
-		//idata = (int*)n->data;
-		idata = (int*)NODE_DATA(n);
+		idata = NODE_INTDATA(n);
 		for (i=0; i<n->N; i++)
 			if (idata[i] == data)
 				return npast + i;
@@ -1218,7 +1154,6 @@ void pl_print(pl* list) {
     for (n=list->head; n; n=n->next) {
 		printf("[ ");
 		for (i=0; i<n->N; i++)
-			//printf("%p ", ((void**)n->data)[i]);
 			printf("%p ", ((void**)NODE_DATA(n))[i]);
 		printf("] ");
     }

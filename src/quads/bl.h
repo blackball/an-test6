@@ -11,10 +11,10 @@
 #include <stdlib.h>
 
 struct bl_node {
-  // number of elements filled.
-  int N;
-  void* data;
-  struct bl_node* next;
+	// number of elements filled.
+	int N;
+	struct bl_node* next;
+	// (data block implicitly follows this struct).
 };
 typedef struct bl_node bl_node;
 
