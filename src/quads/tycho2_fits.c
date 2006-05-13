@@ -269,9 +269,7 @@ tycho2_fits* tycho2_fits_open(char* fn) {
 		free(tycho2);
 		return NULL;
 	}
-
 	tycho2->nentries = tycho2->table->nr;
-
 	return tycho2;
 }
 
@@ -286,6 +284,8 @@ tycho2_fits* tycho2_fits_open_for_writing(char* fn) {
 	}
 	tycho2->table = tycho2_fits_get_table();
 	tycho2->header = qfits_table_prim_header_default();
+	qfits_header_add(tycho2->header, "TYCHO_2", "T", "This is a Tycho-2 catalog.", NULL);
+	qfits_header_add(tycho2->header, "NOBJS", "0", "", NULL);
 	return tycho2;
 
  bailout:
@@ -297,41 +297,32 @@ tycho2_fits* tycho2_fits_open_for_writing(char* fn) {
 
 int tycho2_fits_write_headers(tycho2_fits* tycho2) {
 	qfits_header* table_header;
+	char val[32];
 	assert(tycho2->fid);
 	assert(tycho2->header);
+	sprintf(val, "%u", tycho2->nentries);
+	qfits_header_mod(tycho2->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(tycho2->header, tycho2->fid);
 	table_header = qfits_table_ext_header_default(tycho2->table);
 	qfits_header_dump(table_header, tycho2->fid);
 	qfits_header_destroy(table_header);
-	tycho2->data_offset = ftello(tycho2->fid);
+	tycho2->header_end = ftello(tycho2->fid);
 	return 0;
 }
 
 int tycho2_fits_fix_headers(tycho2_fits* tycho2) {
-	off_t offset, datastart;
-	qfits_header* table_header;
-
-	assert(tycho2->fid);
-
+ 	off_t offset;
+	off_t old_header_end;
 	offset = ftello(tycho2->fid);
 	fseeko(tycho2->fid, 0, SEEK_SET);
-
-	assert(tycho2->header);
-
-	tycho2->table->nr = tycho2->nentries;
-
-	qfits_header_dump(tycho2->header, tycho2->fid);
-	table_header = qfits_table_ext_header_default(tycho2->table);
-	qfits_header_dump(table_header, tycho2->fid);
-	qfits_header_destroy(table_header);
-
-	datastart = ftello(tycho2->fid);
-	if (datastart != tycho2->data_offset) {
-		fprintf(stderr, "Error: Tycho-2 FITS header size changed: was %u, but is now %u.  Corruption is likely!\n",
-				(uint)tycho2->data_offset, (uint)datastart);
+	old_header_end = tycho2->header_end;
+	tycho2_fits_write_headers(tycho2);
+	if (old_header_end != tycho2->header_end) {
+		fprintf(stderr, "Warning: TYCHO-2 FITS header used to end at %lu, "
+		        "now it ends at %lu.\n", (unsigned long)old_header_end,
+				(unsigned long)tycho2->header_end);
 		return -1;
 	}
-
 	fseek(tycho2->fid, offset, SEEK_SET);
 	return 0;
 }

@@ -108,7 +108,6 @@ int catalog_fix_header(catalog* cat)
 {
  	off_t offset;
 	off_t old_header_end;
-
 	if (!cat->fid) {
 		fprintf(stderr, "catalog_fix_header: fid is null.\n");
 		return -1;

@@ -14,7 +14,7 @@ struct usnob_fits {
 	// when writing:
 	qfits_header* header;
 	FILE* fid;
-	off_t data_offset;
+	off_t header_end;
 	uint nentries;
 };
 typedef struct usnob_fits usnob_fits;

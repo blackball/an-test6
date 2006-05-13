@@ -159,17 +159,13 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
-				qfits_header_add(tycs[hp]->header, "TYCHO_2", "T", "This is a Tycho-2 catalog.", NULL);
 				qfits_header_add(tycs[hp]->header, "HEALPIXED", (do_hp ? "T" : "F"), "Is this catalog healpixified?", NULL);
 				if (do_hp) {
 					sprintf(val, "%u", hp);
 					qfits_header_add(tycs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 					sprintf(val, "%u", Nside);
 					qfits_header_add(tycs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-					qfits_header_add(tycs[hp]->header, "NOBJS", "0", "", NULL);
-					// etc...
 				}
-				qfits_header_add(tycs[hp]->header, "NOBJS", "0", "", NULL);
 
 				if (tycho2_fits_write_headers(tycs[hp])) {
 					fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
@@ -200,13 +196,10 @@ int main(int argc, char** args) {
 
 	// close all the files...
 	for (i=0; i<HP; i++) {
-		char val[256];
 		if (!tycs[i])
 			continue;
-		sprintf(val, "%u", tycs[i]->nentries);
-		qfits_header_mod(tycs[i]->header, "NOBJS", val, "Number of objects in this catalog.");
-		tycho2_fits_fix_headers(tycs[i]);
-		if (tycho2_fits_close(tycs[i])) {
+		if (tycho2_fits_fix_headers(tycs[i]) ||
+			tycho2_fits_close(tycs[i])) {
 			fprintf(stderr, "Failed to close Tycho-2 FITS file.\n");
 			exit(-1);
 		}

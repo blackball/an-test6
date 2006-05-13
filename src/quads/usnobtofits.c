@@ -162,12 +162,10 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
-				qfits_header_add(usnobs[hp]->header, "USNOB", "T", "This is a USNO-B 1.0 catalog.", NULL);
 				sprintf(val, "%u", hp);
 				qfits_header_add(usnobs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 				sprintf(val, "%u", Nside);
 				qfits_header_add(usnobs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-				qfits_header_add(usnobs[hp]->header, "NOBJS", "0", "", NULL);
 				// etc...
 
 				if (usnob_fits_write_headers(usnobs[hp])) {
@@ -195,16 +193,10 @@ int main(int argc, char** args) {
 
 	// close all the files...
 	for (i=0; i<HP; i++) {
-		char val[256];
-
 		if (!usnobs[i])
 			continue;
-
-		sprintf(val, "%u", usnobs[i]->nentries);
-		qfits_header_mod(usnobs[i]->header, "NOBJS", val, "Number of objects in this catalog.");
-		usnob_fits_fix_headers(usnobs[i]);
-
-		if (usnob_fits_close(usnobs[i])) {
+		if (usnob_fits_fix_headers(usnobs[i]) ||
+			usnob_fits_close(usnobs[i])) {
 			fprintf(stderr, "Failed to close file %i: %s\n", i, strerror(errno));
 		}
 	}
