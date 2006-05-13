@@ -96,16 +96,16 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Couldn't open catalog %s\n", fn);
 		exit(-1);
 	}
-    fprintf(stderr, "Reading catalogue file %s...\n", fn);
-    fflush(stderr);
+    printf("Reading catalogue file %s...\n", fn);
+    fflush(stdout);
 
 	fn = outfname;
 	catout = an_catalog_open_for_writing(fn);
 	if (!catout) {
-		fprintf(stderr, "Couldn'tn open file %s for writing.\n", fn);
+		fprintf(stderr, "Couldn't open file %s for writing.\n", fn);
 		exit(-1);
 	}
-    fprintf(stderr, "Will write to catalogue %s\n", fn);
+    printf("Will write to catalogue %s\n", fn);
 
 	// discard the default header; copy the source catalog's header.
 	qfits_header_destroy(catout->header);
@@ -122,10 +122,12 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-    fprintf(stderr, "Catalog has %u objects.\n", cat->nentries);
+    printf("Catalog has %u objects.\n", cat->nentries);
+
+	printf("Finding star positions...\n");
+	fflush(stdout);
 
 	thestars = malloc(cat->nentries * 3 * sizeof(double));
-
 	entries = malloc(BLOCK * sizeof(an_entry));
 
 	for (off=0; off<cat->nentries; off+=n) {
@@ -143,42 +145,38 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	duplicates = il_new(256);
-
 	Nleaf = 10;
 	levels = (int)((log((double)cat->nentries) - log((double)Nleaf))/log(2.0));
 	if (levels < 1) {
 		levels = 1;
 	}
-	fprintf(stderr, "Building KD tree (with %i levels)...", levels);
-	fflush(stderr);
-
+	printf("Building KD tree (with %i levels)...", levels);
+	fflush(stdout);
 	starkd = kdtree_build(thestars, cat->nentries, 3, levels);
 	if (!starkd) {
 		fprintf(stderr, "Couldn't create star kdtree.\n");
 		exit(-1);
 	}
-	fprintf(stderr, "Done.\n");
+	printf("Done.\n");
 
 	// convert from arcseconds to distance on the unit sphere.
 	maxdist = sqrt(arcsec2distsq(duprad));
-	fprintf(stderr, "Running dual-tree search to find duplicates...\n");
-	fflush(stderr);
-	// de-duplicate.
+	// dual-tree search...
+	duplicates = il_new(256);
+	printf("Running dual-tree search to find duplicates...\n");
+	fflush(stdout);
 	npoints = cat->nentries;
 	dualtree_rangesearch(starkd, starkd,
 						 RANGESEARCH_NO_LIMIT, maxdist,
-						 duplicate_found, NULL,
-						 progress, NULL);
-	fprintf(stderr, "Done!");
+						 duplicate_found, NULL, progress, NULL);
+	printf("Done.\n");
 
 	kdtree_free(starkd);
 
 	N = cat->nentries;
 	Ndup = il_size(duplicates);
-	fprintf(stderr, "Removing %i duplicate stars (%i stars remain)...\n",
-			Ndup, N-Ndup);
-	fflush(stderr);
+	printf("Removing %i duplicate stars (%i stars remain)...\n", Ndup, N-Ndup);
+	fflush(stdout);
 
 	for (off=0; off<cat->nentries; off+=n) {
 		int i;
@@ -220,7 +218,7 @@ int main(int argc, char *argv[]) {
 
 	an_catalog_close(cat);
 
-	fprintf(stderr, "Done!\n");
+	printf("Done!\n");
 	return 0;
 }
 

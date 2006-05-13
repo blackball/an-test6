@@ -14,7 +14,7 @@ struct tycho2_fits {
 	// when writing:
 	qfits_header* header;
 	FILE* fid;
-	off_t data_offset;
+	off_t header_end;
 	uint nentries;
 };
 typedef struct tycho2_fits tycho2_fits;

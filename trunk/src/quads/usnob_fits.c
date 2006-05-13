@@ -257,6 +257,8 @@ usnob_fits* usnob_fits_open_for_writing(char* fn) {
 	}
 	usnob->table = usnob_fits_get_table();
 	usnob->header = qfits_table_prim_header_default();
+	qfits_header_add(usnob->header, "USNOB", "T", "This is a USNO-B 1.0 catalog.", NULL);
+	qfits_header_add(usnob->header, "NOBJS", "0", "", NULL);
 	return usnob;
 
  bailout:
@@ -267,42 +269,33 @@ usnob_fits* usnob_fits_open_for_writing(char* fn) {
 }
 
 int usnob_fits_write_headers(usnob_fits* usnob) {
+	char val[256];
 	qfits_header* table_header;
 	assert(usnob->fid);
 	assert(usnob->header);
+	sprintf(val, "%u", usnob->nentries);
+	qfits_header_mod(usnob->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(usnob->header, usnob->fid);
 	table_header = qfits_table_ext_header_default(usnob->table);
 	qfits_header_dump(table_header, usnob->fid);
 	qfits_header_destroy(table_header);
-	usnob->data_offset = ftello(usnob->fid);
+	usnob->header_end = ftello(usnob->fid);
 	return 0;
 }
 
 int usnob_fits_fix_headers(usnob_fits* usnob) {
-	off_t offset, datastart;
-	qfits_header* table_header;
-
-	assert(usnob->fid);
-
+ 	off_t offset;
+	off_t old_header_end;
 	offset = ftello(usnob->fid);
 	fseeko(usnob->fid, 0, SEEK_SET);
-
-	assert(usnob->header);
-
-	usnob->table->nr = usnob->nentries;
-
-	qfits_header_dump(usnob->header, usnob->fid);
-	table_header = qfits_table_ext_header_default(usnob->table);
-	qfits_header_dump(table_header, usnob->fid);
-	qfits_header_destroy(table_header);
-
-	datastart = ftello(usnob->fid);
-	if (datastart != usnob->data_offset) {
-		fprintf(stderr, "Error: USNO-B FITS header size changed: was %u, but is now %u.  Corruption is likely!\n",
-				(uint)usnob->data_offset, (uint)datastart);
+	old_header_end = usnob->header_end;
+	usnob_fits_write_headers(usnob);
+	if (old_header_end != usnob->header_end) {
+		fprintf(stderr, "Warning: USNOB FITS header used to end at %lu, "
+		        "now it ends at %lu.\n", (unsigned long)old_header_end,
+				(unsigned long)usnob->header_end);
 		return -1;
 	}
-
 	fseek(usnob->fid, offset, SEEK_SET);
 	return 0;
 }
