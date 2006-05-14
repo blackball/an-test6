@@ -1,7 +1,7 @@
 /**
- *   Solve fields (using Keir's kdtrees)
+ *   Solve fields (with slavish devotion)
  *
- * Inputs: .ckdt2 .objs .quad
+ * Inputs: .ckdt .objs .quad
  * Output: .match
  */
 
@@ -516,6 +516,7 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 
 		matchfile.fieldnum = fieldnum;
 
+		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
 		solver.mostagree = 0;
