@@ -49,6 +49,8 @@ char *quadfname = NULL, *catfname = NULL;
 char *idfname = NULL;
 char* matchfname = NULL;
 char* donefname = NULL;
+char* xcolname;
+char* ycolname;
 bool parity = DEFAULT_PARITY_FLIP;
 double codetol = DEFAULT_CODE_TOL;
 int startdepth = 0;
@@ -129,6 +131,8 @@ int main(int argc, char *argv[]) {
 		hits = NULL;
 		matchfid = NULL;
 		quads = NULL;
+		xcolname = strdup("ROWC");
+		ycolname = strdup("COLC");
 
 		if (read_parameters()) {
 			break;
@@ -157,6 +161,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "agreement %i\n", agreement);
 		fprintf(stderr, "num-to-agree %i\n", nagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
+		fprintf(stderr, "xcolname %s\n", xcolname);
+		fprintf(stderr, "ycolname %s\n", ycolname);
 
 		fprintf(stderr, "fields ");
 		for (i=0; i<il_size(fieldlist); i++)
@@ -184,8 +190,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 			xy->parity = 1;
 		}
-		xy->xname = "ROWC";
-		xy->yname = "COLC";
+		xy->xname = xcolname;
+		xy->yname = ycolname;
 
 		// Read .ckdt2 file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
@@ -269,6 +275,9 @@ int main(int argc, char *argv[]) {
 		free(matchfile.indexpath);
 		free(matchfile.fieldpath);
 
+		free(xcolname);
+		free(ycolname);
+
 		xylist_close(xy);
 		fclose(matchfid);
 		free_fn(fieldfname);
@@ -346,6 +355,10 @@ int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "xcol ", &nextword)) {
+			xcolname = strdup(nextword);
+		} else if (is_word(buffer, "ycol ", &nextword)) {
+			ycolname = strdup(nextword);
 		} else if (is_word(buffer, "agreement", &nextword)) {
 			agreement = TRUE;
 		} else if (is_word(buffer, "nagree ", &nextword)) {
