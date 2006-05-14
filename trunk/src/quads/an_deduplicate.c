@@ -1,15 +1,16 @@
 /**
-   deduplicate: finds pairs of stars within a given distance of each other and removes
+   an_deduplicate: finds pairs of stars within a given distance of each other and removes
    one of the stars (the one that appears second).
 
-   input: .objs catalogue
-   output: .objs catalogue
+   input: AN catalogue
+   output: AN catalogue
 
    original author: dstn
 */
 
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
 	int dupind;
 	int skipind;
 	int srcind;
-	int N, Ndup;
+	int i, N, Ndup;
 	char val[32];
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
