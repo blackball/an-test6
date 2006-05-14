@@ -34,6 +34,9 @@ int npoints = 0;
 void progress(void* nil, int ndone);
 
 kdtree_t *starkd = NULL;
+int* disthist = NULL;
+double binsize;
+int Nbins;
 
 int main(int argc, char *argv[]) {
     int argidx, argchar;
@@ -49,8 +52,8 @@ int main(int argc, char *argv[]) {
 	an_entry* entries;
 	int BLOCK = 100000;
 	int off, n;
-	int dupind = 0;
-	int skipind = -1;
+	int dupind;
+	int skipind;
 	int srcind;
 	int N, Ndup;
 	char val[32];
@@ -161,6 +164,13 @@ int main(int argc, char *argv[]) {
 
 	// convert from arcseconds to distance on the unit sphere.
 	maxdist = sqrt(arcsec2distsq(duprad));
+
+	// distance histogram stuff...
+	Nbins = 50;
+	binsize = maxdist / (double)(Nbins + 1);
+	disthist = malloc(Nbins * sizeof(int));
+	memset(disthist, 0, Nbins * sizeof(int));
+
 	// dual-tree search...
 	duplicates = il_new(256);
 	printf("Running dual-tree search to find duplicates...\n");
@@ -173,11 +183,26 @@ int main(int argc, char *argv[]) {
 
 	kdtree_free(starkd);
 
+	printf("%% bin centers\n");
+	printf("bins=[");
+	for (i=0; i<Nbins; i++)
+		printf("%g,", binsize * (i + 0.5));
+	printf("];\n");
+	printf("%% histogram counts\n");
+	printf("counts=[");
+	for (i=0; i<Nbins; i++)
+		printf("%i,", disthist[i]);
+	printf("];\n");
+
+	free(disthist);
+
 	N = cat->nentries;
 	Ndup = il_size(duplicates);
 	printf("Removing %i duplicate stars (%i stars remain)...\n", Ndup, N-Ndup);
 	fflush(stdout);
 
+	dupind = 0;
+	skipind = -1;
 	for (off=0; off<cat->nentries; off+=n) {
 		int i;
 		if (off + BLOCK > cat->nentries)
@@ -224,14 +249,13 @@ int main(int argc, char *argv[]) {
 
 int last_pct = 0;
 void progress(void* nil, int ndone) {
-	//int pct = (int)(100.0 * ndone / (double)npoints);
 	int pct = (int)(1000.0 * ndone / (double)npoints);
 	if (pct != last_pct) {
-		//printf("%i %% done.\n", pct);
-		//printf("%.1f %% done.\n", 0.1 * pct);
-		if (pct % 10 == 0)
+		if (pct % 10 == 0) {
 			printf("(%i %%)", pct/10);
-		else
+			if (pct % 50 == 0)
+				printf("\n");
+		} else
 			printf(".");
 		fflush(stdout);
 	}
@@ -246,6 +270,12 @@ void duplicate_found(void* nil, int ind1, int ind2, double dist2) {
 	if (i1 <= i2) return;
 	// append the larger of the two.
 	il_insert_unique_ascending(duplicates, i1);
+	if (disthist) {
+		int bin = (int)(sqrt(dist2) / binsize);
+		assert(bin >= 0);
+		assert(bin < Nbins);
+		disthist[bin]++;
+	}
 }
 
 

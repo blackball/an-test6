@@ -316,14 +316,13 @@ int main(int argc, char *argv[]) {
 
 int last_pct = 0;
 void progress(void* nil, int ndone) {
-	//int pct = (int)(100.0 * ndone / (double)npoints);
 	int pct = (int)(1000.0 * ndone / (double)npoints);
 	if (pct != last_pct) {
-		//printf("%i %% done.\n", pct);
-		//printf("%.1f %% done.\n", 0.1 * pct);
-		if (pct % 10 == 0)
+		if (pct % 10 == 0) {
 			printf("(%i %%)", pct/10);
-		else
+			if (pct % 50 == 0)
+				printf("\n");
+		} else
 			printf(".");
 		fflush(stdout);
 	}

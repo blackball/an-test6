@@ -276,8 +276,6 @@ int main(int argc, char *argv[])
 					y = radec2y(deg2rad(entry->RA), deg2rad(entry->DEC));
 					z = radec2z(deg2rad(entry->RA), deg2rad(entry->DEC));
 				}
-				//fprintf(stderr, "xyz=(%g, %g, %g)\n", x, y, z);
-
 				if (!hammer) {
 					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) {
 						backside++;
@@ -290,9 +288,6 @@ int main(int argc, char *argv[])
 					/* Hammer-Aitoff projection */
 					project_hammer_aitoff_x(x, y, z, &X, &Y);
 				}
-
-				//fprintf(stderr, "XY=(%i,%i)\n", X, Y);
-
 				projection[X+N*Y]++;
 			}
 		}
