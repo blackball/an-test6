@@ -23,6 +23,7 @@ struct solver_params {
 	int max_matches_needed;
 	double codetol;
 	bool quitNow;
+	int fieldnum;
 
 	// The limits on the size, in field coordinates,
 	// of the quads to find.

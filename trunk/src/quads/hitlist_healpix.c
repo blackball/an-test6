@@ -483,7 +483,8 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 	// Increment the total number of matches...
 	hlist->ntotal++;
 
-	return 0;
+	//return 0;
+	return hlist->nbest;
 }
 
 
