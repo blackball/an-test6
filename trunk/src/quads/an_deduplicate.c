@@ -167,8 +167,8 @@ int main(int argc, char *argv[]) {
 	maxdist = sqrt(arcsec2distsq(duprad));
 
 	// distance histogram stuff...
-	Nbins = 50;
-	binsize = maxdist / (double)(Nbins + 1);
+	Nbins = 51;
+	binsize = maxdist / (double)(Nbins - 1);
 	disthist = malloc(Nbins * sizeof(int));
 	memset(disthist, 0, Nbins * sizeof(int));
 
