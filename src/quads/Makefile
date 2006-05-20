@@ -11,6 +11,14 @@ CFLAGS += -O2
 #CFLAGS += -pg
 #CFLAGS	+= -O2
 
+# What functions were and weren't inlined?
+# -Winline
+
+# check out __attribute__ ((pure))
+# check out __attribute__ ((const))
+# check out __attribute__ ((nothrow))
+# check out __attribute__ ((nonnull))
+
 # to turn off asserts:
 #CFLAGS += -DNDEBUG
 #CFLAGS += -Werror

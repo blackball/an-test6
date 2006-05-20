@@ -352,17 +352,17 @@ void create_quads_in_pixels(int numstars, il* starindices,
 	int HEALPIXES = 12 * Nside * Nside;
 	int Ninteresting = HEALPIXES;
 	char* interesting;
-	int* quadsmade;
+	unsigned char* quadsmade;
 	int passes = 0;
 	int nused = 0;
+
+	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside, hps);
 
 	interesting = malloc(HEALPIXES * sizeof(char));
 	memset(interesting, 1, HEALPIXES * sizeof(char));
 
-	quadsmade = malloc(HEALPIXES * sizeof(int));
-	memset(quadsmade, 0, HEALPIXES * sizeof(int));
-
-	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside, hps);
+	quadsmade = malloc(HEALPIXES * sizeof(unsigned char));
+	memset(quadsmade, 0, HEALPIXES * sizeof(unsigned char));
 
 	Ninteresting = il_size(hps);
 
@@ -400,6 +400,9 @@ void create_quads_in_pixels(int numstars, il* starindices,
 					il_remove_value(pixels + hp, used_stars[s]);
 
 				quadsmade[hp]++;
+				if (!quadsmade[hp]) {
+					fprintf(stderr, "Warning, \"quadsmade\" counter overflowed for healpix %i.  Some of the stats may be wrong.\n", hp);
+				}
 				nused += 4;
 				nusedthispass += 4;
 			} else {
@@ -419,43 +422,42 @@ void create_quads_in_pixels(int numstars, il* starindices,
 	fprintf(stderr, "Used %i stars.\n", nused);
 	fprintf(stderr, "Didn't use %i stars.\n", (int)numstars - nused);
 
-	{
-		int maxmade = 0;
-		int* nmadehist;
-		for (i = 0; i < HEALPIXES; i++) {
-			if (quadsmade[i] > maxmade)
-				maxmade = quadsmade[i];
-		}
-		nmadehist = malloc((maxmade + 1) * sizeof(int));
-		memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
-		for (i = 0; i < HEALPIXES; i++)
-			nmadehist[quadsmade[i]]++;
-		fprintf(stderr, "nmade=[");
-		for (i = 0; i <= maxmade; i++)
-			fprintf(stderr, "%i,", nmadehist[i]);
-		fprintf(stderr, "];\n");
-
-		free(nmadehist);
-	}
-
-	{
-		int maxmade = 0;
-		int* nmadehist;
-		for (i = 0; i < HEALPIXES; i++) {
-			if (il_size(pixels + i) > maxmade)
-				maxmade = il_size(pixels + i);
-		}
-		nmadehist = malloc((maxmade + 1) * sizeof(int));
-		memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
-		for (i = 0; i < HEALPIXES; i++)
-			nmadehist[il_size(pixels + i)]++;
-		fprintf(stderr, "nleft=[");
-		for (i = 0; i <= maxmade; i++)
-			fprintf(stderr, "%i,", nmadehist[i]);
-		fprintf(stderr, "];\n");
-
-		free(nmadehist);
-	}
+	/*
+	  {
+	  int maxmade = 0;
+	  int* nmadehist;
+	  for (i = 0; i < HEALPIXES; i++) {
+	  if (quadsmade[i] > maxmade)
+	  maxmade = quadsmade[i];
+	  }
+	  nmadehist = malloc((maxmade + 1) * sizeof(int));
+	  memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
+	  for (i = 0; i < HEALPIXES; i++)
+	  nmadehist[quadsmade[i]]++;
+	  fprintf(stderr, "nmade=[");
+	  for (i = 0; i <= maxmade; i++)
+	  fprintf(stderr, "%i,", nmadehist[i]);
+	  fprintf(stderr, "];\n");
+	  free(nmadehist);
+	  }
+	  {
+	  int maxmade = 0;
+	  int* nmadehist;
+	  for (i = 0; i < HEALPIXES; i++) {
+	  if (il_size(pixels + i) > maxmade)
+	  maxmade = il_size(pixels + i);
+	  }
+	  nmadehist = malloc((maxmade + 1) * sizeof(int));
+	  memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
+	  for (i = 0; i < HEALPIXES; i++)
+	  nmadehist[il_size(pixels + i)]++;
+	  fprintf(stderr, "nleft=[");
+	  for (i = 0; i <= maxmade; i++)
+	  fprintf(stderr, "%i,", nmadehist[i]);
+	  fprintf(stderr, "];\n");
+	  free(nmadehist);
+	  }
+	*/
 
 	free(interesting);
 	free(quadsmade);
@@ -531,9 +533,11 @@ int main(int argc, char** argv)
 		il_new_existing(pixels + i, IL_BLOCKSIZE);
 	}
 
+	// "hppass" is a set of lists, one for each of the 9 passes we will
+	// do.  Each list holds the indices of the healpixes that will be
+	// processed during that pass.
 	for (i = 0; i < 9; i++)
 		il_new_existing(hppass + i, 10000);
-
 	for (i = 0; i < HEALPIXES; i++) {
 		uint bighp, x, y;
 		int pass;
@@ -550,6 +554,7 @@ int main(int argc, char** argv)
 		exit( -1);
 	}
 	free_fn(catfname);
+	printf("Catalog contains %i objects.\n", cat->numstars);
 
 	quadfname = mk_quadfn(basefname);
 	codefname = mk_codefn(basefname);
