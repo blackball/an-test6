@@ -393,7 +393,7 @@ void create_quads_in_pixels(int numstars, il* starindices,
 			int used_stars[4];
 			if (!interesting[hp])
 				continue;
-			if (((grass++) % 100000) == 0) {
+			if (((grass++) % 10000) == 0) {
 				fprintf(stderr, "+");
 				fflush(stderr);
 			}
