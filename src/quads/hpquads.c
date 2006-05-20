@@ -303,8 +303,12 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside*3);
 		healpix_decompose(hp, &bighp, &x, &y, Nside*3);
 		// now we compute which pixel this sub-pixel belongs to.
-		if ((x == 0) || (x == (Nside*3-1)) ||
-			(y == 0) || (y == (Nside*3-1))) {
+		if (
+			// if it's on the border...
+			((x == 0) || (x == (Nside*3-1)) ||
+			 (y == 0) || (y == (Nside*3-1))) &&
+			// and it's not the center pixel itself...
+			(((x % 3) != dx) || ((y % 3) != dy)) ) {
 			// this sub-pixel is on the border of its big healpix.
 			// this happens rarely, so do a relatively expensive check:
 			// just find its neighbours and take the first one that has the
