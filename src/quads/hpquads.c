@@ -328,14 +328,18 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 				}
 			}
 			if (j == nn) {
-				fprintf(stderr, "x=%i, y=%i (Nside=%i, Nside*3=%i), dx=%i, dy=%i: no neighbouring center pixel found.\n",
-						x, y, Nside, Nside*3, dx, dy);
-				for (j=0; j<nn; j++) {
-					uint nx, ny, nbighp;
-					healpix_decompose(neigh[j], &nbighp, &nx, &ny, Nside*3);
-					printf("neighbour %i: x=%i (%i mod 3), y=%i (%i mod 3)\n",
-						   j, nx, nx%3, ny, ny%3);
-				}
+				/*
+				  fprintf(stderr, "x=%i, y=%i (Nside=%i, Nside*3=%i), dx=%i, dy=%i: no neighbouring center pixel found.\n",
+				  x, y, Nside, Nside*3, dx, dy);
+				  for (j=0; j<nn; j++) {
+				  uint nx, ny, nbighp;
+				  healpix_decompose(neigh[j], &nbighp, &nx, &ny, Nside*3);
+				  printf("neighbour %i: x=%i (%i mod 3), y=%i (%i mod 3)\n",
+				  j, nx, nx%3, ny, ny%3);
+				  }
+				*/
+				// none of the neighbours is a center pixel - this happens occasionally in
+				// weird corners of the healpixes.
 				continue;
 			}
 		} else {
