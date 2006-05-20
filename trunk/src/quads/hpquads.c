@@ -323,6 +323,11 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 					break;
 				}
 			}
+			if (j == nn) {
+				fprintf(stderr, "x=%i, y=%i (Nside=%i, Nside*3=%i): no neighbouring center pixel found.\n",
+						x, y, Nside, Nside*3);
+				continue;
+			}
 		} else {
 			x = (x + offx) / 3;
 			y = (y + offy) / 3;
