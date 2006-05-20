@@ -18,7 +18,7 @@
 #include "catalog.h"
 #include "tic.h"
 
-#define OPTIONS "hf:u:l:n:ro"
+#define OPTIONS "hf:u:l:n:o" // r
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -31,8 +31,6 @@ catalog* cat;
 // bounds of quad scale (in radians^2)
 double quad_scale_upper2;
 double quad_scale_lower2;
-
-il hppass[9];
 
 #define IL_BLOCKSIZE 50
 
@@ -265,88 +263,82 @@ char find_a_quad(il* stars, int* used_stars)
 	return 0;
 }
 
-void healpix_bin_stars(int numstars, il* starindices,
-                       il* pixels, int Nside)
+void shifted_healpix_bin_stars(int numstars, il* starindices,
+                               il* pixels, int dx, int dy,
+                               int Nside)
 {
 	int i;
+	int HEALPIXES = 12 * Nside * Nside;
+	int offx, offy;
+
+	printf("Binning stars into %i healpixes...\n", HEALPIXES);
+	fflush(stdout);
+
+	// the idea is that we look at a healpix grid that is three times
+	// finer in both directions, and in each pass we choose of the nine
+	// sub-pixels to be the center and we dump stars from a 3x3 grid around
+	// the center into its coarser pixel.
+
+	// (offx, offy) are the offsets you have to add to the sub-pixel
+	// positions to determine which pixel they belong to.
+	offx = (1 - dx);
+	offy = (1 - dy);
+
 	for (i = 0; i < numstars; i++) {
 		double* starxyz;
 		int hp;
 		int ind;
-
+		uint bighp, x, y;
 		if (!(i % 100000)) {
 			fprintf(stderr, ".");
 			fflush(stderr);
 		}
-
 		if (!starindices)
 			ind = i;
 		else
 			ind = il_get(starindices, i);
 
 		starxyz = catalog_get_star(cat, ind);
-		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside);
+		// note the Nside*3; this is the sub-pixel.
+		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside*3);
+		healpix_decompose(hp, &bighp, &x, &y, Nside*3);
+		// now we compute which pixel this sub-pixel belongs to.
+		if ((x == 0) || (x == (Nside*3-1)) ||
+			(y == 0) || (y == (Nside*3-1))) {
+			// this sub-pixel is on the border of its big healpix.
+			// this happens rarely, so do a relatively expensive check:
+			// just find its neighbours and take the first one that has the
+			// right "dx" and "dy" values (ie, is the center sub-pixel in
+			// this pass).
+			uint nn, neigh[8];
+			int j;
+			nn = healpix_get_neighbours_nside(hp, neigh, Nside*3);
+			for (j=0; j<nn; j++) {
+				uint nx, ny, nbighp;
+				healpix_decompose(neigh[j], &nbighp, &nx, &ny, Nside*3);
+				if (((nx % 3) == dx) && ((ny % 3) == dy)) {
+					// found the center pixel!
+					// compute its corresponding normal (not sub-) pixel.
+					hp = healpix_compose(nbighp, nx/3, ny/3, Nside*3);
+					break;
+				}
+			}
+		} else {
+			x = (x + offx) / 3;
+			y = (y + offy) / 3;
+			// note Nside: this is a normal pixel, not a sub-pixel.
+			hp = healpix_compose(bighp, x, y, Nside);
+		}
+		// append this star to the appropriate normal pixel list.
 		il_append(pixels + hp, ind);
 	}
 	fprintf(stderr, "\n");
 	fflush(stderr);
 }
 
-void shifted_healpix_bin_stars(int numstars, il* starindices,
-                               il* pixels, int dx, int dy,
-                               int Nside, il* hps)
-{
-	int i;
-	int HEALPIXES = 12 * Nside * Nside;
-	il merged;
-	int N;
-
-	printf("Binning stars into %i healpixes...\n", HEALPIXES);
-	fflush(stdout);
-	healpix_bin_stars(numstars, starindices, pixels, Nside);
-
-	il_new_existing(&merged, IL_BLOCKSIZE);
-	N = il_size(hps);
-	for (i=0; i<N; i++) {
-		uint neigh[8];
-		uint n, nn;
-		il* sourcelists[9];
-		int sourcelengths[9];
-		int maxlen;
-		int j;
-		int hp;
-
-		hp = il_get(hps, i);
-
-		nn = healpix_get_neighbours_nside(hp, neigh, Nside);
-
-		// grab the neighbour's lists of stars...
-		sourcelists[0] = pixels + hp;
-		for (n = 0; n < nn; n++) {
-			sourcelists[n + 1] = pixels + neigh[n];
-		}
-		// round-robin merge the lists...
-		maxlen = 0;
-		for (n = 0; n < nn+1; n++) {
-			sourcelengths[n] = il_size(sourcelists[n]);
-			if (sourcelengths[n] > maxlen)
-				maxlen = sourcelengths[n];
-		}
-		for (j = 0; j < maxlen; j++)
-			for (n = 0; n < nn+1; n++) {
-				if (j >= sourcelengths[n])
-					continue;
-				il_append(&merged, il_get(sourcelists[n], j));
-			}
-		for (n = 0; n < nn+1; n++)
-			il_remove_all_reuse(sourcelists[n]);
-		il_merge_lists(pixels + hp, &merged);
-	}
-}
-
 void create_quads_in_pixels(int numstars, il* starindices,
                             il* pixels, int Nside,
-                            int dx, int dy, il* hps)
+                            int dx, int dy)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
@@ -356,40 +348,35 @@ void create_quads_in_pixels(int numstars, il* starindices,
 	int passes = 0;
 	int nused = 0;
 
-	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside, hps);
-
-	interesting = malloc(HEALPIXES * sizeof(char));
-	memset(interesting, 1, HEALPIXES * sizeof(char));
+	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside);
 
 	quadsmade = malloc(HEALPIXES * sizeof(unsigned char));
 	memset(quadsmade, 0, HEALPIXES * sizeof(unsigned char));
 
-	Ninteresting = il_size(hps);
+	interesting = malloc(HEALPIXES * sizeof(char));
+	memset(interesting, 0, HEALPIXES * sizeof(char));
+
+	Ninteresting = 0;
+	for (i=0; i<HEALPIXES; i++) {
+		if (il_size(pixels + i)) {
+			interesting[i] = 1;
+			Ninteresting++;
+		}
+	}
 
 	while (Ninteresting) {
 		int nusedthispass;
-		int N;
+		int grass = 0;
+		int hp;
 		nusedthispass = 0;
-		N = il_size(hps);
-		for (i=0; i<N; i++) {
+		for (hp=0; hp<HEALPIXES; hp++) {
 			int foundone;
 			int used_stars[4];
-			int hp = il_get(hps, i);
-
-			if (!(i % 100000)) {
-				fprintf(stderr, "+");
-				fflush(stderr);
-			}
-
 			if (!interesting[hp])
 				continue;
-
-			//printf("hp %i has %i stars.\n", i, il_size(pixels+i));
-
-			if (!il_size(pixels + hp)) {
-				interesting[hp] = 0;
-				Ninteresting--;
-				continue;
+			if (((grass++) % 100000) == 0) {
+				fprintf(stderr, "+");
+				fflush(stderr);
 			}
 
 			foundone = find_a_quad(pixels + hp, used_stars);
@@ -398,6 +385,12 @@ void create_quads_in_pixels(int numstars, il* starindices,
 				// remove the used stars.
 				for (s = 0; s < 4; s++)
 					il_remove_value(pixels + hp, used_stars[s]);
+
+				if (!il_size(pixels + hp)) {
+					interesting[hp] = 0;
+					Ninteresting--;
+					continue;
+				}
 
 				quadsmade[hp]++;
 				if (!quadsmade[hp]) {
@@ -471,18 +464,20 @@ int main(int argc, char** argv)
 	char *codefname = NULL;
 	char* catfname;
 	il* pixels;
-	int Nside = 512;
+	int Nside = 501;
 	int HEALPIXES;
 	int i;
-	int rebin = 0;
+	//int rebin = 0;
 	char* basefname = NULL;
 	uint pass, npasses;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'r':
-			rebin = 1;
-			break;
+			/*
+			  case 'r':
+			  rebin = 1;
+			  break;
+			*/
 		case 'n':
 			Nside = atoi(optarg);
 			break;
@@ -514,6 +509,11 @@ int main(int argc, char** argv)
 		exit( -1);
 	}
 
+	if (Nside % 3) {
+		printf("Warning: to be really correct you should make Nside "
+			   " (-n option) a multiple of three.");
+	}
+
 	HEALPIXES = 12 * Nside * Nside;
 	{
 		double hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HEALPIXES;
@@ -521,29 +521,11 @@ int main(int argc, char** argv)
 		        Nside, HEALPIXES, hparea, sqrt(hparea));
 	}
 
-	// fine healpixelization for shifting.
-	// "dx" and "dy" run from 0 to 2.
-	Nside *= 3;
-	HEALPIXES = 12 * Nside * Nside;
-
 	tic();
 
 	pixels = malloc(HEALPIXES * sizeof(il));
 	for (i = 0; i < HEALPIXES; i++) {
 		il_new_existing(pixels + i, IL_BLOCKSIZE);
-	}
-
-	// "hppass" is a set of lists, one for each of the 9 passes we will
-	// do.  Each list holds the indices of the healpixes that will be
-	// processed during that pass.
-	for (i = 0; i < 9; i++)
-		il_new_existing(hppass + i, 10000);
-	for (i = 0; i < HEALPIXES; i++) {
-		uint bighp, x, y;
-		int pass;
-		healpix_decompose(i, &bighp, &x, &y, Nside);
-		pass = (x % 3)*3 + (y % 3);
-		il_append(hppass + pass, i);
 	}
 
 	catfname = mk_catfn(basefname);
@@ -597,11 +579,11 @@ int main(int argc, char** argv)
 	for (pass = 0; pass < npasses; pass++) {
 		int dx, dy;
 		dx = pass % 3;
-		dy = (pass / 3) % 3;
+		dy = (pass / 3);
 
 		fprintf(stderr, "Doing pass %i of %i: dx=%i, dy=%i.\n", pass, npasses, dx, dy);
 
-		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy, hppass + pass);
+		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy);
 
 		/*
 		  Who knows if this works? 
@@ -621,11 +603,7 @@ int main(int argc, char** argv)
 		// empty blocklists.
 		for (i = 0; i < HEALPIXES; i++)
 			il_remove_all(pixels + i);
-
 	}
-
-	for (i = 0; i < 9; i++)
-		il_remove_all(hppass + i);
 
 	catalog_close(cat);
 
