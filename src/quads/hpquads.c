@@ -319,7 +319,7 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 				if (((nx % 3) == dx) && ((ny % 3) == dy)) {
 					// found the center pixel!
 					// compute its corresponding normal (not sub-) pixel.
-					hp = healpix_compose(nbighp, nx/3, ny/3, Nside*3);
+					hp = healpix_compose(nbighp, nx/3, ny/3, Nside);
 					break;
 				}
 			}
