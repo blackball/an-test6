@@ -7,9 +7,9 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
+#CFLAGS += -O0
 CFLAGS += -O2
 #CFLAGS += -pg
-#CFLAGS	+= -O2
 
 # What functions were and weren't inlined?
 # -Winline
