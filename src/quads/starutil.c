@@ -9,7 +9,7 @@ inline void project_equal_area(double x, double y, double z, double* projx, doub
 	double Xp = x*sqrt(1./(1. + z));
 	double Yp = y*sqrt(1./(1. + z));
 	Xp = 0.5 * (1.0 + Xp);
-	Yp = 0.5 * (1.0 + Xp);
+	Yp = 0.5 * (1.0 + Yp);
 	assert(Xp >= 0.0 && Xp <= 1.0);
 	assert(Yp >= 0.0 && Yp <= 1.0);
 	*projx = Xp;
