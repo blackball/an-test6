@@ -216,6 +216,7 @@ int main(int argc, char *argv[]) {
         if ((index_scale_lower != 0.0) && (index_scale_lower_factor != 0.0) &&
             ((index_scale_lower_factor * index_scale) != index_scale_lower)) {
             fprintf(stderr, "You specified an index_scale, but the quad file contained a different index_scale_lower entry.\n");
+	fprintf(stderr, "Quad file: %g.  Your spec: %g\n", index_scale_lower, index_scale_lower_factor * index_scale);
             fprintf(stderr, "Overriding your specification.\n");
         }
         if ((index_scale_lower == 0.0) && (index_scale_lower_factor != 0.0)) {

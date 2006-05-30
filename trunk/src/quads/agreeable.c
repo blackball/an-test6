@@ -12,11 +12,11 @@
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:L:M:f:m:o";
+char* OPTIONS = "hoH:n:A:B:F:L:M:f:m:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
-			"   [-R]: round-robin mode\n"
+			"   [-o]: round-robin mode\n"
 			"   [-A first-field]\n"
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
@@ -172,8 +172,8 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 		for (i=0; i<ninputfiles; i++) {
-			char* fname = inputfiles[i];
-			fopenin(fname, infiles[i]);
+			fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
+			fopenin(inputfiles[i], infiles[i]);
 		}
 		for (f=firstfield; f<=lastfield; f++) {
 			bool alldone = TRUE;
@@ -185,6 +185,8 @@ int main(int argc, char *argv[]) {
 					alldone = FALSE;
 			if (alldone)
 				break;
+
+			fprintf(stderr, "Field %i.\n", f);
 
 			// get the existing hitlist for this field...
 			fieldnum = f;
@@ -211,7 +213,6 @@ int main(int argc, char *argv[]) {
 				matchfile_entry me;
 				matchfile_entry* mecopy;
 				int c;
-				int fieldnum;
 				FILE* infile = infiles[i];
 				int nr = 0;
 				char* fname = inputfiles[i];
@@ -234,7 +235,7 @@ int main(int argc, char *argv[]) {
 						fflush(stderr);
 						break;
 					}
-					if (me.fieldnum != f) {
+					if (me.fieldnum != fieldnum) {
 						fseeko(infile, offset, SEEK_SET);
 						free_MatchObj(mo);
 						free(me.indexpath);
@@ -242,7 +243,6 @@ int main(int argc, char *argv[]) {
 						break;
 					}
 					nread++;
-					fieldnum = me.fieldnum;
 					nr++;
 
 					if (nread % 10000 == 9999) {
@@ -266,132 +266,131 @@ int main(int argc, char *argv[]) {
 					hitlist_healpix_add_hit(hl, mo);
 				}
 
-				fprintf(stderr, "File %i: read %i matches.\n", f, nr);
+				fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
 			}
+			// flush after each field (and clean up leftovers)
+			flush_solved_fields(leftovers, agree, FALSE, TRUE);
 
-			flush_solved_fields(leftovers, agree, FALSE, FALSE);
+			fdatasync(fileno(agreefid));
 		}
-		flush_solved_fields(leftovers, agree, TRUE, TRUE);
 		fprintf(stderr, "\nRead %i matches.\n", nread);
 		fflush(stderr);
-		exit(0);
-	}
+	} else {
+		for (i=0; i<ninputfiles; i++) {
+			FILE* infile = NULL;
+			char* fname;
+			int nread;
 
-
-	for (i=0; i<ninputfiles; i++) {
-		FILE* infile = NULL;
-		char* fname;
-		int nread;
-
-		if (fromstdin) {
-			fname = "stdin";
-		} else {
-			fname = inputfiles[i];
-		}
-
-		if ((strcmp(fname, "FLUSH") == 0) ||
-			(flushinterval && ((i-1) % (flushinterval) == 0))) {
-			printf("# flushing after file %i\n", i);
-			fprintf(stderr, "Flushing solved fields...\n");
-			flush_solved_fields(FALSE, agree, FALSE, FALSE);
-			if (strcmp(fname, "FLUSH") == 0)
-				continue;
-		}
-
-		if (fromstdin) {
-			infile = stdin;
-		} else {
-			fopenin(fname, infile);
-		}
-
-		fprintf(stderr, "Reading from %s...\n", fname);
-		fflush(stderr);
-		nread = 0;
-		for (;;) {
-			MatchObj* mo;
-			matchfile_entry me;
-			matchfile_entry* mecopy;
-			hitlist* hl;
-			int c;
-			int fieldnum;
-
-			// detect EOF and exit gracefully...
-			c = fgetc(infile);
-			if (c == EOF)
-				break;
-			else
-				ungetc(c, infile);
-
-			if (matchfile_read_match(infile, &mo, &me)) {
-				fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
-				fflush(stderr);
-				break;
-			}
-			nread++;
-			fieldnum = me.fieldnum;
-
-			if (nread % 10000 == 9999) {
-				fprintf(stderr, ".");
-				fflush(stderr);
+			if (fromstdin) {
+				fname = "stdin";
+			} else {
+				fname = inputfiles[i];
 			}
 
-			if (flushfieldinterval &&
-				((nread % flushfieldinterval) == 0)) {
-				fprintf(stderr, "\nRead %i matches; flushing solved fields.\n", nread);
+			if ((strcmp(fname, "FLUSH") == 0) ||
+				(flushinterval && ((i-1) % (flushinterval) == 0))) {
+				printf("# flushing after file %i\n", i);
+				fprintf(stderr, "Flushing solved fields...\n");
 				flush_solved_fields(FALSE, agree, FALSE, FALSE);
+				if (strcmp(fname, "FLUSH") == 0)
+					continue;
 			}
 
-			if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
-				free_MatchObj(mo);
-				free(me.indexpath);
-				free(me.fieldpath);
-				continue;
+			if (fromstdin) {
+				infile = stdin;
+			} else {
+				fopenin(fname, infile);
 			}
 
-			// get the existing hitlist for this field...
-			if (fieldnum < pl_size(hitlists)) {
-				hl = (hitlist*)pl_get(hitlists, fieldnum);
-				if (!hl) {
-					// check if it's NULL because it's been flushed.
-					if (il_contains(flushed, fieldnum)) {
-						//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
-						free_MatchObj(mo);
-						free(me.indexpath);
-						free(me.fieldpath);
-						continue;
-					}
-					hl = hitlist_healpix_new(agreetolarcsec);
-					pl_set(hitlists, fieldnum, hl);
+			fprintf(stderr, "Reading from %s...\n", fname);
+			fflush(stderr);
+			nread = 0;
+			for (;;) {
+				MatchObj* mo;
+				matchfile_entry me;
+				matchfile_entry* mecopy;
+				hitlist* hl;
+				int c;
+				int fieldnum;
+
+				// detect EOF and exit gracefully...
+				c = fgetc(infile);
+				if (c == EOF)
+					break;
+				else
+					ungetc(c, infile);
+
+				if (matchfile_read_match(infile, &mo, &me)) {
+					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
+					fflush(stderr);
+					break;
 				}
-			} else {
-				int k;
-				for (k=pl_size(hitlists); k<fieldnum; k++)
-					pl_append(hitlists, NULL);
-				hl = hitlist_healpix_new(agreetolarcsec);
-				pl_append(hitlists, hl);
+				nread++;
+				fieldnum = me.fieldnum;
+
+				if (nread % 10000 == 9999) {
+					fprintf(stderr, ".");
+					fflush(stderr);
+				}
+
+				if (flushfieldinterval &&
+					((nread % flushfieldinterval) == 0)) {
+					fprintf(stderr, "\nRead %i matches; flushing solved fields.\n", nread);
+					flush_solved_fields(FALSE, agree, FALSE, FALSE);
+				}
+
+				if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
+					free_MatchObj(mo);
+					free(me.indexpath);
+					free(me.fieldpath);
+					continue;
+				}
+
+				// get the existing hitlist for this field...
+				if (fieldnum < pl_size(hitlists)) {
+					hl = (hitlist*)pl_get(hitlists, fieldnum);
+					if (!hl) {
+						// check if it's NULL because it's been flushed.
+						if (il_contains(flushed, fieldnum)) {
+							//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
+							free_MatchObj(mo);
+							free(me.indexpath);
+							free(me.fieldpath);
+							continue;
+						}
+						hl = hitlist_healpix_new(agreetolarcsec);
+						pl_set(hitlists, fieldnum, hl);
+					}
+				} else {
+					int k;
+					for (k=pl_size(hitlists); k<fieldnum; k++)
+						pl_append(hitlists, NULL);
+					hl = hitlist_healpix_new(agreetolarcsec);
+					pl_append(hitlists, hl);
+				}
+
+				if (leftovers || agree) {
+					mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
+					memcpy(mecopy, &me, sizeof(matchfile_entry));
+					mo->extra = mecopy;
+				} else {
+					mo->extra = NULL;
+					free(me.indexpath);
+					free(me.fieldpath);
+				}
+
+				// compute (x,y,z) center, scale, rotation.
+				hitlist_healpix_compute_vector(mo);
+
+				// add the match...
+				hitlist_healpix_add_hit(hl, mo);
 			}
+			fprintf(stderr, "\nRead %i matches.\n", nread);
+			fflush(stderr);
 
-			if (leftovers || agree) {
-				mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
-				memcpy(mecopy, &me, sizeof(matchfile_entry));
-				mo->extra = mecopy;
-			} else {
-				mo->extra = NULL;
-				free(me.indexpath);
-				free(me.fieldpath);
-			}
-
-			// compute (x,y,z) center, scale, rotation.
-			hitlist_healpix_compute_vector(mo);
-
-			// add the match...
-			hitlist_healpix_add_hit(hl, mo);
+			if (!fromstdin)
+				fclose(infile);
 		}
-		fprintf(stderr, "\nRead %i matches.\n", nread);
-		fflush(stderr);
-
-		if (!fromstdin)
-			fclose(infile);
 	}
 
 	flush_solved_fields(leftovers, agree, TRUE, TRUE);
@@ -482,9 +481,7 @@ void flush_solved_fields(bool doleftovers,
 
 		best = hitlist_healpix_get_best(hl);
 		//best = hitlist_healpix_get_all_best(hl);
-		/*
-		  best = hitlist_get_all_above_size(hl, min_matches_to_agree);
-		*/
+		//best = hitlist_get_all_above_size(hl, min_matches_to_agree);
 
 		il_append(flushsolved, fieldnum);
 		il_append(solved, fieldnum);
@@ -494,9 +491,6 @@ void flush_solved_fields(bool doleftovers,
 		fieldhdr.field = fieldnum;
 		fieldhdr.nmatches = hitlist_healpix_count_all(hl);
 		fieldhdr.nagree = nbest;
-
-		//hits_write_field_header(hitfid, &fieldhdr);
-		//hits_start_hits_list(hitfid);
 
 		for (j=0; j<nbest; j++) {
 			matchfile_entry* me;
@@ -536,22 +530,24 @@ void flush_solved_fields(bool doleftovers,
 		hitlist_healpix_free(hl);
 		pl_set(hitlists, fieldnum, NULL);
 	}
-	printf("# nsolved = %i\n", il_size(flushsolved));
-	printf("solved=array([");
-	for (k=0; k<il_size(flushsolved); k++) {
-		printf("%i,", il_get(flushsolved, k));
-	}
-	printf("]);\n");		
 
-	// DEBUG - matlab
-	printf("# solved=[");
-	for (k=0; k<il_size(flushsolved); k++) {
-		printf("%i,", il_get(flushsolved, k));
-	}
-	printf("];\n");
-	fflush(stdout);
+	/*
+	  printf("# nsolved = %i\n", il_size(flushsolved));
+	  printf("solved=array([");
+	  for (k=0; k<il_size(flushsolved); k++) {
+	  printf("%i,", il_get(flushsolved, k));
+	  }
+	  printf("]);\n");		
 
-	fprintf(stderr, "Flushed %i fields.\n", il_size(flushsolved));
+	  // DEBUG - matlab
+	  printf("# solved=[");
+	  for (k=0; k<il_size(flushsolved); k++) {
+	  printf("%i,", il_get(flushsolved, k));
+	  }
+	  printf("];\n");
+	  fflush(stdout);
+	  fprintf(stderr, "Flushed %i fields.\n", il_size(flushsolved));
+	*/
 	fprintf(stderr, "So far, %i fields have been solved.\n", il_size(solved));
 
 	il_free(flushsolved);

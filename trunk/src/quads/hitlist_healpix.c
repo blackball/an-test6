@@ -259,7 +259,7 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 		return NULL;
 	}
 
-	fprintf(stderr, "sizeof(pixinfo)=%i.  Nside=%i, npix=%i, total %i bytes.\n", sizeof(pixinfo), Nside, hl->npix, sizeof(pixinfo)*hl->npix);
+	//fprintf(stderr, "sizeof(pixinfo)=%i.  Nside=%i, npix=%i, total %i bytes.\n", sizeof(pixinfo), Nside, hl->npix, sizeof(pixinfo)*hl->npix);
 
 	for (p=0; p<hl->npix; p++) {
 		init_pixinfo(hl->pix + p, p, Nside);
