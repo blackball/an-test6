@@ -22,51 +22,7 @@ double *projection;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-int N=3000;
-
 #define PI M_PI
-
-inline void project_equal_area(double x, double y, double z, int *X, int *Y)
-{
-	double Xp = x*sqrt(1./(1. + z));
-	double Yp = y*sqrt(1./(1. + z));
-	*X = (unsigned int) floor(N*0.5*(1+0.9*Xp));
-	*Y = (unsigned int) floor(N*0.5*(1+0.9*Yp));
-	if (*X > N || *Y > N) {
-		fprintf(stderr, "BAIL: xind=%d, yind=%d\n", *X, *Y);
-		exit(1);
-	}
-}
-
-inline void project_hammer_aitoff_x(double x, double y, double z, int *X, int *Y)
-{
-
-	double theta = atan(x/z);
-	double r = sqrt(x*x+z*z);
-	double zp, xp;
-
-	/* Hammer-Aitoff projection with x-z plane compressed to purely +z side
-	 * of xz plane */
-
-	if (z < 0) {
-		if (x < 0) {
-			theta = theta - PI;
-		} else {
-			theta = PI + theta;
-		}
-	}
-	theta /= 2.0;
-
-	zp = r*cos(theta);
-	xp = r*sin(theta);
-	if (zp < -0.01) {
-		fprintf(stderr,
-			"BAIL: Hammer projection, got negative z: "
-			"z=%lf; x=%lf; zp=%lf; xp=%lf\n", z,x,zp, xp);
-		exit(1);
-	}
-	project_equal_area(xp,y,zp, X, Y);
-}
 
 inline int is_power_of_two(int x) {
 		return (x == 0x00000001 ||
@@ -103,6 +59,14 @@ inline int is_power_of_two(int x) {
 		        x == 0x80000000);
 }
 
+inline void getxy(double px, double py, int N,
+				  int* X, int* Y) {
+	px = 0.5 + (px - 0.5) * 0.95;
+	py = 0.5 + (py - 0.5) * 0.95;
+	*X = (int)rint(px * N);
+	*Y = (int)rint(py * N);
+}
+
 int main(int argc, char *argv[])
 {
 	uint ii,jj,numstars=0;
@@ -123,6 +87,8 @@ int main(int argc, char *argv[])
 	usnob_fits* usnob;
 	tycho2_fits* tycho;
 	int backside = 0;
+	double px, py;
+	int N=3000;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -283,11 +249,12 @@ int main(int argc, char *argv[])
 					}
 					if (reverse)
 						z = -z;
-					project_equal_area(x, y, z, &X, &Y);
+					project_equal_area(x, y, z, &px, &py);
 				} else {
 					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &X, &Y);
+					project_hammer_aitoff_x(x, y, z, &px, &py);
 				}
+				getxy(px, py, N, &X, &Y);
 				projection[X+N*Y]++;
 			}
 		}
@@ -301,6 +268,13 @@ int main(int argc, char *argv[])
 		if (tycho)
 			tycho2_fits_close(tycho);
 	}
+
+	free(entries);
+
+	maxval = 0;
+	for (ii = 0; ii < (N*N); ii++)
+		if (projection[ii] > maxval)
+			maxval = projection[ii];
 
 	if (grid) {
 		/* Draw a line for ra=-160...+160 in 10 degree sections */
@@ -320,12 +294,13 @@ int main(int argc, char *argv[])
 						continue;
 					if (reverse)
 						z = -z;
-					project_equal_area(x, y, z, &X, &Y);
+					project_equal_area(x, y, z, &px, &py);
 				} else {
 					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &X, &Y);
+					project_hammer_aitoff_x(x, y, z, &px, &py);
 				}
-				projection[X+N*Y] = 255;
+				getxy(px, py, N, &X, &Y);
+				projection[X+N*Y] = maxval;
 			}
 		}
 		/* Draw a line for dec=-80...+80 in 10 degree sections */
@@ -345,22 +320,16 @@ int main(int argc, char *argv[])
 						continue;
 					if (reverse)
 						z = -z;
-					project_equal_area(x, y, z, &X, &Y);
+					project_equal_area(x, y, z, &px, &py);
 				} else {
 					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &X, &Y);
+					project_hammer_aitoff_x(x, y, z, &px, &py);
 				}
-				projection[X+N*Y] = 255;
+				getxy(px, py, N, &X, &Y);
+				projection[X+N*Y] = maxval;
 			}
 		}
 	}
-
-	free(entries);
-
-	maxval = 0;
-	for (ii = 0; ii < (N*N); ii++)
-		if (projection[ii] > maxval)
-			maxval = projection[ii];
 
 	// Output PGM format
 	printf("P5 %d %d %d\n",N,N, 255);

@@ -1,8 +1,40 @@
 #include <math.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "starutil.h"
 #include "mathutil.h"
+
+inline void project_equal_area(double x, double y, double z, double* projx, double* projy) {
+	double Xp = x*sqrt(1./(1. + z));
+	double Yp = y*sqrt(1./(1. + z));
+	Xp = 0.5 * (1.0 + Xp);
+	Yp = 0.5 * (1.0 + Xp);
+	assert(Xp >= 0.0 && Xp <= 1.0);
+	assert(Yp >= 0.0 && Yp <= 1.0);
+	*projx = Xp;
+	*projy = Yp;
+}
+
+inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy) {
+	double theta = atan(x/z);
+	double r = sqrt(x*x+z*z);
+	double zp, xp;
+	/* Hammer-Aitoff projection with x-z plane compressed to purely +z side
+	 * of xz plane */
+	if (z < 0) {
+		if (x < 0) {
+			theta = theta - M_PI;
+		} else {
+			theta = M_PI + theta;
+		}
+	}
+	theta /= 2.0;
+	zp = r*cos(theta);
+	xp = r*sin(theta);
+	assert(zp >= -0.01);
+	project_equal_area(xp, y, zp, projx, projy);
+}
 
 /* makes a star object located uniformly at random within the limits given
    on the sphere */

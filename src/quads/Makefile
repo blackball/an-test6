@@ -102,7 +102,8 @@ an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o 
 	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+plotcat: plotcat.o starutil.o an_catalog.o catalog.o tycho2_fits.o tycho2.o \
+	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 xylist_texttofits: xylist_texttofits.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_OBJ)
