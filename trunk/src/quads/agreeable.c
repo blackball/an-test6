@@ -270,8 +270,8 @@ int main(int argc, char *argv[]) {
 			}
 			// flush after each field (and clean up leftovers)
 			flush_solved_fields(leftovers, agree, FALSE, TRUE);
-
-			fdatasync(fileno(agreefid));
+			if (agreefid)
+				fdatasync(fileno(agreefid));
 		}
 		fprintf(stderr, "\nRead %i matches.\n", nread);
 		fflush(stderr);

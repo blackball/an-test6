@@ -544,10 +544,7 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			int maxagree = 0;
 			int k;
 			int nperlist;
-			thisagreehist = malloc(Nagreehist * sizeof(int));
-			for (k=0; k<Nagreehist; k++)
-				thisagreehist[k] = 0;
-
+			thisagreehist = calloc(Nagreehist, sizeof(int));
 			hitlist_healpix_histogram_agreement_size(hits, thisagreehist, Nagreehist);
 
 			for (k=0; k<Nagreehist; k++)
@@ -563,10 +560,8 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			fprintf(stderr, "];\n");
 			free(thisagreehist);
 			thisagreehist = NULL;
-
 			nbest = hitlist_healpix_count_best(hits);
 			nperlist = nbest;
-
 			fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
 			//best = hitlist_get_best(hits);
@@ -577,13 +572,15 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			if (nbest)
 				fprintf(stderr, "(There are %i sets of agreeing hits of size %i.)\n",
 						pl_size(best) / nperlist, nperlist);
-
-			for (j=0; j<nbest; j++) {
-				matchfile_entry* me;
-				MatchObj* mo = (MatchObj*)pl_get(best, j);
-				me = (matchfile_entry*)mo->extra;
-				if (matchfile_write_match(matchfid, mo, me)) {
-					fprintf(stderr, "Error writing a match: %s\n", strerror(errno));
+			// if there are only singleton hits, don't write anything.
+			if (nbest > 1) {
+				for (j=0; j<nbest; j++) {
+					matchfile_entry* me;
+					MatchObj* mo = (MatchObj*)pl_get(best, j);
+					me = (matchfile_entry*)mo->extra;
+					if (matchfile_write_match(matchfid, mo, me)) {
+						fprintf(stderr, "Error writing a match: %s\n", strerror(errno));
+					}
 				}
 			}
 			pl_free(best);
