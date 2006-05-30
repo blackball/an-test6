@@ -32,7 +32,7 @@ int main(int argc, char** args) {
 	quadfile* qf;
 	catalog* cat;
 	uchar* img;
-	int nquads, i;
+	int i;
 	int maxval;
 	FILE* fid;
 
@@ -77,11 +77,14 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	nquads = qf->numquads;
-	for (i=0; i<nquads; i++) {
+	for (i=0; i<qf->numquads; i++) {
 		uint stars[4];
 		int j;
 		double* xyz;
+		if (!(i % 100000)) {
+			printf(".");
+			fflush(stdout);
+		}
 		quadfile_get_starids(qf, i, stars, stars+1,
 							 stars+2, stars+3);
 		for (j=0; j<4; j++) {
@@ -98,11 +101,13 @@ int main(int argc, char** args) {
 				img[Y*N + X]++;
 		}
 	}
+	printf("\n");
 
 	maxval = 0;
 	for (i=0; i<(N*N); i++)
 		if (img[i] > maxval)
 			maxval = img[i];
+	printf("maxval is %i.\n", maxval);
 	for (i=0; i<(N*N); i++)
 		img[i] = ((maxval * img[i]) / 255);
 
