@@ -51,6 +51,10 @@ typedef unsigned char uchar;
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
 #define z2dec(z) (asin(z)) // result in radians
 
+inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy);
+
+inline void project_equal_area(double x, double y, double z, double* projx, double* projy);
+
 // Converts a distance-squared between two points on the
 // surface of the unit sphere into the angle between the
 // rays from the center of the sphere to the points, in
