@@ -1,4 +1,10 @@
 #include <math.h>
+#include <errno.h>
+#include <string.h>
+
+#if defined(linux)
+#include <linux/bitops.h>
+#endif
 
 #include "fileutil.h"
 #include "starutil.h"
@@ -7,16 +13,18 @@
 #include "usnob_fits.h"
 #include "tycho2_fits.h"
 #include "mathutil.h"
+#include "rdlist.h"
 
-#define OPTIONS "bhgN:"
+#define OPTIONS "bhgN:f:"
 
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
 " <filename> [<filename> ...] > outfile.pgm\n"
 "  -h sets Hammer-Aitoff\n"
 "  -b sets reverse\n"
 "  -g adds grid\n"
-"  -N sets edge size of output image\n\n"
-"Can read Tycho2.fits, USNOB.fits, AN.fits, and AN.objs.fits files.\n";
+"  -N sets edge size of output image\n"
+"  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
+"Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, and rdls.fits files.\n";
 
 double *projection;
 extern char *optarg;
@@ -24,8 +32,11 @@ extern int optind, opterr, optopt;
 
 #define PI M_PI
 
-inline int is_power_of_two(int x) {
-		return (x == 0x00000001 ||
+inline int is_power_of_two(unsigned int x) {
+#if defined(linux)
+	return (generic_hweight32(x) == 1);
+#else
+	    return (x == 0x00000001 ||
 		        x == 0x00000002 ||
 		        x == 0x00000004 ||
 		        x == 0x00000008 ||
@@ -57,6 +68,7 @@ inline int is_power_of_two(int x) {
 		        x == 0x20000000 ||
 		        x == 0x40000000 ||
 		        x == 0x80000000);
+#endif
 }
 
 inline void getxy(double px, double py, int N,
@@ -86,9 +98,14 @@ int main(int argc, char *argv[])
 	an_catalog* ancat;
 	usnob_fits* usnob;
 	tycho2_fits* tycho;
+	dl* rdls;
+	il* fields;
 	int backside = 0;
 	double px, py;
 	int N=3000;
+	unsigned char* img;
+
+	fields = il_new(32);
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -104,6 +121,9 @@ int main(int argc, char *argv[])
 		case 'N':
 		  N=(int)strtoul(optarg, NULL, 0);
 		  break;
+		case 'f':
+			il_append(fields, atoi(optarg));
+			break;
 		default:
 			return (OPT_ERR);
 		}
@@ -115,7 +135,8 @@ int main(int argc, char *argv[])
 
 	projection=calloc(sizeof(double), N*N);
 
-	entries = malloc(BLOCK * imax(sizeof(usnob_entry),
+	entries = malloc(BLOCK * imax(imax(sizeof(usnob_entry),
+									   2*sizeof(double)), // rdls
 								  imax(sizeof(tycho2_entry),
 									   sizeof(an_entry))));
 
@@ -126,6 +147,7 @@ int main(int argc, char *argv[])
 		ancat = NULL;
 		usnob = NULL;
 		tycho = NULL;
+		rdls = NULL;
 		numstars = 0;
 		fname = argv[optind];
 		fprintf(stderr, "Reading file %s...\n", fname);
@@ -155,6 +177,43 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 				numstars = cat->numstars;
+			} else if (strncasecmp(str, AN_FILETYPE_RDLS, strlen(AN_FILETYPE_RDLS)) == 0) {
+				rdlist* rdlsfile;
+				int nfields, f;
+				fprintf(stderr, "Looks like an rdls (RA,DEC list)\n");
+				rdlsfile = rdlist_open(fname);
+				if (!rdlsfile) {
+					fprintf(stderr, "Couldn't open RDLS file.\n");
+					return 1;
+				}
+				rdls = dl_new(256);
+				nfields = il_size(fields);
+				if (!nfields) {
+					nfields = rdlsfile->nfields;
+					fprintf(stderr, "Plotting all %i fields.\n", nfields);
+				}
+				for (f=0; f<nfields; f++) {
+					int fld;
+					rd* rd;
+					int j, M;
+					if (il_size(fields))
+						fld = il_get(fields, f);
+					else
+						fld = f;
+					rd = rdlist_get_field(rdlsfile, fld);
+					if (!rd) {
+						fprintf(stderr, "RDLS file does not contain field %i.\n", fld);
+						return 1;
+					}
+					fprintf(stderr, "Field %i has %i entries.\n", fld, dl_size(rd)/2);
+					//dl_merge_lists(rdls, rd);
+					M = dl_size(rd);
+					for (j=0; j<M; j++)
+						dl_append(rdls, dl_get(rd, j));
+					dl_free(rd);
+				}
+				rdlist_close(rdlsfile);
+				numstars = dl_size(rdls)/2;
 			} else {
 				fprintf(stderr, "Unknown Astrometry.net file type.\n");
 				exit(-1);
@@ -191,7 +250,7 @@ int main(int argc, char *argv[])
 			numstars = tycho->nentries;
 		}
 		qfits_header_destroy(hdr);
-		if (!(cat || ancat || usnob || tycho)) {
+		if (!(cat || ancat || usnob || tycho || rdls)) {
 			fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
 			exit(-1);
 		}
@@ -226,6 +285,13 @@ int main(int argc, char *argv[])
 					x = xyz[0];
 					y = xyz[1];
 					z = xyz[2];
+				} else if (rdls) {
+					double ra, dec;
+					ra  = dl_get(rdls, 2*(off+i));
+					dec = dl_get(rdls, 2*(off+i)+1);
+					x = radec2x(deg2rad(ra), deg2rad(dec));
+					y = radec2y(deg2rad(ra), deg2rad(dec));
+					z = radec2z(deg2rad(ra), deg2rad(dec));
 				} else if (ancat) {
 					an_entry* entry = ((an_entry*)entries) + i;
 					x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
@@ -261,6 +327,8 @@ int main(int argc, char *argv[])
 
 		if (cat)
 			catalog_close(cat);
+		if (rdls)
+			dl_free(rdls);
 		if (ancat)
 			an_catalog_close(ancat);
 		if (usnob)
@@ -333,10 +401,13 @@ int main(int argc, char *argv[])
 
 	// Output PGM format
 	printf("P5 %d %d %d\n",N,N, 255);
-	for (ii = 0; ii < N; ii++) {
-		for (jj = 0; jj < N; jj++) {
-			putchar((int)(255.0 * projection[ii+N*jj] / (double)maxval));
-		}
+	// hack - we reuse the "projection" storage to store the image data:
+	img = (unsigned char*)projection;
+	for (ii=0; ii<(N*N); ii++)
+		img[ii] = (int)(255.0 * projection[ii] / (double)maxval);
+	if (fwrite(img, 1, N*N, stdout) != (N*N)) {
+		fprintf(stderr, "Failed to write image: %s\n", strerror(errno));
+		exit(-1);
 	}
 	/*
 	  saturated++;
@@ -344,6 +415,8 @@ int main(int argc, char *argv[])
 	  saturated,((unsigned long int)N*(unsigned long int)N));
 	*/
 	free(projection);
+
+	il_free(fields);
 
 	return 0;
 }

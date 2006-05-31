@@ -1282,3 +1282,6 @@ dl* dl_dupe(dl* dlist) {
     return ret; 
 }
 
+void   dl_merge_lists(dl* list1, dl* list2) {
+	bl_append_list(list1, list2);
+}

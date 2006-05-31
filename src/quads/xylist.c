@@ -37,19 +37,10 @@ xylist* xylist_open(char* fn) {
 		fprintf(stderr, "Couldn't read FITS header from xylist %s.\n", fn);
         goto bailout;
 	}
+
+	ls->antype = qfits_header_getstr(header, "AN_FILE");
+
 	qfits_header_destroy(header);
-	/*
-	  ls->nfields = qfits_header_getint(header, "NFIELDS", -1);
-	  if (ls->nfields == -1) {
-	  fprintf(stderr, "Didn't find the NFIELDS header field in xylist file %s\n", fn);
-	  goto bailout;
-	  }
-	  if (qfits_query_n_ext(fn) != ls->nfields) {
-	  fprintf(stderr, "xylist file %s supposedly has %u fields, but it only has %u FITS extensions.\n", fn,
-	  ls->nfields, qfits_query_n_ext(fn));
-	  goto bailout;
-	  }
-	*/
 	ls->nfields = qfits_query_n_ext(fn);
 
 	return ls;
@@ -214,8 +205,10 @@ xylist* xylist_open_for_writing(char* fn) {
 		fprintf(stderr, "Couldn't open output file %s for writing: %s\n", fn, strerror(errno));
 		goto bailout;
 	}
+	ls->antype = AN_FILETYPE_XYLS;
 	ls->header = qfits_table_prim_header_default();
 	qfits_header_add(ls->header, "NFIELDS", "0", NULL, NULL);
+	qfits_header_add(ls->header, "AN_FILE", ls->antype, NULL, NULL);
 	return ls;
  bailout:
 	if (ls)
@@ -241,6 +234,7 @@ int xylist_fix_header(xylist* ls) {
 	fseeko(ls->fid, 0, SEEK_SET);
 	sprintf(val, "%u", ls->nfields);
 	qfits_header_mod(ls->header, "NFIELDS", val, "Number of fields");
+	qfits_header_mod(ls->header, "AN_FILE", ls->antype, "Astrometry.net file type");
 	qfits_header_dump(ls->header, ls->fid);
 	datastart = ftello(ls->fid);
 	if (datastart != ls->data_offset) {

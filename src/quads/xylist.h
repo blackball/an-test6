@@ -18,6 +18,8 @@ typedef dl xy;
 #define xy_setx(x,i,v) dl_set(x,2*(i),v)
 #define xy_sety(x,i,v) dl_set(x,2*(i)+1,v)
 
+#define AN_FILETYPE_XYLS "XYLS"
+
 /*
   One table per field.
   One column.
@@ -31,6 +33,8 @@ struct xylist {
 	tfits_type ytype;
 	char* xname; // default "X"
 	char* yname; // default "Y"
+
+	char* antype; // Astrometry.net filetype string.
 
 	// field we're currently reading/writing
 	uint field;
@@ -52,6 +56,7 @@ typedef struct xylist xylist;
 // after opening but before calling xylist_get_field.
 xylist* xylist_open(char* fn);
 
+// it's your responsibility to free_xy() this.
 xy* xylist_get_field(xylist* ls, uint field);
 
 int xylist_n_entries(xylist* ls, uint field);
