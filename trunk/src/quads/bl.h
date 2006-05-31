@@ -174,5 +174,6 @@ dl*    dl_dupe(dl* list);
 int    dl_check_consistency(dl* list);
 void   dl_insert(dl* list, int indx, double data);
 void   dl_remove_all(dl* list);
+void   dl_merge_lists(dl* list1, dl* list2);
 
 #endif

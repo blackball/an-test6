@@ -11,14 +11,15 @@
 #include "xylist.h"
 #include "bl.h"
 
-#define OPTIONS "hdx:y:"
+#define OPTIONS "hdx:y:t:"
 
 void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s [options] <input-file> <output-file>\n"
 		   "    [-d]: use double format (float format is default)\n"
 		   "    [-x <name-of-x-column>]\n"
-		   "    [-y <name-of-y-column>]\n",
+		   "    [-y <name-of-y-column>]\n"
+		   "    [-t <Astrometry.net filetype>]\n\n",
 		   progname);
 }
 
@@ -44,6 +45,7 @@ int main(int argc, char** args) {
 	int doubleformat = 0;
 	char* xname = NULL;
 	char* yname = NULL;
+	char* antype = NULL;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -59,6 +61,9 @@ int main(int argc, char** args) {
 			break;
 		case 'y':
 			yname = optarg;
+			break;
+		case 't':
+			antype = optarg;
 			break;
 		}
     }
@@ -95,6 +100,10 @@ int main(int argc, char** args) {
 		ls->yname = yname;
 	if (xylist_write_header(ls))
 		exit(-1);
+
+	if (antype) {
+		ls->antype = antype;
+	}
 
 	N = xya_size(xya);
 	printf("writing %i fields...\n", N);

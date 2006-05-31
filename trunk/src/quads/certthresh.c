@@ -257,7 +257,6 @@ int main(int argc, char *argv[]) {
 
 		fclose(infile);
 	}
-	xylist_close(rdls);
 
 	fprintf(stderr, "%i hits correct, %i warnings, %i errors.\n",
 			correct, warning, incorrect);
@@ -324,6 +323,7 @@ int main(int argc, char *argv[]) {
 			printf("];\n");
 		}
 
+		printf("\n");
 		for (thresh=TL; thresh<=TH; thresh++) {
 			int right, wrong, unsolved, total;
 			double pct;
@@ -339,6 +339,7 @@ int main(int argc, char *argv[]) {
 			printf("  %2i         %4i     %6.2f         %4i      %6.2f          %i\n",
 				   thresh, right, pct*right, unsolved, pct*unsolved, wrong);
 		}
+		printf("\n\n");
 
 		printf("Finding field centers...\n");
 		fflush(stdout);
@@ -375,6 +376,7 @@ int main(int argc, char *argv[]) {
 			zavg /= (double)M;
 			fieldcenters[i*2 + 0] = rad2deg(xy2ra(xavg, yavg));
 			fieldcenters[i*2 + 1] = rad2deg(z2dec(zavg));
+			dl_free(rdlist);
 		}
 
 		for (thresh=TL; thresh<=TH; thresh++) {
@@ -410,6 +412,8 @@ int main(int argc, char *argv[]) {
 		il_free(wrongs);
 		il_free(unsolveds);
 	}
+
+	xylist_close(rdls);
 
 	free(corrects);
 	free(warnings);

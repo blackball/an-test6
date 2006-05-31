@@ -39,7 +39,7 @@ QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/q
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
 	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
 
-OBJ := starutil.o fileutil.o xylist.o mathutil.o \
+OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	kdtree/kdtree.o kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
 	healpix.o \
 	idfile.o qidxfile.o \
@@ -105,6 +105,7 @@ an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o 
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 plotcat: plotcat.o starutil.o an_catalog.o catalog.o tycho2_fits.o tycho2.o \
+	rdlist.o xylist.o \
 	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
