@@ -9,7 +9,7 @@
 #include "bl.h"
 #include "matchobj.h"
 #include "matchfile.h"
-#include "lsfile.h"
+#include "xylist.h"
 
 char* OPTIONS = "hR:F:L:";
 
@@ -30,8 +30,7 @@ int main(int argc, char *argv[]) {
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
 	char* rdlsfname = NULL;
-	FILE* rdlsfid = NULL;
-	pl* rdls;
+	xylist* rdls;
 	int i;
 	int correct, incorrect, warning;
 	int firstfield = 0;
@@ -41,6 +40,8 @@ int main(int argc, char *argv[]) {
 	int *corrects;
 	int *incorrects;
 	int *warnings;
+
+	double* fieldcenters;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -73,27 +74,30 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	fopenin(rdlsfname, rdlsfid);
 	fprintf(stderr, "Reading rdls file...\n");
-	rdls = read_ls_file(rdlsfid, 2);
+	rdls = xylist_open(rdlsfname);
 	if (!rdls) {
 		fprintf(stderr, "Couldn't read rdls file.\n");
 		exit(-1);
 	}
-	fclose(rdlsfid);
+	rdls->xname = "RA";
+	rdls->yname = "DEC";
 
-	nfields = pl_size(rdls);
+	nfields = rdls->nfields;
 	fprintf(stderr, "Read %i fields from rdls file.\n", nfields);
 	if ((lastfield != -1) && (nfields > lastfield)) {
 		nfields = lastfield + 1;
 	} else {
 		lastfield = nfields - 1;
 	}
+
+
 	corrects =   calloc(sizeof(int), nfields);
 	warnings =   calloc(sizeof(int), nfields);
 	incorrects = calloc(sizeof(int), nfields);
 
 	correct = incorrect = warning = 0;
+
 
 	for (i=0; i<ninputfiles; i++) {
 		FILE* infile = NULL;
@@ -138,23 +142,10 @@ int main(int argc, char *argv[]) {
 				break;
 			}
 			fieldnum = me.fieldnum;
-			/*
-			  if (fieldnum > nfields) {
-			  fprintf(stderr, "Error: fieldnum is %i, but rdls file only goes to %i.\n",
-			  fieldnum, nfields);
-			  continue;
-			  }
-			*/
 			if (fieldnum < firstfield)
 				continue;
 			if (fieldnum > lastfield)
 				continue;
-
-			rdlist = (dl*)pl_get(rdls, fieldnum);
-			if (!rdlist) {
-				fprintf(stderr, "Couldn't get RDLS entry for field %i!\n", fieldnum);
-				exit(-1);
-			}
 
 			nread++;
 
@@ -190,6 +181,7 @@ int main(int argc, char *argv[]) {
 
 			// read the RDLS entries for this field and make sure they're all
 			// within radius of the center.
+			rdlist = (dl*)xylist_get_field(rdls, fieldnum);
 			M = dl_size(rdlist) / 2;
 			xavg = yavg = zavg = 0.0;
 			for (j=0; j<M; j++) {
@@ -250,7 +242,6 @@ int main(int argc, char *argv[]) {
 				warning++;
 				warnings[fieldnum]++;
 			} else {
-				// ok!
 				corrects[fieldnum]++;
 				correct++;
 				fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin.\n", fieldnum, rac, decc, arc);
@@ -266,7 +257,7 @@ int main(int argc, char *argv[]) {
 
 		fclose(infile);
 	}
-	ls_file_free(rdls);
+	xylist_close(rdls);
 
 	fprintf(stderr, "%i hits correct, %i warnings, %i errors.\n",
 			correct, warning, incorrect);
@@ -279,11 +270,14 @@ int main(int argc, char *argv[]) {
 		il* neglist;
 		pl* fplists = pl_new(10);
 		pl* neglists = pl_new(10);
+		il* totals = il_new(10);
+		il* rights = il_new(10);
+		il* wrongs = il_new(10);
+		il* unsolveds = il_new(10);
 		int TL = 3;
 		int TH = 10;
 		for (thresh=TL; thresh<=TH; thresh++) {
 			int right=0, wrong=0, unsolved=0, total=0;
-			double pct;
 			fplist  = il_new(32);
 			neglist = il_new(32);
 			for (i=0; i<nfields; i++) {
@@ -306,21 +300,17 @@ int main(int argc, char *argv[]) {
 				}
 				total++;
 			}
-			if (thresh == TL) {
-				printf("Total of %i fields.\n", total);
-				printf("Threshold   #Solved  %%Solved     #Unsolved %%Unsolved   #FalsePositive\n");
-			}
-			pct = 100.0 / (double)total;
-			printf("  %2i         %4i     %5.2f         %4i      %5.2f          %i\n",
-				   thresh, right, pct*right, unsolved, pct*unsolved, wrong);
-
+			il_append(totals, total);
+			il_append(rights, right);
+			il_append(wrongs, wrong);
+			il_append(unsolveds, unsolved);
 			pl_append(fplists , fplist );
 			pl_append(neglists, neglist);
 		}
 		printf("\n\n");
 		for (thresh=TL; thresh<=TH; thresh++) {
 			fplist  = (il*)pl_get(fplists,  thresh-TL);
-			printf("Threshold=%i: false positives:\n  [ ", thresh);
+			printf("Threshold=%2i: false positives:\n  [ ", thresh);
 			for (i=0; i<il_size(fplist); i++)
 				printf("%i, ", il_get(fplist, i));
 			printf("];\n");
@@ -333,6 +323,80 @@ int main(int argc, char *argv[]) {
 				printf("%i, ", il_get(neglist, i));
 			printf("];\n");
 		}
+
+		for (thresh=TL; thresh<=TH; thresh++) {
+			int right, wrong, unsolved, total;
+			double pct;
+			right    = il_get(rights,    thresh-TL);
+			wrong    = il_get(wrongs,    thresh-TL);
+			unsolved = il_get(unsolveds, thresh-TL);
+			total    = il_get(totals,    thresh-TL);
+			if (thresh == TL) {
+				printf("Total of %i fields.\n", total);
+				printf("Threshold   #Solved  %%Solved     #Unsolved %%Unsolved   #FalsePositive\n");
+			}
+			pct = 100.0 / (double)total;
+			printf("  %2i         %4i     %6.2f         %4i      %6.2f          %i\n",
+				   thresh, right, pct*right, unsolved, pct*unsolved, wrong);
+		}
+
+		printf("Finding field centers...\n");
+		fflush(stdout);
+		fieldcenters = malloc(2 * nfields * sizeof(double));
+		for (i=0; i<(2*nfields); i++)
+			fieldcenters[i] = -1e6;
+		for (i=0; i<nfields; i++) {
+			dl* rdlist;
+			int j, M;
+			double xavg, yavg, zavg;
+			rdlist = (dl*)xylist_get_field(rdls, i);
+			if (!rdlist) {
+				fprintf(stderr, "Couldn't get RDLS entry for field %i!\n", i);
+				exit(-1);
+			}
+			M = dl_size(rdlist) / 2;
+			xavg = yavg = zavg = 0.0;
+			for (j=0; j<M; j++) {
+				double x, y, z, ra, dec;
+				ra  = dl_get(rdlist, j*2);
+				dec = dl_get(rdlist, j*2 + 1);
+				// in degrees
+				ra  = deg2rad(ra);
+				dec = deg2rad(dec);
+				x = radec2x(ra, dec);
+				y = radec2y(ra, dec);
+				z = radec2z(ra, dec);
+				xavg += x;
+				yavg += y;
+				zavg += z;
+			}
+			xavg /= (double)M;
+			yavg /= (double)M;
+			zavg /= (double)M;
+			fieldcenters[i*2 + 0] = rad2deg(xy2ra(xavg, yavg));
+			fieldcenters[i*2 + 1] = rad2deg(z2dec(zavg));
+		}
+
+		for (thresh=TL; thresh<=TH; thresh++) {
+			fplist  = (il*)pl_get(fplists,  thresh-TL);
+			printf("Threshold=%2i: false positive field true centers (deg):\n  [ ", thresh);
+			for (i=0; i<il_size(fplist); i++) {
+				int fld = il_get(fplist, i);
+				printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
+			}
+			printf("];\n");
+		}
+
+		for (thresh=TL; thresh<=TH; thresh++) {
+			neglist = (il*)pl_get(neglists, thresh-TL);
+			printf("Threshold=%i: unsolved field centers (deg):\n  [ ", thresh);
+			for (i=0; i<il_size(neglist); i++) {
+				int fld = il_get(neglist, i);
+				printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
+			}
+			printf("];\n");
+		}
+
 		for (thresh=TL; thresh<=TH; thresh++) {
 			fplist  = (il*)pl_get(fplists,  thresh-TL);
 			neglist = (il*)pl_get(neglists, thresh-TL);
@@ -341,11 +405,17 @@ int main(int argc, char *argv[]) {
 		}
 		pl_free(fplists );
 		pl_free(neglists);
+		il_free(totals);
+		il_free(rights);
+		il_free(wrongs);
+		il_free(unsolveds);
 	}
 
 	free(corrects);
 	free(warnings);
 	free(incorrects);
+
+	free(fieldcenters);
 
 	return 0;
 }
