@@ -50,12 +50,14 @@ OBJ := starutil.o fileutil.o xylist.o mathutil.o \
 
 SOLVER_OBJ := solver.o
 
-EXECS := get_healpix quadidx xylstomatlab rdlstohealpix \
-	rdls2hpls \
+EXECS := quadidx \
 	certifiable hpquads dedup_index codetree startree \
-	printcatalog deduplicate \
+	deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
-	codeprojections quadlocations
+	codeprojections quadlocations hpowned
+
+EXTRAS := xylstomatlab rdlstohealpix rdls2hpls \
+	get_healpix printcatalog 
 
 #	codeprojections fixmatchfile printmatchfile 
 
