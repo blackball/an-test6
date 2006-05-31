@@ -51,7 +51,7 @@ OBJ := starutil.o fileutil.o xylist.o mathutil.o \
 SOLVER_OBJ := solver.o
 
 EXECS := quadidx \
-	certifiable hpquads dedup_index codetree startree \
+	certifiable certthresh hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
 	codeprojections quadlocations hpowned

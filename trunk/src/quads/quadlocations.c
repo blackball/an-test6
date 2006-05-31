@@ -32,6 +32,7 @@ int main(int argc, char** args) {
 	quadfile* qf;
 	catalog* cat;
 	uchar* img;
+	uint* counts;
 	int i;
 	int maxval;
 	FILE* fid;
@@ -71,8 +72,8 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	img = calloc(1, N*N);
-	if (!img) {
+	counts = calloc(sizeof(uint), N*N);
+	if (!counts) {
 		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
 		exit(-1);
 	}
@@ -97,19 +98,27 @@ int main(int argc, char** args) {
 			py = 0.5 + (py - 0.5) * 0.95;
 			X = (int)rint(px * N);
 			Y = (int)rint(py * N);
-			if (img[Y*N + X] < 255)
-				img[Y*N + X]++;
+			//if (img[Y*N + X] < 255)
+			// assume we won't overflow an int...
+			counts[Y*N + X]++;
 		}
 	}
 	printf("\n");
 
 	maxval = 0;
 	for (i=0; i<(N*N); i++)
-		if (img[i] > maxval)
-			maxval = img[i];
+		if (counts[i] > maxval)
+			maxval = counts[i];
 	printf("maxval is %i.\n", maxval);
+
+	img = calloc(1, N*N);
+	if (!img) {
+		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
+		exit(-1);
+	}
+
 	for (i=0; i<(N*N); i++)
-		img[i] = ((maxval * img[i]) / 255);
+		img[i] = (int)rint((255.0 * (double)counts[i]) / (double)maxval);
 
 	fprintf(fid, "P5 %d %d %d\n",N,N, 255);
 	if (fwrite(img, 1, N*N, fid) != (N*N)) {
@@ -121,6 +130,7 @@ int main(int argc, char** args) {
 	catalog_close(cat);
 	quadfile_close(qf);
 	free(img);
+	free(counts);
 
 	return 0;
 }
