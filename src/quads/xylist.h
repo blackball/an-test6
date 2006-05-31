@@ -48,6 +48,8 @@ struct xylist {
 };
 typedef struct xylist xylist;
 
+// you can change the parameters (ie, xname, yname) 
+// after opening but before calling xylist_get_field.
 xylist* xylist_open(char* fn);
 
 xy* xylist_get_field(xylist* ls, uint field);
