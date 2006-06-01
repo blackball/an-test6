@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <assert.h>
 
 #include "quadfile.h"
 #include "catalog.h"
@@ -36,6 +37,7 @@ int main(int argc, char** args) {
 	int i;
 	int maxval;
 	FILE* fid;
+	unsigned char* starcounts;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -72,38 +74,53 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	counts = calloc(sizeof(uint), N*N);
-	if (!counts) {
-		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
-		exit(-1);
-	}
-
+	printf("Counting stars in quads...\n");
+	starcounts = calloc(sizeof(unsigned char), cat->numstars);
 	for (i=0; i<qf->numquads; i++) {
 		uint stars[4];
 		int j;
-		double* xyz;
-		if (!(i % 100000)) {
+		if (!(i % 200000)) {
 			printf(".");
 			fflush(stdout);
 		}
 		quadfile_get_starids(qf, i, stars, stars+1,
 							 stars+2, stars+3);
 		for (j=0; j<4; j++) {
-			double px, py;
-			int X, Y;
-			xyz = catalog_get_star(cat, stars[j]);
-			project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2],
-								  &px, &py);
-			px = 0.5 + (px - 0.5) * 0.95;
-			py = 0.5 + (py - 0.5) * 0.95;
-			X = (int)rint(px * N);
-			Y = (int)rint(py * N);
-			//if (img[Y*N + X] < 255)
-			// assume we won't overflow an int...
-			counts[Y*N + X]++;
+			assert(stars[j] < cat->numstars);
+			assert(starcounts[stars[j]] < 255);
+			starcounts[stars[j]]++;
 		}
 	}
 	printf("\n");
+
+	counts = calloc(sizeof(uint), N*N);
+	if (!counts) {
+		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
+		exit(-1);
+	}
+
+	printf("Computing image...\n");
+	for (i=0; i<cat->numstars; i++) {
+		double* xyz;
+		double px, py;
+		int X, Y;
+		if (!(i % 100000)) {
+			printf(".");
+			fflush(stdout);
+		}
+		if (!starcounts[i])
+			continue;
+		xyz = catalog_get_star(cat, i);
+		project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
+		px = 0.5 + (px - 0.5) * 0.99;
+		py = 0.5 + (py - 0.5) * 0.99;
+		X = (int)rint(px * N);
+		Y = (int)rint(py * N);
+		counts[Y*N + X] += starcounts[i];
+	}
+	printf("\n");
+
+	free(starcounts);
 
 	maxval = 0;
 	for (i=0; i<(N*N); i++)
