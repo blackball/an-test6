@@ -24,6 +24,8 @@ inline int rdlist_read_entries(rdlist* ls, uint field,
 inline rdlist* rdlist_open_for_writing(char* fn) {
 	rdlist* rtn = xylist_open_for_writing(fn);
 	rtn->antype = AN_FILETYPE_RDLS;
+	rtn->xname = "RA";
+	rtn->yname = "DEC";
 	return rtn;
 }
 
