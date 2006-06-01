@@ -427,82 +427,43 @@ int main(int argc, char *argv[]) {
 		printf("];\n");
 	}
 
-	if (fpfn) {
-		rdlist* rdls = rdlist_open_for_writing(fpfn);
-		if (!rdls) {
-			fprintf(stderr, "Couldn't open file %s to write rdls.\n", fpfn);
-			exit(-1);
-		}
-		qfits_header_add(rdls->header, "", NULL, "False positive fields: true locations.", NULL);
-		qfits_header_add(rdls->header, "", NULL, "Extension x holds results for nagree threshold=x.", NULL);
-		rdlist_write_header(rdls);
-		for (thresh=0; thresh<TL; thresh++) {
-			rdlist_write_new_field(rdls);
-			rdlist_fix_field(rdls);
-		}
-		for (thresh=TL; thresh<=TH; thresh++) {
-			fplist  = (il*)pl_get(fplists,  thresh-TL);
-			rdlist_write_new_field(rdls);
-			for (i=0; i<il_size(fplist); i++) {
-				int fld = il_get(fplist, i);
-				rdlist_write_entries(rdls, fieldcenters+(2*fld), 2);
+	{
+		char* fns[3] = { fpfn,    truefn,    negfn };
+		pl* lists[3] = { fplists, truelists, neglists };
+		char* descstrs[3] = {
+			"False positive fields: true locations.",
+			"Correctly solved fields.",
+			"Negative (non-solving) fields."
+		};
+		int nfn;
+		for (nfn=0; nfn<3; nfn++) {
+			char* fn = fns[nfn];
+			if (!fn) continue;
+			rdlist* rdls = rdlist_open_for_writing(fn);
+			if (!rdls) {
+				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
+				exit(-1);
 			}
-			rdlist_fix_field(rdls);
-		}
-		rdlist_fix_header(rdls);
-		rdlist_close(rdls);
-	}
-
-	if (negfn) {
-		rdlist* rdls = rdlist_open_for_writing(negfn);
-		if (!rdls) {
-			fprintf(stderr, "Couldn't open file %s to write rdls.\n", negfn);
-			exit(-1);
-		}
-		qfits_header_add(rdls->header, "", NULL, "Negative (non-solving) fields.", NULL);
-		qfits_header_add(rdls->header, "", NULL, "Extension x holds results for nagree threshold=x.", NULL);
-		rdlist_write_header(rdls);
-		for (thresh=0; thresh<TL; thresh++) {
-			rdlist_write_new_field(rdls);
-			rdlist_fix_field(rdls);
-		}
-		for (thresh=TL; thresh<=TH; thresh++) {
-			neglist = (il*)pl_get(neglists, thresh-TL);
-			rdlist_write_new_field(rdls);
-			for (i=0; i<il_size(neglist); i++) {
-				int fld = il_get(neglist, i);
-				rdlist_write_entries(rdls, fieldcenters+(2*fld), 2);
+			qfits_header_add(rdls->header, "", NULL, descstrs[nfn], NULL);
+			qfits_header_add(rdls->header, "", "", "Extension x holds results for", NULL);
+			qfits_header_add(rdls->header, "", "", "   nagree threshold=x.", NULL);
+			rdlist_write_header(rdls);
+			for (thresh=0; thresh<TL; thresh++) {
+				rdlist_write_new_field(rdls);
+				rdlist_fix_field(rdls);
 			}
-			rdlist_fix_field(rdls);
-		}
-		rdlist_fix_header(rdls);
-		rdlist_close(rdls);
-	}
-
-	if (truefn) {
-		rdlist* rdls = rdlist_open_for_writing(truefn);
-		if (!rdls) {
-			fprintf(stderr, "Couldn't open file %s to write rdls.\n", truefn);
-			exit(-1);
-		}
-		qfits_header_add(rdls->header, "", NULL, "Correctly solved fields.", NULL);
-		qfits_header_add(rdls->header, "", NULL, "Extension x holds results for nagree threshold=x.", NULL);
-		rdlist_write_header(rdls);
-		for (thresh=0; thresh<TL; thresh++) {
-			rdlist_write_new_field(rdls);
-			rdlist_fix_field(rdls);
-		}
-		for (thresh=TL; thresh<=TH; thresh++) {
-			truelist = (il*)pl_get(truelists, thresh-TL);
-			rdlist_write_new_field(rdls);
-			for (i=0; i<il_size(truelist); i++) {
-				int fld = il_get(truelist, i);
-				rdlist_write_entries(rdls, fieldcenters+(2*fld), 2);
+			for (thresh=TL; thresh<=TH; thresh++) {
+				il* fldlist = (il*)pl_get(lists[nfn], thresh-TL);
+				rdlist_write_new_field(rdls);
+				for (i=0; i<il_size(fldlist); i++) {
+					int fld = il_get(fldlist, i);
+					rdlist_write_entries(rdls, fieldcenters+(2*fld), 1);
+				}
+				rdlist_fix_field(rdls);
 			}
-			rdlist_fix_field(rdls);
+			rdlist_fix_header(rdls);
+			rdlist_close(rdls);
 		}
-		rdlist_fix_header(rdls);
-		rdlist_close(rdls);
 	}
 
 	for (thresh=TL; thresh<=TH; thresh++) {
