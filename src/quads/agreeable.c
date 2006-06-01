@@ -52,6 +52,9 @@ il* solved;
 il* unsolved;
 il* flushed;
 
+int* agreehist = NULL;
+int  sizeagreehist = 0;
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -411,6 +414,12 @@ int main(int argc, char *argv[]) {
 	if (agreefid)
 		fclose(agreefid);
 
+	fprintf(stderr, "Number of agreeing quads histogram:\n  [ ");
+	for (i=0; i<sizeagreehist; i++) {
+		fprintf(stderr, "%i, ", agreehist[i]);
+	}
+	fprintf(stderr, "]\n");
+
 	return 0;
 }
 
@@ -478,6 +487,14 @@ void flush_solved_fields(bool doleftovers,
 			continue;
 		}
 		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
+
+		if ((nbest+1) > sizeagreehist) {
+			agreehist = realloc(agreehist, (nbest+1) * sizeof(int));
+			memset(agreehist + sizeagreehist, 0,
+				   ((nbest+1) - sizeagreehist) * sizeof(int));
+			sizeagreehist = nbest + 1;
+		}
+		agreehist[nbest]++;
 
 		best = hitlist_healpix_get_best(hl);
 		//best = hitlist_healpix_get_all_best(hl);
