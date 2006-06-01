@@ -73,8 +73,8 @@ inline int is_power_of_two(unsigned int x) {
 
 inline void getxy(double px, double py, int N,
 				  int* X, int* Y) {
-	px = 0.5 + (px - 0.5) * 0.95;
-	py = 0.5 + (py - 0.5) * 0.95;
+	px = 0.5 + (px - 0.5) * 0.99;
+	py = 0.5 + (py - 0.5) * 0.99;
 	*X = (int)rint(px * N);
 	*Y = (int)rint(py * N);
 }
