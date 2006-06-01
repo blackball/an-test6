@@ -11,10 +11,6 @@
 
 typedef unsigned char bool;
 typedef unsigned char uchar;
-/*
-  bool TRUE = 1;
-  bool FALSE = 0;
-*/
 
 #ifndef TRUE
 #define TRUE 1
@@ -50,6 +46,10 @@ typedef unsigned char uchar;
 #define radec2z(r,d) (sin(d))        // d in radians
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
 #define z2dec(z) (asin(z)) // result in radians
+
+inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
+
+inline void radec2xyzarr(double ra, double dec, double* xyz);
 
 inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy);
 

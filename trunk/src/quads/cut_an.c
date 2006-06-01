@@ -5,8 +5,9 @@
 #include "idfile.h"
 #include "healpix.h"
 #include "starutil.h"
+#include "mathutil.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:"
+#define OPTIONS "ho:i:N:n:m:M:H:d:"
 
 void print_help(char* progname) {
     printf("usage:\n"
@@ -17,6 +18,7 @@ void print_help(char* progname) {
 		   "  [-n <max-stars-per-(small)-healpix>]\n"
 		   "  [-S <max-stars-per-(big)-healpix]\n"
 		   "  [-N <nside>]: healpixelization at the fine-scale; default=100.\n"
+		   "  [-d <dedup-radius>]: deduplication radius (arcseconds)\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
 }
@@ -59,9 +61,9 @@ int main(int argc, char** args) {
 	catalog* cat;
 	idfile* id;
 	int nwritten;
-	int pixesowned;
 	an_entry* entries;
 	int BLOCK = 100000;
+	double deduprad = 0.0;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -69,6 +71,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'd':
+			deduprad = atof(optarg);
+			break;
 		case 'H':
 			bighp = atoi(optarg);
 			break;
@@ -104,14 +109,17 @@ int main(int argc, char** args) {
 	HP = 12 * Nside * Nside;
 
 	printf("Nside=%i, HP=%i, maxperhp=%i, HP*maxperhp=%i.\n", Nside, HP, maxperhp, HP*maxperhp);
-
 	printf("Writing big healpix %i.\n", bighp);
 
-	starlists = malloc(HP * sizeof(bl*));
-	memset(starlists, 0, HP * sizeof(bl*));
+	if (deduprad > 0.0) {
+		printf("Deduplication radius %f arcsec.\n", deduprad);
+		// convert from arcseconds to distance^2 on the unit sphere.
+		deduprad = arcsec2distsq(deduprad);
+	}
 
-	owned = malloc(HP * sizeof(int));
-	memset(owned, 0, HP * sizeof(int));
+	starlists = calloc(sizeof(bl*), HP);
+	owned = calloc(sizeof(int), HP);
+
 	// for each big healpix, find the set of small healpixes it owns
 	// (including a bit of overlap)
 	for (i=0; i<HP; i++) {
@@ -129,21 +137,19 @@ int main(int argc, char** args) {
 		}
 	}
 
-	//printf("Big healpix %i owns:\n", bighp);
-	pixesowned = 0;
-	for (i=0; i<HP; i++) {
-		if (owned[i]) {
-			//printf("%i ", i);
-			pixesowned++;
-		}
-	}
-	//printf("\n");
-	printf("This big healpix owns %i small healpix.\n", pixesowned);
-	if (maxperhp)
-		printf("Max stars in this catalog will be %i\n", pixesowned * maxperhp);
+	/*{
+	  int pixesowned;
+	  pixesowned = 0;
+	  for (i=0; i<HP; i++)
+	  if (owned[i])
+	  pixesowned++;
+	  printf("This big healpix owns %i small healpix.\n", pixesowned);
+	  if (maxperhp)
+	  printf("Max stars in this catalog will be %i\n", pixesowned * maxperhp);
+	  }
+	*/
 
 	nwritten = 0;
-
 	entries = malloc(BLOCK * sizeof(an_entry));
 
 	// go through the healpixes, writing the star locations to the
@@ -172,6 +178,7 @@ int main(int argc, char** args) {
 		an_catalog* ancat;
 		int off, n;
 		int ndiscarded;
+		int nduplicates;
 
 		infn = args[optind];
 		ancat = an_catalog_open(infn);
@@ -183,6 +190,7 @@ int main(int argc, char** args) {
 		printf("Reading   %i entries from %s...\n", N, infn);
 		fflush(stdout);
 		ndiscarded = 0;
+		nduplicates = 0;
 		for (off=0; off<N; off+=n) {
 			stardata sd;
 			int j;
@@ -249,11 +257,29 @@ int main(int argc, char** args) {
 						// this new star is dimmer than the "maxperhp"th one in the list...
 						continue;
 				}
+				if (deduprad > 0.0) {
+					double xyz[3];
+					bool dup = FALSE;
+					radec2xyzarr(deg2rad(sd.ra), deg2rad(sd.dec), xyz);
+					for (j=0; j<bl_size(starlists[hp]); j++) {
+						double xyz2[3];
+						stardata* sd2 = bl_access(starlists[hp], j);
+						radec2xyzarr(deg2rad(sd2->ra), deg2rad(sd2->dec), xyz2);
+						if (!distsq_exceeds(xyz, xyz2, 3, deduprad)) {
+							nduplicates++;
+							dup = TRUE;
+							break;
+						}
+					}
+					if (dup)
+						continue;
+				}
 				bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
 			}
 		}
 
 		printf("Discarded %i stars not in this big healpix.\n", ndiscarded);
+		printf("Discarded %i duplicate stars.\n", nduplicates);
 
 		if (maxperhp) {
 			//printf("largest magnitudes: ");

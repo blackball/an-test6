@@ -5,6 +5,19 @@
 #include "starutil.h"
 #include "mathutil.h"
 
+inline void radec2xyz(double ra, double dec,
+					  double* x, double* y, double* z) {
+	*x = cos(dec) * cos(ra);
+	*y = cos(dec) * sin(ra);
+	*z = sin(dec);
+}
+
+inline void radec2xyzarr(double ra, double dec, double* xyz) {
+	xyz[0] = cos(dec) * cos(ra);
+	xyz[1] = cos(dec) * sin(ra);
+	xyz[2] = sin(dec);
+}
+
 inline void project_equal_area(double x, double y, double z, double* projx, double* projy) {
 	double Xp = x*sqrt(1./(1. + z));
 	double Yp = y*sqrt(1./(1. + z));
