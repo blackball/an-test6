@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
 	char scanrez = 1;
 	qidxfile* qidx;
 
-	if (argc <= 3) {
+	if (argc <= 2) {
+		fprintf(stderr, "not enough arguments. usage:\n");
 		fprintf(stderr, HelpString);
 		return (OPT_ERR);
 	}
