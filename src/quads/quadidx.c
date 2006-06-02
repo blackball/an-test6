@@ -111,7 +111,11 @@ int main(int argc, char *argv[]) {
 
 	qidx = qidxfile_open_for_writing(idxfname, quads->numstars, quads->numquads);
 	if (!qidx) {
-		fprintf(stderr, "Couldn't open outfile qidx file %s.\n", idxfname);
+ 		fprintf(stderr, "Couldn't open outfile qidx file %s.\n", idxfname);
+		exit(-1);
+	}
+	if (qidxfile_write_header(qidx)) {
+ 		fprintf(stderr, "Couldn't write qidx header (%s).\n", idxfname);
 		exit(-1);
 	}
 
@@ -127,7 +131,10 @@ int main(int argc, char *argv[]) {
 		stars = malloc(thisnumq * sizeof(uint));
 		il_copy(list, 0, thisnumq, (int*)stars);
 
-		qidxfile_write_star(qidx,  stars, thisnumq);
+		if (qidxfile_write_star(qidx,  stars, thisnumq)) {
+			fprintf(stderr, "Couldn't write star to qidx file (%s).\n", idxfname);
+			exit(-1);
+		}
 
 		free(stars);
 		il_free(list);
@@ -135,6 +142,7 @@ int main(int argc, char *argv[]) {
 	}
 	free(quadlist);
 	quadfile_close(quads);
+
 	if (qidxfile_close(qidx)) {
 		fprintf(stderr, "Failed to close qidx file.\n");
 		exit(-1);
