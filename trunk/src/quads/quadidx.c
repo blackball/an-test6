@@ -66,6 +66,8 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "quadidx: indexing quads in %s...\n",
 	        quadfname);
 
+	fprintf(stderr, "will write to file %s .\n", idxfname);
+
 	quads = quadfile_open(quadfname, 0);
 	if (!quads) {
 		fprintf(stderr, "Couldn't open quads file %s.\n", quadfname);
