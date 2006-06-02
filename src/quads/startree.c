@@ -84,10 +84,9 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    fprintf(stderr, "%s: building KD tree for %s\n", argv[0], catfname);
-
     catfname = mk_catfn(basename);
 	treefname = mk_streefn(basename);
+    fprintf(stderr, "%s: building KD tree for %s\n", argv[0], catfname);
 	fprintf(stderr, "Will write output to %s\n", treefname);
 
     fprintf(stderr, "Reading star catalogue...");

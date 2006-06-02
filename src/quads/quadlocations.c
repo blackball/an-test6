@@ -85,6 +85,11 @@ int main(int argc, char** args) {
 		cat = catalog_open(fn, 0);
 		free_fn(fn);
 
+		if (!qf || !cat) {
+			fprintf(stderr, "Failed to read input files.\n");
+			continue;
+		}
+
 		printf("Counting stars in quads...\n");
 		starcounts = calloc(sizeof(unsigned char), cat->numstars);
 		for (i=0; i<qf->numquads; i++) {
