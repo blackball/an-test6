@@ -157,6 +157,7 @@ qidxfile* qidxfile_open_for_writing(char* fn, uint nstars, uint nquads)
 	qfits_header_add(qf->header, "NSTARS", val, "Number of stars used.", NULL);
 	sprintf(val, "%u", qf->numquads);
 	qfits_header_add(qf->header, "NQUADS", val, "Number of quads.", NULL);
+	qfits_header_add(qf->header, "AN_FILE", "QIDX", "This is a quad index file.", NULL);
 
 	return qf;
 
@@ -196,17 +197,23 @@ int qidxfile_write_star(qidxfile* qf, uint* quads, uint nquads)
 		fprintf(stderr, "qidxfile_write_star: fid is null.\n");
 		return -1;
 	}
-	fseeko(qf->fid, qf->header_end + qf->cursor_index * 2 * sizeof(uint),
-		   SEEK_SET);
-	if ((fwrite(&qf->cursor_heap, sizeof(uint), 1, qf->fid) != 1) ||
-		(fwrite(&nquads,      sizeof(uint), 1, qf->fid) != 1)) {
-		fprintf(stderr, "qidxfile: failed to write a qidx offset/size.\n");
+	if (fseeko(qf->fid, qf->header_end + qf->cursor_index * 2 * sizeof(uint),
+			   SEEK_SET)) {
+		fprintf(stderr, "qidxfile_write_star: failed to fseek: %s\n", strerror(errno));
 		return -1;
 	}
-	fseeko(qf->fid, qf->header_end + qf->numstars * 2 * sizeof(uint) +
-		   qf->cursor_heap * sizeof(uint), SEEK_SET);
+	if ((fwrite(&qf->cursor_heap, sizeof(uint), 1, qf->fid) != 1) ||
+		(fwrite(&nquads,      sizeof(uint), 1, qf->fid) != 1)) {
+		fprintf(stderr, "qidxfile_write_star: failed to write a qidx offset/size.\n");
+		return -1;
+	}
+	if (fseeko(qf->fid, qf->header_end + qf->numstars * 2 * sizeof(uint) +
+			   qf->cursor_heap * sizeof(uint), SEEK_SET)) {
+		fprintf(stderr, "qidxfile_write_star: failed to fseek: %s\n", strerror(errno));
+		return -1;
+	}
 	if (fwrite(quads, sizeof(uint), nquads, qf->fid) != nquads) {
-		fprintf(stderr, "qidxfile: failed to write quads.\n");
+		fprintf(stderr, "qidxfile_write_star: failed to write quads.\n");
 		return -1;
 	}
 
