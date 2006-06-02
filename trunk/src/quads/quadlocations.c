@@ -10,24 +10,25 @@
 #include "fileutil.h"
 #include "starutil.h"
 
-#define OPTIONS "hf:n:o:"
+#define OPTIONS "hn:o:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 void print_help(char* progname)
 {
-	fprintf(stderr, "Usage: %s -f <base-name>\n"
+	fprintf(stderr, "Usage: %s\n"
 			"   -o <output-file-name>\n"
 			"   [-n <image-size>]  (default 3000)\n"
-			"   [-h]: help\n\n",
+			"   [-h]: help\n"
+			"   <base-name> [<base-name> ...]\n\n",
 	        progname);
 }
 
 int main(int argc, char** args) {
     int argchar;
 	int N = 3000;
-	char* basename = NULL;
+	char* basename;
 	char* outfn = NULL;
 	char* fn;
 	quadfile* qf;
@@ -55,18 +56,10 @@ int main(int argc, char** args) {
 			break;
 		}
 
-	if (!basename || !outfn || !N) {
+	if (!outfn || !N || (optind == argc)) {
 		print_help(args[0]);
 		exit(-1);
 	}
-
-	fn = mk_quadfn(basename);
-	qf = quadfile_open(fn, 0);
-	free_fn(fn);
-
-	fn = mk_catfn(basename);
-	cat = catalog_open(fn, 0);
-	free_fn(fn);
 
 	fid = fopen(outfn, "wb");
 	if (!fid) {
@@ -74,53 +67,70 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	printf("Counting stars in quads...\n");
-	starcounts = calloc(sizeof(unsigned char), cat->numstars);
-	for (i=0; i<qf->numquads; i++) {
-		uint stars[4];
-		int j;
-		if (!(i % 200000)) {
-			printf(".");
-			fflush(stdout);
-		}
-		quadfile_get_starids(qf, i, stars, stars+1,
-							 stars+2, stars+3);
-		for (j=0; j<4; j++) {
-			assert(stars[j] < cat->numstars);
-			assert(starcounts[stars[j]] < 255);
-			starcounts[stars[j]]++;
-		}
-	}
-	printf("\n");
-
 	counts = calloc(sizeof(uint), N*N);
 	if (!counts) {
 		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
 		exit(-1);
 	}
 
-	printf("Computing image...\n");
-	for (i=0; i<cat->numstars; i++) {
-		double* xyz;
-		double px, py;
-		int X, Y;
-		if (!(i % 100000)) {
-			printf(".");
-			fflush(stdout);
-		}
-		if (!starcounts[i])
-			continue;
-		xyz = catalog_get_star(cat, i);
-		project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
-		px = 0.5 + (px - 0.5) * 0.99;
-		py = 0.5 + (py - 0.5) * 0.99;
-		X = (int)rint(px * N);
-		Y = (int)rint(py * N);
-		counts[Y*N + X] += starcounts[i];
-	}
-	printf("\n");
+	for (; optind<argc; optind++) {
+		basename = args[optind];
+		printf("Reading files with basename %s\n", basename);
 
-	free(starcounts);
+		fn = mk_quadfn(basename);
+		qf = quadfile_open(fn, 0);
+		free_fn(fn);
+
+		fn = mk_catfn(basename);
+		cat = catalog_open(fn, 0);
+		free_fn(fn);
+
+		printf("Counting stars in quads...\n");
+		starcounts = calloc(sizeof(unsigned char), cat->numstars);
+		for (i=0; i<qf->numquads; i++) {
+			uint stars[4];
+			int j;
+			if (!(i % 200000)) {
+				printf(".");
+				fflush(stdout);
+			}
+			quadfile_get_starids(qf, i, stars, stars+1,
+								 stars+2, stars+3);
+			for (j=0; j<4; j++) {
+				assert(stars[j] < cat->numstars);
+				assert(starcounts[stars[j]] < 255);
+				starcounts[stars[j]]++;
+			}
+		}
+		printf("\n");
+
+
+		printf("Computing image...\n");
+		for (i=0; i<cat->numstars; i++) {
+			double* xyz;
+			double px, py;
+			int X, Y;
+			if (!(i % 100000)) {
+				printf(".");
+				fflush(stdout);
+			}
+			if (!starcounts[i])
+				continue;
+			xyz = catalog_get_star(cat, i);
+			project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
+			px = 0.5 + (px - 0.5) * 0.99;
+			py = 0.5 + (py - 0.5) * 0.99;
+			X = (int)rint(px * N);
+			Y = (int)rint(py * N);
+			counts[Y*N + X] += starcounts[i];
+		}
+		printf("\n");
+
+		catalog_close(cat);
+		quadfile_close(qf);
+
+		free(starcounts);
+	}
 
 	maxval = 0;
 	for (i=0; i<(N*N); i++)
@@ -144,8 +154,6 @@ int main(int argc, char** args) {
 	}
 	fclose(fid);
 
-	catalog_close(cat);
-	quadfile_close(qf);
 	free(img);
 	free(counts);
 
