@@ -490,6 +490,7 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	int unmatches;
 	int conflicts;
 	double avgmatch;
+	double maxmatch;
 	assert(mo->transform);
 	assert(startree);
 	NF = xy_size(field);
@@ -502,7 +503,7 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	}
 
 	matches = unmatches = conflicts = 0;
-	avgmatch = 0.0;
+	maxmatch = avgmatch = 0.0;
 	map = intmap_new();
 	for (i=0; i<NF; i++) {
 		double bestd2;
@@ -514,13 +515,16 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 			else
 				matches++;
 			avgmatch += sqrt(bestd2);
+			if (bestd2 > maxmatch)
+				maxmatch = bestd2;
 		} else
 			unmatches++;
 	}
 	avgmatch /= (double)(conflicts + matches);
 
-	printf("%i matches, %i unmatches, %i conflicts.  Avg match dist: %g arcsec\n",
-		   matches, unmatches, conflicts, rad2arcsec(distsq2arc(square(avgmatch))));
+	printf("%i matches, %i unmatches, %i conflicts.  Avg match dist: %g arcsec, max dist %g arcsec\n",
+		   matches, unmatches, conflicts, rad2arcsec(distsq2arc(square(avgmatch))),
+		   rad2arcsec(distsq2arc(maxmatch)));
 	fflush(stdout);
 
 	intmap_free(map);
