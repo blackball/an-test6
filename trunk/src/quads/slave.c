@@ -31,6 +31,7 @@
 #include "tic.h"
 #include "quadfile.h"
 #include "idfile.h"
+#include "intmap.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -47,6 +48,7 @@ int read_parameters();
 // params:
 char *fieldfname = NULL, *treefname = NULL;
 char *quadfname = NULL, *catfname = NULL;
+char* startreefname = NULL;
 char *idfname = NULL;
 char* matchfname = NULL;
 char* donefname = NULL;
@@ -67,6 +69,7 @@ bool agreement = FALSE;
 int nagree = 4;
 int maxnagree = 0;
 double agreetol = 0.0;
+double verify_dist2 = 0.0;
 
 hitlist* hits = NULL;
 
@@ -77,6 +80,7 @@ FILE* matchfid = NULL;
 catalog* cat;
 idfile* id;
 quadfile* quads;
+kdtree_t* startree;
 
 // histogram of the size of agreement clusters.
 int *agreesizehist;
@@ -113,6 +117,7 @@ int main(int argc, char *argv[]) {
 
 		fieldfname = NULL;
 		treefname = NULL;
+		startreefname = NULL;
 		quadfname = NULL;
 		catfname = NULL;
 		idfname = NULL;
@@ -136,6 +141,7 @@ int main(int argc, char *argv[]) {
 		hits = NULL;
 		matchfid = NULL;
 		quads = NULL;
+		startree = NULL;
 		xcolname = strdup("ROWC");
 		ycolname = strdup("COLC");
 
@@ -151,6 +157,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%s params:\n", progname);
 		fprintf(stderr, "fieldfname %s\n", fieldfname);
 		fprintf(stderr, "treefname %s\n", treefname);
+		fprintf(stderr, "startreefname %s\n", startreefname);
 		fprintf(stderr, "quadfname %s\n", quadfname);
 		fprintf(stderr, "catfname %s\n", catfname);
 		fprintf(stderr, "idfname %s\n", idfname);
@@ -168,6 +175,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "num-to-agree %i\n", nagree);
 		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
+		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 
@@ -200,7 +208,7 @@ int main(int argc, char *argv[]) {
 		xy->xname = xcolname;
 		xy->yname = ycolname;
 
-		// Read .ckdt2 file...
+		// Read .ckdt file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
 		fflush(stderr);
 		codekd = kdtree_fits_read_file(treefname);
@@ -247,6 +255,14 @@ int main(int argc, char *argv[]) {
 		}
 		free(idfname);
 
+		fprintf(stderr, "Reading star KD tree from %s...", startreefname);
+		fflush(stderr);
+		startree = kdtree_fits_read_file(startreefname);
+		if (!startree)
+			fprintf(stderr, "Star kdtree not found or failed to read.\n");
+		else
+			fprintf(stderr, "done\n");
+
 		matchfile.parity = parity;
 		path = get_pathname(treefname);
 		if (path)
@@ -291,6 +307,7 @@ int main(int argc, char *argv[]) {
 		fclose(matchfid);
 		free_fn(fieldfname);
 		free_fn(treefname);
+		free_fn(startreefname);
 
 		kdtree_close(codekd);
 		catalog_close(cat);
@@ -363,6 +380,7 @@ int read_parameters() {
 					"    nagree <min-to-agree>\n"
 					"    maxnagree <max-to-agree>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
+					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
@@ -384,6 +402,10 @@ int read_parameters() {
 			quadfname = mk_quadfn(fname);
 			catfname = mk_catfn(fname);
 			idfname = mk_idfn(fname);
+			startreefname = mk_streefn(fname);
+		} else if (is_word(buffer, "verify_dist", &nextword)) {
+			double d = atof(nextword);
+			verify_dist2 = arcsec2distsq(d);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
@@ -458,7 +480,57 @@ int read_parameters() {
 	}
 }
 
-int handlehit(struct solver_params* p, MatchObj* mo) {
+int verify_hit(MatchObj* mo, solver_params* p) {
+	xy* field = p->field;
+	int i, NF;
+	double* fieldstars;
+	intmap* map;
+	int matches;
+	int unmatches;
+	int conflicts;
+	assert(mo->transform);
+	assert(startree);
+	NF = xy_size(field);
+	fieldstars = malloc(3 * NF * sizeof(double));
+	for (i=0; i<NF; i++) {
+		double u, v;
+		u = xy_refx(field, i);
+		v = xy_refy(field, i);
+		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
+	}
+
+	matches = unmatches = conflicts = 0;
+	map = intmap_new();
+	for (i=0; i<NF; i++) {
+		double bestd2;
+		int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
+		if (bestd2 <= verify_dist2) {
+			if (intmap_add(map, ind, i) == -1)
+				// a field object already selected star 'ind' as its nearest neighbour.
+				conflicts++;
+			else
+				matches++;
+		} else
+			unmatches++;
+	}
+
+	printf("%i matches, %i unmatches, %i conflicts.\n",
+		   matches, unmatches, conflicts);
+
+	intmap_free(map);
+	free(fieldstars);
+	return 1;
+}
+
+int handlehit(solver_params* p, MatchObj* mo) {
+
+	if (startree && (verify_dist2 > 0.0)) {
+		if (!verify_hit(mo, p)) {
+			// hit not verified.
+			return 0;
+		}
+	}
+
 	if (agreement) {
 		// hack - share this struct between all the matches for this
 		// field...

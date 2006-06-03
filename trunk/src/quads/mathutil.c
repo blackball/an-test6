@@ -1,6 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
+
 #include "mathutil.h"
 
 inline int imax(int a, int b) {
@@ -142,8 +144,8 @@ double inverse_3by3(double *matrix)
 void image_to_xyz(double uu, double vv, double* s, double* transform) {
 	double x, y, z;
 	double length;
-	if (s == NULL || transform == NULL)
-		return;
+	assert(s);
+	assert(transform);
 
 	x = uu * transform[0] +
 		vv * transform[1] +

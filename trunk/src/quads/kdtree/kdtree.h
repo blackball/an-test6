@@ -57,8 +57,8 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
  * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
  * (kd->perm[ind]).
  *
- * If "bestd2" is non-NULL, the distance to the nearest neighbour will be place
- * there.
+ * If "bestd2" is non-NULL, the distance-squared to the nearest neighbour
+ * will be placed there.
  */
 int kdtree_nearest_neighbour(kdtree_t* kd, real *pt, real* bestd2);
 
