@@ -240,11 +240,8 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	Nside = (int)sqrt((4.0 * M_PI / 12.0) / square(arcsec2rad(AgreeArcSec)));
 	if (!Nside)
 		Nside = 1;
-	//if (Nside > 256)
-	//Nside = 256;
 	if (Nside > 128)
 		Nside = 128;
-	//fprintf(stderr, "Chose Nside=%i.\n", Nside);
 
 	hl = malloc(sizeof(hitlist));
 	hl->Nside = Nside;
@@ -258,8 +255,6 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 				hl->npix * sizeof(pixinfo), strerror(errno));
 		return NULL;
 	}
-
-	//fprintf(stderr, "sizeof(pixinfo)=%i.  Nside=%i, npix=%i, total %i bytes.\n", sizeof(pixinfo), Nside, hl->npix, sizeof(pixinfo)*hl->npix);
 
 	for (p=0; p<hl->npix; p++) {
 		init_pixinfo(hl->pix + p, p, Nside);
@@ -482,8 +477,6 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 
 	// Increment the total number of matches...
 	hlist->ntotal++;
-
-	//return 0;
 	return hlist->nbest;
 }
 
@@ -500,6 +493,7 @@ void hitlist_healpix_clear(hitlist* hlist) {
 		MatchObj* mo = (MatchObj*)pl_get(hlist->matchlist, m);
 		if (!mo)
 			continue;
+		free(mo->transform);
 		free_MatchObj(mo);
 	}
 	pl_remove_all(hlist->matchlist);
