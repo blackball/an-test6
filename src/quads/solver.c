@@ -326,8 +326,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
 
-		free(transform);
-
 		// scale checking
 		// fieldunitsupper/lower is in arcseconds/pixel
 		{
@@ -352,6 +350,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 
 		mo = mk_MatchObj();
+
+		mo->transform = transform;
+		//free(transform);
 
 		mo->quadno = thisquadno;
 		mo->iA = iA;
