@@ -477,7 +477,8 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 
 	// Increment the total number of matches...
 	hlist->ntotal++;
-	return hlist->nbest;
+	//return hlist->nbest;
+	return il_size(mergelist);
 }
 
 

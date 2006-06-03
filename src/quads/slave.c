@@ -516,6 +516,7 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 
 	printf("%i matches, %i unmatches, %i conflicts.\n",
 		   matches, unmatches, conflicts);
+	fflush(stdout);
 
 	intmap_free(map);
 	free(fieldstars);
@@ -524,20 +525,24 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 
 int handlehit(solver_params* p, MatchObj* mo) {
 
-	if (startree && (verify_dist2 > 0.0)) {
-		if (!verify_hit(mo, p)) {
-			// hit not verified.
-			return 0;
-		}
-	}
-
 	if (agreement) {
+		int nagree;
 		// hack - share this struct between all the matches for this
 		// field...
 		mo->extra = &matchfile;
 		// compute (x,y,z) center, scale, rotation.
 		hitlist_healpix_compute_vector(mo);
-		return hitlist_healpix_add_hit(hits, mo);
+		nagree = hitlist_healpix_add_hit(hits, mo);
+		if (nagree >= 2) {
+			if (startree && (verify_dist2 > 0.0)) {
+				if (!verify_hit(mo, p)) {
+					// hit not verified.
+					return 0;
+				}
+			}
+		}
+		return nagree;
+
 	} else {
 		if (matchfile_write_match(matchfid, mo, &matchfile)) {
 			fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
