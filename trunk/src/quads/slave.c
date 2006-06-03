@@ -4,7 +4,8 @@
  * Inputs: .ckdt .objs .quad
  * Output: .match
  */
-
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -49,6 +50,7 @@ char *quadfname = NULL, *catfname = NULL;
 char *idfname = NULL;
 char* matchfname = NULL;
 char* donefname = NULL;
+char* solvedfname = NULL;
 char* xcolname;
 char* ycolname;
 bool parity = DEFAULT_PARITY_FLIP;
@@ -63,6 +65,7 @@ double index_scale_lower;
 double index_scale_lower_factor = 0.0;
 bool agreement = FALSE;
 int nagree = 4;
+int maxnagree = 0;
 double agreetol = 0.0;
 
 hitlist* hits = NULL;
@@ -115,6 +118,7 @@ int main(int argc, char *argv[]) {
 		idfname = NULL;
 		matchfname = NULL;
 		donefname = NULL;
+		solvedfname = NULL;
 		parity = DEFAULT_PARITY_FLIP;
 		codetol = DEFAULT_CODE_TOL;
 		startdepth = 0;
@@ -126,6 +130,7 @@ int main(int argc, char *argv[]) {
 		index_scale_lower_factor = 0.0;
 		agreement = FALSE;
 		nagree = 4;
+		maxnagree = 0;
 		agreetol = 0.0;
 		cat = NULL;
 		hits = NULL;
@@ -151,6 +156,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "idfname %s\n", idfname);
 		fprintf(stderr, "matchfname %s\n", matchfname);
 		fprintf(stderr, "donefname %s\n", donefname);
+		fprintf(stderr, "solvedfname %s\n", solvedfname);
 		fprintf(stderr, "parity %i\n", parity);
 		fprintf(stderr, "codetol %g\n", codetol);
 		fprintf(stderr, "startdepth %i\n", startdepth);
@@ -160,6 +166,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "index_lower %g\n", index_scale_lower_factor);
 		fprintf(stderr, "agreement %i\n", agreement);
 		fprintf(stderr, "num-to-agree %i\n", nagree);
+		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
@@ -271,6 +278,7 @@ int main(int argc, char *argv[]) {
 			fclose(batchfid);
 		}
 		free(donefname);
+		free(solvedfname);
 		free(matchfname);
 
 		free(matchfile.indexpath);
@@ -342,6 +350,7 @@ int read_parameters() {
 					"    match <match-file-name>\n"
 					"    done <done-file-name>\n"
 					"    field <field-file-name>\n"
+					"    solvedfname <solved-field-filename-template>\n"
 					"    fields [<field-number> or <start range>/<end range>...]\n"
 					"    sdepth <start-field-object>\n"
 					"    depth <end-field-object>\n"
@@ -352,6 +361,7 @@ int read_parameters() {
 					"    index_lower <index-size-lower-bound-fraction>\n"
 					"    agreement\n"
 					"    nagree <min-to-agree>\n"
+					"    maxnagree <max-to-agree>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    run\n"
 					"    help\n"
@@ -364,6 +374,8 @@ int read_parameters() {
 			agreement = TRUE;
 		} else if (is_word(buffer, "nagree ", &nextword)) {
 			nagree = atoi(nextword);
+		} else if (is_word(buffer, "maxnagree ", &nextword)) {
+			maxnagree = atoi(nextword);
 		} else if (is_word(buffer, "agreetol ", &nextword)) {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "index ", &nextword)) {
@@ -381,6 +393,9 @@ int read_parameters() {
 		} else if (is_word(buffer, "done ", &nextword)) {
 			char* fname = nextword;
 			donefname = strdup(fname);
+		} else if (is_word(buffer, "solved", &nextword)) {
+			char* fname = nextword;
+			solvedfname = strdup(fname);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
 			int d = atoi(nextword);
 			startdepth = d;
@@ -473,7 +488,7 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 	solver.codekd = codekd;
 	solver.endobj = enddepth;
 	solver.maxtries = 0;
-	solver.max_matches_needed = 0;
+	solver.max_matches_needed = maxnagree;
 	solver.codetol = codetol;
 	solver.cornerpix = mk_xy(2);
 	solver.handlehit = handlehit;
@@ -503,16 +518,22 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			continue;
 		}
 
+		if (solvedfname) {
+			char fn[256];
+			struct stat st;
+			sprintf(fn, solvedfname, fieldnum);
+			if (stat(fn, &st) == 0) {
+				// file exists; field has already been solved.
+				fprintf(stderr, "Field %i: file %s exists; field has been solved.\n",
+						fieldnum, fn);
+				continue;
+			}
+		}
+
 		thisfield = xylist_get_field(thefields, fieldnum);
 		if (!thisfield) {
 			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
 			continue;
-		}
-
-		if (xy_size(thisfield) >= 2) {
-			printf("first two points in field: (%g,%g), (%g,%g)\n",
-				   xy_refx(thisfield, 0), xy_refy(thisfield, 0),
-				   xy_refx(thisfield, 1), xy_refy(thisfield, 1));
 		}
 
 		matchfile.fieldnum = fieldnum;
@@ -532,7 +553,6 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		solve_field(&solver);
 
 		free_xy(thisfield);
-
 
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
@@ -586,6 +606,20 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			pl_free(best);
 			hitlist_healpix_clear(hits);
 			hitlist_healpix_free(hits);
+
+			if (maxnagree && (nbest >= maxnagree) && solvedfname) {
+				// write a file to indicate that the field was solved.
+				char fn[256];
+				FILE* f;
+				sprintf(fn, solvedfname, fieldnum);
+				fprintf(stderr, "Field %i solved: writing file %s to indicate this.\n",
+						fieldnum, fn);
+				if (!(f = fopen(fn, "w")) ||
+					fclose(f)) {
+					fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
+				}
+			}
+
 		}
 
 		get_resource_stats(&utime, &stime, NULL);
