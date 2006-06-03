@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
+#include <math.h>
 
 #include "kdtree.h"
 #include "kdtree_io.h"
@@ -488,6 +489,7 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	int matches;
 	int unmatches;
 	int conflicts;
+	double avgmatch;
 	assert(mo->transform);
 	assert(startree);
 	NF = xy_size(field);
@@ -500,6 +502,7 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	}
 
 	matches = unmatches = conflicts = 0;
+	avgmatch = 0.0;
 	map = intmap_new();
 	for (i=0; i<NF; i++) {
 		double bestd2;
@@ -510,12 +513,14 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 				conflicts++;
 			else
 				matches++;
+			avgmatch += sqrt(bestd2);
 		} else
 			unmatches++;
 	}
+	avgmatch /= (double)(conflicts + matches);
 
-	printf("%i matches, %i unmatches, %i conflicts.\n",
-		   matches, unmatches, conflicts);
+	printf("%i matches, %i unmatches, %i conflicts.  Avg match dist: %g arcsec\n",
+		   matches, unmatches, conflicts, rad2arcsec(distsq2arc(square(avgmatch))));
 	fflush(stdout);
 
 	intmap_free(map);
