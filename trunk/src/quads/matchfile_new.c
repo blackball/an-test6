@@ -1,143 +1,154 @@
-#include "matchfile.h"
+#include <assert.h>
+
+//#include "matchfile.h"
+#include "matchfile_new.h"
+#include "fitsioutils.h"
 #include "ioutils.h"
 
-int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me) {
-	int err = 0;
-	int i;
-	err |=
-		write_u32(fid, ENDIAN_DETECTOR) ||
-		write_u32(fid, me->fieldnum) ||
-		write_double(fid, me->codetol) ||
-		write_u8(fid, me->parity) ||
-		write_string(fid, me->indexpath) ||
-		write_string(fid, me->fieldpath) ||
-		write_u32(fid, mo->quadno) ||
-		write_u32(fid, mo->iA) ||
-		write_u32(fid, mo->iB) ||
-		write_u32(fid, mo->iC) ||
-		write_u32(fid, mo->iD) ||
-		write_u32(fid, mo->fA) ||
-		write_u32(fid, mo->fB) ||
-		write_u32(fid, mo->fC) ||
-		write_u32(fid, mo->fD) ||
-		write_double(fid, mo->code_err);
-	/* ticket #111
-	  write_double(fid, mo->fieldunits_lower) ||
-	  write_double(fid, mo->fieldunits_upper);
-	*/
-
-	for (i=0; i<MATCH_VECTOR_SIZE; i++) {
-		if (!err) err |= write_double(fid, mo->vector[i]);
+matchfile* new_matchfile() {
+	matchfile* mf = calloc(1, sizeof(matchfile));
+	if (!mf) {
+		fprintf(stderr, "Couldn't allocate a new matchfile.");
+		return NULL;
 	}
-	for (i=0; i<DIM_STARS; i++) {
-		if (!err) err |= write_double(fid, mo->sMin[i]);
-	}
-	for (i=0; i<DIM_STARS; i++) {
-		if (!err) err |= write_double(fid, mo->sMax[i]);
-	}
-	if (err) {
-		fprintf(stderr, "Error writing match file entry: %s\n", strerror(errno));
-	}
-	return err;
+	return mf;
 }
 
-int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
-	int err = 0, i;
-	uint endian;
-	uint fieldnum;
-	double codetol;
-	unsigned char parity;
-	char* indexpath;
-	char* fieldpath;
-	uint quad, iA, iB, iC, iD, fA, fB, fC, fD;
-	double codeerr;
-	MatchObj* mo;
-	/* ticket #111
-	   double funits_lower;
-	   double funits_upper;
-	*/
-	err |=
-		read_u32(fid, &endian) ||
-		read_u32(fid, &fieldnum) ||
-		read_double(fid, &codetol) ||
-		read_u8(fid, &parity);
-	if (err) {
-		fprintf(stderr, "Error reading matchfile entry: %s\n", strerror(errno));
-		return 1;
-	}
-	if (endian != ENDIAN_DETECTOR) {
-		fprintf(stderr, "Matchfile has incorrect endianness: 0x%x vs 0x%x\n",
-				endian, ENDIAN_DETECTOR);
-		return 1;
-	}
-	indexpath = read_string(fid);
-	fieldpath = read_string(fid);
-	if (!indexpath || !fieldpath) {
-		fprintf(stderr, "Error reading matchfile entry: %s\n", strerror(errno));
-		free(indexpath);
-		free(fieldpath);
-		return 1;
+matchfile* matchfile_open_for_writing(char* fn) {
+	matchfile* mf;
+
+	mf = new_matchfile();
+	if (!mf)
+		goto bailout;
+	mf->fid = fopen(fn, "wb");
+	if (!mf->fid) {
+		fprintf(stderr, "Couldn't open file %s for quad FITS output: %s\n", fn, strerror(errno));
+		goto bailout;
 	}
 
-	err |=
-		read_u32(fid, &quad) ||
-		read_u32(fid, &iA) ||
-		read_u32(fid, &iB) ||
-		read_u32(fid, &iC) ||
-		read_u32(fid, &iD) ||
-		read_u32(fid, &fA) ||
-		read_u32(fid, &fB) ||
-		read_u32(fid, &fC) ||
-		read_u32(fid, &fD) ||
-		read_double(fid, &codeerr);
+    // the header
+    mf->header = qfits_table_prim_header_default();
 	/*
-	  ticket #111
-	  read_double(fid, &funits_lower) ||
-	  read_double(fid, &funits_upper);
+	  fits_add_endian(mf->header);
+	  fits_add_uint_size(mf->header);
 	*/
 
-	mo = mk_MatchObj();
+	qfits_header_add(mf->header, "AN_FILE", MATCHFILE_AN_FILETYPE,
+					 "This is a list of quad matches.", NULL);
+	return mf;
 
-	for (i=0; i<MATCH_VECTOR_SIZE; i++) {
-		if (!err) err |= read_double(fid, mo->vector + i);
+ bailout:
+	if (mf) {
+		if (mf->fid)
+			fclose(mf->fid);
+		free(mf);
 	}
-	for (i=0; i<DIM_STARS; i++) {
-		double d;
-		if (!err) err |= read_double(fid, &d);
-		mo->sMin[i] = d;
-	}
-	for (i=0; i<DIM_STARS; i++) {
-		double d;
-		if (!err) err |= read_double(fid, &d);
-		mo->sMax[i] = d;
-	}
+	return NULL;
+}
 
-	if (err) {
-		fprintf(stderr, "Error reading matchfile entry: %s\n", strerror(errno));
-		free(indexpath);
-		free(fieldpath);
-		free_MatchObj(mo);
-		return 1;
-	}
-
-	mo->quadno = quad;
-	mo->iA = iA;
-	mo->iB = iB;
-	mo->iC = iC;
-	mo->iD = iD;
-	mo->fA = fA;
-	mo->fB = fB;
-	mo->fC = fC;
-	mo->fD = fD;
-	mo->code_err = codeerr;
-	mo->transform = NULL;
-
-	me->fieldnum = fieldnum;
-	me->parity = parity;
-	me->indexpath = indexpath;
-	me->fieldpath = fieldpath;
-	me->codetol = codetol;
-
-	*pmo = mo;
+int matchfile_write_header(matchfile* mf) {
+	// the main file header is quite minimal...
+    qfits_header_dump(mf->header, mf->fid);
+	mf->header_end = ftello(mf->fid);
 	return 0;
 }
+
+int matchfile_fix_header(matchfile* mf) {
+	off_t offset;
+	off_t new_header_end;
+	assert(mf->fid);
+	offset = ftello(mf->fid);
+	fseeko(mf->fid, 0, SEEK_SET);
+    qfits_header_dump(mf->header, mf->fid);
+	new_header_end = ftello(mf->fid);
+	if (new_header_end != mf->header_end) {
+		fprintf(stderr, "Warning: matchfile header used to end at %lu, "
+				"now it ends at %lu.\n", (unsigned long)mf->header_end,
+				(unsigned long)new_header_end);
+		return -1;
+	}
+	fseek(mf->fid, offset, SEEK_SET);
+	fits_pad_file(mf->fid);
+	return 0;
+}
+
+// mapping between a struct field and FITS field.
+struct fits_struct_pair {
+	char* fieldname;
+	char* units;
+	int offset;
+	int size;
+	tfits_type fitstype;
+};
+typedef struct fits_struct_pair fitstruct;
+
+static fitstruct matchfile_fitstruct[MATCHFILE_FITS_COLUMNS];
+static bool matchfile_fitstruct_inited = 0;
+
+#define SET_FIELDS(A, i, t, n, u, fld) { \
+ matchfile_entry x; \
+ A[i].fieldname=n; \
+ A[i].units=u; \
+ A[i].offset=offsetof(matchfile_entry, fld); \
+ A[i].size=sizeof(x.fld); \
+ A[i].fitstype=t; \
+ i++; \
+}
+
+static void init_matchfile_fitstruct() {
+	fitstruct* fs = matchfile_fitstruct;
+	int i = 0, ob;
+	char* nil = " ";
+
+ 	//SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
+
+	assert(i == MATCHFILE_FITS_COLUMNS);
+	matchfile_fitstruct_inited = 1;
+}
+
+static qfits_table* matchfile_get_table() {
+	uint datasize;
+	uint ncols, nrows, tablesize;
+	int col;
+	qfits_table* table;
+
+	if (!matchfile_fitstruct_inited)
+		init_matchfile_fitstruct();
+	// dummy values here...
+	datasize = 0;
+	ncols = MATCHFILE_FITS_COLUMNS;
+	nrows = 0;
+	tablesize = datasize * nrows * ncols;
+	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+	table->tab_w = 0;
+	for (col=0; col<MATCHFILE_FITS_COLUMNS; col++) {
+		fitstruct* fs = matchfile_fitstruct + col;
+		fits_add_column(table, col, fs->fitstype, 1, fs->units, fs->fieldname);
+	}
+	table->tab_w = qfits_compute_table_width(table);
+	return table;
+}
+
+int matchfile_write_table(matchfile* mf, matchfile_entry* me) {
+	if  (mf->meheader) {
+		qfits_header_destroy(mf->meheader);
+	}
+	qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
+	               "qidx", "", "", "", 0, 0, 0, 0, 0);
+	qfits_header_dump(qf->header, qf->fid);
+	qfits_header* tablehdr = qfits_table_ext_header_default(table);
+	qfits_header_dump(tablehdr, qf->fid);
+	qfits_table_close(table);
+	qfits_header_destroy(tablehdr);
+	qf->header_end = ftello(qf->fid);
+
+
+}
+
+int matchfile_fix_table(matchfile* m);
+
+
+
+
+
