@@ -187,8 +187,8 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "CodeTol %g\n", me.codetol);
 					//fprintf(stderr, "FieldUnits [%g, %g]\n", me.fieldunits_lower, me.fieldunits_upper);
 					fprintf(stderr, "Quad %i\n", (int)mo->quadno);
-					fprintf(stderr, "Stars %i %i %i %i\n", (int)mo->iA, (int)mo->iB, (int)mo->iC, (int)mo->iD);
-					fprintf(stderr, "FieldObjs %i %i %i %i\n", (int)mo->fA, (int)mo->fB, (int)mo->fC, (int)mo->fD);
+					fprintf(stderr, "Stars %u %u %u %u\n", mo->star[0], mo->star[1], mo->star[2], mo->star[3]);
+					fprintf(stderr, "FieldObjs %u %u %u %u\n", mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
 					// the code_err values in the matchfile are actually squared.
 					fprintf(stderr, "CodeErr %g\n", sqrt(mo->code_err));
 				}

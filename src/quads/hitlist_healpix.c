@@ -373,10 +373,10 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 			// are we checking correspondence?
 			if (hlist->do_correspond) {
 				intmap* map = (intmap*)pl_get(hlist->correspondlist, agreeind);
-				if (intmap_conflicts(map, match->fA, match->iA) ||
-					intmap_conflicts(map, match->fB, match->iB) ||
-					intmap_conflicts(map, match->fC, match->iC) ||
-					intmap_conflicts(map, match->fD, match->iD)) {
+				if (intmap_conflicts(map, match->field[0], match->star[0]) ||
+					intmap_conflicts(map, match->field[1], match->star[1]) ||
+					intmap_conflicts(map, match->field[2], match->star[2]) ||
+					intmap_conflicts(map, match->field[3], match->star[3])) {
 					continue;
 				}
 			}
@@ -433,10 +433,10 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 		newlist = il_new(4);
 		if (hlist->do_correspond) {
 			newmap = intmap_new();
-			intmap_add(newmap, match->fA, match->iA);
-			intmap_add(newmap, match->fB, match->iB);
-			intmap_add(newmap, match->fC, match->iC);
-			intmap_add(newmap, match->fD, match->iD);
+			intmap_add(newmap, match->field[0], match->star[0]);
+			intmap_add(newmap, match->field[1], match->star[1]);
+			intmap_add(newmap, match->field[2], match->star[2]);
+			intmap_add(newmap, match->field[3], match->star[3]);
 		}
 
 		// find an available spot in agreelist:

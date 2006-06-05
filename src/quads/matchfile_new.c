@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <stddef.h>
+#include <errno.h>
+#include <string.h>
 
 //#include "matchfile.h"
 #include "matchfile_new.h"
@@ -78,6 +81,7 @@ struct fits_struct_pair {
 	char* units;
 	int offset;
 	int size;
+	int ncopies;
 	tfits_type fitstype;
 };
 typedef struct fits_struct_pair fitstruct;
@@ -85,22 +89,28 @@ typedef struct fits_struct_pair fitstruct;
 static fitstruct matchfile_fitstruct[MATCHFILE_FITS_COLUMNS];
 static bool matchfile_fitstruct_inited = 0;
 
-#define SET_FIELDS(A, i, t, n, u, fld) { \
- matchfile_entry x; \
+#define SET_FIELDS(A, i, t, n, u, fld, nc) { \
+ MatchObj x; \
  A[i].fieldname=n; \
  A[i].units=u; \
- A[i].offset=offsetof(matchfile_entry, fld); \
+ A[i].offset=offsetof(MatchObj, fld); \
  A[i].size=sizeof(x.fld); \
+ A[i].ncopies=nc; \
  A[i].fitstype=t; \
  i++; \
 }
 
 static void init_matchfile_fitstruct() {
 	fitstruct* fs = matchfile_fitstruct;
-	int i = 0, ob;
+	int i = 0;
 	char* nil = " ";
 
- 	//SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, 4);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "mincorner", nil, sMin, 3);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "maxcorner", nil, sMax, 3);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
@@ -121,6 +131,7 @@ static qfits_table* matchfile_get_table() {
 	tablesize = datasize * nrows * ncols;
 	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
 	table->tab_w = 0;
+
 	for (col=0; col<MATCHFILE_FITS_COLUMNS; col++) {
 		fitstruct* fs = matchfile_fitstruct + col;
 		fits_add_column(table, col, fs->fitstype, 1, fs->units, fs->fieldname);
@@ -130,23 +141,23 @@ static qfits_table* matchfile_get_table() {
 }
 
 int matchfile_write_table(matchfile* mf, matchfile_entry* me) {
+	int tablesize, ncols, nrows;
 	if  (mf->meheader) {
 		qfits_header_destroy(mf->meheader);
 	}
-	qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
-	               "qidx", "", "", "", 0, 0, 0, 0, 0);
-	qfits_header_dump(qf->header, qf->fid);
+	tablesize = ncols = nrows = 0;
+	qfits_table* table = matchfile_get_table();
 	qfits_header* tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, qf->fid);
+	qfits_header_dump(tablehdr, mf->fid);
 	qfits_table_close(table);
 	qfits_header_destroy(tablehdr);
-	qf->header_end = ftello(qf->fid);
-
-
+	//mf->header_end = ftello(mf->fid);
+	return 0;
 }
 
-int matchfile_fix_table(matchfile* m);
+int matchfile_fix_table(matchfile* m) {
+	return 0;
+}
 
 
 

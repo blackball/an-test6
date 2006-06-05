@@ -5,16 +5,12 @@
 
 struct match_struct {
     uint quadno;
-    uint iA, iB, iC, iD;
-    uint fA, fB, fC, fD;
+	uint star[4];
+	uint field[4];
     double code_err;
-    //star *sMin, *sMax;
-
 	double sMin[3];
 	double sMax[3];
-
     double vector[6];
-
 	double* transform;
 	/*
 	  double corners[4];
