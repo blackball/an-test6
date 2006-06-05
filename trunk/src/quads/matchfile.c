@@ -12,14 +12,14 @@ int matchfile_write_match(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 		write_string(fid, me->indexpath) ||
 		write_string(fid, me->fieldpath) ||
 		write_u32(fid, mo->quadno) ||
-		write_u32(fid, mo->iA) ||
-		write_u32(fid, mo->iB) ||
-		write_u32(fid, mo->iC) ||
-		write_u32(fid, mo->iD) ||
-		write_u32(fid, mo->fA) ||
-		write_u32(fid, mo->fB) ||
-		write_u32(fid, mo->fC) ||
-		write_u32(fid, mo->fD) ||
+		write_u32(fid, mo->star[0]) ||
+		write_u32(fid, mo->star[1]) ||
+		write_u32(fid, mo->star[2]) ||
+		write_u32(fid, mo->star[3]) ||
+		write_u32(fid, mo->field[0]) ||
+		write_u32(fid, mo->field[1]) ||
+		write_u32(fid, mo->field[2]) ||
+		write_u32(fid, mo->field[3]) ||
 		write_double(fid, mo->code_err);
 	/* ticket #111
 	  write_double(fid, mo->fieldunits_lower) ||
@@ -121,14 +121,14 @@ int matchfile_read_match(FILE* fid, MatchObj** pmo, matchfile_entry* me) {
 	}
 
 	mo->quadno = quad;
-	mo->iA = iA;
-	mo->iB = iB;
-	mo->iC = iC;
-	mo->iD = iD;
-	mo->fA = fA;
-	mo->fB = fB;
-	mo->fC = fC;
-	mo->fD = fD;
+	mo->star[0] = iA;
+	mo->star[1] = iB;
+	mo->star[2] = iC;
+	mo->star[3] = iD;
+	mo->field[0] = fA;
+	mo->field[1] = fB;
+	mo->field[2] = fC;
+	mo->field[3] = fD;
 	mo->code_err = codeerr;
 	mo->transform = NULL;
 

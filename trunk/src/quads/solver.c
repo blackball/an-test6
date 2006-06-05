@@ -355,14 +355,14 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		//free(transform);
 
 		mo->quadno = thisquadno;
-		mo->iA = iA;
-		mo->iB = iB;
-		mo->iC = iC;
-		mo->iD = iD;
-		mo->fA = fA;
-		mo->fB = fB;
-		mo->fC = fC;
-		mo->fD = fD;
+		mo->star[0] = iA;
+		mo->star[1] = iB;
+		mo->star[2] = iC;
+		mo->star[3] = iD;
+		mo->field[0] = fA;
+		mo->field[1] = fB;
+		mo->field[2] = fC;
+		mo->field[3] = fD;
 
 		mo->sMin[0] = sMin[0];
 		mo->sMin[1] = sMin[1];

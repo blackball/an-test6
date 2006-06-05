@@ -134,9 +134,9 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 
 	fprintf(fid, "            quad=%u,\n", mo->quadno);
 	fprintf(fid, "            starids_ABCD=(%u,%u,%u,%u),\n",
-			mo->iA, mo->iB, mo->iC, mo->iD);
+			mo->star[0], mo->star[1], mo->star[2], mo->star[3]);
 	fprintf(fid, "            field_objects_ABCD=(%u,%u,%u,%u),\n",
-			mo->fA, mo->fB, mo->fC, mo->fD);
+			mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
 	fprintf(fid, "            min_xyz=(%lf,%lf,%lf), min_radec=(%lf,%lf),\n",
 			mo->sMin[0], mo->sMin[1], mo->sMin[2],
 			rad2deg(xy2ra(mo->sMin[0], mo->sMin[1])),

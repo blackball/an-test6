@@ -603,10 +603,9 @@ int find_correspondences(pl* hits, uint* starids, uint* fieldids,
 	M = 0;
 	for (i=0; i<N; i++) {
 		mo = (MatchObj*)pl_get(hits, i);
-		add_correspondence(starids, fieldids, mo->iA, mo->fA, &M, &ok);
-		add_correspondence(starids, fieldids, mo->iB, mo->fB, &M, &ok);
-		add_correspondence(starids, fieldids, mo->iC, mo->fC, &M, &ok);
-		add_correspondence(starids, fieldids, mo->iD, mo->fD, &M, &ok);
+		int k;
+		for (k=0; k<4; k++)
+			add_correspondence(starids, fieldids, mo->star[k], mo->field[k], &M, &ok);
 	}
 	if (p_ok && !ok) *p_ok = 0;
 	return M;
