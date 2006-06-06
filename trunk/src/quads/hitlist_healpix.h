@@ -19,6 +19,8 @@ void hitlist_healpix_free_extra(hitlist* hlist, void (*free_function)(MatchObj* 
 
 void hitlist_healpix_free(hitlist* hlist);
 
+pl* hitlist_healpix_get_list_containing(hitlist* hlist, MatchObj* mo);
+
 // returns a shallow copy of the best set of hits.
 // you are responsible for calling pl_free.
 pl* hitlist_healpix_get_best(hitlist* hlist);
@@ -29,7 +31,10 @@ pl* hitlist_healpix_get_all_best(hitlist* hlist);
 // you are responsible for calling pl_free.
 pl* hitlist_healpix_get_all(hitlist* hlist);
 
-int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* mo);
+pl* hitlist_healpix_copy_list(hitlist* hlist, int agreelistindex);
+
+int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* mo,
+							int* p_agreelistindex);
 
 int hitlist_healpix_count_best(hitlist* hitlist);
 

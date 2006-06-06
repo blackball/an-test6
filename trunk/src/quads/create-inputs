@@ -1,0 +1,90 @@
+#!/bin/bash
+
+FBASE=/p/learning/stars
+IBASE=/h/42/dstn/local
+
+#TMP=/scr/dstn/
+#INDEXSRC=$BASE/INDEXES/sdss-hp-7/ddd_%02i
+#INDEX=$TMP/sdss-hp-7/ddd_%02i
+
+INDEX=$IBASE/INDEXES/sdss-hp-7/ddd_%02i
+
+FIELD=$FBASE/SDSS_FIELDS/sdssfield01
+XCOL=ROWC
+YCOL=COLC
+PARITY=1
+SDEPTH=0
+DEPTH=80
+
+FUL=0.38
+FUU=0.42
+TOL=0.01
+INDEXLOWER=0.8
+
+NAGREE=4
+AGREETOL=10
+
+VERIFY_DIST=3
+NAGREE_TOVERIFY=2
+NOVERLAP_TOSOLVE=80
+NOVERLAP_TOCONFIRM=50
+
+INPUT=input.%03i
+MATCH=agree.%03i
+DONE=done.%03i
+SOLVED=solved.%04i
+
+filenum=-1
+
+for ((f=0; f<1; f++)); do
+        for ((i=0; i<1; i++)); do
+
+                start=$(($f * 1000))
+                end=$((($f+1) * 1000))
+
+                index=`printf $INDEX $i`
+                indexsrc=`printf $INDEXSRC $i`
+
+                filenum=$((filenum +1))
+                filename=`printf $INPUT $filenum`
+                echo $filename
+                match=`printf $MATCH $filenum`
+                done=`printf $DONE $filenum`
+
+                flds="${start}/${end}"
+
+                txt="index ${index}\n"
+                txt="${txt}index_src ${indexsrc}\n"
+                txt="${txt}field $FIELD\n"
+                txt="${txt}xcol $XCOL\n"
+                txt="${txt}ycol $YCOL\n"
+                txt="${txt}match ${match}\n"
+                txt="${txt}done $done\n"
+                txt="${txt}fields ${flds}\n"
+                txt="${txt}sdepth $SDEPTH\n"
+                txt="${txt}depth $DEPTH\nparity $PARITY\ntol $TOL\n"
+                if [ x$FUL != x ]; then
+                        txt="${txt}fieldunits_lower $FUL\n"
+                fi
+                if [ x$FUU != x ]; then
+                        txt="${txt}fieldunits_upper $FUU\n"
+                fi
+                if [ x$SOLVED != x ]; then
+                        txt="${txt}solved $SOLVED\n"
+                fi
+                txt="${txt}index_lower $INDEXLOWER\n"
+                txt="${txt}nagree $NAGREE\n"
+                txt="${txt}agreetol $AGREETOL\n"
+                if [ x$VERIFY_DIST != x ]; then
+					txt="${txt}verify_dist $VERIFY_DIST\n"
+					txt="${txt}nagree_toverify $NAGREE_TOVERIFY\n"
+					txt="${txt}noverlap_toconfirm $NOVERLAP_TOCONFIRM\n"
+					txt="${txt}noverlap_tosolve $NOVERLAP_TOSOLVE\n"
+				fi
+                txt="${txt}agreement\n"
+                txt="${txt}run\n"
+                echo -n -e $txt > $filename
+        done
+done
+
+

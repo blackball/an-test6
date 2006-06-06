@@ -33,6 +33,7 @@
 #include "quadfile.h"
 #include "idfile.h"
 #include "intmap.h"
+#include "starutil.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -70,7 +71,17 @@ bool agreement = FALSE;
 int nagree = 4;
 int maxnagree = 0;
 double agreetol = 0.0;
+
+bool do_verify = FALSE;
+int nagree_toverify = 0;
 double verify_dist2 = 0.0;
+int noverlap_tosolve = 0;
+int noverlap_toconfirm = 0;
+//MatchObj* overlap_solved = NULL;
+//bool overlap_confirmed = FALSE;
+
+int winning_listind = -1;
+
 
 hitlist* hits = NULL;
 
@@ -143,6 +154,10 @@ int main(int argc, char *argv[]) {
 		startree = NULL;
 		xcolname = strdup("ROWC");
 		ycolname = strdup("COLC");
+		verify_dist2 = 0.0;
+		nagree_toverify = 0;
+		noverlap_toconfirm = 0;
+		noverlap_tosolve = 0;
 
 		if (read_parameters()) {
 			break;
@@ -175,6 +190,9 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
+		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
+		fprintf(stderr, "noverlap_toconfirm %i\n", noverlap_toconfirm);
+		fprintf(stderr, "noverlap_tosolve %i\n", noverlap_tosolve);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 
@@ -265,6 +283,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Star kdtree not found or failed to read.\n");
 		else
 			fprintf(stderr, "done\n");
+
+		do_verify = startree && (verify_dist2 > 0.0);
 
 		me.parity = parity;
 		path = get_pathname(treefname);
@@ -388,6 +408,9 @@ int read_parameters() {
 					"    maxnagree <max-to-agree>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    verify_dist <early-verification-dist (arcsec)>\n"
+					"    nagree_toverify <nagree>\n"
+					"    noverlap_tosolve <noverlap>\n"
+					"    noverlap_toconfirm <noverlap>\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
@@ -413,6 +436,12 @@ int read_parameters() {
 		} else if (is_word(buffer, "verify_dist", &nextword)) {
 			double d = atof(nextword);
 			verify_dist2 = arcsec2distsq(d);
+		} else if (is_word(buffer, "nagree_toverify", &nextword)) {
+			nagree_toverify = atoi(nextword);
+		} else if (is_word(buffer, "noverlap_tosolve", &nextword)) {
+			noverlap_tosolve = atoi(nextword);
+		} else if (is_word(buffer, "noverlap_toconfirm", &nextword)) {
+			noverlap_toconfirm = atoi(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
@@ -533,30 +562,19 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 		   rad2arcsec(distsq2arc(maxmatch)));
 	fflush(stdout);
 
+	mo->noverlap = matches - conflicts;
+
 	intmap_free(map);
 	free(fieldstars);
 	return 1;
 }
 
 int handlehit(solver_params* p, MatchObj* mo) {
-	if (agreement) {
-		int nagree;
-		// hack - share this struct between all the matches for this
-		// field...
-		mo->extra = &me;
-		// compute (x,y,z) center, scale, rotation.
-		hitlist_healpix_compute_vector(mo);
-		nagree = hitlist_healpix_add_hit(hits, mo);
-		if (nagree >= 2) {
-			if (startree && (verify_dist2 > 0.0)) {
-				if (!verify_hit(mo, p)) {
-					// hit not verified.
-					return 0;
-				}
-			}
-		}
-		return nagree;
-	} else {
+	int listind;
+	int nagree = 0;
+	bool winner = FALSE;
+
+	if (!agreement) {
 		if (matchfile_write_match(mf, mo)) {
 			fprintf(stderr, "Failed to write matchfile entry.\n");
 		}
@@ -565,6 +583,54 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		free_MatchObj(mo);
 		return 1;
 	}
+
+	// share this struct between all the matches for this field...
+	mo->extra = &me;
+	// compute (x,y,z) center, scale, rotation.
+	hitlist_healpix_compute_vector(mo);
+	nagree = hitlist_healpix_add_hit(hits, mo, &listind);
+
+	// did this match just join the winning set of agreeing matches?
+	if (maxnagree && (nagree >= maxnagree)) {
+		winning_listind = listind;
+		p->quitNow = TRUE;
+		winner = TRUE;
+	}
+
+	if (!do_verify)
+		return nagree;
+
+	if (nagree < nagree_toverify)
+		return nagree;
+
+	verify_hit(mo, p);
+
+	// does this winning set of agreeing matches need confirmation?
+	if (winner && noverlap_toconfirm) {
+		if (mo->noverlap >= noverlap_toconfirm) {
+			// enough stars overlap to confirm this set of agreeing matches.
+			//overlap_confirmed = TRUE;
+		} else {
+			// HACK - should check the other matches to see if one of the
+			// others could confirm.
+
+			// veto!
+			printf("Found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
+				   nagree, mo->noverlap, noverlap_toconfirm);
+			p->quitNow = FALSE;
+			winning_listind = -1;
+		}
+		return nagree;
+	}
+
+	if (noverlap_tosolve && (mo->noverlap >= noverlap_tosolve)) {
+		// this single hit causes enough overlaps to solve the field.
+		//overlap_solveed = TRUE;
+		printf("Found a match that produces %i overlapping stars.\n", mo->noverlap);
+		winning_listind = listind;
+		p->quitNow = TRUE;
+	}
+	return nagree;
 }
 
 void solve_fields(xylist *thefields, kdtree_t* codekd) {
@@ -637,6 +703,11 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		solver.startobj = startdepth;
 		solver.field = thisfield;
 
+		//overlap_solved = FALSE;
+		//overlap_confirmed = FALSE;
+
+		winning_listind = -1;
+
 		if (agreement) {
 			hits = hitlist_healpix_new(agreetol);
 		}
@@ -649,18 +720,13 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		// The real thing
 		solve_field(&solver);
 
-		free_xy(thisfield);
-
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
 
 		if (agreement) {
-			int nbest, j;
-			pl* best;
 			int* thisagreehist;
 			int maxagree = 0;
 			int k;
-			int nperlist;
 			thisagreehist = calloc(Nagreehist, sizeof(int));
 			hitlist_healpix_histogram_agreement_size(hits, thisagreehist, Nagreehist);
 
@@ -677,48 +743,54 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			fprintf(stderr, "];\n");
 			free(thisagreehist);
 			thisagreehist = NULL;
-			nbest = hitlist_healpix_count_best(hits);
-			nperlist = nbest;
-			fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
-			//best = hitlist_get_best(hits);
-			best = hitlist_healpix_get_all_best(hits);
-			//best = hitlist_get_all_above_size(hits, nagree);
 
-			nbest = pl_size(best);
-			if (nbest)
-				fprintf(stderr, "(There are %i sets of agreeing hits of size %i.)\n",
-						pl_size(best) / nperlist, nperlist);
+			if (winning_listind == -1) {
+				// didn't solve it...
+				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
+			} else {
+				pl* list = hitlist_healpix_copy_list(hits, winning_listind);
+				fprintf(stderr, "Field %i: %i in agreement.\n",
+						fieldnum, pl_size(list));
+				if (do_verify) {
+					int k;
+					// run verification on any of the matches that haven't
+					// already been done.
+					for (k=0; k<pl_size(list); k++) {
+						MatchObj* mo = pl_get(list, k);
+						if (mo->noverlap)
+							continue;
+						verify_hit(mo, &solver);
+					}
+				}
 
-			// if there are only singleton hits, don't write anything.
-			if (nbest > 1) {
-				for (j=0; j<nbest; j++) {
-					matchfile_entry* me;
-					MatchObj* mo = (MatchObj*)pl_get(best, j);
-					me = (matchfile_entry*)mo->extra;
+				for (k=0; k<pl_size(list); k++) {
+					MatchObj* mo = pl_get(list, k);
 					if (matchfile_write_match(mf, mo)) {
 						fprintf(stderr, "Error writing a match.\n");
 					}
 				}
-			}
-			pl_free(best);
-			hitlist_healpix_clear(hits);
-			hitlist_healpix_free(hits);
 
-			if (maxnagree && (nbest >= maxnagree) && solvedfname) {
-				// write a file to indicate that the field was solved.
-				char fn[256];
-				FILE* f;
-				sprintf(fn, solvedfname, fieldnum);
-				fprintf(stderr, "Field %i solved: writing file %s to indicate this.\n",
-						fieldnum, fn);
-				if (!(f = fopen(fn, "w")) ||
-					fclose(f)) {
-					fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
+				pl_free(list);
+
+				if (solvedfname) {
+					// write a file to indicate that the field was solved.
+					char fn[256];
+					FILE* f;
+					sprintf(fn, solvedfname, fieldnum);
+					fprintf(stderr, "Field %i solved: writing file %s to indicate this.\n", fieldnum, fn);
+					if (!(f = fopen(fn, "w")) ||
+						fclose(f)) {
+						fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
+					}
 				}
 			}
 
+			hitlist_healpix_clear(hits);
+			hitlist_healpix_free(hits);
 		}
+
+		free_xy(thisfield);
 
 		if (matchfile_fix_table(mf)) {
 			fprintf(stderr, "Error: Failed to fix matchfile table.\n");

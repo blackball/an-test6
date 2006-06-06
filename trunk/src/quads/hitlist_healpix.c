@@ -88,6 +88,40 @@ typedef struct hitlist_struct hitlist;
 #define DONT_DEFINE_HITLIST
 #include "hitlist_healpix.h"
 
+pl* hitlist_healpix_copy_list(hitlist* hlist, int agreelistindex) {
+	il* agree;
+	int i, N, ind;
+	pl* copy;
+	agree = (il*)pl_get(hlist->agreelist, agreelistindex);
+	// shallow copy.
+	copy = pl_new(32);
+	N = il_size(agree);
+	for (i=0; i<N; i++) {
+		MatchObj* mo;
+		ind = il_get(agree, i);
+		mo = (MatchObj*)pl_get(hlist->matchlist, ind);
+		pl_append(copy, mo);
+	}
+	return copy;
+}
+
+pl* hitlist_healpix_get_list_containing(hitlist* hlist, MatchObj* mo) {
+	int i, N;
+	int ind;
+	// find the index of this MatchObj in "matchlist"...
+	N = pl_size(hlist->matchlist);
+	for (i=0; i<N; i++) {
+		if (mo == pl_get(hlist->matchlist, i))
+			break;
+	}
+	if (i == N)
+		// not found!
+		return NULL;
+	// which agreelist does it belong to?
+	ind = il_get(hlist->memberlist, i);
+	return hitlist_healpix_copy_list(hlist, ind);
+}
+
 void hitlist_healpix_histogram_agreement_size(hitlist* hl, int* hist, int Nhist) {
 	int m, M;
 	int N;
@@ -273,7 +307,6 @@ int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
 	// old-fashioned metric:
 	double vec1[6];
 	double vec2[6];
-	double d2;
 
 	vec1[0] = m1->sMin[0];
 	vec1[1] = m1->sMin[1];
@@ -289,14 +322,13 @@ int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
 	vec2[4] = m2->sMax[1];
 	vec2[5] = m2->sMax[2];
 
-	d2 = distsq(vec1, vec2, 6);
-	if (d2 < agreedist2) {
-		return 1;
-	}
-	return 0;
+	if (distsq_exceeds(vec1, vec2, 6, agreedist2))
+		return 0;
+	return 1;
 }
 
-int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
+int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match,
+							int* p_agreelistind) {
 	int pix;
 	int p;
 	double x,y,z;
@@ -477,10 +509,12 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match) {
 
 	// Increment the total number of matches...
 	hlist->ntotal++;
-	//return hlist->nbest;
+
+	if (p_agreelistind)
+		*p_agreelistind = mergeind;
+
 	return il_size(mergelist);
 }
-
 
 void hitlist_healpix_clear(hitlist* hlist) {
 	int p;

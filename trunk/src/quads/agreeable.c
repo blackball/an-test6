@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
 				// compute (x,y,z) center, scale, rotation.
 				hitlist_healpix_compute_vector(mo);
 				// add the match...
-				hitlist_healpix_add_hit(hl, mo);
+				hitlist_healpix_add_hit(hl, mo, NULL);
 			}
 			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
 		}
