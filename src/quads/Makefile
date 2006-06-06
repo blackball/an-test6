@@ -51,10 +51,12 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 SOLVER_OBJ := solver.o
 
 EXECS := quadidx \
-	certifiable certthresh hpquads dedup_index codetree startree \
+	certthresh hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity agreeable findquad findstar \
 	codeprojections quadlocations hpowned
+
+	#certifiable 
 
 EXTRAS := xylstomatlab rdlstohealpix rdls2hpls \
 	get_healpix printcatalog 

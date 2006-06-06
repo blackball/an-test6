@@ -74,9 +74,8 @@ double verify_dist2 = 0.0;
 
 hitlist* hits = NULL;
 
-matchfile_entry matchfile;
-
-FILE* matchfid = NULL;
+matchfile* mf;
+matchfile_entry me;
 
 catalog* cat;
 idfile* id;
@@ -140,7 +139,6 @@ int main(int argc, char *argv[]) {
 		agreetol = 0.0;
 		cat = NULL;
 		hits = NULL;
-		matchfid = NULL;
 		quads = NULL;
 		startree = NULL;
 		xcolname = strdup("ROWC");
@@ -190,8 +188,12 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		fopenout(matchfname, matchfid);
-
+		mf = matchfile_open_for_writing(matchfname);
+		if (!mf) {
+			fprintf(stderr, "Failed to open file %s to write match file.\n", matchfname);
+			exit(-1);
+		}
+		
 		// Read .xyls file...
 		fprintf(stderr, "Reading fields file %s...", fieldfname);
 		fflush(stderr);
@@ -264,21 +266,23 @@ int main(int argc, char *argv[]) {
 		else
 			fprintf(stderr, "done\n");
 
-		matchfile.parity = parity;
+		me.parity = parity;
 		path = get_pathname(treefname);
 		if (path)
-			matchfile.indexpath = path;
+			me.indexpath = path;
 		else
-			matchfile.indexpath = treefname;
+			me.indexpath = treefname;
 		path = get_pathname(fieldfname);
 		if (path)
-			matchfile.fieldpath = path;
+			me.fieldpath = path;
 		else
-			matchfile.fieldpath = fieldfname;
-		matchfile.codetol = codetol;
+			me.fieldpath = fieldfname;
+		me.codetol = codetol;
 
-		matchfile.fieldunits_lower = funits_lower;
-		matchfile.fieldunits_upper = funits_upper;
+		/*
+		  me.fieldunits_lower = funits_lower;
+		  me.fieldunits_upper = funits_upper;
+		*/
 
 		Nagreehist = 100;
 		agreesizehist = malloc(Nagreehist * sizeof(int));
@@ -298,14 +302,16 @@ int main(int argc, char *argv[]) {
 		free(solvedfname);
 		free(matchfname);
 
-		free(matchfile.indexpath);
-		free(matchfile.fieldpath);
+		free(me.indexpath);
+		free(me.fieldpath);
 
 		free(xcolname);
 		free(ycolname);
 
 		xylist_close(xy);
-		fclose(matchfid);
+
+		matchfile_close(mf);
+
 		free_fn(fieldfname);
 		free_fn(treefname);
 		free_fn(startreefname);
@@ -533,12 +539,11 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 }
 
 int handlehit(solver_params* p, MatchObj* mo) {
-
 	if (agreement) {
 		int nagree;
 		// hack - share this struct between all the matches for this
 		// field...
-		mo->extra = &matchfile;
+		mo->extra = &me;
 		// compute (x,y,z) center, scale, rotation.
 		hitlist_healpix_compute_vector(mo);
 		nagree = hitlist_healpix_add_hit(hits, mo);
@@ -551,15 +556,15 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			}
 		}
 		return nagree;
-
 	} else {
-		if (matchfile_write_match(matchfid, mo, &matchfile)) {
-			fprintf(stderr, "Failed to write matchfile entry: %s\n", strerror(errno));
+		if (matchfile_write_match(mf, mo)) {
+			fprintf(stderr, "Failed to write matchfile entry.\n");
 		}
-		free(mo->transform);
+		if (mo->transform)
+			free(mo->transform);
 		free_MatchObj(mo);
+		return 1;
 	}
-	return 1;
 }
 
 void solve_fields(xylist *thefields, kdtree_t* codekd) {
@@ -623,7 +628,7 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			continue;
 		}
 
-		matchfile.fieldnum = fieldnum;
+		me.fieldnum = fieldnum;
 
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
@@ -634,6 +639,11 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 
 		if (agreement) {
 			hits = hitlist_healpix_new(agreetol);
+		}
+
+		if (matchfile_start_table(mf, &me) ||
+			matchfile_write_table(mf)) {
+			fprintf(stderr, "Error: Failed to write matchfile table.\n");
 		}
 
 		// The real thing
@@ -679,14 +689,15 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			if (nbest)
 				fprintf(stderr, "(There are %i sets of agreeing hits of size %i.)\n",
 						pl_size(best) / nperlist, nperlist);
+
 			// if there are only singleton hits, don't write anything.
 			if (nbest > 1) {
 				for (j=0; j<nbest; j++) {
 					matchfile_entry* me;
 					MatchObj* mo = (MatchObj*)pl_get(best, j);
 					me = (matchfile_entry*)mo->extra;
-					if (matchfile_write_match(matchfid, mo, me)) {
-						fprintf(stderr, "Error writing a match: %s\n", strerror(errno));
+					if (matchfile_write_match(mf, mo)) {
+						fprintf(stderr, "Error writing a match.\n");
 					}
 				}
 			}
@@ -707,6 +718,10 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 				}
 			}
 
+		}
+
+		if (matchfile_fix_table(mf)) {
+			fprintf(stderr, "Error: Failed to fix matchfile table.\n");
 		}
 
 		get_resource_stats(&utime, &stime, NULL);
