@@ -31,13 +31,9 @@ matchfile* matchfile_open_for_writing(char* fn) {
 
     // the header
     mf->header = qfits_table_prim_header_default();
-	/*
-	  fits_add_endian(mf->header);
-	  fits_add_uint_size(mf->header);
-	*/
-
 	qfits_header_add(mf->header, "AN_FILE", MATCHFILE_AN_FILETYPE,
 					 "This is a list of quad matches.", NULL);
+
 	return mf;
 
  bailout:
@@ -140,25 +136,103 @@ static qfits_table* matchfile_get_table() {
 	return table;
 }
 
-int matchfile_write_table(matchfile* mf, matchfile_entry* me) {
-	int tablesize, ncols, nrows;
-	if  (mf->meheader) {
-		qfits_header_destroy(mf->meheader);
+int matchfile_start_table(matchfile* mf, matchfile_entry* me) {
+	char val[64];
+	if (mf->table)
+		qfits_table_close(mf->table);
+	if (mf->tableheader)
+		qfits_header_destroy(mf->tableheader);
+	mf->nrows = 0;
+	mf->table = matchfile_get_table();
+	mf->tableheader = qfits_table_ext_header_default(mf->table);
+
+	sprintf(val, "%u", me->fieldnum);
+	qfits_header_add(mf->tableheader, "FIELD", val, "Field number.", NULL);
+	qfits_header_add(mf->tableheader, "PARITY", (me->parity ? "Y" : "N"),
+					 "Were field coordinates flipped?", NULL);
+	qfits_header_add(mf->tableheader, "INDEX", me->indexpath ? me->indexpath : "",
+					 "Path of the index used", NULL);
+	qfits_header_add(mf->tableheader, "FLDPATH", me->indexpath ? me->indexpath : "",
+					 "Path of the field file", NULL);
+	return 0;
+}
+
+int matchfile_write_table(matchfile* mf) {
+	assert(mf->tableheader);
+	mf->tableheader_start = ftello(mf->fid);
+	qfits_header_dump(mf->tableheader, mf->fid);
+	mf->tableheader_end = ftello(mf->fid);
+	return 0;
+}
+
+int matchfile_fix_table(matchfile* mf) {
+	int i;
+	qfits_header* newhdr;
+	off_t off;
+	off_t newoff;
+
+	assert(mf->table);
+	assert(mf->tableheader);
+
+	// update the number of rows in the table
+	mf->table->nr = mf->nrows;
+	// get the new table header
+	newhdr = qfits_table_ext_header_default(mf->table);
+	// update any of the header fields that have changed.
+	for (i=0; i<newhdr->n; i++) {
+		char key[FITS_LINESZ+1];
+		char val[FITS_LINESZ+1];
+		char com[FITS_LINESZ+1];
+		qfits_header_getitem(newhdr, i, key, val, com, NULL);
+		qfits_header_mod(mf->tableheader, key, val, com);
 	}
-	tablesize = ncols = nrows = 0;
-	qfits_table* table = matchfile_get_table();
-	qfits_header* tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, mf->fid);
-	qfits_table_close(table);
-	qfits_header_destroy(tablehdr);
-	//mf->header_end = ftello(mf->fid);
+	off = ftello(mf->fid);
+	fseeko(mf->fid, mf->tableheader_start, SEEK_SET);
+	qfits_header_dump(mf->tableheader, mf->fid);
+	newoff = ftello(mf->fid);
+	if (newoff != mf->tableheader_end) {
+		fprintf(stderr, "Error: matchfile table header used to end at file offset %u, "
+				"now it ends at %u: data corruption is possible (and likely!).\n",
+				(uint)mf->tableheader_end, (uint)newoff);
+		return -1;
+	}
+	// back to where we started!
+	fseeko(mf->fid, off, SEEK_SET);
 	return 0;
 }
 
-int matchfile_fix_table(matchfile* m) {
+int matchfile_write_match(matchfile* mf, MatchObj* mo) {
+	int c;
+	if (!matchfile_fitstruct_inited)
+		init_matchfile_fitstruct();
+	for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
+		fitstruct* fs = matchfile_fitstruct + c;
+		if (fits_write_data(mf->fid, ((unsigned char*)mo) + fs->offset, fs->fitstype)) {
+			return -1;
+		}
+	}
+	mf->nrows++;
 	return 0;
 }
 
+int matchfile_close(matchfile* mf) {
+	if (mf->fid) {
+		fits_pad_file(mf->fid);
+		if (fclose(mf->fid)) {
+			fprintf(stderr, "Error closing matchfile FITS file: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+	if (mf->table)
+		qfits_table_close(mf->table);
+	if (mf->tableheader)
+		qfits_header_destroy(mf->tableheader);
+	if (mf->header)
+		qfits_header_destroy(mf->header);
+
+	free(mf);
+	return 0;
+}
 
 
 
