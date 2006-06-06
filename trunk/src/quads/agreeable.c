@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <assert.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -12,11 +13,10 @@
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hoH:n:A:B:F:L:M:f:m:";
+char* OPTIONS = "hH:n:A:B:F:L:M:f:m:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
-			"   [-o]: round-robin mode\n"
 			"   [-A first-field]\n"
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
@@ -27,8 +27,7 @@ void printHelp(char* progname) {
 			"   [-m agreement-tolerance-in-arcsec]\n"
  			"   [-n matches_needed_to_agree]\n"
 			"\nIf filename FLUSH is specified, agreeing matches will"
-			" be written out.\n"
-			"\nIf no match files are given, will read from stdin.\n",
+			" be written out.\n",
 			progname);
 }
 
@@ -44,9 +43,9 @@ unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 FILE *hitfid = NULL;
 char *hitfname = NULL;
 char* leftoverfname = NULL;
-FILE* leftoverfid = NULL;
+matchfile* leftovermf = NULL;
 char* agreefname = NULL;
-FILE* agreefid = NULL;
+matchfile* agreemf = NULL;
 pl* hitlists;
 il* solved;
 il* unsolved;
@@ -64,22 +63,23 @@ int main(int argc, char *argv[]) {
 	hits_header hitshdr;
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
-	bool fromstdin = FALSE;
 	int i;
 	int firstfield=0, lastfield=INT_MAX;
 	int flushinterval = 0;
 	int flushfieldinterval = 0;
 	bool leftovers = FALSE;
 	bool agree = FALSE;
-	bool roundrobin = FALSE;
 	double ramin, ramax, decmin, decmax;
 	double agreetolarcsec = DEFAULT_AGREE_TOL;
+	matchfile** mfs;
+	matchfile_entry* mes;
+	bool* mes_valid;
+	bool* eofs;
+	int nread = 0;
+	int f;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
-		case 'o':
-			roundrobin = TRUE;
-			break;
 		case 'm':
 			agreetolarcsec = atof(optarg);
 			break;
@@ -130,8 +130,8 @@ int main(int argc, char *argv[]) {
 		ninputfiles = argc - optind;
 		inputfiles = argv + optind;
 	} else {
-		fromstdin = TRUE;
-		ninputfiles = 1;
+		printHelp(progname);
+		exit(-1);
 	}
 
 	if (lastfield < firstfield) {
@@ -146,11 +146,19 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (leftoverfname) {
-		fopenout(leftoverfname, leftoverfid);
+		leftovermf = matchfile_open_for_writing(leftoverfname);
+		if (!leftovermf) {
+			fprintf(stderr, "Failed to open file %s to write leftover matches.\n", leftoverfname);
+			exit(-1);
+		}
 		leftovers = TRUE;
 	}
 	if (agreefname) {
-		fopenout(agreefname, agreefid);
+		agreemf = matchfile_open_for_writing(agreefname);
+		if (!agreemf) {
+			fprintf(stderr, "Failed to open file %s to write agreeing matches.\n", agreefname);
+			exit(-1);
+		}
 		agree = TRUE;
 	}
 
@@ -165,236 +173,120 @@ int main(int argc, char *argv[]) {
 	hitshdr.min_matches_to_agree = min_matches_to_agree;
 	hits_write_header(hitfid, &hitshdr);
 
+	mfs = malloc(ninputfiles * sizeof(matchfile*));
+	mes = malloc(ninputfiles * sizeof(matchfile_entry));
+	mes_valid = calloc(ninputfiles, sizeof(bool));
+	eofs = calloc(ninputfiles, sizeof(bool));
 
-	if (roundrobin) {
-		FILE* infiles[ninputfiles];
-		int nread = 0;
-		int f;
-		if (fromstdin) {
-			fprintf(stderr, "can't do round-robin from stdin!\n");
+	for (i=0; i<ninputfiles; i++) {
+		fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
+		mfs[i] = matchfile_open(inputfiles[i]);
+		if (!mfs[i]) {
+			fprintf(stderr, "Failed to open matchfile %s.\n", inputfiles[i]);
 			exit(-1);
 		}
-		for (i=0; i<ninputfiles; i++) {
-			fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
-			fopenin(inputfiles[i], infiles[i]);
-		}
-		for (f=firstfield; f<=lastfield; f++) {
-			bool alldone = TRUE;
-			int fieldnum;
-			hitlist* hl;
+	}
+	// we assume the matchfiles are sorted by field number.
+	for (f=firstfield; f<=lastfield; f++) {
+		bool alldone = TRUE;
+		int fieldnum;
+		hitlist* hl;
 
-			for (i=0; i<ninputfiles; i++)
-				if (infiles[i])
-					alldone = FALSE;
-			if (alldone)
-				break;
+		for (i=0; i<ninputfiles; i++)
+			if (!eofs[i])
+				alldone = FALSE;
+		if (alldone)
+			break;
 
-			fprintf(stderr, "Field %i.\n", f);
+		fprintf(stderr, "Field %i.\n", f);
 
-			// get the existing hitlist for this field...
-			fieldnum = f;
-			if (fieldnum < pl_size(hitlists)) {
-				hl = (hitlist*)pl_get(hitlists, fieldnum);
-				if (!hl) {
-					// check if it's NULL because it's been flushed.
-					if (il_contains(flushed, fieldnum)) {
-						continue;
-					}
-					hl = hitlist_healpix_new(agreetolarcsec);
-					pl_set(hitlists, fieldnum, hl);
+		// get the existing hitlist for this field...
+		fieldnum = f;
+		if (fieldnum < pl_size(hitlists)) {
+			hl = (hitlist*)pl_get(hitlists, fieldnum);
+			if (!hl) {
+				// check if it's NULL because it's been flushed.
+				if (il_contains(flushed, fieldnum)) {
+					continue;
 				}
-			} else {
-				int k;
-				for (k=pl_size(hitlists); k<fieldnum; k++)
-					pl_append(hitlists, NULL);
 				hl = hitlist_healpix_new(agreetolarcsec);
-				pl_append(hitlists, hl);
+				pl_set(hitlists, fieldnum, hl);
 			}
-
-			for (i=0; i<ninputfiles; i++) {
-				MatchObj* mo;
-				matchfile_entry me;
-				matchfile_entry* mecopy;
-				int c;
-				FILE* infile = infiles[i];
-				int nr = 0;
-				char* fname = inputfiles[i];
-
-				if (!infile)
-					continue;
-				// detect EOF and exit gracefully...
-				c = fgetc(infile);
-				if (c == EOF) {
-					fclose(infile);
-					infiles[i] = NULL;
-					continue;
-				} else
-					ungetc(c, infile);
-
-				for (;;) {
-					off_t offset = ftello(infile);
-					if (matchfile_read_match(infile, &mo, &me)) {
-						fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
-						fflush(stderr);
-						break;
-					}
-					if (me.fieldnum != fieldnum) {
-						fseeko(infile, offset, SEEK_SET);
-						free_MatchObj(mo);
-						free(me.indexpath);
-						free(me.fieldpath);
-						break;
-					}
-					nread++;
-					nr++;
-
-					if (nread % 10000 == 9999) {
-						fprintf(stderr, ".");
-						fflush(stderr);
-					}
-
-					if (leftovers || agree) {
-						mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
-						memcpy(mecopy, &me, sizeof(matchfile_entry));
-						mo->extra = mecopy;
-					} else {
-						mo->extra = NULL;
-						free(me.indexpath);
-						free(me.fieldpath);
-					}
-
-					// compute (x,y,z) center, scale, rotation.
-					hitlist_healpix_compute_vector(mo);
-					// add the match...
-					hitlist_healpix_add_hit(hl, mo);
-				}
-
-				fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
-			}
-			// flush after each field (and clean up leftovers)
-			flush_solved_fields(leftovers, agree, FALSE, TRUE);
-			if (agreefid)
-				fdatasync(fileno(agreefid));
+		} else {
+			int k;
+			for (k=pl_size(hitlists); k<fieldnum; k++)
+				pl_append(hitlists, NULL);
+			hl = hitlist_healpix_new(agreetolarcsec);
+			pl_append(hitlists, hl);
 		}
-		fprintf(stderr, "\nRead %i matches.\n", nread);
-		fflush(stderr);
-	} else {
+
 		for (i=0; i<ninputfiles; i++) {
-			FILE* infile = NULL;
-			char* fname;
-			int nread;
+			MatchObj* mo;
+			MatchObj* mocopy;
+			matchfile_entry me;
+			matchfile_entry* mecopy = NULL;
+			int nr = 0;
+			char* fname = inputfiles[i];
+			int k;
 
-			if (fromstdin) {
-				fname = "stdin";
-			} else {
-				fname = inputfiles[i];
-			}
+			if (eofs[i])
+				continue;
 
-			if ((strcmp(fname, "FLUSH") == 0) ||
-				(flushinterval && ((i-1) % (flushinterval) == 0))) {
-				printf("# flushing after file %i\n", i);
-				fprintf(stderr, "Flushing solved fields...\n");
-				flush_solved_fields(FALSE, agree, FALSE, FALSE);
-				if (strcmp(fname, "FLUSH") == 0)
+			if (!mes_valid[i]) {
+				if (matchfile_next_table(mfs[i], mes + i)) {
+					eofs[i] = TRUE;
 					continue;
+				}
+				mes_valid[i] = TRUE;
 			}
 
-			if (fromstdin) {
-				infile = stdin;
-			} else {
-				fopenin(fname, infile);
+			assert(mes[i].fieldnum >= fieldnum);
+
+			if (mes[i].fieldnum != fieldnum)
+				continue;
+
+			// LEAK
+			if (leftovers || agree) {
+				mecopy = malloc(sizeof(matchfile_entry));
+				memcpy(mecopy, &me, sizeof(matchfile_entry));
 			}
 
-			fprintf(stderr, "Reading from %s...\n", fname);
-			fflush(stderr);
-			nread = 0;
-			for (;;) {
-				MatchObj* mo;
-				matchfile_entry me;
-				matchfile_entry* mecopy;
-				hitlist* hl;
-				int c;
-				int fieldnum;
-
-				// detect EOF and exit gracefully...
-				c = fgetc(infile);
-				if (c == EOF)
-					break;
-				else
-					ungetc(c, infile);
-
-				if (matchfile_read_match(infile, &mo, &me)) {
+			for (k=0; k<mfs[i]->nrows; k++) {
+				mo = matchfile_buffered_read_match(mfs[i]);
+				if (!mo) {
 					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
-					fflush(stderr);
 					break;
 				}
 				nread++;
-				fieldnum = me.fieldnum;
+				nr++;
 
 				if (nread % 10000 == 9999) {
 					fprintf(stderr, ".");
 					fflush(stderr);
 				}
 
-				if (flushfieldinterval &&
-					((nread % flushfieldinterval) == 0)) {
-					fprintf(stderr, "\nRead %i matches; flushing solved fields.\n", nread);
-					flush_solved_fields(FALSE, agree, FALSE, FALSE);
-				}
-
-				if ((fieldnum < firstfield) || (fieldnum > lastfield)) {
-					free_MatchObj(mo);
-					free(me.indexpath);
-					free(me.fieldpath);
-					continue;
-				}
-
-				// get the existing hitlist for this field...
-				if (fieldnum < pl_size(hitlists)) {
-					hl = (hitlist*)pl_get(hitlists, fieldnum);
-					if (!hl) {
-						// check if it's NULL because it's been flushed.
-						if (il_contains(flushed, fieldnum)) {
-							//fprintf(stderr, "Warning: field %i has already been flushed.\n", fieldnum);
-							free_MatchObj(mo);
-							free(me.indexpath);
-							free(me.fieldpath);
-							continue;
-						}
-						hl = hitlist_healpix_new(agreetolarcsec);
-						pl_set(hitlists, fieldnum, hl);
-					}
-				} else {
-					int k;
-					for (k=pl_size(hitlists); k<fieldnum; k++)
-						pl_append(hitlists, NULL);
-					hl = hitlist_healpix_new(agreetolarcsec);
-					pl_append(hitlists, hl);
-				}
+				mocopy = malloc(sizeof(MatchObj));
+				memcpy(mocopy, mo, sizeof(MatchObj));
 
 				if (leftovers || agree) {
-					mecopy = (matchfile_entry*)malloc(sizeof(matchfile_entry));
-					memcpy(mecopy, &me, sizeof(matchfile_entry));
-					mo->extra = mecopy;
+					mocopy->extra = mecopy;
 				} else {
-					mo->extra = NULL;
-					free(me.indexpath);
-					free(me.fieldpath);
+					mocopy->extra = NULL;
 				}
 
 				// compute (x,y,z) center, scale, rotation.
 				hitlist_healpix_compute_vector(mo);
-
 				// add the match...
 				hitlist_healpix_add_hit(hl, mo);
 			}
-			fprintf(stderr, "\nRead %i matches.\n", nread);
-			fflush(stderr);
-
-			if (!fromstdin)
-				fclose(infile);
+			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
 		}
+
+		// flush after each field (and clean up leftovers)
+		flush_solved_fields(leftovers, agree, FALSE, TRUE);
 	}
+	fprintf(stderr, "\nRead %i matches.\n", nread);
+	fflush(stderr);
 
 	flush_solved_fields(leftovers, agree, TRUE, TRUE);
 
@@ -408,11 +300,11 @@ int main(int argc, char *argv[]) {
 	if (hitfname)
 		fclose(hitfid);
 
-	if (leftoverfid)
-		fclose(leftoverfid);
+	if (leftovermf)
+		matchfile_close(leftovermf);
 
-	if (agreefid)
-		fclose(agreefid);
+	if (agreemf)
+		matchfile_close(agreemf);
 
 	fprintf(stderr, "Number of agreeing quads histogram:\n  [ ");
 	for (i=0; i<sizeagreehist; i++) {
@@ -427,9 +319,11 @@ void free_extra(MatchObj* mo) {
 	matchfile_entry* me;
 	if (!mo->extra) return;
 	me = (matchfile_entry*)mo->extra;
-	free(me->indexpath);
-	free(me->fieldpath);
-	free(me);
+	/*
+	  free(me->indexpath);
+	  free(me->fieldpath);
+	  free(me);
+	*/
 	mo->extra = NULL;
 }
 
@@ -461,20 +355,38 @@ void flush_solved_fields(bool doleftovers,
 			if (doleftovers) {
 				int j;
 				int NA;
+				matchfile_entry me;
 				pl* all = hitlist_healpix_get_all(hl);
 				NA = pl_size(all);
 				fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
+
 				// write the leftovers...
+
+				// HACK - this makes the matchfile_entry basically
+				// meaningless.  Instead, gather together hits that have the
+				// same matchfile_entry ?
+				memset(&me, 0, sizeof(matchfile_entry));
+				me.fieldnum = fieldnum;
+
+				if (matchfile_start_table(leftovermf, &me) ||
+					matchfile_write_table(leftovermf)) {
+					fprintf(stderr, "Failed to write leftover matchfile header.\n");
+				}
+
 				for (j=0; j<NA; j++) {
 					matchfile_entry* me;
 					MatchObj* mo = (MatchObj*)pl_get(all, j);
 					me = (matchfile_entry*)mo->extra;
-					if (matchfile_write_match(leftoverfid, mo, me)) {
-						fprintf(stderr, "Error writing a match to %s: %s\n", leftoverfname, strerror(errno));
+					if (matchfile_write_match(leftovermf, mo)) {
+						fprintf(stderr, "Error writing a leftover match.\n");
 						break;
 					}
 				}
-				fflush(leftoverfid);
+
+				if (matchfile_fix_table(leftovermf)) {
+					fprintf(stderr, "Failed to fix leftover matchfile header.\n");
+				}
+
 				pl_free(all);
 			}
 			if (cleanup) {
@@ -509,6 +421,17 @@ void flush_solved_fields(bool doleftovers,
 		fieldhdr.nmatches = hitlist_healpix_count_all(hl);
 		fieldhdr.nagree = nbest;
 
+		if (doagree) {
+			matchfile_entry me;
+			// HACK -
+			memset(&me, 0, sizeof(matchfile_entry));
+			me.fieldnum = fieldnum;
+			if (matchfile_start_table(agreemf, &me) ||
+				matchfile_write_table(agreemf)) {
+				fprintf(stderr, "Failed to write agreeing matchfile header.\n");
+			}
+		}
+
 		for (j=0; j<nbest; j++) {
 			matchfile_entry* me;
 			MatchObj* mo = (MatchObj*)pl_get(best, j);
@@ -524,12 +447,18 @@ void flush_solved_fields(bool doleftovers,
 			hits_write_hit(hitfid, mo, me);
 
 			if (doagree) {
-				if (matchfile_write_match(agreefid, mo, me)) {
-					fprintf(stderr, "Error writing a match to %s: %s\n", agreefname, strerror(errno));
+				if (matchfile_write_match(agreemf, mo)) {
+					fprintf(stderr, "Error writing an agreeing match.");
 				}
 			}
 		}
 		hits_end_hits_list(hitfid);
+
+		if (doagree) {
+			if (matchfile_fix_table(agreemf)) {
+				fprintf(stderr, "Failed to fix agreeing matchfile header.\n");
+			}
+		}
 
 		starids  = (uint*)malloc(nbest * 4 * sizeof(uint));
 		fieldids = (uint*)malloc(nbest * 4 * sizeof(uint));

@@ -129,20 +129,20 @@ int main(int argc, char *argv[]) {
 	correct = incorrect = warning = 0;
 
 	for (i=0; i<ninputfiles; i++) {
-		FILE* infile = NULL;
-		char* fname;
+		matchfile* mf;
 		int nread;
+		char* fname = inputfiles[i];
 
-		fname = inputfiles[i];
-		fprintf(stderr, "Reading from %s...\n", fname);
-		fopenin(fname, infile);
-		fflush(stderr);
+		fprintf(stderr, "Opening matchfile %s...\n", fname);
+		mf = matchfile_open(fname);
+		if (!mf) {
+			fprintf(stderr, "Failed to open matchfile %s.\n", fname);
+			exit(-1);
+		}
 		nread = 0;
 
 		for (;;) {
-			MatchObj* mo;
 			matchfile_entry me;
-			int c;
 			int fieldnum;
 			double x1,y1,z1;
 			double x2,y2,z2;
@@ -157,126 +157,128 @@ int main(int argc, char *argv[]) {
 			bool err  = FALSE;
 			double xavg, yavg, zavg;
 			double fieldrad2;
+			uint off, n, k;
 
-			// detect EOF and exit gracefully...
-			c = fgetc(infile);
-			if (c == EOF)
+			if (matchfile_next_table(mf, &me))
 				break;
-			else
-				ungetc(c, infile);
 
-			if (matchfile_read_match(infile, &mo, &me)) {
-				fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
-				fflush(stderr);
-				break;
-			}
-			fieldnum = me.fieldnum;
-			if (fieldnum < firstfield)
-				continue;
-			if (fieldnum > lastfield)
-				continue;
-
-			nread++;
-
-			x1 = mo->sMin[0];
-			y1 = mo->sMin[1];
-			z1 = mo->sMin[2];
-			x2 = mo->sMax[0];
-			y2 = mo->sMax[1];
-			z2 = mo->sMax[2];
-
-			// normalize.
-			r = sqrt(square(x1) + square(y1) + square(z1));
-			x1 /= r;
-			y1 /= r;
-			z1 /= r;
-			r = sqrt(square(x2) + square(y2) + square(z2));
-			x2 /= r;
-			y2 /= r;
-			z2 /= r;
-
-			xc = (x1 + x2) / 2.0;
-			yc = (y1 + y2) / 2.0;
-			zc = (z1 + z2) / 2.0;
-			r = sqrt(square(xc) + square(yc) + square(zc));
-			xc /= r;
-			yc /= r;
-			zc /= r;
-
-			radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
-			rac  = rad2deg(xy2ra(xc, yc));
-			decc = rad2deg(z2dec(zc));
-			arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
-
-			// read the RDLS entries for this field and make sure they're all
-			// within radius of the center.
-			rdlist = (dl*)rdlist_get_field(rdls, fieldnum);
-			M = dl_size(rdlist) / 2;
-			xavg = yavg = zavg = 0.0;
-			for (j=0; j<M; j++) {
-				double x, y, z;
-				ra  = dl_get(rdlist, j*2);
-				dec = dl_get(rdlist, j*2 + 1);
-				// in degrees
-				ra  = deg2rad(ra);
-				dec = deg2rad(dec);
-				x = radec2x(ra, dec);
-				y = radec2y(ra, dec);
-				z = radec2z(ra, dec);
-				xavg += x;
-				yavg += y;
-				zavg += z;
-				dist2 = square(x - xc) + square(y - yc) + square(z - zc);
-
-				// 1.1 is a "fudge factor"
-				if (dist2 > (radius2 * 1.1)) {
-					fprintf(stderr, "\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
-							fieldnum, rac, decc, arc);
-					fprintf(stderr, "rdls %i is (%g, %g).\n", j, rad2deg(ra), rad2deg(dec));
-					err = TRUE;
+			for (k=0; k<mf->nrows; k++) {
+				MatchObj* mo;
+				if (mo = matchfile_buffered_read_match(mf)) {
+					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
 					break;
 				}
-			}
-			// make another sweep through, finding the field star furthest from the mean.
-			// this gives an estimate of the field radius.
-			xavg /= (double)M;
-			yavg /= (double)M;
-			zavg /= (double)M;
-			fieldrad2 = 0.0;
-			for (j=0; j<M; j++) {
-				double x, y, z;
-				ra  = dl_get(rdlist, j*2);
-				dec = dl_get(rdlist, j*2 + 1);
-				// in degrees
-				ra  = deg2rad(ra);
-				dec = deg2rad(dec);
-				x = radec2x(ra, dec);
-				y = radec2y(ra, dec);
-				z = radec2z(ra, dec);
-				dist2 = square(x - xavg) + square(y - yavg) + square(z - zavg);
-				if (dist2 > fieldrad2)
-					fieldrad2 = dist2;
-			}
-			if (fieldrad2 * 1.2 < radius2) {
-				fprintf(stderr, "\nWarning: Field %i: match says scale is %g, but field radius is %g.\n", fieldnum,
-						60.0 * rad2deg(distsq2arc(radius2)),
-						60.0 * rad2deg(distsq2arc(fieldrad2)));
-				warn = TRUE;
-			}
 
-			if (err) {
-				incorrect++;
-				incorrects[fieldnum]++;
-			} else if (warn) {
-				warning++;
-				warnings[fieldnum]++;
-			} else {
-				corrects[fieldnum]++;
-				correct++;
-				fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin.\n", fieldnum, rac, decc, arc);
-			}
+				fieldnum = me.fieldnum;
+				if (fieldnum < firstfield)
+					continue;
+				if (fieldnum > lastfield)
+					continue;
 
-			free_MatchObj(mo);
+				nread++;
+
+				x1 = mo->sMin[0];
+				y1 = mo->sMin[1];
+				z1 = mo->sMin[2];
+				x2 = mo->sMax[0];
+				y2 = mo->sMax[1];
+				z2 = mo->sMax[2];
+
+				// normalize.
+				r = sqrt(square(x1) + square(y1) + square(z1));
+				x1 /= r;
+				y1 /= r;
+				z1 /= r;
+				r = sqrt(square(x2) + square(y2) + square(z2));
+				x2 /= r;
+				y2 /= r;
+				z2 /= r;
+				
+				xc = (x1 + x2) / 2.0;
+				yc = (y1 + y2) / 2.0;
+				zc = (z1 + z2) / 2.0;
+				r = sqrt(square(xc) + square(yc) + square(zc));
+				xc /= r;
+				yc /= r;
+				zc /= r;
+
+				radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
+				rac  = rad2deg(xy2ra(xc, yc));
+				decc = rad2deg(z2dec(zc));
+				arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
+
+				// read the RDLS entries for this field and make sure they're all
+				// within radius of the center.
+				rdlist = (dl*)rdlist_get_field(rdls, fieldnum);
+				M = dl_size(rdlist) / 2;
+				xavg = yavg = zavg = 0.0;
+				for (j=0; j<M; j++) {
+					double x, y, z;
+					ra  = dl_get(rdlist, j*2);
+					dec = dl_get(rdlist, j*2 + 1);
+					// in degrees
+					ra  = deg2rad(ra);
+					dec = deg2rad(dec);
+					x = radec2x(ra, dec);
+					y = radec2y(ra, dec);
+					z = radec2z(ra, dec);
+					xavg += x;
+					yavg += y;
+					zavg += z;
+					dist2 = square(x - xc) + square(y - yc) + square(z - zc);
+
+					// 1.1 is a "fudge factor"
+					if (dist2 > (radius2 * 1.1)) {
+						fprintf(stderr, "\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
+								fieldnum, rac, decc, arc);
+						fprintf(stderr, "rdls %i is (%g, %g).\n", j, rad2deg(ra), rad2deg(dec));
+						err = TRUE;
+						break;
+					}
+				}
+				// make another sweep through, finding the field star furthest from the mean.
+				// this gives an estimate of the field radius.
+				xavg /= (double)M;
+				yavg /= (double)M;
+				zavg /= (double)M;
+				fieldrad2 = 0.0;
+				for (j=0; j<M; j++) {
+					double x, y, z;
+					ra  = dl_get(rdlist, j*2);
+					dec = dl_get(rdlist, j*2 + 1);
+					// in degrees
+					ra  = deg2rad(ra);
+					dec = deg2rad(dec);
+					x = radec2x(ra, dec);
+					y = radec2y(ra, dec);
+					z = radec2z(ra, dec);
+					dist2 = square(x - xavg) + square(y - yavg) + square(z - zavg);
+					if (dist2 > fieldrad2)
+						fieldrad2 = dist2;
+				}
+				if (fieldrad2 * 1.2 < radius2) {
+					fprintf(stderr, "\nWarning: Field %i: match says scale is %g, but field radius is %g.\n", fieldnum,
+							60.0 * rad2deg(distsq2arc(radius2)),
+							60.0 * rad2deg(distsq2arc(fieldrad2)));
+					warn = TRUE;
+				}
+				
+				if (err) {
+					incorrect++;
+					incorrects[fieldnum]++;
+				} else if (warn) {
+					warning++;
+					warnings[fieldnum]++;
+				} else {
+					corrects[fieldnum]++;
+					correct++;
+					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin.\n", fieldnum, rac, decc, arc);
+				}
+
+				if (mo->transform)
+					free(mo->transform);
+				//free_MatchObj(mo);
+			}
 			free(me.indexpath);
 			free(me.fieldpath);
 		}
@@ -284,7 +286,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Read %i matches.\n", nread);
 		fflush(stderr);
 
-		fclose(infile);
+		matchfile_close(mf);
 	}
 
 	fprintf(stderr, "%i hits correct, %i warnings, %i errors.\n",
