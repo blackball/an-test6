@@ -141,7 +141,7 @@ void solve_field(solver_params* params) {
 
 		if ((params->max_matches_needed && (params->mostagree >= params->max_matches_needed)) ||
 			(params->maxtries && (params->numtries >= params->maxtries)) ||
-			(params->quitNow))
+			params->quitNow)
 			break;
 	}
 	free(iCs);
@@ -237,6 +237,8 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		params->numtries++;
 
 		try_all_codes(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params);
+		if (params->quitNow)
+			break;
     }
 
     free_xy(ABCDpix);
@@ -261,6 +263,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD, params);
     }
     kdtree_free_query(result);
+	if (params->quitNow)
+		return;
 
     // BACD
     thequery[0] = 1.0 - Cx;
@@ -274,6 +278,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD, params);
     }
     kdtree_free_query(result);
+	if (params->quitNow)
+		return;
 
     // ABDC
     thequery[0] = Dx;
@@ -287,6 +293,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC, params);
     }
     kdtree_free_query(result);
+	if (params->quitNow)
+		return;
 
     // BADC
     thequery[0] = 1.0 - Dx;
@@ -300,6 +308,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC, params);
     }
     kdtree_free_query(result);
+	if (params->quitNow)
+		return;
 }
 
 void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
@@ -427,7 +437,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		if (nagree > params->mostagree) {
 			params->mostagree = nagree;
 		}
-
+		if (params->quitNow)
+			return;
     }
 }
 

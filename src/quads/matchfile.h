@@ -11,7 +11,7 @@
 
 #define MATCHFILE_AN_FILETYPE "MATCH"
 
-#define MATCHFILE_FITS_COLUMNS 6
+#define MATCHFILE_FITS_COLUMNS 7
 
 // a matchfile is structured as a set of tables.
 // each table corresponds to a matchfile_entry
