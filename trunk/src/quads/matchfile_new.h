@@ -41,7 +41,11 @@ struct matchfile {
 	off_t header_end;
 
 	// the current matchfile_entry
-	qfits_header* meheader;
+	qfits_table* table;
+	qfits_header* tableheader;
+	off_t tableheader_start;
+	off_t tableheader_end;
+	int nrows;
 };
 typedef struct matchfile matchfile;
 
@@ -52,7 +56,9 @@ int matchfile_write_header(matchfile* m);
 int matchfile_fix_header(matchfile* m);
 
 
-int matchfile_write_table(matchfile* m, matchfile_entry* me);
+int matchfile_start_table(matchfile* m, matchfile_entry* me);
+
+int matchfile_write_table(matchfile* m);
 
 int matchfile_fix_table(matchfile* m);
 
