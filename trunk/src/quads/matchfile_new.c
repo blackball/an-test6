@@ -52,24 +52,26 @@ int matchfile_write_header(matchfile* mf) {
 	return 0;
 }
 
-int matchfile_fix_header(matchfile* mf) {
-	off_t offset;
-	off_t new_header_end;
-	assert(mf->fid);
-	offset = ftello(mf->fid);
-	fseeko(mf->fid, 0, SEEK_SET);
-    qfits_header_dump(mf->header, mf->fid);
-	new_header_end = ftello(mf->fid);
-	if (new_header_end != mf->header_end) {
-		fprintf(stderr, "Warning: matchfile header used to end at %lu, "
-				"now it ends at %lu.\n", (unsigned long)mf->header_end,
-				(unsigned long)new_header_end);
-		return -1;
-	}
-	fseek(mf->fid, offset, SEEK_SET);
-	fits_pad_file(mf->fid);
-	return 0;
-}
+/*
+  int matchfile_fix_header(matchfile* mf) {
+  off_t offset;
+  off_t new_header_end;
+  assert(mf->fid);
+  offset = ftello(mf->fid);
+  fseeko(mf->fid, 0, SEEK_SET);
+  qfits_header_dump(mf->header, mf->fid);
+  new_header_end = ftello(mf->fid);
+  if (new_header_end != mf->header_end) {
+  fprintf(stderr, "Warning: matchfile header used to end at %lu, "
+  "now it ends at %lu.\n", (unsigned long)mf->header_end,
+  (unsigned long)new_header_end);
+  return -1;
+  }
+  fseek(mf->fid, offset, SEEK_SET);
+  fits_pad_file(mf->fid);
+  return 0;
+  }
+*/
 
 // mapping between a struct field and FITS field.
 struct fits_struct_pair {
@@ -105,8 +107,9 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, 4);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "mincorner", nil, sMin, 3);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "maxcorner", nil, sMax, 3);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "noverlap", nil, noverlap, 1);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
@@ -198,6 +201,8 @@ int matchfile_fix_table(matchfile* mf) {
 	}
 	// back to where we started!
 	fseeko(mf->fid, off, SEEK_SET);
+	// add padding!
+	fits_pad_file(mf->fid);
 	return 0;
 }
 
@@ -234,6 +239,125 @@ int matchfile_close(matchfile* mf) {
 	return 0;
 }
 
+matchfile* matchfile_open(char* fn) {
+	matchfile* mf = NULL;
+	qfits_header* header;
+	FILE* fid;
 
+	if (!matchfile_fitstruct_inited)
+		init_matchfile_fitstruct();
+	if (!is_fits_file(fn)) {
+		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
+		return NULL;
+	}
 
+	fid = fopen(fn, "rb");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s to read matches: %s\n", fn, strerror(errno));
+		return NULL;
+	}
+	header = qfits_header_read(fn);
+	if (!header) {
+		fprintf(stderr, "Couldn't read FITS quad header from %s.\n", fn);
+		goto bailout;
+	}
+
+	mf = new_matchfile();
+	mf->fid = fid;
+	mf->header = header;
+	mf->extension = 0;
+	mf->fn = strdup(fn);
+	return mf;
+
+ bailout:
+	if (mf)
+		free(mf);
+	if (fid)
+		fclose(fid);
+	return NULL;
+}
+
+int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
+	// find a table containing all the columns needed...
+	// (and find the indices of the columns we need.)
+	qfits_table* table;
+	int good = 0;
+	int c;
+	int nextens = qfits_query_n_ext(mf->fn);
+	if (mf->table)
+		qfits_table_close(mf->table);
+	if (mf->tableheader)
+		qfits_header_destroy(mf->tableheader);
+
+	mf->extension++;
+	for (; mf->extension<=nextens; mf->extension++) {
+		int c2;
+		if (!qfits_is_table(mf->fn, mf->extension))
+			continue;
+		table = qfits_table_open(mf->fn, mf->extension);
+
+		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
+			mf->columns[c] = -1;
+		for (c=0; c<table->nc; c++) {
+			qfits_col* col = table->col + c;
+			for (c2=0; c2<MATCHFILE_FITS_COLUMNS; c2++) {
+				if (mf->columns[c2] != -1) continue;
+				// allow case-insensitive matches.
+				if (strcasecmp(col->tlabel, matchfile_fitstruct[c2].fieldname))
+					continue;
+				mf->columns[c2] = c;
+			}
+		}
+		good = 1;
+		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
+			if (mf->columns[c] == -1) {
+				good = 0;
+				break;
+			}
+		}
+		if (good) {
+			mf->table = table;
+			mf->tableheader = qfits_header_readext(mf->fn, mf->extension);
+			break;
+		}
+		qfits_table_close(table);
+	}
+	if (!good) {
+		fprintf(stderr, "matchfile: didn't find the following required columns:\n    ");
+		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
+			if (mf->columns[c] == -1)
+				fprintf(stderr, "%s  ", matchfile_fitstruct[c].fieldname);
+		fprintf(stderr, "\n");
+		return -1;
+	}
+	mf->nrows = mf->table->nr;
+
+	me->fieldnum = qfits_header_getint(mf->tableheader, "FIELD", -1);
+	me->parity = qfits_header_getboolean(mf->tableheader, "PARITY", 0);
+	me->indexpath = strdup(qfits_header_getstr(mf->tableheader, "INDEX"));
+	me->fieldpath = strdup(qfits_header_getstr(mf->tableheader, "FLDPATH"));
+
+	return 0;
+}
+
+int matchfile_read_matches(matchfile* mf, MatchObj* mo, 
+						   uint offset, uint n) {
+	int c;
+
+	if (!matchfile_fitstruct_inited)
+		init_matchfile_fitstruct();
+
+	for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
+		assert(mf->columns[c] != -1);
+		assert(mf->table);
+		assert(mf->table->col[mf->columns[c]].atom_size ==
+			   matchfile_fitstruct[c].size);
+
+		qfits_query_column_seq_to_array
+			(mf->table, mf->columns[c], offset, n,
+			 ((unsigned char*)mo) + matchfile_fitstruct[c].offset,
+			 sizeof(MatchObj));
+	}
+	return 0;
+}
 

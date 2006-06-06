@@ -12,6 +12,9 @@ struct match_struct {
 	double sMax[3];
     double vector[6];
 	double* transform;
+
+	int noverlap;
+
 	/*
 	  double corners[4];
 	  double starA[3];

@@ -46,6 +46,12 @@ struct matchfile {
 	off_t tableheader_start;
 	off_t tableheader_end;
 	int nrows;
+
+	// when reading:
+	// the FITS extension being read.
+	int extension;
+	char* fn;
+	int columns[MATCHFILE_FITS_COLUMNS];
 };
 typedef struct matchfile matchfile;
 
@@ -53,7 +59,7 @@ matchfile* matchfile_open_for_writing(char* fn);
 
 int matchfile_write_header(matchfile* m);
 
-int matchfile_fix_header(matchfile* m);
+//int matchfile_fix_header(matchfile* m);
 
 
 int matchfile_start_table(matchfile* m, matchfile_entry* me);
@@ -70,10 +76,10 @@ int matchfile_close(matchfile* m);
 
 matchfile* matchfile_open(char* fn);
 
-int matchfile_read_table(matchfile* m, matchfile_entry* me);
+int matchfile_next_table(matchfile* m, matchfile_entry* me);
 
-int matchfile_read_match(matchfile* m, MatchObj* mo);
+//int matchfile_read_match(matchfile* m, MatchObj* mo);
 
-int matchfile_read_matches(matchfile* m, MatchObj* mo, int n);
+int matchfile_read_matches(matchfile* m, MatchObj* mo, uint offset, uint n);
 
 #endif
