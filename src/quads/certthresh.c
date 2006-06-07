@@ -158,9 +158,13 @@ int main(int argc, char *argv[]) {
 			double xavg, yavg, zavg;
 			double fieldrad2;
 			uint k;
+			int res;
 
-			if (matchfile_next_table(mf, &me))
+			if ((res = matchfile_next_table(mf, &me))) {
+				if (res == -1)
+					fprintf(stderr, "Failed to read the next table from matchfile %s.\n", fname);
 				break;
+			}
 
 			for (k=0; k<mf->nrows; k++) {
 				MatchObj* mo;
@@ -169,6 +173,15 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
 					break;
 				}
+
+				/*
+				  printf("quad %u, stars { %u, %u, %u, %u }, fieldobjs { %u, %u, %u, %u }\n",
+				  mo->quadno, mo->star[0], mo->star[1], mo->star[2], mo->star[3],
+				  mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
+				  printf("    codeerr %f, mincorner { %g, %g, %g }, maxcorner { %g, %g %g }, noverlap %i\n",
+				  mo->code_err, mo->sMin[0], mo->sMin[1], mo->sMin[2],
+				  mo->sMax[0], mo->sMax[1], mo->sMax[2], (int)mo->noverlap);
+				*/
 
 				fieldnum = me.fieldnum;
 				if (fieldnum < firstfield)
@@ -273,7 +286,8 @@ int main(int argc, char *argv[]) {
 				} else {
 					corrects[fieldnum]++;
 					correct++;
-					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin.\n", fieldnum, rac, decc, arc);
+					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, noverlap %i\n", fieldnum, rac, decc, arc,
+							(int)mo->noverlap);
 				}
 
 				if (mo->transform)

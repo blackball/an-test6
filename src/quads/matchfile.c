@@ -48,6 +48,7 @@ int matchfile_write_header(matchfile* mf) {
 	// the main file header is quite minimal...
     qfits_header_dump(mf->header, mf->fid);
 	mf->header_end = ftello(mf->fid);
+	fits_pad_file(mf->fid);
 	return 0;
 }
 
@@ -132,7 +133,8 @@ static qfits_table* matchfile_get_table() {
 
 	for (col=0; col<MATCHFILE_FITS_COLUMNS; col++) {
 		fitstruct* fs = matchfile_fitstruct + col;
-		fits_add_column(table, col, fs->fitstype, 1, fs->units, fs->fieldname);
+		fits_add_column(table, col, fs->fitstype, fs->ncopies,
+						fs->units, fs->fieldname);
 	}
 	table->tab_w = qfits_compute_table_width(table);
 	return table;
@@ -154,10 +156,10 @@ int matchfile_start_table(matchfile* mf, matchfile_entry* me) {
 	qfits_header_add(mf->tableheader, "CODETOL", val, "Code match tolerance.", NULL);
 	qfits_header_add(mf->tableheader, "PARITY", (me->parity ? "Y" : "N"),
 					 "Were field coordinates flipped?", NULL);
-	qfits_header_add(mf->tableheader, "INDEX", me->indexpath ? me->indexpath : "",
-					 "Path of the index used", NULL);
-	qfits_header_add(mf->tableheader, "FLDPATH", me->indexpath ? me->indexpath : "",
-					 "Path of the field file", NULL);
+	qfits_header_add(mf->tableheader, "INDEX", me->indexpath ? me->indexpath : "", NULL, NULL);
+	qfits_header_add(mf->tableheader, "", NULL, "Path of the index used", NULL);
+	qfits_header_add(mf->tableheader, "FLDPATH", me->indexpath ? me->indexpath : "", NULL, NULL);
+	qfits_header_add(mf->tableheader, "", NULL, "Path of the field file", NULL);
 	return 0;
 }
 
@@ -212,9 +214,14 @@ int matchfile_write_match(matchfile* mf, MatchObj* mo) {
 	if (!matchfile_fitstruct_inited)
 		init_matchfile_fitstruct();
 	for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
+		int i;
+		int atomsize;
 		fitstruct* fs = matchfile_fitstruct + c;
-		if (fits_write_data(mf->fid, ((unsigned char*)mo) + fs->offset, fs->fitstype)) {
-			return -1;
+		atomsize = fs->size / fs->ncopies;
+		for (i=0; i<fs->ncopies; i++) {
+			if (fits_write_data(mf->fid, ((unsigned char*)mo) + fs->offset + (i * atomsize), fs->fitstype)) {
+				return -1;
+			}
 		}
 	}
 	mf->nrows++;
@@ -222,8 +229,6 @@ int matchfile_write_match(matchfile* mf, MatchObj* mo) {
 }
 
 int matchfile_close(matchfile* mf) {
-	if (mf->fn)
-		free(mf->fn);
 	if (mf->fid) {
 		fits_pad_file(mf->fid);
 		if (fclose(mf->fid)) {
@@ -237,7 +242,8 @@ int matchfile_close(matchfile* mf) {
 		qfits_header_destroy(mf->tableheader);
 	if (mf->header)
 		qfits_header_destroy(mf->header);
-
+	if (mf->fn)
+		free(mf->fn);
 	if (mf->buffer)
 		free(mf->buffer);
 
@@ -290,13 +296,17 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 	int good = 0;
 	int c;
 	int nextens = qfits_query_n_ext(mf->fn);
-	if (mf->table)
+	if (mf->table) {
 		qfits_table_close(mf->table);
-	if (mf->tableheader)
+		mf->table = NULL;
+	}
+	if (mf->tableheader) {
 		qfits_header_destroy(mf->tableheader);
+		mf->tableheader = NULL;
+	}
 
 	mf->extension++;
-	if (mf->extension >= nextens) {
+	if (mf->extension > nextens) {
 		return 1;
 	}
 
@@ -343,7 +353,7 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 	mf->nrows = mf->table->nr;
 
 	me->fieldnum = qfits_header_getint(mf->tableheader, "FIELD", -1);
-	me->fieldnum = qfits_header_getdouble(mf->tableheader, "CODETOL", 0.0);
+	me->codetol = qfits_header_getdouble(mf->tableheader, "CODETOL", 0.0);
 	me->parity = qfits_header_getboolean(mf->tableheader, "PARITY", 0);
 	me->indexpath = strdup(qfits_header_getstr(mf->tableheader, "INDEX"));
 	me->fieldpath = strdup(qfits_header_getstr(mf->tableheader, "FLDPATH"));
@@ -362,7 +372,7 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 		assert(mf->columns[c] != -1);
 		assert(mf->table);
 		assert(mf->table->col[mf->columns[c]].atom_size ==
-			   matchfile_fitstruct[c].size);
+			   matchfile_fitstruct[c].size / matchfile_fitstruct[c].ncopies);
 
 		qfits_query_column_seq_to_array
 			(mf->table, mf->columns[c], offset, n,
@@ -381,6 +391,7 @@ MatchObj* matchfile_buffered_read_match(matchfile* mf) {
 		mf->nbuff = mf->off = mf->buffind = 0;
 	}
 	if (mf->buffind == mf->nbuff) {
+		memset(mf->buffer, 0, BLOCK * sizeof(MatchObj));
 		// read a new block!
 		uint n = BLOCK;
 		// the new block to read starts after the current block...

@@ -7,8 +7,8 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-#CFLAGS += -O0
-CFLAGS += -O2
+CFLAGS += -O0
+#CFLAGS += -O2
 #CFLAGS += -pg
 
 # What functions were and weren't inlined?

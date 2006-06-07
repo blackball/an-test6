@@ -211,6 +211,10 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to open file %s to write match file.\n", matchfname);
 			exit(-1);
 		}
+		if (matchfile_write_header(mf)) {
+			fprintf(stderr, "Failed to write matchfile header.\n");
+			exit(-1);
+		}
 		
 		// Read .xyls file...
 		fprintf(stderr, "Reading fields file %s...", fieldfname);
