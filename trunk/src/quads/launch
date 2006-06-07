@@ -34,8 +34,8 @@ CMD="mkdir -p $index_dir"
 echo $CMD
 $CMD
 
-for x in quad objs ckdt; do
-  CMD="cp $index_src.${x}.fits $index_dir";
+for x in quad ckdt skdt; do
+  CMD="rsync $index_src.${x}.fits $index_dir";
   echo $CMD
   $CMD
 done
