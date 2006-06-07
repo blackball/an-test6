@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.7 $
+   @version	$Revision: 1.8 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.7 2006/05/11 14:34:30 dlang Exp $
+	$Id: tfits.c,v 1.8 2006/06/07 18:28:44 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/11 14:34:30 $
-	$Revision: 1.7 $
+	$Date: 2006/06/07 18:28:44 $
+	$Revision: 1.8 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -878,6 +878,7 @@ int qfits_query_column_seq_to_array(
     size_t              size ;
 	int                 i ;
 	int do_swap;
+	int j;
    
     if (th->tab_w == -1) {
         /* Compute the table width in bytes */
@@ -929,8 +930,13 @@ int qfits_query_column_seq_to_array(
         memcpy(r, inbuf, field_size);
 
 #ifndef WORDS_BIGENDIAN
-		if (do_swap)
-			swap_bytes(r, col->atom_size);
+		if (do_swap) {
+			unsigned char* r2 = r;
+			for (j=0; j<col->atom_nb; j++) {
+				swap_bytes(r2, col->atom_size);
+				r2 += col->atom_size;
+			}
+		}
 #endif
 
         r += dest_stride;
