@@ -157,14 +157,15 @@ int main(int argc, char *argv[]) {
 			bool err  = FALSE;
 			double xavg, yavg, zavg;
 			double fieldrad2;
-			uint off, n, k;
+			uint k;
 
 			if (matchfile_next_table(mf, &me))
 				break;
 
 			for (k=0; k<mf->nrows; k++) {
 				MatchObj* mo;
-				if (mo = matchfile_buffered_read_match(mf)) {
+				mo = matchfile_buffered_read_match(mf);
+				if (!mo) {
 					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
 					break;
 				}
