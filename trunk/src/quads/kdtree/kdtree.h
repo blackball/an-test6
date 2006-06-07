@@ -36,7 +36,7 @@ typedef struct kdtree kdtree_t;
 
 struct kdtree_qres {
 	unsigned int nres;
-	real *results;         /* Each af the points returned from a query */
+	real *results;         /* Each of the points returned from a query */
 	real *sdists;          /* Squared distance from query point */
 	unsigned int *inds;    /* Indexes into original data set */
 };
