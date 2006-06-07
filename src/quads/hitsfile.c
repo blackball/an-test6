@@ -70,6 +70,7 @@ void hits_field_init(hits_field* h) {
 	h->nagree = 0;
 	h->parity = FALSE;
 	h->fieldpath = NULL;
+	h->failed = FALSE;
 }
 
 void hits_start_hits_list(FILE* fid) {
@@ -86,6 +87,8 @@ void hits_write_field_header(FILE* fid, hits_field* h) {
 	if (h->fieldpath)
 		fprintf(fid, "    field_to_solve = '%s',\n", h->fieldpath);
 	fprintf(fid, "    user_quit=%s,\n", (h->user_quit?"True":"False"));
+	if (h->failed)
+		fprintf(fid, "    failed=True,\n");
 	fprintf(fid, "    field=%u,\n", h->field);
 	fprintf(fid, "    objects_in_field=%u,\n", h->objects_in_field);
 	fprintf(fid, "    objects_examined=%u,\n", h->objects_examined);
