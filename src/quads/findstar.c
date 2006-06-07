@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "{\n");
 		for (ii = 0; ii < kq->nres; ii++) {
 			fprintf(stdout, "%u: ((%lf, %lf, %lf), (%lf, %lf)),\n",
-				kq->inds[3*ii],
+				kq->inds[ii],
                 kq->results[3*ii], kq->results[3*ii+1], kq->results[3*ii+2],
 				rad2deg(xy2ra(kq->results[3*ii], kq->results[3*ii+1])),
 				rad2deg(z2dec(kq->results[3*ii+2])));
