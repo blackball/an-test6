@@ -1,19 +1,20 @@
 #ifndef MATCHOBJ_H
 #define MATCHOBJ_H
 
+#include <stdint.h>
 #include "starutil.h"
 
 struct match_struct {
     uint quadno;
 	uint star[4];
 	uint field[4];
-    double code_err;
+    float code_err;
 	double sMin[3];
 	double sMax[3];
     double vector[6];
 	double* transform;
 
-	int noverlap;
+	int16_t noverlap;
 
 	/*
 	  double corners[4];

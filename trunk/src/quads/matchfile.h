@@ -20,7 +20,7 @@ struct matchfile_entry {
 	bool parity;
 	char* indexpath;
 	char* fieldpath;
-	double codetol;
+	float codetol;
 };
 typedef struct matchfile_entry matchfile_entry;
 
