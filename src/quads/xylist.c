@@ -104,7 +104,7 @@ xy* xylist_get_field(xylist* ls, uint field) {
 	xy* rtn;
 	nobjs = xylist_n_entries(ls, field);
 	if (nobjs == -1) {
-		fprintf(stderr, "Field %i couldn't be read.", field);
+		fprintf(stderr, "Field %i couldn't be read.\n", field);
 		return NULL;
 	}
 	rtn = mk_xy(nobjs);

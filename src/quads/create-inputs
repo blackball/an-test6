@@ -22,6 +22,7 @@ TOL=0.01
 INDEXLOWER=0.8
 
 NAGREE=4
+MAXNAGREE=20
 AGREETOL=10
 
 VERIFY_DIST=3
@@ -75,6 +76,9 @@ for ((f=0; f<1; f++)); do
                 txt="${txt}index_lower $INDEXLOWER\n"
                 txt="${txt}nagree $NAGREE\n"
                 txt="${txt}agreetol $AGREETOL\n"
+				if [ x$MAXNAGREE != x ]; then
+					txt="${txt}maxnagree $MAXNAGREE\n"
+				fi
                 if [ x$VERIFY_DIST != x ]; then
 					txt="${txt}verify_dist $VERIFY_DIST\n"
 					txt="${txt}nagree_toverify $NAGREE_TOVERIFY\n"
