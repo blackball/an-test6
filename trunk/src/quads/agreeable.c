@@ -375,6 +375,7 @@ void write_field(hitlist* hl,
 			fieldhdr.field = fieldnum;
 			fieldhdr.nmatches = hitlist_healpix_count_all(hl);
 			fieldhdr.nagree = nbest;
+			fieldhdr.failed = TRUE;
 			hits_write_field_header(hitfid, &fieldhdr);
 			hits_start_hits_list(hitfid);
 			hits_end_hits_list(hitfid);

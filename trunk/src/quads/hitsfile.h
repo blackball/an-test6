@@ -24,6 +24,7 @@ typedef struct hitsfileheader hits_header;
 
 struct hitsfieldentry {
 	bool user_quit;
+	bool failed;
 	unsigned int field;
 	unsigned int objects_in_field;
 	unsigned int objects_examined;
