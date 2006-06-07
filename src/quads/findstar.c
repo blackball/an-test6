@@ -149,17 +149,21 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		fprintf(stderr, "findstar:: Got info; searching\n");
 		kq = kdtree_rangesearch(starkd, qpp, dtol*dtol); 
 		if (!kq) continue;
+		fprintf(stderr, "findstar:: got %d results\n", kq->nres);
 
 		fprintf(stdout, "{\n");
 		for (ii = 0; ii < kq->nres; ii++) {
 			fprintf(stdout, "%u: ((%lf, %lf, %lf), (%lf, %lf)),\n",
-				kq->inds[ii], kq->results[ii], kq->results[ii+1], kq->results[ii+2],
-				rad2deg(xy2ra(kq->results[ii], kq->results[ii+1])),
-				rad2deg(z2dec(kq->results[ii+2])));
+				kq->inds[3*ii],
+                kq->results[3*ii], kq->results[3*ii+1], kq->results[3*ii+2],
+				rad2deg(xy2ra(kq->results[3*ii], kq->results[3*ii+1])),
+				rad2deg(z2dec(kq->results[3*ii+2])));
 		}
 		fprintf(stdout, "}\n");
+		fflush(stdout);
 		fflush(stdin);
 
 		kdtree_free_query(kq);
