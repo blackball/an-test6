@@ -4,7 +4,7 @@ FBASE=/p/learning/stars
 IBASE=/h/42/dstn/local
 
 #TMP=/scr/dstn/
-#INDEXSRC=$BASE/INDEXES/sdss-hp-7/ddd_%02i
+#INDEXSRC=$IBASE/INDEXES/sdss-hp-7/ddd_%02i
 #INDEX=$TMP/sdss-hp-7/ddd_%02i
 
 INDEX=$IBASE/INDEXES/sdss-hp-7/ddd_%02i
