@@ -34,7 +34,7 @@ typedef struct match_struct MatchObj;
 
 #define MATCH_VECTOR_SIZE 6
 
-#define mk_MatchObj() ((MatchObj *)malloc(sizeof(MatchObj)))
+#define mk_MatchObj() ((MatchObj *)calloc(1, sizeof(MatchObj)))
 #define free_MatchObj(m) free(m)
 
 #endif
