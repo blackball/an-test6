@@ -112,6 +112,11 @@ int main(int argc, char *argv[])
 		for (i=0; i<starkd->ndata; i++) {
 			assert(starkd->perm[i] < starkd->ndata);
 		}
+
+		fprintf(stderr, "Checking kdtree...\n");
+		fflush(stderr);
+		kdtree_check(starkd);
+		fprintf(stderr, "done.\n");
 	}
 
 	while (!feof(stdin) && scanrez) {

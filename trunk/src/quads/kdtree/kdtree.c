@@ -335,6 +335,17 @@ int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 	assert(node->r >= 0);
 	assert(node->l <= node->r);
 
+	// if it's the root node, make sure that each value in the permutation
+	// array is present exactly once.
+	if (!nodeid) {
+		unsigned char* counts = calloc(kd->ndata, 1);
+		for (i=node->l; i<=node->r; i++)
+			counts[kd->perm[i]]++;
+		for (i=node->l; i<=node->r; i++)
+			assert(counts[i] == 1);
+		free(counts);
+	}
+
 	for (i=node->l; i<=node->r; i++) {
 		sum += kd->perm[i];
 		assert(kd->perm[i] >= 0);
@@ -902,22 +913,17 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 /* Range seach helper */
 void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdistsqd, kdtree_qres_t *res)
 {
-	real smallest_dsqd, largest_dsqd;
 	int i, j;
 	kdtree_node_t* node;
 
 	node = kdtree_nodeid_to_node(kd, nodeid);
 	/* Early exit - FIXME benchmark to see if this actually helps */
-	smallest_dsqd = kdtree_node_point_mindist2_bailout(kd, node, pt, maxdistsqd);
-	//smallest_dsqd = kdtree_node_point_mindist2(kd, node, pt);
-	if (smallest_dsqd > maxdistsqd) {
+	if (kdtree_node_point_mindist2_exceeds(kd, node, pt, maxdistsqd))
 		return;
-	}
 
 	/* FIXME benchmark to see if this helps: if the whole node is within
 	   range, grab all its points. */
-	largest_dsqd = kdtree_node_point_maxdist2_bailout(kd, node, pt, maxdistsqd);
-	if (largest_dsqd <= maxdistsqd) {
+	if (!kdtree_node_point_maxdist2_exceeds(kd, node, pt, maxdistsqd)) {
 		for (i=node->l; i<=node->r; i++) {
 			// HACK - some/many users don't care about the dist...
 			results_sqd[res->nres] = dist2(kd->data + i * kd->ndim, pt, kd->ndim);
@@ -1030,15 +1036,15 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 
 	/* Store actual coordinates of results */
 	res->results = malloc(sizeof(real) * kd->ndim * res->nres);
-	memcpy(res->results, results, sizeof(real)*kd->ndim*res->nres);
+	memcpy(res->results, results, sizeof(real) * kd->ndim * res->nres);
 
 	/* Store squared distances of results */
 	res->sdists = malloc(sizeof(real) * res->nres);
-	memcpy(res->sdists, results_sqd, sizeof(real)*res->nres);
+	memcpy(res->sdists, results_sqd, sizeof(real) * res->nres);
 
 	/* Store indexes of results */
 	res->inds = malloc(sizeof(unsigned int) * res->nres);
-	memcpy(res->inds, results_inds, sizeof(unsigned int)*res->nres);
+	memcpy(res->inds, results_inds, sizeof(unsigned int) * res->nres);
 
 	/* Sort by ascending distance away from target point before returning */
 	kdtree_qsort_results(res, kd->ndim);
