@@ -1,0 +1,44 @@
+#! /bin/bash
+
+echo Args: $*
+num=`printf %03i $1`
+echo Num $num
+input=input.$num
+output=stdout.$num
+err=stderr.$num
+
+if [ -e $input ]; then
+  echo;
+else
+  echo "Input file not found - exiting.";
+  exit
+fi
+
+# check for another instance of "slave" running on this machine.
+if ps -C slave -o cmd h; then
+  PID=`ps -C slave -o pid h`
+  echo "Another instance of \"slave\" is running on this machine: pid $PID.  Exiting.";
+  exit
+fi
+
+
+index=`gawk '/index\>/{print $2}' $input`
+index_src=`gawk '/index_src\>/{print $2}' $input`
+index_dir=`dirname $index`
+
+echo index is $index
+echo index_src is $index_src
+echo index_dir is $index_dir
+
+CMD="mkdir -p $index_dir"
+echo $CMD
+$CMD
+
+for x in quad objs ckdt; do
+  CMD="cp $index_src.${x}.fits $index_dir";
+  echo $CMD
+  $CMD
+done
+
+/home/dstn/quads/slave < $input > $output 2> $err
+

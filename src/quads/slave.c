@@ -663,7 +663,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			}
 
 			// veto!
-			printf("Found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
+			printf("Veto: found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
 				   n, mo->noverlap, noverlap_toconfirm);
 			p->quitNow = FALSE;
 			winning_listind = -1;
