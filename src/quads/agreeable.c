@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 	bool* eofs;
 	int nread = 0;
 	int f;
-	hitlist* hl;
+	hitlist* hl = NULL;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -155,12 +155,20 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to open file %s to write leftover matches.\n", leftoverfname);
 			exit(-1);
 		}
+		if (matchfile_write_header(leftovermf)) {
+			fprintf(stderr, "Failed to write leftovers matchfile header.\n");
+			exit(-1);
+		}
 		leftovers = TRUE;
 	}
 	if (agreefname) {
 		agreemf = matchfile_open_for_writing(agreefname);
 		if (!agreemf) {
 			fprintf(stderr, "Failed to open file %s to write agreeing matches.\n", agreefname);
+			exit(-1);
+		}
+		if (matchfile_write_header(agreemf)) {
+			fprintf(stderr, "Failed to write agreeing matchfile header.\n");
 			exit(-1);
 		}
 		agree = TRUE;
@@ -206,7 +214,6 @@ int main(int argc, char *argv[]) {
 		for (i=0; i<ninputfiles; i++) {
 			MatchObj* mo;
 			MatchObj* mocopy;
-			matchfile_entry me;
 			matchfile_entry* mecopy = NULL;
 			int nr = 0;
 			char* fname = inputfiles[i];
@@ -231,7 +238,11 @@ int main(int argc, char *argv[]) {
 			// LEAK
 			if (leftovers || agree) {
 				mecopy = malloc(sizeof(matchfile_entry));
-				memcpy(mecopy, &me, sizeof(matchfile_entry));
+				memcpy(mecopy, mes+i, sizeof(matchfile_entry));
+
+				printf("fieldnum %i, parity %i, index %s, field %s, codetol %g\n",
+					   mecopy->fieldnum, (int)mecopy->parity, mecopy->indexpath,
+					   mecopy->fieldpath, mecopy->codetol);
 			}
 
 			for (k=0; k<mfs[i]->nrows; k++) {
@@ -258,11 +269,19 @@ int main(int argc, char *argv[]) {
 				}
 
 				// compute (x,y,z) center, scale, rotation.
-				hitlist_healpix_compute_vector(mo);
+				hitlist_healpix_compute_vector(mocopy);
 				// add the match...
-				hitlist_healpix_add_hit(hl, mo, NULL);
+				hitlist_healpix_add_hit(hl, mocopy, NULL);
 			}
 			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
+
+			if (!(leftovers || agree)) {
+				free(mes[i].indexpath);
+				free(mes[i].fieldpath);
+			}
+
+			// we're done with this table...
+			mes_valid[i] = FALSE;
 		}
 
 		write_field(hl, fieldnum, leftovers, agree, TRUE);
@@ -273,6 +292,12 @@ int main(int argc, char *argv[]) {
 	fflush(stderr);
 
 	hitlist_healpix_free(hl);
+
+	for (i=0; i<ninputfiles; i++) {
+		if (!mfs[i])
+			continue;
+		matchfile_close(mfs[i]);
+	}
 
 	il_free(solved);
 	il_free(unsolved);
@@ -293,6 +318,11 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%i, ", agreehist[i]);
 	}
 	fprintf(stderr, "]\n");
+
+	free(mfs);
+	free(mes);
+	free(mes_valid);
+	free(eofs);
 
 	return 0;
 }
@@ -360,7 +390,7 @@ void write_field(hitlist* hl,
 			NA = pl_size(all);
 			fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
 
-			// sorted the matches by their matchfile_entry so we can write
+			// sort the matches by their matchfile_entry so we can write
 			// them in groups.
 			sorted = malloc(NA * sizeof(MatchObj));
 			for (j=0; j<NA; j++)
