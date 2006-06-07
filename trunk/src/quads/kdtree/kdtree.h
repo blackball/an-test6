@@ -53,6 +53,9 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 								 void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxdist2, real* computed_dist2, int indx, void* extra),
 								 void* extra);
 
+/* Counts points within range. */
+int kdtree_rangecount(kdtree_t* kd, real* pt, real maxdistsquared);
+
 /* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
  * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
  * (kd->perm[ind]).

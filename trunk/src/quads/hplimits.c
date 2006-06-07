@@ -175,7 +175,7 @@ int main(int argc, char** args) {
 
 	printf("radec=[");
 	for (optind=optstart; optind<argc; optind++) {
-		double minra, maxra, mindec, maxdec;
+		//double minra, maxra, mindec, maxdec;
 		double x,y,z;
 		int i;
 		int hp = atoi(args[optind]);

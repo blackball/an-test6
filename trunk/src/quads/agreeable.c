@@ -33,7 +33,11 @@ void printHelp(char* progname) {
 
 int find_correspondences(pl* hits, uint* starids, uint* fieldids, int* p_ok);
 
-void flush_solved_fields(bool doleftovers, bool doagree, bool addunsolved, bool cleanup);
+void write_field(hitlist* hl,
+				 int fieldnum,
+				 bool doleftovers,
+				 bool doagree,
+				 bool unsolvedstubs);
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
 #define DEFAULT_AGREE_TOL 7.0
@@ -49,7 +53,6 @@ matchfile* agreemf = NULL;
 pl* hitlists;
 il* solved;
 il* unsolved;
-il* flushed;
 
 int* agreehist = NULL;
 int  sizeagreehist = 0;
@@ -77,6 +80,7 @@ int main(int argc, char *argv[]) {
 	bool* eofs;
 	int nread = 0;
 	int f;
+	hitlist* hl;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -162,8 +166,6 @@ int main(int argc, char *argv[]) {
 		agree = TRUE;
 	}
 
-	hitlists = pl_new(256);
-	flushed = il_new(256);
 	solved = il_new(256);
 	unsolved = il_new(256);
 
@@ -178,6 +180,8 @@ int main(int argc, char *argv[]) {
 	mes_valid = calloc(ninputfiles, sizeof(bool));
 	eofs = calloc(ninputfiles, sizeof(bool));
 
+	hl = hitlist_healpix_new(agreetolarcsec);
+
 	for (i=0; i<ninputfiles; i++) {
 		fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
 		mfs[i] = matchfile_open(inputfiles[i]);
@@ -189,8 +193,7 @@ int main(int argc, char *argv[]) {
 	// we assume the matchfiles are sorted by field number.
 	for (f=firstfield; f<=lastfield; f++) {
 		bool alldone = TRUE;
-		int fieldnum;
-		hitlist* hl;
+		int fieldnum = f;
 
 		for (i=0; i<ninputfiles; i++)
 			if (!eofs[i])
@@ -199,26 +202,6 @@ int main(int argc, char *argv[]) {
 			break;
 
 		fprintf(stderr, "Field %i.\n", f);
-
-		// get the existing hitlist for this field...
-		fieldnum = f;
-		if (fieldnum < pl_size(hitlists)) {
-			hl = (hitlist*)pl_get(hitlists, fieldnum);
-			if (!hl) {
-				// check if it's NULL because it's been flushed.
-				if (il_contains(flushed, fieldnum)) {
-					continue;
-				}
-				hl = hitlist_healpix_new(agreetolarcsec);
-				pl_set(hitlists, fieldnum, hl);
-			}
-		} else {
-			int k;
-			for (k=pl_size(hitlists); k<fieldnum; k++)
-				pl_append(hitlists, NULL);
-			hl = hitlist_healpix_new(agreetolarcsec);
-			pl_append(hitlists, hl);
-		}
 
 		for (i=0; i<ninputfiles; i++) {
 			MatchObj* mo;
@@ -282,16 +265,15 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
 		}
 
-		// flush after each field (and clean up leftovers)
-		flush_solved_fields(leftovers, agree, FALSE, TRUE);
+		write_field(hl, fieldnum, leftovers, agree, TRUE);
+
+		hitlist_healpix_clear(hl);
 	}
 	fprintf(stderr, "\nRead %i matches.\n", nread);
 	fflush(stderr);
 
-	flush_solved_fields(leftovers, agree, TRUE, TRUE);
+	hitlist_healpix_free(hl);
 
-	pl_free(hitlists);
-	il_free(flushed);
 	il_free(solved);
 	il_free(unsolved);
 
@@ -327,177 +309,166 @@ void free_extra(MatchObj* mo) {
 	mo->extra = NULL;
 }
 
-void flush_solved_fields(bool doleftovers,
-						 bool doagree,
-						 bool addunsolved,
-						 bool cleanup) {
-	int k;
-	il* flushsolved = il_new(256);
+int qsort_matchobj_me(const void* v1, const void* v2) {
+	const MatchObj* mo1 = v1;
+	const MatchObj* mo2 = v2;
+	if (mo1->extra == mo2->extra)
+		return 0;
+	if (mo1->extra > mo2->extra)
+		return 1;
+	return -1;
+}
 
-	for (k=0; k<pl_size(hitlists); k++) {
-		pl* best;
-		hits_field fieldhdr;
-		int nbest;
-		int fieldnum = k;
-		int j;
-		uint* starids;
-		uint* fieldids;
-		int correspond_ok = 1;
-		int Ncorrespond;
+void write_field(hitlist* hl,
+				 int fieldnum,
+				 bool doleftovers,
+				 bool doagree,
+				 bool unsolvedstubs) {
+	pl* best;
+	hits_field fieldhdr;
+	int nbest;
+	int j;
+	uint* starids;
+	uint* fieldids;
+	int correspond_ok = 1;
+	int Ncorrespond;
 
-		hitlist* hl = (hitlist*)pl_get(hitlists, fieldnum);
-		if (!hl) continue;
-		nbest = hitlist_healpix_count_best(hl);
-		if (nbest < min_matches_to_agree) {
-			if (addunsolved) {
-				il_append(unsolved, fieldnum);
-			}
-			if (doleftovers) {
-				int j;
-				int NA;
-				matchfile_entry me;
-				pl* all = hitlist_healpix_get_all(hl);
-				NA = pl_size(all);
-				fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
+	nbest = hitlist_healpix_count_best(hl);
 
-				// write the leftovers...
+	// HACK, this needs to allow fields to be solved by 'verification'
 
-				// HACK - this makes the matchfile_entry basically
-				// meaningless.  Instead, gather together hits that have the
-				// same matchfile_entry ?
-				memset(&me, 0, sizeof(matchfile_entry));
-				me.fieldnum = fieldnum;
+	if (nbest < min_matches_to_agree) {
+		il_append(unsolved, fieldnum);
 
-				if (matchfile_start_table(leftovermf, &me) ||
-					matchfile_write_table(leftovermf)) {
-					fprintf(stderr, "Failed to write leftover matchfile header.\n");
-				}
+		if (unsolvedstubs) {
+			hits_field_init(&fieldhdr);
+			fieldhdr.field = fieldnum;
+			fieldhdr.nmatches = hitlist_healpix_count_all(hl);
+			fieldhdr.nagree = nbest;
+			hits_write_field_header(hitfid, &fieldhdr);
+			hits_start_hits_list(hitfid);
+			hits_end_hits_list(hitfid);
+			hits_write_field_tailer(hitfid);
+			fflush(hitfid);
+		}
+		if (doleftovers) {
+			int j;
+			int NA;
+			matchfile_entry* me;
+			pl* all = hitlist_healpix_get_all(hl);
+			MatchObj* sorted;
+			NA = pl_size(all);
+			fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
 
-				for (j=0; j<NA; j++) {
-					matchfile_entry* me;
-					MatchObj* mo = (MatchObj*)pl_get(all, j);
-					me = (matchfile_entry*)mo->extra;
-					if (matchfile_write_match(leftovermf, mo)) {
-						fprintf(stderr, "Error writing a leftover match.\n");
-						break;
+			// sorted the matches by their matchfile_entry so we can write
+			// them in groups.
+			sorted = malloc(NA * sizeof(MatchObj));
+			for (j=0; j<NA; j++)
+				memcpy(sorted + j, pl_get(all, j), sizeof(MatchObj));
+			pl_free(all);
+
+			qsort(sorted, NA, sizeof(MatchObj), qsort_matchobj_me);
+
+			// write the leftovers...
+			me = NULL;
+			for (j=0; j<NA; j++) {
+				if (sorted[j].extra != me) {
+					if (me) {
+						if (matchfile_fix_table(leftovermf)) {
+							fprintf(stderr, "Failed to fix leftover matchfile header.\n");
+						}
+					}
+					me = sorted[j].extra;
+					if (matchfile_start_table(leftovermf, me) ||
+						matchfile_write_table(leftovermf)) {
+						fprintf(stderr, "Failed to write leftover matchfile header.\n");
 					}
 				}
-
+				if (matchfile_write_match(leftovermf, sorted + j)) {
+					fprintf(stderr, "Error writing a leftover match.\n");
+					break;
+				}
+			}
+			if (me)
 				if (matchfile_fix_table(leftovermf)) {
 					fprintf(stderr, "Failed to fix leftover matchfile header.\n");
 				}
 
-				pl_free(all);
-			}
-			if (cleanup) {
-				hitlist_healpix_free_extra(hl, free_extra);
-				// this frees the MatchObjs.
-				hitlist_healpix_clear(hl);
-				hitlist_healpix_free(hl);
-				pl_set(hitlists, fieldnum, NULL);
-			}
-			continue;
+			free(sorted);
 		}
-		fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
+		return;
+	}
+	fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
 
-		if ((nbest+1) > sizeagreehist) {
-			agreehist = realloc(agreehist, (nbest+1) * sizeof(int));
-			memset(agreehist + sizeagreehist, 0,
-				   ((nbest+1) - sizeagreehist) * sizeof(int));
-			sizeagreehist = nbest + 1;
+	if ((nbest+1) > sizeagreehist) {
+		agreehist = realloc(agreehist, (nbest+1) * sizeof(int));
+		memset(agreehist + sizeagreehist, 0,
+			   ((nbest+1) - sizeagreehist) * sizeof(int));
+		sizeagreehist = nbest + 1;
+	}
+	agreehist[nbest]++;
+
+	best = hitlist_healpix_get_best(hl);
+	//best = hitlist_healpix_get_all_best(hl);
+	//best = hitlist_get_all_above_size(hl, min_matches_to_agree);
+
+	il_append(solved, fieldnum);
+
+	hits_field_init(&fieldhdr);
+	fieldhdr.field = fieldnum;
+	fieldhdr.nmatches = hitlist_healpix_count_all(hl);
+	fieldhdr.nagree = nbest;
+
+	if (doagree) {
+		matchfile_entry me;
+		// HACK -
+		memset(&me, 0, sizeof(matchfile_entry));
+		me.fieldnum = fieldnum;
+		if (matchfile_start_table(agreemf, &me) ||
+			matchfile_write_table(agreemf)) {
+			fprintf(stderr, "Failed to write agreeing matchfile header.\n");
 		}
-		agreehist[nbest]++;
-
-		best = hitlist_healpix_get_best(hl);
-		//best = hitlist_healpix_get_all_best(hl);
-		//best = hitlist_get_all_above_size(hl, min_matches_to_agree);
-
-		il_append(flushsolved, fieldnum);
-		il_append(solved, fieldnum);
-		il_append(flushed, fieldnum);
-
-		hits_field_init(&fieldhdr);
-		fieldhdr.field = fieldnum;
-		fieldhdr.nmatches = hitlist_healpix_count_all(hl);
-		fieldhdr.nagree = nbest;
-
-		if (doagree) {
-			matchfile_entry me;
-			// HACK -
-			memset(&me, 0, sizeof(matchfile_entry));
-			me.fieldnum = fieldnum;
-			if (matchfile_start_table(agreemf, &me) ||
-				matchfile_write_table(agreemf)) {
-				fprintf(stderr, "Failed to write agreeing matchfile header.\n");
-			}
-		}
-
-		for (j=0; j<nbest; j++) {
-			matchfile_entry* me;
-			MatchObj* mo = (MatchObj*)pl_get(best, j);
-			me = (matchfile_entry*)mo->extra;
-
-			if (j == 0) {
-				if (me)
-					fieldhdr.fieldpath = me->fieldpath;
-				hits_write_field_header(hitfid, &fieldhdr);
-				hits_start_hits_list(hitfid);
-			}
-
-			hits_write_hit(hitfid, mo, me);
-
-			if (doagree) {
-				if (matchfile_write_match(agreemf, mo)) {
-					fprintf(stderr, "Error writing an agreeing match.");
-				}
-			}
-		}
-		hits_end_hits_list(hitfid);
-
-		if (doagree) {
-			if (matchfile_fix_table(agreemf)) {
-				fprintf(stderr, "Failed to fix agreeing matchfile header.\n");
-			}
-		}
-
-		starids  = (uint*)malloc(nbest * 4 * sizeof(uint));
-		fieldids = (uint*)malloc(nbest * 4 * sizeof(uint));
-		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
-		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
-		free(starids);
-		free(fieldids);
-		hits_write_field_tailer(hitfid);
-		fflush(hitfid);
-		pl_free(best);
-
-		// we now dump this hitlist.
-		hitlist_healpix_free_extra(hl, free_extra);
-		hitlist_healpix_clear(hl);
-		hitlist_healpix_free(hl);
-		pl_set(hitlists, fieldnum, NULL);
 	}
 
-	/*
-	  printf("# nsolved = %i\n", il_size(flushsolved));
-	  printf("solved=array([");
-	  for (k=0; k<il_size(flushsolved); k++) {
-	  printf("%i,", il_get(flushsolved, k));
-	  }
-	  printf("]);\n");		
+	for (j=0; j<nbest; j++) {
+		matchfile_entry* me;
+		MatchObj* mo = (MatchObj*)pl_get(best, j);
+		me = (matchfile_entry*)mo->extra;
 
-	  // DEBUG - matlab
-	  printf("# solved=[");
-	  for (k=0; k<il_size(flushsolved); k++) {
-	  printf("%i,", il_get(flushsolved, k));
-	  }
-	  printf("];\n");
-	  fflush(stdout);
-	  fprintf(stderr, "Flushed %i fields.\n", il_size(flushsolved));
-	*/
+		if (j == 0) {
+			if (me)
+				fieldhdr.fieldpath = me->fieldpath;
+			hits_write_field_header(hitfid, &fieldhdr);
+			hits_start_hits_list(hitfid);
+		}
+
+		hits_write_hit(hitfid, mo, me);
+
+		if (doagree) {
+			if (matchfile_write_match(agreemf, mo)) {
+				fprintf(stderr, "Error writing an agreeing match.");
+			}
+		}
+	}
+	hits_end_hits_list(hitfid);
+
+	if (doagree) {
+		if (matchfile_fix_table(agreemf)) {
+			fprintf(stderr, "Failed to fix agreeing matchfile header.\n");
+		}
+	}
+
+	starids  = (uint*)malloc(nbest * 4 * sizeof(uint));
+	fieldids = (uint*)malloc(nbest * 4 * sizeof(uint));
+	Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
+	hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
+	free(starids);
+	free(fieldids);
+	hits_write_field_tailer(hitfid);
+	fflush(hitfid);
+	pl_free(best);
+
 	fprintf(stderr, "So far, %i fields have been solved.\n", il_size(solved));
-
-	il_free(flushsolved);
-
 	fflush(hitfid);
 }
 

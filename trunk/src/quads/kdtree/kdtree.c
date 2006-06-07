@@ -37,6 +37,17 @@ static inline real dist2(real* p1, real* p2, int d) {
 	return d2;
 }
 
+static inline int dist2_exceeds(real* p1, real* p2, int d, double maxd2) {
+	int i;
+	real d2 = 0.0;
+	for (i=0; i<d; i++) {
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
+}
+
 /*****************************************************************************/
 /* Building routines                                                         */
 /*****************************************************************************/
@@ -1053,6 +1064,35 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 	results = NULL;
 
 	return res;
+}
+
+int kdtree_rangecount_rec(kdtree_t* kd, kdtree_node_t* node,
+						  real* pt, real maxd2) {
+	int i;
+
+	if (kdtree_node_point_mindist2_exceeds(kd, node, pt, maxd2))
+		return 0;
+
+	/* FIXME benchmark to see if this helps: if the whole node is within
+	   range, grab all its points. */
+	if (!kdtree_node_point_maxdist2_exceeds(kd, node, pt, maxd2))
+		return node->r - node->l + 1;
+
+	if (kdtree_node_is_leaf(kd, node)) {
+		int n = 0;
+		for (i=node->l; i<=node->r; i++)
+			if (!dist2_exceeds(kd->data + i*kd->ndim, pt, kd->ndim, maxd2))
+				n++;
+		return n;
+	} else {
+		return
+			kdtree_rangecount_rec(kd, kdtree_get_child1(kd, node), pt, maxd2) +
+			kdtree_rangecount_rec(kd, kdtree_get_child2(kd, node), pt, maxd2);
+	}
+}
+
+int kdtree_rangecount(kdtree_t* kd, real* pt, real maxdistsquared) {
+	return kdtree_rangecount_rec(kd, kdtree_get_root(kd), pt, maxdistsquared);
 }
 
 inline
