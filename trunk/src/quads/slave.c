@@ -643,6 +643,7 @@ static int cached_hits_compare(const void* v1, const void* v2) {
 	return 0;
 }
 
+// if "me" and "matches" are NULL, marks "fieldnum" as having been done.
 static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 	static int index = 0;
 	static bl* cached = NULL;
@@ -656,6 +657,8 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		exit(-1);
 	}
 
+	printf("Write_hits: fieldnum=%i.\n", fieldnum);
+
 	printf("Cache: [ ");
 	for (k=0; k<bl_size(cached); k++) {
 		cached_hits* ch = bl_access(cached, k);
@@ -664,37 +667,46 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 	printf("]\n");
 
 	nextfld = il_get(fieldlist, index);
+	printf("nextfld=%i\n", nextfld);
 	if (nextfld == fieldnum) {
 		cached_hits ch;
 		cached_hits* cache;
 		bool freeit = FALSE;
 
 		ch.fieldnum = fieldnum;
-		memcpy(&ch.me, me, sizeof(matchfile_entry));
+		if (me)
+			memcpy(&ch.me, me, sizeof(matchfile_entry));
+		else {
+			ch.me.indexpath = NULL;
+			ch.me.fieldpath = NULL;
+		}
 		ch.matches = matches;
 		cache = &ch;
 
 		for (;;) {
 			// write it!
-			if (matchfile_start_table(mf, &cache->me) ||
-				matchfile_write_table(mf)) {
-				fprintf(stderr, "Error: Failed to write matchfile table.\n");
-			}
-			for (k=0; k<pl_size(cache->matches); k++) {
-				MatchObj* mo = pl_get(cache->matches, k);
-				if (matchfile_write_match(mf, mo))
-					fprintf(stderr, "Error writing a match.\n");
-				if (freeit) {
-					free(mo);
+			if (cache->matches) {
+				if (matchfile_start_table(mf, &cache->me) ||
+					matchfile_write_table(mf)) {
+					fprintf(stderr, "Error: Failed to write matchfile table.\n");
 				}
-			}
-			if (matchfile_fix_table(mf)) {
-				fprintf(stderr, "Error: Failed to fix matchfile table.\n");
+				for (k=0; k<pl_size(cache->matches); k++) {
+					MatchObj* mo = pl_get(cache->matches, k);
+					if (matchfile_write_match(mf, mo))
+						fprintf(stderr, "Error writing a match.\n");
+					if (freeit) {
+						free(mo);
+					}
+				}
+				if (matchfile_fix_table(mf)) {
+					fprintf(stderr, "Error: Failed to fix matchfile table.\n");
+				}
 			}
 			index++;
 
 			if (freeit) {
-				pl_free(cache->matches);
+				if (cache->matches)
+					pl_free(cache->matches);
 				free(cache->me.indexpath);
 				free(cache->me.fieldpath);
 				bl_remove_index(cached, 0);
@@ -712,16 +724,24 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		cached_hits cache;
 		// deep copy
 		cache.fieldnum = fieldnum;
-		memcpy(&cache.me, me, sizeof(matchfile_entry));
-		cache.me.indexpath = strdup(me->indexpath);
-		cache.me.fieldpath = strdup(me->fieldpath);
-		cache.matches = pl_new(32);
-		for (k=0; k<pl_size(matches); k++) {
-			MatchObj* mo = pl_get(matches, k);
-			MatchObj* copy = malloc(sizeof(MatchObj));
-			memcpy(copy, mo, sizeof(MatchObj));
-			pl_append(cache.matches, copy);
+		if (me) {
+			memcpy(&cache.me, me, sizeof(matchfile_entry));
+			cache.me.indexpath = strdup(me->indexpath);
+			cache.me.fieldpath = strdup(me->fieldpath);
+		} else {
+			cache.me.indexpath = NULL;
+			cache.me.fieldpath = NULL;
 		}
+		if (matches) {
+			cache.matches = pl_new(32);
+			for (k=0; k<pl_size(matches); k++) {
+				MatchObj* mo = pl_get(matches, k);
+				MatchObj* copy = malloc(sizeof(MatchObj));
+				memcpy(copy, mo, sizeof(MatchObj));
+				pl_append(cache.matches, copy);
+			}
+		} else
+			cache.matches = NULL;
 		bl_insert_sorted(cached, &cache, cached_hits_compare);
 	}
 
@@ -915,6 +935,7 @@ solvethread_run(void* varg) {
 				// file exists; field has already been solved.
 				fprintf(stderr, "Field %i: file %s exists; field has been solved.\n",
 						fieldnum, fn);
+				write_hits(fieldnum, NULL, NULL);
 				continue;
 			}
 		}
@@ -973,6 +994,7 @@ solvethread_run(void* varg) {
 			if (my->winning_listind == -1) {
 				// didn't solve it...
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
+				write_hits(fieldnum, NULL, NULL);
 			} else {
 				int maxoverlap = 0;
 				int sumoverlap = 0;
