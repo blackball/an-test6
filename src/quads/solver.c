@@ -361,8 +361,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 
 		mo = mk_MatchObj();
 
-		mo->transform = transform;
-		//free(transform);
+		memcpy(mo->transform, transform, sizeof(mo->transform));
+		free(transform);
+		mo->transform_valid = TRUE;
 
 		mo->quadno = thisquadno;
 		mo->star[0] = iA;
