@@ -17,8 +17,10 @@
 #include "bl.h"
 #include "catalog.h"
 #include "tic.h"
+#include "fitsioutils.h"
 
-#define OPTIONS "hf:u:l:n:o" // r
+
+#define OPTIONS "hf:u:l:n:oi:" // r
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -44,6 +46,7 @@ void print_help(char* progname)
 	       "     [-n <nside>]    healpix nside (default 512)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
+		   "     [-i <unique-id>] set the unique ID of this index\n"
 	       "\n"
 	       , progname);
 }
@@ -489,9 +492,13 @@ int main(int argc, char** argv)
 	//int rebin = 0;
 	char* basefname = NULL;
 	uint pass, npasses;
+	uint id = 0;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'i':
+			id = atoi(optarg);
+			break;
 			/*
 			  case 'r':
 			  rebin = 1;
@@ -533,6 +540,10 @@ int main(int argc, char** argv)
 			   " (-n option) a multiple of three.");
 	}
 
+	if (!id) {
+		printf("Warning: you should set the unique-id for this index (-i).\n");
+	}
+
 	HEALPIXES = 12 * Nside * Nside;
 	{
 		double hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HEALPIXES;
@@ -567,16 +578,32 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Couldn't open file %s to write quads.\n", quadfname);
 		exit(-1);
 	}
-    if (quadfile_write_header(quads)) {
-        fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
-        exit(-1);
-    }
-
     codes = codefile_open_for_writing(codefname);
 	if (!codes) {
 		fprintf(stderr, "Couldn't open file %s to write codes.\n", quadfname);
 		exit(-1);
 	}
+
+	if (id) {
+		char val[32];
+		sprintf(val, "%u", id);
+		qfits_header_add(quads->header, "INDEXID", val, "Unique id for this index.", NULL);
+		qfits_header_add(codes->header, "INDEXID", val, "Unique id for this index.", NULL);
+	}
+	// get the "HEALPIX" header from the catalog and put it in the code and quad headers.
+	if (fits_copy_header(cat->header, quads->header, "HEALPIX") ||
+		fits_copy_header(cat->header, codes->header, "HEALPIX")) {
+		printf("Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
+	}
+	qfits_header_add(quads->header, "", NULL, "hpquads command line:", NULL);
+	qfits_header_add(codes->header, "", NULL, "hpquads command line:", NULL);
+	fits_add_args(quads->header, argv, argc);
+	fits_add_args(codes->header, argv, argc);
+
+    if (quadfile_write_header(quads)) {
+        fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
+        exit(-1);
+    }
     if (codefile_write_header(codes)) {
         fprintf(stderr, "Couldn't write headers to code file %s\n", codefname);
         exit(-1);

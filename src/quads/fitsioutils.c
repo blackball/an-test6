@@ -12,6 +12,27 @@
 #define IS_LITTLE_ENDIAN 0
 #endif
 
+int fits_add_args(qfits_header* hdr, char** args, int argc) {
+	int i;
+	for (i=0; i<argc; i++) {
+		char key[16];
+		sprintf(key, "CMDLN%i", i);
+		qfits_header_add(hdr, key, args[i], NULL, NULL);
+	}
+	return 0;
+}
+
+int fits_copy_header(qfits_header* src, qfits_header* dest, char* key) {
+	char* str = qfits_header_getstr(src, key);
+	if (!str) {
+		// header not found, or other problem.
+		return -1;
+	}
+	qfits_header_add(dest, key, str,
+					 qfits_header_getcom(src, key), NULL);
+	return 0;
+}
+
 int fits_pad_file(FILE* fid) {
 	off_t offset;
 	int npad;

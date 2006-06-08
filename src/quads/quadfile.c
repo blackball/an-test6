@@ -59,8 +59,7 @@ quadfile* quadfile_open(char* fn, int modifiable) {
     qf->numstars = qfits_header_getint(header, "NSTARS", -1);
     qf->index_scale = qfits_header_getdouble(header, "SCALE_U", -1.0);
     qf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
-
-	qfits_header_destroy(header);
+	qf->header = header;
 
 	if ((qf->numquads == -1) || (qf->numstars == -1) ||
 		(qf->index_scale == -1.0) || (qf->index_scale_lower == -1.0)) {
@@ -102,9 +101,12 @@ quadfile* quadfile_open(char* fn, int modifiable) {
     return qf;
 
  bailout:
-    if (qf)
+    if (qf) {
+		if (qf->header)
+			qfits_header_destroy(qf->header);
         free(qf);
-    if (fid)
+	}
+	if (fid)
         fclose(fid);
     return NULL;
 }

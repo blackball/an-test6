@@ -88,8 +88,7 @@ codefile* codefile_open(char* fn, int modifiable)
 	cf->numstars = qfits_header_getint(header, "NSTARS", -1);
 	cf->index_scale = qfits_header_getdouble(header, "SCALE_U", -1.0);
 	cf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
-
-	qfits_header_destroy(header);
+	cf->header = header;
 
 	if ((cf->numcodes == -1) || (cf->numstars == -1) ||
 	        (cf->index_scale == -1.0) || (cf->index_scale_lower == -1.0)) {
@@ -130,8 +129,11 @@ codefile* codefile_open(char* fn, int modifiable)
 	return cf;
 
 bailout:
-	if (cf)
+	if (cf) {
+		if (cf->header)
+			qfits_header_destroy(cf->header);
 		free(cf);
+	}
 	if (fid)
 		fclose(fid);
 	return NULL;

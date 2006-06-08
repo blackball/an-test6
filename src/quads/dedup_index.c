@@ -17,6 +17,7 @@
 #include "bl.h"
 #include "codefile.h"
 #include "quadfile.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "hf:o:"
 const char HelpString[] =
@@ -126,13 +127,23 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Couldn't open output quads file %s: %s\n", quadoutfname, strerror(errno));
         exit(-1);
     }
-    if (quadfile_write_header(quadsout)) {
-        fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
-        exit(-1);
-    }
     codesout = codefile_open_for_writing(codeoutfname);
     if (!codesout) {
         fprintf(stderr, "Couldn't open output codes file %s: %s\n", codeoutfname, strerror(errno));
+        exit(-1);
+    }
+
+	fits_copy_header(quadsin->header, quadsout->header, "INDEXID");
+	fits_copy_header(quadsin->header, quadsout->header, "HEALPIX");
+	fits_copy_header(codesin->header, codesout->header, "INDEXID");
+	fits_copy_header(codesin->header, codesout->header, "HEALPIX");
+	qfits_header_add(quadsout->header, "", NULL, "dedup_index command line:", NULL);
+	qfits_header_add(codesout->header, "", NULL, "dedup_index command line:", NULL);
+	fits_add_args(quadsout->header, argv, argc);
+	fits_add_args(codesout->header, argv, argc);
+
+    if (quadfile_write_header(quadsout)) {
+        fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
         exit(-1);
     }
     if (codefile_write_header(codesout)) {
