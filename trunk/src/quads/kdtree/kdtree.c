@@ -37,7 +37,7 @@ static inline real dist2(real* p1, real* p2, int d) {
 	return d2;
 }
 
-static inline int dist2_exceeds(real* p1, real* p2, int d, double maxd2) {
+static inline int dist2_exceeds(real* p1, real* p2, int d, real maxd2) {
 	int i;
 	real d2 = 0.0;
 	for (i=0; i<d; i++) {
