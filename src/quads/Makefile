@@ -7,8 +7,8 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-#CFLAGS += -O0
-CFLAGS += -O2
+CFLAGS += -O0
+#CFLAGS += -O2
 #CFLAGS += -pg
 
 # What functions were and weren't inlined?
@@ -100,7 +100,7 @@ $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
 
 an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o \
 	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_OBJ)

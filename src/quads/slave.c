@@ -1,7 +1,7 @@
 /**
  *   Solve fields (with slavish devotion)
  *
- * Inputs: .ckdt .objs .quad
+ * Inputs: .ckdt .quad (.skdt or .objs)
  * Output: .match
  */
 #include <sys/types.h>
@@ -15,6 +15,8 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
+#include <sched.h>
+#include <pthread.h>
 
 #include "kdtree.h"
 #include "kdtree_io.h"
@@ -39,8 +41,7 @@ void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
 }
 
-void solve_fields(xylist *thefields,
-				  kdtree_t *codekd);
+void solve_fields();
 
 int read_parameters();
 
@@ -59,14 +60,16 @@ char* xcolname;
 char* ycolname;
 bool parity = DEFAULT_PARITY_FLIP;
 double codetol = DEFAULT_CODE_TOL;
+
 int startdepth = 0;
 int enddepth = 0;
-il* fieldlist = NULL;
+
 double funits_lower = 0.0;
 double funits_upper = 0.0;
 double index_scale;
 double index_scale_lower;
 double index_scale_lower_factor = 0.0;
+
 bool agreement = FALSE;
 int nagree = 4;
 int maxnagree = 0;
@@ -78,17 +81,18 @@ double verify_dist2 = 0.0;
 int noverlap_tosolve = 0;
 int noverlap_toconfirm = 0;
 
-int winning_listind = -1;
-
-
-hitlist* hits = NULL;
+int threads = 1;
+il* fieldlist = NULL;
+pthread_mutex_t fieldlist_mutex;
 
 matchfile* mf;
-matchfile_entry me;
+pthread_mutex_t matchfile_mutex;
 
 catalog* cat;
 idfile* id;
 quadfile* quads;
+kdtree_t *codetree;
+xylist* xyls;
 kdtree_t* startree;
 
 int* inverse_perm = NULL;
@@ -99,21 +103,21 @@ int Nagreehist;
 
 
 char* get_pathname(char* fname) {
-	char resolved[PATH_MAX];
+	//char resolved[PATH_MAX];
+	char* resolved = malloc(PATH_MAX);
 	if (!realpath(fname, resolved)) {
 		fprintf(stderr, "Couldn't resolve real path of %s: %s\n", fname, strerror(errno));
 		return NULL;
 	}
-	return strdup(resolved);
+	resolved = realloc(resolved, strlen(resolved) + 1);
+	return resolved;
+	//return strdup(resolved);
 }
 
 int main(int argc, char *argv[]) {
     uint numfields;
-	xylist* xy;
-    kdtree_t *codekd;
 	char* progname = argv[0];
 	int i;
-	char* path;
 
     if (argc != 1) {
 		printHelp(progname);
@@ -121,6 +125,14 @@ int main(int argc, char *argv[]) {
     }
 
 	fieldlist = il_new(256);
+
+	if (pthread_mutex_init(&fieldlist_mutex, NULL) ||
+		pthread_mutex_init(&matchfile_mutex, NULL)) {
+		fprintf(stderr, "pthread_mutex_init failed: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	qfits_err_statset(1);
 
 	for (;;) {
 		
@@ -149,7 +161,6 @@ int main(int argc, char *argv[]) {
 		maxnagree = 0;
 		agreetol = 0.0;
 		cat = NULL;
-		hits = NULL;
 		quads = NULL;
 		startree = NULL;
 		xcolname = strdup("ROWC");
@@ -206,6 +217,12 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
+		if (!agreement && (threads > 1)) {
+			fprintf(stderr, "Can't multi-thread when !agreement\n");
+			threads = 1;
+		}
+		fprintf(stderr, "threads %i\n", threads);
+
 		mf = matchfile_open_for_writing(matchfname);
 		if (!mf) {
 			fprintf(stderr, "Failed to open file %s to write match file.\n", matchfname);
@@ -219,28 +236,28 @@ int main(int argc, char *argv[]) {
 		// Read .xyls file...
 		fprintf(stderr, "Reading fields file %s...", fieldfname);
 		fflush(stderr);
-		xy = xylist_open(fieldfname);
-		if (!xy) {
+		xyls = xylist_open(fieldfname);
+		if (!xyls) {
 			fprintf(stderr, "Failed to read xylist.\n");
 			exit(-1);
 		}
-		numfields = xy->nfields;
+		numfields = xyls->nfields;
 		fprintf(stderr, "got %u fields.\n", numfields);
 		if (parity) {
 			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
-			xy->parity = 1;
+			xyls->parity = 1;
 		}
-		xy->xname = xcolname;
-		xy->yname = ycolname;
+		xyls->xname = xcolname;
+		xyls->yname = ycolname;
 
 		// Read .ckdt file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
 		fflush(stderr);
-		codekd = kdtree_fits_read_file(treefname);
-		if (!codekd)
+		codetree = kdtree_fits_read_file(treefname);
+		if (!codetree)
 			exit(-1);
 		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
-				codekd->ndata, codekd->nnodes, codekd->ndim);
+				codetree->ndata, codetree->nnodes, codetree->ndim);
 
 		// Read .quad file...
 		fprintf(stderr, "Reading quads file %s...\n", quadfname);
@@ -298,31 +315,13 @@ int main(int argc, char *argv[]) {
 		}
 		free(idfname);
 
-		me.parity = parity;
-		path = get_pathname(treefname);
-		if (path)
-			me.indexpath = path;
-		else
-			me.indexpath = treefname;
-		path = get_pathname(fieldfname);
-		if (path)
-			me.fieldpath = path;
-		else
-			me.fieldpath = fieldfname;
-		me.codetol = codetol;
-
-		/*
-		  me.fieldunits_lower = funits_lower;
-		  me.fieldunits_upper = funits_upper;
-		*/
-
 		Nagreehist = 100;
 		agreesizehist = malloc(Nagreehist * sizeof(int));
 		for (i=0; i<Nagreehist; i++)
 			agreesizehist[i] = 0;
 
 		// Do it!
-		solve_fields(xy, codekd);
+		solve_fields();
 
 		if (donefname) {
 			FILE* batchfid = NULL;
@@ -334,13 +333,10 @@ int main(int argc, char *argv[]) {
 		free(solvedfname);
 		free(matchfname);
 
-		free(me.indexpath);
-		free(me.fieldpath);
-
 		free(xcolname);
 		free(ycolname);
 
-		xylist_close(xy);
+		xylist_close(xyls);
 
 		matchfile_close(mf);
 
@@ -348,7 +344,7 @@ int main(int argc, char *argv[]) {
 		free_fn(treefname);
 		free_fn(startreefname);
 
-		kdtree_close(codekd);
+		kdtree_close(codetree);
 		if (cat)
 			catalog_close(cat);
 		if (inverse_perm)
@@ -375,6 +371,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	il_free(fieldlist);
+
+	if (pthread_mutex_destroy(&fieldlist_mutex) ||
+		pthread_mutex_destroy(&matchfile_mutex)) {
+		fprintf(stderr, "pthread_mutex_destroy failed: %s\n", strerror(errno));
+		exit(-1);
+	}
 
 	return 0;
 }
@@ -435,6 +437,8 @@ int read_parameters() {
 			ycolname = strdup(nextword);
 		} else if (is_word(buffer, "agreement", &nextword)) {
 			agreement = TRUE;
+		} else if (is_word(buffer, "threads ", &nextword)) {
+			threads = atoi(nextword);
 		} else if (is_word(buffer, "nagree ", &nextword)) {
 			nagree = atoi(nextword);
 		} else if (is_word(buffer, "maxnagree ", &nextword)) {
@@ -502,13 +506,13 @@ int read_parameters() {
 					break;
 				}
 				if (firstfld == -1) {
-					il_append(fieldlist, fld);
+					il_insert_unique_ascending(fieldlist, fld);
 				} else {
 					if (firstfld > fld) {
 						fprintf(stderr, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
 					} else {
 						for (i=firstfld+1; i<=fld; i++) {
-							il_append(fieldlist, i);
+							il_insert_unique_ascending(fieldlist, i);
 						}
 					}
 					firstfld = -1;
@@ -541,7 +545,7 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	int conflicts;
 	double avgmatch;
 	double maxmatch;
-	assert(mo->transform);
+	assert(mo->transform_valid);
 	assert(startree);
 	NF = xy_size(field);
 	fieldstars = malloc(3 * NF * sizeof(double));
@@ -613,26 +617,148 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	return 1;
 }
 
+struct solvethread_args {
+	matchfile_entry me;
+	int winning_listind;
+	int threadnum;
+	bool running;
+	hitlist* hits;
+};
+typedef struct solvethread_args threadargs;
+
+struct cached_hits {
+	int fieldnum;
+	matchfile_entry me;
+	pl* matches;
+};
+typedef struct cached_hits cached_hits;
+
+static int cached_hits_compare(const void* v1, const void* v2) {
+	const cached_hits* ch1 = v1;
+	const cached_hits* ch2 = v2;
+	if (ch1->fieldnum > ch2->fieldnum)
+		return 1;
+	if (ch1->fieldnum < ch2->fieldnum)
+		return -1;
+	return 0;
+}
+
+static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
+	static int index = 0;
+	static bl* cached = NULL;
+	int k, nextfld;
+
+	if (!cached)
+		cached = bl_new(sizeof(cached_hits), 16);
+
+	if (pthread_mutex_lock(&matchfile_mutex)) {
+		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	printf("Cache: [ ");
+	for (k=0; k<bl_size(cached); k++) {
+		cached_hits* ch = bl_access(cached, k);
+		printf("%i ", ch->fieldnum);
+	}
+	printf("]\n");
+
+	nextfld = il_get(fieldlist, index);
+	if (nextfld == fieldnum) {
+		cached_hits ch;
+		cached_hits* cache;
+		bool freeit = FALSE;
+
+		ch.fieldnum = fieldnum;
+		memcpy(&ch.me, me, sizeof(matchfile_entry));
+		ch.matches = matches;
+		cache = &ch;
+
+		for (;;) {
+			// write it!
+			if (matchfile_start_table(mf, &cache->me) ||
+				matchfile_write_table(mf)) {
+				fprintf(stderr, "Error: Failed to write matchfile table.\n");
+			}
+			for (k=0; k<pl_size(cache->matches); k++) {
+				MatchObj* mo = pl_get(cache->matches, k);
+				if (matchfile_write_match(mf, mo))
+					fprintf(stderr, "Error writing a match.\n");
+				if (freeit) {
+					free(mo);
+				}
+			}
+			if (matchfile_fix_table(mf)) {
+				fprintf(stderr, "Error: Failed to fix matchfile table.\n");
+			}
+			index++;
+
+			if (freeit) {
+				pl_free(cache->matches);
+				free(cache->me.indexpath);
+				free(cache->me.fieldpath);
+				bl_remove_index(cached, 0);
+			}
+			freeit = TRUE;
+			if (bl_size(cached) == 0)
+				break;
+			nextfld = il_get(fieldlist, index);
+			cache = bl_access(cached, 0);
+			if (cache->fieldnum != nextfld)
+				break;
+		}
+	} else {
+		// cache it!
+		cached_hits cache;
+		// deep copy
+		cache.fieldnum = fieldnum;
+		memcpy(&cache.me, me, sizeof(matchfile_entry));
+		cache.me.indexpath = strdup(me->indexpath);
+		cache.me.fieldpath = strdup(me->fieldpath);
+		cache.matches = pl_new(32);
+		for (k=0; k<pl_size(matches); k++) {
+			MatchObj* mo = pl_get(matches, k);
+			MatchObj* copy = malloc(sizeof(MatchObj));
+			memcpy(copy, mo, sizeof(MatchObj));
+			pl_append(cache.matches, copy);
+		}
+		bl_insert_sorted(cached, &cache, cached_hits_compare);
+	}
+
+	printf("Cache: [ ");
+	for (k=0; k<bl_size(cached); k++) {
+		cached_hits* ch = bl_access(cached, k);
+		printf("%i ", ch->fieldnum);
+	}
+	printf("]\n");
+
+	if (pthread_mutex_unlock(&matchfile_mutex)) {
+		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	return;
+}
+
 int handlehit(solver_params* p, MatchObj* mo) {
 	int listind;
 	int n = 0;
 	bool winner = FALSE;
+	threadargs* my = p->userdata;
 
 	if (!agreement) {
 		if (matchfile_write_match(mf, mo)) {
 			fprintf(stderr, "Failed to write matchfile entry.\n");
 		}
-		if (mo->transform)
-			free(mo->transform);
 		free_MatchObj(mo);
 		return 1;
 	}
 
 	// share this struct between all the matches for this field...
-	mo->extra = &me;
+	mo->extra = &(my->me);
 	// compute (x,y,z) center, scale, rotation.
 	hitlist_healpix_compute_vector(mo);
-	n = hitlist_healpix_add_hit(hits, mo, &listind);
+	n = hitlist_healpix_add_hit(my->hits, mo, &listind);
 
 	// did this match just join a potentially winning set of agreeing matches?
 	/*
@@ -657,7 +783,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (winner && noverlap_toconfirm) {
 		if (mo->noverlap >= noverlap_toconfirm) {
 			// enough stars overlap to confirm this set of agreeing matches.
-			winning_listind = listind;
+			my->winning_listind = listind;
 			p->quitNow = TRUE;
 		} else {
 
@@ -670,7 +796,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			printf("Veto: found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
 				   n, mo->noverlap, noverlap_toconfirm);
 			p->quitNow = FALSE;
-			winning_listind = -1;
+			my->winning_listind = -1;
 		}
 		return n;
 	}
@@ -678,29 +804,78 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (noverlap_tosolve && (mo->noverlap >= noverlap_tosolve)) {
 		// this single hit causes enough overlaps to solve the field.
 		printf("Found a match that produces %i overlapping stars.\n", mo->noverlap);
-		winning_listind = listind;
+		my->winning_listind = listind;
 		p->quitNow = TRUE;
 	}
 	return n;
 }
 
-void solve_fields(xylist *thefields, kdtree_t* codekd) {
-	int i;
+static int next_field(xy** pfield) {
+	static int index = 0;
+	int rtn;
+
+	if (pthread_mutex_lock(&fieldlist_mutex)) {
+		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	if (index >= il_size(fieldlist))
+		rtn = -1;
+	else {
+		rtn = il_get(fieldlist, index);
+		index++;
+		if (pfield)
+			*pfield = xylist_get_field(xyls, rtn);
+	}
+
+	if (pthread_mutex_unlock(&fieldlist_mutex)) {
+		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	return rtn;
+}
+
+//int 
+void*
+solvethread_run(void* varg) {
+	threadargs* my = varg;
 	solver_params solver;
 	double last_utime, last_stime;
+	double utime, stime;
 	int nfields;
+	char* path;
+
+	fprintf(stderr, "Thread %i starting.\n", my->threadnum);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 
 	solver_default_params(&solver);
 
-	solver.codekd = codekd;
+	solver.codekd = codetree;
 	solver.endobj = enddepth;
 	solver.maxtries = 0;
 	solver.max_matches_needed = maxnagree;
 	solver.codetol = codetol;
 	solver.cornerpix = mk_xy(2);
 	solver.handlehit = handlehit;
+
+	my->me.parity = parity;
+	path = get_pathname(treefname);
+	if (path)
+		my->me.indexpath = path;
+	else
+		my->me.indexpath = treefname;
+	path = get_pathname(fieldfname);
+	if (path)
+		my->me.fieldpath = path;
+	else
+		my->me.fieldpath = fieldfname;
+	my->me.codetol = codetol;
+	/*
+	  my->me.fieldunits_lower = funits_lower;
+	  my->me.fieldunits_upper = funits_upper;
+	*/
 
 	if (funits_upper != 0.0) {
 		solver.arcsec_per_pixel_upper = funits_upper;
@@ -713,16 +888,22 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
 
-	nfields = thefields->nfields;
+	nfields = xyls->nfields;
 
-	for (i=0; i<il_size(fieldlist); i++) {
+	for (;;) {
 		xy *thisfield;
 		int fieldnum;
-		double utime, stime;
 
-		fieldnum = il_get(fieldlist, i);
+		fieldnum = next_field(&thisfield);
+
+		if (fieldnum == -1)
+			break;
 		if (fieldnum >= nfields) {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
+			continue;
+		}
+		if (!thisfield) {
+			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
 			continue;
 		}
 
@@ -738,14 +919,6 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			}
 		}
 
-		thisfield = xylist_get_field(thefields, fieldnum);
-		if (!thisfield) {
-			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
-			continue;
-		}
-
-		me.fieldnum = fieldnum;
-
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
@@ -753,16 +926,21 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		solver.startobj = startdepth;
 		solver.field = thisfield;
 		solver.quitNow = FALSE;
+		solver.userdata = my;
 
-		winning_listind = -1;
+		my->me.fieldnum = fieldnum;
+		my->winning_listind = -1;
 
-		if (agreement) {
-			hits = hitlist_healpix_new(agreetol);
-		}
+		if (agreement)
+			my->hits = hitlist_healpix_new(agreetol);
+		else
+			my->hits = NULL;
 
-		if (matchfile_start_table(mf, &me) ||
-			matchfile_write_table(mf)) {
-			fprintf(stderr, "Error: Failed to write matchfile table.\n");
+		if (!agreement) {
+			if (matchfile_start_table(mf, &(my->me)) ||
+				matchfile_write_table(mf)) {
+				fprintf(stderr, "Error: Failed to write matchfile table.\n");
+			}
 		}
 
 		// The real thing
@@ -776,8 +954,7 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			int maxagree = 0;
 			int k;
 			thisagreehist = calloc(Nagreehist, sizeof(int));
-			hitlist_healpix_histogram_agreement_size(hits, thisagreehist, Nagreehist);
-
+			hitlist_healpix_histogram_agreement_size(my->hits, thisagreehist, Nagreehist);
 			for (k=0; k<Nagreehist; k++)
 				if (thisagreehist[k]) {
 					// global total...
@@ -793,13 +970,13 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 			thisagreehist = NULL;
 
 
-			if (winning_listind == -1) {
+			if (my->winning_listind == -1) {
 				// didn't solve it...
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 			} else {
-				pl* list = hitlist_healpix_copy_list(hits, winning_listind);
 				int maxoverlap = 0;
 				int sumoverlap = 0;
+				pl* list = hitlist_healpix_copy_list(my->hits, my->winning_listind);
 				if (do_verify) {
 					int k;
 					// run verification on any of the matches that haven't
@@ -821,13 +998,8 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 					fprintf(stderr, "Field %i: %i in agreement.\n",
 							fieldnum, pl_size(list));
 
-				for (k=0; k<pl_size(list); k++) {
-					MatchObj* mo = pl_get(list, k);
-					if (matchfile_write_match(mf, mo)) {
-						fprintf(stderr, "Error writing a match.\n");
-					}
-				}
-
+				// write 'em!
+				write_hits(fieldnum, &my->me, list);
 				pl_free(list);
 
 				if (solvedfname) {
@@ -843,14 +1015,16 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 				}
 			}
 
-			hitlist_healpix_clear(hits);
-			hitlist_healpix_free(hits);
+			hitlist_healpix_clear(my->hits);
+			hitlist_healpix_free(my->hits);
 		}
 
 		free_xy(thisfield);
 
-		if (matchfile_fix_table(mf)) {
-			fprintf(stderr, "Error: Failed to fix matchfile table.\n");
+		if (!agreement) {
+			if (matchfile_fix_table(mf)) {
+				fprintf(stderr, "Error: Failed to fix matchfile table.\n");
+			}
 		}
 
 		get_resource_stats(&utime, &stime, NULL);
@@ -859,7 +1033,64 @@ void solve_fields(xylist *thefields, kdtree_t* codekd) {
 		last_utime = utime;
 		last_stime = stime;
 	}
-	free_xy(solver.cornerpix);
+
+	free(my->me.indexpath);
+	free(my->me.fieldpath);
+
+	fprintf(stderr, "Thread %i finished.\n", my->threadnum);
+	my->running = FALSE;
+	return 0;
+}
+
+
+void solve_fields() {
+	int i;
+	int STACKSIZE = 1024*1024;
+	threadargs* allargs[threads];
+	unsigned char* allstacks[threads];
+
+	for (i=0; i<threads; i++) {
+		threadargs* args;
+		unsigned char* stack;
+		args = malloc(sizeof(threadargs));
+		stack = malloc(STACKSIZE);
+		allargs[i] = args;
+		allstacks[i] = stack;
+		args->threadnum = (i+1);
+		args->running = TRUE;
+		if (i == (threads - 1))
+			solvethread_run(args);
+		else {
+			/*
+			  if (clone(solvethread_run, stack + STACKSIZE - 1,
+			  CLONE_FS | CLONE_FILES | CLONE_VM | CLONE_THREAD,
+			  args) == -1) {
+			*/
+			pthread_t thread;
+			if (pthread_create(&thread, NULL, solvethread_run, args)) {
+				fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
+				break;
+			}
+		}
+	}
+
+	for (;;) {
+		bool alldone = TRUE;
+		for (i=0; i<(threads-1); i++) {
+			if (allargs[i]->running) {
+				alldone = FALSE;
+				break;
+			}
+		}
+		if (alldone)
+			break;
+		sleep(5);
+	}
+
+	for (i=0; i<threads; i++) {
+		free(allargs[i]);
+		free(allstacks[i]);
+	}
 }
 
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
