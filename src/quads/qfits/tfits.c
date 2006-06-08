@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.8 $
+   @version	$Revision: 1.9 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.8 2006/06/07 18:28:44 dlang Exp $
+	$Id: tfits.c,v 1.9 2006/06/08 15:28:05 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/06/07 18:28:44 $
-	$Revision: 1.8 $
+	$Date: 2006/06/08 15:28:05 $
+	$Revision: 1.9 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -430,7 +430,7 @@ qfits_table * qfits_table_open(
 	}
 		
 	/* Identify a table and get the table type : ASCII or BIN */
-	if ((table_type = qfits_is_table(filename, xtnum))==0) {
+	if ((table_type = qfits_is_table(filename, xtnum))==QFITS_INVALIDTABLE) {
 		qfits_error("[%s] extension %d is not a table", filename, xtnum) ;
 		return NULL ;
 	}
@@ -449,7 +449,7 @@ qfits_table * qfits_table_open(
 	}
 	table_width = atoi(str_val) ;
     
-	/* Get the number of raws */
+	/* Get the number of rows */
 	if ((str_val = qfits_query_ext(filename, "NAXIS2", xtnum)) == NULL) {
 		qfits_error("cannot read NAXIS2 in [%s]:[%d]", filename, xtnum) ;
 		return NULL ;
@@ -610,11 +610,11 @@ qfits_table * qfits_table_open(
         curr_col++ ;
 	}
 
-    /* Check that the theoritical data size is not far from the measured */
+    /* Check that the theoretical data size is not far from the measured */
     /* one by more than 2880 */
     theory_size = qfits_compute_table_width(tload)*tload->nr ;
     if (data_size < theory_size) {
-        qfits_error("Uncoherent data sizes") ;
+        qfits_error("Inconsistent data sizes") ;
         qfits_table_close(tload) ;
         return NULL ;
     }
