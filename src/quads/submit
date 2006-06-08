@@ -1,0 +1,14 @@
+  Executable     = /home/dstn/RUNS/23/launch
+  Universe       = vanilla
+
+  # we only want to run on CPU 1: this is an attempt to get only
+  # one job scheduled per machine.
+  Requirements = (VirtualMachineId == 2)
+
+  Arguments = $(Process)
+  Error   = err.$(Process)
+  Output  = out.$(Process)
+  Log     = run23.log
+
+  Queue 10
+
