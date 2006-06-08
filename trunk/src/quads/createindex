@@ -1,54 +1,95 @@
 #!/bin/bash
+
 # This script is used to generate indexes out of Healpix-ified catalogues.
 # Run it like   "script 0 1 2 3 4 5" to generate catalogues zero through 5.
+
 echo "Args: $*"
 
-# The filename of the catalogues.
-CATALOGUE=an_usno_sdss_%02i
+# The filename of the original catalogues.
+CATALOGUE=an_sdss_%02i
 
-# star kd-tree creation: how many stars to keep.
-KEEP="-k 2500000"
+# The filename of the de-duplicated catalogues.
+CAT_DEDUP=dd_%02i
 
-# startree de-duplication radius (arcsec):
+# The filename of the deduplicated index.
+INDEX_DEDUP=ddd_%02i
+
+# Deduplication: how many stars to keep.
+KEEP=""
+
+# De-duplication radius (arcsec):
 DEDUP="-d 8"
 
 # quad scale (arcmin)
-SCALE="-s 5"
+SCALE="-l 4 -u 5"
 
-# lower-bound factor of quad scale
-LOWER="-l 0.25"
+# nside, etc
+HPQUADS="-n 705"
+
+# codetree options
+CTOPTS="-R 15"
+
+# unique id file
+IDFILE="unique-id"
+
+# unique id
+if [ -f $IDFILE ]; then
+  ID=`cat $IDFILE`;
+else
+  ID=`date +%s`;
+  echo $ID > $IDFILE
+fi
+echo unique id for this index is $ID
 
 for i in $@; do
 	# Input files:
-	FN=`printf $CATALOGUE $i`
-	echo filename is $FN
-	if [ -e $FN.skdt ]; then
-		echo Star kdtree already exists:
-		echo    $FN.skdt
+	IN=`printf $CATALOGUE $i`
+	echo source catalogue is $IN
+
+	FN=`printf $CAT_DEDUP $i`
+	echo de-duplicated catalogue is $FN
+
+	if [ -e $FN.objs.fits ]; then
+		echo Deduplicated catalogue already exists:
+		echo    $FN.objs.fits
 	else
-		echo Creating star kdtree;
-		echo Running: startree -f $FN $KEEP $DEDUP
-		time startree -f $FN $KEEP $DEDUP  ||  continue
+		echo Creating deduplicated catalogue.
+		CMD="deduplicate -i $IN -o $FN $KEEP $DEDUP"
+		echo Running $CMD
+		time $CMD  ||  continue
 	fi
-	if [ -e $FN.code ] && [ -e $FN.quad ] && [ -e $FN.qidx ]; then
-		echo Code and quad and qidx files already exist:
-		echo     $FN.code
-		echo     $FN.quad
-		echo     $FN.qidx
+
+	if [ -e $FN.code.fits ] && [ -e $FN.quad.fits ]; then
+		echo Code and quad files already exist:
+		echo     $FN.code.fits
+		echo     $FN.quad.fits
 	else
-		echo Running all_quads to generate quads...
-		echo Running: all_quads $SCALE $LOWER -f $FN
-		time all_quads $SCALE $LOWER -f $FN  ||  continue
+		CMD="hpquads $HPQUADS $SCALE -f $FN -i $ID"
+		echo Running: $CMD
+		time $CMD  ||  continue
 	fi
-	if [ -e $FN.ckdt ]; then
+
+	DD=`printf $INDEX_DEDUP $i`
+	echo de-duplicated index is $DD
+
+	if [ -e $DD.code.fits ] && [ -e $DD.quad.fits ]; then
+		echo Code and quad files already exist:
+		echo     $DD.code.fits
+		echo     $DD.quad.fits
+	else
+		CMD="dedup_index -f $FN -o $DD"
+		echo Running: $CMD
+		time $CMD  ||  continue
+	fi
+
+	if [ -e $DD.ckdt.fits ]; then
 		echo Code kdtree already exists:
-		echo     $FN.ckdt
+		echo     $DD.ckdt.fits
 	else
 		echo Generating code tree...
-		echo Running: codetree -f $FN
-		time codetree -f $FN  ||  continue
+		CMD="codetree $CTOPTS -f $DD"
+		echo Running: $CMD
+		time $CMD  ||  continue
 	fi
 done
-echo
-echo "Done!"
-echo
+

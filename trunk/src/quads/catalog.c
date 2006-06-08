@@ -164,14 +164,13 @@ catalog* catalog_open(char* catfn, int modifiable)
 	catalog* cat;
 	int mode, flags;
 	int offxyz = -1;
+	int sizexyz;
 
-	cat = malloc(sizeof(catalog));
+	cat = calloc(1, sizeof(catalog));
 	if (!cat) {
 		fprintf(stderr, "catalog_open: malloc failed.\n");
 		return cat;
 	}
-
-	cat->fid = NULL;
 
 	catfid = fopen(catfn, "rb");
 	if (!catfid) {
@@ -179,26 +178,21 @@ catalog* catalog_open(char* catfn, int modifiable)
 		goto bail;
 	}
 
-	int sizexyz;
-	qfits_header* header;
-
 	if (!is_fits_file(catfn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", catfn);
 		goto bail;
 	}
-	header = qfits_header_read(catfn);
-	if (!header) {
+	cat->header = qfits_header_read(catfn);
+	if (!cat->header) {
 		fprintf(stderr, "Couldn't read FITS header from %s.\n", catfn);
 		goto bail;
 	}
-	cat->numstars = qfits_header_getint(header, "NSTARS", -1);
-	if (fits_check_endian(header) ||
-		fits_check_double_size(header)) {
+	cat->numstars = qfits_header_getint(cat->header, "NSTARS", -1);
+	if (fits_check_endian(cat->header) ||
+		fits_check_double_size(cat->header)) {
 		fprintf(stderr, "File %s was written with wrong endianness or double size.\n", catfn);
-		qfits_header_destroy(header);
 		goto bail;
 	}
-	qfits_header_destroy(header);
 	if (cat->numstars == -1) {
 		fprintf(stderr, "Couldn't find NSTARS header in file %s\n", catfn);
 		goto bail;
@@ -235,6 +229,9 @@ catalog* catalog_open(char* catfn, int modifiable)
 
 	return cat;
 bail:
+	if (cat)
+		if (cat->header)
+			qfits_header_destroy(cat->header);
 	free(cat);
 	return NULL;
 }
@@ -314,6 +311,8 @@ int catalog_close(catalog* cat)
 			rtn = -1;
 		}
 	}
+	if (cat->header)
+		qfits_header_destroy(cat->header);
 	if (cat->mmap_cat) {
 		if (munmap(cat->mmap_cat, cat->mmap_cat_size)) {
 			fprintf(stderr, "Failed to munmap catalog file.\n");

@@ -6,6 +6,7 @@
 #include "healpix.h"
 #include "starutil.h"
 #include "mathutil.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "ho:i:N:n:m:M:H:d:"
 
@@ -160,6 +161,15 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
 		exit(-1);
 	}
+	{
+		char val[32];
+		sprintf(val, "%u", bighp);
+		qfits_header_add(cat->header, "HEALPIX", val, "Which big healpix does this catalog cover?", NULL);
+	}
+
+	qfits_header_add(cat->header, "", NULL, "cut_an command line:", NULL);
+	fits_add_args(cat->header, args, argc);
+
 	catalog_write_header(cat);
 
 	sprintf(fn, idfn, bighp);

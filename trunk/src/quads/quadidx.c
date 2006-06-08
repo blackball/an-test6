@@ -16,6 +16,7 @@
 #include "quadfile.h"
 #include "qidxfile.h"
 #include "bl.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "hf:F"
 const char HelpString[] =
@@ -114,6 +115,12 @@ int main(int argc, char *argv[]) {
  		fprintf(stderr, "Couldn't open outfile qidx file %s.\n", idxfname);
 		exit(-1);
 	}
+
+	fits_copy_header(quads->header, qidx->header, "INDEXID");
+	fits_copy_header(quads->header, qidx->header, "HEALPIX");
+	qfits_header_add(quads->header, "", NULL, "quadidx command line:", NULL);
+	fits_add_args(quads->header, argv, argc);
+
 	if (qidxfile_write_header(qidx)) {
  		fprintf(stderr, "Couldn't write qidx header (%s).\n", idxfname);
 		exit(-1);

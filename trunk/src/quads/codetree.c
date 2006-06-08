@@ -16,6 +16,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "fileutil.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "hR:f:"
 const char HelpString[] =
@@ -108,6 +109,12 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
 	sprintf(val, "%u", levels);
 	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
+
+	fits_copy_header(codes->header, hdr, "INDEXID");
+	fits_copy_header(codes->header, hdr, "HEALPIX");
+	qfits_header_add(hdr, "", NULL, "codetree command line:", NULL);
+	fits_add_args(hdr, argv, argc);
+
 	rtn = kdtree_fits_write_file(codekd, treefname, hdr);
 	qfits_header_destroy(hdr);
     free_fn(treefname);

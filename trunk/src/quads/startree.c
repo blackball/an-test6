@@ -17,6 +17,7 @@
 #include "starutil.h"
 #include "fileutil.h"
 #include "catalog.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "hR:f:k:d:"
 
@@ -129,6 +130,11 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
 	sprintf(val, "%u", nkeep);
 	qfits_header_add(hdr, "KEEP", val, "Number of stars kept.", NULL);
+
+	fits_copy_header(hdr, hdr, "HEALPIX");
+	qfits_header_add(hdr, "", NULL, "startree command line:", NULL);
+	fits_add_args(hdr, argv, argc);
+
 	if (kdtree_fits_write_file(starkd, treefname, hdr)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");
 		exit(-1);
