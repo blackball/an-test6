@@ -7,6 +7,10 @@ input=input.$num
 output=stdout.$num
 err=stderr.$num
 
+echo "Running on host:"
+hostname
+echo
+
 if [ -e $input ]; then
   echo;
 else
@@ -22,12 +26,16 @@ if ps -C slave -o cmd h; then
 fi
 
 # check for another instance of "launch" running on this machine.
-if ps -C launch -o cmd h; then
-  PID=`ps -C launch -o pid h`
-  echo "Another instance of \"launch\" is running on this machine: pid $PID.  Exiting.";
+PID1=$(ps h -C launch -o "pid cmd")
+PID2=$(echo "$PID1" | grep -v $$)
+if [ "x$PID2" != "x" ]; then
+  echo "I am alone.";
+  sleep 60;
+else
+  PIDS=$(echo "$PID2" | gawk '{print $1}')
+  echo "Another instance of \"launch\" is running on this machine: pid(s) $PIDS.  Exiting.";
   exit
 fi
-
 
 index=`gawk '/index\>/{print $2}' $input`
 index_src=`gawk '/index_src\>/{print $2}' $input`
