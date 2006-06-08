@@ -290,8 +290,6 @@ int main(int argc, char *argv[]) {
 							(int)mo->noverlap);
 				}
 
-				if (mo->transform)
-					free(mo->transform);
 				//free_MatchObj(mo);
 			}
 			free(me.indexpath);

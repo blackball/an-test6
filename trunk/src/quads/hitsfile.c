@@ -149,7 +149,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 			rad2deg(xy2ra(mo->sMax[0], mo->sMax[1])),
 			rad2deg(z2dec(mo->sMax[2])));
 	
-	if (mo->transform) {
+	if (mo->transform_valid) {
 		fprintf(fid, "            transform=[%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g],\n",
 				mo->transform[0], mo->transform[1], mo->transform[2],
 				mo->transform[3], mo->transform[4], mo->transform[5],

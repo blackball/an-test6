@@ -12,7 +12,8 @@ struct match_struct {
 	double sMin[3];
 	double sMax[3];
     double vector[6];
-	double* transform;
+	bool transform_valid;
+	double transform[9];
 
 	int16_t noverlap;
 

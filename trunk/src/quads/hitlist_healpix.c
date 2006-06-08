@@ -528,7 +528,6 @@ void hitlist_healpix_clear(hitlist* hlist) {
 		MatchObj* mo = (MatchObj*)pl_get(hlist->matchlist, m);
 		if (!mo)
 			continue;
-		free(mo->transform);
 		free_MatchObj(mo);
 	}
 	pl_remove_all(hlist->matchlist);
