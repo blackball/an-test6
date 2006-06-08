@@ -44,6 +44,8 @@ struct solver_params {
 	int mostagree;
 	// this is set to an absolute value.
 	int objsused;
+
+	void* userdata;
 };
 typedef struct solver_params solver_params;
 
