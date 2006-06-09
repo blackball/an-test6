@@ -158,6 +158,16 @@ qidxfile* qidxfile_open_for_writing(char* fn, uint nstars, uint nquads)
 	sprintf(val, "%u", qf->numquads);
 	qfits_header_add(qf->header, "NQUADS", val, "Number of quads.", NULL);
 	qfits_header_add(qf->header, "AN_FILE", "QIDX", "This is a quad index file.", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "The data table of this file has two parts:", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, " -the index", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, " -the heap", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "The index contains two uints for each star: the offset and", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "  length, in the heap, of the list of quads to which it belongs.", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "  (Offset and length are in units of uints, not bytes)", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "  (Offset 0 is the first uint in the heap)", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "  (The heap is ordered and tightly packed)", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "The heap is a flat list of quad indices (uints).", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "All uints are in native endian and size.", NULL);
 
 	return qf;
 

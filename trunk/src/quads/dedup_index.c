@@ -137,8 +137,8 @@ int main(int argc, char *argv[]) {
 	fits_copy_header(quadsin->header, quadsout->header, "HEALPIX");
 	fits_copy_header(codesin->header, codesout->header, "INDEXID");
 	fits_copy_header(codesin->header, codesout->header, "HEALPIX");
-	qfits_header_add(quadsout->header, "", NULL, "dedup_index command line:", NULL);
-	qfits_header_add(codesout->header, "", NULL, "dedup_index command line:", NULL);
+	qfits_header_add(quadsout->header, "COMMENT", NULL, "dedup_index command line:", NULL);
+	qfits_header_add(codesout->header, "COMMENT", NULL, "dedup_index command line:", NULL);
 	fits_add_args(quadsout->header, argv, argc);
 	fits_add_args(codesout->header, argv, argc);
 

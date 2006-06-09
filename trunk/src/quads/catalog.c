@@ -257,7 +257,9 @@ catalog* catalog_open_for_writing(char* fn)
 	fits_add_double_size(qf->header);
 	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
 	qfits_header_add(qf->header, "AN_FILE", "OBJS", "This file has a list of object positions.", NULL);
-	qfits_header_add(qf->header, "", NULL, "This is a flat array of XYZ for each catalog star.", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "This is a flat array of XYZ for each catalog star.", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "  (ie, star position on the unit sphere)", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "  (stored as three native-{endian,size} doubles)", NULL);
 
 	return qf;
 
