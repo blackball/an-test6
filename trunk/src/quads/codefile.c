@@ -162,9 +162,9 @@ codefile* codefile_open_for_writing(char* fn)
 	qfits_header_add(cf->header, "NSTARS", "0", "", NULL);
 	qfits_header_add(cf->header, "SCALE_U", "0.0", "", NULL);
 	qfits_header_add(cf->header, "SCALE_L", "0.0", "", NULL);
-	qfits_header_add(cf->header, "COMMENT", NULL, "The first extension contains the codes ", NULL);
-	qfits_header_add(cf->header, "COMMENT", NULL, " stored as 4 native-{endian,size} doubles.", NULL);
-	qfits_header_add(cf->header, "COMMENT", NULL, " (ie, the quad location in 4-D code space.", NULL);
+	qfits_header_add(cf->header, "COMMENT", "The first extension contains the codes ", NULL, NULL);
+	qfits_header_add(cf->header, "COMMENT", " stored as 4 native-{endian,size} doubles.", NULL, NULL);
+	qfits_header_add(cf->header, "COMMENT", " (ie, the quad location in 4-D code space.", NULL, NULL);
 
 	return cf;
 

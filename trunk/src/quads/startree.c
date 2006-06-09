@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(hdr, "KEEP", val, "Number of stars kept.", NULL);
 
 	fits_copy_header(hdr, hdr, "HEALPIX");
-	qfits_header_add(hdr, "COMMENT", NULL, "startree command line:", NULL);
+	qfits_header_add(hdr, "COMMENT", "startree command line:", NULL, NULL);
 	fits_add_args(hdr, argv, argc);
 
 	if (kdtree_fits_write_file(starkd, treefname, hdr)) {

@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
 	fits_copy_header(quads->header, qidx->header, "INDEXID");
 	fits_copy_header(quads->header, qidx->header, "HEALPIX");
-	qfits_header_add(quads->header, "COMMENT", NULL, "quadidx command line:", NULL);
+	qfits_header_add(quads->header, "COMMENT", "quadidx command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
 
 	if (qidxfile_write_header(qidx)) {
