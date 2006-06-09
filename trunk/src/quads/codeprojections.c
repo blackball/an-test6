@@ -159,28 +159,22 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Index scale lower: %g\n", cf->index_scale_lower);
 	fprintf(stderr, "Index scale upper: %g\n", cf->index_scale);
 
-	onecode = (double*)malloc(4 * sizeof(double));
+	onecode = malloc(4 * sizeof(double));
 
 	// Allocate memory for projection histograms
 	Dims = 4;
-	hists = (int**)malloc(Dims * Dims * sizeof(int*));
-	memset(hists, 0, Dims*Dims*sizeof(int*));
+	hists = calloc(Dims * Dims, sizeof(int*));
+
 	for (d = 0; d < Dims; d++) {
-		for (e = 0; e < d; e++) {
-			hists[d*Dims + e] = (int*)malloc(Nbins * Nbins * sizeof(int));
-			memset(hists[d*Dims + e], 0, Nbins * Nbins * sizeof(int));
-		}
+		for (e = 0; e < d; e++)
+			hists[d*Dims + e] = calloc(Nbins * Nbins, sizeof(int));
 		// Since the 4x4 matrix of histograms is actually symmetric,
 		// only make half
-		for (; e < Dims; e++) {
+		for (; e < Dims; e++)
 			hists[d*Dims + e] = NULL;
-		}
 	}
 
-	single = (int*)malloc(Dims * Nsingle * sizeof(int));
-	for (i = 0; i < (Dims * Nsingle); i++) {
-		single[i] = 0;
-	}
+	single = calloc(Dims * Nsingle, sizeof(int));
 
 	for (i = 0; i < cf->numcodes; i++) {
 		int perm;

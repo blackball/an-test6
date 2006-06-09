@@ -50,10 +50,10 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 
 SOLVER_OBJ := solver.o
 
-EXECS := quadidx \
-	certthresh hpquads dedup_index codetree startree \
+EXECS := mergehits agreeable certthresh quadidx \
+	hpquads dedup_index codetree startree \
 	deduplicate \
-	randcat genfields codedensity agreeable findquad findstar \
+	randcat genfields codedensity findquad findstar \
 	codeprojections quadlocations hpowned
 
 	#certifiable 

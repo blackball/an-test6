@@ -71,7 +71,7 @@ int read_u32(FILE* fin, unsigned int* val) {
 
 int read_u32s_portable(FILE* fin, unsigned int* val, int n) {
     int i;
-    uint32_t* u = (uint32_t*)malloc(sizeof(uint32_t) * n);
+    uint32_t* u = malloc(sizeof(uint32_t) * n);
     if (!u) {
 		fprintf(stderr, "Couldn't real uint32s: couldn't allocate temp array.\n");
 		return 1;
@@ -163,12 +163,11 @@ int write_string(FILE* fout, char* s) {
 int write_fixed_length_string(FILE* fout, char* s, int length) {
 	char* str;
 	int res;
-	str = (char*)malloc(length);
+	str = calloc(length, 1);
 	if (!str) {
 		fprintf(stderr, "Couldn't allocate a temp buffer of size %i.\n", length);
 		return 1;
 	}
-	memset(str, 0, length);
 	sprintf(str, "%.*s", length, s);
 	res = fwrite(str, 1, length, fout);
 	free(str);
@@ -218,7 +217,7 @@ int write_u32_portable(FILE* fout, unsigned int val) {
 
 int write_u32s_portable(FILE* fout, unsigned int* val, int n) {
     int i;
-    uint32_t* v = (uint32_t*)malloc(sizeof(uint32_t) * n);
+    uint32_t* v = malloc(sizeof(uint32_t) * n);
     if (!v) {
 		fprintf(stderr, "Couldn't write u32s: couldn't allocate temp array.\n");
 		return 1;
