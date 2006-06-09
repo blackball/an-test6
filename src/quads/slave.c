@@ -576,10 +576,12 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 	}
 	avgmatch /= (double)(conflicts + matches);
 
-	printf("%i matches, %i unmatches, %i conflicts.  Avg match dist: %g arcsec, max dist %g arcsec\n",
-		   matches, unmatches, conflicts, rad2arcsec(distsq2arc(square(avgmatch))),
-		   rad2arcsec(distsq2arc(maxmatch)));
-	fflush(stdout);
+	fprintf(stderr, "%i matches, %i unmatches, %i conflicts.\n",
+			matches, unmatches, conflicts);
+	//Avg match dist: %g arcsec, max dist %g arcsec\n",
+	//rad2arcsec(distsq2arc(square(avgmatch))),
+	//rad2arcsec(distsq2arc(maxmatch)));
+	fflush(stderr);
 
 	mo->noverlap = matches - conflicts;
 
@@ -685,6 +687,11 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 
 		for (;;) {
 			// write it!
+
+			printf("Writing field %i: matches=%p, m_e=(%s,%s).\n",
+				   cache->fieldnum, cache->matches,
+				   cache->me.indexpath, cache->me.fieldpath);
+
 			if (cache->matches) {
 				if (matchfile_start_table(mf, &cache->me) ||
 					matchfile_write_table(mf)) {
@@ -705,8 +712,13 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			index++;
 
 			if (freeit) {
-				if (cache->matches)
+				if (cache->matches) {
+					for (k=0; k<pl_size(cache->matches); k++) {
+						MatchObj* mo = pl_get(cache->matches, k);
+						free(mo);
+					}
 					pl_free(cache->matches);
+				}
 				free(cache->me.indexpath);
 				free(cache->me.fieldpath);
 				bl_remove_index(cached, 0);
@@ -716,6 +728,9 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 				break;
 			nextfld = il_get(fieldlist, index);
 			cache = bl_access(cached, 0);
+
+			printf("Nextfld=%i, cached field=%i.\n", nextfld, cache->fieldnum);
+
 			if (cache->fieldnum != nextfld)
 				break;
 		}
@@ -729,8 +744,11 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			cache.me.indexpath = strdup(me->indexpath);
 			cache.me.fieldpath = strdup(me->fieldpath);
 		} else {
-			cache.me.indexpath = NULL;
-			cache.me.fieldpath = NULL;
+			memset(&cache.me, 0, sizeof(matchfile_entry));
+			/*
+			  cache.me.indexpath = NULL;
+			  cache.me.fieldpath = NULL;
+			*/
 		}
 		if (matches) {
 			cache.matches = pl_new(32);
@@ -742,6 +760,11 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			}
 		} else
 			cache.matches = NULL;
+
+		printf("Caching field %i: matches=%p, m_e=(%s,%s).\n",
+			   cache.fieldnum, cache.matches, 
+			   cache.me.indexpath, cache.me.fieldpath);
+
 		bl_insert_sorted(cached, &cache, cached_hits_compare);
 	}
 
@@ -813,8 +836,9 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			}
 
 			// veto!
-			printf("Veto: found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
-				   n, mo->noverlap, noverlap_toconfirm);
+			fprintf(stderr, "Veto: found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
+					n, mo->noverlap, noverlap_toconfirm);
+			fflush(stderr);
 			p->quitNow = FALSE;
 			my->winning_listind = -1;
 		}
@@ -823,7 +847,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 
 	if (noverlap_tosolve && (mo->noverlap >= noverlap_tosolve)) {
 		// this single hit causes enough overlaps to solve the field.
-		printf("Found a match that produces %i overlapping stars.\n", mo->noverlap);
+		fprintf(stderr, "Found a match that produces %i overlapping stars.\n", mo->noverlap);
+		fflush(stderr);
 		my->winning_listind = listind;
 		p->quitNow = TRUE;
 	}

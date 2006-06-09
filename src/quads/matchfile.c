@@ -315,6 +315,11 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 		if (!qfits_is_table(mf->fn, mf->extension))
 			continue;
 		table = qfits_table_open(mf->fn, mf->extension);
+		if (!table) {
+			fprintf(stderr, "matchfile: failed to open table: file %s, extension %i.\n",
+					mf->fn, mf->extension);
+			continue;
+		}
 
 		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
 			mf->columns[c] = -1;
