@@ -658,7 +658,7 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 	int k, nextfld;
 
 	if (!cached)
-		cached = bl_new(sizeof(cached_hits), 16);
+		cached = bl_new(16, sizeof(cached_hits));
 
 	if (pthread_mutex_lock(&matchfile_mutex)) {
 		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
