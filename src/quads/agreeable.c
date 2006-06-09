@@ -13,15 +13,13 @@
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:F:L:M:f:m:";
+char* OPTIONS = "hH:n:A:B:L:M:m:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
 			"   [-A first-field]\n"
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
-			"   [-F flush-interval]\n"
-			"   [-f flush-field-interval]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
 			"   [-m agreement-tolerance-in-arcsec]\n"
@@ -50,7 +48,6 @@ char* leftoverfname = NULL;
 matchfile* leftovermf = NULL;
 char* agreefname = NULL;
 matchfile* agreemf = NULL;
-pl* hitlists;
 il* solved;
 il* unsolved;
 
@@ -68,11 +65,9 @@ int main(int argc, char *argv[]) {
 	int ninputfiles = 0;
 	int i;
 	int firstfield=0, lastfield=INT_MAX;
-	int flushinterval = 0;
-	int flushfieldinterval = 0;
 	bool leftovers = FALSE;
 	bool agree = FALSE;
-	double ramin, ramax, decmin, decmax;
+	//double ramin, ramax, decmin, decmax;
 	double agreetolarcsec = DEFAULT_AGREE_TOL;
 	matchfile** mfs;
 	matchfile_entry* mes;
@@ -87,21 +82,20 @@ int main(int argc, char *argv[]) {
 		case 'm':
 			agreetolarcsec = atof(optarg);
 			break;
-		case 'r':
-			ramin = atof(optarg);
-			break;
-		case 'R':
-			ramax = atof(optarg);
-			break;
-		case 'd':
-			decmin = atof(optarg);
-			break;
-		case 'D':
-			decmax = atof(optarg);
-			break;
-		case 'f':
-			flushfieldinterval = atoi(optarg);
-			break;
+			/*
+			  case 'r':
+			  ramin = atof(optarg);
+			  break;
+			  case 'R':
+			  ramax = atof(optarg);
+			  break;
+			  case 'd':
+			  decmin = atof(optarg);
+			  break;
+			  case 'D':
+			  decmax = atof(optarg);
+			  break;
+			*/
 		case 'M':
 			agreefname = optarg;
 			break;
@@ -113,9 +107,6 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'B':
 			lastfield = atoi(optarg);
-			break;
-		case 'F':
-			flushinterval = atoi(optarg);
 			break;
 		case 'H':
 			hitfname = optarg;
@@ -179,7 +170,6 @@ int main(int argc, char *argv[]) {
 
 	// write HITS header.
 	hits_header_init(&hitshdr);
-	hitshdr.nfields = 0;
 	hitshdr.min_matches_to_agree = min_matches_to_agree;
 	hits_write_header(hitfid, &hitshdr);
 
@@ -271,6 +261,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		write_field(hl, fieldnum, leftovers, agree, TRUE);
+
+		fprintf(stderr, "So far: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
 
 		for (i=0; i<ninputfiles; i++) {
 			if (eofs[i] || !mes_valid[i] || mes[i].fieldnum != fieldnum)
@@ -473,8 +465,8 @@ void write_field(hitlist* hl,
 		}
 	}
 
-	starids  = (uint*)malloc(nbest * 4 * sizeof(uint));
-	fieldids = (uint*)malloc(nbest * 4 * sizeof(uint));
+	starids  = malloc(nbest * 4 * sizeof(uint));
+	fieldids = malloc(nbest * 4 * sizeof(uint));
 	Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
 	hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
 	free(starids);
@@ -482,9 +474,6 @@ void write_field(hitlist* hl,
 	hits_write_field_tailer(hitfid);
 	fflush(hitfid);
 	pl_free(best);
-
-	fprintf(stderr, "So far, %i fields have been solved.\n", il_size(solved));
-	fflush(hitfid);
 }
 
 inline void add_correspondence(uint* starids, uint* fieldids,

@@ -374,8 +374,7 @@ void write_histogram(char* fn)
 	}
 
 	bin_size = mx / (double)(Nbins - 1);
-	bincounts = (int*)malloc(Nbins * sizeof(int));
-	memset(bincounts, 0, Nbins * sizeof(int));
+	bincounts = calloc(Nbins, sizeof(int));
 
 	for (i = 0; i < Ntotal; i++) {
 		double d = nndists[i];
@@ -550,11 +549,11 @@ int main(int argc, char *argv[])
 	N = tree->ndata;
 	D = tree->ndim;
 
-	nndists = (double*)malloc(N * sizeof(double));
-	nninds = (int*)malloc(N * sizeof(int));
+	nndists = malloc(N * sizeof(double));
+	nninds  = malloc(N * sizeof(int));
 	for (i = 0; i < N; i++) {
 		nndists[i] = 1e300;
-		nninds[i] = -1;
+		nninds [i] = -1;
 	}
 	Ndone = 0;
 	Ntotal = N;

@@ -61,9 +61,9 @@ void solve_field(solver_params* params) {
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
 		return;
 
-	iCs = (int*)malloc(numxy * numxy * sizeof(int));
-	iDs = (int*)malloc(numxy * numxy * sizeof(int));
-	iunion = (char*)malloc(numxy * sizeof(char));
+	iCs = malloc(numxy * numxy * sizeof(int));
+	iDs = malloc(numxy * numxy * sizeof(int));
+	iunion = malloc(numxy * sizeof(char));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
