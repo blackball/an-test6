@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 
 	fits_copy_header(codes->header, hdr, "INDEXID");
 	fits_copy_header(codes->header, hdr, "HEALPIX");
-	qfits_header_add(hdr, "", NULL, "codetree command line:", NULL);
+	qfits_header_add(hdr, "COMMENT", NULL, "codetree command line:", NULL);
 	fits_add_args(hdr, argv, argc);
 
 	rtn = kdtree_fits_write_file(codekd, treefname, hdr);

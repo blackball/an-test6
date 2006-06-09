@@ -459,9 +459,9 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
 				exit(-1);
 			}
-			qfits_header_add(rdls->header, "", NULL, descstrs[nfn], NULL);
-			qfits_header_add(rdls->header, "", "", "Extension x holds results for", NULL);
-			qfits_header_add(rdls->header, "", "", "   nagree threshold=x.", NULL);
+			qfits_header_add(rdls->header, "COMMENT", NULL, descstrs[nfn], NULL);
+			qfits_header_add(rdls->header, "COMMENT", NULL, "Extension x holds results for", NULL);
+			qfits_header_add(rdls->header, "COMMENT", NULL, "   nagree threshold=x.", NULL);
 			rdlist_write_header(rdls);
 			for (thresh=0; thresh<TL; thresh++) {
 				rdlist_write_new_field(rdls);

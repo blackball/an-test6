@@ -160,8 +160,9 @@ quadfile* quadfile_open_for_writing(char* fn) {
 	qfits_header_add(qf->header, "SCALE_U", val, "Upper-bound index scale.", NULL);
 	sprintf(val, "%.10f", qf->index_scale_lower);
 	qfits_header_add(qf->header, "SCALE_L", val, "Lower-bound index scale.", NULL);
-	qfits_header_add(qf->header, "", NULL, "The first extension contains the quads ", NULL);
-	qfits_header_add(qf->header, "", NULL, " stored as 4 native-endian uints.", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, "The first extension contains the quads ", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, " stored as 4 native-{endian,size} uints.", NULL);
+	qfits_header_add(qf->header, "COMMENT", NULL, " (one for each star's index in the corresponding objs file)", NULL);
 
 	return qf;
 
