@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
 				mecopy = malloc(sizeof(matchfile_entry));
 				memcpy(mecopy, mes+i, sizeof(matchfile_entry));
 
-				printf("fieldnum %i, parity %i, index %s, field %s, codetol %g\n",
+				fprintf(stderr, "fieldnum %i, parity %i, index %s, field %s, codetol %g\n",
 					   mecopy->fieldnum, (int)mecopy->parity, mecopy->indexpath,
 					   mecopy->fieldpath, mecopy->codetol);
 			}
