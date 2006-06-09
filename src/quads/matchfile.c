@@ -297,6 +297,7 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 	qfits_table* table;
 	int good = 0;
 	int c;
+	char* str;
 	int nextens = qfits_query_n_ext(mf->fn);
 	if (mf->table) {
 		qfits_table_close(mf->table);
@@ -364,9 +365,10 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 	me->fieldnum = qfits_header_getint(mf->tableheader, "FIELD", -1);
 	me->codetol = qfits_header_getdouble(mf->tableheader, "CODETOL", 0.0);
 	me->parity = qfits_header_getboolean(mf->tableheader, "PARITY", 0);
-	me->indexpath = strdup(qfits_header_getstr(mf->tableheader, "INDEX"));
-	me->fieldpath = strdup(qfits_header_getstr(mf->tableheader, "FLDPATH"));
-
+	str = qfits_header_getstr(mf->tableheader, "INDEX");
+	me->indexpath = str ? strdup(str) : NULL;
+	str = qfits_header_getstr(mf->tableheader, "FLDPATH");
+	me->fieldpath = str ? strdup(str) : NULL;
 	return 0;
 }
 

@@ -109,9 +109,11 @@ int main(int argc, char *argv[]) {
 	empty = il_new(256);
 	nonempty = il_new(256);
 
-	// write HITS header.
-	hits_header_init(&hitshdr);
-	hits_write_header(hitfid, &hitshdr);
+	if (hitfid) {
+		// write HITS header.
+		hits_header_init(&hitshdr);
+		hits_write_header(hitfid, &hitshdr);
+	}
 
 	mfs = malloc(ninputfiles * sizeof(matchfile*));
 	mes = malloc(ninputfiles * sizeof(matchfile_entry));
@@ -130,15 +132,7 @@ int main(int argc, char *argv[]) {
 	}
 	// we assume the matchfiles are sorted by field number.
 	for (f=firstfield; f<=lastfield; f++) {
-		bool alldone = TRUE;
 		int fieldnum = f;
-
-		for (i=0; i<ninputfiles; i++)
-			if (!eofs[i])
-				alldone = FALSE;
-		if (alldone)
-			break;
-
 		fprintf(stderr, "Field %i.\n", f);
 
 		for (i=0; i<ninputfiles; i++) {
@@ -160,6 +154,7 @@ int main(int argc, char *argv[]) {
 					}
 					mes_valid[i] = TRUE;
 				}
+				fprintf(stderr, " File %s: current table is field %i.\n", fname, mes[i].fieldnum);
 
 				assert(mes[i].fieldnum >= fieldnum);
 
@@ -222,6 +217,17 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "%i fields empty; %i field nonempty.\n",
 			il_size(empty), il_size(nonempty));
 
+	fprintf(stderr, "empty=[ ");
+	for (i=0; i<il_size(empty); i++)
+		fprintf(stderr, "%i, ", il_get(empty, i));
+	fprintf(stderr, "];\n");
+
+	fprintf(stderr, "nonempty=[ ");
+	for (i=0; i<il_size(nonempty); i++)
+		fprintf(stderr, "%i, ", il_get(nonempty, i));
+	fprintf(stderr, "];\n");
+
+
 	il_free(empty);
 	il_free(nonempty);
 
@@ -250,6 +256,10 @@ void write_field(pl* hits,
 	int j;
 	matchfile_entry me;
 
+	// HACK -
+	memset(&me, 0, sizeof(matchfile_entry));
+	me.fieldnum = fieldnum;
+
 	if (!pl_size(hits)) {
 		if (unsolvedstubs && hitfid) {
 			hits_field_init(&fieldhdr);
@@ -262,6 +272,11 @@ void write_field(pl* hits,
 			hits_end_hits_list(hitfid);
 			hits_write_field_tailer(hitfid);
 			fflush(hitfid);
+		}
+		if (matchfile_start_table(agreemf, &me) ||
+			matchfile_write_table(agreemf) ||
+			matchfile_fix_table(agreemf)) {
+			fprintf(stderr, "Failed to write agreeing matchfile header.\n");
 		}
 		il_append(empty, fieldnum);
 		return;
@@ -276,9 +291,6 @@ void write_field(pl* hits,
 	fieldhdr.nmatches = pl_size(hits);
 	fieldhdr.nagree = 0;
 
-	// HACK -
-	memset(&me, 0, sizeof(matchfile_entry));
-	me.fieldnum = fieldnum;
 	if (matchfile_start_table(agreemf, &me) ||
 		matchfile_write_table(agreemf)) {
 		fprintf(stderr, "Failed to write agreeing matchfile header.\n");
