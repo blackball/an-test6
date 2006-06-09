@@ -599,7 +599,7 @@ pl* hitlist_healpix_get_all_best(hitlist* hl) {
 
 // returns a shallow copy of the best set of hits.
 // you are responsible for calling pl_free.
-pl* hitlist_healpix_get_best(hitlist* hl) {
+pl* hitlist_healpix_get_best(struct hitlist_struct* hl) {
 	pl* copy;
 	int m, M;
 

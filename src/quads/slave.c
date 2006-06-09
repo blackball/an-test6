@@ -124,6 +124,12 @@ int main(int argc, char *argv[]) {
 		exit(-1);
     }
 
+	printf("Running on host:\n");
+	fflush(stdout);
+	system("hostname");
+	printf("\n");
+	fflush(stdout);
+
 	fieldlist = il_new(256);
 
 	if (pthread_mutex_init(&fieldlist_mutex, NULL) ||

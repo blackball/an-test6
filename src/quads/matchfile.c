@@ -404,10 +404,8 @@ MatchObj* matchfile_buffered_read_match(matchfile* mf) {
 		uint n = BLOCK;
 		// the new block to read starts after the current block...
 		mf->off += mf->nbuff;
-		fprintf(stderr, "off=%i, n=%i, nrows=%i\n", mf->off, n, mf->nrows);
 		if (n + mf->off > mf->nrows)
 			n = mf->nrows - mf->off;
-		fprintf(stderr, "n=%i\n", n);
 		if (!n) {
 			fprintf(stderr, "matchfile_buffered_read_match: matchfile contains no more matches.\n");
 			return NULL;
