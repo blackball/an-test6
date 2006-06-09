@@ -11,13 +11,15 @@
 #include "matchfile.h"
 #include "rdlist.h"
 
-char* OPTIONS = "hR:F:L:n:t:f:";
+char* OPTIONS = "hR:A:B:n:t:f:L:H:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
 			"   -R rdls-file\n"
-			"   [-F <first-field>]  (default 0)\n"
-			"   [-L <last-field>]   (default the largest field encountered)\n"
+			"   [-A <first-field>]  (default 0)\n"
+			"   [-B <last-field>]   (default the largest field encountered)\n"
+			"   [-L <agree-threshold-low>]  (default 3)\n"
+			"   [-H <agree-threshold-low>]  (default 10)\n"
 			"   [-n <negative-fields-rdls>]"
 			"   [-f <false-positive-fields-rdls>]\n"
 			"   [-t <true-positive-fields-rdls>]\n\n",
@@ -70,11 +72,17 @@ int main(int argc, char *argv[]) {
 		case 'h':
 			printHelp(progname);
 			return (HELP_ERR);
-		case 'F':
+		case 'A':
 			firstfield = atoi(optarg);
 			break;
-		case 'L':
+		case 'B':
 			lastfield = atoi(optarg);
+			break;
+		case 'L':
+			TL = atoi(optarg);
+			break;
+		case 'H':
+			TH = atoi(optarg);
 			break;
 		case 'R':
 			rdlsfname = optarg;

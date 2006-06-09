@@ -668,6 +668,49 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		exit(-1);
 	}
 
+	// DEBUG - ensure cache is empty.
+	if (fieldnum == -1) {
+		cached_hits* cache;
+		if (!bl_size(cached))
+			return;
+		fprintf(stderr, "Warning: cache was not empty at the end of the run.");
+		fprintf(stderr, "Cache: [ ");
+		for (k=0; k<bl_size(cached); k++) {
+			cached_hits* ch = bl_access(cached, k);
+			fprintf(stderr, "%i ", ch->fieldnum);
+		}
+		fprintf(stderr, "]\n");
+		nextfld = il_get(fieldlist, index);
+		fprintf(stderr, "nextfld=%i\n", nextfld);
+
+		// write it!
+		for (k=0; k<bl_size(cached); k++) {
+			cache = bl_access(cached, k);
+			if (cache->matches) {
+				if (matchfile_start_table(mf, &cache->me) ||
+					matchfile_write_table(mf)) {
+					fprintf(stderr, "Error: Failed to write matchfile table.\n");
+				}
+				for (k=0; k<pl_size(cache->matches); k++) {
+					MatchObj* mo = pl_get(cache->matches, k);
+					if (matchfile_write_match(mf, mo))
+						fprintf(stderr, "Error writing a match.\n");
+				}
+				if (matchfile_fix_table(mf)) {
+					fprintf(stderr, "Error: Failed to fix matchfile table.\n");
+				}
+				for (k=0; k<pl_size(cache->matches); k++) {
+					MatchObj* mo = pl_get(cache->matches, k);
+					free(mo);
+				}
+				pl_free(cache->matches);
+			}
+			free(cache->me.indexpath);
+			free(cache->me.fieldpath);
+		}
+		return;
+	}
+
 	nextfld = il_get(fieldlist, index);
 
 	/*
@@ -956,7 +999,9 @@ void* solvethread_run(void* varg) {
 			continue;
 		}
 		if (!thisfield) {
+			// HACK - why is this happening? QFITS + multithreading interaction bug?
 			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
+			write_hits(fieldnum, NULL, NULL);
 			continue;
 		}
 
@@ -1142,6 +1187,9 @@ void solve_fields() {
 			break;
 		sleep(5);
 	}
+
+	// DEBUG
+	write_hits(-1, NULL, NULL);
 
 	for (i=0; i<threads; i++) {
 		free(allargs[i]);
