@@ -214,7 +214,6 @@ int main(int argc, char *argv[]) {
 		for (i=0; i<ninputfiles; i++) {
 			MatchObj* mo;
 			MatchObj* mocopy;
-			matchfile_entry* mecopy = NULL;
 			int nr = 0;
 			char* fname = inputfiles[i];
 			int k;
@@ -235,14 +234,10 @@ int main(int argc, char *argv[]) {
 			if (mes[i].fieldnum != fieldnum)
 				continue;
 
-			// LEAK
 			if (leftovers || agree) {
-				mecopy = malloc(sizeof(matchfile_entry));
-				memcpy(mecopy, mes+i, sizeof(matchfile_entry));
-
 				fprintf(stderr, "fieldnum %i, parity %i, index %s, field %s, codetol %g\n",
-					   mecopy->fieldnum, (int)mecopy->parity, mecopy->indexpath,
-					   mecopy->fieldpath, mecopy->codetol);
+					   mes[i].fieldnum, (int)mes[i].parity, mes[i].indexpath,
+					   mes[i].fieldpath, mes[i].codetol);
 			}
 
 			for (k=0; k<mfs[i]->nrows; k++) {
@@ -262,11 +257,10 @@ int main(int argc, char *argv[]) {
 				mocopy = malloc(sizeof(MatchObj));
 				memcpy(mocopy, mo, sizeof(MatchObj));
 
-				if (leftovers || agree) {
-					mocopy->extra = mecopy;
-				} else {
+				if (leftovers || agree)
+					mocopy->extra = mes + i;
+				else
 					mocopy->extra = NULL;
-				}
 
 				// compute (x,y,z) center, scale, rotation.
 				hitlist_healpix_compute_vector(mocopy);
@@ -274,17 +268,18 @@ int main(int argc, char *argv[]) {
 				hitlist_healpix_add_hit(hl, mocopy, NULL);
 			}
 			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
-
-			if (!(leftovers || agree)) {
-				free(mes[i].indexpath);
-				free(mes[i].fieldpath);
-			}
-
-			// we're done with this table...
-			mes_valid[i] = FALSE;
 		}
 
 		write_field(hl, fieldnum, leftovers, agree, TRUE);
+
+		for (i=0; i<ninputfiles; i++) {
+			if (eofs[i] || !mes_valid[i] || mes[i].fieldnum != fieldnum)
+				continue;
+			// we're done with these tables...
+			free(mes[i].indexpath);
+			free(mes[i].fieldpath);
+			mes_valid[i] = FALSE;
+		}
 
 		hitlist_healpix_clear(hl);
 	}
@@ -318,6 +313,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%i, ", agreehist[i]);
 	}
 	fprintf(stderr, "]\n");
+	free(agreehist);
 
 	free(mfs);
 	free(mes);
@@ -325,18 +321,6 @@ int main(int argc, char *argv[]) {
 	free(eofs);
 
 	return 0;
-}
-
-void free_extra(MatchObj* mo) {
-	matchfile_entry* me;
-	if (!mo->extra) return;
-	me = (matchfile_entry*)mo->extra;
-	/*
-	  free(me->indexpath);
-	  free(me->fieldpath);
-	  free(me);
-	*/
-	mo->extra = NULL;
 }
 
 int qsort_matchobj_me(const void* v1, const void* v2) {
