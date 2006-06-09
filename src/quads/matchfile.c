@@ -357,6 +357,8 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 		return -1;
 	}
 	mf->nrows = mf->table->nr;
+	// reset buffered reading data
+	mf->nbuff = mf->off = mf->buffind = 0;
 
 	me->fieldnum = qfits_header_getint(mf->tableheader, "FIELD", -1);
 	me->codetol = qfits_header_getdouble(mf->tableheader, "CODETOL", 0.0);
@@ -402,8 +404,10 @@ MatchObj* matchfile_buffered_read_match(matchfile* mf) {
 		uint n = BLOCK;
 		// the new block to read starts after the current block...
 		mf->off += mf->nbuff;
+		fprintf(stderr, "off=%i, n=%i, nrows=%i\n", mf->off, n, mf->nrows);
 		if (n + mf->off > mf->nrows)
 			n = mf->nrows - mf->off;
+		fprintf(stderr, "n=%i\n", n);
 		if (!n) {
 			fprintf(stderr, "matchfile_buffered_read_match: matchfile contains no more matches.\n");
 			return NULL;
