@@ -3,7 +3,7 @@
    @file    simple.c
    @author  N. Devillard
    @date    Jan 1999
-   @version $Revision: 1.1 $
+   @version $Revision: 1.2 $
    @brief   Simple FITS access routines.
 
    This module offers a number of very basic low-level FITS access
@@ -12,10 +12,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: simple.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+    $Id: simple.c,v 1.2 2006/06/09 13:23:30 dlang Exp $
     $Author: dlang $
-    $Date: 2006/03/16 22:10:26 $
-    $Revision: 1.1 $
+    $Date: 2006/06/09 13:23:30 $
+    $Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -124,7 +124,10 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
     size_t      size ;
 
     /* Bulletproof entries */
-    if (filename==NULL || keyword==NULL || xtnum<0) return NULL ;
+    if (filename==NULL || keyword==NULL || xtnum<0) {
+		qfits_error("qfits_query_ext: filename, keyword or xtn invalid.");
+		return NULL ;
+	}
 
     /* Expand keyword */
     exp_key = qfits_expand_keyword(keyword);
@@ -134,6 +137,7 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
      * Record the xtension start and stop offsets
      */
     if (qfits_get_hdrinfo(filename, xtnum, &seg_start, &seg_size)==-1) {
+		qfits_error("qfits_query_ext: failed to get extension range.");
         return NULL ;
     }
 
@@ -142,8 +146,10 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
      */
 
     start = falloc(filename, seg_start, &size);
-    if (start==NULL) return NULL ;
-
+    if (start==NULL) {
+		qfits_error("qfits_query_ext: failed to falloc.");
+		return NULL ;
+	}
     /*
      * Look for keyword in header
      */
@@ -176,6 +182,7 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
             (where[3]==' ')) {
             /* Detected header end */
             fdealloc(start, seg_start, size) ;
+			//qfits_error("qfits_query_ext: found END before %s.", exp_key);
             return NULL ;
         }
         /* Forward one line */
@@ -184,6 +191,7 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
         if (bufcount>seg_size) {
             /* File is damaged or not FITS: bailout */
             fdealloc(start, seg_start, size) ;
+			qfits_error("qfits_query_ext: file damaged or not FITS.");
             return NULL ;
         }
     }
@@ -191,6 +199,8 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
     /* Found the keyword, now get its value */
     value = qfits_getvalue(where);
     fdealloc(start, seg_start, size) ;
+	if (!value)
+		qfits_error("qfits_query_ext: found key %s, value is null.", exp_key);
     return value;
 }
 
