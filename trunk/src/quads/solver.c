@@ -317,7 +317,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 					 solver_params* params) {
     uint jj, thisquadno;
     uint iA, iB, iC, iD;
-    double *transform;
+    double transform[9];
     MatchObj *mo;
 	double sA[3], sB[3], sC[3], sD[3], sMin[3], sMax[3];
 
@@ -332,7 +332,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		getstarcoord(iC, sC);
 		getstarcoord(iD, sD);
 
-		transform = fit_transform(ABCDpix, order, sA, sB, sC, sD);
+		fit_transform(ABCDpix, order, sA, sB, sC, sD, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
 
@@ -362,7 +362,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		mo = mk_MatchObj();
 
 		memcpy(mo->transform, transform, sizeof(mo->transform));
-		free(transform);
 		mo->transform_valid = TRUE;
 
 		mo->quadno = thisquadno;

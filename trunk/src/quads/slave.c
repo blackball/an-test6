@@ -268,7 +268,6 @@ int main(int argc, char *argv[]) {
 		// Read .quad file...
 		fprintf(stderr, "Reading quads file %s...\n", quadfname);
 		quads = quadfile_open(quadfname, 0);
-		free_fn(quadfname);
 		if (!quads) {
 			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
 			exit(-1);
@@ -311,7 +310,6 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
 				exit(-1);
 			}
-			free(catfname);
 		}
 
 		id = idfile_open(idfname, 0);
@@ -319,7 +317,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Couldn't open id file %s.\n", idfname);
 			//exit(-1);
 		}
-		free(idfname);
 
 		Nagreehist = 100;
 		agreesizehist = malloc(Nagreehist * sizeof(int));
@@ -347,10 +344,16 @@ int main(int argc, char *argv[]) {
 		matchfile_close(mf);
 
 		free_fn(fieldfname);
+
 		free_fn(treefname);
+		free_fn(quadfname);
+		free_fn(catfname);
+		free_fn(idfname);
 		free_fn(startreefname);
 
 		kdtree_close(codetree);
+		if (startree)
+			kdtree_close(startree);
 		if (cat)
 			catalog_close(cat);
 		if (inverse_perm)
@@ -884,9 +887,7 @@ static int next_field(xy** pfield) {
 	return rtn;
 }
 
-//int 
-void*
-solvethread_run(void* varg) {
+void* solvethread_run(void* varg) {
 	threadargs* my = varg;
 	solver_params solver;
 	double last_utime, last_stime;
@@ -1086,6 +1087,7 @@ solvethread_run(void* varg) {
 
 	free(my->me.indexpath);
 	free(my->me.fieldpath);
+	free_xy(solver.cornerpix);
 
 	fprintf(stderr, "Thread %i finished.\n", my->threadnum);
 	my->running = FALSE;
