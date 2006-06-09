@@ -944,7 +944,7 @@ void* solvethread_run(void* varg) {
 	nfields = xyls->nfields;
 
 	for (;;) {
-		xy *thisfield;
+		xy *thisfield = NULL;
 		int fieldnum;
 
 		fieldnum = next_field(&thisfield);

@@ -245,7 +245,7 @@ void fit_transform(xy *ABCDpix, char order,
 
 	if (det == 0.0) {
 		fprintf(stderr, "ERROR (fit_transform) -- determinant zero\n");
-		return (NULL);
+		return;
 	}
 
 	//fprintf(stderr, "det=%g\n", det);
