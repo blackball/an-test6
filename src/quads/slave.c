@@ -544,7 +544,7 @@ int read_parameters() {
 	}
 }
 
-int verify_hit(MatchObj* mo, solver_params* p) {
+int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
 	xy* field = p->field;
 	int i, NF;
 	double* fieldstars;
@@ -584,9 +584,9 @@ int verify_hit(MatchObj* mo, solver_params* p) {
 			unmatches++;
 	}
 	avgmatch /= (double)(conflicts + matches);
-
-	fprintf(stderr, "%i matches, %i unmatches, %i conflicts.\n",
-			matches, unmatches, conflicts);
+	
+	fprintf(stderr, "    field %i (%i agree): verifying: %i matches, %i unmatches, %i conflicts.\n",
+			p->fieldnum, nagree, matches, unmatches, conflicts);
 	//Avg match dist: %g arcsec, max dist %g arcsec\n",
 	//rad2arcsec(distsq2arc(square(avgmatch))),
 	//rad2arcsec(distsq2arc(maxmatch)));
@@ -668,17 +668,19 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		exit(-1);
 	}
 
-	fprintf(stderr, "Write_hits: fieldnum=%i.\n", fieldnum);
-
-	fprintf(stderr, "Cache: [ ");
-	for (k=0; k<bl_size(cached); k++) {
-		cached_hits* ch = bl_access(cached, k);
-		fprintf(stderr, "%i ", ch->fieldnum);
-	}
-	fprintf(stderr, "]\n");
-
 	nextfld = il_get(fieldlist, index);
-	fprintf(stderr, "nextfld=%i\n", nextfld);
+
+	/*
+	  fprintf(stderr, "Write_hits: fieldnum=%i.\n", fieldnum);
+	  fprintf(stderr, "Cache: [ ");
+	  for (k=0; k<bl_size(cached); k++) {
+	  cached_hits* ch = bl_access(cached, k);
+	  fprintf(stderr, "%i ", ch->fieldnum);
+	  }
+	  fprintf(stderr, "]\n");
+	  fprintf(stderr, "nextfld=%i\n", nextfld);
+	*/
+
 	if (nextfld == fieldnum) {
 		cached_hits ch;
 		cached_hits* cache;
@@ -697,9 +699,11 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		for (;;) {
 			// write it!
 
-			fprintf(stderr, "Writing field %i: matches=%p, m_e=(%s,%s).\n",
-				   cache->fieldnum, cache->matches,
-				   cache->me.indexpath, cache->me.fieldpath);
+			/*
+			  fprintf(stderr, "Writing field %i: matches=%p, m_e=(%s,%s).\n",
+			  cache->fieldnum, cache->matches,
+			  cache->me.indexpath, cache->me.fieldpath);
+			*/
 
 			if (cache->matches) {
 				if (matchfile_start_table(mf, &cache->me) ||
@@ -735,7 +739,7 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			nextfld = il_get(fieldlist, index);
 			cache = bl_access(cached, 0);
 
-			fprintf(stderr, "Nextfld=%i, cached field=%i.\n", nextfld, cache->fieldnum);
+			//fprintf(stderr, "Nextfld=%i, cached field=%i.\n", nextfld, cache->fieldnum);
 
 			if (cache->fieldnum != nextfld)
 				break;
@@ -751,10 +755,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			cache.me.fieldpath = strdup(me->fieldpath);
 		} else {
 			memset(&cache.me, 0, sizeof(matchfile_entry));
-			/*
-			  cache.me.indexpath = NULL;
-			  cache.me.fieldpath = NULL;
-			*/
 		}
 		if (matches) {
 			cache.matches = pl_new(32);
@@ -767,19 +767,23 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		} else
 			cache.matches = NULL;
 
-		fprintf(stderr, "Caching field %i: matches=%p, m_e=(%s,%s).\n",
-			   cache.fieldnum, cache.matches, 
-			   cache.me.indexpath, cache.me.fieldpath);
+		/*
+		  fprintf(stderr, "Caching field %i: matches=%p, m_e=(%s,%s).\n",
+		  cache.fieldnum, cache.matches, 
+		  cache.me.indexpath, cache.me.fieldpath);
+		*/
 
 		bl_insert_sorted(cached, &cache, cached_hits_compare);
 	}
 
-	fprintf(stderr, "Cache: [ ");
-	for (k=0; k<bl_size(cached); k++) {
-		cached_hits* ch = bl_access(cached, k);
-		fprintf(stderr, "%i ", ch->fieldnum);
-	}
-	fprintf(stderr, "]\n");
+	/*
+	  fprintf(stderr, "Cache: [ ");
+	  for (k=0; k<bl_size(cached); k++) {
+	  cached_hits* ch = bl_access(cached, k);
+	  fprintf(stderr, "%i ", ch->fieldnum);
+	  }
+	  fprintf(stderr, "]\n");
+	*/
 
 	if (pthread_mutex_unlock(&matchfile_mutex)) {
 		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
@@ -824,7 +828,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (n < nagree_toverify)
 		return n;
 
-	verify_hit(mo, p);
+	verify_hit(mo, p, n);
 
 	winner = (n >= nagree);
 
@@ -1035,7 +1039,7 @@ void* solvethread_run(void* varg) {
 					for (k=0; k<pl_size(list); k++) {
 						MatchObj* mo = pl_get(list, k);
 						if (!mo->noverlap)
-							verify_hit(mo, &solver);
+							verify_hit(mo, &solver, pl_size(list));
 
 						sumoverlap += mo->noverlap;
 						if (mo->noverlap > maxoverlap)
