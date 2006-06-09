@@ -318,7 +318,7 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 		if (!table) {
 			fprintf(stderr, "matchfile: failed to open table: file %s, extension %i.\n",
 					mf->fn, mf->extension);
-			continue;
+			return -1;
 		}
 
 		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
