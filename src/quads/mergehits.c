@@ -151,10 +151,8 @@ int main(int argc, char *argv[]) {
 			// allow an input matchfile to have multiple tables for a single
 			// field (eg, if there are different settings).
 			while (1) {
-
 				if (eofs[i])
 					break;
-
 				if (!mes_valid[i]) {
 					if (matchfile_next_table(mfs[i], mes + i)) {
 						eofs[i] = TRUE;
@@ -190,6 +188,8 @@ int main(int argc, char *argv[]) {
 					pl_append(hits, mocopy);
 				}
 				fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
+
+				mes_valid[i] = FALSE;
 			}
 
 		}
@@ -204,7 +204,6 @@ int main(int argc, char *argv[]) {
 			// we're done with these tables...
 			free(mes[i].indexpath);
 			free(mes[i].fieldpath);
-			mes_valid[i] = FALSE;
 		}
 
 		pl_remove_all(hits);

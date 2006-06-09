@@ -157,9 +157,9 @@ int matchfile_start_table(matchfile* mf, matchfile_entry* me) {
 	qfits_header_add(mf->tableheader, "PARITY", (me->parity ? "Y" : "N"),
 					 "Were field coordinates flipped?", NULL);
 	qfits_header_add(mf->tableheader, "INDEX", me->indexpath ? me->indexpath : "", " ", NULL);
-	qfits_header_add(mf->tableheader, "COMMENT", NULL, "Path of the index used", NULL);
+	qfits_header_add(mf->tableheader, "COMMENT", "Path of the index used", NULL, NULL);
 	qfits_header_add(mf->tableheader, "FLDPATH", me->fieldpath ? me->fieldpath : "", " ", NULL);
-	qfits_header_add(mf->tableheader, "COMMENT", NULL, "Path of the field file", NULL);
+	qfits_header_add(mf->tableheader, "COMMENT", "Path of the field file", NULL, NULL);
 	return 0;
 }
 

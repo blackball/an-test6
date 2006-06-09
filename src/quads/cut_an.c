@@ -167,7 +167,7 @@ int main(int argc, char** args) {
 		qfits_header_add(cat->header, "HEALPIX", val, "Which big healpix does this catalog cover?", NULL);
 	}
 
-	qfits_header_add(cat->header, "COMMENT", NULL, "cut_an command line:", NULL);
+	qfits_header_add(cat->header, "COMMENT", "cut_an command line:", NULL, NULL);
 	fits_add_args(cat->header, args, argc);
 
 	catalog_write_header(cat);

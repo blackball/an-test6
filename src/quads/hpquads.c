@@ -595,8 +595,8 @@ int main(int argc, char** argv)
 		fits_copy_header(cat->header, codes->header, "HEALPIX")) {
 		printf("Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
-	qfits_header_add(quads->header, "COMMENT", NULL, "hpquads command line:", NULL);
-	qfits_header_add(codes->header, "COMMENT", NULL, "hpquads command line:", NULL);
+	qfits_header_add(quads->header, "COMMENT", "hpquads command line:", NULL, NULL);
+	qfits_header_add(codes->header, "COMMENT", "hpquads command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
 	fits_add_args(codes->header, argv, argc);
 

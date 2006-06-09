@@ -149,8 +149,8 @@ idfile* idfile_open_for_writing(char* fn)
 	sprintf(val, "%u", qf->numstars);
 	qfits_header_add(qf->header, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
 	qfits_header_add(qf->header, "NSTARS", val, "Number of stars used.", NULL);
-	qfits_header_add(qf->header, "COMMENT", NULL, "This is a flat array of ANIDs for each catalog star.", NULL);
-	qfits_header_add(qf->header, "COMMENT", NULL, " (each A.N id is a native-endian uint64)", NULL);
+	qfits_header_add(qf->header, "COMMENT", "This is a flat array of ANIDs for each catalog star.", NULL, NULL);
+	qfits_header_add(qf->header, "COMMENT", " (each A.N id is a native-endian uint64)", NULL, NULL);
 
 	return qf;
 
