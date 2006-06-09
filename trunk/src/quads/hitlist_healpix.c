@@ -546,6 +546,10 @@ void hitlist_healpix_clear(hitlist* hlist) {
 	}
 	pl_remove_all(hlist->agreelist);
 	pl_remove_all(hlist->correspondlist);
+
+	hlist->nbest = 0;
+	hlist->ntotal = 0;
+	hlist->best = NULL;
 }
 
 void hitlist_healpix_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {

@@ -665,17 +665,17 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		exit(-1);
 	}
 
-	printf("Write_hits: fieldnum=%i.\n", fieldnum);
+	fprintf(stderr, "Write_hits: fieldnum=%i.\n", fieldnum);
 
-	printf("Cache: [ ");
+	fprintf(stderr, "Cache: [ ");
 	for (k=0; k<bl_size(cached); k++) {
 		cached_hits* ch = bl_access(cached, k);
-		printf("%i ", ch->fieldnum);
+		fprintf(stderr, "%i ", ch->fieldnum);
 	}
-	printf("]\n");
+	fprintf(stderr, "]\n");
 
 	nextfld = il_get(fieldlist, index);
-	printf("nextfld=%i\n", nextfld);
+	fprintf(stderr, "nextfld=%i\n", nextfld);
 	if (nextfld == fieldnum) {
 		cached_hits ch;
 		cached_hits* cache;
@@ -694,7 +694,7 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		for (;;) {
 			// write it!
 
-			printf("Writing field %i: matches=%p, m_e=(%s,%s).\n",
+			fprintf(stderr, "Writing field %i: matches=%p, m_e=(%s,%s).\n",
 				   cache->fieldnum, cache->matches,
 				   cache->me.indexpath, cache->me.fieldpath);
 
@@ -732,7 +732,7 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			nextfld = il_get(fieldlist, index);
 			cache = bl_access(cached, 0);
 
-			printf("Nextfld=%i, cached field=%i.\n", nextfld, cache->fieldnum);
+			fprintf(stderr, "Nextfld=%i, cached field=%i.\n", nextfld, cache->fieldnum);
 
 			if (cache->fieldnum != nextfld)
 				break;
@@ -764,19 +764,19 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		} else
 			cache.matches = NULL;
 
-		printf("Caching field %i: matches=%p, m_e=(%s,%s).\n",
+		fprintf(stderr, "Caching field %i: matches=%p, m_e=(%s,%s).\n",
 			   cache.fieldnum, cache.matches, 
 			   cache.me.indexpath, cache.me.fieldpath);
 
 		bl_insert_sorted(cached, &cache, cached_hits_compare);
 	}
 
-	printf("Cache: [ ");
+	fprintf(stderr, "Cache: [ ");
 	for (k=0; k<bl_size(cached); k++) {
 		cached_hits* ch = bl_access(cached, k);
-		printf("%i ", ch->fieldnum);
+		fprintf(stderr, "%i ", ch->fieldnum);
 	}
-	printf("]\n");
+	fprintf(stderr, "]\n");
 
 	if (pthread_mutex_unlock(&matchfile_mutex)) {
 		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
@@ -1102,8 +1102,8 @@ void solve_fields() {
 	for (i=0; i<threads; i++) {
 		threadargs* args;
 		unsigned char* stack;
-		args = malloc(sizeof(threadargs));
-		stack = malloc(STACKSIZE);
+		args = calloc(1, sizeof(threadargs));
+		stack = calloc(STACKSIZE, 1);
 		allargs[i] = args;
 		allstacks[i] = stack;
 		args->threadnum = (i+1);

@@ -192,6 +192,7 @@ int matchfile_fix_table(matchfile* mf) {
 		qfits_header_getitem(newhdr, i, key, val, com, NULL);
 		qfits_header_mod(mf->tableheader, key, val, com);
 	}
+	qfits_header_destroy(newhdr);
 	off = ftello(mf->fid);
 	fseeko(mf->fid, mf->tableheader_start, SEEK_SET);
 	qfits_header_dump(mf->tableheader, mf->fid);
@@ -391,7 +392,7 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 }
 
 MatchObj* matchfile_buffered_read_match(matchfile* mf) {
-	int BLOCK = 1000;
+	const int BLOCK = 1000;
 	MatchObj* mo;
 
 	if (!mf->buffer) {
