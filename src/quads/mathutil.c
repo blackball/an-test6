@@ -170,13 +170,13 @@ void image_to_xyz(double uu, double vv, double* s, double* transform) {
 	s[2] = z;
 }
 
-double *fit_transform(xy *ABCDpix, char order,
-					  double* A, double* B, double* C, double* D)
+void fit_transform(xy *ABCDpix, char order,
+				   double* A, double* B, double* C, double* D,
+				   double* trans)
 {
 	double det, uu, uv, vv, sumu, sumv;
 	char oA = 0, oB = 1, oC = 2, oD = 3;
 	double Au, Av, Bu, Bv, Cu, Cv, Du, Dv;
-	double matQ[9];
 	double matR[12];
 
 	if (order == ABCD_ORDER) {
@@ -226,18 +226,18 @@ double *fit_transform(xy *ABCDpix, char order,
 	vv = Av * Av + Bv * Bv + Cv * Cv + Dv * Dv;
 	sumu = Au + Bu + Cu + Du;
 	sumv = Av + Bv + Cv + Dv;
-	matQ[0] = uu;
-	matQ[1] = uv;
-	matQ[2] = sumu;
-	matQ[3] = uv;
-	matQ[4] = vv;
-	matQ[5] = sumv;
-	matQ[6] = sumu;
-	matQ[7] = sumv;
-	matQ[8] = 4.0;
+	trans[0] = uu;
+	trans[1] = uv;
+	trans[2] = sumu;
+	trans[3] = uv;
+	trans[4] = vv;
+	trans[5] = sumv;
+	trans[6] = sumu;
+	trans[7] = sumv;
+	trans[8] = 4.0;
 
 	// take the inverse of Q in-place, so Q=inv(M*M')
-	det = inverse_3by3(matQ);
+	det = inverse_3by3(trans);
 
 	//fprintf(stderr,"det=%.12g\n",det);
 	if (det < 0)
@@ -251,47 +251,41 @@ double *fit_transform(xy *ABCDpix, char order,
 	//fprintf(stderr, "det=%g\n", det);
 
 	// set R to be the 4x3 matrix M'*inv(M*M')=M'*Q
-	matR[0]  = matQ[0] * Au + matQ[3] * Av + matQ[6];
-	matR[1]  = matQ[1] * Au + matQ[4] * Av + matQ[7];
-	matR[2]  = matQ[2] * Au + matQ[5] * Av + matQ[8];
-	matR[3]  = matQ[0] * Bu + matQ[3] * Bv + matQ[6];
-	matR[4]  = matQ[1] * Bu + matQ[4] * Bv + matQ[7];
-	matR[5]  = matQ[2] * Bu + matQ[5] * Bv + matQ[8];
-	matR[6]  = matQ[0] * Cu + matQ[3] * Cv + matQ[6];
-	matR[7]  = matQ[1] * Cu + matQ[4] * Cv + matQ[7];
-	matR[8]  = matQ[2] * Cu + matQ[5] * Cv + matQ[8];
-	matR[9]  = matQ[0] * Du + matQ[3] * Dv + matQ[6];
-	matR[10] = matQ[1] * Du + matQ[4] * Dv + matQ[7];
-	matR[11] = matQ[2] * Du + matQ[5] * Dv + matQ[8];
+	matR[0]  = trans[0] * Au + trans[3] * Av + trans[6];
+	matR[1]  = trans[1] * Au + trans[4] * Av + trans[7];
+	matR[2]  = trans[2] * Au + trans[5] * Av + trans[8];
+	matR[3]  = trans[0] * Bu + trans[3] * Bv + trans[6];
+	matR[4]  = trans[1] * Bu + trans[4] * Bv + trans[7];
+	matR[5]  = trans[2] * Bu + trans[5] * Bv + trans[8];
+	matR[6]  = trans[0] * Cu + trans[3] * Cv + trans[6];
+	matR[7]  = trans[1] * Cu + trans[4] * Cv + trans[7];
+	matR[8]  = trans[2] * Cu + trans[5] * Cv + trans[8];
+	matR[9]  = trans[0] * Du + trans[3] * Dv + trans[6];
+	matR[10] = trans[1] * Du + trans[4] * Dv + trans[7];
+	matR[11] = trans[2] * Du + trans[5] * Dv + trans[8];
 
 	// set Q to be the 3x3 matrix X*R
 
-	matQ[0] = A[0] * matR[0] + B[0] * matR[3] +
+	trans[0] = A[0] * matR[0] + B[0] * matR[3] +
 		C[0] * matR[6] + D[0] * matR[9];
-	matQ[1] = A[0] * matR[1] + B[0] * matR[4] +
+	trans[1] = A[0] * matR[1] + B[0] * matR[4] +
 		C[0] * matR[7] + D[0] * matR[10];
-	matQ[2] = A[0] * matR[2] + B[0] * matR[5] +
+	trans[2] = A[0] * matR[2] + B[0] * matR[5] +
 		C[0] * matR[8] + D[0] * matR[11];
 
-	matQ[3] = A[1] * matR[0] + B[1] * matR[3] +
+	trans[3] = A[1] * matR[0] + B[1] * matR[3] +
 		C[1] * matR[6] + D[1] * matR[9];
-	matQ[4] = A[1] * matR[1] + B[1] * matR[4] +
+	trans[4] = A[1] * matR[1] + B[1] * matR[4] +
 		C[1] * matR[7] + D[1] * matR[10];
-	matQ[5] = A[1] * matR[2] + B[1] * matR[5] +
+	trans[5] = A[1] * matR[2] + B[1] * matR[5] +
 		C[1] * matR[8] + D[1] * matR[11];
 
-	matQ[6] = A[2] * matR[0] + B[2] * matR[3] +
+	trans[6] = A[2] * matR[0] + B[2] * matR[3] +
 		C[2] * matR[6] + D[2] * matR[9];
-	matQ[7] = A[2] * matR[1] + B[2] * matR[4] +
+	trans[7] = A[2] * matR[1] + B[2] * matR[4] +
 		C[2] * matR[7] + D[2] * matR[10];
-	matQ[8] = A[2] * matR[2] + B[2] * matR[5] +
+	trans[8] = A[2] * matR[2] + B[2] * matR[5] +
 		C[2] * matR[8] + D[2] * matR[11];
-
-	{
-		double* copyQ = (double*)malloc(9 * sizeof(double));
-		memcpy(copyQ, matQ, 9 * sizeof(double));
-		return copyQ;
-	}
 }
 
 
