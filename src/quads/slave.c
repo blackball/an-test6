@@ -701,9 +701,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 					MatchObj* mo = pl_get(cache->matches, k);
 					if (matchfile_write_match(mf, mo))
 						fprintf(stderr, "Error writing a match.\n");
-					if (freeit) {
-						free(mo);
-					}
 				}
 				if (matchfile_fix_table(mf)) {
 					fprintf(stderr, "Error: Failed to fix matchfile table.\n");

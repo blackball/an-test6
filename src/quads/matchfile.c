@@ -206,6 +206,7 @@ int matchfile_fix_table(matchfile* mf) {
 	fseeko(mf->fid, off, SEEK_SET);
 	// add padding!
 	fits_pad_file(mf->fid);
+	fdatasync(fileno(mf->fid));
 	return 0;
 }
 
