@@ -11,12 +11,14 @@ int intmap_get(intmap* map, int from, int fail) {
 void intmap_get_entry(intmap* map, int indx, int* pfrom, int* pto) {
 	int from, to;
 	assert(indx < il_size(&map->fromlist));
-	assert(pfrom);
-	assert(pto);
-	from = il_get(&map->fromlist, indx);
-	to = il_get(&map->tolist, indx);
-	*pfrom = from;
-	*pto = to;
+	if (pfrom) {
+		from = il_get(&map->fromlist, indx);
+		*pfrom = from;
+	}
+	if (pto) {
+		to = il_get(&map->tolist, indx);
+		*pto = to;
+	}
 }
 
 int intmap_length(intmap* m) {

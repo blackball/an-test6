@@ -50,7 +50,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 
 SOLVER_OBJ := solver.o
 
-EXECS := mergehits agreeable certthresh quadidx \
+EXECS := whynot checkquads mergehits agreeable certthresh quadidx \
 	hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \

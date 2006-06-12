@@ -131,21 +131,26 @@ int main(int argc, char *argv[]) {
 		uint thisstar;
 		uint* stars; // bad variable name - list of quads this star is in.
 		il* list = quadlist[i];
-		if (!list) continue;
-		thisnumq = (uint)il_size(list);
+		if (list) {
+			thisnumq = (uint)il_size(list);
+			stars = malloc(thisnumq * sizeof(uint));
+			il_copy(list, 0, thisnumq, (int*)stars);
+		} else {
+			thisnumq = 0;
+			stars = NULL;
+		}
 		thisstar = i;
-
-		stars = malloc(thisnumq * sizeof(uint));
-		il_copy(list, 0, thisnumq, (int*)stars);
 
 		if (qidxfile_write_star(qidx,  stars, thisnumq)) {
 			fprintf(stderr, "Couldn't write star to qidx file (%s).\n", idxfname);
 			exit(-1);
 		}
 
-		free(stars);
-		il_free(list);
-		quadlist[i] = NULL;
+		if (list) {
+			free(stars);
+			il_free(list);
+			quadlist[i] = NULL;
+		}
 	}
 	free(quadlist);
 	quadfile_close(quads);

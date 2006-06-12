@@ -153,7 +153,7 @@ void solve_field(solver_params* params) {
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 					  char* inbox, int maxind, solver_params* params) {
-    int i;
+	int i;
     int iC, iD;
     double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
 	double dx, dy;

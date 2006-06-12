@@ -19,7 +19,6 @@
 #include <pthread.h>
 
 #include "kdtree.h"
-#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
@@ -35,7 +34,6 @@
 #include "quadfile.h"
 #include "idfile.h"
 #include "intmap.h"
-#include "starutil.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -118,6 +116,7 @@ int main(int argc, char *argv[]) {
     uint numfields;
 	char* progname = argv[0];
 	int i;
+	int err;
 
     if (argc != 1) {
 		printHelp(progname);
@@ -132,8 +131,8 @@ int main(int argc, char *argv[]) {
 
 	fieldlist = il_new(256);
 
-	if (pthread_mutex_init(&fieldlist_mutex, NULL) ||
-		pthread_mutex_init(&matchfile_mutex, NULL)) {
+	if ((err = pthread_mutex_init(&fieldlist_mutex, NULL)) ||
+		(err = pthread_mutex_init(&matchfile_mutex, NULL))) {
 		fprintf(stderr, "pthread_mutex_init failed: %s\n", strerror(errno));
 		exit(-1);
 	}
@@ -381,9 +380,9 @@ int main(int argc, char *argv[]) {
 
 	il_free(fieldlist);
 
-	if (pthread_mutex_destroy(&fieldlist_mutex) ||
-		pthread_mutex_destroy(&matchfile_mutex)) {
-		fprintf(stderr, "pthread_mutex_destroy failed: %s\n", strerror(errno));
+	if ((err = pthread_mutex_destroy(&fieldlist_mutex)) ||
+		(err = pthread_mutex_destroy(&matchfile_mutex))) {
+		fprintf(stderr, "pthread_mutex_destroy failed: %s\n", strerror(err));
 		exit(-1);
 	}
 
@@ -1162,11 +1161,6 @@ void solve_fields() {
 		if (i == (threads - 1))
 			solvethread_run(args);
 		else {
-			/*
-			  if (clone(solvethread_run, stack + STACKSIZE - 1,
-			  CLONE_FS | CLONE_FILES | CLONE_VM | CLONE_THREAD,
-			  args) == -1) {
-			*/
 			pthread_t thread;
 			if (pthread_create(&thread, NULL, solvethread_run, args)) {
 				fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
