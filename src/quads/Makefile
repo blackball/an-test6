@@ -23,9 +23,9 @@ CFLAGS += -O2
 #CFLAGS += -DNDEBUG
 #CFLAGS += -Werror
 
-CFLAGS += -Wall -DAMFAST -D__USE_FIXED_PROTOTYPES__ -DUNIX_TTY_PLATFORM \
+CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
-	-DUSE_OS_MEMORY_MANAGEMENT -I.
+	-I.
 
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
