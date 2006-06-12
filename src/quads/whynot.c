@@ -95,13 +95,39 @@ intmap* indtofield;
 
 il* quadsinfield;
 
+struct quadmatch {
+	uint quadnum;
+	uint indexstar[4];
+	uint fieldstar[4];
+	uint fieldstar_sorted[4];
+};
+typedef struct quadmatch quadmatch;
+
+quadmatch* qms;
+int Nqms;
+
+
 void try_code(double* code, int iA, int iB, int iC, int iD) {
 	int i;
+	int j;
+
+	fprintf(stderr, "        Quad (%i, %i, %i, %i)\n", iA, iB, iC, iD);
+	for (j=0; j<Nqms; j++) {
+		if ((iA == qms[j].fieldstar[0]) &&
+			(iB == qms[j].fieldstar[1]) &&
+			(iC == qms[j].fieldstar[2]) &&
+			(iD == qms[j].fieldstar[3])) {
+			fprintf(stderr, "This quad should be findable!\n");
+		}
+	}
 	for (i=0; i<il_size(quadsinfield); i++) {
+		double dist;
 		double* qcode = codetree->data +
 			code_inverse_perm[il_get(quadsinfield, i)] * codetree->ndim;
-		fprintf(stderr, "        Dist to quad %i: %g\n",
-				il_get(quadsinfield, i), sqrt(distsq(qcode, code, codetree->ndim)));
+		dist = sqrt(distsq(qcode, code, codetree->ndim));
+		fprintf(stderr, "        Dist to quad %i: %g%s\n",
+				il_get(quadsinfield, i), dist,
+				(dist < codetol) ? "   ==> HIT!" : "");
 	}
 }
 
@@ -109,8 +135,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 				   uint iA, uint iB, uint iC, uint iD,
                    xy *ABCDpix) {
     double thequery[4];
-    kdtree_qres_t* result;
-	double tol = square(codetol);
+    //kdtree_qres_t* result;
+	//double tol = square(codetol);
 
 	fprintf(stderr, "      Trying quad (%i, %i, %i, %i)\n",
 			iA, iB, iC, iD);
@@ -226,7 +252,7 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     }
 
 	fprintf(stderr, "    %i points are in the box defined by (%i, %i)\n",
-			iA, iB, ninbox);
+			ninbox, iA, iB);
 
     for (i=0; i<ncd; i++) {
 		double Cfx, Cfy, Dfx, Dfy;
@@ -257,6 +283,26 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     free_xy(ABCDpix);
 }
 
+int compare_uints(const void* v1, const void* v2) {
+	const uint u1 = *(uint*)v1;
+	const uint u2 = *(uint*)v2;
+	if (u1 < u2)
+		return -1;
+	if (u1 > u2)
+		return 1;
+	return 0;
+}
+
+int compare_last_fieldobj(const void* v1, const void* v2) {
+	const quadmatch* q1 = v1;
+	const quadmatch* q2 = v2;
+	if (q1->fieldstar_sorted[3] > q2->fieldstar_sorted[3])
+		return 1;
+	if (q1->fieldstar_sorted[3] < q2->fieldstar_sorted[3])
+		return -1;
+	return 0;
+}
+
 // find min and max coordinates in this field;
 // place them in "cornerpix"
 void find_corners(xy *thisfield, xy *cornerpix) {
@@ -280,6 +326,62 @@ void find_corners(xy *thisfield, xy *cornerpix) {
     xy_sety(cornerpix, 0, miny);
     xy_setx(cornerpix, 1, maxx);
     xy_sety(cornerpix, 1, maxy);
+}
+
+void getstarcoord(uint iA, double *sA) {
+	memcpy(sA, startree->data + inverse_perm[iA] * DIM_STARS,
+		   DIM_STARS * sizeof(double));
+}
+
+int verify_hit(MatchObj* mo, xy* field) {
+	int i, NF;
+	double* fieldstars;
+	intmap* map;
+	int matches;
+	int unmatches;
+	int conflicts;
+	double avgmatch;
+	double maxmatch;
+	assert(mo->transform_valid);
+	assert(startree);
+	NF = xy_size(field);
+	fieldstars = malloc(3 * NF * sizeof(double));
+	for (i=0; i<NF; i++) {
+		double u, v;
+		u = xy_refx(field, i);
+		v = xy_refy(field, i);
+		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
+	}
+
+	matches = unmatches = conflicts = 0;
+	maxmatch = avgmatch = 0.0;
+	map = intmap_new(INTMAP_ONE_TO_ONE);
+	for (i=0; i<NF; i++) {
+		double bestd2;
+		int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
+		if (bestd2 <= verify_dist2) {
+			if (intmap_add(map, ind, i) == -1)
+				// a field object already selected star 'ind' as its nearest neighbour.
+				conflicts++;
+			else
+				matches++;
+			avgmatch += sqrt(bestd2);
+			if (bestd2 > maxmatch)
+				maxmatch = bestd2;
+		} else
+			unmatches++;
+	}
+	avgmatch /= (double)(conflicts + matches);
+	
+	fprintf(stderr, "verify: %i matches, %i unmatches, %i conflicts.\n",
+			matches, unmatches, conflicts);
+	fflush(stderr);
+
+	mo->noverlap = matches - conflicts;
+
+	intmap_free(map);
+	free(fieldstars);
+	return 1;
 }
 
 void why_not() {
@@ -331,6 +433,9 @@ void why_not() {
 
 		il* indstars;
 		il* indquads;
+
+		hitlist* hlhits;
+		hitlist* hlall;
 
 		fieldnum = il_get(fieldlist, fieldind);
 		if (fieldnum >= nfields) {
@@ -395,13 +500,14 @@ void why_not() {
 				fprintf(stderr, "Failed to read qidxfile for star %i.\n", star);
 				exit(-1);
 			}
-			fprintf(stderr, "Index star %i (field %i) is in quads:\n  ",
-					star, intmap_get(indtofield, star, -1));
-			for (j=0; j<nquads; j++) {
-				fprintf(stderr, "%i ", quads[j]);
-			}
-			fprintf(stderr, "\n");
-
+			/*
+			  fprintf(stderr, "Index star %i (field %i) is in quads:\n  ",
+			  star, intmap_get(indtofield, star, -1));
+			  for (j=0; j<nquads; j++) {
+			  fprintf(stderr, "%i ", quads[j]);
+			  }
+			  fprintf(stderr, "\n");
+			*/
 			for (j=0; j<nquads; j++) {
 				il_insert_ascending(indquads, quads[j]);
 			}
@@ -424,26 +530,236 @@ void why_not() {
 			}
 		}
 
-		fprintf(stderr, "Index-to-field map:\n");
-		for (i=0; i<intmap_length(indtofield); i++) {
-			int from, to;
-			intmap_get_entry(indtofield, i, &from, &to);
-			fprintf(stderr, "  %i -> %i\n", from, to);
-		}
+		/*
+		  fprintf(stderr, "Index-to-field map:\n");
+		  for (i=0; i<intmap_length(indtofield); i++) {
+		  int from, to;
+		  intmap_get_entry(indtofield, i, &from, &to);
+		  fprintf(stderr, "  %i -> %i\n", from, to);
+		  }
+		*/
 
-		fprintf(stderr, "Indexed quads:\n");
 		for (i=0; i<il_size(indquads); i++) {
 			int quad = il_get(indquads, i);
 			uint sA, sB, sC, sD;
+			if (i) {
+				// check for duplicates.
+				if (quad == il_get(indquads, i-1)) {
+					il_remove(indquads, i);
+					i--;
+					continue;
+				}
+			}
 			quadfile_get_starids(quads, quad, &sA, &sB, &sC, &sD);
-			fprintf(stderr, "   %i: index (%i, %i, %i, %i), field (%i, %i, %i, %i)\n",
-					quad, sA, sB, sC, sD,
-					intmap_get(indtofield, sA, -1),
-					intmap_get(indtofield, sB, -1),
-					intmap_get(indtofield, sC, -1),
-					intmap_get(indtofield, sD, -1));
+			if ((intmap_get(indtofield, sA, -1) == -1) ||
+				(intmap_get(indtofield, sB, -1) == -1) ||
+				(intmap_get(indtofield, sC, -1) == -1) ||
+				(intmap_get(indtofield, sD, -1) == -1)) {
+				il_remove(indquads, i);
+				i--;
+			}
 		}
+
+		fprintf(stderr, "Indexed quads:\n");
+
+		Nqms = il_size(indquads);
+		qms = malloc(Nqms * sizeof(quadmatch));
+
+		for (i=0; i<il_size(indquads); i++) {
+			int quad = il_get(indquads, i);
+			uint sA, sB, sC, sD;
+
+			quadfile_get_starids(quads, quad, &sA, &sB, &sC, &sD);
+
+			qms[i].quadnum = quad;
+			qms[i].indexstar[0] = sA;
+			qms[i].indexstar[1] = sB;
+			qms[i].indexstar[2] = sC;
+			qms[i].indexstar[3] = sD;
+			qms[i].fieldstar[0] = intmap_get(indtofield, sA, -1);
+			qms[i].fieldstar[1] = intmap_get(indtofield, sB, -1);
+			qms[i].fieldstar[2] = intmap_get(indtofield, sC, -1);
+			qms[i].fieldstar[3] = intmap_get(indtofield, sD, -1);
+			qms[i].fieldstar_sorted[0] = qms[i].fieldstar[0];
+			qms[i].fieldstar_sorted[1] = qms[i].fieldstar[1];
+			qms[i].fieldstar_sorted[2] = qms[i].fieldstar[2];
+			qms[i].fieldstar_sorted[3] = qms[i].fieldstar[3];
+			qsort(qms[i].fieldstar_sorted, 4, sizeof(uint), compare_uints);
+
+			fprintf(stderr, "   %i: index (%i, %i, %i, %i), field (%i, %i, %i, %i), sorted (%i, %i, %i, %i)\n",
+					quad, sA, sB, sC, sD,
+					qms[i].fieldstar[0],
+					qms[i].fieldstar[1],
+					qms[i].fieldstar[2],
+					qms[i].fieldstar[3],
+					qms[i].fieldstar_sorted[0],
+					qms[i].fieldstar_sorted[1],
+					qms[i].fieldstar_sorted[2],
+					qms[i].fieldstar_sorted[3]);
+		}
+
+		qsort(qms, Nqms, sizeof(quadmatch), compare_last_fieldobj);
+
 		fprintf(stderr, "\n");
+
+		hlhits = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
+		hlall = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
+		find_corners(thisfield, cornerpix);
+
+		fprintf(stderr, "Findable quads:\n");
+		for (i=0; i<Nqms; i++) {
+			double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
+			double dx, dy;
+			double costheta, sintheta, scale, xxtmp;
+			xy *ABCDpix;
+			double* qcode;
+			double dist;
+			double code[4];
+
+			MatchObj mo;
+
+			int iA = qms[i].fieldstar[0];
+			int iB = qms[i].fieldstar[1];
+			int iC = qms[i].fieldstar[2];
+			int iD = qms[i].fieldstar[3];
+
+			Ax = xy_refx(thisfield, iA);
+			Ay = xy_refy(thisfield, iA);
+			Bx = xy_refx(thisfield, iB);
+			By = xy_refy(thisfield, iB);
+			dx = Bx - Ax;
+			dy = By - Ay;
+			scale = dx*dx + dy*dy;
+			if ((scale < square(minAB)) || (scale > square(maxAB))) {
+				fprintf(stderr, "    Quad scale %g: not in allowable range [%g, %g].\n", scale, minAB, maxAB);
+				continue;
+			}
+
+			ABCDpix = mk_xy(DIM_QUADS);
+			xy_setx(ABCDpix, 0, Ax);
+			xy_sety(ABCDpix, 0, Ay);
+			xy_setx(ABCDpix, 1, Bx);
+			xy_sety(ABCDpix, 1, By);
+
+			costheta = (dx + dy) / scale;
+			sintheta = (dy - dx) / scale;
+
+			Cx = xy_refx(thisfield, iC);
+			Cy = xy_refy(thisfield, iC);
+			xy_setx(ABCDpix, 2, Cx);
+			xy_sety(ABCDpix, 2, Cy);
+			Cx -= Ax;
+			Cy -= Ay;
+			xxtmp = Cx;
+			Cx = Cx * costheta + Cy * sintheta;
+			Cy = -xxtmp * sintheta + Cy * costheta;
+			if ((Cx >= 1.0) || (Cx <= 0.0) ||
+				(Cy >= 1.0) || (Cy <= 0.0)) {
+				fprintf(stderr, "Field star C is not in the box.\n");
+				continue;
+			}
+
+			Dx = xy_refx(thisfield, iD);
+			Dy = xy_refy(thisfield, iD);
+			xy_setx(ABCDpix, 3, Dx);
+			xy_sety(ABCDpix, 3, Dy);
+			Dx -= Ax;
+			Dy -= Ay;
+			xxtmp = Dx;
+			Dx = Dx * costheta + Dy * sintheta;
+			Dy = -xxtmp * sintheta + Dy * costheta;
+			if ((Dx >= 1.0) || (Dx <= 0.0) ||
+				(Dy >= 1.0) || (Dy <= 0.0)) {
+				fprintf(stderr, "Field star D is not in the box.\n");
+				continue;
+			}
+
+			code[0] = Cx;
+			code[1] = Cy;
+			code[2] = Dx;
+			code[3] = Dy;
+
+			fprintf(stderr, "  %i: (%i, %i, %i, %i)\n",
+					qms[i].quadnum,
+					qms[i].fieldstar_sorted[0],
+					qms[i].fieldstar_sorted[1],
+					qms[i].fieldstar_sorted[2],
+					qms[i].fieldstar_sorted[3]);
+
+			qcode = codetree->data +
+				code_inverse_perm[qms[i].quadnum] * codetree->ndim;
+			dist = sqrt(distsq(qcode, code, codetree->ndim));
+			fprintf(stderr, "    Dist to quad %i: %g%s\n",
+					qms[i].quadnum, dist,
+					(dist < codetol) ? "   ==> HIT!" : "");
+
+			mo.quadno = qms[i].quadnum;
+			mo.star[0] = qms[i].indexstar[0];
+			mo.star[1] = qms[i].indexstar[1];
+			mo.star[2] = qms[i].indexstar[2];
+			mo.star[3] = qms[i].indexstar[3];
+			mo.field[0] = qms[i].fieldstar[0];
+			mo.field[1] = qms[i].fieldstar[1];
+			mo.field[2] = qms[i].fieldstar[2];
+			mo.field[3] = qms[i].fieldstar[3];
+			mo.code_err = square(dist);
+			{
+				double sA[3], sB[3], sC[3], sD[3];
+				getstarcoord(mo.star[0], sA);
+				getstarcoord(mo.star[1], sB);
+				getstarcoord(mo.star[2], sC);
+				getstarcoord(mo.star[3], sD);
+
+				fit_transform(ABCDpix, ABCD_ORDER, sA, sB, sC, sD, mo.transform);
+				image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin, mo.transform);
+				image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax, mo.transform);
+				mo.transform_valid = TRUE;
+
+				// scale checking
+				// fieldunitsupper/lower is in arcseconds/pixel
+				{
+					double d, c;
+					d  = square(mo.sMax[0] - mo.sMin[0]);
+					d += square(mo.sMax[1] - mo.sMin[1]);
+					d += square(mo.sMax[2] - mo.sMin[2]);
+					// convert 'd' from squared distance on the unit sphere
+					// to arcseconds...
+					d = distsq2arc(d);
+					d = rad2deg(d) * 60.0 * 60.0;
+					c  = square(xy_refy(cornerpix, 1) - xy_refy(cornerpix, 0));
+					c += square(xy_refx(cornerpix, 1) - xy_refx(cornerpix, 0));
+					c = sqrt(c);
+					if ((d/c > arcsec_per_pixel_upper) || (d/c < arcsec_per_pixel_lower)) {
+						// this quad has invalid scale.
+						fprintf(stderr, "    This quad has invalid scale: %g not in [%g, %g].\n",
+								d/c, arcsec_per_pixel_lower, arcsec_per_pixel_upper);
+						continue;
+					}
+				}
+			}
+
+			{
+				int nagree, listind;
+				MatchObj* mocopy;
+				mocopy = malloc(sizeof(MatchObj));
+				memcpy(mocopy, &mo, sizeof(MatchObj));
+				verify_hit(mocopy, thisfield);
+				hitlist_healpix_compute_vector(mocopy);
+				/*
+				  fprintf(stderr, "Checking agreement to (all) list...\n");
+				  hitlist_healpix_print_dists_to_lists(hlall, mocopy);
+				*/
+				nagree = hitlist_healpix_add_hit(hlall, mocopy, &listind);
+				fprintf(stderr, "    -> %i agree (all).\n", nagree);
+
+				fprintf(stderr, "Checking agreement to (hits only) list...\n");
+				hitlist_healpix_print_dists_to_lists(hlhits, mocopy);
+				if (dist < codetol) {
+					nagree = hitlist_healpix_add_hit(hlhits, mocopy, &listind);
+					fprintf(stderr, "    -> %i agree (hits only).\n", nagree);
+				}
+			}
+		}
 
 		quadsinfield = indquads;
 
@@ -457,8 +773,6 @@ void why_not() {
 		  solver.quitNow = FALSE;
 		  solver.userdata = my;
 		*/
-
-		find_corners(thisfield, cornerpix);
 
 		numxy = xy_size(thisfield);
 
@@ -490,7 +804,7 @@ void why_not() {
 						ncd++;
 					}
 				}
-				fprintf(stderr, "  Trying %i quads with newpoint on the diagonal (%i, %i).\n", ncd, newpoint, iA);
+				fprintf(stderr, "  Trying %i quads with newpoint on the diagonal (%i, %i).\n", ncd, iB, iA);
 				try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, thisfield);
 			}
 			// quads with the new star not on the diagonal:
@@ -532,6 +846,7 @@ void why_not() {
 	}
 }
 
+
 /*
   char* get_pathname(char* fname) {
   char* resolved = malloc(PATH_MAX);
@@ -562,8 +877,8 @@ int main(int argc, char *argv[]) {
 
 	fieldlist = il_new(256);
 
-	fieldtoind = intmap_new();
-	indtofield = intmap_new();
+	fieldtoind = intmap_new(INTMAP_MANY_TO_ONE);
+	indtofield = intmap_new(INTMAP_ONE_TO_ONE);
 
 	qfits_err_statset(1);
 
@@ -733,10 +1048,10 @@ int main(int argc, char *argv[]) {
 		do_verify = startree && (verify_dist2 > 0.0);
 
 		if (startree) {
-			inverse_perm = malloc(startree->ndata * sizeof(int));
-			for (i=0; i<startree->ndata; i++)
-				inverse_perm[startree->perm[i]] = i;
-			cat = NULL;
+			  inverse_perm = malloc(startree->ndata * sizeof(int));
+			  for (i=0; i<startree->ndata; i++)
+			  inverse_perm[startree->perm[i]] = i;
+			  cat = NULL;
 		} else {
 			// Read .objs file...
 			cat = catalog_open(catfname, 0);

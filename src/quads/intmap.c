@@ -25,15 +25,16 @@ int intmap_length(intmap* m) {
 	return il_size(&m->fromlist);
 }
 
-intmap* intmap_new() {
+intmap* intmap_new(intmap_type type) {
 	intmap* c = malloc(sizeof(intmap));
-	intmap_init(c);
+	intmap_init(c, type);
 	return c;
 }
 
-void intmap_init(intmap* c) {
+void intmap_init(intmap* c, intmap_type type) {
 	il_new_existing(&c->fromlist, 4);
 	il_new_existing(&c->tolist, 4);
+	c->type = type;
 }
 
 void intmap_clear(intmap* m) {
@@ -56,9 +57,16 @@ int intmap_conflicts(intmap* c, int from, int to) {
 		if ((from == f) && (to == t)) {
 			// okay.
 			continue;
-		} else if ((from == f) || (to == t)) {
-			// conflict!
-			return 1;
+		}
+		switch (c->type) {
+		case INTMAP_ONE_TO_ONE:
+			if ((from == f) || (to == t))
+				// conflict!
+				return 1;
+		case INTMAP_MANY_TO_ONE:
+			if (from == f)
+				// conflict!
+				return 1;
 		}
 	}
 	return 0;
@@ -74,9 +82,16 @@ int intmap_add(intmap* c, int from, int to) {
 		if ((from == f) && (to == t)) {
 			// mapping exists.
 			return 1;
-		} else if ((from == f) || (to == t)) {
-			// conflict!
-			return -1;
+		}
+		switch (c->type) {
+		case INTMAP_ONE_TO_ONE:
+			if ((from == f) || (to == t))
+				// conflict!
+				return -1;
+		case INTMAP_MANY_TO_ONE:
+			if (from == f)
+				// conflict!
+				return -1;
 		}
 	}
 	il_append(&c->fromlist, from);

@@ -40,4 +40,6 @@ int hitlist_healpix_count_best(hitlist* hitlist);
 
 int hitlist_healpix_count_all(hitlist* hitlist);
 
+void hitlist_healpix_print_dists_to_lists(hitlist* hl, MatchObj* mo);
+
 #endif
