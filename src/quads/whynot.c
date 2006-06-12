@@ -12,7 +12,6 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "matchobj.h"
-#include "matchfile.h"
 #include "catalog.h"
 #include "hitlist_healpix.h"
 #include "tic.h"
@@ -41,7 +40,6 @@ char* qidxfname = NULL;
 char *rdlsfname = NULL;
 char* startreefname = NULL;
 char *idfname = NULL;
-char* matchfname = NULL;
 char* xcolname;
 char* ycolname;
 char* racolname = "RA";
@@ -72,8 +70,6 @@ int noverlap_toconfirm = 0;
 int threads = 1;
 il* fieldlist = NULL;
 
-matchfile* mf;
-
 catalog* cat;
 idfile* id;
 quadfile* quads;
@@ -93,8 +89,6 @@ double minAB, maxAB;
 intmap* fieldtoind;
 intmap* indtofield;
 
-il* quadsinfield;
-
 struct quadmatch {
 	uint quadnum;
 	uint indexstar[4];
@@ -105,183 +99,6 @@ typedef struct quadmatch quadmatch;
 
 quadmatch* qms;
 int Nqms;
-
-
-void try_code(double* code, int iA, int iB, int iC, int iD) {
-	int i;
-	int j;
-
-	fprintf(stderr, "        Quad (%i, %i, %i, %i)\n", iA, iB, iC, iD);
-	for (j=0; j<Nqms; j++) {
-		if ((iA == qms[j].fieldstar[0]) &&
-			(iB == qms[j].fieldstar[1]) &&
-			(iC == qms[j].fieldstar[2]) &&
-			(iD == qms[j].fieldstar[3])) {
-			fprintf(stderr, "This quad should be findable!\n");
-		}
-	}
-	for (i=0; i<il_size(quadsinfield); i++) {
-		double dist;
-		double* qcode = codetree->data +
-			code_inverse_perm[il_get(quadsinfield, i)] * codetree->ndim;
-		dist = sqrt(distsq(qcode, code, codetree->ndim));
-		fprintf(stderr, "        Dist to quad %i: %g%s\n",
-				il_get(quadsinfield, i), dist,
-				(dist < codetol) ? "   ==> HIT!" : "");
-	}
-}
-
-void try_all_codes(double Cx, double Cy, double Dx, double Dy,
-				   uint iA, uint iB, uint iC, uint iD,
-                   xy *ABCDpix) {
-    double thequery[4];
-    //kdtree_qres_t* result;
-	//double tol = square(codetol);
-
-	fprintf(stderr, "      Trying quad (%i, %i, %i, %i)\n",
-			iA, iB, iC, iD);
-
-	if ((intmap_get(fieldtoind, iA, -1) == -1) ||
-		(intmap_get(fieldtoind, iB, -1) == -1) ||
-		(intmap_get(fieldtoind, iC, -1) == -1) ||
-		(intmap_get(fieldtoind, iD, -1) == -1)) {
-		fprintf(stderr, "        Not all field objects are indexed.\n");
-		return;
-	}
-
-	fprintf(stderr, "        Code is (%f,%f,%f,%f)\n", Cx, Cy, Dx, Dy);
-
-    // ABCD
-    thequery[0] = Cx;
-    thequery[1] = Cy;
-    thequery[2] = Dx;
-    thequery[3] = Dy;
-
-	fprintf(stderr, "        ABCD:\n");
-	try_code(thequery, iA, iB, iC, iD);
-
-    // BACD
-    thequery[0] = 1.0 - Cx;
-    thequery[1] = 1.0 - Cy;
-    thequery[2] = 1.0 - Dx;
-    thequery[3] = 1.0 - Dy;
-
-	fprintf(stderr, "        BACD:\n");
-	try_code(thequery, iB, iA, iC, iD);
-
-    // ABDC
-    thequery[0] = Dx;
-    thequery[1] = Dy;
-    thequery[2] = Cx;
-    thequery[3] = Cy;
-
-	fprintf(stderr, "        ABDC:\n");
-	try_code(thequery, iA, iB, iD, iC);
-
-    // BADC
-    thequery[0] = 1.0 - Dx;
-    thequery[1] = 1.0 - Dy;
-    thequery[2] = 1.0 - Cx;
-    thequery[3] = 1.0 - Cy;
-
-	fprintf(stderr, "        BADC:\n");
-	try_code(thequery, iB, iA, iD, iC);
-}
-
-inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-					  char* inbox, int maxind, xy* field) {
-	int i;
-    int iC, iD;
-    double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
-	double dx, dy;
-    double costheta, sintheta, scale, xxtmp;
-    double xs[maxind];
-    double ys[maxind];
-	double fieldxs[maxind];
-	double fieldys[maxind];
-    xy *ABCDpix;
-	int ninbox;
-
-    Ax = xy_refx(field, iA);
-    Ay = xy_refy(field, iA);
-    Bx = xy_refx(field, iB);
-    By = xy_refy(field, iB);
-
-	dx = Bx - Ax;
-	dy = By - Ay;
-	scale = dx*dx + dy*dy;
-
-	if ((scale < square(minAB)) || (scale > square(maxAB))) {
-		fprintf(stderr, "    Quad scale %g: not in allowable range [%g, %g].\n", scale, minAB, maxAB);
-		return;
-	}
-
-    ABCDpix = mk_xy(DIM_QUADS);
-
-    xy_setx(ABCDpix, 0, Ax);
-    xy_sety(ABCDpix, 0, Ay);
-    xy_setx(ABCDpix, 1, Bx);
-    xy_sety(ABCDpix, 1, By);
-
-    costheta = (dx + dy) / scale;
-    sintheta = (dy - dx) / scale;
-
-    // check which C, D points are inside the square.
-	ninbox = 0;
-    for (i=0; i<maxind; i++) {
-		if (!inbox[i]) continue;
-		Cx = xy_refx(field, i);
-		Cy = xy_refy(field, i);
-
-		fieldxs[i] = Cx;
-		fieldys[i] = Cy;
-
-		Cx -= Ax;
-		Cy -= Ay;
-		xxtmp = Cx;
-		Cx = Cx * costheta + Cy * sintheta;
-		Cy = -xxtmp * sintheta + Cy * costheta;
-		if ((Cx >= 1.0) || (Cx <= 0.0) ||
-			(Cy >= 1.0) || (Cy <= 0.0)) {
-			inbox[i] = 0;
-		} else {
-			xs[i] = Cx;
-			ys[i] = Cy;
-			ninbox++;
-		}
-    }
-
-	fprintf(stderr, "    %i points are in the box defined by (%i, %i)\n",
-			ninbox, iA, iB);
-
-    for (i=0; i<ncd; i++) {
-		double Cfx, Cfy, Dfx, Dfy;
-		iC = iCs[i];
-		iD = iDs[i];
-		// are both C and D in the box?
-		if (!inbox[iC]) continue;
-		if (!inbox[iD]) continue;
-
-		Cx = xs[iC];
-		Cy = ys[iC];
-		Dx = xs[iD];
-		Dy = ys[iD];
-
-		Cfx = fieldxs[iC];
-		Cfy = fieldys[iC];
-		Dfx = fieldxs[iD];
-		Dfy = fieldys[iD];
-
-		xy_setx(ABCDpix, 2, Cfx);
-		xy_sety(ABCDpix, 2, Cfy);
-		xy_setx(ABCDpix, 3, Dfx);
-		xy_sety(ABCDpix, 3, Dfy);
-
-		try_all_codes(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix);
-    }
-
-    free_xy(ABCDpix);
-}
 
 int compare_uints(const void* v1, const void* v2) {
 	const uint u1 = *(uint*)v1;
@@ -333,7 +150,8 @@ void getstarcoord(uint iA, double *sA) {
 		   DIM_STARS * sizeof(double));
 }
 
-int verify_hit(MatchObj* mo, xy* field) {
+int verify_hit(MatchObj* mo, xy* field,
+			   int* pmatches, int* punmatches, int* pconflicts) {
 	int i, NF;
 	double* fieldstars;
 	intmap* map;
@@ -373,15 +191,173 @@ int verify_hit(MatchObj* mo, xy* field) {
 	}
 	avgmatch /= (double)(conflicts + matches);
 	
-	fprintf(stderr, "verify: %i matches, %i unmatches, %i conflicts.\n",
-			matches, unmatches, conflicts);
-	fflush(stderr);
+	/*
+	*/
 
 	mo->noverlap = matches - conflicts;
+
+	if (pmatches)
+		*pmatches = matches;
+	if (punmatches)
+		*punmatches = unmatches;
+	if (pconflicts)
+		*pconflicts = conflicts;
 
 	intmap_free(map);
 	free(fieldstars);
 	return 1;
+}
+
+void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
+				   hitlist* hits, bool verbose) {
+	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
+	double dx, dy;
+	double costheta, sintheta, scale, xxtmp;
+	xy *ABCDpix;
+	double* qcode;
+	double dist;
+	double code[4];
+	double sA[3], sB[3], sC[3], sD[3];
+	double d, c;
+	int nagree, listind;
+
+	MatchObj mo;
+	MatchObj* mocopy;
+
+	int matches, unmatches, conflicts;
+
+	int iA = qm->fieldstar[0];
+	int iB = qm->fieldstar[1];
+	int iC = qm->fieldstar[2];
+	int iD = qm->fieldstar[3];
+
+	fprintf(stderr, "  %i: (%i, %i, %i, %i)\n",
+			qm->quadnum,
+			qm->fieldstar_sorted[0],
+			qm->fieldstar_sorted[1],
+			qm->fieldstar_sorted[2],
+			qm->fieldstar_sorted[3]);
+
+	Ax = xy_refx(thisfield, iA);
+	Ay = xy_refy(thisfield, iA);
+	Bx = xy_refx(thisfield, iB);
+	By = xy_refy(thisfield, iB);
+	dx = Bx - Ax;
+	dy = By - Ay;
+	scale = dx*dx + dy*dy;
+	if ((scale < square(minAB)) || (scale > square(maxAB))) {
+		fprintf(stderr, "    Quad scale %g: not in allowable range [%g, %g].\n", scale, minAB, maxAB);
+		return;
+	}
+
+	ABCDpix = mk_xy(DIM_QUADS);
+	xy_setx(ABCDpix, 0, Ax);
+	xy_sety(ABCDpix, 0, Ay);
+	xy_setx(ABCDpix, 1, Bx);
+	xy_sety(ABCDpix, 1, By);
+
+	costheta = (dx + dy) / scale;
+	sintheta = (dy - dx) / scale;
+
+	Cx = xy_refx(thisfield, iC);
+	Cy = xy_refy(thisfield, iC);
+	xy_setx(ABCDpix, 2, Cx);
+	xy_sety(ABCDpix, 2, Cy);
+	Cx -= Ax;
+	Cy -= Ay;
+	xxtmp = Cx;
+	Cx = Cx * costheta + Cy * sintheta;
+	Cy = -xxtmp * sintheta + Cy * costheta;
+	if ((Cx >= 1.0) || (Cx <= 0.0) ||
+		(Cy >= 1.0) || (Cy <= 0.0)) {
+		fprintf(stderr, "    Field star C is not in the box.\n");
+		return;
+	}
+
+	Dx = xy_refx(thisfield, iD);
+	Dy = xy_refy(thisfield, iD);
+	xy_setx(ABCDpix, 3, Dx);
+	xy_sety(ABCDpix, 3, Dy);
+	Dx -= Ax;
+	Dy -= Ay;
+	xxtmp = Dx;
+	Dx = Dx * costheta + Dy * sintheta;
+	Dy = -xxtmp * sintheta + Dy * costheta;
+	if ((Dx >= 1.0) || (Dx <= 0.0) ||
+		(Dy >= 1.0) || (Dy <= 0.0)) {
+		fprintf(stderr, "    Field star D is not in the box.\n");
+		return;
+	}
+
+	code[0] = Cx;
+	code[1] = Cy;
+	code[2] = Dx;
+	code[3] = Dy;
+
+	qcode = codetree->data +
+		code_inverse_perm[qm->quadnum] * codetree->ndim;
+	dist = sqrt(distsq(qcode, code, codetree->ndim));
+	fprintf(stderr, "    Dist to quad %i: %g%s\n",
+			qm->quadnum, dist,
+			(dist < codetol) ? "   ==> HIT!" : "");
+
+	if (dist > codetol)
+		return;
+
+	mo.quadno = qm->quadnum;
+	mo.star[0] = qm->indexstar[0];
+	mo.star[1] = qm->indexstar[1];
+	mo.star[2] = qm->indexstar[2];
+	mo.star[3] = qm->indexstar[3];
+	mo.field[0] = qm->fieldstar[0];
+	mo.field[1] = qm->fieldstar[1];
+	mo.field[2] = qm->fieldstar[2];
+	mo.field[3] = qms->fieldstar[3];
+	mo.code_err = square(dist);
+
+	getstarcoord(mo.star[0], sA);
+	getstarcoord(mo.star[1], sB);
+	getstarcoord(mo.star[2], sC);
+	getstarcoord(mo.star[3], sD);
+
+	fit_transform(ABCDpix, ABCD_ORDER, sA, sB, sC, sD, mo.transform);
+	image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin, mo.transform);
+	image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax, mo.transform);
+	mo.transform_valid = TRUE;
+
+	// scale checking
+	// fieldunitsupper/lower is in arcseconds/pixel
+	d  = square(mo.sMax[0] - mo.sMin[0]);
+	d += square(mo.sMax[1] - mo.sMin[1]);
+	d += square(mo.sMax[2] - mo.sMin[2]);
+	// convert 'd' from squared distance on the unit sphere
+	// to arcseconds...
+	d = distsq2arc(d);
+	d = rad2deg(d) * 60.0 * 60.0;
+	c  = square(xy_refy(cornerpix, 1) - xy_refy(cornerpix, 0));
+	c += square(xy_refx(cornerpix, 1) - xy_refx(cornerpix, 0));
+	c = sqrt(c);
+	if ((d/c > arcsec_per_pixel_upper) || (d/c < arcsec_per_pixel_lower)) {
+		// this quad has invalid scale.
+		fprintf(stderr, "    This quad has invalid scale: %g not in [%g, %g].\n",
+				d/c, arcsec_per_pixel_lower, arcsec_per_pixel_upper);
+		return;
+	}
+
+	mocopy = malloc(sizeof(MatchObj));
+	memcpy(mocopy, &mo, sizeof(MatchObj));
+	verify_hit(mocopy, thisfield, &matches, &unmatches, &conflicts);
+	if (verbose) {
+		fprintf(stderr, "    Verify: %i matches, %i unmatches, %i conflicts.\n",
+				matches, unmatches, conflicts);
+	}
+	hitlist_healpix_compute_vector(mocopy);
+	if (verbose) {
+		fprintf(stderr, "    Checking agreement to list...\n");
+		hitlist_healpix_print_dists_to_lists(hits, mocopy);
+	}
+	nagree = hitlist_healpix_add_hit(hits, mocopy, &listind);
+	fprintf(stderr, "    -> %i agree, %i overlap (%i - %i).\n", nagree, matches-conflicts, matches, conflicts);
 }
 
 void why_not() {
@@ -392,17 +368,6 @@ void why_not() {
 	xy* cornerpix = mk_xy(2);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
-
-	/*
-	  solver_default_params(&solver);
-	  solver.codekd = codetree;
-	  solver.endobj = enddepth;
-	  solver.maxtries = 0;
-	  solver.max_matches_needed = maxnagree;
-	  solver.codetol = codetol;
-	  solver.cornerpix = mk_xy(2);
-	  solver.handlehit = handlehit;
-	*/
 
 	if (funits_upper != 0.0) {
 		arcsec_per_pixel_upper = funits_upper;
@@ -426,16 +391,10 @@ void why_not() {
 		double nearbyd2;
 		int i;
 
-		uint numxy, iA, iB, iC, iD, newpoint;
-		int *iCs, *iDs;
-		char *iunion;
-		int ncd;
-
 		il* indstars;
 		il* indquads;
 
 		hitlist* hlhits;
-		hitlist* hlall;
 
 		fieldnum = il_get(fieldlist, fieldind);
 		if (fieldnum >= nfields) {
@@ -602,235 +561,29 @@ void why_not() {
 
 		fprintf(stderr, "\n");
 
-		hlhits = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
-		hlall = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
 		find_corners(thisfield, cornerpix);
 
 		fprintf(stderr, "Findable quads:\n");
+		
+		hlhits = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
+		//hlall = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
+		hlhits->do_correspond = 0;
+
 		for (i=0; i<Nqms; i++) {
-			double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
-			double dx, dy;
-			double costheta, sintheta, scale, xxtmp;
-			xy *ABCDpix;
-			double* qcode;
-			double dist;
-			double code[4];
-
-			MatchObj mo;
-
-			int iA = qms[i].fieldstar[0];
-			int iB = qms[i].fieldstar[1];
-			int iC = qms[i].fieldstar[2];
-			int iD = qms[i].fieldstar[3];
-
-			Ax = xy_refx(thisfield, iA);
-			Ay = xy_refy(thisfield, iA);
-			Bx = xy_refx(thisfield, iB);
-			By = xy_refy(thisfield, iB);
-			dx = Bx - Ax;
-			dy = By - Ay;
-			scale = dx*dx + dy*dy;
-			if ((scale < square(minAB)) || (scale > square(maxAB))) {
-				fprintf(stderr, "    Quad scale %g: not in allowable range [%g, %g].\n", scale, minAB, maxAB);
-				continue;
-			}
-
-			ABCDpix = mk_xy(DIM_QUADS);
-			xy_setx(ABCDpix, 0, Ax);
-			xy_sety(ABCDpix, 0, Ay);
-			xy_setx(ABCDpix, 1, Bx);
-			xy_sety(ABCDpix, 1, By);
-
-			costheta = (dx + dy) / scale;
-			sintheta = (dy - dx) / scale;
-
-			Cx = xy_refx(thisfield, iC);
-			Cy = xy_refy(thisfield, iC);
-			xy_setx(ABCDpix, 2, Cx);
-			xy_sety(ABCDpix, 2, Cy);
-			Cx -= Ax;
-			Cy -= Ay;
-			xxtmp = Cx;
-			Cx = Cx * costheta + Cy * sintheta;
-			Cy = -xxtmp * sintheta + Cy * costheta;
-			if ((Cx >= 1.0) || (Cx <= 0.0) ||
-				(Cy >= 1.0) || (Cy <= 0.0)) {
-				fprintf(stderr, "Field star C is not in the box.\n");
-				continue;
-			}
-
-			Dx = xy_refx(thisfield, iD);
-			Dy = xy_refy(thisfield, iD);
-			xy_setx(ABCDpix, 3, Dx);
-			xy_sety(ABCDpix, 3, Dy);
-			Dx -= Ax;
-			Dy -= Ay;
-			xxtmp = Dx;
-			Dx = Dx * costheta + Dy * sintheta;
-			Dy = -xxtmp * sintheta + Dy * costheta;
-			if ((Dx >= 1.0) || (Dx <= 0.0) ||
-				(Dy >= 1.0) || (Dy <= 0.0)) {
-				fprintf(stderr, "Field star D is not in the box.\n");
-				continue;
-			}
-
-			code[0] = Cx;
-			code[1] = Cy;
-			code[2] = Dx;
-			code[3] = Dy;
-
-			fprintf(stderr, "  %i: (%i, %i, %i, %i)\n",
-					qms[i].quadnum,
-					qms[i].fieldstar_sorted[0],
-					qms[i].fieldstar_sorted[1],
-					qms[i].fieldstar_sorted[2],
-					qms[i].fieldstar_sorted[3]);
-
-			qcode = codetree->data +
-				code_inverse_perm[qms[i].quadnum] * codetree->ndim;
-			dist = sqrt(distsq(qcode, code, codetree->ndim));
-			fprintf(stderr, "    Dist to quad %i: %g%s\n",
-					qms[i].quadnum, dist,
-					(dist < codetol) ? "   ==> HIT!" : "");
-
-			mo.quadno = qms[i].quadnum;
-			mo.star[0] = qms[i].indexstar[0];
-			mo.star[1] = qms[i].indexstar[1];
-			mo.star[2] = qms[i].indexstar[2];
-			mo.star[3] = qms[i].indexstar[3];
-			mo.field[0] = qms[i].fieldstar[0];
-			mo.field[1] = qms[i].fieldstar[1];
-			mo.field[2] = qms[i].fieldstar[2];
-			mo.field[3] = qms[i].fieldstar[3];
-			mo.code_err = square(dist);
-			{
-				double sA[3], sB[3], sC[3], sD[3];
-				getstarcoord(mo.star[0], sA);
-				getstarcoord(mo.star[1], sB);
-				getstarcoord(mo.star[2], sC);
-				getstarcoord(mo.star[3], sD);
-
-				fit_transform(ABCDpix, ABCD_ORDER, sA, sB, sC, sD, mo.transform);
-				image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin, mo.transform);
-				image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax, mo.transform);
-				mo.transform_valid = TRUE;
-
-				// scale checking
-				// fieldunitsupper/lower is in arcseconds/pixel
-				{
-					double d, c;
-					d  = square(mo.sMax[0] - mo.sMin[0]);
-					d += square(mo.sMax[1] - mo.sMin[1]);
-					d += square(mo.sMax[2] - mo.sMin[2]);
-					// convert 'd' from squared distance on the unit sphere
-					// to arcseconds...
-					d = distsq2arc(d);
-					d = rad2deg(d) * 60.0 * 60.0;
-					c  = square(xy_refy(cornerpix, 1) - xy_refy(cornerpix, 0));
-					c += square(xy_refx(cornerpix, 1) - xy_refx(cornerpix, 0));
-					c = sqrt(c);
-					if ((d/c > arcsec_per_pixel_upper) || (d/c < arcsec_per_pixel_lower)) {
-						// this quad has invalid scale.
-						fprintf(stderr, "    This quad has invalid scale: %g not in [%g, %g].\n",
-								d/c, arcsec_per_pixel_lower, arcsec_per_pixel_upper);
-						continue;
-					}
-				}
-			}
-
-			{
-				int nagree, listind;
-				MatchObj* mocopy;
-				mocopy = malloc(sizeof(MatchObj));
-				memcpy(mocopy, &mo, sizeof(MatchObj));
-				verify_hit(mocopy, thisfield);
-				hitlist_healpix_compute_vector(mocopy);
-				/*
-				  fprintf(stderr, "Checking agreement to (all) list...\n");
-				  hitlist_healpix_print_dists_to_lists(hlall, mocopy);
-				*/
-				nagree = hitlist_healpix_add_hit(hlall, mocopy, &listind);
-				fprintf(stderr, "    -> %i agree (all).\n", nagree);
-
-				fprintf(stderr, "Checking agreement to (hits only) list...\n");
-				hitlist_healpix_print_dists_to_lists(hlhits, mocopy);
-				if (dist < codetol) {
-					nagree = hitlist_healpix_add_hit(hlhits, mocopy, &listind);
-					fprintf(stderr, "    -> %i agree (hits only).\n", nagree);
-				}
-			}
+			findable_quad(qms+i, thisfield, cornerpix, hlhits, FALSE);
+			fprintf(stderr, "\n");
 		}
 
-		quadsinfield = indquads;
+		fprintf(stderr, "---------------------------------------\n");
 
-		/*
-		  solver.fieldnum = fieldnum;
-		  solver.numtries = 0;
-		  solver.nummatches = 0;
-		  solver.mostagree = 0;
-		  solver.startobj = startdepth;
-		  solver.field = thisfield;
-		  solver.quitNow = FALSE;
-		  solver.userdata = my;
-		*/
+		hitlist_healpix_clear(hlhits);
 
-		numxy = xy_size(thisfield);
-
-		iCs = malloc(numxy * numxy * sizeof(int));
-		iDs = malloc(numxy * numxy * sizeof(int));
-		iunion = malloc(numxy * sizeof(char));
-
-		for (newpoint=0; newpoint<numxy; newpoint++) {
-			if (intmap_get(fieldtoind, newpoint, -1) == -1) {
-				fprintf(stderr, "Field object %i is not in the index - skipping.\n", newpoint);
-				continue;
-			}
-			fprintf(stderr, "Making quads with object %i.\n", newpoint);
-
-			// quads with the new star on the diagonal:
-			iB = newpoint;
-			for (iA=0; iA<newpoint; iA++) {
-				ncd = 0;
-				memset(iunion, 0, newpoint);
-				for (iC=0; iC<newpoint; iC++) {
-					if ((iC == iA) || (iC == iB))
-						continue;
-					iunion[iC] = 1;
-					for (iD=iC+1; iD<newpoint; iD++) {
-						if ((iD == iA) || (iD == iB))
-							continue;
-						iCs[ncd] = iC;
-						iDs[ncd] = iD;
-						ncd++;
-					}
-				}
-				fprintf(stderr, "  Trying %i quads with newpoint on the diagonal (%i, %i).\n", ncd, iB, iA);
-				try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, thisfield);
-			}
-			// quads with the new star not on the diagonal:
-			iD = newpoint;
-			for (iA=0; iA<newpoint; iA++) {
-				for (iB=iA+1; iB<newpoint; iB++) {
-					ncd = 0;
-					memset(iunion, 0, newpoint+1);
-					iunion[iD] = 1;
-					for (iC=0; iC<newpoint; iC++) {
-						if ((iC == iA) || (iC == iB))
-							continue;
-						iunion[iC] = 1;
-						iCs[ncd] = iC;
-						iDs[ncd] = iD;
-						ncd++;
-					}
-					fprintf(stderr, "  Trying %i quads with newpoint not on the diagonal (diag %i, %i).\n", ncd, iA, iB);
-					try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint+1, thisfield);
-				}
-			}
+		for (i=0; i<Nqms; i++) {
+			findable_quad(qms+i, thisfield, cornerpix, hlhits, TRUE);
+			fprintf(stderr, "\n");
 		}
 
-		free(iCs);
-		free(iDs);
-		free(iunion);
+		hitlist_healpix_clear(hlhits);
 
 		free_xy(thisfield);
 		free_xy(thisrd);
@@ -845,19 +598,6 @@ void why_not() {
 		last_stime = stime;
 	}
 }
-
-
-/*
-  char* get_pathname(char* fname) {
-  char* resolved = malloc(PATH_MAX);
-  if (!realpath(fname, resolved)) {
-  fprintf(stderr, "Couldn't resolve real path of %s: %s\n", fname, strerror(errno));
-  return NULL;
-  }
-  resolved = realloc(resolved, strlen(resolved) + 1);
-  return resolved;
-  }
-*/
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -892,7 +632,6 @@ int main(int argc, char *argv[]) {
 		quadfname = NULL;
 		catfname = NULL;
 		idfname = NULL;
-		matchfname = NULL;
 		parity = DEFAULT_PARITY_FLIP;
 		codetol = DEFAULT_CODE_TOL;
 		startdepth = 0;
@@ -933,7 +672,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "quadfname %s\n", quadfname);
 		fprintf(stderr, "catfname %s\n", catfname);
 		fprintf(stderr, "idfname %s\n", idfname);
-		fprintf(stderr, "matchfname %s\n", matchfname);
 		fprintf(stderr, "parity %i\n", parity);
 		fprintf(stderr, "codetol %g\n", codetol);
 		fprintf(stderr, "startdepth %i\n", startdepth);
@@ -957,7 +695,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "%i ", il_get(fieldlist, i));
 		fprintf(stderr, "\n");
 
-		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
+		if (!treefname || !fieldfname || (codetol < 0.0)) {
 			fprintf(stderr, "Invalid params... this message is useless.\n");
 			exit(-1);
 		}
@@ -1071,19 +809,12 @@ int main(int argc, char *argv[]) {
 
 		why_not();
 
-
-
-		free(matchfname);
-
 		free(xcolname);
 		free(ycolname);
 
 		xylist_close(xyls);
 
-		matchfile_close(mf);
-
 		free_fn(fieldfname);
-
 		free_fn(treefname);
 		free_fn(quadfname);
 		free_fn(catfname);
@@ -1200,9 +931,6 @@ int read_parameters() {
 			fieldfname = mk_fieldfn(fname);
 		} else if (is_word(buffer, "rdls ", &nextword)) {
 			rdlsfname = strdup(nextword);
-		} else if (is_word(buffer, "match ", &nextword)) {
-			char* fname = nextword;
-			matchfname = strdup(fname);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
 			int d = atoi(nextword);
 			startdepth = d;
