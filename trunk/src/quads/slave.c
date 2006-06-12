@@ -566,7 +566,7 @@ int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
 
 	matches = unmatches = conflicts = 0;
 	maxmatch = avgmatch = 0.0;
-	map = intmap_new();
+	map = intmap_new(INTMAP_ONE_TO_ONE);
 	for (i=0; i<NF; i++) {
 		double bestd2;
 		int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);

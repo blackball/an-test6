@@ -3,17 +3,24 @@
 
 #include "bl.h"
 
+enum intmap_type {
+	INTMAP_ONE_TO_ONE,
+	INTMAP_MANY_TO_ONE
+};
+typedef enum intmap_type intmap_type;
+
 struct intmap {
 	il fromlist;
 	il tolist;
+	intmap_type type;
 };
 typedef struct intmap intmap;
 
 int intmap_length(intmap* m);
 
-intmap* intmap_new();
+intmap* intmap_new(intmap_type type);
 
-void intmap_init(intmap* m);
+void intmap_init(intmap* m, intmap_type type);
 
 void intmap_clear(intmap* m);
 

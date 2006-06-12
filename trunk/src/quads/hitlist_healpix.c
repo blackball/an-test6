@@ -88,6 +88,35 @@ typedef struct hitlist_struct hitlist;
 #define DONT_DEFINE_HITLIST
 #include "hitlist_healpix.h"
 
+void hitlist_healpix_print_dists_to_lists(hitlist* hlist, MatchObj* match) {
+	int i, j;
+	for (i=0; i<pl_size(hlist->agreelist); i++) {
+		double mindist = 1e300;
+		il* agree = pl_get(hlist->agreelist, i);
+		for (j=0; j<il_size(agree); j++) {
+			int ind = il_get(agree, j);
+			MatchObj* mo = pl_get(hlist->matchlist, ind);
+			double dist = distsq(match->sMin, mo->sMin, 3) +
+				distsq(match->sMax, mo->sMax, 3);
+			if (dist < mindist)
+				mindist = dist;
+		}
+		fprintf(stderr, "Checking list: ");
+		for (j=0; j<il_size(agree); j++) {
+			int ind = il_get(agree, j);
+			MatchObj* mo = pl_get(hlist->matchlist, ind);
+			fprintf(stderr, "%i ", mo->quadno);
+		}
+		fprintf(stderr, "\n");
+
+		fprintf(stderr, "Match %sagrees: mindist %g (tol %g), (%g arcsec, %g arcsec)\n", 
+				(mindist < hlist->agreedist2) ? "" : "dis",
+				sqrt(mindist), sqrt(hlist->agreedist2),
+				rad2arcsec(distsq2arc(mindist)),
+				rad2arcsec(distsq2arc(hlist->agreedist2)));
+	}
+}
+
 pl* hitlist_healpix_copy_list(hitlist* hlist, int agreelistindex) {
 	il* agree;
 	int i, N, ind;
@@ -464,7 +493,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match,
 		// list and add this MatchObj to it.
 		newlist = il_new(4);
 		if (hlist->do_correspond) {
-			newmap = intmap_new();
+			newmap = intmap_new(INTMAP_ONE_TO_ONE);
 			intmap_add(newmap, match->field[0], match->star[0]);
 			intmap_add(newmap, match->field[1], match->star[1]);
 			intmap_add(newmap, match->field[2], match->star[2]);
