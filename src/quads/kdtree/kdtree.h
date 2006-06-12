@@ -1,5 +1,5 @@
-#ifndef _KDTREE_H
-#define _KDTREE_H
+#ifndef KDTREE_H
+#define KDTREE_H
 
 #include <stdio.h>
 
@@ -216,4 +216,4 @@ int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
 int kdtree_qsort_results(kdtree_qres_t *kq, int D);
 int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 
-#endif /* _KDTREE_H */
+#endif /* KDTREE_H */
