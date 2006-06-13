@@ -76,8 +76,8 @@ double agreetol = 0.0;
 bool do_verify = FALSE;
 int nagree_toverify = 0;
 double verify_dist2 = 0.0;
-int noverlap_tosolve = 0;
-int noverlap_toconfirm = 0;
+double overlap_tosolve;
+double overlap_toconfirm;
 
 int do_correspond = 1;
 
@@ -174,8 +174,8 @@ int main(int argc, char *argv[]) {
 		ycolname = strdup("COLC");
 		verify_dist2 = 0.0;
 		nagree_toverify = 0;
-		noverlap_toconfirm = 0;
-		noverlap_tosolve = 0;
+		overlap_toconfirm = 0.0;
+		overlap_tosolve = 0.0;
 
 		if (read_parameters()) {
 			break;
@@ -209,8 +209,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
-		fprintf(stderr, "noverlap_toconfirm %i\n", noverlap_toconfirm);
-		fprintf(stderr, "noverlap_tosolve %i\n", noverlap_tosolve);
+		fprintf(stderr, "overlap_toconfirm %f\n", overlap_toconfirm);
+		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
@@ -437,8 +437,8 @@ int read_parameters() {
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    nagree_toverify <nagree>\n"
-					"    noverlap_tosolve <noverlap>\n"
-					"    noverlap_toconfirm <noverlap>\n"
+					"    overlap_tosolve <overlap-fraction>\n"
+					"    overlap_toconfirm <overlap-fraction>\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
@@ -470,10 +470,10 @@ int read_parameters() {
 			verify_dist2 = arcsec2distsq(d);
 		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
 			nagree_toverify = atoi(nextword);
-		} else if (is_word(buffer, "noverlap_tosolve ", &nextword)) {
-			noverlap_tosolve = atoi(nextword);
-		} else if (is_word(buffer, "noverlap_toconfirm ", &nextword)) {
-			noverlap_toconfirm = atoi(nextword);
+		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
+			overlap_tosolve = atof(nextword);
+		} else if (is_word(buffer, "overlap_toconfirm ", &nextword)) {
+			overlap_toconfirm = atof(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
@@ -550,7 +550,7 @@ int read_parameters() {
 
 int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
 	xy* field = p->field;
-	int i, NF;
+	int i, j, NF;
 	double* fieldstars;
 	intmap* map;
 	int matches;
@@ -558,8 +558,55 @@ int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
 	int conflicts;
 	double avgmatch;
 	double maxmatch;
+	double fieldcenter[3];
+	double fieldr2;
+	kdtree_qres_t* res;
+	double vec1[3], vec2[3], len1, len2;
+	// number of stars in the index that are within the bounds of the field.
+	int NI;
 	assert(mo->transform_valid);
 	assert(startree);
+
+	for (i=0; i<3; i++)
+		fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
+	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
+	// 1.01 is a little safety factor.
+	res = kdtree_rangesearch(startree, fieldcenter, fieldr2 * 1.01);
+	assert(res);
+
+	for (i=0; i<3; i++) {
+		vec1[i] = mo->sMinMax[i] - mo->sMin[i];
+		vec2[i] = mo->sMaxMin[i] - mo->sMin[i];
+	}
+	len1 = len2 = 0.0;
+	for (i=0; i<3; i++) {
+		len1 += (mo->sMax[i] - mo->sMin[i]) * vec1[i];
+		len2 += (mo->sMax[i] - mo->sMin[i]) * vec2[i];
+	}
+
+	NI = 0;
+	for (j=0; j<res->nres; j++) {
+		double l1 = 0.0, l2 = 0.0;
+		for (i=0; i<3; i++) {
+			l1 += (res->results[j*3 + i] - mo->sMin[i]) * vec1[i];
+			l2 += (res->results[j*3 + i] - mo->sMin[i]) * vec2[i];
+		}
+		if ((l1 >= 0.0) && (l1 <= len1) &&
+			(l2 >= 0.0) && (l2 <= len2))
+			NI++;
+	}
+
+	kdtree_free_query(res);
+
+	/*
+	  Comment for the picky: in the rangesearch below, we grab an range
+	  around each field star (at the moment this range is typically set to
+	  3 arcsec).  This could grab an index star that isn't actually within
+	  the bounds of the field that we computed above.  Since SDSS fields
+	  are ~600 arcsec on a side, this is a pretty small extra area and we
+	  cavalierly decide to ignore it.
+	*/
+
 	NF = xy_size(field);
 	fieldstars = malloc(3 * NF * sizeof(double));
 	for (i=0; i<NF; i++) {
@@ -589,43 +636,14 @@ int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
 	}
 	avgmatch /= (double)(conflicts + matches);
 	
-	fprintf(stderr, "    field %i (%i agree): verifying: %i matches, %i unmatches, %i conflicts.\n",
-			p->fieldnum, nagree, matches, unmatches, conflicts);
+	fprintf(stderr, "    field %i (%i agree / %i field = %.3f): verifying: %i matches, %i unmatches, %i conflicts.\n",
+			p->fieldnum, nagree, NI, nagree/(double)NI, matches, unmatches, conflicts);
 	//Avg match dist: %g arcsec, max dist %g arcsec\n",
 	//rad2arcsec(distsq2arc(square(avgmatch))),
 	//rad2arcsec(distsq2arc(maxmatch)));
 	fflush(stderr);
 
-	mo->noverlap = matches - conflicts;
-
-	/*
-	  {
-	  // estimate the center (as centroid) and radius of the field.
-	  // count the index stars in that region.
-	  double fieldcenter[3];
-	  double fieldrad2 = 0.0;
-	  double r;
-	  int rc;
-	  fieldcenter[0] = fieldcenter[1] = fieldcenter[2] = 0.0;
-	  for (i=0; i<NF; i++) {
-	  fieldcenter[0] += fieldstars[i*3 + 0];
-	  fieldcenter[1] += fieldstars[i*3 + 1];
-	  fieldcenter[2] += fieldstars[i*3 + 2];
-	  }
-	  // normalize
-	  r = sqrt(square(fieldcenter[0]) + square(fieldcenter[1]) + square(fieldcenter[2]));
-	  fieldcenter[0] /= r;
-	  fieldcenter[1] /= r;
-	  fieldcenter[2] /= r;
-	  for (i=0; i<NF; i++) {
-	  double d2 = distsq(fieldcenter, fieldstars + 3*i, 3);
-	  if (d2 > fieldrad2)
-	  fieldrad2 = d2;
-	  }
-	  rc = kdtree_rangecount(startree, fieldcenter, fieldrad2);
-	  printf("Index has %i stars in the region.\n", rc);
-	  }
-	*/
+	mo->overlap = (matches - conflicts) / (double)NI;
 
 	intmap_free(map);
 	free(fieldstars);
@@ -880,8 +898,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	winner = (n >= nagree);
 
 	// does this winning set of agreeing matches need confirmation?
-	if (winner && noverlap_toconfirm) {
-		if (mo->noverlap >= noverlap_toconfirm) {
+	if (winner && (overlap_toconfirm > 0.0)) {
+		if (mo->overlap >= overlap_toconfirm) {
 			// enough stars overlap to confirm this set of agreeing matches.
 			my->winning_listind = listind;
 			p->quitNow = TRUE;
@@ -893,8 +911,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			}
 
 			// veto!
-			fprintf(stderr, "Veto: found %i agreeing matches, but verification failed (%i overlaps < %i required).\n",
-					n, mo->noverlap, noverlap_toconfirm);
+			fprintf(stderr, "Veto: found %i agreeing matches, but verification failed (%f overlap < %f required).\n",
+					n, mo->overlap, overlap_toconfirm);
 			fflush(stderr);
 			p->quitNow = FALSE;
 			my->winning_listind = -1;
@@ -902,9 +920,9 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		return n;
 	}
 
-	if (noverlap_tosolve && (mo->noverlap >= noverlap_tosolve)) {
+	if ((overlap_tosolve > 0.0) && (mo->overlap >= overlap_tosolve)) {
 		// this single hit causes enough overlaps to solve the field.
-		fprintf(stderr, "Found a match that produces %i overlapping stars.\n", mo->noverlap);
+		fprintf(stderr, "Found a match that produces %f overlapping stars.\n", mo->overlap);
 		fflush(stderr);
 		my->winning_listind = listind;
 		p->quitNow = TRUE;
@@ -957,7 +975,7 @@ void* solvethread_run(void* varg) {
 	solver.maxtries = 0;
 	solver.max_matches_needed = maxnagree;
 	solver.codetol = codetol;
-	solver.cornerpix = mk_xy(2);
+	solver.cornerpix = mk_xy(4);
 	solver.handlehit = handlehit;
 
 	my->me.parity = parity;
@@ -1079,8 +1097,8 @@ void* solvethread_run(void* varg) {
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 				write_hits(fieldnum, NULL, NULL);
 			} else {
-				int maxoverlap = 0;
-				int sumoverlap = 0;
+				double maxoverlap = 0;
+				double sumoverlap = 0;
 				pl* list = hitlist_healpix_copy_list(my->hits, my->winning_listind);
 				if (do_verify) {
 					int k;
@@ -1088,16 +1106,16 @@ void* solvethread_run(void* varg) {
 					// already been done.
 					for (k=0; k<pl_size(list); k++) {
 						MatchObj* mo = pl_get(list, k);
-						if (!mo->noverlap)
+						if (mo->overlap == 0.0)
 							verify_hit(mo, &solver, pl_size(list));
 
-						sumoverlap += mo->noverlap;
-						if (mo->noverlap > maxoverlap)
-							maxoverlap = mo->noverlap;
+						sumoverlap += mo->overlap;
+						if (mo->overlap > maxoverlap)
+							maxoverlap = mo->overlap;
 					}
 				}
 				if (do_verify)
-					fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %i, avg %g\n",
+					fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
 							fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
 				else
 					fprintf(stderr, "Field %i: %i in agreement.\n",
