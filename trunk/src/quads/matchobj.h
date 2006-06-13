@@ -17,6 +17,8 @@ struct match_struct {
 	bool transform_valid;
 	double transform[9];
 
+	int16_t noverlap;
+	int16_t ninfield;
 	float overlap;
 
 	/*
