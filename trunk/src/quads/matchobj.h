@@ -11,11 +11,13 @@ struct match_struct {
     float code_err;
 	double sMin[3];
 	double sMax[3];
+	double sMinMax[3];
+	double sMaxMin[3];
     double vector[6];
 	bool transform_valid;
 	double transform[9];
 
-	int16_t noverlap;
+	float overlap;
 
 	/*
 	  double corners[4];

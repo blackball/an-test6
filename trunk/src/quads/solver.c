@@ -319,7 +319,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
     uint iA, iB, iC, iD;
     double transform[9];
     MatchObj *mo;
-	double sA[3], sB[3], sC[3], sD[3], sMin[3], sMax[3];
+	double sA[3], sB[3], sC[3], sD[3], sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
 
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
@@ -335,6 +335,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		fit_transform(ABCDpix, order, sA, sB, sC, sD, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
+		image_to_xyz(xy_refx(params->cornerpix, 2), xy_refy(params->cornerpix, 2), sMinMax, transform);
+		image_to_xyz(xy_refx(params->cornerpix, 3), xy_refy(params->cornerpix, 3), sMaxMin, transform);
 
 		// scale checking
 		// fieldunitsupper/lower is in arcseconds/pixel
@@ -374,12 +376,10 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
 		mo->field[2] = fC;
 		mo->field[3] = fD;
 
-		mo->sMin[0] = sMin[0];
-		mo->sMin[1] = sMin[1];
-		mo->sMin[2] = sMin[2];
-		mo->sMax[0] = sMax[0];
-		mo->sMax[1] = sMax[1];
-		mo->sMax[2] = sMax[2];
+		memcpy(mo->sMin,    sMin,    3 * sizeof(double));
+		memcpy(mo->sMax,    sMax,    3 * sizeof(double));
+		memcpy(mo->sMinMax, sMinMax, 3 * sizeof(double));
+		memcpy(mo->sMaxMin, sMaxMin, 3 * sizeof(double));
 
 		mo->vector[0] = sMin[0];
 		mo->vector[1] = sMin[1];
@@ -465,4 +465,9 @@ void find_corners(xy *thisfield, xy *cornerpix) {
     xy_sety(cornerpix, 0, miny);
     xy_setx(cornerpix, 1, maxx);
     xy_sety(cornerpix, 1, maxy);
+
+    xy_setx(cornerpix, 2, minx);
+    xy_sety(cornerpix, 2, maxy);
+    xy_setx(cornerpix, 3, maxx);
+    xy_sety(cornerpix, 3, miny);
 }
