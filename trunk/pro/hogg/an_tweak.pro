@@ -16,7 +16,7 @@
 ;                  distortions)
 ;   qa           - name of PS file for QA plots
 ; BUGS:
-;   - Not tested.
+;   - Not rigorously tested.
 ;   - Dependencies.
 ;   - xylist "optional" input is currently REQUIRED unless you pass xyfile
 ;   - jitter hard-wired.
