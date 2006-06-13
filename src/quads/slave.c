@@ -636,13 +636,15 @@ int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
 	}
 	avgmatch /= (double)(conflicts + matches);
 	
-	fprintf(stderr, "    field %i (%i agree / %i field = %.3f): verifying: %i matches, %i unmatches, %i conflicts.\n",
-			p->fieldnum, nagree, NI, nagree/(double)NI, matches, unmatches, conflicts);
+	fprintf(stderr, "    field %i (%i agree): verifying: overlap %f: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+			p->fieldnum, nagree, (matches - conflicts) / (double)NI, NI, matches, unmatches, conflicts);
 	//Avg match dist: %g arcsec, max dist %g arcsec\n",
 	//rad2arcsec(distsq2arc(square(avgmatch))),
 	//rad2arcsec(distsq2arc(maxmatch)));
 	fflush(stderr);
 
+	mo->noverlap = matches - conflicts;
+	mo->ninfield = NI;
 	mo->overlap = (matches - conflicts) / (double)NI;
 
 	intmap_free(map);

@@ -109,7 +109,8 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "overlap", nil, overlap, 1);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "noverlap", nil, noverlap, 1);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "ninfield", nil, ninfield, 1);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
