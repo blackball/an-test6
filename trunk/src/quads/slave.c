@@ -79,6 +79,8 @@ double verify_dist2 = 0.0;
 int noverlap_tosolve = 0;
 int noverlap_toconfirm = 0;
 
+int do_correspond = 1;
+
 int threads = 1;
 il* fieldlist = NULL;
 pthread_mutex_t fieldlist_mutex;
@@ -211,6 +213,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "noverlap_tosolve %i\n", noverlap_tosolve);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
+		fprintf(stderr, "do_correspond %i\n", do_correspond);
 
 		fprintf(stderr, "fields ");
 		for (i=0; i<il_size(fieldlist); i++)
@@ -439,6 +442,8 @@ int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "do_correspond ", &nextword)) {
+			do_correspond = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
 			xcolname = strdup(nextword);
 		} else if (is_word(buffer, "ycol ", &nextword)) {
@@ -1029,9 +1034,10 @@ void* solvethread_run(void* varg) {
 		my->me.fieldnum = fieldnum;
 		my->winning_listind = -1;
 
-		if (agreement)
+		if (agreement) {
 			my->hits = hitlist_healpix_new(agreetol);
-		else
+			my->hits->do_correspond = do_correspond;
+		} else
 			my->hits = NULL;
 
 		if (!agreement) {
