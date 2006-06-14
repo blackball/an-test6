@@ -170,76 +170,58 @@ void image_to_xyz(double uu, double vv, double* s, double* transform) {
 	s[2] = z;
 }
 
-void fit_transform(xy *ABCDpix, char order,
-				   double* A, double* B, double* C, double* D,
-				   double* trans)
-{
-	double det, uu, uv, vv, sumu, sumv;
-	char oA = 0, oB = 1, oC = 2, oD = 3;
-	double Au, Av, Bu, Bv, Cu, Cv, Du, Dv;
-	double matR[12];
+/*
+  star = trans * (field; 1)
 
-	if (order == ABCD_ORDER) {
-		oA = 0;
-		oB = 1;
-		oC = 2;
-		oD = 3;
+  star is 3 x N
+  field is 2 x N and is supplemented by a row of ones.
+  trans is 3 x 3
+
+  "star" and "field" are stored in lexicographical order, so the element at
+  (r, c) is stored at array[r + c*H], where H is the "height" of the
+  matrix: 3 for "star", 2 for "field".
+
+  "trans" is stored in the transposed order (to be compatible with
+  image_to_xyz and the previous version of this function).
+
+  S = T F
+  S F' = T F F'
+  S F' (F F')^-1 = T
+*/
+void fit_transform(double* star, double* field, int N, double* trans) {
+	int r, c, k;
+	double FFt[9];
+	double det;
+	double* R;
+	double* F;
+
+	// build F = (field; ones)
+	F = malloc(3 * N * sizeof(double));
+	for (c=0; c<N; r++) {
+		// row 0
+		F[0 + c*3] = field[0 + c*2];
+		// row 1
+		F[1 + c*3] = field[1 + c*2];
+		// row 2
+		F[2 + c*3] = 1.0;
 	}
-	if (order == BACD_ORDER) {
-		oA = 1;
-		oB = 0;
-		oC = 2;
-		oD = 3;
-	}
-	if (order == ABDC_ORDER) {
-		oA = 0;
-		oB = 1;
-		oC = 3;
-		oD = 2;
-	}
-	if (order == BADC_ORDER) {
-		oA = 1;
-		oB = 0;
-		oC = 3;
-		oD = 2;
-	}
 
-	// image plane coordinates of A,B,C,D
-	Au = xy_refx(ABCDpix, oA);
-	Av = xy_refy(ABCDpix, oA);
-	Bu = xy_refx(ABCDpix, oB);
-	Bv = xy_refy(ABCDpix, oB);
-	Cu = xy_refx(ABCDpix, oC);
-	Cv = xy_refy(ABCDpix, oC);
-	Du = xy_refx(ABCDpix, oD);
-	Dv = xy_refy(ABCDpix, oD);
+	// first compute  FFt  =   F   *   F'
+	//               (3x3) = (3xN) * (Nx3)
+	for (r=0; r<3; r++)
+		for (c=0; c<3; c++) {
+			// FFt(r,c) = sum_k F(r,k) * F'(k,c)
+			//          = sum_k F(r,k) * F(c,k)
+			// FFt[r+c*3] = sum_k F[r + k*3] * F[c + k*3].
+			double acc = 0.0;
+			for (k=0; k<N; k++)
+				acc += F[r + k*3] * F[c + k*3];
+			FFt[r + c*3] = acc;
+		}
 
-	//fprintf(stderr,"Image ABCD = (%lf,%lf) (%lf,%lf) (%lf,%lf) (%lf,%lf)\n",
-	//  	    Au,Av,Bu,Bv,Cu,Cv,Du,Dv);
+	// invert FFt in-place.
+	det = inverse_3by3(FFt);
 
-	// define M to be the 3x4 matrix [Au,Bu,Cu,Du;ones(1,4)]
-	// define X to be the 3x4 matrix [Ax,Bx,Cx,Dx;Ay,By,Cy,Dy;Az,Bz,Cz,Dz]
-
-	// set Q to be the 3x3 matrix  M*M'
-	uu = Au * Au + Bu * Bu + Cu * Cu + Du * Du;
-	uv = Au * Av + Bu * Bv + Cu * Cv + Du * Dv;
-	vv = Av * Av + Bv * Bv + Cv * Cv + Dv * Dv;
-	sumu = Au + Bu + Cu + Du;
-	sumv = Av + Bv + Cv + Dv;
-	trans[0] = uu;
-	trans[1] = uv;
-	trans[2] = sumu;
-	trans[3] = uv;
-	trans[4] = vv;
-	trans[5] = sumv;
-	trans[6] = sumu;
-	trans[7] = sumv;
-	trans[8] = 4.0;
-
-	// take the inverse of Q in-place, so Q=inv(M*M')
-	det = inverse_3by3(trans);
-
-	//fprintf(stderr,"det=%.12g\n",det);
 	if (det < 0)
 		fprintf(stderr, "WARNING (fit_transform) -- determinant<0\n");
 
@@ -248,45 +230,35 @@ void fit_transform(xy *ABCDpix, char order,
 		return;
 	}
 
-	//fprintf(stderr, "det=%g\n", det);
+	R = malloc(N * 3 * sizeof(double));
 
-	// set R to be the 4x3 matrix M'*inv(M*M')=M'*Q
-	matR[0]  = trans[0] * Au + trans[3] * Av + trans[6];
-	matR[1]  = trans[1] * Au + trans[4] * Av + trans[7];
-	matR[2]  = trans[2] * Au + trans[5] * Av + trans[8];
-	matR[3]  = trans[0] * Bu + trans[3] * Bv + trans[6];
-	matR[4]  = trans[1] * Bu + trans[4] * Bv + trans[7];
-	matR[5]  = trans[2] * Bu + trans[5] * Bv + trans[8];
-	matR[6]  = trans[0] * Cu + trans[3] * Cv + trans[6];
-	matR[7]  = trans[1] * Cu + trans[4] * Cv + trans[7];
-	matR[8]  = trans[2] * Cu + trans[5] * Cv + trans[8];
-	matR[9]  = trans[0] * Du + trans[3] * Dv + trans[6];
-	matR[10] = trans[1] * Du + trans[4] * Dv + trans[7];
-	matR[11] = trans[2] * Du + trans[5] * Dv + trans[8];
+	// compute   R   =   F'  *  FFt  = F' inv(F F')
+	//         (Nx3) = (Nx3) * (3x3)
+	for (r=0; r<N; r++)
+		for (c=0; c<3; c++) {
+			// R(r,c) = sum_k F'(r,k) * FFt(k,c)
+			//        = sum_k F(k,r) * FFt(k,c)
+			//        = sum_k F[k + r*3] * FFt[k + c*3]
+			double acc = 0.0;
+			for (k=0; k<3; k++)
+				acc += F[k + r*3] * FFt[k + c*3];
+			R[r + c*N] = acc;
+		}
 
-	// set Q to be the 3x3 matrix X*R
+	// finally, compute   T   =   S   *   R   = S F' inv(F F')
+	//                  (3x3) = (3xN) * (Nx3)
+	for (r=0; r<3; r++)
+		for (c=0; c<3; c++) {
+			// T(r,c) = sum_k S(r,k) * R(k,c)
+			//        = sum_k S[r + k*3] * R[k + c*N]
+			double acc = 0.0;
+			for (k=0; k<N; k++)
+				acc += star[r + k*3] * R[k + c*N];
+			// "trans" is stored in transposed order.
+			trans[c + r*3] = acc;
+		}
 
-	trans[0] = A[0] * matR[0] + B[0] * matR[3] +
-		C[0] * matR[6] + D[0] * matR[9];
-	trans[1] = A[0] * matR[1] + B[0] * matR[4] +
-		C[0] * matR[7] + D[0] * matR[10];
-	trans[2] = A[0] * matR[2] + B[0] * matR[5] +
-		C[0] * matR[8] + D[0] * matR[11];
-
-	trans[3] = A[1] * matR[0] + B[1] * matR[3] +
-		C[1] * matR[6] + D[1] * matR[9];
-	trans[4] = A[1] * matR[1] + B[1] * matR[4] +
-		C[1] * matR[7] + D[1] * matR[10];
-	trans[5] = A[1] * matR[2] + B[1] * matR[5] +
-		C[1] * matR[8] + D[1] * matR[11];
-
-	trans[6] = A[2] * matR[0] + B[2] * matR[3] +
-		C[2] * matR[6] + D[2] * matR[9];
-	trans[7] = A[2] * matR[1] + B[2] * matR[4] +
-		C[2] * matR[7] + D[2] * matR[10];
-	trans[8] = A[2] * matR[2] + B[2] * matR[5] +
-		C[2] * matR[8] + D[2] * matR[11];
+	free(F);
+	free(R);
 }
-
-
 

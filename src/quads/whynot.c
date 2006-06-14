@@ -217,14 +217,16 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	double* qcode;
 	double dist;
 	double code[4];
-	double sA[3], sB[3], sC[3], sD[3];
 	double d, c;
 	int nagree, listind;
 
 	MatchObj mo;
 	MatchObj* mocopy;
 
-	int matches, unmatches, conflicts;
+	int i, matches, unmatches, conflicts;
+
+	double star[12];
+	double field[8];
 
 	int iA = qm->fieldstar[0];
 	int iB = qm->fieldstar[1];
@@ -315,12 +317,17 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	mo.field[3] = qms->fieldstar[3];
 	mo.code_err = square(dist);
 
-	getstarcoord(mo.star[0], sA);
-	getstarcoord(mo.star[1], sB);
-	getstarcoord(mo.star[2], sC);
-	getstarcoord(mo.star[3], sD);
+	getstarcoord(mo.star[0], star+0*3);
+	getstarcoord(mo.star[1], star+1*3);
+	getstarcoord(mo.star[2], star+2*3);
+	getstarcoord(mo.star[3], star+3*3);
 
-	fit_transform(ABCDpix, ABCD_ORDER, sA, sB, sC, sD, mo.transform);
+	for (i=0; i<4; i++) {
+		field[i*2 + 0] = xy_refx(ABCDpix, i);
+		field[i*2 + 1] = xy_refy(ABCDpix, i);
+	}
+
+	fit_transform(star, field, 4, mo.transform);
 	image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin, mo.transform);
 	image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax, mo.transform);
 	mo.transform_valid = TRUE;
