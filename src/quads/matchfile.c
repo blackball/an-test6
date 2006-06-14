@@ -45,33 +45,12 @@ matchfile* matchfile_open_for_writing(char* fn) {
 }
 
 int matchfile_write_header(matchfile* mf) {
-	// the main file header is quite minimal...
+	// the main file header is minimal...
     qfits_header_dump(mf->header, mf->fid);
 	mf->header_end = ftello(mf->fid);
 	fits_pad_file(mf->fid);
 	return 0;
 }
-
-/*
-  int matchfile_fix_header(matchfile* mf) {
-  off_t offset;
-  off_t new_header_end;
-  assert(mf->fid);
-  offset = ftello(mf->fid);
-  fseeko(mf->fid, 0, SEEK_SET);
-  qfits_header_dump(mf->header, mf->fid);
-  new_header_end = ftello(mf->fid);
-  if (new_header_end != mf->header_end) {
-  fprintf(stderr, "Warning: matchfile header used to end at %lu, "
-  "now it ends at %lu.\n", (unsigned long)mf->header_end,
-  (unsigned long)new_header_end);
-  return -1;
-  }
-  fseek(mf->fid, offset, SEEK_SET);
-  fits_pad_file(mf->fid);
-  return 0;
-  }
-*/
 
 // mapping between a struct field and FITS field.
 struct fits_struct_pair {
@@ -327,20 +306,17 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 			return -1;
 		}
 
-		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
-			mf->columns[c] = -1;
-		for (c=0; c<table->nc; c++) {
-			qfits_col* col = table->col + c;
-			for (c2=0; c2<MATCHFILE_FITS_COLUMNS; c2++) {
-				if (mf->columns[c2] != -1) continue;
-				// allow case-insensitive matches.
-				if (strcasecmp(col->tlabel, matchfile_fitstruct[c2].fieldname))
-					continue;
-				mf->columns[c2] = c;
-			}
-		}
 		good = 1;
 		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
+			mf->columns[c] = -1;
+			for (c2=0; c2<table->nc; c2++) {
+				qfits_col* col = table->col + c2;
+				// allow case-insensitive matches.
+				if (strcasecmp(col->tlabel, matchfile_fitstruct[c].fieldname))
+					continue;
+				mf->columns[c] = c2;
+				break;
+			}
 			if (matchfile_fitstruct[c].required && (mf->columns[c] == -1)) {
 				good = 0;
 				break;
@@ -356,7 +332,8 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 	if (!good) {
 		fprintf(stderr, "matchfile: didn't find the following required columns:\n    ");
 		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++)
-			if (mf->columns[c] == -1)
+			if (matchfile_fitstruct[c].required &&
+				(mf->columns[c] == -1))
 				fprintf(stderr, "%s  ", matchfile_fitstruct[c].fieldname);
 		fprintf(stderr, "\n");
 		return -1;
