@@ -8,7 +8,7 @@
 ; OPTIONAL INPUTS:
 ;   exten        - which extension of FITS file to look at; default 0
 ;   originalastr - the original astrometry header info; over-rides
-;                  header to FITS file
+;                  header to FITS file, must not be GSSS format
 ;   xylist       - X,Y list of stars in image
 ;   xyfile       - OR you can pass a ASCII file name with X,Y,FLUX
 ;                   xyfile overrides xylist. 
@@ -31,6 +31,15 @@ if (not keyword_set(nsigma)) then nsigma= 5.0
 ; get "original" WCS for image
 if (NOT keyword_set(originalastr)) then begin
     hdr= headfits(imagefile,exten=exten)
+
+; deal with the possibility that this has a GSSS header
+    gsss = sxpar(hdr,'PPO1',count=N_ppo1)
+    if N_ppo1 EQ 1 then begin 
+        splog, 'converting GSSS structure into approximate ASTR structure'
+        gsss_stdast, hdr
+    endif
+
+; extract astr and check
     extast, hdr,originalastr
     if not keyword_set(originalastr) then begin 
         print,'ERROR: Image file ',imagefile
@@ -38,7 +47,6 @@ if (NOT keyword_set(originalastr)) then begin
         return,0
     endif
 endif
-
 astr= originalastr
 splog, 'got original ASTR structure'
 
