@@ -294,8 +294,8 @@ int main(int argc, char *argv[]) {
 				} else {
 					corrects[fieldnum]++;
 					correct++;
-					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, noverlap %i\n", fieldnum, rac, decc, arc,
-							(int)mo->noverlap);
+					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, noverlap %i\n",
+							fieldnum, rac, decc, arc, (int)mo->noverlap);
 				}
 
 				//free_MatchObj(mo);
