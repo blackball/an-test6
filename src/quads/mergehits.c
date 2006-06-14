@@ -17,7 +17,7 @@ char* OPTIONS = "hH:A:B:F:L:M:f:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
-			"   [-A first-field]\n"
+			"   [-A first-field]  (default 0)\n"
 			"   [-B last-field]\n"
 			"   [-H hits-file]\n"
 			"   <-M output-file>\n",
@@ -134,6 +134,18 @@ int main(int argc, char *argv[]) {
 	for (f=firstfield; f<=lastfield; f++) {
 		int fieldnum = f;
 		fprintf(stderr, "Field %i.\n", f);
+
+		if (lastfield == INT_MAX) {
+			bool alldone = TRUE;
+			for (i=0; i<ninputfiles; i++) {
+				if (!eofs[i]) {
+					alldone = FALSE;
+					break;
+				}
+			}
+			if (alldone)
+				break;
+		}
 
 		for (i=0; i<ninputfiles; i++) {
 			MatchObj* mo;
