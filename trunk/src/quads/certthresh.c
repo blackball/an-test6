@@ -174,6 +174,13 @@ int main(int argc, char *argv[]) {
 				break;
 			}
 
+			fieldnum = me.fieldnum;
+			if (fieldnum < firstfield)
+				continue;
+			if (fieldnum > lastfield)
+				// here we assume the fields are ordered...
+				break;
+
 			for (k=0; k<mf->nrows; k++) {
 				MatchObj* mo;
 				mo = matchfile_buffered_read_match(mf);
@@ -190,12 +197,6 @@ int main(int argc, char *argv[]) {
 				  mo->code_err, mo->sMin[0], mo->sMin[1], mo->sMin[2],
 				  mo->sMax[0], mo->sMax[1], mo->sMax[2], (int)mo->noverlap);
 				*/
-
-				fieldnum = me.fieldnum;
-				if (fieldnum < firstfield)
-					continue;
-				if (fieldnum > lastfield)
-					continue;
 
 				nread++;
 
