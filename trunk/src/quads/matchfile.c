@@ -81,13 +81,14 @@ struct fits_struct_pair {
 	int size;
 	int ncopies;
 	tfits_type fitstype;
+	bool required;
 };
 typedef struct fits_struct_pair fitstruct;
 
 static fitstruct matchfile_fitstruct[MATCHFILE_FITS_COLUMNS];
 static bool matchfile_fitstruct_inited = 0;
 
-#define SET_FIELDS(A, i, t, n, u, fld, nc) { \
+#define SET_FIELDS(A, i, t, n, u, fld, nc, req) { \
  MatchObj x; \
  A[i].fieldname=n; \
  A[i].units=u; \
@@ -95,6 +96,7 @@ static bool matchfile_fitstruct_inited = 0;
  A[i].size=sizeof(x.fld); \
  A[i].ncopies=nc; \
  A[i].fitstype=t; \
+ A[i].required = req; \
  i++; \
 }
 
@@ -103,14 +105,14 @@ static void init_matchfile_fitstruct() {
 	int i = 0;
 	char* nil = " ";
 
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, 4);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "noverlap", nil, noverlap, 1);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "ninfield", nil, ninfield, 1);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, 4, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "noverlap", nil, noverlap, 1, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "ninfield", nil, ninfield, 1, FALSE);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
@@ -339,7 +341,7 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 		}
 		good = 1;
 		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
-			if (mf->columns[c] == -1) {
+			if (matchfile_fitstruct[c].required && (mf->columns[c] == -1)) {
 				good = 0;
 				break;
 			}
@@ -381,7 +383,8 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 		init_matchfile_fitstruct();
 
 	for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
-		assert(mf->columns[c] != -1);
+		if (mf->columns[c] == -1)
+			continue;
 		assert(mf->table);
 		assert(mf->table->col[mf->columns[c]].atom_size ==
 			   matchfile_fitstruct[c].size / matchfile_fitstruct[c].ncopies);
