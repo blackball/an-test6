@@ -42,8 +42,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 				   uint iA, uint iB, uint iC, uint iD,
                    xy *ABCDpix, solver_params* params);
 
-void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
-					 char order, uint fA, uint fB, uint fC, uint fD,
+void resolve_matches(kdtree_qres_t* krez, double *query, xy *field,
+					 uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params);
 
 void solve_field(solver_params* params) {
@@ -244,12 +244,19 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     free_xy(ABCDpix);
 }
 
+static void set_xy(xy* dest, int destind, xy* src, int srcind) {
+	xy_setx(dest, destind, xy_refx(src, srcind));
+	xy_sety(dest, destind, xy_refy(src, srcind));
+}
+
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 				   uint iA, uint iB, uint iC, uint iD,
                    xy *ABCDpix, solver_params* params) {
     double thequery[4];
     kdtree_qres_t* result;
 	double tol = square(params->codetol);
+	xy* inorder = mk_xy(4);
+	int A=0, B=1, C=2, D=3;
 
     // ABCD
     thequery[0] = Cx;
@@ -257,14 +264,19 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = Dx;
     thequery[3] = Dy;
 
+	set_xy(inorder, 0, ABCDpix, A);
+	set_xy(inorder, 1, ABCDpix, B);
+	set_xy(inorder, 2, ABCDpix, C);
+	set_xy(inorder, 3, ABCDpix, D);
+
     result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
 		params->nummatches += result->nres;
-		resolve_matches(result, thequery, ABCDpix, ABCD_ORDER, iA, iB, iC, iD, params);
+		resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
     }
     kdtree_free_query(result);
 	if (params->quitNow)
-		return;
+		goto bailout;
 
     // BACD
     thequery[0] = 1.0 - Cx;
@@ -272,14 +284,19 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = 1.0 - Dx;
     thequery[3] = 1.0 - Dy;
 
+	set_xy(inorder, 0, ABCDpix, B);
+	set_xy(inorder, 1, ABCDpix, A);
+	set_xy(inorder, 2, ABCDpix, C);
+	set_xy(inorder, 3, ABCDpix, D);
+
     result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
 		params->nummatches += result->nres;
-		resolve_matches(result, thequery, ABCDpix, BACD_ORDER, iB, iA, iC, iD, params);
+		resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
     }
     kdtree_free_query(result);
 	if (params->quitNow)
-		return;
+		goto bailout;
 
     // ABDC
     thequery[0] = Dx;
@@ -287,14 +304,19 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = Cx;
     thequery[3] = Cy;
 
+	set_xy(inorder, 0, ABCDpix, A);
+	set_xy(inorder, 1, ABCDpix, B);
+	set_xy(inorder, 2, ABCDpix, D);
+	set_xy(inorder, 3, ABCDpix, C);
+
     result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
 		params->nummatches += result->nres;
-		resolve_matches(result, thequery, ABCDpix, ABDC_ORDER, iA, iB, iD, iC, params);
+		resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
     }
     kdtree_free_query(result);
 	if (params->quitNow)
-		return;
+		goto bailout;
 
     // BADC
     thequery[0] = 1.0 - Dx;
@@ -302,37 +324,53 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = 1.0 - Cx;
     thequery[3] = 1.0 - Cy;
 
+	set_xy(inorder, 0, ABCDpix, B);
+	set_xy(inorder, 1, ABCDpix, A);
+	set_xy(inorder, 2, ABCDpix, D);
+	set_xy(inorder, 3, ABCDpix, C);
+
     result = kdtree_rangesearch(params->codekd, thequery, tol);
     if (result->nres) {
 		params->nummatches += result->nres;
-		resolve_matches(result, thequery, ABCDpix, BADC_ORDER, iB, iA, iD, iC, params);
+		resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
     }
     kdtree_free_query(result);
 	if (params->quitNow)
-		return;
+		goto bailout;
+
+ bailout:
+	free_xy(inorder);
 }
 
-void resolve_matches(kdtree_qres_t* krez, double *query, xy *ABCDpix,
-					 char order, uint fA, uint fB, uint fC, uint fD,
+void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
+					 uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params) {
     uint jj, thisquadno;
     uint iA, iB, iC, iD;
     double transform[9];
     MatchObj *mo;
-	double sA[3], sB[3], sC[3], sD[3], sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
+	double sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
 
     for (jj=0; jj<krez->nres; jj++) {
 		int nagree;
 		//uint64_t idA, idB, idC, idD;
+		double star[12];
+		double field[8];
+		int i;
 
 		thisquadno = (uint)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
-		getstarcoord(iA, sA);
-		getstarcoord(iB, sB);
-		getstarcoord(iC, sC);
-		getstarcoord(iD, sD);
+		getstarcoord(iA, star+0*3);
+		getstarcoord(iB, star+1*3);
+		getstarcoord(iC, star+2*3);
+		getstarcoord(iD, star+3*3);
 
-		fit_transform(ABCDpix, order, sA, sB, sC, sD, transform);
+		for (i=0; i<4; i++) {
+			field[i*2 + 0] = xy_refx(fieldxy, i);
+			field[i*2 + 1] = xy_refy(fieldxy, i);
+		}
+
+		fit_transform(star, field, 4, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 2), xy_refy(params->cornerpix, 2), sMinMax, transform);
