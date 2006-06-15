@@ -17,10 +17,6 @@ void verify_hit(kdtree_t* startree,
 	int matches;
 	int unmatches;
 	int conflicts;
-	/*
-	  double avgmatch;
-	  double maxmatch;
-	*/
 	double fieldcenter[3];
 	double fieldr2;
 	kdtree_qres_t* res;
@@ -90,7 +86,6 @@ void verify_hit(kdtree_t* startree,
 	}
 
 	matches = unmatches = conflicts = 0;
-	//maxmatch = avgmatch = 0.0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);
 	for (i=0; i<NF; i++) {
 		//int j;
@@ -108,19 +103,7 @@ void verify_hit(kdtree_t* startree,
 				matches++;
 		} else
 			unmatches++;
-		/*
-		  avgmatch += sqrt(bestd2);
-		  if (bestd2 > maxmatch)
-		  maxmatch = bestd2;
-		*/
 	}
-	//avgmatch /= (double)(conflicts + matches);
-	
-	/*
-	*/
-	//Avg match dist: %g arcsec, max dist %g arcsec\n",
-	//rad2arcsec(distsq2arc(square(avgmatch))),
-	//rad2arcsec(distsq2arc(maxmatch)));
 
 	mo->noverlap = matches - conflicts;
 	mo->ninfield = NI;
