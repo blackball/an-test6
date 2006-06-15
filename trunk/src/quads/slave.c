@@ -34,6 +34,7 @@
 #include "quadfile.h"
 #include "idfile.h"
 #include "intmap.h"
+#include "verify.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -548,110 +549,6 @@ int read_parameters() {
 	}
 }
 
-int verify_hit(MatchObj* mo, solver_params* p, int nagree) {
-	xy* field = p->field;
-	int i, j, NF;
-	double* fieldstars;
-	intmap* map;
-	int matches;
-	int unmatches;
-	int conflicts;
-	double avgmatch;
-	double maxmatch;
-	double fieldcenter[3];
-	double fieldr2;
-	kdtree_qres_t* res;
-	double vec1[3], vec2[3], len1, len2;
-	// number of stars in the index that are within the bounds of the field.
-	int NI;
-	assert(mo->transform_valid);
-	assert(startree);
-
-	for (i=0; i<3; i++)
-		fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
-	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
-	// 1.01 is a little safety factor.
-	res = kdtree_rangesearch(startree, fieldcenter, fieldr2 * 1.01);
-	assert(res);
-
-	for (i=0; i<3; i++) {
-		vec1[i] = mo->sMinMax[i] - mo->sMin[i];
-		vec2[i] = mo->sMaxMin[i] - mo->sMin[i];
-	}
-	len1 = len2 = 0.0;
-	for (i=0; i<3; i++) {
-		len1 += (mo->sMax[i] - mo->sMin[i]) * vec1[i];
-		len2 += (mo->sMax[i] - mo->sMin[i]) * vec2[i];
-	}
-
-	NI = 0;
-	for (j=0; j<res->nres; j++) {
-		double l1 = 0.0, l2 = 0.0;
-		for (i=0; i<3; i++) {
-			l1 += (res->results[j*3 + i] - mo->sMin[i]) * vec1[i];
-			l2 += (res->results[j*3 + i] - mo->sMin[i]) * vec2[i];
-		}
-		if ((l1 >= 0.0) && (l1 <= len1) &&
-			(l2 >= 0.0) && (l2 <= len2))
-			NI++;
-	}
-
-	kdtree_free_query(res);
-
-	/*
-	  Comment for the picky: in the rangesearch below, we grab an range
-	  around each field star (at the moment this range is typically set to
-	  3 arcsec).  This could grab an index star that isn't actually within
-	  the bounds of the field that we computed above.  Since SDSS fields
-	  are ~600 arcsec on a side, this is a pretty small extra area and we
-	  cavalierly decide to ignore it.
-	*/
-
-	NF = xy_size(field);
-	fieldstars = malloc(3 * NF * sizeof(double));
-	for (i=0; i<NF; i++) {
-		double u, v;
-		u = xy_refx(field, i);
-		v = xy_refy(field, i);
-		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
-	}
-
-	matches = unmatches = conflicts = 0;
-	maxmatch = avgmatch = 0.0;
-	map = intmap_new(INTMAP_ONE_TO_ONE);
-	for (i=0; i<NF; i++) {
-		double bestd2;
-		int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
-		if (bestd2 <= verify_dist2) {
-			if (intmap_add(map, ind, i) == -1)
-				// a field object already selected star 'ind' as its nearest neighbour.
-				conflicts++;
-			else
-				matches++;
-			avgmatch += sqrt(bestd2);
-			if (bestd2 > maxmatch)
-				maxmatch = bestd2;
-		} else
-			unmatches++;
-	}
-	avgmatch /= (double)(conflicts + matches);
-	
-	fprintf(stderr, "    field %i (%i agree): verifying: overlap %f: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-			p->fieldnum, nagree, (matches - conflicts) / (double)NI, NI, matches, unmatches, conflicts);
-	//Avg match dist: %g arcsec, max dist %g arcsec\n",
-	//rad2arcsec(distsq2arc(square(avgmatch))),
-	//rad2arcsec(distsq2arc(maxmatch)));
-	fflush(stderr);
-
-	mo->noverlap = matches - conflicts;
-	mo->ninfield = NI;
-	mo->overlap = (matches - conflicts) / (double)NI;
-
-	intmap_free(map);
-	free(fieldstars);
-	return 1;
-}
-
 struct solvethread_args {
 	matchfile_entry me;
 	int winning_listind;
@@ -865,6 +762,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	int n = 0;
 	bool winner = FALSE;
 	threadargs* my = p->userdata;
+	int matches, unmatches, conflicts;
 
 	if (!agreement) {
 		if (matchfile_write_match(mf, mo)) {
@@ -895,7 +793,12 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (n < nagree_toverify)
 		return n;
 
-	verify_hit(mo, p, n);
+	verify_hit(startree, mo, p->field, verify_dist2,
+			   &matches, &unmatches, &conflicts);
+
+	fprintf(stderr, "    field %i (%i agree): verifying: overlap %f: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+			p->fieldnum, n, (matches - conflicts) / (double)mo->ninfield, mo->ninfield, matches, unmatches, conflicts);
+	fflush(stderr);
 
 	winner = (n >= nagree);
 
@@ -1108,8 +1011,15 @@ void* solvethread_run(void* varg) {
 					// already been done.
 					for (k=0; k<pl_size(list); k++) {
 						MatchObj* mo = pl_get(list, k);
-						if (mo->overlap == 0.0)
-							verify_hit(mo, &solver, pl_size(list));
+						if (mo->overlap == 0.0) {
+							int matches, unmatches, conflicts;
+							verify_hit(startree, mo, solver.field, verify_dist2,
+									   &matches, &unmatches, &conflicts);
+							fprintf(stderr, "    field %i (%i agree): verifying: overlap %f: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+									solver.fieldnum, pl_size(list), (matches - conflicts) / (double)mo->ninfield, mo->ninfield,
+									matches, unmatches, conflicts);
+							fflush(stderr);
+						}
 
 						sumoverlap += mo->overlap;
 						if (mo->overlap > maxoverlap)

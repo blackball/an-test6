@@ -21,6 +21,7 @@
 #include "xylist.h"
 #include "rdlist.h"
 #include "qidxfile.h"
+#include "verify.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -64,8 +65,8 @@ double agreetol = 0.0;
 bool do_verify = FALSE;
 int nagree_toverify = 0;
 double verify_dist2 = 0.0;
-int noverlap_tosolve = 0;
-int noverlap_toconfirm = 0;
+float overlap_tosolve = 0;
+float overlap_toconfirm = 0;
 
 int threads = 1;
 il* fieldlist = NULL;
@@ -148,64 +149,6 @@ void find_corners(xy *thisfield, xy *cornerpix) {
 void getstarcoord(uint iA, double *sA) {
 	memcpy(sA, startree->data + inverse_perm[iA] * DIM_STARS,
 		   DIM_STARS * sizeof(double));
-}
-
-int verify_hit(MatchObj* mo, xy* field,
-			   int* pmatches, int* punmatches, int* pconflicts) {
-	int i, NF;
-	double* fieldstars;
-	intmap* map;
-	int matches;
-	int unmatches;
-	int conflicts;
-	double avgmatch;
-	double maxmatch;
-	assert(mo->transform_valid);
-	assert(startree);
-	NF = xy_size(field);
-	fieldstars = malloc(3 * NF * sizeof(double));
-	for (i=0; i<NF; i++) {
-		double u, v;
-		u = xy_refx(field, i);
-		v = xy_refy(field, i);
-		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
-	}
-
-	matches = unmatches = conflicts = 0;
-	maxmatch = avgmatch = 0.0;
-	map = intmap_new(INTMAP_ONE_TO_ONE);
-	for (i=0; i<NF; i++) {
-		double bestd2;
-		int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
-		if (bestd2 <= verify_dist2) {
-			if (intmap_add(map, ind, i) == -1)
-				// a field object already selected star 'ind' as its nearest neighbour.
-				conflicts++;
-			else
-				matches++;
-			avgmatch += sqrt(bestd2);
-			if (bestd2 > maxmatch)
-				maxmatch = bestd2;
-		} else
-			unmatches++;
-	}
-	avgmatch /= (double)(conflicts + matches);
-	
-	/*
-	*/
-
-	mo->noverlap = matches - conflicts;
-
-	if (pmatches)
-		*pmatches = matches;
-	if (punmatches)
-		*punmatches = unmatches;
-	if (pconflicts)
-		*pconflicts = conflicts;
-
-	intmap_free(map);
-	free(fieldstars);
-	return 1;
 }
 
 void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
@@ -353,7 +296,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 
 	mocopy = malloc(sizeof(MatchObj));
 	memcpy(mocopy, &mo, sizeof(MatchObj));
-	verify_hit(mocopy, thisfield, &matches, &unmatches, &conflicts);
+	verify_hit(startree, mocopy, thisfield, verify_dist2, &matches, &unmatches, &conflicts);
 	if (verbose) {
 		fprintf(stderr, "    Verify: %i matches, %i unmatches, %i conflicts.\n",
 				matches, unmatches, conflicts);
@@ -659,8 +602,8 @@ int main(int argc, char *argv[]) {
 		ycolname = strdup("COLC");
 		verify_dist2 = 0.0;
 		nagree_toverify = 0;
-		noverlap_toconfirm = 0;
-		noverlap_tosolve = 0;
+		overlap_toconfirm = 0.0;
+		overlap_tosolve = 0.0;
 
 		if (read_parameters()) {
 			break;
@@ -692,8 +635,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
-		fprintf(stderr, "noverlap_toconfirm %i\n", noverlap_toconfirm);
-		fprintf(stderr, "noverlap_tosolve %i\n", noverlap_tosolve);
+		fprintf(stderr, "overlap_toconfirm %f\n", overlap_toconfirm);
+		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 
@@ -929,10 +872,10 @@ int read_parameters() {
 			verify_dist2 = arcsec2distsq(d);
 		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
 			nagree_toverify = atoi(nextword);
-		} else if (is_word(buffer, "noverlap_tosolve ", &nextword)) {
-			noverlap_tosolve = atoi(nextword);
-		} else if (is_word(buffer, "noverlap_toconfirm ", &nextword)) {
-			noverlap_toconfirm = atoi(nextword);
+		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
+			overlap_tosolve = atof(nextword);
+		} else if (is_word(buffer, "overlap_toconfirm ", &nextword)) {
+			overlap_toconfirm = atof(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
