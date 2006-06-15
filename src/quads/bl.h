@@ -155,6 +155,7 @@ void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
 void  pl_remove(pl* list, int ind);
 void  pl_remove_all(pl* list);
+void  pl_merge_lists(pl* list1, pl* list2);
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //

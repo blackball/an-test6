@@ -1148,6 +1148,10 @@ int bl_compare_pointers_ascending(const void* v1, const void* v2) {
     else return 0;
 }
 
+void  pl_merge_lists(pl* list1, pl* list2) {
+	bl_append_list(list1, list2);
+}
+
 int pl_insert_unique_ascending(bl* list, void* p) {
     return bl_insert_unique_sorted(list, &p, bl_compare_pointers_ascending);
 }
