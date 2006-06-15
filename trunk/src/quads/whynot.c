@@ -305,7 +305,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	memcpy(mocopy, &mo, sizeof(MatchObj));
 	verify_hit(startree, mocopy, thisfield, verify_dist2, &matches, &unmatches, &conflicts);
 	if (verbose) {
-		fprintf(stderr, "    Verify: %4.1f %%: %i matches, %i unmatches, %i conflicts.\n",
+		fprintf(stderr, "    Verify: %4.1f%%: %i matches, %i unmatches, %i conflicts.\n",
 				100.0 * mocopy->overlap, matches, unmatches, conflicts);
 	}
 	hitlist_healpix_compute_vector(mocopy);
@@ -314,7 +314,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 		hitlist_healpix_print_dists_to_lists(hits, mocopy);
 	}
 	nagree = hitlist_healpix_add_hit(hits, mocopy, &listind);
-	fprintf(stderr, "    -> %i agree, overlap %4.1f %%.\n", nagree, 100.0 * mocopy->overlap);
+	fprintf(stderr, "    -> %i agree, overlap %4.1f%%.\n", nagree, 100.0 * mocopy->overlap);
 }
 
 void why_not() {
