@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 
 #include "verify.h"
 #include "mathutil.h"
@@ -23,7 +24,9 @@ void verify_hit(kdtree_t* startree,
 	double vec1[3], vec2[3], len1, len2;
 	// number of stars in the index that are within the bounds of the field.
 	int NI;
-	//int destind;
+	kdtree_t* itree;
+	int levels;
+	int Nleaf = 5;
 	assert(mo->transform_valid);
 	assert(startree);
 
@@ -61,8 +64,10 @@ void verify_hit(kdtree_t* startree,
 			l2 += (res->results[j*3 + i] - mo->sMin[i]) * vec2[i];
 		}
 		if ((l1 >= 0.0) && (l1 <= len1) &&
-			(l2 >= 0.0) && (l2 <= len2))
+			(l2 >= 0.0) && (l2 <= len2)) {
+			memmove(res->results+NI*3, res->results+j*3, 3*sizeof(double));
 			NI++;
+		}
 	}
 
 	kdtree_free_query(res);
@@ -85,16 +90,25 @@ void verify_hit(kdtree_t* startree,
 		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
 	}
 
+	/*
+	  A counteracting note to the picky: if we build a kdtree over the
+	  index stars within range, the above comment is no longer true.
+	*/
+    levels = (int)ceil(log(NI / (double)Nleaf) * M_LOG2E);
+    if (levels < 1)
+        levels = 1;
+	itree = kdtree_build(res->results, NI, 3, levels);
+
 	matches = unmatches = conflicts = 0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);
 	for (i=0; i<NF; i++) {
-		//int j;
 		// HACK - will it be faster to do NF (~300) kdtree searches, or
 		// NF * NI distance computations?  Or build a kdtree over NI and
 		// do nearest-neighbour search in that!
 
 		double bestd2;
-		int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
+		//int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
+		int ind = kdtree_nearest_neighbour(itree, fieldstars + 3*i, &bestd2);
 		if (bestd2 <= verify_dist2) {
 			if (intmap_add(map, ind, i) == -1)
 				// a field object already selected star 'ind' as its nearest neighbour.
@@ -104,6 +118,8 @@ void verify_hit(kdtree_t* startree,
 		} else
 			unmatches++;
 	}
+
+	kdtree_free(itree);
 
 	mo->noverlap = matches - conflicts;
 	mo->ninfield = NI;
