@@ -7,8 +7,8 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS += -O0
-#CFLAGS += -O2
+#CFLAGS += -O0
+CFLAGS += -O2
 #CFLAGS += -pg
 
 # What functions were and weren't inlined?
@@ -91,8 +91,9 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-EXTRA_EXECS = usnobprint usnobtofits tycho2tofits ancatalog cut_an \
-	xylist_texttofits split_an hplimits plotcat an_deduplicate
+EXTRA_EXECS = xylist_texttofits hplimits plotcat
+#usnobprint usnobtofits tycho2tofits ancatalog cut_an split_an \
+#an_deduplicate
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
