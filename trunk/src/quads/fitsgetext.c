@@ -90,10 +90,7 @@ int main(int argc, char *argv[]) {
 	for (i=0; i<il_size(exts); i++) {
 		int hdrstart, hdrlen, datastart, datalen;
 		int ext = il_get(exts, i);
-		/*
-		  char buff[FITS_BLOCK_SIZE];
-		  int j, blocks;
-		*/
+
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart,  &hdrlen ) ||
 			qfits_get_datinfo(infn, ext, &datastart, &datalen)) {
 			fprintf(stderr, "Error getting extents of extension %i.\n", ext);
@@ -107,26 +104,10 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to write extension %i: %s\n", ext, strerror(errno));
 			exit(-1);
 		}
-		/*
-		  assert((hdrlen % FITS_BLOCK_SIZE) == 0);
-		  assert((datalen % FITS_BLOCK_SIZE) == 0);
-		  blocks = hdrlen / FITS_BLOCK_SIZE;
-		  fseeko(fin, hdrstart, SEEK_SET);
-		  for (j=0; j<blocks; j++) {
-		  if ((fread (buff, FITS_BLOCK_SIZE, 1, fin ) != 1) ||
-		  (fwrite(buff, FITS_BLOCK_SIZE, 1, fout) != 1)) {
-		  fprintf(stderr, "Failed to write extension %i: %s\n", ext, strerror(errno));
-		  exit(-1);
-		  }
-		  }
-		*/
 	}
-	//fclose(fin);
 
 	munmap(map, mapsize);
-
 	fclose(fout);
-
 	il_free(exts);
 	return 0;
 }
