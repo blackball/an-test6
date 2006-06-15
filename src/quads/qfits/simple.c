@@ -3,7 +3,7 @@
    @file    simple.c
    @author  N. Devillard
    @date    Jan 1999
-   @version $Revision: 1.2 $
+   @version $Revision: 1.3 $
    @brief   Simple FITS access routines.
 
    This module offers a number of very basic low-level FITS access
@@ -12,10 +12,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: simple.c,v 1.2 2006/06/09 13:23:30 dlang Exp $
+    $Id: simple.c,v 1.3 2006/06/15 15:05:06 dlang Exp $
     $Author: dlang $
-    $Date: 2006/06/09 13:23:30 $
-    $Revision: 1.2 $
+    $Date: 2006/06/15 15:05:06 $
+    $Revision: 1.3 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -199,8 +199,10 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
     /* Found the keyword, now get its value */
     value = qfits_getvalue(where);
     fdealloc(start, seg_start, size) ;
-	if (!value)
-		qfits_error("qfits_query_ext: found key %s, value is null.", exp_key);
+	/*
+	  if (!value)
+	  qfits_error("qfits_query_ext: found key %s, value is null.", exp_key);
+	*/
     return value;
 }
 
