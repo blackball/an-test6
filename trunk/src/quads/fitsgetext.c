@@ -77,9 +77,9 @@ int main(int argc, char *argv[]) {
 
 	qfits_err_statset(1);
 
-	fseeko(fin, SEEK_END, 0);
+	fseeko(fin, 0, SEEK_END);
 	mapsize = ftello(fin);
-	fseeko(fin, SEEK_SET, 0);
+	fseeko(fin, 0, SEEK_SET);
 	map = mmap(NULL, mapsize, PROT_READ, MAP_SHARED, fileno(fin), 0);
 	if (map == MAP_FAILED) {
 		fprintf(stderr, "Failed to mmap input file: %s\n", strerror(errno));
@@ -89,12 +89,11 @@ int main(int argc, char *argv[]) {
 
 	for (i=0; i<il_size(exts); i++) {
 		int hdrstart, hdrlen, datastart, datalen;
-		/*
-		  int pagesize;
-		  off_t start;
-		  int leftover;
-		*/
 		int ext = il_get(exts, i);
+		/*
+		  char buff[FITS_BLOCK_SIZE];
+		  int j, blocks;
+		*/
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart,  &hdrlen ) ||
 			qfits_get_datinfo(infn, ext, &datastart, &datalen)) {
 			fprintf(stderr, "Error getting extents of extension %i.\n", ext);
@@ -102,19 +101,27 @@ int main(int argc, char *argv[]) {
 		}
 		printf("Writing extension %i: header start %i, length %i, data start %i, length %i.\n",
 			   ext, hdrstart, hdrlen, datastart, datalen);
-		/*
-		  assert(hdrstart + hdrlen == datastart);
-		  pagesize = getpagesize();
-		  start = (hdrstart / pagesize) * pagesize;
-		  leftover = hdrstart - start;
-		  mapsize = leftover + hdrlen + datalen;
-		*/
+		
 		if ((hdrlen  && (fwrite(map + hdrstart , 1, hdrlen , fout) != hdrlen )) ||
 			(datalen && (fwrite(map + datastart, 1, datalen, fout) != datalen))) {
 			fprintf(stderr, "Failed to write extension %i: %s\n", ext, strerror(errno));
 			exit(-1);
 		}
+		/*
+		  assert((hdrlen % FITS_BLOCK_SIZE) == 0);
+		  assert((datalen % FITS_BLOCK_SIZE) == 0);
+		  blocks = hdrlen / FITS_BLOCK_SIZE;
+		  fseeko(fin, hdrstart, SEEK_SET);
+		  for (j=0; j<blocks; j++) {
+		  if ((fread (buff, FITS_BLOCK_SIZE, 1, fin ) != 1) ||
+		  (fwrite(buff, FITS_BLOCK_SIZE, 1, fout) != 1)) {
+		  fprintf(stderr, "Failed to write extension %i: %s\n", ext, strerror(errno));
+		  exit(-1);
+		  }
+		  }
+		*/
 	}
+	//fclose(fin);
 
 	munmap(map, mapsize);
 
