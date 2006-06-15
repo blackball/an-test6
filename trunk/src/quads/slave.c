@@ -833,7 +833,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		bool solved = FALSE;
 		if (n == nagree_toverify) {
 			// run verification on the other match.
-			pl* list = hitlist_healpix_copy_list(my->hits, my->winning_listind);
+			pl* list = hitlist_healpix_copy_list(my->hits, listind);
 			MatchObj* mo1 = pl_get(list, 0);
 			if (mo1->overlap == 0) {
 				verify_hit(startree, mo1, p->field, verify_dist2,
