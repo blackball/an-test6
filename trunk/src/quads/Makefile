@@ -54,7 +54,7 @@ EXECS := whynot checkquads mergehits agreeable certthresh quadidx \
 	hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
-	codeprojections quadlocations hpowned
+	codeprojections quadlocations hpowned fitsgetext
 
 	#certifiable 
 

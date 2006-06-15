@@ -307,7 +307,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 		hitlist_healpix_print_dists_to_lists(hits, mocopy);
 	}
 	nagree = hitlist_healpix_add_hit(hits, mocopy, &listind);
-	fprintf(stderr, "    -> %i agree, %i overlap (%i - %i).\n", nagree, matches-conflicts, matches, conflicts);
+	fprintf(stderr, "    -> %i agree, overlap %4.1f %%.\n", nagree, 100.0 * mocopy->overlap);
 }
 
 void why_not() {
