@@ -197,7 +197,7 @@ void fit_transform(double* star, double* field, int N, double* trans) {
 
 	// build F = (field; ones)
 	F = malloc(3 * N * sizeof(double));
-	for (c=0; c<N; r++) {
+	for (c=0; c<N; c++) {
 		// row 0
 		F[0 + c*3] = field[0 + c*2];
 		// row 1
