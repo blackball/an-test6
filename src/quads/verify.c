@@ -65,12 +65,13 @@ void verify_hit(kdtree_t* startree,
 		}
 		if ((l1 >= 0.0) && (l1 <= len1) &&
 			(l2 >= 0.0) && (l2 <= len2)) {
-			memmove(res->results+NI*3, res->results+j*3, 3*sizeof(double));
+			if (j != NI)
+				memmove(res->results + NI * 3,
+						res->results +  j * 3,
+						3 * sizeof(double));
 			NI++;
 		}
 	}
-
-	kdtree_free_query(res);
 
 	/*
 	  Comment for the picky: in the rangesearch below, we grab an range
@@ -120,6 +121,7 @@ void verify_hit(kdtree_t* startree,
 	}
 
 	kdtree_free(itree);
+	kdtree_free_query(res);
 
 	mo->noverlap = matches - conflicts;
 	mo->ninfield = NI;

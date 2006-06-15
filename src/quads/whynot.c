@@ -144,6 +144,11 @@ void find_corners(xy *thisfield, xy *cornerpix) {
     xy_sety(cornerpix, 0, miny);
     xy_setx(cornerpix, 1, maxx);
     xy_sety(cornerpix, 1, maxy);
+
+    xy_setx(cornerpix, 2, minx);
+    xy_sety(cornerpix, 2, maxy);
+    xy_setx(cornerpix, 3, maxx);
+    xy_sety(cornerpix, 3, miny);
 }
 
 void getstarcoord(uint iA, double *sA) {
@@ -271,8 +276,10 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	}
 
 	fit_transform(star, field, 4, mo.transform);
-	image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin, mo.transform);
-	image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax, mo.transform);
+	image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin,    mo.transform);
+	image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax,    mo.transform);
+	image_to_xyz(xy_refx(cornerpix, 2), xy_refy(cornerpix, 2), mo.sMinMax, mo.transform);
+	image_to_xyz(xy_refx(cornerpix, 3), xy_refy(cornerpix, 3), mo.sMaxMin, mo.transform);
 	mo.transform_valid = TRUE;
 
 	// scale checking
@@ -315,7 +322,7 @@ void why_not() {
 	double utime, stime;
 	int nfields;
 	int fieldind;
-	xy* cornerpix = mk_xy(2);
+	xy* cornerpix = mk_xy(4);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 
@@ -351,6 +358,7 @@ void why_not() {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			continue;
 		}
+
 		thisfield = xylist_get_field(xyls, fieldnum);
 		thisrd = rdlist_get_field(rdls, fieldnum);
 		if (!thisfield || !thisrd) {
@@ -694,7 +702,7 @@ int main(int argc, char *argv[]) {
 			code_inverse_perm[codetree->perm[i]] = i;
 
 		// Read .qidx file...
-		fprintf(stderr, "Reading qidxfile %s...", qidxfname);
+		fprintf(stderr, "Reading qidxfile %s...\n", qidxfname);
 		fflush(stderr);
 		qidx = qidxfile_open(qidxfname, 0);
 		if (!qidx) {
