@@ -581,19 +581,20 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 	static bl* cached = NULL;
 	int k, nextfld;
 
-	if (!cached)
-		cached = bl_new(16, sizeof(cached_hits));
-
 	if (pthread_mutex_lock(&matchfile_mutex)) {
 		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
 		exit(-1);
 	}
 
+	if (!cached)
+		cached = bl_new(16, sizeof(cached_hits));
+
 	// DEBUG - ensure cache is empty.
 	if (fieldnum == -1) {
 		cached_hits* cache;
-		if (!bl_size(cached))
-			return;
+		if (!bl_size(cached)) {
+			goto bailout;
+		}
 		fprintf(stderr, "Warning: cache was not empty at the end of the run.");
 		fprintf(stderr, "Cache: [ ");
 		for (k=0; k<bl_size(cached); k++) {
@@ -629,7 +630,7 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			free(cache->me.indexpath);
 			free(cache->me.fieldpath);
 		}
-		return;
+		goto bailout;
 	}
 
 	nextfld = il_get(fieldlist, index);
@@ -749,6 +750,7 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 	  fprintf(stderr, "]\n");
 	*/
 
+ bailout:
 	if (pthread_mutex_unlock(&matchfile_mutex)) {
 		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
 		exit(-1);

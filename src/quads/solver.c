@@ -46,6 +46,22 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *field,
 					 uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params);
 
+static bool check_scale(int iA, int iB, solver_params* params) {
+	double Ax, Ay, Bx, By, dx, dy, scale;
+	Ax = xy_refx(params->field, iA);
+	Ay = xy_refy(params->field, iA);
+	Bx = xy_refx(params->field, iB);
+	By = xy_refy(params->field, iB);
+	dx = Bx - Ax;
+	dy = By - Ay;
+	scale = dx*dx + dy*dy;
+	if ((scale < square(params->minAB)) || (scale > square(params->maxAB))) {
+		//fprintf(stderr, "Quad scale %g: not in allowable range [%g, %g].\n", scale, params->minAB, params->maxAB);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 void solve_field(solver_params* params) {
     uint numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
@@ -96,6 +112,8 @@ void solve_field(solver_params* params) {
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
+			if (!check_scale(iA, iB, params))
+				continue;
 			ncd = 0;
 			memset(iunion, 0, newpoint);
 			for (iC=0; iC<newpoint; iC++) {
@@ -110,6 +128,8 @@ void solve_field(solver_params* params) {
 					ncd++;
 				}
 			}
+
+
 			// note: "newpoint" is used as an upper-bound on the largest
 			// TRUE element in "iunion".
 			try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, params);
@@ -119,6 +139,9 @@ void solve_field(solver_params* params) {
 		iD = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
+				if (!check_scale(iA, iB, params))
+					continue;
+
 				ncd = 0;
 				memset(iunion, 0, newpoint+1);
 				iunion[iD] = 1;
@@ -164,19 +187,13 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	double fieldys[maxind];
     xy *ABCDpix;
 
+	// assume the scale has already been checked by the caller.
+	// if (!check_scale(iA, iB, params)) return;
+
     Ax = xy_refx(params->field, iA);
     Ay = xy_refy(params->field, iA);
     Bx = xy_refx(params->field, iB);
     By = xy_refy(params->field, iB);
-
-	dx = Bx - Ax;
-	dy = By - Ay;
-	scale = dx*dx + dy*dy;
-
-	if ((scale < square(params->minAB)) || (scale > square(params->maxAB))) {
-		//fprintf(stderr, "Quad scale %g: not in allowable range [%g, %g].\n", scale, params->minAB, params->maxAB);
-		return;
-	}
 
     ABCDpix = mk_xy(DIM_QUADS);
 
@@ -184,6 +201,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     xy_sety(ABCDpix, 0, Ay);
     xy_setx(ABCDpix, 1, Bx);
     xy_sety(ABCDpix, 1, By);
+
+	dx = Bx - Ax;
+	dy = By - Ay;
+	scale = dx*dx + dy*dy;
 
     costheta = (dx + dy) / scale;
     sintheta = (dy - dx) / scale;
