@@ -796,8 +796,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	verify_hit(startree, mo, p->field, verify_dist2,
 			   &matches, &unmatches, &conflicts);
 
-	fprintf(stderr, "    field %i (%i agree): verifying: overlap %f: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-			p->fieldnum, n, (matches - conflicts) / (double)mo->ninfield, mo->ninfield, matches, unmatches, conflicts);
+	fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f %%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+			p->fieldnum, n, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
 	fflush(stderr);
 
 	winner = (n >= nagree);
@@ -1015,9 +1015,8 @@ void* solvethread_run(void* varg) {
 							int matches, unmatches, conflicts;
 							verify_hit(startree, mo, solver.field, verify_dist2,
 									   &matches, &unmatches, &conflicts);
-							fprintf(stderr, "    field %i (%i agree): verifying: overlap %f: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-									solver.fieldnum, pl_size(list), (matches - conflicts) / (double)mo->ninfield, mo->ninfield,
-									matches, unmatches, conflicts);
+							fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f %%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+									solver.fieldnum, pl_size(list), 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
 							fflush(stderr);
 						}
 

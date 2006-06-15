@@ -298,8 +298,8 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	memcpy(mocopy, &mo, sizeof(MatchObj));
 	verify_hit(startree, mocopy, thisfield, verify_dist2, &matches, &unmatches, &conflicts);
 	if (verbose) {
-		fprintf(stderr, "    Verify: %i matches, %i unmatches, %i conflicts.\n",
-				matches, unmatches, conflicts);
+		fprintf(stderr, "    Verify: %4.1f %%: %i matches, %i unmatches, %i conflicts.\n",
+				100.0 * mocopy->overlap, matches, unmatches, conflicts);
 	}
 	hitlist_healpix_compute_vector(mocopy);
 	if (verbose) {
