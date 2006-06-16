@@ -374,8 +374,16 @@ int main(int argc, char *argv[]) {
 			printf("%i, ", il_get(neglist, i));
 		printf("];\n");
 	}
-
 	printf("\n");
+	for (thresh=TL; thresh<=TH; thresh++) {
+		truelist = pl_get(truelists, thresh-TL);
+		printf("Threshold=%i: solved:\n  [ ", thresh);
+		for (i=0; i<il_size(truelist); i++)
+			printf("%i, ", il_get(truelist, i));
+		printf("];\n");
+	}
+	printf("\n");
+
 	for (thresh=TL; thresh<=TH; thresh++) {
 		int right, wrong, unsolved, total;
 		double pct;
