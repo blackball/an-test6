@@ -358,7 +358,7 @@ void write_field(hitlist* hl,
 				continue;
 			for (i=0; i<pl_size(list); i++) {
 				MatchObj* mo = pl_get(list, i);
-				if (mo->overlap > overlap_needed) {
+				if (mo->overlap >= overlap_needed) {
 					gotit = TRUE;
 					break;
 				}
