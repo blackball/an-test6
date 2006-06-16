@@ -1041,19 +1041,17 @@ void* solvethread_run(void* varg) {
 					int k;
 					for (k=0; k<pl_size(list); k++) {
 						MatchObj* mo = pl_get(list, k);
-						/*
-						//(verification should already have been run on any that agree)
 						// run verification on any of the matches that haven't
 						// already been done.
-						if (mo->overlap == 0.0) {
-						int matches, unmatches, conflicts;
-						verify_hit(startree, mo, solver.field, verify_dist2,
-						&matches, &unmatches, &conflicts);
-						fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f %%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-						solver.fieldnum, pl_size(list), 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
-						fflush(stderr);
+ 						if (mo->overlap == 0.0) {
+							int matches, unmatches, conflicts;
+							verify_hit(startree, mo, solver.field, verify_dist2,
+									   &matches, &unmatches, &conflicts);
+							fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+									solver.fieldnum, pl_size(list), 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
+							fflush(stderr);
 						}
-						*/
+
 						sumoverlap += mo->overlap;
 						if (mo->overlap > maxoverlap)
 							maxoverlap = mo->overlap;
