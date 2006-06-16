@@ -38,6 +38,8 @@ struct match_struct {
 };
 typedef struct match_struct MatchObj;
 
+void matchobj_compute_overlap(MatchObj* mo);
+
 #define MATCH_VECTOR_SIZE 6
 
 #define mk_MatchObj() ((MatchObj *)calloc(1, sizeof(MatchObj)))
