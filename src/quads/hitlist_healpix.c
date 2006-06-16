@@ -9,11 +9,17 @@
 #include "intmap.h"
 #include "mathutil.h"
 
+int hitlist_healpix_count_lists(hitlist* hl) {
+	return pl_size(hl->agreelist);
+}
+
 void hitlist_healpix_print_dists_to_lists(hitlist* hlist, MatchObj* match) {
 	int i, j;
 	for (i=0; i<pl_size(hlist->agreelist); i++) {
 		double mindist = 1e300;
 		il* agree = pl_get(hlist->agreelist, i);
+		if (!agree)
+			continue;
 		for (j=0; j<il_size(agree); j++) {
 			int ind = il_get(agree, j);
 			MatchObj* mo = pl_get(hlist->matchlist, ind);
@@ -53,14 +59,15 @@ pl* hitlist_healpix_copy_list(hitlist* hlist, int agreelistindex) {
 	il* agree;
 	int i, N, ind;
 	pl* copy;
-	agree = (il*)pl_get(hlist->agreelist, agreelistindex);
+	agree = pl_get(hlist->agreelist, agreelistindex);
+	if (!agree) return NULL;
 	// shallow copy.
 	copy = pl_new(32);
 	N = il_size(agree);
 	for (i=0; i<N; i++) {
 		MatchObj* mo;
 		ind = il_get(agree, i);
-		mo = (MatchObj*)pl_get(hlist->matchlist, ind);
+		mo = pl_get(hlist->matchlist, ind);
 		pl_append(copy, mo);
 	}
 	return copy;
@@ -88,7 +95,7 @@ void hitlist_healpix_histogram_agreement_size(hitlist* hl, int* hist, int Nhist)
 	int N;
 	M = pl_size(hl->agreelist);
 	for (m=0; m<M; m++) {
-		il* lst = (il*)pl_get(hl->agreelist, m);
+		il* lst = pl_get(hl->agreelist, m);
 		if (!lst) continue;
 		N = il_size(lst);
 		if (N >= Nhist)
@@ -387,7 +394,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match,
 				// merge lists.
 				il* agreelist;
 				int a, A;
-				agreelist = (il*)pl_get(hlist->agreelist, agreeind);
+				agreelist = pl_get(hlist->agreelist, agreeind);
 				A = il_size(agreelist);
 				// go through this agreement list and tell all its members that they
 				// now belong to mergelist.

@@ -55,6 +55,9 @@ struct matchfile {
 };
 typedef struct matchfile matchfile;
 
+void matchobj_compute_overlap(MatchObj* mo);
+
+
 matchfile* matchfile_open_for_writing(char* fn);
 
 int matchfile_write_header(matchfile* m);

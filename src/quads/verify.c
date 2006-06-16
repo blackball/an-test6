@@ -123,9 +123,9 @@ void verify_hit(kdtree_t* startree,
 	kdtree_free(itree);
 	kdtree_free_query(res);
 
-	mo->noverlap = matches - conflicts;
+	mo->noverlap = matches; // - conflicts;
 	mo->ninfield = NI;
-	mo->overlap = (matches - conflicts) / (double)NI;
+	matchobj_compute_overlap(mo);
 
 	if (pmatches)
 		*pmatches = matches;

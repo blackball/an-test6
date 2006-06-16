@@ -7,6 +7,15 @@
 #include "fitsioutils.h"
 #include "ioutils.h"
 
+void matchobj_compute_overlap(MatchObj* mo) {
+	if (!mo->ninfield) {
+		fprintf(stderr, "Warning: matchobj_compute_overlap: ninfield = 0.\n");
+		mo->overlap = 0.0;
+		return;
+	}
+	mo->overlap = mo->noverlap / (double)mo->ninfield;
+}
+
 matchfile* new_matchfile() {
 	matchfile* mf = calloc(1, sizeof(matchfile));
 	if (!mf) {
@@ -355,7 +364,7 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 int matchfile_read_matches(matchfile* mf, MatchObj* mo, 
 						   uint offset, uint n) {
 	int c;
-
+	int i;
 	if (!matchfile_fitstruct_inited)
 		init_matchfile_fitstruct();
 
@@ -371,6 +380,8 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 			 ((unsigned char*)mo) + matchfile_fitstruct[c].offset,
 			 sizeof(MatchObj));
 	}
+	for (i=0; i<n; i++)
+		matchobj_compute_overlap(mo + i);
 	return 0;
 }
 

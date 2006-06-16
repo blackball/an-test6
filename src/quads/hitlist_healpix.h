@@ -78,6 +78,7 @@ struct hitlist_struct {
 };
 typedef struct hitlist_struct hitlist;
 
+int hitlist_healpix_count_lists(hitlist* hl);
 
 void hitlist_healpix_compute_vector(MatchObj* mo);
 
