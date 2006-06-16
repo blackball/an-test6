@@ -411,9 +411,9 @@ int main(int argc, char *argv[]) {
 	printf("\n\n");
 
 	printf("Largest overlap of an incorrect match: %4.1f%%.\n",
-		   overlap_highwrong);
+		   100.0 * overlap_highwrong);
 	printf("Smallest overlap of a correct match: %4.1f%%.\n",
-		   overlap_lowcorrect);
+		   100.0 * overlap_lowcorrect);
 
 	printf("Finding field centers...\n");
 	fflush(stdout);
