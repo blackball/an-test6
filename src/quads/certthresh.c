@@ -257,7 +257,8 @@ int main(int argc, char *argv[]) {
 					if (dist2 > (radius2 * 1.1)) {
 						fprintf(stderr, "\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
 								fieldnum, rac, decc, arc);
-						fprintf(stderr, "rdls %i is (%g, %g).\n", j, rad2deg(ra), rad2deg(dec));
+						fprintf(stderr, "rdls %i is (%g, %g).  Overlap %4.1f%%\n", j, rad2deg(ra), rad2deg(dec),
+								100.0 * mo->overlap);
 						err = TRUE;
 						break;
 					}
@@ -297,14 +298,14 @@ int main(int argc, char *argv[]) {
 				} else if (warn) {
 					warning++;
 					warnings[fieldnum]++;
-					if ((mo->overlap > 0.0) && (mo->overlap < overlap_lowcorrect))
+					if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
 						overlap_lowcorrect = mo->overlap;
 				} else {
 					corrects[fieldnum]++;
 					correct++;
 					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%%\n",
 							fieldnum, rac, decc, arc, 100.0 * mo->overlap);
-					if ((mo->overlap > 0.0) && (mo->overlap < overlap_lowcorrect))
+					if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
 						overlap_lowcorrect = mo->overlap;
 				}
 
