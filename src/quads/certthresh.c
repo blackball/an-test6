@@ -64,6 +64,9 @@ int main(int argc, char *argv[]) {
 	il* wrongs;
 	il* unsolveds;
 
+	double overlap_lowcorrect = 1.0;
+	double overlap_highwrong = 0.0;
+
 	int TL = 3;
 	int TH = 10;
 
@@ -289,14 +292,20 @@ int main(int argc, char *argv[]) {
 				if (err) {
 					incorrect++;
 					incorrects[fieldnum]++;
+					if (mo->overlap > overlap_highwrong)
+						overlap_highwrong = mo->overlap;
 				} else if (warn) {
 					warning++;
 					warnings[fieldnum]++;
+					if ((mo->overlap > 0.0) && (mo->overlap < overlap_lowcorrect))
+						overlap_lowcorrect = mo->overlap;
 				} else {
 					corrects[fieldnum]++;
 					correct++;
-					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, noverlap %i\n",
-							fieldnum, rac, decc, arc, (int)mo->noverlap);
+					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%%\n",
+							fieldnum, rac, decc, arc, 100.0 * mo->overlap);
+					if ((mo->overlap > 0.0) && (mo->overlap < overlap_lowcorrect))
+						overlap_lowcorrect = mo->overlap;
 				}
 
 				//free_MatchObj(mo);
