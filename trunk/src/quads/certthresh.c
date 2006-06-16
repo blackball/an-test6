@@ -410,6 +410,11 @@ int main(int argc, char *argv[]) {
 	}
 	printf("\n\n");
 
+	printf("Largest overlap of an incorrect match: %4.1f%%.\n",
+		   overlap_highwrong);
+	printf("Smallest overlap of a correct match: %4.1f%%.\n",
+		   overlap_lowcorrect);
+
 	printf("Finding field centers...\n");
 	fflush(stdout);
 	fieldcenters = malloc(2 * nfields * sizeof(double));
