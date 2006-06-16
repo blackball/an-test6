@@ -11,7 +11,7 @@
 #include "matchfile.h"
 #include "rdlist.h"
 
-char* OPTIONS = "hR:A:B:n:t:f:L:H:";
+char* OPTIONS = "hR:A:B:n:t:f:L:H:b:C:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
@@ -22,7 +22,9 @@ void printHelp(char* progname) {
 			"   [-H <agree-threshold-low>]  (default 10)\n"
 			"   [-n <negative-fields-rdls>]"
 			"   [-f <false-positive-fields-rdls>]\n"
-			"   [-t <true-positive-fields-rdls>]\n\n",
+			"   [-t <true-positive-fields-rdls>]\n"
+			"   [-b <bin-size>]: histogram overlap %% into bins of this size\n"
+			"   [-C <number-of-RDLS-stars-to-compute-center>]\n\n",
 			progname);
 }
 
@@ -67,6 +69,13 @@ int main(int argc, char *argv[]) {
 	double overlap_lowcorrect = 1.0;
 	double overlap_highwrong = 0.0;
 
+	double binsize = 0.0;
+	int Nbins = 0;
+	int* overlap_hist_right = NULL;
+	int* overlap_hist_wrong = NULL;
+
+	int Ncenter = 0;
+
 	int TL = 3;
 	int TH = 10;
 
@@ -75,11 +84,17 @@ int main(int argc, char *argv[]) {
 		case 'h':
 			printHelp(progname);
 			return (HELP_ERR);
+		case 'b':
+			binsize = atof(optarg);
+			break;
 		case 'A':
 			firstfield = atoi(optarg);
 			break;
 		case 'B':
 			lastfield = atoi(optarg);
+			break;
+		case 'C':
+			Ncenter = atoi(optarg);
 			break;
 		case 'L':
 			TL = atoi(optarg);
@@ -114,6 +129,12 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "You must specify an RDLS file!\n");
 		printHelp(progname);
 		exit(-1);
+	}
+
+	if (binsize != 0.0) {
+		Nbins = (int)ceil(100.0 / binsize);
+		overlap_hist_right = calloc(Nbins, sizeof(int));
+		overlap_hist_wrong = calloc(Nbins, sizeof(int));
 	}
 
 	fprintf(stderr, "Reading rdls file...\n");
@@ -164,8 +185,6 @@ int main(int argc, char *argv[]) {
 			double radius2;
 			dl* rdlist;
 			int j, M;
-			bool warn = FALSE;
-			bool err  = FALSE;
 			double xavg, yavg, zavg;
 			double fieldrad2;
 			uint k;
@@ -186,6 +205,8 @@ int main(int argc, char *argv[]) {
 
 			for (k=0; k<mf->nrows; k++) {
 				MatchObj* mo;
+				bool warn = FALSE;
+				bool err  = FALSE;
 				mo = matchfile_buffered_read_match(mf);
 				if (!mo) {
 					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
@@ -309,6 +330,16 @@ int main(int argc, char *argv[]) {
 						overlap_lowcorrect = mo->overlap;
 				}
 
+				if (binsize != 0.0) {
+					int bin = rint(mo->overlap / binsize);
+					if (bin < 0) bin = 0;
+					if (bin >= Nbins) bin = Nbins-1;
+					if (err)
+						overlap_hist_wrong[bin]++;
+					else
+						overlap_hist_right[bin]++;
+				}
+
 				//free_MatchObj(mo);
 			}
 			free(me.indexpath);
@@ -416,6 +447,18 @@ int main(int argc, char *argv[]) {
 	printf("Smallest overlap of a correct match: %4.1f%%.\n",
 		   100.0 * overlap_lowcorrect);
 
+	printf("overlap_hist_wrong = [ ");
+	for (i=0; i<Nbins; i++) {
+		printf("%i, ", overlap_hist_wrong[i]);
+	}
+	printf("]");
+
+	printf("overlap_hist_right = [ ");
+	for (i=0; i<Nbins; i++) {
+		printf("%i, ", overlap_hist_right[i]);
+	}
+	printf("]");
+
 	printf("Finding field centers...\n");
 	fflush(stdout);
 	fieldcenters = malloc(2 * nfields * sizeof(double));
@@ -431,6 +474,8 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 		M = dl_size(rdlist) / 2;
+		if (Ncenter && Ncenter < M)
+			M = Ncenter;
 		xavg = yavg = zavg = 0.0;
 		for (j=0; j<M; j++) {
 			double x, y, z, ra, dec;
@@ -536,6 +581,9 @@ int main(int argc, char *argv[]) {
 	free(incorrects);
 
 	free(fieldcenters);
+
+	free(overlap_hist_right);
+	free(overlap_hist_wrong);
 
 	return 0;
 }
