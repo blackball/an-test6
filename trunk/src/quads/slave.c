@@ -75,9 +75,10 @@ int maxnagree = 0;
 double agreetol = 0.0;
 
 bool do_verify = FALSE;
-int nagree_toverify = 0;
-double verify_dist2 = 0.0;
+int nagree_toverify;
+double verify_dist2;
 double overlap_tosolve;
+int min_ninfield;
 
 int do_correspond = 1;
 
@@ -175,6 +176,7 @@ int main(int argc, char *argv[]) {
 		verify_dist2 = 0.0;
 		nagree_toverify = 0;
 		overlap_tosolve = 0.0;
+		min_ninfield = 0;
 
 		if (read_parameters()) {
 			break;
@@ -209,6 +211,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
 		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
+		fprintf(stderr, "min_ninfield %i\n", min_ninfield);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
@@ -469,6 +472,8 @@ int read_parameters() {
 			nagree_toverify = atoi(nextword);
 		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
 			overlap_tosolve = atof(nextword);
+		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
+			min_ninfield = atoi(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
@@ -773,6 +778,12 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		if (mo->overlap >= overlap_tosolve)
 			solved = TRUE;
 		pl_append(my->verified, mo);
+
+		if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
+			fprintf("    Match has only %i index stars in the field; %i required.\n",
+					mo->ninfield, min_ninfield);
+			solved = FALSE;
+		}
 
 		// we got enough overlaps to solve the field.
 		if (solved) {
