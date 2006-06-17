@@ -630,17 +630,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 
 	nextfld = il_get(fieldlist, index);
 
-	/*
-	  fprintf(stderr, "Write_hits: fieldnum=%i.\n", fieldnum);
-	  fprintf(stderr, "Cache: [ ");
-	  for (k=0; k<bl_size(cached); k++) {
-	  cached_hits* ch = bl_access(cached, k);
-	  fprintf(stderr, "%i ", ch->fieldnum);
-	  }
-	  fprintf(stderr, "]\n");
-	  fprintf(stderr, "nextfld=%i\n", nextfld);
-	*/
-
 	if (nextfld == fieldnum) {
 		cached_hits ch;
 		cached_hits* cache;
@@ -658,12 +647,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 
 		for (;;) {
 			// write it!
-
-			/*
-			  fprintf(stderr, "Writing field %i: matches=%p, m_e=(%s,%s).\n",
-			  cache->fieldnum, cache->matches,
-			  cache->me.indexpath, cache->me.fieldpath);
-			*/
 
 			if (cache->matches) {
 				if (matchfile_start_table(mf, &cache->me) ||
@@ -699,8 +682,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 			nextfld = il_get(fieldlist, index);
 			cache = bl_access(cached, 0);
 
-			//fprintf(stderr, "Nextfld=%i, cached field=%i.\n", nextfld, cache->fieldnum);
-
 			if (cache->fieldnum != nextfld)
 				break;
 		}
@@ -727,23 +708,8 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		} else
 			cache.matches = NULL;
 
-		/*
-		  fprintf(stderr, "Caching field %i: matches=%p, m_e=(%s,%s).\n",
-		  cache.fieldnum, cache.matches, 
-		  cache.me.indexpath, cache.me.fieldpath);
-		*/
-
 		bl_insert_sorted(cached, &cache, cached_hits_compare);
 	}
-
-	/*
-	  fprintf(stderr, "Cache: [ ");
-	  for (k=0; k<bl_size(cached); k++) {
-	  cached_hits* ch = bl_access(cached, k);
-	  fprintf(stderr, "%i ", ch->fieldnum);
-	  }
-	  fprintf(stderr, "]\n");
-	*/
 
  bailout:
 	if (pthread_mutex_unlock(&matchfile_mutex)) {
@@ -757,7 +723,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 int handlehit(solver_params* p, MatchObj* mo) {
 	int listind;
 	int n = 0;
-	//bool winner = FALSE;
 	threadargs* my = p->userdata;
 	int matches, unmatches, conflicts;
 
@@ -918,6 +883,7 @@ void* solvethread_run(void* varg) {
 		}
 		if (!thisfield) {
 			// HACK - why is this happening? QFITS + multithreading interaction bug?
+			// or running out of address space?
 			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
 			write_hits(fieldnum, NULL, NULL);
 			continue;
@@ -991,7 +957,15 @@ void* solvethread_run(void* varg) {
 			if (my->winning_listind == -1) {
 				// didn't solve it...
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
-				write_hits(fieldnum, NULL, NULL);
+
+				// ... but write the matches for which verification was run
+				// to collect good stats.
+				if (do_verify) {
+					// write 'em!
+					write_hits(fieldnum, &my->me, my->verified);
+				} else {
+					write_hits(fieldnum, NULL, NULL);
+				}
 			} else {
 				double maxoverlap = 0;
 				double sumoverlap = 0;
