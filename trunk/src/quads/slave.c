@@ -78,7 +78,6 @@ bool do_verify = FALSE;
 int nagree_toverify = 0;
 double verify_dist2 = 0.0;
 double overlap_tosolve;
-//double overlap_toconfirm;
 
 int do_correspond = 1;
 
@@ -175,7 +174,6 @@ int main(int argc, char *argv[]) {
 		ycolname = strdup("COLC");
 		verify_dist2 = 0.0;
 		nagree_toverify = 0;
-		//overlap_toconfirm = 0.0;
 		overlap_tosolve = 0.0;
 
 		if (read_parameters()) {
@@ -210,7 +208,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
-		//fprintf(stderr, "overlap_toconfirm %f\n", overlap_toconfirm);
 		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
@@ -439,7 +436,6 @@ int read_parameters() {
 					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    nagree_toverify <nagree>\n"
 					"    overlap_tosolve <overlap-fraction>\n"
-					//"    overlap_toconfirm <overlap-fraction>\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
@@ -473,10 +469,6 @@ int read_parameters() {
 			nagree_toverify = atoi(nextword);
 		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
 			overlap_tosolve = atof(nextword);
-			/*
-			  } else if (is_word(buffer, "overlap_toconfirm ", &nextword)) {
-			  overlap_toconfirm = atof(nextword);
-			*/
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
@@ -795,39 +787,6 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
 			p->fieldnum, n, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
 	fflush(stderr);
-
-
-
-	/*
-	  winner = (n >= nagree);
-	  // does this winning set of agreeing matches need confirmation?
-	  if (winner && (overlap_toconfirm > 0.0)) {
-	  if (mo->overlap >= overlap_toconfirm) {
-	  // enough stars overlap to confirm this set of agreeing matches.
-	  my->winning_listind = listind;
-	  p->quitNow = TRUE;
-	  } else {
-	  if (n == nagree_toverify) {
-	  // HACK - should check the other matches to see if one
-	  // of them could confirm.
-	  }
-	  // veto!
-	  fprintf(stderr, "Veto: found %i agreeing matches, but verification failed (%f overlap < %f required).\n",
-	  n, mo->overlap, overlap_toconfirm);
-	  fflush(stderr);
-	  p->quitNow = FALSE;
-	  my->winning_listind = -1;
-	  }
-	  return n;
-	  }
-	  if ((overlap_tosolve > 0.0) && (mo->overlap >= overlap_tosolve)) {
-	  // this single hit causes enough overlaps to solve the field.
-	  fprintf(stderr, "Found a match that produces %f overlapping stars.\n", mo->overlap);
-	  fflush(stderr);
-	  my->winning_listind = listind;
-	  p->quitNow = TRUE;
-	  }
-	*/
 
 	if (overlap_tosolve > 0.0) {
 		bool solved = FALSE;

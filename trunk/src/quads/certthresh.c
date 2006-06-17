@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
 				}
 
 				if (binsize != 0.0) {
-					int bin = rint(mo->overlap / binsize);
+					int bin = rint(100.0 * mo->overlap / binsize);
 					if (bin < 0) bin = 0;
 					if (bin >= Nbins) bin = Nbins-1;
 					if (err)
@@ -447,17 +447,17 @@ int main(int argc, char *argv[]) {
 	printf("Smallest overlap of a correct match: %4.1f%%.\n",
 		   100.0 * overlap_lowcorrect);
 
-	printf("overlap_hist_wrong = [ ");
+	printf("\noverlap_hist_wrong = [ ");
 	for (i=0; i<Nbins; i++) {
 		printf("%i, ", overlap_hist_wrong[i]);
 	}
-	printf("]");
+	printf("]\n");
 
 	printf("overlap_hist_right = [ ");
 	for (i=0; i<Nbins; i++) {
 		printf("%i, ", overlap_hist_right[i]);
 	}
-	printf("]");
+	printf("]\n\n");
 
 	printf("Finding field centers...\n");
 	fflush(stdout);
