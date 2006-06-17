@@ -13,7 +13,7 @@
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -25,6 +25,7 @@ void printHelp(char* progname) {
 			"   [-m agreement-tolerance-in-arcsec]\n"
  			"   [-n matches_needed_to_agree]\n"
 			"   [-o overlap_needed_to_solve]\n"
+			"   [-f minimum-field-objects-needed-to-solve]\n"
 			"\nIf filename FLUSH is specified, agreeing matches will"
 			" be written out.\n",
 			progname);
@@ -53,6 +54,7 @@ il* solved;
 il* unsolved;
 
 double overlap_needed = 0.0;
+int min_ninfield = 0;
 
 int* agreehist = NULL;
 int  sizeagreehist = 0;
@@ -101,6 +103,9 @@ int main(int argc, char *argv[]) {
 			*/
 		case 'o':
 			overlap_needed = atof(optarg);
+			break;
+		case 'f':
+			min_ninfield = atoi(optarg);
 			break;
 		case 'M':
 			agreefname = optarg;
@@ -230,11 +235,13 @@ int main(int argc, char *argv[]) {
 			if (mes[i].fieldnum != fieldnum)
 				continue;
 
-			if (leftovers || agree) {
-				fprintf(stderr, "fieldnum %i, parity %i, index %s, field %s, codetol %g\n",
-					   mes[i].fieldnum, (int)mes[i].parity, mes[i].indexpath,
-					   mes[i].fieldpath, mes[i].codetol);
-			}
+			/*
+			  if (leftovers || agree) {
+			  fprintf(stderr, "fieldnum %i, parity %i, index %s, field %s, codetol %g\n",
+			  mes[i].fieldnum, (int)mes[i].parity, mes[i].indexpath,
+			  mes[i].fieldpath, mes[i].codetol);
+			  }
+			*/
 
 			for (k=0; k<mfs[i]->nrows; k++) {
 				mo = matchfile_buffered_read_match(mfs[i]);
@@ -358,7 +365,8 @@ void write_field(hitlist* hl,
 				continue;
 			for (i=0; i<pl_size(list); i++) {
 				MatchObj* mo = pl_get(list, i);
-				if (mo->overlap >= overlap_needed) {
+				if ((mo->overlap >= overlap_needed) &&
+					(mo->ninfield > min_ninfield)) {
 					gotit = TRUE;
 					break;
 				}

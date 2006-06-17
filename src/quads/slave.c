@@ -780,7 +780,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		pl_append(my->verified, mo);
 
 		if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
-			fprintf("    Match has only %i index stars in the field; %i required.\n",
+			fprintf(stderr, "    Match has only %i index stars in the field; %i required.\n",
 					mo->ninfield, min_ninfield);
 			solved = FALSE;
 		}
