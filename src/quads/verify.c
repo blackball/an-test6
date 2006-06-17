@@ -73,6 +73,24 @@ void verify_hit(kdtree_t* startree,
 		}
 	}
 
+	if (!NI) {
+		// I don't know HOW this happens, but I've seen it...
+		fprintf(stderr, "Freakishly, NI=0.\n");
+		mo->ninfield = 0;
+		mo->noverlap = 0;
+		matchobj_compute_overlap(mo);
+
+		if (pmatches)
+			*pmatches = 0;
+		if (punmatches)
+			*punmatches = NF;
+		if (pconflicts)
+			*pconflicts = 0;
+
+		kdtree_free_query(res);
+		return;
+	}
+
 	/*
 	  Comment for the picky: in the rangesearch below, we grab an range
 	  around each field star (at the moment this range is typically set to
