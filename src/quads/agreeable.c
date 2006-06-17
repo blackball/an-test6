@@ -355,6 +355,11 @@ void write_field(hitlist* hl,
 
 	nbest = hitlist_healpix_count_best(hl);
 
+	hits_field_init(&fieldhdr);
+	fieldhdr.field = fieldnum;
+	fieldhdr.nmatches = hitlist_healpix_count_all(hl);
+	fieldhdr.nagree = nbest;
+
 	if (overlap_needed > 0.0) {
 		int nlists = hitlist_healpix_count_lists(hl);
 		for (j=0; j<nlists; j++) {
@@ -390,11 +395,6 @@ void write_field(hitlist* hl,
 			//best = hitlist_get_all_above_size(hl, min_matches_to_agree);
 		}
 	}
-
-	hits_field_init(&fieldhdr);
-	fieldhdr.field = fieldnum;
-	fieldhdr.nmatches = hitlist_healpix_count_all(hl);
-	fieldhdr.nagree = nbest;
 
 	if (!issolved) {
 		il_append(unsolved, fieldnum);
@@ -500,7 +500,7 @@ void write_field(hitlist* hl,
 			fprintf(stderr, "Failed to fix agreeing matchfile header.\n");
 		}
 	}
-
+	nbest = pl_size(best);
 	starids  = malloc(nbest * 4 * sizeof(uint));
 	fieldids = malloc(nbest * 4 * sizeof(uint));
 	Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
