@@ -78,6 +78,7 @@ bool do_verify = FALSE;
 int nagree_toverify;
 double verify_dist2;
 double overlap_tosolve;
+double overlap_tokeep;
 int min_ninfield;
 
 int do_correspond = 1;
@@ -104,7 +105,6 @@ int Nagreehist;
 
 
 char* get_pathname(char* fname) {
-	//char resolved[PATH_MAX];
 	char* resolved = malloc(PATH_MAX);
 	if (!realpath(fname, resolved)) {
 		fprintf(stderr, "Couldn't resolve real path of %s: %s\n", fname, strerror(errno));
@@ -112,7 +112,6 @@ char* get_pathname(char* fname) {
 	}
 	resolved = realloc(resolved, strlen(resolved) + 1);
 	return resolved;
-	//return strdup(resolved);
 }
 
 int main(int argc, char *argv[]) {
@@ -176,6 +175,7 @@ int main(int argc, char *argv[]) {
 		verify_dist2 = 0.0;
 		nagree_toverify = 0;
 		overlap_tosolve = 0.0;
+		overlap_tokeep = 0.0;
 		min_ninfield = 0;
 
 		if (read_parameters()) {
@@ -211,6 +211,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
 		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
+		fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
 		fprintf(stderr, "min_ninfield %i\n", min_ninfield);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
@@ -439,6 +440,7 @@ int read_parameters() {
 					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    nagree_toverify <nagree>\n"
 					"    overlap_tosolve <overlap-fraction>\n"
+					"    overlap_tokeep <overlap-fraction>\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
@@ -472,6 +474,8 @@ int read_parameters() {
 			nagree_toverify = atoi(nextword);
 		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
 			overlap_tosolve = atof(nextword);
+		} else if (is_word(buffer, "overlap_tokeep ", &nextword)) {
+			overlap_tokeep = atof(nextword);
 		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
 			min_ninfield = atoi(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
@@ -762,8 +766,9 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		bool solved = FALSE;
 		if (n == nagree_toverify) {
 			// run verification on the other match.
+			MatchObj* mo1 = NULL;
 			pl* list = hitlist_healpix_copy_list(my->hits, listind);
-			MatchObj* mo1 = pl_get(list, 0);
+			mo1 = pl_get(list, 0);
 			if (mo1->overlap == 0) {
 				verify_hit(startree, mo1, p->field, verify_dist2,
 						   &matches, &unmatches, &conflicts);
@@ -773,11 +778,14 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			}
 			if (mo1->overlap >= overlap_tosolve)
 				solved = TRUE;
-			pl_append(my->verified, mo1);
+			if (mo1->overlap >= overlap_tokeep)
+				pl_append(my->verified, mo1);
 		}
 		if (mo->overlap >= overlap_tosolve)
 			solved = TRUE;
-		pl_append(my->verified, mo);
+
+		if (mo->overlap >= overlap_tokeep)
+			pl_append(my->verified, mo);
 
 		if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
 			fprintf(stderr, "    Match has only %i index stars in the field; %i required.\n",
@@ -857,10 +865,6 @@ void* solvethread_run(void* varg) {
 	else
 		my->me.fieldpath = fieldfname;
 	my->me.codetol = codetol;
-	/*
-	  my->me.fieldunits_lower = funits_lower;
-	  my->me.fieldunits_upper = funits_upper;
-	*/
 
 	if (do_verify)
 		my->verified = pl_new(32);
