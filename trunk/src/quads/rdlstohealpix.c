@@ -10,7 +10,7 @@
 #include "rdlist.h"
 #include "bl.h"
 
-char* OPTIONS = "hq";
+char* OPTIONS = "hqf:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options]\n"
@@ -56,6 +56,7 @@ int main(int argc, char** args) {
 	  exit(-1);
   }
 
+  fprintf(stderr, "Opening RDLS file %s...\n", filename);
   rdls = rdlist_open(filename);
   if (!rdls) {
 	  fprintf(stderr, "Failed to open RDLS file.\n");
