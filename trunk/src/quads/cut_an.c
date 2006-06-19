@@ -161,11 +161,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
 		exit(-1);
 	}
-	{
-		char val[32];
-		sprintf(val, "%u", bighp);
-		qfits_header_add(cat->header, "HEALPIX", val, "Which big healpix does this catalog cover?", NULL);
-	}
+	cat->healpix = bighp;
 
 	qfits_header_add(cat->header, "COMMENT", "cut_an command line:", NULL, NULL);
 	fits_add_args(cat->header, args, argc);

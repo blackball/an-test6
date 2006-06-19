@@ -34,6 +34,8 @@ int catalog_write_to_file(catalog* cat, char* fn)
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_add(hdr, "NSTARS", val, "Number of stars used.", NULL);
 	qfits_header_add(hdr, "AN_FILE", CATALOG_AN_FILETYPE, "This file has a list of object positions.", NULL);
+	sprintf(val, "%u", cat->healpix);
+	qfits_header_add(hdr, "HEALPIX", val, "The healpix covered by this catalog.", NULL);
 	qfits_header_dump(hdr, catfid);
 	qfits_header_destroy(hdr);
 
@@ -84,6 +86,8 @@ int catalog_write_header(catalog* cat)
 	// fill in the real values...
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_mod(cat->header, "NSTARS", val, "Number of stars.");
+	sprintf(val, "%u", cat->healpix);
+	qfits_header_mod(cat->header, "HEALPIX", val, "Healpix covered by this catalog.");
 	datasize = DIM_STARS * sizeof(double);
 	ncols = 1;
 	nrows = cat->numstars;
@@ -188,6 +192,7 @@ catalog* catalog_open(char* catfn, int modifiable)
 		goto bail;
 	}
 	cat->numstars = qfits_header_getint(cat->header, "NSTARS", -1);
+	cat->healpix = qfits_header_getint(cat->header, "HEALPIX", -1);
 	if (fits_check_endian(cat->header) ||
 		fits_check_double_size(cat->header)) {
 		fprintf(stderr, "File %s was written with wrong endianness or double size.\n", catfn);
@@ -244,7 +249,7 @@ catalog* catalog_open_for_writing(char* fn)
 		fprintf(stderr, "catalog_open_for_writing: malloc failed.\n");
 		goto bailout;
 	}
-
+	qf->healpix = -1;
 	qf->fid = fopen(fn, "wb");
 	if (!qf->fid) {
 		fprintf(stderr, "Couldn't open file %s for FITS output: %s\n", fn, strerror(errno));
@@ -257,6 +262,7 @@ catalog* catalog_open_for_writing(char* fn)
 	fits_add_double_size(qf->header);
 	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
 	qfits_header_add(qf->header, "AN_FILE", "OBJS", "This file has a list of object positions.", NULL);
+	qfits_header_add(qf->header, "HEALPIX", "-1", "Healpix covered by this catalog.", NULL);
 	qfits_header_add(qf->header, "COMMENT", "This is a flat array of XYZ for each catalog star.", NULL, NULL);
 	qfits_header_add(qf->header, "COMMENT", "  (ie, star position on the unit sphere)", NULL, NULL);
 	qfits_header_add(qf->header, "COMMENT", "  (stored as three native-{endian,size} doubles)", NULL, NULL);

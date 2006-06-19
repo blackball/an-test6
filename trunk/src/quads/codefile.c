@@ -10,12 +10,12 @@
 
 static codefile* new_codefile()
 {
-	codefile* cf = malloc(sizeof(codefile));
+	codefile* cf = calloc(1, sizeof(codefile));
 	if (!cf) {
-		fprintf(stderr, "Couldn't malloc a codefile struct: %s\n", strerror(errno));
+		fprintf(stderr, "Couldn't calloc a codefile struct: %s\n", strerror(errno));
 		return NULL;
 	}
-	memset(cf, 0, sizeof(codefile));
+	cf->healpix = -1;
 	return cf;
 }
 
@@ -88,6 +88,8 @@ codefile* codefile_open(char* fn, int modifiable)
 	cf->numstars = qfits_header_getint(header, "NSTARS", -1);
 	cf->index_scale = qfits_header_getdouble(header, "SCALE_U", -1.0);
 	cf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
+	cf->indexid = qfits_header_getint(header, "INDEXID", 0);
+	cf->healpix = qfits_header_getint(header, "HEALPIX", -1);
 	cf->header = header;
 
 	if ((cf->numcodes == -1) || (cf->numstars == -1) ||
@@ -162,6 +164,8 @@ codefile* codefile_open_for_writing(char* fn)
 	qfits_header_add(cf->header, "NSTARS", "0", "", NULL);
 	qfits_header_add(cf->header, "SCALE_U", "0.0", "", NULL);
 	qfits_header_add(cf->header, "SCALE_L", "0.0", "", NULL);
+	qfits_header_add(cf->header, "INDEXID", "0", "Index unique ID.", NULL);
+	qfits_header_add(cf->header, "HEALPIX", "-1", "Healpix of this index.", NULL);
 	qfits_header_add(cf->header, "COMMENT", "The first extension contains the codes ", NULL, NULL);
 	qfits_header_add(cf->header, "COMMENT", " stored as 4 native-{endian,size} doubles.", NULL, NULL);
 	qfits_header_add(cf->header, "COMMENT", " (ie, the quad location in 4-D code space.", NULL, NULL);
@@ -197,6 +201,10 @@ int codefile_write_header(codefile* cf) {
 	qfits_header_mod(cf->header, "SCALE_U", val, "Upper-bound index scale.");
 	sprintf(val, "%.10f", cf->index_scale_lower);
 	qfits_header_mod(cf->header, "SCALE_L", val, "Lower-bound index scale.");
+	sprintf(val, "%u", cf->indexid);
+	qfits_header_mod(cf->header, "INDEXID", val, "Index unique ID.");
+	sprintf(val, "%u", cf->healpix);
+	qfits_header_mod(cf->header, "HEALPIX", val, "Healpix of this index.");
 
 	datasize = DIM_CODES * sizeof(double);
 	ncols = 1;

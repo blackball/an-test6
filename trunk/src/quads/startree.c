@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
 	sprintf(val, "%u", nkeep);
 	qfits_header_add(hdr, "KEEP", val, "Number of stars kept.", NULL);
 
-	fits_copy_header(hdr, hdr, "HEALPIX");
+	fits_copy_header(cat->header, hdr, "HEALPIX");
 	qfits_header_add(hdr, "COMMENT", "startree command line:", NULL, NULL);
 	fits_add_args(hdr, argv, argc);
 

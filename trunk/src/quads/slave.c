@@ -68,6 +68,9 @@ double funits_upper = 0.0;
 double index_scale;
 double index_scale_lower;
 double index_scale_lower_factor = 0.0;
+int fieldid;
+int indexid;
+int healpix;
 
 bool agreement = FALSE;
 int nagree = 4;
@@ -156,6 +159,9 @@ int main(int argc, char *argv[]) {
 		solvedfname = NULL;
 		parity = DEFAULT_PARITY_FLIP;
 		codetol = DEFAULT_CODE_TOL;
+		fieldid = 0;
+		indexid = 0;
+		healpix = -1;
 		startdepth = 0;
 		enddepth = 0;
 		il_remove_all(fieldlist);
@@ -189,6 +195,7 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "%s params:\n", progname);
 		fprintf(stderr, "fieldfname %s\n", fieldfname);
+		fprintf(stderr, "fieldid %i\n", fieldid);
 		fprintf(stderr, "treefname %s\n", treefname);
 		fprintf(stderr, "startreefname %s\n", startreefname);
 		fprintf(stderr, "quadfname %s\n", quadfname);
@@ -278,6 +285,8 @@ int main(int argc, char *argv[]) {
 		}
 		index_scale = quadfile_get_index_scale_arcsec(quads);
 		index_scale_lower = quadfile_get_index_scale_lower_arcsec(quads);
+		indexid = quads->indexid;
+		healpix = quads->healpix;
 
         if ((index_scale_lower != 0.0) && (index_scale_lower_factor != 0.0) &&
             ((index_scale_lower_factor * index_scale) != index_scale_lower)) {
@@ -481,6 +490,8 @@ int read_parameters() {
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
+		} else if (is_word(buffer, "fieldid ", &nextword)) {
+			fieldid = atoi(nextword);
 		} else if (is_word(buffer, "match ", &nextword)) {
 			char* fname = nextword;
 			matchfname = strdup(fname);
@@ -865,6 +876,10 @@ void* solvethread_run(void* varg) {
 	else
 		my->me.fieldpath = fieldfname;
 	my->me.codetol = codetol;
+
+	my->me.fieldfile = fieldid;
+	my->me.indexid = indexid;
+	my->me.healpix = healpix;
 
 	if (do_verify)
 		my->verified = pl_new(32);
