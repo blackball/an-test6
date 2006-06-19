@@ -1,0 +1,176 @@
+\documentclass[journal]{IEEEtran}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\newcommand{\x}{\mathbf{x}}
+
+\begin{document}
+\title{A space and time efficient KD-tree data structure}
+\author{Dustin~Lang,
+        Keir~Mierle,
+        and~Sam~Roweis}% <-this % stops a space
+\maketitle
+
+\begin{abstract}
+A compact kdtree reperesentation which contains no pointers is presented. The
+key to achieving a compact pointerless kdtree is to pivot the array containing
+the data points around the split point at each level of the tree while
+building. By pivoting the data, a mere two indexes into the data array are
+required for each node in order to store the data points belonging to that
+node.  Each node (including inner nodes) contains two indexes into the data
+point array (the left and right index); all data points between the left and
+right index in the data array belong to this particular node. This means the
+points belonging to every node are stored linearly in memory, allowing
+extremely fast access by enhancing data locality. Pointers between nodes are
+also eliminated by requiring a full tree, where nodes are stored sequentially
+and node relations are functions of the node index. In addition, because of the
+pointerless nature of the kdtree, it can be stored on disk and used without
+modification with a single call to UNIX's {\texttt mmap()}. A generic ANSII C
+implementation is provided at \url{http://www.cs.utoronto.ca/~roweis/kdtree.html}.
+\end{abstract}
+
+\section{Introduction}
+\PARstart{T}{he} kdtree is a data structure which has a long history of uses in a
+wide variety of areas. It enables quick searching through $d$-dimensional data
+under a distance metric, typically Euclidean distance.  Example uses
+include finding the nearest neighbour to a query point in a dataset, or
+extracting all data points within a certain radius of a point, or even
+intersecting rays with objects in a scene as is often the case in graphics.
+Over the history of the kdtree, many different implementation flavors of have
+evolved (FIXME cite literature); e.g. some implementations operate on {\em axis
+aligned bounding boxes} (AABB's for short) while others store split locations
+and dimensions. There are also differing methods of storing which points belong
+to each node in the tree; this is the topic considered in this paper. We
+present a novel method of storing the points in a kdtree compactly in memory
+such that there are no pointers. This has several benefits, including extremely
+fast searching due to improved data locality, and the ability to write and read
+kdtree's from disk with a single call to UNIX's {\texttt mmap()}.
+
+Before describing our efficient storage mechanism, a brief overview of kdtree
+construction is given. Then we examine how to store the points in a kdtree such
+that there are no pointers, followed by a simple implementation trick learned
+in a typical freshmen algorithms course for storing a full tree without needing
+pointers.  The combination of the two allows eliminating all pointers from the
+structure.
+
+\subsection{Contributions}
+The contributions of this paper are twofold:
+\begin{itemize}
+    \item A novel kdtree datastructure which contains no pointers, is
+    memory-compact, and enhances performance by improving locality while
+    searching the tree.
+    \item An implementation of the kdtree in clean ANSI C, downloadable from
+    the web.
+\end{itemize}
+ 
+\section{KD-tree construction}
+Before getting into the details of the algorithm, a few simple definitions must
+be understood.  Consider a series of points in $\mathbb{R}^n$,
+$\x^0,\x^1,\x^2,...,\x^N$. These are the points the kdtree will index.  Notice
+indexing starts at 0.  Specific dimensions of each point are denoted $x_d$,
+where $d$ is the dimension.
+
+Each node in a kdtree, for the purposes of this paper, consists of a pointer to
+its left and rigth children, a AABB (typically two $\mathbb{R}^n$ vectors for
+the max corner and min corner) corresponding to the area of space owned by this
+node, and a list of data points which fall within the AABB. The kdtree
+structure itself consists of a pointer to the root node, the dimension of the
+data, and possibly other information such as the number of nodes and number of
+points in the tree.
+
+\subsection{Construction algorithm}
+The typical kdtree construction algorithm looks like the following, which takes
+as input an array of points $\x^0,\x^1,\x^2,...,\x^N$ and returns a kdtree:
+\begin{enumerate}
+    \item Initialize the kdtree data structure
+    \item Create a new kdtree node; if this is the root node store a pointer to
+          it in the kdtree structure
+    \item Store the current array of points in this node (all points if it is
+          the root node)
+    \item Decide which dimension to split the data in this node
+    \item Decide where along that dimension to split
+    \item Call step 2 with the data points the first half of the split (i.e.
+          recursive tree construction)
+    \item Call step 2 with the data points the second half of the split
+    \item Store pointers to the nodes created in step 6 and 7 as the left and
+          right child of this node
+\end{enumerate}
+The algorithm terminates when there are no remaining points. It is illustrated
+in figure \ref{}. Typically, the points in each node are either stored as an
+array pointed to from the node; often internal nodes do not have any points
+associated with them once the building phase is complete.
+
+\subsection{Storing the points in each node}
+Our modification to the typical kdtree algorthim presented above happens in
+steps 6 and 7. Essentially, our method consists of pivoting the entire data
+around the split dimension, allowing compact storage of the nodes and which
+points belong to each node. To understand our modification, consider an example
+data array in 2D, stored such that the values for each dimension of the data
+points are stored contiguously (i.e. column major). % XXX FIXME or is it row major?
+\begin{equation*}
+    \begin{array}{r||cccccccc}
+    \textrm{array~index}     & 0 & 1 & 2 & 3 & 4  & 5  & 6 & 7 \\
+    \textrm{original~index}  & 0 & 1 & 2 & 3 & 4  & 5  & 6 & 7 \\
+    \textrm{x}               & 6 & 2 & 1 & 6 & 1  & 3  & 1 & 9 \\
+    \textrm{y}               & 1 & 3 & 5 & 8 & 12 & 18 & 1 & 0 \\
+    \end{array}
+\end{equation*}
+Where most algorithms copy the nodes into a new array before recursing, 
+our algorithm {\em pivots} the data around the split dimension. Pivoting
+the data works as follows: For a split dimension $d$ and a split value $s$
+along the split dimension, data points with
+dimension $d$ less than $s$ are moved to the first half of the array (i.e.
+$x_d < s$, with the rest placed in the second half (i.e. where $x_d > s$).
+
+In the example array above, consider splitting on the x axis. Since we are
+enforcing a balanced tree, the median of the array along the splitting
+dimension is found (3 in this case), and all points above the median shifted to
+the right, and points below to the left. The result is below:
+\begin{equation*}
+    \begin{array}{r||cccc|cccc}
+    \textrm{array~index}     & 0 & 1 & 2 & 3  & 4  & 5 & 6 & 7 \\
+    \textrm{original~index}  & 6 & 1 & 2 & 4  & 5  & 7 & 0 & 3 \\
+    \textrm{x}               & 1 & 2 & 1 & 1  & 3  & 9 & 6 & 6 \\
+    \textrm{y}               & 1 & 3 & 5 & 12 & 18 & 0 & 1 & 8 \\
+    \end{array}
+\end{equation*}
+The vertical line in the middle of the array indicates the split between the
+data. What is important to notice is that the data is {\em physically}
+relocated in memory, such that all the data for the left child is on the left,
+and all the data for the right child is on the right. Within either half of the
+array, the order does not matter; only that the child owns that half of the
+array. Thus, we can store all the points that belong to a node as the index of
+the left and right location of the first and last points belonging to that node.
+In the case above, the left child's indexes would be $[0,3]$, and the right
+child's indexes would be $[4,7]$. 
+
+\subsection{Eliminating node pointers}
+A binary tree in which each node is stored linearly in an array such that they
+are numbered $0$ to $N$, with consecutive numbers on each level of the tree,
+has the convienent property that the left and right child of node $n$ is
+located at $2n+1$ and $2n+2$ respectively. The parent of node $n$ is located at
+$\lfloor \frac{n-1}{2} \rfloor$.
+
+%\begin{figure}
+%FIXME
+%\caption{Building the tree}
+%\end{figure}
+
+\section{Conclusion}
+The conclusion goes here.
+
+%\section*{Acknowledgment}
+%The authors would like to thank...
+
+\begin{thebibliography}{1}
+
+\bibitem{IEEEhowto:kopka}
+H.~Kopka and P.~W. Daly, \emph{A Guide to {\LaTeX}}, 3rd~ed.\hskip 1em plus
+  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
+
+\end{thebibliography}
+
+\end{document}
+
+
