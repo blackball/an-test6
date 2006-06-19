@@ -66,7 +66,7 @@ static int xylist_find_field(xylist* ls, uint field) {
 	ls->table = qfits_table_open(ls->fn, field + 1);
 	if (!ls->table) {
 		fprintf(stderr, "FITS extension %i in file %s is not a table.\n",
-				field+2, ls->fn);
+				field+1, ls->fn);
 		return -1;
 	}
 	// find the right column.

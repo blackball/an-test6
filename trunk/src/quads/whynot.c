@@ -62,14 +62,16 @@ int nagree = 4;
 int maxnagree = 0;
 double agreetol = 0.0;
 
-bool do_verify = FALSE;
-int nagree_toverify = 0;
-double verify_dist2 = 0.0;
-float overlap_tosolve = 0;
-float overlap_toconfirm = 0;
+bool do_verify;
+int nagree_toverify;
+double verify_dist2;
+float overlap_tosolve;
+int min_ninfield;
 
 int threads = 1;
 il* fieldlist = NULL;
+
+int do_correspond = 1;
 
 catalog* cat;
 idfile* id;
@@ -315,6 +317,9 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	}
 	nagree = hitlist_healpix_add_hit(hits, mocopy, &listind);
 	fprintf(stderr, "    -> %i agree, overlap %4.1f%%.\n", nagree, 100.0 * mocopy->overlap);
+	if (mocopy->ninfield < min_ninfield)
+		fprintf(stderr, "    -> warning, ninfield %i is less than required %i\n",
+				mocopy->ninfield, min_ninfield);
 }
 
 void why_not() {
@@ -390,10 +395,10 @@ void why_not() {
 				continue;
 
 			if (intmap_add(fieldtoind, i, res->inds[0])) {
-				fprintf(stderr, "Conflicting mapping (f->i): %i <-> %i\n", i, res->inds[0]);
+				fprintf(stderr, "Conflicting mapping (f->i): %i -> %i\n", i, res->inds[0]);
 			}
 			if (intmap_add(indtofield, res->inds[0], i)) {
-				fprintf(stderr, "Conflicting mapping (i->f): %i <-> %i\n", i, res->inds[0]);
+				fprintf(stderr, "Conflicting mapping (i->f): %i -> %i\n", res->inds[0], i);
 			}
 			il_append(indstars, res->inds[0]);
 		}
@@ -525,7 +530,7 @@ void why_not() {
 		
 		hlhits = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
 		//hlall = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
-		hlhits->do_correspond = 0;
+		hlhits->do_correspond = do_correspond;
 
 		for (i=0; i<Nqms; i++) {
 			findable_quad(qms+i, thisfield, cornerpix, hlhits, FALSE);
@@ -610,8 +615,8 @@ int main(int argc, char *argv[]) {
 		ycolname = strdup("COLC");
 		verify_dist2 = 0.0;
 		nagree_toverify = 0;
-		overlap_toconfirm = 0.0;
 		overlap_tosolve = 0.0;
+		min_ninfield = 0;
 
 		if (read_parameters()) {
 			break;
@@ -643,8 +648,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
-		fprintf(stderr, "overlap_toconfirm %f\n", overlap_toconfirm);
 		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
+		fprintf(stderr, "min_ninfield %i\n", min_ninfield);
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 
@@ -844,11 +849,12 @@ int read_parameters() {
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    nagree_toverify <nagree>\n"
-					"    noverlap_tosolve <noverlap>\n"
-					"    noverlap_toconfirm <noverlap>\n"
+					"    overlap_tosolve <overlap>\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "do_correspond ", &nextword)) {
+			do_correspond = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
 			xcolname = strdup(nextword);
 		} else if (is_word(buffer, "ycol ", &nextword)) {
@@ -882,8 +888,8 @@ int read_parameters() {
 			nagree_toverify = atoi(nextword);
 		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
 			overlap_tosolve = atof(nextword);
-		} else if (is_word(buffer, "overlap_toconfirm ", &nextword)) {
-			overlap_toconfirm = atof(nextword);
+		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
+			min_ninfield = atoi(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			char* fname = nextword;
 			fieldfname = mk_fieldfn(fname);
