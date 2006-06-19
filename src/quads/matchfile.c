@@ -151,6 +151,19 @@ int matchfile_start_table(matchfile* mf, matchfile_entry* me) {
 	qfits_header_add(mf->tableheader, "COMMENT", "Path of the index used", NULL, NULL);
 	qfits_header_add(mf->tableheader, "FLDPATH", me->fieldpath ? me->fieldpath : "", " ", NULL);
 	qfits_header_add(mf->tableheader, "COMMENT", "Path of the field file", NULL, NULL);
+	if (me->fieldfile) {
+		sprintf(val, "%u", me->fieldfile);
+		qfits_header_add(mf->tableheader, "FLDID", val, "Field file id.", NULL);
+	}
+	if (me->indexid) {
+		sprintf(val, "%u", me->indexid);
+		qfits_header_add(mf->tableheader, "INDEXID", val, "Index id.", NULL);
+	}
+	if (me->healpix != -1) {
+		sprintf(val, "%u", me->healpix);
+		qfits_header_add(mf->tableheader, "HEALPIX", val, "Big healpix of index.", NULL);
+	}
+
 	return 0;
 }
 
@@ -358,6 +371,9 @@ int matchfile_next_table(matchfile* mf, matchfile_entry* me) {
 	me->indexpath = str ? strdup(str) : NULL;
 	str = qfits_header_getstr(mf->tableheader, "FLDPATH");
 	me->fieldpath = str ? strdup(str) : NULL;
+	me->fieldfile = qfits_header_getint(mf->tableheader, "FLDID", 0);
+	me->indexid = qfits_header_getint(mf->tableheader, "INDEXID", 0);
+	me->healpix = qfits_header_getint(mf->tableheader, "HEALPIX", -1);
 	return 0;
 }
 
