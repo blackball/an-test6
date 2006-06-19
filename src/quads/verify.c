@@ -73,6 +73,8 @@ void verify_hit(kdtree_t* startree,
 		}
 	}
 
+	NF = xy_size(field);
+
 	if (!NI) {
 		// I don't know HOW this happens, but I've seen it...
 		fprintf(stderr, "Freakishly, NI=0.\n");
@@ -100,7 +102,6 @@ void verify_hit(kdtree_t* startree,
 	  cavalierly decide to ignore it.
 	*/
 
-	NF = xy_size(field);
 	fieldstars = malloc(3 * NF * sizeof(double));
 	for (i=0; i<NF; i++) {
 		double u, v;
@@ -113,9 +114,7 @@ void verify_hit(kdtree_t* startree,
 	  A counteracting note to the picky: if we build a kdtree over the
 	  index stars within range, the above comment is no longer true.
 	*/
-    levels = (int)ceil(log(NI / (double)Nleaf) * M_LOG2E);
-    if (levels < 1)
-        levels = 1;
+    levels = kdtree_compute_levels(NI, Nleaf);
 	itree = kdtree_build(res->results, NI, 3, levels);
 
 	matches = unmatches = conflicts = 0;

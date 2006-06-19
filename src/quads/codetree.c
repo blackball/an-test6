@@ -90,10 +90,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "  Building code KD tree...\n");
     fflush(stderr);
-    levels = (int)((log((double)codes->numcodes) - log((double)Nleaf))/log(2.0));
-    if (levels < 1) {
-        levels = 1;
-    }
+    levels = kdtree_compute_levels(codes->numcodes, Nleaf);
     fprintf(stderr, "Requesting %i levels.\n", levels);
     codekd = kdtree_build(codes->codearray, codes->numcodes, DIM_CODES, levels);
     if (!codekd)

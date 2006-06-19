@@ -61,6 +61,8 @@ inline void project_equal_area(double x, double y, double z, double* projx, doub
 // radians.
 inline double distsq2arc(double dist2);
 
+inline double distsq2arcsec(double dist2);
+
 // Converts an angle (in radians) into the distance-squared
 // between two points on the unit sphere separated by that angle.
 inline double arc2distsq(double arcInRadians);

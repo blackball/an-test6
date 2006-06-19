@@ -1,6 +1,5 @@
 /**
-   A hybrid linked-list/array data structure.
-   It's a linked list of arrays, which allows
+   A linked list of arrays, which allows
    more rapid traversal of the list, and fairly
    efficient insertions and deletions.
 */
@@ -37,7 +36,7 @@ typedef struct bl bl;
  */
 void bl_split(bl* src, bl* dest, int split);
 bl*  bl_new(int blocksize, int datasize);
-int  bl_size(bl* list);
+int  bl_size(const bl* list);
 void bl_init(bl* l, int blocksize, int datasize);
 void bl_free(bl* list);
 void bl_append(bl* list, void* data);
@@ -81,7 +80,6 @@ void  bl_get(bl* list, int n, void* dest);
 void  bl_print_structure(bl* list);
 // Returns a pointer to the nth element.
 void* bl_access(bl* list, int n);
-int   bl_count(bl* list);
 void  bl_copy(bl* list, int start, int length, void* vdest);
 void  bl_remove_all(bl* list);
 /*
@@ -107,7 +105,7 @@ int   bl_check_sorted(bl* list, int (*compare)(const void* v1, const void* v2), 
 ///////////////////////////////////////////////
 typedef bl il;
 il*  il_new(int blocksize);
-int  il_size(il* list);
+int  il_size(const il* list);
 void il_new_existing(il* list, int blocksize);
 void il_init(il* list, int blocksize);
 void il_remove_all(il* list);
@@ -130,6 +128,8 @@ void il_set(il* list, int ind, int value);
 void il_remove(il* list, int ind);
 void il_remove_index_range(il* list, int start, int length);
 int  il_find_index_ascending(il* list, int value);
+
+il* il_merge_ascending(il* list1, il* list2);
 
 // returns the index of the removed value, or -1 if it didn't
 // exist in the list.

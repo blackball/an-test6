@@ -80,6 +80,10 @@ inline double arcsec2distsq(double arcInArcSec) {
 	return arc2distsq(arcInArcSec * M_PI / (180.0 * 60.0 * 60.0));
 }
 
+inline double distsq2arcsec(double dist2) {
+	return rad2arcsec(distsq2arc(dist2));
+}
+
 inline double distsq2arc(double dist2) {
 	// cosine law: c^2 = a^2 + b^2 - 2 a b cos C
 	// c^2 is dist2.  We want C.
