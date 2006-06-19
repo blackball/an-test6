@@ -5,64 +5,88 @@
 #include <math.h>
 #include <string.h>
 
+#include "xylist.h"
+
+char* OPTIONS = "hf:v:x:y:n:";
+
+void printHelp(char* progname) {
+	fprintf(stderr, "Usage: %s \n"
+			"   <-f xyls-file-name>\n"
+			"   [-n field-number]\n"
+			"   [-v variable-name]\n"
+			"   [-x x-column-name]\n"
+			"   [-y y-column-name]\n",
+			progname);
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 int main(int argc, char** args) {
-  FILE* f;
-  char* filename;
-  char* varname;
-  int numfields;
-  int npoints;
-  double* points;
+  int argchar;
+  char* progname = args[0];
+  char* filename = NULL;
+  char* varname = "xy";
+  char* xname = NULL;
+  char* yname = NULL;
   int i;
+  xylist* xyls;
+  xy* field;
+  int fieldnum = 0;
 
-  if (argc != 3) {
-	printf("%s <xyls-file> <variable-name>\n", args[0]);
-	exit(-1);
+  while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
+	  switch (argchar) {
+	  case '?':
+	  case 'h':
+		  printHelp(progname);
+		  exit(0);
+	  case 'n':
+		  fieldnum = atoi(optarg);
+		  break;
+	  case 'f':
+		  filename = optarg;
+		  break;
+	  case 'v':
+		  varname = optarg;
+		  break;
+	  case 'x':
+		  xname = optarg;
+		  break;
+	  case 'y':
+		  yname = optarg;
+		  break;
+	  }
   }
 
-  filename = args[1];
-  varname = args[2];
-
-  f = fopen(filename, "r");
-  if (!f) {
-      printf("Couldn't open %s: %s\n", filename, strerror(errno));
-      exit(-1);
+  if (!filename) {
+	  printHelp(progname);
+	  exit(-1);
   }
 
-  // first line: numfields
-  if (fscanf(f, "NumFields=%i\n", &numfields) != 1) {
-      printf("parse error: numfields\n");
-      exit(-1);
+  xyls = xylist_open(filename);
+  if (!xyls) {
+	  fprintf(stderr, "Couldn't open xylist %s\n", filename);
+	  exit(-1);
   }
 
-  printf("Numfields = %i\n", numfields);
+  if (xname)
+	  xyls->xname = xname;
+  if (yname)
+	  xyls->yname = yname;
 
-  // second line: first field
-  if (fscanf(f, "%i,", &npoints) != 1) {
-      printf("parse error: npoints\n");
-      exit(-1);
+  field = xylist_get_field(xyls, fieldnum);
+  if (!field) {
+	  fprintf(stderr, "Failed to read field %i from file %s\n", fieldnum, filename);
+	  exit(-1);
   }
 
-  printf("number of points = %i\n", npoints);
-
-  points = (double*)malloc(sizeof(double) * npoints * 2);
-  for (i=0; i<npoints; i++) {
-      points[i*2] = points[i*2+1] = 0.0;
-      if (fscanf(f, "%lf,%lf", points + i*2, points + i*2 + 1) != 2) {
-          printf("parse error: points %i\n", i);
-          exit(-1);
-      }
-      //printf("    %i:  %f, %f\n", i, points[i*2], points[i*2+1]);
-      if (i != (npoints-1)) {
-          fscanf(f, ",");
-      }
+  printf("%s = [", varname);
+  for (i=0; i<xy_size(field); i++) {
+	  printf("%g,%g;\n", xy_refx(field, i), xy_refy(field, i));
   }
+  printf("];\n");
+  free_xy(field);
 
-  fprintf(stderr, "%s=[", varname);
-  for (i=0; i<npoints; i++) {
-	  fprintf(stderr, "%g,%g;", points[i*2], points[i*2+1]);
-  }
-  fprintf(stderr, "];\n");
-
-  fclose(f);
+  xylist_close(xyls);
   return 0;
 }

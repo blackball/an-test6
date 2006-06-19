@@ -7,8 +7,8 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS += -O0
-#CFLAGS += -O2
+#CFLAGS += -O0
+CFLAGS += -O2
 #CFLAGS += -pg
 
 # What functions were and weren't inlined?
@@ -54,11 +54,12 @@ EXECS := whynot checkquads mergehits agreeable certthresh quadidx \
 	hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
-	codeprojections quadlocations hpowned fitsgetext
+	codeprojections quadlocations hpowned fitsgetext \
+	xylstomatlab
 
 	#certifiable 
 
-EXTRAS := xylstomatlab rdlstohealpix rdls2hpls \
+EXTRAS := rdlstohealpix rdls2hpls \
 	get_healpix printcatalog 
 
 #	codeprojections fixmatchfile printmatchfile 
