@@ -1,5 +1,5 @@
-#ifndef HITSFILE_H_
-#define HITSFILE_H_
+#ifndef HITSFILE_H
+#define HITSFILE_H
 
 #include <stdio.h>
 

@@ -109,6 +109,7 @@ void solve_field(solver_params* params) {
 	// We keep the invariants that iA < iB and iC < iD.
 	// We try the A<->B and C<->D permutation in try_all_points.
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
+		params->objsused = newpoint;
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
@@ -171,7 +172,6 @@ void solve_field(solver_params* params) {
 	free(iDs);
 	free(iunion);
 
-	params->objsused = newpoint;
 }
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,

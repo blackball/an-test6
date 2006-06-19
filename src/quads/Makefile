@@ -55,15 +55,13 @@ EXECS := whynot checkquads mergehits agreeable certthresh quadidx \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
 	codeprojections quadlocations hpowned fitsgetext \
-	xylstomatlab
+	xylstomatlab \
+	rdlstohealpix 
 
-	#certifiable 
+#certifiable 
 
-EXTRAS := rdlstohealpix rdls2hpls \
-	get_healpix printcatalog 
-
-#	codeprojections fixmatchfile printmatchfile 
-
+EXTRAS := rdls2hpls get_healpix printcatalog 
+# codeprojections fixmatchfile printmatchfile 
 # codetomatlab 
 
 
@@ -93,7 +91,7 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-EXTRA_EXECS = xylist_texttofits hplimits plotcat
+EXTRA_EXECS = xylist_texttofits hplimits plotcat 
 #usnobprint usnobtofits tycho2tofits ancatalog cut_an split_an \
 #an_deduplicate
 

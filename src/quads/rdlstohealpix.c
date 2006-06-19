@@ -7,16 +7,16 @@
 
 #include "healpix.h"
 #include "starutil.h"
-#include "lsfile.h"
+#include "rdlist.h"
+#include "bl.h"
 
-char* OPTIONS = "hH:q";
+char* OPTIONS = "hq";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s [options] [<rdls-file>]\n"
+	fprintf(stderr, "Usage: %s [options]\n"
+			"   -f <rdls-file>\n"
 			"   [-h] print help msg\n"
-			"   [-q] quiet mode\n"
-			"   [-H healpix]: print the fields with stars in a healpix.\n"
-			"\nIf <rdls-file> is not provided, will read from stdin.\n",
+			"   [-q] quiet mode\n",
 			progname);
 }
 
@@ -24,28 +24,26 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 int main(int argc, char** args) {
-  FILE* f;
-  char* filename;
-  int numfields;
+  char* filename = NULL;
   int npoints;
   int i, j;
   int healpixes[12];
   int argchar;
   char* progname = args[0];
-  int target = -1;
-  bool fromstdin = FALSE;
+  il* lists[12];
   bool quiet = FALSE;
+  rdlist* rdls;
 
   while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 	  switch (argchar) {
+	  case 'f':
+		  filename = optarg;
+		  break;
 	  case 'h':
 		  printHelp(progname);
 		  exit(0);
 	  case 'q':
 		  quiet = TRUE;
-		  break;
-	  case 'H':
-		  target = atoi(optarg);
 		  break;
 	  case '?':
 		  fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -53,41 +51,27 @@ int main(int argc, char** args) {
 		  exit(-1);
 	  }
 
-  if (optind < argc) {
-	  filename = args[optind];
-  } else {
-	  fromstdin = TRUE;
-  }
-
-  if (fromstdin) {
-	  printf("Reading from stdin...\n");
-	  f = stdin;
-  } else {
-	  f = fopen(filename, "r");
-	  if (!f) {
-		  printf("Couldn't open %s: %s\n", filename, strerror(errno));
-		  exit(-1);
-	  }
-  }
-
-  if (target != -1) {
-	  printf("Printing the indices of fields in healpix %i to stderr...\n", target);
-  }
-
-  numfields = read_ls_file_header(f);
-  if (numfields == -1) {
-	  fprintf(stderr, "Couldn't read rdls file.\n");
+  if (!filename) {
+	  printHelp(progname);
 	  exit(-1);
   }
 
-  printf("NumFields %i.\n", numfields);
+  rdls = rdlist_open(filename);
+  if (!rdls) {
+	  fprintf(stderr, "Failed to open RDLS file.\n");
+	  exit(-1);
+  }
 
-  for (j=0; j<numfields; j++) {
-	  dl* points;
+  for (i=0; i<12; i++) {
+	  lists[i] = il_new(256);
+  }
 
-	  points = read_ls_file_field(f, 2);
+  for (j=0; j<rdls->nfields; j++) {
+	  rd* points;
+
+	  points = rdlist_get_field(rdls, j);
 	  if (!points) {
-		  printf("error reading field %i\n", j);
+		  fprintf(stderr, "error reading field %i\n", j);
 		  break;
 	  }
 
@@ -95,14 +79,14 @@ int main(int argc, char** args) {
 		  healpixes[i] = 0;
 	  }
 
-	  npoints = dl_size(points) / 2;
+	  npoints = rd_size(points);
 
 	  for (i=0; i<npoints; i++) {
 		  double ra, dec;
 		  int hp;
 
-		  ra  = dl_get(points, i*2);
-		  dec = dl_get(points, i*2 + 1);
+		  ra  = rd_refra (points, i);
+		  dec = rd_refdec(points, i);
 
 		  ra  *= M_PI / 180.0;
 		  dec *= M_PI / 180.0;
@@ -123,14 +107,22 @@ int main(int argc, char** args) {
 		  printf("\n");
 	  }
 
-	  if ((target != -1) && (healpixes[target])) {
-		  fprintf(stderr, "%i ", j);
-	  }
+	  for (i=0; i<12; i++)
+		  if (healpixes[i])
+			  il_append(lists[i], j);
 
-	  dl_free(points);
+	  free_rd(points);
   }
 
-  if (!fromstdin)
-	  fclose(f);
+  for (i=0; i<12; i++) {
+	  int N = il_size(lists[i]);
+	  printf("HP %i: ", i);
+	  for (j=0; j<N; j++)
+		  printf("%i ", il_get(lists[i], j));
+	  printf("\n");
+	  il_free(lists[i]);
+  }
+
+  rdlist_close(rdls);
   return 0;
 }
