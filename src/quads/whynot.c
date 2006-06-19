@@ -403,8 +403,8 @@ void why_not() {
 			il_append(indstars, res->inds[0]);
 		}
 
-		fprintf(stderr, "Of %i field stars, %i have nearby index stars.\n",
-				rd_size(thisrd), intmap_length(fieldtoind));
+		fprintf(stderr, "Of %i field stars, %i have nearby index stars.  %i index stars have nearby field objects.\n",
+				rd_size(thisrd), intmap_length(fieldtoind), intmap_length(indtofield));
 
 		fprintf(stderr, "Field stars that are indexed:\n");
 		for (i=0; i<intmap_length(fieldtoind); i++) {

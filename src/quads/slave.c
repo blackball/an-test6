@@ -769,8 +769,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	verify_hit(startree, mo, p->field, verify_dist2,
 			   &matches, &unmatches, &conflicts);
 
-	fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-			p->fieldnum, n, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
+	fprintf(stderr, "    field %i %i/%i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+			p->fieldnum, p->objsused, p->endobj, n, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
 	fflush(stderr);
 
 	if (overlap_tosolve > 0.0) {
