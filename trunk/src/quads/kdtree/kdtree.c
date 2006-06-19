@@ -52,6 +52,15 @@ static inline int dist2_exceeds(real* p1, real* p2, int d, real maxd2) {
 /* Building routines                                                         */
 /*****************************************************************************/
 
+int kdtree_compute_levels(int N, int Nleaf) {
+    int levels;
+	assert(Nleaf);
+	levels = (int)rint(log(N / (double)Nleaf) * M_LOG2E);
+    if (levels < 1)
+        levels = 1;
+	return levels;
+}
+
 #ifdef AMNSLOW
 
 real* kdqsort_arr;

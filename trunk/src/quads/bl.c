@@ -19,29 +19,23 @@ static void bl_sort_rec(bl* list, void* pivot,
 	bl* less;
 	bl* equal;
 	bl* greater;
-	int i; //, iless;
+	int i;
     bl_node* node;
 	bl_node* next;
 
 	less = bl_new(list->blocksize, list->datasize);
 	equal = bl_new(list->blocksize, list->datasize);
 	greater = bl_new(list->blocksize, list->datasize);
-	//iless = 0;
 	for (node=list->head; node;) {
 		char* data = NODE_CHARDATA(node);
 		for (i=0; i<node->N; i++) {
 			int val = compare(data, pivot);
-			if (val < 0) {
-				/*
-				  bl_set(list, iless, data);
-				  iless++;
-				*/
+			if (val < 0)
 				bl_append(less, data);
-			} else if (val > 0) {
+			else if (val > 0)
 				bl_append(greater, data);
-			} else {
+			else
 				bl_append(equal, data);
-			}
 			data += list->datasize;
 		}
 		next = node->next;
@@ -60,7 +54,6 @@ static void bl_sort_rec(bl* list, void* pivot,
 		list->tail = less->tail;
 		list->N = less->N;
 	}
-	//*iequal = list->N;
 	if (equal->N) {
 		if (list->N) {
 			list->tail->next = equal->head;
@@ -71,7 +64,6 @@ static void bl_sort_rec(bl* list, void* pivot,
 		}
 		list->N += equal->N;
 	}
-	//*igreater = list->N;
 	if (greater->N) {
 		if (list->N) {
 			list->tail->next = greater->head;
@@ -82,6 +74,7 @@ static void bl_sort_rec(bl* list, void* pivot,
 		}
 		list->N += greater->N;
 	}
+	// note, these are supposed to be "free", not "bl_free"...
 	free(less);
 	free(equal);
 	free(greater);
@@ -407,12 +400,8 @@ void bl_append_list(bl* list1, bl* list2) {
 	clear_list(list2);
 }
 
-int bl_count(bl* list) {
+int bl_size(const bl* list) {
 	return list->N;
-}
-
-int bl_size(bl* list) {
-	return bl_count(list);
 }
 
 static void bl_free_node(bl_node* node) {
@@ -478,8 +467,7 @@ void bl_print_structure(bl* list) {
 }
 
 void bl_get(bl* list, int n, void* dest) {
-	char* src;
-	src = (char*)bl_access(list, n);
+	char* src = bl_access(list, n);
 	memcpy(dest, src, list->datasize);
 }
 
@@ -763,7 +751,7 @@ void bl_copy(bl* list, int start, int length, void* vdest) {
 	// we've found the node containing "start".  keep copying elements and
 	// moving down the list until we've copied all "length" elements.
 
-	dest = (char*)vdest;
+	dest = vdest;
 	while (length > 0) {
 		int take, avail;
 		char* src;
@@ -840,7 +828,7 @@ int bl_check_sorted(bl* list,
 	int i, N;
 	int nbad = 0;
 	void* v2 = NULL;
-	N = bl_count(list);
+	N = bl_size(list);
 	if (N)
 		v2 = bl_access(list, 0);
 	for (i=1; i<N; i++) {
@@ -882,7 +870,52 @@ int bl_compare_ints_descending(const void* v1, const void* v2) {
     else return 0;
 }
 
-// special-case integer list accessors...
+// integer list functions:
+
+il* il_merge_ascending(il* list1, il* list2) {
+	il* res;
+	int i1, i2, N1, N2, v1, v2;
+	unsigned char getv1, getv2;
+	if (!list1)
+		return il_dupe(list2);
+	if (!list2)
+		return il_dupe(list1);
+	if (!il_size(list1))
+		return il_dupe(list2);
+	if (!il_size(list2))
+		return il_dupe(list1);
+
+	res = il_new(list1->blocksize);
+	N1 = il_size(list1);
+	N2 = il_size(list2);
+	i1 = i2 = 0;
+	v1 = v2 = -1; // to make gcc happy
+	getv1 = getv2 = 1;
+	while (i1 < N1 && i2 < N2) {
+		if (getv1) {
+			v1 = il_get(list1, i1);
+			getv1 = 0;
+		}
+		if (getv2) {
+			getv2 = 0;
+			v2 = il_get(list2, i2);
+		}
+		if (v1 <= v2) {
+			il_append(res, v1);
+			i1++;
+			getv1 = 1;
+		} else {
+			il_append(res, v2);
+			i2++;
+			getv2 = 1;
+		}
+	}
+	for (; i1<N1; i1++)
+		il_append(res, il_get(list1, i1));
+	for (; i2<N2; i2++)
+		il_append(res, il_get(list2, i2));
+	return res;
+}
 
 void il_remove_all_reuse(il* list) {
 	bl_remove_all_but_first(list);
@@ -906,8 +939,8 @@ int il_check_sorted_descending(il* list,
 	return bl_check_sorted(list, bl_compare_ints_descending, isunique);
 }
 
-int il_size(il* list) {
-    return bl_count(list);
+int il_size(const il* list) {
+    return bl_size(list);
 }
 
 void il_remove(il* ilist, int index) {
@@ -937,7 +970,7 @@ int il_remove_value(il* ilist, int value) {
 		 prev=node, node=node->next) {
 		int i;
 		int* idat;
-		idat = (int*)NODE_DATA(node);
+		idat = NODE_DATA(node);
 		for (i=0; i<node->N; i++)
 			if (idat[i] == value) {
 				bl_remove_from_node(list, node, prev, i);
@@ -963,7 +996,7 @@ void il_set(il* list, int index, int value) {
 }
 
 il* il_new(int blocksize) {
-	return (il*) bl_new(blocksize, sizeof(int));
+	return bl_new(blocksize, sizeof(int));
 }
 
 void il_new_existing(il* list, int blocksize) {
@@ -991,8 +1024,7 @@ void il_merge_lists(il* list1, il* list2) {
 }
 
 int il_get(il* list, int n) {
-	int* ptr;
-	ptr = (int*)bl_access(list, n);
+	int* ptr = bl_access(list, n);
 	return *ptr;
 }
 
@@ -1189,8 +1221,7 @@ void pl_append(pl* list, void* data) {
 }
 
 void* pl_get(pl* list, int n) {
-    void** ptr;
-    ptr = (void**)bl_access(list, n);
+    void** ptr = bl_access(list, n);
     return *ptr;
 }
 
@@ -1210,7 +1241,7 @@ void pl_print(pl* list) {
 }
 
 int   pl_size(pl* list) {
-	return bl_count(list);
+	return bl_size(list);
 }
 
 // special-case double list accessors...
@@ -1235,7 +1266,7 @@ void dl_free(dl* list) {
 }
 
 int   dl_size(dl* list) {
-	return bl_count(list);
+	return bl_size(list);
 }
 
 int dl_check_consistency(dl* list) {
@@ -1258,7 +1289,7 @@ double dl_pop(dl* list) {
 
 double dl_get(dl* list, int n) {
 	double* ptr;
-	ptr = (double*)bl_access(list, n);
+	ptr = bl_access(list, n);
 	return *ptr;
 }
 

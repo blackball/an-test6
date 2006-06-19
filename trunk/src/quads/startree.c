@@ -107,9 +107,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Building star KD tree...");
     fflush(stderr);
 
-    levels = (int)((log((double)cat->numstars) - log((double)Nleaf))/log(2.0));
-    if (levels < 1)
-        levels = 1;
+    levels = kdtree_compute_levels(cat->numstars, Nleaf);
     fprintf(stderr, "Requesting %i levels.\n", levels);
 
     starkd = kdtree_build(catalog_get_base(cat), cat->numstars, DIM_STARS, levels);

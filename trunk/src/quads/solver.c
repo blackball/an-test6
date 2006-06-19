@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "fileutil.h"
 #include "mathutil.h"
@@ -62,24 +63,32 @@ static bool check_scale(int iA, int iB, solver_params* params) {
 	return TRUE;
 }
 
+enum scale_prop {
+	SCALE_UNCHECKED,
+	SCALE_OKAY,
+	SCALE_BAD
+};
+
 void solve_field(solver_params* params) {
     uint numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
     int ncd;
+	unsigned char *scale_value;
 
 	numxy = xy_size(params->field);
+	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
+		return;
 	if (params->endobj && (numxy > params->endobj))
 		numxy = params->endobj;
 
 	find_corners(params->field, params->cornerpix);
 
-	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
-		return;
-
 	iCs = malloc(numxy * numxy * sizeof(int));
 	iDs = malloc(numxy * numxy * sizeof(int));
 	iunion = malloc(numxy * sizeof(char));
+
+	scale_value = calloc(numxy*numxy, sizeof(unsigned char));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -105,7 +114,6 @@ void solve_field(solver_params* params) {
 	  element is FALSE.
 	*/
 
-
 	// We keep the invariants that iA < iB and iC < iD.
 	// We try the A<->B and C<->D permutation in try_all_points.
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
@@ -113,8 +121,11 @@ void solve_field(solver_params* params) {
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
-			if (!check_scale(iA, iB, params))
+			if (!check_scale(iA, iB, params)) {
+				scale_value[iA * numxy + iB] = SCALE_BAD;
 				continue;
+			}
+			scale_value[iA * numxy + iB] = SCALE_OKAY;
 			ncd = 0;
 			memset(iunion, 0, newpoint);
 			for (iC=0; iC<newpoint; iC++) {
@@ -130,7 +141,6 @@ void solve_field(solver_params* params) {
 				}
 			}
 
-
 			// note: "newpoint" is used as an upper-bound on the largest
 			// TRUE element in "iunion".
 			try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, params);
@@ -140,7 +150,12 @@ void solve_field(solver_params* params) {
 		iD = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
-				if (!check_scale(iA, iB, params))
+				/*
+				  if (!check_scale(iA, iB, params))
+				  continue;
+				*/
+				assert(scale_value[iA * numxy + iB] != SCALE_UNCHECKED);
+				if (scale_value[iA * numxy + iB] == SCALE_BAD)
 					continue;
 
 				ncd = 0;
@@ -168,6 +183,7 @@ void solve_field(solver_params* params) {
 			params->quitNow)
 			break;
 	}
+	free(scale_value);
 	free(iCs);
 	free(iDs);
 	free(iunion);

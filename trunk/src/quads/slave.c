@@ -35,6 +35,7 @@
 #include "idfile.h"
 #include "intmap.h"
 #include "verify.h"
+#include "dualtree_rangesearch.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -48,46 +49,38 @@ int read_parameters();
 #define DEFAULT_PARITY_FLIP FALSE
 
 // params:
-char *fieldfname = NULL, *treefname = NULL;
-char *quadfname = NULL, *catfname = NULL;
-char* startreefname = NULL;
-char *idfname = NULL;
-char* matchfname = NULL;
-char* donefname = NULL;
-char* solvedfname = NULL;
-char* xcolname;
-char* ycolname;
-bool parity = DEFAULT_PARITY_FLIP;
-double codetol = DEFAULT_CODE_TOL;
-
-int startdepth = 0;
-int enddepth = 0;
-
-double funits_lower = 0.0;
-double funits_upper = 0.0;
+char *fieldfname, *treefname, *quadfname, *catfname, *startreefname;
+char *idfname, *matchfname, *donefname, *solvedfname;
+char* xcolname, *ycolname;
+bool parity;
+double codetol;
+int startdepth;
+int enddepth;
+double funits_lower;
+double funits_upper;
 double index_scale;
 double index_scale_lower;
-double index_scale_lower_factor = 0.0;
+double index_scale_lower_factor;
 int fieldid;
 int indexid;
 int healpix;
-
-bool agreement = FALSE;
-int nagree = 4;
-int maxnagree = 0;
-double agreetol = 0.0;
-
-bool do_verify = FALSE;
+bool agreement;
+int nagree;
+int maxnagree;
+double agreetol;
+bool do_verify;
 int nagree_toverify;
 double verify_dist2;
 double overlap_tosolve;
 double overlap_tokeep;
 int min_ninfield;
+int do_correspond;
+double donut_dist;
+double donut_thresh;
+int do_donut;
+int threads;
 
-int do_correspond = 1;
-
-int threads = 1;
-il* fieldlist = NULL;
+il* fieldlist;
 pthread_mutex_t fieldlist_mutex;
 
 matchfile* mf;
@@ -150,43 +143,49 @@ int main(int argc, char *argv[]) {
 
 		fieldfname = NULL;
 		treefname = NULL;
-		startreefname = NULL;
 		quadfname = NULL;
 		catfname = NULL;
+		startreefname = NULL;
 		idfname = NULL;
 		matchfname = NULL;
 		donefname = NULL;
 		solvedfname = NULL;
+		xcolname = strdup("ROWC");
+		ycolname = strdup("COLC");
 		parity = DEFAULT_PARITY_FLIP;
 		codetol = DEFAULT_CODE_TOL;
-		fieldid = 0;
-		indexid = 0;
-		healpix = -1;
 		startdepth = 0;
 		enddepth = 0;
-		il_remove_all(fieldlist);
 		funits_lower = 0.0;
 		funits_upper = 0.0;
 		index_scale = 0.0;
 		index_scale_lower_factor = 0.0;
+		fieldid = 0;
+		indexid = 0;
+		healpix = -1;
 		agreement = FALSE;
 		nagree = 4;
 		maxnagree = 0;
 		agreetol = 0.0;
-		cat = NULL;
-		quads = NULL;
-		startree = NULL;
-		xcolname = strdup("ROWC");
-		ycolname = strdup("COLC");
-		verify_dist2 = 0.0;
 		nagree_toverify = 0;
+		verify_dist2 = 0.0;
 		overlap_tosolve = 0.0;
 		overlap_tokeep = 0.0;
 		min_ninfield = 0;
+		do_correspond = 1;
+		donut_dist = 0.0;
+		donut_thresh = 0.0;
+		do_donut = 0;
+		threads = 1;
 
-		if (read_parameters()) {
+		il_remove_all(fieldlist);
+
+		cat = NULL;
+		quads = NULL;
+		startree = NULL;
+
+		if (read_parameters())
 			break;
-		}
 
 		if (agreement && (agreetol <= 0.0)) {
 			fprintf(stderr, "If you set 'agreement', you must set 'agreetol'.\n");
@@ -215,7 +214,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "num-to-agree %i\n", nagree);
 		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
-		fprintf(stderr, "verify_dist %g\n", rad2arcsec(distsq2arc(verify_dist2)));
+		fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
 		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
 		fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
@@ -223,6 +222,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
+		fprintf(stderr, "donut_dist %g\n", donut_dist);
+		fprintf(stderr, "donut_thresh %g\n", donut_thresh);
 
 		fprintf(stderr, "fields ");
 		for (i=0; i<il_size(fieldlist); i++)
@@ -294,9 +295,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Quad file: %g.  Your spec: %g\n", index_scale_lower, index_scale_lower_factor * index_scale);
             fprintf(stderr, "Overriding your specification.\n");
         }
-        if ((index_scale_lower == 0.0) && (index_scale_lower_factor != 0.0)) {
+        if ((index_scale_lower == 0.0) && (index_scale_lower_factor != 0.0))
             index_scale_lower = index_scale * index_scale_lower_factor;
-        }
 
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
@@ -310,6 +310,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "done\n");
 
 		do_verify = startree && (verify_dist2 > 0.0);
+		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
 
 		if (startree) {
 			inverse_perm = malloc(startree->ndata * sizeof(int));
@@ -345,35 +346,30 @@ int main(int argc, char *argv[]) {
 			fopenout(donefname, batchfid);
 			fclose(batchfid);
 		}
-		free(donefname);
-		free(solvedfname);
-		free(matchfname);
-
-		free(xcolname);
-		free(ycolname);
 
 		xylist_close(xyls);
-
 		matchfile_close(mf);
-
-		free_fn(fieldfname);
-
-		free_fn(treefname);
-		free_fn(quadfname);
-		free_fn(catfname);
-		free_fn(idfname);
-		free_fn(startreefname);
-
 		kdtree_close(codetree);
 		if (startree)
 			kdtree_close(startree);
 		if (cat)
 			catalog_close(cat);
-		if (inverse_perm)
-			free(inverse_perm);
 		if (id)
 			idfile_close(id);
 		quadfile_close(quads);
+
+		free(donefname);
+		free(solvedfname);
+		free(matchfname);
+		free(xcolname);
+		free(ycolname);
+		free_fn(fieldfname);
+		free_fn(treefname);
+		free_fn(quadfname);
+		free_fn(catfname);
+		free_fn(idfname);
+		free_fn(startreefname);
+		free(inverse_perm);
 
 		{
 			int maxagree = 0;
@@ -385,7 +381,6 @@ int main(int argc, char *argv[]) {
 			for (i=0; i<=maxagree; i++)
 				fprintf(stderr, "%i,", agreesizehist[i]);
 			fprintf(stderr, "];\n");
-
 			free(agreesizehist);
 		}
 
@@ -453,6 +448,10 @@ int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "donut_dist ", &nextword)) {
+			donut_dist = atof(nextword);
+		} else if (is_word(buffer, "donut_thresh ", &nextword)) {
+			donut_thresh = atof(nextword);
 		} else if (is_word(buffer, "do_correspond ", &nextword)) {
 			do_correspond = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
@@ -842,6 +841,143 @@ static int next_field(xy** pfield) {
 	return rtn;
 }
 
+void donut_pair_found(void* extra, int x, int y, double dist2) {
+	int i;
+	int xlistind = -1, ylistind = -1;
+	pl* lists = extra;
+	if (x >= y)
+		return;
+	for (i=0; i<pl_size(lists); i++) {
+		il* list = pl_get(lists, i);
+		if (il_find_index_ascending(list, x) != -1)
+			xlistind = i;
+		if (il_find_index_ascending(list, y) != -1)
+			ylistind = i;
+	}
+	if ((xlistind == -1) && (ylistind == -1)) {
+		// add a new list.
+		il* newlist = il_new(16);
+		il_insert_unique_ascending(newlist, x);
+		il_insert_unique_ascending(newlist, y);
+		pl_append(lists, newlist);
+	} else if (xlistind == -1) {
+		// add x to y's list.
+		il* list = pl_get(lists, ylistind);
+		il_insert_unique_ascending(list, x);
+	} else if (ylistind == -1) {
+		// add y to x's list.
+		il* list = pl_get(lists, xlistind);
+		il_insert_unique_ascending(list, y);
+	} else {
+		if (xlistind == ylistind)
+			// they're already in the same list.
+			return;
+		// merge the lists.
+		il* xlist = pl_get(lists, xlistind);
+		il* ylist = pl_get(lists, ylistind);
+		il* merged = il_merge_ascending(xlist, ylist);
+		il_free(xlist);
+		il_free(ylist);
+		pl_set(lists, xlistind, merged);
+		pl_remove(lists, ylistind);
+	}
+}
+
+void detect_donuts(int fieldnum, xy** pfield,
+				   double nearbydist, double thresh) {
+	double* fieldxy;
+	int i, N;
+	int nearby;
+	kdtree_t* tree;
+	int levels;
+	int* counts;
+	double frac;
+	xy* field = *pfield;
+	pl* lists;
+	xy* newfield;
+	bool* merged;
+	int fieldind;
+	int nmerged;
+
+	N = xy_size(field);
+	assert(N);
+	fieldxy = malloc(N * 2 * sizeof(double));
+	assert(fieldxy);
+	for (i=0; i<N; i++) {
+		fieldxy[i*2 + 0] = xy_refx(field, i);
+		fieldxy[i*2 + 1] = xy_refy(field, i);
+	}
+
+	levels = kdtree_compute_levels(N, 5);
+	//printf("Building tree with %i points, %i levels.\n", N, levels);
+	tree = kdtree_build(fieldxy, N, 2, levels);
+	assert(tree);
+	counts = calloc(N, sizeof(int));
+	dualtree_rangecount(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist, counts);
+	nearby = 0;
+	for (i=0; i<N; i++)
+		nearby += counts[i];
+	frac = (nearby - N) / (double)N;
+	fprintf(stderr, "Field %i: Donuts: %4.1f%% (%i of %i) in range.\n",
+			fieldnum, 100.0 * frac, nearby - N, N);
+	free(counts);
+	if (frac < thresh)
+		goto done;
+
+	lists = pl_new(32);
+	dualtree_rangesearch(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist,
+						 donut_pair_found, lists, NULL, NULL);
+	fprintf(stderr, "Found %i clusters:\n", pl_size(lists));
+
+	nmerged = 0;
+	for (i=0; i<pl_size(lists); i++)
+		nmerged += il_size(pl_get(lists, i));
+
+	newfield = mk_xy(N - nmerged + pl_size(lists));
+
+	merged = calloc(N, sizeof(bool));
+
+	for (i=0; i<pl_size(lists); i++) {
+		int j;
+		double avgx, avgy;
+		il* list = pl_get(lists, i);
+		fprintf(stderr, "    ");
+		avgx = avgy = 0.0;
+		for (j=0; j<il_size(list); j++) {
+			int ind;
+			fprintf(stderr, "%i ", il_get(list, j));
+			ind = tree->perm[il_get(list, j)];
+			merged[ind] = TRUE;
+			avgx += xy_refx(field, ind);
+			avgy += xy_refy(field, ind);
+		}
+		avgx /= (double)il_size(list);
+		avgy /= (double)il_size(list);
+		fprintf(stderr, "\n");
+		il_free(list);
+		xy_setx(newfield, i, avgx);
+		xy_sety(newfield, i, avgy);
+	}
+	fieldind = pl_size(lists);
+	for (i=0; i<N; i++) {
+		if (merged[i])
+			continue;
+		// this star wasn't part of a donut...
+		xy_setx(newfield, fieldind, xy_refx(field, i));
+		xy_sety(newfield, fieldind, xy_refy(field, i));
+		fieldind++;
+	}
+
+	free(merged);
+	pl_free(lists);
+	free_xy(field);
+	*pfield = newfield;
+
+ done:
+	kdtree_free(tree);
+	free(fieldxy);
+}
+
 void* solvethread_run(void* varg) {
 	threadargs* my = varg;
 	solver_params solver;
@@ -932,6 +1068,21 @@ void* solvethread_run(void* varg) {
 			}
 		}
 
+		if (do_donut) {
+			/*
+			  double donutdist;
+			  // fieldunits_{upper,lower} is in arcsec/pixel
+			  // xylist is in pixels
+			  // verify_dist2 is in star-space distance
+			  // donutdist is in pixels.
+			  donutdist = distsq2arcsec(verify_dist2) / funits_upper;
+			*/
+			int oldsize = xy_size(thisfield);
+			detect_donuts(fieldnum, &thisfield, donut_dist, donut_thresh);
+			if (xy_size(thisfield) != oldsize)
+				fprintf(stderr, "Field %i: donuts detected; merged %i objects to %i.\n",
+						fieldnum, oldsize, xy_size(thisfield));
+		}
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
