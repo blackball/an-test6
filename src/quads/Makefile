@@ -99,6 +99,23 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
+FITS_UTILS := tablist
+
+fitsutils: $(FITS_UTILS)
+
+CFITSIO_CFLAGS := -Icfitsio/include
+CFITSIO_CFLAGS += -Wall -O2
+CFITSIO_LIB := libcfitsio.a
+CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
+
+CFITSIO_OBJS := $(addsuffix .o,$(FITS_UTILS))
+
+$(FITS_UTILS) :: %: %.o $(CFITSIO_LIB)
+	$(CC) $(CFITSIO_CFLAGS) $^ -o $@ $(CFITSIO_LFLAGS)
+
+$(CFITSIO_OBJS) :: %.o: %.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
