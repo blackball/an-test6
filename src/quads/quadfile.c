@@ -12,12 +12,12 @@
 #include "ioutils.h"
 
 static quadfile* new_quadfile() {
-	quadfile* qf = malloc(sizeof(quadfile));
+	quadfile* qf = calloc(1, sizeof(quadfile));
 	if (!qf) {
 		fprintf(stderr, "Couldn't malloc a quadfile struct: %s\n", strerror(errno));
 		return NULL;
 	}
-	memset(qf, 0, sizeof(quadfile));
+	qf->healpix = -1;
 	return qf;
 }
 
@@ -59,6 +59,8 @@ quadfile* quadfile_open(char* fn, int modifiable) {
     qf->numstars = qfits_header_getint(header, "NSTARS", -1);
     qf->index_scale = qfits_header_getdouble(header, "SCALE_U", -1.0);
     qf->index_scale_lower = qfits_header_getdouble(header, "SCALE_L", -1.0);
+	qf->indexid = qfits_header_getint(header, "INDEXID", 0);
+	qf->healpix = qfits_header_getint(header, "HEALPIX", -1);
 	qf->header = header;
 
 	if ((qf->numquads == -1) || (qf->numstars == -1) ||
@@ -134,7 +136,6 @@ int quadfile_close(quadfile* qf) {
 
 quadfile* quadfile_open_for_writing(char* fn) {
 	quadfile* qf;
-    char val[256];
 
 	qf = new_quadfile();
 	if (!qf)
@@ -150,16 +151,13 @@ quadfile* quadfile_open_for_writing(char* fn) {
     fits_add_endian(qf->header);
     fits_add_uint_size(qf->header);
 
-	// These may be placeholder values...
 	qfits_header_add(qf->header, "AN_FILE", "QUAD", "This file lists, for each quad, its four stars.", NULL);
-	sprintf(val, "%u", qf->numquads);
-	qfits_header_add(qf->header, "NQUADS", val, "Number of quads.", NULL);
-	sprintf(val, "%u", qf->numstars);
-	qfits_header_add(qf->header, "NSTARS", val, "Number of stars used (or zero).", NULL);
-	sprintf(val, "%.10f", qf->index_scale);
-	qfits_header_add(qf->header, "SCALE_U", val, "Upper-bound index scale.", NULL);
-	sprintf(val, "%.10f", qf->index_scale_lower);
-	qfits_header_add(qf->header, "SCALE_L", val, "Lower-bound index scale.", NULL);
+	qfits_header_add(qf->header, "NQUADS", "0", "Number of quads.", NULL);
+	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used (or zero).", NULL);
+	qfits_header_add(qf->header, "SCALE_U", "0.0", "Upper-bound index scale.", NULL);
+	qfits_header_add(qf->header, "SCALE_L", "0.0", "Lower-bound index scale.", NULL);
+	qfits_header_add(qf->header, "INDEXID", "0", "Index unique ID.", NULL);
+	qfits_header_add(qf->header, "HEALPIX", "-1", "Healpix of this index.", NULL);
 	qfits_header_add(qf->header, "COMMENT", "The first extension contains the quads ", NULL, NULL);
 	qfits_header_add(qf->header, "COMMENT", " stored as 4 native-{endian,size} uints.", NULL, NULL);
 	qfits_header_add(qf->header, "COMMENT", " (one for each star's index in the corresponding objs file)", NULL, NULL);
@@ -222,6 +220,15 @@ int quadfile_fix_header(quadfile* qf) {
 	qfits_header_mod(qf->header, "SCALE_U", val, "Upper-bound index scale.");
 	sprintf(val, "%.10f", qf->index_scale_lower);
 	qfits_header_mod(qf->header, "SCALE_L", val, "Lower-bound index scale.");
+	//if (qf->indexid) {
+	sprintf(val, "%u", qf->indexid);
+	qfits_header_mod(qf->header, "INDEXID", val, "Index unique ID.");
+	//}
+	//if (qf->healpix != -1) {
+	sprintf(val, "%u", qf->healpix);
+	qfits_header_mod(qf->header, "HEALPIX", val, "Healpix of this index.");
+	//}
+
 
     dataptr = NULL;
     datasize = DIM_QUADS * sizeof(uint);

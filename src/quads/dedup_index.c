@@ -133,10 +133,10 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-	fits_copy_header(quadsin->header, quadsout->header, "INDEXID");
-	fits_copy_header(quadsin->header, quadsout->header, "HEALPIX");
-	fits_copy_header(codesin->header, codesout->header, "INDEXID");
-	fits_copy_header(codesin->header, codesout->header, "HEALPIX");
+	quadsout->indexid = quadsin->indexid;
+	quadsout->healpix = quadsin->healpix;
+	codesout->indexid = codesin->indexid;
+	codesout->healpix = codesin->healpix;
 	qfits_header_add(quadsout->header, "COMMENT", "dedup_index command line:", NULL, NULL);
 	qfits_header_add(codesout->header, "COMMENT", "dedup_index command line:", NULL, NULL);
 	fits_add_args(quadsout->header, argv, argc);

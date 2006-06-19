@@ -12,6 +12,10 @@ struct quadfile {
 	double index_scale;
 	// lower bound
 	double index_scale_lower;
+	// unique ID of this index
+	int indexid;
+	// healpix covered by this index
+	int healpix;
 
 	// when reading:
 	void*  mmap_quad;

@@ -13,12 +13,12 @@
 
 static idfile* new_idfile()
 {
-	idfile* qf = malloc(sizeof(idfile));
+	idfile* qf = calloc(1, sizeof(idfile));
 	if (!qf) {
 		fprintf(stderr, "Couldn't malloc a idfile struct: %s\n", strerror(errno));
 		return NULL;
 	}
-	memset(qf, 0, sizeof(idfile));
+	qf->healpix = -1;
 	return qf;
 }
 
@@ -57,6 +57,7 @@ idfile* idfile_open(char* fn, int modifiable)
 		goto bailout;
 
 	qf->numstars = qfits_header_getint(header, "NSTARS", -1);
+	qf->healpix = qfits_header_getint(header, "HEALPIX", -1);
 	qfits_header_destroy(header);
 
 	if (qf->numstars == -1) {
@@ -130,7 +131,6 @@ int idfile_close(idfile* qf)
 idfile* idfile_open_for_writing(char* fn)
 {
 	idfile* qf;
-	char val[256];
 
 	qf = new_idfile();
 	if (!qf)
@@ -145,10 +145,10 @@ idfile* idfile_open_for_writing(char* fn)
 	qf->header = qfits_table_prim_header_default();
 	fits_add_endian(qf->header);
 
-	// These may be placeholder values...
-	sprintf(val, "%u", qf->numstars);
+	// These are be placeholder values...
 	qfits_header_add(qf->header, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
-	qfits_header_add(qf->header, "NSTARS", val, "Number of stars used.", NULL);
+	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
+	qfits_header_add(qf->header, "HEALPIX", "-1", "Healpix covered by this file.", NULL);
 	qfits_header_add(qf->header, "COMMENT", "This is a flat array of ANIDs for each catalog star.", NULL, NULL);
 	qfits_header_add(qf->header, "COMMENT", " (each A.N id is a native-endian uint64)", NULL, NULL);
 
@@ -200,6 +200,8 @@ int idfile_fix_header(idfile* qf)
 	// fill in the real values...
 	sprintf(val, "%u", qf->numstars);
 	qfits_header_mod(qf->header, "NSTARS", val, "Number of stars.");
+	sprintf(val, "%u", qf->healpix);
+	qfits_header_mod(qf->header, "HEALPIX", val, "Healpix covered by this file.");
 
 	dataptr = NULL;
 	datasize = sizeof(uint64_t);
@@ -264,5 +266,4 @@ uint64_t idfile_get_anid(idfile* qf, uint starid)
 
 	return qf->anidarray[starid];
 }
-
 

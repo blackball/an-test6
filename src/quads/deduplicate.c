@@ -159,6 +159,9 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "                 idfile %s\n", fn);
 	free_fn(fn);
 
+	catout->healpix = cat->healpix;
+	idout->healpix  = id->healpix;
+
 	if (idfile_write_header(idout) ||
 		catalog_write_header(catout)) {
 		fprintf(stderr, "Couldn't write headers.\n");

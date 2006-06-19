@@ -9,6 +9,7 @@
 
 struct idfile {
 	uint numstars;
+	int healpix;
 
 	// when reading:
 	void*  mmap_base;

@@ -7,15 +7,17 @@
 #define CATALOG_AN_FILETYPE "OBJS"
 
 struct catalog {
-	FILE* fid;
-	void* mmap_cat;
-	size_t mmap_cat_size;
 	uint numstars;
 	double ramin;
 	double ramax;
 	double decmin;
 	double decmax;
 	double* stars;
+	int healpix;
+
+	FILE* fid;
+	void* mmap_cat;
+	size_t mmap_cat_size;
 	qfits_header* header;
 	off_t header_end;
 };

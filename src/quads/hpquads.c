@@ -372,11 +372,8 @@ void create_quads_in_pixels(int numstars, il* starindices,
 
 	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside);
 
-	quadsmade = malloc(HEALPIXES * sizeof(unsigned char));
-	memset(quadsmade, 0, HEALPIXES * sizeof(unsigned char));
-
-	interesting = malloc(HEALPIXES * sizeof(char));
-	memset(interesting, 0, HEALPIXES * sizeof(char));
+	quadsmade = calloc(HEALPIXES, sizeof(unsigned char));
+	interesting = calloc(HEALPIXES, sizeof(char));
 
 	Ninteresting = 0;
 	for (i=0; i<HEALPIXES; i++) {
@@ -585,14 +582,13 @@ int main(int argc, char** argv)
 	}
 
 	if (id) {
-		char val[32];
-		sprintf(val, "%u", id);
-		qfits_header_add(quads->header, "INDEXID", val, "Unique id for this index.", NULL);
-		qfits_header_add(codes->header, "INDEXID", val, "Unique id for this index.", NULL);
+		quads->indexid = id;
+		codes->indexid = id;
 	}
 	// get the "HEALPIX" header from the catalog and put it in the code and quad headers.
-	if (fits_copy_header(cat->header, quads->header, "HEALPIX") ||
-		fits_copy_header(cat->header, codes->header, "HEALPIX")) {
+	quads->healpix = cat->healpix;
+	codes->healpix = cat->healpix;
+	if (cat->healpix == -1) {
 		printf("Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
 	qfits_header_add(quads->header, "COMMENT", "hpquads command line:", NULL, NULL);
