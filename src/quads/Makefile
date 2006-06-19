@@ -99,7 +99,7 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
-FITS_UTILS := tablist
+FITS_UTILS := tablist modhead
 
 fitsutils: $(FITS_UTILS)
 
