@@ -21,6 +21,10 @@ struct matchfile_entry {
 	char* indexpath;
 	char* fieldpath;
 	float codetol;
+
+	int fieldfile;
+	int indexid;
+	int healpix;
 };
 typedef struct matchfile_entry matchfile_entry;
 
