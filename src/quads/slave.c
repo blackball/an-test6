@@ -60,7 +60,6 @@ double funits_lower;
 double funits_upper;
 double index_scale;
 double index_scale_lower;
-double index_scale_lower_factor;
 int fieldid;
 int indexid;
 int healpix;
@@ -150,7 +149,6 @@ int main(int argc, char *argv[]) {
 		funits_lower = 0.0;
 		funits_upper = 0.0;
 		index_scale = 0.0;
-		index_scale_lower_factor = 0.0;
 		fieldid = 0;
 		indexid = 0;
 		healpix = -1;
@@ -195,7 +193,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "enddepth %i\n", enddepth);
 		fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
 		fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
-		fprintf(stderr, "index_lower %g\n", index_scale_lower_factor);
 		fprintf(stderr, "num-to-agree %i\n", nagree);
 		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
@@ -269,15 +266,6 @@ int main(int argc, char *argv[]) {
 		index_scale_lower = quadfile_get_index_scale_lower_arcsec(quads);
 		indexid = quads->indexid;
 		healpix = quads->healpix;
-
-        if ((index_scale_lower != 0.0) && (index_scale_lower_factor != 0.0) &&
-            ((index_scale_lower_factor * index_scale) != index_scale_lower)) {
-            fprintf(stderr, "You specified an index_scale, but the quad file contained a different index_scale_lower entry.\n");
-			fprintf(stderr, "Quad file: %g.  Your spec: %g\n", index_scale_lower, index_scale_lower_factor * index_scale);
-            fprintf(stderr, "Overriding your specification.\n");
-        }
-        if ((index_scale_lower == 0.0) && (index_scale_lower_factor != 0.0))
-            index_scale_lower = index_scale * index_scale_lower_factor;
 
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
@@ -490,9 +478,6 @@ int read_parameters() {
 		} else if (is_word(buffer, "parity ", &nextword)) {
 			int d = atoi(nextword);
 			parity = (d ? TRUE : FALSE);
-		} else if (is_word(buffer, "index_lower ", &nextword)) {
-			double d = atof(nextword);
-			index_scale_lower_factor = d;
 		} else if (is_word(buffer, "fieldunits_lower ", &nextword)) {
 			double d = atof(nextword);
 			funits_lower = d;
