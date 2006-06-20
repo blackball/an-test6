@@ -60,17 +60,7 @@ void hits_write_tailer(FILE* fid) {
 }
 
 void hits_field_init(hits_field* h) {
-	h->user_quit = FALSE;
-	h->field = 0;
-	h->objects_in_field = 0;
-	h->objects_examined = 0;
-	h->field_corners = NULL;
-	h->ntries = 0;
-	h->nmatches = 0;
-	h->nagree = 0;
-	h->parity = FALSE;
-	h->fieldpath = NULL;
-	h->failed = FALSE;
+	memset(h, 0, sizeof(hits_field));
 }
 
 void hits_start_hits_list(FILE* fid) {
@@ -84,8 +74,6 @@ void hits_end_hits_list(FILE* fid) {
 void hits_write_field_header(FILE* fid, hits_field* h) {
 	fprintf(fid, "# --------------------\n");
 	fprintf(fid, "dict(\n");
-	if (h->fieldpath)
-		fprintf(fid, "    field_to_solve = '%s',\n", h->fieldpath);
 	fprintf(fid, "    user_quit=%s,\n", (h->user_quit?"True":"False"));
 	if (h->failed)
 		fprintf(fid, "    failed=True,\n");
@@ -116,24 +104,19 @@ void hits_write_field_tailer(FILE* fid) {
 	fprintf(fid, "),\n");
 }
 
-void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
+void hits_write_hit(FILE* fid, MatchObj* mo) {
 	if (!mo) {
 		fprintf(fid, "        # No agreement between matches. Could not resolve field.\n");
 		return;
 	}
 	fprintf(fid, "        dict(\n");
 
-	if (me) {
-		/*
-		  if (me->fieldpath)
-		  fprintf(fid, "            field_to_solve = '%s',\n", me->fieldpath);
-		*/
-		if (me->indexpath)
-			fprintf(fid, "            index_used = '%s',\n", me->indexpath);
-		if (me->parity)
-			fprintf(fid, "            parity = True,\n");
-		fprintf(fid, "            field = %i,\n", me->fieldnum);
-	}
+	fprintf(fid, "            index_id = %i,\n", (int)mo->indexid);
+	fprintf(fid, "            healpix = %i,\n", (int)mo->healpix);
+	fprintf(fid, "            field_file = %i,\n", (int)mo->fieldfile);
+	fprintf(fid, "            field = %i,\n", mo->fieldnum);
+	if (mo->parity)
+		fprintf(fid, "            parity = True,\n");
 
 	fprintf(fid, "            quad=%u,\n", mo->quadno);
 	fprintf(fid, "            starids_ABCD=(%u,%u,%u,%u),\n",
@@ -154,10 +137,12 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 				mo->transform[0], mo->transform[1], mo->transform[2],
 				mo->transform[3], mo->transform[4], mo->transform[5],
 				mo->transform[6], mo->transform[7], mo->transform[8]);
-		fprintf(fid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
-				mo->transform[0], mo->transform[1], mo->transform[2],
-				mo->transform[3], mo->transform[4], mo->transform[5],
-				mo->transform[6], mo->transform[7], mo->transform[8]);
+		/*
+		  fprintf(fid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
+		  mo->transform[0], mo->transform[1], mo->transform[2],
+		  mo->transform[3], mo->transform[4], mo->transform[5],
+		  mo->transform[6], mo->transform[7], mo->transform[8]);
+		*/
 	}
 	/*
 	  fprintf(fid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
@@ -191,9 +176,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me) {
 	  fprintf(fid, "            abcdorder=%i,\n",
 	  mo->abcdorder);
 	*/
-	if (mo->code_err > 0.0) {
-		fprintf(fid, "            code_err=%lf,\n", sqrt(mo->code_err));
-	}
+	fprintf(fid, "            code_err = %lf,\n", sqrt(mo->code_err));
 	fprintf(fid, "        ),\n");
 }
 

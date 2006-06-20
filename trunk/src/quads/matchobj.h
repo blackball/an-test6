@@ -16,10 +16,16 @@ struct match_struct {
     double vector[6];
 	bool transform_valid;
 	double transform[9];
-
 	int16_t noverlap;
 	int16_t ninfield;
 	float overlap;
+
+	// formerly matchfile_entry:
+	int fieldnum;
+	bool parity;
+	int fieldfile;
+	int16_t indexid;
+	int16_t healpix;
 
 	/*
 	  double corners[4];

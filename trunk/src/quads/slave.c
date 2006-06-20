@@ -35,7 +35,7 @@
 #include "idfile.h"
 #include "intmap.h"
 #include "verify.h"
-#include "dualtree_rangesearch.h"
+#include "donuts.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -99,16 +99,6 @@ int* inverse_perm = NULL;
 int *agreesizehist;
 int Nagreehist;
 
-
-char* get_pathname(char* fname) {
-	char* resolved = malloc(PATH_MAX);
-	if (!realpath(fname, resolved)) {
-		fprintf(stderr, "Couldn't resolve real path of %s: %s\n", fname, strerror(errno));
-		return NULL;
-	}
-	resolved = realloc(resolved, strlen(resolved) + 1);
-	return resolved;
-}
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -563,7 +553,6 @@ int read_parameters() {
 }
 
 struct solvethread_args {
-	matchfile_entry me;
 	int winning_listind;
 	int threadnum;
 	bool running;
@@ -574,7 +563,6 @@ typedef struct solvethread_args threadargs;
 
 struct cached_hits {
 	int fieldnum;
-	matchfile_entry me;
 	pl* matches;
 };
 typedef struct cached_hits cached_hits;
@@ -589,8 +577,8 @@ static int cached_hits_compare(const void* v1, const void* v2) {
 	return 0;
 }
 
-// if "me" and "matches" are NULL, marks "fieldnum" as having been done.
-static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
+// if "matches" are NULL, marks "fieldnum" as having been done.
+static void write_hits(int fieldnum, pl* matches) {
 	static int index = 0;
 	static bl* cached = NULL;
 	int k, nextfld;
@@ -623,17 +611,10 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		for (k=0; k<bl_size(cached); k++) {
 			cache = bl_access(cached, k);
 			if (cache->matches) {
-				if (matchfile_start_table(mf, &cache->me) ||
-					matchfile_write_table(mf)) {
-					fprintf(stderr, "Error: Failed to write matchfile table.\n");
-				}
 				for (k=0; k<pl_size(cache->matches); k++) {
 					MatchObj* mo = pl_get(cache->matches, k);
 					if (matchfile_write_match(mf, mo))
 						fprintf(stderr, "Error writing a match.\n");
-				}
-				if (matchfile_fix_table(mf)) {
-					fprintf(stderr, "Error: Failed to fix matchfile table.\n");
 				}
 				for (k=0; k<pl_size(cache->matches); k++) {
 					MatchObj* mo = pl_get(cache->matches, k);
@@ -641,8 +622,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 				}
 				pl_free(cache->matches);
 			}
-			free(cache->me.indexpath);
-			free(cache->me.fieldpath);
 		}
 		goto bailout;
 	}
@@ -655,30 +634,16 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		bool freeit = FALSE;
 
 		ch.fieldnum = fieldnum;
-		if (me)
-			memcpy(&ch.me, me, sizeof(matchfile_entry));
-		else {
-			ch.me.indexpath = NULL;
-			ch.me.fieldpath = NULL;
-		}
 		ch.matches = matches;
 		cache = &ch;
 
 		for (;;) {
 			// write it!
-
 			if (cache->matches) {
-				if (matchfile_start_table(mf, &cache->me) ||
-					matchfile_write_table(mf)) {
-					fprintf(stderr, "Error: Failed to write matchfile table.\n");
-				}
 				for (k=0; k<pl_size(cache->matches); k++) {
 					MatchObj* mo = pl_get(cache->matches, k);
 					if (matchfile_write_match(mf, mo))
 						fprintf(stderr, "Error writing a match.\n");
-				}
-				if (matchfile_fix_table(mf)) {
-					fprintf(stderr, "Error: Failed to fix matchfile table.\n");
 				}
 			}
 			index++;
@@ -691,8 +656,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 					}
 					pl_free(cache->matches);
 				}
-				free(cache->me.indexpath);
-				free(cache->me.fieldpath);
 				bl_remove_index(cached, 0);
 			}
 			freeit = TRUE;
@@ -709,13 +672,6 @@ static void write_hits(int fieldnum, matchfile_entry* me, pl* matches) {
 		cached_hits cache;
 		// deep copy
 		cache.fieldnum = fieldnum;
-		if (me) {
-			memcpy(&cache.me, me, sizeof(matchfile_entry));
-			cache.me.indexpath = strdup(me->indexpath);
-			cache.me.fieldpath = strdup(me->fieldpath);
-		} else {
-			memset(&cache.me, 0, sizeof(matchfile_entry));
-		}
 		if (matches) {
 			cache.matches = pl_new(32);
 			for (k=0; k<pl_size(matches); k++) {
@@ -753,8 +709,6 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		return 1;
 	}
 
-	// share this struct between all the matches for this field...
-	mo->extra = &(my->me);
 	// compute (x,y,z) center, scale, rotation.
 	hitlist_healpix_compute_vector(mo);
 	n = hitlist_healpix_add_hit(my->hits, mo, &listind);
@@ -841,142 +795,6 @@ static int next_field(xy** pfield) {
 	return rtn;
 }
 
-void donut_pair_found(void* extra, int x, int y, double dist2) {
-	int i;
-	int xlistind = -1, ylistind = -1;
-	pl* lists = extra;
-	if (x >= y)
-		return;
-	for (i=0; i<pl_size(lists); i++) {
-		il* list = pl_get(lists, i);
-		if (il_find_index_ascending(list, x) != -1)
-			xlistind = i;
-		if (il_find_index_ascending(list, y) != -1)
-			ylistind = i;
-	}
-	if ((xlistind == -1) && (ylistind == -1)) {
-		// add a new list.
-		il* newlist = il_new(16);
-		il_insert_unique_ascending(newlist, x);
-		il_insert_unique_ascending(newlist, y);
-		pl_append(lists, newlist);
-	} else if (xlistind == -1) {
-		// add x to y's list.
-		il* list = pl_get(lists, ylistind);
-		il_insert_unique_ascending(list, x);
-	} else if (ylistind == -1) {
-		// add y to x's list.
-		il* list = pl_get(lists, xlistind);
-		il_insert_unique_ascending(list, y);
-	} else {
-		if (xlistind == ylistind)
-			// they're already in the same list.
-			return;
-		// merge the lists.
-		il* xlist = pl_get(lists, xlistind);
-		il* ylist = pl_get(lists, ylistind);
-		il* merged = il_merge_ascending(xlist, ylist);
-		il_free(xlist);
-		il_free(ylist);
-		pl_set(lists, xlistind, merged);
-		pl_remove(lists, ylistind);
-	}
-}
-
-void detect_donuts(int fieldnum, xy** pfield,
-				   double nearbydist, double thresh) {
-	double* fieldxy;
-	int i, N;
-	int nearby;
-	kdtree_t* tree;
-	int levels;
-	int* counts;
-	double frac;
-	xy* field = *pfield;
-	pl* lists;
-	xy* newfield;
-	bool* merged;
-	int fieldind;
-	int nmerged;
-
-	N = xy_size(field);
-	assert(N);
-	fieldxy = malloc(N * 2 * sizeof(double));
-	assert(fieldxy);
-	for (i=0; i<N; i++) {
-		fieldxy[i*2 + 0] = xy_refx(field, i);
-		fieldxy[i*2 + 1] = xy_refy(field, i);
-	}
-
-	levels = kdtree_compute_levels(N, 5);
-	//printf("Building tree with %i points, %i levels.\n", N, levels);
-	tree = kdtree_build(fieldxy, N, 2, levels);
-	assert(tree);
-	counts = calloc(N, sizeof(int));
-	dualtree_rangecount(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist, counts);
-	nearby = 0;
-	for (i=0; i<N; i++)
-		nearby += counts[i];
-	frac = (nearby - N) / (double)N;
-	fprintf(stderr, "Field %i: Donuts: %4.1f%% (%i of %i) in range.\n",
-			fieldnum, 100.0 * frac, nearby - N, N);
-	free(counts);
-	if (frac < thresh)
-		goto done;
-
-	lists = pl_new(32);
-	dualtree_rangesearch(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist,
-						 donut_pair_found, lists, NULL, NULL);
-	fprintf(stderr, "Found %i clusters:\n", pl_size(lists));
-
-	nmerged = 0;
-	for (i=0; i<pl_size(lists); i++)
-		nmerged += il_size(pl_get(lists, i));
-
-	newfield = mk_xy(N - nmerged + pl_size(lists));
-
-	merged = calloc(N, sizeof(bool));
-
-	for (i=0; i<pl_size(lists); i++) {
-		int j;
-		double avgx, avgy;
-		il* list = pl_get(lists, i);
-		fprintf(stderr, "    ");
-		avgx = avgy = 0.0;
-		for (j=0; j<il_size(list); j++) {
-			int ind;
-			fprintf(stderr, "%i ", il_get(list, j));
-			ind = tree->perm[il_get(list, j)];
-			merged[ind] = TRUE;
-			avgx += xy_refx(field, ind);
-			avgy += xy_refy(field, ind);
-		}
-		avgx /= (double)il_size(list);
-		avgy /= (double)il_size(list);
-		fprintf(stderr, "\n");
-		il_free(list);
-		xy_setx(newfield, i, avgx);
-		xy_sety(newfield, i, avgy);
-	}
-	fieldind = pl_size(lists);
-	for (i=0; i<N; i++) {
-		if (merged[i])
-			continue;
-		// this star wasn't part of a donut...
-		xy_setx(newfield, fieldind, xy_refx(field, i));
-		xy_sety(newfield, fieldind, xy_refy(field, i));
-		fieldind++;
-	}
-
-	free(merged);
-	pl_free(lists);
-	free_xy(field);
-	*pfield = newfield;
-
- done:
-	kdtree_free(tree);
-	free(fieldxy);
-}
 
 void* solvethread_run(void* varg) {
 	threadargs* my = varg;
@@ -984,14 +802,12 @@ void* solvethread_run(void* varg) {
 	double last_utime, last_stime;
 	double utime, stime;
 	int nfields;
-	char* path;
 
 	fprintf(stderr, "Thread %i starting.\n", my->threadnum);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 
 	solver_default_params(&solver);
-
 	solver.codekd = codetree;
 	solver.endobj = enddepth;
 	solver.maxtries = 0;
@@ -999,23 +815,6 @@ void* solvethread_run(void* varg) {
 	solver.codetol = codetol;
 	solver.cornerpix = mk_xy(4);
 	solver.handlehit = handlehit;
-
-	my->me.parity = parity;
-	path = get_pathname(treefname);
-	if (path)
-		my->me.indexpath = path;
-	else
-		my->me.indexpath = treefname;
-	path = get_pathname(fieldfname);
-	if (path)
-		my->me.fieldpath = path;
-	else
-		my->me.fieldpath = fieldfname;
-	my->me.codetol = codetol;
-
-	my->me.fieldfile = fieldid;
-	my->me.indexid = indexid;
-	my->me.healpix = healpix;
 
 	if (do_verify)
 		my->verified = pl_new(32);
@@ -1038,6 +837,7 @@ void* solvethread_run(void* varg) {
 	for (;;) {
 		xy *thisfield = NULL;
 		int fieldnum;
+		MatchObj template;
 
 		fieldnum = next_field(&thisfield);
 
@@ -1051,7 +851,7 @@ void* solvethread_run(void* varg) {
 			// HACK - why is this happening? QFITS + multithreading interaction bug?
 			// or running out of address space?
 			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
-			write_hits(fieldnum, NULL, NULL);
+			write_hits(fieldnum, NULL);
 			continue;
 		}
 
@@ -1063,26 +863,25 @@ void* solvethread_run(void* varg) {
 				// file exists; field has already been solved.
 				fprintf(stderr, "Field %i: file %s exists; field has been solved.\n",
 						fieldnum, fn);
-				write_hits(fieldnum, NULL, NULL);
+				write_hits(fieldnum, NULL);
 				continue;
 			}
 		}
 
 		if (do_donut) {
-			/*
-			  double donutdist;
-			  // fieldunits_{upper,lower} is in arcsec/pixel
-			  // xylist is in pixels
-			  // verify_dist2 is in star-space distance
-			  // donutdist is in pixels.
-			  donutdist = distsq2arcsec(verify_dist2) / funits_upper;
-			*/
 			int oldsize = xy_size(thisfield);
 			detect_donuts(fieldnum, &thisfield, donut_dist, donut_thresh);
 			if (xy_size(thisfield) != oldsize)
 				fprintf(stderr, "Field %i: donuts detected; merged %i objects to %i.\n",
 						fieldnum, oldsize, xy_size(thisfield));
 		}
+
+		template.fieldnum = fieldnum;
+		template.parity = parity;
+		template.fieldfile = fieldid;
+		template.indexid = indexid;
+		template.healpix = healpix;
+
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
@@ -1090,23 +889,15 @@ void* solvethread_run(void* varg) {
 		solver.startobj = startdepth;
 		solver.field = thisfield;
 		solver.quitNow = FALSE;
+		solver.mo_template = &template;
 		solver.userdata = my;
 
-		my->me.fieldnum = fieldnum;
 		my->winning_listind = -1;
-
 		if (agreement) {
 			my->hits = hitlist_healpix_new(agreetol);
 			my->hits->do_correspond = do_correspond;
 		} else
 			my->hits = NULL;
-
-		if (!agreement) {
-			if (matchfile_start_table(mf, &(my->me)) ||
-				matchfile_write_table(mf)) {
-				fprintf(stderr, "Error: Failed to write matchfile table.\n");
-			}
-		}
 
 		// The real thing
 		solve_field(&solver);
@@ -1143,9 +934,9 @@ void* solvethread_run(void* varg) {
 				// to collect good stats.
 				if (do_verify) {
 					// write 'em!
-					write_hits(fieldnum, &my->me, my->verified);
+					write_hits(fieldnum, my->verified);
 				} else {
-					write_hits(fieldnum, NULL, NULL);
+					write_hits(fieldnum, NULL);
 				}
 			} else {
 				double maxoverlap = 0;
@@ -1184,7 +975,7 @@ void* solvethread_run(void* varg) {
 				}
 
 				// write 'em!
-				write_hits(fieldnum, &my->me, list);
+				write_hits(fieldnum, list);
 				pl_free(list);
 
 				if (solvedfname) {
@@ -1209,12 +1000,6 @@ void* solvethread_run(void* varg) {
 
 		free_xy(thisfield);
 
-		if (!agreement) {
-			if (matchfile_fix_table(mf)) {
-				fprintf(stderr, "Error: Failed to fix matchfile table.\n");
-			}
-		}
-
 		get_resource_stats(&utime, &stime, NULL);
 		fprintf(stderr, "    spent %g s user, %g s system, %g s total.\n",
 				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime));
@@ -1223,16 +1008,12 @@ void* solvethread_run(void* varg) {
 	}
 
 	pl_free(my->verified);
-
-	free(my->me.indexpath);
-	free(my->me.fieldpath);
 	free_xy(solver.cornerpix);
 
 	fprintf(stderr, "Thread %i finished.\n", my->threadnum);
 	my->running = FALSE;
 	return 0;
 }
-
 
 void solve_fields() {
 	int i;
@@ -1274,7 +1055,7 @@ void solve_fields() {
 	}
 
 	// DEBUG
-	write_hits(-1, NULL, NULL);
+	write_hits(-1, NULL);
 
 	for (i=0; i<threads; i++) {
 		free(allargs[i]);

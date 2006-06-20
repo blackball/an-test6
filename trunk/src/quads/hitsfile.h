@@ -33,7 +33,6 @@ struct hitsfieldentry {
 	unsigned int nmatches;
 	unsigned int nagree;
 	bool parity;
-	char* fieldpath;
 };
 typedef struct hitsfieldentry hits_field;
 
@@ -50,7 +49,7 @@ void hits_write_field_header(FILE* fid, hits_field* h);
 
 void hits_start_hits_list(FILE* fid);
 
-void hits_write_hit(FILE* fid, MatchObj* mo, matchfile_entry* me);
+void hits_write_hit(FILE* fid, MatchObj* mo);
 
 void hits_end_hits_list(FILE* fid);
 

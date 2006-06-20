@@ -32,6 +32,10 @@ struct solver_params {
 	double arcsec_per_pixel_lower;
 	double arcsec_per_pixel_upper;
 
+	// the MatchObj template: if non-NULL, every MatchObj will be a memcpy
+	// of this one before the other fields are set.
+	MatchObj* mo_template;
+
 	// Must be initialized by caller; will contain outputs:
 	xy* cornerpix;
 	handle_hit handlehit;

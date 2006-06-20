@@ -164,6 +164,8 @@ int main(int argc, char *argv[]) {
 		matchfile* mf;
 		int nread;
 		char* fname = inputfiles[i];
+		MatchObj* mo;
+		int k;
 
 		fprintf(stderr, "Opening matchfile %s...\n", fname);
 		mf = matchfile_open(fname);
@@ -173,8 +175,7 @@ int main(int argc, char *argv[]) {
 		}
 		nread = 0;
 
-		for (;;) {
-			matchfile_entry me;
+		for (k=0; k<mf->nrows; k++) {
 			int fieldnum;
 			double x1,y1,z1;
 			double x2,y2,z2;
@@ -187,163 +188,148 @@ int main(int argc, char *argv[]) {
 			int j, M;
 			double xavg, yavg, zavg;
 			double fieldrad2;
-			uint k;
-			int res;
+			bool warn = FALSE;
+			bool err  = FALSE;
 
-			if ((res = matchfile_next_table(mf, &me))) {
-				if (res == -1)
-					fprintf(stderr, "Failed to read the next table from matchfile %s.\n", fname);
+			mo = matchfile_buffered_read_match(mf);
+			if (!mo) {
+				fprintf(stderr, "Failed to read a match from file %s\n", fname);
 				break;
 			}
 
-			fieldnum = me.fieldnum;
+			fieldnum = mo->fieldnum;
 			if (fieldnum < firstfield)
 				continue;
 			if (fieldnum > lastfield)
 				// here we assume the fields are ordered...
 				break;
 
-			for (k=0; k<mf->nrows; k++) {
-				MatchObj* mo;
-				bool warn = FALSE;
-				bool err  = FALSE;
-				mo = matchfile_buffered_read_match(mf);
-				if (!mo) {
-					fprintf(stderr, "Failed to read match from %s: %s\n", fname, strerror(errno));
+			/*
+			  printf("quad %u, stars { %u, %u, %u, %u }, fieldobjs { %u, %u, %u, %u }\n",
+			  mo->quadno, mo->star[0], mo->star[1], mo->star[2], mo->star[3],
+			  mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
+			  printf("    codeerr %f, mincorner { %g, %g, %g }, maxcorner { %g, %g %g }, noverlap %i\n",
+			  mo->code_err, mo->sMin[0], mo->sMin[1], mo->sMin[2],
+			  mo->sMax[0], mo->sMax[1], mo->sMax[2], (int)mo->noverlap);
+			*/
+
+			nread++;
+
+			x1 = mo->sMin[0];
+			y1 = mo->sMin[1];
+			z1 = mo->sMin[2];
+			x2 = mo->sMax[0];
+			y2 = mo->sMax[1];
+			z2 = mo->sMax[2];
+
+			// normalize.
+			r = sqrt(square(x1) + square(y1) + square(z1));
+			x1 /= r;
+			y1 /= r;
+			z1 /= r;
+			r = sqrt(square(x2) + square(y2) + square(z2));
+			x2 /= r;
+			y2 /= r;
+			z2 /= r;
+				
+			xc = (x1 + x2) / 2.0;
+			yc = (y1 + y2) / 2.0;
+			zc = (z1 + z2) / 2.0;
+			r = sqrt(square(xc) + square(yc) + square(zc));
+			xc /= r;
+			yc /= r;
+			zc /= r;
+
+			radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
+			rac  = rad2deg(xy2ra(xc, yc));
+			decc = rad2deg(z2dec(zc));
+			arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
+
+			// read the RDLS entries for this field and make sure they're all
+			// within radius of the center.
+			rdlist = (dl*)rdlist_get_field(rdls, fieldnum);
+			M = dl_size(rdlist) / 2;
+			xavg = yavg = zavg = 0.0;
+			for (j=0; j<M; j++) {
+				double x, y, z;
+				ra  = dl_get(rdlist, j*2);
+				dec = dl_get(rdlist, j*2 + 1);
+				// in degrees
+				ra  = deg2rad(ra);
+				dec = deg2rad(dec);
+				x = radec2x(ra, dec);
+				y = radec2y(ra, dec);
+				z = radec2z(ra, dec);
+				xavg += x;
+				yavg += y;
+				zavg += z;
+				dist2 = square(x - xc) + square(y - yc) + square(z - zc);
+
+				// 1.1 is a "fudge factor"
+				if (dist2 > (radius2 * 1.1)) {
+					fprintf(stderr, "\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
+							fieldnum, rac, decc, arc);
+					fprintf(stderr, "rdls %i is (%g, %g).  Overlap %4.1f%% (%i/%i)\n", j, rad2deg(ra), rad2deg(dec),
+							100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+					err = TRUE;
 					break;
 				}
-
-				/*
-				  printf("quad %u, stars { %u, %u, %u, %u }, fieldobjs { %u, %u, %u, %u }\n",
-				  mo->quadno, mo->star[0], mo->star[1], mo->star[2], mo->star[3],
-				  mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
-				  printf("    codeerr %f, mincorner { %g, %g, %g }, maxcorner { %g, %g %g }, noverlap %i\n",
-				  mo->code_err, mo->sMin[0], mo->sMin[1], mo->sMin[2],
-				  mo->sMax[0], mo->sMax[1], mo->sMax[2], (int)mo->noverlap);
-				*/
-
-				nread++;
-
-				x1 = mo->sMin[0];
-				y1 = mo->sMin[1];
-				z1 = mo->sMin[2];
-				x2 = mo->sMax[0];
-				y2 = mo->sMax[1];
-				z2 = mo->sMax[2];
-
-				// normalize.
-				r = sqrt(square(x1) + square(y1) + square(z1));
-				x1 /= r;
-				y1 /= r;
-				z1 /= r;
-				r = sqrt(square(x2) + square(y2) + square(z2));
-				x2 /= r;
-				y2 /= r;
-				z2 /= r;
-				
-				xc = (x1 + x2) / 2.0;
-				yc = (y1 + y2) / 2.0;
-				zc = (z1 + z2) / 2.0;
-				r = sqrt(square(xc) + square(yc) + square(zc));
-				xc /= r;
-				yc /= r;
-				zc /= r;
-
-				radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
-				rac  = rad2deg(xy2ra(xc, yc));
-				decc = rad2deg(z2dec(zc));
-				arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
-
-				// read the RDLS entries for this field and make sure they're all
-				// within radius of the center.
-				rdlist = (dl*)rdlist_get_field(rdls, fieldnum);
-				M = dl_size(rdlist) / 2;
-				xavg = yavg = zavg = 0.0;
-				for (j=0; j<M; j++) {
-					double x, y, z;
-					ra  = dl_get(rdlist, j*2);
-					dec = dl_get(rdlist, j*2 + 1);
-					// in degrees
-					ra  = deg2rad(ra);
-					dec = deg2rad(dec);
-					x = radec2x(ra, dec);
-					y = radec2y(ra, dec);
-					z = radec2z(ra, dec);
-					xavg += x;
-					yavg += y;
-					zavg += z;
-					dist2 = square(x - xc) + square(y - yc) + square(z - zc);
-
-					// 1.1 is a "fudge factor"
-					if (dist2 > (radius2 * 1.1)) {
-						fprintf(stderr, "\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
-								fieldnum, rac, decc, arc);
-						fprintf(stderr, "rdls %i is (%g, %g).  Overlap %4.1f%% (%i/%i)\n", j, rad2deg(ra), rad2deg(dec),
-								100.0 * mo->overlap, mo->noverlap, mo->ninfield);
-						err = TRUE;
-						break;
-					}
-				}
-				// make another sweep through, finding the field star furthest from the mean.
-				// this gives an estimate of the field radius.
-				xavg /= (double)M;
-				yavg /= (double)M;
-				zavg /= (double)M;
-				fieldrad2 = 0.0;
-				for (j=0; j<M; j++) {
-					double x, y, z;
-					ra  = dl_get(rdlist, j*2);
-					dec = dl_get(rdlist, j*2 + 1);
-					// in degrees
-					ra  = deg2rad(ra);
-					dec = deg2rad(dec);
-					x = radec2x(ra, dec);
-					y = radec2y(ra, dec);
-					z = radec2z(ra, dec);
-					dist2 = square(x - xavg) + square(y - yavg) + square(z - zavg);
-					if (dist2 > fieldrad2)
-						fieldrad2 = dist2;
-				}
-				if (fieldrad2 * 1.2 < radius2) {
-					fprintf(stderr, "\nWarning: Field %i: match says scale is %g, but field radius is %g.\n", fieldnum,
-							60.0 * rad2deg(distsq2arc(radius2)),
-							60.0 * rad2deg(distsq2arc(fieldrad2)));
-					warn = TRUE;
-				}
-				
-				if (err) {
-					incorrect++;
-					incorrects[fieldnum]++;
-					if (mo->overlap > overlap_highwrong)
-						overlap_highwrong = mo->overlap;
-				} else if (warn) {
-					warning++;
-					warnings[fieldnum]++;
-					if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-						overlap_lowcorrect = mo->overlap;
-				} else {
-					corrects[fieldnum]++;
-					correct++;
-					fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
-							fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
-					if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-						overlap_lowcorrect = mo->overlap;
-				}
-
-				if (binsize != 0.0) {
-					int bin = rint(100.0 * mo->overlap / binsize);
-					if (bin < 0) bin = 0;
-					if (bin >= Nbins) bin = Nbins-1;
-					if (err)
-						overlap_hist_wrong[bin]++;
-					else
-						overlap_hist_right[bin]++;
-				}
-
-				//free_MatchObj(mo);
 			}
-			free(me.indexpath);
-			free(me.fieldpath);
+			// make another sweep through, finding the field star furthest from the mean.
+			// this gives an estimate of the field radius.
+			xavg /= (double)M;
+			yavg /= (double)M;
+			zavg /= (double)M;
+			fieldrad2 = 0.0;
+			for (j=0; j<M; j++) {
+				double x, y, z;
+				ra  = dl_get(rdlist, j*2);
+				dec = dl_get(rdlist, j*2 + 1);
+				// in degrees
+				ra  = deg2rad(ra);
+				dec = deg2rad(dec);
+				x = radec2x(ra, dec);
+				y = radec2y(ra, dec);
+				z = radec2z(ra, dec);
+				dist2 = square(x - xavg) + square(y - yavg) + square(z - zavg);
+				if (dist2 > fieldrad2)
+					fieldrad2 = dist2;
+			}
+			if (fieldrad2 * 1.2 < radius2) {
+				fprintf(stderr, "\nWarning: Field %i: match says scale is %g, but field radius is %g.\n", fieldnum,
+						60.0 * rad2deg(distsq2arc(radius2)),
+						60.0 * rad2deg(distsq2arc(fieldrad2)));
+				warn = TRUE;
+			}
+				
+			if (err) {
+				incorrect++;
+				incorrects[fieldnum]++;
+				if (mo->overlap > overlap_highwrong)
+					overlap_highwrong = mo->overlap;
+			} else if (warn) {
+				warning++;
+				warnings[fieldnum]++;
+				if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
+					overlap_lowcorrect = mo->overlap;
+			} else {
+				corrects[fieldnum]++;
+				correct++;
+				fprintf(stderr, "Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
+						fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+				if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
+					overlap_lowcorrect = mo->overlap;
+			}
+
+			if (binsize != 0.0) {
+				int bin = rint(100.0 * mo->overlap / binsize);
+				if (bin < 0) bin = 0;
+				if (bin >= Nbins) bin = Nbins-1;
+				if (err)
+					overlap_hist_wrong[bin]++;
+				else
+					overlap_hist_right[bin]++;
+			}
 		}
 
 		fprintf(stderr, "Read %i matches.\n", nread);
