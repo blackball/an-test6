@@ -94,6 +94,8 @@ kdtree_t* startree;
 
 int* inverse_perm = NULL;
 
+int nverified;
+
 // histogram of the size of agreement clusters.
 int *agreesizehist;
 int Nagreehist;
@@ -171,6 +173,7 @@ int main(int argc, char *argv[]) {
 		cat = NULL;
 		quads = NULL;
 		startree = NULL;
+		nverified = 0;
 
 		if (read_parameters())
 			break;
@@ -680,11 +683,21 @@ static void write_hits(int fieldnum, pl* matches) {
 	return;
 }
 
+void verify(MatchObj* mo, xy* field, int fieldnum, int nagree) {
+	int matches, unmatches, conflicts;
+	verify_hit(startree, mo, field, verify_dist2,
+			   &matches, &unmatches, &conflicts);
+	fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+			fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
+ 	fflush(stderr);
+	mo->nverified = nverified;
+	nverified++;
+}
+
 int handlehit(solver_params* p, MatchObj* mo) {
 	int listind;
 	int n = 0;
 	threadargs* my = p->userdata;
-	int matches, unmatches, conflicts;
 
 	// compute (x,y,z) center, scale, rotation.
 	hitlist_healpix_compute_vector(mo);
@@ -696,12 +709,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (n < nagree_toverify)
 		return n;
 
-	verify_hit(startree, mo, p->field, verify_dist2,
-			   &matches, &unmatches, &conflicts);
-
-	fprintf(stderr, "    field %i %i/%i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-			p->fieldnum, p->objsused, p->endobj, n, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
-	fflush(stderr);
+	verify(mo, p->field, p->fieldnum, n);
 
 	if (overlap_tosolve > 0.0) {
 		bool solved = FALSE;
@@ -710,12 +718,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			MatchObj* mo1 = NULL;
 			pl* list = hitlist_healpix_copy_list(my->hits, listind);
 			mo1 = pl_get(list, 0);
-			if (mo1->overlap == 0) {
-				verify_hit(startree, mo1, p->field, verify_dist2,
-						   &matches, &unmatches, &conflicts);
-				fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-						p->fieldnum, n, 100.0 * mo1->overlap, mo1->ninfield, matches, unmatches, conflicts);
-				fflush(stderr);
+			if (mo1->overlap == 0.0) {
+				verify(mo, p->field, p->fieldnum, n);
 			}
 			if (mo1->overlap >= overlap_tosolve)
 				solved = TRUE;
@@ -724,7 +728,6 @@ int handlehit(solver_params* p, MatchObj* mo) {
 		}
 		if (mo->overlap >= overlap_tosolve)
 			solved = TRUE;
-
 		if (mo->overlap >= overlap_tokeep)
 			pl_append(my->verified, mo);
 
@@ -923,12 +926,7 @@ void* solvethread_run(void* varg) {
 					// run verification on any of the matches that haven't
 					// already been done.
 					if (mo->overlap == 0.0) {
-						int matches, unmatches, conflicts;
-						verify_hit(startree, mo, solver.field, verify_dist2,
-								   &matches, &unmatches, &conflicts);
-						fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-								solver.fieldnum, pl_size(list), 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
-						fflush(stderr);
+						verify(mo, solver.field, solver.fieldnum, pl_size(list));
 					}
 
 					sumoverlap += mo->overlap;

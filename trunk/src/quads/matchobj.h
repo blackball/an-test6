@@ -18,6 +18,7 @@ struct match_struct {
 	double transform[9];
 	int16_t noverlap;
 	int16_t ninfield;
+	// this isn't stored, it's computed from noverlap and ninfield.
 	float overlap;
 
 	// formerly matchfile_entry:
@@ -26,6 +27,18 @@ struct match_struct {
 	int fieldfile;
 	int16_t indexid;
 	int16_t healpix;
+
+	// how many field quads did we try before finding this one?
+	int quads_tried;
+	// how many matching quads from the index did we find before this one?
+	int quads_matched;
+	// how many field objects did we have to look at?
+	//  (this isn't stored in the matchfile, it's max(field))
+	int objs_tried;
+	// how many matches have we run verification on?
+	int nverified;
+	// how many seconds of CPU time have we spent on this field?
+	float timeused;
 
 	/*
 	  double corners[4];
@@ -45,6 +58,9 @@ struct match_struct {
 typedef struct match_struct MatchObj;
 
 void matchobj_compute_overlap(MatchObj* mo);
+
+// compute all derived fields.
+void matchobj_compute_derived(MatchObj* mo);
 
 #define MATCH_VECTOR_SIZE 6
 
