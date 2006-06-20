@@ -10,6 +10,16 @@
 static int find_table(matchfile* mf);
 static qfits_table* matchfile_get_table();
 
+void matchobj_compute_derived(MatchObj* mo) {
+	int mx;
+	int i;
+	matchobj_compute_overlap(mo);
+	mx = 0;
+	for (i=0; i<4; i++)
+		if (mo->field[i] > mx) mx = mo->field[i];
+	mo->objs_tried = mx+1;
+}
+
 void matchobj_compute_overlap(MatchObj* mo) {
 	if (!mo->ninfield) {
 		fprintf(stderr, "Warning: matchobj_compute_overlap: ninfield = 0.\n");
@@ -112,6 +122,10 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "indexid", nil, indexid, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "healpix", nil, healpix, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "parity", nil, parity, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qtried", nil, quads_tried, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qmatched", nil, quads_matched, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "nverified", nil, nverified, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "timeused", nil, timeused, 1, FALSE);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
@@ -299,7 +313,8 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 			 sizeof(MatchObj));
 	}
 	for (i=0; i<n; i++)
-		matchobj_compute_overlap(mo + i);
+		//matchobj_compute_overlap(mo + i);
+		matchobj_compute_derived(mo + i);
 	return 0;
 }
 

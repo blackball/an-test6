@@ -11,6 +11,7 @@
 #include "matchobj.h"
 #include "solver.h"
 #include "solver_callbacks.h"
+#include "tic.h"
 
 void solver_default_params(solver_params* params) {
 	memset(params, 0, sizeof(solver_params));
@@ -59,6 +60,11 @@ void solve_field(solver_params* params) {
     char *iunion;
     int ncd;
 	unsigned char *scale_value;
+	double c;
+	double usertime, systime;
+
+	get_resource_stats(&usertime, &systime, NULL);
+	params->starttime = usertime + systime;
 
 	numxy = xy_size(params->field);
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
@@ -67,6 +73,18 @@ void solve_field(solver_params* params) {
 		numxy = params->endobj;
 
 	find_corners(params->field, params->cornerpix);
+
+	// how many pixels from corner to corner of the field?
+	c  = square(xy_refy(params->cornerpix, 1) - xy_refy(params->cornerpix, 0));
+	c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
+	params->fieldscale = sqrt(c);
+	// how many arcsec from corner to corner of the field?
+	/*
+	  params->arcsec_lower = params->arcsec_per_pixel_upper * params->fieldscale;
+	  params->arcsec_upper = params->arcsec_per_pixel_lomer * params->fieldscale;
+	*/
+	params->starscale_lower = arcsec2distsq(params->arcsec_per_pixel_upper * params->fieldscale);
+	params->starscale_upper = arcsec2distsq(params->arcsec_per_pixel_lower * params->fieldscale);
 
 	iCs = malloc(numxy * numxy * sizeof(int));
 	iDs = malloc(numxy * numxy * sizeof(int));
@@ -167,7 +185,6 @@ void solve_field(solver_params* params) {
 	free(iCs);
 	free(iDs);
 	free(iunion);
-
 }
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
@@ -269,11 +286,15 @@ static void set_xy(xy* dest, int destind, xy* src, int srcind) {
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 				   uint iA, uint iB, uint iC, uint iD,
                    xy *ABCDpix, solver_params* params) {
+
     double thequery[4];
     kdtree_qres_t* result;
 	double tol = square(params->codetol);
 	xy* inorder = mk_xy(4);
 	int A=0, B=1, C=2, D=3;
+	double usertime, systime;
+	get_resource_stats(&usertime, &systime, NULL);
+	params->timeused = usertime + systime - params->starttime;
 
     // ABCD
     thequery[0] = Cx;
@@ -287,10 +308,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	set_xy(inorder, 3, ABCDpix, D);
 
     result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres) {
-		params->nummatches += result->nres;
+    if (result->nres)
 		resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
-    }
     kdtree_free_query(result);
 	if (params->quitNow)
 		goto bailout;
@@ -307,10 +326,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	set_xy(inorder, 3, ABCDpix, D);
 
     result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres) {
-		params->nummatches += result->nres;
+    if (result->nres)
 		resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
-    }
     kdtree_free_query(result);
 	if (params->quitNow)
 		goto bailout;
@@ -327,10 +344,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	set_xy(inorder, 3, ABCDpix, C);
 
     result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres) {
-		params->nummatches += result->nres;
+    if (result->nres)
 		resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
-    }
     kdtree_free_query(result);
 	if (params->quitNow)
 		goto bailout;
@@ -347,10 +362,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	set_xy(inorder, 3, ABCDpix, C);
 
     result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres) {
-		params->nummatches += result->nres;
+    if (result->nres)
 		resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
-    }
     kdtree_free_query(result);
 	if (params->quitNow)
 		goto bailout;
@@ -374,6 +387,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 		double star[12];
 		double field[8];
 		int i;
+		double starscale;
+
+		params->nummatches++;
 
 		thisquadno = (uint)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
@@ -390,36 +406,26 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 		fit_transform(star, field, 4, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
+
+		// check scale
+		starscale  = square(sMax[0] - sMin[0]);
+		starscale += square(sMax[1] - sMin[1]);
+		starscale += square(sMax[2] - sMin[2]);
+		if ((starscale > params->starscale_upper) ||
+			(starscale < params->starscale_lower))
+			// this quad has invalid scale.
+			continue;
+
 		image_to_xyz(xy_refx(params->cornerpix, 2), xy_refy(params->cornerpix, 2), sMinMax, transform);
 		image_to_xyz(xy_refx(params->cornerpix, 3), xy_refy(params->cornerpix, 3), sMaxMin, transform);
 
-		// scale checking
-		// fieldunitsupper/lower is in arcseconds/pixel
-		{
-			double d, c;
-			d  = square(sMax[0] - sMin[0]);
-			d += square(sMax[1] - sMin[1]);
-			d += square(sMax[2] - sMin[2]);
-			// convert 'd' from squared distance on the unit sphere
-			// to arcseconds...
-			d = distsq2arc(d);
-			d = rad2deg(d) * 60.0 * 60.0;
-
-			c  = square(xy_refy(params->cornerpix, 1) - xy_refy(params->cornerpix, 0));
-			c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
-			c = sqrt(c);
-
-			if ((d/c > params->arcsec_per_pixel_upper) || (d/c < params->arcsec_per_pixel_lower)) {
-				// this quad has invalid scale.
-				continue;
-			}
-		}
-
-
 		mo = mk_MatchObj();
-
 		if (params->mo_template)
 			memcpy(mo, params->mo_template, sizeof(MatchObj));
+
+		mo->quads_tried   = params->numtries;
+		mo->quads_matched = params->nummatches;
+		mo->timeused = params->timeused;
 
 		memcpy(mo->transform, transform, sizeof(mo->transform));
 		mo->transform_valid = TRUE;
