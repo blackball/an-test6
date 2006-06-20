@@ -83,8 +83,8 @@ void solve_field(solver_params* params) {
 	  params->arcsec_lower = params->arcsec_per_pixel_upper * params->fieldscale;
 	  params->arcsec_upper = params->arcsec_per_pixel_lomer * params->fieldscale;
 	*/
-	params->starscale_lower = arcsec2distsq(params->arcsec_per_pixel_upper * params->fieldscale);
-	params->starscale_upper = arcsec2distsq(params->arcsec_per_pixel_lower * params->fieldscale);
+	params->starscale_upper = arcsec2distsq(params->arcsec_per_pixel_upper * params->fieldscale);
+	params->starscale_lower = arcsec2distsq(params->arcsec_per_pixel_lower * params->fieldscale);
 
 	iCs = malloc(numxy * numxy * sizeof(int));
 	iDs = malloc(numxy * numxy * sizeof(int));
