@@ -70,11 +70,28 @@ int matchfile_write_header(matchfile* mf) {
 	qfits_header* tablehdr;
 	// the main file header:
     qfits_header_dump(mf->header, mf->fid);
+	mf->table->nr = mf->nrows;
 	tablehdr = qfits_table_ext_header_default(mf->table);
     qfits_header_dump(tablehdr, mf->fid);
     qfits_header_destroy(tablehdr);
 	mf->header_end = ftello(mf->fid);
 	//fits_pad_file(mf->fid);
+	return 0;
+}
+
+int matchfile_fix_header(matchfile* mf) {
+	off_t offset;
+	off_t old_offset;
+	offset = ftello(mf->fid);
+	fseeko(mf->fid, 0, SEEK_SET);
+	old_offset = mf->header_end;
+	matchfile_write_header(mf);
+	if (mf->header_end != old_offset) {
+		fprintf(stderr, "Error: matchfile %s: header used to end at %i, but now it ends at %i.  Data corruction is likely to have resulted.\n",
+				mf->fn, (int)old_offset, (int)mf->header_end);
+		return -1;
+	}
+	fseeko(mf->fid, offset, SEEK_SET);
 	return 0;
 }
 

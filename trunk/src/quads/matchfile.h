@@ -49,6 +49,8 @@ matchfile* matchfile_open_for_writing(char* fn);
 
 int matchfile_write_header(matchfile* m);
 
+int matchfile_fix_header(matchfile* m);
+
 int matchfile_write_match(matchfile* m, MatchObj* mo);
 
 

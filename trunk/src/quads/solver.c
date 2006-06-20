@@ -79,10 +79,6 @@ void solve_field(solver_params* params) {
 	c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
 	params->fieldscale = sqrt(c);
 	// how many arcsec from corner to corner of the field?
-	/*
-	  params->arcsec_lower = params->arcsec_per_pixel_upper * params->fieldscale;
-	  params->arcsec_upper = params->arcsec_per_pixel_lomer * params->fieldscale;
-	*/
 	params->starscale_upper = arcsec2distsq(params->arcsec_per_pixel_upper * params->fieldscale);
 	params->starscale_lower = arcsec2distsq(params->arcsec_per_pixel_lower * params->fieldscale);
 

@@ -196,6 +196,7 @@ int main(int argc, char *argv[]) {
 	il_free(empty);
 	il_free(nonempty);
 
+	matchfile_fix_header(agreemf);
 	matchfile_close(agreemf);
 
 	free(mfs);

@@ -317,7 +317,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		xylist_close(xyls);
-		matchfile_close(mf);
+		if (matchfile_fix_header(mf) ||
+			matchfile_close(mf)) {
+			fprintf(stderr, "Error closing matchfile.\n");
+		}
 		kdtree_close(codetree);
 		if (startree)
 			kdtree_close(startree);
