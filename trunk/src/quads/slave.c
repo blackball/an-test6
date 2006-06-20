@@ -64,7 +64,6 @@ double index_scale_lower_factor;
 int fieldid;
 int indexid;
 int healpix;
-bool agreement;
 int nagree;
 int maxnagree;
 double agreetol;
@@ -153,7 +152,6 @@ int main(int argc, char *argv[]) {
 		fieldid = 0;
 		indexid = 0;
 		healpix = -1;
-		agreement = FALSE;
 		nagree = 4;
 		maxnagree = 0;
 		agreetol = 0.0;
@@ -177,11 +175,6 @@ int main(int argc, char *argv[]) {
 		if (read_parameters())
 			break;
 
-		if (agreement && (agreetol <= 0.0)) {
-			fprintf(stderr, "If you set 'agreement', you must set 'agreetol'.\n");
-			exit(-1);
-		}
-
 		fprintf(stderr, "%s params:\n", progname);
 		fprintf(stderr, "fieldfname %s\n", fieldfname);
 		fprintf(stderr, "fieldid %i\n", fieldid);
@@ -200,7 +193,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
 		fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
 		fprintf(stderr, "index_lower %g\n", index_scale_lower_factor);
-		fprintf(stderr, "agreement %i\n", agreement);
 		fprintf(stderr, "num-to-agree %i\n", nagree);
 		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
@@ -214,6 +206,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
 		fprintf(stderr, "donut_dist %g\n", donut_dist);
 		fprintf(stderr, "donut_thresh %g\n", donut_thresh);
+		fprintf(stderr, "threads %i\n", threads);
 
 		fprintf(stderr, "fields ");
 		for (i=0; i<il_size(fieldlist); i++)
@@ -225,11 +218,6 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		if (!agreement && (threads > 1)) {
-			fprintf(stderr, "Can't multi-thread when !agreement\n");
-			threads = 1;
-		}
-		fprintf(stderr, "threads %i\n", threads);
 
 		mf = matchfile_open_for_writing(matchfname);
 		if (!mf) {
@@ -427,7 +415,6 @@ int read_parameters() {
 					"    fieldunits_lower <arcsec-per-pixel>\n"
 					"    fieldunits_upper <arcsec-per-pixel>\n"
 					"    index_lower <index-size-lower-bound-fraction>\n"
-					"    agreement\n"
 					"    nagree <min-to-agree>\n"
 					"    maxnagree <max-to-agree>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
@@ -448,8 +435,6 @@ int read_parameters() {
 			xcolname = strdup(nextword);
 		} else if (is_word(buffer, "ycol ", &nextword)) {
 			ycolname = strdup(nextword);
-		} else if (is_word(buffer, "agreement", &nextword)) {
-			agreement = TRUE;
 		} else if (is_word(buffer, "threads ", &nextword)) {
 			threads = atoi(nextword);
 		} else if (is_word(buffer, "nagree ", &nextword)) {
@@ -701,14 +686,6 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	threadargs* my = p->userdata;
 	int matches, unmatches, conflicts;
 
-	if (!agreement) {
-		if (matchfile_write_match(mf, mo)) {
-			fprintf(stderr, "Failed to write matchfile entry.\n");
-		}
-		free_MatchObj(mo);
-		return 1;
-	}
-
 	// compute (x,y,z) center, scale, rotation.
 	hitlist_healpix_compute_vector(mo);
 	n = hitlist_healpix_add_hit(my->hits, mo, &listind);
@@ -838,7 +815,7 @@ void* solvethread_run(void* varg) {
 		xy *thisfield = NULL;
 		int fieldnum;
 		MatchObj template;
-
+		
 		fieldnum = next_field(&thisfield);
 
 		if (fieldnum == -1)
@@ -893,11 +870,8 @@ void* solvethread_run(void* varg) {
 		solver.userdata = my;
 
 		my->winning_listind = -1;
-		if (agreement) {
-			my->hits = hitlist_healpix_new(agreetol);
-			my->hits->do_correspond = do_correspond;
-		} else
-			my->hits = NULL;
+		my->hits = hitlist_healpix_new(agreetol);
+		my->hits->do_correspond = do_correspond;
 
 		// The real thing
 		solve_field(&solver);
@@ -905,7 +879,7 @@ void* solvethread_run(void* varg) {
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
 
-		if (agreement) {
+		{
 			int* thisagreehist;
 			int maxagree = 0;
 			int k;
@@ -924,76 +898,70 @@ void* solvethread_run(void* varg) {
 			fprintf(stderr, "];\n");
 			free(thisagreehist);
 			thisagreehist = NULL;
+		}
 
+		if (my->winning_listind == -1) {
+			// didn't solve it...
+			fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 
-			if (my->winning_listind == -1) {
-				// didn't solve it...
-				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
-
-				// ... but write the matches for which verification was run
-				// to collect good stats.
-				if (do_verify) {
-					// write 'em!
-					write_hits(fieldnum, my->verified);
-				} else {
-					write_hits(fieldnum, NULL);
-				}
-			} else {
-				double maxoverlap = 0;
-				double sumoverlap = 0;
-				pl* list = hitlist_healpix_copy_list(my->hits, my->winning_listind);
-				if (do_verify) {
-					int k;
-					for (k=0; k<pl_size(list); k++) {
-						MatchObj* mo = pl_get(list, k);
-						// run verification on any of the matches that haven't
-						// already been done.
- 						if (mo->overlap == 0.0) {
-							int matches, unmatches, conflicts;
-							verify_hit(startree, mo, solver.field, verify_dist2,
-									   &matches, &unmatches, &conflicts);
-							fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
-									solver.fieldnum, pl_size(list), 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
-							fflush(stderr);
-						}
-
-						sumoverlap += mo->overlap;
-						if (mo->overlap > maxoverlap)
-							maxoverlap = mo->overlap;
-					}
-				}
-				if (do_verify)
-					fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
-							fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
-				else
-					fprintf(stderr, "Field %i: %i in agreement.\n",
-							fieldnum, pl_size(list));
-
-				if (do_verify) {
-					// also write all the other matches that we ran verification on.
-					pl_merge_lists(list, my->verified);
-				}
-
+			// ... but write the matches for which verification was run
+			// to collect good stats.
+			if (do_verify) {
 				// write 'em!
-				write_hits(fieldnum, list);
-				pl_free(list);
-
-				if (solvedfname) {
-					// write a file to indicate that the field was solved.
-					char fn[256];
-					FILE* f;
-					sprintf(fn, solvedfname, fieldnum);
-					fprintf(stderr, "Field %i solved: writing file %s to indicate this.\n", fieldnum, fn);
-					if (!(f = fopen(fn, "w")) ||
-						fclose(f)) {
-						fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
+				write_hits(fieldnum, my->verified);
+			} else {
+				write_hits(fieldnum, NULL);
+			}
+		} else {
+			double maxoverlap = 0;
+			double sumoverlap = 0;
+			pl* list = hitlist_healpix_copy_list(my->hits, my->winning_listind);
+			if (do_verify) {
+				int k;
+				for (k=0; k<pl_size(list); k++) {
+					MatchObj* mo = pl_get(list, k);
+					// run verification on any of the matches that haven't
+					// already been done.
+					if (mo->overlap == 0.0) {
+						int matches, unmatches, conflicts;
+						verify_hit(startree, mo, solver.field, verify_dist2,
+								   &matches, &unmatches, &conflicts);
+						fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+								solver.fieldnum, pl_size(list), 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
+						fflush(stderr);
 					}
+
+					sumoverlap += mo->overlap;
+					if (mo->overlap > maxoverlap)
+						maxoverlap = mo->overlap;
+				}
+				fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
+						fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
+
+				// also write all the other matches that we ran verification on.
+				pl_merge_lists(list, my->verified);
+
+			} else
+				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(list));
+			
+			// write 'em!
+			write_hits(fieldnum, list);
+			pl_free(list);
+
+			if (solvedfname) {
+				// write a file to indicate that the field was solved.
+				char fn[256];
+				FILE* f;
+				sprintf(fn, solvedfname, fieldnum);
+				fprintf(stderr, "Field %i solved: writing file %s to indicate this.\n", fieldnum, fn);
+				if (!(f = fopen(fn, "w")) ||
+					fclose(f)) {
+					fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
 				}
 			}
-
-			hitlist_healpix_clear(my->hits);
-			hitlist_healpix_free(my->hits);
 		}
+		hitlist_healpix_clear(my->hits);
+		hitlist_healpix_free(my->hits);
 
 		if (do_verify)
 			pl_remove_all(my->verified);
