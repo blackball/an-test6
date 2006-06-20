@@ -46,10 +46,6 @@ struct solver_params {
 	double starscale_upper;
 	double starttime;
 	double timeused;
-	/*
-	  double arcsec_lower;
-	  double arcsec_upper;
-	*/
 
 	// Outputs:
 	// NOTE: these are only incremented, not initialized.  It's up to

@@ -272,11 +272,15 @@ int main(int argc, char *argv[]) {
 	if (hitfname)
 		fclose(hitfid);
 
-	if (leftovermf)
+	if (leftovermf) {
+		matchfile_fix_header(leftovermf);
 		matchfile_close(leftovermf);
+	}
 
-	if (agreemf)
+	if (agreemf) {
+		matchfile_fix_header(agreemf);
 		matchfile_close(agreemf);
+	}
 
 	fprintf(stderr, "Number of agreeing quads histogram:\n  [ ");
 	for (i=0; i<sizeagreehist; i++) {
