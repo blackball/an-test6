@@ -710,11 +710,11 @@ int handlehit(solver_params* p, MatchObj* mo) {
 				mo1 = pl_get(list, j);
 				if (mo1->overlap == 0.0) {
 					verify(mo1, p->field, p->fieldnum, n);
+					if (mo1->overlap >= overlap_tokeep)
+						pl_append(my->verified, mo1);
 				}
 				if (mo1->overlap >= overlap_tosolve)
 					solved = TRUE;
-				if (mo1->overlap >= overlap_tokeep)
-					pl_append(my->verified, mo1);
 			}
 		}
 		if (mo->overlap >= overlap_tokeep)
