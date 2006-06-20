@@ -8,26 +8,11 @@
 #include "matchobj.h"
 #include "starutil.h"
 #include "qfits.h"
+#include "bl.h"
 
 #define MATCHFILE_AN_FILETYPE "MATCH"
 
-#define MATCHFILE_FITS_COLUMNS 8
-
-// a matchfile is structured as a set of tables.
-// each table corresponds to a matchfile_entry
-struct matchfile_entry {
-	int fieldnum;
-	bool parity;
-	char* indexpath;
-	char* fieldpath;
-	float codetol;
-
-	int fieldfile;
-	int indexid;
-	int healpix;
-};
-typedef struct matchfile_entry matchfile_entry;
-
+#define MATCHFILE_FITS_COLUMNS 13
 
 struct matchfile {
 	// when writing:
@@ -37,14 +22,10 @@ struct matchfile {
 
 	// the current matchfile_entry
 	qfits_table* table;
-	qfits_header* tableheader;
-	off_t tableheader_start;
-	off_t tableheader_end;
 	int nrows;
 
 	// when reading:
 	// the FITS extension being read.
-	int extension;
 	char* fn;
 	int columns[MATCHFILE_FITS_COLUMNS];
 
@@ -62,24 +43,16 @@ typedef struct matchfile matchfile;
 void matchobj_compute_overlap(MatchObj* mo);
 
 
+pl* matchfile_get_matches_for_field(matchfile* m, uint field);
+
 matchfile* matchfile_open_for_writing(char* fn);
 
 int matchfile_write_header(matchfile* m);
-
-
-int matchfile_start_table(matchfile* m, matchfile_entry* me);
-
-int matchfile_write_table(matchfile* m);
-
-int matchfile_fix_table(matchfile* m);
-
 
 int matchfile_write_match(matchfile* m, MatchObj* mo);
 
 
 matchfile* matchfile_open(char* fn);
-
-int matchfile_next_table(matchfile* m, matchfile_entry* me);
 
 int matchfile_read_matches(matchfile* m, MatchObj* mo, uint offset, uint n);
 

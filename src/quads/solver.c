@@ -13,25 +13,9 @@
 #include "solver_callbacks.h"
 
 void solver_default_params(solver_params* params) {
-	params->field = NULL;
-	params->codekd = NULL;
-	params->startobj = 0;
-	params->endobj = 0;
-	params->maxtries = 0;
-	params->max_matches_needed = 0;
-	params->codetol = 0.0;
-	params->quitNow = FALSE;
-	params->minAB = 0.0;
+	memset(params, 0, sizeof(solver_params));
 	params->maxAB = 1e300;
-	params->arcsec_per_pixel_lower = 0.0;
 	params->arcsec_per_pixel_upper = 1.0e300;
-	params->maxAB = 1e300;
-	params->cornerpix = NULL;
-	params->handlehit = NULL;
-	params->numtries = 0;
-	params->nummatches = 0;
-	params->mostagree = 0;
-	params->objsused = 0;
 }
 
 void find_corners(xy *thisfield, xy *cornerpix);
@@ -150,10 +134,6 @@ void solve_field(solver_params* params) {
 		iD = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
-				/*
-				  if (!check_scale(iA, iB, params))
-				  continue;
-				*/
 				assert(scale_value[iA * numxy + iB] != SCALE_UNCHECKED);
 				if (scale_value[iA * numxy + iB] == SCALE_BAD)
 					continue;
@@ -438,6 +418,9 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 
 		mo = mk_MatchObj();
 
+		if (params->mo_template)
+			memcpy(mo, params->mo_template, sizeof(MatchObj));
+
 		memcpy(mo->transform, transform, sizeof(mo->transform));
 		mo->transform_valid = TRUE;
 
@@ -504,7 +487,6 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 		  mo->abcdorder = ABCD_ORDER;
 		*/
 
-		//nagree = hitlist_add_hit(params->hits, mo);
 		nagree = params->handlehit(params, mo);
 		// Note - after this call returns, the "mo" may
 		// have been freed!
