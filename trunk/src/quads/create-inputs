@@ -99,7 +99,7 @@ for ((f=0; f<1; f++)); do
                 if [ x$VERIFY_DIST != x ]; then
 					txt="${txt}verify_dist $VERIFY_DIST\n"
 					txt="${txt}nagree_toverify $NAGREE_TOVERIFY\n"
-					txt="${txt}overlap_toconfirm $OVERLAP_TOCONFIRM\n"
+					txt="${txt}overlap_tosolve $OVERLAP_TOSOLVE\n"
 					txt="${txt}overlap_tokeep $OVERLAP_TOKEEP\n"
 					txt="${txt}min_ninfield $MIN_NINFIELD\n"
 				fi
