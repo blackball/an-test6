@@ -7,8 +7,8 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS += -O0
-#CFLAGS += -O2
+#CFLAGS += -O0
+CFLAGS += -O2
 #CFLAGS += -pg
 
 # What functions were and weren't inlined?
@@ -20,7 +20,7 @@ CFLAGS += -O0
 # check out __attribute__ ((nonnull))
 
 # to turn off asserts:
-#CFLAGS += -DNDEBUG
+CFLAGS += -DNDEBUG
 #CFLAGS += -Werror
 
 CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \

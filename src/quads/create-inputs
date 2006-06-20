@@ -1,19 +1,15 @@
 #!/bin/bash
 
-FBASE=/p/learning/stars
-IBASE=/h/42/dstn/local
+FBASE=/home/dstn
+IBASE=/home/dstn
 
-#FBASE=/home/dstn
-#IBASE=/home/dstn
+HPORDER="2 1 6 4 5 7 0 3 8 11 10 9"
 
-#TMP=/scr/dstn/
-#INDEXSRC=$IBASE/INDEXES/sdss-hp-7/ddd_%02i
-#INDEX=$TMP/sdss-hp-7/ddd_%02i
-
-INDEX=$IBASE/INDEXES/sdss-hp-7/ddd_%02i
+TMP=/scr/dstn/
+INDEXSRC=$IBASE/INDEXES/sdss-hp-7/ddd_%02i
+INDEX=$TMP/sdss-hp-7/ddd_%02i
 
 FIELD=$FBASE/SDSS_FIELDS/sdssfield01
-
 FIELDID=1
 
 THREADS=1
@@ -29,7 +25,6 @@ FUU=0.42
 TOL=0.01
 
 NAGREE=4
-MAXNAGREE=20
 AGREETOL=10
 DO_CORRESPOND=0
 
@@ -49,11 +44,14 @@ SOLVED=solved.%04i
 
 filenum=-1
 
-for ((f=0; f<1; f++)); do
-        for ((i=0; i<1; i++)); do
+for ((f=0; f<10; f++)); do
+        for ((h=0; h<12; h++)); do
+
+		cmd="{print \$$(($h+1))}"
+		i=`echo $HPORDER | gawk "$cmd"`
 
                 start=$(($f * 1000))
-                end=$((($f+1) * 1000))
+                end=$((($f+1) * 1000 - 1))
 
                 index=`printf $INDEX $i`
                 indexsrc=`printf $INDEXSRC $i`
