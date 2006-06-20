@@ -714,10 +714,10 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			if (mo1->overlap >= overlap_tokeep)
 				pl_append(my->verified, mo1);
 		}
-		if (mo->overlap >= overlap_tosolve)
-			solved = TRUE;
 		if (mo->overlap >= overlap_tokeep)
 			pl_append(my->verified, mo);
+		if (mo->overlap >= overlap_tosolve)
+			solved = TRUE;
 
 		if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
 			fprintf(stderr, "    Match has only %i index stars in the field; %i required.\n",
@@ -844,6 +844,7 @@ void* solvethread_run(void* varg) {
 						fieldnum, oldsize, xy_size(thisfield));
 		}
 
+		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
 		template.parity = parity;
 		template.fieldfile = fieldid;
@@ -915,6 +916,8 @@ void* solvethread_run(void* varg) {
 					// already been done.
 					if (mo->overlap == 0.0) {
 						verify(mo, solver.field, solver.fieldnum, pl_size(list));
+						if (do_verify)
+							pl_append(my->verified, mo);
 					}
 
 					sumoverlap += mo->overlap;
@@ -925,13 +928,16 @@ void* solvethread_run(void* varg) {
 						fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
 
 				// also write all the other matches that we ran verification on.
-				pl_merge_lists(list, my->verified);
+				//pl_merge_lists(list, my->verified);
 
 			} else
 				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(list));
 			
 			// write 'em!
-			write_hits(fieldnum, list);
+			if (do_verify)
+				write_hits(fieldnum, my->verified);
+			else
+				write_hits(fieldnum, list);
 			pl_free(list);
 
 			if (solvedfname) {
