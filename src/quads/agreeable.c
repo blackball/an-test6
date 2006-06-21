@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (hitfname) {
-		fopenout(hitfname, hitfid);
+		fopenout(hitfname, &hitfid);
 	} else {
 		hitfid = stdout;
 	}

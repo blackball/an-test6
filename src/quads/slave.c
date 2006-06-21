@@ -312,8 +312,11 @@ int main(int argc, char *argv[]) {
 		if (donefname) {
 			FILE* batchfid = NULL;
 			fprintf(stderr, "Writing marker file %s...\n", donefname);
-			fopenout(donefname, batchfid);
-			fclose(batchfid);
+			batchfid = fopen(donefname, "wb");
+			if (batchfid)
+				fclose(batchfid);
+			else
+				fprintf(stderr, "Failed to write marker file %s: %s\n", donefname, strerror(errno));
 		}
 
 		xylist_close(xyls);

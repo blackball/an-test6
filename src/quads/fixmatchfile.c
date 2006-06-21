@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 			fname = inputfiles[i];
 			sprintf(outfname, "%s.tmp", fname);
 			fopenin(fname, infile);
-			fopenout(outfname, outfile);
+			fopenout(outfname, &outfile);
 		}
 
 		fprintf(stderr, "Reading from %s...\n", fname);
