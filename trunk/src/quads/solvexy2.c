@@ -304,7 +304,7 @@ int main(int argc, char *argv[]) {
 			hitfid = stdout;
 		} else {
 			fprintf(stderr, "Using HITS output file %s\n", hitfname);
-			fopenout(hitfname, hitfid);
+			fopenout(hitfname, &hitfid);
 		}
 		hits_header_init(&hitshdr);
 		hitshdr.field_file_name = fieldfname;
@@ -347,7 +347,7 @@ int main(int argc, char *argv[]) {
 	if (batchfname) {
 		FILE* batchfid;
 		fprintf(stderr, "Writing marker file %s...\n", batchfname);
-		fopenout(batchfname, batchfid);
+		fopenout(batchfname, &batchfid);
 		fclose(batchfid);
 	}
 

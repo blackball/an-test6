@@ -151,13 +151,13 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  Generating %u fields at scale %g arcmin...\n",
 		        numFields, rad2arcmin(radscale));
 	fflush(stderr);
-	fopenout(listfname, listfid);
+	fopenout(listfname, &listfid);
 	free_fn(listfname);
-	fopenout(pix0fname, pix0fid);
+	fopenout(pix0fname, &pix0fid);
 	free_fn(pix0fname);
-	fopenout(pixfname, pixfid);
+	fopenout(pixfname, &pixfid);
 	free_fn(pixfname);
-	fopenout(rdlsfname, rdlsfid);
+	fopenout(rdlsfname, &rdlsfid);
 	free_fn(rdlsfname);
 	if (numFields > 1) {
 		double ramin, ramax, decmin, decmax;

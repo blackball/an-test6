@@ -9,9 +9,10 @@
 #define FOPEN_ERR -301
 #define READ_FAIL -1
 
-#define fopenout(n,f) {if(n){f=fopen(n,"w");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for writing.\n",n); return(FOPEN_ERR);}}
+void fopenout(char* fn, FILE** pfid);
+
 #define fopenin(n,f)  {if(n){f=fopen(n,"r");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n); return(FOPEN_ERR);}}
-#define free_fn(n) {if(n) free(n);}
+#define free_fn(n) {free(n);}
 
 #define mk_catfn(s)    mk_filename(s,".objs.fits")
 #define mk_idfn(s)    mk_filename(s,".id.fits")
