@@ -51,9 +51,6 @@ int main(int argc, char** args) {
 		case 'h':
 			print_help(args[0]);
 			exit(0);
-		case 'f':
-			basename = optarg;
-			break;
 		}
 
 	if (!outfn || !N || (optind == argc)) {

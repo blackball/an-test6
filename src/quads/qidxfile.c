@@ -38,7 +38,7 @@ qidxfile* qidxfile_open(char* fn, int modifiable)
 	}
 	fid = fopen(fn, "rb");
 	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s to read id file: %s\n", fn, strerror(errno));
+		fprintf(stderr, "Couldn't open file %s to read qidx file: %s\n", fn, strerror(errno));
 		goto bailout;
 	}
 	header = qfits_header_read(fn);
