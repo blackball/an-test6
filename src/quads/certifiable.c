@@ -390,7 +390,7 @@ int main(int argc, char *argv[]) {
 		unsigned char* solved = malloc(ntotal);
 
 		printf("Total of %i fields.\n", ntotal);
-		printf("Threshold%%   #Solved  %%Solved     #Unsolved %%Unsolved   #FalsePositive\n");
+		printf("Threshold%%   #Solved  %%Solved     #Unsolved  %%Unsolved   #FalsePositive\n");
 
 		for (bin=0; bin<Nbins; bin++) {
 			int nright, nwrong, nunsolved;
@@ -428,7 +428,7 @@ int main(int argc, char *argv[]) {
 						il_append(negfieldbins[bin], i + firstfield);
 			}
 
-			printf("  %4.1f          %4i     %6.2f         %4i      %6.2f          %i\n",
+			printf("  %5.1f       %4i     %6.2f         %4i      %6.2f          %i\n",
 				   (bin+1)*binsize, sumright, pct*sumright, nunsolved, pct*nunsolved, sumwrong);
 		}
 		printf("\n\n");
@@ -569,12 +569,12 @@ int main(int argc, char *argv[]) {
 	free(incorrects);
 
 	for (bin=0; bin<Nbins; bin++) {
-		if (rightfieldbins[i])
-			il_free(rightfieldbins[i]);
-		if (wrongfieldbins[i])
-			il_free(wrongfieldbins[i]);
-		if (negfieldbins[i])
-			il_free(negfieldbins[i]);
+		if (rightfieldbins[bin])
+			il_free(rightfieldbins[bin]);
+		if (wrongfieldbins[bin])
+			il_free(wrongfieldbins[bin]);
+		if (negfieldbins[bin])
+			il_free(negfieldbins[bin]);
 	}
 	free(rightfieldbins);
 	free(wrongfieldbins);
