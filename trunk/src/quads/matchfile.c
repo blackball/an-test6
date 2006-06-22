@@ -266,8 +266,10 @@ static int find_table(matchfile* mf) {
 
 	for (ext=1; ext<=nextens; ext++) {
 		int c2;
-		if (!qfits_is_table(mf->fn, ext))
+		if (!qfits_is_table(mf->fn, ext)) {
+			fprintf(stderr, "matchfile: extention %i isn't a table.\n", ext);
 			continue;
+		}
 		table = qfits_table_open(mf->fn, ext);
 		if (!table) {
 			fprintf(stderr, "matchfile: failed to open table: file %s, extension %i.\n", mf->fn, ext);
