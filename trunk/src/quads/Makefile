@@ -54,7 +54,7 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
-	codeprojections quadlocations hpowned fitsgetext
+	codeprojections quadlocations hpowned fitsgetext quadsperstar
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylstomatlab rdlstohealpix 
 # codeprojections fixmatchfile printmatchfile 
