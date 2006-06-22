@@ -153,6 +153,7 @@ void  pl_append(pl* list, void* data);
 void  pl_copy(pl* list, int start, int length, void** dest);
 void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
+int   pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2));
 void  pl_remove(pl* list, int ind);
 void  pl_remove_all(pl* list);
 void  pl_merge_lists(pl* list1, pl* list2);
