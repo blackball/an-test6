@@ -2,6 +2,7 @@
 
 inline rdlist* rdlist_open(char* fn) {
 	rdlist* rtn = xylist_open(fn);
+	if (!rtn) return NULL;
 	rtn->xname = "RA";
 	rtn->yname = "DEC";
 	return rtn;

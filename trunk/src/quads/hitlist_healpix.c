@@ -13,6 +13,27 @@ int hitlist_healpix_count_lists(hitlist* hl) {
 	return pl_size(hl->agreelist);
 }
 
+double hitlist_healpix_closest_dist_to_lists(hitlist* hlist, MatchObj* match) {
+	int i, j;
+	double mindist = 1e300;
+	for (i=0; i<pl_size(hlist->agreelist); i++) {
+		il* agree = pl_get(hlist->agreelist, i);
+		if (!agree)
+			continue;
+		for (j=0; j<il_size(agree); j++) {
+			int ind = il_get(agree, j);
+			MatchObj* mo = pl_get(hlist->matchlist, ind);
+			double dist = distsq(match->sMin, mo->sMin, 3) +
+				distsq(match->sMax, mo->sMax, 3);
+			if (dist < mindist)
+				mindist = dist;
+		}
+	}
+	if (mindist == 1e300)
+		mindist = -1.0;
+	return mindist;
+}
+
 void hitlist_healpix_print_dists_to_lists(hitlist* hlist, MatchObj* match) {
 	int i, j;
 	for (i=0; i<pl_size(hlist->agreelist); i++) {
