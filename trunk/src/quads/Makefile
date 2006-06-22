@@ -75,7 +75,7 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
 	usnobtofits.o usnob.o usnob_fits.o tycho2.o \
 	tycho2tofits.o tycho2_fits.o build_an_catalog.o cut_an.o \
-	certthresh.o mergehits.o checkquads.o
+	mergehits.o checkquads.o
 
 QFITS_I := -Iqfits
 QFITS_L := 
