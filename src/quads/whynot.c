@@ -259,6 +259,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 			(dist < codetol) ? "   ==> HIT!" : "");
 
 	printf("codedist(%i)=%g;\n", quadnum+1, dist);
+	printf("codepassed(%i)=%i;\n", quadnum+1, (dist<codetol)?1:0);
 
 	if (dist > codetol)
 		badquad = TRUE;
@@ -321,13 +322,14 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 			fld[i*2  ] = xy_refx(thisfield, i);
 			fld[i*2+1] = xy_refy(thisfield, i);
 		}
-		verify_hit(startree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts);
+		verify_hit(startree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts, NULL);
 		free(fld);
 	}
 	if (verbose) {
 		fprintf(stderr, "    Verify: %4.1f%%: %i matches, %i unmatches, %i conflicts.\n",
 				100.0 * mocopy->overlap, matches, unmatches, conflicts);
 	}
+
 	hitlist_healpix_compute_vector(mocopy);
 	if (verbose) {
 		fprintf(stderr, "    Checking agreement to list...\n");
@@ -407,6 +409,7 @@ void why_not() {
 
 		assert(xy_size(thisfield) == rd_size(thisrd));
 
+		find_corners(thisfield, cornerpix);
 
 		{
 			double starpos[3*rd_size(thisrd)];
@@ -500,6 +503,42 @@ void why_not() {
 			dec = z2dec(xyz[2]);
 			printf("%g,%g;", rad2deg(ra), rad2deg(dec));
  		}
+		printf("];\n");
+
+		printf("infield_radec = [");
+		{
+			MatchObj mo;
+			il* infield = il_new(256);
+			double* fld;
+			int i, nfield, ind;
+			double xyz[3], ra, dec;
+			nfield = xy_size(thisfield);
+			fld = malloc(nfield*2*sizeof(double));
+			for (i=0; i<nfield; i++) {
+				fld[i*2  ] = xy_refx(thisfield, i);
+				fld[i*2+1] = xy_refy(thisfield, i);
+			}
+			memset(&mo, 0, sizeof(mo));
+			memcpy(mo.transform, transform, 9*sizeof(double));
+			mo.transform_valid = TRUE;
+			image_to_xyz(xy_refx(cornerpix, 0), xy_refy(cornerpix, 0), mo.sMin,    transform);
+			image_to_xyz(xy_refx(cornerpix, 1), xy_refy(cornerpix, 1), mo.sMax,    transform);
+			image_to_xyz(xy_refx(cornerpix, 2), xy_refy(cornerpix, 2), mo.sMinMax, transform);
+			image_to_xyz(xy_refx(cornerpix, 3), xy_refy(cornerpix, 3), mo.sMaxMin, transform);
+
+			verify_hit(startree, &mo, fld, nfield, verify_dist2,
+					   NULL, NULL, NULL, infield);
+
+			for (i=0; i<il_size(infield); i++) {
+				ind = il_get(infield, i);
+				getstarcoord(ind, xyz);
+				ra = xy2ra(xyz[0], xyz[1]);
+				dec = z2dec(xyz[2]);
+				printf("%g,%g;", rad2deg(ra), rad2deg(dec));
+			}
+
+			il_free(infield);
+		}
 		printf("];\n");
 		
 		for (i=0; i<il_size(indstars); i++) {
@@ -643,8 +682,6 @@ void why_not() {
 
 		fprintf(stderr, "\n");
 
-		find_corners(thisfield, cornerpix);
-
 		fprintf(stderr, "Findable quads:\n");
 		
 		hlhits = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
@@ -660,6 +697,7 @@ void why_not() {
 
 		printf("quadscale=[];\n");
 		printf("codedist=[];\n");
+		printf("codepassed=[];\n");
 		printf("overlap=[];\n");
 		printf("ninfield=[];\n");
 		printf("nagree=[];\n");

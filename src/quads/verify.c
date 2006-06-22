@@ -21,7 +21,8 @@ void verify_hit(kdtree_t* startree,
 				double verify_dist2,
 				int* pmatches,
 				int* punmatches,
-				int* pconflicts) {
+				int* pconflicts,
+				il* indexstars) {
 	int i, j;
 	double* fieldstars;
 	intmap* map;
@@ -80,6 +81,8 @@ void verify_hit(kdtree_t* startree,
 				memmove(res->results + NI * 3,
 						res->results +  j * 3,
 						3 * sizeof(double));
+			if (indexstars)
+				il_append(indexstars, res->inds[j]);
 			NI++;
 		}
 	}
