@@ -505,7 +505,6 @@ void why_not() {
  		}
 		printf("];\n");
 
-		printf("infield_radec = [");
 		{
 			MatchObj mo;
 			il* infield = il_new(256);
@@ -529,6 +528,21 @@ void why_not() {
 			verify_hit(startree, &mo, fld, nfield, verify_dist2,
 					   NULL, NULL, NULL, infield);
 
+			// make "infield" just be the ones that aren't in "indexed_radec".
+			printf("%% infield=");
+			il_print(infield);
+			printf("\n");
+			for (i=0; i<intmap_length(indtofield); i++) {
+				int ind;
+				intmap_get_entry(indtofield, i, &ind, NULL);
+				if (il_remove_value(infield, ind) == -1) {
+					printf("%% failed to remove index %i from infield\n", ind);
+				}
+			}
+			printf("%% infield=");
+			il_print(infield);
+			printf("\n");
+			printf("infield_radec = [");
 			for (i=0; i<il_size(infield); i++) {
 				ind = il_get(infield, i);
 				getstarcoord(ind, xyz);
@@ -536,10 +550,10 @@ void why_not() {
 				dec = z2dec(xyz[2]);
 				printf("%g,%g;", rad2deg(ra), rad2deg(dec));
 			}
+			printf("];\n");
 
 			il_free(infield);
 		}
-		printf("];\n");
 		
 		for (i=0; i<il_size(indstars); i++) {
 			uint* quads, nquads;
