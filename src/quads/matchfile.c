@@ -239,6 +239,7 @@ matchfile* matchfile_open(char* fn) {
 	mf = new_matchfile();
 	mf->fid = fid;
 	mf->header = header;
+	mf->fn = fn;
 	if (find_table(mf)) {
 		fprintf(stderr, "Couldn't find an appropriate FITS table in %s.\n", fn);
 		goto bailout;
@@ -287,6 +288,7 @@ static int find_table(matchfile* mf) {
 				break;
 			}
 			if (matchfile_fitstruct[c].required && (mf->columns[c] == -1)) {
+				fprintf(stderr, "matchfile: didn't find column \"%s\"", matchfile_fitstruct[c].fieldname);
 				good = 0;
 				break;
 			}
