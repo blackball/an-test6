@@ -1188,6 +1188,10 @@ int pl_insert_unique_ascending(bl* list, void* p) {
     return bl_insert_unique_sorted(list, &p, bl_compare_pointers_ascending);
 }
 
+int pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2)) {
+	return bl_insert_sorted(list, &data, compare);
+}
+
 pl* pl_new(int blocksize) {
     return bl_new(blocksize, sizeof(void*));
 }
