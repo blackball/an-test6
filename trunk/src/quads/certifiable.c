@@ -344,54 +344,13 @@ int main(int argc, char *argv[]) {
 	// here we sort of assume that the hits file has been processed with "agreeable" so that
 	// only agreeing hits are included for each field.
 
-	for (bin=0; bin<Nbins; bin++) {
-		il* list = wrongfieldbins[bin];
-		if (list) {
-			printf("Bin %i (overlap %4.1f to %4.1f %%) wrong [%i]: ",
-				   bin, bin * binsize, (bin+1) * binsize, il_size(list));
-			for (i=0; i<il_size(list); i++)
-				printf("%i ", il_get(list, i));
-			printf("\n");
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-
-	for (bin=0; bin<Nbins; bin++) {
-		il* list = rightfieldbins[bin];
-		if (list) {
-			printf("Bin %i (overlap %4.1f to %4.1f %%) right [%i]: ", bin,
-				   bin * binsize, (bin+1) * binsize, il_size(list));
-			for (i=0; i<il_size(list); i++)
-				printf("%i ", il_get(list, i));
-			printf("\n");
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-
-	/*
-	  for (bin=0; bin<Nbins; bin++) {
-	  il* list = negfieldbins[bin];
-	  if (list) {
-	  printf("Bin %i (overlap %4.1f to %4.1f %%) unsolved [%i]: ", bin,
-	  bin * binsize, (bin+1) * binsize, il_size(list));
-	  for (i=0; i<il_size(list); i++)
-	  printf("%i ", il_get(list, i));
-	  printf("\n");
-	  }
-	  }
-	  printf("\n");
-	  fflush(stdout);
-	*/
-
 	{
 		int sumright=0, sumwrong=0;
 		int ntotal = lastfield - firstfield + 1;
 		double pct = 100.0 / (double)ntotal;
-		unsigned char* solved = malloc(ntotal);
+		unsigned char* solved = calloc(1, ntotal);
 
-		printf("Total of %i fields.\n", ntotal);
+		printf("\n\nTotal of %i fields.\n", ntotal);
 		printf("Threshold%%   #Solved  %%Solved     #Unsolved  %%Unsolved   #FalsePositive\n");
 
 		for (bin=Nbins-1; bin>=0; bin--) {
@@ -416,7 +375,6 @@ int main(int argc, char *argv[]) {
 
 			if (nunsolved) {
 				negfieldbins[bin] = il_new(256);
-				memset(solved, 0, ntotal);
 				list = rightfieldbins[bin];
 				if (list)
 					for (i=0; i<il_size(list); i++)
@@ -453,6 +411,45 @@ int main(int argc, char *argv[]) {
 		printf("%i, ", overlap_hist_right[i]);
 	}
 	printf("]\n\n");
+
+	for (bin=0; bin<Nbins; bin++) {
+		il* list = wrongfieldbins[bin];
+		if (list) {
+			printf("Bin %i (overlap %4.1f to %4.1f %%) wrong [%i]: ",
+				   bin, bin * binsize, (bin+1) * binsize, il_size(list));
+			for (i=0; i<il_size(list); i++)
+				printf("%i ", il_get(list, i));
+			printf("\n");
+		}
+	}
+	printf("\n");
+	fflush(stdout);
+
+	for (bin=0; bin<Nbins; bin++) {
+		il* list = rightfieldbins[bin];
+		if (list) {
+			printf("Bin %i (overlap %4.1f to %4.1f %%) right [%i]: ", bin,
+				   bin * binsize, (bin+1) * binsize, il_size(list));
+			for (i=0; i<il_size(list); i++)
+				printf("%i ", il_get(list, i));
+			printf("\n");
+		}
+	}
+	printf("\n");
+	fflush(stdout);
+
+	for (bin=0; bin<Nbins; bin++) {
+		il* list = negfieldbins[bin];
+		if (list) {
+			printf("Bin %i (overlap %4.1f to %4.1f %%) unsolved [%i]: ", bin,
+				   bin * binsize, (bin+1) * binsize, il_size(list));
+			for (i=0; i<il_size(list); i++)
+				printf("%i ", il_get(list, i));
+			printf("\n");
+		}
+	}
+	printf("\n");
+	fflush(stdout);
 
 	printf("Finding field centers...\n");
 	fflush(stdout);
