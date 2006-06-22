@@ -42,4 +42,6 @@ void intmap_get_entry(intmap* map, int indx, int* pfrom, int* pto);
 // look up the value "from" in the mapping; return "fail" if it's not found.
 int intmap_get(intmap* map, int from, int fail);
 
+int intmap_get_inverse(intmap* map, int to, int fail);
+
 #endif

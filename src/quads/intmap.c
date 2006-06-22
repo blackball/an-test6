@@ -8,6 +8,12 @@ int intmap_get(intmap* map, int from, int fail) {
 	return il_get(&map->tolist, indx);
 }
 
+int intmap_get_inverse(intmap* map, int to, int fail) {
+	int indx = il_index_of(&map->tolist, to);
+	if (indx == -1) return fail;
+	return il_get(&map->fromlist, indx);
+}
+
 void intmap_get_entry(intmap* map, int indx, int* pfrom, int* pto) {
 	int from, to;
 	assert(indx < il_size(&map->fromlist));

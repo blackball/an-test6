@@ -158,6 +158,8 @@ void getstarcoord(uint iA, double *sA) {
 		   DIM_STARS * sizeof(double));
 }
 
+int quadnum;
+
 void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 				   hitlist* hits, bool verbose) {
 	double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -183,6 +185,8 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	int iC = qm->fieldstar[2];
 	int iD = qm->fieldstar[3];
 
+	bool badquad = FALSE;
+
 	fprintf(stderr, "  %i: (%i, %i, %i, %i)\n",
 			qm->quadnum,
 			qm->fieldstar_sorted[0],
@@ -197,6 +201,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	dx = Bx - Ax;
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
+	printf("quadscale(%i)=%g;\n", quadnum+1, sqrt(scale));
 	if ((scale < square(minAB)) || (scale > square(maxAB))) {
 		fprintf(stderr, "    Quad scale %g: not in allowable range [%g, %g].\n", scale, minAB, maxAB);
 		return;
@@ -253,8 +258,10 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 			qm->quadnum, dist,
 			(dist < codetol) ? "   ==> HIT!" : "");
 
+	printf("codedist(%i)=%g;\n", quadnum+1, dist);
+
 	if (dist > codetol)
-		return;
+		badquad = TRUE;
 
 	mo.quadno = qm->quadnum;
 	mo.star[0] = qm->indexstar[0];
@@ -305,7 +312,18 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 
 	mocopy = malloc(sizeof(MatchObj));
 	memcpy(mocopy, &mo, sizeof(MatchObj));
-	verify_hit(startree, mocopy, thisfield, verify_dist2, &matches, &unmatches, &conflicts);
+	{
+		int i, nfield;
+		double* fld;
+		nfield = xy_size(thisfield);
+		fld = malloc(nfield*2*sizeof(double));
+		for (i=0; i<nfield; i++) {
+			fld[i*2  ] = xy_refx(thisfield, i);
+			fld[i*2+1] = xy_refy(thisfield, i);
+		}
+		verify_hit(startree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts);
+		free(fld);
+	}
 	if (verbose) {
 		fprintf(stderr, "    Verify: %4.1f%%: %i matches, %i unmatches, %i conflicts.\n",
 				100.0 * mocopy->overlap, matches, unmatches, conflicts);
@@ -315,11 +333,26 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 		fprintf(stderr, "    Checking agreement to list...\n");
 		hitlist_healpix_print_dists_to_lists(hits, mocopy);
 	}
-	nagree = hitlist_healpix_add_hit(hits, mocopy, &listind);
+	{
+		double closest = hitlist_healpix_closest_dist_to_lists(hits, mocopy);
+		printf("agreedist(%i)=%g;\n", quadnum+1, closest>0.0 ? distsq2arcsec(closest) : 0.0);
+	}
+
+	if (badquad)
+		nagree = 0;
+	else
+		nagree = hitlist_healpix_add_hit(hits, mocopy, &listind);
 	fprintf(stderr, "    -> %i agree, overlap %4.1f%%.\n", nagree, 100.0 * mocopy->overlap);
 	if (mocopy->ninfield < min_ninfield)
 		fprintf(stderr, "    -> warning, ninfield %i is less than required %i\n",
 				mocopy->ninfield, min_ninfield);
+
+	printf("nagree(%i)=%i;\n", quadnum+1, nagree);
+	printf("overlap(%i)=%g;\n", quadnum+1, mocopy->overlap);
+	printf("ninfield(%i)=%i;\n", quadnum+1, mocopy->ninfield);
+
+	if (badquad)
+		free(mocopy);
 }
 
 void why_not() {
@@ -327,6 +360,7 @@ void why_not() {
 	double utime, stime;
 	int nfields;
 	int fieldind;
+	double transform[9];
 	xy* cornerpix = mk_xy(4);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
@@ -344,7 +378,7 @@ void why_not() {
 
 	nfields = xyls->nfields;
 
-	for (fieldind=0; fieldind<nfields; fieldind++) {
+	for (fieldind=0; fieldind<il_size(fieldlist); fieldind++) {
 		xy *thisfield = NULL;
 		int fieldnum;
 		rd* thisrd;
@@ -373,6 +407,35 @@ void why_not() {
 
 		assert(xy_size(thisfield) == rd_size(thisrd));
 
+
+		{
+			double starpos[3*rd_size(thisrd)];
+			double fieldpos[2*xy_size(thisfield)];
+
+			printf("field_xy=[");
+			for (i=0; i<xy_size(thisfield); i++) {
+				double x, y;
+				x = xy_refx(thisfield, i);
+				y = xy_refy(thisfield, i);
+				printf("%g,%g;", x, y);
+				fieldpos[i*2] = x;
+				fieldpos[i*2+1] = y;
+			}
+			printf("];\n");
+			printf("field_radec=[");
+			for (i=0; i<xy_size(thisrd); i++) {
+				double ra, dec;
+				ra  = rd_refra(thisrd, i);
+				dec = rd_refdec(thisrd, i);
+				printf("%g,%g;", ra, dec);
+				radec2xyzarr(deg2rad(ra), deg2rad(dec), starpos + i*3);
+			}
+			printf("];\n");
+
+			fit_transform(starpos, fieldpos, xy_size(thisfield), transform);
+			//inverse_3by3(transform);
+		}
+
 		intmap_clear(fieldtoind);
 		intmap_clear(indtofield);
 
@@ -381,6 +444,7 @@ void why_not() {
 
 		// for each object in the field, find nearby stars in the index.
 		nearbyd2 = arcsec2distsq(nearbyrad);
+		printf("conflicts=[");
 		for (i=0; i<rd_size(thisrd); i++) {
 			double xyz[3];
 			double ra, dec;
@@ -399,9 +463,13 @@ void why_not() {
 			}
 			if (intmap_add(indtofield, res->inds[0], i)) {
 				fprintf(stderr, "Conflicting mapping (i->f): %i -> %i\n", res->inds[0], i);
+				printf("%i,", i);
 			}
 			il_append(indstars, res->inds[0]);
+
+			kdtree_free_query(res);
 		}
+		printf("];\n");
 
 		fprintf(stderr, "Of %i field stars, %i have nearby index stars.  %i index stars have nearby field objects.\n",
 				rd_size(thisrd), intmap_length(fieldtoind), intmap_length(indtofield));
@@ -413,6 +481,26 @@ void why_not() {
 			fprintf(stderr, "%i ", fld);
 		}
 		fprintf(stderr, "\n");
+
+		printf("field_indexed = [");
+		for (i=0; i<intmap_length(fieldtoind); i++) {
+			int fld;
+			intmap_get_entry(fieldtoind, i, &fld, NULL);
+			printf("%i, ", fld);
+		}
+		printf("];\n");
+
+		printf("indexed_radec = [");
+		for (i=0; i<intmap_length(indtofield); i++) {
+			int ind;
+			double xyz[3], ra, dec;
+			intmap_get_entry(indtofield, i, &ind, NULL);
+			getstarcoord(ind, xyz);
+			ra = xy2ra(xyz[0], xyz[1]);
+			dec = z2dec(xyz[2]);
+			printf("%g,%g;", rad2deg(ra), rad2deg(dec));
+ 		}
+		printf("];\n");
 		
 		for (i=0; i<il_size(indstars); i++) {
 			uint* quads, nquads;
@@ -473,10 +561,16 @@ void why_not() {
 				}
 			}
 			quadfile_get_starids(quads, quad, &sA, &sB, &sC, &sD);
-			if ((intmap_get(indtofield, sA, -1) == -1) ||
-				(intmap_get(indtofield, sB, -1) == -1) ||
-				(intmap_get(indtofield, sC, -1) == -1) ||
-				(intmap_get(indtofield, sD, -1) == -1)) {
+			/*
+			  if ((intmap_get(indtofield, sA, -1) == -1) ||
+			  (intmap_get(indtofield, sB, -1) == -1) ||
+			  (intmap_get(indtofield, sC, -1) == -1) ||
+			  (intmap_get(indtofield, sD, -1) == -1)) {
+			*/
+			if ((intmap_get_inverse(fieldtoind, sA, -1) == -1) ||
+				(intmap_get_inverse(fieldtoind, sB, -1) == -1) ||
+				(intmap_get_inverse(fieldtoind, sC, -1) == -1) ||
+				(intmap_get_inverse(fieldtoind, sD, -1) == -1)) {
 				il_remove(indquads, i);
 				i--;
 			}
@@ -487,6 +581,22 @@ void why_not() {
 		Nqms = il_size(indquads);
 		qms = malloc(Nqms * sizeof(quadmatch));
 
+		/*
+		  printf("quads=[");
+		  for (i=0; i<il_size(indquads); i++) {
+		  int quad = il_get(indquads, i);
+		  uint sA, sB, sC, sD;
+		  uint fA, fB, fC, fD;
+		  quadfile_get_starids(quads, quad, &sA, &sB, &sC, &sD);
+		  fA = intmap_get_inverse(fieldtoind, sA, -1);
+		  fB = intmap_get_inverse(fieldtoind, sB, -1);
+		  fC = intmap_get_inverse(fieldtoind, sC, -1);
+		  fD = intmap_get_inverse(fieldtoind, sD, -1);
+		  printf("%i,%i,%i,%i;", fA, fB, fC, fD);
+		  }
+		  printf("];\n");
+		*/
+		
 		for (i=0; i<il_size(indquads); i++) {
 			int quad = il_get(indquads, i);
 			uint sA, sB, sC, sD;
@@ -498,10 +608,19 @@ void why_not() {
 			qms[i].indexstar[1] = sB;
 			qms[i].indexstar[2] = sC;
 			qms[i].indexstar[3] = sD;
-			qms[i].fieldstar[0] = intmap_get(indtofield, sA, -1);
-			qms[i].fieldstar[1] = intmap_get(indtofield, sB, -1);
-			qms[i].fieldstar[2] = intmap_get(indtofield, sC, -1);
-			qms[i].fieldstar[3] = intmap_get(indtofield, sD, -1);
+
+			// ??
+			/*
+			  qms[i].fieldstar[0] = intmap_get(indtofield, sA, -1);
+			  qms[i].fieldstar[1] = intmap_get(indtofield, sB, -1);
+			  qms[i].fieldstar[2] = intmap_get(indtofield, sC, -1);
+			  qms[i].fieldstar[3] = intmap_get(indtofield, sD, -1);
+			*/
+			qms[i].fieldstar[0] = intmap_get_inverse(fieldtoind, sA, -1);
+			qms[i].fieldstar[1] = intmap_get_inverse(fieldtoind, sB, -1);
+			qms[i].fieldstar[2] = intmap_get_inverse(fieldtoind, sC, -1);
+			qms[i].fieldstar[3] = intmap_get_inverse(fieldtoind, sD, -1);
+
 			qms[i].fieldstar_sorted[0] = qms[i].fieldstar[0];
 			qms[i].fieldstar_sorted[1] = qms[i].fieldstar[1];
 			qms[i].fieldstar_sorted[2] = qms[i].fieldstar[2];
@@ -532,7 +651,24 @@ void why_not() {
 		//hlall = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
 		hlhits->do_correspond = do_correspond;
 
+		printf("quads=[");
 		for (i=0; i<Nqms; i++) {
+			uint* fs = qms[i].fieldstar;
+			printf("%i,%i,%i,%i;", fs[0], fs[1], fs[2], fs[3]);
+		}
+		printf("];\n");
+
+		printf("quadscale=[];\n");
+		printf("codedist=[];\n");
+		printf("overlap=[];\n");
+		printf("ninfield=[];\n");
+		printf("nagree=[];\n");
+		printf("agreedist=[];\n");
+		printf("codetol=%g;\n", codetol);
+		printf("agreetol=%g;\n", agreetol);
+
+		for (i=0; i<Nqms; i++) {
+			quadnum = i;
 			findable_quad(qms+i, thisfield, cornerpix, hlhits, FALSE);
 			fprintf(stderr, "\n");
 		}
@@ -549,10 +685,14 @@ void why_not() {
 		hitlist_healpix_clear(hlhits);
 
 		free_xy(thisfield);
-		free_xy(thisrd);
+		free_rd(thisrd);
 
 		il_free(indstars);
 		il_free(indquads);
+
+		free(qms);
+
+		hitlist_healpix_free(hlhits);
 
 		get_resource_stats(&utime, &stime, NULL);
 		fprintf(stderr, "    spent %g s user, %g s system, %g s total.\n",
@@ -571,12 +711,6 @@ int main(int argc, char *argv[]) {
 		printHelp(progname);
 		exit(-1);
     }
-
-	printf("Running on host:\n");
-	fflush(stdout);
-	system("hostname");
-	printf("\n");
-	fflush(stdout);
 
 	fieldlist = il_new(256);
 
@@ -681,7 +815,7 @@ int main(int argc, char *argv[]) {
 		xyls->yname = ycolname;
 
 		// Read .rdls file...
-		fprintf(stderr, "Reading fields file %s...", rdlsfname);
+		fprintf(stderr, "Reading rdls file %s...", rdlsfname);
 		fflush(stderr);
 		rdls = rdlist_open(rdlsfname);
 		if (!rdls) {
@@ -776,6 +910,7 @@ int main(int argc, char *argv[]) {
 		free(ycolname);
 
 		xylist_close(xyls);
+		xylist_close(rdls);
 
 		free_fn(fieldfname);
 		free_fn(treefname);
@@ -789,8 +924,8 @@ int main(int argc, char *argv[]) {
 			kdtree_close(startree);
 		if (cat)
 			catalog_close(cat);
-		if (inverse_perm)
-			free(inverse_perm);
+		free(inverse_perm);
+		free(code_inverse_perm);
 		if (id)
 			idfile_close(id);
 		quadfile_close(quads);

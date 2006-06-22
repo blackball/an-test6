@@ -115,4 +115,6 @@ int hitlist_healpix_count_all(hitlist* hitlist);
 
 void hitlist_healpix_print_dists_to_lists(hitlist* hl, MatchObj* mo);
 
+double hitlist_healpix_closest_dist_to_lists(hitlist* hl, MatchObj* mo);
+
 #endif
