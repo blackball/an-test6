@@ -36,7 +36,7 @@ void solver_default_params(solver_params* params) {
 	params->arcsec_per_pixel_upper = 1.0e300;
 }
 
-void find_corners(double *thisfield, double *cornerpix);
+void find_corners(double *thisfield, int nfield, double *cornerpix);
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 					  char* inbox, int maxind, solver_params* params);
@@ -83,7 +83,7 @@ void solve_field(solver_params* params) {
 	if (params->endobj && (numxy > params->endobj))
 		numxy = params->endobj;
 
-	find_corners(params->field, params->cornerpix);
+	find_corners(params->field, params->nfield, params->cornerpix);
 
 	// how many pixels from corner to corner of the field?
 	c  = square(getx(params->cornerpix, 1) - getx(params->cornerpix, 0));
@@ -227,8 +227,8 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     // check which C, D points are inside the square.
     for (i=0; i<maxind; i++) {
 		if (!inbox[i]) continue;
-		Cx = xy_refx(params->field, i);
-		Cy = xy_refy(params->field, i);
+		Cx = getx(params->field, i);
+		Cy = gety(params->field, i);
 
 		fieldxs[i] = Cx;
 		fieldys[i] = Cy;
@@ -497,7 +497,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 // find min and max coordinates in this field;
 // place them in "cornerpix"
-void find_corners(double *thisfield, double *cornerpix) {
+void find_corners(double *thisfield, int nfield, double *cornerpix) {
 	double minx, maxx, miny, maxy;
 	double x, y;
 	uint i;
@@ -505,7 +505,7 @@ void find_corners(double *thisfield, double *cornerpix) {
 	minx = miny = 1e308;
 	maxx = maxy = -1e308;
 	
-	for (i=0; i<xy_size(thisfield); i++) {
+	for (i=0; i<nfield; i++) {
 		x = getx(thisfield, i);
 		y = gety(thisfield, i);
 		if (x < minx) minx = x;

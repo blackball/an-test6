@@ -39,19 +39,6 @@ void write_field(hitlist* hl,
 				 bool doagree,
 				 bool unsolvedstubs);
 
-
-/*
-  double* best_overlaps = NULL;
-  void ensure_bestoverlaps_size(int fieldnum) {
-  static int oldsize = 0;
-  int newsize = (fieldnum + 1) * sizeof(double);
-  best_overlaps = realloc(best_overlaps, newsize);
-  if (newsize > oldsize)
-  memset(best_overlaps + oldsize, 0, newsize - oldsize);
-  oldsize = newsize;
-  }
-*/
-
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
 #define DEFAULT_AGREE_TOL 7.0
 
