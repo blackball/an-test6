@@ -24,6 +24,8 @@ char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
 "  -g adds grid\n"
 "  -N sets edge size of output image\n"
 "  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
+"  [-L <field-range-low>]\n"
+"  [-H <field-range-high>]\n"
 "Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, and rdls.fits files.\n";
 
 double *projection;
@@ -105,6 +107,9 @@ int main(int argc, char *argv[])
 	int N=3000;
 	unsigned char* img;
 
+	int fieldslow = -1;
+	int fieldshigh = -1;
+
 	fields = il_new(32);
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -124,6 +129,12 @@ int main(int argc, char *argv[])
 		case 'f':
 			il_append(fields, atoi(optarg));
 			break;
+		case 'L':
+			fieldslow = atoi(optarg);
+			break;
+		case 'H':
+			fieldshigh = atoi(optarg);
+			break;
 		default:
 			return (OPT_ERR);
 		}
@@ -131,6 +142,19 @@ int main(int argc, char *argv[])
 	if (optind == argc) {
 		fprintf(stderr, help);
 		exit(-1);
+	}
+
+	if (((fieldslow == -1) && (fieldshigh != -1)) ||
+		((fieldslow != -1) && (fieldshigh == -1)) ||
+		(fieldslow > fieldshigh)) {
+		fprintf(stderr, help);
+		fprintf(stderr, "If you specify -L you must also specify -H.\n");
+		exit(-1);
+	}
+	if (fieldslow != -1) {
+		int f;
+		for (f=fieldslow; f<=fieldshigh; f++)
+			il_append(fields, f);
 	}
 
 	projection=calloc(sizeof(double), N*N);
