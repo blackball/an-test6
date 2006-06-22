@@ -13,31 +13,48 @@
 #include "solver_callbacks.h"
 #include "tic.h"
 
+static inline double getx(double* d, int ind) {
+	// return d[ind*2];
+	return d[ind << 1];
+}
+static inline double gety(double* d, int ind) {
+	// return d[ind*2 + 1];
+	return d[(ind << 1) | 1];
+}
+static inline void setx(double* d, int ind, double val) {
+	// d[ind*2] = val;
+	d[ind << 1] = val;
+}
+static inline void sety(double* d, int ind, double val) {
+	// d[ind*2 + 1] = val;
+	d[(ind << 1) | 1] = val;
+}
+
 void solver_default_params(solver_params* params) {
 	memset(params, 0, sizeof(solver_params));
 	params->maxAB = 1e300;
 	params->arcsec_per_pixel_upper = 1.0e300;
 }
 
-void find_corners(xy *thisfield, xy *cornerpix);
+void find_corners(double *thisfield, double *cornerpix);
 
 inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 					  char* inbox, int maxind, solver_params* params);
 
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 				   uint iA, uint iB, uint iC, uint iD,
-                   xy *ABCDpix, solver_params* params);
+				   double *ABCDpix, solver_params* params);
 
-void resolve_matches(kdtree_qres_t* krez, double *query, xy *field,
+void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 					 uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params);
 
 static bool check_scale(int iA, int iB, solver_params* params) {
 	double Ax, Ay, Bx, By, dx, dy, scale;
-	Ax = xy_refx(params->field, iA);
-	Ay = xy_refy(params->field, iA);
-	Bx = xy_refx(params->field, iB);
-	By = xy_refy(params->field, iB);
+	Ax = getx(params->field, iA);
+	Ay = gety(params->field, iA);
+	Bx = getx(params->field, iB);
+	By = gety(params->field, iB);
 	dx = Bx - Ax;
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
@@ -48,25 +65,19 @@ static bool check_scale(int iA, int iB, solver_params* params) {
 	return TRUE;
 }
 
-enum scale_prop {
-	SCALE_UNCHECKED,
-	SCALE_OKAY,
-	SCALE_BAD
-};
-
 void solve_field(solver_params* params) {
     uint numxy, iA, iB, iC, iD, newpoint;
     int *iCs, *iDs;
     char *iunion;
     int ncd;
-	unsigned char *scale_value;
+	unsigned char *scale_ok;
 	double c;
 	double usertime, systime;
 
 	get_resource_stats(&usertime, &systime, NULL);
 	params->starttime = usertime + systime;
 
-	numxy = xy_size(params->field);
+	numxy = params->nfield;
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
 		return;
 	if (params->endobj && (numxy > params->endobj))
@@ -75,8 +86,8 @@ void solve_field(solver_params* params) {
 	find_corners(params->field, params->cornerpix);
 
 	// how many pixels from corner to corner of the field?
-	c  = square(xy_refy(params->cornerpix, 1) - xy_refy(params->cornerpix, 0));
-	c += square(xy_refx(params->cornerpix, 1) - xy_refx(params->cornerpix, 0));
+	c  = square(getx(params->cornerpix, 1) - getx(params->cornerpix, 0));
+	c += square(gety(params->cornerpix, 1) - gety(params->cornerpix, 0));
 	params->fieldscale = sqrt(c);
 	// how many arcsec from corner to corner of the field?
 	params->starscale_upper = arcsec2distsq(params->arcsec_per_pixel_upper * params->fieldscale);
@@ -86,7 +97,7 @@ void solve_field(solver_params* params) {
 	iDs = malloc(numxy * numxy * sizeof(int));
 	iunion = malloc(numxy * sizeof(char));
 
-	scale_value = calloc(numxy*numxy, sizeof(unsigned char));
+	scale_ok = calloc(numxy*numxy, sizeof(unsigned char));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -119,11 +130,9 @@ void solve_field(solver_params* params) {
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
-			if (!check_scale(iA, iB, params)) {
-				scale_value[iA * numxy + iB] = SCALE_BAD;
+			if (!check_scale(iA, iB, params))
 				continue;
-			}
-			scale_value[iA * numxy + iB] = SCALE_OKAY;
+			scale_ok[iA * numxy + iB] = 1;
 			ncd = 0;
 			memset(iunion, 0, newpoint);
 			for (iC=0; iC<newpoint; iC++) {
@@ -148,8 +157,7 @@ void solve_field(solver_params* params) {
 		iD = newpoint;
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
-				assert(scale_value[iA * numxy + iB] != SCALE_UNCHECKED);
-				if (scale_value[iA * numxy + iB] == SCALE_BAD)
+				if (!scale_ok[iA * numxy + iB])
 					continue;
 
 				ncd = 0;
@@ -177,7 +185,7 @@ void solve_field(solver_params* params) {
 			params->quitNow)
 			break;
 	}
-	free(scale_value);
+	free(scale_ok);
 	free(iCs);
 	free(iDs);
 	free(iunion);
@@ -194,22 +202,20 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
     double ys[maxind];
 	double fieldxs[maxind];
 	double fieldys[maxind];
-    xy *ABCDpix;
+    double ABCDpix[8];
 
 	// assume the scale has already been checked by the caller.
 	// if (!check_scale(iA, iB, params)) return;
 
-    Ax = xy_refx(params->field, iA);
-    Ay = xy_refy(params->field, iA);
-    Bx = xy_refx(params->field, iB);
-    By = xy_refy(params->field, iB);
+    Ax = getx(params->field, iA);
+    Ay = gety(params->field, iA);
+    Bx = getx(params->field, iB);
+    By = gety(params->field, iB);
 
-    ABCDpix = mk_xy(DIM_QUADS);
-
-    xy_setx(ABCDpix, 0, Ax);
-    xy_sety(ABCDpix, 0, Ay);
-    xy_setx(ABCDpix, 1, Bx);
-    xy_sety(ABCDpix, 1, By);
+	setx(ABCDpix, 0, Ax);
+	sety(ABCDpix, 0, Ay);
+	setx(ABCDpix, 1, Bx);
+	sety(ABCDpix, 1, By);
 
 	dx = Bx - Ax;
 	dy = By - Ay;
@@ -259,10 +265,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		Dfx = fieldxs[iD];
 		Dfy = fieldys[iD];
 
-		xy_setx(ABCDpix, 2, Cfx);
-		xy_sety(ABCDpix, 2, Cfy);
-		xy_setx(ABCDpix, 3, Dfx);
-		xy_sety(ABCDpix, 3, Dfy);
+		setx(ABCDpix, 2, Cfx);
+		sety(ABCDpix, 2, Cfy);
+		setx(ABCDpix, 3, Dfx);
+		sety(ABCDpix, 3, Dfy);
 
 		params->numtries++;
 
@@ -270,23 +276,21 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		if (params->quitNow)
 			break;
     }
-
-    free_xy(ABCDpix);
 }
 
-static void set_xy(xy* dest, int destind, xy* src, int srcind) {
-	xy_setx(dest, destind, xy_refx(src, srcind));
-	xy_sety(dest, destind, xy_refy(src, srcind));
+static inline void set_xy(double* dest, int destind, double* src, int srcind) {
+	setx(dest, destind, getx(src, srcind));
+	sety(dest, destind, gety(src, srcind));
 }
 
 void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 				   uint iA, uint iB, uint iC, uint iD,
-                   xy *ABCDpix, solver_params* params) {
+                   double *ABCDpix, solver_params* params) {
 
     double thequery[4];
     kdtree_qres_t* result;
 	double tol = square(params->codetol);
-	xy* inorder = mk_xy(4);
+	double inorder[8];
 	int A=0, B=1, C=2, D=3;
 	double usertime, systime;
 	get_resource_stats(&usertime, &systime, NULL);
@@ -308,7 +312,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
     kdtree_free_query(result);
 	if (params->quitNow)
-		goto bailout;
+		return;
 
     // BACD
     thequery[0] = 1.0 - Cx;
@@ -326,7 +330,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
     kdtree_free_query(result);
 	if (params->quitNow)
-		goto bailout;
+		return;
 
     // ABDC
     thequery[0] = Dx;
@@ -344,7 +348,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
     kdtree_free_query(result);
 	if (params->quitNow)
-		goto bailout;
+		return;
 
     // BADC
     thequery[0] = 1.0 - Dx;
@@ -362,13 +366,10 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
     kdtree_free_query(result);
 	if (params->quitNow)
-		goto bailout;
-
- bailout:
-	free_xy(inorder);
+		return;
 }
 
-void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
+void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 					 uint fA, uint fB, uint fC, uint fD,
 					 solver_params* params) {
     uint jj, thisquadno;
@@ -381,27 +382,20 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 		int nagree;
 		//uint64_t idA, idB, idC, idD;
 		double star[12];
-		double field[8];
-		int i;
 		double starscale;
 
 		params->nummatches++;
 
 		thisquadno = (uint)krez->inds[jj];
 		getquadids(thisquadno, &iA, &iB, &iC, &iD);
-		getstarcoord(iA, star+0*3);
-		getstarcoord(iB, star+1*3);
-		getstarcoord(iC, star+2*3);
-		getstarcoord(iD, star+3*3);
-
-		for (i=0; i<4; i++) {
-			field[i*2 + 0] = xy_refx(fieldxy, i);
-			field[i*2 + 1] = xy_refy(fieldxy, i);
-		}
+		getstarcoord(iA, star + 0*3);
+		getstarcoord(iB, star + 1*3);
+		getstarcoord(iC, star + 2*3);
+		getstarcoord(iD, star + 3*3);
 
 		fit_transform(star, field, 4, transform);
-		image_to_xyz(xy_refx(params->cornerpix, 0), xy_refy(params->cornerpix, 0), sMin, transform);
-		image_to_xyz(xy_refx(params->cornerpix, 1), xy_refy(params->cornerpix, 1), sMax, transform);
+		image_to_xyz(getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin, transform);
+		image_to_xyz(getx(params->cornerpix, 1), gety(params->cornerpix, 1), sMax, transform);
 
 		// check scale
 		starscale  = square(sMax[0] - sMin[0]);
@@ -412,8 +406,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 			// this quad has invalid scale.
 			continue;
 
-		image_to_xyz(xy_refx(params->cornerpix, 2), xy_refy(params->cornerpix, 2), sMinMax, transform);
-		image_to_xyz(xy_refx(params->cornerpix, 3), xy_refy(params->cornerpix, 3), sMaxMin, transform);
+		image_to_xyz(getx(params->cornerpix, 2), gety(params->cornerpix, 2), sMinMax, transform);
+		image_to_xyz(getx(params->cornerpix, 3), gety(params->cornerpix, 3), sMaxMin, transform);
 
 		mo = mk_MatchObj();
 		if (params->mo_template)
@@ -503,7 +497,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, xy *fieldxy,
 
 // find min and max coordinates in this field;
 // place them in "cornerpix"
-void find_corners(xy *thisfield, xy *cornerpix) {
+void find_corners(double *thisfield, double *cornerpix) {
 	double minx, maxx, miny, maxy;
 	double x, y;
 	uint i;
@@ -512,21 +506,21 @@ void find_corners(xy *thisfield, xy *cornerpix) {
 	maxx = maxy = -1e308;
 	
 	for (i=0; i<xy_size(thisfield); i++) {
-		x = xy_refx(thisfield, i);
-		y = xy_refy(thisfield, i);
+		x = getx(thisfield, i);
+		y = gety(thisfield, i);
 		if (x < minx) minx = x;
 		if (x > maxx) maxx = x;
 		if (y < miny) miny = y;
 		if (y > maxy) maxy = y;
 	}
 
-    xy_setx(cornerpix, 0, minx);
-    xy_sety(cornerpix, 0, miny);
-    xy_setx(cornerpix, 1, maxx);
-    xy_sety(cornerpix, 1, maxy);
+    setx(cornerpix, 0, minx);
+    sety(cornerpix, 0, miny);
+    setx(cornerpix, 1, maxx);
+    sety(cornerpix, 1, maxy);
 
-    xy_setx(cornerpix, 2, minx);
-    xy_sety(cornerpix, 2, maxy);
-    xy_setx(cornerpix, 3, maxx);
-    xy_sety(cornerpix, 3, miny);
+    setx(cornerpix, 2, minx);
+    sety(cornerpix, 2, maxy);
+    setx(cornerpix, 3, maxx);
+    sety(cornerpix, 3, miny);
 }

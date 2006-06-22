@@ -15,7 +15,8 @@ typedef int (*handle_hit)(struct solver_params*, MatchObj*);
 struct solver_params {
 
 	// Inputs:
-	xy* field;
+	double* field;
+	int nfield;
 	kdtree_t* codekd;
 	int startobj;
 	int endobj;
@@ -37,10 +38,10 @@ struct solver_params {
 	MatchObj* mo_template;
 
 	// Must be initialized by caller; will contain outputs:
-	xy* cornerpix;
 	handle_hit handlehit;
 	
 	// internal:
+	double cornerpix[8];
 	double fieldscale;
 	double starscale_lower;
 	double starscale_upper;
