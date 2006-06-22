@@ -511,7 +511,7 @@ int main(int argc, char *argv[]) {
 		list = negfieldbins[bin];
 		if (!list)
 			continue;
-		printf("Bin %i: unsolved field true centers (deg):\n  [ ", bin);
+		printf("Bin %i: unsolved field centers (deg):\n  [ ", bin);
 		for (i=0; i<il_size(list); i++) {
 			int fld = il_get(list, i);
 			printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
@@ -532,29 +532,32 @@ int main(int argc, char *argv[]) {
 		for (nfn=0; nfn<3; nfn++) {
 			char* fn = fns[nfn];
 			il** fields = lists[nfn];
+			char buf[256];
 			if (!fn) continue;
 			rdlist* rdls = rdlist_open_for_writing(fn);
 			if (!rdls) {
 				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
 				exit(-1);
 			}
+			sprintf(buf, "%.10g", binsize);
+			qfits_header_add(rdls->header, "BINSIZE", buf, NULL, NULL);
 			qfits_header_add(rdls->header, "COMMENT", descstrs[nfn], NULL, NULL);
 			qfits_header_add(rdls->header, "COMMENT", "Extension x holds results for", NULL, NULL);
-			qfits_header_add(rdls->header, "COMMENT", "   nagree threshold=x.", NULL, NULL);
+			qfits_header_add(rdls->header, "COMMENT", "   bin x.", NULL, NULL);
 			rdlist_write_header(rdls);
 
 			for (bin=0; bin<Nbins; bin++) {
-				int b;
+				//int b;
 				rdlist_write_new_field(rdls);
-				for (b=0; b<=bin; b++) {
-					il* list = fields[b];
-					if (!list)
-						continue;
-					for (i=0; i<il_size(list); i++) {
-						int fld = il_get(list, i);
-						rdlist_write_entries(rdls, fieldcenters+(2*fld), 1);
-					}
+				//for (b=0; b<=bin; b++) {
+				il* list = fields[bin];
+				if (!list)
+					continue;
+				for (i=0; i<il_size(list); i++) {
+					int fld = il_get(list, i);
+					rdlist_write_entries(rdls, fieldcenters+(2*fld), 1);
 				}
+				//}
 				rdlist_fix_field(rdls);
 			}
 			rdlist_fix_header(rdls);
