@@ -370,18 +370,20 @@ int main(int argc, char *argv[]) {
 	printf("\n");
 	fflush(stdout);
 
-	for (bin=0; bin<Nbins; bin++) {
-		il* list = negfieldbins[bin];
-		if (list) {
-			printf("Bin %i (overlap %4.1f to %4.1f %%) unsolved [%i]: ", bin,
-				   bin * binsize, (bin+1) * binsize, il_size(list));
-			for (i=0; i<il_size(list); i++)
-				printf("%i ", il_get(list, i));
-			printf("\n");
-		}
-	}
-	printf("\n");
-	fflush(stdout);
+	/*
+	  for (bin=0; bin<Nbins; bin++) {
+	  il* list = negfieldbins[bin];
+	  if (list) {
+	  printf("Bin %i (overlap %4.1f to %4.1f %%) unsolved [%i]: ", bin,
+	  bin * binsize, (bin+1) * binsize, il_size(list));
+	  for (i=0; i<il_size(list); i++)
+	  printf("%i ", il_get(list, i));
+	  printf("\n");
+	  }
+	  }
+	  printf("\n");
+	  fflush(stdout);
+	*/
 
 	{
 		int sumright=0, sumwrong=0;
@@ -392,7 +394,7 @@ int main(int argc, char *argv[]) {
 		printf("Total of %i fields.\n", ntotal);
 		printf("Threshold%%   #Solved  %%Solved     #Unsolved  %%Unsolved   #FalsePositive\n");
 
-		for (bin=0; bin<Nbins; bin++) {
+		for (bin=Nbins-1; bin>=0; bin--) {
 			int nright, nwrong, nunsolved;
 			il* list;
 
@@ -547,9 +549,7 @@ int main(int argc, char *argv[]) {
 			rdlist_write_header(rdls);
 
 			for (bin=0; bin<Nbins; bin++) {
-				//int b;
 				rdlist_write_new_field(rdls);
-				//for (b=0; b<=bin; b++) {
 				il* list = fields[bin];
 				if (!list)
 					continue;
@@ -557,7 +557,6 @@ int main(int argc, char *argv[]) {
 					int fld = il_get(list, i);
 					rdlist_write_entries(rdls, fieldcenters+(2*fld), 1);
 				}
-				//}
 				rdlist_fix_field(rdls);
 			}
 			rdlist_fix_header(rdls);
