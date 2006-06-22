@@ -5,14 +5,24 @@
 #include "mathutil.h"
 #include "intmap.h"
 
+/*
+  static inline double getx(double* d, int ind) {
+  return d[ind << 1];
+  }
+  static inline double gety(double* d, int ind) {
+  return d[(ind << 1) | 1];
+  }
+*/
+
 void verify_hit(kdtree_t* startree,
 				MatchObj* mo,
-				xy* field,
+				double* field,
+				int NF,
 				double verify_dist2,
 				int* pmatches,
 				int* punmatches,
 				int* pconflicts) {
-	int i, j, NF;
+	int i, j;
 	double* fieldstars;
 	intmap* map;
 	int matches;
@@ -27,6 +37,7 @@ void verify_hit(kdtree_t* startree,
 	kdtree_t* itree;
 	int levels;
 	int Nleaf = 5;
+	double* dptr;
 	assert(mo->transform_valid);
 	assert(startree);
 
@@ -73,8 +84,6 @@ void verify_hit(kdtree_t* startree,
 		}
 	}
 
-	NF = xy_size(field);
-
 	if (!NI) {
 		// I don't know HOW this happens, but I've seen it...
 		fprintf(stderr, "Freakishly, NI=0.\n");
@@ -103,10 +112,17 @@ void verify_hit(kdtree_t* startree,
 	*/
 
 	fieldstars = malloc(3 * NF * sizeof(double));
+	dptr = field;
 	for (i=0; i<NF; i++) {
 		double u, v;
-		u = xy_refx(field, i);
-		v = xy_refy(field, i);
+		/*
+		  u = getx(field, i);
+		  v = gety(field, i);
+		*/
+		u = *dptr;
+		dptr++;
+		v = *dptr;
+		dptr++;
 		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
 	}
 

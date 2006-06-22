@@ -674,9 +674,9 @@ static void write_hits(int fieldnum, pl* matches) {
 	return;
 }
 
-void verify(MatchObj* mo, xy* field, int fieldnum, int nagree) {
+void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
 	int matches, unmatches, conflicts;
-	verify_hit(startree, mo, field, verify_dist2,
+	verify_hit(startree, mo, field, nfield, verify_dist2,
 			   &matches, &unmatches, &conflicts);
 	fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
 			fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
@@ -700,7 +700,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (n < nagree_toverify)
 		return n;
 
-	verify(mo, p->field, p->fieldnum, n);
+	verify(mo, p->field, p->nfield, p->fieldnum, n);
 
 	if (overlap_tosolve > 0.0) {
 		bool solved = FALSE;
@@ -712,7 +712,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			for (j=0; j<pl_size(list); j++) {
 				mo1 = pl_get(list, j);
 				if (mo1->overlap == 0.0) {
-					verify(mo1, p->field, p->fieldnum, n);
+					verify(mo1, p->field, p->nfield, p->fieldnum, n);
 					if (mo1->overlap >= overlap_tokeep)
 						pl_append(my->verified, mo1);
 				}
@@ -776,6 +776,7 @@ void* solvethread_run(void* varg) {
 	double last_utime, last_stime;
 	double utime, stime;
 	int nfields;
+	double* field = NULL;
 
 	fprintf(stderr, "Thread %i starting.\n", my->threadnum);
 
@@ -787,7 +788,6 @@ void* solvethread_run(void* varg) {
 	solver.maxtries = 0;
 	solver.max_matches_needed = maxnagree;
 	solver.codetol = codetol;
-	solver.cornerpix = mk_xy(4);
 	solver.handlehit = handlehit;
 
 	if (do_verify)
@@ -812,7 +812,8 @@ void* solvethread_run(void* varg) {
 		xy *thisfield = NULL;
 		int fieldnum;
 		MatchObj template;
-		
+		int nfield;
+
 		fieldnum = next_field(&thisfield);
 
 		if (fieldnum == -1)
@@ -850,6 +851,11 @@ void* solvethread_run(void* varg) {
 						fieldnum, oldsize, xy_size(thisfield));
 		}
 
+		nfield = xy_size(thisfield);
+		field = realloc(field, 2 * nfield * sizeof(double));
+		dl_copy(thisfield, 0, 2 * nfield, field);
+		free_xy(thisfield);
+
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
 		template.parity = parity;
@@ -862,7 +868,8 @@ void* solvethread_run(void* varg) {
 		solver.nummatches = 0;
 		solver.mostagree = 0;
 		solver.startobj = startdepth;
-		solver.field = thisfield;
+		solver.field = field;
+		solver.nfield = nfield;
 		solver.quitNow = FALSE;
 		solver.mo_template = &template;
 		solver.userdata = my;
@@ -921,7 +928,7 @@ void* solvethread_run(void* varg) {
 					// run verification on any of the matches that haven't
 					// already been done.
 					if (mo->overlap == 0.0) {
-						verify(mo, solver.field, solver.fieldnum, pl_size(list));
+						verify(mo, solver.field, solver.nfield, solver.fieldnum, pl_size(list));
 						if (do_verify)
 							pl_append(my->verified, mo);
 					}
@@ -964,8 +971,6 @@ void* solvethread_run(void* varg) {
 		if (do_verify)
 			pl_remove_all(my->verified);
 
-		free_xy(thisfield);
-
 		get_resource_stats(&utime, &stime, NULL);
 		fprintf(stderr, "    spent %g s user, %g s system, %g s total.\n",
 				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime));
@@ -973,8 +978,8 @@ void* solvethread_run(void* varg) {
 		last_stime = stime;
 	}
 
+	free(field);
 	pl_free(my->verified);
-	free_xy(solver.cornerpix);
 
 	fprintf(stderr, "Thread %i finished.\n", my->threadnum);
 	my->running = FALSE;
