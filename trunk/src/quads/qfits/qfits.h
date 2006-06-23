@@ -2080,6 +2080,14 @@ int qfits_query_column_seq_to_array(
 									unsigned char*      destination,
 									int                 dest_stride);
 
+int qfits_query_column_seq_to_array_no_endian_swap(
+									qfits_table	    *   th,
+									int                 colnum,
+									int                 start_ind,
+									int                 nb_rows,
+									unsigned char*      destination,
+									int                 dest_stride);
+
 
 /*----------------------------------------------------------------------------*/
 /**

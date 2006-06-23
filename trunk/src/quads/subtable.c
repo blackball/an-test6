@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
 	int ext;
 	int NC;
 	int start, size;
-	char* buf;
 
 	qfits_table* outtable;
+	unsigned char* buffer;
 
 	cols = pl_new(16);
 
@@ -87,18 +87,21 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Couldn't get main header.\n");
 		exit(-1);
 	}
-	buf = malloc(size);
-	if (fread(buf, 1, size, fin) != size) {
+	buffer = malloc(size);
+	if (fread(buffer, 1, size, fin) != size) {
 		fprintf(stderr, "Error reading main header: %s\n", strerror(errno));
 		exit(-1);
 	}
-	if (fwrite(buf, 1, size, fout) != size) {
+	if (fwrite(buffer, 1, size, fout) != size) {
 		fprintf(stderr, "Error writing main header: %s\n", strerror(errno));
 		exit(-1);
 	}
+	free(buffer);
 
 	NC = pl_size(cols);
 	nextens = qfits_query_n_ext(infn);
+	printf("Translating %i extensions.\n", nextens);
+	buffer = NULL;
 	for (ext=1; ext<=nextens; ext++) {
 		int c2, c;
 		int columns[NC];
@@ -107,11 +110,14 @@ int main(int argc, char *argv[]) {
 		int offset = 0;
 		int off, n;
 		int totalsize = 0;
-		unsigned char* buffer;
 		const int BLOCK=1000;
 		qfits_table* table;
 		qfits_header* header;
 		qfits_header* tablehdr;
+
+		if (ext%100 == 0) {
+			printf("Extension %i.\n", ext);
+		}
 
 		if (!qfits_is_table(infn, ext)) {
 			fprintf(stderr, "extention %i isn't a table.\n", ext);
@@ -203,8 +209,10 @@ int main(int argc, char *argv[]) {
 
 		qfits_header_dump(tablehdr, fout);
 		qfits_header_destroy(tablehdr);
-
-		buffer = malloc(totalsize * BLOCK);
+		
+		buffer = realloc(buffer, totalsize * BLOCK);
+		// DEBUG
+		//memset(buffer, 0, totalsize * BLOCK);
 
 		for (off=0; off<table->nr; off+=n) {
 			if (off + BLOCK > table->nr)
@@ -212,7 +220,8 @@ int main(int argc, char *argv[]) {
 			else
 				n = BLOCK;
 			for (c=0; c<pl_size(cols); c++)
-				qfits_query_column_seq_to_array(table, columns[c], off, n, buffer + offsets[c], totalsize);
+				qfits_query_column_seq_to_array_no_endian_swap
+					(table, columns[c], off, n, buffer + offsets[c], totalsize);
 			if (fwrite(buffer, totalsize, n, fout) != n) {
 				fprintf(stderr, "Error writing a block of data: ext %i: %s\n", ext, strerror(errno));
 				exit(-1);
@@ -220,13 +229,18 @@ int main(int argc, char *argv[]) {
 		}
 
 		qfits_table_close(outtable);
-		free(buffer);
 
 		fits_pad_file(fout);
 
 		qfits_header_destroy(header);
 		qfits_table_close(table);
 	}
+	free(buffer);
+
+	if (fclose(fout)) {
+		fprintf(stderr, "Error closing output file: %s\n", strerror(errno));
+	}
+	fclose(fin);
 
 	pl_free(cols);
 	return 0;
