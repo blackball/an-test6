@@ -54,7 +54,8 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	hpquads dedup_index codetree startree \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
-	codeprojections quadlocations hpowned fitsgetext quadsperstar
+	codeprojections quadlocations hpowned fitsgetext quadsperstar \
+	subtable
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylstomatlab rdlstohealpix 
 # codeprojections fixmatchfile printmatchfile 
@@ -93,7 +94,7 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
 
-FITS_UTILS := tablist modhead
+FITS_UTILS := tablist modhead fitscopy
 
 fitsutils: $(FITS_UTILS)
 
