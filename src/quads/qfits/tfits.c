@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.9 $
+   @version	$Revision: 1.10 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.9 2006/06/08 15:28:05 dlang Exp $
+	$Id: tfits.c,v 1.10 2006/06/23 04:09:11 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/06/08 15:28:05 $
-	$Revision: 1.9 $
+	$Date: 2006/06/23 04:09:11 $
+	$Revision: 1.10 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -861,13 +861,14 @@ unsigned char * qfits_query_column_seq(
 
 
 
-int qfits_query_column_seq_to_array(
+static int qfits_query_column_seq_to_array_endian(
 									qfits_table	    *   th,
 									int                 colnum,
 									int                 start_ind,
 									int                 nb_rows,
 									unsigned char*      destination,
-									int                 dest_stride)
+									int                 dest_stride,
+									int swap_endian)
 {
 	char			*	start ;
     qfits_col       *   col ;
@@ -919,8 +920,9 @@ int qfits_query_column_seq_to_array(
 
 	do_swap = 0;
 #ifndef WORDS_BIGENDIAN
-    if ((th->tab_t == QFITS_BINTABLE) && (col->atom_size > 1))
-		do_swap = 1;
+	if (swap_endian)
+		if ((th->tab_t == QFITS_BINTABLE) && (col->atom_size > 1))
+			do_swap = 1;
 #endif
 
     /* Copy the values in array */
@@ -949,7 +951,27 @@ int qfits_query_column_seq_to_array(
 }
 
 
+int qfits_query_column_seq_to_array(
+									qfits_table	    *   th,
+									int                 colnum,
+									int                 start_ind,
+									int                 nb_rows,
+									unsigned char*      destination,
+									int                 dest_stride)
+{
+	return qfits_query_column_seq_to_array_endian(th, colnum, start_ind, nb_rows, destination, dest_stride, 1);
+}
 
+int qfits_query_column_seq_to_array_no_endian_swap(
+									qfits_table	    *   th,
+									int                 colnum,
+									int                 start_ind,
+									int                 nb_rows,
+									unsigned char*      destination,
+									int                 dest_stride)
+{
+	return qfits_query_column_seq_to_array_endian(th, colnum, start_ind, nb_rows, destination, dest_stride, 0);
+}
 
 /*----------------------------------------------------------------------------*/
 /**
