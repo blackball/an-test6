@@ -9,6 +9,8 @@
 #define FOPEN_ERR -301
 #define READ_FAIL -1
 
+bool file_exists(char* fn);
+
 void fopenout(char* fn, FILE** pfid);
 
 #define fopenin(n,f)  {if(n){f=fopen(n,"r");} if(!n||!f){fprintf(stderr,"ERROR OPENING FILE %s for reading.\n",n); return(FOPEN_ERR);}}

@@ -25,6 +25,7 @@ struct solver_params {
 	double codetol;
 	bool quitNow;
 	int fieldnum;
+	char* solvedfn;
 
 	// The limits on the size, in field coordinates,
 	// of the quads to find.
