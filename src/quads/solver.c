@@ -126,6 +126,10 @@ void solve_field(solver_params* params) {
 	// We keep the invariants that iA < iB and iC < iD.
 	// We try the A<->B and C<->D permutation in try_all_points.
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
+		if (params->solvedfn && file_exists(params->solvedfn)) {
+			fprintf(stderr, "  field %u: file %s exists; aborting.\n", params->fieldnum, params->solvedfn);
+			break;
+		}
 		params->objsused = newpoint;
 		// quads with the new star on the diagonal:
 		iB = newpoint;

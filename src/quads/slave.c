@@ -5,7 +5,6 @@
  * Output: .match
  */
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -832,16 +831,17 @@ void* solvethread_run(void* varg) {
 
 		if (solvedfname) {
 			char fn[256];
-			struct stat st;
 			sprintf(fn, solvedfname, fieldnum);
-			if (stat(fn, &st) == 0) {
+			if (file_exists(fn)) {
 				// file exists; field has already been solved.
 				fprintf(stderr, "Field %i: file %s exists; field has been solved.\n",
 						fieldnum, fn);
 				write_hits(fieldnum, NULL);
 				continue;
 			}
-		}
+			solver.solvedfn = strdup(fn);
+		} else
+			solver.solvedfn = NULL;
 
 		if (do_donut) {
 			int oldsize = xy_size(thisfield);
@@ -884,6 +884,8 @@ void* solvethread_run(void* varg) {
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
 
+		//if (solver.solvedfn && file_exists(solver.solvedfn)) {
+		free(solver.solvedfn);
 		{
 			int* thisagreehist;
 			int maxagree = 0;
