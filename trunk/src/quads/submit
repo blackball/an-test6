@@ -1,4 +1,4 @@
-  Executable     = /home/dstn/RUNS/23/launch
+  Executable     = /home/dstn/RUNS/36/launch
   Universe       = vanilla
 
   # we only want to run on CPU 1: this is an attempt to get only
@@ -6,9 +6,9 @@
   Requirements = (VirtualMachineId == 2)
 
   Arguments = $(Process)
-  Error   = err.$(Process)
-  Output  = out.$(Process)
-  Log     = run23.log
+  Error   = err/err.$(Process)
+  Output  = out/out.$(Process)
+  Log     = condor.log
 
-  Queue 10
+  Queue 420
 
