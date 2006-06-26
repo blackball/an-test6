@@ -151,6 +151,7 @@ void* pl_get(pl* list, int n);
 void  pl_set(pl* list, int ind, void* data);
 void  pl_append(pl* list, void* data);
 void  pl_copy(pl* list, int start, int length, void** dest);
+pl*   pl_dup(pl* list);
 void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
 int   pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2));
