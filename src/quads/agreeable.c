@@ -13,7 +13,7 @@
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:b";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bF";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -35,6 +35,8 @@ int find_correspondences(pl* hits, uint* starids, uint* fieldids, int* p_ok);
 
 void write_field(hitlist* hl,
 				 pl* overlaps,
+				 bool bestover,
+				 bool firstover,
 				 int fieldnum,
 				 bool doleftovers,
 				 bool doagree,
@@ -63,10 +65,22 @@ int  sizeagreehist = 0;
 static int compare_overlaps(const void* v1, const void* v2) {
 	const MatchObj* mo1 = v1;
 	const MatchObj* mo2 = v2;
-	double diff = mo1->overlap - mo2->overlap;
+	double diff = mo2->overlap - mo1->overlap;
 	if (diff > 0.0)
 		return 1;
 	if (diff == 0.0)
+		return 0;
+	return -1;
+}
+
+static int compare_objs_used(const void* v1, const void* v2) {
+	const MatchObj* mo1 = v1;
+	const MatchObj* mo2 = v2;
+	// this is backward so the list is sorted in INCREASING order of objs_tried.
+	int diff = mo1->objs_tried - mo2->objs_tried;
+	if (diff > 0)
+		return 1;
+	if (diff == 0)
 		return 0;
 	return -1;
 }
@@ -103,6 +117,7 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'F':
 			do_first_overlap = TRUE;
+			break;
 		case 'm':
 			agreetolarcsec = atof(optarg);
 			break;
@@ -197,7 +212,7 @@ int main(int argc, char *argv[]) {
 		agree = TRUE;
 	}
 
-	if (do_best_overlap)
+	if (do_best_overlap || do_first_overlap)
 		overlaps = pl_new(32);
 	else
 		hl = hitlist_healpix_new(agreetolarcsec);
@@ -266,6 +281,8 @@ int main(int argc, char *argv[]) {
 
 				if (do_best_overlap) {
 					pl_insert_sorted(overlaps, mocopy, compare_overlaps);
+				} else if (do_first_overlap) {
+					pl_insert_sorted(overlaps, mocopy, compare_objs_used);
 				} else {
 					// compute (x,y,z) center, scale, rotation.
 					hitlist_healpix_compute_vector(mocopy);
@@ -278,7 +295,24 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
 		}
 
-		write_field(hl, overlaps, fieldnum, leftovers, agree, TRUE);
+		/*
+		  printf("objs_used: ");
+		  for (i=0; i<pl_size(overlaps); i++) {
+		  MatchObj* mo = pl_get(overlaps, i);
+		  printf("%i ", mo->objs_tried);
+		  }
+		  printf("\n");
+
+		  printf("overlap: ");
+		  for (i=0; i<pl_size(overlaps); i++) {
+		  MatchObj* mo = pl_get(overlaps, i);
+		  printf("%f ", mo->overlap);
+		  }
+		  printf("\n");
+		*/
+
+		write_field(hl, overlaps, do_best_overlap, do_first_overlap,
+					fieldnum, leftovers, agree, TRUE);
 
 		fprintf(stderr, "So far: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
 
@@ -339,6 +373,8 @@ int main(int argc, char *argv[]) {
 
 void write_field(hitlist* hl,
 				 pl* overlaps,
+				 bool bestover,
+				 bool firstover,
 				 int fieldnum,
 				 bool doleftovers,
 				 bool doagree,
@@ -359,7 +395,7 @@ void write_field(hitlist* hl,
 	if (hl) {
 		nbest = hitlist_healpix_count_best(hl);
 		nall = hitlist_healpix_count_all(hl);
-	} else {
+	} else { //if (bestover || firstover) {
 		nall = pl_size(overlaps);
 		nbest = (nall ? 1 : 0);
 	}
@@ -370,36 +406,27 @@ void write_field(hitlist* hl,
 	fieldhdr.nagree = nbest;
 
 	if (overlap_needed > 0.0) {
+		pl* lists = pl_new(32);
 		if (hl) {
 			int nlists = hitlist_healpix_count_lists(hl);
 			for (j=0; j<nlists; j++) {
-				int i;
-				bool gotit = FALSE;
 				pl* list = hitlist_healpix_copy_list(hl, j);
 				if (!list)
 					continue;
-				for (i=0; i<pl_size(list); i++) {
-					MatchObj* mo = pl_get(list, i);
-					if ((mo->overlap >= overlap_needed) &&
-						(mo->ninfield >= min_ninfield)) {
-						gotit = TRUE;
-						break;
-					}
-				}
-				if (gotit) {
-					if (!best)
-						best = pl_new(32);
-					pl_merge_lists(best, list);
-				}
-				pl_free(list);
+				pl_append(lists, list);
 			}
-			issolved = (best != NULL);
 		} else {
+			pl* copy = pl_dup(overlaps);
+			pl_append(lists, copy);
+		}
+
+		for (j=0; j<pl_size(lists); j++) {
 			int i;
 			bool gotit = FALSE;
-			MatchObj* mo;
-			for (i=0; i<pl_size(overlaps); i++) {
-				mo = pl_get(overlaps, i);
+			pl* list = pl_get(lists, j);
+
+			for (i=0; i<pl_size(list); i++) {
+				MatchObj* mo = pl_get(list, i);
 				if ((mo->overlap >= overlap_needed) &&
 					(mo->ninfield >= min_ninfield)) {
 					gotit = TRUE;
@@ -409,10 +436,13 @@ void write_field(hitlist* hl,
 			if (gotit) {
 				if (!best)
 					best = pl_new(32);
-				pl_append(best, mo);
+				pl_merge_lists(best, list);
 			}
-			issolved = (best != NULL);
+			pl_free(list);
 		}
+		pl_free(lists);
+		issolved = (best != NULL);
+
 	} else {
 		if (hl) {
 			if (nbest < min_matches_to_agree) {

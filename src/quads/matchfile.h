@@ -60,6 +60,7 @@ int matchfile_read_matches(matchfile* m, MatchObj* mo, uint offset, uint n);
 
 MatchObj* matchfile_buffered_read_match(matchfile* m);
 
+int matchfile_buffered_read_pushback(matchfile* m);
 
 int matchfile_close(matchfile* m);
 

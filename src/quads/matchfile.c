@@ -347,7 +347,7 @@ pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 		if (!mo) break;
 		if (mo->fieldnum != field) {
 			// push back the newly-read entry...
-			mf->buffind--;
+			matchfile_buffered_read_pushback(mf);
 			break;
 		}
 		copy = malloc(sizeof(MatchObj));
@@ -389,3 +389,11 @@ MatchObj* matchfile_buffered_read_match(matchfile* mf) {
 	mf->buffind++;
 	return mo;
 }
+
+int matchfile_buffered_read_pushback(matchfile* mf) {
+	if (!mf->buffind)
+		return -1;
+	mf->buffind--;
+	return 0;
+}
+
