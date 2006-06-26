@@ -107,7 +107,7 @@ int main(int argc, char** args) {
 			goto bailout;
 		}
 
-		printf("Got request %s\n", buf);
+		//printf("Got request %s\n", buf);
 
 		if (sscanf(buf, "%4s %i %i\n", getsetstr, &filenum, &fieldnum) != 3) {
 			fprintf(stderr, "Malformed request: %s\n", buf);
