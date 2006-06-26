@@ -12,6 +12,7 @@
 #include "solver.h"
 #include "solver_callbacks.h"
 #include "tic.h"
+#include "solvedfile.h"
 
 static inline double getx(double* d, int ind) {
 	// return d[ind*2];

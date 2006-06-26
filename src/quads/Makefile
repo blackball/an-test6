@@ -12,9 +12,9 @@ CFLAGS :=
 #CFLAGS += -pg
 CFLAGS += -O3 -fomit-frame-pointer -ffast-math
 # gcc-3.2:
-#CFLAGS += -mcpu=pentium4 
+CFLAGS += -mcpu=pentium4 
 # gcc-4.0:
-CFLAGS += -mtune=pentium4
+#CFLAGS += -mtune=pentium4
 CFLAGS += -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
 # This seems to kill qfits...
 #CFLAGS += -malign-double
