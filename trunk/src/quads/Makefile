@@ -6,10 +6,14 @@ LFLAGS := -lm
 CFLAGS :=
 
 #fast
-CFLAGS	+= -g
+#CFLAGS	+= -g
 #CFLAGS += -O0
-CFLAGS += -O2
+#CFLAGS += -O2
 #CFLAGS += -pg
+CFLAGS += -O3 -fomit-frame-pointer -ffast-math
+CFLAGS += -mcpu=pentium4 -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
+# This seems to kill qfits...
+#CFLAGS += -malign-double
 
 # What functions were and weren't inlined?
 # -Winline
