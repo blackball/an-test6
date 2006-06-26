@@ -292,7 +292,8 @@ int main(int argc, char *argv[]) {
 
 				mos[i] = NULL;
 			}
-			fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
+			if (nr)
+				fprintf(stderr, "File %s: read %i matches.\n", inputfiles[i], nr);
 		}
 
 		/*
@@ -309,6 +310,7 @@ int main(int argc, char *argv[]) {
 		  printf("%f ", mo->overlap);
 		  }
 		  printf("\n");
+		  fflush(stdout);
 		*/
 
 		write_field(hl, overlaps, do_best_overlap, do_first_overlap,

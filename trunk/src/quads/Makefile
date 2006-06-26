@@ -21,6 +21,7 @@ CFLAGS += -pg
 
 # to turn off asserts:
 CFLAGS += -DNDEBUG
+
 #CFLAGS += -Werror
 
 CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \

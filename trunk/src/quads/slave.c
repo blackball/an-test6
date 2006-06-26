@@ -654,7 +654,7 @@ void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
 	int matches, unmatches, conflicts;
 	verify_hit(startree, mo, field, nfield, verify_dist2,
 			   &matches, &unmatches, &conflicts, NULL);
-	fprintf(stderr, "    field %i (%i agree): verifying: overlap %4.1f%%: %i in field, %i matches, %i unmatches, %i conflicts.\n",
+	fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 			fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
  	fflush(stderr);
 	mo->nverified = nverified;
@@ -665,6 +665,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	int listind;
 	int n = 0;
 	threadargs* my = p->userdata;
+
+	assert(mo->timeused >= 0.0);
 
 	// compute (x,y,z) center, scale, rotation.
 	hitlist_healpix_compute_vector(mo);
@@ -681,7 +683,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (overlap_tosolve > 0.0) {
 		bool solved = FALSE;
 		if (n == nagree_toverify) {
-			// run verification on the other match.
+			// run verification on the other matches
 			int j;
 			MatchObj* mo1 = NULL;
 			pl* list = hitlist_healpix_copy_list(my->hits, listind);
