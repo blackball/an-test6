@@ -58,7 +58,7 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	subtable
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylstomatlab rdlstohealpix 
-# codeprojections fixmatchfile printmatchfile 
+# codeprojections printmatchfile 
 # codetomatlab 
 
 
@@ -70,7 +70,7 @@ SOLVER_EXECS := slave
 MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	starutil.o fileutil.o mathutil.o \
 	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
-	xylstomatlab.o rdlstohealpix.o slave.o fixmatchfile.o \
+	xylstomatlab.o rdlstohealpix.o slave.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
 	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
 	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
