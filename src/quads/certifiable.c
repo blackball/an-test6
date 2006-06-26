@@ -10,6 +10,7 @@
 #include "matchobj.h"
 #include "matchfile.h"
 #include "rdlist.h"
+#include "histogram.h"
 
 char* OPTIONS = "hR:A:B:n:t:f:L:H:b:C:";
 
@@ -60,9 +61,9 @@ int main(int argc, char *argv[]) {
 	double overlap_highwrong = 0.0;
 
 	double binsize = 1.0;
-	int Nbins = 0;
-	int* overlap_hist_right = NULL;
-	int* overlap_hist_wrong = NULL;
+	int Nbins;
+	histogram* overlap_hist_right = NULL;
+	histogram* overlap_hist_wrong = NULL;
 
 	int Ncenter = 0;
 
@@ -115,9 +116,10 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	Nbins = (int)ceil(100.0 / binsize) + 1;
-	overlap_hist_right = calloc(Nbins, sizeof(int));
-	overlap_hist_wrong = calloc(Nbins, sizeof(int));
+	overlap_hist_right = histogram_new_binsize(0.0, 100.0, binsize);
+	overlap_hist_wrong = histogram_new_binsize(0.0, 100.0, binsize);
+
+	Nbins = overlap_hist_right->Nbins;
 
 	rightfieldbins = calloc(Nbins, sizeof(il*));
 	wrongfieldbins = calloc(Nbins, sizeof(il*));
@@ -288,15 +290,9 @@ int main(int argc, char *argv[]) {
 				warn = TRUE;
 			}
 
-			//bin = rint(100.0 * mo->overlap / binsize);
-			bin = floor(100.0 * mo->overlap / binsize);
-			if (bin < 0) bin = 0;
-			if (bin >= Nbins) bin = Nbins-1;
-			if (err)
-				overlap_hist_wrong[bin]++;
-			else
-				overlap_hist_right[bin]++;
-				
+			bin = histogram_add(err ? overlap_hist_wrong : overlap_hist_right,
+								100.0 * mo->overlap);
+
 			if (err) {
 				incorrect++;
 				incorrects[fieldnum]++;
@@ -402,13 +398,13 @@ int main(int argc, char *argv[]) {
 
 	printf("\noverlap_hist_wrong = [ ");
 	for (i=0; i<Nbins; i++) {
-		printf("%i, ", overlap_hist_wrong[i]);
+		printf("%i, ", overlap_hist_wrong->hist[i]);
 	}
 	printf("]\n");
 
 	printf("overlap_hist_right = [ ");
 	for (i=0; i<Nbins; i++) {
-		printf("%i, ", overlap_hist_right[i]);
+		printf("%i, ", overlap_hist_right->hist[i]);
 	}
 	printf("]\n\n");
 
@@ -581,8 +577,8 @@ int main(int argc, char *argv[]) {
 
 	free(fieldcenters);
 
-	free(overlap_hist_right);
-	free(overlap_hist_wrong);
+	histogram_free(overlap_hist_right);
+	histogram_free(overlap_hist_wrong);
 
 	return 0;
 }
