@@ -26,7 +26,8 @@ void printHelp(char* progname) {
  			"   [-n matches_needed_to_agree]\n"
 			"   [-o overlap_needed_to_solve]\n"
 			"   [-f minimum-field-objects-needed-to-solve]\n"
-			"   [-b]: best-overlap mode\n",
+			"   [-b]: best-overlap mode\n"
+			"   [-F]: first-solved mode\n",
 			progname);
 }
 
@@ -93,12 +94,15 @@ int main(int argc, char *argv[]) {
 	hitlist* hl = NULL;
 	pl* overlaps = NULL;
 	bool do_best_overlap = FALSE;
+	bool do_first_overlap = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'b':
 			do_best_overlap = TRUE;
 			break;
+		case 'F':
+			do_first_overlap = TRUE;
 		case 'm':
 			agreetolarcsec = atof(optarg);
 			break;
@@ -141,10 +145,9 @@ int main(int argc, char *argv[]) {
 			min_matches_to_agree = atoi(optarg);
 			break;
 		case 'h':
-			printHelp(progname);
-			return (HELP_ERR);
 		default:
-			return (OPT_ERR);
+			printHelp(progname);
+			exit(-1);
 		}
 	}
 	if (optind < argc) {
@@ -155,16 +158,19 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	if (do_first_overlap && do_best_overlap) {
+		fprintf(stderr, "Can't select both -b and -F.\n");
+		printHelp(progname);
+		exit(-1);
+	}
+
 	if (lastfield < firstfield) {
 		fprintf(stderr, "Last field (-B) must be at least as big as first field (-A)\n");
 		exit(-1);
 	}
 
-	if (hitfname) {
+	if (hitfname)
 		fopenout(hitfname, &hitfid);
-	} else {
-		hitfid = stdout;
-	}
 
 	if (leftoverfname) {
 		leftovermf = matchfile_open_for_writing(leftoverfname);
@@ -199,10 +205,12 @@ int main(int argc, char *argv[]) {
 	solved = il_new(256);
 	unsolved = il_new(256);
 
-	// write HITS header.
-	hits_header_init(&hitshdr);
-	hitshdr.min_matches_to_agree = min_matches_to_agree;
-	hits_write_header(hitfid, &hitshdr);
+	if (hitfid) {
+		// write HITS header.
+		hits_header_init(&hitshdr);
+		hitshdr.min_matches_to_agree = min_matches_to_agree;
+		hits_write_header(hitfid, &hitshdr);
+	}
 
 	mfs = malloc(ninputfiles * sizeof(matchfile*));
 	mos =  calloc(ninputfiles, sizeof(MatchObj*));
@@ -301,9 +309,10 @@ int main(int argc, char *argv[]) {
 	il_free(unsolved);
 
 	// finish up HITS file...
-	hits_write_tailer(hitfid);
-	if (hitfname)
+	if (hitfid) {
+		hits_write_tailer(hitfid);
 		fclose(hitfid);
+	}
 
 	if (leftovermf) {
 		matchfile_fix_header(leftovermf);
@@ -426,7 +435,7 @@ void write_field(hitlist* hl,
 
 	if (!issolved) {
 		il_append(unsolved, fieldnum);
-		if (unsolvedstubs) {
+		if (hitfid && unsolvedstubs) {
 			fieldhdr.failed = TRUE;
 			hits_write_field_header(hitfid, &fieldhdr);
 			hits_start_hits_list(hitfid);
@@ -469,12 +478,15 @@ void write_field(hitlist* hl,
 		agreehist[nbest]++;
 	}
 
-	hits_write_field_header(hitfid, &fieldhdr);
-	hits_start_hits_list(hitfid);
+	if (hitfid) {
+		hits_write_field_header(hitfid, &fieldhdr);
+		hits_start_hits_list(hitfid);
+	}
 
 	for (j=0; j<pl_size(best); j++) {
 		MatchObj* mo = pl_get(best, j);
-		hits_write_hit(hitfid, mo);
+		if (hitfid)
+			hits_write_hit(hitfid, mo);
 		if (doagree) {
 			if (matchfile_write_match(agreemf, mo)) {
 				fprintf(stderr, "Error writing an agreeing match.");
@@ -484,17 +496,18 @@ void write_field(hitlist* hl,
 			fprintf(stderr, "Field %i: Overlap %f\n", fieldnum, mo->overlap);
 	}
 
-	hits_end_hits_list(hitfid);
-
-	nbest = pl_size(best);
-	starids  = malloc(nbest * 4 * sizeof(uint));
-	fieldids = malloc(nbest * 4 * sizeof(uint));
-	Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
-	hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
-	free(starids);
-	free(fieldids);
-	hits_write_field_tailer(hitfid);
-	fflush(hitfid);
+	if (hitfid) {
+		hits_end_hits_list(hitfid);
+		nbest = pl_size(best);
+		starids  = malloc(nbest * 4 * sizeof(uint));
+		fieldids = malloc(nbest * 4 * sizeof(uint));
+		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
+		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
+		free(starids);
+		free(fieldids);
+		hits_write_field_tailer(hitfid);
+		fflush(hitfid);
+	}
 	pl_free(best);
 }
 
