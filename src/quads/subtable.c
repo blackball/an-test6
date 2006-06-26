@@ -117,6 +117,7 @@ int main(int argc, char *argv[]) {
 
 		if (ext%100 == 0) {
 			printf("Extension %i.\n", ext);
+			fflush(stdout);
 		}
 
 		if (!qfits_is_table(infn, ext)) {
