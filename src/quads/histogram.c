@@ -51,3 +51,21 @@ int histogram_add(histogram* h, double val) {
 	return bin;
 }
 
+double histogram_mean(histogram* h) {
+	double acc = 0.0;
+	int n = 0;
+	int i;
+	for (i=0; i<h->Nbins; i++) {
+		acc += (h->hist[i] * (i * h->binsize));
+		n += h->hist[i];
+	}
+	return h->zero + acc / n;
+}
+
+void histogram_print_matlab(histogram* h, FILE* fid) {
+	int i;
+	fprintf(fid, "[ ");
+	for (i=0; i<h->Nbins; i++)
+		fprintf(fid, "%s%i", (i ? ", " : ""), h->hist[i]);
+	fprintf(fid, "]");
+}
