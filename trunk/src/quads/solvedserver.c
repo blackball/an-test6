@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 const char* OPTIONS = "hp:f:";
 
@@ -15,6 +16,12 @@ void printHelp(char* progname) {
 			"   [-p <port>] (default 6789)\n"
 			"   [-f <filename-pattern>]  (default solved.%%02i)\n",
 			progname);
+}
+
+int bailout = 0;
+
+static void sighandler(int sig) {
+	bailout = 1;
 }
 
 extern char *optarg;
@@ -63,6 +70,9 @@ int main(int argc, char** args) {
 	}
 	printf("Listening on port %i.\n", port);
 	fflush(stdout);
+
+	signal(SIGINT, sighandler);
+
 	for (;;) {
 		char buf[256];
 		FILE* fid;
@@ -74,6 +84,11 @@ int main(int argc, char** args) {
 		int fieldnum;
 		struct sockaddr_in clientaddr;
 		socklen_t addrsz = sizeof(clientaddr);
+
+		if (bailout) {
+			break;
+		}
+
 		int s = accept(sock, (struct sockaddr*)&clientaddr, &addrsz);
 		if (s == -1) {
 			fprintf(stderr, "Failed to accept() on socket: %s\n", strerror(errno));
@@ -179,6 +194,11 @@ int main(int argc, char** args) {
 	bailout:
 		fclose(fid);
 		continue;
+	}
+
+	printf("Closing socket...\n");
+	if (close(sock)) {
+		fprintf(stderr, "Failed to close socket: %s\n", strerror(errno));
 	}
 
 	return 0;
