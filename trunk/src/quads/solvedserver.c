@@ -107,11 +107,20 @@ int main(int argc, char** args) {
 		if (get) {
 			FILE* f = fopen(fn, "rb");
 			unsigned char val;
+			off_t end;
 			printf("Getting offset %i in file %s.\n", fieldnum, fn);
 			if (!f) {
 				// assume it's not solved!
 				fprintf(fid, "unsolved %i %i\n", filenum, fieldnum);
 				fflush(fid);
+				goto bailout;
+			}
+			fseek(f, 0, SEEK_END);
+			end = ftello(f);
+			if (end <= fieldnum) {
+				fprintf(fid, "unsolved %i %i\n", filenum, fieldnum);
+				fflush(fid);
+				fclose(f);
 				goto bailout;
 			}
 			if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
