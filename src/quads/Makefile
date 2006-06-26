@@ -11,7 +11,11 @@ CFLAGS :=
 #CFLAGS += -O2
 #CFLAGS += -pg
 CFLAGS += -O3 -fomit-frame-pointer -ffast-math
-CFLAGS += -mcpu=pentium4 -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
+# gcc-3.2:
+#CFLAGS += -mcpu=pentium4 
+# gcc-4.0:
+CFLAGS += -mtune=pentium4
+CFLAGS += -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
 # This seems to kill qfits...
 #CFLAGS += -malign-double
 
@@ -52,6 +56,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	codefile.o tic.o quadfile.o intmap.o bl.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
+	solvedfile.o \
 	$(QFITS_OBJ)
 
 SOLVER_OBJ := solver.o
@@ -98,7 +103,10 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 #usnobprint usnobtofits tycho2tofits ancatalog cut_an split_an \
 #an_deduplicate
 
-all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) 
+all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver
+
+solvedserver: solvedserver.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 FITS_UTILS := tablist modhead fitscopy
 

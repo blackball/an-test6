@@ -73,9 +73,11 @@ void solve_field(solver_params* params) {
 	unsigned char *scale_ok;
 	double c;
 	double usertime, systime;
+	double lastcheck;
 
 	get_resource_stats(&usertime, &systime, NULL);
 	params->starttime = usertime + systime;
+	lastcheck = params->starttime;
 
 	numxy = params->nfield;
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
@@ -130,6 +132,17 @@ void solve_field(solver_params* params) {
 			fprintf(stderr, "  field %u: file %s exists; aborting.\n", params->fieldnum, params->solvedfn);
 			break;
 		}
+		if (params->do_solvedserver) {
+			get_resource_stats(&usertime, &systime, NULL);
+			if (usertime + systime - lastcheck > 10.0) {
+				if (solvedserver_get(params->fieldid, params->fieldnum)) {
+					fprintf(stderr, "  field %u: field solved; aborting.\n", params->fieldnum);
+					break;
+				}
+				lastcheck = usertime + systime;
+			}
+		}
+
 		params->objsused = newpoint;
 		// quads with the new star on the diagonal:
 		iB = newpoint;
