@@ -424,9 +424,10 @@ void write_field(hitlist* hl,
 			int i;
 			bool gotit = FALSE;
 			pl* list = pl_get(lists, j);
+			MatchObj* mo;
 
 			for (i=0; i<pl_size(list); i++) {
-				MatchObj* mo = pl_get(list, i);
+				mo = pl_get(list, i);
 				if ((mo->overlap >= overlap_needed) &&
 					(mo->ninfield >= min_ninfield)) {
 					gotit = TRUE;
@@ -436,7 +437,12 @@ void write_field(hitlist* hl,
 			if (gotit) {
 				if (!best)
 					best = pl_new(32);
-				pl_merge_lists(best, list);
+				if (overlaps)
+					// just take the first/best one.
+					pl_append(best, mo);
+				else 
+					// take the whole list.
+					pl_merge_lists(best, list);
 			}
 			pl_free(list);
 		}
