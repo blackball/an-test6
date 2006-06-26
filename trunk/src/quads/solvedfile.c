@@ -14,12 +14,28 @@
 static struct sockaddr_in serveraddr = {0, 0, {0}};
 
 int solvedserver_set_server(char* addr) {
-	struct hostent* he = gethostbyname(addr);
-	if (!he) {
-		fprintf(stderr, "Solved server not found: %s\n", hstrerror(h_errno));
+	char buf[256];
+	char* ind;
+	struct hostent* he;
+	int len;
+	int port;
+	ind = index(addr, ':');
+	if (!ind) {
+		fprintf(stderr, "Invalid IP:port address: %s\n", addr);
 		return -1;
 	}
-	memcpy(&serveraddr, he->h_addr, he->h_length);
+	len = ind - addr;
+	memcpy(buf, addr, len);
+	buf[len] = '\0';
+	he = gethostbyname(buf);
+	if (!he) {
+		fprintf(stderr, "Solved server \"%s\" not found: %s.\n", buf, hstrerror(h_errno));
+		return -1;
+	}
+	memcpy(&(serveraddr.sin_addr), he->h_addr, he->h_length);
+	port = atoi(ind+1);
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_port = htons(port);
 	return 0;
 }
 
