@@ -9,7 +9,7 @@ CFLAGS :=
 CFLAGS	+= -g
 #CFLAGS += -O0
 CFLAGS += -O2
-CFLAGS += -pg
+#CFLAGS += -pg
 
 # What functions were and weren't inlined?
 # -Winline

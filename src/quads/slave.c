@@ -845,6 +845,7 @@ void* solvethread_run(void* varg) {
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
+		solver.numscaleok = 0;
 		solver.mostagree = 0;
 		solver.startobj = startdepth;
 		solver.field = field;

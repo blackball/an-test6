@@ -54,6 +54,7 @@ struct solver_params {
 	// you to set them to zero before calling, if you're starting from scratch.
 	int numtries;
 	int nummatches;
+	int numscaleok;
 	int mostagree;
 	// this is set to an absolute value.
 	int objsused;
