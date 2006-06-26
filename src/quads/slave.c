@@ -94,11 +94,6 @@ int* inverse_perm = NULL;
 
 int nverified;
 
-// histogram of the size of agreement clusters.
-int *agreesizehist;
-int Nagreehist;
-
-
 int main(int argc, char *argv[]) {
     uint numfields;
 	char* progname = argv[0];
@@ -300,11 +295,6 @@ int main(int argc, char *argv[]) {
 			//exit(-1);
 		}
 
-		Nagreehist = 100;
-		agreesizehist = malloc(Nagreehist * sizeof(int));
-		for (i=0; i<Nagreehist; i++)
-			agreesizehist[i] = 0;
-
 		// Do it!
 		solve_fields();
 
@@ -344,19 +334,6 @@ int main(int argc, char *argv[]) {
 		free_fn(idfname);
 		free_fn(startreefname);
 		free(inverse_perm);
-
-		{
-			int maxagree = 0;
-			for (i=0; i<Nagreehist; i++)
-				if (agreesizehist[i])
-					maxagree = i;
-			fprintf(stderr, "Agreement cluster size histogram:\n");
-			fprintf(stderr, "nagreehist_total=[");
-			for (i=0; i<=maxagree; i++)
-				fprintf(stderr, "%i,", agreesizehist[i]);
-			fprintf(stderr, "];\n");
-			free(agreesizehist);
-		}
 
 		toc();
 	}
@@ -884,28 +861,7 @@ void* solvethread_run(void* varg) {
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
 
-		//if (solver.solvedfn && file_exists(solver.solvedfn)) {
 		free(solver.solvedfn);
-		{
-			int* thisagreehist;
-			int maxagree = 0;
-			int k;
-			thisagreehist = calloc(Nagreehist, sizeof(int));
-			hitlist_healpix_histogram_agreement_size(my->hits, thisagreehist, Nagreehist);
-			for (k=0; k<Nagreehist; k++)
-				if (thisagreehist[k]) {
-					// global total...
-					agreesizehist[k] += thisagreehist[k];
-					maxagree = k;
-				}
-			fprintf(stderr, "Agreement cluster size histogram:\n");
-			fprintf(stderr, "nagreehist=[");
-			for (k=0; k<=maxagree; k++)
-				fprintf(stderr, "%i,", thisagreehist[k]);
-			fprintf(stderr, "];\n");
-			free(thisagreehist);
-			thisagreehist = NULL;
-		}
 
 		if (my->winning_listind == -1) {
 			// didn't solve it...
