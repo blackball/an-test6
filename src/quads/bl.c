@@ -1160,7 +1160,24 @@ int pl_insert_unique_ascending(bl* list, void* p) {
 }
 
 int pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2)) {
-	return bl_insert_sorted(list, &data, compare);
+	// we don't just call bl_insert_sorted because then we end up passing
+	// "void**" rather than "void*" args to the compare function.
+	int lower, upper;
+	lower = -1;
+	upper = list->N;
+	while (lower < (upper-1)) {
+		int mid;
+		int cmp;
+		mid = (upper + lower) / 2;
+		cmp = compare(data, pl_get(list, mid));
+		if (cmp >= 0) {
+			lower = mid;
+		} else {
+			upper = mid;
+		}
+	}
+	bl_insert(list, lower+1, &data);
+	return lower+1;
 }
 
 pl* pl_new(int blocksize) {
