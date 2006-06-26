@@ -35,6 +35,7 @@
 #include "intmap.h"
 #include "verify.h"
 #include "donuts.h"
+#include "solvedfile.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -49,7 +50,7 @@ int read_parameters();
 
 // params:
 char *fieldfname, *treefname, *quadfname, *catfname, *startreefname;
-char *idfname, *matchfname, *donefname, *solvedfname;
+char *idfname, *matchfname, *donefname, *solvedfname, *solvedserver;
 char* xcolname, *ycolname;
 bool parity;
 double codetol;
@@ -122,7 +123,7 @@ int main(int argc, char *argv[]) {
 	qfits_err_statset(1);
 
 	for (;;) {
-		
+
 		tic();
 
 		fieldfname = NULL;
@@ -134,6 +135,7 @@ int main(int argc, char *argv[]) {
 		matchfname = NULL;
 		donefname = NULL;
 		solvedfname = NULL;
+		solvedserver = NULL;
 		xcolname = strdup("ROWC");
 		ycolname = strdup("COLC");
 		parity = DEFAULT_PARITY_FLIP;
@@ -181,6 +183,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "matchfname %s\n", matchfname);
 		fprintf(stderr, "donefname %s\n", donefname);
 		fprintf(stderr, "solvedfname %s\n", solvedfname);
+		fprintf(stderr, "solvedserver %s\n", solvedserver);
 		fprintf(stderr, "parity %i\n", parity);
 		fprintf(stderr, "codetol %g\n", codetol);
 		fprintf(stderr, "startdepth %i\n", startdepth);
@@ -211,7 +214,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Invalid params... this message is useless.\n");
 			exit(-1);
 		}
-
 
 		mf = matchfile_open_for_writing(matchfname);
 		if (!mf) {
@@ -275,6 +277,13 @@ int main(int argc, char *argv[]) {
 		do_verify = startree && (verify_dist2 > 0.0);
 		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
 
+		if (solvedserver) {
+			if (solvedserver_set_server(solvedserver)) {
+				fprintf(stderr, "Error setting solvedserver.\n");
+				exit(-1);
+			}
+		}
+
 		if (startree) {
 			inverse_perm = malloc(startree->ndata * sizeof(int));
 			for (i=0; i<startree->ndata; i++)
@@ -324,6 +333,7 @@ int main(int argc, char *argv[]) {
 
 		free(donefname);
 		free(solvedfname);
+		free(solvedserver);
 		free(matchfname);
 		free(xcolname);
 		free(ycolname);
@@ -448,6 +458,8 @@ int read_parameters() {
 		} else if (is_word(buffer, "solved ", &nextword)) {
 			char* fname = nextword;
 			solvedfname = strdup(fname);
+		} else if (is_word(buffer, "solvedserver ", &nextword)) {
+			solvedserver = strdup(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
 			int d = atoi(nextword);
 			startdepth = d;
@@ -822,6 +834,16 @@ void* solvethread_run(void* varg) {
 		} else
 			solver.solvedfn = NULL;
 
+		if (solvedserver) {
+			if (solvedserver_get(fieldid, fieldnum) == 1) {
+				// field has already been solved.
+				fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
+				write_hits(fieldnum, NULL);
+				continue;
+			}
+		}
+		solver.do_solvedserver = (solvedserver ? TRUE : FALSE);
+
 		if (do_donut) {
 			int oldsize = xy_size(thisfield);
 			detect_donuts(fieldnum, &thisfield, donut_dist, donut_thresh);
@@ -842,6 +864,7 @@ void* solvethread_run(void* varg) {
 		template.indexid = indexid;
 		template.healpix = healpix;
 
+		solver.fieldid = fieldid;
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
@@ -925,6 +948,10 @@ void* solvethread_run(void* varg) {
 					fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
 				}
 			}
+			if (solvedserver) {
+				solvedserver_set(fieldid, fieldnum);
+			}
+
 		}
 		hitlist_healpix_clear(my->hits);
 		hitlist_healpix_free(my->hits);

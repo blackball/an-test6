@@ -1,5 +1,5 @@
-#ifndef IOUTILS_H_
-#define IOUTILS_H_
+#ifndef IOUTILS_H
+#define IOUTILS_H
 
 #include <stdio.h>
 
