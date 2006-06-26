@@ -298,7 +298,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	int A=0, B=1, C=2, D=3;
 	double usertime, systime;
 	get_resource_stats(&usertime, &systime, NULL);
-	params->timeused = usertime + systime - params->starttime;
+	params->timeused = (usertime + systime) - params->starttime;
 
     // ABCD
     thequery[0] = Cx;
@@ -419,6 +419,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		mo->quads_tried   = params->numtries;
 		mo->quads_matched = params->nummatches;
+		mo->quads_scaleok = params->numscaleok;
 		mo->timeused = params->timeused;
 
 		memcpy(mo->transform, transform, sizeof(mo->transform));

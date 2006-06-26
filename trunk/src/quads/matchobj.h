@@ -32,6 +32,8 @@ struct match_struct {
 	int quads_tried;
 	// how many matching quads from the index did we find before this one?
 	int quads_matched;
+	// how many matching quads had the right scale?
+	int quads_scaleok;
 	// how many field objects did we have to look at?
 	//  (this isn't stored in the matchfile, it's max(field))
 	int objs_tried;
