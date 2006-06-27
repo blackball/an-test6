@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <sys/select.h>
 
 const char* OPTIONS = "hp:f:";
 
@@ -60,7 +61,8 @@ int main(int argc, char** args) {
 	opt = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
 		fprintf(stderr, "Warning: failed to setsockopt() to reuse address.\n");
-	}
+	
+}
 
 	memset(&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
@@ -91,16 +93,39 @@ int main(int argc, char** args) {
 		int fieldnum;
 		struct sockaddr_in clientaddr;
 		socklen_t addrsz = sizeof(clientaddr);
+		int s;
 
-		if (bailout) {
-			break;
+		// wait for a connection...
+		while (1) {
+			fd_set set;
+			struct timeval timeout;
+			int res;
+			timeout.tv_sec = 1;
+			timeout.tv_usec = 0;
+			FD_ZERO(&set);
+			FD_SET(sock, &set);
+			res = select(sock+1, &set, NULL, NULL, &timeout);
+			if (res == -1) {
+				if (errno != EINTR) {
+					fprintf(stderr, "Error: select(): %s\n", strerror(errno));
+					exit(-1);
+				}
+			}
+			if (res > 1)
+				if (FD_ISSET(sock, &set))
+					break;
+			if (bailout)
+				break;
 		}
+		if (bailout)
+			break;
 
-		int s = accept(sock, (struct sockaddr*)&clientaddr, &addrsz);
+		s = accept(sock, (struct sockaddr*)&clientaddr, &addrsz);
 		if (s == -1) {
 			fprintf(stderr, "Error: failed to accept() on socket: %s\n", strerror(errno));
 			continue;
 		}
+
 		if (addrsz != sizeof(clientaddr)) {
 			fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, sizeof(clientaddr));
 			continue;
@@ -142,13 +167,12 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Error: seeking to end of file %s: %s\n",
 						fn, strerror(errno));
 				goto bailout;
-			} else {
-				if (end <= fieldnum) {
-					fprintf(fid, "unsolved %i %i\n", filenum, fieldnum);
-					fflush(fid);
-					fclose(f);
-					goto bailout;
-				}
+			}
+			if (end <= fieldnum) {
+				fprintf(fid, "unsolved %i %i\n", filenum, fieldnum);
+				fflush(fid);
+				fclose(f);
+				goto bailout;
 			}
 			if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
 				(fread(&val, 1, 1, f) != 1)) {
@@ -163,7 +187,7 @@ int main(int argc, char** args) {
 			fclose(f);
 			goto bailout;
 		} else if (set) {
-			FILE* f = fopen(fn, "r+b");
+			FILE* f = fopen(fn, "ab");
 			unsigned char val;
 			off_t off;
 			printf("Set %s [%i].\n", fn, fieldnum);
@@ -176,18 +200,21 @@ int main(int argc, char** args) {
 				((off = ftello(f)) == -1)) {
 				fprintf(stderr, "Error: failed to seek to end of file %s: %s\n",
 						fn, strerror(errno));
+				fclose(f);
 				goto bailout;
-			} else {
-				if (off < fieldnum) {
-					// pad.
-					int npad = fieldnum - off;
-					int i;
-					val = 0;
-					for (i=0; i<npad; i++)
-						if (fwrite(&val, 1, 1, f) != 1)
-							fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
-									fn, strerror(errno));
-				}
+			}
+			if (off < fieldnum) {
+				// pad.
+				int npad = fieldnum - off;
+				int i;
+				val = 0;
+				for (i=0; i<npad; i++)
+					if (fwrite(&val, 1, 1, f) != 1) {
+						fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
+								fn, strerror(errno));
+						fclose(f);
+						goto bailout;
+					}
 			}
 			val = 1;
 			if (fflush(f) ||
