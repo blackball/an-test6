@@ -188,8 +188,13 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars) {
 
 static void
 got_quad(pquad* pq, il* stars) {
-	codefile_write_code(codes, pq->cx, pq->cy, pq->dx, pq->dy);
-	quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridC, pq->staridD);
+	if (pq->cx <= pq->dx) {
+		codefile_write_code(codes, pq->cx, pq->cy, pq->dx, pq->dy);
+		quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridC, pq->staridD);
+	} else {
+		codefile_write_code(codes, pq->dx, pq->dy, pq->cx, pq->cy);
+		quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridD, pq->staridC);
+	}
 	quadnum++;
 	drop_quad(stars, pq->iA, pq->iB, pq->iC, pq->iD);
 }
@@ -405,6 +410,7 @@ static void create_quads_in_pixels(int numstars, il* starindices,
 		passes++;
 		fprintf(stderr, "\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
 		        passes, Ninteresting, nusedthispass, nused, (int)numstars);
+		fprintf(stderr, "Made %i quads so far.\n", quadnum);
 	}
 	fprintf(stderr, "\n");
 	fflush(stderr);
