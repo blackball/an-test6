@@ -12,7 +12,7 @@
 #else
 #include <asm/bitops.h>
 // "borrowed" from <linux/bitops.h> from linux-2.4
-static inline unsigned int my_hweight32(unsigned int w) {
+static Inline unsigned int my_hweight32(unsigned int w) {
         unsigned int res = (w & 0x55555555) + ((w >> 1) & 0x55555555);
         res = (res & 0x33333333) + ((res >> 2) & 0x33333333);
         res = (res & 0x0F0F0F0F) + ((res >> 4) & 0x0F0F0F0F);
@@ -51,7 +51,7 @@ extern int optind, opterr, optopt;
 
 #define PI M_PI
 
-inline int is_power_of_two(unsigned int x) {
+Inline int is_power_of_two(unsigned int x) {
 #if defined(linux)
 	return (HWEIGHT(x) == 1);
 #else
@@ -90,7 +90,7 @@ inline int is_power_of_two(unsigned int x) {
 #endif
 }
 
-inline void getxy(double px, double py, int N,
+Inline void getxy(double px, double py, int N,
 				  int* X, int* Y) {
 	px = 0.5 + (px - 0.5) * 0.99;
 	py = 0.5 + (py - 0.5) * 0.99;

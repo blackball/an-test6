@@ -37,13 +37,13 @@
 #include "donuts.h"
 #include "solvedfile.h"
 
-void printHelp(char* progname) {
+static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
 }
 
-void solve_fields();
+static void solve_fields();
 
-int read_parameters();
+static int read_parameters();
 
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP FALSE
@@ -353,7 +353,7 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-inline int is_word(char* cmdline, char* keyword, char** cptr) {
+static int is_word(char* cmdline, char* keyword, char** cptr) {
 	int len = strlen(keyword);
 	if (strncmp(cmdline, keyword, len))
 		return 0;
@@ -361,7 +361,7 @@ inline int is_word(char* cmdline, char* keyword, char** cptr) {
 	return 1;
 }
 
-int read_parameters() {
+static int read_parameters() {
 	for (;;) {
 		char buffer[10240];
 		char* nextword;

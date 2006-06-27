@@ -54,7 +54,7 @@ typedef struct xylist xylist;
 
 // you can change the parameters (ie, xname, yname) 
 // after opening but before calling xylist_get_field.
-xylist* xylist_open(char* fn);
+xylist* xylist_open(const char* fn);
 
 // it's your responsibility to free_xy() this.
 xy* xylist_get_field(xylist* ls, uint field);

@@ -570,7 +570,7 @@ void write_field(hitlist* hl,
 	pl_free(best);
 }
 
-inline void add_correspondence(uint* starids, uint* fieldids,
+Inline void add_correspondence(uint* starids, uint* fieldids,
 							   uint starid, uint fieldid,
 							   int* p_nids, int* p_ok) {
 	int i;

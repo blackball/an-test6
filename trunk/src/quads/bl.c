@@ -5,7 +5,7 @@
 
 #include "bl.h"
 
-static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
+static Inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped);
 static bl_node* bl_new_node(bl* list);
 static void bl_free_node(bl_node* node);
 
@@ -468,7 +468,7 @@ void bl_get(bl* list, int n, void* dest) {
 }
 
 /* find the node in which element "n" can be found. */
-static inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
+static Inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
 	bl_node* node;
 	int nskipped;
 	if (list->last_access && n >= list->last_access_n) {

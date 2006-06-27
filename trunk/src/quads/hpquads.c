@@ -53,7 +53,7 @@ static void print_help(char* progname)
 
 
 // warning, you must guarantee iA<iB and iC<iD
-static inline void drop_quad(il* stars, int iA, int iB, int iC, int iD)
+static Inline void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 {
 	int inA, inB, inC, inD;
 	inA = iA;
