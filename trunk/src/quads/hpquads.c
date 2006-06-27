@@ -99,7 +99,7 @@ void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 	il_remove(stars, iD - 1);
 }
 
-int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
+int try_quads(int iA, int iB,
               char* inbox, int maxind, il* stars,
               int* used_stars)
 {
@@ -129,17 +129,17 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	scale = (ABx * ABx) + (ABy * ABy);
 
 	if ((scale < quad_scale_lower2) ||
-	        (scale > quad_scale_upper2))
+		(scale > quad_scale_upper2))
 		return 0;
 
 	costheta = (ABx + ABy) / scale;
 	sintheta = (ABy - ABx) / scale;
 
-	// check which C, D points are inside the square.
 	for (i = 0; i < maxind; i++) {
 		if (!inbox[i])
 			continue;
 
+		// compute this star's code position
 		iD = i;
 		staridD = il_get(stars, i);
 		sD = catalog_get_star(cat, staridD);
@@ -149,18 +149,21 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		dx = ADx * costheta + ADy * sintheta;
 		dy = -ADx * sintheta + ADy * costheta;
 
-		if ((dx >= 1.0) || (dx <= 0.0) ||
-		        (dy >= 1.0) || (dy <= 0.0)) {
+		// make sure it's in the box...
+		if ((dx > 1.0) || (dx < 0.0) ||
+			(dy > 1.0) || (dy < 0.0)) {
 			continue;
 		}
 
 		ninbox++;
 		if (ninbox == 1) {
+			// the first star in the box becomes star C.
 			cx = dx;
 			cy = dy;
 			staridC = staridD;
 			iC = iD;
 		} else {
+			// the second star in the box becomes star D.
 			codefile_write_code(codes, cx, cy, dx, dy);
             quadfile_write_quad(quads, staridA, staridB, staridC, staridD);
 			quadnum++;
@@ -180,14 +183,10 @@ int try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 char find_a_quad(il* stars, int* used_stars)
 {
 	uint numxy, iA, iB, iC, iD, newpoint;
-	int *iCs, *iDs;
 	char *iunion;
-	int ncd;
 
 	numxy = il_size(stars);
 
-	iCs = alloca(numxy * numxy * sizeof(int));
-	iDs = alloca(numxy * numxy * sizeof(int));
 	iunion = alloca(numxy * sizeof(char));
 
 	/*
@@ -215,28 +214,19 @@ char find_a_quad(il* stars, int* used_stars)
 	*/
 
 	// We keep the invariants that iA < iB and iC < iD.
-	// We try the A<->B and C<->D permutation in try_all_points.
 	for (newpoint = 0; newpoint < numxy; newpoint++) {
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
-			ncd = 0;
 			memset(iunion, 0, newpoint);
 			for (iC = 0; iC < newpoint; iC++) {
 				if ((iC == iA) || (iC == iB))
 					continue;
 				iunion[iC] = 1;
-				for (iD = iC + 1; iD < newpoint; iD++) {
-					if ((iD == iA) || (iD == iB))
-						continue;
-					iCs[ncd] = iC;
-					iDs[ncd] = iD;
-					ncd++;
-				}
 			}
 			// note: "newpoint" is used as an upper-bound on the largest
 			// TRUE element in "iunion".
-			if (try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint, stars, used_stars)) {
+			if (try_quads(iA, iB, iunion, newpoint, stars, used_stars)) {
 				return 1;
 			}
 		}
@@ -245,19 +235,15 @@ char find_a_quad(il* stars, int* used_stars)
 		iD = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
 			for (iB = iA + 1; iB < newpoint; iB++) {
-				ncd = 0;
 				memset(iunion, 0, newpoint + 1);
 				iunion[iD] = 1;
 				for (iC = 0; iC < newpoint; iC++) {
 					if ((iC == iA) || (iC == iB))
 						continue;
 					iunion[iC] = 1;
-					iCs[ncd] = iC;
-					iDs[ncd] = iD;
-					ncd++;
 				}
 				// note: "newpoint+1" is used because "iunion[newpoint]" is TRUE.
-				if (try_quads(iA, iB, iCs, iDs, ncd, iunion, newpoint + 1, stars, used_stars)) {
+				if (try_quads(iA, iB, iunion, newpoint + 1, stars, used_stars)) {
 					return 1;
 				}
 			}
@@ -331,16 +317,6 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 				}
 			}
 			if (j == nn) {
-				/*
-				  fprintf(stderr, "x=%i, y=%i (Nside=%i, Nside*3=%i), dx=%i, dy=%i: no neighbouring center pixel found.\n",
-				  x, y, Nside, Nside*3, dx, dy);
-				  for (j=0; j<nn; j++) {
-				  uint nx, ny, nbighp;
-				  healpix_decompose(neigh[j], &nbighp, &nx, &ny, Nside*3);
-				  printf("neighbour %i: x=%i (%i mod 3), y=%i (%i mod 3)\n",
-				  j, nx, nx%3, ny, ny%3);
-				  }
-				*/
 				// none of the neighbours is a center pixel - this happens occasionally in
 				// weird corners of the healpixes.
 				continue;
@@ -433,43 +409,6 @@ void create_quads_in_pixels(int numstars, il* starindices,
 	fprintf(stderr, "Made %i quads.\n", quadnum);
 	fprintf(stderr, "Used %i stars.\n", nused);
 	fprintf(stderr, "Didn't use %i stars.\n", (int)numstars - nused);
-
-	/*
-	  {
-	  int maxmade = 0;
-	  int* nmadehist;
-	  for (i = 0; i < HEALPIXES; i++) {
-	  if (quadsmade[i] > maxmade)
-	  maxmade = quadsmade[i];
-	  }
-	  nmadehist = malloc((maxmade + 1) * sizeof(int));
-	  memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
-	  for (i = 0; i < HEALPIXES; i++)
-	  nmadehist[quadsmade[i]]++;
-	  fprintf(stderr, "nmade=[");
-	  for (i = 0; i <= maxmade; i++)
-	  fprintf(stderr, "%i,", nmadehist[i]);
-	  fprintf(stderr, "];\n");
-	  free(nmadehist);
-	  }
-	  {
-	  int maxmade = 0;
-	  int* nmadehist;
-	  for (i = 0; i < HEALPIXES; i++) {
-	  if (il_size(pixels + i) > maxmade)
-	  maxmade = il_size(pixels + i);
-	  }
-	  nmadehist = malloc((maxmade + 1) * sizeof(int));
-	  memset(nmadehist, 0, (maxmade + 1)*sizeof(int));
-	  for (i = 0; i < HEALPIXES; i++)
-	  nmadehist[il_size(pixels + i)]++;
-	  fprintf(stderr, "nleft=[");
-	  for (i = 0; i <= maxmade; i++)
-	  fprintf(stderr, "%i,", nmadehist[i]);
-	  fprintf(stderr, "];\n");
-	  free(nmadehist);
-	  }
-	*/
 
 	free(interesting);
 	free(quadsmade);
