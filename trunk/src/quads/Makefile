@@ -11,13 +11,6 @@ CFLAGS :=
 #CFLAGS += -O2
 #CFLAGS += -pg
 CFLAGS += -O3 -fomit-frame-pointer -ffast-math
-# gcc-3.2:
-CFLAGS += -mcpu=pentium4 
-# gcc-4.0:
-#CFLAGS += -mtune=pentium4
-CFLAGS += -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
-# This seems to kill qfits...
-#CFLAGS += -malign-double
 
 # What functions were and weren't inlined?
 # -Winline
@@ -36,13 +29,22 @@ CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-I.
 
-#	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
-#	-Wmissing-declarations -Wredundant-decls
-
 MACHINE=$(shell uname -m)
-ifneq ($(MACHINE), i686)
+ifeq ($(MACHINE), i686)
+	# gcc-3.2:
+	CFLAGS += -mcpu=pentium4 
+	# gcc-4.0:
+	#CFLAGS += -mtune=pentium4
+	CFLAGS += -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
+	# This seems to kill qfits...
+	#CFLAGS += -malign-double
+else
 	CFLAGS += -DNOT_686
 endif
+
+
+#	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
+#	-Wmissing-declarations -Wredundant-decls
 
 QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
@@ -103,7 +105,10 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 #usnobprint usnobtofits tycho2tofits ancatalog cut_an split_an \
 #an_deduplicate
 
-all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver
+all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver printsolved
+
+printsolved: printsolved.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 solvedserver: solvedserver.o
 	$(CC) $(CFLAGS) -o $@ $^
