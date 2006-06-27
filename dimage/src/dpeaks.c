@@ -59,7 +59,7 @@ int dpeaks(float *image,
   /* 1. smooth image */
   smooth=(float *) malloc(sizeof(float)*nx*ny);
   if(smoothimage) {
-    dsmooth(image, nx, ny, 2, smooth);
+    dsmooth(image, nx, ny, 1, smooth);
   } else {
     for(j=0;j<ny;j++) 
       for(i=0;i<nx;i++) 
@@ -106,6 +106,7 @@ int dpeaks(float *image,
   mask=(int *) malloc(sizeof(int)*nx*ny);
   object=(int *) malloc(sizeof(int)*nx*ny);
   keep=(int *) malloc(sizeof(int)*(*npeaks));
+  printf("%d peaks before checking\n", (*npeaks));
   for(i=(*npeaks)-1;i>=0;i--) {
     keep[i]=1;
 
