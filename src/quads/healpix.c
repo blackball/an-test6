@@ -7,41 +7,44 @@
 
 int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir);
 
-void swap(uint* i1, uint* i2)
-{
+__const static inline double mysquare(double d) {
+	return d*d;
+}
+
+static inline void swap(uint* i1, uint* i2) {
 	uint tmp;
 	tmp = *i1;
 	*i1 = *i2;
 	*i2 = tmp;
 }
 
-void swap_double(double* i1, double* i2) {
+static inline void swap_double(double* i1, double* i2) {
 	double tmp;
 	tmp = *i1;
 	*i1 = *i2;
 	*i2 = tmp;
 }
 
-bool ispolar(int healpix)
+static inline bool ispolar(int healpix)
 {
 	// the north polar healpixes are 0,1,2,3
 	// the south polar healpixes are 8,9,10,11
 	return (healpix <= 3) || (healpix >= 8);
 }
 
-bool isequatorial(int healpix)
+static inline bool isequatorial(int healpix)
 {
 	// the north polar healpixes are 0,1,2,3
 	// the south polar healpixes are 8,9,10,11
 	return (healpix >= 4) && (healpix <= 7);
 }
 
-bool isnorthpolar(int healpix)
+static inline bool isnorthpolar(int healpix)
 {
 	return (healpix <= 3);
 }
 
-bool issouthpolar(int healpix)
+static inline bool issouthpolar(int healpix)
 {
 	return (healpix >= 8);
 }
@@ -60,7 +63,7 @@ static inline bool ispowerof4(uint x) {
 				x == 0x10000);
 }
 
-void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
+static void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
 {
 	uint xbitmask, ybitmask;
 	uint x, y;
@@ -90,7 +93,7 @@ void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
 	if (py) *py = y;
 }
 
-uint xy_to_pnprime(uint x, uint y, uint Nside)
+static uint xy_to_pnprime(uint x, uint y, uint Nside)
 {
 	uint pnprime = 0;
 	uint mask;
@@ -626,7 +629,7 @@ uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 		phit = fmod(phi, pi / 2.0);
 		assert (phit >= 0.00);
 
-		root = (1.0 - z*zfactor) * 3.0 * square(Nside * (2.0 * phit - pi) / pi);
+		root = (1.0 - z*zfactor) * 3.0 * mysquare(Nside * (2.0 * phit - pi) / pi);
 		if (root <= 0.0)
 			x = 1;
 		else
@@ -635,7 +638,7 @@ uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 		assert(x >= 1);
 		assert(x <= Nside);
 
-		root = (1.0 - z*zfactor) * 3.0 * square(Nside * 2.0 * phit / pi);
+		root = (1.0 - z*zfactor) * 3.0 * mysquare(Nside * 2.0 * phit / pi);
 		if (root <= 0.0)
 			y = 1;
 		else
@@ -872,11 +875,11 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 			y = (Nside - y);
 		}
 
-		A = square(Nside - y);
-		B = square(Nside - x);
+		A = mysquare(Nside - y);
+		B = mysquare(Nside - x);
 		a = (A - B);
 		b = -A * pi;
-		c = A * square(pi / 2.0);
+		c = A * mysquare(pi / 2.0);
 
 		if (a == 0.0) {
 			phit = pi / 4.0;
@@ -898,9 +901,9 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 		}
 
 		if (phit == 0.0) {
-			z = 1.0 - square(pi * (Nside - x) / ((2.0 * phit - pi) * Nside)) / 3.0;
+			z = 1.0 - mysquare(pi * (Nside - x) / ((2.0 * phit - pi) * Nside)) / 3.0;
 		} else {
-			z = 1.0 - square(pi * (Nside - y) / (2.0 * phit * Nside)) / 3.0;
+			z = 1.0 - mysquare(pi * (Nside - y) / (2.0 * phit * Nside)) / 3.0;
 		}
 		assert(0.0 <= fabs(z) && fabs(z) <= 1.0);
 		z *= zfactor;

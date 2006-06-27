@@ -15,16 +15,16 @@ double uniform_sample(double low, double high);
 
 double gaussian_sample(double mean, double stddev);
 
-inline int imax(int a, int b);
+__const inline int imax(int a, int b);
 
-inline int imin(int a, int b);
+__const inline int imin(int a, int b);
 
 inline double distsq_exceeds(double* d1, double* d2, int D, double limit);
 
-inline double square(double d);
+__const inline double square(double d);
 
 // note, this is cyclic
-inline int inrange(double ra, double ralow, double rahigh);
+__const inline int inrange(double ra, double ralow, double rahigh);
 
 inline double distsq(double* d1, double* d2, int D);
 
