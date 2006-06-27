@@ -14,8 +14,6 @@ struct idfile {
 	// when reading:
 	void*  mmap_base;
 	size_t mmap_size;
-
-	// ok, we actually needed that after all
 	uint64_t* anidarray;
 
 	// when writing:

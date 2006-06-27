@@ -50,6 +50,8 @@ kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
 */
 int kdtree_compute_levels(int N, int Nleaf);
 
+void kdtree_inverse_permutation(kdtree_t* tree, int* invperm);
+
 /* Range seach */
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
 

@@ -280,8 +280,7 @@ int main(int argc, char *argv[]) {
 
 		if (startree) {
 			inverse_perm = malloc(startree->ndata * sizeof(int));
-			for (i=0; i<startree->ndata; i++)
-				inverse_perm[startree->perm[i]] = i;
+			kdtree_inverse_permutation(startree, inverse_perm);
 			cat = NULL;
 		} else {
 			// Read .objs file...

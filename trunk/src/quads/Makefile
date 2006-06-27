@@ -72,7 +72,7 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
 	codeprojections quadlocations hpowned fitsgetext quadsperstar \
-	subtable matchstats
+	subtable matchstats unpermute-stars
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylstomatlab rdlstohealpix 
 # codeprojections printmatchfile 
@@ -112,7 +112,6 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver printsolved
 
 printsolved: printsolved.o
-	echo "GCC version $(GCCVER)"
 	$(CC) $(CFLAGS) -o $@ $^
 
 solvedserver: solvedserver.o

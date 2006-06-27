@@ -52,6 +52,12 @@ static inline int dist2_exceeds(real* p1, real* p2, int d, real maxd2) {
 /* Building routines                                                         */
 /*****************************************************************************/
 
+void kdtree_inverse_permutation(kdtree_t* tree, int* invperm) {
+	int i;
+	for (i=0; i<tree->ndata; i++)
+		invperm[tree->perm[i]] = i;
+}
+
 int kdtree_compute_levels(int N, int Nleaf) {
     int levels;
 	assert(Nleaf);

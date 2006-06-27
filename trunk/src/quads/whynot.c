@@ -889,8 +889,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Computing inverse permutation...\n");
 		fflush(stderr);
 		code_inverse_perm = malloc(codetree->ndata * sizeof(int));
-		for (i=0; i<codetree->ndata; i++)
-			code_inverse_perm[codetree->perm[i]] = i;
+		kdtree_inverse_permutation(codetree, code_inverse_perm);
 
 		// Read .qidx file...
 		fprintf(stderr, "Reading qidxfile %s...\n", qidxfname);
@@ -936,8 +935,7 @@ int main(int argc, char *argv[]) {
 
 		if (startree) {
 			  inverse_perm = malloc(startree->ndata * sizeof(int));
-			  for (i=0; i<startree->ndata; i++)
-			  inverse_perm[startree->perm[i]] = i;
+			  kdtree_inverse_permutation(startree, inverse_perm);
 			  cat = NULL;
 		} else {
 			// Read .objs file...
