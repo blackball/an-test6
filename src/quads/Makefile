@@ -14,7 +14,7 @@ CFLAGS += -pg
 CFLAGS += -O3 -ffast-math
 
 # What functions were and weren't inlined?
-# -Winline
+CFLAGS += -Winline
 
 # check out __attribute__ ((pure))
 # check out __attribute__ ((const))

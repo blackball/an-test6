@@ -9,6 +9,8 @@
 
 #include <stdlib.h>
 
+#include "keywords.h"
+
 struct bl_node {
 	// number of elements filled.
 	int N;
@@ -35,8 +37,8 @@ typedef struct bl bl;
    to the end of the list from \c src and appends them to \c dest.
  */
 void bl_split(bl* src, bl* dest, int split);
-bl*  bl_new(int blocksize, int datasize);
-int  bl_size(const bl* list);
+__malloc bl*  bl_new(int blocksize, int datasize);
+__pure inline int  bl_size(const bl* list);
 void bl_init(bl* l, int blocksize, int datasize);
 void bl_free(bl* list);
 void bl_append(bl* list, void* data);
@@ -104,8 +106,8 @@ int   bl_check_sorted(bl* list, int (*compare)(const void* v1, const void* v2), 
 // special-case functions for integer lists. //
 ///////////////////////////////////////////////
 typedef bl il;
-il*  il_new(int blocksize);
-int  il_size(const il* list);
+__malloc il*  il_new(int blocksize);
+__pure inline int il_size(const il* list);
 void il_new_existing(il* list, int blocksize);
 void il_init(il* list, int blocksize);
 void il_remove_all(il* list);
@@ -117,7 +119,7 @@ void il_push(il* list, int data);
 int  il_pop(il* list);
 int  il_contains(il* list, int data);
 int  il_index_of(il* list, int data);
-int  il_get(il* list, int n);
+inline int  il_get(il* list, const int n);
 void il_copy(il* list, int start, int length, int* vdest);
 il*  il_dupe(il* list);
 void il_print(il* list);

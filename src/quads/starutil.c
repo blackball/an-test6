@@ -4,6 +4,7 @@
 
 #include "starutil.h"
 #include "mathutil.h"
+#include "keywords.h"
 
 inline void radec2xyz(double ra, double dec,
 					  double* x, double* y, double* z) {
@@ -71,20 +72,20 @@ void make_rand_star(double* star, double ramin, double ramax,
 	star[2] = radec2z(raval, decval);
 }
 
-inline double arc2distsq(double arcInRadians) {
+__const inline double arc2distsq(double arcInRadians) {
 	// inverse of distsq2arc; cosine law.
 	return 2.0 * (1.0 - cos(arcInRadians));
 }
 
-inline double arcsec2distsq(double arcInArcSec) {
+__const inline double arcsec2distsq(double arcInArcSec) {
 	return arc2distsq(arcInArcSec * M_PI / (180.0 * 60.0 * 60.0));
 }
 
-inline double distsq2arcsec(double dist2) {
+__const inline double distsq2arcsec(double dist2) {
 	return rad2arcsec(distsq2arc(dist2));
 }
 
-inline double distsq2arc(double dist2) {
+__const inline double distsq2arc(double dist2) {
 	// cosine law: c^2 = a^2 + b^2 - 2 a b cos C
 	// c^2 is dist2.  We want C.
 	// a = b = 1
@@ -97,14 +98,15 @@ inline double distsq2arc(double dist2) {
 
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
-inline void star_coords(double *s, double *r, double *x, double *y) {
+inline void star_coords(double *s, double *r, double *x, double *y)
+{
 	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
 	assert(sdotr > 0.0);
-	if (r[2] == 1.0) {
+	if (unlikely(r[2] == 1.0)) {
 		double inv_s2 = 1.0 / s[2];
 		*x = s[0] * inv_s2;
 		*y = s[1] * inv_s2;
-	} else if (r[2] == -1.0) {
+	} else if (unlikely(r[2] == -1.0)) {
 		double inv_s2 = 1.0 / s[2];
 		*x =  s[0] * inv_s2;
 		*y = -s[1] * inv_s2;
@@ -136,9 +138,11 @@ inline void star_midpoint(double* mid, double* A, double* B) {
 	mid[0] = A[0] + B[0];
 	mid[1] = A[1] + B[1];
 	mid[2] = A[2] + B[2];
-	len = sqrt(square(mid[0]) + square(mid[1]) + square(mid[2]));
+	//len = sqrt(square(mid[0]) + square(mid[1]) + square(mid[2]));
+	len = sqrt(mid[0] * mid[0] + mid[1] * mid[1] + mid[2] * mid[2]);
 	invlen = 1.0 / len;
 	mid[0] *= invlen;
 	mid[1] *= invlen;
 	mid[2] *= invlen;
 }
+
