@@ -25,20 +25,20 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-quadfile* quads = NULL;
-codefile* codes = NULL;
+static quadfile* quads = NULL;
+static codefile* codes = NULL;
 
-catalog* cat;
+static catalog* cat;
 
 // bounds of quad scale (in radians^2)
-double quad_scale_upper2;
-double quad_scale_lower2;
+static double quad_scale_upper2;
+static double quad_scale_lower2;
 
 #define IL_BLOCKSIZE 50
 
-int quadnum = 0;
+static int quadnum = 0;
 
-void print_help(char* progname)
+static void print_help(char* progname)
 {
 	printf("\nUsage:\n"
 	       "  %s -f <filename-base>\n"
@@ -53,7 +53,7 @@ void print_help(char* progname)
 
 
 // warning, you must guarantee iA<iB and iC<iD
-void drop_quad(il* stars, int iA, int iB, int iC, int iD)
+static inline void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 {
 	int inA, inB, inC, inD;
 	inA = iA;
@@ -99,95 +99,111 @@ void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 	il_remove(stars, iD - 1);
 }
 
-int try_quads(int iA, int iB,
-              char* inbox, int maxind, il* stars,
-              int* used_stars)
-{
-	int i;
-	int iC = 0, iD;
-	double Ax, Ay, Bx, By, Dx, Dy;
-	double ABx, ABy, ADx, ADy;
-	double cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0;
-	double costheta, sintheta, scale;
-	double *sA, *sB, *sD;
+struct potential_quad {
+	bool scale_ok;
+	int iA, iB;
+	uint staridA, staridB;
 	double midAB[3];
-	int ninbox = 0;
-	uint staridA, staridB, staridC = 0, staridD;
+	double Ax, Ay;
+	double costheta, sintheta;
+	bool gotC;
+	int iC;
+	double cx, cy;
+	uint staridC;
+	bool gotD;
+	int iD;
+	double dx, dy;
+	uint staridD;
+};
+typedef struct potential_quad pquad;
 
-	staridA = il_get(stars, iA);
-	staridB = il_get(stars, iB);
-	sA = catalog_get_star(cat, staridA);
-	sB = catalog_get_star(cat, staridB);
-
-	star_midpoint(midAB, sA, sB);
-	star_coords(sA, midAB, &Ax, &Ay);
-	star_coords(sB, midAB, &Bx, &By);
-
-	ABx = Bx - Ax;
-	ABy = By - Ay;
-
+static void
+check_scale(pquad* pq, il* stars) {
+	double *sA, *sB;
+	double Bx, By;
+	double scale, invscale;
+	double ABx, ABy;
+	pq->staridA = il_get(stars, pq->iA);
+	pq->staridB = il_get(stars, pq->iB);
+	sA = catalog_get_star(cat, pq->staridA);
+	sB = catalog_get_star(cat, pq->staridB);
+	star_midpoint(pq->midAB, sA, sB);
+	star_coords(sA, pq->midAB, &pq->Ax, &pq->Ay);
+	star_coords(sB, pq->midAB, &Bx, &By);
+	ABx = Bx - pq->Ax;
+	ABy = By - pq->Ay;
 	scale = (ABx * ABx) + (ABy * ABy);
 
 	if ((scale < quad_scale_lower2) ||
-		(scale > quad_scale_upper2))
-		return 0;
-
-	costheta = (ABx + ABy) / scale;
-	sintheta = (ABy - ABx) / scale;
-
-	for (i = 0; i < maxind; i++) {
-		if (!inbox[i])
-			continue;
-
-		// compute this star's code position
-		iD = i;
-		staridD = il_get(stars, i);
-		sD = catalog_get_star(cat, staridD);
-		star_coords(sD, midAB, &Dx, &Dy);
-		ADx = Dx - Ax;
-		ADy = Dy - Ay;
-		dx = ADx * costheta + ADy * sintheta;
-		dy = -ADx * sintheta + ADy * costheta;
-
-		// make sure it's in the box...
-		if ((dx > 1.0) || (dx < 0.0) ||
-			(dy > 1.0) || (dy < 0.0)) {
-			continue;
-		}
-
-		ninbox++;
-		if (ninbox == 1) {
-			// the first star in the box becomes star C.
-			cx = dx;
-			cy = dy;
-			staridC = staridD;
-			iC = iD;
-		} else {
-			// the second star in the box becomes star D.
-			codefile_write_code(codes, cx, cy, dx, dy);
-            quadfile_write_quad(quads, staridA, staridB, staridC, staridD);
-			quadnum++;
-			drop_quad(stars, iA, iB, iC, iD);
-			if (used_stars) {
-				used_stars[0] = staridA;
-				used_stars[1] = staridB;
-				used_stars[2] = staridC;
-				used_stars[3] = staridD;
-			}
-			return 1;
-		}
+		(scale > quad_scale_upper2)) {
+		pq->scale_ok = 0;
+		return;
 	}
-	return 0;
+	pq->scale_ok = 1;
+	invscale = 1.0 / scale;
+	pq->costheta = (ABy + ABx) * invscale;
+	pq->sintheta = (ABy - ABx) * invscale;
 }
 
-char find_a_quad(il* stars, int* used_stars)
-{
+static bool
+check_inbox(pquad* pq, int* inds, int ninds, il* stars) {
+	int i, ind;
+	uint starid;
+	double* starpos;
+	double Dx, Dy;
+	double ADx, ADy;
+	double x, y;
+	for (i=0; i<ninds; i++) {
+		ind = inds[i];
+		starid = il_get(stars, ind);
+		starpos = catalog_get_star(cat, starid);
+		star_coords(starpos, pq->midAB, &Dx, &Dy);
+		ADx = Dx - pq->Ax;
+		ADy = Dy - pq->Ay;
+		x =  ADx * pq->costheta + ADy * pq->sintheta;
+		y = -ADx * pq->sintheta + ADy * pq->costheta;
+		// make sure it's in the box...
+		if ((x > 1.0) || (x < 0.0) ||
+			(y > 1.0) || (y < 0.0)) {
+			continue;
+		}
+		if (!pq->gotC) {
+			pq->gotC = TRUE;
+			pq->cx = x;
+			pq->cy = y;
+			pq->iC = ind;
+			pq->staridC = starid;
+		} else {
+			assert(pq->getD == FALSE);
+			pq->gotD = TRUE;
+			pq->dx = x;
+			pq->dy = y;
+			pq->iD = ind;
+			pq->staridD = starid;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+static void
+got_quad(pquad* pq, il* stars) {
+	codefile_write_code(codes, pq->cx, pq->cy, pq->dx, pq->dy);
+	quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridC, pq->staridD);
+	quadnum++;
+	drop_quad(stars, pq->iA, pq->iB, pq->iC, pq->iD);
+}
+
+static char find_a_quad(il* stars) {
 	uint numxy, iA, iB, iC, iD, newpoint;
-	char *iunion;
+	int rtn = 0;
+	pquad* pquads;
+	int* inbox;
+	int ninbox;
 
 	numxy = il_size(stars);
-
-	iunion = alloca(numxy * sizeof(char));
+	inbox =  malloc(numxy * sizeof(int));
+	pquads = calloc(numxy*numxy, sizeof(pquad));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -196,65 +212,61 @@ char find_a_quad(il* stars, int* used_stars)
 	  building all quads that have the star not on the diagonal
 	  (star D).
 
-	  In each of the loops, we first consider a pair of A, B stars,
-	  and gather all the stars that could be C and D stars.  We add
-	  the indices of the C and D stars to the arrays "iCs" and "iDs".
-	  That is, iCs[0] and iDs[0] contain the first pair of C,D stars.
-	  Both arrays can contain duplicates.
-
-	  We also mark "iunion" of these indices to TRUE, so if index "i"
-	  appears in "iCs" or "iDs", then "iunion[i]" is true.
-
-	  We then call "try_quads" with stars A,B and the sets of stars
-	  C,D.  For each element in "iunion" that is true, "try_quads"
-	  checks whether that star is inside the box formed by AB; if not,
-	  it marks iunion back to FALSE.  If then iterates through "iCs"
-	  and "iDs", skipping any for which the corresponding "iunion"
-	  element is FALSE.
+	  Note that we keep the invariants iA < iB and iC < iD.
 	*/
 
-	// We keep the invariants that iA < iB and iC < iD.
 	for (newpoint = 0; newpoint < numxy; newpoint++) {
+		pquad* pq;
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
-			memset(iunion, 0, newpoint);
+			pq = pquads + iA*numxy + iB;
+			pq->iA = iA;
+			pq->iB = iB;
+			check_scale(pq, stars);
+			if (!pq->scale_ok)
+				continue;
+
+			ninbox = 0;
 			for (iC = 0; iC < newpoint; iC++) {
 				if ((iC == iA) || (iC == iB))
 					continue;
-				iunion[iC] = 1;
+				inbox[ninbox] = iC;
+				ninbox++;
 			}
-			// note: "newpoint" is used as an upper-bound on the largest
-			// TRUE element in "iunion".
-			if (try_quads(iA, iB, iunion, newpoint, stars, used_stars)) {
-				return 1;
-			}
+			if (!check_inbox(pq, inbox, ninbox, stars))
+				continue;
+
+			got_quad(pq, stars);
+			rtn = 1;
+			goto theend;
 		}
 
 		// quads with the new star not on the diagonal:
 		iD = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
 			for (iB = iA + 1; iB < newpoint; iB++) {
-				memset(iunion, 0, newpoint + 1);
-				iunion[iD] = 1;
-				for (iC = 0; iC < newpoint; iC++) {
-					if ((iC == iA) || (iC == iB))
-						continue;
-					iunion[iC] = 1;
-				}
-				// note: "newpoint+1" is used because "iunion[newpoint]" is TRUE.
-				if (try_quads(iA, iB, iunion, newpoint + 1, stars, used_stars)) {
-					return 1;
-				}
+				pq = pquads + iA*numxy + iB;
+				if (!pq->scale_ok)
+					continue;
+				inbox[0] = iD;
+				if (!check_inbox(pq, inbox, 1, stars))
+					continue;
+				got_quad(pq, stars);
+				rtn = 1;
+				goto theend;
 			}
 		}
 	}
-	return 0;
+ theend:
+	free(inbox);
+	free(pquads);
+	return rtn;
 }
 
-void shifted_healpix_bin_stars(int numstars, il* starindices,
-                               il* pixels, int dx, int dy,
-                               int Nside)
+static void shifted_healpix_bin_stars(int numstars, il* starindices,
+									  il* pixels, int dx, int dy,
+									  int Nside)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
@@ -264,7 +276,7 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 	fflush(stdout);
 
 	// the idea is that we look at a healpix grid that is three times
-	// finer in both directions, and in each pass we choose of the nine
+	// finer in both directions, and in each pass we choose one of the nine
 	// sub-pixels to be the center and we dump stars from a 3x3 grid around
 	// the center into its coarser pixel.
 
@@ -334,9 +346,9 @@ void shifted_healpix_bin_stars(int numstars, il* starindices,
 	fflush(stderr);
 }
 
-void create_quads_in_pixels(int numstars, il* starindices,
-                            il* pixels, int Nside,
-                            int dx, int dy)
+static void create_quads_in_pixels(int numstars, il* starindices,
+								   il* pixels, int Nside,
+								   int dx, int dy)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
@@ -366,27 +378,19 @@ void create_quads_in_pixels(int numstars, il* starindices,
 		nusedthispass = 0;
 		for (hp=0; hp<HEALPIXES; hp++) {
 			int foundone;
-			int used_stars[4];
 			if (!interesting[hp])
 				continue;
 			if (((grass++) % 10000) == 0) {
 				fprintf(stderr, "+");
 				fflush(stderr);
 			}
-
-			foundone = find_a_quad(pixels + hp, used_stars);
+			foundone = find_a_quad(pixels + hp);
 			if (foundone) {
-				int s;
-				// remove the used stars.
-				for (s = 0; s < 4; s++)
-					il_remove_value(pixels + hp, used_stars[s]);
-
 				if (!il_size(pixels + hp)) {
 					interesting[hp] = 0;
 					Ninteresting--;
 					continue;
 				}
-
 				quadsmade[hp]++;
 				if (!quadsmade[hp]) {
 					fprintf(stderr, "Warning, \"quadsmade\" counter overflowed for healpix %i.  Some of the stats may be wrong.\n", hp);
@@ -451,10 +455,6 @@ int main(int argc, char** argv)
 			break;
 		case 'u':
 			quad_scale_upper2 = atof(optarg);
-			if (quad_scale_upper2 == 0.0) {
-				printf("Couldn't parse desired scale \"%s\"\n", optarg);
-				exit( -1);
-			}
 			quad_scale_upper2 = square(arcmin2rad(quad_scale_upper2));
 			break;
 		case 'l':
@@ -490,9 +490,8 @@ int main(int argc, char** argv)
 	tic();
 
 	pixels = malloc(HEALPIXES * sizeof(il));
-	for (i = 0; i < HEALPIXES; i++) {
+	for (i = 0; i < HEALPIXES; i++)
 		il_new_existing(pixels + i, IL_BLOCKSIZE);
-	}
 
 	catfname = mk_catfn(basefname);
 	printf("Reading catalog file %s ...\n", catfname);
@@ -589,14 +588,14 @@ int main(int argc, char** argv)
 	catalog_close(cat);
 
 	// fix output file headers.
-    quadfile_fix_header(quads);
-	if (quadfile_close(quads)) {
+    if (quadfile_fix_header(quads) ||
+		quadfile_close(quads)) {
 		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
 		exit( -1);
 	}
 
-	codefile_fix_header(codes);
-    if (codefile_close(codes)) {
+	if (codefile_fix_header(codes) ||
+		codefile_close(codes)) {
 		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
 		exit( -1);
 	}
