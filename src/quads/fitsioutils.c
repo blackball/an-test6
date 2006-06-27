@@ -6,6 +6,8 @@
 #include "fitsioutils.h"
 #include "ioutils.h"
 
+#include "keywords.h"
+
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define IS_LITTLE_ENDIAN 1
 #else
@@ -89,14 +91,14 @@ int fits_add_column(qfits_table* table, int column, tfits_type type,
 	return 0;
 }
 
-static inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
+static Inline void dstn_swap_bytes(unsigned char* c1, unsigned char* c2) {
 	unsigned char tmp;
 	tmp = *c1;
 	*c1 = *c2;
 	*c2 = tmp;
 }
 
-static inline void hton64(void* ptr) {
+static Inline void hton64(void* ptr) {
 #if IS_LITTLE_ENDIAN
 	unsigned char* c = (unsigned char*)ptr;
 	dstn_swap_bytes(c+0, c+7);
@@ -106,7 +108,7 @@ static inline void hton64(void* ptr) {
 #endif
 }
 
-static inline void hton32(void* ptr) {
+static Inline void hton32(void* ptr) {
 #if IS_LITTLE_ENDIAN
 	unsigned char* c = (unsigned char*)ptr;
 	dstn_swap_bytes(c+0, c+3);
@@ -114,7 +116,7 @@ static inline void hton32(void* ptr) {
 #endif
 }
 
-static inline void hton16(void* ptr) {
+static Inline void hton16(void* ptr) {
 #if IS_LITTLE_ENDIAN
 	unsigned char* c = (unsigned char*)ptr;
 	dstn_swap_bytes(c+0, c+1);

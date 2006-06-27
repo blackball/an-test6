@@ -2,31 +2,32 @@
 
 #if __GNUC__ >= 3
 
-//# define inline		inline __attribute__ ((always_inline))
-# define __pure		__attribute__ ((pure))
-# define __const	__attribute__ ((const))
-# define __noreturn	__attribute__ ((noreturn))
-# define __malloc	__attribute__ ((malloc))
-# define __must_check	__attribute__ ((warn_unused_result))
-# define __deprecated	__attribute__ ((deprecated))
-# define __used		__attribute__ ((used))
-# define __unused	__attribute__ ((unused))
-# define __packed	__attribute__ ((packed))
+//# define Inline		inline __attribute__ ((always_inline))
+# define Inline		inline
+# define Pure		__attribute__ ((pure))
+# define Const	__attribute__ ((const))
+# define Noreturn	__attribute__ ((noreturn))
+# define Malloc	__attribute__ ((malloc))
+# define Must_check	__attribute__ ((warn_unused_result))
+# define Deprecated	__attribute__ ((deprecated))
+# define Used		__attribute__ ((used))
+# define Unused	__attribute__ ((unused))
+# define Packed	__attribute__ ((packed))
 # define likely(x)	__builtin_expect (!!(x), 1)
 # define unlikely(x)	__builtin_expect (!!(x), 0)
 
 #else
 
-# define inline		/* no inline */
-# define __pure		/* no pure */
-# define __const	/* no const */
-# define __noreturn	/* no noreturn */
-# define __malloc	/* no malloc */
-# define __must_check	/* no warn_unused_result */
-# define __deprecated	/* no deprecated */
-# define __used		/* no used */
-# define __unused	/* no unused */
-# define __packed	/* no packed */
+# define Inline		/* no inline */
+# define Pure		/* no pure */
+# define Const	/* no const */
+# define Noreturn	/* no noreturn */
+# define Malloc	/* no malloc */
+# define Must_check	/* no warn_unused_result */
+# define Deprecated	/* no deprecated */
+# define Used		/* no used */
+# define Unused	/* no unused */
+# define Packed	/* no packed */
 # define likely(x)	(x)
 # define unlikely(x)	(x)
 

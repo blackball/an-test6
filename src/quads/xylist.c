@@ -18,7 +18,7 @@ static xylist* xylist_new() {
 	return ls;
 }
 
-xylist* xylist_open(char* fn) {
+xylist* xylist_open(const char* fn) {
 	xylist* ls = NULL;
 	qfits_header* header;
 

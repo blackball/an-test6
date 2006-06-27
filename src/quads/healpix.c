@@ -7,49 +7,49 @@
 
 int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir);
 
-__const static inline double mysquare(double d) {
+Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
-static inline void swap(uint* i1, uint* i2) {
+static Inline void swap(uint* i1, uint* i2) {
 	uint tmp;
 	tmp = *i1;
 	*i1 = *i2;
 	*i2 = tmp;
 }
 
-static inline void swap_double(double* i1, double* i2) {
+static Inline void swap_double(double* i1, double* i2) {
 	double tmp;
 	tmp = *i1;
 	*i1 = *i2;
 	*i2 = tmp;
 }
 
-static inline bool ispolar(int healpix)
+static Inline bool ispolar(int healpix)
 {
 	// the north polar healpixes are 0,1,2,3
 	// the south polar healpixes are 8,9,10,11
 	return (healpix <= 3) || (healpix >= 8);
 }
 
-static inline bool isequatorial(int healpix)
+static Inline bool isequatorial(int healpix)
 {
 	// the north polar healpixes are 0,1,2,3
 	// the south polar healpixes are 8,9,10,11
 	return (healpix >= 4) && (healpix <= 7);
 }
 
-static inline bool isnorthpolar(int healpix)
+static Inline bool isnorthpolar(int healpix)
 {
 	return (healpix <= 3);
 }
 
-static inline bool issouthpolar(int healpix)
+static Inline bool issouthpolar(int healpix)
 {
 	return (healpix >= 8);
 }
 
-static inline bool ispowerof4(uint x) {
+static Inline bool ispowerof4(uint x) {
 	if (x >= 0x40000)
 		return (                    x == 0x40000   ||
 				 x == 0x100000   || x == 0x400000  ||

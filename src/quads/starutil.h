@@ -60,17 +60,17 @@ inline void project_equal_area(double x, double y, double z, double* projx, doub
 // surface of the unit sphere into the angle between the
 // rays from the center of the sphere to the points, in
 // radians.
-__const inline double distsq2arc(double dist2);
+Const inline double distsq2arc(double dist2);
 
-__const inline double distsq2arcsec(double dist2);
+Const inline double distsq2arcsec(double dist2);
 
 // Converts an angle (in radians) into the distance-squared
 // between two points on the unit sphere separated by that angle.
-__const inline double arc2distsq(double arcInRadians);
+Const inline double arc2distsq(double arcInRadians);
 
 // Converts an angle (in arcseconds) into the distance-squared
 // between two points on the unit sphere separated by that angle.
-__const inline double arcsec2distsq(double arcInArcSec);
+Const inline double arcsec2distsq(double arcInArcSec);
 
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
 

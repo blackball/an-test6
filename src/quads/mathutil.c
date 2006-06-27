@@ -5,15 +5,15 @@
 
 #include "mathutil.h"
 
-inline int imax(int a, int b) {
+Inline int imax(int a, int b) {
 	return (a > b) ? a : b;
 }
 
-inline int imin(int a, int b) {
+Inline int imin(int a, int b) {
 	return (a < b) ? a : b;
 }
 
-inline double distsq_exceeds(double* d1, double* d2, int D, double limit) {
+Inline double distsq_exceeds(double* d1, double* d2, int D, double limit) {
     double dist2;
     int i;
     dist2 = 0.0;
@@ -25,7 +25,7 @@ inline double distsq_exceeds(double* d1, double* d2, int D, double limit) {
 	return 0;
 }
 
-inline double distsq(double* d1, double* d2, int D) {
+Inline double distsq(double* d1, double* d2, int D) {
     double dist2;
     int i;
     dist2 = 0.0;
@@ -35,11 +35,11 @@ inline double distsq(double* d1, double* d2, int D) {
     return dist2;
 }
 
-inline double square(double d) {
+Inline double square(double d) {
 	return d*d;
 }
 
-inline int inrange(double ra, double ralow, double rahigh) {
+Inline int inrange(double ra, double ralow, double rahigh) {
     if (ralow < rahigh) {
 		if (ra >= ralow && ra <= rahigh)
             return 1;

@@ -21,8 +21,7 @@ void print_help(char* progname)
 			"   <base-name> [<base-name> ...]\n\n",
 	        progname);
 }
-
-static inline void ensure_hist_size(uint** hist, uint* size, uint newsize) {
+static Inline void ensure_hist_size(uint** hist, uint* size, uint newsize) {
 	if (newsize <= *size)
 		return;
 	*hist = realloc(*hist, newsize*sizeof(uint));
