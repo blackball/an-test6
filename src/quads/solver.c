@@ -198,8 +198,7 @@ void solve_field(solver_params* params) {
 				"  field %u, object %u of %u: %i agree, %i tried, %i matched.\n",
 				params->fieldnum, newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
 
-		if ((params->max_matches_needed && (params->mostagree >= params->max_matches_needed)) ||
-			(params->maxtries && (params->numtries >= params->maxtries)) ||
+		if ((params->maxtries && (params->numtries >= params->maxtries)) ||
 			params->quitNow)
 			break;
 	}
