@@ -12,8 +12,9 @@
 #include "hitsfile.h"
 #include "hitlist_healpix.h"
 #include "matchfile.h"
+#include "solvedfile.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bF";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -27,7 +28,8 @@ void printHelp(char* progname) {
 			"   [-o overlap_needed_to_solve]\n"
 			"   [-f minimum-field-objects-needed-to-solve]\n"
 			"   [-b]: best-overlap mode\n"
-			"   [-F]: first-solved mode\n",
+			"   [-F]: first-solved mode\n"
+			"   [-s <solved-server-address>]\n",
 			progname);
 }
 
@@ -35,8 +37,7 @@ int find_correspondences(pl* hits, uint* starids, uint* fieldids, int* p_ok);
 
 void write_field(hitlist* hl,
 				 pl* overlaps,
-				 bool bestover,
-				 bool firstover,
+				 int fieldfile,
 				 int fieldnum,
 				 bool doleftovers,
 				 bool doagree,
@@ -55,6 +56,8 @@ char* agreefname = NULL;
 matchfile* agreemf = NULL;
 il* solved;
 il* unsolved;
+
+char* solvedserver = NULL;
 
 double overlap_needed = 0.0;
 int min_ninfield = 0;
@@ -109,9 +112,13 @@ int main(int argc, char *argv[]) {
 	pl* overlaps = NULL;
 	bool do_best_overlap = FALSE;
 	bool do_first_overlap = FALSE;
+	int fieldfile = -1;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 's':
+			solvedserver = optarg;
+			break;
 		case 'b':
 			do_best_overlap = TRUE;
 			break;
@@ -183,6 +190,12 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Last field (-B) must be at least as big as first field (-A)\n");
 		exit(-1);
 	}
+
+	if (solvedserver)
+		if (solvedserver_set_server(solvedserver)) {
+			fprintf(stderr, "Failed to set solved server.\n");
+			exit(-1);
+		}
 
 	if (hitfname)
 		fopenout(hitfname, &hitfid);
@@ -268,6 +281,13 @@ int main(int argc, char *argv[]) {
 				assert(mos[i]->fieldnum >= fieldnum);
 				if (mos[i]->fieldnum != fieldnum)
 					break;
+
+				if (fieldfile == -1) {
+					fieldfile = mos[i]->fieldfile;
+					fprintf(stderr, "Field file %i.\n", fieldfile);
+				} else
+					assert(mos[i]->fieldfile == fieldfile);
+
 				nread++;
 				nr++;
 
@@ -313,8 +333,7 @@ int main(int argc, char *argv[]) {
 		  fflush(stdout);
 		*/
 
-		write_field(hl, overlaps, do_best_overlap, do_first_overlap,
-					fieldnum, leftovers, agree, TRUE);
+		write_field(hl, overlaps, fieldfile, fieldnum, leftovers, agree, TRUE);
 
 		fprintf(stderr, "So far: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
 
@@ -375,8 +394,7 @@ int main(int argc, char *argv[]) {
 
 void write_field(hitlist* hl,
 				 pl* overlaps,
-				 bool bestover,
-				 bool firstover,
+				 int fieldfile,
 				 int fieldnum,
 				 bool doleftovers,
 				 bool doagree,
@@ -397,7 +415,7 @@ void write_field(hitlist* hl,
 	if (hl) {
 		nbest = hitlist_healpix_count_best(hl);
 		nall = hitlist_healpix_count_all(hl);
-	} else { //if (bestover || firstover) {
+	} else {
 		nall = pl_size(overlaps);
 		nbest = (nall ? 1 : 0);
 	}
@@ -506,6 +524,9 @@ void write_field(hitlist* hl,
 
 	// solved field.
 	il_append(solved, fieldnum);
+
+	if (solvedserver)
+		solvedserver_set(fieldfile, fieldnum);
 
 	if (hl) {
 		if ((nbest+1) > sizeagreehist) {

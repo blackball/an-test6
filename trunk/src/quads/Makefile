@@ -29,12 +29,15 @@ CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-I.
 
-MACHINE=$(shell uname -m)
+MACHINE:=$(shell uname -m)
 ifeq ($(MACHINE), i686)
-	# gcc-3.2:
-	CFLAGS += -mcpu=pentium4 
-	# gcc-4.0:
-	#CFLAGS += -mtune=pentium4
+	GCCVER:=$(shell gcc --version | head -1 | gawk '{print $$3}' | gawk 'BEGIN{FS="."} {print $$1 "." $$2}')
+	ifeq ($(GCCVER), 3.2)
+		CFLAGS += -mcpu=pentium4 
+	endif
+	ifeq ($(GCCVER), 4.0)
+		CFLAGS += -mtune=pentium4
+	endif
 	CFLAGS += -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
 	# This seems to kill qfits...
 	#CFLAGS += -malign-double
@@ -108,6 +111,7 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver printsolved
 
 printsolved: printsolved.o
+	echo "GCC version $(GCCVER)"
 	$(CC) $(CFLAGS) -o $@ $^
 
 solvedserver: solvedserver.o
