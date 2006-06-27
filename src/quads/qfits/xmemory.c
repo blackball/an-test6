@@ -3,7 +3,7 @@
   @file     xmemory.c
   @author   Nicolas Devillard
   @date     Oct 2000
-  @version  $Revision: 1.6 $
+  @version  $Revision: 1.7 $
   @brief    POSIX-compatible extended memory handling.
 
   xmemory is a small and efficient module offering memory extension 
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: xmemory.c,v 1.6 2006/05/10 19:31:23 dlang Exp $
+    $Id: xmemory.c,v 1.7 2006/06/27 20:10:49 dlang Exp $
     $Author: dlang $
-    $Date: 2006/05/10 19:31:23 $
-    $Revision: 1.6 $
+    $Date: 2006/06/27 20:10:49 $
+    $Revision: 1.7 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -198,10 +198,10 @@ static int          xmemory_p_mm_refcount[XMEMORY_MAXPTRS] ;
                     Private function prototypes 
  -----------------------------------------------------------------------------*/
 
-static unsigned xmemory_hash(char *) ;
+static unsigned xmemory_hash(const char *) ;
 static void xmemory_init(void) ;
 static void xmemory_cleanup(void);
-static int xmemory_addcell(void*, size_t, const char*, int, char, int, int, char*) ;
+static int xmemory_addcell(void*, size_t, const char*, int, char, int, int, const char*) ;
 static int xmemory_remcell(int) ;
 static void xmemory_dumpcell(int, FILE*) ;
 static char * xmemory_tmpfilename(int) ;
@@ -224,7 +224,7 @@ void xmemory_status_(const char *, int) ;
   key itself in last resort.
  */
 /*----------------------------------------------------------------------------*/
-static unsigned xmemory_hash(char * key)
+static unsigned xmemory_hash(const char * key)
 {
     int         len ;
     unsigned    hash ;
@@ -355,7 +355,7 @@ static int xmemory_addcell(
         char        memtype,
         int         swapfileid,
         int         swapfd,
-        char    *   mm_filename)
+        const char    *   mm_filename)
 {
     int pos, ii ;
     
@@ -746,7 +746,7 @@ void * xmemory_calloc(size_t nmemb, size_t size, const char * filename, int line
  */
 /*----------------------------------------------------------------------------*/
 char * xmemory_falloc(
-        char    *   name,
+					  const char    *   name,
         size_t      offs,
         size_t  *   size,
         const char    *   srcname,

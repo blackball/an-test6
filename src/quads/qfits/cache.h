@@ -3,7 +3,7 @@
   @file     cache.h
   @author   N. Devillard
   @date     Mar 2001
-  @version  $Revision: 1.1 $
+  @version  $Revision: 1.2 $
   @brief    FITS caching capabilities
 
   This modules implements a cache for FITS access routines.
@@ -14,10 +14,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: cache.h,v 1.1 2006/03/16 22:10:26 dlang Exp $
+	$Id: cache.h,v 1.2 2006/06/27 20:10:49 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/16 22:10:26 $
-	$Revision: 1.1 $
+	$Date: 2006/06/27 20:10:49 $
+	$Revision: 1.2 $
 */
 
 #ifndef CACHE_H
@@ -116,7 +116,7 @@ void qfits_cache_purge(void);
   of the FITS file.
  */
 /*----------------------------------------------------------------------------*/
-int qfits_query(char * filename, int what);
+int qfits_query(const char * filename, int what);
 
 #endif
 /* vim: set ts=4 et sw=4 tw=75 */

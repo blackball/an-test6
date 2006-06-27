@@ -3,7 +3,7 @@
    @file    simple.c
    @author  N. Devillard
    @date    Jan 1999
-   @version $Revision: 1.4 $
+   @version $Revision: 1.5 $
    @brief   Simple FITS access routines.
 
    This module offers a number of very basic low-level FITS access
@@ -12,10 +12,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: simple.c,v 1.4 2006/06/27 17:40:45 dlang Exp $
+    $Id: simple.c,v 1.5 2006/06/27 20:10:49 dlang Exp $
     $Author: dlang $
-    $Date: 2006/06/27 17:40:45 $
-    $Revision: 1.4 $
+    $Date: 2006/06/27 20:10:49 $
+    $Revision: 1.5 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -31,7 +31,8 @@
 #include <unistd.h>
 #include <regex.h>
 
-#include "simple.h"
+#include "qfits.h"
+//#include "simple.h"
 #include "fits_p.h"
 #include "expkey.h"
 #include "cache.h"
@@ -215,7 +216,7 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum)
   extension is found, and -1 if an error occurred.
  */
 /*----------------------------------------------------------------------------*/
-int qfits_query_n_ext(char * filename)
+int qfits_query_n_ext(const char * filename)
 {
     return qfits_query(filename, QFITS_QUERY_N_EXT);
 }
@@ -492,7 +493,7 @@ int qfits_get_type(char * s)
  */
 /*----------------------------------------------------------------------------*/
 int qfits_get_hdrinfo(
-        char * filename,
+					  const char * filename,
         int    xtnum,
         int  * seg_start,
         int  * seg_size)
@@ -533,7 +534,7 @@ int qfits_get_hdrinfo(
  */
 /*----------------------------------------------------------------------------*/
 int qfits_get_datinfo(
-        char * filename,
+					  const char * filename,
         int    xtnum,
         int  * seg_start,
         int  * seg_size)

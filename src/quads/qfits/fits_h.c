@@ -3,7 +3,7 @@
   @file		fits_h.c
   @author	N. Devillard
   @date		Mar 2000
-  @version	$Revision: 1.2 $
+  @version	$Revision: 1.3 $
   @brief	FITS header handling
 
   This file contains definition and related methods for the FITS header
@@ -31,10 +31,10 @@
 
 
 /*
-	$Id: fits_h.c,v 1.2 2006/05/04 18:44:15 dlang Exp $
+	$Id: fits_h.c,v 1.3 2006/06/27 20:10:49 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/04 18:44:15 $
-	$Revision: 1.2 $
+	$Date: 2006/06/27 20:10:49 $
+	$Revision: 1.3 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -43,7 +43,7 @@
 
 #include "qfits.h"
 #include "fits_p.h"
-#include "simple.h"
+//#include "simple.h"
 #include "xmemory.h"
 #include "expkey.h"
 #include "qerror.h"

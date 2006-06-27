@@ -3,16 +3,16 @@
    @file    fits_rw.c
    @author  N. Devillard
    @date    Mar 2000
-   @version $Revision: 1.3 $
+   @version $Revision: 1.4 $
    @brief   FITS header reading/writing.
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: fits_rw.c,v 1.3 2006/05/10 02:45:06 dlang Exp $
+    $Id: fits_rw.c,v 1.4 2006/06/27 20:10:49 dlang Exp $
     $Author: dlang $
-    $Date: 2006/05/10 02:45:06 $
-    $Revision: 1.3 $
+    $Date: 2006/06/27 20:10:49 $
+    $Revision: 1.4 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -27,9 +27,9 @@
 #include <sys/stat.h>
 
 #include "qfits.h"
-#include "fits_rw.h"
+//#include "fits_rw.h"
 #include "fits_p.h"
-#include "simple.h"
+//#include "simple.h"
 #include "xmemory.h"
 #include "qerror.h"
 
@@ -71,7 +71,7 @@ static int is_blank_line(char * s)
   Value, comment, and original line might be NULL pointers.
  */
 /*----------------------------------------------------------------------------*/
-qfits_header * qfits_header_read(char * filename)
+qfits_header * qfits_header_read(const char * filename)
 {
     /* Forward job to readext */
     return qfits_header_readext(filename, 0);
@@ -256,7 +256,7 @@ qfits_header * qfits_header_read_hdr_string(
   Returns NULL in case of error.
  */
 /*----------------------------------------------------------------------------*/
-qfits_header * qfits_header_readext(char * filename, int xtnum)
+qfits_header * qfits_header_readext(const char * filename, int xtnum)
 {
     qfits_header*   hdr ;
     int             n_ext ;
@@ -389,7 +389,7 @@ void qfits_zeropad(char * filename)
   0 else. If the file does not exist, returns -1.
  */
 /*----------------------------------------------------------------------------*/
-int is_fits_file(char *filename)
+int is_fits_file(const char *filename)
 {
     FILE  *   fp ;
     char  *   magic ;
