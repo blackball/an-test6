@@ -36,7 +36,7 @@ inline double distsq(double* d1, double* d2, int D) {
 }
 
 inline double square(double d) {
-    return d*d;
+	return d*d;
 }
 
 inline int inrange(double ra, double ralow, double rahigh) {

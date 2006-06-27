@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 #include "bl.h"
+#include "keywords.h"
 
 #define DIM_STARS 3
 #define DIM_CODES 4
@@ -59,27 +60,28 @@ inline void project_equal_area(double x, double y, double z, double* projx, doub
 // surface of the unit sphere into the angle between the
 // rays from the center of the sphere to the points, in
 // radians.
-inline double distsq2arc(double dist2);
+__const inline double distsq2arc(double dist2);
 
-inline double distsq2arcsec(double dist2);
+__const inline double distsq2arcsec(double dist2);
 
 // Converts an angle (in radians) into the distance-squared
 // between two points on the unit sphere separated by that angle.
-inline double arc2distsq(double arcInRadians);
+__const inline double arc2distsq(double arcInRadians);
 
 // Converts an angle (in arcseconds) into the distance-squared
 // between two points on the unit sphere separated by that angle.
-inline double arcsec2distsq(double arcInArcSec);
+__const inline double arcsec2distsq(double arcInArcSec);
 
 #define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
 
 #define HELP_ERR -101
 #define OPT_ERR -201
 
-inline void star_midpoint(double* mid, double* A, double* B);
-inline void star_coords(double *s, double *r, double *x, double *y);
-
 void make_rand_star(double* star, double ramin, double ramax,
 					double decmin, double decmax);
+
+inline void star_coords(double *s, double *r, double *x, double *y);
+
+inline void star_midpoint(double* mid, double* A, double* B);
 
 #endif
