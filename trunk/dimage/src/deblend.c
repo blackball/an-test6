@@ -56,16 +56,15 @@ int deblend(float *image,
             float saddle,   /* number of sigma for allowed saddle */
             float parallel, /* how parallel you allow templates to be */
 						int maxnchild, 
-            float minpeak)  
+            float minpeak, 
+            int starstart)  
 {
   int i,j,k,npeaks,ip,jp,di,dj,ntpeaks,kp,joined,maxiter,niter,
     tmpnpeaks, closest;
   float v1,v2,level,cross,offset,tol,chi2,ss,r2,maxval,val,
     maxlevel, mindist, currdist;
-#if 0
-	int central;
-#endif
 
+  printf("in deblend\n"); fflush(stdout);
   mask=(int *) malloc(sizeof(int)*nx*ny);
   object=(int *) malloc(sizeof(int)*nx*ny);
   xtcen=(int *) malloc(sizeof(int)*maxnchild);
@@ -76,12 +75,13 @@ int deblend(float *image,
   printf("finding peaks.\n"); fflush(stdout);
   if((*nchild)==0) {
     dpeaks(image, nx, ny, &npeaks, xcen, ycen, sigma, dlim, 
-           saddle, maxnchild, 0, 1, minpeak);
+           saddle, maxnchild, 1, 1, minpeak);
   } else {
     npeaks=(*nchild);
   }
+  printf("%d peaks.\n", npeaks); fflush(stdout);
 
-  /* 1.5 find "central" peak */
+  /* 201.5 find "central" peak */
 #if 0
   printf("finding central.\n"); fflush(stdout);
   dcentral(image, nx, ny, npeaks, xcen, ycen, &central, sigma, dlim,
@@ -102,15 +102,35 @@ int deblend(float *image,
         ip=xcen[k]+di;
         if(ip>=0 && jp>=0 && ip<nx && jp<ny) {
           v2=image[ip+jp*nx];
-          templates[i+j*nx+nx*ny*k]=((v2<v1)?v2:v1)+0.564189*sigma;
+          templates[i+j*nx+nx*ny*k]=((v2<v1)?v2:v1); 
+          if(v2<3.*sigma && v1<3.*sigma) 
+            templates[i+j*nx+nx*ny*k]+=0.564189*sigma;
         } else {
           templates[i+j*nx+nx*ny*k]=0.;
         }
       }
     }
 
+#if 1 
+  /* limit size of stars */ 
+    if(k>=starstart) {
+	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
+	                               k*nx*ny]);
+      for(j=0;j<ny;j++) 
+        for(i=0;i<nx;i++) {
+          currdist=((xcen[k]-(float) i)*
+                    (xcen[k]-(float) i)+
+                    (ycen[k]-(float) j)*
+                    (ycen[k]-(float) j));
+          templates[i+j*nx+k*nx*ny]*=exp(-0.5*currdist/(10.*10.));
+        }
+	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
+	                               k*nx*ny]);
+    }
+#endif
+
     /* 2a. smooth template and rid it of low S/N areas */
-#if 0
+#if 1
     printf("smoothing template %d.\n", k);
     stemplates=(float *) malloc(nx*ny*sizeof(float));
     dsmooth(&(templates[k*nx*ny]), nx, ny, tsmooth, stemplates);
@@ -122,8 +142,9 @@ int deblend(float *image,
       }
     FREEVEC(stemplates);
 #endif
+
     
-#if 1
+#if 0
     /* 2b. now remove smaller peaks from the template */
     printf("finding peaks in template %d.\n", k);
 		closest=-1;
@@ -177,25 +198,6 @@ int deblend(float *image,
 #endif
   }
 
-#if 1 
-  /* limit size of all but central template */
-  for(k=0;k<npeaks;k++) {
-    if(k!=0) {
-	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
-	                               k*nx*ny]);
-      for(j=0;j<ny;j++) 
-        for(i=0;i<nx;i++) {
-          currdist=((xcen[k]-(float) i)*
-                    (xcen[k]-(float) i)+
-                    (ycen[k]-(float) j)*
-                    (ycen[k]-(float) j));
-          templates[i+j*nx+k*nx*ny]*=exp(-0.5*currdist/(4.*4.));
-        }
-	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
-	                               k*nx*ny]);
-    }
-  }
-#endif
   
   /* 2.5 return if there is nothing to deblend */
   if(npeaks<=1) {
@@ -306,6 +308,8 @@ int deblend(float *image,
     printf("%e\n",weights[k]);
 
   /* 6. find pixel fluxes */
+
+  /* first smooth templates*/
   stemplates=(float *) malloc(nx*ny*npeaks*sizeof(float));
   printf("blah\n"); fflush(stdout);
   for(k=0;k<npeaks;k++)
@@ -321,7 +325,7 @@ int deblend(float *image,
       ss=0.;
       for(k=0;k<npeaks;k++)
         ss+=weights[k]*templates[i+j*nx+nx*ny*k];
-      if(ss>.1) {
+      if(ss>10.*sigma) {
         for(k=0;k<npeaks;k++)
           cimages[i+j*nx+nx*ny*k]= 
             image[i+j*nx]*weights[k]*templates[i+j*nx+nx*ny*k]/ss;
@@ -330,7 +334,7 @@ int deblend(float *image,
         ss=0.;
         for(k=0;k<npeaks;k++)
           ss+=weights[k]*stemplates[i+j*nx+nx*ny*k];
-        if(ss>0.01) {
+        if(ss>sigma) {
           for(k=0;k<npeaks;k++)
             cimages[i+j*nx+nx*ny*k]= 
               image[i+j*nx]*weights[k]*stemplates[i+j*nx+nx*ny*k]/ss;
@@ -338,6 +342,7 @@ int deblend(float *image,
         }
       }
     }
+#if 1
   fr=(float *) malloc(npeaks*sizeof(float));
   for(k=0;k<npeaks;k++) {
     fr[k]=0.;
@@ -365,6 +370,7 @@ int deblend(float *image,
         cimages[i+j*nx+kp*nx*ny]=image[i+j*nx];
       }
     }
+#endif
     
   *nchild=npeaks;
 
