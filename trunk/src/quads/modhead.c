@@ -42,11 +42,13 @@ int main(int argc, char *argv[])
       if (argc == 4)  /* write or overwrite the keyword */
       {
           /* check if this is a protected keyword that must not be changed */
-          if (*card && fits_get_keyclass(card) == TYP_STRUC_KEY)
-          {
+		  /*
+			if (*card && fits_get_keyclass(card) == TYP_STRUC_KEY)
+			{
             printf("Protected keyword cannot be modified.\n");
-          }
-          else
+			}
+			else
+		  */
           {
             /* get the comment string */
             if (*card)fits_parse_value(card, oldvalue, comment, &status);
