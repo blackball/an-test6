@@ -590,6 +590,10 @@ static void write_hits(int fieldnum, pl* matches) {
 				pl_free(cache->matches);
 			}
 		}
+		if (matchfile_fix_header(mf)) {
+			fprintf(stderr, "Failed to fix matchfile header.\n");
+			goto bailout;
+		}
 		goto bailout;
 	}
 
@@ -633,6 +637,10 @@ static void write_hits(int fieldnum, pl* matches) {
 
 			if (cache->fieldnum != nextfld)
 				break;
+		}
+		if (matchfile_fix_header(mf)) {
+			fprintf(stderr, "Failed to fix matchfile header.\n");
+			goto bailout;
 		}
 	} else {
 		// cache it!
