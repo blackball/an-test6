@@ -1,5 +1,7 @@
 // borrowed from http://rlove.org/log/2005102601.
+
 #if __GNUC__ >= 3
+
 //# define inline		inline __attribute__ ((always_inline))
 # define __pure		__attribute__ ((pure))
 # define __const	__attribute__ ((const))
@@ -12,7 +14,9 @@
 # define __packed	__attribute__ ((packed))
 # define likely(x)	__builtin_expect (!!(x), 1)
 # define unlikely(x)	__builtin_expect (!!(x), 0)
+
 #else
+
 # define inline		/* no inline */
 # define __pure		/* no pure */
 # define __const	/* no const */
@@ -25,4 +29,5 @@
 # define __packed	/* no packed */
 # define likely(x)	(x)
 # define unlikely(x)	(x)
+
 #endif
