@@ -104,7 +104,6 @@ int main(int argc, char** args) {
 			timeout.tv_usec = 0;
 			FD_ZERO(&set);
 			FD_SET(sock, &set);
-			printf("select()...\n");
 			res = select(sock+1, &set, NULL, NULL, &timeout);
 			if (res == -1) {
 				if (errno != EINTR) {
@@ -120,7 +119,6 @@ int main(int argc, char** args) {
 		}
 		if (bailout)
 			break;
-		printf("accept()...\n");
 		s = accept(sock, (struct sockaddr*)&clientaddr, &addrsz);
 		if (s == -1) {
 			fprintf(stderr, "Error: failed to accept() on socket: %s\n", strerror(errno));
@@ -131,7 +129,7 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, sizeof(clientaddr));
 			continue;
 		}
-		printf("Connection from %s\n", inet_ntoa(clientaddr.sin_addr));
+		printf("Connection from %s: ", inet_ntoa(clientaddr.sin_addr));
 		fflush(stdout);
 
 		fid = fdopen(s, "a+b");
