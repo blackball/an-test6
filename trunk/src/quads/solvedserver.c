@@ -34,6 +34,7 @@ int main(int argc, char** args) {
 	struct sockaddr_in addr;
 	int port = 6789;
 	char* solvedfnpattern = "solved.%02i";
+	unsigned int opt;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -56,6 +57,12 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	opt = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+		fprintf(stderr, "Warning: failed to setsockopt() to reuse address.\n");
+	}
+
+	memset(&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(port);
