@@ -3,7 +3,7 @@
    @file    simple.c
    @author  N. Devillard
    @date    Jan 1999
-   @version $Revision: 1.3 $
+   @version $Revision: 1.4 $
    @brief   Simple FITS access routines.
 
    This module offers a number of very basic low-level FITS access
@@ -12,10 +12,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: simple.c,v 1.3 2006/06/15 15:05:06 dlang Exp $
+    $Id: simple.c,v 1.4 2006/06/27 17:40:45 dlang Exp $
     $Author: dlang $
-    $Date: 2006/06/15 15:05:06 $
-    $Revision: 1.3 $
+    $Date: 2006/06/27 17:40:45 $
+    $Revision: 1.4 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -581,6 +581,7 @@ char * qfits_query_card(
     exp_key = qfits_expand_keyword(keyword) ;
 
     /* Memory-map the FITS header of the input file  */
+	hs = -1;
     qfits_get_hdrinfo(filename, 0, NULL, &hs) ;
     if (hs < 1) {
         qfits_error("error getting FITS header size for %s", filename);
@@ -671,6 +672,7 @@ int qfits_replace_card(
      * Memory-map the FITS header of the input file 
      */
 
+	hs = -1;
     qfits_get_hdrinfo(filename, 0, NULL, &hs) ;
     if (hs < 1) {
         qfits_error("error getting FITS header size for %s", filename);
