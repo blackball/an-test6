@@ -555,7 +555,7 @@ char * qfits_getcomment(char * line) ;
   Value, comment, and original line might be NULL pointers.
  */
 /*----------------------------------------------------------------------------*/
-qfits_header * qfits_header_read(char * filename) ;
+qfits_header * qfits_header_read(const char * filename) ;
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -600,7 +600,7 @@ qfits_header * qfits_header_read_hdr_string(
   Returns NULL in case of error.
  */
 /*----------------------------------------------------------------------------*/
-qfits_header * qfits_header_readext(char * filename, int xtnum) ;
+qfits_header * qfits_header_readext(const char * filename, int xtnum) ;
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -624,7 +624,7 @@ void qfits_zeropad(char * filename) ;
   0 else. If the file does not exist, returns -1.
  */
 /*----------------------------------------------------------------------------*/
-int is_fits_file(char *filename) ;
+int is_fits_file(const char *filename) ;
 /* FITS header constants */
 
 /** FITS block size */
@@ -1460,7 +1460,7 @@ char * qfits_query_ext(char * filename, const char * keyword, int xtnum) ;
   extension is found, and -1 if an error occurred.
  */
 /*----------------------------------------------------------------------------*/
-int qfits_query_n_ext(char * filename) ;
+int qfits_query_n_ext(const char * filename) ;
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -1587,7 +1587,7 @@ int qfits_get_type(char * s) ;
  */
 /*----------------------------------------------------------------------------*/
 int qfits_get_hdrinfo(
-        char * filename,
+					  const char * filename,
         int    xtnum,
         int  * seg_start,
         int  * seg_size) ;
@@ -1612,7 +1612,7 @@ int qfits_get_hdrinfo(
  */
 /*----------------------------------------------------------------------------*/
 int qfits_get_datinfo(
-        char * filename,
+					  const char * filename,
         int    xtnum,
         int  * seg_start,
         int  * seg_size) ;

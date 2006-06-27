@@ -3,7 +3,7 @@
   @file		cache.c
   @author	N. Devillard
   @date		Mar 2001
-  @version	$Revision: 1.3 $
+  @version	$Revision: 1.4 $
   @brief	FITS caching capabilities
 
   This modules implements a cache for FITS access routines.
@@ -14,10 +14,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: cache.c,v 1.3 2006/05/12 20:56:59 dlang Exp $
+	$Id: cache.c,v 1.4 2006/06/27 20:10:49 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/05/12 20:56:59 $
-	$Revision: 1.3 $
+	$Date: 2006/06/27 20:10:49 $
+	$Revision: 1.4 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -106,8 +106,8 @@ static int qfits_cache_init = 0 ;
  -----------------------------------------------------------------------------*/
 
 static void qfits_cache_activate(void);
-static int qfits_is_cached(char * filename);
-static int qfits_cache_add(char * name);
+static int qfits_is_cached(const char * filename);
+static int qfits_cache_add(const char * name);
 
 /*-----------------------------------------------------------------------------
   							Function codes
@@ -180,7 +180,7 @@ void qfits_cache_purge(void)
   @return   int 1 if in the cache, 0 if not
  */
 /*----------------------------------------------------------------------------*/
-static int qfits_is_cached(char * filename)
+static int qfits_is_cached(const char * filename)
 {
 	int	        i, n ;
 	struct stat sta ;
@@ -311,7 +311,7 @@ void qfits_cache_dump(void)
   of the FITS file.
  */
 /*----------------------------------------------------------------------------*/
-int	qfits_query(char * filename, int what)
+int	qfits_query(const char * filename, int what)
 {
 	int	rank ;
 	int	which ;
@@ -404,7 +404,7 @@ int	qfits_query(char * filename, int what)
     and extension data start.
  */
 /*----------------------------------------------------------------------------*/
-static int qfits_cache_add(char * filename)
+static int qfits_cache_add(const char * filename)
 {
 	FILE    *	in ;
 	int *off_hdr = NULL;

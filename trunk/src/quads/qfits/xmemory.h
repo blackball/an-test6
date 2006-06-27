@@ -3,7 +3,7 @@
   @file     xmemory.h
   @author   Nicolas Devillard
   @date     Oct 2000
-  @version  $Revision: 1.1 $
+  @version  $Revision: 1.2 $
   @brief    POSIX-compatible extended memory handling.
 
   xmemory is a small and efficient module offering memory extension
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: xmemory.h,v 1.1 2006/03/16 22:10:26 dlang Exp $
+	$Id: xmemory.h,v 1.2 2006/06/27 20:10:49 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/16 22:10:26 $
-	$Revision: 1.1 $
+	$Date: 2006/06/27 20:10:49 $
+	$Revision: 1.2 $
 */
 
 #ifndef XMEMORY_H
@@ -71,7 +71,7 @@ void * 	xmemory_calloc(size_t, size_t, const char *, int) ;
 void * 	xmemory_realloc(void *, size_t, const char *, int) ;
 void   	xmemory_free(void *, const char *, int) ;
 char * 	xmemory_strdup(const char *, const char *, int) ;
-char *	xmemory_falloc(char *, size_t, size_t *, const char *, int) ;
+char *	xmemory_falloc(const char *, size_t, size_t *, const char *, int) ;
 void    xmemory_fdealloc(void *, size_t, size_t, const char *, int) ;
 
 void xmemory_status_(const char * filename, int lineno) ;
