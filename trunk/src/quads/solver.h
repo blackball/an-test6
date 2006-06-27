@@ -21,7 +21,6 @@ struct solver_params {
 	int startobj;
 	int endobj;
 	int maxtries;
-	int max_matches_needed;
 	double codetol;
 	bool quitNow;
 	int fieldid;

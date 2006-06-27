@@ -63,8 +63,6 @@ double index_scale_lower;
 int fieldid;
 int indexid;
 int healpix;
-int nagree;
-int maxnagree;
 double agreetol;
 bool do_verify;
 int nagree_toverify;
@@ -148,8 +146,6 @@ int main(int argc, char *argv[]) {
 		fieldid = 0;
 		indexid = 0;
 		healpix = -1;
-		nagree = 4;
-		maxnagree = 0;
 		agreetol = 0.0;
 		nagree_toverify = 0;
 		verify_dist2 = 0.0;
@@ -190,8 +186,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "enddepth %i\n", enddepth);
 		fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
 		fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
-		fprintf(stderr, "num-to-agree %i\n", nagree);
-		fprintf(stderr, "max-num-to-agree %i\n", maxnagree);
 		fprintf(stderr, "agreetol %g\n", agreetol);
 		fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
 		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
@@ -398,8 +392,6 @@ int read_parameters() {
 					"    fieldunits_lower <arcsec-per-pixel>\n"
 					"    fieldunits_upper <arcsec-per-pixel>\n"
 					"    index_lower <index-size-lower-bound-fraction>\n"
-					"    nagree <min-to-agree>\n"
-					"    maxnagree <max-to-agree>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    nagree_toverify <nagree>\n"
@@ -420,10 +412,6 @@ int read_parameters() {
 			ycolname = strdup(nextword);
 		} else if (is_word(buffer, "threads ", &nextword)) {
 			threads = atoi(nextword);
-		} else if (is_word(buffer, "nagree ", &nextword)) {
-			nagree = atoi(nextword);
-		} else if (is_word(buffer, "maxnagree ", &nextword)) {
-			maxnagree = atoi(nextword);
 		} else if (is_word(buffer, "agreetol ", &nextword)) {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "index ", &nextword)) {
@@ -784,7 +772,6 @@ void* solvethread_run(void* varg) {
 	solver.codekd = codetree;
 	solver.endobj = enddepth;
 	solver.maxtries = 0;
-	solver.max_matches_needed = maxnagree;
 	solver.codetol = codetol;
 	solver.handlehit = handlehit;
 
