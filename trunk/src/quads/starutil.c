@@ -97,52 +97,48 @@ inline double distsq2arc(double dist2) {
 
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
-void star_coords(double *s, double *r, double *x, double *y)
-{
+inline void star_coords(double *s, double *r, double *x, double *y) {
 	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
-	if (sdotr <= 0.0) {
-		fprintf(stderr, "ERROR (star_coords) -- s dot r <=0; undefined projection.\n");
-		return ;
-	}
-
+	assert(sdotr > 0.0);
 	if (r[2] == 1.0) {
-		*x = s[0] / s[2];
-		*y = s[1] / s[2];
+		double inv_s2 = 1.0 / s[2];
+		*x = s[0] * inv_s2;
+		*y = s[1] * inv_s2;
 	} else if (r[2] == -1.0) {
-		*x = s[0] / s[2];
-		*y = -s[1] / s[2];
+		double inv_s2 = 1.0 / s[2];
+		*x =  s[0] * inv_s2;
+		*y = -s[1] * inv_s2;
 	} else {
 		double etax, etay, etaz, xix, xiy, xiz, eta_norm;
+		double inv_en, inv_sdotr;
 		// eta is a vector perpendicular to r
 		etax = -r[1];
-		etay = + r[0];
+		etay =  r[0];
 		etaz = 0.0;
 		eta_norm = sqrt(etax * etax + etay * etay);
-		etax /= eta_norm;
-		etay /= eta_norm;
+		inv_en = 1.0 / eta_norm;
+		etax *= inv_en;
+		etay *= inv_en;
 		// xi =  r cross eta
 		xix = -r[2] * etay;
-		xiy = r[2] * etax;
-		xiz = r[0] * etay - r[1] * etax;
-
-		*x = s[0] * xix / sdotr +
-		     s[1] * xiy / sdotr +
-		     s[2] * xiz / sdotr;
-		*y = s[0] * etax / sdotr +
-		     s[1] * etay / sdotr;
+		xiy =  r[2] * etax;
+		xiz =  r[0] * etay - r[1] * etax;
+		inv_sdotr = 1.0 / sdotr;
+		*x = (s[0] * xix + s[1] * xiy + s[2] * xiz) * inv_sdotr;
+		*y = (s[0] * etax + s[1] * etay) * inv_sdotr;
 	}
 }
 
-void star_midpoint(double* mid, double* A, double* B)
-{
+inline void star_midpoint(double* mid, double* A, double* B) {
 	double len;
-	// we don't actually need to divide by 2 because
-	// we immediately renormalize it...
+	double invlen;
+	// we don't divide by 2 because we immediately renormalize it...
 	mid[0] = A[0] + B[0];
 	mid[1] = A[1] + B[1];
 	mid[2] = A[2] + B[2];
 	len = sqrt(square(mid[0]) + square(mid[1]) + square(mid[2]));
-	mid[0] /= len;
-	mid[1] /= len;
-	mid[2] /= len;
+	invlen = 1.0 / len;
+	mid[0] *= invlen;
+	mid[1] *= invlen;
+	mid[2] *= invlen;
 }

@@ -9,8 +9,9 @@ CFLAGS :=
 #CFLAGS	+= -g
 #CFLAGS += -O0
 #CFLAGS += -O2
-#CFLAGS += -pg
-CFLAGS += -O3 -fomit-frame-pointer -ffast-math
+CFLAGS += -pg
+#CFLAGS += -fomit-frame-pointer
+CFLAGS += -O3 -ffast-math
 
 # What functions were and weren't inlined?
 # -Winline
