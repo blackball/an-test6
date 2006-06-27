@@ -1,0 +1,12 @@
+#! /bin/bash
+
+if [ $# -ne 2 ]; then
+  echo "usage <file> <fieldid>"
+  exit
+fi
+
+file="$1"
+fieldid="$2"
+
+fitscopy "$file[1][col *;fieldid=$fieldid]" "$file.tmp" && \
+mv "$file.tmp" "$file"
