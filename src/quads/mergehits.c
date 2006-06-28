@@ -230,9 +230,9 @@ void write_field(pl* hits,
 	}
 }
 
-Inline void add_correspondence(uint* starids, uint* fieldids,
-							   uint starid, uint fieldid,
-							   int* p_nids, int* p_ok) {
+void add_correspondence(uint* starids, uint* fieldids,
+						uint starid, uint fieldid,
+						int* p_nids, int* p_ok) {
 	int i;
 	int ok = 1;
 	for (i=0; i<(*p_nids); i++) {
