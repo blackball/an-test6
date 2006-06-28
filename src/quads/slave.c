@@ -825,6 +825,7 @@ void* solvethread_run(void* varg) {
 				fprintf(stderr, "Field %i: file %s exists; field has been solved.\n",
 						fieldnum, fn);
 				write_hits(fieldnum, NULL);
+				free_xy(thisfield);
 				continue;
 			}
 			solver.solvedfn = strdup(fn);
@@ -836,6 +837,7 @@ void* solvethread_run(void* varg) {
 				// field has already been solved.
 				fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
 				write_hits(fieldnum, NULL);
+				free_xy(thisfield);
 				continue;
 			}
 		}

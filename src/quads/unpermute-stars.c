@@ -48,8 +48,10 @@ int main(int argc, char **args) {
 	char* baseout = NULL;
 	char* fn;
 	int i;
+	qfits_header* starhdr;
 	qfits_header* hdr;
 	int healpix;
+	int starhp;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -80,6 +82,11 @@ int main(int argc, char **args) {
 		fprintf(stderr, "Failed to read star kdtree from %s.\n", fn);
 		exit(-1);
 	}
+	starhdr = qfits_header_read(fn);
+	if (!starhdr) {
+		fprintf(stderr, "Failed to read star kdtree header from %s.\n", fn);
+		exit(-1);
+	}
 	free_fn(fn);
 
 	fn = mk_catfn(basein);
@@ -101,9 +108,17 @@ int main(int argc, char **args) {
 	free_fn(fn);
 
 	healpix = idin->healpix;
-	if (catin->healpix != idin->healpix) {
+	if (catin->healpix != healpix) {
 		fprintf(stderr, "Catalog header says it's healpix %i, but idfile say %i.\n",
 				catin->healpix, idin->healpix);
+	}
+	starhp = qfits_header_getint(starhdr, "HEALPIX", -1);
+	if (starhp == -1)
+		fprintf(stderr, "Warning, input star kdtree didn't have a HEALPIX header.\n");
+	else if (starhp != healpix) {
+		fprintf(stderr, "Idfile says it's healpix %i, but star kdtree says %i.\n",
+				healpix, starhp);
+		exit(-1);
 	}
 
 	fn = mk_catfn(baseout);
@@ -124,14 +139,20 @@ int main(int argc, char **args) {
 	}
 	free_fn(fn);
 
-	/*
-	  printf("Computing inverse permutation...\n");
-	  invperm = malloc(treein->ndata * sizeof(int));
-	  kdtree_inverse_permutation(treein, invperm);
-	*/
-
 	catout->healpix = healpix;
 	idout ->healpix = healpix;
+
+	qfits_header_add(catout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
+	fits_add_args(catout->header, args, argc);
+	qfits_header_add(catout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
+	fits_copy_all_headers(catin->header, catout->header, "HISTORY");
+	fits_copy_all_headers(catin->header, catout->header, "COMMENT");
+
+	qfits_header_add(idout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
+	fits_add_args(idout->header, args, argc);
+	qfits_header_add(idout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
+	fits_copy_all_headers(idin->header, idout->header, "HISTORY");
+	fits_copy_all_headers(idin->header, idout->header, "COMMENT");
 
 	if (catalog_write_header(catout) ||
 		idfile_write_header(idout)) {
@@ -160,9 +181,6 @@ int main(int argc, char **args) {
 		exit(-1);
 	}
 
-	catalog_close(catin);
-	idfile_close(idin);
-
 	treeout = calloc(1, sizeof(kdtree_t));
 	treeout->tree   = treein->tree;
 	treeout->data   = treein->data;
@@ -170,9 +188,17 @@ int main(int argc, char **args) {
 	treeout->ndim   = treein->ndim;
 	treeout->nnodes = treein->nnodes;
 
-	hdr = qfits_header_new();
+	hdr = qfits_header_default();
 	qfits_header_add(hdr, "AN_FILE", "SKDT", "This is a star kdtree.", NULL);
 	fits_copy_header(catin->header, hdr, "HEALPIX");
+	qfits_header_add(hdr, "HISTORY", "unpermute-stars command line:", NULL, NULL);
+	fits_add_args(hdr, args, argc);
+	qfits_header_add(hdr, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
+	fits_copy_all_headers(starhdr, hdr, "HISTORY");
+	fits_copy_all_headers(starhdr, hdr, "COMMENT");
+
+	catalog_close(catin);
+	idfile_close(idin);
 
 	fn = mk_streefn(baseout);
 	printf("Writing star kdtree to %s ...\n", fn);
@@ -184,7 +210,7 @@ int main(int argc, char **args) {
 	free(treeout);
 
 	kdtree_close(treein);
-	//free(invperm);
+	qfits_header_destroy(starhdr);
 
 	return 0;
 }

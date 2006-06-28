@@ -100,17 +100,17 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
 
-	hdr = qfits_header_new();
+	hdr = qfits_header_default();
 	qfits_header_add(hdr, "AN_FILE", "CKDT", "This file is a code kdtree.", NULL);
 	sprintf(val, "%u", Nleaf);
 	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
 	sprintf(val, "%u", levels);
 	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
-
 	fits_copy_header(codes->header, hdr, "INDEXID");
 	fits_copy_header(codes->header, hdr, "HEALPIX");
-	qfits_header_add(hdr, "COMMENT", "codetree command line:", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "codetree command line:", NULL, NULL);
 	fits_add_args(hdr, argv, argc);
+	qfits_header_add(hdr, "HISTORY", "(end of codetree command line)", NULL, NULL);
 
 	rtn = kdtree_fits_write_file(codekd, treefname, hdr);
 	qfits_header_destroy(hdr);

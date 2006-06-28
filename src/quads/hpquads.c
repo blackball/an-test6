@@ -188,6 +188,7 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars) {
 
 static void
 got_quad(pquad* pq, il* stars) {
+	// here we add the invariant that cx <= dx.
 	if (pq->cx <= pq->dx) {
 		codefile_write_code(codes, pq->cx, pq->cy, pq->dx, pq->dy);
 		quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridC, pq->staridD);
@@ -309,12 +310,12 @@ static void shifted_healpix_bin_stars(int numstars, il* starindices,
 		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside*3);
 		healpix_decompose(hp, &bighp, &x, &y, Nside*3);
 		// now we compute which pixel this sub-pixel belongs to.
-		if (
+		if (unlikely(
 			// if it's on the border...
 			((x == 0) || (x == (Nside*3-1)) ||
 			 (y == 0) || (y == (Nside*3-1))) &&
 			// and it's not the center pixel itself...
-			(((x % 3) != dx) || ((y % 3) != dy)) ) {
+			(((x % 3) != dx) || ((y % 3) != dy)) )) {
 			// this sub-pixel is on the border of its big healpix.
 			// this happens rarely, so do a relatively expensive check:
 			// just find its neighbours and take the first one that has the
@@ -535,10 +536,13 @@ int main(int argc, char** argv)
 	if (cat->healpix == -1) {
 		printf("Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
-	qfits_header_add(quads->header, "COMMENT", "hpquads command line:", NULL, NULL);
-	qfits_header_add(codes->header, "COMMENT", "hpquads command line:", NULL, NULL);
+	qfits_header_add(quads->header, "HISTORY", "hpquads command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
+	qfits_header_add(quads->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
+
+	qfits_header_add(codes->header, "HISTORY", "hpquads command line:", NULL, NULL);
 	fits_add_args(codes->header, argv, argc);
+	qfits_header_add(codes->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
 
     if (quadfile_write_header(quads)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);

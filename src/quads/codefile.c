@@ -75,7 +75,7 @@ codefile* codefile_open(char* fn, int modifiable)
 	}
 
 	if (fits_check_endian(header) ||
-	        fits_check_double_size(header)) {
+		fits_check_double_size(header)) {
 		fprintf(stderr, "File %s was written with wrong endianness or double size.\n", fn);
 		goto bailout;
 	}

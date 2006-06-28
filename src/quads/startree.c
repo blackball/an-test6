@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
-	hdr = qfits_header_new();
+	hdr = qfits_header_default();
 	qfits_header_add(hdr, "AN_FILE", "SKDT", "This file is a star kdtree.", NULL);
 	sprintf(val, "%u", Nleaf);
 	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
@@ -130,8 +130,9 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(hdr, "KEEP", val, "Number of stars kept.", NULL);
 
 	fits_copy_header(cat->header, hdr, "HEALPIX");
-	qfits_header_add(hdr, "COMMENT", "startree command line:", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "startree command line:", NULL, NULL);
 	fits_add_args(hdr, argv, argc);
+	qfits_header_add(hdr, "HISTORY", "(end of startree command line)", NULL, NULL);
 
 	if (kdtree_fits_write_file(starkd, treefname, hdr)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");
