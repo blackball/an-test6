@@ -406,8 +406,10 @@ static int read_parameters() {
 		} else if (is_word(buffer, "do_correspond ", &nextword)) {
 			do_correspond = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
+			free(xcolname);
 			xcolname = strdup(nextword);
 		} else if (is_word(buffer, "ycol ", &nextword)) {
+			free(ycolname);
 			ycolname = strdup(nextword);
 		} else if (is_word(buffer, "threads ", &nextword)) {
 			threads = atoi(nextword);
@@ -548,9 +550,8 @@ static void write_hits(int fieldnum, pl* matches) {
 	// DEBUG - ensure cache is empty.
 	if (fieldnum == -1) {
 		cached_hits* cache;
-		if (!bl_size(cached)) {
-			goto bailout;
-		}
+		if (!bl_size(cached))
+			goto done_cacheflush;
 		fprintf(stderr, "Warning: cache was not empty at the end of the run.");
 		fprintf(stderr, "Cache: [ ");
 		for (k=0; k<bl_size(cached); k++) {
@@ -579,8 +580,9 @@ static void write_hits(int fieldnum, pl* matches) {
 		}
 		if (matchfile_fix_header(mf)) {
 			fprintf(stderr, "Failed to fix matchfile header.\n");
-			goto bailout;
 		}
+	done_cacheflush:
+		bl_free(cached);
 		goto bailout;
 	}
 
@@ -704,6 +706,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 				if (mo1->overlap >= overlap_tosolve)
 					solved = TRUE;
 			}
+			pl_free(list);
 		}
 		if (mo->overlap >= overlap_tokeep)
 			pl_append(my->verified, mo);

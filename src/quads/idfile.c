@@ -13,20 +13,20 @@
 
 static idfile* new_idfile()
 {
-	idfile* qf = calloc(1, sizeof(idfile));
-	if (!qf) {
+	idfile* id = calloc(1, sizeof(idfile));
+	if (!id) {
 		fprintf(stderr, "Couldn't malloc a idfile struct: %s\n", strerror(errno));
 		return NULL;
 	}
-	qf->healpix = -1;
-	return qf;
+	id->healpix = -1;
+	return id;
 }
 
 idfile* idfile_open(char* fn, int modifiable)
 {
 	FILE* fid = NULL;
 	qfits_header* header = NULL;
-	idfile* qf = NULL;
+	idfile* id = NULL;
 	int off, sizeanids;
 	int size;
 	void* map;
@@ -52,28 +52,28 @@ idfile* idfile_open(char* fn, int modifiable)
 		goto bailout;
 	}
 
-	qf = new_idfile();
-	if (!qf)
+	id = new_idfile();
+	if (!id)
 		goto bailout;
 
-	qf->numstars = qfits_header_getint(header, "NSTARS", -1);
-	qf->healpix = qfits_header_getint(header, "HEALPIX", -1);
+	id->numstars = qfits_header_getint(header, "NSTARS", -1);
+	id->healpix = qfits_header_getint(header, "HEALPIX", -1);
 	qfits_header_destroy(header);
 
-	if (qf->numstars == -1) {
+	if (id->numstars == -1) {
 		fprintf(stderr, "Couldn't find NUMSTARS of stars entries in FITS header.");
 		goto bailout;
 	}
-	fprintf(stderr, "nstars %u\n", qf->numstars);
+	fprintf(stderr, "nstars %u\n", id->numstars);
 
 	if (fits_find_table_column(fn, "ids", &off, &sizeanids)) {
 		fprintf(stderr, "Couldn't find \"ids\" column in FITS file.");
 		goto bailout;
 	}
 
-	if (fits_blocks_needed(qf->numstars * sizeof(uint64_t)) != sizeanids) {
+	if (fits_blocks_needed(id->numstars * sizeof(uint64_t)) != sizeanids) {
 		fprintf(stderr, "Number of stars promised does jive with the table size: %u vs %u.\n",
-		        fits_blocks_needed(qf->numstars * sizeof(uint64_t)), sizeanids);
+		        fits_blocks_needed(id->numstars * sizeof(uint64_t)), sizeanids);
 		goto bailout;
 	}
 
@@ -93,91 +93,91 @@ idfile* idfile_open(char* fn, int modifiable)
 		goto bailout;
 	}
 
-	qf->anidarray = (uint64_t*)(map + off);
-	qf->mmap_base = map;
-	qf->mmap_size = size;
-	return qf;
+	id->anidarray = (uint64_t*)(map + off);
+	id->mmap_base = map;
+	id->mmap_size = size;
+	return id;
 
 bailout:
-	if (qf)
-		free(qf);
+	if (id)
+		free(id);
 	if (fid)
 		fclose(fid);
 	return NULL;
 }
 
-int idfile_close(idfile* qf)
+int idfile_close(idfile* id)
 {
 	int rtn = 0;
-	if (qf->mmap_base)
-		if (munmap(qf->mmap_base, qf->mmap_size)) {
+	if (id->mmap_base)
+		if (munmap(id->mmap_base, id->mmap_size)) {
 			fprintf(stderr, "Error munmapping idfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
-	if (qf->fid) {
-		fits_pad_file(qf->fid);
-		if (fclose(qf->fid)) {
+	if (id->fid) {
+		fits_pad_file(id->fid);
+		if (fclose(id->fid)) {
 			fprintf(stderr, "Error closing idfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
 	}
-	if (qf->header)
-		qfits_header_destroy(qf->header);
+	if (id->header)
+		qfits_header_destroy(id->header);
 
-	free(qf);
+	free(id);
 	return rtn;
 }
 
 idfile* idfile_open_for_writing(char* fn)
 {
-	idfile* qf;
+	idfile* id;
 
-	qf = new_idfile();
-	if (!qf)
+	id = new_idfile();
+	if (!id)
 		goto bailout;
-	qf->fid = fopen(fn, "wb");
-	if (!qf->fid) {
+	id->fid = fopen(fn, "wb");
+	if (!id->fid) {
 		fprintf(stderr, "Couldn't open file %s for FITS output: %s\n", fn, strerror(errno));
 		goto bailout;
 	}
 
 	// the header
-	qf->header = qfits_table_prim_header_default();
-	fits_add_endian(qf->header);
+	id->header = qfits_table_prim_header_default();
+	fits_add_endian(id->header);
 
 	// These are be placeholder values...
-	qfits_header_add(qf->header, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
-	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
-	qfits_header_add(qf->header, "HEALPIX", "-1", "Healpix covered by this file.", NULL);
-	qfits_header_add(qf->header, "COMMENT", "This is a flat array of ANIDs for each catalog star.", NULL, NULL);
-	qfits_header_add(qf->header, "COMMENT", " (each A.N id is a native-endian uint64)", NULL, NULL);
+	qfits_header_add(id->header, "AN_FILE", "ID", "This file lists Astrometry.net star IDs for catalog stars.", NULL);
+	qfits_header_add(id->header, "NSTARS", "0", "Number of stars used.", NULL);
+	qfits_header_add(id->header, "HEALPIX", "-1", "Healpix covered by this file.", NULL);
+	qfits_header_add(id->header, "COMMENT", "This is a flat array of ANIDs for each catalog star.", NULL, NULL);
+	qfits_header_add(id->header, "COMMENT", " (each A.N id is a native-endian uint64)", NULL, NULL);
 
-	return qf;
+	return id;
 
 bailout:
-	if (qf) {
-		if (qf->fid)
-			fclose(qf->fid);
-		free(qf);
+	if (id) {
+		if (id->fid)
+			fclose(id->fid);
+		free(id);
 	}
 	return NULL;
 }
 
-int idfile_write_anid(idfile* qf, uint64_t anid)
+int idfile_write_anid(idfile* id, uint64_t anid)
 {
-	if (!qf->fid) {
+	if (!id->fid) {
 		fprintf(stderr, "idfile_fits_write_anid: fid is null.\n");
 		return -1;
 	}
-	if (fwrite(&anid, sizeof(uint64_t), 1, qf->fid) == 1) {
-		qf->numstars++;
+	if (fwrite(&anid, sizeof(uint64_t), 1, id->fid) == 1) {
+		id->numstars++;
 		return 0;
 	}
 	fprintf(stderr, "idfile_fits_write_anid: failed to write: %s\n", strerror(errno));
 	return -1;
 }
 
-int idfile_fix_header(idfile* qf)
+int idfile_fix_header(idfile* id)
 {
 	off_t offset;
 	off_t new_header_end;
@@ -189,81 +189,81 @@ int idfile_fix_header(idfile* qf)
 	uint ncols, nrows, tablesize;
 	char* fn;
 
-	if (!qf->fid) {
+	if (!id->fid) {
 		fprintf(stderr, "idfile_fix_header: fid is null.\n");
 		return -1;
 	}
 
-	offset = ftello(qf->fid);
-	fseeko(qf->fid, 0, SEEK_SET);
+	offset = ftello(id->fid);
+	fseeko(id->fid, 0, SEEK_SET);
 
 	// fill in the real values...
-	sprintf(val, "%u", qf->numstars);
-	qfits_header_mod(qf->header, "NSTARS", val, "Number of stars.");
-	sprintf(val, "%u", qf->healpix);
-	qfits_header_mod(qf->header, "HEALPIX", val, "Healpix covered by this file.");
+	sprintf(val, "%u", id->numstars);
+	qfits_header_mod(id->header, "NSTARS", val, "Number of stars.");
+	sprintf(val, "%i", id->healpix);
+	qfits_header_mod(id->header, "HEALPIX", val, "Healpix covered by this file.");
 
 	dataptr = NULL;
 	datasize = sizeof(uint64_t);
 	ncols = 1;
-	nrows = qf->numstars;
+	nrows = id->numstars;
 	tablesize = datasize * nrows * ncols;
 	fn = "";
 	table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
 	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
 	               "ids",
 	               "", "", "", 0, 0, 0, 0, 0);
-	qfits_header_dump(qf->header, qf->fid);
+	qfits_header_dump(id->header, id->fid);
 	tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, qf->fid);
+	qfits_header_dump(tablehdr, id->fid);
 	qfits_table_close(table);
 	qfits_header_destroy(tablehdr);
 
-	new_header_end = ftello(qf->fid);
+	new_header_end = ftello(id->fid);
 
-	if (new_header_end != qf->header_end) {
+	if (new_header_end != id->header_end) {
 		fprintf(stderr, "Warning: idfile header used to end at %lu, "
-		        "now it ends at %lu.\n", (unsigned long)qf->header_end,
+		        "now it ends at %lu.\n", (unsigned long)id->header_end,
 		        (unsigned long)new_header_end);
 		return -1;
 	}
 
-	fseek(qf->fid, offset, SEEK_SET);
+	fseek(id->fid, offset, SEEK_SET);
 
-	fits_pad_file(qf->fid);
+	fits_pad_file(id->fid);
 
 	return 0;
 }
 
-int idfile_write_header(idfile* qf)
+int idfile_write_header(idfile* id)
 {
 	// first table: the quads.
 	int datasize = sizeof(uint64_t);
 	int ncols = 1;
 	// may be dummy
-	int nrows = qf->numstars;
+	int nrows = id->numstars;
 	int tablesize = datasize * nrows * ncols;
 	qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
 	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
 	               "ids", "", "", "", 0, 0, 0, 0, 0);
-	qfits_header_dump(qf->header, qf->fid);
+	qfits_header_dump(id->header, id->fid);
 	qfits_header* tablehdr = qfits_table_ext_header_default(table);
-	qfits_header_dump(tablehdr, qf->fid);
+	qfits_header_dump(tablehdr, id->fid);
 	qfits_table_close(table);
 	qfits_header_destroy(tablehdr);
-	qf->header_end = ftello(qf->fid);
+	id->header_end = ftello(id->fid);
 	return 0;
 }
 
-uint64_t idfile_get_anid(idfile* qf, uint starid) 
+uint64_t idfile_get_anid(idfile* id, uint starid) 
 {
-	if (starid >= qf->numstars) {
+	if (starid >= id->numstars) {
 		fprintf(stderr, "Requested quadid %i, but number of quads is %i. SKY IS FALLING\n",
-		        starid, qf->numstars);
+		        starid, id->numstars);
 		assert(0);
 		return *(int*)0x0; /* explode gracefully */
 	}
 
-	return qf->anidarray[starid];
+	return id->anidarray[starid];
 }
 

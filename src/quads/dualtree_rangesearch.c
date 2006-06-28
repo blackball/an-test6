@@ -191,9 +191,6 @@ void rs_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 
 bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
     rs_params* p = (rs_params*)vparams;
-    double mindistsq;
-    double maxdistsq;
-	//bool allinrange = TRUE;
 
 	// does the bounding box partly overlap the desired range?
     if (p->usemax) {

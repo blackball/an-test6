@@ -240,7 +240,8 @@ char* fits_get_endian_string() {
 
 void fits_add_endian(qfits_header* header) {
 	qfits_header_add(header, "ENDIAN", fits_get_endian_string(), "Endianness detector: u32 0x01020304 written ", NULL);
-	qfits_header_add(header, "COMMENT", " in the order it is stored in memory.", NULL, NULL);
+	qfits_header_add(header, "", NULL, " in the order it is stored in memory.", NULL);
+	// (don't make this a COMMENT because that makes it get separated from the ENDIAN header line.)
 }
 
 int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
