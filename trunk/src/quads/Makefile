@@ -22,7 +22,7 @@ CFLAGS += -O3 -ffast-math
 # check out __attribute__ ((nonnull))
 
 # to turn off asserts:
-CFLAGS += -DNDEBUG
+#CFLAGS += -DNDEBUG
 
 #CFLAGS += -Werror
 

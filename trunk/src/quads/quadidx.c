@@ -77,8 +77,7 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "%u quads, %u stars.\n", quads->numquads, quads->numstars);
 
-	quadlist = malloc(quads->numstars * sizeof(il*));
-	memset(quadlist, 0, quads->numstars * sizeof(il*));
+	quadlist = calloc(quads->numstars, sizeof(il*));
 
 	for (q=0; q<quads->numquads; q++) {
 		uint inds[4];
@@ -118,8 +117,9 @@ int main(int argc, char *argv[]) {
 
 	fits_copy_header(quads->header, qidx->header, "INDEXID");
 	fits_copy_header(quads->header, qidx->header, "HEALPIX");
-	qfits_header_add(quads->header, "COMMENT", "quadidx command line:", NULL, NULL);
+	qfits_header_add(quads->header, "HISTORY", "quadidx command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
+	qfits_header_add(quads->header, "HISTORY", "(end of quadidx command line)", NULL, NULL);
 
 	if (qidxfile_write_header(qidx)) {
  		fprintf(stderr, "Couldn't write qidx header (%s).\n", idxfname);

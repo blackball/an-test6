@@ -189,10 +189,10 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
 		char val[FITS_LINESZ+1];
 		char com[FITS_LINESZ+1];
 		char lin[FITS_LINESZ+1];
-		printf("Adding %i header entries\n", hdr->n);
+		//printf("Adding %i header entries\n", hdr->n);
 		for (i=0; i<hdr->n; i++) {
 			qfits_header_getitem(hdr, i, key, val, com, lin);
-			printf("Adding header key %s\n", key);
+			//printf("Adding header key %s\n", key);
 			qfits_header_add(header, key, val, com, lin);
 		}
 	}
