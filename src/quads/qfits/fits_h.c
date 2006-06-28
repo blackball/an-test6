@@ -3,7 +3,7 @@
   @file		fits_h.c
   @author	N. Devillard
   @date		Mar 2000
-  @version	$Revision: 1.3 $
+  @version	$Revision: 1.4 $
   @brief	FITS header handling
 
   This file contains definition and related methods for the FITS header
@@ -31,10 +31,10 @@
 
 
 /*
-	$Id: fits_h.c,v 1.3 2006/06/27 20:10:49 dlang Exp $
+	$Id: fits_h.c,v 1.4 2006/06/28 16:55:05 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/06/27 20:10:49 $
-	$Revision: 1.3 $
+	$Date: 2006/06/28 16:55:05 $
+	$Revision: 1.4 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -363,21 +363,32 @@ void qfits_header_add(
 	keytuple	*	last ;
 
 	if (hdr==NULL || key==NULL) return ;
-	if (hdr->n<2) return ;
+	if (hdr->n<2) {
+		fprintf(stderr, "Caution, qfits thinks it knows better than you: %s:%i\n", __FILE__, __LINE__);
+		return;
+	}
 
 	first = (keytuple*)hdr->first ;
 	last  = (keytuple*)hdr->last ;
 
 	if (((keytype)first->typ != keytype_top) ||
-		((keytype)last->typ != keytype_end)) return ;
-	
+		((keytype)last->typ != keytype_end)) {
+		fprintf(stderr, "Caution, qfits thinks it knows better than you: %s:%i\n", __FILE__, __LINE__);
+		return;
+	}
+
     /* Create new key tuple */
 	k = keytuple_new(key, val, com, lin);
+
+	/* Don't add duplicate SIMPLE, XTENSION or END entries. */
+	if ((k->typ == keytype_top) || (k->typ == keytype_end)) {
+		return;
+	}
 
     /* Find the last keytuple with same key type */
 	kbf = first ;
 	while (kbf!=NULL) {
-		if ((k->typ>=kbf->typ) && (k->typ<kbf->next->typ)) break ;
+		if ((k->typ>=kbf->typ) && (kbf->next) && (k->typ<kbf->next->typ)) break ;
 		kbf = kbf->next ;
 	}
 	if (kbf==NULL) kbf = last->prev ;
