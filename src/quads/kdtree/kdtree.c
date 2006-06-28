@@ -360,7 +360,7 @@ int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 
 	// if it's the root node, make sure that each value in the permutation
 	// array is present exactly once.
-	if (!nodeid) {
+	if (!nodeid && kd->perm) {
 		unsigned char* counts = calloc(kd->ndata, 1);
 		for (i=node->l; i<=node->r; i++)
 			counts[kd->perm[i]]++;
@@ -424,6 +424,8 @@ real* kdtree_node_get_point(kdtree_t* tree, kdtree_node_t* node, int ind)
 inline
 int kdtree_node_get_index(kdtree_t* tree, kdtree_node_t* node, int ind)
 {
+	if (!tree->perm)
+		return node->l + ind;
 	return tree->perm[(node->l + ind)];
 }
 
@@ -844,7 +846,7 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdists
 	if (!kdtree_node_point_maxdist2_exceeds(kd, node, pt, maxdistsqd)) {
 		for (i=node->l; i<=node->r; i++) {
 			add_result(res, dist2(kd->data + i * kd->ndim, pt, kd->ndim),
-					   kd->perm[i], COORD(i, 0), kd->ndim, &res_size);
+					   (kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim, &res_size);
 		}
 		return;
 	}
@@ -857,7 +859,7 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdists
 				dsqd += delta * delta;
 			}
 			if (dsqd < maxdistsqd) {
-				add_result(res, dsqd, kd->perm[i], COORD(i, 0), kd->ndim,
+				add_result(res, dsqd, (kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim,
 						   &res_size);
 			}
 		}
@@ -1108,7 +1110,6 @@ void kdtree_free(kdtree_t *kd)
 {
 	assert(kd);
 	assert(kd->tree);
-	assert(kd->perm);
 	/* We don't free kd->data */
 	free(kd->perm);
 	free(kd->tree);
