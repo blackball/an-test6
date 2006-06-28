@@ -54,8 +54,13 @@ static inline int dist2_exceeds(real* p1, real* p2, int d, real maxd2) {
 
 void kdtree_inverse_permutation(kdtree_t* tree, int* invperm) {
 	int i;
-	for (i=0; i<tree->ndata; i++)
-		invperm[tree->perm[i]] = i;
+	if (!tree->perm) {
+		for (i=0; i<tree->ndata; i++)
+			invperm[i] = i;
+	} else {
+		for (i=0; i<tree->ndata; i++)
+			invperm[tree->perm[i]] = i;
+	}
 }
 
 int kdtree_compute_levels(int N, int Nleaf) {
@@ -364,10 +369,12 @@ int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 		free(counts);
 	}
 
-	for (i=node->l; i<=node->r; i++) {
-		sum += kd->perm[i];
-		assert(kd->perm[i] >= 0);
-		assert(kd->perm[i] < kd->ndata);
+	if (kd->perm) {
+		for (i=node->l; i<=node->r; i++) {
+			sum += kd->perm[i];
+			assert(kd->perm[i] >= 0);
+			assert(kd->perm[i] < kd->ndata);
+		}
 	}
 	if (ISLEAF(nodeid)) {
 		for (i=node->l; i<=node->r; i++) {
@@ -469,34 +476,6 @@ real kdtree_bb_mindist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2
 }
 
 inline
-real kdtree_bb_mindist2_bailout(real* bblow1, real* bbhigh1,
-								real* bblow2, real* bbhigh2, int dim,
-								real bailout) {
-	real d2 = 0.0;
-	real delta;
-	int i;
-	for (i = 0; i < dim; i++) {
-		real alo, ahi, blo, bhi;
-		alo = bblow1 [i];
-		blo = bblow2 [i];
-		ahi = bbhigh1[i];
-		bhi = bbhigh2[i];
-		if (ahi < blo) {
-			delta = blo - ahi;
-			d2 += delta * delta;
-			if (d2 > bailout)
-				return d2;
-		} else if (bhi < alo) {
-			delta = alo - bhi;
-			d2 += delta * delta;
-			if (d2 > bailout)
-				return d2;
-		} // else delta = 0.0;
-	}
-	return d2;
-}
-
-inline
 real kdtree_bb_mindist2_exceeds(real* bblow1, real* bbhigh1,
 								real* bblow2, real* bbhigh2, int dim,
 								real maxd2) {
@@ -542,32 +521,6 @@ real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2
 		if (delta2 > delta)
 			delta = delta2;
 		d2 += delta * delta;
-	}
-	return d2;
-}
-
-inline
-real kdtree_bb_maxdist2_bailout(real* bblow1, real* bbhigh1,
-								real* bblow2, real* bbhigh2, int dim,
-								real bailout)
-{
-	real d2 = 0.0;
-	real delta;
-	int i;
-	for (i = 0; i < dim; i++) {
-		real alo, ahi, blo, bhi;
-		real delta2;
-		alo = bblow1 [i];
-		ahi = bbhigh1[i];
-		blo = bblow2 [i];
-		bhi = bbhigh2[i];
-		delta  = bhi - alo;
-		delta2 = ahi - blo;
-		if (delta2 > delta)
-			delta = delta2;
-		d2 += delta * delta;
-		if (d2 > bailout)
-			return d2;
 	}
 	return d2;
 }
@@ -623,29 +576,6 @@ real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
 }
 
 inline
-real kdtree_bb_point_mindist2_bailout(real* bblow, real* bbhigh,
-									  real* point, int dim, real bailout) {
-	real d2 = 0.0;
-	real delta;
-	int i;
-	for (i = 0; i < dim; i++) {
-		real lo, hi;
-		lo = bblow[i];
-		hi = bbhigh[i];
-		if (point[i] < lo)
-			delta = lo - point[i];
-		else if (point[i] > hi)
-			delta = point[i] - hi;
-		else
-			continue;
-		d2 += delta * delta;
-		if (d2 > bailout)
-			return d2;
-	}
-	return d2;
-}
-
-inline
 int kdtree_bb_point_mindist2_exceeds(real* bblow, real* bbhigh,
 									 real* point, int dim, real maxd2) {
 	real d2 = 0.0;
@@ -684,29 +614,6 @@ real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh, real* point, int dim)
 			d2 += delta1;
 		else
 			d2 += delta2;
-	}
-	return d2;
-}
-
-inline
-real kdtree_bb_point_maxdist2_bailout(real* bblow, real* bbhigh,
-									  real* point, int dim, double bailout)
-{
-	real d2 = 0.0;
-	real delta1, delta2;
-	int i;
-	for (i = 0; i < dim; i++) {
-		real lo, hi;
-		lo = bblow[i];
-		hi = bbhigh[i];
-		delta1 = (point[i] - lo) * (point[i] - lo);
-		delta2 = (point[i] - hi) * (point[i] - hi);
-		if (delta1 > delta2)
-			d2 += delta1;
-		else
-			d2 += delta2;
-		if (d2 > bailout)
-			return d2;
 	}
 	return d2;
 }
@@ -824,19 +731,6 @@ real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
 }
 
 inline
-real kdtree_node_node_mindist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
-									   kdtree_t* tree2, kdtree_node_t* node2,
-									   real bailout) {
-	int dim = tree1->ndim;
-	real *lo1, *hi1, *lo2, *hi2;
-	lo1 = kdtree_get_bb_low (tree1, node1);
-	hi1 = kdtree_get_bb_high(tree1, node1);
-	lo2 = kdtree_get_bb_low (tree2, node2);
-	hi2 = kdtree_get_bb_high(tree2, node2);
-	return kdtree_bb_mindist2_bailout(lo1, hi1, lo2, hi2, dim, bailout);
-}
-
-inline
 int kdtree_node_node_mindist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
 									  kdtree_t* tree2, kdtree_node_t* node2,
 									  real maxd2) {
@@ -875,34 +769,17 @@ real kdtree_node_node_maxdist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
 	return kdtree_bb_maxdist2_exceeds(lo1, hi1, lo2, hi2, dim, maxd2);
 }
 
-inline
-real kdtree_node_node_maxdist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
-									   kdtree_t* tree2, kdtree_node_t* node2,
-									   real bailout) {
-	int dim = tree1->ndim;
-	real *lo1, *hi1, *lo2, *hi2;
-	lo1 = kdtree_get_bb_low (tree1, node1);
-	hi1 = kdtree_get_bb_high(tree1, node1);
-	lo2 = kdtree_get_bb_low (tree2, node2);
-	hi2 = kdtree_get_bb_high(tree2, node2);
-	return kdtree_bb_maxdist2_bailout(lo1, hi1, lo2, hi2, dim, bailout);
-}
-
 void kdtree_rangesearch_cb_rec(kdtree_t *kd, kdtree_node_t* node,
 							   real *pt, real maxd2,
 							   void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxd2, real* computed_d2, int indx, void* extra),
 							   void* extra) {
-	real smallest_dsqd, largest_dsqd;
 	int i;
 	/* Early exit - FIXME benchmark to see if this actually helps */
-	smallest_dsqd = kdtree_node_point_mindist2_bailout(kd, node, pt, maxd2);
-	//smallest_dsqd = kdtree_node_point_mindist2(kd, node, pt);
-	if (smallest_dsqd > maxd2)
+	if (kdtree_node_point_mindist2_exceeds(kd, node, pt, maxd2))
 		return;
 	/* FIXME benchmark to see if this helps: if the whole node is within
 	   range, grab all its points. */
-	largest_dsqd = kdtree_node_point_maxdist2_bailout(kd, node, pt, maxd2);
-	if (largest_dsqd <= maxd2) {
+	if (!kdtree_node_point_maxdist2_exceeds(kd, node, pt, maxd2)) {
 		for (i=node->l; i<=node->r; i++)
 			rangesearch_callback(kd, pt, maxd2, NULL, i, extra);
 		return;
@@ -1101,15 +978,6 @@ real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 }
 
 inline
-real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
-										real* pt, real bailout) {
-	return kdtree_bb_point_mindist2_bailout
-		(kdtree_get_bb_low(kd, node),
-		 kdtree_get_bb_high(kd, node),
-		 pt, kd->ndim, bailout);
-}
-
-inline
 int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
 									   real* pt, real maxd2) {
 	return kdtree_bb_point_mindist2_exceeds
@@ -1123,15 +991,6 @@ real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 	return kdtree_bb_point_maxdist2(kdtree_get_bb_low(kd, node),
 									kdtree_get_bb_high(kd, node),
 									pt, kd->ndim);
-}
-
-inline
-real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
-										real* pt, real bailout) {
-	return kdtree_bb_point_maxdist2_bailout
-		(kdtree_get_bb_low(kd, node),
-		 kdtree_get_bb_high(kd, node),
-		 pt, kd->ndim, bailout);
 }
 
 inline
