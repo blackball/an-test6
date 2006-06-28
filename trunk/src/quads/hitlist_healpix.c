@@ -505,7 +505,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match,
 	return il_size(mergelist);
 }
 
-void hitlist_healpix_clear(hitlist* hlist) {
+static void hitlist_healpix_doclear(hitlist* hlist, int freeobjs) {
 	int p;
 	int m, M;
 	for (p=0; p<hlist->npix; p++) {
@@ -513,11 +513,13 @@ void hitlist_healpix_clear(hitlist* hlist) {
 		clear_pixinfo(pix);
 	}
 	M = pl_size(hlist->matchlist);
-	for (m=0; m<M; m++) {
-		MatchObj* mo = (MatchObj*)pl_get(hlist->matchlist, m);
-		if (!mo)
-			continue;
-		free_MatchObj(mo);
+	if (freeobjs) {
+		for (m=0; m<M; m++) {
+			MatchObj* mo = (MatchObj*)pl_get(hlist->matchlist, m);
+			if (!mo)
+				continue;
+			free_MatchObj(mo);
+		}
 	}
 	pl_remove_all(hlist->matchlist);
 	il_remove_all(hlist->memberlist);
@@ -539,6 +541,14 @@ void hitlist_healpix_clear(hitlist* hlist) {
 	hlist->nbest = 0;
 	hlist->ntotal = 0;
 	hlist->best = NULL;
+}
+
+void hitlist_healpix_remove_all(hitlist* hlist) {
+	hitlist_healpix_doclear(hlist, 0);
+}
+
+void hitlist_healpix_clear(hitlist* hlist) {
+	hitlist_healpix_doclear(hlist, 1);
 }
 
 void hitlist_healpix_free_extra(hitlist* hl, void (*free_function)(MatchObj* mo)) {

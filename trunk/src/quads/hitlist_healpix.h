@@ -86,6 +86,8 @@ void hitlist_healpix_histogram_agreement_size(hitlist* hl, int* hist, int Nhist)
 
 hitlist* hitlist_healpix_new(double AgreeTolArcSec);
 
+void hitlist_healpix_remove_all(hitlist* hlist);
+
 void hitlist_healpix_clear(hitlist* hlist);
 
 void hitlist_healpix_free_extra(hitlist* hlist, void (*free_function)(MatchObj* mo));

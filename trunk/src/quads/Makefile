@@ -9,7 +9,7 @@ CFLAGS :=
 CFLAGS	+= -g
 #CFLAGS += -O0
 #CFLAGS += -O2
-#CFLAGS += -pg
+CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
 CFLAGS += -O3 -ffast-math
 
@@ -22,7 +22,7 @@ CFLAGS += -O3 -ffast-math
 # check out __attribute__ ((nonnull))
 
 # to turn off asserts:
-#CFLAGS += -DNDEBUG
+CFLAGS += -DNDEBUG
 
 #CFLAGS += -Werror
 
@@ -39,7 +39,8 @@ ifeq ($(MACHINE), i686)
 	ifeq ($(GCCVER), 4.0)
 		CFLAGS += -mtune=pentium4
 	endif
-	CFLAGS += -march=pentium4 -mfpmath=sse -mmmx -msse -msse2
+	CFLAGS += -march=pentium4
+	#CFLAGS += -mfpmath=sse -mmmx -msse -msse2
 	# This seems to kill qfits...
 	#CFLAGS += -malign-double
 else
@@ -117,7 +118,7 @@ printsolved: printsolved.o
 solvedserver: solvedserver.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-FITS_UTILS := tablist modhead fitscopy
+FITS_UTILS := tablist modhead fitscopy tabmerge
 
 fitsutils: $(FITS_UTILS)
 

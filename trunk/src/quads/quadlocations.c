@@ -21,7 +21,8 @@ void print_help(char* progname)
 			"   -o <output-file-name>\n"
 			"   [-n <image-size>]  (default 3000)\n"
 			"   [-h]: help\n"
-			"   <base-name> [<base-name> ...]\n\n",
+			"   <base-name> [<base-name> ...]\n\n"
+			"Requires both objs and quad files.\n\n",
 	        progname);
 }
 

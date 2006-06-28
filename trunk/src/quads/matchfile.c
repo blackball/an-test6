@@ -336,7 +336,6 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 			 sizeof(MatchObj));
 	}
 	for (i=0; i<n; i++)
-		//matchobj_compute_overlap(mo + i);
 		matchobj_compute_derived(mo + i);
 	return 0;
 }
