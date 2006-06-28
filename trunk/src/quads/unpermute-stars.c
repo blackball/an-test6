@@ -1,7 +1,12 @@
 /**
-   \file Applies the inverse of a star kdtree permutation array to
+   \file Applies a star kdtree permutation array to the corresponding
    .cat and .id files to produce new .cat, .id, and .skdt files that are
    consistent and don't require permutation.
+
+   In:  .cat, .id, .skdt
+   Out: .cat, .id, .skdt
+
+   Original author: dstn
 */
 #include <unistd.h>
 #include <stdlib.h>
@@ -41,10 +46,10 @@ int main(int argc, char **args) {
 	char* progname = args[0];
 	char* basein = NULL;
 	char* baseout = NULL;
-	//int* invperm;
 	char* fn;
 	int i;
 	qfits_header* hdr;
+	int healpix;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -95,6 +100,12 @@ int main(int argc, char **args) {
 	}
 	free_fn(fn);
 
+	healpix = idin->healpix;
+	if (catin->healpix != idin->healpix) {
+		fprintf(stderr, "Catalog header says it's healpix %i, but idfile say %i.\n",
+				catin->healpix, idin->healpix);
+	}
+
 	fn = mk_catfn(baseout);
 	printf("Writing catalog to %s ...\n", fn);
 	catout = catalog_open_for_writing(fn);
@@ -118,6 +129,9 @@ int main(int argc, char **args) {
 	  invperm = malloc(treein->ndata * sizeof(int));
 	  kdtree_inverse_permutation(treein, invperm);
 	*/
+
+	catout->healpix = healpix;
+	idout ->healpix = healpix;
 
 	if (catalog_write_header(catout) ||
 		idfile_write_header(idout)) {
