@@ -23,6 +23,7 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	int size;
 	void* map;
 	int realsz;
+	bool hasperm;
 
 	if (!is_fits_file(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -72,12 +73,17 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	}
 
     if (fits_find_table_column(fn, "kdtree_nodes", &offnodes, &sizenodes) ||
-        fits_find_table_column(fn, "kdtree_data",  &offdata , &sizedata ) ||
-        fits_find_table_column(fn, "kdtree_perm",  &offperm , &sizeperm )) {
-		fprintf(stderr, "Couldn't find nodes, data, or permutation table.\n");
+        fits_find_table_column(fn, "kdtree_data",  &offdata , &sizedata )) {
+		fprintf(stderr, "Couldn't find nodes, or data.\n");
 		fclose(fid);
 		return NULL;
-    }
+	}
+	if (fits_find_table_column(fn, "kdtree_perm",  &offperm , &sizeperm )) {
+				//fpri, or permutation table.\n");
+		hasperm = FALSE;
+    } else
+		// haha, you have a funny hairstyle.
+		hasperm = TRUE;
 	/*
 	  fprintf(stderr, "nodes offset %i, size %i\n", offnodes, sizenodes);
 	  fprintf(stderr, "data  offset %i, size %i\n", offdata, sizedata);
@@ -86,13 +92,18 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * ndim * 2;
 
 	if ((fits_blocks_needed(nodesize * nnodes) != sizenodes) ||
-		(fits_blocks_needed(ndata * sizeof(int)) != sizeperm) ||
+		(hasperm && (fits_blocks_needed(ndata * sizeof(int)) != sizeperm)) ||
 		(fits_blocks_needed(ndata * ndim * sizeof(real)) != sizedata)) {
-		fprintf(stderr, "Node, permutation, or data size doesn't jive!");
-		fprintf(stderr, "  (%i -> %i vs %i, %i -> %i vs %i, %i -> %i vs %i)\n",
-				nodesize * nnodes, fits_blocks_needed(nodesize*nnodes),
-				sizenodes, fits_blocks_needed(sizenodes), ndata * sizeof(int), sizeperm,
-				ndata * ndim * sizeof(real), fits_blocks_needed(ndata*ndim&sizeof(real)), sizedata);
+		fprintf(stderr, "Node, data, or permutation size doesn't jive!");
+		fprintf(stderr, "  nodes (%i -> %i vs %i -> %i)\n",
+				nodesize*nnodes, fits_blocks_needed(nodesize*nnodes),
+				sizenodes, fits_blocks_needed(sizenodes));
+		fprintf(stderr, "  data (%i -> %i vs %i)\n",
+				ndata * ndim * sizeof(real), fits_blocks_needed(ndata*ndim*sizeof(real)),
+				sizedata);
+		if (hasperm)
+			fprintf(stderr, "  perm (%i -> %i vs %i)\n",
+					ndata * sizeof(int), fits_blocks_needed(ndata * sizeof(int)), sizeperm);
 		fclose(fid);
 		return NULL;
 	}
@@ -100,7 +111,8 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	// launch!
 	size = offnodes + sizenodes;
 	size = imax(size, offdata + sizedata);
-	size = imax(size, offperm + sizeperm);
+	if (hasperm)
+		size = imax(size, offperm + sizeperm);
 
 	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
 	fclose(fid);
@@ -118,11 +130,12 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
     kdtree->ndata  = ndata;
     kdtree->ndim   = ndim;
     kdtree->nnodes = nnodes;
-
 	kdtree->mmapped = map;
 	kdtree->mmapped_size = size;
-
-	kdtree->perm = (unsigned int*) (map + offperm);
+	if (hasperm)
+		kdtree->perm = (unsigned int*) (map + offperm);
+	else
+		kdtree->perm = NULL;
 	kdtree->data = (real*)         (map + offdata);
 	kdtree->tree = (kdtree_node_t*)(map + offnodes);
 
@@ -159,13 +172,15 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
     qfits_header_add(header, "NDIM", val, "kdtree: number of dimensions", NULL);
     sprintf(val, "%i", kdtree->nnodes);
     qfits_header_add(header, "NNODES", val, "kdtree: number of nodes", NULL);
-	qfits_header_add(header, "", NULL, "The first extension contains the kdtree node ", NULL);
-	qfits_header_add(header, "", NULL, " structs.", NULL);
-	qfits_header_add(header, "", NULL, "The second extension contains the kdtree data, ", NULL);
-	qfits_header_add(header, "", NULL, " stored in native-endian, 8-byte doubles.", NULL);
-	qfits_header_add(header, "", NULL, "The third extension contains the kdtree", NULL);
-	qfits_header_add(header, "", NULL, " permutation array, stored as native-endian", NULL);
-	qfits_header_add(header, "", NULL, " 4-byte unsigned ints.", NULL);
+	qfits_header_add(header, "COMMENT", "The first extension contains the kdtree node ", NULL, NULL);
+	qfits_header_add(header, "COMMENT", " structs.", NULL, NULL);
+	qfits_header_add(header, "COMMENT", "The second extension contains the kdtree data, ", NULL, NULL);
+	qfits_header_add(header, "COMMENT", " stored in native-endian, 8-byte doubles.", NULL, NULL);
+	qfits_header_add(header, "COMMENT", "The third extension, if it exists,", NULL, NULL);
+	qfits_header_add(header, "COMMENT", " contains the kdtree permutation array,", NULL, NULL);
+	qfits_header_add(header, "COMMENT", " stored as native-endian 4-byte unsigned", NULL, NULL);
+	qfits_header_add(header, "COMMENT", " ints.  If it doesn't exist, the permutation", NULL, NULL);
+	qfits_header_add(header, "COMMENT", " array is assumed to be the identity.", NULL, NULL);
 
 	if (hdr) {
 		int i ;
@@ -218,21 +233,23 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
     qfits_table_close(table);
 
     // third table: the permutation vector.
-    datasize = sizeof(int);
-    dataptr = kdtree->perm;
-    ncols = 1;
-    nrows = kdtree->ndata;
-    tablesize = datasize * nrows * ncols;
+	if (kdtree->perm) {
+		datasize = sizeof(int);
+		dataptr = kdtree->perm;
+		ncols = 1;
+		nrows = kdtree->ndata;
+		tablesize = datasize * nrows * ncols;
 
-    table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
-    qfits_col_fill(table->col,
-                   datasize, 0, 1, TFITS_BIN_TYPE_A,
-                   "kdtree_perm",
-				   "", "", "",
-                   0, 0, 0, 0,
-                   0);
-    qfits_table_append_xtension(fid, table, &dataptr);
-    qfits_table_close(table);
+		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		qfits_col_fill(table->col,
+					   datasize, 0, 1, TFITS_BIN_TYPE_A,
+					   "kdtree_perm",
+					   "", "", "",
+					   0, 0, 0, 0,
+					   0);
+		qfits_table_append_xtension(fid, table, &dataptr);
+		qfits_table_close(table);
+	}
 
     if (fclose(fid)) {
         fprintf(stderr, "Couldn't close file %s after writing kdtree: %s\n",

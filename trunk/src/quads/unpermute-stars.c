@@ -18,6 +18,7 @@
 #include "catalog.h"
 #include "idfile.h"
 #include "fitsioutils.h"
+#include "qfits.h"
 
 #define OPTIONS "hf:o:"
 
@@ -43,6 +44,7 @@ int main(int argc, char **args) {
 	//int* invperm;
 	char* fn;
 	int i;
+	qfits_header* hdr;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -153,6 +155,10 @@ int main(int argc, char **args) {
 	treeout->ndata  = treein->ndata;
 	treeout->ndim   = treein->ndim;
 	treeout->nnodes = treein->nnodes;
+
+	hdr = qfits_header_new();
+	qfits_header_add(hdr, "AN_FILE", "SKDT", "This is a star kdtree.", NULL);
+	fits_copy_header(catin->header, hdr, "HEALPIX");
 
 	fn = mk_streefn(baseout);
 	printf("Writing star kdtree to %s ...\n", fn);

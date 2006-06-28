@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include "keywords.h"
+
 #if defined(linux)
 #include <linux/bitops.h>
 // in linux 2.4 it's called "generic_hweight32"
