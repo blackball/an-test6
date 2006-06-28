@@ -17,9 +17,17 @@
 int fits_add_args(qfits_header* hdr, char** args, int argc) {
 	int i;
 	for (i=0; i<argc; i++) {
-		char key[16];
-		sprintf(key, "CMDLN%i", i);
-		qfits_header_add(hdr, key, args[i], NULL, NULL);
+		char* str = args[i];
+		int len = strlen(str);
+		int charsperline = 60;
+		do {
+			char copy[80];
+			sprintf(copy, "%s%.*s%s", (i?"  ":""), charsperline, str,
+					(len>charsperline) ? " ...":"");
+			qfits_header_add(hdr, "HISTORY", copy, NULL, NULL);
+			len -= charsperline;
+			str += charsperline;
+		} while (len > 0);
 	}
 	return 0;
 }
@@ -31,7 +39,23 @@ int fits_copy_header(qfits_header* src, qfits_header* dest, char* key) {
 		return -1;
 	}
 	qfits_header_add(dest, key, str,
-					 qfits_header_getcom(src, key), NULL);
+						qfits_header_getcom(src, key), NULL);
+	return 0;
+}
+
+int fits_copy_all_headers(qfits_header* src, qfits_header* dest, char* targetkey) {
+	int i;
+	char key[FITS_LINESZ+1];
+	char val[FITS_LINESZ+1];
+	char com[FITS_LINESZ+1];
+	char lin[FITS_LINESZ+1];
+
+	for (i=0; i<src->n; i++) {
+		qfits_header_getitem(src, i, key, val, com, lin);
+		if (strcasecmp(key, targetkey))
+			continue;
+		qfits_header_add(dest, key, val, com, lin);
+	}
 	return 0;
 }
 

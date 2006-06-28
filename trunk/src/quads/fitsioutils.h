@@ -5,6 +5,8 @@
 
 int fits_copy_header(qfits_header* src, qfits_header* dest, char* key);
 
+int fits_copy_all_headers(qfits_header* src, qfits_header* dest, char* targetkey);
+
 int fits_add_args(qfits_header* src, char** args, int argc);
 
 // how many FITS blocks are required to hold 'size' bytes?

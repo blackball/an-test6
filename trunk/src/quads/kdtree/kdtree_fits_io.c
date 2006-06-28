@@ -149,6 +149,7 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
     int tablesize;
     qfits_table* table;
     qfits_header* header;
+    qfits_header* tablehdr;
     FILE* fid;
     void* dataptr;
     char val[256];
@@ -183,17 +184,21 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
 	qfits_header_add(header, "COMMENT", " array is assumed to be the identity.", NULL, NULL);
 
 	if (hdr) {
-		int i ;
-		char key[FITS_LINESZ+1] ;
-		char val[FITS_LINESZ+1] ;
-		char com[FITS_LINESZ+1] ;
-		char lin[FITS_LINESZ+1] ;
-		for (i=0 ; i<hdr->n ; i++) {
+		int i;
+		char key[FITS_LINESZ+1];
+		char val[FITS_LINESZ+1];
+		char com[FITS_LINESZ+1];
+		char lin[FITS_LINESZ+1];
+		printf("Adding %i header entries\n", hdr->n);
+		for (i=0; i<hdr->n; i++) {
 			qfits_header_getitem(hdr, i, key, val, com, lin);
-			//printf("card[%d] key[%s] val[%s] com[%s]\n", i, key, val, com);
+			printf("Adding header key %s\n", key);
 			qfits_header_add(header, key, val, com, lin);
 		}
 	}
+
+    qfits_header_dump(header, fid);
+    qfits_header_destroy(header);
 
     // first table: the kdtree structs.
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * kdtree->ndim * 2;
@@ -209,11 +214,17 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
 				   "", "", "",
                    0, 0, 0, 0,
                    0);
-    qfits_save_table_hdrdump(&dataptr, table, header);
-    qfits_header_dump(header, fid);
-    qfits_table_append_xtension(fid, table, &dataptr);
-    qfits_table_close(table);
-    qfits_header_destroy(header);
+    //qfits_save_table_hdrdump(&dataptr, table, header);
+    //qfits_table_append_xtension(fid, table, &dataptr);
+ 	tablehdr = qfits_table_ext_header_default(table);
+	qfits_header_dump(tablehdr, fid);
+	qfits_header_destroy(tablehdr);
+	qfits_table_close(table);
+	if ((fwrite(dataptr, 1, tablesize, fid) != tablesize) ||
+		fits_pad_file(fid)) {
+		fprintf(stderr, "Failed to write kdtree nodes: %s\n", strerror(errno));
+		return -1;
+	}
 
     // second table: the data.
     datasize = kdtree->ndim * sizeof(real);
@@ -229,8 +240,17 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
 				   "", "", "",
                    0, 0, 0, 0,
                    0);
-    qfits_table_append_xtension(fid, table, &dataptr);
-    qfits_table_close(table);
+    //qfits_table_append_xtension(fid, table, &dataptr);
+    //qfits_table_close(table);
+ 	tablehdr = qfits_table_ext_header_default(table);
+	qfits_header_dump(tablehdr, fid);
+	qfits_header_destroy(tablehdr);
+	qfits_table_close(table);
+	if ((fwrite(dataptr, 1, tablesize, fid) != tablesize) ||
+		fits_pad_file(fid)) {
+		fprintf(stderr, "Failed to write kdtree data: %s\n", strerror(errno));
+		return -1;
+	}
 
     // third table: the permutation vector.
 	if (kdtree->perm) {
@@ -247,8 +267,17 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
 					   "", "", "",
 					   0, 0, 0, 0,
 					   0);
-		qfits_table_append_xtension(fid, table, &dataptr);
+		//qfits_table_append_xtension(fid, table, &dataptr);
+		//qfits_table_close(table);
+		tablehdr = qfits_table_ext_header_default(table);
+		qfits_header_dump(tablehdr, fid);
+		qfits_header_destroy(tablehdr);
 		qfits_table_close(table);
+		if ((fwrite(dataptr, 1, tablesize, fid) != tablesize) ||
+			fits_pad_file(fid)) {
+			fprintf(stderr, "Failed to write kdtree perm: %s\n", strerror(errno));
+			return -1;
+		}
 	}
 
     if (fclose(fid)) {

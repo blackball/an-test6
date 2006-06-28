@@ -72,7 +72,7 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	deduplicate \
 	randcat genfields codedensity findquad findstar \
 	codeprojections quadlocations hpowned fitsgetext quadsperstar \
-	subtable matchstats unpermute-stars
+	subtable matchstats unpermute-stars unpermute-quads
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylstomatlab rdlstohealpix 
 # codeprojections printmatchfile 

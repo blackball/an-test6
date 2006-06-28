@@ -25,12 +25,12 @@ static idfile* new_idfile()
 idfile* idfile_open(char* fn, int modifiable)
 {
 	FILE* fid = NULL;
-	qfits_header* header = NULL;
 	idfile* id = NULL;
 	int off, sizeanids;
 	int size;
 	void* map;
 	int mode, flags;
+	qfits_header* header = NULL;
 
 	if (!is_fits_file(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -56,9 +56,9 @@ idfile* idfile_open(char* fn, int modifiable)
 	if (!id)
 		goto bailout;
 
+	id->header = header;
 	id->numstars = qfits_header_getint(header, "NSTARS", -1);
 	id->healpix = qfits_header_getint(header, "HEALPIX", -1);
-	qfits_header_destroy(header);
 
 	if (id->numstars == -1) {
 		fprintf(stderr, "Couldn't find NUMSTARS of stars entries in FITS header.");
@@ -99,6 +99,8 @@ idfile* idfile_open(char* fn, int modifiable)
 	return id;
 
 bailout:
+	if (header)
+		qfits_header_destroy(header);
 	if (id)
 		free(id);
 	if (fid)

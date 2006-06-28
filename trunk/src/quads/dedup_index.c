@@ -137,10 +137,12 @@ int main(int argc, char *argv[]) {
 	quadsout->healpix = quadsin->healpix;
 	codesout->indexid = codesin->indexid;
 	codesout->healpix = codesin->healpix;
-	qfits_header_add(quadsout->header, "COMMENT", "dedup_index command line:", NULL, NULL);
-	qfits_header_add(codesout->header, "COMMENT", "dedup_index command line:", NULL, NULL);
+	qfits_header_add(quadsout->header, "HISTORY", "dedup_index command line:", NULL, NULL);
 	fits_add_args(quadsout->header, argv, argc);
+	qfits_header_add(quadsout->header, "HISTORY", "(end of dedup_index command line)", NULL, NULL);
+	qfits_header_add(codesout->header, "HISTORY", "dedup_index command line:", NULL, NULL);
 	fits_add_args(codesout->header, argv, argc);
+	qfits_header_add(codesout->header, "HISTORY", "(end of dedup_index command line)", NULL, NULL);
 
     if (quadfile_write_header(quadsout)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
