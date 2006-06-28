@@ -202,7 +202,7 @@ int main(int argc, char **args) {
 
 	fn = mk_streefn(baseout);
 	printf("Writing star kdtree to %s ...\n", fn);
-	if (kdtree_fits_write_file(treeout, fn, NULL)) {
+	if (kdtree_fits_write_file(treeout, fn, hdr)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");
 		exit(-1);
 	}

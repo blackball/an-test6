@@ -174,7 +174,7 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars) {
 			pq->iC = ind;
 			pq->staridC = starid;
 		} else {
-			assert(pq->getD == FALSE);
+			assert(pq->gotD == FALSE);
 			pq->gotD = TRUE;
 			pq->dx = x;
 			pq->dy = y;
