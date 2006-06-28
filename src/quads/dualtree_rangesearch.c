@@ -204,13 +204,13 @@ bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode
 
 	// does the bounding box partly overlap the desired range?
     if (p->usemax) {
-		mindistsq = kdtree_node_node_mindist2_bailout(p->xtree, xnode, p->ytree, ynode, p->maxdistsq);
-		if (mindistsq > p->maxdistsq)
+		if (kdtree_node_node_mindist2_exceeds(p->xtree, xnode,
+											  p->ytree, ynode, p->maxdistsq))
 			return FALSE;
     }
     if (p->usemin) {
-		maxdistsq = kdtree_node_node_maxdist2(p->xtree, xnode, p->ytree, ynode);
-		if (maxdistsq < p->mindistsq)
+		if (!kdtree_node_node_maxdist2_exceeds(p->xtree, xnode,
+											   p->ytree, ynode, p->mindistsq))
 			return FALSE;
     }
 
@@ -262,13 +262,12 @@ void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 	
 	// is the bounding box fully within the desired range?
 	if (p->usemin) {
-		double mindistsq = kdtree_node_node_mindist2(p->xtree, xnode, p->ytree, ynode);
-		if (mindistsq < p->mindistsq)
+		if (!kdtree_node_node_mindist2_exceeds(p->xtree, xnode, p->ytree, ynode,
+											   p->mindistsq))
 			allinrange = FALSE;
 	}
 	if (allinrange && p->usemax) {
-		double maxdistsq = kdtree_node_node_maxdist2_bailout(p->xtree, xnode, p->ytree, ynode, p->maxdistsq);
-		if (maxdistsq > p->maxdistsq)
+		if (kdtree_node_node_maxdist2_exceeds(p->xtree, xnode, p->ytree, ynode, p->maxdistsq))
 			allinrange = FALSE;
 	}
 	if (allinrange) {

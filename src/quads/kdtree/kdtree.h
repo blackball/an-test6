@@ -97,11 +97,6 @@ real kdtree_bb_mindist2(real* bblow1, real* bbhigh1,
 						real* bblow2, real* bbhigh2, int dim);
 
 inline
-real kdtree_bb_mindist2_bailout(real* bblow1, real* bbhigh1,
-								real* bblow2, real* bbhigh2, int dim,
-								real bailout);
-
-inline
 real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1,
 						real* bblow2, real* bbhigh2, int dim);
 
@@ -112,14 +107,6 @@ real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
 inline
 real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
 							  real* point, int dim);
-
-inline
-real kdtree_bb_point_mindist2_bailout(real* bblow, real* bbhigh,
-									  real* point, int dim, real bailout);
-
-inline
-real kdtree_bb_point_maxdist2_bailout(real* bblow, real* bbhigh,
-									  real* point, int dim, real bailout);
 
 /***   Simple accessors   ***/
 
@@ -176,19 +163,9 @@ real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
 							   kdtree_t* tree2, kdtree_node_t* node2);
 
 inline
-real kdtree_node_node_mindist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
-									   kdtree_t* tree2, kdtree_node_t* node2,
-									   real bailout);
-
-inline
 int kdtree_node_node_mindist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
 									  kdtree_t* tree2, kdtree_node_t* node2,
 									  real maxd2);
-
-inline
-real kdtree_node_node_maxdist2_bailout(kdtree_t* tree1, kdtree_node_t* node1,
-									   kdtree_t* tree2, kdtree_node_t* node2,
-									   real bailout);
 
 inline
 real kdtree_node_node_maxdist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
@@ -200,16 +177,6 @@ real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
 
 inline
 real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
-
-/* if the mindist exceeds "bailout", return. */
-inline
-real kdtree_node_point_mindist2_bailout(kdtree_t* kd, kdtree_node_t* node,
-										real* pt, real bailout);
-
-/* if the maxdist exceeds "bailout", return. */
-inline
-real kdtree_node_point_maxdist2_bailout(kdtree_t* kd, kdtree_node_t* node,
-										real* pt, real bailout);
 
 inline
 int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
