@@ -12,7 +12,7 @@
 #include "hitsfile.h"
 #include "hitlist_healpix.h"
 #include "matchfile.h"
-#include "solvedfile.h"
+#include "solvedclient.h"
 
 char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:R";
 
@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (solvedserver)
-		if (solvedserver_set_server(solvedserver)) {
+		if (solvedclient_set_server(solvedserver)) {
 			fprintf(stderr, "Failed to set solved server.\n");
 			exit(-1);
 		}
@@ -590,7 +590,7 @@ void write_field(hitlist* hl,
 	il_append(solved, fieldnum);
 
 	if (solvedserver)
-		solvedserver_set(fieldfile, fieldnum);
+		solvedclient_set(fieldfile, fieldnum);
 
 	if (hl) {
 		/*
