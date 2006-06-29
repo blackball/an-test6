@@ -1,0 +1,39 @@
+graph indexpipeline {
+	graph [ rankdir = LR ];
+	node [ shape=box ];
+	edge [ dir=forward ];
+	node [ style=filled, fillcolor=azure2 ];
+	ancat [ label="Astrometry.net Catalog\n(an*.fits)" ];
+	skdt2 [ label="Star kdtree (2)\n(.skdt)" ];
+	objs2  [ label="Catalog (2)\n(.objs)" ];
+	id2    [ label="Star ID (2)\n(.id)" ];
+	node [ style="" ];
+	objs  [ label="Catalog\n(.objs)" ];
+	id    [ label="Star ID\n(.id)" ];
+	skdt  [ label="Star kdtree\n(.skdt)" ];
+
+	node [ shape=ellipse ];
+	ancat -- cut_an
+	cut_an -- objs
+	cut_an -- id
+	objs -- startree -- skdt
+	skdt -- unpermute_stars -- skdt2
+	objs -- unpermute_stars [ minlen=3 ];
+	unpermute_stars -- objs2
+	id -- unpermute_stars [ minlen=3 ];
+	unpermute_stars -- id2
+
+
+}
+
+
+// render with:
+//   dot -Tps2 -o pipeline0.eps pipeline0.dot
+//   epstopng pipeline.eps
+
+// to get bounding box:
+//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=bbox pipeline.ps
+// to render as png:
+//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=png16m -sOutputFile=pipeline.png -g850x162 pipeline.ps
+// (where 850x162 is determined by the output of the bounding-box stage)
+
