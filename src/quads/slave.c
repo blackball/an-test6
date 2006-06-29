@@ -1,7 +1,7 @@
 /**
  *   Solve fields (with slavish devotion)
  *
- * Inputs: .ckdt .quad (.skdt or .objs)
+ * Inputs: .ckdt .quad .skdt
  * Output: .match
  */
 #include <sys/types.h>
@@ -27,7 +27,6 @@
 #include "solver_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
-#include "catalog.h"
 #include "hitlist_healpix.h"
 #include "tic.h"
 #include "quadfile.h"
@@ -49,7 +48,7 @@ static int read_parameters();
 #define DEFAULT_PARITY_FLIP FALSE
 
 // params:
-char *fieldfname, *treefname, *quadfname, *catfname, *startreefname;
+char *fieldfname, *treefname, *quadfname, *startreefname;
 char *idfname, *matchfname, *donefname, *solvedfname, *solvedserver;
 char* xcolname, *ycolname;
 bool parity;
@@ -83,7 +82,6 @@ pthread_mutex_t fieldlist_mutex;
 matchfile* mf;
 pthread_mutex_t matchfile_mutex;
 
-catalog* cat;
 idfile* id;
 quadfile* quads;
 kdtree_t *codetree;
@@ -128,7 +126,6 @@ int main(int argc, char *argv[]) {
 		fieldfname = NULL;
 		treefname = NULL;
 		quadfname = NULL;
-		catfname = NULL;
 		startreefname = NULL;
 		idfname = NULL;
 		matchfname = NULL;
@@ -162,7 +159,6 @@ int main(int argc, char *argv[]) {
 
 		il_remove_all(fieldlist);
 
-		cat = NULL;
 		quads = NULL;
 		startree = NULL;
 		nverified = 0;
@@ -176,7 +172,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "treefname %s\n", treefname);
 		fprintf(stderr, "startreefname %s\n", startreefname);
 		fprintf(stderr, "quadfname %s\n", quadfname);
-		fprintf(stderr, "catfname %s\n", catfname);
 		fprintf(stderr, "idfname %s\n", idfname);
 		fprintf(stderr, "matchfname %s\n", matchfname);
 		fprintf(stderr, "donefname %s\n", donefname);
@@ -240,12 +235,12 @@ int main(int argc, char *argv[]) {
 		xyls->yname = ycolname;
 
 		// Read .ckdt file...
-		fprintf(stderr, "Reading code KD tree from %s...", treefname);
+		fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
 		fflush(stderr);
 		codetree = kdtree_fits_read_file(treefname);
 		if (!codetree)
 			exit(-1);
-		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
+		fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
 				codetree->ndata, codetree->nnodes, codetree->ndim);
 
 		// Read .quad file...
@@ -263,15 +258,17 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
 		// Read .skdt file...
-		fprintf(stderr, "Reading star KD tree from %s...", startreefname);
+		fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
 		fflush(stderr);
 		startree = kdtree_fits_read_file(startreefname);
-		if (!startree)
-			fprintf(stderr, "Star kdtree not found or failed to read.\n");
-		else
-			fprintf(stderr, "done\n");
+		if (!startree) {
+			fprintf(stderr, "Failed to read star kdtree %s\n", startreefname);
+			exit(-1);
+		}
+		fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
+				startree->ndata, startree->nnodes, startree->ndim);
 
-		do_verify = startree && (verify_dist2 > 0.0);
+		do_verify = (verify_dist2 > 0.0);
 		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
 		if (cxdx_margin > 0.0) {
 			// check for CXDX field in ckdt header...
@@ -297,23 +294,16 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (startree) {
-			inverse_perm = malloc(startree->ndata * sizeof(int));
-			kdtree_inverse_permutation(startree, inverse_perm);
-			cat = NULL;
-		} else {
-			// Read .objs file...
-			cat = catalog_open(catfname, 0);
-			if (!cat) {
-				fprintf(stderr, "Couldn't open catalog %s.\n", catfname);
-				exit(-1);
-			}
-		}
-
 		id = idfile_open(idfname, 0);
 		if (!id) {
 			fprintf(stderr, "Couldn't open id file %s.\n", idfname);
 			//exit(-1);
+		}
+
+		if (startree->perm) {
+			fprintf(stderr, "Computing inverse permutation...\n");
+			inverse_perm = malloc(startree->ndata * sizeof(int));
+			kdtree_inverse_permutation(startree, inverse_perm);
 		}
 
 		// Do it!
@@ -339,10 +329,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Error closing matchfile.\n");
 		}
 		kdtree_close(codetree);
-		if (startree)
-			kdtree_close(startree);
-		if (cat)
-			catalog_close(cat);
+		kdtree_close(startree);
 		if (id)
 			idfile_close(id);
 		quadfile_close(quads);
@@ -356,7 +343,6 @@ int main(int argc, char *argv[]) {
 		free_fn(fieldfname);
 		free_fn(treefname);
 		free_fn(quadfname);
-		free_fn(catfname);
 		free_fn(idfname);
 		free_fn(startreefname);
 		free(inverse_perm);
@@ -444,7 +430,6 @@ static int read_parameters() {
 			char* fname = nextword;
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
-			catfname = mk_catfn(fname);
 			idfname = mk_idfn(fname);
 			startreefname = mk_streefn(fname);
 		} else if (is_word(buffer, "verify_dist ", &nextword)) {
@@ -917,7 +902,6 @@ void* solvethread_run(void* varg) {
 		if (my->winning_listind == -1) {
 			// didn't solve it...
 			fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
-
 			// ... but write the matches for which verification was run
 			// to collect good stats.
 			if (do_verify) {
@@ -948,10 +932,6 @@ void* solvethread_run(void* varg) {
 				}
 				fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
 						fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
-
-				// also write all the other matches that we ran verification on.
-				//pl_merge_lists(list, my->verified);
-
 			} else
 				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(list));
 			
@@ -1057,10 +1037,11 @@ void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
 }
 
 void getstarcoord(uint iA, double *sA) {
-	if (cat)
-		memcpy(sA, catalog_get_star(cat, iA), DIM_STARS * sizeof(double));
-	else
+	if (inverse_perm)
 		memcpy(sA, startree->data + inverse_perm[iA] * DIM_STARS,
+			   DIM_STARS * sizeof(double));
+	else
+		memcpy(sA, startree->data + iA * DIM_STARS,
 			   DIM_STARS * sizeof(double));
 }
 
