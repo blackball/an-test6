@@ -18,9 +18,9 @@
 #include "fileutil.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "hR:f:"
+#define OPTIONS "hR:f:o:"
 const char HelpString[] =
-"codetree -f fname [-R KD_RMIN]\n"
+"codetree -f <input-base-name> -o <output-base-name> [-R KD_RMIN]\n"
 "  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
 
 extern char *optarg;
@@ -31,7 +31,8 @@ int main(int argc, char *argv[]) {
 	int Nleaf = 25;
     kdtree_t *codekd = NULL;
     int levels;
-    char* basename = NULL;
+    char* basenamein = NULL;
+    char* basenameout = NULL;
     char* treefname;
     char* codefname;
     codefile* codes;
@@ -50,7 +51,10 @@ int main(int argc, char *argv[]) {
             Nleaf = (int)strtoul(optarg, NULL, 0);
             break;
         case 'f':
-            basename = optarg;
+            basenamein = optarg;
+            break;
+        case 'o':
+            basenameout = optarg;
             break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -67,13 +71,13 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, HelpString);
         return (OPT_ERR);
     }
-    if (!basename) {
+    if (!basenamein || !basenameout) {
         fprintf(stderr, HelpString);
         return (OPT_ERR);
     }
 
-	treefname = mk_ctreefn(basename);
-	codefname = mk_codefn(basename);
+	codefname = mk_codefn(basenamein);
+	treefname = mk_ctreefn(basenameout);
 
     fprintf(stderr, "codetree: building KD tree for %s\n", codefname);
     fprintf(stderr, "       will write KD tree file %s\n", treefname);

@@ -251,6 +251,9 @@ int main(int argc, char *argv[]) {
 		// write HITS header.
 		hits_header_init(&hitshdr);
 		hitshdr.min_matches_to_agree = min_matches_to_agree;
+		hitshdr.overlap_needed = overlap_needed;
+		hitshdr.field_objs_needed = min_ninfield;
+		hitshdr.agreetol = agreetolarcsec;
 		hits_write_header(hitfid, &hitshdr);
 	}
 
@@ -486,8 +489,6 @@ void write_field(hitlist* hl,
 
 	hits_field_init(&fieldhdr);
 	fieldhdr.field = fieldnum;
-	fieldhdr.nmatches = nall;
-	fieldhdr.nagree = nbest;
 
 	if (overlap_needed > 0.0) {
 		pl* lists = pl_new(32);
@@ -591,17 +592,6 @@ void write_field(hitlist* hl,
 
 	if (solvedserver)
 		solvedclient_set(fieldfile, fieldnum);
-
-	if (hl) {
-		/*
-		  if ((nbest+1) > sizeagreehist) {
-		  agreehist = realloc(agreehist, (nbest+1) * sizeof(int));
-		  memset(agreehist + sizeagreehist, 0, ((nbest+1) - sizeagreehist) * sizeof(int));
-		  sizeagreehist = nbest + 1;
-		  }
-		  agreehist[nbest]++;
-		*/
-	}
 
 	if (hitfid) {
 		hits_write_field_header(hitfid, &fieldhdr);

@@ -23,10 +23,11 @@ struct match_struct {
 
 	// formerly matchfile_entry:
 	int fieldnum;
-	bool parity;
 	int fieldfile;
 	int16_t indexid;
 	int16_t healpix;
+
+	bool parity;
 
 	// how many field quads did we try before finding this one?
 	int quads_tried;

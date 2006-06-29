@@ -8,31 +8,16 @@
 #include "matchfile.h"
 
 struct hitsfileheader {
-	char* field_file_name;
-	char* tree_file_name;
-	unsigned int nfields;
-	unsigned int ncodes;
-	unsigned int nstars;
-	double codetol;
-	// DEPRECATE: agreetol
-	double agreetol;
-	bool parity;
+	float agreetol;
 	unsigned int min_matches_to_agree;
-	unsigned int max_matches_needed;
+	float overlap_needed;
+	unsigned int field_objs_needed;
 };
 typedef struct hitsfileheader hits_header;
 
 struct hitsfieldentry {
-	bool user_quit;
 	bool failed;
 	unsigned int field;
-	unsigned int objects_in_field;
-	unsigned int objects_examined;
-	xy* field_corners;
-	unsigned int ntries;
-	unsigned int nmatches;
-	unsigned int nagree;
-	bool parity;
 };
 typedef struct hitsfieldentry hits_field;
 
