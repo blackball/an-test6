@@ -547,6 +547,9 @@ int main(int argc, char** argv)
 	fits_add_args(codes->header, argv, argc);
 	qfits_header_add(codes->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
 
+	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.\n", NULL);
+	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.\n", NULL);
+
     if (quadfile_write_header(quads)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
         exit(-1);

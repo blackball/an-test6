@@ -76,7 +76,6 @@ double donut_thresh;
 int do_donut;
 int threads;
 double cxdx_margin;
-bool do_cxdx;
 
 il* fieldlist;
 pthread_mutex_t fieldlist_mutex;
@@ -159,7 +158,6 @@ int main(int argc, char *argv[]) {
 		donut_thresh = 0.0;
 		do_donut = 0;
 		threads = 1;
-		do_cxdx = 0;
 		cxdx_margin = 0.0;
 
 		il_remove_all(fieldlist);
@@ -275,7 +273,22 @@ int main(int argc, char *argv[]) {
 
 		do_verify = startree && (verify_dist2 > 0.0);
 		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
-		do_cxdx = (cxdx_margin > 0.0);
+		if (cxdx_margin > 0.0) {
+			// check for CXDX field in ckdt header...
+			qfits_header* hdr = qfits_header_read(treefname);
+			if (!hdr) {
+				fprintf(stderr, "Failed to read FITS header from ckdt file %s\n", treefname);
+				exit(-1);
+			} else {
+				int cxdx = qfits_header_getboolean(hdr, "CXDX", 0);
+				if (!cxdx) {
+					fprintf(stderr, "Warning: you asked for a CXDX margin, but ckdt file %s does not have the CXDX FITS header.\n",
+							treefname);
+					exit(-1);
+				}
+			}
+			qfits_header_destroy(hdr);
+		}
 
 		if (solvedserver) {
 			if (solvedclient_set_server(solvedserver)) {
