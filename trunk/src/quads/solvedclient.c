@@ -66,6 +66,8 @@ static int connect_to_server() {
 	}
 	if (connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr))) {
 		fprintf(stderr, "Couldn't connect to server: %s\n", strerror(errno));
+		if (fclose(fserver))
+			fprintf(stderr, "Failed to close socket: %s\n", strerror(errno));
 		fserver = NULL;
 		return -1;
 	}
