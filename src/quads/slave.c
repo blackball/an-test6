@@ -310,6 +310,10 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Failed to write marker file %s: %s\n", donefname, strerror(errno));
 		}
 
+		if (solvedserver) {
+			solvedclient_set_server(NULL);
+		}
+
 		xylist_close(xyls);
 		if (matchfile_fix_header(mf) ||
 			matchfile_close(mf)) {
