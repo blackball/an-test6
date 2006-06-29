@@ -6,65 +6,40 @@
 echo "Args: $*"
 
 # The filename of the original catalogues.
-CATALOGUE=an_sdss_%02i
+CATALOGUE=/p/learning/stars/CATALOGUES/an-sdss-dd/an-sdss-dd_%02i
 
-# The filename of the de-duplicated catalogues.
-CAT_DEDUP=dd_%02i
+# The filename of the index.
+INDEX=index_%02i
 
 # The filename of the deduplicated index.
-INDEX_DEDUP=ddd_%02i
+INDEX_DEDUP=ddind_%02i
 
-# Deduplication: how many stars to keep.
-KEEP=""
-
-# De-duplication radius (arcsec):
-DEDUP="-d 8"
+# The filename of the unpermuted index.
+INDEX_UNPERM=sdss-8_%02i
 
 # quad scale (arcmin)
 SCALE="-l 4 -u 5"
 
-# nside, etc
-HPQUADS="-n 705"
+# nside, index ID
+HPQUADS="-n 705 -i 8"
 
 # codetree options
 CTOPTS="-R 15"
-
-# unique id file
-IDFILE="unique-id"
-
-# unique id
-if [ -f $IDFILE ]; then
-  ID=`cat $IDFILE`;
-else
-  ID=`date +%s`;
-  echo $ID > $IDFILE
-fi
-echo unique id for this index is $ID
 
 for i in $@; do
 	# Input files:
 	IN=`printf $CATALOGUE $i`
 	echo source catalogue is $IN
 
-	FN=`printf $CAT_DEDUP $i`
-	echo de-duplicated catalogue is $FN
-
-	if [ -e $FN.objs.fits ]; then
-		echo Deduplicated catalogue already exists:
-		echo    $FN.objs.fits
-	else
-		echo Creating deduplicated catalogue.
-		CMD="deduplicate -i $IN -o $FN $KEEP $DEDUP"
-		echo Running $CMD
-		time $CMD  ||  continue
-	fi
+	FN=`printf $INDEX $i`
+	echo first-stage index is $FN
 
 	if [ -e $FN.code.fits ] && [ -e $FN.quad.fits ]; then
 		echo Code and quad files already exist:
 		echo     $FN.code.fits
 		echo     $FN.quad.fits
 	else
-		CMD="hpquads $HPQUADS $SCALE -f $FN -i $ID"
+		CMD="hpquads $HPQUADS $SCALE -f $IN -o $FN"
 		echo Running: $CMD
 		time $CMD  ||  continue
 	fi
@@ -87,9 +62,31 @@ for i in $@; do
 		echo     $DD.ckdt.fits
 	else
 		echo Generating code tree...
-		CMD="codetree $CTOPTS -f $DD"
+		CMD="codetree $CTOPTS -f $DD -o $DD"
 		echo Running: $CMD
 		time $CMD  ||  continue
 	fi
+
+	UP=`printf $INDEX_UNPERM $i`
+	echo unpermuted index is $UP
+
+	if [ -e $UP.ckdt.fits ] && [ -e $UP.quad.fits ]; then
+		echo ckdt and quad files already exist:
+		echo     $UP.ckdt.fits
+		echo     $UP.quad.fits
+	else
+		CMD="unpermute-quads -f $DD -o $UP"
+		echo Running: $CMD
+		time $CMD  ||  continue
+	fi
+
+	if [ -e $UP.skdt.fits ]; then
+		echo -n;
+	else
+		CMD="ln -s $IN.skdt.fits $UP.skdt.fits"
+		echo Running: $CMD
+		$CMD  ||  continue
+	fi
+
 done
 

@@ -48,6 +48,6 @@ gs -q -dNOPAUSE -dBATCH -dSAFER -dTextAlphaBits=4 \
 	-sOutputFile=$TMP -g${XU}x${YU} $IN
 
 echo "pngtopnm $TMP | pnmcut -l $XL -b $H | pnmtopng \> $OUT"
-pngtopnm $TMP | pnmcut -l $XL -b $H | pnmtopng > $OUT
+pngtopnm $TMP | pnmcut -l $XL -b $(($H-1)) | pnmtopng > $OUT
 
 rm $TMP
