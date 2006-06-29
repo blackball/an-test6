@@ -320,7 +320,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[3] = Dy;
 
 	if ((params->cxdx_margin == 0.0) ||
-		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
+		(thequery[0] <= (thequery[2] + params->cxdx_margin))) {
 
 		set_xy(inorder, 0, ABCDpix, A);
 		set_xy(inorder, 1, ABCDpix, B);
@@ -342,7 +342,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[3] = 1.0 - Dy;
 
 	if ((params->cxdx_margin == 0.0) ||
-		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
+		(thequery[0] <= (thequery[2] + params->cxdx_margin))) {
 
 		set_xy(inorder, 0, ABCDpix, B);
 		set_xy(inorder, 1, ABCDpix, A);
@@ -364,7 +364,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[3] = Cy;
 
 	if ((params->cxdx_margin == 0.0) ||
-		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
+		(thequery[0] <= (thequery[2] + params->cxdx_margin))) {
 
 		set_xy(inorder, 0, ABCDpix, A);
 		set_xy(inorder, 1, ABCDpix, B);
@@ -386,7 +386,7 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[3] = 1.0 - Cy;
 
 	if ((params->cxdx_margin == 0.0) ||
-		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
+		(thequery[0] <= (thequery[2] + params->cxdx_margin))) {
 
 		set_xy(inorder, 0, ABCDpix, B);
 		set_xy(inorder, 1, ABCDpix, A);
