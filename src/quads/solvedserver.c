@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <sys/select.h>
+#include <fcntl.h>
 
 #include "bl.h"
 #include "solvedfile.h"
@@ -107,6 +108,7 @@ int main(int argc, char** args) {
 	int port = 6789;
 	unsigned int opt;
 	pl* clients;
+	int flags;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -132,6 +134,18 @@ int main(int argc, char** args) {
 	opt = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
 		fprintf(stderr, "Warning: failed to setsockopt() to reuse address.\n");
+	}
+
+	flags = fcntl(sock, F_GETFL, 0);
+	if (flags == -1) {
+		fprintf(stderr, "Warning: failed to get socket flags: %s\n",
+					strerror(errno));
+	} else {
+		flags |= O_NONBLOCK;
+		if (fcntl(sock, F_SETFL, flags) == -1) {
+			fprintf(stderr, "Warning: failed to set socket flags: %s\n",
+					strerror(errno));
+		}
 	}
 
 	memset(&addr, 0, sizeof(struct sockaddr_in));
