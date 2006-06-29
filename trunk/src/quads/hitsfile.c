@@ -2,17 +2,7 @@
 #include "hitsfile.h"
 
 void hits_header_init(hits_header* h) {
-	h->field_file_name = NULL;
-	h->tree_file_name = NULL;
-	h->nfields = 0;
-	h->ncodes = 0;
-	h->nstars = 0;
-	h->codetol = 0.0;
-	// DEPRECATE
-	h->agreetol = 0.0;
-	h->parity = FALSE;
-	h->min_matches_to_agree = 0;
-	h->max_matches_needed = 0;
+	memset(h, 0, sizeof(hits_header));
 }
 
 void hits_write_header(FILE* fid, hits_header* h) {
@@ -31,21 +21,11 @@ void hits_write_header(FILE* fid, hits_header* h) {
 	fprintf(fid, "# 23\n\n");
 	fprintf(fid, "dict(\n");
 	fprintf(fid, "# SOLVER PARAMS:\n");
-	fprintf(fid, "# solving fields in %s using %s\n",
-			h->field_file_name, h->tree_file_name);
-	fprintf(fid, "field_to_solve = '%s',\n", h->field_file_name);
-	fprintf(fid, "index_used = '%s',\n", h->tree_file_name);
-	fprintf(fid, "nfields = %u,\n", h->nfields);
-	fprintf(fid, "ncodes = %u,\n", h->ncodes);
-	fprintf(fid, "nstars = %u,\n", h->nstars);
-	fprintf(fid, "code_tol = %g,\n", h->codetol);
-	// DEPRECATE
-	fprintf(fid, "agree_tol = %g,\n", h->agreetol);
-	fprintf(fid, "parity_flip = %s,\n", (h->parity ? "True" : "False"));
-	if (h->parity)
-		fprintf(fid, "# flipping parity (swapping row/col image coordinates)\n");
 	fprintf(fid, "min_matches_to_agree = %u,\n", h->min_matches_to_agree);
-	fprintf(fid, "max_matches_needed = %u,\n", h->max_matches_needed);
+	fprintf(fid, "min_overlap = %f,\n", h->overlap_needed);
+	fprintf(fid, "min_field_objs = %u,\n", h->field_objs_needed);
+	fprintf(fid, "# in arcsec:\n");
+	fprintf(fid, "agree_tol = %g,\n", h->agreetol);
 
 	fprintf(fid, "############################################################\n");
 	fprintf(fid, "# Result data, stored as a list of dictionaries\n");
@@ -74,29 +54,10 @@ void hits_end_hits_list(FILE* fid) {
 void hits_write_field_header(FILE* fid, hits_field* h) {
 	fprintf(fid, "# --------------------\n");
 	fprintf(fid, "dict(\n");
-	fprintf(fid, "    user_quit=%s,\n", (h->user_quit?"True":"False"));
 	if (h->failed)
 		fprintf(fid, "    failed=True,\n");
 	fprintf(fid, "    field=%u,\n", h->field);
-	fprintf(fid, "    objects_in_field=%u,\n", h->objects_in_field);
-	fprintf(fid, "    objects_examined=%u,\n", h->objects_examined);
 	fprintf(fid, "    # Image corners\n");
-	if (h->field_corners) {
-		xy* c = h->field_corners;
-		if (h->parity) {
-			fprintf(fid, "    min_uv_corner=(%g,%g), max_uv_corner=(%g,%g),\n",
-					xy_refy(c, 0), xy_refx(c, 0),
-					xy_refy(c, 1), xy_refx(c, 1));
-		} else {
-			fprintf(fid, "    min_uv_corner=(%g,%g), max_uv_corner=(%g,%g),\n",
-					xy_refx(c, 0), xy_refy(c, 0),
-					xy_refx(c, 1), xy_refy(c, 1));
-		}
-	}
-	fprintf(fid, "    quads_tried=%i,\n", h->ntries);
-	fprintf(fid, "    codes_matched=%i,\n", h->nmatches);
-	fprintf(fid, "    # %d matches agree on resolving of the field:\n", h->nagree);
-	fprintf(fid, "    matches_agree=%d,\n", h->nagree);
 }
 
 
@@ -117,6 +78,15 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 	fprintf(fid, "            field = %i,\n", mo->fieldnum);
 	if (mo->parity)
 		fprintf(fid, "            parity = True,\n");
+	fprintf(fid, "            stars_in_field=%i,\n", (int)mo->ninfield);
+	fprintf(fid, "            stars_overlap=%i,\n", (int)mo->noverlap);
+	fprintf(fid, "            overlap=%f,\n", mo->overlap);
+	fprintf(fid, "            quads_tried=%i,\n", mo->quads_tried);
+	fprintf(fid, "            codes_matched=%i,\n", mo->quads_matched);
+	fprintf(fid, "            quads_with_ok_scale=%i,\n", mo->quads_scaleok);
+	fprintf(fid, "            matches_verified=%i,\n", mo->nverified);
+	fprintf(fid, "            objs_used=%i,\n", mo->objs_tried);
+	fprintf(fid, "            time_used=%f,\n", mo->timeused);
 
 	fprintf(fid, "            quad=%u,\n", mo->quadno);
 	fprintf(fid, "            starids_ABCD=(%u,%u,%u,%u),\n",
@@ -137,45 +107,7 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 				mo->transform[0], mo->transform[1], mo->transform[2],
 				mo->transform[3], mo->transform[4], mo->transform[5],
 				mo->transform[6], mo->transform[7], mo->transform[8]);
-		/*
-		  fprintf(fid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
-		  mo->transform[0], mo->transform[1], mo->transform[2],
-		  mo->transform[3], mo->transform[4], mo->transform[5],
-		  mo->transform[6], mo->transform[7], mo->transform[8]);
-		*/
 	}
-	/*
-	  fprintf(fid, "            transform=array([%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g,%.12g]),\n",
-	  mo->transform[0], mo->transform[1], mo->transform[2],
-	  mo->transform[3], mo->transform[4], mo->transform[5],
-	  mo->transform[6], mo->transform[7], mo->transform[8]);
-	  fprintf(fid, "            # T=[%.12g,%.12g,%.12g;%.12g,%.12g,%.12g;%.12g,%.12g,%.12g],\n",
-	  mo->transform[0], mo->transform[1], mo->transform[2],
-	  mo->transform[3], mo->transform[4], mo->transform[5],
-	  mo->transform[6], mo->transform[7], mo->transform[8]);
-	  fprintf(fid, "            corner1=[%.12g,%.12g,1.0],\n",
-	  mo->corners[0], mo->corners[1]);
-	  fprintf(fid, "            corner2=[%.12g,%.12g,1.0],\n",
-	  mo->corners[2], mo->corners[3]);
-	  fprintf(fid, "            starA=[%.12g,%.12g,%.12g],\n",
-	  mo->starA[0], mo->starA[1], mo->starA[2]);
-	  fprintf(fid, "            fieldA=[%.12g,%.12g,1.0],\n",
-	  mo->fieldA[0], mo->fieldA[1]);
-	  fprintf(fid, "            starB=[%.12g,%.12g,%.12g],\n",
-	  mo->starB[0], mo->starB[1], mo->starB[2]);
-	  fprintf(fid, "            fieldB=[%.12g,%.12g,1.0],\n",
-	  mo->fieldB[0], mo->fieldB[1]);
-	  fprintf(fid, "            starC=[%.12g,%.12g,%.12g],\n",
-	  mo->starC[0], mo->starC[1], mo->starC[2]);
-	  fprintf(fid, "            fieldC=[%.12g,%.12g,1.0],\n",
-	  mo->fieldC[0], mo->fieldC[1]);
-	  fprintf(fid, "            starD=[%.12g,%.12g,%.12g],\n",
-	  mo->starD[0], mo->starD[1], mo->starD[2]);
-	  fprintf(fid, "            fieldD=[%.12g,%.12g,1.0],\n",
-	  mo->fieldD[0], mo->fieldD[1]);
-	  fprintf(fid, "            abcdorder=%i,\n",
-	  mo->abcdorder);
-	*/
 	fprintf(fid, "            code_err = %lf,\n", sqrt(mo->code_err));
 	fprintf(fid, "        ),\n");
 }
@@ -183,7 +115,6 @@ void hits_write_hit(FILE* fid, MatchObj* mo) {
 void hits_write_correspondences(FILE* fid, uint* starids, uint* fieldids,
 								int Nids, int ok) {
 	int i;
-	//fprintf(fid, "    ],\n"); /* Close previous quads list */
 	fprintf(fid, "    # Field Object <--> Catalogue Object Mapping Table\n");
 	if (!ok) {
 		fprintf(fid, "    # warning: some matches agree on resolve but not on mapping\n");
