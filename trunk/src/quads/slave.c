@@ -35,7 +35,7 @@
 #include "intmap.h"
 #include "verify.h"
 #include "donuts.h"
-#include "solvedfile.h"
+#include "solvedclient.h"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
 		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
 
 		if (solvedserver) {
-			if (solvedserver_set_server(solvedserver)) {
+			if (solvedclient_set_server(solvedserver)) {
 				fprintf(stderr, "Error setting solvedserver.\n");
 				exit(-1);
 			}
@@ -833,7 +833,7 @@ void* solvethread_run(void* varg) {
 			solver.solvedfn = NULL;
 
 		if (solvedserver) {
-			if (solvedserver_get(fieldid, fieldnum) == 1) {
+			if (solvedclient_get(fieldid, fieldnum) == 1) {
 				// field has already been solved.
 				fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
 				write_hits(fieldnum, NULL);
@@ -948,7 +948,7 @@ void* solvethread_run(void* varg) {
 				}
 			}
 			if (solvedserver) {
-				solvedserver_set(fieldid, fieldnum);
+				solvedclient_set(fieldid, fieldnum);
 			}
 
 		}

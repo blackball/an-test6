@@ -12,7 +12,7 @@
 #include "solver.h"
 #include "solver_callbacks.h"
 #include "tic.h"
-#include "solvedfile.h"
+#include "solvedclient.h"
 
 static inline double getx(double* d, int ind) {
 	// return d[ind*2];
@@ -136,7 +136,7 @@ void solve_field(solver_params* params) {
 		if (params->do_solvedserver) {
 			get_resource_stats(&usertime, &systime, NULL);
 			if (usertime + systime - lastcheck > 10.0) {
-				if (solvedserver_get(params->fieldid, params->fieldnum)) {
+				if (solvedclient_get(params->fieldid, params->fieldnum)) {
 					fprintf(stderr, "  field %u: field solved; aborting.\n", params->fieldnum);
 					break;
 				}

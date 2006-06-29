@@ -11,110 +11,86 @@
 
 #include "solvedfile.h"
 
-static struct sockaddr_in serveraddr = {0, 0, {0}};
-static FILE* fserver = NULL;
+/*
+  static char* fntemplate = NULL;
 
-int solvedserver_set_server(char* addr) {
-	char buf[256];
-	char* ind;
-	struct hostent* he;
-	int len;
-	int port;
-	if (fserver) {
-		if (fflush(fserver) ||
-			fclose(fserver)) {
-			fprintf(stderr, "Failed to close previous connection to server.\n");
-		}
-		fserver = NULL;
-	}
-	if (!addr)
-		return -1;
-	ind = index(addr, ':');
-	if (!ind) {
-		fprintf(stderr, "Invalid IP:port address: %s\n", addr);
-		return -1;
-	}
-	len = ind - addr;
-	memcpy(buf, addr, len);
-	buf[len] = '\0';
-	he = gethostbyname(buf);
-	if (!he) {
-		fprintf(stderr, "Solved server \"%s\" not found: %s.\n", buf, hstrerror(h_errno));
-		return -1;
-	}
-	memcpy(&(serveraddr.sin_addr), he->h_addr, he->h_length);
-	port = atoi(ind+1);
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_port = htons(port);
+  int solvedfile_set_filename_template(char* fn) {
+  if (fntemplate)
+  free(fntemplate);
+  fntemplate = strdup(fn);
+  return 0;
+  }
+*/
 
-	return 0;
-}
+int solvedfile_get(char* fn, int fieldnum) {
+	FILE* f;
+	unsigned char val;
+	off_t end;
 
-static int connect_to_server() {
-	int sock;
-	if (fserver)
+	f = fopen(fn, "rb");
+	if (!f) {
+		// assume it's not solved!
 		return 0;
-	sock = socket(PF_INET, SOCK_STREAM, 0);
-	if (sock == -1) {
-		fprintf(stderr, "Couldn't create socket: %s\n", strerror(errno));
+	}
+	if (fseek(f, 0, SEEK_END) ||
+		((end = ftello(f)) == -1)) {
+		fprintf(stderr, "Error: seeking to end of file %s: %s\n",
+				fn, strerror(errno));
 		return -1;
 	}
-	fserver = fdopen(sock, "r+b");
-	if (!fserver) {
-		fprintf(stderr, "Failed to fdopen socket: %s\n", strerror(errno));
+	if (end <= fieldnum) {
+		return 0;
+	}
+	if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
+		(fread(&val, 1, 1, f) != 1) ||
+		fclose(f)) {
+		fprintf(stderr, "Error: seeking, reading, or closing file %s: %s\n",
+				fn, strerror(errno));
 		return -1;
 	}
-	if (connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr))) {
-		fprintf(stderr, "Couldn't connect to server: %s\n", strerror(errno));
-		fserver = NULL;
+	return val;
+}
+
+int solvedfile_set(char* fn, int fieldnum) {
+	FILE* f;
+	unsigned char val;
+	off_t off;
+	//f = fopen(fn, "ab");
+	f = fopen(fn, "wb");
+	if (!f) {
+		fprintf(stderr, "Error: failed to open file %s for writing: %s\n",
+				fn, strerror(errno));
+		return -1;
+	}
+	if (fseeko(f, 0, SEEK_END) ||
+		((off = ftello(f)) == -1)) {
+		fprintf(stderr, "Error: failed to seek to end of file %s: %s\n",
+				fn, strerror(errno));
+		return -1;
+	}
+	printf("End of file is %i.  Fieldnum is %i.\n", (int)off, fieldnum);
+	if (off < fieldnum) {
+		// pad.
+		int npad = fieldnum - off;
+		int i;
+		val = 0;
+		printf("Adding %i pad bytes.\n", npad);
+		for (i=0; i<npad; i++)
+			if (fwrite(&val, 1, 1, f) != 1) {
+				fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
+						fn, strerror(errno));
+				return -1;
+			}
+	}
+	val = 1;
+	if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
+		(fwrite(&val, 1, 1, f) != 1) ||
+		fseeko(f, 0, SEEK_END) ||
+		fclose(f)) {
+		fprintf(stderr, "Error: seeking, writing, or closing file %s: %s\n",
+				fn, strerror(errno));
 		return -1;
 	}
 	return 0;
-}
-
-int solvedserver_get(int filenum, int fieldnum) {
-	char buf[256];
-	const char* solvedstr = "solved";
-	int nchars;
-	int solved;
-
-	if (connect_to_server())
-		return -1;
-	nchars = sprintf(buf, "get %i %i\n", filenum, fieldnum);
-	if ((fwrite(buf, 1, nchars, fserver) != nchars) ||
-		fflush(fserver)) {
-		fprintf(stderr, "Failed to write request to server: %s\n", strerror(errno));
-		fclose(fserver);
-		fserver = NULL;
-		return -1;
-	}
-	if (!fgets(buf, 256, fserver)) {
-		fprintf(stderr, "Couldn't read response: %s\n", strerror(errno));
-		fclose(fserver);
-		fserver = NULL;
-		return -1;
-	}
-	solved = (strncmp(buf, solvedstr, strlen(solvedstr)) == 0);
-	return solved;
-}
-
-void solvedserver_set(int filenum, int fieldnum) {
-	char buf[256];
-	int nchars;
-	if (connect_to_server())
-		return;
-	nchars = sprintf(buf, "set %i %i\n", filenum, fieldnum);
-	if ((fwrite(buf, 1, nchars, fserver) != nchars) ||
-		fflush(fserver)) {
-		fprintf(stderr, "Failed to send command (%s) to solvedserver: %s\n", buf, strerror(errno));
-		return;
-	}
-	// wait for response.
-	if (!fgets(buf, 256, fserver)) {
-		fprintf(stderr, "Couldn't read response: %s\n", strerror(errno));
-		fclose(fserver);
-		fserver = NULL;
-		return;
-	}
 }
 

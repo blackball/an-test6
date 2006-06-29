@@ -63,7 +63,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	codefile.o tic.o quadfile.o intmap.o bl.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
-	solvedfile.o \
+	solvedclient.o \
 	$(QFITS_OBJ)
 
 SOLVER_OBJ := solver.o
@@ -115,7 +115,7 @@ all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver printsolved
 printsolved: printsolved.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-solvedserver: solvedserver.o
+solvedserver: solvedserver.o solvedfile.o bl.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 FITS_UTILS := tablist modhead fitscopy tabmerge

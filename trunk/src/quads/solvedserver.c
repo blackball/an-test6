@@ -11,6 +11,7 @@
 #include <sys/select.h>
 
 #include "bl.h"
+#include "solvedfile.h"
 
 const char* OPTIONS = "hp:f:";
 
@@ -22,6 +23,7 @@ void printHelp(char* progname) {
 }
 
 int bailout = 0;
+char* solvedfnpattern = "solved.%02i";
 
 static void sighandler(int sig) {
 	bailout = 1;
@@ -32,14 +34,26 @@ extern int optind, opterr, optopt;
 
 int handle_request(FILE* fid) {
 	char buf[256];
+	char fn[256];
+	char getsetstr[16];
+	int set;
+	int get;
+	int filenum;
+	int fieldnum;
+
+	printf("Fileno %i:\n", fileno(fid));
 	if (!fgets(buf, 256, fid)) {
 		fprintf(stderr, "Error: failed to read a line of input.\n");
-		goto bailout;
+		fflush(stderr);
+		fclose(fid);
+		return -1;
 	}
 	//printf("Got request %s\n", buf);
 	if (sscanf(buf, "%4s %i %i\n", getsetstr, &filenum, &fieldnum) != 3) {
 		fprintf(stderr, "Error: malformed request: %s\n", buf);
-		goto bailout;
+		fflush(stderr);
+		fclose(fid);
+		return -1;
 	}
 
 	get = (strcmp(getsetstr, "get") == 0);
@@ -48,92 +62,41 @@ int handle_request(FILE* fid) {
 	sprintf(fn, solvedfnpattern, filenum);
 
 	if (get) {
-		FILE* f = fopen(fn, "rb");
-		unsigned char val;
-		off_t end;
+		int val;
 		printf("Get %s [%i].\n", fn, fieldnum);
-		if (!f) {
-			// assume it's not solved!
-			fprintf(fid, "unsolved %i %i\n", filenum, fieldnum);
+		val = solvedfile_get(fn, fieldnum);
+		if (val == -1) {
+			fclose(fid);
+			return -1;
+		} else {
+			fprintf(fid, "%s %i %i\n", (val ? "solved" : "unsolved"),
+					filenum, fieldnum);
 			fflush(fid);
-			goto bailout;
 		}
-		if (fseek(f, 0, SEEK_END) ||
-			((end = ftello(f)) == -1)) {
-			fprintf(stderr, "Error: seeking to end of file %s: %s\n",
-					fn, strerror(errno));
-			goto bailout;
-		}
-		if (end <= fieldnum) {
-			fprintf(fid, "unsolved %i %i\n", filenum, fieldnum);
-			fflush(fid);
-			//fclose(f);
-			goto bailout;
-		}
-		if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
-			(fread(&val, 1, 1, f) != 1)) {
-			fprintf(stderr, "Error: seeking or reading from file %s: %s\n",
-					fn, strerror(errno));
-			//fclose(f);
-			goto bailout;
-		}
-		fprintf(fid, "%s %i %i\n", (val ? "solved" : "unsolved"),
-				filenum, fieldnum);
-		fflush(fid);
-		//fclose(f);
+		return 0;
 	} else if (set) {
-		FILE* f = fopen(fn, "ab");
-		unsigned char val;
-		off_t off;
 		printf("Set %s [%i].\n", fn, fieldnum);
-		if (!f) {
-			fprintf(stderr, "Error: failed to open file %s for writing: %s\n",
-					fn, strerror(errno));
-			goto bailout;
+		if (solvedfile_set(fn, fieldnum)) {
+			fclose(fid);
+			return -1;
 		}
-		if (fseeko(f, 0, SEEK_END) ||
-			((off = ftello(f)) == -1)) {
-			fprintf(stderr, "Error: failed to seek to end of file %s: %s\n",
-					fn, strerror(errno));
-			//fclose(f);
-			goto bailout;
-		}
-		if (off < fieldnum) {
-			// pad.
-			int npad = fieldnum - off;
-			int i;
-			val = 0;
-			for (i=0; i<npad; i++)
-				if (fwrite(&val, 1, 1, f) != 1) {
-					fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
-							fn, strerror(errno));
-					//fclose(f);
-					goto bailout;
-				}
-		}
-		val = 1;
-		if (fflush(f) ||
-			fseeko(f, (off_t)fieldnum, SEEK_SET) ||
-			(fwrite(&val, 1, 1, f) != 1)) {
-			fprintf(stderr, "Error: seeking or writing to file %s: %s\n",
-					fn, strerror(errno));
-			//fclose(f);
-			goto bailout;
-		}
+		fprintf(fid, "ok\n");
+		fflush(fid);
+		return 0;
 		/*
-		  if (fclose(f)) {
-		  fprintf(stderr, "Error: closing file %s: %s\n", fn, strerror(errno));
+		  sprintf(buf, "ok\n");
+		  len = strlen(buf);
+		  if ((fwrite(buf, 1, len, fid) != len) ||
+		  fflush(fid)) {
+		  fprintf(stderr, "Error writing set confirmation.\n");
 		  goto bailout;
 		  }
 		*/
 	} else {
 		fprintf(stderr, "Error: malformed command.\n");
-		goto bailout;
+		fclose(fid);
+		return -1;
 	}
-	return 0;
-
- bailout:
-	return -1;
 }
 
 int main(int argc, char** args) {
@@ -142,7 +105,6 @@ int main(int argc, char** args) {
 	int sock;
 	struct sockaddr_in addr;
 	int port = 6789;
-	char* solvedfnpattern = "solved.%02i";
 	unsigned int opt;
 	pl* clients;
 
@@ -190,98 +152,90 @@ int main(int argc, char** args) {
 
 	signal(SIGINT, sighandler);
 
-	for (;;) {
-		char buf[256];
-		FILE* fid;
-		char getsetstr[16];
-		char fn[256];
-		int set;
-		int get;
-		int filenum;
-		int fieldnum;
+	clients = pl_new(32);
+
+	// wait for a connection or i/o...
+	while (1) {
 		struct sockaddr_in clientaddr;
 		socklen_t addrsz = sizeof(clientaddr);
+		FILE* fid;
+		fd_set rset;
+		//fd_set wset;
+		//fd_set eset;
+		struct timeval timeout;
+		int res;
+		int maxval = 0;
+		int i;
 
-		// wait for a connection or i/o...
-		while (1) {
-			fd_set rset;
-			//fd_set wset;
-			fd_set eset;
-			struct timeval timeout;
-			int res;
-			int maxval = 0;
-			int i;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
 
-			timeout.tv_sec = 1;
-			timeout.tv_usec = 0;
+		FD_ZERO(&rset);
+		//FD_ZERO(&wset);
+		//FD_ZERO(&eset);
 
-			FD_ZERO(&rset);
-			//FD_ZERO(&wset);
-			FD_ZERO(&eset);
-
-			maxval = sock;
-			for (i=0; i<pl_size(clients); i++) {
-				int val;
-				fid = pl_get(clients, i);
-				val = fileno(fid);
-				FD_SET(val, &rset);
-				FD_SET(val, &eset);
-				if (val > maxval)
-					maxval = val;
+		maxval = sock;
+		for (i=0; i<pl_size(clients); i++) {
+			int val;
+			fid = pl_get(clients, i);
+			val = fileno(fid);
+			FD_SET(val, &rset);
+			//FD_SET(val, &eset);
+			if (val > maxval)
+				maxval = val;
+		}
+		FD_SET(sock, &rset);
+		//FD_SET(sock, &eset);
+		printf("select().\n");
+		res = select(maxval+1, &rset, NULL, NULL, /*&eset,*/ &timeout);
+		if (res == -1) {
+			if (errno != EINTR) {
+				fprintf(stderr, "Error: select(): %s\n", strerror(errno));
+				exit(-1);
 			}
-			FD_SET(sock, &rset);
-			FD_SET(sock, &eset);
-			res = select(maxval+1, &rset, NULL, &eset, &timeout);
-			if (res == -1) {
-				if (errno != EINTR) {
-					fprintf(stderr, "Error: select(): %s\n", strerror(errno));
-					exit(-1);
-				}
-			}
-			if (bailout)
-				break;
-			if (!res)
-				continue;
+		}
+		if (bailout)
+			break;
+		if (!res)
+			continue;
 
-			for (i=0; i<pl_size(clients); i++) {
-				fid = pl_get(clients, i);
-				if (FD_ISSET(fileno(fid), &eset)) {
+		for (i=0; i<pl_size(clients); i++) {
+			fid = pl_get(clients, i);
+			/*
+			  if (FD_ISSET(fileno(fid), &eset)) {
+			  fprintf(stderr, "Error from fileno %i\n", fileno(fid));
+			  if (ferror(fid) || feof(fid)) {
+			  pl_remove(clients, i);
+			  i--;
+			  continue;
+			  }
+			  }
+			*/
+			if (FD_ISSET(fileno(fid), &rset)) {
+				if (handle_request(fid)) {
 					fprintf(stderr, "Error from fileno %i\n", fileno(fid));
 					pl_remove(clients, i);
 					i--;
 					continue;
 				}
-				if (FD_ISSET(fileno(fid), &rset)) {
-					if (handle_request(fid)) {
-						fprintf(stderr, "Error from fileno %i\n", fileno(fid));
-						pl_remove(clients, i);
-						i--;
-						continue;
-					}
-				}
-			}
-			if (FD_ISSET(sock, &rset)) {
-				int s = accept(sock, (struct sockaddr*)&clientaddr, &addrsz);
-				if (s == -1) {
-					fprintf(stderr, "Error: failed to accept() on socket: %s\n", strerror(errno));
-					continue;
-				}
-				if (addrsz != sizeof(clientaddr)) {
-					fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, sizeof(clientaddr));
-					continue;
-				}
-				printf("Connection from %s: ", inet_ntoa(clientaddr.sin_addr));
-				fflush(stdout);
-				fid = fdopen(s, "a+b");
-				pl_append(clients, fid);
 			}
 		}
-		if (bailout)
-			break;
-
-	bailout:
-		fclose(fid);
-		continue;
+		if (FD_ISSET(sock, &rset)) {
+			int s = accept(sock, (struct sockaddr*)&clientaddr, &addrsz);
+			if (s == -1) {
+				fprintf(stderr, "Error: failed to accept() on socket: %s\n", strerror(errno));
+				continue;
+			}
+			if (addrsz != sizeof(clientaddr)) {
+				fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, sizeof(clientaddr));
+				continue;
+			}
+			printf("Connection from %s: ", inet_ntoa(clientaddr.sin_addr));
+			fflush(stdout);
+			fid = fdopen(s, "a+b");
+			printf("fileno %i\n", fileno(fid));
+			pl_append(clients, fid);
+		}
 	}
 
 	printf("Closing socket...\n");

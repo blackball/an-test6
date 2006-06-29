@@ -1,10 +1,10 @@
 #ifndef SOLVEDFILE_H
 #define SOLVEDFILE_H
 
-int solvedserver_set_server(char* addr);
+//int solvedfile_set_filename_template(char* templ);
 
-int solvedserver_get(int filenum, int fieldnum);
+int solvedfile_get(char* fn, int fieldnum);
 
-void solvedserver_set(int filenum, int fieldnum);
+int solvedfile_set(char* fn, int fieldnum);
 
 #endif
