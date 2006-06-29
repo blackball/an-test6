@@ -4,23 +4,10 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "solvedfile.h"
-
-/*
-  static char* fntemplate = NULL;
-
-  int solvedfile_set_filename_template(char* fn) {
-  if (fntemplate)
-  free(fntemplate);
-  fntemplate = strdup(fn);
-  return 0;
-  }
-*/
 
 int solvedfile_get(char* fn, int fieldnum) {
 	FILE* f;
@@ -52,41 +39,39 @@ int solvedfile_get(char* fn, int fieldnum) {
 }
 
 int solvedfile_set(char* fn, int fieldnum) {
-	FILE* f;
+	int f;
 	unsigned char val;
 	off_t off;
-	//f = fopen(fn, "ab");
-	f = fopen(fn, "wb");
-	if (!f) {
+	f = open(fn, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+	if (f == -1) {
 		fprintf(stderr, "Error: failed to open file %s for writing: %s\n",
 				fn, strerror(errno));
 		return -1;
 	}
-	if (fseeko(f, 0, SEEK_END) ||
-		((off = ftello(f)) == -1)) {
-		fprintf(stderr, "Error: failed to seek to end of file %s: %s\n",
-				fn, strerror(errno));
+	off = lseek(f, 0, SEEK_END);
+	if (off == -1) {
+		fprintf(stderr, "Error: failed to lseek() to end of file %s: %s\n", fn, strerror(errno));
 		return -1;
 	}
-	printf("End of file is %i.  Fieldnum is %i.\n", (int)off, fieldnum);
+	// this gives you the offset one past the end of the file.
+	//printf("End of file is %i.  Fieldnum is %i.\n", (int)off, fieldnum);
 	if (off < fieldnum) {
 		// pad.
 		int npad = fieldnum - off;
 		int i;
 		val = 0;
-		printf("Adding %i pad bytes.\n", npad);
+		//printf("Adding %i pad bytes.\n", npad);
 		for (i=0; i<npad; i++)
-			if (fwrite(&val, 1, 1, f) != 1) {
+			if (write(f, &val, 1) != 1) {
 				fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
 						fn, strerror(errno));
 				return -1;
 			}
 	}
 	val = 1;
-	if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
-		(fwrite(&val, 1, 1, f) != 1) ||
-		fseeko(f, 0, SEEK_END) ||
-		fclose(f)) {
+	if ((lseek(f, (off_t)fieldnum, SEEK_SET) == -1) ||
+		(write(f, &val, 1) != 1) ||
+		close(f)) {
 		fprintf(stderr, "Error: seeking, writing, or closing file %s: %s\n",
 				fn, strerror(errno));
 		return -1;
