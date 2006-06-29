@@ -319,17 +319,21 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = Dx;
     thequery[3] = Dy;
 
-	set_xy(inorder, 0, ABCDpix, A);
-	set_xy(inorder, 1, ABCDpix, B);
-	set_xy(inorder, 2, ABCDpix, C);
-	set_xy(inorder, 3, ABCDpix, D);
+	if ((params->cxdx_margin == 0.0) ||
+		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
 
-    result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres)
-		resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
-    kdtree_free_query(result);
-	if (params->quitNow)
-		return;
+		set_xy(inorder, 0, ABCDpix, A);
+		set_xy(inorder, 1, ABCDpix, B);
+		set_xy(inorder, 2, ABCDpix, C);
+		set_xy(inorder, 3, ABCDpix, D);
+
+		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
+		kdtree_free_query(result);
+		if (params->quitNow)
+			return;
+	}
 
     // BACD
     thequery[0] = 1.0 - Cx;
@@ -337,17 +341,21 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = 1.0 - Dx;
     thequery[3] = 1.0 - Dy;
 
-	set_xy(inorder, 0, ABCDpix, B);
-	set_xy(inorder, 1, ABCDpix, A);
-	set_xy(inorder, 2, ABCDpix, C);
-	set_xy(inorder, 3, ABCDpix, D);
+	if ((params->cxdx_margin == 0.0) ||
+		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
 
-    result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres)
-		resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
-    kdtree_free_query(result);
-	if (params->quitNow)
-		return;
+		set_xy(inorder, 0, ABCDpix, B);
+		set_xy(inorder, 1, ABCDpix, A);
+		set_xy(inorder, 2, ABCDpix, C);
+		set_xy(inorder, 3, ABCDpix, D);
+
+		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
+		kdtree_free_query(result);
+		if (params->quitNow)
+			return;
+	}
 
     // ABDC
     thequery[0] = Dx;
@@ -355,17 +363,21 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = Cx;
     thequery[3] = Cy;
 
-	set_xy(inorder, 0, ABCDpix, A);
-	set_xy(inorder, 1, ABCDpix, B);
-	set_xy(inorder, 2, ABCDpix, D);
-	set_xy(inorder, 3, ABCDpix, C);
+	if ((params->cxdx_margin == 0.0) ||
+		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
 
-    result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres)
-		resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
-    kdtree_free_query(result);
-	if (params->quitNow)
-		return;
+		set_xy(inorder, 0, ABCDpix, A);
+		set_xy(inorder, 1, ABCDpix, B);
+		set_xy(inorder, 2, ABCDpix, D);
+		set_xy(inorder, 3, ABCDpix, C);
+
+		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
+		kdtree_free_query(result);
+		if (params->quitNow)
+			return;
+	}
 
     // BADC
     thequery[0] = 1.0 - Dx;
@@ -373,17 +385,22 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = 1.0 - Cx;
     thequery[3] = 1.0 - Cy;
 
-	set_xy(inorder, 0, ABCDpix, B);
-	set_xy(inorder, 1, ABCDpix, A);
-	set_xy(inorder, 2, ABCDpix, D);
-	set_xy(inorder, 3, ABCDpix, C);
+	if ((params->cxdx_margin == 0.0) ||
+		(thequery[0] <= (thequery[2] - params->cxdx_margin))) {
 
-    result = kdtree_rangesearch(params->codekd, thequery, tol);
-    if (result->nres)
-		resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
-    kdtree_free_query(result);
-	if (params->quitNow)
-		return;
+		set_xy(inorder, 0, ABCDpix, B);
+		set_xy(inorder, 1, ABCDpix, A);
+		set_xy(inorder, 2, ABCDpix, D);
+		set_xy(inorder, 3, ABCDpix, C);
+
+		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
+		kdtree_free_query(result);
+		if (params->quitNow)
+			return;
+	}
+
 }
 
 void resolve_matches(kdtree_qres_t* krez, double *query, double *field,

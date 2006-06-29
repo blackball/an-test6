@@ -75,6 +75,8 @@ double donut_dist;
 double donut_thresh;
 int do_donut;
 int threads;
+double cxdx_margin;
+bool do_cxdx;
 
 il* fieldlist;
 pthread_mutex_t fieldlist_mutex;
@@ -157,6 +159,8 @@ int main(int argc, char *argv[]) {
 		donut_thresh = 0.0;
 		do_donut = 0;
 		threads = 1;
+		do_cxdx = 0;
+		cxdx_margin = 0.0;
 
 		il_remove_all(fieldlist);
 
@@ -197,6 +201,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
 		fprintf(stderr, "donut_dist %g\n", donut_dist);
 		fprintf(stderr, "donut_thresh %g\n", donut_thresh);
+		fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
 		fprintf(stderr, "threads %i\n", threads);
 
 		fprintf(stderr, "fields ");
@@ -270,6 +275,7 @@ int main(int argc, char *argv[]) {
 
 		do_verify = startree && (verify_dist2 > 0.0);
 		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
+		do_cxdx = (cxdx_margin > 0.0);
 
 		if (solvedserver) {
 			if (solvedclient_set_server(solvedserver)) {
@@ -403,6 +409,8 @@ static int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
+			cxdx_margin = atof(nextword);
 		} else if (is_word(buffer, "donut_dist ", &nextword)) {
 			donut_dist = atof(nextword);
 		} else if (is_word(buffer, "donut_thresh ", &nextword)) {
@@ -780,6 +788,7 @@ void* solvethread_run(void* varg) {
 	solver.maxtries = 0;
 	solver.codetol = codetol;
 	solver.handlehit = handlehit;
+	solver.cxdx_margin = cxdx_margin;
 
 	if (do_verify)
 		my->verified = pl_new(32);
