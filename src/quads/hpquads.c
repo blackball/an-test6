@@ -20,14 +20,13 @@
 #include "fitsioutils.h"
 
 
-#define OPTIONS "hf:u:l:n:oi:" // r
+#define OPTIONS "hf:u:l:n:o:i:" // r
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-static quadfile* quads = NULL;
-static codefile* codes = NULL;
-
+static quadfile* quads;
+static codefile* codes;
 static catalog* cat;
 
 // bounds of quad scale (in radians^2)
@@ -41,13 +40,13 @@ static int quadnum = 0;
 static void print_help(char* progname)
 {
 	printf("\nUsage:\n"
-	       "  %s -f <filename-base>\n"
+	       "  %s -f <input-filename-base> -o <output-filename-base>\n"
 	       "     [-r]            re-bin the unused stars\n"
-	       "     [-n <nside>]    healpix nside (default 512)\n"
+	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
-		   "     [-i <unique-id>] set the unique ID of this index\n"
-	       "\n"
+		   "     [-i <unique-id>] set the unique ID of this index\n\n"
+	       "Reads catalog (objs), writes (code, quad).\n\n"
 	       , progname);
 }
 
@@ -437,7 +436,8 @@ int main(int argc, char** argv)
 	int HEALPIXES;
 	int i;
 	//int rebin = 0;
-	char* basefname = NULL;
+	char* basefnin = NULL;
+	char* basefnout = NULL;
 	uint pass, npasses;
 	uint id = 0;
 
@@ -458,7 +458,10 @@ int main(int argc, char** argv)
 			print_help(argv[0]);
 			exit(0);
 		case 'f':
-			basefname = optarg;
+			basefnin = optarg;
+			break;
+		case 'o':
+			basefnout = optarg;
 			break;
 		case 'u':
 			quad_scale_upper2 = atof(optarg);
@@ -472,8 +475,8 @@ int main(int argc, char** argv)
 			return -1;
 		}
 
-	if (!basefname) {
-		printf("specify a catalogue file, bonehead.\n");
+	if (!basefnin || !basefnout) {
+		fprintf(stderr, "Specify in&out base filenames, bonehead!\n");
 		print_help(argv[0]);
 		exit( -1);
 	}
@@ -500,7 +503,7 @@ int main(int argc, char** argv)
 	for (i = 0; i < HEALPIXES; i++)
 		il_new_existing(pixels + i, IL_BLOCKSIZE);
 
-	catfname = mk_catfn(basefname);
+	catfname = mk_catfn(basefnin);
 	printf("Reading catalog file %s ...\n", catfname);
 	cat = catalog_open(catfname, 0);
 	if (!cat) {
@@ -510,8 +513,8 @@ int main(int argc, char** argv)
 	free_fn(catfname);
 	printf("Catalog contains %i objects.\n", cat->numstars);
 
-	quadfname = mk_quadfn(basefname);
-	codefname = mk_codefn(basefname);
+	quadfname = mk_quadfn(basefnout);
+	codefname = mk_codefn(basefnout);
 
 	printf("Writing quad file %s and code file %s\n", quadfname, codefname);
 
