@@ -125,6 +125,7 @@ int main(int argc, char **args) {
 	qfits_header_add(quadout->header, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
 	fits_copy_all_headers(quadin->header, quadout->header, "HISTORY");
 	fits_copy_all_headers(quadin->header, quadout->header, "COMMENT");
+	fits_copy_header(quadin->header, quadout->header, "CXDX");
 
 	if (quadfile_write_header(quadout)) {
 		fprintf(stderr, "Failed to write quadfile header.\n");
@@ -162,6 +163,7 @@ int main(int argc, char **args) {
 	qfits_header_add(hdr, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
 	fits_copy_all_headers(codehdr, hdr, "HISTORY");
 	fits_copy_all_headers(codehdr, hdr, "COMMENT");
+	fits_copy_header(codehdr, hdr, "CXDX");
 
 	quadfile_close(quadin);
 

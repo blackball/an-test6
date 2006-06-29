@@ -144,6 +144,9 @@ int main(int argc, char *argv[]) {
 	fits_add_args(codesout->header, argv, argc);
 	qfits_header_add(codesout->header, "HISTORY", "(end of dedup_index command line)", NULL, NULL);
 
+	fits_copy_header(codesin->header, codesout->header, "CXDX");
+	fits_copy_header(quadsin->header, quadsout->header, "CXDX");
+
     if (quadfile_write_header(quadsout)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
         exit(-1);

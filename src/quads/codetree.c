@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
 	fits_copy_header(codes->header, hdr, "INDEXID");
 	fits_copy_header(codes->header, hdr, "HEALPIX");
+	fits_copy_header(codes->header, hdr, "CXDX");
 	qfits_header_add(hdr, "HISTORY", "codetree command line:", NULL, NULL);
 	fits_add_args(hdr, argv, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of codetree command line)", NULL, NULL);
