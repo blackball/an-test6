@@ -297,6 +297,12 @@ int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
 	double vec1[6];
 	double vec2[6];
 
+	// two matches to the same quad don't supply any additional evidence -
+	// it's probably donuts or double-images or something.
+	if (m1->quadno == m2->quadno) {
+		return 0;
+	}
+
 	vec1[0] = m1->sMin[0];
 	vec1[1] = m1->sMin[1];
 	vec1[2] = m1->sMin[2];
