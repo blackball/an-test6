@@ -880,6 +880,7 @@ void* solvethread_run(void* varg) {
 		solver.nummatches = 0;
 		solver.numscaleok = 0;
 		solver.mostagree = 0;
+		solver.numcxdxskipped = 0;
 		solver.startobj = startdepth;
 		solver.field = field;
 		solver.nfield = nfield;

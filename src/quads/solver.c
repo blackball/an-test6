@@ -195,8 +195,9 @@ void solve_field(solver_params* params) {
 		}
 
 		fprintf(stderr,
-				"  field %u, object %u of %u: %i agree, %i tried, %i matched.\n",
-				params->fieldnum, newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
+				"  field %u, object %u of %u: %i agree, %i tried, %i matched.  cxdx skipped %i.\n",
+				params->fieldnum, newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches,
+				params->numcxdxskipped);
 
 		if ((params->maxtries && (params->numtries >= params->maxtries)) ||
 			params->quitNow)
@@ -333,7 +334,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		kdtree_free_query(result);
 		if (params->quitNow)
 			return;
-	}
+	} else
+		params->numcxdxskipped++;
 
     // BACD
     thequery[0] = 1.0 - Cx;
@@ -355,7 +357,9 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		kdtree_free_query(result);
 		if (params->quitNow)
 			return;
-	}
+	} else
+		params->numcxdxskipped++;
+
 
     // ABDC
     thequery[0] = Dx;
@@ -377,7 +381,9 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		kdtree_free_query(result);
 		if (params->quitNow)
 			return;
-	}
+	} else
+		params->numcxdxskipped++;
+
 
     // BADC
     thequery[0] = 1.0 - Dx;
@@ -399,7 +405,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		kdtree_free_query(result);
 		if (params->quitNow)
 			return;
-	}
+	} else
+		params->numcxdxskipped++;
 
 }
 

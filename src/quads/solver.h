@@ -40,7 +40,6 @@ struct solver_params {
 	// of this one before the other fields are set.
 	MatchObj* mo_template;
 
-	// Must be initialized by caller; will contain outputs:
 	handle_hit handlehit;
 	
 	// internal:
@@ -60,6 +59,8 @@ struct solver_params {
 	int mostagree;
 	// this is set to an absolute value.
 	int objsused;
+	// number of quads skipped because of cxdx constraints.
+	int numcxdxskipped;
 
 	void* userdata;
 };
