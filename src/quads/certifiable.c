@@ -16,7 +16,7 @@ char* OPTIONS = "hR:A:B:n:t:f:L:H:b:C:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
-			"   -R rdls-file\n"
+			"   -R rdls-file-template\n"
 			"   [-A <first-field>]  (default 0)\n"
 			"   [-B <last-field>]   (default the largest field encountered)\n"
 			"   [-n <negative-fields-rdls>]"
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
 	char* rdlsfname = NULL;
-	rdlist* rdls;
+	rdlist* rdls = NULL;
 	int i;
 	int correct, incorrect, warning;
 	int firstfield = 0;
