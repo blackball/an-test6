@@ -196,6 +196,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "donut_dist %g\n", donut_dist);
 		fprintf(stderr, "donut_thresh %g\n", donut_thresh);
 		fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
+		fprintf(stderr, "maxquads %i\n", maxquads);
 		fprintf(stderr, "threads %i\n", threads);
 
 		fprintf(stderr, "fields ");
@@ -900,6 +901,11 @@ void* solvethread_run(void* varg) {
 
 		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
 				fieldnum, solver.numtries, solver.nummatches);
+
+		if (maxquads && solver.numtries >= maxquads) {
+			fprintf(stderr, "    exceeded the number of quads to try: %i >= %i.\n",
+					solver.numtries, maxquads);
+		}
 
 		free(solver.solvedfn);
 
