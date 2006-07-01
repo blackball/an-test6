@@ -54,6 +54,16 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
+	if (infn && !outfn) {
+		int next = qfits_query_n_ext(infn);
+		if (next == -1) {
+			fprintf(stderr, "Couldn't determine how many extensions are in file %s.\n", infn);
+		} else {
+			printf("File %s contains %i FITS extensions.\n", infn, next);
+		}
+		exit(0);
+	}
+
 	if (!infn || !outfn || !il_size(exts)) {
 		printHelp(progname);
 		exit(-1);
