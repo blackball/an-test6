@@ -75,6 +75,7 @@ double donut_thresh;
 int do_donut;
 int threads;
 double cxdx_margin;
+int maxquads;
 
 il* fieldlist;
 pthread_mutex_t fieldlist_mutex;
@@ -408,6 +409,8 @@ static int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "maxquads ", &nextword)) {
+			maxquads = atoi(nextword);
 		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
 			cxdx_margin = atof(nextword);
 		} else if (is_word(buffer, "donut_dist ", &nextword)) {
@@ -783,7 +786,7 @@ void* solvethread_run(void* varg) {
 	solver_default_params(&solver);
 	solver.codekd = codetree;
 	solver.endobj = enddepth;
-	solver.maxtries = 0;
+	solver.maxtries = maxquads;
 	solver.codetol = codetol;
 	solver.handlehit = handlehit;
 	solver.cxdx_margin = cxdx_margin;
