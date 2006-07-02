@@ -127,54 +127,41 @@ int xylist_n_entries(xylist* ls, uint field) {
 
 int xylist_read_entries(xylist* ls, uint field, uint offset, uint n,
 						double* vals) {
-	void* rawdata;
 	double* ddata;
-	float* fdata;
+	float* fdata = NULL;
 	int i;
 	if (xylist_find_field(ls, field)) {
 		return -1;
 	}
-	rawdata = qfits_query_column_seq(ls->table, ls->xcol, offset, n);
-	if (!rawdata) {
-		fprintf(stderr, "Failed to read data from xylist file %s, field "
-				"%u, offset %u, n %u.\n", ls->fn, field, offset, n);
-		return -1;
-	}
+	ddata = vals + (ls->parity ? 1 : 0);
 	if (ls->xtype == TFITS_BIN_TYPE_D) {
-		ddata = rawdata;
-		for (i=0; i<n; i++)
-			vals[i*2 + 0] = ddata[i];
+		qfits_query_column_seq_to_array(ls->table, ls->xcol, offset, n,
+										(unsigned char*)ddata,
+										2 * sizeof(double));
 	} else if (ls->xtype == TFITS_BIN_TYPE_E) {
-		fdata = rawdata;
+		fdata = malloc(n * sizeof(float));
+		qfits_query_column_seq_to_array(ls->table, ls->xcol, offset, n,
+										(unsigned char*)fdata,
+										sizeof(float));
 		for (i=0; i<n; i++)
-			vals[i*2 + 0] = fdata[i];
+			ddata[i*2] = fdata[i];
 	}
-	free(rawdata);
-	rawdata = qfits_query_column_seq(ls->table, ls->ycol, offset, n);
-	if (!rawdata) {
-		fprintf(stderr, "Failed to read data from xylist file %s, field "
-				"%u, offset %u, n %u.\n", ls->fn, field, offset, n);
-		return -1;
-	}
-	if (ls->ytype == TFITS_BIN_TYPE_D) {
-		ddata = rawdata;
-		for (i=0; i<n; i++)
-			vals[i*2 + 1] = ddata[i];
-	} else if (ls->ytype == TFITS_BIN_TYPE_E) {
-		fdata = rawdata;
-		for (i=0; i<n; i++)
-			vals[i*2 + 1] = fdata[i];
-	}
-	free(rawdata);
 
-	if (ls->parity) {
-		for (i=0; i<n; i++) {
-			double tmp;
-			tmp           = vals[i*2 + 0];
-			vals[i*2 + 0] = vals[i*2 + 1];
-			vals[i*2 + 1] = tmp;
-		}
+	ddata = vals + (ls->parity ? 0 : 1);
+	if (ls->ytype == TFITS_BIN_TYPE_D) {
+		qfits_query_column_seq_to_array(ls->table, ls->ycol, offset, n,
+										(unsigned char*)ddata,
+										2 * sizeof(double));
+	} else if (ls->ytype == TFITS_BIN_TYPE_E) {
+		fdata = realloc(fdata, n * sizeof(float));
+		qfits_query_column_seq_to_array(ls->table, ls->ycol, offset, n,
+										(unsigned char*)fdata,
+										sizeof(float));
+		for (i=0; i<n; i++)
+			ddata[i*2] = fdata[i];
 	}
+
+	free(fdata);
 	return 0;
 }
 
