@@ -177,10 +177,27 @@ int main(int argc, char *argv[]) {
 	// we assume the matchfiles are sorted by field id and number.
 	for (fieldfile=firstfieldfile; fieldfile<=lastfieldfile; fieldfile++) {
 		bool alldone = TRUE;
+		char fn[256];
+
+		sprintf(fn, rdlsfname, fieldfile);
+		printf("Reading rdls file %s ...\n", fn);
+		fflush(stdout);
+		rdls = rdlist_open(fn);
+		if (!rdls) {
+			fprintf(stderr, "Couldn't read rdls file.\n");
+			exit(-1);
+		}
+		rdls->xname = "RA";
+		rdls->yname = "DEC";
+
+		nfields = rdls->nfields;
+		printf("Read %i fields from rdls file.\n", nfields);
+		if (nfields < lastfield) {
+			lastfield = nfields - 1;
+		}
 
 		for (f=firstfield; f<=lastfield; f++) {
 			int fieldnum = f;
-			char fn[256];
 
 			alldone = TRUE;
 			for (i=0; i<ninputfiles; i++)
@@ -232,23 +249,6 @@ int main(int argc, char *argv[]) {
 
 			if (!bl_size(matches))
 				continue;
-
-			sprintf(fn, rdlsfname, fieldfile);
-			printf("Reading rdls file %s ...\n", fn);
-			fflush(stdout);
-			rdls = rdlist_open(fn);
-			if (!rdls) {
-				fprintf(stderr, "Couldn't read rdls file.\n");
-				exit(-1);
-			}
-			rdls->xname = "RA";
-			rdls->yname = "DEC";
-
-			nfields = rdls->nfields;
-			printf("Read %i fields from rdls file.\n", nfields);
-			if (nfields < lastfield) {
-				lastfield = nfields - 1;
-			}
 
 			/*
 			  corrects =   calloc(sizeof(int), nfields);
@@ -398,7 +398,11 @@ int main(int argc, char *argv[]) {
 				}
 				fflush(stdout);
 			}
+
 		}
+
+		rdlist_close(rdls);
+
 		if (alldone)
 			break;
 
