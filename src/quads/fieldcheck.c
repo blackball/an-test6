@@ -269,7 +269,7 @@ static int find_table(fieldcheck_file* mf) {
 	return 0;
 }
 
-int fieldcheck_file_read_matches(fieldcheck_file* mf, fieldcheck* fc, 
+int fieldcheck_file_read_entries(fieldcheck_file* mf, fieldcheck* fc, 
 								 uint offset, uint n) {
 	int c;
 	if (!fieldcheck_file_fitstruct_inited)
