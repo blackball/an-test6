@@ -45,7 +45,7 @@ dl** neglist;
 dl** fplist;
 dl** tplist;
 int Ncenter = 0;
-double* fieldcenters;
+double* fieldcenters = NULL;
 
 static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 						bl* matches) {
@@ -233,8 +233,6 @@ int main(int argc, char *argv[]) {
 	  int *warnings;
 	*/
 
-	//double* fieldcenters;
-
 	char* truefn = NULL;
 	char* fpfn = NULL;
 	char* negfn = NULL;
@@ -365,7 +363,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	fieldcenters = malloc((lastfield+1) * 2 * sizeof(double));
 	matches = bl_new(256, sizeof(MatchObj));
 	correct = incorrect = warning = 0;
 
@@ -390,6 +387,8 @@ int main(int argc, char *argv[]) {
 		if (nfields < lastfield) {
 			lastfield = nfields - 1;
 		}
+
+		fieldcenters = realloc(fieldcenters, (lastfield+1) * 2 * sizeof(double));
 
 		for (f=firstfield; f<=lastfield; f++) {
 			int fieldnum = f;
