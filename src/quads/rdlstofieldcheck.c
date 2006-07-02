@@ -127,6 +127,11 @@ int main(int argc, char *argv[]) {
 			double x, y, z;
 			double ra, dec;
 
+			if (f % 100 == 0) {
+				printf(".");
+				fflush(stdout);
+			}
+
 			M = rdlist_n_entries(rdls, fieldnum);
 			if (Ncheck && Ncheck < M)
 				M = Ncheck;
@@ -176,6 +181,7 @@ int main(int argc, char *argv[]) {
 
 			fieldcheck_file_write_entry(fcf, &fc);
 		}
+		printf("\n");
 
 		rdlist_close(rdls);
 	}
