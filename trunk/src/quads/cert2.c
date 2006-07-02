@@ -658,6 +658,7 @@ int main(int argc, char *argv[]) {
 			dl** fields = lists[nfn];
 			char buf[256];
 			if (!fn) continue;
+			printf("Writing %s...\n", fn);
 			rdlist* rdls = rdlist_open_for_writing(fn);
 			if (!rdls) {
 				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
@@ -678,11 +679,11 @@ int main(int argc, char *argv[]) {
 				tmparr = realloc(tmparr, dl_size(list) * 2 * sizeof(double));
 				dl_copy(list, 0, dl_size(list), tmparr);
 				rdlist_write_entries(rdls, tmparr, dl_size(list));
+				rdlist_fix_field(rdls);
 			}
-			rdlist_fix_field(rdls);
+			rdlist_fix_header(rdls);
+			rdlist_close(rdls);
 		}
-		rdlist_fix_header(rdls);
-		rdlist_close(rdls);
 
 		free(tmparr);
 	}
