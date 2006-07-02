@@ -14,7 +14,7 @@
 #include "rdlist.h"
 #include "histogram.h"
 
-char* OPTIONS = "hr:A:B:I:J:n:t:f:L:H:b:C:o:";
+char* OPTIONS = "hr:A:B:I:J:n:t:f:b:C:o:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
@@ -48,11 +48,12 @@ dl** tplist;
 int Ncenter = 0;
 int Ncheck = 0;
 double* fieldcenters = NULL;
+double* radecs = NULL;
 
 static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 						bl* matches) {
 	int i, j;
-	dl* rdlist;
+	//dl* rdlist;
 	int M;
 	double xavg, yavg, zavg;
 	double fieldrad2;
@@ -64,22 +65,30 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		return;
 
 	// read the RDLS entries for this field
-	rdlist = rdlist_get_field(rdls, fieldnum);
-	M = dl_size(rdlist) / 2;
-
+	/*
+	  rdlist = rdlist_get_field(rdls, fieldnum);
+	  M = dl_size(rdlist) / 2;
+	*/
+	M = rdlist_n_entries(rdls, fieldnum);
 	if (Ncheck && Ncheck < M)
 		M = Ncheck;
-
 	if (!bl_size(matches)) {
 		if (Ncenter && Ncenter < M)
 			M = Ncenter;
 	}
 
+	radecs = realloc(radecs, 2*M*sizeof(double));
+	rdlist_read_entries(rdls, fieldnum, 0, M, radecs);
+
 	xyz = realloc(xyz, M * 3 * sizeof(double));
 	xavg = yavg = zavg = 0.0;
 	for (j=0; j<M; j++) {
-		ra  = dl_get(rdlist, j*2);
-		dec = dl_get(rdlist, j*2 + 1);
+		/*
+		  ra  = dl_get(rdlist, j*2);
+		  dec = dl_get(rdlist, j*2 + 1);
+		*/
+		ra  = radecs[2*j];
+		dec = radecs[2*j + 1];
 		// in degrees
 		ra  = deg2rad(ra);
 		dec = deg2rad(dec);
@@ -356,7 +365,6 @@ int main(int argc, char *argv[]) {
 		}
 	} else
 		tplist = NULL;
-
 
 	mos =  calloc(ninputfiles, sizeof(MatchObj*));
 	eofs = calloc(ninputfiles, sizeof(bool));
@@ -695,6 +703,7 @@ int main(int argc, char *argv[]) {
 		free(tmparr);
 	}
 	free(fieldcenters);
+	free(radecs);
 
 	if (tplist) {
 		for (i=0; i<Nbins; i++)
