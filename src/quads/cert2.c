@@ -31,6 +31,178 @@ void printHelp(char* progname) {
 			progname);
 }
 
+double* xyz = NULL;
+histogram* overlap_hist_right = NULL;
+histogram* overlap_hist_wrong = NULL;
+int bin;
+int correct, incorrect, warning;
+il** rightfieldbins;
+il** wrongfieldbins;
+il** negfieldbins;
+double overlap_lowcorrect = 1.0;
+double overlap_highwrong = 0.0;
+
+static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
+						bl* matches) {
+	int i, j;
+	dl* rdlist;
+	int M;
+	double xavg, yavg, zavg;
+	double fieldrad2;
+	double dist2;
+
+	// read the RDLS entries for this field and make sure they're all
+	// within "radius" of the center.
+	rdlist = rdlist_get_field(rdls, fieldnum);
+	M = dl_size(rdlist) / 2;
+	xyz = realloc(xyz, M * 3 * sizeof(double));
+
+	xavg = yavg = zavg = 0.0;
+	for (j=0; j<M; j++) {
+		double x, y, z;
+		double ra, dec;
+		ra  = dl_get(rdlist, j*2);
+		dec = dl_get(rdlist, j*2 + 1);
+		// in degrees
+		ra  = deg2rad(ra);
+		dec = deg2rad(dec);
+		x = radec2x(ra, dec);
+		y = radec2y(ra, dec);
+		z = radec2z(ra, dec);
+		xavg += x;
+		yavg += y;
+		zavg += z;
+		xyz[j*3 + 0] = x;
+		xyz[j*3 + 1] = y;
+		xyz[j*3 + 2] = z;
+	}
+	xavg /= (double)M;
+	yavg /= (double)M;
+	zavg /= (double)M;
+	// make another sweep through, finding the field star furthest from the mean.
+	// this gives an estimate of the field radius.
+	fieldrad2 = 0.0;
+	for (j=0; j<M; j++) {
+		double x, y, z;
+		x = xyz[j*3 + 0];
+		y = xyz[j*3 + 1];
+		z = xyz[j*3 + 2];
+		dist2 = square(x - xavg) + square(y - yavg) + square(z - zavg);
+		if (dist2 > fieldrad2)
+			fieldrad2 = dist2;
+	}
+
+	for (i=0; i<bl_size(matches); i++) {
+		MatchObj* mo;
+		double x1,y1,z1;
+		double x2,y2,z2;
+		double xc,yc,zc;
+		double rac, decc, arc;
+		double ra,dec;
+		double r;
+		double radius2;
+		int j;
+		bool warn = FALSE;
+		bool err  = FALSE;
+
+		mo = bl_access(matches, i);
+
+		x1 = mo->sMin[0];
+		y1 = mo->sMin[1];
+		z1 = mo->sMin[2];
+		x2 = mo->sMax[0];
+		y2 = mo->sMax[1];
+		z2 = mo->sMax[2];
+
+		// normalize.
+		r = sqrt(x1*x1 + y1*y1 + z1*z1);
+		x1 /= r;
+		y1 /= r;
+		z1 /= r;
+		r = sqrt(x2*x2 + y2*y2 + z2*z2);
+		x2 /= r;
+		y2 /= r;
+		z2 /= r;
+				
+		xc = (x1 + x2) / 2.0;
+		yc = (y1 + y2) / 2.0;
+		zc = (z1 + z2) / 2.0;
+		r = sqrt(xc*xc + yc*yc + zc*zc);
+		xc /= r;
+		yc /= r;
+		zc /= r;
+
+		radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
+		rac  = rad2deg(xy2ra(xc, yc));
+		decc = rad2deg(z2dec(zc));
+		arc  = rad2arcmin(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
+
+		for (j=0; j<M; j++) {
+			double x, y, z;
+			x = xyz[j*3 + 0];
+			y = xyz[j*3 + 1];
+			z = xyz[j*3 + 2];
+			dist2 = square(x - xc) + square(y - yc) + square(z - zc);
+
+			// 1.2 is a "fudge factor"
+			if (dist2 > (radius2 * 1.2)) {
+				printf("\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
+					   fieldnum, rac, decc, arc);
+				ra = xy2ra(x, y);
+				dec = z2dec(z);
+				printf("rdls %i is (%g, %g).  Overlap %4.1f%% (%i/%i)\n", j, rad2deg(ra), rad2deg(dec),
+					   100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+				err = TRUE;
+				break;
+			}
+		}
+		if (fieldrad2 * 1.2 < radius2) {
+			printf("\nWarning: Field %i: match says scale is %g, but field radius is %g.\n", fieldnum,
+				   60.0 * rad2deg(distsq2arc(radius2)),
+				   60.0 * rad2deg(distsq2arc(fieldrad2)));
+			warn = TRUE;
+		}
+
+		bin = histogram_add(err ? overlap_hist_wrong : overlap_hist_right,
+							100.0 * mo->overlap);
+
+		if (err) {
+			incorrect++;
+			//incorrects[fieldnum]++;
+
+			if (!wrongfieldbins[bin])
+				wrongfieldbins[bin] = il_new(256);
+			il_append(wrongfieldbins[bin], fieldnum);
+
+			if (mo->overlap > overlap_highwrong)
+				overlap_highwrong = mo->overlap;
+		} else if (warn) {
+			warning++;
+			//warnings[fieldnum]++;
+
+			if (!rightfieldbins[bin])
+				rightfieldbins[bin] = il_new(256);
+			il_append(rightfieldbins[bin], fieldnum);
+
+			if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
+				overlap_lowcorrect = mo->overlap;
+		} else {
+			printf("File %2i: Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
+				   fieldfile, fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+			//corrects[fieldnum]++;
+			correct++;
+
+			if (!rightfieldbins[bin])
+				rightfieldbins[bin] = il_new(256);
+			il_append(rightfieldbins[bin], fieldnum);
+
+			if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
+				overlap_lowcorrect = mo->overlap;
+		}
+		fflush(stdout);
+	}
+}
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -39,7 +211,6 @@ int main(int argc, char *argv[]) {
 	char* progname = argv[0];
 	char* rdlsfname = NULL;
 	rdlist* rdls = NULL;
-	int correct, incorrect, warning;
 
 	int nfields;
 	/*
@@ -54,26 +225,13 @@ int main(int argc, char *argv[]) {
 	char* fpfn = NULL;
 	char* negfn = NULL;
 
-	il** rightfieldbins;
-	il** wrongfieldbins;
-	il** negfieldbins;
-
 	int* thresh_right;
 	int* thresh_wrong;
 	int* thresh_unsolved;
 
-	double overlap_lowcorrect = 1.0;
-	double overlap_highwrong = 0.0;
-
 	double binsize = 1.0;
 	int Nbins;
-	histogram* overlap_hist_right = NULL;
-	histogram* overlap_hist_wrong = NULL;
-
 	int Ncenter = 0;
-
-	double* xyz = NULL;
-	int bin;
 
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
@@ -250,155 +408,13 @@ int main(int argc, char *argv[]) {
 			if (!bl_size(matches))
 				continue;
 
+			check_field(fieldfile, fieldnum, rdls, matches);
+
 			/*
 			  corrects =   calloc(sizeof(int), nfields);
 			  warnings =   calloc(sizeof(int), nfields);
 			  incorrects = calloc(sizeof(int), nfields);
 			*/
-
-			for (i=0; i<bl_size(matches); i++) {
-				MatchObj* mo;
-				double x1,y1,z1;
-				double x2,y2,z2;
-				double xc,yc,zc;
-				double rac, decc, arc;
-				double ra,dec;
-				double dist2, r;
-				double radius2;
-				dl* rdlist;
-				int j, M;
-				double xavg, yavg, zavg;
-				double fieldrad2;
-				bool warn = FALSE;
-				bool err  = FALSE;
-
-				mo = bl_access(matches, i);
-
-				x1 = mo->sMin[0];
-				y1 = mo->sMin[1];
-				z1 = mo->sMin[2];
-				x2 = mo->sMax[0];
-				y2 = mo->sMax[1];
-				z2 = mo->sMax[2];
-
-				// normalize.
-				r = sqrt(square(x1) + square(y1) + square(z1));
-				x1 /= r;
-				y1 /= r;
-				z1 /= r;
-				r = sqrt(square(x2) + square(y2) + square(z2));
-				x2 /= r;
-				y2 /= r;
-				z2 /= r;
-				
-				xc = (x1 + x2) / 2.0;
-				yc = (y1 + y2) / 2.0;
-				zc = (z1 + z2) / 2.0;
-				r = sqrt(square(xc) + square(yc) + square(zc));
-				xc /= r;
-				yc /= r;
-				zc /= r;
-
-				radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
-				rac  = rad2deg(xy2ra(xc, yc));
-				decc = rad2deg(z2dec(zc));
-				arc  = 60.0 * rad2deg(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
-
-				// read the RDLS entries for this field and make sure they're all
-				// within "radius" of the center.
-				rdlist = rdlist_get_field(rdls, fieldnum);
-				M = dl_size(rdlist) / 2;
-				xyz = realloc(xyz, M * 3 * sizeof(double));
-				xavg = yavg = zavg = 0.0;
-				for (j=0; j<M; j++) {
-					double x, y, z;
-					ra  = dl_get(rdlist, j*2);
-					dec = dl_get(rdlist, j*2 + 1);
-					// in degrees
-					ra  = deg2rad(ra);
-					dec = deg2rad(dec);
-					x = radec2x(ra, dec);
-					y = radec2y(ra, dec);
-					z = radec2z(ra, dec);
-					xavg += x;
-					yavg += y;
-					zavg += z;
-					dist2 = square(x - xc) + square(y - yc) + square(z - zc);
-					xyz[j*3 + 0] = x;
-					xyz[j*3 + 1] = y;
-					xyz[j*3 + 2] = z;
-
-					// 1.2 is a "fudge factor"
-					if (dist2 > (radius2 * 1.2)) {
-						printf("\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
-							   fieldnum, rac, decc, arc);
-						printf("rdls %i is (%g, %g).  Overlap %4.1f%% (%i/%i)\n", j, rad2deg(ra), rad2deg(dec),
-							   100.0 * mo->overlap, mo->noverlap, mo->ninfield);
-						err = TRUE;
-						break;
-					}
-				}
-				// make another sweep through, finding the field star furthest from the mean.
-				// this gives an estimate of the field radius.
-				xavg /= (double)M;
-				yavg /= (double)M;
-				zavg /= (double)M;
-				fieldrad2 = 0.0;
-				for (j=0; j<M; j++) {
-					double x, y, z;
-					x = xyz[j*3 + 0];
-					y = xyz[j*3 + 1];
-					z = xyz[j*3 + 2];
-					dist2 = square(x - xavg) + square(y - yavg) + square(z - zavg);
-					if (dist2 > fieldrad2)
-						fieldrad2 = dist2;
-				}
-				if (fieldrad2 * 1.2 < radius2) {
-					printf("\nWarning: Field %i: match says scale is %g, but field radius is %g.\n", fieldnum,
-						   60.0 * rad2deg(distsq2arc(radius2)),
-						   60.0 * rad2deg(distsq2arc(fieldrad2)));
-					warn = TRUE;
-				}
-
-				bin = histogram_add(err ? overlap_hist_wrong : overlap_hist_right,
-									100.0 * mo->overlap);
-
-				if (err) {
-					incorrect++;
-					//incorrects[fieldnum]++;
-
-					if (!wrongfieldbins[bin])
-						wrongfieldbins[bin] = il_new(256);
-					il_append(wrongfieldbins[bin], fieldnum);
-
-					if (mo->overlap > overlap_highwrong)
-						overlap_highwrong = mo->overlap;
-				} else if (warn) {
-					warning++;
-					//warnings[fieldnum]++;
-
-					if (!rightfieldbins[bin])
-						rightfieldbins[bin] = il_new(256);
-					il_append(rightfieldbins[bin], fieldnum);
-
-					if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-						overlap_lowcorrect = mo->overlap;
-				} else {
-					printf("File %2i: Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
-						   fieldfile, fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
-					//corrects[fieldnum]++;
-					correct++;
-
-					if (!rightfieldbins[bin])
-						rightfieldbins[bin] = il_new(256);
-					il_append(rightfieldbins[bin], fieldnum);
-
-					if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-						overlap_lowcorrect = mo->overlap;
-				}
-				fflush(stdout);
-			}
-
 		}
 
 		rdlist_close(rdls);
@@ -519,7 +535,7 @@ int main(int argc, char *argv[]) {
 	fflush(stderr);
 
 	printf("%i hits correct, %i warnings, %i errors.\n",
-			correct, warning, incorrect);
+		   correct, warning, incorrect);
 
 	{
 		int ntotal = thresh_unsolved[0] + thresh_right[0] + thresh_wrong[0];
