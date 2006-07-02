@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
 {
     fitsfile *infptr, *outfptr;  /* FITS file pointers */
     int status = 0;   /* CFITSIO status value MUST be initialized to zero! */
-    int icol, incols, outcols, intype, outtype, hdunum, check = 1;
+    int icol, incols, outcols, intype, outtype, check = 1;
     long inrep, outrep, width, inrows, outrows, ii, jj;
     unsigned char *buffer = 0;
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
             fits_get_coltype(infptr,  icol, &intype,  &inrep,  NULL, &status);
             fits_get_coltype(outfptr, icol, &outtype, &outrep, NULL, &status);
             if (intype != outtype || inrep != outrep) {
-                printf("Column %d is not the same in both tables\n", ii);
+                printf("Column %d is not the same in both tables\n", icol);
                 check = 0;
             }
         }

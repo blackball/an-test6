@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
           /* print each column, row by row (there are faster ways to do this) */
           val = value; 
           for (jj = 1; jj <= nrows && !status; jj++) {
-              printf("%4d ", jj);
+              printf("%4d ", (int)jj);
               for (ii = firstcol; ii <= lastcol; ii++)
               {
                   /* read value as a string, regardless of intrinsic datatype */
