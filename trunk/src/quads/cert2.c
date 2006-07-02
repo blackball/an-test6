@@ -277,6 +277,8 @@ int main(int argc, char *argv[]) {
 	int fieldfile;
 	bl* matches;
 
+	int lastfield_orig;
+
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'h':
@@ -338,6 +340,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Last field (-B) must be at least as big as first field (-A)\n");
 		exit(-1);
 	}
+	lastfield_orig = lastfield;
 
 	overlap_hist_right = histogram_new_binsize(0.0, 100.0, binsize);
 	overlap_hist_wrong = histogram_new_binsize(0.0, 100.0, binsize);
@@ -423,6 +426,7 @@ int main(int argc, char *argv[]) {
 
 			nfields = rdls->nfields;
 			printf("Read %i fields from rdls file.\n", nfields);
+			lastfield = lastfield_orig;
 			if (nfields < lastfield) {
 				lastfield = nfields - 1;
 			}
@@ -443,6 +447,7 @@ int main(int argc, char *argv[]) {
 			}
 			//nfields = maxfieldnum+1;
 			nfields = endind - fcind;
+			lastfield = lastfield_orig;
 			if (nfields < lastfield) {
 				lastfield = nfields - 1;
 			}
