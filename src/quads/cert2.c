@@ -99,8 +99,8 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		yavg /= (double)M;
 		zavg /= (double)M;
 
-		ra = xy2ra(xavg, yavg);
-		dec = z2dec(zavg);
+		ra  = rad2deg(xy2ra(xavg, yavg));
+		dec = rad2deg(z2dec(zavg));
 	} else {
 		assert(fc->filenum == fieldfile);
 		assert(fc->fieldnum == fieldnum);
@@ -113,8 +113,8 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		xyz[1] = radec2y(deg2rad(ra), deg2rad(dec));
 		xyz[2] = radec2z(deg2rad(ra), deg2rad(dec));
 	}
-	fieldcenters[fieldnum * 2 + 0] = rad2deg(ra);
-	fieldcenters[fieldnum * 2 + 1] = rad2deg(dec);
+	fieldcenters[fieldnum * 2 + 0] = ra;
+	fieldcenters[fieldnum * 2 + 1] = dec;
 
 	if (!bl_size(matches)) {
 		return;
@@ -737,9 +737,9 @@ int main(int argc, char *argv[]) {
 				dl* list = fields[bin];
 				if (!list)
 					continue;
-				tmparr = realloc(tmparr, dl_size(list) * 2 * sizeof(double));
+				tmparr = realloc(tmparr, dl_size(list) * sizeof(double));
 				dl_copy(list, 0, dl_size(list), tmparr);
-				rdlist_write_entries(rdls, tmparr, dl_size(list));
+				rdlist_write_entries(rdls, tmparr, dl_size(list)/2);
 				rdlist_fix_field(rdls);
 			}
 			rdlist_fix_header(rdls);
