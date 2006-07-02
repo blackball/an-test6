@@ -77,8 +77,8 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		}
 		radecs = realloc(radecs, 2*M*sizeof(double));
 		rdlist_read_entries(rdls, fieldnum, 0, M, radecs);
-
 		xyz = realloc(xyz, M * 3 * sizeof(double));
+
 		for (j=0; j<M; j++) {
 			ra  = radecs[2*j];
 			dec = radecs[2*j + 1];
@@ -108,6 +108,10 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		ra  = fc->ra;
 		dec = fc->dec;
 		fieldrad2 = arcsec2distsq(fc->radius);
+		xyz = realloc(xyz, M * 3 * sizeof(double));
+		xyz[0] = radec2x(deg2rad(ra), deg2rad(dec));
+		xyz[1] = radec2y(deg2rad(ra), deg2rad(dec));
+		xyz[2] = radec2z(deg2rad(ra), deg2rad(dec));
 	}
 	fieldcenters[fieldnum * 2 + 0] = rad2deg(ra);
 	fieldcenters[fieldnum * 2 + 1] = rad2deg(dec);
