@@ -2,8 +2,6 @@
 #define MATCHFILE_H
 
 #include <stdio.h>
-#include <errno.h>
-#include <string.h>
 
 #include "matchobj.h"
 #include "starutil.h"
@@ -25,7 +23,6 @@ struct matchfile {
 	int nrows;
 
 	// when reading:
-	// the FITS extension being read.
 	char* fn;
 	int columns[MATCHFILE_FITS_COLUMNS];
 

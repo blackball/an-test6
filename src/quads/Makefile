@@ -63,7 +63,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	codefile.o tic.o quadfile.o intmap.o bl.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
-	solvedclient.o \
+	solvedclient.o fieldcheck.o \
 	$(QFITS_OBJ)
 
 SOLVER_OBJ := solver.o
@@ -74,7 +74,7 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	randcat genfields codedensity findquad findstar \
 	codeprojections quadlocations hpowned fitsgetext quadsperstar \
 	subtable matchstats unpermute-stars unpermute-quads \
-	cert2
+	cert2 rdlstofieldcheck
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylstomatlab rdlstohealpix 
 # codeprojections printmatchfile 
