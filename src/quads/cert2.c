@@ -41,6 +41,11 @@ il** wrongfieldbins;
 il** negfieldbins;
 double overlap_lowcorrect = 1.0;
 double overlap_highwrong = 0.0;
+dl** neglist;
+dl** fplist;
+dl** tplist;
+int Ncenter = 0;
+double* fieldcenters;
 
 static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 						bl* matches) {
@@ -50,17 +55,24 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 	double xavg, yavg, zavg;
 	double fieldrad2;
 	double dist2;
+	double x, y, z;
+	double ra, dec;
 
-	// read the RDLS entries for this field and make sure they're all
-	// within "radius" of the center.
+	if (!bl_size(matches) && !neglist)
+		return;
+
+	// read the RDLS entries for this field
 	rdlist = rdlist_get_field(rdls, fieldnum);
 	M = dl_size(rdlist) / 2;
 	xyz = realloc(xyz, M * 3 * sizeof(double));
 
+	if (!bl_size(matches)) {
+		if (Ncenter && Ncenter < M)
+			M = Ncenter;
+	}
+
 	xavg = yavg = zavg = 0.0;
 	for (j=0; j<M; j++) {
-		double x, y, z;
-		double ra, dec;
 		ra  = dl_get(rdlist, j*2);
 		dec = dl_get(rdlist, j*2 + 1);
 		// in degrees
@@ -79,11 +91,20 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 	xavg /= (double)M;
 	yavg /= (double)M;
 	zavg /= (double)M;
+
+	ra = xy2ra(xavg, yavg);
+	dec = z2dec(zavg);
+	fieldcenters[fieldnum * 2 + 0] = rad2deg(ra);
+	fieldcenters[fieldnum * 2 + 1] = rad2deg(dec);
+
+	if (!bl_size(matches)) {
+		return;
+	}
+
 	// make another sweep through, finding the field star furthest from the mean.
 	// this gives an estimate of the field radius.
 	fieldrad2 = 0.0;
 	for (j=0; j<M; j++) {
-		double x, y, z;
 		x = xyz[j*3 + 0];
 		y = xyz[j*3 + 1];
 		z = xyz[j*3 + 2];
@@ -98,7 +119,6 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		double x2,y2,z2;
 		double xc,yc,zc;
 		double rac, decc, arc;
-		double ra,dec;
 		double r;
 		double radius2;
 		int j;
@@ -138,7 +158,6 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 		arc  = rad2arcmin(distsq2arc(square(x2-x1)+square(y2-y1)+square(z2-z1)));
 
 		for (j=0; j<M; j++) {
-			double x, y, z;
 			x = xyz[j*3 + 0];
 			y = xyz[j*3 + 1];
 			z = xyz[j*3 + 2];
@@ -176,21 +195,16 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 
 			if (mo->overlap > overlap_highwrong)
 				overlap_highwrong = mo->overlap;
-		} else if (warn) {
-			warning++;
-			//warnings[fieldnum]++;
-
-			if (!rightfieldbins[bin])
-				rightfieldbins[bin] = il_new(256);
-			il_append(rightfieldbins[bin], fieldnum);
-
-			if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-				overlap_lowcorrect = mo->overlap;
 		} else {
-			printf("File %2i: Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
-				   fieldfile, fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
-			//corrects[fieldnum]++;
-			correct++;
+			if (warn) {
+				warning++;
+				//warnings[fieldnum]++;
+			} else {
+				printf("File %2i: Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
+					   fieldfile, fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+				//corrects[fieldnum]++;
+				correct++;
+			}
 
 			if (!rightfieldbins[bin])
 				rightfieldbins[bin] = il_new(256);
@@ -231,7 +245,6 @@ int main(int argc, char *argv[]) {
 
 	double binsize = 1.0;
 	int Nbins;
-	int Ncenter = 0;
 
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
@@ -316,6 +329,29 @@ int main(int argc, char *argv[]) {
 	thresh_wrong    = calloc(Nbins, sizeof(int));
 	thresh_unsolved = calloc(Nbins, sizeof(int));
 
+	if (negfn) {
+		neglist = malloc(Nbins * sizeof(dl*));
+		for (i=0; i<Nbins; i++) {
+			neglist[i] = dl_new(256);
+		}
+	} else
+		neglist = NULL;
+	if (fpfn) {
+		fplist = malloc(Nbins * sizeof(dl*));
+		for (i=0; i<Nbins; i++) {
+			fplist[i] = dl_new(256);
+		}
+	} else
+		fplist = NULL;
+	if (truefn) {
+		tplist = malloc(Nbins * sizeof(dl*));
+		for (i=0; i<Nbins; i++) {
+			tplist[i] = dl_new(256);
+		}
+	} else
+		tplist = NULL;
+
+
 	mos =  calloc(ninputfiles, sizeof(MatchObj*));
 	eofs = calloc(ninputfiles, sizeof(bool));
 	mfs = malloc(ninputfiles * sizeof(matchfile*));
@@ -329,6 +365,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	fieldcenters = malloc((lastfield+1) * 2 * sizeof(double));
 	matches = bl_new(256, sizeof(MatchObj));
 	correct = incorrect = warning = 0;
 
@@ -405,22 +442,55 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "File %s: read %i matches, skipped %i matches.\n", inputfiles[i], nr, ns);
 			}
 
-			if (!bl_size(matches))
-				continue;
-
 			check_field(fieldfile, fieldnum, rdls, matches);
-
-			/*
-			  corrects =   calloc(sizeof(int), nfields);
-			  warnings =   calloc(sizeof(int), nfields);
-			  incorrects = calloc(sizeof(int), nfields);
-			*/
 		}
 
 		rdlist_close(rdls);
 
 		if (alldone)
 			break;
+
+		{
+			int sumright=0, sumwrong=0;
+			int ntotal = lastfield - firstfield + 1;
+			unsigned char* solved = calloc(1, ntotal);
+
+			for (bin=Nbins-1; bin>=0; bin--) {
+				int nright, nwrong, nunsolved;
+				il* list;
+				list = rightfieldbins[bin];
+				if (!list)
+					nright = 0;
+				else
+					nright = il_size(list);
+				list = wrongfieldbins[bin];
+				if (!list)
+					nwrong = 0;
+				else
+					nwrong = il_size(list);
+				sumright += nright;
+				sumwrong += nwrong;
+				nunsolved = ntotal - sumright - sumwrong;
+				if (nunsolved) {
+					negfieldbins[bin] = il_new(256);
+					list = rightfieldbins[bin];
+					if (list)
+						for (i=0; i<il_size(list); i++)
+							solved[il_get(list, i) - firstfield] = 1;
+					list = wrongfieldbins[bin];
+					if (list)
+						for (i=0; i<il_size(list); i++)
+							solved[il_get(list, i) - firstfield] = 1;
+					for (i=0; i<ntotal; i++)
+						if (!solved[i])
+							il_append(negfieldbins[bin], i + firstfield);
+				}
+				thresh_right[bin] += sumright;
+				thresh_wrong[bin] += sumwrong;
+				thresh_unsolved[bin] += nunsolved;
+			}
+			free(solved);
+		}
 
 		printf("File %i.\n", fieldfile);
 		for (bin=0; bin<Nbins; bin++) {
@@ -462,48 +532,53 @@ int main(int argc, char *argv[]) {
 		printf("\n");
 		fflush(stdout);
 
-		{
-			int sumright=0, sumwrong=0;
-			int ntotal = lastfield - firstfield + 1;
-			unsigned char* solved = calloc(1, ntotal);
-
-			for (bin=Nbins-1; bin>=0; bin--) {
-				int nright, nwrong, nunsolved;
-				il* list;
-				list = rightfieldbins[bin];
+		if (fplist) {
+			for (bin=0; bin<Nbins; bin++) {
+				il* list = wrongfieldbins[bin];
 				if (!list)
-					nright = 0;
-				else
-					nright = il_size(list);
-				list = wrongfieldbins[bin];
-				if (!list)
-					nwrong = 0;
-				else
-					nwrong = il_size(list);
-				sumright += nright;
-				sumwrong += nwrong;
-				nunsolved = ntotal - sumright - sumwrong;
-				if (nunsolved) {
-					negfieldbins[bin] = il_new(256);
-					list = rightfieldbins[bin];
-					if (list)
-						for (i=0; i<il_size(list); i++)
-							solved[il_get(list, i) - firstfield] = 1;
-					list = wrongfieldbins[bin];
-					if (list)
-						for (i=0; i<il_size(list); i++)
-							solved[il_get(list, i) - firstfield] = 1;
-					for (i=0; i<ntotal; i++)
-						if (!solved[i])
-							il_append(negfieldbins[bin], i + firstfield);
+					continue;
+				for (i=0; i<il_size(list); i++) {
+					int fld = il_get(list, i);
+					double ra, dec;
+					ra  = fieldcenters[2 * fld + 0];
+					dec = fieldcenters[2 * fld + 1];
+					dl_append(fplist[bin], ra);
+					dl_append(fplist[bin], dec);
 				}
-				thresh_right[bin] += sumright;
-				thresh_wrong[bin] += sumwrong;
-				thresh_unsolved[bin] += nunsolved;
 			}
-			printf("\n\n");
-			free(solved);
 		}
+		if (tplist) {
+			for (bin=0; bin<Nbins; bin++) {
+				il* list = rightfieldbins[bin];
+				if (!list)
+					continue;
+				for (i=0; i<il_size(list); i++) {
+					int fld = il_get(list, i);
+					double ra, dec;
+					ra  = fieldcenters[2 * fld + 0];
+					dec = fieldcenters[2 * fld + 1];
+					dl_append(tplist[bin], ra);
+					dl_append(tplist[bin], dec);
+				}
+			}
+		}
+		if (neglist) {
+			for (bin=0; bin<Nbins; bin++) {
+				il* list = negfieldbins[bin];
+				if (!list)
+					continue;
+				for (i=0; i<il_size(list); i++) {
+					int fld = il_get(list, i);
+					double ra, dec;
+					ra  = fieldcenters[2 * fld + 0];
+					dec = fieldcenters[2 * fld + 1];
+					dl_append(neglist[bin], ra);
+					dl_append(neglist[bin], dec);
+				}
+			}
+		}
+
+
 
 		for (bin=0; bin<Nbins; bin++) {
 			if (rightfieldbins[bin])
@@ -567,118 +642,67 @@ int main(int argc, char *argv[]) {
 	}
 	printf("]\n\n");
 
-	/*
-	  printf("Finding field centers...\n");
-	  fflush(stdout);
-	  fieldcenters = malloc(2 * nfields * sizeof(double));
-	  for (i=0; i<(2*nfields); i++)
-	  fieldcenters[i] = -1e6;
-	  for (i=firstfield; i<=lastfield; i++) {
-	  dl* rdlist;
-	  int j, M;
-	  double xavg, yavg, zavg;
-	  rdlist = rdlist_get_field(rdls, i);
-	  if (!rdlist) {
-	  printf("Couldn't get RDLS entry for field %i!\n", i);
-	  exit(-1);
-	  }
-	  M = dl_size(rdlist) / 2;
-	  if (Ncenter && Ncenter < M)
-	  M = Ncenter;
-	  xavg = yavg = zavg = 0.0;
-	  for (j=0; j<M; j++) {
-	  double x, y, z, ra, dec;
-	  ra  = dl_get(rdlist, j*2);
-	  dec = dl_get(rdlist, j*2 + 1);
-	  // in degrees
-	  ra  = deg2rad(ra);
-	  dec = deg2rad(dec);
-	  x = radec2x(ra, dec);
-	  y = radec2y(ra, dec);
-	  z = radec2z(ra, dec);
-	  xavg += x;
-	  yavg += y;
-	  zavg += z;
-	  }
-	  xavg /= (double)M;
-	  yavg /= (double)M;
-	  zavg /= (double)M;
-	  fieldcenters[i*2 + 0] = rad2deg(xy2ra(xavg, yavg));
-	  fieldcenters[i*2 + 1] = rad2deg(z2dec(zavg));
-	  dl_free(rdlist);
-	  }
 
-	  for (bin=0; bin<Nbins; bin++) {
-	  il* list;
-	  list = wrongfieldbins[bin];
-	  if (!list)
-	  continue;
-	  printf("Bin %i: false positive field true centers (deg):\n  [ ", bin);
-	  for (i=0; i<il_size(list); i++) {
-	  int fld = il_get(list, i);
-	  printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
-	  }
-	  printf("];\n");
-	  }
-	  printf("\n\n");
+	if (truefn || fpfn || negfn) {
+		char* fns[3]  = { fpfn,    truefn,    negfn };
+		dl** lists[3] = { fplist,  tplist,    neglist };
+		char* descstrs[3] = {
+			"False positive fields: true locations.",
+			"Correctly solved fields.",
+			"Negative (non-solving) fields."
+		};
+		double* tmparr = NULL;
+		int nfn;
+		for (nfn=0; nfn<3; nfn++) {
+			char* fn = fns[nfn];
+			dl** fields = lists[nfn];
+			char buf[256];
+			if (!fn) continue;
+			rdlist* rdls = rdlist_open_for_writing(fn);
+			if (!rdls) {
+				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
+				exit(-1);
+			}
+			sprintf(buf, "%.10g", binsize);
+			qfits_header_add(rdls->header, "BINSIZE", buf, NULL, NULL);
+			qfits_header_add(rdls->header, "COMMENT", descstrs[nfn], NULL, NULL);
+			qfits_header_add(rdls->header, "COMMENT", "Extension x holds results for", NULL, NULL);
+			qfits_header_add(rdls->header, "COMMENT", "   bin x.", NULL, NULL);
+			rdlist_write_header(rdls);
 
-	  for (bin=0; bin<Nbins; bin++) {
-	  il* list;
-	  list = negfieldbins[bin];
-	  if (!list)
-	  continue;
-	  printf("Bin %i: unsolved field centers (deg):\n  [ ", bin);
-	  for (i=0; i<il_size(list); i++) {
-	  int fld = il_get(list, i);
-	  printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
-	  }
-	  printf("];\n");
-	  }
-	  printf("\n\n");
+			for (bin=0; bin<Nbins; bin++) {
+				rdlist_write_new_field(rdls);
+				dl* list = fields[bin];
+				if (!list)
+					continue;
+				tmparr = realloc(tmparr, dl_size(list) * 2 * sizeof(double));
+				dl_copy(list, 0, dl_size(list), tmparr);
+				rdlist_write_entries(rdls, tmparr, dl_size(list));
+			}
+			rdlist_fix_field(rdls);
+		}
+		rdlist_fix_header(rdls);
+		rdlist_close(rdls);
 
-	  {
-	  char* fns[3]  = { fpfn,    truefn,    negfn };
-	  il** lists[3] = { wrongfieldbins, rightfieldbins, negfieldbins };
-	  char* descstrs[3] = {
-	  "False positive fields: true locations.",
-	  "Correctly solved fields.",
-	  "Negative (non-solving) fields."
-	  };
-	  int nfn;
-	  for (nfn=0; nfn<3; nfn++) {
-	  char* fn = fns[nfn];
-	  il** fields = lists[nfn];
-	  char buf[256];
-	  if (!fn) continue;
-	  rdlist* rdls = rdlist_open_for_writing(fn);
-	  if (!rdls) {
-	  fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
-	  exit(-1);
-	  }
-	  sprintf(buf, "%.10g", binsize);
-	  qfits_header_add(rdls->header, "BINSIZE", buf, NULL, NULL);
-	  qfits_header_add(rdls->header, "COMMENT", descstrs[nfn], NULL, NULL);
-	  qfits_header_add(rdls->header, "COMMENT", "Extension x holds results for", NULL, NULL);
-	  qfits_header_add(rdls->header, "COMMENT", "   bin x.", NULL, NULL);
-	  rdlist_write_header(rdls);
+		free(tmparr);
+	}
+	free(fieldcenters);
 
-	  for (bin=0; bin<Nbins; bin++) {
-	  rdlist_write_new_field(rdls);
-	  il* list = fields[bin];
-	  if (!list)
-	  continue;
-	  for (i=0; i<il_size(list); i++) {
-	  int fld = il_get(list, i);
-	  rdlist_write_entries(rdls, fieldcenters+(2*fld), 1);
-	  }
-	  rdlist_fix_field(rdls);
-	  }
-	  rdlist_fix_header(rdls);
-	  rdlist_close(rdls);
-	  }
-	  }
-	  free(fieldcenters);
-	*/
+	if (tplist) {
+		for (i=0; i<Nbins; i++)
+			dl_free(tplist[i]);
+		free(tplist);
+	}
+	if (fplist) {
+		for (i=0; i<Nbins; i++)
+			dl_free(fplist[i]);
+		free(fplist);
+	}
+	if (neglist) {
+		for (i=0; i<Nbins; i++)
+			dl_free(neglist[i]);
+		free(neglist);
+	}
 
 	free(rightfieldbins);
 	free(wrongfieldbins);
