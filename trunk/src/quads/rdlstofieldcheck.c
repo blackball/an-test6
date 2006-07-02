@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 	fieldcheck_file* fcf;
 	char* fcfname = NULL;
 	int Ncheck;
+	int lastfield_orig;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -85,6 +86,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Last field (-B) must be at least as big as first field (-A)\n");
 		exit(-1);
 	}
+	lastfield_orig = lastfield;
 
 	fcf = fieldcheck_file_open_for_writing(fcfname);
 	if (!fcf) {
@@ -113,6 +115,7 @@ int main(int argc, char *argv[]) {
 
 		nfields = rdls->nfields;
 		printf("Read %i fields from rdls file.\n", nfields);
+		lastfield = lastfield_orig;
 		if (nfields < lastfield) {
 			lastfield = nfields - 1;
 		}
