@@ -14,7 +14,7 @@
 #include "rdlist.h"
 #include "histogram.h"
 
-char* OPTIONS = "hr:A:B:I:J:n:t:f:L:H:b:C:";
+char* OPTIONS = "hr:A:B:I:J:n:t:f:L:H:b:C:o:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
@@ -27,7 +27,8 @@ void printHelp(char* progname) {
 			"   [-f <false-positive-fields-rdls>]\n"
 			"   [-t <true-positive-fields-rdls>]\n"
 			"   [-b <bin-size>]: histogram overlap %% into bins of this size (default 1)\n"
-			"   [-C <number-of-RDLS-stars-to-compute-center>]\n\n",
+			"   [-C <number-of-RDLS-stars-to-compute-center>]\n"
+			"   [-o <number-of-RDLS-stars-to-check>]\n\n",
 			progname);
 }
 
@@ -45,6 +46,7 @@ dl** neglist;
 dl** fplist;
 dl** tplist;
 int Ncenter = 0;
+int Ncheck = 0;
 double* fieldcenters = NULL;
 
 static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
@@ -64,13 +66,16 @@ static void check_field(int fieldfile, int fieldnum, rdlist* rdls,
 	// read the RDLS entries for this field
 	rdlist = rdlist_get_field(rdls, fieldnum);
 	M = dl_size(rdlist) / 2;
-	xyz = realloc(xyz, M * 3 * sizeof(double));
+
+	if (Ncheck && Ncheck < M)
+		M = Ncheck;
 
 	if (!bl_size(matches)) {
 		if (Ncenter && Ncenter < M)
 			M = Ncenter;
 	}
 
+	xyz = realloc(xyz, M * 3 * sizeof(double));
 	xavg = yavg = zavg = 0.0;
 	for (j=0; j<M; j++) {
 		ra  = dl_get(rdlist, j*2);
@@ -280,6 +285,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'C':
 			Ncenter = atoi(optarg);
+			break;
+		case 'o':
+			Ncheck = atoi(optarg);
 			break;
 		case 'r':
 			rdlsfname = optarg;
