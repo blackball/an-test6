@@ -144,36 +144,30 @@ int main(int argc, char *argv[]) {
 		}
 		for (c=0; c<pl_size(cols); c++) {
 			char* colname = pl_get(cols, c);
-			for (c2=0; c2<table->nc; c2++) {
-				qfits_col* col = table->col + c2;
-				if (strcasecmp(col->tlabel, colname))
-					continue;
-				columns[c] = c2;
-				sizes[c] = col->atom_nb * col->atom_size;
-				offsets[c] = offset;
-				offset += sizes[c];
-
-				qfits_col_fill(outtable->col + c,
-							   col->atom_nb, col->atom_dec_nb,
-							   col->atom_size, col->atom_type,
-							   col->tlabel, col->tunit,
-							   col->nullval, col->tdisp,
-							   col->zero_present,
-							   col->zero,
-							   col->scale_present,
-							   col->scale,
-							   outtable->tab_w);
-				outtable->tab_w += sizes[c];
-
-				break;
-			}
-		}
-		for (c=0; c<pl_size(cols); c++) {
-			if (columns[c] == -1) {
+			qfits_col* col;
+			c2 = fits_find_column(table, colname);
+			if (c2 == -1) {
 				fprintf(stderr, "Extension %i: failed to find column named %s\n",
-						ext, (char*)pl_get(cols, c));
+						ext, colname);
 				exit(-1);
 			}
+			col = table->col + c2;
+			columns[c] = c2;
+			sizes[c] = col->atom_nb * col->atom_size;
+			offsets[c] = offset;
+			offset += sizes[c];
+
+			qfits_col_fill(outtable->col + c,
+						   col->atom_nb, col->atom_dec_nb,
+						   col->atom_size, col->atom_type,
+						   col->tlabel, col->tunit,
+						   col->nullval, col->tdisp,
+						   col->zero_present,
+						   col->zero,
+						   col->scale_present,
+						   col->scale,
+						   outtable->tab_w);
+			outtable->tab_w += sizes[c];
 		}
 		totalsize = offset;
 
@@ -212,8 +206,6 @@ int main(int argc, char *argv[]) {
 		qfits_header_destroy(tablehdr);
 		
 		buffer = realloc(buffer, totalsize * BLOCK);
-		// DEBUG
-		//memset(buffer, 0, totalsize * BLOCK);
 
 		for (off=0; off<table->nr; off+=n) {
 			if (off + BLOCK > table->nr)
