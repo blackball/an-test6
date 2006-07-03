@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	printf("Reading matchfile from %s ...\n", matchfname);
+	fprintf(stderr, "Reading matchfile from %s ...\n", matchfname);
 	mf = matchfile_open(matchfname);
 	if (!mf) {
 		fprintf(stderr, "Failed to open matchfile from file %s .\n", matchfname);
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	fn = mk_streefn(indexfname);
-	printf("Reading star kdtree from %s ...\n", fn);
+	fprintf(stderr, "Reading star kdtree from %s ...\n", fn);
 	startree = kdtree_fits_read_file(fn);
 	if (!startree) {
 		fprintf(stderr, "Failed to open star kdtree from file %s .\n", fn);
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 		square(xyz[2] - mo.sMin[2]);
 
 	res = kdtree_rangesearch(startree, xyz, radius2);
-	printf("Found %i stars within range.\n", res->nres);
+	fprintf(stderr, "Found %i stars within range.\n", res->nres);
 
 	starxy = malloc(res->nres * 2 * sizeof(double));
 
