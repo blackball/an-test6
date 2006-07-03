@@ -251,6 +251,11 @@ int main(int argc, char *argv[]) {
 
 		munmap(map, mapsize);
 		free(perm);
+
+		if (fits_pad_file(fout)) {
+			fprintf(stderr, "Failed to add padding to extension %i.\n", ext);
+			exit(-1);
+		}
 	}
 	free(buffer);
 
