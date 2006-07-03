@@ -79,10 +79,8 @@ int fits_pad_file(FILE* fid) {
 	return 0;
 }
 
-int fits_add_column(qfits_table* table, int column, tfits_type type,
-					int ncopies, char* units, char* label) {
-	int atomsize;
-	int colsize;
+int fits_get_atom_size(tfits_type type) {
+	int atomsize = -1;
 	switch (type) {
 	case TFITS_BIN_TYPE_A:
 	case TFITS_BIN_TYPE_X:
@@ -102,6 +100,18 @@ int fits_add_column(qfits_table* table, int column, tfits_type type,
 		atomsize = 8;
 		break;
 	default:
+		break;
+	}
+	return atomsize;
+}
+
+int fits_add_column(qfits_table* table, int column, tfits_type type,
+					int ncopies, char* units, char* label) {
+	int atomsize;
+	int colsize;
+
+	atomsize = fits_get_atom_size(type);
+	if (atomsize == -1) {
 		fprintf(stderr, "Unknown atom size for type %i.\n", type);
 		return -1;
 	}
@@ -274,6 +284,7 @@ int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
 	nextens = qfits_query_n_ext(fn);
 	for (i=0; i<=nextens; i++) {
         qfits_table* table;
+        int c;
 		if (qfits_get_datinfo(fn, i, &start, &size) == -1) {
 			fprintf(stderr, "error getting start/size for ext %i.\n", i);
             return -1;
@@ -287,19 +298,25 @@ int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
 					fn, i);
 			continue;
 		}
-        int c;
-        for (c=0; c<table->nc; c++) {
-            qfits_col* col = table->col + c;
-            if (strcmp(col->tlabel, colname) == 0) {
-                *pstart = start;
-                *psize = size;
-                qfits_table_close(table);
-                return 0;
-            }
-        }
-        qfits_table_close(table);
+		c = fits_find_column(table, colname);
+		qfits_table_close(table);
+		if (c != -1) {
+			*pstart = start;
+			*psize = size;
+			return 0;
+		}
     }
     return -1;
+}
+
+int fits_find_column(qfits_table* table, char* colname) {
+	int c;
+	for (c=0; c<table->nc; c++) {
+		qfits_col* col = table->col + c;
+		if (strcasecmp(col->tlabel, colname) == 0)
+			return c;
+	}
+	return -1;
 }
 
 void fits_add_uint_size(qfits_header* header) {

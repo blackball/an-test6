@@ -5,6 +5,15 @@
 
 #include "fileutil.h"
 
+void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap) {
+	int ps = getpagesize();
+	int gap = start % ps;
+	// start must be a multiple of pagesize.
+	*mapstart = start - gap;
+	*mapsize  = size  + gap;
+	*pgap = gap;
+}
+
 bool file_exists(char* fn) {
 	struct stat st;
 	return (stat(fn, &st) == 0);
