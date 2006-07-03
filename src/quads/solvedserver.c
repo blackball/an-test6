@@ -42,7 +42,7 @@ int handle_request(FILE* fid) {
 	int filenum;
 	int fieldnum;
 
-	printf("Fileno %i:\n", fileno(fid));
+	//printf("Fileno %i:\n", fileno(fid));
 	if (!fgets(buf, 256, fid)) {
 		fprintf(stderr, "Error: failed to read a line of input.\n");
 		fflush(stderr);
@@ -200,7 +200,7 @@ int main(int argc, char** args) {
 		}
 		FD_SET(sock, &rset);
 		//FD_SET(sock, &eset);
-		printf("select().\n");
+		//printf("select().\n");
 		res = select(maxval+1, &rset, NULL, NULL, /*&eset,*/ &timeout);
 		if (res == -1) {
 			if (errno != EINTR) {
@@ -247,7 +247,7 @@ int main(int argc, char** args) {
 			printf("Connection from %s: ", inet_ntoa(clientaddr.sin_addr));
 			fflush(stdout);
 			fid = fdopen(s, "a+b");
-			printf("fileno %i\n", fileno(fid));
+			//printf("fileno %i\n", fileno(fid));
 			pl_append(clients, fid);
 		}
 	}
