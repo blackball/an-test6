@@ -131,8 +131,12 @@ int main(int argc, char *argv[]) {
 		double x, y;
 		star_coords(mo.sMin, xyz, &x, &y);
 		printf("minxy=[%g,%g];\n", x, y);
+		printf("minx=%g;\n", x);
+		printf("miny=%g;\n", y);
 		star_coords(mo.sMax, xyz, &x, &y);
 		printf("maxxy=[%g,%g];\n", x, y);
+		printf("maxx=%g;\n", x);
+		printf("maxy=%g;\n", y);
 	}
 	/*
 	  scale = (maxx - minx) > (maxy - miny) ? (maxx - minx) : (maxy - miny);
