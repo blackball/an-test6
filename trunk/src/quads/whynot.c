@@ -629,6 +629,7 @@ void why_not() {
 			}
 		}
 
+		fprintf(stderr, "Field %i.\n", fieldnum);
 		fprintf(stderr, "Indexed quads:\n");
 
 		Nqms = il_size(indquads);
