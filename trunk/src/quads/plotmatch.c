@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
 	printf("];\n");
 	{
 		double x, y;
+		double ra, dec;
 		star_coords(mo.sMin, xyz, &x, &y);
 		printf("minxy=[%g,%g];\n", x, y);
 		printf("minx=%g;\n", x);
@@ -137,6 +138,10 @@ int main(int argc, char *argv[]) {
 		printf("maxxy=[%g,%g];\n", x, y);
 		printf("maxx=%g;\n", x);
 		printf("maxy=%g;\n", y);
+		ra  = rad2deg(xy2ra(xyz[0], xyz[1]));
+		dec = rad2deg(z2dec(xyz[2]));
+		printf("ra=%g;\n", ra);
+		printf("dec=%g;\n", dec);
 	}
 	/*
 	  scale = (maxx - minx) > (maxy - miny) ? (maxx - minx) : (maxy - miny);
