@@ -1,22 +1,28 @@
 .PHONY: 00 01 02 03 04 05 06 07 08 09 10 11
 
-#.PRECIOUS / .SECONDARY
-
-#CATALOG := an-sdss-dd_
-CATALOG := cat_
+CATALOG := /p/learning/stars/CATALOGUES/an-sdss-dd/an-sdss-dd_
 INDEX := sdss-9_
 TEMP1 := phase1_
 TEMP2 := phase2_
 
-UNPERMUTE_QUADS := @echo unpermute-quads
-CODETREE := @echo codetree
-DEDUP_INDEX := @echo dedup_index
-HPQUADS := @echo hpquads
+UNPERMUTE_QUADS := unpermute-quads
+CODETREE        := codetree
+DEDUP_INDEX     := dedup_index
+HPQUADS         := hpquads
 
 CODETREE_OPTS := -R 15
-HPQUADS_OPTS := -l 4 -u 5 -n 705 -i 9
+HPQUADS_OPTS := -l 4 -u 5 -n 705 -i 9 -c -p 5
 
 NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
+
+SEC := \
+  $(foreach base, $(addprefix $(TEMP1), $(NUMS)), $(base).code.fits $(base).quad.fits) \
+  $(foreach base, $(addprefix $(TEMP2), $(NUMS)), $(base).code.fits $(base).quad.fits $(base).ckdt.fits)
+
+.SECONDARY: $(SEC)
+
+debug:
+	echo "Secondary: $(SEC)"
 
 $(NUMS) : %: $(addprefix $(INDEX)%., quad.fits ckdt.fits skdt.fits)
 
@@ -29,7 +35,7 @@ $(INDEX)%.quad.fits $(INDEX)%.ckdt.fits : $(TEMP2)%.ckdt.fits $(TEMP2)%.quad.fit
 	mv tmp.$(basename $(basename $@)).quad.fits $(basename $(basename $@)).quad.fits
 
 $(TEMP2)%.ckdt.fits: $(TEMP2)%.code.fits
-	$(CODETREE) $(CODETREE_OPTS) -f tmp.$(basename $(basename $<))
+	$(CODETREE) $(CODETREE_OPTS) -f $(basename $(basename $<)) -o tmp.$(basename $(basename $@))
 	mv tmp.$(basename $(basename $@)).ckdt.fits $(basename $(basename $@)).ckdt.fits
 
 $(TEMP2)%.quad.fits $(TEMP2)%.code.fits : $(TEMP1)%.quad.fits $(TEMP1)%.code.fits
