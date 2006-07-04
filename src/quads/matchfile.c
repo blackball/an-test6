@@ -26,7 +26,15 @@ void matchobj_compute_overlap(MatchObj* mo) {
 		mo->overlap = 0.0;
 		return;
 	}
-	mo->overlap = mo->noverlap / (double)mo->ninfield;
+	if (mo->ninfield < 4) {
+		mo->overlap = 0.0;
+		return;
+	}
+	// at least four should match since the transformation is calculated
+	// based on projecting one quad...
+	mo->overlap = (mo->noverlap - 4) / (double)(mo->ninfield - 4);
+	if (mo->overlap < 0.0)
+		mo->overlap = 0.0;
 }
 
 matchfile* new_matchfile() {
@@ -134,6 +142,7 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "noverlap", nil, noverlap, 1, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nconflict", nil, nconflict, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "ninfield", nil, ninfield, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldnum", nil, fieldnum, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldid", nil, fieldfile, 1, FALSE);
