@@ -238,10 +238,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
 
-    costheta = (dx + dy) / scale;
+    costheta = (dy + dx) / scale;
     sintheta = (dy - dx) / scale;
 
-    // check which C, D points are inside the square.
+    // check which C, D points are inside the square/circle.
     for (i=0; i<maxind; i++) {
 		if (!inbox[i]) continue;
 		Cx = getx(params->field, i);
@@ -253,22 +253,33 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 		Cx -= Ax;
 		Cy -= Ay;
 		xxtmp = Cx;
-		Cx = Cx * costheta + Cy * sintheta;
+		Cx =     Cx * costheta + Cy * sintheta;
 		Cy = -xxtmp * sintheta + Cy * costheta;
-		if ((Cx >= 1.0) || (Cx <= 0.0) ||
-			(Cy >= 1.0) || (Cy <= 0.0)) {
-			inbox[i] = 0;
+		if (params->circle) {
+			// make sure it's in the circle centered at (0.5, 0.5)...
+			// (x-1/2)^2 + (y-1/2)^2   <=   r^2
+			// x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2))^2
+			// x^2-x + y^2-y + 1/2     <=   1/2
+			// x^2-x + y^2-y           <=   0
+			double r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
+			if (r > 0.0)
+				continue;
 		} else {
-			xs[i] = Cx;
-			ys[i] = Cy;
+			if ((Cx > 1.0) || (Cx < 0.0) ||
+				(Cy > 1.0) || (Cy < 0.0)) {
+				inbox[i] = 0;
+				continue;
+			}
 		}
+		xs[i] = Cx;
+		ys[i] = Cy;
     }
 
     for (i=0; i<ncd; i++) {
 		double Cfx, Cfy, Dfx, Dfy;
 		iC = iCs[i];
 		iD = iDs[i];
-		// are both C and D in the box?
+		// are both C and D in the (possibly round) box?
 		if (!inbox[iC]) continue;
 		if (!inbox[iD]) continue;
 
@@ -445,6 +456,8 @@ void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 			(starscale < params->starscale_lower))
 			// this quad has invalid scale.
 			continue;
+
+		params->numscaleok++;
 
 		image_to_xyz(getx(params->cornerpix, 2), gety(params->cornerpix, 2), sMinMax, transform);
 		image_to_xyz(getx(params->cornerpix, 3), gety(params->cornerpix, 3), sMaxMin, transform);

@@ -89,6 +89,8 @@ kdtree_t *codetree;
 xylist* xyls;
 kdtree_t* startree;
 
+bool circle;
+
 int* inverse_perm = NULL;
 
 int nverified;
@@ -272,13 +274,14 @@ int main(int argc, char *argv[]) {
 
 		do_verify = (verify_dist2 > 0.0);
 		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
-		if (cxdx_margin > 0.0) {
-			// check for CXDX field in ckdt header...
+		{
 			qfits_header* hdr = qfits_header_read(treefname);
 			if (!hdr) {
 				fprintf(stderr, "Failed to read FITS header from ckdt file %s\n", treefname);
 				exit(-1);
-			} else {
+			}
+			if (cxdx_margin > 0.0) {
+				// check for CXDX field in ckdt header...
 				int cxdx = qfits_header_getboolean(hdr, "CXDX", 0);
 				if (!cxdx) {
 					fprintf(stderr, "Warning: you asked for a CXDX margin, but ckdt file %s does not have the CXDX FITS header.\n",
@@ -286,8 +289,12 @@ int main(int argc, char *argv[]) {
 					exit(-1);
 				}
 			}
+			// check for CIRCLE field in ckdt header...
+			circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
 			qfits_header_destroy(hdr);
 		}
+		fprintf(stderr, "ckdt %s the CIRCLE header.\n",
+				(circle ? "contains" : "does not contain"));
 
 		if (solvedserver) {
 			if (solvedclient_set_server(solvedserver)) {
@@ -890,6 +897,7 @@ void* solvethread_run(void* varg) {
 		solver.nfield = nfield;
 		solver.quitNow = FALSE;
 		solver.mo_template = &template;
+		solver.circle = circle;
 		solver.userdata = my;
 
 		my->winning_listind = -1;
