@@ -865,18 +865,18 @@ void* solvethread_run(void* varg) {
 		}
 		solver.do_solvedserver = (solvedserver ? TRUE : FALSE);
 
-		if (do_donut) {
-			int oldsize = xy_size(thisfield);
-			detect_donuts(fieldnum, &thisfield, donut_dist, donut_thresh);
-			if (xy_size(thisfield) != oldsize)
-				fprintf(stderr, "Field %i: donuts detected; merged %i objects to %i.\n",
-						fieldnum, oldsize, xy_size(thisfield));
-		}
-
 		nfield = xy_size(thisfield);
 		field = realloc(field, 2 * nfield * sizeof(double));
 		dl_copy(thisfield, 0, 2 * nfield, field);
 		free_xy(thisfield);
+
+		if (do_donut) {
+			int oldsize = nfield;
+			detect_donuts(fieldnum, &field, &nfield, donut_dist, donut_thresh);
+			if (nfield != oldsize)
+				fprintf(stderr, "Field %i: donuts detected; merged %i objects to %i.\n",
+						fieldnum, oldsize, nfield);
+		}
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
