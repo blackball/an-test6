@@ -7,6 +7,19 @@
 
 #define USNOB_RECORD_SIZE 80
 
+#define USNOB_SURVEY_POSS_I_O 0
+#define USNOB_SURVEY_POSS_I_E 1
+#define USNOB_SURVEY_POSS_II_J 2
+#define USNOB_SURVEY_POSS_II_F 3
+#define USNOB_SURVEY_SERC_J 4
+#define USNOB_SURVEY_SERC_EJ 4
+#define USNOB_SURVEY_ESO_R 5
+#define USNOB_SURVEY_SERC_ER 5
+#define USNOB_SURVEY_AAO_R 6
+#define USNOB_SURVEY_POSS_II_N 7
+#define USNOB_SURVEY_SERC_I 8
+#define USNOB_SURVEY_SERC_I_OR_POSS_II_N 9
+
 struct observation {
 	// 0 to 99.99 (m:4)
 	float mag;
@@ -109,5 +122,10 @@ int usnob_get_index(usnob_entry* entry);
 int usnob_parse_entry(unsigned char* line, usnob_entry* usnob);
 
 unsigned char usnob_get_survey_band(int survey);
+
+// returns 1 if the observation is first-epoch
+//         2 if the observation is second-epoch
+//        -1 on error.
+int unsob_get_survey_epoch(int survey, int obsnum);
 
 #endif

@@ -8,7 +8,7 @@
 #include "mathutil.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:d:"
+#define OPTIONS "ho:i:N:n:m:M:H:d:RGe:"
 
 void print_help(char* progname) {
     printf("usage:\n"
@@ -20,6 +20,10 @@ void print_help(char* progname) {
 		   "  [-S <max-stars-per-(big)-healpix]\n"
 		   "  [-N <nside>]: healpixelization at the fine-scale; default=100.\n"
 		   "  [-d <dedup-radius>]: deduplication radius (arcseconds)\n"
+		   "  ( [-R] or [-G] )\n"
+		   "        R: SDSS R-band\n"
+		   "        G: Galex\n"
+		   "  [-e <Galex-epsilon>]\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
 }
@@ -65,6 +69,9 @@ int main(int argc, char** args) {
 	an_entry* entries;
 	int BLOCK = 100000;
 	double deduprad = 0.0;
+	double epsilon = 0.0;
+	bool sdss = FALSE;
+	bool galex = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -72,6 +79,15 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'R':
+			sdss = TRUE;
+			break;
+		case 'G':
+			galex = TRUE;
+			break;
+		case 'e':
+			epsilon = atof(optarg);
+			break;
 		case 'd':
 			deduprad = atof(optarg);
 			break;
@@ -103,6 +119,11 @@ int main(int argc, char** args) {
     }
 
 	if (!outfn || !idfn || (optind == argc) || (bighp == -1)) {
+		print_help(args[0]);
+		exit(-1);
+	}
+	if ((!sdss && !galex) || (sdss && galex)) {
+		printf("Must choose one of SDSS or Galex.\n");
 		print_help(args[0]);
 		exit(-1);
 	}
@@ -229,14 +250,29 @@ int main(int argc, char** args) {
 				// dumbass magnitude averaging!
 				summag = 0.0;
 				nmag = 0;
-				for (j=0; j<an[i].nobs; j++) {
-					if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
-						if (an[i].obs[j].band == 'E' || an[i].obs[j].band == 'F') {
+				if (sdss) {
+					for (j=0; j<an[i].nobs; j++) {
+						if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
+							if (an[i].obs[j].band == 'E' || an[i].obs[j].band == 'F') {
+								summag += an[i].obs[j].mag;
+								nmag++;
+							}
+						} else if (an[i].obs[j].catalog == AN_SOURCE_TYCHO2) {
+							if (an[i].obs[j].band == 'V' || an[i].obs[j].band == 'H') {
+								summag += an[i].obs[j].mag;
+								nmag++;
+							}
+						}
+					}
+				} else if (galex) {
+					for (j=0; j<an[i].nobs; j++) {
+						if ((an[i].obs[j].catalog == AN_SOURCE_USNOB) &&
+							//(usnob_get_survey_epoch(an[i].obs[j].survey, j) == 2) &&
+							(an[i].obs[j].band == 'O' || an[i].obs[j].band == 'J')) {
 							summag += an[i].obs[j].mag;
 							nmag++;
-						}
-					} else if (an[i].obs[j].catalog == AN_SOURCE_TYCHO2) {
-						if (an[i].obs[j].band == 'V' || an[i].obs[j].band == 'H') {
+						} else if ((an[i].obs[j].catalog == AN_SOURCE_TYCHO2) &&
+								   (an[i].obs[j].band == 'B' || an[i].obs[j].band == 'H')) {
 							summag += an[i].obs[j].mag;
 							nmag++;
 						}
