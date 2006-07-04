@@ -3,6 +3,7 @@
 #include "donuts.h"
 #include "dualtree_rangesearch.h"
 #include "bl.h"
+#include "starutil.h"
 
 static void donut_pair_found(void* extra, int x, int y, double dist2) {
 	int i;
@@ -46,7 +47,7 @@ static void donut_pair_found(void* extra, int x, int y, double dist2) {
 	}
 }
 
-void detect_donuts(int fieldnum, xy** pfield,
+void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 				   double nearbydist, double thresh) {
 	double* fieldxy;
 	int i, N;
@@ -55,21 +56,14 @@ void detect_donuts(int fieldnum, xy** pfield,
 	int levels;
 	int* counts;
 	double frac;
-	xy* field = *pfield;
 	pl* lists;
-	xy* newfield;
+	double* newfield;
 	bool* merged;
 	int fieldind;
 	int nmerged;
 
-	N = xy_size(field);
-	assert(N);
-	fieldxy = malloc(N * 2 * sizeof(double));
-	assert(fieldxy);
-	for (i=0; i<N; i++) {
-		fieldxy[i*2 + 0] = xy_refx(field, i);
-		fieldxy[i*2 + 1] = xy_refy(field, i);
-	}
+	N = *pnfield;
+	fieldxy = *pfield;
 
 	levels = kdtree_compute_levels(N, 5);
 	//printf("Building tree with %i points, %i levels.\n", N, levels);
@@ -96,7 +90,7 @@ void detect_donuts(int fieldnum, xy** pfield,
 	for (i=0; i<pl_size(lists); i++)
 		nmerged += il_size(pl_get(lists, i));
 
-	newfield = mk_xy(N - nmerged + pl_size(lists));
+	newfield = malloc((N - nmerged + pl_size(lists)) * 2 * sizeof(double));
 
 	merged = calloc(N, sizeof(bool));
 
@@ -111,32 +105,32 @@ void detect_donuts(int fieldnum, xy** pfield,
 			fprintf(stderr, "%i ", il_get(list, j));
 			ind = tree->perm[il_get(list, j)];
 			merged[ind] = TRUE;
-			avgx += xy_refx(field, ind);
-			avgy += xy_refy(field, ind);
+			avgx += fieldxy[ind*2];
+			avgy += fieldxy[ind*2+1];
 		}
 		avgx /= (double)il_size(list);
 		avgy /= (double)il_size(list);
 		fprintf(stderr, "\n");
 		il_free(list);
-		xy_setx(newfield, i, avgx);
-		xy_sety(newfield, i, avgy);
+		newfield[i*2]   = avgx;
+		newfield[i*2+1] = avgy;
 	}
 	fieldind = pl_size(lists);
 	for (i=0; i<N; i++) {
 		if (merged[i])
 			continue;
 		// this star wasn't part of a donut...
-		xy_setx(newfield, fieldind, xy_refx(field, i));
-		xy_sety(newfield, fieldind, xy_refy(field, i));
+		newfield[fieldind*2  ] = fieldxy[i*2];
+		newfield[fieldind*2+1] = fieldxy[i*2+1];
 		fieldind++;
 	}
 
 	free(merged);
 	pl_free(lists);
-	free_xy(field);
+	free(fieldxy);
 	*pfield = newfield;
+	*pnfield = fieldind;
 
  done:
 	kdtree_free(tree);
-	free(fieldxy);
 }
