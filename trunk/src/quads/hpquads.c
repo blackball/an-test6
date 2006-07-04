@@ -19,8 +19,7 @@
 #include "tic.h"
 #include "fitsioutils.h"
 
-
-#define OPTIONS "hf:u:l:n:o:i:" // r
+#define OPTIONS "hf:u:l:n:o:i:p:" // r
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -45,6 +44,7 @@ static void print_help(char* progname)
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
+		   "     [-p <passes>]   number of quad-generating passes through healpixes\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
 	       "Reads catalog (objs), writes (code, quad).\n\n"
 	       , progname);
@@ -296,8 +296,8 @@ static void shifted_healpix_bin_stars(int numstars, il* starindices,
 		int ind;
 		uint bighp, x, y;
 		if (!(i % 100000)) {
-			fprintf(stderr, ".");
-			fflush(stderr);
+			printf(".");
+			fflush(stdout);
 		}
 		if (!starindices)
 			ind = i;
@@ -347,13 +347,13 @@ static void shifted_healpix_bin_stars(int numstars, il* starindices,
 		// append this star to the appropriate normal pixel list.
 		il_append(pixels + hp, ind);
 	}
-	fprintf(stderr, "\n");
-	fflush(stderr);
+	printf("\n");
+	fflush(stdout);
 }
 
 static void create_quads_in_pixels(int numstars, il* starindices,
 								   il* pixels, int Nside,
-								   int dx, int dy)
+								   int dx, int dy, int Npasses)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
@@ -386,8 +386,8 @@ static void create_quads_in_pixels(int numstars, il* starindices,
 			if (!interesting[hp])
 				continue;
 			if (((grass++) % 10000) == 0) {
-				fprintf(stderr, "+");
-				fflush(stderr);
+				printf("+");
+				fflush(stdout);
 			}
 			foundone = find_a_quad(pixels + hp);
 			if (foundone) {
@@ -408,17 +408,21 @@ static void create_quads_in_pixels(int numstars, il* starindices,
 			}
 		}
 		passes++;
-		fprintf(stderr, "\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
+		printf("\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
 		        passes, Ninteresting, nusedthispass, nused, (int)numstars);
-		fprintf(stderr, "Made %i quads so far.\n", quadnum);
+		printf("Made %i quads so far.\n", quadnum);
+		if (Npasses && (passes == Npasses)) {
+			printf("Maximum number of passes reached.\n");
+			break;
+		}
 	}
-	fprintf(stderr, "\n");
-	fflush(stderr);
+	printf("\n");
+	fflush(stdout);
 
-	fprintf(stderr, "Took %i passes.\n", passes);
-	fprintf(stderr, "Made %i quads.\n", quadnum);
-	fprintf(stderr, "Used %i stars.\n", nused);
-	fprintf(stderr, "Didn't use %i stars.\n", (int)numstars - nused);
+	printf("Took %i passes.\n", passes);
+	printf("Made %i quads.\n", quadnum);
+	printf("Used %i stars.\n", nused);
+	printf("Didn't use %i stars.\n", (int)numstars - nused);
 
 	free(interesting);
 	free(quadsmade);
@@ -440,9 +444,13 @@ int main(int argc, char** argv)
 	char* basefnout = NULL;
 	uint pass, npasses;
 	uint id = 0;
+	int Npasses = 0;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'p':
+			Npasses = atoi(optarg);
+			break;
 		case 'i':
 			id = atoi(optarg);
 			break;
@@ -482,18 +490,18 @@ int main(int argc, char** argv)
 	}
 
 	if (Nside % 3) {
-		printf("Warning: to be really correct you should make Nside "
+		fprintf(stderr, "Warning: to be really correct you should make Nside "
 			   " (-n option) a multiple of three.");
 	}
 
 	if (!id) {
-		printf("Warning: you should set the unique-id for this index (-i).\n");
+		fprintf(stderr, "Warning: you should set the unique-id for this index (-i).\n");
 	}
 
 	HEALPIXES = 12 * Nside * Nside;
 	{
 		double hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HEALPIXES;
-		fprintf(stderr, "Nside=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
+		printf("Nside=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
 		        Nside, HEALPIXES, hparea, sqrt(hparea));
 	}
 
@@ -537,7 +545,7 @@ int main(int argc, char** argv)
 	quads->healpix = cat->healpix;
 	codes->healpix = cat->healpix;
 	if (cat->healpix == -1) {
-		printf("Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
+		fprintf(stderr, "Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
 	qfits_header_add(quads->header, "HISTORY", "hpquads command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
@@ -577,9 +585,10 @@ int main(int argc, char** argv)
 		dx = pass % 3;
 		dy = (pass / 3);
 
-		fprintf(stderr, "Doing pass %i of %i: dx=%i, dy=%i.\n", pass, npasses, dx, dy);
+		printf("Doing pass %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
 
-		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy);
+		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy,
+							   Npasses);
 
 		/*
 		  Who knows if this works? 
@@ -590,7 +599,7 @@ int main(int argc, char** argv)
 		  for (i = 0; i < HEALPIXES; i++) {
 		  il_merge_lists(leftovers, pixels + i);
 		  }
-		  fprintf(stderr, "Rebinning with Nside=%i\n", Nside / 2);
+		  printf("Rebinning with Nside=%i\n", Nside / 2);
 		  create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, dx, dy, );
 		  il_free(leftovers);
 		  }
@@ -618,8 +627,8 @@ int main(int argc, char** argv)
 
 	toc();
 
-	fprintf(stderr, "Done.\n");
-	fflush(stderr);
+	printf("Done.\n");
+	fflush(stdout);
 
 	free(pixels);
 
