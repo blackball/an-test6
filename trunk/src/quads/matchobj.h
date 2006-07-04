@@ -17,6 +17,7 @@ struct match_struct {
 	bool transform_valid;
 	double transform[9];
 	int16_t noverlap;
+	int16_t nconflict;
 	int16_t ninfield;
 	// this isn't stored, it's computed from noverlap and ninfield.
 	float overlap;

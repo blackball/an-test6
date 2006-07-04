@@ -159,7 +159,8 @@ void verify_hit(kdtree_t* startree,
 	kdtree_free(itree);
 	kdtree_free_query(res);
 
-	mo->noverlap = matches; // - conflicts;
+	mo->noverlap = matches;
+	mo->nconflict = conflicts;
 	mo->ninfield = NI;
 	matchobj_compute_overlap(mo);
 
