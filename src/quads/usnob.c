@@ -21,28 +21,55 @@ static inline uint from_le32(uint i) {
 #endif
 }
 
+int unsob_get_survey_epoch(int survey, int obsnum) {
+	switch (survey) {
+	case USNOB_SURVEY_POSS_I_O:
+	case USNOB_SURVEY_POSS_I_E:
+		return 1;
+
+	case USNOB_SURVEY_POSS_II_J:
+	case USNOB_SURVEY_POSS_II_F:
+	case USNOB_SURVEY_POSS_II_N:
+	case USNOB_SURVEY_SERC_J:
+		//case USNOB_SURVEY_SERC_EJ:
+	case USNOB_SURVEY_AAO_R:
+	case USNOB_SURVEY_SERC_I:
+	case USNOB_SURVEY_SERC_I_OR_POSS_II_N:
+		return 2;
+
+	case USNOB_SURVEY_ESO_R:
+		//case USNOB_SURVEY_SERC_ER:
+		{
+			if (obsnum == 1)
+				return 1;
+			if (obsnum == 3)
+				return 2;
+			return -1;
+		}
+	default:
+		return -1;
+	}
+}
+
 unsigned char usnob_get_survey_band(int survey) {
 	// from Tables 1 and 3 (esp footnote h) of the USNO-B paper.
 	switch (survey) {
-	case 0: // POSS-I O
+	case USNOB_SURVEY_POSS_I_O:
 		return 'O';
-	case 1: // POSS-I E
+	case USNOB_SURVEY_POSS_I_E:
 		return 'E';
-	case 2: // POSS-II J
+	case USNOB_SURVEY_POSS_II_J:
+	case USNOB_SURVEY_SERC_J:
+		//case USNOB_SURVEY_SERC_EJ:
 		return 'J';
-	case 3: // POSS-II F
+	case USNOB_SURVEY_POSS_II_F:
+	case USNOB_SURVEY_ESO_R:
+		//case USNOB_SURVEY_SERC_ER:
+	case USNOB_SURVEY_AAO_R:
 		return 'F';
-	case 4: // SERC-J or SERC-EJ
-		return 'J';
-	case 5: // ESO-R or SERC-ER
-		return 'F';
-	case 6: // AAO-R
-		return 'F';
-	case 7: // POSS-II N
-		return 'N';
-	case 8: // SERC-I
-		return 'N';
-	case 9: // SERC-I / POSS-II N
+	case USNOB_SURVEY_POSS_II_N:
+	case USNOB_SURVEY_SERC_I:
+	case USNOB_SURVEY_SERC_I_OR_POSS_II_N:
 		return 'N';
 	default:
 		return '\0';
