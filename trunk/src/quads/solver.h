@@ -28,6 +28,7 @@ struct solver_params {
 	char* solvedfn;
 	bool do_solvedserver;
 	double cxdx_margin;
+	bool circle;
 
 	// The limits on the size, in field coordinates,
 	// of the quads to find.
