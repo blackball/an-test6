@@ -19,7 +19,7 @@
 #include "tic.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "hf:u:l:n:o:i:p:" // r
+#define OPTIONS "hf:u:l:n:o:i:p:c" // r
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -40,7 +40,8 @@ static void print_help(char* progname)
 {
 	printf("\nUsage:\n"
 	       "  %s -f <input-filename-base> -o <output-filename-base>\n"
-	       "     [-r]            re-bin the unused stars\n"
+	       //"     [-r]            re-bin the unused stars\n"
+		   "     [-c]            allow quads in the circle, not the box, defined by AB\n"
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
@@ -145,7 +146,7 @@ check_scale(pquad* pq, il* stars) {
 }
 
 static bool
-check_inbox(pquad* pq, int* inds, int ninds, il* stars) {
+check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
 	int i, ind;
 	uint starid;
 	double* starpos;
@@ -161,10 +162,21 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars) {
 		ADy = Dy - pq->Ay;
 		x =  ADx * pq->costheta + ADy * pq->sintheta;
 		y = -ADx * pq->sintheta + ADy * pq->costheta;
-		// make sure it's in the box...
-		if ((x > 1.0) || (x < 0.0) ||
-			(y > 1.0) || (y < 0.0)) {
-			continue;
+		if (circle) {
+			// make sure it's in the circle centered at (0.5, 0.5)...
+			// (x-1/2)^2 + (y-1/2)^2   <=   r^2
+			// x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2))^2
+			// x^2-x + y^2-y + 1/2     <=   1/2
+			// x^2-x + y^2-y           <=   0
+			double r = (x*x - x) + (y*y - y);
+			if (r > 0.0)
+				continue;
+		} else {
+			// make sure it's in the box...
+			if ((x > 1.0) || (x < 0.0) ||
+				(y > 1.0) || (y < 0.0)) {
+				continue;
+			}
 		}
 		if (!pq->gotC) {
 			pq->gotC = TRUE;
@@ -199,7 +211,7 @@ got_quad(pquad* pq, il* stars) {
 	drop_quad(stars, pq->iA, pq->iB, pq->iC, pq->iD);
 }
 
-static char find_a_quad(il* stars) {
+static char find_a_quad(il* stars, bool circle) {
 	uint numxy, iA, iB, iC, iD, newpoint;
 	int rtn = 0;
 	pquad* pquads;
@@ -239,7 +251,7 @@ static char find_a_quad(il* stars) {
 				inbox[ninbox] = iC;
 				ninbox++;
 			}
-			if (!check_inbox(pq, inbox, ninbox, stars))
+			if (!check_inbox(pq, inbox, ninbox, stars, circle))
 				continue;
 
 			got_quad(pq, stars);
@@ -255,7 +267,7 @@ static char find_a_quad(il* stars) {
 				if (!pq->scale_ok)
 					continue;
 				inbox[0] = iD;
-				if (!check_inbox(pq, inbox, 1, stars))
+				if (!check_inbox(pq, inbox, 1, stars, circle))
 					continue;
 				got_quad(pq, stars);
 				rtn = 1;
@@ -353,7 +365,8 @@ static void shifted_healpix_bin_stars(int numstars, il* starindices,
 
 static void create_quads_in_pixels(int numstars, il* starindices,
 								   il* pixels, int Nside,
-								   int dx, int dy, int Npasses)
+								   int dx, int dy, int Npasses,
+								   bool circle)
 {
 	int i;
 	int HEALPIXES = 12 * Nside * Nside;
@@ -389,7 +402,7 @@ static void create_quads_in_pixels(int numstars, il* starindices,
 				printf("+");
 				fflush(stdout);
 			}
-			foundone = find_a_quad(pixels + hp);
+			foundone = find_a_quad(pixels + hp, circle);
 			if (foundone) {
 				if (!il_size(pixels + hp)) {
 					interesting[hp] = 0;
@@ -445,9 +458,13 @@ int main(int argc, char** argv)
 	uint pass, npasses;
 	uint id = 0;
 	int Npasses = 0;
+	bool circle = FALSE;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'c':
+			circle = TRUE;
+			break;
 		case 'p':
 			Npasses = atoi(optarg);
 			break;
@@ -558,6 +575,13 @@ int main(int argc, char** argv)
 	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.\n", NULL);
 	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.\n", NULL);
 
+	qfits_header_add(quads->header, "CIRCLE", (circle ? "T" : "F"), 
+					 (circle ? "Stars C,D live in the circle defined by AB."
+					  :        "Stars C,D live in the box defined by AB."), NULL);
+	qfits_header_add(codes->header, "CIRCLE", (circle ? "T" : "F"), 
+					 (circle ? "Stars C,D live in the circle defined by AB."
+					  :        "Stars C,D live in the box defined by AB."), NULL);
+
     if (quadfile_write_header(quads)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
         exit(-1);
@@ -588,7 +612,7 @@ int main(int argc, char** argv)
 		printf("Doing pass %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
 
 		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy,
-							   Npasses);
+							   Npasses, circle);
 
 		/*
 		  Who knows if this works? 

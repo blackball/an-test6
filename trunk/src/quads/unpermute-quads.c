@@ -126,6 +126,7 @@ int main(int argc, char **args) {
 	fits_copy_all_headers(quadin->header, quadout->header, "HISTORY");
 	fits_copy_all_headers(quadin->header, quadout->header, "COMMENT");
 	fits_copy_header(quadin->header, quadout->header, "CXDX");
+	fits_copy_header(quadin->header, quadout->header, "CIRCLE");
 
 	if (quadfile_write_header(quadout)) {
 		fprintf(stderr, "Failed to write quadfile header.\n");
@@ -164,6 +165,7 @@ int main(int argc, char **args) {
 	fits_copy_all_headers(codehdr, hdr, "HISTORY");
 	fits_copy_all_headers(codehdr, hdr, "COMMENT");
 	fits_copy_header(codehdr, hdr, "CXDX");
+	fits_copy_header(codehdr, hdr, "CIRCLE");
 
 	quadfile_close(quadin);
 

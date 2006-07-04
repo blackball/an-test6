@@ -146,6 +146,8 @@ int main(int argc, char *argv[]) {
 
 	fits_copy_header(codesin->header, codesout->header, "CXDX");
 	fits_copy_header(quadsin->header, quadsout->header, "CXDX");
+	fits_copy_header(codesin->header, codesout->header, "CIRCLE");
+	fits_copy_header(quadsin->header, quadsout->header, "CIRCLE");
 
     if (quadfile_write_header(quadsout)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadoutfname);
