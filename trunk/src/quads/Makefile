@@ -7,8 +7,8 @@ CFLAGS :=
 
 #fast
 CFLAGS	+= -g
-CFLAGS += -O0
-#CFLAGS += -O2
+#CFLAGS += -O0
+CFLAGS += -O2
 #CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
 #CFLAGS += -O3 -ffast-math
@@ -22,7 +22,7 @@ CFLAGS += -O0
 # check out __attribute__ ((nonnull))
 
 # to turn off asserts:
-CFLAGS += -DNDEBUG
+#CFLAGS += -DNDEBUG
 
 #CFLAGS += -Werror
 
@@ -124,8 +124,7 @@ FITS_UTILS := tablist modhead fitscopy tabmerge
 fitsutils: $(FITS_UTILS)
 
 CFITSIO_CFLAGS := -Icfitsio/include
-#CFITSIO_CFLAGS += -Wall -O2
-CFITSIO_CFLAGS += -Wall -g -O0
+CFITSIO_CFLAGS += -Wall -O2
 CFITSIO_LIB := libcfitsio.a
 CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
 

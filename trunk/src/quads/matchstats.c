@@ -64,6 +64,40 @@ int main(int argc, char *argv[]) {
 	htimeused = histogram_new_binsize(0.0, 2.0, timeunits);
 	nmatches = 0;
 
+ 	for (i=0; i<ninputfiles; i++) {
+		matchfile* mf;
+		//int f;
+
+		fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
+		mf = matchfile_open(inputfiles[i]);
+		if (!mf) {
+			fprintf(stderr, "Failed to open matchfile %s.\n", inputfiles[i]);
+			exit(-1);
+		}
+
+		//printf("objs_used=[");
+		//printf("time_used=[");
+		//printf("code_dists=[");
+		printf("quads_tried=[");
+		for (;;) {
+			MatchObj* mo;
+			mo = matchfile_buffered_read_match(mf);
+			if (!mo)
+				break;
+			//printf("%i,", mo->objs_tried);
+			//printf("%g,", mo->timeused);
+			//printf("%g,", mo->code_err);
+			printf("%i,", mo->quads_tried);
+		}
+		printf("];\n");
+
+	}
+
+	exit(0);
+
+
+
+
 	for (i=0; i<ninputfiles; i++) {
 		matchfile* mf;
 		int f;
