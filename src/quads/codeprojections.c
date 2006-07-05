@@ -43,14 +43,15 @@
 #include "starutil.h"
 #include "codefile.h"
 
-#define OPTIONS "hf:"
+#define OPTIONS "hf:p"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 static void print_help(char* progname)
 {
-	fprintf(stderr, "Usage: %s -f <code-file>\n\n",
+	fprintf(stderr, "Usage: %s -f <code-file>\n"
+			"       [-p]: don't do all code permutations.\n\n",
 	        progname);
 }
 
@@ -107,8 +108,9 @@ int main(int argc, char *argv[])
 {
 	int argchar;
 	char *codefname = NULL;
-	double* onecode;
 	int i, d, e;
+	bool allperms = TRUE;
+	double onecode[4];
 
 	if (argc <= 2) {
 		print_help(argv[0]);
@@ -119,6 +121,9 @@ int main(int argc, char *argv[])
 		switch (argchar) {
 		case 'f':
 			codefname = optarg;
+			break;
+		case 'p':
+			allperms = FALSE;
 			break;
 		case 'h':
 			print_help(argv[0]);
@@ -138,8 +143,6 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Number of stars in catalogue: %i\n", cf->numstars);
 	fprintf(stderr, "Index scale lower: %g\n", cf->index_scale_lower);
 	fprintf(stderr, "Index scale upper: %g\n", cf->index_scale);
-
-	onecode = malloc(4 * sizeof(double));
 
 	// Allocate memory for projection histograms
 	Dims = 4;
@@ -162,39 +165,47 @@ int main(int argc, char *argv[])
 		codefile_get_code(cf, i,
 		                  onecode, onecode+1, onecode+2, onecode+3);
 
-		for (perm = 0; perm < 4; perm++) {
-			switch (perm) {
-			case 0:
-				permcode[0] = onecode[0];
-				permcode[1] = onecode[1];
-				permcode[2] = onecode[2];
-				permcode[3] = onecode[3];
-				break;
-			case 1:
-				permcode[0] = onecode[2];
-				permcode[1] = onecode[3];
-				permcode[2] = onecode[0];
-				permcode[3] = onecode[1];
-				break;
-			case 2:
-				permcode[0] = 1.0 - onecode[0];
-				permcode[1] = 1.0 - onecode[1];
-				permcode[2] = 1.0 - onecode[2];
-				permcode[3] = 1.0 - onecode[3];
-				break;
-			case 3:
-				permcode[0] = 1.0 - onecode[2];
-				permcode[1] = 1.0 - onecode[3];
-				permcode[2] = 1.0 - onecode[0];
-				permcode[3] = 1.0 - onecode[1];
-				break;
+		if (allperms) {
+			for (perm = 0; perm < 4; perm++) {
+				switch (perm) {
+				case 0:
+					permcode[0] = onecode[0];
+					permcode[1] = onecode[1];
+					permcode[2] = onecode[2];
+					permcode[3] = onecode[3];
+					break;
+				case 1:
+					permcode[0] = onecode[2];
+					permcode[1] = onecode[3];
+					permcode[2] = onecode[0];
+					permcode[3] = onecode[1];
+					break;
+				case 2:
+					permcode[0] = 1.0 - onecode[0];
+					permcode[1] = 1.0 - onecode[1];
+					permcode[2] = 1.0 - onecode[2];
+					permcode[3] = 1.0 - onecode[3];
+					break;
+				case 3:
+					permcode[0] = 1.0 - onecode[2];
+					permcode[1] = 1.0 - onecode[3];
+					permcode[2] = 1.0 - onecode[0];
+					permcode[3] = 1.0 - onecode[1];
+					break;
+				}
+				for (d = 0; d < Dims; d++) {
+					for (e = 0; e < d; e++) {
+						add_to_histogram(d, e, permcode[d], permcode[e]);
+					}
+					add_to_single_histogram(d, permcode[d]);
+				}
 			}
-
+		} else {
 			for (d = 0; d < Dims; d++) {
 				for (e = 0; e < d; e++) {
-					add_to_histogram(d, e, permcode[d], permcode[e]);
+					add_to_histogram(d, e, onecode[d], onecode[e]);
 				}
-				add_to_single_histogram(d, permcode[d]);
+				add_to_single_histogram(d, onecode[d]);
 			}
 		}
 	}
