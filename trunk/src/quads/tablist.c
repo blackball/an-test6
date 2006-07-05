@@ -8,9 +8,11 @@ int main(int argc, char *argv[])
     char *val, value[1000], nullstr[]="*";
     char keyword[FLEN_KEYWORD], colname[FLEN_VALUE];
     int status = 0;   /*  CFITSIO status value MUST be initialized to zero!  */
-    int hdunum, hdutype, ncols, ii, anynul, dispwidth[1000];
-    int firstcol, lastcol = 0, linewidth;
-    long jj, nrows;
+    int hdunum, hdutype, ncols, ii, anynul, dispwidth[1000], nelements[1000];
+    int firstcol, lastcol = 1, linewidth;
+	int elem, firstelem, lastelem = 0, nelems;
+    long jj, nrows, kk;
+	tcolumn* tcol;
 
     if (argc != 2) {
       printf("Usage:  tablist filename[ext][col filter][row filter] \n");
@@ -47,22 +49,66 @@ int main(int argc, char *argv[])
         /* find the number of columns that will fit within 80 characters */
         while(lastcol < ncols) {
           linewidth = 0;
-          firstcol = lastcol+1;
+		  /* go on to the next element in the current column. */
+		  /* (if such an element does not exist, the inner 'for' loop
+			 does not get run and we skip to the next column.) */
+		  firstcol = lastcol;
+		  firstelem = lastelem + 1;
+		  elem = firstelem;
+
           for (lastcol = firstcol; lastcol <= ncols; lastcol++) {
-             fits_get_col_display_width
+			 fits_get_col_display_width
                 (fptr, lastcol, &dispwidth[lastcol], &status);
-             linewidth += dispwidth[lastcol] + 1;
-             if (linewidth > 80)break;  
+			 tcol = fptr->Fptr->tableptr + lastcol - 1;
+			 nelements[lastcol] = tcol->trepeat;
+			 if (abs(tcol->tdatatype) == TBIT) nelements[lastcol] = 1;
+			 nelems = nelements[lastcol];
+
+			 for (lastelem = elem; lastelem <= nelems; lastelem++) {
+				 linewidth += dispwidth[lastcol] + 1;
+				 if (linewidth > 80) {
+					 /* adding this element would overflow the line, so
+						don't include it - and if it's a column of only
+						one element, don't include the whole column. */
+					 if (lastelem > 1)
+						 lastelem--;
+					 else {
+						 lastcol--;
+						 lastelem = nelements[lastcol];
+					 }
+					 break;
+				 }
+			 }
+			 if (linewidth > 80)
+				 break;
+			 /* start at the first element of the next column. */
+			 elem = 1;
           }
-          if (lastcol > firstcol)lastcol--;  /* the last col didn't fit */
+
+		  /* if we exited the loop naturally, (not via break) then include all columns. */
+		  if (lastcol > ncols) {
+			  lastcol = ncols;
+			  lastelem = nelements[lastcol];
+		  }
 
           /* print column names as column headers */
           printf("\n    ");
           for (ii = firstcol; ii <= lastcol; ii++) {
+			  int maxelem;
               fits_make_keyn("TTYPE", ii, keyword, &status);
               fits_read_key(fptr, TSTRING, keyword, colname, NULL, &status);
               colname[dispwidth[ii]] = '\0';  /* truncate long names */
-              printf("%*s ",dispwidth[ii], colname); 
+			  kk = ((ii == firstcol) ? firstelem : 1);
+			  maxelem = ((ii == lastcol) ? lastelem : nelements[ii]);
+
+			  for (; kk <= maxelem; kk++) {
+				  if (kk > 1) {
+					  char buf[32];
+					  int len = snprintf(buf, 32, "(%li)", kk);
+					  printf("%*.*s%s ",dispwidth[ii]-len, dispwidth[ii]-len, colname, buf);
+				  } else
+					  printf("%*s ",dispwidth[ii], colname); 
+			  }
           }
           printf("\n");  /* terminate header line */
 
@@ -72,12 +118,16 @@ int main(int argc, char *argv[])
               printf("%4d ", (int)jj);
               for (ii = firstcol; ii <= lastcol; ii++)
               {
-                  /* read value as a string, regardless of intrinsic datatype */
-                  if (fits_read_col_str (fptr,ii,jj, 1, 1, nullstr,
-                      &val, &anynul, &status) )
-                     break;  /* jump out of loop on error */
-
-                  printf("%-*s ",dispwidth[ii], value);
+				  kk = ((ii == firstcol) ? firstelem : 1);
+				  nelems = ((ii == lastcol) ? lastelem : nelements[ii]);
+				  for (; kk <= nelems; kk++)
+				  {
+					  /* read value as a string, regardless of intrinsic datatype */
+					  if (fits_read_col_str (fptr,ii,jj,kk, 1, nullstr,
+											 &val, &anynul, &status) )
+						  break;  /* jump out of loop on error */
+					  printf("%-*s ",dispwidth[ii], value);
+				  }
               }
               printf("\n");
           }
