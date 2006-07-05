@@ -26,8 +26,9 @@ struct codefile {
 
 	// when writing:
 	FILE* fid;
-	qfits_header* header;
 	off_t header_end;
+
+	qfits_header* header;
 };
 typedef struct codefile codefile;
 

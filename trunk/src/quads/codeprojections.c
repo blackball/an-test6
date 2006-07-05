@@ -38,6 +38,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 
 #include "fileutil.h"
 #include "starutil.h"
@@ -62,18 +63,26 @@ int Dims;
 int Nsingle = 100;
 int* single;
 
-static void add_to_single_histogram(int dim, double val)
-{
-	int* hist = single + Nsingle * dim;
-	int bin = (int)(val * Nsingle);
-	if (bin >= Nsingle) {
-		bin = Nsingle;
+double minvalue;
+double scale;
+
+static int value_to_bin(double val, int Nbins) {
+	int bin = (int)((val - minvalue) * scale * Nbins);
+	if (bin >= Nbins) {
+		bin = Nbins-1;
 		printf("truncating value %g\n", val);
 	}
 	if (bin < 0) {
 		bin = 0;
 		printf("truncating (up) value %g\n", val);
 	}
+	return bin;
+}
+
+static void add_to_single_histogram(int dim, double val)
+{
+	int* hist = single + Nsingle * dim;
+	int bin = value_to_bin(val, Nsingle);
 	hist[bin]++;
 }
 
@@ -81,25 +90,8 @@ static void add_to_histogram(int dim1, int dim2, double val1, double val2)
 {
 	int xbin, ybin;
 	int* hist = hists[dim1 * Dims + dim2];
-	xbin = (int)(val1 * Nbins);
-	if (xbin >= Nbins) {
-		xbin = Nbins;
-		printf("truncating value %g\n", val1);
-	}
-	if (xbin < 0) {
-		xbin = 0;
-		printf("truncating (up) value %g\n", val1);
-	}
-	ybin = (int)(val2 * Nbins);
-	if (ybin >= Nbins) {
-		ybin = Nbins;
-		printf("truncating value %g\n", val2);
-	}
-	if (ybin < 0) {
-		ybin = 0;
-		printf("truncating (up) value %g\n", val2);
-	}
-
+	xbin = value_to_bin(val1, Nbins);
+	ybin = value_to_bin(val2, Nbins);
 	hist[xbin * Nbins + ybin]++;
 }
 
@@ -111,6 +103,7 @@ int main(int argc, char *argv[])
 	int i, d, e;
 	bool allperms = TRUE;
 	double onecode[4];
+	bool circle;
 
 	if (argc <= 2) {
 		print_help(argv[0]);
@@ -143,6 +136,18 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Number of stars in catalogue: %i\n", cf->numstars);
 	fprintf(stderr, "Index scale lower: %g\n", cf->index_scale_lower);
 	fprintf(stderr, "Index scale upper: %g\n", cf->index_scale);
+
+	circle = qfits_header_getboolean(cf->header, "CIRCLE", 0);
+	fprintf(stderr, "Index %s the CIRCLE property.\n",
+			(circle ? "has" : "does not have"));
+
+	if (circle) {
+		minvalue = 0.5 - M_SQRT1_2;
+		scale = 1.0 / (2.0 * M_SQRT1_2);
+	} else {
+		minvalue = 0.0;
+		scale = 1.0;
+	}
 
 	// Allocate memory for projection histograms
 	Dims = 4;
