@@ -36,6 +36,79 @@ static double quad_scale_lower2;
 
 static int quadnum = 0;
 
+static bl* quadlist;
+int ndupquads = 0;
+
+struct quadcode {
+	uint quad[4];
+};
+typedef struct quadcode quadcode;
+
+int compare_quadcode(const void* v1, const void* v2) {
+	const quadcode* qc1 = v1;
+	const quadcode* qc2 = v2;
+	int i;
+	for (i=0; i<4; i++) {
+		if (qc1->quad[i] > qc2->quad[i])
+			return 1;
+		if (qc1->quad[i] < qc2->quad[i])
+			return -1;
+	}
+	return 0;
+}
+
+static bool add_quad(quadcode* qc) {
+	//return (bl_insert_unique_sorted(quadlist, qc, compare_quadcode) != -1);
+	int ind = bl_insert_unique_sorted(quadlist, qc, compare_quadcode);
+	if (ind == -1)
+		ndupquads++;
+	return (ind != -1);
+}
+
+void compute_code(quadcode* qc, double* code) {
+	double *sA, *sB;
+	double Bx, By;
+	double scale, invscale;
+	double ABx, ABy;
+	double* starpos;
+	double Dx, Dy;
+	double ADx, ADy;
+	double x, y;
+	double midAB[3];
+	double Ax, Ay;
+	double costheta, sintheta;
+
+	sA = catalog_get_star(cat, qc->quad[0]);
+	sB = catalog_get_star(cat, qc->quad[1]);
+	star_midpoint(midAB, sA, sB);
+	star_coords(sA, midAB, &Ax, &Ay);
+	star_coords(sB, midAB, &Bx, &By);
+	ABx = Bx - Ax;
+	ABy = By - Ay;
+	scale = (ABx * ABx) + (ABy * ABy);
+	invscale = 1.0 / scale;
+	costheta = (ABy + ABx) * invscale;
+	sintheta = (ABy - ABx) * invscale;
+
+	starpos = catalog_get_star(cat, qc->quad[2]);
+	star_coords(starpos, midAB, &Dx, &Dy);
+	ADx = Dx - Ax;
+	ADy = Dy - Ay;
+	x =  ADx * costheta + ADy * sintheta;
+	y = -ADx * sintheta + ADy * costheta;
+	code[0] = x;
+	code[1] = y;
+
+	starpos = catalog_get_star(cat, qc->quad[3]);
+	star_coords(starpos, midAB, &Dx, &Dy);
+	ADx = Dx - Ax;
+	ADy = Dy - Ay;
+	x =  ADx * costheta + ADy * sintheta;
+	y = -ADx * sintheta + ADy * costheta;
+	code[2] = x;
+	code[3] = y;
+}
+
 static void print_help(char* progname)
 {
 	printf("\nUsage:\n"
@@ -106,14 +179,8 @@ struct potential_quad {
 	double midAB[3];
 	double Ax, Ay;
 	double costheta, sintheta;
-	bool gotC;
-	int iC;
-	double cx, cy;
-	uint staridC;
-	bool gotD;
-	int iD;
-	double dx, dy;
-	uint staridD;
+	int* inbox;
+	int ninbox;
 };
 typedef struct potential_quad pquad;
 
@@ -145,7 +212,7 @@ check_scale(pquad* pq, il* stars) {
 	pq->sintheta = (ABy - ABx) * invscale;
 }
 
-static bool
+static int
 check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
 	int i, ind;
 	uint starid;
@@ -153,6 +220,7 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
 	double Dx, Dy;
 	double ADx, ADy;
 	double x, y;
+	int destind = 0;
 	for (i=0; i<ninds; i++) {
 		ind = inds[i];
 		starid = il_get(stars, ind);
@@ -178,38 +246,27 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
 				continue;
 			}
 		}
-		if (!pq->gotC) {
-			pq->gotC = TRUE;
-			pq->cx = x;
-			pq->cy = y;
-			pq->iC = ind;
-			pq->staridC = starid;
-		} else {
-			assert(pq->gotD == FALSE);
-			pq->gotD = TRUE;
-			pq->dx = x;
-			pq->dy = y;
-			pq->iD = ind;
-			pq->staridD = starid;
-			return TRUE;
-		}
+		inds[destind] = ind;
+		destind++;
 	}
-	return FALSE;
+	return destind;
 }
 
-static void
-got_quad(pquad* pq, il* stars) {
-	// here we add the invariant that cx <= dx.
-	if (pq->cx <= pq->dx) {
-		codefile_write_code(codes, pq->cx, pq->cy, pq->dx, pq->dy);
-		quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridC, pq->staridD);
-	} else {
-		codefile_write_code(codes, pq->dx, pq->dy, pq->cx, pq->cy);
-		quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridD, pq->staridC);
-	}
-	quadnum++;
-	drop_quad(stars, pq->iA, pq->iB, pq->iC, pq->iD);
-}
+/*
+  static void
+  got_quad(pquad* pq, il* stars) {
+  // here we add the invariant that cx <= dx.
+  if (pq->cx <= pq->dx) {
+  codefile_write_code(codes, pq->cx, pq->cy, pq->dx, pq->dy);
+  quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridC, pq->staridD);
+  } else {
+  codefile_write_code(codes, pq->dx, pq->dy, pq->cx, pq->cy);
+  quadfile_write_quad(quads, pq->staridA, pq->staridB, pq->staridD, pq->staridC);
+  }
+  quadnum++;
+  drop_quad(stars, pq->iA, pq->iB, pq->iC, pq->iD);
+  }
+*/
 
 static char find_a_quad(il* stars, bool circle) {
 	uint numxy, iA, iB, iC, iD, newpoint;
@@ -217,6 +274,7 @@ static char find_a_quad(il* stars, bool circle) {
 	pquad* pquads;
 	int* inbox;
 	int ninbox;
+	int i, j, k;
 
 	numxy = il_size(stars);
 	inbox =  malloc(numxy * sizeof(int));
@@ -237,6 +295,8 @@ static char find_a_quad(il* stars, bool circle) {
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
+			int j,k;
+
 			pq = pquads + iA*numxy + iB;
 			pq->iA = iA;
 			pq->iB = iB;
@@ -251,12 +311,27 @@ static char find_a_quad(il* stars, bool circle) {
 				inbox[ninbox] = iC;
 				ninbox++;
 			}
-			if (!check_inbox(pq, inbox, ninbox, stars, circle))
-				continue;
+			ninbox = check_inbox(pq, inbox, ninbox, stars, circle);
+			for (j=0; j<ninbox; j++) {
+				iC = inbox[j];
+				for (k=j+1; k<ninbox; k++) {
+					quadcode qc;
+					iD = inbox[k];
+					qc.quad[0] = pq->staridA;
+					qc.quad[1] = pq->staridB;
+					qc.quad[2] = il_get(stars, iC);
+					qc.quad[3] = il_get(stars, iD);
 
-			got_quad(pq, stars);
-			rtn = 1;
-			goto theend;
+					if (add_quad(&qc)) {
+						drop_quad(stars, iA, iB, iC, iD);
+						rtn = 1;
+						goto theend;
+					}
+				}
+			}
+			pq->inbox = malloc(numxy * sizeof(int));
+			pq->ninbox = ninbox;
+			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
 
 		// quads with the new star not on the diagonal:
@@ -269,13 +344,36 @@ static char find_a_quad(il* stars, bool circle) {
 				inbox[0] = iD;
 				if (!check_inbox(pq, inbox, 1, stars, circle))
 					continue;
-				got_quad(pq, stars);
-				rtn = 1;
-				goto theend;
+				pq->inbox[pq->ninbox] = iD;
+				pq->ninbox++;
+				ninbox = pq->ninbox;
+
+				for (j=0; j<ninbox; j++) {
+					iC = pq->inbox[j];
+					for (k=j+1; k<ninbox; k++) {
+						quadcode qc;
+						iD = pq->inbox[k];
+						qc.quad[0] = pq->staridA;
+						qc.quad[1] = pq->staridB;
+						qc.quad[2] = il_get(stars, iC);
+						qc.quad[3] = il_get(stars, iD);
+
+						if (add_quad(&qc)) {
+							drop_quad(stars, iA, iB, iC, iD);
+							rtn = 1;
+							goto theend;
+						}
+					}
+				}
 			}
 		}
 	}
  theend:
+	// free all the pq->inbox!
+	for (i=0; i<(numxy*numxy); i++)
+		free(pquads[i].inbox);
+		
+
 	free(inbox);
 	free(pquads);
 	return rtn;
@@ -423,6 +521,11 @@ static void create_quads_in_pixels(int numstars, il* starindices,
 		passes++;
 		printf("\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
 		        passes, Ninteresting, nusedthispass, nused, (int)numstars);
+
+		// HACK
+		quadnum = bl_size(quadlist);
+		printf("Duplicate quads: %i\n", ndupquads);
+
 		printf("Made %i quads so far.\n", quadnum);
 		if (Npasses && (passes == Npasses)) {
 			printf("Maximum number of passes reached.\n");
@@ -603,13 +706,15 @@ int main(int argc, char** argv)
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
+	quadlist = bl_new(1024, sizeof(quadcode));
+
 	npasses = 9;
 	for (pass = 0; pass < npasses; pass++) {
 		int dx, dy;
 		dx = pass % 3;
 		dy = (pass / 3);
 
-		printf("Doing pass %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
+		printf("Doing shift %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
 
 		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy,
 							   Npasses, circle);
@@ -632,6 +737,20 @@ int main(int argc, char** argv)
 		// empty blocklists.
 		for (i = 0; i < HEALPIXES; i++)
 			il_remove_all(pixels + i);
+	}
+
+	for (i=0; i<bl_size(quadlist); i++) {
+		double code[4];
+		quadcode* qc = bl_access(quadlist, i);
+		compute_code(qc, code);
+		// here we add the invariant cx <= dx.
+		if (code[0] <= code[2]) {
+			codefile_write_code(codes, code[0], code[1], code[2], code[3]);
+			quadfile_write_quad(quads, qc->quad[0], qc->quad[1], qc->quad[2], qc->quad[3]);
+		} else {
+			codefile_write_code(codes, code[2], code[3], code[0], code[1]);
+			quadfile_write_quad(quads, qc->quad[0], qc->quad[1], qc->quad[3], qc->quad[2]);
+		}
 	}
 
 	catalog_close(cat);

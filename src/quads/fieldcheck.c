@@ -280,7 +280,7 @@ int fieldcheck_file_read_entries(fieldcheck_file* mf, fieldcheck* fc,
 			continue;
 		assert(mf->table);
 		assert(mf->table->col[mf->columns[c]].atom_size ==
-			   fieldcheck_file_fitstruct[c].size / fieldcheck_file_fitstruct[c].ncopies);
+			   fieldcheck_file_fitstruct[c].size);
 
 		qfits_query_column_seq_to_array
 			(mf->table, mf->columns[c], offset, n,

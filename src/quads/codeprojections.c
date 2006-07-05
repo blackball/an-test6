@@ -48,30 +48,10 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-void print_help(char* progname)
+static void print_help(char* progname)
 {
 	fprintf(stderr, "Usage: %s -f <code-file>\n\n",
 	        progname);
-}
-
-struct code_header
-{
-	unsigned short magic;
-	unsigned int numcodes;
-	unsigned short dim;
-	double index_scale;
-	unsigned int numstars;
-};
-typedef struct code_header code_header;
-
-int read_field(void* ptr, int size, FILE* fid)
-{
-	int nread = fread(ptr, 1, size, fid);
-	if (nread != size) {
-		fprintf(stderr, "Read %i, not %i\n", nread, size);
-		return 1;
-	}
-	return 0;
 }
 
 int** hists;
@@ -81,7 +61,7 @@ int Dims;
 int Nsingle = 100;
 int* single;
 
-void add_to_single_histogram(int dim, double val)
+static void add_to_single_histogram(int dim, double val)
 {
 	int* hist = single + Nsingle * dim;
 	int bin = (int)(val * Nsingle);
@@ -96,7 +76,7 @@ void add_to_single_histogram(int dim, double val)
 	hist[bin]++;
 }
 
-void add_to_histogram(int dim1, int dim2, double val1, double val2)
+static void add_to_histogram(int dim1, int dim2, double val1, double val2)
 {
 	int xbin, ybin;
 	int* hist = hists[dim1 * Dims + dim2];
