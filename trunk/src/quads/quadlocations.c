@@ -108,7 +108,7 @@ int main(int argc, char** args) {
 		}
 
 		printf("Counting stars in quads...\n");
-		starcounts = calloc(sizeof(unsigned char), cat->numstars);
+		starcounts = calloc(sizeof(unsigned char), Nstars);
 		for (i=0; i<qf->numquads; i++) {
 			uint stars[4];
 			int j;
