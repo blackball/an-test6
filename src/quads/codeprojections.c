@@ -46,7 +46,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 
-#define OPTIONS "hf:p"
+#define OPTIONS "hf:F:p"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
