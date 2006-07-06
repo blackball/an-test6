@@ -262,8 +262,10 @@ inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
 			// x^2-x + y^2-y + 1/2     <=   1/2
 			// x^2-x + y^2-y           <=   0
 			double r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
-			if (r > 0.0)
+			if (r > 0.0) {
+				inbox[i] = 0;
 				continue;
+			}
 		} else {
 			if ((Cx > 1.0) || (Cx < 0.0) ||
 				(Cy > 1.0) || (Cy < 0.0)) {
