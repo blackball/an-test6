@@ -9,6 +9,8 @@
 #include "catalog.h"
 #include "fileutil.h"
 #include "starutil.h"
+#include "kdtree_io.h"
+#include "kdtree_fits_io.h"
 
 #define OPTIONS "hn:o:"
 
@@ -33,7 +35,9 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	char* fn;
 	quadfile* qf;
-	catalog* cat;
+	catalog* cat = NULL;
+	kdtree_t* skdt = NULL;
+	int* invperm = NULL;
 	uchar* img;
 	uint* counts;
 	int i;
@@ -72,20 +76,35 @@ int main(int argc, char** args) {
 	}
 
 	for (; optind<argc; optind++) {
+		int Nstars;
 		basename = args[optind];
 		printf("Reading files with basename %s\n", basename);
 
 		fn = mk_quadfn(basename);
 		qf = quadfile_open(fn, 0);
+		if (!qf) {
+			fprintf(stderr, "Failed to open quad file %s.\n", fn);
+			continue;
+		}
 		free_fn(fn);
 
 		fn = mk_catfn(basename);
 		cat = catalog_open(fn, 0);
 		free_fn(fn);
-
-		if (!qf || !cat) {
-			fprintf(stderr, "Failed to read input files.\n");
-			continue;
+		if (cat) {
+			Nstars = cat->numstars;
+		} else {
+			fn = mk_streefn(basename);
+			skdt = kdtree_fits_read_file(basename);
+			if (!skdt) {
+				fprintf(stderr, "Failed to read star kdtree %s.\n", fn);
+				continue;
+			}
+			if (skdt->perm) {
+				invperm = realloc(invperm, skdt->ndata * sizeof(int));
+				kdtree_inverse_permutation(skdt, invperm);
+			}
+			Nstars = skdt->ndata;
 		}
 
 		printf("Counting stars in quads...\n");
@@ -100,7 +119,7 @@ int main(int argc, char** args) {
 			quadfile_get_starids(qf, i, stars, stars+1,
 								 stars+2, stars+3);
 			for (j=0; j<4; j++) {
-				assert(stars[j] < cat->numstars);
+				assert(stars[j] < Nstars);
 				assert(starcounts[stars[j]] < 255);
 				starcounts[stars[j]]++;
 			}
@@ -109,7 +128,7 @@ int main(int argc, char** args) {
 
 
 		printf("Computing image...\n");
-		for (i=0; i<cat->numstars; i++) {
+		for (i=0; i<Nstars; i++) {
 			double* xyz;
 			double px, py;
 			int X, Y;
@@ -119,7 +138,10 @@ int main(int argc, char** args) {
 			}
 			if (!starcounts[i])
 				continue;
-			xyz = catalog_get_star(cat, i);
+			if (cat)
+				xyz = catalog_get_star(cat, i);
+			else
+				xyz = skdt->data + skdt->ndim * (invperm ? invperm[i] : i);
 			project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
 			px = 0.5 + (px - 0.5) * 0.99;
 			py = 0.5 + (py - 0.5) * 0.99;
@@ -129,7 +151,11 @@ int main(int argc, char** args) {
 		}
 		printf("\n");
 
-		catalog_close(cat);
+		if (cat)
+			catalog_close(cat);
+		if (skdt)
+			kdtree_close(skdt);
+
 		quadfile_close(qf);
 
 		free(starcounts);
