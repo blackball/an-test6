@@ -74,7 +74,8 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	randcat genfields codedensity findquad findstar \
 	codeprojections quadlocations hpowned fitsgetext quadsperstar \
 	subtable matchstats unpermute-stars unpermute-quads \
-	cert2 rdlstofieldcheck tabsort plotmatch xylstomatlab genmatch
+	cert2 rdlstofieldcheck tabsort plotmatch xylstomatlab genmatch \
+	makematch
 
 EXTRAS := rdls2hpls get_healpix printcatalog rdlstohealpix 
 # codeprojections printmatchfile 
