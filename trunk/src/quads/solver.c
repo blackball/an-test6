@@ -325,6 +325,8 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	double usertime, systime;
 	get_resource_stats(&usertime, &systime, NULL);
 	params->timeused = (usertime + systime) - params->starttime;
+	if (params->timeused < 0.0)
+		params->timeused = 0.0;
 
     // ABCD
     thequery[0] = Cx;
