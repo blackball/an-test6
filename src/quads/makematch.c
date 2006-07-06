@@ -23,7 +23,6 @@ int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
 	char* matchfname = NULL;
-	int i;
 	matchfile* mf;
 	MatchObj mo;
 
