@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     char keyword[FLEN_KEYWORD], colname[FLEN_VALUE];
     int status = 0;   /*  CFITSIO status value MUST be initialized to zero!  */
     int hdunum, hdutype, ncols, ii, anynul, dispwidth[1000];
-	long nelements[1000];
+    long nelements[1000];
     int firstcol, lastcol = 1, linewidth;
     int elem, firstelem, lastelem = 0, nelems;
     long jj, nrows, kk;
@@ -57,16 +57,14 @@ int main(int argc, char *argv[])
           elem = firstelem;
 
           for (lastcol = firstcol; lastcol <= ncols; lastcol++) {
-			  int typecode;
+             int typecode;
              fits_get_col_display_width
                 (fptr, lastcol, &dispwidth[lastcol], &status);
-
-			 fits_get_coltype
-				 (fptr, lastcol, &typecode, &nelements[lastcol], NULL, &status);
+             fits_get_coltype
+                (fptr, lastcol, &typecode, &nelements[lastcol], NULL, &status);
              if (abs(typecode) == TBIT)
-				 nelements[lastcol] = 1;
+                nelements[lastcol] = 1;
              nelems = nelements[lastcol];
-
              for (lastelem = elem; lastelem <= nelems; lastelem++) {
                  linewidth += dispwidth[lastcol] + 1;
                  if (linewidth > 80) {
