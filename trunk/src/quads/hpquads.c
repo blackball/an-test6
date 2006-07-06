@@ -656,8 +656,8 @@ int main(int argc, char** argv)
 	fits_add_args(codes->header, argv, argc);
 	qfits_header_add(codes->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
 
-	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.\n", NULL);
-	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.\n", NULL);
+	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
+	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 
 	qfits_header_add(quads->header, "CIRCLE", (circle ? "T" : "F"), 
 					 (circle ? "Stars C,D live in the circle defined by AB."

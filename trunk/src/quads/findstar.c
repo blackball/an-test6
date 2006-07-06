@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 	double* qpp = NULL;
 	char scanrez = 1;
 	int ii;
+	int* invperm = NULL;
 
 	if (argc <= 3) {
 		fprintf(stderr, HelpString);
@@ -91,7 +92,7 @@ int main(int argc, char *argv[])
 		char* catfname = mk_catfn(basefname);
 		cat = catalog_open(catfname, 0);
 		if (!cat) {
-			fprintf(stderr, "ERROR: couldn't open catalog");
+			fprintf(stderr, "ERROR: couldn't open catalog.\n");
 		}
 		free_fn(catfname);
 	}
@@ -99,25 +100,32 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "findstar: getting stars from %s\n", treefname);
 	fflush(stderr);
 	starkd = kdtree_fits_read_file(treefname);
-
 	free_fn(treefname);
 	if (!starkd)
 		return 2;
 	numstars = starkd->ndata;
 	fprintf(stderr, "%u stars, %d nodes\n", starkd->ndata, starkd->nnodes);
 
-	// DEBUG
-	{
-		int i;
-		for (i=0; i<starkd->ndata; i++) {
-			assert(starkd->perm[i] < starkd->ndata);
+	if (whichset && !cat) {
+		if (starkd->perm) {
+			invperm = malloc(numstars * sizeof(int));
+			kdtree_inverse_permutation(starkd, invperm);
 		}
-
-		fprintf(stderr, "Checking kdtree...\n");
-		fflush(stderr);
-		kdtree_check(starkd);
-		fprintf(stderr, "done.\n");
 	}
+
+	// DEBUG
+	/*
+	  {
+	  int i;
+	  for (i=0; i<starkd->ndata; i++) {
+	  assert(starkd->perm[i] < starkd->ndata);
+	  }
+	  fprintf(stderr, "Checking kdtree...\n");
+	  fflush(stderr);
+	  kdtree_check(starkd);
+	  fprintf(stderr, "done.\n");
+	  }
+	*/
 
 	while (!feof(stdin) && scanrez) {
 		if (whichset) {
@@ -127,7 +135,11 @@ int main(int argc, char *argv[])
 					fprintf(stdin, "ERROR: No such star %u\n", whichstar);
 					continue;
 				}
-				qpp = catalog_get_star(cat, whichstar);
+				if (cat)
+					qpp = catalog_get_star(cat, whichstar);
+				else
+					qpp = starkd->data + starkd->ndim *
+						(invperm ? invperm[whichstar] : whichstar);
 			}
 		} else if (radecset) {
 			if (read_dtol) 
