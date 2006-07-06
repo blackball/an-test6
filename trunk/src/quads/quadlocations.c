@@ -95,7 +95,7 @@ int main(int argc, char** args) {
 			Nstars = cat->numstars;
 		} else {
 			fn = mk_streefn(basename);
-			skdt = kdtree_fits_read_file(basename);
+			skdt = kdtree_fits_read_file(fn);
 			if (!skdt) {
 				fprintf(stderr, "Failed to read star kdtree %s.\n", fn);
 				continue;
