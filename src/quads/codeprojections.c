@@ -43,6 +43,8 @@
 #include "fileutil.h"
 #include "starutil.h"
 #include "codefile.h"
+#include "kdtree_io.h"
+#include "kdtree_fits_io.h"
 
 #define OPTIONS "hf:p"
 
@@ -51,7 +53,7 @@ extern int optind, opterr, optopt;
 
 static void print_help(char* progname)
 {
-	fprintf(stderr, "Usage: %s -f <code-file>\n"
+	fprintf(stderr, "Usage: %s ( -f <code-file>   OR  -F <ckdt-file> )\n"
 			"       [-p]: don't do all code permutations.\n\n",
 	        progname);
 }
@@ -100,10 +102,13 @@ int main(int argc, char *argv[])
 {
 	int argchar;
 	char *codefname = NULL;
+	char *ckdtfname = NULL;
 	int i, d, e;
 	bool allperms = TRUE;
-	double onecode[4];
 	bool circle;
+	codefile* cf = NULL;
+	kdtree_t* ckdt = NULL;
+	int Ncodes;
 
 	if (argc <= 2) {
 		print_help(argv[0]);
@@ -115,6 +120,9 @@ int main(int argc, char *argv[])
 		case 'f':
 			codefname = optarg;
 			break;
+		case 'F':
+			ckdtfname = optarg;
+			break;
 		case 'p':
 			allperms = FALSE;
 			break;
@@ -125,19 +133,39 @@ int main(int argc, char *argv[])
 			return (OPT_ERR);
 		}
 
-	if (!codefname) {
+	if (!(codefname || ckdtfname)) {
 		print_help(argv[0]);
 		return (OPT_ERR);
 	}
 
-	codefile* cf = codefile_open(codefname, 0);
+	if (codefname) {
+		cf = codefile_open(codefname, 0);
+		if (!cf) {
+			fprintf(stderr, "Failed to read codefile %s.\n", codefname);
+			exit(-1);
+		}
+		fprintf(stderr, "Number of codes: %i\n", cf->numcodes);
+		fprintf(stderr, "Number of stars in catalogue: %i\n", cf->numstars);
+		fprintf(stderr, "Index scale lower: %g\n", cf->index_scale_lower);
+		fprintf(stderr, "Index scale upper: %g\n", cf->index_scale);
+		circle = qfits_header_getboolean(cf->header, "CIRCLE", 0);
+		Ncodes = cf->numcodes;
+	} else {
+		qfits_header* hdr;
+		ckdt = kdtree_fits_read_file(ckdtfname);
+		if (!ckdt) {
+			fprintf(stderr, "Failed to read code kdtree file %s.\n", ckdtfname);
+			exit(-1);
+		}
+		hdr = qfits_header_read(ckdtfname);
+		if (!hdr) {
+			fprintf(stderr, "Failed to read FITS header from code kdtree file %s.\n", ckdtfname);
+			exit(-1);
+		}
+		circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
+		Ncodes = ckdt->ndata;
+	}
 
-	fprintf(stderr, "Number of codes: %i\n", cf->numcodes);
-	fprintf(stderr, "Number of stars in catalogue: %i\n", cf->numstars);
-	fprintf(stderr, "Index scale lower: %g\n", cf->index_scale_lower);
-	fprintf(stderr, "Index scale upper: %g\n", cf->index_scale);
-
-	circle = qfits_header_getboolean(cf->header, "CIRCLE", 0);
 	fprintf(stderr, "Index %s the CIRCLE property.\n",
 			(circle ? "has" : "does not have"));
 
@@ -164,11 +192,19 @@ int main(int argc, char *argv[])
 
 	single = calloc(Dims * Nsingle, sizeof(int));
 
-	for (i = 0; i < cf->numcodes; i++) {
+	for (i=0; i<Ncodes; i++) {
 		int perm;
+		double codearr[4];
 		double permcode[4];
-		codefile_get_code(cf, i,
-		                  onecode, onecode+1, onecode+2, onecode+3);
+		double* onecode;
+
+		if (cf) {
+			codefile_get_code(cf, i,
+							  codearr, codearr+1, codearr+2, codearr+3);
+			onecode = codearr;
+		} else
+			//memcpy(onecode, ckdt->data + i*4, 4*sizeof(double));
+			onecode = ckdt->data + i*4;
 
 		if (allperms) {
 			for (perm = 0; perm < 4; perm++) {
@@ -215,7 +251,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	codefile_close(cf);
+	if (cf)
+		codefile_close(cf);
+	else
+		kdtree_close(ckdt);
 
 	for (d = 0; d < Dims; d++) {
 		for (e = 0; e < d; e++) {
