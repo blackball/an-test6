@@ -8,11 +8,11 @@ int main(int argc, char *argv[])
     char *val, value[1000], nullstr[]="*";
     char keyword[FLEN_KEYWORD], colname[FLEN_VALUE];
     int status = 0;   /*  CFITSIO status value MUST be initialized to zero!  */
-    int hdunum, hdutype, ncols, ii, anynul, dispwidth[1000], nelements[1000];
+    int hdunum, hdutype, ncols, ii, anynul, dispwidth[1000];
+	long nelements[1000];
     int firstcol, lastcol = 1, linewidth;
     int elem, firstelem, lastelem = 0, nelems;
     long jj, nrows, kk;
-    tcolumn* tcol;
 
     if (argc != 2) {
       printf("Usage:  tablist filename[ext][col filter][row filter] \n");
@@ -57,11 +57,14 @@ int main(int argc, char *argv[])
           elem = firstelem;
 
           for (lastcol = firstcol; lastcol <= ncols; lastcol++) {
+			  int typecode;
              fits_get_col_display_width
                 (fptr, lastcol, &dispwidth[lastcol], &status);
-             tcol = fptr->Fptr->tableptr + lastcol - 1;
-             nelements[lastcol] = tcol->trepeat;
-             if (abs(tcol->tdatatype) == TBIT) nelements[lastcol] = 1;
+
+			 fits_get_coltype
+				 (fptr, lastcol, &typecode, &nelements[lastcol], NULL, &status);
+             if (abs(typecode) == TBIT)
+				 nelements[lastcol] = 1;
              nelems = nelements[lastcol];
 
              for (lastelem = elem; lastelem <= nelems; lastelem++) {
