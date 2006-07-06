@@ -45,27 +45,27 @@ struct quad {
 typedef struct quad quad;
 
 int compare_quad(const void* v1, const void* v2) {
-	const quad* qc1 = v1;
-	const quad* qc2 = v2;
+	const quad* q1 = v1;
+	const quad* q2 = v2;
 	int i;
 	for (i=0; i<4; i++) {
-		if (qc1->star[i] > qc2->star[i])
+		if (q1->star[i] > q2->star[i])
 			return 1;
-		if (qc1->star[i] < qc2->star[i])
+		if (q1->star[i] < q2->star[i])
 			return -1;
 	}
 	return 0;
 }
 
-static bool add_quad(quad* qc) {
-	//return (bl_insert_unique_sorted(quadlist, qc, compare_quad) != -1);
-	int ind = bl_insert_unique_sorted(quadlist, qc, compare_quad);
+static bool add_quad(quad* q) {
+	//return (bl_insert_unique_sorted(quadlist, q, compare_quad) != -1);
+	int ind = bl_insert_unique_sorted(quadlist, q, compare_quad);
 	if (ind == -1)
 		ndupquads++;
 	return (ind != -1);
 }
 
-void compute_code(quad* qc, double* code) {
+void compute_code(quad* q, double* code) {
 	double *sA, *sB;
 	double Bx, By;
 	double scale, invscale;
@@ -78,8 +78,8 @@ void compute_code(quad* qc, double* code) {
 	double Ax, Ay;
 	double costheta, sintheta;
 
-	sA = catalog_get_star(cat, qc->star[0]);
-	sB = catalog_get_star(cat, qc->star[1]);
+	sA = catalog_get_star(cat, q->star[0]);
+	sB = catalog_get_star(cat, q->star[1]);
 	star_midpoint(midAB, sA, sB);
 	star_coords(sA, midAB, &Ax, &Ay);
 	star_coords(sB, midAB, &Bx, &By);
@@ -90,7 +90,7 @@ void compute_code(quad* qc, double* code) {
 	costheta = (ABy + ABx) * invscale;
 	sintheta = (ABy - ABx) * invscale;
 
-	starpos = catalog_get_star(cat, qc->star[2]);
+	starpos = catalog_get_star(cat, q->star[2]);
 	star_coords(starpos, midAB, &Dx, &Dy);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
@@ -99,7 +99,7 @@ void compute_code(quad* qc, double* code) {
 	code[0] = x;
 	code[1] = y;
 
-	starpos = catalog_get_star(cat, qc->star[3]);
+	starpos = catalog_get_star(cat, q->star[3]);
 	star_coords(starpos, midAB, &Dx, &Dy);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
@@ -299,14 +299,14 @@ static char find_a_quad(il* stars, bool circle) {
 			for (j=0; j<ninbox; j++) {
 				iC = inbox[j];
 				for (k=j+1; k<ninbox; k++) {
-					quad qc;
+					quad q;
 					iD = inbox[k];
-					qc.star[0] = pq->staridA;
-					qc.star[1] = pq->staridB;
-					qc.star[2] = il_get(stars, iC);
-					qc.star[3] = il_get(stars, iD);
+					q.star[0] = pq->staridA;
+					q.star[1] = pq->staridB;
+					q.star[2] = il_get(stars, iC);
+					q.star[3] = il_get(stars, iD);
 
-					if (add_quad(&qc)) {
+					if (add_quad(&q)) {
 						drop_quad(stars, iA, iB, iC, iD);
 						rtn = 1;
 						goto theend;
@@ -335,14 +335,14 @@ static char find_a_quad(il* stars, bool circle) {
 				for (j=0; j<ninbox; j++) {
 					iC = pq->inbox[j];
 					for (k=j+1; k<ninbox; k++) {
-						quad qc;
+						quad q;
 						iD = pq->inbox[k];
-						qc.star[0] = pq->staridA;
-						qc.star[1] = pq->staridB;
-						qc.star[2] = il_get(stars, iC);
-						qc.star[3] = il_get(stars, iD);
+						q.star[0] = pq->staridA;
+						q.star[1] = pq->staridB;
+						q.star[2] = il_get(stars, iC);
+						q.star[3] = il_get(stars, iD);
 
-						if (add_quad(&qc)) {
+						if (add_quad(&q)) {
 							drop_quad(stars, iA, iB, iC, iD);
 							rtn = 1;
 							goto theend;
@@ -722,15 +722,15 @@ int main(int argc, char** argv)
 
 	for (i=0; i<bl_size(quadlist); i++) {
 		double code[4];
-		quad* qc = bl_access(quadlist, i);
-		compute_code(qc, code);
+		quad* q = bl_access(quadlist, i);
+		compute_code(q, code);
 		// here we add the invariant cx <= dx.
 		if (code[0] <= code[2]) {
 			codefile_write_code(codes, code[0], code[1], code[2], code[3]);
-			quadfile_write_quad(quads, qc->star[0], qc->star[1], qc->star[2], qc->star[3]);
+			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[2], q->star[3]);
 		} else {
 			codefile_write_code(codes, code[2], code[3], code[0], code[1]);
-			quadfile_write_quad(quads, qc->star[0], qc->star[1], qc->star[3], qc->star[2]);
+			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[3], q->star[2]);
 		}
 	}
 

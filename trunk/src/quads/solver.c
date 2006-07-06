@@ -37,18 +37,18 @@ void solver_default_params(solver_params* params) {
 	params->arcsec_per_pixel_upper = 1.0e300;
 }
 
-void find_corners(double *thisfield, int nfield, double *cornerpix);
+static void find_corners(double *thisfield, int nfield, double *cornerpix);
 
-inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-					  char* inbox, int maxind, solver_params* params);
+static inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
+							 char* inbox, int maxind, solver_params* params);
 
-void try_all_codes(double Cx, double Cy, double Dx, double Dy,
-				   uint iA, uint iB, uint iC, uint iD,
-				   double *ABCDpix, solver_params* params);
+static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
+						  uint iA, uint iB, uint iC, uint iD,
+						  double *ABCDpix, solver_params* params);
 
-void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
-					 uint fA, uint fB, uint fC, uint fD,
-					 solver_params* params);
+static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
+							uint fA, uint fB, uint fC, uint fD,
+							solver_params* params);
 
 static bool check_scale(int iA, int iB, solver_params* params) {
 	double Ax, Ay, Bx, By, dx, dy, scale;
@@ -208,8 +208,8 @@ void solve_field(solver_params* params) {
 	free(iunion);
 }
 
-inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
-					  char* inbox, int maxind, solver_params* params) {
+static inline void try_quads(int iA, int iB, int* iCs, int* iDs, int ncd,
+							 char* inbox, int maxind, solver_params* params) {
 	int i;
     int iC, iD;
     double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
@@ -313,9 +313,9 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind) {
 	sety(dest, destind, gety(src, srcind));
 }
 
-void try_all_codes(double Cx, double Cy, double Dx, double Dy,
-				   uint iA, uint iB, uint iC, uint iD,
-                   double *ABCDpix, solver_params* params) {
+static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
+						  uint iA, uint iB, uint iC, uint iD,
+						  double *ABCDpix, solver_params* params) {
 
     double thequery[4];
     kdtree_qres_t* result;
@@ -424,9 +424,9 @@ void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 
 }
 
-void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
-					 uint fA, uint fB, uint fC, uint fD,
-					 solver_params* params) {
+static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
+							uint fA, uint fB, uint fC, uint fD,
+							solver_params* params) {
     uint jj, thisquadno;
     uint iA, iB, iC, iD;
     double transform[9];
@@ -555,7 +555,7 @@ void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 // find min and max coordinates in this field;
 // place them in "cornerpix"
-void find_corners(double *thisfield, int nfield, double *cornerpix) {
+static void find_corners(double *thisfield, int nfield, double *cornerpix) {
 	double minx, maxx, miny, maxy;
 	double x, y;
 	uint i;
