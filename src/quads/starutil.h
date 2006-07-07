@@ -80,6 +80,8 @@ Const inline double arcsec2distsq(double arcInArcSec);
 void make_rand_star(double* star, double ramin, double ramax,
 					double decmin, double decmax);
 
+/* computes the 2D coordinates (x,y)  that star s would have in a
+   TANGENTIAL PROJECTION defined by (centred at) star r.     */
 inline void star_coords(double *s, double *r, double *x, double *y);
 
 inline void star_midpoint(double* mid, double* A, double* B);
