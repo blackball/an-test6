@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (!indexfname) {
+	if (!indexfname || !ra_set || !dec_set || radius == 0.0) {
 		printHelp(progname);
 		exit(-1);
 	}
