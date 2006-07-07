@@ -21,8 +21,7 @@ void printHelp(char* progname) {
 			"   (-m <matchfile>\n"
 			"    [-e <matchfile-entry-number>] (default 0)\n"
 			"   OR\n"
-			"    -R <ra> -D <dec> -r <radius in arcmin>)\n"
-			"   [-n <image-size>] (default 1000)\n",
+			"    -R <ra> -D <dec> -r <radius in arcmin>)\n",
 			progname);
 }
 
@@ -36,7 +35,6 @@ int main(int argc, char *argv[]) {
 	char* matchfname = NULL;
 	char* indexfname = NULL;
 	int entry = 0;
-	int N = 1000;
 	matchfile* mf = NULL;
 	kdtree_t* startree;
 	char* fn;
@@ -53,7 +51,6 @@ int main(int argc, char *argv[]) {
 	double radius = 0.0;
 	MatchObj mo;
 	double *mincorner=NULL, *maxcorner=NULL;
-	//double scale;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -70,9 +67,6 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'e':
 			entry = atoi(optarg);
-			break;
-		case 'n':
-			N = atoi(optarg);
 			break;
 		case 'm':
 			matchfname = optarg;
@@ -183,12 +177,6 @@ int main(int argc, char *argv[]) {
 		printf("ra=%g;\n", ra);
 		printf("dec=%g;\n", dec);
 	}
-	/*
-	  scale = (maxx - minx) > (maxy - miny) ? (maxx - minx) : (maxy - miny);
-	  scale = N /
-	  for (i=0; i<res->nres; i++) {
-	  }
-	*/
 
 	kdtree_close(startree);
 	if (mf)
