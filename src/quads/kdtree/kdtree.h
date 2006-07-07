@@ -72,6 +72,16 @@ int kdtree_rangecount(kdtree_t* kd, real* pt, real maxdistsquared);
  */
 int kdtree_nearest_neighbour(kdtree_t* kd, real *pt, real* bestd2);
 
+/* Nearest neighbour (if within a maximum range): returns the index
+ * _in the kdtree_ of the nearest point, _if_ its distance is less than
+ * maxd2.  (Otherwise, -1).
+ *
+ * If "bestd2" is non-NULL, the distance-squared to the nearest neighbour
+ * will be placed there.
+ */
+int kdtree_nearest_neighbour_within(kdtree_t* kd, real *pt, real maxd2,
+									real* bestd2);
+
 /* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
 void kdtree_optimize(kdtree_t *kd);
 
