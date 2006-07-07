@@ -145,7 +145,6 @@ void verify_hit(kdtree_t* startree,
 	matches = unmatches = conflicts = 0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);
 	for (i=0; i<NF; i++) {
-		double ol;
 		double bestd2;
 		int ind = kdtree_nearest_neighbour_within(itree, fieldstars + 3*i, verify_dist2, &bestd2);
 		if (ind == -1) {
@@ -159,11 +158,11 @@ void verify_hit(kdtree_t* startree,
 			matches++;
 
 		if (i > 50) {
+			double ol, ol2;
 			ol = matches / (double)(matches + unmatches + NI);
+			ol2 = matches / (double)imin(matches + unmatches, NI);
+			fprintf(stderr, "%i:  ol %.2f,  ol2 %.2f (%i/%i/%i, NI=%i)\n", i, ol*100, ol2*100, matches, unmatches, conflicts, NI);
 
-			printf("%i: ol %g (%i/%i/%i, NI=%i)\n", i, ol, matches, unmatches, conflicts, NI);
-
-			//ol = matches / (double)imin(matches + unmatches, NI);
 			if (ol > bestoverlap) {
 				bestm = matches;
 				bestu = unmatches;
