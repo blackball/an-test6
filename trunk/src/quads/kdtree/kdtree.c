@@ -1005,8 +1005,11 @@ int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
 		 pt, kd->ndim, maxd2);
 }
 
-int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
-					  real* bestmaxdist2, int best_sofar) {
+void kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
+					   real* bestmaxdist2, int* best_sofar) {
+	kdtree_node_t *child1, *child2, *nearchild, *farchild;
+	real child1mindist2, child2mindist2, nearmindist2, farmindist2;
+
 	if (kdtree_node_is_leaf(kd, node)) {
 		// compute the distance to each point owned by this node and return
 		// the index of the best one.
@@ -1016,58 +1019,61 @@ int kdtree_nn_recurse(kdtree_t* kd, kdtree_node_t* node, real* pt,
 			real d2 = dist2(pt, p, kd->ndim);
 			if (d2 < *bestmaxdist2) {
 				*bestmaxdist2 = d2;
-				best_sofar = ind;
+				*best_sofar = ind;
 			}
 		}
-		return best_sofar;
-	} else {
-		// compute the mindists to this node's children; recurse on the
-		// closer one.  if, after the recursion returns, the other one's
-		// mindist is less than the best maxdist found, then recurse on the
-		// further child.
-		kdtree_node_t *child1, *child2, *nearchild, *farchild;
-		real child1mindist2, child2mindist2, nearmindist2, farmindist2;
-
-		child1 = kdtree_get_child1(kd, node);
-		child2 = kdtree_get_child2(kd, node);
-		child1mindist2 = kdtree_node_point_mindist2(kd, child1, pt);
-		child2mindist2 = kdtree_node_point_mindist2(kd, child2, pt);
-
-		if (child1mindist2 < child2mindist2) {
-			nearchild = child1;
-			nearmindist2 = child1mindist2;
-			farchild = child2;
-			farmindist2 = child2mindist2;
-		} else {
-			nearchild = child2;
-			nearmindist2 = child2mindist2;
-			farchild = child1;
-			farmindist2 = child1mindist2;
-		}
-
-		if (nearmindist2 > *bestmaxdist2) {
-			// we can't do better than the existing best.
-			return best_sofar;
-		}
-		// recurse on the near child.
-		best_sofar = kdtree_nn_recurse(kd, nearchild, pt, bestmaxdist2, best_sofar);
-
-		// check if we should bother recursing on the far child.
-		if (farmindist2 > *bestmaxdist2) {
-			return best_sofar;
-		}
-		// recurse on the far child.
-		best_sofar = kdtree_nn_recurse(kd, farchild, pt, bestmaxdist2, best_sofar);
-		return best_sofar;
+		return;
 	}
+
+	// compute the mindists to this node's children; recurse on the
+	// closer one.  if, after the recursion returns, the other one's
+	// mindist is less than the best maxdist found, then recurse on the
+	// further child.
+
+	child1 = kdtree_get_child1(kd, node);
+	child2 = kdtree_get_child2(kd, node);
+	child1mindist2 = kdtree_node_point_mindist2(kd, child1, pt);
+	child2mindist2 = kdtree_node_point_mindist2(kd, child2, pt);
+
+	if (child1mindist2 < child2mindist2) {
+		nearchild = child1;
+		nearmindist2 = child1mindist2;
+		farchild = child2;
+		farmindist2 = child2mindist2;
+	} else {
+		nearchild = child2;
+		nearmindist2 = child2mindist2;
+		farchild = child1;
+		farmindist2 = child1mindist2;
+	}
+
+	// should we bother recursing on the near child?
+	if (nearmindist2 > *bestmaxdist2)
+		// we can't do better than the existing best.
+		return;
+
+	// recurse on the near child.
+	kdtree_nn_recurse(kd, nearchild, pt, bestmaxdist2, best_sofar);
+
+	// check if we should bother recursing on the far child.
+	if (farmindist2 > *bestmaxdist2)
+		return;
+
+	// recurse on the far child.
+	kdtree_nn_recurse(kd, farchild, pt, bestmaxdist2, best_sofar);
 }
 
-int kdtree_nearest_neighbour(kdtree_t* kd, real* pt, real* mindist2) {
-	real bestd2 = 1e300;
-	int ibest;
-	ibest = kdtree_nn_recurse(kd, kdtree_get_root(kd), pt, &bestd2, -1);
-	if (mindist2 && (ibest != -1))
-		*mindist2 = bestd2;
+int kdtree_nearest_neighbour(kdtree_t* kd, real* pt, real* p_mindist2) {
+	return kdtree_nearest_neighbour_within(kd, pt, 1e300, p_mindist2);
+}
+
+int kdtree_nearest_neighbour_within(kdtree_t* kd, real *pt, real maxd2,
+									real* p_mindist2) {
+	real bestd2 = maxd2;
+	int ibest = -1;
+	kdtree_nn_recurse(kd, kdtree_get_root(kd), pt, &bestd2, &ibest);
+	if (p_mindist2 && (ibest != -1))
+		*p_mindist2 = bestd2;
 	return ibest;
 }
 

@@ -39,6 +39,12 @@ void verify_hit(kdtree_t* startree,
 	int levels;
 	int Nleaf = 5;
 	double* dptr;
+
+	int bestm;
+	int bestu;
+	int bestc;
+	double bestoverlap = 0.0;
+
 	assert(mo->transform_valid);
 	assert(startree);
 
@@ -88,19 +94,19 @@ void verify_hit(kdtree_t* startree,
 	}
 
 	if (!NI) {
-		// I don't know HOW this happens, but I've seen it...
+		// I don't know HOW this happens - at the very least, the four stars
+		// belonging to the quad that generated this hit should lie in the
+		// proposed field - but I've seen it happen!
 		fprintf(stderr, "Freakishly, NI=0.\n");
 		mo->ninfield = 0;
 		mo->noverlap = 0;
 		matchobj_compute_overlap(mo);
-
 		if (pmatches)
 			*pmatches = 0;
 		if (punmatches)
 			*punmatches = NF;
 		if (pconflicts)
 			*pconflicts = 0;
-
 		kdtree_free_query(res);
 		return;
 	}
@@ -139,21 +145,49 @@ void verify_hit(kdtree_t* startree,
 	matches = unmatches = conflicts = 0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);
 	for (i=0; i<NF; i++) {
-		// HACK - will it be faster to do NF (~300) kdtree searches, or
-		// NF * NI distance computations?  Or build a kdtree over NI and
-		// do nearest-neighbour search in that!
-
+		double ol;
 		double bestd2;
-		//int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
-		int ind = kdtree_nearest_neighbour(itree, fieldstars + 3*i, &bestd2);
-		if (bestd2 <= verify_dist2) {
-			if (intmap_add(map, ind, i) == -1)
-				// a field object already selected star 'ind' as its nearest neighbour.
-				conflicts++;
-			else
-				matches++;
-		} else
+		int ind = kdtree_nearest_neighbour_within(itree, fieldstars + 3*i, verify_dist2, &bestd2);
+		if (ind == -1) {
 			unmatches++;
+			continue;
+		}
+		if (intmap_add(map, ind, i) == -1)
+			// a field object already selected star 'ind' as its nearest neighbour.
+			conflicts++;
+		else
+			matches++;
+
+		if (matches + unmatches > 50) {
+			ol = matches / (double)(matches + unmatches + NI);
+
+			printf("%i: ol %g (%i/%i/%i, NI=%i)\n", i, ol, matches, unmatches, conflicts, NI);
+
+			//ol = matches / (double)imin(matches + unmatches, NI);
+			if (ol > bestoverlap) {
+				bestm = matches;
+				bestu = unmatches;
+				bestc = conflicts;
+			}
+		}
+
+		/*
+		  ;
+		  // HACK - will it be faster to do NF (~300) kdtree searches, or
+		  // NF * NI distance computations?  Or build a kdtree over NI and
+		  // do nearest-neighbour search in that?
+		  double bestd2;
+		  //int ind = kdtree_nearest_neighbour(startree, fieldstars + 3*i, &bestd2);
+		  int ind = kdtree_nearest_neighbour(itree, fieldstars + 3*i, &bestd2);
+		  if (bestd2 <= verify_dist2) {
+		  if (intmap_add(map, ind, i) == -1)
+		  // a field object already selected star 'ind' as its nearest neighbour.
+		  conflicts++;
+		  else
+		  matches++;
+		  } else
+		  unmatches++;
+		*/
 	}
 
 	kdtree_free(itree);
