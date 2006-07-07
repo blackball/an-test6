@@ -137,6 +137,9 @@ int main(int argc, char *argv[]) {
 	}
 	printf("];\n");
 
+	fprintf(stderr, "Found %i quads involving stars in this field.\n",
+			il_size(quadlist));
+
 	goodquads = il_new(32);
 
 	// find quads that are composed of 4 stars in this field.
@@ -149,6 +152,9 @@ int main(int argc, char *argv[]) {
 			il_append(goodquads, quad);
 	}
 	il_free(quadlist);
+
+	fprintf(stderr, "Found %i quads involving only stars in this field.\n",
+			il_size(goodquads));
 
 	// draw lines to indicate quads.
 	printf("quadlinesx=zeros(6,%i);\n", il_size(goodquads));
