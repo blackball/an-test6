@@ -45,8 +45,9 @@
 #include "codefile.h"
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
+#include "keywords.h"
 
-#define OPTIONS "hf:F:p"
+#define OPTIONS "hf:F:pd"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -54,19 +55,42 @@ extern int optind, opterr, optopt;
 static void print_help(char* progname)
 {
 	fprintf(stderr, "Usage: %s ( -f <code-file>   OR  -F <ckdt-file> )\n"
-			"       [-p]: don't do all code permutations.\n\n",
+			"       [-p]: don't do all code permutations.\n"
+			"       [-d]: normalize by volume (produce density plots)\n\n",
 	        progname);
 }
 
-int** hists;
+// 2-D hists
+int** hists = NULL;
+double** dhists = NULL;
 int Nbins = 20;
 int Dims;
-// single-dimension hists
+
+// 1-D hists
+int* single = NULL;
+double* dsingle = NULL;
 int Nsingle = 100;
-int* single;
+
+bool do_density = FALSE;
 
 double minvalue;
 double scale;
+
+static Const double volume_at_value(double x) {
+	// codes in a circle live inside the circle
+	//    (x-1/2)^2 + (y-1/2)^2 = 1/2
+	// we are given "x" and want to find the distance
+	// between the upper and lower arcs of the circle;
+	// ie y(x)_upper - y(x)_lower.  Hence we don't care
+	// about the y offset of the center of the circle and
+	// we want twice the value y(x)_upper.  Ie, solve
+	//    (x-1/2)^2 + y^2 = 1/2
+	// for y, and return twice that.
+	//    y = sqrt(1/2 - (x - 1/2)^2).
+	//      = sqrt(1/2 - (x^2 - x + 1/4)
+	//      = sqrt(-x^2 + x + 1/4)
+	return 2.0 * sqrt(-x*x + x + 0.25);
+}
 
 static int value_to_bin(double val, int Nbins) {
 	int bin = (int)((val - minvalue) * scale * Nbins);
@@ -86,6 +110,10 @@ static void add_to_single_histogram(int dim, double val)
 	int* hist = single + Nsingle * dim;
 	int bin = value_to_bin(val, Nsingle);
 	hist[bin]++;
+	if (do_density) {
+		double* dhist = dsingle + Nsingle * dim;
+		dhist[bin] += 1.0 / volume_at_value(val);
+	}
 }
 
 static void add_to_histogram(int dim1, int dim2, double val1, double val2)
@@ -95,6 +123,16 @@ static void add_to_histogram(int dim1, int dim2, double val1, double val2)
 	xbin = value_to_bin(val1, Nbins);
 	ybin = value_to_bin(val2, Nbins);
 	hist[xbin * Nbins + ybin]++;
+	if (do_density) {
+		double* dhist = dhists[dim1 * Dims + dim2];
+		double inc;
+		if (dim1/2 == dim2/2)
+			// (cx vs cy) or (dx vs dy); the other two dimensions are independent.
+			inc = 1.0;
+		else
+			inc = 1.0 / (volume_at_value(val1) * volume_at_value(val2));
+		dhist[xbin * Nbins + ybin] += inc;
+	}
 }
 
 
@@ -117,6 +155,9 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'd':
+			do_density = TRUE;
+			break;
 		case 'f':
 			codefname = optarg;
 			break;
@@ -171,26 +212,38 @@ int main(int argc, char *argv[])
 
 	if (circle) {
 		minvalue = 0.5 - M_SQRT1_2;
-		scale = 1.0 / (2.0 * M_SQRT1_2);
+		scale = M_SQRT1_2;
 	} else {
 		minvalue = 0.0;
 		scale = 1.0;
+
+		if (do_density) {
+			fprintf(stderr, "Warning: this index does not have the CIRCLE property "
+					"so the -d flag has no effect.\n");
+			do_density = FALSE;
+		}
 	}
 
 	// Allocate memory for projection histograms
 	Dims = 4;
-	hists = calloc(Dims * Dims, sizeof(int*));
+	 hists = calloc(Dims * Dims, sizeof(int*));
+	dhists = calloc(Dims * Dims, sizeof(double*));
 
 	for (d = 0; d < Dims; d++) {
-		for (e = 0; e < d; e++)
-			hists[d*Dims + e] = calloc(Nbins * Nbins, sizeof(int));
+		for (e = 0; e < d; e++) {
+			 hists[d*Dims + e] = calloc(Nbins * Nbins, sizeof(int));
+			dhists[d*Dims + e] = calloc(Nbins * Nbins, sizeof(double));
+		}
 		// Since the 4x4 matrix of histograms is actually symmetric,
 		// only make half
-		for (; e < Dims; e++)
-			hists[d*Dims + e] = NULL;
+		for (; e < Dims; e++) {
+			hists [d*Dims + e] = NULL;
+			dhists[d*Dims + e] = NULL;
+		}
 	}
 
-	single = calloc(Dims * Nsingle, sizeof(int));
+	single  = calloc(Dims * Nsingle, sizeof(int));
+	dsingle = calloc(Dims * Nsingle, sizeof(double));
 
 	for (i=0; i<Ncodes; i++) {
 		int perm;
@@ -234,6 +287,7 @@ int main(int argc, char *argv[])
 					permcode[3] = 1.0 - onecode[1];
 					break;
 				}
+
 				for (d = 0; d < Dims; d++) {
 					for (e = 0; e < d; e++) {
 						add_to_histogram(d, e, permcode[d], permcode[e]);
@@ -271,15 +325,39 @@ int main(int argc, char *argv[])
 				printf("];\n");
 			}
 			free(hist);
+			if (do_density) {
+				double* dhist;
+				printf("dhist_%i_%i=zeros([%i,%i]);\n",
+					   d, e, Nbins, Nbins);
+				dhist = dhists[d * Dims + e];
+				for (i = 0; i < Nbins; i++) {
+					int j;
+					printf("dhist_%i_%i(%i,:)=[", d, e, i + 1);
+					for (j = 0; j < Nbins; j++)
+						printf("%g,", dhist[i*Nbins + j]);
+					printf("];\n");
+				}
+				free(dhist);
+			}
 		}
 		printf("hist_%i=[", d);
-		for (i = 0; i < Nsingle; i++) {
+		for (i = 0; i < Nsingle; i++)
 			printf("%i,", single[d*Nsingle + i]);
-		}
 		printf("];\n");
+
+		if (do_density) {
+			printf("dhist_%i=[", d);
+			for (i = 0; i < Nsingle; i++)
+				printf("%g,", dsingle[d*Nsingle + i]);
+			printf("];\n");
+		}
 	}
 	free(hists);
 	free(single);
+	if (do_density) {
+		free(dhists);
+		free(dsingle);
+	}
 
 	fprintf(stderr, "Done!\n");
 
