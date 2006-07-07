@@ -158,11 +158,13 @@ void verify_hit(kdtree_t* startree,
 			matches++;
 
 		if (i > 50) {
-			double ol, ol2, ol3;
+			double ol, ol2, ol3, ol4;
 			ol = matches / (double)(matches + unmatches + NI);
 			ol2 = matches / (double)imin(matches + unmatches, NI);
 			ol3 = matches / (double)imax(matches + unmatches, NI);
-			fprintf(stderr, "%i:  ol %.2f,  ol2 %.2f,  ol3 %.2f  (%i/%i/%i, NI=%i)\n", i, ol*100, ol2*100, ol3*100, matches, unmatches, conflicts, NI);
+			ol4 = matches / sqrt((matches + unmatches) * NI);
+			fprintf(stderr, "%i:  ol %.2f,  ol2 %.2f,  ol3 %.2f,  ol4 %.2f  (%i/%i/%i, NI=%i)\n",
+					i, ol*100, ol2*100, ol3*100, ol4*100, matches, unmatches, conflicts, NI);
 
 			if (ol > bestoverlap) {
 				bestm = matches;
