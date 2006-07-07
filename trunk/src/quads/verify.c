@@ -158,7 +158,7 @@ void verify_hit(kdtree_t* startree,
 		else
 			matches++;
 
-		if (matches + unmatches > 50) {
+		if (i > 50) {
 			ol = matches / (double)(matches + unmatches + NI);
 
 			printf("%i: ol %g (%i/%i/%i, NI=%i)\n", i, ol, matches, unmatches, conflicts, NI);
