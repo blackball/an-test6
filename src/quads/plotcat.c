@@ -38,9 +38,9 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 
 char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
 " <filename> [<filename> ...] > outfile.pgm\n"
-"  -h sets Hammer-Aitoff\n"
-"  -b sets reverse\n"
-"  -g adds grid\n"
+"  -h sets Hammer-Aitoff (default is an equal-area, positive-Z projection)\n"
+"  -b sets reverse (negative-Z projection)\n"
+"  -g adds RA,DEC grid\n"
 "  -N sets edge size of output image\n"
 "  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
 "  [-L <field-range-low>]\n"
