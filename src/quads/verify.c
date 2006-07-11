@@ -112,7 +112,7 @@ void verify_hit(kdtree_t* startree,
 	}
 
 	/*
-	  Comment for the picky: in the rangesearch below, we grab an range
+	  Comment for the picky: in the rangesearch below, we grab a range
 	  around each field star (at the moment this range is typically set to
 	  3 arcsec).  This could grab an index star that isn't actually within
 	  the bounds of the field that we computed above.  Since SDSS fields
@@ -144,6 +144,9 @@ void verify_hit(kdtree_t* startree,
 
 	matches = unmatches = conflicts = 0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);
+
+	//printf("ol=[");
+
 	for (i=0; i<NF; i++) {
 		double bestd2;
 		int ind = kdtree_nearest_neighbour_within(itree, fieldstars + 3*i, verify_dist2, &bestd2);
@@ -157,14 +160,18 @@ void verify_hit(kdtree_t* startree,
 				matches++;
 		}
 
-		if (i > 50) {
+		//if (i > 50) {
+		{
 			double ol, ol2, ol3, ol4;
 			ol = matches / (double)(matches + unmatches + NI);
 			ol2 = matches / (double)imin(matches + unmatches, NI);
 			ol3 = matches / (double)imax(matches + unmatches, NI);
 			ol4 = matches / sqrt((matches + unmatches) * NI);
-			fprintf(stderr, "%i: %s,  ol %.2f,  ol2 %.2f,  ol3 %.2f,  ol4 %.2f  (%i/%i/%i, NI=%i)\n",
-					i, (ind==-1)?"miss":"hit ", ol*100, ol2*100, ol3*100, ol4*100, matches, unmatches, conflicts, NI);
+			/*
+			  fprintf(stderr, "%i: %s,  ol %.2f,  ol2 %.2f,  ol3 %.2f,  ol4 %.2f  (%i/%i/%i, NI=%i)\n",
+			  i, (ind==-1)?"miss":"hit ", ol*100, ol2*100, ol3*100, ol4*100, matches, unmatches, conflicts, NI);
+			*/
+			//printf("%g,", ol4);
 
 			if (ol > bestoverlap) {
 				bestm = matches;
@@ -191,6 +198,7 @@ void verify_hit(kdtree_t* startree,
 		  unmatches++;
 		*/
 	}
+	//printf("];\n");
 
 	kdtree_free(itree);
 	kdtree_free_query(res);
