@@ -281,7 +281,6 @@ static int find_table(matchfile* mf) {
 	int ext;
 
 	for (ext=1; ext<=nextens; ext++) {
-		int c2;
 		if (!qfits_is_table(mf->fn, ext)) {
 			fprintf(stderr, "matchfile: extention %i isn't a table.\n", ext);
 			continue;
@@ -293,15 +292,7 @@ static int find_table(matchfile* mf) {
 		}
 		good = 1;
 		for (c=0; c<MATCHFILE_FITS_COLUMNS; c++) {
-			mf->columns[c] = -1;
-			for (c2=0; c2<table->nc; c2++) {
-				qfits_col* col = table->col + c2;
-				// allow case-insensitive matches.
-				if (strcasecmp(col->tlabel, matchfile_fitstruct[c].fieldname))
-					continue;
-				mf->columns[c] = c2;
-				break;
-			}
+			mf->columns[c] = fits_find_column(table, matchfile_fitstruct[c].fieldname);
 			if (matchfile_fitstruct[c].required && (mf->columns[c] == -1)) {
 				fprintf(stderr, "matchfile: didn't find column \"%s\"", matchfile_fitstruct[c].fieldname);
 				good = 0;

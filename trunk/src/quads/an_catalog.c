@@ -148,26 +148,18 @@ an_catalog* an_catalog_open(char* fn) {
 	// find a table containing all the columns needed...
 	// (and find the indices of the columns we need.)
 	nextens = qfits_query_n_ext(fn);
+	if (nextens == -1) {
+		fprintf(stderr, "Couldn't find the number of extensions in file %s.\n", fn);
+		return NULL;
+	}
 	for (i=0; i<=nextens; i++) {
-		int c2;
 		if (!qfits_is_table(fn, i))
 			continue;
 		table = qfits_table_open(fn, i);
 
 		for (c=0; c<AN_FITS_COLUMNS; c++)
-			cat->columns[c] = -1;
-
-		for (c=0; c<table->nc; c++) {
-			qfits_col* col = table->col + c;
-			for (c2=0; c2<AN_FITS_COLUMNS; c2++) {
-				if (cat->columns[c2] != -1) continue;
-				// allow case-insensitive matches.
-				if (strcasecmp(col->tlabel, an_fitstruct[c2].fieldname))
-					continue;
-				cat->columns[c2] = c;
-			}
-		}
-
+			cat->columns[c] = fits_find_column(table,
+											   an_fitstruct[c].fieldname);
 		good = 1;
 		for (c=0; c<AN_FITS_COLUMNS; c++) {
 			if (cat->columns[c] == -1) {
