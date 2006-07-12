@@ -75,7 +75,7 @@ EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
 	codeprojections quadlocations hpowned fitsgetext quadsperstar \
 	subtable matchstats unpermute-stars unpermute-quads \
 	cert2 rdlstofieldcheck tabsort plotmatch xylstomatlab genmatch \
-	makematch plotquads
+	makematch plotquads matchtordls
 
 EXTRAS := rdls2hpls get_healpix printcatalog rdlstohealpix 
 # codeprojections printmatchfile 
@@ -125,7 +125,8 @@ FITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab
 fitsutils: $(FITS_UTILS)
 
 CFITSIO_CFLAGS := -Icfitsio/include
-CFITSIO_CFLAGS += -Wall -O2
+#CFITSIO_CFLAGS += -Wall -O2
+CFITSIO_CFLAGS += -Wall -O0 -g
 CFITSIO_LIB := libcfitsio.a
 CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
 

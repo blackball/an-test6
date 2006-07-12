@@ -39,6 +39,6 @@ inline int rdlist_write_entries(rdlist* ls, double* vals, uint nvals);
 
 inline int rdlist_fix_field(rdlist* ls);
 
-inline void rdlist_close(rdlist* ls);
+inline int rdlist_close(rdlist* ls);
 
 #endif

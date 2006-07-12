@@ -48,29 +48,30 @@ int main(int argc, char *argv[])
 	fits_get_num_rows(fptr, &nrows, &status);
 	fits_get_num_cols(fptr, &ncols, &status);
 
-	// column names become variable names.
-	for (ii = 1; ii <= ncols; ii++) {
+	for (ii=1; ii<=ncols; ii++) {
 		int typecode;
 		long nelems;
 		fits_make_keyn("TTYPE", ii, keyword, &status);
 		fits_read_key(fptr, TSTRING, keyword, colname, NULL, &status);
 		fits_get_coltype(fptr, ii, &typecode, &nelems, NULL, &status);
-		if (abs(typecode) == TBIT)
+		typecode = abs(typecode);
+		if (typecode == TBIT)
 			nelems = 1;
 
+		// column names become variable names.
 		printf("%s = [ ", colname);
 
 		// print each column, row by row (there are faster ways to do this)
-		val = value;
 		for (jj=1; jj<=nrows && !status; jj++) {
-			for (kk=1; kk<=nelems; kk++) {
+			for (kk=1; kk<=nelems && !status; kk++) {
 				/* read value as a string, regardless of intrinsic datatype */
+				val = value;
 				if (fits_read_col_str (fptr, ii, jj, kk, 1, nullstr,
 									   &val, &anynul, &status) )
 					break;  /* jump out of loop on error */
-				// remove whitespace.
 				val = value;
 				if (typecode != TSTRING) {
+					// remove leading and trailing whitespace.
 					char* endp;
 					while (*val && isspace(*val)) val++;
 					endp = val + strlen(val) - 1;

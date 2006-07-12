@@ -50,6 +50,6 @@ Inline int rdlist_fix_field(rdlist* ls) {
 	return xylist_fix_field(ls);
 }
 
-Inline void rdlist_close(rdlist* ls) {
-	xylist_close(ls);
+Inline int rdlist_close(rdlist* ls) {
+	return xylist_close(ls);
 }
