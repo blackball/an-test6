@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 
 #include "donuts.h"
 #include "dualtree_rangesearch.h"
@@ -63,7 +64,8 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	int nmerged;
 
 	N = *pnfield;
-	fieldxy = *pfield;
+	fieldxy = malloc(N * 2 * sizeof(double));
+	memcpy(fieldxy, *pfield, N * 2 * sizeof(double));
 
 	levels = kdtree_compute_levels(N, 5);
 	//printf("Building tree with %i points, %i levels.\n", N, levels);
@@ -80,6 +82,11 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	free(counts);
 	if (frac < thresh)
 		goto done;
+
+	/***
+	 * FIXME:
+	 * This process totally scrambles the order of the stars; it shouldn't.
+	 */
 
 	lists = pl_new(32);
 	dualtree_rangesearch(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist,
@@ -127,10 +134,10 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 
 	free(merged);
 	pl_free(lists);
-	free(fieldxy);
 	*pfield = newfield;
 	*pnfield = fieldind;
 
  done:
 	kdtree_free(tree);
+	free(fieldxy);
 }

@@ -14,19 +14,19 @@
 #include "tic.h"
 #include "solvedclient.h"
 
-static inline double getx(double* d, int ind) {
+static inline double getx(const double* d, uint ind) {
 	// return d[ind*2];
 	return d[ind << 1];
 }
-static inline double gety(double* d, int ind) {
+static inline double gety(const double* d, uint ind) {
 	// return d[ind*2 + 1];
 	return d[(ind << 1) | 1];
 }
-static inline void setx(double* d, int ind, double val) {
+static inline void setx(double* d, uint ind, double val) {
 	// d[ind*2] = val;
 	d[ind << 1] = val;
 }
-static inline void sety(double* d, int ind, double val) {
+static inline void sety(double* d, uint ind, double val) {
 	// d[ind*2 + 1] = val;
 	d[(ind << 1) | 1] = val;
 }
@@ -50,7 +50,6 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 struct potential_quad {
 	bool scale_ok;
 	int iA, iB;
-	double Ax, Ay;
 	double costheta, sintheta;
 	int* inbox;
 	int ninbox;
@@ -58,42 +57,46 @@ struct potential_quad {
 };
 typedef struct potential_quad pquad;
 
-static bool check_scale(pquad* pq, solver_params* params) {
-	double Bx, By, dx, dy, scale;
-	pq->Ax = getx(params->field, pq->iA);
-	pq->Ay = gety(params->field, pq->iA);
+static void check_scale(pquad* pq, solver_params* params) {
+	double Ax, Ay, Bx, By, dx, dy, scale;
+	Ax = getx(params->field, pq->iA);
+	Ay = gety(params->field, pq->iA);
 	Bx = getx(params->field, pq->iB);
 	By = gety(params->field, pq->iB);
-	dx = Bx - pq->Ax;
-	dy = By - pq->Ay;
+	dx = Bx - Ax;
+	dy = By - Ay;
 	scale = dx*dx + dy*dy;
 	fprintf(stderr, " AB %i -- %i: scale %f: %s\n",
 			pq->iA, pq->iB, scale, 
 			((scale < square(params->minAB)) ||
 			 (scale > square(params->maxAB))) ? "invalid" : "ok");
+	fprintf(stderr, "    Ax=%f, Ay=%f, Bx=%f, By=%f.\n", Ax, Ay, Bx, By);
 
 	if ((scale < square(params->minAB)) ||
 		(scale > square(params->maxAB))) {
 		//fprintf(stderr, "Quad scale %g: not in allowable range [%g, %g].\n", scale, params->minAB, params->maxAB);
-		return FALSE;
+		pq->scale_ok = FALSE;
+		return;
 	}
 
     pq->costheta = (dy + dx) / scale;
     pq->sintheta = (dy - dx) / scale;
-
-	return TRUE;
+	pq->scale_ok = TRUE;
 }
 
 static void check_inbox(pquad* pq, int start, solver_params* params) {
 	int i;
+	double Ax, Ay;
+	Ax = getx(params->field, pq->iA);
+	Ay = gety(params->field, pq->iA);
     // check which C, D points are inside the square/circle.
     for (i=start; i<pq->ninbox; i++) {
 		double Cx, Cy, xxtmp;
 		if (!pq->inbox[i]) continue;
 		Cx = getx(params->field, i);
 		Cy = gety(params->field, i);
-		Cx -= pq->Ax;
-		Cy -= pq->Ay;
+		Cx -= Ax;
+		Cy -= Ay;
 		xxtmp = Cx;
 		Cx =     Cx * pq->costheta + Cy * pq->sintheta;
 		Cy = -xxtmp * pq->sintheta + Cy * pq->costheta;
@@ -157,27 +160,18 @@ void solve_field(solver_params* params) {
 	  building all quads that have the star not on the diagonal
 	  (star D).
 
-	  In each of the loops, we first consider a pair of A, B stars,
-	  and gather all the stars that could be C and D stars.  We add
-	  the indices of the C and D stars to the arrays "iCs" and "iDs".
-	  That is, iCs[0] and iDs[0] contain the first pair of C,D stars.
-	  Both arrays can contain duplicates.
+	  For each AB pair, we have a "potential_quad" or "pquad" struct.
+	  This caches the computation we need to do: deciding whether the
+	  scale is acceptable, computing the transformation to code
+	  coordinates, and deciding which C,D stars are in the box/circle.
 
-	  We also mark "iunion" of these indices to TRUE, so if index "i"
-	  appears in "iCs" or "iDs", then "iunion[i]" is true.
-
-	  We then call "try_quads" with stars A,B and the sets of stars
-	  C,D.  For each element in "iunion" that is true, "try_quads"
-	  checks whether that star is inside the box formed by AB; if not,
-	  it marks iunion back to FALSE.  If then iterates through "iCs"
-	  and "iDs", skipping any for which the corresponding "iunion"
-	  element is FALSE.
+	  We keep the invariants that iA < iB and iC < iD.
+	  The A<->B and C<->D permutations will be tried in try_all_codes.
 	*/
 
-	// We keep the invariants that iA < iB and iC < iD.
-	// We try the A<->B and C<->D permutation in try_all_codes.
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
 		double ABCDpix[8];
+		// check if the field has already been solved...
 		if (params->solvedfn && file_exists(params->solvedfn)) {
 			fprintf(stderr, "  field %u: file %s exists; aborting.\n", params->fieldnum, params->solvedfn);
 			break;
@@ -195,6 +189,8 @@ void solve_field(solver_params* params) {
 
 		fprintf(stderr, "adding object %i.\n", newpoint);
 
+		fprintf(stderr, "Field obj %i: (%g, %g)\n", newpoint, getx(params->field, newpoint), gety(params->field, newpoint));
+
 		params->objsused = newpoint;
 		// quads with the new star on the diagonal:
 		iB = newpoint;
@@ -204,11 +200,11 @@ void solve_field(solver_params* params) {
 			pquad* pq = pquads + iB * numxy + iA;
 			pq->iA = iA;
 			pq->iB = iB;
-			pq->scale_ok = check_scale(pq, params);
+			check_scale(pq, params);
 			if (!pq->scale_ok)
 				continue;
-			pq->inbox = malloc(numxy * sizeof(int));
-			pq->xy = malloc(numxy * 2 * sizeof(double));
+			pq->inbox = calloc(numxy, sizeof(int));
+			pq->xy    = malloc(numxy * 2 * sizeof(double));
 			for (iC=0; iC<newpoint; iC++) {
 				if ((iC == iA) || (iC == iB))
 					continue;
@@ -233,10 +229,8 @@ void solve_field(solver_params* params) {
 					sety(ABCDpix, 3, gety(params->field, iD));
 					dx = getx(pq->xy, iD);
 					dy = gety(pq->xy, iD);
-					params->numtries++;
-
 					fprintf(stderr, "   CD  %i  %i.\n", iC, iD);
-
+					params->numtries++;
 					try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
 					if (params->quitNow)
 						break;
@@ -250,8 +244,8 @@ void solve_field(solver_params* params) {
 		sety(ABCDpix, 3, gety(params->field, iD));
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
-				pquad* pq = pquads + iB * numxy + iA;
 				double cx, cy, dx, dy;
+				pquad* pq = pquads + iB * numxy + iA;
 				if (!pq->scale_ok)
 					continue;
 				pq->inbox[iD] = 1;
@@ -275,10 +269,10 @@ void solve_field(solver_params* params) {
 					sety(ABCDpix, 2, gety(params->field, iC));
 					cx = getx(pq->xy, iC);
 					cy = gety(pq->xy, iC);
-					params->numtries++;
 
 					fprintf(stderr, "   CD  %i  %i.\n", iC, iD);
 
+					params->numtries++;
 					try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
 					if (params->quitNow)
 						break;
