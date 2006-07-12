@@ -870,13 +870,6 @@ void* solvethread_run(void* varg) {
 		dl_copy(thisfield, 0, 2 * nfield, field);
 		free_xy(thisfield);
 
-		{
-			int j;
-			for (j=0; j<10; j++) {
-				fprintf(stderr, "Field obj %i: (%g, %g)\n", j, field[2*j], field[2*j+1]);
-			}
-		}
-
 		if (do_donut) {
 			int oldsize = nfield;
 			detect_donuts(fieldnum, &field, &nfield, donut_dist, donut_thresh);

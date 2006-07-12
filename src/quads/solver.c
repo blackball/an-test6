@@ -66,19 +66,12 @@ static void check_scale(pquad* pq, solver_params* params) {
 	dx = Bx - Ax;
 	dy = By - Ay;
 	scale = dx*dx + dy*dy;
-	fprintf(stderr, " AB %i -- %i: scale %f: %s\n",
-			pq->iA, pq->iB, scale, 
-			((scale < square(params->minAB)) ||
-			 (scale > square(params->maxAB))) ? "invalid" : "ok");
-	fprintf(stderr, "    Ax=%f, Ay=%f, Bx=%f, By=%f.\n", Ax, Ay, Bx, By);
-
 	if ((scale < square(params->minAB)) ||
 		(scale > square(params->maxAB))) {
 		//fprintf(stderr, "Quad scale %g: not in allowable range [%g, %g].\n", scale, params->minAB, params->maxAB);
 		pq->scale_ok = FALSE;
 		return;
 	}
-
     pq->costheta = (dy + dx) / scale;
     pq->sintheta = (dy - dx) / scale;
 	pq->scale_ok = TRUE;
@@ -187,10 +180,6 @@ void solve_field(solver_params* params) {
 			}
 		}
 
-		fprintf(stderr, "adding object %i.\n", newpoint);
-
-		fprintf(stderr, "Field obj %i: (%g, %g)\n", newpoint, getx(params->field, newpoint), gety(params->field, newpoint));
-
 		params->objsused = newpoint;
 		// quads with the new star on the diagonal:
 		iB = newpoint;
@@ -229,7 +218,6 @@ void solve_field(solver_params* params) {
 					sety(ABCDpix, 3, gety(params->field, iD));
 					dx = getx(pq->xy, iD);
 					dy = gety(pq->xy, iD);
-					fprintf(stderr, "   CD  %i  %i.\n", iC, iD);
 					params->numtries++;
 					try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
 					if (params->quitNow)
@@ -259,9 +247,6 @@ void solve_field(solver_params* params) {
 				sety(ABCDpix, 1, gety(params->field, iB));
 				dx = getx(pq->xy, iD);
 				dy = gety(pq->xy, iD);
-
-				fprintf(stderr, " AB  %i  %i.\n", iA, iB);
-
 				for (iC=0; iC<newpoint; iC++) {
 					if (!pq->inbox[iC])
 						continue;
@@ -269,9 +254,6 @@ void solve_field(solver_params* params) {
 					sety(ABCDpix, 2, gety(params->field, iC));
 					cx = getx(pq->xy, iC);
 					cy = gety(pq->xy, iC);
-
-					fprintf(stderr, "   CD  %i  %i.\n", iC, iD);
-
 					params->numtries++;
 					try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
 					if (params->quitNow)
