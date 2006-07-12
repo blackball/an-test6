@@ -120,7 +120,7 @@ printsolved: printsolved.o
 solvedserver: solvedserver.o solvedfile.o bl.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-FITS_UTILS := tablist modhead fitscopy tabmerge
+FITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab
 
 fitsutils: $(FITS_UTILS)
 
