@@ -10,6 +10,8 @@
 static int find_table(matchfile* mf);
 static qfits_table* matchfile_get_table();
 
+static int transform_index;
+
 void matchobj_compute_derived(MatchObj* mo) {
 	int mx;
 	int i;
@@ -154,6 +156,8 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qscaleok", nil, quads_scaleok, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "nverified", nil, nverified, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "timeused", nil, timeused, 1, FALSE);
+	transform_index = i;
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "transform", nil, transform, 9, FALSE);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
@@ -346,6 +350,9 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 	}
 	for (i=0; i<n; i++)
 		matchobj_compute_derived(mo + i);
+	if (mf->columns[transform_index] != -1)
+		for (i=0; i<n; i++)
+			mo->transform_valid = 1;
 	return 0;
 }
 
