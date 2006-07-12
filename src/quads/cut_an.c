@@ -223,6 +223,8 @@ int main(int argc, char** args) {
 			int j;
 			double summag;
 			int nmag;
+			double sumredmag;
+			int nredmag;
 			an_entry* an = entries;
 
 			if (off + BLOCK > N)
@@ -250,6 +252,8 @@ int main(int argc, char** args) {
 				// dumbass magnitude averaging!
 				summag = 0.0;
 				nmag = 0;
+				sumredmag = 0.0;
+				nredmag = 0;
 				if (sdss) {
 					for (j=0; j<an[i].nobs; j++) {
 						if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
@@ -266,15 +270,22 @@ int main(int argc, char** args) {
 					}
 				} else if (galex) {
 					for (j=0; j<an[i].nobs; j++) {
-						if ((an[i].obs[j].catalog == AN_SOURCE_USNOB) &&
-							//(usnob_get_survey_epoch(an[i].obs[j].survey, j) == 2) &&
-							(an[i].obs[j].band == 'O' || an[i].obs[j].band == 'J')) {
-							summag += an[i].obs[j].mag;
-							nmag++;
-						} else if ((an[i].obs[j].catalog == AN_SOURCE_TYCHO2) &&
-								   (an[i].obs[j].band == 'B' || an[i].obs[j].band == 'H')) {
-							summag += an[i].obs[j].mag;
-							nmag++;
+						if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
+							if (an[i].obs[j].band == 'O' || an[i].obs[j].band == 'J') {
+								summag += an[i].obs[j].mag;
+								nmag++;
+							} else if (an[i].obs[j].band == 'E' || an[i].obs[j].band == 'F') {
+								sumredmag += an[i].obs[j].mag;
+								nredmag++;
+							}
+						} else if (an[i].obs[j].catalog == AN_SOURCE_TYCHO2) {
+							if (an[i].obs[j].band == 'B' || an[i].obs[j].band == 'H') {
+								summag += an[i].obs[j].mag;
+								nmag++;
+							} else if (an[i].obs[j].band == 'V') {
+								sumredmag += an[i].obs[j].mag;
+								nredmag++;
+							}
 						}
 					}
 				}
@@ -283,6 +294,13 @@ int main(int argc, char** args) {
 
 				summag /= (double)nmag;
 				sd.mag = summag;
+
+				if (galex && epsilon>0) {
+					if (nredmag) {
+						sumredmag /= (double)nredmag;
+						sd.mag += epsilon * (summag - sumredmag);
+					}
+				}
 
 				if (sd.mag < minmag)
 					continue;
