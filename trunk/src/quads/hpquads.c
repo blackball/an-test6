@@ -19,7 +19,23 @@
 #include "tic.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "hf:u:l:n:o:i:p:c" // r
+#define OPTIONS "hf:u:l:n:o:i:p:P:c" // r
+
+static void print_help(char* progname)
+{
+	printf("\nUsage:\n"
+	       "  %s -f <input-filename-base> -o <output-filename-base>\n"
+	       //"     [-r]            re-bin the unused stars\n"
+		   "     [-c]            allow quads in the circle, not the box, defined by AB\n"
+	       "     [-n <nside>]    healpix nside (default 501)\n"
+	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
+	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
+		   "     [-p <passes>]   number of quad-generating passes through healpixes (inner loop)\n"
+		   "     [-P <passes>]   number of quad-generating passes through healpixes (outer loop)\n"
+		   "     [-i <unique-id>] set the unique ID of this index\n\n"
+	       "Reads catalog (objs), writes (code, quad).\n\n"
+	       , progname);
+}
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -107,21 +123,6 @@ void compute_code(quad* q, double* code) {
 	y = -ADx * sintheta + ADy * costheta;
 	code[2] = x;
 	code[3] = y;
-}
-
-static void print_help(char* progname)
-{
-	printf("\nUsage:\n"
-	       "  %s -f <input-filename-base> -o <output-filename-base>\n"
-	       //"     [-r]            re-bin the unused stars\n"
-		   "     [-c]            allow quads in the circle, not the box, defined by AB\n"
-	       "     [-n <nside>]    healpix nside (default 501)\n"
-	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
-	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
-		   "     [-p <passes>]   number of quad-generating passes through healpixes\n"
-		   "     [-i <unique-id>] set the unique ID of this index\n\n"
-	       "Reads catalog (objs), writes (code, quad).\n\n"
-	       , progname);
 }
 
 
@@ -543,9 +544,13 @@ int main(int argc, char** argv)
 	uint id = 0;
 	int Npasses = 0;
 	bool circle = FALSE;
+	int Bigpasses = 1;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'P':
+			Bigpasses = atoi(optarg);
+			break;
 		case 'c':
 			circle = TRUE;
 			break;
@@ -689,11 +694,11 @@ int main(int argc, char** argv)
 
 	quadlist = bl_new(1024, sizeof(quad));
 
-	npasses = 9;
+	npasses = 9 * Bigpasses;
 	for (pass = 0; pass < npasses; pass++) {
 		int dx, dy;
 		dx = pass % 3;
-		dy = (pass / 3);
+		dy = (pass / 3) % 3;
 
 		printf("Doing shift %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
 
