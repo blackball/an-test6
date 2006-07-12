@@ -77,6 +77,6 @@ int xylist_write_entries(xylist* ls, double* vals, uint nvals);
 
 int xylist_fix_field(xylist* ls);
 
-void xylist_close(xylist* ls);
+int xylist_close(xylist* ls);
 
 #endif

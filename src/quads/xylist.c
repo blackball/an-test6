@@ -285,10 +285,11 @@ int xylist_fix_field(xylist* ls) {
 	return 0;
 }
 
-void xylist_close(xylist* ls) {
+int xylist_close(xylist* ls) {
 	if (ls->fid) {
 		if (fclose(ls->fid)) {
-			fprintf(stderr, "Failed to fclose xylist file %s\n", ls->fn);
+			fprintf(stderr, "Failed to fclose xylist file %s: %s\n", ls->fn, strerror(errno));
+			return -1;
 		}
 	}
 	if (ls->table) {
@@ -298,5 +299,6 @@ void xylist_close(xylist* ls) {
 		free(ls->fn);
 	}
 	free(ls);
+	return 0;
 }
 

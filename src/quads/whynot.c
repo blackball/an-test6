@@ -68,6 +68,8 @@ double verify_dist2;
 float overlap_tosolve;
 int min_ninfield;
 
+double nearbyrad = 3.0;
+
 int threads = 1;
 il* fieldlist = NULL;
 
@@ -385,7 +387,6 @@ void why_not() {
 		int fieldnum;
 		rd* thisrd;
 
-		double nearbyrad = 3.0;
 		double nearbyd2;
 		int i;
 
@@ -1081,6 +1082,8 @@ int read_parameters() {
 			fieldfname = mk_fieldfn(fname);
 		} else if (is_word(buffer, "rdls ", &nextword)) {
 			rdlsfname = strdup(nextword);
+		} else if (is_word(buffer, "nearby ", &nextword)) {
+			nearbyrad = atof(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
 			int d = atoi(nextword);
 			startdepth = d;
