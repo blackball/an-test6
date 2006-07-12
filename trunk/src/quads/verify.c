@@ -40,10 +40,13 @@ void verify_hit(kdtree_t* startree,
 	int Nleaf = 5;
 	double* dptr;
 
-	int bestm;
-	int bestu;
-	int bestc;
-	double bestoverlap = 0.0;
+	/*
+	  int bestm;
+	  int bestu;
+	  int bestc;
+	  double bestoverlap = 0.0;
+	*/
+	int Nmin;
 
 	assert(mo->transform_valid);
 	assert(startree);
@@ -120,9 +123,11 @@ void verify_hit(kdtree_t* startree,
 	  cavalierly decide to ignore it.
 	*/
 
-	fieldstars = malloc(3 * NF * sizeof(double));
+	Nmin = imin(NI, NF);
+
+	fieldstars = malloc(3 * Nmin * sizeof(double));
 	dptr = field;
-	for (i=0; i<NF; i++) {
+	for (i=0; i<Nmin; i++) {
 		double u, v;
 		/*
 		  u = getx(field, i);
@@ -147,7 +152,7 @@ void verify_hit(kdtree_t* startree,
 
 	//printf("ol=[");
 
-	for (i=0; i<NF; i++) {
+	for (i=0; i<Nmin; i++) {
 		double bestd2;
 		int ind = kdtree_nearest_neighbour_within(itree, fieldstars + 3*i, verify_dist2, &bestd2);
 		if (ind == -1) {
@@ -161,24 +166,26 @@ void verify_hit(kdtree_t* startree,
 		}
 
 		//if (i > 50) {
-		{
-			double ol, ol2, ol3, ol4;
-			ol = matches / (double)(matches + unmatches + NI);
-			ol2 = matches / (double)imin(matches + unmatches, NI);
-			ol3 = matches / (double)imax(matches + unmatches, NI);
-			ol4 = matches / sqrt((matches + unmatches) * NI);
-			/*
-			  fprintf(stderr, "%i: %s,  ol %.2f,  ol2 %.2f,  ol3 %.2f,  ol4 %.2f  (%i/%i/%i, NI=%i)\n",
-			  i, (ind==-1)?"miss":"hit ", ol*100, ol2*100, ol3*100, ol4*100, matches, unmatches, conflicts, NI);
-			*/
-			//printf("%g,", ol4);
+		/*
+		  {
+		  double ol, ol2, ol3, ol4;
+		  ol = matches / (double)(matches + unmatches + NI);
+		  ol2 = matches / (double)imin(matches + unmatches, NI);
+		  ol3 = matches / (double)imax(matches + unmatches, NI);
+		  ol4 = matches / sqrt((matches + unmatches) * NI);
 
-			if (ol > bestoverlap) {
-				bestm = matches;
-				bestu = unmatches;
-				bestc = conflicts;
-			}
-		}
+		  fprintf(stderr, "%i: %s,  ol %.2f,  ol2 %.2f,  ol3 %.2f,  ol4 %.2f  (%i/%i/%i, NI=%i)\n",
+		  i, (ind==-1)?"miss":"hit ", ol*100, ol2*100, ol3*100, ol4*100, matches, unmatches, conflicts, NI);
+		  
+		  //printf("%g,", ol4);
+
+		  if (ol > bestoverlap) {
+		  bestm = matches;
+		  bestu = unmatches;
+		  bestc = conflicts;
+		  }
+		  }
+		*/
 
 		/*
 		  ;
