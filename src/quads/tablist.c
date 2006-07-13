@@ -62,8 +62,11 @@ int main(int argc, char *argv[])
                 (fptr, lastcol, &dispwidth[lastcol], &status);
              fits_get_coltype
                 (fptr, lastcol, &typecode, &nelements[lastcol], NULL, &status);
-             if (abs(typecode) == TBIT)
-                nelements[lastcol] = 1;
+			 typecode = abs(typecode);
+             if (typecode == TBIT)
+				 nelements[lastcol] = (nelements[lastcol] + 7)/8;
+			 else if (typecode == TSTRING)
+				 nelements[lastcol] = 1;
              nelems = nelements[lastcol];
              for (lastelem = elem; lastelem <= nelems; lastelem++) {
                  linewidth += dispwidth[lastcol] + 1;
