@@ -8,38 +8,40 @@
 
 static void donut_pair_found(void* extra, int x, int y, double dist2) {
 	int i;
-	int xlistind = -1, ylistind = -1;
+	il* xlist = NULL;
+	il* ylist = NULL;
+	int xlistind=-1, ylistind=-1;
 	pl* lists = extra;
 	if (x >= y)
 		return;
 	for (i=0; i<pl_size(lists); i++) {
 		il* list = pl_get(lists, i);
-		if (il_find_index_ascending(list, x) != -1)
+		if (il_find_index_ascending(list, x) != -1) {
 			xlistind = i;
-		if (il_find_index_ascending(list, y) != -1)
+			xlist = list;
+		}
+		if (il_find_index_ascending(list, y) != -1) {
 			ylistind = i;
+			ylist = list;
+		}
 	}
-	if ((xlistind == -1) && (ylistind == -1)) {
+	if (!xlist && !ylist) {
 		// add a new list.
 		il* newlist = il_new(16);
 		il_insert_unique_ascending(newlist, x);
 		il_insert_unique_ascending(newlist, y);
 		pl_append(lists, newlist);
-	} else if (xlistind == -1) {
+	} else if (!xlist) {
 		// add x to y's list.
-		il* list = pl_get(lists, ylistind);
-		il_insert_unique_ascending(list, x);
-	} else if (ylistind == -1) {
+		il_insert_unique_ascending(ylist, x);
+	} else if (!ylist) {
 		// add y to x's list.
-		il* list = pl_get(lists, xlistind);
-		il_insert_unique_ascending(list, y);
+		il_insert_unique_ascending(xlist, y);
 	} else {
-		if (xlistind == ylistind)
+		if (xlist == ylist)
 			// they're already in the same list.
 			return;
 		// merge the lists.
-		il* xlist = pl_get(lists, xlistind);
-		il* ylist = pl_get(lists, ylistind);
 		il* merged = il_merge_ascending(xlist, ylist);
 		il_free(xlist);
 		il_free(ylist);
@@ -77,8 +79,8 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	for (i=0; i<N; i++)
 		nearby += counts[i];
 	frac = (nearby - N) / (double)N;
-	fprintf(stderr, "Field %i: Donuts: %4.1f%% (%i of %i) in range.\n",
-			fieldnum, 100.0 * frac, nearby - N, N);
+	fprintf(stderr, "Field %i: Donuts: %4.1f (%i of %i) in range.\n",
+			fieldnum, frac, nearby - N, N);
 	free(counts);
 	if (frac < thresh)
 		goto done;
