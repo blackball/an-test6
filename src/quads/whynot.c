@@ -564,6 +564,9 @@ void why_not() {
 				fprintf(stderr, "Failed to read qidxfile for star %i.\n", star);
 				exit(-1);
 			}
+
+			fprintf(stderr, "Star %u is in %i quads.\n", star, nquads);
+
 			/*
 			  fprintf(stderr, "Index star %i (field %i) is in quads:\n  ",
 			  star, intmap_get(indtofield, star, -1));
