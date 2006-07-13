@@ -10,11 +10,12 @@
 #include "rdlist.h"
 #include "bl.h"
 
-char* OPTIONS = "hqf:";
+char* OPTIONS = "hqf:N:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options]\n"
 			"   -f <rdls-file>\n"
+			"   [-N nside]   (default 1)\n"
 			"   [-h] print help msg\n"
 			"   [-q] quiet mode\n",
 			progname);
@@ -27,15 +28,20 @@ int main(int argc, char** args) {
   char* filename = NULL;
   int npoints;
   int i, j;
-  int healpixes[12];
+  int* healpixes;
   int argchar;
   char* progname = args[0];
-  il* lists[12];
+  il** lists;
   bool quiet = FALSE;
   rdlist* rdls;
+  int Nside = 1;
+  int N;
 
   while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 	  switch (argchar) {
+	  case 'N':
+		  Nside = atoi(optarg);
+		  break;
 	  case 'f':
 		  filename = optarg;
 		  break;
@@ -63,9 +69,16 @@ int main(int argc, char** args) {
 	  exit(-1);
   }
 
-  for (i=0; i<12; i++) {
-	  lists[i] = il_new(256);
-  }
+  N = 12 * Nside * Nside;
+
+  healpixes = malloc(N * sizeof(int));
+  lists     = calloc(N,  sizeof(il*));
+
+  /*
+	for (i=0; i<N; i++) {
+	lists[i] = il_new(256);
+	}
+  */
 
   for (j=0; j<rdls->nfields; j++) {
 	  rd* points;
@@ -76,9 +89,7 @@ int main(int argc, char** args) {
 		  break;
 	  }
 
-	  for (i=0; i<12; i++) {
-		  healpixes[i] = 0;
-	  }
+	  memset(healpixes, 0, N * sizeof(int));
 
 	  npoints = rd_size(points);
 
@@ -86,14 +97,14 @@ int main(int argc, char** args) {
 		  double ra, dec;
 		  int hp;
 
-		  ra  = rd_refra (points, i);
-		  dec = rd_refdec(points, i);
+		  ra  = deg2rad(rd_refra (points, i));
+		  dec = deg2rad(rd_refdec(points, i));
 
-		  ra  *= M_PI / 180.0;
-		  dec *= M_PI / 180.0;
-
-		  hp = radectohealpix(ra, dec);
-		  if ((hp < 0) || (hp >= 12)) {
+		  if (Nside > 1)
+			  hp = radectohealpix_nside(ra, dec, Nside);
+		  else
+			  hp = radectohealpix(ra, dec);
+		  if ((hp < 0) || (hp >= N)) {
 			  printf("hp=%i\n", hp);
 			  continue;
 		  }
@@ -101,28 +112,37 @@ int main(int argc, char** args) {
 	  }
 	  if (!quiet) {
 		  printf("Field %i: healpixes  ", j);
-		  for (i=0; i<12; i++) {
+		  for (i=0; i<N; i++) {
 			  if (healpixes[i])
 				  printf("%i  ", i);
 		  }
 		  printf("\n");
 	  }
 
-	  for (i=0; i<12; i++)
-		  if (healpixes[i])
+	  for (i=0; i<N; i++)
+		  if (healpixes[i]) {
+			  if (!lists[i])
+				  lists[i] = il_new(256);
 			  il_append(lists[i], j);
+		  }
 
 	  free_rd(points);
   }
 
-  for (i=0; i<12; i++) {
-	  int N = il_size(lists[i]);
+  for (i=0; i<N; i++) {
+	  int N;
 	  printf("HP %i: ", i);
-	  for (j=0; j<N; j++)
-		  printf("%i ", il_get(lists[i], j));
+	  if (lists[i]) {
+		  N = il_size(lists[i]);
+		  for (j=0; j<N; j++)
+			  printf("%i ", il_get(lists[i], j));
+		  il_free(lists[i]);
+	  }
 	  printf("\n");
-	  il_free(lists[i]);
   }
+
+  free(lists);
+  free(healpixes);
 
   rdlist_close(rdls);
   return 0;
