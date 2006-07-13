@@ -69,8 +69,9 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	fieldxy = malloc(N * 2 * sizeof(double));
 	memcpy(fieldxy, *pfield, N * 2 * sizeof(double));
 
+	// Hey, doughbrain: "fieldxy" will be scrambled after creating a kdtree out of it.
+
 	levels = kdtree_compute_levels(N, 5);
-	//printf("Building tree with %i points, %i levels.\n", N, levels);
 	tree = kdtree_build(fieldxy, N, 2, levels);
 	assert(tree);
 	counts = calloc(N, sizeof(int));
@@ -112,7 +113,7 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 		for (j=0; j<il_size(list); j++) {
 			int ind;
 			fprintf(stderr, "%i ", il_get(list, j));
-			ind = tree->perm[il_get(list, j)];
+			ind = il_get(list, j);
 			merged[ind] = TRUE;
 			avgx += fieldxy[ind*2];
 			avgy += fieldxy[ind*2+1];
