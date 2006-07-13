@@ -720,7 +720,7 @@ int main(int argc, char** argv)
 		nuses[i] = Bigpasses;
 	}
 
-	npasses = 9;
+	npasses = 9 * Bigpasses;
 	for (pass = 0; pass < npasses; pass++) {
 		int dx, dy;
 		dx = pass % 3;
