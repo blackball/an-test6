@@ -557,15 +557,23 @@ void why_not() {
 		}
 		
 		for (i=0; i<il_size(indstars); i++) {
-			uint* quads, nquads;
+			uint* quadlist, nquads;
 			uint star = il_get(indstars, i);
 			int j;
-			if (qidxfile_get_quads(qidx, star, &quads, &nquads)) {
+			if (qidxfile_get_quads(qidx, star, &quadlist, &nquads)) {
 				fprintf(stderr, "Failed to read qidxfile for star %i.\n", star);
 				exit(-1);
 			}
 			
-			fprintf(stderr, "Star %u [field obj %i] is in %i quads.\n", star, intmap_get(indtofield, star, -1), nquads);
+			fprintf(stderr, "Star %u [field obj %i] is in %i quads:\n", star, intmap_get(indtofield, star, -1), nquads);
+			for (j=0; j<nquads; j++) {
+				uint sA, sB, sC, sD;
+				quadfile_get_starids(quads, quadlist[j], &sA, &sB, &sC, &sD);
+				fprintf(stderr, "  stars (%u,%u,%u,%u), field objs [%i,%i,%i,%i]\n",
+						sA, sB, sC, sD, 
+						intmap_get(indtofield,sA,-1), intmap_get(indtofield,sB,-1),
+						intmap_get(indtofield,sC,-1), intmap_get(indtofield,sD,-1));
+			}
 
 			/*
 			  fprintf(stderr, "Index star %i (field %i) is in quads:\n  ",
@@ -576,7 +584,7 @@ void why_not() {
 			  fprintf(stderr, "\n");
 			*/
 			for (j=0; j<nquads; j++) {
-				il_insert_ascending(indquads, quads[j]);
+				il_insert_ascending(indquads, quadlist[j]);
 			}
 		}
 
