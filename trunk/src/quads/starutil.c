@@ -6,10 +6,16 @@
 #include "mathutil.h"
 #include "keywords.h"
 
+inline void xyz2radec(double x, double y, double z, double *ra, double *dec) {
+	*ra = xy2ra(x, y);
+	*dec = z2dec(z);
+}
+
 inline void radec2xyz(double ra, double dec,
 					  double* x, double* y, double* z) {
-	*x = cos(dec) * cos(ra);
-	*y = cos(dec) * sin(ra);
+	double cosdec = cos(dec);
+	*x = cosdec * cos(ra);
+	*y = cosdec * sin(ra);
 	*z = sin(dec);
 }
 

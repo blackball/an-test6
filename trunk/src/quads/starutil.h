@@ -50,6 +50,8 @@ typedef unsigned char uchar;
 
 inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
 
+inline void xyz2radec(double x, double y, double z, double *ra, double *dec);
+
 inline void radec2xyzarr(double ra, double dec, double* xyz);
 
 inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy);

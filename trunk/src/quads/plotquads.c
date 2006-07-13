@@ -15,12 +15,13 @@
 #include "bl.h"
 #include "intmap.h"
 
-static const char* OPTIONS = "hf:R:D:r:";
+static const char* OPTIONS = "hf:R:D:r:P";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
 			"   -f <index-basename>\n"
-			"   -R <ra> -D <dec> -r <radius-in-arcmin>\n", progname);
+			"   -R <ra> -D <dec> -r <radius-in-arcmin>\n"
+			"   [-P]:  don't project; just print RA,DEC\n", progname);
 }
 
 extern char *optarg;
@@ -47,9 +48,13 @@ int main(int argc, char *argv[]) {
 	il* goodquads;
 	int i, j;
 	intmap* indmap;
+	bool project = TRUE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'P':
+			project = FALSE;
+			break;
 		case 'R':
 			ra = atof(optarg);
 			ra_set = TRUE;
@@ -78,10 +83,10 @@ int main(int argc, char *argv[]) {
 
 	ra  = deg2rad(ra);
 	dec = deg2rad(dec);
-	xyz[0] = radec2x(ra, dec);
-	xyz[1] = radec2y(ra, dec);
-	xyz[2] = radec2z(ra, dec);
+	radec2xyzarr(ra, dec, xyz);
 	radius2 = arcsec2distsq(radius * 60.0);
+
+	// xyz is the center of the field.
 	
 	fn = mk_streefn(indexfname);
 	fprintf(stderr, "Reading star kdtree from %s ...\n", fn);
@@ -130,7 +135,13 @@ int main(int argc, char *argv[]) {
 			il_insert_ascending(quadlist, quads[j]);
 		// project the star
 		starpos = res->results + i*3;
-		star_coords(starpos, xyz, &x, &y);
+		if (project) {
+			star_coords(starpos, xyz, &x, &y);
+		} else {
+			xyz2radec(starpos[0], starpos[1], starpos[2], &x, &y);
+			x = rad2deg(x);
+			y = rad2deg(y);
+		}
 		printf("%g,%g;", x, y);
 		// record the mapping from star id to index in the starxy array.
 		intmap_add(indmap, star, i+1);
