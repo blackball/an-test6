@@ -131,13 +131,13 @@ int main(int argc, char** args) {
 
   for (i=0; i<N; i++) {
 	  int N;
+	  if (!lists[i]) 
+		  continue;
 	  printf("HP %i: ", i);
-	  if (lists[i]) {
-		  N = il_size(lists[i]);
-		  for (j=0; j<N; j++)
-			  printf("%i ", il_get(lists[i], j));
-		  il_free(lists[i]);
-	  }
+	  N = il_size(lists[i]);
+	  for (j=0; j<N; j++)
+		  printf("%i ", il_get(lists[i], j));
+	  il_free(lists[i]);
 	  printf("\n");
   }
 
