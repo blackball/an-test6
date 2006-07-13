@@ -53,7 +53,9 @@ static double quad_scale_lower2;
 static int quadnum = 0;
 
 static bl* quadlist;
-int ndupquads = 0;
+static int ndupquads = 0;
+
+static unsigned char* nuses;
 
 struct quad {
 	uint star[4];
@@ -125,18 +127,30 @@ void compute_code(quad* q, double* code) {
 	code[3] = y;
 }
 
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#define MAX(a,b) ((a)>(b)?(a):(b))
 
 // warning, you must guarantee iA<iB and iC<iD
 static Inline void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 {
-	int inA, inB, inC, inD;
-	inA = iA;
-	inB = iB;
-	inC = iC;
-	inD = iD;
+	int n1, n2, n3, n4;
+	int i1, i2, i3, i4;
+	// n1 < n2 < n3 < n4.
+	n1 = MIN(iA, iC);
+	n4 = MAX(iB, iD);
+	n2 = MAX(iA, iC);
+	n3 = MIN(iB, iD);
+	if (n2 > n3) {
+		int ntmp = n2;
+		n2 = n3;
+		n3 = ntmp;
+	}
 
 	assert(iA < iB);
 	assert(iC < iD);
+	assert(n1 < n2);
+	assert(n2 < n3);
+	assert(n3 < n4);
 	assert(il_size(stars) >= 4);
 	assert(il_size(stars) > iA);
 	assert(il_size(stars) > iB);
@@ -147,30 +161,28 @@ static Inline void drop_quad(il* stars, int iA, int iB, int iC, int iD)
 	assert(iC >= 0);
 	assert(iD >= 0);
 
-	il_remove(stars, iA);
+	i1 = il_get(stars, n1);
+	i2 = il_get(stars, n2);
+	i3 = il_get(stars, n3);
+	i4 = il_get(stars, n4);
 
-	assert(iB >= 0);
-	assert(iB - 1 < il_size(stars));
+	assert(nuses[i4]);
+	assert(nuses[i3]);
+	assert(nuses[i2]);
+	assert(nuses[i1]);
 
-	il_remove(stars, iB - 1);
-	if (inC > inA)
-		iC--;
-	if (inC > inB)
-		iC--;
-
-	assert(iC >= 0);
-	assert(iC < il_size(stars));
-
-	il_remove(stars, iC);
-	if (inD > inA)
-		iD--;
-	if (inD > inB)
-		iD--;
-
-	assert(iD >= 0);
-	assert(iD - 1 < il_size(stars));
-
-	il_remove(stars, iD - 1);
+	nuses[i4]--;
+	if (!nuses[i4])
+		il_remove(stars, n4);
+	nuses[i3]--;
+	if (!nuses[i3])
+		il_remove(stars, n3);
+	nuses[i2]--;
+	if (!nuses[i2])
+		il_remove(stars, n2);
+	nuses[i1]--;
+	if (!nuses[i1])
+		il_remove(stars, n1);
 }
 
 struct potential_quad {
@@ -395,6 +407,10 @@ static void shifted_healpix_bin_stars(int numstars, il* starindices,
 			ind = i;
 		else
 			ind = il_get(starindices, i);
+
+		if (!nuses[ind])
+			// this star has been used too many times already.
+			continue;
 
 		starxyz = catalog_get_star(cat, ind);
 		// note the Nside*3; this is the sub-pixel.
@@ -694,7 +710,17 @@ int main(int argc, char** argv)
 
 	quadlist = bl_new(1024, sizeof(quad));
 
-	npasses = 9 * Bigpasses;
+	if (Bigpasses > 255) {
+		fprintf(stderr, "Error, -P must be less than 256.\n");
+		exit(-1);
+	}
+
+	nuses = malloc(cat->numstars * sizeof(unsigned char));
+	for (i=0; i<cat->numstars; i++) {
+		nuses[i] = Bigpasses;
+	}
+
+	npasses = 9;
 	for (pass = 0; pass < npasses; pass++) {
 		int dx, dy;
 		dx = pass % 3;
@@ -724,6 +750,8 @@ int main(int argc, char** argv)
 		for (i = 0; i < HEALPIXES; i++)
 			il_remove_all(pixels + i);
 	}
+
+	free(nuses);
 
 	for (i=0; i<bl_size(quadlist); i++) {
 		double code[4];
