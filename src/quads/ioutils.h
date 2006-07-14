@@ -29,4 +29,25 @@ char* read_string_terminated(FILE* fin, char* terminators, int nterminators);
 int read_u32_portable(FILE* fin, unsigned int* val);
 int read_u32s_portable(FILE* fin, unsigned int* val, int n);
 
+struct buffered_read_data {
+	void* buffer;
+	int blocksize;
+	int elementsize;
+	int ntotal;
+	int nbuff;
+	int off;
+	int buffind;
+	int (*refill_buffer)(void* userdata, void* buffer, uint offs, uint nelems);
+	void* userdata;
+};
+typedef struct buffered_read_data bread;
+
+void* buffered_read(bread* buff);
+
+void buffered_read_pushback(bread* br);
+
+void buffered_read_reset(bread* br);
+
+void buffered_read_free(bread* br);
+
 #endif

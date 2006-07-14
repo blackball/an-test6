@@ -264,3 +264,46 @@ int write_uints(FILE* fout, unsigned int* val, int n) {
     }
 }
 
+void* buffered_read(bread* br) {
+	void* rtn;
+	if (!br->buffer) {
+		br->buffer = malloc(br->blocksize * br->elementsize);
+		br->nbuff = br->off = br->buffind = 0;
+	}
+	if (br->buffind == br->nbuff) {
+		// read a new block!
+		uint n = br->blocksize;
+		// the new block to read starts after the current block...
+		br->off += br->nbuff;
+		if (n + br->off > br->ntotal)
+			n = br->ntotal - br->off;
+		if (!n)
+			return NULL;
+		memset(br->buffer, 0, br->blocksize * br->elementsize);
+		if (br->refill_buffer(br->userdata, br->buffer, br->off, n)) {
+			fprintf(stderr, "buffered_read: Error filling buffer.\n");
+			return NULL;
+		}
+		br->nbuff = n;
+		br->buffind = 0;
+	}
+	rtn = (char*)br->buffer + (br->buffind * br->elementsize);
+	br->buffind++;
+	return rtn;
+}
+
+void buffered_read_reset(bread* br) {
+	br->nbuff = br->off = br->buffind = 0;
+}
+
+void buffered_read_pushback(bread* br) {
+	if (!br->buffind) {
+		fprintf(stderr, "buffered_read_pushback: Can't push back any further!\n");
+		return;
+	}
+	br->buffind--;
+}
+
+void buffered_read_free(bread* br) {
+	free(br->buffer);
+}
