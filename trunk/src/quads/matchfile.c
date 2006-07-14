@@ -39,12 +39,23 @@ void matchobj_compute_overlap(MatchObj* mo) {
 		mo->overlap = 0.0;
 }
 
+static int matchfile_refill_buffer(void* userdata, void* buffer,
+								   uint offset, uint n) {
+	matchfile* mf = userdata;
+	MatchObj* mo = buffer;
+	return matchfile_read_matches(mf, mo, offset, n);
+}
+
 matchfile* new_matchfile() {
 	matchfile* mf = calloc(1, sizeof(matchfile));
 	if (!mf) {
 		fprintf(stderr, "Couldn't allocate a new matchfile.");
 		return NULL;
 	}
+	mf->br.blocksize = 1000;
+	mf->br.elementsize = sizeof(MatchObj);
+	mf->br.refill_buffer = matchfile_refill_buffer;
+	mf->br.userdata = mf;
 	return mf;
 }
 
@@ -85,7 +96,6 @@ int matchfile_write_header(matchfile* mf) {
     qfits_header_dump(tablehdr, mf->fid);
     qfits_header_destroy(tablehdr);
 	mf->header_end = ftello(mf->fid);
-	//fits_pad_file(mf->fid);
 	return 0;
 }
 
@@ -221,9 +231,7 @@ int matchfile_close(matchfile* mf) {
 		qfits_header_destroy(mf->header);
 	if (mf->fn)
 		free(mf->fn);
-	if (mf->buffer)
-		free(mf->buffer);
-
+	buffered_read_free(&mf->br);
 	free(mf);
 	return 0;
 }
@@ -260,6 +268,7 @@ matchfile* matchfile_open(char* fn) {
 		goto bailout;
 	}
 	mf->nrows = mf->table->nr;
+	mf->br.ntotal = mf->nrows;
 	mf->fn = strdup(fn);
 	return mf;
 
@@ -316,7 +325,8 @@ static int find_table(matchfile* mf) {
 	}
 	mf->nrows = mf->table->nr;
 	// reset buffered reading data
-	mf->nbuff = mf->off = mf->buffind = 0;
+	mf->br.ntotal = mf->nrows;
+	buffered_read_reset(&mf->br);
 	return 0;
 }
 
@@ -366,42 +376,14 @@ pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 }
 
 MatchObj* matchfile_buffered_read_match(matchfile* mf) {
-	const int BLOCK = 1000;
-	MatchObj* mo;
-
-	if (!mf->buffer) {
-		mf->buffer = malloc(BLOCK * sizeof(MatchObj));
-		mf->nbuff = mf->off = mf->buffind = 0;
-	}
-	if (mf->buffind == mf->nbuff) {
-		// read a new block!
-		uint n = BLOCK;
-		// the new block to read starts after the current block...
-		mf->off += mf->nbuff;
-		if (n + mf->off > mf->nrows)
-			n = mf->nrows - mf->off;
-		if (!n) {
-			//fprintf(stderr, "matchfile_buffered_read_match: matchfile contains no more matches.\n");
-			return NULL;
-		}
-		memset(mf->buffer, 0, BLOCK * sizeof(MatchObj));
-		if (matchfile_read_matches(mf, mf->buffer, mf->off, n)) {
-			fprintf(stderr, "matchfile_buffered_read_match: Error filling buffer!\n");
-			return NULL;
-		}
-		mf->nbuff = n;
-		mf->buffind = 0;
-	}
-
-	mo = mf->buffer + mf->buffind;
-	mf->buffind++;
+	MatchObj* mo = buffered_read(&mf->br);
+	if (!mo)
+		fprintf(stderr, "Failed to read matchfile entry.\n");
 	return mo;
 }
 
 int matchfile_buffered_read_pushback(matchfile* mf) {
-	if (!mf->buffind)
-		return -1;
-	mf->buffind--;
+	buffered_read_pushback(&mf->br);
 	return 0;
 }
 

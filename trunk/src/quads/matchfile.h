@@ -7,6 +7,7 @@
 #include "starutil.h"
 #include "qfits.h"
 #include "bl.h"
+#include "ioutils.h"
 
 #define MATCHFILE_AN_FILETYPE "MATCH"
 
@@ -27,13 +28,7 @@ struct matchfile {
 	int columns[MATCHFILE_FITS_COLUMNS];
 
 	// for buffered reading:
-	MatchObj* buffer;
-	// number of elements in the buffer
-	int nbuff;
-	// offset of the start of the buffer
-	int off;
-	// index within the buffer
-	int buffind;
+	bread br;
 };
 typedef struct matchfile matchfile;
 
