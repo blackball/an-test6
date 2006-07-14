@@ -15,17 +15,20 @@
 #include "mathutil.h"
 #include "quadfile.h"
 #include "bl.h"
-#include "catalog.h"
+#include "kdtree.h"
+#include "kdtree_io.h"
+#include "kdtree_fits_io.h"
 #include "tic.h"
 #include "fitsioutils.h"
+#include "qfits.h"
+#include "permutedsort.h"
 
-#define OPTIONS "hf:u:l:n:o:i:p:P:c" // r
+#define OPTIONS "hf:u:l:n:o:i:p:P:c"
 
 static void print_help(char* progname)
 {
 	printf("\nUsage:\n"
 	       "  %s -f <input-filename-base> -o <output-filename-base>\n"
-	       //"     [-r]            re-bin the unused stars\n"
 		   "     [-c]            allow quads in the circle, not the box, defined by AB\n"
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
@@ -33,7 +36,7 @@ static void print_help(char* progname)
 		   "     [-p <passes>]   number of quad-generating passes through healpixes (inner loop)\n"
 		   "     [-P <passes>]   number of quad-generating passes through healpixes (outer loop)\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
-	       "Reads catalog (objs), writes (code, quad).\n\n"
+	       "Reads skdt, writes {code, quad}.\n\n"
 	       , progname);
 }
 
@@ -42,13 +45,12 @@ extern int optind, opterr, optopt;
 
 static quadfile* quads;
 static codefile* codes;
-static catalog* cat;
+static kdtree_t* startree;
+static int* invperm;
 
 // bounds of quad scale (in radians^2)
 static double quad_scale_upper2;
 static double quad_scale_lower2;
-
-#define IL_BLOCKSIZE 50
 
 static int quadnum = 0;
 
@@ -62,7 +64,7 @@ struct quad {
 };
 typedef struct quad quad;
 
-int compare_quad(const void* v1, const void* v2) {
+static int compare_quad(const void* v1, const void* v2) {
 	const quad* q1 = v1;
 	const quad* q2 = v2;
 	int i;
@@ -75,8 +77,15 @@ int compare_quad(const void* v1, const void* v2) {
 	return 0;
 }
 
+static int compare_ints(const void* v1, const void* v2) {
+	int i1 = *(int*)v1;
+	int i2 = *(int*)v2;
+	if (i1 < i2) return -1;
+	if (i1 > i2) return 1;
+	return 0;
+}
+
 static bool add_quad(quad* q) {
-	//return (bl_insert_unique_sorted(quadlist, q, compare_quad) != -1);
 	int ind = bl_insert_unique_sorted(quadlist, q, compare_quad);
 	if (ind == -1)
 		ndupquads++;
@@ -84,7 +93,7 @@ static bool add_quad(quad* q) {
 }
 
 void compute_code(quad* q, double* code) {
-	double *sA, *sB;
+	double *sA, *sB, *sC, *sD;
 	double Bx, By;
 	double scale, invscale;
 	double ABx, ABy;
@@ -96,8 +105,11 @@ void compute_code(quad* q, double* code) {
 	double Ax, Ay;
 	double costheta, sintheta;
 
-	sA = catalog_get_star(cat, q->star[0]);
-	sB = catalog_get_star(cat, q->star[1]);
+	sA = startree->data + 3 * invperm[q->star[0]];
+	sB = startree->data + 3 * invperm[q->star[1]];
+	sC = startree->data + 3 * invperm[q->star[2]];
+	sD = startree->data + 3 * invperm[q->star[3]];
+
 	star_midpoint(midAB, sA, sB);
 	star_coords(sA, midAB, &Ax, &Ay);
 	star_coords(sB, midAB, &Bx, &By);
@@ -108,7 +120,7 @@ void compute_code(quad* q, double* code) {
 	costheta = (ABy + ABx) * invscale;
 	sintheta = (ABy - ABx) * invscale;
 
-	starpos = catalog_get_star(cat, q->star[2]);
+	starpos = sC;
 	star_coords(starpos, midAB, &Dx, &Dy);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
@@ -117,7 +129,7 @@ void compute_code(quad* q, double* code) {
 	code[0] = x;
 	code[1] = y;
 
-	starpos = catalog_get_star(cat, q->star[3]);
+	starpos = sD;
 	star_coords(starpos, midAB, &Dx, &Dy);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
@@ -127,62 +139,11 @@ void compute_code(quad* q, double* code) {
 	code[3] = y;
 }
 
-#define MIN(a,b) ((a)<(b)?(a):(b))
-#define MAX(a,b) ((a)>(b)?(a):(b))
-
-// warning, you must guarantee iA<iB and iC<iD
-static Inline void drop_quad(il* stars, int iA, int iB, int iC, int iD)
-{
-	int n1, n2, n3, n4;
-	int i1, i2, i3, i4;
-	// n1 < n2 < n3 < n4.
-	n1 = MIN(iA, iC);
-	n4 = MAX(iB, iD);
-	n2 = MAX(iA, iC);
-	n3 = MIN(iB, iD);
-	if (n2 > n3) {
-		int ntmp = n2;
-		n2 = n3;
-		n3 = ntmp;
-	}
-
-	assert(iA < iB);
-	assert(iC < iD);
-	assert(n1 < n2);
-	assert(n2 < n3);
-	assert(n3 < n4);
-	assert(il_size(stars) >= 4);
-	assert(il_size(stars) > iA);
-	assert(il_size(stars) > iB);
-	assert(il_size(stars) > iC);
-	assert(il_size(stars) > iD);
-	assert(iA >= 0);
-	assert(iB >= 0);
-	assert(iC >= 0);
-	assert(iD >= 0);
-
-	i1 = il_get(stars, n1);
-	i2 = il_get(stars, n2);
-	i3 = il_get(stars, n3);
-	i4 = il_get(stars, n4);
-
-	assert(nuses[i4]);
-	assert(nuses[i3]);
-	assert(nuses[i2]);
-	assert(nuses[i1]);
-
-	nuses[i4]--;
-	if (!nuses[i4])
-		il_remove(stars, n4);
-	nuses[i3]--;
-	if (!nuses[i3])
-		il_remove(stars, n3);
-	nuses[i2]--;
-	if (!nuses[i2])
-		il_remove(stars, n2);
-	nuses[i1]--;
-	if (!nuses[i1])
-		il_remove(stars, n1);
+static Inline void drop_quad(int iA, int iB, int iC, int iD) {
+	nuses[iA]--;
+	nuses[iB]--;
+	nuses[iC]--;
+	nuses[iD]--;
 }
 
 struct potential_quad {
@@ -198,15 +159,13 @@ struct potential_quad {
 typedef struct potential_quad pquad;
 
 static void
-check_scale(pquad* pq, il* stars) {
+check_scale(pquad* pq, double* stars, int* starids, int Nstars) {
 	double *sA, *sB;
 	double Bx, By;
 	double scale, invscale;
 	double ABx, ABy;
-	pq->staridA = il_get(stars, pq->iA);
-	pq->staridB = il_get(stars, pq->iB);
-	sA = catalog_get_star(cat, pq->staridA);
-	sB = catalog_get_star(cat, pq->staridB);
+	sA = stars + pq->iA * 3;
+	sB = stars + pq->iB * 3;
 	star_midpoint(pq->midAB, sA, sB);
 	star_coords(sA, pq->midAB, &pq->Ax, &pq->Ay);
 	star_coords(sB, pq->midAB, &Bx, &By);
@@ -219,6 +178,8 @@ check_scale(pquad* pq, il* stars) {
 		pq->scale_ok = 0;
 		return;
 	}
+	pq->staridA = starids[pq->iA];
+	pq->staridB = starids[pq->iB];
 	pq->scale_ok = 1;
 	invscale = 1.0 / scale;
 	pq->costheta = (ABy + ABx) * invscale;
@@ -226,9 +187,8 @@ check_scale(pquad* pq, il* stars) {
 }
 
 static int
-check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
+check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	int i, ind;
-	uint starid;
 	double* starpos;
 	double Dx, Dy;
 	double ADx, ADy;
@@ -236,8 +196,7 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
 	int destind = 0;
 	for (i=0; i<ninds; i++) {
 		ind = inds[i];
-		starid = il_get(stars, ind);
-		starpos = catalog_get_star(cat, starid);
+		starpos = stars + ind*3;
 		star_coords(starpos, pq->midAB, &Dx, &Dy);
 		ADx = Dx - pq->Ax;
 		ADy = Dy - pq->Ay;
@@ -265,17 +224,21 @@ check_inbox(pquad* pq, int* inds, int ninds, il* stars, bool circle) {
 	return destind;
 }
 
-static char find_a_quad(il* stars, bool circle) {
-	uint numxy, iA, iB, iC, iD, newpoint;
+static int create_quad(double* stars, int* starinds, int Nstars,
+					   bool circle,
+					   double* origin, double* vx, double* vy) {
+	double lx2 = vx[0]*vx[0] + vx[1]*vx[1] + vx[2]*vx[2];
+	double ly2 = vy[0]*vy[0] + vy[1]*vy[1] + vy[2]*vy[2];
+
+	uint iA, iB, iC, iD, newpoint;
 	int rtn = 0;
 	pquad* pquads;
 	int* inbox;
 	int ninbox;
 	int i, j, k;
 
-	numxy = il_size(stars);
-	inbox =  malloc(numxy * sizeof(int));
-	pquads = calloc(numxy*numxy, sizeof(pquad));
+	inbox =  malloc(Nstars * sizeof(int));
+	pquads = calloc(Nstars*Nstars, sizeof(pquad));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -287,19 +250,35 @@ static char find_a_quad(il* stars, bool circle) {
 	  Note that we keep the invariants iA < iB and iC < iD.
 	*/
 
-	for (newpoint = 0; newpoint < numxy; newpoint++) {
+	for (newpoint=0; newpoint<Nstars; newpoint++) {
 		pquad* pq;
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
-			int j,k;
-
-			pq = pquads + iA*numxy + iB;
+			double del;
+			double thislx2, thisly2;
+			int d;
+			pq = pquads + iA*Nstars + iB;
 			pq->iA = iA;
 			pq->iB = iB;
-			check_scale(pq, stars);
+			check_scale(pq, stars, starinds, Nstars);
 			if (!pq->scale_ok)
 				continue;
+
+			// is the midpoint of AB inside this healpix?
+			thislx2 = thisly2 = 0.0;
+			for (d=0; d<3; d++) {
+				del = pq->midAB[d] - origin[d];
+				thislx2 += (del - vx[d]) * (del - vx[d]);
+				thisly2 += (del - vy[d]) * (del - vy[d]);
+			}
+			if ((thislx2 < 0.0) ||
+				(thislx2 > lx2) ||
+				(thisly2 < 0.0) ||
+				(thisly2 > ly2)) {
+				pq->scale_ok = 0;
+				continue;
+			}
 
 			ninbox = 0;
 			for (iC = 0; iC < newpoint; iC++) {
@@ -316,17 +295,17 @@ static char find_a_quad(il* stars, bool circle) {
 					iD = inbox[k];
 					q.star[0] = pq->staridA;
 					q.star[1] = pq->staridB;
-					q.star[2] = il_get(stars, iC);
-					q.star[3] = il_get(stars, iD);
+					q.star[2] = starinds[iC];
+					q.star[3] = starinds[iD];
 
 					if (add_quad(&q)) {
-						drop_quad(stars, iA, iB, iC, iD);
+						drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 						rtn = 1;
 						goto theend;
 					}
 				}
 			}
-			pq->inbox = malloc(numxy * sizeof(int));
+			pq->inbox = malloc(Nstars * sizeof(int));
 			pq->ninbox = ninbox;
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
@@ -335,7 +314,7 @@ static char find_a_quad(il* stars, bool circle) {
 		iD = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
 			for (iB = iA + 1; iB < newpoint; iB++) {
-				pq = pquads + iA*numxy + iB;
+				pq = pquads + iA*Nstars + iB;
 				if (!pq->scale_ok)
 					continue;
 				inbox[0] = iD;
@@ -352,11 +331,11 @@ static char find_a_quad(il* stars, bool circle) {
 						iD = pq->inbox[k];
 						q.star[0] = pq->staridA;
 						q.star[1] = pq->staridB;
-						q.star[2] = il_get(stars, iC);
-						q.star[3] = il_get(stars, iD);
+						q.star[2] = starinds[iC];
+						q.star[3] = starinds[iD];
 
 						if (add_quad(&q)) {
-							drop_quad(stars, iA, iB, iC, iD);
+							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
 							goto theend;
 						}
@@ -366,194 +345,23 @@ static char find_a_quad(il* stars, bool circle) {
 		}
 	}
  theend:
-	for (i=0; i<(numxy*numxy); i++)
+	for (i=0; i<(Nstars*Nstars); i++)
 		free(pquads[i].inbox);
 	free(inbox);
 	free(pquads);
 	return rtn;
 }
 
-static void shifted_healpix_bin_stars(int numstars, il* starindices,
-									  il* pixels, int dx, int dy,
-									  int Nside)
-{
-	int i;
-	int HEALPIXES = 12 * Nside * Nside;
-	int offx, offy;
-
-	printf("Binning stars into %i healpixes...\n", HEALPIXES);
-	fflush(stdout);
-
-	// the idea is that we look at a healpix grid that is three times
-	// finer in both directions, and in each pass we choose one of the nine
-	// sub-pixels to be the center and we dump stars from a 3x3 grid around
-	// the center into its coarser pixel.
-
-	// (offx, offy) are the offsets you have to add to the sub-pixel
-	// positions to determine which pixel they belong to.
-	offx = (1 - dx);
-	offy = (1 - dy);
-
-	for (i = 0; i < numstars; i++) {
-		double* starxyz;
-		int hp;
-		int ind;
-		uint bighp, x, y;
-		if (!(i % 100000)) {
-			printf(".");
-			fflush(stdout);
-		}
-		if (!starindices)
-			ind = i;
-		else
-			ind = il_get(starindices, i);
-
-		if (!nuses[ind])
-			// this star has been used too many times already.
-			continue;
-
-		starxyz = catalog_get_star(cat, ind);
-		// note the Nside*3; this is the sub-pixel.
-		hp = xyztohealpix_nside(starxyz[0], starxyz[1], starxyz[2], Nside*3);
-		healpix_decompose(hp, &bighp, &x, &y, Nside*3);
-		// now we compute which pixel this sub-pixel belongs to.
-		if (unlikely(
-			// if it's on the border...
-			((x == 0) || (x == (Nside*3-1)) ||
-			 (y == 0) || (y == (Nside*3-1))) &&
-			// and it's not the center pixel itself...
-			(((x % 3) != dx) || ((y % 3) != dy)) )) {
-			// this sub-pixel is on the border of its big healpix.
-			// this happens rarely, so do a relatively expensive check:
-			// just find its neighbours and take the first one that has the
-			// right "dx" and "dy" values (ie, is the center sub-pixel in
-			// this pass).
-			uint nn, neigh[8];
-			int j;
-			nn = healpix_get_neighbours_nside(hp, neigh, Nside*3);
-			for (j=0; j<nn; j++) {
-				uint nx, ny, nbighp;
-				healpix_decompose(neigh[j], &nbighp, &nx, &ny, Nside*3);
-				if (((nx % 3) == dx) && ((ny % 3) == dy)) {
-					// found the center pixel!
-					// compute its corresponding normal (not sub-) pixel.
-					hp = healpix_compose(nbighp, nx/3, ny/3, Nside);
-					break;
-				}
-			}
-			if (j == nn) {
-				// none of the neighbours is a center pixel - this happens occasionally in
-				// weird corners of the healpixes.
-				continue;
-			}
-		} else {
-			x = (x + offx) / 3;
-			y = (y + offy) / 3;
-			// note Nside: this is a normal pixel, not a sub-pixel.
-			hp = healpix_compose(bighp, x, y, Nside);
-		}
-		// append this star to the appropriate normal pixel list.
-		il_append(pixels + hp, ind);
-	}
-	printf("\n");
-	fflush(stdout);
-}
-
-static void create_quads_in_pixels(int numstars, il* starindices,
-								   il* pixels, int Nside,
-								   int dx, int dy, int Npasses,
-								   bool circle)
-{
-	int i;
-	int HEALPIXES = 12 * Nside * Nside;
-	int Ninteresting = HEALPIXES;
-	char* interesting;
-	unsigned char* quadsmade;
-	int passes = 0;
-	int nused = 0;
-
-	shifted_healpix_bin_stars(numstars, starindices, pixels, dx, dy, Nside);
-
-	quadsmade = calloc(HEALPIXES, sizeof(unsigned char));
-	interesting = calloc(HEALPIXES, sizeof(char));
-
-	Ninteresting = 0;
-	for (i=0; i<HEALPIXES; i++) {
-		if (il_size(pixels + i)) {
-			interesting[i] = 1;
-			Ninteresting++;
-		}
-	}
-
-	while (Ninteresting) {
-		int nusedthispass;
-		int grass = 0;
-		int hp;
-		nusedthispass = 0;
-		for (hp=0; hp<HEALPIXES; hp++) {
-			int foundone;
-			if (!interesting[hp])
-				continue;
-			if (((grass++) % 10000) == 0) {
-				printf("+");
-				fflush(stdout);
-			}
-			foundone = find_a_quad(pixels + hp, circle);
-			if (foundone) {
-				if (!il_size(pixels + hp)) {
-					interesting[hp] = 0;
-					Ninteresting--;
-					continue;
-				}
-				quadsmade[hp]++;
-				if (!quadsmade[hp]) {
-					fprintf(stderr, "Warning, \"quadsmade\" counter overflowed for healpix %i.  Some of the stats may be wrong.\n", hp);
-				}
-				nused += 4;
-				nusedthispass += 4;
-			} else {
-				interesting[hp] = 0;
-				Ninteresting--;
-			}
-		}
-		passes++;
-		printf("\nEnd of pass %i: ninteresting=%i, nused=%i this pass, %i total, of %i stars\n",
-		        passes, Ninteresting, nusedthispass, nused, (int)numstars);
-
-		// HACK
-		quadnum = bl_size(quadlist);
-		printf("Duplicate quads: %i\n", ndupquads);
-
-		printf("Made %i quads so far.\n", quadnum);
-		if (Npasses && (passes == Npasses)) {
-			printf("Maximum number of passes reached.\n");
-			break;
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-
-	printf("Took %i passes.\n", passes);
-	printf("Made %i quads.\n", quadnum);
-	printf("Used %i stars.\n", nused);
-	printf("Didn't use %i stars.\n", (int)numstars - nused);
-
-	free(interesting);
-	free(quadsmade);
-}
-
-
 int main(int argc, char** argv)
 {
 	int argchar;
-	char *quadfname = NULL;
-	char *codefname = NULL;
-	char* catfname;
-	il* pixels;
+	char *quadfname;
+	char *codefname;
+	char *skdtfname;
+	qfits_header* hdr;
 	int Nside = 501;
 	int HEALPIXES;
 	int i;
-	//int rebin = 0;
 	char* basefnin = NULL;
 	char* basefnout = NULL;
 	uint pass, npasses;
@@ -561,6 +369,7 @@ int main(int argc, char** argv)
 	int Npasses = 0;
 	bool circle = FALSE;
 	int Bigpasses = 1;
+	int hp;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -576,11 +385,6 @@ int main(int argc, char** argv)
 		case 'i':
 			id = atoi(optarg);
 			break;
-			/*
-			  case 'r':
-			  rebin = 1;
-			  break;
-			*/
 		case 'n':
 			Nside = atoi(optarg);
 			break;
@@ -611,11 +415,6 @@ int main(int argc, char** argv)
 		exit( -1);
 	}
 
-	if (Nside % 3) {
-		fprintf(stderr, "Warning: to be really correct you should make Nside "
-			   " (-n option) a multiple of three.");
-	}
-
 	if (!id) {
 		fprintf(stderr, "Warning: you should set the unique-id for this index (-i).\n");
 	}
@@ -629,24 +428,25 @@ int main(int argc, char** argv)
 
 	tic();
 
-	pixels = malloc(HEALPIXES * sizeof(il));
-	for (i = 0; i < HEALPIXES; i++)
-		il_new_existing(pixels + i, IL_BLOCKSIZE);
-
-	catfname = mk_catfn(basefnin);
-	printf("Reading catalog file %s ...\n", catfname);
-	cat = catalog_open(catfname, 0);
-	if (!cat) {
-		fprintf(stderr, "Failed to open catalog file %s\n", catfname);
+	skdtfname = mk_streefn(basefnin);
+	printf("Reading star kdtree %s ...\n", skdtfname);
+	startree = kdtree_fits_read_file(skdtfname);
+	if (!startree) {
+		fprintf(stderr, "Failed to open star kdtree %s\n", skdtfname);
 		exit( -1);
 	}
-	free_fn(catfname);
-	printf("Catalog contains %i objects.\n", cat->numstars);
+	hdr = qfits_header_read(skdtfname);
+	if (!hdr) {
+		fprintf(stderr, "Failed to read FITS header from kdtree file %s.\n", skdtfname);
+		exit(-1);
+	}
+	free_fn(skdtfname);
+	printf("Star tree contains %i objects.\n", startree->ndata);
 
 	quadfname = mk_quadfn(basefnout);
 	codefname = mk_codefn(basefnout);
 
-	printf("Writing quad file %s and code file %s\n", quadfname, codefname);
+	printf("Will write to quad file %s and code file %s\n", quadfname, codefname);
 
     quads = quadfile_open_for_writing(quadfname);
 	if (!quads) {
@@ -663,12 +463,14 @@ int main(int argc, char** argv)
 		quads->indexid = id;
 		codes->indexid = id;
 	}
-	// get the "HEALPIX" header from the catalog and put it in the code and quad headers.
-	quads->healpix = cat->healpix;
-	codes->healpix = cat->healpix;
-	if (cat->healpix == -1) {
-		fprintf(stderr, "Warning: catalog file does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
+
+	// get the "HEALPIX" header from the skdt and put it in the code and quad headers.
+	hp = qfits_header_getint(hdr, "HEALPIX", -1);
+	if (hp == -1) {
+		fprintf(stderr, "Warning: skdt does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
+	quads->healpix = hp;
+	codes->healpix = hp;
 	qfits_header_add(quads->header, "HISTORY", "hpquads command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
 	qfits_header_add(quads->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
@@ -698,13 +500,12 @@ int main(int argc, char** argv)
 
 	free_fn(quadfname);
 	free_fn(codefname);
-	quadfname = codefname = NULL;
 
-    codes->numstars = cat->numstars;
+    codes->numstars = startree->ndata;
     codes->index_scale       = sqrt(quad_scale_upper2);
     codes->index_scale_lower = sqrt(quad_scale_lower2);
 
-    quads->numstars = cat->numstars;
+    quads->numstars = startree->ndata;
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
@@ -715,43 +516,310 @@ int main(int argc, char** argv)
 		exit(-1);
 	}
 
-	nuses = malloc(cat->numstars * sizeof(unsigned char));
-	for (i=0; i<cat->numstars; i++) {
+	nuses = malloc(startree->ndata * sizeof(unsigned char));
+	for (i=0; i<startree->ndata; i++)
 		nuses[i] = Bigpasses;
-	}
 
-	npasses = 9 * Bigpasses;
-	for (pass = 0; pass < npasses; pass++) {
-		int dx, dy;
-		dx = pass % 3;
-		dy = (pass / 3) % 3;
+	{
+		double* hp00 = malloc(3 * HEALPIXES * sizeof(double));
+		double* hpvx = malloc(3 * HEALPIXES * sizeof(double));
+		double* hpvy = malloc(3 * HEALPIXES * sizeof(double));
+		//int Nshift;
+		double radius2;
+		int* perm = NULL;
+		//int natonce = 5;
+		int j, d;
+		int* inds = NULL;
+		double* stars = NULL;
+		int lastgrass = 0;
 
-		printf("Doing shift %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
+		printf("Computing healpix centers...\n");
 
-		create_quads_in_pixels(cat->numstars, NULL, pixels, Nside, dx, dy,
-							   Npasses, circle);
+		//printf("hpcenters=[");
+		for (i=0; i<HEALPIXES; i++) {
+			healpix_to_xyz(0.0, 0.0, i, Nside,
+						   hp00 + i*3 + 0,
+						   hp00 + i*3 + 1,
+						   hp00 + i*3 + 2);
+
+			/*
+			  {
+			  double ra, dec;
+			  double xyz[3];
+			  memcpy(xyz, hp00 + i*3, 3*sizeof(double));
+			  normalize(xyz, xyz+1, xyz+2);
+			  xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
+			  ra  = rad2deg(ra);
+			  dec = rad2deg(dec);
+			  printf("%g,%g;", ra, dec);
+			  }
+			*/
+		}
+		//printf("];\n");
+
+		printf("Computing healpix bounds...\n");
+		for (i=0; i<HEALPIXES; i++) {
+			uint bighp, x, y;
+			double x1,y1,z1;
+			double x2,y2,z2;
+			x1 = hp00[i*3 + 0];
+			y1 = hp00[i*3 + 1];
+			z1 = hp00[i*3 + 2];
+			healpix_decompose(i, &bighp, &x, &y, Nside);
+
+			if (x == Nside-1)
+				healpix_to_xyz(1.0, 0.0, i, Nside, &x2, &y2, &z2);
+			else {
+ 				uint hp = healpix_compose(bighp, x+1, y, Nside);
+				x2 = hp00[hp*3 + 0];
+				y2 = hp00[hp*3 + 1];
+				z2 = hp00[hp*3 + 2];
+			}
+			hpvx[i*3 + 0] = x2 - x1;
+			hpvx[i*3 + 1] = y2 - y1;
+			hpvx[i*3 + 2] = z2 - z1;
+
+			if (y == Nside-1)
+				healpix_to_xyz(0.0, 1.0, i, Nside, &x2, &y2, &z2);
+			else {
+ 				uint hp = healpix_compose(bighp, x, y+1, Nside);
+				x2 = hp00[hp*3 + 0];
+				y2 = hp00[hp*3 + 1];
+				z2 = hp00[hp*3 + 2];
+			}
+			hpvy[i*3 + 0] = x2 - x1;
+			hpvy[i*3 + 1] = y2 - y1;
+			hpvy[i*3 + 2] = z2 - z1;
+		}
 
 		/*
-		  Who knows if this works? 
+		  printf("hpx=[%g,%g,%g,%g,%g];\n",
+		  hp00[0],
+		  hp00[0]+hpvx[0],
+		  hp00[0]+hpvx[0]+hpvy[0],
+		  hp00[0]+hpvy[0],
+		  hp00[0]);
+		  printf("hpy=[%g,%g,%g,%g,%g];\n",
+		  hp00[1],
+		  hp00[1]+hpvx[1],
+		  hp00[1]+hpvx[1]+hpvy[1],
+		  hp00[1]+hpvy[1],
+		  hp00[1]);
+		  printf("hpz=[%g,%g,%g,%g,%g];\n",
+		  hp00[2],
+		  hp00[2]+hpvx[2],
+		  hp00[2]+hpvx[2]+hpvy[2],
+		  hp00[2]+hpvy[2],
+		  hp00[2]);
+		*/
+		/*
+		  printf("hpdx=[");
+		  for (i=0; i<HEALPIXES; i++) {
+		  printf("%g,%g,%g;", hpvx[i*3+0], hpvx[i*3+1], hpvx[i*3+2]);
+		  }
+		  printf("];\n");
+		  printf("hpdy=[");
+		  for (i=0; i<HEALPIXES; i++) {
+		  printf("%g,%g,%g;", hpvy[i*3+0], hpvy[i*3+1], hpvy[i*3+2]);
+		  }
+		  printf("];\n");
+		*/
+		/*
+		  printf("hpx=[");
+		  for (i=0; i<HEALPIXES; i++) {
+		  {
+		  double ra, dec;
+		  double xyz[3];
+		  memcpy(xyz, hp00 + i*3, 3*sizeof(double));
+		  xyz[0] += hpvx[i*3+0];
+		  xyz[1] += hpvx[i*3+1];
+		  xyz[2] += hpvx[i*3+2];
+		  normalize(xyz, xyz+1, xyz+2);
+		  xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
+		  ra  = rad2deg(ra);
+		  dec = rad2deg(dec);
+		  printf("%g,%g;", ra, dec);
+		  }
+		  }
+		  printf("];\n");
 
-		  if (rebin) {
-		  // Gather up the leftover stars and re-bin.
-		  il* leftovers = il_new(IL_BLOCKSIZE);
-		  for (i = 0; i < HEALPIXES; i++) {
-		  il_merge_lists(leftovers, pixels + i);
+		  printf("hpy=[");
+		  for (i=0; i<HEALPIXES; i++) {
+		  {
+		  double ra, dec;
+		  double xyz[3];
+		  memcpy(xyz, hp00 + i*3, 3*sizeof(double));
+		  xyz[0] += hpvy[i*3+0];
+		  xyz[1] += hpvy[i*3+1];
+		  xyz[2] += hpvy[i*3+2];
+		  normalize(xyz, xyz+1, xyz+2);
+		  xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
+		  ra  = rad2deg(ra);
+		  dec = rad2deg(dec);
+		  printf("%g,%g;", ra, dec);
 		  }
-		  printf("Rebinning with Nside=%i\n", Nside / 2);
-		  create_quads_in_pixels(il_size(leftovers), leftovers, pixels, Nside / 2, dx, dy, );
-		  il_free(leftovers);
 		  }
+		  printf("];\n");
 		*/
 
-		// empty blocklists.
-		for (i = 0; i < HEALPIXES; i++)
-			il_remove_all(pixels + i);
+		/*
+		  Nshift = 2;
+		  npasses = Nshift*Nshift;
+		  for (pass = 0; pass < npasses; pass++) {
+		  int dx, dy;
+		  double dxfrac, dyfrac;
+		  dx = pass % Nshift;
+		  dy = (pass / Nshift) % Nshift;
+		  dxfrac = 0.5 + dx / (double)Nshift;
+		  dyfrac = 0.5 + dy / (double)Nshift;
+		  printf("Doing shift %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
+		*/
+
+		{
+			double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
+			double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
+			// 1.01 for a bit of safety.  we'll look at a few extra stars.
+			radius2 = square(1.01 * (hprad + quadscale));
+
+			printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
+				   distsq2arcsec(hprad*hprad),
+				   distsq2arcsec(quadscale*quadscale),
+				   distsq2arcsec(radius2));
+		}
+
+		npasses = Npasses;
+		for (pass=0; pass<npasses; pass++) {
+			double dxfrac, dyfrac;
+			kdtree_qres_t* res;
+			int nthispass;
+			int nnostars;
+			int nnounused;
+			dxfrac = dyfrac = 0.5;
+			printf("Pass %i of %i.\n", pass+1, Npasses);
+			nthispass = 0;
+			nnostars = 0;
+			nnounused = 0;
+
+			//printf("gotstars_rd=[");
+			//printf("nostars_rd=[");
+
+			for (i=0; i<HEALPIXES; i++) {
+				int N;
+				int destind;
+				double centre[3];
+
+				if ((i * 80 / HEALPIXES) != lastgrass) {
+					printf(".");
+					fflush(stdout);
+					lastgrass = i*80/HEALPIXES;
+				}
+
+				centre[0] = hp00[i*3+0] + hpvx[i*3+0] * dxfrac + hpvy[i*3+0] * dyfrac;
+				centre[1] = hp00[i*3+1] + hpvx[i*3+1] * dxfrac + hpvy[i*3+1] * dyfrac;
+				centre[2] = hp00[i*3+2] + hpvx[i*3+2] * dxfrac + hpvy[i*3+2] * dyfrac;
+
+				res = kdtree_rangesearch_nosort(startree, centre, radius2);
+
+				// HACK here - could also check whether stars are in the box
+				// defined by the healpix boundaries plus quadscale...
+
+				N = res->nres;
+				if (!N) {
+					kdtree_free_query(res);
+					nnostars++;
+
+					continue;
+				}
+
+				/*
+				  {
+				  double ra, dec;
+				  normalize(centre+0, centre+1, centre+2);
+				  xyz2radec(centre[0], centre[1], centre[2], &ra, &dec);
+				  ra  = rad2deg(ra);
+				  dec = rad2deg(dec);
+				  printf("%g,%g;", ra, dec);
+				  }
+				*/
+				// remove stars that have no "nuses" left.
+				destind = 0;
+				for (j=0; j<N; j++) {
+					if (!nuses[res->inds[j]])
+						continue;
+					res->inds[destind] = res->inds[j];
+					for (d=0; d<3; d++)
+						res->results[destind*3+d] = res->results[j*3+d];
+					destind++;
+				}
+				N = destind;
+				if (!N) {
+					kdtree_free_query(res);
+					nnounused++;
+					continue;
+				}
+
+				// sort the stars in increasing order of index - assume
+				// that this corresponds to decreasing order of brightness.
+				perm = realloc(perm, N * sizeof(int));
+				for (j=0; j<N; j++)
+					perm[j] = j;
+
+				permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
+				permuted_sort(perm, N);
+
+				inds  = realloc(inds,  N * sizeof(int));
+				stars = realloc(stars, N * 3 * sizeof(double));
+
+				for (j=0; j<N; j++) {
+					inds[j] = res->inds[perm[j]];
+					for (d=0; d<3; d++)
+						stars[j*3+d] = res->results[perm[j]*3+d];
+				}
+
+				kdtree_free_query(res);
+
+				/*
+				  printf("hp %i: %i stars:\n", i, N);
+				  for (j=0; j<N; j++)
+				  printf("  ind %i, pos (%g,%g,%g)\n", inds[j], stars[j*3], stars[j*3+1], stars[j*3+2]);
+				*/
+
+				if (create_quad(stars, inds, N, circle,
+								hp00 + i*3, hpvx + i*3, hpvy + i*3)) {
+					//printf("-> made a quad.\n");
+					nthispass++;
+				} else {
+					//printf("-> couldn't make a quad.\n");
+				}
+
+			}
+			//printf("];\n");
+			printf("\n");
+
+			printf("Made %i quads (out of %i healpixes) this pass.\n",
+				   nthispass, HEALPIXES);
+			printf("  %i healpixes had no stars.\n", nnostars);
+			printf("  %i healpixes had some stars.\n", HEALPIXES - nnostars);
+			printf("  %i healpixes had only stars that had been over-used.\n", nnounused);
+
+			// HACK
+			quadnum = bl_size(quadlist);
+			printf("Duplicate quads: %i\n", ndupquads);
+			printf("Made %i quads so far.\n", quadnum);
+		}
+
+		free(stars);
+		free(inds);
+		free(perm);
+		free(hp00);
+		free(hpvx);
+		free(hpvy);
 	}
 
 	free(nuses);
+
+	invperm = malloc(startree->ndata * sizeof(int));
+	kdtree_inverse_permutation(startree, invperm);
 
 	for (i=0; i<bl_size(quadlist); i++) {
 		double code[4];
@@ -767,7 +835,8 @@ int main(int argc, char** argv)
 		}
 	}
 
-	catalog_close(cat);
+	free(invperm);
+	kdtree_close(startree);
 
 	// fix output file headers.
     if (quadfile_fix_header(quads) ||
@@ -775,7 +844,6 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
 		exit( -1);
 	}
-
 	if (codefile_fix_header(codes) ||
 		codefile_close(codes)) {
 		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
@@ -783,12 +851,7 @@ int main(int argc, char** argv)
 	}
 
 	toc();
-
 	printf("Done.\n");
-	fflush(stdout);
-
-	free(pixels);
-
 	return 0;
 }
 

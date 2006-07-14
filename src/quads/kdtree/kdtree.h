@@ -55,6 +55,8 @@ void kdtree_inverse_permutation(kdtree_t* tree, int* invperm);
 /* Range seach */
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
 
+kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsquared);
+
 /* Range seach using callback */
 void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 								 void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxdist2, real* computed_dist2, int indx, void* extra),
