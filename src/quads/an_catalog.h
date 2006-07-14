@@ -8,6 +8,8 @@ typedef uint64_t uint64;
 
 #include "qfits.h"
 
+#include "ioutils.h"
+
 enum an_sources {
 	AN_SOURCE_UNKNOWN,
 	AN_SOURCE_USNOB,
@@ -45,11 +47,13 @@ typedef struct an_entry an_entry;
 struct an_catalog {
 	qfits_table* table;
 	int columns[AN_FITS_COLUMNS];
+	uint nentries;
+	// buffered reading
+	bread br;
 	// when writing:
 	qfits_header* header;
 	FILE* fid;
 	off_t header_end;
-	uint nentries;
 };
 typedef struct an_catalog an_catalog;
 
@@ -63,6 +67,8 @@ int an_catalog_fix_headers(an_catalog* cat);
 
 int an_catalog_read_entries(an_catalog* cat, uint offset,
 							uint count, an_entry* entries);
+
+an_entry* an_catalog_read_entry(an_catalog* cat);
 
 int an_catalog_count_entries(an_catalog* cat);
 

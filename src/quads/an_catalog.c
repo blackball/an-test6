@@ -88,6 +88,13 @@ int an_catalog_read_entries(an_catalog* cat, uint offset,
 	return 0;
 }
 
+an_entry* an_catalog_read_entry(an_catalog* cat) {
+	an_entry* e = buffered_read(&cat->br);
+	if (!e)
+		fprintf(stderr, "Failed to read an Astrometry.net catalog entry.\n");
+	return e;
+}
+
 int an_catalog_write_entry(an_catalog* cat, an_entry* entry) {
 	int c;
 	FILE* fid = cat->fid;
@@ -124,6 +131,7 @@ int an_catalog_close(an_catalog* cat) {
 	if (cat->header) {
 		qfits_header_destroy(cat->header);
 	}
+	buffered_read_free(&cat->br);
 	free(cat);
 	return 0;
 }
@@ -158,8 +166,7 @@ an_catalog* an_catalog_open(char* fn) {
 		table = qfits_table_open(fn, i);
 
 		for (c=0; c<AN_FITS_COLUMNS; c++)
-			cat->columns[c] = fits_find_column(table,
-											   an_fitstruct[c].fieldname);
+			cat->columns[c] = fits_find_column(table, an_fitstruct[c].fieldname);
 		good = 1;
 		for (c=0; c<AN_FITS_COLUMNS; c++) {
 			if (cat->columns[c] == -1) {
@@ -183,6 +190,7 @@ an_catalog* an_catalog_open(char* fn) {
 		return NULL;
 	}
 	cat->nentries = cat->table->nr;
+	cat->br.ntotal = cat->nentries;
 	return cat;
 }
 
@@ -246,14 +254,23 @@ int an_catalog_fix_headers(an_catalog* cat) {
 	return 0;
 }
 
+static int an_catalog_refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+	an_catalog* cat = userdata;
+	an_entry* en = buffer;
+	return an_catalog_read_entries(cat, offset, n, en);
+}
+
 an_catalog* an_catalog_new() {
-	an_catalog* rtn = malloc(sizeof(an_catalog));
-	if (!rtn) {
+	an_catalog* cat = calloc(1, sizeof(an_catalog));
+	if (!cat) {
 		fprintf(stderr, "Couldn't allocate memory for a an_catalog structure.\n");
 		exit(-1);
 	}
-	memset(rtn, 0, sizeof(an_catalog));
-	return rtn;
+	cat->br.blocksize = 1000;
+	cat->br.elementsize = sizeof(an_entry);
+	cat->br.refill_buffer = an_catalog_refill_buffer;
+	cat->br.userdata = cat;
+	return cat;
 }
 
 static qfits_table* an_catalog_get_table() {
