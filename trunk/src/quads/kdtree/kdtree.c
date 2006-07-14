@@ -944,6 +944,25 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 	return res;
 }
 
+kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsquared)
+{
+	kdtree_qres_t *res;
+	int res_size = KDTREE_MAX_RESULTS;
+	if (!kd || !pt)
+		return NULL;
+	res = calloc(1, sizeof(kdtree_qres_t));
+	resize_results(res, res_size, kd->ndim);
+
+	/* Do the real rangesearch */
+	kdtree_rangesearch_actual(kd, 0, pt, maxdistsquared, res, &res_size);
+
+	/* Resize result arrays. */
+	resize_results(res, res->nres, kd->ndim);
+
+	return res;
+}
+
+
 int kdtree_rangecount_rec(kdtree_t* kd, kdtree_node_t* node,
 						  real* pt, real maxd2) {
 	int i;
