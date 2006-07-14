@@ -64,6 +64,32 @@ struct quad {
 };
 typedef struct quad quad;
 
+static void* mymalloc(int n) {
+	void* rtn = malloc(n);
+	if (!rtn) {
+		fprintf(stderr, "Failed to malloc %i.\n", n);
+		exit(-1);
+	}
+	return rtn;
+}
+static void* mycalloc(int n, int sz) {
+	void* rtn = calloc(n, sz);
+	if (!rtn) {
+		fprintf(stderr, "Failed to calloc %i * %i.\n", n, sz);
+		exit(-1);
+	}
+	return rtn;
+}
+static void* myrealloc(void* p, int n) {
+	void* rtn = realloc(p, n);
+	if (!rtn) {
+		fprintf(stderr, "Failed to realloc %i.\n", n);
+		exit(-1);
+	}
+	return rtn;
+}
+
+
 static int compare_quad(const void* v1, const void* v2) {
 	const quad* q1 = v1;
 	const quad* q2 = v2;
@@ -237,8 +263,15 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	int ninbox;
 	int i, j, k;
 
-	inbox =  malloc(Nstars * sizeof(int));
-	pquads = calloc(Nstars*Nstars, sizeof(pquad));
+	inbox =  mymalloc(Nstars * sizeof(int));
+	pquads = mycalloc(Nstars*Nstars, sizeof(pquad));
+
+	/*
+	  if (!inbox || !pquads) {
+	  fprintf(stderr, "Failed to alloc inbox or pquads.\n");
+	  exit(-1);
+	  }
+	*/
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -305,7 +338,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					}
 				}
 			}
-			pq->inbox = malloc(Nstars * sizeof(int));
+			pq->inbox = mymalloc(Nstars * sizeof(int));
 			pq->ninbox = ninbox;
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
@@ -516,46 +549,36 @@ int main(int argc, char** argv)
 		exit(-1);
 	}
 
-	nuses = malloc(startree->ndata * sizeof(unsigned char));
+	nuses = mymalloc(startree->ndata * sizeof(unsigned char));
 	for (i=0; i<startree->ndata; i++)
 		nuses[i] = Bigpasses;
 
 	{
-		double* hp00 = malloc(3 * HEALPIXES * sizeof(double));
-		double* hpvx = malloc(3 * HEALPIXES * sizeof(double));
-		double* hpvy = malloc(3 * HEALPIXES * sizeof(double));
-		//int Nshift;
+		double* hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
+		double* hpvx = mymalloc(3 * HEALPIXES * sizeof(double));
+		double* hpvy = mymalloc(3 * HEALPIXES * sizeof(double));
 		double radius2;
 		int* perm = NULL;
-		//int natonce = 5;
 		int j, d;
 		int* inds = NULL;
 		double* stars = NULL;
 		int lastgrass = 0;
 
+		/*
+		  if (!hp00 || !hpvx || !hpvy) {
+		  fprintf(stderr, "Failed to allocate memory for healpix centers & vectors.\n");
+		  exit(-1);
+		  }
+		*/
+
 		printf("Computing healpix centers...\n");
 
-		//printf("hpcenters=[");
 		for (i=0; i<HEALPIXES; i++) {
 			healpix_to_xyz(0.0, 0.0, i, Nside,
 						   hp00 + i*3 + 0,
 						   hp00 + i*3 + 1,
 						   hp00 + i*3 + 2);
-
-			/*
-			  {
-			  double ra, dec;
-			  double xyz[3];
-			  memcpy(xyz, hp00 + i*3, 3*sizeof(double));
-			  normalize(xyz, xyz+1, xyz+2);
-			  xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
-			  ra  = rad2deg(ra);
-			  dec = rad2deg(dec);
-			  printf("%g,%g;", ra, dec);
-			  }
-			*/
 		}
-		//printf("];\n");
 
 		printf("Computing healpix bounds...\n");
 		for (i=0; i<HEALPIXES; i++) {
@@ -565,12 +588,12 @@ int main(int argc, char** argv)
 			x1 = hp00[i*3 + 0];
 			y1 = hp00[i*3 + 1];
 			z1 = hp00[i*3 + 2];
-			healpix_decompose(i, &bighp, &x, &y, Nside);
+			healpix_decompose_lex(i, &bighp, &x, &y, Nside);
 
 			if (x == Nside-1)
 				healpix_to_xyz(1.0, 0.0, i, Nside, &x2, &y2, &z2);
 			else {
- 				uint hp = healpix_compose(bighp, x+1, y, Nside);
+ 				uint hp = healpix_compose_lex(bighp, x+1, y, Nside);
 				x2 = hp00[hp*3 + 0];
 				y2 = hp00[hp*3 + 1];
 				z2 = hp00[hp*3 + 2];
@@ -582,7 +605,7 @@ int main(int argc, char** argv)
 			if (y == Nside-1)
 				healpix_to_xyz(0.0, 1.0, i, Nside, &x2, &y2, &z2);
 			else {
- 				uint hp = healpix_compose(bighp, x, y+1, Nside);
+ 				uint hp = healpix_compose_lex(bighp, x, y+1, Nside);
 				x2 = hp00[hp*3 + 0];
 				y2 = hp00[hp*3 + 1];
 				z2 = hp00[hp*3 + 2];
@@ -591,89 +614,6 @@ int main(int argc, char** argv)
 			hpvy[i*3 + 1] = y2 - y1;
 			hpvy[i*3 + 2] = z2 - z1;
 		}
-
-		/*
-		  printf("hpx=[%g,%g,%g,%g,%g];\n",
-		  hp00[0],
-		  hp00[0]+hpvx[0],
-		  hp00[0]+hpvx[0]+hpvy[0],
-		  hp00[0]+hpvy[0],
-		  hp00[0]);
-		  printf("hpy=[%g,%g,%g,%g,%g];\n",
-		  hp00[1],
-		  hp00[1]+hpvx[1],
-		  hp00[1]+hpvx[1]+hpvy[1],
-		  hp00[1]+hpvy[1],
-		  hp00[1]);
-		  printf("hpz=[%g,%g,%g,%g,%g];\n",
-		  hp00[2],
-		  hp00[2]+hpvx[2],
-		  hp00[2]+hpvx[2]+hpvy[2],
-		  hp00[2]+hpvy[2],
-		  hp00[2]);
-		*/
-		/*
-		  printf("hpdx=[");
-		  for (i=0; i<HEALPIXES; i++) {
-		  printf("%g,%g,%g;", hpvx[i*3+0], hpvx[i*3+1], hpvx[i*3+2]);
-		  }
-		  printf("];\n");
-		  printf("hpdy=[");
-		  for (i=0; i<HEALPIXES; i++) {
-		  printf("%g,%g,%g;", hpvy[i*3+0], hpvy[i*3+1], hpvy[i*3+2]);
-		  }
-		  printf("];\n");
-		*/
-		/*
-		  printf("hpx=[");
-		  for (i=0; i<HEALPIXES; i++) {
-		  {
-		  double ra, dec;
-		  double xyz[3];
-		  memcpy(xyz, hp00 + i*3, 3*sizeof(double));
-		  xyz[0] += hpvx[i*3+0];
-		  xyz[1] += hpvx[i*3+1];
-		  xyz[2] += hpvx[i*3+2];
-		  normalize(xyz, xyz+1, xyz+2);
-		  xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
-		  ra  = rad2deg(ra);
-		  dec = rad2deg(dec);
-		  printf("%g,%g;", ra, dec);
-		  }
-		  }
-		  printf("];\n");
-
-		  printf("hpy=[");
-		  for (i=0; i<HEALPIXES; i++) {
-		  {
-		  double ra, dec;
-		  double xyz[3];
-		  memcpy(xyz, hp00 + i*3, 3*sizeof(double));
-		  xyz[0] += hpvy[i*3+0];
-		  xyz[1] += hpvy[i*3+1];
-		  xyz[2] += hpvy[i*3+2];
-		  normalize(xyz, xyz+1, xyz+2);
-		  xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
-		  ra  = rad2deg(ra);
-		  dec = rad2deg(dec);
-		  printf("%g,%g;", ra, dec);
-		  }
-		  }
-		  printf("];\n");
-		*/
-
-		/*
-		  Nshift = 2;
-		  npasses = Nshift*Nshift;
-		  for (pass = 0; pass < npasses; pass++) {
-		  int dx, dy;
-		  double dxfrac, dyfrac;
-		  dx = pass % Nshift;
-		  dy = (pass / Nshift) % Nshift;
-		  dxfrac = 0.5 + dx / (double)Nshift;
-		  dyfrac = 0.5 + dy / (double)Nshift;
-		  printf("Doing shift %i of %i: dx=%i, dy=%i.\n", pass+1, npasses, dx, dy);
-		*/
 
 		{
 			double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
@@ -699,9 +639,6 @@ int main(int argc, char** argv)
 			nthispass = 0;
 			nnostars = 0;
 			nnounused = 0;
-
-			//printf("gotstars_rd=[");
-			//printf("nostars_rd=[");
 
 			for (i=0; i<HEALPIXES; i++) {
 				int N;
@@ -731,16 +668,6 @@ int main(int argc, char** argv)
 					continue;
 				}
 
-				/*
-				  {
-				  double ra, dec;
-				  normalize(centre+0, centre+1, centre+2);
-				  xyz2radec(centre[0], centre[1], centre[2], &ra, &dec);
-				  ra  = rad2deg(ra);
-				  dec = rad2deg(dec);
-				  printf("%g,%g;", ra, dec);
-				  }
-				*/
 				// remove stars that have no "nuses" left.
 				destind = 0;
 				for (j=0; j<N; j++) {
@@ -760,15 +687,28 @@ int main(int argc, char** argv)
 
 				// sort the stars in increasing order of index - assume
 				// that this corresponds to decreasing order of brightness.
-				perm = realloc(perm, N * sizeof(int));
+				perm = myrealloc(perm, N * sizeof(int));
+				/*
+				  if (!perm) {
+				  fprintf(stderr, "Failed to realloc perm.\n");
+				  exit(-1);
+				  }
+				*/
 				for (j=0; j<N; j++)
 					perm[j] = j;
 
 				permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
 				permuted_sort(perm, N);
 
-				inds  = realloc(inds,  N * sizeof(int));
-				stars = realloc(stars, N * 3 * sizeof(double));
+				inds  = myrealloc(inds,  N * sizeof(int));
+				stars = myrealloc(stars, N * 3 * sizeof(double));
+
+				/*
+				  if (!inds || !stars) {
+				  fprintf(stderr, "Failed to allocate mem for inds or stars.\n");
+				  exit(-1);
+				  }
+				*/
 
 				for (j=0; j<N; j++) {
 					inds[j] = res->inds[perm[j]];
@@ -778,22 +718,10 @@ int main(int argc, char** argv)
 
 				kdtree_free_query(res);
 
-				/*
-				  printf("hp %i: %i stars:\n", i, N);
-				  for (j=0; j<N; j++)
-				  printf("  ind %i, pos (%g,%g,%g)\n", inds[j], stars[j*3], stars[j*3+1], stars[j*3+2]);
-				*/
-
 				if (create_quad(stars, inds, N, circle,
-								hp00 + i*3, hpvx + i*3, hpvy + i*3)) {
-					//printf("-> made a quad.\n");
+								hp00 + i*3, hpvx + i*3, hpvy + i*3))
 					nthispass++;
-				} else {
-					//printf("-> couldn't make a quad.\n");
-				}
-
 			}
-			//printf("];\n");
 			printf("\n");
 
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
@@ -818,7 +746,11 @@ int main(int argc, char** argv)
 
 	free(nuses);
 
-	invperm = malloc(startree->ndata * sizeof(int));
+	invperm = mymalloc(startree->ndata * sizeof(int));
+	if (!invperm) {
+		fprintf(stderr, "Failed to allocate mem for invperm.\n");
+		exit(-1);
+	}
 	kdtree_inverse_permutation(startree, invperm);
 
 	for (i=0; i<bl_size(quadlist); i++) {
