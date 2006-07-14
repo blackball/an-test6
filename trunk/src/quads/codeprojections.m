@@ -42,3 +42,16 @@ for i=1:4,
   set(gca,'XTickLabel',{});
 end
 
+figure(4);
+subplot(1,1,1);
+s=surf(hist_xy);
+set(s, 'EdgeAlpha', 0);
+set(gca,'XTickLabel',{});
+set(gca,'YTickLabel',{});
+view(0,90);
+axis tight;
+axis square;
+xlabel('x')
+ylabel('y') 
+title('cx vs cy + dx vs dy')
+colormap hot

@@ -66,6 +66,10 @@ double** dhists = NULL;
 int Nbins = 20;
 int Dims;
 
+// 2-D hist of {C,D}x,{C,D}y
+int* xyhist = NULL;
+double* dxyhist = NULL;
+
 // 1-D hists
 int* single = NULL;
 double* dsingle = NULL;
@@ -105,8 +109,7 @@ static int value_to_bin(double val, int Nbins) {
 	return bin;
 }
 
-static void add_to_single_histogram(int dim, double val)
-{
+static void add_to_single_histogram(int dim, double val) {
 	int* hist = single + Nsingle * dim;
 	int bin = value_to_bin(val, Nsingle);
 	hist[bin]++;
@@ -116,8 +119,7 @@ static void add_to_single_histogram(int dim, double val)
 	}
 }
 
-static void add_to_histogram(int dim1, int dim2, double val1, double val2)
-{
+static void add_to_histogram(int dim1, int dim2, double val1, double val2) {
 	int xbin, ybin;
 	int* hist = hists[dim1 * Dims + dim2];
 	xbin = value_to_bin(val1, Nbins);
@@ -135,13 +137,21 @@ static void add_to_histogram(int dim1, int dim2, double val1, double val2)
 	}
 }
 
+static void add_to_cd_histogram(double val1, double val2) {
+	int xbin, ybin;
+	xbin = value_to_bin(val1, Nbins);
+	ybin = value_to_bin(val2, Nbins);
+	xyhist[xbin * Nbins + ybin]++;
+	if (do_density)
+		dxyhist[xbin * Nbins + ybin] += 1.0 / (volume_at_value(val1) * volume_at_value(val2));
+}
 
 int main(int argc, char *argv[])
 {
 	int argchar;
 	char *codefname = NULL;
 	char *ckdtfname = NULL;
-	int i, d, e;
+	int i, j, d, e;
 	bool allperms = TRUE;
 	bool circle;
 	codefile* cf = NULL;
@@ -226,7 +236,7 @@ int main(int argc, char *argv[])
 
 	// Allocate memory for projection histograms
 	Dims = 4;
-	 hists = calloc(Dims * Dims, sizeof(int*));
+	hists  = calloc(Dims * Dims, sizeof(int*));
 	dhists = calloc(Dims * Dims, sizeof(double*));
 
 	for (d = 0; d < Dims; d++) {
@@ -241,6 +251,9 @@ int main(int argc, char *argv[])
 			dhists[d*Dims + e] = NULL;
 		}
 	}
+
+	xyhist  = calloc(Nbins * Nbins, sizeof(int));
+	dxyhist = calloc(Nbins * Nbins, sizeof(double));
 
 	single  = calloc(Dims * Nsingle, sizeof(int));
 	dsingle = calloc(Dims * Nsingle, sizeof(double));
@@ -294,6 +307,8 @@ int main(int argc, char *argv[])
 					}
 					add_to_single_histogram(d, permcode[d]);
 				}
+				add_to_cd_histogram(permcode[0], permcode[1]);
+				add_to_cd_histogram(permcode[2], permcode[3]);
 			}
 		} else {
 			for (d = 0; d < Dims; d++) {
@@ -302,6 +317,8 @@ int main(int argc, char *argv[])
 				}
 				add_to_single_histogram(d, onecode[d]);
 			}
+			add_to_cd_histogram(onecode[0], onecode[1]);
+			add_to_cd_histogram(onecode[2], onecode[3]);
 		}
 	}
 
@@ -331,7 +348,6 @@ int main(int argc, char *argv[])
 					   d, e, Nbins, Nbins);
 				dhist = dhists[d * Dims + e];
 				for (i = 0; i < Nbins; i++) {
-					int j;
 					printf("dhist_%i_%i(%i,:)=[", d, e, i + 1);
 					for (j = 0; j < Nbins; j++)
 						printf("%g,", dhist[i*Nbins + j]);
@@ -352,9 +368,28 @@ int main(int argc, char *argv[])
 			printf("];\n");
 		}
 	}
+	printf("hist_xy=[");
+	for (i=0; i<Nbins; i++) {
+		for (j=0; j<Nbins; j++)
+			printf("%i,", xyhist[i*Nbins+j]);
+		printf(";");
+	}
+	printf("];\n");
+	if (do_density) {
+		printf("dhist_xy=[");
+		for (i=0; i<Nbins; i++) {
+			for (j=0; j<Nbins; j++)
+				printf("%g,", dxyhist[i*Nbins+j]);
+			printf(";");
+		}
+		printf("];\n");
+	}
+
+	free(xyhist);
 	free(hists);
 	free(single);
 	if (do_density) {
+		free(dxyhist);
 		free(dhists);
 		free(dsingle);
 	}
