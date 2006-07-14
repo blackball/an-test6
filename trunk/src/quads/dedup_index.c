@@ -18,6 +18,7 @@
 #include "codefile.h"
 #include "quadfile.h"
 #include "fitsioutils.h"
+#include "permutedsort.h"
 
 #define OPTIONS "hf:o:"
 const char HelpString[] =
@@ -28,16 +29,11 @@ extern int optind, opterr, optopt;
 
 il* duplicates = NULL;
 
-double* qsort_array;
-int qsort_array_stride;
 int qsort_permutation;
 
-int sort_permuted_array(const void* v1, const void* v2) {
-	int i1 = *(int*)v1;
-	int i2 = *(int*)v2;
-	double val1, val2;
-	val1 = qsort_array[i1 * qsort_array_stride];
-	val2 = qsort_array[i2 * qsort_array_stride];
+static int sort_codes(const void* v1, const void* v2) {
+	double val1 = *(double*)v1;
+	double val2 = *(double*)v2;
 	if (qsort_permutation)
 		val1 = 1.0 - val1;
 	if (val1 < val2)
@@ -160,10 +156,10 @@ int main(int argc, char *argv[]) {
 	free_fn(quadoutfname);
 	free_fn(codeoutfname);
 
-	qsort_array = codesin->codearray;
-	qsort_array_stride = DIM_CODES;
+	permuted_sort_set_params(codesin->codearray, DIM_CODES * sizeof(double),
+							 sort_codes);
 
-	perm = malloc(DIM_CODES * codesin->numcodes * sizeof(int));
+	perm = malloc(codesin->numcodes * sizeof(int));
 	duplicates = il_new(1024);
 
 	// across-the-diagonal permutations...
@@ -174,7 +170,7 @@ int main(int argc, char *argv[]) {
 			perm[i] = i;
 
 		qsort_permutation = flip;
-		qsort(perm, codesin->numcodes, sizeof(int), sort_permuted_array);
+		permuted_sort(perm, codesin->numcodes);
 
 		// CD / DC permutation.
 		for (i=0; i<(codesin->numcodes-1); i++) {
