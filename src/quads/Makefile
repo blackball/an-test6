@@ -8,7 +8,8 @@ CFLAGS :=
 #fast
 CFLAGS	+= -g
 #CFLAGS += -O0
-CFLAGS += -O2
+CFLAGS += -O1
+#CFLAGS += -O2
 #CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
 #CFLAGS += -O3 -ffast-math

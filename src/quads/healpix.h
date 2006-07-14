@@ -42,4 +42,11 @@ void healpix_decompose(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
 
 Const uint healpix_compose(uint bighp, uint x, uint y, uint Nside);
 
+/*
+  lexicographical versions (neither RING nor NESTED scheme)
+*/
+void healpix_decompose_lex(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
+
+Const uint healpix_compose_lex(uint bighp, uint x, uint y, uint Nside);
+
 #endif

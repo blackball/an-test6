@@ -127,6 +127,23 @@ void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside
 		*pbighp = bighp;
 }
 
+uint healpix_compose_lex(uint bighp, uint x, uint y, uint Nside) {
+	return (bighp * Nside * Nside) + (x * Nside) + y;
+}
+
+void healpix_decompose_lex(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
+	uint hp;
+	if (pbighp) {
+		uint bighp   = finehp / (Nside * Nside);
+		*pbighp = bighp;
+	}
+	hp = finehp % (Nside * Nside);
+	if (px)
+		*px = hp / Nside;
+	if (py)
+		*py = hp % Nside;
+}
+
 int healpix_get_neighbour(int hp, int dx, int dy)
 {
 	if (isnorthpolar(hp)) {
