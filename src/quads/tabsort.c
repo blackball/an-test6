@@ -8,6 +8,7 @@
 #include "qfits.h"
 #include "fileutil.h"
 #include "fitsioutils.h"
+#include "permutedsort.h"
 
 char* OPTIONS = "hc:i:o:d";
 
@@ -17,19 +18,6 @@ void printHelp(char* progname) {
 		   "      -c <column-name>\n"
 		   "      [-d]: sort in descending order (default, ascending)\n",
 		   progname);
-}
-
-static void* qsort_array;
-static int qsort_array_stride;
-static int (*qsort_compare)(const void*, const void*);
-
-static int compare_permuted(const void* v1, const void* v2) {
-	int i1 = *(int*)v1;
-	int i2 = *(int*)v2;
-	void* val1, *val2;
-	val1 = ((unsigned char*)qsort_array) + i1 * qsort_array_stride;
-	val2 = ((unsigned char*)qsort_array) + i2 * qsort_array_stride;
-	return qsort_compare(val1, val2);
 }
 
 static int sort_doubles_desc(const void* v1, const void* v2) {
@@ -211,11 +199,8 @@ int main(int argc, char *argv[]) {
 		for (i=0; i<table->nr; i++)
 			perm[i] = i;
 
-		qsort_array = buffer;
-		qsort_array_stride = atomsize;
-		qsort_compare = sort_func;
-
-		qsort(perm, table->nr, sizeof(int), compare_permuted);
+		permuted_sort_set_params(buffer, atomsize, sort_func);
+		permuted_sort(perm, table->nr);
 
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart, &hdrsize) ||
 			qfits_get_datinfo(infn, ext, &datstart, &datsize)) {
