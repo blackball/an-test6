@@ -577,6 +577,13 @@ int main(int argc, char** argv)
 			//printf("center(%i)=(%g,%g,%g)\n", i, hp00[i*3+0], hp00[i*3+1], hp00[i*3+2]);
 		}
 
+		/*
+		  printf("hp=[");
+		  for (i=0; i<HEALPIXES; i++)
+		  printf("%g,%g,%g;", hp00[i*3+0], hp00[i*3+1], hp00[i*3+2]);
+		  printf("];\n");
+		*/
+
 		printf("Computing healpix bounds...\n");
 		for (i=0; i<HEALPIXES; i++) {
 			uint bighp, x, y;
@@ -613,6 +620,16 @@ int main(int argc, char** argv)
 			hpvy[i*3 + 2] = z2 - z1;
 		}
 
+		/*
+		  printf("hpcenter=[");
+		  for (i=0; i<HEALPIXES; i++)
+		  printf("%g,%g,%g;",
+		  hp00[i*3+0]+0.5*hpvx[i*3+0]+0.5*hpvy[i*3+0],
+		  hp00[i*3+1]+0.5*hpvx[i*3+1]+0.5*hpvy[i*3+1],
+		  hp00[i*3+2]+0.5*hpvx[i*3+2]+0.5*hpvy[i*3+2]);
+		  printf("];\n");
+		*/
+
 		{
 			double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
 			double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
@@ -638,13 +655,14 @@ int main(int argc, char** argv)
 			nnostars = 0;
 			nnounused = 0;
 
+			//printf("centers=[");
 			for (i=0; i<HEALPIXES; i++) {
 				int N;
 				int destind;
 				double centre[3];
 
 				if ((i * 80 / HEALPIXES) != lastgrass) {
-					printf(".");
+					//printf(".");
 					fflush(stdout);
 					lastgrass = i*80/HEALPIXES;
 				}
@@ -659,7 +677,7 @@ int main(int argc, char** argv)
 				// defined by the healpix boundaries plus quadscale.
 
 				N = res->nres;
-				if (!N) {
+				if (N < 4) {
 					kdtree_free_query(res);
 					nnostars++;
 					continue;
@@ -676,7 +694,7 @@ int main(int argc, char** argv)
 					destind++;
 				}
 				N = destind;
-				if (!N) {
+				if (N < 4) {
 					kdtree_free_query(res);
 					nnounused++;
 					continue;
@@ -702,10 +720,21 @@ int main(int argc, char** argv)
 
 				kdtree_free_query(res);
 
+				//printf("%g,%g,%g;", centre[0], centre[1], centre[2]);
+				/*
+				  printf("center_%i=[%g,%g,%g];\n", i, centre[0], centre[1], centre[2]);
+				  printf("stars_%i=[", i);
+				  for (j=0; j<N; j++) {
+				  printf("%g,%g,%g;", stars[j*3], stars[j*3+1], stars[j*3+2]);
+				  }
+				  printf("];\n");
+				*/
+
 				if (create_quad(stars, inds, N, circle,
 								hp00 + i*3, hpvx + i*3, hpvy + i*3))
 					nthispass++;
 			}
+			//printf("];\n");
 			printf("\n");
 
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
