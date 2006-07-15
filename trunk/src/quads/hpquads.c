@@ -23,7 +23,7 @@
 #include "qfits.h"
 #include "permutedsort.h"
 
-#define OPTIONS "hf:u:l:n:o:i:p:cr:" /* P: */
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:" /* p:P: */
 
 static void print_help(char* progname)
 {
@@ -33,9 +33,9 @@ static void print_help(char* progname)
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
-		   "     [-p <passes>]   number of quad-generating passes through healpixes (inner loop)\n"
+		   "     [-x <x-passes>] number of passes in the x direction\n"
+		   "     [-y <y-passes>] number of passes in the y direction\n"
 		   "     [-r <reuse-times>] number of times a star can be used.\n"
-		   //"     [-P <passes>]   number of quad-generating passes through healpixes (outer loop)\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
 	       "Reads skdt, writes {code, quad}.\n\n"
 	       , progname);
@@ -379,8 +379,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	return rtn;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
 	int argchar;
 	char *quadfname;
 	char *codefname;
@@ -391,29 +390,36 @@ int main(int argc, char** argv)
 	int i;
 	char* basefnin = NULL;
 	char* basefnout = NULL;
-	uint pass, npasses;
+	int xpass, ypass;
 	uint id = 0;
-	int Npasses = 0;
+	int xpasses = 1;
+	int ypasses = 1;
 	bool circle = FALSE;
-	//int Bigpasses = 1;
 	int hp;
 	int Nreuse = 3;
+	double* hp00;
+	double* hpvx;
+	double* hpvy;
+	double radius2;
+	int* perm = NULL;
+	int j, d;
+	int* inds = NULL;
+	double* stars = NULL;
+	int lastgrass = 0;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-			/*
-			  case 'P':
-			  Bigpasses = atoi(optarg);
-			  break;
-			*/
 		case 'r':
 			Nreuse = atoi(optarg);
 			break;
 		case 'c':
 			circle = TRUE;
 			break;
-		case 'p':
-			Npasses = atoi(optarg);
+		case 'x':
+			xpasses = atoi(optarg);
+			break;
+		case 'y':
+			ypasses = atoi(optarg);
 			break;
 		case 'i':
 			id = atoi(optarg);
@@ -455,8 +461,8 @@ int main(int argc, char** argv)
 	HEALPIXES = 12 * Nside * Nside;
 	{
 		double hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HEALPIXES;
-		printf("Nside=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
-		        Nside, HEALPIXES, hparea, sqrt(hparea));
+		printf("Nside=%i.  Nside^2=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
+			   Nside, Nside*Nside, HEALPIXES, hparea, sqrt(hparea));
 	}
 
 	tic();
@@ -544,116 +550,90 @@ int main(int argc, char** argv)
 
 	quadlist = bl_new(1024, sizeof(quad));
 
-	/*
-	  if (Bigpasses > 255) {
-	  fprintf(stderr, "Error, -P must be less than 256.\n");
-	  exit(-1);
-	  }
-	*/
-
+	if (Nreuse > 255) {
+		fprintf(stderr, "Error, reuse (-r) must be less than 256.\n");
+		exit(-1);
+	}
 	nuses = mymalloc(startree->ndata * sizeof(unsigned char));
 	for (i=0; i<startree->ndata; i++)
 		nuses[i] = Nreuse;
-		//nuses[i] = Bigpasses;
+
+	printf("Computing healpix centers...\n");
+
+	hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
+	hpvx = mymalloc(3 * HEALPIXES * sizeof(double));
+	hpvy = mymalloc(3 * HEALPIXES * sizeof(double));
+
+	for (i=0; i<HEALPIXES; i++)
+		healpix_to_xyz_lex(0.0, 0.0, i, Nside,
+						   hp00 + i*3 + 0,
+						   hp00 + i*3 + 1,
+						   hp00 + i*3 + 2);
+
+	printf("Computing healpix bounds...\n");
+	for (i=0; i<HEALPIXES; i++) {
+		uint bighp, x, y;
+		double x1,y1,z1;
+		double x2,y2,z2;
+		x1 = hp00[i*3 + 0];
+		y1 = hp00[i*3 + 1];
+		z1 = hp00[i*3 + 2];
+
+		healpix_decompose_lex(i, &bighp, &x, &y, Nside);
+
+		if (x == Nside-1)
+			healpix_to_xyz_lex(1.0, 0.0, i, Nside, &x2, &y2, &z2);
+		else {
+			uint hp = healpix_compose_lex(bighp, x+1, y, Nside);
+			x2 = hp00[hp*3 + 0];
+			y2 = hp00[hp*3 + 1];
+			z2 = hp00[hp*3 + 2];
+		}
+		hpvx[i*3 + 0] = x2 - x1;
+		hpvx[i*3 + 1] = y2 - y1;
+		hpvx[i*3 + 2] = z2 - z1;
+
+		if (y == Nside-1)
+			healpix_to_xyz_lex(0.0, 1.0, i, Nside, &x2, &y2, &z2);
+		else {
+			uint hp = healpix_compose_lex(bighp, x, y+1, Nside);
+			x2 = hp00[hp*3 + 0];
+			y2 = hp00[hp*3 + 1];
+			z2 = hp00[hp*3 + 2];
+		}
+		hpvy[i*3 + 0] = x2 - x1;
+		hpvy[i*3 + 1] = y2 - y1;
+		hpvy[i*3 + 2] = z2 - z1;
+	}
 
 	{
-		double* hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
-		double* hpvx = mymalloc(3 * HEALPIXES * sizeof(double));
-		double* hpvy = mymalloc(3 * HEALPIXES * sizeof(double));
-		double radius2;
-		int* perm = NULL;
-		int j, d;
-		int* inds = NULL;
-		double* stars = NULL;
-		int lastgrass = 0;
+		double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
+		double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
+		// 1.01 for a bit of safety.  we'll look at a few extra stars.
+		radius2 = square(1.01 * (hprad + quadscale));
 
-		printf("Computing healpix centers...\n");
+		printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
+			   distsq2arcsec(hprad*hprad),
+			   distsq2arcsec(quadscale*quadscale),
+			   distsq2arcsec(radius2));
+	}
 
-		for (i=0; i<HEALPIXES; i++) {
-			healpix_to_xyz_lex(0.0, 0.0, i, Nside,
-							   hp00 + i*3 + 0,
-							   hp00 + i*3 + 1,
-							   hp00 + i*3 + 2);
-			//printf("center(%i)=(%g,%g,%g)\n", i, hp00[i*3+0], hp00[i*3+1], hp00[i*3+2]);
-		}
-
-		/*
-		  printf("hp=[");
-		  for (i=0; i<HEALPIXES; i++)
-		  printf("%g,%g,%g;", hp00[i*3+0], hp00[i*3+1], hp00[i*3+2]);
-		  printf("];\n");
-		*/
-
-		printf("Computing healpix bounds...\n");
-		for (i=0; i<HEALPIXES; i++) {
-			uint bighp, x, y;
-			double x1,y1,z1;
-			double x2,y2,z2;
-			x1 = hp00[i*3 + 0];
-			y1 = hp00[i*3 + 1];
-			z1 = hp00[i*3 + 2];
-
-			healpix_decompose_lex(i, &bighp, &x, &y, Nside);
-
-			if (x == Nside-1)
-				healpix_to_xyz_lex(1.0, 0.0, i, Nside, &x2, &y2, &z2);
-			else {
- 				uint hp = healpix_compose_lex(bighp, x+1, y, Nside);
-				x2 = hp00[hp*3 + 0];
-				y2 = hp00[hp*3 + 1];
-				z2 = hp00[hp*3 + 2];
-			}
-			hpvx[i*3 + 0] = x2 - x1;
-			hpvx[i*3 + 1] = y2 - y1;
-			hpvx[i*3 + 2] = z2 - z1;
-
-			if (y == Nside-1)
-				healpix_to_xyz_lex(0.0, 1.0, i, Nside, &x2, &y2, &z2);
-			else {
- 				uint hp = healpix_compose_lex(bighp, x, y+1, Nside);
-				x2 = hp00[hp*3 + 0];
-				y2 = hp00[hp*3 + 1];
-				z2 = hp00[hp*3 + 2];
-			}
-			hpvy[i*3 + 0] = x2 - x1;
-			hpvy[i*3 + 1] = y2 - y1;
-			hpvy[i*3 + 2] = z2 - z1;
-		}
-
-		/*
-		  printf("hpcenter=[");
-		  for (i=0; i<HEALPIXES; i++)
-		  printf("%g,%g,%g;",
-		  hp00[i*3+0]+0.5*hpvx[i*3+0]+0.5*hpvy[i*3+0],
-		  hp00[i*3+1]+0.5*hpvx[i*3+1]+0.5*hpvy[i*3+1],
-		  hp00[i*3+2]+0.5*hpvx[i*3+2]+0.5*hpvy[i*3+2]);
-		  printf("];\n");
-		*/
-
-		{
-			double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
-			double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
-			// 1.01 for a bit of safety.  we'll look at a few extra stars.
-			radius2 = square(1.01 * (hprad + quadscale));
-
-			printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
-				   distsq2arcsec(hprad*hprad),
-				   distsq2arcsec(quadscale*quadscale),
-				   distsq2arcsec(radius2));
-		}
-
-		npasses = Npasses;
-		for (pass=0; pass<npasses; pass++) {
+	for (xpass=0; xpass<xpasses; xpass++) {
+		for (ypass=0; ypass<ypasses; ypass++) {
 			double dxfrac, dyfrac;
 			kdtree_qres_t* res;
 			int nthispass;
 			int nnostars;
 			int nnounused;
-			dxfrac = dyfrac = 0.5;
-			printf("Pass %i of %i.\n", pass+1, Npasses);
+
+			dxfrac = xpass / (double)xpasses;
+			dyfrac = ypass / (double)ypasses;
+
+			printf("Pass %i of %i.\n", xpass * ypasses + ypass + 1, xpasses * ypasses);
 			nthispass = 0;
 			nnostars = 0;
 			nnounused = 0;
+			lastgrass = 0;
 
 			//printf("centers=[");
 			for (i=0; i<HEALPIXES; i++) {
@@ -662,7 +642,7 @@ int main(int argc, char** argv)
 				double centre[3];
 
 				if ((i * 80 / HEALPIXES) != lastgrass) {
-					//printf(".");
+					printf(".");
 					fflush(stdout);
 					lastgrass = i*80/HEALPIXES;
 				}
@@ -720,21 +700,10 @@ int main(int argc, char** argv)
 
 				kdtree_free_query(res);
 
-				//printf("%g,%g,%g;", centre[0], centre[1], centre[2]);
-				/*
-				  printf("center_%i=[%g,%g,%g];\n", i, centre[0], centre[1], centre[2]);
-				  printf("stars_%i=[", i);
-				  for (j=0; j<N; j++) {
-				  printf("%g,%g,%g;", stars[j*3], stars[j*3+1], stars[j*3+2]);
-				  }
-				  printf("];\n");
-				*/
-
 				if (create_quad(stars, inds, N, circle,
 								hp00 + i*3, hpvx + i*3, hpvy + i*3))
 					nthispass++;
 			}
-			//printf("];\n");
 			printf("\n");
 
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
@@ -748,16 +717,17 @@ int main(int argc, char** argv)
 			printf("Duplicate quads: %i\n", ndupquads);
 			printf("Made %i quads so far.\n", quadnum);
 		}
-
-		free(stars);
-		free(inds);
-		free(perm);
-		free(hp00);
-		free(hpvx);
-		free(hpvy);
 	}
 
+	free(stars);
+	free(inds);
+	free(perm);
+	free(hp00);
+	free(hpvx);
+	free(hpvy);
 	free(nuses);
+
+	printf("Writing quads...\n");
 
 	invperm = mymalloc(startree->ndata * sizeof(int));
 	if (!invperm) {
