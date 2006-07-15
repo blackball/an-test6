@@ -835,7 +835,7 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 	double zfactor = 1.0;
 	uint xp, yp;
 	double x, y, z;
-	double pi = PIl, phi;
+	double pi = M_PI, phi;
 	
 	if (lex)
 		healpix_decompose_lex(hp, &chp, &xp, &yp, Nside);
@@ -895,11 +895,11 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 			y = (Nside - y);
 		}
 
-		A = mysquare(Nside - y);
-		B = mysquare(Nside - x);
+		A = (Nside - y) * (Nside - y);
+		B = (Nside - x) * (Nside - x);
 		a = (A - B);
 		b = -A * pi;
-		c = A * mysquare(pi / 2.0);
+		c = A * pi * pi / 4.0;
 
 		if (a == 0.0) {
 			phit = pi / 4.0;

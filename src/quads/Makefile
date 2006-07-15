@@ -8,7 +8,6 @@ CFLAGS :=
 #fast
 CFLAGS	+= -g
 #CFLAGS += -O0
-#CFLAGS += -O1
 CFLAGS += -O2
 #CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
@@ -115,6 +114,9 @@ EXTRA_EXECS = xylist_texttofits hplimits plotcat
 #an_deduplicate
 
 all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver printsolved
+
+hptst: hptst.o healpix.o
+	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 printsolved: printsolved.o
 	$(CC) $(CFLAGS) -o $@ $^
