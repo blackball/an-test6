@@ -836,7 +836,8 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 	uint xp, yp;
 	double x, y, z;
 	double pi = M_PI, phi;
-	
+	double rad;
+
 	if (lex)
 		healpix_decompose_lex(hp, &chp, &xp, &yp, Nside);
 	else
@@ -944,8 +945,9 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 	if (phi < 0.0)
 		phi += 2*pi;
 
-	*rx = cos(phi);
-	*ry = sin(phi);
+	rad = sqrt(1.0 - z*z);
+	*rx = rad * cos(phi);
+	*ry = rad * sin(phi);
 	*rz = z;
 }
 
