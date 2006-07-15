@@ -49,4 +49,7 @@ void healpix_decompose_lex(uint finehp, uint* bighp, uint* x, uint* y, uint Nsid
 
 Const uint healpix_compose_lex(uint bighp, uint x, uint y, uint Nside);
 
+void healpix_to_xyz_lex(double dx, double dy, uint hp, uint Nside,
+						double* p_x, double *p_y, double *p_z);
+
 #endif

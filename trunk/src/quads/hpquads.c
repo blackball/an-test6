@@ -23,7 +23,7 @@
 #include "qfits.h"
 #include "permutedsort.h"
 
-#define OPTIONS "hf:u:l:n:o:i:p:P:c"
+#define OPTIONS "hf:u:l:n:o:i:p:cr:" /* P: */
 
 static void print_help(char* progname)
 {
@@ -34,7 +34,8 @@ static void print_help(char* progname)
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
 		   "     [-p <passes>]   number of quad-generating passes through healpixes (inner loop)\n"
-		   "     [-P <passes>]   number of quad-generating passes through healpixes (outer loop)\n"
+		   "     [-r <reuse-times>] number of times a star can be used.\n"
+		   //"     [-P <passes>]   number of quad-generating passes through healpixes (outer loop)\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
 	       "Reads skdt, writes {code, quad}.\n\n"
 	       , progname);
@@ -267,13 +268,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	pquads = mycalloc(Nstars*Nstars, sizeof(pquad));
 
 	/*
-	  if (!inbox || !pquads) {
-	  fprintf(stderr, "Failed to alloc inbox or pquads.\n");
-	  exit(-1);
-	  }
-	*/
-
-	/*
 	  Each time through the "for" loop below, we consider a new
 	  star ("newpoint").  First, we try building all quads that
 	  have the new star on the diagonal (star B).  Then, we try
@@ -302,8 +296,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 			thislx2 = thisly2 = 0.0;
 			for (d=0; d<3; d++) {
 				del = pq->midAB[d] - origin[d];
-				thislx2 += (del - vx[d]) * (del - vx[d]);
-				thisly2 += (del - vy[d]) * (del - vy[d]);
+				thislx2 += (del * vx[d]);
+				thisly2 += (del * vy[d]);
 			}
 			if ((thislx2 < 0.0) ||
 				(thislx2 > lx2) ||
@@ -401,13 +395,19 @@ int main(int argc, char** argv)
 	uint id = 0;
 	int Npasses = 0;
 	bool circle = FALSE;
-	int Bigpasses = 1;
+	//int Bigpasses = 1;
 	int hp;
+	int Nreuse = 3;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'P':
-			Bigpasses = atoi(optarg);
+			/*
+			  case 'P':
+			  Bigpasses = atoi(optarg);
+			  break;
+			*/
+		case 'r':
+			Nreuse = atoi(optarg);
 			break;
 		case 'c':
 			circle = TRUE;
@@ -544,14 +544,17 @@ int main(int argc, char** argv)
 
 	quadlist = bl_new(1024, sizeof(quad));
 
-	if (Bigpasses > 255) {
-		fprintf(stderr, "Error, -P must be less than 256.\n");
-		exit(-1);
-	}
+	/*
+	  if (Bigpasses > 255) {
+	  fprintf(stderr, "Error, -P must be less than 256.\n");
+	  exit(-1);
+	  }
+	*/
 
 	nuses = mymalloc(startree->ndata * sizeof(unsigned char));
 	for (i=0; i<startree->ndata; i++)
-		nuses[i] = Bigpasses;
+		nuses[i] = Nreuse;
+		//nuses[i] = Bigpasses;
 
 	{
 		double* hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
@@ -588,10 +591,11 @@ int main(int argc, char** argv)
 			x1 = hp00[i*3 + 0];
 			y1 = hp00[i*3 + 1];
 			z1 = hp00[i*3 + 2];
+
 			healpix_decompose_lex(i, &bighp, &x, &y, Nside);
 
 			if (x == Nside-1)
-				healpix_to_xyz(1.0, 0.0, i, Nside, &x2, &y2, &z2);
+				healpix_to_xyz_lex(1.0, 0.0, i, Nside, &x2, &y2, &z2);
 			else {
  				uint hp = healpix_compose_lex(bighp, x+1, y, Nside);
 				x2 = hp00[hp*3 + 0];
@@ -603,7 +607,7 @@ int main(int argc, char** argv)
 			hpvx[i*3 + 2] = z2 - z1;
 
 			if (y == Nside-1)
-				healpix_to_xyz(0.0, 1.0, i, Nside, &x2, &y2, &z2);
+				healpix_to_xyz_lex(0.0, 1.0, i, Nside, &x2, &y2, &z2);
 			else {
  				uint hp = healpix_compose_lex(bighp, x, y+1, Nside);
 				x2 = hp00[hp*3 + 0];
@@ -657,14 +661,13 @@ int main(int argc, char** argv)
 
 				res = kdtree_rangesearch_nosort(startree, centre, radius2);
 
-				// HACK here - could also check whether stars are in the box
-				// defined by the healpix boundaries plus quadscale...
+				// here we could check whether stars are in the box
+				// defined by the healpix boundaries plus quadscale.
 
 				N = res->nres;
 				if (!N) {
 					kdtree_free_query(res);
 					nnostars++;
-
 					continue;
 				}
 
@@ -688,12 +691,6 @@ int main(int argc, char** argv)
 				// sort the stars in increasing order of index - assume
 				// that this corresponds to decreasing order of brightness.
 				perm = myrealloc(perm, N * sizeof(int));
-				/*
-				  if (!perm) {
-				  fprintf(stderr, "Failed to realloc perm.\n");
-				  exit(-1);
-				  }
-				*/
 				for (j=0; j<N; j++)
 					perm[j] = j;
 
@@ -702,13 +699,6 @@ int main(int argc, char** argv)
 
 				inds  = myrealloc(inds,  N * sizeof(int));
 				stars = myrealloc(stars, N * 3 * sizeof(double));
-
-				/*
-				  if (!inds || !stars) {
-				  fprintf(stderr, "Failed to allocate mem for inds or stars.\n");
-				  exit(-1);
-				  }
-				*/
 
 				for (j=0; j<N; j++) {
 					inds[j] = res->inds[perm[j]];
