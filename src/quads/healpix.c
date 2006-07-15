@@ -827,8 +827,8 @@ int xyztohealpix(double x, double y, double z)
 	}
 }
 
-void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
-                    double* rx, double *ry, double *rz)
+void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
+						   double* rx, double *ry, double *rz, int lex)
 {
 	uint chp;
 	uint equatorial = 1;
@@ -837,7 +837,10 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 	double x, y, z;
 	double pi = PIl, phi;
 	
-	healpix_decompose(hp, &chp, &xp, &yp, Nside);
+	if (lex)
+		healpix_decompose_lex(hp, &chp, &xp, &yp, Nside);
+	else
+		healpix_decompose(hp, &chp, &xp, &yp, Nside);
 
 	// this is x,y position in the healpix reference frame
 	x = xp+dx;
@@ -941,3 +944,15 @@ void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
 	*ry = sin(phi);
 	*rz = z;
 }
+
+void healpix_to_xyz_lex(double dx, double dy, uint hp, uint Nside,
+						double* p_x, double *p_y, double *p_z) {
+	healpix_to_xyz_common(dx, dy, hp, Nside, p_x, p_y, p_z, 1);
+}
+
+void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
+                    double* p_x, double *p_y, double *p_z) {
+	healpix_to_xyz_common(dx, dy, hp, Nside, p_x, p_y, p_z, 0);
+}
+
+
