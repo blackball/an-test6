@@ -567,13 +567,6 @@ int main(int argc, char** argv)
 		double* stars = NULL;
 		int lastgrass = 0;
 
-		/*
-		  if (!hp00 || !hpvx || !hpvy) {
-		  fprintf(stderr, "Failed to allocate memory for healpix centers & vectors.\n");
-		  exit(-1);
-		  }
-		*/
-
 		printf("Computing healpix centers...\n");
 
 		for (i=0; i<HEALPIXES; i++) {

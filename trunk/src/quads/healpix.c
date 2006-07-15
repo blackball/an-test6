@@ -907,7 +907,11 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 			double disc = b*b - 4.0*a*c;
 			if (disc <= 0.0) {
 				phit = -b / (2.0 * a);
-				assert(0.0 <= phit && phit <= pi/2.0);
+				// with Nside=200, hp 349000, and -O2 with gcc 4.0.1, this
+				// assert fails (marginally).
+				//assert(0.0 <= phit && phit <= pi/2.0);
+				if (phit < 0.0) phit = 0.0;
+				if (phit > pi/2.0) phit = pi/2.0;
 			} else {
 				phiP = (-b + sqrt(disc)) / (2.0*a);
 				phiN = (-b - sqrt(disc)) / (2.0*a);
