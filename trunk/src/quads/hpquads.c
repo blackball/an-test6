@@ -574,6 +574,7 @@ int main(int argc, char** argv)
 							   hp00 + i*3 + 0,
 							   hp00 + i*3 + 1,
 							   hp00 + i*3 + 2);
+			//printf("center(%i)=(%g,%g,%g)\n", i, hp00[i*3+0], hp00[i*3+1], hp00[i*3+2]);
 		}
 
 		printf("Computing healpix bounds...\n");
