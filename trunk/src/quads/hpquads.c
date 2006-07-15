@@ -577,10 +577,10 @@ int main(int argc, char** argv)
 		printf("Computing healpix centers...\n");
 
 		for (i=0; i<HEALPIXES; i++) {
-			healpix_to_xyz(0.0, 0.0, i, Nside,
-						   hp00 + i*3 + 0,
-						   hp00 + i*3 + 1,
-						   hp00 + i*3 + 2);
+			healpix_to_xyz_lex(0.0, 0.0, i, Nside,
+							   hp00 + i*3 + 0,
+							   hp00 + i*3 + 1,
+							   hp00 + i*3 + 2);
 		}
 
 		printf("Computing healpix bounds...\n");
