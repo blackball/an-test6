@@ -22,6 +22,8 @@ Const int radectohealpix(double ra, double dec);
 
 Const int xyztohealpix(double x, double y, double z);
 
+Const double healpix_side_length_arcmin(uint Nside);
+
 /**
    The following functions convert (ra,dec) or (x,y,z) into a finely-
    pixelized healpix index, according to the HIERARCHICAL scheme,

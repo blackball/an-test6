@@ -130,7 +130,8 @@ int main(int argc, char** args) {
 
 	HP = 12 * Nside * Nside;
 
-	printf("Nside=%i, HP=%i, maxperhp=%i, HP*maxperhp=%i.\n", Nside, HP, maxperhp, HP*maxperhp);
+	printf("Nside=%i, HP=%i, maxperhp=%i, max number of stars = HP*maxperhp = %i.\n", Nside, HP, maxperhp, HP*maxperhp);
+	printf("Healpix side length: %g arcmin.\n", healpix_side_length_arcmin(Nside));
 	printf("Writing big healpix %i.\n", bighp);
 
 	if (deduprad > 0.0) {

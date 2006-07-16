@@ -461,11 +461,8 @@ int main(int argc, char** argv) {
 	}
 
 	HEALPIXES = 12 * Nside * Nside;
-	{
-		double hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HEALPIXES;
-		printf("Nside=%i.  Nside^2=%i.  Number of healpixes=%i.  Healpix area = %g arcmin^2, length ~ %g arcmin.\n",
-			   Nside, Nside*Nside, HEALPIXES, hparea, sqrt(hparea));
-	}
+	printf("Nside=%i.  Nside^2=%i.  Number of healpixes=%i.  Healpix side length ~ %g arcmin.\n",
+		   Nside, Nside*Nside, HEALPIXES, healpix_side_length_arcmin(Nside));
 
 	tic();
 
