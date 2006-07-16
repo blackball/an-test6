@@ -188,15 +188,27 @@ int main(int argc, char** args) {
 	qfits_header_add(cat->header, "COMMENT", "cut_an command line:", NULL, NULL);
 	fits_add_args(cat->header, args, argc);
 
-	catalog_write_header(cat);
-
 	sprintf(fn, idfn, bighp);
 	id = idfile_open_for_writing(fn);
 	if (!id) {
 		fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
 		exit(-1);
 	}
-	idfile_write_header(id);
+	id->healpix = bighp;
+
+	qfits_header_add(id->header, "HISTORY", "cut_an command line:", NULL, NULL);
+	fits_add_args(id->header, args, argc);
+	qfits_header_add(id->header, "HISTORY", "(end of cut_an command line)", NULL, NULL);
+
+	qfits_header_add(cat->header, "HISTORY", "cut_an command line:", NULL, NULL);
+	fits_add_args(cat->header, args, argc);
+	qfits_header_add(cat->header, "HISTORY", "(end of cut_an command line)", NULL, NULL);
+
+	if (catalog_write_header(cat) ||
+		idfile_write_header(id)) {
+		fprintf(stderr, "Failed to write catalog or idfile header.\n");
+		exit(-1);
+	}
 
 	startoptind = optind;
 	for (; optind<argc; optind++) {

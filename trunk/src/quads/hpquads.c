@@ -765,7 +765,7 @@ int main(int argc, char** argv) {
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
 				   nthispass, HEALPIXES);
 			printf("  %i healpixes had no stars.\n", nnostars);
-			printf("  %i healpixes had some stars.\n", HEALPIXES - nnostars);
+			printf("  %i healpixes had some stars.\n", nyesstars);
 			printf("  %i healpixes had only stars that had been over-used.\n", nnounused);
 
 			// HACK

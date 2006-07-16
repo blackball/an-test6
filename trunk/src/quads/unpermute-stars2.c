@@ -53,6 +53,7 @@ int main(int argc, char **args) {
 	qfits_header* hdr;
 	int healpix;
 	int starhp;
+	int lastgrass;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -149,6 +150,11 @@ int main(int argc, char **args) {
 	qfout->healpix = healpix;
 	idout->healpix = healpix;
 
+	qfout->numstars          = qfin->numstars;
+	qfout->index_scale       = qfin->index_scale;
+	qfout->index_scale_lower = qfin->index_scale_lower;
+	qfout->indexid           = qfin->indexid;
+
 	qfits_header_add(qfout->header, "HISTORY", "unpermute-stars2 command line:", NULL, NULL);
 	fits_add_args(qfout->header, args, argc);
 	qfits_header_add(qfout->header, "HISTORY", "(end of unpermute-stars2 command line)", NULL, NULL);
@@ -167,18 +173,34 @@ int main(int argc, char **args) {
 		exit(-1);
 	}
 
+	printf("Writing IDs...\n");
+	lastgrass = 0;
 	for (i=0; i<treein->ndata; i++) {
 		uint64_t id;
-		int ind = treein->perm[i];
+		int ind;
+		if (i*80/treein->ndata != lastgrass) {
+			printf(".");
+			fflush(stdout);
+			lastgrass = i*80/treein->ndata;
+		}
+		ind = treein->perm[i];
 		id = idfile_get_anid(idin, ind);
 		if (idfile_write_anid(idout, id)) {
 			fprintf(stderr, "Failed to write idfile entry.\n");
 			exit(-1);
 		}
 	}
+	printf("\n");
+	printf("Writing quads...\n");
+	lastgrass = 0;
 	for (i=0; i<qfin->numquads; i++) {
 		int j;
 		uint stars[4];
+		if (i*80/qfin->numquads != lastgrass) {
+			printf(".");
+			fflush(stdout);
+			lastgrass = i*80/qfin->numquads;
+		}
 		quadfile_get_starids(qfin, i, stars, stars+1, stars+2, stars+3);
 		for (j=0; j<4; j++)
 			stars[j] = treein->perm[stars[j]];
@@ -187,6 +209,7 @@ int main(int argc, char **args) {
 			exit(-1);
 		}
 	}
+	printf("\n");
 
 	if (quadfile_fix_header(qfout) ||
 		quadfile_close(qfout) ||
