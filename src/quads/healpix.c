@@ -11,6 +11,11 @@ Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
+Const double healpix_side_length_arcmin(uint Nside) {
+	return sqrt((4.0 * M_PI * mysquare(180.0 * 60.0 / M_PI)) /
+				(double)(12 * Nside * Nside));
+}
+
 static Inline void swap(uint* i1, uint* i2) {
 	uint tmp;
 	tmp = *i1;
