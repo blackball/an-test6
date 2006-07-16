@@ -409,7 +409,7 @@ int main(int argc, char** argv) {
 	int lastgrass = 0;
 	int Nhighwater = 0;
 	unsigned char* tryhealpix;
-	int Ntry;
+	int Ntry, Ntrystart;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -644,6 +644,7 @@ int main(int argc, char** argv) {
 			nnostars = 0;
 			nnounused = 0;
 			lastgrass = 0;
+			Ntrystart = Ntry;
 
 			//printf("centers=[");
 			for (i=0; i<HEALPIXES; i++) {
@@ -654,10 +655,10 @@ int main(int argc, char** argv) {
 				if (!tryhealpix[i])
 					continue;
 
-				if ((ntried * 80 / Ntry) != lastgrass) {
+				if ((ntried * 80 / Ntrystart) != lastgrass) {
 					printf(".");
 					fflush(stdout);
-					lastgrass = ntried * 80 / Ntry;
+					lastgrass = ntried * 80 / Ntrystart;
 				}
 				ntried++;
 
