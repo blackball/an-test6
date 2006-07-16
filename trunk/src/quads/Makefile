@@ -5,16 +5,17 @@ LFLAGS := -lm
 
 CFLAGS :=
 
-#fast
 CFLAGS	+= -g
 #CFLAGS += -O0
-CFLAGS += -O2
-#CFLAGS += -pg
+#CFLAGS += -O2
+CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
-#CFLAGS += -O3 -ffast-math
+CFLAGS += -O3 -ffast-math
 
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
+#	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
+#	-Wmissing-declarations -Wredundant-decls
 
 # check out __attribute__ ((pure))
 # check out __attribute__ ((const))
@@ -22,9 +23,7 @@ CFLAGS += -O2
 # check out __attribute__ ((nonnull))
 
 # to turn off asserts:
-#CFLAGS += -DNDEBUG
-
-#CFLAGS += -Werror
+CFLAGS += -DNDEBUG
 
 CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
@@ -46,10 +45,6 @@ ifeq ($(MACHINE), i686)
 else
 	CFLAGS += -DNOT_686
 endif
-
-
-#	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
-#	-Wmissing-declarations -Wredundant-decls
 
 QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
