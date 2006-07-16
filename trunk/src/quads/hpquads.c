@@ -92,6 +92,14 @@ static void* mycalloc(int n, int sz) {
   }
 */
 
+static int compare_ints(const void* v1, const void* v2) {
+	int i1 = *(int*)v1;
+	int i2 = *(int*)v2;
+	if (i1 < i2) return -1;
+	if (i1 > i2) return 1;
+	return 0;
+}
+
 static int compare_quad(const void* v1, const void* v2) {
 	const quad* q1 = v1;
 	const quad* q2 = v2;
@@ -102,14 +110,6 @@ static int compare_quad(const void* v1, const void* v2) {
 		if (q1->star[i] < q2->star[i])
 			return -1;
 	}
-	return 0;
-}
-
-static int compare_ints(const void* v1, const void* v2) {
-	int i1 = *(int*)v1;
-	int i2 = *(int*)v2;
-	if (i1 < i2) return -1;
-	if (i1 > i2) return 1;
 	return 0;
 }
 
@@ -252,6 +252,10 @@ check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	return destind;
 }
 
+static int Ncq = 0;
+static pquad* cq_pquads;
+static int* cq_inbox;
+
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy) {
@@ -260,13 +264,20 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 
 	uint iA, iB, iC, iD, newpoint;
 	int rtn = 0;
-	pquad* pquads;
-	int* inbox;
 	int ninbox;
 	int i, j, k;
+	int* inbox;
+	pquad* pquads;
 
-	inbox =  mymalloc(Nstars * sizeof(int));
-	pquads = mycalloc(Nstars*Nstars, sizeof(pquad));
+	// ensure the arrays are large enough...
+	if (Nstars > Ncq) {
+		Ncq = Nstars;
+		cq_inbox =  mymalloc(Nstars * sizeof(int));
+		cq_pquads = mymalloc(Nstars*Nstars, sizeof(pquad));
+	}
+	inbox = cq_inbox;
+	pquads = cp_pquads;
+	memset(pquads, 0, Nstars*Nstars*sizeof(pquad));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -375,8 +386,10 @@ static int create_quad(double* stars, int* starinds, int Nstars,
  theend:
 	for (i=0; i<(Nstars*Nstars); i++)
 		free(pquads[i].inbox);
-	free(inbox);
-	free(pquads);
+	/*
+	  free(inbox);
+	  free(pquads);
+	*/
 	return rtn;
 }
 
@@ -629,6 +642,7 @@ int main(int argc, char** argv) {
 			kdtree_qres_t* res;
 			int nthispass;
 			int nnostars;
+			int nyesstars;
 			int nnounused;
 
 			int ntried = 0;
@@ -642,6 +656,7 @@ int main(int argc, char** argv) {
 			printf("Pass %i of %i.\n", xpass * ypasses + ypass + 1, xpasses * ypasses);
 			nthispass = 0;
 			nnostars = 0;
+			nyesstars = 0;
 			nnounused = 0;
 			lastgrass = 0;
 			Ntrystart = Ntry;
@@ -679,6 +694,8 @@ int main(int argc, char** argv) {
 					Ntry--;
 					continue;
 				}
+
+				nyesstars++;
 
 				// remove stars that have no "nuses" left.
 				destind = 0;
