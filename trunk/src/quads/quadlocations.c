@@ -22,11 +22,11 @@ extern int optind, opterr, optopt;
 void print_help(char* progname)
 {
 	fprintf(stderr, "Usage: %s\n"
-			"   -o <output-file-name>\n"
+			"   -o <output-image-file-name>\n"
 			"   [-n <image-size>]  (default 3000)\n"
 			"   [-h]: help\n"
 			"   <base-name> [<base-name> ...]\n\n"
-			"Requires both (objs or skdt) and quad files.\n\n",
+			"Requires both (objs or skdt) and quad files.  Writes a PGM image.\n\n",
 	        progname);
 }
 
