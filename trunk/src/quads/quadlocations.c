@@ -7,6 +7,8 @@
 
 #include "quadfile.h"
 #include "catalog.h"
+#include "kdtree.h"
+#include "kdtree_fits_io.h"
 #include "fileutil.h"
 #include "starutil.h"
 #include "kdtree_io.h"
@@ -24,7 +26,7 @@ void print_help(char* progname)
 			"   [-n <image-size>]  (default 3000)\n"
 			"   [-h]: help\n"
 			"   <base-name> [<base-name> ...]\n\n"
-			"Requires both objs and quad files.\n\n",
+			"Requires both (objs or skdt) and quad files.\n\n",
 	        progname);
 }
 

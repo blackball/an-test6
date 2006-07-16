@@ -73,15 +73,16 @@ static void* mymalloc(int n) {
 	}
 	return rtn;
 }
-static void* mycalloc(int n, int sz) {
-	void* rtn = calloc(n, sz);
-	if (!rtn) {
-		fprintf(stderr, "Failed to calloc %i * %i.\n", n, sz);
-		exit(-1);
-	}
-	return rtn;
-}
+
 /*
+  static void* mycalloc(int n, int sz) {
+  void* rtn = calloc(n, sz);
+  if (!rtn) {
+  fprintf(stderr, "Failed to calloc %i * %i.\n", n, sz);
+  exit(-1);
+  }
+  return rtn;
+  }
   static void* myrealloc(void* p, int n) {
   void* rtn = realloc(p, n);
   if (!rtn) {
@@ -273,10 +274,10 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	if (Nstars > Ncq) {
 		Ncq = Nstars;
 		cq_inbox =  mymalloc(Nstars * sizeof(int));
-		cq_pquads = mymalloc(Nstars*Nstars, sizeof(pquad));
+		cq_pquads = mymalloc(Nstars * Nstars * sizeof(pquad));
 	}
 	inbox = cq_inbox;
-	pquads = cp_pquads;
+	pquads = cq_pquads;
 	memset(pquads, 0, Nstars*Nstars*sizeof(pquad));
 
 	/*
