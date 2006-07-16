@@ -25,10 +25,10 @@
 #include "fitsioutils.h"
 #include "qfits.h"
 
-#define OPTIONS "hf:o:"
+#define OPTIONS "hf:o:q:"
 
 void printHelp(char* progname) {
-	printf("%s -f <input-basename> -o <output-basename>\n",
+	printf("%s -f <input-basename> [-q <input-quadfile-basename>] -o <output-basename>\n",
 		   progname);
 }
 
@@ -46,6 +46,7 @@ int main(int argc, char **args) {
 	char* progname = args[0];
 	char* basein = NULL;
 	char* baseout = NULL;
+	char* basequadin = NULL;
 	char* fn;
 	int i;
 	qfits_header* starhdr;
@@ -55,6 +56,9 @@ int main(int argc, char **args) {
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+		case 'q':
+			basequadin = optarg;
+			break;
         case 'f':
 			basein = optarg;
 			break;
@@ -89,7 +93,10 @@ int main(int argc, char **args) {
 	}
 	free_fn(fn);
 
-	fn = mk_quadfn(basein);
+	if (basequadin)
+		fn = mk_quadfn(basequadin);
+	else
+		fn = mk_quadfn(basein);
 	printf("Reading quadfile from %s ...\n", fn);
 	qfin = quadfile_open(fn, 0);
 	if (!qfin) {
