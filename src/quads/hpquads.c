@@ -766,7 +766,7 @@ int main(int argc, char** argv) {
 				   nthispass, HEALPIXES);
 			printf("  %i healpixes had no stars.\n", nnostars);
 			printf("  %i healpixes had some stars.\n", nyesstars);
-			printf("  %i healpixes had only stars that had been over-used.\n", nnounused);
+			printf("  %i healpixes had only stars that had been overused.\n", nnounused);
 
 			// HACK
 			quadnum = bl_size(quadlist);
