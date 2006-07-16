@@ -1,0 +1,56 @@
+graph P {
+	graph [ rankdir = LR ];
+	node [ shape=box ];
+	edge [ dir=forward ];
+	node [ style=filled, fillcolor=azure2 ];
+	ancat [ label="Astrometry.net Catalog\n(an*.fits)" ];
+
+	quad3  [ label="Quad stars (3)\n(.quad)" ];
+	ckdt2  [ label="Code kdtree (2)\n(.ckdt)" ];
+	skdt2 [ label="Star kdtree (2)\n(.skdt)" ];
+	id2    [ label="Star ID (2)\n(.id)" ];
+
+	node [ fillcolor=lightyellow ];
+	match [ label="Match list\n(.match)" ];
+
+	node [ style="" ];
+	id    [ label="Star ID\n(.id)" ];
+	skdt  [ label="Star kdtree\n(.skdt)" ];
+	objs  [ label="Catalog\n(.objs)" ];
+	quad  [ label="Quad stars\n(.quad)" ];
+	ckdt  [ label="Code kdtree\n(.ckdt)" ];
+	code  [ label="Quad codes\n(.code)" ];
+	qidx [ label="Quad index\n(.qidx)" ];
+	quad2  [ label="Quad stars (2)\n(.quad)" ];
+
+
+	node [ shape=ellipse ];
+	ancat -- cut_an
+	cut_an -- objs
+	cut_an -- id
+	objs -- startree -- skdt
+
+	skdt -- hpquads
+	hpquads -- code
+	hpquads -- quad
+	code -- codetree -- ckdt
+
+	skdt -- unpermute_stars2 -- skdt2
+	id   -- unpermute_stars2 [ minlen=5 ];
+	unpermute_stars2 -- id2
+	quad -- unpermute_stars2 -- quad2
+
+	quad2 -- unpermute_quads -- quad3
+	ckdt  -- unpermute_quads -- ckdt2
+
+	skdt2 -- slave [ minlen=3 ];
+	ckdt2 -- slave
+	quad3 -- slave
+
+	slave -- match
+
+	quad3 -- quadidx -- qidx [ style=dashed ];
+}
+
+//   dot -Tps2 -o pipelineall.eps pipelineall.dot
+//   epstopng pipelineall.eps

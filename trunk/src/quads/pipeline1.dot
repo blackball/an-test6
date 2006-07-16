@@ -3,28 +3,19 @@ graph indexpipeline {
 	node [ shape=box ];
 	edge [ dir=forward ];
 	node [ style=filled, fillcolor=azure2 ];
-	//skdt2 [ label="Star kdtree\n(.skdt)" ];
-	objs2  [ label="Catalog\n(.objs)" ];
-	quad3  [ label="Quad stars (3)\n(.quad)" ];
-	ckdt2  [ label="Code kdtree (2)\n(.ckdt)" ];
-	//id2    [ label="Star ID\n(.id)" ];
+	skdt [ label="Star kdtree\n(.skdt)" ];
+	quad  [ label="Quad stars\n(.quad)" ];
+	ckdt  [ label="Code kdtree\n(.ckdt)" ];
 	node [ style="" ];
 	code  [ label="Quad codes\n(.code)" ];
-	code2  [ label="Quad codes (2)\n(.code)" ];
-	quad  [ label="Quad stars\n(.quad)" ];
-	quad2  [ label="Quad stars (2)\n(.quad)" ];
-	ckdt  [ label="Code kdtree\n(.ckdt)" ];
 
 	node [ shape=ellipse ];
-	objs2 -- hpquads
-	hpquads -- code -- dedup_index -- code2
-	hpquads -- quad -- dedup_index -- quad2
-	code2 -- codetree -- ckdt
-	ckdt -- unpermute_quads -- ckdt2
-	quad2 -- unpermute_quads [ minlen=3 ];
-	unpermute_quads -- quad3
-}
+	skdt -- hpquads
+	hpquads -- code
+	hpquads -- quad
+	code -- codetree -- ckdt
 
+}
 
 // render with:
 //   dot -Tps2 -o pipeline1.eps pipeline1.dot
