@@ -408,6 +408,8 @@ int main(int argc, char** argv) {
 	double* stars = NULL;
 	int lastgrass = 0;
 	int Nhighwater = 0;
+	unsigned char* tryhealpix;
+	int Ntry;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -617,6 +619,10 @@ int main(int argc, char** argv) {
 			   distsq2arcsec(radius2));
 	}
 
+	tryhealpix = malloc(HEALPIXES * sizeof(unsigned char));
+	memset(tryhealpix, 1, HEALPIXES * sizeof(unsigned char));
+	Ntry = HEALPIXES;
+
 	for (xpass=0; xpass<xpasses; xpass++) {
 		for (ypass=0; ypass<ypasses; ypass++) {
 			double dxfrac, dyfrac;
@@ -624,6 +630,11 @@ int main(int argc, char** argv) {
 			int nthispass;
 			int nnostars;
 			int nnounused;
+
+			int ntried = 0;
+
+			int nstarstotal = 0;
+			int ncounted = 0;
 
 			dxfrac = xpass / (double)xpasses;
 			dyfrac = ypass / (double)ypasses;
@@ -640,11 +651,15 @@ int main(int argc, char** argv) {
 				int destind;
 				double centre[3];
 
-				if ((i * 80 / HEALPIXES) != lastgrass) {
+				if (!tryhealpix[i])
+					continue;
+
+				if ((ntried * 80 / Ntry) != lastgrass) {
 					printf(".");
 					fflush(stdout);
-					lastgrass = i*80/HEALPIXES;
+					lastgrass = ntried * 80 / Ntry;
 				}
+				ntried++;
 
 				centre[0] = hp00[i*3+0] + hpvx[i*3+0] * dxfrac + hpvy[i*3+0] * dyfrac;
 				centre[1] = hp00[i*3+1] + hpvx[i*3+1] * dxfrac + hpvy[i*3+1] * dyfrac;
@@ -659,6 +674,8 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnostars++;
+					tryhealpix[i] = 0;
+					Ntry--;
 					continue;
 				}
 
@@ -676,6 +693,8 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnounused++;
+					tryhealpix[i] = 0;
+					Ntry--;
 					continue;
 				}
 
@@ -698,6 +717,9 @@ int main(int argc, char** argv) {
 					Nhighwater = N;
 				}
 
+				nstarstotal += N;
+				ncounted++;
+
 				for (j=0; j<N; j++)
 					perm[j] = j;
 
@@ -718,6 +740,9 @@ int main(int argc, char** argv) {
 			}
 			printf("\n");
 
+			printf("Each non-empty healpix had on average %g stars.\n",
+				   nstarstotal / (double)ncounted);
+
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
 				   nthispass, HEALPIXES);
 			printf("  %i healpixes had no stars.\n", nnostars);
@@ -731,6 +756,7 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	free(tryhealpix);
 	free(stars);
 	free(inds);
 	free(perm);
