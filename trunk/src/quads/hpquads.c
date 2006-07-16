@@ -81,15 +81,16 @@ static void* mycalloc(int n, int sz) {
 	}
 	return rtn;
 }
-static void* myrealloc(void* p, int n) {
-	void* rtn = realloc(p, n);
-	if (!rtn) {
-		fprintf(stderr, "Failed to realloc %i.\n", n);
-		exit(-1);
-	}
-	return rtn;
-}
-
+/*
+  static void* myrealloc(void* p, int n) {
+  void* rtn = realloc(p, n);
+  if (!rtn) {
+  fprintf(stderr, "Failed to realloc %i.\n", n);
+  exit(-1);
+  }
+  return rtn;
+  }
+*/
 
 static int compare_quad(const void* v1, const void* v2) {
 	const quad* q1 = v1;
@@ -406,6 +407,7 @@ int main(int argc, char** argv) {
 	int* inds = NULL;
 	double* stars = NULL;
 	int lastgrass = 0;
+	int Nhighwater = 0;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -682,15 +684,28 @@ int main(int argc, char** argv) {
 
 				// sort the stars in increasing order of index - assume
 				// that this corresponds to decreasing order of brightness.
-				perm = myrealloc(perm, N * sizeof(int));
+
+				if (N > Nhighwater) {
+					// enlarge arrays.
+					/*
+					  perm = myrealloc(perm, N * sizeof(int));
+					  inds  = myrealloc(inds,  N * sizeof(int));
+					  stars = myrealloc(stars, N * 3 * sizeof(double));
+					*/
+					free(perm);
+					free(inds);
+					free(stars);
+					perm = mymalloc(N * sizeof(int));
+					inds  = mymalloc(N * sizeof(int));
+					stars = mymalloc(N * 3 * sizeof(double));
+					Nhighwater = N;
+				}
+
 				for (j=0; j<N; j++)
 					perm[j] = j;
 
 				permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
 				permuted_sort(perm, N);
-
-				inds  = myrealloc(inds,  N * sizeof(int));
-				stars = myrealloc(stars, N * 3 * sizeof(double));
 
 				for (j=0; j<N; j++) {
 					inds[j] = res->inds[perm[j]];
