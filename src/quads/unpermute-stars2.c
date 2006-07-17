@@ -54,6 +54,7 @@ int main(int argc, char **args) {
 	int healpix;
 	int starhp;
 	int lastgrass;
+	int* invperm;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -191,7 +192,12 @@ int main(int argc, char **args) {
 		}
 	}
 	printf("\n");
+
 	printf("Writing quads...\n");
+
+	invperm = malloc(treein->ndata * sizeof(int));
+	kdtree_inverse_permutation(treein, invperm);
+
 	lastgrass = 0;
 	for (i=0; i<qfin->numquads; i++) {
 		int j;
@@ -203,13 +209,16 @@ int main(int argc, char **args) {
 		}
 		quadfile_get_starids(qfin, i, stars, stars+1, stars+2, stars+3);
 		for (j=0; j<4; j++)
-			stars[j] = treein->perm[stars[j]];
+			stars[j] = invperm[stars[j]];
+			//stars[j] = treein->perm[stars[j]];
 		if (quadfile_write_quad(qfout, stars[0], stars[1], stars[2], stars[3])) {
 			fprintf(stderr, "Failed to write quadfile entry.\n");
 			exit(-1);
 		}
 	}
 	printf("\n");
+
+	free(invperm);
 
 	if (quadfile_fix_header(qfout) ||
 		quadfile_close(qfout) ||
