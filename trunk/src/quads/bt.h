@@ -14,7 +14,8 @@ struct bt_node {
 	  };
 	*/
 	struct bt_node* children[2];
-	// the data block owned by this leaf node.
+	// if leaf: the data block owned by this leaf node.
+	// else: the leftmost data block in this subtree.
 	bl_node* node;
 	// number of elements in the left subtree.
 	int Nleft;
@@ -22,6 +23,9 @@ struct bt_node {
 	int Nright;
 	// AVL balance
 	signed char balance;
+
+	// DEBUG
+	int nodenum;
 };
 typedef struct bt_node bt_node;
 
@@ -44,5 +48,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare);
 void* bt_access(bt* tree, int index);
 
 void bt_print(bt* tree, void (*print_element)(void* val));
+
+void bt_print_structure(bt* tree, void (*print_element)(void* val));
 
 #endif
