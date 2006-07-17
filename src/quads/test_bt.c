@@ -41,5 +41,7 @@ int main() {
 	}
 	printf("\n");
 
+	bt_free(tree);
+
 	return 0;
 }
