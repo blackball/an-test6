@@ -1,38 +1,9 @@
 /**
-  Reads a .code file, projects each code onto each pair of axes, and
-  histograms the results.  Writes out the histograms as Matlab literals.
+  Reads a .code or .ckdt file, projects each code onto each pair of axes,
+  and histograms the results.  Writes out the histograms as Matlab literals.
 
-  Pipe the output to a file like "hists.m", then in Matlab, do
-
-  hists
-  clf;
-  for i=1:3,
-  for j=0:(i-1),
-  subplot(3,3,(i-1)*3+j+1);
-  mesh(eval(sprintf('hist_%i_%i', i, j)));
-  end;
-  end
-
-  or
-
-  for i=1:3,for j=0:(i-1),subplot(3,3,(i-1)*3+j+1);surf(eval(sprintf('hist_%i_%i', i, j)));set(gca,'XTickLabel',{});set(gca,'YTickLabel',{});end;end
-  set(gca,'ZTickLabel',{});
-
-  for i=1:3,for j=0:(i-1),subplot(3,3,(i-1)*3+j+1);surf(eval(sprintf('hist_%i_%i', i, j)));set(gca,'XTickLabel',{});set(gca,'YTickLabel',{});view(2);axis tight; end; end
-
-  set(gca,'ZTickLabel',{});
-
-  mx=max(max(max(max(hist_1_0,hist_2_0),max(max(hist_2_1,hist_3_0),max(hist_3_1,hist_3_2)))))
-  mn=min(min(min(min(hist_1_0,hist_2_0),min(min(hist_2_1,hist_3_0),min(hist_3_1,hist_3_2)))))
-  for i=1:3,for j=0:(i-1),subplot(3,3,(i-1)*3+j+1);h=eval(sprintf('hist_%i_%i', i, j));surf(h);set(gca,'XTickLabel',{});set(gca,'YTickLabel',{});a=axis;a(5)=0;a(6)=mx*1.2;axis(a);if (~((i==1)*(j==0))),set(gca,'ZTickLabel',{});end;stddev=sqrt(var(h(1:length(h)))), end; end
-
-  mx=max(max(max(max(hist_1_0,hist_2_0),max(max(hist_2_1,hist_3_0),max(hist_3_1,hist_3_2)))))
-  mn=min(min(min(min(hist_1_0,hist_2_0),min(min(hist_2_1,hist_3_0),min(hist_3_1,hist_3_2)))))
-  for i=1:3,for j=0:(i-1),subplot(3,3,(i-1)*3+j+1);h=eval(sprintf('hist_%i_%i', i, j));surf(h);set(gca,'XTickLabel',{});set(gca,'YTickLabel',{});a=axis;a(5)=0;a(6)=mx*1.2;axis(a);if (~((i==1)*(j==0)));end;stddev=sqrt(var(h(1:length(h)))), end; end
-
-  For the one-d projections, try something like
-  for i=1:4, subplot(4,1,i); bar(eval(sprintf('hist_%i', (i-1)))); axis([0 100 0 1.5e5]); set(gca,'XTickLabel',{}); end
-
+  Pipe the output to a file like "hists.m", then in Matlab run the
+  "codeprojections.m" script.
 */
 
 #include <string.h>
@@ -63,7 +34,7 @@ static void print_help(char* progname)
 // 2-D hists
 int** hists = NULL;
 double** dhists = NULL;
-int Nbins = 20;
+int Nbins = 40;
 int Dims;
 
 // 2-D hist of {C,D}x,{C,D}y
@@ -221,8 +192,9 @@ int main(int argc, char *argv[])
 			(circle ? "has" : "does not have"));
 
 	if (circle) {
-		minvalue = 0.5 - M_SQRT1_2;
-		scale = M_SQRT1_2;
+		double margin = 0.1;
+		minvalue = 0.5 - M_SQRT1_2 - (0.5 * margin);
+		scale = M_SQRT1_2 + margin;
 	} else {
 		minvalue = 0.0;
 		scale = 1.0;

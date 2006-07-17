@@ -21,10 +21,11 @@ for i=1:3,
   for j=0:(i-1),
     subplot(3,3,(i-1)*3+j+1);
     h=eval(sprintf('hist_%i_%i', i, j));
-    s=surf(h);
-	set(s, 'EdgeAlpha', 0);
-	view(0,90);
-	axis tight;
+    %s=surf(h);
+    %set(s, 'EdgeAlpha', 0);
+    %view(0,90);
+    imagesc(h);
+    axis tight;
 	axis square;
     set(gca,'XTickLabel',{});
     set(gca,'YTickLabel',{});
@@ -44,11 +45,12 @@ end
 
 figure(4);
 subplot(1,1,1);
-s=surf(hist_xy);
-set(s, 'EdgeAlpha', 0);
+%s=surf(hist_xy);
+%set(s, 'EdgeAlpha', 0);
+%view(0,90);
+imagesc(hist_xy);
 set(gca,'XTickLabel',{});
 set(gca,'YTickLabel',{});
-view(0,90);
 axis tight;
 axis square;
 xlabel('x')
