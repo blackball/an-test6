@@ -2,6 +2,7 @@
 #define BT_H
 
 #include "starutil.h"
+#include "keywords.h"
 
 #define NODENUM 0
 
@@ -40,11 +41,11 @@ typedef struct bt bt;
 
 typedef int (*compare_func)(const void* v1, const void* v2);
 
-bt* bt_new(int datasize, int blocksize);
+Malloc bt* bt_new(int datasize, int blocksize);
 
 void bt_free(bt* tree);
 
-int bt_size(bt* tree);
+Pure Inline int bt_size(bt* tree);
 
 bool bt_insert(bt* tree, void* data, bool unique, compare_func compare);
 

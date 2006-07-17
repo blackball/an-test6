@@ -7,10 +7,10 @@ CFLAGS :=
 
 CFLAGS	+= -g
 #CFLAGS += -O0
-#CFLAGS += -O2
+CFLAGS += -O2
 CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math
+#CFLAGS += -O3 -ffast-math
 
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
