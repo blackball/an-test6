@@ -6,11 +6,11 @@ LFLAGS := -lm
 CFLAGS :=
 
 CFLAGS	+= -g
-#CFLAGS += -O0
+CFLAGS += -O0
 #CFLAGS += -O2
-CFLAGS += -pg
+#CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math
+#CFLAGS += -O3 -ffast-math
 
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
@@ -142,6 +142,9 @@ $(EXECS) :: %: %.o $(OBJ)
 
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
+
+test_bt: test_bt.o bt.o bl.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o \
 	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_OBJ)
