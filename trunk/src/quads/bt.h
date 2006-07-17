@@ -4,15 +4,6 @@
 #include "bl.h"
 
 struct bt_node {
-	/*
-	  union {
-	  struct {
-	  struct bt_node* left;
-	  struct bt_node* right;
-	  } lr;
-	  struct bt_node* children[2];
-	  };
-	*/
 	struct bt_node* children[2];
 	// if leaf: the data block owned by this leaf node.
 	// else: the leftmost data block in this subtree.
@@ -42,6 +33,8 @@ typedef int (*compare_func)(const void* v1, const void* v2);
 typedef unsigned char bool;
 
 bt* bt_new(int datasize, int blocksize);
+
+void bt_free(bt* tree);
 
 bool bt_insert(bt* tree, void* data, bool unique, compare_func compare);
 
