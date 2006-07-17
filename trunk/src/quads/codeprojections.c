@@ -194,7 +194,8 @@ int main(int argc, char *argv[])
 	if (circle) {
 		double margin = 0.1;
 		minvalue = 0.5 - M_SQRT1_2 - (0.5 * margin);
-		scale = M_SQRT1_2 + margin;
+		//scale = M_SQRT1_2 + margin;
+		scale = 1.0 / (M_SQRT2 + margin);
 	} else {
 		minvalue = 0.0;
 		scale = 1.0;
