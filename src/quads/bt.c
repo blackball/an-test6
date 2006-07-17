@@ -8,10 +8,16 @@
 #define FALSE 0
 #define TRUE 1
 
+// DEBUG
+static void print_int(void* v1) {
+	int i = *(int*)v1;
+	printf("%i ", i);
+}
+
+
 // data follows the bl_node*.
 #define NODE_DATA(node) ((void*)(((bl_node*)(node)) + 1))
 #define NODE_CHARDATA(node) ((char*)(((bl_node*)(node)) + 1))
-//#define NODE_INTDATA(node) ((int*)(((bl_node*)(node)) + 1))
 
 bt* bt_new(int datasize, int blocksize) {
 	bt* tree = calloc(1, sizeof(bt));
@@ -33,11 +39,13 @@ static void* first_element(bt_node* n) {
 }
 
 static bt_node* bt_new_node(bt* tree) {
+	static int nodenum = 1;
 	bt_node* n = calloc(1, sizeof(bt_node));
 	if (!n) {
 		fprintf(stderr, "Failed to allocate a new bt_node: %s\n", strerror(errno));
 		return NULL;
 	}
+	n->nodenum = nodenum++;
 	return n;
 }
 
@@ -49,6 +57,7 @@ static bt_node* bt_new_leaf(bt* tree) {
 	n->node->N = 0;
 	return n;
 }
+
 
 static bool bt_node_insert(bt* tree, bt_node* node, void* data, bool unique,
 						   compare_func compare, void* overflow) {
@@ -114,6 +123,38 @@ static void increment_nleftright(bt_node** ancestors, int nancestors, bt_node* c
 	}
 }
 
+static bt_node* next_node(bt_node** ancestors, int nancestors,
+						  bt_node* child,
+						  bt_node** nextancestors, int* nnextancestors) {
+	// -first, find the first ancestor of whom we are a left
+	//  (grand^n)-child.
+	bt_node* parent;
+	int i, j;
+	for (i=nancestors-1; i>=0; i--) {
+		parent = ancestors[i];
+		if (parent->children[0] == child)
+			break;
+		child = parent;
+	}
+	if (i < 0) {
+		// no next node.
+		return NULL;
+	}
+
+	// we share ancestors from the root to "parent".
+	for (j=i; j>=0; j--)
+		nextancestors[j] = ancestors[j];
+	*nnextancestors = i+1;
+
+	// -next, find the leftmost leaf of the parent's right branch.
+	child = parent->children[1];
+	while (child->children[0]) {
+		nextancestors[(*nnextancestors)++] = child;
+	    child = child->children[0];
+	}
+	return child;
+}
+
 #define AVL_MAX_HEIGHT 32
 
 bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
@@ -122,75 +163,105 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bt_node *n;     /* Newly inserted node. */
 	bt_node *w;     /* New root of rebalanced subtree. */
 	int dir;                /* Direction to descend. */
+	bt_node* nq;
 
 	bt_node* ancestors[AVL_MAX_HEIGHT];
+	int nancestors = 0;
 	unsigned char da[AVL_MAX_HEIGHT]; /* Cached comparison results. */
 	int k = 0;              /* Number of cached results. */
 	unsigned char overflow[tree->datasize];
 	bool rtn;
 	bool willfit;
+	int cmp;
+	bt_node* lastcompared;
+	int lastcmp;
 
 	if (!tree->root) {
 		// inserting the first element...
 		n = bt_new_leaf(tree);
 		tree->root = n;
 		bt_node_insert(tree, n, data, unique, compare, NULL);
-		tree->root->balance = -1;
+		tree->root->balance = 0;
 		return TRUE;
 	}
 
 	z = y = tree->root;
 	dir = 0;
 	for (q = z, p = y; p; q = p, p = p->children[dir]) {
-		int cmp = compare(data, first_element(p));
+		if (p->children[1]) {
+			cmp = compare(data, first_element(p->children[1]));
+			lastcmp = cmp;
+			lastcompared = p->children[1];
+		} else
+			cmp = -1;
 		if (p->balance != 0) {
-			z = q, y = p, k = 0;
+			z = q;
+			y = p;
+			k = 0;
 		}
-		ancestors[k] = p;
+		ancestors[nancestors++] = p;
+		//da[k++] = dir = (cmp >= 0);
 		da[k++] = dir = (cmp > 0);
-    }
+	}
+	nancestors--;
 
 	// will this element fit in the current node?
 	willfit = (q->node->N < tree->blocksize);
-	rtn = bt_node_insert(tree, q, data, unique, compare, overflow);
-	// duplicate value?
-	if (!rtn)
-		return rtn;
 	if (willfit) {
-		increment_nleftright(ancestors, k, q);
-		return rtn;
+		rtn = bt_node_insert(tree, q, data, unique, compare, overflow);
+		// duplicate value?
+		if (!rtn)
+			return rtn;
+		increment_nleftright(ancestors, nancestors, q);
+		return TRUE;
 	}
 
-	// is there room in the next node?
-	{
-		// find the next node:
-		// -first, find the first ancestor of whom we are a left
-		//  (grand^n)-child.
-		bt_node* granny;
-		bt_node* child;
+	if (lastcompared != q)
+		cmp = compare(data, first_element(q));
+	else
+		cmp = lastcmp;
+
+	if (cmp > 0) {
+		// insert the new element into this node and shuffle the
+		// overflowing element (which may be the new element)
+		// into the next node, if it exists, or a new node.
 		bt_node* nextnode;
-		int i;
-		child = q;
-		for (i=k-1; i>=0; i--) {
-			granny = ancestors[i];
-			if (granny->children[0] == child)
-				break;
-			child = granny;
-		}
-		if (i < 0) {
-			// no next node.
-			nextnode = NULL;
-		} else {
-			// -next, find the leftmost leaf.
-			nextnode = granny;
-			while (nextnode->children[0])
-				nextnode = nextnode->children[0];
-		}
+		bt_node* nextancestors[AVL_MAX_HEIGHT];
+		int nnextancestors;
+
+		/*
+		  HACK - should we traverse the tree looking for the next node,
+		  or just take the right sibling if we're the left child of a
+		  balanced parent?
+		*/
+
+		rtn = bt_node_insert(tree, q, data, unique, compare, overflow);
+		if (!rtn)
+			// duplicate value.
+			return rtn;
+		nextnode = next_node(ancestors, nancestors, q, nextancestors, &nnextancestors);
 		if (nextnode && (nextnode->node->N < tree->blocksize)) {
 			// there's room; insert the element!
+
+			printf("inserting element in next node (%i)\n", nextnode->nodenum);
+
 			rtn = bt_node_insert(tree, nextnode, overflow, unique, compare, NULL);
-			increment_nleftright(ancestors, k, nextnode);
+			increment_nleftright(nextancestors, nnextancestors, nextnode);
+
+			bt_print(tree, print_int);
+			printf("\n");
+
+			return TRUE;
 		}
+
+		// no room (or no next node); add a new node to the right to hold
+		// the overflowed data.
+		dir = 1;
+		data = overflow;
+
+	} else {
+		// add a new node to the left.
+		dir = 0;
 	}
 
 	// create a new node to hold this element.
@@ -199,25 +270,38 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		return FALSE;
 
 	// create a new node to hold q's data.
-	{
-		bt_node* nq = bt_new_node(tree);
-		q->children[1-dir] = nq;
-		nq->node = q->node;
-		q->node = NULL;
+	nq = bt_new_node(tree);
+	if (!nq)
+		return FALSE;
+	q->children[1-dir] = nq;
+	nq->node = q->node;
+	q->node = q->children[0]->node;
+	if (dir) {
 		q->Nleft = nq->node->N;
+		q->Nright = 1;
+	} else {
+		q->Nright = nq->node->N;
+		q->Nleft = 1;
 	}
 
-	bt_node_insert(tree, n, overflow, unique, compare, NULL);
-	increment_nleftright(ancestors, k, n);
+	bt_node_insert(tree, n, data, unique, compare, NULL);
+	increment_nleftright(ancestors, nancestors, q);
 
 	if (!y)
 		return TRUE;
 
-	for (p = y, k = 0; p != n; p = p->children[da[k]], k++)
+	for (p = y, k = 0; p != q; p = p->children[da[k]], k++)
 		if (da[k] == 0)
 			p->balance--;
 		else
 			p->balance++;
+
+	/*
+	  printf("After updating balance:\n");
+	  bt_print_structure(tree, print_int);
+	  printf("\n");
+	  printf("Node y = %i.\n", y->nodenum);
+	*/
 
 	if (y->balance == -2) {
 		bt_node *x = y->children[0];
@@ -229,6 +313,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 
 			y->Nleft  = x->Nright;
 			x->Nright = y->Nleft + y->Nright;
+			y->node = y->children[0]->node;
+
         } else {
 			assert (x->balance == 1);
 			w = x->children[1];
@@ -241,6 +327,9 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			w->Nleft  = x->Nleft + x->Nright;
 			y->Nleft  = w->Nright;
 			w->Nright = y->Nleft + y->Nright;
+
+			w->node = w->children[0]->node;
+			y->node = y->children[0]->node;
 
 			if (w->balance == -1) {
 				x->balance = 0;
@@ -264,6 +353,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			y->Nright = x->Nleft;
 			x->Nleft  = y->Nleft + y->Nright;
 
+			x->node = x->children[0]->node;
+
         } else {
 			assert (x->balance == -1);
 			w = x->children[0];
@@ -277,6 +368,9 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			y->Nright = w->Nleft;
 			w->Nleft  = y->Nleft + y->Nright;
 
+			x->node = x->children[0]->node;
+			w->node = w->children[0]->node;
+
 			if (w->balance == 1) {
 				x->balance = 0;
 				y->balance = -1;
@@ -289,25 +383,36 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			w->balance = 0;
         }
     } else
-		return TRUE;
+		goto finished;
 
 	//z->children[y != z->children[0]] = w;
-	if (y == z->children[0]) {
-		z->children[0] = w;
-		z->Nleft = w->Nleft + w->Nright;
+	if (y == tree->root) {
+		tree->root = w;
 	} else {
-		z->children[1] = w;
-		z->Nright = w->Nleft + w->Nright;
+		if (y == z->children[0]) {
+			z->children[0] = w;
+			z->Nleft = w->Nleft + w->Nright;
+			z->node = w->node;
+		} else {
+			z->children[1] = w;
+			z->Nright = w->Nleft + w->Nright;
+		}
 	}
 
+ finished:
+	/*
+	  printf("After rotating the tree:\n");
+	  bt_print_structure(tree, print_int);
+	  printf("\n");
+	*/
 	return TRUE;
 }
 
 void* bt_access(bt* tree, int index) {
 	bt_node* n = tree->root;
 	int offset = index;
-	while (!n->node) {
-		if (offset > n->Nleft) {
+	while (n->children[0]) {
+		if (offset >= n->Nleft) {
 			// right child
 			offset -= n->Nleft;
 			n = n->children[1];
@@ -322,8 +427,10 @@ static void bt_print_node(bt* tree, bt_node* node, char* indent,
 						  void (*print_element)(void* val)) {
 	if (node->children[0] || node->children[1]) {
 		char* subind;
-		printf("%sNleft=%i, Nright=%i (sum=%i), balance %i.\n",
-			   indent, node->Nleft, node->Nright, node->Nleft + node->Nright, node->balance);
+		printf("%sNode %i.  Nleft=%i, Nright=%i (sum=%i), balance %i.\n",
+			   indent, 
+			   node->nodenum,
+			   node->Nleft, node->Nright, node->Nleft + node->Nright, node->balance);
 		subind = malloc(strlen(indent) + 2 + 1);
 		sprintf(subind, "%s  ", indent);
 		if (node->children[0]) {
@@ -340,12 +447,14 @@ static void bt_print_node(bt* tree, bt_node* node, char* indent,
 	} else {
 		int i;
 		if (node->node) {
-			printf("%sLeaf: N=%i.\n", indent, node->node->N);
-			printf("%s[ ", indent);
-			for (i=0; i<node->node->N; i++) {
-				print_element(get_element(tree, node, i));
+			printf("%sNode %i: Leaf: N=%i.\n", indent, node->nodenum, node->node->N);
+			if (print_element) {
+				printf("%s[ ", indent);
+				for (i=0; i<node->node->N; i++) {
+					print_element(get_element(tree, node, i));
+				}
+				printf("]\n");
 			}
-			printf("]\n");
 		} else {
 			printf("%sEmpty node.\n", indent);
 		}
@@ -361,3 +470,40 @@ void bt_print(bt* tree, void (*print_element)(void* val)) {
 	}
 	bt_print_node(tree, tree->root, "  ", print_element);
 }
+
+static void bt_print_struct_node(bt* tree, bt_node* node, char* indent,
+								 void (*print_element)(void* val)) {
+	printf("%s%i (%i)", indent, node->nodenum, node->balance);
+	if (node->children[0] || node->children[1]) {
+		char* subind;
+		printf("\n");
+		subind = malloc(strlen(indent) + 3 + 1);
+		sprintf(subind, "%s|--", indent);
+		if (node->children[0]) {
+			bt_print_struct_node(tree, node->children[0], subind, print_element);
+		} else
+			printf("%s|--x\n", indent);
+
+		if (node->children[1]) {
+			bt_print_struct_node(tree, node->children[1], subind, print_element);
+		} else
+			printf("%s|--x\n", indent);
+	} else {
+		int i;
+		if (node->node) {
+			if (print_element) {
+				printf(" [ ");
+				for (i=0; i<node->node->N; i++) {
+					print_element(get_element(tree, node, i));
+				}
+				printf("]");
+			}
+		}
+		printf("\n");
+	}
+}
+
+void bt_print_structure(bt* tree, void (*print_element)(void* val)) {
+	bt_print_struct_node(tree, tree->root, "   ", print_element);
+}
+
