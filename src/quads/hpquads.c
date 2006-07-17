@@ -23,6 +23,8 @@
 #include "qfits.h"
 #include "permutedsort.h"
 
+#include "bt.h"
+
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:" /* p:P: */
 
 static void print_help(char* progname)
@@ -55,7 +57,8 @@ static double quad_scale_lower2;
 
 static int quadnum = 0;
 
-static bl* quadlist;
+//static bl* quadlist;
+static bt* quadlist;
 static int ndupquads = 0;
 
 static unsigned char* nuses;
@@ -101,7 +104,7 @@ static int compare_ints(const void* v1, const void* v2) {
 	return 0;
 }
 
-static int compare_quad(const void* v1, const void* v2) {
+static int compare_quads(const void* v1, const void* v2) {
 	const quad* q1 = v1;
 	const quad* q2 = v2;
 	int i;
@@ -115,10 +118,16 @@ static int compare_quad(const void* v1, const void* v2) {
 }
 
 static bool add_quad(quad* q) {
-	int ind = bl_insert_unique_sorted(quadlist, q, compare_quad);
-	if (ind == -1)
+	/*
+	  int ind = bl_insert_unique_sorted(quadlist, q, compare_quad);
+	  if (ind == -1)
+	  ndupquads++;
+	  return (ind != -1);
+	*/
+	bool okay = bt_insert(quadlist, q, TRUE, compare_quads);
+	if (!okay)
 		ndupquads++;
-	return (ind != -1);
+	return okay;
 }
 
 void compute_code(quad* q, double* code) {
@@ -424,6 +433,7 @@ int main(int argc, char** argv) {
 	int Nhighwater = 0;
 	unsigned char* tryhealpix;
 	int Ntry, Ntrystart;
+	int nquads;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -563,7 +573,8 @@ int main(int argc, char** argv) {
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
-	quadlist = bl_new(1024, sizeof(quad));
+	//quadlist = bl_new(1024, sizeof(quad));
+	quadlist = bt_new(sizeof(quad), 256);
 
 	if (Nreuse > 255) {
 		fprintf(stderr, "Error, reuse (-r) must be less than 256.\n");
@@ -769,7 +780,8 @@ int main(int argc, char** argv) {
 			printf("  %i healpixes had only stars that had been overused.\n", nnounused);
 
 			// HACK
-			quadnum = bl_size(quadlist);
+			//quadnum = bl_size(quadlist);
+			quadnum = bt_size(quadlist);
 			printf("Duplicate quads: %i\n", ndupquads);
 			printf("Made %i quads so far.\n", quadnum);
 		}
@@ -793,9 +805,11 @@ int main(int argc, char** argv) {
 	}
 	kdtree_inverse_permutation(startree, invperm);
 
-	for (i=0; i<bl_size(quadlist); i++) {
+	nquads = bt_size(quadlist);
+	for (i=0; i<nquads; i++) {
 		double code[4];
-		quad* q = bl_access(quadlist, i);
+		//quad* q = bl_access(quadlist, i);
+		quad* q = bt_access(quadlist, i);
 		compute_code(q, code);
 		// here we add the invariant cx <= dx.
 		if (code[0] <= code[2]) {
@@ -821,6 +835,8 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
 		exit( -1);
 	}
+
+	bt_free(quadlist);
 
 	toc();
 	printf("Done.\n");

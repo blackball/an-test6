@@ -197,8 +197,9 @@ int main(int argc, char *argv[])
 		//scale = M_SQRT1_2 + margin;
 		scale = 1.0 / (M_SQRT2 + margin);
 	} else {
-		minvalue = 0.0;
-		scale = 1.0;
+		double margin = 0.06;
+		minvalue = 0.0 - (0.5 * margin);
+		scale = 1.0 / (1.0 + margin);
 
 		if (do_density) {
 			fprintf(stderr, "Warning: this index does not have the CIRCLE property "

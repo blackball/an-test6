@@ -5,20 +5,13 @@
 
 #include "bt.h"
 
-#define FALSE 0
-#define TRUE 1
-
 /*
-  // DEBUG
-  static void print_int(void* v1) {
-  int i = *(int*)v1;
-  printf("%i ", i);
-  }
+  The AVL tree portion of this code was adapted from GNU libavl.
 */
 
-// data follows the bl_node*.
-#define NODE_DATA(node) ((void*)(((bl_node*)(node)) + 1))
-#define NODE_CHARDATA(node) ((char*)(((bl_node*)(node)) + 1))
+// data follows the bt_datablock*.
+#define NODE_DATA(node) ((void*)(((bt_datablock*)(node)) + 1))
+#define NODE_CHARDATA(node) ((char*)(((bt_datablock*)(node)) + 1))
 
 bt* bt_new(int datasize, int blocksize) {
 	bt* tree = calloc(1, sizeof(bt));
@@ -31,12 +24,16 @@ bt* bt_new(int datasize, int blocksize) {
 	return tree;
 }
 
+int bt_size(bt* tree) {
+	return tree->N;
+}
+
 static void bt_free_node(bt_node* node) {
 	if (node->children[0]) {
 		bt_free_node(node->children[0]);
 		bt_free_node(node->children[1]);
 	} else {
-		free(node->node);
+		free(node->data);
 	}
 	free(node);
 }
@@ -48,11 +45,11 @@ void bt_free(bt* tree) {
 }
 
 static void* get_element(bt* tree, bt_node* node, int index) {
-	return NODE_CHARDATA(node->node) + index * tree->datasize;
+	return NODE_CHARDATA(node->data) + index * tree->datasize;
 }
 
 static void* first_element(bt_node* n) {
-	return NODE_DATA(n->node);
+	return NODE_DATA(n->data);
 }
 
 static bt_node* bt_new_node(bt* tree) {
@@ -62,7 +59,9 @@ static bt_node* bt_new_node(bt* tree) {
 		fprintf(stderr, "Failed to allocate a new bt_node: %s\n", strerror(errno));
 		return NULL;
 	}
+#if defined(NODENUM)
 	n->nodenum = nodenum++;
+#endif
 	return n;
 }
 
@@ -70,8 +69,8 @@ static bt_node* bt_new_leaf(bt* tree) {
 	bt_node* n = bt_new_node(tree);
 	if (!n)
 		return NULL;
-	n->node = malloc(sizeof(bl_node) + tree->datasize * tree->blocksize);
-	n->node->N = 0;
+	n->data = malloc(sizeof(bt_datablock) + tree->datasize * tree->blocksize);
+	n->data->N = 0;
 	return n;
 }
 
@@ -83,7 +82,7 @@ static bool bt_node_insert(bt* tree, bt_node* node, void* data, bool unique,
 
 	// binary search...
 	lower = -1;
-	upper = node->node->N;
+	upper = node->data->N;
 	while (lower < (upper-1)) {
 		int mid;
 		int cmp;
@@ -103,19 +102,19 @@ static bool bt_node_insert(bt* tree, bt_node* node, void* data, bool unique,
 			return FALSE;
 
 	// shift...
-	nshift = node->node->N - index;
-	if (node->node->N == tree->blocksize) {
+	nshift = node->data->N - index;
+	if (node->data->N == tree->blocksize) {
 		// this node is full.  insert the element and put the overflowing
 		// element in "overflow".
 		if (nshift) {
-			memcpy(overflow, get_element(tree, node, node->node->N-1), tree->datasize);
+			memcpy(overflow, get_element(tree, node, node->data->N-1), tree->datasize);
 			nshift--;
 		} else {
 			memcpy(overflow, data, tree->datasize);
 			return TRUE;
 		}
 	} else {
-		node->node->N++;
+		node->data->N++;
 		tree->N++;
 	}
 	memmove(get_element(tree, node, index+1),
@@ -191,14 +190,13 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bool willfit;
 	int cmp;
 	bt_node* lastcompared;
-	int lastcmp;
+	int lastcmp = -1000;
 
 	if (!tree->root) {
 		// inserting the first element...
 		n = bt_new_leaf(tree);
 		tree->root = n;
 		bt_node_insert(tree, n, data, unique, compare, NULL);
-		tree->root->balance = 0;
 		return TRUE;
 	}
 
@@ -227,7 +225,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	nancestors--;
 
 	// will this element fit in the current node?
-	willfit = (q->node->N < tree->blocksize);
+	willfit = (q->data->N < tree->blocksize);
 	if (willfit) {
 		rtn = bt_node_insert(tree, q, data, unique, compare, overflow);
 		// duplicate value?
@@ -261,7 +259,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			// duplicate value.
 			return rtn;
 		nextnode = next_node(ancestors, nancestors, q, nextancestors, &nnextancestors);
-		if (nextnode && (nextnode->node->N < tree->blocksize)) {
+		if (nextnode && (nextnode->data->N < tree->blocksize)) {
 			// there's room; insert the element!
 			rtn = bt_node_insert(tree, nextnode, overflow, unique, compare, NULL);
 			increment_nleftright(nextancestors, nnextancestors, nextnode);
@@ -293,14 +291,14 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	if (!nq)
 		return FALSE;
 	q->children[1-dir] = nq;
-	nq->node = q->node;
-	q->node = q->children[0]->node;
+	nq->data = q->data;
 	if (dir) {
-		q->Nleft = nq->node->N;
+		q->Nleft = nq->data->N;
 		q->Nright = 1;
 	} else {
-		q->Nright = nq->node->N;
+		q->Nright = nq->data->N;
 		q->Nleft = 1;
+		q->data = n->data;
 	}
 
 	rtn = bt_node_insert(tree, n, data, unique, compare, NULL);
@@ -334,7 +332,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 
 			y->Nleft  = x->Nright;
 			x->Nright = y->Nleft + y->Nright;
-			y->node = y->children[0]->node;
+			y->data = y->children[0]->data;
 
         } else {
 			assert (x->balance == 1);
@@ -349,8 +347,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			y->Nleft  = w->Nright;
 			w->Nright = y->Nleft + y->Nright;
 
-			w->node = w->children[0]->node;
-			y->node = y->children[0]->node;
+			w->data = w->children[0]->data;
+			y->data = y->children[0]->data;
 
 			if (w->balance == -1) {
 				x->balance = 0;
@@ -374,7 +372,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			y->Nright = x->Nleft;
 			x->Nleft  = y->Nleft + y->Nright;
 
-			x->node = x->children[0]->node;
+			x->data = x->children[0]->data;
 
         } else {
 			assert (x->balance == -1);
@@ -389,8 +387,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 			y->Nright = w->Nleft;
 			w->Nleft  = y->Nleft + y->Nright;
 
-			x->node = x->children[0]->node;
-			w->node = w->children[0]->node;
+			x->data = x->children[0]->data;
+			w->data = w->children[0]->data;
 
 			if (w->balance == 1) {
 				x->balance = 0;
@@ -412,7 +410,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		if (y == z->children[0]) {
 			z->children[0] = w;
 			z->Nleft = w->Nleft + w->Nright;
-			z->node = w->node;
+			z->data = w->data;
 		} else {
 			z->children[1] = w;
 			z->Nright = w->Nleft + w->Nright;
@@ -440,16 +438,18 @@ void* bt_access(bt* tree, int index) {
 			// left child
 			n = n->children[0];
 	}
-	return NODE_CHARDATA(n->node) + offset * tree->datasize;
+	return NODE_CHARDATA(n->data) + offset * tree->datasize;
 }
 
 static void bt_print_node(bt* tree, bt_node* node, char* indent,
 						  void (*print_element)(void* val)) {
 	if (node->children[0] || node->children[1]) {
 		char* subind;
-		printf("%sNode %i.  Nleft=%i, Nright=%i (sum=%i), balance %i.\n",
-			   indent, 
-			   node->nodenum,
+		printf("%s", indent);
+#if defined(NODENUM)
+		printf("Node %i.  ", node->nodenum);
+#endif
+		printf("Nleft=%i, Nright=%i (sum=%i), balance %i.\n",
 			   node->Nleft, node->Nright, node->Nleft + node->Nright, node->balance);
 		subind = malloc(strlen(indent) + 2 + 1);
 		sprintf(subind, "%s  ", indent);
@@ -467,11 +467,15 @@ static void bt_print_node(bt* tree, bt_node* node, char* indent,
 		free(subind);
 	} else {
 		int i;
-		if (node->node) {
-			printf("%sNode %i: Leaf: N=%i.\n", indent, node->nodenum, node->node->N);
+		if (node->data) {
+			printf("%s", indent);
+#if defined(NODENUM)
+			printf("Node %i.  ", node->nodenum);
+#endif
+			printf("Leaf: N=%i.\n", node->data->N);
 			if (print_element) {
 				printf("%s[ ", indent);
-				for (i=0; i<node->node->N; i++) {
+				for (i=0; i<node->data->N; i++) {
 					print_element(get_element(tree, node, i));
 				}
 				printf("]\n");
@@ -494,7 +498,12 @@ void bt_print(bt* tree, void (*print_element)(void* val)) {
 
 static void bt_print_struct_node(bt* tree, bt_node* node, char* indent,
 								 void (*print_element)(void* val)) {
-	printf("%s%i (%i)", indent, node->nodenum, node->balance);
+
+	printf("%s", indent);
+#if defined(NODENUM)
+	printf("Node %i.  ", node->nodenum);
+#endif
+	printf("(bal %i)", node->balance);
 	if (node->children[0] || node->children[1]) {
 		char* subind;
 		printf("\n");
@@ -511,10 +520,10 @@ static void bt_print_struct_node(bt* tree, bt_node* node, char* indent,
 			printf("%s|--x\n", indent);
 	} else {
 		int i;
-		if (node->node) {
+		if (node->data) {
 			if (print_element) {
 				printf(" [ ");
-				for (i=0; i<node->node->N; i++) {
+				for (i=0; i<node->data->N; i++) {
 					print_element(get_element(tree, node, i));
 				}
 				printf("]");

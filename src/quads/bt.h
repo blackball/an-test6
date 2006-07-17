@@ -1,13 +1,22 @@
 #ifndef BT_H
 #define BT_H
 
-#include "bl.h"
+#include "starutil.h"
+
+#define NODENUM 0
+
+struct bt_datablock {
+	// number of data elements.
+	int N;
+	// data follows implicitly.
+};
+typedef struct bt_datablock bt_datablock;
 
 struct bt_node {
 	struct bt_node* children[2];
 	// if leaf: the data block owned by this leaf node.
 	// else: the leftmost data block in this subtree.
-	bl_node* node;
+	bt_datablock* data;
 	// number of elements in the left subtree.
 	int Nleft;
 	// number of elements in the right subtree.
@@ -15,8 +24,9 @@ struct bt_node {
 	// AVL balance
 	signed char balance;
 
-	// DEBUG
+#if defined(NODENUM)
 	int nodenum;
+#endif
 };
 typedef struct bt_node bt_node;
 
@@ -30,11 +40,11 @@ typedef struct bt bt;
 
 typedef int (*compare_func)(const void* v1, const void* v2);
 
-typedef unsigned char bool;
-
 bt* bt_new(int datasize, int blocksize);
 
 void bt_free(bt* tree);
+
+int bt_size(bt* tree);
 
 bool bt_insert(bt* tree, void* data, bool unique, compare_func compare);
 
