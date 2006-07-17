@@ -65,6 +65,8 @@ static unsigned char* nuses;
 
 struct quad {
 	uint star[4];
+	// DEBUG
+	int hp;
 };
 typedef struct quad quad;
 
@@ -114,6 +116,11 @@ static int compare_quads(const void* v1, const void* v2) {
 		if (q1->star[i] < q2->star[i])
 			return -1;
 	}
+
+	printf("quads equal: %i,%i,%i,%i: hps %i, %i.\n",
+		   q1->star[0], q1->star[1], q1->star[2], q1->star[3],
+		   q1->hp, q2->hp);
+
 	return 0;
 }
 
@@ -266,6 +273,8 @@ static int Ncq = 0;
 static pquad* cq_pquads;
 static int* cq_inbox;
 
+static int cq_hp;
+
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy) {
@@ -329,6 +338,33 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 				continue;
 			}
 
+			printf("vx . vy = %g, angle %g.\n", vx[0]*vy[0] + vx[1]*vy[1] + vx[2]*vy[2],
+				   180.0 / M_PI * acos(vx[0]*vy[0]+vx[1]*vy[1]+vx[2]*vy[2] / (sqrt(lx2) * sqrt(ly2))));
+
+			switch (cq_hp) {
+			case 873:
+			case 1751:
+				/*
+				  case 1688:
+				  case 2566:
+				*/
+				if (pq->staridA == 992 && pq->staridB == 1005895) {
+					printf("%i: midAB (%g,%g,%g), lxfrac %g, lyfrac %g.\n",
+						   cq_hp,
+						   pq->midAB[0],
+						   pq->midAB[1],
+						   pq->midAB[2],
+						   sqrt(thislx2/lx2), sqrt(thisly2/ly2));
+					printf("midAB%i=[%g,%g,%g];\n", cq_hp,
+						   pq->midAB[0],
+						   pq->midAB[1],
+						   pq->midAB[2]);
+					printf("origin%i=[%g,%g,%g];\n", cq_hp, origin[0], origin[1], origin[2]);
+					printf("vx%i=[%g,%g,%g];\n", cq_hp, vx[0], vx[1], vx[2]);
+					printf("vy%i=[%g,%g,%g];\n", cq_hp, vy[0], vy[1], vy[2]);
+				}
+			}
+
 			ninbox = 0;
 			for (iC = 0; iC < newpoint; iC++) {
 				if ((iC == iA) || (iC == iB))
@@ -346,6 +382,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					q.star[1] = pq->staridB;
 					q.star[2] = starinds[iC];
 					q.star[3] = starinds[iD];
+
+					q.hp = cq_hp;
 
 					if (add_quad(&q)) {
 						drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
@@ -382,6 +420,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						q.star[1] = pq->staridB;
 						q.star[2] = starinds[iC];
 						q.star[3] = starinds[iD];
+
+						q.hp = cq_hp;
 
 						if (add_quad(&q)) {
 							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
@@ -763,6 +803,8 @@ int main(int argc, char** argv) {
 				}
 
 				kdtree_free_query(res);
+
+				cq_hp = i;
 
 				if (create_quad(stars, inds, N, circle,
 								hp00 + i*3, hpvx + i*3, hpvy + i*3))
