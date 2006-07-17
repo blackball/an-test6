@@ -1,50 +1,85 @@
 .PHONY: 00 01 02 03 04 05 06 07 08 09 10 11
 
-CATALOG := /p/learning/stars/CATALOGUES/an-sdss-dd/an-sdss-dd_
-INDEX := sdss-9_
-TEMP1 := phase1_
-TEMP2 := phase2_
+comma := ,
+empty :=
+VER := $(shell make --version | grep "GNU Make version" | gawk '{print $$4}')
+ifeq ($(VER), $(empty))
+  VER := $(shell make --version | grep "GNU Make" | gawk '{print $$3}')
+endif
+VER:=$(subst $(comma),$(empty),$(VER))
+$(warning make version $(VER))
+ifeq ($(VER), 3.79.1)
+  $(error You are running a stupid version of Make.  Try version 3.81)
+endif
+
+
+CATALOG := /h/42/dstn/local/CUTS/an-sdss-2/an_sdss_
+INDEX := sdss-tst-2_
+TEMP1 := phase1b_
+TEMP2 := phase2b_
 
 UNPERMUTE_QUADS := unpermute-quads
+UNPERMUTE_STARS := unpermute-stars2
 CODETREE        := codetree
-DEDUP_INDEX     := dedup_index
 HPQUADS         := hpquads
 
+% s=4;
+% Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
+
 CODETREE_OPTS := -R 15
-HPQUADS_OPTS := -l 4 -u 5 -n 705 -i 9 -c -p 5
+#HPQUADS_OPTS := -l 4 -u 5 -n 879 -i 999 -c -x 3 -y 3
+HPQUADS_OPTS := -l 4 -u 5 -n 879 -i 999 -c -x 2 -y 2
 
 NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
 
-SEC := \
-  $(foreach base, $(addprefix $(TEMP1), $(NUMS)), $(base).code.fits $(base).quad.fits) \
-  $(foreach base, $(addprefix $(TEMP2), $(NUMS)), $(base).code.fits $(base).quad.fits $(base).ckdt.fits)
+#SEC := \
+#    $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
+#    $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
+#.SECONDARY: $$(SEC)
 
-.SECONDARY: $(SEC)
+define INDEX_template
+$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+$(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
+		$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).quad.fits
+	$(UNPERMUTE_QUADS) -f $(TEMP2)$(1) -o tmp.$(INDEX)$(1)
+	mv tmp.$(INDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
+	mv tmp.$(INDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
 
-debug:
-	echo "Secondary: $(SEC)"
+$(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits $(INDEX)$(1).id.fits : \
+		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(TEMP1)$(1).quad.fits
+	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
+	mv tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	mv tmp.$(INDEX)$(1).id.fits   $(INDEX)$(1).id.fits
+	mv tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
 
-$(NUMS) : %: $(addprefix $(INDEX)%., quad.fits ckdt.fits skdt.fits)
+$(TEMP2)$(1).ckdt.fits: $(TEMP1)$(1).code.fits
+	$(CODETREE) $(CODETREE_OPTS) -f $(TEMP1)$(1) -o tmp.$(TEMP2)$(1)
+	mv tmp.$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).ckdt.fits
 
-$(INDEX)%.skdt.fits : $(CATALOG)%.skdt.fits
-	ln -s $< $@
+$(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
+	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o tmp.$(TEMP1)$(1)
+	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
+	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
-$(INDEX)%.quad.fits $(INDEX)%.ckdt.fits : $(TEMP2)%.ckdt.fits $(TEMP2)%.quad.fits
-	$(UNPERMUTE_QUADS) -f $(basename $(basename $<)) -o tmp.$(basename $(basename $@))
-	mv tmp.$(basename $(basename $@)).ckdt.fits $(basename $(basename $@)).ckdt.fits
-	mv tmp.$(basename $(basename $@)).quad.fits $(basename $(basename $@)).quad.fits
+endef
 
-$(TEMP2)%.ckdt.fits: $(TEMP2)%.code.fits
-	$(CODETREE) $(CODETREE_OPTS) -f $(basename $(basename $<)) -o tmp.$(basename $(basename $@))
-	mv tmp.$(basename $(basename $@)).ckdt.fits $(basename $(basename $@)).ckdt.fits
+$(foreach num,$(NUMS),$(eval $(call INDEX_template,$(num))))
 
-$(TEMP2)%.quad.fits $(TEMP2)%.code.fits : $(TEMP1)%.quad.fits $(TEMP1)%.code.fits
-	$(DEDUP_INDEX) -f $(basename $(basename $<)) -o tmp.$(basename $(basename $@))
-	mv tmp.$(basename $(basename $@)).code.fits $(basename $(basename $@)).code.fits
-	mv tmp.$(basename $(basename $@)).quad.fits $(basename $(basename $@)).quad.fits
+all:
+	@echo try targets 00, 01, 02, ..., 11
 
-$(TEMP1)%.quad.fits $(TEMP1)%.code.fits : $(CATALOG)%.objs.fits
-	$(HPQUADS) $(HPQUADS_OPTS) -f $(basename $(basename $<)) -o tmp.$(basename $(basename $@))
-	mv tmp.$(basename $(basename $@)).quad.fits $(basename $(basename $@)).quad.fits
-	mv tmp.$(basename $(basename $@)).code.fits $(basename $(basename $@)).code.fits
-
+#all: rules
+#RULES := $(foreach num,$(NUMS),$(call INDEX_template,$(num)))
+#RULES = $(foreach num,$(NUMS),$(call INDEX_template,$(num)))
+#RULES := $(foreach num,00,$(call INDEX_template,$(num)))
+#$(warning $(RULES))
+#$(eval $(RULES))
+#rules: makeindex3
+#	printargs $(RULES)
+#$(echo $(RULES)) > rules
+#@echo $(RULES)
+#/bin/echo $(RULES) > rules
+#$(shell /bin/echo $(value RULES) > rules)
+#ifneq ($(MAKECMDGOALS),clean)
+#  include rules
+#endif
