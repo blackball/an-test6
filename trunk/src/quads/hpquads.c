@@ -710,7 +710,7 @@ int main(int argc, char** argv) {
 		hpvy[i*3 + 2] = z2 - z1;
 
 		cross_product(hpvx + i*3, hpvy + i*3, norm);
-		cross_product(hpvx + i*3, norm, perp1);
+		cross_product(norm, hpvx + i*3, perp1);
 		cross_product(hpvy + i*3, norm, perp2);
 		hpmaxdot1[i] =
 			hpvy[i*3+0]*perp1[0] +
