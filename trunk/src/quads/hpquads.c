@@ -309,7 +309,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 		(vx[1]-origin[1])*perp2[1] +
 		(vx[2]-origin[2])*perp2[2];
 
-	printf("maxdot1=%g, maxdot2=%g.\n", maxdot1, maxdot2);
+	//printf("maxdot1=%g, maxdot2=%g.\n", maxdot1, maxdot2);
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
