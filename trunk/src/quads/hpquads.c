@@ -83,6 +83,15 @@ static void* mymalloc(int n) {
 	return rtn;
 }
 
+static void* myrealloc(void* p, int n) {
+	void* rtn = realloc(p, n);
+	if (!rtn) {
+		fprintf(stderr, "Failed to realloc %i.\n", n);
+		exit(-1);
+	}
+	return rtn;
+}
+
 static int compare_ints(const void* v1, const void* v2) {
 	int i1 = *(int*)v1;
 	int i2 = *(int*)v2;
@@ -716,7 +725,7 @@ int main(int argc, char** argv) {
 			int nyesstars;
 			int nnounused;
 
-			int ntried = 0;
+			//int ntried = 0;
 
 			int nstarstotal = 0;
 			int ncounted = 0;
@@ -731,7 +740,6 @@ int main(int argc, char** argv) {
 			nnounused = 0;
 			lastgrass = 0;
 			Nquads = 0;
-			Ntrystart = Ntry;
 			nbadscale = 0;
 			nbadcenter = 0;
 			nabok = 0;
@@ -763,6 +771,11 @@ int main(int argc, char** argv) {
 				   centre[0] = hp00[i*3+0] + hpvx[i*3+0] * dxfrac + hpvy[i*3+0] * dyfrac;
 				   centre[1] = hp00[i*3+1] + hpvx[i*3+1] * dxfrac + hpvy[i*3+1] * dyfrac;
 				   centre[2] = hp00[i*3+2] + hpvx[i*3+2] * dxfrac + hpvy[i*3+2] * dyfrac;
+
+				   Also note - if you change the centers every pass, then
+				   the whole "hptotry" thing won't work - centers that were
+				   bad last time might be good this time!
+
 				*/
 				centre[0] = hp00[hp*3+0];
 				centre[1] = hp00[hp*3+1];
@@ -832,8 +845,11 @@ int main(int argc, char** argv) {
 
 				if (create_quad(stars, inds, N, circle,
 								hp00 + hp*3, hpvx + hp*3, hpvy + hp*3,
-								hpmaxdot1[hp], hpmaxdot2[hp]))
+								hpmaxdot1[hp], hpmaxdot2[hp])) {
 					nthispass++;
+
+					hptotry[Nhpnext++] = hp;
+				}
 			}
 			printf("\n");
 
@@ -841,7 +857,7 @@ int main(int argc, char** argv) {
 				   nstarstotal / (double)ncounted);
 
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
-				   nthispass, Ntrystart);
+				   nthispass, Nhptotry);
 			printf("  %i healpixes had no stars.\n", nnostars);
 			printf("  %i healpixes had only stars that had been overused.\n", nnounused);
 			printf("  %i healpixes had some stars.\n", nyesstars);
@@ -850,6 +866,9 @@ int main(int argc, char** argv) {
 			printf("  %i AB pairs were ok.\n", nabok);
 			//printf("  %i AB pairs lacked CD stars that weren't duplicates.\n", nnocd);
 			printf("  %i quads were duplicates.\n", ndupquads);
+
+			hptotry = myrealloc(hptotry, Nhpnext * sizeof(int));
+			Nhptotry = Nhpnext;
 
 			// HACK -
 			// sort the quads in "quadlist", then insert them into
@@ -868,6 +887,8 @@ int main(int argc, char** argv) {
 			firstpass = FALSE;
 		}
 	}
+
+	free(hptotry);
 
 	free(cq_pquads);
 	free(cq_inbox);
