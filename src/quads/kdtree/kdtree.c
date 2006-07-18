@@ -7,6 +7,10 @@
 
 #include "kdtree.h"
 
+typedef unsigned char bool;
+#define TRUE 1
+#define FALSE 0
+
 /*****************************************************************************/
 /* Utility macros                                                            */
 /*****************************************************************************/
@@ -810,16 +814,17 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 }
 
 inline static
-void resize_results(kdtree_qres_t* res, int newsize, int d) {
+bool resize_results(kdtree_qres_t* res, int newsize, int d) {
 	res->results = realloc(res->results, newsize * d * sizeof(real));
 	res->sdists  = realloc(res->sdists , newsize * sizeof(real));
 	res->inds    = realloc(res->inds   , newsize * sizeof(unsigned int));
 	if (!res->results || !res->sdists || !res->inds)
-		fprintf(stderr, "Failed to resize kdtree results arrays: %s\n", strerror(errno));
+		fprintf(stderr, "Failed to resize kdtree results arrays.\n");
+	return TRUE;
 }
 
 inline static
-void add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
+bool add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
 				int d, int* res_size) {
 	res->sdists[res->nres] = sdist;
 	res->inds  [res->nres] = ind;
@@ -829,8 +834,9 @@ void add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
 	if (res->nres == *res_size) {
 		// enlarge arrays.
 		*res_size *= 2;
-		resize_results(res, *res_size, d);
+		return resize_results(res, *res_size, d);
 	}
+	return TRUE;
 }
 
 /* Range seach helper */
@@ -849,8 +855,9 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdists
 	   range, grab all its points. */
 	if (!kdtree_node_point_maxdist2_exceeds(kd, node, pt, maxdistsqd)) {
 		for (i=node->l; i<=node->r; i++) {
-			add_result(res, dist2(kd->data + i * kd->ndim, pt, kd->ndim),
-					   (kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim, res_size);
+			if (!add_result(res, dist2(kd->data + i * kd->ndim, pt, kd->ndim),
+							(kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim, res_size))
+				return;
 		}
 		return;
 	}
@@ -863,8 +870,8 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdists
 				dsqd += delta * delta;
 			}
 			if (dsqd < maxdistsqd) {
-				add_result(res, dsqd, (kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim,
-						   res_size);
+				if (!add_result(res, dsqd, (kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim, res_size))
+					return;
 			}
 		}
 	} else {
