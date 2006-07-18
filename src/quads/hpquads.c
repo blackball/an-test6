@@ -848,7 +848,10 @@ int main(int argc, char** argv) {
 								hpmaxdot1[hp], hpmaxdot2[hp])) {
 					nthispass++;
 
+					// pack stuff into smaller arrays for next round...
+
 					hptotry[Nhpnext++] = hp;
+
 				}
 			}
 			printf("\n");
@@ -868,6 +871,8 @@ int main(int argc, char** argv) {
 			printf("  %i quads were duplicates.\n", ndupquads);
 
 			hptotry = myrealloc(hptotry, Nhpnext * sizeof(int));
+			quadlist = myrealloc(quadlist, Nhpnext * sizeof(quad));
+
 			Nhptotry = Nhpnext;
 
 			// HACK -
