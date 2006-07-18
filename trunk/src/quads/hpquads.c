@@ -204,6 +204,11 @@ check_scale(pquad* pq, double* stars, int* starids, int Nstars) {
 	double ABx, ABy;
 	sA = stars + pq->iA * 3;
 	sB = stars + pq->iB * 3;
+
+	// HACK - we can check scale without doing this projections
+	// HACK - also, we can determine whether the quad center is in the
+	//   healpix using just the average - don't need to normalize it - no sqrt.
+
 	star_midpoint(pq->midAB, sA, sB);
 	star_coords(sA, pq->midAB, &pq->Ax, &pq->Ay);
 	star_coords(sB, pq->midAB, &Bx, &By);
