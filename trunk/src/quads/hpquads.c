@@ -70,6 +70,7 @@ static int ndupquads = 0;
 static int nbadscale = 0;
 static int nbadcenter = 0;
 static int nabok = 0;
+//static int nnocd = 0;
 
 static unsigned char* nuses;
 
@@ -81,25 +82,6 @@ static void* mymalloc(int n) {
 	}
 	return rtn;
 }
-
-/*
-  static void* mycalloc(int n, int sz) {
-  void* rtn = calloc(n, sz);
-  if (!rtn) {
-  fprintf(stderr, "Failed to calloc %i * %i.\n", n, sz);
-  exit(-1);
-  }
-  return rtn;
-  }
-  static void* myrealloc(void* p, int n) {
-  void* rtn = realloc(p, n);
-  if (!rtn) {
-  fprintf(stderr, "Failed to realloc %i.\n", n);
-  exit(-1);
-  }
-  return rtn;
-  }
-*/
 
 static int compare_ints(const void* v1, const void* v2) {
 	int i1 = *(int*)v1;
@@ -125,18 +107,6 @@ static int compare_quads(const void* v1, const void* v2) {
 static bool firstpass;
 
 static bool add_quad(quad* q) {
-	/*
-	  int ind = bl_insert_unique_sorted(quadlist, q, compare_quad);
-	  if (ind == -1)
-	  ndupquads++;
-	  return (ind != -1);
-	*/
-	/*
-	  bool okay = bt_insert(quadlist, q, TRUE, compare_quads);
-	  if (!okay)
-	  ndupquads++;
-	  return okay;
-	*/
 	if (!firstpass) {
 		bool dup = bt_contains(bigquadlist, q, compare_quads);
 		if (dup) {
@@ -486,8 +456,9 @@ int main(int argc, char** argv) {
 	double* stars = NULL;
 	int lastgrass = 0;
 	int Nhighwater = 0;
-	unsigned char* tryhealpix;
-	int Ntry, Ntrystart;
+	int* hptotry;
+	int Nhptotry;
+	int Nhpnext;
 	int nquads;
 	double rads;
 
@@ -726,9 +697,11 @@ int main(int argc, char** argv) {
 		hpvy[i*3+2] = perp2[2];
 	}
 
-	tryhealpix = malloc(HEALPIXES * sizeof(unsigned char));
-	memset(tryhealpix, 1, HEALPIXES * sizeof(unsigned char));
-	Ntry = HEALPIXES;
+	// first time around, try all healpixes.
+	hptotry = malloc(HEALPIXES * sizeof(int));
+	for (i=0; i<HEALPIXES; i++)
+		hptotry[i] = i;
+	Nhptotry = HEALPIXES;
 
 	quadlist = malloc(HEALPIXES * sizeof(quad));
 
@@ -762,26 +735,38 @@ int main(int argc, char** argv) {
 			nbadscale = 0;
 			nbadcenter = 0;
 			nabok = 0;
+			//nnocd = 0;
 			ndupquads = 0;
 
-			for (i=0; i<HEALPIXES; i++) {
+			// how many healpixes are we going to try next round?
+			Nhpnext = 0;
+
+			for (i=0; i<Nhptotry; i++) {
 				int N;
 				int destind;
 				double centre[3];
+				int hp;
 
-				if (!tryhealpix[i])
-					continue;
+				hp = hptotry[i];
 
-				if ((ntried * 80 / Ntrystart) != lastgrass) {
+				if ((i * 80 / Nhptotry) != lastgrass) {
 					printf(".");
 					fflush(stdout);
-					lastgrass = ntried * 80 / Ntrystart;
+					lastgrass = i * 80 / Nhptotry;
 				}
-				ntried++;
 
-				centre[0] = hp00[i*3+0] + hpvx[i*3+0] * dxfrac + hpvy[i*3+0] * dyfrac;
-				centre[1] = hp00[i*3+1] + hpvx[i*3+1] * dxfrac + hpvy[i*3+1] * dyfrac;
-				centre[2] = hp00[i*3+2] + hpvx[i*3+2] * dxfrac + hpvy[i*3+2] * dyfrac;
+				/**
+				   HACK -
+				   This isn't right any more; hpvx and hpvy don't point along those
+				   axes, they are perpendicular to those vectors.
+
+				   centre[0] = hp00[i*3+0] + hpvx[i*3+0] * dxfrac + hpvy[i*3+0] * dyfrac;
+				   centre[1] = hp00[i*3+1] + hpvx[i*3+1] * dxfrac + hpvy[i*3+1] * dyfrac;
+				   centre[2] = hp00[i*3+2] + hpvx[i*3+2] * dxfrac + hpvy[i*3+2] * dyfrac;
+				*/
+				centre[0] = hp00[hp*3+0];
+				centre[1] = hp00[hp*3+1];
+				centre[2] = hp00[hp*3+2];
 
 				res = kdtree_rangesearch_nosort(startree, centre, radius2);
 
@@ -792,8 +777,6 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnostars++;
-					tryhealpix[i] = 0;
-					Ntry--;
 					continue;
 				}
 
@@ -813,8 +796,6 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnounused++;
-					tryhealpix[i] = 0;
-					Ntry--;
 					continue;
 				}
 
@@ -850,8 +831,8 @@ int main(int argc, char** argv) {
 				kdtree_free_query(res);
 
 				if (create_quad(stars, inds, N, circle,
-								hp00 + i*3, hpvx + i*3, hpvy + i*3,
-								hpmaxdot1[i], hpmaxdot2[i]))
+								hp00 + hp*3, hpvx + hp*3, hpvy + hp*3,
+								hpmaxdot1[hp], hpmaxdot2[hp]))
 					nthispass++;
 			}
 			printf("\n");
@@ -860,13 +841,14 @@ int main(int argc, char** argv) {
 				   nstarstotal / (double)ncounted);
 
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
-				   nthispass, HEALPIXES);
+				   nthispass, Ntrystart);
 			printf("  %i healpixes had no stars.\n", nnostars);
 			printf("  %i healpixes had only stars that had been overused.\n", nnounused);
 			printf("  %i healpixes had some stars.\n", nyesstars);
 			printf("  %i AB pairs had bad scale.\n", nbadscale);
 			printf("  %i AB pairs had bad center.\n", nbadcenter);
 			printf("  %i AB pairs were ok.\n", nabok);
+			//printf("  %i AB pairs lacked CD stars that weren't duplicates.\n", nnocd);
 			printf("  %i quads were duplicates.\n", ndupquads);
 
 			// HACK -
@@ -890,7 +872,6 @@ int main(int argc, char** argv) {
 	free(cq_pquads);
 	free(cq_inbox);
 
-	free(tryhealpix);
 	free(stars);
 	free(inds);
 	free(perm);
@@ -904,10 +885,6 @@ int main(int argc, char** argv) {
 	printf("Writing quads...\n");
 
 	invperm = mymalloc(startree->ndata * sizeof(int));
-	if (!invperm) {
-		fprintf(stderr, "Failed to allocate mem for invperm.\n");
-		exit(-1);
-	}
 	kdtree_inverse_permutation(startree, invperm);
 
 	nquads = bt_size(bigquadlist);
