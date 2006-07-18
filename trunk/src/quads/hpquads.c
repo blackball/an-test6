@@ -55,6 +55,10 @@ static int* invperm;
 static double quad_scale_upper2;
 static double quad_scale_lower2;
 
+// bounds of quad scale, in distance between AB on the sphere.
+static double quad_dist2_upper;
+static double quad_dist2_lower;
+
 static int quadnum = 0;
 
 //static bl* quadlist;
@@ -130,7 +134,7 @@ static bool add_quad(quad* q) {
 	return okay;
 }
 
-void compute_code(quad* q, double* code) {
+static void compute_code(quad* q, double* code) {
 	double *sA, *sB, *sC, *sD;
 	double Bx, By;
 	double scale, invscale;
@@ -196,39 +200,78 @@ struct potential_quad {
 };
 typedef struct potential_quad pquad;
 
+// is the AB distance right?
+// is the midpoint of AB inside the healpix?
+Noinline
 static void
-check_scale(pquad* pq, double* stars, int* starids, int Nstars) {
+check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
+						 double* origin, double* vx, double* vy,
+						 double maxdot1, double maxdot2) {
 	double *sA, *sB;
 	double Bx, By;
 	double scale, invscale;
 	double ABx, ABy;
+	double dot1, dot2;
+	double s2;
+	int d;
+	double avgAB[3];
+	double invlen;
+
 	sA = stars + pq->iA * 3;
 	sB = stars + pq->iB * 3;
 
-	// HACK - we can check scale without doing this projections
-	// HACK - also, we can determine whether the quad center is in the
-	//   healpix using just the average - don't need to normalize it - no sqrt.
+	// s2: squared AB dist
+	s2 = 0.0;
+	for (d=0; d<3; d++)
+		s2 += (sA[d] - sB[d])*(sA[d] - sB[d]);
 
-	star_midpoint(pq->midAB, sA, sB);
+	if ((s2 > quad_dist2_upper) ||
+		(s2 < quad_dist2_lower)) {
+		pq->scale_ok = 0;
+		return;
+	}
+
+	// avgAB: mean of A,B.  (note, it's NOT on the sphere)
+	for (d=0; d<3; d++)
+		avgAB[d] = 0.5 * (sA[d] + sB[d]);
+
+	dot1 =
+		(avgAB[0] - origin[0]) * vx[0] +
+		(avgAB[1] - origin[1]) * vx[1] +
+		(avgAB[2] - origin[2]) * vx[2];
+	if (dot1 < 0.0 || dot1 > maxdot1) {
+		pq->scale_ok = 0;
+		return;
+	}
+	dot2 =
+		(avgAB[0] - origin[0]) * vy[0] +
+		(avgAB[1] - origin[1]) * vy[1] +
+		(avgAB[2] - origin[2]) * vy[2];
+	if (dot2 < 0.0 || dot2 > maxdot2) {
+		pq->scale_ok = 0;
+		return;
+	}
+
+	pq->scale_ok = 1;
+	pq->staridA = starids[pq->iA];
+	pq->staridB = starids[pq->iB];
+
+	invlen = 1.0 / sqrt(avgAB[0]*avgAB[0] + avgAB[1]*avgAB[1] + avgAB[2]*avgAB[2]);
+	pq->midAB[0] = avgAB[0] * invlen;
+	pq->midAB[1] = avgAB[1] * invlen;
+	pq->midAB[2] = avgAB[2] * invlen;
+	//star_midpoint(pq->midAB, sA, sB);
 	star_coords(sA, pq->midAB, &pq->Ax, &pq->Ay);
 	star_coords(sB, pq->midAB, &Bx, &By);
 	ABx = Bx - pq->Ax;
 	ABy = By - pq->Ay;
 	scale = (ABx * ABx) + (ABy * ABy);
-
-	if ((scale < quad_scale_lower2) ||
-		(scale > quad_scale_upper2)) {
-		pq->scale_ok = 0;
-		return;
-	}
-	pq->staridA = starids[pq->iA];
-	pq->staridB = starids[pq->iB];
-	pq->scale_ok = 1;
 	invscale = 1.0 / scale;
 	pq->costheta = (ABy + ABx) * invscale;
 	pq->sintheta = (ABy - ABx) * invscale;
 }
 
+Noinline
 static int
 check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	int i, ind;
@@ -268,29 +311,32 @@ check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 }
 
 static int Ncq = 0;
-static pquad* cq_pquads;
-static int* cq_inbox;
+static pquad* cq_pquads = NULL;
+static int* cq_inbox = NULL;
 
+Noinline
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy,
 					   double maxdot1, double maxdot2) {
-	uint iA, iB, iC, iD, newpoint;
+	uint iA=0, iB, iC, iD, newpoint;
 	int rtn = 0;
 	int ninbox;
 	int i, j, k;
 	int* inbox;
 	pquad* pquads;
+	int iAalloc;
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
+		free(cq_inbox);
+		free(cq_pquads);
 		Ncq = Nstars;
 		cq_inbox =  mymalloc(Nstars * sizeof(int));
 		cq_pquads = mymalloc(Nstars * Nstars * sizeof(pquad));
 	}
 	inbox = cq_inbox;
 	pquads = cq_pquads;
-	memset(pquads, 0, Nstars*Nstars*sizeof(pquad));
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -307,31 +353,18 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
-			double dot1, dot2;
 			pq = pquads + iA*Nstars + iB;
+
+			//printf("init  %i %i\n", iA, iB);
+
+			pq->inbox = NULL;
+			pq->ninbox = 0;
 			pq->iA = iA;
 			pq->iB = iB;
-			check_scale(pq, stars, starinds, Nstars);
+			check_scale_and_midpoint(pq, stars, starinds, Nstars,
+									 origin, vx, vy, maxdot1, maxdot2);
 			if (!pq->scale_ok)
 				continue;
-
-			// is the midpoint of AB inside this healpix?
-			dot1 =
-				(pq->midAB[0] - origin[0]) * vx[0] +
-				(pq->midAB[1] - origin[1]) * vx[1] +
-				(pq->midAB[2] - origin[2]) * vx[2];
-			if (dot1 < 0.0 || dot1 > maxdot1) {
-				pq->scale_ok = 0;
-				continue;
-			}
-			dot2 =
-				(pq->midAB[0] - origin[0]) * vy[0] +
-				(pq->midAB[1] - origin[1]) * vy[1] +
-				(pq->midAB[2] - origin[2]) * vy[2];
-			if (dot2 < 0.0 || dot2 > maxdot2) {
-				pq->scale_ok = 0;
-				continue;
-			}
 
 			ninbox = 0;
 			for (iC = 0; iC < newpoint; iC++) {
@@ -358,10 +391,15 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					}
 				}
 			}
+
+			//printf("alloc %i %i\n", iA, iB);
+
 			pq->inbox = mymalloc(Nstars * sizeof(int));
 			pq->ninbox = ninbox;
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
+
+		iAalloc = iA;
 
 		// quads with the new star not on the diagonal:
 		iD = newpoint;
@@ -390,6 +428,9 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						if (add_quad(&q)) {
 							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
+
+							iA = iAalloc;
+
 							goto theend;
 						}
 					}
@@ -398,8 +439,14 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 		}
 	}
  theend:
-	for (i=0; i<(Nstars*Nstars); i++)
-		free(pquads[i].inbox);
+	for (i=0; i<imin(Nstars, newpoint+1); i++) {
+		for (j=0; j<imin(iA, i); j++) {
+			pquad* pq = pquads + j*Nstars + i;
+			//printf("free   %i %i\n", j, i);
+			free(pq->inbox);
+		}
+	}
+
 	return rtn;
 }
 
@@ -436,6 +483,7 @@ int main(int argc, char** argv) {
 	unsigned char* tryhealpix;
 	int Ntry, Ntrystart;
 	int nquads;
+	double rads;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -467,12 +515,14 @@ int main(int argc, char** argv) {
 			basefnout = optarg;
 			break;
 		case 'u':
-			quad_scale_upper2 = atof(optarg);
-			quad_scale_upper2 = square(arcmin2rad(quad_scale_upper2));
+			rads = arcmin2rad(atof(optarg));
+			quad_scale_upper2 = square(rads);
+			quad_dist2_upper = square(tan(rads));
 			break;
 		case 'l':
-			quad_scale_lower2 = atof(optarg);
-			quad_scale_lower2 = square(arcmin2rad(quad_scale_lower2));
+			rads = arcmin2rad(atof(optarg));
+			quad_scale_lower2 = square(rads);
+			quad_dist2_lower = square(tan(rads));
 			break;
 		default:
 			return -1;
@@ -532,9 +582,11 @@ int main(int argc, char** argv) {
 
 	// get the "HEALPIX" header from the skdt and put it in the code and quad headers.
 	hp = qfits_header_getint(hdr, "HEALPIX", -1);
+	qfits_header_destroy(hdr);
 	if (hp == -1) {
 		fprintf(stderr, "Warning: skdt does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
+
 	quads->healpix = hp;
 	codes->healpix = hp;
 	qfits_header_add(quads->header, "HISTORY", "hpquads command line:", NULL, NULL);
@@ -586,8 +638,21 @@ int main(int argc, char** argv) {
 	for (i=0; i<startree->ndata; i++)
 		nuses[i] = Nreuse;
 
-	printf("Computing healpix centers...\n");
+	{
+		//double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
+		//double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
+		double hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
+		double quadscale = 0.5 * sqrt(quad_dist2_upper);
+		// 1.01 for a bit of safety.  we'll look at a few extra stars.
+		radius2 = square(1.01 * (hprad + quadscale));
 
+		printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
+			   distsq2arcsec(hprad*hprad),
+			   distsq2arcsec(quadscale*quadscale),
+			   distsq2arcsec(radius2));
+	}
+
+	printf("Computing healpix centers...\n");
 	hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
 	hpvx = mymalloc(3 * HEALPIXES * sizeof(double));
 	hpvy = mymalloc(3 * HEALPIXES * sizeof(double));
@@ -656,18 +721,6 @@ int main(int argc, char** argv) {
 		hpvy[i*3+0] = perp2[0];
 		hpvy[i*3+1] = perp2[1];
 		hpvy[i*3+2] = perp2[2];
-	}
-
-	{
-		double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
-		double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
-		// 1.01 for a bit of safety.  we'll look at a few extra stars.
-		radius2 = square(1.01 * (hprad + quadscale));
-
-		printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
-			   distsq2arcsec(hprad*hprad),
-			   distsq2arcsec(quadscale*quadscale),
-			   distsq2arcsec(radius2));
 	}
 
 	tryhealpix = malloc(HEALPIXES * sizeof(unsigned char));
@@ -807,6 +860,9 @@ int main(int argc, char** argv) {
 			printf("Made %i quads so far.\n", quadnum);
 		}
 	}
+
+	free(cq_pquads);
+	free(cq_inbox);
 
 	free(tryhealpix);
 	free(stars);

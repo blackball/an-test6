@@ -128,7 +128,7 @@ inline void star_coords(double *s, double *r, double *x, double *y)
 		etax = -r[1];
 		etay =  r[0];
 		etaz = 0.0;
-		eta_norm = sqrt(etax * etax + etay * etay);
+		eta_norm = hypot(etax, etay); //sqrt(etax * etax + etay * etay);
 		inv_en = 1.0 / eta_norm;
 		etax *= inv_en;
 		etay *= inv_en;
