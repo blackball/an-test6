@@ -7,20 +7,35 @@ CFLAGS :=
 
 CFLAGS	+= -g
 #CFLAGS += -O0
-CFLAGS += -O2
+#CFLAGS += -O2
 CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
-#CFLAGS += -O3 -ffast-math
+CFLAGS += -O3 -ffast-math
 
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
 #	-Wmissing-declarations -Wredundant-decls
 
-# check out __attribute__ ((pure))
-# check out __attribute__ ((const))
-# check out __attribute__ ((nothrow))
-# check out __attribute__ ((nonnull))
+# check out:
+#   __attribute__ ((nothrow))
+#   __attribute__ ((nonnull))
+#   -fforce-addr
+#   -fprefetch-loop-arrays
+
+# -fmudflap -fmudflapth -fmudflapir
+#    instrument all risky pointer/array dereferencing operations,	
+#    some standard library string/heap functions, and some other
+#    associated constructs with range/validity tests.
+#    The instrumentation relies on a separate runtime library (libmudflap),
+#    which will be linked into a program if -fmudflap is given at link time
+#    Run-time behavior of the instrumented program is controlled by the
+#    MUDFLAP_OPTIONS environment variable. See env MUDFLAP_OPTIONS=-help
+#    a.out for its options.
+#    Use -fmudflapth instead of -fmudflap to compile and to link if your program
+#    is multi-threaded. Use -fmudflapir, in addition to -fmudflap or -fmudflapth,
+#    if instrumentation should ignore pointer reads. This produces less
+#    instrumentation (and therefore faster execution) and still provides some protection against outright memory corrupting writes, but allows erroneously read data to propagate within a program.
 
 # to turn off asserts:
 CFLAGS += -DNDEBUG

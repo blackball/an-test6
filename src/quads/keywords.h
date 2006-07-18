@@ -15,20 +15,21 @@
 # define Packed	__attribute__ ((packed))
 # define likely(x)	__builtin_expect (!!(x), 1)
 # define unlikely(x)	__builtin_expect (!!(x), 0)
-
+# define Noinline __attribute__ ((noinline))
 #else
 
-# define Inline		/* no inline */
-# define Pure		/* no pure */
-# define Const	/* no const */
-# define Noreturn	/* no noreturn */
-# define Malloc	/* no malloc */
-# define Must_check	/* no warn_unused_result */
-# define Deprecated	/* no deprecated */
-# define Used		/* no used */
-# define Unused	/* no unused */
-# define Packed	/* no packed */
+# define Inline
+# define Pure
+# define Const
+# define Noreturn
+# define Malloc
+# define Must_check
+# define Deprecated
+# define Used
+# define Unused
+# define Packed
 # define likely(x)	(x)
 # define unlikely(x)	(x)
+# define Noinline
 
 #endif
