@@ -59,18 +59,18 @@ static double quad_scale_lower2;
 static double quad_dist2_upper;
 static double quad_dist2_lower;
 
-static int quadnum = 0;
-
-//static bl* quadlist;
-static bt* quadlist;
-static int ndupquads = 0;
-
-static unsigned char* nuses;
-
 struct quad {
 	uint star[4];
 };
 typedef struct quad quad;
+
+static int Nquads;
+static quad* quadlist;
+
+static bt* bigquadlist;
+static int ndupquads = 0;
+
+static unsigned char* nuses;
 
 static void* mymalloc(int n) {
 	void* rtn = malloc(n);
@@ -128,10 +128,19 @@ static bool add_quad(quad* q) {
 	  ndupquads++;
 	  return (ind != -1);
 	*/
-	bool okay = bt_insert(quadlist, q, TRUE, compare_quads);
-	if (!okay)
+	/*
+	  bool okay = bt_insert(quadlist, q, TRUE, compare_quads);
+	  if (!okay)
+	  ndupquads++;
+	  return okay;
+	*/
+	bool okay = bt_contains(bigquadlist, q, compare_quads);
+	if (!okay) {
 		ndupquads++;
-	return okay;
+		return FALSE;
+	}
+	quadlist[Nquads++] = *q;
+	return TRUE;
 }
 
 static void compute_code(quad* q, double* code) {
@@ -209,7 +218,7 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 						 double maxdot1, double maxdot2) {
 	double *sA, *sB;
 	double Bx, By;
-	double scale, invscale;
+	double invscale;
 	double ABx, ABy;
 	double dot1, dot2;
 	double s2;
@@ -265,8 +274,7 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 	star_coords(sB, pq->midAB, &Bx, &By);
 	ABx = Bx - pq->Ax;
 	ABy = By - pq->Ay;
-	scale = (ABx * ABx) + (ABy * ABy);
-	invscale = 1.0 / scale;
+	invscale = 1.0 / (ABx*ABx + ABy*ABy);
 	pq->costheta = (ABy + ABx) * invscale;
 	pq->sintheta = (ABy - ABx) * invscale;
 }
@@ -627,8 +635,7 @@ int main(int argc, char** argv) {
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
-	//quadlist = bl_new(1024, sizeof(quad));
-	quadlist = bt_new(sizeof(quad), 256);
+	bigquadlist = bt_new(sizeof(quad), 256);
 
 	if (Nreuse > 255) {
 		fprintf(stderr, "Error, reuse (-r) must be less than 256.\n");
@@ -639,8 +646,6 @@ int main(int argc, char** argv) {
 		nuses[i] = Nreuse;
 
 	{
-		//double hprad = sqrt(0.5 * (hpvx[0]*hpvx[0] + hpvx[1]*hpvx[1] + hpvx[2]*hpvx[2]));
-		//double quadscale = 0.5 * sqrt(arc2distsq(sqrt(quad_scale_upper2)));
 		double hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
 		double quadscale = 0.5 * sqrt(quad_dist2_upper);
 		// 1.01 for a bit of safety.  we'll look at a few extra stars.
@@ -727,6 +732,8 @@ int main(int argc, char** argv) {
 	memset(tryhealpix, 1, HEALPIXES * sizeof(unsigned char));
 	Ntry = HEALPIXES;
 
+	quadlist = malloc(HEALPIXES * sizeof(quad));
+
 	for (xpass=0; xpass<xpasses; xpass++) {
 		for (ypass=0; ypass<ypasses; ypass++) {
 			double dxfrac, dyfrac;
@@ -750,6 +757,7 @@ int main(int argc, char** argv) {
 			nyesstars = 0;
 			nnounused = 0;
 			lastgrass = 0;
+			Nquads = 0;
 			Ntrystart = Ntry;
 
 			for (i=0; i<HEALPIXES; i++) {
@@ -853,11 +861,21 @@ int main(int argc, char** argv) {
 			printf("  %i healpixes had some stars.\n", nyesstars);
 			printf("  %i healpixes had only stars that had been overused.\n", nnounused);
 
-			// HACK
-			//quadnum = bl_size(quadlist);
-			quadnum = bt_size(quadlist);
 			printf("Duplicate quads: %i\n", ndupquads);
-			printf("Made %i quads so far.\n", quadnum);
+
+			// HACK -
+			// sort the quads in "quadlist", then insert them into
+			// "bigquadlist" ?
+
+			if ((xpass == xpasses-1) &&
+				(ypass == ypasses-1))
+				break;
+			printf("Merging quads...\n");
+			for (i=0; i<Nquads; i++) {
+				quad* q = quadlist + i;
+				bt_insert(bigquadlist, q, FALSE, compare_quads);
+			}
+			printf("Made %i quads so far.\n", bt_size(bigquadlist));
 		}
 	}
 
@@ -884,11 +902,10 @@ int main(int argc, char** argv) {
 	}
 	kdtree_inverse_permutation(startree, invperm);
 
-	nquads = bt_size(quadlist);
+	nquads = bt_size(bigquadlist);
 	for (i=0; i<nquads; i++) {
 		double code[4];
-		//quad* q = bl_access(quadlist, i);
-		quad* q = bt_access(quadlist, i);
+		quad* q = bt_access(bigquadlist, i);
 		compute_code(q, code);
 		// here we add the invariant cx <= dx.
 		if (code[0] <= code[2]) {
@@ -899,6 +916,21 @@ int main(int argc, char** argv) {
 			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[3], q->star[2]);
 		}
 	}
+	for (i=0; i<Nquads; i++) {
+		double code[4];
+		quad* q = quadlist + i;
+		compute_code(q, code);
+		// here we add the invariant cx <= dx.
+		if (code[0] <= code[2]) {
+			codefile_write_code(codes, code[0], code[1], code[2], code[3]);
+			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[2], q->star[3]);
+		} else {
+			codefile_write_code(codes, code[2], code[3], code[0], code[1]);
+			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[3], q->star[2]);
+		}
+	}
+	free(quadlist);
+
 
 	free(invperm);
 	kdtree_close(startree);
@@ -915,7 +947,7 @@ int main(int argc, char** argv) {
 		exit( -1);
 	}
 
-	bt_free(quadlist);
+	bt_free(bigquadlist);
 
 	toc();
 	printf("Done.\n");

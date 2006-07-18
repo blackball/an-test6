@@ -49,6 +49,8 @@ Pure Inline int bt_size(bt* tree);
 
 bool bt_insert(bt* tree, void* data, bool unique, compare_func compare);
 
+bool bt_contains(bt* tree, void* data, compare_func compare);
+
 void* bt_access(bt* tree, int index);
 
 void bt_print(bt* tree, void (*print_element)(void* val));
