@@ -65,8 +65,6 @@ static unsigned char* nuses;
 
 struct quad {
 	uint star[4];
-	// DEBUG
-	int hp;
 };
 typedef struct quad quad;
 
@@ -116,11 +114,6 @@ static int compare_quads(const void* v1, const void* v2) {
 		if (q1->star[i] < q2->star[i])
 			return -1;
 	}
-
-	printf("quads equal: %i,%i,%i,%i: hps %i, %i.\n",
-		   q1->star[0], q1->star[1], q1->star[2], q1->star[3],
-		   q1->hp, q2->hp);
-
 	return 0;
 }
 
@@ -269,47 +262,20 @@ check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	return destind;
 }
 
-/*
-  static bool check_midpoint(pquad* pq, double* origin, double* vx, double* vy) {
-  }
-*/
-
 static int Ncq = 0;
 static pquad* cq_pquads;
 static int* cq_inbox;
 
-static int cq_hp;
-
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
-					   double* origin, double* vx, double* vy) {
-	double lx2 = vx[0]*vx[0] + vx[1]*vx[1] + vx[2]*vx[2];
-	double ly2 = vy[0]*vy[0] + vy[1]*vy[1] + vy[2]*vy[2];
-
+					   double* origin, double* vx, double* vy,
+					   double maxdot1, double maxdot2) {
 	uint iA, iB, iC, iD, newpoint;
 	int rtn = 0;
 	int ninbox;
 	int i, j, k;
 	int* inbox;
 	pquad* pquads;
-
-	double norm[3];
-	double perp1[3];
-	double perp2[3];
-	double maxdot1, maxdot2;
-	cross_product(vx, vy, norm);
-	cross_product(vx, norm, perp1);
-	cross_product(vy, norm, perp2);
-	maxdot1 =
-		(vy[0]-origin[0])*perp1[0] +
-		(vy[1]-origin[1])*perp1[1] +
-		(vy[2]-origin[2])*perp1[2];
-	maxdot2 =
-		(vx[0]-origin[0])*perp2[0] +
-		(vx[1]-origin[1])*perp2[1] +
-		(vx[2]-origin[2])*perp2[2];
-
-	//printf("maxdot1=%g, maxdot2=%g.\n", maxdot1, maxdot2);
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
@@ -336,9 +302,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 		// quads with the new star on the diagonal:
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
-			double del;
-			double thislx2, thisly2;
-			int d;
+			double dot1, dot2;
 			pq = pquads + iA*Nstars + iB;
 			pq->iA = iA;
 			pq->iB = iB;
@@ -347,68 +311,22 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 				continue;
 
 			// is the midpoint of AB inside this healpix?
-			{
-				double dot1, dot2;
-				dot1 =
-					(pq->midAB[0] - origin[0]) * perp1[0] +
-					(pq->midAB[1] - origin[1]) * perp1[1] +
-					(pq->midAB[2] - origin[2]) * perp1[2];
-				dot2 =
-					(pq->midAB[0] - origin[0]) * perp2[0] +
-					(pq->midAB[1] - origin[1]) * perp2[1] +
-					(pq->midAB[2] - origin[2]) * perp2[2];
-
-				if (dot1 < 0.0 || dot1 > maxdot1 ||
-					dot2 < 0.0 || dot2 > maxdot2) {
-					pq->scale_ok = 0;
-					continue;
-				}
+			dot1 =
+				(pq->midAB[0] - origin[0]) * vx[0] +
+				(pq->midAB[1] - origin[1]) * vx[1] +
+				(pq->midAB[2] - origin[2]) * vx[2];
+			if (dot1 < 0.0 || dot1 > maxdot1) {
+				pq->scale_ok = 0;
+				continue;
 			}
-
-
-			/*
-			  if (!check_midpoint(pq, origin, vx, vy)) {
-			  pq->scale_ok = 0;
-			  continue;
-			  }
-			*/
-
-			/*
-			  thislx2 = thisly2 = 0.0;
-			  for (d=0; d<3; d++) {
-			  del = pq->midAB[d] - origin[d];
-			  thislx2 += (del * vx[d]);
-			  thisly2 += (del * vy[d]);
-			  }
-			  if ((thislx2 < 0.0) ||
-			  (thislx2 > lx2) ||
-			  (thisly2 < 0.0) ||
-			  (thisly2 > ly2)) {
-			  pq->scale_ok = 0;
-			  continue;
-			  }
-			  printf("vx . vy = %g, angle %g.\n", vx[0]*vy[0] + vx[1]*vy[1] + vx[2]*vy[2],
-			  180.0 / M_PI * acos(vx[0]*vy[0]+vx[1]*vy[1]+vx[2]*vy[2] / (sqrt(lx2) * sqrt(ly2))));
-			  switch (cq_hp) {
-			  case 873:
-			  case 1751:
-			  if (pq->staridA == 992 && pq->staridB == 1005895) {
-			  printf("%i: midAB (%g,%g,%g), lxfrac %g, lyfrac %g.\n",
-			  cq_hp,
-			  pq->midAB[0],
-			  pq->midAB[1],
-			  pq->midAB[2],
-			  sqrt(thislx2/lx2), sqrt(thisly2/ly2));
-			  printf("midAB%i=[%g,%g,%g];\n", cq_hp,
-			  pq->midAB[0],
-			  pq->midAB[1],
-			  pq->midAB[2]);
-			  printf("origin%i=[%g,%g,%g];\n", cq_hp, origin[0], origin[1], origin[2]);
-			  printf("vx%i=[%g,%g,%g];\n", cq_hp, vx[0], vx[1], vx[2]);
-			  printf("vy%i=[%g,%g,%g];\n", cq_hp, vy[0], vy[1], vy[2]);
-			  }
-			  }
-			*/
+			dot2 =
+				(pq->midAB[0] - origin[0]) * vy[0] +
+				(pq->midAB[1] - origin[1]) * vy[1] +
+				(pq->midAB[2] - origin[2]) * vy[2];
+			if (dot2 < 0.0 || dot2 > maxdot2) {
+				pq->scale_ok = 0;
+				continue;
+			}
 
 			ninbox = 0;
 			for (iC = 0; iC < newpoint; iC++) {
@@ -427,8 +345,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					q.star[1] = pq->staridB;
 					q.star[2] = starinds[iC];
 					q.star[3] = starinds[iD];
-
-					q.hp = cq_hp;
 
 					if (add_quad(&q)) {
 						drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
@@ -466,8 +382,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						q.star[2] = starinds[iC];
 						q.star[3] = starinds[iD];
 
-						q.hp = cq_hp;
-
 						if (add_quad(&q)) {
 							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
@@ -481,10 +395,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
  theend:
 	for (i=0; i<(Nstars*Nstars); i++)
 		free(pquads[i].inbox);
-	/*
-	  free(inbox);
-	  free(pquads);
-	*/
 	return rtn;
 }
 
@@ -509,6 +419,8 @@ int main(int argc, char** argv) {
 	double* hp00;
 	double* hpvx;
 	double* hpvy;
+	double* hpmaxdot1;
+	double* hpmaxdot2;
 	double radius2;
 	int* perm = NULL;
 	int j, d;
@@ -674,6 +586,8 @@ int main(int argc, char** argv) {
 	hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
 	hpvx = mymalloc(3 * HEALPIXES * sizeof(double));
 	hpvy = mymalloc(3 * HEALPIXES * sizeof(double));
+	hpmaxdot1 = mymalloc(HEALPIXES * sizeof(double));
+	hpmaxdot2 = mymalloc(HEALPIXES * sizeof(double));
 
 	for (i=0; i<HEALPIXES; i++)
 		healpix_to_xyz_lex(0.0, 0.0, i, Nside,
@@ -686,6 +600,10 @@ int main(int argc, char** argv) {
 		uint bighp, x, y;
 		double x1,y1,z1;
 		double x2,y2,z2;
+		double norm[3];
+		double perp1[3];
+		double perp2[3];
+
 		x1 = hp00[i*3 + 0];
 		y1 = hp00[i*3 + 1];
 		z1 = hp00[i*3 + 2];
@@ -715,6 +633,24 @@ int main(int argc, char** argv) {
 		hpvy[i*3 + 0] = x2 - x1;
 		hpvy[i*3 + 1] = y2 - y1;
 		hpvy[i*3 + 2] = z2 - z1;
+
+		cross_product(hpvx + i*3, hpvy + i*3, norm);
+		cross_product(hpvx + i*3, norm, perp1);
+		cross_product(hpvy + i*3, norm, perp2);
+		hpmaxdot1[i] =
+			hpvy[i*3+0]*perp1[0] +
+			hpvy[i*3+1]*perp1[1] +
+			hpvy[i*3+2]*perp1[2];
+		hpmaxdot2[i] = 
+			hpvx[i*3+0]*perp2[0] +
+			hpvx[i*3+1]*perp2[1] +
+			hpvx[i*3+2]*perp2[2];
+		hpvx[i*3+0] = perp1[0];
+		hpvx[i*3+1] = perp1[1];
+		hpvx[i*3+2] = perp1[2];
+		hpvy[i*3+0] = perp2[0];
+		hpvy[i*3+1] = perp2[1];
+		hpvy[i*3+2] = perp2[2];
 	}
 
 	{
@@ -758,7 +694,6 @@ int main(int argc, char** argv) {
 			lastgrass = 0;
 			Ntrystart = Ntry;
 
-			//printf("centers=[");
 			for (i=0; i<HEALPIXES; i++) {
 				int N;
 				int destind;
@@ -818,15 +753,10 @@ int main(int argc, char** argv) {
 
 				if (N > Nhighwater) {
 					// enlarge arrays.
-					/*
-					  perm = myrealloc(perm, N * sizeof(int));
-					  inds  = myrealloc(inds,  N * sizeof(int));
-					  stars = myrealloc(stars, N * 3 * sizeof(double));
-					*/
 					free(perm);
 					free(inds);
 					free(stars);
-					perm = mymalloc(N * sizeof(int));
+					perm  = mymalloc(N * sizeof(int));
 					inds  = mymalloc(N * sizeof(int));
 					stars = mymalloc(N * 3 * sizeof(double));
 					Nhighwater = N;
@@ -849,10 +779,9 @@ int main(int argc, char** argv) {
 
 				kdtree_free_query(res);
 
-				cq_hp = i;
-
 				if (create_quad(stars, inds, N, circle,
-								hp00 + i*3, hpvx + i*3, hpvy + i*3))
+								hp00 + i*3, hpvx + i*3, hpvy + i*3,
+								hpmaxdot1[i], hpmaxdot2[i]))
 					nthispass++;
 			}
 			printf("\n");
@@ -881,6 +810,8 @@ int main(int argc, char** argv) {
 	free(hp00);
 	free(hpvx);
 	free(hpvy);
+	free(hpmaxdot1);
+	free(hpmaxdot2);
 	free(nuses);
 
 	printf("Writing quads...\n");
