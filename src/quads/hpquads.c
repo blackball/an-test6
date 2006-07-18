@@ -269,6 +269,11 @@ check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	return destind;
 }
 
+/*
+  static bool check_midpoint(pquad* pq, double* origin, double* vx, double* vy) {
+  }
+*/
+
 static int Ncq = 0;
 static pquad* cq_pquads;
 static int* cq_inbox;
@@ -287,6 +292,24 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	int i, j, k;
 	int* inbox;
 	pquad* pquads;
+
+	double norm[3];
+	double perp1[3];
+	double perp2[3];
+	double maxdot1, maxdot2;
+	cross_product(vx, vy, norm);
+	cross_product(vx, norm, perp1);
+	cross_product(vy, norm, perp2);
+	maxdot1 =
+		(vy[0]-origin[0])*perp1[0] +
+		(vy[1]-origin[1])*perp1[1] +
+		(vy[2]-origin[2])*perp1[2];
+	maxdot2 =
+		(vx[0]-origin[0])*perp2[0] +
+		(vx[1]-origin[1])*perp2[1] +
+		(vx[2]-origin[2])*perp2[2];
+
+	printf("maxdot1=%g, maxdot2=%g.\n", maxdot1, maxdot2);
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
@@ -324,46 +347,68 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 				continue;
 
 			// is the midpoint of AB inside this healpix?
-			thislx2 = thisly2 = 0.0;
-			for (d=0; d<3; d++) {
-				del = pq->midAB[d] - origin[d];
-				thislx2 += (del * vx[d]);
-				thisly2 += (del * vy[d]);
-			}
-			if ((thislx2 < 0.0) ||
-				(thislx2 > lx2) ||
-				(thisly2 < 0.0) ||
-				(thisly2 > ly2)) {
-				pq->scale_ok = 0;
-				continue;
-			}
+			{
+				double dot1, dot2;
+				dot1 =
+					(pq->midAB[0] - origin[0]) * perp1[0] +
+					(pq->midAB[1] - origin[1]) * perp1[1] +
+					(pq->midAB[2] - origin[2]) * perp1[2];
+				dot2 =
+					(pq->midAB[0] - origin[0]) * perp2[0] +
+					(pq->midAB[1] - origin[1]) * perp2[1] +
+					(pq->midAB[2] - origin[2]) * perp2[2];
 
-			printf("vx . vy = %g, angle %g.\n", vx[0]*vy[0] + vx[1]*vy[1] + vx[2]*vy[2],
-				   180.0 / M_PI * acos(vx[0]*vy[0]+vx[1]*vy[1]+vx[2]*vy[2] / (sqrt(lx2) * sqrt(ly2))));
-
-			switch (cq_hp) {
-			case 873:
-			case 1751:
-				/*
-				  case 1688:
-				  case 2566:
-				*/
-				if (pq->staridA == 992 && pq->staridB == 1005895) {
-					printf("%i: midAB (%g,%g,%g), lxfrac %g, lyfrac %g.\n",
-						   cq_hp,
-						   pq->midAB[0],
-						   pq->midAB[1],
-						   pq->midAB[2],
-						   sqrt(thislx2/lx2), sqrt(thisly2/ly2));
-					printf("midAB%i=[%g,%g,%g];\n", cq_hp,
-						   pq->midAB[0],
-						   pq->midAB[1],
-						   pq->midAB[2]);
-					printf("origin%i=[%g,%g,%g];\n", cq_hp, origin[0], origin[1], origin[2]);
-					printf("vx%i=[%g,%g,%g];\n", cq_hp, vx[0], vx[1], vx[2]);
-					printf("vy%i=[%g,%g,%g];\n", cq_hp, vy[0], vy[1], vy[2]);
+				if (dot1 < 0.0 || dot1 > maxdot1 ||
+					dot2 < 0.0 || dot2 > maxdot2) {
+					pq->scale_ok = 0;
+					continue;
 				}
 			}
+
+
+			/*
+			  if (!check_midpoint(pq, origin, vx, vy)) {
+			  pq->scale_ok = 0;
+			  continue;
+			  }
+			*/
+
+			/*
+			  thislx2 = thisly2 = 0.0;
+			  for (d=0; d<3; d++) {
+			  del = pq->midAB[d] - origin[d];
+			  thislx2 += (del * vx[d]);
+			  thisly2 += (del * vy[d]);
+			  }
+			  if ((thislx2 < 0.0) ||
+			  (thislx2 > lx2) ||
+			  (thisly2 < 0.0) ||
+			  (thisly2 > ly2)) {
+			  pq->scale_ok = 0;
+			  continue;
+			  }
+			  printf("vx . vy = %g, angle %g.\n", vx[0]*vy[0] + vx[1]*vy[1] + vx[2]*vy[2],
+			  180.0 / M_PI * acos(vx[0]*vy[0]+vx[1]*vy[1]+vx[2]*vy[2] / (sqrt(lx2) * sqrt(ly2))));
+			  switch (cq_hp) {
+			  case 873:
+			  case 1751:
+			  if (pq->staridA == 992 && pq->staridB == 1005895) {
+			  printf("%i: midAB (%g,%g,%g), lxfrac %g, lyfrac %g.\n",
+			  cq_hp,
+			  pq->midAB[0],
+			  pq->midAB[1],
+			  pq->midAB[2],
+			  sqrt(thislx2/lx2), sqrt(thisly2/ly2));
+			  printf("midAB%i=[%g,%g,%g];\n", cq_hp,
+			  pq->midAB[0],
+			  pq->midAB[1],
+			  pq->midAB[2]);
+			  printf("origin%i=[%g,%g,%g];\n", cq_hp, origin[0], origin[1], origin[2]);
+			  printf("vx%i=[%g,%g,%g];\n", cq_hp, vx[0], vx[1], vx[2]);
+			  printf("vy%i=[%g,%g,%g];\n", cq_hp, vy[0], vy[1], vy[2]);
+			  }
+			  }
+			*/
 
 			ninbox = 0;
 			for (iC = 0; iC < newpoint; iC++) {

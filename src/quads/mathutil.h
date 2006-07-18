@@ -5,6 +5,8 @@
 #include "xylist.h"
 #include "keywords.h"
 
+Inline void cross_product(double* v1, double* v2, double* cross);
+
 double inverse_3by3(double *matrix);
 
 void image_to_xyz(double uu, double vv, double* s, double* transform);
