@@ -135,8 +135,8 @@ static bool add_quad(quad* q) {
 	  ndupquads++;
 	  return okay;
 	*/
-	bool okay = bt_contains(bigquadlist, q, compare_quads);
-	if (!okay) {
+	bool dup = bt_contains(bigquadlist, q, compare_quads);
+	if (dup) {
 		ndupquads++;
 		return FALSE;
 	}
@@ -367,9 +367,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 		iB = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
 			pq = pquads + iA*Nstars + iB;
-
-			//printf("init  %i %i\n", iA, iB);
-
 			pq->inbox = NULL;
 			pq->ninbox = 0;
 			pq->iA = iA;
@@ -404,9 +401,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					}
 				}
 			}
-
-			//printf("alloc %i %i\n", iA, iB);
-
 			pq->inbox = mymalloc(Nstars * sizeof(int));
 			pq->ninbox = ninbox;
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
@@ -762,6 +756,7 @@ int main(int argc, char** argv) {
 			nbadscale = 0;
 			nbadcenter = 0;
 			nabok = 0;
+			ndupquads = 0;
 
 			for (i=0; i<HEALPIXES; i++) {
 				int N;
@@ -866,8 +861,7 @@ int main(int argc, char** argv) {
 			printf("  %i AB pairs had bad scale.\n", nbadscale);
 			printf("  %i AB pairs had bad center.\n", nbadcenter);
 			printf("  %i AB pairs were ok.\n", nabok);
-
-			printf("Duplicate quads: %i\n", ndupquads);
+			printf("  %i quads were duplicates.\n", ndupquads);
 
 			// HACK -
 			// sort the quads in "quadlist", then insert them into
