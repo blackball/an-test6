@@ -59,7 +59,7 @@ int main(int argc, char** args) {
 	int maxperhp = 0;
 	double minmag = -1.0;
 	double maxmag = 30.0;
-	int* owned;
+	bool* owned;
 	int maxperbighp = 0;
 	int bighp = -1;
 	char fn[256];
@@ -136,12 +136,11 @@ int main(int argc, char** args) {
 
 	if (deduprad > 0.0) {
 		printf("Deduplication radius %f arcsec.\n", deduprad);
-		// convert from arcseconds to distance^2 on the unit sphere.
 		deduprad = arcsec2distsq(deduprad);
 	}
 
-	starlists = calloc(sizeof(bl*), HP);
-	owned = calloc(sizeof(int), HP);
+	starlists = calloc(HP, sizeof(bl*));
+	owned = calloc(HP, sizeof(bool));
 
 	// for each big healpix, find the set of small healpixes it owns
 	// (including a bit of overlap)
@@ -159,18 +158,6 @@ int main(int argc, char** args) {
 				owned[neigh[k]] = 1;
 		}
 	}
-
-	/*{
-	  int pixesowned;
-	  pixesowned = 0;
-	  for (i=0; i<HP; i++)
-	  if (owned[i])
-	  pixesowned++;
-	  printf("This big healpix owns %i small healpix.\n", pixesowned);
-	  if (maxperhp)
-	  printf("Max stars in this catalog will be %i\n", pixesowned * maxperhp);
-	  }
-	*/
 
 	nwritten = 0;
 	entries = malloc(BLOCK * sizeof(an_entry));
@@ -355,49 +342,17 @@ int main(int argc, char** args) {
 		printf("Discarded %i duplicate stars.\n", nduplicates);
 
 		if (maxperhp) {
-			//printf("largest magnitudes: ");
 			for (i=0; i<HP; i++) {
 				int size;
 				stardata* d;
 				if (!starlists[i]) continue;
 				size = bl_size(starlists[i]);
-				if (size) {
+				if (size)
 					d = bl_access(starlists[i], size-1);
-					//printf("%g ", d->mag);
-				}
 				if (size < maxperhp) continue;
 				bl_remove_index_range(starlists[i], maxperhp, size-maxperhp);
 			}
-			//printf("\n");
 		}
-
-		/*
-		  {
-		  int maxsize = 0;
-		  for (i=0; i<HP; i++) {
-		  if (!owned[i]) continue;
-		  if (!starlists[i]) continue;
-		  if (bl_size(starlists[i]) > maxsize)
-		  maxsize = bl_size(starlists[i]);
-		  }
-		  printf("Longest list has %i stars.\n", maxsize);
-		  {
-		  int hist[maxsize+1];
-		  memset(hist, 0, (maxsize+1)*sizeof(int));
-		  for (i=0; i<HP; i++) {
-		  if (!owned[i]) continue;
-		  if (!starlists[i])
-		  hist[0]++;
-		  else
-		  hist[bl_size(starlists[i])]++;
-		  }
-		  for (i=0; i<=maxsize; i++) {
-		  if (hist[i])
-		  printf("  %i stars: %i lists\n", i, hist[i]);
-		  }
-		  }
-		  }
-		*/
 
 		an_catalog_close(ancat);
 	}
@@ -409,41 +364,62 @@ int main(int argc, char** args) {
 			owned[i] = 0;
 
 	// sweep through the healpixes...
-	for (k=0;; k++) {
+	{
+		stardata* sweeplist;
 		int nowned = 0;
-		for (i=0; i<HP; i++) {
-			stardata* sd;
-			double xyz[3];
-			int N;
-			if (!owned[i]) continue;
-			N = bl_size(starlists[i]);
-			if (k >= N) {
-				owned[i] = 0;
-				continue;
+		for (i=0; i<HP; i++)
+			if (owned[i])
+				nowned++;
+		sweeplist = malloc(nowned * sizeof(stardata));
+
+		for (k=0;; k++) {
+			nowned = 0;
+			// gather up the stars that will be used in this sweep...
+			for (i=0; i<HP; i++) {
+				stardata* sd;
+				int N;
+				if (!owned[i]) continue;
+				N = bl_size(starlists[i]);
+				if (k >= N) {
+					owned[i] = 0;
+					continue;
+				}
+				sd = bl_access(starlists[i], k);
+				memcpy(sweeplist + nowned, sd, sizeof(stardata));
+				nowned++;
 			}
-			nowned++;
-			sd = (stardata*)bl_access(starlists[i], k);
 
-			xyz[0] = radec2x(deg2rad(sd->ra), deg2rad(sd->dec));
-			xyz[1] = radec2y(deg2rad(sd->ra), deg2rad(sd->dec));
-			xyz[2] = radec2z(deg2rad(sd->ra), deg2rad(sd->dec));
-			catalog_write_star(cat, xyz);
+			// sort them by magnitude...
+			qsort(sweeplist, nowned, sizeof(stardata), sort_stardata_mag);
 
-			idfile_write_anid(id, sd->id);
+			// write them out...
+			for (i=0; i<nowned; i++) {
+				double xyz[3];
+				stardata* sd = sweeplist + i;
+				xyz[0] = radec2x(deg2rad(sd->ra), deg2rad(sd->dec));
+				xyz[1] = radec2y(deg2rad(sd->ra), deg2rad(sd->dec));
+				xyz[2] = radec2z(deg2rad(sd->ra), deg2rad(sd->dec));
 
-			nwritten++;
+				catalog_write_star(cat, xyz);
+				idfile_write_anid(id, sd->id);
+				
+				nwritten++;
+				if (nwritten == maxperbighp)
+					break;
+			}
+			printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
+			fflush(stdout);
+			// if we broke out of the loop...
 			if (nwritten == maxperbighp)
 				break;
+			if (!nowned)
+				break;
 		}
-		printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
+		printf("Made %i sweeps through the healpixes.\n", k);
 		fflush(stdout);
-		if (nwritten == maxperbighp)
-			break;
-		if (!nowned)
-			break;
+
+		free(sweeplist);
 	}
-	printf("Made %i sweeps through the healpixes.\n", k);
-	fflush(stdout);
 
 	catalog_fix_header(cat);
 	catalog_close(cat);
