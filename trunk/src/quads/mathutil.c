@@ -5,6 +5,12 @@
 
 #include "mathutil.h"
 
+Inline void cross_product(double* a, double* b, double* cross) {
+	cross[0] = a[1] * b[2] - a[2] * b[1];
+	cross[1] = a[2] * b[0] - a[0] * b[2];
+	cross[2] = a[0] * b[1] - a[1] * b[0];
+}
+
 Inline int imax(int a, int b) {
 	return (a > b) ? a : b;
 }
