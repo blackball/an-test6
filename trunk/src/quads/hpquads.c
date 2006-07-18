@@ -14,7 +14,6 @@
 #include "fileutil.h"
 #include "mathutil.h"
 #include "quadfile.h"
-#include "bl.h"
 #include "kdtree.h"
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
@@ -22,7 +21,6 @@
 #include "fitsioutils.h"
 #include "qfits.h"
 #include "permutedsort.h"
-
 #include "bt.h"
 
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:" /* p:P: */
@@ -66,9 +64,12 @@ typedef struct quad quad;
 
 static int Nquads;
 static quad* quadlist;
-
 static bt* bigquadlist;
+
 static int ndupquads = 0;
+static int nbadscale = 0;
+static int nbadcenter = 0;
+static int nabok = 0;
 
 static unsigned char* nuses;
 
@@ -237,6 +238,7 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 	if ((s2 > quad_dist2_upper) ||
 		(s2 < quad_dist2_lower)) {
 		pq->scale_ok = 0;
+		nbadscale++;
 		return;
 	}
 
@@ -250,6 +252,7 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 		(avgAB[2] - origin[2]) * vx[2];
 	if (dot1 < 0.0 || dot1 > maxdot1) {
 		pq->scale_ok = 0;
+		nbadcenter++;
 		return;
 	}
 	dot2 =
@@ -258,6 +261,7 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 		(avgAB[2] - origin[2]) * vy[2];
 	if (dot2 < 0.0 || dot2 > maxdot2) {
 		pq->scale_ok = 0;
+		nbadcenter++;
 		return;
 	}
 
@@ -277,6 +281,8 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 	invscale = 1.0 / (ABx*ABx + ABy*ABy);
 	pq->costheta = (ABy + ABx) * invscale;
 	pq->sintheta = (ABy - ABx) * invscale;
+
+	nabok++;
 }
 
 Noinline
@@ -333,7 +339,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	int i, j, k;
 	int* inbox;
 	pquad* pquads;
-	int iAalloc;
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
@@ -407,8 +412,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
 
-		iAalloc = iA;
-
 		// quads with the new star not on the diagonal:
 		iD = newpoint;
 		for (iA = 0; iA < newpoint; iA++) {
@@ -436,9 +439,6 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						if (add_quad(&q)) {
 							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
-
-							iA = iAalloc;
-
 							goto theend;
 						}
 					}
@@ -759,6 +759,9 @@ int main(int argc, char** argv) {
 			lastgrass = 0;
 			Nquads = 0;
 			Ntrystart = Ntry;
+			nbadscale = 0;
+			nbadcenter = 0;
+			nabok = 0;
 
 			for (i=0; i<HEALPIXES; i++) {
 				int N;
@@ -858,8 +861,11 @@ int main(int argc, char** argv) {
 			printf("Made %i quads (out of %i healpixes) this pass.\n",
 				   nthispass, HEALPIXES);
 			printf("  %i healpixes had no stars.\n", nnostars);
-			printf("  %i healpixes had some stars.\n", nyesstars);
 			printf("  %i healpixes had only stars that had been overused.\n", nnounused);
+			printf("  %i healpixes had some stars.\n", nyesstars);
+			printf("  %i AB pairs had bad scale.\n", nbadscale);
+			printf("  %i AB pairs had bad center.\n", nbadcenter);
+			printf("  %i AB pairs were ok.\n", nabok);
 
 			printf("Duplicate quads: %i\n", ndupquads);
 
