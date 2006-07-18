@@ -173,6 +173,47 @@ static bt_node* next_node(bt_node** ancestors, int nancestors,
 
 #define AVL_MAX_HEIGHT 32
 
+static bool bt_node_contains(bt* tree, bt_node* node, void* data,
+							 compare_func compare) {
+	int lower, upper;
+	lower = -1;
+	upper = node->data->N;
+	while (lower < (upper-1)) {
+		int mid;
+		int cmp;
+		mid = (upper + lower) / 2;
+		cmp = compare(data, get_element(tree, node, mid));
+		if (cmp == 0) return TRUE;
+		if (cmp > 0)
+			lower = mid;
+		else
+			upper = mid;
+	}
+	// duplicate value?
+	if (lower >= 0)
+		if (compare(data, get_element(tree, node, lower)) == 0)
+			return TRUE;
+	return FALSE;
+}
+
+bool bt_contains(bt* tree, void* data, compare_func compare) {
+	bt_node *n;
+	int cmp;
+	int dir;
+
+	if (!tree->root)
+		return FALSE;
+
+	dir = 0;
+	for (n = tree->root; n->children[1]; n = n->children[dir]) {
+		cmp = compare(data, first_element(n->children[1]));
+		if (cmp == 0)
+			return TRUE;
+		dir = (cmp > 0);
+	}
+	return bt_node_contains(tree, n, data, compare);
+}
+
 bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bt_node *y, *z; /* Top node to update balance factor, and parent. */
 	bt_node *p, *q; /* Iterator, and parent. */
