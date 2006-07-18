@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <errno.h>
+
 #include "kdtree.h"
 
 /*****************************************************************************/
@@ -812,6 +814,8 @@ void resize_results(kdtree_qres_t* res, int newsize, int d) {
 	res->results = realloc(res->results, newsize * d * sizeof(real));
 	res->sdists  = realloc(res->sdists , newsize * sizeof(real));
 	res->inds    = realloc(res->inds   , newsize * sizeof(unsigned int));
+	if (!res->results || !res->sdists || !res->inds)
+		fprintf(stderr, "Failed to resize kdtree results arrays: %s\n", strerror(errno));
 }
 
 inline static
@@ -943,6 +947,10 @@ kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsqu
 	if (!kd || !pt)
 		return NULL;
 	res = calloc(1, sizeof(kdtree_qres_t));
+	if (!res) {
+		fprintf(stderr, "Failed to allocate kdtree_qres_t struct.\n");
+		return NULL;
+	}
 	res_size = KDTREE_MAX_RESULTS;
 	resize_results(res, res_size, kd->ndim);
 
