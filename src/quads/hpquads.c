@@ -122,6 +122,8 @@ static int compare_quads(const void* v1, const void* v2) {
 	return 0;
 }
 
+static bool firstpass;
+
 static bool add_quad(quad* q) {
 	/*
 	  int ind = bl_insert_unique_sorted(quadlist, q, compare_quad);
@@ -135,10 +137,12 @@ static bool add_quad(quad* q) {
 	  ndupquads++;
 	  return okay;
 	*/
-	bool dup = bt_contains(bigquadlist, q, compare_quads);
-	if (dup) {
-		ndupquads++;
-		return FALSE;
+	if (!firstpass) {
+		bool dup = bt_contains(bigquadlist, q, compare_quads);
+		if (dup) {
+			ndupquads++;
+			return FALSE;
+		}
 	}
 	quadlist[Nquads++] = *q;
 	return TRUE;
@@ -728,6 +732,8 @@ int main(int argc, char** argv) {
 
 	quadlist = malloc(HEALPIXES * sizeof(quad));
 
+	firstpass = TRUE;
+
 	for (xpass=0; xpass<xpasses; xpass++) {
 		for (ypass=0; ypass<ypasses; ypass++) {
 			double dxfrac, dyfrac;
@@ -876,6 +882,8 @@ int main(int argc, char** argv) {
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
 			}
 			printf("Made %i quads so far.\n", bt_size(bigquadlist));
+
+			firstpass = FALSE;
 		}
 	}
 
