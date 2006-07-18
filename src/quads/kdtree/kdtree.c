@@ -926,31 +926,24 @@ int kdtree_qsort_results(kdtree_qres_t *kq, int D)
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 {
 	kdtree_qres_t *res;
-	int res_size = KDTREE_MAX_RESULTS;
 	if (!kd || !pt)
 		return NULL;
-	res = calloc(1, sizeof(kdtree_qres_t));
-	resize_results(res, res_size, kd->ndim);
-
-	/* Do the real rangesearch */
-	kdtree_rangesearch_actual(kd, 0, pt, maxdistsquared, res, &res_size);
-
-	/* Resize result arrays. */
-	resize_results(res, res->nres, kd->ndim);
-
+	res = kdtree_rangesearch_nosort(kd, pt, maxdistsquared);
+	if (!res)
+		return NULL;
 	/* Sort by ascending distance away from target point before returning */
 	kdtree_qsort_results(res, kd->ndim);
-
 	return res;
 }
 
 kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsquared)
 {
 	kdtree_qres_t *res;
-	int res_size = KDTREE_MAX_RESULTS;
+	int res_size;
 	if (!kd || !pt)
 		return NULL;
 	res = calloc(1, sizeof(kdtree_qres_t));
+	res_size = KDTREE_MAX_RESULTS;
 	resize_results(res, res_size, kd->ndim);
 
 	/* Do the real rangesearch */
@@ -958,7 +951,6 @@ kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsqu
 
 	/* Resize result arrays. */
 	resize_results(res, res->nres, kd->ndim);
-
 	return res;
 }
 
