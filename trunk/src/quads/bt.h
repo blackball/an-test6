@@ -57,4 +57,6 @@ void bt_print(bt* tree, void (*print_element)(void* val));
 
 void bt_print_structure(bt* tree, void (*print_element)(void* val));
 
+int bt_height(bt* tree);
+
 #endif

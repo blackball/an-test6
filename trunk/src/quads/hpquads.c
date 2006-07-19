@@ -699,9 +699,6 @@ int main(int argc, char** argv) {
 			nabok = 0;
 			ndupquads = 0;
 
-			// how many healpixes are we going to try next round?
-			//Nhpnext = 0;
-
 			printf("Trying %i healpixes.\n", Nhptotry);
 
 			for (i=0; i<Nhptotry; i++) {
@@ -805,12 +802,6 @@ int main(int argc, char** argv) {
 				if (create_quad(stars, inds, N, circle,
 								centre, perp1, perp2, maxdot1, maxdot2)) {
 					nthispass++;
-					/*
-					  ;
-					  // pack stuff into smaller arrays for next round...
-					  hptotry[Nhpnext] = hp;
-					  Nhpnext++;
-					*/
 				}
 			}
 			printf("\n");
@@ -828,12 +819,6 @@ int main(int argc, char** argv) {
 			printf("  %i AB pairs were ok.\n", nabok);
 			printf("  %i quads were duplicates.\n", ndupquads);
 
-			/*
-			  hptotry = myrealloc(hptotry, Nhpnext * sizeof(int));
-			  quadlist = myrealloc(quadlist, Nhpnext * sizeof(quad));
-			  Nhptotry = Nhpnext;
-			*/
-
 			// HACK -
 			// sort the quads in "quadlist", then insert them into
 			// "bigquadlist" ?
@@ -847,6 +832,11 @@ int main(int argc, char** argv) {
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
 			}
 			printf("Made %i quads so far.\n", bt_size(bigquadlist));
+			printf("bt height is %i\n", bt_height(bigquadlist));
+			{
+				double opth = log(bt_size(bigquadlist) / (double)bigquadlist->blocksize) / log(2.0);
+				printf("(optimal height is %g.)\n", opth);
+			}
 
 			firstpass = FALSE;
 		}
