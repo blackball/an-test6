@@ -305,6 +305,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bool rtn;
 	bool willfit;
 	int cmp;
+	int ik;
 
 	if (!tree->root) {
 		// inserting the first element...
@@ -429,11 +430,11 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	  else
 	  p->branch.balance++;
 	*/
-	for (k=0; k<nancestors; k++) {
-		if (da[k] == 0)
-			ancestors[k]->branch.balance--;
+	for (ik=0; ik<k; ik++) {
+		if (da[ik] == 0)
+			ancestors[ik]->branch.balance--;
 		else
-			ancestors[k]->branch.balance++;
+			ancestors[ik]->branch.balance++;
 	}
 
 	if (y->branch.balance == -2) {
