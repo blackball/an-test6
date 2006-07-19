@@ -420,8 +420,6 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	if (!y || isleaf(y))
 		return TRUE;
 
-	bt_print_structure(tree, NULL);
-
 	for (p = y, k = 0;
 		 p != q;
 		 p = p->branch.children[da[k]], k++)
