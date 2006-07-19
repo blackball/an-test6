@@ -832,6 +832,7 @@ int xyztohealpix(double x, double y, double z)
 	}
 }
 
+static
 void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 						   double* rx, double *ry, double *rz, int lex)
 {
