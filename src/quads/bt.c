@@ -8,6 +8,7 @@
 /*
   The AVL tree portion of this code was adapted from GNU libavl.
 */
+#define AVL_MAX_HEIGHT 32
 
 // data follows the bt_datablock*.
 /*
@@ -83,6 +84,17 @@ int bt_height(bt* tree) {
 			n = getleftchild(n);
 	}
 	return h;
+}
+
+static int bt_count_leaves_rec(bt_node* node) {
+	if (isleaf(node)) return 1;
+	else return
+			 bt_count_leaves_rec(node->branch.children[0]) +
+			 bt_count_leaves_rec(node->branch.children[1]);
+}
+
+int bt_count_leaves(bt* tree) {
+	return bt_count_leaves_rec(tree->root);
 }
 
 static void bt_free_node(bt_node* node) {
@@ -217,8 +229,6 @@ static bt_node* next_node(bt_node** ancestors, int nancestors,
 	}
 	return child;
 }
-
-#define AVL_MAX_HEIGHT 32
 
 // Pure?
 static bool bt_leaf_contains(bt* tree, bt_leaf* leaf, void* data,
