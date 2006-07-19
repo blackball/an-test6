@@ -41,6 +41,15 @@ int main() {
 	}
 	printf("\n");
 
+	{
+		int vals[] = { 0, 1, 2, 9, 10, 11, 49, 50, 51, 99, 100, 101, 149, 150, 151, 199, 200, 201, 249, 250, 251 };
+		for (i=0; i<sizeof(vals)/sizeof(int); i++) {
+			val = vals[i];
+			printf("Contains %i: %s\n", val,
+				   (bt_contains(tree, &val, compare_ints) ? "yes" : "no"));
+		}
+	}
+
 	bt_free(tree);
 
 	return 0;

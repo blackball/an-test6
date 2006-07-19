@@ -823,6 +823,8 @@ int main(int argc, char** argv) {
 			// sort the quads in "quadlist", then insert them into
 			// "bigquadlist" ?
 
+			printf("Made %i quads so far.\n", bt_size(bigquadlist) + Nquads);
+
 			if ((xpass == xpasses-1) &&
 				(ypass == ypasses-1))
 				break;
@@ -831,7 +833,6 @@ int main(int argc, char** argv) {
 				quad* q = quadlist + i;
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
 			}
-			printf("Made %i quads so far.\n", bt_size(bigquadlist));
 			printf("bt height is %i\n", bt_height(bigquadlist));
 			{
 				double opth = log(bt_size(bigquadlist) / (double)bigquadlist->blocksize) / log(2.0);
