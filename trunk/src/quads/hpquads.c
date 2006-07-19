@@ -70,7 +70,6 @@ static int ndupquads = 0;
 static int nbadscale = 0;
 static int nbadcenter = 0;
 static int nabok = 0;
-//static int nnocd = 0;
 
 static unsigned char* nuses;
 
@@ -453,11 +452,13 @@ int main(int argc, char** argv) {
 	bool circle = FALSE;
 	int hp;
 	int Nreuse = 3;
-	double* hp00;
-	double* hpvx;
-	double* hpvy;
-	double* hpmaxdot1;
-	double* hpmaxdot2;
+	/*
+	  double* hp00;
+	  double* hpvx;
+	  double* hpvy;
+	  double* hpmaxdot1;
+	  double* hpmaxdot2;
+	*/
 	double radius2;
 	int* perm = NULL;
 	int j, d;
@@ -668,6 +669,7 @@ int main(int argc, char** argv) {
 		Nhptotry = HEALPIXES;
 	}
 
+#if 0
 	printf("Computing healpix centers...\n");
 	hp00 = mymalloc(3 * Nhptotry * sizeof(double));
 	hpvx = mymalloc(3 * Nhptotry * sizeof(double));
@@ -744,6 +746,7 @@ int main(int argc, char** argv) {
 		hpvy[i*3+1] = perp2[1];
 		hpvy[i*3+2] = perp2[2];
 	}
+#endif
 
 	quadlist = malloc(Nhptotry * sizeof(quad));
 
@@ -776,7 +779,6 @@ int main(int argc, char** argv) {
 			nbadscale = 0;
 			nbadcenter = 0;
 			nabok = 0;
-			//nnocd = 0;
 			ndupquads = 0;
 
 			// how many healpixes are we going to try next round?
@@ -785,7 +787,14 @@ int main(int argc, char** argv) {
 			for (i=0; i<Nhptotry; i++) {
 				int N;
 				int destind;
+				double origin[3];
 				double centre[3];
+				double vx[3];
+				double vy[3];
+				double normal[3];
+				double perp1[3];
+				double perp2[3];
+				double maxdot1, maxdot2;
 				int hp;
 
 				hp = hptotry[i];
@@ -815,9 +824,15 @@ int main(int argc, char** argv) {
 				  centre[1] = hp00[hp*3+1];
 				  centre[2] = hp00[hp*3+2];
 				*/
-				centre[0] = hp00[i*3+0];
-				centre[1] = hp00[i*3+1];
-				centre[2] = hp00[i*3+2];
+				healpix_to_xyzarr_lex(0.0, 0.0, hptotry[i], Nside, origin);
+				//healpix_decompose_lex(hptotry[i], &bighp, &x, &y, Nside);
+				healpix_to_xyzarr_lex(1.0, 0.0, hptotry[i], Nside, vx);
+				healpix_to_xyzarr_lex(0.0, 1.0, hptotry[i], Nside, vy);
+				for (d=0; d<3; d++) {
+					vx[d] -= origin[d];
+					vy[d] -= origin[d];
+					centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
+				}
 
 				res = kdtree_rangesearch_nosort(startree, centre, radius2);
 
@@ -849,12 +864,14 @@ int main(int argc, char** argv) {
 					nnounused++;
 					continue;
 				}
+				nstarstotal += N;
+				ncounted++;
 
 				// sort the stars in increasing order of index - assume
 				// that this corresponds to decreasing order of brightness.
 
+				// ensure the arrays are big enough...
 				if (N > Nhighwater) {
-					// enlarge arrays.
 					free(perm);
 					free(inds);
 					free(stars);
@@ -863,39 +880,49 @@ int main(int argc, char** argv) {
 					stars = mymalloc(N * 3 * sizeof(double));
 					Nhighwater = N;
 				}
-
-				nstarstotal += N;
-				ncounted++;
-
+				// find permutation that sorts by index...
 				for (j=0; j<N; j++)
 					perm[j] = j;
-
 				permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
 				permuted_sort(perm, N);
-
+				// apply the permutation...
 				for (j=0; j<N; j++) {
 					inds[j] = res->inds[perm[j]];
 					for (d=0; d<3; d++)
 						stars[j*3+d] = res->results[perm[j]*3+d];
 				}
-
 				kdtree_free_query(res);
 
+				// compute the projection vectors
+				cross_product(vx, vy, normal);
+				cross_product(normal, vx, perp1);
+				cross_product(vy, normal, perp2);
+				maxdot1 = maxdot2 = 0.0;
+				for (d=0; d<3; d++) {
+					maxdot1 += vy[d] * perp1[d];
+					maxdot2 += vx[d] * perp2[d];
+				}
+
 				if (create_quad(stars, inds, N, circle,
-								//hp00 + hp*3, hpvx + hp*3, hpvy + hp*3,
-								//hpmaxdot1[hp], hpmaxdot2[hp])) {
-								hp00 + i*3, hpvx + i*3, hpvy + i*3,
-								hpmaxdot1[i], hpmaxdot2[i])) {
+								centre, perp1, perp2, maxdot1, maxdot2)) {
+					/*
+					//hp00 + hp*3, hpvx + hp*3, hpvy + hp*3,
+					//hpmaxdot1[hp], hpmaxdot2[hp])) {
+					//hp00 + i*3, hpvx + i*3, hpvy + i*3,
+					//hpmaxdot1[i], hpmaxdot2[i])) {
+					*/
 					nthispass++;
 
 					// pack stuff into smaller arrays for next round...
 
 					hptotry[Nhpnext] = hp;
-					memmove(hp00 + Nhpnext * 3, hp00 + i, 3 * sizeof(double));
-					memmove(hpvx + Nhpnext * 3, hpvx + i, 3 * sizeof(double));
-					memmove(hpvy + Nhpnext * 3, hpvy + i, 3 * sizeof(double));
-					hpmaxdot1[Nhpnext] = hpmaxdot1[i];
-					hpmaxdot2[Nhpnext] = hpmaxdot2[i];
+					/*
+					  memmove(hp00 + Nhpnext * 3, hp00 + i, 3 * sizeof(double));
+					  memmove(hpvx + Nhpnext * 3, hpvx + i, 3 * sizeof(double));
+					  memmove(hpvy + Nhpnext * 3, hpvy + i, 3 * sizeof(double));
+					  hpmaxdot1[Nhpnext] = hpmaxdot1[i];
+					  hpmaxdot2[Nhpnext] = hpmaxdot2[i];
+					*/
 					Nhpnext++;
 				}
 			}
@@ -912,17 +939,17 @@ int main(int argc, char** argv) {
 			printf("  %i AB pairs had bad scale.\n", nbadscale);
 			printf("  %i AB pairs had bad center.\n", nbadcenter);
 			printf("  %i AB pairs were ok.\n", nabok);
-			//printf("  %i AB pairs lacked CD stars that weren't duplicates.\n", nnocd);
 			printf("  %i quads were duplicates.\n", ndupquads);
 
 			hptotry = myrealloc(hptotry, Nhpnext * sizeof(int));
 			quadlist = myrealloc(quadlist, Nhpnext * sizeof(quad));
-			hp00 = myrealloc(hp00, Nhpnext * 3 * sizeof(double));
-			hpvx = myrealloc(hpvx, Nhpnext * 3 * sizeof(double));
-			hpvy = myrealloc(hpvy, Nhpnext * 3 * sizeof(double));
-			hpmaxdot1 = myrealloc(hpmaxdot1, Nhpnext * sizeof(double));
-			hpmaxdot2 = myrealloc(hpmaxdot2, Nhpnext * sizeof(double));
-
+			/*
+			  hp00 = myrealloc(hp00, Nhpnext * 3 * sizeof(double));
+			  hpvx = myrealloc(hpvx, Nhpnext * 3 * sizeof(double));
+			  hpvy = myrealloc(hpvy, Nhpnext * 3 * sizeof(double));
+			  hpmaxdot1 = myrealloc(hpmaxdot1, Nhpnext * sizeof(double));
+			  hpmaxdot2 = myrealloc(hpmaxdot2, Nhpnext * sizeof(double));
+			*/
 			Nhptotry = Nhpnext;
 
 			// HACK -
@@ -951,11 +978,13 @@ int main(int argc, char** argv) {
 	free(stars);
 	free(inds);
 	free(perm);
-	free(hp00);
-	free(hpvx);
-	free(hpvy);
-	free(hpmaxdot1);
-	free(hpmaxdot2);
+	/*
+	  free(hp00);
+	  free(hpvx);
+	  free(hpvy);
+	  free(hpmaxdot1);
+	  free(hpmaxdot2);
+	*/
 	free(nuses);
 
 	printf("Writing quads...\n");
