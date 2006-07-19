@@ -961,6 +961,11 @@ void healpix_to_xyz_lex(double dx, double dy, uint hp, uint Nside,
 	healpix_to_xyz_common(dx, dy, hp, Nside, p_x, p_y, p_z, 1);
 }
 
+void healpix_to_xyzarr_lex(double dx, double dy, uint hp, uint Nside,
+						   double* xyz) {
+	healpix_to_xyz_common(dx, dy, hp, Nside, xyz, xyz+1, xyz+2, 1);
+}
+
 void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
                     double* p_x, double *p_y, double *p_z) {
 	healpix_to_xyz_common(dx, dy, hp, Nside, p_x, p_y, p_z, 0);
