@@ -470,6 +470,8 @@ int main(int argc, char** argv) {
 	int Nhpnext;
 	int nquads;
 	double rads;
+	double hprad;
+	double quadscale;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -623,33 +625,64 @@ int main(int argc, char** argv) {
 	for (i=0; i<startree->ndata; i++)
 		nuses[i] = Nreuse;
 
-	{
-		double hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
-		double quadscale = 0.5 * sqrt(quad_dist2_upper);
-		// 1.01 for a bit of safety.  we'll look at a few extra stars.
-		radius2 = square(1.01 * (hprad + quadscale));
+	hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
+	quadscale = 0.5 * sqrt(quad_dist2_upper);
+	// 1.01 for a bit of safety.  we'll look at a few extra stars.
+	radius2 = square(1.01 * (hprad + quadscale));
 
-		printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
-			   distsq2arcsec(hprad*hprad),
-			   distsq2arcsec(quadscale*quadscale),
-			   distsq2arcsec(radius2));
+	printf("Healpix radius %g arcsec, quad scale %g arcsec, total %g arcsec\n",
+		   distsq2arcsec(hprad*hprad),
+		   distsq2arcsec(quadscale*quadscale),
+		   distsq2arcsec(radius2));
+
+	// if the SKDT had the HEALPIX property, then it includes stars that are
+	// within that healpix and within a small margin around it.
+	// Try fine-grained healpixes that are either within that big healpix
+	// or neighbouring it.  That's not exactly right, since we don't really
+	// know how big the margin is, but in reality it's probably what we want
+	// to do.
+	if (hp != -1) {
+		hptotry = malloc(HEALPIXES * sizeof(int));
+		Nhptotry = 0;
+		for (i=0; i<HEALPIXES; i++) {
+			uint bighp, x, y;
+			healpix_decompose_lex(i, &bighp, &x, &y, Nside);
+			if (bighp != hp)
+				continue;
+			hptotry[Nhptotry++] = i;
+			if ((x == 0) || (y == 0) || (x == Nside-1) || (y == Nside-1)) {
+				uint neigh[8];
+				uint nneigh;
+				int k;
+				nneigh = healpix_get_neighbours_nside(i, neigh, Nside);
+				for (k=0; k<nneigh; k++)
+					hptotry[Nhptotry++] = neigh[k];
+			}
+		}
+		hptotry = realloc(hptotry, Nhptotry * sizeof(int));
+	} else {
+		// try all healpixes.
+		hptotry = malloc(HEALPIXES * sizeof(int));
+		for (i=0; i<HEALPIXES; i++)
+			hptotry[i] = i;
+		Nhptotry = HEALPIXES;
 	}
 
 	printf("Computing healpix centers...\n");
-	hp00 = mymalloc(3 * HEALPIXES * sizeof(double));
-	hpvx = mymalloc(3 * HEALPIXES * sizeof(double));
-	hpvy = mymalloc(3 * HEALPIXES * sizeof(double));
-	hpmaxdot1 = mymalloc(HEALPIXES * sizeof(double));
-	hpmaxdot2 = mymalloc(HEALPIXES * sizeof(double));
+	hp00 = mymalloc(3 * Nhptotry * sizeof(double));
+	hpvx = mymalloc(3 * Nhptotry * sizeof(double));
+	hpvy = mymalloc(3 * Nhptotry * sizeof(double));
+	hpmaxdot1 = mymalloc(Nhptotry * sizeof(double));
+	hpmaxdot2 = mymalloc(Nhptotry * sizeof(double));
 
-	for (i=0; i<HEALPIXES; i++)
-		healpix_to_xyz_lex(0.0, 0.0, i, Nside,
+	for (i=0; i<Nhptotry; i++)
+		healpix_to_xyz_lex(0.0, 0.0, hptotry[i], Nside,
 						   hp00 + i*3 + 0,
 						   hp00 + i*3 + 1,
 						   hp00 + i*3 + 2);
 
 	printf("Computing healpix bounds...\n");
-	for (i=0; i<HEALPIXES; i++) {
+	for (i=0; i<Nhptotry; i++) {
 		uint bighp, x, y;
 		double x1,y1,z1;
 		double x2,y2,z2;
@@ -661,27 +694,33 @@ int main(int argc, char** argv) {
 		y1 = hp00[i*3 + 1];
 		z1 = hp00[i*3 + 2];
 
-		healpix_decompose_lex(i, &bighp, &x, &y, Nside);
+		healpix_decompose_lex(hptotry[i], &bighp, &x, &y, Nside);
 
 		if (x == Nside-1)
-			healpix_to_xyz_lex(1.0, 0.0, i, Nside, &x2, &y2, &z2);
+			healpix_to_xyz_lex(1.0, 0.0, hptotry[i], Nside, &x2, &y2, &z2);
 		else {
 			uint hp = healpix_compose_lex(bighp, x+1, y, Nside);
-			x2 = hp00[hp*3 + 0];
-			y2 = hp00[hp*3 + 1];
-			z2 = hp00[hp*3 + 2];
+			/*
+			  x2 = hp00[hp*3 + 0];
+			  y2 = hp00[hp*3 + 1];
+			  z2 = hp00[hp*3 + 2];
+			*/
+			healpix_to_xyz_lex(0.0, 0.0, hp, Nside, &x2, &y2, &z2);
 		}
 		hpvx[i*3 + 0] = x2 - x1;
 		hpvx[i*3 + 1] = y2 - y1;
 		hpvx[i*3 + 2] = z2 - z1;
 
 		if (y == Nside-1)
-			healpix_to_xyz_lex(0.0, 1.0, i, Nside, &x2, &y2, &z2);
+			healpix_to_xyz_lex(0.0, 1.0, hptotry[i], Nside, &x2, &y2, &z2);
 		else {
 			uint hp = healpix_compose_lex(bighp, x, y+1, Nside);
-			x2 = hp00[hp*3 + 0];
-			y2 = hp00[hp*3 + 1];
-			z2 = hp00[hp*3 + 2];
+			/*
+			  x2 = hp00[hp*3 + 0];
+			  y2 = hp00[hp*3 + 1];
+			  z2 = hp00[hp*3 + 2];
+			*/
+			healpix_to_xyz_lex(0.0, 0.0, hp, Nside, &x2, &y2, &z2);
 		}
 		hpvy[i*3 + 0] = x2 - x1;
 		hpvy[i*3 + 1] = y2 - y1;
@@ -706,13 +745,7 @@ int main(int argc, char** argv) {
 		hpvy[i*3+2] = perp2[2];
 	}
 
-	// first time around, try all healpixes.
-	hptotry = malloc(HEALPIXES * sizeof(int));
-	for (i=0; i<HEALPIXES; i++)
-		hptotry[i] = i;
-	Nhptotry = HEALPIXES;
-
-	quadlist = malloc(HEALPIXES * sizeof(quad));
+	quadlist = malloc(Nhptotry * sizeof(quad));
 
 	firstpass = TRUE;
 
@@ -777,9 +810,14 @@ int main(int argc, char** argv) {
 				   bad last time might be good this time!
 
 				*/
-				centre[0] = hp00[hp*3+0];
-				centre[1] = hp00[hp*3+1];
-				centre[2] = hp00[hp*3+2];
+				/*
+				  centre[0] = hp00[hp*3+0];
+				  centre[1] = hp00[hp*3+1];
+				  centre[2] = hp00[hp*3+2];
+				*/
+				centre[0] = hp00[i*3+0];
+				centre[1] = hp00[i*3+1];
+				centre[2] = hp00[i*3+2];
 
 				res = kdtree_rangesearch_nosort(startree, centre, radius2);
 
@@ -844,14 +882,21 @@ int main(int argc, char** argv) {
 				kdtree_free_query(res);
 
 				if (create_quad(stars, inds, N, circle,
-								hp00 + hp*3, hpvx + hp*3, hpvy + hp*3,
-								hpmaxdot1[hp], hpmaxdot2[hp])) {
+								//hp00 + hp*3, hpvx + hp*3, hpvy + hp*3,
+								//hpmaxdot1[hp], hpmaxdot2[hp])) {
+								hp00 + i*3, hpvx + i*3, hpvy + i*3,
+								hpmaxdot1[i], hpmaxdot2[i])) {
 					nthispass++;
 
 					// pack stuff into smaller arrays for next round...
 
-					hptotry[Nhpnext++] = hp;
-
+					hptotry[Nhpnext] = hp;
+					memmove(hp00 + Nhpnext * 3, hp00 + i, 3 * sizeof(double));
+					memmove(hpvx + Nhpnext * 3, hpvx + i, 3 * sizeof(double));
+					memmove(hpvy + Nhpnext * 3, hpvy + i, 3 * sizeof(double));
+					hpmaxdot1[Nhpnext] = hpmaxdot1[i];
+					hpmaxdot2[Nhpnext] = hpmaxdot2[i];
+					Nhpnext++;
 				}
 			}
 			printf("\n");
@@ -872,6 +917,11 @@ int main(int argc, char** argv) {
 
 			hptotry = myrealloc(hptotry, Nhpnext * sizeof(int));
 			quadlist = myrealloc(quadlist, Nhpnext * sizeof(quad));
+			hp00 = myrealloc(hp00, Nhpnext * 3 * sizeof(double));
+			hpvx = myrealloc(hpvx, Nhpnext * 3 * sizeof(double));
+			hpvy = myrealloc(hpvy, Nhpnext * 3 * sizeof(double));
+			hpmaxdot1 = myrealloc(hpmaxdot1, Nhpnext * sizeof(double));
+			hpmaxdot2 = myrealloc(hpmaxdot2, Nhpnext * sizeof(double));
 
 			Nhptotry = Nhpnext;
 
