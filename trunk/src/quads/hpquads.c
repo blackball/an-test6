@@ -117,7 +117,6 @@ static int compare_quads(const void* v1, const void* v2) {
 static bool firstpass;
 
 static bool add_quad(quad* q) {
-	/*
 	if (!firstpass) {
 		bool dup = bt_contains(bigquadlist, q, compare_quads);
 		if (dup) {
@@ -127,11 +126,6 @@ static bool add_quad(quad* q) {
 	}
 	quadlist[Nquads++] = *q;
 	return TRUE;
-	*/
-	bool ok = bt_insert(bigquadlist, q, TRUE, compare_quads);
-	if (!ok)
-		ndupquads++;
-	return ok;
 }
 
 static void compute_code(quad* q, double* code) {
