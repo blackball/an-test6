@@ -13,7 +13,7 @@ CFLAGS += -O0
 #CFLAGS += -O3 -ffast-math
 
 # to turn off asserts:
-#CFLAGS += -DNDEBUG
+CFLAGS += -DNDEBUG
 
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
