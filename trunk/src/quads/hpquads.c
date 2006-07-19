@@ -836,7 +836,11 @@ int main(int argc, char** argv) {
 			printf("bt height is %i\n", bt_height(bigquadlist));
 			{
 				double opth = log(bt_size(bigquadlist) / (double)bigquadlist->blocksize) / log(2.0);
+				int nleaves;
 				printf("(optimal height is %g.)\n", opth);
+				nleaves = bt_count_leaves(bigquadlist);
+				printf("bt contains %i leaves.\n", nleaves);
+				printf("leaves are on average %.1f%% full.\n", 100.0 * bt_size(bigquadlist) / (double)(nleaves * bigquadlist->blocksize));
 			}
 
 			firstpass = FALSE;
