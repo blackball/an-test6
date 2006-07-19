@@ -659,7 +659,7 @@ int main(int argc, char** argv) {
 					hptotry[Nhptotry++] = neigh[k];
 			}
 		}
-		hptotry = realloc(hptotry, Nhptotry * sizeof(int));
+		hptotry = myrealloc(hptotry, Nhptotry * sizeof(int));
 	} else {
 		// try all healpixes.
 		hptotry = malloc(HEALPIXES * sizeof(int));
