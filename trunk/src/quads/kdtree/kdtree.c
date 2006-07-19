@@ -818,7 +818,7 @@ bool resize_results(kdtree_qres_t* res, int newsize, int d) {
 	res->results = realloc(res->results, newsize * d * sizeof(real));
 	res->sdists  = realloc(res->sdists , newsize * sizeof(real));
 	res->inds    = realloc(res->inds   , newsize * sizeof(unsigned int));
-	if (!res->results || !res->sdists || !res->inds)
+	if (newsize && (!res->results || !res->sdists || !res->inds))
 		fprintf(stderr, "Failed to resize kdtree results arrays.\n");
 	return TRUE;
 }
