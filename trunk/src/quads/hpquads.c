@@ -321,6 +321,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	int i, j, k;
 	int* inbox;
 	pquad* pquads;
+	int iAalloc;
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
@@ -387,6 +388,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 			pq->ninbox = ninbox;
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
+		iAalloc = iA;
 
 		// quads with the new star not on the diagonal:
 		iD = newpoint;
@@ -415,6 +417,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						if (add_quad(&q)) {
 							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
+							iA = iAalloc;
 							goto theend;
 						}
 					}
@@ -424,7 +427,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	}
  theend:
 	for (i=0; i<imin(Nstars, newpoint+1); i++) {
-		for (j=0; j<imin(iA, i); j++) {
+		int lim = (i == newpoint) ? iA : i;
+		for (j=0; j<lim; j++) {
 			pquad* pq = pquads + j*Nstars + i;
 			free(pq->inbox);
 		}
