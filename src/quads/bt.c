@@ -417,7 +417,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 
 	increment_n(ancestors, nancestors);
 
-	if (!y)
+	if (!y || isleaf(y))
 		return TRUE;
 
 	bt_print_structure(tree, NULL);
