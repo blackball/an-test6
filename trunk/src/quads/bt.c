@@ -420,13 +420,21 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	if (!y || isleaf(y))
 		return TRUE;
 
-	for (p = y, k = 0;
-		 p != q;
-		 p = p->branch.children[da[k]], k++)
+	/*
+	  for (p = y, k = 0;
+	  p != q;
+	  p = p->branch.children[da[k]], k++)
+	  if (da[k] == 0)
+	  p->branch.balance--;
+	  else
+	  p->branch.balance++;
+	*/
+	for (k=0; k<nancestors; k++) {
 		if (da[k] == 0)
-			p->branch.balance--;
+			ancestors[k]->branch.balance--;
 		else
-			p->branch.balance++;
+			ancestors[k]->branch.balance++;
+	}
 
 	if (y->branch.balance == -2) {
 		bt_node *x = y->branch.children[0];
