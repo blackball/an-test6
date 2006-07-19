@@ -305,7 +305,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bool rtn;
 	bool willfit;
 	int cmp;
-	int ik;
+	//int ik;
 
 	if (!tree->root) {
 		// inserting the first element...
@@ -421,21 +421,22 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	if (!y || isleaf(y))
 		return TRUE;
 
-	/*
-	  for (p = y, k = 0;
-	  p != q;
-	  p = p->branch.children[da[k]], k++)
-	  if (da[k] == 0)
-	  p->branch.balance--;
-	  else
-	  p->branch.balance++;
-	*/
-	for (ik=0; ik<k; ik++) {
-		if (da[ik] == 0)
-			ancestors[ik]->branch.balance--;
+	for (p = y, k = 0;
+		 p != q;
+		 p = p->branch.children[da[k]], k++)
+		if (da[k] == 0)
+			p->branch.balance--;
 		else
-			ancestors[ik]->branch.balance++;
-	}
+			p->branch.balance++;
+	
+	/* (nancestors - k)
+	  for (ik=0; ik<k; ik++) {
+	  if (da[ik] == 0)
+	  ancestors[ik]->branch.balance--;
+	  else
+	  ancestors[ik]->branch.balance++;
+	  }
+	*/
 
 	if (y->branch.balance == -2) {
 		bt_node *x = y->branch.children[0];
