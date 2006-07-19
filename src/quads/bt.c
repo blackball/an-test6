@@ -305,7 +305,6 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bool rtn;
 	bool willfit;
 	int cmp;
-	//int ik;
 
 	if (!tree->root) {
 		// inserting the first element...
@@ -332,8 +331,6 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		ancestors[nancestors++] = p;
 		da[k++] = dir = (cmp > 0);
 	}
-	cmp = -1;
-	da[k++] = dir = (cmp > 0);
 	cmp = compare(data, first_element(p));
 
 	// will this element fit in the current node?
@@ -346,6 +343,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		increment_n(ancestors, nancestors);
 		return TRUE;
 	}
+
+	da[k++] = (cmp > 0);
 
 	if (cmp > 0) {
 		// insert the new element into this node and shuffle the
@@ -422,22 +421,13 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		return TRUE;
 
 	for (p = y, k = 0;
-		 p != q;
+		 p != np;
 		 p = p->branch.children[da[k]], k++)
 		if (da[k] == 0)
 			p->branch.balance--;
 		else
 			p->branch.balance++;
 	
-	/* (nancestors - k)
-	  for (ik=0; ik<k; ik++) {
-	  if (da[ik] == 0)
-	  ancestors[ik]->branch.balance--;
-	  else
-	  ancestors[ik]->branch.balance++;
-	  }
-	*/
-
 	if (y->branch.balance == -2) {
 		bt_node *x = y->branch.children[0];
 		if (x->branch.balance == -1) {
