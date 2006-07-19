@@ -659,17 +659,17 @@ static void bt_print_struct_node(bt* tree, bt_node* node, char* indent,
 #if NODENUM
 	printf("Node %i.  ", node->nodenum);
 #endif
-	printf("(bal %i)", node->branch.balance);
 	if (!isleaf(node)) {
 		char* subind;
 		char* addind = "|--";
-		printf("\n");
+		printf("(bal %i)\n", node->branch.balance);
 		subind = malloc(strlen(indent) + strlen(addind) + 1);
 		sprintf(subind, "%s%s", indent, addind);
 		bt_print_struct_node(tree, node->branch.children[0], subind, print_element);
 		bt_print_struct_node(tree, node->branch.children[1], subind, print_element);
 	} else {
 		int i;
+		printf("(leaf)");
 		if (print_element) {
 			printf(" [ ");
 			for (i=0; i<node_N(node); i++)
