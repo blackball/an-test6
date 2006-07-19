@@ -6,28 +6,50 @@
 
 #define NODENUM 0
 
-struct bt_datablock {
+struct bt_leaf {
+	// always 1; must be the first element in the struct.
+	unsigned char isleaf;
 	// number of data elements.
-	int N;
+	short N;
 	// data follows implicitly.
 };
-typedef struct bt_datablock bt_datablock;
+typedef struct bt_leaf bt_leaf;
 
-struct bt_node {
-	struct bt_node* children[2];
-	// if leaf: the data block owned by this leaf node.
-	// else: the leftmost data block in this subtree.
-	bt_datablock* data;
-	// number of elements in the left subtree.
-	int Nleft;
-	// number of elements in the right subtree.
-	int Nright;
+struct bt_branch {
+	// always 0; must be the first element in the struct.
+	unsigned char isleaf;
 	// AVL balance
 	signed char balance;
 
-#if defined(NODENUM)
+	struct bt_node* children[2];
+
+	// the leftmost leaf node in this subtree.
+	bt_leaf* firstleaf;
+
+	// number of element in this subtree.
+	int N;
+
+#if NODENUM
 	int nodenum;
 #endif
+};
+typedef struct bt_branch bt_branch;
+
+/*
+  We distinguish between "branch" (ie, internal) nodes and "leaf" nodes,
+  because leaf nodes don't need most of the entries in the "branch"
+  struct, and since there are a lot of leaves, this space savings can be
+  quite considerable.
+
+  The data owned by a leaf node follows right after the leaf struct
+  itself.
+ */
+
+struct bt_node {
+	union {
+		bt_leaf leaf;
+		bt_branch branch;
+	};
 };
 typedef struct bt_node bt_node;
 
