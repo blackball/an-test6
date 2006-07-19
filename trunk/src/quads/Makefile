@@ -6,11 +6,14 @@ LFLAGS := -lm
 CFLAGS :=
 
 CFLAGS	+= -g
-#CFLAGS += -O0
+CFLAGS += -O0
 #CFLAGS += -O2
-CFLAGS += -pg
+#CFLAGS += -pg
 #CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math
+#CFLAGS += -O3 -ffast-math
+
+# to turn off asserts:
+#CFLAGS += -DNDEBUG
 
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
@@ -36,9 +39,6 @@ CFLAGS += -O3 -ffast-math
 #    is multi-threaded. Use -fmudflapir, in addition to -fmudflap or -fmudflapth,
 #    if instrumentation should ignore pointer reads. This produces less
 #    instrumentation (and therefore faster execution) and still provides some protection against outright memory corrupting writes, but allows erroneously read data to propagate within a program.
-
-# to turn off asserts:
-CFLAGS += -DNDEBUG
 
 CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
