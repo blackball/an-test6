@@ -28,6 +28,18 @@ int bt_size(bt* tree) {
 	return tree->N;
 }
 
+int bt_height(bt* tree) {
+	bt_node* n = tree->root;
+	int h = 0;
+	for (n=tree->root; n; h++) {
+		if (n->balance > 0)
+			n = n->children[1];
+		else
+			n = n->children[0];
+	}
+	return h;
+}
+
 static void bt_free_node(bt_node* node) {
 	if (node->children[0]) {
 		bt_free_node(node->children[0]);
