@@ -73,11 +73,11 @@ int bt_size(bt* tree) {
 
 int bt_height(bt* tree) {
 	bt_node* n;
-	int h = 0;
+	int h;
 	n = tree->root;
 	if (!n) return 0;
 	if (isleaf(n)) return 1;
-	for (; n; h++) {
+	for (h=1; !isleaf(n); h++) {
 		if (n->branch.balance > 0)
 			n = getrightchild(n);
 		else
