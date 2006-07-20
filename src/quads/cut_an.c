@@ -253,16 +253,16 @@ int main(int argc, char** args) {
 				exit(-1);
 			}
 
-			hp = radectohealpix_nside(deg2rad(an[i].ra), deg2rad(an[i].dec), Nside);
+			hp = radectohealpix_nside(deg2rad(an->ra), deg2rad(an->dec), Nside);
 
 			if (!owned[hp]) {
 				ndiscarded++;
 				continue;
 			}
 
-			sd.ra = an[i].ra;
-			sd.dec = an[i].dec;
-			sd.id = an[i].id;
+			sd.ra = an->ra;
+			sd.dec = an->dec;
+			sd.id = an->id;
 
 			// dumbass magnitude averaging!
 			summag = 0.0;
@@ -270,35 +270,35 @@ int main(int argc, char** args) {
 			sumredmag = 0.0;
 			nredmag = 0;
 			if (sdss) {
-				for (j=0; j<an[i].nobs; j++) {
-					if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
-						if (an[i].obs[j].band == 'E' || an[i].obs[j].band == 'F') {
-							summag += an[i].obs[j].mag;
+				for (j=0; j<an->nobs; j++) {
+					if (an->obs[j].catalog == AN_SOURCE_USNOB) {
+						if (an->obs[j].band == 'E' || an->obs[j].band == 'F') {
+							summag += an->obs[j].mag;
 							nmag++;
 						}
-					} else if (an[i].obs[j].catalog == AN_SOURCE_TYCHO2) {
-						if (an[i].obs[j].band == 'V' || an[i].obs[j].band == 'H') {
-							summag += an[i].obs[j].mag;
+					} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
+						if (an->obs[j].band == 'V' || an->obs[j].band == 'H') {
+							summag += an->obs[j].mag;
 							nmag++;
 						}
 					}
 				}
 			} else if (galex) {
-				for (j=0; j<an[i].nobs; j++) {
-					if (an[i].obs[j].catalog == AN_SOURCE_USNOB) {
-						if (an[i].obs[j].band == 'O' || an[i].obs[j].band == 'J') {
-							summag += an[i].obs[j].mag;
+				for (j=0; j<an->nobs; j++) {
+					if (an->obs[j].catalog == AN_SOURCE_USNOB) {
+						if (an->obs[j].band == 'O' || an->obs[j].band == 'J') {
+							summag += an->obs[j].mag;
 							nmag++;
-						} else if (an[i].obs[j].band == 'E' || an[i].obs[j].band == 'F') {
-							sumredmag += an[i].obs[j].mag;
+						} else if (an->obs[j].band == 'E' || an->obs[j].band == 'F') {
+							sumredmag += an->obs[j].mag;
 							nredmag++;
 						}
-					} else if (an[i].obs[j].catalog == AN_SOURCE_TYCHO2) {
-						if (an[i].obs[j].band == 'B' || an[i].obs[j].band == 'H') {
-							summag += an[i].obs[j].mag;
+					} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
+						if (an->obs[j].band == 'B' || an->obs[j].band == 'H') {
+							summag += an->obs[j].mag;
 							nmag++;
-						} else if (an[i].obs[j].band == 'V') {
-							sumredmag += an[i].obs[j].mag;
+						} else if (an->obs[j].band == 'V') {
+							sumredmag += an->obs[j].mag;
 							nredmag++;
 						}
 					}
