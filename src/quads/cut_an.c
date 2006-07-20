@@ -434,6 +434,9 @@ int main(int argc, char** args) {
 	idfile_close(id);
 
 	free(owned);
+	for (i=0; i<HP; i++)
+		if (starlists[i])
+			bl_free(starlists[i]);
 	free(starlists);
 
 	return 0;
