@@ -159,14 +159,22 @@ int main(int argc, char **args) {
 	qfits_header_add(qfout->header, "HISTORY", "unpermute-stars2 command line:", NULL, NULL);
 	fits_add_args(qfout->header, args, argc);
 	qfits_header_add(qfout->header, "HISTORY", "(end of unpermute-stars2 command line)", NULL, NULL);
+	qfits_header_add(qfout->header, "HISTORY", "** unpermute-stars2: history from input:", NULL, NULL);
 	fits_copy_all_headers(qfin->header, qfout->header, "HISTORY");
+	qfits_header_add(qfout->header, "HISTORY", "** unpermute-stars2: end of history from input.", NULL, NULL);
+	qfits_header_add(qfout->header, "COMMENT", "** unpermute-stars2: comments from input:", NULL, NULL);
 	fits_copy_all_headers(qfin->header, qfout->header, "COMMENT");
+	qfits_header_add(qfout->header, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
 
 	qfits_header_add(idout->header, "HISTORY", "unpermute-stars2 command line:", NULL, NULL);
 	fits_add_args(idout->header, args, argc);
 	qfits_header_add(idout->header, "HISTORY", "(end of unpermute-stars2 command line)", NULL, NULL);
+	qfits_header_add(idout->header, "HISTORY", "** unpermute-stars2: history from input:", NULL, NULL);
 	fits_copy_all_headers(idin->header, idout->header, "HISTORY");
+	qfits_header_add(idout->header, "HISTORY", "** unpermute-stars2: end of history from input.", NULL, NULL);
+	qfits_header_add(idout->header, "COMMENT", "** unpermute-stars2: comments from input:", NULL, NULL);
 	fits_copy_all_headers(idin->header, idout->header, "COMMENT");
+	qfits_header_add(idout->header, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
 
 	if (quadfile_write_header(qfout) ||
 		idfile_write_header(idout)) {
@@ -241,8 +249,12 @@ int main(int argc, char **args) {
 	qfits_header_add(hdr, "HISTORY", "unpermute-stars2 command line:", NULL, NULL);
 	fits_add_args(hdr, args, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of unpermute-stars2 command line)", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "** unpermute-stars2: history from input:", NULL, NULL);
 	fits_copy_all_headers(starhdr, hdr, "HISTORY");
+	qfits_header_add(hdr, "HISTORY", "** unpermute-stars2: end of history from input.", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "** unpermute-stars2: comments from input:", NULL, NULL);
 	fits_copy_all_headers(starhdr, hdr, "COMMENT");
+	qfits_header_add(hdr, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
 
 	quadfile_close(qfin);
 	idfile_close(idin);
