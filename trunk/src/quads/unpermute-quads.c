@@ -123,8 +123,12 @@ int main(int argc, char **args) {
 	qfits_header_add(quadout->header, "HISTORY", "unpermute-quads command line:", NULL, NULL);
 	fits_add_args(quadout->header, args, argc);
 	qfits_header_add(quadout->header, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
+	qfits_header_add(quadout->header, "HISTORY", "** unpermute-quads: history from input:", NULL, NULL);
 	fits_copy_all_headers(quadin->header, quadout->header, "HISTORY");
+	qfits_header_add(quadout->header, "HISTORY", "** unpermute-quads end of history from input.", NULL, NULL);
+	qfits_header_add(quadout->header, "COMMENT", "** unpermute-quads: comments from input:", NULL, NULL);
 	fits_copy_all_headers(quadin->header, quadout->header, "COMMENT");
+	qfits_header_add(quadout->header, "COMMENT", "** unpermute-quads: end of comments from input.", NULL, NULL);
 	fits_copy_header(quadin->header, quadout->header, "CXDX");
 	fits_copy_header(quadin->header, quadout->header, "CIRCLE");
 
@@ -157,13 +161,17 @@ int main(int argc, char **args) {
 	treeout->nnodes = treein->nnodes;
 
 	hdr = qfits_header_default();
-	qfits_header_add(hdr, "AN_FILE", "CKDT", "This is a star kdtree.", NULL);
+	qfits_header_add(hdr, "AN_FILE", "CKDT", "This is a code kdtree.", NULL);
 	fits_copy_header(quadin->header, hdr, "HEALPIX");
 	qfits_header_add(hdr, "HISTORY", "unpermute-quads command line:", NULL, NULL);
 	fits_add_args(hdr, args, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "** unpermute-quads: history from input ckdt:", NULL, NULL);
 	fits_copy_all_headers(codehdr, hdr, "HISTORY");
+	qfits_header_add(hdr, "HISTORY", "** unpermute-quads end of history from input ckdt.", NULL, NULL);
+	qfits_header_add(hdr, "COMMENT", "** unpermute-quads: comments from input ckdt:", NULL, NULL);
 	fits_copy_all_headers(codehdr, hdr, "COMMENT");
+	qfits_header_add(hdr, "COMMENT", "** unpermute-quads: end of comments from input ckdt.", NULL, NULL);
 	fits_copy_header(codehdr, hdr, "CXDX");
 	fits_copy_header(codehdr, hdr, "CIRCLE");
 

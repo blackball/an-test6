@@ -79,15 +79,31 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 
 SOLVER_OBJ := solver.o
 
-EXECS := whynot checkquads mergehits agreeable certifiable quadidx \
-	hpquads dedup_index codetree startree \
-	deduplicate \
-	randcat genfields codedensity findquad findstar \
-	codeprojections quadlocations hpowned fitsgetext quadsperstar \
-	subtable matchstats unpermute-stars unpermute-quads \
-	cert2 rdlstofieldcheck tabsort plotmatch xylstomatlab genmatch \
-	makematch plotquads matchtordls homer rdlstohealpix \
-	galex_stats unpermute-stars2
+EXECS := whynot agreeable certifiable quadidx \
+	hpquads codetree startree \
+	codedensity findquad findstar \
+	codeprojections quadlocations hpowned fitsgetext \
+	subtable matchstats unpermute-quads \
+	tabsort plotmatch \
+	plotquads matchtordls homer \
+	unpermute-stars2
+
+# things we don't use often:
+#	randcat genfields
+#   quadsperstar
+#   genmatch makematch 
+#	xylstomatlab \
+#	galex_stats 
+#	rdlstofieldcheck 
+#   checkquads 
+#   mergehits 
+#   rdlstohealpix \
+
+# obsolescent:
+#	deduplicate \
+#   unpermute-stars 
+#	cert2 
+#   dedup_index 
 
 EXTRAS := rdls2hpls get_healpix printcatalog 
 # codeprojections printmatchfile 
