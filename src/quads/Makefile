@@ -105,10 +105,8 @@ EXECS := whynot agreeable certifiable quadidx \
 #	cert2 
 #   dedup_index 
 
-EXTRAS := rdls2hpls get_healpix printcatalog 
-# codeprojections printmatchfile 
-# codetomatlab 
-
+EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
+	filter_an
 
 # execs that require solver.o
 SOLVER_EXECS := slave
@@ -136,11 +134,7 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
-EXTRA_EXECS = xylist_texttofits hplimits plotcat 
-#usnobprint usnobtofits tycho2tofits ancatalog cut_an split_an \
-#an_deduplicate
-
-all: $(EXTRA_EXECS) $(EXECS) $(SOLVER_EXECS) solvedserver printsolved
+all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat
 
 hptst: hptst.o healpix.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
@@ -175,6 +169,9 @@ $(EXECS) :: %: %.o $(OBJ)
 $(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
 
+$(EXTRAS) :: %: %.o $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
 test_bt: test_bt.o bt.o bl.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
@@ -185,9 +182,6 @@ an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o 
 plotcat: plotcat.o starutil.o an_catalog.o catalog.o tycho2_fits.o tycho2.o \
 	rdlist.o xylist.o \
 	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
-
-xylist_texttofits: xylist_texttofits.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
@@ -207,9 +201,6 @@ cut_an: cut_an.o an_catalog.o catalog.o idfile.o fitsioutils.o \
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
-
-hplimits: hplimits.o healpix.o mathutil.o bl.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest
