@@ -8,17 +8,14 @@
 #include "mathutil.h"
 #include "fitsioutils.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:d:RGe:A"
+#define OPTIONS "ho:N:n:d:RGe:"
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s -o <output-filename-template> -i <output-idfile-template>\n"
-		   "  [-H <big healpix>]  or  [-A] (all-sky)\n"
-		   "  [-m <minimum-magnitude-to-use>]\n"
-		   "  [-M <maximum-magnitude-to-use>]\n"
-		   "  [-n <max-stars-per-(small)-healpix>]\n"
-		   "  [-S <max-stars-per-(big)-healpix]\n"
-		   "  [-N <nside>]: healpixelization at the fine-scale; default=100.\n"
+		   "  %s\n"
+		   "  -o <output-filename>\n"
+		   "  [-n <max-stars-per-fine-healpix>]\n"
+		   "  [-N <nside>]: fine-scale healpixelization.\n"
 		   "  [-d <dedup-radius>]: deduplication radius (arcseconds)\n"
 		   "  ( [-R] or [-G] )\n"
 		   "        R: SDSS R-band\n"
@@ -32,14 +29,12 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 struct stardata {
-	double ra;
-	double dec;
-	uint64_t id;
 	float mag;
+	an_entry entry;
 };
 typedef struct stardata stardata;
 
-int sort_stardata_mag(const void* v1, const void* v2) {
+int compare_stardata_mag(const void* v1, const void* v2) {
 	stardata* d1 = (stardata*)v1;
 	stardata* d2 = (stardata*)v2;
 	float diff = d1->mag - d2->mag;
@@ -50,28 +45,20 @@ int sort_stardata_mag(const void* v1, const void* v2) {
 
 int main(int argc, char** args) {
 	char* outfn = NULL;
-	char* idfn = NULL;
 	int c;
 	int startoptind;
 	int i, k, HP;
 	int Nside = 100;
 	bl** starlists;
 	int maxperhp = 0;
-	double minmag = -1.0;
-	double maxmag = 30.0;
-	bool* owned;
-	int maxperbighp = 0;
-	int bighp = -1;
 	char fn[256];
-	catalog* cat;
-	idfile* id;
+	an_catalog* cat;
 	int nwritten;
 	int BLOCK = 100000;
 	double deduprad = 0.0;
 	double epsilon = 0.0;
 	bool sdss = FALSE;
 	bool galex = FALSE;
-	bool allsky = FALSE;
 	stardata* sweeplist;
 	int nowned;
 
@@ -81,9 +68,6 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
-		case 'A':
-			allsky = TRUE;
-			break;
 		case 'R':
 			sdss = TRUE;
 			break;
@@ -96,35 +80,20 @@ int main(int argc, char** args) {
 		case 'd':
 			deduprad = atof(optarg);
 			break;
-		case 'H':
-			bighp = atoi(optarg);
-			break;
-		case 'S':
-			maxperbighp = atoi(optarg);
-			break;
 		case 'N':
 			Nside = atoi(optarg);
 			break;
 		case 'o':
 			outfn = optarg;
 			break;
-		case 'i':
-			idfn = optarg;
-			break;
 		case 'n':
 			maxperhp = atoi(optarg);
-			break;
-		case 'm':
-			minmag = atof(optarg);
-			break;
-		case 'M':
-			maxmag = atof(optarg);
 			break;
 		}
     }
 
-	if (!outfn || !idfn || (optind == argc)) {
-		printf("Specify catalog and idfile names and input files.\n");
+	if (!outfn || (optind == argc)) {
+		printf("Specify output and input filesnames.\n");
 		print_help(args[0]);
 		exit(-1);
 	}
@@ -133,20 +102,11 @@ int main(int argc, char** args) {
 		print_help(args[0]);
 		exit(-1);
 	}
-	if ((bighp == -1) && !allsky) {
-		printf("Either specify a healpix (-H) or all-sky (-A).\n");
-		print_help(args[0]);
-		exit(-1);
-	}
 
 	HP = 12 * Nside * Nside;
 
 	printf("Nside=%i, HP=%i, maxperhp=%i, max number of stars = HP*maxperhp = %i.\n", Nside, HP, maxperhp, HP*maxperhp);
 	printf("Healpix side length: %g arcmin.\n", healpix_side_length_arcmin(Nside));
-	if (bighp != -1)
-		printf("Writing big healpix %i.\n", bighp);
-	else
-		printf("Writing an all-sky catalog.\n");
 
 	if (deduprad > 0.0) {
 		printf("Deduplication radius %f arcsec.\n", deduprad);
@@ -154,62 +114,19 @@ int main(int argc, char** args) {
 	}
 
 	starlists = calloc(HP, sizeof(bl*));
-	owned = calloc(HP, sizeof(bool));
 
-	// find the set of small healpixes that this big healpix owns
-	// (including a bit of overlap)
-	if (bighp != -1) {
-		for (i=0; i<HP; i++) {
-			uint big, x, y;
-			uint nn, neigh[8], k;
-			healpix_decompose(i, &big, &x, &y, Nside);
-			if (big != bighp)
-				continue;
-			owned[i] = 1;
-			if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
-				// add its neighbours.
-				nn = healpix_get_neighbours_nside(i, neigh, Nside);
-				for (k=0; k<nn; k++)
-					owned[neigh[k]] = 1;
-			}
-		}
-	} else
-		memset(owned, 1, HP * sizeof(bool));
-
-	nwritten = 0;
-
-	sprintf(fn, outfn, bighp);
-	cat = catalog_open_for_writing(fn);
+	cat = an_catalog_open_for_writing(outfn);
 	if (!cat) {
 		fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
 		exit(-1);
 	}
-	cat->healpix = bighp;
-	if (allsky)
-		qfits_header_add(cat->header, "ALLSKY", "T", "All-sky catalog.", NULL);
 
-
-	sprintf(fn, idfn, bighp);
-	id = idfile_open_for_writing(fn);
-	if (!id) {
-		fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
-		exit(-1);
-	}
-	id->healpix = bighp;
-	if (allsky)
-		qfits_header_add(id->header, "ALLSKY", "T", "All-sky catalog.", NULL);
-
-	qfits_header_add(id->header, "HISTORY", "cut_an command line:", NULL, NULL);
-	fits_add_args(id->header, args, argc);
-	qfits_header_add(id->header, "HISTORY", "(end of cut_an command line)", NULL, NULL);
-
-	qfits_header_add(cat->header, "HISTORY", "cut_an command line:", NULL, NULL);
+	qfits_header_add(cat->header, "HISTORY", "filter_an command line:", NULL, NULL);
 	fits_add_args(cat->header, args, argc);
-	qfits_header_add(cat->header, "HISTORY", "(end of cut_an command line)", NULL, NULL);
+	qfits_header_add(cat->header, "HISTORY", "(end of filter_an command line)", NULL, NULL);
 
-	if (catalog_write_header(cat) ||
-		idfile_write_header(id)) {
-		fprintf(stderr, "Failed to write catalog or idfile header.\n");
+	if (an_catalog_write_headers(cat)) {
+		fprintf(stderr, "Failed to write catalog header.\n");
 		exit(-1);
 	}
 
@@ -218,8 +135,8 @@ int main(int argc, char** args) {
 		char* infn;
 		int i, N;
 		an_catalog* ancat;
-		int ndiscarded;
 		int nduplicates;
+		int lastgrass = 0;
 
 		infn = args[optind];
 		ancat = an_catalog_open(infn);
@@ -231,7 +148,6 @@ int main(int argc, char** args) {
 		N = an_catalog_count_entries(ancat);
 		printf("Reading   %i entries from %s...\n", N, infn);
 		fflush(stdout);
-		ndiscarded = 0;
 		nduplicates = 0;
 
 		for (i=0; i<N; i++) {
@@ -243,6 +159,14 @@ int main(int argc, char** args) {
 			double sumredmag;
 			int nredmag;
 			an_entry* an;
+			int grass;
+
+			grass = i*80 / N;
+			if (grass != lastgrass) {
+				printf(".");
+				fflush(stdout);
+				lastgrass = grass;
+			}
 
 			an = an_catalog_read_entry(ancat);
 			if (!an) {
@@ -251,15 +175,6 @@ int main(int argc, char** args) {
 			}
 
 			hp = radectohealpix_nside(deg2rad(an->ra), deg2rad(an->dec), Nside);
-
-			if (!owned[hp]) {
-				ndiscarded++;
-				continue;
-			}
-
-			sd.ra = an->ra;
-			sd.dec = an->dec;
-			sd.id = an->id;
 
 			// dumbass magnitude averaging!
 			summag = 0.0;
@@ -314,11 +229,6 @@ int main(int argc, char** args) {
 				}
 			}
 
-			if (sd.mag < minmag)
-				continue;
-			if (sd.mag > maxmag)
-				continue;
-
 			if (!starlists[hp])
 				starlists[hp] = bl_new(maxperhp ? maxperhp : 10, sizeof(stardata));
 
@@ -332,11 +242,11 @@ int main(int argc, char** args) {
 			if (deduprad > 0.0) {
 				double xyz[3];
 				bool dup = FALSE;
-				radec2xyzarr(deg2rad(sd.ra), deg2rad(sd.dec), xyz);
+				radec2xyzarr(deg2rad(an->ra), deg2rad(an->dec), xyz);
 				for (j=0; j<bl_size(starlists[hp]); j++) {
 					double xyz2[3];
 					stardata* sd2 = bl_access(starlists[hp], j);
-					radec2xyzarr(deg2rad(sd2->ra), deg2rad(sd2->dec), xyz2);
+					radec2xyzarr(deg2rad(sd2->entry.ra), deg2rad(sd2->entry.dec), xyz2);
 					if (!distsq_exceeds(xyz, xyz2, 3, deduprad)) {
 						nduplicates++;
 						dup = TRUE;
@@ -346,11 +256,12 @@ int main(int argc, char** args) {
 				if (dup)
 					continue;
 			}
-			bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
-		}
 
-		if (bighp != -1)
-			printf("Discarded %i stars not in this big healpix.\n", ndiscarded);
+			memcpy(&sd.entry, an, sizeof(an_entry));
+			bl_insert_sorted(starlists[hp], &sd, compare_stardata_mag);
+		}
+		printf("\n");
+
 		printf("Discarded %i duplicate stars.\n", nduplicates);
 
 		if (maxperhp)
@@ -368,55 +279,40 @@ int main(int argc, char** args) {
 		an_catalog_close(ancat);
 	}
 
-	for (i=0; i<HP; i++)
-		if (!starlists[i])
-			owned[i] = 0;
-
 	// sweep through the healpixes...
 	nowned = 0;
 	for (i=0; i<HP; i++)
-		if (owned[i])
+		if (starlists[i])
 			nowned++;
 	sweeplist = malloc(nowned * sizeof(stardata));
 
+	nwritten = 0;
 	for (k=0;; k++) {
 		nowned = 0;
 		// gather up the stars that will be used in this sweep...
 		for (i=0; i<HP; i++) {
 			stardata* sd;
 			int N;
-			if (!owned[i]) continue;
+			if (!starlists[i]) continue;
 			N = bl_size(starlists[i]);
-			if (k >= N) {
-				owned[i] = 0;
+			if (k >= N)
 				continue;
-			}
 			sd = bl_access(starlists[i], k);
 			memcpy(sweeplist + nowned, sd, sizeof(stardata));
 			nowned++;
 		}
 
 		// sort them by magnitude...
-		qsort(sweeplist, nowned, sizeof(stardata), sort_stardata_mag);
+		qsort(sweeplist, nowned, sizeof(stardata), compare_stardata_mag);
 
 		// write them out...
 		for (i=0; i<nowned; i++) {
-			double xyz[3];
 			stardata* sd = sweeplist + i;
-			radec2xyzarr(deg2rad(sd->ra), deg2rad(sd->dec), xyz);
-
-			catalog_write_star(cat, xyz);
-			idfile_write_anid(id, sd->id);
-				
+			an_catalog_write_entry(cat, &sd->entry);
 			nwritten++;
-			if (nwritten == maxperbighp)
-				break;
 		}
 		printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
 		fflush(stdout);
-		// if we broke out of the loop...
-		if (nwritten == maxperbighp)
-			break;
 		if (!nowned)
 			break;
 	}
@@ -424,12 +320,12 @@ int main(int argc, char** args) {
 
 	free(sweeplist);
 
-	catalog_fix_header(cat);
-	catalog_close(cat);
-	idfile_fix_header(id);
-	idfile_close(id);
+	if (an_catalog_fix_headers(cat) ||
+		an_catalog_close(cat)) {
+		fprintf(stderr, "Failed to close output catalog.\n");
+		exit(-1);
+	}
 
-	free(owned);
 	for (i=0; i<HP; i++)
 		if (starlists[i])
 			bl_free(starlists[i]);
