@@ -324,7 +324,7 @@ int main(int argc, char** args) {
 				continue;
 
 			if (!starlists[hp])
-				starlists[hp] = bl_new(10, sizeof(stardata));
+				starlists[hp] = bl_new(maxperhp ? maxperhp : 10, sizeof(stardata));
 
 			if (maxperhp && (bl_size(starlists[hp]) >= maxperhp)) {
 				// is this list full?
