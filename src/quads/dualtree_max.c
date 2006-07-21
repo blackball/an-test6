@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "dualtree_max.h"
+#include "kdtree_access.h"
 #include "starutil.h"
 #include "bl.h"
 

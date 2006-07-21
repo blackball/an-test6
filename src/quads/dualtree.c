@@ -1,4 +1,5 @@
 #include "dualtree.h"
+#include "kdtree_access.h"
 #include "bl.h"
 
 #define BAIL_OUT() printf("Bailing out: file %s, line %i", __FILE__, __LINE__)

@@ -2,6 +2,7 @@
 #include "dualtree_rangesearch.h"
 #include "dualtree.h"
 #include "mathutil.h"
+#include "kdtree_access.h"
 
 double RANGESEARCH_NO_LIMIT = 1.12345e308;
 

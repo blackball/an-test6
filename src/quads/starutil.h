@@ -76,8 +76,6 @@ Const inline double arc2distsq(double arcInRadians);
 // between two points on the unit sphere separated by that angle.
 Const inline double arcsec2distsq(double arcInArcSec);
 
-#define radscale2xyzscale(r) (sqrt(2.0-2.0*cos(r/2.0)))
-
 #define HELP_ERR -101
 #define OPT_ERR -201
 
