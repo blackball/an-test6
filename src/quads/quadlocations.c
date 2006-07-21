@@ -91,12 +91,14 @@ int main(int argc, char** args) {
 		free_fn(fn);
 
 		fn = mk_catfn(basename);
+		printf("Trying to open catalog file %s...\n", fn);
 		cat = catalog_open(fn, 0);
 		free_fn(fn);
 		if (cat) {
 			Nstars = cat->numstars;
 		} else {
 			fn = mk_streefn(basename);
+			printf("Trying to open star kdtree %s instead...\n", fn);
 			skdt = kdtree_fits_read_file(fn);
 			if (!skdt) {
 				fprintf(stderr, "Failed to read star kdtree %s.\n", fn);

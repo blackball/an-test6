@@ -50,6 +50,21 @@ static void donut_pair_found(void* extra, int x, int y, double dist2) {
 	}
 }
 
+struct merged_obj {
+	double avgx;
+	double avgy;
+	int brightness;
+};
+typedef struct merged_obj merged_obj;
+
+static int compare_brightness(const void* v1, const void* v2) {
+	const merged_obj* m1 = v1;
+	const merged_obj* m2 = v2;
+	if (m1->brightness < m2->brightness) return -1;
+	if (m1->brightness > m2->brightness) return 1;
+	return 0;
+}
+
 void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 				   double nearbydist, double thresh) {
 	double* fieldxy;
@@ -64,12 +79,17 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	bool* merged;
 	int fieldind;
 	int nmerged;
+	merged_obj* mergedobjs;
+	int Nnew;
+	int Ndonuts;
+	int nextmerged;
 
 	N = *pnfield;
 	fieldxy = malloc(N * 2 * sizeof(double));
 	memcpy(fieldxy, *pfield, N * 2 * sizeof(double));
 
-	// Hey, doughbrain: "fieldxy" will be scrambled after creating a kdtree out of it.
+	// Hey, doughbrain: be careful, "fieldxy" will be scrambled after 
+	// creating a kdtree out of it.
 
 	levels = kdtree_compute_levels(N, 5);
 	tree = kdtree_build(fieldxy, N, 2, levels);
@@ -86,54 +106,71 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	if (frac < thresh)
 		goto done;
 
-	/***
-	 * FIXME:
-	 * This process totally scrambles the order of the stars; it shouldn't.
-	 */
-
 	lists = pl_new(32);
 	dualtree_rangesearch(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist,
 						 donut_pair_found, lists, NULL, NULL);
 	fprintf(stderr, "Found %i clusters:\n", pl_size(lists));
 
+	// how many stars joined donuts?
 	nmerged = 0;
 	for (i=0; i<pl_size(lists); i++)
 		nmerged += il_size(pl_get(lists, i));
 
-	newfield = malloc((N - nmerged + pl_size(lists)) * 2 * sizeof(double));
+	Ndonuts = pl_size(lists);
+	Nnew = (N - nmerged + Ndonuts);
+	mergedobjs = malloc(Nnew * sizeof(merged_obj));
 
 	merged = calloc(N, sizeof(bool));
 
 	for (i=0; i<pl_size(lists); i++) {
 		int j;
 		double avgx, avgy;
+		int brightest = -1;
 		il* list = pl_get(lists, i);
 		fprintf(stderr, "    ");
 		avgx = avgy = 0.0;
 		for (j=0; j<il_size(list); j++) {
 			int ind;
-			fprintf(stderr, "%i ", il_get(list, j));
+			//fprintf(stderr, "%i ", il_get(list, j));
 			ind = il_get(list, j);
 			merged[ind] = TRUE;
 			avgx += fieldxy[ind*2];
 			avgy += fieldxy[ind*2+1];
+			if ((j == 0) || (ind < brightest))
+				brightest = ind;
 		}
 		avgx /= (double)il_size(list);
 		avgy /= (double)il_size(list);
-		fprintf(stderr, "\n");
 		il_free(list);
-		newfield[i*2]   = avgx;
-		newfield[i*2+1] = avgy;
+		mergedobjs[i].avgx = avgx;
+		mergedobjs[i].avgy = avgy;
+		mergedobjs[i].brightness = brightest;
 	}
-	fieldind = pl_size(lists);
+
+	qsort(mergedobjs, sizeof(merged_obj), Ndonuts, compare_brightness);
+	nextmerged = 0;
+
+	newfield = malloc(Nnew * 2 * sizeof(double));
+
+	fieldind = 0;
 	for (i=0; i<N; i++) {
-		if (merged[i])
+		if (merged[i]) {
+			// check if we should insert the next-brightest donut...
+			if ((nextmerged < Ndonuts) &&
+				(mergedobjs[nextmerged].brightness == i)) {
+				newfield[fieldind*2  ] = mergedobjs[nextmerged].avgx;
+				newfield[fieldind*2+1] = mergedobjs[nextmerged].avgx;
+				nextmerged++;
+				fieldind++;
+			}
 			continue;
+		}
 		// this star wasn't part of a donut...
 		newfield[fieldind*2  ] = fieldxy[i*2];
 		newfield[fieldind*2+1] = fieldxy[i*2+1];
 		fieldind++;
 	}
+	free(mergedobjs);
 
 	free(merged);
 	pl_free(lists);
