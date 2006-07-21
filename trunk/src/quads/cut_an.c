@@ -66,7 +66,6 @@ int main(int argc, char** args) {
 	catalog* cat;
 	idfile* id;
 	int nwritten;
-	an_entry* entries;
 	int BLOCK = 100000;
 	double deduprad = 0.0;
 	double epsilon = 0.0;
@@ -149,6 +148,8 @@ int main(int argc, char** args) {
 	else
 		printf("Writing an all-sky catalog.\n");
 
+	printf("sizeof(stardata) = %i.\n", sizeof(stardata));
+
 	if (deduprad > 0.0) {
 		printf("Deduplication radius %f arcsec.\n", deduprad);
 		deduprad = arcsec2distsq(deduprad);
@@ -178,7 +179,6 @@ int main(int argc, char** args) {
 		memset(owned, 1, HP * sizeof(bool));
 
 	nwritten = 0;
-	entries = malloc(BLOCK * sizeof(an_entry));
 
 	// go through the healpixes, writing the star locations to the
 	// catalog file, and the star ids to the idfile.
@@ -231,6 +231,7 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Couldn't open Astrometry.net catalog %s.\n", infn);
 			exit(-1);
 		}
+		ancat->br.blocksize = BLOCK;
 		N = an_catalog_count_entries(ancat);
 		printf("Reading   %i entries from %s...\n", N, infn);
 		fflush(stdout);
@@ -370,8 +371,6 @@ int main(int argc, char** args) {
 
 		an_catalog_close(ancat);
 	}
-
-	free(entries);
 
 	for (i=0; i<HP; i++)
 		if (!starlists[i])
