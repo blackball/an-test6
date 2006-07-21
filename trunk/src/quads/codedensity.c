@@ -17,6 +17,7 @@
 #include "mathutil.h"
 #include "codefile.h"
 #include "kdtree.h"
+#include "kdtree_access.h"
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "dualtree_max.h"

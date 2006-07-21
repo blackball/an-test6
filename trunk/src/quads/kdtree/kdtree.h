@@ -50,8 +50,6 @@ kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
 */
 int kdtree_compute_levels(int N, int Nleaf);
 
-void kdtree_inverse_permutation(kdtree_t* tree, int* invperm);
-
 /* Range seach */
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
 
@@ -98,108 +96,5 @@ void kdtree_output_dot(FILE* fid, kdtree_t* kd);
 
 /* Sanity-check a tree. 0=okay. */
 int kdtree_check(kdtree_t* t);
-
-/***   Utility functions   ***/
-
-inline
-int kdtree_is_point_in_rect(real* bblo, real* bbhi, real* point, int dim);
-
-inline
-real kdtree_bb_mindist2(real* bblow1, real* bbhigh1,
-						real* bblow2, real* bbhigh2, int dim);
-
-inline
-real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1,
-						real* bblow2, real* bbhigh2, int dim);
-
-inline
-real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
-							  real* point, int dim);
-
-inline
-real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
-							  real* point, int dim);
-
-/***   Simple accessors   ***/
-
-kdtree_node_t* kdtree_get_root(kdtree_t* kd);
-
-inline
-int kdtree_node_npoints(kdtree_node_t* node);
-
-/***   Nodeid accessors   ***/
-
-int kdtree_nodeid_is_leaf(kdtree_t* tree, int nodeid);
-
-inline
-kdtree_node_t* kdtree_nodeid_to_node(kdtree_t* kd, int nodeid);
-
-inline
-int kdtree_get_childid1(kdtree_t* tree, int nodeid);
-
-inline
-int kdtree_get_childid2(kdtree_t* tree, int nodeid);
-
-/***   kdtree_node_t* accessors  ***/
-
-inline
-real kdtree_node_volume(kdtree_t* tree, kdtree_node_t* node);
-
-inline
-int kdtree_node_is_leaf(kdtree_t* tree, kdtree_node_t* node);
-
-inline
-real* kdtree_node_get_point(kdtree_t* tree, kdtree_node_t* node, int ind);
-
-inline
-int kdtree_node_get_index(kdtree_t* tree, kdtree_node_t* node, int ind);
-
-inline
-kdtree_node_t* kdtree_get_child1(kdtree_t* tree, kdtree_node_t* node);
-
-inline
-kdtree_node_t* kdtree_get_child2(kdtree_t* tree, kdtree_node_t* node);
-
-inline
-real* kdtree_get_bb_low(kdtree_t* tree, kdtree_node_t* node);
-
-inline
-real* kdtree_get_bb_high(kdtree_t* tree, kdtree_node_t* node);
-
-inline
-real kdtree_node_node_mindist2(kdtree_t* tree1, kdtree_node_t* node1,
-							   kdtree_t* tree2, kdtree_node_t* node2);
-
-inline
-real kdtree_node_node_maxdist2(kdtree_t* tree1, kdtree_node_t* node1,
-							   kdtree_t* tree2, kdtree_node_t* node2);
-
-inline
-int kdtree_node_node_mindist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
-									  kdtree_t* tree2, kdtree_node_t* node2,
-									  real maxd2);
-
-inline
-real kdtree_node_node_maxdist2_exceeds(kdtree_t* tree1, kdtree_node_t* node1,
-									   kdtree_t* tree2, kdtree_node_t* node2,
-									   real maxd2);
-
-inline
-real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
-
-inline
-real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
-
-inline
-int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
-									   real* pt, real maxd2);
-
-inline
-int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
-									   real* pt, real maxd2);
-
-/* Internal methods */
-int kdtree_qsort_results(kdtree_qres_t *kq, int D);
-int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 
 #endif /* KDTREE_H */

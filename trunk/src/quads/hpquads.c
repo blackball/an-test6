@@ -15,6 +15,7 @@
 #include "mathutil.h"
 #include "quadfile.h"
 #include "kdtree.h"
+#include "kdtree_access.h"
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "tic.h"

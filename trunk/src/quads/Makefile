@@ -66,7 +66,8 @@ QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/q
 	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
 
 OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
-	kdtree/kdtree.o kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
+	kdtree/kdtree.o kdtree/kdtree_access.o kdtree/kdtree_io.o \
+	kdtree/kdtree_fits_io.o \
 	healpix.o \
 	idfile.o qidxfile.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \

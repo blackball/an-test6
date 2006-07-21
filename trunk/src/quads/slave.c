@@ -18,6 +18,7 @@
 #include <pthread.h>
 
 #include "kdtree.h"
+#include "kdtree_access.h"
 #include "kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
