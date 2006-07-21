@@ -262,29 +262,20 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 			hi[d] = -KDT_INFTY;
 			lo[d] = KDT_INFTY;
 		}
-		// haha, how sick is this? Take advantage of the way data is stored.
+		/* (avoid doing kd->data[NODE(i)*D + d] many times by taking advantage of the
+		   fact that the data is stored lexicographically; just use ++ on the pointer) */
 		pdata = kd->data + NODE(i)->l * D;
-		for (j=NODE(i)->l; j<=NODE(i)->r; j++) {
+		for (j=NODE(i)->l; j<=NODE(i)->r; j++)
 			for (d=0; d<D; d++) {
 				if (*pdata > hi[d]) hi[d] = *pdata;
 				if (*pdata < lo[d]) lo[d] = *pdata;
 				pdata++;
 			}
-		}
 
 		for (d=0; d<D; d++) {
 			*LOW_HR(i, d) = lo[d];
 			*HIGH_HR(i, d) = hi[d];
 		}
-
-		/*
-		  for (j=NODE(i)->l; j<=NODE(i)->r; j++) {
-		  for (d=0; d<D; d++) {
-		  assert(*LOW_HR(i,d) <= *COORD(j, d));
-		  assert(*HIGH_HR(i,d) >= *COORD(j, d));
-		  }
-		  }
-		*/
 
 		/* Decide which dimension to split along: we use the dimension with
 		   largest range. */
@@ -592,11 +583,11 @@ int kdtree_rangecount_rec(kdtree_t* kd, kdtree_node_t* node,
 			if (!dist2_exceeds(kd->data + i*kd->ndim, pt, kd->ndim, maxd2))
 				n++;
 		return n;
-	} else {
-		return
-			kdtree_rangecount_rec(kd, kdtree_get_child1(kd, node), pt, maxd2) +
-			kdtree_rangecount_rec(kd, kdtree_get_child2(kd, node), pt, maxd2);
 	}
+
+	return
+		kdtree_rangecount_rec(kd, kdtree_get_child1(kd, node), pt, maxd2) +
+		kdtree_rangecount_rec(kd, kdtree_get_child2(kd, node), pt, maxd2);
 }
 
 int kdtree_rangecount(kdtree_t* kd, real* pt, real maxdistsquared) {
