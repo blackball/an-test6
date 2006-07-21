@@ -35,8 +35,8 @@ struct stardata {
 typedef struct stardata stardata;
 
 int compare_stardata_mag(const void* v1, const void* v2) {
-	stardata* d1 = (stardata*)v1;
-	stardata* d2 = (stardata*)v2;
+	const stardata* d1 = v1;
+	const stardata* d2 = v2;
 	float diff = d1->mag - d2->mag;
 	if (diff < 0.0) return -1;
 	if (diff == 0.0) return 0;
@@ -61,6 +61,7 @@ int main(int argc, char** args) {
 	bool galex = FALSE;
 	stardata* sweeplist;
 	int nowned;
+	int ninfiles;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -125,8 +126,32 @@ int main(int argc, char** args) {
 	fits_add_args(cat->header, args, argc);
 	qfits_header_add(cat->header, "HISTORY", "(end of filter_an command line)", NULL, NULL);
 
+	ninfiles = argc - optind;
+	if (ninfiles == 1) {
+		qfits_header* hdr = qfits_header_read(args[optind]);
+		if (!hdr) {
+			fprintf(stderr, "Couldn't read FITS header from %s.\n", args[optind]);
+			exit(-1);
+		}
+		fits_copy_header(hdr, cat->header, "HEALPIX");
+		fits_copy_header(hdr, cat->header, "NSIDE");
+		qfits_header_add(cat->header, "HISTORY", "** filter_an: history from input file:", NULL, NULL);
+		fits_copy_all_headers(hdr, cat->header, "HISTORY");
+		qfits_header_add(cat->header, "HISTORY", "** filter_an: end of history from input file.", NULL, NULL);
+		qfits_header_add(cat->header, "COMMENT", "** filter_an: comments from input file:", NULL, NULL);
+		fits_copy_all_headers(hdr, cat->header, "HISTORY");
+		qfits_header_add(cat->header, "COMMENT", "** filter_an: end of comments from input file.", NULL, NULL);
+	}
+
+	// add placeholders...
+	for (k=0; k< (maxperhp ? maxperhp : 100); k++) {
+		char key[64];
+		sprintf(key, "SWEEP%i", (k+1));
+		qfits_header_add(cat->header, key, "-1", "placeholder", NULL);
+	}
+
 	if (an_catalog_write_headers(cat)) {
-		fprintf(stderr, "Failed to write catalog header.\n");
+		fprintf(stderr, "Failed to write output catalog header.\n");
 		exit(-1);
 	}
 
@@ -287,7 +312,9 @@ int main(int argc, char** args) {
 	sweeplist = malloc(nowned * sizeof(stardata));
 
 	nwritten = 0;
-	for (k=0;; k++) {
+	for (k=0; !maxperhp || (k < maxperhp); k++) {
+		char key[64];
+		char val[64];
 		nowned = 0;
 		// gather up the stars that will be used in this sweep...
 		for (i=0; i<HP; i++) {
@@ -311,6 +338,14 @@ int main(int argc, char** args) {
 			an_catalog_write_entry(cat, &sd->entry);
 			nwritten++;
 		}
+
+		// add to FITS header...
+		if (maxperhp || (k<100)) {
+			sprintf(key, "SWEEP%i", (k+1));
+			sprintf(val, "%i", nowned);
+			qfits_header_mod(cat->header, key, val, " ");
+		}
+
 		printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
 		fflush(stdout);
 		if (!nowned)
