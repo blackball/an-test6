@@ -6,7 +6,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 
-#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:F"
+#define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:"
 const char HelpString[] =
     "genfields -f fname -o fieldname [-F] {-n num_rand_fields | -r RA -d DEC}\n"
     "          -s scale(arcmin) [-p] [-w noise] [-x distractors] [-q dropouts] [-S seed]\n\n"
@@ -15,8 +15,7 @@ const char HelpString[] =
     "    -p flips parity, -q (default 0) sets the fraction of real stars removed\n"
     "    -x (default 0) sets the fraction of real stars added as random stars\n"
     "    -w (default 0) sets the fraction of scale by which to jitter positions\n"
-    "    -S random seed\n"
-    "    -F reads traditional (non-FITS) inputs.\n";
+"    -S random seed\n";
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -47,7 +46,6 @@ int main(int argc, char *argv[])
 	uint numstars;
 	uint i;
 	kdtree_t* starkd = NULL;
-    int fits = 1;
     char* basename = NULL;
 
 	if (argc <= 8) {
@@ -57,9 +55,6 @@ int main(int argc, char *argv[])
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-        case 'F':
-            fits = 0;
-            break;
 		case 'S':
 			RANDSEED = atoi(optarg);
 			break;
@@ -204,7 +199,7 @@ uint gen_pix(FILE *listfid, FILE *pix0fid, FILE *pixfid,
 	uint jj, numS, numX;
 	uint numtries = 0, ii;
 	double xx, yy;
-	double scale = radscale2xyzscale(radscale);
+	double scale = sqrt(arc2distsq(radscale));
 	double pixxmin = 0, pixymin = 0, pixxmax = 0, pixymax = 0;
 	double randstar[3];
 	kdtree_qres_t* krez = NULL;
