@@ -40,8 +40,8 @@ struct stardata {
 typedef struct stardata stardata;
 
 int sort_stardata_mag(const void* v1, const void* v2) {
-	stardata* d1 = (stardata*)v1;
-	stardata* d2 = (stardata*)v2;
+	const stardata* d1 = v1;
+	const stardata* d2 = v2;
 	float diff = d1->mag - d2->mag;
 	if (diff < 0.0) return -1;
 	if (diff == 0.0) return 0;
@@ -206,6 +206,14 @@ int main(int argc, char** args) {
 	qfits_header_add(cat->header, "HISTORY", "cut_an command line:", NULL, NULL);
 	fits_add_args(cat->header, args, argc);
 	qfits_header_add(cat->header, "HISTORY", "(end of cut_an command line)", NULL, NULL);
+
+	// add placeholders...
+	for (k=0; k< (maxperhp ? maxperhp : 100); k++) {
+		char key[64];
+		sprintf(key, "SWEEP%i", (k+1));
+		qfits_header_add(id->header, key, "-1", "placeholder", NULL);
+		qfits_header_add(cat->header, key, "-1", "placeholder", NULL);
+	}
 
 	if (catalog_write_header(cat) ||
 		idfile_write_header(id)) {
@@ -380,6 +388,8 @@ int main(int argc, char** args) {
 	sweeplist = malloc(nowned * sizeof(stardata));
 
 	for (k=0;; k++) {
+		char key[64];
+		char val[64];
 		nowned = 0;
 		// gather up the stars that will be used in this sweep...
 		for (i=0; i<HP; i++) {
@@ -412,6 +422,15 @@ int main(int argc, char** args) {
 			if (nwritten == maxperbighp)
 				break;
 		}
+
+		// add to FITS header...
+		if (maxperhp || (k<100)) {
+			sprintf(key, "SWEEP%i", (k+1));
+			sprintf(val, "%i", nowned);
+			qfits_header_mod(id->header , key, val, "");
+			qfits_header_mod(cat->header, key, val, "");
+		}
+
 		printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
 		fflush(stdout);
 		// if we broke out of the loop...
@@ -424,10 +443,13 @@ int main(int argc, char** args) {
 
 	free(sweeplist);
 
-	catalog_fix_header(cat);
-	catalog_close(cat);
-	idfile_fix_header(id);
-	idfile_close(id);
+	if (catalog_fix_header(cat) ||
+		catalog_close(cat) ||
+		idfile_fix_header(id) ||
+		idfile_close(id)) {
+		fprintf(stderr, "Failed to close output files.\n");
+		exit(-1);
+	}
 
 	free(owned);
 	for (i=0; i<HP; i++)
