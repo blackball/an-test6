@@ -386,8 +386,9 @@ int main(int argc, char** args) {
 			starlists[npix] = starlists[i];
 			npix++;
 		}
+	starlists = realloc(starlists, npix * sizeof(bl*));
+	// (reuse the bl* storage as stardata* storage)
 	stararrays = (stardata**)starlists;
-	stararrays = realloc(stararrays, npix * sizeof(stardata*));
 	stararrayN = malloc(npix * sizeof(int));
 
 	for (i=0; i<npix; i++) {
