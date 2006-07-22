@@ -107,7 +107,7 @@ EXECS := whynot agreeable certifiable quadidx \
 #   dedup_index 
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
-	filter_an
+	filter_an kdspeed
 
 # execs that require solver.o
 SOLVER_EXECS := slave

@@ -10,6 +10,12 @@
 
 time_t starttime, endtime;
 
+double millis_between(struct timeval* tv1, struct timeval* tv2) {
+	return
+		(tv2->tv_usec - tv1->tv_usec)*1e-3 +
+		(tv2->tv_sec  - tv1->tv_sec )*1e3;
+}
+
 void tic()
 {
 	starttime = time(NULL);
