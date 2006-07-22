@@ -20,11 +20,16 @@ int main() {
 	int ROUNDS = 1000;
 	int REPS = 5;
 
+	printf("N=%i, D=%i.\n", N, D);
+	printf("Generating random data...\n");
+	fflush(stdout);
 	data = malloc(N * D * sizeof(double));
 	for (i=0; i<N*D; i++)
 		data[i] = rand() / (double)RAND_MAX;
 
 	levels = kdtree_compute_levels(N, 10);
+	printf("Creating tree with %i level...\n", levels);
+	fflush(stdout);
 	kd = kdtree_build(data, N, D, levels);
 
 	for (i=0; i<ROUNDS; i++) {
@@ -48,6 +53,10 @@ int main() {
 		}
 
 		assert(res1->nres == res2->nres);
+		if (res1->nres != res2->nres) {
+			printf("DISCREPANCY: res1: %i, res2: %i results.\n", res1->nres, res2->nres);
+			exit(-1);
+		}
 		printf("%i results.\n", res1->nres);
 		kdtree_free_query(res1);
 		kdtree_free_query(res2);
