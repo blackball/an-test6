@@ -8,7 +8,7 @@
 #include "tic.h"
 
 int main() {
-	int N = 10000000;
+	int N = 3000000;
 	int D = 4;
 	double* data;
 	int i, d, r;
@@ -28,7 +28,7 @@ int main() {
 		data[i] = rand() / (double)RAND_MAX;
 
 	levels = kdtree_compute_levels(N, 10);
-	printf("Creating tree with %i level...\n", levels);
+	printf("Creating tree with %i levels...\n", levels);
 	fflush(stdout);
 	kd = kdtree_build(data, N, D, levels);
 
