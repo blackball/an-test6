@@ -425,6 +425,8 @@ int main(int argc, char** args) {
 			memcpy(sweeplist + nsweep, sd, sizeof(stardata));
 			nsweep++;
 		}
+		if (!nsweep)
+			break;
 
 		// sort them by magnitude...
 		qsort(sweeplist, nsweep, sizeof(stardata), sort_stardata_mag);
@@ -455,8 +457,6 @@ int main(int argc, char** args) {
 		fflush(stdout);
 		// if we broke out of the loop...
 		if (nwritten == maxperbighp)
-			break;
-		if (!nsweep)
 			break;
 	}
 	printf("Made %i sweeps through the healpixes.\n", k);
