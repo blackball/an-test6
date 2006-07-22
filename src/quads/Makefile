@@ -5,11 +5,11 @@ LFLAGS := -lm
 
 CFLAGS :=
 
-#CFLAGS	+= -g
+CFLAGS	+= -g
 #CFLAGS += -O0
 #CFLAGS += -O2
-#CFLAGS += -pg
-CFLAGS += -fomit-frame-pointer
+CFLAGS += -pg
+#CFLAGS += -fomit-frame-pointer
 CFLAGS += -O3 -ffast-math
 
 # to turn off asserts:

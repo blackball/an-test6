@@ -17,8 +17,11 @@ int main() {
 	kdtree_qres_t* res2;
 	int levels;
 	double maxd2 = 0.003;
-	int ROUNDS = 1000;
+	int ROUNDS = 10000;
 	int REPS = 5;
+	double iter_total[REPS];
+	double rec_total[REPS];
+	int lastgrass = 0;
 
 	printf("N=%i, D=%i.\n", N, D);
 	printf("Generating random data...\n");
@@ -26,6 +29,9 @@ int main() {
 	data = malloc(N * D * sizeof(double));
 	for (i=0; i<N*D; i++)
 		data[i] = rand() / (double)RAND_MAX;
+
+	for (i=0; i<REPS; i++)
+		iter_total[i] = rec_total[i] = 0.0;
 
 	levels = kdtree_compute_levels(N, 10);
 	printf("Creating tree with %i levels...\n", levels);
@@ -35,6 +41,13 @@ int main() {
 	for (i=0; i<ROUNDS; i++) {
 		double pt[3];
 		struct timeval tv1, tv2, tv3;
+		int grass;
+		grass = i * 80 / ROUNDS;
+		if (grass != lastgrass) {
+			printf(".");
+			fflush(stdout);
+			lastgrass = grass;
+		}
 		for (d=0; d<D; d++)
 			pt[d] = rand() / (double)RAND_MAX;
 
@@ -48,8 +61,12 @@ int main() {
 				kdtree_free_query(res1);
 				kdtree_free_query(res2);
 			}
-			printf("recursive: %g ms.\niterative: %g ms.\n",
+			/*
+				printf("recursive: %g ms.\niterative: %g ms.\n",
 				   millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
+			*/
+			rec_total[r] += millis_between(&tv1, &tv2);
+			iter_total[r] += millis_between(&tv2, &tv3);
 		}
 
 		assert(res1->nres == res2->nres);
@@ -57,9 +74,16 @@ int main() {
 			printf("DISCREPANCY: res1: %i, res2: %i results.\n", res1->nres, res2->nres);
 			exit(-1);
 		}
-		printf("%i results.\n", res1->nres);
+		//printf("%i results.\n", res1->nres);
 		kdtree_free_query(res1);
 		kdtree_free_query(res2);
 	}
+	printf("\n");
+
+	printf("\n\nTotals:\n\n");
+	for (i=0; i<REPS; i++)
+		printf("recursive: %g ms.\niterative: %g ms.\n",
+			rec_total[i], iter_total[i]);
+	
 	return 0;
 }
