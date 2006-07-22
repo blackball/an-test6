@@ -400,7 +400,6 @@ int main(int argc, char** args) {
 		bl_copy(list, 0, n, stararrays[i]);
 		bl_free(list);
 		stararrayN[i] = n;
-		npix++;
 	}
 
 	sweeplist = malloc(npix * sizeof(stardata));
