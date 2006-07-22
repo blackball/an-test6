@@ -436,7 +436,7 @@ bool add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
 }
 
 /* Range seach helper */
-void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdistsqd,
+static void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdistsqd,
 							   kdtree_qres_t *res, int* res_size)
 {
 	int i, j;
@@ -470,10 +470,10 @@ void kdtree_rangesearch_actual(kdtree_t *kd, int nodeid, real *pt, real maxdists
 					return;
 			}
 		}
-	} else {
-		kdtree_rangesearch_actual(kd, 2*nodeid + 1, pt, maxdistsqd, res, res_size);
-		kdtree_rangesearch_actual(kd, 2*nodeid + 2, pt, maxdistsqd, res, res_size);
+		return;
 	}
+	kdtree_rangesearch_actual(kd, 2*nodeid + 1, pt, maxdistsqd, res, res_size);
+	kdtree_rangesearch_actual(kd, 2*nodeid + 2, pt, maxdistsqd, res, res_size);
 }
 
 /* Sorts results by kq->sdists */
@@ -748,3 +748,75 @@ void kdtree_output_dot(FILE* fid, kdtree_t* kd)
 
 	fprintf(fid, "}\n");
 }
+
+
+
+
+
+kdtree_qres_t *kdtree_rangesearch_iter(kdtree_t *kd, real *pt, real maxd2) {
+	int nodestack[100];
+	int stackpos = 0;
+	kdtree_qres_t *res;
+	int res_size;
+	int* p_res_size = &res_size;
+
+	if (!kd || !pt)
+		return NULL;
+	res = calloc(1, sizeof(kdtree_qres_t));
+	if (!res) {
+		fprintf(stderr, "Failed to allocate kdtree_qres_t struct.\n");
+		return NULL;
+	}
+	res_size = KDTREE_MAX_RESULTS;
+	resize_results(res, res_size, kd->ndim);
+
+	// queue root.
+	nodestack[0] = 0;
+
+	while (stackpos >= 0) {
+		kdtree_node_t* node;
+		int nodeid;
+		int i, j;
+
+		nodeid = nodestack[stackpos];
+		stackpos--;
+		node = kdtree_nodeid_to_node(kd, nodeid);
+		/* Early exit - FIXME benchmark to see if this actually helps */
+		if (kdtree_node_point_mindist2_exceeds(kd, node, pt, maxd2))
+			continue;
+		/* FIXME benchmark to see if this helps: if the whole node is within
+		   range, grab all its points. */
+		if (!kdtree_node_point_maxdist2_exceeds(kd, node, pt, maxd2)) {
+			for (i=node->l; i<=node->r; i++) {
+				if (!add_result(res, dist2(kd->data + i * kd->ndim, pt, kd->ndim),
+								(kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim, p_res_size))
+					return NULL;
+			}
+			continue;
+		}
+		if (ISLEAF(nodeid)) {
+			for (i=node->l; i<=node->r; i++) {
+				real dsqd = 0.0;
+				for (j = 0; j < kd->ndim; j++) {
+					real delta = pt[j] - (*COORD(i, j));
+					dsqd += delta * delta;
+				}
+				if (dsqd < maxd2) {
+					if (!add_result(res, dsqd, (kd->perm ? kd->perm[i] : i), COORD(i, 0), kd->ndim, p_res_size))
+						return NULL;
+				}
+			}
+			continue;
+		}
+		stackpos++;
+		nodestack[stackpos] = 2 * nodeid + 1;
+		stackpos++;
+		nodestack[stackpos] = 2 * nodeid + 2;
+	}
+
+	/* Resize result arrays. */
+	resize_results(res, res->nres, kd->ndim);
+	return res;
+}
+
+
