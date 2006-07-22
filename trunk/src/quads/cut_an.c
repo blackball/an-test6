@@ -73,7 +73,9 @@ int main(int argc, char** args) {
 	bool galex = FALSE;
 	bool allsky = FALSE;
 	stardata* sweeplist;
-	int nowned;
+	int npix;
+	stardata** stararrays;
+	int* stararrayN;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -154,11 +156,11 @@ int main(int argc, char** args) {
 	}
 
 	starlists = calloc(HP, sizeof(bl*));
-	owned = calloc(HP, sizeof(bool));
 
 	// find the set of small healpixes that this big healpix owns
 	// (including a bit of overlap)
 	if (bighp != -1) {
+		owned = calloc(HP, sizeof(bool));
 		for (i=0; i<HP; i++) {
 			uint big, x, y;
 			uint nn, neigh[8], k;
@@ -174,7 +176,7 @@ int main(int argc, char** args) {
 			}
 		}
 	} else
-		memset(owned, 1, HP * sizeof(bool));
+		owned = NULL;
 
 	nwritten = 0;
 
@@ -260,7 +262,7 @@ int main(int argc, char** args) {
 
 			hp = radectohealpix_nside(deg2rad(an->ra), deg2rad(an->dec), Nside);
 
-			if (!owned[hp]) {
+			if (owned && !owned[hp]) {
 				ndiscarded++;
 				continue;
 			}
@@ -375,42 +377,60 @@ int main(int argc, char** args) {
 
 		an_catalog_close(ancat);
 	}
+	free(owned);
 
+	// compact the stars into arrays.
+	npix = 0;
 	for (i=0; i<HP; i++)
-		if (!starlists[i])
-			owned[i] = 0;
+		if (starlists[i]) {
+			starlists[npix] = starlists[i];
+			npix++;
+		}
+	stararrays = (stardata**)starlists;
+	stararrays = realloc(stararrays, npix * sizeof(stardata*));
+	stararrayN = malloc(npix * sizeof(int));
+
+	for (i=0; i<npix; i++) {
+		bl* list;
+		int n;
+		list = starlists[i];
+		n = bl_size(list);
+		stararrays[i] = malloc(n * sizeof(stardata));
+		bl_copy(list, 0, n, stararrays[i]);
+		bl_free(list);
+		stararrayN[i] = n;
+		npix++;
+	}
+
+	sweeplist = malloc(npix * sizeof(stardata));
 
 	// sweep through the healpixes...
-	nowned = 0;
-	for (i=0; i<HP; i++)
-		if (owned[i])
-			nowned++;
-	sweeplist = malloc(nowned * sizeof(stardata));
-
 	for (k=0;; k++) {
 		char key[64];
 		char val[64];
-		nowned = 0;
+		int nsweep = 0;
 		// gather up the stars that will be used in this sweep...
-		for (i=0; i<HP; i++) {
+		for (i=0; i<npix; i++) {
 			stardata* sd;
 			int N;
-			if (!owned[i]) continue;
-			N = bl_size(starlists[i]);
+			if (!stararrays[i])
+				continue;
+			N = stararrayN[i];
 			if (k >= N) {
-				owned[i] = 0;
+				free(stararrays[i]);
+				stararrays[i] = NULL;
 				continue;
 			}
-			sd = bl_access(starlists[i], k);
-			memcpy(sweeplist + nowned, sd, sizeof(stardata));
-			nowned++;
+			sd = stararrays[i] + k;
+			memcpy(sweeplist + nsweep, sd, sizeof(stardata));
+			nsweep++;
 		}
 
 		// sort them by magnitude...
-		qsort(sweeplist, nowned, sizeof(stardata), sort_stardata_mag);
+		qsort(sweeplist, nsweep, sizeof(stardata), sort_stardata_mag);
 
 		// write them out...
-		for (i=0; i<nowned; i++) {
+		for (i=0; i<nsweep; i++) {
 			double xyz[3];
 			stardata* sd = sweeplist + i;
 			radec2xyzarr(deg2rad(sd->ra), deg2rad(sd->dec), xyz);
@@ -426,22 +446,26 @@ int main(int argc, char** args) {
 		// add to FITS header...
 		if (maxperhp || (k<100)) {
 			sprintf(key, "SWEEP%i", (k+1));
-			sprintf(val, "%i", nowned);
+			sprintf(val, "%i", nsweep);
 			qfits_header_mod(id->header , key, val, "");
 			qfits_header_mod(cat->header, key, val, "");
 		}
 
-		printf("sweep %i: got %i stars (%i total)\n", k, nowned, nwritten);
+		printf("sweep %i: got %i stars (%i total)\n", k, nsweep, nwritten);
 		fflush(stdout);
 		// if we broke out of the loop...
 		if (nwritten == maxperbighp)
 			break;
-		if (!nowned)
+		if (!nsweep)
 			break;
 	}
 	printf("Made %i sweeps through the healpixes.\n", k);
 
 	free(sweeplist);
+	free(stararrayN);
+	for (i=0; i<npix; i++)
+		free(stararrays[i]);
+	free(stararrays);
 
 	if (catalog_fix_header(cat) ||
 		catalog_close(cat) ||
@@ -450,12 +474,6 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Failed to close output files.\n");
 		exit(-1);
 	}
-
-	free(owned);
-	for (i=0; i<HP; i++)
-		if (starlists[i])
-			bl_free(starlists[i]);
-	free(starlists);
 
 	return 0;
 }

@@ -8,7 +8,7 @@
 #include "tic.h"
 
 int main() {
-	int N = 3000000;
+	int N = 1000000;
 	int D = 4;
 	double* data;
 	int i, d, r;
