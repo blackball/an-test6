@@ -228,6 +228,11 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	kd->tree = malloc(sizeof(intkdtree_node_t) * (ninterior));
 	assert(kd->tree);
 	kd->lr = calloc(nbottom, sizeof(unsigned int));
+
+	for (i=0; i<nbottom; i++) {
+		kd->lr[i] = 11111;
+	}
+
 	assert(kd->lr);
 
 	/* Use the lr array as a stack while building. In place in your face! */
@@ -267,19 +272,10 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		}
 
 		/* Since we're not storing the L pointers, we have to infer L */
-		/* Not convinced about the correctness of this */
-		if (level != nlevel-2) {
-			if (i == (1<<level)-1) {
-				left = 0;
-			} else {
-				left = kd->lr[i-1] + 1;
-			}
+		if (i == (1<<level)-1) {
+			left = 0;
 		} else {
-			if (!i) {
-				left = 0;
-			} else {
-				left = kd->lr[i-1] + 1;
-			}
+			left = kd->lr[i-1] + 1;
 		}
 		right = kd->lr[i];
 		assert(left <= right);
@@ -336,8 +332,11 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	return kd;
 }
 
-#define INTKDTREE_STACK_SIZE 4*500
+#define INTKDTREE_STACK_SIZE 1024
 unsigned int stack[INTKDTREE_STACK_SIZE];
+real results[INTKDTREE_MAX_RESULTS*INTKDTREE_MAX_DIM];
+real results_sqd[INTKDTREE_MAX_RESULTS];
+unsigned int results_inds[INTKDTREE_MAX_RESULTS];
 
 void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, intkdtree_qres_t *res)
 {
@@ -345,34 +344,59 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 	unsigned int umd = REAL2FIXED(maxdist);
 
 	unsigned int zzz = 0; /* lazy programming */
-	unsigned int depth = 0;
-	unsigned int j;
 	unsigned int pti[kd->ndim];
+	unsigned int j;
 
-	/* Start out with the entire space. We could optimize this by shrinking
-	 * it for the entire tree... */
-	for (j=0; j<kd->ndim; j++) {
-		stack[j] = 0;
-		stack[kd->ndim+j] = 0xffffffff;
-		stack[kd->ndim+kd->ndim+1] = kd->tree[0].split & 0x3;
-		pti[j] = REAL2FIXED(pt[j]);
-	}
+	stack[zzz++] = 0;
 
 	while (zzz) {
 
-		unsigned int i = stack[zzz--]; /* root beer */
-		unsigned int info = kd->tree[i].split;
-		unsigned int spl = info & 0x3;
-		unsigned int loc = info & 0xfffffffc;
+		unsigned int i = stack[--zzz]; /* root beer */
 
-		if (pti[spl] <= loc) {
-			stack[zzz++] = 2*i+1;
-			if (pti[spl] + umd >= loc)
-				stack[zzz++] = 2*i+2;
-		} else {
-			stack[zzz++] = 2*i+2;
-			if (loc + umd <= pti[spl] )
+		if (zzz <= kd->ninterior) {
+			unsigned int info = kd->tree[i].split;
+			unsigned int spl = info & 0x3;
+			unsigned int loc = info & 0xfffffffc;
+
+			if (pti[spl] <= loc) {
 				stack[zzz++] = 2*i+1;
+				if (pti[spl] + umd >= loc)
+					stack[zzz++] = 2*i+2;
+			} else {
+				stack[zzz++] = 2*i+2;
+				if (loc + umd <= pti[spl] )
+					stack[zzz++] = 2*i+1;
+			}
+		} else {
+			/* children */
+
+			unsigned int lrind = i - kd->ninterior;
+			unsigned int l, r = kd->lr[lrind];
+			unsigned int k;
+			if (lrind) 
+				l = 0;
+			else
+				l = kd->lr[lrind-1]+1;
+
+			assert(l <= r);
+
+			for (j=l; j<=r; j++) {
+				real dsqd = 0.0;
+				for (k=0; k < kd->ndim; k++) {
+					real delta = pt[k] - (*COORD(j, k));
+					dsqd += delta * delta;
+				}
+				if (dsqd < maxdistsqd) {
+					results_sqd[res->nres] = dsqd;
+					results_inds[res->nres] = kd->perm[j];
+					memcpy(results + res->nres*kd->ndim, COORD(j, 0), sizeof(real)*kd->ndim);
+					res->nres++;
+					if (res->nres >= INTKDTREE_MAX_RESULTS) {
+						fprintf(stderr, "\nintkdtree rangesearch overflow.\n");
+						break;
+					}
+				}
+			}
 		}
 	}
 }
