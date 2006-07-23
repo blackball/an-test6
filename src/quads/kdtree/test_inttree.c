@@ -38,6 +38,7 @@ void test_sort_1d_even_3(CuTest *tc)
 	intkdtree_t *kd = intkdtree_build(data, n, d, 3, 0, 150);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 	for (i=0;i<n*d;i++) {
+		printf("+%d ", data[i]);
 	    CuAssertIntEquals(tc, data[i], data_sorted[i]);
 	}
     //kdtree_output_dot(stdout, kd);
