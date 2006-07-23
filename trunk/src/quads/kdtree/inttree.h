@@ -9,7 +9,8 @@
 /* this is a fixed-point intree where data values are constrained in some
  * range */
 
-typedef double real;
+#include "kdtree.h"
+//typedef double real;
 
 struct intkdtree_node {
     unsigned int split; /* first two bits are dimension */
@@ -35,19 +36,13 @@ struct intkdtree {
 };
 typedef struct intkdtree intkdtree_t;
 
-struct intkdtree_qres {
-	unsigned int nres;
-	real *results;         /* Each af the points returned from a query */
-	real *sdists;          /* Squared distance from query point */
-	unsigned int *inds;    /* Indexes into original data set */
-};
-typedef struct intkdtree_qres intkdtree_qres_t;
+typedef kdtree_qres_t intkdtree_qres_t;
 
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
 intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel, real minval, real maxval);
 
 /* Range seach */
-intkdtree_qres_t *kdtree_rangesearch(intkdtree_t *kd, real *pt, real maxdistsquared);
+intkdtree_qres_t *intkdtree_rangesearch(intkdtree_t *kd, real *pt, real maxdistsquared);
 
 /* Free results */
 void intkdtree_free_query(intkdtree_qres_t *kd);
