@@ -30,18 +30,27 @@ void test_sort_1d_odd(CuTest *tc)
 */
 
 /* 3 is the deepest level we can do with 10 elements */
+/* This is no longer sorted, because the pivot doesn't run on child nodes. This
+ * means at the low levels the data isn't sorted anymore */
 void test_sort_1d_even_3(CuTest *tc)
 {
-	real data[]        = {5,9,84,7,56,4,8,4,33,120};
-	real data_sorted[] = {4,4,5,7,8,9,33,56,84,120};
+	//real data[]        = {5,9,84,7,56,4,8,4,33,120};
+	real data[]        = {33,9,84,7,56,4,8,4,5,120};
+	real data_sorted[] = {4,4,5,7,8,33,9,56,84,120}; /* notice this isn't quite sorted */
+	int lr[]           = {2,4,7,9};
 	int i, n=10, d=1;
 	intkdtree_t *kd = intkdtree_build(data, n, d, 3, 0, 150);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 	for (i=0;i<n*d;i++) {
-		printf("+%d ", data[i]);
+		printf("%3.0f ",  data[i]);
+	}
+	printf("\n");
+	for (i=0;i<n*d;i++) {
 	    CuAssertIntEquals(tc, data[i], data_sorted[i]);
 	}
-    //kdtree_output_dot(stdout, kd);
+	for (i=0;i<4;i++) {
+	    CuAssertIntEquals(tc, kd->lr[i], lr[i]);
+	}
 }
 
 /* 4 is too deep for 10 elements */
@@ -56,12 +65,17 @@ void test_sort_1d_even_too_many_levels(CuTest *tc)
 void test_sort_2d_even(CuTest *tc)
 {
 	real data[]        = {5,6, 84,85, 56,57, 8,9};
-	real data_sorted[] = {5,6, 8,9, 56,57, 84,85};
+	real data_sorted[] = {5,6, 84,85, 56,57, 8,9};
+	int lr[]           = {3};
 	int i, n=4, d=2;
+	/* in this case there are no interior nodes, so no pivot takes place */
 	intkdtree_t *kd = intkdtree_build(data, n, d, 1, 0, 150);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 	for (i=0;i<n*d;i++) {
 		CuAssertIntEquals(tc, data[i], data_sorted[i]);
+	}
+	for (i=0;i<1;i++) {
+	    CuAssertIntEquals(tc, kd->lr[i], lr[i]);
 	}
 }
 
@@ -145,9 +159,12 @@ void test_kd_massive_build(CuTest *tc)
 	int n=10000, d=4, i;
 	real *data = malloc(sizeof(real)*n*d);
 	srandom(0);
-	for (i=0; i < n*d; i++) 
-        data[i] = random() / (real)RAND_MAX;
-	kd = intkdtree_build(data, n, d, 16, 0, 1);
+	for (i=0; i < n*d; i++) {
+		data[i] = random() / (real)RAND_MAX;
+		assert(data[i] >= 0.0);
+		assert(data[i] <= 1.0);
+	}
+	kd = intkdtree_build(data, n, d, 10, 0, 1);
 	CuAssertPtrNotNullMsg(tc, "null kd-tree return", kd);
 }
 
@@ -273,6 +290,7 @@ void test_kd_range_search_callback(CuTest *tc) {
 	free(data);
 }
 
+*/
 void test_kd_range_search(CuTest *tc) {
 	int n=10000;
 	int d=3, i, j;
@@ -289,11 +307,11 @@ void test_kd_range_search(CuTest *tc) {
 	intkdtree_t *kd;
 
 	for (i=0; i < n*d; i++) 
-        data[i] = random() / (real)RAND_MAX;
+		data[i] = random() / (real)RAND_MAX;
 
 	memcpy(origdata, data, n*d*sizeof(real));
 
-	kd = intkdtree_build(data, n, d, levels);
+	kd = intkdtree_build(data, n, d, levels,0,1);
 
 	point = malloc(sizeof(real)*d);
 
@@ -304,7 +322,7 @@ void test_kd_range_search(CuTest *tc) {
 
 		for (i=0; i<d; i++)
 			point[i] = random() / (real)RAND_MAX;
-		results = kdtree_rangesearch(kd, point, range2);
+		results = intkdtree_rangesearch(kd, point, range2);
 
 		CuAssertPtrNotNullMsg(tc, "null kdtree rangesearch result.", results);
 
@@ -349,10 +367,9 @@ void test_kd_range_search(CuTest *tc) {
 	}
 	free(origdata);
 	free(point);
-	kdtree_free(kd);
+	intkdtree_free(kd);
 	free(data);
 }
-*/
 
 
 int main(void) {
@@ -373,10 +390,11 @@ int main(void) {
 	SUITE_ADD_TEST(suite, test_kd_size);
 	SUITE_ADD_TEST(suite, test_kd_invalid_args);
 	//SUITE_ADD_TEST(suite, test_kd_nn);
-	//SUITE_ADD_TEST(suite, test_kd_range_search);
+	SUITE_ADD_TEST(suite, test_kd_range_search);
 	//SUITE_ADD_TEST(suite, test_kd_range_search_callback);
 	//SUITE_ADD_TEST(suite, test_sort_random);
-	//SUITE_ADD_TEST(suite, test_kd_massive_build);
+	//
+	SUITE_ADD_TEST(suite, test_kd_massive_build);
 
 	/* Run the suite, collect results and display */
 	CuSuiteRun(suite);

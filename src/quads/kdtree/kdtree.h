@@ -99,4 +99,8 @@ void kdtree_output_dot(FILE* fid, kdtree_t* kd);
 /* Sanity-check a tree. 0=okay. */
 int kdtree_check(kdtree_t* t);
 
+/* Reused by inttree */
+int kdtree_qsort_results(kdtree_qres_t *kq, int D);
+int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r, int D, int d);
+
 #endif /* KDTREE_H */
