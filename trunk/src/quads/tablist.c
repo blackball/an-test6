@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         fits_get_num_cols(fptr, &ncols, &status);
 
         /* find the number of columns that will fit within 80 characters */
-        while(lastcol < ncols) {
+        for (;;) {
           linewidth = 0;
           /* go on to the next element in the current column. */
           /* (if such an element does not exist, the inner 'for' loop
@@ -55,6 +55,9 @@ int main(int argc, char *argv[])
           firstcol = lastcol;
           firstelem = lastelem + 1;
           elem = firstelem;
+
+		  if ((firstcol == ncols) && (firstelem >= nelements[ncols]))
+			  break;
 
           for (lastcol = firstcol; lastcol <= ncols; lastcol++) {
              int typecode;
