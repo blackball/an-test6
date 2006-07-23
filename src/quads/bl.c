@@ -618,8 +618,6 @@ void bl_insert(bl* list, int index, void* data) {
 		return;
 	}
 
-	// this may fail if we try to insert an element past the last element in the list
-	// (ie, append).  could detect this condition and pass the call the "append". [we do this above]
 	node = bl_find_node(list, index, &nskipped);
 
 	list->last_access = node;

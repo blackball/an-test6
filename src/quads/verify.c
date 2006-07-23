@@ -212,7 +212,8 @@ void verify_hit(kdtree_t* startree,
 
 	mo->noverlap = matches;
 	mo->nconflict = conflicts;
-	mo->ninfield = NI;
+	//mo->ninfield = NI;
+	mo->ninfield = Nmin;
 	matchobj_compute_overlap(mo);
 
 	if (pmatches)
