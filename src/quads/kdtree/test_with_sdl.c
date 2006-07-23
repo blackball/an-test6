@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
                                 printf("LOW %.2f %.2f\nHIG %.2f %.2f\n",
                                  *LOW_HR(i,0), *LOW_HR(i,1),
                                  *HIGH_HR(i,0),*HIGH_HR(i,1));
-                                printf(" pivot val: %.2f\n", NODE(i)->pivot);
+                                //printf(" pivot val: %.2f\n", NODE(i)->pivot);
                                 int level,t;
                                 level = 0; t = i+1;
                                 while(t>>=1) level++;
