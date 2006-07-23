@@ -174,20 +174,22 @@ int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
 #undef ELEM_SWAP
 #undef GET
 
-/* If the root node is level 0, then maxlevel is the level at which there may
- * not be enough points to keep the tree complete (i.e. last level) */
-intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel,
+#define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))/kd->delta) ) )
+
+/* nlevels is the number of levels in the tree. a 3-node tree has 2 levels. */
+intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
                              real minval, real maxval)
 {
 	int i;
 	intkdtree_t *kd;
-	int nnodes, nbottom;
-	int level = 0, dim=-1, m;
-	int lnext;
+	unsigned int nnodes, nbottom, ninterior;
+	unsigned int level = 0, dim=-1, m;
+	unsigned int lnext;
+	real delta;
 	unsigned int N = ndata;
 	unsigned int D = ndim;
 
-	assert(maxlevel > 0);
+	assert(nlevel > 0);
 	assert(D <= INTKDTREE_MAX_DIM);
 	assert(minval < maxval);
 
@@ -195,23 +197,25 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel,
 	if (!data || !N || !D)
 		return NULL;
 	/* Make sure we have enough data */
-	if ((1 << maxlevel) - 1 > N)
+	if ((1 << nlevel) - 1 > N)
 		return NULL;
 
 	/* Set the tree fields */
 	kd = malloc(sizeof(intkdtree_t));
-	nnodes = (1 << maxlevel) - 1;
-	nbottom = 1 << (maxlevel - 1); /* number of nodes at the bottom level */
+	nnodes = (1 << nlevel) - 1;
+	nbottom = 1 << (nlevel - 1); /* number of nodes at the bottom level */
+	ninterior = nbottom-1;       /* number of interior nodes */
 	kd->ndata = N;
 	kd->ndim = D;
 	kd->nnodes = nnodes;
 	kd->nbottom = nbottom;
+	kd->ninterior = ninterior;
 	kd->data = data;
 	kd->minval = minval;
 	kd->maxval = maxval;
 
 	/* delta size for this tree... for now same for all dimensions */
-	kd->delta = (maxval - minval) / (real) (unsigned int) -1;
+	kd->delta = delta = (maxval - minval) / (real) (unsigned int) -1;
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
@@ -219,26 +223,29 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel,
 	for (i = 0;i < N;i++)
 		kd->perm[i] = i;
 	assert(kd->perm);
-	kd->tree = malloc(sizeof(intkdtree_node_t) * (nnodes));
+
+	/* Only interior nodes need space in the node tree; others are in lr space */
+	kd->tree = malloc(sizeof(intkdtree_node_t) * (ninterior));
 	assert(kd->tree);
-	kd->lr = calloc(2*sizeof(unsigned int) * (nbottom), 1);
+	kd->lr = calloc(nbottom, sizeof(unsigned int));
 	assert(kd->lr);
 
-	/* Use the lr array as a stack while building. Yummy memory reuse. */
-	kd->lr[0] = 0;
-	kd->lr[1] = N - 1;
+	/* Use the lr array as a stack while building. In place in your face! */
+	kd->lr[0] = N - 1;
 
 	lnext = 1;
 	level = 0;
 
 	/* And in one shot, make the kdtree. Because in inttree the lr pointers
 	 * are only stored for the bottom layer, we use the lr array as a
-	 * stack. At finish, it contains the lr pointers for the bottom nodes. */
-	for (i = 0; i < nnodes; i++) {
+	 * stack. At finish, it contains the r pointers for the bottom nodes. */
+	for (i = 0; i < ninterior; i++) {
 		real hi[D];
 		real lo[D];
-		int j, d;
+		int j;
+		unsigned int d;
 		unsigned int left, right;
+		unsigned int firstinlevel = 0;
 		real* pdata;
 		real maxrange;
 
@@ -255,27 +262,35 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel,
 			level++;
 			lnext = lnext * 2 + 1;
 			printf ("new level %d\n", level);
+			firstinlevel = 1; /* not used yet */
+			(void) firstinlevel;
 		}
 
-		if (level == maxlevel - 1) {
-			/* Get left and right from front of array */
-			assert( i-((1<<(maxlevel-1))-1) < nnodes);
-			left = kd->lr[2*(i-((1<<(maxlevel-1))-1))];
-			right = kd->lr[2*(i-((1<<(maxlevel-1))-1)) + 1];
-			assert(left <= right);
+		/* Since we're not storing the L pointers, we have to infer L */
+		/* Not convinced about the correctness of this */
+		if (level != nlevel-2) {
+			if (i == (1<<level)-1) {
+				left = 0;
+			} else {
+				left = kd->lr[i-1] + 1;
+			}
 		} else {
-			/* Access linerally from front */
-			left = kd->lr[2*i];
-			right = kd->lr[2*i+1];
-			assert(left <= right);
+			if (!i) {
+				left = 0;
+			} else {
+				left = kd->lr[i-1] + 1;
+			}
 		}
+		right = kd->lr[i];
+		assert(left <= right);
 
 		/* Find the bounding-box for this node. */
 		for (d=0; d<D; d++) {
 			hi[d] = -KDT_INFTY;
 			lo[d] = KDT_INFTY;
 		}
-		// Haha, how sick is this? Take advantage of the way data is stored.
+
+		/* Haha, how sick is this? Take advantage of the way data is stored. */
 		pdata = kd->data + left * D;
 		for (j=left; j<=right; j++) {
 			for (d=0; d<D; d++) {
@@ -285,8 +300,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel,
 			}
 		}
 
-		/* Decide which dimension to split along: we use the dimension with
-		   largest range. */
+		/* Split along dimension with largest range */
 		maxrange = -1.0;
 		for (d=0; d<D; d++)
 			if ((hi[d] - lo[d]) > maxrange) {
@@ -297,47 +311,75 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel,
 		/* Pivot the data at the median */
 		m = kdtree_quickselect_partition(data, kd->perm, left, right, D, dim);
 
-		/* Encode split dimension and split value */
-		kd->nodes[i] = 
+		/* Encode split dimension and value. Last 2 bits are dim */
+		unsigned int s = REAL2FIXED(data[D*m+d]);
+		kd->tree[i].split = (s & 0xfffffffc) | d;
 
 		for(j=0; j<nbottom; j++) {
 			printf("%3i ", kd->lr[j]);
 		}
 		printf("\n");
 
-		/* Only do child operations if we're not the last layer */
-		if (level == maxlevel - 2) {
+		if (level == nlevel - 2) {
+			int c = 2*i - ninterior;
+			/* FIXME asserts!!!!! */
+			kd->lr[c+1] = m-1;
+			kd->lr[c+2] = right;
+		} else {
 
-			assert(2*i + 1 < nnodes);
-			assert(2*i + 2 < nnodes);
-
-			int ntop = nnodes - nbottom;
-			int children = 2*(i - ntop);
-
-			kd->lr[2*children+0] = left;
-			kd->lr[2*children+1] = m - 1;
-			kd->lr[2*children+3] = m;
-			kd->lr[2*children+4] = right;
-
-		} else if (level < maxlevel - 1) {
-			assert(2*i + 1 < nnodes);
-			assert(2*i + 2 < nnodes);
-
-			kd->lr[2*(2*i+1) + 0] = left;
-			kd->lr[2*(2*i+1) + 1] = m - 1;
-			kd->lr[2*(2*i+2) + 0] = m;
-			kd->lr[2*(2*i+2) + 1] = right;
+			/* not yet fancy last level */
+			/* FIXME need some asserts here... corner cases? */
+			kd->lr[2*i+1] = m-1;
+			kd->lr[2*i+2] = right;
 		}
 	}
 	return kd;
 }
 
-void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, kdtree_qres_t *res)
-{
+#define INTKDTREE_STACK_SIZE 4*500
+unsigned int stack[INTKDTREE_STACK_SIZE];
 
+void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, intkdtree_qres_t *res)
+{
+	real maxdist = sqrt(maxdistsqd); /* a sqrt per search or a square per iteration? */
+	unsigned int umd = REAL2FIXED(maxdist);
+
+	unsigned int zzz = 0; /* lazy programming */
+	unsigned int depth = 0;
+	unsigned int j;
+	unsigned int pti[kd->ndim];
+
+	/* Start out with the entire space. We could optimize this by shrinking
+	 * it for the entire tree... */
+	for (j=0; j<kd->ndim; j++) {
+		stack[j] = 0;
+		stack[kd->ndim+j] = 0xffffffff;
+		stack[kd->ndim+kd->ndim+1] = kd->tree[0].split & 0x3;
+		pti[j] = REAL2FIXED(pt[j]);
+	}
+
+	while (zzz) {
+
+		unsigned int i = stack[zzz--]; /* root beer */
+		unsigned int info = kd->tree[i].split;
+		unsigned int spl = info & 0x3;
+		unsigned int loc = info & 0xfffffffc;
+
+		if (pti[spl] <= loc) {
+			stack[zzz++] = 2*i+1;
+			if (pti[spl] + umd >= loc)
+				stack[zzz++] = 2*i+2;
+		} else {
+			stack[zzz++] = 2*i+2;
+			if (loc + umd <= pti[spl] )
+				stack[zzz++] = 2*i+1;
+		}
+	}
 }
 
 /* Range seach helper */
+
+#if 0
 void intkdtree_rangesearch_actual(intkdtree_t *kd, int nodeid, real *pt, real maxdistsqd, kdtree_qres_t *res)
 {
 	real smallest_dsqd, largest_dsqd;
@@ -402,7 +444,7 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, int nodeid, real *pt, real ma
 }
 
 /* Sorts results by kq->sdists */
-int kdtree_qsort_results(kdtree_qres_t *kq, int D)
+int kdtree_qsort_results(intkdtree_qres_t *kq, int D)
 {
 	int beg[KDTREE_MAX_RESULTS], end[KDTREE_MAX_RESULTS], i = 0, j, L, R;
 	static real piv_vec[KDTREE_MAX_DIM];
@@ -490,3 +532,4 @@ kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared)
 	return res;
 }
 
+#endif

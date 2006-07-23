@@ -20,6 +20,7 @@ struct intkdtree {
 	intkdtree_node_t *tree;   /* Flat tree storing nodes and HR's */
 	unsigned int *lr;         /* Stores left and right for bottom of tree */
 	real *data;               /* Raw coordinate data as xyzxyzxyz */
+	real *bbox;               /* Hyperrectangle containing all points */
 	real delta;               /* The delta size for this tree */
 	real minval;              /* Min val in any dim */
 	real maxval;              /* Max val in any dim */
@@ -28,6 +29,7 @@ struct intkdtree {
 	unsigned int ndim;        /* Number of dimensions */
 	unsigned int nnodes;      /* Number of internal nodes */
 	unsigned int nbottom;     /* Number of internal nodes */
+	unsigned int ninterior;   /* Number of internal nodes */
 	void* mmapped;            /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
 };
