@@ -3,3 +3,4 @@ env=Environment(CCFLAGS='-g -Wall -O0',
                 LIBS=['gcov', 'SDL'])
 env.Program('test_kdtree',Split('kdtree.c CuTest/CuTest.c test_kdtree.c'))
 env.Program('test_with_sdl',Split('kdtree.c test_with_sdl.c'))
+env.Program('test_inttree',Split('inttree.c CuTest/CuTest.c test_inttree.c'))
