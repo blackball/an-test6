@@ -39,8 +39,7 @@ xylist* xylist_open(const char* fn) {
 	}
 
 	ls->antype = qfits_header_getstr(header, "AN_FILE");
-
-	qfits_header_destroy(header);
+	ls->header = header;
 	ls->nfields = qfits_query_n_ext(fn);
 
 	return ls;
@@ -292,12 +291,11 @@ int xylist_close(xylist* ls) {
 			return -1;
 		}
 	}
-	if (ls->table) {
+	if (ls->table)
 		qfits_table_close(ls->table);
-	}
-	if (ls->fn) {
-		free(ls->fn);
-	}
+	if (ls->header)
+		qfits_header_destroy(ls->header);
+	free(ls->fn);
 	free(ls);
 	return 0;
 }

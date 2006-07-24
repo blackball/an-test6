@@ -12,6 +12,7 @@ static void donut_pair_found(void* extra, int x, int y, double dist2) {
 	il* ylist = NULL;
 	int xlistind=-1, ylistind=-1;
 	pl* lists = extra;
+	// Note that "x" and "y" are indices IN THE KDTREE.
 	if (x >= y)
 		return;
 	for (i=0; i<pl_size(lists); i++) {
@@ -65,9 +66,8 @@ static int compare_brightness(const void* v1, const void* v2) {
 	return 0;
 }
 
-void detect_donuts(int fieldnum, double** pfield, int* pnfield,
+void detect_donuts(int fieldnum, double* fieldxy, int* pnfield,
 				   double nearbydist, double thresh) {
-	double* fieldxy;
 	int i, N;
 	int nearby;
 	kdtree_t* tree;
@@ -75,7 +75,6 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	int* counts;
 	double frac;
 	pl* lists;
-	double* newfield;
 	bool* merged;
 	int fieldind;
 	int nmerged;
@@ -83,16 +82,17 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	int Nnew;
 	int Ndonuts;
 	int nextmerged;
+	double* fieldcopy;
 
 	N = *pnfield;
-	fieldxy = malloc(N * 2 * sizeof(double));
-	memcpy(fieldxy, *pfield, N * 2 * sizeof(double));
+	fieldcopy = malloc(N * 2 * sizeof(double));
+	memcpy(fieldcopy, fieldxy, N * 2 * sizeof(double));
 
-	// Hey, doughbrain: be careful, "fieldxy" will be scrambled after 
+	// Hey, doughbrain: be careful, "fieldcopy" will be scrambled after 
 	// creating a kdtree out of it.
 
 	levels = kdtree_compute_levels(N, 5);
-	tree = kdtree_build(fieldxy, N, 2, levels);
+	tree = kdtree_build(fieldcopy, N, 2, levels);
 	assert(tree);
 	counts = calloc(N, sizeof(int));
 	dualtree_rangecount(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist, counts);
@@ -100,8 +100,10 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 	for (i=0; i<N; i++)
 		nearby += counts[i];
 	frac = (nearby - N) / (double)N;
-	fprintf(stderr, "Field %i: Donuts: %4.1f (%i of %i) in range.\n",
-			fieldnum, frac, nearby - N, N);
+	/*
+	  fprintf(stderr, "Field %i: Donuts: %4.1f (%i of %i) in range.\n",
+	  fieldnum, frac, nearby - N, N);
+	*/
 	free(counts);
 	if (frac < thresh)
 		goto done;
@@ -127,12 +129,15 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 		double avgx, avgy;
 		int brightest = -1;
 		il* list = pl_get(lists, i);
-		fprintf(stderr, "    ");
+		//printf("  cluster %i: ", i);
 		avgx = avgy = 0.0;
 		for (j=0; j<il_size(list); j++) {
 			int ind;
-			//fprintf(stderr, "%i ", il_get(list, j));
 			ind = il_get(list, j);
+			// as noted above, this is an index IN THE KDTREE.
+			// get back to original index:
+			ind = tree->perm[ind];
+			//printf("%i ", ind);
 			merged[ind] = TRUE;
 			avgx += fieldxy[ind*2];
 			avgy += fieldxy[ind*2+1];
@@ -146,38 +151,39 @@ void detect_donuts(int fieldnum, double** pfield, int* pnfield,
 		mergedobjs[i].avgy = avgy;
 		mergedobjs[i].brightness = brightest;
 	}
+	pl_free(lists);
 
-	qsort(mergedobjs, sizeof(merged_obj), Ndonuts, compare_brightness);
+	qsort(mergedobjs, Ndonuts, sizeof(merged_obj), compare_brightness);
+	// the next donut (merged object) to merge in.
 	nextmerged = 0;
 
-	newfield = malloc(Nnew * 2 * sizeof(double));
-
+	// output index.
 	fieldind = 0;
+	// go through the original stars...
 	for (i=0; i<N; i++) {
+		// if it was merged into a donut...
 		if (merged[i]) {
 			// check if we should insert the next-brightest donut...
 			if ((nextmerged < Ndonuts) &&
 				(mergedobjs[nextmerged].brightness == i)) {
-				newfield[fieldind*2  ] = mergedobjs[nextmerged].avgx;
-				newfield[fieldind*2+1] = mergedobjs[nextmerged].avgx;
+				fieldxy[fieldind*2  ] = mergedobjs[nextmerged].avgx;
+				fieldxy[fieldind*2+1] = mergedobjs[nextmerged].avgy;
 				nextmerged++;
 				fieldind++;
 			}
 			continue;
 		}
 		// this star wasn't part of a donut...
-		newfield[fieldind*2  ] = fieldxy[i*2];
-		newfield[fieldind*2+1] = fieldxy[i*2+1];
+		fieldxy[fieldind*2  ] = fieldxy[i*2];
+		fieldxy[fieldind*2+1] = fieldxy[i*2+1];
 		fieldind++;
 	}
-	free(mergedobjs);
 
+	free(mergedobjs);
 	free(merged);
-	pl_free(lists);
-	*pfield = newfield;
 	*pnfield = fieldind;
 
  done:
 	kdtree_free(tree);
-	free(fieldxy);
+	free(fieldcopy);
 }
