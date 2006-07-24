@@ -10,15 +10,16 @@
 #include "mathutil.h"
 #include "xylist.h"
 #include "donuts.h"
+#include "fitsioutils.h"
+#include "qfits.h"
 
-char* OPTIONS = "hi:X:Y:o:d:t:"; //f:";
+char* OPTIONS = "hi:X:Y:o:d:t:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options]\n"
 			"   -i <input-xylist-filename>\n"
 			"     [-X <x-column-name>]\n"
 			"     [-Y <y-column-name>]\n"
-			//"     [-f <field-number>]\n"
 			"   -o <output-xylist-filename>\n"
 			"   -d <donut-distance-pixels>\n"
 			"   -t <donut-threshold>\n",
@@ -36,13 +37,13 @@ int main(int argc, char *argv[]) {
 	char* outfname = NULL;
 	char* xcol = NULL;
 	char* ycol = NULL;
-	//int fieldnum = -1;
 	xylist* xyls = NULL;
 	xylist* xylsout = NULL;
 	int i, N;
 	double* fieldxy = NULL;
 	double donut_dist = 5.0;
 	double donut_thresh = 0.25;
+	char val[64];
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -64,11 +65,6 @@ int main(int argc, char *argv[]) {
 		case 'o':
 			outfname = optarg;
 			break;
-			/*
-			  case 'f':
-			  fieldnum = atoi(optarg);
-			  break;
-			*/
 		default:
 		case 'h':
 			printHelp(progname);
@@ -100,6 +96,21 @@ int main(int argc, char *argv[]) {
 	if (ycol)
 		xylsout->yname = ycol;
 
+	qfits_header_add(xylsout->header, "HOMERED", "T", "This file has been homered (donuts removed)", NULL);
+	sprintf(val, "%f", donut_dist);
+	qfits_header_add(xylsout->header, "HMR_DST", val, "Donut radius (pixels)", NULL);
+	sprintf(val, "%f", donut_thresh);
+	qfits_header_add(xylsout->header, "HMR_THR", val, "Donut threshold (fraction)", NULL);
+	qfits_header_add(xylsout->header, "HISTORY", "homer command line:", NULL, NULL);
+	fits_add_args(xylsout->header, argv, argc);
+	qfits_header_add(xylsout->header, "HISTORY", "(end of homer command line)", NULL, NULL);
+	qfits_header_add(xylsout->header, "HISTORY", "** homer: history from input xyls:", NULL, NULL);
+	fits_copy_all_headers(xyls->header, xylsout->header, "HISTORY");
+	qfits_header_add(xylsout->header, "HISTORY", "** homer end of history from input xyls.", NULL, NULL);
+	qfits_header_add(xylsout->header, "COMMENT", "** homer: comments from input xyls:", NULL, NULL);
+	fits_copy_all_headers(xyls->header, xylsout->header, "COMMENT");
+	qfits_header_add(xylsout->header, "COMMENT", "** homer: end of comments from input xyls.", NULL, NULL);
+
 	if (xylist_write_header(xylsout)) {
 		fprintf(stderr, "Failed to write xyls header.\n");
 		exit(-1);
@@ -114,7 +125,7 @@ int main(int argc, char *argv[]) {
 		fieldxy = realloc(fieldxy, NF * 2 * sizeof(double));
 		xylist_read_entries(xyls, i, 0, NF, fieldxy);
 		nf = NF;
-		detect_donuts(i, &fieldxy, &nf, donut_dist, donut_thresh);
+		detect_donuts(i, fieldxy, &nf, donut_dist, donut_thresh);
 		if (nf != NF)
 			fprintf(stderr, "Found donuts! %i -> %i objs.\n", NF, nf);
 		if (xylist_write_new_field(xylsout) ||
