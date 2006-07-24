@@ -343,12 +343,12 @@ static void write_histogram(char* fn) {
 	free(bincounts);
 
 	fprintf(fout, "bar(bins, counts);\n");
-	fprintf(fout, "xlabel(\"4D distance\");\n");
-	fprintf(fout, "ylabel(\"Count\");\n");
-	fprintf(fout, "title(\"Histogram of nearist neighbour distance in codespace\");\n");
-	fprintf(fout, "legend(\"hide\");\n");
-	fprintf(fout, "print(\"%s.nnhists.eps\");\n", prefix);
-	fprintf(fout, "print(\"%s.nnhists.png\", \"-color\");\n", prefix);
+	fprintf(fout, "xlabel('4D distance');\n");
+	fprintf(fout, "ylabel('Count');\n");
+	fprintf(fout, "title('Histogram of nearist neighbour distance in codespace');\n");
+	fprintf(fout, "legend('hide');\n");
+	fprintf(fout, "print('%s.nnhists.eps');\n", prefix);
+	fprintf(fout, "print('-depsc', '%s.nnhists.png');\n", prefix);
 
 	fclose(fout);
 	printf("Wrote histogram to %s\n", fn);
