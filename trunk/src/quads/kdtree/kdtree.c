@@ -307,6 +307,146 @@ kdtree_t *kdtree_build(real *data, int N, int D, int maxlevel)
 	return kd;
 }
 
+
+
+
+
+
+
+
+
+/* If the root node is level 0, then maxlevel is the level at which there may
+ * not be enough points to keep the tree complete (i.e. last level) */
+kdtree_t *kdtree_build_depthfirst(real *data, int N, int D, int maxlevel)
+{
+	int i;
+	kdtree_t *kd;
+	int nnodes;
+	int dim=-1, m;
+
+	int nodestack[100];
+	int levelstack[100];
+	int stackptr;
+
+	assert(maxlevel > 0);
+	assert(D <= KDTREE_MAX_DIM);
+
+	/* Parameters checking */
+	if (!data || !N || !D)
+		return NULL;
+	/* Make sure we have enough data */
+	if ((1 << maxlevel) - 1 > N)
+		return NULL;
+
+	/* Set the tree fields */
+	kd = malloc(sizeof(kdtree_t));
+	nnodes = (1 << maxlevel) - 1;
+	kd->ndata = N;
+	kd->ndim = D;
+	kd->nnodes = nnodes;
+	kd->data = data;
+
+	/* perm stores the permutation indexes. This gets shuffled around during
+	 * sorts to keep track of the original index. */
+	kd->perm = malloc(sizeof(unsigned int) * N);
+	for (i = 0;i < N;i++)
+		kd->perm[i] = i;
+	assert(kd->perm);
+	kd->tree = malloc(NODE_SIZE * (nnodes));
+	assert(kd->tree);
+
+	NODE(0)->l = 0;
+	NODE(0)->r = N - 1;
+
+	levelstack[0] = 0;
+	nodestack[0] = 0;
+	stackptr = 0;
+
+	/* And in one shot, make the kdtree. Each iteration we set our
+	 * children's [l,r] array bounds and pivot our own subset. */
+	while (stackptr >= 0) {
+		int level, i;
+		real hi[D];
+		real lo[D];
+		int j, d;
+		real* pdata;
+		real maxrange;
+
+		level = levelstack[stackptr];
+		i = nodestack[stackptr];
+		stackptr--;
+
+		/* Sanity */
+		assert(NODE(i) == PARENT(2*i + 1));
+		assert(NODE(i) == PARENT(2*i + 2));
+		if (i && i % 2)
+			assert(NODE(i) == CHILD_NEG((i - 1) / 2));
+		else if (i)
+			assert(NODE(i) == CHILD_POS((i - 1) / 2));
+
+		/* Find the bounding-box for this node. */
+		for (d=0; d<D; d++) {
+			hi[d] = -KDT_INFTY;
+			lo[d] = KDT_INFTY;
+		}
+		/* (avoid doing kd->data[NODE(i)*D + d] many times by taking advantage of the
+		   fact that the data is stored lexicographically; just use ++ on the pointer) */
+		pdata = kd->data + NODE(i)->l * D;
+		for (j=NODE(i)->l; j<=NODE(i)->r; j++)
+			for (d=0; d<D; d++) {
+				if (*pdata > hi[d]) hi[d] = *pdata;
+				if (*pdata < lo[d]) lo[d] = *pdata;
+				pdata++;
+			}
+
+		for (d=0; d<D; d++) {
+			*LOW_HR(i, d) = lo[d];
+			*HIGH_HR(i, d) = hi[d];
+		}
+
+		/* Decide which dimension to split along: we use the dimension with
+		   largest range. */
+		maxrange = -1.0;
+		for (d=0; d<D; d++)
+			if ((hi[d] - lo[d]) > maxrange) {
+				maxrange = hi[d] - lo[d];
+				dim = d;
+			}
+
+		/* Pivot the data at the median */
+		m = kdtree_quickselect_partition(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
+
+		/* Only do child operations if we're not the last layer */
+		if (level < maxlevel - 1) {
+			assert(2*i + 1 < nnodes);
+			assert(2*i + 2 < nnodes);
+			CHILD_NEG(i)->l = NODE(i)->l;
+			CHILD_NEG(i)->r = m - 1;
+			CHILD_POS(i)->l = m;
+			CHILD_POS(i)->r	= NODE(i)->r;
+
+			stackptr++;
+			levelstack[stackptr] = level+1;
+			nodestack[stackptr] = 2*i + 1;
+			stackptr++;
+			levelstack[stackptr] = level+1;
+			nodestack[stackptr] = 2*i + 2;
+		}
+	}
+	return kd;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 /*****************************************************************************/
 /* Querying routines                                                         */
 /*****************************************************************************/
