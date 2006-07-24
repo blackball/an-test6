@@ -1,5 +1,3 @@
-.PHONY: 00 01 02 03 04 05 06 07 08 09 10 11
-
 comma := ,
 empty :=
 VER := $(shell make --version | grep "GNU Make version" | gawk '{print $$4}')
@@ -13,32 +11,30 @@ ifeq ($(VER), 3.79.1)
 endif
 
 
-CATALOG := /h/42/dstn/local/CUTS/an-sdss-2/an_sdss_
-INDEX := sdss-tst-2_
-TEMP1 := phase1b_
-TEMP2 := phase2b_
+CATALOG := /h/42/dstn/local/CUTS/sdss-2/an_sdss_
+INDEX := sdss-16_
+TEMP1 := phase1_
+TEMP2 := phase2_
 
 UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars2
 CODETREE        := codetree
 HPQUADS         := hpquads
+QUADLOCATIONS 	:= quadlocations 
+CODEPROJ        := codeprojections
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
 
 CODETREE_OPTS := -R 15
-#HPQUADS_OPTS := -l 4 -u 5 -n 879 -i 999 -c -x 3 -y 3
-HPQUADS_OPTS := -l 4 -u 5 -n 879 -i 999 -c -x 2 -y 2
-
-NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
-
-#SEC := \
-#    $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
-#    $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
-#.SECONDARY: $$(SEC)
+HPQUADS_OPTS  := -l 4 -u 5 -n 879 -i 16 -c -x 5 -y 5 -r 8
+QUADLOC_OPTS  := -n 1000
+CODEPROJ_OPTS := -d
 
 define INDEX_template
 $(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+.PHONY: $(1)
+
 $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
 		$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).quad.fits
 	$(UNPERMUTE_QUADS) -f $(TEMP2)$(1) -o tmp.$(INDEX)$(1)
@@ -61,25 +57,38 @@ $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
+ana$(1): quad$(1).pgm proj$(1).m
+.PHONY: ana$(1)
+
+quad$(1).pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
+	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o $$@ $(INDEX)$(1)
+
+proj$(1).m: $(INDEX)$(1).ckdt.fits
+	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
+
+SEC += \
+    $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
+    $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
+
 endef
 
+SEC := 
+
 $(foreach num,$(NUMS),$(eval $(call INDEX_template,$(num))))
+
+.SECONDARY: $(SEC)
+
+NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
+.PHONY: $(NUMS)
 
 all:
 	@echo try targets 00, 01, 02, ..., 11
 
-#all: rules
-#RULES := $(foreach num,$(NUMS),$(call INDEX_template,$(num)))
-#RULES = $(foreach num,$(NUMS),$(call INDEX_template,$(num)))
-#RULES := $(foreach num,00,$(call INDEX_template,$(num)))
-#$(warning $(RULES))
-#$(eval $(RULES))
-#rules: makeindex3
-#	printargs $(RULES)
-#$(echo $(RULES)) > rules
-#@echo $(RULES)
-#/bin/echo $(RULES) > rules
-#$(shell /bin/echo $(value RULES) > rules)
-#ifneq ($(MAKECMDGOALS),clean)
-#  include rules
-#endif
+.PHONY: anaall
+anaall: quadsall.pgm
+
+quadsall.pgm: \
+	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
+	$(addsuffix .skdt.fits, $(addprefix $(INDEX), $(NUMS)))
+	$(QUADLOCATIONS) $(QUADLOC_OPTS) $(addprefix $(INDEX), $(NUMS)) -o $@
+

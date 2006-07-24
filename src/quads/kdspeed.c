@@ -61,10 +61,9 @@ int main() {
 				kdtree_free_query(res1);
 				kdtree_free_query(res2);
 			}
-			/*
 				printf("recursive: %g ms.\niterative: %g ms.\n",
 				   millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
-			*/
+
 			rec_total[r] += millis_between(&tv1, &tv2);
 			iter_total[r] += millis_between(&tv2, &tv3);
 		}
