@@ -220,14 +220,10 @@ int quadfile_fix_header(quadfile* qf) {
 	qfits_header_mod(qf->header, "SCALE_U", val, "Upper-bound index scale.");
 	sprintf(val, "%.10f", qf->index_scale_lower);
 	qfits_header_mod(qf->header, "SCALE_L", val, "Lower-bound index scale.");
-	//if (qf->indexid) {
-	sprintf(val, "%u", qf->indexid);
+	sprintf(val, "%i", qf->indexid);
 	qfits_header_mod(qf->header, "INDEXID", val, "Index unique ID.");
-	//}
-	//if (qf->healpix != -1) {
-	sprintf(val, "%u", qf->healpix);
+	sprintf(val, "%i", qf->healpix);
 	qfits_header_mod(qf->header, "HEALPIX", val, "Healpix of this index.");
-	//}
 
 
     dataptr = NULL;
