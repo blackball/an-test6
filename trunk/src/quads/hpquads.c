@@ -592,6 +592,14 @@ int main(int argc, char** argv) {
 					 (circle ? "Stars C,D live in the circle defined by AB."
 					  :        "Stars C,D live in the box defined by AB."), NULL);
 
+	// add placeholders...
+	for (i=0; i<(xpasses * ypasses); i++) {
+		char key[64];
+		sprintf(key, "PASS%i", i+1);
+		qfits_header_add(codes->header, key, "-1", "placeholder", NULL);
+		qfits_header_add(quads->header, key, "-1", "placeholder", NULL);
+	}
+
     if (quadfile_write_header(quads)) {
         fprintf(stderr, "Couldn't write headers to quads file %s\n", quadfname);
         exit(-1);
@@ -822,6 +830,15 @@ int main(int argc, char** argv) {
 			printf("  %i AB pairs had bad center.\n", nbadcenter);
 			printf("  %i AB pairs were ok.\n", nabok);
 			printf("  %i quads were duplicates.\n", ndupquads);
+
+			{
+				char key[64];
+				char val[64];
+				sprintf(key, "PASS%i", xpass * ypasses + ypass + 1);
+				sprintf(val, "%i", nthispass);
+				qfits_header_mod(codes->header, key, val, "quads created in this pass");
+				qfits_header_mod(quads->header, key, val, "quads created in this pass");
+			}
 
 			// HACK -
 			// sort the quads in "quadlist", then insert them into
