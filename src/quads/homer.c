@@ -127,13 +127,14 @@ int main(int argc, char *argv[]) {
 		nf = NF;
 		detect_donuts(i, fieldxy, &nf, donut_dist, donut_thresh);
 		if (nf != NF)
-			fprintf(stderr, "Found donuts! %i -> %i objs.\n", NF, nf);
+			printf("Found donuts! %i -> %i objs.\n", NF, nf);
 		if (xylist_write_new_field(xylsout) ||
 			xylist_write_entries(xylsout, fieldxy, nf) ||
 			xylist_fix_field(xylsout)) {
 			fprintf(stderr, "Failed to write xyls field.\n");
 			exit(-1);
 		}
+		fflush(NULL);
 	}
 
 	free(fieldxy);
