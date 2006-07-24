@@ -22,7 +22,7 @@
 #include "kdtree_fits_io.h"
 #include "dualtree_max.h"
 
-#define OPTIONS "hf:H:D:cpr4" // n:
+#define OPTIONS "hf:H:D:cpr4"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -36,14 +36,11 @@ char* prefix;
 
 kdtree_t* tree = NULL;
 
-void print_help(char* progname)
-{
-	fprintf(stderr, "Usage: %s -f <prefix> [-c] [-p] [-4] [-H <hists.m>] [-D <dists.m>\n\n"
+void print_help(char* progname) {
+	fprintf(stderr, "Usage: %s -f <prefix> [-c] [-p] [-4] [-H <hists.m>] [-D <dists.m>]\n\n"
 	        "-c = check results against naive search.\n"
 	        "-4 = check all four permutations of codes (this only makes sense for code kdtrees).\n"
 	        "-p = write out a Matlab-literals file containing the positions of the stars.\n"
-	        "-n <radius> = write out Matlab literals containing the positions of nearby stars\n"
-	        "      where 'nearby' is defined as being within <radius> units.\n"
 	        "-r = convert XYZ to RA-DEC (this only make sense with -p or -n, and for star kdtrees).\n"
 	        "-H = File where histogram data should go (matlab).\n"
 	        "-D = File where distance data should go (matlab).\n",
@@ -51,8 +48,7 @@ void print_help(char* progname)
 }
 
 
-void swap_coords(double* v, int permnum)
-{
+static void swap_coords(double* v, int permnum) {
 	double tmp;
 	if (permnum & 1) {
 		// swap C, D:  0-2, 1-3
@@ -73,10 +69,9 @@ void swap_coords(double* v, int permnum)
 	}
 }
 
-void swap_hrect(double* dstlo, double* dsthi,
-                double* srclo, double* srchi,
-                int permnum)
-{
+static void swap_hrect(double* dstlo, double* dsthi,
+					   double* srclo, double* srchi,
+					   int permnum) {
 	if (permnum & 2) {
 		// swap hi/lo box hrects.
 		memcpy(dstlo, srchi, 4*sizeof(double));
@@ -90,9 +85,8 @@ void swap_hrect(double* dstlo, double* dsthi,
 }
 
 // a=query, b=search
-double box_to_box_min_dist2(kdtree_t* tree1, kdtree_node_t* node1,
-                            kdtree_t* tree2, kdtree_node_t* node2)
-{
+static double box_to_box_min_dist2(kdtree_t* tree1, kdtree_node_t* node1,
+								   kdtree_t* tree2, kdtree_node_t* node2) {
 	double tmplo[4], tmphi[4];
 	double *lo1, *hi1, *lo2, *hi2;
 
@@ -109,9 +103,8 @@ double box_to_box_min_dist2(kdtree_t* tree1, kdtree_node_t* node1,
 	return kdtree_bb_mindist2(lo1, hi1, lo2, hi2, tree->ndim);
 }
 
-double box_to_box_max_dist2(kdtree_t* tree1, kdtree_node_t* node1,
-                            kdtree_t* tree2, kdtree_node_t* node2)
-{
+static double box_to_box_max_dist2(kdtree_t* tree1, kdtree_node_t* node1,
+                            kdtree_t* tree2, kdtree_node_t* node2) {
 	double tmplo[4], tmphi[4];
 	double *lo1, *hi1, *lo2, *hi2;
 
@@ -128,8 +121,7 @@ double box_to_box_max_dist2(kdtree_t* tree1, kdtree_node_t* node1,
 	return kdtree_bb_maxdist2(lo1, hi1, lo2, hi2, tree->ndim);
 }
 
-double box_to_point_min_dist2(double* bblo, double* bbhi, double* point)
-{
+static double box_to_point_min_dist2(double* bblo, double* bbhi, double* point) {
 	double tmplo[4], tmphi[4];
 	if (do_perms) {
 		swap_hrect(tmplo, tmphi, bblo, bbhi, permnum);
@@ -139,8 +131,7 @@ double box_to_point_min_dist2(double* bblo, double* bbhi, double* point)
 	return kdtree_bb_point_mindist2(bblo, bbhi, point, tree->ndim);
 }
 
-double point_to_point_dist2(double* a, double* b)
-{
+static double point_to_point_dist2(double* a, double* b) {
 	double tmppt[4];
 	if (do_perms) {
 		memcpy(tmppt, b, 4*sizeof(double));
@@ -151,9 +142,9 @@ double point_to_point_dist2(double* a, double* b)
 }
 
 
-void bounds_function(void* extra, kdtree_node_t* ynode,
-                     kdtree_node_t* xnode,
-                     double pruning_thresh, double* lower, double* upper)
+static void bounds_function(void* extra, kdtree_node_t* ynode,
+							kdtree_node_t* xnode,
+							double pruning_thresh, double* lower, double* upper)
 {
 	double min2, max2;
 	min2 = -box_to_box_min_dist2(tree, xnode, tree, ynode);
@@ -166,21 +157,20 @@ void bounds_function(void* extra, kdtree_node_t* ynode,
 }
 
 
-double* nndists;
-int* nninds;
-int Ndone, Ntotal;
+static double* nndists;
+static int* nninds;
+static int Ndone, Ntotal;
 
-double* pruning_threshs;
-int* bests;
+static double* pruning_threshs;
+static int* bests;
 
 /**
    This callback is called when we've reached the leaves in the search
    tree.  For each point in the query tree, we allocate space for a
    pruning threshold and the index of the best point in the search tree.
 */
-void max_start_results(void* extra, kdtree_node_t* ynode,
-                       /*pl* leaves,*/
-                       double* pruning_thresh)
+static void max_start_results(void* extra, kdtree_node_t* ynode,
+							  double* pruning_thresh)
 {
 	int i, N;
 
@@ -215,9 +205,9 @@ void max_start_results(void* extra, kdtree_node_t* ynode,
 /**
    This callback is called once for each search node.
 */
+static
 void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
-                 double* pruning_threshold, double lower, double upper)
-{
+                 double* pruning_threshold, double lower, double upper) {
 	int i, N, j, M;
 	int ix, iy;
 	double prune;
@@ -277,55 +267,7 @@ void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
 	}
 }
 
-/*
-  void write_nearby_positions(char* fn, double radius, bool radec, dyv_array* array) {
-  FILE* fout;
-  int i;
-  fout = fopen(fn, "w");
-  if (!fout) {
-  printf("Couldn't open output file %s\n", fn);
-  return;
-  }
-  fprintf(fout, "nnposns=[");
-  for (i=0; i<Ntotal; i++) {
-  dyv* v;
-  int d, D;
-  if (nninds[i] < 0) continue;
-  if (nndists[i] > radius) continue;
-  v = dyv_array_ref(array, i);
-  D = v->size;
-  for (d=0; d<D; d++) {
-  double x = dyv_ref(v, d);
-  fprintf(fout,"%s%g", (d?",":""), x);
-  }
-  fprintf(fout, ";\n");
-  }
-  fprintf(fout, "];");
-  if (radec) {
-  fprintf(fout, "nnposnsradec=[");
-  for (i=0; i<Ntotal; i++) {
-  double x,y,z,ra,dec;
-  dyv* v;
-  if (nninds[i] < 0) continue;
-  if (nndists[i] > radius) continue;
-  v = dyv_array_ref(array, i);
-  x = dyv_ref(v, 0);
-  y = dyv_ref(v, 1);
-  z = dyv_ref(v, 2);
-  ra  = xy2ra(x, y);
-  dec = z2dec(z);
-  fprintf(fout, "%g,%g;\n", ra, dec);
-  }
-  fprintf(fout, "];");
-  fprintf(fout, "ra=nnposnsradec(:,1); dec=nnposnsradec(:,2);\n");
-  }
-  fclose(fout);
-  printf("Wrote positions to %s\n", fn);
-  }
-*/
-
-void write_array(char* fn)
-{
+static void write_array(char* fn) {
 	FILE* fout;
 	int i;
 	fout = fopen(fn, "w");
@@ -347,8 +289,7 @@ void write_array(char* fn)
 	printf("Wrote array to %s\n", fn);
 }
 
-void write_histogram(char* fn)
-{
+static void write_histogram(char* fn) {
 	FILE* fout;
 	int Nbins = 200;
 	int i;
@@ -414,8 +355,7 @@ void write_histogram(char* fn)
 	fflush(stdout);
 }
 
-void max_end_results(void* extra, kdtree_node_t* ynode)
-{
+static void max_end_results(void* extra, kdtree_node_t* ynode) {
 	int i, N;
 	N = kdtree_node_npoints(ynode);
 	for (i = 0; i < N; i++) {
@@ -453,19 +393,11 @@ void max_end_results(void* extra, kdtree_node_t* ynode)
 		char fn[256];
 		sprintf(fn, "/tmp/nnhists_%i.m", (Ndone + N) / 100000);
 		write_histogram(fn);
-		/*
-		  if (write_nearby) {
-		  sprintf(fn, "/tmp/nearby_%i.m", (Ndone+N)/100000);
-		  write_nearby_positions(fn, nearby_radius, radec, array);
-		  }
-		*/
 	}
 	Ndone += N;
 }
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int argchar;
 	char *treefname = NULL;
 	char *distsfname = NULL;
@@ -491,17 +423,6 @@ int main(int argc, char *argv[])
 		case 'p':
 			write_points = TRUE;
 			break;
-			/*
-			  case 'n':
-			  write_nearby = TRUE;
-			  nearby_radius = atof(optarg);
-			  if (nearby_radius == 0.0) {
-			  printf("Couldn't parse nearby-radius: %s\n", optarg);
-			  print_help(argv[0]);
-			  exit(-1);
-			  }
-			  break;
-			*/
 		case 'r':
 			radec = TRUE;
 			break;
@@ -612,12 +533,6 @@ int main(int argc, char *argv[])
 			dualtree_max(tree, tree, &max_callbacks, 1, 0);
 		}
 	}
-
-	/*
-	  if (write_nearby) {
-	  write_nearby_positions("/tmp/nearby.m", nearby_radius, radec, array);
-	  }
-	*/
 
 	if (histsfname)
 		write_histogram(histsfname);

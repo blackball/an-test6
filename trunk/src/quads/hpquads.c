@@ -465,7 +465,6 @@ int main(int argc, char** argv) {
 	int Nhighwater = 0;
 	int* hptotry;
 	int Nhptotry;
-	//int Nhpnext;
 	int nquads;
 	double rads;
 	double hprad;
@@ -838,15 +837,17 @@ int main(int argc, char** argv) {
 				quad* q = quadlist + i;
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
 			}
-			printf("bt height is %i\n", bt_height(bigquadlist));
-			{
-				double opth = log(bt_size(bigquadlist) / (double)bigquadlist->blocksize) / log(2.0);
-				int nleaves;
-				printf("(optimal height is %g.)\n", opth);
-				nleaves = bt_count_leaves(bigquadlist);
-				printf("bt contains %i leaves.\n", nleaves);
-				printf("leaves are on average %.1f%% full.\n", 100.0 * bt_size(bigquadlist) / (double)(nleaves * bigquadlist->blocksize));
-			}
+			/*
+			  printf("bt height is %i\n", bt_height(bigquadlist));
+			  {
+			  double opth = log(bt_size(bigquadlist) / (double)bigquadlist->blocksize) / log(2.0);
+			  int nleaves;
+			  printf("(optimal height is %g.)\n", opth);
+			  nleaves = bt_count_leaves(bigquadlist);
+			  printf("bt contains %i leaves.\n", nleaves);
+			  printf("leaves are on average %.1f%% full.\n", 100.0 * bt_size(bigquadlist) / (double)(nleaves * bigquadlist->blocksize));
+			  }
+			*/
 
 			firstpass = FALSE;
 		}
