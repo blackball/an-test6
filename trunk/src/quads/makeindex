@@ -22,6 +22,7 @@ CODETREE        := codetree
 HPQUADS         := hpquads
 QUADLOCATIONS 	:= quadlocations 
 CODEPROJ        := codeprojections
+MATLAB		:= matlab
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
@@ -57,8 +58,15 @@ $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
-ana$(1): quad$(1).pgm proj$(1).m
 .PHONY: ana$(1)
+ana$(1): quad$(1).pgm proj$(1).m
+
+.PHONY: plot$(1)
+plot$(1): cp_hists$(1).eps
+
+cp_hists$(1).eps: proj$(1).m
+	echo "proj$(1); print_plots=1; plot_suffix=$(1); batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
+	$(MATLAB) < /tmp/tmpscript$(1).m
 
 quad$(1).pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o $$@ $(INDEX)$(1)
@@ -86,6 +94,9 @@ all:
 
 .PHONY: anaall
 anaall: quadsall.pgm
+
+plots: $(addprefix plot, $(NUMS))
+.PHONY: plots
 
 quadsall.pgm: \
 	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
