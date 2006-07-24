@@ -45,8 +45,6 @@ typedef struct kdtree_qres kdtree_qres_t;
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
 kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
 
-kdtree_t *kdtree_build_depthfirst(real *data, int N, int D, int maxlevel);
-
 /* Compute how many levels should be used if you have "N" points and you
    want "Nleaf" points in the leaf nodes.
 */
