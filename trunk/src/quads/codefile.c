@@ -201,9 +201,9 @@ int codefile_write_header(codefile* cf) {
 	qfits_header_mod(cf->header, "SCALE_U", val, "Upper-bound index scale.");
 	sprintf(val, "%.10f", cf->index_scale_lower);
 	qfits_header_mod(cf->header, "SCALE_L", val, "Lower-bound index scale.");
-	sprintf(val, "%u", cf->indexid);
+	sprintf(val, "%i", cf->indexid);
 	qfits_header_mod(cf->header, "INDEXID", val, "Index unique ID.");
-	sprintf(val, "%u", cf->healpix);
+	sprintf(val, "%i", cf->healpix);
 	qfits_header_mod(cf->header, "HEALPIX", val, "Healpix of this index.");
 
 	datasize = DIM_CODES * sizeof(double);

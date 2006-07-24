@@ -34,7 +34,7 @@ int catalog_write_to_file(catalog* cat, char* fn)
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_add(hdr, "NSTARS", val, "Number of stars used.", NULL);
 	qfits_header_add(hdr, "AN_FILE", CATALOG_AN_FILETYPE, "This file has a list of object positions.", NULL);
-	sprintf(val, "%u", cat->healpix);
+	sprintf(val, "%i", cat->healpix);
 	qfits_header_add(hdr, "HEALPIX", val, "The healpix covered by this catalog.", NULL);
 	qfits_header_dump(hdr, catfid);
 	qfits_header_destroy(hdr);
@@ -86,7 +86,7 @@ int catalog_write_header(catalog* cat)
 	// fill in the real values...
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_mod(cat->header, "NSTARS", val, "Number of stars.");
-	sprintf(val, "%u", cat->healpix);
+	sprintf(val, "%i", cat->healpix);
 	qfits_header_mod(cat->header, "HEALPIX", val, "Healpix covered by this catalog.");
 	datasize = DIM_STARS * sizeof(double);
 	ncols = 1;
