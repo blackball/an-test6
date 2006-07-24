@@ -80,16 +80,17 @@ SEC += \
 
 endef
 
+
+
+NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
+
+PHO := $(NUMS)
 SEC := 
-PHO :=
 
 $(foreach num,$(NUMS),$(eval $(call INDEX_template,$(num))))
 
-.SECONDARY: $(SEC)
 .PHONY: $(PHO)
-
-NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
-.PHONY: $(NUMS)
+.SECONDARY: $(SEC)
 
 all:
 	@echo try targets 00, 01, 02, ..., 11
