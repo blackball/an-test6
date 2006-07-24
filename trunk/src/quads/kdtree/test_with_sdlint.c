@@ -262,6 +262,7 @@ int main(int argc, char* argv[])
                                                   255, 0, 0);
                         }
 
+			/*
                             for (i=0;i<NPTS;i++) {
                             setpixel(mainScreen, (int)data[2*i+0]-2,
                                                  (int)data[2*i+1]+2, 255, 0, 255);
@@ -269,6 +270,7 @@ int main(int argc, char* argv[])
                                                  (int)data[2*i+1]-2, 255, 0, 255);
                             printf("%d %d\n",  (int)data[2*i+0], (int)data[2*i+1]);
                             }
+			    */
                         //kdtree_free_query(kr);
                     }
 

@@ -68,7 +68,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	kd->maxval = maxval;
 
 	/* delta size for this tree... for now same for all dimensions */
-	kd->delta = delta = (maxval - minval) / (real) (unsigned int) -1;
+	kd->delta = delta = (maxval - minval) / 4294967296.0;
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
@@ -167,9 +167,18 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		}//printf("\n");
 
 		/* Encode split dimension and value. Last 2 bits are dim */
-		/* FIXME shouldn't just truncate; should actually round */
 		unsigned int s = REAL2FIXED(data[D*m+d]);
-		kd->tree[i].split = (s & 0xfffffffc) | dim;
+		unsigned int rem = s  & 0x3;
+		/* if we're close to the next value, push up */
+		switch(rem) {
+			/* case 0: no rounding needed */
+			case 1: s--; break; /* get rid of trailing 1 */
+			case 2: s++;
+			case 3: s++;
+		}
+		assert((s & 0x3) == 0);
+		printf("s*d %f split %f error: %f\n", s*delta*kd->maxval, data[D*m+d], s*delta*kd->maxval - data[D*m+d]);
+		kd->tree[i].split = s | dim;
 
 		unsigned int spl = kd->tree[i].split & 0x3;
 		assert(spl ==dim);
@@ -234,7 +243,7 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 			unsigned int loc = info & 0xfffffffc;
 
 			assert(spl < kd->ndim);
-			printf("spl %d loc %d\n", spl, loc);
+			printf("spl %d loc %f\n", spl, kd->delta*loc*kd->maxval);
 
 			if (pti[spl] <= loc) {
 				stack[zzz++] = 2*i+1;
