@@ -36,6 +36,23 @@ int main() {
 	levels = kdtree_compute_levels(N, 10);
 	printf("Creating tree with %i levels...\n", levels);
 	fflush(stdout);
+
+	for (r=0; r<REPS; r++) {
+		kdtree_t *kd1, *kd2;
+		struct timeval tv1, tv2, tv3;
+		gettimeofday(&tv1, NULL);
+		kd1 = kdtree_build(data, N, D, levels);
+		gettimeofday(&tv2, NULL);
+		kd2 = kdtree_build_depthfirst(data, N, D, levels);
+		gettimeofday(&tv3, NULL);
+
+		printf("breadth: %g ms.\ndepth: %g ms.\n",
+			   millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
+		kdtree_free(kd1);
+		kdtree_free(kd2);
+	}
+	exit(0);
+
 	kd = kdtree_build(data, N, D, levels);
 
 	for (i=0; i<ROUNDS; i++) {
