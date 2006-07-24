@@ -13,6 +13,7 @@
 #include "starutil.h"
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
+#include "kdtree_access.h"
 
 #define OPTIONS "hn:o:"
 
