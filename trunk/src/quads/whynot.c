@@ -7,6 +7,7 @@
 #include "kdtree.h"
 #include "kdtree_fits_io.h"
 #include "kdtree_io.h"
+#include "kdtree_access.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
