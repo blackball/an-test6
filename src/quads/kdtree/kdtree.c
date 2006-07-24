@@ -182,8 +182,13 @@ int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r,
 		assert(GET(i) <= medval);
 	}
 	for (i = median + 1; i <= r; i++) {
-		assert(GET(i) >= medval);
-		//assert(GET(i) > medval);
+		/* Assert contention: i just changed this assert to strict
+		 * because for the inttree, i need strict median guarentee
+		 * (i.e. all the median values are on one side or the other of
+		 * the return value of this function) If this causes problems
+		 * let me know --k */
+		assert(GET(i) > medval);
+		//assert(GET(i) >= medval);
 	}
 
 	return median + 1;
