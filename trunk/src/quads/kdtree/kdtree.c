@@ -45,8 +45,6 @@ int kdtree_compute_levels(int N, int Nleaf) {
 	return levels;
 }
 
-#ifdef AMNSLOW
-
 real* kdqsort_arr;
 int kdqsort_D;
 
@@ -98,7 +96,6 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 	return 1;
 }
 
-#endif
 
 #define GET(x) (arr[(x)*D+d])
 #define ELEM_SWAP(il, ir) { \

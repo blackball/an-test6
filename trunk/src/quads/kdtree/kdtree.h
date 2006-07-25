@@ -102,5 +102,6 @@ int kdtree_check(kdtree_t* t);
 /* Reused by inttree */
 int kdtree_qsort_results(kdtree_qres_t *kq, int D);
 int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r, int D, int d);
+int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 
 #endif /* KDTREE_H */
