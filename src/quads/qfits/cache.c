@@ -3,7 +3,7 @@
   @file		cache.c
   @author	N. Devillard
   @date		Mar 2001
-  @version	$Revision: 1.4 $
+  @version	$Revision: 1.5 $
   @brief	FITS caching capabilities
 
   This modules implements a cache for FITS access routines.
@@ -14,10 +14,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: cache.c,v 1.4 2006/06/27 20:10:49 dlang Exp $
+	$Id: cache.c,v 1.5 2006/07/25 14:52:43 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/06/27 20:10:49 $
-	$Revision: 1.4 $
+	$Date: 2006/07/25 14:52:43 $
+	$Revision: 1.5 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "static_sz.h"
 #include "xmemory.h"
@@ -446,7 +447,7 @@ static int qfits_cache_add(const char * filename)
 	/* Open input file */
 	if ((in=fopen(filename, "r"))==NULL) {
 		qdebug(
-			printf("qfits: cannot open file %s\n", filename);
+			printf("qfits: cannot open file %s: %s\n", filename, strerror(errno));
 		);
 		return -1 ;
 	}

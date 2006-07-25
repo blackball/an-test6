@@ -3,7 +3,7 @@
    @file	fits_md5.c
    @author	N. Devillard
    @date	May 2001
-   @version	$Revision: 1.1 $
+   @version	$Revision: 1.2 $
    @brief	FITS data block MD5 computation routine.
 
    This module offers MD5 computation over all data areas of a FITS file.
@@ -11,10 +11,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: fits_md5.c,v 1.1 2006/03/16 22:10:26 dlang Exp $
+	$Id: fits_md5.c,v 1.2 2006/07/25 14:52:43 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/03/16 22:10:26 $
-	$Revision: 1.1 $
+	$Date: 2006/07/25 14:52:43 $
+	$Revision: 1.2 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -26,6 +26,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "md5.h"
 #include "fits_std.h"
@@ -74,7 +75,7 @@ char * qfits_datamd5(char * filename)
 	if (filename==NULL) return NULL ;
     /* Open input file */
     if ((in=fopen(filename, "r"))==NULL) {
-        qfits_error("cannot open file %s", filename);
+        qfits_error("cannot open file %s: %s", filename, strerror(errno));
         return NULL ;
     }
     /* Initialize all variables */

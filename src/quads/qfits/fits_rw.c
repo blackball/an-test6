@@ -3,16 +3,16 @@
    @file    fits_rw.c
    @author  N. Devillard
    @date    Mar 2000
-   @version $Revision: 1.4 $
+   @version $Revision: 1.5 $
    @brief   FITS header reading/writing.
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: fits_rw.c,v 1.4 2006/06/27 20:10:49 dlang Exp $
+    $Id: fits_rw.c,v 1.5 2006/07/25 14:52:43 dlang Exp $
     $Author: dlang $
-    $Date: 2006/06/27 20:10:49 $
-    $Revision: 1.4 $
+    $Date: 2006/07/25 14:52:43 $
+    $Revision: 1.5 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -25,11 +25,10 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "qfits.h"
-//#include "fits_rw.h"
 #include "fits_p.h"
-//#include "simple.h"
 #include "xmemory.h"
 #include "qerror.h"
 
@@ -397,7 +396,7 @@ int is_fits_file(const char *filename)
 
     if (filename==NULL) return -1 ;
     if ((fp = fopen(filename, "r"))==NULL) {
-        qfits_error("cannot open file [%s]", filename) ;
+        qfits_error("cannot open file [%s]: %s", filename, strerror(errno)) ;
         return -1 ;
     }
 

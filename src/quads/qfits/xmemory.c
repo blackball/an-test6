@@ -3,7 +3,7 @@
   @file     xmemory.c
   @author   Nicolas Devillard
   @date     Oct 2000
-  @version  $Revision: 1.7 $
+  @version  $Revision: 1.8 $
   @brief    POSIX-compatible extended memory handling.
 
   xmemory is a small and efficient module offering memory extension 
@@ -20,10 +20,10 @@
 /*----------------------------------------------------------------------------*/
 
 /*
-    $Id: xmemory.c,v 1.7 2006/06/27 20:10:49 dlang Exp $
+    $Id: xmemory.c,v 1.8 2006/07/25 14:52:43 dlang Exp $
     $Author: dlang $
-    $Date: 2006/06/27 20:10:49 $
-    $Revision: 1.7 $
+    $Date: 2006/07/25 14:52:43 $
+    $Revision: 1.8 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -39,6 +39,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <errno.h>
 
 #include <assert.h>
 
@@ -786,8 +787,8 @@ char * xmemory_falloc(
         /* Open file */
         if ((fd=open(name, O_RDONLY))==-1) {
             xmem_debug(
-                fprintf(stderr, "xmem: cannot open file %s - %s (%d)\n",
-                        name, srcname, srclin);
+					   fprintf(stderr, "xmem: cannot open file %s - %s (%d): %s\n",
+							   name, srcname, srclin, strerror(errno));
             );
             if (XMEMORY_MODE == 0) return NULL ;
             else exit(1) ;
@@ -898,8 +899,8 @@ char * xmemory_falloc(
     /* Open file */
     if ((fd=open(name, O_RDONLY))==-1) {
         xmem_debug(
-            fprintf(stderr, "xmem: cannot open file %s - %s (%d)\n",
-                    name, srcname, srclin);
+				   fprintf(stderr, "xmem: cannot open file %s - %s (%d): %s\n",
+                    name, srcname, srclin, strerror(errno));
         );
         return NULL ;
     }
