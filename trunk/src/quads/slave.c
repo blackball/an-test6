@@ -287,7 +287,7 @@ int main(int argc, char *argv[]) {
 				if (!cxdx) {
 					fprintf(stderr, "Warning: you asked for a CXDX margin, but ckdt file %s does not have the CXDX FITS header.\n",
 							treefname);
-					exit(-1);
+					//exit(-1);
 				}
 			}
 			// check for CIRCLE field in ckdt header...
@@ -908,7 +908,7 @@ void* solvethread_run(void* varg) {
 		// The real thing
 		solve_field(&solver);
 
-		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n\n",
+		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n",
 				fieldnum, solver.numtries, solver.nummatches);
 
 		if (maxquads && solver.numtries >= maxquads) {
@@ -988,6 +988,7 @@ void* solvethread_run(void* varg) {
 				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime));
 		last_utime = utime;
 		last_stime = stime;
+		fprintf(stderr, "\n\n");
 	}
 
 	free(field);
