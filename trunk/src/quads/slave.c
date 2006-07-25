@@ -34,7 +34,6 @@
 #include "idfile.h"
 #include "intmap.h"
 #include "verify.h"
-#include "donuts.h"
 #include "solvedclient.h"
 
 static void printHelp(char* progname) {
@@ -71,9 +70,6 @@ double overlap_tosolve;
 double overlap_tokeep;
 int min_ninfield;
 int do_correspond;
-double donut_dist;
-double donut_thresh;
-int do_donut;
 int threads;
 double cxdx_margin;
 int maxquads;
@@ -155,9 +151,6 @@ int main(int argc, char *argv[]) {
 		overlap_tokeep = 0.0;
 		min_ninfield = 0;
 		do_correspond = 1;
-		donut_dist = 0.0;
-		donut_thresh = 0.0;
-		do_donut = 0;
 		threads = 1;
 		cxdx_margin = 0.0;
 
@@ -196,8 +189,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "xcolname %s\n", xcolname);
 		fprintf(stderr, "ycolname %s\n", ycolname);
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
-		fprintf(stderr, "donut_dist %g\n", donut_dist);
-		fprintf(stderr, "donut_thresh %g\n", donut_thresh);
 		fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
 		fprintf(stderr, "maxquads %i\n", maxquads);
 		fprintf(stderr, "threads %i\n", threads);
@@ -274,7 +265,6 @@ int main(int argc, char *argv[]) {
 				startree->ndata, startree->nnodes, startree->ndim);
 
 		do_verify = (verify_dist2 > 0.0);
-		do_donut = (donut_dist > 0.0) && (donut_thresh > 0.0);
 		{
 			qfits_header* hdr = qfits_header_read(treefname);
 			if (!hdr) {
@@ -422,10 +412,6 @@ static int read_parameters() {
 			maxquads = atoi(nextword);
 		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
 			cxdx_margin = atof(nextword);
-		} else if (is_word(buffer, "donut_dist ", &nextword)) {
-			donut_dist = atof(nextword);
-		} else if (is_word(buffer, "donut_thresh ", &nextword)) {
-			donut_thresh = atof(nextword);
 		} else if (is_word(buffer, "do_correspond ", &nextword)) {
 			do_correspond = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
@@ -870,14 +856,6 @@ void* solvethread_run(void* varg) {
 		field = realloc(field, 2 * nfield * sizeof(double));
 		dl_copy(thisfield, 0, 2 * nfield, field);
 		free_xy(thisfield);
-
-		if (do_donut) {
-			int oldsize = nfield;
-			detect_donuts(fieldnum, &field, &nfield, donut_dist, donut_thresh);
-			if (nfield != oldsize)
-				fprintf(stderr, "Field %i: donuts detected; merged %i objects to %i.\n",
-						fieldnum, oldsize, nfield);
-		}
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
