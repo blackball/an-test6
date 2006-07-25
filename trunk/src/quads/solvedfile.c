@@ -23,9 +23,11 @@ int solvedfile_get(char* fn, int fieldnum) {
 		((end = ftello(f)) == -1)) {
 		fprintf(stderr, "Error: seeking to end of file %s: %s\n",
 				fn, strerror(errno));
+		fclose(f);
 		return -1;
 	}
 	if (end <= fieldnum) {
+		fclose(f);
 		return 0;
 	}
 	if (fseeko(f, (off_t)fieldnum, SEEK_SET) ||
@@ -33,6 +35,7 @@ int solvedfile_get(char* fn, int fieldnum) {
 		fclose(f)) {
 		fprintf(stderr, "Error: seeking, reading, or closing file %s: %s\n",
 				fn, strerror(errno));
+		fclose(f);
 		return -1;
 	}
 	return val;
@@ -51,6 +54,7 @@ int solvedfile_set(char* fn, int fieldnum) {
 	off = lseek(f, 0, SEEK_END);
 	if (off == -1) {
 		fprintf(stderr, "Error: failed to lseek() to end of file %s: %s\n", fn, strerror(errno));
+		close(f);
 		return -1;
 	}
 	// this gives you the offset one past the end of the file.
@@ -63,6 +67,7 @@ int solvedfile_set(char* fn, int fieldnum) {
 			if (write(f, &val, 1) != 1) {
 				fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
 						fn, strerror(errno));
+				close(f);
 				return -1;
 			}
 	}
@@ -72,6 +77,7 @@ int solvedfile_set(char* fn, int fieldnum) {
 		close(f)) {
 		fprintf(stderr, "Error: seeking, writing, or closing file %s: %s\n",
 				fn, strerror(errno));
+		close(f);
 		return -1;
 	}
 	return 0;
