@@ -54,13 +54,11 @@ int solvedfile_set(char* fn, int fieldnum) {
 		return -1;
 	}
 	// this gives you the offset one past the end of the file.
-	//printf("End of file is %i.  Fieldnum is %i.\n", (int)off, fieldnum);
 	if (off < fieldnum) {
 		// pad.
 		int npad = fieldnum - off;
 		int i;
 		val = 0;
-		//printf("Adding %i pad bytes.\n", npad);
 		for (i=0; i<npad; i++)
 			if (write(f, &val, 1) != 1) {
 				fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
