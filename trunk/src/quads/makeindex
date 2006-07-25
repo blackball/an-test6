@@ -31,6 +31,9 @@ CODETREE_OPTS := -R 15
 HPQUADS_OPTS  := -l 4 -u 5 -n 879 -i 16 -c -x 5 -y 5 -r 8
 QUADLOC_OPTS  := -n 1000
 CODEPROJ_OPTS := -d
+MATLAB_OPTS   := -nojvm -nosplash -nodisplay
+
+MATLAB_INIT   := addpath('~/quads')
 
 define INDEX_template
 PHO += $(1)
@@ -58,6 +61,12 @@ $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
+quad$(1).pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
+	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o $$@ $(INDEX)$(1)
+
+proj$(1).m: $(INDEX)$(1).ckdt.fits
+	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
+
 PHO += ana$(1)
 ana$(1): quad$(1).pgm proj$(1).m
 
@@ -65,14 +74,8 @@ PHO += plot$(1)
 plot$(1): cp_hists$(1).eps
 
 cp_hists$(1).eps: proj$(1).m
-	echo "proj$(1); print_plots=1; plot_suffix=$(1); batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
-	$(MATLAB) < /tmp/tmpscript$(1).m
-
-quad$(1).pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
-	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o $$@ $(INDEX)$(1)
-
-proj$(1).m: $(INDEX)$(1).ckdt.fits
-	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
+	echo "$(MATLAB_INIT); fprintf('\nGenerating plots for $(1)...\n'); proj$(1); print_plots=1; plot_suffix='$(1)'; batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
+	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
 
 SEC += \
     $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
