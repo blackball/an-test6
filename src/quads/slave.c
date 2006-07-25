@@ -35,6 +35,7 @@
 #include "intmap.h"
 #include "verify.h"
 #include "solvedclient.h"
+#include "solvedfile.h"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -391,7 +392,7 @@ static int read_parameters() {
 					"    match <match-file-name>\n"
 					"    done <done-file-name>\n"
 					"    field <field-file-name>\n"
-					"    solvedfname <solved-field-filename-template>\n"
+					"    solvedfname <solved-filename>\n"
 					"    fields [<field-number> or <start range>/<end range>...]\n"
 					"    sdepth <start-field-object>\n"
 					"    depth <end-field-object>\n"
@@ -827,17 +828,14 @@ void* solvethread_run(void* varg) {
 		}
 
 		if (solvedfname) {
-			char fn[256];
-			sprintf(fn, solvedfname, fieldnum);
-			if (file_exists(fn)) {
+			if (solvedfile_get(solvedfname, fieldnum)) {
 				// file exists; field has already been solved.
-				fprintf(stderr, "Field %i: file %s exists; field has been solved.\n",
-						fieldnum, fn);
+				fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solvedfname);
 				write_hits(fieldnum, NULL);
 				free_xy(thisfield);
 				continue;
 			}
-			solver.solvedfn = strdup(fn);
+			solver.solvedfn = solvedfname;
 		} else
 			solver.solvedfn = NULL;
 
@@ -894,8 +892,6 @@ void* solvethread_run(void* varg) {
 					solver.numtries, maxquads);
 		}
 
-		free(solver.solvedfn);
-
 		if (my->winning_listind == -1) {
 			// didn't solve it...
 			fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
@@ -940,14 +936,9 @@ void* solvethread_run(void* varg) {
 			pl_free(list);
 
 			if (solvedfname) {
-				// write a file to indicate that the field was solved.
-				char fn[256];
-				FILE* f;
-				sprintf(fn, solvedfname, fieldnum);
-				fprintf(stderr, "Field %i solved: writing file %s to indicate this.\n", fieldnum, fn);
-				if (!(f = fopen(fn, "w")) ||
-					fclose(f)) {
-					fprintf(stderr, "Failed to write field-finished file %s.\n", fn);
+				fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, solvedfname);
+				if (solvedfile_set(solvedfname, fieldnum)) {
+					fprintf(stderr, "Failed to write to solvedfile %s.\n", solvedfname);
 				}
 			}
 			if (solvedserver) {

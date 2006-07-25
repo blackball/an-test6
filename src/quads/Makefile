@@ -75,7 +75,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
 	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
-	bt.o \
+	bt.o solvedfile.o \
 	$(QFITS_OBJ)
 
 SOLVER_OBJ := solver.o
