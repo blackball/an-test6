@@ -3,17 +3,17 @@
    @file	tfits.c
    @author	Y. Jung
    @date	July 1999
-   @version	$Revision: 1.11 $
+   @version	$Revision: 1.12 $
    @brief
    FITS table handling
 */
 /*----------------------------------------------------------------------------*/
 
 /*
-	$Id: tfits.c,v 1.11 2006/06/27 20:10:49 dlang Exp $
+	$Id: tfits.c,v 1.12 2006/07/25 14:52:43 dlang Exp $
 	$Author: dlang $
-	$Date: 2006/06/27 20:10:49 $
-	$Revision: 1.11 $
+	$Date: 2006/07/25 14:52:43 $
+	$Revision: 1.12 $
 */
 
 /*-----------------------------------------------------------------------------
@@ -25,13 +25,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include "qfits.h"
-
 #include "ieeefp-compat.h"
 #include "fits_std.h"
 #include "byteswap.h"
-//#include "simple.h"
 #include "t_iso8601.h"
 #include "config.h"
 #include "fits_md5.h"
@@ -1643,7 +1642,7 @@ int qfits_save_table_hdrdump(
 
 	/* Open the destination file */
 	if ((outfile = fopen(table->filename, "w")) == NULL) {
-		qfits_error("cannot open file [%s]", table->filename) ;
+		qfits_error("cannot open file [%s]: %s", table->filename, strerror(errno));
 		return -1 ;
 	}
 	/* Write the fits header in the file 'outname' */
