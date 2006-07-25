@@ -36,7 +36,7 @@ void test_sort_1d_even_3(CuTest *tc)
 {
 	//real data[]        = {5,9,84,7,56,4,8,4,33,120};
 	real data[]        = {33,9,84,7,56,4,8,4,5,120};
-	real data_sorted[] = {4,4,5,7,8,33,9,56,84,120}; /* notice this isn't quite sorted */
+	real data_sorted[] = {4,4,5,7,8,9,33,56,84,120}; /* notice this isn't quite sorted */
 	int lr[]           = {2,4,7,9};
 	int i, n=10, d=1;
 	intkdtree_t *kd = intkdtree_build(data, n, d, 3, 0, 150);
@@ -348,7 +348,8 @@ void test_kd_range_search(CuTest *tc) {
 					break;
 				}
 			}
-			CuAssertIntEquals(tc, ok, 1);
+			printf(" Got one %d %d\n", t, i);
+			CuAssertIntEquals(tc, 1, ok);
 			if (ok) {
 				// make sure the reported distance is right.
 				CuAssertDblEquals(tc, results->sdists[hitind], d2, 1e-10);
