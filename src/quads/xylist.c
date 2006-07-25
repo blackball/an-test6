@@ -56,15 +56,15 @@ static int xylist_find_field(xylist* ls, uint field) {
 	int c;
 	if (ls->table && ls->field == field)
 		return 0;
-	// the main FITS header is extension 0
-	// the first FITS table is extension 1
 	if (ls->table) {
 		qfits_table_close(ls->table);
 		ls->table = NULL;
 	}
+	// the main FITS header is extension 0
+	// the first FITS table is extension 1
 	ls->table = qfits_table_open(ls->fn, field + 1);
 	if (!ls->table) {
-		fprintf(stderr, "FITS extension %i in file %s is not a table.\n",
+		fprintf(stderr, "FITS extension %i in file %s is not a table (or there was an error opening the file).\n",
 				field+1, ls->fn);
 		return -1;
 	}
