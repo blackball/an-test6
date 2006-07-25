@@ -35,7 +35,7 @@ if 0,
   end
   colormap hot;
   if print_plots,
-    print -depsc ['cp_hists', plot_suffix];
+    print('-depsc', ['cp_hists', plot_suffix]);
   end
   if ~batch,
     input('next');
@@ -60,7 +60,7 @@ if 0,
     end
     colormap hot;
     if print_plots,
-      print -depsc ['cp_dhists', plot_suffix];
+      print('-depsc', ['cp_dhists', plot_suffix]);
     end
     if ~batch,
       input('next');
@@ -82,7 +82,7 @@ for i=1:3,
 end
 colormap hot;
 if print_plots,
-  print -depsc ['cp_2dhists', plot_suffix];
+  print('-depsc', ['cp_2dhists', plot_suffix]);
 end
 if ~batch,
   input('next');
@@ -103,7 +103,7 @@ if do_density,
   end
   colormap hot;
   if print_plots,
-    print -depsc ['cp_2ddhists', plot_suffix];
+    print('-depsc', ['cp_2ddhists', plot_suffix]);
   end
   if ~batch,
     input('next');
@@ -119,7 +119,7 @@ for i=1:4,
   set(gca,'XTickLabel',{});
 end
 if print_plots,
-  print -depsc ['cp_1dhists', plot_suffix];
+  print('-depsc', ['cp_1dhists', plot_suffix]);
 end
 if ~batch,
   input('next');
@@ -136,7 +136,7 @@ if do_density,
   end
 end
 if print_plots,
-  print -depsc ['cp_1ddhists', plot_suffix];
+  print('-depsc', ['cp_1ddhists', plot_suffix]);
 end
 if ~batch,
   input('next');
@@ -155,7 +155,7 @@ ylabel('y')
 title('cx vs cy + dx vs dy')
 colormap hot
 if print_plots,
-  print -depsc ['cp_xy', plot_suffix];
+  print('-depsc', ['cp_xy', plot_suffix]);
 end
 if ~batch,
   input('next');
@@ -174,7 +174,7 @@ if do_density,
   title('cx vs cy + dx vs dy')
   colormap hot
   if print_plots,
-    print -depsc ['cp_dxy', plot_suffix];
+    print('-depsc', ['cp_dxy', plot_suffix]);
   end
   if ~batch,
     input('next');
