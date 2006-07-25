@@ -13,6 +13,7 @@
 #include "solver_callbacks.h"
 #include "tic.h"
 #include "solvedclient.h"
+#include "solvedfile.h"
 
 static inline double getx(const double* d, uint ind) {
 	// return d[ind*2];
@@ -68,7 +69,6 @@ static void check_scale(pquad* pq, solver_params* params) {
 	scale = dx*dx + dy*dy;
 	if ((scale < square(params->minAB)) ||
 		(scale > square(params->maxAB))) {
-		//fprintf(stderr, "Quad scale %g: not in allowable range [%g, %g].\n", scale, params->minAB, params->maxAB);
 		pq->scale_ok = FALSE;
 		return;
 	}
@@ -165,8 +165,9 @@ void solve_field(solver_params* params) {
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
 		double ABCDpix[8];
 		// check if the field has already been solved...
-		if (params->solvedfn && file_exists(params->solvedfn)) {
-			fprintf(stderr, "  field %u: file %s exists; aborting.\n", params->fieldnum, params->solvedfn);
+		if (params->solvedfn && solvedfile_get(params->solvedfn, params->fieldnum)) {
+			fprintf(stderr, "  field %u: file %s indicates that the field has been solved.\n",
+					params->fieldnum, params->solvedfn);
 			break;
 		}
 		if (params->do_solvedserver) {
