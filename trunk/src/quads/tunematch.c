@@ -12,23 +12,23 @@
 #include "kdtree.h"
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
+#include "xylist.h"
 
-static const char* OPTIONS = "hi:o:s:r:t:f:";
+static const char* OPTIONS = "hi:o:s:r:t:m:f:X:Y:";
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
 			"   -i <input matchfile>\n"
 			"   -o <output matchfile>\n"
+			"   -f <field (xyls) file>\n"
+			"     [-X <x column name>]\n"
+			"     [-Y <y column name>]\n"
 			"   -s <star kdtree>\n"
 			"   -r <overlap radius (arcsec)>\n"
 			"   -t <overlap threshold>\n"
-			"   -f <min field objects required>\n"
+			"   -m <min field objects required>\n"
 			"\n", progname);
 }
-
-static double overlap_thresh = 0.0;
-static double overlap_rad = 0.0;
-static int min_ninfield = 0;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -44,13 +44,36 @@ int main(int argc, char *argv[]) {
 	*/
 	char* infn = NULL;
 	char* outfn = NULL;
+	char* xylsfn = NULL;
 	char* starfn = NULL;
+	char* xname = NULL;
+	char* yname = NULL;
 	matchfile* matchin;
 	matchfile* matchout;
 	kdtree_t* startree;
+	xylist* xyls;
+	double* fielduv = NULL;
+	double* fieldxyz = NULL;
+
+	double overlap_thresh = 0.0;
+	double overlap_rad = 0.0;
+	int min_ninfield = 0;
+
+	double overlap_d2;
+
+
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'X':
+			xname = optarg;
+			break;
+		case 'Y':
+			yname = optarg;
+			break;
+		case 'f':
+			xylsfn = optarg;
+			break;
 		case 'i':
 			infn = optarg;
 			break;
@@ -63,7 +86,7 @@ int main(int argc, char *argv[]) {
 		case 't':
 			overlap_thresh = atof(optarg);
 			break;
-		case 'f':
+		case 'm':
 			min_ninfield = atoi(optarg);
 			break;
 		case 'r':
@@ -76,8 +99,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (!infn || !outfn || !starfn) {
-		fprintf(stderr, "Must specify input, output, and star kdtree filenames.\n");
+	if (!infn || !outfn || !starfn || !xylsfn) {
+		fprintf(stderr, "Must specify input and output match files, star kdtree, and field filenames.\n");
 		printHelp(progname);
 		exit(-1);
 	}
@@ -87,6 +110,8 @@ int main(int argc, char *argv[]) {
 		printHelp(progname);
 		exit(-1);
 	}
+
+	overlap_d2 = arcsec2distsq(overlap_rad);
 
 	matchin = matchfile_open(infn);
 	if (!matchin) {
@@ -99,6 +124,16 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Failed to open star kdtree %s.\n", starfn);
 		exit(-1);
 	}
+
+	xyls = xylist_open(xylsfn);
+	if (!xyls) {
+		fprintf(stderr, "Failed to open xylist %s.\n", xylsfn);
+		exit(-1);
+	}
+	if (xname)
+		xyls->xname = xname;
+	if (yname)
+		xyls->yname = yname;
 
 	matchout = matchfile_open_for_writing(outfn);
 	if (!matchout) {
@@ -124,8 +159,12 @@ int main(int argc, char *argv[]) {
 		double len1;
 		double len2;
 		double r2;
+		int NF;
 		kdtree_qres_t* res;
 		MatchObj* mo;
+		int s;
+		int i;
+
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
 			break;
@@ -213,10 +252,169 @@ int main(int argc, char *argv[]) {
 		printf("Parity=%i\n", (int)P);
 
 
+
+
+		NF = xylist_n_entries(xyls, mo->fieldnum);
+		if (NF <= 0) {
+			fprintf(stderr, "Failed to get field %i.\n", mo->fieldnum);
+			continue;
+		}
+		fielduv = realloc(fielduv, NF * 2 * sizeof(double));
+		xylist_read_entries(xyls, mo->fieldnum, 0, NF, fielduv);
+
+		printf("NF=%i\n", NF);
+
+		fieldxyz = realloc(fieldxyz, NF * 3 * sizeof(double));
+
+
+		//for (s=0; s<10; s++) {
+		for (s=0; s<1; s++) {
+			double u,v;
+			double cosT, sinT;
+			double cosD, sinD;
+			double cosR, sinR;
+			int NI;
+			int j;
+			double* indxyz;
+			double maxd2;
+
+			double totalweight;
+			double totalscale;
+			double totaltheta;
+			double totalxyz[3];
+
+			// project each field object...
+			cosT = cos(T);
+			sinT = sin(T);
+			cosD = cos(D);
+			sinD = sin(D);
+			cosR = cos(R);
+			sinR = sin(R);
+			for (i=0; i<NF; i++) {
+				double tu, tv;
+				double d1, d2, d3;
+				// HACK - should precompute these matrix elements...
+				u = fielduv[i*2 + 0];
+				v = fielduv[i*2 + 1];
+				tu =  S*u*cosT + S*v*sinT;
+				tv = -S*u*sinT + S*v*cosT;
+				d1 = tu;
+				d2 =  cosD * tv + sinD;
+				d3 = -sinD * tv + cosD;
+				fieldxyz[i*3+0] = d1 *  cosR + d2 * sinR;
+				fieldxyz[i*3+1] = d1 * -sinR + d2 * cosR;
+				fieldxyz[i*3+2] = d3;
+			}
+
+			// "xyz" is the field origin.
+
+			NI = res->nres;
+			indxyz = res->results;
+
+			printf("NI=%i\n", NI);
+
+			// 5 sigmas
+			maxd2 = 25.0 * overlap_d2;
+
+			totalweight = 0.0;
+			totalscale  = 0.0;
+			totaltheta  = 0.0;
+			totalxyz[0] = totalxyz[1] = totalxyz[2] = 0.0;
+
+			for (i=0; i<NF; i++) {
+				double* fxyz;
+				double rf;
+				double fu, fv;
+				double ftheta;
+				fxyz = fieldxyz + i*3;
+				rf = sqrt(distsq(fxyz, xyz, 3));
+				fu = (fxyz[0]-xyz[0])*pu[0] + (fxyz[1]-xyz[1])*pu[1] + (fxyz[2]-xyz[2])*pu[2];
+				fv = (fxyz[0]-xyz[0])*pv[0] + (fxyz[1]-xyz[1])*pv[1] + (fxyz[2]-xyz[2])*pv[2];
+				ftheta = atan2(fv, fu);
+
+				for (j=0; j<NI; j++) {
+					double* ixyz;
+					double d2;
+					//double dxyz[3];
+					double ri;
+					double iu, iv;
+					double itheta;
+					double weight;
+					double dtheta;
+
+					ixyz = indxyz + j*3;
+					d2 = distsq(fxyz, ixyz, 3);
+					if (d2 > maxd2)
+						continue;
+
+					ri = sqrt(distsq(ixyz, xyz, 3));
+
+					weight = exp(-0.5 * (d2 / overlap_d2));
+					totalweight += weight;
+
+					printf("dist: %g (%g sigmas)\n", sqrt(d2),
+						   sqrt(d2 / overlap_d2));
+					printf("index scale: %g\nfield scale: %g\n", ri, rf);
+					printf("scale change factor: %g\n", (ri / rf));
+
+					totalscale += (ri / rf) * weight;
+
+					iu = (ixyz[0]-xyz[0])*pu[0] + (ixyz[1]-xyz[1])*pu[1] + (ixyz[2]-xyz[2])*pu[2];
+					iv = (ixyz[0]-xyz[0])*pv[0] + (ixyz[1]-xyz[1])*pv[1] + (ixyz[2]-xyz[2])*pv[2];
+
+					/*
+					  printf("field (u,v) = (%g,%g) or (%g,%g)\n",
+					  fu, fv, fielduv[i*2], fielduv[i*2+1]);
+					*/
+					printf("field (u,v) = (%g,%g)\n", fu, fv);
+					printf("index (u,v) = (%g,%g)\n", iu, iv);
+					itheta = atan2(iv, iu);
+					printf("field theta=%g\nindex theta=%g\n", ftheta, itheta);
+
+					dtheta = itheta - ftheta;
+					if (dtheta > M_PI)
+						dtheta = 2.0 * M_PI - dtheta;
+					if (dtheta < -M_PI)
+						dtheta += 2.0 * M_PI;
+
+					totaltheta += dtheta * weight;
+
+					totalxyz[0] = weight * (ixyz[0] - fxyz[0]);
+					totalxyz[1] = weight * (ixyz[1] - fxyz[1]);
+					totalxyz[2] = weight * (ixyz[2] - fxyz[2]);
+
+					/*
+					  dxyz[0] = ixyz[0] - xyz[0];
+					  dxyz[1] = ixyz[1] - xyz[1];
+					  dxyz[2] = ixyz[2] - xyz[2];
+					  iu = dxyz[0]*pu[0] + dxyz[1]*pu[1] + dxyz[2]*pu[2];
+					  iv = dxyz[0]*pv[0] + dxyz[1]*pv[1] + dxyz[2]*pv[2];
+					*/
+				}
+			}
+
+			totalscale /= totalweight;
+			totaltheta /= totalweight;
+			totalxyz[0] /= totalweight;
+			totalxyz[1] /= totalweight;
+			totalxyz[2] /= totalweight;
+
+			printf("Total change:\n");
+			printf("=============\n");
+			printf("scale: %g\n", totalscale);
+			printf("theta: %g\n", totaltheta);
+			printf("xyz: (%g,%g,%g)\n", totalxyz[0], totalxyz[1], totalxyz[2]);
+
+		}
+
+
 		kdtree_free_query(res);
 	}
 
+	free(fielduv);
+	free(fieldxyz);
 
+	xylist_close(xyls);
 	matchfile_close(matchin);
 	kdtree_close(startree);
 
