@@ -53,8 +53,6 @@ int kdtree_compute_levels(int N, int Nleaf);
 /* Range seach */
 kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
 
-kdtree_qres_t *kdtree_rangesearch_iter(kdtree_t *kd, real *pt, real maxdistsquared);
-
 kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsquared);
 
 /* Range seach using callback */

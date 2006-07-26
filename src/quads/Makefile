@@ -87,7 +87,7 @@ EXECS := whynot agreeable certifiable quadidx \
 	subtable matchstats unpermute-quads \
 	tabsort plotmatch \
 	plotquads matchtordls homer \
-	unpermute-stars2
+	unpermute-stars2 tunematch
 
 # things we don't use often:
 #	randcat genfields

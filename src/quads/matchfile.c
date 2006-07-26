@@ -353,7 +353,7 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 		matchobj_compute_derived(mo + i);
 	if (mf->columns[transform_index] != -1)
 		for (i=0; i<n; i++)
-			mo->transform_valid = 1;
+			mo[i].transform_valid = 1;
 	return 0;
 }
 

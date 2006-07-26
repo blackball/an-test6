@@ -7,6 +7,10 @@
 
 Inline void cross_product(double* v1, double* v2, double* cross);
 
+inline void normalize(double* x, double* y, double* z);
+
+inline void normalize_3(double* xyz);
+
 double inverse_3by3(double *matrix);
 
 void image_to_xyz(double uu, double vv, double* s, double* transform);

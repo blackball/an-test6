@@ -6,13 +6,6 @@
 #include "mathutil.h"
 #include "keywords.h"
 
-inline void normalize(double* x, double* y, double* z) {
-	double l = sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
-	*x /= l;
-	*y /= l;
-	*z /= l;
-}
-
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec) {
 	*ra = xy2ra(x, y);
 	*dec = z2dec(z);

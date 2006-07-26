@@ -5,6 +5,20 @@
 
 #include "mathutil.h"
 
+inline void normalize(double* x, double* y, double* z) {
+	double l = sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
+	*x /= l;
+	*y /= l;
+	*z /= l;
+}
+
+inline void normalize_3(double* xyz) {
+	double invlen = 1.0 / sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
+	xyz[0] *= invlen;
+	xyz[1] *= invlen;
+	xyz[2] *= invlen;
+}
+
 Inline void cross_product(double* a, double* b, double* cross) {
 	cross[0] = a[1] * b[2] - a[2] * b[1];
 	cross[1] = a[2] * b[0] - a[0] * b[2];
