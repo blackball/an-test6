@@ -165,6 +165,13 @@ int main(int argc, char *argv[]) {
 		int s;
 		int i;
 
+		double cosT, sinT;
+		double cosD, sinD;
+		double cosR, sinR;
+		double maxd2;
+		int NI;
+		double* indxyz;
+
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
 			break;
@@ -208,39 +215,34 @@ int main(int argc, char *argv[]) {
 		// and computing the projections of t1, t2 on these.
 		R = M_PI_2 - ra;
 		D = M_PI_2 - dec;
-		pu[0] = cos(R);
-		pu[1] = -sin(R);
+		cosR = cos(R);
+		sinR = sin(R);
+		cosD = cos(D);
+		sinD = sin(D);
+
+		pu[0] = cosR;
+		pu[1] = -sinR;
 		pu[2] = 0.0;
-		pv[0] = cos(D) * sin(R);
-		pv[1] = cos(D) * cos(R);
-		pv[2] = -sin(D);
+		pv[0] = cosD * sinR;
+		pv[1] = cosD * cosR;
+		pv[2] = -sinD;
 		// note, pu and pv have length 1.
 
 		u1 = t1[0]*pu[0] + t1[1]*pu[1] + t1[2]*pu[2];
 		v1 = t1[0]*pv[0] + t1[1]*pv[1] + t1[2]*pv[2];
 		u2 = t2[0]*pu[0] + t2[1]*pu[1] + t2[2]*pu[2];
 		v2 = t2[0]*pv[0] + t2[1]*pv[1] + t2[2]*pv[2];
-
 		theta1 = atan2(v1, u1);
 		theta2 = atan2(v2, u2);
-
 		diff = fabs(theta1 - theta2);
 		if (diff > M_PI)
 			diff = 2.0*M_PI - diff;
-
-		printf("RA,DEC=(%g, %g) degrees, scale=%g arcsec/pixel,",
-			   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60);
-		printf("theta1=%g, theta2=%g.\n",
-			   rad2deg(theta1), rad2deg(theta2));
-
 		// if they're not within 10 degrees of being 90 degrees apart,
 		// warn.
 		if (fabs(rad2deg(diff) - 90) > 10) {
 			printf("warning, theta1 and theta2 should be nearly orthogonal.\n");
 		}
-
 		T = theta1;
-
 		// parity: is theta2 90 degrees clockwise or anti-clockwise of theta1?
 		diff = theta2 - theta1;
 		if (diff < -M_PI)
@@ -249,10 +251,13 @@ int main(int argc, char *argv[]) {
 			diff -= 2.0 * M_PI;
 		P = (diff > 0.0) ? 1.0 : 0.0;
 
-		printf("Parity=%i\n", (int)P);
+		printf("RA,DEC=(%g, %g) degrees, scale=%g arcsec/pixel,",
+			   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60);
+		printf("theta=%g, parity=%i.\n",
+			   rad2deg(T), (int)P);
 
-
-
+		cosT = cos(T);
+		sinT = sin(T);
 
 		NF = xylist_n_entries(xyls, mo->fieldnum);
 		if (NF <= 0) {
@@ -266,30 +271,26 @@ int main(int argc, char *argv[]) {
 
 		fieldxyz = realloc(fieldxyz, NF * 3 * sizeof(double));
 
+		NI = res->nres;
+		indxyz = res->results;
+		printf("NI=%i\n", NI);
 
-		//for (s=0; s<10; s++) {
-		for (s=0; s<1; s++) {
+		// 5 sigmas
+		maxd2 = 25.0 * overlap_d2;
+
+		// "xyz" is the field origin.
+
+		for (s=0; s<10; s++) {
 			double u,v;
-			double cosT, sinT;
-			double cosD, sinD;
-			double cosR, sinR;
-			int NI;
 			int j;
-			double* indxyz;
-			double maxd2;
 
 			double totalweight;
 			double totalscale;
 			double totaltheta;
 			double totalxyz[3];
+			double step;
 
 			// project each field object...
-			cosT = cos(T);
-			sinT = sin(T);
-			cosD = cos(D);
-			sinD = sin(D);
-			cosR = cos(R);
-			sinR = sin(R);
 			for (i=0; i<NF; i++) {
 				double tu, tv;
 				double d1, d2, d3;
@@ -305,16 +306,6 @@ int main(int argc, char *argv[]) {
 				fieldxyz[i*3+1] = d1 * -sinR + d2 * cosR;
 				fieldxyz[i*3+2] = d3;
 			}
-
-			// "xyz" is the field origin.
-
-			NI = res->nres;
-			indxyz = res->results;
-
-			printf("NI=%i\n", NI);
-
-			// 5 sigmas
-			maxd2 = 25.0 * overlap_d2;
 
 			totalweight = 0.0;
 			totalscale  = 0.0;
@@ -335,7 +326,6 @@ int main(int argc, char *argv[]) {
 				for (j=0; j<NI; j++) {
 					double* ixyz;
 					double d2;
-					//double dxyz[3];
 					double ri;
 					double iu, iv;
 					double itheta;
@@ -352,12 +342,11 @@ int main(int argc, char *argv[]) {
 					weight = exp(-0.5 * (d2 / overlap_d2));
 					totalweight += weight;
 
-					printf("dist: %g (%g sigmas)\n", sqrt(d2),
-						   sqrt(d2 / overlap_d2));
-					printf("index scale: %g\nfield scale: %g\n", ri, rf);
-					printf("scale change factor: %g\n", (ri / rf));
-
-					totalscale += (ri / rf) * weight;
+					printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
+						   sqrt(d2 / overlap_d2), weight);
+					//printf("index scale: %g\nfield scale: %g\n", ri, rf);
+					//printf("scale change factor: %g\n", (ri / rf));
+					totalscale += log(ri / rf) * weight;
 
 					iu = (ixyz[0]-xyz[0])*pu[0] + (ixyz[1]-xyz[1])*pu[1] + (ixyz[2]-xyz[2])*pu[2];
 					iv = (ixyz[0]-xyz[0])*pv[0] + (ixyz[1]-xyz[1])*pv[1] + (ixyz[2]-xyz[2])*pv[2];
@@ -366,30 +355,23 @@ int main(int argc, char *argv[]) {
 					  printf("field (u,v) = (%g,%g) or (%g,%g)\n",
 					  fu, fv, fielduv[i*2], fielduv[i*2+1]);
 					*/
-					printf("field (u,v) = (%g,%g)\n", fu, fv);
-					printf("index (u,v) = (%g,%g)\n", iu, iv);
+					/*
+					  printf("field (u,v) = (%g,%g)\n", fu, fv);
+					  printf("index (u,v) = (%g,%g)\n", iu, iv);
+					*/
 					itheta = atan2(iv, iu);
-					printf("field theta=%g\nindex theta=%g\n", ftheta, itheta);
+					//printf("field theta=%g\nindex theta=%g\n", ftheta, itheta);
 
 					dtheta = itheta - ftheta;
 					if (dtheta > M_PI)
 						dtheta = 2.0 * M_PI - dtheta;
 					if (dtheta < -M_PI)
 						dtheta += 2.0 * M_PI;
-
 					totaltheta += dtheta * weight;
 
 					totalxyz[0] = weight * (ixyz[0] - fxyz[0]);
 					totalxyz[1] = weight * (ixyz[1] - fxyz[1]);
 					totalxyz[2] = weight * (ixyz[2] - fxyz[2]);
-
-					/*
-					  dxyz[0] = ixyz[0] - xyz[0];
-					  dxyz[1] = ixyz[1] - xyz[1];
-					  dxyz[2] = ixyz[2] - xyz[2];
-					  iu = dxyz[0]*pu[0] + dxyz[1]*pu[1] + dxyz[2]*pu[2];
-					  iv = dxyz[0]*pv[0] + dxyz[1]*pv[1] + dxyz[2]*pv[2];
-					*/
 				}
 			}
 
@@ -399,12 +381,42 @@ int main(int argc, char *argv[]) {
 			totalxyz[1] /= totalweight;
 			totalxyz[2] /= totalweight;
 
+			totalscale = exp(totalscale);
+
+			printf("\n");
+			printf("Total weight: %g\n", totalweight);
 			printf("Total change:\n");
 			printf("=============\n");
 			printf("scale: %g\n", totalscale);
 			printf("theta: %g\n", totaltheta);
 			printf("xyz: (%g,%g,%g)\n", totalxyz[0], totalxyz[1], totalxyz[2]);
+			printf("\n");
 
+			step = 0.5;
+
+			xyz[0] += step * totalxyz[0];
+			xyz[1] += step * totalxyz[1];
+			xyz[2] += step * totalxyz[2];
+			normalize_3(xyz);
+			xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
+			R = M_PI_2 - ra;
+			D = M_PI_2 - dec;
+			T += step * totaltheta;
+			S *= pow(totalscale, step);
+
+			cosR = cos(R);
+			sinR = sin(R);
+			cosD = cos(D);
+			sinD = sin(D);
+			cosT = cos(T);
+			sinT = sin(T);
+
+			pu[0] = cosR;
+			pu[1] = -sinR;
+			pu[2] = 0.0;
+			pv[0] = cosD * sinR;
+			pv[1] = cosD * cosR;
+			pv[2] = -sinD;
 		}
 
 
