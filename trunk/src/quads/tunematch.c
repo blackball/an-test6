@@ -30,6 +30,13 @@ static void printHelp(char* progname) {
 			"\n", progname);
 }
 
+/*
+  static void show_params(double* projxyz,
+  double* xyz, double S, double T,
+  double* stars, double* fielduv) {
+  }
+*/
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -146,6 +153,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	for (;;) {
+		double centerxyz[3];
 		double xyz[3];
 		double t1[3];
 		double t2[3];
@@ -181,12 +189,12 @@ int main(int argc, char *argv[]) {
 		}
 
 		// find the field center
-		star_midpoint(xyz, mo->sMin, mo->sMax);
+		star_midpoint(centerxyz, mo->sMin, mo->sMax);
 		// find the field radius
-		r2 = distsq(xyz, mo->sMin, 3);
+		r2 = distsq(centerxyz, mo->sMin, 3);
 		r2 *= 1.02;
 		// find stars in that region
-		res = kdtree_rangesearch_nosort(startree, xyz, r2);
+		res = kdtree_rangesearch_nosort(startree, centerxyz, r2);
 		if (!res->nres) {
 			printf("no stars found.\n");
 			//kdtree_free_query(res);
@@ -394,6 +402,60 @@ int main(int argc, char *argv[]) {
 
 			step = 0.5;
 
+
+
+			{
+				double ox, oy;
+				double x, y;
+				double u1[3];
+				double v1[3];
+				double pu[3], pv[3], puv[3];
+				double pux, puy, pvx, pvy, puvx, puvy;
+				//double ux, uy, vx, vy;
+				star_coords(xyz, centerxyz, &ox, &oy);
+				printf("origin=[%g,%g];\n", ox, oy);
+				printf("field=[");
+				for (i=0; i<NF; i++) {
+					star_coords(fieldxyz + i*3, centerxyz, &x, &y);
+					printf("%g,%g;", x, y);
+				}
+				printf("];\n");
+				printf("index=[");
+				for (j=0; j<NI; j++) {
+					star_coords(indxyz + i*3, centerxyz, &x, &y);
+					printf("%g,%g;", x, y);
+				}
+				printf("];\n");
+				u1[0] =  S*cosR*cosT - S*sinR*cosD*sinT;// + sinR*sinD;
+				u1[1] = -S*sinR*cosT - S*cosR*cosD*sinT;// + cosR*sinD;
+				u1[2] =  S*sinD*sinT;// + cosD;
+				v1[0] =  S*cosR*sinT + S*sinR*cosD*cosT;// + sinR*sinD;
+				v1[1] = -S*sinR*sinT + S*cosR*cosD*cosT;// + cosR*sinD;
+				v1[2] = -S*sinD*cosT;// + cosD;
+				//star_coords(u1, centerxyz, &ux, &uy);
+				//star_coords(v1, centerxyz, &vx, &vy);
+				pu[0] = xyz[0] + u1[0];
+				pu[1] = xyz[1] + u1[1];
+				pu[2] = xyz[2] + u1[2];
+				pv[0] = xyz[0] + v1[0];
+				pv[1] = xyz[1] + v1[1];
+				pv[2] = xyz[2] + v1[2];
+				puv[0] = xyz[0] + u1[0] + v1[0];
+				puv[1] = xyz[1] + u1[1] + v1[1];
+				puv[2] = xyz[2] + u1[2] + v1[2];
+				star_coords(pu,  centerxyz, &pux,  &puy);
+				star_coords(pv,  centerxyz, &pvx,  &pvy);
+				star_coords(puv, centerxyz, &puvx, &puvy);
+
+				printf("uvx=[%g,%g,%g,%g,%g];\n",
+					   ox, pux, puvx, pvx, ox);
+				printf("uvy=[%g,%g,%g,%g,%g];\n",
+					   oy, puy, puvy, pvy, oy);
+			}
+
+
+
+
 			xyz[0] += step * totalxyz[0];
 			xyz[1] += step * totalxyz[1];
 			xyz[2] += step * totalxyz[2];
@@ -417,6 +479,10 @@ int main(int argc, char *argv[]) {
 			pv[0] = cosD * sinR;
 			pv[1] = cosD * cosR;
 			pv[2] = -sinD;
+
+			printf("New RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g.\n\n",
+				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
+
 		}
 
 
