@@ -58,8 +58,6 @@ inline void project_hammer_aitoff_x(double x, double y, double z, double* projx,
 
 inline void project_equal_area(double x, double y, double z, double* projx, double* projy);
 
-inline void normalize(double* x, double* y, double* z);
-
 // Converts a distance-squared between two points on the
 // surface of the unit sphere into the angle between the
 // rays from the center of the sphere to the points, in

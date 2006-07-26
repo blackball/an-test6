@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 			double xc,yc,zc;
 			double rac, decc, arc;
 			double ra,dec;
-			double dist2, r;
+			double dist2;
 			double radius2;
 			dl* rdlist;
 			int j, M;
@@ -210,24 +210,14 @@ int main(int argc, char *argv[]) {
 			x2 = mo->sMax[0];
 			y2 = mo->sMax[1];
 			z2 = mo->sMax[2];
-
-			// normalize.
-			r = sqrt(square(x1) + square(y1) + square(z1));
-			x1 /= r;
-			y1 /= r;
-			z1 /= r;
-			r = sqrt(square(x2) + square(y2) + square(z2));
-			x2 /= r;
-			y2 /= r;
-			z2 /= r;
-				
 			xc = (x1 + x2) / 2.0;
 			yc = (y1 + y2) / 2.0;
 			zc = (z1 + z2) / 2.0;
-			r = sqrt(square(xc) + square(yc) + square(zc));
-			xc /= r;
-			yc /= r;
-			zc /= r;
+
+			// normalize.
+			normalize(&x1, &y1, &z1);
+			normalize(&x2, &y2, &z2);
+			normalize(&xc, &yc, &zc);
 
 			radius2 = square(xc - x1) + square(yc - y1) + square(zc - z1);
 			rac  = rad2deg(xy2ra(xc, yc));
