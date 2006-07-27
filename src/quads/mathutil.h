@@ -5,6 +5,14 @@
 #include "xylist.h"
 #include "keywords.h"
 
+void matrix_matrix_3(double* m1, double* m2, double* result);
+
+void matrix_vector_3(double* m, double* v, double* result);
+
+double dot_product_3(double* v1, double* v2);
+
+double vector_length_3(double* v);
+
 Inline void cross_product(double* v1, double* v2, double* cross);
 
 inline void normalize(double* x, double* y, double* z);

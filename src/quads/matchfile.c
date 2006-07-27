@@ -377,8 +377,10 @@ pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 
 MatchObj* matchfile_buffered_read_match(matchfile* mf) {
 	MatchObj* mo = buffered_read(&mf->br);
-	if (!mo)
-		fprintf(stderr, "Failed to read matchfile entry.\n");
+	/*
+	  if (!mo)
+	  fprintf(stderr, "Failed to read matchfile entry.\n");
+	*/
 	return mo;
 }
 
