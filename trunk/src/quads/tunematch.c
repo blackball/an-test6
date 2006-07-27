@@ -376,55 +376,14 @@ int main(int argc, char *argv[]) {
 
 		// "xyz" is the field origin.
 
-		for (s=0; s<10; s++) {
+		for (s=0; s<100; s++) {
 			double u,v;
 			int j;
-
 			double totalweight;
 			double totalscale;
 			double totaltheta;
 			double totalxyz[3];
 			double step;
-
-			/*
-			  pu[0] = 1.0;
-			  pu[1] = 0.0;
-			  pu[2] = 0.0;
-			  matrix_vector_3(MP, pu, tmp2);
-			  matrix_vector_3(MS, tmp2, tmp);
-			  matrix_vector_3(MT, tmp, pu);
-			  matrix_vector_3(MD, pu, tmp);
-			  matrix_vector_3(MR, tmp, pu);
-
-			  pv[0] = 0.0;
-			  pv[1] = 1.0;
-			  pv[2] = 0.0;
-			  matrix_vector_3(MP, pv, tmp2);
-			  matrix_vector_3(MS, tmp2, tmp);
-			  matrix_vector_3(MT, tmp, pv);
-			  matrix_vector_3(MD, pv, tmp);
-			  matrix_vector_3(MR, tmp, pv);
-
-			  pw[0] = 0.0;
-			  pw[1] = 0.0;
-			  pw[2] = 1.0;
-			  matrix_vector_3(MS, pw, tmp);
-			  matrix_vector_3(MT, tmp, pw);
-			  matrix_vector_3(MD, pw, tmp);
-			  matrix_vector_3(MR, tmp, pw);
-
-			  printf("\n");
-			  printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", xyz[0], xyz[1], xyz[2]);
-			  printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
-			  printf("\n");
-			  printf("t1=[ % 8.3g, % 8.3g, % 8.3g ];\n", t1[0], t1[1], t1[2]);
-			  printf("pu=[ % 8.3g, % 8.3g, % 8.3g ];\n", pu[0], pu[1], pu[2]);
-			  printf("\n");
-			  printf("t2=[ % 8.3g, % 8.3g, % 8.3g ];\n", t2[0], t2[1], t2[2]);
-			  printf("pv=[ % 8.3g, % 8.3g, % 8.3g ];\n", pv[0], pv[1], pv[2]);
-			  printf("\n");
-			*/
-
 
 			// project each field object...
 			for (i=0; i<NF; i++) {
@@ -476,19 +435,18 @@ int main(int argc, char *argv[]) {
 					weight = exp(-0.5 * (d2 / overlap_d2));
 					totalweight += weight;
 
-					printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
-						   sqrt(d2 / overlap_d2), weight);
-
 					totalscale += log(ri / rf) * weight;
 
 					cross_product(frel, irel, cross);
 					dtheta = asin(dot_product_3(cross, xyz) / (rf * ri));
-					//printf("dtheta=%g degrees\n", rad2deg(dtheta));
 					totaltheta += weight * dtheta;
 
 					totalxyz[0] = weight * (ixyz[0] - fxyz[0]);
 					totalxyz[1] = weight * (ixyz[1] - fxyz[1]);
 					totalxyz[2] = weight * (ixyz[2] - fxyz[2]);
+
+					printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
+						   sqrt(d2 / overlap_d2), weight);
 				}
 			}
 
@@ -511,7 +469,7 @@ int main(int argc, char *argv[]) {
 
 			step = 0.5;
 
-			{
+			if (s < 10 || s == 99) {
 				double ox, oy;
 				double x, y;
 				double pu[3], pv[3], puv[3];
@@ -519,17 +477,20 @@ int main(int argc, char *argv[]) {
 				double pixelsx = 4096;
 				double pixelsy = 4096;
 
+				if (s == 0) {
+					fprintf(stderr, "index=[");
+					for (j=0; j<NI; j++) {
+						star_coords(indxyz + j*3, centerxyz, &x, &y);
+						fprintf(stderr, "%g,%g;", x, y);
+					}
+					fprintf(stderr, "];\n");
+				}
+
 				star_coords(xyz, centerxyz, &ox, &oy);
 				fprintf(stderr, "origin%i=[%g,%g];\n", s, ox, oy);
 				fprintf(stderr, "field%i=[", s);
 				for (i=0; i<NF; i++) {
 					star_coords(fieldxyz + i*3, centerxyz, &x, &y);
-					fprintf(stderr, "%g,%g;", x, y);
-				}
-				fprintf(stderr, "];\n");
-				fprintf(stderr, "index%i=[", s);
-				for (j=0; j<NI; j++) {
-					star_coords(indxyz + j*3, centerxyz, &x, &y);
 					fprintf(stderr, "%g,%g;", x, y);
 				}
 				fprintf(stderr, "];\n");
@@ -552,11 +513,11 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "uvy%i=[%g,%g,%g,%g,%g];\n", s, oy, puy, puvy, pvy, oy);
 				fprintf(stderr, "p=plot(origin%i(1),origin%i(2),'r*', "
 						"field%i(:,1), field%i(:,2), 'b.',"
-						"index%i(:,1), index%i(:,2), 'ro',"
-						"uvx%i, uvy%i, 'm-');\n", s, s, s, s, s, s, s, s);
+						"index(:,1), index(:,2), 'ro',"
+						"uvx%i, uvy%i, 'm-');\n", s, s, s, s, s, s);
 				fprintf(stderr, "set(p(3), 'MarkerSize', 5);\n");
 				fprintf(stderr, "axis equal;\n");
-				fprintf(stderr, "input('\\nnext');\n");
+				fprintf(stderr, "input('\\nround %i');\n", s);
 			}
 
 			printf("Old RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n\n",
@@ -604,14 +565,14 @@ int main(int argc, char *argv[]) {
 		matrix_vector_3(Mall, tmp, pw);
 
 		printf("\n");
-		printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", t3[0], t3[1], t3[2]);
-		printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
-		printf("\n");
 		printf("t1=[ % 8.3g, % 8.3g, % 8.3g ];\n", t1[0], t1[1], t1[2]);
 		printf("pu=[ % 8.3g, % 8.3g, % 8.3g ];\n", pu[0], pu[1], pu[2]);
 		printf("\n");
 		printf("t2=[ % 8.3g, % 8.3g, % 8.3g ];\n", t2[0], t2[1], t2[2]);
 		printf("pv=[ % 8.3g, % 8.3g, % 8.3g ];\n", pv[0], pv[1], pv[2]);
+		printf("\n");
+		printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", t3[0], t3[1], t3[2]);
+		printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
 		printf("\n");
 
 		// compute the new & improved MatchObj.
@@ -652,10 +613,7 @@ int main(int argc, char *argv[]) {
 		mo->sMax[1] = pw[1] + maxu * pu[1] + maxv * pv[1];
 		mo->sMax[2] = pw[2] + maxu * pu[2] + maxv * pv[2];
 
-		// verify_hit ?
-
 		printf("Initial overlap: %g\n", mo->overlap);
-
 		{
 			int match;
 			int unmatch;
@@ -663,11 +621,9 @@ int main(int argc, char *argv[]) {
 			verify_hit(startree, mo, fielduv, NF, overlap_d2,
 					   &match, &unmatch, &conflict, NULL);
 		}
-
 		printf("Final overlap: %g\n", mo->overlap);
 
 		matchfile_write_match(matchout, mo);
-
 	}
 
 	free(fielduv);
