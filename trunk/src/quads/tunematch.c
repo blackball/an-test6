@@ -13,6 +13,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "xylist.h"
+#include "verify.h"
 
 static const char* OPTIONS = "hi:o:s:r:t:m:f:X:Y:";
 
@@ -30,12 +31,57 @@ static void printHelp(char* progname) {
 			"\n", progname);
 }
 
-/*
-  static void show_params(double* projxyz,
-  double* xyz, double S, double T,
-  double* stars, double* fielduv) {
-  }
-*/
+static void rotation_matrix_z(double* M, double R) {
+	double cosR = cos(R);
+	double sinR = sin(R);
+	M[0] = cosR;
+	M[1] = -sinR;
+	M[2] = 0.0;
+	M[3] = sinR;
+	M[4] = cosR;
+	M[5] = 0.0;
+	M[6] = 0.0;
+	M[7] = 0.0;
+	M[8] = 1.0;
+}
+
+static void rotation_matrix_x(double* M, double R) {
+	double cosR = cos(R);
+	double sinR = sin(R);
+	M[0] = 1.0;
+	M[1] = 0.0;
+	M[2] = 0.0;
+	M[3] = 0.0;
+	M[4] = cosR;
+	M[5] = -sinR;
+	M[6] = 0.0;
+	M[7] = sinR;
+	M[8] = cosR;
+}
+
+static void scale_matrix(double* M, double sx, double sy, double sz) {
+	M[0] = sx;
+	M[1] = 0.0;
+	M[2] = 0.0;
+	M[3] = 0.0;
+	M[4] = sy;
+	M[5] = 0.0;
+	M[6] = 0.0;
+	M[7] = 0.0;
+	M[8] = sz;
+}
+
+static void parity_matrix_xy(double* M, bool P) {
+	M[0] = (P ? 0 : 1);
+	M[1] = (P ? 1 : 0);
+	M[2] = 0;
+	M[3] = (P ? 1 : 0);
+	M[4] = (P ? 0 : 1);
+	M[5] = 0;
+	M[6] = 0;
+	M[7] = 0;
+	M[8] = 1;
+}
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -157,13 +203,15 @@ int main(int argc, char *argv[]) {
 		double xyz[3];
 		double t1[3];
 		double t2[3];
+		double t3[3];
 		double pu[3];
 		double pv[3];
 		double u1, u2, v1, v2;
 		double theta1, theta2;
 		double diff;
 		double ra, dec;
-		double R, D, T, S, P;
+		double R, D, T, S;
+		bool P;
 		double len1;
 		double len2;
 		double r2;
@@ -173,12 +221,22 @@ int main(int argc, char *argv[]) {
 		int s;
 		int i;
 
-		double cosT, sinT;
-		double cosD, sinD;
-		double cosR, sinR;
 		double maxd2;
 		int NI;
 		double* indxyz;
+
+		double MS[9];
+		double MT[9];
+		double MD[9];
+		double MR[9];
+		double MP[9];
+		double Mtmp[9];
+		double Mtmp2[9];
+		double Mall[9];
+		double tmp[3];
+		double pw[3];
+
+		double minu, maxu, minv, maxv;
 
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
@@ -202,9 +260,9 @@ int main(int argc, char *argv[]) {
 		}
 
 		// convert the transformation matrix into RA, DEC, theta, scale.
-		xyz[0] = mo->transform[2];
-		xyz[1] = mo->transform[5];
-		xyz[2] = mo->transform[8];
+		t3[0] = xyz[0] = mo->transform[2];
+		t3[1] = xyz[1] = mo->transform[5];
+		t3[2] = xyz[2] = mo->transform[8];
 		normalize_3(xyz);
 		xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
 
@@ -215,33 +273,51 @@ int main(int argc, char *argv[]) {
 		t2[0] = mo->transform[1];
 		t2[1] = mo->transform[4];
 		t2[2] = mo->transform[7];
-		len1 = sqrt(t1[0]*t1[0] + t1[1]*t1[1] + t1[2]*t1[2]);
-		len2 = sqrt(t2[0]*t2[0] + t2[1]*t2[1] + t2[2]*t2[2]);
+		len1 = vector_length_3(t1);
+		len2 = vector_length_3(t2);
 		S = (len1 + len2) * 0.5;
+		scale_matrix(MS, S, S, 1.0);
 
-		// we get theta by projecting pu=[1 0 0] and pv=[0 1 0] through R*D*P
+		// we get theta by projecting pu=[1 0 0] and pv=[0 1 0] through R*D
 		// and computing the projections of t1, t2 on these.
-		R = M_PI_2 - ra;
+		R = M_PI_2 + ra;
 		D = M_PI_2 - dec;
-		cosR = cos(R);
-		sinR = sin(R);
-		cosD = cos(D);
-		sinD = sin(D);
+		rotation_matrix_z(MR, R);
+		rotation_matrix_x(MD, D);
 
-		pu[0] = cosR;
-		pu[1] = -sinR;
+		pu[0] = 1.0;
+		pu[1] = 0.0;
 		pu[2] = 0.0;
-		pv[0] = cosD * sinR;
-		pv[1] = cosD * cosR;
-		pv[2] = -sinD;
-		// note, pu and pv have length 1.
+		matrix_vector_3(MD, pu, tmp);
+		matrix_vector_3(MR, tmp, pu);
+		
+		pv[0] = 0.0;
+		pv[1] = 1.0;
+		pv[2] = 0.0;
+		matrix_vector_3(MD, pv, tmp);
+		matrix_vector_3(MR, tmp, pv);
 
-		u1 = t1[0]*pu[0] + t1[1]*pu[1] + t1[2]*pu[2];
-		v1 = t1[0]*pv[0] + t1[1]*pv[1] + t1[2]*pv[2];
-		u2 = t2[0]*pu[0] + t2[1]*pu[1] + t2[2]*pu[2];
-		v2 = t2[0]*pv[0] + t2[1]*pv[1] + t2[2]*pv[2];
+		pw[0] = 0.0;
+		pw[1] = 0.0;
+		pw[2] = 1.0;
+		matrix_vector_3(MD, pw, tmp);
+		matrix_vector_3(MR, tmp, pw);
+
+		printf("\n");
+		printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", t3[0], t3[1], t3[2]);
+		printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
+		printf("\n");
+
+		// note, pu and pv have length 1.
+		u1 = dot_product_3(t1, pu);
+		v1 = dot_product_3(t1, pv);
+		u2 = dot_product_3(t2, pu);
+		v2 = dot_product_3(t2, pv);
 		theta1 = atan2(v1, u1);
 		theta2 = atan2(v2, u2);
+
+		printf("theta1=%g, theta2=%g.\n", rad2deg(theta1), rad2deg(theta2));
+
 		diff = fabs(theta1 - theta2);
 		if (diff > M_PI)
 			diff = 2.0*M_PI - diff;
@@ -250,26 +326,32 @@ int main(int argc, char *argv[]) {
 		if (fabs(rad2deg(diff) - 90) > 10) {
 			printf("warning, theta1 and theta2 should be nearly orthogonal.\n");
 		}
-		T = theta1;
+
 		// parity: is theta2 90 degrees clockwise or anti-clockwise of theta1?
 		diff = theta2 - theta1;
 		if (diff < -M_PI)
 			diff += 2.0 * M_PI;
 		if (diff > M_PI)
 			diff -= 2.0 * M_PI;
-		P = (diff > 0.0) ? 1.0 : 0.0;
+		printf("theta2 is %g after theta1.\n", rad2deg(diff));
+		P = (diff < 0.0);
+
+		if (P)
+			T = theta2;
+		else
+			T = theta1;
+		parity_matrix_xy(MP, P);
 
 		printf("RA,DEC=(%g, %g) degrees, scale=%g arcsec/pixel,",
 			   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60);
 		printf("theta=%g, parity=%i.\n",
 			   rad2deg(T), (int)P);
 
-		cosT = cos(T);
-		sinT = sin(T);
+		rotation_matrix_z(MT, T);
 
 		NF = xylist_n_entries(xyls, mo->fieldnum);
 		if (NF <= 0) {
-			fprintf(stderr, "Failed to get field %i.\n", mo->fieldnum);
+			printf("Failed to get field %i.\n", mo->fieldnum);
 			continue;
 		}
 		fielduv = realloc(fielduv, NF * 2 * sizeof(double));
@@ -286,6 +368,12 @@ int main(int argc, char *argv[]) {
 		// 5 sigmas
 		maxd2 = 25.0 * overlap_d2;
 
+		matrix_matrix_3(MS, MP, Mtmp);
+		matrix_matrix_3(MT, Mtmp, Mtmp2);
+		matrix_matrix_3(MD, Mtmp2, Mtmp);
+		matrix_matrix_3(MR, Mtmp, Mall);
+
+
 		// "xyz" is the field origin.
 
 		for (s=0; s<10; s++) {
@@ -298,21 +386,55 @@ int main(int argc, char *argv[]) {
 			double totalxyz[3];
 			double step;
 
+			/*
+			  pu[0] = 1.0;
+			  pu[1] = 0.0;
+			  pu[2] = 0.0;
+			  matrix_vector_3(MP, pu, tmp2);
+			  matrix_vector_3(MS, tmp2, tmp);
+			  matrix_vector_3(MT, tmp, pu);
+			  matrix_vector_3(MD, pu, tmp);
+			  matrix_vector_3(MR, tmp, pu);
+
+			  pv[0] = 0.0;
+			  pv[1] = 1.0;
+			  pv[2] = 0.0;
+			  matrix_vector_3(MP, pv, tmp2);
+			  matrix_vector_3(MS, tmp2, tmp);
+			  matrix_vector_3(MT, tmp, pv);
+			  matrix_vector_3(MD, pv, tmp);
+			  matrix_vector_3(MR, tmp, pv);
+
+			  pw[0] = 0.0;
+			  pw[1] = 0.0;
+			  pw[2] = 1.0;
+			  matrix_vector_3(MS, pw, tmp);
+			  matrix_vector_3(MT, tmp, pw);
+			  matrix_vector_3(MD, pw, tmp);
+			  matrix_vector_3(MR, tmp, pw);
+
+			  printf("\n");
+			  printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", xyz[0], xyz[1], xyz[2]);
+			  printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
+			  printf("\n");
+			  printf("t1=[ % 8.3g, % 8.3g, % 8.3g ];\n", t1[0], t1[1], t1[2]);
+			  printf("pu=[ % 8.3g, % 8.3g, % 8.3g ];\n", pu[0], pu[1], pu[2]);
+			  printf("\n");
+			  printf("t2=[ % 8.3g, % 8.3g, % 8.3g ];\n", t2[0], t2[1], t2[2]);
+			  printf("pv=[ % 8.3g, % 8.3g, % 8.3g ];\n", pv[0], pv[1], pv[2]);
+			  printf("\n");
+			*/
+
+
 			// project each field object...
 			for (i=0; i<NF; i++) {
-				double tu, tv;
-				double d1, d2, d3;
-				// HACK - should precompute these matrix elements...
 				u = fielduv[i*2 + 0];
 				v = fielduv[i*2 + 1];
-				tu =  S*u*cosT + S*v*sinT;
-				tv = -S*u*sinT + S*v*cosT;
-				d1 = tu;
-				d2 =  cosD * tv + sinD;
-				d3 = -sinD * tv + cosD;
-				fieldxyz[i*3+0] = d1 *  cosR + d2 * sinR;
-				fieldxyz[i*3+1] = d1 * -sinR + d2 * cosR;
-				fieldxyz[i*3+2] = d3;
+				tmp[0] = u;
+				tmp[1] = v;
+				tmp[2] = 1.0;
+				matrix_vector_3(Mall, tmp, fieldxyz + i*3);
+				normalize_3(fieldxyz + i*3);
 			}
 
 			totalweight = 0.0;
@@ -323,59 +445,46 @@ int main(int argc, char *argv[]) {
 			for (i=0; i<NF; i++) {
 				double* fxyz;
 				double rf;
-				double fu, fv;
-				double ftheta;
+				double frel[3];
+
 				fxyz = fieldxyz + i*3;
-				rf = sqrt(distsq(fxyz, xyz, 3));
-				fu = (fxyz[0]-xyz[0])*pu[0] + (fxyz[1]-xyz[1])*pu[1] + (fxyz[2]-xyz[2])*pu[2];
-				fv = (fxyz[0]-xyz[0])*pv[0] + (fxyz[1]-xyz[1])*pv[1] + (fxyz[2]-xyz[2])*pv[2];
-				ftheta = atan2(fv, fu);
+
+				frel[0] = fxyz[0] - xyz[0];
+				frel[1] = fxyz[1] - xyz[1];
+				frel[2] = fxyz[2] - xyz[2];
+				rf = vector_length_3(frel);
 
 				for (j=0; j<NI; j++) {
 					double* ixyz;
 					double d2;
 					double ri;
-					double iu, iv;
-					double itheta;
 					double weight;
 					double dtheta;
+					double cross[3];
+					double irel[3];
 
 					ixyz = indxyz + j*3;
 					d2 = distsq(fxyz, ixyz, 3);
 					if (d2 > maxd2)
 						continue;
 
-					ri = sqrt(distsq(ixyz, xyz, 3));
+					irel[0] = ixyz[0] - xyz[0];
+					irel[1] = ixyz[1] - xyz[1];
+					irel[2] = ixyz[2] - xyz[2];
+					ri = vector_length_3(irel);
 
 					weight = exp(-0.5 * (d2 / overlap_d2));
 					totalweight += weight;
 
 					printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
 						   sqrt(d2 / overlap_d2), weight);
-					//printf("index scale: %g\nfield scale: %g\n", ri, rf);
-					//printf("scale change factor: %g\n", (ri / rf));
+
 					totalscale += log(ri / rf) * weight;
 
-					iu = (ixyz[0]-xyz[0])*pu[0] + (ixyz[1]-xyz[1])*pu[1] + (ixyz[2]-xyz[2])*pu[2];
-					iv = (ixyz[0]-xyz[0])*pv[0] + (ixyz[1]-xyz[1])*pv[1] + (ixyz[2]-xyz[2])*pv[2];
-
-					/*
-					  printf("field (u,v) = (%g,%g) or (%g,%g)\n",
-					  fu, fv, fielduv[i*2], fielduv[i*2+1]);
-					*/
-					/*
-					  printf("field (u,v) = (%g,%g)\n", fu, fv);
-					  printf("index (u,v) = (%g,%g)\n", iu, iv);
-					*/
-					itheta = atan2(iv, iu);
-					//printf("field theta=%g\nindex theta=%g\n", ftheta, itheta);
-
-					dtheta = itheta - ftheta;
-					if (dtheta > M_PI)
-						dtheta = 2.0 * M_PI - dtheta;
-					if (dtheta < -M_PI)
-						dtheta += 2.0 * M_PI;
-					totaltheta += dtheta * weight;
+					cross_product(frel, irel, cross);
+					dtheta = asin(dot_product_3(cross, xyz) / (rf * ri));
+					//printf("dtheta=%g degrees\n", rad2deg(dtheta));
+					totaltheta += weight * dtheta;
 
 					totalxyz[0] = weight * (ixyz[0] - fxyz[0]);
 					totalxyz[1] = weight * (ixyz[1] - fxyz[1]);
@@ -396,97 +505,169 @@ int main(int argc, char *argv[]) {
 			printf("Total change:\n");
 			printf("=============\n");
 			printf("scale: %g\n", totalscale);
-			printf("theta: %g\n", totaltheta);
+			printf("theta: %g degrees\n", rad2deg(totaltheta));
 			printf("xyz: (%g,%g,%g)\n", totalxyz[0], totalxyz[1], totalxyz[2]);
 			printf("\n");
 
 			step = 0.5;
 
-
-
 			{
 				double ox, oy;
 				double x, y;
-				double u1[3];
-				double v1[3];
 				double pu[3], pv[3], puv[3];
 				double pux, puy, pvx, pvy, puvx, puvy;
-				//double ux, uy, vx, vy;
+				double pixelsx = 4096;
+				double pixelsy = 4096;
+
 				star_coords(xyz, centerxyz, &ox, &oy);
-				printf("origin=[%g,%g];\n", ox, oy);
-				printf("field=[");
+				fprintf(stderr, "origin%i=[%g,%g];\n", s, ox, oy);
+				fprintf(stderr, "field%i=[", s);
 				for (i=0; i<NF; i++) {
 					star_coords(fieldxyz + i*3, centerxyz, &x, &y);
-					printf("%g,%g;", x, y);
+					fprintf(stderr, "%g,%g;", x, y);
 				}
-				printf("];\n");
-				printf("index=[");
+				fprintf(stderr, "];\n");
+				fprintf(stderr, "index%i=[", s);
 				for (j=0; j<NI; j++) {
-					star_coords(indxyz + i*3, centerxyz, &x, &y);
-					printf("%g,%g;", x, y);
+					star_coords(indxyz + j*3, centerxyz, &x, &y);
+					fprintf(stderr, "%g,%g;", x, y);
 				}
-				printf("];\n");
-				u1[0] =  S*cosR*cosT - S*sinR*cosD*sinT;// + sinR*sinD;
-				u1[1] = -S*sinR*cosT - S*cosR*cosD*sinT;// + cosR*sinD;
-				u1[2] =  S*sinD*sinT;// + cosD;
-				v1[0] =  S*cosR*sinT + S*sinR*cosD*cosT;// + sinR*sinD;
-				v1[1] = -S*sinR*sinT + S*cosR*cosD*cosT;// + cosR*sinD;
-				v1[2] = -S*sinD*cosT;// + cosD;
-				//star_coords(u1, centerxyz, &ux, &uy);
-				//star_coords(v1, centerxyz, &vx, &vy);
-				pu[0] = xyz[0] + u1[0];
-				pu[1] = xyz[1] + u1[1];
-				pu[2] = xyz[2] + u1[2];
-				pv[0] = xyz[0] + v1[0];
-				pv[1] = xyz[1] + v1[1];
-				pv[2] = xyz[2] + v1[2];
-				puv[0] = xyz[0] + u1[0] + v1[0];
-				puv[1] = xyz[1] + u1[1] + v1[1];
-				puv[2] = xyz[2] + u1[2] + v1[2];
-				star_coords(pu,  centerxyz, &pux,  &puy);
-				star_coords(pv,  centerxyz, &pvx,  &pvy);
-				star_coords(puv, centerxyz, &puvx, &puvy);
-
-				printf("uvx=[%g,%g,%g,%g,%g];\n",
-					   ox, pux, puvx, pvx, ox);
-				printf("uvy=[%g,%g,%g,%g,%g];\n",
-					   oy, puy, puvy, pvy, oy);
+				fprintf(stderr, "];\n");
+				pu[0] = pixelsx;
+				pu[1] = 0.0;
+				pu[2] = 1.0;
+				pv[0] = 0.0;
+				pv[1] = pixelsy;
+				pv[2] = 1.0;
+				puv[0] = pixelsx;
+				puv[1] = pixelsy;
+				puv[2] = 1.0;
+				matrix_vector_3(Mall, pu, tmp);
+				star_coords(tmp,  centerxyz, &pux,  &puy);
+				matrix_vector_3(Mall, pv, tmp);
+				star_coords(tmp,  centerxyz, &pvx,  &pvy);
+				matrix_vector_3(Mall, puv, tmp);
+				star_coords(tmp,  centerxyz, &puvx,  &puvy);
+				fprintf(stderr, "uvx%i=[%g,%g,%g,%g,%g];\n", s, ox, pux, puvx, pvx, ox);
+				fprintf(stderr, "uvy%i=[%g,%g,%g,%g,%g];\n", s, oy, puy, puvy, pvy, oy);
+				fprintf(stderr, "p=plot(origin%i(1),origin%i(2),'r*', "
+						"field%i(:,1), field%i(:,2), 'b.',"
+						"index%i(:,1), index%i(:,2), 'ro',"
+						"uvx%i, uvy%i, 'm-');\n", s, s, s, s, s, s, s, s);
+				fprintf(stderr, "set(p(3), 'MarkerSize', 5);\n");
+				fprintf(stderr, "axis equal;\n");
+				fprintf(stderr, "input('\\nnext');\n");
 			}
 
-
-
+			printf("Old RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n\n",
+				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
 
 			xyz[0] += step * totalxyz[0];
 			xyz[1] += step * totalxyz[1];
 			xyz[2] += step * totalxyz[2];
 			normalize_3(xyz);
 			xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
-			R = M_PI_2 - ra;
+
+			R = M_PI_2 + ra;
 			D = M_PI_2 - dec;
 			T += step * totaltheta;
 			S *= pow(totalscale, step);
 
-			cosR = cos(R);
-			sinR = sin(R);
-			cosD = cos(D);
-			sinD = sin(D);
-			cosT = cos(T);
-			sinT = sin(T);
+			rotation_matrix_z(MR, R);
+			rotation_matrix_x(MD, D);
+			rotation_matrix_z(MT, T);
+			scale_matrix(MS, S, S, 1.0);
+			matrix_matrix_3(MS, MP, Mtmp);
+			matrix_matrix_3(MT, Mtmp, Mtmp2);
+			matrix_matrix_3(MD, Mtmp2, Mtmp);
+			matrix_matrix_3(MR, Mtmp, Mall);
 
-			pu[0] = cosR;
-			pu[1] = -sinR;
-			pu[2] = 0.0;
-			pv[0] = cosD * sinR;
-			pv[1] = cosD * cosR;
-			pv[2] = -sinD;
-
-			printf("New RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g.\n\n",
+			printf("New RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n\n",
 				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
-
 		}
 
-
 		kdtree_free_query(res);
+
+		tmp[0] = 1.0;
+		tmp[1] = 0.0;
+		tmp[2] = 0.0;
+		matrix_vector_3(Mall, tmp, pu);
+
+		tmp[0] = 0.0;
+		tmp[1] = 1.0;
+		tmp[2] = 0.0;
+		matrix_vector_3(Mall, tmp, pv);
+
+		tmp[0] = 0.0;
+		tmp[1] = 0.0;
+		tmp[2] = 1.0;
+		matrix_vector_3(Mall, tmp, pw);
+
+		printf("\n");
+		printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", t3[0], t3[1], t3[2]);
+		printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
+		printf("\n");
+		printf("t1=[ % 8.3g, % 8.3g, % 8.3g ];\n", t1[0], t1[1], t1[2]);
+		printf("pu=[ % 8.3g, % 8.3g, % 8.3g ];\n", pu[0], pu[1], pu[2]);
+		printf("\n");
+		printf("t2=[ % 8.3g, % 8.3g, % 8.3g ];\n", t2[0], t2[1], t2[2]);
+		printf("pv=[ % 8.3g, % 8.3g, % 8.3g ];\n", pv[0], pv[1], pv[2]);
+		printf("\n");
+
+		// compute the new & improved MatchObj.
+
+		mo->transform[0] = pu[0];
+		mo->transform[3] = pu[1];
+		mo->transform[6] = pu[2];
+		mo->transform[1] = pv[0];
+		mo->transform[4] = pv[1];
+		mo->transform[7] = pv[2];
+		mo->transform[2] = pw[0];
+		mo->transform[5] = pw[1];
+		mo->transform[8] = pw[2];
+
+		minu = 1e300;
+		maxu = -1e300;
+		minv = 1e300;
+		maxv = -1e300;
+		for (i=0; i<NF; i++) {
+			double u = fielduv[i*2+0];
+			double v = fielduv[i*2+1];
+			if (u < minu) minu = u;
+			if (u > maxu) maxu = u;
+			if (v < minv) minv = v;
+			if (v > maxv) maxv = v;
+		}
+
+		mo->sMin[0] = pw[0] + minu * pu[0] + minv * pv[0];
+		mo->sMin[1] = pw[1] + minu * pu[1] + minv * pv[1];
+		mo->sMin[2] = pw[2] + minu * pu[2] + minv * pv[2];
+		mo->sMinMax[0] = pw[0] + minu * pu[0] + maxv * pv[0];
+		mo->sMinMax[1] = pw[1] + minu * pu[1] + maxv * pv[1];
+		mo->sMinMax[2] = pw[2] + minu * pu[2] + maxv * pv[2];
+		mo->sMaxMin[0] = pw[0] + maxu * pu[0] + minv * pv[0];
+		mo->sMaxMin[1] = pw[1] + maxu * pu[1] + minv * pv[1];
+		mo->sMaxMin[2] = pw[2] + maxu * pu[2] + minv * pv[2];
+		mo->sMax[0] = pw[0] + maxu * pu[0] + maxv * pv[0];
+		mo->sMax[1] = pw[1] + maxu * pu[1] + maxv * pv[1];
+		mo->sMax[2] = pw[2] + maxu * pu[2] + maxv * pv[2];
+
+		// verify_hit ?
+
+		printf("Initial overlap: %g\n", mo->overlap);
+
+		{
+			int match;
+			int unmatch;
+			int conflict;
+			verify_hit(startree, mo, fielduv, NF, overlap_d2,
+					   &match, &unmatch, &conflict, NULL);
+		}
+
+		printf("Final overlap: %g\n", mo->overlap);
+
+		matchfile_write_match(matchout, mo);
+
 	}
 
 	free(fielduv);

@@ -5,6 +5,34 @@
 
 #include "mathutil.h"
 
+double vector_length_3(double* v) {
+	return sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+}
+
+double dot_product_3(double* va, double* vb) {
+	return va[0]*vb[0] + va[1]*vb[1] + va[2]*vb[2];
+}
+
+void matrix_matrix_3(double* ma, double* mb, double* result) {
+	result[0] = ma[0]*mb[0] + ma[1]*mb[3] + ma[2]*mb[6];
+	result[3] = ma[3]*mb[0] + ma[4]*mb[3] + ma[5]*mb[6];
+	result[6] = ma[6]*mb[0] + ma[7]*mb[3] + ma[8]*mb[6];
+
+	result[1] = ma[0]*mb[1] + ma[1]*mb[4] + ma[2]*mb[7];
+	result[4] = ma[3]*mb[1] + ma[4]*mb[4] + ma[5]*mb[7];
+	result[7] = ma[6]*mb[1] + ma[7]*mb[4] + ma[8]*mb[7];
+
+	result[2] = ma[0]*mb[2] + ma[1]*mb[5] + ma[2]*mb[8];
+	result[5] = ma[3]*mb[2] + ma[4]*mb[5] + ma[5]*mb[8];
+	result[8] = ma[6]*mb[2] + ma[7]*mb[5] + ma[8]*mb[8];
+}
+
+void matrix_vector_3(double* m, double* v, double* result) {
+	result[0] = m[0]*v[0] + m[1]*v[1] + m[2]*v[2];
+	result[1] = m[3]*v[0] + m[4]*v[1] + m[5]*v[2];
+	result[2] = m[6]*v[0] + m[7]*v[1] + m[8]*v[2];
+}
+
 inline void normalize(double* x, double* y, double* z) {
 	double l = sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
 	*x /= l;
