@@ -263,9 +263,10 @@ void solve_field(solver_params* params) {
 			}
 		}
 
-		fprintf(stderr,
-				"  field %u, object %u of %u: %i agree, %i tried, %i matched.\n",
-				params->fieldnum, newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
+		if (!params->quiet)
+			fprintf(stderr,
+					"  field %u, object %u of %u: %i agree, %i tried, %i matched.\n",
+					params->fieldnum, newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
 
 		if ((params->maxtries && (params->numtries >= params->maxtries)) ||
 			params->quitNow)

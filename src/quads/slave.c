@@ -75,6 +75,8 @@ int threads;
 double cxdx_margin;
 int maxquads;
 
+bool quiet;
+
 il* fieldlist;
 pthread_mutex_t fieldlist_mutex;
 
@@ -154,6 +156,7 @@ int main(int argc, char *argv[]) {
 		do_correspond = 1;
 		threads = 1;
 		cxdx_margin = 0.0;
+		quiet = FALSE;
 
 		il_remove_all(fieldlist);
 
@@ -192,6 +195,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "do_correspond %i\n", do_correspond);
 		fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
 		fprintf(stderr, "maxquads %i\n", maxquads);
+		fprintf(stderr, "quiet %i\n", quiet);
 		fprintf(stderr, "threads %i\n", threads);
 
 		fprintf(stderr, "fields ");
@@ -409,6 +413,8 @@ static int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "quiet", &nextword)) {
+			quiet = TRUE;
 		} else if (is_word(buffer, "maxquads ", &nextword)) {
 			maxquads = atoi(nextword);
 		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
@@ -672,8 +678,9 @@ void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
 	int matches, unmatches, conflicts;
 	verify_hit(startree, mo, field, nfield, verify_dist2,
 			   &matches, &unmatches, &conflicts, NULL);
-	fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
-			fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
+	if (!quiet)
+		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
+				fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
  	fflush(stderr);
 	mo->nverified = nverified;
 	nverified++;
@@ -786,6 +793,7 @@ void* solvethread_run(void* varg) {
 	solver.codetol = codetol;
 	solver.handlehit = handlehit;
 	solver.cxdx_margin = cxdx_margin;
+	solver.quiet = quiet;
 
 	if (do_verify)
 		my->verified = pl_new(32);

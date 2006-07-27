@@ -29,6 +29,7 @@ struct solver_params {
 	bool do_solvedserver;
 	double cxdx_margin;
 	bool circle;
+	bool quiet;
 
 	// The limits on the size, in field coordinates,
 	// of the quads to find.
