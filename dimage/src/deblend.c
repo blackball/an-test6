@@ -62,7 +62,7 @@ int deblend(float *image,
   int i,j,k,npeaks,ip,jp,di,dj,ntpeaks,kp,joined,maxiter,niter,
     tmpnpeaks, closest;
   float v1,v2,level,cross,offset,tol,chi2,ss,r2,maxval,val,
-    maxlevel, mindist, currdist;
+    maxlevel, mindist, currdist, tval, tcen;
 
   printf("in deblend\n"); fflush(stdout);
   mask=(int *) malloc(sizeof(int)*nx*ny);
@@ -116,13 +116,15 @@ int deblend(float *image,
     if(k>=starstart) {
 	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
 	                               k*nx*ny]);
+			tcen=templates[xcen[k]+(ycen[k])*nx+k*nx*ny];
       for(j=0;j<ny;j++) 
         for(i=0;i<nx;i++) {
           currdist=((xcen[k]-(float) i)*
                     (xcen[k]-(float) i)+
                     (ycen[k]-(float) j)*
                     (ycen[k]-(float) j));
-          templates[i+j*nx+k*nx*ny]*=exp(-0.5*currdist/(10.*10.));
+					tval=exp(-0.5*currdist/(2.*2.))* tcen;
+					templates[i+j*nx+k*nx*ny]=tval;
         }
 	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
 	                               k*nx*ny]);
@@ -312,9 +314,18 @@ int deblend(float *image,
   /* first smooth templates*/
   stemplates=(float *) malloc(nx*ny*npeaks*sizeof(float));
   printf("blah\n"); fflush(stdout);
-  for(k=0;k<npeaks;k++)
-    dsmooth(&(templates[k*nx*ny]), nx, ny, 4., &(stemplates[k*nx*ny]));
-  printf("blah\n"); fflush(stdout);
+	kp=0;
+  for(k=0;k<npeaks;k++) {
+		if(weights[k]>1.e-10) {
+			dsmooth(&(templates[k*nx*ny]), nx, ny, 4., &(stemplates[kp*nx*ny]));
+			for(j=0;j<ny;j++) 
+				for(i=0;i<nx;i++) 
+					templates[i+j*nx+kp*nx*ny]=templates[i+j*nx+k*nx*ny];
+			kp++;
+		}
+	}
+	npeaks=kp;
+  printf("blah %d\n", npeaks); fflush(stdout);
   assigned=(int *)malloc(nx*ny*sizeof(int));
   for(j=0;j<ny;j++) 
     for(i=0;i<nx;i++) 

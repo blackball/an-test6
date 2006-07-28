@@ -48,8 +48,8 @@ if(n_elements(xgals) gt 0) then begin
     starstart=n_elements(xgals)
 endif
 
-if(n_elements(xstars) gt 0) then begin
-    if(n_elements(xpeaks) gt 0) then begin
+if(xstars[0] gt 0) then begin
+    if(xpeaks[0] gt 0) then begin
         starstart=n_elements(xpeaks)
         xpeaks=[xpeaks, xstars]
         ypeaks=[ypeaks, ystars]
@@ -60,8 +60,7 @@ if(n_elements(xstars) gt 0) then begin
     endelse
 endif
 
-if(n_elements(xpeaks) gt 0) then $
-  maxnchild=n_elements(xpeaks)
+if(xpeaks[0] gt 0) then maxnchild=n_elements(xpeaks)
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
@@ -78,7 +77,7 @@ soname=filepath('libdimage.'+idlutils_so_ext(), $
                 root_dir=getenv('DIMAGE_DIR'), subdirectory='lib')
 
 nchild=0L
-if(n_elements(xpeaks) gt 0) then begin
+if(xpeaks[0] gt 0) then begin
     nchild=n_elements(xpeaks)
     xcen[0:nchild-1L]=xpeaks
     ycen[0:nchild-1L]=ypeaks
