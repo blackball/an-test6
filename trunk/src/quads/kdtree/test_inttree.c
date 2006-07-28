@@ -348,7 +348,7 @@ void test_kd_range_search(CuTest *tc) {
 					break;
 				}
 			}
-			printf(" Got one %d %d\n", t, i);
+			//printf(" Got one %d %d\n", t, i);
 			CuAssertIntEquals(tc, 1, ok);
 			if (ok) {
 				// make sure the reported distance is right.
@@ -358,19 +358,19 @@ void test_kd_range_search(CuTest *tc) {
 					CuAssertDblEquals(tc, results->results[hitind*d + j], origdata[i*d + j], 1e-30);
 				}
 			} else {
-				printf("MISSING %d %d\n", t, i);
+				//printf("MISSING %d %d\n", t, i);
 			}
 		}
 		// make sure the number of hits is equal.
 		//CuAssertIntEquals(tc, nfound, results->nres);
 
-		printf("range search: %i results.\n", results->nres);
+		//printf("range search: %i results.\n", results->nres);
 
 		kdtree_free_query(results);
 	}
 
-	for (t=0; t<kd->nbottom-1; t++) 
-		printf("lrs %u %d\n", kd->lr[t], kd->lr[t+1]-kd->lr[t]);
+	//for (t=0; t<kd->nbottom-1; t++) 
+	//	printf("lrs %u %d\n", kd->lr[t], kd->lr[t+1]-kd->lr[t]);
 
 	free(origdata);
 	free(point);

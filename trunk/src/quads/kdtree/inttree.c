@@ -90,17 +90,6 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 
 	assert(kd->lr);
 
-	/*
-	int yy, zz;
-	for(yy=0; yy<N; yy++) { 
-		printf("nnn %lf", data[D*yy+0] );
-		for (zz=1; zz<D; zz++) {
-			printf(" %lf", data[D*yy+zz] );
-		}
-		printf("\n");
-	}
-	*/
-
 	/* Use the lr array as a stack while building. In place in your face! */
 	kd->lr[0] = N - 1;
 
@@ -109,7 +98,9 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 
 	/* And in one shot, make the kdtree. Because in inttree the lr pointers
 	 * are only stored for the bottom layer, we use the lr array as a
-	 * stack. At finish, it contains the r pointers for the bottom nodes. */
+	 * stack. At finish, it contains the r pointers for the bottom nodes.
+	 * The l pointer is simply +1 of the previous right pointer, or 0 if we
+	 * are at the first element of the lr array. */
 	for (i = 0; i < ninterior; i++) {
 		real hi[D];
 		real lo[D];
@@ -141,6 +132,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		}
 		right = kd->lr[i];
 
+		/* More sanity */
 		assert(0 <= left);
 		assert(left <= right);
 		assert(right < N);
@@ -189,87 +181,58 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		 * the correct side, great. Otherwise, we have to move shift
 		 * point M-1 into the right side and only then chose plane 1. */
 
-		/* UGH but qsort allocates a 2nd perm array GAH */
-		unsigned int xx;
-		/*
-		for(xx=left; xx<=right; xx++) { 
-			printf("nnn %lf\n", data[D*xx+d] );
-		}
-		*/
+
+		/* FIXME but qsort allocates a 2nd perm array GAH */
 		m = kdtree_qsort(data, kd->perm, left, right, D, dim);
 		m = 1 + (left+right)/2;
 
 		/* Make sure sort works */
+		unsigned int xx;
 		for(xx=left; xx<=right-1; xx++) { 
 			assert(data[D*xx+d] <= data[D*(xx+1)+d]);
 		}
 
-		/*
-		for (j=0;j<N*D;j++) {
-			printf("%4.0f ",  data[j]);
-		}
-		printf("\n");
-		*/
-
-		/* Encode split dimension and value. Last 2 bits are dim */
+		/* Encode split dimension and value. Last 2 bits are the split
+		 * dimension. The split location is the upper 30 bits. */
 		unsigned int s = REAL2FIXED(data[D*m+d]);
 		s = s & 0xfffffffc;
 		real qsplit = s*delta*kd->maxval; 
 		assert((s & 0x3) == 0);
-		//printf("intitial s*d %f split %f error: %f\n", qsplit, data[D*m+d], qsplit - data[D*m+d]);
-		//while( m < right && qsplit >= data[D*m+d]) {
-		while( m < right && data[D*m+d] < qsplit) {
-			m++;
-			//printf(" *  %f split %f error: %f\n", qsplit, data[D*m+d], qsplit - data[D*m+d]);
-		}
-		//printf("s*d %f split %f error: %f\n", qsplit, data[D*m+d], qsplit - data[D*m+d]);
-		while( m > left && qsplit <= data[D*(m-1)+d]) {
-			m--;
-			//printf("x*x %f split %f error: %f\n", qsplit, data[D*m+d], qsplit - data[D*m+d]);
-		}
-		for(xx=left; xx<=right; xx++) { 
-			//printf("... %lf\n", data[D*xx+d] );
-		}
-		for(xx=left; xx<=m-1; xx++) { 
-			//printf("+%lf\n", data[D*xx+d] );
-			assert( data[D*xx+d] < qsplit);
-		}
-		for(xx=m; xx<=right; xx++) {
-			//printf("+%lf\n", data[D*xx+d] );
-			assert( qsplit <= data[D*xx+d]);
-		}
 
+		/* Play games to make sure we properly partition the data */
+		while(m < right && data[D*m+d] < qsplit) m++;
+		while(m > left && qsplit <= data[D*(m-1)+d]) m--;
+		assert(m-1 >= 0);
+
+		/* Even more sanity */
+		for (xx=left; xx<=m-1; xx++)
+			assert(data[D*xx+d] < qsplit);
+		for (xx=m; xx<=right; xx++)
+			assert(qsplit <= data[D*xx+d]);
 		assert(left <= m);
 		assert(m <= right);
 
-		//printf("+*+ %f split %f error: %f\n", s*delta*kd->maxval, data[D*m+d], s*delta*kd->maxval - data[D*m+d]);
-		
 		kd->tree[i].split = s | dim;
 
+		/* Sanity is good when you do so much low level tweaking */
 		unsigned int spl = kd->tree[i].split & 0x3;
 		assert(spl == dim);
 
-		for(j=0; j<nbottom; j++) {
-			//printf("%3i ", kd->lr[j]);
-		}
-		//printf("\n");
-
+		/* Store the R pointers for each child */
 		unsigned int c = 2*i;
 		if (level == nlevel - 2)
 			c -= ninterior;
-		assert( m-1 >= 0);
 		kd->lr[c+1] = m-1;
 		kd->lr[c+2] = right;
+
+		assert(0 <= left);
+		assert(left <= m-1);
+		assert(m <= right);
 	}
-	int j;
-	for(j=0; j<nbottom; j++) {
-		//printf("%3i ", kd->lr[j]);
-	}
-	for(j=0; j<nbottom-1; j++) {
-		assert(kd->lr[j] <= kd->lr[j+1]);
-	}
-	for (j=0; j<kd->nbottom-1; j++) 
-		printf("++lrs %u %d\n", kd->lr[j], kd->lr[j+1]-kd->lr[j]);
+
+	unsigned int xx;
+	for(xx=0; xx<nbottom-1; xx++)
+		assert(kd->lr[xx] <= kd->lr[xx+1]);
 
 	return kd;
 }
@@ -298,51 +261,46 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 
 		unsigned int i = stack[--zzz]; /* root beer */
 
-		printf("popped %d\n", i);
-
 		assert(i < kd->nnodes);
 
 		if (i < kd->ninterior) {
+			/* Interior nodes */
+
 			unsigned int info = kd->tree[i].split;
 			unsigned int spl = info & 0x3;
 			unsigned int loc = info & 0xfffffffc;
 
 			assert(spl < kd->ndim);
-			printf("spl %d loc %f\n", spl, kd->delta*loc*kd->maxval);
 
 			if (pti[spl] < loc) {
 				assert(pt[spl] < kd->delta*loc*kd->maxval);
-				stack[zzz++] = 2*i+1;
-				//if (pti[spl] + radius >= loc || 
-				 //   (UINT_MAX - pti[spl] < radius) /* overflow */ ) {
 				assert(loc >= pti[spl]);
+				stack[zzz++] = 2*i+1;
+				/* Note that this condition is written
+				 * such that integer overflow cannot occur */
 				if (loc - pti[spl] <= radius) {
-					//assert(pt[spl] + maxdist >= kd->delta*loc*kd->maxval);
 					assert(kd->delta*loc*kd->maxval - pt[spl] > 0.0);
 					assert(kd->delta*loc*kd->maxval - pt[spl] <= maxdist);
-
 					stack[zzz++] = 2*i+2;
 				}
 			} else {
 				assert(kd->delta*loc*kd->maxval <= pt[spl]);
 				stack[zzz++] = 2*i+2;
-//				if (loc + radius < pti[spl] ||
-//						(UINT_MAX - loc < radius) /* overflow */ ) {
 				assert(pti[spl] >= loc);
 				if (pti[spl] - loc < radius) {
-					//assert(kd->delta*loc*kd->maxval + maxdist < pt[spl]);
 					assert(pt[spl] - kd->delta*loc*kd->maxval >= 0.0);
 					assert(pt[spl] - kd->delta*loc*kd->maxval < maxdist);
-					//assert(kd->delta*loc*kd->maxval + maxdist < pt[spl]);
 					stack[zzz++] = 2*i+1;
 				}
 			}
 		} else {
-			/* children */
+			/* Child nodes */
 
 			unsigned int lrind = i - kd->ninterior;
-			unsigned int l, r = kd->lr[lrind];
-			unsigned int k;
+			unsigned int r = kd->lr[lrind];
+			unsigned int l, k;
+
+			/* Figure out our bounds in the data array */
 			if (lrind) 
 				l = kd->lr[lrind-1]+1;
 			else
@@ -359,11 +317,12 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 					dsqd += delta * delta;
 				}
 				if (dsqd < maxdistsqd) {
-					printf("found point close enough dist %f\n",sqrt(dsqd));
 					results_sqd[res->nres] = dsqd;
 					results_inds[res->nres] = kd->perm[j];
 					memcpy(results + res->nres*kd->ndim, COORD(j, 0), sizeof(real)*kd->ndim);
 					res->nres++;
+					/* FIXME maybe put an assert and simply
+					 * crash at this point? */
 					if (res->nres >= INTKDTREE_MAX_RESULTS) {
 						fprintf(stderr, "\nintkdtree rangesearch overflow.\n");
 						break;
