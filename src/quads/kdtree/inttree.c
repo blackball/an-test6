@@ -9,7 +9,7 @@
 /* Utility macros                                                            */
 /*****************************************************************************/
 #define INTKDTREE_MAX_DIM 4
-#define INTKDTREE_MAX_RESULTS 1000
+#define INTKDTREE_MAX_RESULTS 10000
 
 /* Most macros operate on a variable kdtree_t *kd, assumed to exist. */
 /* x is a node index, d is a dimension, and n is a point index */
@@ -26,6 +26,7 @@
 /*****************************************************************************/
 
 #define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))/kd->delta) ) )
+#define UINT_MAX 0xffffffff
 
 real round(real);
 
@@ -216,7 +217,8 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		real qsplit = s*delta*kd->maxval; 
 		assert((s & 0x3) == 0);
 		//printf("intitial s*d %f split %f error: %f\n", qsplit, data[D*m+d], qsplit - data[D*m+d]);
-		while( m < right && qsplit >= data[D*m+d]) {
+		//while( m < right && qsplit >= data[D*m+d]) {
+		while( m < right && data[D*m+d] < qsplit) {
 			m++;
 			//printf(" *  %f split %f error: %f\n", qsplit, data[D*m+d], qsplit - data[D*m+d]);
 		}
@@ -263,7 +265,12 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	for(j=0; j<nbottom; j++) {
 		//printf("%3i ", kd->lr[j]);
 	}
-	//printf("\n");
+	for(j=0; j<nbottom-1; j++) {
+		assert(kd->lr[j] <= kd->lr[j+1]);
+	}
+	for (j=0; j<kd->nbottom-1; j++) 
+		printf("++lrs %u %d\n", kd->lr[j], kd->lr[j+1]-kd->lr[j]);
+
 	return kd;
 }
 
@@ -276,7 +283,7 @@ unsigned int results_inds[INTKDTREE_MAX_RESULTS];
 void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, intkdtree_qres_t *res)
 {
 	real maxdist = sqrt(maxdistsqd); /* a sqrt per search or a square per iteration? */
-	unsigned int umd = REAL2FIXED(maxdist);
+	unsigned int radius = REAL2FIXED(maxdist);
 
 	unsigned int zzz = 0; /* lazy programming */
 	unsigned int pti[kd->ndim];
@@ -306,15 +313,27 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 			if (pti[spl] < loc) {
 				assert(pt[spl] < kd->delta*loc*kd->maxval);
 				stack[zzz++] = 2*i+1;
-				if (pti[spl] + umd >= loc) {
-					assert(pt[spl] + maxdist >= kd->delta*loc*kd->maxval);
+				//if (pti[spl] + radius >= loc || 
+				 //   (UINT_MAX - pti[spl] < radius) /* overflow */ ) {
+				assert(loc >= pti[spl]);
+				if (loc - pti[spl] <= radius) {
+					//assert(pt[spl] + maxdist >= kd->delta*loc*kd->maxval);
+					assert(kd->delta*loc*kd->maxval - pt[spl] > 0.0);
+					assert(kd->delta*loc*kd->maxval - pt[spl] <= maxdist);
+
 					stack[zzz++] = 2*i+2;
 				}
 			} else {
 				assert(kd->delta*loc*kd->maxval <= pt[spl]);
 				stack[zzz++] = 2*i+2;
-				if (loc + umd < pti[spl] ) {
-					assert(kd->delta*loc*kd->maxval + maxdist < pt[spl]);
+//				if (loc + radius < pti[spl] ||
+//						(UINT_MAX - loc < radius) /* overflow */ ) {
+				assert(pti[spl] >= loc);
+				if (pti[spl] - loc < radius) {
+					//assert(kd->delta*loc*kd->maxval + maxdist < pt[spl]);
+					assert(pt[spl] - kd->delta*loc*kd->maxval >= 0.0);
+					assert(pt[spl] - kd->delta*loc*kd->maxval < maxdist);
+					//assert(kd->delta*loc*kd->maxval + maxdist < pt[spl]);
 					stack[zzz++] = 2*i+1;
 				}
 			}

@@ -292,9 +292,9 @@ void test_kd_range_search_callback(CuTest *tc) {
 
 */
 void test_kd_range_search(CuTest *tc) {
-	int n=10000;
+	int n=100000;
 	int d=3, i, j;
-	int levels=10;
+	int levels=14;
 	real range = 0.08;
 	real range2;
 	real *point;
@@ -357,6 +357,97 @@ void test_kd_range_search(CuTest *tc) {
 				for (j=0; j<d; j++) {
 					CuAssertDblEquals(tc, results->results[hitind*d + j], origdata[i*d + j], 1e-30);
 				}
+			} else {
+				printf("MISSING %d %d\n", t, i);
+			}
+		}
+		// make sure the number of hits is equal.
+		//CuAssertIntEquals(tc, nfound, results->nres);
+
+		printf("range search: %i results.\n", results->nres);
+
+		kdtree_free_query(results);
+	}
+
+	for (t=0; t<kd->nbottom-1; t++) 
+		printf("lrs %u %d\n", kd->lr[t], kd->lr[t+1]-kd->lr[t]);
+
+	free(origdata);
+	free(point);
+	intkdtree_free(kd);
+	free(data);
+}
+
+/* search for each point individually, with a margin small enough just to get
+ * the point we're interested in. */
+void test_kd_range_search_findall(CuTest *tc) {
+	int n=100;
+	int d=2, i, j;
+	int levels=5;
+	real range = 0.08;
+	real range2;
+	real *point;
+	real *data = malloc(sizeof(real)*n*d);
+	real *origdata = malloc(sizeof(real)*n*d);
+	kdtree_qres_t* results;
+	int nfound;
+	int ntimes = 10;
+	int t;
+	intkdtree_t *kd;
+
+	for (i=0; i < n*d; i++) 
+		data[i] = random() / (real)RAND_MAX;
+
+	memcpy(origdata, data, n*d*sizeof(real));
+
+	kd = intkdtree_build(data, n, d, levels,0,1);
+
+	point = malloc(sizeof(real)*d);
+
+	for (t=0; t<ntimes; t++) {
+
+		range = t * 0.02;
+		range2 = range*range;
+
+		for (i=0; i<d; i++)
+			point[i] = random() / (real)RAND_MAX;
+		results = intkdtree_rangesearch(kd, point, range2);
+
+		CuAssertPtrNotNullMsg(tc, "null kdtree rangesearch result.", results);
+
+		nfound = 0;
+		for (i=0; i<n; i++) {
+			double d2;
+			int ok;
+			int hitind;
+			d2 = 0.0;
+			for (j=0; j<d; j++) {
+				double diff = (origdata[i*d + j] - point[j]);
+				d2 += (diff*diff);
+			}
+			if (d2 > range2) continue;
+			nfound++;
+			// make sure this hit is present in the results list.
+			hitind = -1;
+			ok = 0;
+			for (j=0; j<results->nres; j++) {
+				if (results->inds[j] == i) {
+					ok = 1;
+					hitind = j;
+					break;
+				}
+			}
+			printf(" Got one %d %d\n", t, i);
+			//CuAssertIntEquals(tc, 1, ok);
+			if (ok) {
+				// make sure the reported distance is right.
+				//CuAssertDblEquals(tc, results->sdists[hitind], d2, 1e-10);
+				// make sure the reported results are right.
+				for (j=0; j<d; j++) {
+					//CuAssertDblEquals(tc, results->results[hitind*d + j], origdata[i*d + j], 1e-30);
+				}
+			} else {
+				printf("MISSING %d %d\n", t, i);
 			}
 		}
 		// make sure the number of hits is equal.
