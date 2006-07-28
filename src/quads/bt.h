@@ -2,8 +2,7 @@
 #define BT_H
 
 #include "keywords.h"
-
-typedef unsigned char bool;
+#include "starutil.h"
 
 #define NODENUM 0
 
