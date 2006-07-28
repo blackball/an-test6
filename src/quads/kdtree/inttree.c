@@ -35,7 +35,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
                              real minval, real maxval)
 {
 	printf("BUILD %d\n", ndata);
-	int i;
+	int i, j;
 	intkdtree_t *kd;
 	unsigned int nnodes, nbottom, ninterior;
 	unsigned int level = 0, dim=-1, m;
@@ -54,6 +54,14 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	/* Make sure we have enough data */
 	if ((1 << nlevel) - 1 > N)
 		return NULL;
+
+	/* Range better be correct FIXME or determined automatically? */
+	for (i=0; i<N; i++) {
+		for (j=0; j<D; j++) {
+			assert(minval <= data[D*i+j]);
+			assert(data[D*i+j] <= maxval);
+		}
+	}
 
 	/* Set the tree fields */
 	kd = malloc(sizeof(intkdtree_t));
@@ -87,7 +95,6 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	for (i=0; i<nbottom; i++) {
 		kd->lr[i] = 1111;
 	}
-
 	assert(kd->lr);
 
 	/* Use the lr array as a stack while building. In place in your face! */
@@ -335,7 +342,7 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 
 /* Range seach */
 int overflow;
-intkdtree_qres_t *intkdtree_rangesearch(intkdtree_t *kd, real *pt, real maxdistsquared)
+intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real maxdistsquared)
 {
 	kdtree_qres_t *res;
 	if (!kd || !pt)
@@ -358,6 +365,16 @@ intkdtree_qres_t *intkdtree_rangesearch(intkdtree_t *kd, real *pt, real maxdists
 	/* Store indexes of results */
 	res->inds = malloc(sizeof(unsigned int) * res->nres);
 	memcpy(res->inds, results_inds, sizeof(unsigned int)*res->nres);
+
+
+	return res;
+}
+
+
+intkdtree_qres_t *intkdtree_rangesearch(intkdtree_t *kd, real *pt, real maxdistsquared)
+{
+	/* Do unsorted search */
+	intkdtree_qres_t * res = intkdtree_rangesearch_unsorted(kd, pt, maxdistsquared);
 
 	/* Sort by ascending distance away from target point before returning */
 	kdtree_qsort_results(res, kd->ndim);
