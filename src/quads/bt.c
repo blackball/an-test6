@@ -4,10 +4,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define TRUE  1
-#define FALSE 0
-
 #include "bt.h"
+#include "starutil.h"
 
 /*
   The AVL tree portion of this code was adapted from GNU libavl.
@@ -121,17 +119,11 @@ static Pure void* first_element(bt_node* n) {
 }
 
 static Malloc bt_node* bt_new_branch(bt* tree) {
-#if NODENUM
-	static int nodenum = 1;
-#endif
 	bt_node* n = calloc(1, sizeof(bt_node));
 	if (!n) {
 		fprintf(stderr, "Failed to allocate a new bt_node: %s\n", strerror(errno));
 		return NULL;
 	}
-#if NODENUM
-	n->nodenum = nodenum++;
-#endif
 	return n;
 }
 
@@ -607,9 +599,6 @@ void* bt_access(bt* tree, int index) {
 static void bt_print_node(bt* tree, bt_node* node, char* indent,
 						  void (*print_element)(void* val)) {
 	printf("%s", indent);
-#if NODENUM
-	printf("Node %i.  ", node->nodenum);
-#endif
 	printf("N=%i", node_N(node));
 
 	if (!isleaf(node)) {
@@ -652,9 +641,6 @@ static void bt_print_struct_node(bt* tree, bt_node* node, char* indent,
 								 void (*print_element)(void* val)) {
 
 	printf("%s", indent);
-#if NODENUM
-	printf("Node %i.  ", node->nodenum);
-#endif
 	if (!isleaf(node)) {
 		char* subind;
 		char* addind = "|--";
