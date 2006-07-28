@@ -20,21 +20,20 @@
 static int *mask=NULL;
 
 int dobjects(float *image, 
-             float *invvar,
 						 float *smooth,
              int nx, 
              int ny,
              float dpsf, 
              float plim, 
-             float sigma, 
              int *objects)
 {
   int i,j,ip,jp,ist,ind,jst,jnd;
-  float limit;
-
-  limit=sigma*plim/(4.*PI*dpsf*dpsf);
+  float limit,sigma;
 
   dsmooth(image, nx, ny, dpsf, smooth);
+
+	dsigma(smooth, nx, ny, &sigma);
+  limit=sigma*plim;
   
   mask=(int *) malloc(nx*ny*sizeof(int));
   for(j=0;j<ny;j++) 

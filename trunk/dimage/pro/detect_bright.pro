@@ -4,7 +4,7 @@
 ; PURPOSE:
 ;   detect objects in image of bright object
 ; CALLING SEQUENCE:
-;   dimage, image
+;   
 ; INPUTS:
 ;   image - [nx, ny] input image
 ; COMMENTS:
@@ -13,104 +13,85 @@
 ;   11-Jan-2006  Written by Blanton, NYU
 ;-
 ;------------------------------------------------------------------------------
-pro detect_bright, image, psmooth=psmooth
+pro detect_bright, imfile, dbset=dbset
 
-common atv_point, markcoord
+base=(stregex(imfile, '(.*)\.fits.*', /sub, /extr))[1]
 
-nx=(size(image,/dim))[0]
-ny=(size(image,/dim))[1]
+if(NOT keyword_set(dbset)) then begin
+    dbset={base:base, $
+           guess:0., $
+           psmooth:20L, $
+           glim:40., $
+           parent:-1L, $
+           xstars:fltarr(128), $
+           ystars:fltarr(128), $
+           nstars:0L, $
+           xgals:fltarr(128), $
+           ygals:fltarr(128), $
+           ngals:0L}
+    
+;; get parents
+    dparents, imfile
 
-;; do general object detection
-sigma=dsigma(image)
-invvar=fltarr(nx,ny)+1./sigma^2
-dobjects, image, invvar, object=oimage, plim=25., dpsf=1.
+;; read in parents 
+    pcat=mrdfits(base+'-pcat.fits',1)
+    isig=where(pcat.msig gt 20.)
+    xs=pcat.xnd-pcat.xst+1L
+    
+;; look at all small images for psf
+    isort=sort(xs[isig])
+    ipsf=isig[isort[where(findgen(n_elements(isig))/float(n_elements(isig)) $
+                          lt 0.75)]]
+    psf=fltarr(n_elements(ipsf))
+    k=0
+    for i=0L, n_elements(ipsf)-1L do begin
+        image=mrdfits(base+'-parents.fits',1+ipsf[i])
+        sigma=dsigma(image)
+        ivar=image-image+1./sigma^2
+        simage=dsmooth(image,1.)
+        ssigma=dsigma(simage)
+        dpeaks, simage, xc=xc, yc=yc, sigma=ssigma, minpeak=10.*ssigma, $
+          /refine, npeaks=nc
+        if(nc gt 0) then begin
+            psf[k]=dpsfapprox(image, ivar, xc[0], yc[0] )
+            k=k+1
+        endif
+    endfor
+    dbset.guess=median(psf[0:k-1])
 
-iobj=where(oimage eq oimage[nx/2L, ny/2L])
-ixobj=iobj mod nx
-iyobj=iobj / nx
-xstart=min(ixobj)
-xend=max(ixobj)
-ystart=min(iyobj)
-yend=max(iyobj)
-nxnew=xend-xstart+1L
-nynew=yend-ystart+1L
+;; look for biggest object
+    mxs=max(xs, imxs)
+    dbset.parent=imxs
+endif else begin
+    dbset=mrdfits(base+'-dbset.fits', 1)
+endelse
 
-timage=image[xstart:xend, ystart:yend]
-oimage=oimage[xstart:xend, ystart:yend]
-
-;; now choose the object that includes the center
-iobj=where(oimage eq oimage[nx/2L-xstart, ny/2L-ystart] OR oimage eq -1L)
-
-iimage=randomn(seed, nxnew, nynew)*sigma
-iimage[iobj]=timage[iobj]
-iivar=fltarr(nxnew,nynew)+1./sigma^2
-
-;; find all peaks 
-dpeaks, iimage, xc=xc, yc=yc, sigma=sigma, minpeak=25.*sigma
-xpeaks=xc*float(subpix)
-ypeaks=yc*float(subpix)
-
-;; try and guess which peaks are PSFlike
-
-;; measure colors of PSFlike peaks
-
-;; 
-
-;; smooth, resample, and find peaks at a reasonable scale 
-if(0) then begin
-psmooth=6.
-subpix=long(psmooth/3.) > 1L
-nxsub=nx/subpix
-nysub=ny/subpix
-simage=rebin(iimage[0:nxsub*subpix-1, 0:nysub*subpix-1], nxsub, nysub)
-simage=dsmooth(simage, psmooth/float(subpix))
-
-ssig=dsigma(simage)
-sivar=fltarr(nxsub, nysub)+1./ssig^2
-
-deblend, simage, sivar, nchild=nchild, xcen=xcen, ycen=ycen, $
-  children=children, templates=templates
-
-dpeaks, simage, xc=xc, yc=yc, sigma=ssig, minpeak=25.*ssig
-xpeaks=xc*float(subpix)
-ypeaks=yc*float(subpix)
-
-for i=0L, n_elements(xpeaks)-1L do begin
-  xst=long(xpeaks[i]-1.5*subpix)>0L
-  xnd=long(xpeaks[i]+1.5*subpix)<(nx-1L)
-  yst=long(ypeaks[i]-1.5*subpix)>0L
-  ynd=long(ypeaks[i]+1.5*subpix)<(ny-1L)
-  subim=iimage[xst:xnd, yst:ynd]
-  vmax=max(subim, imax)
-  xpeaks[i]=(imax mod (xnd-xst+1L))+xst
-  ypeaks[i]=(imax / (xnd-xst+1L))+yst
-endfor
+if(dbset.nstars gt 0) then begin 
+    xstars=dbset.xstars[0:dbset.nstars-1]
+    ystars=dbset.ystars[0:dbset.nstars-1]
 endif
+if(dbset.ngals gt 0) then begin 
+    xgals=dbset.xgals[0:dbset.ngals-1]
+    ygals=dbset.ygals[0:dbset.ngals-1]
+endif
+dchildren, dbset.base, dbset.parent, guess=dbset.guess, $
+  psmooth=dbset.psmooth, xstars=xstars, ystars=ystars, $
+  xgals=xgals, ygals=ygals
 
-splog, 'Mark stars and exit'
-atv, iimage, /block
-
-starcoord=markcoord
-
-splog, 'Mark galaxies and exit'
-atv, iimage, /block
-galcoord=markcoord
-
-xstars=transpose(starcoord[0,*])
-ystars=transpose(starcoord[1,*])
-xgals=transpose(galcoord[0,*])
-ygals=transpose(galcoord[1,*])
-
-;; deblend on those peaks
-deblend, iimage, iivar, nchild=nchild, xcen=xcen, ycen=ycen, $
-  children=children, templates=templates, xgals=xgals, ygals=ygals, $
-  xstars=xstars, ystars=ystars
-stop
-
-
-;; 
-save
-
+dbset.nstars=n_elements(xstars)
+if(xstars[0] eq -1) then dbset.nstars=0
+dbset.ngals=n_elements(xgals)
+if(xgals[0] eq -1) then dbset.ngals=0
+if(dbset.nstars gt 0) then begin
+    dbset.xstars[0:dbset.nstars-1]=xstars
+    dbset.ystars[0:dbset.nstars-1]=ystars
+endif
+if(dbset.ngals gt 0) then begin
+    dbset.xgals[0:dbset.ngals-1]=xgals
+    dbset.ygals[0:dbset.ngals-1]=ygals
+endif
+  
+mwrfits, dbset, base+'-dbset.fits', /create
 
 end
 ;------------------------------------------------------------------------------

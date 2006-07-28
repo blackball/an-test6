@@ -94,7 +94,7 @@ int dpeaks(float *image,
   for(i=0;i<(*npeaks);i++)
     indx[i]=i;
   qsort((void *) indx, (*npeaks), sizeof(int), dpeaks_compare);
-  if((*npeaks)>100*maxnpeaks) *npeaks=100*maxnpeaks;
+  if((*npeaks)>maxnpeaks) *npeaks=maxnpeaks;
   fullxcen=(int *) malloc((*npeaks)*sizeof(int));
   fullycen=(int *) malloc((*npeaks)*sizeof(int));
   for(i=0;i<(*npeaks);i++) {
@@ -106,7 +106,6 @@ int dpeaks(float *image,
   mask=(int *) malloc(sizeof(int)*nx*ny);
   object=(int *) malloc(sizeof(int)*nx*ny);
   keep=(int *) malloc(sizeof(int)*(*npeaks));
-  printf("%d peaks before checking\n", (*npeaks));
   for(i=(*npeaks)-1;i>=0;i--) {
     keep[i]=1;
 

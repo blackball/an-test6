@@ -4,10 +4,9 @@
 ; PURPOSE:
 ;   detect objects in an image
 ; CALLING SEQUENCE:
-;   dobjects, image, invvar, objects= [, dpsf=, plim=, sigma=]
+;   dobjects, image, objects= [, dpsf=, plim=, sigma=]
 ; INPUTS:
 ;   image - [nx, ny] original image
-;   invvar - [nx, ny] input image inverse variance
 ; OPTIONAL INPUTS:
 ;   dpsf - smoothing of PSF for detection (defaults to sigma=1 pixel)
 ;   plim - limiting significance in sky sigma (defaults to 5 sig )
@@ -18,15 +17,14 @@
 ;   11-Jan-2006  Written by Blanton, NYU
 ;-
 ;------------------------------------------------------------------------------
-pro dobjects, image, invvar, objects=objects, dpsf=dpsf, sigma=sigma, $
+pro dobjects, image, objects=objects, dpsf=dpsf, $
               plim=plim, smooth=smooth
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
 if(NOT keyword_set(dpsf)) then dpsf=1.
-if(NOT keyword_set(plim)) then plim=5. ;;*(4.*!DPI*dpsf^2)
-if(NOT keyword_set(sigma)) then sigma=1./sqrt(median(invvar))
+if(NOT keyword_set(plim)) then plim=10.
 
 ; Set source object name
 soname=filepath('libdimage.'+idlutils_so_ext(), $
@@ -37,12 +35,10 @@ objects=lonarr(nx,ny)
 smooth=fltarr(nx,ny)
 retval=call_external(soname, 'idl_dobjects', $
                      float(image), $
-                     float(invvar), $
                      float(smooth), $
                      long(nx), long(ny), $
                      float(dpsf), $
                      float(plim), $
-                     float(sigma), $
                      long(objects))
 
 end

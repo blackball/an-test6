@@ -14,7 +14,7 @@ static void free_memory()
 IDL_LONG idl_dpeaks (int      argc,
                      void *   argv[])
 {
-	IDL_LONG nx,ny,*npeaks,maxnpeaks,smooth, *xcen, *ycen;
+	IDL_LONG nx,ny,*npeaks,maxnpeaks, checkpeaks, smooth, *xcen, *ycen;
 	float *image, dlim, sigma, saddle, minpeak;
 	
 	IDL_LONG i;
@@ -33,12 +33,14 @@ IDL_LONG idl_dpeaks (int      argc,
   saddle=*((float *)argv[i]); i++;
   maxnpeaks=*((int *)argv[i]); i++;
   smooth=*((int *)argv[i]); i++;
+  checkpeaks=*((float *)argv[i]); i++;
   minpeak=*((float *)argv[i]); i++;
 	
 	/* 1. run the fitting routine */
 	retval=(IDL_LONG) dpeaks(image, nx, ny, (int *) npeaks, (int *) xcen, 
 													 (int *) ycen, sigma,
-                           dlim, saddle, maxnpeaks, smooth, 1, minpeak);
+                           dlim, saddle, maxnpeaks, smooth, checkpeaks, 
+													 minpeak);
 	
 	/* 2. free memory and leave */
 	free_memory();
