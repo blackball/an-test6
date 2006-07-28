@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include "inttree.h"
+#include "../tic.h"
 #include "CuTest/CuTest.h"
 
 #define MAXDEPTH 30
@@ -294,15 +295,15 @@ void test_kd_range_search_callback(CuTest *tc) {
 void test_kd_range_search(CuTest *tc) {
 	int n=100000;
 	int d=3, i, j;
-	int levels=14;
-	real range = 0.08;
+	int levels=15;
+	real range;
 	real range2;
 	real *point;
 	real *data = malloc(sizeof(real)*n*d);
 	real *origdata = malloc(sizeof(real)*n*d);
 	kdtree_qres_t* results;
 	int nfound;
-	int ntimes = 10;
+	int ntimes = 2000;
 	int t;
 	intkdtree_t *kd;
 
@@ -311,13 +312,17 @@ void test_kd_range_search(CuTest *tc) {
 
 	memcpy(origdata, data, n*d*sizeof(real));
 
+	tic();
 	kd = intkdtree_build(data, n, d, levels,0,1);
+	printf("Done build\n");
+	toc();
 
 	point = malloc(sizeof(real)*d);
 
+	tic();
 	for (t=0; t<ntimes; t++) {
 
-		range = t * 0.02;
+		range = t * 0.0001;
 		range2 = range*range;
 
 		for (i=0; i<d; i++)
@@ -368,6 +373,7 @@ void test_kd_range_search(CuTest *tc) {
 
 		kdtree_free_query(results);
 	}
+	toc();
 
 	//for (t=0; t<kd->nbottom-1; t++) 
 	//	printf("lrs %u %d\n", kd->lr[t], kd->lr[t+1]-kd->lr[t]);
@@ -400,7 +406,10 @@ void test_kd_range_search_findall(CuTest *tc) {
 
 	memcpy(origdata, data, n*d*sizeof(real));
 
+	tic();
 	kd = intkdtree_build(data, n, d, levels,0,1);
+	printf("Done build\n");
+	toc();
 
 	point = malloc(sizeof(real)*d);
 
@@ -486,7 +495,7 @@ int main(void) {
 	//SUITE_ADD_TEST(suite, test_kd_range_search_callback);
 	//SUITE_ADD_TEST(suite, test_sort_random);
 	//
-	SUITE_ADD_TEST(suite, test_kd_massive_build);
+	//SUITE_ADD_TEST(suite, test_kd_massive_build);
 
 	/* Run the suite, collect results and display */
 	CuSuiteRun(suite);

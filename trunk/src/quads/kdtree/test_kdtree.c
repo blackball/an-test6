@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include "kdtree.h"
+#include "../tic.h"
 #include "CuTest/CuTest.h"
 
 #define MAXDEPTH 30
@@ -190,8 +191,8 @@ void test_kd_massive_build(CuTest *tc)
 }
 
 void test_kd_nn(CuTest *tc) {
-	int n=1000;
-	int levels=8;
+	int n=100000;
+	int levels=14;
 	int d=3, i, j;
 	kdtree_t* kd;
 	real* data;
@@ -311,17 +312,17 @@ void test_kd_range_search_callback(CuTest *tc) {
 }
 
 void test_kd_range_search(CuTest *tc) {
-	int n=10000;
+	int n=1000000;
 	int d=3, i, j;
-	int levels=10;
-	real range = 0.08;
+	int levels=18;
+	real range;
 	real range2;
 	real *point;
 	real *data = malloc(sizeof(real)*n*d);
 	real *origdata = malloc(sizeof(real)*n*d);
 	kdtree_qres_t* results;
 	int nfound;
-	int ntimes = 10;
+	int ntimes = 2000;
 	int t;
 	kdtree_t *kd;
 
@@ -330,13 +331,17 @@ void test_kd_range_search(CuTest *tc) {
 
 	memcpy(origdata, data, n*d*sizeof(real));
 
+	tic();
 	kd = kdtree_build(data, n, d, levels);
+	printf("Done build\n");
+	toc();
 
 	point = malloc(sizeof(real)*d);
 
+	tic();
 	for (t=0; t<ntimes; t++) {
 
-		range = t * 0.02;
+		range = t * 0.00001;
 		range2 = range*range;
 
 		for (i=0; i<d; i++)
@@ -380,10 +385,11 @@ void test_kd_range_search(CuTest *tc) {
 		// make sure the number of hits is equal.
 		CuAssertIntEquals(tc, nfound, results->nres);
 
-		printf("range search: %i results.\n", results->nres);
+		//printf("range search: %i results.\n", results->nres);
 
 		kdtree_free_query(results);
 	}
+	toc();
 	free(origdata);
 	free(point);
 	kdtree_free(kd);
@@ -408,10 +414,10 @@ int main(void) {
 	SUITE_ADD_TEST(suite, test_1d_nn_2);
 	SUITE_ADD_TEST(suite, test_kd_size);
 	SUITE_ADD_TEST(suite, test_kd_invalid_args);
-	SUITE_ADD_TEST(suite, test_kd_nn);
+	//SUITE_ADD_TEST(suite, test_kd_nn);
 	SUITE_ADD_TEST(suite, test_kd_range_search);
-	SUITE_ADD_TEST(suite, test_kd_range_search_callback);
-	SUITE_ADD_TEST(suite, test_sort_random);
+	//SUITE_ADD_TEST(suite, test_kd_range_search_callback);
+	//SUITE_ADD_TEST(suite, test_sort_random);
 	//SUITE_ADD_TEST(suite, test_kd_massive_build);
 
 	/* Run the suite, collect results and display */

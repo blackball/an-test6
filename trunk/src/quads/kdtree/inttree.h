@@ -43,6 +43,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int maxlevel, real
 
 /* Range seach */
 intkdtree_qres_t *intkdtree_rangesearch(intkdtree_t *kd, real *pt, real maxdistsquared);
+intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real maxdistsquared);
 
 /* Free results */
 void intkdtree_free_query(intkdtree_qres_t *kd);
