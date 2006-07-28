@@ -1,10 +1,20 @@
 #ifndef BT_H
 #define BT_H
 
-#include "starutil.h"
 #include "keywords.h"
 
+typedef unsigned char bool;
+
 #define NODENUM 0
+
+/*
+  We distinguish between "branch" (ie, internal) nodes and "leaf" nodes
+  because leaf nodes can be much smaller.  Since there are a lot of leaves,
+  the space savings can be considerable.
+
+  The data owned by a leaf node follows right after the leaf struct
+  itself.
+ */
 
 struct bt_leaf {
 	// always 1; must be the first element in the struct.
@@ -34,16 +44,6 @@ struct bt_branch {
 #endif
 };
 typedef struct bt_branch bt_branch;
-
-/*
-  We distinguish between "branch" (ie, internal) nodes and "leaf" nodes,
-  because leaf nodes don't need most of the entries in the "branch"
-  struct, and since there are a lot of leaves, this space savings can be
-  quite considerable.
-
-  The data owned by a leaf node follows right after the leaf struct
-  itself.
- */
 
 struct bt_node {
 	union {
