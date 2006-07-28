@@ -2,6 +2,10 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+
+#define TRUE  1
+#define FALSE 0
 
 #include "bt.h"
 
@@ -11,10 +15,6 @@
 #define AVL_MAX_HEIGHT 32
 
 // data follows the bt_datablock*.
-/*
-  #define NODE_DATA     (leaf) ((void*)(((bt_leaf*)(node)) + 1))
-  #define NODE_CHARDATA (leaf) ((char*)(((bt_leaf*)(node)) + 1))
-*/
 static Const void* NODE_DATA(bt_leaf* leaf) {
 	return leaf+1;
 }
@@ -273,12 +273,6 @@ bool bt_contains(bt* tree, void* data, compare_func compare) {
 	return bt_leaf_contains(tree, &n->leaf, data, compare);
 }
 
-static void increment_n(bt_node** ancestors, int nancestors) {
-	int i;
-	for (i=0; i<nancestors; i++)
-		ancestors[i]->branch.N++;
-}
-
 static void update_firstleaf(bt_node** ancestors, int nancestors,
 							 bt_node* child, bt_leaf* leaf) {
 	int i;
@@ -305,6 +299,7 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	bool rtn;
 	bool willfit;
 	int cmp;
+	int i;
 
 	if (!tree->root) {
 		// inserting the first element...
@@ -340,7 +335,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		// duplicate value?
 		if (!rtn)
 			return rtn;
-		increment_n(ancestors, nancestors);
+		for (i=0; i<nancestors; i++)
+			ancestors[i]->branch.N++;
 		return TRUE;
 	}
 
@@ -369,7 +365,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 		if (nextnode && (nextnode->leaf.N < tree->blocksize)) {
 			// there's room; insert the element!
 			rtn = bt_leaf_insert(tree, &nextnode->leaf, overflow, unique, compare, NULL);
-			increment_n(nextancestors, nnextancestors);
+			for (i=0; i<nancestors; i++)
+				ancestors[i]->branch.N++;
 			return rtn;
 		}
 
@@ -415,7 +412,8 @@ bool bt_insert(bt* tree, void* data, bool unique, compare_func compare) {
 	if (p == tree->root)
 		tree->root = np;
 
-	increment_n(ancestors, nancestors);
+	for (i=0; i<nancestors; i++)
+		ancestors[i]->branch.N++;
 
 	if (!y || isleaf(y))
 		return TRUE;
