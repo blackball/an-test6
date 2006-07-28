@@ -4,8 +4,6 @@
 #include "keywords.h"
 #include "starutil.h"
 
-#define NODENUM 0
-
 /*
   We distinguish between "branch" (ie, internal) nodes and "leaf" nodes
   because leaf nodes can be much smaller.  Since there are a lot of leaves,
@@ -37,10 +35,6 @@ struct bt_branch {
 
 	// number of element in this subtree.
 	int N;
-
-#if NODENUM
-	int nodenum;
-#endif
 };
 typedef struct bt_branch bt_branch;
 
