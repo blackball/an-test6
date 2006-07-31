@@ -5,10 +5,15 @@
 #include <string.h>
 #include <sys/mman.h>
 
-const char* OPTIONS = "h";
+#include "starutil.h"
+#include "mathutil.h"
+
+const char* OPTIONS = "hum:";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s <solved-file> ...\n",
+	fprintf(stderr, "Usage: %s <solved-file> ...\n"
+			"    [-u]: print UNsolved fields\n"
+			"    [-m <max-field>]: for unsolved mode, max field number.\n",
 			progname);
 }
 
@@ -21,9 +26,17 @@ int main(int argc, char** args) {
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
 	int i;
+	bool unsolved = FALSE;
+	int maxfield = 0;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'u':
+			unsolved = TRUE;
+			break;
+		case 'm':
+			maxfield = atoi(optarg);
+			break;
 		case 'h':
 		default:
 			printHelp(progname);
@@ -41,9 +54,10 @@ int main(int argc, char** args) {
 	for (i=0; i<ninputfiles; i++) {
 		FILE* fid;
 		off_t off;
-		char* map;
+		bool* map;
 		int mapsize;
 		int j;
+		int lim;
 		fid = fopen(inputfiles[i], "rb");
 		if (!fid) {
 			fprintf(stderr, "Failed to open input file %s: %s\n",
@@ -61,8 +75,19 @@ int main(int argc, char** args) {
 		}
 		fclose(fid);
 		printf("File %s\n", inputfiles[i]);
-		for (j=0; j<mapsize; j++)
-			if (map[j])
+		if (maxfield)
+			lim = imin(maxfield, mapsize);
+		else
+			lim = mapsize;
+
+		for (j=0; j<lim; j++)
+			if (unsolved && !map[j])
+				printf("%i ", j);
+			else if (!unsolved && map[j])
+				printf("%i ", j);
+		if (unsolved)
+			// all fields beyond the end of the file are unsolved.
+			for (; j<maxfield; j++)
 				printf("%i ", j);
 		printf("\n");
 

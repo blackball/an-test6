@@ -140,7 +140,7 @@ all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat
 hptst: hptst.o healpix.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-printsolved: printsolved.o
+printsolved: printsolved.o mathutil.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 solvedserver: solvedserver.o solvedfile.o bl.o
