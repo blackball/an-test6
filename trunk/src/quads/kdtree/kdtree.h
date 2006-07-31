@@ -6,6 +6,12 @@
 #define KDTREE_MAX_LEVELS 1000
 #define KDT_INFTY 1e309
 
+
+#define KD_OPTIONS_COMPUTE_DISTS  0x1
+#define KD_OPTIONS_SORT_DISTS     0x2
+#define KD_OPTIONS_SMALL_RADIUS   0x4
+
+
 typedef double real;
 struct kdtree_hr {
 	real *low;            /* Lower hyperrectangle boundry */
@@ -122,6 +128,8 @@ kdtree_t* KDFUNC(kdtree_build)(real *data, int ndata, int ndim, int maxlevel);
 kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, real *pt, real maxdistsquared);
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, real *pt, real maxdistsquared);
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(kdtree_t *kd, real *pt, real maxdistsquared, int options);
 
 #if !defined(KD_DIM)
 #undef KD_DIM_GENERIC
