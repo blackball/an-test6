@@ -42,18 +42,10 @@ struct kdtree_qres {
 };
 typedef struct kdtree_qres kdtree_qres_t;
 
-/* Build a tree from an array of data, of size N*D*sizeof(real) */
-kdtree_t *kdtree_build(real *data, int ndata, int ndim, int maxlevel);
-
 /* Compute how many levels should be used if you have "N" points and you
    want "Nleaf" points in the leaf nodes.
 */
 int kdtree_compute_levels(int N, int Nleaf);
-
-/* Range seach */
-kdtree_qres_t *kdtree_rangesearch(kdtree_t *kd, real *pt, real maxdistsquared);
-
-kdtree_qres_t *kdtree_rangesearch_nosort(kdtree_t *kd, real *pt, real maxdistsquared);
 
 /* Range seach using callback */
 void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
@@ -102,4 +94,38 @@ int kdtree_qsort_results(kdtree_qres_t *kq, int D);
 int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r, int D, int d);
 int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 
+// include dimension-generic versions of the dimension-specific code.
+#define KD_DIM_GENERIC 1
+
 #endif /* KDTREE_H */
+
+
+#if defined(KD_DIM) || defined(KD_DIM_GENERIC)
+
+#if defined(KD_DIM)
+  #undef KDID
+  #undef GLUE2
+  #undef GLUE
+
+  #define GLUE2(a, b) a ## b
+  #define GLUE(a, b) GLUE2(a, b)
+  #define KDID(x) GLUE(x ## _, KD_DIM)
+#else
+  #define KDID(x) x
+#endif
+#define KDFUNC(x) KDID(x)
+
+/* Build a tree from an array of data, of size N*D*sizeof(real) */
+kdtree_t* KDFUNC(kdtree_build)(real *data, int ndata, int ndim, int maxlevel);
+
+/* Range seach */
+kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, real *pt, real maxdistsquared);
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, real *pt, real maxdistsquared);
+
+#if !defined(KD_DIM)
+#undef KD_DIM_GENERIC
+#endif
+
+#endif
+

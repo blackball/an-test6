@@ -174,28 +174,6 @@ real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
 	return d2;
 }
 
-int kdtree_bb_point_mindist2_exceeds(real* bblow, real* bbhigh,
-									 real* point, int dim, real maxd2) {
-	real d2 = 0.0;
-	real delta;
-	int i;
-	for (i = 0; i < dim; i++) {
-		real lo, hi;
-		lo = bblow[i];
-		hi = bbhigh[i];
-		if (point[i] < lo)
-			delta = lo - point[i];
-		else if (point[i] > hi)
-			delta = point[i] - hi;
-		else
-			continue;
-		d2 += delta * delta;
-		if (d2 > maxd2)
-			return 1;
-	}
-	return 0;
-}
-
 real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh, real* point, int dim)
 {
 	real d2 = 0.0;
@@ -213,28 +191,6 @@ real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh, real* point, int dim)
 			d2 += delta2;
 	}
 	return d2;
-}
-
-real kdtree_bb_point_maxdist2_exceeds(real* bblow, real* bbhigh,
-									  real* point, int dim, double maxd2)
-{
-	real d2 = 0.0;
-	real delta1, delta2;
-	int i;
-	for (i = 0; i < dim; i++) {
-		real lo, hi;
-		lo = bblow[i];
-		hi = bbhigh[i];
-		delta1 = (point[i] - lo) * (point[i] - lo);
-		delta2 = (point[i] - hi) * (point[i] - hi);
-		if (delta1 > delta2)
-			d2 += delta1;
-		else
-			d2 += delta2;
-		if (d2 > maxd2)
-			return 1;
-	}
-	return 0;
 }
 
 int kdtree_node_to_nodeid(kdtree_t* kd, kdtree_node_t* node) {
@@ -348,25 +304,9 @@ real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 									pt, kd->ndim);
 }
 
-int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
-									   real* pt, real maxd2) {
-	return kdtree_bb_point_mindist2_exceeds
-		(kdtree_get_bb_low(kd, node),
-		 kdtree_get_bb_high(kd, node),
-		 pt, kd->ndim, maxd2);
-}
-
 real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt) {
 	return kdtree_bb_point_maxdist2(kdtree_get_bb_low(kd, node),
 									kdtree_get_bb_high(kd, node),
 									pt, kd->ndim);
-}
-
-int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
-										real* pt, real maxd2) {
-	return kdtree_bb_point_maxdist2_exceeds
-		(kdtree_get_bb_low(kd, node),
-		 kdtree_get_bb_high(kd, node),
-		 pt, kd->ndim, maxd2);
 }
 

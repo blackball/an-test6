@@ -15,6 +15,9 @@ CFLAGS += -O3 -ffast-math
 # to turn off asserts:
 CFLAGS += -DNDEBUG
 
+#CFLAGS += -fmudflap
+#LFLAGS += -lmudflap
+
 # What functions were and weren't inlined?
 #CFLAGS += -Winline
 #	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
@@ -66,8 +69,8 @@ QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/q
 	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
 
 OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
-	kdtree/kdtree.o kdtree/kdtree_access.o kdtree/kdtree_io.o \
-	kdtree/kdtree_fits_io.o \
+	kdtree/kdtree.o kdtree/kdtree_access.o kdtree/kdtree_dim.o \
+	kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
 	healpix.o \
 	idfile.o qidxfile.o \
 	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \
@@ -107,7 +110,8 @@ EXECS := whynot agreeable certifiable quadidx \
 #   dedup_index 
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
-	filter_an kdspeed
+	filter_an
+#kdspeed
 
 # execs that require solver.o
 SOLVER_EXECS := slave
@@ -136,6 +140,13 @@ CFLAGS += -Ikdtree
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat
+
+kdspeed: kdspeed.o kdtree/kdtree.o kdtree/kdtree_dim.o kdtree/kdtree_access.o \
+	kdtree/kdtree_dim_4.o tic.o
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
+
+kdtree/kdtree_dim_4.o: kdtree/kdtree_dim.c
+	$(CC) $(CFLAGS) -o $@ -c $^ -DKD_DIM=4
 
 hptst: hptst.o healpix.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
