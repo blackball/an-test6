@@ -19,13 +19,16 @@ int main() {
 	kdtree_qres_t* res1;
 	kdtree_qres_t* res2;
 	int levels;
+	double maxd2 = 0.001; // gives about 5 results per query.
+	//double maxd2 = 0.002;
 	//double maxd2 = 0.003;
-	double maxd2 = 0.01;
+	//double maxd2 = 0.01;
 	int ROUNDS = 10000;
 	int REPS = 5;
 	double v1_total[REPS];
 	double v2_total[REPS];
 	int lastgrass = 0;
+	double nresavg;
 
 	printf("N=%i, D=%i.\n", N, D);
 	printf("Generating random data...\n");
@@ -66,6 +69,8 @@ int main() {
 	REPS=1;
 	r=0;
 
+	nresavg = 0.0;
+
 	for (i=0; i<ROUNDS; i++) {
 		double pt[4];
 		struct timeval tv1, tv2, tv3, tv4;
@@ -79,22 +84,29 @@ int main() {
 		for (d=0; d<D; d++)
 			pt[d] = rand() / (double)RAND_MAX;
 
+		//#define OPTION1 			res1 = kdtree_rangesearch_options_4(kd, pt, maxd2, 0);
+#define OPTION1 			res1 = kdtree_rangesearch(kd, pt, maxd2);
+#define OPTION2 			res2 = kdtree_rangesearch_options_4(kd, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+
 		//for (r=0; r<REPS; r++) {
 		if (i % 2) {
 			gettimeofday(&tv1, NULL);
-			res1 = kdtree_rangesearch_nosort(kd, pt, maxd2);
+			OPTION1
 			gettimeofday(&tv2, NULL);
 			gettimeofday(&tv3, NULL);
-			res2 = kdtree_rangesearch_nosort_4(kd, pt, maxd2);
+			OPTION2
 			gettimeofday(&tv4, NULL);
 		} else {
 			gettimeofday(&tv3, NULL);
-			res2 = kdtree_rangesearch_nosort_4(kd, pt, maxd2);
+			OPTION2
 			gettimeofday(&tv4, NULL);
 			gettimeofday(&tv1, NULL);
-			res1 = kdtree_rangesearch_nosort(kd, pt, maxd2);
+			OPTION1
 			gettimeofday(&tv2, NULL);
 		}
+
+		nresavg += res1->nres;
+
 		/*
 		  if (r < REPS-1) {
 		  kdtree_free_query(res1);
@@ -123,5 +135,7 @@ int main() {
 		printf("rangesearch:   %g ms.\nrangesearch_4: %g ms.\n",
 			v1_total[i], v2_total[i]);
 	
+	printf("Average number of results: %g\n", nresavg / (double)ROUNDS);
+
 	return 0;
 }

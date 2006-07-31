@@ -35,6 +35,20 @@ static inline real KDFUNC(dist2_bailout)(real* p1, real* p2, int d, real maxd2) 
 	return d2;
 }
 
+static inline real KDFUNC(dist2_exceeds)(real* p1, real* p2, int d, real maxd2) {
+	int i;
+	real d2 = 0.0;
+#if defined(KD_DIM)
+	d = KD_DIM;
+#endif
+	for (i=0; i<d; i++) {
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
+}
+
 #define GET(x) (arr[(x)*D+d])
 #define ELEM_SWAP(il, ir) { \
         if ((il) != (ir)) { \
@@ -253,19 +267,22 @@ kdtree_t* KDFUNC(kdtree_build)
 }
 
 inline static
-bool resize_results(kdtree_qres_t* res, int newsize, int d) {
+bool resize_results(kdtree_qres_t* res, int newsize, int d,
+					bool do_dists) {
+	if (do_dists)
+		res->sdists  = realloc(res->sdists , newsize * sizeof(real));
 	res->results = realloc(res->results, newsize * d * sizeof(real));
-	res->sdists  = realloc(res->sdists , newsize * sizeof(real));
 	res->inds    = realloc(res->inds   , newsize * sizeof(unsigned int));
-	if (newsize && (!res->results || !res->sdists || !res->inds))
+	if (newsize && (!res->results || (do_dists && !res->sdists) || !res->inds))
 		fprintf(stderr, "Failed to resize kdtree results arrays.\n");
 	return TRUE;
 }
 
 inline static
 bool add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
-				int d, int* res_size) {
-	res->sdists[res->nres] = sdist;
+				int d, int* res_size, bool do_dists) {
+	if (do_dists)
+		res->sdists[res->nres] = sdist;
 	res->inds  [res->nres] = ind;
 	memcpy(res->results + res->nres * d, pt, sizeof(real) * d);
 	res->nres++;
@@ -273,34 +290,32 @@ bool add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
 	if (res->nres == *res_size) {
 		// enlarge arrays.
 		*res_size *= 2;
-		return resize_results(res, *res_size, d);
+		return resize_results(res, *res_size, d, do_dists);
 	}
 	return TRUE;
 }
 
 /* Range seach */
 kdtree_qres_t* KDFUNC(kdtree_rangesearch)
-	 (kdtree_t *kd, real *pt, real maxdistsquared)
-{
-	kdtree_qres_t *res;
-	if (!kd || !pt)
-		return NULL;
-	res = KDFUNC(kdtree_rangesearch_nosort)(kd, pt, maxdistsquared);
-	if (!res)
-		return NULL;
-	/* Sort by ascending distance away from target point before returning */
-	kdtree_qsort_results(res, kd->ndim);
-	return res;
+	 (kdtree_t *kd, real *pt, real maxd2) {
+	return KDFUNC(kdtree_rangesearch_options)(kd, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS | KD_OPTIONS_SORT_DISTS);
 }
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
 	 (kdtree_t *kd, real *pt, real maxd2) {
+	return KDFUNC(kdtree_rangesearch_options)(kd, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS);
+}
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)
+	 (kdtree_t *kd, real *pt, real maxd2, int options) {
 	int nodestack[100];
 	int stackpos = 0;
 	kdtree_qres_t *res;
 	int res_size;
 	int* p_res_size = &res_size;
 	int D;
+	bool do_dists;
+	bool do_wholenode_check;
 
 	if (!kd || !pt)
 		return NULL;
@@ -310,13 +325,20 @@ kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
 #else
 	D = kd->ndim;
 #endif
+
+	// gotta compute 'em if ya wanna sort 'em!
+	if (options & KD_OPTIONS_SORT_DISTS)
+		options |= KD_OPTIONS_COMPUTE_DISTS;
+	do_dists = options & KD_OPTIONS_COMPUTE_DISTS;
+	do_wholenode_check = !(options & KD_OPTIONS_SMALL_RADIUS);
+
 	res = calloc(1, sizeof(kdtree_qres_t));
 	if (!res) {
 		fprintf(stderr, "Failed to allocate kdtree_qres_t struct.\n");
 		return NULL;
 	}
 	res_size = KDTREE_MAX_RESULTS;
-	resize_results(res, res_size, D);
+	resize_results(res, res_size, D, do_dists);
 
 	// queue root.
 	nodestack[0] = 0;
@@ -333,22 +355,37 @@ kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
 			continue;
 		/* FIXME benchmark to see if this helps: if the whole node is within
 		   range, grab all its points. */
-		if (!KDFUNC(kdtree_node_point_maxdist2_exceeds)(kd, node, pt, maxd2)) {
-			for (i=node->l; i<=node->r; i++) {
-				if (!add_result(res, KDFUNC(dist2)(kd->data + i * D, pt, D),
-								(kd->perm ? kd->perm[i] : i), COORD(i, 0), D, p_res_size))
-					return NULL;
+		if (do_wholenode_check &&
+			!KDFUNC(kdtree_node_point_maxdist2_exceeds)(kd, node, pt, maxd2)) {
+			if (do_dists) {
+				for (i=node->l; i<=node->r; i++)
+					if (!add_result(res, KDFUNC(dist2)(kd->data + i * D, pt, D),
+									(kd->perm ? kd->perm[i] : i), COORD(i, 0), D, p_res_size, do_dists))
+						return NULL;
+			} else {
+				for (i=node->l; i<=node->r; i++)
+					if (!add_result(res, 0.0, (kd->perm ? kd->perm[i] : i), COORD(i, 0), D, p_res_size, do_dists))
+						return NULL;
 			}
 			continue;
 		}
 		if (ISLEAF(nodeid)) {
-			for (i=node->l; i<=node->r; i++) {
-				// FIXME benchmark dist2 vs dist2_bailout.
-				real dsqd = KDFUNC(dist2_bailout)(pt, COORD(i, 0), D, maxd2);
-				if (dsqd == -1.0)
-					continue;
-				if (!add_result(res, dsqd, (kd->perm ? kd->perm[i] : i), COORD(i, 0), D, p_res_size))
-					return NULL;
+			if (do_dists) {
+				for (i=node->l; i<=node->r; i++) {
+					// FIXME benchmark dist2 vs dist2_bailout.
+					real dsqd = KDFUNC(dist2_bailout)(pt, COORD(i, 0), D, maxd2);
+					if (dsqd == -1.0)
+						continue;
+					if (!add_result(res, dsqd, (kd->perm ? kd->perm[i] : i), COORD(i, 0), D, p_res_size, do_dists))
+						return NULL;
+				}
+			} else {
+				for (i=node->l; i<=node->r; i++) {
+					if (KDFUNC(dist2_exceeds)(pt, COORD(i, 0), D, maxd2))
+						continue;
+					if (!add_result(res, 0.0, (kd->perm ? kd->perm[i] : i), COORD(i, 0), D, p_res_size, do_dists))
+						return NULL;
+				}
 			}
 			continue;
 		}
@@ -359,7 +396,12 @@ kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
 	}
 
 	/* Resize result arrays. */
-	resize_results(res, res->nres, D);
+	resize_results(res, res->nres, D, do_dists);
+
+	/* Sort by ascending distance away from target point before returning */
+	if (options & KD_OPTIONS_SORT_DISTS)
+		kdtree_qsort_results(res, kd->ndim);
+
 	return res;
 }
 
