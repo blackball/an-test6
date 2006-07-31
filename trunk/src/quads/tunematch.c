@@ -28,6 +28,7 @@ static void printHelp(char* progname) {
 			"   -r <overlap radius (arcsec)>\n"
 			"   -t <overlap threshold>\n"
 			"   -m <min field objects required>\n"
+			"   [-w <FITS WCS header output file>]\n"
 			"\n", progname);
 }
 
@@ -97,6 +98,7 @@ int main(int argc, char *argv[]) {
 	*/
 	char* infn = NULL;
 	char* outfn = NULL;
+	char* fitsout = NULL;
 	char* xylsfn = NULL;
 	char* starfn = NULL;
 	char* xname = NULL;
@@ -118,6 +120,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'w':
+			fitsout = optarg;
+			break;
 		case 'X':
 			xname = optarg;
 			break;
@@ -255,8 +260,8 @@ int main(int argc, char *argv[]) {
 		res = kdtree_rangesearch_nosort(startree, centerxyz, r2);
 		if (!res->nres) {
 			printf("no stars found.\n");
-			//kdtree_free_query(res);
-			//continue;
+			kdtree_free_query(res);
+			continue;
 		}
 
 		// convert the transformation matrix into RA, DEC, theta, scale.
@@ -624,6 +629,53 @@ int main(int argc, char *argv[]) {
 		printf("Final overlap: %g\n", mo->overlap);
 
 		matchfile_write_match(matchout, mo);
+
+		if (fitsout) {
+			FILE* fid = fopen(fitsout, "wb");
+			qfits_header* hdr;
+			char val[64];
+			if (!fid) {
+				fprintf(stderr, "Failed to open file %s to write FITS header: %s\n",
+						fitsout, strerror(errno));
+				exit(-1);
+			}
+			hdr = qfits_header_default();
+
+			qfits_header_add(hdr, "CRPIX1 ", "0", "X reference pixel", NULL);
+			qfits_header_add(hdr, "CRPIX2 ", "0", "Y reference pixel", NULL);
+			sprintf(val, "%g", rad2deg(S));
+			qfits_header_add(hdr, "CDELT1 ", val, "X pixel scale (deg)", NULL);
+			qfits_header_add(hdr, "CDELT2 ", val, "Y pixel scale (deg)", NULL);
+			qfits_header_add(hdr, "CUNIT1 ", "deg", "X pixel scale units", NULL);
+			qfits_header_add(hdr, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
+			sprintf(val, "%g", cos(T));
+			qfits_header_add(hdr, "PC1_1 ", val, "XY rotation matrix (cos T)", NULL);
+			qfits_header_add(hdr, "PC2_2 ", val, "XY rotation matrix (cos T)", NULL);
+			sprintf(val, "%g", -sin(T));
+			qfits_header_add(hdr, "PC1_2 ", val, "XY rotation matrix (-sin T)", NULL);
+			sprintf(val, "%g", sin(T));
+			qfits_header_add(hdr, "PC2_1 ", val, "XY rotation matrix (sin T)", NULL);
+
+			qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
+			qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
+			sprintf(val, "%g", rad2deg(ra));
+			qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
+			sprintf(val, "%g", rad2deg(dec));
+			qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
+
+			if (qfits_header_dump(hdr, fid)) {
+				fprintf(stderr, "Failed to write FITS header to file %s.\n", fitsout);
+				exit(-1);
+			}
+
+			qfits_header_destroy(hdr);
+			if (fclose(fid)) {
+				fprintf(stderr, "Failed to close file %s to write FITS header: %s\n",
+						fitsout, strerror(errno));
+				exit(-1);
+			}
+		}
+
 	}
 
 	free(fielduv);
