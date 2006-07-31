@@ -5,6 +5,9 @@
 #include <time.h>
 
 #include "kdtree.h"
+#define KD_DIM 4
+#include "kdtree.h"
+
 #include "tic.h"
 
 int main() {
@@ -16,11 +19,12 @@ int main() {
 	kdtree_qres_t* res1;
 	kdtree_qres_t* res2;
 	int levels;
-	double maxd2 = 0.003;
+	//double maxd2 = 0.003;
+	double maxd2 = 0.01;
 	int ROUNDS = 10000;
 	int REPS = 5;
-	double iter_total[REPS];
-	double rec_total[REPS];
+	double v1_total[REPS];
+	double v2_total[REPS];
 	int lastgrass = 0;
 
 	printf("N=%i, D=%i.\n", N, D);
@@ -31,33 +35,40 @@ int main() {
 		data[i] = rand() / (double)RAND_MAX;
 
 	for (i=0; i<REPS; i++)
-		iter_total[i] = rec_total[i] = 0.0;
+		v1_total[i] = v2_total[i] = 0.0;
 
 	levels = kdtree_compute_levels(N, 10);
 	printf("Creating tree with %i levels...\n", levels);
 	fflush(stdout);
 
-	for (r=0; r<REPS; r++) {
+#if 0
+	for (r=0; r<0; r++) {
 		kdtree_t *kd1, *kd2;
 		struct timeval tv1, tv2, tv3;
 		gettimeofday(&tv1, NULL);
 		kd1 = kdtree_build(data, N, D, levels);
 		gettimeofday(&tv2, NULL);
-		kd2 = kdtree_build_depthfirst(data, N, D, levels);
+		kd2 = kdtree_build_4(data, N, D, levels);
 		gettimeofday(&tv3, NULL);
 
-		printf("breadth: %g ms.\ndepth: %g ms.\n",
+		printf("build: %g ms.\nbuild_4: %g ms.\n",
 			   millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
 		kdtree_free(kd1);
 		kdtree_free(kd2);
 	}
-	exit(0);
+#endif
 
 	kd = kdtree_build(data, N, D, levels);
 
+	for (i=0; i<REPS; i++)
+		v1_total[i] = v2_total[i] = 0.0;
+
+	REPS=1;
+	r=0;
+
 	for (i=0; i<ROUNDS; i++) {
-		double pt[3];
-		struct timeval tv1, tv2, tv3;
+		double pt[4];
+		struct timeval tv1, tv2, tv3, tv4;
 		int grass;
 		grass = i * 80 / ROUNDS;
 		if (grass != lastgrass) {
@@ -68,22 +79,33 @@ int main() {
 		for (d=0; d<D; d++)
 			pt[d] = rand() / (double)RAND_MAX;
 
-		for (r=0; r<REPS; r++) {
+		//for (r=0; r<REPS; r++) {
+		if (i % 2) {
 			gettimeofday(&tv1, NULL);
 			res1 = kdtree_rangesearch_nosort(kd, pt, maxd2);
 			gettimeofday(&tv2, NULL);
-			res2 = kdtree_rangesearch_iter(kd, pt, maxd2);
 			gettimeofday(&tv3, NULL);
-			if (r < REPS-1) {
-				kdtree_free_query(res1);
-				kdtree_free_query(res2);
-			}
-				printf("recursive: %g ms.\niterative: %g ms.\n",
-				   millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
-
-			rec_total[r] += millis_between(&tv1, &tv2);
-			iter_total[r] += millis_between(&tv2, &tv3);
+			res2 = kdtree_rangesearch_nosort_4(kd, pt, maxd2);
+			gettimeofday(&tv4, NULL);
+		} else {
+			gettimeofday(&tv3, NULL);
+			res2 = kdtree_rangesearch_nosort_4(kd, pt, maxd2);
+			gettimeofday(&tv4, NULL);
+			gettimeofday(&tv1, NULL);
+			res1 = kdtree_rangesearch_nosort(kd, pt, maxd2);
+			gettimeofday(&tv2, NULL);
 		}
+		/*
+		  if (r < REPS-1) {
+		  kdtree_free_query(res1);
+		  kdtree_free_query(res2);
+		  }
+		  //printf("rangesearch: %g ms.\nrangesearch_4: %g ms.\n", millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
+		  */
+
+		v1_total[r] += millis_between(&tv1, &tv2);
+		v2_total[r] += millis_between(&tv3, &tv4);
+		//}
 
 		assert(res1->nres == res2->nres);
 		if (res1->nres != res2->nres) {
@@ -98,8 +120,8 @@ int main() {
 
 	printf("\n\nTotals:\n\n");
 	for (i=0; i<REPS; i++)
-		printf("recursive: %g ms.\niterative: %g ms.\n",
-			rec_total[i], iter_total[i]);
+		printf("rangesearch:   %g ms.\nrangesearch_4: %g ms.\n",
+			v1_total[i], v2_total[i]);
 	
 	return 0;
 }

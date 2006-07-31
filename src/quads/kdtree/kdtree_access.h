@@ -74,10 +74,31 @@ real kdtree_node_point_mindist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
 
 real kdtree_node_point_maxdist2(kdtree_t* kd, kdtree_node_t* node, real* pt);
 
-int kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
-									   real* pt, real maxd2);
+#define KD_ACCESS_GENERIC 1
 
-int kdtree_node_point_mindist2_exceeds(kdtree_t* kd, kdtree_node_t* node,
-									   real* pt, real maxd2);
+#endif
+
+
+#if defined(KD_ACCESS_GENERIC) || defined(KD_DIM)
+
+int KDFUNC(kdtree_node_point_maxdist2_exceeds)
+	 (kdtree_t* kd, kdtree_node_t* node,
+	  real* pt, real maxd2);
+
+int KDFUNC(kdtree_node_point_mindist2_exceeds)
+	 (kdtree_t* kd, kdtree_node_t* node,
+	  real* pt, real maxd2);
+
+int KDFUNC(kdtree_bb_point_mindist2_exceeds)
+	 (real* bblow, real* bbhigh,
+	  real* point, int dim, real maxd2);
+
+int KDFUNC(kdtree_bb_point_maxdist2_exceeds)
+	 (real* bblow, real* bbhigh,
+	  real* point, int dim, real maxd2);
+
+#if !defined(KD_DIM)
+#undef KD_ACCESS_GENERIC
+#endif
 
 #endif
