@@ -14,6 +14,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "kdtree_access.h"
+#include "bl.h"
 
 #define OPTIONS "hn:o:"
 
@@ -27,13 +28,15 @@ void print_help(char* progname)
 			"   [-n <image-size>]  (default 3000)\n"
 			"   [-h]: help\n"
 			"   <base-name> [<base-name> ...]\n\n"
-			"Requires both (objs or skdt) and quad files.  Writes a PGM image.\n\n",
+			"Requires both (objs or skdt) and quad files.  Writes a PGM image.\n"
+			"If you specify multiple -o and -n options, multiple image files will be written.\n\n",
 	        progname);
 }
 
 int main(int argc, char** args) {
     int argchar;
-	int N = 3000;
+	const int Ndefault = 3000;
+	int N = Ndefault;
 	char* basename;
 	char* outfn = NULL;
 	char* fn;
@@ -41,20 +44,27 @@ int main(int argc, char** args) {
 	catalog* cat = NULL;
 	kdtree_t* skdt = NULL;
 	int* invperm = NULL;
-	uchar* img;
-	uint* counts;
+	uchar* img = NULL;
 	int i;
 	int maxval;
-	FILE* fid;
 	unsigned char* starcounts;
+	il* imgsizes;
+	pl* outnames;
+	uint** counts;
+	int Nimgs;
+
+	imgsizes = il_new(8);
+	outnames = pl_new(8);
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
 		case 'o':
 			outfn = optarg;
+			pl_append(outnames, strdup(optarg));
 			break;
         case 'n':
             N = atoi(optarg);
+			il_append(imgsizes, N);
             break;
 		case 'h':
 			print_help(args[0]);
@@ -66,16 +76,19 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	fid = fopen(outfn, "wb");
-	if (!fid) {
-		fprintf(stderr, "Couldn't open file %s to write image: %s\n", outfn, strerror(errno));
-		exit(-1);
-	}
+	for (i=il_size(imgsizes); i<pl_size(outnames); i++)
+		il_append(imgsizes, Ndefault);
 
-	counts = calloc(sizeof(uint), N*N);
-	if (!counts) {
-		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
-		exit(-1);
+	Nimgs = pl_size(outnames);
+
+	counts = malloc(Nimgs * sizeof(uint*));
+	for (i=0; i<Nimgs; i++) {
+		int n = il_get(imgsizes, i);
+		counts[i] = calloc(n*n, sizeof(int));
+		if (!counts) {
+			fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
+			exit(-1);
+		}
 	}
 
 	for (; optind<argc; optind++) {
@@ -137,6 +150,7 @@ int main(int argc, char** args) {
 			double* xyz;
 			double px, py;
 			int X, Y;
+			int j;
 			if (!(i % 100000)) {
 				printf(".");
 				fflush(stdout);
@@ -150,9 +164,12 @@ int main(int argc, char** args) {
 			project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
 			px = 0.5 + (px - 0.5) * 0.99;
 			py = 0.5 + (py - 0.5) * 0.99;
-			X = (int)rint(px * N);
-			Y = (int)rint(py * N);
-			counts[Y*N + X] += starcounts[i];
+			for (j=0; j<Nimgs; j++) {
+				N = il_get(imgsizes, j);
+				X = (int)rint(px * N);
+				Y = (int)rint(py * N);
+				(counts[j])[Y*N + X] += starcounts[i];
+			}
 		}
 		printf("\n");
 
@@ -166,27 +183,39 @@ int main(int argc, char** args) {
 		free(starcounts);
 	}
 
-	maxval = 0;
-	for (i=0; i<(N*N); i++)
-		if (counts[i] > maxval)
-			maxval = counts[i];
-	printf("maxval is %i.\n", maxval);
+	for (i=0; i<Nimgs; i++) {
+		FILE* fid;
+		int j;
+		outfn = pl_get(outnames, i);
+		N = il_get(imgsizes, i);
 
-	img = calloc(1, N*N);
-	if (!img) {
-		fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
-		exit(-1);
+		maxval = 0;
+		for (j=0; j<(N*N); j++)
+			if (counts[i][j] > maxval)
+				maxval = counts[i][j];
+		printf("maxval is %i.\n", maxval);
+
+		fid = fopen(outfn, "wb");
+		if (!fid) {
+			fprintf(stderr, "Couldn't open file %s to write image: %s\n", outfn, strerror(errno));
+			exit(-1);
+		}
+		img = realloc(img, N*N);
+		if (!img) {
+			fprintf(stderr, "Couldn't allocate %ix%i image.\n", N, N);
+			exit(-1);
+		}
+		for (j=0; j<(N*N); j++)
+			img[j] = (int)rint((255.0 * (double)counts[i][j]) / (double)maxval);
+
+		fprintf(fid, "P5 %d %d %d\n",N,N, 255);
+		if (fwrite(img, 1, N*N, fid) != (N*N)) {
+			fprintf(stderr, "Failed to write image file: %s\n", strerror(errno));
+			exit(-1);
+		}
+		fclose(fid);
+		free(outfn);
 	}
-
-	for (i=0; i<(N*N); i++)
-		img[i] = (int)rint((255.0 * (double)counts[i]) / (double)maxval);
-
-	fprintf(fid, "P5 %d %d %d\n",N,N, 255);
-	if (fwrite(img, 1, N*N, fid) != (N*N)) {
-		fprintf(stderr, "Failed to write image file: %s\n", strerror(errno));
-		exit(-1);
-	}
-	fclose(fid);
 
 	free(img);
 	free(counts);
