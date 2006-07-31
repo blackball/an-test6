@@ -150,15 +150,16 @@ end
 
 
 subplot(1,1,1);
+clf;
 imagesc(hist_xy);
 set(gca,'YDir','normal');
 set(gca,'XTickLabel',{});
 set(gca,'YTickLabel',{});
 axis tight;
 axis square;
-xlabel('x')
-ylabel('y') 
-title('cx vs cy + dx vs dy')
+%xlabel('x')
+%ylabel('y') 
+%title('cx vs cy + dx vs dy')
 colormap hot
 if print_plots,
   fn = ['cp_xy', plot_suffix, '.eps'];
@@ -170,15 +171,16 @@ end
 
 if do_density,
   subplot(1,1,1);
+  clf;
   imagesc(dhist_xy);
   set(gca,'YDir','normal');
   set(gca,'XTickLabel',{});
   set(gca,'YTickLabel',{});
   axis tight;
   axis square;
-  xlabel('x')
-  ylabel('y') 
-  title('cx vs cy + dx vs dy')
+  %xlabel('x')
+  %ylabel('y') 
+  %title('cx vs cy + dx vs dy')
   colormap hot
   if print_plots,
     fn = ['cp_dxy', plot_suffix, '.eps'];

@@ -20,16 +20,20 @@ UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars2
 CODETREE        := codetree
 HPQUADS         := hpquads
+QUADIDX			:= quadidx
 QUADLOCATIONS 	:= quadlocations 
+QUADSPERSTAR 	:= quadsperstar 
 CODEPROJ        := codeprojections
-MATLAB		:= matlab
+MATLAB			:= matlab
+PNMTOPNG		:= pnmtopng
+EPSTOPNG		:= epstopng
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
 
 CODETREE_OPTS := -R 15
 HPQUADS_OPTS  := -l 4 -u 5 -n 879 -i 16 -c -x 5 -y 5 -r 8
-QUADLOC_OPTS  := -n 1000
+QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
@@ -38,6 +42,9 @@ MATLAB_INIT   := addpath('~/quads')
 define INDEX_template
 PHO += $(1)
 $(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+
+$(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
+	$(QUADIDX) -f $(INDEX)$(1)
 
 $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
 		$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).quad.fits
@@ -61,21 +68,31 @@ $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
-quad$(1).pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
-	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o $$@ $(INDEX)$(1)
+quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
+	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o quad$(1)_small.pgm -o quad$(1).pgm $(INDEX)$(1)
 
 proj$(1).m: $(INDEX)$(1).ckdt.fits
 	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
 
 PHO += ana$(1)
-ana$(1): quad$(1).pgm proj$(1).m
+ana$(1): quad$(1).png quad$(1)_small.png proj$(1).m
 
 PHO += plot$(1)
-plot$(1): cp_hists$(1).eps
+plot$(1): cp_2dhists$(1).png cp_2dhists$(1)_small.png \
+	cp_1dhists$(1).png cp_1dhists$(1)_small.png \
+	cp_xy$(1).png cp_xy$(1)_small.png \
 
-cp_hists$(1).eps: proj$(1).m
+PHO += dplot$(1)
+dplot$(1): cp_2ddhists$(1).png cp_2ddhists$(1)_small.png \
+	cp_1ddhists$(1).png cp_1ddhists$(1)_small.png \
+	cp_dxy$(1).png cp_dxy$(1)_small.png
+
+cp_2dhists$(1).eps cp_2ddhists$(1).eps cp_xy$(1).eps: proj$(1).m
 	echo "$(MATLAB_INIT); fprintf('\nGenerating plots for $(1)...\n'); proj$(1); print_plots=1; plot_suffix='$(1)'; batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
+
+%$(1)_small.png: %$(1).png
+	pngtopnm -- $$< | pamscale -linear 0.2 | pnmtopng > $$@
 
 SEC += \
     $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
@@ -83,7 +100,11 @@ SEC += \
 
 endef
 
+%.png: %.pgm
+	$(PNMTOPNG) -- $< > $@
 
+%.png: %.eps
+	$(EPSTOPNG) $< $@
 
 NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
 
@@ -98,16 +119,51 @@ $(foreach num,$(NUMS),$(eval $(call INDEX_template,$(num))))
 all:
 	@echo try targets 00, 01, 02, ..., 11
 
-.PHONY: anaall
-anaall: quadsall.pgm
+.PHONY: ana_all
+ana_all: quadsall.png quadsall_small.png
+
+quadsall.pgm quadsall_small.pgm: \
+	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
+	$(addsuffix .skdt.fits, $(addprefix $(INDEX), $(NUMS)))
+	$(QUADLOCATIONS) $(QUADLOC_OPTS) $(addprefix $(INDEX), $(NUMS)) \
+		-o quadsall_small.pgm quadsall.pgm
 
 plots: $(addprefix plot, $(NUMS))
 .PHONY: plots
+dplots: $(addprefix dplot, $(NUMS))
+.PHONY: dplots
 
-quadsall.pgm: \
-	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
-	$(addsuffix .skdt.fits, $(addprefix $(INDEX), $(NUMS)))
-	$(QUADLOCATIONS) $(QUADLOC_OPTS) $(addprefix $(INDEX), $(NUMS)) -o $@
+SUMPLOTS_EPS := cp_2dhists_sum.eps cp_2ddhists_sum.eps \
+	cp_1dhists_sum.eps cp_1ddhists_sum.eps \
+	cp_xy_sum.eps cp_dxy_sum.eps
+$(SUMPLOTS_EPS): $(addsuffix .m, $(addprefix proj, $(NUMS)))
+	echo "$(MATLAB_INIT); fprintf('\nGenerating sum plots...\n'); sumprojs; print_plots=1; plot_suffix='_sum'; batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
+	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
+
+SUMPLOTS_PNG := $(SUMPLOTS_EPS:.eps=.png)
+SUMPLOTS_SMALL := $(SUMPLOTS_PNG:.png=_small.png)
+
+QUADS := $(addprefix ana,$(NUMS))
+
+QPS_EPS := $(addsuffix .eps, $(addprefix quadsperstar_, $(NUMS) all))
+$(QPS_EPS): quadsperstar.m
+	echo "$(MATLAB_INIT); fprintf('\nGenerating quads per star histograms...\n'); quadsperstar; for j=0:11, x=eval(sprintf('$(INDEX)_%02i', j)); " \
+	  "bar([0:length(x)-1],x,1); print('-depsc', sprintf('quadsperstar_%i.eps', j)); end; " \
+	  "x=sum; bar([0:length(x)-1],x); printf('-depsc', 'quadsperstar_sum.eps'); quit" > /tmp/tmpscript.m
+	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
+
+QPS_PNG := $(QPS_EPS:.eps=.png)
+QPS_SMALL := $(QPS_PNG:.png=_small.png)
+
+
+$(SUMPLOTS_SMALL) $(QPS_SMALL):: %_small.png: %.png
+	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
+
+quadsperstar.m: $(addsuffix .qidx.fits, $(addprefix $(INDEX), $(NUMS)))
+	$(QUADSPERSTAR) $(addprefix $(INDEX), $(NUMS)) | sed s/-/_/ > $@
+
+.PHONY: prospectus
+prospectus: $(QUADS) ana_all plots dplots $(SUMPLOTS_PNG) $(SUMPLOTS_SMALL) $(QPS_PNG) $(QPS_SMALL)
 
 # RULE00 := $(call INDEX_template,00)
 # $(warning $(RULE00))
