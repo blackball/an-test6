@@ -15,7 +15,8 @@ int main() {
 	int D = 4;
 	double* data;
 	int i, d, r;
-	kdtree_t* kd;
+	//kdtree_t* kd;
+	kdtree_t *kd1, *kd2;
 	kdtree_qres_t* res1;
 	kdtree_qres_t* res2;
 	int levels;
@@ -44,9 +45,10 @@ int main() {
 	printf("Creating tree with %i levels...\n", levels);
 	fflush(stdout);
 
-#if 0
-	for (r=0; r<0; r++) {
-		kdtree_t *kd1, *kd2;
+	REPS=1;
+	r=0;
+
+	for (r=0; r<REPS; r++) {
 		struct timeval tv1, tv2, tv3;
 		gettimeofday(&tv1, NULL);
 		kd1 = kdtree_build(data, N, D, levels);
@@ -56,20 +58,19 @@ int main() {
 
 		printf("build: %g ms.\nbuild_4: %g ms.\n",
 			   millis_between(&tv1, &tv2), millis_between(&tv2, &tv3));
-		kdtree_free(kd1);
-		kdtree_free(kd2);
+		if (r != REPS-1) {
+			kdtree_free(kd1);
+			kdtree_free(kd2);
+		}
 	}
-#endif
 
-	kd = kdtree_build(data, N, D, levels);
+	//kd = kdtree_build(data, N, D, levels);
 
 	for (i=0; i<REPS; i++)
 		v1_total[i] = v2_total[i] = 0.0;
 
-	REPS=1;
-	r=0;
-
 	nresavg = 0.0;
+	r=0;
 
 	for (i=0; i<ROUNDS; i++) {
 		double pt[4];
@@ -84,9 +85,8 @@ int main() {
 		for (d=0; d<D; d++)
 			pt[d] = rand() / (double)RAND_MAX;
 
-		//#define OPTION1 			res1 = kdtree_rangesearch_options_4(kd, pt, maxd2, 0);
-#define OPTION1 			res1 = kdtree_rangesearch(kd, pt, maxd2);
-#define OPTION2 			res2 = kdtree_rangesearch_options_4(kd, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+#define OPTION1 			res1 = kdtree_rangesearch(kd1, pt, maxd2);
+#define OPTION2 			res2 = kdtree_rangesearch_options_4(kd2, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
 
 		//for (r=0; r<REPS; r++) {
 		if (i % 2) {

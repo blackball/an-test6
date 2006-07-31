@@ -50,6 +50,18 @@ static inline real KDFUNC(dist2_exceeds)(real* p1, real* p2, int d, real maxd2) 
 }
 
 #define GET(x) (arr[(x)*D+d])
+#if defined(KD_DIM)
+#define ELEM_SWAP(il, ir) { \
+        if ((il) != (ir)) { \
+          tmpperm  = parr[il]; \
+          assert(tmpperm != -1); \
+          parr[il] = parr[ir]; \
+          parr[ir] = tmpperm; \
+          { int d; for (d=0; d<D; d++) { \
+		  tmpdata[0] = arr[(il)*D+d]; \
+		  arr[(il)*D+d] = arr[(ir)*D+d]; \
+          arr[(il)*D+d] = tmpdata[0]; }}}}
+#else
 #define ELEM_SWAP(il, ir) { \
         if ((il) != (ir)) { \
           tmpperm  = parr[il]; \
@@ -58,8 +70,8 @@ static inline real KDFUNC(dist2_exceeds)(real* p1, real* p2, int d, real maxd2) 
           parr[ir] = tmpperm; \
           memcpy(tmpdata,    arr+(il)*D, D*sizeof(real)); \
           memcpy(arr+(il)*D, arr+(ir)*D, D*sizeof(real)); \
-          memcpy(arr+(ir)*D, tmpdata,    D*sizeof(real)); } \
-        }
+          memcpy(arr+(ir)*D, tmpdata,    D*sizeof(real)); }}
+#endif
 
 int KDFUNC(kdtree_quickselect_partition)
 	 (real *arr, unsigned int *parr, int l, int r, int D, int d) {
