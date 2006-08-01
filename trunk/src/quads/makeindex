@@ -145,11 +145,13 @@ SUMPLOTS_SMALL := $(SUMPLOTS_PNG:.png=_small.png)
 
 QUADS := $(addprefix ana,$(NUMS))
 
-QPS_EPS := $(addsuffix .eps, $(addprefix quadsperstar_, $(NUMS) all))
+INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
+
+QPS_EPS := $(addsuffix .eps, $(addprefix quadsperstar_, $(NUMS) sum))
 $(QPS_EPS): quadsperstar.m
-	echo "$(MATLAB_INIT); fprintf('\nGenerating quads per star histograms...\n'); quadsperstar; for j=0:11, x=eval(sprintf('$(INDEX)_%02i', j)); " \
-	  "bar([0:length(x)-1],x,1); print('-depsc', sprintf('quadsperstar_%i.eps', j)); end; " \
-	  "x=sum; bar([0:length(x)-1],x); printf('-depsc', 'quadsperstar_sum.eps'); quit" > /tmp/tmpscript.m
+	echo "$(MATLAB_INIT); fprintf('\nGenerating quads per star histograms...\n'); quadsperstar; for j=0:11, x=eval(sprintf('$(INDEX_UNDERSCORE)%02i', j)); " \
+	  "bar([0:length(x)-1],x,1); print('-depsc', sprintf('quadsperstar_%02i.eps', j)); end; " \
+	  "x=sum; bar([0:length(x)-1],x,1); print('-depsc', 'quadsperstar_sum.eps'); quit" > /tmp/tmpscript.m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
 
 QPS_PNG := $(QPS_EPS:.eps=.png)
