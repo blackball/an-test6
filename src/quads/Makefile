@@ -152,7 +152,7 @@ hptst: hptst.o healpix.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 printsolved: printsolved.o mathutil.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 solvedserver: solvedserver.o solvedfile.o bl.o
 	$(CC) $(CFLAGS) -o $@ $^
