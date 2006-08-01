@@ -157,7 +157,6 @@ $(QPS_EPS): quadsperstar.m
 QPS_PNG := $(QPS_EPS:.eps=.png)
 QPS_SMALL := $(QPS_PNG:.png=_small.png)
 
-
 $(SUMPLOTS_SMALL) $(QPS_SMALL):: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
 
@@ -165,7 +164,11 @@ quadsperstar.m: $(addsuffix .qidx.fits, $(addprefix $(INDEX), $(NUMS)))
 	$(QUADSPERSTAR) $(addprefix $(INDEX), $(NUMS)) | sed s/-/_/ > $@
 
 .PHONY: prospectus
-prospectus: $(QUADS) ana_all plots dplots $(SUMPLOTS_PNG) $(SUMPLOTS_SMALL) $(QPS_PNG) $(QPS_SMALL)
+prospectus: $(QUADS) ana_all plots dplots $(SUMPLOTS_PNG) $(SUMPLOTS_SMALL) \
+	$(QPS_PNG) $(QPS_SMALL) prospectus.html
+
+prospectus.html: prospectus.html.in
+	genprospectus $(INDEX) prospectus.html.in > $@
 
 # RULE00 := $(call INDEX_template,00)
 # $(warning $(RULE00))
