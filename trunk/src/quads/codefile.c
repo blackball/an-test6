@@ -198,9 +198,9 @@ int codefile_write_header(codefile* cf) {
 	sprintf(val, "%u", cf->numstars);
 	qfits_header_mod(cf->header, "NSTARS", val, "Number of stars.");
 	sprintf(val, "%.10f", cf->index_scale);
-	qfits_header_mod(cf->header, "SCALE_U", val, "Upper-bound index scale.");
+	qfits_header_mod(cf->header, "SCALE_U", val, "Upper-bound index scale (radians).");
 	sprintf(val, "%.10f", cf->index_scale_lower);
-	qfits_header_mod(cf->header, "SCALE_L", val, "Lower-bound index scale.");
+	qfits_header_mod(cf->header, "SCALE_L", val, "Lower-bound index scale (radians).");
 	sprintf(val, "%i", cf->indexid);
 	qfits_header_mod(cf->header, "INDEXID", val, "Index unique ID.");
 	sprintf(val, "%i", cf->healpix);

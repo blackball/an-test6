@@ -217,9 +217,9 @@ int quadfile_fix_header(quadfile* qf) {
 	sprintf(val, "%u", qf->numstars);
 	qfits_header_mod(qf->header, "NSTARS", val, "Number of stars.");
 	sprintf(val, "%.10f", qf->index_scale);
-	qfits_header_mod(qf->header, "SCALE_U", val, "Upper-bound index scale.");
+	qfits_header_mod(qf->header, "SCALE_U", val, "Upper-bound index scale (radians).");
 	sprintf(val, "%.10f", qf->index_scale_lower);
-	qfits_header_mod(qf->header, "SCALE_L", val, "Lower-bound index scale.");
+	qfits_header_mod(qf->header, "SCALE_L", val, "Lower-bound index scale (radians).");
 	sprintf(val, "%i", qf->indexid);
 	qfits_header_mod(qf->header, "INDEXID", val, "Index unique ID.");
 	sprintf(val, "%i", qf->healpix);
