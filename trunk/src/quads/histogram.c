@@ -24,6 +24,7 @@ static histogram* hist_new(int nbins) {
 histogram* histogram_new_nbins(double zero, double maximum, int Nbins) {
 	double binsize = (maximum - zero) / (double)(Nbins - 1);
 	histogram* h = hist_new(Nbins);
+	h->min = zero;
 	h->binsize = binsize;
 	return h;
 }
@@ -31,6 +32,7 @@ histogram* histogram_new_nbins(double zero, double maximum, int Nbins) {
 histogram* histogram_new_binsize(double zero, double maximum, double binsize) {
 	int Nbins = (int)ceil((maximum - zero) / binsize) + 1;
 	histogram* h = hist_new(Nbins);
+	h->min = zero;
 	h->binsize = binsize;
 	return h;
 }
@@ -42,7 +44,7 @@ void histogram_free(histogram* h) {
 }
 
 int histogram_add(histogram* h, double val) {
-	int bin = (val - h->zero) / h->binsize;
+	int bin = (val - h->min) / h->binsize;
 	if (bin < 0)
 		bin = 0;
 	if (bin >= h->Nbins)
@@ -59,7 +61,7 @@ double histogram_mean(histogram* h) {
 		acc += (h->hist[i] * (i * h->binsize));
 		n += h->hist[i];
 	}
-	return h->zero + acc / n;
+	return h->min + acc / n;
 }
 
 void histogram_print_matlab(histogram* h, FILE* fid) {
@@ -67,5 +69,13 @@ void histogram_print_matlab(histogram* h, FILE* fid) {
 	fprintf(fid, "[ ");
 	for (i=0; i<h->Nbins; i++)
 		fprintf(fid, "%s%i", (i ? ", " : ""), h->hist[i]);
+	fprintf(fid, "]");
+}
+
+void histogram_print_matlab_bin_centers(histogram* h, FILE* fid) {
+	int i;
+	fprintf(fid, "[ ");
+	for (i=0; i<h->Nbins; i++)
+		fprintf(fid, "%s%g", (i ? ", " : ""), h->min + (i + 0.5) * h->binsize);
 	fprintf(fid, "]");
 }

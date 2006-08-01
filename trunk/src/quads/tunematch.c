@@ -15,7 +15,7 @@
 #include "xylist.h"
 #include "verify.h"
 
-static const char* OPTIONS = "hi:o:s:r:t:m:f:X:Y:";
+static const char* OPTIONS = "hi:o:s:r:t:m:f:X:Y:w:M";
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
@@ -29,6 +29,7 @@ static void printHelp(char* progname) {
 			"   -t <overlap threshold>\n"
 			"   -m <min field objects required>\n"
 			"   [-w <FITS WCS header output file>]\n"
+			"   [-M]: write Matlab script showing the tuning\n"
 			"\n", progname);
 }
 
@@ -116,10 +117,14 @@ int main(int argc, char *argv[]) {
 
 	double overlap_d2;
 
+	bool matlab = FALSE;
 
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'M':
+			matlab = TRUE;
+			break;
 		case 'w':
 			fitsout = optarg;
 			break;
@@ -381,7 +386,7 @@ int main(int argc, char *argv[]) {
 
 		// "xyz" is the field origin.
 
-		for (s=0; s<100; s++) {
+		for (s=0; s<25; s++) {
 			double u,v;
 			int j;
 			double totalweight;
@@ -450,8 +455,10 @@ int main(int argc, char *argv[]) {
 					totalxyz[1] = weight * (ixyz[1] - fxyz[1]);
 					totalxyz[2] = weight * (ixyz[2] - fxyz[2]);
 
-					printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
-						   sqrt(d2 / overlap_d2), weight);
+					/*
+					  printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
+					  sqrt(d2 / overlap_d2), weight);
+					*/
 				}
 			}
 
@@ -474,7 +481,7 @@ int main(int argc, char *argv[]) {
 
 			step = 0.5;
 
-			if (s < 10 || s == 99) {
+			if (matlab && (s < 10 || s == 24)) {
 				double ox, oy;
 				double x, y;
 				double pu[3], pv[3], puv[3];
@@ -525,7 +532,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "input('\\nround %i');\n", s);
 			}
 
-			printf("Old RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n\n",
+			printf("Old RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n",
 				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
 
 			xyz[0] += step * totalxyz[0];
@@ -641,26 +648,30 @@ int main(int argc, char *argv[]) {
 			}
 			hdr = qfits_header_default();
 
+			qfits_header_add(hdr, "BITPIX", "8", NULL, NULL);
+			qfits_header_add(hdr, "NAXIS", "0", "No image", NULL);
+			qfits_header_add(hdr, "EXTEND", "T", "May be FITS extensions", NULL);
+
 			qfits_header_add(hdr, "CRPIX1 ", "0", "X reference pixel", NULL);
 			qfits_header_add(hdr, "CRPIX2 ", "0", "Y reference pixel", NULL);
-			sprintf(val, "%g", rad2deg(S));
-			qfits_header_add(hdr, "CDELT1 ", val, "X pixel scale (deg)", NULL);
-			qfits_header_add(hdr, "CDELT2 ", val, "Y pixel scale (deg)", NULL);
+			sprintf(val, "%.12g", rad2deg(S));
+			qfits_header_add(hdr, "CDELT1 ", val, "X pixel scale (deg/pix)", NULL);
+			qfits_header_add(hdr, "CDELT2 ", val, "Y pixel scale (deg/pix)", NULL);
 			qfits_header_add(hdr, "CUNIT1 ", "deg", "X pixel scale units", NULL);
 			qfits_header_add(hdr, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
-			sprintf(val, "%g", cos(T));
+			sprintf(val, "%.12g", cos(T));
 			qfits_header_add(hdr, "PC1_1 ", val, "XY rotation matrix (cos T)", NULL);
 			qfits_header_add(hdr, "PC2_2 ", val, "XY rotation matrix (cos T)", NULL);
-			sprintf(val, "%g", -sin(T));
+			sprintf(val, "%.12g", -sin(T));
 			qfits_header_add(hdr, "PC1_2 ", val, "XY rotation matrix (-sin T)", NULL);
-			sprintf(val, "%g", sin(T));
+			sprintf(val, "%.12g", sin(T));
 			qfits_header_add(hdr, "PC2_1 ", val, "XY rotation matrix (sin T)", NULL);
 
 			qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
 			qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
-			sprintf(val, "%g", rad2deg(ra));
+			sprintf(val, "%.12g", rad2deg(ra));
 			qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
-			sprintf(val, "%g", rad2deg(dec));
+			sprintf(val, "%.12g", rad2deg(dec));
 			qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
 
 			if (qfits_header_dump(hdr, fid)) {
