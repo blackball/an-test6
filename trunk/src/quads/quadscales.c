@@ -149,10 +149,10 @@ int main(int argc, char** args) {
 		quadfile_close(qf);
 	}
 
-	printf("sum = ");
+	printf("qs_sum = ");
 	histogram_print_matlab(sumhist, stdout);
 	printf(";\n");
-	printf("sum_bins = ");
+	printf("qs_sum_bins = ");
 	histogram_print_matlab_bin_centers(sumhist, stdout);
 	printf(";\n");
 
