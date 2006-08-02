@@ -315,7 +315,9 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, C);
 		set_xy(inorder, 3, ABCDpix, D);
 
-		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		result = kdtree_rangesearch_options(params->codekd, thequery, tol,
+											KD_OPTIONS_SMALL_RADIUS |
+											KD_OPTIONS_COMPUTE_DISTS);
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
 		kdtree_free_query(result);
@@ -338,7 +340,9 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, C);
 		set_xy(inorder, 3, ABCDpix, D);
 
-		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		result = kdtree_rangesearch_options(params->codekd, thequery, tol,
+											KD_OPTIONS_SMALL_RADIUS |
+											KD_OPTIONS_COMPUTE_DISTS);
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
 		kdtree_free_query(result);
@@ -362,7 +366,9 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, D);
 		set_xy(inorder, 3, ABCDpix, C);
 
-		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		result = kdtree_rangesearch_options(params->codekd, thequery, tol,
+											KD_OPTIONS_SMALL_RADIUS |
+											KD_OPTIONS_COMPUTE_DISTS);
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
 		kdtree_free_query(result);
@@ -386,7 +392,9 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, D);
 		set_xy(inorder, 3, ABCDpix, C);
 
-		result = kdtree_rangesearch(params->codekd, thequery, tol);
+		result = kdtree_rangesearch_options(params->codekd, thequery, tol,
+											KD_OPTIONS_SMALL_RADIUS |
+											KD_OPTIONS_COMPUTE_DISTS);
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
 		kdtree_free_query(result);
