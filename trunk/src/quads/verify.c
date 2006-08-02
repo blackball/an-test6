@@ -72,7 +72,8 @@ void verify_hit(kdtree_t* startree,
 		fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
 	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
 	// 1.01 is a little safety factor.
-	res = kdtree_rangesearch_nosort(startree, fieldcenter, fieldr2 * 1.01);
+	res = kdtree_rangesearch_options(startree, fieldcenter, fieldr2 * 1.01,
+									 KD_OPTIONS_SMALL_RADIUS);
 	assert(res);
 
 	// for each of the index stars, project them into field coordinates
