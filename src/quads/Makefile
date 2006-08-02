@@ -68,6 +68,10 @@ QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/q
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
 	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
 
+libqfits.a: $(QFITS_OBJ)
+	ar cr $@ $^
+	ranlib $@
+
 OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	kdtree/kdtree.o kdtree/kdtree_access.o kdtree/kdtree_dim.o \
 	kdtree/kdtree_io.o kdtree/kdtree_fits_io.o \
