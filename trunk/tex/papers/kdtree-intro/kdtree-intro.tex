@@ -21,128 +21,117 @@
 \section{Introduction}
 \PARstart{T}{he} kdtree is a simple data structure for indexing a set of
 $k$-dimensional points.
+Each node in the tree owns a subset of the data points; the root node owns
+all the data points, and each point owned by a parent node is owned by exactly
+one child node.  A kdtree is built by choosing a 
+``splitting dimension'' and ``splitting value'' at each non-leaf node.
+The data points owned by the node are partitioned by placing a hyperplane
+perpendicular to the axis of the splitting dimension, at the splitting value along
+the splitting axis.  Points that lie on one side of the hyperplane (ie, whose position
+along the splitting dimension is greater than the splitting value) are given to the
+right child, and those on the other side are given to the left child.
 
-Blah blah blah.
+%A hyperplane perpendicular to the splitting axis
+%In effect, the region of space owned by a parent node is divided in two by a
+%hyperplane aligned with the coordinate axes; points one on side of the plane belong to
+%the right child, and points on the other side belong to the left child.
+
+%``splitting dimension'' and ``splitting value'' at each non-leaf node.
+%  Data points whose position along the
+%splitting dimension is greater than the splitting value are given to one child,
+%while those whose value is less than the splitting value are given to the other child.
+%In effect, the region of space owned by a parent node is divided in two by a
+%hyperplane aligned with the coordinate axes; points one on side of the plane belong to
+%the right child, and points on the other side belong to the left child.
+
+%In addition, at
+At each node in the tree a number of ``cached statistics'' are stored.
+Most common is the bounding box: a hyper-rectangle that (tightly) bounds
+the data points owned by the node.
+% Bounding box is composed of the lower- and upper-bound points, which are dimensionwise
+% minimum and maximum of the data points owned by the node.
+  A kdtree has the property that sibling bounding
+boxes do not overlap, and a child node's bounding box is a subset of the parent's
+bounding box.
+
+An alternative to storing the bounding box at each node is to store the splitting dimension
+and splitting value.  This is a less powerful, but more compact, representation.
+
+%Each non-leaf node may also store the splitting dimension and value.  This is a less powerful
+%but more compact representation of the tree, compared to storing the bounding boxes.
+
+%Each node in the tree owns a region of the $k$-dimensional space; child nodes
+%own a subset of the space owned by their parents.
+%The region owned by a node is a hyper-rectangle whose sides are
+%parallel to the axes.
+%At each non-leaf node, the space is split along one dimension, and data point
+%Each non-leaf node splits its space along one 
 
 
+Other cached statistics might include the centroid or second moment of the data points.
 
 
+Cached statistics are stored in the tree in order to allow queries to be accelerated.
+The classical query is range search: return all data points within a given radius
+(typically using the Euclidean metric)
+of a query point.  By storing the bounding box, we can quickly check if a sphere centered
+at the query point with the given search radius intersects the bounding box.  If it does not,
+no point owned by the node can possibly be part of the result set, so we need not descend
+the tree further.
 
-  It enables quick searching through $d$-dimensional data
-under a distance metric, typically Euclidean distance.  Example uses
-include finding the nearest neighbour to a query point in a dataset, or
-extracting all data points within a certain radius of a point, or even
-intersecting rays with objects in a scene as is often the case in graphics.
-Over the history of the kdtree, many different implementation flavors of have
-evolved (FIXME cite literature); e.g. some implementations operate on {\em axis
-aligned bounding boxes} (AABB's for short) while others store split locations
-and dimensions. There are also differing methods of storing which points belong
-to each node in the tree; this is the topic considered in this paper. We
-present a novel method of storing the points in a kdtree compactly in memory
-such that there are no pointers. This has several benefits, including extremely
-fast searching due to improved data locality, and the ability to write and read
-kdtree's from disk with a single call to UNIX's {\texttt mmap()}.
+%% FIX - be consistent with phrases like ``descend'' the tree, traverse, search, etc.
 
-Before describing our efficient storage mechanism, a brief overview of kdtree
-construction is given. Then we examine how to store the points in a kdtree such
-that there are no pointers, followed by a simple implementation trick learned
-in a typical freshmen algorithms course for storing a full tree without needing
-pointers.  The combination of the two allows eliminating all pointers from the
-structure.
+% FIX - why axis-aligned bounding boxes?  --> very quick min/maxdist, membership test,
 
-\subsection{Contributions}
-The contributions of this paper are twofold:
-\begin{itemize}
-    \item A novel kdtree datastructure which contains no pointers, is
-    memory-compact, and enhances performance by improving locality while
-    searching the tree.
-    \item An implementation of the kdtree in clean ANSI C, downloadable from
-    the web.
-\end{itemize}
+
+\section{Building a kdtree}
+
+Construction of a kdtree begins by computing the axis-aligned bounding box of the 
+data points (which will be the bounding box of the root node).
+(The corners of this bounding box are simply the dimensionwise minima and maxima.)
+We then choose a splitting dimension and splitting value, and partition the data
+points into the sets of points that belong to the left and right children.  Finally, the
+children's bounding boxes are computed and the procedure repeats on each child node.
+This process stops once a node contains fewer than a desired maximum number of points.
+
+The splitting dimension and value can be chosen a number of ways.  Common choices
+include choosing the dimension with the largest variance or the largest range
+(maximum - minimum).  The splitting value is often chosen to be the median value so
+that the left and right children own an equal number of data points; this typically results
+in a balanced, full, binary tree.
+
+An important implementation decision is how to store the set of points owned by each
+node.  Clearly, we want to avoid duplicating the data values at each level of the tree.
+One option is to create a permutation vector (initialized to the identity permutation)
+which is shuffled during tree construction
+such that the indices of points owned by the left child are in the first half of the vector
+and points owned by the right child are in the second half.  Then each node must store
+the offset and length of the segment of the permutation vector that it owns; the indices of
+the data points it owns are contained in that segment of the permutation vector.
+The benefit of this scheme is that the data points themselves need not be shuffled or duplicated;
+it does however incur the cost of a level of indirection when accessing the data points,
+and requires an extra vector to be stored.
+
+
+% Decide where along that dimension to split
  
-\section{KD-tree construction}
-Before getting into the details of the algorithm, a few simple definitions must
-be understood.  Consider a series of points in $\mathbb{R}^n$,
-$\x^0,\x^1,\x^2,...,\x^N$. These are the points the kdtree will index.  Notice
-indexing starts at 0.  Specific dimensions of each point are denoted $x_d$,
-where $d$ is the dimension.
 
-Each node in a kdtree, for the purposes of this paper, consists of a pointer to
-its left and rigth children, a AABB (typically two $\mathbb{R}^n$ vectors for
-the max corner and min corner) corresponding to the area of space owned by this
-node, and a list of data points which fall within the AABB. The kdtree
-structure itself consists of a pointer to the root node, the dimension of the
-data, and possibly other information such as the number of nodes and number of
-points in the tree.
+\section{Range search}
 
-\subsection{Construction algorithm}
-The typical kdtree construction algorithm looks like the following, which takes
-as input an array of points $\x^0,\x^1,\x^2,...,\x^N$ and returns a kdtree:
-\begin{enumerate}
-    \item Initialize the kdtree data structure
-    \item Create a new kdtree node; if this is the root node store a pointer to
-          it in the kdtree structure
-    \item Store the current array of points in this node (all points if it is
-          the root node)
-    \item Decide which dimension to split the data in this node
-    \item Decide where along that dimension to split
-    \item Call step 2 with the data points the first half of the split (i.e.
-          recursive tree construction)
-    \item Call step 2 with the data points the second half of the split
-    \item Store pointers to the nodes created in step 6 and 7 as the left and
-          right child of this node
-\end{enumerate}
-The algorithm terminates when there are no remaining points. It is illustrated
-in figure \ref{}. Typically, the points in each node are either stored as an
-array pointed to from the node; often internal nodes do not have any points
-associated with them once the building phase is complete.
+\subsection{Bounding box}
 
-\subsection{Storing the points in each node}
-Our modification to the typical kdtree algorthim presented above happens in
-steps 6 and 7. Essentially, our method consists of pivoting the entire data
-around the split dimension, allowing compact storage of the nodes and which
-points belong to each node. To understand our modification, consider an example
-data array in 2D, stored such that the values for each dimension of the data
-points are stored contiguously (i.e. column major). % XXX FIXME or is it row major?
-\begin{equation*}
-    \begin{array}{r||cccccccc}
-    \textrm{array~index}     & 0 & 1 & 2 & 3 & 4  & 5  & 6 & 7 \\
-    \textrm{original~index}  & 0 & 1 & 2 & 3 & 4  & 5  & 6 & 7 \\
-    \textrm{x}               & 6 & 2 & 1 & 6 & 1  & 3  & 1 & 9 \\
-    \textrm{y}               & 1 & 3 & 5 & 8 & 12 & 18 & 1 & 0 \\
-    \end{array}
-\end{equation*}
-Where most algorithms copy the nodes into a new array before recursing, 
-our algorithm {\em pivots} the data around the split dimension. Pivoting
-the data works as follows: For a split dimension $d$ and a split value $s$
-along the split dimension, data points with
-dimension $d$ less than $s$ are moved to the first half of the array (i.e.
-$x_d < s$, with the rest placed in the second half (i.e. where $x_d > s$).
 
-In the example array above, consider splitting on the x axis. Since we are
-enforcing a balanced tree, the median of the array along the splitting
-dimension is found (3 in this case), and all points above the median shifted to
-the right, and points below to the left. The result is below:
-\begin{equation*}
-    \begin{array}{r||cccc|cccc}
-    \textrm{array~index}     & 0 & 1 & 2 & 3  & 4  & 5 & 6 & 7 \\
-    \textrm{original~index}  & 6 & 1 & 2 & 4  & 5  & 7 & 0 & 3 \\
-    \textrm{x}               & 1 & 2 & 1 & 1  & 3  & 9 & 6 & 6 \\
-    \textrm{y}               & 1 & 3 & 5 & 12 & 18 & 0 & 1 & 8 \\
-    \end{array}
-\end{equation*}
-The vertical line in the middle of the array indicates the split between the
-data. What is important to notice is that the data is {\em physically}
-relocated in memory, such that all the data for the left child is on the left,
-and all the data for the right child is on the right. Within either half of the
-array, the order does not matter; only that the child owns that half of the
-array. Thus, we can store all the points that belong to a node as the index of
-the left and right location of the first and last points belonging to that node.
-In the case above, the left child's indexes would be $[0,3]$, and the right
-child's indexes would be $[4,7]$. 
 
-\section{Conclusion}
-Kdtrees are deceptively simple.
+\subsection{Split dimension/value}
+
+
+
+
+
+
+
+
+
 
 \begin{thebibliography}{1}
 
