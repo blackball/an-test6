@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "wcs.h"
+#include "wcshdr.h"
 #include "qfits.h"
 #include "starutil.h"
 
@@ -125,5 +126,5 @@ int main(int argc, char** args) {
 	wcsfree(&wcs);
 
 	free(hdrstring);
-
+	return 0;
 }
