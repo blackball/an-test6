@@ -13,8 +13,9 @@
 #include "hitlist_healpix.h"
 #include "matchfile.h"
 #include "solvedclient.h"
+#include "solvedfile.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:R";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -32,6 +33,7 @@ void printHelp(char* progname) {
 			"   [-b]: best-overlap mode\n"
 			"   [-F]: first-solved mode\n"
 			"   [-s <solved-server-address>]\n"
+			"   [-S <solved-file-template>]\n"
 			"   [-R]: read all at once\n",
 			progname);
 }
@@ -61,6 +63,7 @@ il* solved;
 il* unsolved;
 
 char* solvedserver = NULL;
+char* solvedfile = NULL;
 
 double overlap_needed = 0.0;
 int min_ninfield = 0;
@@ -121,6 +124,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'S':
+			solvedfile = optarg;
+			break;
 		case 'R':
 			read_all = TRUE;
 			break;
@@ -592,6 +598,11 @@ void write_field(hitlist* hl,
 
 	if (solvedserver)
 		solvedclient_set(fieldfile, fieldnum);
+	if (solvedfile) {
+		char fn[256];
+		sprintf(fn, solvedfile, fieldfile);
+		solvedfile_set(fn, fieldnum);
+	}
 
 	if (hitfid) {
 		hits_write_field_header(hitfid, &fieldhdr);
