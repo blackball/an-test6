@@ -82,6 +82,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	$(QFITS_OBJ)
 
 SOLVER_OBJ := solver.o
+SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
 
 EXECS := whynot agreeable certifiable quadidx \
 	hpquads codetree startree \
@@ -191,7 +192,7 @@ $(CFITSIO_OBJS) :: %.o: %.c
 $(EXECS) :: %: %.o $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-$(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ)
+$(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ) $(SOLVER_OBJ_SPECIAL)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
 
 $(EXTRAS) :: %: %.o $(OBJ)

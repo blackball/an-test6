@@ -6,6 +6,13 @@
 #include "intmap.h"
 
 /*
+  #include "kdtree.h"
+  #define KD_DIM 3
+  #include "kdtree.h"
+  #undef KD_DIM
+*/
+
+/*
   static inline double getx(double* d, int ind) {
   return d[ind << 1];
   }
