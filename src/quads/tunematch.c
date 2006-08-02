@@ -15,7 +15,7 @@
 #include "xylist.h"
 #include "verify.h"
 
-static const char* OPTIONS = "hi:o:s:r:t:m:f:X:Y:w:M";
+static const char* OPTIONS = "hi:o:s:r:m:f:X:Y:w:M"; // t:
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
@@ -26,7 +26,7 @@ static void printHelp(char* progname) {
 			"     [-Y <y column name>]\n"
 			"   -s <star kdtree>\n"
 			"   -r <overlap radius (arcsec)>\n"
-			"   -t <overlap threshold>\n"
+			//"   -t <overlap threshold>\n"
 			"   -m <min field objects required>\n"
 			"   [-w <FITS WCS header output file>]\n"
 			"   [-M]: write Matlab script showing the tuning\n"
@@ -85,6 +85,67 @@ static void parity_matrix_xy(double* M, bool P) {
 	M[8] = 1;
 }
 
+// compute the new & improved MatchObj.
+static void update_matchobj(MatchObj* mo, double* Mall,
+							double* fielduv, int NF) {
+	double tmp[3];
+	double pu[3], pv[3], pw[3];
+	double minu, maxu, minv, maxv;
+	int i;
+
+	tmp[0] = 1.0;
+	tmp[1] = 0.0;
+	tmp[2] = 0.0;
+	matrix_vector_3(Mall, tmp, pu);
+
+	tmp[0] = 0.0;
+	tmp[1] = 1.0;
+	tmp[2] = 0.0;
+	matrix_vector_3(Mall, tmp, pv);
+
+	tmp[0] = 0.0;
+	tmp[1] = 0.0;
+	tmp[2] = 1.0;
+	matrix_vector_3(Mall, tmp, pw);
+
+	mo->transform[0] = pu[0];
+	mo->transform[3] = pu[1];
+	mo->transform[6] = pu[2];
+	mo->transform[1] = pv[0];
+	mo->transform[4] = pv[1];
+	mo->transform[7] = pv[2];
+	mo->transform[2] = pw[0];
+	mo->transform[5] = pw[1];
+	mo->transform[8] = pw[2];
+
+	minu = 1e300;
+	maxu = -1e300;
+	minv = 1e300;
+	maxv = -1e300;
+	for (i=0; i<NF; i++) {
+		double u = fielduv[i*2+0];
+		double v = fielduv[i*2+1];
+		if (u < minu) minu = u;
+		if (u > maxu) maxu = u;
+		if (v < minv) minv = v;
+		if (v > maxv) maxv = v;
+	}
+
+	mo->sMin[0] = pw[0] + minu * pu[0] + minv * pv[0];
+	mo->sMin[1] = pw[1] + minu * pu[1] + minv * pv[1];
+	mo->sMin[2] = pw[2] + minu * pu[2] + minv * pv[2];
+	mo->sMinMax[0] = pw[0] + minu * pu[0] + maxv * pv[0];
+	mo->sMinMax[1] = pw[1] + minu * pu[1] + maxv * pv[1];
+	mo->sMinMax[2] = pw[2] + minu * pu[2] + maxv * pv[2];
+	mo->sMaxMin[0] = pw[0] + maxu * pu[0] + minv * pv[0];
+	mo->sMaxMin[1] = pw[1] + maxu * pu[1] + minv * pv[1];
+	mo->sMaxMin[2] = pw[2] + maxu * pu[2] + minv * pv[2];
+	mo->sMax[0] = pw[0] + maxu * pu[0] + maxv * pv[0];
+	mo->sMax[1] = pw[1] + maxu * pu[1] + maxv * pv[1];
+	mo->sMax[2] = pw[2] + maxu * pu[2] + maxv * pv[2];
+
+}
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -111,7 +172,7 @@ int main(int argc, char *argv[]) {
 	double* fielduv = NULL;
 	double* fieldxyz = NULL;
 
-	double overlap_thresh = 0.0;
+	//double overlap_thresh = 0.0;
 	double overlap_rad = 0.0;
 	int min_ninfield = 0;
 
@@ -146,9 +207,11 @@ int main(int argc, char *argv[]) {
 		case 's':
 			starfn = optarg;
 			break;
-		case 't':
-			overlap_thresh = atof(optarg);
-			break;
+			/*
+			  case 't':
+			  overlap_thresh = atof(optarg);
+			  break;
+			*/
 		case 'm':
 			min_ninfield = atoi(optarg);
 			break;
@@ -168,7 +231,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	if (overlap_rad == 0.0 || overlap_thresh == 0.0) {
+	if (overlap_rad == 0.0) { // || overlap_thresh == 0.0) {
 		fprintf(stderr, "Must specify overlap radius and threshold.\n");
 		printHelp(progname);
 		exit(-1);
@@ -245,8 +308,6 @@ int main(int argc, char *argv[]) {
 		double Mall[9];
 		double tmp[3];
 		double pw[3];
-
-		double minu, maxu, minv, maxv;
 
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
@@ -356,6 +417,7 @@ int main(int argc, char *argv[]) {
 			   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60);
 		printf("theta=%g, parity=%i.\n",
 			   rad2deg(T), (int)P);
+		printf("Initial overlap: %g\n", mo->overlap);
 
 		rotation_matrix_z(MT, T);
 
@@ -557,6 +619,17 @@ int main(int argc, char *argv[]) {
 
 			printf("New RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n\n",
 				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
+
+			update_matchobj(mo, Mall, fielduv, NF);
+			{
+				int match;
+				int unmatch;
+				int conflict;
+				verify_hit(startree, mo, fielduv, NF, overlap_d2,
+						   &match, &unmatch, &conflict, NULL);
+			}
+			printf("Overlap: %g\n", mo->overlap);
+
 		}
 
 		kdtree_free_query(res);
@@ -586,54 +659,6 @@ int main(int argc, char *argv[]) {
 		printf("t3=[ % 8.3g, % 8.3g, % 8.3g ];\n", t3[0], t3[1], t3[2]);
 		printf("pw=[ % 8.3g, % 8.3g, % 8.3g ];\n", pw[0], pw[1], pw[2]);
 		printf("\n");
-
-		// compute the new & improved MatchObj.
-
-		mo->transform[0] = pu[0];
-		mo->transform[3] = pu[1];
-		mo->transform[6] = pu[2];
-		mo->transform[1] = pv[0];
-		mo->transform[4] = pv[1];
-		mo->transform[7] = pv[2];
-		mo->transform[2] = pw[0];
-		mo->transform[5] = pw[1];
-		mo->transform[8] = pw[2];
-
-		minu = 1e300;
-		maxu = -1e300;
-		minv = 1e300;
-		maxv = -1e300;
-		for (i=0; i<NF; i++) {
-			double u = fielduv[i*2+0];
-			double v = fielduv[i*2+1];
-			if (u < minu) minu = u;
-			if (u > maxu) maxu = u;
-			if (v < minv) minv = v;
-			if (v > maxv) maxv = v;
-		}
-
-		mo->sMin[0] = pw[0] + minu * pu[0] + minv * pv[0];
-		mo->sMin[1] = pw[1] + minu * pu[1] + minv * pv[1];
-		mo->sMin[2] = pw[2] + minu * pu[2] + minv * pv[2];
-		mo->sMinMax[0] = pw[0] + minu * pu[0] + maxv * pv[0];
-		mo->sMinMax[1] = pw[1] + minu * pu[1] + maxv * pv[1];
-		mo->sMinMax[2] = pw[2] + minu * pu[2] + maxv * pv[2];
-		mo->sMaxMin[0] = pw[0] + maxu * pu[0] + minv * pv[0];
-		mo->sMaxMin[1] = pw[1] + maxu * pu[1] + minv * pv[1];
-		mo->sMaxMin[2] = pw[2] + maxu * pu[2] + minv * pv[2];
-		mo->sMax[0] = pw[0] + maxu * pu[0] + maxv * pv[0];
-		mo->sMax[1] = pw[1] + maxu * pu[1] + maxv * pv[1];
-		mo->sMax[2] = pw[2] + maxu * pu[2] + maxv * pv[2];
-
-		printf("Initial overlap: %g\n", mo->overlap);
-		{
-			int match;
-			int unmatch;
-			int conflict;
-			verify_hit(startree, mo, fielduv, NF, overlap_d2,
-					   &match, &unmatch, &conflict, NULL);
-		}
-		printf("Final overlap: %g\n", mo->overlap);
 
 		matchfile_write_match(matchout, mo);
 
