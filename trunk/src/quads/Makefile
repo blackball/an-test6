@@ -145,6 +145,15 @@ ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat
 
+WCSLIB_LIB := /usr/local/wcslib-4.2/lib/libwcs.a
+WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
+
+wcscheck: wcscheck.o starutil.o mathutil.o libqfits.a
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(WCSLIB_LIB)
+
+wcscheck.o: wcscheck.c
+	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
+
 kdspeed: kdspeed.o kdtree/kdtree.o kdtree/kdtree_dim.o kdtree/kdtree_access.o \
 	kdtree/kdtree_dim_4.o tic.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
