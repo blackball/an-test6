@@ -67,6 +67,7 @@ endif
 QFITS_OBJ := qfits/tfits.o qfits/fits_h.o qfits/xmemory.o qfits/simple.o qfits/qerror.o \
 	qfits/cache.o qfits/t_iso8601.o qfits/fits_rw.o qfits/byteswap.o \
 	qfits/ieeefp-compat.o qfits/fits_md5.o qfits/expkey.o qfits/fits_p.o qfits/md5.o
+QFITS_LIB := libqfits.a
 
 OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	kdtree/kdtree.o kdtree/kdtree_access.o kdtree/kdtree_dim.o \
@@ -78,8 +79,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
 	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
-	bt.o solvedfile.o \
-	$(QFITS_OBJ)
+	bt.o solvedfile.o
 
 SOLVER_OBJ := solver.o
 SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
@@ -138,11 +138,11 @@ LFLAGS += $(QFITS_L)
 
 CFLAGS += -Ikdtree
 
-ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ)
+ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat
 
-libqfits.a: $(QFITS_OBJ)
+$(QFITS_LIB): $(QFITS_OBJ)
 	ar cr $@ $^
 	ranlib $@
 
@@ -189,44 +189,44 @@ $(FITS_UTILS) :: %: %.o $(CFITSIO_LIB)
 $(CFITSIO_OBJS) :: %.o: %.c
 	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
 
-$(EXECS) :: %: %.o $(OBJ)
+$(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-$(SOLVER_EXECS) :: %: %.o $(OBJ) $(SOLVER_OBJ) $(SOLVER_OBJ_SPECIAL)
+$(SOLVER_EXECS) :: %: %.o $(OBJ) $(QFITS_LIB) $(SOLVER_OBJ) $(SOLVER_OBJ_SPECIAL)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
 
-$(EXTRAS) :: %: %.o $(OBJ)
+$(EXTRAS) :: %: %.o $(OBJ) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 test_bt: test_bt.o bt.o bl.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o \
-	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_OBJ)
+	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 plotcat: plotcat.o starutil.o an_catalog.o catalog.o tycho2_fits.o tycho2.o \
 	rdlist.o xylist.o \
-	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-ancatalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+ancatalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 cut_an: cut_an.o an_catalog.o catalog.o idfile.o fitsioutils.o \
-	ioutils.o healpix.o mathutil.o bl.o starutil.o $(QFITS_OBJ)
+	ioutils.o healpix.o mathutil.o bl.o starutil.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_OBJ)
+split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 CUTEST_I := -Ikdtree/CuTest
@@ -247,10 +247,10 @@ deps: $(DEPS)
 	$(CC) -MM $(CFLAGS) -c $< > $@
 
 allclean:
-	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) *~ $(DEPS) deps $(QFITS_OBJ) $(OBJ)
+	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) *~ $(DEPS) deps $(QFITS_OBJ) $(OBJ) $(QFITS_LIB)
 
 clean:
-	rm -f $(EXECS) $(SOLVER_EXECS) $(EXTRA_EXECS) $(MY_OBJ) $(OBJ) $(DEPS) deps
+	rm -f $(EXECS) $(SOLVER_EXECS) $(EXTRA_EXECS) $(MY_OBJ) $(OBJ) $(QFITS_LIB) $(DEPS) deps
 
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
