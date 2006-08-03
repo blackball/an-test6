@@ -33,7 +33,7 @@ IDL_LONG idl_dpeaks (int      argc,
   saddle=*((float *)argv[i]); i++;
   maxnpeaks=*((int *)argv[i]); i++;
   smooth=*((int *)argv[i]); i++;
-  checkpeaks=*((float *)argv[i]); i++;
+  checkpeaks=*((int *)argv[i]); i++;
   minpeak=*((float *)argv[i]); i++;
 	
 	/* 1. run the fitting routine */

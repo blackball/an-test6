@@ -23,8 +23,7 @@ int nmf(float *data,
         int nim, 
         float *coeffs,
         float *templates,
-        int nc,
-        int np)
+        int nc)
 {
   int i,k,c,iters, maxiters;
   long seed;

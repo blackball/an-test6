@@ -16,7 +16,9 @@
 ;   2-Mar-2006  Written by Blanton, NYU (Fink's method)
 ;-
 ;------------------------------------------------------------------------------
-function dsigma, image
+function dsigma, image, sp=sp
+
+if(NOT keyword_set(sp)) then sp=2L
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
@@ -27,7 +29,7 @@ soname=filepath('libdimage.'+idlutils_so_ext(), $
 
 sigma=0.
 retval=call_external(soname, 'idl_dsigma', float(image), $
-                     long(nx), long(ny), float(sigma))
+                     long(nx), long(ny), long(sp), float(sigma))
 
 return, sigma
 

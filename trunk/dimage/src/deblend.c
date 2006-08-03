@@ -57,7 +57,10 @@ int deblend(float *image,
             float parallel, /* how parallel you allow templates to be */
 						int maxnchild, 
             float minpeak, 
-            int starstart)  
+            int starstart, 
+						float *psf, 
+						int pnx,
+						int pny)  
 {
   int i,j,k,npeaks,ip,jp,di,dj,ntpeaks,kp,joined,maxiter,niter,
     tmpnpeaks, closest;
@@ -114,20 +117,15 @@ int deblend(float *image,
 #if 1 
   /* limit size of stars */ 
     if(k>=starstart) {
-	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
-	                               k*nx*ny]);
-			tcen=templates[xcen[k]+(ycen[k])*nx+k*nx*ny];
       for(j=0;j<ny;j++) 
         for(i=0;i<nx;i++) {
-          currdist=((xcen[k]-(float) i)*
-                    (xcen[k]-(float) i)+
-                    (ycen[k]-(float) j)*
-                    (ycen[k]-(float) j));
-					tval=exp(-0.5*currdist/(2.*2.))* tcen;
-					templates[i+j*nx+k*nx*ny]=tval;
+					ip=i-xcen[k]+pnx/2;
+					jp=j-ycen[k]+pny/2;
+					if(ip>=0 && ip<pnx && jp>0 && jp<pny) 
+						templates[i+j*nx+nx*ny*k]=psf[ip+jp*pnx];
+					else 
+						templates[i+j*nx+nx*ny*k]=0.;
         }
-	    printf("t %f\n", templates[xcen[k]+5+(ycen[k]+5)*nx+
-	                               k*nx*ny]);
     }
 #endif
 
