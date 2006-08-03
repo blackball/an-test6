@@ -29,7 +29,7 @@ pro deblend, image, invvar, nchild=nchild, xcen=xcen, ycen=ycen, $
              children=children, templates=templates, sigma=sigma, $
              dlim=dlim, saddle=saddle, tlimit=tlimit, minpeak=minpeak, $
              xpeaks=xpeaks, ypeaks=ypeaks, xstars=xstars, ystars=ystars, $
-             xgals=xgals, ygals=ygals
+             xgals=xgals, ygals=ygals, psf=psf
 
 if(NOT keyword_set(maxnchild)) then maxnchild=32L
 if(NOT keyword_set(dlim)) then dlim=1.
@@ -64,6 +64,8 @@ if(xpeaks[0] gt 0) then maxnchild=n_elements(xpeaks)
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
+pnx=(size(psf,/dim))[0]
+pny=(size(psf,/dim))[1]
 
 xcen=lonarr(maxnchild)
 ycen=lonarr(maxnchild)
@@ -99,7 +101,10 @@ retval=call_external(soname, 'idl_deblend', float(image), $
                      float(parallel), $
                      long(maxnchild), $
                      float(minpeak), $
-                     long(starstart))
+                     long(starstart), $
+                     float(psf), $
+                     long(pnx), $
+                     long(pny))
 
 if(nchild eq 0) then return
 

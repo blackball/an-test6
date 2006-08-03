@@ -32,7 +32,7 @@ int dobjects(float *image,
 
   dsmooth(image, nx, ny, dpsf, smooth);
 
-	dsigma(smooth, nx, ny, &sigma);
+	dsigma(smooth, nx, ny, 2, &sigma);
   limit=sigma*plim;
   
   mask=(int *) malloc(nx*ny*sizeof(int));

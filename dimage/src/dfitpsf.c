@@ -17,7 +17,7 @@ static float *templates=NULL;
 static float *coeffs=NULL;
 
 int nmf(float *data, float *ivar, int ndata, int nim, float *coeffs,
-        float *templates, int nc, int np);
+        float *templates, int nc);
 
 int dfitpsf(float *atlas,
             float *atlas_ivar,
@@ -34,8 +34,8 @@ int dfitpsf(float *atlas,
 
   printf("%d %d %d %d\n", nx, ny, nc, nim); fflush(stdout);
 
-  nmf(atlas, atlas_ivar, nx*ny, nim, psfc, psft, nc, np);
-  
+  nmf(atlas, atlas_ivar, nx*ny, nim, psfc, psft, nc);
+
   FREEVEC(templates);
   FREEVEC(coeffs);
 	return(1);

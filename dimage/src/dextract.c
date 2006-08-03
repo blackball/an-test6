@@ -5,9 +5,9 @@
 #include "dimage.h"
 
 /*
- * dpeaks.c
+ * dextract.c
  *
- * Find peaks in an image, for the purposes of deblending children.
+ * Take image and list of objects, and produce list of all peaks 
  *
  * Mike Blanton
  * 1/2006 */
@@ -22,8 +22,8 @@ static int *indx=NULL;
 static int *object=NULL;
 static int *keep=NULL;
 static int *mask=NULL;
-static int *fullxcen=NULL;
-static int *fullycen=NULL;
+static float *fullxcen=NULL;
+static float *fullycen=NULL;
 
 int dpeaks_compare(const void *first, const void *second)
 {
@@ -43,23 +43,24 @@ int dpeaks(float *image,
            int nx, 
            int ny,
            int *npeaks, 
-           int *xcen, 
-           int *ycen, 
+           float *xcen, 
+           float *ycen, 
            float sigma,   /* sky sigma */
            float dlim,    /* limiting distance */
            float saddle,  /* number of sigma for allowed saddle */
            int maxnpeaks, 
            int smoothimage, 
-           int checkpeaks, 
            float minpeak)
 {
   int i,j,ip,jp,ist,jst,ind,jnd,highest,tmpnpeaks;
   float dx,dy, level;
 
+  printf("%e %e %e\n", sigma, dlim, saddle);
+  
   /* 1. smooth image */
   smooth=(float *) malloc(sizeof(float)*nx*ny);
   if(smoothimage) {
-    dsmooth(image, nx, ny, 1, smooth);
+    dsmooth(image, nx, ny, 2, smooth);
   } else {
     for(j=0;j<ny;j++) 
       for(i=0;i<nx;i++) 
@@ -90,13 +91,14 @@ int dpeaks(float *image,
   }
 
   /* 2. sort peaks */
+  printf("%d peaks\n", (*npeaks));
   indx=(int *) malloc(sizeof(int)*(*npeaks));
   for(i=0;i<(*npeaks);i++)
     indx[i]=i;
   qsort((void *) indx, (*npeaks), sizeof(int), dpeaks_compare);
-  if((*npeaks)>maxnpeaks) *npeaks=maxnpeaks;
-  fullxcen=(int *) malloc((*npeaks)*sizeof(int));
-  fullycen=(int *) malloc((*npeaks)*sizeof(int));
+  if((*npeaks)>100*maxnpeaks) *npeaks=100*maxnpeaks;
+  fullxcen=(float *) malloc((*npeaks)*sizeof(float));
+  fullycen=(float *) malloc((*npeaks)*sizeof(float));
   for(i=0;i<(*npeaks);i++) {
     fullxcen[i]=peaks[indx[i]]%nx;
     fullycen[i]=peaks[indx[i]]/nx;
@@ -109,21 +111,20 @@ int dpeaks(float *image,
   for(i=(*npeaks)-1;i>=0;i--) {
     keep[i]=1;
 
-		if(checkpeaks) {
-			/* look for peaks joined by a high saddle to brighter peaks */
-			level= (smooth[ fullxcen[i]+  fullycen[i]*nx]-saddle*sigma);
-			for(jp=0;jp<ny;jp++)
-				for(ip=0;ip<nx;ip++)
-					mask[ip+jp*nx]=smooth[ip+jp*nx]>level;
-			printf("checking %d %f %f\n", checkpeaks, level, smooth[ fullxcen[i]+  fullycen[i]*nx]); fflush(stdout);
-			dfind(mask, nx, ny, object);
-			for(j=i-1;j>=0;j--) 
-				if(object[ fullxcen[j]+ fullycen[j]*nx]==
-					 object[ fullxcen[i]+ fullycen[i]*nx] || 
-					 object[ fullxcen[i]+ fullycen[i]*nx]==-1 ) {
-					keep[i]=0;
-				}
-		}
+    /* look for peaks joined by a high saddle to brighter peaks */
+    level= (smooth[(int) fullxcen[i]+ (int) fullycen[i]*nx]-saddle*sigma);
+    if(level<saddle*sigma) 
+      level=(smooth[(int) fullxcen[i]+ (int) fullycen[i]*nx]-sigma);
+    for(jp=0;jp<ny;jp++)
+      for(ip=0;ip<nx;ip++)
+        mask[ip+jp*nx]=smooth[ip+jp*nx]>level;
+    dfind(mask, nx, ny, object);
+    for(j=i-1;j>=0;j--) 
+      if(object[(int) fullxcen[j]+(int) fullycen[j]*nx]==
+         object[(int) fullxcen[i]+(int) fullycen[i]*nx] || 
+         object[(int) fullxcen[i]+(int) fullycen[i]*nx]==-1 ) {
+        keep[i]=0;
+      }
 
     /* look for close peaks */
     for(j=i-1;j>=0;j--) {

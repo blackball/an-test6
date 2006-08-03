@@ -24,12 +24,11 @@ float dselip(unsigned long k, unsigned long n, float *arr);
 int dsigma(float *image, 
 					 int nx, 
 					 int ny,
+					 int sp,
 					 float *sigma)
 {
 	float tot;
-  int i,j,dx,dy, ndiff, sp;
-
-	sp=2;
+  int i,j,dx,dy, ndiff;
 
 	if(nx==1 && ny==1) {
 		(*sigma)=0.;
