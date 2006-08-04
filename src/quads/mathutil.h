@@ -13,6 +13,8 @@ double dot_product_3(double* v1, double* v2);
 
 double vector_length_3(double* v);
 
+double vector_length_squared_3(double* v);
+
 Inline void cross_product(double* v1, double* v2, double* cross);
 
 inline void normalize(double* x, double* y, double* z);

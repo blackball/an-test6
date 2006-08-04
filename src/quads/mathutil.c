@@ -9,6 +9,10 @@ double vector_length_3(double* v) {
 	return sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 }
 
+double vector_length_squared_3(double* v) {
+	return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+}
+
 double dot_product_3(double* va, double* vb) {
 	return va[0]*vb[0] + va[1]*vb[1] + va[2]*vb[2];
 }

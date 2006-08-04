@@ -15,7 +15,7 @@
 #include "xylist.h"
 #include "verify.h"
 
-static const char* OPTIONS = "hi:o:s:r:m:f:X:Y:w:M"; // t:
+static const char* OPTIONS = "hi:o:s:r:m:f:X:Y:w:Mu:v:";
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
@@ -30,6 +30,8 @@ static void printHelp(char* progname) {
 			"   -m <min field objects required>\n"
 			"   [-w <FITS WCS header output file>]\n"
 			"   [-M]: write Matlab script showing the tuning\n"
+			"     [-u <max-u-image-coordinate>] (defaults 1024)\n"
+			"     [-v <max-v-image-coordinate>]\n"
 			"\n", progname);
 }
 
@@ -180,9 +182,17 @@ int main(int argc, char *argv[]) {
 
 	bool matlab = FALSE;
 
+	double maxu = 1024;
+	double maxv = 1024;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'u':
+			maxu = atof(optarg);
+			break;
+		case 'v':
+			maxv = atof(optarg);
+			break;
 		case 'M':
 			matlab = TRUE;
 			break;
@@ -308,6 +318,10 @@ int main(int argc, char *argv[]) {
 		double Mall[9];
 		double tmp[3];
 		double pw[3];
+
+		const int STEPS = 25;
+		double overlaps[STEPS+1];
+		double totalweights[STEPS];
 
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
@@ -445,10 +459,11 @@ int main(int argc, char *argv[]) {
 		matrix_matrix_3(MD, Mtmp2, Mtmp);
 		matrix_matrix_3(MR, Mtmp, Mall);
 
+		overlaps[0] = mo->overlap;
 
 		// "xyz" is the field origin.
 
-		for (s=0; s<25; s++) {
+		for (s=0; s<STEPS; s++) {
 			double u,v;
 			int j;
 			double totalweight;
@@ -456,6 +471,7 @@ int main(int argc, char *argv[]) {
 			double totaltheta;
 			double totalxyz[3];
 			double step;
+			double lenxyz;
 
 			// project each field object...
 			for (i=0; i<NF; i++) {
@@ -513,9 +529,9 @@ int main(int argc, char *argv[]) {
 					dtheta = asin(dot_product_3(cross, xyz) / (rf * ri));
 					totaltheta += weight * dtheta;
 
-					totalxyz[0] = weight * (ixyz[0] - fxyz[0]);
-					totalxyz[1] = weight * (ixyz[1] - fxyz[1]);
-					totalxyz[2] = weight * (ixyz[2] - fxyz[2]);
+					totalxyz[0] += weight * (ixyz[0] - fxyz[0]);
+					totalxyz[1] += weight * (ixyz[1] - fxyz[1]);
+					totalxyz[2] += weight * (ixyz[2] - fxyz[2]);
 
 					/*
 					  printf("f=%i, i=%i: dist: %g (%g sigmas), weight %g\n", i, j, sqrt(d2),
@@ -538,18 +554,19 @@ int main(int argc, char *argv[]) {
 			printf("=============\n");
 			printf("scale: %g\n", totalscale);
 			printf("theta: %g degrees\n", rad2deg(totaltheta));
-			printf("xyz: (%g,%g,%g)\n", totalxyz[0], totalxyz[1], totalxyz[2]);
+			lenxyz = distsq2arcsec(vector_length_squared_3(totalxyz));
+			printf("xyz: (%g,%g,%g)   (%g arcsec)\n", totalxyz[0], totalxyz[1], totalxyz[2], lenxyz);
 			printf("\n");
 
 			step = 0.5;
 
-			if (matlab && (s < 10 || s == 24)) {
+			if (matlab && (s < 10 || s == STEPS-1)) {
 				double ox, oy;
 				double x, y;
 				double pu[3], pv[3], puv[3];
 				double pux, puy, pvx, pvy, puvx, puvy;
-				double pixelsx = 4096;
-				double pixelsy = 4096;
+				double pixelsx = maxu;
+				double pixelsy = maxv;
 
 				if (s == 0) {
 					fprintf(stderr, "index=[");
@@ -585,13 +602,6 @@ int main(int argc, char *argv[]) {
 				star_coords(tmp,  centerxyz, &puvx,  &puvy);
 				fprintf(stderr, "uvx%i=[%g,%g,%g,%g,%g];\n", s, ox, pux, puvx, pvx, ox);
 				fprintf(stderr, "uvy%i=[%g,%g,%g,%g,%g];\n", s, oy, puy, puvy, pvy, oy);
-				fprintf(stderr, "p=plot(origin%i(1),origin%i(2),'r*', "
-						"field%i(:,1), field%i(:,2), 'b.',"
-						"index(:,1), index(:,2), 'ro',"
-						"uvx%i, uvy%i, 'm-');\n", s, s, s, s, s, s);
-				fprintf(stderr, "set(p(3), 'MarkerSize', 5);\n");
-				fprintf(stderr, "axis equal;\n");
-				fprintf(stderr, "input('\\nround %i');\n", s);
 			}
 
 			printf("Old RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n",
@@ -630,6 +640,46 @@ int main(int argc, char *argv[]) {
 			}
 			printf("Overlap: %g\n", mo->overlap);
 
+			totalweights[s] = totalweight;
+			overlaps[s+1] = mo->overlap;
+
+		}
+
+		if (matlab) {
+			// slide show.
+			fprintf(stderr, "totalweights=[");
+			for (s=0; s<STEPS; s++)
+				fprintf(stderr, "%g,", totalweights[s]);
+			fprintf(stderr, "];\n");
+			fprintf(stderr, "overlaps=[");
+			for (s=0; s<=STEPS; s++)
+				fprintf(stderr, "%g,", overlaps[s]);
+			fprintf(stderr, "];\n");
+			fprintf(stderr, "clf;\n");
+			fprintf(stderr, "subplot(6, 1, 1);\n");
+			for (s=0; s<STEPS; s++) {
+				// skip 10--23
+				if (s == 10) {
+					s = 23;
+					continue;
+				}
+				fprintf(stderr, "subplot(6, 1, 1);\n");
+				fprintf(stderr, "plot([1:%i],totalweights,'r-',%i,totalweights(%i),'ro'); "
+						"a=axis; a(1)=0; a(2)=%i; axis(a); ylabel('Total probability');\n",
+						STEPS, s+1, s+1, STEPS+1);
+				fprintf(stderr, "subplot(6, 1, 2);");
+				fprintf(stderr, "plot([0:%i],overlaps,'b-',%i,overlaps(%i),'ro'); "
+						"a=axis; a(1)=0; a(2)=%i; axis(a); ylabel('Overlap'); xlabel('Step');\n",
+						STEPS, s+1, s+2, STEPS+1);
+				fprintf(stderr, "subplot(6, 1, [3:6]);");
+				fprintf(stderr, "p=plot(origin%i(1),origin%i(2),'r*', "
+						"field%i(:,1), field%i(:,2), 'b.',"
+						"index(:,1), index(:,2), 'ro',"
+						"uvx%i, uvy%i, 'm-');\n", s, s, s, s, s, s);
+				fprintf(stderr, "set(p(3), 'MarkerSize', 5);\n");
+				fprintf(stderr, "axis equal;\n");
+				fprintf(stderr, "input('\\nround %i');\n", s);
+			}
 		}
 
 		kdtree_free_query(res);
