@@ -13,9 +13,9 @@
 
 /* Most macros operate on a variable kdtree_t *kd, assumed to exist. */
 /* x is a node index, d is a dimension, and n is a point index */
-#define INTNODE_SIZE      (sizeof(intkdtree_node_t) + sizeof(real)*kd->ndim*2)
 
-#define NODE(x)        ((intkdtree_node_t*) (((void*)kd->tree) + INTNODE_SIZE*(x)))
+#define INTNODE_SIZE      (sizeof(intkdtree_node_t))
+#define NODE(x)        ((intkdtree_node_t*) (((char*)kd->tree) + INTNODE_SIZE*(x)))
 #define PARENT(x)      NODE(((x)-1)/2)
 #define CHILD_NEG(x)   NODE(2*(x) + 1)
 #define CHILD_POS(x)   NODE(2*(x) + 2)
@@ -26,6 +26,7 @@
 /*****************************************************************************/
 
 #define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))/kd->delta) ) )
+#define FIXED2REAL(i) (kd->minval + (i)*kd->delta)
 #define UINT_MAX 0xffffffff
 
 real round(real);
@@ -34,7 +35,6 @@ real round(real);
 intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
                              real minval, real maxval)
 {
-	printf("BUILD %d\n", ndata);
 	int i, j;
 	intkdtree_t *kd;
 	unsigned int nnodes, nbottom, ninterior;
@@ -43,6 +43,9 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	real delta;
 	unsigned int N = ndata;
 	unsigned int D = ndim;
+	unsigned int xx;
+
+	printf("BUILD %d\n", ndata);
 
 	assert(nlevel > 0);
 	assert(D <= INTKDTREE_MAX_DIM);
@@ -116,6 +119,11 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		unsigned int left, right;
 		real* pdata;
 		real maxrange;
+		unsigned int xx;
+		unsigned int s;
+		real qsplit;
+		unsigned int spl;
+		unsigned int c;
 
 		/* Sanity */
 		assert(NODE(i) == PARENT(2*i + 1));
@@ -194,25 +202,23 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		m = 1 + (left+right)/2;
 
 		/* Make sure sort works */
-		unsigned int xx;
 		for(xx=left; xx<=right-1; xx++) { 
 			assert(data[D*xx+d] <= data[D*(xx+1)+d]);
 		}
 
 		/* Encode split dimension and value. Last 2 bits are the split
 		 * dimension. The split location is the upper 30 bits. */
-		unsigned int s = REAL2FIXED(data[D*m+d]);
+		s = REAL2FIXED(data[D*m+d]);
 		s = s & 0xfffffffc;
-		real qsplit = s*delta*kd->maxval; 
+		qsplit = FIXED2REAL(s);
 		assert((s & 0x3) == 0);
 
 		/* Play games to make sure we properly partition the data */
 		while(m < right && data[D*m+d] < qsplit) m++;
-		while(m > left && qsplit <= data[D*(m-1)+d]) m--;
-		assert(m-1 >= 0);
+		while(left <  m && qsplit <= data[D*(m-1)+d]) m--;
 
 		/* Even more sanity */
-		for (xx=left; xx<=m-1; xx++)
+		for (xx=left; m && xx<=m-1; xx++)
 			assert(data[D*xx+d] < qsplit);
 		for (xx=m; xx<=right; xx++)
 			assert(qsplit <= data[D*xx+d]);
@@ -223,22 +229,20 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		kd->tree[i].split = s | dim;
 
 		/* Sanity is good when you do so much low level tweaking */
-		unsigned int spl = kd->tree[i].split & 0x3;
+		spl = kd->tree[i].split & 0x3;
 		assert(spl == dim);
 
 		/* Store the R pointers for each child */
-		unsigned int c = 2*i;
+		c = 2*i;
 		if (level == nlevel - 2)
 			c -= ninterior;
 		kd->lr[c+1] = m-1;
 		kd->lr[c+2] = right;
 
-		assert(0 <= left);
-		assert(left <= m-1);
+		assert((m == 0 && left == 0) || (left <= m-1));
 		assert(m <= right);
 	}
 
-	unsigned int xx;
 	for(xx=0; xx<nbottom-1; xx++)
 		assert(kd->lr[xx] <= kd->lr[xx+1]);
 
@@ -281,23 +285,23 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 			assert(spl < kd->ndim);
 
 			if (pti[spl] < loc) {
-				assert(pt[spl] < kd->delta*loc*kd->maxval);
+				assert(pt[spl] < FIXED2REAL(loc));
 				assert(loc >= pti[spl]);
 				stack[zzz++] = 2*i+1;
 				/* Note that this condition is written
 				 * such that integer overflow cannot occur */
 				if (loc - pti[spl] <= radius) {
-					assert(kd->delta*loc*kd->maxval - pt[spl] > 0.0);
-					assert(kd->delta*loc*kd->maxval - pt[spl] <= maxdist);
+					assert(FIXED2REAL(loc) - pt[spl] > 0.0);
+					assert(FIXED2REAL(loc) - pt[spl] <= maxdist);
 					stack[zzz++] = 2*i+2;
 				}
 			} else {
-				assert(kd->delta*loc*kd->maxval <= pt[spl]);
+				assert(FIXED2REAL(loc) <= pt[spl]);
 				stack[zzz++] = 2*i+2;
 				assert(pti[spl] >= loc);
 				if (pti[spl] - loc < radius) {
-					assert(pt[spl] - kd->delta*loc*kd->maxval >= 0.0);
-					assert(pt[spl] - kd->delta*loc*kd->maxval < maxdist);
+					assert(pt[spl] - FIXED2REAL(loc) >= 0.0);
+					assert(pt[spl] - FIXED2REAL(loc) < maxdist);
 					stack[zzz++] = 2*i+1;
 				}
 			}
@@ -346,6 +350,7 @@ int overflow;
 intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real maxdistsquared)
 {
 	kdtree_qres_t *res;
+	int j, k;
 	if (!kd || !pt)
 		return NULL;
 	res = malloc(sizeof(kdtree_qres_t));
@@ -367,7 +372,6 @@ intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real
 	res->inds = malloc(sizeof(unsigned int) * res->nres);
 	memcpy(res->inds, results_inds, sizeof(unsigned int)*res->nres);
 
-	int j, k;
 	for(j=0;j<res->nres; j++) {
 		real x = 0;
 		for(k=0; k<kd->ndim;k++) {
