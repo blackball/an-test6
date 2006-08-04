@@ -27,10 +27,16 @@ if(NOT keyword_set(plim)) then plim=5.
 base=(stregex(imfile, '(.*)\.fits.*', /sub, /extr))[1]
 
 image=mrdfits(imfile)
-if(keyword_set(msub)) then image=image-median(image)
+ivar=mrdfits(imfile,2)
 
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
+
+sigma=dsigma(image, sp=10)
+if(NOT keyword_set(ivar)) then $
+  ivar=fltarr(nx, ny)+1./sigma^2
+
+if(keyword_set(msub)) then image=image-median(image)
 
 ;; do general object detection
 dobjects, image, object=oimage, plim=plim
@@ -38,7 +44,6 @@ mwrfits, oimage, base+'-pimage.fits', /create
 
 pcat=replicate({xst:0L, yst:0L, xnd:0L, ynd:0L, msig:0.},max(oimage)+1L)
 mwrfits, 0, base+'-parents.fits', /create
-sigma=dsigma(image)
 for iobj=0L, max(oimage) do begin
     io=where(oimage eq iobj)
     ixo=io mod nx
@@ -52,13 +57,16 @@ for iobj=0L, max(oimage) do begin
 
     timage=image[xstart:xend, ystart:yend]
     nimage=oimage[xstart:xend, ystart:yend]
+    iivar=ivar[xstart:xend, ystart:yend]
     
 ;; now choose the object that includes the center
     io=where(nimage eq iobj OR nimage eq -1L)
     
     iimage=randomn(seed, nxnew, nynew)*sigma
+    ii=where(iivar gt 0., nii)
+    if(nii gt 0) then $
+      iimage[ii]=randomn(seed, nii)/sqrt(iivar[ii])
     iimage[io]=timage[io]
-    iivar=fltarr(nxnew,nynew)+1./sigma^2
 
     hdr=['']
     sxaddpar, hdr, 'XST', xstart
@@ -72,6 +80,7 @@ for iobj=0L, max(oimage) do begin
     pcat[iobj].msig=max(iimage)/sigma
     
     mwrfits, iimage, base+'-parents.fits', hdr
+    mwrfits, iivar, base+'-parents.fits', hdr
 endfor
 
 mwrfits, pcat, base+'-pcat.fits', /create
