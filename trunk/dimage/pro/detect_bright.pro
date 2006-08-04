@@ -13,10 +13,10 @@
 ;   11-Jan-2006  Written by Blanton, NYU
 ;-
 ;------------------------------------------------------------------------------
-pro detect_bright, imfile, dbset=dbset, nodeblend=nodeblend, cz=cz
+pro detect_bright, imfile, dbset=dbset, nodeblend=nodeblend, cz=cz, $
+                   hand=hand
 
 base=(stregex(imfile, '(.*)\.fits.*', /sub, /extr))[1]
-
 
 if(NOT keyword_set(dbset)) then begin
     dbset={base:base, $
@@ -60,8 +60,6 @@ endif else begin
 endelse
 psf=mrdfits(base+'-bpsf.fits')
 
-
-if(0) then begin
 if(dbset.nstars gt 0) then begin 
     xstars=dbset.xstars[0:dbset.nstars-1]
     ystars=dbset.ystars[0:dbset.nstars-1]
@@ -70,10 +68,10 @@ if(dbset.ngals gt 0) then begin
     xgals=dbset.xgals[0:dbset.ngals-1]
     ygals=dbset.ygals[0:dbset.ngals-1]
 endif
-endif
 dchildren, dbset.base, dbset.parent, $
   psmooth=dbset.psmooth, xstars=xstars, ystars=ystars, $
-  xgals=xgals, ygals=ygals, psf=psf, nodeblend=nodeblend
+  xgals=xgals, ygals=ygals, psf=psf, nodeblend=nodeblend, $
+  hand=hand
 
 dbset.nstars=n_elements(xstars)
 if(xstars[0] eq -1) then dbset.nstars=0
@@ -89,6 +87,8 @@ if(dbset.ngals gt 0) then begin
 endif
   
 mwrfits, dbset, base+'-dbset.fits', /create
+
+dhtmlpage, dbset.base, dbset.parent, /install
 
 end
 ;------------------------------------------------------------------------------
