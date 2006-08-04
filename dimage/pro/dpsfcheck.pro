@@ -21,6 +21,10 @@ nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 npx=(size(psf,/dim))[0]
 npy=(size(psf,/dim))[1]
+
+fit_mult_gauss, psf, 1, amp, psfsig, model=model
+fwhm=psfsig*2.*sqrt(2.*alog(2.))
+
 cc=fltarr(npx,npy)+1.
 xx=reform(replicate(1., npx)#findgen(npy), npx*npy)/float(npx)-0.5
 yy=reform(findgen(npx)#replicate(1., npy), npx*npy)/float(npy)-0.5
@@ -32,29 +36,27 @@ cmodel[*,1]=xx
 cmodel[*,2]=yy
 cmodel[*,3]=cc
 
-ispsf=fltarr(n_elements(x))+1
 amp=fltarr(n_elements(x))
-for i=0L, n_elements(x)-1L do begin
-    cutout_image=fltarr(npx,npy)
-    cutout_ivar=fltarr(npx,npy)
-    embed_stamp, cutout_image, image, npx/2L-x[i], npy/2L-y[i]
-    embed_stamp, cutout_ivar, ivar, npx/2L-x[i], npy/2L-y[i]
-    cutout_ivar=cutout_ivar>0.
-
-    hogg_iter_linfit, cmodel, reform(cutout_image, npx*npy), $
-      reform(cutout_ivar, npx*npy), coeffs, nsigma=20
+for i=0L, n_elements(x)-1L do begin & $
+    cutout_image=fltarr(npx,npy) & $
+    cutout_ivar=fltarr(npx,npy) & $
+  cutout_ivar=cutout_ivar>0. & $
+    embed_stamp, cutout_image, image, npx/2L-x[i], npy/2L-y[i] & $
+    embed_stamp, cutout_ivar, ivar, npx/2L-x[i], npy/2L-y[i] & $
     
-    model=reform(coeffs#cmodel, npx, npy)
-    resid=(cutout_image-model)^2*cutout_ivar*(psf>0.1)
-    igd=where(cutout_ivar gt 0, ngd)
-    chi2sig=(total(resid[igd])-ngd)/sqrt(ngd)
-    help,i,chi2sig
-    amp[i]=coeffs[0]
-    ispsf[i]=chi2sig lt 100. AND coeffs[3] lt 0.2*coeffs[0]
-    help,ispsf[i]
-    atv, cutout_image
-    stop
+    hogg_iter_linfit, cmodel, reform(cutout_image, npx*npy), $
+      reform(cutout_ivar, npx*npy), coeffs, nsigma=10 & $
+    amp[i]=coeffs[0] & $
 endfor
+
+model=fltarr(nx,ny)
+for i=0L, n_elements(x)-1L do $ 
+  embed_stamp, model, amp[i]*psf/max(psf), $
+  x[i]-float(npx/2L), y[i]-float(npy/2L)
+nimage= image-model
+simage=dmedsmooth(nimage,box=ceil(fwhm)) 
+
+ispsf=image[long(x), long(y)] gt 10.*simage[long(x), long(y)]
 
 return, ispsf
 

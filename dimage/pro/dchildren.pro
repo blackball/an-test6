@@ -19,11 +19,11 @@
 ;------------------------------------------------------------------------------
 pro dchildren, base, iparent, plim=plim, psmooth=psmooth, $
                glim=glim, xstars=xstars, ystars=ystars, xgals=xgals, $
-               ygals=ygals, psf=psf, nodeblend=nodeblend
+               ygals=ygals, psf=psf, nodeblend=nodeblend, hand=hand
 
 common atv_point, markcoord
 
-if(NOT keyword_set(plim)) then plim=10.
+if(NOT keyword_set(plim)) then plim=5.
 if(NOT keyword_set(glim)) then glim=10.
 if(NOT keyword_set(psmooth)) then psmooth=40L
 
@@ -41,18 +41,17 @@ if(NOT keyword_set(xstars)) then begin
     simage=dsmooth(image,1.)
     ssigma=dsigma(simage, sp=5)
     dpeaks, simage, xc=xc, yc=yc, sigma=ssigma, minpeak=plim*ssigma, $
-      /refine, npeaks=nc, maxnpeaks=100, /check, saddle=3.
+      /refine, npeaks=nc, maxnpeaks=1000, /check, saddle=3.
 endif    
 
 if(keyword_set(nc) gt 0 or $
    keyword_set(xstars) gt 0 or $
-   keyword_set(xgals) gt 0) then begin
+   keyword_set(xgals) gt 0 or $
+   keyword_set(hand) gt 0) then begin
     
     if(keyword_set(xstars) eq 0 AND $
        keyword_set(xgals) eq 0) then begin 
 ;; try and guess which peaks are PSFlike
-        xco=xc
-        yco=yc
         ispsf=dpsfcheck(image, ivar, xc, yc, amp=amp, psf=psf)
         ipsf=where(ispsf gt 0., npsf)
         xstars=-1
@@ -148,10 +147,10 @@ if(keyword_set(nc) gt 0 or $
     
     npsf=n_elements(xstars)
     ngals=n_elements(xgals)
-    if(1) then begin
+    if(keyword_set(hand)) then begin
         atv,image
         if(npsf gt 0) then $
-          atvplot,xstars, ystars, psym=4, th=4, color='green'
+          atvplot,xstars, ystars, psym=4, th=4, color='green', /block
         if(ngals gt 0) then $
           atvplot,xgals, ygals, psym=4, th=2, color='red'
     endif
