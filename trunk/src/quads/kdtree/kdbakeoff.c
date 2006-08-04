@@ -98,6 +98,7 @@ int main() {
 		double pt[4];
 		struct timeval tv1, tv2, tv3;
 		int grass;
+		real mag;
 		grass = i * 80 / ROUNDS;
 		if (grass != lastgrass) {
 			printf(".");
@@ -107,7 +108,7 @@ int main() {
 
 		grnf(pt, pt+1);
 		grnf(pt+2, pt+3);
-		real mag = pt[i]*pt[i]+pt[i+1]*pt[i+1]+pt[i+2]*pt[i+2];
+		mag = pt[i]*pt[i]+pt[i+1]*pt[i+1]+pt[i+2]*pt[i+2];
 		pt[i] /= mag;
 		pt[i+1] /= mag;
 		pt[i+2] /= mag;
