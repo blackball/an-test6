@@ -219,6 +219,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		assert(left <= m);
 		assert(m <= right);
 
+		/* Store split dimension and location */
 		kd->tree[i].split = s | dim;
 
 		/* Sanity is good when you do so much low level tweaking */
@@ -366,6 +367,16 @@ intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real
 	res->inds = malloc(sizeof(unsigned int) * res->nres);
 	memcpy(res->inds, results_inds, sizeof(unsigned int)*res->nres);
 
+	int j, k;
+	for(j=0;j<res->nres; j++) {
+		real x = 0;
+		for(k=0; k<kd->ndim;k++) {
+			real delta = res->results[kd->ndim*j+k]-pt[k];
+			x += delta*delta;
+		}
+		assert(x <= maxdistsquared);
+		//printf("delta: %f\n", x);
+	}
 
 	return res;
 }
