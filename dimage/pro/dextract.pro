@@ -83,10 +83,10 @@ for i=1L, n_elements(iuniq)-1L do begin
         ynd[i-1]=iylims[1]
         xcen[i-1]=(icen mod (ixlims[1]-ixlims[0]+1))+ixlims[0]
         ycen[i-1]=(icen / (ixlims[1]-ixlims[0]+1))+iylims[0]
-        if(xcen[i-1]-ixlims[0]-1 gt 0 and $
-           xcen[i-1]-ixlims[0]-1 lt nxs-1L and $
-           ycen[i-1]-iylims[0]-1 gt 0 and $
-           ycen[i-1]-iylims[0]-1 lt nys-1L) then begin
+        if(xcen[i-1]-ixlims[0] gt 0 and $
+           xcen[i-1]-ixlims[0] lt nxs-1L and $
+           ycen[i-1]-iylims[0] gt 0 and $
+           ycen[i-1]-iylims[0] lt nys-1L) then begin
             dcen3x3, sm[xcen[i-1]-ixlims[0]-1:xcen[i-1]-ixlims[0]+1, $
                         ycen[i-1]-iylims[0]-1:ycen[i-1]-iylims[0]+1], xx, yy
             xfit[i-1]=xx+float(xcen[i-1])-1.

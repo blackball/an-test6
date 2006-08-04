@@ -27,14 +27,14 @@ if(NOT keyword_set(plim)) then plim=10.
 if(NOT keyword_set(glim)) then glim=10.
 if(NOT keyword_set(psmooth)) then psmooth=40L
 
-image=mrdfits(base+'-parents.fits',1+iparent)
+image=mrdfits(base+'-parents.fits',1+2*iparent)
+ivar=mrdfits(base+'-parents.fits',2+2*iparent)
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 pnx=(size(psf,/dim))[0]
 pny=(size(psf,/dim))[1]
-sigma=dsigma(image)
-;; hack assuming sky is about 1.0 in these units
-ivar=fltarr(nx,ny)+1./(1.+(150.*image>0.))/sigma^2
+sscale=dsigma(image,sp=10)*sqrt(median(ivar))
+ivar=ivar/sscale^2
 
 ;; find all peaks 
 if(NOT keyword_set(xstars)) then begin
