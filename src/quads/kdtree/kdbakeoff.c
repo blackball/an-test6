@@ -13,10 +13,15 @@ double rec_total[REPS];
 
 void grnf (double *x, double *y);
 
+#define SPHERE
+
 int main() {
 	int N = 1000000;
-	//int D = 4;
+#ifdef SPHERE
 	int D = 3;
+#else
+	int D = 4;
+#endif
 	double* data, *data2;
 	int i, d, r;
 	kdtree_t* kd;
@@ -27,7 +32,7 @@ int main() {
 	double maxd2 = 0.005;
 	//double maxd2 = 0.0001;
 	//double maxd2 = 0.0015;
-	int ROUNDS = 100;
+	int ROUNDS = 3000;
 	int lastgrass = 0;
 
 	printf("N=%i, D=%i.\n", N, D);
@@ -40,26 +45,30 @@ int main() {
 
 
 
-#if 0
-	for (i=0; i<N*D; i++) {
-		data[i] = rand() / (double)RAND_MAX;
-		data2[i] = data[i];
-	}
-#endif
+#ifdef SPHERE
 	// on the sphere
 	for (i=0; i<N*D; i+=2) {
 		grnf(data+i, data+i+1);
 	}
 	for (i=0; i<N*D; i+=3) {
-		real mag = data[i]*data[i]+data[i+1]*data[i+1]+data[i+2]*data[i+2];
+		real mag = sqrt(data[i]*data[i] + data[i+1]*data[i+1] + data[i+2]*data[i+2]);
 		data[i] /= mag;
 		data[i+1] /= mag;
 		data[i+2] /= mag;
 		data2[i] = data[i];
 		data2[i+1] = data[i+1];
 		data2[i+2] = data[i+2];
+		assert(-1 <= data2[i] && data2[i] <= 1);
+		assert(-1 <= data2[i+1] && data2[i+1] <= 1);
+		assert(-1 <= data2[i+2] && data2[i+2] <= 1);
 	}
 
+#else 
+	for (i=0; i<N*D; i++) {
+		data[i] = rand() / (double)RAND_MAX;
+		data2[i] = data[i];
+	}
+#endif
 
 	for (i=0; i<REPS; i++)
 		iter_total[i] = rec_total[i] = 0.0;
@@ -91,7 +100,11 @@ int main() {
 	kd = kdtree_build(data, N, D, levels);
 	toc();
 	tic();
-	ikd = intkdtree_build(data2, N, D, levels, 0, 1);
+#ifdef SPHERE
+	ikd = intkdtree_build(data2, N, D, levels, -1.0, 1.0);
+#else 
+	ikd = intkdtree_build(data2, N, D, levels, 0.0, 1.0);
+#endif
 	toc();
 
 	for (i=0; i<ROUNDS; i++) {
@@ -106,14 +119,17 @@ int main() {
 			lastgrass = grass;
 		}
 
+#ifdef SPHERE
 		grnf(pt, pt+1);
 		grnf(pt+2, pt+3);
-		mag = pt[i]*pt[i]+pt[i+1]*pt[i+1]+pt[i+2]*pt[i+2];
-		pt[i] /= mag;
-		pt[i+1] /= mag;
-		pt[i+2] /= mag;
-		//for (d=0; d<D; d++)
-			//pt[d] = rand() / (double)RAND_MAX;
+		mag = sqrt(pt[0]*pt[0]+pt[1]*pt[1]+pt[2]*pt[2]);
+		pt[0] /= mag;
+		pt[1] /= mag;
+		pt[2] /= mag;
+#else
+		for (d=0; d<D; d++)
+			pt[d] = rand() / (double)RAND_MAX;
+#endif
 
 		for (r=0; r<REPS; r++) {
 			gettimeofday(&tv1, NULL);
