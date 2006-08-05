@@ -25,7 +25,10 @@
 /* Building routines                                                         */
 /*****************************************************************************/
 
-#define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))/kd->delta) ) )
+#define FOURBILLION 4294967296.0
+//#define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))/kd->delta) ) )
+#define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))*FOURBILLION ) ) )
+#define REALDELTA2FIXED(x) ((unsigned int) round( (double) (((x)/(kd->maxval - kd->minval))*FOURBILLION ) ) )
 #define FIXED2REAL(i) (kd->minval + (i)*kd->delta)
 #define UINT_MAX 0xffffffff
 
@@ -81,7 +84,7 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 	kd->maxval = maxval;
 
 	/* delta size for this tree... for now same for all dimensions */
-	kd->delta = delta = (maxval - minval) / 4294967296.0;
+	kd->delta = delta = (maxval - minval) / FOURBILLION;
 
 	/* perm stores the permutation indexes. This gets shuffled around during
 	 * sorts to keep track of the original index. */
@@ -213,11 +216,15 @@ intkdtree_t *intkdtree_build(real *data, int ndata, int ndim, int nlevel,
 		qsplit = FIXED2REAL(s);
 		assert((s & 0x3) == 0);
 
+		int xxxx = m;
+
 		/* Play games to make sure we properly partition the data */
 		while(m < right && data[D*m+d] < qsplit) m++;
+		int xxxxy = m;
 		while(left <  m && qsplit <= data[D*(m-1)+d]) m--;
 
 		/* Even more sanity */
+		assert(m != 0);
 		for (xx=left; m && xx<=m-1; xx++)
 			assert(data[D*xx+d] < qsplit);
 		for (xx=m; xx<=right; xx++)
@@ -257,8 +264,10 @@ unsigned int results_inds[INTKDTREE_MAX_RESULTS];
 
 void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, intkdtree_qres_t *res)
 {
+	/* Note that the radius is not a position on the real line but rather a
+	 * difference; so we must use a different conversion to fixed point. */
 	real maxdist = sqrt(maxdistsqd); /* a sqrt per search or a square per iteration? */
-	unsigned int radius = REAL2FIXED(maxdist);
+	unsigned int radius = REALDELTA2FIXED(maxdist);
 
 	unsigned int zzz = 0; /* lazy programming */
 	unsigned int pti[kd->ndim];
@@ -298,7 +307,7 @@ void intkdtree_rangesearch_actual(intkdtree_t *kd, real *pt, real maxdistsqd, in
 			} else {
 				assert(FIXED2REAL(loc) <= pt[spl]);
 				stack[zzz++] = 2*i+2;
-				assert(pti[spl] >= loc);
+				assert(loc <= pti[spl]);
 				if (pti[spl] - loc < radius) {
 					assert(pt[spl] - FIXED2REAL(loc) >= 0.0);
 					assert(pt[spl] - FIXED2REAL(loc) < maxdist);
@@ -357,6 +366,12 @@ intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real
 	res->nres = 0;
 	overflow = 0;
 
+	/* Range better be correct FIXME or determined automatically? */
+	for (j=0; j<kd->ndim; j++) {
+		assert(kd->minval <= pt[j]);
+		assert(pt[j] <= kd->maxval);
+	}
+
 	/* Do the real rangesearch */
 	intkdtree_rangesearch_actual(kd, pt, maxdistsquared, res);
 
@@ -372,6 +387,7 @@ intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real
 	res->inds = malloc(sizeof(unsigned int) * res->nres);
 	memcpy(res->inds, results_inds, sizeof(unsigned int)*res->nres);
 
+#if 0
 	for(j=0;j<res->nres; j++) {
 		real x = 0;
 		for(k=0; k<kd->ndim;k++) {
@@ -381,6 +397,7 @@ intkdtree_qres_t *intkdtree_rangesearch_unsorted(intkdtree_t *kd, real *pt, real
 		assert(x <= maxdistsquared);
 		//printf("delta: %f\n", x);
 	}
+#endif
 
 	return res;
 }
