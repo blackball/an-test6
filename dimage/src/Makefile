@@ -33,6 +33,8 @@ OBJECTS = \
 	dsigma.o \
 	idl_dsigma.o \
 	dmsmooth.o \
+	idl_dtemplates.o \
+	dtemplates.o \
 	dnonneg.o \
 	dcholdc.o \
 	dcholsl.o \
@@ -59,7 +61,7 @@ all : $(LIB)/libdimage.$(SO_EXT) ${BIN}/fits2xy
 ${BIN}/fits2xy: fits2xy.c ${LIB}/libdimage.${SO_EXT}  
 	$(CC) -o ${BIN}/fits2xy fits2xy.c -ldimage -lcfitsio -I../../src/cfitsio -L../../src/cfitsio -L${LIB}
 
-$(LIB)/libdimage.$(SO_EXT): $(OBJECTS) 
+$(LIB)/libdimage.$(SO_EXT): $(OBJECTS)  dimage.h
 	$(LD) $(X_LD_FLAGS) -o $(LIB)/libdimage.$(SO_EXT) $(OBJECTS) -lm
 #	$(LD) $(X_LD_FLAGS) -o $(LIB)/libdimage.$(SO_EXT) $(OBJECTS) $(MAKE_FTNLIB)
 #	nm -s ../lib/libimage.$(SO_EXT)
