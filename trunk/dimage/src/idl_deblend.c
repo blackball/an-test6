@@ -14,7 +14,8 @@ static void free_memory()
 IDL_LONG idl_deblend (int      argc,
 											void *   argv[])
 {
-	IDL_LONG nx,ny,*nchild, maxnchild, *xcen, *ycen, starstart, pnx, pny;
+	IDL_LONG nx,ny,*nchild, maxnchild, *xcen, *ycen, starstart, pnx, pny, 
+		dontsettemplates;
 	float *cimages, *templates, *image, *invvar, dlim, sigma, 
     tsmooth, tlimit, tfloor, saddle, parallel, minpeak, *psf; 
 	
@@ -45,13 +46,15 @@ IDL_LONG idl_deblend (int      argc,
 	psf=((float *)argv[i]); i++;
 	pnx=*((int *)argv[i]); i++;
 	pny=*((int *)argv[i]); i++;
+	dontsettemplates=*((int *)argv[i]); i++;
 	
 	/* 1. run the fitting routine */
 	retval=(IDL_LONG) deblend(image, invvar, nx, ny, (int *) nchild, 
 														(int *) xcen, (int *) ycen, cimages, templates, 
 														sigma, dlim, tsmooth,
                             tlimit, tfloor, saddle, parallel, maxnchild, 
-                            minpeak, starstart, psf, pnx, pny);
+                            minpeak, starstart, psf, pnx, pny, 
+														dontsettemplates);
 	
 	/* 2. free memory and leave */
 	free_memory();

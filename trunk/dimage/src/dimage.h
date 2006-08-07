@@ -36,7 +36,8 @@ int deblend(float *image,
             int starstart, 
 						float *psf, 
 						int pnx,
-						int pny);
+						int pny,
+						int dontsettemplates);
 int dcen3x3(float *image, float *xcen, float *ycen);
 int dsigma(float *image, int nx, int ny, int sp,float *sigma);
 int dmedsmooth(float *image, float *invvar, int nx, int ny, int box,
@@ -47,3 +48,5 @@ int dallpeaks(float *image, int nx, int ny, int *objects, float *xcen,
 int simplexy(float *image, int nx, int ny, float dpsf, float plim,  
 						 float dlim, float saddle, int maxper, int maxnpeaks,  
 						 float *sigma, float *x, float *y, float *flux, int *npeaks);
+int dtemplates(float *image, int nx, int ny, int *ntemplates, int *xcen, 
+							 int *ycen, float *templates, float sigma, float parallel);
