@@ -5,12 +5,12 @@ LFLAGS := -lm
 
 CFLAGS :=
 
-#CFLAGS	+= -g
-#CFLAGS += -O0
+CFLAGS	+= -g
+CFLAGS += -O0
 #CFLAGS += -O2
 #CFLAGS += -pg
-CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math
+#CFLAGS += -fomit-frame-pointer
+#CFLAGS += -O3 -ffast-math
 
 # to turn off asserts:
 CFLAGS += -DNDEBUG
@@ -98,7 +98,7 @@ EXECS := whynot agreeable certifiable quadidx \
 # things we don't use often:
 #	randcat genfields
 #   quadsperstar
-#   genmatch makematch 
+#makematch 
 #	xylstomatlab \
 #	galex_stats 
 #	rdlstofieldcheck 
@@ -113,7 +113,7 @@ EXECS := whynot agreeable certifiable quadidx \
 #   dedup_index 
 
 EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
-	filter_an
+	filter_an genmatch 
 #kdspeed
 
 # execs that require solver.o

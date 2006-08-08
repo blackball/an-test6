@@ -80,6 +80,8 @@ int main(int argc, char** args) {
 		else
 			lim = mapsize;
 
+		printf("|| %i || ", i+1);
+
 		for (j=0; j<lim; j++)
 			if (unsolved && !map[j])
 				printf("%i ", j);
@@ -89,6 +91,9 @@ int main(int argc, char** args) {
 			// all fields beyond the end of the file are unsolved.
 			for (; j<maxfield; j++)
 				printf("%i ", j);
+
+		printf(" ||");
+
 		printf("\n");
 
 		munmap(map, mapsize);

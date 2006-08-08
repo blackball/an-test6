@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 	double xyz[3];
 	double radius2;
 	kdtree_qres_t* res;
-	double* starxy;
+	//double* starxy;
 	int i;
 	double minx, miny, maxx, maxy;
 	double ra;
@@ -141,19 +141,23 @@ int main(int argc, char *argv[]) {
 	res = kdtree_rangesearch(startree, xyz, radius2);
 	fprintf(stderr, "Found %i stars within range.\n", res->nres);
 
-	starxy = malloc(res->nres * 2 * sizeof(double));
+	//starxy = malloc(res->nres * 2 * sizeof(double));
 
-	minx = maxx = miny = maxy = 0.0;
+	//minx = maxx = miny = maxy = 0.0;
 	printf("starxy=[");
 	for (i=0; i<res->nres; i++) {
 		double x, y;
 		star_coords(res->results + i*3, xyz, &x, &y);
-		starxy[i*2 + 0] = x;
-		starxy[i*2 + 1] = y;
-		if (x > maxx) maxx = x;
-		if (x < minx) minx = x;
-		if (y > maxy) maxy = y;
-		if (y < miny) miny = y;
+		/*
+		  starxy[i*2 + 0] = x;
+		  starxy[i*2 + 1] = y;
+		*/
+		/*
+		  if (x > maxx) maxx = x;
+		  if (x < minx) minx = x;
+		  if (y > maxy) maxy = y;
+		  if (y < miny) miny = y;
+		*/
 		printf("%g,%g;", x, y);
 	}
 	printf("];\n");
