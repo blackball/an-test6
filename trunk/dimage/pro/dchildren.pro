@@ -80,7 +80,7 @@ if(keyword_set(nc) gt 0 or $
         
     if(keyword_set(xgals) eq 0) then begin
         ngals=0
-        psmooth=5L
+        psmooth=2L
         while(ngals eq 0 and psmooth gt 1L) do begin
             subpix=long(psmooth/3.) > 1L
             nxsub=nx/subpix
