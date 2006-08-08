@@ -15,6 +15,8 @@ CFLAGS += -O3 -ffast-math
 # to turn off asserts:
 CFLAGS += -DNDEBUG
 
+#CFLAGS += -Wpointer-arith
+
 #CFLAGS += -fmudflap
 #LFLAGS += -lmudflap
 
