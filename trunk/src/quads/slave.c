@@ -45,6 +45,8 @@ static void solve_fields();
 
 static int read_parameters();
 
+static void reset_next_field();
+
 #define DEFAULT_CODE_TOL .002
 #define DEFAULT_PARITY_FLIP FALSE
 
@@ -207,6 +209,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Invalid params... this message is useless.\n");
 			exit(-1);
 		}
+
+		reset_next_field();
 
 		mf = matchfile_open_for_writing(matchfname);
 		if (!mf) {
@@ -748,8 +752,13 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	return n;
 }
 
+static int next_field_index = 0;
+
+static void reset_next_field() {
+	next_field_index = 0;
+}
+
 static int next_field(xy** pfield) {
-	static int index = 0;
 	int rtn;
 
 	if (pthread_mutex_lock(&fieldlist_mutex)) {
@@ -757,11 +766,11 @@ static int next_field(xy** pfield) {
 		exit(-1);
 	}
 
-	if (index >= il_size(fieldlist))
+	if (next_field_index >= il_size(fieldlist))
 		rtn = -1;
 	else {
-		rtn = il_get(fieldlist, index);
-		index++;
+		rtn = il_get(fieldlist, next_field_index);
+		next_field_index++;
 		if (pfield)
 			*pfield = xylist_get_field(xyls, rtn);
 	}
