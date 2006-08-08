@@ -15,7 +15,7 @@
 #include "xylist.h"
 #include "verify.h"
 
-static const char* OPTIONS = "hi:o:s:r:m:f:X:Y:w:Mu:v:";
+static const char* OPTIONS = "hi:o:s:r:f:X:Y:w:Mu:v:";
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
@@ -26,8 +26,6 @@ static void printHelp(char* progname) {
 			"     [-Y <y column name>]\n"
 			"   -s <star kdtree>\n"
 			"   -r <overlap radius (arcsec)>\n"
-			//"   -t <overlap threshold>\n"
-			"   -m <min field objects required>\n"
 			"   [-w <FITS WCS header output file>]\n"
 			"   [-M]: write Matlab script showing the tuning\n"
 			"     [-u <max-u-image-coordinate>] (defaults 1024)\n"
@@ -155,11 +153,6 @@ int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
 
-	/*
-	  char** inputfiles = NULL;
-	  int ninputfiles = 0;
-	  int i;
-	*/
 	char* infn = NULL;
 	char* outfn = NULL;
 	char* fitsout = NULL;
@@ -174,10 +167,7 @@ int main(int argc, char *argv[]) {
 	double* fielduv = NULL;
 	double* fieldxyz = NULL;
 
-	//double overlap_thresh = 0.0;
 	double overlap_rad = 0.0;
-	int min_ninfield = 0;
-
 	double overlap_d2;
 
 	bool matlab = FALSE;
@@ -217,14 +207,6 @@ int main(int argc, char *argv[]) {
 		case 's':
 			starfn = optarg;
 			break;
-			/*
-			  case 't':
-			  overlap_thresh = atof(optarg);
-			  break;
-			*/
-		case 'm':
-			min_ninfield = atoi(optarg);
-			break;
 		case 'r':
 			overlap_rad = atof(optarg);
 			break;
@@ -241,7 +223,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	if (overlap_rad == 0.0) { // || overlap_thresh == 0.0) {
+	if (overlap_rad == 0.0) {
 		fprintf(stderr, "Must specify overlap radius and threshold.\n");
 		printHelp(progname);
 		exit(-1);
