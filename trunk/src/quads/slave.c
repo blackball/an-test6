@@ -571,7 +571,7 @@ static void write_hits(int fieldnum, pl* matches) {
 		cached_hits* cache;
 		if (!bl_size(cached))
 			goto done_cacheflush;
-		fprintf(stderr, "Warning: cache was not empty at the end of the run.");
+		fprintf(stderr, "Warning: cache was not empty at the end of the run.\n");
 		fprintf(stderr, "Cache: [ ");
 		for (k=0; k<bl_size(cached); k++) {
 			cached_hits* ch = bl_access(cached, k);
@@ -835,6 +835,7 @@ void* solvethread_run(void* varg) {
 			break;
 		if (fieldnum >= nfields) {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
+			write_hits(fieldnum, NULL);
 			continue;
 		}
 		if (!thisfield) {
