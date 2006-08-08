@@ -95,6 +95,10 @@ int main(int argc, char *argv[]) {
 		double dx, dy, dz;
 		double r;
 		double radius;
+
+		printf("Field center RA,DEC (%g, %g) degrees.\n", fc.ra, fc.dec);
+		printf("Field radius %g arcmin.\n", fc.radius / 60.0);
+
 		ra  = deg2rad(fc.ra );
 		dec = deg2rad(fc.dec);
 		radius = sqrt(arcsec2distsq(fc.radius));

@@ -15,16 +15,16 @@
 #include "xylist.h"
 #include "verify.h"
 
-static const char* OPTIONS = "hi:o:s:r:f:X:Y:w:Mu:v:";
+static const char* OPTIONS = "hi:o:s:S:r:f:F:X:Y:w:Mu:v:";
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n"
 			"   -i <input matchfile>\n"
 			"   -o <output matchfile>\n"
-			"   -f <field (xyls) file>\n"
+			"   (-f <field (xyls) file>  OR  -F <field (xyls) template>)\n"
 			"     [-X <x column name>]\n"
 			"     [-Y <y column name>]\n"
-			"   -s <star kdtree>\n"
+			"   (-s <star kdtree>  OR  -S <star kdtree template>)\n"
 			"   -r <overlap radius (arcsec)>\n"
 			"   [-w <FITS WCS header output file>]\n"
 			"   [-M]: write Matlab script showing the tuning\n"
@@ -158,6 +158,8 @@ int main(int argc, char *argv[]) {
 	char* fitsout = NULL;
 	char* xylsfn = NULL;
 	char* starfn = NULL;
+	char* xylstemplate = NULL;
+	char* startemplate = NULL;
 	char* xname = NULL;
 	char* yname = NULL;
 	matchfile* matchin;
@@ -174,6 +176,8 @@ int main(int argc, char *argv[]) {
 
 	double maxu = 1024;
 	double maxv = 1024;
+
+	il* slideshow_steps = il_new(32);
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -198,6 +202,9 @@ int main(int argc, char *argv[]) {
 		case 'f':
 			xylsfn = optarg;
 			break;
+		case 'F':
+			xylstemplate = optarg;
+			break;
 		case 'i':
 			infn = optarg;
 			break;
@@ -206,6 +213,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 's':
 			starfn = optarg;
+			break;
+		case 'S':
+			startemplate = optarg;
 			break;
 		case 'r':
 			overlap_rad = atof(optarg);
@@ -217,7 +227,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (!infn || !outfn || !starfn || !xylsfn) {
+	if (!infn || !outfn || !(starfn || startemplate) || !(xylsfn || xylstemplate)) {
 		fprintf(stderr, "Must specify input and output match files, star kdtree, and field filenames.\n");
 		printHelp(progname);
 		exit(-1);
@@ -231,27 +241,36 @@ int main(int argc, char *argv[]) {
 
 	overlap_d2 = arcsec2distsq(overlap_rad);
 
+	il_append(slideshow_steps, 0);
+	il_append(slideshow_steps, 24);
+
 	matchin = matchfile_open(infn);
 	if (!matchin) {
 		fprintf(stderr, "Failed to read input matchfile %s.\n", infn);
 		exit(-1);
 	}
 
-	startree = kdtree_fits_read_file(starfn);
-	if (!startree) {
-		fprintf(stderr, "Failed to open star kdtree %s.\n", starfn);
-		exit(-1);
-	}
+	if (starfn) {
+		startree = kdtree_fits_read_file(starfn);
+		if (!startree) {
+			fprintf(stderr, "Failed to open star kdtree %s.\n", starfn);
+			exit(-1);
+		}
+	} else
+		startree = NULL;
 
-	xyls = xylist_open(xylsfn);
-	if (!xyls) {
-		fprintf(stderr, "Failed to open xylist %s.\n", xylsfn);
-		exit(-1);
-	}
-	if (xname)
-		xyls->xname = xname;
-	if (yname)
-		xyls->yname = yname;
+	if (xylsfn) {
+		xyls = xylist_open(xylsfn);
+		if (!xyls) {
+			fprintf(stderr, "Failed to open xylist %s.\n", xylsfn);
+			exit(-1);
+		}
+		if (xname)
+			xyls->xname = xname;
+		if (yname)
+			xyls->yname = yname;
+	} else
+		xyls = NULL;
 
 	matchout = matchfile_open_for_writing(outfn);
 	if (!matchout) {
@@ -305,12 +324,40 @@ int main(int argc, char *argv[]) {
 		double overlaps[STEPS+1];
 		double totalweights[STEPS];
 
+		char fn[256];
+
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
 			break;
 		if (!mo->transform_valid) {
 			printf("MatchObject transform isn't valid.\n");
 			continue;
+		}
+
+		if (startemplate) {
+			if (startree)
+				kdtree_close(startree);
+			sprintf(fn, startemplate, mo->healpix);
+			startree = kdtree_fits_read_file(fn);
+			if (!startree) {
+				fprintf(stderr, "Failed to open star kdtree from file %s.\n", fn);
+				exit(-1);
+			}
+		}
+
+		if (xylstemplate) {
+			if (xyls)
+				xylist_close(xyls);
+			sprintf(fn, xylstemplate, mo->fieldfile);
+			xyls = xylist_open(fn);
+			if (!xyls) {
+				fprintf(stderr, "Failed to open xylist file %s.\n", fn);
+				exit(-1);
+			}
+			if (xname)
+				xyls->xname = xname;
+			if (yname)
+				xyls->yname = yname;
 		}
 
 		// find the field center
@@ -542,7 +589,7 @@ int main(int argc, char *argv[]) {
 
 			step = 0.5;
 
-			if (matlab && (s < 10 || s == STEPS-1)) {
+			if (matlab && il_contains(slideshow_steps, s)) {
 				double ox, oy;
 				double x, y;
 				double pu[3], pv[3], puv[3];
@@ -550,7 +597,9 @@ int main(int argc, char *argv[]) {
 				double pixelsx = maxu;
 				double pixelsy = maxv;
 
-				if (s == 0) {
+				if (s == il_get(slideshow_steps, 0)) {
+					fprintf(stderr, "fprintf('File %i, Field %i.\\n');\n",
+							mo->fieldfile, mo->fieldnum);
 					fprintf(stderr, "index=[");
 					for (j=0; j<NI; j++) {
 						star_coords(indxyz + j*3, centerxyz, &x, &y);
@@ -639,12 +688,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "];\n");
 			fprintf(stderr, "clf;\n");
 			fprintf(stderr, "subplot(6, 1, 1);\n");
-			for (s=0; s<STEPS; s++) {
-				// skip 10--23
-				if (s == 10) {
-					s = 23;
-					continue;
-				}
+			for (i=0; i<il_size(slideshow_steps); i++) {
+				s = il_get(slideshow_steps, i);
 				fprintf(stderr, "subplot(6, 1, 1);\n");
 				fprintf(stderr, "plot([1:%i],totalweights,'r-',%i,totalweights(%i),'ro'); "
 						"a=axis; a(1)=0; a(2)=%i; axis(a); ylabel('Total probability');\n",
@@ -749,9 +794,11 @@ int main(int argc, char *argv[]) {
 	free(fielduv);
 	free(fieldxyz);
 
-	xylist_close(xyls);
+	if (xyls)
+		xylist_close(xyls);
 	matchfile_close(matchin);
-	kdtree_close(startree);
+	if (startree)
+		kdtree_close(startree);
 
 	if (matchfile_fix_header(matchout) ||
 		matchfile_close(matchout)) {
