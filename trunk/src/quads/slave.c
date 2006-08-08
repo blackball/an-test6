@@ -603,6 +603,7 @@ static void write_hits(int fieldnum, pl* matches) {
 	done_cacheflush:
 		bl_free(cached);
 		cached = NULL;
+		index = 0;
 		goto bailout;
 	}
 
