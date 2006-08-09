@@ -151,14 +151,14 @@ $(QFITS_LIB): $(QFITS_OBJ)
 WCSLIB_LIB := /usr/local/wcslib-4.2/lib/libwcs.a
 WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
 
-#badfields: badfields.o fitsioutils.o ioutils.o $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
-#
-#badfields.o: badfields.c badfields.inc
-#	$(CC) $(CFLAGS) -c $< -o $@
-#
-#badfields.inc: opBadfields.par badfields.awk
-#	gawk -f badfields.awk $< > $@
+badfields: badfields.o fitsioutils.o ioutils.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
+
+badfields.o: badfields.c badfields.inc
+	$(CC) $(CFLAGS) -c $< -o $@
+
+badfields.inc: opBadfields.par badfields.awk
+	gawk -f badfields.awk $< > $@
 
 wcscheck: wcscheck.o starutil.o mathutil.o libqfits.a
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(WCSLIB_LIB)
