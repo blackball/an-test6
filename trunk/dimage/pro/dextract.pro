@@ -2,9 +2,9 @@
 ; NAME:
 ;   dextract
 ; PURPOSE:
-;   extract objects in an image
+;   extract objects in an image based on object image
 ; CALLING SEQUENCE:
-;   dextract, image, invvar, object=object, extract=extract [ , small=]
+;   dextract, image, invvar, object=object, extract=extract [, small=]
 ; INPUTS:
 ;   image - [nx, ny] input image
 ;   invvar - [nx, ny] input image inverse variance
@@ -91,8 +91,8 @@ for i=1L, n_elements(iuniq)-1L do begin
                         ycen[i-1]-iylims[0]-1:ycen[i-1]-iylims[0]+1], xx, yy
             xfit[i-1]=xx+float(xcen[i-1])-1.
             yfit[i-1]=yy+float(ycen[i-1])-1.
-
-      ;; if there is a good center shift to center
+            
+            ;; if there is a good center shift to center
             if(xx gt -1. AND xx lt 3. AND yy gt -1. AND yy lt 3.) then begin
                 ixlims=[long(xcen[i-1])-small, long(xcen[i-1])+small]
                 iylims=[long(ycen[i-1])-small, long(ycen[i-1])+small]

@@ -116,7 +116,6 @@ int dpeaks(float *image,
 			for(jp=0;jp<ny;jp++)
 				for(ip=0;ip<nx;ip++)
 					mask[ip+jp*nx]=smooth[ip+jp*nx]>level;
-			printf("checking %d %f %f\n", checkpeaks, level, smooth[ fullxcen[i]+  fullycen[i]*nx]); fflush(stdout);
 			dfind(mask, nx, ny, object);
 			for(j=i-1;j>=0;j--) 
 				if(object[ fullxcen[j]+ fullycen[j]*nx]==

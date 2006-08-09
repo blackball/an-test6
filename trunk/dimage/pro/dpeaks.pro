@@ -4,18 +4,29 @@
 ; PURPOSE:
 ;   find peaks in an image
 ; CALLING SEQUENCE:
-;   dpeaks, image [, xcen=, ycen=, sigma=, dlim=, maxnpeaks= ]
+;   dpeaks, image [, xcen=, ycen=, sigma=, dlim=, maxnpeaks=, $
+;      saddle=, minpeak=, npeaks=, /smooth, /checkpeaks, /refine ]
 ; INPUTS:
 ;   image - [nx, ny] input image
 ; OPTIONAL INPUTS:
-;   sigma - sky sigma (defaults to sigma clipped estimate)
-;   dlim - limiting separation for identical peaks
-;   maxnpeaks - maximum number of peaks to return
+;   sigma - sky sigma (defaults to estimate from dsigma.pro)
+;   dlim - limiting separation for identical peaks (default 1)
+;   maxnpeaks - maximum number of peaks to return (default 1000)
 ;   minpeak - minimum peak value (defaults to 1 sigma)
+;   saddle - saddle point limit when checking peak separation 
+;            (default 3.)
 ; OPTIONAL KEYWORDS:
 ;   /smooth - smooth a bit before finding
+;   /checkpeaks - check for peaks which are too connected to each other
+;   /refine - refines peak estimates
 ; OUTPUTS:
-;   xcen, ycen - [nx, ny] positions of peaks
+;   xcen, ycen - [npeaks] positions of peaks
+;   npeaks - number of peaks
+; COMMENTS:
+;   When /checkpeaks is set, checks whether saddle points between peak
+;     pairs are > peak-saddle*sigma; if so, those peaks are joined.
+;   When /refine is not set, just finds to nearest pixel; when /refine
+;     is set, uses gaussian approximation to guess peak center.
 ; REVISION HISTORY:
 ;   11-Jan-2006  Written by Blanton, NYU
 ;-
@@ -25,10 +36,10 @@ pro dpeaks, image, xcen=xcen, ycen=ycen, sigma=sigma, dlim=dlim, $
             minpeak=minpeak, refine=refine, npeaks=npeaks, $
             checkpeaks=checkpeaks
 
-if(NOT keyword_set(maxnpeaks)) then maxnpeaks=32
+if(NOT keyword_set(maxnpeaks)) then maxnpeaks=1000
 if(NOT keyword_set(dlim)) then dlim=1.
-if(NOT keyword_set(sigma)) then sigma=djsig(image, sigrej=2)
-if(NOT keyword_set(minpeak)) then minpeak=sigma
+if(NOT keyword_set(sigma)) then sigma=dsigma(image, sp=4)
+if(NOT keyword_set(minpeak)) then minpeak=5.*sigma
 if(NOT keyword_set(saddle)) then saddle=3.
 if(NOT keyword_set(smooth)) then smooth=0
 
@@ -55,23 +66,9 @@ xcen=xcen[0:npeaks-1]
 ycen=ycen[0:npeaks-1]
 
 if(keyword_set(refine)) then begin
-    xcenold=xcen
-    ycenold=ycen
-    xcen=fltarr(npeaks)
-    ycen=fltarr(npeaks)
-    simage=dsmooth(image, 1.0)
-    for i=0L, npeaks-1L do begin
-        dcen3x3, simage[xcenold[i]-1:xcenold[i]+1, $
-                        ycenold[i]-1:ycenold[i]+1], xr, yr
-        if(xr ge -0.5 and xr lt 2.5 and $
-           yr ge -0.5 and yr lt 2.5) then begin
-            xcen[i]=xcenold[i]-1.+xr
-            ycen[i]=ycenold[i]-1.+yr
-        endif else begin
-            xcen[i]=xcenold[i]
-            ycen[i]=ycenold[i]
-        endelse
-    endfor
+    xcenold=long(xcen)
+    ycenold=long(ycen)
+    drefine, image, xcenold, ycenold, smooth=1., xr=xcen, yr=ycen
 endif
 
 end

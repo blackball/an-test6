@@ -1,4 +1,9 @@
 
+int dfluxes(float *image, float *templates, float *weights, int nx, int ny,
+            float *xcen, float *ycen, int nchild, float *children, 
+            float sigma);
+int dweights(float *image, float *invvar, int nx, int ny, int ntemplates, 
+             float *templates, int nonneg, float *weights);
 void dcholsl(float *a, int n, float p[], float b[], float x[]);
 void dcholdc(float *a, int n, float p[]);
 int dfind(int *image, int nx, int ny, int *object);

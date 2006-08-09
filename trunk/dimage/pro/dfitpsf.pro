@@ -4,15 +4,14 @@
 ; PURPOSE:
 ;   fit a PSF model to an image
 ; CALLING SEQUENCE:
-;   dfitpsf, image, invvar, extract= [, psf=, psfc=, xpsf=, ypsf= ]
+;   dfitpsf, imfile
 ; INPUTS:
-;   image - [nx, ny] input image
-;   invvar - [nx, ny] invverse variance image
-; OUTPUTS:
-;   psf - [N, N] measured PSF at center
-;   psfc - [N, N, Nc] components of PSF model
-;   xpsf - [Np] polynomial coeffs in x (-1., 1. units between 0, nx-1)
-;   ypsf - [Np] polynomial coeffs in y (-1., 1. units between 0, ny-1)
+;   imfile - input FITS file
+; COMMENTS:
+;   Currently always uses Nc=1 (no varying PSFs allowed)
+;   Seems to work OK but many arbitrary parameters.
+;   Ouputs (imfile is base.fits or base.fits.gz):
+;     base-bpsf.fits - basic (single-fit) PSF
 ; REVISION HISTORY:
 ;   11-Jan-2006  Written by Blanton, NYU
 ;-
@@ -24,7 +23,21 @@ image=mrdfits(imfile)
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
-;; free parameters: plim to detect, small, minbatlas, smoothing box, stardiff
+;; set a bunch of parameters
+plim=20.
+box=60
+small=30
+minbatlas=1.e-6
+natlas=61
+nc=1L
+np=1L
+natlas=61
+stardiff=20.
+maxnstar=60
+
+; Set source object name
+soname=filepath('libdimage.'+idlutils_so_ext(), $
+                root_dir=getenv('DIMAGE_DIR'), subdirectory='lib')
 
 ;; if there are zeros at the edges, excise 'em
 xst=0L
@@ -43,31 +56,21 @@ if(sigma eq 0) then begin
 endif
 invvar=fltarr(nx,ny)+1./sigma^2
 
-msimage=dmedsmooth(image, invvar, box=60)
+;; median smooth the image and find and extract objects
+msimage=dmedsmooth(image, invvar, box=box)
 simage=image-msimage
-
-dobjects, simage, objects=obj, plim=20.
-dextract, simage, invvar, object=obj, extract=extract, small=30
-
+dobjects, simage, objects=obj, plim=plim
+dextract, simage, invvar, object=obj, extract=extract, small=small
 if(n_tags(extract) eq 0) then begin
     splog, 'no small enough objects in image'
     return
 endif
 
+; do initial fit
 atlas=extract.atlas
 atlas_ivar=extract.atlas_ivar
-
 batlas=(atlas) 
-batlas=batlas>1.e-6
-
-; Set source object name
-soname=filepath('libdimage.'+idlutils_so_ext(), $
-                root_dir=getenv('DIMAGE_DIR'), subdirectory='lib')
-
-; do initial fit
-nc=1L
-np=1L
-natlas=61
+batlas=batlas>minbatlas
 psf=fltarr(natlas,natlas)
 psfc=fltarr(nc, n_elements(extract))
 psft=fltarr(natlas,natlas,nc)
@@ -86,17 +89,15 @@ for i=0L, n_elements(extract)-1L do begin
     diff[i]=total((atlas[*,*,i]-model)^2/scale^2) 
 endfor
 isort=sort(diff)
-istar=isort[where(diff[isort] lt 20. and lindgen(n_elements(isort)) lt 50)]
+istar=isort[where(diff[isort] lt stardiff and $
+                  lindgen(n_elements(isort)) lt maxnstar)]
 extract=extract[istar]
 
-; find basic psf
+; find basic PSF
 atlas=extract.atlas
 atlas_ivar=extract.atlas_ivar
 batlas=(atlas) 
-batlas=batlas>1.e-6
-nc=1L
-np=1L
-natlas=61
+batlas=batlas>minbatlas
 psf=fltarr(natlas,natlas)
 psfc=fltarr(nc, n_elements(extract))
 psft=fltarr(natlas,natlas,nc)
@@ -107,6 +108,7 @@ retval=call_external(soname, 'idl_dfitpsf', float(batlas), $
                      long(n_elements(extract)), float(psfc), float(psft), $
                      float(xpsf), float(ypsf), long(nc), long(np))
 
+; output basic PSF
 psft=psft-median(psft)
 mwrfits, reform(psft, natlas, natlas), base+'-bpsf.fits', /create
 

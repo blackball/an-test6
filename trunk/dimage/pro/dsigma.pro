@@ -2,11 +2,13 @@
 ; NAME:
 ;   dsigma
 ; PURPOSE:
-;   find approximate sigma
+;   find approximate sigma from image
 ; CALLING SEQUENCE:
 ;   sigma= dsigma(image)
 ; INPUTS:
 ;   image - [nx, ny] input image
+; OPTIONAL INPUTS:
+;   sp - spacing between nearby pixels (default 2)
 ; OUTPUTS:
 ;   sigma - estimated sigma
 ; COMMENTS:
