@@ -4,11 +4,11 @@
 ; PURPOSE:
 ;   take a fits file, detect objects, and create parents file
 ; CALLING SEQUENCE:
-;   dparents, imfile [, psf= ]
+;   dparents, imfile [, plim= ]
 ; INPUTS:
 ;   imfile - FITS image file 
 ; OPTIONAL INPUTS:
-;   psf - guess sigma for gaussian PSF (default 2.)
+;   plim - significance to detect (default 5.)
 ; COMMENTS:
 ;   If you input 'myimage.fits' it outputs:
 ;    myimage-pimage.fits (object image)
@@ -18,7 +18,7 @@
 ;   11-Jan-2006  Written by Blanton, NYU
 ;-
 ;------------------------------------------------------------------------------
-pro dparents, imfile, plim=plim, msub=msub
+pro dparents, imfile, plim=plim
 
 common atv_point, markcoord
 
@@ -35,8 +35,6 @@ ny=(size(image,/dim))[1]
 sigma=dsigma(image, sp=10)
 if(NOT keyword_set(ivar)) then $
   ivar=fltarr(nx, ny)+1./sigma^2
-
-if(keyword_set(msub)) then image=image-median(image)
 
 ;; do general object detection
 dobjects, image, object=oimage, plim=plim

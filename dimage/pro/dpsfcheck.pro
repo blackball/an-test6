@@ -4,13 +4,20 @@
 ; PURPOSE:
 ;   check how well a PSF fits some data
 ; CALLING SEQUENCE:
-;   dpsfcheck, image, ivar, x, y [, psf= ]
+;   ispsf= dpsfcheck(image, ivar, x, y [, psf=, amp= ])
 ; INPUTS:
 ;   image - [nx, ny] input image
 ;   ivar - [nx, ny] input invverse variance
 ;   x, y - [N] positions to check
-; OPTIONAL INPUTS:
-;   psf - sigma of PSF
+;   psf - [npx, npy] PSF image
+; OUTPUTS:
+;   ispsf - [N] 1 for PSF, 0 otherwise
+;   amp - amplitude of fit (after peak-normalizing PSF)
+; COMMENTS:
+;   Fits a simple linear background plus the PSF.  Subtracts off the
+;   model, median smoothes the image in FWHM boxes, and calls it a PSF
+;   if the median smoothed image is < 0.1 times the original image at
+;   the PSF peak. 
 ; REVISION HISTORY:
 ;   1-Mar-2006  Written by Blanton, NYU
 ;-
@@ -37,16 +44,16 @@ cmodel[*,2]=yy
 cmodel[*,3]=cc
 
 amp=fltarr(n_elements(x))
-for i=0L, n_elements(x)-1L do begin & $
-    cutout_image=fltarr(npx,npy) & $
-    cutout_ivar=fltarr(npx,npy) & $
-  cutout_ivar=cutout_ivar>0. & $
-    embed_stamp, cutout_image, image, npx/2L-x[i], npy/2L-y[i] & $
-    embed_stamp, cutout_ivar, ivar, npx/2L-x[i], npy/2L-y[i] & $
+for i=0L, n_elements(x)-1L do begin 
+    cutout_image=fltarr(npx,npy) 
+    cutout_ivar=fltarr(npx,npy) 
+    cutout_ivar=cutout_ivar>0. 
+    embed_stamp, cutout_image, image, npx/2L-x[i], npy/2L-y[i] 
+    embed_stamp, cutout_ivar, ivar, npx/2L-x[i], npy/2L-y[i] 
     
     hogg_iter_linfit, cmodel, reform(cutout_image, npx*npy), $
-      reform(cutout_ivar, npx*npy), coeffs, nsigma=10 & $
-    amp[i]=coeffs[0] & $
+      reform(cutout_ivar, npx*npy), coeffs, nsigma=10 
+    amp[i]=coeffs[0] 
 endfor
 
 model=fltarr(nx,ny)

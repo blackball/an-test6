@@ -46,6 +46,10 @@ OBJECTS = \
 	idl_deblend.o \
 	deblend.o \
 	dcentral.o \
+	idl_dweights.o \
+	dweights.o \
+	idl_dfluxes.o \
+	dfluxes.o \
 	idl_dfind.o \
 	dfind.o \
 	dpeaks.o \
