@@ -65,6 +65,7 @@ int handle_request(FILE* fid) {
 	if (get) {
 		int val;
 		printf("Get %s [%i].\n", fn, fieldnum);
+		fflush(stdout);
 		val = solvedfile_get(fn, fieldnum);
 		if (val == -1) {
 			fclose(fid);
@@ -77,6 +78,7 @@ int handle_request(FILE* fid) {
 		return 0;
 	} else if (set) {
 		printf("Set %s [%i].\n", fn, fieldnum);
+		fflush(stdout);
 		if (solvedfile_set(fn, fieldnum)) {
 			fclose(fid);
 			return -1;
@@ -84,15 +86,6 @@ int handle_request(FILE* fid) {
 		fprintf(fid, "ok\n");
 		fflush(fid);
 		return 0;
-		/*
-		  sprintf(buf, "ok\n");
-		  len = strlen(buf);
-		  if ((fwrite(buf, 1, len, fid) != len) ||
-		  fflush(fid)) {
-		  fprintf(stderr, "Error writing set confirmation.\n");
-		  goto bailout;
-		  }
-		*/
 	} else {
 		fprintf(stderr, "Error: malformed command.\n");
 		fclose(fid);
@@ -174,8 +167,6 @@ int main(int argc, char** args) {
 		socklen_t addrsz = sizeof(clientaddr);
 		FILE* fid;
 		fd_set rset;
-		//fd_set wset;
-		//fd_set eset;
 		struct timeval timeout;
 		int res;
 		int maxval = 0;
@@ -185,8 +176,6 @@ int main(int argc, char** args) {
 		timeout.tv_usec = 0;
 
 		FD_ZERO(&rset);
-		//FD_ZERO(&wset);
-		//FD_ZERO(&eset);
 
 		maxval = sock;
 		for (i=0; i<pl_size(clients); i++) {
@@ -194,14 +183,11 @@ int main(int argc, char** args) {
 			fid = pl_get(clients, i);
 			val = fileno(fid);
 			FD_SET(val, &rset);
-			//FD_SET(val, &eset);
 			if (val > maxval)
 				maxval = val;
 		}
 		FD_SET(sock, &rset);
-		//FD_SET(sock, &eset);
-		//printf("select().\n");
-		res = select(maxval+1, &rset, NULL, NULL, /*&eset,*/ &timeout);
+		res = select(maxval+1, &rset, NULL, NULL, &timeout);
 		if (res == -1) {
 			if (errno != EINTR) {
 				fprintf(stderr, "Error: select(): %s\n", strerror(errno));
@@ -215,16 +201,6 @@ int main(int argc, char** args) {
 
 		for (i=0; i<pl_size(clients); i++) {
 			fid = pl_get(clients, i);
-			/*
-			  if (FD_ISSET(fileno(fid), &eset)) {
-			  fprintf(stderr, "Error from fileno %i\n", fileno(fid));
-			  if (ferror(fid) || feof(fid)) {
-			  pl_remove(clients, i);
-			  i--;
-			  continue;
-			  }
-			  }
-			*/
 			if (FD_ISSET(fileno(fid), &rset)) {
 				if (handle_request(fid)) {
 					fprintf(stderr, "Error from fileno %i\n", fileno(fid));
@@ -244,10 +220,9 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, sizeof(clientaddr));
 				continue;
 			}
-			printf("Connection from %s: ", inet_ntoa(clientaddr.sin_addr));
+			printf("Connection from %s.\n", inet_ntoa(clientaddr.sin_addr));
 			fflush(stdout);
 			fid = fdopen(s, "a+b");
-			//printf("fileno %i\n", fileno(fid));
 			pl_append(clients, fid);
 		}
 	}
