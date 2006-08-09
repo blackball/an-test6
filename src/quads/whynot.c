@@ -23,6 +23,7 @@
 #include "rdlist.h"
 #include "qidxfile.h"
 #include "verify.h"
+#include "qfits.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -75,6 +76,8 @@ int threads = 1;
 il* fieldlist = NULL;
 
 int do_correspond = 1;
+
+bool circle = FALSE;
 
 catalog* cat;
 idfile* id;
@@ -228,10 +231,18 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	xxtmp = Cx;
 	Cx = Cx * costheta + Cy * sintheta;
 	Cy = -xxtmp * sintheta + Cy * costheta;
-	if ((Cx >= 1.0) || (Cx <= 0.0) ||
-		(Cy >= 1.0) || (Cy <= 0.0)) {
-		fprintf(stderr, "    Field star C is not in the box.\n");
-		return;
+	if (circle) {
+		double r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
+		if (r > 0.0) {
+			fprintf(stderr, "    Field star C is not in the circle.\n");
+			return;
+		}
+	} else {
+		if ((Cx > 1.0) || (Cx < 0.0) ||
+			(Cy > 1.0) || (Cy < 0.0)) {
+			fprintf(stderr, "    Field star C is not in the box.\n");
+			return;
+		}
 	}
 
 	Dx = xy_refx(thisfield, iD);
@@ -243,10 +254,18 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	xxtmp = Dx;
 	Dx = Dx * costheta + Dy * sintheta;
 	Dy = -xxtmp * sintheta + Dy * costheta;
-	if ((Dx >= 1.0) || (Dx <= 0.0) ||
-		(Dy >= 1.0) || (Dy <= 0.0)) {
-		fprintf(stderr, "    Field star D is not in the box.\n");
-		return;
+	if (circle) {
+		double r = (Dx*Dx - Dx) + (Dy*Dy - Dy);
+		if (r > 0.0) {
+			fprintf(stderr, "    Field star D is not in the circle.\n");
+			return;
+		}
+	} else {
+		if ((Dx > 1.0) || (Dx < 0.0) ||
+			(Dy > 1.0) || (Dy < 0.0)) {
+			fprintf(stderr, "    Field star D is not in the box.\n");
+			return;
+		}
 	}
 
 	code[0] = Cx;
@@ -899,6 +918,14 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
 				codetree->ndata, codetree->nnodes, codetree->ndim);
+		{
+			qfits_header* hdr;
+			hdr = qfits_header_read(treefname);
+			circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
+			qfits_header_destroy(hdr);
+		}
+		if (circle)
+			fprintf(stderr, "CKDT has the CIRCLE property.\n");
 
 		fprintf(stderr, "Computing inverse permutation...\n");
 		fflush(stderr);

@@ -11,10 +11,12 @@ ifeq ($(VER), 3.79.1)
 endif
 
 
-CATALOG := /h/42/dstn/local/CUTS/sdss-2/an_sdss_
-INDEX := sdss-16_
+CATALOG := /p/learning/stars/CATALOGUES/sdss-2/an_sdss_
+INDEX := sdss-18_
 TEMP1 := phase1_
 TEMP2 := phase2_
+
+IDFILES := no
 
 UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars2
@@ -32,7 +34,7 @@ EPSTOPNG		:= epstopng
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
 
 CODETREE_OPTS := -R 15
-HPQUADS_OPTS  := -l 4 -u 5 -n 879 -i 16 -c -x 5 -y 5 -r 8
+HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i 18 -c -x 6 -y 6 -r 4
 QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
@@ -52,12 +54,20 @@ $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
 	mv tmp.$(INDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
 	mv tmp.$(INDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
 
+ifeq ($(IDFILES), yes)
 $(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits $(INDEX)$(1).id.fits : \
 		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(TEMP1)$(1).quad.fits
 	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
 	mv tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
 	mv tmp.$(INDEX)$(1).id.fits   $(INDEX)$(1).id.fits
 	mv tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+else
+$(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits : \
+		$(CATALOG)$(1).skdt.fits $(TEMP1)$(1).quad.fits
+	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
+	mv tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	mv tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+endif
 
 $(TEMP2)$(1).ckdt.fits: $(TEMP1)$(1).code.fits
 	$(CODETREE) $(CODETREE_OPTS) -f $(TEMP1)$(1) -o tmp.$(TEMP2)$(1)
