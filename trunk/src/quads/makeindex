@@ -78,6 +78,9 @@ $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
+PHO += prospectus$(1)
+prospectus$(1): ana$(1) plot$(1) qps$(1)
+
 quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o quad$(1)_small.pgm -o quad$(1).pgm $(INDEX)$(1)
 
@@ -97,9 +100,25 @@ dplot$(1): cp_2ddhists$(1).png cp_2ddhists$(1)_small.png \
 	cp_1ddhists$(1).png cp_1ddhists$(1)_small.png \
 	cp_dxy$(1).png cp_dxy$(1)_small.png
 
-cp_2dhists$(1).eps cp_2ddhists$(1).eps cp_xy$(1).eps: proj$(1).m
+cp_2dhists$(1).eps cp_2ddhists$(1).eps cp_1dhists$(1).eps cp_xy$(1).eps: proj$(1).m
 	echo "$(MATLAB_INIT); fprintf('\nGenerating plots for $(1)...\n'); proj$(1); print_plots=1; plot_suffix='$(1)'; batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
+
+PHO += qps$(1)
+qps$(1): qps_$(1).png qps_$(1)_small.png
+
+qps_$(1).eps: qps$(1).m
+	echo "$(MATLAB_INIT);" \
+		"fprintf('\nGenerating quads per star histograms...\n');" \
+		"qps$(1);" \
+		"x=$(INDEX_UNDERSCORE)$(1);" \
+		"bar([0:length(x)-1],x,1);" \
+		"print('-depsc', $$@);" \
+		"quit" > /tmp/tmpscript.m
+	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
+
+qps$(1).m: $(INDEX)$(1).qidx.fits
+	$(QUADSPERSTAR) $(INDEX)$(1) | sed s/-/_/ > $$@
 
 %$(1)_small.png: %$(1).png
 	pngtopnm -- $$< | pamscale -linear 0.2 | pnmtopng > $$@
