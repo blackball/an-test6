@@ -18,7 +18,9 @@ static void print_int(void* v1) {
 int main() {
 	int val;
 	int i;
-	bt* tree = bt_new(sizeof(int), 4);
+	bt* tree;
+
+	tree = bt_new(sizeof(int), 4);
 
 	printf("Empty:\n");
 	bt_print(tree, print_int);
@@ -50,6 +52,19 @@ int main() {
 		}
 	}
 
+	bt_free(tree);
+
+	printf("Inserting a million items...\n");
+	tree = bt_new(sizeof(int), 32);
+	for (i=0; i<1000000; i++) {
+		val = rand() % 1000;
+		bt_insert(tree, &val, 0, compare_ints);
+		//bt_check(tree);
+	}
+	printf("Checking...\n");
+	bt_check(tree);
+	printf("Done.\n");
+	
 	bt_free(tree);
 
 	return 0;
