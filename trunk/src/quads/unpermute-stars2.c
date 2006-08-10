@@ -41,7 +41,7 @@ int main(int argc, char **args) {
     quadfile* qfin;
 	quadfile* qfout;
 	idfile* idin;
-	idfile* idout;
+	idfile* idout = NULL;
 	kdtree_t* treein;
 	kdtree_t* treeout;
 	char* progname = args[0];
@@ -112,16 +112,20 @@ int main(int argc, char **args) {
 	printf("Reading id file from %s ...\n", fn);
 	idin = idfile_open(fn, 0);
 	if (!idin) {
-		fprintf(stderr, "Failed to read id file from %s.\n", fn);
-		exit(-1);
+		fprintf(stderr, "Failed to read id file from %s.  Will not generate output id file.\n", fn);
+		//exit(-1);
 	}
 	free_fn(fn);
 
-	healpix = idin->healpix;
-	if (qfin->healpix != healpix) {
-		fprintf(stderr, "Quadfile header says it's healpix %i, but idfile say %i.\n",
-				qfin->healpix, idin->healpix);
-	}
+	if (idin) {
+		healpix = idin->healpix;
+		if (qfin->healpix != healpix) {
+			fprintf(stderr, "Quadfile header says it's healpix %i, but idfile say %i.\n",
+					qfin->healpix, idin->healpix);
+		}
+	} else
+		healpix = qfin->healpix;
+
 	starhp = qfits_header_getint(starhdr, "HEALPIX", -1);
 	if (starhp == -1)
 		fprintf(stderr, "Warning, input star kdtree didn't have a HEALPIX header.\n");
@@ -140,17 +144,20 @@ int main(int argc, char **args) {
 	}
 	free_fn(fn);
 
-	fn = mk_idfn(baseout);
-	printf("Writing id to %s ...\n", fn);
-	idout = idfile_open_for_writing(fn);
-	if (!idout) {
-		fprintf(stderr, "Failed to write id file to %s.\n", fn);
-		exit(-1);
+	if (idin) {
+		fn = mk_idfn(baseout);
+		printf("Writing id to %s ...\n", fn);
+		idout = idfile_open_for_writing(fn);
+		if (!idout) {
+			fprintf(stderr, "Failed to write id file to %s.\n", fn);
+			exit(-1);
+		}
+		free_fn(fn);
 	}
-	free_fn(fn);
 
 	qfout->healpix = healpix;
-	idout->healpix = healpix;
+	if (idin)
+		idout->healpix = healpix;
 
 	qfout->numstars          = qfin->numstars;
 	qfout->index_scale       = qfin->index_scale;
@@ -167,40 +174,44 @@ int main(int argc, char **args) {
 	fits_copy_all_headers(qfin->header, qfout->header, "COMMENT");
 	qfits_header_add(qfout->header, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
 
-	qfits_header_add(idout->header, "HISTORY", "unpermute-stars2 command line:", NULL, NULL);
-	fits_add_args(idout->header, args, argc);
-	qfits_header_add(idout->header, "HISTORY", "(end of unpermute-stars2 command line)", NULL, NULL);
-	qfits_header_add(idout->header, "HISTORY", "** unpermute-stars2: history from input:", NULL, NULL);
-	fits_copy_all_headers(idin->header, idout->header, "HISTORY");
-	qfits_header_add(idout->header, "HISTORY", "** unpermute-stars2: end of history from input.", NULL, NULL);
-	qfits_header_add(idout->header, "COMMENT", "** unpermute-stars2: comments from input:", NULL, NULL);
-	fits_copy_all_headers(idin->header, idout->header, "COMMENT");
-	qfits_header_add(idout->header, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
+	if (idin) {
+		qfits_header_add(idout->header, "HISTORY", "unpermute-stars2 command line:", NULL, NULL);
+		fits_add_args(idout->header, args, argc);
+		qfits_header_add(idout->header, "HISTORY", "(end of unpermute-stars2 command line)", NULL, NULL);
+		qfits_header_add(idout->header, "HISTORY", "** unpermute-stars2: history from input:", NULL, NULL);
+		fits_copy_all_headers(idin->header, idout->header, "HISTORY");
+		qfits_header_add(idout->header, "HISTORY", "** unpermute-stars2: end of history from input.", NULL, NULL);
+		qfits_header_add(idout->header, "COMMENT", "** unpermute-stars2: comments from input:", NULL, NULL);
+		fits_copy_all_headers(idin->header, idout->header, "COMMENT");
+		qfits_header_add(idout->header, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
+	}
 
 	if (quadfile_write_header(qfout) ||
-		idfile_write_header(idout)) {
+		(idin && idfile_write_header(idout))) {
 		fprintf(stderr, "Failed to write quadfile or idfile header.\n");
 		exit(-1);
 	}
 
-	printf("Writing IDs...\n");
-	lastgrass = 0;
-	for (i=0; i<treein->ndata; i++) {
-		uint64_t id;
-		int ind;
-		if (i*80/treein->ndata != lastgrass) {
-			printf(".");
-			fflush(stdout);
-			lastgrass = i*80/treein->ndata;
+	if (idin) {
+		printf("Writing IDs...\n");
+		lastgrass = 0;
+		for (i=0; i<treein->ndata; i++) {
+			uint64_t id;
+			int ind;
+			if (i*80/treein->ndata != lastgrass) {
+				printf(".");
+				fflush(stdout);
+				lastgrass = i*80/treein->ndata;
+			}
+			ind = treein->perm[i];
+			id = idfile_get_anid(idin, ind);
+			if (idfile_write_anid(idout, id)) {
+				fprintf(stderr, "Failed to write idfile entry.\n");
+				exit(-1);
+			}
 		}
-		ind = treein->perm[i];
-		id = idfile_get_anid(idin, ind);
-		if (idfile_write_anid(idout, id)) {
-			fprintf(stderr, "Failed to write idfile entry.\n");
-			exit(-1);
-		}
+		printf("\n");
 	}
-	printf("\n");
 
 	printf("Writing quads...\n");
 
@@ -231,8 +242,8 @@ int main(int argc, char **args) {
 
 	if (quadfile_fix_header(qfout) ||
 		quadfile_close(qfout) ||
-		idfile_fix_header(idout) ||
-		idfile_close(idout)) {
+		(idin && (idfile_fix_header(idout) ||
+				  idfile_close(idout)))) {
 		fprintf(stderr, "Failed to close output quadfile or idfile.\n");
 		exit(-1);
 	}
@@ -258,7 +269,8 @@ int main(int argc, char **args) {
 	qfits_header_add(hdr, "COMMENT", "** unpermute-stars2: end of comments from input.", NULL, NULL);
 
 	quadfile_close(qfin);
-	idfile_close(idin);
+	if (idin)
+		idfile_close(idin);
 
 	fn = mk_streefn(baseout);
 	printf("Writing star kdtree to %s ...\n", fn);
