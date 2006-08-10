@@ -5,15 +5,15 @@ LFLAGS := -lm
 
 CFLAGS :=
 
-#CFLAGS	+= -g
-#CFLAGS += -O0
+CFLAGS	+= -g
+CFLAGS += -O0
 #CFLAGS += -O2
 #CFLAGS += -pg
-CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math
+#CFLAGS += -fomit-frame-pointer
+#CFLAGS += -O3 -ffast-math
 
 # to turn off asserts:
-CFLAGS += -DNDEBUG
+#CFLAGS += -DNDEBUG
 
 #CFLAGS += -Wpointer-arith
 
@@ -96,6 +96,7 @@ EXECS := whynot agreeable certifiable quadidx \
 	unpermute-stars2 tunematch quadscales
 
 homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
 
 # things we don't use often:
 #	randcat genfields
