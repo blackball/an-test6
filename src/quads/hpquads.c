@@ -853,12 +853,7 @@ int main(int argc, char** argv) {
 			for (i=0; i<Nquads; i++) {
 				quad* q = quadlist + i;
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
-				bt_check(bigquadlist);
 			}
-
-#ifndef NDEBUG
-			bt_check(bigquadlist);
-#endif
 
 			/*
 			  printf("bt height is %i\n", bt_height(bigquadlist));
