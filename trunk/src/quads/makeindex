@@ -113,7 +113,7 @@ qps_$(1).eps: qps$(1).m
 		"qps$(1);" \
 		"x=$(INDEX_UNDERSCORE)$(1);" \
 		"bar([0:length(x)-1],x,1);" \
-		"print('-depsc', $$@);" \
+		"print('-depsc', '$$@');" \
 		"quit" > /tmp/tmpscript.m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
 
@@ -139,6 +139,8 @@ NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
 
 PHO := $(NUMS)
 SEC := 
+
+INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
 
 $(foreach num,$(NUMS),$(eval $(call INDEX_template,$(num))))
 
@@ -173,8 +175,6 @@ SUMPLOTS_PNG := $(SUMPLOTS_EPS:.eps=.png)
 SUMPLOTS_SMALL := $(SUMPLOTS_PNG:.png=_small.png)
 
 QUADS := $(addprefix ana,$(NUMS))
-
-INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
 
 QPS_EPS := $(addsuffix .eps, $(addprefix quadsperstar_, $(NUMS) sum))
 $(QPS_EPS): quadsperstar.m
