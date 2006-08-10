@@ -93,8 +93,9 @@ EXECS := whynot agreeable certifiable quadidx \
 	subtable matchstats unpermute-quads \
 	tabsort plotmatch \
 	plotquads matchtordls homer \
-	unpermute-stars2 tunematch quadscales \
-	homer2
+	unpermute-stars2 tunematch quadscales
+
+homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
 
 # things we don't use often:
 #	randcat genfields
