@@ -8,12 +8,13 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-const char* OPTIONS = "hum:";
+const char* OPTIONS = "hum:S";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s <solved-file> ...\n"
 			"    [-u]: print UNsolved fields\n"
-			"    [-m <max-field>]: for unsolved mode, max field number.\n",
+			"    [-m <max-field>]: for unsolved mode, max field number.\n"
+			"    [-S]: for unsolved mode, use Sloan max field numbers, and assume the files are given in order.\n",
 			progname);
 }
 
@@ -28,9 +29,18 @@ int main(int argc, char** args) {
 	int i;
 	bool unsolved = FALSE;
 	int maxfield = 0;
+	bool sloan = FALSE;
+
+	int sloanmaxes[] = { 9978, 9980, 9974, 9974, 9965, 9971, 9965, 9979, 9978, 9979,
+						 9981, 9978, 9981, 9977, 9973, 9977, 9981, 9977, 9972, 9975,
+						 9981, 9980, 9980, 9975, 9974, 9970, 9978, 9979, 9979, 9978,
+						 9981, 9971, 9983, 7318, 12 };
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'S':
+			sloan = TRUE;
+			break;
 		case 'u':
 			unsolved = TRUE;
 			break;
@@ -75,7 +85,9 @@ int main(int argc, char** args) {
 		}
 		fclose(fid);
 		printf("File %s\n", inputfiles[i]);
-		if (maxfield)
+		if (sloan && (i < (sizeof(sloanmaxes) / sizeof(int))))
+			lim = imin(mapsize, sloanmaxes[i]);
+		else if (maxfield)
 			lim = imin(maxfield, mapsize);
 		else
 			lim = mapsize;
