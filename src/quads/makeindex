@@ -177,14 +177,14 @@ quadsall.pgm quadsall_small.pgm: \
 	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
 	$(addsuffix .skdt.fits, $(addprefix $(INDEX), $(NUMS)))
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) $(addprefix $(INDEX), $(NUMS)) \
-		-o quadsall_small.pgm quadsall.pgm
+		-o quadsall_small.pgm -o quadsall.pgm
 
 qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 	echo "$(MATLAB_INIT); qpssum=[]; for x=0:11, " \
 		"eval(sprintf('qps%02i', x));" \
 		"s=eval(sprintf('$(INDEX_UNDERSCORE)%02i', x));" \
-		"newsum=zeros(max(length(qpssum), length(s)));" \
-		"newsum(1:length(qpssum))=newsum(1:length(qpssum)) + qpssum;"\
+		"newsum=zeros(1,max(length(qpssum), length(s)));" \
+		"if length(qpssum), newsum(1:length(qpssum))=newsum(1:length(qpssum)) + qpssum; end,"\
 		"newsum(1:length(s))=newsum(1:length(s)) + s;"\
 		"qpssum = newsum;" \
 		"end," \
