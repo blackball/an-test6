@@ -79,7 +79,7 @@ $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 
 PHO += prospectus$(1)
-prospectus$(1): ana$(1) plot$(1) qps$(1)
+prospectus$(1): ana$(1) plot$(1) dplot$(1) qps$(1)
 
 quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o quad$(1)_small.pgm -o quad$(1).pgm $(INDEX)$(1)
@@ -164,7 +164,7 @@ SUMPLOTS_PNG := $(SUMPLOTS_EPS:.eps=.png)
 SUMPLOTS_SMALL := $(SUMPLOTS_PNG:.png=_small.png)
 
 .PHONY: prospectus_all
-prospectus_all: quadsall.png quadsall_small.png qps_sum.png \
+prospectus_all: quadsall.png quadsall_small.png qps_sum.png qps_sum_small.png \
 	$(SUMPLOTS_PNG) $(SUMPLOTS_SMALL)
 
 .PHONY: prospectus
@@ -192,7 +192,7 @@ qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 		"print('-depsc', '$@'); quit" > /tmp/tmpscript.m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
 
-$(SUMPLOTS_SMALL) $(QPS_SMALL):: %_small.png: %.png
+$(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
 
 # RULE00 := $(call INDEX_template,00)
