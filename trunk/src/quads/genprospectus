@@ -27,6 +27,7 @@ for ((j=0; j<12; j++)); do
 done
 
 INDEX_ID=$(modhead "${ind}.quad.fits" INDEXID | gawk '{print $3}')
+INDEX_NAME=$INDEX
 SCALE_U=$(modhead "${ind}.quad.fits" SCALE_U | gawk '{print $3}')
 SCALE_L=$(modhead "${ind}.quad.fits" SCALE_L | gawk '{print $3}')
 
