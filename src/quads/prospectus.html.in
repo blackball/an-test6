@@ -1,13 +1,13 @@
 <html>
 <head>
 <title>
-Prospectus for index sdss-16
+Prospectus for index ${INDEX_NAME}
 </title>
 </head>
 <body>
 
 <h1 align=center>
-Prospectus for index sdss-16
+Prospectus for index ${INDEX_NAME}
 </h1>
 
 <hr>
