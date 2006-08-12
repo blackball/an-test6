@@ -14,19 +14,19 @@ int main(int argc, char *argv[])
     long jj, nrows, kk;
 
     if (argc != 2) {
-      printf("Usage:  tablist filename[ext][col filter][row filter] \n");
-      printf("\n");
-      printf("List the contents of a FITS table \n");
-      printf("\n");
-      printf("Examples: \n");
-      printf("  tablist tab.fits[GTI]           - list the GTI extension\n");
-      printf("  tablist tab.fits[1][#row < 101] - list first 100 rows\n");
-      printf("  tablist tab.fits[1][col X;Y]    - list X and Y cols only\n");
-      printf("  tablist tab.fits[1][col -PI]    - list all but the PI col\n");
-      printf("  tablist tab.fits[1][col -PI][#row < 101]  - combined case\n");
-      printf("\n");
-      printf("Display formats can be modified with the TDISPn keywords.\n");
-      return(0);
+		printf("Usage:  tablist filename[ext][col filter][row filter] \n");
+		printf("\n");
+		printf("List the contents of a FITS table \n");
+		printf("\n");
+		printf("Examples: \n");
+		printf("  tablist tab.fits[GTI]           - list the GTI extension\n");
+		printf("  tablist tab.fits[1][#row < 101] - list first 100 rows\n");
+		printf("  tablist tab.fits[1][col X;Y]    - list X and Y cols only\n");
+		printf("  tablist tab.fits[1][col -PI]    - list all but the PI col\n");
+		printf("  tablist tab.fits[1][col -PI][#row < 101]  - combined case\n");
+		printf("\n");
+		printf("Display formats can be modified with the TDISPn keywords.\n");
+		return(0);
     }
 
     if (fits_open_file(&fptr, argv[1], READONLY, &status))
