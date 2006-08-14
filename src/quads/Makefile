@@ -154,7 +154,9 @@ WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
 homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
 
-badfields: badfields.o fitsioutils.o ioutils.o $(QFITS_LIB)
+
+#$(QFITS_LIB) fitsioutils.o ioutils.o 
+badfields: badfields.o solvedfile.o bl.o 
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
 
 badfields.o: badfields.c badfields.inc

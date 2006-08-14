@@ -11,8 +11,9 @@ else
 fi
 
 echo "$start to $end"
-echo "FILE FIELDNUM RUN FIELD RERUN CAMCOL FILTER IFIELD"
-
+# "tablist" prints the columns in the order they appear in the FITS file,
+# NOT the order you ask for them...
+echo "FILE FIELDNUM RUN RERUN CAMCOL FIELD FILTER IFIELD"
 for ((f=$start; f<=$end; f++)); do
 	in=`printf ~/stars/SDSS_FIELDS/sdssfield%02i.fits $f`
 	for ((x=1; x<10000; x++)); do

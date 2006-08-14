@@ -14,8 +14,9 @@ void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s <solved-file> ...\n"
 			"    [-u]: print UNsolved fields\n"
 			"    [-m <max-field>]: for unsolved mode, max field number.\n"
-			"    [-S]: for unsolved mode, use Sloan max field numbers, and assume the files are given in order.\n",
-			progname);
+			"    [-S]: for unsolved mode, use Sloan max field numbers, and assume the files are given in order.\n"
+			"    [-w]: format for the wiki.\n"
+			"\n", progname);
 }
 
 extern char *optarg;
@@ -30,6 +31,7 @@ int main(int argc, char** args) {
 	bool unsolved = FALSE;
 	int maxfield = 0;
 	bool sloan = FALSE;
+	bool wiki = FALSE;
 
 	int sloanmaxes[] = { 9978, 9980, 9974, 9974, 9965, 9971, 9965, 9979, 9978, 9979,
 						 9981, 9978, 9981, 9977, 9973, 9977, 9981, 9977, 9972, 9975,
@@ -38,6 +40,9 @@ int main(int argc, char** args) {
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'w':
+			wiki = TRUE;
+			break;
 		case 'S':
 			sloan = TRUE;
 			break;
@@ -92,7 +97,9 @@ int main(int argc, char** args) {
 		else
 			lim = mapsize;
 
-		printf("|| %i || ", i+1);
+
+		if (wiki)
+			printf("|| %i || ", i+1);
 
 		for (j=0; j<lim; j++)
 			if (unsolved && !map[j])
@@ -104,22 +111,24 @@ int main(int argc, char** args) {
 			for (; j<maxfield; j++)
 				printf("%i ", j);
 
-		printf(" ||");
+		if (wiki)
+			printf(" ||");
 
 		printf("\n");
 
-
-		printf("unsolved[%i]=\"", i+1);
-		for (j=0; j<lim; j++)
-			if (unsolved && !map[j])
-				printf("%i ", j);
-			else if (!unsolved && map[j])
-				printf("%i ", j);
-		if (unsolved)
-			// all fields beyond the end of the file are unsolved.
-			for (; j<maxfield; j++)
-				printf("%i ", j);
-		printf("\"\n");
+		/*
+		  printf("unsolved[%i]=\"", i+1);
+		  for (j=0; j<lim; j++)
+		  if (unsolved && !map[j])
+		  printf("%i ", j);
+		  else if (!unsolved && map[j])
+		  printf("%i ", j);
+		  if (unsolved)
+		  // all fields beyond the end of the file are unsolved.
+		  for (; j<maxfield; j++)
+		  printf("%i ", j);
+		  printf("\"\n");
+		*/
 
 		munmap(map, mapsize);
 	}
