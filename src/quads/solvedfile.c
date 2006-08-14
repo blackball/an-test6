@@ -41,6 +41,66 @@ int solvedfile_get(char* fn, int fieldnum) {
 	return val;
 }
 
+il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
+	FILE* f;
+	off_t end;
+	int fields = 0;
+	il* list;
+	int i;
+	int nf;
+
+	list = il_new(256);
+
+	f = fopen(fn, "rb");
+	if (!f) {
+		// assume no fields are solved.
+		for (i=firstfield; i<=lastfield; i++) {
+			il_append(list, i);
+			fields++;
+			if (fields == maxfields)
+				break;
+		}
+		return list;
+	}
+	if (fseek(f, 0, SEEK_END) ||
+		((end = ftello(f)) == -1)) {
+		fprintf(stderr, "Error: seeking to end of file %s: %s\n",
+				fn, strerror(errno));
+		fclose(f);
+		il_free(list);
+		return NULL;
+	}
+	if (end <= firstfield) {
+		fclose(f);
+		return list;
+	}
+	nf = 1 + lastfield - firstfield;
+	if (end <= lastfield)
+		nf = end - firstfield;
+	{
+		unsigned char buf[nf];
+
+		if (fseeko(f, (off_t)firstfield, SEEK_SET) ||
+			(fread(buf, 1, nf, f) != 1) ||
+			fclose(f)) {
+			fprintf(stderr, "Error: seeking, reading, or closing file %s: %s\n",
+					fn, strerror(errno));
+			fclose(f);
+			il_free(list);
+			return NULL;
+		}
+		for (i=firstfield; i<=lastfield; i++) {
+			if (buf[i - firstfield] == 0) {
+				il_append(list, i);
+				fields++;
+				if (fields == maxfields)
+					break;
+			}
+		}
+	}
+	return list;
+}
+
 int solvedfile_set(char* fn, int fieldnum) {
 	int f;
 	unsigned char val;
