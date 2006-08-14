@@ -15,7 +15,7 @@
 #include "solvedclient.h"
 #include "solvedfile.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:a";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -31,7 +31,11 @@ void printHelp(char* progname) {
 			"   [-o overlap_needed_to_solve]\n"
 			"   [-f minimum-field-objects-needed-to-solve]\n"
 			"   [-b]: best-overlap mode\n"
-			"   [-F]: first-solved mode\n"
+			"   [-F]: first-solved mode (smallest number of field objs)\n"
+			"   [-a]: agreement mode (waits until enough agreeing matches have been found,\n"
+			"                         prints the last one if it is above the overlap thresh,\n"
+			"                         otherwise prints the last one but steals the 'overlap'\n"
+			"                         from the largest-overlap match)\n"
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
 			"   [-R]: read all at once\n",
@@ -67,6 +71,8 @@ char* solvedfile = NULL;
 
 double overlap_needed = 0.0;
 int min_ninfield = 0;
+
+bool do_agree_overlap = FALSE;
 
 static int compare_overlaps(const void* v1, const void* v2) {
 	const MatchObj* mo1 = v1;
@@ -116,6 +122,7 @@ int main(int argc, char *argv[]) {
 	pl* overlaps = NULL;
 	bool do_best_overlap = FALSE;
 	bool do_first_overlap = FALSE;
+	//bool do_agree_overlap = FALSE;
 	int fieldfile;
 	int totalsolved, totalunsolved;
 	bool read_all = FALSE;
@@ -138,6 +145,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'F':
 			do_first_overlap = TRUE;
+			break;
+		case 'a':
+			do_agree_overlap = TRUE;
 			break;
 		case 'm':
 			agreetolarcsec = atof(optarg);
@@ -378,6 +388,10 @@ int main(int argc, char *argv[]) {
 						pl_insert_sorted(overlaps, mos[i], compare_overlaps);
 					} else if (do_first_overlap) {
 						pl_insert_sorted(overlaps, mos[i], compare_objs_used);
+						/*
+						  } else if (do_agree_overlap) {
+						  pl_append(overlaps, mos[i]);
+						*/
 					} else {
 						// compute (x,y,z) center, scale, rotation.
 						hitlist_healpix_compute_vector(mos[i]);
@@ -517,20 +531,59 @@ void write_field(hitlist* hl,
 			pl* list = pl_get(lists, j);
 			MatchObj* mo;
 
+			MatchObj* mbest = NULL;
+			double bestoverlap = 0.0;
+
 			for (i=0; i<pl_size(list); i++) {
 				mo = pl_get(list, i);
-				if ((mo->overlap >= overlap_needed) &&
-					(mo->ninfield >= min_ninfield)) {
-					gotit = TRUE;
-					break;
+
+				if (do_agree_overlap) {
+					// slightly strange rules, as a result of the way slave
+					// combines agreement and overlap.  Once "nagree" hits
+					// have accumulated, overlap is computed for each of them
+					// and if one passes threshold, the whole cluster is
+					// written out.
+
+					// For analyzing the solver parameters, we want to know
+					// how many objects we had to look at before this
+					// happened, so we want stats for the first object that
+					// has sufficient nagree and is part of a cluster that
+					// has sufficient overlap.  HOWEVER, in order to not
+					// screw up further analysis, we want the overlap of the
+					// best solution.
+
+					if ((mo->overlap >= bestoverlap) &&
+						(mo->ninfield >= min_ninfield)) {
+						mbest = mo;
+						bestoverlap = mo->overlap;
+					}
+					if ((i >= (min_matches_to_agree-1)) &&
+						(bestoverlap >= overlap_needed)) {
+						gotit = TRUE;
+						break;
+					}
+					
+				} else {
+					if ((mo->overlap >= overlap_needed) &&
+						(mo->ninfield >= min_ninfield)) {
+						gotit = TRUE;
+						break;
+					}
 				}
 			}
 			if (gotit) {
 				if (!best)
 					best = pl_new(32);
-				if (overlaps)
+				if (overlaps) {
+					if (mbest) {
+						mo->noverlap  = mbest->noverlap;
+						mo->nconflict = mbest->nconflict;
+						mo->ninfield  = mbest->ninfield;
+						mo->overlap   = mbest->overlap;
+					}
 					// just take the first/best one.
 					pl_append(best, mo);
+				}
 				else 
 					// take the whole list.
 					pl_merge_lists(best, list);
