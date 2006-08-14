@@ -80,6 +80,8 @@ int maxquads;
 
 bool quiet;
 
+int firstfield, lastfield;
+
 il* fieldlist;
 pthread_mutex_t fieldlist_mutex;
 
@@ -142,6 +144,7 @@ int main(int argc, char *argv[]) {
 		ycolname = strdup("COLC");
 		parity = DEFAULT_PARITY_FLIP;
 		codetol = DEFAULT_CODE_TOL;
+		firstfield = lastfield = -1;
 		startdepth = 0;
 		enddepth = 0;
 		funits_lower = 0.0;
@@ -301,6 +304,22 @@ int main(int argc, char *argv[]) {
 			if (solvedclient_set_server(solvedserver)) {
 				fprintf(stderr, "Error setting solvedserver.\n");
 				exit(-1);
+			}
+
+			if ((il_size(fieldlist) == 0) && (firstfield != -1) && (lastfield != -1)) {
+				int j;
+				free(fieldlist);
+				printf("Contacting solvedserver to get field list...\n");
+				fieldlist = solvedclient_get_fields(fieldid, firstfield, lastfield, 0);
+				if (!fieldlist) {
+					fprintf(stderr, "Failed to get field list from solvedserver.\n");
+					exit(-1);
+				}
+				printf("Got %i fields from solvedserver: ", il_size(fieldlist));
+				for (j=0; j<il_size(fieldlist); j++) {
+					printf("%i ", il_get(fieldlist, j));
+				}
+				printf("\n");
 			}
 		}
 
@@ -479,6 +498,10 @@ static int read_parameters() {
 		} else if (is_word(buffer, "fieldunits_upper ", &nextword)) {
 			double d = atof(nextword);
 			funits_upper = d;
+		} else if (is_word(buffer, "firstfield ", &nextword)) {
+			firstfield = atoi(nextword);
+		} else if (is_word(buffer, "lastfield ", &nextword)) {
+			lastfield = atoi(nextword);
 		} else if (is_word(buffer, "fields ", &nextword)) {
 			char* str = nextword;
 			char* endp;
