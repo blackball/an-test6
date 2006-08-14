@@ -79,8 +79,6 @@ il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
 		nf = end - firstfield;
 	{
 		unsigned char buf[nf];
-		printf("NF %i\n", nf);
-		printf("firstfield %i, last %i, max %i\n", firstfield, lastfield, maxfields);
 		if (fseeko(f, (off_t)firstfield, SEEK_SET) ||
 			(fread(buf, 1, nf, f) != nf) ||
 			fclose(f)) {
