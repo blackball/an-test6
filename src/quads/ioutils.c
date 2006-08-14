@@ -8,6 +8,14 @@
 
 unsigned int ENDIAN_DETECTOR = 0x01020304;
 
+int is_word(char* cmdline, char* keyword, char** cptr) {
+	int len = strlen(keyword);
+	if (strncmp(cmdline, keyword, len))
+		return 0;
+	*cptr = cmdline + len;
+	return 1;
+}
+
 void read_complain(FILE* fin, char* attempted) {
 	if (feof(fin)) {
 		fprintf(stderr, "Couldn't read %s: end-of-file.\n", attempted);

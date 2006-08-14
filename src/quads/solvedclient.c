@@ -9,7 +9,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "solvedfile.h"
+#include "solvedclient.h"
+#include "bl.h"
 
 static struct sockaddr_in serveraddr = {0, 0, {0}};
 static FILE* fserver = NULL;
@@ -120,3 +121,48 @@ void solvedclient_set(int filenum, int fieldnum) {
 	}
 }
 
+il* solvedclient_get_fields(int filenum, int firstfield, int lastfield,
+							int maxnfields) {
+	char buf[maxnfields * 10];
+	il* list;
+	char* cptr;
+	int fld;
+	int nchars;
+
+	if (connect_to_server())
+		return NULL;
+	nchars = sprintf(buf, "getall %i %i %i %i\n", filenum, firstfield,
+					 lastfield, maxnfields);
+	if ((fwrite(buf, 1, nchars, fserver) != nchars) ||
+		fflush(fserver)) {
+		fprintf(stderr, "Failed to send command (%s) to solvedserver: %s\n", buf, strerror(errno));
+		return NULL;
+	}
+	// wait for response.
+	if (!fgets(buf, sizeof(buf), fserver)) {
+		fprintf(stderr, "Couldn't read response: %s\n", strerror(errno));
+		fclose(fserver);
+		fserver = NULL;
+		return NULL;
+	}
+	if (sscanf(buf, "unsolved %i%n", &fld, &nchars) != 1) {
+		fprintf(stderr, "Couldn't parse response: %s\n", buf);
+		return NULL;
+	}
+	if (fld != filenum) {
+		fprintf(stderr, "Expected file number %i, not %i.\n", filenum, fld);
+		return NULL;
+	}
+	cptr = buf + nchars;
+	list = il_new(256);
+	while (*cptr && *cptr != '\n') {
+		if (sscanf(cptr, " %i%n", &fld, &nchars) != 1) {
+			fprintf(stderr, "Couldn't parse response: %s\n", buf);
+			il_free(list);
+			return NULL;
+		}
+		cptr += nchars;
+		il_append(list, fld);
+	}
+	return list;
+}

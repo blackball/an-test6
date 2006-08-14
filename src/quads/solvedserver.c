@@ -13,6 +13,7 @@
 
 #include "bl.h"
 #include "solvedfile.h"
+#include "ioutils.h"
 
 const char* OPTIONS = "hp:f:";
 
@@ -36,11 +37,14 @@ extern int optind, opterr, optopt;
 int handle_request(FILE* fid) {
 	char buf[256];
 	char fn[256];
-	char getsetstr[16];
 	int set;
 	int get;
+	int getall;
 	int filenum;
 	int fieldnum;
+	int lastfieldnum;
+	int maxfields;
+	char* nextword;
 
 	//printf("Fileno %i:\n", fileno(fid));
 	if (!fgets(buf, 256, fid)) {
@@ -50,15 +54,36 @@ int handle_request(FILE* fid) {
 		return -1;
 	}
 	//printf("Got request %s\n", buf);
-	if (sscanf(buf, "%4s %i %i\n", getsetstr, &filenum, &fieldnum) != 3) {
-		fprintf(stderr, "Error: malformed request: %s\n", buf);
-		fflush(stderr);
+	get = set = getall = 0;
+	if (is_word(buf, "get ", &nextword)) {
+		get = 1;
+	} else if (is_word(buf, "set ", &nextword)) {
+		set = 1;
+	} else if (is_word(buf, "getall ", &nextword)) {
+		getall = 1;
+	}
+
+	if (!(get || set || getall)) {
+		fprintf(stderr, "Error: malformed command.\n");
 		fclose(fid);
 		return -1;
 	}
 
-	get = (strcmp(getsetstr, "get") == 0);
-	set = (strcmp(getsetstr, "set") == 0);
+	if (get || set) {
+		if (sscanf(buf, "%i %i", &filenum, &fieldnum) != 2) {
+			fprintf(stderr, "Error: malformed request: %s\n", buf);
+			fflush(stderr);
+			fclose(fid);
+			return -1;
+		}
+	} else if (getall) {
+		if (sscanf(buf, "%i %i %i %i", &filenum, &fieldnum, &lastfieldnum, &maxfields) != 4) {
+			fprintf(stderr, "Error: malformed request: %s\n", buf);
+			fflush(stderr);
+			fclose(fid);
+			return -1;
+		}
+	}
 
 	sprintf(fn, solvedfnpattern, filenum);
 
@@ -86,11 +111,30 @@ int handle_request(FILE* fid) {
 		fprintf(fid, "ok\n");
 		fflush(fid);
 		return 0;
-	} else {
-		fprintf(stderr, "Error: malformed command.\n");
-		fclose(fid);
-		return -1;
+	} else if (getall) {
+		int val;
+		int i;
+		int fields = 0;
+		printf("Getall %s [%i : %i].\n", fn, fieldnum, lastfieldnum);
+		fflush(stdout);
+		fprintf(fid, "unsolved %i", filenum);
+		for (i=fieldnum; i<=lastfieldnum; i++) {
+			val = solvedfile_get(fn, i);
+			if (val == -1) {
+				fclose(fid);
+				return -1;
+			} else if (val == 0) {
+				fprintf(fid, " %i", i);
+				fields++;
+				if (fields == maxfields)
+					break;
+			}
+		}
+		fprintf(fid, "\n");
+		fflush(fid);
+		return 0;
 	}
+	return -1;
 }
 
 int main(int argc, char** args) {

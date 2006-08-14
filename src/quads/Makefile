@@ -95,9 +95,6 @@ EXECS := whynot agreeable certifiable quadidx \
 	plotquads matchtordls homer \
 	unpermute-stars2 tunematch quadscales
 
-homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
-
 # things we don't use often:
 #	randcat genfields
 #   quadsperstar
@@ -154,6 +151,9 @@ $(QFITS_LIB): $(QFITS_OBJ)
 WCSLIB_LIB := /usr/local/wcslib-4.2/lib/libwcs.a
 WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
 
+homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
+
 badfields: badfields.o fitsioutils.o ioutils.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
 
@@ -182,7 +182,7 @@ hptst: hptst.o healpix.o
 printsolved: printsolved.o mathutil.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-solvedserver: solvedserver.o solvedfile.o bl.o
+solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 FITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead

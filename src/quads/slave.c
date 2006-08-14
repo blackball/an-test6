@@ -36,6 +36,7 @@
 #include "verify.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
+#include "ioutils.h"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -368,14 +369,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	return 0;
-}
-
-static int is_word(char* cmdline, char* keyword, char** cptr) {
-	int len = strlen(keyword);
-	if (strncmp(cmdline, keyword, len))
-		return 0;
-	*cptr = cmdline + len;
-	return 1;
 }
 
 static int read_parameters() {
