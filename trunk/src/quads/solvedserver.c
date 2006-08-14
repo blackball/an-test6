@@ -112,23 +112,16 @@ int handle_request(FILE* fid) {
 		fflush(fid);
 		return 0;
 	} else if (getall) {
-		int val;
 		int i;
-		int fields = 0;
-		printf("Getall %s [%i : %i].\n", fn, fieldnum, lastfieldnum);
+		il* list;
+		printf("Getall %s [%i : %i], max %i.\n", fn, fieldnum, lastfieldnum, maxfields);
 		fflush(stdout);
 		fprintf(fid, "unsolved %i", filenum);
-		for (i=fieldnum; i<=lastfieldnum; i++) {
-			val = solvedfile_get(fn, i);
-			if (val == -1) {
-				fclose(fid);
-				return -1;
-			} else if (val == 0) {
+		list = solvedfile_getall(fn, fieldnum, lastfieldnum, maxfields);
+		if (list) {
+			for (i=0; i<il_size(list); i++)
 				fprintf(fid, " %i", i);
-				fields++;
-				if (fields == maxfields)
-					break;
-			}
+			il_free(list);
 		}
 		fprintf(fid, "\n");
 		fflush(fid);
