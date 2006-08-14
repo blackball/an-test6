@@ -5,6 +5,12 @@
 
 extern unsigned int ENDIAN_DETECTOR;
 
+/**
+   If "cmdline" starts with "keyword", returns 1 and places the address of
+   the start of the next word in "p_next_word".
+ */
+int is_word(char* cmdline, char* keyword, char** p_next_word);
+
 int write_u8(FILE* fout, unsigned char val);
 int write_u16(FILE* fout, unsigned int val);
 int write_u32(FILE* fout, unsigned int val);

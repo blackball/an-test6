@@ -24,6 +24,7 @@
 #include "qidxfile.h"
 #include "verify.h"
 #include "qfits.h"
+#include "ioutils.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -1030,14 +1031,6 @@ int main(int argc, char *argv[]) {
 	intmap_free(indtofield);
 
 	return 0;
-}
-
-inline int is_word(char* cmdline, char* keyword, char** cptr) {
-	int len = strlen(keyword);
-	if (strncmp(cmdline, keyword, len))
-		return 0;
-	*cptr = cmdline + len;
-	return 1;
 }
 
 int read_parameters() {
