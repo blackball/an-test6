@@ -123,7 +123,8 @@ void solvedclient_set(int filenum, int fieldnum) {
 
 il* solvedclient_get_fields(int filenum, int firstfield, int lastfield,
 							int maxnfields) {
-	char buf[maxnfields * 10];
+	char* buf;
+	int bufsize;
 	il* list;
 	char* cptr;
 	int fld;
@@ -131,6 +132,8 @@ il* solvedclient_get_fields(int filenum, int firstfield, int lastfield,
 
 	if (connect_to_server())
 		return NULL;
+	bufsize = 100 + 10 * (maxnfields ? maxnfields : (1 + lastfield - firstfield));
+	buf = malloc(bufsize);
 	nchars = sprintf(buf, "getall %i %i %i %i\n", filenum, firstfield,
 					 lastfield, maxnfields);
 	if ((fwrite(buf, 1, nchars, fserver) != nchars) ||
@@ -139,18 +142,21 @@ il* solvedclient_get_fields(int filenum, int firstfield, int lastfield,
 		return NULL;
 	}
 	// wait for response.
-	if (!fgets(buf, sizeof(buf), fserver)) {
+	if (!fgets(buf, bufsize, fserver)) {
 		fprintf(stderr, "Couldn't read response: %s\n", strerror(errno));
 		fclose(fserver);
 		fserver = NULL;
+		free(buf);
 		return NULL;
 	}
 	if (sscanf(buf, "unsolved %i%n", &fld, &nchars) != 1) {
 		fprintf(stderr, "Couldn't parse response: %s\n", buf);
+		free(buf);
 		return NULL;
 	}
 	if (fld != filenum) {
 		fprintf(stderr, "Expected file number %i, not %i.\n", filenum, fld);
+		free(buf);
 		return NULL;
 	}
 	cptr = buf + nchars;
@@ -159,10 +165,12 @@ il* solvedclient_get_fields(int filenum, int firstfield, int lastfield,
 		if (sscanf(cptr, " %i%n", &fld, &nchars) != 1) {
 			fprintf(stderr, "Couldn't parse response: %s\n", buf);
 			il_free(list);
+			free(buf);
 			return NULL;
 		}
 		cptr += nchars;
 		il_append(list, fld);
 	}
+	free(buf);
 	return list;
 }

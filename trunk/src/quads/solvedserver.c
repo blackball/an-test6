@@ -70,14 +70,14 @@ int handle_request(FILE* fid) {
 	}
 
 	if (get || set) {
-		if (sscanf(buf, "%i %i", &filenum, &fieldnum) != 2) {
+		if (sscanf(nextword, "%i %i", &filenum, &fieldnum) != 2) {
 			fprintf(stderr, "Error: malformed request: %s\n", buf);
 			fflush(stderr);
 			fclose(fid);
 			return -1;
 		}
 	} else if (getall) {
-		if (sscanf(buf, "%i %i %i %i", &filenum, &fieldnum, &lastfieldnum, &maxfields) != 4) {
+		if (sscanf(nextword, "%i %i %i %i", &filenum, &fieldnum, &lastfieldnum, &maxfields) != 4) {
 			fprintf(stderr, "Error: malformed request: %s\n", buf);
 			fflush(stderr);
 			fclose(fid);
@@ -120,7 +120,7 @@ int handle_request(FILE* fid) {
 		list = solvedfile_getall(fn, fieldnum, lastfieldnum, maxfields);
 		if (list) {
 			for (i=0; i<il_size(list); i++)
-				fprintf(fid, " %i", i);
+				fprintf(fid, " %i", il_get(list, i));
 			il_free(list);
 		}
 		fprintf(fid, "\n");

@@ -79,9 +79,10 @@ il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
 		nf = end - firstfield;
 	{
 		unsigned char buf[nf];
-
+		printf("NF %i\n", nf);
+		printf("firstfield %i, last %i, max %i\n", firstfield, lastfield, maxfields);
 		if (fseeko(f, (off_t)firstfield, SEEK_SET) ||
-			(fread(buf, 1, nf, f) != 1) ||
+			(fread(buf, 1, nf, f) != nf) ||
 			fclose(f)) {
 			fprintf(stderr, "Error: seeking, reading, or closing file %s: %s\n",
 					fn, strerror(errno));
@@ -89,13 +90,20 @@ il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
 			il_free(list);
 			return NULL;
 		}
-		for (i=firstfield; i<=lastfield; i++) {
-			if (buf[i - firstfield] == 0) {
-				il_append(list, i);
+		for (i=0; i<nf; i++) {
+			if (buf[i] == 0) {
+				il_append(list, firstfield + i);
 				fields++;
 				if (fields == maxfields)
 					break;
 			}
+		}
+		// if the file was shorter than the last field requested, add the missing fields.
+		for (i=firstfield+nf; i<=lastfield; i++) {
+			if (fields == maxfields)
+				break;
+			il_append(list, i);
+			fields++;
 		}
 	}
 	return list;
