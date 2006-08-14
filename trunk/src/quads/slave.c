@@ -806,12 +806,14 @@ void* solvethread_run(void* varg) {
 	solver_params solver;
 	double last_utime, last_stime;
 	double utime, stime;
+	struct timeval wtime, last_wtime;
 	int nfields;
 	double* field = NULL;
 
 	fprintf(stderr, "Thread %i starting.\n", my->threadnum);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
+	gettimeofday(&last_wtime, NULL);
 
 	solver_default_params(&solver);
 	solver.codekd = codetree;
@@ -920,11 +922,11 @@ void* solvethread_run(void* varg) {
 		// The real thing
 		solve_field(&solver);
 
-		fprintf(stderr, "    field %i: tried %i quads, matched %i codes.\n",
+		fprintf(stderr, "field %i: tried %i quads, matched %i codes.\n",
 				fieldnum, solver.numtries, solver.nummatches);
 
 		if (maxquads && solver.numtries >= maxquads) {
-			fprintf(stderr, "    exceeded the number of quads to try: %i >= %i.\n",
+			fprintf(stderr, "  exceeded the number of quads to try: %i >= %i.\n",
 					solver.numtries, maxquads);
 		}
 
@@ -989,10 +991,13 @@ void* solvethread_run(void* varg) {
 			pl_remove_all(my->verified);
 
 		get_resource_stats(&utime, &stime, NULL);
-		fprintf(stderr, "    spent %g s user, %g s system, %g s total.\n",
-				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime));
+		gettimeofday(&wtime, NULL);
+		fprintf(stderr, "Spent %g s user, %g s system, %g s total, %g s wall time.\n",
+				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
+				millis_between(&last_wtime, &wtime) * 0.001);
 		last_utime = utime;
 		last_stime = stime;
+		last_wtime = wtime;
 		fprintf(stderr, "\n\n");
 	}
 
