@@ -36,7 +36,7 @@
 ;------------------------------------------------------------------------------
 pro dchildren, base, iparent, psf=psf, plim=plim, gsmooth=gsmooth, $
                glim=glim, xstars=xstars, ystars=ystars, xgals=xgals, $
-               ygals=ygals, hand=hand
+               ygals=ygals, hand=hand, saddle=saddle
 
 common atv_point, markcoord
 
@@ -138,7 +138,7 @@ if(keyword_set(nc) gt 0 or $
                 kpsf=lonarr(n_elements(xstars))+1L 
                 kpsf[m1]=0 
                 istars=where(kpsf gt 0, nstars) 
-                if(nk gt 0) then begin
+                if(nstars gt 0) then begin
                     xstars=xstars[istars] 
                     ystars=ystars[istars] 
                 endif
@@ -151,7 +151,7 @@ if(keyword_set(nc) gt 0 or $
       xgals=xgals, ygals=ygals, ngals=ngals
 
 ;; deblend on those peaks
-    if(nstars gt 0 OR xgals gt 0) then begin
+    if(nstars gt 0 OR ngals gt 0) then begin
 
         ;; make stellar templates
         psfd=psf
