@@ -178,6 +178,7 @@ int main(int argc, char *argv[]) {
 	double maxv = 1024;
 
 	il* slideshow_steps = il_new(32);
+	int lasthp, lastff;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -282,6 +283,8 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	lasthp = lastff = -1;
+
 	for (;;) {
 		double centerxyz[3];
 		double xyz[3];
@@ -334,7 +337,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		if (startemplate) {
+		if (startemplate && (mo->healpix != lasthp)) {
 			if (startree)
 				kdtree_close(startree);
 			sprintf(fn, startemplate, mo->healpix);
@@ -343,9 +346,10 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Failed to open star kdtree from file %s.\n", fn);
 				exit(-1);
 			}
+			lasthp = mo->healpix;
 		}
 
-		if (xylstemplate) {
+		if (xylstemplate && (mo->fieldfile != lastff)) {
 			if (xyls)
 				xylist_close(xyls);
 			sprintf(fn, xylstemplate, mo->fieldfile);
@@ -358,6 +362,7 @@ int main(int argc, char *argv[]) {
 				xyls->xname = xname;
 			if (yname)
 				xyls->yname = yname;
+			lastff = mo->fieldfile;
 		}
 
 		// find the field center
@@ -667,7 +672,7 @@ int main(int argc, char *argv[]) {
 				int unmatch;
 				int conflict;
 				verify_hit(startree, mo, fielduv, NF, overlap_d2,
-						   &match, &unmatch, &conflict, NULL);
+						   &match, &unmatch, &conflict, NULL, NULL);
 			}
 			printf("Overlap: %g\n", mo->overlap);
 
