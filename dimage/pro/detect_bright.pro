@@ -84,7 +84,7 @@ if(dbset.ngals gt 0) then begin
     xgals=dbset.xgals[0:dbset.ngals-1]
     ygals=dbset.ygals[0:dbset.ngals-1]
 endif
-dchildren, dbset.base, dbset.parent, psf, $
+dchildren, dbset.base, dbset.parent, psf=psf, $
   gsmooth=dbset.gsmooth, xstars=xstars, ystars=ystars, $
   xgals=xgals, ygals=ygals, hand=hand
 

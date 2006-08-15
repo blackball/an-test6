@@ -47,7 +47,7 @@ nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
 ; Set source object name
-soname=filepath('libdimage.'+kcorrect_so_ext(), $
+soname=filepath('libdimage.'+idlutils_so_ext(), $
                 root_dir=getenv('DIMAGE_DIR'), subdirectory='lib')
 
 xcen=lonarr(maxnpeaks)

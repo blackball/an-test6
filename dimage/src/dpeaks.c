@@ -112,7 +112,7 @@ int dpeaks(float *image,
 		if(checkpeaks) {
 			/* look for peaks joined by a high saddle to brighter peaks */
 			level= (smooth[ fullxcen[i]+  fullycen[i]*nx]-saddle*sigma);
-			if(level<minpeak) level=minpeak;
+			if(level<sigma) level=sigma;
 			for(jp=0;jp<ny;jp++)
 				for(ip=0;ip<nx;ip++)
 					mask[ip+jp*nx]=smooth[ip+jp*nx]>level;

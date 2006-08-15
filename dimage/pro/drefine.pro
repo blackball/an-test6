@@ -27,6 +27,11 @@ box=((long(box)/2L)*2L+1L)>3L
 nx=(size(image,/dim))[0]
 ny=(size(image,/dim))[1]
 
+if(keyword_set(smooth)) then $
+  simage=dsmooth(image, smooth) $ 
+else $
+  simage=image
+
 ncen=n_elements(xc)
 xr=fltarr(ncen)
 yr=fltarr(ncen)
@@ -47,9 +52,7 @@ for i=0L, ncen-1L do begin
     nys=ynd-yst+1L
     if(nxs ne box OR nys ne box) then $
       message, 'image smaller than box in drefine'
-    subimg=image[xst:xnd, yst:ynd]
-    if(keyword_set(smooth)) then $
-      subimg=dsmooth(subimg, smooth)
+    subimg=simage[xst:xnd, yst:ynd]
     
     if(box gt 3L) then begin
         submax=max(subimg, imax)

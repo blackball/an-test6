@@ -35,7 +35,7 @@ int dfluxes(float *image,
             float *children,
             float sigma)
 {
-  int i,j,k,closest, kp;
+  int i,j,k,kp;
   float r2, maxval, val, ss;
 
   /* 1. smooth templates*/
