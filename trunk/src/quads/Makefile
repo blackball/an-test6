@@ -227,6 +227,9 @@ plotcat: plotcat.o starutil.o an_catalog.o catalog.o tycho2_fits.o tycho2.o \
 	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
+2masstofits: 2masstofits.o 2mass.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -lz
+
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
