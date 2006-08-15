@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -15,7 +16,7 @@
 #include "solvedclient.h"
 #include "solvedfile.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:a";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:at";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
@@ -36,6 +37,7 @@ void printHelp(char* progname) {
 			"                         prints the last one if it is above the overlap thresh,\n"
 			"                         otherwise prints the last one but steals the 'overlap'\n"
 			"                         from the largest-overlap match)\n"
+			"   [-t]: print agreement distances.\n"
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
 			"   [-R]: read all at once\n",
@@ -53,7 +55,7 @@ void write_field(hitlist* hl,
 				 bool unsolvedstubs);
 
 #define DEFAULT_MIN_MATCHES_TO_AGREE 3
-#define DEFAULT_AGREE_TOL 7.0
+#define DEFAULT_AGREE_TOL 10.0
 
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 
@@ -73,6 +75,9 @@ double overlap_needed = 0.0;
 int min_ninfield = 0;
 
 bool do_agree_overlap = FALSE;
+
+bool print_agree = FALSE;
+dl* agreedistlist;
 
 static int compare_overlaps(const void* v1, const void* v2) {
 	const MatchObj* mo1 = v1;
@@ -116,6 +121,7 @@ int main(int argc, char *argv[]) {
 	matchfile** mfs;
 	MatchObj** mos;
 	bool* eofs;
+	bool* eofieldfile;
 	int nread = 0;
 	int f;
 	hitlist* hl = NULL;
@@ -148,6 +154,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'a':
 			do_agree_overlap = TRUE;
+			break;
+		case 't':
+			print_agree = TRUE;
 			break;
 		case 'm':
 			agreetolarcsec = atof(optarg);
@@ -227,6 +236,10 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
+	if (print_agree) {
+		agreedistlist = dl_new(256);
+	}
+
 	if (hitfname)
 		fopenout(hitfname, &hitfid);
 
@@ -277,6 +290,7 @@ int main(int argc, char *argv[]) {
 
 	mos =  calloc(ninputfiles, sizeof(MatchObj*));
 	eofs = calloc(ninputfiles, sizeof(bool));
+	eofieldfile = malloc(ninputfiles * sizeof(bool));
 
 	if (read_all) {
 		mfs = NULL;
@@ -322,14 +336,32 @@ int main(int argc, char *argv[]) {
 
 	// we assume the matchfiles are sorted by field id and number.
 	for (fieldfile=firstfieldfile; fieldfile<=lastfieldfile; fieldfile++) {
+
+		memset(eofieldfile, 0, ninputfiles * sizeof(bool));
+
 		bool alldone = TRUE;
 		for (f=firstfield; f<=lastfield; f++) {
 			int fieldnum = f;
+			bool donefieldfile;
 			alldone = TRUE;
 			for (i=0; i<ninputfiles; i++)
-				if (!eofs[i])
+				if (!eofs[i]) {
 					alldone = FALSE;
+					break;
+				}
 			if (alldone)
+				break;
+
+			donefieldfile = TRUE;
+			for (i=0; i<ninputfiles; i++)
+				if (!eofieldfile[i] && !eofs[i]) {
+					//fprintf(stderr, "input file %s still has hits for fieldfile %i.\n", inputfiles[i], fieldfile);
+					//if (mos[i])
+					//fprintf(stderr, "(field %i.)\n", mos[i]->fieldnum);
+					donefieldfile = FALSE;
+					break;
+				}
+			if (donefieldfile)
 				break;
 
 			fprintf(stderr, "File %i, Field %i.\n", fieldfile, f);
@@ -366,6 +398,10 @@ int main(int argc, char *argv[]) {
 						ns++;
 						continue;
 					}
+
+					if (mos[i]->fieldfile > fieldfile)
+						eofieldfile[i] = TRUE;
+
 					if (mos[i]->fieldfile != fieldfile)
 						break;
 					assert(mos[i]->fieldnum >= fieldnum);
@@ -388,10 +424,6 @@ int main(int argc, char *argv[]) {
 						pl_insert_sorted(overlaps, mos[i], compare_overlaps);
 					} else if (do_first_overlap) {
 						pl_insert_sorted(overlaps, mos[i], compare_objs_used);
-						/*
-						  } else if (do_agree_overlap) {
-						  pl_append(overlaps, mos[i]);
-						*/
 					} else {
 						// compute (x,y,z) center, scale, rotation.
 						hitlist_healpix_compute_vector(mos[i]);
@@ -476,6 +508,14 @@ int main(int argc, char *argv[]) {
 		matchfile_close(agreemf);
 	}
 
+	if (print_agree) {
+		printf("agree_dists = [");
+		for (i=0; i<dl_size(agreedistlist); i++)
+			printf("%g, ", dl_get(agreedistlist, i));
+		printf("];\n");
+		dl_free(agreedistlist);
+	}
+
 	return 0;
 }
 
@@ -536,6 +576,20 @@ void write_field(hitlist* hl,
 
 			for (i=0; i<pl_size(list); i++) {
 				mo = pl_get(list, i);
+
+				if (i && hl && print_agree) {
+					double bestd2 = 1e300;
+					int j;
+					for (j=0; j<i; j++) {
+						double d2 = -1.0;
+						MatchObj* mo2 = pl_get(list, j);
+						hitlist_hits_agree(mo, mo2, hl->agreedist2, &d2);
+						if (d2 < bestd2)
+							bestd2 = d2;
+					}
+					if (bestd2 < 1e300)
+						dl_append(agreedistlist, distsq2arcsec(bestd2));
+				}
 
 				if (do_agree_overlap) {
 					// slightly strange rules, as a result of the way slave

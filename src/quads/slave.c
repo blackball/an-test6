@@ -699,7 +699,7 @@ static void write_hits(int fieldnum, pl* matches) {
 void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
 	int matches, unmatches, conflicts;
 	verify_hit(startree, mo, field, nfield, verify_dist2,
-			   &matches, &unmatches, &conflicts, NULL);
+			   &matches, &unmatches, &conflicts, NULL, NULL);
 	if (!quiet)
 		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 				fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);

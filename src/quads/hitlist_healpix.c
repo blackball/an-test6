@@ -292,14 +292,17 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	return hl;
 }
 
-int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
+int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double* p_agreedist2) {
 	// old-fashioned metric:
 	double vec1[6];
 	double vec2[6];
+	double d2;
 
 	// two matches to the same quad don't supply any additional evidence -
 	// it's probably donuts or double-images or something.
 	if (m1->quadno == m2->quadno) {
+		if (p_agreedist2)
+			*p_agreedist2 = -1.0;
 		return 0;
 	}
 
@@ -317,7 +320,14 @@ int hits_agree(MatchObj* m1, MatchObj* m2, double agreedist2) {
 	vec2[4] = m2->sMax[1];
 	vec2[5] = m2->sMax[2];
 
-	if (distsq_exceeds(vec1, vec2, 6, agreedist2))
+	/*
+	  if (distsq_exceeds(vec1, vec2, 6, maxagreedist2))
+	  return 0;
+	*/
+	d2 = distsq(vec1, vec2, 6);
+	if (p_agreedist2)
+		*p_agreedist2 = d2;
+	if (d2 > maxagreedist2)
 		return 0;
 	return 1;
 }
@@ -388,7 +398,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match,
 			// get the MO from the master list
 			mo = (MatchObj*)pl_get(hlist->matchlist, ind);
 
-			if (!hits_agree(match, mo, hlist->agreedist2))
+			if (!hitlist_hits_agree(match, mo, hlist->agreedist2, NULL))
 				continue;
 
 			// this match agrees.

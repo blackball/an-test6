@@ -345,7 +345,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 			fld[i*2  ] = xy_refx(thisfield, i);
 			fld[i*2+1] = xy_refy(thisfield, i);
 		}
-		verify_hit(startree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts, NULL);
+		verify_hit(startree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts, NULL, NULL);
 		free(fld);
 	}
 	if (verbose) {
@@ -548,7 +548,7 @@ void why_not() {
 			image_to_xyz(xy_refx(cornerpix, 3), xy_refy(cornerpix, 3), mo.sMaxMin, transform);
 
 			verify_hit(startree, &mo, fld, nfield, verify_dist2,
-					   NULL, NULL, NULL, infield);
+					   NULL, NULL, NULL, infield, NULL);
 
 			// make "infield" just be the ones that aren't in "indexed_radec".
 			printf("%% infield=");
