@@ -111,20 +111,11 @@ struct twomass_entry {
 	unsigned k_ndet_M          :3; // number of detections
 	unsigned k_ndet_N          :3; // potential number of detections
 
-	// arcsec: proximity to the nearest other source in the catalog.
-	float proximity;
-	// degrees (null): direction to the nearest neighbour, east of north.
-	unsigned char prox_angle;
-	// : key of the nearest neighbour.
-	unsigned int prox_key;
-
 	// may be a foreground star superimposed on a galaxy.
 	unsigned galaxy_contam     :2;
 
 	// may be a minor planet, comet, asteroid, etc.
 	unsigned minor_planet      :1;
-
-	unsigned int key;
 
 	unsigned northern_hemisphere  :1;
 
@@ -133,6 +124,14 @@ struct twomass_entry {
 	unsigned date_day             :5;
 
 	unsigned scan                 :10;
+
+	// arcsec: proximity to the nearest other source in the catalog.
+	float proximity;
+	// : key of the nearest neighbour.
+	unsigned int prox_key;
+
+	// unique id of this object.
+	unsigned int key;
 
 	// degrees: galactic longitude
 	float glon;
@@ -180,14 +179,6 @@ struct twomass_entry {
 
 	unsigned association      :2;
 
-	// arcsec (null):
-	float dist_opt;
-	// degrees east of north (null)
-	unsigned char phi_opt;
-	// mag (null)
-	float b_m_opt;
-	// mag (null)
-	float vr_m_opt;
 	unsigned nopt_mchs    :4;
 
 	// (null)
@@ -195,6 +186,15 @@ struct twomass_entry {
 	unsigned scan_key     :17;
 	unsigned coadd_key    :24;
 	unsigned coadd        :10;
+
+	// degrees east of north (null)
+	unsigned char phi_opt;
+	// arcsec (null):
+	float dist_opt;
+	// mag (null)
+	float b_m_opt;
+	// mag (null)
+	float vr_m_opt;
 };
 typedef struct twomass_entry twomass_entry;
 
