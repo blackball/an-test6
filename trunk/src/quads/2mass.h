@@ -1,7 +1,14 @@
 #ifndef TWOMASS_H
 #define TWOMASS_H
 
-#define TWOMASS_NULL_MAG NAN
+#define _GNU_SOURCE
+#include <math.h>  // to get NAN
+
+/*
+  struct twomass_quality_bits {
+  };
+  typedef struct twomass_quality_bits twomass_qbits;
+*/
 
 /**
    See:
@@ -49,6 +56,7 @@ struct twomass_entry {
 	float k_snr;
 
 	// quality bits:
+	//struct twomass_qbits j_quality;
 	unsigned j_no_brightness   :1; // flag X
 	unsigned j_upper_limit_mag :1; // flag U
 	unsigned j_no_sigma        :1; // flag F
@@ -117,6 +125,7 @@ struct twomass_entry {
 	// may be a minor planet, comet, asteroid, etc.
 	unsigned minor_planet      :1;
 
+	// 1=north, 0=south.
 	unsigned northern_hemisphere  :1;
 
 	unsigned date_year            :12;
@@ -124,6 +133,8 @@ struct twomass_entry {
 	unsigned date_day             :5;
 
 	unsigned scan                 :10;
+
+	unsigned prox_angle           :8;
 
 	// arcsec: proximity to the nearest other source in the catalog.
 	float proximity;
@@ -197,6 +208,17 @@ struct twomass_entry {
 	float vr_m_opt;
 };
 typedef struct twomass_entry twomass_entry;
+
+#define TWOMASS_NULL NAN
+
+#define TWOMASS_XSC_KEY_NULL 0xffffff;
+
+#define TWOMASS_ASSOCIATION_NONE 0
+#define TWOMASS_ASSOCIATION_TYCHO 1
+#define TWOMASS_ASSOCIATION_USNOA2 2
+
+
+int twomass_parse_entry(struct twomass_entry* entry, char* line);
 
 
 #endif
