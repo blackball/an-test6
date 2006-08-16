@@ -6,6 +6,9 @@
 #include <zlib.h>
 
 #include "2mass.h"
+#include "2mass_catalog.h"
+#include "healpix.h"
+#include "starutil.h"
 
 #define OPTIONS "ho:N:"
 
@@ -26,6 +29,9 @@ int main(int argc, char** args) {
 	int startoptind;
 	int Nside = 8;
 	int HP;
+	int i;
+
+	twomass_catalog** cats;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -54,6 +60,7 @@ int main(int argc, char** args) {
 	}
 
 	HP = 12 * Nside * Nside;
+	cats = calloc(HP, sizeof(twomass_catalog*));
 
 	printf("Nside = %i, using %i healpixes.\n", Nside, HP);
 
@@ -64,11 +71,11 @@ int main(int argc, char** args) {
 	for (; optind<argc; optind++) {
 		char* infn;
 		gzFile* fiz = NULL;
-		//int i;
 		char line[1024];
+		int nentries;
 
 		infn = args[optind];
-		printf("\nReading file %i of %i: %s\n", optind - startoptind,
+		printf("\nReading file %i of %i: %s\n", 1 + optind - startoptind,
 			   argc - startoptind, infn);
 		infn = args[optind];
 		fiz = gzopen(infn, "rb");
@@ -76,9 +83,10 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to open file %s: %s\n", infn, strerror(errno));
 			exit(-1);
 		}
-
+		nentries = 0;
 		for (;;) {
 			twomass_entry e;
+			int hp;
 
 			if (!gzgets(fiz, line, 1024)) {
 				fprintf(stderr, "Failed to read a line from file %s: %s\n", infn, strerror(errno));
@@ -91,10 +99,48 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Failed to parse 2MASS entry from file %s.\n", infn);
 				exit(-1);
 			}
-		}
 
+			hp = radectohealpix_nside(deg2rad(e.ra), deg2rad(e.dec), Nside);
+			if (!cats[hp]) {
+				char fn[256];
+				sprintf(fn, outfn, hp);
+				cats[hp] = twomass_catalog_open(fn);
+				if (!cats[hp]) {
+					fprintf(stderr, "Failed to open 2MASS catalog for writing to file %s (hp %i).\n", fn, hp);
+					exit(-1);
+				}
+				if (twomass_catalog_write_headers(cats[hp])) {
+					fprintf(stderr, "Failed to write 2MASS catalog headers: %s\n", fn);
+					exit(-1);
+				}
+			}
+			if (twomass_catalog_write_entry(cats[hp], &e)) {
+				fprintf(stderr, "Failed to write 2MASS catalog entry.\n");
+				exit(-1);
+			}
+
+			nentries++;
+			if (!(nentries % 100000)) {
+				printf(".");
+				fflush(stdout);
+			}
+		}
 		gzclose(fiz);
+		printf("\n");
+
+		printf("Read %i entries.\n", nentries);
 	}
+
+	for (i=0; i<HP; i++) {
+		if (!cats[i])
+			continue;
+		if (twomass_catalog_fix_headers(cats[i]) ||
+			twomass_catalog_close(cats[i])) {
+			fprintf(stderr, "Failed to close 2MASS catalog.\n");
+			exit(-1);
+		}
+	}
+	free(cats);
 
 	return 0;
 }
