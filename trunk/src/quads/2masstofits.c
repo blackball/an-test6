@@ -168,9 +168,10 @@ int main(int argc, char** args) {
 				sprintf(val, "* the NULL value for floats is %f", TWOMASS_NULL);
 				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
 				//qfits_header_add(cats[hp]->header, "COMMENT", "* the NULL float value is IEEE NaN.", NULL, NULL);
-				sprintf(val, "* the NULL value for the 'ext_key' aka 'xsc_key' field is %i.\n", TWOMASS_KEY_NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", "* the NULL value for the 'ext_key' aka 'xsc_key' field is", NULL, NULL);
+				sprintf(val, "   %i (0x%x).", TWOMASS_KEY_NULL, TWOMASS_KEY_NULL);
 				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
-				sprintf(val, "* the NULL value for the 'prox_angle' and 'phi_opt' fields is %i.\n", TWOMASS_ANGLE_NULL);
+				sprintf(val, "* the NULL value for the 'prox_angle' and 'phi_opt' fields is %i (0x%x).", TWOMASS_ANGLE_NULL, TWOMASS_ANGLE_NULL);
 				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
 
 				if (twomass_catalog_write_headers(cats[hp])) {
