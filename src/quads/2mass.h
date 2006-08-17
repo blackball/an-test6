@@ -57,32 +57,47 @@ struct twomass_entry {
 
 	// quality bits:
 	//struct twomass_qbits j_quality;
-	unsigned j_no_brightness   :1; // flag X
-	unsigned j_upper_limit_mag :1; // flag U
-	unsigned j_no_sigma        :1; // flag F
-	unsigned j_bad_fit         :1; // flag E
-	unsigned j_quality_A       :1; // flag A
-	unsigned j_quality_B       :1; // flag B
-	unsigned j_quality_C       :1; // flag C
-	unsigned j_quality_D       :1; // flag D
+	/*
+	  unsigned j_no_brightness   :1; // flag X
+	  unsigned j_upper_limit_mag :1; // flag U
+	  unsigned j_no_sigma        :1; // flag F
+	  unsigned j_bad_fit         :1; // flag E
+	  unsigned j_quality_A       :1; // flag A
+	  unsigned j_quality_B       :1; // flag B
+	  unsigned j_quality_C       :1; // flag C
+	  unsigned j_quality_D       :1; // flag D
 
-	unsigned h_no_brightness   :1; // flag X
-	unsigned h_upper_limit_mag :1; // flag U
-	unsigned h_no_sigma        :1; // flag F
-	unsigned h_bad_fit         :1; // flag E
-	unsigned h_quality_A       :1; // flag A
-	unsigned h_quality_B       :1; // flag B
-	unsigned h_quality_C       :1; // flag C
-	unsigned h_quality_D       :1; // flag D
+	  unsigned h_no_brightness   :1; // flag X
+	  unsigned h_upper_limit_mag :1; // flag U
+	  unsigned h_no_sigma        :1; // flag F
+	  unsigned h_bad_fit         :1; // flag E
+	  unsigned h_quality_A       :1; // flag A
+	  unsigned h_quality_B       :1; // flag B
+	  unsigned h_quality_C       :1; // flag C
+	  unsigned h_quality_D       :1; // flag D
 
-	unsigned k_no_brightness   :1; // flag X
-	unsigned k_upper_limit_mag :1; // flag U
-	unsigned k_no_sigma        :1; // flag F
-	unsigned k_bad_fit         :1; // flag E
-	unsigned k_quality_A       :1; // flag A
-	unsigned k_quality_B       :1; // flag B
-	unsigned k_quality_C       :1; // flag C
-	unsigned k_quality_D       :1; // flag D
+	  unsigned k_no_brightness   :1; // flag X
+	  unsigned k_upper_limit_mag :1; // flag U
+	  unsigned k_no_sigma        :1; // flag F
+	  unsigned k_bad_fit         :1; // flag E
+	  unsigned k_quality_A       :1; // flag A
+	  unsigned k_quality_B       :1; // flag B
+	  unsigned k_quality_C       :1; // flag C
+	  unsigned k_quality_D       :1; // flag D
+	*/
+
+	unsigned char j_quality;
+	unsigned char h_quality;
+	unsigned char k_quality;
+
+#define TWOMASS_QUALITY_NO_BRIGHTNESS 0x1
+#define TWOMASS_QUALITY_UPPER_LIMIT_MAG 0x2
+#define TWOMASS_QUALITY_NO_SIGMA 0x4
+#define TWOMASS_QUALITY_BAD_FIT 0x8
+#define TWOMASS_QUALITY_A 0x10
+#define TWOMASS_QUALITY_B 0x20
+#define TWOMASS_QUALITY_C 0x40
+#define TWOMASS_QUALITY_D 0x80
 
 	unsigned j_read_flag       :4;
 	unsigned h_read_flag       :4;

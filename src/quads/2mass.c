@@ -23,6 +23,39 @@ static int parse_null(char** pcursor, float* dest) {
 	return 0;
 }
 
+int parse_quality_flag(char flag, unsigned char* bitfield) {
+	switch (flag) {
+	case 'X':
+		*bitfield = TWOMASS_QUALITY_NO_BRIGHTNESS;
+		break;
+	case 'U':
+		*bitfield = TWOMASS_QUALITY_UPPER_LIMIT_MAG;
+		break;
+	case 'F':
+		*bitfield = TWOMASS_QUALITY_NO_SIGMA;
+		break;
+	case 'E':
+		*bitfield = TWOMASS_QUALITY_BAD_FIT;
+		break;
+	case 'A':
+		*bitfield = TWOMASS_QUALITY_A;
+		break;
+	case 'B':
+		*bitfield = TWOMASS_QUALITY_B;
+		break;
+	case 'C':
+		*bitfield = TWOMASS_QUALITY_C;
+		break;
+	case 'D':
+		*bitfield = TWOMASS_QUALITY_D;
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
+
 #define ensure(c, f) { if (c!='|') { fprintf(stderr, "Expected '|' following field %s in 2MASS line.\n", f); return -1; }}
 
 //#define printval printf
@@ -81,107 +114,43 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	printval("h_m %g, h_cmsig %g, h_msigcom %g, h_snr %g.\n", e->h_m, e->h_cmsig, e->h_msigcom, e->h_snr);
 	printval("k_m %g, k_cmsig %g, k_msigcom %g, k_snr %g.\n", e->k_m, e->k_cmsig, e->k_msigcom, e->k_snr);
 
-
-	e->j_no_brightness = e->j_upper_limit_mag = e->j_no_sigma = e->j_bad_fit =
-		e->j_quality_A = e->j_quality_B = e->j_quality_C = e->j_quality_D = 0;
-	switch (*cursor) {
-	case 'X':
-		e->j_no_brightness = 1;
-		break;
-	case 'U':
-		e->j_upper_limit_mag = 1;
-		break;
-	case 'F':
-		e->j_no_sigma = 1;
-		break;
-	case 'E':
-		e->j_bad_fit = 1;
-		break;
-	case 'A':
-		e->j_quality_A = 1;
-		break;
-	case 'B':
-		e->j_quality_B = 1;
-		break;
-	case 'C':
-		e->j_quality_C = 1;
-		break;
-	case 'D':
-		e->j_quality_D = 1;
-		break;
+	for (i=0; i<3; i++) {
+		char bands[] = { 'j', 'h', 'k' };
+		unsigned char* quals[] = { &e->j_quality, &e->h_quality, &e->k_quality };
+		if (parse_quality_flag(*cursor, quals[i])) {
+			fprintf(stderr, "Failed to parse '%c_quality' entry in 2MASS line.\n", bands[i]);
+			return -1;
+		}
+		cursor++;
 	}
-	cursor++;
 
-	// ugh, the disadvantage of bitfields...
-
-	e->h_no_brightness = e->h_upper_limit_mag = e->h_no_sigma = e->h_bad_fit =
-		e->h_quality_A = e->h_quality_B = e->h_quality_C = e->h_quality_D = 0;
-	switch (*cursor) {
-	case 'X':
-		e->h_no_brightness = 1;
-		break;
-	case 'U':
-		e->h_upper_limit_mag = 1;
-		break;
-	case 'F':
-		e->h_no_sigma = 1;
-		break;
-	case 'E':
-		e->h_bad_fit = 1;
-		break;
-	case 'A':
-		e->h_quality_A = 1;
-		break;
-	case 'B':
-		e->h_quality_B = 1;
-		break;
-	case 'C':
-		e->h_quality_C = 1;
-		break;
-	case 'D':
-		e->h_quality_D = 1;
-		break;
-	}
-	cursor++;
-
-	e->k_no_brightness = e->k_upper_limit_mag = e->k_no_sigma = e->k_bad_fit =
-		e->k_quality_A = e->k_quality_B = e->k_quality_C = e->k_quality_D = 0;
-	switch (*cursor) {
-	case 'X':
-		e->k_no_brightness = 1;
-		break;
-	case 'U':
-		e->k_upper_limit_mag = 1;
-		break;
-	case 'F':
-		e->k_no_sigma = 1;
-		break;
-	case 'E':
-		e->k_bad_fit = 1;
-		break;
-	case 'A':
-		e->k_quality_A = 1;
-		break;
-	case 'B':
-		e->k_quality_B = 1;
-		break;
-	case 'C':
-		e->k_quality_C = 1;
-		break;
-	case 'D':
-		e->k_quality_D = 1;
-		break;
-	default:
-		assert(0);
-	}
-	cursor++;
-
- 	printval("j X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n", e->j_no_brightness, e->j_upper_limit_mag, e->j_no_sigma,
-			 e->j_bad_fit, e->j_quality_A, e->j_quality_B, e->j_quality_C, e->j_quality_D);
- 	printval("h X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n", e->h_no_brightness, e->h_upper_limit_mag, e->h_no_sigma,
-			 e->h_bad_fit, e->h_quality_A, e->h_quality_B, e->h_quality_C, e->h_quality_D);
- 	printval("k X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n", e->k_no_brightness, e->k_upper_limit_mag, e->k_no_sigma,
-			 e->k_bad_fit, e->k_quality_A, e->k_quality_B, e->k_quality_C, e->k_quality_D);
+ 	printval("j X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n",
+			 (e->j_quality & TWOMASS_QUALITY_NO_BRIGHTNESS) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_UPPER_LIMIT_MAG) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_NO_SIGMA) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_BAD_FIT) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_A) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_B) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_C) ? 1 : 0,
+			 (e->j_quality & TWOMASS_QUALITY_D) ? 1 : 0);
+ 	printval("h X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n",
+			 (e->h_quality & TWOMASS_QUALITY_NO_BRIGHTNESS) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_UPPER_LIMIT_MAG) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_NO_SIGMA) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_BAD_FIT) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_A) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_B) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_C) ? 1 : 0,
+			 (e->h_quality & TWOMASS_QUALITY_D) ? 1 : 0);
+ 	printval("k X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n",
+			 (e->k_quality & TWOMASS_QUALITY_NO_BRIGHTNESS) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_UPPER_LIMIT_MAG) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_NO_SIGMA) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_BAD_FIT) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_A) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_B) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_C) ? 1 : 0,
+			 (e->k_quality & TWOMASS_QUALITY_D) ? 1 : 0);
 
 	ensure(*cursor, "flags");
 	cursor++;
