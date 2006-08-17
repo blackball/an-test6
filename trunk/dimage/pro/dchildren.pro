@@ -44,6 +44,8 @@ if(NOT keyword_set(plim)) then plim=5.
 if(NOT keyword_set(glim)) then glim=5.
 if(NOT keyword_set(gsmooth)) then gsmooth=2.
 if(NOT keyword_set(saddle)) then saddle=100.
+if(keyword_set(xstars)) then nstars=n_elements(xstars)
+if(keyword_set(xgals)) then nstars=n_elements(xgals)
 
 maxnpeaks=1000L
 
