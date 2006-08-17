@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+#include <math.h>  // to get NAN
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,6 +120,58 @@ int main(int argc, char** args) {
 				qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 				sprintf(val, "%u", Nside);
 				qfits_header_add(cats[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
+
+				qfits_header_add(cats[hp]->header, "COMMENT", "The fields are as described in the 2MASS documentation:", NULL, NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", "  ftp://ftp.ipac.caltech.edu/pub/2mass/allsky/format_psc.html", NULL, NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", "with a few exceptions:", NULL, NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", "* the photometric quality flag values are:", NULL, NULL);
+				sprintf(val, "    %i: 'X' in 2MASS, No brightness info available.", TWOMASS_QUALITY_NO_BRIGHTNESS);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'U' in 2MASS, The brightness val is an upper bound.", TWOMASS_QUALITY_UPPER_LIMIT_MAG);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'F' in 2MASS, No magnitude sigma is available", TWOMASS_QUALITY_NO_SIGMA);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'E' in 2MASS, Profile-fit photometry was bad", TWOMASS_QUALITY_BAD_FIT);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'A' in 2MASS, Best quality", TWOMASS_QUALITY_A);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'B' in 2MASS, ...", TWOMASS_QUALITY_B);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'C' in 2MASS, ...", TWOMASS_QUALITY_C);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'D' in 2MASS, Worst quality", TWOMASS_QUALITY_D);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+
+				qfits_header_add(cats[hp]->header, "COMMENT", "* the confusion/contamination flag values are:", NULL, NULL);
+				sprintf(val, "    %i: '0' in 2MASS, No problems.", TWOMASS_CC_NONE);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'p' in 2MASS, Persistence.", TWOMASS_CC_PERSISTENCE);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'c' in 2MASS, Confusion.", TWOMASS_CC_CONFUSION);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'd' in 2MASS, Diffraction.", TWOMASS_CC_DIFFRACTION);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 's' in 2MASS, Stripe.", TWOMASS_CC_STRIPE);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: 'b' in 2MASS, Band merge.", TWOMASS_CC_BANDMERGE);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+
+				qfits_header_add(cats[hp]->header, "COMMENT", "* the association flag values are:", NULL, NULL);
+				sprintf(val, "    %i: none.", TWOMASS_ASSOCIATION_NONE);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: Tycho.", TWOMASS_ASSOCIATION_TYCHO);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "    %i: USNO A-2.", TWOMASS_ASSOCIATION_USNOA2);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+
+				//qfits_header_add(cats[hp]->header, "COMMENT", "* the NULL float value is IEEE NaN.", NULL, NULL);
+				sprintf(val, "* the NULL value for floats is %f", TWOMASS_NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				//qfits_header_add(cats[hp]->header, "COMMENT", "* the NULL float value is IEEE NaN.", NULL, NULL);
+				sprintf(val, "* the NULL value for the 'ext_key' aka 'xsc_key' field is %i.\n", TWOMASS_KEY_NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
+				sprintf(val, "* the NULL value for the 'prox_angle' and 'phi_opt' fields is %i.\n", TWOMASS_ANGLE_NULL);
+				qfits_header_add(cats[hp]->header, "COMMENT", val, NULL, NULL);
 
 				if (twomass_catalog_write_headers(cats[hp])) {
 					fprintf(stderr, "Failed to write 2MASS catalog headers: %s\n", fn);
