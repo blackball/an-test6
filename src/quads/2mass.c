@@ -23,7 +23,7 @@ static int parse_null(char** pcursor, float* dest) {
 	return 0;
 }
 
-int parse_quality_flag(char flag, unsigned char* val) {
+static int parse_quality_flag(char flag, unsigned char* val) {
 	switch (flag) {
 	case 'X':
 		*val = TWOMASS_QUALITY_NO_BRIGHTNESS;
@@ -55,7 +55,7 @@ int parse_quality_flag(char flag, unsigned char* val) {
 	return 0;
 }
 
-int parse_cc_flag(char flag, unsigned char* val) {
+static int parse_cc_flag(char flag, unsigned char* val) {
 	switch (flag) {
 	case 'p':
 		*val = TWOMASS_CC_PERSISTENCE;
@@ -93,6 +93,10 @@ int twomass_cc_flag(unsigned char val, unsigned char flag) {
 
 int twomass_quality_flag(unsigned char val, unsigned char flag) {
 	return (val == flag);
+}
+
+int twomass_is_null_float(float f) {
+	return isnan(f);
 }
 
 int twomass_parse_entry(struct twomass_entry* e, char* line) {
@@ -399,7 +403,10 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		fprintf(stderr, "Failed to parse 'prox_angle' entry in 2MASS line.\n");
 		return -1;
 	}
-	e->prox_angle = val2;
+	if (twomass_is_null_float(val2))
+		e->prox_angle = TWOMASS_ANGLE_NULL;
+	else
+		e->prox_angle = val2;
 
 	printval("proximity_angle %i\n", e->prox_angle);
 
@@ -612,7 +619,10 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		fprintf(stderr, "Failed to parse 'dist_opt/phi_opt/b_m_opt/vr_m_opt' entries in 2MASS line.\n");
 		return -1;
 	}
-	e->phi_opt = val2;
+	if (twomass_is_null_float(val2))
+		e->phi_opt = TWOMASS_ANGLE_NULL;
+	else
+		e->phi_opt = val2;
 
 	printval("dist_opt %g, phi_opt %i, b_m_opt %g, vr_m_opt %g.\n", e->dist_opt, e->phi_opt, e->b_m_opt, e->vr_m_opt);
 
@@ -628,7 +638,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	printval("nopt_matches %i\n", e->nopt_mchs);
 
 	if (!strncmp(cursor, "\\N|", 3)) {
-		e->xsc_key = TWOMASS_XSC_KEY_NULL;
+		e->xsc_key = TWOMASS_KEY_NULL;
 		cursor += 3;
 	} else {
 		int ival;

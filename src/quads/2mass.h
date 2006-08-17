@@ -61,7 +61,6 @@ struct twomass_entry {
 	// (null):
 	float k_snr;
 
-
 	// photometric quality flags
 	unsigned char j_quality;
 	unsigned char h_quality;
@@ -187,11 +186,15 @@ typedef struct twomass_entry twomass_entry;
 
 #define TWOMASS_NULL NAN
 
-#define TWOMASS_XSC_KEY_NULL 0xffffff;
+#define TWOMASS_KEY_NULL 0xffffff
 
-#define TWOMASS_ASSOCIATION_NONE 0
-#define TWOMASS_ASSOCIATION_TYCHO 1
-#define TWOMASS_ASSOCIATION_USNOA2 2
+#define TWOMASS_ANGLE_NULL 0xff
+
+enum twomass_association_val {
+	TWOMASS_ASSOCIATION_NONE,
+	TWOMASS_ASSOCIATION_TYCHO,
+	TWOMASS_ASSOCIATION_USNOA2
+};
 
 enum twomass_quality_val {
 	TWOMASS_QUALITY_NO_BRIGHTNESS,    // X flag
@@ -213,13 +216,12 @@ enum twomass_cc_val {
 	TWOMASS_CC_BANDMERGE        // b
 };
 
-
 int twomass_parse_entry(struct twomass_entry* entry, char* line);
-
 
 int twomass_cc_flag(unsigned char val, unsigned char flag);
 
 int twomass_quality_flag(unsigned char val, unsigned char flag);
 
+int twomass_is_null_float(float f);
 
 #endif
