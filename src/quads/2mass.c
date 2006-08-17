@@ -23,31 +23,57 @@ static int parse_null(char** pcursor, float* dest) {
 	return 0;
 }
 
-int parse_quality_flag(char flag, unsigned char* bitfield) {
+int parse_quality_flag(char flag, unsigned char* val) {
 	switch (flag) {
 	case 'X':
-		*bitfield = TWOMASS_QUALITY_NO_BRIGHTNESS;
+		*val = TWOMASS_QUALITY_NO_BRIGHTNESS;
 		break;
 	case 'U':
-		*bitfield = TWOMASS_QUALITY_UPPER_LIMIT_MAG;
+		*val = TWOMASS_QUALITY_UPPER_LIMIT_MAG;
 		break;
 	case 'F':
-		*bitfield = TWOMASS_QUALITY_NO_SIGMA;
+		*val = TWOMASS_QUALITY_NO_SIGMA;
 		break;
 	case 'E':
-		*bitfield = TWOMASS_QUALITY_BAD_FIT;
+		*val = TWOMASS_QUALITY_BAD_FIT;
 		break;
 	case 'A':
-		*bitfield = TWOMASS_QUALITY_A;
+		*val = TWOMASS_QUALITY_A;
 		break;
 	case 'B':
-		*bitfield = TWOMASS_QUALITY_B;
+		*val = TWOMASS_QUALITY_B;
 		break;
 	case 'C':
-		*bitfield = TWOMASS_QUALITY_C;
+		*val = TWOMASS_QUALITY_C;
 		break;
 	case 'D':
-		*bitfield = TWOMASS_QUALITY_D;
+		*val = TWOMASS_QUALITY_D;
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
+int parse_cc_flag(char flag, unsigned char* val) {
+	switch (flag) {
+	case 'p':
+		*val = TWOMASS_CC_PERSISTENCE;
+		break;
+	case 'c':
+		*val = TWOMASS_CC_CONFUSION;
+		break;
+	case 'd':
+		*val = TWOMASS_CC_DIFFRACTION;
+		break;
+	case 's':
+		*val = TWOMASS_CC_STRIPE;
+		break;
+	case 'b':
+		*val = TWOMASS_CC_BANDMERGE;
+		break;
+	case '0':
+		*val = TWOMASS_CC_NONE;
 		break;
 	default:
 		return -1;
@@ -60,6 +86,14 @@ int parse_quality_flag(char flag, unsigned char* bitfield) {
 
 //#define printval printf
 #define printval(x,...) {}
+
+int twomass_cc_flag(unsigned char val, unsigned char flag) {
+	return (val == flag);
+}
+
+int twomass_quality_flag(unsigned char val, unsigned char flag) {
+	return (val == flag);
+}
 
 int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	char* cursor;
@@ -125,32 +159,34 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	}
 
  	printval("j X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n",
-			 (e->j_quality & TWOMASS_QUALITY_NO_BRIGHTNESS) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_UPPER_LIMIT_MAG) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_NO_SIGMA) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_BAD_FIT) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_A) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_B) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_C) ? 1 : 0,
-			 (e->j_quality & TWOMASS_QUALITY_D) ? 1 : 0);
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_NO_BRIGHTNESS),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_UPPER_LIMIT_MAG),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_NO_SIGMA),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_BAD_FIT),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_A),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_B),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_C),
+			 twomass_quality_flag(e->j_quality, TWOMASS_QUALITY_D));
+
  	printval("h X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n",
-			 (e->h_quality & TWOMASS_QUALITY_NO_BRIGHTNESS) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_UPPER_LIMIT_MAG) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_NO_SIGMA) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_BAD_FIT) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_A) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_B) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_C) ? 1 : 0,
-			 (e->h_quality & TWOMASS_QUALITY_D) ? 1 : 0);
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_NO_BRIGHTNESS),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_UPPER_LIMIT_MAG),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_NO_SIGMA),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_BAD_FIT),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_A),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_B),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_C),
+			 twomass_quality_flag(e->h_quality, TWOMASS_QUALITY_D));
+
  	printval("k X=%i, U=%i, F=%i, E=%i, A=%i, B=%i, C=%i, D=%i\n",
-			 (e->k_quality & TWOMASS_QUALITY_NO_BRIGHTNESS) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_UPPER_LIMIT_MAG) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_NO_SIGMA) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_BAD_FIT) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_A) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_B) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_C) ? 1 : 0,
-			 (e->k_quality & TWOMASS_QUALITY_D) ? 1 : 0);
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_NO_BRIGHTNESS),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_UPPER_LIMIT_MAG),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_NO_SIGMA),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_BAD_FIT),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_A),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_B),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_C),
+			 twomass_quality_flag(e->k_quality, TWOMASS_QUALITY_D));
 
 	ensure(*cursor, "flags");
 	cursor++;
@@ -207,87 +243,120 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	ensure(*cursor, "blend_flag");
 	cursor++;
 
-	e->j_cc_persistence = e->j_cc_confusion = e->j_cc_diffraction =
-		e->j_cc_stripe = e->j_cc_bandmerge = 0;
-	switch (*cursor) {
-	case 'p':
-		e->j_cc_persistence = 1;
-		break;
-	case 'c':
-		e->j_cc_confusion = 1;
-		break;
-	case 'd':
-		e->j_cc_diffraction = 1;
-		break;
-	case 's':
-		e->j_cc_stripe = 1;
-		break;
-	case 'b':
-		e->j_cc_bandmerge = 1;
-		break;
-	case '0':
-		break;
-	default:
-		assert(0);
+	for (i=0; i<3; i++) {
+		char bands[] = { 'j', 'h', 'k' };
+		unsigned char* ccs[] = { &e->j_cc, &e->h_cc, &e->k_cc };
+		if (parse_cc_flag(*cursor, ccs[i])) {
+			fprintf(stderr, "Failed to parse '%c_cc' entry in 2MASS line.\n", bands[i]);
+			return -1;
+		}
+		cursor++;
 	}
-	cursor++;
 
-	e->h_cc_persistence = e->h_cc_confusion = e->h_cc_diffraction =
-		e->h_cc_stripe = e->h_cc_bandmerge = 0;
-	switch (*cursor) {
-	case 'p':
-		e->h_cc_persistence = 1;
-		break;
-	case 'c':
-		e->h_cc_confusion = 1;
-		break;
-	case 'd':
-		e->h_cc_diffraction = 1;
-		break;
-	case 's':
-		e->h_cc_stripe = 1;
-		break;
-	case 'b':
-		e->h_cc_bandmerge = 1;
-		break;
-	case '0':
-		break;
-	default:
-		assert(0);
-	}
-	cursor++;
+	/*
+	  e->j_cc_persistence = e->j_cc_confusion = e->j_cc_diffraction =
+	  e->j_cc_stripe = e->j_cc_bandmerge = 0;
+	  switch (*cursor) {
+	  case 'p':
+	  e->j_cc_persistence = 1;
+	  break;
+	  case 'c':
+	  e->j_cc_confusion = 1;
+	  break;
+	  case 'd':
+	  e->j_cc_diffraction = 1;
+	  break;
+	  case 's':
+	  e->j_cc_stripe = 1;
+	  break;
+	  case 'b':
+	  e->j_cc_bandmerge = 1;
+	  break;
+	  case '0':
+	  break;
+	  default:
+	  assert(0);
+	  }
+	  cursor++;
 
-	e->k_cc_persistence = e->k_cc_confusion = e->k_cc_diffraction =
-		e->k_cc_stripe = e->k_cc_bandmerge = 0;
-	switch (*cursor) {
-	case 'p':
-		e->k_cc_persistence = 1;
-		break;
-	case 'c':
-		e->k_cc_confusion = 1;
-		break;
-	case 'd':
-		e->k_cc_diffraction = 1;
-		break;
-	case 's':
-		e->k_cc_stripe = 1;
-		break;
-	case 'b':
-		e->k_cc_bandmerge = 1;
-		break;
-	case '0':
-		break;
-	default:
-		assert(0);
-	}
-	cursor++;
+	  e->h_cc_persistence = e->h_cc_confusion = e->h_cc_diffraction =
+	  e->h_cc_stripe = e->h_cc_bandmerge = 0;
+	  switch (*cursor) {
+	  case 'p':
+	  e->h_cc_persistence = 1;
+	  break;
+	  case 'c':
+	  e->h_cc_confusion = 1;
+	  break;
+	  case 'd':
+	  e->h_cc_diffraction = 1;
+	  break;
+	  case 's':
+	  e->h_cc_stripe = 1;
+	  break;
+	  case 'b':
+	  e->h_cc_bandmerge = 1;
+	  break;
+	  case '0':
+	  break;
+	  default:
+	  assert(0);
+	  }
+	  cursor++;
 
-	printval("j_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->j_cc_persistence,
-		   e->j_cc_confusion, e->j_cc_diffraction, e->j_cc_stripe, e->j_cc_bandmerge);
-	printval("h_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->h_cc_persistence,
-		   e->h_cc_confusion, e->h_cc_diffraction, e->h_cc_stripe, e->h_cc_bandmerge);
-	printval("k_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->k_cc_persistence,
-		   e->k_cc_confusion, e->k_cc_diffraction, e->k_cc_stripe, e->k_cc_bandmerge);
+	  e->k_cc_persistence = e->k_cc_confusion = e->k_cc_diffraction =
+	  e->k_cc_stripe = e->k_cc_bandmerge = 0;
+	  switch (*cursor) {
+	  case 'p':
+	  e->k_cc_persistence = 1;
+	  break;
+	  case 'c':
+	  e->k_cc_confusion = 1;
+	  break;
+	  case 'd':
+	  e->k_cc_diffraction = 1;
+	  break;
+	  case 's':
+	  e->k_cc_stripe = 1;
+	  break;
+	  case 'b':
+	  e->k_cc_bandmerge = 1;
+	  break;
+	  case '0':
+	  break;
+	  default:
+	  assert(0);
+	  }
+	  cursor++;
+	*/
+
+	/*
+	  printval("j_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->j_cc_persistence,
+	  e->j_cc_confusion, e->j_cc_diffraction, e->j_cc_stripe, e->j_cc_bandmerge);
+	  printval("h_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->h_cc_persistence,
+	  e->h_cc_confusion, e->h_cc_diffraction, e->h_cc_stripe, e->h_cc_bandmerge);
+	  printval("k_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->k_cc_persistence,
+	  e->k_cc_confusion, e->k_cc_diffraction, e->k_cc_stripe, e->k_cc_bandmerge);
+	*/
+
+	printval("j_confusion: p=%i, c=%i, d=%i, s=%i, b=%i.\n",
+			 twomass_cc_flag(e->j_cc, TWOMASS_CC_PERSISTENCE),
+			 twomass_cc_flag(e->j_cc, TWOMASS_CC_CONFUSION),
+			 twomass_cc_flag(e->j_cc, TWOMASS_CC_DIFFFRACTION),
+			 twomass_cc_flag(e->j_cc, TWOMASS_CC_STRIPE),
+			 twomass_cc_flag(e->j_cc, TWOMASS_CC_BANDMERGE));
+	printval("h_confusion: p=%i, c=%i, d=%i, s=%i, b=%i.\n",
+			 twomass_cc_flag(e->h_cc, TWOMASS_CC_PERSISTENCE),
+			 twomass_cc_flag(e->h_cc, TWOMASS_CC_CONFUSION),
+			 twomass_cc_flag(e->h_cc, TWOMASS_CC_DIFFFRACTION),
+			 twomass_cc_flag(e->h_cc, TWOMASS_CC_STRIPE),
+			 twomass_cc_flag(e->h_cc, TWOMASS_CC_BANDMERGE));
+	printval("k_confusion: p=%i, c=%i, d=%i, s=%i, b=%i.\n",
+			 twomass_cc_flag(e->k_cc, TWOMASS_CC_PERSISTENCE),
+			 twomass_cc_flag(e->k_cc, TWOMASS_CC_CONFUSION),
+			 twomass_cc_flag(e->k_cc, TWOMASS_CC_DIFFFRACTION),
+			 twomass_cc_flag(e->k_cc, TWOMASS_CC_STRIPE),
+			 twomass_cc_flag(e->k_cc, TWOMASS_CC_BANDMERGE));
 
 	ensure(*cursor, "confusion_flag");
 	cursor++;

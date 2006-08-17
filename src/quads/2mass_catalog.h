@@ -7,7 +7,7 @@
 #include "ioutils.h"
 #include "2mass.h"
 
-#define TWOMASS_FITS_COLUMNS 107
+#define TWOMASS_FITS_COLUMNS 76
 
 struct twomass_catalog {
 	qfits_table* table;
