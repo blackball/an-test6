@@ -97,10 +97,6 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Failed to read a line from file %s: %s\n", infn, strerror(errno));
 				exit(-1);
 			}
-			/*
-			  if (!strlen(line))
-			  break;
-			*/
 
 			if (twomass_parse_entry(&e, line)) {
 				fprintf(stderr, "Failed to parse 2MASS entry from file %s.\n", infn);
@@ -110,12 +106,19 @@ int main(int argc, char** args) {
 			hp = radectohealpix_nside(deg2rad(e.ra), deg2rad(e.dec), Nside);
 			if (!cats[hp]) {
 				char fn[256];
+				char val[256];
 				sprintf(fn, outfn, hp);
 				cats[hp] = twomass_catalog_open_for_writing(fn);
 				if (!cats[hp]) {
 					fprintf(stderr, "Failed to open 2MASS catalog for writing to file %s (hp %i).\n", fn, hp);
 					exit(-1);
 				}
+				// header remarks...
+				sprintf(val, "%u", hp);
+				qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
+				sprintf(val, "%u", Nside);
+				qfits_header_add(cats[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
+
 				if (twomass_catalog_write_headers(cats[hp])) {
 					fprintf(stderr, "Failed to write 2MASS catalog headers: %s\n", fn);
 					exit(-1);
