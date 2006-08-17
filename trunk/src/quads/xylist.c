@@ -128,7 +128,7 @@ int xylist_read_entries(xylist* ls, uint field, uint offset, uint n,
 						double* vals) {
 	double* ddata;
 	float* fdata = NULL;
-	int i;
+	uint i;
 	if (xylist_find_field(ls, field)) {
 		return -1;
 	}

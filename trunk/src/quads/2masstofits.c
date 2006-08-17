@@ -88,12 +88,19 @@ int main(int argc, char** args) {
 			twomass_entry e;
 			int hp;
 
-			if (!gzgets(fiz, line, 1024)) {
+			if (gzeof(fiz))
+				break;
+
+			if (gzgets(fiz, line, 1024) == Z_NULL) {
+				if (gzeof(fiz))
+					break;
 				fprintf(stderr, "Failed to read a line from file %s: %s\n", infn, strerror(errno));
 				exit(-1);
 			}
-			if (!strlen(line))
-				break;
+			/*
+			  if (!strlen(line))
+			  break;
+			*/
 
 			if (twomass_parse_entry(&e, line)) {
 				fprintf(stderr, "Failed to parse 2MASS entry from file %s.\n", infn);
@@ -104,7 +111,7 @@ int main(int argc, char** args) {
 			if (!cats[hp]) {
 				char fn[256];
 				sprintf(fn, outfn, hp);
-				cats[hp] = twomass_catalog_open(fn);
+				cats[hp] = twomass_catalog_open_for_writing(fn);
 				if (!cats[hp]) {
 					fprintf(stderr, "Failed to open 2MASS catalog for writing to file %s (hp %i).\n", fn, hp);
 					exit(-1);

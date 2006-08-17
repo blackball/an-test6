@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 		if (whichset) {
 			scanrez = fscanf(stdin, "%u", &whichstar);
 			if (scanrez == 1) {
-				if (whichstar < 0 || whichstar >= numstars) {
+				if (whichstar >= numstars) {
 					fprintf(stdin, "ERROR: No such star %u\n", whichstar);
 					continue;
 				}

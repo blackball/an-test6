@@ -4,27 +4,35 @@
 #define _GNU_SOURCE
 #include <math.h>  // to get NAN
 
-/*
-  struct twomass_quality_bits {
-  };
-  typedef struct twomass_quality_bits twomass_qbits;
-*/
-
 /**
+
    See:
    .    ftp://ftp.ipac.caltech.edu/pub/2mass/allsky/format_psc.html
+
 */
 struct twomass_entry {
 	// degrees, J2000 ICRS
 	double ra;
+	// degrees, J2000 ICRS
 	double dec;
 
-	// in days: Julian date (+- 30 seconds) of the measurement.
-	double jdate;
+	// unique id of this object.
+	unsigned int key;
 
-	// arcsec, one-sigma positional error ellipse
+	// arcsec, one-sigma positional error ellipse: major axis
 	float err_major;
+	// arcsec, one-sigma positional error ellipse: minor axis
 	float err_minor;
+
+	// degrees east of north of the major axis of the error ellipse
+	unsigned char err_angle;
+
+	// hhmmssss[+-]ddmmsss[ABC...]
+	char designation[18];
+
+	// is this in the northern hemisphere?
+	// 1=north, 0=south.
+	unsigned char northern_hemisphere;
 
 	// mag (null)
 	float j_m;
@@ -53,8 +61,64 @@ struct twomass_entry {
 	// (null):
 	float k_snr;
 
+
+	// photometric quality flags
+	unsigned char j_quality;
+	unsigned char h_quality;
+	unsigned char k_quality;
+
+	// read flags: where did the data come from?
+	unsigned char j_read_flag;
+	unsigned char h_read_flag;
+	unsigned char k_read_flag;
+
+	// blend flags: how many source measurements were blended?
+	unsigned char h_blend_flag;
+	unsigned char j_blend_flag;
+	unsigned char k_blend_flag;
+
+	// contamination and confusion flags: object detection.
+	unsigned char j_cc;
+	unsigned char h_cc;
+	unsigned char k_cc;
+
+	// number of detections (seen, possible)
+	unsigned char j_ndet_M;
+	unsigned char j_ndet_N;
+	unsigned char h_ndet_M;
+	unsigned char h_ndet_N;
+	unsigned char k_ndet_M;
+	unsigned char k_ndet_N;
+
+	// may be a foreground star superimposed on a galaxy.
+	unsigned char galaxy_contam;
+
+	// (null) angle (degrees east of north) to the nearest object
+	unsigned char prox_angle;
+
 	// arcsec: proximity to the nearest other source in the catalog.
 	float proximity;
+
+	// : key of the nearest neighbour.
+	unsigned int prox_key;
+
+	// day the observation run was started
+	unsigned short date_year;
+	unsigned char date_month;
+	unsigned char date_day;
+
+	// in days: Julian date (+- 30 seconds) of the measurement.
+	double jdate;
+
+	// nightly scan number
+	unsigned short scan;
+	// may be a minor planet, comet, asteroid, etc.
+	unsigned char minor_planet;
+
+	// degrees east of north (null)
+	unsigned char phi_opt;
+
+
 
 	// degrees: galactic longitude
 	float glon;
@@ -92,161 +156,32 @@ struct twomass_entry {
 	// mag (null)
 	float vr_m_opt;
 
-	// : key of the nearest neighbour.
-	unsigned int prox_key;
-
-	// unique id of this object.
-	unsigned int key;
 
 
-	//unsigned scan                 :10;
-	unsigned short scan;
+	  // arcsec:
+	unsigned int dist_edge_ns;
+	unsigned int dist_edge_ew;
+	// 1=north
+	unsigned char dist_flag_ns;
+	// 1=east
+	unsigned char dist_flag_ew;
 
-	// degrees east of north (null)
-	unsigned char phi_opt;
-
-	unsigned char prox_angle;
-
-	// degrees east of north of the major axis of the error ellipse
-	unsigned char err_angle;
-
-	unsigned char k_quality;
-
-	// hhmmssss[+-]ddmmsss[ABC...]
-	char designation[18];
+	unsigned char dup_src;
+	unsigned char use_src;
 
 
-	// quality bits:
-	//struct twomass_qbits j_quality;
-	/*
-	  unsigned j_no_brightness   :1; // flag X
-	  unsigned j_upper_limit_mag :1; // flag U
-	  unsigned j_no_sigma        :1; // flag F
-	  unsigned j_bad_fit         :1; // flag E
-	  unsigned j_quality_A       :1; // flag A
-	  unsigned j_quality_B       :1; // flag B
-	  unsigned j_quality_C       :1; // flag C
-	  unsigned j_quality_D       :1; // flag D
+	unsigned char association;
 
-	  unsigned h_no_brightness   :1; // flag X
-	  unsigned h_upper_limit_mag :1; // flag U
-	  unsigned h_no_sigma        :1; // flag F
-	  unsigned h_bad_fit         :1; // flag E
-	  unsigned h_quality_A       :1; // flag A
-	  unsigned h_quality_B       :1; // flag B
-	  unsigned h_quality_C       :1; // flag C
-	  unsigned h_quality_D       :1; // flag D
+	unsigned char nopt_mchs;
 
-	  unsigned k_no_brightness   :1; // flag X
-	  unsigned k_upper_limit_mag :1; // flag U
-	  unsigned k_no_sigma        :1; // flag F
-	  unsigned k_bad_fit         :1; // flag E
-	  unsigned k_quality_A       :1; // flag A
-	  unsigned k_quality_B       :1; // flag B
-	  unsigned k_quality_C       :1; // flag C
-	  unsigned k_quality_D       :1; // flag D
-	*/
+	unsigned short coadd;
 
-	/*
-	  unsigned j_cc_persistence  :1; // flag p
-	  unsigned j_cc_confusion    :1; // flag c
-	  unsigned j_cc_diffraction  :1; // flag d
-	  unsigned j_cc_stripe       :1; // flag s
-	  unsigned j_cc_bandmerge    :1; // flag b
-
-	  unsigned h_cc_persistence  :1; // flag p
-	  unsigned h_cc_confusion    :1; // flag c
-	  unsigned h_cc_diffraction  :1; // flag d
-	  unsigned h_cc_stripe       :1; // flag s
-	  unsigned h_cc_bandmerge    :1; // flag b
-
-	  unsigned k_cc_persistence  :1; // flag p
-	  unsigned k_cc_confusion    :1; // flag c
-	  unsigned k_cc_diffraction  :1; // flag d
-	  unsigned k_cc_stripe       :1; // flag s
-	  unsigned k_cc_bandmerge    :1; // flag b
-	*/
-
-	/*
-	  unsigned char j_cc;
-	  unsigned char h_cc;
-	  unsigned char k_cc;
-	*/
-
-	unsigned  j_cc :3;
-	unsigned  h_cc :3;
-	unsigned  k_cc :3;
-	unsigned j_read_flag       :4;
-	unsigned h_read_flag       :4;
-	unsigned k_read_flag       :4;
-	unsigned j_blend_flag      :2;
-	unsigned date_day             :5;
-	unsigned h_blend_flag      :2;
-	unsigned k_blend_flag      :2;
-
-
-
-
-	unsigned j_ndet_M          :3; // number of detections
-	unsigned j_ndet_N          :3; // potential number of detections
-	unsigned h_ndet_M          :3; // number of detections
-	unsigned h_ndet_N          :3; // potential number of detections
-	unsigned k_ndet_M          :3; // number of detections
-	unsigned k_ndet_N          :3; // potential number of detections
-	unsigned date_year            :12;
-	// may be a foreground star superimposed on a galaxy.
-	unsigned galaxy_contam     :2;
-
-
-
-
+	unsigned int scan_key;
 
 	// (null)
-	unsigned xsc_key      :24;
-	unsigned date_month           :4;
-	unsigned nopt_mchs    :4;
+	unsigned int xsc_key;
 
-
-
-
-	// arcsec:
-	unsigned dist_edge_ns     :17;
-	// 1=east
-	unsigned dist_flag_ew     :1;
-	unsigned coadd        :10;
-	unsigned dup_src          :2;
-	unsigned association      :2;
-
-
-
-
-
-	unsigned scan_key     :17;
-	unsigned use_src          :1;
-	// may be a minor planet, comet, asteroid, etc.
-	unsigned minor_planet      :1;
-	// arcsec:
-	unsigned dist_edge_ew     :10;
-	unsigned  j_quality :3;
-
-
-
-	unsigned coadd_key    :24;
-	unsigned  h_quality :3;
-	// 1=north, 0=south.
-	unsigned northern_hemisphere  :1;
-	// 1=north
-	unsigned dist_flag_ns     :1;
-
-
-	/*
-	  unsigned char j_quality;
-	  unsigned char h_quality;
-	  unsigned char k_quality;
-	*/
-
-	//unsigned  k_quality :3;
-
+	unsigned int coadd_key;
 };
 typedef struct twomass_entry twomass_entry;
 
@@ -258,17 +193,33 @@ typedef struct twomass_entry twomass_entry;
 #define TWOMASS_ASSOCIATION_TYCHO 1
 #define TWOMASS_ASSOCIATION_USNOA2 2
 
-#define TWOMASS_QUALITY_NO_BRIGHTNESS 0x1
-#define TWOMASS_QUALITY_UPPER_LIMIT_MAG 0x2
-#define TWOMASS_QUALITY_NO_SIGMA 0x4
-#define TWOMASS_QUALITY_BAD_FIT 0x8
-#define TWOMASS_QUALITY_A 0x10
-#define TWOMASS_QUALITY_B 0x20
-#define TWOMASS_QUALITY_C 0x40
-#define TWOMASS_QUALITY_D 0x80
+enum twomass_quality_val {
+	TWOMASS_QUALITY_NO_BRIGHTNESS,    // X flag
+	TWOMASS_QUALITY_UPPER_LIMIT_MAG,  // U
+	TWOMASS_QUALITY_NO_SIGMA,         // F
+	TWOMASS_QUALITY_BAD_FIT,          // E
+	TWOMASS_QUALITY_A,
+	TWOMASS_QUALITY_B,
+	TWOMASS_QUALITY_C,
+	TWOMASS_QUALITY_D
+};
+
+enum twomass_cc_val {
+	TWOMASS_CC_NONE,
+	TWOMASS_CC_PERSISTENCE,     // p flag
+	TWOMASS_CC_CONFUSION,       // c
+	TWOMASS_CC_DIFFRACTION,     // d
+	TWOMASS_CC_STRIPE,          // s
+	TWOMASS_CC_BANDMERGE        // b
+};
 
 
 int twomass_parse_entry(struct twomass_entry* entry, char* line);
+
+
+int twomass_cc_flag(unsigned char val, unsigned char flag);
+
+int twomass_quality_flag(unsigned char val, unsigned char flag);
 
 
 #endif
