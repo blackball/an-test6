@@ -129,20 +129,22 @@ if(keyword_set(nc) gt 0 or $
             drefine, nimage, xc, yc, smooth=2., xr=xgals, yr=ygals, $
               box=long(5.*subpix)
             
-            x1=fltarr(2,n_elements(xstars))
-            x1[0,*]=xstars
-            x1[1,*]=ystars
-            x2=fltarr(2,n_elements(xgals))
-            x2[0,*]=xgals
-            x2[1,*]=ygals
-            matchnd, x1, x2, 10., m1=m1, m2=m2, nmatch=nm, nd=2
-            if(nm gt 0) then begin
-                kpsf=lonarr(n_elements(xstars))+1L 
-                kpsf[m1]=0 
-                istars=where(kpsf gt 0, nstars) 
-                if(nstars gt 0) then begin
-                    xstars=xstars[istars] 
-                    ystars=ystars[istars] 
+            if(keyword_set(nstars)) then begin
+                x1=fltarr(2,n_elements(xstars))
+                x1[0,*]=xstars
+                x1[1,*]=ystars
+                x2=fltarr(2,n_elements(xgals))
+                x2[0,*]=xgals
+                x2[1,*]=ygals
+                matchnd, x1, x2, 10., m1=m1, m2=m2, nmatch=nm, nd=2
+                if(nm gt 0) then begin
+                    kpsf=lonarr(n_elements(xstars))+1L 
+                    kpsf[m1]=0 
+                    istars=where(kpsf gt 0, nstars) 
+                    if(nstars gt 0) then begin
+                        xstars=xstars[istars] 
+                        ystars=ystars[istars] 
+                    endif
                 endif
             endif
         endif
