@@ -1,3 +1,18 @@
+% to-do
+% -----
+% - have we switched to taking quads in a circle?  if so change figure
+% - need to settle on definite data release, to get definite numbers
+%    of fields
+% - need to settle on cascade of runs and re-run to get definite
+%    numbers of failures
+% - how does success and false positive rate depend on band?
+% - how does it depend on field size?
+% - how does it depend on star-galaxy separation?
+% - how does it depend on plate scale prior?  Should we drop scale
+%    determination claim from title and abstract?
+% - write
+% - submit
+
 \documentclass[12pt,preprint]{aastex}
 
 \newcommand{\latin}[1]{\textit{#1}}
@@ -41,23 +56,24 @@ repair badly archived or corrupted data, and \textsl{(3)}~to propagate
 standards for the recording and transmission of WCS information.
 
 In this first stage, we demonstrate that we can determine the WCS for
-public Sloan Digital Sky Survey (SDSS) images using only the $(x,y)$
-positions in the image of compact sources, even when we have \emph{no
-first guess} or prior information of any kind as to pointing,
-rotation, or plate scale (although in fact the configurations we
-consider do not span much range in scale).  Our system works by
-matching quadrangles of compact sources in the \usnob\ astrometric
-catalog to quadrangles of compact sources in the input image.  We
-employ tree methods for fast searching.  No solutions (\ie,
-determinations of pointing, orientation, and scale) are considered
-``good'' unless they lead to successful, precise WCS parameter fits
-and pass a strong statistical test designed to flag false positives.
-Our system gets good solutions for [DWH:??]~percent of SDSS images,
-and the time to go from the $x,y$ list of source locations in the
-input image to pointing, rotation, and scale ranges from [DWH:??]  to
-[DWH:??]~s.  By taking sub-frames of SDSS images, we show that we can
-reliably get good solutions for images as small as [DWH??].
-
+public Sloan Digital Sky Survey (SDSS) $r$-band images
+($2048\times14??$~pixels, $??\times??~\mathrm{arcmin^2}$) using only
+the $(x,y)$ positions in the image of compact sources, even when we
+have \emph{no first guess} or prior information of any kind as to
+pointing or rotation, and only an imprecise value for the plate scale.
+Our system works by matching quadrangles of compact sources in the
+\usnob\ astrometric catalog to quadrangles of compact sources in the
+input image.  We do not require photometrically ``calibrated'' images;
+star brightnesses are not used in the matching.  We employ tree
+methods for fast searching.  No solutions (\ie, determinations of
+pointing, orientation, and scale) are considered ``good'' unless they
+lead to successful, precise WCS parameter fits.  Our system gets good
+solutions for a fraction $>0.998$ (??/??) of SDSS images, with zero
+false positives (fractional rate $<3\times 10^-6$).  The time to go
+from the $x,y$ list of source locations in the input image to
+pointing, rotation, and scale ranges from [DWH:??] to [DWH:??]~CPU~s.
+By taking sub-frames of SDSS images, we show that we can reliably get
+good solutions for images as small as [DWH??].
 \end{abstract}
 
 \keywords{
@@ -131,38 +147,83 @@ here.
 
 In this work we use SDSS images to show that the hardest form of the
 blind astrometry problem---no prior information at all about image
-pointing, rotation, or scale---is solvable for real, science-grade
-astronomical images of varying sizes, bandpasses, and depths.
+pointing or rotation, and only imprecise information about scale---is
+solvable for real, science-grade astronomical images of varying sizes,
+bandpasses, and depths.
 
 \section{Method}
 
-[DWH: should this paragraph be in the introduction?]  In what follows,
-we will describe how we determine the pointing, rotation, and scale of
-an \textit{input image}, in the astrometric system defined by a
-standard \textit{catalog} (here the \usnob\ catalog [DWH:
-reference??]), by comparing the configurations of compact sources in
-the input image to configurations in the catalog.  For the purposes of
-what follows, we refer to any compact source as a ``\textit{star}'',
-for the reason that in fact the astrometrically measured sources in
-deep astrometric catalogs (in particular in the the \usnob\ catalog)
-are not overwhelmingly stars.
+In what follows, we will describe how we determine the pointing,
+rotation, and scale of an \textit{input image}, in the astrometric
+system defined by a standard \textit{catalog} (here the \usnob\
+catalog [DWH: reference??]), by comparing the configurations of
+compact sources in the input image to configurations in the catalog.
+For the purposes of what follows, we refer to any compact source as a
+``\textit{star}'', though in fact the astrometrically measured sources
+in deep astrometric catalogs (in particular in the the \usnob\
+catalog) are not overwhelmingly stars.
 
 The basic method we employ is to locate stars in the input image, and
 look up sets of four (\textit{quadrangles}) in an \textit{index} of
-quadrangles created from stars in the catalog.
+stellar quadrangles created from stars in the catalog.  We then test
+matches to see if they represent correct determinations of pointing,
+rotation, and scale by refining the determined pointing, rotation, and
+scale against the full star catalog.
 
-[DWH: why quadrangles and not triangles or pentagons??]
+\subsection{Why quadrangles?}
 
-\subsection{Stellar quadrangles}
+We want to match our input image to our catalog using stellar
+configurations that are common (so the images can be expected to
+contain them) but also unique (so that a match between image and
+catalog configurations is decisive).
 
 The goal of the project is to determine---without prior
 knowledge---the pointing, rotation, and scale of the input image, so
-we desire a geometric description of a quadrangle of stars that does
-not depend on any of these.  Additionally, to simplify the indexing
-and search of the quadrangle database we construct, we desire the
-parameters of the geometric description to be uniformly distributed in
-a compact volume of parameter space.  The parameterization of
-quadrangles we settled on is the following:
+once we have settled on a type of configuration, we want a
+parameterization that does not depend on any of these.  For example,
+if we were to index triangles, we could use ratios of the side lengths
+$b/a$ and $c/a$, or one length ratio and one interior angle [DWH: cite
+Groth??].  In the pointing-, rotation-, and scale-free
+parameterization, triangles have two parameters, quadrangles have
+four, pentagons have six, \etc, because each additional star in the
+configuration adds two new parameters (which can be thought of as the
+position of the new star in the scaled coordinates defined by the
+other stars).
+
+Simple configurations (\eg, triangles) live in a low-dimensional
+parameter space and are therefore easy to index and search, while more
+complex configurations (\eg, pentagons) require fast searches of
+nearby neighbors (because of positional measurement errors in the
+catalog and the input image, plus input image field distortions) in
+high-dimensional spaces, which are notoriously difficult.  More
+complex configurations show much more diversity (because the parameter
+space is larger in dimensionality) and therefore a ``match'' between
+input image and indexed configuration---given realistic uncertainties
+in measurements and input image field distortion---is a more reliable
+determinant of pointing, rotation, and scale.  More complex
+configurations take much longer to search in an input image, because
+there are $N$-choose-$n$ $n$-star configurations in an input image
+containing $N$ stars (and typically $N\sim 10^3$).  More complex
+configurations are also generally larger in solid angle, restricting
+the possible range of input image sizes that can be solved given a
+starting catalog.
+
+Analysis of these trade-offs, given current technology, strongly
+favors quadrangles.  Triangles can be searched very fast, but they are
+not diverse enough to be decisive.  Pentagons are far too numerous and
+high in dimensionality for fast searching.  Given the accuracy of
+typical star positions in a typical input image (as we will see
+below), an individual quadrangle match is generally not completely
+decisive, but it is close.  Searching the quadrangles in the input
+image is relatively fast, but is by far the rate-limiting process.
+
+\subsection{Parameterizing quadrangles}
+
+In addition to desiring a parameterization that is independent of
+pointing, rotation, and scale, we can simplify the construction and
+search of the quadrangle index we construct by choosing a geometric
+description that uniformly fills a compact volume of parameter space.
+The parameterization of quadrangles we settled on is the following:
 
 Choose four stars (all nearby on the sky) from the catalog.  The most
 widely separated pair is labeled $\AAA$ and $\BBB$ (with the choice of
@@ -207,6 +268,8 @@ image); it effectively swaps coordinates $u$ and $v$ or it transforms
   (\CCC_v,\CCC_u,\DDD_v,\DDD_u) \quad .
 \end{equation}
 
+\subsection{Quadrangle statistics}
+
 If stars are unclustered at small scales (this assumption is not valid
 for any real catalog, though clustering is small in \usnob), and if
 the quadrangles all span small angles, the chosen quads will fill the
@@ -229,7 +292,7 @@ $\Gamma$, the true number of allowed quads in any real stellar catalog
 (which has variations in $\Gamma$ over the sky) will in fact be very
 different from this homogeneous prediction.
 
-\subsection{Index}
+\subsection{Index construction}
 
 We do not index all possible quadrangles in the catalog, but rather we
 make a subsample that has a limited range in $\thetaAB$, and good
@@ -247,7 +310,7 @@ the sky.
 
 [DWH: Figure showing example catalog on sky and in code space?]
 
-\subsection{Test}
+\subsection{Solving an input image}
 
 Each parameter in the set $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$ can be
 determined with an uncertainty of about $\Delta\theta/\thetaAB$, where
@@ -275,7 +338,7 @@ the pointing, rotation, and scale.
 
 [DWH: how do we decide that two quadrangle matches ``agree''?]
 
-\subsection{Tweak and check}
+\subsection{Testing the solution}
 
 [DWH: how do we encode WCS?]
 
@@ -311,7 +374,7 @@ Research, and STR thanks the MIT Computer Science Artificial
 Intelligence Laboratory, for hosting us during the period in which
 most of this work was performed.
 
-[DWH: grant numbers??]
+[DWH + STR: grant numbers??]
 
 \bibliographystyle{apj}
 \bibliography{apj-jour,ccpp}
