@@ -194,19 +194,18 @@ Simple configurations (\eg, triangles) live in a low-dimensional
 parameter space and are therefore easy to index and search, while more
 complex configurations (\eg, pentagons) require fast searches of
 nearby neighbors (because of positional measurement errors in the
-catalog and the input image, plus input image field distortions) in
-high-dimensional spaces, which are notoriously difficult.  More
-complex configurations show much more diversity (because the parameter
-space is larger in dimensionality) and therefore a ``match'' between
-input image and indexed configuration---given realistic uncertainties
-in measurements and input image field distortion---is a more reliable
-determinant of pointing, rotation, and scale.  More complex
-configurations take much longer to search in an input image, because
-there are $N$-choose-$n$ $n$-star configurations in an input image
-containing $N$ stars (and typically $N\sim 10^3$).  More complex
-configurations are also generally larger in solid angle, restricting
-the possible range of input image sizes that can be solved given a
-starting catalog.
+catalog and input image field distortions) in high-dimensional spaces,
+which are notoriously difficult.  More complex configurations show
+much more diversity (because the parameter space is larger in
+dimensionality) and therefore a ``match'' between input image and
+indexed configuration---given realistic uncertainties in measurements
+and input image field distortion---is a more reliable determinant of
+pointing, rotation, and scale.  More complex configurations take much
+longer to search in an input image, because there are $N$-choose-$n$
+$n$-star configurations in an input image containing $N$ stars (and
+typically $N\sim 10^3$).  More complex configurations are also
+generally larger in solid angle, restricting the possible range of
+input image sizes that can be solved given a starting catalog.
 
 Analysis of these trade-offs, given current technology, strongly
 favors quadrangles.  Triangles can be searched very fast, but they are
@@ -214,8 +213,9 @@ not diverse enough to be decisive.  Pentagons are far too numerous and
 high in dimensionality for fast searching.  Given the accuracy of
 typical star positions in a typical input image (as we will see
 below), an individual quadrangle match is generally not completely
-decisive, but it is close.  Searching the quadrangles in the input
-image is relatively fast, but is by far the rate-limiting process.
+decisive, but it is close.  Searching for matches between the
+quadrangles in the input image and those in the index is relatively
+fast, but is by far the rate-limiting process.
 
 \subsection{Parameterizing quadrangles}
 
@@ -282,6 +282,7 @@ stars $\AAA$ and $\BBB$ is between $\thetamin$ and $\thetamax$, then
 the expectation value $\ENABCD$ of the total number $\NABCD$ of valid
 stellar quadrangles in a large sky region is
 \begin{equation}
+%%% this equation is correct for square box cuts on quads, not circles
 \ENABCD = \frac{\pi}{48}\,\Gamma^4\,\Omega_\mathrm{total}\,
   [\thetamax^6-\thetamin^6] \quad ,
 \end{equation}
@@ -290,7 +291,8 @@ the catalog, $4\pi$~ster if the catalog is all-sky.  Because the
 expectation $\ENABCD$ scales so strongly with the stellar density
 $\Gamma$, the true number of allowed quads in any real stellar catalog
 (which has variations in $\Gamma$ over the sky) will in fact be very
-different from this homogeneous prediction.
+different from this homogeneous prediction, but the scaling with
+$\thetamax$ is robust.
 
 \subsection{Index construction}
 
