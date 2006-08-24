@@ -33,6 +33,8 @@ struct xylist {
 	tfits_type ytype;
 	char* xname; // default "X"
 	char* yname; // default "Y"
+	char* xunits; // default null
+	char* yunits; // default null
 
 	char* antype; // Astrometry.net filetype string.
 

@@ -172,8 +172,8 @@ static qfits_table* xylist_get_table(xylist* ls) {
 	nrows = 0;
 	tablesize = 0;
 	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
-	fits_add_column(table, 0, ls->xtype, 1, nil, ls->xname);
-	fits_add_column(table, 1, ls->ytype, 1, nil, ls->yname);
+	fits_add_column(table, 0, ls->xtype, 1, (ls->xunits ? ls->xunits : nil), ls->xname);
+	fits_add_column(table, 1, ls->ytype, 1, (ls->yunits ? ls->yunits : nil), ls->yname);
 	table->tab_w = qfits_compute_table_width(table);
 	return table;
 }
