@@ -23,8 +23,9 @@
 #include "qfits.h"
 #include "permutedsort.h"
 #include "bt.h"
+#include "rdlist.h"
 
-#define OPTIONS "hf:u:l:n:o:i:cr:x:y:"
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:"
 
 static void print_help(char* progname)
 {
@@ -38,6 +39,7 @@ static void print_help(char* progname)
 		   "     [-y <y-passes>] number of passes in the y direction\n"
 		   "     [-r <reuse-times>] number of times a star can be used.\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
+		   "     [-F <failed-rdls-file>] write the centers of the healpixes in which quads can't be made.\n"
 	       "Reads skdt, writes {code, quad}.\n\n"
 	       , progname);
 }
@@ -449,6 +451,8 @@ int main(int argc, char** argv) {
 	int i;
 	char* basefnin = NULL;
 	char* basefnout = NULL;
+	char* failedrdlsfn = NULL;
+	rdlist* failedrdls = NULL;
 	int xpass, ypass;
 	uint id = 0;
 	int xpasses = 1;
@@ -472,6 +476,9 @@ int main(int argc, char** argv) {
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'F':
+			failedrdlsfn = optarg;
+			break;
 		case 'r':
 			Nreuse = atoi(optarg);
 			break;
@@ -521,6 +528,17 @@ int main(int argc, char** argv) {
 
 	if (!id) {
 		fprintf(stderr, "Warning: you should set the unique-id for this index (-i).\n");
+	}
+
+	if (failedrdlsfn) {
+		failedrdls = rdlist_open_for_writing(failedrdlsfn);
+		if (!failedrdls) {
+			fprintf(stderr, "Failed to open file %s to write failed-quads RDLS.\n", failedrdlsfn);
+			exit(-1);
+		}
+		if (rdlist_write_header(failedrdls)) {
+			fprintf(stderr, "Failed to write header of failed RDLS file.\n");
+		}
 	}
 
 	HEALPIXES = 12 * Nside * Nside;
@@ -711,6 +729,13 @@ int main(int argc, char** argv) {
 			nabok = 0;
 			ndupquads = 0;
 
+			if (failedrdls) {
+				if (rdlist_write_new_field(failedrdls)) {
+					fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
+					exit(-1);
+				}
+			}
+
 			printf("Trying %i healpixes.\n", Nhptotry);
 
 			for (i=0; i<Nhptotry; i++) {
@@ -814,6 +839,12 @@ int main(int argc, char** argv) {
 				if (create_quad(stars, inds, N, circle,
 								centre, perp1, perp2, maxdot1, maxdot2)) {
 					nthispass++;
+				} else {
+					if (failedrdls) {
+						double radec[2];
+						xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
+						rdlist_write_entries(failedrdls, radec, 1);
+					}
 				}
 			}
 			printf("\n");
@@ -868,6 +899,14 @@ int main(int argc, char** argv) {
 			*/
 
 			firstpass = FALSE;
+
+			if (failedrdls) {
+				if (rdlist_fix_field(failedrdls)) {
+					fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
+					exit(-1);
+				}
+			}
+
 		}
 	}
 
@@ -929,6 +968,13 @@ int main(int argc, char** argv) {
 		codefile_close(codes)) {
 		fprintf(stderr, "Couldn't write code output file: %s\n", strerror(errno));
 		exit( -1);
+	}
+
+	if (failedrdls) {
+		if (rdlist_fix_header(failedrdls) ||
+			rdlist_close(failedrdls)) {
+			fprintf(stderr, "Failed to fix header of failed RDLS file.\n");
+		}
 	}
 
 	bt_free(bigquadlist);
