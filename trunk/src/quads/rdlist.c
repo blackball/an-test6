@@ -27,6 +27,10 @@ Inline rdlist* rdlist_open_for_writing(char* fn) {
 	rtn->antype = AN_FILETYPE_RDLS;
 	rtn->xname = "RA";
 	rtn->yname = "DEC";
+	rtn->xunits = "degrees";
+	rtn->yunits = "degrees";
+	rtn->xtype = TFITS_BIN_TYPE_D;
+	rtn->ytype = TFITS_BIN_TYPE_D;
 	return rtn;
 }
 

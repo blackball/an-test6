@@ -768,6 +768,14 @@ int main(int argc, char** argv) {
 					centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
 				}
 
+				// DEBUG
+				/*
+				  if (rand() % 1000 == 0)
+				  goto failedhp;
+				  else
+				  continue;
+				*/
+
 				res = kdtree_rangesearch_nosort(startree, centre, radius2);
 
 				// here we could check whether stars are in the box
@@ -849,10 +857,22 @@ int main(int argc, char** argv) {
 				if (failedrdls) {
 					double radec[2];
 					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
-					rdlist_write_entries(failedrdls, radec, 1);
+					radec[0] = rad2deg(radec[0]);
+					radec[1] = rad2deg(radec[1]);
+					if (rdlist_write_entries(failedrdls, radec, 1)) {
+						fprintf(stderr, "Failed to write failed-RDLS entries.\n");
+						exit(-1);
+					}
 				}
 			}
 			printf("\n");
+
+			if (failedrdls) {
+				if (rdlist_fix_field(failedrdls)) {
+					fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
+					exit(-1);
+				}
+			}
 
 			printf("Each non-empty healpix had on average %g stars.\n",
 				   nstarstotal / (double)ncounted);
@@ -885,6 +905,7 @@ int main(int argc, char** argv) {
 			if ((xpass == xpasses-1) &&
 				(ypass == ypasses-1))
 				break;
+
 			printf("Merging quads...\n");
 			for (i=0; i<Nquads; i++) {
 				quad* q = quadlist + i;
@@ -904,13 +925,6 @@ int main(int argc, char** argv) {
 			*/
 
 			firstpass = FALSE;
-
-			if (failedrdls) {
-				if (rdlist_fix_field(failedrdls)) {
-					fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
-					exit(-1);
-				}
-			}
 
 		}
 	}
@@ -958,7 +972,6 @@ int main(int argc, char** argv) {
 		}
 	}
 	free(quadlist);
-
 
 	free(invperm);
 	kdtree_close(startree);
