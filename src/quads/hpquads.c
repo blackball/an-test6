@@ -777,7 +777,7 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnostars++;
-					continue;
+					goto failedhp;
 				}
 				nyesstars++;
 
@@ -795,7 +795,7 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnounused++;
-					continue;
+					goto failedhp;
 				}
 				nstarstotal += N;
 				ncounted++;
@@ -840,11 +840,16 @@ int main(int argc, char** argv) {
 								centre, perp1, perp2, maxdot1, maxdot2)) {
 					nthispass++;
 				} else {
-					if (failedrdls) {
-						double radec[2];
-						xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
-						rdlist_write_entries(failedrdls, radec, 1);
-					}
+					goto failedhp;
+				}
+
+				continue;
+
+			failedhp:
+				if (failedrdls) {
+					double radec[2];
+					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
+					rdlist_write_entries(failedrdls, radec, 1);
 				}
 			}
 			printf("\n");
