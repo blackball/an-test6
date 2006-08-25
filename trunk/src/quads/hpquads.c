@@ -24,6 +24,7 @@
 #include "permutedsort.h"
 #include "bt.h"
 #include "rdlist.h"
+#include "histogram.h"
 
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:"
 
@@ -714,6 +715,9 @@ int main(int argc, char** argv) {
 			int nstarstotal = 0;
 			int ncounted = 0;
 
+			histogram* histnstars = histogram_new_nbins(0.0, 100.0, 100);
+			histogram* histnstars_failed = histogram_new_nbins(0.0, 100.0, 100);
+
 			dxfrac = xpass / (double)xpasses;
 			dyfrac = ypass / (double)ypasses;
 
@@ -768,14 +772,6 @@ int main(int argc, char** argv) {
 					centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
 				}
 
-				// DEBUG
-				/*
-				  if (rand() % 1000 == 0)
-				  goto failedhp;
-				  else
-				  continue;
-				*/
-
 				res = kdtree_rangesearch_nosort(startree, centre, radius2);
 
 				// here we could check whether stars are in the box
@@ -785,6 +781,7 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnostars++;
+					histogram_add(histnstars, (double)N);
 					goto failedhp;
 				}
 				nyesstars++;
@@ -803,10 +800,12 @@ int main(int argc, char** argv) {
 				if (N < 4) {
 					kdtree_free_query(res);
 					nnounused++;
+					histogram_add(histnstars, (double)N);
 					goto failedhp;
 				}
 				nstarstotal += N;
 				ncounted++;
+				histogram_add(histnstars, (double)N);
 
 				// sort the stars in increasing order of index - assume
 				// that this corresponds to decreasing order of brightness.
@@ -854,6 +853,7 @@ int main(int argc, char** argv) {
 				continue;
 
 			failedhp:
+				histogram_add(histnstars_failed, (double)N);
 				if (failedrdls) {
 					double radec[2];
 					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
@@ -866,6 +866,25 @@ int main(int argc, char** argv) {
 				}
 			}
 			printf("\n");
+
+			printf("Number of stars per healpix histogram:\n");
+			printf("hist_nstars=");
+			histogram_print_matlab(histnstars, stdout);
+			printf("\n");
+			printf("hist_nstars_bins=");
+			histogram_print_matlab_bin_centers(histnstars, stdout);
+			printf("\n");
+
+			printf("Number of stars per healpix, for failed healpixes:\n");
+			printf("hist_nstars_failed=");
+			histogram_print_matlab(histnstars_failed, stdout);
+			printf("\n");
+			printf("hist_nstars_failed_bins=");
+			histogram_print_matlab_bin_centers(histnstars_failed, stdout);
+			printf("\n");
+
+			histogram_free(histnstars);
+			histogram_free(histnstars_failed);
 
 			if (failedrdls) {
 				if (rdlist_fix_field(failedrdls)) {
