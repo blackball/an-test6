@@ -26,7 +26,7 @@
 #include "rdlist.h"
 #include "histogram.h"
 
-#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:"
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:R"
 
 static void print_help(char* progname)
 {
@@ -39,6 +39,8 @@ static void print_help(char* progname)
 		   "     [-x <x-passes>] number of passes in the x direction\n"
 		   "     [-y <y-passes>] number of passes in the y direction\n"
 		   "     [-r <reuse-times>] number of times a star can be used.\n"
+		   "     [-R]            make a second pass through healpixes in which quads couldn't be made,\n"
+		   "                     removing the \"-r\" restriction on the number of times a star can be used.\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
 		   "     [-F <failed-rdls-file>] write the centers of the healpixes in which quads can't be made.\n"
 	       "Reads skdt, writes {code, quad}.\n\n"
@@ -85,17 +87,6 @@ static void* mymalloc(int n) {
 	}
 	return rtn;
 }
-
-/*
-  static void* myrealloc(void* p, int n) {
-  void* rtn = realloc(p, n);
-  if (!rtn) {
-  fprintf(stderr, "Failed to realloc %i.\n", n);
-  exit(-1);
-  }
-  return rtn;
-  }
-*/
 
 static int compare_ints(const void* v1, const void* v2) {
 	int i1 = *(int*)v1;
@@ -441,6 +432,113 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 	return rtn;
 }
 
+static int* perm = NULL;
+static int* inds = NULL;
+static double* stars = NULL;
+
+static bool find_stars_and_vectors(int hp, int Nside, double radius2,
+								   int* p_nostars, int* p_yesstars,
+								   int* p_nounused, int* p_nstarstotal,
+								   int* p_ncounted,
+								   int* p_N,
+								   double* centre, double* perp1,
+								   double* perp2,
+								   double* p_maxdot1, double* p_maxdot2,
+								   double dxfrac, double dyfrac) {
+	static int Nhighwater = 0;
+	double origin[3];
+	double vx[3];
+	double vy[3];
+	double normal[3];
+	int d;
+	kdtree_qres_t* res;
+	int j, N;
+	int destind;
+
+	healpix_to_xyzarr_lex(0.0, 0.0, hp, Nside, origin);
+	healpix_to_xyzarr_lex(1.0, 0.0, hp, Nside, vx);
+	healpix_to_xyzarr_lex(0.0, 1.0, hp, Nside, vy);
+	for (d=0; d<3; d++) {
+		vx[d] -= origin[d];
+		vy[d] -= origin[d];
+		centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
+	}
+
+	res = kdtree_rangesearch_nosort(startree, centre, radius2);
+
+	// here we could check whether stars are in the box
+	// defined by the healpix boundaries plus quadscale.
+
+	N = res->nres;
+	if (N < 4) {
+		kdtree_free_query(res);
+		if (p_nostars)
+			(*p_nostars)++;
+		return FALSE;
+	}
+	if (p_yesstars)
+		(*p_yesstars)++;
+
+	// remove stars that have been used up.
+	destind = 0;
+	for (j=0; j<N; j++) {
+		if (!nuses[res->inds[j]])
+			continue;
+		res->inds[destind] = res->inds[j];
+		for (d=0; d<3; d++)
+			res->results[destind*3+d] = res->results[j*3+d];
+		destind++;
+	}
+	N = destind;
+	if (N < 4) {
+		kdtree_free_query(res);
+		if (p_nounused)
+			(*p_nounused)++;
+		return FALSE;
+	}
+	if (p_nstarstotal)
+		(*p_nstarstotal) += N;
+	if (p_ncounted)
+		(*p_ncounted)++;
+
+	// sort the stars in increasing order of index - assume
+	// that this corresponds to decreasing order of brightness.
+
+	// ensure the arrays are big enough...
+	if (N > Nhighwater) {
+		free(perm);
+		free(inds);
+		free(stars);
+		perm  = mymalloc(N * sizeof(int));
+		inds  = mymalloc(N * sizeof(int));
+		stars = mymalloc(N * 3 * sizeof(double));
+		Nhighwater = N;
+	}
+	// find permutation that sorts by index...
+	for (j=0; j<N; j++)
+		perm[j] = j;
+	permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
+	permuted_sort(perm, N);
+	// apply the permutation...
+	for (j=0; j<N; j++) {
+		inds[j] = res->inds[perm[j]];
+		for (d=0; d<3; d++)
+			stars[j*3+d] = res->results[perm[j]*3+d];
+	}
+	kdtree_free_query(res);
+
+	// compute the projection vectors
+	cross_product(vx, vy, normal);
+	cross_product(normal, vx, perp1);
+	cross_product(vy, normal, perp2);
+	*p_maxdot1 = *p_maxdot2 = 0.0;
+	for (d=0; d<3; d++) {
+		*p_maxdot1 += vy[d] * perp1[d];
+		*p_maxdot2 += vx[d] * perp2[d];
+	}
+	return TRUE;
+}
+
 int main(int argc, char** argv) {
 	int argchar;
 	char *quadfname;
@@ -462,21 +560,21 @@ int main(int argc, char** argv) {
 	int hp;
 	int Nreuse = 3;
 	double radius2;
-	int* perm = NULL;
-	int j, d;
-	int* inds = NULL;
-	double* stars = NULL;
 	int lastgrass = 0;
-	int Nhighwater = 0;
 	int* hptotry;
 	int Nhptotry;
 	int nquads;
 	double rads;
 	double hprad;
 	double quadscale;
+	bool noreuse_pass = FALSE;
+	il* noreuse_hps = NULL;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'R':
+			noreuse_pass = TRUE;
+			break;
 		case 'F':
 			failedrdlsfn = optarg;
 			break;
@@ -702,12 +800,14 @@ int main(int argc, char** argv) {
 
 	quadlist = malloc(Nhptotry * sizeof(quad));
 
+	if (noreuse_pass)
+		noreuse_hps = il_new(1024);
+
 	firstpass = TRUE;
 
 	for (xpass=0; xpass<xpasses; xpass++) {
 		for (ypass=0; ypass<ypasses; ypass++) {
 			double dxfrac, dyfrac;
-			kdtree_qres_t* res;
 			int nthispass;
 			int nnostars;
 			int nyesstars;
@@ -743,17 +843,12 @@ int main(int argc, char** argv) {
 			printf("Trying %i healpixes.\n", Nhptotry);
 
 			for (i=0; i<Nhptotry; i++) {
-				int N;
-				int destind;
-				double origin[3];
 				double centre[3];
-				double vx[3];
-				double vy[3];
-				double normal[3];
 				double perp1[3];
 				double perp2[3];
 				double maxdot1, maxdot2;
 				int hp;
+				int N;
 
 				hp = hptotry[i];
 
@@ -763,90 +858,27 @@ int main(int argc, char** argv) {
 					lastgrass = i * 80 / Nhptotry;
 				}
 
-				healpix_to_xyzarr_lex(0.0, 0.0, hptotry[i], Nside, origin);
-				healpix_to_xyzarr_lex(1.0, 0.0, hptotry[i], Nside, vx);
-				healpix_to_xyzarr_lex(0.0, 1.0, hptotry[i], Nside, vy);
-				for (d=0; d<3; d++) {
-					vx[d] -= origin[d];
-					vy[d] -= origin[d];
-					centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
-				}
-
-				res = kdtree_rangesearch_nosort(startree, centre, radius2);
-
-				// here we could check whether stars are in the box
-				// defined by the healpix boundaries plus quadscale.
-
-				N = res->nres;
-				if (N < 4) {
-					kdtree_free_query(res);
-					nnostars++;
-					histogram_add(histnstars, (double)N);
+				if (!find_stars_and_vectors(hp, Nside, radius2,
+											&nnostars, &nyesstars,
+											&nnounused, &nstarstotal,
+											&ncounted,
+											&N, centre, perp1, perp2,
+											&maxdot1, &maxdot2,
+											dxfrac, dyfrac)) {
 					goto failedhp;
 				}
-				nyesstars++;
-
-				// remove stars that have been used up.
-				destind = 0;
-				for (j=0; j<N; j++) {
-					if (!nuses[res->inds[j]])
-						continue;
-					res->inds[destind] = res->inds[j];
-					for (d=0; d<3; d++)
-						res->results[destind*3+d] = res->results[j*3+d];
-					destind++;
-				}
-				N = destind;
-				if (N < 4) {
-					kdtree_free_query(res);
-					nnounused++;
-					histogram_add(histnstars, (double)N);
-					goto failedhp;
-				}
-				nstarstotal += N;
-				ncounted++;
 				histogram_add(histnstars, (double)N);
-
-				// sort the stars in increasing order of index - assume
-				// that this corresponds to decreasing order of brightness.
-
-				// ensure the arrays are big enough...
-				if (N > Nhighwater) {
-					free(perm);
-					free(inds);
-					free(stars);
-					perm  = mymalloc(N * sizeof(int));
-					inds  = mymalloc(N * sizeof(int));
-					stars = mymalloc(N * 3 * sizeof(double));
-					Nhighwater = N;
-				}
-				// find permutation that sorts by index...
-				for (j=0; j<N; j++)
-					perm[j] = j;
-				permuted_sort_set_params(res->inds, sizeof(int), compare_ints);
-				permuted_sort(perm, N);
-				// apply the permutation...
-				for (j=0; j<N; j++) {
-					inds[j] = res->inds[perm[j]];
-					for (d=0; d<3; d++)
-						stars[j*3+d] = res->results[perm[j]*3+d];
-				}
-				kdtree_free_query(res);
-
-				// compute the projection vectors
-				cross_product(vx, vy, normal);
-				cross_product(normal, vx, perp1);
-				cross_product(vy, normal, perp2);
-				maxdot1 = maxdot2 = 0.0;
-				for (d=0; d<3; d++) {
-					maxdot1 += vy[d] * perp1[d];
-					maxdot2 += vx[d] * perp2[d];
-				}
 
 				if (create_quad(stars, inds, N, circle,
 								centre, perp1, perp2, maxdot1, maxdot2)) {
 					nthispass++;
 				} else {
+
+					// this is the only kind of failure-to-make-a-quad that
+					// loosening the "nreuse" param will help.
+					if (noreuse_pass)
+						il_append(noreuse_hps, hp);
+
 					goto failedhp;
 				}
 
@@ -947,8 +979,55 @@ int main(int argc, char** argv) {
 
 		}
 	}
-
 	free(hptotry);
+
+	if (noreuse_pass) {
+		int i;
+		int nfailed1 = 0;
+		int nfailed2 = 0;
+		int nmade = 0;
+		lastgrass = -1;
+		printf("Making no-limit-on-number-of-times-a-star-can-be-used pass.\n");
+
+		for (i=0; i<startree->ndata; i++)
+			nuses[i] = 255;
+
+		for (i=0; i<il_size(noreuse_hps); i++) {
+			double centre[3];
+			double perp1[3];
+			double perp2[3];
+			double maxdot1, maxdot2;
+			int N;
+			int hp = il_get(noreuse_hps, i);
+
+			if ((i * 80 / il_size(noreuse_hps)) != lastgrass) {
+				printf(".");
+				fflush(stdout);
+				lastgrass = i * 80 / il_size(noreuse_hps);
+			}
+
+			if (!find_stars_and_vectors(hp, Nside, radius2,
+										NULL, NULL, NULL, NULL, NULL,
+										&N, centre, perp1, perp2,
+										&maxdot1, &maxdot2, 0.0, 0.0)) {
+				nfailed1++;
+				continue;
+			}
+			if (!create_quad(stars, inds, N, circle,
+							 centre, perp1, perp2, maxdot1, maxdot2)) {
+				nfailed2++;
+				continue;
+			}
+			nmade++;
+		}
+
+		printf("Tried %i healpixes.\n", il_size(noreuse_hps));
+		printf("Failed at point 1: %i.\n", nfailed1);
+		printf("Failed at point 2: %i.\n", nfailed2);
+		printf("Made: %i\n", nmade);
+
+		il_free(noreuse_hps);
+	}
 
 	free(cq_pquads);
 	free(cq_inbox);
@@ -963,6 +1042,7 @@ int main(int argc, char** argv) {
 	invperm = mymalloc(startree->ndata * sizeof(int));
 	kdtree_inverse_permutation(startree, invperm);
 
+	// add the quads from the big-quadlist
 	nquads = bt_size(bigquadlist);
 	for (i=0; i<nquads; i++) {
 		double code[4];
@@ -977,6 +1057,7 @@ int main(int argc, char** argv) {
 			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[3], q->star[2]);
 		}
 	}
+	// add the quads that were made during the final round.
 	for (i=0; i<Nquads; i++) {
 		double code[4];
 		quad* q = quadlist + i;
@@ -996,7 +1077,7 @@ int main(int argc, char** argv) {
 	kdtree_close(startree);
 
 	// fix output file headers.
-    if (quadfile_fix_header(quads) ||
+	if (quadfile_fix_header(quads) ||
 		quadfile_close(quads)) {
 		fprintf(stderr, "Couldn't write quad output file: %s\n", strerror(errno));
 		exit( -1);
@@ -1021,3 +1102,4 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
+	
