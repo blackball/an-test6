@@ -995,6 +995,13 @@ int main(int argc, char** argv) {
 		for (i=0; i<startree->ndata; i++)
 			nuses[i] = 255;
 
+		if (failedrdls) {
+			if (rdlist_write_new_field(failedrdls)) {
+				fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
+				exit(-1);
+			}
+		}
+
 		for (i=0; i<il_size(noreuse_hps); i++) {
 			double centre[3];
 			double perp1[3];
@@ -1014,14 +1021,27 @@ int main(int argc, char** argv) {
 										&N, centre, perp1, perp2,
 										&maxdot1, &maxdot2, 0.0, 0.0)) {
 				nfailed1++;
-				continue;
+				goto failedhp2;
 			}
 			if (!create_quad(stars, inds, N, circle,
 							 centre, perp1, perp2, maxdot1, maxdot2)) {
 				nfailed2++;
-				continue;
+				goto failedhp2;
 			}
 			nmade++;
+			continue;
+
+		failedhp2:
+			if (failedrdls) {
+				double radec[2];
+				xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
+				radec[0] = rad2deg(radec[0]);
+				radec[1] = rad2deg(radec[1]);
+				if (rdlist_write_entries(failedrdls, radec, 1)) {
+					fprintf(stderr, "Failed to write failed-RDLS entries.\n");
+					exit(-1);
+				}
+			}
 		}
 
 		printf("Tried %i healpixes.\n", il_size(noreuse_hps));
@@ -1030,6 +1050,13 @@ int main(int argc, char** argv) {
 		printf("Made: %i\n", nmade);
 
 		il_free(noreuse_hps);
+
+		if (failedrdls) {
+			if (rdlist_fix_field(failedrdls)) {
+				fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
+				exit(-1);
+			}
+		}
 	}
 
 	free(cq_pquads);
