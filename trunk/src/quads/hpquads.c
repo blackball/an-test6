@@ -474,6 +474,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		kdtree_free_query(res);
 		if (p_nostars)
 			(*p_nostars)++;
+		if (p_N) *p_N = N;
 		return FALSE;
 	}
 	if (p_yesstars)
@@ -494,6 +495,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		kdtree_free_query(res);
 		if (p_nounused)
 			(*p_nounused)++;
+		if (p_N) *p_N = N;
 		return FALSE;
 	}
 	if (p_nstarstotal)
@@ -536,6 +538,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		*p_maxdot1 += vy[d] * perp1[d];
 		*p_maxdot2 += vx[d] * perp2[d];
 	}
+	if (p_N) *p_N = N;
 	return TRUE;
 }
 
