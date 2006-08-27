@@ -979,7 +979,7 @@ int main(int argc, char** argv) {
 						fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
 						exit(-1);
 					}
-					for (j=0; j<dl_size(list)/2; j+=2) {
+					for (j=0; j<dl_size(list); j+=2) {
 						double radec[2];
 						radec[0] = dl_get(list, j);
 						radec[1] = dl_get(list, j+1);
