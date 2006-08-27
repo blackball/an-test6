@@ -444,7 +444,8 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 								   double* centre, double* perp1,
 								   double* perp2,
 								   double* p_maxdot1, double* p_maxdot2,
-								   double dxfrac, double dyfrac) {
+								   double dxfrac, double dyfrac,
+								   bool* p_failed_nostars) {
 	static int Nhighwater = 0;
 	double origin[3];
 	double vx[3];
@@ -475,6 +476,8 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		if (p_nostars)
 			(*p_nostars)++;
 		if (p_N) *p_N = N;
+		if (p_failed_nostars)
+			*p_failed_nostars = TRUE;
 		return FALSE;
 	}
 	if (p_yesstars)
@@ -572,6 +575,10 @@ int main(int argc, char** argv) {
 	double quadscale;
 	bool noreuse_pass = FALSE;
 	il* noreuse_hps = NULL;
+
+	dl* nostars_radec = NULL;
+	dl* noreuse_radec = NULL;
+	dl* noquads_radec = NULL;
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
@@ -806,6 +813,12 @@ int main(int argc, char** argv) {
 	if (noreuse_pass)
 		noreuse_hps = il_new(1024);
 
+	if (failedrdls) {
+		nostars_radec = dl_new(1024);
+		noreuse_radec = dl_new(1024);
+		noquads_radec = dl_new(1024);
+	}
+
 	firstpass = TRUE;
 
 	for (xpass=0; xpass<xpasses; xpass++) {
@@ -836,13 +849,6 @@ int main(int argc, char** argv) {
 			nabok = 0;
 			ndupquads = 0;
 
-			if (failedrdls) {
-				if (rdlist_write_new_field(failedrdls)) {
-					fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
-					exit(-1);
-				}
-			}
-
 			printf("Trying %i healpixes.\n", Nhptotry);
 
 			for (i=0; i<Nhptotry; i++) {
@@ -850,8 +856,11 @@ int main(int argc, char** argv) {
 				double perp1[3];
 				double perp2[3];
 				double maxdot1, maxdot2;
+				double radec[2];
 				int hp;
 				int N;
+				bool ok;
+				bool failed_nostars;
 
 				hp = hptotry[i];
 
@@ -861,43 +870,52 @@ int main(int argc, char** argv) {
 					lastgrass = i * 80 / Nhptotry;
 				}
 
-				if (!find_stars_and_vectors(hp, Nside, radius2,
+				failed_nostars = FALSE;
+				ok = find_stars_and_vectors(hp, Nside, radius2,
 											&nnostars, &nyesstars,
 											&nnounused, &nstarstotal,
 											&ncounted,
 											&N, centre, perp1, perp2,
 											&maxdot1, &maxdot2,
-											dxfrac, dyfrac)) {
-					goto failedhp;
-				}
-				histogram_add(histnstars, (double)N);
+											dxfrac, dyfrac,
+											&failed_nostars);
 
-				if (create_quad(stars, inds, N, circle,
-								centre, perp1, perp2, maxdot1, maxdot2)) {
-					nthispass++;
-				} else {
-
-					// this is the only kind of failure-to-make-a-quad that
-					// loosening the "nreuse" param will help.
-					if (noreuse_pass)
-						il_append(noreuse_hps, hp);
-
-					goto failedhp;
-				}
-
-				continue;
-
-			failedhp:
-				histogram_add(histnstars_failed, (double)N);
 				if (failedrdls) {
-					double radec[2];
 					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
 					radec[0] = rad2deg(radec[0]);
 					radec[1] = rad2deg(radec[1]);
-					if (rdlist_write_entries(failedrdls, radec, 1)) {
-						fprintf(stderr, "Failed to write failed-RDLS entries.\n");
-						exit(-1);
+				}
+
+				if (!ok) {
+					if (failed_nostars) {
+						if (failedrdls) {
+							dl_append(nostars_radec, radec[0]);
+							dl_append(nostars_radec, radec[1]);
+						}
+					} else {
+						if (noreuse_pass)
+							il_append(noreuse_hps, hp);
+						if (failedrdls) {
+							dl_append(noreuse_radec, radec[0]);
+							dl_append(noreuse_radec, radec[1]);
+						}
 					}
+					histogram_add(histnstars_failed, (double)N);
+					continue;
+				}
+
+				if (create_quad(stars, inds, N, circle,
+								centre, perp1, perp2, maxdot1, maxdot2)) {
+					histogram_add(histnstars, (double)N);
+					nthispass++;
+				} else {
+					if (noreuse_pass)
+						il_append(noreuse_hps, hp);
+					if (failedrdls) {
+						dl_append(noquads_radec, radec[0]);
+						dl_append(noquads_radec, radec[1]);
+					}
+					histogram_add(histnstars_failed, (double)N);
 				}
 			}
 			printf("\n");
@@ -920,13 +938,6 @@ int main(int argc, char** argv) {
 
 			histogram_free(histnstars);
 			histogram_free(histnstars_failed);
-
-			if (failedrdls) {
-				if (rdlist_fix_field(failedrdls)) {
-					fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
-					exit(-1);
-				}
-			}
 
 			printf("Each non-empty healpix had on average %g stars.\n",
 				   nstarstotal / (double)ncounted);
@@ -956,6 +967,33 @@ int main(int argc, char** argv) {
 
 			printf("Made %i quads so far.\n", bt_size(bigquadlist) + Nquads);
 
+			if (failedrdls) {
+				int j;
+				dl* lists[] = { nostars_radec, noreuse_radec, noquads_radec };
+				int l;
+
+				for (l=0; l<3; l++) {
+					dl* list = lists[l];
+					if (rdlist_write_new_field(failedrdls)) {
+						fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
+						exit(-1);
+					}
+					for (j=0; j<dl_size(list)/2; j+=2) {
+						double radec[2];
+						radec[0] = dl_get(list, j);
+						radec[1] = dl_get(list, j+1);
+						if (rdlist_write_entries(failedrdls, radec, 1)) {
+							fprintf(stderr, "Failed to write failed-RDLS entries.\n");
+							exit(-1);
+						}
+					}
+					if (rdlist_fix_field(failedrdls)) {
+						fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
+						exit(-1);
+					}
+				}
+			}
+
 			if ((xpass == xpasses-1) &&
 				(ypass == ypasses-1))
 				break;
@@ -983,6 +1021,13 @@ int main(int argc, char** argv) {
 		}
 	}
 	free(hptotry);
+
+	if (failedrdls) {
+		dl_free(nostars_radec);
+		dl_free(noreuse_radec);
+		dl_free(noquads_radec);
+	}
+
 
 	if (noreuse_pass) {
 		int i;
@@ -1019,7 +1064,8 @@ int main(int argc, char** argv) {
 			if (!find_stars_and_vectors(hp, Nside, radius2,
 										NULL, NULL, NULL, NULL, NULL,
 										&N, centre, perp1, perp2,
-										&maxdot1, &maxdot2, 0.0, 0.0)) {
+										&maxdot1, &maxdot2, 0.0, 0.0,
+										NULL)) {
 				nfailed1++;
 				goto failedhp2;
 			}
@@ -1044,6 +1090,7 @@ int main(int argc, char** argv) {
 			}
 		}
 
+		printf("\n");
 		printf("Tried %i healpixes.\n", il_size(noreuse_hps));
 		printf("Failed at point 1: %i.\n", nfailed1);
 		printf("Failed at point 2: %i.\n", nfailed2);
