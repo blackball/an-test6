@@ -83,6 +83,7 @@ static void* mymalloc(int n) {
 	void* rtn = malloc(n);
 	if (!rtn) {
 		fprintf(stderr, "Failed to malloc %i.\n", n);
+		assert(0);
 		exit(-1);
 	}
 	return rtn;
