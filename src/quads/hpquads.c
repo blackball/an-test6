@@ -667,7 +667,7 @@ int main(int argc, char** argv) {
 		exit( -1);
 	}
 	free_fn(skdtfname);
-	printf("Star tree contains %i objects.\n", starkd->N);
+	printf("Star tree contains %i objects.\n", starkd->tree->ndata);
 
 	quadfname = mk_quadfn(basefnout);
 	codefname = mk_codefn(basefnout);
@@ -736,11 +736,11 @@ int main(int argc, char** argv) {
 	free_fn(quadfname);
 	free_fn(codefname);
 
-    codes->numstars = starkd->N;
+    codes->numstars = starkd->tree->ndata;
     codes->index_scale       = sqrt(quad_scale_upper2);
     codes->index_scale_lower = sqrt(quad_scale_lower2);
 
-    quads->numstars = starkd->N;
+    quads->numstars = starkd->tree->ndata;
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
@@ -750,8 +750,8 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error, reuse (-r) must be less than 256.\n");
 		exit(-1);
 	}
-	nuses = mymalloc(starkd->N * sizeof(unsigned char));
-	for (i=0; i<starkd->N; i++)
+	nuses = mymalloc(starkd->tree->ndata * sizeof(unsigned char));
+	for (i=0; i<starkd->tree->ndata; i++)
 		nuses[i] = Nreuse;
 
 	hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
@@ -1034,7 +1034,7 @@ int main(int argc, char** argv) {
 		lastgrass = -1;
 		printf("Making no-limit-on-number-of-times-a-star-can-be-used pass.\n");
 
-		for (i=0; i<starkd->N; i++)
+		for (i=0; i<starkd->tree->ndata; i++)
 			nuses[i] = 255;
 
 		if (failedrdls) {

@@ -6,8 +6,10 @@
 
 struct startree {
 	kdtree_t* tree;
-	uint N; // == tree->ndata
-	uint D; // == tree->ndim
+	/*
+	  uint N; // == tree->ndata
+	  uint D; // == tree->ndim
+	*/
 	qfits_header* header;
 	int* inverse_perm;
 };

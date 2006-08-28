@@ -35,8 +35,10 @@ startree* startree_open(char* fn) {
 		goto bailout;
 	}
 
-	s->N = s->tree->ndata;
-	s->D = s->tree->ndim;
+	/*
+	  s->N = s->tree->ndata;
+	  s->D = s->tree->ndim;
+	*/
 
 	return s;
 
@@ -59,18 +61,22 @@ int startree_close(startree* s) {
 	return 0;
 }
 
+static int Ndata(startree* s) {
+	return s->tree->ndata;
+}
+
 int startree_get(startree* s, uint starid, double* posn) {
 	if (s->tree->perm && !s->inverse_perm) {
 		// compute inverse permutation vector.
-		s->inverse_perm = malloc(s->tree->ndata * sizeof(int));
+		s->inverse_perm = malloc(Ndata(s) * sizeof(int));
 		if (!s->inverse_perm) {
 			fprintf(stderr, "Failed to allocate star kdtree inverse permutation vector.\n");
 			return -1;
 		}
 		kdtree_inverse_permutation(s->tree, s->inverse_perm);
 	}
-	if (starid >= s->N) {
-		fprintf(stderr, "Invalid star ID: %u >= %u.\n", starid, s->N);
+	if (starid >= Ndata(s)) {
+		fprintf(stderr, "Invalid star ID: %u >= %u.\n", starid, Ndata(s));
 		return -1;
 	}
 	if (s->inverse_perm)
