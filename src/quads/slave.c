@@ -37,6 +37,7 @@
 #include "solvedclient.h"
 #include "solvedfile.h"
 #include "ioutils.h"
+#include "starkd.h"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -92,11 +93,9 @@ idfile* id;
 quadfile* quads;
 kdtree_t *codetree;
 xylist* xyls;
-kdtree_t* startree;
+startree* starkd;
 
 bool circle;
-
-int* inverse_perm = NULL;
 
 int nverified;
 
@@ -167,7 +166,7 @@ int main(int argc, char *argv[]) {
 		il_remove_all(fieldlist);
 
 		quads = NULL;
-		startree = NULL;
+		starkd = NULL;
 		nverified = 0;
 
 		if (read_parameters())
@@ -269,13 +268,13 @@ int main(int argc, char *argv[]) {
 		// Read .skdt file...
 		fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
 		fflush(stderr);
-		startree = kdtree_fits_read_file(startreefname);
-		if (!startree) {
+		starkd = startree_open(startreefname);
+		if (!starkd) {
 			fprintf(stderr, "Failed to read star kdtree %s\n", startreefname);
 			exit(-1);
 		}
 		fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
-				startree->ndata, startree->nnodes, startree->ndim);
+				starkd->tree->ndata, starkd->tree->nnodes, starkd->tree->ndim);
 
 		do_verify = (verify_dist2 > 0.0);
 		{
@@ -329,12 +328,6 @@ int main(int argc, char *argv[]) {
 			//exit(-1);
 		}
 
-		if (startree->perm) {
-			fprintf(stderr, "Computing inverse permutation...\n");
-			inverse_perm = malloc(startree->ndata * sizeof(int));
-			kdtree_inverse_permutation(startree, inverse_perm);
-		}
-
 		// Do it!
 		solve_fields();
 
@@ -358,7 +351,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Error closing matchfile.\n");
 		}
 		kdtree_close(codetree);
-		kdtree_close(startree);
+		startree_close(starkd);
 		if (id)
 			idfile_close(id);
 		quadfile_close(quads);
@@ -374,7 +367,6 @@ int main(int argc, char *argv[]) {
 		free_fn(quadfname);
 		free_fn(idfname);
 		free_fn(startreefname);
-		free(inverse_perm);
 
 		toc();
 	}
@@ -698,7 +690,7 @@ static void write_hits(int fieldnum, pl* matches) {
 
 void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
 	int matches, unmatches, conflicts;
-	verify_hit(startree, mo, field, nfield, verify_dist2,
+	verify_hit(starkd->tree, mo, field, nfield, verify_dist2,
 			   &matches, &unmatches, &conflicts, NULL, NULL);
 	if (!quiet)
 		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
@@ -1066,12 +1058,7 @@ void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
 }
 
 void getstarcoord(uint iA, double *sA) {
-	if (inverse_perm)
-		memcpy(sA, startree->data + inverse_perm[iA] * DIM_STARS,
-			   DIM_STARS * sizeof(double));
-	else
-		memcpy(sA, startree->data + iA * DIM_STARS,
-			   DIM_STARS * sizeof(double));
+	startree_get(starkd, iA, sA);
 }
 
 uint64_t getstarid(uint iA) {
