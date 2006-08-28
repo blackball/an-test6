@@ -82,7 +82,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
 	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
-	bt.o solvedfile.o
+	bt.o solvedfile.o starkd.o
 
 SOLVER_OBJ := solver.o
 SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
@@ -144,6 +144,10 @@ CFLAGS += -Ikdtree
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat
+
+.PHONY: tags
+tags:
+	etags `find . -name "*.h" -o -name "*.c"`
 
 $(QFITS_LIB): $(QFITS_OBJ)
 	ar cr $@ $^
