@@ -463,7 +463,7 @@ kdtree_t* kdtree_read(FILE* fin) {
 
 
 void kdtree_close(kdtree_t* kd) {
-	assert(kd);
+	if (!kd) return;
 	munmap(kd->mmapped, kd->mmapped_size);
 	free(kd);
 }
