@@ -94,7 +94,7 @@ EXECS := whynot agreeable certifiable quadidx \
 	subtable matchstats unpermute-quads \
 	tabsort plotmatch \
 	plotquads matchtordls homer \
-	unpermute-stars2 tunematch quadscales \
+	unpermute-stars tunematch quadscales \
 	overlapstats
 
 # things we don't use often:
@@ -110,7 +110,6 @@ EXECS := whynot agreeable certifiable quadidx \
 
 # obsolescent:
 #	deduplicate \
-#   unpermute-stars 
 #	cert2 
 #   dedup_index 
 
