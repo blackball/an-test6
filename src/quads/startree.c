@@ -18,6 +18,7 @@
 #include "fileutil.h"
 #include "catalog.h"
 #include "fitsioutils.h"
+#include "starkd.h"
 
 #define OPTIONS "hR:f:k:d:"
 
@@ -33,7 +34,7 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[]) {
     int argidx, argchar;
     int nkeep = 0;
-    kdtree_t* starkd = NULL;
+	startree* starkd;
     int levels;
     catalog* cat;
     int Nleaf = 25;
@@ -41,7 +42,6 @@ int main(int argc, char *argv[]) {
     char* treefname = NULL;
     char* catfname = NULL;
 	char* progname = argv[0];
-	qfits_header* hdr;
 	char val[32];
 
     if (argc <= 2) {
@@ -110,39 +110,41 @@ int main(int argc, char *argv[]) {
     levels = kdtree_compute_levels(cat->numstars, Nleaf);
     fprintf(stderr, "Requesting %i levels.\n", levels);
 
-    starkd = kdtree_build(catalog_get_base(cat), cat->numstars, DIM_STARS, levels);
-    if (!starkd) {
+	starkd = startree_new();
+	if (!starkd) {
+		fprintf(stderr, "Failed to allocate startree.\n");
+		exit(-1);
+	}
+    starkd->tree = kdtree_build(catalog_get_base(cat), cat->numstars, DIM_STARS, levels);
+    if (!starkd->tree) {
         catalog_close(cat);
         fprintf(stderr, "Couldn't build kdtree.\n");
         exit(-1);
     }
-    fprintf(stderr, "done (%d nodes)\n", starkd->nnodes);
+    fprintf(stderr, "done (%d nodes)\n", starkd->tree->nnodes);
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
-	hdr = qfits_header_default();
-	qfits_header_add(hdr, "AN_FILE", "SKDT", "This file is a star kdtree.", NULL);
 	sprintf(val, "%u", Nleaf);
-	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
+	qfits_header_add(starkd->header, "NLEAF", val, "Target number of points in leaves.", NULL);
 	sprintf(val, "%u", levels);
-	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
+	qfits_header_add(starkd->header, "LEVELS", val, "Number of kdtree levels.", NULL);
 	sprintf(val, "%u", nkeep);
-	qfits_header_add(hdr, "KEEP", val, "Number of stars kept.", NULL);
+	qfits_header_add(starkd->header, "KEEP", val, "Number of stars kept.", NULL);
 
-	fits_copy_header(cat->header, hdr, "HEALPIX");
-	qfits_header_add(hdr, "HISTORY", "startree command line:", NULL, NULL);
-	fits_add_args(hdr, argv, argc);
-	qfits_header_add(hdr, "HISTORY", "(end of startree command line)", NULL, NULL);
+	fits_copy_header(cat->header, starkd->header, "HEALPIX");
+	qfits_header_add(starkd->header, "HISTORY", "startree command line:", NULL, NULL);
+	fits_add_args(starkd->header, argv, argc);
+	qfits_header_add(starkd->header, "HISTORY", "(end of startree command line)", NULL, NULL);
 
-	if (kdtree_fits_write_file(starkd, treefname, hdr)) {
+	if (startree_write_to_file(starkd, treefname)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");
 		exit(-1);
 	}
-	qfits_header_destroy(hdr);
     free_fn(treefname);
     fprintf(stderr, "done.\n");
 
-    kdtree_free(starkd);
+    startree_close(starkd);
     catalog_close(cat);
     return 0;
 }
