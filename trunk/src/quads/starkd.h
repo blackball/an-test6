@@ -22,6 +22,8 @@ int startree_get(startree* s, uint starid, double* posn);
 
 int startree_close(startree* s);
 
+void startree_compute_inverse_perm(startree* s);
+
 // for writing
 startree* startree_new();
 

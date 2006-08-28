@@ -205,6 +205,8 @@ int main(int argc, char **args) {
 
 	printf("Writing quads...\n");
 
+	startree_compute_inverse_perm(treein);
+
 	lastgrass = 0;
 	for (i=0; i<qfin->numquads; i++) {
 		int j;
@@ -240,7 +242,6 @@ int main(int argc, char **args) {
 	treeout->tree->ndim   = treein->tree->ndim;
 	treeout->tree->nnodes = treein->tree->nnodes;
 
-	qfits_header_add(treeout->header, "AN_FILE", "SKDT", "This is a star kdtree.", NULL);
 	fits_copy_header(qfin->header, treeout->header, "HEALPIX");
 	qfits_header_add(treeout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
 	fits_add_args(treeout->header, args, argc);
