@@ -10,10 +10,11 @@
 #include "mathutil.h"
 #include "matchfile.h"
 #include "kdtree.h"
-#include "kdtree_io.h"
-#include "kdtree_fits_io.h"
+//#include "kdtree_io.h"
+//#include "kdtree_fits_io.h"
 #include "xylist.h"
 #include "verify.h"
+#include "starkd.h"
 
 static const char* OPTIONS = "hi:o:s:S:r:f:F:X:Y:w:Mu:v:";
 
@@ -164,7 +165,7 @@ int main(int argc, char *argv[]) {
 	char* yname = NULL;
 	matchfile* matchin;
 	matchfile* matchout;
-	kdtree_t* startree;
+	startree* skdt;
 	xylist* xyls;
 	double* fielduv = NULL;
 	double* fieldxyz = NULL;
@@ -252,13 +253,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (starfn) {
-		startree = kdtree_fits_read_file(starfn);
-		if (!startree) {
+		skdt = startree_open(starfn);
+		if (!skdt) {
 			fprintf(stderr, "Failed to open star kdtree %s.\n", starfn);
 			exit(-1);
 		}
 	} else
-		startree = NULL;
+		skdt = NULL;
 
 	if (xylsfn) {
 		xyls = xylist_open(xylsfn);
@@ -338,11 +339,11 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (startemplate && (mo->healpix != lasthp)) {
-			if (startree)
-				kdtree_close(startree);
+			if (skdt)
+				startree_close(skdt);
 			sprintf(fn, startemplate, mo->healpix);
-			startree = kdtree_fits_read_file(fn);
-			if (!startree) {
+			skdt = startree_open(fn);
+			if (!skdt) {
 				fprintf(stderr, "Failed to open star kdtree from file %s.\n", fn);
 				exit(-1);
 			}
@@ -371,7 +372,7 @@ int main(int argc, char *argv[]) {
 		r2 = distsq(centerxyz, mo->sMin, 3);
 		r2 *= 1.02;
 		// find stars in that region
-		res = kdtree_rangesearch_nosort(startree, centerxyz, r2);
+		res = kdtree_rangesearch_nosort(skdt->tree, centerxyz, r2);
 		if (!res->nres) {
 			printf("no stars found.\n");
 			kdtree_free_query(res);
@@ -671,7 +672,7 @@ int main(int argc, char *argv[]) {
 				int match;
 				int unmatch;
 				int conflict;
-				verify_hit(startree, mo, fielduv, NF, overlap_d2,
+				verify_hit(skdt->tree, mo, fielduv, NF, overlap_d2,
 						   &match, &unmatch, &conflict, NULL, NULL);
 			}
 			printf("Overlap: %g\n", mo->overlap);
@@ -802,8 +803,8 @@ int main(int argc, char *argv[]) {
 	if (xyls)
 		xylist_close(xyls);
 	matchfile_close(matchin);
-	if (startree)
-		kdtree_close(startree);
+	if (skdt)
+		startree_close(skdt);
 
 	if (matchfile_fix_header(matchout) ||
 		matchfile_close(matchout)) {
