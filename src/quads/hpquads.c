@@ -25,6 +25,7 @@
 #include "bt.h"
 #include "rdlist.h"
 #include "histogram.h"
+#include "starkd.h"
 
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:R"
 
@@ -52,8 +53,7 @@ extern int optind, opterr, optopt;
 
 static quadfile* quads;
 static codefile* codes;
-static kdtree_t* startree;
-static int* invperm;
+static startree* starkd;
 
 // bounds of quad scale (in radians^2)
 static double quad_scale_upper2;
@@ -125,7 +125,7 @@ static bool add_quad(quad* q) {
 }
 
 static void compute_code(quad* q, double* code) {
-	double *sA, *sB, *sC, *sD;
+	double sA[3], sB[3], sC[3], sD[3];
 	double Bx, By;
 	double scale, invscale;
 	double ABx, ABy;
@@ -137,10 +137,13 @@ static void compute_code(quad* q, double* code) {
 	double Ax, Ay;
 	double costheta, sintheta;
 
-	sA = startree->data + 3 * invperm[q->star[0]];
-	sB = startree->data + 3 * invperm[q->star[1]];
-	sC = startree->data + 3 * invperm[q->star[2]];
-	sD = startree->data + 3 * invperm[q->star[3]];
+	if (startree_get(starkd, q->star[0], sA) ||
+		startree_get(starkd, q->star[1], sB) ||
+		startree_get(starkd, q->star[2], sC) ||
+		startree_get(starkd, q->star[3], sD)) {
+		fprintf(stderr, "Failed to get stars belonging to a quad.\n");
+		exit(-1);
+	}
 
 	star_midpoint(midAB, sA, sB);
 	star_coords(sA, midAB, &Ax, &Ay);
@@ -466,7 +469,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
 	}
 
-	res = kdtree_rangesearch_nosort(startree, centre, radius2);
+	res = kdtree_rangesearch_nosort(starkd->tree, centre, radius2);
 
 	// here we could check whether stars are in the box
 	// defined by the healpix boundaries plus quadscale.
@@ -551,7 +554,6 @@ int main(int argc, char** argv) {
 	char *quadfname;
 	char *codefname;
 	char *skdtfname;
-	qfits_header* hdr;
 	int Nside = 501;
 	int HEALPIXES;
 	int i;
@@ -659,18 +661,13 @@ int main(int argc, char** argv) {
 
 	skdtfname = mk_streefn(basefnin);
 	printf("Reading star kdtree %s ...\n", skdtfname);
-	startree = kdtree_fits_read_file(skdtfname);
-	if (!startree) {
+	starkd = startree_open(skdtfname);
+	if (!starkd) {
 		fprintf(stderr, "Failed to open star kdtree %s\n", skdtfname);
 		exit( -1);
 	}
-	hdr = qfits_header_read(skdtfname);
-	if (!hdr) {
-		fprintf(stderr, "Failed to read FITS header from kdtree file %s.\n", skdtfname);
-		exit(-1);
-	}
 	free_fn(skdtfname);
-	printf("Star tree contains %i objects.\n", startree->ndata);
+	printf("Star tree contains %i objects.\n", starkd->N);
 
 	quadfname = mk_quadfn(basefnout);
 	codefname = mk_codefn(basefnout);
@@ -694,8 +691,7 @@ int main(int argc, char** argv) {
 	}
 
 	// get the "HEALPIX" header from the skdt and put it in the code and quad headers.
-	hp = qfits_header_getint(hdr, "HEALPIX", -1);
-	qfits_header_destroy(hdr);
+	hp = qfits_header_getint(starkd->header, "HEALPIX", -1);
 	if (hp == -1) {
 		fprintf(stderr, "Warning: skdt does not contain \"HEALPIX\" header.  Code and quad files will not contain this header either.\n");
 	}
@@ -740,11 +736,11 @@ int main(int argc, char** argv) {
 	free_fn(quadfname);
 	free_fn(codefname);
 
-    codes->numstars = startree->ndata;
+    codes->numstars = starkd->N;
     codes->index_scale       = sqrt(quad_scale_upper2);
     codes->index_scale_lower = sqrt(quad_scale_lower2);
 
-    quads->numstars = startree->ndata;
+    quads->numstars = starkd->N;
     quads->index_scale       = sqrt(quad_scale_upper2);
     quads->index_scale_lower = sqrt(quad_scale_lower2);
 
@@ -754,8 +750,8 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error, reuse (-r) must be less than 256.\n");
 		exit(-1);
 	}
-	nuses = mymalloc(startree->ndata * sizeof(unsigned char));
-	for (i=0; i<startree->ndata; i++)
+	nuses = mymalloc(starkd->N * sizeof(unsigned char));
+	for (i=0; i<starkd->N; i++)
 		nuses[i] = Nreuse;
 
 	hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
@@ -1038,7 +1034,7 @@ int main(int argc, char** argv) {
 		lastgrass = -1;
 		printf("Making no-limit-on-number-of-times-a-star-can-be-used pass.\n");
 
-		for (i=0; i<startree->ndata; i++)
+		for (i=0; i<starkd->N; i++)
 			nuses[i] = 255;
 
 		if (failedrdls) {
@@ -1117,9 +1113,6 @@ int main(int argc, char** argv) {
 
 	printf("Writing quads...\n");
 
-	invperm = mymalloc(startree->ndata * sizeof(int));
-	kdtree_inverse_permutation(startree, invperm);
-
 	// add the quads from the big-quadlist
 	nquads = bt_size(bigquadlist);
 	for (i=0; i<nquads; i++) {
@@ -1151,8 +1144,7 @@ int main(int argc, char** argv) {
 	}
 	free(quadlist);
 
-	free(invperm);
-	kdtree_close(startree);
+	startree_close(starkd);
 
 	// fix output file headers.
 	if (quadfile_fix_header(quads) ||
