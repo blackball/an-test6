@@ -9,11 +9,12 @@
 #include "catalog.h"
 #include "kdtree.h"
 #include "kdtree_io.h"
-#include "kdtree_fits_io.h"
-#include "kdtree_access.h"
+//#include "kdtree_fits_io.h"
+//#include "kdtree_access.h"
 #include "fileutil.h"
 #include "starutil.h"
 #include "bl.h"
+#include "starkd.h"
 
 #define OPTIONS "hn:o:"
 
@@ -41,8 +42,7 @@ int main(int argc, char** args) {
 	char* fn;
 	quadfile* qf;
 	catalog* cat = NULL;
-	kdtree_t* skdt = NULL;
-	int* invperm = NULL;
+	startree* skdt = NULL;
 	uchar* img = NULL;
 	int i;
 	int maxval;
@@ -112,16 +112,12 @@ int main(int argc, char** args) {
 		} else {
 			fn = mk_streefn(basename);
 			printf("Trying to open star kdtree %s instead...\n", fn);
-			skdt = kdtree_fits_read_file(fn);
+			skdt = startree_open(fn);
 			if (!skdt) {
 				fprintf(stderr, "Failed to read star kdtree %s.\n", fn);
 				continue;
 			}
-			if (skdt->perm) {
-				invperm = realloc(invperm, skdt->ndata * sizeof(int));
-				kdtree_inverse_permutation(skdt, invperm);
-			}
-			Nstars = skdt->ndata;
+			Nstars = skdt->tree->ndata;
 		}
 
 		printf("Counting stars in quads...\n");
@@ -147,6 +143,7 @@ int main(int argc, char** args) {
 		printf("Computing image...\n");
 		for (i=0; i<Nstars; i++) {
 			double* xyz;
+			double starpos[3];
 			double px, py;
 			int X, Y;
 			int j;
@@ -158,8 +155,10 @@ int main(int argc, char** args) {
 				continue;
 			if (cat)
 				xyz = catalog_get_star(cat, i);
-			else
-				xyz = skdt->data + skdt->ndim * (invperm ? invperm[i] : i);
+			else {
+				startree_get(skdt, i, starpos);
+				xyz = starpos;
+			}
 			project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
 			px = 0.5 + (px - 0.5) * 0.99;
 			py = 0.5 + (py - 0.5) * 0.99;
@@ -175,7 +174,7 @@ int main(int argc, char** args) {
 		if (cat)
 			catalog_close(cat);
 		if (skdt)
-			kdtree_close(skdt);
+			startree_close(skdt);
 
 		quadfile_close(qf);
 
