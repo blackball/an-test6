@@ -800,8 +800,7 @@ static int next_field(xy** pfield) {
 	return rtn;
 }
 
-
-void* solvethread_run(void* varg) {
+static void* solvethread_run(void* varg) {
 	threadargs* my = varg;
 	solver_params solver;
 	double last_utime, last_stime;
@@ -1009,7 +1008,7 @@ void* solvethread_run(void* varg) {
 	return 0;
 }
 
-void solve_fields() {
+static void solve_fields() {
 	int i;
 	int STACKSIZE = 1024*1024;
 	threadargs* allargs[threads];
