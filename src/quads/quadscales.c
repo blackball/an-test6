@@ -7,14 +7,12 @@
 
 #include "quadfile.h"
 #include "kdtree.h"
-#include "kdtree_io.h"
-#include "kdtree_fits_io.h"
-#include "kdtree_access.h"
 #include "fileutil.h"
 #include "starutil.h"
 #include "mathutil.h"
 #include "bl.h"
 #include "histogram.h"
+#include "starkd.h"
 
 #define OPTIONS "h"
 
@@ -36,8 +34,7 @@ int main(int argc, char** args) {
 	char* basename;
 	char* fn;
 	quadfile* qf;
-	kdtree_t* skdt = NULL;
-	int* invperm = NULL;
+	startree* skdt = NULL;
 	int i;
 	int Nbins = 100;
 	histogram* sumhist = NULL;
@@ -82,16 +79,12 @@ int main(int argc, char** args) {
 
 		fn = mk_streefn(basename);
 		fprintf(stderr, "Opening skdt file %s...\n", fn);
-		skdt = kdtree_fits_read_file(fn);
+		skdt = startree_open(fn);
 		if (!skdt) {
 			fprintf(stderr, "Failed to read star kdtree %s.\n", fn);
 			continue;
 		}
 		free_fn(fn);
-		if (skdt->perm) {
-			invperm = realloc(invperm, skdt->ndata * sizeof(int));
-			kdtree_inverse_permutation(skdt, invperm);
-		}
 
 		hist = histogram_new_nbins(qf->index_scale_lower,
 								   qf->index_scale, Nbins);
@@ -110,8 +103,8 @@ int main(int argc, char** args) {
 		for (i=0; i<qf->numquads; i++) {
 			uint stars[4];
 			int grass;
-			double* xyzA;
-			double* xyzB;
+			double xyzA[3];
+			double xyzB[3];
 			int A, B;
 			double rad;
 
@@ -127,8 +120,8 @@ int main(int argc, char** args) {
 
 			A = stars[0];
 			B = stars[1];
-			xyzA = skdt->data + 3 * (invperm ? invperm[A] : A);
-			xyzB = skdt->data + 3 * (invperm ? invperm[B] : B);
+			startree_get(skdt, A, xyzA);
+			startree_get(skdt, B, xyzB);
 			rad = distsq2arc(distsq(xyzA, xyzB, 3));
 
 			histogram_add(hist, rad);
@@ -145,7 +138,7 @@ int main(int argc, char** args) {
 
 		histogram_free(hist);
 
-		kdtree_close(skdt);
+		startree_close(skdt);
 		quadfile_close(qf);
 	}
 
