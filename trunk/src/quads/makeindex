@@ -19,7 +19,7 @@ TEMP2 := phase2_
 IDFILES := no
 
 UNPERMUTE_QUADS := unpermute-quads
-UNPERMUTE_STARS := unpermute-stars2
+UNPERMUTE_STARS := unpermute-stars
 CODETREE        := codetree
 HPQUADS         := hpquads
 QUADIDX			:= quadidx
