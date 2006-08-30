@@ -33,17 +33,17 @@ device, file=prefix+'.ps',/inches,xsize=xsize,ysize=ysize, $
 !Y.STYLE= 5
 xyouts, 0,0,'!3'
 
-nx= 4
+nx= 3
 !P.MULTI=[0,nx,nx]
 !P.CHARTHICK= 3.0/nx
 charsize= 2.0/nx
-gridthick= 1.0/nx
-codethick= 4.0/nx
+gridthick= 3.0/nx
+codethick= 4.0*gridthick
 labelboxsize= 8.0/nx
-starsize= 2.0/nx
 stcharthick= 1.0*codethick
-factor= 0.5
+factor= 0.75
 stcharsize= factor*charsize
+starsize= factor*4.0/nx
 gridcolor= 127
 tt= 2D0*!DPI*dindgen(2001)/2D3
 for ii=1,nx do for jj=1,nx do begin
@@ -134,7 +134,7 @@ for ii=1,nx do for jj=1,nx do begin
     dvstr= signstr+string(abs(ddd[1]-aaa[1])/length,format=format)
     xyouts, xl,yl,'('+Cu+','+Cv+','+Du+','+Dv+') = ' $
       +'('+custr+','+cvstr+','+dustr+','+dvstr+')', $
-      charsize=0.75*charsize,align=0.5
+      charsize=charsize,align=0.5
 
     usersym, [1,-1,-1,1,1],[1,1,-1,-1,1],/fill
     oplot, [(mm#aaa)[0],(mm#bbb)[0],(mm#ccc)[0],(mm#ddd)[0]], $
