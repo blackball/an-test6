@@ -15,6 +15,7 @@
 ;  maxobj    - the number of sources to return per field (default 300)
 ;  band      - band to use to sort sources by psfflux (default 2)
 ;  run       - all fields for the specified run will be returned
+;  maxrun    - maximum run number to use (default 5390)
 ;
 ; KEYWORDS:
 ;  /order    - return nfields in order.
@@ -30,7 +31,7 @@
 ;  2005-09-14  chunks - Hogg
 ;-
 pro sdssfield, seed=seed,nfields=nfields,maxobj=maxobj,band=band, $
-               order=order,ngc=ngc,run=run,chunksize=chunksize
+               order=order,ngc=ngc,run=run,chunksize=chunksize,maxrun=maxrun
 
 objtype= {run:0L, $
           rerun:0L, $
@@ -60,11 +61,13 @@ endelse
 if not keyword_set(seed) then seed=7L
 if not keyword_set(nfields) then nfields=1L
 nfields= nfields < maxfields
+nfields= round(nfields)
 if not keyword_set(chunksize) then chunksize=10000L
 if not keyword_set(maxobj) then maxobj=300
-if not keyword_set(band) then band=2
-prefix= 'sdssfield'
-splog, nfields
+if (n_elements(band) NE 1) then band=2
+prefix= 'sdssfield_'+filtername(band)
+if not keyword_set(maxrun) then maxrun=5390L
+splog, prefix
 
 ; shuffle
 if not (keyword_set(order) or keyword_set(run)) then $
@@ -73,8 +76,12 @@ if not (keyword_set(order) or keyword_set(run)) then $
 ; specific run
 if keyword_set(run) then begin
     flist= flist[where(flist.run eq run)]
-    nfields= n_elements(flist)
-endif
+endif else begin
+    flist= flist[where(flist.run le maxrun)]
+    splog, max(flist.run)
+endelse
+nfields= n_elements(flist)
+splog, nfields
 
 ; loop over chunks, setting filenames
 nchunks= ceil(float(nfields)/float(chunksize))
