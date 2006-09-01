@@ -36,3 +36,5 @@ L =[l1, l2, l3, l4];
 BT=[b1, b2, z3, z4];
 VT=[v1, v2, v3, z4];
 HP=[h1, h2, h3, h4];
+
+plot(L, BT, 'b-', L, VT, 'r-', L, HP, 'g-');
