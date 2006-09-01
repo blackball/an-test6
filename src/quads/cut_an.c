@@ -247,11 +247,11 @@ int main(int argc, char** args) {
 		for (i=0; i<N; i++) {
 			stardata sd;
 			int j;
-			double summag;
+			double redmag;
 			int hp;
-			int nmag;
-			double sumredmag;
-			int nredmag;
+			int nred;
+			double bluemag;
+			int nblue;
 			an_entry* an;
 
 			an = an_catalog_read_entry(ancat);
@@ -272,21 +272,21 @@ int main(int argc, char** args) {
 			sd.id = an->id;
 
 			// dumbass magnitude averaging!
-			summag = 0.0;
-			nmag = 0;
-			sumredmag = 0.0;
-			nredmag = 0;
+			redmag = 0.0;
+			nred = 0;
+			bluemag = 0.0;
+			nblue = 0;
 			if (sdss) {
 				for (j=0; j<an->nobs; j++) {
 					if (an->obs[j].catalog == AN_SOURCE_USNOB) {
 						if (an->obs[j].band == 'E' || an->obs[j].band == 'F') {
-							summag += an->obs[j].mag;
-							nmag++;
+							redmag += an->obs[j].mag;
+							nred++;
 						}
 					} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
 						if (an->obs[j].band == 'V' || an->obs[j].band == 'H') {
-							summag += an->obs[j].mag;
-							nmag++;
+							redmag += an->obs[j].mag;
+							nred++;
 						}
 					}
 				}
@@ -294,33 +294,33 @@ int main(int argc, char** args) {
 				for (j=0; j<an->nobs; j++) {
 					if (an->obs[j].catalog == AN_SOURCE_USNOB) {
 						if (an->obs[j].band == 'O' || an->obs[j].band == 'J') {
-							summag += an->obs[j].mag;
-							nmag++;
+							bluemag += an->obs[j].mag;
+							nblue++;
 						} else if (an->obs[j].band == 'E' || an->obs[j].band == 'F') {
-							sumredmag += an->obs[j].mag;
-							nredmag++;
+							redmag += an->obs[j].mag;
+							nred++;
 						}
 					} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
 						if (an->obs[j].band == 'B' || an->obs[j].band == 'H') {
-							summag += an->obs[j].mag;
-							nmag++;
+							bluemag += an->obs[j].mag;
+							nblue++;
 						} else if (an->obs[j].band == 'V') {
-							sumredmag += an->obs[j].mag;
-							nredmag++;
+							redmag += an->obs[j].mag;
+							nred++;
 						}
 					}
 				}
 			}
-			if (!nmag)
+			if (!nred)
 				continue;
 
-			summag /= (double)nmag;
-			sd.mag = summag;
+			redmag /= (double)nred;
+			sd.mag = redmag;
 
 			if (galex && epsilon>0) {
-				if (nredmag) {
-					sumredmag /= (double)nredmag;
-					sd.mag += epsilon * (summag - sumredmag);
+				if (nblue) {
+					bluemag /= (double)nblue;
+					sd.mag += epsilon * (bluemag - redmag);
 				}
 			}
 
