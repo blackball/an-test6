@@ -99,7 +99,8 @@ int main(int argc, char** args) {
 
 			for (i=0; i<entry->nobs; i++) {
 				bool red = FALSE, blue = FALSE, ir = FALSE;
-				an_observation ob = entry->obs + i;
+				float flux;
+				an_observation* ob = entry->obs + i;
 				switch (ob->catalog) {
 				case AN_SOURCE_USNOB:
 					switch (ob->band) {
@@ -122,13 +123,23 @@ int main(int argc, char** args) {
 						blue = TRUE;
 						break;
 					case 'V':
-						
+						red = TRUE;
 						break;
 					case 'H':
+						blue = TRUE;
+						red = TRUE;
 						break;
 					}
 					break;
 				}
+
+				flux = exp(ob->mag);
+				if (red)
+					redimg[y * W + x] += flux;
+				if (blue)
+					blueimg[y * W + x] += flux;
+				if (ir)
+					nimg[y * W + x] += flux;
 
 			}
 			
