@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 	kdtree_qres_t* res;
 	//double* starxy;
 	int i;
-	double minx, miny, maxx, maxy;
+	//double minx, miny, maxx, maxy;
 	double ra;
 	double dec;
 	bool ra_set = FALSE;
