@@ -1,6 +1,7 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 
 #include "fileutil.h"
 #include "starutil.h"
@@ -24,7 +25,10 @@ void printHelp(char* progname) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+#define max(a,b) (((a)>(b))?(a):(b))
+
 int main(int argc, char** args) {
+	int argchar;
 	char* progname = args[0];
 	double maxy = M_PI;
 	int W = 0, H = 0;
@@ -34,10 +38,10 @@ int main(int argc, char** args) {
 	float* blueimg;
 	float* nimg;
 
-	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
 		case 'h':
-			printHelp(prognam);
+			printHelp(progname);
 			exit(0);
 		case 'W':
 			W = atoi(optarg);
@@ -140,12 +144,37 @@ int main(int argc, char** args) {
 					blueimg[y * W + x] += flux;
 				if (ir)
 					nimg[y * W + x] += flux;
-
 			}
-			
 		}
 
 		an_catalog_close(ancat);
+	}
+
+	{
+		float rmax, bmax, nmax, minval;
+		int i;
+		minval = exp(-25);
+		rmax = bmax = nmax = minval;
+		for (i=0; i<(W*H); i++)
+			if (redimg[i] > rmax)
+				rmax = redimg[i];
+		for (i=0; i<(W*H); i++)
+			if (blueimg[i] > bmax)
+				bmax = blueimg[i];
+		for (i=0; i<(W*H); i++)
+			if (nimg[i] > nmax)
+				nmax = nimg[i];
+
+		printf("P6 %d %d %d\n", W, H, 255);
+		for (i=0; i<(W*H); i++) {
+			unsigned char pix;
+			pix = log(max(redimg[i], minval) / rmax);
+			putc(pix, stdout);
+			pix = log(max(blueimg[i], minval) / bmax);
+			putc(pix, stdout);
+			pix = log(max(nimg[i], minval) / nmax);
+			putc(pix, stdout);
+		}
 	}
 
 	return 0;
