@@ -15,7 +15,8 @@ void printHelp(char* progname) {
 	fprintf(stderr, "%s usage:\n"
 			"  -W <width>    Width of the output.\n"
 			"  -H <height>   Height of the output.\n"
-			"  [-m <max-y-val>] Maximum y value of the projection (default: Pi)\n"
+			"  [-m <max-y-val>]: Maximum y value of the projection (default: Pi)\n"
+			"  [-M <min-mag>]:    Minimum-magnitude star in the catalog (default: 25).\n"
 			"\n"
 			"  <input-catalog> ...\n"
 			"\n"
@@ -49,6 +50,9 @@ int main(int argc, char** args) {
 		case 'h':
 			printHelp(progname);
 			exit(0);
+		case 'M':
+			minmag = atof(optarg);
+			break;
 		case 'W':
 			W = atoi(optarg);
 			break;
@@ -229,6 +233,10 @@ int main(int argc, char** args) {
 	}
 
 	fprintf(stderr, "That took %i seconds.\n", (int)(time(NULL) - start));
+
+	free(redimg);
+	free(blueimg);
+	free(nimg);
 
 	return 0;
 }
