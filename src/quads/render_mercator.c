@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #include "fileutil.h"
 #include "starutil.h"
@@ -39,6 +40,9 @@ int main(int argc, char** args) {
 	double* nimg;
 	int i, j;
 	double minmag = 25.0;
+	time_t start;
+
+	start = time(NULL);
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
@@ -223,6 +227,8 @@ int main(int argc, char** args) {
 			putc(pix, stdout);
 		}
 	}
+
+	fprintf(stderr, "That took %i seconds.\n", (int)(time(NULL) - start));
 
 	return 0;
 }
