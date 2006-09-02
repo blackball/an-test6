@@ -34,10 +34,11 @@ int main(int argc, char** args) {
 	int W = 0, H = 0;
 	double xscale, yscale;
 	double yoffset;
-	float* redimg;
-	float* blueimg;
-	float* nimg;
+	double* redimg;
+	double* blueimg;
+	double* nimg;
 	int i, j;
+	double minmag = 25.0;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
@@ -66,9 +67,9 @@ int main(int argc, char** args) {
 	yscale = (double)H / (2.0 * maxy);
 	yoffset = (double)H / 2.0;
 
-	redimg  = calloc(W*H, sizeof(float));
-	blueimg = calloc(W*H, sizeof(float));
-	nimg    = calloc(W*H, sizeof(float));
+	redimg  = calloc(W*H, sizeof(double));
+	blueimg = calloc(W*H, sizeof(double));
+	nimg    = calloc(W*H, sizeof(double));
 
 	for (; optind<argc; optind++) {
 		char* fn;
@@ -113,7 +114,7 @@ int main(int argc, char** args) {
 
 			for (i=0; i<entry->nobs; i++) {
 				bool red = FALSE, blue = FALSE, ir = FALSE;
-				float flux;
+				double flux;
 				an_observation* ob = entry->obs + i;
 				switch (ob->catalog) {
 				case AN_SOURCE_USNOB:
@@ -147,7 +148,7 @@ int main(int argc, char** args) {
 					break;
 				}
 
-				flux = exp(ob->mag);
+				flux = exp(-ob->mag);
 				if (red)
 					redimg[y * W + x] += flux;
 				if (blue)
@@ -156,15 +157,22 @@ int main(int argc, char** args) {
 					nimg[y * W + x] += flux;
 			}
 		}
-
+		fprintf(stderr, "\n");
 		an_catalog_close(ancat);
 	}
 
+	fprintf(stderr, "Rendering image...\n");
 	{
-		float rmax, bmax, nmax, minval;
+		double rmax, bmax, nmax, minval;
+		// DEBUG
+		//double rmin, bmin, nmin;
+		double rscale, bscale, nscale;
+		double offset;
 		int i;
-		minval = exp(-25);
-		rmax = bmax = nmax = minval;
+		minval = exp(-minmag);
+		offset = -minmag;
+		rmax = bmax = nmax = -1e300;
+		//rmin = bmin = nmin = 1e300;
 		for (i=0; i<(W*H); i++)
 			if (redimg[i] > rmax)
 				rmax = redimg[i];
@@ -175,14 +183,36 @@ int main(int argc, char** args) {
 			if (nimg[i] > nmax)
 				nmax = nimg[i];
 
+		/* // DEBUG
+		   for (i=0; i<(W*H); i++)
+		   if (redimg[i] < rmin)
+		   rmin = redimg[i];
+		   for (i=0; i<(W*H); i++)
+		   if (blueimg[i] < bmin)
+		   bmin = blueimg[i];
+		   for (i=0; i<(W*H); i++)
+		   if (nimg[i] < nmin)
+		   nmin = nimg[i];
+		   fprintf(stderr, "R range [%g, %g]\n", (double)rmin, (double)rmax);
+		   fprintf(stderr, "B range [%g, %g]\n", (double)bmin, (double)bmax);
+		   fprintf(stderr, "N range [%g, %g]\n", (double)nmin, (double)nmax);
+		*/
+
+		fprintf(stderr, "Rmax %g\n", (double)rmax);
+		fprintf(stderr, "Bmax %g\n", (double)bmax);
+		fprintf(stderr, "Nmax %g\n", (double)nmax);
+
+		rscale = 255.0 / (log(rmax) - offset);
+		bscale = 255.0 / (log(bmax) - offset);
+		nscale = 255.0 / (log(nmax) - offset);
 		printf("P6 %d %d %d\n", W, H, 255);
 		for (i=0; i<(W*H); i++) {
 			unsigned char pix;
-			pix = log(max(redimg[i], minval) / rmax);
+			pix = (log(max(redimg[i], minval)) - offset) * rscale;
 			putc(pix, stdout);
-			pix = log(max(blueimg[i], minval) / bmax);
+			pix = (log(max(blueimg[i], minval)) - offset) * bscale;
 			putc(pix, stdout);
-			pix = log(max(nimg[i], minval) / nmax);
+			pix = (log(max(nimg[i], minval)) - offset) * nscale;
 			putc(pix, stdout);
 		}
 	}
