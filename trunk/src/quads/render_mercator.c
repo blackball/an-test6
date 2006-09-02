@@ -89,6 +89,7 @@ int main(int argc, char** args) {
 		for (j=0; j<ancat->nentries; j++) {
 			int x, y;
 			int grass;
+			double vertscale;
 			entry = an_catalog_read_entry(ancat);
 			if (!entry)
 				break;
@@ -111,6 +112,12 @@ int main(int argc, char** args) {
 			}
 
 			x = (int)rint(xscale * entry->ra);
+
+			// correct for the distortion of the Mercator projection:
+			// high-latitude stars project to low-density areas in
+			// the image, so correct by the vertical scaling of the
+			// projection: sec(dec) = 1/cos(dec)
+			vertscale = 1.0 / cos(deg2rad(entry->dec));
 
 			for (i=0; i<entry->nobs; i++) {
 				bool red = FALSE, blue = FALSE, ir = FALSE;
@@ -148,7 +155,7 @@ int main(int argc, char** args) {
 					break;
 				}
 
-				flux = exp(-ob->mag);
+				flux = exp(-ob->mag) * vertscale;
 				if (red)
 					redimg[y * W + x] += flux;
 				if (blue)
