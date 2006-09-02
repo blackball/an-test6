@@ -37,6 +37,7 @@ int main(int argc, char** args) {
 	float* redimg;
 	float* blueimg;
 	float* nimg;
+	int i, j;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
@@ -74,6 +75,7 @@ int main(int argc, char** args) {
 		an_catalog* ancat;
 		an_entry* entry;
 		int oob = 0;
+		int lastgrass = 0;
 
 		fn = args[optind];
 		ancat = an_catalog_open(fn);
@@ -81,13 +83,21 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to open Astrometry.net catalog %s\n", fn);
 			exit(-1);
 		}
+		fprintf(stderr, "Reading %i entries for catalog file %s.\n", ancat->nentries, fn);
 
-		for (;;) {
+		for (j=0; j<ancat->nentries; j++) {
 			int x, y;
-			int i;
+			int grass;
 			entry = an_catalog_read_entry(ancat);
 			if (!entry)
 				break;
+
+			grass = (j * 80 / ancat->nentries);
+			if (grass != lastgrass) {
+				fprintf(stderr, ".");
+				fflush(stderr);
+				lastgrass = grass;
+			}
 
 			assert(entry->ra >= 0.0);
 			assert(entry->ra < 360.0);
