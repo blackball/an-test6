@@ -180,14 +180,14 @@ int main(int argc, char** args) {
 	{
 		double rmax, bmax, nmax, minval;
 		// DEBUG
-		//double rmin, bmin, nmin;
+		double rmin, bmin, nmin;
 		double rscale, bscale, nscale;
 		double offset;
 		int i;
 		minval = exp(-minmag);
 		offset = -minmag;
 		rmax = bmax = nmax = -1e300;
-		//rmin = bmin = nmin = 1e300;
+		rmin = bmin = nmin = 1e300;
 		for (i=0; i<(W*H); i++)
 			if (redimg[i] > rmax)
 				rmax = redimg[i];
@@ -198,24 +198,26 @@ int main(int argc, char** args) {
 			if (nimg[i] > nmax)
 				nmax = nimg[i];
 
-		/* // DEBUG
-		   for (i=0; i<(W*H); i++)
-		   if (redimg[i] < rmin)
-		   rmin = redimg[i];
-		   for (i=0; i<(W*H); i++)
-		   if (blueimg[i] < bmin)
-		   bmin = blueimg[i];
-		   for (i=0; i<(W*H); i++)
-		   if (nimg[i] < nmin)
-		   nmin = nimg[i];
-		   fprintf(stderr, "R range [%g, %g]\n", (double)rmin, (double)rmax);
-		   fprintf(stderr, "B range [%g, %g]\n", (double)bmin, (double)bmax);
-		   fprintf(stderr, "N range [%g, %g]\n", (double)nmin, (double)nmax);
-		*/
+		/**/
+		// DEBUG
+		for (i=0; i<(W*H); i++)
+			if (redimg[i] < rmin)
+				rmin = redimg[i];
+		for (i=0; i<(W*H); i++)
+			if (blueimg[i] < bmin)
+				bmin = blueimg[i];
+		for (i=0; i<(W*H); i++)
+			if (nimg[i] < nmin)
+				nmin = nimg[i];
+		fprintf(stderr, "R range [%g, %g]\n", (double)rmin, (double)rmax);
+		fprintf(stderr, "B range [%g, %g]\n", (double)bmin, (double)bmax);
+		fprintf(stderr, "N range [%g, %g]\n", (double)nmin, (double)nmax);
 
-		fprintf(stderr, "Rmax %g\n", (double)rmax);
-		fprintf(stderr, "Bmax %g\n", (double)bmax);
-		fprintf(stderr, "Nmax %g\n", (double)nmax);
+		/*
+		  fprintf(stderr, "Rmax %g\n", (double)rmax);
+		  fprintf(stderr, "Bmax %g\n", (double)bmax);
+		  fprintf(stderr, "Nmax %g\n", (double)nmax);
+		*/
 
 		rscale = 255.0 / (log(rmax) - offset);
 		bscale = 255.0 / (log(bmax) - offset);
