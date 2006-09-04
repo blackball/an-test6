@@ -32,15 +32,15 @@ extern int optind, opterr, optopt;
 int main(int argc, char** args) {
 	int argchar;
 	char* progname = args[0];
-	double maxy = M_PI;
+	float maxy = M_PI;
 	int W = 0, H = 0;
-	double xscale, yscale;
-	double yoffset;
-	double* redimg;
-	double* blueimg;
-	double* nimg;
+	float xscale, yscale;
+	float yoffset;
+	float* redimg;
+	float* blueimg;
+	float* nimg;
 	int i, j;
-	double minmag = 25.0;
+	float minmag = 25.0;
 	time_t start;
 
 	start = time(NULL);
@@ -70,14 +70,14 @@ int main(int argc, char** args) {
 	}
 
 	// A.N catalog RA,DEC entries are in degrees.
-	//xscale = 2.0 * M_PI / (double)W;
-	xscale = (double)W / 360.0;
-	yscale = (double)H / (2.0 * maxy);
-	yoffset = (double)H / 2.0;
+	//xscale = 2.0 * M_PI / (float)W;
+	xscale = (float)W / 360.0;
+	yscale = (float)H / (2.0 * maxy);
+	yoffset = (float)H / 2.0;
 
-	redimg  = calloc(W*H, sizeof(double));
-	blueimg = calloc(W*H, sizeof(double));
-	nimg    = calloc(W*H, sizeof(double));
+	redimg  = calloc(W*H, sizeof(float));
+	blueimg = calloc(W*H, sizeof(float));
+	nimg    = calloc(W*H, sizeof(float));
 
 	for (; optind<argc; optind++) {
 		char* fn;
@@ -97,7 +97,7 @@ int main(int argc, char** args) {
 		for (j=0; j<ancat->nentries; j++) {
 			int x, y;
 			int grass;
-			double vertscale;
+			float vertscale;
 			entry = an_catalog_read_entry(ancat);
 			if (!entry)
 				break;
@@ -129,7 +129,7 @@ int main(int argc, char** args) {
 
 			for (i=0; i<entry->nobs; i++) {
 				bool red = FALSE, blue = FALSE, ir = FALSE;
-				double flux;
+				float flux;
 				an_observation* ob = entry->obs + i;
 				switch (ob->catalog) {
 				case AN_SOURCE_USNOB:
@@ -178,11 +178,11 @@ int main(int argc, char** args) {
 
 	fprintf(stderr, "Rendering image...\n");
 	{
-		double rmax, bmax, nmax, minval;
+		float rmax, bmax, nmax, minval;
 		// DEBUG
-		double rmin, bmin, nmin;
-		double rscale, bscale, nscale;
-		double offset;
+		float rmin, bmin, nmin;
+		float rscale, bscale, nscale;
+		float offset;
 		int i;
 		minval = exp(-minmag);
 		offset = -minmag;
@@ -209,14 +209,14 @@ int main(int argc, char** args) {
 		for (i=0; i<(W*H); i++)
 			if (nimg[i] < nmin)
 				nmin = nimg[i];
-		fprintf(stderr, "R range [%g, %g]\n", (double)rmin, (double)rmax);
-		fprintf(stderr, "B range [%g, %g]\n", (double)bmin, (double)bmax);
-		fprintf(stderr, "N range [%g, %g]\n", (double)nmin, (double)nmax);
+		fprintf(stderr, "R range [%g, %g]\n", (float)rmin, (float)rmax);
+		fprintf(stderr, "B range [%g, %g]\n", (float)bmin, (float)bmax);
+		fprintf(stderr, "N range [%g, %g]\n", (float)nmin, (float)nmax);
 
 		/*
-		  fprintf(stderr, "Rmax %g\n", (double)rmax);
-		  fprintf(stderr, "Bmax %g\n", (double)bmax);
-		  fprintf(stderr, "Nmax %g\n", (double)nmax);
+		  fprintf(stderr, "Rmax %g\n", (float)rmax);
+		  fprintf(stderr, "Bmax %g\n", (float)bmax);
+		  fprintf(stderr, "Nmax %g\n", (float)nmax);
 		*/
 
 		rscale = 255.0 / (log(rmax) - offset);
