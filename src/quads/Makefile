@@ -139,6 +139,12 @@ QFITS_L :=
 CFLAGS += $(QFITS_I)
 LFLAGS += $(QFITS_L)
 
+NETPBM_I :=
+NETPBM_L := -L. -lnetpbm
+
+CFLAGS += $(NETPBM_I)
+LFLAGS += $(NETPBM_L)
+
 CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
@@ -146,7 +152,7 @@ ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat ppmnormrgb
 
 ppmnormrgb: ppmnormrgb.o
-	$(CC) $(CFLAGS) -o $@ $^ -L. -lnetpbm -lm
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
 
 .PHONY: tags
 tags:
