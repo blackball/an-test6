@@ -81,8 +81,9 @@ main(int argc, char** args) {
         for (col = 0; col < cols; ++col) {
             pixel p = pixelrow[col];
 			p.r = rmap[p.r];
-			p.g = rmap[p.g];
-			p.b = rmap[p.b];
+			p.g = gmap[p.g];
+			p.b = bmap[p.b];
+			pixelrow[col] = p;
 		}
 		ppm_writeppmrow(fout, pixelrow, cols, maxval, 0);
 	}
