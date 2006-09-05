@@ -146,7 +146,7 @@ ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat ppmnormrgb
 
 ppmnormrgb: ppmnormrgb.o
-	$(CC) $(CFLAGS) -o $@ $^ -lnetpbm -lm
+	$(CC) $(CFLAGS) -o $@ $^ -L. -lnetpbm -lm
 
 .PHONY: tags
 tags:
