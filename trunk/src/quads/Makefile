@@ -95,7 +95,7 @@ EXECS := whynot agreeable certifiable quadidx \
 	tabsort plotmatch \
 	plotquads matchtordls homer \
 	unpermute-stars tunematch quadscales \
-	overlapstats usnobtile render_mercator
+	overlapstats usnobtile usnobcount render_mercator
 
 # things we don't use often:
 #	randcat genfields
