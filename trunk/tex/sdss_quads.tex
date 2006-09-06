@@ -1,6 +1,5 @@
 % to-do
 % -----
-% - have we switched to taking quads in a circle?  if so change figure
 % - need to settle on definite data release, to get definite numbers
 %    of fields
 % - need to settle on cascade of runs and re-run to get definite
@@ -239,11 +238,9 @@ $(u,v)$ coordinates of stars $\CCC$ and $\DDD$, or
 $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$.
 
 In addition to the above description, we require that all indexed
-quadrangles have all four coordinates $(\CCC_u,\CCC_v,\DDD_u,\DDD_v)$
-each on the interval $[0,1]$ (\ie, we require that the stars $\CCC$
-and $\DDD$ lie in the square box of which $\AAA$ and $\BBB$ define
-opposite corners.  Figure~\ref{fig:quad} shows this parameterization
-for sixteen legal quadrangles, randomly produced.
+quadrangles have stars $\CCC$ and $\DDD$ inside the circle of which
+$\AAA$ and $\BBB$ define a diameter.  Figure~\ref{fig:quad} shows this
+parameterization for nine legal quadrangles, randomly produced.
 
 Stellar quads parameterized this way have two ambiguities:  Stars
 $\AAA$ and $\BBB$ can be swapped; this effectively rotates the $u,v$
@@ -280,19 +277,26 @@ the sky (this assumption is also not valid for any real catalog), and
 if quadrangles are considered only when the angle $\thetaAB$ between
 stars $\AAA$ and $\BBB$ is between $\thetamin$ and $\thetamax$, then
 the expectation value $\ENABCD$ of the total number $\NABCD$ of valid
-stellar quadrangles in a large sky region is
+stellar quadrangles in a large sky region can be computed exactly.  It
+is
 \begin{equation}
-%%% this equation is correct for square box cuts on quads, not circles
-\ENABCD = \frac{\pi}{48}\,\Gamma^4\,\Omega_\mathrm{total}\,
+\ENABCD = \frac{\pi^3}{192}\,\Gamma^4\,\Omega_\mathrm{total}\,
   [\thetamax^6-\thetamin^6] \quad ,
 \end{equation}
 where $\Omega_\mathrm{total}$ is the solid angle of the sky covered by
-the catalog, $4\pi$~ster if the catalog is all-sky.  Because the
-expectation $\ENABCD$ scales so strongly with the stellar density
-$\Gamma$, the true number of allowed quads in any real stellar catalog
-(which has variations in $\Gamma$ over the sky) will in fact be very
-different from this homogeneous prediction, but the scaling with
-$\thetamax$ is robust.
+the catalog, $4\pi$~ster if the catalog is all-sky.  The number
+$\ENABCD$ scales with the number density of stars to the fourth power
+because there are four stars involved in the figure; it scales with
+angle $\thetamax$ to the sixth power because, for each star designated
+$\AAA$, the number of options for $\BBB$, $\CCC$, and $\DDD$ is
+proportional to the cube of the solid angle available to make the
+quad.
+
+Because the expectation $\ENABCD$ scales so strongly with the stellar
+density $\Gamma$, the true number of allowed quads in any real stellar
+catalog (which has variations in $\Gamma$ over the sky) will in fact
+be very different from this homogeneous prediction, but the scaling
+with $\thetamax$ is robust.
 
 \subsection{Index construction}
 
@@ -384,11 +388,11 @@ most of this work was performed.
 \clearpage
 \begin{figure}
 \plotone{quad.ps}
-\caption{Sixteen example quadrangles of stars.  The stars are
-  represented by black boxes labeled $\AAA$, $\BBB$, $\CCC$, and
-  $\DDD$.  The coordinates of stars $\CCC$ and $\DDD$ in the $u,v$
-  coordinate systems defined by stars $\AAA$ and $\BBB$ are shown
-  graphically with grey lines and also given numerically for each
+\caption{Nine example quadrangles of stars.  The stars are represented
+  by black boxes labeled $\AAA$, $\BBB$, $\CCC$, and $\DDD$.  The
+  coordinates of stars $\CCC$ and $\DDD$ in the $u,v$ coordinate
+  systems defined by stars $\AAA$ and $\BBB$ are shown graphically
+  with grey lines and also given numerically for each
   quadrangle.\label{fig:quad}}
 \end{figure}
 
