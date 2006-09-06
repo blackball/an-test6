@@ -9,6 +9,7 @@
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"
+#include "merctree.h"
 #include "bl.h"
 #include "ppm.h"
 #include "pnm.h"
@@ -17,6 +18,11 @@
 
 extern char *optarg;
 extern int optind, opterr, optopt;
+
+static void get_nodes_contained_in(kdtree_t* kd, real* querylow,
+								   real* queryhigh, pl* nodelist) {
+	
+}
 
 int main(int argc, char *argv[]) {
     int argchar;
@@ -31,6 +37,7 @@ int main(int argc, char *argv[]) {
 	int Nside = 9;
 	char* fntemplate = "/h/42/dstn/local/AN/an_hp%03i.fits";
 	char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
+	char* merc_template = "/h/42/dstn/local/maps/merc_hp%03i.fits";
 	char fn[256];
 	an_catalog* cat;
 	int i, N;
@@ -154,68 +161,12 @@ int main(int argc, char *argv[]) {
 		}
 		imgstart = ftello(fin);
 		mapsize = cols * rows * 3;
-		map = mmap(NULL, mapsize, PROT_READ, /*MAP_SHARED*/MAP_PRIVATE, fileno(fin), 0);
+		map = mmap(NULL, mapsize, PROT_READ, MAP_PRIVATE, fileno(fin), 0);
 		if (map == MAP_FAILED) {
 			fprintf(stderr, "Failed to mmap image file.\n");
 			exit(-1);
 		}
 		img = map + imgstart;
-
-		/*
-		  if (xpix1 < xpix0) {
-		  int tmp = xpix0;
-		  xpix0 = xpix1;
-		  xpix1 = tmp;
-		  fprintf(stderr, "Swapping xpix0 and xpix1.\n");
-		  }
-		  if (ypix1 < ypix0) {
-		  int tmp = ypix0;
-		  ypix0 = ypix1;
-		  ypix1 = tmp;
-		  fprintf(stderr, "Swapping ypix0 and ypix1.\n");
-		  }
-		  if (xpix0 < 0) {
-		  fprintf(stderr, "Shifting xpix0 from %i up to 0.\n", xpix0);
-		  xpix0 = 0;
-		  }
-		  if (ypix0 < 0) {
-		  fprintf(stderr, "Shifting ypix0 from %i up to 0.\n", ypix0);
-		  ypix0 = 0;
-		  }
-		  if (xpix0 >= cols) {
-		  fprintf(stderr, "Shifting xpix0 from %i down to %i.\n", xpix0, cols-1);
-		  xpix0 = cols-1;
-		  }
-		  if (ypix0 >= rows) {
-		  fprintf(stderr, "Shifting ypix0 from %i down to %i.\n", ypix0, rows-1);
-		  ypix0 = rows-1;
-		  }
-		  if (xpix1 < 0) {
-		  fprintf(stderr, "Shifting xpix1 from %i up to 0.\n", xpix1);
-		  xpix1 = 0;
-		  }
-		  if (ypix1 < 0) {
-		  fprintf(stderr, "Shifting ypix1 from %i up to 0.\n", ypix1);
-		  ypix1 = 0;
-		  }
-		  if (xpix1 >= cols) {
-		  fprintf(stderr, "Shifting xpix1 from %i down to %i.\n", xpix1, cols-1);
-		  xpix1 = cols-1;
-		  }
-		  if (ypix1 >= rows) {
-		  fprintf(stderr, "Shifting ypix1 from %i down to %i.\n", ypix1, rows-1);
-		  ypix1 = rows-1;
-		  }
-		  if ((xpix1 - xpix0) != w) {
-		  fprintf(stderr, "Changing xpix1 to match image size %i.\n", w);
-		  xpix1 = xpix0 + w;
-		  }
-		  if ((ypix1 - ypix0) != h) {
-		  fprintf(stderr, "Changing ypix1 to match image size %i.\n", h);
-		  ypix1 = ypix0 + h;
-		  }
-		  fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i)\n", xpix0, ypix0, xpix1, ypix1);
-		*/
 
 		if (xpix0 < 0 || ypix0 < 0 || xpix1 > cols || ypix1 > rows) {
 			fprintf(stderr, "Requested pixels (%i,%i) to (%i,%i) aren't within image bounds (0,0),(%i,%i)\n",
@@ -295,6 +246,9 @@ int main(int argc, char *argv[]) {
 		int xstart, xend, ystart, yend;
 		bool* hps;
 		il* hplist;
+		merctree* merc;
+		real querylow[2], queryhigh[2];
+		pl* nodelist;
 
 		HP = 12 * Nside * Nside;
 
@@ -346,9 +300,34 @@ int main(int argc, char *argv[]) {
 
 		free(hps);
 
+
+
+		querylow[0] = px0;
+		querylow[1] = (py0 + M_PI) / (2.0 * M_PI);
+		queryhigh[0] = px1;
+		queryhigh[1] = (py1 + M_PI) / (2.0 * M_PI);
+
+		nodelist = pl_new(256);
+
 		for (i=0; i<il_size(hplist); i++) {
 			hp = il_get(hplist, i);
+
+			sprintf(fn, merc_template, hp);
+			fprintf(stderr, "Opening file %s...\n", fn);
+			merc = merctree_open(fn);
+			if (!merc) {
+				fprintf(stderr, "Failed to open merctree for healpix %i.\n", hp);
+				continue;
+			}
+
+			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist);
+
+			merctree_close(merc);
+
+			pl_remove_all(nodelist);
 		}
+
+		pl_free(nodelist);
 
 		il_free(hplist);
 

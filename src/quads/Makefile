@@ -82,7 +82,7 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	hitlist_healpix.o fitsioutils.o verify.o donuts.o histogram.o \
 	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
-	bt.o solvedfile.o starkd.o codekd.o
+	bt.o solvedfile.o starkd.o codekd.o merctree.o
 
 SOLVER_OBJ := solver.o
 SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
@@ -95,7 +95,8 @@ EXECS := whynot agreeable certifiable quadidx \
 	tabsort plotmatch \
 	plotquads matchtordls homer \
 	unpermute-stars tunematch quadscales \
-	overlapstats usnobtile usnobcount render_mercator
+	overlapstats usnobtile usnobcount render_mercator \
+	make-merctree
 
 MISC_EXECS := solvedserver printsolved plotcat ppmnormrgb \
 	2masstofits usnobtofits tycho2tofits build_an_catalog cut_an

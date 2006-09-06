@@ -278,6 +278,35 @@ void fits_add_endian(qfits_header* header) {
 	// (don't make this a COMMENT because that makes it get separated from the ENDIAN header line.)
 }
 
+qfits_table* fits_get_table_column(char* fn, char* colname, int* pcol) {
+    int i, nextens, start, size;
+
+	nextens = qfits_query_n_ext(fn);
+	for (i=0; i<=nextens; i++) {
+        qfits_table* table;
+        int c;
+		if (qfits_get_datinfo(fn, i, &start, &size) == -1) {
+			fprintf(stderr, "error getting start/size for ext %i.\n", i);
+            return NULL;
+        }
+		if (!qfits_is_table(fn, i))
+            continue;
+        table = qfits_table_open(fn, i);
+		if (!table) {
+			fprintf(stderr, "Couldn't read FITS table from file %s, extension %i.\n",
+					fn, i);
+			continue;
+		}
+		c = fits_find_column(table, colname);
+		if (c != -1) {
+			*pcol = c;
+			return table;
+		}
+		qfits_table_close(table);
+    }
+	return NULL;
+}
+
 int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
     int i, nextens, start, size;
 

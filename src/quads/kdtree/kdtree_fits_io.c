@@ -12,7 +12,7 @@
 #include "ioutils.h"
 #include "fitsioutils.h"
 
-kdtree_t* kdtree_fits_read_file(char* fn) {
+kdtree_t* kdtree_fits_read_file_extras(char* fn, extra_table* extras, int nextras) {
 	FILE* fid;
 	kdtree_t* kdtree = NULL;
 	qfits_header* header;
@@ -24,6 +24,7 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 	void* map;
 	int realsz;
 	bool hasperm;
+	int i;
 
 	if (!is_fits_file(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
@@ -84,6 +85,19 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 		// haha, you have a funny hairstyle.
 		hasperm = TRUE;
 
+	for (i=0; i<nextras; i++) {
+		extra_table* tab = extras + i;
+		if (fits_find_table_column(fn, tab->name, &tab->offset, &tab->size)) {
+			if (tab->required) {
+				fprintf(stderr, "Failed to find table %s in file %s.\n", tab->name, fn);
+				fclose(fid);
+				return NULL;
+			}
+			tab->found = 0;
+		}
+		tab->found = 1;
+	}
+
 	/*
 	  fprintf(stderr, "nodes offset %i, size %i\n", offnodes, sizenodes);
 	  fprintf(stderr, "data  offset %i, size %i\n", offdata, sizedata);
@@ -109,18 +123,10 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 		return NULL;
 	}
 
-	// launch!
 	size = offnodes + sizenodes;
 	size = imax(size, offdata + sizedata);
 	if (hasperm)
 		size = imax(size, offperm + sizeperm);
-
-	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
-	fclose(fid);
-	if (map == MAP_FAILED) {
-		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
-		return NULL;
-	}
 
     kdtree = malloc(sizeof(kdtree_t));
     if (!kdtree) {
@@ -131,19 +137,90 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
     kdtree->ndata  = ndata;
     kdtree->ndim   = ndim;
     kdtree->nnodes = nnodes;
+
+	for (i=0; i<nextras; i++) {
+		extra_table* tab = extras + i;
+		int tablesize;
+		int col;
+		qfits_table* table;
+		int ds;
+
+		if (!tab->found)
+			continue;
+		if (tab->compute_tablesize)
+			tab->compute_tablesize(kdtree, tab);
+
+		table = fits_get_table_column(fn, tab->name, &col);
+		if (tab->nitems) {
+			if (tab->nitems != table->nr) {
+				fprintf(stderr, "Table %s in file %s: expected %i data items, found %i.\n",
+						tab->name, fn, tab->nitems, table->nr);
+				free(kdtree);
+				qfits_table_close(table);
+				return NULL;
+			}
+		} else {
+			tab->nitems = table->nr;
+		}
+		ds = table->col[col].atom_nb * table->col[col].atom_size;
+		if (tab->datasize) {
+			if (tab->datasize != ds) {
+				fprintf(stderr, "Table %s in file %s: expected data size %i, found %i.\n",
+						tab->name, fn, tab->datasize, ds);
+				free(kdtree);
+				qfits_table_close(table);
+				return NULL;
+			}
+		} else {
+			tab->datasize = ds;
+		}
+		qfits_table_close(table);
+
+		tablesize = tab->datasize * tab->nitems;
+		if (fits_blocks_needed(tablesize) != tab->size) {
+			fprintf(stderr, "The size of table %s in file %s doesn't jive with what's expected: %i vs %i.\n",
+					tab->name, fn, fits_blocks_needed(tablesize), tab->size);
+			free(kdtree);
+			return NULL;
+		}
+
+		size = imax(size, tab->offset + tab->size);
+	}
+
+	// launch!
+	map = mmap(0, size, PROT_READ, MAP_SHARED, fileno(fid), 0);
+	fclose(fid);
+	if (map == MAP_FAILED) {
+		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
+		free(kdtree);
+		return NULL;
+	}
+
 	kdtree->mmapped = map;
 	kdtree->mmapped_size = size;
+
+	kdtree->data = (real*)         (map + offdata);
+	kdtree->tree = (kdtree_node_t*)(map + offnodes);
 	if (hasperm)
 		kdtree->perm = (unsigned int*) (map + offperm);
 	else
 		kdtree->perm = NULL;
-	kdtree->data = (real*)         (map + offdata);
-	kdtree->tree = (kdtree_node_t*)(map + offnodes);
+
+	for (i=0; i<nextras; i++) {
+		extra_table* tab = extras + i;
+		if (!tab->found)
+			continue;
+		tab->ptr = (map + tab->offset);
+	}
 
 	return kdtree;
 }
 
-int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
+kdtree_t* kdtree_fits_read_file(char* fn) {
+	return kdtree_fits_read_file_extras(fn, NULL, 0);
+}
+
+int kdtree_fits_write_file_extras(kdtree_t* kdtree, char* fn, qfits_header* hdr, extra_table* extras, int nextras) {
     int nodesize;
     int ncols, nrows;
     int datasize;
@@ -154,6 +231,7 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
     FILE* fid;
     void* dataptr;
     char val[256];
+	int i;
 
     fid = fopen(fn, "wb");
     if (!fid) {
@@ -281,12 +359,43 @@ int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
 		}
 	}
 
+	for (i=0; i<nextras; i++) {
+		extra_table* tab = extras + i;
+		if (!tab->found)
+			continue;
+		datasize = tab->datasize;
+		dataptr  = tab->ptr;
+		ncols = 1;
+		nrows = tab->nitems;
+		tablesize = datasize * nrows * ncols;
+		table = qfits_table_new(fn, QFITS_BINTABLE, tablesize, ncols, nrows);
+		qfits_col_fill(table->col,
+					   datasize, 0, 1, TFITS_BIN_TYPE_A,
+					   tab->name,
+					   "", "", "",
+					   0, 0, 0, 0,
+					   0);
+		tablehdr = qfits_table_ext_header_default(table);
+		qfits_header_dump(tablehdr, fid);
+		qfits_header_destroy(tablehdr);
+		qfits_table_close(table);
+		if ((fwrite(dataptr, 1, tablesize, fid) != tablesize) ||
+			fits_pad_file(fid)) {
+			fprintf(stderr, "Failed to write kdtree table %s: %s\n", tab->name, strerror(errno));
+			return -1;
+		}
+	}
+
     if (fclose(fid)) {
         fprintf(stderr, "Couldn't close file %s after writing kdtree: %s\n",
                 fn, strerror(errno));
         return -1;
     }
     return 0;
+}
+
+int kdtree_fits_write_file(kdtree_t* kdtree, char* fn, qfits_header* hdr) {
+	return kdtree_fits_write_file_extras(kdtree, fn, hdr, NULL, 0);
 }
 
 void kdtree_fits_close(kdtree_t* kd) {
