@@ -1,6 +1,8 @@
 #ifndef KDTREE_MACROS_H
 #define KDTREE_MACROS_H
 
+#include <stddef.h>
+
 /*****************************************************************************/
 /* Utility macros                                                            */
 /*****************************************************************************/
@@ -14,6 +16,10 @@
 #define DIMENSION   (KD_DIM)
 #else
 #define DIMENSION   (kd->ndim)
+#endif
+
+#if defined(KD_NODE_DATA)
+#define NODE_DATA(n)  ((kdtree_node_data_t*)((char*)(n) + offsetof(kdtree_node_t, data)))
 #endif
 
 #define SIZEOF_PT  (sizeof(real)*DIMENSION)
@@ -30,7 +36,7 @@
 
 #define NODE_HIGH_BB(n) ((real*)((char*)(n) \
 								 + sizeof(kdtree_node_t) \
-								 + sizeof(real)*DIMENSION))
+								 + SIZEOF_PT))
 
 								 // warning, this only works if "n" has type kdtree_node_t*.
 #define NODE_LOW_BB(n) ((real*)((n)+1))

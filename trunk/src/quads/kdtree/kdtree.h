@@ -14,8 +14,8 @@
 
 typedef double real;
 struct kdtree_hr {
-	real *low;            /* Lower hyperrectangle boundry */
-	real *high;           /* Upper hyperrectangle boundry */
+	real *low;            /* Lower hyperrectangle boundary */
+	real *high;           /* Upper hyperrectangle boundary */
 };
 typedef struct kdtree_hr kdtree_hr_t;
 
