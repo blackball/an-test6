@@ -206,13 +206,20 @@ FITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 fitsutils: $(FITS_UTILS)
 
-CFITSIO_CFLAGS := -Icfitsio/include
+#CFITSIO_CFLAGS := -Icfitsio/include
+CFITSIO_CFLAGS := -Icfitsio
 #CFITSIO_CFLAGS += -Wall -O2
 CFITSIO_CFLAGS += -Wall -O0 -g
-CFITSIO_LIB := libcfitsio.a
+CFITSIO_LIB := cfitsio/libcfitsio.a
 CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
 
 CFITSIO_OBJS := $(addsuffix .o,$(FITS_UTILS))
+
+$(CFITSIO_LIB): cfitsio/*.c cfitsio/*.h cfitsio/Makefile
+	$(MAKE) -C cfitsio
+
+cfitsio/Makefile: cfitsio/Makefile.in
+	cd cfitsio && ./configure
 
 $(FITS_UTILS) :: %: %.o $(CFITSIO_LIB)
 	$(CC) $(CFITSIO_CFLAGS) $^ -o $@ $(CFITSIO_LFLAGS)
