@@ -18,10 +18,6 @@
 #define DIMENSION   (kd->ndim)
 #endif
 
-#if defined(KD_NODE_DATA)
-#define NODE_DATA(n)  ((kdtree_node_data_t*)((char*)(n) + offsetof(kdtree_node_t, data)))
-#endif
-
 #define SIZEOF_PT  (sizeof(real)*DIMENSION)
 
 #define NODE_SIZE      (sizeof(kdtree_node_t) + (SIZEOF_PT * 2))
