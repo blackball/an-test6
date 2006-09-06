@@ -21,9 +21,13 @@
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s -o <output-filename-template>\n"
+		   "  %s -o <output-filename-template>     [eg, usnob10_%%03i.fits]\n"
 		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
 		   "  <input-file> [<input-file> ...]\n"
+		   "\n"
+		   "The output-filename-template should contain a \"printf\" sequence like \"%%03i\";\n"
+		   "we use \"sprintf(filename, output-filename-template, healpix)\" to determine the filename\n"
+		   "to be used for each healpix.\n\n"
 		   "\n\nNOTE: WE ASSUME THE FILES ARE PROCESSED IN ORDER: 000/b0000.cat, 000/b0001.cat, etc.\n",
 		   progname);
 }
