@@ -5,8 +5,8 @@ if [ $# -eq 0 ]; then
   exit
 fi
 
-#LEN=`ls -s --block-size=1 $1 | gawk '{print $1}'`
-LEN=`ls -l $1 | gawk '{print $5}'`
+#LEN=`ls -s --block-size=1 $1 | awk '{print $1}'`
+LEN=`ls -l $1 | awk '{print $5}'`
 if [ "x$LEN" == "x" ]; then
   exit
 fi

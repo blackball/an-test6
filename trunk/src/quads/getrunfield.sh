@@ -19,6 +19,6 @@ for ((f=$start; f<=$end; f++)); do
 	for ((x=1; x<10000; x++)); do
 		fitsgetext -i $in -o $tmpfits -e 0 -e $x >/dev/null 2>&1   ||  continue;
 		tablist $tmpfits"[#row==1][col RUN;FIELD;RERUN;CAMCOL;FILTER;IFIELD]" | grep -v "\(RUN\|^$\)" | \
-			gawk '{printf("%i %i %i %i %i %i %i %i\n", '$f', '$(($x-1))', $2, $3, $4, $5, $6, $7)}'
+			awk '{printf("%i %i %i %i %i %i %i %i\n", '$f', '$(($x-1))', $2, $3, $4, $5, $6, $7)}'
 	done
 done

@@ -47,7 +47,7 @@ filenum=-1
     # healpixes
     for ((h=0; h<12; h++)); do
       cmd="{print \$$(($h+1))}"
-      i=`echo $HPORDER | gawk "$cmd"`
+      i=`echo $HPORDER | awk "$cmd"`
       index=`printf $INDEX $i`
       indexsrc=`printf $INDEXSRC $i`
 
