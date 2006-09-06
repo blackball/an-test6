@@ -26,7 +26,7 @@
                                  + NODE_SIZE*(x) \
                                  + sizeof(kdtree_node_t) \
                                  + SIZEOF_PT \
-                                 + sizeof(real)*(d)
+                                 + sizeof(real)*(d)))
 
 #define COORD(n,d)     ((real*)(kd->data + DIMENSION*(n) + (d)))
 
