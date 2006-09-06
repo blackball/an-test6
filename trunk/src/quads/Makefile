@@ -149,6 +149,7 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 
+.PHONY: all
 all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat ppmnormrgb \
 	2masstofits usnobtofits tycho2tofits build_an_catalog cut_an
 
@@ -286,13 +287,42 @@ CFLAGS += $(CUTEST_I)
 ifeq ($(origin USNOB), undefined)
   USNOB := "usnob-fits/usnob*.fits"
 endif
+
 ifeq ($(origin TYCHO2), undefined)
   TYCHO2 := "tycho2-fits/catalog.fits tycho2-fits/suppl1.fits"
 endif
+
+AN_NSIDE  := 9
+AN_FILE   := an/an_hp%03i.fits
+AN_DIR    := an
+AN_FORMAT := %03i
+
 an_catalog: build_an_catalog
 	echo "Set the USNOB environment variable to select the location of the USNO-B1 FITS files."
 	echo "Set the TYCHO2 environment variable to select the location of the Tycho-2 FITS files."
-	build_an_catalog -o an_hp%04i.fits -N 9 $(USNOB) $(TYCHO2)
+	mkdir -p $(AN_DIR)
+	build_an_catalog -o $(AN_FILE) -N $(AN_NSIDE) $(USNOB) $(TYCHO2)
+
+CUT_AN_NSIDE  := 1000
+CUT_AN_SWEEPS := 12
+CUT_AN_DEDUP  := 8
+CUT_AN_CUT    := -R
+CUT_FILE      := cut/an-sdss-%02i
+CUT_DIR       := cut
+
+define CUT_template
+.PHONY: cut$(1)
+cut$(1):
+	mkdir -p $(CUT_DIR)
+	cut_an -H $(1) -o $(CUT_FILE).objs.fits -i $(CUT_FILE).id.fits \
+		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
+		`hpowned -f $(AN_FILE) -m -N $(AN_NSIDE) $(1)`
+endef
+
+NUMS := 0 1 2 3 4 5 6 7 8 9 10 11
+$(foreach num,$(NUMS),$(eval $(call CUT_template,$(num))))
+
+
 
 
 # Dependencies:           
