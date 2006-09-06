@@ -293,8 +293,9 @@ ifeq ($(origin TYCHO2), undefined)
 endif
 
 AN_NSIDE  := 9
-AN_FILE   := an/an_hp%03i.fits
-AN_DIR    := an
+# (note, a trailing '/' is required!)
+AN_DIR    := an/
+AN_FILE   := $(AN_DIR)an_hp%03i.fits
 AN_FORMAT := %03i
 
 an_catalog: build_an_catalog
@@ -307,8 +308,9 @@ CUT_AN_NSIDE  := 1000
 CUT_AN_SWEEPS := 12
 CUT_AN_DEDUP  := 8
 CUT_AN_CUT    := -R
-CUT_FILE      := cut/an-sdss-%02i
-CUT_DIR       := cut
+# (note, a trailing '/' is required!)
+CUT_DIR       := cut/
+CUT_FILE      := $(CUT_DIR)an-sdss-%02i
 
 define CUT_template
 .PHONY: cut$(1)
