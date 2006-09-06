@@ -97,6 +97,9 @@ EXECS := whynot agreeable certifiable quadidx \
 	unpermute-stars tunematch quadscales \
 	overlapstats usnobtile usnobcount render_mercator
 
+MISC_EXECS := solvedserver printsolved plotcat ppmnormrgb \
+	2masstofits usnobtofits tycho2tofits build_an_catalog cut_an
+
 # things we don't use often:
 #	randcat genfields
 #   quadsperstar
@@ -150,8 +153,7 @@ CFLAGS += -Ikdtree
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 
 .PHONY: all
-all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat ppmnormrgb \
-	2masstofits usnobtofits tycho2tofits build_an_catalog cut_an
+all: $(EXECS) $(SOLVER_EXECS) $(MISC_EXECS)
 
 ppmnormrgb: ppmnormrgb.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
@@ -337,10 +339,10 @@ deps: $(DEPS)
 	$(CC) -MM $(CFLAGS) -c $< > $@
 
 allclean:
-	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) *~ $(DEPS) deps $(QFITS_OBJ) $(OBJ) $(QFITS_LIB)
+	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) $(OBJ) *~ $(DEPS) deps $(QFITS_OBJ) $(QFITS_LIB)
 
 clean:
-	rm -f $(EXECS) $(SOLVER_EXECS) $(EXTRA_EXECS) $(MY_OBJ) $(OBJ) $(QFITS_LIB) $(DEPS) deps
+	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) $(MY_OBJ) $(OBJ) $(QFITS_LIB) $(DEPS) deps
 
 $(CUTEST_L) :: %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
