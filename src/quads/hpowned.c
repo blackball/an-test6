@@ -9,11 +9,14 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hN:m"
+#define OPTIONS "hN:mf:"
 
 void print_help(char* progname) {
     printf("usage:\n"
-		   "  %s [-N <nside>] [-m (to include a margin of one small healpixel)] <hp> [<hp> ...]\n",
+		   "  %s [-N <nside>]\n"
+		   "     [-m (to include a margin of one small healpixel)]\n"
+		   "     [-f <format>]: printf format for the output (default %03i)\n"
+		   "     <hp> [<hp> ...]\n",
 		   progname);
 }
 
@@ -29,6 +32,7 @@ int main(int argc, char** args) {
 	int* owned;
 	int i;
 	double hparea;
+	char* format = "%03i";
 
     if (argc == 1) {
 		print_help(args[0]);
@@ -41,6 +45,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'f':
+			format = optarg;
+			break;
 		case 'N':
 			Nside = atoi(optarg);
 			break;
@@ -80,8 +87,10 @@ int main(int argc, char** args) {
 		}
 		//printf("HP %i owns:\n", bighp);
 		for (i=0; i<HP; i++) {
-			if (owned[i])
-				printf("%03i ", i);
+			if (owned[i]) {
+				printf(format, i);
+				printf(" ");
+			}
 		}
 		printf("\n");
 	}
