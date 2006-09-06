@@ -52,7 +52,7 @@ CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 
 MACHINE:=$(shell uname -m)
 ifeq ($(MACHINE), i686)
-	GCCVER:=$(shell gcc --version | head -1 | gawk '{print $$3}' | gawk 'BEGIN{FS="."} {print $$1 "." $$2}')
+	GCCVER:=$(shell gcc --version | head -1 | awk '{print $$3}' | awk 'BEGIN{FS="."} {print $$1 "." $$2}')
 	ifeq ($(GCCVER), 3.2)
 		CFLAGS += -mcpu=pentium4 
 	endif
@@ -149,7 +149,8 @@ CFLAGS += -Ikdtree
 
 ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
 
-all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat ppmnormrgb
+all: $(EXECS) $(SOLVER_EXECS) solvedserver printsolved plotcat ppmnormrgb \
+	2masstofits usnobtofits tycho2tofits build_an_catalog cut_an
 
 ppmnormrgb: ppmnormrgb.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
@@ -177,7 +178,7 @@ badfields.o: badfields.c badfields.inc
 	$(CC) $(CFLAGS) -c $< -o $@
 
 badfields.inc: opBadfields.par badfields.awk
-	gawk -f badfields.awk $< > $@
+	awk -f badfields.awk $< > $@
 
 wcscheck: wcscheck.o starutil.o mathutil.o libqfits.a
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(WCSLIB_LIB)
@@ -255,7 +256,7 @@ tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o fitsioutils.o ioutils.o heal
 usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-ancatalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+build_an_catalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 cut_an: cut_an.o an_catalog.o catalog.o idfile.o fitsioutils.o \

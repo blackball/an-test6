@@ -12,7 +12,7 @@
 #include "ppm.h"
 #include "pnm.h"
 
-#define OPTIONS "x:y:X:Y:w:h:"
+#define OPTIONS "x:y:X:Y:w:h:l:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -36,11 +36,21 @@ int main(int argc, char *argv[]) {
 	int valid;
 	uchar* image;
 	double scale;
+	double lines = 0.0;
+
+	double px0, py0, px1, py1;
+	double xperpix, yperpix;
+	double xzoom, yzoom;
+	int zoomlevel;
+	int xpix0, xpix1, ypix0, ypix1;
 
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'l':
+			lines = atof(optarg);
+			break;
 		case 'x':
 			x0 = atof(optarg);
 			gotx = TRUE;
@@ -77,12 +87,44 @@ int main(int argc, char *argv[]) {
 	y0 = deg2rad(y0);
 	y1 = deg2rad(y1);
 
-	{
-		// projected
-		double px0, py0, px1, py1;
-		double xperpix, yperpix;
-		double xzoom, yzoom;
-		int zoomlevel;
+	// Merator projected position
+	px0 = x0 / (2.0 * M_PI);
+	px1 = x1 / (2.0 * M_PI);
+	py0 = asinh(tan(y0));
+	py1 = asinh(tan(y1));
+	xperpix = fabs(px1 - px0) / (double)w;
+	yperpix = fabs(py1 - py0) / (double)h;
+	fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
+	fprintf(stderr, "Projected Y range: [%g, %g]\n", py0, py1);
+	fprintf(stderr, "X,Y pixel scale: %g, %g.\n", xperpix, yperpix);
+	xzoom = 1.0 / (xperpix * 256.0);
+	yzoom = 1.0 / (yperpix * 256.0 / (2.0 * M_PI));
+	fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
+	if ((fabs(xzoom - rint(xzoom)) > 0.05) ||
+		(fabs(xzoom - yzoom) > 0.05)) {
+		fprintf(stderr, "Invalid zoom level.\n");
+		exit(-1);
+	}
+	zoomlevel = (int)rint(log(xzoom) / log(2.0));
+	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
+
+	if (px0 < 0.0) {
+		px0 += 1.0;
+		px1 += 1.0;
+		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
+	}
+
+	xpix0 = px0 / xperpix;
+	ypix0 = (-py1 + M_PI) / yperpix;
+	xpix1 = px1 / xperpix;
+	ypix1 = (-py0 + M_PI) / yperpix;
+
+	fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
+
+	xpix1 = xpix0 + w;
+	ypix1 = ypix0 + h;
+
+	if (zoomlevel <= 5) {
 		char fn[256];
 		FILE* fin;
 		int rows, cols, format;
@@ -91,28 +133,9 @@ int main(int argc, char *argv[]) {
 		unsigned char* map;
 		size_t mapsize;
 		unsigned char* img;
-		int xpix0, xpix1, ypix0, ypix1;
 		int y;
+		unsigned char* outimg;
 
-		px0 = x0 / (2.0 * M_PI);
-		px1 = x1 / (2.0 * M_PI);
-		py0 = asinh(tan(y0));
-		py1 = asinh(tan(y1));
-		xperpix = fabs(px1 - px0) / (double)w;
-		yperpix = fabs(py1 - py0) / (double)h;
-		fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
-		fprintf(stderr, "Projected Y range: [%g, %g]\n", py0, py1);
-		fprintf(stderr, "X,Y pixel scale: %g, %g.\n", xperpix, yperpix);
-		xzoom = 1.0 / (xperpix * 256.0);
-		yzoom = 1.0 / (yperpix * 256.0 / (2.0 * M_PI));
-		fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
-		if ((fabs(xzoom - rint(xzoom)) > 0.05) ||
-			(fabs(xzoom - yzoom) > 0.05)) {
-			fprintf(stderr, "Invalid zoom level.\n");
-			exit(-1);
-		}
-		zoomlevel = (int)rint(log(xzoom) / log(2.0));
-		fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 		sprintf(fn, map_template, zoomlevel);
 		fprintf(stderr, "Loading image from file %s.\n", fn);
 		fin = pm_openr_seekable(fn);
@@ -127,28 +150,12 @@ int main(int argc, char *argv[]) {
 		}
 		imgstart = ftello(fin);
 		mapsize = cols * rows * 3;
-		map = mmap(NULL, mapsize, PROT_READ, MAP_SHARED, fileno(fin), 0);
+		map = mmap(NULL, mapsize, PROT_READ, /*MAP_SHARED*/MAP_PRIVATE, fileno(fin), 0);
 		if (map == MAP_FAILED) {
 			fprintf(stderr, "Failed to mmap image file.\n");
 			exit(-1);
 		}
 		img = map + imgstart;
-
-		if (px0 < 0.0) {
-			px0 += 1.0;
-			px1 += 1.0;
-			fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
-		}
-
-		xpix0 = px0 / xperpix;
-		ypix0 = (py0 + M_PI) / yperpix;
-		xpix1 = px1 / xperpix;
-		ypix1 = (py1 + M_PI) / yperpix;
-
-		fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
-
-		xpix1 = xpix0 + w;
-		ypix1 = ypix0 + h;
 
 		/*
 		  if (xpix1 < xpix0) {
@@ -212,14 +219,97 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		// output PPM.
-		printf("P6 %d %d %d\n", w, h, 255);
+		/*
+		  for (y=ypix0; y<ypix1; y++) {
+		  unsigned char* start = img + 3*((y * cols) + xpix0);
+		  fwrite(start, 1, w*3, stdout);
+		  }
+		*/
+		outimg = malloc(3 * w * h);
 		for (y=ypix0; y<ypix1; y++) {
 			unsigned char* start = img + 3*((y * cols) + xpix0);
-			fwrite(start, 1, w*3, stdout);
+			memcpy(outimg + 3*w*(y-ypix0), start, 3*w);
 		}
 
 		munmap(map, mapsize);
+
+		if (lines != 0.0) {
+			double rstart, rend, dstart, dend;
+			double r, d;
+			unsigned char linecolor[] = { 255, 0, 0 };
+			double linealpha = 0.25;
+			int c;
+			int x;
+
+			rstart = floor(rad2deg(x0) / lines) * lines;
+			rend   =  ceil(rad2deg(x1) / lines) * lines;
+			dstart = floor(rad2deg(y0) / lines) * lines;
+			dend   =  ceil(rad2deg(y1) / lines) * lines;
+			for (r=rstart; r<=rend; r+=lines) {
+				int px;
+				px = (int)rint((deg2rad(r) / 2.0 * M_PI) / xperpix);
+				fprintf(stderr, "RA %g: pix %i.\n", r, px);
+				if (px < 0 || px >= w)
+					continue;
+				for (y=0; y<h; y++) {
+					for (c=0; c<3; c++) {
+						int ind = 3*((y*w) + px) + c;
+						outimg[ind] = (unsigned char)(outimg[ind] * (1.0 - linealpha) + linecolor[c] * linealpha);
+					}
+				}
+			}
+			for (d=dstart; d<=dend; d+=lines) {
+				int py;
+				py = (int)rint((M_PI - asinh(tan(deg2rad(d)))) / yperpix);
+				fprintf(stderr, "DEC %g: pix %i.\n", d, py);
+				if (py < 0 || py >= h)
+					continue;
+				for (x=0; x<w; x++) {
+					for (c=0; c<3; c++) {
+						int ind = 3*((py*w) + x) + c;
+						outimg[ind] = (unsigned char)(outimg[ind] * (1.0 - linealpha) + linecolor[c] * linealpha);
+					}
+				}
+			}
+		}
+
+		// output PPM.
+		printf("P6 %d %d %d\n", w, h, 255);
+		fwrite(outimg, 1, w*h*3, stdout);
+
+		free(outimg);
+
+		return 0;
+	} else {
+		//bool ra_wrap;
+		int Nside = 9;
+		int* hpimg;
+		int hpimgsize = 256;
+		int x, y;
+
+		hpimg = malloc(hpimgsize * hpimgsize * sizeof(int));
+		for (y=0; y<hpimgsize; y++) {
+			double xval, yval;
+			double ra, dec;
+			yval = (((double)y / (double)hpimgsize) * 2.0 * M_PI) - M_PI;
+			dec = atan(sinh(yval));
+			for (x=0; x<hpimgsize; x++) {
+				xval = ((double)x / (double)hpimgsize);
+				ra = xval * 2.0 * M_PI;
+				hp = radectohealpix_nside(ra, dec, Nside);
+				hpimg[y*hpimgsize + x] = hp;
+			}
+		}
+
+		/*
+		  ra_wrap = (x1 < x0);
+		  if (ra_wrap) {
+		  fprintf(stderr, "This tile wraps around in RA.\n");
+		  } else {
+		  }
+		*/
+
+		free(hpimg);
 
 		return 0;
 	}
