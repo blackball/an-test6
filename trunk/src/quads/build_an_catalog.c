@@ -19,7 +19,7 @@
 void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s -o <output-filename-template>\n"
-		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
+		   "  [-N <healpix-nside>]  (default = 8)\n"
 		   "  <input-file> [<input-file> ...]\n",
 		   progname);
 }
@@ -130,6 +130,7 @@ int main(int argc, char** args) {
 		int hp;
 
 		infn = args[optind];
+		printf("Opening catalog file %s...\n", infn);
 		hdr = qfits_header_read(infn);
 		if (!hdr) {
 			fprintf(stderr, "Couldn't read FITS header in file %s.\n", infn);

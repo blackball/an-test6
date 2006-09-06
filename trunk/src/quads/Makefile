@@ -274,6 +274,20 @@ CFLAGS += $(CUTEST_I)
 %.o:	%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+
+
+ifeq ($(origin USNOB), undefined)
+  USNOB := "usnob-fits/usnob*.fits"
+endif
+ifeq ($(origin TYCHO2), undefined)
+  TYCHO2 := "tycho2-fits/catalog.fits tycho2-fits/suppl1.fits"
+endif
+an_catalog: build_an_catalog
+	echo "Set the USNOB environment variable to select the location of the USNO-B1 FITS files."
+	echo "Set the TYCHO2 environment variable to select the location of the Tycho-2 FITS files."
+	build_an_catalog -o an_hp%04i.fits -N 9 $(USNOB) $(TYCHO2)
+
+
 # Dependencies:           
 DEPS := $(subst .o,.dep,$(ALL_OBJ))
 
