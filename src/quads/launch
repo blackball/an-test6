@@ -29,13 +29,13 @@ fi
 PID1=$(ps h -C launch -o "pid cmd")
 PID2=$(echo "$PID1" | grep -v $$)
 if [ "x$PID2" != "x" ]; then
-  PIDS=$(echo "$PID2" | gawk '{print $1}')
+  PIDS=$(echo "$PID2" | awk '{print $1}')
   echo "Another instance of \"launch\" is running on this machine: pid(s) $PIDS.  Exiting.";
   exit
 fi
 
-index=`gawk '/index\>/{print $2}' $input`
-index_src=`gawk '/index_src\>/{print $2}' $input`
+index=`awk '/index\>/{print $2}' $input`
+index_src=`awk '/index_src\>/{print $2}' $input`
 index_dir=`dirname $index`
 echo index is $index
 echo index_src is $index_src

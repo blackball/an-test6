@@ -14,22 +14,22 @@ for ((j=0; j<12; j++)); do
 
   cmd="modhead $ind.quad.fits NQUADS"
   #echo "$cmd"
-  nquads[$j]=$($cmd | gawk '{print $3}')
+  nquads[$j]=$($cmd | awk '{print $3}')
   #echo "==> ${nquads[j]} quads"
 
   cmd="modhead $ind.quad.fits NSTARS"
   #echo "$cmd"
-  nstars[$j]=$($cmd | gawk '{print $3}')
+  nstars[$j]=$($cmd | awk '{print $3}')
   #echo "==> ${nstars[j]} stars"
 
   sumstars=$(($sumstars + ${nstars[j]}))
   sumquads=$(($sumquads + ${nquads[j]}))
 done
 
-INDEX_ID=$(modhead "${ind}.quad.fits" INDEXID | gawk '{print $3}')
+INDEX_ID=$(modhead "${ind}.quad.fits" INDEXID | awk '{print $3}')
 INDEX_NAME=$INDEX
-SCALE_U=$(modhead "${ind}.quad.fits" SCALE_U | gawk '{print $3}')
-SCALE_L=$(modhead "${ind}.quad.fits" SCALE_L | gawk '{print $3}')
+SCALE_U=$(modhead "${ind}.quad.fits" SCALE_U | awk '{print $3}')
+SCALE_L=$(modhead "${ind}.quad.fits" SCALE_L | awk '{print $3}')
 
 # convert from radians to arcmin...
 SCALE_U_ARCMIN=$(echo "$SCALE_U * 180 / (a(1)*4) * 60" | bc -l)

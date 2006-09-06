@@ -27,10 +27,10 @@ BBOX=`grep %%BoundingBox $IN`
 
 echo bbox $BBOX
 
-XL=`echo $BBOX | grep "%%BoundingBox" | gawk '{print $2}'`
-YL=`echo $BBOX | grep "%%BoundingBox" | gawk '{print $3}'`
-XU=`echo $BBOX | grep "%%BoundingBox" | gawk '{print $4}'`
-YU=`echo $BBOX | grep "%%BoundingBox" | gawk '{print $5}'`
+XL=`echo $BBOX | grep "%%BoundingBox" | awk '{print $2}'`
+YL=`echo $BBOX | grep "%%BoundingBox" | awk '{print $3}'`
+XU=`echo $BBOX | grep "%%BoundingBox" | awk '{print $4}'`
+YU=`echo $BBOX | grep "%%BoundingBox" | awk '{print $5}'`
 
 echo X $XL -- $XU
 echo Y $YL -- $YU

@@ -15,7 +15,7 @@ void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s [-N <nside>]\n"
 		   "     [-m (to include a margin of one small healpixel)]\n"
-		   "     [-f <format>]: printf format for the output (default %03i)\n"
+		   "     [-f <format>]: printf format for the output (default %%03i)\n"
 		   "     <hp> [<hp> ...]\n",
 		   progname);
 }
