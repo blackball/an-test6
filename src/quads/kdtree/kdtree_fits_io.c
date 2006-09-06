@@ -79,16 +79,17 @@ kdtree_t* kdtree_fits_read_file(char* fn) {
 		return NULL;
 	}
 	if (fits_find_table_column(fn, "kdtree_perm",  &offperm , &sizeperm )) {
-				//fpri, or permutation table.\n");
 		hasperm = FALSE;
     } else
 		// haha, you have a funny hairstyle.
 		hasperm = TRUE;
+
 	/*
 	  fprintf(stderr, "nodes offset %i, size %i\n", offnodes, sizenodes);
 	  fprintf(stderr, "data  offset %i, size %i\n", offdata, sizedata);
 	  fprintf(stderr, "perm  offset %i, size %i\n", offperm, sizeperm);
 	*/
+
     nodesize = sizeof(kdtree_node_t) + sizeof(real) * ndim * 2;
 
 	if ((fits_blocks_needed(nodesize * nnodes) != sizenodes) ||
