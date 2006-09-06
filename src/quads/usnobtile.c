@@ -9,6 +9,7 @@
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"
+#include "bl.h"
 #include "ppm.h"
 #include "pnm.h"
 
@@ -82,12 +83,15 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
+	fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
+
 	x0 = deg2rad(x0);
 	x1 = deg2rad(x1);
 	y0 = deg2rad(y0);
 	y1 = deg2rad(y1);
 
-	// Merator projected position
+	// Mercator projected position
 	px0 = x0 / (2.0 * M_PI);
 	px1 = x1 / (2.0 * M_PI);
 	py0 = asinh(tan(y0));
@@ -240,15 +244,16 @@ int main(int argc, char *argv[]) {
 			double linealpha = 0.25;
 			int c;
 			int x;
+			double x0wrap = (x0 < 0.0 ? 2.0*M_PI : 0.0);
 
-			rstart = floor(rad2deg(x0) / lines) * lines;
-			rend   =  ceil(rad2deg(x1) / lines) * lines;
+			rstart = floor(rad2deg(x0 + x0wrap) / lines) * lines;
+			rend   =  ceil(rad2deg(x1 + x0wrap) / lines) * lines;
 			dstart = floor(rad2deg(y0) / lines) * lines;
 			dend   =  ceil(rad2deg(y1) / lines) * lines;
 			for (r=rstart; r<=rend; r+=lines) {
 				int px;
-				px = (int)rint((deg2rad(r) / 2.0 * M_PI) / xperpix);
-				fprintf(stderr, "RA %g: pix %i.\n", r, px);
+				px = (int)rint(((deg2rad(r) - (x0 + x0wrap)) / (2.0*M_PI)) / xperpix);
+				//fprintf(stderr, "RA %g: pix %i.\n", r, px);
 				if (px < 0 || px >= w)
 					continue;
 				for (y=0; y<h; y++) {
@@ -260,8 +265,8 @@ int main(int argc, char *argv[]) {
 			}
 			for (d=dstart; d<=dend; d+=lines) {
 				int py;
-				py = (int)rint((M_PI - asinh(tan(deg2rad(d)))) / yperpix);
-				fprintf(stderr, "DEC %g: pix %i.\n", d, py);
+				py = (int)rint((M_PI - asinh(tan(deg2rad(d)))) / yperpix) - ypix0;
+				//fprintf(stderr, "DEC %g: pix %i.\n", d, py);
 				if (py < 0 || py >= h)
 					continue;
 				for (x=0; x<w; x++) {
@@ -283,9 +288,15 @@ int main(int argc, char *argv[]) {
 	} else {
 		//bool ra_wrap;
 		int Nside = 9;
+		int HP;
 		int* hpimg;
 		int hpimgsize = 256;
-		int x, y;
+		int x, y, hp;
+		int xstart, xend, ystart, yend;
+		bool* hps;
+		il* hplist;
+
+		HP = 12 * Nside * Nside;
 
 		hpimg = malloc(hpimgsize * hpimgsize * sizeof(int));
 		for (y=0; y<hpimgsize; y++) {
@@ -301,15 +312,45 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		/*
-		  ra_wrap = (x1 < x0);
-		  if (ra_wrap) {
-		  fprintf(stderr, "This tile wraps around in RA.\n");
-		  } else {
-		  }
-		*/
+		xstart = (int)floor(px0 * hpimgsize);
+		xend   = (int)ceil (px1 * hpimgsize);
+		ystart = (int)floor((py0 + M_PI) / (2.0*M_PI) * hpimgsize);
+		yend   = (int)ceil ((py1 + M_PI) / (2.0*M_PI) * hpimgsize);
+
+		//fprintf(stderr, "x [%i, %i], y [%i, %i]\n", xstart, xend, ystart, yend);
+
+		hps = calloc(HP, sizeof(bool));
+
+		for (y=ystart; y<=yend; y++) {
+			if (y < 0 || y >= hpimgsize)
+				continue;
+			for (x=xstart; x<=xend; x++) {
+				if (x < 0 || x >= hpimgsize)
+					continue;
+				hps[hpimg[y*hpimgsize + x]] = TRUE;
+			}
+		}
 
 		free(hpimg);
+
+		hplist = il_new(32);
+
+		fprintf(stderr, "Healpixes: ");
+		for (i=0; i<HP; i++) {
+			if (hps[i]) {
+				il_append(hplist, i);
+				fprintf(stderr, "%i ", i);
+			}
+		}
+		fprintf(stderr, "\n");
+
+		free(hps);
+
+		for (i=0; i<il_size(hplist); i++) {
+			hp = il_get(hplist, i);
+		}
+
+		il_free(hplist);
 
 		return 0;
 	}
