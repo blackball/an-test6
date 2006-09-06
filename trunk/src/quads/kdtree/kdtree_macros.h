@@ -34,8 +34,7 @@
 								 + sizeof(kdtree_node_t) \
 								 + SIZEOF_PT))
 
-								 // warning, this only works if "n" has type kdtree_node_t*.
-#define NODE_LOW_BB(n) ((real*)((n)+1))
+#define NODE_LOW_BB(n) ((real*)(((kdtree_node_t*)(n))+1))
 
 #define NODE(x)        ((kdtree_node_t*) (((char*)kd->tree) + NODE_SIZE*(x)))
 
@@ -47,5 +46,9 @@
 #define CHILD_NEG(x)   NODE(2*(x) + 1)
 #define CHILD_POS(x)   NODE(2*(x) + 2)
 #define ISLEAF(x)      ((2*(x)+1) >= kd->nnodes)
+
+#define PARENT_INDEX(i)     (((i)-1)/2)
+#define CHILD_INDEX_NEG(i)  (2*(i)+1)
+#define CHILD_INDEX_POS(i)  (2*(i)+2)
 
 #endif
