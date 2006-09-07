@@ -30,6 +30,8 @@
 
 #define COORD(n,d)     ((real*)(kd->data + DIMENSION*(n) + (d)))
 
+#define KD_POINT(n)     ((real*)(kd->data + DIMENSION*(n)))
+
 #define NODE_HIGH_BB(n) ((real*)((char*)(n) \
 								 + sizeof(kdtree_node_t) \
 								 + SIZEOF_PT))

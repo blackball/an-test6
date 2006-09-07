@@ -8,17 +8,46 @@
  */
 void kdtree_inverse_permutation(kdtree_t* tree, int* invperm);
 
+/**
+   Returns 1 if the point is contained in the bounding box, 0 otherwise.
+ */
 int kdtree_is_point_in_rect(real* bblo, real* bbhi, real* point, int dim);
 
+/**
+   Returns 1 if the bounding boxes overlap, 0 otherwise.
+ */
+int kdtree_do_boxes_overlap(real* bblow1, real* bbhigh1,
+							real* bblow2, real* bbhigh2, int dim);
+
+/**
+   Returns 1 if the first bounding boxes is completely contained within
+   the second; 0 otherwise.
+ */
+int kdtree_is_box_contained(real* bblow_inside,  real* bbhigh_inside,
+							real* bblow_outside, real* bbhigh_outside,
+							int dim);
+
+/**
+   Returns the minimum distance^2 between two bounding boxes (hyperrectangles).
+*/
 real kdtree_bb_mindist2(real* bblow1, real* bbhigh1,
 						real* bblow2, real* bbhigh2, int dim);
 
+/**
+   Returns the maximum distance^2 between two bounding boxes (hyperrects).
+*/
 real kdtree_bb_maxdist2(real* bblow1, real* bbhigh1,
 						real* bblow2, real* bbhigh2, int dim);
 
+/**
+   Returns the minimum distance^2 from a point to a bounding box.
+ */
 real kdtree_bb_point_mindist2(real* bblow, real* bbhigh,
 							  real* point, int dim);
 
+/**
+   Returns the maximum distance^2 from a point to a bounding box.
+ */
 real kdtree_bb_point_maxdist2(real* bblow, real* bbhigh,
 							  real* point, int dim);
 

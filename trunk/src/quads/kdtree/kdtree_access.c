@@ -57,6 +57,25 @@ int kdtree_is_point_in_rect(real* bblo, real* bbhi, real* point, int dim) {
 	return 1;
 }
 
+int kdtree_do_boxes_overlap(real* alo, real* ahi,
+							real* blo, real* bhi, int dim) {
+	int i;
+	for (i=0; i<dim; i++)
+		if (( ahi[i] < blo[i] ) || ( bhi[i] < alo[i] ))
+			return 0;
+	return 1;
+}
+
+int kdtree_is_box_contained(real* inlo,  real* inhi,
+							real* outlo, real* outhi,
+							int dim) {
+	int i;
+	for (i=0; i<dim; i++)
+		if ((inlo[i] < outlo[i]) || (inhi[i] > outhi[i]))
+			return 0;
+	return 1;
+}
+
 real kdtree_bb_mindist2(real* bblow1, real* bbhigh1, real* bblow2, real* bbhigh2, int dim)
 {
 	real d2 = 0.0;
