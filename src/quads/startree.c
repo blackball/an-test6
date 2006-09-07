@@ -1,6 +1,5 @@
 /**
-   \file  A replacement for \c startree using Keir's new
-   kdtree.
+   Builds a star kdtree from a list of stars.
 
    Input: .objs
    Output: .skdt
@@ -24,7 +23,7 @@
 
 void printHelp(char* progname) {
 	printf("%s -f <input-catalog-name>\n"
-		   "    [-R Nleaf]: number of points in a kdtree leaf node\n"
+		   "    [-R Nleaf]: number of points in a kdtree leaf node (default 25)\n"
 		   "    [-k keep]:  number of points to keep\n", progname);
 }
 
