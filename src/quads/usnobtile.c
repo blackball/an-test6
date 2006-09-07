@@ -124,11 +124,20 @@ int main(int argc, char *argv[]) {
 	xzoom = 1.0 / (xperpix * 256.0);
 	yzoom = 1.0 / (yperpix * 256.0 / (2.0 * M_PI));
 	fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
-	if ((fabs(xzoom - rint(xzoom)) > 0.05) ||
-		(fabs(xzoom - yzoom) > 0.05)) {
-		fprintf(stderr, "Invalid zoom level.\n");
-		exit(-1);
+	{
+		double fxzoom;
+		double fyzoom;
+		fxzoom = log(xzoom) / log(2.0);
+		fyzoom = log(yzoom) / log(2.0);
+		fprintf(stderr, "fzoom %g, %g\n", fxzoom, fyzoom);
 	}
+	/*
+	  if ((fabs(xzoom - rint(xzoom)) > 0.05) ||
+	  (fabs(xzoom - yzoom) > 0.05)) {
+	  fprintf(stderr, "Invalid zoom level.\n");
+	  exit(-1);
+	  }
+	*/
 	zoomlevel = (int)rint(log(xzoom) / log(2.0));
 	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 
@@ -384,7 +393,9 @@ int main(int argc, char *argv[]) {
 			if (minx == 0.0) {
 				if ((1.0 - minxnz) < (maxx - minx)) {
 					// RA wrap-around.
-					minx = minxnz;
+					//fprintf(stderr, "HP %i: RA wrap-around: minx=%g, minxnz=%g, maxx=%g.\n", i, minx, minxnz, maxx);
+					// (there are healpixes with finite extent on either side of the RA=0 line.)
+					minx = 0.0;
 					maxx = 1.0;
 				}
 			}
@@ -418,7 +429,7 @@ int main(int argc, char *argv[]) {
 			{
 				real *lo, *hi;
 				int ix1, ix2, iy1, iy2;
-				int ix, iy;
+				//int ix, iy;
 				lo = kdtree_get_bb_low (merc->tree, kdtree_get_root(merc->tree));
 				hi = kdtree_get_bb_high(merc->tree, kdtree_get_root(merc->tree));
 				fprintf(stderr, "Merctree bounding box: x:[%g,%g], y:[%g,%g]\n",
@@ -427,32 +438,31 @@ int main(int argc, char *argv[]) {
 				ix2 = (int)rint((hi[0] - querylow[0]) * xscale);
 				iy2 = h - (int)rint((lo[1] - querylow[1]) * yscale);
 				iy1 = h - (int)rint((hi[1] - querylow[1]) * yscale);
-
 				fprintf(stderr, "In pixels: x:[%i,%i], y:[%i,%i]\n", ix1, ix2, iy1, iy2);
 
-				if (ix1 >= 0 && ix1 < w)
-					for (iy=iy1; iy<=iy2; iy++)
-						if (iy >= 0 && iy < h)
-							fluximg[3*(iy*w+ix1)+0] += exp(-1);
-				if (ix2 >= 0 && ix2 < w)
-					for (iy=iy1; iy<=iy2; iy++)
-						if (iy >= 0 && iy < h)
-							fluximg[3*(iy*w+ix2)+0] += exp(-1);
-				if (iy1 >= 0 && iy1 < h)
-					for (ix=ix1; ix<=ix2; ix++)
-						if (ix >= 0 && ix < w)
-							fluximg[3*(iy1*w+ix)+0] += exp(-1);
-				if (iy2 >= 0 && iy2 < h)
-					for (ix=ix1; ix<=ix2; ix++)
-						if (ix >= 0 && ix < w)
-							fluximg[3*(iy2*w+ix)+0] += exp(-1);
-
-				for (iy=iy1; iy<iy2; iy++)
-					if (iy >= 0 && iy < h)
-						for (ix=ix1; ix<ix2; ix++)
-							if (ix >= 0 && ix < w)
-								fluximg[3*(iy*w+ix)+2] += exp(-1);
-
+				/*
+				  if (ix1 >= 0 && ix1 < w)
+				  for (iy=iy1; iy<=iy2; iy++)
+				  if (iy >= 0 && iy < h)
+				  fluximg[3*(iy*w+ix1)+0] += exp(-1);
+				  if (ix2 >= 0 && ix2 < w)
+				  for (iy=iy1; iy<=iy2; iy++)
+				  if (iy >= 0 && iy < h)
+				  fluximg[3*(iy*w+ix2)+0] += exp(-1);
+				  if (iy1 >= 0 && iy1 < h)
+				  for (ix=ix1; ix<=ix2; ix++)
+				  if (ix >= 0 && ix < w)
+				  fluximg[3*(iy1*w+ix)+0] += exp(-1);
+				  if (iy2 >= 0 && iy2 < h)
+				  for (ix=ix1; ix<=ix2; ix++)
+				  if (ix >= 0 && ix < w)
+				  fluximg[3*(iy2*w+ix)+0] += exp(-1);
+				  for (iy=iy1; iy<iy2; iy++)
+				  if (iy >= 0 && iy < h)
+				  for (ix=ix1; ix<ix2; ix++)
+				  if (ix >= 0 && ix < w)
+				  fluximg[3*(iy*w+ix)+2] += exp(-1);
+				*/
 			}
 
 			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist);
