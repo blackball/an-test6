@@ -11,7 +11,14 @@
 
   <body>
   <center>
-    <div id="map" style="width: 800px; height: 600px"></div>
+  <div id="info" style="width: 500px; height: 0px"></div>
+  </center>
+
+  <center>
+  <div id="map" style="width: 800px; height: 600px"></div>
+  </center>
+
+  <center>
 
 
     <script type="text/javascript">
@@ -26,7 +33,7 @@
 		var WMS_URL = "http://monte.ai.toronto.edu:8080/usnob/tile.php?map=usnob";
 
 	    //var usnobTile= new GTileLayer(new GCopyrightCollection(""),1,17);
-		var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,6);
+		var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
 		//usnobTile.myMercZoomLevel=5;
 		usnobTile.myLayers='usnob';
 		usnobTile.myFormat='image/png';
@@ -59,19 +66,25 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 		var ow = 150;
 		var oh = 150;
 		map.addControl(new GOverviewMapControl(new GSize(ow,oh)));
-		// position overview map.
-		/*
-		var omap=document.getElementById("map_overview");
-		var x = w - ow;
-		var y = h - oh;
-        omap.style.left = x+"px";
-        omap.style.top = y+"px";
-        omap.firstChild.style.border = "1px solid gray";
-        omap.firstChild.firstChild.style.left="4px";
-        omap.firstChild.firstChild.style.top="4px";
-        omap.firstChild.firstChild.style.width=(ow - 10) + "px"; //"140px";
-        omap.firstChild.firstChild.style.height=(oh - 10) + "px"; // "140px";
-		*/
+
+		function getGetData(){
+		    GET_DATA=new Object();
+			var getDataString=new String(window.location);
+			var questionMarkLocation=getDataString.search(/\?/);
+			if (questionMarkLocation!=-1){
+			  getDataString=getDataString.substr(questionMarkLocation+1);
+			  var getDataArray=getDataString.split(/&/g);
+			  for (var i=0;i<getDataArray.length;i++){
+			    var nameValuePair=getDataArray[i].split(/=/);
+				GET_DATA[unescape(nameValuePair[0])]=unescape(nameValuePair[1]);
+			  }
+			}
+			return GET_DATA;
+		}
+
+		function debug(txt) {
+			//document.debugform.debug.value += txt;
+		}
 
 		function addoverlay() {
 			var coarseGrid = new Array(0);
@@ -124,7 +137,14 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 
 	    GEvent.bindDom(window,"resize",map,map.onResize);
 
+		// is the map moving as a result of our request?
+		var movingmap = false;
+
 		function mapmoved() {
+		  debug("mapmoved(): movingmap = " + movingmap + "\n");
+		  if (movingmap) {
+		    return;
+	      }
 		  center = map.getCenter();
 		  // update the center ra,dec textboxes.
 		  ra = center.lng();
@@ -160,10 +180,18 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 */
 
 		function mapzoomed(oldzoom, newzoom) {
+		  // update the "zoom" textbox.
+		  //document.getElementById('zoombox').value = "" + newzoom;
+		  document.dummyform.zoom.value = "" + newzoom;
 		  mapmoved();
 		}
 
 		function moveended() {
+		  debug("moveended().\n");
+		  if (movingmap) {
+		    debug("set movingmap = false.\n");
+		    movingmap = false;
+		  }
 		  mapmoved();
 		  // update the object count textbox.
 		  var bounds = map.getBounds();
@@ -171,36 +199,42 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 		  var zoom = map.getZoom();
 		  var sw = bounds.getSouthWest();
 		  var ne = bounds.getNorthEast();
-		  document.debugform.debug.value = "Center (" +
+		  /*
+		  debug("Center (" +
 		    center.lng() + "," + center.lat() + ")\n" +
 			"Bounds (" +
 		    sw.lng() + "," + sw.lat() + ")-(" + ne.lng() + "," +
 			ne.lat() + ")\n" +
 			"Pixelsize (" + pixelsize.width + "," + pixelsize.height +
 			")\n" +
-			"Zoom " + zoom + "\n";
+			"Zoom " + zoom + "\n");
+			*/
 
 		  var COUNT_URL = "http://monte.ai.toronto.edu:8080/usnob/count.php?map=usnob";
 	      var url = COUNT_URL + "&center_ra=" + center.lng() + "&center_dec=" + center.lat()
 		     + "&zoom=" + zoom + "&width=" + pixelsize.width + "&height=" + pixelsize.height;
 		  GDownloadUrl(url, function(txt) {
-		     document.debugform.debug.value = txt;
 		     document.infoform.nobjs.value = txt;
 		  });
 		}
 
 		function mousemoved(latlong) {
-		  ra = latlong.lng();
+		  var ra = latlong.lng();
 		  if (ra < 0.0) { ra += 360.0; }
 		  document.dummyform.ra_mouse.value  = "" + ra;
 		  document.dummyform.dec_mouse.value = "" + latlong.lat();
 		}
 
 		function moveCenter() {
-		  // "Go!" button
-		  ra = document.dummyform.ra_center.value;
-		  dec = document.dummyform.dec_center.value;
-		  map.panTo(new GLatLng(dec, ra));
+		  // "Go!" button / Enter in textfields
+		  debug("moveCenter() - set movingmap = true.\n");
+		  movingmap = true;
+		  var ra = document.dummyform.ra_center.value;
+		  var dec = document.dummyform.dec_center.value;
+		  var zoom = document.dummyform.zoom.value;
+		  //map.panTo(new GLatLng(dec, ra));
+		  //map.setZoom(zoom);
+		  map.setCenter(new GLatLng(dec, ra), zoom);
 		}
 
 		GEvent.addListener(map, "move", mapmoved);
@@ -210,15 +244,38 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 
 		map.setCenter(new GLatLng(0,0), 0);
 
+		function parseget() {
+		  var get = getGetData();
+		  if (("ra" in get) && ("dec" in get) && ("zoom" in get)) {
+		  		  var ra = Number(get["ra"]);
+				  var dec = Number(get["dec"]);
+				  var zoom = Number(get["zoom"]);
+				  //document.debugform.debug.value = "ra=" + ra + ", dec=" + dec + ", zoom=" + zoom;
+				  map.setZoom(zoom);
+				  map.setCenter(new GLatLng(dec,ra));
+		  }
+		}
 
-		setTimeout("moveended()",1);
-		//setTimeout("addoverlay()",1);
+		function linktohere() {
+			var url=new String(window.location);
+			var qm=url.search(/\?/);
+			if (qm!=-1) {
+			  url = url.substr(0, qm);
+			}
+			center = map.getCenter();
+            url = url + "?ra=" + center.lng() + "&dec=" + center.lat()
+			   + "&zoom=" + map.getZoom();
+			window.location = url;
+		}
+
+		setTimeout("moveended();", 1);
+		setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
+		setTimeout("parseget()", 3);
 
 		/*
-			info_html = "center: RA, DEC (" + 0.0 + ", " + 0.0 + ") degrees";
-			document.getElementById("info").innerHTML = info_html;
-		*/
-
+			info_html = "<b>testing</b>";
+			document.getElementById("info").innerHTML += info_html;
+			*/
 		/*
 		<input type="button" value="Button 1"
 		onclick= "document.getElementById('text1').style.visibility= 'visible';">
@@ -250,11 +307,13 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
     </script>
 
 	<FORM NAME="dummyform" ACTION="" METHOD="GET">
-	Center RA: <INPUT TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()">
-	DEC: <INPUT TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()"> degrees
+	Center RA: <INPUT TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
+	DEC: <INPUT TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10> degrees.
+	Zoom level: <input type="text" name="zoom" id="zoombox" VALUE="" onChange="moveCenter()" size=4>
 	<INPUT TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()")<br>
-	Mouse RA: <INPUT TYPE="text" NAME="ra_mouse" VALUE="" readonly>
-	DEC: <INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly>
+	<input type="button" name="linkhere" value="Link to this view" onClick="linktohere()"><br>
+	Mouse RA: <INPUT TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
+	DEC: <INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
 	</FORM>
 	<br>
 	<FORM name="infoform" action="" method="GET">
@@ -263,10 +322,8 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 	</FORM>
 
 	<FORM name="debugform" ACTION="" METHOD="GET">
-<script type="text/javascript">/*
-	<textarea rows=10 cols=80 NAME="debug" readonly></textarea>
-*/</script>
-    <input type="hidden" name="debug">
+	<!textarea rows=5 cols=60 NAME="debug" readonly><!/textarea>
+    <input type="hidden" name="debug" value="">
 	</FORM>
 
 	<table width="60%">
@@ -287,10 +344,12 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 	<form name="artifacts" ACTION="" METHOD="GET">
 	<select name="artifact">
 	<option selected value="nil" onclick="map.setCenter(new GLatLng(0,0)); map.setZoom(1);">-- View some artifacts --</option>
-	<option value="dupN" onclick="map.setCenter(new GLatLng(41.4,33.6)); map.setZoom(3);">Duplicate "N" tiles</option>
-	<option value="dupRB" onclick="map.setCenter(new GLatLng(15.03,198.90)); map.setZoom(5);">Duplicate red and blue tiles</option>
-	<option value="magel" onclick="map.setCenter(new GLatLng(69.2,80.2)); map.setZoom(4);">Fine tiling in the Magellanic cloud</option>
-	<option value="crazy" onclick="map.setCenter(new GLatLng(61.122, 221.000)); map.setZoom(5);">Craziness around bright objects</option>
+	<option value="dupN" onclick="map.setCenter(new GLatLng(-41.4,33.6)); map.setZoom(3);">Duplicate "N" tiles</option>
+	<option value="dupRB" onclick="map.setCenter(new GLatLng(-15.03,198.90)); map.setZoom(5);">Duplicate red and blue tiles</option>
+	<option value="magel" onclick="map.setCenter(new GLatLng(-69.2,80.2)); map.setZoom(4);">Fine tiling in the Magellanic cloud</option>
+	<option value="crazy" onclick="map.setCenter(new GLatLng(-61.122, 221.000)); map.setZoom(5);">Craziness around bright objects</option>
+	<option value="crazy" onclick="map.setCenter(new GLatLng(-3.472, 356.594)); map.setZoom(11);">Diffraction spikes and coronas</option>
+	
 	</select>
 	</form>
 
@@ -310,6 +369,6 @@ http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=
 	</table>
 
 	</center>
-
+	</div>
 </body>
 </html>
