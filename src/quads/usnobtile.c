@@ -17,7 +17,7 @@
 #include "ppm.h"
 #include "pnm.h"
 
-#define OPTIONS "x:y:X:Y:w:h:l:"
+#define OPTIONS "x:y:X:Y:w:h:l:f"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -65,10 +65,15 @@ int main(int argc, char *argv[]) {
 	int zoomlevel;
 	int xpix0, xpix1, ypix0, ypix1;
 
+	bool forcetree = FALSE;
+
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'f':
+			forcetree = TRUE;
+			break;
 		case 'l':
 			lines = atof(optarg);
 			break;
@@ -157,7 +162,7 @@ int main(int argc, char *argv[]) {
 	xpix1 = xpix0 + w;
 	ypix1 = ypix0 + h;
 
-	if (zoomlevel <= 5) {
+	if (!forcetree && (zoomlevel <= 5)) {
 		char fn[256];
 		FILE* fin;
 		int rows, cols, format;
@@ -490,7 +495,7 @@ int main(int argc, char *argv[]) {
 					pt = KD_POINT(k);
 					ix = (int)rint((pt[0] - querylow[0]) * xscale);
 					iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
-					if (ix < 0 || iy < 0 || ix > w || iy > h) {
+					if (ix < 0 || iy < 0 || ix >= w || iy >= h) {
 						Noob++;
 						continue;
 					}
