@@ -120,21 +120,21 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Couldn't build kdtree.\n");
         exit(-1);
     }
-    fprintf(stderr, "done (%d nodes)\n", starkd->tree->nnodes);
+    fprintf(stderr, "done (%d nodes)\n", startree_N(starkd));
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
 	sprintf(val, "%u", Nleaf);
-	qfits_header_add(starkd->header, "NLEAF", val, "Target number of points in leaves.", NULL);
+	qfits_header_add(startree_header(starkd), "NLEAF", val, "Target number of points in leaves.", NULL);
 	sprintf(val, "%u", levels);
-	qfits_header_add(starkd->header, "LEVELS", val, "Number of kdtree levels.", NULL);
+	qfits_header_add(startree_header(starkd), "LEVELS", val, "Number of kdtree levels.", NULL);
 	sprintf(val, "%u", nkeep);
-	qfits_header_add(starkd->header, "KEEP", val, "Number of stars kept.", NULL);
+	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept.", NULL);
 
-	fits_copy_header(cat->header, starkd->header, "HEALPIX");
-	qfits_header_add(starkd->header, "HISTORY", "startree command line:", NULL, NULL);
-	fits_add_args(starkd->header, argv, argc);
-	qfits_header_add(starkd->header, "HISTORY", "(end of startree command line)", NULL, NULL);
+	fits_copy_header(cat->header, startree_header(starkd), "HEALPIX");
+	qfits_header_add(startree_header(starkd), "HISTORY", "startree command line:", NULL, NULL);
+	fits_add_args(startree_header(starkd), argv, argc);
+	qfits_header_add(startree_header(starkd), "HISTORY", "(end of startree command line)", NULL, NULL);
 
 	if (startree_write_to_file(starkd, treefname)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");

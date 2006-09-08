@@ -6,10 +6,6 @@
 
 struct startree {
 	kdtree_t* tree;
-	/*
-	  uint N; // == tree->ndata
-	  uint D; // == tree->ndim
-	*/
 	qfits_header* header;
 	int* inverse_perm;
 };
@@ -17,6 +13,14 @@ typedef struct startree startree;
 
 
 startree* startree_open(char* fn);
+
+int startree_N(startree* s);
+
+int startree_nodes(startree* s);
+
+int startree_D(startree* s);
+
+qfits_header* startree_header(startree* s);
 
 int startree_get(startree* s, uint starid, double* posn);
 

@@ -114,7 +114,7 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Failed to read star kdtree %s.\n", fn);
 				continue;
 			}
-			Nstars = skdt->tree->ndata;
+			Nstars = startree_N(skdt);
 		}
 
 		printf("Counting stars in quads...\n");

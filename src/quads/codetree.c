@@ -12,11 +12,9 @@
 #include <string.h>
 
 #include "codefile.h"
-#include "kdtree.h"
-#include "kdtree_io.h"
-#include "kdtree_fits_io.h"
 #include "fileutil.h"
 #include "fitsioutils.h"
+#include "codekd.h"
 
 #define OPTIONS "hR:f:o:"
 const char HelpString[] =
@@ -29,7 +27,7 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[]) {
     int argidx, argchar;
 	int Nleaf = 25;
-    kdtree_t *codekd = NULL;
+    codetree *codekd = NULL;
     int levels;
     char* basenamein = NULL;
     char* basenameout = NULL;
@@ -96,15 +94,22 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
     levels = kdtree_compute_levels(codes->numcodes, Nleaf);
     fprintf(stderr, "Requesting %i levels.\n", levels);
-    codekd = kdtree_build(codes->codearray, codes->numcodes, DIM_CODES, levels);
-    if (!codekd)
+	codekd = codetree_new();
+	if (!codekd) {
+		fprintf(stderr, "Failed to allocate a codetree structure.\n");
 		exit(-1);
-    fprintf(stderr, "done (%d nodes)\n", codekd->nnodes);
+	}
+    codekd->tree = kdtree_build(codes->codearray, codes->numcodes, DIM_CODES, levels);
+    if (!codekd) {
+		fprintf(stderr, "Failed to build code kdtree.\n");
+		exit(-1);
+	}
+    fprintf(stderr, "done (%d nodes)\n", codetree_N(codekd));
 
     fprintf(stderr, "  Writing code KD tree to %s...", treefname);
     fflush(stderr);
 
-	hdr = qfits_header_default();
+	hdr = codetree_header(codekd);
 	qfits_header_add(hdr, "AN_FILE", "CKDT", "This file is a code kdtree.", NULL);
 	sprintf(val, "%u", Nleaf);
 	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
@@ -118,8 +123,7 @@ int main(int argc, char *argv[]) {
 	fits_add_args(hdr, argv, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of codetree command line)", NULL, NULL);
 
-	rtn = kdtree_fits_write_file(codekd, treefname, hdr);
-	qfits_header_destroy(hdr);
+	rtn = codetree_write_to_file(codekd, treefname);
     free_fn(treefname);
 	if (rtn) {
         fprintf(stderr, "Couldn't write code kdtree.\n");
@@ -128,7 +132,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "done.\n");
     codefile_close(codes);
-    kdtree_free(codekd);
+    codetree_close(codekd);
 	return 0;
 }
 

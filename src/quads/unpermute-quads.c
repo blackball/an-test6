@@ -16,12 +16,11 @@
 #include <string.h>
 
 #include "kdtree.h"
-#include "kdtree_io.h"
-#include "kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "quadfile.h"
 #include "fitsioutils.h"
+#include "codekd.h"
 #include "qfits.h"
 
 #define OPTIONS "hf:o:"
@@ -38,8 +37,8 @@ int main(int argc, char **args) {
     int argchar;
     quadfile* quadin;
 	quadfile* quadout;
-	kdtree_t* treein;
-	kdtree_t* treeout;
+	codetree* treein;
+	codetree* treeout;
 	char* progname = args[0];
 	char* basein = NULL;
 	char* baseout = NULL;
@@ -74,17 +73,13 @@ int main(int argc, char **args) {
 
 	fn = mk_ctreefn(basein);
 	printf("Reading code tree from %s ...\n", fn);
-	treein = kdtree_fits_read_file(fn);
+	treein = codetree_open(fn);
 	if (!treein) {
 		fprintf(stderr, "Failed to read code kdtree from %s.\n", fn);
 		exit(-1);
 	}
-	codehdr = qfits_header_read(fn);
-	if (!codehdr) {
-		fprintf(stderr, "Failed to read code kdtree header from %s.\n", fn);
-		exit(-1);
-	}
 	free_fn(fn);
+	codehdr = codetree_header(treein);
 
 	fn = mk_quadfn(basein);
 	printf("Reading quads from %s ...\n", fn);
@@ -137,9 +132,9 @@ int main(int argc, char **args) {
 		exit(-1);
 	}
 
-	for (i=0; i<treein->ndata; i++) {
+	for (i=0; i<codetree_N(treein); i++) {
 		uint sA, sB, sC, sD;
-		int ind = treein->perm[i];
+		int ind = codetree_get_permuted(treein, i);
 		quadfile_get_starids(quadin, ind, &sA, &sB, &sC, &sD);
 		if (quadfile_write_quad(quadout, sA, sB, sC, sD)) {
 			fprintf(stderr, "Failed to write quad entry.\n");
@@ -153,14 +148,15 @@ int main(int argc, char **args) {
 		exit(-1);
 	}
 
-	treeout = calloc(1, sizeof(kdtree_t));
-	treeout->tree   = treein->tree;
-	treeout->data   = treein->data;
-	treeout->ndata  = treein->ndata;
-	treeout->ndim   = treein->ndim;
-	treeout->nnodes = treein->nnodes;
+	treeout = codetree_new();
+	treeout->tree = calloc(1, sizeof(kdtree_t));
+	treeout->tree->tree   = treein->tree->tree;
+	treeout->tree->data   = treein->tree->data;
+	treeout->tree->ndata  = treein->tree->ndata;
+	treeout->tree->ndim   = treein->tree->ndim;
+	treeout->tree->nnodes = treein->tree->nnodes;
 
-	hdr = qfits_header_default();
+	hdr = codetree_header(treeout);
 	qfits_header_add(hdr, "AN_FILE", "CKDT", "This is a code kdtree.", NULL);
 	fits_copy_header(quadin->header, hdr, "HEALPIX");
 	qfits_header_add(hdr, "HISTORY", "unpermute-quads command line:", NULL, NULL);
@@ -179,15 +175,14 @@ int main(int argc, char **args) {
 
 	fn = mk_ctreefn(baseout);
 	printf("Writing code kdtree to %s ...\n", fn);
-	if (kdtree_fits_write_file(treeout, fn, hdr)) {
+	if (codetree_write_to_file(treeout, fn) ||
+		codetree_close(treeout)) {
 		fprintf(stderr, "Failed to write code kdtree.\n");
 		exit(-1);
 	}
 	free_fn(fn);
-	free(treeout);
 
-	kdtree_close(treein);
-	qfits_header_destroy(codehdr);
+	codetree_close(treein);
 
 	return 0;
 }

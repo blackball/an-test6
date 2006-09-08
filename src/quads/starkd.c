@@ -16,6 +16,22 @@ static startree* startree_alloc() {
 	return s;
 }
 
+int startree_N(startree* s) {
+	return s->tree->ndata;
+}
+
+int startree_nodes(startree* s) {
+	return s->tree->nnodes;
+}
+
+int startree_D(startree* s) {
+	return s->tree->ndim;
+}
+
+qfits_header* startree_header(startree* s) {
+	return s->header;
+}
+
 startree* startree_open(char* fn) {
 	startree* s;
 

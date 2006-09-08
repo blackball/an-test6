@@ -4,7 +4,6 @@
 #include "starutil.h"
 #include "xylist.h"
 #include "kdtree.h"
-#include "kdtree_io.h"
 #include "bl.h"
 #include "matchobj.h"
 

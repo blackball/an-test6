@@ -289,7 +289,7 @@ unpermute-stars: unpermute-stars.o starkd.o quadfile.o idfile.o \
 		$(KDTREE_OBJS) $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-unpermute-quads: unpermute-quads.o quadfile.o \
+unpermute-quads: unpermute-quads.o quadfile.o codekd.o \
 		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 

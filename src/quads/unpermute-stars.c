@@ -116,7 +116,7 @@ int main(int argc, char **args) {
 	} else
 		healpix = qfin->healpix;
 
-	starhp = qfits_header_getint(treein->header, "HEALPIX", -1);
+	starhp = qfits_header_getint(startree_header(treein), "HEALPIX", -1);
 	if (starhp == -1)
 		fprintf(stderr, "Warning, input star kdtree didn't have a HEALPIX header.\n");
 	else if (starhp != healpix) {
@@ -185,13 +185,13 @@ int main(int argc, char **args) {
 	if (idin) {
 		printf("Writing IDs...\n");
 		lastgrass = 0;
-		for (i=0; i<treein->tree->ndata; i++) {
+		for (i=0; i<startree_N(treein); i++) {
 			uint64_t id;
 			int ind;
-			if (i*80/treein->tree->ndata != lastgrass) {
+			if (i*80/startree_N(treein) != lastgrass) {
 				printf(".");
 				fflush(stdout);
-				lastgrass = i*80/treein->tree->ndata;
+				lastgrass = i*80/startree_N(treein);
 			}
 			ind = treein->tree->perm[i];
 			id = idfile_get_anid(idin, ind);
@@ -238,20 +238,20 @@ int main(int argc, char **args) {
 	treeout->tree   = calloc(1, sizeof(kdtree_t));
 	treeout->tree->tree   = treein->tree->tree;
 	treeout->tree->data   = treein->tree->data;
-	treeout->tree->ndata  = treein->tree->ndata;
-	treeout->tree->ndim   = treein->tree->ndim;
-	treeout->tree->nnodes = treein->tree->nnodes;
+	treeout->tree->ndata  = startree_N(treein);
+	treeout->tree->ndim   = startree_D(treein);
+	treeout->tree->nnodes = startree_nodes(treein);
 
-	fits_copy_header(qfin->header, treeout->header, "HEALPIX");
-	qfits_header_add(treeout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
-	fits_add_args(treeout->header, args, argc);
-	qfits_header_add(treeout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
-	qfits_header_add(treeout->header, "HISTORY", "** unpermute-stars: history from input:", NULL, NULL);
-	fits_copy_all_headers(treein->header, treeout->header, "HISTORY");
-	qfits_header_add(treeout->header, "HISTORY", "** unpermute-stars: end of history from input.", NULL, NULL);
-	qfits_header_add(treeout->header, "COMMENT", "** unpermute-stars: comments from input:", NULL, NULL);
-	fits_copy_all_headers(treein->header, treeout->header, "COMMENT");
-	qfits_header_add(treeout->header, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
+	fits_copy_header(qfin->header, startree_header(treeout), "HEALPIX");
+	qfits_header_add(startree_header(treeout), "HISTORY", "unpermute-stars command line:", NULL, NULL);
+	fits_add_args(startree_header(treeout), args, argc);
+	qfits_header_add(startree_header(treeout), "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
+	qfits_header_add(startree_header(treeout), "HISTORY", "** unpermute-stars: history from input:", NULL, NULL);
+	fits_copy_all_headers(startree_header(treein), startree_header(treeout), "HISTORY");
+	qfits_header_add(startree_header(treeout), "HISTORY", "** unpermute-stars: end of history from input.", NULL, NULL);
+	qfits_header_add(startree_header(treeout), "COMMENT", "** unpermute-stars: comments from input:", NULL, NULL);
+	fits_copy_all_headers(startree_header(treein), startree_header(treeout), "COMMENT");
+	qfits_header_add(startree_header(treeout), "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
 
 	quadfile_close(qfin);
 	if (idin)
