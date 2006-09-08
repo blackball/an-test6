@@ -25,31 +25,28 @@ extern int optind, opterr, optopt;
 //#define max(a,b) (((a)>(b))?(a):(b))
 
 static void get_nodes_in(kdtree_t* kd, kdtree_node_t* node,
-						 real* qlo, real* qhi, pl* nodelist, pl* leaflist) {
+						 real* qlo, real* qhi, pl* nodelist) {
 	real *bblo, *bbhi;
 	bblo = kdtree_get_bb_low (kd, node);
 	bbhi = kdtree_get_bb_high(kd, node);
 	if (!kdtree_do_boxes_overlap(bblo, bbhi, qlo, qhi, kd->ndim))
 		return;
 	if (kdtree_is_box_contained(bblo, bbhi, qlo, qhi, kd->ndim)) {
-		if (kdtree_node_is_leaf(kd, node))
-			pl_append(leaflist, node);
-		else
-			pl_append(nodelist, node);
+		pl_append(nodelist, node);
 		return;
 	}
 	if (kdtree_node_is_leaf(kd, node)) {
-		pl_append(leaflist, node);
+		pl_append(nodelist, node);
 	} else {
-		get_nodes_in(kd, kdtree_get_child1(kd, node), qlo, qhi, nodelist, leaflist);
-		get_nodes_in(kd, kdtree_get_child2(kd, node), qlo, qhi, nodelist, leaflist);
+		get_nodes_in(kd, kdtree_get_child1(kd, node), qlo, qhi, nodelist);
+		get_nodes_in(kd, kdtree_get_child2(kd, node), qlo, qhi, nodelist);
 	}
 }
 
 static void get_nodes_contained_in(kdtree_t* kd,
 								   real* querylow, real* queryhigh,
-								   pl* nodelist, pl* leaflist) {
-	get_nodes_in(kd, kdtree_get_root(kd), querylow, queryhigh, nodelist, leaflist);
+								   pl* nodelist) {
+	get_nodes_in(kd, kdtree_get_root(kd), querylow, queryhigh, nodelist);
 }
 
 static void expand_nodes(kdtree_t* kd, kdtree_node_t* node,
@@ -78,7 +75,7 @@ static void expand_nodes(kdtree_t* kd, kdtree_node_t* node,
 	expand_nodes(kd, kdtree_get_child2(kd, node), leaflist, pixlist, qlo, qhi, w, h);
 }
 
-static int count_nodes_in_list(pl* list) {
+static int count_points_in_list(pl* list) {
 	int j;
 	int N = 0;
 	for (j=0; j<pl_size(list); j++) {
@@ -460,12 +457,17 @@ int main(int argc, char *argv[]) {
 				*/
 			}
 
-			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist, leaflist);
+			//get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist, leaflist);
+			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist);
 
-			fprintf(stderr, "Found %i nodes (%i points) + %i leaves (%i points), total of %i points.\n",
-					pl_size(nodelist), count_nodes_in_list(nodelist),
-					pl_size(leaflist), count_nodes_in_list(leaflist),
-					count_nodes_in_list(nodelist) + count_nodes_in_list(leaflist));
+			/*
+			  fprintf(stderr, "Found %i nodes (%i points) + %i leaves (%i points), total of %i points.\n",
+			  pl_size(nodelist), count_points_in_list(nodelist),
+			  pl_size(leaflist), count_points_in_list(leaflist),
+			  count_points_in_list(nodelist) + count_points_in_list(leaflist));
+			*/
+			fprintf(stderr, "%i nodes (%i points) overlap the tile.\n", pl_size(nodelist), count_points_in_list(nodelist));
+			//fprintf(stderr, "%i leaves (%i points) overlap the tile.\n", pl_size(leaflist), count_points_in_list(leaflist));
 
 			for (j=0; j<pl_size(nodelist); j++) {
 				kdtree_node_t* node = pl_get(nodelist, j);
@@ -474,9 +476,14 @@ int main(int argc, char *argv[]) {
 			}
 			pl_remove_all(nodelist);
 
-			fprintf(stderr, "Expanded to %i leaves (%i points) + %i single-pixel nodes (%i points)\n",
-					pl_size(leaflist), count_nodes_in_list(leaflist),
-					pl_size(pixlist), count_nodes_in_list(pixlist));
+			fprintf(stderr, "%i single-pixel nodes (%i points).\n", pl_size(pixlist), count_points_in_list(pixlist));
+			fprintf(stderr, "%i multi-pixel leaves (%i points).\n", pl_size(leaflist), count_points_in_list(leaflist));
+
+			/*
+			  fprintf(stderr, "Expanded to %i leaves (%i points) + %i single-pixel nodes (%i points)\n",
+			  pl_size(leaflist), count_points_in_list(leaflist),
+			  pl_size(pixlist), count_points_in_list(pixlist));
+			*/
 
 			/*
 			  Ntotal = 0;
