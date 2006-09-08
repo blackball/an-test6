@@ -63,6 +63,8 @@ int kdtree_nodeid_is_leaf(kdtree_t* tree, int nodeid);
 
 kdtree_node_t* kdtree_nodeid_to_node(kdtree_t* kd, int nodeid);
 
+int kdtree_node_to_nodeid(kdtree_t* kd, kdtree_node_t* node);
+
 int kdtree_get_childid1(kdtree_t* tree, int nodeid);
 
 int kdtree_get_childid2(kdtree_t* tree, int nodeid);

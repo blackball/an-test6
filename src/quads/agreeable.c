@@ -569,7 +569,7 @@ void write_field(hitlist* hl,
 			int i;
 			bool gotit = FALSE;
 			pl* list = pl_get(lists, j);
-			MatchObj* mo;
+			MatchObj* mo = NULL;
 
 			MatchObj* mbest = NULL;
 			double bestoverlap = 0.0;
