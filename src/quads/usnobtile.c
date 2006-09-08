@@ -97,7 +97,6 @@ int main(int argc, char *argv[]) {
 	double lines = 0.0;
 
 	double px0, py0, px1, py1;
-	//double xperpix, yperpix;
 	double pixperx, pixpery;
 	double xzoom, yzoom;
 	int zoomlevel;
@@ -328,6 +327,7 @@ int main(int argc, char *argv[]) {
 		float xscale, yscale;
 		int Noob;
 		int Nib;
+		int Nstars;
 
 		HP = 12 * Nside * Nside;
 		hplist = il_new(32);
@@ -352,6 +352,8 @@ int main(int argc, char *argv[]) {
 
 		Noob = 0;
 		Nib = 0;
+		// number of stars in the image.
+		Nstars = 0;
 
 		fprintf(stderr, "Query: x:[%g,%g] y:[%g,%g]\n",
 				querylow[0], queryhigh[0], querylow[1], queryhigh[1]);
@@ -508,13 +510,18 @@ int main(int argc, char *argv[]) {
 
 				pt = KD_POINT(node->l);
 				ix = (int)rint((pt[0] - querylow[0]) * xscale);
+				if (ix < 0 || ix >= w) {
+					Noob++;
+					continue;
+				}
 				// flip vertically
 				iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
-				if (ix < 0 || iy < 0 || ix >= w || iy >= h) {
+				if (iy < 0 || iy >= h) {
 					Noob++;
 					continue;
 				}
 				Nib++;
+				Nstars += kdtree_node_npoints(node);
 				nodenum = kdtree_node_to_nodeid(kd, node);
 				flux = &(merc->stats[nodenum].flux);
 				fluximg[3*(iy*w+ix) + 0] += flux->rflux;
@@ -528,19 +535,39 @@ int main(int argc, char *argv[]) {
 				kdtree_node_t* node = pl_get(leaflist, j);
 				// for macros
 				kdtree_t* kd = merc->tree;
+
+				{
+					float xp0, xp1, yp0, yp1;
+					real *bblo, *bbhi;
+					real *qlo = querylow;
+					real *qhi = queryhigh;
+					bblo = kdtree_get_bb_low (kd, node);
+					bbhi = kdtree_get_bb_high(kd, node);
+					xp0 = ((double)w * (bblo[0] - qlo[0]) / (qhi[0] - qlo[0]));
+					xp1 = ((double)w * (bbhi[0] - qlo[0]) / (qhi[0] - qlo[0]));
+					yp0 = ((double)h * (bblo[1] - qlo[1]) / (qhi[1] - qlo[1]));
+					yp1 = ((double)h * (bbhi[1] - qlo[1]) / (qhi[1] - qlo[1]));
+					fprintf(stderr, "xp [%g,%g], yp [%g,%g], area %g, N %i\n", xp0, xp1, yp0, yp1, (xp1-xp0)*(yp1-yp0), kdtree_node_npoints(node));
+				}
+
 				for (k=node->l; k<=node->r; k++) {
 					int ix, iy;
 					real* pt;
 					merc_flux* flux;
 					pt = KD_POINT(k);
 					ix = (int)rint((pt[0] - querylow[0]) * xscale);
+					if (ix < 0 || ix >= w) {
+						Noob++;
+						continue;
+					}
 					// flip vertically
 					iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
-					if (ix < 0 || iy < 0 || ix >= w || iy >= h) {
+					if (iy < 0 || iy >= h) {
 						Noob++;
 						continue;
 					}
 					Nib++;
+					Nstars++;
 					flux = merc->flux + k;
 					fluximg[3*(iy*w+ix) + 0] += flux->rflux;
 					fluximg[3*(iy*w+ix) + 1] += flux->bflux;
@@ -551,8 +578,9 @@ int main(int argc, char *argv[]) {
 
 			merctree_close(merc);
 		}
-		fprintf(stderr, "%i stars outside image bounds.\n", Noob);
-		fprintf(stderr, "%i stars inside image bounds.\n", Nib);
+		fprintf(stderr, "%i points outside image bounds.\n", Noob);
+		fprintf(stderr, "%i points inside image bounds.\n", Nib);
+		fprintf(stderr, "%i stars inside image bounds.\n", Nstars);
 
 		pl_free(nodelist);
 		pl_free(leaflist);

@@ -122,39 +122,6 @@ void merctree_compute_stats(merctree* m) {
 	}
 }
 
-/*
-  void merctree_compute_inverse_perm(merctree* s) {
-  // compute inverse permutation vector.
-  s->inverse_perm = malloc(Ndata(s) * sizeof(int));
-  if (!s->inverse_perm) {
-  fprintf(stderr, "Failed to allocate merc kdtree inverse permutation vector.\n");
-  return;
-  }
-  kdtree_inverse_permutation(s->tree, s->inverse_perm);
-  }
-*/
-
-/*
-  int startree_get(startree* s, uint starid, double* posn) {
-  if (s->tree->perm && !s->inverse_perm) {
-  startree_compute_inverse_perm(s);
-  if (!s->inverse_perm)
-  return -1;
-  }
-  if (starid >= Ndata(s)) {
-  fprintf(stderr, "Invalid star ID: %u >= %u.\n", starid, Ndata(s));
-  return -1;
-  }
-  if (s->inverse_perm)
-  memcpy(posn, s->tree->data + s->inverse_perm[starid] * DIM_STARS,
-  DIM_STARS * sizeof(double));
-  else
-  memcpy(posn, s->tree->data + starid * DIM_STARS,
-  DIM_STARS * sizeof(double));
-  return 0;
-  }
-*/
-
 merctree* merctree_new() {
 	merctree* s = merctree_alloc();
 	s->header = qfits_header_default();
