@@ -139,6 +139,7 @@ void verify_hit(kdtree_t* startree,
 	matches = unmatches = conflicts = 0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);
 
+	// insert dual-tree here :)
 	for (i=0; i<Nmin; i++) {
 		double bestd2;
 		int ind = kdtree_nearest_neighbour_within(itree, fieldstars + 3*i, verify_dist2, &bestd2);

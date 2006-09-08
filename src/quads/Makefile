@@ -90,8 +90,11 @@ EXECS := whynot certifiable \
 	plotmatch \
 	plotquads matchtordls \
 	tunematch \
-	overlapstats usnobtile usnobcount render_mercator \
+	overlapstats \
+	render_mercator \
 	make-merctree
+
+#usnobtile usnobcount 
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
@@ -344,6 +347,14 @@ subtable: subtable.o bl.o fitsioutils.o ioutils.o $(QFITS_LIB)
 
 tabsort: tabsort.o fitsioutils.o ioutils.o permutedsort.o fileutil.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+usnobcount: usnobcount.o 
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+#merctree.o bl.o healpix.o $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+
+usnobtile: usnobtile.o merctree.o bl.o healpix.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
 
 #CUTEST_I := -Ikdtree/CuTest
 #CUTEST_L := kdtree/CuTest/CuTest.o 
