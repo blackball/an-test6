@@ -84,9 +84,6 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
 	bt.o solvedfile.o starkd.o codekd.o merctree.o
 
-#SOLVER_OBJ := solver.o
-#SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
-
 EXECS := whynot certifiable \
 	findquad findstar \
 	matchstats \
@@ -96,72 +93,20 @@ EXECS := whynot certifiable \
 	overlapstats usnobtile usnobcount render_mercator \
 	make-merctree
 
-#quadscales \
-
 QFITS_UTILS := fitsgetext subtable tabsort
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-#quadidx codedensity 
-#codeprojections quadlocations \
-
-#	startree \
-#	hpowned
-#	hpquads
-#	codetree \
-#   unpermute-quads \
-#	unpermute-stars 
-#	homer slave agreeable
-
 MISC_EXECS := ppmnormrgb 2masstofits 
 
-#usnobtofits tycho2tofits build_an_catalog cut_an
+#randcat.o genfields.o findstar.o findquad.o \
+#printcatalog.o get_healpix.o 
+#printmatchfile.o rdls2hpls.o certifiable.o
+#kdtree/test_kdtree.o \
+#mergehits.o checkquads.o
 
-#solvedserver printsolved 
-
-# things we don't use often:
-#	randcat genfields
-#   quadsperstar
-#makematch 
-#	xylstomatlab \
-#	galex_stats 
-#	rdlstofieldcheck 
-#   checkquads 
-#   mergehits 
-#   rdlstohealpix \
-
-# obsolescent:
-#	deduplicate \
-#	cert2 
-#   dedup_index 
-
-#EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
-#	filter_an genmatch 
-#kdspeed
-
-# execs that require solver.o
-#SOLVER_EXECS := slave
-
-# postmortem requires: findstar(2), findquad, certifiable
-
-MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
-	starutil.o fileutil.o mathutil.o \
-	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
-	xylstomatlab.o rdlstohealpix.o slave.o \
-	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
-	hpquads.o \
-	codeprojections.o startree.o \
-	solver.o \
-	kdtree/test_kdtree.o \
-	usnobtofits.o usnob.o usnob_fits.o tycho2.o \
-	tycho2tofits.o tycho2_fits.o build_an_catalog.o cut_an.o \
-	mergehits.o checkquads.o
-
-#dedup_index.o 
-#deduplicate.o
-#test_healpix.o 
 
 QFITS_I := -Iqfits
 QFITS_L := 
@@ -181,7 +126,14 @@ KDTREE_OBJS := kdtree/kdtree.o kdtree/kdtree_fits_io.o kdtree/kdtree_io.o kdtree
 
 UTIL_OBJS := fitsioutils.o ioutils.o fileutil.o starutil.o mathutil.o
 
-ALL_OBJ := $(OBJ) $(MY_OBJ) $(QFITS_OBJ) #$(SOLVER_OBJ) 
+OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
+	bt.o an_catalog.o catalog.o idfile.o starkd.o quadfile.o codefile.o \
+	rdlist.o xylist.o histogram.o tic.o permutedsort.o codekd.o \
+	donuts.o verify.o dualtree_rangesearch.o dualtree.o dualtree_max.o \
+	solver.o matchfile.o solvedclient.o solvedfile.o hitlist_healpix.o \
+	intmap.o hitsfile.o qidxfile.o kdtree/kdtree_dim_4.o
+
+2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
 PIPELINE := usnobtofits tycho2tofits build_an_catalog hpowned cut_an startree \
 	hpquads codetree unpermute-quads unpermute-stars homer slave agreeable \
@@ -194,9 +146,10 @@ PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
 PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
 FITS_UTILS_MAIN_OBJ := $(addsuffix .o,$(FITS_UTILS))
 
-ALL_OBJ += $(PIPELINE_MAIN_OBJ)
-ALL_OBJ += $(PROSPECTUS_MAIN_OBJ)
-ALL_OBJ += $(FITS_UTILS_MAIN_OBJ)
+ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
+	$(PIPELINE_MAIN_OBJ) $(PROSPECTUS_MAIN_OBJ) $(FITS_UTILS_MAIN_OBJ) \
+	$(OTHER_OBJS)
+ALL_OBJ += $(2MASSOBJ)
 
 .PHONY: all
 all: $(PIPELINE) $(PROSPECTUS) $(FITS_UTILS)
@@ -294,9 +247,6 @@ $(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)
 #	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_LIB)
 #	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
-ALL_OBJ += $(2MASSOBJ)
-
 2masstofits: $(2MASSOBJ) healpix.o $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -lz
 
@@ -362,9 +312,6 @@ printsolved: printsolved.o mathutil.o
 
 solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o
 	$(CC) $(CFLAGS) -o $@ $^
-
-#split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o rdlist.o \
 		xylist.o usnob_fits.o usnob.o healpix.o bl.o $(UTIL_OBJS) $(QFITS_LIB)
@@ -459,6 +406,9 @@ deps: $(DEPS)
 %.dep : %.c
 	$(CC) -MM $(CFLAGS) $(CFITSIO_CFLAGS) $(NETPBM_I) -c $< > $@
 
+kdtree/kdtree_dim_4.dep: kdtree/kdtree_dim.c
+	$(CC) -MM $(CFLAGS) $(CFITSIO_CFLAGS) $(NETPBM_I) -c $< -DKD_DIM=4 > $@
+
 allclean:
 	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) $(OBJ) *~ $(DEPS) deps $(QFITS_OBJ) $(QFITS_LIB)
 
@@ -481,6 +431,7 @@ clean:
 
 ifneq ($(MAKECMDGOALS),clean)
   ifneq ($(MAKECMDGOALS),allclean)
+    #echo "Don't worry if a warning is printed immediately below this line."
     include deps
   endif
 endif
