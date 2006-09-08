@@ -16,6 +16,27 @@ static codetree* codetree_alloc() {
 	return s;
 }
 
+int codetree_N(codetree* s) {
+	return s->tree->ndata;
+}
+
+int codetree_nodes(codetree* s) {
+	return s->tree->nnodes;
+}
+
+int codetree_D(codetree* s) {
+	return s->tree->ndim;
+}
+
+qfits_header* codetree_header(codetree* s) {
+	return s->header;
+}
+
+int codetree_get_permuted(codetree* s, int index) {
+	if (s->tree->perm) return s->tree->perm[index];
+	else return index;
+}
+
 codetree* codetree_open(char* fn) {
 	codetree* s;
 

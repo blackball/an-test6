@@ -16,6 +16,16 @@ codetree* codetree_open(char* fn);
 
 int codetree_get(codetree* s, uint codeid, double* code);
 
+int codetree_N(codetree* s);
+
+int codetree_nodes(codetree* s);
+
+int codetree_D(codetree* s);
+
+int codetree_get_permuted(codetree* s, int index);
+
+qfits_header* codetree_header(codetree* s);
+
 int codetree_close(codetree* s);
 
 // for writing

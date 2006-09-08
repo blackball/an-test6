@@ -10,8 +10,6 @@
 #include "mathutil.h"
 #include "matchfile.h"
 #include "kdtree.h"
-//#include "kdtree_io.h"
-//#include "kdtree_fits_io.h"
 #include "xylist.h"
 #include "verify.h"
 #include "starkd.h"

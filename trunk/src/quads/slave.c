@@ -17,9 +17,6 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "kdtree.h"
-#include "kdtree_access.h"
-#include "kdtree_fits_io.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
@@ -38,6 +35,7 @@
 #include "solvedfile.h"
 #include "ioutils.h"
 #include "starkd.h"
+#include "codekd.h"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -91,9 +89,9 @@ pthread_mutex_t matchfile_mutex;
 
 idfile* id;
 quadfile* quads;
-kdtree_t *codetree;
 xylist* xyls;
 startree* starkd;
+codetree *codekd;
 
 bool circle;
 
@@ -245,11 +243,11 @@ int main(int argc, char *argv[]) {
 		// Read .ckdt file...
 		fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
 		fflush(stderr);
-		codetree = kdtree_fits_read_file(treefname);
-		if (!codetree)
+		codekd = codetree_open(treefname);
+		if (!codekd)
 			exit(-1);
 		fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
-				codetree->ndata, codetree->nnodes, codetree->ndim);
+				codetree_N(codekd), codetree_nodes(codekd), codetree_D(codekd));
 
 		// Read .quad file...
 		fprintf(stderr, "Reading quads file %s...\n", quadfname);
@@ -274,7 +272,7 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 		fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
-				starkd->tree->ndata, starkd->tree->nnodes, starkd->tree->ndim);
+				startree_N(starkd), startree_nodes(starkd), startree_D(starkd));
 
 		do_verify = (verify_dist2 > 0.0);
 		{
@@ -350,7 +348,7 @@ int main(int argc, char *argv[]) {
 			matchfile_close(mf)) {
 			fprintf(stderr, "Error closing matchfile.\n");
 		}
-		kdtree_close(codetree);
+		codetree_close(codekd);
 		startree_close(starkd);
 		if (id)
 			idfile_close(id);
@@ -807,7 +805,7 @@ static void* solvethread_run(void* varg) {
 	gettimeofday(&last_wtime, NULL);
 
 	solver_default_params(&solver);
-	solver.codekd = codetree;
+	solver.codekd = codekd->tree;
 	solver.endobj = enddepth;
 	solver.maxtries = maxquads;
 	solver.codetol = codetol;
