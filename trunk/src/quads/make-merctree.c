@@ -13,12 +13,13 @@
 #include "an_catalog.h"
 #include "mathutil.h"
 
-#define OPTIONS "ho:"
+#define OPTIONS "ho:l:m:"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "%s usage:\n"
 			"   -o <output-file>\n"
 			"  [-m <max-y-val>]: Maximum y value of the projection (default: Pi)\n"
+			"  [-l <n-leaf-point>]: Target number of points in the leaves of the tree (default 15).\n"
 			"\n"
 			"  <input-catalog> ...\n"
 			"\n"
@@ -34,6 +35,7 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	float maxy = M_PI;
 	int i;
+	int Nleaf = 15;
 	time_t start;
 	merctree* mt;
 	int N;
@@ -49,6 +51,9 @@ int main(int argc, char** args) {
 			exit(0);
 		case 'o':
 			outfn = optarg;
+			break;
+		case 'l':
+			Nleaf = atoi(optarg);
 			break;
 		case 'm':
 			maxy = atof(optarg);
@@ -123,7 +128,7 @@ int main(int argc, char** args) {
 			}
 
 			x = (entry->ra / 360.0);
-			y = (M_PI + asinh(tan(deg2rad(entry->dec)))) / (2.0 * M_PI);
+			y = (maxy + asinh(tan(deg2rad(entry->dec)))) / (2.0 * maxy);
 			vertscale = 1.0 / cos(deg2rad(entry->dec));
 
 			xy[i*2] = x;
@@ -181,9 +186,8 @@ int main(int argc, char** args) {
 	fprintf(stderr, "Creating kdtree...\n");
 	{
 		int levels;
-		int Nleaf = 15;
 		levels = kdtree_compute_levels(N, Nleaf);
-		mt->tree = kdtree_build(xy, N, 2, levels);
+		mt->tree = kdtree_build(xy, N, 2, levels + 1);
 		if (!mt->tree) {
 			fprintf(stderr, "Failed to build kdtree.\n");
 			exit(-1);

@@ -356,6 +356,10 @@ usnobtile: usnobtile.o merctree.o bl.o healpix.o \
 		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
 
+usnobtile-test: usnobtile.o merctree.o bl.o healpix.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
+
 #CUTEST_I := -Ikdtree/CuTest
 #CUTEST_L := kdtree/CuTest/CuTest.o 
 #CFLAGS += $(CUTEST_I)
