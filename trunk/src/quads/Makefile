@@ -84,22 +84,42 @@ OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
 	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
 	bt.o solvedfile.o starkd.o codekd.o merctree.o
 
-SOLVER_OBJ := solver.o
-SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
+#SOLVER_OBJ := solver.o
+#SOLVER_OBJ_SPECIAL := kdtree/kdtree_dim_4.o
 
-EXECS := whynot agreeable certifiable quadidx \
-	hpquads codetree startree \
-	codedensity findquad findstar \
-	codeprojections quadlocations hpowned fitsgetext \
-	subtable matchstats unpermute-quads \
-	tabsort plotmatch \
-	plotquads matchtordls homer \
-	unpermute-stars tunematch quadscales \
+EXECS := whynot certifiable \
+	findquad findstar \
+	matchstats \
+	plotmatch \
+	plotquads matchtordls \
+	tunematch \
 	overlapstats usnobtile usnobcount render_mercator \
 	make-merctree
 
-MISC_EXECS := solvedserver printsolved plotcat ppmnormrgb \
-	2masstofits usnobtofits tycho2tofits build_an_catalog cut_an
+#quadscales \
+
+QFITS_UTILS := fitsgetext subtable tabsort
+
+CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
+
+FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
+
+#quadidx codedensity 
+#codeprojections quadlocations \
+
+#	startree \
+#	hpowned
+#	hpquads
+#	codetree \
+#   unpermute-quads \
+#	unpermute-stars 
+#	homer slave agreeable
+
+MISC_EXECS := ppmnormrgb 2masstofits 
+
+#usnobtofits tycho2tofits build_an_catalog cut_an
+
+#solvedserver printsolved 
 
 # things we don't use often:
 #	randcat genfields
@@ -117,12 +137,12 @@ MISC_EXECS := solvedserver printsolved plotcat ppmnormrgb \
 #	cert2 
 #   dedup_index 
 
-EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
-	filter_an genmatch 
+#EXTRAS := rdls2hpls get_healpix printcatalog xylist_texttofits hplimits \
+#	filter_an genmatch 
 #kdspeed
 
 # execs that require solver.o
-SOLVER_EXECS := slave
+#SOLVER_EXECS := slave
 
 # postmortem requires: findstar(2), findquad, certifiable
 
@@ -131,11 +151,17 @@ MY_OBJ := randcat.o genfields.o findstar.o findquad.o \
 	codedensity.o codetree.o printcatalog.o get_healpix.o quadidx.o \
 	xylstomatlab.o rdlstohealpix.o slave.o \
 	printmatchfile.o rdls2hpls.o certifiable.o agreeable.o \
-	hpquads.o dedup_index.o codeprojections.o codedensity.o startree.o \
-	solver.o deduplicate.o test_healpix.o kdtree/test_kdtree.o \
+	hpquads.o \
+	codeprojections.o startree.o \
+	solver.o \
+	kdtree/test_kdtree.o \
 	usnobtofits.o usnob.o usnob_fits.o tycho2.o \
 	tycho2tofits.o tycho2_fits.o build_an_catalog.o cut_an.o \
 	mergehits.o checkquads.o
+
+#dedup_index.o 
+#deduplicate.o
+#test_healpix.o 
 
 QFITS_I := -Iqfits
 QFITS_L := 
@@ -146,18 +172,49 @@ LFLAGS += $(QFITS_L)
 NETPBM_I :=
 NETPBM_L := -L. -lnetpbm
 
-CFLAGS += $(NETPBM_I)
-LFLAGS += $(NETPBM_L)
+#CFLAGS += $(NETPBM_I)
+#LFLAGS += $(NETPBM_L)
 
 CFLAGS += -Ikdtree
 
-ALL_OBJ := $(OBJ) $(MY_OBJ) $(SOLVER_OBJ) $(QFITS_OBJ)
+KDTREE_OBJS := kdtree/kdtree.o kdtree/kdtree_fits_io.o kdtree/kdtree_io.o kdtree/kdtree_access.o kdtree/kdtree_dim.o
+
+UTIL_OBJS := fitsioutils.o ioutils.o fileutil.o starutil.o mathutil.o
+
+ALL_OBJ := $(OBJ) $(MY_OBJ) $(QFITS_OBJ) #$(SOLVER_OBJ) 
+
+PIPELINE := usnobtofits tycho2tofits build_an_catalog hpowned cut_an startree \
+	hpquads codetree unpermute-quads unpermute-stars homer slave agreeable \
+	solvedserver printsolved
+
+PROSPECTUS := plotcat quadidx codedensity codeprojections quadlocations \
+	quadscales
+
+PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
+PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
+FITS_UTILS_MAIN_OBJ := $(addsuffix .o,$(FITS_UTILS))
+
+ALL_OBJ += $(PIPELINE_MAIN_OBJ)
+ALL_OBJ += $(PROSPECTUS_MAIN_OBJ)
+ALL_OBJ += $(FITS_UTILS_MAIN_OBJ)
 
 .PHONY: all
-all: $(EXECS) $(SOLVER_EXECS) $(MISC_EXECS)
+all: $(PIPELINE) $(PROSPECTUS) $(FITS_UTILS)
+
+.PHONY: pipeline
+pipeline: $(PIPELINE)
+
+.PHONY: prospectus_progs
+prospectus_progs: $(PROSPECTUS)
+
+.PHONY: fitsutils
+fitsutils: $(FITS_UTILS)
 
 ppmnormrgb: ppmnormrgb.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
+
+ppmnormrgb.o: ppmnormrgb.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
 .PHONY: tags
 tags:
@@ -167,48 +224,36 @@ $(QFITS_LIB): $(QFITS_OBJ)
 	ar cr $@ $^
 	ranlib $@
 
-WCSLIB_LIB := /usr/local/wcslib-4.2/lib/libwcs.a
-WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
+#WCSLIB_LIB := /usr/local/wcslib-4.2/lib/libwcs.a
+#WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
 
-homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
+#homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
 
+#badfields: badfields.o solvedfile.o bl.o 
+#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
 
-#$(QFITS_LIB) fitsioutils.o ioutils.o 
-badfields: badfields.o solvedfile.o bl.o 
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
+#badfields.o: badfields.c badfields.inc
+#	$(CC) $(CFLAGS) -c $< -o $@
 
-badfields.o: badfields.c badfields.inc
-	$(CC) $(CFLAGS) -c $< -o $@
+#badfields.inc: opBadfields.par badfields.awk
+#	awk -f badfields.awk $< > $@
 
-badfields.inc: opBadfields.par badfields.awk
-	awk -f badfields.awk $< > $@
+#wcscheck: wcscheck.o starutil.o mathutil.o libqfits.a
+#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
-wcscheck: wcscheck.o starutil.o mathutil.o libqfits.a
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(WCSLIB_LIB)
+#wcscheck.o: wcscheck.c
+#	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
 
-wcscheck.o: wcscheck.c
-	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
-
-kdspeed: kdspeed.o kdtree/kdtree.o kdtree/kdtree_dim.o kdtree/kdtree_access.o \
-	kdtree/kdtree_dim_4.o tic.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
+#kdspeed: kdspeed.o kdtree/kdtree.o kdtree/kdtree_dim.o kdtree/kdtree_access.o \
+#	kdtree/kdtree_dim_4.o tic.o
+#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
 
 kdtree/kdtree_dim_4.o: kdtree/kdtree_dim.c
 	$(CC) $(CFLAGS) -o $@ -c $^ -DKD_DIM=4
 
-hptst: hptst.o healpix.o
-	$(CC) $(CFLAGS) -o $@ $^ -lm
-
-printsolved: printsolved.o mathutil.o
-	$(CC) $(CFLAGS) -o $@ $^ -lm
-
-solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o
-	$(CC) $(CFLAGS) -o $@ $^
-
-FITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
-
-fitsutils: $(FITS_UTILS)
+#hptst: hptst.o healpix.o
+#	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 #CFITSIO_CFLAGS := -Icfitsio/include
 CFITSIO_CFLAGS := -Icfitsio
@@ -216,8 +261,7 @@ CFITSIO_CFLAGS := -Icfitsio
 CFITSIO_CFLAGS += -Wall -O0 -g
 CFITSIO_LIB := cfitsio/libcfitsio.a
 CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
-
-CFITSIO_OBJS := $(addsuffix .o,$(FITS_UTILS))
+CFITSIO_OBJS := $(addsuffix .o,$(CFITS_UTILS))
 
 $(CFITSIO_LIB): cfitsio/*.c cfitsio/*.h cfitsio/Makefile
 	$(MAKE) -C cfitsio
@@ -225,62 +269,138 @@ $(CFITSIO_LIB): cfitsio/*.c cfitsio/*.h cfitsio/Makefile
 cfitsio/Makefile: cfitsio/Makefile.in
 	cd cfitsio && ./configure
 
-$(FITS_UTILS) :: %: %.o $(CFITSIO_LIB)
+$(CFITS_UTILS) :: %: %.o $(CFITSIO_LIB)
 	$(CC) $(CFITSIO_CFLAGS) $^ -o $@ $(CFITSIO_LFLAGS)
 
-$(CFITSIO_OBJS) :: %.o: %.c
+#$(CFITSIO_OBJS) :: %.o: %.c
+#	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+
+$(CFITSIO_OBJS):
 	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
 
 $(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-$(SOLVER_EXECS) :: %: %.o $(OBJ) $(QFITS_LIB) $(SOLVER_OBJ) $(SOLVER_OBJ_SPECIAL)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
+#$(SOLVER_EXECS) :: %: %.o $(OBJ) $(QFITS_LIB) $(SOLVER_OBJ) $(SOLVER_OBJ_SPECIAL)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
 
-$(EXTRAS) :: %: %.o $(OBJ) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+#$(EXTRAS) :: %: %.o $(OBJ) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-test_bt: test_bt.o bt.o bl.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+#test_bt: test_bt.o bt.o bl.o
+#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o \
-	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
-
-plotcat: plotcat.o starutil.o an_catalog.o catalog.o tycho2_fits.o tycho2.o \
-	rdlist.o xylist.o \
-	usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+#an_deduplicate: an_deduplicate.o an_catalog.o dualtree_rangesearch.o dualtree.o \
+#	kdtree/kdtree.o bl.o fitsioutils.o ioutils.o mathutil.o starutil.o $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 ALL_OBJ += $(2MASSOBJ)
 
-2masstofits: $(2MASSOBJ) fitsioutils.o ioutils.o healpix.o $(QFITS_LIB)
+2masstofits: $(2MASSOBJ) healpix.o $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -lz
 
-usnobtofits: usnobtofits.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+usnobtofits: usnobtofits.o usnob_fits.o usnob.o healpix.o bl.o \
+		$(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o healpix.o bl.o \
+		$(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-usnobprint: usnob_fits_print.o usnob_fits.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+#usnobprint: usnob_fits_print.o usnob_fits.o usnob.o healpix.o bl.o \
+#		$(UTIL_OBJS) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+hpowned: hpowned.o healpix.o mathutil.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-build_an_catalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o tycho2.o usnob.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+build_an_catalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
+		tycho2.o usnob.o healpix.o bl.o $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-cut_an: cut_an.o an_catalog.o catalog.o idfile.o fitsioutils.o \
-	ioutils.o healpix.o mathutil.o bl.o starutil.o $(QFITS_LIB)
+cut_an: cut_an.o an_catalog.o catalog.o idfile.o healpix.o bl.o \
+		$(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+startree: startree.o starkd.o catalog.o $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-CUTEST_I := -Ikdtree/CuTest
-CUTEST_L := kdtree/CuTest/CuTest.o 
+hpquads: hpquads.o starkd.o quadfile.o codefile.o bt.o rdlist.o xylist.o \
+		healpix.o histogram.o bl.o tic.o permutedsort.o $(UTIL_OBJS) \
+		$(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-CFLAGS += $(CUTEST_I)
+codetree: codetree.o codekd.o codefile.o $(KDTREE_OBJS) $(UTIL_OBJS) \
+		$(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+unpermute-stars: unpermute-stars.o starkd.o quadfile.o idfile.o \
+		$(KDTREE_OBJS) $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+unpermute-quads: unpermute-quads.o quadfile.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+homer: homer.o donuts.o xylist.o bl.o dualtree_rangesearch.o dualtree.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+slave: slave.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
+		solvedclient.o solvedfile.o healpix.o idfile.o verify.o \
+		xylist.o hitlist_healpix.o intmap.o kdtree/kdtree_dim_4.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -pthread
+
+agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist_healpix.o \
+		solvedfile.o solvedclient.o intmap.o healpix.o $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+printsolved: printsolved.o mathutil.o
+	$(CC) $(CFLAGS) -o $@ $^ -lm
+
+solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+#split_an: split_an.o an_catalog.o fitsioutils.o ioutils.o healpix.o mathutil.o bl.o $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o rdlist.o \
+		xylist.o usnob_fits.o usnob.o healpix.o bl.o $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+quadidx: quadidx.o quadfile.o qidxfile.o bl.o $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+codedensity: codedensity.o codekd.o dualtree_max.o bl.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+codeprojections: codeprojections.o codefile.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+quadlocations: quadlocations.o quadfile.o catalog.o starkd.o bl.o $(UTIL_OBJS) \
+		$(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+quadscales: quadscales.o histogram.o starkd.o quadfile.o $(UTIL_OBJS) \
+		$(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+fitsgetext: fitsgetext.o bl.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+subtable: subtable.o bl.o fitsioutils.o ioutils.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+tabsort: tabsort.o fitsioutils.o ioutils.o permutedsort.o fileutil.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+#CUTEST_I := -Ikdtree/CuTest
+#CUTEST_L := kdtree/CuTest/CuTest.o 
+#CFLAGS += $(CUTEST_I)
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -337,25 +457,27 @@ deps: $(DEPS)
 	cat *.dep > deps
 
 %.dep : %.c
-	$(CC) -MM $(CFLAGS) -c $< > $@
+	$(CC) -MM $(CFLAGS) $(CFITSIO_CFLAGS) $(NETPBM_I) -c $< > $@
 
 allclean:
 	rm -f KD/*.o *.o $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) $(OBJ) *~ $(DEPS) deps $(QFITS_OBJ) $(QFITS_LIB)
 
 clean:
-	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) $(MY_OBJ) $(OBJ) $(QFITS_LIB) $(DEPS) deps
+	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \
+		$(PIPELINE) $(PROSPECTUS) $(QFITS_LIB) $(DEPS) deps \
+		$(FITS_UTILS) $(ALL_OBJ)
 
-$(CUTEST_L) :: %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
+#$(CUTEST_L) :: %.o : %.c
+#	$(CC) $(CFLAGS) -c $< -o $@ $(CUTEST_I)
 
-CUTEST_TEST_DRIVERS := kdtree/test_kdtree test_healpix test_bl
+#CUTEST_TEST_DRIVERS := kdtree/test_kdtree test_healpix test_bl
 
-tests: $(CUTEST_TEST_DRIVERS)
+#tests: $(CUTEST_TEST_DRIVERS)
 
-CUTEST_TEST_OBJS := $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
+#CUTEST_TEST_OBJS := $(addsuffix .o,$(CUTEST_TEST_DRIVERS))
 
-$(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ -lm
+#$(CUTEST_TEST_DRIVERS) :: %: %.o $(CUTEST_L) $(OBJ)
+#	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 ifneq ($(MAKECMDGOALS),clean)
   ifneq ($(MAKECMDGOALS),allclean)

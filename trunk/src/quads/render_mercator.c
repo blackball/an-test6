@@ -112,6 +112,11 @@ int main(int argc, char** args) {
 			assert(entry->ra >= 0.0);
 			assert(entry->ra < 360.0);
 
+			/**
+			   Note that "y" is defined here such that the top of the image
+			   (as viewed on screen or read from file) is y=0 and increases
+			   toward the bottom of the image.
+			 */
 			y = (int)rint(yoffset + yscale * asinh(tan(deg2rad(entry->dec))));
 
 			if ((y < 0) || (y >= H)) {

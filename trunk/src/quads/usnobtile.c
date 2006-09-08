@@ -25,27 +25,67 @@ extern int optind, opterr, optopt;
 //#define max(a,b) (((a)>(b))?(a):(b))
 
 static void get_nodes_in(kdtree_t* kd, kdtree_node_t* node,
-						 real* qlo, real* qhi, pl* nodelist) {
+						 real* qlo, real* qhi, pl* nodelist, pl* leaflist) {
 	real *bblo, *bbhi;
 	bblo = kdtree_get_bb_low (kd, node);
 	bbhi = kdtree_get_bb_high(kd, node);
 	if (!kdtree_do_boxes_overlap(bblo, bbhi, qlo, qhi, kd->ndim))
 		return;
 	if (kdtree_is_box_contained(bblo, bbhi, qlo, qhi, kd->ndim)) {
-		pl_append(nodelist, node);
+		if (kdtree_node_is_leaf(kd, node))
+			pl_append(leaflist, node);
+		else
+			pl_append(nodelist, node);
 		return;
 	}
 	if (kdtree_node_is_leaf(kd, node)) {
-		pl_append(nodelist, node);
+		pl_append(leaflist, node);
 	} else {
-		get_nodes_in(kd, kdtree_get_child1(kd, node), qlo, qhi, nodelist);
-		get_nodes_in(kd, kdtree_get_child2(kd, node), qlo, qhi, nodelist);
+		get_nodes_in(kd, kdtree_get_child1(kd, node), qlo, qhi, nodelist, leaflist);
+		get_nodes_in(kd, kdtree_get_child2(kd, node), qlo, qhi, nodelist, leaflist);
 	}
 }
 
-static void get_nodes_contained_in(kdtree_t* kd, real* querylow,
-								   real* queryhigh, pl* nodelist) {
-	get_nodes_in(kd, kdtree_get_root(kd), querylow, queryhigh, nodelist);
+static void get_nodes_contained_in(kdtree_t* kd,
+								   real* querylow, real* queryhigh,
+								   pl* nodelist, pl* leaflist) {
+	get_nodes_in(kd, kdtree_get_root(kd), querylow, queryhigh, nodelist, leaflist);
+}
+
+static void expand_nodes(kdtree_t* kd, kdtree_node_t* node,
+						 pl* leaflist, pl* pixlist,
+						 real* qlo, real* qhi,
+						 int w, int h) {
+	// check if this whole box fits inside a pixel.
+	int xp0, xp1, yp0, yp1;
+	real *bblo, *bbhi;
+	bblo = kdtree_get_bb_low (kd, node);
+	bbhi = kdtree_get_bb_high(kd, node);
+	xp0 = (int)floor((double)w * (bblo[0] - qlo[0]) / (qhi[0] - qlo[0]));
+	xp1 = (int)ceil ((double)w * (bbhi[0] - qlo[0]) / (qhi[0] - qlo[0]));
+	yp0 = (int)floor((double)h * (bblo[1] - qlo[1]) / (qhi[1] - qlo[1]));
+	yp1 = (int)ceil ((double)h * (bbhi[1] - qlo[1]) / (qhi[1] - qlo[1]));
+	if ((xp1 - xp0 <= 1) && (yp1 - yp0 <= 1)) {
+		//fprintf(stderr, "Node fits in a single pixel!\n");
+		pl_append(pixlist, node);
+		return;
+	}
+	if (kdtree_node_is_leaf(kd, node)) {
+		pl_append(leaflist, node);
+		return;
+	}
+	expand_nodes(kd, kdtree_get_child1(kd, node), leaflist, pixlist, qlo, qhi, w, h);
+	expand_nodes(kd, kdtree_get_child2(kd, node), leaflist, pixlist, qlo, qhi, w, h);
+}
+
+static int count_nodes_in_list(pl* list) {
+	int j;
+	int N = 0;
+	for (j=0; j<pl_size(list); j++) {
+		kdtree_node_t* node = pl_get(list, j);
+		N += kdtree_node_npoints(node);
+	}
+	return N;
 }
 
 int main(int argc, char *argv[]) {
@@ -60,7 +100,8 @@ int main(int argc, char *argv[]) {
 	double lines = 0.0;
 
 	double px0, py0, px1, py1;
-	double xperpix, yperpix;
+	//double xperpix, yperpix;
+	double pixperx, pixpery;
 	double xzoom, yzoom;
 	int zoomlevel;
 	int xpix0, xpix1, ypix0, ypix1;
@@ -119,15 +160,25 @@ int main(int argc, char *argv[]) {
 	// Mercator projected position
 	px0 = x0 / (2.0 * M_PI);
 	px1 = x1 / (2.0 * M_PI);
-	py0 = asinh(tan(y0));
-	py1 = asinh(tan(y1));
-	xperpix = fabs(px1 - px0) / (double)w;
-	yperpix = fabs(py1 - py0) / (double)h;
+	py0 = (M_PI + asinh(tan(y0))) / (2.0 * M_PI);
+	py1 = (M_PI + asinh(tan(y1))) / (2.0 * M_PI);
+	if (px1 < px0) {
+		fprintf(stderr, "Error, px1 < px0 (%g < %g)\n", px1, px0);
+		exit(-1);
+	}
+	if (py1 < py0) {
+		fprintf(stderr, "Error, py1 < py0 (%g < %g)\n", py1, py0);
+		exit(-1);
+	}
+
+	pixperx = (double)w / (px1 - px0);
+	pixpery = (double)h / (py1 - py0);
+
 	fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
 	fprintf(stderr, "Projected Y range: [%g, %g]\n", py0, py1);
-	fprintf(stderr, "X,Y pixel scale: %g, %g.\n", xperpix, yperpix);
-	xzoom = 1.0 / (xperpix * 256.0);
-	yzoom = 1.0 / (yperpix * 256.0 / (2.0 * M_PI));
+	fprintf(stderr, "X,Y pixel scale: %g, %g.\n", pixperx, pixpery);
+	xzoom = pixperx / 256.0;
+	yzoom = pixpery / 256.0;
 	fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
 	{
 		double fxzoom;
@@ -152,10 +203,10 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
 	}
 
-	xpix0 = px0 / xperpix;
-	ypix0 = (-py1 + M_PI) / yperpix;
-	xpix1 = px1 / xperpix;
-	ypix1 = (-py0 + M_PI) / yperpix;
+	xpix0 = px0 * pixperx;
+	ypix0 = py0 * pixpery;
+	xpix1 = px1 * pixperx;
+	ypix1 = py1 * pixpery;
 
 	fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
 
@@ -230,7 +281,7 @@ int main(int argc, char *argv[]) {
 			dend   =  ceil(rad2deg(y1) / lines) * lines;
 			for (r=rstart; r<=rend; r+=lines) {
 				int px;
-				px = (int)rint(((deg2rad(r) - (x0 + x0wrap)) / (2.0*M_PI)) / xperpix);
+				px = (int)rint(((deg2rad(r) - (x0 + x0wrap)) / (2.0*M_PI)) * pixperx);
 				//fprintf(stderr, "RA %g: pix %i.\n", r, px);
 				if (px < 0 || px >= w)
 					continue;
@@ -243,7 +294,7 @@ int main(int argc, char *argv[]) {
 			}
 			for (d=dstart; d<=dend; d+=lines) {
 				int py;
-				py = (int)rint((M_PI - asinh(tan(deg2rad(d)))) / yperpix) - ypix0;
+				py = (int)rint( ((M_PI + asinh(tan(deg2rad(d)))) / (2.0*M_PI)) * pixpery) - ypix0;
 				//fprintf(stderr, "DEC %g: pix %i.\n", d, py);
 				if (py < 0 || py >= h)
 					continue;
@@ -258,7 +309,10 @@ int main(int argc, char *argv[]) {
 
 		// output PPM.
 		printf("P6 %d %d %d\n", w, h, 255);
-		fwrite(outimg, 1, w*h*3, stdout);
+		// flip the image vertically here at the last step.
+		for (y=h-1; y>=0; y--)
+			fwrite(outimg + y*w*3, 1, w*3, stdout);
+		//fwrite(outimg, 1, w*h*3, stdout);
 
 		free(outimg);
 
@@ -267,95 +321,28 @@ int main(int argc, char *argv[]) {
 		int Nside = 9;
 		int HP;
 		int hp;
-		/*
-		  int x, y;
-		  int xstart, xend, ystart, yend;
-		  int* hpimg;
-		  int hpimgsize = 256;
-		  bool* hps;
-		*/
 		il* hplist;
 		merctree* merc;
 		real querylow[2], queryhigh[2];
 		pl* nodelist;
+		pl* leaflist;
+		pl* pixlist;
 		float* fluximg;
 		float xscale, yscale;
 		int Noob;
 		int Nib;
 
 		HP = 12 * Nside * Nside;
-
-		/*
-		  hpimg = malloc(hpimgsize * hpimgsize * sizeof(int));
-		  for (y=0; y<hpimgsize; y++) {
-		  double xval, yval;
-		  double ra, dec;
-		  yval = (((double)y / (double)hpimgsize) * 2.0 * M_PI) - M_PI;
-		  dec = atan(sinh(yval));
-		  for (x=0; x<hpimgsize; x++) {
-		  xval = ((double)x / (double)hpimgsize);
-		  ra = xval * 2.0 * M_PI;
-		  hp = radectohealpix_nside(ra, dec, Nside);
-		  hpimg[y*hpimgsize + x] = hp;
-		  }
-		  }
-
-		  xstart = (int)floor(px0 * hpimgsize);
-		  xend   = (int)ceil (px1 * hpimgsize);
-		  ystart = (int)floor((py0 + M_PI) / (2.0*M_PI) * hpimgsize);
-		  yend   = (int)ceil ((py1 + M_PI) / (2.0*M_PI) * hpimgsize);
-
-		  //fprintf(stderr, "x [%i, %i], y [%i, %i]\n", xstart, xend, ystart, yend);
-
-		  hps = calloc(HP, sizeof(bool));
-
-		  for (y=ystart; y<=yend; y++) {
-		  if (y < 0 || y >= hpimgsize)
-		  continue;
-		  for (x=xstart; x<=xend; x++) {
-		  if (x < 0 || x >= hpimgsize)
-		  continue;
-		  hps[hpimg[y*hpimgsize + x]] = TRUE;
-		  }
-		  }
-		*/
-		/*
-		  for (y=ystart-1; y<=yend+1; y++) {
-		  if (y < 0 || y >= hpimgsize)
-		  continue;
-		  for (x=xstart-1; x<=xend+1; x++) {
-		  if (x < 0 || x >= hpimgsize)
-		  continue;
-		  hps[hpimg[y*hpimgsize + x]] = TRUE;
-		  }
-		  }
-		*/
-
-		/*
-		  free(hpimg);
-		*/
-
 		hplist = il_new(32);
 
-		/*
-		  fprintf(stderr, "Healpixes: ");
-		  for (i=0; i<HP; i++) {
-		  if (hps[i]) {
-		  il_append(hplist, i);
-		  fprintf(stderr, "%i ", i);
-		  }
-		  }
-		  fprintf(stderr, "\n");
-
-		  free(hps);
-		*/
-
 		querylow[0] = px0;
-		querylow[1] = (py0 + M_PI) / (2.0 * M_PI);
+		querylow[1] = py0;
 		queryhigh[0] = px1;
-		queryhigh[1] = (py1 + M_PI) / (2.0 * M_PI);
+		queryhigh[1] = py1;
 
-		nodelist = pl_new(256);
+		nodelist = pl_new(1024);
+		leaflist = pl_new(1024);
+		pixlist = pl_new(1024);
 
 		fluximg = calloc(w*h*3, sizeof(float));
 		if (!fluximg) {
@@ -363,8 +350,8 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		xscale = (float)w / (queryhigh[0] - querylow[0]);
-		yscale = (float)h / (queryhigh[1] - querylow[1]);
+		xscale = pixperx;
+		yscale = pixpery;
 
 		Noob = 0;
 		Nib = 0;
@@ -418,8 +405,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		for (i=0; i<il_size(hplist); i++) {
-			int Ntotal;
-			int Nleaves;
+			/*
+			  int Ntotal;
+			  int Nleaves;
+			*/
 			int j;
 			hp = il_get(hplist, i);
 
@@ -441,6 +430,7 @@ int main(int argc, char *argv[]) {
 						lo[0], hi[0], lo[1], hi[1]);
 				ix1 = (int)rint((lo[0] - querylow[0]) * xscale);
 				ix2 = (int)rint((hi[0] - querylow[0]) * xscale);
+				// flip the image vertically
 				iy2 = h - (int)rint((lo[1] - querylow[1]) * yscale);
 				iy1 = h - (int)rint((hi[1] - querylow[1]) * yscale);
 				fprintf(stderr, "In pixels: x:[%i,%i], y:[%i,%i]\n", ix1, ix2, iy1, iy2);
@@ -470,22 +460,65 @@ int main(int argc, char *argv[]) {
 				*/
 			}
 
-			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist);
+			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist, leaflist);
 
-			Ntotal = 0;
-			Nleaves = 0;
+			fprintf(stderr, "Found %i nodes (%i points) + %i leaves (%i points), total of %i points.\n",
+					pl_size(nodelist), count_nodes_in_list(nodelist),
+					pl_size(leaflist), count_nodes_in_list(leaflist),
+					count_nodes_in_list(nodelist) + count_nodes_in_list(leaflist));
+
 			for (j=0; j<pl_size(nodelist); j++) {
 				kdtree_node_t* node = pl_get(nodelist, j);
-				Ntotal += kdtree_node_npoints(node);
-				if (kdtree_node_is_leaf(merc->tree, node))
-					Nleaves++;
+				expand_nodes(merc->tree, node, leaflist, pixlist,
+							 querylow, queryhigh, w, h);
 			}
+			pl_remove_all(nodelist);
 
-			fprintf(stderr, "Found %i nodes (%i leaves), total of %i points.\n", pl_size(nodelist), Nleaves, Ntotal);
+			fprintf(stderr, "Expanded to %i leaves (%i points) + %i single-pixel nodes (%i points)\n",
+					pl_size(leaflist), count_nodes_in_list(leaflist),
+					pl_size(pixlist), count_nodes_in_list(pixlist));
 
-			for (j=0; j<pl_size(nodelist); j++) {
+			/*
+			  Ntotal = 0;
+			  Nleaves = 0;
+			  for (j=0; j<pl_size(nodelist); j++) {
+			  kdtree_node_t* node = pl_get(nodelist, j);
+			  Ntotal += kdtree_node_npoints(node);
+			  if (kdtree_node_is_leaf(merc->tree, node))
+			  Nleaves++;
+			  }
+			  fprintf(stderr, "Found %i nodes (%i leaves), total of %i points.\n", pl_size(nodelist), Nleaves, Ntotal);
+			*/
+
+			for (j=0; j<pl_size(pixlist); j++) {
+				kdtree_node_t* node = pl_get(pixlist, j);
+				// for macros
+				kdtree_t* kd = merc->tree;
+				int ix, iy;
+				real* pt;
+				merc_flux* flux;
+				int nodenum;
+
+				pt = KD_POINT(node->l);
+				ix = (int)rint((pt[0] - querylow[0]) * xscale);
+				// flip vertically
+				iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
+				if (ix < 0 || iy < 0 || ix >= w || iy >= h) {
+					Noob++;
+					continue;
+				}
+				Nib++;
+				nodenum = kdtree_node_to_nodeid(kd, node);
+				flux = &(merc->stats[nodenum].flux);
+				fluximg[3*(iy*w+ix) + 0] += flux->rflux;
+				fluximg[3*(iy*w+ix) + 1] += flux->bflux;
+				fluximg[3*(iy*w+ix) + 2] += flux->nflux;
+			}
+			pl_remove_all(pixlist);
+
+			for (j=0; j<pl_size(leaflist); j++) {
 				int k;
-				kdtree_node_t* node = pl_get(nodelist, j);
+				kdtree_node_t* node = pl_get(leaflist, j);
 				// for macros
 				kdtree_t* kd = merc->tree;
 				for (k=node->l; k<=node->r; k++) {
@@ -494,6 +527,7 @@ int main(int argc, char *argv[]) {
 					merc_flux* flux;
 					pt = KD_POINT(k);
 					ix = (int)rint((pt[0] - querylow[0]) * xscale);
+					// flip vertically
 					iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
 					if (ix < 0 || iy < 0 || ix >= w || iy >= h) {
 						Noob++;
@@ -506,14 +540,16 @@ int main(int argc, char *argv[]) {
 					fluximg[3*(iy*w+ix) + 2] += flux->nflux;
 				}
 			}
+			pl_remove_all(leaflist);
 
-			pl_remove_all(nodelist);
 			merctree_close(merc);
 		}
 		fprintf(stderr, "%i stars outside image bounds.\n", Noob);
 		fprintf(stderr, "%i stars inside image bounds.\n", Nib);
 
 		pl_free(nodelist);
+		pl_free(leaflist);
+		pl_free(pixlist);
 		il_free(hplist);
 
 		{
