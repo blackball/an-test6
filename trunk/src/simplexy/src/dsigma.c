@@ -49,16 +49,10 @@ int dsigma(float *image,
 
 	diff = (float *) malloc(2 * nx * ny * sizeof(float));
 	ndiff = 0;
-	for (j = 0;j < ny;j += dy) {
-		for (i = 0;i < nx;i += dx) {
-			if (i < nx - sp) {
-				diff[ndiff] = fabs(image[i + j * nx] - image[i + sp + j * nx]);
-				ndiff++;
-			}
-			if (j < ny - sp) {
-				diff[ndiff] = fabs(image[i + j * nx] - image[i + (j + sp) * nx]);
-				ndiff++;
-			}
+	for (j = 0;j < ny-sp;j += dy) {
+		for (i = 0;i < nx-sp;i += dx) {
+			diff[ndiff] = fabs(image[i + j * nx] - image[i + sp + (j + sp) * nx]);
+			ndiff++;
 		}
 	}
 

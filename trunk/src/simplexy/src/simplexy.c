@@ -42,7 +42,7 @@ int simplexy(float *image,
 	int i, j;
 
 	/* determine sigma */
-	dsigma(image, nx, ny, 2, sigma);
+	dsigma(image, nx, ny, 5, sigma);
 	invvar = (float *) malloc(nx * ny * sizeof(float));
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
