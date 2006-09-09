@@ -1,0 +1,2 @@
+#!/bin/sh
+tablist -r "$1[col X;Y]" |awk '{print " image; cross point" $0}'|xpaset ds9 regions
