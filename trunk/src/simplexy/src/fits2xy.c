@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 		for (i = 0;i < npeaks;i++)
 			fprintf(stdout, "%e %e %e\n", x[i], y[i], flux[i]);
 
+		fprintf(stderr, "sigma=%f\n", sigma);
 		free(thedata);
 		free(x);
 		free(y);
