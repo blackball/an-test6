@@ -14,10 +14,11 @@ int main(int argc, char *argv[])
     int elem, firstelem, lastelem = 0, nelems;
     long jj, nrows, kk;
 	
-    if (argc != 2) {
-		printf("Usage:  tablist filename[ext][col filter][row filter] \n");
+    if (argc != 2 && argc != 3) {
+		printf("Usage:  tablist [-r] filename[ext][col filter][row filter] \n");
 		printf("\n");
 		printf("List the contents of a FITS table \n");
+		printf(" -r: Don't output column headers or row numbers \n");
 		printf("\n");
 		printf("Examples: \n");
 		printf("  tablist tab.fits[GTI]           - list the GTI extension\n");
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
 		return(0);
     }
 
-    if (fits_open_file(&fptr, argv[1], READONLY, &status)) {
+    if (fits_open_file(&fptr, argv[argc-1], READONLY, &status)) {
 		if (status) fits_report_error(stderr, status); /* print any error message */
 		return status;
 	}
@@ -44,6 +45,11 @@ int main(int argc, char *argv[])
 	if (hdutype == IMAGE_HDU) {
 		printf("Error: this program only displays tables, not images\n");
 		return -1;
+	}
+
+	int quiet = 0;
+	if (argv[1][0] == '-' && argv[1][1] == 'r') {
+		quiet = 1;
 	}
 
 	fits_get_num_rows(fptr, &nrows, &status);
@@ -105,30 +111,33 @@ int main(int argc, char *argv[])
 			break;
 
 		/* print column names as column headers */
-		printf("\n    ");
-		for (ii = firstcol; ii <= lastcol; ii++) {
-			int maxelem;
-			fits_make_keyn("TTYPE", ii, keyword, &status);
-			fits_read_key(fptr, TSTRING, keyword, colname, NULL, &status);
-			colname[dispwidth[ii]] = '\0';  /* truncate long names */
-			kk = ((ii == firstcol) ? firstelem : 1);
-			maxelem = ((ii == lastcol) ? lastelem : nelements[ii]);
+		if (!quiet) {
+			printf("\n    ");
+			for (ii = firstcol; ii <= lastcol; ii++) {
+				int maxelem;
+				fits_make_keyn("TTYPE", ii, keyword, &status);
+				fits_read_key(fptr, TSTRING, keyword, colname, NULL, &status);
+				colname[dispwidth[ii]] = '\0';  /* truncate long names */
+				kk = ((ii == firstcol) ? firstelem : 1);
+				maxelem = ((ii == lastcol) ? lastelem : nelements[ii]);
 
-			for (; kk <= maxelem; kk++) {
-				if (kk > 1) {
-					char buf[32];
-					int len = snprintf(buf, 32, "(%li)", kk);
-					printf("%*.*s%s ",dispwidth[ii]-len, dispwidth[ii]-len, colname, buf);
-				} else
-					printf("%*s ",dispwidth[ii], colname);
+				for (; kk <= maxelem; kk++) {
+					if (kk > 1) {
+						char buf[32];
+						int len = snprintf(buf, 32, "(%li)", kk);
+						printf("%*.*s%s ",dispwidth[ii]-len, dispwidth[ii]-len, colname, buf);
+					} else
+						printf("%*s ",dispwidth[ii], colname);
+				}
 			}
+			printf("\n");  /* terminate header line */
 		}
-		printf("\n");  /* terminate header line */
 
 		/* print each column, row by row (there are faster ways to do this) */
 		val = value;
 		for (jj = 1; jj <= nrows && !status; jj++) {
-			printf("%4d ", (int)jj);
+			if (!quiet) 
+				printf("%4d ", (int)jj);
 			for (ii = firstcol; ii <= lastcol; ii++)
 				{
 					kk = ((ii == firstcol) ? firstelem : 1);
