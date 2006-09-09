@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
 	fitsfile *ofptr;        /* FITS file pointer to output file */
 	//char card[FLEN_CARD];   /* Standard string lengths defined in fitsio.h */
-	int status = 0;
+	int status = 0; // FIXME should have ostatus too
 	int naxis;
 	int maxnpeaks = MAXNPEAKS, npeaks;
 	long naxisn[2];
@@ -132,8 +132,6 @@ int main(int argc, char *argv[])
 		char* tunit[] = {"PIXEL","PIXEL","FLUX"};
 		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
 				tunit, "SOURCES", &status);
-		//int fits_write_col(fitsfile *fptr, int datatype, int colnum, long firstrow,
-                 // long firstelem, long nelements, void *array, int *status);
 		fits_write_col(ofptr, TFLOAT, 1, 1, 1, npeaks, x, &status);
 		fits_report_error(stderr, status);
 		assert(!status);
