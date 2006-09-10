@@ -10,7 +10,7 @@ CFLAGS	+= -g
 #CFLAGS += -O2
 #CFLAGS += -pg
 CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math
+CFLAGS += -O3 -ffast-math -Wall
 
 # to turn off asserts:
 CFLAGS += -DNDEBUG
@@ -48,7 +48,7 @@ CFLAGS += -DNDEBUG
 
 CFLAGS += -Wall -D__USE_FIXED_PROTOTYPES__ \
 	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
-	-I.
+	-I. -I../cfitsio
 
 MACHINE:=$(shell uname -m)
 ifeq ($(MACHINE), i686)
@@ -92,7 +92,8 @@ EXECS := whynot certifiable \
 	tunematch \
 	overlapstats \
 	render_mercator \
-	make-merctree
+	make-merctree \
+	rawstartree
 
 #usnobtile usnobcount 
 
@@ -212,7 +213,7 @@ kdtree/kdtree_dim_4.o: kdtree/kdtree_dim.c
 #	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 #CFITSIO_CFLAGS := -Icfitsio/include
-CFITSIO_CFLAGS := -Icfitsio
+CFITSIO_CFLAGS := -Icfitsio -I../cfitsio
 #CFITSIO_CFLAGS += -Wall -O2
 CFITSIO_CFLAGS += -Wall -O0 -g
 CFITSIO_LIB := cfitsio/libcfitsio.a

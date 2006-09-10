@@ -4,10 +4,14 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "kdtree.h"
+#ifndef INTKDTREE
 #define KD_DIM 4
 #include "kdtree.h"
+#else
+#include "inttree.h"
+#endif
 
+>>>>>>> 1.10
 #include "tic.h"
 
 int main() {
