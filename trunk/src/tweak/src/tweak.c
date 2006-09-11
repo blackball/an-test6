@@ -56,7 +56,7 @@ wcs_t* get_wcs_from_hdu(fitsfile* infptr)
 	return wcsninit(tmpbuff, tmpbufflen);
 }
 
-int get_xy(fitsfile* fptr, int hdu, double **x, double **y, int *n)
+int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 {
 	// find this extension in fptr (which should be open to the xylist)
 	int nhdus, hdutype;
@@ -65,8 +65,12 @@ int get_xy(fitsfile* fptr, int hdu, double **x, double **y, int *n)
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 	int i, ext=33;
 	for (i=1; i<=nhdus; i++) {
+		fprintf(stderr, "+++++++++++++++++++++++++++++\n");
 		fits_movabs_hdu(fptr, i, &hdutype, &status);
-		{ // REMOVE ME DEBUG CODE!!!
+		if (status)
+			fits_report_error(stderr, status);
+		assert(!status);
+		if (0) { // REMOVE ME DEBUG CODE!!!
 			int mystatus=0;
 			int* status = &mystatus;
 			int nkeys, ii;
@@ -74,8 +78,8 @@ int get_xy(fitsfile* fptr, int hdu, double **x, double **y, int *n)
 
 			if (ffghsp(infptr, &nkeys, NULL, status) > 0) {
 				fprintf(stderr, "nomem\n");
-				fits_report_error(stderr, status);
-				return NULL;
+				fits_report_error(stderr, *status);
+				return 0;
 			}
 			fprintf(stderr, "nkeys=%d\n",nkeys);
 
@@ -83,15 +87,19 @@ int get_xy(fitsfile* fptr, int hdu, double **x, double **y, int *n)
 
 			for (ii = 0; ii < nkeys; ii++) {
 				ffgrec(infptr, ii+1, tmpbuff, status);
-				fits_report_error(stderr, status);
-				assert(!status);
+				fits_report_error(stderr, *status);
+				assert(!*status);
 				fprintf(stderr,"%s\n",tmpbuff);
 			}
 		}
 		if (i != 1)
 			assert(hdutype != IMAGE_HDU) ;
-		fits_read_key(fptr, TINT, "BITPIX", &ext, NULL, &status);
+		//fits_read_key(fptr, TINT, "BITPIX", &ext, NULL, &status);
 		fits_read_key(fptr, TINT, "SRCEXT ", &ext, NULL, &status);
+		if (status) {
+			status = 0;
+			continue;
+		}
 		fprintf(stderr, "SRCEXT=%d\n", ext);
 		fprintf(stderr, "i=%d\n", i);
 		fprintf(stderr, "status=%d\n", status);
@@ -99,6 +107,7 @@ int get_xy(fitsfile* fptr, int hdu, double **x, double **y, int *n)
 		if (ext == hdu)
 			break;
 	}
+	fprintf(stderr, "Got it.\n");
 	fits_get_hdu_type(fptr, &hdutype, &status);
 
 	assert(hdutype != IMAGE_HDU);
@@ -124,8 +133,10 @@ int get_center_and_radius(double* ra, double* dec, int n,
 	double* xyz = malloc(3*n*sizeof(double));
 	double xyz_mean[3] = {0,0,0};
 	int i, j;
-	for (i=0; i<n; i++) 
+	for (i=0; i<n; i++) {
 		radec2xyzarr(ra[i],dec[i],xyz+3*i);
+		//fprintf(stderr,"%f,%f,%f\n",xyz[3*i],xyz[3*i+1],xyz[3*i+2]);
+	}
 
 	for (i=0; i<n; i++) 
 		for (j=0; j<3; j++) 
@@ -134,7 +145,7 @@ int get_center_and_radius(double* ra, double* dec, int n,
 	for (j=0; j<3; j++) 
 		xyz_mean[j] /= (double) n;
 
-	double maxdist2 = 1e300;
+	double maxdist2 = 1e-300;
 	int maxind = -1;
 	for (i=0; i<n; i++) {
 		double dist2 = 0;
@@ -145,6 +156,9 @@ int get_center_and_radius(double* ra, double* dec, int n,
 			maxind = i;
 		}
 	}
+	*radius = rad2deg(sqrt(maxdist2));
+	*ra_mean = rad2deg(xy2ra(xyz_mean[0],xyz_mean[1]));
+	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
 	return 0;
 }
 
@@ -255,21 +269,27 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "GOT WCS INFO!!! %p \n", wcs);
 
 		// Extract xy
-		int n;
-		double *x, *y;
+		int n,jj;
+		float *x, *y;
 		get_xy(xyfptr, kk, &x, &y, &n);
+		//for (jj=0; jj<n; jj++) 
+			//fprintf(stderr, "%f %f\n",x[jj], y[jj]);
+
 
 		// Convert to ra dec
-		int jj;
+		//int jj;
 		double *a, *d;
 		a = malloc(sizeof(double)*n);
 		d = malloc(sizeof(double)*n);
-		for (jj=0; jj<n; jj++) 
+		for (jj=0; jj<n; jj++) {
 			pix2wcs(wcs, x[jj], y[jj], a+jj, d+jj);
+			fprintf(stderr, "%f %f\n",a[jj],a[jj]);
+		}
 
 		// Find field center/radius
 		double ra_mean, dec_mean, radius;
 		get_center_and_radius(a, d, n, &ra_mean, &dec_mean, &radius);
+		fprintf(stderr, "abar=%f, dbar=%f, rad=%f\n",ra_mean,dec_mean,radius);
 	}
 
 
