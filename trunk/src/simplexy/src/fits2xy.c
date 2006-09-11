@@ -48,10 +48,6 @@ int main(int argc, char *argv[])
 	fits_get_num_hdus(fptr, &nhdus, &status);
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
-	int hdu;
-	fits_get_hdu_num(fptr, &hdu);
-	fprintf(stderr, "hdu=%d\n", hdu);
-
 	// Create xylist filename (by trimming '.fits')
 	int fnamelen = strlen(argv[1]);
 	char outfile[300];
@@ -61,7 +57,6 @@ int main(int argc, char *argv[])
 	outfile[fnamelen-5] = '\0';
 	sprintf(outfile, "%s.xy.fits",outfile);
 	fprintf(stderr, "outfile=%s\n",outfile);
-	
 	
 	// Create output file
 	if (fits_create_file(&ofptr, outfile, &status)) {
