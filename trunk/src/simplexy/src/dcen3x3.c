@@ -11,8 +11,6 @@
  * COMMENTS:
  *   - Convention is to make the CENTER of the first pixel (0,0).
  * BUGS:
- *   - why is there a "1.3333" instead of a "(4.0/3.0)"?
- *   - why does dcen3 make edge cases and not just pass the problem out?
  *
  * Mike Blanton
  * 1/2006 */
@@ -25,7 +23,7 @@ int dcen3(float f0, float f1, float f2, float *xcen)
 {
 	float s, d, aa, sod, kk;
 
-	kk = 1.3333;
+	kk = (4.0/3.0);
 	s = 0.5 * (f2 - f0);
 	d = 2. * f1 - (f0 + f2);
 
