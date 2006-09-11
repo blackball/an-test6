@@ -21,7 +21,7 @@ typedef struct kdtree_hr kdtree_hr_t;
 
 struct kdtree_node {
     unsigned int l,r;              /* data(l:r) are coordinates below this node */
-	/* Implicit hyperrectangle 
+	/* Implicit hyperrectangle
 	real HR[sizeof(real)*D] Lower
 	real HR[sizeof(real)*D] Upper
 	*/
