@@ -20,19 +20,35 @@ wcs_t* get_wcs_from_hdu(fitsfile* infptr)
 	int* status = &mystatus;
 	int nkeys, ii;
 
-	if (ffghsp(infptr, &nkeys, NULL, status) > 0) /* get no. of keywords */
+	if (ffghsp(infptr, &nkeys, NULL, status) > 0) {
+		fprintf(stderr, "nomem\n");
 		return NULL;
+	}
+	fprintf(stderr, "nkeys=%d\n",nkeys);
 
 	/* create a memory buffer to hold the header records */
-	int tmpbufflen = nkeys*FLEN_CARD*sizeof(char);
+	int tmpbufflen = nkeys*(FLEN_CARD-1)*sizeof(char)+1;
 	char* tmpbuff = malloc(tmpbufflen);
-	if (!tmpbuff)
+	if (!tmpbuff) {
+		fprintf(stderr, "nomem\n");
 		return NULL;
+	}
 
 	/* read all of the header records in the input HDU */
-	for (ii = 0; ii < nkeys; ii++)
-		ffgrec(infptr, ii+1, tmpbuff + (ii * FLEN_CARD), status);
+	for (ii = 0; ii < nkeys; ii++) {
+		char* thiscard = tmpbuff + (ii * (FLEN_CARD-1));
+		ffgrec(infptr, ii+1, thiscard, status);
 
+		// Stupid hack because ffgrec null terminates
+		int n = strlen(thiscard);
+		if (n!=80) {
+			int jj;
+			for(jj=n;jj<80;jj++) 
+				thiscard[jj] = ' ';
+		}
+	}
+	//tmpbuff[tmpbufflen] = '\0';
+	//fprintf(stderr, "%s\n",tmpbuff);
 	return wcsninit(tmpbuff, tmpbufflen);
 }
 
@@ -68,12 +84,13 @@ int get_center_and_radius(double* ra, double* dec, int n,
 			maxind = i;
 		}
 	}
+	return 0;
 }
 
 int get_reference_stars(double ra_mean, double dec_mean, double radius,
                         double** ra, double **dec, int *n)
 {
-
+	return 0;
 }
 
 /* Fink-Hogg shift */
@@ -86,11 +103,11 @@ int main(int argc, char *argv[])
 	wcs_t* wcs;
 	/* Are there multiple images? */
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
-	fitsfile *ofptr;        /* FITS file pointer to output file */
+	//fitsfile *ofptr;        /* FITS file pointer to output file */
 	int status = 0; // FIXME should have ostatus too
 	int naxis;
-	long naxisn[2];
-	int kk, jj;
+	//long naxisn[2];
+	int kk;
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: tweak filename.fits \n");
@@ -110,7 +127,6 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
 	int hdutype;
-	int nimgs = 0;
 
 	// Tweak each HDU independently
 	for (kk=1; kk <= nhdus; kk++) {
@@ -142,7 +158,7 @@ int main(int argc, char *argv[])
 		status = 0; /* Reset after normal error */
 
 	fits_close_file(fptr, &status);
-	fits_close_file(ofptr, &status);
+	//fits_close_file(ofptr, &status);
 
 
 	if (status)
