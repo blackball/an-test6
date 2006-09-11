@@ -9,6 +9,9 @@
  *
  * Get simple x and y values
  *
+ * BUGS:
+ *   - there is an (int) where there should be a round in the flux step.
+ *
  * Mike Blanton
  * 1/2006 */
 
