@@ -72,6 +72,19 @@ int main(int argc, char *argv[])
 	assert(!status);
 
 	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
+	/* Parameters for simplexy; save for debugging */
+	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
+	float dpsf = 1;     /* gaussian psf width; 1 is usually fine */
+	float plim = 8;     /* significance to keep; 8 is usually fine */
+	float dlim = 1;     /* closest two peaks can be; 1 is usually fine */
+	float saddle = 3;   /* saddle difference (in sig); 3 is usually fine */
+	int maxper = 1000;  /* maximum number of peaks per object; 1000 */
+	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "Gaussian psf width", &status);
+	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "Significance to keep", &status);
+	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "Closest two peaks can be", &status);
+	fits_write_key(ofptr, TFLOAT, "SADDLE", &saddle, "Saddle difference (in sig)", &status);
+	fits_write_key(ofptr, TINT, "MAXPER", &maxper, "Max num of peaks per object", &status);
+	fits_write_key(ofptr, TINT, "MAXPEAKS", &maxnpeaks, "Max num of peaks total", &status);
 
 	fits_write_history(ofptr, 
 		"Created by astrometry.net's simplexy v1.0.4rc2 alpha-3+4",
@@ -121,7 +134,7 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 
-		// FIXME Check and make sure this is float data
+		// FIXME #199 Check and make sure this is float data
 		fits_read_pix(fptr, TFLOAT, fpixel, naxisn[0]*naxisn[1], NULL, thedata,
 			      NULL, &status);
 
@@ -132,8 +145,9 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 		flux = malloc(maxnpeaks * sizeof(float));
-		simplexy( thedata, naxisn[0], naxisn[1], 1., 8., 1., 3., 1000,
-			  maxnpeaks, &sigma, x, y, flux, &npeaks);
+		simplexy( thedata, naxisn[0], naxisn[1],
+				dpsf, plim, dlim, saddle, maxper, maxnpeaks,
+				&sigma, x, y, flux, &npeaks);
 
 		// The FITS standard specifies that the center of the lower
 		// left pixel is 1,1. Store our xylist according to FITS
@@ -144,7 +158,7 @@ int main(int argc, char *argv[])
 
 		char* ttype[] = {"X","Y","FLUX"};
 		char* tform[] = {"E","E","E"};
-		char* tunit[] = {"PIXEL","PIXEL","FLUX"};
+		char* tunit[] = {"pixels","pixels","flux"};
 		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
 				tunit, "SOURCES", &status);
 		fits_write_col(ofptr, TFLOAT, 1, 1, 1, npeaks, x, &status);
@@ -165,6 +179,7 @@ int main(int argc, char *argv[])
 		assert(!status);
 		fits_write_key(ofptr, TINT, "SRCEXT", &kk, "Extension number in src image", &status);
 		assert(!status);
+		fits_write_key(ofptr, TFLOAT, "ESTSIGMA", &sigma, "Estimated source image variance", &status);
 		fits_write_comment(ofptr,
 			"The X and Y points are specified assuming 1,1 is "
 			"the center of the leftmost bottom pixel of the "
@@ -183,8 +198,6 @@ int main(int argc, char *argv[])
 	assert(hdutype == IMAGE_HDU);
 	fits_write_key(ofptr, TINT, "NEXTEND", &nimgs, "Number of extensions", &status);
 	assert(!status);
-
-
 
 	if (status == END_OF_FILE)
 		status = 0; /* Reset after normal error */
