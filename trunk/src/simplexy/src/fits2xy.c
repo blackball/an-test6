@@ -20,8 +20,7 @@ int main(int argc, char *argv[])
 	int maxnpeaks = MAXNPEAKS, npeaks;
 	long naxisn[2];
 	long fpixel[2] = {1L, 1L};
-	//unsigned long int bscale = 1L, bzero = 0L, kk, jj;
-	int kk;
+	int kk, jj;
 	float *thedata = NULL;
 	float sigma;
 
@@ -69,20 +68,31 @@ int main(int argc, char *argv[])
 		fits_report_error(stderr, status);
 		exit( -1);
 	}
+	fits_create_img(ofptr, 8, 0, NULL, &status);
+	assert(!status);
+
+	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
+
+	fits_write_history(ofptr, 
+		"Created by astrometry.net's simplexy v1.0.4rc2 alpha-3+4",
+		&status);
+	assert(!status);
+	fits_write_history(ofptr, 
+		"Visit us on the web at http://astrometry.net/",
+		&status);
+	assert(!status);
+	assert(!status);
+
+	int hdutype;
+	int nimgs = 0;
 
 	// Run simplexy on each HDU
 	for (kk=1; kk <= nhdus; kk++) {
-		int hdutype;
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
 
-		// Create dummy HDU for tables
-		if (hdutype != IMAGE_HDU) {
-			fprintf(stderr, "dummy hdr\n");
-			fits_create_tbl(ofptr, hdutype, 0, 0, NULL,NULL, NULL,
-					"dummy", &status);
+		if (hdutype != IMAGE_HDU) 
 			continue;
-		}
 
 		fits_get_img_dim(fptr, &naxis, &status);
 		if (status) {
@@ -91,23 +101,21 @@ int main(int argc, char *argv[])
 		}
 
 		if (naxis != 2) {
-			// FIXME perhaps just continue?
-			fprintf(stderr, "Invalid header: NAXIS is not 2 on hdu%d!\n", kk);
-			fits_create_img(ofptr, 8, 0, NULL, &status);
-			assert(!status);
-			//exit( -1);
+			fprintf(stderr, "Invalid image: NAXIS is not 2 in HDU %d!\n", kk);
 			continue;
 		}
+
 		fits_get_img_size(fptr, 2, naxisn, &status);
 		if (status) {
 			fits_report_error(stderr, status);
 			exit( -1);
 		}
 
-		//fprintf(stderr,"Got naxis=%d,na1=%d,na2=%d,bitpix=%d\n", naxis,naxisn[0],naxisn[1],bitpix);
+		nimgs++;
+
 		fprintf(stderr,"Got naxis=%d,na1=%lu,na2=%lu\n", naxis,naxisn[0],naxisn[1]);
 
-		thedata = (float *)malloc(naxisn[0] * naxisn[1] * sizeof(float));
+		thedata = malloc(naxisn[0] * naxisn[1] * sizeof(float));
 		if (thedata == NULL) {
 			fprintf(stderr, "Failed allocating data array.\n");
 			exit( -1);
@@ -117,15 +125,22 @@ int main(int argc, char *argv[])
 		fits_read_pix(fptr, TFLOAT, fpixel, naxisn[0]*naxisn[1], NULL, thedata,
 			      NULL, &status);
 
-		x = (float *) malloc(maxnpeaks * sizeof(float));
-		y = (float *) malloc(maxnpeaks * sizeof(float));
+		x = malloc(maxnpeaks * sizeof(float));
+		y = malloc(maxnpeaks * sizeof(float));
 		if (x == NULL || y == NULL) {
 			fprintf(stderr, "Failed allocating output arrays.\n");
 			exit( -1);
 		}
-		flux = (float *) malloc(maxnpeaks * sizeof(float));
+		flux = malloc(maxnpeaks * sizeof(float));
 		simplexy( thedata, naxisn[0], naxisn[1], 1., 8., 1., 3., 1000,
 			  maxnpeaks, &sigma, x, y, flux, &npeaks);
+
+		// The FITS standard specifies that the center of the lower
+		// left pixel is 1,1. Store our xylist according to FITS
+		for (jj=0; jj<npeaks; jj++) {
+			x[jj] += 1.0;
+			y[jj] += 1.0;
+		}
 
 		char* ttype[] = {"X","Y","FLUX"};
 		char* tform[] = {"E","E","E"};
@@ -142,11 +157,32 @@ int main(int argc, char *argv[])
 		fits_report_error(stderr, status);
 		assert(!status);
 
+		fits_modify_comment(ofptr, "TTYPE1", "X coordinate", &status);
+		assert(!status);
+		fits_modify_comment(ofptr, "TTYPE2", "Y coordinate", &status);
+		assert(!status);
+		fits_modify_comment(ofptr, "TTYPE3", "Flux of source", &status);
+		assert(!status);
+		fits_write_key(ofptr, TINT, "SRCEXT", &kk, "Extension number in src image", &status);
+		assert(!status);
+		fits_write_comment(ofptr,
+			"The X and Y points are specified assuming 1,1 is "
+			"the center of the leftmost bottom pixel of the "
+			"image in accordance with the FITS standard.", &status);
+		assert(!status);
+
+
 		fprintf(stderr, "sigma=%f\n", sigma);
 		free(thedata);
 		free(x);
 		free(y);
 	}
+
+	// Put in the optional NEXTEND keywoard
+	fits_movabs_hdu(ofptr, 1, &hdutype, &status);
+	assert(hdutype == IMAGE_HDU);
+	fits_write_key(ofptr, TINT, "NEXTEND", &nimgs, "Number of extensions", &status);
+	assert(!status);
 
 
 
