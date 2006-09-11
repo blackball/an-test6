@@ -10,6 +10,10 @@
  * Take image and list of objects, and produce list of all peaks (and
  * which object they are in). 
  *
+ * BUGS:
+ *   - Sets flux to zero when the centroid is suspect.
+ *   - Fixed possible MRB bug with "+0.5" possibly wrongly.
+ *
  * Mike Blanton
  * 1/2006 */
 
@@ -118,10 +122,11 @@ int dallpeaks(float *image,
 						for (oj = -1;oj <= 1;oj++)
 							three[oi + 1 + (oj + 1)*3] =
 							    simage[oi + xc[i] + (oj + yc[i]) * onx];
-					dcen3x3(three, &tmpxc, &tmpyc);
-					xcen[imore + (*npeaks)] = tmpxc + (float)(xc[i] + xmin - 1);
-					ycen[imore + (*npeaks)] = tmpyc + (float)(yc[i] + ymin - 1);
-					imore++;
+					if (dcen3x3(three, &tmpxc, &tmpyc)) {
+					  xcen[imore + (*npeaks)] = tmpxc + (float)(xc[i] + xmin - 1);
+					  ycen[imore + (*npeaks)] = tmpyc + (float)(yc[i] + ymin - 1);
+					  imore++;
+					}
 				}
 			}
 			(*npeaks) += imore;

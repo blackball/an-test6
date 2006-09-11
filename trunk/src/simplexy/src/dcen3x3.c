@@ -6,7 +6,13 @@
 /*
  * dcen3x3.c
  *
- * Find center of 3x3 image
+ * Find center of a star inside a 3x3 image
+ *
+ * COMMENTS:
+ *   - Convention is to make the CENTER of the first pixel (0,0).
+ * BUGS:
+ *   - why is there a "1.3333" instead of a "(4.0/3.0)"?
+ *   - why does dcen3 make edge cases and not just pass the problem out?
  *
  * Mike Blanton
  * 1/2006 */
@@ -24,12 +30,7 @@ int dcen3(float f0, float f1, float f2, float *xcen)
 	d = 2. * f1 - (f0 + f2);
 
 	if (d <= 1.e-10*f0) {
-		if (f0 > f1 && f0 > f2)
-			(*xcen) = 0.;
-		if (f2 > f1 && f2 > f0)
-			(*xcen) = 2.;
-		(*xcen) = 1.;
-		return (1);
+		return (0);
 	}
 
 	aa = f1 + 0.5 * s * s / d;
@@ -44,14 +45,20 @@ int dcen3x3(float *image, float *xcen, float *ycen)
 	float mx0, mx1, mx2;
 	float my0, my1, my2;
 	float bx, by, mx , my;
+	int badcen = 0;
 
-	dcen3(image[0 + 3*0], image[1 + 3*0], image[2 + 3*0], &mx0);
-	dcen3(image[0 + 3*1], image[1 + 3*1], image[2 + 3*1], &mx1);
-	dcen3(image[0 + 3*2], image[1 + 3*2], image[2 + 3*2], &mx2);
+	badcen += dcen3(image[0 + 3*0], image[1 + 3*0], image[2 + 3*0], &mx0);
+	badcen += dcen3(image[0 + 3*1], image[1 + 3*1], image[2 + 3*1], &mx1);
+	badcen += dcen3(image[0 + 3*2], image[1 + 3*2], image[2 + 3*2], &mx2);
 
-	dcen3(image[0 + 3*0], image[0 + 3*1], image[0 + 3*2], &my0);
-	dcen3(image[1 + 3*0], image[1 + 3*1], image[1 + 3*2], &my1);
-	dcen3(image[2 + 3*0], image[2 + 3*1], image[2 + 3*2], &my2);
+	badcen += dcen3(image[0 + 3*0], image[0 + 3*1], image[0 + 3*2], &my0);
+	badcen += dcen3(image[1 + 3*0], image[1 + 3*1], image[1 + 3*2], &my1);
+	badcen += dcen3(image[2 + 3*0], image[2 + 3*1], image[2 + 3*2], &my2);
+
+	/* are we not okay? */
+	if (badcen != 6) {
+	  return (0);
+	}
 
 	/* x = (y-1) mx + bx */
 	bx = (mx0 + mx1 + mx2) / 3.;
@@ -61,8 +68,15 @@ int dcen3x3(float *image, float *xcen, float *ycen)
 	by = (my0 + my1 + my2) / 3.;
 	my = (my2 - my0) / 2.;
 
+	/* find intersection */
 	(*xcen) = (mx * (by - my - 1.) + bx) / (1. + mx * my);
 	(*ycen) = ((*xcen) - 1.) * my + by;
+
+	/* check that we are in the box */
+	if (((*xcen) < 0.0) || ((*xcen) > 2.0) ||
+	    ((*ycen) < 0.0) || ((*ycen) > 2.0)){
+	  return (0);
+	}
 
 	return (1);
 } /* end dcen3x3 */
