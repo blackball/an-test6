@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 
 		char* ttype[] = {"X","Y","FLUX"};
 		char* tform[] = {"E","E","E"};
-		char* tunit[] = {"pixels","pixels","flux"};
+		char* tunit[] = {"pix","pix","unknown"};
 		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
 				tunit, "SOURCES", &status);
 		fits_write_col(ofptr, TFLOAT, 1, 1, 1, npeaks, x, &status);
