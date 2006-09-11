@@ -11,8 +11,7 @@
  * which object they are in). 
  *
  * BUGS:
- *   - Sets flux to zero when the centroid is suspect.
- *   - Fixed possible MRB bug with "+0.5" possibly wrongly.
+ *   - Drops object if peak center sux.
  *
  * Mike Blanton
  * 1/2006 */

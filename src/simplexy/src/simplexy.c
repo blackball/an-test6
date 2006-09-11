@@ -10,7 +10,6 @@
  * Get simple x and y values
  *
  * BUGS:
- *   - there is an (int) where there should be a round in the flux step.
  *
  * Mike Blanton
  * 1/2006 */
@@ -70,7 +69,7 @@ int simplexy(float *image,
 	          maxper, maxnpeaks, minpeak);
 
 	for (i = 0;i < (*npeaks);i++)
-		flux[i] = simage[((int) x[i]) + ((int) y[i]) * nx];
+		flux[i] = simage[((int) (x[i]+0.5)) + ((int) (y[i]+0.5)) * nx];
 
 	FREEVEC(invvar);
 	FREEVEC(mimage);
