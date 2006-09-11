@@ -51,11 +51,6 @@ startree* startree_open(char* fn) {
 		goto bailout;
 	}
 
-	/*
-	  s->N = s->tree->ndata;
-	  s->D = s->tree->ndim;
-	*/
-
 	return s;
 
  bailout:
