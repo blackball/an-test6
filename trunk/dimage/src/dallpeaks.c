@@ -10,6 +10,8 @@
  * Take image and list of objects, and produce list of all peaks (and
  * which object they are in). 
  *
+ * BUGS: doesn't respect maxnpeaks
+ *
  * Mike Blanton
  * 1/2006 */
 
