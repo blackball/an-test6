@@ -158,7 +158,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
                         double** ra, double **dec, int *n, char* hppat)
 {
 	// FIXME magical 9 constant == an_cat hp res NSide
-	int hp = radectohealpix_nside(ra_mean, dec_mean, 9); 
+	int hp = radectohealpix_nside(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
 
 	char buf[1000];
 	snprintf(buf,1000, hppat, hp);
