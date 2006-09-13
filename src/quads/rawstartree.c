@@ -127,7 +127,7 @@ int main(int argc, char** args)
 	{
 		int levels;
 		levels = kdtree_compute_levels(N, Nleaf);
-		kd = kdtree_build(xyz, N, 2, levels + 1);
+		kd = kdtree_build(xyz, N, 3, levels + 1);
 		if (!kd) {
 			fprintf(stderr, "Failed to build kdtree.\n");
 			exit( -1);
