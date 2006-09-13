@@ -22,7 +22,7 @@ typedef struct WorldCoor wcs_t;
 // figure out the wcs
 wcs_t* get_wcs_from_hdu(fitsfile* infptr)
 {
-	int mystatus;
+	int mystatus = 0;
 	int* status = &mystatus;
 	int nkeys, ii;
 
@@ -172,11 +172,31 @@ int get_reference_stars(double ra_mean, double dec_mean, double radius,
 	int hp = radectohealpix_nside(ra_mean, dec_mean, 9); 
 
 	char buf[1000];
-	snprintf(buf,1000, "/home/users/keir/an_hp%04d.kdtree.fits", hp);
+	snprintf(buf,1000, "/global/metal1/scr/keir/AN/AN/an_hp%03d.rkdt.fits", hp);
 	fprintf(stderr, "opening %s\n",buf);
 	kdtree_t* kd = kdtree_fits_read_file(buf);
+	fprintf(stderr, "success\n");
 	assert(kd);
 
+	double xyz[3];
+	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
+
+	kdtree_qres_t* kq = kdtree_rangesearch_nosort(kd, xyz, radius);
+	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
+
+	*ra = malloc(sizeof(double)*kq->nres);
+	*dec = malloc(sizeof(double)*kq->nres);
+	*n = kq->nres;
+
+	int i;
+	for (i=0; i<kq->nres; i++) {
+		double *xyz = kq->results+3*i;
+		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
+		(*dec)[i] = rad2deg(z2dec(xyz[2]));
+	}
+
+	kdtree_free_query(kq);
+	kdtree_fits_close(kd);
 
 	return 0;
 }
@@ -313,6 +333,12 @@ int main(int argc, char *argv[])
 		double ra_mean, dec_mean, radius;
 		get_center_and_radius(a, d, n, &ra_mean, &dec_mean, &radius);
 		fprintf(stderr, "abar=%f, dbar=%f, rad=%f\n",ra_mean,dec_mean,radius);
+
+		double *a_ref, *d_ref;
+		int n_ref;
+		get_reference_stars(ra_mean, dec_mean, radius,
+					&a_ref, &d_ref, &n_ref);
+
 	}
 
 
