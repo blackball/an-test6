@@ -17,6 +17,10 @@
 typedef uint32_t u32;
 typedef uint16_t u16;
 
+typedef unsigned char bool;
+#define TRUE 1
+#define FALSE 0
+
 #if 0
 typedef double real;
 struct kdtree_hr {
@@ -47,29 +51,29 @@ struct kdtree {
 	unsigned int *perm;    /* Permutation index */
 
 	/* Bounding box: list: D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
-	union bb {
+	union {
 		float* f;
 		double* d;
 		u32* i;
 		u16* s;
 		void* any;
-	};
+	} bb;
 
 	/* Split dimension & position. */
-	union split {
+	union {
 		u32* i;
 		u16* s;
 		void* any;
-	};
+	} split;
 
-	union data {
+	union {
 		/* Raw coordinate data as xyzxyzxyz */
 		float* f;
 		double* d;
 		u32* i;
 		u16* s;
 		void* any;
-	};
+	} data;
 
 	/*
 	  union minval {
@@ -92,7 +96,8 @@ struct kdtree {
 	unsigned int ndata;     /* Number of items */
 	unsigned int ndim;      /* Number of dimensions */
 	unsigned int nnodes;    /* Number of nodes */
-	unsigned int nleaf;     /* Number of leaf nodes */
+	//unsigned int nleaf;     /* Number of leaf nodes */
+	unsigned int nbottom;
 	unsigned int ninterior; /* Number of internal nodes */
 	void* mmapped;          /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
@@ -203,6 +208,7 @@ kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
 	  bool copydata);
 
+#if 0
 
 /* Range seach */
 kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, real *pt, real maxdistsquared);
@@ -210,6 +216,8 @@ kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, real *pt, real maxdistsq
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, real *pt, real maxdistsquared);
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(kdtree_t *kd, real *pt, real maxdistsquared, int options);
+
+#endif//if0
 
 #if !defined(KD_DIM)
 #undef KD_DIM_GENERIC

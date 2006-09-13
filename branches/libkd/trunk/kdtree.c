@@ -9,10 +9,13 @@
 #include "kdtree_access.h"
 #include "kdtree_macros.h"
 
-typedef unsigned char bool;
-#define TRUE 1
-#define FALSE 0
+/*
+  typedef unsigned char bool;
+  #define TRUE 1
+  #define FALSE 0
+*/
 
+#if 0
 static inline real dist2(real* p1, real* p2, int d) {
 	int i;
 	real d2 = 0.0;
@@ -31,6 +34,7 @@ static inline int dist2_exceeds(real* p1, real* p2, int d, real maxd2) {
 	}
 	return 0;
 }
+#endif//if0
 
 /*****************************************************************************/
 /* Building routines                                                         */
@@ -45,8 +49,10 @@ int kdtree_compute_levels(int N, int Nleaf) {
 	return levels;
 }
 
+#if 0
 real* kdqsort_arr;
 int kdqsort_D;
+#endif//if0
 
 #if 0
 int kdqsort_compare(const void* v1, const void* v2)
@@ -207,6 +213,7 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 }
 #endif
 
+#if 0
 /* Sorts results by kq->sdists */
 int kdtree_qsort_results(kdtree_qres_t *kq, int D)
 {
@@ -259,6 +266,7 @@ int kdtree_qsort_results(kdtree_qres_t *kq, int D)
 	}
 	return 1;
 }
+#endif//if0
 
 #if 0
 int kdtree_rangecount_rec(kdtree_t* kd, kdtree_node_t* node,
@@ -363,6 +371,7 @@ int kdtree_nearest_neighbour_within(kdtree_t* kd, real *pt, real maxd2,
 }
 #endif
 
+#if 0
 /* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
 void kdtree_optimize(kdtree_t *kd)
 {
@@ -389,12 +398,15 @@ void kdtree_optimize(kdtree_t *kd)
 		}
 	}
 }
+#endif//if0
 
 void kdtree_free_query(kdtree_qres_t *kq)
 {
 	assert(kq);
-	free(kq->results);
-	free(kq->sdists);
+	/*
+	  free(kq->results);
+	  free(kq->sdists);
+	*/
 	free(kq->inds);
 	free(kq);
 }
@@ -402,7 +414,7 @@ void kdtree_free_query(kdtree_qres_t *kq)
 void kdtree_free(kdtree_t *kd)
 {
 	assert(kd);
-	assert(kd->tree);
+	assert(kd->nodes);
 	free(kd->perm);
 	free(kd->nodes);
 	free(kd->lr);

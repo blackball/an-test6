@@ -1,5 +1,10 @@
+#include <assert.h>
+#include <stdlib.h>
+#include <math.h>
+
 #include "kdtree.h"
 #include "kdtree_internal.h"
+#include "kdtree_macros.h"
 
 /*
   Expects the following to be defined:
@@ -16,9 +21,6 @@ x -   LOW_HR (kd, D, i)       returns a "kdtype*" to the lower hyperrectangle co
 x -   HIGH_HR(kd, D, i)       returns a "kdtype*" to the upper hyperrectangle corner
 */
 
-#define LOW_HR( kd, D, i) (kd->bb + (2*(i)*(D)))
-#define HIGH_HR(kd, D, i) (kd->bb + ((2*(i)+1)*(D)))
-
 /*
   #define FOURBILLION 4294967296.0
   #define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))*FOURBILLION ) ) )
@@ -27,10 +29,6 @@ x -   HIGH_HR(kd, D, i)       returns a "kdtype*" to the upper hyperrectangle co
   #define UINT_MAX 0xffffffff
 */
 
-#define DOUBLE2U32(kd, d, r)   ((u32)round(((r) - kd->minval[d]) * kd->scale[d]))
-
-#define DOUBLE2U16(kd, d, r)   ((u16)round(((r) - kd->minval[d]) * kd->scale[d]))
-
 /* args:
    
 -   bb: bounding-box or split-dim?
@@ -38,7 +36,11 @@ x -   HIGH_HR(kd, D, i)       returns a "kdtype*" to the upper hyperrectangle co
 kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 	 (real* data, int N, int D, int maxlevel, bool bbtree, bool copydata) {
 	real* pdata;
-	int i;
+	int i, d;
+	int xx;
+	kdtree_t* kd;
+	int nnodes;
+	int lnext, level;
 
 	assert(maxlevel > 0);
 	assert(D <= KDTREE_MAX_DIM);
@@ -93,7 +95,7 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		kd->minval[d] =  KDT_INFTY;
 		kd->maxval[d] = -KDT_INFTY;
 	}
-	pdata = kd->data;
+	pdata = kd->data.any;
 	for (i=0; i<N; i++) {
 		for (d=0; d<D; d++) {
 			if (*pdata > kd->maxval[d]) kd->maxval[d] = *pdata;
@@ -142,6 +144,9 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		real qsplit;
 		unsigned int spl;
 		unsigned int c;
+		int dim;
+		int m;
+		real hi[D], lo[D];
 
 		/* Sanity */
 		/*
@@ -183,7 +188,7 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		/** ??? Do we need special floor/ceiling REAL2KDTYPE routines to ensure
 			that the bounding box we store actually bounds the original real types? */
 
-		pdata = kd->data + left * D;
+		pdata = kd->data.any + left * D;
 		for (j=left; j<=right; j++) {
 			for (d=0; d<D; d++) {
 				if (*pdata > hi[d]) hi[d] = *pdata;
@@ -194,8 +199,8 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 
 		if (bbtree) {
 			for (d=0; d<D; d++) {
-				LOW_HR (kd, D, i)[d] = REAL2KDTYPE(kd, d, lo[d]);
-				HIGH_HR(kd, D, i)[d] = REAL2KDTYPE(kd, d, hi[d]);
+				(LOW_HR (kd, D, i))[d] = REAL2KDTYPE(kd, d, lo[d]);
+				(HIGH_HR(kd, D, i))[d] = REAL2KDTYPE(kd, d, hi[d]);
 			}
 		}
 
@@ -223,8 +228,8 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 
 		/* Store the R pointers for each child */
 		c = 2*i;
-		if (level == nlevel - 2)
-			c -= ninterior;
+		if (level == maxlevel - 2)
+			c -= kd->ninterior;
 		kd->lr[c+1] = m-1;
 		kd->lr[c+2] = right;
 
@@ -232,7 +237,7 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		assert(m <= right);
 	}
 
-	for (xx=0; xx<nbottom-1; xx++)
+	for (xx=0; xx<kd->nbottom-1; xx++)
 		assert(kd->lr[xx] <= kd->lr[xx+1]);
 
 	/* do leaf nodes get bounding boxes? */

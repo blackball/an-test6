@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef KDTREE_ACCESS_H
 #define KDTREE_ACCESS_H
 
@@ -133,3 +135,5 @@ int KDFUNC(kdtree_bb_point_maxdist2_exceeds)
 #endif
 
 #endif
+
+#endif//if0

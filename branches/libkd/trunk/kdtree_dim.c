@@ -8,7 +8,10 @@
 #include "kdtree.h"
 #include "kdtree_macros.h"
 #include "kdtree_access.h"
-#include "starutil.h"
+
+#include "kdtree_internal.h"
+
+//#include "starutil.h"
 
 #if 0
 

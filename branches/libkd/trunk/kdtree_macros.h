@@ -9,6 +9,8 @@
 #define KDTREE_MAX_DIM 10
 #define KDTREE_MAX_RESULTS 1000
 
+#if 0
+
 /* Most macros operate on a variable kdtree_t *kd, assumed to exist. */
 /* x is a node index, d is a dimension, and n is a point index */
 
@@ -52,5 +54,7 @@
 #define PARENT_INDEX(i)     (((i)-1)/2)
 #define CHILD_INDEX_NEG(i)  (2*(i)+1)
 #define CHILD_INDEX_POS(i)  (2*(i)+2)
+
+#endif//if0
 
 #endif
