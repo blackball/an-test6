@@ -1,0 +1,17 @@
+#!/bin/bash
+
+FILE=$1
+XYFILE="`echo $1|cut -f1 -d.`.xy.fits"
+XYSFILE="`echo $1|cut -f1 -d.`.xys.fits"
+OFILE="`echo $1|cut -f1 -d.`.tweaked.fits"
+DBPATTERN='/global/metal1/scr/keir/AN/AN/an_hp%03d.rkdt.fits'
+HPNSIDE=9
+
+if [ -f $XYFILE ]; then
+	../simplexy/fits2xy $1
+fi
+if [ -f $XYSFILE ]; then
+	../quads/tabsort -d -i $XYFILE -o $XYSFILE  -c flux
+fi
+
+tweak -i $FILE -s $XYFILE -o $OFILE -d DBPATTERN -n 9
