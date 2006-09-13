@@ -16,6 +16,8 @@ kdtree_t* kdtree_fits_read_file_extras(char* fn, extra_table* extras, int nextra
 
 int kdtree_fits_write_file_extras(kdtree_t* kdtree, char* fn, qfits_header* hdr, extra_table* extras, int nextras);
 
+void kdtree_fits_close(kdtree_t* kd);
+
 struct extra_table_info {
 	char* name;
 
