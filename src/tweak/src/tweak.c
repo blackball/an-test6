@@ -138,24 +138,34 @@ void get_center_and_radius(double* ra, double* dec, int n,
 	for (j=0; j<3; j++) 
 		xyz_mean[j] /= (double) n;
 
-	double maxdist2 = 1e-300;
+	double norm=0;
+	for (j=0; j<3; j++) 
+		norm += xyz_mean[j]*xyz_mear[j];
+	norm = sqrt(norm);
+
+	for (j=0; j<3; j++) 
+		xyz_mean[j] /= norm;
+
+	double maxdist2 = 0;
 	int maxind = -1;
 	for (i=0; i<n; i++) {
 		double dist2 = 0;
-		for (j=0; j<3; j++) 
-			dist2 += (xyz_mean[j]-xyz[3*i+j])*(xyz_mean[j]-xyz[3*i+j]);
+		for (j=0; j<3; j++) {
+			double d = xyz_mean[j]-xyz[3*i+j];
+			dist2 += d*d;
+		}
 		if (maxdist2 < dist2) {
 			maxdist2 = dist2;
 			maxind = i;
 		}
 	}
-	*radius = rad2deg(sqrt(maxdist2));
+	*radius = sqrt(maxdist2);
 	*ra_mean = rad2deg(xy2ra(xyz_mean[0],xyz_mean[1]));
 	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
 }
 
 void get_reference_stars(double ra_mean, double dec_mean, double radius,
-                        double** ra, double **dec, int *n, char* hppat)
+                         double** ra, double **dec, int *n, char* hppat)
 {
 	// FIXME magical 9 constant == an_cat hp res NSide
 	int hp = radectohealpix_nside(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
@@ -184,10 +194,61 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 		double *xyz = kq->results+3*i;
 		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
 		(*dec)[i] = rad2deg(z2dec(xyz[2]));
+		if (i < 30) 
+			fprintf(stderr, "a=%f d=%f\n",(*ra)[i],(*dec)[i]);
 	}
 
 	kdtree_free_query(kq);
 	kdtree_fits_close(kd);
+}
+
+// FIXME in RADECSPACE!!! EWWWWWWWWWWWWWWWWWWWWWW
+void get_shift(double* aimg, double* dimg, int nimg,
+		double* acat, double* dcat, int ncat)
+{
+
+	nimg = 100;
+	ncat = 100;
+	int N = nimg*ncat;
+	int Nleaf = 15;
+	double* adshift = malloc(sizeof(double)*N*2);
+	int i, j;
+	FILE* blah = fopen("res.py", "w");
+	fprintf(blah, "[\n");
+	for (i=0; i<nimg; i++)
+		for (j=0; j<ncat; j++) {
+			adshift[2*i*nimg+2*j+0] = aimg[i]-acat[j];
+			adshift[2*i*nimg+2*j+1] = dimg[i]-dcat[j];
+			fprintf(blah, "%f %f;\n", aimg[i]-acat[j], dimg[i]-dcat[j]);
+		}
+	fprintf(blah, "]\n");
+	fclose(blah);
+	exit(1);
+
+	int levels = kdtree_compute_levels(N, Nleaf);
+	kdtree_t* kd = kdtree_build(adshift, N, 2, levels + 1);
+
+	double maxker = 0;
+	double* maxad;
+	double bandwidth = 0.1; // FIXME !!!! need to pick real value
+	for (i=0; i<N; i++) {
+		kdtree_qres_t* kq = kdtree_rangesearch_nosort(kd,
+				kd->data+2*i, bandwidth); // FIXME get real value
+		double ker = 0;
+		double* ad = kd->data+2*i;
+		for (j=0; j< kq->nres; j++) {
+			double* adr = kq->results+2*j;
+			double dist = sqrt((ad[0]-adr[0])*(ad[0]-adr[0]) +
+			                   (ad[1]-adr[1])*(ad[1]-adr[1]));
+			double u = dist / bandwidth;
+			if (-1 < u || u < 1)
+				ker += 3/4 * (1-u*u); // Epanechnikov
+		}
+		if (maxker < ker) {
+			maxker = ker;
+			maxad = ad;
+		}
+	}
 }
 
 /* Fink-Hogg shift */
@@ -320,12 +381,14 @@ int main(int argc, char *argv[])
 		// Find field center/radius
 		double ra_mean, dec_mean, radius;
 		get_center_and_radius(a, d, n, &ra_mean, &dec_mean, &radius);
-		fprintf(stderr, "abar=%f, dbar=%f, rad=%f\n",ra_mean,dec_mean,radius);
+		fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",ra_mean, dec_mean, radius);
 
 		double *a_ref, *d_ref;
 		int n_ref;
 		get_reference_stars(ra_mean, dec_mean, radius,
 					&a_ref, &d_ref, &n_ref, hppat);
+
+		get_shift(a, d, n, a_ref, d_ref, n_ref);
 
 	}
 
