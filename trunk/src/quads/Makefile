@@ -5,7 +5,7 @@ LFLAGS := -lm
 
 CFLAGS :=
 
-CFLAGS	+= -g
+#CFLAGS	+= -g
 #CFLAGS += -O0
 #CFLAGS += -O2
 #CFLAGS += -pg
@@ -219,6 +219,7 @@ CFITSIO_CFLAGS += -Wall -O0 -g
 CFITSIO_LIB := cfitsio/libcfitsio.a
 CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
 CFITSIO_OBJS := $(addsuffix .o,$(CFITS_UTILS))
+CFITSIO_SRCS := $(CFITSIO_OBJS:.o=.c)
 
 $(CFITSIO_LIB): cfitsio/*.c cfitsio/*.h cfitsio/Makefile
 	$(MAKE) -C cfitsio
@@ -232,7 +233,7 @@ $(CFITS_UTILS) :: %: %.o $(CFITSIO_LIB)
 #$(CFITSIO_OBJS) :: %.o: %.c
 #	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
 
-$(CFITSIO_OBJS):
+$(CFITSIO_OBJS): $(CFITSIO_SRCS)
 	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
 
 $(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)

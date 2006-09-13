@@ -6,7 +6,7 @@ echo Num $num
 input=input/input.$num
 output=stdout/stdout.$num
 err=stderr/stderr.$num
-
+mkdir -p input stdout stderr
 echo "Running on host:"
 hostname
 echo
@@ -34,8 +34,11 @@ if [ "x$PID2" != "x" ]; then
   exit
 fi
 
+#index=`gawk '/index\>/{print $2}' $input | head -n 1`
+#index_src=`gawk '/index_src\>/{print $2}' $input | head -n 1`
 index=`awk '/index\>/{print $2}' $input`
 index_src=`awk '/index_src\>/{print $2}' $input`
+
 index_dir=`dirname $index`
 echo index is $index
 echo index_src is $index_src
@@ -55,7 +58,7 @@ echo "starting slave..."
 
 echo "removing files..."
 for x in quad ckdt skdt; do
-  CMD="rm -v $index_src.${x}.fits $index_dir";
+  CMD="rm -v $index.${x}.fits";
   echo $CMD
   $CMD
 done
