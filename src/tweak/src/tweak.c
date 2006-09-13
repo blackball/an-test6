@@ -18,8 +18,8 @@
 
 typedef struct WorldCoor wcs_t;
 
-// hacky. pull the complete hdu from the current hdu, then use wcstools to
-// figure out the wcs
+// Hacky. Pull the complete hdu from the current hdu, then use wcstools to
+// figure out the wcs, and return it
 wcs_t* get_wcs_from_hdu(fitsfile* infptr)
 {
 	int mystatus = 0;
@@ -32,18 +32,18 @@ wcs_t* get_wcs_from_hdu(fitsfile* infptr)
 	}
 	fprintf(stderr, "nkeys=%d\n",nkeys);
 
-	/* create a memory buffer to hold the header records */
+	// Create a memory buffer to hold the header records
 	int tmpbufflen = nkeys*(FLEN_CARD-1)*sizeof(char)+1;
 	char* tmpbuff = malloc(tmpbufflen);
-	if (!tmpbuff) {
-		fprintf(stderr, "nomem\n");
-		return NULL;
-	}
+	assert(tmpbuff);
 
-	/* read all of the header records in the input HDU */
+	// Read all of the header records in the input HDU
 	for (ii = 0; ii < nkeys; ii++) {
 		char* thiscard = tmpbuff + (ii * (FLEN_CARD-1));
-		ffgrec(infptr, ii+1, thiscard, status);
+		if (ffgrec(infptr, ii+1, thiscard, status)) {
+			fits_report_error(stderr, *status);
+			exit(-1);
+		}
 
 		// Stupid hack because ffgrec null terminates
 		int n = strlen(thiscard);
@@ -58,87 +58,77 @@ wcs_t* get_wcs_from_hdu(fitsfile* infptr)
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 {
-	// find this extension in fptr (which should be open to the xylist)
+	// Find this extension in fptr (which should be open to the xylist)
 	int nhdus, hdutype;
 	int status=0;
-	fits_get_num_hdus(fptr, &nhdus, &status);
-	fprintf(stderr, "nhdus=%d\n", nhdus);
-	int i, ext=33;
+
+	if (fits_get_num_hdus(fptr, &nhdus, &status)) {
+		fits_report_error(stderr, status);
+		exit(-1);
+	}
+
+	// Search each HDU looking for the one with SRCEXT==hdu
+	int i, ext=-1;
 	for (i=1; i<=nhdus; i++) {
-		fprintf(stderr, "+++++++++++++++++++++++++++++\n");
-		fits_movabs_hdu(fptr, i, &hdutype, &status);
-		if (status)
+		if (fits_movabs_hdu(fptr, i, &hdutype, &status)) {
 			fits_report_error(stderr, status);
-		assert(!status);
-		if (0) { // REMOVE ME DEBUG CODE!!!
-			int mystatus=0;
-			int* status = &mystatus;
-			int nkeys, ii;
-			fitsfile *infptr = fptr;
-
-			if (ffghsp(infptr, &nkeys, NULL, status) > 0) {
-				fprintf(stderr, "nomem\n");
-				fits_report_error(stderr, *status);
-				return 0;
-			}
-			fprintf(stderr, "nkeys=%d\n",nkeys);
-
-			char tmpbuff[3*FLEN_CARD];
-
-			for (ii = 0; ii < nkeys; ii++) {
-				ffgrec(infptr, ii+1, tmpbuff, status);
-				fits_report_error(stderr, *status);
-				assert(!*status);
-				fprintf(stderr,"%s\n",tmpbuff);
-			}
+			exit(-1);
 		}
 		if (i != 1)
 			assert(hdutype != IMAGE_HDU) ;
-		//fits_read_key(fptr, TINT, "BITPIX", &ext, NULL, &status);
-		fits_read_key(fptr, TINT, "SRCEXT ", &ext, NULL, &status);
-		if (status) {
+
+		if (fits_read_key(fptr, TINT, "SRCEXT ",
+					&ext, NULL, &status)) {
 			status = 0;
 			continue;
 		}
-		fprintf(stderr, "SRCEXT=%d\n", ext);
-		fprintf(stderr, "i=%d\n", i);
-		fprintf(stderr, "status=%d\n", status);
-		fits_report_error(stderr, status);
 		if (ext == hdu)
 			break;
 	}
-	fprintf(stderr, "Got it.\n");
-	fits_get_hdu_type(fptr, &hdutype, &status);
 
+	// Sanity
+	if (ext != hdu) {
+		fprintf(stderr, "Couldn't find xylist for HDU %d\n",hdu);
+		exit(-1);
+	}
+	if (fits_get_hdu_type(fptr, &hdutype, &status)) {
+		fits_report_error(stderr, status);
+		exit(-1);
+	}
 	assert(hdutype != IMAGE_HDU);
-	long nn;
-	fits_get_num_rows(fptr, &nn, &status);
-	fits_report_error(stderr, status);
-	*n = nn;
-	assert(!status);
 
+	// Now pull the X and Y columns
+	long l;
+	if (fits_get_num_rows(fptr, &l, &status)) {
+		fits_report_error(stderr, status);
+		exit(-1);
+	}
+	fprintf(stderr, "n=%d\n", *n);
+
+	*n = l;
 	*x = malloc(sizeof(double)* *n);
 	*y = malloc(sizeof(double)* *n);
-	fits_read_col(fptr, TFLOAT, 1, 1, 1, *n, NULL, *x, NULL, &status);
-	assert(!status);
-	fits_read_col(fptr, TFLOAT, 2, 1, 1, *n, NULL, *y, NULL, &status);
-	assert(!status);
-	fprintf(stderr, "n=%d\n", *n);
+	if (fits_read_col(fptr, TFLOAT, 1, 1, 1, *n, NULL, *x, NULL, &status)) {
+		fits_report_error(stderr, status);
+		exit(-1);
+	}
+	if (fits_read_col(fptr, TFLOAT, 2, 1, 1, *n, NULL, *y, NULL, &status)) {
+		fits_report_error(stderr, status);
+		exit(-1);
+	}
 	return 0;
 }
 
-int get_center_and_radius(double* ra, double* dec, int n,
+void get_center_and_radius(double* ra, double* dec, int n,
                           double* ra_mean, double* dec_mean, double* radius)
 {
 	double* xyz = malloc(3*n*sizeof(double));
 	double xyz_mean[3] = {0,0,0};
 	int i, j;
 	for (i=0; i<n; i++) {
-		radec2xyzarr(deg2rad(ra[i]),deg2rad(dec[i]),xyz+3*i);
-		//fprintf(stderr,"++%f,%f\n",ra[i],dec[i]);
-		//fprintf(stderr,"%f,%f,%f\n",xyz[3*i],xyz[3*i+1],xyz[3*i+2]);
-		//fprintf(stderr,".. %f,%f\n",rad2deg(xy2ra(xyz[3*i],xyz[3*i+1])),
-				//rad2deg(z2dec(xyz[3*i+2])));
+		radec2xyzarr(deg2rad(ra[i]),
+		             deg2rad(dec[i]),
+		             xyz + 3*i);
 	}
 
 	for (i=0; i<n; i++) 
@@ -162,17 +152,16 @@ int get_center_and_radius(double* ra, double* dec, int n,
 	*radius = rad2deg(sqrt(maxdist2));
 	*ra_mean = rad2deg(xy2ra(xyz_mean[0],xyz_mean[1]));
 	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
-	return 0;
 }
 
-int get_reference_stars(double ra_mean, double dec_mean, double radius,
-                        double** ra, double **dec, int *n)
+void get_reference_stars(double ra_mean, double dec_mean, double radius,
+                        double** ra, double **dec, int *n, char* hppat)
 {
 	// FIXME magical 9 constant == an_cat hp res NSide
 	int hp = radectohealpix_nside(ra_mean, dec_mean, 9); 
 
 	char buf[1000];
-	snprintf(buf,1000, "/global/metal1/scr/keir/AN/AN/an_hp%03d.rkdt.fits", hp);
+	snprintf(buf,1000, hppat, hp);
 	fprintf(stderr, "opening %s\n",buf);
 	kdtree_t* kd = kdtree_fits_read_file(buf);
 	fprintf(stderr, "success\n");
@@ -186,6 +175,8 @@ int get_reference_stars(double ra_mean, double dec_mean, double radius,
 
 	*ra = malloc(sizeof(double)*kq->nres);
 	*dec = malloc(sizeof(double)*kq->nres);
+	assert(*ra);
+	assert(*dec);
 	*n = kq->nres;
 
 	int i;
@@ -197,8 +188,6 @@ int get_reference_stars(double ra_mean, double dec_mean, double radius,
 
 	kdtree_free_query(kq);
 	kdtree_fits_close(kd);
-
-	return 0;
 }
 
 /* Fink-Hogg shift */
@@ -206,98 +195,100 @@ int get_reference_stars(double ra_mean, double dec_mean, double radius,
 
 /* spherematch */
 
+void printHelp(char* progname)
+{
+	fprintf(stderr, "%s usage:\n"
+	        "   -i <input file>      file to tweak\n"
+	        "   -o <output-file>     destination file\n"
+	        "   -s <xy-list>         sources (produced by fits2xy)\n"
+	        "   -d <database-subst>  pattern for the index\n"
+	        "   -n <healpix-nside>   number of healpixes in index\n"
+	        , progname);
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 int main(int argc, char *argv[])
 {
 	wcs_t* wcs;
-	/* Are there multiple images? */
 	fitsfile *fptr, *xyfptr;  /* FITS file pointer, defined in fitsio.h */
 	//fitsfile *ofptr;        /* FITS file pointer to output file */
 	int status = 0; // FIXME should have ostatus too
 	int naxis;
-	//long naxisn[2];
 	int kk;
+	char* xyfile = NULL;
+	char* outfile = NULL;
+	char* infile = NULL;
+	char* hppat = NULL;
+	int Nside = 0;
+	char argchar;
 
-	if (argc != 2) {
-		fprintf(stderr, "Usage: tweak filename.fits \n");
-		fprintf(stderr, "Assumes filename.xy.fits already exists\n");
-		return (0);
+	while ((argchar = getopt(argc, argv, "hi:s:o:d:n:")) != -1)
+		switch (argchar) {
+		case 'h':
+			printHelp(argv[0]);
+			exit(0);
+		case 'i':
+			infile = optarg;
+			break;
+		case 's':
+			xyfile = optarg;
+			break;
+		case 'o':
+			outfile = optarg;
+			break;
+		case 'd':
+			hppat = optarg;
+			break;
+		case 'n':
+			Nside = atoi(optarg);
+			break;
+		}
+
+	if (!outfile || !infile || !xyfile || !hppat || !Nside ||
+			(optind == argc)) {
+		printHelp(argv[0]);
+		exit( -1);
 	}
 
-	if (fits_open_file(&fptr, argv[1], READONLY, &status)) {
-		fprintf(stderr, "Error reading file %s\n", argv[1]);
+	if (fits_open_file(&fptr, infile, READONLY, &status)) {
+		fprintf(stderr, "Error reading file %s\n", infile);
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
 
-	// Are there multiple HDU's?
 	int nhdus;
-	fits_get_num_hdus(fptr, &nhdus, &status);
+	if (fits_get_num_hdus(fptr, &nhdus, &status)) {
+		fits_report_error(stderr, status);
+		exit(-1);
+	}
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
-	int hdutype;
-
-	// Create xylist filename (by trimming '.fits')
-	int fnamelen = strlen(argv[1]);
-	int fnlen=1024;
-	char xyfile[fnlen]; 
-	char xysfile[fnlen]; 
-	char sbuf[fnlen]; 
-	assert(argv[1][fnamelen] == '\0');
-	assert(fnamelen > 5);
-	snprintf(sbuf, fnlen, "%s", argv[1]);
-	sbuf[fnamelen-5] = '\0';
-	snprintf(xyfile, fnlen, "%s.xy.fits",sbuf);
-	snprintf(xysfile, fnlen, "%s.xys.fits",sbuf);
-	fprintf(stderr, "xyfile=%s\n",xyfile);
-	fprintf(stderr, "xysfile=%s\n",xyfile);
-
-	// Check if it exists, create it if it doesn't
-	struct stat buf;
-	if (stat(xyfile, &buf)) {
-		if (errno == ENOENT) {
-			// Detect sources with simplexy
-			fprintf(stderr, "need to detect sources. running simplexy...----\n");
-			char tmpbuff[2*fnlen];
-			int ret;
-			snprintf(tmpbuff, 2*fnlen, "../simplexy/fits2xy %s", argv[1]);
-			fprintf(stderr, "CMD: %s\n", tmpbuff);
-			ret = system(tmpbuff);
-			if (ret) {
-				fprintf(stderr, "Error executing fits2xy. exiting");
-				exit(1);
-			}
-			fprintf(stderr, "---done\n");
-
-			// Sort by flux. in theory simplexy should do this but
-			// the code was already written.
-			fprintf(stderr, "sorting on flux...\n");
-			snprintf(tmpbuff, 2*fnlen, "../quads/tabsort -d -i %s -o %s -c flux", xyfile, xysfile);
-			ret = system(tmpbuff);
-			if (ret) {
-				fprintf(stderr, "Error executing fits2xy. exiting");
-				exit(1);
-			}
-			fprintf(stderr, "done\n");
-		}
-	}
-
 	// Load xylist
-	if (fits_open_file(&xyfptr, xysfile, READONLY, &status)) {
-		fprintf(stderr, "Error reading xy file %s\n", xysfile);
+	if (fits_open_file(&xyfptr, xyfile, READONLY, &status)) {
+		fprintf(stderr, "Error reading xy file %s\n", xyfile);
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
 
 	// Tweak each HDU independently
 	for (kk=1; kk <= nhdus; kk++) {
-		fits_movabs_hdu(fptr, kk, &hdutype, &status);
-		fits_get_hdu_type(fptr, &hdutype, &status);
+		int hdutype;
+		if (fits_movabs_hdu(fptr, kk, &hdutype, &status)) {
+			fits_report_error(stderr, status);
+			exit(-1);
+		}
+
+		if (fits_get_hdu_type(fptr, &hdutype, &status)) {
+			fits_report_error(stderr, status);
+			exit(-1);
+		}
 
 		if (hdutype != IMAGE_HDU) 
 			continue;
 
-		fits_get_img_dim(fptr, &naxis, &status);
-		if (status) {
+		if (fits_get_img_dim(fptr, &naxis, &status)) {
 			fits_report_error(stderr, status);
 			exit( -1);
 		}
@@ -309,24 +300,22 @@ int main(int argc, char *argv[])
 
 		// At this point, we have an image. Now get the WCS data
 		wcs = get_wcs_from_hdu(fptr);
-		fprintf(stderr, "GOT WCS INFO!!! %p \n", wcs);
+		if (!wcs) {
+			fprintf(stderr, "Problems with WCS info, skipping HDU\n");
+			continue;
+		}
 
 		// Extract xy
 		int n,jj;
 		float *x, *y;
 		get_xy(xyfptr, kk, &x, &y, &n);
-		//for (jj=0; jj<n; jj++) 
-			//fprintf(stderr, "%f %f\n",x[jj], y[jj]);
-
 
 		// Convert to ra dec
-		//int jj;
 		double *a, *d;
 		a = malloc(sizeof(double)*n);
 		d = malloc(sizeof(double)*n);
 		for (jj=0; jj<n; jj++) {
 			pix2wcs(wcs, x[jj], y[jj], a+jj, d+jj);
-			//fprintf(stderr, "%f %f\n",a[jj],d[jj]);
 		}
 
 		// Find field center/radius
@@ -337,7 +326,7 @@ int main(int argc, char *argv[])
 		double *a_ref, *d_ref;
 		int n_ref;
 		get_reference_stars(ra_mean, dec_mean, radius,
-					&a_ref, &d_ref, &n_ref);
+					&a_ref, &d_ref, &n_ref, hppat);
 
 	}
 
@@ -352,10 +341,6 @@ int main(int argc, char *argv[])
 	return (status);
 	
 
-	/* Get original WCS from image */
-	/* Get xy positions of stars in image */
-	/* Find field center and radius */
-	/* Get standard stars from USNO or whatever */
 	/* Fink-Hogg shift */
 	/* Fink-Hogg shift */
 	/* Correspondeces via spherematch -- switch to dualtree */
