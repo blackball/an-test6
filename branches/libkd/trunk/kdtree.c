@@ -48,6 +48,7 @@ int kdtree_compute_levels(int N, int Nleaf) {
 real* kdqsort_arr;
 int kdqsort_D;
 
+#if 0
 int kdqsort_compare(const void* v1, const void* v2)
 {
 	int i1, i2;
@@ -95,11 +96,13 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d)
 	free(permute);
 	return 1;
 }
+#endif
 
 /*****************************************************************************/
 /* Querying routines                                                         */
 /*****************************************************************************/
 
+#if 0
 int kdtree_node_check(kdtree_t* kd, kdtree_node_t* node, int nodeid) {
 	int sum, i;
 	real dsum;
@@ -202,6 +205,7 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 	kdtree_rangesearch_cb_rec(kd, kdtree_get_root(kd), pt, maxdistsquared,
 							  rangesearch_callback, extra);
 }
+#endif
 
 /* Sorts results by kq->sdists */
 int kdtree_qsort_results(kdtree_qres_t *kq, int D)
@@ -256,6 +260,7 @@ int kdtree_qsort_results(kdtree_qres_t *kq, int D)
 	return 1;
 }
 
+#if 0
 int kdtree_rangecount_rec(kdtree_t* kd, kdtree_node_t* node,
 						  real* pt, real maxd2) {
 	int i;
@@ -356,6 +361,7 @@ int kdtree_nearest_neighbour_within(kdtree_t* kd, real *pt, real maxd2,
 		*p_mindist2 = bestd2;
 	return ibest;
 }
+#endif
 
 /* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
 void kdtree_optimize(kdtree_t *kd)
@@ -397,9 +403,13 @@ void kdtree_free(kdtree_t *kd)
 {
 	assert(kd);
 	assert(kd->tree);
-	/* We don't free kd->data */
 	free(kd->perm);
-	free(kd->tree);
+	free(kd->nodes);
+	free(kd->lr);
+	free(kd->bb.any);
+	free(kd->split.any);
+	/* We don't free kd->data */
+	//free(kd->data.any);
 	free(kd);
 }
 
@@ -407,6 +417,7 @@ void kdtree_free(kdtree_t *kd)
 /* Output routines                                                           */
 /*****************************************************************************/
 
+#if 0
 /* Output a graphviz style description of the tree, for input to dot program */
 void kdtree_output_dot(FILE* fid, kdtree_t* kd)
 {
@@ -439,4 +450,4 @@ void kdtree_output_dot(FILE* fid, kdtree_t* kd)
 
 	fprintf(fid, "}\n");
 }
-
+#endif

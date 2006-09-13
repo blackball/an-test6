@@ -2,22 +2,31 @@
 #define KDTREE_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 #define KDTREE_MAX_LEVELS 1000
-#define KDT_INFTY 1e309
+//#define KDT_INFTY 1e309
 
+#define KDT_INFTY_DOUBLE 1e309
+#define KDT_INFTY_FLOAT  3e38
 
 #define KD_OPTIONS_COMPUTE_DISTS  0x1
 #define KD_OPTIONS_SORT_DISTS     0x2
 #define KD_OPTIONS_SMALL_RADIUS   0x4
 
+typedef uint32_t u32;
+typedef uint16_t u16;
 
+#if 0
 typedef double real;
 struct kdtree_hr {
 	real *low;            /* Lower hyperrectangle boundary */
 	real *high;           /* Upper hyperrectangle boundary */
 };
 typedef struct kdtree_hr kdtree_hr_t;
+#endif
+
+
 
 struct kdtree_node {
     unsigned int l,r;              /* data(l:r) are coordinates below this node */
@@ -29,24 +38,79 @@ struct kdtree_node {
 typedef struct kdtree_node kdtree_node_t;
 
 struct kdtree {
-	kdtree_node_t *tree;   /* Flat tree storing nodes and HR's */
-	real *data;            /* Raw coordinate data as xyzxyzxyz */
+	// (compatibility mode)
+	kdtree_node_t *nodes;   /* Flat tree storing nodes and HR's */
+
+	unsigned int* lr;      /* Points owned by leaf nodes, stored and manipulated
+							  in a way that's too complicated to explain in this comment. */
+
 	unsigned int *perm;    /* Permutation index */
-	unsigned int ndata;    /* Number of items */
-	unsigned int ndim;     /* Number of dimensions */
-	unsigned int nnodes;   /* Number of internal nodes */
-	void* mmapped;         /* Next two are for mmap'd access */
+
+	/* Bounding box: list: D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
+	union bb {
+		float* f;
+		double* d;
+		u32* i;
+		u16* s;
+		void* any;
+	};
+
+	/* Split dimension & position. */
+	union split {
+		u32* i;
+		u16* s;
+		void* any;
+	};
+
+	union data {
+		/* Raw coordinate data as xyzxyzxyz */
+		float* f;
+		double* d;
+		u32* i;
+		u16* s;
+		void* any;
+	};
+
+	/*
+	  union minval {
+	  float* f;
+	  double* d;
+	  };
+	  union maxval {
+	  float* f;
+	  double* d;
+	  };
+	  union scale {
+	  float* f;
+	  double* d;
+	  };
+	*/
+	double* minval;
+	double* maxval;
+	double* scale;
+
+	unsigned int ndata;     /* Number of items */
+	unsigned int ndim;      /* Number of dimensions */
+	unsigned int nnodes;    /* Number of nodes */
+	unsigned int nleaf;     /* Number of leaf nodes */
+	unsigned int ninterior; /* Number of internal nodes */
+	void* mmapped;          /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
 };
 typedef struct kdtree kdtree_t;
 
 struct kdtree_qres {
 	unsigned int nres;
+#if 0
 	real *results;         /* Each of the points returned from a query */
 	real *sdists;          /* Squared distance from query point */
+#endif
 	unsigned int *inds;    /* Indexes into original data set */
 };
 typedef struct kdtree_qres kdtree_qres_t;
+
+
+#if 0
 
 /* Compute how many levels should be used if you have "N" points and you
    want "Nleaf" points in the leaf nodes.
@@ -83,12 +147,17 @@ int kdtree_nearest_neighbour_within(kdtree_t* kd, real *pt, real maxd2,
 /* Optimize the KDTree by by constricting hyperrectangles to minimum volume */
 void kdtree_optimize(kdtree_t *kd);
 
+#endif
+
+
+
 /* Free results */
 void kdtree_free_query(kdtree_qres_t *kd);
 
 /* Free a tree; does not free kd->data */
 void kdtree_free(kdtree_t *kd);
 
+#if 0
 /* Output Graphviz .dot format version of the tree */
 void kdtree_output_dot(FILE* fid, kdtree_t* kd);
 
@@ -99,6 +168,7 @@ int kdtree_check(kdtree_t* t);
 int kdtree_qsort_results(kdtree_qres_t *kq, int D);
 int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, int r, int D, int d);
 int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
+#endif
 
 // include dimension-generic versions of the dimension-specific code.
 #define KD_DIM_GENERIC 1
@@ -107,6 +177,11 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 
 
 #if defined(KD_DIM) || defined(KD_DIM_GENERIC)
+
+#define KDTT_DOUBLE      0
+#define KDTT_FLOAT       1
+#define KDTT_DOUBLE_U32  2
+#define KDTT_DOUBLE_U16  3
 
 #if defined(KD_DIM)
   #undef KDID
@@ -122,7 +197,12 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 #define KDFUNC(x) KDID(x)
 
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
-kdtree_t* KDFUNC(kdtree_build)(real *data, int ndata, int ndim, int maxlevel);
+//kdtree_t* KDFUNC(kdtree_build)(real *data, int ndata, int ndim, int maxlevel);
+
+kdtree_t* KDFUNC(kdtree_build)
+	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
+	  bool copydata);
+
 
 /* Range seach */
 kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, real *pt, real maxdistsquared);

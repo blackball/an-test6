@@ -10,6 +10,8 @@
 #include "kdtree_access.h"
 #include "starutil.h"
 
+#if 0
+
 static inline real KDFUNC(dist2)(real* p1, real* p2, int d) {
 	int i;
 	real d2 = 0.0;
@@ -161,122 +163,44 @@ int KDFUNC(kdtree_quickselect_partition)
 #undef ELEM_SWAP
 #undef GET
 
+
+
+#endif // if0
+
+
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
 /* If the root node is level 0, then maxlevel is the level at which there may
  * not be enough points to keep the tree complete (i.e. last level) */
 kdtree_t* KDFUNC(kdtree_build)
-	 (real *data, int N, int D, int maxlevel) {
+	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
+	  bool copydata) {
 	int i;
 	kdtree_t *kd;
 	int nnodes;
 	int level = 0, dim=-1, m;
 	int lnext;
 
-	assert(maxlevel > 0);
-	assert(D <= KDTREE_MAX_DIM);
-#if defined(KD_DIM)
-	assert(D == KD_DIM);
-	// let the compiler know that D is a constant...
-	D = KD_DIM;
-#endif
-
-	/* Parameters checking */
-	if (!data || !N || !D)
-		return NULL;
-	/* Make sure we have enough data */
-	if ((1 << maxlevel) - 1 > N)
-		return NULL;
-
-	/* Set the tree fields */
-	kd = malloc(sizeof(kdtree_t));
-	nnodes = (1 << maxlevel) - 1;
-	kd->ndata = N;
-	kd->ndim = D;
-	kd->nnodes = nnodes;
-	kd->data = data;
-
-	/* perm stores the permutation indexes. This gets shuffled around during
-	 * sorts to keep track of the original index. */
-	kd->perm = malloc(sizeof(unsigned int) * N);
-	for (i = 0;i < N;i++)
-		kd->perm[i] = i;
-	assert(kd->perm);
-	kd->tree = malloc(NODE_SIZE * (nnodes));
-	assert(kd->tree);
-
-	NODE(0)->l = 0;
-	NODE(0)->r = N - 1;
-
-	lnext = 1;
-	level = 0;
-
-	/* And in one shot, make the kdtree. Each iteration we set our
-	 * children's [l,r] array bounds and pivot our own subset. */
-	for (i = 0; i < nnodes; i++) {
-		real hi[D];
-		real lo[D];
-		int j, d;
-		real* pdata;
-		real maxrange;
-
-		/* Sanity */
-		assert(NODE(i) == PARENT(2*i + 1));
-		assert(NODE(i) == PARENT(2*i + 2));
-		if (i && i % 2)
-			assert(NODE(i) == CHILD_NEG((i - 1) / 2));
-		else if (i)
-			assert(NODE(i) == CHILD_POS((i - 1) / 2));
-
-		/* Have we reached the next level in the tree? */
-		if (i == lnext) {
-			level++;
-			lnext = lnext * 2 + 1;
-		}
-
-		/* Find the bounding-box for this node. */
-		for (d=0; d<D; d++) {
-			hi[d] = -KDT_INFTY;
-			lo[d] = KDT_INFTY;
-		}
-		/* (avoid doing kd->data[NODE(i)*D + d] many times by taking advantage of the
-		   fact that the data is stored lexicographically; just use ++ on the pointer) */
-		pdata = kd->data + NODE(i)->l * D;
-		for (j=NODE(i)->l; j<=NODE(i)->r; j++)
-			for (d=0; d<D; d++) {
-				if (*pdata > hi[d]) hi[d] = *pdata;
-				if (*pdata < lo[d]) lo[d] = *pdata;
-				pdata++;
-			}
-
-		for (d=0; d<D; d++) {
-			*LOW_HR(i, d) = lo[d];
-			*HIGH_HR(i, d) = hi[d];
-		}
-
-		/* Decide which dimension to split along: we use the dimension with
-		   largest range. */
-		maxrange = -1.0;
-		for (d=0; d<D; d++)
-			if ((hi[d] - lo[d]) > maxrange) {
-				maxrange = hi[d] - lo[d];
-				dim = d;
-			}
-
-		/* Pivot the data at the median */
-		m = KDFUNC(kdtree_quickselect_partition)(data, kd->perm, NODE(i)->l, NODE(i)->r, D, dim);
-
-		/* Only do child operations if we're not the last layer */
-		if (level < maxlevel - 1) {
-			assert(2*i + 1 < nnodes);
-			assert(2*i + 2 < nnodes);
-			CHILD_NEG(i)->l = NODE(i)->l;
-			CHILD_NEG(i)->r = m - 1;
-			CHILD_POS(i)->l = m;
-			CHILD_POS(i)->r	= NODE(i)->r;
-		}
+	switch (treetype) {
+	case KDTT_DOUBLE:
+		return KDMANGLE(kdtree_build, double, double)((double*)data, N, D, maxlevel, bb, copydata);
+		break;
+	case KDTT_FLOAT:
+		return KDMANGLE(kdtree_build, float, float)((float*)data, N, D, maxlevel, bb, copydata);
+		break;
+	case KDTT_DOUBLE_U32:
+		return KDMANGLE(kdtree_build, double, u32)((double*)data, N, D, maxlevel, bb, copydata);
+		break;
+	case KDTT_DOUBLE_U16:
+		return KDMANGLE(kdtree_build, double, u16)((double*)data, N, D, maxlevel, bb, copydata);
+		break;
+	default:
+		break;
 	}
-	return kd;
+	return NULL;
 }
+
+
+#if 0
 
 inline static
 bool resize_results(kdtree_qres_t* res, int newsize, int d,
@@ -495,3 +419,4 @@ int KDFUNC(kdtree_bb_point_mindist2_exceeds)
 	return 0;
 }
 
+#endif //if0
