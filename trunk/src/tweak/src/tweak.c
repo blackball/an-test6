@@ -246,14 +246,13 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-	if (!outfile || !infile || !xyfile || !hppat || !Nside ||
-			(optind == argc)) {
+	if (!outfile || !infile || !xyfile || !hppat || !Nside) {
 		printHelp(argv[0]);
 		exit( -1);
 	}
 
 	if (fits_open_file(&fptr, infile, READONLY, &status)) {
-		fprintf(stderr, "Error reading file %s\n", infile);
+		fprintf(stderr, "Error reading image file %s\n", infile);
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
@@ -267,7 +266,7 @@ int main(int argc, char *argv[])
 
 	// Load xylist
 	if (fits_open_file(&xyfptr, xyfile, READONLY, &status)) {
-		fprintf(stderr, "Error reading xy file %s\n", xyfile);
+		fprintf(stderr, "Error reading XY file %s\n", xyfile);
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
