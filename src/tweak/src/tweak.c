@@ -134,8 +134,11 @@ int get_center_and_radius(double* ra, double* dec, int n,
 	double xyz_mean[3] = {0,0,0};
 	int i, j;
 	for (i=0; i<n; i++) {
-		radec2xyzarr(ra[i],dec[i],xyz+3*i);
+		radec2xyzarr(deg2rad(ra[i]),deg2rad(dec[i]),xyz+3*i);
+		//fprintf(stderr,"++%f,%f\n",ra[i],dec[i]);
 		//fprintf(stderr,"%f,%f,%f\n",xyz[3*i],xyz[3*i+1],xyz[3*i+2]);
+		//fprintf(stderr,".. %f,%f\n",rad2deg(xy2ra(xyz[3*i],xyz[3*i+1])),
+				//rad2deg(z2dec(xyz[3*i+2])));
 	}
 
 	for (i=0; i<n; i++) 
@@ -217,30 +220,50 @@ int main(int argc, char *argv[])
 	int fnamelen = strlen(argv[1]);
 	int fnlen=1024;
 	char xyfile[fnlen]; 
+	char xysfile[fnlen]; 
 	char sbuf[fnlen]; 
 	assert(argv[1][fnamelen] == '\0');
 	assert(fnamelen > 5);
 	snprintf(sbuf, fnlen, "%s", argv[1]);
 	sbuf[fnamelen-5] = '\0';
 	snprintf(xyfile, fnlen, "%s.xy.fits",sbuf);
+	snprintf(xysfile, fnlen, "%s.xys.fits",sbuf);
 	fprintf(stderr, "xyfile=%s\n",xyfile);
+	fprintf(stderr, "xysfile=%s\n",xyfile);
 
 	// Check if it exists, create it if it doesn't
 	struct stat buf;
 	if (stat(xyfile, &buf)) {
 		if (errno == ENOENT) {
 			// Detect sources with simplexy
-			fprintf(stderr, "need to detect sources. running simplexy...\n");
-			char tmpbuff[fnlen];
-			snprintf(tmpbuff, fnlen, "../simplexy/fits2xy %s", xyfile);
-			system(tmpbuff);
+			fprintf(stderr, "need to detect sources. running simplexy...----\n");
+			char tmpbuff[2*fnlen];
+			int ret;
+			snprintf(tmpbuff, 2*fnlen, "../simplexy/fits2xy %s", argv[1]);
+			fprintf(stderr, "CMD: %s\n", tmpbuff);
+			ret = system(tmpbuff);
+			if (ret) {
+				fprintf(stderr, "Error executing fits2xy. exiting");
+				exit(1);
+			}
+			fprintf(stderr, "---done\n");
+
+			// Sort by flux. in theory simplexy should do this but
+			// the code was already written.
+			fprintf(stderr, "sorting on flux...\n");
+			snprintf(tmpbuff, 2*fnlen, "../quads/tabsort -d -i %s -o %s -c flux", xyfile, xysfile);
+			ret = system(tmpbuff);
+			if (ret) {
+				fprintf(stderr, "Error executing fits2xy. exiting");
+				exit(1);
+			}
 			fprintf(stderr, "done\n");
 		}
 	}
 
 	// Load xylist
-	if (fits_open_file(&xyfptr, xyfile, READONLY, &status)) {
-		fprintf(stderr, "Error reading xy file %s\n", xyfile);
+	if (fits_open_file(&xyfptr, xysfile, READONLY, &status)) {
+		fprintf(stderr, "Error reading xy file %s\n", xysfile);
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
@@ -283,7 +306,7 @@ int main(int argc, char *argv[])
 		d = malloc(sizeof(double)*n);
 		for (jj=0; jj<n; jj++) {
 			pix2wcs(wcs, x[jj], y[jj], a+jj, d+jj);
-			fprintf(stderr, "%f %f\n",a[jj],a[jj]);
+			//fprintf(stderr, "%f %f\n",a[jj],d[jj]);
 		}
 
 		// Find field center/radius
