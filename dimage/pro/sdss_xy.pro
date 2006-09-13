@@ -12,5 +12,4 @@ outstr.flux=flux
 mwrfits, outstr, 'sdss-xy-'+string(f='(i6.6)', run)+'-r'+ $
   strtrim(string(camcol),2)+'-'+string(f='(i4.4)', field)+'.fits', /create
 
-
 end
