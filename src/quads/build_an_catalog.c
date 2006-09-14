@@ -16,7 +16,7 @@
 
 #define OPTIONS "ho:N:"
 
-void print_help(char* progname) {
+static void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s -o <output-filename-template>\n"
 		   "  [-N <healpix-nside>]  (default = 8)\n"
@@ -62,7 +62,7 @@ static uint tycho2_id_to_int(int tyc1, int tyc2, int tyc3) {
 	return id;
 }
 
-void qfits_dispfn(char* str) {
+static void qfits_dispfn(char* str) {
 	printf("qfits: %s\n", str);
 }
 
