@@ -25,14 +25,6 @@ x -   LOW_HR (kd, D, i)       returns a "kdtype*" to the lower hyperrectangle co
 x -   HIGH_HR(kd, D, i)       returns a "kdtype*" to the upper hyperrectangle corner
 */
 
-/*
-  #define FOURBILLION 4294967296.0
-  #define REAL2FIXED(x) ((unsigned int) round( (double) ((((x)-kd->minval)/(kd->maxval - kd->minval))*FOURBILLION ) ) )
-  #define REALDELTA2FIXED(x) ((unsigned int) round( (double) (((x)/(kd->maxval - kd->minval))*FOURBILLION ) ) )
-  #define FIXED2REAL(i) (kd->minval + (i)*kd->delta)
-  #define UINT_MAX 0xffffffff
-*/
-
 #if KDTYPE_INTEGER
 
 static real* kdqsort_arr;
@@ -233,12 +225,7 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 	if ((1 << maxlevel) - 1 > N)
 		return NULL;
 
-
 	if (copydata) {
-		/*
-		  real hi[D], lo[D];
-		  real scale[D];
-		*/
 		double hi[D], lo[D], scale[D];
 		kdtype* mydata;
 		kdtree_t temptree;
@@ -314,7 +301,6 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 			}
 		}
 		kd->splitmask = 0xffffffffu - kd->dimmask;
-
 		//printf("D=%i.  dimbits=%i, mask=0x%x, splitmask=0x%x.\n", D, kd->dimbits, kd->dimmask, kd->splitmask);
 	}
 
@@ -338,21 +324,6 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		kd->scale[d] = (double)KDTYPE_MAX / (kd->maxval[d] - kd->minval[d]);
 	}
 #endif
-
-	/* ???
-	   if (copydata) {
-	   kd->data.any = malloc(N * D * sizeof(kdtype));
-	   kdata = kd->data.any;
-	   rdata = data;
-	   for (i=0; i<N; i++) {
-	   for (d=0; d<D; d++) {
-	   *kdata = REAL2KDTYPE(kd, d, *rdata);
-	   kdata++;
-	   rdata++;
-	   }
-	   }
-	   }
-	*/
 
 	/* Use the lr array as a stack while building. In place in your face! */
 	kd->lr[0] = N - 1;
@@ -400,46 +371,8 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		assert(right < N);
 
 		/* Find the bounding-box for this node. */
-
 		/* (since data is stored lexicographically we can just iterate through it) */
 		/* (avoid doing kd->data[NODE(i)*D + d] many times; just ++ the pointer) */
-
-		/** ??? Do we need special floor/ceiling REAL2KDTYPE routines to ensure
-			that the bounding box we store actually bounds the original real types? */
-
-		// Gah!
-		/*
-		  if (copydata) {
-		  kdtype klo[D];
-		  kdtype khi[D];
-		  kdata = kd->data.any + left * D;
-		  for (d=0; d<D; d++) {
-		  khi[d] = KDTYPE_MIN;
-		  klo[d] = KDTYPE_MAX;
-		  }
-		  for (j=left; j<=right; j++) {
-		  for (d=0; d<D; d++) {
-		  if (*kdata > khi[d]) khi[d] = *kdata;
-		  if (*kdata < klo[d]) klo[d] = *kdata;
-		  kdata++;
-		  }
-		  }
-		  if (bbtree) {
-		  for (d=0; d<D; d++) {
-		  (LOW_HR (kd, D, i))[d] = klo[d];
-		  (HIGH_HR(kd, D, i))[d] = khi[d];
-		  }
-		  }
-		  maxrange = -1.0;
-		  for (d=0; d<D; d++)
-		  if ((khi[d] - klo[d]) > maxrange) {
-		  maxrange = khi[d] - klo[d];
-		  dim = d;
-		  }
-		  d = dim;
-		  assert (d < D);
-		  } else {
-		*/
 		for (d=0; d<D; d++) {
 			hi[d] = REAL_MIN;
 			lo[d] = REAL_MAX;
@@ -490,7 +423,6 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 
 
 		/* FIXME but qsort allocates a 2nd perm array GAH */
-		//m = kdtree_qsort(data, kd->perm, left, right, D, dim);
 		kdtree_qsort(data, kd->perm, left, right, D, dim);
 		m = 1 + (left+right)/2;
 
@@ -507,18 +439,6 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 			assert((s & kd->dimmask) == 0);
 		}
 		qsplit = KDTYPE2REAL(kd, d, s);
-
-		/*
-		  #if KDTYPE_INTEGER
-		  printf("%s: L=%i, R=%i, m=%i, d[m]=%u, s=%u, qsplit=%u.\n",
-		  __FUNCTION__,
-		  left, right, m, (unsigned int)data[D*m+d], s, (unsigned int)qsplit);
-		  #else
-		  printf("%s: L=%i, R=%i, m=%i, d[m]=%g, s=%u, qsplit=%g.\n",
-		  __FUNCTION__,
-		  left, right, m, (double)data[D*m+d], s, (double)qsplit);
-		  #endif
-		*/
 
 		{
 			int xxxxy;
