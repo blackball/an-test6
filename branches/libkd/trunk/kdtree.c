@@ -60,14 +60,14 @@ int kdtree_left(kdtree_t* kd, int nodeid) {
 		int val;
 		int dlevel;
 		int twodl;
+		int nodeid_twodl;
 		int ind;
 		for (level=0, val=(nodeid+1)>>1; val; val=val>>1, level++);
-		//printf("nodeid %i, level %i\n", nodeid, level);
 		dlevel = (kd->nlevels - 1) - level;
-		//printf("dlevel %i\n", dlevel);
 		twodl = (1 << dlevel);
-		//printf("leftmost child %i\n", twodl*nodeid + twodl - 1);
-		ind = (twodl*nodeid + twodl - 1) - kd->ninterior;
+		nodeid_twodl = (nodeid << dlevel);
+		//ind = (twodl*nodeid + twodl - 1) - kd->ninterior;
+		ind = (nodeid_twodl + twodl - 1) - kd->ninterior;
 		if (!ind) return 0;
 		return kd->lr[ind-1] + 1;
 	}
@@ -83,32 +83,17 @@ int kdtree_right(kdtree_t* kd, int nodeid) {
 		int val;
 		int dlevel;
 		int twodl;
+		int nodeid_twodl;
 		int ind;
-		//for (level=-1, val=nodeid+1; val; val=val>>1, level++);
 		for (level=0, val=(nodeid+1)>>1; val; val=val>>1, level++);
-		//printf("nodeid %i, level %i\n", nodeid, level);
 		dlevel = (kd->nlevels - 1) - level;
-		//printf("dlevel %i\n", dlevel);
 		twodl = (1 << dlevel);
-		//printf("rightmost child %i\n", twodl*nodeid + (twodl - 1)*2);
-		ind = (twodl*nodeid + (twodl - 1)*2) - kd->ninterior;
+		nodeid_twodl = (nodeid << dlevel);
+		//ind = (twodl*nodeid + (twodl - 1)*2) - kd->ninterior;
+		ind = (nodeid_twodl + (twodl - 1)*2) - kd->ninterior;
 		return kd->lr[ind];
 	}
 }
-
-/*
-  int kdtree_left(kdtree_t* kd, int nodeid) {
-  int val;
-  if (!nodeid) return 0;
-  // if all trailing bits are 1, return 0.
-  for (val = nodeid; val & 1; val = val >> 1);
-  if (!val) return 0;
-  return kd->lr[nodeid-1]+1;
-  }
-  int kdtree_right(kdtree_t* kd, int nodeid) {
-  return kd->lr[nodeid];
-  }
-*/
 
 #if 0
 real* kdqsort_arr;
