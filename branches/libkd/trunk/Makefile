@@ -17,3 +17,6 @@ tst: tst.o $(KD)
 
 $(INTERNALS): kdtree_internal.c
 
+.PHONY: clean
+clean:
+	-rm $(KD) tst tst.o

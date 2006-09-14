@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #define KDTREE_MAX_LEVELS 1000
-//#define KDT_INFTY 1e309
 
 #define KDT_INFTY_DOUBLE 1e309
 #define KDT_INFTY_FLOAT  1e39
@@ -78,7 +77,7 @@ struct kdtree {
 	unsigned int dimmask;
 	unsigned int splitmask;
 
-	union { // (real, or kdtype if "copydata" was set)
+	union { // (real, or kdtype if "convert_data" was set)
 		/* Raw coordinate data as xyzxyzxyz */
 		float* f;
 		double* d;
@@ -89,7 +88,12 @@ struct kdtree {
 
 	// does this data belong to me alone, ie, did I make a copy of the original
 	// data array?
-	bool datacopy;
+
+	/*
+	  Is my "data" array a copy of the original data that has been converted to
+	  my own kdtype format?
+	*/
+	bool convert_data;
 
 	/*
 	  union {
@@ -238,7 +242,7 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
 kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
-	  bool copydata);
+	  bool convert_data);
 
 /* Range seach */
 kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, void *pt, double maxd2);

@@ -2,6 +2,8 @@
 
 typedef u32 real;
 
+#define REAL_INTEGER 1
+
 #define REAL_MAX  0xffffffffu
 #define REAL_MIN  0
 

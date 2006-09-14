@@ -397,10 +397,8 @@ void kdtree_optimize(kdtree_t *kd)
 void kdtree_free_query(kdtree_qres_t *kq)
 {
 	assert(kq);
-	/*
-	  free(kq->results);
-	  free(kq->sdists);
-	*/
+	free(kq->results.any);
+	//free(kq->sdists.any);
 	free(kq->inds);
 	free(kq);
 }
@@ -414,7 +412,7 @@ void kdtree_free(kdtree_t *kd)
 	free(kd->bb.any);
 	free(kd->split.any);
 	free(kd->splitdim);
-	if (kd->datacopy)
+	if (kd->convert_data)
 		free(kd->data.any);
 	free(kd->minval);
 	free(kd->maxval);

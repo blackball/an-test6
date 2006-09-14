@@ -10,45 +10,40 @@
 #include "kdtree_access.h"
 #include "kdtree_internal.h"
 
-#if 0
-
-
-#endif//if0
-
-
 // declarations (should go elsewhere)
-kdtree_t* KDMANGLE(kdtree_build, double, double)(double* data, int N, int D, int maxlevel, bool bb, bool copydata);
-kdtree_t* KDMANGLE(kdtree_build, float, float)(float* data, int N, int D, int maxlevel, bool bb, bool copydata);
-kdtree_t* KDMANGLE(kdtree_build, double, u32)(double* data, int N, int D, int maxlevel, bool bb, bool copydata);
-kdtree_t* KDMANGLE(kdtree_build, double, u16)(double* data, int N, int D, int maxlevel, bool bb, bool copydata);
+kdtree_t* KDMANGLE(kdtree_build, double, double)(double* data, int N, int D, int maxlevel, bool bb, bool convert_data);
+kdtree_t* KDMANGLE(kdtree_build, float, float)(float* data, int N, int D, int maxlevel, bool bb, bool convert_data);
+kdtree_t* KDMANGLE(kdtree_build, double, u32)(double* data, int N, int D, int maxlevel, bool bb, bool convert_data);
+kdtree_t* KDMANGLE(kdtree_build, double, u16)(double* data, int N, int D, int maxlevel, bool bb, bool convert_data);
 
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
 /* If the root node is level 0, then maxlevel is the level at which there may
  * not be enough points to keep the tree complete (i.e. last level) */
 kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
-	  bool copydata) {
+	  bool convert_data) {
 	kdtree_t* kd = NULL;
 	switch (treetype) {
 	case KDTT_DOUBLE:
-		kd = KDMANGLE(kdtree_build, double, double)((double*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, double, double)((double*)data, N, D, maxlevel, bb, convert_data);
 		break;
 	case KDTT_FLOAT:
-		kd = KDMANGLE(kdtree_build, float, float)((float*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, float, float)((float*)data, N, D, maxlevel, bb, convert_data);
 		break;
 	case KDTT_DOUBLE_U32:
-		kd = KDMANGLE(kdtree_build, double, u32)((double*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, double, u32)((double*)data, N, D, maxlevel, bb, convert_data);
 		break;
 	case KDTT_DOUBLE_U16:
-		kd = KDMANGLE(kdtree_build, double, u16)((double*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, double, u16)((double*)data, N, D, maxlevel, bb, convert_data);
 		break;
 	default:
 		break;
 	}
 	if (kd) {
 		kd->treetype = treetype;
-		kd->nlevels = maxlevel;
+		kd->convert_data = convert_data;
 	}
+
 	return kd;
 }
 

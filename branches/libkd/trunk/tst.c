@@ -27,6 +27,14 @@ static float* getfdata(int N, int D) {
 	return fdata;
 }
 
+static int compare_ints(const void* v1, const void* v2) {
+    int i1 = *(int*)v1;
+    int i2 = *(int*)v2;
+    if (i1 > i2) return 1;
+    else if (i1 < i2) return -1;
+    else return 0;
+}
+
 int main() {
 	int N = 1000;
 	int D = 2;
@@ -43,7 +51,8 @@ int main() {
 	double pt[D];
 	double maxd2;
 	int d;
-	//int i;
+	int i;
+	double* data2;
 
 	levels = 8;
 
@@ -55,6 +64,10 @@ int main() {
 
 	printf("Making dd tree..\n");
 	ddata = getddata(N, D);
+
+	datacopy = malloc(N * D * sizeof(double));
+	memcpy(datacopy, ddata, N*D*sizeof(double));
+
 	for (d=0; d<D; d++)
 		pt[d] = 10.0 * rand() / (double)RAND_MAX;
 	maxd2 = 1.0;
@@ -75,15 +88,75 @@ int main() {
 		printf("No results.\n");
 	else {
 		printf("%i results.\n", res->nres);
+
+		// sort by index.
+		qsort(res->inds, res->nres, sizeof(int), compare_ints);
+
+		printf("Inds : [ ");
+		for (i=0; i<res->nres; i++) {
+			printf("%i ", res->inds[i]);
+		}
+		printf("]\n");
 		kdtree_free_query(res);
+
+		printf("Naive: [ ");
+		data2 = datacopy;
+		for (i=0; i<N; i++) {
+			double d2 = 0.0;
+			for (d=0; d<D; d++) {
+				double delta = (data2[i*D + d] - pt[d]);
+				d2 += (delta * delta);
+			}
+			if (d2 <= maxd2)
+				printf("%i ", i);
+		}
+		printf("]\n");
 	}
 
 	free(ddata);
+	free(datacopy);
 
 	printf("Making inttree..\n");
 	ddata = getddata(N, D);
+
+	datacopy = malloc(N * D * sizeof(double));
+	memcpy(datacopy, ddata, N*D*sizeof(double));
+
 	t2 = kdtree_build(ddata, N, D, levels, KDTT_DOUBLE_U32, FALSE, FALSE);
+
+	printf("Rangesearch...\n");
+	res = kdtree_rangesearch_options(t2, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+	if (!res)
+		printf("No results.\n");
+	else {
+		printf("%i results.\n", res->nres);
+
+		// sort by index.
+		qsort(res->inds, res->nres, sizeof(int), compare_ints);
+
+		printf("Inds : [ ");
+		for (i=0; i<res->nres; i++) {
+			printf("%i ", res->inds[i]);
+		}
+		printf("]\n");
+		kdtree_free_query(res);
+
+		printf("Naive: [ ");
+		data2 = datacopy;
+		for (i=0; i<N; i++) {
+			double d2 = 0.0;
+			for (d=0; d<D; d++) {
+				double delta = (data2[i*D + d] - pt[d]);
+				d2 += (delta * delta);
+			}
+			if (d2 <= maxd2)
+				printf("%i ", i);
+		}
+		printf("]\n");
+	}
+
 	free(ddata);
+	free(datacopy);
 
 	printf("Making du32 tree..\n");
 	ddata = getddata(N, D);
