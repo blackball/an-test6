@@ -20,10 +20,410 @@
   -   KDTYPE_INTEGER          is kdtype an integer type? (0/1)
   -   KDTYPE_MIN              kdtype's min value (as a "kdtype")
   -   KDTYPE_MAX              kdtype's max value (as a "kdtype")
-x -   KDT_INFTY    large "real"; (also -KDT_INFTY must work)
-x -   LOW_HR (kd, D, i)       returns a "kdtype*" to the lower hyperrectangle corner, for a D-dimensional tree.
-x -   HIGH_HR(kd, D, i)       returns a "kdtype*" to the upper hyperrectangle corner
+  x -   KDT_INFTY    large "real"; (also -KDT_INFTY must work)
+  x -   LOW_HR (kd, D, i)       returns a "kdtype*" to the lower hyperrectangle corner, for a D-dimensional tree.
+  x -   HIGH_HR(kd, D, i)       returns a "kdtype*" to the upper hyperrectangle corner
 */
+
+#define LOW_HR( kd, D, i) ((kd)->bb.KDTYPE_VAR + (2*(i)*(D)))
+#define HIGH_HR(kd, D, i) ((kd)->bb.KDTYPE_VAR + ((2*(i)+1)*(D)))
+
+#define KD_SPLIT(kd, i) ((kd)->split.KDTYPE_VAR + (i))
+
+#define KD_DATA(kd, D, i) ((kd)->data.REAL_VAR + (2*(D)*(i)))
+
+#define KD_PERM(kd, i) ((kd)->perm ? (kd)->perm[i] : i)
+
+#if defined(KD_DIM)
+#define DIMENSION   (KD_DIM)
+#else
+#define DIMENSION   (kd->ndim)
+#endif
+
+#define SIZEOF_PT  (sizeof(real)*DIMENSION)
+
+// compatibility macros
+#define COMPAT_NODE_SIZE      (sizeof(kdtree_node_t) + (SIZEOF_PT * 2))
+//#define COMPAT_HIGH_HR(kd, i)  ((real*)(((char*)(kd)->nodes)
+#define COMPAT_HIGH_HR(kd, i)  ((kdtype*)(((char*)(kd)->nodes) \
+										  + COMPAT_NODE_SIZE*(i) \
+										  + sizeof(kdtree_node_t) \
+										  + SIZEOF_PT))
+//#define COMPAT_LOW_HR(kd, i)   ((real*) (((char*)(kd)->nodes)
+#define COMPAT_LOW_HR(kd, i)   ((kdtype*) (((char*)(kd)->nodes) \
+										   + COMPAT_NODE_SIZE*(i) \
+										   + sizeof(kdtree_node_t)))
+
+
+// FIXME: kdtree_qres_t -> results: real or kdtype ?
+
+static inline real dist2(real* p1, real* p2, int d) {
+	int i;
+	real d2 = 0.0;
+#if defined(KD_DIM)
+	d = KD_DIM;
+#endif
+	for (i=0; i<d; i++)
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+	return d2;
+}
+
+static inline real dist2_bailout(real* p1, real* p2, int d, real maxd2) {
+	int i;
+	real d2 = 0.0;
+#if defined(KD_DIM)
+	d = KD_DIM;
+#endif
+	for (i=0; i<d; i++) {
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+		if (d2 > maxd2)
+			return -1.0;
+	}
+	return d2;
+}
+
+static inline real dist2_exceeds(real* p1, real* p2, int d, real maxd2) {
+	int i;
+	real d2 = 0.0;
+#if defined(KD_DIM)
+	d = KD_DIM;
+#endif
+	for (i=0; i<d; i++) {
+		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+		if (d2 > maxd2)
+			return 1;
+	}
+	return 0;
+}
+
+static bool kdtree_bb_point_mindist2_exceeds(real* bblow, real* bbhigh,
+											 real* point, int dim, real maxd2)
+{
+	real d2 = 0.0;
+	real delta;
+	int i;
+#if defined(KD_DIM)
+	dim = KD_DIM;
+#endif
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+		if (point[i] < lo)
+			delta = lo - point[i];
+		else if (point[i] > hi)
+			delta = point[i] - hi;
+		else
+			continue;
+		d2 += delta * delta;
+		if (d2 > maxd2)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+static bool kdtree_bb_point_maxdist2_exceeds(real* bblow, real* bbhigh,
+											 real* point, int dim, real maxd2)
+{
+	real d2 = 0.0;
+	real delta1, delta2;
+	int i;
+#if defined(KD_DIM)
+	dim = KD_DIM;
+#endif
+	for (i = 0; i < dim; i++) {
+		real lo, hi;
+		lo = bblow[i];
+		hi = bbhigh[i];
+		delta1 = (point[i] - lo) * (point[i] - lo);
+		delta2 = (point[i] - hi) * (point[i] - hi);
+		if (delta1 > delta2)
+			d2 += delta1;
+		else
+			d2 += delta2;
+		if (d2 > maxd2)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/*
+  real kdtree_bb_mindist2_exceeds(real* bblow1, real* bbhigh1,
+  real* bblow2, real* bbhigh2, int dim,
+  real maxd2) {
+  real d2 = 0.0;
+  real delta;
+  int i;
+  #if defined(KD_DIM)
+  dim = KD_DIM;
+  #endif
+  for (i = 0; i < dim; i++) {
+  real alo, ahi, blo, bhi;
+  alo = bblow1 [i];
+  blo = bblow2 [i];
+  ahi = bbhigh1[i];
+  bhi = bbhigh2[i];
+  if (ahi < blo) {
+  delta = blo - ahi;
+  d2 += delta * delta;
+  if (d2 > maxd2)
+  return 1;
+  } else if (bhi < alo) {
+  delta = alo - bhi;
+  d2 += delta * delta;
+  if (d2 > maxd2)
+  return 1;
+  } // else delta = 0;
+  }
+  return 0;
+  }
+
+  real kdtree_bb_maxdist2_exceeds(real* bblow1, real* bbhigh1,
+  real* bblow2, real* bbhigh2, int dim,
+  real maxd2)
+  {
+  real d2 = 0.0;
+  real delta;
+  int i;
+  #if defined(KD_DIM)
+  dim = KD_DIM;
+  #endif
+  for (i = 0; i < dim; i++) {
+  real alo, ahi, blo, bhi;
+  real delta2;
+  alo = bblow1 [i];
+  ahi = bbhigh1[i];
+  blo = bblow2 [i];
+  bhi = bbhigh2[i];
+  delta  = bhi - alo;
+  delta2 = ahi - blo;
+  if (delta2 > delta)
+  delta = delta2;
+  d2 += delta * delta;
+  if (d2 > maxd2)
+  return 1;
+  }
+  return 0;
+  }
+*/
+
+/* Sorts results by kq->sdists */
+static int kdtree_qsort_results(kdtree_qres_t *kq, int D)
+{
+	int beg[KDTREE_MAX_RESULTS], end[KDTREE_MAX_RESULTS], i = 0, j, L, R;
+	static real piv_vec[KDTREE_MAX_DIM];
+	unsigned int piv_perm;
+	real piv;
+
+	beg[0] = 0;
+	end[0] = kq->nres - 1;
+	while (i >= 0) {
+		L = beg[i];
+		R = end[i];
+		if (L < R) {
+			piv = kq->sdists[L];
+			for (j = 0;j < D;j++)
+				piv_vec[j] = kq->results.REAL_VAR[D * L + j];
+			piv_perm = kq->inds[L];
+			if (i == KDTREE_MAX_RESULTS - 1) /* Sanity */
+				assert(0);
+			while (L < R) {
+				while (kq->sdists[R] >= piv && L < R)
+					R--;
+				if (L < R) {
+					for (j = 0;j < D;j++)
+						kq->results.REAL_VAR[D*L + j] = kq->results.REAL_VAR[D * R + j];
+					kq->inds[L] = kq->inds[R];
+					kq->sdists[L] = kq->sdists[R];
+					L++;
+				}
+				while (kq->sdists[L] <= piv && L < R)
+					L++;
+				if (L < R) {
+					for (j = 0;j < D;j++)
+						kq->results.REAL_VAR[D*R + j] = kq->results.REAL_VAR[D * L + j];
+					kq->inds[R] = kq->inds[L];
+					kq->sdists[R] = kq->sdists[L];
+					R--;
+				}
+			}
+			for (j = 0;j < D;j++)
+				kq->results.REAL_VAR[D*L + j] = piv_vec[j];
+			kq->inds[L] = piv_perm;
+			kq->sdists[L] = piv;
+			beg[i + 1] = L + 1;
+			end[i + 1] = end[i];
+			end[i++] = L;
+		} else
+			i--;
+	}
+	return 1;
+}
+
+static
+bool resize_results(kdtree_qres_t* res, int newsize, int d,
+					bool do_dists) {
+	if (do_dists)
+		res->sdists  = realloc(res->sdists , newsize * sizeof(real));
+	res->results.any = realloc(res->results.any, newsize * d * sizeof(real));
+	res->inds    = realloc(res->inds   , newsize * sizeof(unsigned int));
+	if (newsize && (!res->results.any || (do_dists && !res->sdists) || !res->inds))
+		fprintf(stderr, "Failed to resize kdtree results arrays.\n");
+	return TRUE;
+}
+
+static
+bool add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
+				int d, int* res_size, bool do_dists) {
+	if (do_dists)
+		res->sdists[res->nres] = sdist;
+	res->inds  [res->nres] = ind;
+	memcpy(((char*)res->results.any) + res->nres * d * sizeof(real),
+		   pt, sizeof(real) * d);
+	res->nres++;
+	if (res->nres == *res_size) {
+		// enlarge arrays.
+		*res_size *= 2;
+		return resize_results(res, *res_size, d, do_dists);
+	}
+	return TRUE;
+}
+
+kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, REAL* pt, double maxd2, int options)
+{
+	int nodestack[100];
+	int stackpos = 0;
+	kdtree_qres_t *res;
+	int res_size;
+	int* p_res_size = &res_size;
+	int D;
+	bool do_dists;
+	bool do_wholenode_check;
+
+	if (!kd || !pt)
+		return NULL;
+#if defined(KD_DIM)
+	assert(kd->ndim == KD_DIM);
+	D = KD_DIM;
+#else
+	D = kd->ndim;
+#endif
+
+	// gotta compute 'em if ya wanna sort 'em!
+	if (options & KD_OPTIONS_SORT_DISTS)
+		options |= KD_OPTIONS_COMPUTE_DISTS;
+	do_dists = options & KD_OPTIONS_COMPUTE_DISTS;
+	do_wholenode_check = !(options & KD_OPTIONS_SMALL_RADIUS);
+
+	res = calloc(1, sizeof(kdtree_qres_t));
+	if (!res) {
+		fprintf(stderr, "Failed to allocate kdtree_qres_t struct.\n");
+		return NULL;
+	}
+	res_size = KDTREE_MAX_RESULTS;
+	resize_results(res, res_size, D, do_dists);
+
+	// queue root.
+	nodestack[0] = 0;
+
+	while (stackpos >= 0) {
+		int nodeid;
+		int i;
+		int dim;
+		int L, R;
+		kdtype split;
+		kdtype *bblo=NULL, *bbhi=NULL;
+
+		nodeid = nodestack[stackpos];
+		stackpos--;
+
+		if (ISLEAF(kd, nodeid)) {
+			L = kdtree_left(kd, nodeid);
+			R = kdtree_right(kd, nodeid);
+			if (do_dists) {
+				for (i=L; i<=R; i++) {
+					// FIXME benchmark dist2 vs dist2_bailout.
+					real dsqd = dist2_bailout(pt, KD_DATA(kd, D, i), D, maxd2);
+					if (dsqd == -1.0)
+						continue;
+					if (!add_result(res, dsqd, KD_PERM(kd, i), KD_DATA(kd, D, i), D, p_res_size, do_dists))
+						return NULL;
+				}
+			} else {
+				for (i=L; i<=R; i++) {
+					if (dist2_exceeds(pt, KD_DATA(kd, D, i), D, maxd2))
+						continue;
+					if (!add_result(res, 0.0, KD_PERM(kd, i), KD_DATA(kd, D, i), D, p_res_size, do_dists))
+						return NULL;
+				}
+			}
+			continue;
+		}
+
+		if (kd->nodes) {
+			// compat mode
+			bblo = COMPAT_LOW_HR (kd, nodeid);
+			bbhi = COMPAT_HIGH_HR(kd, nodeid);
+
+		} else if (kd->bb.any) {
+			// bb trees
+			bblo = LOW_HR (kd, D, nodeid);
+			bbhi = HIGH_HR(kd, D, nodeid);
+
+		} else {
+			// split/dim trees
+			split = *KD_SPLIT(kd, i);
+			if (kd->splitdim)
+				dim = kd->splitdim[i];
+			else {
+#if KDTYPE_INTEGER
+				dim = split & kd->dimmask;
+				split &= kd->splitmask;
+#endif
+			}
+		}
+
+		if (bblo && bbhi) {
+			if (kdtree_bb_point_mindist2_exceeds(bblo, bbhi, pt, D, maxd2))
+				continue;
+
+			if (do_wholenode_check &&
+				!kdtree_bb_point_maxdist2_exceeds(bblo, bbhi, pt, D, maxd2)) {
+
+				L = kdtree_left(kd, nodeid);
+				R = kdtree_right(kd, nodeid);
+				if (do_dists) {
+					for (i=L; i<=R; i++) {
+						real dsqd = dist2(pt, KD_DATA(kd, D, i), D);
+						if (!add_result(res, dsqd, KD_PERM(kd, i), KD_DATA(kd, D, i), D, p_res_size, do_dists))
+							return NULL;
+					}
+				} else {
+					for (i=L; i<=R; i++)
+						if (!add_result(res, 0.0, KD_PERM(kd, i), KD_DATA(kd, D, i), D, p_res_size, do_dists))
+							return NULL;
+				}
+				continue;
+			}
+		}
+		stackpos++;
+		nodestack[stackpos] = 2 * nodeid + 1;
+		stackpos++;
+		nodestack[stackpos] = 2 * nodeid + 2;
+	}
+
+	/* Resize result arrays. */
+	resize_results(res, res->nres, D, do_dists);
+
+	/* Sort by ascending distance away from target point before returning */
+	if (options & KD_OPTIONS_SORT_DISTS)
+		kdtree_qsort_results(res, kd->ndim);
+
+	return res;
+}
+
+
+
 
 #if KDTYPE_INTEGER
 
@@ -469,7 +869,7 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 
 #else
 		/* Pivot the data at the median */
-		m = KDFUNC(kdtree_quickselect_partition)(data, kd->perm, left, right, D, dim);
+		m = kdtree_quickselect_partition(data, kd->perm, left, right, D, dim);
 		s = REAL2KDTYPE(kd, d, data[D*m+d]);
 #endif
 

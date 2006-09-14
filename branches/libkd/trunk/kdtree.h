@@ -42,6 +42,8 @@ struct kdtree_node {
 typedef struct kdtree_node kdtree_node_t;
 
 struct kdtree {
+	int treetype;
+
 	// (compatibility mode)
 	kdtree_node_t *nodes;   /* Flat tree storing nodes and HR's */
 
@@ -50,7 +52,7 @@ struct kdtree {
 
 	unsigned int *perm;    /* Permutation index */
 
-	/* Bounding box: list of D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
+	/* Bounding box: (kdtype) list of D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
 	union {
 		float* f;
 		double* d;
@@ -59,7 +61,7 @@ struct kdtree {
 		void* any;
 	} bb;
 
-	/* Split position (& dimension for ints). */
+	/* Split position (& dimension for ints) (kdtype). */
 	union {
 		float* f;
 		double* d;
@@ -76,7 +78,7 @@ struct kdtree {
 	unsigned int dimmask;
 	unsigned int splitmask;
 
-	union {
+	union { // (real, or kdtype if "copydata" was set)
 		/* Raw coordinate data as xyzxyzxyz */
 		float* f;
 		double* d;
@@ -114,6 +116,7 @@ struct kdtree {
 	//unsigned int nleaf;     /* Number of leaf nodes */
 	unsigned int nbottom;
 	unsigned int ninterior; /* Number of internal nodes */
+	unsigned int nlevels;
 	void* mmapped;          /* Next two are for mmap'd access */
 	unsigned int mmapped_size;  
 };
@@ -121,10 +124,15 @@ typedef struct kdtree kdtree_t;
 
 struct kdtree_qres {
 	unsigned int nres;
-#if 0
-	real *results;         /* Each of the points returned from a query */
-	real *sdists;          /* Squared distance from query point */
-#endif
+	union {
+		double* d;
+		float* f;
+		u32* i;
+		u16* s;
+		void* any;
+	} results;
+	//real *results;         /* Each of the points returned from a query */
+	double *sdists;          /* Squared distance from query point */
 	unsigned int *inds;    /* Indexes into original data set */
 };
 typedef struct kdtree_qres kdtree_qres_t;
@@ -177,6 +185,17 @@ void kdtree_free_query(kdtree_qres_t *kd);
 /* Free a tree; does not free kd->data */
 void kdtree_free(kdtree_t *kd);
 
+int kdtree_left(kdtree_t* kd, int nodeid);
+
+int kdtree_right(kdtree_t* kd, int nodeid);
+
+//#define ISLEAF(x)      ((2*(x)+1) >= kd->nnodes)
+#define ISLEAF(kd, i)       ((i) >= (kd)->ninterior)
+#define PARENT_INDEX(i)     (((i)-1)/2)
+#define CHILD_INDEX_NEG(i)  (2*(i)+1)
+#define CHILD_INDEX_POS(i)  (2*(i)+2)
+
+
 #if 0
 /* Output Graphviz .dot format version of the tree */
 void kdtree_output_dot(FILE* fid, kdtree_t* kd);
@@ -221,16 +240,12 @@ kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
 	  bool copydata);
 
-#if 0
-
 /* Range seach */
-kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, real *pt, real maxdistsquared);
+kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, void *pt, double maxd2);
 
-kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, real *pt, real maxdistsquared);
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, void *pt, double maxd2);
 
-kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(kdtree_t *kd, real *pt, real maxdistsquared, int options);
-
-#endif//if0
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(kdtree_t *kd, void *pt, double maxd2, int options);
 
 #if !defined(KD_DIM)
 #undef KD_DIM_GENERIC

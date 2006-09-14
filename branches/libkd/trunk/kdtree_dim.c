@@ -12,44 +12,6 @@
 
 #if 0
 
-static inline real KDFUNC(dist2)(real* p1, real* p2, int d) {
-	int i;
-	real d2 = 0.0;
-#if defined(KD_DIM)
-	d = KD_DIM;
-#endif
-	for (i=0; i<d; i++)
-		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
-	return d2;
-}
-
-static inline real KDFUNC(dist2_bailout)(real* p1, real* p2, int d, real maxd2) {
-	int i;
-	real d2 = 0.0;
-#if defined(KD_DIM)
-	d = KD_DIM;
-#endif
-	for (i=0; i<d; i++) {
-		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
-		if (d2 > maxd2)
-			return -1.0;
-	}
-	return d2;
-}
-
-static inline real KDFUNC(dist2_exceeds)(real* p1, real* p2, int d, real maxd2) {
-	int i;
-	real d2 = 0.0;
-#if defined(KD_DIM)
-	d = KD_DIM;
-#endif
-	for (i=0; i<d; i++) {
-		d2 += (p1[i] - p2[i]) * (p1[i] - p2[i]);
-		if (d2 > maxd2)
-			return 1;
-	}
-	return 0;
-}
 
 #endif//if0
 
@@ -66,18 +28,60 @@ kdtree_t* KDMANGLE(kdtree_build, double, u16)(double* data, int N, int D, int ma
 kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
 	  bool copydata) {
+	kdtree_t* kd = NULL;
 	switch (treetype) {
 	case KDTT_DOUBLE:
-		return KDMANGLE(kdtree_build, double, double)((double*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, double, double)((double*)data, N, D, maxlevel, bb, copydata);
 		break;
 	case KDTT_FLOAT:
-		return KDMANGLE(kdtree_build, float, float)((float*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, float, float)((float*)data, N, D, maxlevel, bb, copydata);
 		break;
 	case KDTT_DOUBLE_U32:
-		return KDMANGLE(kdtree_build, double, u32)((double*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, double, u32)((double*)data, N, D, maxlevel, bb, copydata);
 		break;
 	case KDTT_DOUBLE_U16:
-		return KDMANGLE(kdtree_build, double, u16)((double*)data, N, D, maxlevel, bb, copydata);
+		kd = KDMANGLE(kdtree_build, double, u16)((double*)data, N, D, maxlevel, bb, copydata);
+		break;
+	default:
+		break;
+	}
+	if (kd) {
+		kd->treetype = treetype;
+		kd->nlevels = maxlevel;
+	}
+	return kd;
+}
+
+/* Range seach */
+kdtree_qres_t* KDFUNC(kdtree_rangesearch)
+	 (kdtree_t *kd, void *pt, double maxd2) {
+	return KDFUNC(kdtree_rangesearch_options)(kd, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS | KD_OPTIONS_SORT_DISTS);
+}
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
+	 (kdtree_t *kd, void *pt, double maxd2) {
+	return KDFUNC(kdtree_rangesearch_options)(kd, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS);
+}
+
+kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, double, double)(kdtree_t* kd, double* pt, double maxd2, int options);
+kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, float,  float )(kdtree_t* kd, float * pt, double maxd2, int options);
+kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, double, u32   )(kdtree_t* kd, double* pt, double maxd2, int options);
+kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, double, u16   )(kdtree_t* kd, double* pt, double maxd2, int options);
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)
+	 (kdtree_t *kd, void *pt, double maxd2, int options) {
+	switch (kd->treetype) {
+	case KDTT_DOUBLE:
+		return KDMANGLE(kdtree_rangesearch_options, double, double)(kd, (double*)pt, maxd2, options);
+		break;
+	case KDTT_FLOAT:
+		return KDMANGLE(kdtree_rangesearch_options, float, float)(kd, (float*)pt, maxd2, options);
+		break;
+	case KDTT_DOUBLE_U32:
+		return KDMANGLE(kdtree_rangesearch_options, double, u32)(kd, (double*)pt, maxd2, options);
+		break;
+	case KDTT_DOUBLE_U16:
+		return KDMANGLE(kdtree_rangesearch_options, double, u16)(kd, (double*)pt, maxd2, options);
 		break;
 	default:
 		break;
@@ -115,17 +119,6 @@ bool add_result(kdtree_qres_t* res, real sdist, unsigned int ind, real* pt,
 		return resize_results(res, *res_size, d, do_dists);
 	}
 	return TRUE;
-}
-
-/* Range seach */
-kdtree_qres_t* KDFUNC(kdtree_rangesearch)
-	 (kdtree_t *kd, real *pt, real maxd2) {
-	return KDFUNC(kdtree_rangesearch_options)(kd, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS | KD_OPTIONS_SORT_DISTS);
-}
-
-kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
-	 (kdtree_t *kd, real *pt, real maxd2) {
-	return KDFUNC(kdtree_rangesearch_options)(kd, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS);
 }
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)

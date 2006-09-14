@@ -49,6 +49,67 @@ int kdtree_compute_levels(int N, int Nleaf) {
 	return levels;
 }
 
+int kdtree_left(kdtree_t* kd, int nodeid) {
+	if (ISLEAF(kd, nodeid)) {
+		int ind = nodeid - kd->ninterior;
+		if (!ind) return 0;
+		return kd->lr[ind-1] + 1;
+	} else {
+		// leftmost child's L.
+		int level;
+		int val;
+		int dlevel;
+		int twodl;
+		int ind;
+		for (level=0, val=(nodeid+1)>>1; val; val=val>>1, level++);
+		//printf("nodeid %i, level %i\n", nodeid, level);
+		dlevel = (kd->nlevels - 1) - level;
+		//printf("dlevel %i\n", dlevel);
+		twodl = (1 << dlevel);
+		//printf("leftmost child %i\n", twodl*nodeid + twodl - 1);
+		ind = (twodl*nodeid + twodl - 1) - kd->ninterior;
+		if (!ind) return 0;
+		return kd->lr[ind-1] + 1;
+	}
+}
+
+int kdtree_right(kdtree_t* kd, int nodeid) {
+	if (ISLEAF(kd, nodeid)) {
+		int ind = nodeid - kd->ninterior;
+		return kd->lr[ind];
+	} else {
+		// rightmost child's R.
+		int level;
+		int val;
+		int dlevel;
+		int twodl;
+		int ind;
+		//for (level=-1, val=nodeid+1; val; val=val>>1, level++);
+		for (level=0, val=(nodeid+1)>>1; val; val=val>>1, level++);
+		//printf("nodeid %i, level %i\n", nodeid, level);
+		dlevel = (kd->nlevels - 1) - level;
+		//printf("dlevel %i\n", dlevel);
+		twodl = (1 << dlevel);
+		//printf("rightmost child %i\n", twodl*nodeid + (twodl - 1)*2);
+		ind = (twodl*nodeid + (twodl - 1)*2) - kd->ninterior;
+		return kd->lr[ind];
+	}
+}
+
+/*
+  int kdtree_left(kdtree_t* kd, int nodeid) {
+  int val;
+  if (!nodeid) return 0;
+  // if all trailing bits are 1, return 0.
+  for (val = nodeid; val & 1; val = val >> 1);
+  if (!val) return 0;
+  return kd->lr[nodeid-1]+1;
+  }
+  int kdtree_right(kdtree_t* kd, int nodeid) {
+  return kd->lr[nodeid];
+  }
+*/
+
 #if 0
 real* kdqsort_arr;
 int kdqsort_D;
@@ -214,58 +275,6 @@ void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
 #endif
 
 #if 0
-/* Sorts results by kq->sdists */
-int kdtree_qsort_results(kdtree_qres_t *kq, int D)
-{
-	int beg[KDTREE_MAX_RESULTS], end[KDTREE_MAX_RESULTS], i = 0, j, L, R;
-	static real piv_vec[KDTREE_MAX_DIM];
-	unsigned int piv_perm;
-	real piv;
-
-	beg[0] = 0;
-	end[0] = kq->nres - 1;
-	while (i >= 0) {
-		L = beg[i];
-		R = end[i];
-		if (L < R) {
-			piv = kq->sdists[L];
-			for (j = 0;j < D;j++)
-				piv_vec[j] = kq->results[D * L + j];
-			piv_perm = kq->inds[L];
-			if (i == KDTREE_MAX_RESULTS - 1) /* Sanity */
-				assert(0);
-			while (L < R) {
-				while (kq->sdists[R] >= piv && L < R)
-					R--;
-				if (L < R) {
-					for (j = 0;j < D;j++)
-						kq->results[D*L + j] = kq->results[D * R + j];
-					kq->inds[L] = kq->inds[R];
-					kq->sdists[L] = kq->sdists[R];
-					L++;
-				}
-				while (kq->sdists[L] <= piv && L < R)
-					L++;
-				if (L < R) {
-					for (j = 0;j < D;j++)
-						kq->results[D*R + j] = kq->results[D * L + j];
-					kq->inds[R] = kq->inds[L];
-					kq->sdists[R] = kq->sdists[L];
-					R--;
-				}
-			}
-			for (j = 0;j < D;j++)
-				kq->results[D*L + j] = piv_vec[j];
-			kq->inds[L] = piv_perm;
-			kq->sdists[L] = piv;
-			beg[i + 1] = L + 1;
-			end[i + 1] = end[i];
-			end[i++] = L;
-		} else
-			i--;
-	}
-	return 1;
-}
 #endif//if0
 
 #if 0

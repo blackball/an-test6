@@ -28,18 +28,23 @@ static float* getfdata(int N, int D) {
 }
 
 int main() {
+	int N = 1000;
+	int D = 2;
+
 	double* ddata;
 	float* fdata;
 	kdtree_t* t1;
 	kdtree_t* t2;
 	kdtree_t* t3;
 	kdtree_t* t4;
-	int N, D;
 	int levels;
 	void* datacopy;
+	kdtree_qres_t* res;
+	double pt[D];
+	double maxd2;
+	int d;
+	//int i;
 
-	N = 1000;
-	D = 2;
 	levels = 8;
 
 	/*
@@ -50,7 +55,29 @@ int main() {
 
 	printf("Making dd tree..\n");
 	ddata = getddata(N, D);
+	for (d=0; d<D; d++)
+		pt[d] = 10.0 * rand() / (double)RAND_MAX;
+	maxd2 = 1.0;
+
 	t1 = kdtree_build(ddata, N, D, levels, KDTT_DOUBLE, TRUE, FALSE);
+
+	/*
+	  printf("nnodes %i\n", t1->nnodes);
+	  printf("nlevels %i\n", t1->nlevels);
+	  for (i=0; i<t1->nnodes; i++) {
+	  printf("node %i: L %i, R %i\n", i, kdtree_left(t1, i), kdtree_right(t1, i));
+	  }
+	*/
+
+	printf("Rangesearch...\n");
+	res = kdtree_rangesearch_options(t1, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+	if (!res)
+		printf("No results.\n");
+	else {
+		printf("%i results.\n", res->nres);
+		kdtree_free_query(res);
+	}
+
 	free(ddata);
 
 	printf("Making inttree..\n");
