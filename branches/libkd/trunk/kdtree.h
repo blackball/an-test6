@@ -8,7 +8,7 @@
 //#define KDT_INFTY 1e309
 
 #define KDT_INFTY_DOUBLE 1e309
-#define KDT_INFTY_FLOAT  3e38
+#define KDT_INFTY_FLOAT  1e39
 
 #define KD_OPTIONS_COMPUTE_DISTS  0x1
 #define KD_OPTIONS_SORT_DISTS     0x2
@@ -50,7 +50,7 @@ struct kdtree {
 
 	unsigned int *perm;    /* Permutation index */
 
-	/* Bounding box: list: D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
+	/* Bounding box: list of D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
 	union {
 		float* f;
 		double* d;
@@ -59,12 +59,17 @@ struct kdtree {
 		void* any;
 	} bb;
 
-	/* Split dimension & position. */
+	/* Split position (& dimension for ints). */
 	union {
+		float* f;
+		double* d;
 		u32* i;
 		u16* s;
 		void* any;
 	} split;
+
+	// Split dimension for floating-point types
+	unsigned char* splitdim;
 
 	// bitmasks for the split dimension and location.
 	unsigned int dimbits;
@@ -79,6 +84,10 @@ struct kdtree {
 		u16* s;
 		void* any;
 	} data;
+
+	// does this data belong to me alone, ie, did I make a copy of the original
+	// data array?
+	bool datacopy;
 
 	/*
 	  union {
@@ -208,8 +217,6 @@ int kdtree_qsort(real *arr, unsigned int *parr, int l, int r, int D, int d);
 #define KDFUNC(x) KDID(x)
 
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
-//kdtree_t* KDFUNC(kdtree_build)(real *data, int ndata, int ndim, int maxlevel);
-
 kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
 	  bool copydata);

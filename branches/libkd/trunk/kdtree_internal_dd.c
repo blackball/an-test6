@@ -20,8 +20,7 @@ typedef double kdtype;
 #define LOW_HR(kd, D, i)  LOW_HR_D(kd, D, i)
 #define HIGH_HR(kd, D, i) HIGH_HR_D(kd, D, i)
 
-// ????
-#define KD_SPLIT(kd, i) KD_SPLIT_I(kd, i)
+#define KD_SPLIT(kd, i) KD_SPLIT_D(kd, i)
 
 #include "kdtree_internal.c"
 

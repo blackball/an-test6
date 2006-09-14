@@ -414,14 +414,17 @@ void kdtree_free_query(kdtree_qres_t *kq)
 void kdtree_free(kdtree_t *kd)
 {
 	assert(kd);
-	assert(kd->nodes);
-	free(kd->perm);
 	free(kd->nodes);
 	free(kd->lr);
+	free(kd->perm);
 	free(kd->bb.any);
 	free(kd->split.any);
-	/* We don't free kd->data */
-	//free(kd->data.any);
+	free(kd->splitdim);
+	if (kd->datacopy)
+		free(kd->data.any);
+	free(kd->minval);
+	free(kd->maxval);
+	free(kd->scale);
 	free(kd);
 }
 

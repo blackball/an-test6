@@ -261,7 +261,10 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 			}
 		}
 
-		return KDMANGLE(kdtree_build, KDTYPE, KDTYPE)(mydata, N, D, maxlevel, bbtree, FALSE);
+		kd = KDMANGLE(kdtree_build, KDTYPE, KDTYPE)(mydata, N, D, maxlevel, bbtree, FALSE);
+		if (kd)
+			kd->datacopy = TRUE;
+		return kd;
 	}
 
 	/* Set the tree fields */
@@ -292,6 +295,11 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 	} else {
 		kd->split.any = malloc(kd->nnodes * sizeof(kdtype));
 		assert(kd->split.any);
+
+#if KDTYPE_INTEGER
+#else
+		kd->splitdim = malloc(kd->nnodes * sizeof(unsigned char));
+#endif
 
 		for (i=0; i<32; i++) {
 			kd->dimmask |= (1 << i);
@@ -344,8 +352,8 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 #if KDTYPE_INTEGER
 		real qsplit;
 		unsigned int xx;
-		kdtype s;
 #endif
+		kdtype s;
 		unsigned int c;
 		int dim;
 		int m;
@@ -462,11 +470,17 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 #else
 		/* Pivot the data at the median */
 		m = KDFUNC(kdtree_quickselect_partition)(data, kd->perm, left, right, D, dim);
+		s = REAL2KDTYPE(kd, d, data[D*m+d]);
 #endif
 
 #if KDTYPE_INTEGER
 		if (!bbtree) {
 			*(KD_SPLIT(kd, i)) = s | dim;
+		}
+#else
+		if (!bbtree) {
+			*(KD_SPLIT(kd, i)) = s;
+			kd->splitdim[i] = dim;
 		}
 #endif
 

@@ -12,6 +12,8 @@
 
 #define KD_SPLIT_I(kd, i) ((kd)->split.i + (i))
 #define KD_SPLIT_S(kd, i) ((kd)->split.s + (i))
+#define KD_SPLIT_F(kd, i) ((kd)->split.f + (i))
+#define KD_SPLIT_D(kd, i) ((kd)->split.d + (i))
 
 #define DOUBLE2U32(kd, d, r)   ((u32)rint(((r) - (kd)->minval[d]) * (kd)->scale[d]))
 
