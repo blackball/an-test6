@@ -91,6 +91,13 @@ static void init_tycho2_fitstruct() {
 	tycho2_fitstruct_inited = 1;
 }
 
+tycho2_entry* tycho2_fits_read_entry(tycho2_fits* t) {
+	tycho2_entry* e = buffered_read(&t->br);
+	if (!e)
+		fprintf(stderr, "Failed to read a Tycho-2 catalog entry.\n");
+	return e;
+}
+
 int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 							uint count, tycho2_entry* entries) {
 	int i=-1, c;
@@ -201,6 +208,7 @@ int tycho2_fits_close(tycho2_fits* tycho2) {
 	if (tycho2->header) {
 		qfits_header_destroy(tycho2->header);
 	}
+	buffered_read_free(&tycho2->br);
 	free(tycho2);
 	return 0;
 }
@@ -226,27 +234,13 @@ tycho2_fits* tycho2_fits_open(char* fn) {
 	// (and find the indices of the columns we need.)
 	nextens = qfits_query_n_ext(fn);
 	for (i=0; i<=nextens; i++) {
-		int c2;
 		if (!qfits_is_table(fn, i))
 			continue;
 		table = qfits_table_open(fn, i);
 
-		for (c=0; c<TYCHO2_FITS_COLUMNS; c++)
-			tycho2->columns[c] = -1;
-
-		for (c=0; c<table->nc; c++) {
-			qfits_col* col = table->col + c;
-			for (c2=0; c2<TYCHO2_FITS_COLUMNS; c2++) {
-				if (tycho2->columns[c2] != -1) continue;
-				// allow case-insensitive matches.
-				if (strcasecmp(col->tlabel, tycho2_fitstruct[c2].fieldname))
-					continue;
-				tycho2->columns[c2] = c;
-			}
-		}
-
 		good = 1;
 		for (c=0; c<TYCHO2_FITS_COLUMNS; c++) {
+			tycho2->columns[c] = fits_find_column(table, tycho2_fitstruct[c].fieldname);
 			if (tycho2->columns[c] == -1) {
 				good = 0;
 				break;
@@ -270,6 +264,7 @@ tycho2_fits* tycho2_fits_open(char* fn) {
 		return NULL;
 	}
 	tycho2->nentries = tycho2->table->nr;
+	tycho2->br.ntotal = tycho2->nentries;
 	return tycho2;
 }
 
@@ -328,13 +323,22 @@ int tycho2_fits_fix_headers(tycho2_fits* tycho2) {
 	return 0;
 }
 
+static int tycho2_fits_refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+	tycho2_fits* cat = userdata;
+	tycho2_entry* en = buffer;
+	return tycho2_fits_read_entries(cat, offset, n, en);
+}
+
 tycho2_fits* tycho2_fits_new() {
-	tycho2_fits* rtn = malloc(sizeof(tycho2_fits));
+	tycho2_fits* rtn = calloc(1, sizeof(tycho2_fits));
 	if (!rtn) {
 		fprintf(stderr, "Couldn't allocate memory for a tycho2_fits structure.\n");
 		exit(-1);
 	}
-	memset(rtn, 0, sizeof(tycho2_fits));
+	rtn->br.blocksize = 1000;
+	rtn->br.elementsize = sizeof(tycho2_entry);
+	rtn->br.refill_buffer = tycho2_fits_refill_buffer;
+	rtn->br.userdata = rtn;
 	return rtn;
 }
 

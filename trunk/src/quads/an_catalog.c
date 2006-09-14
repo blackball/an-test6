@@ -165,10 +165,9 @@ an_catalog* an_catalog_open(char* fn) {
 			continue;
 		table = qfits_table_open(fn, i);
 
-		for (c=0; c<AN_FITS_COLUMNS; c++)
-			cat->columns[c] = fits_find_column(table, an_fitstruct[c].fieldname);
 		good = 1;
 		for (c=0; c<AN_FITS_COLUMNS; c++) {
+			cat->columns[c] = fits_find_column(table, an_fitstruct[c].fieldname);
 			if (cat->columns[c] == -1) {
 				good = 0;
 				break;
