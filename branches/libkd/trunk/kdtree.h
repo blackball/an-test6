@@ -66,6 +66,11 @@ struct kdtree {
 		void* any;
 	} split;
 
+	// bitmasks for the split dimension and location.
+	unsigned int dimbits;
+	unsigned int dimmask;
+	unsigned int splitmask;
+
 	union {
 		/* Raw coordinate data as xyzxyzxyz */
 		float* f;
@@ -76,19 +81,20 @@ struct kdtree {
 	} data;
 
 	/*
-	  union minval {
+	  union {
 	  float* f;
 	  double* d;
-	  };
-	  union maxval {
+	  } minval;
+	  union {
 	  float* f;
 	  double* d;
-	  };
-	  union scale {
+	  } maxval;
+	  union {
 	  float* f;
 	  double* d;
-	  };
+	  } scale;
 	*/
+
 	double* minval;
 	double* maxval;
 	double* scale;

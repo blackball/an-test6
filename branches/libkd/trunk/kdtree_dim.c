@@ -8,10 +8,7 @@
 #include "kdtree.h"
 #include "kdtree_macros.h"
 #include "kdtree_access.h"
-
 #include "kdtree_internal.h"
-
-//#include "starutil.h"
 
 #if 0
 
@@ -54,122 +51,14 @@ static inline real KDFUNC(dist2_exceeds)(real* p1, real* p2, int d, real maxd2) 
 	return 0;
 }
 
-#define GET(x) (arr[(x)*D+d])
-#if defined(KD_DIM)
-#define ELEM_SWAP(il, ir) { \
-        if ((il) != (ir)) { \
-          tmpperm  = parr[il]; \
-          assert(tmpperm != -1); \
-          parr[il] = parr[ir]; \
-          parr[ir] = tmpperm; \
-          { int d; for (d=0; d<D; d++) { \
-		  tmpdata[0] = arr[(il)*D+d]; \
-		  arr[(il)*D+d] = arr[(ir)*D+d]; \
-          arr[(il)*D+d] = tmpdata[0]; }}}}
-#else
-#define ELEM_SWAP(il, ir) { \
-        if ((il) != (ir)) { \
-          tmpperm  = parr[il]; \
-          assert(tmpperm != -1); \
-          parr[il] = parr[ir]; \
-          parr[ir] = tmpperm; \
-          memcpy(tmpdata,    arr+(il)*D, D*sizeof(real)); \
-          memcpy(arr+(il)*D, arr+(ir)*D, D*sizeof(real)); \
-          memcpy(arr+(ir)*D, tmpdata,    D*sizeof(real)); }}
-#endif
-
-int KDFUNC(kdtree_quickselect_partition)
-	 (real *arr, unsigned int *parr, int l, int r, int D, int d) {
-	real* tmpdata = alloca(D * sizeof(real));
-
-	real medval;
-	int tmpperm = -1, i;
-	int low, high;
-	int median;
-	int middle, ll, hh;
-
-#if defined(KD_DIM)
-	// tell the compiler this is a constant...
-	D = KD_DIM;
-#endif
-
-	/* sanity is good */
-	assert(r >= l);
-
-	/* Find the median; also happens to partition the data */
-	low = l;
-	high = r;
-	median = (low + high) / 2;
-	while(1) {
-        if (high <= (low+1))
-            break;
-
-		/* Find median of low, middle and high items; swap into position low */
-		middle = (low + high) / 2;
-		if (GET(middle) > GET(high))
-			ELEM_SWAP(middle, high);
-		if (GET(low) > GET(high))
-			ELEM_SWAP(low, high);
-		if (GET(middle) > GET(low))
-			ELEM_SWAP(middle, low);
-
-		/* Swap low item (now in position middle) into position (low+1) */
-		ELEM_SWAP(middle, low + 1) ;
-
-		/* Nibble from each end towards middle, swapping items when stuck */
-		ll = low + 1;
-		hh = high;
-		for (;;) {
-			do ll++;
-			while (GET(low) > GET(ll)) ;
-			do hh--;
-			while (GET(hh) > GET(low)) ;
-
-			if (hh < ll)
-				break;
-
-			ELEM_SWAP(ll, hh) ;
-		}
-
-		/* Swap middle item (in position low) back into correct position */
-		ELEM_SWAP(low, hh) ;
-
-		/* Re-set active partition */
-		if (hh <= median)
-			low = ll;
-		if (hh >= median)
-			high = hh - 1;
-	}
-
-    if (high == low + 1) {  /* Two elements only */
-        if (GET(low) > GET(high))
-            ELEM_SWAP(low, high);
-    }
-	medval = GET(median);
-
-	/* check that it worked. */
-	for (i = l; i <= median; i++) {
-		assert(GET(i) <= medval);
-	}
-	for (i = median + 1; i <= r; i++) {
-		/* Assert contention: i just changed this assert to strict
-		 * because for the inttree, i need strict median guarentee
-		 * (i.e. all the median values are on one side or the other of
-		 * the return value of this function) If this causes problems
-		 * let me know --k */
-		assert(GET(i) > medval);
-		//assert(GET(i) >= medval);
-	}
-
-	return median + 1;
-}
-#undef ELEM_SWAP
-#undef GET
+#endif//if0
 
 
-
-#endif // if0
-
+// declarations (should go elsewhere)
+kdtree_t* KDMANGLE(kdtree_build, double, double)(double* data, int N, int D, int maxlevel, bool bb, bool copydata);
+kdtree_t* KDMANGLE(kdtree_build, float, float)(float* data, int N, int D, int maxlevel, bool bb, bool copydata);
+kdtree_t* KDMANGLE(kdtree_build, double, u32)(double* data, int N, int D, int maxlevel, bool bb, bool copydata);
+kdtree_t* KDMANGLE(kdtree_build, double, u16)(double* data, int N, int D, int maxlevel, bool bb, bool copydata);
 
 /* Build a tree from an array of data, of size N*D*sizeof(real) */
 /* If the root node is level 0, then maxlevel is the level at which there may
@@ -177,12 +66,6 @@ int KDFUNC(kdtree_quickselect_partition)
 kdtree_t* KDFUNC(kdtree_build)
 	 (void *data, int N, int D, int maxlevel, int treetype, bool bb,
 	  bool copydata) {
-	int i;
-	kdtree_t *kd;
-	int nnodes;
-	int level = 0, dim=-1, m;
-	int lnext;
-
 	switch (treetype) {
 	case KDTT_DOUBLE:
 		return KDMANGLE(kdtree_build, double, double)((double*)data, N, D, maxlevel, bb, copydata);
