@@ -269,11 +269,15 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 
 		// GAH - non-isotropic spaces!
 
-		res = KDMANGLE(kdtree_rangesearch_options, KDTYPE, KDTYPE)(kd, query, maxd2, options);
+		// prevent infinite recursion :)
+		/*
+		  kd->convert_data = FALSE;
+		  res = KDMANGLE(kdtree_rangesearch_options, KDTYPE, KDTYPE)(kd, query, maxd2, options);
+		  kd->convert_data = TRUE;
+		  return res;
 
+		*/
 		// -and convert distances back at the end?
-
-		return res;
 	}
 
 	// gotta compute 'em if ya wanna sort 'em!
@@ -341,9 +345,9 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 
 		} else {
 			// split/dim trees
-			split = *KD_SPLIT(kd, i);
+			split = *KD_SPLIT(kd, nodeid);
 			if (kd->splitdim)
-				dim = kd->splitdim[i];
+				dim = kd->splitdim[nodeid];
 			else {
 #if KDTYPE_INTEGER
 				dim = split & kd->dimmask;

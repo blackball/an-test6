@@ -49,6 +49,7 @@ int main() {
 	void* datacopy;
 	kdtree_qres_t* res;
 	double pt[D];
+	float fpt[D];
 	double maxd2;
 	int d;
 	int i;
@@ -167,8 +168,43 @@ int main() {
 		printf("ERROR - data changed!\n");
 		exit(-1);
 	}
-	free(ddata);
 	free(datacopy);
+
+	printf("Rangesearch...\n");
+	res = kdtree_rangesearch_options(t3, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+	if (!res)
+		printf("No results.\n");
+	else {
+		printf("%i results.\n", res->nres);
+
+		// sort by index.
+		qsort(res->inds, res->nres, sizeof(int), compare_ints);
+
+		printf("Inds : [ ");
+		for (i=0; i<res->nres; i++) {
+			printf("%i ", res->inds[i]);
+		}
+		printf("]\n");
+		kdtree_free_query(res);
+
+		printf("Naive: [ ");
+		data2 = ddata;
+		for (i=0; i<N; i++) {
+			double d2 = 0.0;
+			for (d=0; d<D; d++) {
+				double delta = (data2[i*D + d] - pt[d]);
+				d2 += (delta * delta);
+			}
+			if (d2 <= maxd2)
+				printf("%i ", i);
+		}
+		printf("]\n");
+	}
+
+	free(ddata);
+
+	for (d=0; d<D; d++)
+		fpt[d] = 10.0 * rand() / (double)RAND_MAX;
 
 	printf("Making ff tree..\n");
 	fdata = getfdata(N, D);
@@ -179,8 +215,41 @@ int main() {
 		printf("ERROR - data changed!\n");
 		exit(-1);
 	}
-	free(fdata);
 	free(datacopy);
+
+	printf("Rangesearch...\n");
+	res = kdtree_rangesearch_options(t4, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+	if (!res)
+		printf("No results.\n");
+	else {
+		printf("%i results.\n", res->nres);
+
+		// sort by index.
+		qsort(res->inds, res->nres, sizeof(int), compare_ints);
+
+		printf("Inds : [ ");
+		for (i=0; i<res->nres; i++) {
+			printf("%i ", res->inds[i]);
+		}
+		printf("]\n");
+		kdtree_free_query(res);
+
+		printf("Naive: [ ");
+		data2 = ddata;
+		for (i=0; i<N; i++) {
+			double d2 = 0.0;
+			for (d=0; d<D; d++) {
+				double delta = (data2[i*D + d] - pt[d]);
+				d2 += (delta * delta);
+			}
+			if (d2 <= maxd2)
+				printf("%i ", i);
+		}
+		printf("]\n");
+	}
+
+	free(fdata);
+
 	printf("Done!\n");
 
 	kdtree_free(t1);
