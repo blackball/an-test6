@@ -112,7 +112,7 @@ struct kdtree {
 
 	double* minval;
 	double* maxval;
-	double* scale;
+	double scale;
 
 	unsigned int ndata;     /* Number of items */
 	unsigned int ndim;      /* Number of dimensions */

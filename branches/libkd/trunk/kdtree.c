@@ -416,7 +416,6 @@ void kdtree_free(kdtree_t *kd)
 		free(kd->data.any);
 	free(kd->minval);
 	free(kd->maxval);
-	free(kd->scale);
 	free(kd);
 }
 

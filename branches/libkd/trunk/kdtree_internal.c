@@ -38,6 +38,8 @@
 
 #define KD_PERM(kd, i) ((kd)->perm ? (kd)->perm[i] : i)
 
+#define REALD2TOKDTYPED2(kd, d2)  ((d2)*((kd)->scale)*((kd)->scale))
+
 #if defined(KD_DIM)
 #define DIMENSION   (KD_DIM)
 #else
@@ -261,23 +263,21 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 		// then call the appropriate rangesearch function.
 		kdtype query[D];
 		int d;
-		//double newd2;
+		double newd2;
 
 		for (d=0; d<D; d++)
 			query[d] = REAL2KDTYPE(kd, d, pt[d]);
-		//newd2 = REALD2TO
+		newd2 = REALD2TOKDTYPED2(kd, maxd2);
 
-		// GAH - non-isotropic spaces!
+		printf("maxd2: %g.  scale: %g.  newd2: %g\n", maxd2, kd->scale, newd2);
 
 		// prevent infinite recursion :)
-		/*
-		  kd->convert_data = FALSE;
-		  res = KDMANGLE(kdtree_rangesearch_options, KDTYPE, KDTYPE)(kd, query, maxd2, options);
-		  kd->convert_data = TRUE;
-		  return res;
+		kd->convert_data = FALSE;
+		res = KDMANGLE(kdtree_rangesearch_options, KDTYPE, KDTYPE)(kd, query, newd2, options);
+		kd->convert_data = TRUE;
 
-		*/
 		// -and convert distances back at the end?
+		return res;
 	}
 
 	// gotta compute 'em if ya wanna sort 'em!
@@ -769,6 +769,12 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 	int nnodes;
 	int lnext, level;
 
+	// debug
+	/*
+	  bool kdtype_integer = KDTYPE_INTEGER;
+	  bool real_integer = REAL_INTEGER;
+	*/
+
 	assert(maxlevel > 0);
 	assert(D <= KDTREE_MAX_DIM);
 #if defined(KD_DIM)
@@ -788,7 +794,7 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 
 		// GAH - non-isotropic!
 
-		double hi[D], lo[D], scale[D];
+		double hi[D], lo[D], scale, range;
 		kdtype* mydata;
 		kdtree_t temptree;
 		kdtree_t* kd = &temptree;
@@ -805,8 +811,11 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 				rdata++;
 			}
 		}
+		range = 0.0;
 		for (d=0; d<D; d++)
-			scale[d] = (double)KDTYPE_MAX / (hi[d] - lo[d]);
+			if (hi[d] - lo[d] > range)
+				range = hi[d] - lo[d];
+		scale = (double)KDTYPE_MAX / range;
 
 		// set up a fake temporary tree for the REAL2KDTYPE macro
 		kd->minval = lo;
@@ -829,10 +838,9 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		// store the scaling params.
 		kd->minval = malloc(D * sizeof(double));
 		kd->maxval = malloc(D * sizeof(double));
-		kd->scale  = malloc(D * sizeof(double));
+		kd->scale  = scale;
 		memcpy(kd->minval, lo, D * sizeof(double));
 		memcpy(kd->maxval, hi, D * sizeof(double));
-		memcpy(kd->scale,  scale, D * sizeof(double));
 
 		return kd;
 	}
@@ -884,10 +892,10 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 	}
 
 	if (KDTYPE_INTEGER && !REAL_INTEGER) {
+		double range;
 		// compute scaling params
 		kd->minval = malloc(D * sizeof(double));
 		kd->maxval = malloc(D * sizeof(double));
-		kd->scale  = malloc(D * sizeof(double));
 		for (d=0; d<D; d++) {
 			kd->minval[d] = REAL_MAX;
 			kd->maxval[d] = REAL_MIN;
@@ -900,9 +908,11 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 				rdata++;
 			}
 		}
-		for (d=0; d<D; d++) {
-			kd->scale[d] = (double)KDTYPE_MAX / (kd->maxval[d] - kd->minval[d]);
-		}
+		range = 0.0;
+		for (d=0; d<D; d++)
+			if (kd->maxval[d] - kd->minval[d] > range)
+				range = kd->maxval[d] - kd->minval[d];
+		kd->scale = (double)KDTYPE_MAX / range;
 	}
 
 	/* Use the lr array as a stack while building. In place in your face! */
@@ -1020,27 +1030,9 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		}
 		qsplit = KDTYPE2REAL(kd, d, s);
 
-		/*
-		  {
-		  int xxxxy;
-		  int xxxx;
-		  xxxx = m;
-		*/
 		/* Play games to make sure we properly partition the data */
 		while(m < right && data[D*m+d] < qsplit) m++;
-		//xxxxy = m;
 		while(left <  m && qsplit <= data[D*(m-1)+d]) m--;
-		//}
-
-		// recompute location of splitting plane??
-		/*
-		  s = REAL2KDTYPE(kd, d, data[D*m+d]);
-		  if (!bbtree) {
-		  s = s & kd->splitmask;
-		  assert((s & kd->dimmask) == 0);
-		  }
-		*/
-		//qsplit = KDTYPE2REAL(kd, d, s);
 
 		/* Even more sanity */
 		assert(m != 0);
