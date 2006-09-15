@@ -54,6 +54,7 @@ int main() {
 	int d;
 	int i;
 	double* data2;
+	float* fdata2;
 
 	levels = 8;
 
@@ -159,7 +160,7 @@ int main() {
 	free(ddata);
 	free(datacopy);
 
-	printf("Making du32 tree..\n");
+	printf("Making du32 tree (bb + convert_data)..\n");
 	ddata = getddata(N, D);
 	datacopy = malloc(N * D * sizeof(double));
 	memcpy(datacopy, ddata, N*D*sizeof(double));
@@ -206,19 +207,21 @@ int main() {
 	for (d=0; d<D; d++)
 		fpt[d] = 10.0 * rand() / (double)RAND_MAX;
 
-	printf("Making ff tree..\n");
+	printf("Making ff tree... (split/dim)\n");
 	fdata = getfdata(N, D);
 	datacopy = malloc(N * D * sizeof(float));
 	memcpy(datacopy, fdata, N*D*sizeof(float));
-	t4 = kdtree_build(fdata, N, D, levels, KDTT_FLOAT, TRUE, TRUE);
-	if (memcmp(fdata, datacopy, N*D*sizeof(float))) {
-		printf("ERROR - data changed!\n");
-		exit(-1);
-	}
-	free(datacopy);
+	t4 = kdtree_build(fdata, N, D, levels, KDTT_FLOAT, FALSE, FALSE);
+	/*
+	  if (memcmp(fdata, datacopy, N*D*sizeof(float))) {
+	  printf("ERROR - data changed!\n");
+	  exit(-1);
+	  }
+	  free(datacopy);
+	*/
 
 	printf("Rangesearch...\n");
-	res = kdtree_rangesearch_options(t4, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
+	res = kdtree_rangesearch_options(t4, fpt, maxd2, KD_OPTIONS_SMALL_RADIUS);
 	if (!res)
 		printf("No results.\n");
 	else {
@@ -235,11 +238,11 @@ int main() {
 		kdtree_free_query(res);
 
 		printf("Naive: [ ");
-		data2 = ddata;
+		fdata2 = datacopy;
 		for (i=0; i<N; i++) {
 			double d2 = 0.0;
 			for (d=0; d<D; d++) {
-				double delta = (data2[i*D + d] - pt[d]);
+				double delta = (fdata2[i*D + d] - fpt[d]);
 				d2 += (delta * delta);
 			}
 			if (d2 <= maxd2)

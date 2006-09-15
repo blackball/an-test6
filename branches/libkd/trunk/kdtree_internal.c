@@ -258,27 +258,29 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 	D = kd->ndim;
 #endif
 
-	if (kd->convert_data) {
-		// convert the query and maxd2 from the original data type to this tree's type,
-		// then call the appropriate rangesearch function.
-		kdtype query[D];
-		int d;
-		double newd2;
+	/*
+	  if (kd->convert_data) {
+	  // convert the query and maxd2 from the original data type to this tree's type,
+	  // then call the appropriate rangesearch function.
+	  kdtype query[D];
+	  int d;
+	  double newd2;
 
-		for (d=0; d<D; d++)
-			query[d] = REAL2KDTYPE(kd, d, pt[d]);
-		newd2 = REALD2TOKDTYPED2(kd, maxd2);
+	  for (d=0; d<D; d++)
+	  query[d] = REAL2KDTYPE(kd, d, pt[d]);
+	  newd2 = REALD2TOKDTYPED2(kd, maxd2);
 
-		printf("maxd2: %g.  scale: %g.  newd2: %g\n", maxd2, kd->scale, newd2);
+	  printf("maxd2: %g.  scale: %g.  newd2: %g\n", maxd2, kd->scale, newd2);
 
-		// prevent infinite recursion :)
-		kd->convert_data = FALSE;
-		res = KDMANGLE(kdtree_rangesearch_options, KDTYPE, KDTYPE)(kd, query, newd2, options);
-		kd->convert_data = TRUE;
+	  // prevent infinite recursion :)
+	  kd->convert_data = FALSE;
+	  res = KDMANGLE(kdtree_rangesearch_options, KDTYPE, KDTYPE)(kd, query, newd2, options);
+	  kd->convert_data = TRUE;
 
-		// -and convert distances back at the end?
-		return res;
-	}
+	  // -and convert distances back at the end?
+	  return res;
+	  }
+	*/
 
 	// gotta compute 'em if ya wanna sort 'em!
 	if (options & KD_OPTIONS_SORT_DISTS)
@@ -300,6 +302,7 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 	while (stackpos >= 0) {
 		int nodeid;
 		int i;
+		int d;
 		int dim;
 		int L, R;
 		kdtype split;
@@ -311,22 +314,47 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 		if (ISLEAF(kd, nodeid)) {
 			L = kdtree_left(kd, nodeid);
 			R = kdtree_right(kd, nodeid);
+			real tmpdata[D];
+			real* data;
+
+			if (kd->convert_data) {
+				data = tmpdata;
+			}
+
 			if (do_dists) {
 				for (i=L; i<=R; i++) {
 					bool bailedout = FALSE;
 					real dsqd;
+
+					if (kd->convert_data) {
+						for (d=0; d<D; d++)
+							//tmpdata[d] = (kd->data.KDTYPE_VAR[(D*i)+d] - kd->minval[d]) * kd->scale;
+							tmpdata[d] = ((real)(kd->data.KDTYPE_VAR[(D*i)+d]) / kd->scale) +  kd->minval[d];
+					} else {
+						data = KD_DATA(kd, D, i);
+					}
+
 					// FIXME benchmark dist2 vs dist2_bailout.
-					dist2_bailout(pt, KD_DATA(kd, D, i), D, maxd2, &bailedout, &dsqd);
+					dist2_bailout(pt, data, D, maxd2, &bailedout, &dsqd);
 					if (bailedout)
 						continue;
-					if (!add_result(res, dsqd, KD_PERM(kd, i), KD_DATA(kd, D, i), D, p_res_size, do_dists))
+					if (!add_result(res, dsqd, KD_PERM(kd, i), data, D, p_res_size, do_dists))
 						return NULL;
 				}
 			} else {
 				for (i=L; i<=R; i++) {
-					if (dist2_exceeds(pt, KD_DATA(kd, D, i), D, maxd2))
+
+					if (kd->convert_data) {
+						for (d=0; d<D; d++)
+							//tmpdata[d] = (kd->data.KDTYPE_VAR[(D*i)+d] - kd->minval[d]) * kd->scale;
+							tmpdata[d] = ((real)(kd->data.KDTYPE_VAR[(D*i)+d]) / kd->scale) +  kd->minval[d];
+					} else {
+						data = KD_DATA(kd, D, i);
+					}
+
+					if (dist2_exceeds(pt, data, D, maxd2))
 						continue;
-					if (!add_result(res, 0.0, KD_PERM(kd, i), KD_DATA(kd, D, i), D, p_res_size, do_dists))
+					if (!add_result(res, 0.0, KD_PERM(kd, i), data, D, p_res_size, do_dists))
 						return NULL;
 				}
 			}
@@ -359,9 +387,18 @@ kdtree_qres_t* KDMANGLE(kdtree_rangesearch_options, REAL, KDTYPE)(kdtree_t* kd, 
 		if (kbblo && kbbhi) {
 			real bblo[D], bbhi[D];
 			int d;
-			for (d=0; d<D; d++) {
-				bblo[d] = KDTYPE2REAL(kd, d, kbblo[d]);
-				bbhi[d] = KDTYPE2REAL(kd, d, kbbhi[d]);
+			if (kd->convert_data) {
+				for (d=0; d<D; d++) {
+					//bblo[d] = kd->scale * (kbblo[d] - kd->minval[d]);
+					//bbhi[d] = kd->scale * (kbbhi[d] - kd->minval[d]);
+					bblo[d] = (((real)kbblo[d]) / kd->scale) + kd->minval[d];
+					bbhi[d] = (((real)kbbhi[d]) / kd->scale) + kd->minval[d];
+				}
+			} else {
+				for (d=0; d<D; d++) {
+					bblo[d] = KDTYPE2REAL(kd, d, kbblo[d]);
+					bbhi[d] = KDTYPE2REAL(kd, d, kbbhi[d]);
+				}
 			}
 
 			if (kdtree_bb_point_mindist2_exceeds(bblo, bbhi, pt, D, maxd2))
@@ -500,7 +537,7 @@ static int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, in
 	/* sanity is good */
 	assert(r >= l);
 
-	/* Find the median; also happens to partition the data */
+	/* Find the median and partition the data */
 	low = l;
 	high = r;
 	median = (low + high) / 2;
@@ -565,7 +602,10 @@ static int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, in
 		//assert(GET(i) >= medval);
 	}
 
-	return median + 1;
+	// ???
+	//return median + 1;
+
+	return median;
 }
 #undef ELEM_SWAP
 #undef GET
@@ -1047,6 +1087,18 @@ kdtree_t* KDMANGLE(kdtree_build, REAL, KDTYPE)
 		/* Pivot the data at the median */
 		m = kdtree_quickselect_partition(data, kd->perm, left, right, D, dim);
 		s = REAL2KDTYPE(kd, d, data[D*m+d]);
+
+		assert(m != 0);
+		assert(left <= m);
+		assert(m <= right);
+		for (xx=left; m && xx<=m-1; xx++)
+			assert(data[D*xx+d] < data[D*m+d]);
+		for (xx=left; m && xx<=m-1; xx++)
+			assert(data[D*xx+d] < s);
+		for (xx=m; xx<=right; xx++)
+			assert(data[D*m+d] <= data[D*xx+d]);
+		for (xx=m; xx<=right; xx++)
+			assert(s <= data[D*xx+d]);
 #endif
 
 #if KDTYPE_INTEGER
