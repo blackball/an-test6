@@ -602,9 +602,6 @@ static int kdtree_quickselect_partition(real *arr, unsigned int *parr, int l, in
 		//assert(GET(i) >= medval);
 	}
 
-	// ???
-	//return median + 1;
-
 	return median;
 }
 #undef ELEM_SWAP
