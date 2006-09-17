@@ -5,6 +5,10 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include "ppm.h"
+#include "pnm.h"
+#undef bool
+
 #include "an_catalog.h"
 #include "kdtree/kdtree.h"
 #include "kdtree/kdtree_macros.h"
@@ -12,10 +16,13 @@
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"
+<<<<<<< usnobtile.c
+=======
 #include "merctree.h"
 #include "bl.h"
 #include "ppm.h"
 #include "pnm.h"
+>>>>>>> 1.5
 
 #define OPTIONS "x:y:X:Y:w:h:l:f"
 
