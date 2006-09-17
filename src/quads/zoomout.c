@@ -6,7 +6,7 @@
 
 #include "starutil.h"
 
-#define OPTIONS "hr:d:W:H:z:s:e:o:"
+#define OPTIONS "hr:d:W:H:z:s:e:o:g"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "usage: %s\n"
@@ -18,6 +18,7 @@ static void printHelp(char* progname) {
 			"    [-s <start-zoom>] default 15\n"
 			"    [-e <end-zoom>] default 1\n"
 			"    -o <output-file-template> in printf format, given frame number, eg, \"frame%%03i.ppm\".\n"
+			"    [-g]  output GIF format\n"
 			"\n", progname);
 }
 
@@ -39,12 +40,16 @@ int main(int argc, char *args[]) {
 	double dzoom;
 	int i;
 	double ucenter, vcenter;
+	bool gif = FALSE;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
 		case 'h':
 			printHelp(progname);
 			exit(0);
+		case 'g':
+			gif = TRUE;
+			break;
 		case 'r':
 			ra = atof(optarg);
 			break;
@@ -102,6 +107,7 @@ int main(int argc, char *args[]) {
 		double vscale = (2.0*M_PI) / 256.0;
 		double u1, u2, v1, v2;
 		double ra1, ra2, dec1, dec2;
+		int res;
 
 		uscale *= zoomscale;
 		vscale *= zoomscale;
@@ -118,19 +124,28 @@ int main(int argc, char *args[]) {
 		dec1 = atan(sinh(v1));
 		dec2 = atan(sinh(v2));
 
+		ra1 = rad2deg(ra1);
+		ra2 = rad2deg(ra2);
+		dec1 = rad2deg(dec1);
+		dec2 = rad2deg(dec2);
+
 		printf("Zoom %g, scale %g, u range [%g,%g], v range [%g,%g], RA [%g,%g], DEC [%g,%g]\n",
-			   zoom, zoomscale, u1, u2, v1, v2, rad2deg(ra1), rad2deg(ra2), rad2deg(dec1), rad2deg(dec2));
+			   zoom, zoomscale, u1, u2, v1, v2, ra1, ra2, dec1, dec2);
 
 		sprintf(fn, outfn, i);
 
-		sprintf(cmdline, "usnobtile -f -x %g, -X %g, -y %g, -Y %g -w %i -h %i > %s",
-				ra1, ra2, dec1, dec2, W, H, fn);
+		sprintf(cmdline, "usnobtile -f -x %g, -X %g, -y %g, -Y %g -w %i -h %i %s> %s",
+				ra1, ra2, dec1, dec2, W, H, (gif ? "| pnmquant 256 | ppmtogif " : ""), fn);
 
 		printf("cmdline: %s\n", cmdline);
 
-		if (system(cmdline) == -1) {
+		if ((res = system(cmdline)) == -1) {
 			fprintf(stderr, "system() call failed.\n");
 			exit(-1);
+		}
+		if (res) {
+			fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
+			break;
 		}
 	}
 
