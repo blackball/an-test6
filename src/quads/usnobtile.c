@@ -16,13 +16,10 @@
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"
-<<<<<<< usnobtile.c
-=======
 #include "merctree.h"
 #include "bl.h"
 #include "ppm.h"
 #include "pnm.h"
->>>>>>> 1.5
 
 #define OPTIONS "x:y:X:Y:w:h:l:f"
 
