@@ -6,7 +6,7 @@
 
 #include "starutil.h"
 
-#define OPTIONS "hr:d:W:H:z:s:e:o:g"
+#define OPTIONS "hr:d:W:H:z:s:e:o:gn"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "usage: %s\n"
@@ -19,6 +19,7 @@ static void printHelp(char* progname) {
 			"    [-e <end-zoom>] default 1\n"
 			"    -o <output-file-template> in printf format, given frame number, eg, \"frame%%03i.ppm\".\n"
 			"    [-g]  output GIF format\n"
+			"    [-n]  just print the command-lines, don't execute them.\n"
 			"\n", progname);
 }
 
@@ -41,12 +42,16 @@ int main(int argc, char *args[]) {
 	int i;
 	double ucenter, vcenter;
 	bool gif = FALSE;
+	bool justprint = FALSE;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
 		case 'h':
 			printHelp(progname);
 			exit(0);
+		case 'n':
+			justprint = TRUE;
+			break;
 		case 'g':
 			gif = TRUE;
 			break;
@@ -139,6 +144,8 @@ int main(int argc, char *args[]) {
 
 		printf("cmdline: %s\n", cmdline);
 
+		if (justprint)
+			continue;
 		if ((res = system(cmdline)) == -1) {
 			fprintf(stderr, "system() call failed.\n");
 			exit(-1);
