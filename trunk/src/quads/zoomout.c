@@ -107,7 +107,7 @@ int main(int argc, char *args[]) {
 		double zoomscale = pow(2.0, 1.0 - zoom);
 		char fn[256];
 		char cmdline[1024];
-		// Google's definition of "scale 1" pixel scale.
+		// Google's definition of "scale 0" pixel scale.
 		double uscale = 1.0 / 256.0;
 		double vscale = (2.0*M_PI) / 256.0;
 		double u1, u2, v1, v2;
@@ -117,42 +117,154 @@ int main(int argc, char *args[]) {
 		uscale *= zoomscale;
 		vscale *= zoomscale;
 
-		u1 = ucenter - W/2 * uscale;
-		u2 = ucenter + W/2 * uscale;
-		v1 = vcenter - H/2 * vscale;
-		v2 = vcenter + H/2 * vscale;
-
 		// CHECK BOUNDS!
 
-		ra1 = u1 * 2.0 * M_PI;
-		ra2 = u2 * 2.0 * M_PI;
-		dec1 = atan(sinh(v1));
-		dec2 = atan(sinh(v2));
 
-		ra1 = rad2deg(ra1);
-		ra2 = rad2deg(ra2);
-		dec1 = rad2deg(dec1);
-		dec2 = rad2deg(dec2);
+		if (zoom <= 5.0) {
+			int zi;
+			char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
+			char fn[256];
+			char outfile[256];
+			int left, right, top, bottom;
+			double scaleadj;
+			int pixelsize;
+			zi = (int)ceil(zoom);
+			if (zi < 1) zi = 1;
+			printf("Zoom %g => %i\n", zoom, zi);
+			sprintf(fn, map_template, zi);
+			scaleadj = pow(2.0, (double)zi - zoom);
+			printf("Scale adjustment %g\n", scaleadj);
 
-		printf("Zoom %g, scale %g, u range [%g,%g], v range [%g,%g], RA [%g,%g], DEC [%g,%g]\n",
-			   zoom, zoomscale, u1, u2, v1, v2, ra1, ra2, dec1, dec2);
+			pixelsize = (int)rint(pow(2.0, zi)) * 256;
 
-		sprintf(fn, outfn, i);
+			printf("Pixelsize %i\n", pixelsize);
 
-		sprintf(cmdline, "usnobtile -f -x %g, -X %g, -y %g, -Y %g -w %i -h %i %s> %s",
-				ra1, ra2, dec1, dec2, W, H, (gif ? "| pnmquant 256 | ppmtogif " : ""), fn);
+			// I seem to have gained a factor of two somewhere along the way...
+			uscale *= 0.5;
+			vscale *= 0.5;
 
-		printf("cmdline: %s\n", cmdline);
+			u1 = ucenter - W/2 * uscale;
+			u2 = ucenter + W/2 * uscale;
+			v1 = vcenter - H/2 * vscale;
+			v2 = vcenter + H/2 * vscale;
 
-		if (justprint)
-			continue;
-		if ((res = system(cmdline)) == -1) {
-			fprintf(stderr, "system() call failed.\n");
-			exit(-1);
-		}
-		if (res) {
-			fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
-			break;
+			printf("u range [%g, %g], v range [%g, %g].\n", u1, u2, v1, v2);
+
+			left   = (int)rint(u1 * pixelsize);
+			right  = (int)rint(u2 * pixelsize);
+			top    = (int)rint((v1 + M_PI) / (2.0 * M_PI) * pixelsize);
+			bottom = (int)rint((v2 + M_PI) / (2.0 * M_PI) * pixelsize);
+
+			printf("L %i, R %i, T %i, B %i\n", left, right, top, bottom);
+
+			sprintf(outfile, outfn, i);
+
+			if (left >= 0 && right < pixelsize && top >= 0 && bottom < pixelsize) {
+				printf("Cutting and scaling...\n");
+				sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s | pnmscale -width=%i -height=%i - > %s",
+						left, right, top, bottom, fn, W, H, outfile);
+
+				printf("cmdline: %s\n", cmdline);
+
+				if (justprint)
+					continue;
+				if ((res = system(cmdline)) == -1) {
+					fprintf(stderr, "system() call failed.\n");
+					exit(-1);
+				}
+				if (res) {
+					fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
+					break;
+				}
+			} else {
+				// we've got to paste together the image...
+
+				sprintf(cmdline, "ppmmake black %i %i > %s", W, H, outfile);
+				printf("cmdline: %s\n", cmdline);
+				if (!justprint)
+					system(cmdline);
+
+				if (left < 0) {
+					int L;
+					int T, B;
+					char* tempimg = "/tmp/tmpimg.ppm";
+					int SX, SY;
+					T = (top >= 0 ? top : 0);
+					B = (bottom < pixelsize ? bottom : pixelsize-1);
+
+					L = left;
+					SX = 0;
+					while (L < right) {
+						int pixL, pixR;
+						int SW, SH;
+						pixL = ((L % pixelsize) + pixelsize) % pixelsize;
+						if (L < 0)
+							pixR = pixelsize-1;
+						else
+							pixR = (right >= pixelsize ? pixelsize-1 : right);
+						printf("grabbing %i to %i\n", pixL, pixR);
+						SW = rint((1 + pixR - pixL) / scaleadj);
+						SH = (1 + B - T) / scaleadj;
+						//SX = (L - left) / scaleadj;
+						SY = (T - top) / scaleadj;
+						if (SX + SW > W) {
+							printf("Adjusting width from %i to %i.\n", SW, W-SX);
+							SW = W - SX;
+						}
+						//if (SY + SH > H) {
+						sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
+								"| pnmscale -width=%i -height=%i - "
+								"| pnmpaste - %i %i %s > %s; mv %s %s",
+								pixL, pixR, T, B, fn,
+								SW, SH, SX, SY, outfile, tempimg, tempimg, outfile);
+						printf("cmdline: %s\n", cmdline);
+						if (!justprint)
+							system(cmdline);
+
+						SX += SW;
+						L += (pixR - pixL + 1);
+					}
+				}
+
+
+			}
+
+		} else {
+			u1 = ucenter - W/2 * uscale;
+			u2 = ucenter + W/2 * uscale;
+			v1 = vcenter - H/2 * vscale;
+			v2 = vcenter + H/2 * vscale;
+
+			ra1 = u1 * 2.0 * M_PI;
+			ra2 = u2 * 2.0 * M_PI;
+			dec1 = atan(sinh(v1));
+			dec2 = atan(sinh(v2));
+
+			ra1 = rad2deg(ra1);
+			ra2 = rad2deg(ra2);
+			dec1 = rad2deg(dec1);
+			dec2 = rad2deg(dec2);
+
+			printf("Zoom %g, scale %g, u range [%g,%g], v range [%g,%g], RA [%g,%g], DEC [%g,%g]\n",
+				   zoom, zoomscale, u1, u2, v1, v2, ra1, ra2, dec1, dec2);
+
+			sprintf(fn, outfn, i);
+
+			sprintf(cmdline, "usnobtile -f -x %g, -X %g, -y %g, -Y %g -w %i -h %i %s> %s",
+					ra1, ra2, dec1, dec2, W, H, (gif ? "| pnmquant 256 | ppmtogif " : ""), fn);
+
+			printf("cmdline: %s\n", cmdline);
+
+			if (justprint)
+				continue;
+			if ((res = system(cmdline)) == -1) {
+				fprintf(stderr, "system() call failed.\n");
+				exit(-1);
+			}
+			if (res) {
+				fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
+				break;
+			}
 		}
 	}
 

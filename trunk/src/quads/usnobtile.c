@@ -98,6 +98,7 @@ int main(int argc, char *argv[]) {
 	int w=0, h=0;
 	char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
 	char* merc_template = "/h/42/dstn/local/maps/merc/merc_hp%03i.fits";
+	//char* merc_template = "/h/42/dstn/local/maps/merc/merc_hp365.fits";
 	char fn[256];
 	int i;
 	double lines = 0.0;
@@ -420,6 +421,15 @@ int main(int argc, char *argv[]) {
 			bblo[1] = miny;
 			bbhi[1] = maxy;
 
+			/*
+			  if (!((queryhigh[1] < bblo[1]) || (bbhi[1] < querylow[1]))) {
+			  // Y range overlaps.
+			  if (wrapra)
+			  fprintf(stderr, "HP %i: bb [%g,%g]; query [%g,%g], wrap [%g,%g].\n",
+			  i, bblo[0], bbhi[0], querylow[0], queryhigh[0], wraplow[0], wraphigh[0]);
+			  }
+			*/
+
 			if (kdtree_do_boxes_overlap(bblo, bbhi, querylow, queryhigh, 2) ||
 				(wrapra && kdtree_do_boxes_overlap(bblo, bbhi, wraplow, wraphigh, 2))) {
 				fprintf(stderr, "HP %i overlaps: x:[%g,%g], y:[%g,%g]\n",
@@ -488,7 +498,7 @@ int main(int argc, char *argv[]) {
 			iwnode = pl_size(nodelist);
 			if (wrapra) {
 				get_nodes_contained_in(merc->tree, wraplow, wraphigh, nodelist);
-				fprintf(stderr, "Found %i nodes in wrapped-around region.\n", (pl_size(nodelist) - iwnode));
+				//fprintf(stderr, "Found %i nodes in wrapped-around region.\n", (pl_size(nodelist) - iwnode));
 			}
 
 			/*
@@ -500,7 +510,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "%i nodes (%i points) overlap the tile.\n", pl_size(nodelist), count_points_in_list(nodelist));
 			//fprintf(stderr, "%i leaves (%i points) overlap the tile.\n", pl_size(leaflist), count_points_in_list(leaflist));
 
-			iwpix = iwleaf = UINT_MAX;
+			iwpix = iwleaf = INT_MAX;
 
 			for (j=0; j<pl_size(nodelist); j++) {
 				kdtree_node_t* node = pl_get(nodelist, j);
@@ -517,10 +527,12 @@ int main(int argc, char *argv[]) {
 
 			fprintf(stderr, "%i single-pixel nodes (%i points).\n", pl_size(pixlist), count_points_in_list(pixlist));
 			fprintf(stderr, "%i multi-pixel leaves (%i points).\n", pl_size(leaflist), count_points_in_list(leaflist));
-			if (wrapra) {
-				fprintf(stderr, "(%i single-pixel nodes, %i multi-pixel in the wrapped-around region.)\n",
-						(pl_size(pixlist) - iwpix), (pl_size(leaflist) - iwleaf));
-			}
+			/*
+			  if (wrapra) {
+			  fprintf(stderr, "(%i single-pixel nodes, %i multi-pixel in the wrapped-around region.)\n",
+			  (pl_size(pixlist) - iwpix), (pl_size(leaflist) - iwleaf));
+			  }
+			*/
 
 			/*
 			  fprintf(stderr, "Expanded to %i leaves (%i points) + %i single-pixel nodes (%i points)\n",
