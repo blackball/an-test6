@@ -3,8 +3,10 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 #include <sys/mman.h>
 
+#define TRUE 1
 #include "ppm.h"
 #include "pnm.h"
 #undef bool
@@ -324,6 +326,7 @@ int main(int argc, char *argv[]) {
 		il* hplist;
 		merctree* merc;
 		real querylow[2], queryhigh[2];
+		real wraplow[2], wraphigh[2];
 		pl* nodelist;
 		pl* leaflist;
 		pl* pixlist;
@@ -332,15 +335,28 @@ int main(int argc, char *argv[]) {
 		int Noob;
 		int Nib;
 		int Nstars;
+		bool wrapra;
+
+		wrapra = (px1 > 1.0);
 
 		HP = 12 * Nside * Nside;
 		hplist = il_new(32);
 
-		querylow[0] = px0;
-		querylow[1] = py0;
-		queryhigh[0] = px1;
-		queryhigh[1] = py1;
-
+		if (wrapra) {
+			querylow[0] = px0;
+			queryhigh[0] = 1.0;
+			querylow[1] = py0;
+			queryhigh[1] = py1;
+			wraplow[0] = 0.0;
+			wraphigh[0] = px1 - 1.0;
+			wraplow[1] = py0;
+			wraphigh[1] = py1;
+		} else {
+			querylow[0] = px0;
+			querylow[1] = py0;
+			queryhigh[0] = px1;
+			queryhigh[1] = py1;
+		}
 		nodelist = pl_new(1024);
 		leaflist = pl_new(1024);
 		pixlist = pl_new(1024);
@@ -361,6 +377,10 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "Query: x:[%g,%g] y:[%g,%g]\n",
 				querylow[0], queryhigh[0], querylow[1], queryhigh[1]);
+		if (wrapra)
+			fprintf(stderr, "Query': x:[%g,%g] y:[%g,%g]\n",
+					wraplow[0], wraphigh[0], wraplow[1], wraphigh[1]);
+
 
 		for (i=0; i<HP; i++) {
 			double x,y,z;
@@ -400,7 +420,8 @@ int main(int argc, char *argv[]) {
 			bblo[1] = miny;
 			bbhi[1] = maxy;
 
-			if (kdtree_do_boxes_overlap(bblo, bbhi, querylow, queryhigh, 2)) {
+			if (kdtree_do_boxes_overlap(bblo, bbhi, querylow, queryhigh, 2) ||
+				(wrapra && kdtree_do_boxes_overlap(bblo, bbhi, wraplow, wraphigh, 2))) {
 				fprintf(stderr, "HP %i overlaps: x:[%g,%g], y:[%g,%g]\n",
 						i, bblo[0], bbhi[0], bblo[1], bbhi[1]);
 				il_append(hplist, i);
@@ -413,6 +434,7 @@ int main(int argc, char *argv[]) {
 			  int Nleaves;
 			*/
 			int j;
+			int iwnode, iwpix, iwleaf;
 			hp = il_get(hplist, i);
 
 			sprintf(fn, merc_template, hp);
@@ -423,7 +445,7 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 
-			{
+			/*{
 				real *lo, *hi;
 				int ix1, ix2, iy1, iy2;
 				//int ix, iy;
@@ -438,7 +460,6 @@ int main(int argc, char *argv[]) {
 				iy1 = h - (int)rint((hi[1] - querylow[1]) * yscale);
 				fprintf(stderr, "In pixels: x:[%i,%i], y:[%i,%i]\n", ix1, ix2, iy1, iy2);
 
-				/*
 				  if (ix1 >= 0 && ix1 < w)
 				  for (iy=iy1; iy<=iy2; iy++)
 				  if (iy >= 0 && iy < h)
@@ -460,11 +481,15 @@ int main(int argc, char *argv[]) {
 				  for (ix=ix1; ix<ix2; ix++)
 				  if (ix >= 0 && ix < w)
 				  fluximg[3*(iy*w+ix)+2] += exp(-1);
-				*/
-			}
+				  }*/
 
 			//get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist, leaflist);
 			get_nodes_contained_in(merc->tree, querylow, queryhigh, nodelist);
+			iwnode = pl_size(nodelist);
+			if (wrapra) {
+				get_nodes_contained_in(merc->tree, wraplow, wraphigh, nodelist);
+				fprintf(stderr, "Found %i nodes in wrapped-around region.\n", (pl_size(nodelist) - iwnode));
+			}
 
 			/*
 			  fprintf(stderr, "Found %i nodes (%i points) + %i leaves (%i points), total of %i points.\n",
@@ -475,15 +500,27 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "%i nodes (%i points) overlap the tile.\n", pl_size(nodelist), count_points_in_list(nodelist));
 			//fprintf(stderr, "%i leaves (%i points) overlap the tile.\n", pl_size(leaflist), count_points_in_list(leaflist));
 
+			iwpix = iwleaf = UINT_MAX;
+
 			for (j=0; j<pl_size(nodelist); j++) {
 				kdtree_node_t* node = pl_get(nodelist, j);
+				if (j == iwnode) {
+					iwleaf = pl_size(leaflist);
+					iwpix  = pl_size(pixlist);
+				}
 				expand_nodes(merc->tree, node, leaflist, pixlist,
-							 querylow, queryhigh, w, h);
+							 (j >= iwnode ? wraplow  : querylow),
+							 (j >= iwnode ? wraphigh : queryhigh),
+							 w, h);
 			}
 			pl_remove_all(nodelist);
 
 			fprintf(stderr, "%i single-pixel nodes (%i points).\n", pl_size(pixlist), count_points_in_list(pixlist));
 			fprintf(stderr, "%i multi-pixel leaves (%i points).\n", pl_size(leaflist), count_points_in_list(leaflist));
+			if (wrapra) {
+				fprintf(stderr, "(%i single-pixel nodes, %i multi-pixel in the wrapped-around region.)\n",
+						(pl_size(pixlist) - iwpix), (pl_size(leaflist) - iwleaf));
+			}
 
 			/*
 			  fprintf(stderr, "Expanded to %i leaves (%i points) + %i single-pixel nodes (%i points)\n",
@@ -513,7 +550,11 @@ int main(int argc, char *argv[]) {
 				int nodenum;
 
 				pt = KD_POINT(node->l);
-				ix = (int)rint((pt[0] - querylow[0]) * xscale);
+				if (j >= iwpix) {
+					ix = (int)rint(((pt[0] - wraplow[0]) + (1.0 - querylow[0])) * xscale);
+				} else {
+					ix = (int)rint((pt[0] - querylow[0]) * xscale);
+				}
 				if (ix < 0 || ix >= w) {
 					Noob++;
 					continue;
@@ -540,7 +581,7 @@ int main(int argc, char *argv[]) {
 				// for macros
 				kdtree_t* kd = merc->tree;
 
-				{
+				/*{
 					float xp0, xp1, yp0, yp1;
 					real *bblo, *bbhi;
 					real *qlo = querylow;
@@ -552,14 +593,18 @@ int main(int argc, char *argv[]) {
 					yp0 = ((double)h * (bblo[1] - qlo[1]) / (qhi[1] - qlo[1]));
 					yp1 = ((double)h * (bbhi[1] - qlo[1]) / (qhi[1] - qlo[1]));
 					fprintf(stderr, "xp [%g,%g], yp [%g,%g], area %g, N %i\n", xp0, xp1, yp0, yp1, (xp1-xp0)*(yp1-yp0), kdtree_node_npoints(node));
-				}
+					}*/
 
 				for (k=node->l; k<=node->r; k++) {
 					int ix, iy;
 					real* pt;
 					merc_flux* flux;
 					pt = KD_POINT(k);
-					ix = (int)rint((pt[0] - querylow[0]) * xscale);
+					if (j >= iwleaf) {
+						ix = (int)rint(((pt[0] - wraplow[0]) + (1.0 - querylow[0])) * xscale);
+					} else {
+						ix = (int)rint((pt[0] - querylow[0]) * xscale);
+					}
 					if (ix < 0 || ix >= w) {
 						Noob++;
 						continue;
