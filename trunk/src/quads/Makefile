@@ -221,7 +221,7 @@ CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
 CFITSIO_OBJS := $(addsuffix .o,$(CFITS_UTILS))
 CFITSIO_SRCS := $(CFITSIO_OBJS:.o=.c)
 
-$(CFITSIO_LIB): cfitsio/*.c cfitsio/*.h cfitsio/Makefile
+$(CFITSIO_LIB): $(wildcard cfitsio/*.c) $(wildcard cfitsio/*.h) cfitsio/Makefile
 	$(MAKE) -C cfitsio
 
 cfitsio/Makefile: cfitsio/Makefile.in
