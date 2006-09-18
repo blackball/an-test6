@@ -1,0 +1,8 @@
+#! /bin/bash
+
+for x in $*; do
+	fitsgetext -i $x -b | \
+		awk "{print \$0; if (NR > 1) {print(\$2, \$6, \$9, \$13, \$16); if (\$16 > 0) { system(\"dd if=$x bs=2880 skip=\" \$13 \" count=\" \$16 \" | md5sum | awk '{print \$1, \\\"$x\\\", \\\"[\"\$2\"]\\\"}'\");}}}"
+
+#		awk "{print \$0; if (NR > 1) {print(\$2, \$6, \$9, \$13, \$16); if (\$16 > 0) { system(\"echo awk \'{print \$1, \\\"$x\\\", \\\"\"\$2\"\\\"}\'\");}}}"
+done

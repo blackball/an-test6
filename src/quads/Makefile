@@ -103,7 +103,7 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-MISC_EXECS := ppmnormrgb 2masstofits 
+MISC_EXECS := ppmnormrgb whitebalance 2masstofits 
 
 #randcat.o genfields.o findstar.o findquad.o \
 #printcatalog.o get_healpix.o 
@@ -171,6 +171,15 @@ ppmnormrgb: ppmnormrgb.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
 
 ppmnormrgb.o: ppmnormrgb.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+
+whitebalance: whitebalance.o pnmutils.o
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
+
+whitebalance.o: whitebalance.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+
+pnmutils.o: pnmutils.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
 .PHONY: tags
@@ -362,8 +371,8 @@ usnobtile-test: usnobtile.o merctree.o bl.o healpix.o \
 		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
 
-zoomout: zoomout.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+zoomout: zoomout.o pnmutils.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
 
 tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
