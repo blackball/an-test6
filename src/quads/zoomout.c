@@ -7,7 +7,15 @@
 #include "starutil.h"
 #include "pnmutils.h"
 
-#define OPTIONS "hr:d:W:H:z:s:e:o:gnipw"
+#define OPTIONS "hr:d:W:H:z:s:e:o:gnipwbB:"
+
+/*
+  eg:
+
+zoomout -r 0 -d 0 -W 512 -H 512 -z 241 -s 12 -e 1 -o /tmp/frame%03i.ppm -w -b;
+for x in /tmp/frame*.ppm; do echo $x; ppmquant 256 $x | ppmtogif > `basename $x .ppm`.gif; done
+
+ */
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "usage: %s\n"
@@ -24,6 +32,8 @@ static void printHelp(char* progname) {
 			"    [-i]  force rendering from pre-rendered images\n"
 			"    [-p]  force direct plotting from catalog\n"
 			"    [-w]  do automatic white-balancing\n"
+			"    [-b]  add power-of-10 boxes\n"
+			"    [-B <color>]  set box color\n"
 			"\n", progname);
 }
 
@@ -54,9 +64,17 @@ int main(int argc, char *args[]) {
 	bool donewhitebalframe = FALSE;
 	char* lastfn = NULL;
 	double Rgain, Ggain, Bgain;
+	char* boxcolor = "red";
+	bool doboxes = FALSE;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+		case 'b':
+			doboxes = TRUE;
+			break;
+		case 'B':
+			boxcolor = optarg;
+			break;
 		case 'w':
 			whitebalance = TRUE;
 			break;
@@ -128,7 +146,6 @@ int main(int argc, char *args[]) {
 	for (i=0; i<zoomsteps; i++) {
 		double zoom = startzoom + i * dzoom;
 		double zoomscale = pow(2.0, 1.0 - zoom);
-		char fn[256];
 		char cmdline[1024];
 		// My "scale 1" image is 512x512.
 		double uscale = 1.0 / 512.0;
@@ -136,6 +153,10 @@ int main(int argc, char *args[]) {
 		double u1, u2, v1, v2;
 		double ra1, ra2, dec1, dec2;
 		int res;
+		char* tempimg = "/tmp/tmpimg.ppm";
+		char outfile[256];
+
+		printf("\nZoom %g\n", zoom);
 
 		uscale *= zoomscale;
 		vscale *= zoomscale;
@@ -152,11 +173,9 @@ int main(int argc, char *args[]) {
 			int zi;
 			char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
 			char fn[256];
-			char outfile[256];
 			int left, right, top, bottom;
 			double scaleadj;
 			int pixelsize;
-			char* tempimg = "/tmp/tmpimg.ppm";
 			/*
 			  zi = (int)ceil(zoom);
 			  if (zi < 1) zi = 1;
@@ -223,15 +242,15 @@ int main(int argc, char *args[]) {
 					whitebalframe = FALSE;
 				}
 
-				if (justprint)
-					continue;
-				if ((res = system(cmdline)) == -1) {
-					fprintf(stderr, "system() call failed.\n");
-					exit(-1);
-				}
-				if (res) {
-					fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
-					break;
+				if (!justprint) {
+					if ((res = system(cmdline)) == -1) {
+						fprintf(stderr, "system() call failed.\n");
+						exit(-1);
+					}
+					if (res) {
+						fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
+						break;
+					}
 				}
 			} else {
 				// we've got to paste together the image...
@@ -324,27 +343,57 @@ int main(int argc, char *args[]) {
 			printf("Zoom %g, scale %g, u range [%g,%g], v range [%g,%g], RA [%g,%g], DEC [%g,%g] degrees\n",
 				   zoom, zoomscale, u1, u2, v1, v2, ra1, ra2, dec1, dec2);
 
-			sprintf(fn, outfn, i);
+			sprintf(outfile, outfn, i);
 
 			sprintf(cmdline, "usnobtile -f -x %g, -X %g, -y %g, -Y %g -w %i -h %i %s> %s",
-					ra1, ra2, dec1, dec2, W, H, (gif ? "| pnmquant 256 | ppmtogif " : ""), fn);
+					ra1, ra2, dec1, dec2, W, H, (gif ? "| pnmquant 256 | ppmtogif " : ""), outfile);
 
 			printf("cmdline: %s\n", cmdline);
 
-			if (justprint)
-				continue;
-			if ((res = system(cmdline)) == -1) {
-				fprintf(stderr, "system() call failed.\n");
-				exit(-1);
-			}
-			if (res) {
-				fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
-				break;
+			if (!justprint) {
+				if ((res = system(cmdline)) == -1) {
+					fprintf(stderr, "system() call failed.\n");
+					exit(-1);
+				}
+				if (res) {
+					fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
+					break;
+				}
 			}
 
 			free(lastfn);
-			lastfn = strdup(fn);
+			lastfn = strdup(outfile);
 		}
+
+
+
+		// outline the initial box's position in this frame.
+		if (doboxes) {
+			double step = 10.0;
+			int left, top;
+			double dscale = pow(2.0, i * dzoom);
+			for (;;) {
+				int width, height;
+				printf("dscale %g\n", dscale);
+				if (dscale > 1.0)
+					break;
+				left   = (int)rint(W/2 - dscale * W/2);
+				top    = (int)rint(H/2 - dscale * H/2);
+				width   = (int)rint(dscale * (W-1));
+				height  = (int)rint(dscale * (H-1));
+
+				sprintf(cmdline, "ppmdraw -script \"setcolor %s; setpos %i %i; line_here %i 0; line_here 0 %i; line_here %i 0; line_here 0 %i\" %s > %s; mv %s %s",
+						boxcolor, left, top, width, height, -width, -height, outfile, tempimg, tempimg, outfile);
+				printf("cmdline: %s\n", cmdline);
+				if (!justprint) {
+					system(cmdline);
+				}
+				dscale *= step;
+			}
+		}
+
+
+
 	}
 
 	free(lastfn);
