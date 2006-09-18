@@ -14,6 +14,7 @@
 
 zoomout -r 0 -d 0 -W 512 -H 512 -z 241 -s 12 -e 1 -o /tmp/frame%03i.ppm -w -b;
 for x in /tmp/frame*.ppm; do echo $x; ppmquant 256 $x | ppmtogif > `basename $x .ppm`.gif; done
+gifsicle -d 10 -O -o zoom.gif -l=1 frame*.gif
 
  */
 
