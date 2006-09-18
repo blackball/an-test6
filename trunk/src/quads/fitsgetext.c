@@ -8,11 +8,12 @@
 #include "qfits.h"
 #include "bl.h"
 
-char* OPTIONS = "he:i:o:";
+char* OPTIONS = "he:i:o:b";
 
 void printHelp(char* progname) {
 	printf("%s    -i <input-file>\n"
 		   "      -o <output-file>\n"
+		   "      [-b]: print sizes and offsets in FITS blocks (of 2880 bytes)\n"
 		   "      -e <extension-number> ...\n\n",
 		   progname);
 }
@@ -32,11 +33,15 @@ int main(int argc, char *argv[]) {
 	char* map;
 	int mapsize;
 	char* progname = argv[0];
+	int inblocks = 0;
 
 	exts = il_new(16);
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'b':
+			inblocks = 1;
+			break;
         case 'e':
 			il_append(exts, atoi(optarg));
             break;
@@ -60,6 +65,22 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Couldn't determine how many extensions are in file %s.\n", infn);
 		} else {
 			printf("File %s contains %i FITS extensions.\n", infn, next);
+			for (i=0; i<=next; i++) {
+				int hdrstart, hdrlen, datastart, datalen;
+				if (qfits_get_hdrinfo(infn, i, &hdrstart,  &hdrlen ) ||
+					qfits_get_datinfo(infn, i, &datastart, &datalen)) {
+					fprintf(stderr, "Error getting extents of extension %i.\n", i);
+					exit(-1);
+				}
+				if (inblocks) {
+					printf("Extension %i : header start %i , length %i ; data start %i , length %i blocks.\n",
+						   i, hdrstart/FITS_BLOCK_SIZE, hdrlen/FITS_BLOCK_SIZE,
+						   datastart/FITS_BLOCK_SIZE, datalen/FITS_BLOCK_SIZE);
+				} else {
+					printf("Extension %i : header start %i , length %i ; data start %i , length %i .\n",
+						   i, hdrstart, hdrlen, datastart, datalen);
+				}
+			}
 		}
 		exit(0);
 	}
@@ -106,8 +127,12 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Error getting extents of extension %i.\n", ext);
 			exit(-1);
 		}
-		printf("Writing extension %i: header start %i, length %i, data start %i, length %i.\n",
-			   ext, hdrstart, hdrlen, datastart, datalen);
+		if (inblocks)
+			printf("Writing extension %i: header start %i, length %i, data start %i, length %i blocks.\n",
+				   ext, hdrstart/FITS_BLOCK_SIZE, hdrlen/FITS_BLOCK_SIZE, datastart/FITS_BLOCK_SIZE, datalen/FITS_BLOCK_SIZE);
+		else
+			printf("Writing extension %i: header start %i, length %i, data start %i, length %i.\n",
+				   ext, hdrstart, hdrlen, datastart, datalen);
 		
 		if ((hdrlen  && (fwrite(map + hdrstart , 1, hdrlen , fout) != hdrlen )) ||
 			(datalen && (fwrite(map + datastart, 1, datalen, fout) != datalen))) {

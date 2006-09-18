@@ -5,8 +5,9 @@
 #include <string.h>
 
 #include "starutil.h"
+#include "pnmutils.h"
 
-#define OPTIONS "hr:d:W:H:z:s:e:o:gnf"
+#define OPTIONS "hr:d:W:H:z:s:e:o:gnipw"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "usage: %s\n"
@@ -20,6 +21,9 @@ static void printHelp(char* progname) {
 			"    -o <output-file-template> in printf format, given frame number, eg, \"frame%%03i.ppm\".\n"
 			"    [-g]  output GIF format\n"
 			"    [-n]  just print the command-lines, don't execute them.\n"
+			"    [-i]  force rendering from pre-rendered images\n"
+			"    [-p]  force direct plotting from catalog\n"
+			"    [-w]  do automatic white-balancing\n"
 			"\n", progname);
 }
 
@@ -44,14 +48,24 @@ int main(int argc, char *args[]) {
 	bool gif = FALSE;
 	bool justprint = FALSE;
 	bool forceimg = FALSE;
+	bool forcecat = FALSE;
+	bool whitebalance = FALSE;
+	bool whitebalframe = FALSE;
+	bool donewhitebalframe = FALSE;
+	char* lastfn = NULL;
+	double Rgain, Ggain, Bgain;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
-
-		case 'f':
+		case 'w':
+			whitebalance = TRUE;
+			break;
+		case 'i':
 			forceimg = TRUE;
 			break;
-
+		case 'p':
+			forcecat = TRUE;
+			break;
 		case 'h':
 			printHelp(progname);
 			exit(0);
@@ -92,12 +106,15 @@ int main(int argc, char *args[]) {
 		exit(-1);
 	}
 
-	if (zoomsteps < 2) {
+	if (zoomsteps < 1) {
 		printHelp(progname);
 		exit(-1);
 	}
 
-	dzoom = (endzoom - startzoom) / (zoomsteps - 1);
+	if (zoomsteps > 1)
+		dzoom = (endzoom - startzoom) / (zoomsteps - 1);
+	else
+		dzoom = 0.0;
 
 	ra = deg2rad(ra);
 	dec = deg2rad(dec);
@@ -130,7 +147,8 @@ int main(int argc, char *args[]) {
 		v1 = vcenter - H/2 * vscale;
 		v2 = vcenter + H/2 * vscale;
 
-		if ((zoom <= 5.0) || forceimg) {
+		//if ((zoom <= 5.0) || forceimg) {
+		if ((!forcecat && (zoom <= 4.0)) || forceimg || whitebalframe) {
 			int zi;
 			char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
 			char fn[256];
@@ -138,9 +156,21 @@ int main(int argc, char *args[]) {
 			int left, right, top, bottom;
 			double scaleadj;
 			int pixelsize;
-			zi = (int)ceil(zoom);
-			if (zi < 1) zi = 1;
-			if (zi > 5) zi = 5;
+			char* tempimg = "/tmp/tmpimg.ppm";
+			/*
+			  zi = (int)ceil(zoom);
+			  if (zi < 1) zi = 1;
+			  if (zi > 5) zi = 5;
+			*/
+
+			if (whitebalance && !whitebalframe && !donewhitebalframe) {
+				// re-render the previous zoom step from images rather than from catalog.
+				whitebalframe = TRUE;
+				i-=2;
+				continue;
+			}
+
+			zi = 5;
 			printf("Zoom %g => %i\n", zoom, zi);
 			sprintf(fn, map_template, zi);
 			scaleadj = pow(2.0, (double)zi - zoom);
@@ -159,16 +189,39 @@ int main(int argc, char *args[]) {
 
 			printf("L %i, R %i, T %i, B %i\n", left, right, top, bottom);
 
-			sprintf(outfile, outfn, i);
+			if (whitebalframe) {
+				sprintf(outfile, "/tmp/whitebal.ppm");
+			} else {
+				sprintf(outfile, outfn, i);
+			}
 
 			if (left >= 0 && right < pixelsize && top >= 0 && bottom < pixelsize) {
 				printf("Cutting and scaling...\n");
-				sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
-						"| pnmscale -width=%i -height=%i - "
-						"| pnmflip -tb > %s",
-						left, right, top, bottom, fn, W, H, outfile);
+				if (whitebalance && !whitebalframe) {
+					sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
+							"| pnmscale -width=%i -height=%i - "
+							"| pnmflip -tb > %s; "
+							"ppmnormrgb -r %g -g %g -b %g %s > %s",
+							left, right, top, bottom, fn,
+							W, H, tempimg,
+							Rgain, Ggain, Bgain, tempimg, outfile);
+				} else {
+					sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
+							"| pnmscale -width=%i -height=%i - "
+							"| pnmflip -tb > %s",
+							left, right, top, bottom, fn, W, H, outfile);
+				}
 
 				printf("cmdline: %s\n", cmdline);
+
+				if (whitebalframe) {
+					if (pnmutils_whitebalance(lastfn, outfile, &Rgain, &Ggain, &Bgain)) {
+						exit(-1);
+					}
+					printf("Gains: R %g, G %g, B %g\n", Rgain, Ggain, Bgain);
+					donewhitebalframe = TRUE;
+					whitebalframe = FALSE;
+				}
 
 				if (justprint)
 					continue;
@@ -191,7 +244,6 @@ int main(int argc, char *args[]) {
 				if (left < 0) {
 					int L;
 					int T, B;
-					char* tempimg = "/tmp/tmpimg.ppm";
 					int SX, SY;
 					T = (top >= 0 ? top : 0);
 					B = (bottom < pixelsize ? bottom : pixelsize-1);
@@ -222,9 +274,12 @@ int main(int argc, char *args[]) {
 						sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
 								"| pnmscale -width=%i -height=%i - "
 								"| pnmflip -tb "
-								"| pnmpaste - %i %i %s > %s; mv %s %s",
+								"| pnmpaste - %i %i %s > %s; "
+								"mv %s %s",
 								pixL, pixR, T, B, fn,
-								SW, SH, SX, SY, outfile, tempimg, tempimg, outfile);
+								SW, SH,
+								SX, SY, outfile, tempimg,
+								tempimg, outfile);
 						printf("cmdline: %s\n", cmdline);
 						if (!justprint)
 							system(cmdline);
@@ -232,9 +287,27 @@ int main(int argc, char *args[]) {
 						SX += SW;
 						L += (pixR - pixL + 1);
 					}
+
 				}
 
+				if (whitebalance && !whitebalframe) {
+					sprintf(cmdline, "ppmnormrgb -r %g -g %g -b %g %s > %s; "
+							"mv %s %s",
+							Rgain, Ggain, Bgain, outfile, tempimg,
+							tempimg, outfile);
+					printf("cmdline: %s\n", cmdline);
+					if (!justprint)
+						system(cmdline);
+				}
 
+				if (whitebalframe) {
+					if (pnmutils_whitebalance(lastfn, outfile, &Rgain, &Ggain, &Bgain)) {
+						exit(-1);
+					}
+					printf("Gains: R %g, G %g, B %g\n", Rgain, Ggain, Bgain);
+					donewhitebalframe = TRUE;
+					whitebalframe = FALSE;
+				}
 			}
 
 		} else {
@@ -248,7 +321,7 @@ int main(int argc, char *args[]) {
 			dec1 = rad2deg(dec1);
 			dec2 = rad2deg(dec2);
 
-			printf("Zoom %g, scale %g, u range [%g,%g], v range [%g,%g], RA [%g,%g], DEC [%g,%g]\n",
+			printf("Zoom %g, scale %g, u range [%g,%g], v range [%g,%g], RA [%g,%g], DEC [%g,%g] degrees\n",
 				   zoom, zoomscale, u1, u2, v1, v2, ra1, ra2, dec1, dec2);
 
 			sprintf(fn, outfn, i);
@@ -268,8 +341,12 @@ int main(int argc, char *args[]) {
 				fprintf(stderr, "command line returned a non-zero value.  Quitting.\n");
 				break;
 			}
+
+			free(lastfn);
+			lastfn = strdup(fn);
 		}
 	}
 
+	free(lastfn);
 	return 0;
 }

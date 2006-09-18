@@ -10,8 +10,25 @@
 #include "ppm.h"
 #include "pnm.h"
 
+static const char* OPTIONS = "hr:g:b:";
+
+static void printHelp(char* progname) {
+	fprintf(stderr, "usage: %s\n"
+			"    [-r <red-gain>  ]\n"
+			"    [-g <green-gain>]\n"
+			"    [-b <blue-gain> ]\n"
+			"    <input-image>\n"
+			"Writes PPM on stdout.\n"
+			"\n", progname);
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 int
 main(int argc, char** args) {
+	char* progname = args[0];
+	int argchar;
     FILE *fin;
 	char* fn;
     int rows, cols, format;
@@ -22,14 +39,33 @@ main(int argc, char** args) {
 	off_t imgstart;
 	pixval *rmap, *bmap, *gmap;
 	int i;
+	double redgain, bluegain, greengain;
+
+	redgain = bluegain = greengain = 0.0;
 
     pnm_init(&argc, args);
 
-	if (argc != 2) {
-		fprintf(stderr, "Usage: %s <input-ppm>\n", args[0]);
+    while ((argchar = getopt (argc, args, OPTIONS)) != -1)
+        switch (argchar) {
+		case 'h':
+			printHelp(progname);
+			exit(0);
+		case 'r':
+			redgain = atof(optarg);
+			break;
+		case 'g':
+			greengain = atof(optarg);
+			break;
+		case 'b':
+			bluegain = atof(optarg);
+			break;
+		}
+
+	if (optind == argc) {
+		printHelp(progname);
 		exit(-1);
 	}
-	fn = args[1];
+	fn = args[optind];
 
     fin = pm_openr_seekable(fn);
 
@@ -70,9 +106,20 @@ main(int argc, char** args) {
 	fseeko(fin, imgstart, SEEK_SET);
 
 	for (i=0; i<maxval; i++) {
-		rmap[i] = (pixval)rint((double)i * maxval / (double)rmax);
-		gmap[i] = (pixval)rint((double)i * maxval / (double)gmax);
-		bmap[i] = (pixval)rint((double)i * maxval / (double)bmax);
+		if (redgain == 0.0)
+			rmap[i] = (pixval)rint((double)i * maxval / (double)rmax);
+		else
+			rmap[i] = (pixval)min(maxval, rint((double)i * redgain));
+
+		if (greengain == 0.0)
+			gmap[i] = (pixval)rint((double)i * maxval / (double)gmax);
+		else
+			gmap[i] = (pixval)min(maxval, rint((double)i * greengain));
+			
+		if (bluegain == 0.0)
+			bmap[i] = (pixval)rint((double)i * maxval / (double)bmax);
+		else
+			bmap[i] = (pixval)min(maxval, rint((double)i * bluegain));
 	}
 
     for (row = 0; row < rows; ++row) {
