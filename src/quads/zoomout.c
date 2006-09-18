@@ -6,7 +6,7 @@
 
 #include "starutil.h"
 
-#define OPTIONS "hr:d:W:H:z:s:e:o:gn"
+#define OPTIONS "hr:d:W:H:z:s:e:o:gnf"
 
 static void printHelp(char* progname) {
 	fprintf(stderr, "usage: %s\n"
@@ -43,9 +43,15 @@ int main(int argc, char *args[]) {
 	double ucenter, vcenter;
 	bool gif = FALSE;
 	bool justprint = FALSE;
+	bool forceimg = FALSE;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+
+		case 'f':
+			forceimg = TRUE;
+			break;
+
 		case 'h':
 			printHelp(progname);
 			exit(0);
@@ -107,9 +113,9 @@ int main(int argc, char *args[]) {
 		double zoomscale = pow(2.0, 1.0 - zoom);
 		char fn[256];
 		char cmdline[1024];
-		// Google's definition of "scale 0" pixel scale.
-		double uscale = 1.0 / 256.0;
-		double vscale = (2.0*M_PI) / 256.0;
+		// My "scale 1" image is 512x512.
+		double uscale = 1.0 / 512.0;
+		double vscale = (2.0*M_PI) / 512.0;
 		double u1, u2, v1, v2;
 		double ra1, ra2, dec1, dec2;
 		int res;
@@ -119,8 +125,12 @@ int main(int argc, char *args[]) {
 
 		// CHECK BOUNDS!
 
+		u1 = ucenter - W/2 * uscale;
+		u2 = ucenter + W/2 * uscale;
+		v1 = vcenter - H/2 * vscale;
+		v2 = vcenter + H/2 * vscale;
 
-		if (zoom <= 5.0) {
+		if ((zoom <= 5.0) || forceimg) {
 			int zi;
 			char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
 			char fn[256];
@@ -130,6 +140,7 @@ int main(int argc, char *args[]) {
 			int pixelsize;
 			zi = (int)ceil(zoom);
 			if (zi < 1) zi = 1;
+			if (zi > 5) zi = 5;
 			printf("Zoom %g => %i\n", zoom, zi);
 			sprintf(fn, map_template, zi);
 			scaleadj = pow(2.0, (double)zi - zoom);
@@ -138,15 +149,6 @@ int main(int argc, char *args[]) {
 			pixelsize = (int)rint(pow(2.0, zi)) * 256;
 
 			printf("Pixelsize %i\n", pixelsize);
-
-			// I seem to have gained a factor of two somewhere along the way...
-			uscale *= 0.5;
-			vscale *= 0.5;
-
-			u1 = ucenter - W/2 * uscale;
-			u2 = ucenter + W/2 * uscale;
-			v1 = vcenter - H/2 * vscale;
-			v2 = vcenter + H/2 * vscale;
 
 			printf("u range [%g, %g], v range [%g, %g].\n", u1, u2, v1, v2);
 
@@ -161,7 +163,9 @@ int main(int argc, char *args[]) {
 
 			if (left >= 0 && right < pixelsize && top >= 0 && bottom < pixelsize) {
 				printf("Cutting and scaling...\n");
-				sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s | pnmscale -width=%i -height=%i - > %s",
+				sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
+						"| pnmscale -width=%i -height=%i - "
+						"| pnmflip -tb > %s",
 						left, right, top, bottom, fn, W, H, outfile);
 
 				printf("cmdline: %s\n", cmdline);
@@ -211,9 +215,13 @@ int main(int argc, char *args[]) {
 							printf("Adjusting width from %i to %i.\n", SW, W-SX);
 							SW = W - SX;
 						}
-						//if (SY + SH > H) {
+						if (SY + SH > H) {
+							printf("Adjusting height from %i to %i.\n", SH, H-SY);
+							SH = H - SY;
+						}
 						sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
 								"| pnmscale -width=%i -height=%i - "
+								"| pnmflip -tb "
 								"| pnmpaste - %i %i %s > %s; mv %s %s",
 								pixL, pixR, T, B, fn,
 								SW, SH, SX, SY, outfile, tempimg, tempimg, outfile);
@@ -230,11 +238,6 @@ int main(int argc, char *args[]) {
 			}
 
 		} else {
-			u1 = ucenter - W/2 * uscale;
-			u2 = ucenter + W/2 * uscale;
-			v1 = vcenter - H/2 * vscale;
-			v2 = vcenter + H/2 * vscale;
-
 			ra1 = u1 * 2.0 * M_PI;
 			ra2 = u2 * 2.0 * M_PI;
 			dec1 = atan(sinh(v1));
