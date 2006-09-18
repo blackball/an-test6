@@ -10,9 +10,27 @@ ifeq ($(VER), 3.79.1)
   $(error You are running a stupid version of Make.  Try version 3.81)
 endif
 
+TYCHO2_DIR := "tycho2/"              # (note, trailing '/' required!)
+TYCHO2 := $(TYCHO2_DIR)catalog.dat $(TYCHO2_DIR)suppl1.dat
 
-CATALOG := /p/learning/stars/CATALOGUES/sdss-2/an_sdss_
-INDEX := sdss-18_
+USNOB_DIR := "usnob/"                # (note, trailing '/' required!)
+USNOB := $(shell for ((i=0; i<180; i++)); do I=`printf %03i $i`; for ((j=0; j<10; j++)); do echo $(USNOB_DIR)$I/b$I$j.cat; done; done)
+
+TYCHO2_FITS_DIR := "tycho2-fits/"    
+TYCHO2_FITS := "$(TYCHO2_FITS_DIR)catalog.fits $(TYCHO2_FITS_DIR)suppl1.fits"
+
+USNOB_FITS_DIR := "usnob-fits/"      # (note, trailing '/' required!)
+USNOB_FITS_TEMPLATE := "$(USNOB_FITS_DIR)usnob%03i.fits"
+USNOB_FITS_NSIDE := 9
+USNOB_FITS_HP := $(shell echo $(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
+USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf $(USNOB_FITS_TEMPLATE) $i; done)
+
+AN_DIR    := an/   # (note, a trailing '/' is required!)
+AN_FILE   := $(AN_DIR)an_hp%03i.fits
+AN_FORMAT := %03i
+
+CATALOG := an_sdss_
+INDEX := sdss-1_
 TEMP1 := phase1_
 TEMP2 := phase2_
 
@@ -34,12 +52,44 @@ EPSTOPNG		:= epstopng
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
 
 CODETREE_OPTS := -R 15
-HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i 18 -c -x 6 -y 6 -r 4
+HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i 1 -c -x 6 -y 6 -r 4
 QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
 MATLAB_INIT   := addpath('~/quads')
+
+AN_NSIDE  := 9
+
+an_catalog: build_an_catalog
+	mkdir -p $(AN_DIR)
+	build_an_catalog -o $(AN_FILE) -N $(AN_NSIDE) $(USNOB) $(TYCHO2)
+
+#echo "Set the USNOB environment variable to select the location of the USNO-B1 FITS files."
+#echo "Set the TYCHO2 environment variable to select the location of the Tycho-2 FITS files."
+
+CUT_AN_NSIDE  := 1000
+CUT_AN_SWEEPS := 12
+CUT_AN_DEDUP  := 8
+CUT_AN_CUT    := -R
+# (note, a trailing '/' is required!)
+CUT_DIR       := cut/
+CUT_FILE      := $(CUT_DIR)an-sdss-%02i
+
+define CUT_template
+.PHONY: cut$(1)
+cut$(1):
+	mkdir -p $(CUT_DIR)
+	cut_an -H $(1) -o $(CUT_FILE).objs.fits -i $(CUT_FILE).id.fits \
+		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
+		`hpowned -f $(AN_FILE) -m -N $(AN_NSIDE) $(1)`
+endef
+
+NUMS := 0 1 2 3 4 5 6 7 8 9 10 11
+$(foreach num,$(NUMS),$(eval $(call CUT_template,$(num))))
+
+
+
 
 define INDEX_template
 PHO += $(1)
