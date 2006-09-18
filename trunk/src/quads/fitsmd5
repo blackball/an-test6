@@ -1,5 +1,12 @@
 #! /bin/bash
 
+sigint_func () {
+	#echo "Got SIGINT!"
+	#got_sigint=1
+	kill $$
+	return;
+}
+
 if [ $# -eq 0 ]; then
 	echo -e "\nusage: $0 <input.fits> ...\n"
 	echo -e "output is of the form:\n"
@@ -9,7 +16,11 @@ if [ $# -eq 0 ]; then
 	echo "d0ce1352853bff44092a2b7732794c28 /h/42/dstn/stars/INDEXES/sdss-20/sdss-20_03.skdt.fits [1]"
 	echo "5ad98dc4acc5f753c66963de5bbe4eb3 /h/42/dstn/stars/INDEXES/sdss-20/sdss-20_03.skdt.fits [2]"
 	echo
+	exit 0;
 fi
+
+#got_sigint=0
+trap sigint_func SIGINT
 
 for x in $*; do
 	fitsgetext -i $x -b | \
@@ -17,4 +28,12 @@ for x in $*; do
 
 #		awk "{print \$0; if (NR > 1) {print(\$2, \$6, \$9, \$13, \$16); if (\$16 > 0) { system(\"dd if=$x bs=2880 skip=\" \$13 \" count=\" \$16 \" | md5sum | awk '{print \$1, \\\"$x\\\", \\\"[\"\$2\"]\\\"}'\");}}}"
 #		awk "{print \$0; if (NR > 1) {print(\$2, \$6, \$9, \$13, \$16); if (\$16 > 0) { system(\"echo awk \'{print \$1, \\\"$x\\\", \\\"\"\$2\"\\\"}\'\");}}}"
+	#echo "rtn val: $?"
+	if [ $? -ne 0 ]; then
+		break;
+	fi
+	#if [ $got_sigint -ne 0 ]; then
+	#	echo "exiting due to SIGINT"
+	#	break;
+	#fi
 done
