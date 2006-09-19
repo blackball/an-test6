@@ -86,6 +86,13 @@ static void init_usnob_fitstruct() {
 	usnob_fitstruct_inited = 1;
 }
 
+usnob_entry* usnob_fits_read_entry(usnob_fits* u) {
+	usnob_entry* e = buffered_read(&u->br);
+	if (!e)
+		fprintf(stderr, "Failed to read a USNO-B catalog entry.\n");
+	return e;
+}
+
 int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 							uint count, usnob_entry* entries) {
 	int i, c;
@@ -173,6 +180,7 @@ int usnob_fits_close(usnob_fits* usnob) {
 	if (usnob->header) {
 		qfits_header_destroy(usnob->header);
 	}
+	buffered_read_free(&usnob->br);
 	free(usnob);
 	return 0;
 }
@@ -241,7 +249,7 @@ usnob_fits* usnob_fits_open(char* fn) {
 		return NULL;
 	}
 
-	usnob->nentries = usnob->table->nr;
+	usnob->br.ntotal = usnob->nentries = usnob->table->nr;
 
 	return usnob;
 }
@@ -301,13 +309,22 @@ int usnob_fits_fix_headers(usnob_fits* usnob) {
 	return 0;
 }
 
+static int usnob_fits_refill_buffer(void* userdata, void* buffer, uint offset, uint n) {
+	usnob_fits* cat = userdata;
+	usnob_entry* en = buffer;
+	return usnob_fits_read_entries(cat, offset, n, en);
+}
+
 usnob_fits* usnob_fits_new() {
-	usnob_fits* rtn = malloc(sizeof(usnob_fits));
+	usnob_fits* rtn = calloc(1, sizeof(usnob_fits));
 	if (!rtn) {
 		fprintf(stderr, "Couldn't allocate memory for a usnob_fits structure.\n");
 		exit(-1);
 	}
-	memset(rtn, 0, sizeof(usnob_fits));
+	rtn->br.blocksize = 1000;
+	rtn->br.elementsize = sizeof(usnob_entry);
+	rtn->br.refill_buffer = usnob_fits_refill_buffer;
+	rtn->br.userdata = rtn;
 	return rtn;
 }
 

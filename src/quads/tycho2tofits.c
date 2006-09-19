@@ -11,6 +11,7 @@
 #include "starutil.h"
 #include "healpix.h"
 #include "boilerplate.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "ho:HN:"
 
@@ -162,13 +163,20 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
-				qfits_header_add(tycs[hp]->header, "HEALPIXED", (do_hp ? "T" : "F"), "Is this catalog healpixified?", NULL);
+				qfits_header_add(tycs[hp]->header, "HEALPIXD", (do_hp ? "T" : "F"), "Is this catalog healpixified?", NULL);
 				if (do_hp) {
 					sprintf(val, "%u", hp);
 					qfits_header_add(tycs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 					sprintf(val, "%u", Nside);
 					qfits_header_add(tycs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
 				}
+
+				boilerplate_add_fits_headers(tycs[hp]->header);
+
+				qfits_header_add(tycs[hp]->header, "HISTORY", "Created by the program \"tycho2tofits\"", NULL, NULL);
+				qfits_header_add(tycs[hp]->header, "HISTORY", "tycho2tofits command line:", NULL, NULL);
+				fits_add_args(tycs[hp]->header, args, argc);
+				qfits_header_add(tycs[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
 
 				if (tycho2_fits_write_headers(tycs[hp])) {
 					fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);

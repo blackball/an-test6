@@ -227,7 +227,8 @@ CFITSIO_CFLAGS := -Icfitsio -I../cfitsio
 #CFITSIO_CFLAGS += -Wall -O2
 CFITSIO_CFLAGS += -Wall -O0 -g
 CFITSIO_LIB := cfitsio/libcfitsio.a
-CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
+#CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
+CFITSIO_LFLAGS := -lm
 CFITSIO_OBJS := $(addsuffix .o,$(CFITS_UTILS))
 CFITSIO_SRCS := $(CFITSIO_OBJS:.o=.c)
 
@@ -240,11 +241,28 @@ cfitsio/Makefile: cfitsio/Makefile.in
 $(CFITS_UTILS) :: %: %.o $(CFITSIO_LIB)
 	$(CC) $(CFITSIO_CFLAGS) $^ -o $@ $(CFITSIO_LFLAGS)
 
+# Gah, this is lame, but I can't figure out how to avoid it; I need
+# CFITSIO_CFLAGS to be set for just these object files.
+tablist.o: tablist.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+modhead.o: modhead.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+fitscopy.o: fitscopy.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+tabmerge.o: tabmerge.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+fitstomatlab.o: fitstomatlab.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+liststruc.o: liststruc.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+listhead.o: listhead.c
+	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+
 #$(CFITSIO_OBJS) :: %.o: %.c
 #	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
 
-$(CFITSIO_OBJS): $(CFITSIO_SRCS)
-	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
+#$(CFITSIO_OBJS): $(CFITSIO_SRCS)
+#	$(CC) $(CFITSIO_CFLAGS) -c $< -o $@
 
 $(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)

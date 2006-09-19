@@ -13,21 +13,27 @@
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"
+#include "boilerplate.h"
+#include "fitsioutils.h"
 
 #define OPTIONS "ho:N:"
 
 static void print_help(char* progname) {
-    printf("usage:\n"
-		   "  %s -o <output-filename-template>\n"
-		   "  [-N <healpix-nside>]  (default = 8)\n"
-		   "  <input-file> [<input-file> ...]\n",
-		   progname);
+	boilerplate_help_header(stdout);
+    printf("\nUsage: %s\n"
+		   "   -o <output-filename-template>     (eg, an_hp%%03i.fits)\n"
+		   "  [-N <healpix-nside>]  (default = 9)\n"
+		   "  <input-file> [<input-file> ...]\n"
+		   "\n"
+		   "\nThe input files should be USNO-B1.0 and Tycho-2 files in FITS format.\n"
+		   "(To generate these files, see \"usnobtofits\" and \"tycho2tofits\".)"
+		   "\n", progname);
 }
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside) {
+static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int argc, char** args) {
 	char fn[256];
 	char val[256];
 	sprintf(fn, outfn, hp);
@@ -42,6 +48,13 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside) {
 	sprintf(val, "%u", Nside);
 	qfits_header_add(cats[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
 	// etc...
+
+	boilerplate_add_fits_headers(cats[hp]->header);
+
+	qfits_header_add(cats[hp]->header, "HISTORY", "Created by the program \"build_an_catalog\"", NULL, NULL);
+	qfits_header_add(cats[hp]->header, "HISTORY", "build_an_catalog command line:", NULL, NULL);
+	fits_add_args(cats[hp]->header, args, argc);
+	qfits_header_add(cats[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
 
 	if (an_catalog_write_headers(cats[hp])) {
 		fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
@@ -70,17 +83,13 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	int c;
 	int startoptind;
-	//uint nrecords, nobs;
-	int Nside = 8;
+	int Nside = 9;
 	int i, HP;
 	an_catalog** cats;
 	int64_t starid;
 	int version = 0;
 	int nusnob = 0, ntycho = 0;
-
 	int BLOCK = 100000;
-	void* entries;
-	entries = malloc(BLOCK * imax(sizeof(usnob_entry), sizeof(tycho2_entry)));
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -113,8 +122,7 @@ int main(int argc, char** args) {
 
 	HP = 12 * Nside * Nside;
 
-	cats = malloc(HP * sizeof(an_catalog*));
-	memset(cats, 0, HP * sizeof(an_catalog*));
+	cats = calloc(HP, sizeof(an_catalog*));
 
 	starid = 0;
 
@@ -174,150 +182,136 @@ int main(int argc, char** args) {
 		  Therefore, we don't need to correlate stars between the catalogs.
 		*/
 		if (usnob) {
-			int n, off;
-			usnob_entry* entry = (usnob_entry*)entries;
+			usnob_entry* entry;
 			int N = usnob_fits_count_entries(usnob);
 			printf("Reading %i entries from USNO-B catalog file %s\n", N, infn);
-			for (off=0; off<N; off+=BLOCK) {
-				int j, ob;
-				if (off + BLOCK > N)
-					n = N - off;
-				else
-					n = BLOCK;
+			usnob->br.blocksize = BLOCK;
+			for (i=0; i<N; i++) {
+				int ob, j;
 
-				if (off % 100000 == 0) {
+				if (!(i % 100000)) {
 					printf(".");
 					fflush(stdout);
 				}
-
-				if (usnob_fits_read_entries(usnob, off, n, entry)) {
-					fprintf(stderr, "Failed to read USNO-B entries.\n");
+				entry = usnob_fits_read_entry(usnob);
+				if (!entry) {
+					fprintf(stderr, "Failed to read USNO-B entry.\n");
 					exit(-1);
 				}
-				for (i=0; i<n; i++) {
-					if (!entry[i].ndetections)
-						// Tycho-2 star.  Ignore it.
+				if (!entry->ndetections)
+					// Tycho-2 star.  Ignore it.
+					continue;
+				if (entry->diffraction_spike)
+					// may be a diffraction spike.  Ignore it.
+					continue;
+
+				memset(&an, 0, sizeof(an));
+
+				an.ra = entry->ra;
+				an.dec = entry->dec;
+				an.motion_ra = entry->mu_ra;
+				an.motion_dec = entry->mu_dec;
+				an.sigma_ra = entry->sigma_ra;
+				an.sigma_dec = entry->sigma_dec;
+				an.sigma_motion_ra = entry->sigma_mu_ra;
+				an.sigma_motion_dec = entry->sigma_mu_dec;
+
+				an.id = an_catalog_get_id(version, starid);
+				starid++;
+
+				ob = 0;
+				for (j=0; j<5; j++) {
+					//if (entry.obs[j].mag == 0.0)
+					if (entry->obs[j].field == 0)
 						continue;
-					if (entry[i].diffraction_spike)
-						// may be a diffraction spike.  Ignore it.
-						continue;
-
-					memset(&an, 0, sizeof(an));
-
-					an.ra = entry[i].ra;
-					an.dec = entry[i].dec;
-					an.motion_ra = entry[i].mu_ra;
-					an.motion_dec = entry[i].mu_dec;
-					an.sigma_ra = entry[i].sigma_ra;
-					an.sigma_dec = entry[i].sigma_dec;
-					an.sigma_motion_ra = entry[i].sigma_mu_ra;
-					an.sigma_motion_dec = entry[i].sigma_mu_dec;
-
-					an.id = an_catalog_get_id(version, starid);
-					starid++;
-
-					ob = 0;
-					for (j=0; j<5; j++) {
-						//if (entry.obs[j].mag == 0.0)
-						if (entry[i].obs[j].field == 0)
-							continue;
-						an.obs[ob].mag = entry[i].obs[j].mag;
-						// estimate from USNO-B paper section 5: photometric calibn
-						an.obs[ob].sigma_mag = 0.25;
-						an.obs[ob].id = entry[i].usnob_id;
-						an.obs[ob].catalog = AN_SOURCE_USNOB;
-						an.obs[ob].band = usnob_get_survey_band(entry[i].obs[j].survey);
-						ob++;
-					}
-					an.nobs = ob;
-
-					hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
-					if (!cats[hp]) {
-						init_catalog(cats, outfn, hp, Nside);
-					}
-					an_catalog_write_entry(cats[hp], &an);
-					nusnob++;
+					an.obs[ob].mag = entry->obs[j].mag;
+					// estimate from USNO-B paper section 5: photometric calibn
+					an.obs[ob].sigma_mag = 0.25;
+					an.obs[ob].id = entry->usnob_id;
+					an.obs[ob].catalog = AN_SOURCE_USNOB;
+					an.obs[ob].band = usnob_get_survey_band(entry->obs[j].survey);
+					ob++;
 				}
+				an.nobs = ob;
+
+				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				if (!cats[hp]) {
+					init_catalog(cats, outfn, hp, Nside, argc, args);
+				}
+				an_catalog_write_entry(cats[hp], &an);
+				nusnob++;
 			}
 			usnob_fits_close(usnob);
 			printf("\n");
 
 		} else if (tycho) {
-			int n, off;
-			tycho2_entry* entry = (tycho2_entry*)entries;
+			tycho2_entry* entry;
 			int N = tycho2_fits_count_entries(tycho);
 			printf("Reading %i entries from Tycho-2 catalog file %s\n", N, infn);
-			for (off=0; off<N; off+=BLOCK) {
+			tycho->br.blocksize = BLOCK;
+			for (i=0; i<N; i++) {
 				int ob;
-				if (off + BLOCK > N)
-					n = N - off;
-				else
-					n = BLOCK;
-
-				if (off % 100000 == 0) {
+				if (!(i % 100000)) {
 					printf(".");
 					fflush(stdout);
 				}
-
-				//printf("off=%i, n=%i, N=%i\n", off, n, N);
-				if (tycho2_fits_read_entries(tycho, off, n, entry)) {
-					fprintf(stderr, "Failed to read Tycho-2 entries.\n");
+				entry = tycho2_fits_read_entry(tycho);
+				if (!entry) {
+					fprintf(stderr, "Failed to read Tycho-2 entry.\n");
 					exit(-1);
 				}
 
-				for (i=0; i<n; i++) {
-					memset(&an, 0, sizeof(an));
+				memset(&an, 0, sizeof(an));
 
-					an.ra = entry[i].RA;
-					an.dec = entry[i].DEC;
-					an.sigma_ra = entry[i].sigma_RA;
-					an.sigma_dec = entry[i].sigma_DEC;
-					an.motion_ra = entry[i].pmRA;
-					an.motion_dec = entry[i].pmDEC;
-					an.sigma_motion_ra = entry[i].sigma_pmRA;
-					an.sigma_motion_dec = entry[i].sigma_pmDEC;
+				an.ra = entry->RA;
+				an.dec = entry->DEC;
+				an.sigma_ra = entry->sigma_RA;
+				an.sigma_dec = entry->sigma_DEC;
+				an.motion_ra = entry->pmRA;
+				an.motion_dec = entry->pmDEC;
+				an.sigma_motion_ra = entry->sigma_pmRA;
+				an.sigma_motion_dec = entry->sigma_pmDEC;
 
-					an.id = an_catalog_get_id(version, starid);
-					starid++;
+				an.id = an_catalog_get_id(version, starid);
+				starid++;
 
-					ob = 0;
-					if (entry[i].mag_BT != 0.0) {
-						an.obs[ob].catalog = AN_SOURCE_TYCHO2;
-						an.obs[ob].band = 'B';
-						an.obs[ob].id = tycho2_id_to_int(entry[i].tyc1, entry[i].tyc2, entry[i].tyc3);
-						an.obs[ob].mag = entry[i].mag_BT;
-						an.obs[ob].sigma_mag = entry[i].sigma_BT;
-						ob++;
-					}
-					if (entry[i].mag_VT != 0.0) {
-						an.obs[ob].catalog = AN_SOURCE_TYCHO2;
-						an.obs[ob].band = 'V';
-						an.obs[ob].id = tycho2_id_to_int(entry[i].tyc1, entry[i].tyc2, entry[i].tyc3);
-						an.obs[ob].mag = entry[i].mag_VT;
-						an.obs[ob].sigma_mag = entry[i].sigma_VT;
-						ob++;
-					}
-					if (entry[i].mag_HP != 0.0) {
-						an.obs[ob].catalog = AN_SOURCE_TYCHO2;
-						an.obs[ob].band = 'H';
-						an.obs[ob].id = tycho2_id_to_int(entry[i].tyc1, entry[i].tyc2, entry[i].tyc3);
-						an.obs[ob].mag = entry[i].mag_HP;
-						an.obs[ob].sigma_mag = entry[i].sigma_HP;
-						ob++;
-					}
-					an.nobs = ob;
-					if (!an.nobs) {
-						fprintf(stderr, "Tycho entry %i: no observations!\n", off + i);
-						continue;
-					}
-
-					hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
-					if (!cats[hp]) {
-						init_catalog(cats, outfn, hp, Nside);
-					}
-					an_catalog_write_entry(cats[hp], &an);
-					ntycho++;
+				ob = 0;
+				if (entry->mag_BT != 0.0) {
+					an.obs[ob].catalog = AN_SOURCE_TYCHO2;
+					an.obs[ob].band = 'B';
+					an.obs[ob].id = tycho2_id_to_int(entry->tyc1, entry->tyc2, entry->tyc3);
+					an.obs[ob].mag = entry->mag_BT;
+					an.obs[ob].sigma_mag = entry->sigma_BT;
+					ob++;
 				}
+				if (entry->mag_VT != 0.0) {
+					an.obs[ob].catalog = AN_SOURCE_TYCHO2;
+					an.obs[ob].band = 'V';
+					an.obs[ob].id = tycho2_id_to_int(entry->tyc1, entry->tyc2, entry->tyc3);
+					an.obs[ob].mag = entry->mag_VT;
+					an.obs[ob].sigma_mag = entry->sigma_VT;
+					ob++;
+				}
+				if (entry->mag_HP != 0.0) {
+					an.obs[ob].catalog = AN_SOURCE_TYCHO2;
+					an.obs[ob].band = 'H';
+					an.obs[ob].id = tycho2_id_to_int(entry->tyc1, entry->tyc2, entry->tyc3);
+					an.obs[ob].mag = entry->mag_HP;
+					an.obs[ob].sigma_mag = entry->sigma_HP;
+					ob++;
+				}
+				an.nobs = ob;
+				if (!an.nobs) {
+					fprintf(stderr, "Tycho entry %i: no observations!\n", i);
+					continue;
+				}
+
+				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				if (!cats[hp]) {
+					init_catalog(cats, outfn, hp, Nside, argc, args);
+				}
+				an_catalog_write_entry(cats[hp], &an);
+				ntycho++;
 			}
 			tycho2_fits_close(tycho);
 			printf("\n");
@@ -341,8 +335,6 @@ int main(int argc, char** args) {
 
 	printf("Read %i USNO-B objects and %i Tycho-2 objects.\n",
 		   nusnob, ntycho);
-
-	free(entries);
 
 	for (i=0; i<HP; i++) {
 		char val[32];

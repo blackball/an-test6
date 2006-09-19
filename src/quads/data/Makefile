@@ -1,5 +1,10 @@
+ifndef $(MAKEFILE_INCLUDED)
+MAKEFILE_INCLUDED := 1
+export MAKEFILE_INCLUDED
+
 # no default rules
 .SUFFIXES :=
+
 
 comma := ,
 empty :=
@@ -123,14 +128,17 @@ $(USNOB_PRESENT):
 $(USNOB_FITS_PRESENT):
 	$(MAKE) -f makefile.usnob_fits $@
 
-$(TYCHO2_PRESENT):
-	$(MAKE) -f makefile.tycho2 $@
+#$(TYCHO2_PRESENT):
+#	$(MAKE) -f makefile.tycho2 $@
 
 $(TYCHO2_FITS_PRESENT):
 	$(MAKE) -f makefile.tycho2_fits $@
 
 $(AN_CATALOG_PRESENT):
 	$(MAKE) -f makefile.an_catalog $@
+
+tycho2_download:
+	$(MAKE) -f makefile.tycho2 $@
 
 #$(CUT_BASE)$(1).objs.fits: $(AN_FILES)
 
@@ -301,3 +309,5 @@ qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 $(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
 
+
+endif

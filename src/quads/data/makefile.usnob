@@ -1,5 +1,6 @@
-# no default rules
-.SUFFIXES :=
+ifndef $(MAKEFILE_USNOB_INCLUDED)
+MAKEFILE_USNOB_INCLUDED := 1
+export MAKEFILE_USNOB_INCLUDED
 
 include Makefile
 
@@ -11,14 +12,11 @@ $(USNOB_PRESENT): $(USNOB)
 	$(MKDIR) $(USNOB_DIR)
 	$(TOUCH) $@
 
-$(USNOB): usnobfiles
-	
+#$(USNOB): usnobfiles
 
-#@echo "test.  target: $@"
-#$(USNOB):: % : usnobfiles
-
-.PHONY: usnobfiles
-usnobfiles: 
+#.PHONY: usnobfiles
+#usnobfiles: 
+$(USNOB):
 	@echo "target: $@"
 	@echo
 	@echo "The Makefile has decided that you need the original USNO-B1.0 data files."
@@ -34,6 +32,6 @@ usnobfiles:
 	@echo "to the Navy Observatory in Arizona, or talk to the folks at Astrometry.net"
 	@echo "to find out about downloading it.  It's 80 GB."
 	@echo
+	@false
 
-#.PHONY: $(USNOB)
-#$(USNOB):
+endif
