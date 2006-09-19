@@ -1,6 +1,10 @@
 ifndef $(MAKEFILE_TYCHO2_INCLUDED)
 MAKEFILE_TYCHO2_INCLUDED := 1
-export MAKEFILE_TYCHO2_INCLUDED
+#export MAKEFILE_TYCHO2_INCLUDED
+export
+
+$(warning Including makefile.tycho2)
+#$(warning MAKEFILE_INCLUDED is $(MAKEFILE_INCLUDED))
 
 include Makefile
 
@@ -37,4 +41,6 @@ tycho2_download:
 	$(WGET) -O $(TYCHO2_DIR)suppl_1.dat $(TYCHO2_URL)suppl_1.dat
 	$(TOUCH) timestamp-tycho2-download-done
 
+else
+$(warning Already included makefile.tycho2)
 endif

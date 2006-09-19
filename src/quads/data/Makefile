@@ -1,10 +1,14 @@
-ifndef $(MAKEFILE_INCLUDED)
+#$(warning Makefile: MAKEFILE_INCLUDED is is $(MAKEFILE_INCLUDED))
+
+ifndef MAKEFILE_INCLUDED
 MAKEFILE_INCLUDED := 1
-export MAKEFILE_INCLUDED
+export
+#export MAKEFILE_INCLUDED
 
 # no default rules
 .SUFFIXES :=
 
+$(warning Including Makefile)
 
 comma := ,
 empty :=
@@ -309,5 +313,9 @@ qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 $(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
 
+
+else
+
+$(warning Already included Makefile)
 
 endif

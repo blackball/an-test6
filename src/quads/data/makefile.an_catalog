@@ -1,10 +1,18 @@
 ifndef $(MAKEFILE_AN_CAT_INCLUDED)
 MAKEFILE_AN_CAT_INCLUDED := 1
-export MAKEFILE_AN_CAT_INCLUDED
+#export MAKEFILE_AN_CAT_INCLUDED
+export
+
+$(warning Including makefile.an_catalog)
+#$(warning MAKEFILE_INCLUDED is $(MAKEFILE_INCLUDED))
+#export MAKEFILE_INCLUDED
 
 include Makefile
 include makefile.usnob_fits
 include makefile.tycho2_fits
+
+# no default rules
+.SUFFIXES :=
 
 AN_HP     := $(shell echo $$(($(AN_NSIDE) * $(AN_NSIDE) * 12)))
 #AN_FORMAT := %03i
@@ -28,5 +36,9 @@ build-an: $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
 	$(TOUCH) timestamp-build-an-cat-start
 	$(BUILD_AN) -o $(AN_FILE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
 	$(TOUCH) timestamp-build-an-cat-done
+
+else
+
+$(warning Already included makefile.an_catalog)
 
 endif

@@ -1,6 +1,12 @@
 ifndef $(MAKEFILE_USNOB_INCLUDED)
 MAKEFILE_USNOB_INCLUDED := 1
-export MAKEFILE_USNOB_INCLUDED
+#export MAKEFILE_USNOB_INCLUDED
+export
+
+$(warning Including makefile.usnob)
+#$(warning MAKEFILE_INCLUDED is $(MAKEFILE_INCLUDED))
+
+#export MAKEFILE_INCLUDED
 
 include Makefile
 
