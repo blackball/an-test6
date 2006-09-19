@@ -10,15 +10,18 @@
 #include "tycho2_fits.h"
 #include "starutil.h"
 #include "healpix.h"
+#include "boilerplate.h"
 
 #define OPTIONS "ho:HN:"
 
 void print_help(char* progname) {
-    printf("usage:\n"
-		   "  %s -o <output-filename(-template)>\n"
-		   "  [-H]: do healpixification.\n"
-		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
-		   "  <input-file> [<input-file> ...]\n",
+	boilerplate_help_header(stdout);
+    printf("\nUsage:\n"
+		   "  %s -o <output-filename(-template)>   (eg, tycho2_hp%%02i.fits if you use the -H option)\n"
+		   "  [-H]: do healpixification\n"
+		   "  [-N <healpix-nside>]\n"
+		   "  <input-file> [<input-file> ...]\n\n"
+		   "(Healpixification isn't usually necessary because the Tycho-2 catalog is small.)\n\n",
 		   progname);
 }
 
