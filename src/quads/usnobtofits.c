@@ -16,11 +16,13 @@
 #include "starutil.h"
 #include "usnob_fits.h"
 #include "fitsioutils.h"
+#include "boilerplate.h"
 
 #define OPTIONS "ho:N:"
 
 void print_help(char* progname) {
-    printf("usage:\n"
+	boilerplate_help_header(stdout);
+	printf("\nUsage:\n"
 		   "  %s -o <output-filename-template>     [eg, usnob10_%%03i.fits]\n"
 		   "  [-N <healpix-nside>]  (default = 8; should be power of two.)\n"
 		   "  <input-file> [<input-file> ...]\n"
@@ -28,7 +30,7 @@ void print_help(char* progname) {
 		   "The output-filename-template should contain a \"printf\" sequence like \"%%03i\";\n"
 		   "we use \"sprintf(filename, output-filename-template, healpix)\" to determine the filename\n"
 		   "to be used for each healpix.\n\n"
-		   "\n\nNOTE: WE ASSUME THE FILES ARE PROCESSED IN ORDER: 000/b0000.cat, 000/b0001.cat, etc.\n",
+		   "\nNOTE: WE ASSUME THE USNO-B1.0 FILES ARE GIVEN ON THE COMMAND LINE IN ORDER: 000/b0000.cat, 000/b0001.cat, etc.\n\n\n",
 		   progname);
 }
 

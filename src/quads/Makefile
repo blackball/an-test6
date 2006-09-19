@@ -128,7 +128,8 @@ CFLAGS += -Ikdtree
 
 KDTREE_OBJS := kdtree/kdtree.o kdtree/kdtree_fits_io.o kdtree/kdtree_io.o kdtree/kdtree_access.o kdtree/kdtree_dim.o
 
-UTIL_OBJS := fitsioutils.o ioutils.o fileutil.o starutil.o mathutil.o
+UTIL_OBJS := fitsioutils.o ioutils.o fileutil.o starutil.o mathutil.o \
+	boilerplate.o svn.o
 
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 	bt.o an_catalog.o catalog.o idfile.o starkd.o quadfile.o codefile.o \
