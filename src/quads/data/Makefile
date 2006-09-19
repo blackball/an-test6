@@ -174,33 +174,43 @@ $(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
 define INDEX_template_B
 $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
 		$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-quads-$(1)-start
 	$(UNPERMUTE_QUADS) -f $(TEMP2)$(1) -o tmp.$(INDEX)$(1)
 	$(MV) tmp.$(INDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
 	$(MV) tmp.$(INDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-quads-$(1)-done
 
 ifeq ($(IDFILES), yes)
 $(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits $(INDEX)$(1).id.fits : \
 		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(TEMP1)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-start
 	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
 	$(MV) tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
 	$(MV) tmp.$(INDEX)$(1).id.fits   $(INDEX)$(1).id.fits
 	$(MV) tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-done
 else
 $(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits : \
 		$(CATALOG)$(1).skdt.fits $(TEMP1)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-start
 	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
 	$(MV) tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
 	$(MV) tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-done
 endif
 
 $(TEMP2)$(1).ckdt.fits: $(TEMP1)$(1).code.fits
+	$(TOUCH) timestamp-codetree-$(1)-start
 	$(CODETREE) $(CODETREE_OPTS) -f $(TEMP1)$(1) -o tmp.$(TEMP2)$(1)
 	$(MV) tmp.$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).ckdt.fits
+	$(TOUCH) timestamp-codetree-$(1)-done
 
 $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
+	$(TOUCH) timestamp-hpquads-$(1)-start
 	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o tmp.$(TEMP1)$(1)
 	$(MV) tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	$(MV) tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
+	$(TOUCH) timestamp-hpquads-$(1)-done
 
 SEC += \
     $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
@@ -216,13 +226,17 @@ $(foreach num,$(NUMS2),$(eval $(call INDEX_template_B,$(num))))
 
 define PROSPECTUS_template
 $(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
+	$(TOUCH) timestamp-quadidx-$(1)-start
 	$(QUADIDX) -f $(INDEX)$(1)
+	$(TOUCH) timestamp-quadidx-$(1)-done
 
 PHO += prospectus$(1)
 prospectus$(1): ana$(1) plot$(1) dplot$(1) qps$(1)
 
 quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
+	$(TOUCH) timestamp-quadlocations-$(1)-start
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o quad$(1)_small.pgm -o quad$(1).pgm $(INDEX)$(1)
+	$(TOUCH) timestamp-quadlocations-$(1)-done
 
 proj$(1).m: $(INDEX)$(1).ckdt.fits
 	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
@@ -264,15 +278,16 @@ qps$(1).m: $(INDEX)$(1).qidx.fits
 
 %$(1)_small.png: %$(1).png
 	pngtopnm -- $$< | pamscale -linear 0.2 | pnmtopng > $$@
+
 endef
+
+$(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 %.png: %.pgm
 	$(PNMTOPNG) -- $< > $@
 
 %.png: %.eps
 	$(EPSTOPNG) $< $@
-
-$(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 .PHONY: $(PHO)
 .SECONDARY: $(SEC)
