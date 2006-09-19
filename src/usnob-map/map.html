@@ -15,13 +15,19 @@
 <div id="map" style="width: 800px; height: 600px"></div>
 </center>
 
+<br>
 <center>
 <FORM NAME="dummyform" ACTION="" METHOD="GET">
 Center RA: <INPUT TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
 DEC: <INPUT TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10> degrees.
+&nbsp;
 Zoom level: <input type="text" name="zoom" id="zoombox" VALUE="" onChange="moveCenter()" size=4>
+&nbsp;
 <INPUT TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()")
-<input type="button" name="linkhere" value="Link to this view" onClick="linktohere()"><br>
+&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;
+<input type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
+<p>
 Mouse RA: <INPUT TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
 DEC: <INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
 </FORM>
