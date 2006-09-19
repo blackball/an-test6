@@ -10,27 +10,44 @@ ifeq ($(VER), 3.79.1)
   $(error You are running a stupid version of Make.  Try version 3.81)
 endif
 
-TYCHO2_DIR := "tycho2/"              # (note, trailing '/' required!)
-TYCHO2 := $(TYCHO2_DIR)catalog.dat $(TYCHO2_DIR)suppl1.dat
+TYCHO2_DIR := tycho2/
+                    # (note, trailing '/' required!)
+TYCHO2_FILES := catalog.dat suppl_1.dat
+TYCHO2 := $(addprefix $(TYCHO2_DIR),$(TYCHO2_FILES))
+TYCHO2_URL := http://www.astro.ku.dk/~cf/CD/data/
 
-USNOB_DIR := "usnob/"                # (note, trailing '/' required!)
-USNOB := $(shell for ((i=0; i<180; i++)); do for ((j=0; j<10; j++)); do printf $(USNOB_DIR)%03i/b%03i$j.cat $i $i; done; done)
+USNOB_DIR := usnob/
+                  # (note, trailing '/' required!)
+USNOB := $(shell for ((i=0; i<180; i++)); do for ((j=0; j<10; j++)); do printf "$(USNOB_DIR)%03i/b%03i%i.cat " $$i $$i $$j; done; done)
 
-TYCHO2_FITS_DIR := "tycho2-fits/"    
-TYCHO2_FITS := $(addprefix $(TYCHO2_FITS_DIR),catalog.fits suppl1.fits)
+#$(warning USNOB files: $(USNOB))
+#$(warning TYCHO-2 files: $(TYCHO2))
 
-USNOB_FITS_DIR := "usnob-fits/"      # (note, trailing '/' required!)
-USNOB_FITS_TEMPLATE := "$(USNOB_FITS_DIR)usnob%03i.fits"
+TYCHO2_FITS_DIR := tycho2-fits/
+                              # (note, trailing '/' required!)
+TYCHO2_FITS := $(addprefix $(TYCHO2_FITS_DIR),$(subst .dat,.fits,$(TYCHO2_FILES)))
+
+#$(warning TYCHO-2 FITS files: $(TYCHO2_FITS))
+
+USNOB_FITS_DIR := usnob-fits/
+                            # (note, trailing '/' required!)
+USNOB_FITS_TEMPLATE := "$(USNOB_FITS_DIR)usnob10_hp%03i.fits"
 USNOB_FITS_NSIDE := 9
-USNOB_FITS_HP := $(shell echo $(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
-USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf $(USNOB_FITS_TEMPLATE) $i; done)
+USNOB_FITS_HP := $(shell echo $$(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
+USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf "$(USNOB_FITS_TEMPLATE) " $$i; done)
 
-AN_DIR    := an/   # (note, a trailing '/' is required!)
+#$(warning USNOB_FITS_HP is $(USNOB_FITS_HP))
+#$(warning USNOB FITS files: $(USNOB_FITS))
+
+AN_DIR    := an/
+               # (note, a trailing '/' is required!)
 AN_TEMPLATE := $(AN_DIR)an_hp%03i.fits
 AN_NSIDE  := 9
-AN_HP     := $(shell echo $(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
+AN_HP     := $(shell echo $$(($(AN_NSIDE) * $(AN_NSIDE) * 12)))
 #AN_FORMAT := %03i
-AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf $(AN_TEMPLATE) $i; done)
+AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf "$(AN_TEMPLATE) " $$i; done)
+
+#$(warning AN files: $(AN_FILES))
 
 CATALOG := an_sdss_
 INDEX := sdss-1_
@@ -41,6 +58,7 @@ IDFILES := no
 
 USNOBTOFITS     := usnobtofits
 TYCHO2TOFITS    := tycho2tofits
+WGET            := wget --continue
 
 UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars
@@ -65,6 +83,49 @@ MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
 MATLAB_INIT   := addpath('~/quads')
 
+$(USNOB):
+	@echo
+	@echo "The Makefile has decided that you need the original USNO-B1.0 data files."
+	@echo
+	@echo "The files were expected to be named like this:"
+	@echo "     $(firstword $(USNOB))"
+	@echo
+	@echo "If you have the USNO-B1.0 data files, you might need to set up symlinks"
+	@echo "or edit the Makefile (look for the USNOB_DIR variable) to point to the"
+	@echo "right place."
+	@echo
+	@echo "If you don't have the USNO-B1.0 data files, you either need to mail a disk"
+	@echo "to the Navy Observatory in Arizona, or talk to the folks at Astrometry.net"
+	@echo "to find out about downloading it.  It's 80 GB."
+	@echo
+
+$(TYCHO2):
+	@echo
+	@echo "The Makefile has decided that you need the original Tycho-2 data files."
+	@echo
+	@echo "The files were expected to be named like this:"
+	@echo "    $(TYCHO2)"
+	@echo
+	@echo "If you have the Tycho-2 data files, you might need to set up symlinks"
+	@echo "or edit the Makefile (look for the TYCHO2_DIR variable) to point to the"
+	@echo "right place."
+	@echo
+	@echo "If you don't have the Tycho-2 data files, you can automatically download"
+	@echo "them by running:"
+	@echo "    make tycho2_download"
+	@echo "The files are a little over 500 MB and will be placed in the location"
+	@echo "shown above."
+	@echo
+
+.PHONY: tycho2_download
+tycho2_download:
+	mkdir -p $(TYCHO2_DIR)
+	$(WGET) -O $(TYCHO2_DIR)catalog.dat $(TYCHO2_URL)catalog.dat
+	$(WGET) -O $(TYCHO2_DIR)suppl_1.dat $(TYCHO2_URL)suppl_1.dat
+
+#	$(WGET) -O $(TYCHO2_DIR) $(addprefix $(TYCHO2_URL),$(TYCHO2_FILES))
+
+
 .PHONY: usnob_fits
 usnob_fits: $(USNOB_FITS)
 $(USNOB_FITS): $(USNOB)
@@ -72,8 +133,8 @@ $(USNOB_FITS): $(USNOB)
 
 .PHONY: tycho2_fits
 tycho2_fits: $(TYCHO2_FITS)
-$(TYCHO2_FITS): $(TYCHO2)
-	$(TYCHO2TOFITS) -o $(TYCHO2_FITS)
+$(TYCHO2_FITS):: %.fits : %.dat
+	$(TYCHO2TOFITS) -o $@ $<
 
 .PHONY: an_catalog
 an_catalog: $(AN_FILES)
