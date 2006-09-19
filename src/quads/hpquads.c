@@ -23,13 +23,16 @@
 #include "rdlist.h"
 #include "histogram.h"
 #include "starkd.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:R"
 
 static void print_help(char* progname)
 {
-	printf("\nUsage:\n"
-	       "  %s -f <input-filename-base> -o <output-filename-base>\n"
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s\n"
+	       "      -f <input-filename-base>    (ie, the .skdt.fits file without the .skdt.fits suffix)\n"
+		   "      -o <output-filename-base>   (ie, the .*.fits output filenames, without the .*.fits suffixes)\n"
 		   "     [-c]            allow quads in the circle, not the box, defined by AB\n"
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
@@ -40,7 +43,7 @@ static void print_help(char* progname)
 		   "     [-R]            make a second pass through healpixes in which quads couldn't be made,\n"
 		   "                     removing the \"-r\" restriction on the number of times a star can be used.\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
-		   "     [-F <failed-rdls-file>] write the centers of the healpixes in which quads can't be made.\n"
+		   "     [-F <failed-rdls-file>] write the centers of the healpixes in which quads can't be made.\n\n"
 	       "Reads skdt, writes {code, quad}.\n\n"
 	       , progname);
 }
@@ -695,13 +698,26 @@ int main(int argc, char** argv) {
 
 	quads->healpix = hp;
 	codes->healpix = hp;
+
+	boilerplate_add_fits_headers(quads->header);
+	qfits_header_add(quads->header, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
 	qfits_header_add(quads->header, "HISTORY", "hpquads command line:", NULL, NULL);
 	fits_add_args(quads->header, argv, argc);
 	qfits_header_add(quads->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
 
+	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
+	fits_copy_all_headers(startree_header(starkd), quads->header, "HISTORY");
+	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
+
+	boilerplate_add_fits_headers(codes->header);
+	qfits_header_add(codes->header, "HISTORY", "This file was created by the program \"hpquads\".", NULL, NULL);
 	qfits_header_add(codes->header, "HISTORY", "hpquads command line:", NULL, NULL);
 	fits_add_args(codes->header, argv, argc);
 	qfits_header_add(codes->header, "HISTORY", "(end of hpquads command line)", NULL, NULL);
+
+	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
+	fits_copy_all_headers(startree_header(starkd), codes->header, "HISTORY");
+	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
 
 	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);

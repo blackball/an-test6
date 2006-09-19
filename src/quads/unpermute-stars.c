@@ -23,12 +23,17 @@
 #include "fitsioutils.h"
 #include "qfits.h"
 #include "starkd.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hf:o:q:"
 
 void printHelp(char* progname) {
-	printf("%s -f <input-basename> [-q <input-quadfile-basename>] -o <output-basename>\n",
-		   progname);
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s\n"
+		   "    -f <input-basename>\n"
+		   "   [-q <input-quadfile-basename>]\n"
+		   "    -o <output-basename>\n"
+		   "\n", progname);
 }
 
 extern char *optarg;
@@ -154,6 +159,8 @@ int main(int argc, char **args) {
 	qfout->index_scale_lower = qfin->index_scale_lower;
 	qfout->indexid           = qfin->indexid;
 
+	boilerplate_add_fits_headers(qfout->header);
+	qfits_header_add(qfout->header, "HISTORY", "This file was created by the program \"unpermute-stars\".", NULL, NULL);
 	qfits_header_add(qfout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
 	fits_add_args(qfout->header, args, argc);
 	qfits_header_add(qfout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
@@ -165,6 +172,8 @@ int main(int argc, char **args) {
 	qfits_header_add(qfout->header, "COMMENT", "** unpermute-stars: end of comments from input.", NULL, NULL);
 
 	if (idin) {
+		boilerplate_add_fits_headers(idout->header);
+		qfits_header_add(idout->header, "HISTORY", "This file was created by the program \"unpermute-stars\".", NULL, NULL);
 		qfits_header_add(idout->header, "HISTORY", "unpermute-stars command line:", NULL, NULL);
 		fits_add_args(idout->header, args, argc);
 		qfits_header_add(idout->header, "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);

@@ -21,6 +21,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "dualtree_max.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hf:H:D:cpr4"
 
@@ -37,7 +38,8 @@ char* prefix;
 kdtree_t* tree = NULL;
 
 void print_help(char* progname) {
-	fprintf(stderr, "Usage: %s -f <prefix> [-c] [-p] [-4] [-H <hists.m>] [-D <dists.m>]\n\n"
+	boilerplate_help_header(stderr);
+	fprintf(stderr, "\nUsage: %s -f <prefix> [-c] [-p] [-4] [-H <hists.m>] [-D <dists.m>]\n\n"
 	        "-c = check results against naive search.\n"
 	        "-4 = check all four permutations of codes (this only makes sense for code kdtrees).\n"
 	        "-p = write out a Matlab-literals file containing the positions of the stars.\n"

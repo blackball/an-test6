@@ -295,7 +295,7 @@ tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o healpix.o bl.o \
 #		$(UTIL_OBJS) $(QFITS_LIB)
 #	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-hpowned: hpowned.o healpix.o mathutil.o
+hpowned: hpowned.o healpix.o mathutil.o boilerplate.o svn.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 build_an_catalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
@@ -340,10 +340,10 @@ agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist_healpix.o \
 		solvedfile.o solvedclient.o intmap.o healpix.o $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-printsolved: printsolved.o mathutil.o
+printsolved: printsolved.o mathutil.o boilerplate.o svn.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o
+solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o boilerplate.o svn.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^
 
 plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o rdlist.o \

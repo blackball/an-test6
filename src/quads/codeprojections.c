@@ -17,6 +17,7 @@
 #include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "keywords.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hf:F:pd"
 
@@ -25,6 +26,7 @@ extern int optind, opterr, optopt;
 
 static void print_help(char* progname)
 {
+	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s ( -f <code-file>   OR  -F <ckdt-file> )\n"
 			"       [-p]: don't do all code permutations.\n"
 			"       [-d]: normalize by volume (produce density plots)\n\n",

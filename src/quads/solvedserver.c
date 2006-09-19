@@ -14,11 +14,13 @@
 #include "bl.h"
 #include "solvedfile.h"
 #include "ioutils.h"
+#include "boilerplate.h"
 
 const char* OPTIONS = "hp:f:";
 
-void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s\n"
+static void printHelp(char* progname) {
+	boilerplate_help_header(stderr);
+	fprintf(stderr, "\nUsage: %s\n"
 			"   [-p <port>] (default 6789)\n"
 			"   [-f <filename-pattern>]  (default solved.%%02i)\n",
 			progname);

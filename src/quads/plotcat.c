@@ -33,20 +33,25 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 #include "tycho2_fits.h"
 #include "mathutil.h"
 #include "rdlist.h"
+#include "boilerplate.h"
 
 #define OPTIONS "bhgN:f:"
 
-char* help = "usage: plotcat [-b] [-h] [-g] [-N imsize]"
-" <filename> [<filename> ...] > outfile.pgm\n"
-"  -h sets Hammer-Aitoff (default is an equal-area, positive-Z projection)\n"
-"  -b sets reverse (negative-Z projection)\n"
-"  -g adds RA,DEC grid\n"
-"  -N sets edge size of output image\n"
-"  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
-"  [-L <field-range-low>]\n"
-"  [-H <field-range-high>]\n"
-"Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, and rdls.fits files.\n";
-
+static void printHelp(char* progname) {
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s [-b] [-h] [-g] [-N imsize]"
+		   " <filename> [<filename> ...] > outfile.pgm\n"
+		   "  -h sets Hammer-Aitoff (default is an equal-area, positive-Z projection)\n"
+		   "  -b sets reverse (negative-Z projection)\n"
+		   "  -g adds RA,DEC grid\n"
+		   "  -N sets edge size of output image\n"
+		   "  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
+		   "  [-L <field-range-low>]\n"
+		   "  [-H <field-range-high>]\n"
+		   "Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, and rdls.fits files.\n"
+		   "\n", progname);
+}
+		   
 double *projection;
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -102,6 +107,7 @@ Inline void getxy(double px, double py, int N,
 
 int main(int argc, char *argv[])
 {
+	char* progname = argv[0];
 	uint ii,jj,numstars=0;
 	int reverse=0, hammer=0, grid=0;
 	double x=0,y=0,z=0;
@@ -159,14 +165,14 @@ int main(int argc, char *argv[])
 		}
 
 	if (optind == argc) {
-		fprintf(stderr, help);
+		printHelp(progname);
 		exit(-1);
 	}
 
 	if (((fieldslow == -1) && (fieldshigh != -1)) ||
 		((fieldslow != -1) && (fieldshigh == -1)) ||
 		(fieldslow > fieldshigh)) {
-		fprintf(stderr, help);
+		printHelp(progname);
 		fprintf(stderr, "If you specify -L you must also specify -H.\n");
 		exit(-1);
 	}

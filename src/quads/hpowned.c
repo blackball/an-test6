@@ -8,12 +8,14 @@
 #include "healpix.h"
 #include "starutil.h"
 #include "mathutil.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hN:mf:"
 
 void print_help(char* progname) {
-    printf("usage:\n"
-		   "  %s [-N <nside>]\n"
+	boilerplate_help_header(stdout);
+    printf("\nUsage: %s\n"
+		   "     [-N <nside>]    (default 1)\n"
 		   "     [-m (to include a margin of one small healpixel)]\n"
 		   "     [-f <format>]: printf format for the output (default %%03i)\n"
 		   "     <hp> [<hp> ...]\n",

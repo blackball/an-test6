@@ -12,6 +12,7 @@
 #include "starutil.h"
 #include "bl.h"
 #include "starkd.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hn:o:"
 
@@ -20,6 +21,7 @@ extern int optind, opterr, optopt;
 
 void print_help(char* progname)
 {
+	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s\n"
 			"   -o <output-image-file-name>\n"
 			"   [-n <image-size>]  (default 3000)\n"

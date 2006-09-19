@@ -36,8 +36,10 @@
 #include "ioutils.h"
 #include "starkd.h"
 #include "codekd.h"
+#include "boilerplate.h"
 
 static void printHelp(char* progname) {
+	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s\n", progname);
 }
 
@@ -218,6 +220,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to open file %s to write match file.\n", matchfname);
 			exit(-1);
 		}
+		boilerplate_add_fits_headers(mf->header);
+		qfits_header_add(mf->header, "HISTORY", "This file was created by the program \"slave\".", NULL, NULL);
 		if (matchfile_write_header(mf)) {
 			fprintf(stderr, "Failed to write matchfile header.\n");
 			exit(-1);

@@ -12,11 +12,13 @@
 #include "donuts.h"
 #include "fitsioutils.h"
 #include "qfits.h"
+#include "boilerplate.h"
 
 char* OPTIONS = "hi:X:Y:o:d:t:";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s [options]\n"
+	boilerplate_help_header(stderr);
+	fprintf(stderr, "\nUsage: %s [options]\n"
 			"   -i <input-xylist-filename>\n"
 			"     [-X <x-column-name>]\n"
 			"     [-Y <y-column-name>]\n"
@@ -101,6 +103,9 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(xylsout->header, "HMR_DST", val, "Donut radius (pixels)", NULL);
 	sprintf(val, "%f", donut_thresh);
 	qfits_header_add(xylsout->header, "HMR_THR", val, "Donut threshold (fraction)", NULL);
+
+	boilerplate_add_fits_headers(xylsout->header);
+	qfits_header_add(xylsout->header, "HISTORY", "This file was created by the program \"homer\".", NULL, NULL);
 	qfits_header_add(xylsout->header, "HISTORY", "homer command line:", NULL, NULL);
 	fits_add_args(xylsout->header, argv, argc);
 	qfits_header_add(xylsout->header, "HISTORY", "(end of homer command line)", NULL, NULL);

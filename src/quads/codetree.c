@@ -1,5 +1,5 @@
 /**
-   Writes a Keir-style kdtree of code values.
+   Reads a list of codes and writes a code kdtree.
 
    Input: .code
    Output: .ckdt
@@ -15,17 +15,26 @@
 #include "fileutil.h"
 #include "fitsioutils.h"
 #include "codekd.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hR:f:o:"
-const char HelpString[] =
-"codetree -f <input-base-name> -o <output-base-name> [-R KD_RMIN]\n"
-"  KD_RMIN (default 50) is the max# points per leaf in KD tree\n";
+
+static void printHelp(char* progname) {
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s\n"
+		   "    -f <input-basename>\n"
+		   "    -o <output-basename>\n"
+		   "    [-R <target-leaf-node-size>]   (default 25)\n"
+		   "\n", progname);
+}
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 int main(int argc, char *argv[]) {
     int argidx, argchar;
+	char* progname = argv[0];
+
 	int Nleaf = 25;
     codetree *codekd = NULL;
     int levels;
@@ -39,8 +48,8 @@ int main(int argc, char *argv[]) {
 	char val[32];
 
     if (argc <= 2) {
-        fprintf(stderr, HelpString);
-        return (OPT_ERR);
+        printHelp(progname);
+		exit(-1);
     }
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -57,8 +66,8 @@ int main(int argc, char *argv[]) {
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
         case 'h':
-            fprintf(stderr, HelpString);
-            return (HELP_ERR);
+			printHelp(progname);
+			exit(-1);
         default:
             return (OPT_ERR);
         }
@@ -66,12 +75,12 @@ int main(int argc, char *argv[]) {
     if (optind < argc) {
         for (argidx = optind; argidx < argc; argidx++)
             fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-        fprintf(stderr, HelpString);
-        return (OPT_ERR);
+		printHelp(progname);
+		exit(-1);
     }
     if (!basenamein || !basenameout) {
-        fprintf(stderr, HelpString);
-        return (OPT_ERR);
+		printHelp(progname);
+		exit(-1);
     }
 
 	codefname = mk_codefn(basenamein);
@@ -119,9 +128,15 @@ int main(int argc, char *argv[]) {
 	fits_copy_header(codes->header, hdr, "HEALPIX");
 	fits_copy_header(codes->header, hdr, "CXDX");
 	fits_copy_header(codes->header, hdr, "CIRCLE");
+
+	boilerplate_add_fits_headers(hdr);
+	qfits_header_add(hdr, "HISTORY", "This file was created by the program \"codetree\".", NULL, NULL);
 	qfits_header_add(hdr, "HISTORY", "codetree command line:", NULL, NULL);
 	fits_add_args(hdr, argv, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of codetree command line)", NULL, NULL);
+	qfits_header_add(hdr, "HISTORY", "** codetree: history from input file:", NULL, NULL);
+	fits_copy_all_headers(codes->header, hdr, "HISTORY");
+	qfits_header_add(hdr, "HISTORY", "** codetree: end of history from input file.", NULL, NULL);
 
 	rtn = codetree_write_to_file(codekd, treefname);
     free_fn(treefname);

@@ -18,13 +18,17 @@
 #include "catalog.h"
 #include "fitsioutils.h"
 #include "starkd.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hR:f:k:d:"
 
 void printHelp(char* progname) {
-	printf("%s -f <input-catalog-name>\n"
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s\n"
+		   "     -f <input-catalog-name>\n"
 		   "    [-R Nleaf]: number of points in a kdtree leaf node (default 25)\n"
-		   "    [-k keep]:  number of points to keep\n", progname);
+		   "    [-k keep]:  number of points to keep\n"
+		   "\n", progname);
 }
 
 extern char *optarg;
@@ -132,9 +136,16 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept.", NULL);
 
 	fits_copy_header(cat->header, startree_header(starkd), "HEALPIX");
+
+	boilerplate_add_fits_headers(startree_header(starkd));
+	qfits_header_add(startree_header(starkd), "HISTORY", "This file was created by the program \"startree\".", NULL, NULL);
 	qfits_header_add(startree_header(starkd), "HISTORY", "startree command line:", NULL, NULL);
 	fits_add_args(startree_header(starkd), argv, argc);
 	qfits_header_add(startree_header(starkd), "HISTORY", "(end of startree command line)", NULL, NULL);
+
+	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
+	fits_copy_all_headers(cat->header, startree_header(starkd), "HISTORY");
+	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
 
 	if (startree_write_to_file(starkd, treefname)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");

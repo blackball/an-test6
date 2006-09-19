@@ -7,11 +7,13 @@
 
 #include "starutil.h"
 #include "mathutil.h"
+#include "boilerplate.h"
 
 const char* OPTIONS = "hum:S";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s <solved-file> ...\n"
+	boilerplate_help_header(stderr);
+	fprintf(stderr, "\nUsage: %s <solved-file> ...\n"
 			"    [-u]: print UNsolved fields\n"
 			"    [-m <max-field>]: for unsolved mode, max field number.\n"
 			"    [-S]: for unsolved mode, use Sloan max field numbers, and assume the files are given in order.\n"

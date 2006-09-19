@@ -17,15 +17,21 @@
 #include "qidxfile.h"
 #include "bl.h"
 #include "fitsioutils.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hf:F"
-const char HelpString[] =
-"quadidx -f fname\n";
+
+static void printHelp(char* progname) {
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s -f <filename-template>\n"
+		   "\n", progname);
+}
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 int main(int argc, char *argv[]) {
+	char* progname = argv[0];
 	int argidx, argchar;
 	char *idxfname = NULL;
 	char *quadfname = NULL;
@@ -37,9 +43,8 @@ int main(int argc, char *argv[]) {
 	uint numused;
 	
 	if (argc <= 2) {
-		fprintf(stderr, HelpString);
-		return (OPT_ERR);
-		fprintf(stderr, "argc=%d\n", argc);
+		printHelp(progname);
+		exit(-1);
 	}
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -51,8 +56,8 @@ int main(int argc, char *argv[]) {
 		case '?':
 			fprintf(stderr, "Unknown option `-%c'.\n", optopt);
 		case 'h':
-			fprintf(stderr, HelpString);
-			return (HELP_ERR);
+			printHelp(progname);
+			exit(-1);
 		default:
 			return (OPT_ERR);
 		}
@@ -60,8 +65,8 @@ int main(int argc, char *argv[]) {
 	if (optind < argc) {
 		for (argidx = optind; argidx < argc; argidx++)
 			fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
-		fprintf(stderr, HelpString);
-		return (OPT_ERR);
+		printHelp(progname);
+		exit(-1);
 	}
 
 	fprintf(stderr, "quadidx: indexing quads in %s...\n",
@@ -117,9 +122,16 @@ int main(int argc, char *argv[]) {
 
 	fits_copy_header(quads->header, qidx->header, "INDEXID");
 	fits_copy_header(quads->header, qidx->header, "HEALPIX");
-	qfits_header_add(quads->header, "HISTORY", "quadidx command line:", NULL, NULL);
-	fits_add_args(quads->header, argv, argc);
-	qfits_header_add(quads->header, "HISTORY", "(end of quadidx command line)", NULL, NULL);
+
+	boilerplate_add_fits_headers(qidx->header);
+	qfits_header_add(qidx->header, "HISTORY", "This file was created by the program \"quadidx\".", NULL, NULL);
+	qfits_header_add(qidx->header, "HISTORY", "quadidx command line:", NULL, NULL);
+	fits_add_args(qidx->header, argv, argc);
+	qfits_header_add(qidx->header, "HISTORY", "(end of quadidx command line)", NULL, NULL);
+
+	qfits_header_add(qidx->header, "HISTORY", "** History entries copied from the input file:", NULL, NULL);
+	fits_copy_all_headers(quads->header, qidx->header, "HISTORY");
+	qfits_header_add(qidx->header, "HISTORY", "** End of history entries.", NULL, NULL);
 
 	if (qidxfile_write_header(qidx)) {
  		fprintf(stderr, "Couldn't write qidx header (%s).\n", idxfname);

@@ -13,6 +13,7 @@
 #include "bl.h"
 #include "histogram.h"
 #include "starkd.h"
+#include "boilerplate.h"
 
 #define OPTIONS "h"
 
@@ -21,6 +22,7 @@ extern int optind, opterr, optopt;
 
 void print_help(char* progname)
 {
+	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s\n"
 			"   [-h]: help\n"
 			"   [-n <number of histogram bins>]  (default 100)\n"

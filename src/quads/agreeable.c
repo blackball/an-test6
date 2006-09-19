@@ -15,11 +15,13 @@
 #include "matchfile.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
+#include "boilerplate.h"
 
 char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:at";
 
 void printHelp(char* progname) {
-	fprintf(stderr, "Usage: %s [options] [<input-match-file> ...]\n"
+	boilerplate_help_header(stderr);
+	fprintf(stderr, "Usage: %s [options]\n"
 			"   [-A first-field]\n"
 			"   [-B last-field]\n"
 			"   [-I first-field-filenum]\n"
@@ -40,8 +42,9 @@ void printHelp(char* progname) {
 			"   [-t]: print agreement distances.\n"
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
-			"   [-R]: read all at once\n",
-			progname);
+			"   [-R]: read all at once\n"
+			"   <input-match-file> ...\n"
+			"\n", progname);
 }
 
 int find_correspondences(pl* hits, uint* starids, uint* fieldids, int* p_ok);
@@ -249,6 +252,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to open file %s to write leftover matches.\n", leftoverfname);
 			exit(-1);
 		}
+		boilerplate_add_fits_headers(leftovermf->header);
+		qfits_header_add(leftovermf->header, "HISTORY", "This file was created by the program \"agreeable\".", NULL, NULL);
 		if (matchfile_write_header(leftovermf)) {
 			fprintf(stderr, "Failed to write leftovers matchfile header.\n");
 			exit(-1);
@@ -261,6 +266,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to open file %s to write agreeing matches.\n", agreefname);
 			exit(-1);
 		}
+		boilerplate_add_fits_headers(agreemf->header);
+		qfits_header_add(agreemf->header, "HISTORY", "This file was created by the program \"agreeable\".", NULL, NULL);
 		if (matchfile_write_header(agreemf)) {
 			fprintf(stderr, "Failed to write agreeing matchfile header.\n");
 			exit(-1);

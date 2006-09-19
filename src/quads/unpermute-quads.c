@@ -22,12 +22,16 @@
 #include "fitsioutils.h"
 #include "codekd.h"
 #include "qfits.h"
+#include "boilerplate.h"
 
 #define OPTIONS "hf:o:"
 
-void printHelp(char* progname) {
-	printf("%s -f <input-basename> -o <output-basename>\n",
-		   progname);
+static void printHelp(char* progname) {
+	boilerplate_help_header(stdout);
+	printf("\nUsage: %s\n"
+		   "    -f <input-basename>\n"
+		   "    -o <output-basename>\n"
+		   "\n", progname);
 }
 
 extern char *optarg;
@@ -115,6 +119,8 @@ int main(int argc, char **args) {
 	quadout->index_scale = quadin->index_scale;
 	quadout->index_scale_lower = quadin->index_scale_lower;
 
+	boilerplate_add_fits_headers(quadout->header);
+	qfits_header_add(quadout->header, "HISTORY", "This file was created by the program \"unpermute-quads\".", NULL, NULL);
 	qfits_header_add(quadout->header, "HISTORY", "unpermute-quads command line:", NULL, NULL);
 	fits_add_args(quadout->header, args, argc);
 	qfits_header_add(quadout->header, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
@@ -159,6 +165,8 @@ int main(int argc, char **args) {
 	hdr = codetree_header(treeout);
 	qfits_header_add(hdr, "AN_FILE", "CKDT", "This is a code kdtree.", NULL);
 	fits_copy_header(quadin->header, hdr, "HEALPIX");
+	boilerplate_add_fits_headers(hdr);
+	qfits_header_add(hdr, "HISTORY", "This file was created by the program \"unpermute-quads\".", NULL, NULL);
 	qfits_header_add(hdr, "HISTORY", "unpermute-quads command line:", NULL, NULL);
 	fits_add_args(hdr, args, argc);
 	qfits_header_add(hdr, "HISTORY", "(end of unpermute-quads command line)", NULL, NULL);
