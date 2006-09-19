@@ -17,7 +17,8 @@ const char* svn_date() {
 int svn_revision() {
 	int rev;
 	/* See the comment above; the same thing is true of "revstr". Huzzah! */
-	if (sscanf("$Revision$", "$Revision$", &rev) != 1)
+	const char* revstr = "$Revision$";
+	if (sscanf(revstr + 1, "Revision: %i $", &rev) != 1)
 		return -1;
 	return rev;
 }
