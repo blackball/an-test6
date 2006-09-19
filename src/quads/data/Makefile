@@ -46,23 +46,45 @@ AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf "$(AN_TEMPLATE) " $
 #$(warning USNOB FITS files: $(USNOB_FITS))
 #$(warning AN files: $(AN_FILES))
 
-INDEX_ID := 1
+CUT_DIR       := cut/
+                    # (note, a trailing '/' is required!)
+CUT_BASE      := $(CUT_DIR)an-sdss-
+#CUT_TEMPLATE  := $(CUT_DIR)an-sdss-%02i
+#CUT_FILES     := $(shell for ((i=0; i<12; i++)); do printf "$(CUT_TEMPLATE) " $$i; done)
+CUT_PREFIXES  := $(addprefix $(CUT_PREFIX),$(NUMS2))
+CUT_OBJS      := $(addsuffix .objs.fits,$(CUT_PREFIXES))
+CUT_IDS       := $(addsuffix .id.fits,$(CUT_PREFIXES))
+CUT_SKDTS     := $(addsuffix .skdt.fits,$(CUT_PREFIXES))
+CUT_FILES     := $(CUT_OBJS) $(CUT_SKDTS)
+ifeq ($(IDFILES), yes)
+CUT_FILES     += $(CUT_IDS)
+endif
+CUT_AN_NSIDE  := 1000
+CUT_AN_SWEEPS := 12
+CUT_AN_DEDUP  := 8
+CUT_AN_CUT    := -R
+CUT_NLEAF     := 15
 
-CATALOG := an_sdss_
-INDEX := sdss-$(INDEX_ID)_
-TEMP1 := phase1_
-TEMP2 := phase2_
+
+INDEX_ID   := 1
+INDEX_DIR  := sdss-$(INDEX_ID)/
+CATALOG    := $(CUT_BASE)
+INDEX      := $(INDEX_DIR)sdss-$(INDEX_ID)_
+TEMP1      := $(INDEX_DIR)phase1_
+TEMP2      := $(INDEX_DIR)phase2_
 
 IDFILES := no
 
 WGET            := wget --continue
 MKDIR           := mkdir -p
 TOUCH           := touch
+MV              := mv
 
 USNOBTOFITS     := usnobtofits
 TYCHO2TOFITS    := tycho2tofits
 BUILD_AN        := build_an_catalog
 CUT_AN          := cut_an
+STARTREE        := startree
 
 UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars
@@ -86,6 +108,22 @@ CODEPROJ_OPTS := -d
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
 MATLAB_INIT   := addpath('~/quads')
+
+define INDEX_template_A
+.PHONY: index$(1)
+index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+endef
+
+NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
+$(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
+INDEXES := $(addsuffix $(NUMS2),index)
+
+
+
+#all: $(USNOB_FITS) $(TYCHO2_FITS) $(AN_FILES) $(CUTS) $(INDEXES)
+
+all: $(INDEXES)
+
 
 $(USNOB):
 	@echo
@@ -153,65 +191,65 @@ $(AN_FILES): $(USNOB_FITS) $(TYCHO2_FITS)
 	$(BUILD_AN) -o $(AN_FILE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
 	$(TOUCH) timestamp-build-an-cat-done
 
-CUT_AN_NSIDE  := 1000
-CUT_AN_SWEEPS := 12
-CUT_AN_DEDUP  := 8
-CUT_AN_CUT    := -R
-CUT_DIR       := cut/
-                    # (note, a trailing '/' is required!)
-CUT_TEMPLATE  := $(CUT_DIR)an-sdss-%02i
-
 define CUT_template
 .PHONY: cut$(1)
-cut$(1):
+$(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
+	$(MKDIR) $(CUT_DIR)
+	$(TOUCH) timestamp-cut-startree-$(1)-start
+	$(STARTREE) -f $(CUT_BASE)$(1) -R $(CUT_NLEAF)
+	$(TOUCH) timestamp-cut-startree-$(1)-done
+
+cut$(1): $(CUT_BASE)$(1).objs.fits
+
+$(CUT_BASE)$(1).objs.fits: $(AN_FILES)
 	$(MKDIR) $(CUT_DIR)
 	$(TOUCH) timestamp-cut-an-$(1)-start
-	$(CUT_AN) -H $(1) -o $(CUT_TEMPLATE).objs.fits -i $(CUT_TEMPLATE).id.fits \
+	$(CUT_AN) -H $(1) -o $(CUT_BASE)$(1).objs.fits -i $(CUT_BASE)$(1).id.fits \
 		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
-		`hpowned -f $(AN_FILE) -m -N $(AN_NSIDE) $(1)`
+		`hpowned -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
 	$(TOUCH) timestamp-cut-an-$(1)-done
 endef
-$(foreach num,0 1 2 3 4 5 6 7 8 9 10 11,$(eval $(call CUT_template,$(num))))
+$(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
 
-
-
-
-define INDEX_template
-PHO += $(1)
-$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
-
-$(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
-	$(QUADIDX) -f $(INDEX)$(1)
-
+define INDEX_template_B
 $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
 		$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).quad.fits
 	$(UNPERMUTE_QUADS) -f $(TEMP2)$(1) -o tmp.$(INDEX)$(1)
-	mv tmp.$(INDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
-	mv tmp.$(INDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
+	$(MV) tmp.$(INDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
+	$(MV) tmp.$(INDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
 
 ifeq ($(IDFILES), yes)
 $(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits $(INDEX)$(1).id.fits : \
 		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(TEMP1)$(1).quad.fits
 	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
-	mv tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
-	mv tmp.$(INDEX)$(1).id.fits   $(INDEX)$(1).id.fits
-	mv tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+	$(MV) tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	$(MV) tmp.$(INDEX)$(1).id.fits   $(INDEX)$(1).id.fits
+	$(MV) tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
 else
 $(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits : \
 		$(CATALOG)$(1).skdt.fits $(TEMP1)$(1).quad.fits
 	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
-	mv tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
-	mv tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+	$(MV) tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	$(MV) tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
 endif
 
 $(TEMP2)$(1).ckdt.fits: $(TEMP1)$(1).code.fits
 	$(CODETREE) $(CODETREE_OPTS) -f $(TEMP1)$(1) -o tmp.$(TEMP2)$(1)
-	mv tmp.$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).ckdt.fits
+	$(MV) tmp.$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).ckdt.fits
 
 $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o tmp.$(TEMP1)$(1)
-	mv tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
-	mv tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
+	$(MV) tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
+	$(MV) tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
+
+SEC += \
+    $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
+    $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
+endef
+
+define PROSPECTUS_template
+$(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
+	$(QUADIDX) -f $(INDEX)$(1)
 
 PHO += prospectus$(1)
 prospectus$(1): ana$(1) plot$(1) dplot$(1) qps$(1)
@@ -259,11 +297,6 @@ qps$(1).m: $(INDEX)$(1).qidx.fits
 
 %$(1)_small.png: %$(1).png
 	pngtopnm -- $$< | pamscale -linear 0.2 | pnmtopng > $$@
-
-SEC += \
-    $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
-    $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
-
 endef
 
 %.png: %.pgm
@@ -272,21 +305,16 @@ endef
 %.png: %.eps
 	$(EPSTOPNG) $< $@
 
-NUMS := 00 01 02 03 04 05 06 07 08 09 10 11
-
 PHO := $(NUMS)
 SEC := 
 
 INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
 
-$(foreach num,$(NUMS),$(eval $(call INDEX_template,$(num))))
+$(foreach num,$(NUMS2),$(eval $(call INDEX_template_B,$(num))))
+$(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 .PHONY: $(PHO)
 .SECONDARY: $(SEC)
-
-all:
-	@echo try targets 00, 01, 02, ..., 11
-
 
 SUMPLOTS_EPS := cp_2dhists_sum.eps cp_2ddhists_sum.eps \
 	cp_1dhists_sum.eps cp_1ddhists_sum.eps \
@@ -329,7 +357,4 @@ qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 
 $(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
-
-# RULE00 := $(call INDEX_template,00)
-# $(warning $(RULE00))
 
