@@ -116,15 +116,20 @@ MATLAB_INIT   := addpath('~/quads')
 define INDEX_template_A
 .PHONY: index$(1)
 index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+
+#$(warning index$(1) is $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits))
+
 endef
 
 NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
 $(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
-INDEXES := $(addsuffix $(NUMS2),index)
+INDEXES := $(addprefix index,$(NUMS2))
 
-#all: $(INDEXES)
+all: $(INDEXES)
 
-all: $(USNOB_FITS_PRESENT)
+#$(warning INDEXES: $(INDEXES))
+
+#all: $(USNOB_FITS_PRESENT)
 
 $(USNOB_PRESENT):
 	$(MAKE) -f makefile.usnob $@
@@ -202,6 +207,13 @@ SEC += \
     $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
 endef
 
+PHO := $(NUMS)
+SEC := 
+
+INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
+
+$(foreach num,$(NUMS2),$(eval $(call INDEX_template_B,$(num))))
+
 define PROSPECTUS_template
 $(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
 	$(QUADIDX) -f $(INDEX)$(1)
@@ -260,12 +272,6 @@ endef
 %.png: %.eps
 	$(EPSTOPNG) $< $@
 
-PHO := $(NUMS)
-SEC := 
-
-INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
-
-$(foreach num,$(NUMS2),$(eval $(call INDEX_template_B,$(num))))
 $(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 .PHONY: $(PHO)
