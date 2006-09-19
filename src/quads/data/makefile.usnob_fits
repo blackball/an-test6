@@ -1,0 +1,19 @@
+include Makefile
+
+USNOB_FITS_HP := $(shell echo $$(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
+USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf "$(USNOB_FITS_TEMPLATE) " $$i; done)
+
+#$(warning USNOB_FITS_HP is $(USNOB_FITS_HP))
+#$(warning USNOB FITS files: $(USNOB_FITS))
+
+$(USNOB_FITS_PRESENT): usnob_fits
+	$(TOUCH) $@
+
+.PHONY: usnob_fits
+usnob_fits: $(USNOB_FITS)
+$(USNOB_FITS): $(USNOB_PRESENT)
+	$(MKDIR) $(USNOB_FITS_DIR)
+	$(TOUCH) timestamp-usnobtofits-start
+	$(USNOBTOFITS) -o $(USNOB_FITS_TEMPLATE) -N $(USNOB_FITS_NSIDE) $(USNOB)
+	$(TOUCH) timestamp-usnobtofits-done
+

@@ -1,0 +1,23 @@
+# no default rules
+.SUFFIXES :=
+
+include Makefile
+
+AN_HP     := $(shell echo $$(($(AN_NSIDE) * $(AN_NSIDE) * 12)))
+#AN_FORMAT := %03i
+AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf "$(AN_TEMPLATE) " $$i; done)
+
+#$(warning AN files: $(AN_FILES))
+
+$(AN_CATALOG_PRESENT): $(AN_FILES)
+	$(TOUCH) $@
+
+.PHONY: an_catalog
+an_catalog: $(AN_FILES)
+#$(AN_FILES): $(USNOB_FITS) $(TYCHO2_FITS)
+$(AN_FILES): $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
+	$(MKDIR) $(AN_DIR)
+	$(TOUCH) timestamp-build-an-cat-start
+	$(BUILD_AN) -o $(AN_FILE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
+	$(TOUCH) timestamp-build-an-cat-done
+

@@ -1,0 +1,17 @@
+include Makefile
+
+TYCHO2_FITS := $(addprefix $(TYCHO2_FITS_DIR),$(subst .dat,.fits,$(TYCHO2_FILES)))
+
+#$(warning TYCHO-2 FITS files: $(TYCHO2_FITS))
+
+$(TYCHO2_FITS_PRESENT): $(TYCHO2_FITS)
+	$(TOUCH) $@
+
+.PHONY: tycho2_fits
+tycho2_fits: $(TYCHO2_FITS)
+$(TYCHO2_FITS):: %.fits : %.dat
+	$(MKDIR) $(TYCHO2_FITS_DIR)
+	$(TOUCH) timestamp-tycho2tofits-start
+	$(TYCHO2TOFITS) -o $@ $<
+	$(TOUCH) timestamp-tycho2tofits-done
+

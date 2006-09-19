@@ -1,3 +1,6 @@
+# no default rules
+.SUFFIXES :=
+
 comma := ,
 empty :=
 VER := $(shell make --version | grep "GNU Make version" | awk '{print $$4}')
@@ -10,41 +13,33 @@ ifeq ($(VER), 3.79.1)
   $(error You are running a stupid version of Make.  Try version 3.81)
 endif
 
+
 TYCHO2_DIR := tycho2/
                     # (note, trailing '/' required!)
 TYCHO2_FILES := catalog.dat suppl_1.dat
 TYCHO2 := $(addprefix $(TYCHO2_DIR),$(TYCHO2_FILES))
 TYCHO2_URL := http://www.astro.ku.dk/~cf/CD/data/
+TYCHO2_PRESENT := $(TYCHO2_DIR)tycho2-present
 
 USNOB_DIR := usnob/
                   # (note, trailing '/' required!)
-USNOB := $(shell for ((i=0; i<180; i++)); do for ((j=0; j<10; j++)); do printf "$(USNOB_DIR)%03i/b%03i%i.cat " $$i $$i $$j; done; done)
+USNOB_PRESENT := $(USNOB_DIR)usnob-present
 
 TYCHO2_FITS_DIR := tycho2-fits/
                               # (note, trailing '/' required!)
-TYCHO2_FITS := $(addprefix $(TYCHO2_FITS_DIR),$(subst .dat,.fits,$(TYCHO2_FILES)))
+TYCHO2_FITS_PRESENT := $(TYCHO2_FITS_DIR)tycho2-fits-present
 
 USNOB_FITS_DIR := usnob-fits/
                             # (note, trailing '/' required!)
 USNOB_FITS_TEMPLATE := "$(USNOB_FITS_DIR)usnob10_hp%03i.fits"
 USNOB_FITS_NSIDE := 9
-USNOB_FITS_HP := $(shell echo $$(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
-USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf "$(USNOB_FITS_TEMPLATE) " $$i; done)
+USNOB_FITS_PRESENT := $(USNOB_FITS_DIR)usnob-fits-present
 
 AN_DIR    := an/
                # (note, a trailing '/' is required!)
 AN_TEMPLATE := $(AN_DIR)an_hp%03i.fits
 AN_NSIDE  := 9
-AN_HP     := $(shell echo $$(($(AN_NSIDE) * $(AN_NSIDE) * 12)))
-#AN_FORMAT := %03i
-AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf "$(AN_TEMPLATE) " $$i; done)
-
-#$(warning USNOB files: $(USNOB))
-#$(warning TYCHO-2 files: $(TYCHO2))
-#$(warning TYCHO-2 FITS files: $(TYCHO2_FITS))
-#$(warning USNOB_FITS_HP is $(USNOB_FITS_HP))
-#$(warning USNOB FITS files: $(USNOB_FITS))
-#$(warning AN files: $(AN_FILES))
+AN_CATALOG_PRESENT := $(AN_DIR)an-catalog-present
 
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
@@ -118,78 +113,26 @@ NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
 $(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
 INDEXES := $(addsuffix $(NUMS2),index)
 
+#all: $(INDEXES)
 
+all: $(USNOB_FITS_PRESENT)
 
-#all: $(USNOB_FITS) $(TYCHO2_FITS) $(AN_FILES) $(CUTS) $(INDEXES)
+$(USNOB_PRESENT):
+	$(MAKE) -f makefile.usnob $@
 
-all: $(INDEXES)
+$(USNOB_FITS_PRESENT):
+	$(MAKE) -f makefile.usnob_fits $@
 
+$(TYCHO2_PRESENT):
+	$(MAKE) -f makefile.tycho2 $@
 
-$(USNOB):
-	@echo
-	@echo "The Makefile has decided that you need the original USNO-B1.0 data files."
-	@echo
-	@echo "The files were expected to be named like this:"
-	@echo "     $(firstword $(USNOB))"
-	@echo
-	@echo "If you have the USNO-B1.0 data files, you might need to set up symlinks"
-	@echo "or edit the Makefile (look for the USNOB_DIR variable) to point to the"
-	@echo "right place."
-	@echo
-	@echo "If you don't have the USNO-B1.0 data files, you either need to mail a disk"
-	@echo "to the Navy Observatory in Arizona, or talk to the folks at Astrometry.net"
-	@echo "to find out about downloading it.  It's 80 GB."
-	@echo
+$(TYCHO2_FITS_PRESENT):
+	$(MAKE) -f makefile.tycho2_fits $@
 
-$(TYCHO2):
-	@echo
-	@echo "The Makefile has decided that you need the original Tycho-2 data files."
-	@echo
-	@echo "The files were expected to be named like this:"
-	@echo "    $(TYCHO2)"
-	@echo
-	@echo "If you have the Tycho-2 data files, you might need to set up symlinks"
-	@echo "or edit the Makefile (look for the TYCHO2_DIR variable) to point to the"
-	@echo "right place."
-	@echo
-	@echo "If you don't have the Tycho-2 data files, you can automatically download"
-	@echo "them by running:"
-	@echo "    make tycho2_download"
-	@echo "The files are a little over 500 MB and will be placed in the location"
-	@echo "shown above."
-	@echo
+$(AN_CATALOG_PRESENT):
+	$(MAKE) -f makefile.an_catalog $@
 
-.PHONY: tycho2_download
-tycho2_download:
-	$(MKDIR) $(TYCHO2_DIR)
-	$(TOUCH) timestamp-tycho2-download-start
-	$(WGET) -O $(TYCHO2_DIR)catalog.dat $(TYCHO2_URL)catalog.dat
-	$(WGET) -O $(TYCHO2_DIR)suppl_1.dat $(TYCHO2_URL)suppl_1.dat
-	$(TOUCH) timestamp-tycho2-download-done
-
-.PHONY: usnob_fits
-usnob_fits: $(USNOB_FITS)
-$(USNOB_FITS): $(USNOB)
-	$(MKDIR) $(USNOB_FITS_DIR)
-	$(TOUCH) timestamp-usnobtofits-start
-	$(USNOBTOFITS) -o $(USNOB_FITS_TEMPLATE) -N $(USNOB_FITS_NSIDE) $(USNOB)
-	$(TOUCH) timestamp-usnobtofits-done
-
-.PHONY: tycho2_fits
-tycho2_fits: $(TYCHO2_FITS)
-$(TYCHO2_FITS):: %.fits : %.dat
-	$(MKDIR) $(TYCHO2_FITS_DIR)
-	$(TOUCH) timestamp-tycho2tofits-start
-	$(TYCHO2TOFITS) -o $@ $<
-	$(TOUCH) timestamp-tycho2tofits-done
-
-.PHONY: an_catalog
-an_catalog: $(AN_FILES)
-$(AN_FILES): $(USNOB_FITS) $(TYCHO2_FITS)
-	$(MKDIR) $(AN_DIR)
-	$(TOUCH) timestamp-build-an-cat-start
-	$(BUILD_AN) -o $(AN_FILE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
-	$(TOUCH) timestamp-build-an-cat-done
+#$(CUT_BASE)$(1).objs.fits: $(AN_FILES)
 
 define CUT_template
 .PHONY: cut$(1)
@@ -201,7 +144,7 @@ $(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
 
 cut$(1): $(CUT_BASE)$(1).objs.fits
 
-$(CUT_BASE)$(1).objs.fits: $(AN_FILES)
+$(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
 	$(MKDIR) $(CUT_DIR)
 	$(TOUCH) timestamp-cut-an-$(1)-start
 	$(CUT_AN) -H $(1) -o $(CUT_BASE)$(1).objs.fits -i $(CUT_BASE)$(1).id.fits \
