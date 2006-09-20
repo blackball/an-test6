@@ -3,7 +3,8 @@
 
 #include "svn.h"
 
-static char rtnval[64];
+static char date_rtnval[64];
+static char url_rtnval[64];
 
 const char* svn_date() {
 	/* Through the magic of Subversion, the date string on the following line will
@@ -11,8 +12,8 @@ const char* svn_date() {
 	   subversion! */
 	const char* datestr = "$Date$";
 	// (I want to trim off the "$Date$" trailing: 7 chars at front and 2 at back)
-	strncpy(rtnval, datestr + 7, strlen(datestr) - 9);
-	return rtnval;
+	strncpy(date_rtnval, datestr + 7, strlen(datestr) - 9);
+	return date_rtnval;
 }
 
 int svn_revision() {
@@ -26,3 +27,9 @@ int svn_revision() {
 	return rev;
 }
 
+cosnt char* svn_url() {
+	/* Ditto for "headurlstr". */
+	const char* headurlstr = "$HeadURL$";
+	strncpy(url_rtnval, headurlstr + 10, strlen(headurlstr) - 11);
+	return url_rtnval;
+}
