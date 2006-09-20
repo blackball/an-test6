@@ -116,6 +116,9 @@
 	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
+	if ($sdssfile && $sdssfield) {
+		$cmd = $cmd . " -transparent =black";
+	}
 
 	loggit("Command: $cmd\n");
 

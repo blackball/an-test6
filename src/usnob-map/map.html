@@ -109,8 +109,14 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
   var filenum = Number(getdata["SDSS_FILE"]);
   var fieldnum = Number(getdata["SDSS_FIELD"]);
   if (filenum > 0 && filenum < 35 && fieldnum >= 0 && fieldnum < 10000) {
-    WMS_URL += "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
+    var sdss = true;
+    var SDSS_WMS_URL = WMS_URL + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
   }
+}
+
+var overview = true;
+if (("over" in getdata) && (getdata["over"] == "no")) {
+  overview = false;
 }
 
 var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
@@ -119,31 +125,50 @@ usnobTile.myFormat='image/png';
 usnobTile.myBaseURL=WMS_URL;
 usnobTile.getTileUrl=CustomGetTileUrl;
 
-var usnobTile2 = new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
-usnobTile2.myLayers='usnob lines10';
-usnobTile2.myFormat='image/png';
-usnobTile2.myBaseURL=WMS_URL;
-usnobTile2.getTileUrl=CustomGetTileUrl;
+/*
+  var usnobTile2 = new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
+  usnobTile2.myLayers='usnob lines10';
+  usnobTile2.myFormat='image/png';
+  usnobTile2.myBaseURL=WMS_URL;
+  usnobTile2.getTileUrl=CustomGetTileUrl;
+*/
+
+var sdssTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
+sdssTile.myLayers='sdss';
+sdssTile.myFormat='image/png';
+sdssTile.myBaseURL=SDSS_WMS_URL;
+sdssTile.getTileUrl=CustomGetTileUrl;
 
 /*
   http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=usnob&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:54004&BBOX=-13677947.379473988,4552576.405486049,-13658379.500533395,4572062.879663667&WIDTH=256&HEIGHT=256&reaspect=false
 */
 
 var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
-var usnobType2 = new GMapType([usnobTile2], G_SATELLITE_MAP.getProjection(), "+Lines", G_SATELLITE_MAP);
+//var usnobType2 = new GMapType([usnobTile2], G_SATELLITE_MAP.getProjection(), "+Lines", G_SATELLITE_MAP);
+if (sdss) {
+  var usnobPlusSDSS = new GMapType([usnobTile,sdssTile], G_SATELLITE_MAP.getProjection(), "USNOB+SDSS", G_SATELLITE_MAP);
+}
+
 map.getMapTypes().length = 0;
 map.addMapType(usnobType);
-map.addMapType(usnobType2);
-map.setMapType(usnobType2);
+if (sdss) {
+  map.addMapType(usnobPlusSDSS);
+  //map.addMapType(usnobType2);
+  //map.setMapType(usnobPlusSDSS);
+}
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
 //map.addControl(new GScaleControl());
 
-var w = 800;
-var h = 600;
-var ow = 150;
-var oh = 150;
-map.addControl(new GOverviewMapControl(new GSize(ow,oh)));
+if (overview) {
+  var w = 800;
+  var h = 600;
+  var ow = 150;
+  var oh = 150;
+  overviewControl = new GOverviewMapControl(new GSize(ow,oh));
+  map.addControl(overviewControl);
+  //map.hideControls([overviewControl]);
+}
 
 function debug(txt) {
 	//document.debugform.debug.value += txt;
@@ -256,12 +281,21 @@ function linktohere() {
 	center = map.getCenter();
 	url = url + "?ra=" + center.lng() + "&dec=" + center.lat()
 		+ "&zoom=" + map.getZoom();
+    if (!overview) {
+      url = url + "&over=no";
+    }
+    if (sdss) {
+	  url = url + "&SDSS_FILE=$filenum&SDSS_FIELD=$fieldnum";
+	}
 	window.location = url;
 }
 
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
+if (sdss) {
+  setTimeout("map.setMapType(usnobPlusSDSS);", 4);
+}
 
 /*
 info_html = "<b>testing</b>";
