@@ -50,8 +50,7 @@
 			exit;
 	}
 
-	$n = sscanf($bb, "%f,%f,%f,%f", $x0, $y0, $x1, $y1);
-	if ($n != 4) {
+	if (sscanf($bb, "%f,%f,%f,%f", $x0, $y0, $x1, $y1) != 4) {
 			loggit("Failed to parse BBOX.\n");
 			header("Content-type: text/html");
 			echo("<html><body>Invalid request: failed to parse BBOX.</body></html>\n\n");
@@ -64,6 +63,18 @@
 			printf("<html><body>Invalid request: failed to parse WIDTH or HEIGHT.</body></html>\n\n");
 			exit;
 	}
+
+	if (strlen("$sdss_file") && strlen("$sdss_field")) {
+		if ((sscanf($sdss_file, "%d", $sdssfile) != 1) ||
+			(sscanf($sdss_field, "%d", $sdssfield) != 1) ||
+			($sdssfile < 1) || ($sdssfile > 35) || ($sdssfield < 0) || ($sdssfield > 10000)) {
+			loggit("Failed to parse SDSS FILE/FIELD.\n");
+			header("Content-type: text/html");
+			printf("<html><body>Invalid request: failed to parse SDSS_{FILE,FIELD}.</body></html>\n\n");
+			exit;
+		}
+	}
+
 
 	$layers = explode(" ", $lay);
 	$lines = false;
@@ -87,16 +98,22 @@
 
 	loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1.\n");
 	loggit("w=$w, h=$h.\n");
+	loggit("sdss file=$sdssfile field=$sdssfield.\n");
 	if ($lines) {
 		loggit("linesize=$linesize\n");
 	}
 
 	// http://ca.php.net/manual/en/function.escapeshellarg.php
 
-	$cmd = sprintf("usnobtile -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
-	if ($lines) {
-		$cmd = $cmd . sprintf(" -l %f", $linesize);
+	if ($sdssfile && $sdssfield) {
+		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
+	} else {
+		$cmd = "usnobtile";
+		if ($lines) {
+			$cmd = $cmd . sprintf(" -l %f", $linesize);
+		}
 	}
+	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
 

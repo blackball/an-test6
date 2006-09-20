@@ -83,11 +83,35 @@ This is a picture of USNO-B1, not a picture of the sky.
 <script TYPE="text/javascript">
 //<![CDATA[
 
+function getGetData(){
+	GET_DATA=new Object();
+	var getDataString=new String(window.location);
+	var questionMarkLocation=getDataString.search(/\?/);
+	if (questionMarkLocation!=-1){
+		getDataString=getDataString.substr(questionMarkLocation+1);
+		var getDataArray=getDataString.split(/&/g);
+		for (var i=0;i<getDataArray.length;i++){
+			var nameValuePair=getDataArray[i].split(/=/);
+			GET_DATA[unescape(nameValuePair[0])]=unescape(nameValuePair[1]);
+		}
+	}
+	return GET_DATA;
+}
+
 //if (GBrowserIsCompatible()) {
 // var map = new GMap2(document.getElementById("map"));
 var map = new GMap(document.getElementById("map"));
 
 var WMS_URL = "http://monte.ai.toronto.edu:8080/usnob/tile.php?map=usnob";
+
+var getdata = getGetData();
+if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
+  var filenum = Number(getdata["SDSS_FILE"]);
+  var fieldnum = Number(getdata["SDSS_FIELD"]);
+  if (filenum > 0 && filenum < 35 && fieldnum >= 0 && fieldnum < 10000) {
+    WMS_URL += "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
+  }
+}
 
 var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
 usnobTile.myLayers='usnob';
@@ -120,21 +144,6 @@ var h = 600;
 var ow = 150;
 var oh = 150;
 map.addControl(new GOverviewMapControl(new GSize(ow,oh)));
-
-function getGetData(){
-	GET_DATA=new Object();
-	var getDataString=new String(window.location);
-	var questionMarkLocation=getDataString.search(/\?/);
-	if (questionMarkLocation!=-1){
-		getDataString=getDataString.substr(questionMarkLocation+1);
-		var getDataArray=getDataString.split(/&/g);
-		for (var i=0;i<getDataArray.length;i++){
-			var nameValuePair=getDataArray[i].split(/=/);
-			GET_DATA[unescape(nameValuePair[0])]=unescape(nameValuePair[1]);
-		}
-	}
-	return GET_DATA;
-}
 
 function debug(txt) {
 	//document.debugform.debug.value += txt;
