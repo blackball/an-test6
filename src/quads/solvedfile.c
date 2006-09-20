@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 
 #include "solvedfile.h"
@@ -41,27 +42,30 @@ int solvedfile_get(char* fn, int fieldnum) {
 	return val;
 }
 
-il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
+static il* solvedfile_getall_val(char* fn, int firstfield, int lastfield, int maxfields, int val) {
 	FILE* f;
 	off_t end;
 	int fields = 0;
 	il* list;
 	int i;
-	int nf;
+	unsigned char* map;
 
 	list = il_new(256);
 
 	f = fopen(fn, "rb");
 	if (!f) {
-		// assume no fields are solved.
-		for (i=firstfield; i<=lastfield; i++) {
-			il_append(list, i);
-			fields++;
-			if (fields == maxfields)
-				break;
+		// if file doesn't exist, assume no fields are solved.
+		if (val == 0) {
+			for (i=firstfield; i<=lastfield; i++) {
+				il_append(list, i);
+				fields++;
+				if (fields == maxfields)
+					break;
+			}
 		}
 		return list;
 	}
+
 	if (fseek(f, 0, SEEK_END) ||
 		((end = ftello(f)) == -1)) {
 		fprintf(stderr, "Error: seeking to end of file %s: %s\n",
@@ -74,37 +78,42 @@ il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
 		fclose(f);
 		return list;
 	}
-	nf = 1 + lastfield - firstfield;
-	if (end <= lastfield)
-		nf = end - firstfield;
-	{
-		unsigned char buf[nf];
-		if (fseeko(f, (off_t)firstfield, SEEK_SET) ||
-			(fread(buf, 1, nf, f) != nf) ||
-			fclose(f)) {
-			fprintf(stderr, "Error: seeking, reading, or closing file %s: %s\n",
-					fn, strerror(errno));
-			fclose(f);
-			il_free(list);
-			return NULL;
+
+	map = mmap(NULL, end, PROT_READ, MAP_SHARED, fileno(f), 0);
+	fclose(f);
+	if (map == MAP_FAILED) {
+		fprintf(stderr, "Error: couldn't mmap file %s: %s\n", fn, strerror(errno));
+		il_free(list);
+		return NULL;
+	}
+
+	for (i=firstfield; i<=lastfield && i < end; i++) {
+		if (map[i] == val) {
+			il_append(list, i);
+			if (il_size(list) == maxfields)
+				break;
 		}
-		for (i=0; i<nf; i++) {
-			if (buf[i] == 0) {
-				il_append(list, firstfield + i);
-				fields++;
-				if (fields == maxfields)
-					break;
-			}
-		}
-		// if the file was shorter than the last field requested, add the missing fields.
-		for (i=firstfield+nf; i<=lastfield; i++) {
-			if (fields == maxfields)
+	}
+
+	munmap(map, end);
+
+	if (val == 0) {
+		// fields larger than the file size are unsolved.
+		for (i=end; i<=lastfield; i++) {
+			if (il_size(list) == maxfields)
 				break;
 			il_append(list, i);
-			fields++;
 		}
 	}
 	return list;
+}
+
+il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
+	return solvedfile_getall_val(fn, firstfield, lastfield, maxfields, 0);
+}
+
+il* solvedfile_getall_solved(char* fn, int firstfield, int lastfield, int maxfields) {
+	return solvedfile_getall_val(fn, firstfield, lastfield, maxfields, 1);
 }
 
 int solvedfile_set(char* fn, int fieldnum) {

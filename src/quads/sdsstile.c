@@ -175,12 +175,14 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		for (i=0; i<h; i++) {
-			img[3*(i*w + w/2) + 0] = 255.0;
-		}
-		for (i=0; i<w; i++) {
-			img[3*(h/2*w + i) + 0] = 255.0;
-		}
+		/* draw a T to tell the world we're running:
+		   for (i=0; i<h; i++) {
+		   img[3*(i*w + w/2) + 0] = 255.0;
+		   }
+		   for (i=0; i<w; i++) {
+		   img[3*(h/2*w + i) + 0] = 255.0;
+		   }
+		*/
 
 		xscale = pixperx;
 		yscale = pixpery;

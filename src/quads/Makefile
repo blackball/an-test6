@@ -340,7 +340,8 @@ agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist_healpix.o \
 		solvedfile.o solvedclient.o intmap.o healpix.o $(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
-printsolved: printsolved.o mathutil.o boilerplate.o svn.o $(QFITS_LIB)
+printsolved: printsolved.o mathutil.o boilerplate.o svn.o \
+		solvedfile.o bl.o $(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 solvedserver: solvedserver.o solvedfile.o ioutils.o bl.o boilerplate.o svn.o $(QFITS_LIB)
