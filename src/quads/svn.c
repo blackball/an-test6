@@ -27,9 +27,13 @@ int svn_revision() {
 	return rev;
 }
 
-cosnt char* svn_url() {
+const char* svn_url() {
 	/* Ditto for "headurlstr". */
 	const char* headurlstr = "$HeadURL$";
-	strncpy(url_rtnval, headurlstr + 10, strlen(headurlstr) - 11);
+	char* cptr;
+	char* str = (char*)headurlstr + 10;
+	cptr = str + strlen(str) - 1;
+	while (cptr > str && *cptr != '/') cptr--;
+	strncpy(url_rtnval, str, cptr - str + 1);
 	return url_rtnval;
 }
