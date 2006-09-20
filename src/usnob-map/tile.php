@@ -36,7 +36,12 @@
 	$epsg = $_REQUEST["SRS"];
 	$lay = $_REQUEST["LAYERS"];
 
+	$sdss_file  = $_REQUEST["SDSS_FILE"];
+	$sdss_field = $_REQUEST["SDSS_FIELD"];
+
 	loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
+
+	loggit("SDSS file $sdss_file, field $sdss_field\n");
 
 	if ($epsg != "EPSG:4326") {
 			loggit("Wrong EPSG: $epsg.\n");
@@ -64,8 +69,14 @@
 	$lines = false;
 	$linesize = 0;
 	//loggit("Layers: $layers");
+	//$layerscmd = "";
 	foreach ($layers as $l => $lval) {
 		loggit("Layer $l, val $lval\n");
+		/*
+			if (strlen($lval) > 0) {
+			$layerscmd += "-l " . escapeshellarg($lval);
+			}
+		*/
 	}
 
 	if (in_array("lines10", $layers)) {
@@ -86,6 +97,7 @@
 	if ($lines) {
 		$cmd = $cmd . sprintf(" -l %f", $linesize);
 	}
+	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
 
 	loggit("Command: $cmd\n");
