@@ -20,8 +20,6 @@
 #include "mathutil.h"
 #include "merctree.h"
 #include "bl.h"
-#include "ppm.h"
-#include "pnm.h"
 
 #define OPTIONS "x:y:X:Y:w:h:l:f"
 
