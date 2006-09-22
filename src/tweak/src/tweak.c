@@ -140,7 +140,7 @@ void get_center_and_radius(double* ra, double* dec, int n,
 
 	double norm=0;
 	for (j=0; j<3; j++) 
-		norm += xyz_mean[j]*xyz_mear[j];
+		norm += xyz_mean[j]*xyz_mean[j];
 	norm = sqrt(norm);
 
 	for (j=0; j<3; j++) 
@@ -214,14 +214,22 @@ void get_shift(double* aimg, double* dimg, int nimg,
 	double* adshift = malloc(sizeof(double)*N*2);
 	int i, j;
 	FILE* blah = fopen("res.py", "w");
-	fprintf(blah, "[\n");
+	fprintf(blah, "img = mat('''[");
+	/*
 	for (i=0; i<nimg; i++)
 		for (j=0; j<ncat; j++) {
 			adshift[2*i*nimg+2*j+0] = aimg[i]-acat[j];
 			adshift[2*i*nimg+2*j+1] = dimg[i]-dcat[j];
 			fprintf(blah, "%f %f;\n", aimg[i]-acat[j], dimg[i]-dcat[j]);
 		}
-	fprintf(blah, "]\n");
+		*/
+	for (i=0; i<nimg; i++)
+		fprintf(blah, "%f %f;\n", aimg[i], dimg[i]);
+	fprintf(blah, "]''')\n");
+	fprintf(blah, "cat = mat('''[");
+	for (j=0; j<ncat; j++) {
+		fprintf(blah, "%f %f;\n", acat[j], dcat[j]);
+	fprintf(blah, "]''')\n");
 	fclose(blah);
 	exit(1);
 
