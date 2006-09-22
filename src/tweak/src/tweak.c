@@ -180,7 +180,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	double xyz[3];
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
 
-	kdtree_qres_t* kq = kdtree_rangesearch_nosort(kd, xyz, radius);
+	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz, radius);
 	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
 
 	*ra = malloc(sizeof(double)*kq->nres);
@@ -214,7 +214,6 @@ void get_shift(double* aimg, double* dimg, int nimg,
 	double* adshift = malloc(sizeof(double)*N*2);
 	int i, j;
 	FILE* blah = fopen("res.py", "w");
-	fprintf(blah, "img = mat('''[");
 	/*
 	for (i=0; i<nimg; i++)
 		for (j=0; j<ncat; j++) {
@@ -223,11 +222,12 @@ void get_shift(double* aimg, double* dimg, int nimg,
 			fprintf(blah, "%f %f;\n", aimg[i]-acat[j], dimg[i]-dcat[j]);
 		}
 		*/
+	fprintf(blah, "img = mat('''[");
 	for (i=0; i<nimg; i++)
 		fprintf(blah, "%f %f;\n", aimg[i], dimg[i]);
 	fprintf(blah, "]''')\n");
 	fprintf(blah, "cat = mat('''[");
-	for (j=0; j<ncat; j++) {
+	for (j=0; j<ncat; j++) 
 		fprintf(blah, "%f %f;\n", acat[j], dcat[j]);
 	fprintf(blah, "]''')\n");
 	fclose(blah);
