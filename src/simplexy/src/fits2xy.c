@@ -108,10 +108,12 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 
-		if (naxis != 2) {
-			fprintf(stderr, "Invalid image: NAXIS is not 2 in HDU %d!\n", kk);
-			continue;
-		}
+		// OH MY GOD the horror. 
+
+		//if (naxis != 2) {
+		//	fprintf(stderr, "Invalid image: NAXIS is not 2 in HDU %d!\n", kk);
+		//	continue;
+		//}
 
 		fits_get_img_size(fptr, 2, naxisn, &status);
 		if (status) {

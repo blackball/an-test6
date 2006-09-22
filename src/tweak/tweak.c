@@ -103,9 +103,9 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
+	*n = l;
 	fprintf(stderr, "n=%d\n", *n);
 
-	*n = l;
 	*x = malloc(sizeof(double)* *n);
 	*y = malloc(sizeof(double)* *n);
 	if (fits_read_col(fptr, TFLOAT, 1, 1, 1, *n, NULL, *x, NULL, &status)) {
@@ -180,22 +180,32 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	double xyz[3];
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
 
-	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz, radius);
+	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz, radius*radius);
 	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
+
+	*n = kq->nres;
+
+	// No stars? That's bad. Run away.
+	if (!*n)
+		return;
 
 	*ra = malloc(sizeof(double)*kq->nres);
 	*dec = malloc(sizeof(double)*kq->nres);
 	assert(*ra);
 	assert(*dec);
-	*n = kq->nres;
 
 	int i;
+	fprintf(stderr, "ref stars:\n");
 	for (i=0; i<kq->nres; i++) {
 		double *xyz = kq->results+3*i;
 		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
 		(*dec)[i] = rad2deg(z2dec(xyz[2]));
-		if (i < 30) 
+		if (i < 30) {
 			fprintf(stderr, "a=%f d=%f\n",(*ra)[i],(*dec)[i]);
+			fprintf(stderr, "x=%f y=%f z=%f\n",xyz[0],xyz[1], xyz[2]);
+			fprintf(stderr, "sdist=%f\n",sqrt(kq->sdists[i]));
+			fprintf(stderr, "sdistdeg=%f\n",kq->sdists[i]);
+		}
 	}
 
 	kdtree_free_query(kq);
@@ -204,7 +214,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 
 // FIXME in RADECSPACE!!! EWWWWWWWWWWWWWWWWWWWWWW
 void get_shift(double* aimg, double* dimg, int nimg,
-		double* acat, double* dcat, int ncat)
+               double* acat, double* dcat, int ncat)
 {
 
 	nimg = 100;
@@ -395,7 +405,15 @@ int main(int argc, char *argv[])
 		int n_ref;
 		get_reference_stars(ra_mean, dec_mean, radius,
 					&a_ref, &d_ref, &n_ref, hppat);
-
+		if (!n_ref)  {
+			// No reference stars? This is bad.
+			fprintf(stderr, "No reference stars; failing\n");
+			free(a);
+			free(d);
+			free(x);
+			free(y);
+			continue;
+		}
 		get_shift(a, d, n, a_ref, d_ref, n_ref);
 
 	}

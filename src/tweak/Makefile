@@ -2,8 +2,8 @@ CC=gcc
 CFLAGS=-g -Wall -O0 -I../cfitsio -I../wcstools-3.6.4 -I../quads \
        -I../quads/kdtree -I../quads/qfits
 LIBS= -L../cfitsio/ -lcfitsio -L../wcstools-3.6.4/libwcs -lwcs -lm
-OBJS= src/tweak.o ../quads/starutil.o ../quads/mathutil.o \
-      ../quads/kdtree/kdtree.o ../quads/kdtree/kdtree_fits_io.o \
+OBJS= tweak.o ../quads/starutil.o ../quads/mathutil.o \
+../quads/kdtree/kdtree.o   ../quads/kdtree/kdtree_fits_io.o \
 ../quads/qfits/byteswap.o  ../quads/qfits/fits_p.o    ../quads/qfits/simple.o \
 ../quads/qfits/cache.o     ../quads/qfits/fits_rw.o    ../quads/qfits/tfits.o \
 ../quads/qfits/expkey.o    ../quads/qfits/ieeefp-compat.o \
