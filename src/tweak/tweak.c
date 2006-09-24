@@ -213,15 +213,16 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 }
 
 // FIXME in RADECSPACE!!! EWWWWWWWWWWWWWWWWWWWWWW
-void get_shift(double* aimg, double* dimg, int nimg,
-               double* acat, double* dcat, int ncat)
+void get_shift(double* ximg, double* yimg, int nimg,
+               double* xcat, double* ycat, int ncat, 
+	       double* xshift, double* yshift)
 {
 
 	nimg = 100;
 	ncat = 100;
 	int N = nimg*ncat;
 	int Nleaf = 15;
-	double* adshift = malloc(sizeof(double)*N*2);
+	double* xyshift = malloc(sizeof(double)*N*2);
 	int i, j;
 	FILE* blah = fopen("res.py", "w");
 	/*
@@ -234,17 +235,17 @@ void get_shift(double* aimg, double* dimg, int nimg,
 		*/
 	fprintf(blah, "img = mat('''[");
 	for (i=0; i<nimg; i++)
-		fprintf(blah, "%f %f;\n", aimg[i], dimg[i]);
+		fprintf(blah, "%f %f;\n", ximg[i], yimg[i]);
 	fprintf(blah, "]''')\n");
 	fprintf(blah, "cat = mat('''[");
 	for (j=0; j<ncat; j++) 
-		fprintf(blah, "%f %f;\n", acat[j], dcat[j]);
+		fprintf(blah, "%f %f;\n", xcat[j], ycat[j]);
 	fprintf(blah, "]''')\n");
 	fclose(blah);
 	exit(1);
 
 	int levels = kdtree_compute_levels(N, Nleaf);
-	kdtree_t* kd = kdtree_build(adshift, N, 2, levels + 1);
+	kdtree_t* kd = kdtree_build(xyshift, N, 2, levels + 1);
 
 	double maxker = 0;
 	double* maxad;
@@ -376,6 +377,8 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
+		// FIXME BREAK HERE into new function
+
 		// At this point, we have an image. Now get the WCS data
 		wcs = get_wcs_from_hdu(fptr);
 		if (!wcs) {
@@ -385,8 +388,17 @@ int main(int argc, char *argv[])
 
 		// Extract xy
 		int n,jj;
-		float *x, *y;
-		get_xy(xyfptr, kk, &x, &y, &n);
+		float *xf, *yf;
+		get_xy(xyfptr, kk, &xf, &yf, &n);
+
+		// Convert to doubles
+		double *x, *y;
+		x = malloc(sizeof(double)*n);
+		y = malloc(sizeof(double)*n);
+		for (jj=0; jj<n; jj++) {
+			x[jj] = xf[jj];
+			y[jj] = yf[jj];
+		}
 
 		// Convert to ra dec
 		double *a, *d;
@@ -401,10 +413,11 @@ int main(int argc, char *argv[])
 		get_center_and_radius(a, d, n, &ra_mean, &dec_mean, &radius);
 		fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",ra_mean, dec_mean, radius);
 
+		// Get the reference stars from our catalog
 		double *a_ref, *d_ref;
 		int n_ref;
 		get_reference_stars(ra_mean, dec_mean, radius,
-					&a_ref, &d_ref, &n_ref, hppat);
+		                    &a_ref, &d_ref, &n_ref, hppat);
 		if (!n_ref)  {
 			// No reference stars? This is bad.
 			fprintf(stderr, "No reference stars; failing\n");
@@ -414,8 +427,17 @@ int main(int argc, char *argv[])
 			free(y);
 			continue;
 		}
-		get_shift(a, d, n, a_ref, d_ref, n_ref);
 
+		// Shift runs in XY; project reference stars
+		double *x_ref = malloc(sizeof(double)*n_ref);
+		double *y_ref = malloc(sizeof(double)*n_ref);
+		double xshift, yshift;
+		int offscr;
+		for (jj=0; jj<n_ref; jj++) {
+			wcs2pix(wcs, a_ref[jj], d_ref[jj],
+			        x_ref+jj, y_ref+jj, offscr);
+		}
+		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
 	}
 
 
