@@ -204,9 +204,6 @@ void hitlist_healpix_compute_vector(MatchObj* mo) {
 
 void init_pixinfo(pixinfo* node, int pix, int Nside) {
 	node->matchinds = NULL;
-	//node->healpix = pix;
-	//node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
-	//node->nn = -1;
 	node->neighbours = NULL;
 }
 
@@ -219,14 +216,8 @@ void ensure_pixinfo_inited(pixinfo* node, int pix, int Nside) {
 		memcpy(node->neighbours, neigh, nn * sizeof(int));
 		node->neighbours[nn] = -1;
 	}
-	/*
-	  if (node->nn == -1) {
-	  node->nn = healpix_get_neighbours_nside(pix, node->neighbours, Nside);
-	  }
-	*/
-	if (!node->matchinds) {
+	if (!node->matchinds)
 		node->matchinds = il_new(4);
-	}
 }
 
 void clear_pixinfo(pixinfo* node) {
@@ -266,22 +257,20 @@ hitlist* hitlist_healpix_new(double AgreeArcSec) {
 	if (Nside > 128)
 		Nside = 128;
 
-	hl = malloc(sizeof(hitlist));
+	hl = calloc(1, sizeof(hitlist));
 	hl->Nside = Nside;
-	hl->ntotal = 0;
-	hl->nbest = 0;
-	hl->best = NULL;
 	hl->npix = 12 * Nside * Nside;
 	hl->pix = malloc(hl->npix * sizeof(pixinfo));
 	if (!hl->pix) {
 		fprintf(stderr, "hitlist_healpix: failed to malloc the pixel array: %i bytes: %s.\n",
 				hl->npix * sizeof(pixinfo), strerror(errno));
+		free(hl);
 		return NULL;
 	}
 
-	for (p=0; p<hl->npix; p++) {
+	for (p=0; p<hl->npix; p++)
 		init_pixinfo(hl->pix + p, p, Nside);
-	}
+
 	hl->agreedist2 = AgreeTol2;
 	hl->matchlist = pl_new(16);
 	hl->memberlist = il_new(16);
@@ -320,10 +309,6 @@ int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double*
 	vec2[4] = m2->sMax[1];
 	vec2[5] = m2->sMax[2];
 
-	/*
-	  if (distsq_exceeds(vec1, vec2, 6, maxagreedist2))
-	  return 0;
-	*/
 	d2 = distsq(vec1, vec2, 6);
 	if (p_agreedist2)
 		*p_agreedist2 = d2;
