@@ -20,20 +20,16 @@
 #undef KD_DIM
 
 static inline double getx(const double* d, uint ind) {
-	// return d[ind*2];
-	return d[ind << 1];
+	return d[ind*2];
 }
 static inline double gety(const double* d, uint ind) {
-	// return d[ind*2 + 1];
-	return d[(ind << 1) | 1];
+	return d[ind*2 + 1];
 }
 static inline void setx(double* d, uint ind, double val) {
-	// d[ind*2] = val;
-	d[ind << 1] = val;
+	d[ind*2] = val;
 }
 static inline void sety(double* d, uint ind, double val) {
-	// d[ind*2 + 1] = val;
-	d[(ind << 1) | 1] = val;
+	d[ind*2 + 1] = val;
 }
 
 void solver_default_params(solver_params* params) {
