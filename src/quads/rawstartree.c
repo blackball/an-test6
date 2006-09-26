@@ -117,7 +117,7 @@ int main(int argc, char** args)
 				lastgrass = grass;
 			}
 
-			radec2xyzarr(entry->ra, entry->dec, xyz+3*i);
+			radec2xyzarr(deg2rad(entry->ra), deg2rad(entry->dec), xyz+3*i);
 		}
 		an_catalog_close(ancat);
 	}

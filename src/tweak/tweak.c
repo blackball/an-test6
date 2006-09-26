@@ -179,6 +179,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 
 	double xyz[3];
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
+	radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
 
 	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz, radius*radius);
 	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
@@ -203,8 +204,8 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 		if (i < 30) {
 			fprintf(stderr, "a=%f d=%f\n",(*ra)[i],(*dec)[i]);
 			fprintf(stderr, "x=%f y=%f z=%f\n",xyz[0],xyz[1], xyz[2]);
-			fprintf(stderr, "sdist=%f\n",sqrt(kq->sdists[i]));
-			fprintf(stderr, "sdistdeg=%f\n",kq->sdists[i]);
+			fprintf(stderr, "dist=%f\n",sqrt(kq->sdists[i]));
+			fprintf(stderr, "distdeg=%f\n",sqrt(kq->sdists[i]));
 		}
 	}
 
@@ -212,10 +213,9 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	kdtree_fits_close(kd);
 }
 
-// FIXME in RADECSPACE!!! EWWWWWWWWWWWWWWWWWWWWWW
 void get_shift(double* ximg, double* yimg, int nimg,
                double* xcat, double* ycat, int ncat, 
-	       double* xshift, double* yshift)
+               double* xshift, double* yshift)
 {
 
 	nimg = 100;
@@ -437,6 +437,8 @@ int main(int argc, char *argv[])
 			wcs2pix(wcs, a_ref[jj], d_ref[jj],
 			        x_ref+jj, y_ref+jj, offscr);
 		}
+
+		// Run our wonderful shift algorithm
 		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
 	}
 

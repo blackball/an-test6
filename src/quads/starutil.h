@@ -49,10 +49,10 @@ typedef unsigned char uchar;
 #define z2dec(z) (asin(z)) // result in radians
 
 inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
-
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec);
-
 inline void radec2xyzarr(double ra, double dec, double* xyz);
+inline void radec2xyzarrmany(double *ra, double *dec, double* xyz, int n);
+inline void radecdeg2xyzarrmany(double *ra, double *dec, double* xyz, int n);
 
 inline void project_hammer_aitoff_x(double x, double y, double z, double* projx, double* projy);
 

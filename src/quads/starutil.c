@@ -25,6 +25,21 @@ inline void radec2xyzarr(double ra, double dec, double* xyz) {
 	xyz[2] = sin(dec);
 }
 
+// xyz stored as xyzxyzxyz.
+inline void radec2xyzarrmany(double *ra, double *dec, double* xyz, int n) {
+	int i;
+	for (i=0; i<n; i++) {
+		radec2xyzarr(ra[i], dec[i], xyz+3*i);
+	}
+}
+
+inline void radecdeg2xyzarrmany(double *ra, double *dec, double* xyz, int n) {
+	int i;
+	for (i=0; i<n; i++) {
+		radec2xyzarr(deg2rad(ra[i]), deg2rad(dec[i]), xyz+3*i);
+	}
+}
+
 inline void project_equal_area(double x, double y, double z, double* projx, double* projy) {
 	double Xp = x*sqrt(1./(1. + z));
 	double Yp = y*sqrt(1./(1. + z));
