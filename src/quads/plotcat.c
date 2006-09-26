@@ -36,6 +36,9 @@ static void printHelp(char* progname) {
 		   "  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
 		   "  [-L <field-range-low>]\n"
 		   "  [-H <field-range-high>]\n"
+		   "\n"
+		   "  [-t]: for USNOB inputs, include Tycho-2 stars, even though their format isn't quite right.\n"
+		   "\n"
 		   "Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, and rdls.fits files.\n"
 		   "\n", progname);
 }
@@ -122,6 +125,7 @@ int main(int argc, char *argv[])
 
 	int fieldslow = -1;
 	int fieldshigh = -1;
+	int notycho = 1;
 
 	fields = il_new(32);
 
@@ -147,6 +151,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'H':
 			fieldshigh = atoi(optarg);
+			break;
+		case 't':
+			notycho = 0;
 			break;
 		default:
 			return (OPT_ERR);
@@ -336,6 +343,8 @@ int main(int argc, char *argv[])
 					z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
 				} else if (usnob) {
 					usnob_entry* entry = ((usnob_entry*)entries) + i;
+					if (notycho && (entry->ndetections == 0))
+						continue;
 					x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
 					y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
 					z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
