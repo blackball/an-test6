@@ -362,7 +362,7 @@ points.push(points[0]);
 }
 
 function addindexquad() {
-  var URL = BASE_URL + "quad.php?src=index&hp=$hp" +
+  var URL = BASE_URL + "quad.php?src=index&hp=" + hp +
       "&quad=" + indexobjs[0] + "," + indexobjs[1] + "," + indexobjs[2] +
       "," + indexobjs[3];
 
@@ -376,7 +376,7 @@ points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
 		parseFloat(quads[i].getAttribute("ra"+j))));
 }
 points.push(points[0]);
-    map.addOverlay(new GPolyline(points));
+    map.addOverlay(new GPolyline(points, "#ff0000"));
   }
 });
 

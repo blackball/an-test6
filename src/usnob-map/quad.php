@@ -34,7 +34,7 @@
 
 	$src = $_REQUEST["src"];
 	$is_sdss = ($src == "sdss");
-	$is_index = $(src == "index");
+	$is_index = ($src == "index");
 	if ($is_sdss) {
 		$needed = array("file", "field");
 		foreach ($needed as $n => $val) {
