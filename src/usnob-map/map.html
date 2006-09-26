@@ -38,12 +38,12 @@ Number of objects in this view: <input type="text" name="nobjs" value="" readonl
 (note, this box lies)
 </FORM>
 
-<script type="text/javascript">/*
+<! script type="text/javascript">
   <FORM name="debugform" ACTION="" METHOD="GET">
   <textarea ROWS=5 COLS=60 NAME="debug" READONLY></textarea>
   <!  input type="hidden" name="debug" value="">
   </FORM>
-*/</script>
+<! /script>
 
 <table width="60%">
 <tr>
@@ -96,7 +96,7 @@ function getGetData(){
 }
 
 function debug(txt) {
-//document.debugform.debug.value += txt;
+document.debugform.debug.value += txt;
 }
 
 //if (GBrowserIsCompatible()) {
@@ -340,6 +340,8 @@ function linktohere() {
 	window.location = url;
 }
 
+var sdssQuad = new GPolyline([]);
+
 function addquad() {
   var URL = BASE_URL + "quad.php?src=sdss&file=" + filenum + "&field=" + fieldnum +
       "&quad=" + fieldobjs[0] + "," + fieldobjs[1] + "," + fieldobjs[2] +
@@ -355,11 +357,15 @@ points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
 		parseFloat(quads[i].getAttribute("ra"+j))));
 }
 points.push(points[0]);
-    map.addOverlay(new GPolyline(points));
+sdssQuad = new GPolyline(points);
+map.addOverlay(sdssQuad);
+  map.addControl(new QuadControl(sdssQuad, "- SDSS QUAD", "+ SDSS QUAD", 7, 30));
   }
 });
 
 }
+
+var indexQuad = new GPolyline([]);
 
 function addindexquad() {
   var URL = BASE_URL + "quad.php?src=index&hp=" + hp +
@@ -376,12 +382,140 @@ points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
 		parseFloat(quads[i].getAttribute("ra"+j))));
 }
 points.push(points[0]);
-    map.addOverlay(new GPolyline(points, "#ff0000"));
+indexQuad = new GPolyline(points, "#ff0000");
+map.addOverlay(indexQuad);
+  map.addControl(new QuadControl(indexQuad, "- INDEX QUAD", "+ INDEX QUAD", 100, 30));
   }
 });
 
 }
 
+function QuadControl(quad, ontxt, offtxt, dx, dy) {
+this.myquad = quad;
+this.myontxt = ontxt;
+this.myofftxt = offtxt;
+this.dx = dx;
+this.dy = dy;
+this.on = true;
+this.toggleDiv = document.createElement("div");
+debug("QuadControl constructor: " + this.myontxt + "/" + this.myofftxt);
+}
+QuadControl.prototype = new GControl();
+QuadControl.prototype.click = function() {
+if (this.on) {
+this.on = false;
+map.removeOverlay(this.myquad);
+//txtNode.innerHTML = this.myofftxt;
+//txtNode.nodeValue = this.myofftxt;
+var newNode = document.createTextNode(this.myofftxt);
+var oldNode = this.toggleDiv.firstChild;
+debug("off txt: " + this.myofftxt);
+//this.toggleDiv.replaceChild(newNode, oldNode);
+this.toggleDiv.removeChild(oldNode);
+this.toggleDiv.appendChild(newNode);
+} else {
+this.on = true;
+map.addOverlay(this.myquad);
+//txtNode.innerHTML = this.myontxt;
+//txtNode.nodeValue = this.myontxt;
+var newNode = document.createTextNode(this.myontxt);
+var oldNode = this.toggleDiv.firstChild;
+debug("on txt: " + this.myontxt);
+//this.toggleDiv.replaceChild(newNode, oldNode);
+this.toggleDiv.removeChild(oldNode);
+this.toggleDiv.appendChild(newNode);
+//this.toggleDiv.replaceChild(newTxtNode, txtNode);
+//txtNode = newTxtNode;
+//this.toggleDiv.replaceChild(document.createTextNode(this.myontxt), txtNode);
+}
+//alert(txtNode.innerHTML);
+//alert(txtNode.nodeValue);
+}
+QuadControl.prototype.initialize = function(map) {
+  var container = document.createElement("div");
+  var txtNode = document.createTextNode(this.myontxt);
+  this.setButtonStyle_(this.toggleDiv);
+  container.appendChild(this.toggleDiv);
+this.toggleDiv.appendChild(txtNode);
+  GEvent.addDomListener(this.toggleDiv, "click", this.click);
+  map.getContainer().appendChild(container);
+  return container;
+}
+QuadControl.prototype.getDefaultPosition = function() {
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(this.dx, this.dy));
+}
+QuadControl.prototype.setButtonStyle_ = function(button) {
+//button.style.textDecoration = "underline";
+//button.style.color = "#b0b0b0";
+  button.style.color = "#000000";
+  button.style.backgroundColor = "white";
+//  button.style.font = "small small-caps Arial";
+  button.style.fontSize = "x-small";
+button.style.fontFamily = "Arial";
+//  button.style.font = "12px";
+//button.style.border = "1px solid black";
+//  button.style.border = "1px solid white #b0b0b0 #b0b0b0 white";
+  button.style.borderTop    = "1px solid white";
+  button.style.borderBottom = "1px solid #b0b0b0";
+  button.style.borderRight  = "1px solid #b0b0b0";
+  button.style.borderLeft   = "1px solid white";
+  button.style.padding = "1px";
+  button.style.marginBottom = "1px";
+  button.style.marginTop = "1px";
+  button.style.marginLeft = "1px";
+  button.style.marginRight = "1px";
+  button.style.textAlign = "center";
+//button.style.width = "6em";
+  button.style.cursor = "pointer";
+}
+
+/* The 'SdssQuadControl' toggles between showing and hiding
+   SDSS quad polylines. 
+function SdssQuadControl() {}
+SdssQuadControl.prototype = new GControl();
+SdssQuadControl.prototype.initialize = function(map) {
+var on = true;
+  var container = document.createElement("div");
+  var toggleDiv = document.createElement("div");
+  var txtNode = document.createTextNode("- SDSS Quad");
+  this.setButtonStyle_(toggleDiv);
+  container.appendChild(toggleDiv);
+toggleDiv.appendChild(txtNode);
+  GEvent.addDomListener(toggleDiv, "click", function() {
+if (on) {
+on = false;
+map.removeOverlay(sdssQuad);
+txtNode.innerHTML = "+ SDSS Quad";
+} else {
+on = true;
+map.addOverlay(sdssQuad);
+txtNode.innerHTML = "- SDSS Quad";
+}
+  });
+  map.getContainer().appendChild(container);
+  return container;
+}
+// By default, the control will appear in the top left corner of the
+// map with 7 pixels of padding.
+SdssQuadControl.prototype.getDefaultPosition = function() {
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(7, 30));
+}
+// Sets the proper CSS for the given button element.
+SdssQuadControl.prototype.setButtonStyle_ = function(button) {
+//button.style.textDecoration = "underline";
+  button.style.color = "#b0b0b0";
+  button.style.backgroundColor = "white";
+//  button.style.font = "small Arial";
+//  button.style.font = "12px";
+//button.style.border = "1px solid black";
+  button.style.border = "1px solid white";
+  button.style.padding = "2px";
+  button.style.marginBottom = "3px";
+  button.style.textAlign = "center";
+  button.style.width = "6em";
+  button.style.cursor = "pointer";
+}
+*/
 
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
@@ -392,9 +526,20 @@ if (gothp) {
   setTimeout("map.setMapType(usnobPlusSDSS);", 4);
 }
 if (gotquad) {
+//  map.addControl(new SdssQuadControl());
+/*
+  setTimeout("addquad();", 5);
+  map.addControl(new QuadControl(sdssQuad, "- SDSS QUAD", "+ SDSS QUAD", 7, 30));
+*/
+//setTimeout("addquad();map.addControl(new QuadControl(sdssQuad, \"- SDSS QUAD\", \"+ SDSS QUAD\", 7, 30));", 5);
   setTimeout("addquad();", 5);
 }
 if (gotindexquad) {
+/*
+  setTimeout("addindexquad();", 6);
+  map.addControl(new QuadControl(indexQuad, "- INDEX QUAD", "+ INDEX QUAD", 50, 30));
+*/
+//setTimeout("addindexquad();map.addControl(new QuadControl(indexQuad, \"- INDEX QUAD\", \"+ INDEX QUAD\", 50, 30));", 6);
   setTimeout("addindexquad();", 6);
 }
 /*
