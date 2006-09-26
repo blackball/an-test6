@@ -399,6 +399,14 @@ sdsstile: sdsstile.o rdlist.o xylist.o bl.o \
 		$(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
 
+indextile: indextile.o starkd.o healpix.o bl.o \
+		$(KDTREE_OBJS) $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
+
+indexquad: indexquad.o starkd.o bl.o \
+		$(KDTREE_OBJS) $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
+
 sdssquad: sdssquad.o rdlist.o xylist.o bl.o \
 		$(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
