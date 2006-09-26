@@ -9,8 +9,12 @@ CFLAGS :=
 #CFLAGS += -O0
 #CFLAGS += -O2
 #CFLAGS += -pg
+CFLAGS += -Wall
 CFLAGS += -fomit-frame-pointer
-CFLAGS += -O3 -ffast-math -Wall
+CFLAGS += -O3 
+# This wrecks our ability to do "fitsmd5" and similar fun byte-level tests
+#CFLAGS += -ffast-math 
+CFLAGS += -fno-math-errno -fno-trapping-math -ffinite-math-only -fno-signaling-nans
 
 # to turn off asserts:
 CFLAGS += -DNDEBUG
@@ -182,6 +186,10 @@ whitebalance.o: whitebalance.c
 
 pnmutils.o: pnmutils.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+
+## DEBUG
+kdtst: kdtst.o $(KDTREE_OBJS) $(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
 
 .PHONY: tags
 tags:
@@ -405,7 +413,7 @@ tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(QFITS_LIB)
 #CUTEST_L := kdtree/CuTest/CuTest.o 
 #CFLAGS += $(CUTEST_I)
 
-%.o:	%.c
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
