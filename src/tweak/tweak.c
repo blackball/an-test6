@@ -270,7 +270,32 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	}
 }
 
+// Take shift in image plane and do a switcharoo to make the wcs something
+// better
+wcs_t* wcs_shift(wcs_t* wcs, double xs, double ys)
+{
+	wcs_t* swcs = malloc(sizeof(wcs_t));
+
+	// NOT SAFE
+	memcpy(swcs, wcs, sizeof(wcs_t));
+
+	double crpixx = wcs->xrefpix;
+	double crpixy = wcs->yrefpix;
+
+	wcs->xrefpix -= xs;
+	wcs->yrefpix -= ys;
+
+	// now reproject the old crpix[xy] into swcs
+	pix2wcs(wcs, crpixx, crpixy, &swcs->xref, &swcs->yref);
+
+	wcs->xrefpix = crpixx;
+	wcs->yrefpix = crpixy;
+
+	return swcs;
+}
+
 /* Fink-Hogg shift */
+
 /* This one isn't going to be fun. */
 
 /* spherematch */
