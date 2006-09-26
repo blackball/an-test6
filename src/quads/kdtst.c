@@ -40,11 +40,7 @@ int main(int argc, char** args) {
 	int d;
 	int i;
 	double* data2;
-	int Nleaf = 5;
 	int levels = 8;
-
-	double lowvals[] = { 0.0, 0.0 };
-	double highvals[] = { 10.0, 10.0 };
 
 	for (d=0; d<D; d++)
 		pt[d] = 10.0 * rand() / (double)RAND_MAX;
