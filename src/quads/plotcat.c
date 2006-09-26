@@ -1,6 +1,8 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
+#include <netinet/in.h>
 
 #include "keywords.h"
 
@@ -23,7 +25,7 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 #include "rdlist.h"
 #include "boilerplate.h"
 
-#define OPTIONS "bhgN:f:t"
+#define OPTIONS "bhgN:f:ts"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
@@ -33,6 +35,7 @@ static void printHelp(char* progname) {
 		   "  -b sets reverse (negative-Z projection)\n"
 		   "  -g adds RA,DEC grid\n"
 		   "  -N sets edge size of output image\n"
+		   "  [-s]: write two-byte-per-pixel PGM (default is one-byte-per-pixel)\n"
 		   "  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
 		   "  [-L <field-range-low>]\n"
 		   "  [-H <field-range-high>]\n"
@@ -104,13 +107,11 @@ int main(int argc, char *argv[])
 	double x=0,y=0,z=0;
 	int maxval;
 	int X,Y;
-	//unsigned long int saturated=0;
 	char* fname = NULL;
 	int argchar;
 	FILE* fid;
 	qfits_header* hdr;
 	char* valstr;
-	void* entries;
 	int BLOCK = 100000;
 	catalog* cat;
 	an_catalog* ancat;
@@ -126,11 +127,15 @@ int main(int argc, char *argv[])
 	int fieldslow = -1;
 	int fieldshigh = -1;
 	int notycho = 1;
+	int imgmax = 255;
 
 	fields = il_new(32);
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 's':
+			imgmax = 65535;
+			break;
 		case 'b':
 			reverse = 1;
 			break;
@@ -179,13 +184,8 @@ int main(int argc, char *argv[])
 
 	projection=calloc(sizeof(double), N*N);
 
-	entries = malloc(BLOCK * imax(imax(sizeof(usnob_entry),
-									   2*sizeof(double)), // rdls
-								  imax(sizeof(tycho2_entry),
-									   sizeof(an_entry))));
-
 	for (; optind<argc; optind++) {
-		int n, off, i;
+		int i;
 		char* key;
 		cat = NULL;
 		ancat = NULL;
@@ -250,7 +250,6 @@ int main(int argc, char *argv[])
 						return 1;
 					}
 					fprintf(stderr, "Field %i has %i entries.\n", fld, dl_size(rd)/2);
-					//dl_merge_lists(rdls, rd);
 					M = dl_size(rd);
 					for (j=0; j<M; j++)
 						dl_append(rdls, dl_get(rd, j));
@@ -274,6 +273,7 @@ int main(int argc, char *argv[])
 					exit(-1);
 				}
 				numstars = ancat->nentries;
+				ancat->br.blocksize = BLOCK;
 			}
 		}
 		if (qfits_header_getboolean(hdr, "USNOB", 0)) {
@@ -284,6 +284,7 @@ int main(int argc, char *argv[])
 				exit(-1);
 			}
 			numstars = usnob->nentries;
+			usnob->br.blocksize = BLOCK;
 		} else if (qfits_header_getboolean(hdr, "TYCHO_2", 0)) {
 			fprintf(stderr, "File has TYCHO_2 = T header.\n");
 			tycho = tycho2_fits_open(fname);
@@ -292,6 +293,7 @@ int main(int argc, char *argv[])
 				exit(-1);
 			}
 			numstars = tycho->nentries;
+			tycho->br.blocksize = BLOCK;
 		}
 		qfits_header_destroy(hdr);
 		if (!(cat || ancat || usnob || tycho || rdls)) {
@@ -301,74 +303,60 @@ int main(int argc, char *argv[])
 
 		fprintf(stderr, "Reading %i stars...\n", numstars);
 
-		for (off=0; off<numstars; off+=n) {
-			if (off + BLOCK > numstars)
-				n = numstars - off;
-			else
-				n = BLOCK;
+		for (i=0; i<numstars; i++) {
+			if (is_power_of_two(i+1)) {
+				if (backside) {
+					fprintf(stderr, "%i stars project onto the opposite hemisphere.\n", backside);
+				}
+				fprintf(stderr,"  done %u/%u stars\r",i+1,numstars);
+			}
 
-			if (ancat) {
-				an_catalog_read_entries(ancat, off, n, entries);
+			if (cat) {
+				double* xyz;
+				xyz = catalog_get_star(cat, i);
+				x = xyz[0];
+				y = xyz[1];
+				z = xyz[2];
+			} else if (rdls) {
+				double ra, dec;
+				ra  = dl_get(rdls, 2*i);
+				dec = dl_get(rdls, 2*i+1);
+				x = radec2x(deg2rad(ra), deg2rad(dec));
+				y = radec2y(deg2rad(ra), deg2rad(dec));
+				z = radec2z(deg2rad(ra), deg2rad(dec));
+			} else if (ancat) {
+				an_entry* entry = an_catalog_read_entry(ancat);
+				x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
+				y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
+				z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
 			} else if (usnob) {
-				usnob_fits_read_entries(usnob, off, n, entries);
+				usnob_entry* entry = usnob_fits_read_entry(usnob);
+				if (notycho && (entry->ndetections == 0))
+					continue;
+				x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
+				y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
+				z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
 			} else if (tycho) {
-				tycho2_fits_read_entries(tycho, off, n, entries);
+				tycho2_entry* entry = tycho2_fits_read_entry(tycho);
+				x = radec2x(deg2rad(entry->RA), deg2rad(entry->DEC));
+				y = radec2y(deg2rad(entry->RA), deg2rad(entry->DEC));
+				z = radec2z(deg2rad(entry->RA), deg2rad(entry->DEC));
 			}
 
-			for (i=0; i<n; i++) {
-				if(is_power_of_two(off+i+1)) {
-					if (backside) {
-						fprintf(stderr, "%i stars project onto the opposite hemisphere.\n", backside);
-					}
-					fprintf(stderr,"  done %u/%u stars\r",off+i+1,numstars);
+			if (!hammer) {
+				if ((z <= 0 && !reverse) || (z >= 0 && reverse)) {
+					backside++;
+					continue;
 				}
-
-				if (cat) {
-					double* xyz;
-					xyz = catalog_get_star(cat, off+i);
-					x = xyz[0];
-					y = xyz[1];
-					z = xyz[2];
-				} else if (rdls) {
-					double ra, dec;
-					ra  = dl_get(rdls, 2*(off+i));
-					dec = dl_get(rdls, 2*(off+i)+1);
-					x = radec2x(deg2rad(ra), deg2rad(dec));
-					y = radec2y(deg2rad(ra), deg2rad(dec));
-					z = radec2z(deg2rad(ra), deg2rad(dec));
-				} else if (ancat) {
-					an_entry* entry = ((an_entry*)entries) + i;
-					x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
-					y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
-					z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
-				} else if (usnob) {
-					usnob_entry* entry = ((usnob_entry*)entries) + i;
-					if (notycho && (entry->ndetections == 0))
-						continue;
-					x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
-					y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
-					z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
-				} else if (tycho) {
-					tycho2_entry* entry = ((tycho2_entry*)entries) + i;
-					x = radec2x(deg2rad(entry->RA), deg2rad(entry->DEC));
-					y = radec2y(deg2rad(entry->RA), deg2rad(entry->DEC));
-					z = radec2z(deg2rad(entry->RA), deg2rad(entry->DEC));
-				}
-				if (!hammer) {
-					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) {
-						backside++;
-						continue;
-					}
-					if (reverse)
-						z = -z;
-					project_equal_area(x, y, z, &px, &py);
-				} else {
-					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &px, &py);
-				}
-				getxy(px, py, N, &X, &Y);
-				projection[X+N*Y]++;
+				if (reverse)
+					z = -z;
+				project_equal_area(x, y, z, &px, &py);
+			} else {
+				/* Hammer-Aitoff projection */
+				project_hammer_aitoff_x(x, y, z, &px, &py);
 			}
+			getxy(px, py, N, &X, &Y);
+			projection[X+N*Y]++;
 		}
 
 		if (cat)
@@ -382,8 +370,6 @@ int main(int argc, char *argv[])
 		if (tycho)
 			tycho2_fits_close(tycho);
 	}
-
-	free(entries);
 
 	maxval = 0;
 	for (ii = 0; ii < (N*N); ii++)
@@ -446,20 +432,27 @@ int main(int argc, char *argv[])
 	}
 
 	// Output PGM format
-	printf("P5 %d %d %d\n",N,N, 255);
+	printf("P5 %d %d %d\n",N, N, imgmax);
 	// hack - we reuse the "projection" storage to store the image data:
-	img = (unsigned char*)projection;
-	for (ii=0; ii<(N*N); ii++)
-		img[ii] = (int)(255.0 * projection[ii] / (double)maxval);
-	if (fwrite(img, 1, N*N, stdout) != (N*N)) {
-		fprintf(stderr, "Failed to write image: %s\n", strerror(errno));
-		exit(-1);
+	if (imgmax == 255) {
+		img = (unsigned char*)projection;
+		for (ii=0; ii<(N*N); ii++)
+			img[ii] = (int)((double)imgmax * projection[ii] / (double)maxval);
+		if (fwrite(img, 1, N*N, stdout) != (N*N)) {
+			fprintf(stderr, "Failed to write image: %s\n", strerror(errno));
+			exit(-1);
+		}
+	} else {
+		uint16_t* img = (uint16_t*)projection;
+		for (ii=0; ii<(N*N); ii++) {
+			img[ii] = (int)((double)imgmax * projection[ii] / (double)maxval);
+			img[ii] = htons(img[ii]);
+		}
+		if (fwrite(img, 2, N*N, stdout) != (N*N)) {
+			fprintf(stderr, "Failed to write image: %s\n", strerror(errno));
+			exit(-1);
+		}
 	}
-	/*
-	  saturated++;
-	  fprintf(stderr," %lu/%lu pixels saturated\n",
-	  saturated,((unsigned long int)N*(unsigned long int)N));
-	*/
 	free(projection);
 
 	il_free(fields);

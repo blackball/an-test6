@@ -32,9 +32,6 @@ int main(int argc, char *argv[]) {
 
 	double px0, py0, px1, py1;
 	double pixperx, pixpery;
-	//double xzoom, yzoom;
-	//int zoomlevel;
-	//int xpix0, xpix1, ypix0, ypix1;
 
 	int filenum = -1;
 	int fieldnum = -1;
@@ -175,15 +172,6 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		/* draw a T to tell the world we're running:
-		   for (i=0; i<h; i++) {
-		   img[3*(i*w + w/2) + 0] = 255.0;
-		   }
-		   for (i=0; i<w; i++) {
-		   img[3*(h/2*w + i) + 0] = 255.0;
-		   }
-		*/
-
 		xscale = pixperx;
 		yscale = pixpery;
 
@@ -225,7 +213,6 @@ int main(int argc, char *argv[]) {
 			}
 			Nib++;
 
-			//img[3*(iy*w+ix) + 0] += flux->rflux;
 			img[3*(iy*w + ix) + 0] = 255.0;
 			if (ix > 0)
 				img[3*(iy*w + ix - 1) + 0] = 255.0;
@@ -239,67 +226,6 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "%i stars outside image bounds.\n", Noob);
 		fprintf(stderr, "%i stars inside image bounds.\n", Nib);
-
-		/*
-		  fprintf(stderr, "Query: x:[%g,%g] y:[%g,%g]\n",
-		  querylow[0], queryhigh[0], querylow[1], queryhigh[1]);
-		  if (wrapra)
-		  fprintf(stderr, "Query': x:[%g,%g] y:[%g,%g]\n",
-		  wraplow[0], wraphigh[0], wraplow[1], wraphigh[1]);
-		*/
-
-		/*
-		  int ix, iy;
-		  real* pt;
-
-		  if (j >= iwpix) {
-		  ix = (int)rint(((pt[0] - wraplow[0]) + (1.0 - querylow[0])) * xscale);
-		  } else {
-		  ix = (int)rint((pt[0] - querylow[0]) * xscale);
-		  }
-		  if (ix < 0 || ix >= w) {
-		  Noob++;
-		  continue;
-		  }
-		  // flip vertically
-		  iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
-		  if (iy < 0 || iy >= h) {
-		  Noob++;
-		  continue;
-		  }
-		  Nib++;
-		  img[3*(iy*w+ix) + 0] += flux->rflux;
-		  img[3*(iy*w+ix) + 1] += flux->bflux;
-		  img[3*(iy*w+ix) + 2] += flux->nflux;
-		  }
-
-		  {
-		  float rmax, bmax, nmax;
-		  float offset = -25;
-		  float minval = exp(offset);
-		  float rscale, bscale, nscale;
-		  rmax = bmax = nmax = 0.0;
-		  for (i=0; i<(w*h); i++) {
-		  if (img[3*i + 0] > rmax) rmax = img[3*i + 0];
-		  if (img[3*i + 1] > bmax) bmax = img[3*i + 1];
-		  if (img[3*i + 2] > nmax) nmax = img[3*i + 2];
-		  }
-		  rscale = 255.0 / (log(rmax) - offset);
-		  bscale = 255.0 / (log(bmax) - offset);
-		  nscale = 255.0 / (log(nmax) - offset);
-
-		  fprintf(stderr, "Maxes: R %g, B %g, N %g.\n", rmax, bmax, nmax);
-
-		  printf("P6 %d %d %d\n", w, h, 255);
-		  for (i=0; i<(w*h); i++) {
-		  unsigned char pix[3];
-		  pix[0] = (log(max(img[3*i+0], minval)) - offset) * rscale;
-		  pix[1] = (log(max(img[3*i+1], minval)) - offset) * bscale;
-		  pix[2] = (log(max(img[3*i+2], minval)) - offset) * nscale;
-		  fwrite(pix, 1, 3, stdout);
-		  }
-		  }
-		*/
 
 		printf("P6 %d %d %d\n", w, h, 255);
 		for (i=0; i<(w*h); i++) {
