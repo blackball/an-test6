@@ -256,7 +256,7 @@ int main(int argc, char** args) {
 				continue;
 			}
 			if (addrsz != sizeof(clientaddr)) {
-				fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, sizeof(clientaddr));
+				fprintf(stderr, "Error: client address has size %i, not %i.\n", addrsz, (uint)sizeof(clientaddr));
 				continue;
 			}
 			printf("Connection from %s.\n", inet_ntoa(clientaddr.sin_addr));

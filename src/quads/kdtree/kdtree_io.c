@@ -393,17 +393,17 @@ kdtree_t* kdtree_read(FILE* fin) {
     }
     if (rs != sizeof(real)) {
 		fprintf(stderr, "Size of real doesn't match: %i, %i\n",
-				(int)rs, sizeof(real));
+			(int)rs, (uint)sizeof(real));
 		return NULL;
     }
     if (is != sizeof(unsigned int)) {
 		fprintf(stderr, "Size of uint doesn't match: %i, %i\n",
-				(int)is, sizeof(unsigned int));
+			(int)is, (uint)sizeof(unsigned int));
 		return NULL;
     }
     if (kdns != sizeof(kdtree_node_t)) {
 		fprintf(stderr, "Size of kdtree node doesn't match: %i, %i\n",
-				(int)kdns, sizeof(kdtree_node_t));
+			(int)kdns, (uint)sizeof(kdtree_node_t));
 		return NULL;
     }
     if (endian != ENDIAN_DETECTOR) {

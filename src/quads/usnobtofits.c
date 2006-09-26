@@ -129,7 +129,7 @@ int main(int argc, char** args) {
 
 		if (map_size % USNOB_RECORD_SIZE) {
 			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-byte records.\n",
-					infn, map_size, USNOB_RECORD_SIZE);
+					infn, (unsigned int)map_size, USNOB_RECORD_SIZE);
 		}
 
 		for (i=0; i<map_size; i+=USNOB_RECORD_SIZE) {

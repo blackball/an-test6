@@ -2118,11 +2118,11 @@ static char * qfits_bintable_field_to_string(
 			} else {
 				/* For each atom of the column */
 				for (i=0 ; i<col->atom_nb-1 ; i++) {
-					sprintf(ctmp, "%lld, ", kcol[i]) ;
+					sprintf(ctmp, "%lld, ", (long long int)kcol[i]) ;
 					strcat(stmp, ctmp) ;
 				}
 				/* Handle the last atom differently: no ',' */
-				sprintf(ctmp, "%lld", kcol[col->atom_nb-1]);
+				sprintf(ctmp, "%lld", (long long int)kcol[col->atom_nb-1]);
 				strcat(stmp, ctmp) ;
 			}
 			break ;

@@ -68,7 +68,7 @@ kdtree_t* kdtree_fits_read_file_extras(char* fn, extra_table* extras, int nextra
 
 	if (sizeof(real) != realsz) {
 		fprintf(stderr, "File was written with sizeof(real)=%i, but currently sizeof(real)=%i.\n",
-				realsz, sizeof(real));
+			realsz, (uint)sizeof(real));
 		fclose(fid);
 		return NULL;
 	}
@@ -114,11 +114,11 @@ kdtree_t* kdtree_fits_read_file_extras(char* fn, extra_table* extras, int nextra
 				nodesize*nnodes, fits_blocks_needed(nodesize*nnodes),
 				sizenodes, fits_blocks_needed(sizenodes));
 		fprintf(stderr, "  data (%i -> %i vs %i)\n",
-				ndata * ndim * sizeof(real), fits_blocks_needed(ndata*ndim*sizeof(real)),
+			ndata * ndim * (uint)sizeof(real), fits_blocks_needed(ndata*ndim*sizeof(real)),
 				sizedata);
 		if (hasperm)
 			fprintf(stderr, "  perm (%i -> %i vs %i)\n",
-					ndata * sizeof(int), fits_blocks_needed(ndata * sizeof(int)), sizeperm);
+					ndata * (uint)sizeof(int), fits_blocks_needed(ndata * sizeof(int)), sizeperm);
 		fclose(fid);
 		return NULL;
 	}
@@ -244,7 +244,7 @@ int kdtree_fits_write_file_extras(kdtree_t* kdtree, char* fn, qfits_header* hdr,
     header = qfits_table_prim_header_default();
     fits_add_endian(header);
     fits_add_uint_size(header);
-	sprintf(val, "%i", sizeof(real));
+	sprintf(val, "%i", (uint)sizeof(real));
 	qfits_header_add(header, "REAL_SZ", val, "sizeof(real)", NULL);
     sprintf(val, "%i", kdtree->ndata);
     qfits_header_add(header, "NDATA", val, "kdtree: number of data points", NULL);

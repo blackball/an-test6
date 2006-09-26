@@ -350,13 +350,13 @@ int fits_find_column(qfits_table* table, char* colname) {
 
 void fits_add_uint_size(qfits_header* header) {
     char val[8];
-	sprintf(val, "%i", sizeof(uint));
+	sprintf(val, "%i", (uint)sizeof(uint));
 	qfits_header_add(header, "UINT_SZ", val, "sizeof(uint)", NULL);
 }
 
 void fits_add_double_size(qfits_header* header) {
     char val[8];
-	sprintf(val, "%i", sizeof(double));
+	sprintf(val, "%i", (uint)sizeof(double));
 	qfits_header_add(header, "DUBL_SZ", val, "sizeof(double)", NULL);
 }
 
@@ -365,7 +365,7 @@ int fits_check_uint_size(qfits_header* header) {
 	uintsz = qfits_header_getint(header, "UINT_SZ", -1);
 	if (sizeof(uint) != uintsz) {
 		fprintf(stderr, "File was written with sizeof(uint)=%i, but currently sizeof(uint)=%i.\n",
-				uintsz, sizeof(uint));
+			uintsz, (uint)sizeof(uint));
         return -1;
 	}
     return 0;
@@ -376,7 +376,7 @@ int fits_check_double_size(qfits_header* header) {
 	doublesz = qfits_header_getint(header, "DUBL_SZ", -1);
 	if (sizeof(double) != doublesz) {
 		fprintf(stderr, "File was written with sizeof(double)=%i, but currently sizeof(double)=%i.\n",
-				doublesz, sizeof(double));
+			doublesz, (uint)sizeof(double));
         return -1;
 	}
     return 0;
