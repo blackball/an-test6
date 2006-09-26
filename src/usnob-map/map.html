@@ -104,7 +104,8 @@ function debug(txt) {
 var map = new GMap(document.getElementById("map"));
 
 var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
-var WMS_URL = BASE_URL + "tile.php?map=usnob";
+var TILE_URL = BASE_URL + "tile.php?";
+var USNOB_URL = BASE_URL + "map=usnob";
 
 var getdata = getGetData();
 if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
@@ -112,7 +113,7 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
   var fieldnum = Number(getdata["SDSS_FIELD"]);
   if (filenum > 0 && filenum <= 35 && fieldnum >= 0 && fieldnum < 10000) {
     var sdss = true;
-    var SDSS_WMS_URL = WMS_URL + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
+    var SDSS_URL = TILE_URL + "map=sdss" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
   }
   if ("SDSS_QUAD" in getdata) {
     var quadstr = getdata["SDSS_QUAD"];
@@ -132,6 +133,30 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
     }
   }
 }
+if ("HP" in getdata) {
+var hp = Number(getdata["HP"]);
+if (hp >= 0 && hp < 12) {
+var gothp = true;
+var INDEX_URL = TILE_URL + "map=index" + "&HP=" + hp;
+}
+  if ("INDEX_QUAD" in getdata) {
+    var quadstr = getdata["INDEX_QUAD"];
+    debug("quadstr is " + quadstr + "\n");
+    if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
+      debug("quadstr matches.\n");
+      var indexobjs = quadstr.match(/\d+/g);
+      debug("indexobjs is " + indexobjs + "\n");
+      if (indexobjs != null) {
+        for (var i=0; i<indexobjs.length; i++) {
+          debug("indexobjs[" + i + "] is " + indexobjs[i] + "\n");
+        }
+      }
+      if (indexobjs != null && indexobjs.length == 4) {
+        var gotindexquad = true;
+      }
+    }
+  }
+}
 
 
 var overview = true;
@@ -142,7 +167,7 @@ if (("over" in getdata) && (getdata["over"] == "no")) {
 var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
 usnobTile.myLayers='usnob';
 usnobTile.myFormat='image/png';
-usnobTile.myBaseURL=WMS_URL;
+usnobTile.myBaseURL=USNOB_URL;
 usnobTile.getTileUrl=CustomGetTileUrl;
 
 /*
@@ -156,8 +181,14 @@ usnobTile.getTileUrl=CustomGetTileUrl;
 var sdssTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
 sdssTile.myLayers='sdss';
 sdssTile.myFormat='image/png';
-sdssTile.myBaseURL=SDSS_WMS_URL;
+sdssTile.myBaseURL=SDSS_URL;
 sdssTile.getTileUrl=CustomGetTileUrl;
+
+var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
+indexTile.myLayers='index';
+indexTile.myFormat='image/png';
+indexTile.myBaseURL=INDEX_URL;
+indexTile.getTileUrl=CustomGetTileUrl;
 
 /*
   http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=usnob&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:54004&BBOX=-13677947.379473988,4552576.405486049,-13658379.500533395,4572062.879663667&WIDTH=256&HEIGHT=256&reaspect=false
@@ -168,12 +199,18 @@ var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNO
 if (sdss) {
   var usnobPlusSDSS = new GMapType([usnobTile,sdssTile], G_SATELLITE_MAP.getProjection(), "USNOB+SDSS", G_SATELLITE_MAP);
 }
+if (gothp) {
+  var indexPlusSDSS = new GMapType([indexTile,sdssTile], G_SATELLITE_MAP.getProjection(), "INDEX+SDSS", G_SATELLITE_MAP);
+}
 
 map.getMapTypes().length = 0;
 map.addMapType(usnobType);
 if (sdss) {
   map.addMapType(usnobPlusSDSS);
   //map.addMapType(usnobType2);
+}
+if (gothp) {
+  map.addMapType(indexPlusSDSS);
 }
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
@@ -304,7 +341,7 @@ function linktohere() {
 }
 
 function addquad() {
-  var URL = BASE_URL + "quad.php?file=" + filenum + "&field=" + fieldnum +
+  var URL = BASE_URL + "quad.php?src=sdss&file=" + filenum + "&field=" + fieldnum +
       "&quad=" + fieldobjs[0] + "," + fieldobjs[1] + "," + fieldobjs[2] +
       "," + fieldobjs[3];
 
@@ -324,14 +361,41 @@ points.push(points[0]);
 
 }
 
+function addindexquad() {
+  var URL = BASE_URL + "quad.php?src=index&hp=$hp" +
+      "&quad=" + indexobjs[0] + "," + indexobjs[1] + "," + indexobjs[2] +
+      "," + indexobjs[3];
+
+  GDownloadUrl(URL, function(data, responseCode){
+  var xml = GXml.parse(data);
+  var quads = xml.documentElement.getElementsByTagName("quad");
+  for (var i = 0; i < quads.length; i++) {
+    var points = [];
+    for (var j=0; j<4; j++) {
+points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
+		parseFloat(quads[i].getAttribute("ra"+j))));
+}
+points.push(points[0]);
+    map.addOverlay(new GPolyline(points));
+  }
+});
+
+}
+
+
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
-if (sdss) {
+if (gothp) {
+  setTimeout("map.setMapType(indexPlusSDSS);", 4);
+} else if (sdss) {
   setTimeout("map.setMapType(usnobPlusSDSS);", 4);
 }
 if (gotquad) {
   setTimeout("addquad();", 5);
+}
+if (gotindexquad) {
+  setTimeout("addindexquad();", 6);
 }
 /*
 info_html = "<b>testing</b>";

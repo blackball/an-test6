@@ -39,9 +39,11 @@
 	$sdss_file  = $_REQUEST["SDSS_FILE"];
 	$sdss_field = $_REQUEST["SDSS_FIELD"];
 
-	loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
+	$hpstr = $_REQUEST["HP"];
 
+	loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
 	loggit("SDSS file $sdss_file, field $sdss_field\n");
+	loggit("Healpix $hpstr\n");
 
 	if ($epsg != "EPSG:4326") {
 			loggit("Wrong EPSG: $epsg.\n");
@@ -65,6 +67,7 @@
 	}
 
 	if (strlen("$sdss_file") && strlen("$sdss_field")) {
+		$gotsdss = 1;
 		if ((sscanf($sdss_file, "%d", $sdssfile) != 1) ||
 			(sscanf($sdss_field, "%d", $sdssfield) != 1) ||
 			($sdssfile < 1) || ($sdssfile > 35) || ($sdssfield < 0) || ($sdssfield > 10000)) {
@@ -74,7 +77,15 @@
 			exit;
 		}
 	}
-
+	if (strlen("$hpstr")) {
+		$gothp = 1;
+		if (sscanf($hpstr, "%d", $hp) != 1) {
+			loggit("Failed to parse healpix.\n");
+			header("Content-type: text/html");
+			printf("<html><body>Invalid request: failed to parse healpix.</body></html>\n\n");
+			exit;
+		}
+	}
 
 	$layers = explode(" ", $lay);
 	$lines = false;
@@ -99,13 +110,16 @@
 	loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1.\n");
 	loggit("w=$w, h=$h.\n");
 	loggit("sdss file=$sdssfile field=$sdssfield.\n");
+	loggit("hp=$hp\n");
 	if ($lines) {
 		loggit("linesize=$linesize\n");
 	}
 
 	// http://ca.php.net/manual/en/function.escapeshellarg.php
 
-	if ($sdssfile && $sdssfield) {
+	if ($gothp) {
+		$cmd = sprintf("indextile -H %d", $hp);
+	} else if ($gotsdss) {
 		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
 	} else {
 		$cmd = "usnobtile";
@@ -116,7 +130,7 @@
 	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
-	if ($sdssfile && $sdssfield) {
+	if ($gotsdss) {
 		$cmd = $cmd . " -transparent =black";
 	}
 
