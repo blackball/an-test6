@@ -15,6 +15,7 @@
 #include "mathutil.h"
 #include "rdlist.h"
 #include "bl.h"
+#include "permutedsort.h"
 
 #define OPTIONS "s:S:q:"
 
@@ -81,11 +82,32 @@ int main(int argc, char *argv[]) {
 
 	printf("<quads>\n");
 	for (j=0; j<il_size(quads)/4; j++) {
+		double xyzABCD[12];
+		double xyz0[3];
+		double theta[4];
+		int inds[4];
+		int perm[4];
+		for (i=0; i<4; i++) {
+			inds[i] = il_get(quads, j*4 + i);
+			if (inds[i] < 0 || inds[i] >= Nstars) {
+				fprintf(stderr, "Invalid starid %i\n", inds[i]);
+				exit(-1);
+			}
+			radec2xyzarr(deg2rad(radec[2*inds[i]]), deg2rad(radec[2*inds[i]+1]),
+						 xyzABCD + 3*i);
+		}
+		star_midpoint(xyz0, xyzABCD + 3*0, xyzABCD + 3*1);
+		for (i=0; i<4; i++) {
+			double x, y;
+			star_coords(xyzABCD + 3*i, xyz0, &x, &y);
+			theta[i] = atan2(x, y);
+			perm[i] = i;
+		}
+		permuted_sort_set_params(theta, sizeof(double), compare_doubles);
+		permuted_sort(perm, 4);
 		printf("  <quad");
 		for (i=0; i<4; i++) {
-			int ind = il_get(quads, j*4 + i);
-			if (ind < 0 || ind >= Nstars)
-				break;
+			int ind = inds[perm[i]];
 			printf(" ra%i=\"%g\" dec%i=\"%g\"", i, radec[2*ind], i, radec[2*ind+1]);
 		}
 		printf("/>\n");

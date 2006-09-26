@@ -26,3 +26,15 @@ void permuted_sort(int* perm, int Nperm) {
 	qsort(perm, Nperm, sizeof(int), compare_permuted);
 }
 
+
+int compare_doubles(const void* v1, const void* v2) {
+	const double d1 = *(double*)v1;
+	const double d2 = *(double*)v2;
+	if (d1 < d2)
+		return -1;
+	if (d1 > d2)
+		return 1;
+	return 0;
+}
+
+

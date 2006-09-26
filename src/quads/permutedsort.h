@@ -13,4 +13,10 @@ void permuted_sort_set_params(void* realarray, int array_stride,
 
 void permuted_sort(int* perm, int Nperm);
 
+
+/*
+  Some sort functions that might come in handy:
+ */
+int compare_doubles(const void* v1, const void* v2);
+
 #endif

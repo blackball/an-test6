@@ -19,6 +19,7 @@
 #include "healpix.h"
 #include "mathutil.h"
 #include "bl.h"
+#include "permutedsort.h"
 
 #define OPTIONS "q:H:"
 
@@ -65,14 +66,32 @@ int main(int argc, char *argv[]) {
 
 	printf("<quads>\n");
 	for (j=0; j<il_size(quads)/4; j++) {
+		double xyzABCD[12];
+		double xyz0[3];
+		double theta[4];
+		int inds[4];
+		int perm[4];
+		for (i=0; i<4; i++) {
+			inds[i] = il_get(quads, j*4 + i);
+			if (inds[i] < 0 || inds[i] >= skdt->tree->ndata) {
+				fprintf(stderr, "Invalid starid %i\n", inds[i]);
+				exit(-1);
+			}
+			startree_get(skdt, inds[i], xyzABCD + 3*i);
+		}
+		star_midpoint(xyz0, xyzABCD + 3*0, xyzABCD + 3*1);
+		for (i=0; i<4; i++) {
+			double x, y;
+			star_coords(xyzABCD + 3*i, xyz0, &x, &y);
+			theta[i] = atan2(x, y);
+			perm[i] = i;
+		}
+		permuted_sort_set_params(theta, sizeof(double), compare_doubles);
+		permuted_sort(perm, 4);
 		printf("  <quad");
 		for (i=0; i<4; i++) {
-			double* xyz;
 			double ra, dec;
-			int ind = il_get(quads, j*4 + i);
-			if (ind < 0 || ind >= skdt->tree->ndata)
-				break;
-			xyz = skdt->tree->data + ind * 3;
+			double* xyz = xyzABCD + 3 * perm[i];
 			xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
 			ra = rad2deg(ra);
 			dec = rad2deg(dec);
