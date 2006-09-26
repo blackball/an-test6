@@ -20,6 +20,23 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
+
+static void addstar(float* fluximg, int x, int y, int W, int H) {
+	int dx[] = { -1,  0,  1, -1,  0,  1, -2, -2, -2,  2,  2,  2 };
+	int dy[] = { -2, -2, -2,  2,  2,  2, -1,  0,  1, -1,  0,  1 };
+	float rflux, gflux, bflux;
+	int i;
+	rflux = 255.0;
+	gflux = bflux = 0.0;
+	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
+		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;
+		if ((y + dy[i] < 0) || (y + dy[i] >= H)) continue;
+		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 0] += rflux;
+		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 1] += gflux;
+		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 2] += bflux;
+	}
+}
+
 int main(int argc, char *argv[]) {
     int argchar;
 	bool gotx, goty, gotX, gotY, gotw, goth, gots, gotS;
@@ -164,6 +181,8 @@ int main(int argc, char *argv[]) {
 			querylow[1] = py0;
 			queryhigh[0] = px1;
 			queryhigh[1] = py1;
+			// quell gcc warnings
+			wraphigh[0] = wraphigh[1] = wraplow[0] = 0.0;
 		}
 
 		img = calloc(w*h*3, sizeof(float));
@@ -213,15 +232,7 @@ int main(int argc, char *argv[]) {
 			}
 			Nib++;
 
-			img[3*(iy*w + ix) + 0] = 255.0;
-			if (ix > 0)
-				img[3*(iy*w + ix - 1) + 0] = 255.0;
-			if (ix < (w-1))
-				img[3*(iy*w + ix + 1) + 0] = 255.0;
-			if (iy > 0)
-				img[3*((iy+1)*w + ix) + 0] = 255.0;
-			if (iy < (h-1))
-				img[3*((iy-1)*w + ix) + 0] = 255.0;
+			addstar(img, ix, iy, w, h);
 		}
 
 		fprintf(stderr, "%i stars outside image bounds.\n", Noob);

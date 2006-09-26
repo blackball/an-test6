@@ -89,6 +89,26 @@ static int count_points_in_list(pl* list) {
 	return N;
 }
 
+static void addstar(float* fluximg, int x, int y, int W, int H,
+					float rflux, float gflux, float bflux) {
+	/*
+	  int dx[]      = {  -2,  -1,   0,   1,   2,   0,   0,   0,   0,   1,   1,  -1,  -1 };
+	  int dy[]      = {   0,   0,   0,   0,   0,  -2,  -1,   1,   2,   1,  -1,   1,  -1 };
+	  float scale[] = { 5e-2, 0.1, 1.0, 0.1, 5e-2, 5e-2, 0.1, 0.1, 5e-2, 8e-1, 8e-1, 8e-1, 8e-1 };
+	*/
+	int dx[] = { -1,  0,  1,  0,  0 };
+	int dy[] = {  0,  0,  0, -1,  1 };
+	float scale[] = { 1, 1, 1, 1, 1 };
+	int i;
+	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
+		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;
+		if ((y + dy[i] < 0) || (y + dy[i] >= H)) continue;
+		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 0] += rflux * scale[i];
+		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 1] += gflux * scale[i];
+		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 2] += bflux * scale[i];
+	}
+}
+
 int main(int argc, char *argv[]) {
     int argchar;
 	bool gotx, goty, gotX, gotY, gotw, goth;
@@ -628,9 +648,7 @@ int main(int argc, char *argv[]) {
 					Nib++;
 					Nstars++;
 					flux = merc->flux + k;
-					fluximg[3*(iy*w+ix) + 0] += flux->rflux;
-					fluximg[3*(iy*w+ix) + 1] += flux->bflux;
-					fluximg[3*(iy*w+ix) + 2] += flux->nflux;
+					addstar(fluximg, ix, iy, w, h, flux->rflux, flux->bflux, flux->nflux);
 				}
 			}
 			pl_remove_all(leaflist);
