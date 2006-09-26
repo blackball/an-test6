@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
@@ -39,11 +38,10 @@ Number of objects in this view: <input type="text" name="nobjs" value="" readonl
 (note, this box lies)
 </FORM>
 
-<script type="text/javascript">
-/*
+<script type="text/javascript">/*
   <FORM name="debugform" ACTION="" METHOD="GET">
-  <! textarea ROWS=5 COLS=60 NAME="debug" READONLY><! /textarea>
-  <input type="hidden" name="debug" value="">
+  <textarea ROWS=5 COLS=60 NAME="debug" READONLY></textarea>
+  <!  input type="hidden" name="debug" value="">
   </FORM>
 */</script>
 
@@ -69,8 +67,7 @@ This is a picture of USNO-B1, not a picture of the sky.
 <option value="dupRB" onclick="map.setCenter(new GLatLng(-15.03,198.90)); map.setZoom(5);">Duplicate red and blue tiles</option>
 <option value="magel" onclick="map.setCenter(new GLatLng(-69.2,80.2)); map.setZoom(4);">Fine tiling in the Magellanic cloud</option>
 <option value="crazy" onclick="map.setCenter(new GLatLng(-61.122, 221.000)); map.setZoom(5);">Craziness around bright objects</option>
-<option value="crazy" onclick="map.setCenter(new GLatLng(-3.472, 356.594)); map.setZoom(11);">Diffraction spikes and coronas</option>
-
+<option value="crazy2" onclick="map.setCenter(new GLatLng(-3.472, 356.594)); map.setZoom(11);">Diffraction spikes and coronas</option>
 </select>
 </form>
 
@@ -98,21 +95,44 @@ function getGetData(){
 	return GET_DATA;
 }
 
+function debug(txt) {
+//document.debugform.debug.value += txt;
+}
+
 //if (GBrowserIsCompatible()) {
 // var map = new GMap2(document.getElementById("map"));
 var map = new GMap(document.getElementById("map"));
 
-var WMS_URL = "http://monte.ai.toronto.edu:8080/usnob/tile.php?map=usnob";
+var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
+var WMS_URL = BASE_URL + "tile.php?map=usnob";
 
 var getdata = getGetData();
 if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
   var filenum = Number(getdata["SDSS_FILE"]);
   var fieldnum = Number(getdata["SDSS_FIELD"]);
-  if (filenum > 0 && filenum < 35 && fieldnum >= 0 && fieldnum < 10000) {
+  if (filenum > 0 && filenum <= 35 && fieldnum >= 0 && fieldnum < 10000) {
     var sdss = true;
     var SDSS_WMS_URL = WMS_URL + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
   }
+  if ("SDSS_QUAD" in getdata) {
+    var quadstr = getdata["SDSS_QUAD"];
+    debug("quadstr is " + quadstr + "\n");
+    if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
+      debug("quadstr matches.\n");
+      var fieldobjs = quadstr.match(/\d+/g);
+      debug("fieldobjs is " + fieldobjs + "\n");
+      if (fieldobjs != null) {
+        for (var i=0; i<fieldobjs.length; i++) {
+          debug("fieldobjs[" + i + "] is " + fieldobjs[i] + "\n");
+        }
+      }
+      if (fieldobjs != null && fieldobjs.length == 4) {
+        var gotquad = true;
+      }
+    }
+  }
 }
+
 
 var overview = true;
 if (("over" in getdata) && (getdata["over"] == "no")) {
@@ -154,7 +174,6 @@ map.addMapType(usnobType);
 if (sdss) {
   map.addMapType(usnobPlusSDSS);
   //map.addMapType(usnobType2);
-  //map.setMapType(usnobPlusSDSS);
 }
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
@@ -168,10 +187,6 @@ if (overview) {
   overviewControl = new GOverviewMapControl(new GSize(ow,oh));
   map.addControl(overviewControl);
   //map.hideControls([overviewControl]);
-}
-
-function debug(txt) {
-	//document.debugform.debug.value += txt;
 }
 
 GEvent.bindDom(window,"resize",map,map.onResize);
@@ -245,9 +260,7 @@ function moveCenter() {
 	var ra = document.dummyform.ra_center.value;
 	var dec = document.dummyform.dec_center.value;
 	var zoom = document.dummyform.zoom.value;
-	//map.panTo(new GLatLng(dec, ra));
-	//map.setZoom(zoom);
-	// jump directly instead
+	// jump directly
 	map.setCenter(new GLatLng(dec, ra), zoom);
 }
 
@@ -290,13 +303,36 @@ function linktohere() {
 	window.location = url;
 }
 
+function addquad() {
+  var URL = BASE_URL + "quad.php?file=" + filenum + "&field=" + fieldnum +
+      "&quad=" + fieldobjs[0] + "," + fieldobjs[1] + "," + fieldobjs[2] +
+      "," + fieldobjs[3];
+
+  GDownloadUrl(URL, function(data, responseCode){
+  var xml = GXml.parse(data);
+  var quads = xml.documentElement.getElementsByTagName("quad");
+  for (var i = 0; i < quads.length; i++) {
+    var points = [];
+    for (var j=0; j<4; j++) {
+points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
+		parseFloat(quads[i].getAttribute("ra"+j))));
+}
+points.push(points[0]);
+    map.addOverlay(new GPolyline(points));
+  }
+});
+
+}
+
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
 if (sdss) {
   setTimeout("map.setMapType(usnobPlusSDSS);", 4);
 }
-
+if (gotquad) {
+  setTimeout("addquad();", 5);
+}
 /*
 info_html = "<b>testing</b>";
 document.getElementById("info").innerHTML += info_html;
