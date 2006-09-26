@@ -399,6 +399,10 @@ sdsstile: sdsstile.o rdlist.o xylist.o bl.o \
 		$(UTIL_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
 
+sdssquad: sdssquad.o rdlist.o xylist.o bl.o \
+		$(UTIL_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
 usnobtile-test: usnobtile.o merctree.o bl.o healpix.o \
 		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
