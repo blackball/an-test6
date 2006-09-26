@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
 	int xpix0, xpix1, ypix0, ypix1;
 	int healpix = 0;
 
+	int pixelmargin = 3;
+
 	gotx = goty = gotX = gotY = gotw = goth = gotH = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -172,7 +174,7 @@ int main(int argc, char *argv[]) {
 	ypix1 = ypix0 + h;
 
 	{
-		int Nside = 1;
+		//int Nside = 1;
 		il* hplist;
 		uchar* img;
 		float xscale, yscale;
@@ -184,22 +186,29 @@ int main(int argc, char *argv[]) {
 		bool wrapra;
 		real query[3];
 		real maxd2;
+		double xmargin = (double)pixelmargin / pixperx;
+		double ymargin = (double)pixelmargin / pixpery;
+		double xorigin, yorigin;
 
+		xorigin = px0;
+		yorigin = py0;
 		wrapra = (px1 > 1.0);
 		if (wrapra) {
-			querylow[0] = px0;
+			querylow[0] = px0 - xmargin;
 			queryhigh[0] = 1.0;
-			querylow[1] = py0;
-			queryhigh[1] = py1;
+			querylow[1] = py0 - ymargin;
+			queryhigh[1] = py1 + ymargin;
 			wraplow[0] = 0.0;
-			wraphigh[0] = px1 - 1.0;
-			wraplow[1] = py0;
-			wraphigh[1] = py1;
+			wraphigh[0] = px1 - 1.0 + xmargin;
+			wraplow[1] = py0 - ymargin;
+			wraphigh[1] = py1 + ymargin;
 		} else {
-			querylow[0] = px0;
-			querylow[1] = py0;
-			queryhigh[0] = px1;
-			queryhigh[1] = py1;
+			querylow[0] = px0 - xmargin;
+			querylow[1] = py0 - ymargin;
+			queryhigh[0] = px1 + xmargin;
+			queryhigh[1] = py1 + ymargin;
+			// quell gcc warnings
+			wraphigh[0] = wraphigh[1] = wraplow[0] = wraplow[1] = 0.0;
 		}
 
 		hplist = il_new(12);
@@ -216,55 +225,55 @@ int main(int argc, char *argv[]) {
 		Noob = 0;
 		Nib = 0;
 
-		//il_append(hplist, healpix);
+		il_append(hplist, healpix);
 
-		//for (i=0; i<HP; i++) {
-		{
-			double x,y,z;
-			double ra,dec;
-			real bblo[2], bbhi[2];
-			double minx, miny, maxx, maxy, minxnz;
-			double dx[] = { 0.0, 0.0, 1.0, 1.0 };
-			double dy[] = { 0.0, 1.0, 1.0, 0.0 };
-			int j;
+		/*
+		  {
+		  double x,y,z;
+		  double ra,dec;
+		  real bblo[2], bbhi[2];
+		  double minx, miny, maxx, maxy, minxnz;
+		  double dx[] = { 0.0, 0.0, 1.0, 1.0 };
+		  double dy[] = { 0.0, 1.0, 1.0, 0.0 };
+		  int j;
 
-			i = healpix;
+		  i = healpix;
 
-			minx = miny = minxnz = 1e100;
-			maxx = maxy = -1e100;
-			for (j=0; j<4; j++) {
-				healpix_to_xyz(dx[j], dy[j], i, Nside, &x, &y, &z);
-				xyz2radec(x, y, z, &ra, &dec);
-				x = ra / (2.0 * M_PI);
-				y = (asinh(tan(dec)) + M_PI) / (2.0 * M_PI);
-				if (x > maxx) maxx = x;
-				if (x < minx) minx = x;
-				if ((x != 0.0) && (x < minxnz)) minxnz = x;
-				if (y > maxy) maxy = y;
-				if (y < miny) miny = y;
-			}
+		  minx = miny = minxnz = 1e100;
+		  maxx = maxy = -1e100;
+		  for (j=0; j<4; j++) {
+		  healpix_to_xyz(dx[j], dy[j], i, Nside, &x, &y, &z);
+		  xyz2radec(x, y, z, &ra, &dec);
+		  x = ra / (2.0 * M_PI);
+		  y = (asinh(tan(dec)) + M_PI) / (2.0 * M_PI);
+		  if (x > maxx) maxx = x;
+		  if (x < minx) minx = x;
+		  if ((x != 0.0) && (x < minxnz)) minxnz = x;
+		  if (y > maxy) maxy = y;
+		  if (y < miny) miny = y;
+		  }
 
-			if (minx == 0.0) {
-				if ((1.0 - minxnz) < (maxx - minx)) {
-					// RA wrap-around.
-					minx = 0.0;
-					maxx = 1.0;
-				}
-			}
+		  if (minx == 0.0) {
+		  if ((1.0 - minxnz) < (maxx - minx)) {
+		  // RA wrap-around.
+		  minx = 0.0;
+		  maxx = 1.0;
+		  }
+		  }
 
-			bblo[0] = minx;
-			bbhi[0] = maxx;
-			bblo[1] = miny;
-			bbhi[1] = maxy;
+		  bblo[0] = minx;
+		  bbhi[0] = maxx;
+		  bblo[1] = miny;
+		  bbhi[1] = maxy;
 
-			if (kdtree_do_boxes_overlap(bblo, bbhi, querylow, queryhigh, 2) ||
-				(wrapra && kdtree_do_boxes_overlap(bblo, bbhi, wraplow, wraphigh, 2))) {
-				fprintf(stderr, "HP %i overlaps: x:[%g,%g], y:[%g,%g]\n",
-						i, bblo[0], bbhi[0], bblo[1], bbhi[1]);
-				il_append(hplist, i);
-			}
-		}
-
+		  if (kdtree_do_boxes_overlap(bblo, bbhi, querylow, queryhigh, 2) ||
+		  (wrapra && kdtree_do_boxes_overlap(bblo, bbhi, wraplow, wraphigh, 2))) {
+		  fprintf(stderr, "HP %i overlaps: x:[%g,%g], y:[%g,%g]\n",
+		  i, bblo[0], bbhi[0], bblo[1], bbhi[1]);
+		  il_append(hplist, i);
+		  }
+		  }
+		*/
 		{
 			double racenter = (x0 + x1)*0.5;
 			double deccenter = (y0 + y1)*0.5;
@@ -308,9 +317,12 @@ int main(int argc, char *argv[]) {
 					   (px >= wraplow[0]) && (px <= wraphigh[0]) &&
 					   (py >= wraplow[1]) && (py <= wraphigh[1]))))
 					continue;
-				ix = (int)rint((px - querylow[0]) * xscale);
-				iy = h - (int)rint((py - querylow[1]) * yscale);
-				if (ix < 0 || ix >= w || iy < 0 || iy >= h)
+				ix = (int)rint((px - xorigin) * xscale);
+				iy = h - (int)rint((py - yorigin) * yscale);
+				if (ix + pixelmargin < 0 ||
+					ix - pixelmargin >= w ||
+					iy + pixelmargin < 0 ||
+					iy - pixelmargin >= h)
 					continue;
 				addstar(img, ix, iy, w, h, 255, 255, 255);
 				Nib++;
@@ -326,39 +338,7 @@ int main(int argc, char *argv[]) {
 
 		printf("P6 %d %d %d\n", w, h, 255);
 		fwrite(img, 1, 3*w*h, stdout);
-		/*
-		  for (i=0; i<(w*h); i++) {
-		  unsigned char pix[3];
-		  pix[0] = img[3*i+0];
-		  pix[1] = img[3*i+1];
-		  pix[2] = img[3*i+2];
-		  fwrite(pix, 1, 3, stdout);
-		  }
-		*/
-
 		free(img);
 		return 0;
 	}
 }
-
-/*			
-		ix = (int)rint((pt[0] - querylow[0]) * xscale);
-		if (ix < 0 || ix >= w) {
-		Noob++;
-		continue;
-		}
-		// flip vertically
-		iy = h - (int)rint((pt[1] - querylow[1]) * yscale);
-		if (iy < 0 || iy >= h) {
-		Noob++;
-		continue;
-		}
-		Nib++;
-
-		addstar(fluximg, ix, iy, w, h, flux->rflux, flux->bflux, flux->nflux);
-		}
-
-		fprintf(stderr, "%i points outside image bounds.\n", Noob);
-		fprintf(stderr, "%i points inside image bounds.\n", Nib);
-		fprintf(stderr, "%i stars inside image bounds.\n", Nstars);
-*/

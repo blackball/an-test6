@@ -56,6 +56,8 @@ int main(int argc, char *argv[]) {
 	double* radec;
 	int Nstars;
 
+	int pixelmargin = 3;
+
 	gotx = goty = gotX = gotY = gotw = goth = gots = gotS = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
@@ -164,23 +166,35 @@ int main(int argc, char *argv[]) {
 		int Noob;
 		int Nib;
 		bool wrapra;
+		double xorigin, yorigin;
+		/*
+		  Since we draw stars is little icons, we need to expand the search
+		  range slightly...
+		 */
+		double xmargin = (double)pixelmargin / pixperx;
+		double ymargin = (double)pixelmargin / pixpery;
+
+		fprintf(stderr, "Expanding xy by margins (%g, %g)\n", xmargin, ymargin);
 
 		wrapra = (px1 > 1.0);
 
+		xorigin = px0;
+		yorigin = py0;
+
 		if (wrapra) {
-			querylow[0] = px0;
+			querylow[0] = px0 - xmargin;
 			queryhigh[0] = 1.0;
-			querylow[1] = py0;
-			queryhigh[1] = py1;
+			querylow[1] = py0 - ymargin;
+			queryhigh[1] = py1 + ymargin;
 			wraplow[0] = 0.0;
-			wraphigh[0] = px1 - 1.0;
-			wraplow[1] = py0;
-			wraphigh[1] = py1;
+			wraphigh[0] = px1 - 1.0 + xmargin;
+			wraplow[1] = py0 - ymargin;
+			wraphigh[1] = py1 + ymargin;
 		} else {
-			querylow[0] = px0;
-			querylow[1] = py0;
-			queryhigh[0] = px1;
-			queryhigh[1] = py1;
+			querylow[0] = px0 - xmargin;
+			querylow[1] = py0 - ymargin;
+			queryhigh[0] = px1 + xmargin;
+			queryhigh[1] = py1 + ymargin;
 			// quell gcc warnings
 			wraphigh[0] = wraphigh[1] = wraplow[0] = 0.0;
 		}
@@ -216,17 +230,17 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			if (xs < querylow[0]) {
-				ix = (int)rint(((xs - wraplow[0]) + (1.0 - querylow[0])) * xscale);
+				ix = (int)rint((xs + 1.0 - xorigin) * xscale);
 			} else {
-				ix = (int)rint(((xs - querylow[0])) * xscale);
+				ix = (int)rint((xs - xorigin) * xscale);
 			}
-			if (ix < 0 || ix >= w) {
+			if (ix + pixelmargin < 0 || ix - pixelmargin >= w) {
 				Noob++;
 				continue;
 			}
 			// flip vertically
-			iy = h - (int)rint((ys - querylow[1]) * yscale);
-			if (iy < 0 || iy >= h) {
+			iy = h - (int)rint((ys - yorigin) * yscale);
+			if (iy + pixelmargin < 0 || iy - pixelmargin >= h) {
 				Noob++;
 				continue;
 			}
