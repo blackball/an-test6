@@ -131,6 +131,8 @@
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
 	if ($gotsdss) {
+		// NOTE, that space between "-transparent" and "=black" is supposed
+		// to be there!
 		$cmd = $cmd . " -transparent =black";
 	}
 
