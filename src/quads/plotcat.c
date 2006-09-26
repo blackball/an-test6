@@ -23,7 +23,7 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 #include "rdlist.h"
 #include "boilerplate.h"
 
-#define OPTIONS "bhgN:f:"
+#define OPTIONS "bhgN:f:t"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
