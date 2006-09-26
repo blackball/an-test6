@@ -4,15 +4,6 @@
 
 #include "keywords.h"
 
-#if defined(linux)
-#include <linux/bitops.h>
-// in linux 2.4 it's called "generic_hweight32"
-// in linux 2.6 it's called "hweight32" (but declare extern and not defined in the header)
-#include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-#define HWEIGHT(x) generic_hweight32(x)
-#else
-#include <asm/bitops.h>
 // "borrowed" from <linux/bitops.h> from linux-2.4
 static Inline unsigned int my_hweight32(unsigned int w) {
         unsigned int res = (w & 0x55555555) + ((w >> 1) & 0x55555555);
@@ -21,9 +12,6 @@ static Inline unsigned int my_hweight32(unsigned int w) {
         res = (res & 0x00FF00FF) + ((res >> 8) & 0x00FF00FF);
         return (res & 0x0000FFFF) + ((res >> 16) & 0x0000FFFF);
 }
-#define HWEIGHT(x) my_hweight32(x)
-#endif
-#endif
 
 #include "fileutil.h"
 #include "starutil.h"
@@ -60,7 +48,7 @@ extern int optind, opterr, optopt;
 
 Inline int is_power_of_two(unsigned int x) {
 #if defined(linux)
-	return (HWEIGHT(x) == 1);
+	return (my_hweight32(x) == 1);
 #else
 	    return (x == 0x00000001 ||
 		        x == 0x00000002 ||
