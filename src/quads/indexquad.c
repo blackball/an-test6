@@ -20,7 +20,7 @@
 #include "mathutil.h"
 #include "bl.h"
 
-#define OPTIONS "H:"
+#define OPTIONS "q:H:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
