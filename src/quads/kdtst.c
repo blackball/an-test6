@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "kdtree.h"
+//#include "kdtree_access.h"
 #include "kdtree_fits_io.h"
 
 static double* getddata(int N, int D) {
@@ -47,30 +48,44 @@ int main(int argc, char** args) {
 
 	maxd2 = 1.0;
 
-	printf("Making dd tree..\n");
-	ddata = getddata(N, D);
-
 	datacopy = malloc(N * D * sizeof(double));
-	memcpy(datacopy, ddata, N*D*sizeof(double));
 
-	t1 = kdtree_build(ddata, N, D, levels);
+	if (argc == 1) {
+	  printf("Making dd tree..\n");
+	  ddata = getddata(N, D);
 
-	kdtree_check(t1);
+	  memcpy(datacopy, ddata, N*D*sizeof(double));
 
-	printf("Writing dd tree...\n");
-	if (kdtree_fits_write_file(t1, "t1.fits", NULL)) {
-		fprintf(stderr, "Failed to write kdtree.\n");
-		exit(-1);
+	  t1 = kdtree_build(ddata, N, D, levels);
+
+	  kdtree_check(t1);
+
+	  printf("Writing dd tree...\n");
+	  if (kdtree_fits_write_file(t1, "t1.fits", NULL)) {
+	    fprintf(stderr, "Failed to write kdtree.\n");
+	    exit(-1);
+	  }
+
+	  kdtree_free(t1);
+	  free(ddata);
+
+	  printf("Reading dd tree...\n");
+	  t1 = kdtree_fits_read_file("t1.fits");
+	  printf("Checking...\n");
+	  kdtree_check(t1);
+
+	} else {
+	  char* fn = args[1];
+	  printf("Reading tree from file %s\n", fn);
+	  t1 = kdtree_fits_read_file(fn);
+	  printf("Checking...\n");
+	  kdtree_check(t1);
+	  data2 = datacopy;
+	  for (i=0; i<N; i++) {
+	    memcpy(data2 + t1->perm[i] * D, t1->data + i * D,
+		   D * sizeof(double));
+	  }
 	}
-
-	kdtree_free(t1);
-	free(ddata);
-
-	printf("Reading dd tree...\n");
-	t1 = kdtree_fits_read_file("t1.fits");
-
-	printf("Checking...\n");
-	kdtree_check(t1);
 
 	printf("Rangesearch...\n");
 	res = kdtree_rangesearch_options(t1, pt, maxd2, KD_OPTIONS_SMALL_RADIUS);
