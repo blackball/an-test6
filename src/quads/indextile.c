@@ -27,8 +27,12 @@ extern int optind, opterr, optopt;
 
 static void addstar(uchar* img, int x, int y, int W, int H,
 					uchar r, uchar g, uchar b) {
-	int dx[] = { -1,  0,  1,  0,  0 };
-	int dy[] = {  0,  0,  0, -1,  1 };
+	int dx[] = { -1,  0,  1, -1,  0,  1, -2, -2, -2,  2,  2,  2 };
+	int dy[] = { -2, -2, -2,  2,  2,  2, -1,  0,  1, -1,  0,  1 };
+	/*
+	  int dx[] = { -1,  0,  1,  0,  0 };
+	  int dy[] = {  0,  0,  0, -1,  1 };
+	*/
 	int i;
 	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
 		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;

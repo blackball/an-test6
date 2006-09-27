@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 		for (i=0; i<4; i++) {
 			double x, y;
 			star_coords(xyzABCD + 3*i, xyz0, &x, &y);
-			theta[i] = atan2(x, y);
+			theta[i] = atan2(y, x);
 			perm[i] = i;
 		}
 		permuted_sort_set_params(theta, sizeof(double), compare_doubles);

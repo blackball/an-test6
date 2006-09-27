@@ -13,19 +13,14 @@
 
 #include "starutil.h"
 #include "mathutil.h"
-#include "rdlist.h"
+#include "xylist.h"
 
 #define OPTIONS "x:y:X:Y:w:h:s:S:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-
 static void addstar(float* fluximg, int x, int y, int W, int H) {
-	/*
-	  int dx[] = { -1,  0,  1, -1,  0,  1, -2, -2, -2,  2,  2,  2 };
-	  int dy[] = { -2, -2, -2,  2,  2,  2, -1,  0,  1, -1,  0,  1 };
-	*/
 	int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2 };
 	int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2 };
 	float rflux, gflux, bflux;
@@ -49,18 +44,32 @@ int main(int argc, char *argv[]) {
 	char fn[256];
 	int i;
 
-	char* sdss_file_template = "/p/learning/stars/SDSS_FIELDS/sdssfield%02i.rd.fits";
+	char* sdss_file_template = "/p/learning/stars/SDSS_FIELDS/sdssfield%02i.xy.fits";
 
 	double px0, py0, px1, py1;
 	double pixperx, pixpery;
 
 	int filenum = -1;
 	int fieldnum = -1;
-	rdlist* rdls;
-	double* radec;
+	xylist* xyls;
+	double* xy;
 	int Nstars;
 
 	int pixelmargin = 3;
+
+	// see also sdssquad.c
+	double Xmax = 2048.0;
+	double Ymax = 1600.0;
+	/*
+	  double Xoffset = 0.1;
+	  double Xscale = 0.8;
+	  double Yoffset = 0.1;
+	  double Yscale = 0.8;
+	*/
+	double Xoffset = 0.2;
+	double Xscale = 0.6;
+	double Yoffset = 0.2;
+	double Yscale = 0.6;
 
 	gotx = goty = gotX = gotY = gotw = goth = gots = gotS = FALSE;
 
@@ -143,20 +152,22 @@ int main(int argc, char *argv[]) {
 	}
 
 	sprintf(fn, sdss_file_template, filenum);
-	rdls = rdlist_open(fn);
-	if (!rdls) {
-		fprintf(stderr, "Failed to open RDLS file.\n");
+	xyls = xylist_open(fn);
+	if (!xyls) {
+		fprintf(stderr, "Failed to open XYLS file.\n");
 		exit(-1);
 	}
-	Nstars = rdlist_n_entries(rdls, fieldnum);
+	xyls->xname = "COLC";
+	xyls->yname = "ROWC";
+	Nstars = xylist_n_entries(xyls, fieldnum);
 	if (Nstars == -1) {
-		fprintf(stderr, "Failed to read RDLS file.\n");
+		fprintf(stderr, "Failed to read XYLS file.\n");
 		exit(-1);
 	}
-	radec = malloc(Nstars * 2 * sizeof(double));
-	if (rdlist_read_entries(rdls, fieldnum, 0, Nstars, radec)) {
-		fprintf(stderr, "Failed to read RDLS file.\n");
-		free(radec);
+	xy = malloc(Nstars * 2 * sizeof(double));
+	if (xylist_read_entries(xyls, fieldnum, 0, Nstars, xy)) {
+		fprintf(stderr, "Failed to read XYLS file.\n");
+		free(xy);
 		exit(-1);
 	}
 
@@ -165,11 +176,11 @@ int main(int argc, char *argv[]) {
 	{
 		double querylow[2], queryhigh[2];
 		double wraplow[2], wraphigh[2];
+		bool wrapra;
 		float* img;
 		float xscale, yscale;
 		int Noob;
-		int Nib;
-		bool wrapra;
+		//int Nib;
 		double xorigin, yorigin;
 		/*
 		  Since we draw stars as little icons, we need to expand the search
@@ -180,10 +191,10 @@ int main(int argc, char *argv[]) {
 
 		fprintf(stderr, "Expanding xy by margins (%g, %g)\n", xmargin, ymargin);
 
-		wrapra = (px1 > 1.0);
-
 		xorigin = px0;
 		yorigin = py0;
+
+		wrapra = (px1 > 1.0);
 
 		if (wrapra) {
 			querylow[0] = px0 - xmargin;
@@ -213,17 +224,34 @@ int main(int argc, char *argv[]) {
 		yscale = pixpery;
 
 		Noob = 0;
-		Nib = 0;
+		//Nib = 0;
+
+		{
+			double minx, maxx, miny, maxy;
+			minx = miny = 1e100;
+			maxx = maxy = -1e100;
+			for (i=0; i<Nstars; i++) {
+				double x = xy[i*2 + 0];
+				double y = xy[i*2 + 1];
+				if (x < minx) minx = x;
+				if (x > maxx) maxx = x;
+				if (y < miny) miny = y;
+				if (y > maxy) maxy = y;
+			}
+			fprintf(stderr, "X limits [%g, %g].  Y limits [%g, %g].\n",
+					minx, maxx, miny, maxy);
+		}
 
 		for (i=0; i<Nstars; i++) {
 			double xs, ys;
-			double ra, dec;
-			int ix, iy;
-			ra = radec[i*2 + 0];
-			dec = radec[i*2 + 1];
-			// RA/DEC values in FITS files are in degrees.
-			xs = ra / 360.0;
-			ys = (M_PI + asinh(tan(deg2rad(dec)))) / (2.0 * M_PI);
+			int ix, iy, ixwrap;
+
+			xs = xy[i*2 + 0] / Xmax;
+			ys = xy[i*2 + 1] / Ymax;
+
+			// make the field look more pretty.
+			xs = xs * Xscale + Xoffset;
+			ys = ys * Yscale + Yoffset;
 
 			if (!((xs >= querylow[0] && xs <= queryhigh[0] &&
 				   ys >= querylow[1] && ys <= queryhigh[1]) ||
@@ -233,28 +261,25 @@ int main(int argc, char *argv[]) {
 				Noob++;
 				continue;
 			}
-			if (xs < querylow[0]) {
-				ix = (int)rint((xs + 1.0 - xorigin) * xscale);
-			} else {
-				ix = (int)rint((xs - xorigin) * xscale);
-			}
-			if (ix + pixelmargin < 0 || ix - pixelmargin >= w) {
-				Noob++;
-				continue;
-			}
+
 			// flip vertically
 			iy = h - (int)rint((ys - yorigin) * yscale);
 			if (iy + pixelmargin < 0 || iy - pixelmargin >= h) {
 				Noob++;
 				continue;
 			}
-			Nib++;
 
-			addstar(img, ix, iy, w, h);
+			ixwrap = (int)rint((xs + 1.0 - xorigin) * xscale);
+			if (!(ixwrap + pixelmargin < 0 || ixwrap - pixelmargin >= w))
+				addstar(img, ixwrap, iy, w, h);
+
+			ix = (int)rint((xs - xorigin) * xscale);
+			if (!(ix + pixelmargin < 0 || ix - pixelmargin >= w))
+				addstar(img, ix, iy, w, h);
 		}
 
 		fprintf(stderr, "%i stars outside image bounds.\n", Noob);
-		fprintf(stderr, "%i stars inside image bounds.\n", Nib);
+		//fprintf(stderr, "%i stars inside image bounds.\n", Nib);
 
 		printf("P6 %d %d %d\n", w, h, 255);
 		for (i=0; i<(w*h); i++) {

@@ -666,7 +666,8 @@ int main(int argc, char *argv[]) {
 
 		{
 			float rmax, bmax, nmax;
-			float offset = -25;
+			//float offset = -25;
+			float offset = -30;
 			float minval = exp(offset);
 			float rscale, bscale, nscale;
 			rmax = bmax = nmax = 0.0;
