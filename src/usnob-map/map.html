@@ -212,6 +212,12 @@ sdssTile.myFormat='image/png';
 sdssTile.myBaseURL=SDSS_URL;
 sdssTile.getTileUrl=CustomGetTileUrl;
 
+var sdssTransTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
+sdssTransTile.myLayers='sdss';
+sdssTransTile.myFormat='image/png';
+sdssTransTile.myBaseURL=SDSS_URL + "&trans=1";
+sdssTransTile.getTileUrl=CustomGetTileUrl;
+
 var sdssFieldTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),0,17);
 sdssFieldTile.myLayers='sdssfield';
 sdssFieldTile.myFormat='image/png';
@@ -239,17 +245,18 @@ var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNO
 
 /*
   if (sdss) {
-  var usnobPlusSDSS = new GMapType([usnobTile,sdssTile], G_SATELLITE_MAP.getProjection(), "USNOB+SDSS", G_SATELLITE_MAP);
+  var usnobPlusSDSS = new GMapType([usnobTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "USNOB+SDSS", G_SATELLITE_MAP);
   }
 */
 if (sdss) {
   var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
+  var sdssAlone = new GMapType([sdssTile], G_SATELLITE_MAP.getProjection(), "SDSS", G_SATELLITE_MAP);
 }
 
 if (gothp) {
   var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
   var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
-  var indexPlusSDSS = new GMapType([indexTile,sdssTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
+  var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
 }
 
 map.getMapTypes().length = 0;
@@ -266,6 +273,7 @@ if (gothp) {
   map.addMapType(indexPlusSDSS);
 }
 if (sdss) {
+  map.addMapType(sdssAlone);
   map.addMapType(sdssField);
 }
 map.addControl(new GLargeMapControl());
@@ -442,7 +450,7 @@ IndexQuadControl.prototype.initialize = function(map) {
   return container;
 }
 IndexQuadControl.prototype.getDefaultPosition = function() {
-  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(7, 30));
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(170, 30));
 }
 IndexQuadControl.prototype.setButtonStyle_ = function(button) {
   button.style.color = "#000000";
@@ -564,7 +572,7 @@ FieldQuadControl.prototype.initialize = function(map) {
   return container;
 }
 FieldQuadControl.prototype.getDefaultPosition = function() {
-  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(170, 30));
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(7, 30));
 }
 FieldQuadControl.prototype.setButtonStyle_ = function(button) {
   button.style.color = "#000000";
@@ -602,7 +610,7 @@ function addquad() {
 		                        parseFloat(quads[i].getAttribute("ra"+j))));
     }
     points.push(points[0]);
-    sdssQuad = new GPolyline(points);
+    sdssQuad = new GPolyline(points, "#0000ff");
   }
   map.addOverlay(sdssQuad);
   map.addControl(new SdssQuadControl());
@@ -646,7 +654,7 @@ function addfieldquad() {
 		                        parseFloat(quads[i].getAttribute("ra"+j))));
     }
     points.push(points[0]);
-    sdssFieldQuad = new GPolyline(points, "#ff0000");
+    sdssFieldQuad = new GPolyline(points, "#0000ff");
   }
   map.addControl(new FieldQuadControl());
   });

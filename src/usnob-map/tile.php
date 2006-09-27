@@ -90,8 +90,9 @@
 			printf("<html><body>Invalid request: failed to parse healpix.</body></html>\n\n");
 			exit;
 		}
-		$indextransparent = ($_REQUEST["trans"] == "1");
 	}
+
+	$transparent = ($_REQUEST["trans"] == "1");
 
 	$layers = explode(" ", $lay);
 	$lines = false;
@@ -138,7 +139,7 @@
 	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
-	if ($gotsdss || $indextransparent) {
+	if (($gotsdss || $gothp) && $transparent) {
 		// NOTE, that space between "-transparent" and "=black" is supposed
 		// to be there!
 		$cmd = $cmd . " -transparent =black";
