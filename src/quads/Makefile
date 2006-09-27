@@ -22,23 +22,13 @@ $(warning gcc version string: "$(GCC_VERSTR)")
 AWK := awk
 #AWK := gawk --lint --lint-old
 
-#GCC_MAJOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) '/[0-9]\.[0-9]*/{i=index($$0, "."); i--; j=i; while (index("0123456789", substr($$0, j, 1))) { j--; } j--; print substr($$0, j, i-j);}')
-#GCC_MINOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) '/[0-9]\.[0-9]*/{i=index($$0, "."); i++; j=i; while (index("0123456789", substr($$0, j, 1))) { j++; } print substr($$0, i, j-i);}')
-
-
 GCC_MAJOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) 'BEGIN{RS=" ";got=0} /[0-9]\.[0-9]*/{i=index($$0, "."); if (i && !got) {print substr($$0, 1, i-1); got=1}}')
 GCC_MINOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) 'BEGIN{RS=" ";got=0} /[0-9]\.[0-9]*/{i=index($$0, "."); if (i && !got) {i++; j=i; while (index("0123456789", substr($$0, j, 1))) { j++; } print substr($$0, i, j-i); got=1}}')
-#GCC_MAJOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) 'BEGIN{RS=" "} /[[:digit:]]\.[[:digit:]]*/{i=index($$0, "."); print substr($$0, 1, i-1);}')
-#GCC_MINOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) 'BEGIN{RS=" "} /[[:digit:]]\.[[:digit:]]*/{i=index($$0, "."); i++; j=i; while (index("0123456789", substr($$0, j, 1))) { j++; } print substr($$0, i, j-i);}')
-#GCC_MAJOR := $(shell echo "$(GCC_VERSTR)" | awk --lint --lint-old '/[[:digit:]]\.[[:digit:]]*/{if (match($$0, "[[:digit:]]\\.")) {print substr($$0, RSTART, RLENGTH-1);}}')
-#GCC_MINOR := $(shell echo "$(GCC_VERSTR)" | awk --lint --lint-old '/[[:digit:]]\.[[:digit:]]*/{if (match($$0, "\\.[[:digit:]]*")) {print substr($$0, RSTART+1, RLENGTH-1);}}')
 $(warning gcc version $(GCC_MAJOR) dot $(GCC_MINOR))
 GCC_HAS_FFINITE := $(shell if ((($(GCC_MAJOR) > 3) || (($(GCC_MAJOR) == 3) && ($(GCC_MINOR) >= 3)))); then echo 1; else echo 0; fi)
 # 3.2 doesn't have it
 # 3.3 does
 # 4.0 does
-#$(warning gcc has -ffinite-math-only: $(GCC_HAS_FFINITE))
-
 ifeq ($(GCC_HAS_FFINITE), 1)
 	CFLAGS += -ffinite-math-only -fno-signaling-nans
 endif
