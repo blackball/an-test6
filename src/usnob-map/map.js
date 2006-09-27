@@ -548,7 +548,7 @@ function addfieldquad() {
 			points.push(points[0]);
 			sdssFieldQuads.push(new GPolyline(points, "#ffc800"));
 		}
-		if (sdssFieldQuadsState) {
+		if (sdssFieldQuadState) {
 			for (var i=0; i<sdssFieldQuads.length; i++) {
 				map.addOverlay(sdssFieldQuads[i]);
 			}
