@@ -16,13 +16,13 @@ CFLAGS += -O3
 #CFLAGS += -ffast-math 
 CFLAGS += -fno-math-errno -fno-trapping-math
 
-GCC_MAJOR := $(shell gcc --version | awk '/[[:digit:]]\.[[:digit:]]/{if (match($$0, "[[:digit:]]\\.")) {print substr($$0, RSTART, RLENGTH-1);}}')
-GCC_MINOR := $(shell gcc --version | awk '/[[:digit:]]\.[[:digit:]]/{if (match($$0, "\\.[[:digit:]]")) {print substr($$0, RSTART+1, RLENGTH-1);}}')
+GCC_MAJOR := $(shell gcc --version | awk '/[[:digit:]]\.[[:digit:]]*/{if (match($$0, "[[:digit:]]\\.")) {print substr($$0, RSTART, RLENGTH-1);}}')
+GCC_MINOR := $(shell gcc --version | awk '/[[:digit:]]\.[[:digit:]]*/{if (match($$0, "\\.[[:digit:]]*")) {print substr($$0, RSTART+1, RLENGTH-1);}}')
+$(warning gcc version $(GCC_MAJOR) dot $(GCC_MINOR))
 GCC_HAS_FFINITE := $(shell if ((($(GCC_MAJOR) > 3) || (($(GCC_MAJOR) == 3) && ($(GCC_MINOR) >= 3)))); then echo 1; else echo 0; fi)
 # 3.2 doesn't have it
 # 3.3 does
 # 4.0 does
-$(warning gcc version $(GCC_MAJOR) dot $(GCC_MINOR))
 #$(warning gcc has -ffinite-math-only: $(GCC_HAS_FFINITE))
 
 ifeq ($(GCC_HAS_FFINITE), 1)
