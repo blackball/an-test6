@@ -116,9 +116,7 @@ MATLAB_INIT   := addpath('~/quads')
 define INDEX_template_A
 .PHONY: index$(1)
 index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
-
 #$(warning index$(1) is $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits))
-
 endef
 
 NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
@@ -128,7 +126,6 @@ INDEXES := $(addprefix index,$(NUMS2))
 all: $(INDEXES)
 
 #$(warning INDEXES: $(INDEXES))
-
 #all: $(USNOB_FITS_PRESENT)
 
 $(USNOB_PRESENT):
@@ -137,14 +134,23 @@ $(USNOB_PRESENT):
 $(USNOB_FITS_PRESENT):
 	$(MAKE) -f makefile.usnob_fits $@
 
+.PHONY: usnob-fits
+usnob-fits: $(USNOB_FITS_PRESENT)
+
 #$(TYCHO2_PRESENT):
 #	$(MAKE) -f makefile.tycho2 $@
 
 $(TYCHO2_FITS_PRESENT):
 	$(MAKE) -f makefile.tycho2_fits $@
 
+.PHONY: tycho2-fits
+tycho2-fits: $(TYCHO2_FITS_PRESENT)
+
 $(AN_CATALOG_PRESENT):
 	$(MAKE) -f makefile.an_catalog $@
+
+.PHONY: an-catalog
+an-catalog: $(AN_CATALOG_PRESENT)
 
 tycho2_download:
 	$(MAKE) -f makefile.tycho2 $@
