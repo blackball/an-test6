@@ -33,7 +33,8 @@ static void printHelp(char* progname) {
 			"    [-i]  force rendering from pre-rendered images\n"
 			"    [-p]  force direct plotting from catalog\n"
 			"    [-w]  do automatic white-balancing\n"
-			"    [-b]  add power-of-10 boxes\n"
+			"    [-b]  add box\n"
+			"    [-b]  (specify -b twice to get power-of-10 boxes)\n"
 			"    [-B <color>]  set box color\n"
 			"\n", progname);
 }
@@ -66,12 +67,15 @@ int main(int argc, char *args[]) {
 	char* lastfn = NULL;
 	double Rgain, Ggain, Bgain;
 	char* boxcolor = "red";
+	bool dobox = FALSE;
 	bool doboxes = FALSE;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
 		case 'b':
-			doboxes = TRUE;
+			if (dobox)
+				doboxes = TRUE;
+			dobox = TRUE;
 			break;
 		case 'B':
 			boxcolor = optarg;
@@ -233,16 +237,6 @@ int main(int argc, char *args[]) {
 				}
 
 				printf("cmdline: %s\n", cmdline);
-
-				if (whitebalframe) {
-					if (pnmutils_whitebalance(lastfn, outfile, &Rgain, &Ggain, &Bgain)) {
-						exit(-1);
-					}
-					printf("Gains: R %g, G %g, B %g\n", Rgain, Ggain, Bgain);
-					donewhitebalframe = TRUE;
-					whitebalframe = FALSE;
-				}
-
 				if (!justprint) {
 					if ((res = system(cmdline)) == -1) {
 						fprintf(stderr, "system() call failed.\n");
@@ -253,61 +247,77 @@ int main(int argc, char *args[]) {
 						break;
 					}
 				}
+
+				if (whitebalframe) {
+					if (pnmutils_whitebalance(lastfn, outfile, &Rgain, &Ggain, &Bgain)) {
+						exit(-1);
+					}
+					printf("Gains: R %g, G %g, B %g\n", Rgain, Ggain, Bgain);
+					donewhitebalframe = TRUE;
+					whitebalframe = FALSE;
+				}
+
 			} else {
 				// we've got to paste together the image...
+				int L, R;
+				int T, B;
+				int SX, SY;
 
 				sprintf(cmdline, "ppmmake black %i %i > %s", W, H, outfile);
 				printf("cmdline: %s\n", cmdline);
 				if (!justprint)
 					system(cmdline);
 
-				if (left < 0) {
-					int L;
-					int T, B;
-					int SX, SY;
-					T = (top >= 0 ? top : 0);
-					B = (bottom < pixelsize ? bottom : pixelsize-1);
+				//if (left < 0) {
+				T = (top >= 0 ? top : 0);
+				B = (bottom < pixelsize ? bottom : pixelsize-1);
+				//T = top;
+				//B = bottom;
+				L = left;
+				R = right;
+				SX = 0;
+				while (L < right) {
+					int pixL, pixR;
+					int SW, SH;
 
-					L = left;
-					SX = 0;
-					while (L < right) {
-						int pixL, pixR;
-						int SW, SH;
-						pixL = ((L % pixelsize) + pixelsize) % pixelsize;
-						if (L < 0)
-							pixR = pixelsize-1;
-						else
-							pixR = (right >= pixelsize ? pixelsize-1 : right);
-						printf("grabbing %i to %i\n", pixL, pixR);
-						SW = rint((1 + pixR - pixL) / scaleadj);
-						SH = (1 + B - T) / scaleadj;
-						//SX = (L - left) / scaleadj;
-						SY = (T - top) / scaleadj;
-						if (SX + SW > W) {
-							printf("Adjusting width from %i to %i.\n", SW, W-SX);
-							SW = W - SX;
-						}
-						if (SY + SH > H) {
-							printf("Adjusting height from %i to %i.\n", SH, H-SY);
-							SH = H - SY;
-						}
-						sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
-								"| pnmscale -width=%i -height=%i - "
-								"| pnmflip -tb "
-								"| pnmpaste - %i %i %s > %s; "
-								"mv %s %s",
-								pixL, pixR, T, B, fn,
-								SW, SH,
-								SX, SY, outfile, tempimg,
-								tempimg, outfile);
-						printf("cmdline: %s\n", cmdline);
-						if (!justprint)
-							system(cmdline);
+					printf("L=%i, R=%i.\n", L, R);
 
-						SX += SW;
-						L += (pixR - pixL + 1);
+					pixL = ((L % pixelsize) + pixelsize) % pixelsize;
+					/*
+					  if (L < 0)
+					  pixR = pixelsize-1;
+					  else
+					*/
+					pixR = pixL + (R-L);
+					pixR = (pixR >= pixelsize ? pixelsize-1 : pixR);
+					printf("grabbing %i to %i\n", pixL, pixR);
+					SW = rint((1 + pixR - pixL) / scaleadj);
+					SH = (1 + B - T) / scaleadj;
+					//SX = (L - left) / scaleadj;
+					SY = (T - top) / scaleadj;
+					if (SX + SW > W) {
+						printf("Adjusting width from %i to %i.\n", SW, W-SX);
+						SW = W - SX;
 					}
+					if (SY + SH > H) {
+						printf("Adjusting height from %i to %i.\n", SH, H-SY);
+						SH = H - SY;
+					}
+					sprintf(cmdline, "pnmcut -left %i -right %i -top %i -bottom %i %s "
+							"| pnmscale -width=%i -height=%i - "
+							"| pnmflip -tb "
+							"| pnmpaste - %i %i %s > %s; "
+							"mv %s %s",
+							pixL, pixR, T, B, fn,
+							SW, SH,
+							SX, SY, outfile, tempimg,
+							tempimg, outfile);
+					printf("cmdline: %s\n", cmdline);
+					if (!justprint)
+						system(cmdline);
 
+					SX += SW;
+					L += (pixR - pixL + 1);
 				}
 
 				if (whitebalance && !whitebalframe) {
@@ -369,7 +379,7 @@ int main(int argc, char *args[]) {
 
 
 		// outline the initial box's position in this frame.
-		if (doboxes) {
+		if (dobox) {
 			double step = 10.0;
 			int left, top;
 			double dscale = pow(2.0, i * dzoom);
@@ -390,6 +400,8 @@ int main(int argc, char *args[]) {
 					system(cmdline);
 				}
 				dscale *= step;
+				if (!doboxes)
+					break;
 			}
 		}
 

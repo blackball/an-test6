@@ -15,7 +15,7 @@
 #include "mathutil.h"
 #include "xylist.h"
 
-#define OPTIONS "x:y:X:Y:w:h:s:S:"
+#define OPTIONS "x:y:X:Y:w:h:s:S:N:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
 	int Nstars;
 
 	int pixelmargin = 4;
+	int N = 0;
 
 	// see also sdssquad.c
 	double Xmax = 2048.0;
@@ -92,6 +93,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'N':
+			N = atoi(optarg);
+			break;
 		case 's':
 			filenum = atoi(optarg);
 			gots = TRUE;
@@ -181,6 +185,10 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Failed to read XYLS file.\n");
 		exit(-1);
 	}
+
+	if (N && N < Nstars)
+		Nstars = N;
+
 	xy = malloc(Nstars * 2 * sizeof(double));
 	if (xylist_read_entries(xyls, fieldnum, 0, Nstars, xy)) {
 		fprintf(stderr, "Failed to read XYLS file.\n");
