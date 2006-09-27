@@ -25,7 +25,8 @@ AWK := awk
 GCC_MAJOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) 'BEGIN{RS=" ";got=0} /[0-9]\.[0-9]*/{i=index($$0, "."); if (i && !got) {print substr($$0, 1, i-1); got=1}}')
 GCC_MINOR := $(shell echo "$(GCC_VERSTR)" | $(AWK) 'BEGIN{RS=" ";got=0} /[0-9]\.[0-9]*/{i=index($$0, "."); if (i && !got) {i++; j=i; while (index("0123456789", substr($$0, j, 1))) { j++; } print substr($$0, i, j-i); got=1}}')
 $(warning gcc version $(GCC_MAJOR) dot $(GCC_MINOR))
-GCC_HAS_FFINITE := $(shell if ((($(GCC_MAJOR) > 3) || (($(GCC_MAJOR) == 3) && ($(GCC_MINOR) >= 3)))); then echo 1; else echo 0; fi)
+GCC_HAS_FFINITE := $(shell echo "$$(( (($(GCC_MAJOR) > 3) || (($(GCC_MAJOR) == 3) && ($(GCC_MINOR) >= 3))) ? 1 : 0 ))" )
+#$(warning gcc_has_ffinite: $(GCC_HAS_FFINITE))
 # 3.2 doesn't have it
 # 3.3 does
 # 4.0 does
