@@ -38,12 +38,12 @@ Number of objects in this view: <input type="text" name="nobjs" value="" readonl
 (note, this box lies)
 </FORM>
 
-<! script type="text/javascript">
+<!  script type="text/javascript">
   <FORM name="debugform" ACTION="" METHOD="GET">
-  <textarea ROWS=5 COLS=60 NAME="debug" READONLY></textarea>
+  <!  textarea ROWS=5 COLS=60 NAME="debug" READONLY><!  /textarea>
   <!  input type="hidden" name="debug" value="">
   </FORM>
-<! /script>
+<!  /script>
 
 <table width="60%">
 <tr>
@@ -125,7 +125,7 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
   if ("SDSS_QUAD" in getdata) {
     var quadstr = getdata["SDSS_QUAD"];
     debug("quadstr is " + quadstr + "\n");
-    if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
+    if (quadstr.match(/^\d*(,\d*){3}(;\d*(,\d*){3})*$/) != null) {
       debug("quadstr matches.\n");
       sdssobjs = quadstr.match(/\d+/g);
       debug("sdssobjs is " + sdssobjs + "\n");
@@ -134,32 +134,13 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
           debug("sdssobjs[" + i + "] is " + sdssobjs[i] + "\n");
         }
       }
-      if (sdssobjs != null && sdssobjs.length == 4) {
+      if (sdssobjs != null && (sdssobjs.length % 4 == 0)) {
         gotquad = true;
       }
     }
     fieldobjs = sdssobjs;
     gotfieldquad = gotquad;
   }
-/*
-  if ("FIELD_QUAD" in getdata) {
-    var quadstr = getdata["FIELD_QUAD"];
-    debug("quadstr is " + quadstr + "\n");
-    if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
-      debug("quadstr matches.\n");
-      var fieldobjs = quadstr.match(/\d+/g);
-      debug("fieldobjs is " + fieldobjs + "\n");
-      if (fieldobjs != null) {
-        for (var i=0; i<fieldobjs.length; i++) {
-          debug("fieldobjs[" + i + "] is " + fieldobjs[i] + "\n");
-        }
-      }
-      if (fieldobjs != null && fieldobjs.length == 4) {
-        var gotfieldquad = true;
-      }
-    }
-  }
-*/
 }
 if ("HP" in getdata) {
 var hp = Number(getdata["HP"]);
@@ -170,7 +151,7 @@ var INDEX_URL = TILE_URL + "map=index" + "&HP=" + hp;
   if ("INDEX_QUAD" in getdata) {
     var quadstr = getdata["INDEX_QUAD"];
     debug("quadstr is " + quadstr + "\n");
-    if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
+    if (quadstr.match(/^\d*(,\d*){3}(;\d*(,\d*){3})*$/) != null) {
       debug("quadstr matches.\n");
       var indexobjs = quadstr.match(/\d+/g);
       debug("indexobjs is " + indexobjs + "\n");
@@ -179,7 +160,7 @@ var INDEX_URL = TILE_URL + "map=index" + "&HP=" + hp;
           debug("indexobjs[" + i + "] is " + indexobjs[i] + "\n");
         }
       }
-      if (indexobjs != null && indexobjs.length == 4) {
+      if (indexobjs != null && (indexobjs.length % 4 == 0)) {
         var gotindexquad = true;
       }
     }
@@ -404,16 +385,63 @@ function linktohere() {
 	window.location = url;
 }
 
-var indexQuad = new GPolyline([]);
-var indexOn  = "INDEX QUAD";
-var indexOff = "INDEX QUAD";
+var indexQuads = [];
+var indexTxt  = "INDEX QUAD";
+var indexQuadState = ("iq" in getdata);
 
-var sdssQuad = null; //new GPolyline([]);
-var sdssOn  = "SDSS QUAD";
-var sdssOff = "SDSS QUAD";
+var sdssQuads = [];
+var sdssTxt  = "SDSS QUAD";
+var sdssQuadState = ("sq" in getdata);
 
-var sdssFieldQuad = null; //new GPolyline([]);
+var sdssBoundary = null;
+var sdssBoundaryTxt  = "SDSS BOX";
+var pts=[];
+// HACK!  Hard-code this for now...
+pts.push(new GLatLng(26.884,241.39));
+pts.push(new GLatLng(27.071,241.54));
+pts.push(new GLatLng(26.978,241.69));
+pts.push(new GLatLng(26.791,241.55));
+pts.push(pts[0]);
+sdssBoundary = new GPolyline(pts, "ffc800");
+var sdssBoundaryState = ("sb" in getdata);
+
+var sdssFieldQuads = [];
 var sdssFieldTxt  = "FIELD QUAD";
+var sdssFieldQuadState = ("fq" in getdata);
+
+function buttonStyleOn(button) {
+  button.style.borderTopColor    = "#b0b0b0";
+  button.style.borderLeftColor   = "#b0b0b0";
+  button.style.borderBottomColor = "white";
+  button.style.borderRightColor  = "white";
+  button.style.fontWeight = "bold";
+}
+
+function buttonStyleOff(button) {
+  button.style.borderTopColor    = "white";
+  button.style.borderLeftColor   = "white";
+  button.style.borderBottomColor = "#b0b0b0";
+  button.style.borderRightColor  = "#b0b0b0";
+  button.style.fontWeight = "normal";
+}
+
+function buttonStyleCommon(button) {
+  button.style.color = "#000000";
+  button.style.backgroundColor = "white";
+  button.style.fontSize = "x-small";
+  button.style.fontFamily = "Arial";
+  button.style.borderStyle = "solid";
+  button.style.borderWidth = "1px";
+  //  button.style.padding = "1px";
+  button.style.marginBottom = "1px";
+  button.style.marginTop = "1px";
+  //  button.style.marginLeft = "1px";
+  //  button.style.marginRight = "1px";
+  button.style.textAlign = "center";
+  button.style.cursor = "pointer";
+  button.style.width = "70px";
+  buttonStyleOn(button);
+}
 
 function IndexQuadControl() {}
 IndexQuadControl.prototype = new GControl();
@@ -421,54 +449,33 @@ IndexQuadControl.prototype.initialize = function(map) {
   var on = true;
   var container = document.createElement("div");
   var toggleDiv = document.createElement("div");
-  var txtNode = document.createTextNode(indexOn);
+  var txtNode = document.createTextNode(indexTxt);
   this.setButtonStyle_(toggleDiv);
   container.appendChild(toggleDiv);
   toggleDiv.appendChild(txtNode);
   GEvent.addDomListener(toggleDiv, "click", function(){
     if (on) {
       on = false;
-      map.removeOverlay(indexQuad);
-      txtNode.nodeValue = indexOff;
-      toggleDiv.style.fontWeight = "normal";
-      toggleDiv.style.borderTopColor    = "white";
-      toggleDiv.style.borderLeftColor   = "white";
-      toggleDiv.style.borderBottomColor = "#b0b0b0";
-      toggleDiv.style.borderRightColor  = "#b0b0b0";
+for (var i=0; i<indexQuads.length; i++) {
+  map.removeOverlay(indexQuads[i]);
+}
+buttonStyleOff(toggleDiv);
     } else {
       on = true;
-      map.addOverlay(indexQuad);
-      txtNode.nodeValue = indexOn;
-      toggleDiv.style.fontWeight = "bold";
-      toggleDiv.style.borderTopColor    = "#b0b0b0";
-      toggleDiv.style.borderLeftColor   = "#b0b0b0";
-      toggleDiv.style.borderBottomColor = "white";
-      toggleDiv.style.borderRightColor  = "white";
+for (var i=0; i<indexQuads.length; i++) {
+  map.addOverlay(indexQuads[i]);
+}
+buttonStyleOn(toggleDiv);
     }
   });
   map.getContainer().appendChild(container);
   return container;
 }
 IndexQuadControl.prototype.getDefaultPosition = function() {
-  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(170, 30));
+return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(3*78 + 7, 30));
 }
 IndexQuadControl.prototype.setButtonStyle_ = function(button) {
-  button.style.color = "#000000";
-  button.style.backgroundColor = "white";
-  button.style.fontSize = "x-small";
-  button.style.fontFamily = "Arial";
-  button.style.fontWeight = "bold";
-  button.style.borderTop    = "1px solid #b0b0b0"
-  button.style.borderLeft   = "1px solid #b0b0b0";
-  button.style.borderBottom = "1px solid white";
-  button.style.borderRight  = "1px solid white";
-  button.style.padding = "1px";
-  button.style.marginBottom = "1px";
-  button.style.marginTop = "1px";
-  button.style.marginLeft = "1px";
-  button.style.marginRight = "1px";
-  button.style.textAlign = "center";
-  button.style.cursor = "pointer";
+buttonStyleCommon(button);
 }
 
 function SdssQuadControl() {}
@@ -477,58 +484,68 @@ SdssQuadControl.prototype.initialize = function(map) {
   var on = true;
   var container = document.createElement("div");
   var toggleDiv = document.createElement("div");
-  var txtNode = document.createTextNode(sdssOn);
+  var txtNode = document.createTextNode(sdssTxt);
   this.setButtonStyle_(toggleDiv);
   container.appendChild(toggleDiv);
   toggleDiv.appendChild(txtNode);
   GEvent.addDomListener(toggleDiv, "click", function(){
     if (on) {
       on = false;
-      if (sdssQuad != null) {
-        map.removeOverlay(sdssQuad);
-      }
-      txtNode.nodeValue = sdssOff;
-      toggleDiv.style.fontWeight = "normal";
-      toggleDiv.style.borderTopColor    = "white";
-      toggleDiv.style.borderLeftColor   = "white";
-      toggleDiv.style.borderBottomColor = "#b0b0b0";
-      toggleDiv.style.borderRightColor  = "#b0b0b0";
+for (var i=0; i<sdssQuads.length; i++) {
+  map.removeOverlay(sdssQuads[i]);
+}
+buttonStyleOff(toggleDiv);
     } else {
       on = true;
-      if (sdssQuad != null) {
-        map.addOverlay(sdssQuad);
-      }
-      txtNode.nodeValue = sdssOn;
-      toggleDiv.style.fontWeight = "bold";
-      toggleDiv.style.borderTopColor    = "#b0b0b0";
-      toggleDiv.style.borderLeftColor   = "#b0b0b0";
-      toggleDiv.style.borderBottomColor = "white";
-      toggleDiv.style.borderRightColor  = "white";
+for (var i=0; i<sdssQuads.length; i++) {
+  map.addOverlay(sdssQuads[i]);
+}
+buttonStyleOn(toggleDiv);
     }
   });
   map.getContainer().appendChild(container);
   return container;
 }
 SdssQuadControl.prototype.getDefaultPosition = function() {
-  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(95, 30));
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(1*78 + 7, 30));
 }
 SdssQuadControl.prototype.setButtonStyle_ = function(button) {
-  button.style.color = "#000000";
-  button.style.backgroundColor = "white";
-  button.style.fontSize = "x-small";
-  button.style.fontFamily = "Arial";
-  button.style.fontWeight = "bold";
-  button.style.borderTop    = "1px solid #b0b0b0"
-  button.style.borderLeft   = "1px solid #b0b0b0";
-  button.style.borderBottom = "1px solid white";
-  button.style.borderRight  = "1px solid white";
-  button.style.padding = "1px";
-  button.style.marginBottom = "1px";
-  button.style.marginTop = "1px";
-  button.style.marginLeft = "1px";
-  button.style.marginRight = "1px";
-  button.style.textAlign = "center";
-  button.style.cursor = "pointer";
+buttonStyleCommon(button);
+}
+
+function SdssBoundaryControl() {}
+SdssBoundaryControl.prototype = new GControl();
+SdssBoundaryControl.prototype.initialize = function(map) {
+  var on = true;
+  var container = document.createElement("div");
+  var toggleDiv = document.createElement("div");
+  var txtNode = document.createTextNode(sdssBoundaryTxt);
+  this.setButtonStyle_(toggleDiv);
+  container.appendChild(toggleDiv);
+  toggleDiv.appendChild(txtNode);
+  GEvent.addDomListener(toggleDiv, "click", function(){
+    if (on) {
+      on = false;
+      if (sdssBoundary != null) {
+        map.removeOverlay(sdssBoundary);
+      }
+buttonStyleOff(toggleDiv);
+    } else {
+      on = true;
+      if (sdssBoundary != null) {
+        map.addOverlay(sdssBoundary);
+      }
+buttonStyleOn(toggleDiv);
+    }
+  });
+  map.getContainer().appendChild(container);
+  return container;
+}
+SdssBoundaryControl.prototype.getDefaultPosition = function() {
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(2*78 + 7, 30));
+}
+SdssBoundaryControl.prototype.setButtonStyle_ = function(button) {
+buttonStyleCommon(button);
 }
 
 function FieldQuadControl() {}
@@ -544,28 +561,16 @@ FieldQuadControl.prototype.initialize = function(map) {
   GEvent.addDomListener(toggleDiv, "click", function(){
     if (on) {
       on = false;
-      if (sdssFieldQuad != null) {
-        map.removeOverlay(sdssFieldQuad);
-      }
-      //map.removeOverlay(sdssFieldQuad);
-      //txtNode.nodeValue = sdssFieldTxt;
-      toggleDiv.style.fontWeight = "normal";
-      toggleDiv.style.borderTopColor    = "white";
-      toggleDiv.style.borderLeftColor   = "white";
-      toggleDiv.style.borderBottomColor = "#b0b0b0";
-      toggleDiv.style.borderRightColor  = "#b0b0b0";
+for (var i=0; i<sdssFieldQuads.length; i++) {
+  map.removeOverlay(sdssFieldQuads[i]);
+}
+buttonStyleOff(toggleDiv);
     } else {
       on = true;
-      if (sdssFieldQuad != null) {
-        map.addOverlay(sdssFieldQuad);
-      }
-      //map.addOverlay(sdssFieldQuad);
-      //txtNode.nodeValue = sdssFieldTxt;
-      toggleDiv.style.fontWeight = "bold";
-      toggleDiv.style.borderTopColor    = "#b0b0b0";
-      toggleDiv.style.borderLeftColor   = "#b0b0b0";
-      toggleDiv.style.borderBottomColor = "white";
-      toggleDiv.style.borderRightColor  = "white";
+for (var i=0; i<sdssFieldQuads.length; i++) {
+  map.addOverlay(sdssFieldQuads[i]);
+}
+buttonStyleOn(toggleDiv);
     }
   });
   map.getContainer().appendChild(container);
@@ -575,30 +580,17 @@ FieldQuadControl.prototype.getDefaultPosition = function() {
   return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(7, 30));
 }
 FieldQuadControl.prototype.setButtonStyle_ = function(button) {
-  button.style.color = "#000000";
-  button.style.backgroundColor = "white";
-  button.style.fontSize = "x-small";
-  button.style.fontFamily = "Arial";
-  button.style.fontWeight = "normal";
-  button.style.borderStyle = "solid";
-  button.style.borderWidth = "1px";
-  button.style.borderTopColor    = "white";
-  button.style.borderLeftColor   = "white";
-  button.style.borderBottomColor = "#b0b0b0";
-  button.style.borderRightColor  = "#b0b0b0";
-  button.style.padding = "1px";
-  button.style.marginBottom = "1px";
-  button.style.marginTop = "1px";
-  button.style.marginLeft = "1px";
-  button.style.marginRight = "1px";
-  button.style.textAlign = "center";
-  button.style.cursor = "pointer";
+buttonStyleCommon(button);
+buttonStyleOff(button);
 }
 
 function addquad() {
   var URL = BASE_URL + "quad.php?src=sdss&file=" + filenum + "&field=" + fieldnum +
-      "&quad=" + sdssobjs[0] + "," + sdssobjs[1] + "," + sdssobjs[2] +
-      "," + sdssobjs[3];
+      "&quad=";
+  for (var i=0; i<sdssobjs.length; i++) {
+    if (i) { URL = URL + ","; }
+    URL = URL + sdssobjs[i];
+  }
 
   GDownloadUrl(URL, function(data, responseCode){
   var xml = GXml.parse(data);
@@ -610,18 +602,25 @@ function addquad() {
 		                        parseFloat(quads[i].getAttribute("ra"+j))));
     }
     points.push(points[0]);
-    sdssQuad = new GPolyline(points, "#0000ff");
+sdssQuads.push(new GPolyline(points, "#ffc800"));
+//    sdssQuad = new GPolyline(points, "#0000ff");
+//    sdssQuad = new GPolyline(points, "#00e000");
+//sdssQuad = new GPolyline(points, "#ffc800");
   }
-  map.addOverlay(sdssQuad);
+for (var i=0; i<sdssQuads.length; i++) {
+  map.addOverlay(sdssQuads[i]);
+}
   map.addControl(new SdssQuadControl());
   });
 }
 
 function addindexquad() {
   var URL = BASE_URL + "quad.php?src=index&hp=" + hp +
-      "&quad=" + indexobjs[0] + "," + indexobjs[1] + "," + indexobjs[2] +
-      "," + indexobjs[3];
-
+      "&quad=";
+  for (var i=0; i<indexobjs.length; i++) {
+    if (i) { URL = URL + ","; }
+    URL = URL + indexobjs[i];
+  }
   GDownloadUrl(URL, function(data, responseCode){
   var xml = GXml.parse(data);
   var quads = xml.documentElement.getElementsByTagName("quad");
@@ -632,18 +631,24 @@ function addindexquad() {
 		                        parseFloat(quads[i].getAttribute("ra"+j))));
     }
     points.push(points[0]);
-    indexQuad = new GPolyline(points, "#ff0000");
+indexQuads.push(new GPolyline(points, "#90a8ff"));
+//indexQuad = new GPolyline(points, "#ff0000");
+//indexQuad = new GPolyline(points, "#90a8ff");
   }
-  map.addOverlay(indexQuad);
+for (var i=0; i<indexQuads.length; i++) {
+  map.addOverlay(indexQuads[i]);
+}
   map.addControl(new IndexQuadControl());
   });
 }
 
 function addfieldquad() {
   var URL = BASE_URL + "quad.php?src=field&file=" + filenum + "&field=" + fieldnum +
-      "&quad=" + fieldobjs[0] + "," + fieldobjs[1] + "," + fieldobjs[2] +
-      "," + fieldobjs[3];
-
+      "&quad=";
+  for (var i=0; i<fieldobjs.length; i++) {
+    if (i) { URL = URL + ","; }
+    URL = URL + fieldobjs[i];
+  }
   GDownloadUrl(URL, function(data, responseCode){
   var xml = GXml.parse(data);
   var quads = xml.documentElement.getElementsByTagName("quad");
@@ -654,7 +659,10 @@ function addfieldquad() {
 		                        parseFloat(quads[i].getAttribute("ra"+j))));
     }
     points.push(points[0]);
-    sdssFieldQuad = new GPolyline(points, "#0000ff");
+sdssFieldQuads.push(new GPolyline(points, "#ffc800"));
+//sdssFieldQuad = new GPolyline(points, "#0000ff");
+//sdssFieldQuad = new GPolyline(points, "#00e000");
+//sdssFieldQuad = new GPolyline(points, "#ffc800");
   }
   map.addControl(new FieldQuadControl());
   });
@@ -677,6 +685,42 @@ if (gotindexquad) {
 if (gotfieldquad) {
   setTimeout("addfieldquad();", 7);
 }
+if (sdss) {
+if (sdssBoundaryState)
+  map.addOverlay(sdssBoundary);
+  map.addControl(new SdssBoundaryControl());
+}
+
+if ("view" in getdata) {
+var view = getdata["view"];
+var type="";
+if (view == "usnob") {
+type = "usnobType";
+} else if (view == "u+i") {
+type = "usnobPlusIndex";
+} else if (view == "index") {
+type = "indexAlone";
+} else if (view == "i+s") {
+type = "indexPlusSDSS";
+} else if (view == "sdss") {
+type = "sdssAlone";
+} else if (view == "field") {
+type = "sdssField";
+}
+if (type.length) {
+setTimeout("map.setMapType(" + type + ");");
+}
+}
+
+// DEBUG
+//setTimeout("map.setMapType(sdssField); map.setZoom(2); map.setCenter(new GLatLng(8.41,179.65));", 8);
+//setTimeout("map.setMapType(sdssAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
+//setTimeout("map.setMapType(indexAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
+
+//setTimeout("map.setMapType(sdssField); map.setZoom(2); map.setCenter(new GLatLng(0,180));", 8);
+//setTimeout("map.setMapType(sdssAlone); map.setZoom(11); map.setCenter(new GLatLng(26.93,241.55));", 8);
+//setTimeout("map.setMapType(indexAlone); map.setZoom(11); map.setCenter(new GLatLng(26.93,241.55));", 8);
+
 /*
 info_html = "<b>testing</b>";
 document.getElementById("info").innerHTML += info_html;

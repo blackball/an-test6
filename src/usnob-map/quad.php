@@ -86,14 +86,16 @@
 			exit;
 		}
 	}
-	if (sscanf($quadstr, "%d,%d,%d,%d", $q1, $q2, $q3, $q4) != 4) {
+	$quadpattern = '/^\d*(,\d*){3}(,\d*(,\d*){3})*$/';
+	if (!preg_match($quadpattern, $quadstr)) {
 		loggit("Failed to parse quad.\n");
 		header("Content-type: text/html");
 		echo("<html><body>Invalid request: failed to parse quad.</body></html>\n\n");
 		exit;
 	}
+	$quads = explode(",", $quadstr);
 
-	loggit("file=$filenum, field=$fieldnum, hp=$hp, quad=$q1,$q2,$q3,$q4.\n");
+	loggit("file=$filenum, field=$fieldnum, hp=$hp, quads=$quads\n");
 
 	if ($is_sdss || $is_field) {
 		$cmd = sprintf("sdssquad -s %d -S %d", $filenum, $fieldnum);
@@ -103,7 +105,10 @@
 	} else if ($is_index) {
 		$cmd = sprintf("indexquad -H %d", $hp);
 	}
-	$cmd = $cmd . sprintf(" -q %d -q %d -q %d -q %d", $q1, $q2, $q3, $q4);
+	//$cmd = $cmd . sprintf(" -q %d -q %d -q %d -q %d", $q1, $q2, $q3, $q4);
+	foreach ($quads as $q) {
+		$cmd = $cmd . sprintf(" -q %d", $q);
+	}
 	loggit("Command: $cmd\n");
 	passthru($cmd);
 ?> 
