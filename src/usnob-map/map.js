@@ -23,6 +23,7 @@ var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
 var FIELD_URL;
+var SDSS_URL;
 
 var gotquad = false;
 var gotfieldquad = false;
@@ -35,8 +36,13 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 	var fieldnum = Number(getdata["SDSS_FIELD"]);
 	if (filenum > 0 && filenum <= 35 && fieldnum >= 0 && fieldnum < 10000) {
 		var sdss = true;
-		var SDSS_URL = TILE_URL + "map=sdss" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
+		SDSS_URL = TILE_URL + "map=sdss" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
 		FIELD_URL = TILE_URL + "map=sdssfield" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
+		if ("nf" in getdata) {
+			var nf = Number(getdata["nf"]);
+			SDSS_URL = SDSS_URL + "&N=" + nf;
+			FIELD_URL = FIELD_URL + "&N=" + nf;
+		}
 	}
 	if ("SDSS_QUAD" in getdata) {
 		var quadstr = getdata["SDSS_QUAD"];

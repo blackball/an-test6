@@ -67,6 +67,7 @@
 			exit;
 	}
 
+	$N = 0;
 	if (strlen("$sdss_file") && strlen("$sdss_field")) {
 		if ($map == "sdssfield") {
 			$gotsdssfield = 1;
@@ -80,6 +81,15 @@
 			header("Content-type: text/html");
 			printf("<html><body>Invalid request: failed to parse SDSS_{FILE,FIELD}.</body></html>\n\n");
 			exit;
+		}
+		$nstr = $_REQUEST["N"];
+		if (strlen($nstr)) {
+			if (sscanf($nstr, "%d", $N) != 1) {
+				loggit("Failed to parse N.\n");
+				header("Content-type: text/html");
+				printf("<html><body>Invalid request: failed to parse.</body></html>\n\n");
+				exit;
+			}
 		}
 	}
 	if (strlen("$hpstr")) {
@@ -135,6 +145,9 @@
 		if ($lines) {
 			$cmd = $cmd . sprintf(" -l %f", $linesize);
 		}
+	}
+	if ($N > 0) {
+		$cmd = $cmd . sprintf(" -N %d", $N);
 	}
 	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
