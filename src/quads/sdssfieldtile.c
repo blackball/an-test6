@@ -21,12 +21,23 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 static void addstar(float* fluximg, int x, int y, int W, int H) {
+	/*
 	int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2 };
 	int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2 };
+	*/
+	int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2,
+				  1,  0, -1,  2,  3,  2,  3,  0, -1 };
+	int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2,
+				  0, -1, -2,  1,  2, -1, -2,  1,  2 };
 	float rflux, gflux, bflux;
 	int i;
+	/*
+	  rflux = 255.0;
+	  gflux = bflux = 0.0;
+	*/
 	rflux = 255.0;
-	gflux = bflux = 0.0;
+	gflux = 200.0;
+	bflux = 0.0;
 	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
 		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;
 		if ((y + dy[i] < 0) || (y + dy[i] >= H)) continue;
@@ -55,21 +66,27 @@ int main(int argc, char *argv[]) {
 	double* xy;
 	int Nstars;
 
-	int pixelmargin = 3;
+	int pixelmargin = 4;
 
 	// see also sdssquad.c
 	double Xmax = 2048.0;
-	double Ymax = 1600.0;
+	double Ymax = 1500.0;
 	/*
 	  double Xoffset = 0.1;
 	  double Xscale = 0.8;
 	  double Yoffset = 0.1;
 	  double Yscale = 0.8;
 	*/
-	double Xoffset = 0.2;
-	double Xscale = 0.6;
-	double Yoffset = 0.2;
-	double Yscale = 0.6;
+	/*
+	  double Xoffset = 0.2;
+	  double Xscale = 0.6;
+	  double Yoffset = 0.2;
+	  double Yscale = 0.6;
+	*/
+	double Xoffset = 0.22;
+	double Xscale = 0.56;
+	double Yoffset = 0.22;
+	double Yscale = 0.56;
 
 	gotx = goty = gotX = gotY = gotw = goth = gots = gotS = FALSE;
 
@@ -244,10 +261,14 @@ int main(int argc, char *argv[]) {
 
 		for (i=0; i<Nstars; i++) {
 			double xs, ys;
+			double tmp;
 			int ix, iy, ixwrap;
 
 			xs = xy[i*2 + 0] / Xmax;
 			ys = xy[i*2 + 1] / Ymax;
+
+			// Switcheroo! (parity)
+			tmp = xs; xs = ys; ys = tmp;
 
 			// make the field look more pretty.
 			xs = xs * Xscale + Xoffset;

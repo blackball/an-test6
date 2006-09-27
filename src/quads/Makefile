@@ -14,7 +14,20 @@ CFLAGS += -fomit-frame-pointer
 CFLAGS += -O3 
 # This wrecks our ability to do "fitsmd5" and similar fun byte-level tests
 #CFLAGS += -ffast-math 
-CFLAGS += -fno-math-errno -fno-trapping-math -ffinite-math-only -fno-signaling-nans
+CFLAGS += -fno-math-errno -fno-trapping-math
+
+GCC_MAJOR := $(shell gcc --version | awk '/[[:digit:]]\.[[:digit:]]/{if (match($$0, "[[:digit:]]\\.")) {print substr($$0, RSTART, RLENGTH-1);}}')
+GCC_MINOR := $(shell gcc --version | awk '/[[:digit:]]\.[[:digit:]]/{if (match($$0, "\\.[[:digit:]]")) {print substr($$0, RSTART+1, RLENGTH-1);}}')
+GCC_HAS_FFINITE := $(shell if ((($(GCC_MAJOR) > 3) || (($(GCC_MAJOR) == 3) && ($(GCC_MINOR) >= 3)))); then echo 1; else echo 0; fi)
+# 3.2 doesn't have it
+# 3.3 does
+# 4.0 does
+$(warning gcc version $(GCC_MAJOR) dot $(GCC_MINOR))
+#$(warning gcc has -ffinite-math-only: $(GCC_HAS_FFINITE))
+
+ifeq ($(GCC_HAS_FFINITE), 1)
+	CFLAGS += -ffinite-math-only -fno-signaling-nans
+endif
 
 # to turn off asserts:
 CFLAGS += -DNDEBUG
@@ -149,7 +162,7 @@ PIPELINE := usnobtofits tycho2tofits build_an_catalog hpowned cut_an startree \
 	solvedserver printsolved
 
 PROSPECTUS := plotcat quadidx codedensity codeprojections quadlocations \
-	quadscales
+	quadscales quadsperstar
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
 PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
@@ -376,6 +389,10 @@ quadlocations: quadlocations.o quadfile.o catalog.o starkd.o bl.o $(UTIL_OBJS) \
 
 quadscales: quadscales.o histogram.o starkd.o quadfile.o $(UTIL_OBJS) \
 		$(KDTREE_OBJS) $(QFITS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+
+quadsperstar: quadsperstar.o qidxfile.o \
+		$(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 fitsgetext: fitsgetext.o bl.o $(QFITS_LIB)

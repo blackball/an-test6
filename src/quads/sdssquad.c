@@ -135,18 +135,21 @@ int main(int argc, char *argv[]) {
 			printf("  <quad");
 			for (i=0; i<4; i++) {
 				int ind = inds[perm[i]];
-				printf(" ra%i=\"%g\" dec%i=\"%g\"", i, radec[2*ind], i, radec[2*ind+1]);
+				double x, y;
+				x = radec[2*ind];
+				y = radec[2*ind+1];
+				printf(" ra%i=\"%g\" dec%i=\"%g\"", i, x, i, y);
 			}
 			printf("/>\n");
 		}
 	} else {
 		// see also sdssfieldtile.c
 		double Xmax = 2048.0;
-		double Ymax = 1600.0;
-		double Xoffset = 0.2;
-		double Xscale = 0.6;
-		double Yoffset = 0.2;
-		double Yscale = 0.6;
+		double Ymax = 1500.0;
+		double Xoffset = 0.22;
+		double Xscale = 0.56;
+		double Yoffset = 0.22;
+		double Yscale = 0.56;
 
 		for (j=0; j<il_size(quads)/4; j++) {
 			double xyABCD[8];
@@ -177,11 +180,15 @@ int main(int argc, char *argv[]) {
 			printf("  <quad");
 			for (i=0; i<4; i++) {
 				int ind = inds[perm[i]];
-				double x, y;
-				x = radec[2*ind];
-				y = radec[2*ind+1];
-				x = (x / Xmax) * Xscale + Xoffset;
-				y = (y / Ymax) * Yscale + Yoffset;
+				double x, y, tmp;
+				x = radec[2*ind]   / Xmax;
+				y = radec[2*ind+1] / Ymax;
+
+				// Switcheroo! (parity)
+				tmp = x; x = y; y = tmp;
+
+				x = x * Xscale + Xoffset;
+				y = y * Yscale + Yoffset;
 				// now x,y are in (unit)-Mercator coordinates; un-project.
 				x *= 360.0;
 				y = atan(sinh((y * 2.0 * M_PI) - M_PI)) * 180.0 / M_PI;

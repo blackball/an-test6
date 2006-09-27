@@ -27,8 +27,16 @@ extern int optind, opterr, optopt;
 
 static void addstar(uchar* img, int x, int y, int W, int H,
 					uchar r, uchar g, uchar b) {
-	int dx[] = { -1,  0,  1, -1,  0,  1, -2, -2, -2,  2,  2,  2 };
-	int dy[] = { -2, -2, -2,  2,  2,  2, -1,  0,  1, -1,  0,  1 };
+	/*
+	  int dx[] = { -1,  0,  1, -1,  0,  1, -2, -2, -2,  2,  2,  2 };
+	  int dy[] = { -2, -2, -2,  2,  2,  2, -1,  0,  1, -1,  0,  1 };
+	*/
+	int dx[] = { -1,  0,  1,  2, -1,  0,  1,  2,
+				 -2, -2, -2, -2,  3,  3,  3,  3 };
+	//-2, -2,  3,  3 };
+	int dy[] = { -2, -2, -2, -2,  3,  3,  3,  3,
+				 -1,  0,  1,  2, -1,  0,  1,  2 };
+	//-2,  3, -2,  3 };
 	/*
 	  int dx[] = { -1,  0,  1,  0,  0 };
 	  int dy[] = {  0,  0,  0, -1,  1 };
@@ -328,7 +336,9 @@ int main(int argc, char *argv[]) {
 					iy + pixelmargin < 0 ||
 					iy - pixelmargin >= h)
 					continue;
-				addstar(img, ix, iy, w, h, 255, 255, 255);
+				//addstar(img, ix, iy, w, h, 255, 255, 255);
+				//addstar(img, ix, iy, w, h, 255, 255, 255);
+				addstar(img, ix, iy, w, h, 0x90, 0xa8, 255);
 				Nib++;
 			}
 

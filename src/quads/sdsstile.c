@@ -26,12 +26,19 @@ static void addstar(float* fluximg, int x, int y, int W, int H) {
 	  int dx[] = { -1,  0,  1, -1,  0,  1, -2, -2, -2,  2,  2,  2 };
 	  int dy[] = { -2, -2, -2,  2,  2,  2, -1,  0,  1, -1,  0,  1 };
 	*/
-	int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2 };
-	int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2 };
+	/*
+	  int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2 };
+	  int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2 };
+	*/
+	int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2,
+				  1,  0, -1,  2,  3,  2,  3,  0, -1 };
+	int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2,
+				  0, -1, -2,  1,  2, -1, -2,  1,  2 };
 	float rflux, gflux, bflux;
 	int i;
 	rflux = 255.0;
-	gflux = bflux = 0.0;
+	gflux = 200.0;
+	bflux = 0.0;
 	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
 		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;
 		if ((y + dy[i] < 0) || (y + dy[i] >= H)) continue;
@@ -60,7 +67,7 @@ int main(int argc, char *argv[]) {
 	double* radec;
 	int Nstars;
 
-	int pixelmargin = 3;
+	int pixelmargin = 4;
 
 	gotx = goty = gotX = gotY = gotw = goth = gots = gotS = FALSE;
 
