@@ -20,7 +20,7 @@ AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf "$(AN_TEMPLATE) " $
 
 #$(warning AN files: $(AN_FILES))
 
-$(AN_CATALOG_PRESENT): $(AN_FILES)
+$(AN_CATALOG_PRESENT): an_catalog #$(AN_FILES)
 	$(MKDIR) $(AN_DIR)
 	$(TOUCH) $@
 
@@ -28,12 +28,9 @@ $(AN_CATALOG_PRESENT): $(AN_FILES)
 an_catalog: $(AN_FILES)
 
 #$(AN_FILES): $(USNOB_FITS) $(TYCHO2_FITS)
-
 #.PHONY: build-an
 #$(AN_FILES): build-an
-
 #build-an: $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
-
 #build-an: $(USNOB_FITS) $(TYCHO2_FITS)
 
 $(AN_FILES): $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)

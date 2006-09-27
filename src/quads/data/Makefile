@@ -116,8 +116,8 @@ MATLAB_INIT   := addpath('~/quads')
 define INDEX_template_A
 .PHONY: index$(1)
 index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
-#$(warning index$(1) is $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits))
 endef
+#$(warning index$(1) is $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits))
 
 NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
 $(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
