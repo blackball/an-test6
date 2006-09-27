@@ -35,6 +35,7 @@
 	$bb = $_REQUEST["BBOX"];
 	$epsg = $_REQUEST["SRS"];
 	$lay = $_REQUEST["LAYERS"];
+	$map = $_REQUEST["map"];
 
 	$sdss_file  = $_REQUEST["SDSS_FILE"];
 	$sdss_field = $_REQUEST["SDSS_FIELD"];
@@ -67,7 +68,11 @@
 	}
 
 	if (strlen("$sdss_file") && strlen("$sdss_field")) {
-		$gotsdss = 1;
+		if ($map == "sdssfield") {
+			$gotsdssfield = 1;
+		} else {
+			$gotsdss = 1;
+		}
 		if ((sscanf($sdss_file, "%d", $sdssfile) != 1) ||
 			(sscanf($sdss_field, "%d", $sdssfield) != 1) ||
 			($sdssfile < 1) || ($sdssfile > 35) || ($sdssfield < 0) || ($sdssfield > 10000)) {
@@ -85,6 +90,7 @@
 			printf("<html><body>Invalid request: failed to parse healpix.</body></html>\n\n");
 			exit;
 		}
+		$indextransparent = ($_REQUEST["trans"] == "1");
 	}
 
 	$layers = explode(" ", $lay);
@@ -121,6 +127,8 @@
 		$cmd = sprintf("indextile -H %d", $hp);
 	} else if ($gotsdss) {
 		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
+	} else if ($gotsdssfield) {
+		$cmd = sprintf("sdssfieldtile -s %d -S %d", $sdssfile, $sdssfield);
 	} else {
 		$cmd = "usnobtile";
 		if ($lines) {
@@ -130,7 +138,7 @@
 	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
-	if ($gotsdss) {
+	if ($gotsdss || $indextransparent) {
 		// NOTE, that space between "-transparent" and "=black" is supposed
 		// to be there!
 		$cmd = $cmd . " -transparent =black";

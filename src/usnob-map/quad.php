@@ -35,7 +35,8 @@
 	$src = $_REQUEST["src"];
 	$is_sdss = ($src == "sdss");
 	$is_index = ($src == "index");
-	if ($is_sdss) {
+	$is_field = ($src == "field");
+	if ($is_sdss || $is_field) {
 		$needed = array("file", "field");
 		foreach ($needed as $n => $val) {
 			if (!array_key_exists($val, $_REQUEST)) {
@@ -69,7 +70,7 @@
 
 	loggit("file=$filestr, field=$fieldstr, quad=$quadstr, hp=$hpstr\n");
 
-	if ($is_sdss) {
+	if ($is_sdss || $is_field) {
 		 if ((sscanf($filestr, "%d", $filenum) != 1) ||
 		     (sscanf($fieldstr, "%d", $fieldnum) != 1)) {
 				loggit("Failed to parse file or field.\n");
@@ -94,8 +95,11 @@
 
 	loggit("file=$filenum, field=$fieldnum, hp=$hp, quad=$q1,$q2,$q3,$q4.\n");
 
-	if ($is_sdss) {
+	if ($is_sdss || $is_field) {
 		$cmd = sprintf("sdssquad -s %d -S %d", $filenum, $fieldnum);
+	    if ($is_field) {
+			$cmd = $cmd . " -f";
+		}
 	} else if ($is_index) {
 		$cmd = sprintf("indexquad -H %d", $hp);
 	}

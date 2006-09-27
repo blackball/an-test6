@@ -106,6 +106,12 @@ var map = new GMap(document.getElementById("map"));
 var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
+var FIELD_URL;
+
+var gotquad = false;
+var gotfieldquad = false;
+var sdssobjs = [];
+var fieldobjs = [];
 
 var getdata = getGetData();
 if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
@@ -114,9 +120,30 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
   if (filenum > 0 && filenum <= 35 && fieldnum >= 0 && fieldnum < 10000) {
     var sdss = true;
     var SDSS_URL = TILE_URL + "map=sdss" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
+    FIELD_URL = TILE_URL + "map=sdssfield" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
   }
   if ("SDSS_QUAD" in getdata) {
     var quadstr = getdata["SDSS_QUAD"];
+    debug("quadstr is " + quadstr + "\n");
+    if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
+      debug("quadstr matches.\n");
+      sdssobjs = quadstr.match(/\d+/g);
+      debug("sdssobjs is " + sdssobjs + "\n");
+      if (sdssobjs != null) {
+        for (var i=0; i<sdssobjs.length; i++) {
+          debug("sdssobjs[" + i + "] is " + sdssobjs[i] + "\n");
+        }
+      }
+      if (sdssobjs != null && sdssobjs.length == 4) {
+        gotquad = true;
+      }
+    }
+    fieldobjs = sdssobjs;
+    gotfieldquad = gotquad;
+  }
+/*
+  if ("FIELD_QUAD" in getdata) {
+    var quadstr = getdata["FIELD_QUAD"];
     debug("quadstr is " + quadstr + "\n");
     if (quadstr.match(/^\d*(,\d*){3}$/) != null) {
       debug("quadstr matches.\n");
@@ -128,10 +155,11 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
         }
       }
       if (fieldobjs != null && fieldobjs.length == 4) {
-        var gotquad = true;
+        var gotfieldquad = true;
       }
     }
   }
+*/
 }
 if ("HP" in getdata) {
 var hp = Number(getdata["HP"]);
@@ -184,33 +212,61 @@ sdssTile.myFormat='image/png';
 sdssTile.myBaseURL=SDSS_URL;
 sdssTile.getTileUrl=CustomGetTileUrl;
 
+var sdssFieldTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),0,17);
+sdssFieldTile.myLayers='sdssfield';
+sdssFieldTile.myFormat='image/png';
+sdssFieldTile.myBaseURL=FIELD_URL;
+sdssFieldTile.getTileUrl=CustomGetTileUrl;
+
 var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
 indexTile.myLayers='index';
 indexTile.myFormat='image/png';
 indexTile.myBaseURL=INDEX_URL;
 indexTile.getTileUrl=CustomGetTileUrl;
 
+var indexTransTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
+indexTransTile.myLayers='index';
+indexTransTile.myFormat='image/png';
+indexTransTile.myBaseURL=INDEX_URL + "&trans=1";
+indexTransTile.getTileUrl=CustomGetTileUrl;
+
 /*
-  http://www.cs.toronto.edu/~dstn/usnob/tile.php?map=usnob&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=usnob&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:54004&BBOX=-13677947.379473988,4552576.405486049,-13658379.500533395,4572062.879663667&WIDTH=256&HEIGHT=256&reaspect=false
+http://monte.ai.toronto.edu:8080/usnob/map.html?SDSS_FILE=1&SDSS_FIELD=6&SDSS_QUAD=0,9,13,6&ra=241.55&dec=26.93&zoom=11&HP=2&INDEX_QUAD=4763876,4763639,4763878,4732341&over=no
 */
 
 var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
 //var usnobType2 = new GMapType([usnobTile2], G_SATELLITE_MAP.getProjection(), "+Lines", G_SATELLITE_MAP);
-if (sdss) {
+
+/*
+  if (sdss) {
   var usnobPlusSDSS = new GMapType([usnobTile,sdssTile], G_SATELLITE_MAP.getProjection(), "USNOB+SDSS", G_SATELLITE_MAP);
+  }
+*/
+if (sdss) {
+  var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
 }
+
 if (gothp) {
-  var indexPlusSDSS = new GMapType([indexTile,sdssTile], G_SATELLITE_MAP.getProjection(), "INDEX+SDSS", G_SATELLITE_MAP);
+  var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
+  var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
+  var indexPlusSDSS = new GMapType([indexTile,sdssTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
 }
 
 map.getMapTypes().length = 0;
 map.addMapType(usnobType);
-if (sdss) {
+/*
+  if (sdss) {
   map.addMapType(usnobPlusSDSS);
   //map.addMapType(usnobType2);
-}
+  }
+*/
 if (gothp) {
+  map.addMapType(usnobPlusIndex);
+  map.addMapType(indexAlone);
   map.addMapType(indexPlusSDSS);
+}
+if (sdss) {
+  map.addMapType(sdssField);
 }
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
@@ -344,9 +400,12 @@ var indexQuad = new GPolyline([]);
 var indexOn  = "INDEX QUAD";
 var indexOff = "INDEX QUAD";
 
-var sdssQuad = new GPolyline([]);
+var sdssQuad = null; //new GPolyline([]);
 var sdssOn  = "SDSS QUAD";
 var sdssOff = "SDSS QUAD";
+
+var sdssFieldQuad = null; //new GPolyline([]);
+var sdssFieldTxt  = "FIELD QUAD";
 
 function IndexQuadControl() {}
 IndexQuadControl.prototype = new GControl();
@@ -417,7 +476,9 @@ SdssQuadControl.prototype.initialize = function(map) {
   GEvent.addDomListener(toggleDiv, "click", function(){
     if (on) {
       on = false;
-      map.removeOverlay(sdssQuad);
+      if (sdssQuad != null) {
+        map.removeOverlay(sdssQuad);
+      }
       txtNode.nodeValue = sdssOff;
       toggleDiv.style.fontWeight = "normal";
       toggleDiv.style.borderTopColor    = "white";
@@ -426,7 +487,9 @@ SdssQuadControl.prototype.initialize = function(map) {
       toggleDiv.style.borderRightColor  = "#b0b0b0";
     } else {
       on = true;
-      map.addOverlay(sdssQuad);
+      if (sdssQuad != null) {
+        map.addOverlay(sdssQuad);
+      }
       txtNode.nodeValue = sdssOn;
       toggleDiv.style.fontWeight = "bold";
       toggleDiv.style.borderTopColor    = "#b0b0b0";
@@ -439,7 +502,7 @@ SdssQuadControl.prototype.initialize = function(map) {
   return container;
 }
 SdssQuadControl.prototype.getDefaultPosition = function() {
-  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(100, 30));
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(95, 30));
 }
 SdssQuadControl.prototype.setButtonStyle_ = function(button) {
   button.style.color = "#000000";
@@ -460,10 +523,74 @@ SdssQuadControl.prototype.setButtonStyle_ = function(button) {
   button.style.cursor = "pointer";
 }
 
+function FieldQuadControl() {}
+FieldQuadControl.prototype = new GControl();
+FieldQuadControl.prototype.initialize = function(map) {
+  var on = false;
+  var container = document.createElement("div");
+  var toggleDiv = document.createElement("div");
+  var txtNode = document.createTextNode(sdssFieldTxt);
+  this.setButtonStyle_(toggleDiv);
+  container.appendChild(toggleDiv);
+  toggleDiv.appendChild(txtNode);
+  GEvent.addDomListener(toggleDiv, "click", function(){
+    if (on) {
+      on = false;
+      if (sdssFieldQuad != null) {
+        map.removeOverlay(sdssFieldQuad);
+      }
+      //map.removeOverlay(sdssFieldQuad);
+      //txtNode.nodeValue = sdssFieldTxt;
+      toggleDiv.style.fontWeight = "normal";
+      toggleDiv.style.borderTopColor    = "white";
+      toggleDiv.style.borderLeftColor   = "white";
+      toggleDiv.style.borderBottomColor = "#b0b0b0";
+      toggleDiv.style.borderRightColor  = "#b0b0b0";
+    } else {
+      on = true;
+      if (sdssFieldQuad != null) {
+        map.addOverlay(sdssFieldQuad);
+      }
+      //map.addOverlay(sdssFieldQuad);
+      //txtNode.nodeValue = sdssFieldTxt;
+      toggleDiv.style.fontWeight = "bold";
+      toggleDiv.style.borderTopColor    = "#b0b0b0";
+      toggleDiv.style.borderLeftColor   = "#b0b0b0";
+      toggleDiv.style.borderBottomColor = "white";
+      toggleDiv.style.borderRightColor  = "white";
+    }
+  });
+  map.getContainer().appendChild(container);
+  return container;
+}
+FieldQuadControl.prototype.getDefaultPosition = function() {
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(170, 30));
+}
+FieldQuadControl.prototype.setButtonStyle_ = function(button) {
+  button.style.color = "#000000";
+  button.style.backgroundColor = "white";
+  button.style.fontSize = "x-small";
+  button.style.fontFamily = "Arial";
+  button.style.fontWeight = "normal";
+  button.style.borderStyle = "solid";
+  button.style.borderWidth = "1px";
+  button.style.borderTopColor    = "white";
+  button.style.borderLeftColor   = "white";
+  button.style.borderBottomColor = "#b0b0b0";
+  button.style.borderRightColor  = "#b0b0b0";
+  button.style.padding = "1px";
+  button.style.marginBottom = "1px";
+  button.style.marginTop = "1px";
+  button.style.marginLeft = "1px";
+  button.style.marginRight = "1px";
+  button.style.textAlign = "center";
+  button.style.cursor = "pointer";
+}
+
 function addquad() {
   var URL = BASE_URL + "quad.php?src=sdss&file=" + filenum + "&field=" + fieldnum +
-      "&quad=" + fieldobjs[0] + "," + fieldobjs[1] + "," + fieldobjs[2] +
-      "," + fieldobjs[3];
+      "&quad=" + sdssobjs[0] + "," + sdssobjs[1] + "," + sdssobjs[2] +
+      "," + sdssobjs[3];
 
   GDownloadUrl(URL, function(data, responseCode){
   var xml = GXml.parse(data);
@@ -504,6 +631,27 @@ function addindexquad() {
   });
 }
 
+function addfieldquad() {
+  var URL = BASE_URL + "quad.php?src=field&file=" + filenum + "&field=" + fieldnum +
+      "&quad=" + fieldobjs[0] + "," + fieldobjs[1] + "," + fieldobjs[2] +
+      "," + fieldobjs[3];
+
+  GDownloadUrl(URL, function(data, responseCode){
+  var xml = GXml.parse(data);
+  var quads = xml.documentElement.getElementsByTagName("quad");
+  for (var i = 0; i < quads.length; i++) {
+    var points = [];
+    for (var j=0; j<4; j++) {
+        points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
+		                        parseFloat(quads[i].getAttribute("ra"+j))));
+    }
+    points.push(points[0]);
+    sdssFieldQuad = new GPolyline(points, "#ff0000");
+  }
+  map.addControl(new FieldQuadControl());
+  });
+}
+
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
@@ -517,6 +665,9 @@ if (gotquad) {
 }
 if (gotindexquad) {
   setTimeout("addindexquad();", 6);
+}
+if (gotfieldquad) {
+  setTimeout("addfieldquad();", 7);
 }
 /*
 info_html = "<b>testing</b>";
