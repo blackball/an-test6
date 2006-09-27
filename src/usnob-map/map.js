@@ -17,8 +17,6 @@ function debug(txt) {
 	//document.debugform.debug.value += txt;
 }
 
-//if (GBrowserIsCompatible()) {
-// var map = new GMap2(document.getElementById("map"));
 var map = new GMap(document.getElementById("map"));
 
 var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
@@ -97,14 +95,6 @@ usnobTile.myFormat='image/png';
 usnobTile.myBaseURL=USNOB_URL;
 usnobTile.getTileUrl=CustomGetTileUrl;
 
-/*
-  var usnobTile2 = new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
-  usnobTile2.myLayers='usnob lines10';
-  usnobTile2.myFormat='image/png';
-  usnobTile2.myBaseURL=WMS_URL;
-  usnobTile2.getTileUrl=CustomGetTileUrl;
-*/
-
 var sdssTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
 sdssTile.myLayers='sdss';
 sdssTile.myFormat='image/png';
@@ -140,13 +130,7 @@ indexTransTile.getTileUrl=CustomGetTileUrl;
 */
 
 var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
-//var usnobType2 = new GMapType([usnobTile2], G_SATELLITE_MAP.getProjection(), "+Lines", G_SATELLITE_MAP);
 
-/*
-  if (sdss) {
-  var usnobPlusSDSS = new GMapType([usnobTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "USNOB+SDSS", G_SATELLITE_MAP);
-  }
-*/
 if (sdss) {
 	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
 	var sdssAlone = new GMapType([sdssTile], G_SATELLITE_MAP.getProjection(), "SDSS", G_SATELLITE_MAP);
@@ -160,12 +144,7 @@ if (gothp) {
 
 map.getMapTypes().length = 0;
 map.addMapType(usnobType);
-/*
-  if (sdss) {
-  map.addMapType(usnobPlusSDSS);
-  //map.addMapType(usnobType2);
-  }
-*/
+
 if (gothp) {
 	map.addMapType(usnobPlusIndex);
 	map.addMapType(indexAlone);
@@ -190,16 +169,8 @@ if (overview) {
 }
 
 GEvent.bindDom(window,"resize",map,map.onResize);
-// is the map moving as a result of our request?
-// (this doesn't quite work with panning because it seems they deliver some
-//  "moveend" events before it really has stopped moving.)
-var movingmap = false;
 
 function mapmoved() {
-	debug("mapmoved(): movingmap = " + movingmap + "\n");
-	if (movingmap) {
-		return;
-	}
 	center = map.getCenter();
 	// update the center ra,dec textboxes.
 	ra = center.lng();
@@ -215,11 +186,6 @@ function mapzoomed(oldzoom, newzoom) {
 }
 
 function moveended() {
-	debug("moveended().\n");
-	if (movingmap) {
-		debug("set movingmap = false.\n");
-		movingmap = false;
-	}
 	mapmoved();
 	// update the object count textbox.
 	var bounds = map.getBounds();
@@ -227,16 +193,6 @@ function moveended() {
 	var zoom = map.getZoom();
 	var sw = bounds.getSouthWest();
 	var ne = bounds.getNorthEast();
-	/*
-	  debug("Center (" +
-	  center.lng() + "," + center.lat() + ")\n" +
-	  "Bounds (" +
-	  sw.lng() + "," + sw.lat() + ")-(" + ne.lng() + "," +
-	  ne.lat() + ")\n" +
-	  "Pixelsize (" + pixelsize.width + "," + pixelsize.height +
-	  ")\n" +
-	  "Zoom " + zoom + "\n");
-	*/
 
 	var COUNT_URL = "http://monte.ai.toronto.edu:8080/usnob/count.php?map=usnob";
 	var url = COUNT_URL + "&center_ra=" + center.lng() + "&center_dec=" + center.lat()
@@ -255,8 +211,6 @@ function mousemoved(latlong) {
 
 function moveCenter() {
 	// "Go!" button / Enter in textfields
-	debug("moveCenter() - set movingmap = true.\n");
-	movingmap = true;
 	var ra = document.dummyform.ra_center.value;
 	var dec = document.dummyform.dec_center.value;
 	var zoom = document.dummyform.zoom.value;
@@ -322,6 +276,9 @@ pts.push(new GLatLng(26.791,241.55));
 pts.push(pts[0]);
 sdssBoundary = new GPolyline(pts, "ffc800");
 var sdssBoundaryState = ("sb" in getdata);
+if (sdssBoundaryState) {
+	map.addOverlay(sdssBoundary);
+}
 
 var sdssFieldQuads = [];
 var sdssFieldTxt  = "FIELD QUAD";
@@ -350,11 +307,8 @@ function buttonStyleCommon(button) {
 	button.style.fontFamily = "Arial";
 	button.style.borderStyle = "solid";
 	button.style.borderWidth = "1px";
-	//  button.style.padding = "1px";
 	button.style.marginBottom = "1px";
 	button.style.marginTop = "1px";
-	//  button.style.marginLeft = "1px";
-	//  button.style.marginRight = "1px";
 	button.style.textAlign = "center";
 	button.style.cursor = "pointer";
 	button.style.width = "70px";
@@ -364,7 +318,7 @@ function buttonStyleCommon(button) {
 function IndexQuadControl() {}
 IndexQuadControl.prototype = new GControl();
 IndexQuadControl.prototype.initialize = function(map) {
-	var on = true;
+	var on = indexQuadState;
 	var container = document.createElement("div");
 	var toggleDiv = document.createElement("div");
 	var txtNode = document.createTextNode(indexTxt);
@@ -394,12 +348,15 @@ IndexQuadControl.prototype.getDefaultPosition = function() {
 }
 IndexQuadControl.prototype.setButtonStyle_ = function(button) {
 	buttonStyleCommon(button);
+	if (!indexQuadState) {
+		buttonStyleOff(button);
+	}
 }
 
 function SdssQuadControl() {}
 SdssQuadControl.prototype = new GControl();
 SdssQuadControl.prototype.initialize = function(map) {
-	var on = true;
+	var on = sdssQuadState;
 	var container = document.createElement("div");
 	var toggleDiv = document.createElement("div");
 	var txtNode = document.createTextNode(sdssTxt);
@@ -429,12 +386,15 @@ SdssQuadControl.prototype.getDefaultPosition = function() {
 }
 SdssQuadControl.prototype.setButtonStyle_ = function(button) {
 	buttonStyleCommon(button);
+	if (!sdssQuadState) {
+		buttonStyleOff(button);
+	}
 }
 
 function SdssBoundaryControl() {}
 SdssBoundaryControl.prototype = new GControl();
 SdssBoundaryControl.prototype.initialize = function(map) {
-	var on = true;
+	var on = sdssBoundaryState;
 	var container = document.createElement("div");
 	var toggleDiv = document.createElement("div");
 	var txtNode = document.createTextNode(sdssBoundaryTxt);
@@ -464,12 +424,15 @@ SdssBoundaryControl.prototype.getDefaultPosition = function() {
 }
 SdssBoundaryControl.prototype.setButtonStyle_ = function(button) {
 	buttonStyleCommon(button);
+	if (!sdssBoundaryState) {
+		buttonStyleOff(button);
+	}
 }
 
 function FieldQuadControl() {}
 FieldQuadControl.prototype = new GControl();
 FieldQuadControl.prototype.initialize = function(map) {
-	var on = false;
+	var on = sdssFieldQuadState;
 	var container = document.createElement("div");
 	var toggleDiv = document.createElement("div");
 	var txtNode = document.createTextNode(sdssFieldTxt);
@@ -499,7 +462,9 @@ FieldQuadControl.prototype.getDefaultPosition = function() {
 }
 FieldQuadControl.prototype.setButtonStyle_ = function(button) {
 	buttonStyleCommon(button);
-	buttonStyleOff(button);
+	if (!sdssFieldQuadState) {
+		buttonStyleOff(button);
+	}
 }
 
 function addquad() {
@@ -525,8 +490,10 @@ function addquad() {
 			//    sdssQuad = new GPolyline(points, "#00e000");
 			//sdssQuad = new GPolyline(points, "#ffc800");
 		}
-		for (var i=0; i<sdssQuads.length; i++) {
-			map.addOverlay(sdssQuads[i]);
+		if (sdssQuadState) {
+			for (var i=0; i<sdssQuads.length; i++) {
+				map.addOverlay(sdssQuads[i]);
+			}
 		}
 		map.addControl(new SdssQuadControl());
 	});
@@ -553,8 +520,10 @@ function addindexquad() {
 			//indexQuad = new GPolyline(points, "#ff0000");
 			//indexQuad = new GPolyline(points, "#90a8ff");
 		}
-		for (var i=0; i<indexQuads.length; i++) {
-			map.addOverlay(indexQuads[i]);
+		if (indexQuadState) {
+			for (var i=0; i<indexQuads.length; i++) {
+				map.addOverlay(indexQuads[i]);
+			}
 		}
 		map.addControl(new IndexQuadControl());
 	});
@@ -578,9 +547,11 @@ function addfieldquad() {
 			}
 			points.push(points[0]);
 			sdssFieldQuads.push(new GPolyline(points, "#ffc800"));
-			//sdssFieldQuad = new GPolyline(points, "#0000ff");
-			//sdssFieldQuad = new GPolyline(points, "#00e000");
-			//sdssFieldQuad = new GPolyline(points, "#ffc800");
+		}
+		if (sdssFieldQuadsState) {
+			for (var i=0; i<sdssFieldQuads.length; i++) {
+				map.addOverlay(sdssFieldQuads[i]);
+			}
 		}
 		map.addControl(new FieldQuadControl());
 	});
@@ -589,11 +560,6 @@ function addfieldquad() {
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
-if (gothp) {
-	setTimeout("map.setMapType(indexPlusSDSS);", 4);
-} else if (sdss) {
-	setTimeout("map.setMapType(usnobPlusSDSS);", 4);
-}
 if (gotquad) {
 	setTimeout("addquad();", 5);
 }
@@ -610,9 +576,9 @@ if (sdss) {
 	map.addControl(new SdssBoundaryControl());
 }
 
+var type="";
 if ("view" in getdata) {
 	var view = getdata["view"];
-	var type="";
 	if (view == "usnob") {
 		type = "usnobType";
 	} else if (view == "u+i") {
@@ -626,8 +592,14 @@ if ("view" in getdata) {
 	} else if (view == "field") {
 		type = "sdssField";
 	}
-	if (type.length) {
-		setTimeout("map.setMapType(" + type + ");");
+}
+if (type.length) {
+	setTimeout("map.setMapType(" + type + ");", 8);
+} else {
+	if (gothp) {
+		setTimeout("map.setMapType(indexPlusSDSS);", 4);
+	} else if (sdss) {
+		setTimeout("map.setMapType(usnobPlusSDSS);", 4);
 	}
 }
 
@@ -636,17 +608,7 @@ if ("view" in getdata) {
 //setTimeout("map.setMapType(sdssAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
 //setTimeout("map.setMapType(indexAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
 
-//setTimeout("map.setMapType(sdssField); map.setZoom(2); map.setCenter(new GLatLng(0,180));", 8);
-//setTimeout("map.setMapType(sdssAlone); map.setZoom(11); map.setCenter(new GLatLng(26.93,241.55));", 8);
-//setTimeout("map.setMapType(indexAlone); map.setZoom(11); map.setCenter(new GLatLng(26.93,241.55));", 8);
-
 /*
   info_html = "<b>testing</b>";
   document.getElementById("info").innerHTML += info_html;
-*/
-
-/*
-  <body onload="load()" onunload="GUnload()">
-  <div id="map" style="width: 500px; height: 300px"></div>
-  </body>
 */
