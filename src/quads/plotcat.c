@@ -53,42 +53,7 @@ extern int optind, opterr, optopt;
 #define PI M_PI
 
 Inline int is_power_of_two(unsigned int x) {
-#if defined(linux)
 	return (my_hweight32(x) == 1);
-#else
-	    return (x == 0x00000001 ||
-		        x == 0x00000002 ||
-		        x == 0x00000004 ||
-		        x == 0x00000008 ||
-		        x == 0x00000010 ||
-		        x == 0x00000020 ||
-		        x == 0x00000040 ||
-		        x == 0x00000080 ||
-		        x == 0x00000100 ||
-		        x == 0x00000200 ||
-		        x == 0x00000400 ||
-		        x == 0x00000800 ||
-		        x == 0x00001000 ||
-		        x == 0x00002000 ||
-		        x == 0x00004000 ||
-		        x == 0x00008000 ||
-		        x == 0x00010000 ||
-		        x == 0x00020000 ||
-		        x == 0x00040000 ||
-		        x == 0x00080000 ||
-		        x == 0x00100000 ||
-		        x == 0x00200000 ||
-		        x == 0x00400000 ||
-		        x == 0x00800000 ||
-		        x == 0x01000000 ||
-		        x == 0x02000000 ||
-		        x == 0x04000000 ||
-		        x == 0x08000000 ||
-		        x == 0x10000000 ||
-		        x == 0x20000000 ||
-		        x == 0x40000000 ||
-		        x == 0x80000000);
-#endif
 }
 
 Inline void getxy(double px, double py, int N,

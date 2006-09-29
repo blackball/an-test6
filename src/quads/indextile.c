@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 	int xpix0, xpix1, ypix0, ypix1;
 	int healpix = 0;
 
-	int pixelmargin = 3;
+	int pixelmargin = 4;
 
 	gotx = goty = gotX = gotY = gotw = goth = gotH = FALSE;
 
