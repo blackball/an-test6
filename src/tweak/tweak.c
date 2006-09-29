@@ -181,6 +181,9 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
 	radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
 
+	// Fudge radius factor because if the shift is really big, then we
+	// can't actually find the correct astrometry.
+	double radius_factor =1.5;
 	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz, radius*radius);
 	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
 
