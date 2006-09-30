@@ -34,6 +34,7 @@
 #include "kdtree_fits_io.h"
 #include "assert.h"
 #include "healpix.h"
+#include "ezfits.h"
 
 double max(double x, double y)
 {
@@ -254,11 +255,6 @@ void get_shift(double* ximg, double* yimg, int nimg,
                double* xshift, double* yshift)
 {
 
-	nimg = 100;
-	ncat = 100;
-	int N = nimg*ncat;
-	int Nleaf = 15;
-	double* xyshift = malloc(sizeof(double)*N*2);
 	int i, j;
 
 	// hough transform 
@@ -293,8 +289,6 @@ void get_shift(double* ximg, double* yimg, int nimg,
 			assert (iy >=0);
 			assert (ix >=0);
 			assert (iy*hsz+ ix < hsz*hsz);
-			//hough[(int) (hsz*hsz*( (dy-mindy)/(maxdy-mindy) )) +
-			 //         (int) (hsz*( (dx-mindx)/(maxdx-mindx) ))]++;
 			hough[iy*hsz + ix]++;
 		}
 	}
@@ -311,6 +305,8 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	*yshift = ((double)(themaxind/hsz)/(double)hsz)*(maxdy-mindy)+mindy;
 	*xshift = ((double)(themaxind % hsz)/(double)hsz)*(maxdx-mindx)+mindx;
 	fprintf(stderr, "xs=%lf, ys=%lf\n", *xshift, *yshift);
+
+	ezwriteimage("hough.fits", TINT, hough, hsz, hsz);
 }
 
 wcs_t* copy_wcs(wcs_t* wcs)
@@ -535,6 +531,7 @@ int main(int argc, char *argv[])
 
 		// Run our wonderful shift algorithm
 		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
+		exit(1);
 	}
 
 
