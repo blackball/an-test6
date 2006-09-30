@@ -289,7 +289,19 @@ void get_shift(double* ximg, double* yimg, int nimg,
 			assert (iy >=0);
 			assert (ix >=0);
 			assert (iy*hsz+ ix < hsz*hsz);
-			hough[iy*hsz + ix]++;
+			if (0 < iy && iy < hsz+1 &&
+					0 < ix && ix < hsz+1) {
+				// approx gauss
+				hough[(iy-1)*hsz + (ix-1)] += 1;
+				hough[(iy+1)*hsz + (ix+1)] += 1;
+				hough[(iy-1)*hsz + (ix+1)] += 1;
+				hough[(iy+1)*hsz + (ix-1)] += 1;
+				hough[(iy-0)*hsz + (ix-1)] += 4;
+				hough[(iy-1)*hsz + (ix-0)] += 4;
+				hough[(iy+0)*hsz + (ix+1)] += 4;
+				hough[(iy+1)*hsz + (ix+0)] += 4;
+				hough[iy*hsz + ix] += 10;
+			}
 		}
 	}
 
@@ -302,11 +314,19 @@ void get_shift(double* ximg, double* yimg, int nimg,
 		}
 	}
 
+	int ys = themaxind/hsz;
+	int xs = themaxind%hsz;
+
+	fprintf(stderr, "xshsz = %d, yshsz=%d\n",xs,ys);
+
 	*yshift = ((double)(themaxind/hsz)/(double)hsz)*(maxdy-mindy)+mindy;
 	*xshift = ((double)(themaxind % hsz)/(double)hsz)*(maxdx-mindx)+mindx;
 	fprintf(stderr, "xs=%lf, ys=%lf\n", *xshift, *yshift);
 
-	ezwriteimage("hough.fits", TINT, hough, hsz, hsz);
+	static char c = '1';
+	static char fn[] = "houghN.fits";
+	fn[5] = c++;
+	ezwriteimage(fn, TINT, hough, hsz, hsz);
 }
 
 wcs_t* copy_wcs(wcs_t* wcs)
@@ -531,7 +551,7 @@ int main(int argc, char *argv[])
 
 		// Run our wonderful shift algorithm
 		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
-		exit(1);
+		//exit(1);
 	}
 
 
