@@ -166,8 +166,10 @@ void get_center_and_radius(double* ra, double* dec, int n,
 		for (j=0; j<3; j++) 
 			xyz_mean[j] += xyz[3*i+j];
 
+	/*
 	for (j=0; j<3; j++) 
 		xyz_mean[j] /= (double) n;
+		*/
 
 	double norm=0;
 	for (j=0; j<3; j++) 
@@ -210,7 +212,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 
 	double xyz[3];
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
-	radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
+	//radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
 
 	// Fudge radius factor because if the shift is really big, then we
 	// can't actually find the correct astrometry.
@@ -519,6 +521,8 @@ int main(int argc, char *argv[])
 			pix2wcs(wcs, x[jj], y[jj], a+jj, d+jj);
 		}
 
+		ezwritescatter("scatter_image.fits", x,y,a,d,n);
+
 		// Find field center/radius
 		double ra_mean, dec_mean, radius;
 		get_center_and_radius(a, d, n, &ra_mean, &dec_mean, &radius);
@@ -549,11 +553,11 @@ int main(int argc, char *argv[])
 			        x_ref+jj, y_ref+jj, &offscr);
 		}
 
-		ezwritescatter("scatter.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
+		ezwritescatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
 
 		// Run our wonderful shift algorithm
 		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
-		//exit(1);
+		exit(1);
 	}
 
 
