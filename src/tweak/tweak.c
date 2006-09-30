@@ -549,6 +549,8 @@ int main(int argc, char *argv[])
 			        x_ref+jj, y_ref+jj, &offscr);
 		}
 
+		ezwritescatter("scatter.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
+
 		// Run our wonderful shift algorithm
 		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
 		//exit(1);
