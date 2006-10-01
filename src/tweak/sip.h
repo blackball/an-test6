@@ -93,6 +93,7 @@ typedef struct sip_s {
 	double bp[MAXORDER][MAXORDER];
 } sip_t;
 
+sip_t* createsip(void);
 void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d);
 void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 

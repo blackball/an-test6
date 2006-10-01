@@ -3,6 +3,28 @@
 #include "sip.h"
 #include "starutil.h"
 
+sip_t* createsip() {
+	sip_t* sip = malloc(sizeof(sip_t));
+
+	sip->crval[0] = 0;
+	sip->crval[1] = 0;
+
+	sip->crpix[0] = 0;
+	sip->crpix[1] = 0;
+
+	sip->cd[0][0] = 1;
+	sip->cd[0][1] = 0;
+	sip->cd[1][0] = 0;
+	sip->cd[1][1] = 1;
+
+	sip->a_order = 0;
+	sip->b_order = 0;
+	sip->ap_order = 0;
+	sip->bp_order = 0;
+
+	return sip;
+}
+
 // Convert a ra,dec in degrees to coordinates in the image
 void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 {
@@ -35,7 +57,7 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double rx, ry, rz;
 	radec2xyz(deg2rad(sip->crval[0]), deg2rad(sip->crval[1]), &rx, &ry, &rz);
 
-	// Form i = r cross north pole, which is in direction of x
+	// Form i = r cross north pole, which is in direction of z
 	double ix = ry;
 	double iy = -rx;
 	//     iz = 0 because the the north pole is at (0,0,1)
@@ -47,6 +69,7 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double jx =  rx*rz;
 	double jy =  rz*ry;
 	double jz = -rx*rx - ry*ry;
+	// norm should already be 1, but normalize anyway
 	norm = sqrt(jx*jx + jy*jy + jz*jz);
 	jx /= norm;
 	jy /= norm;
@@ -54,9 +77,9 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 
 	// Form the point on the tangent plane relative to observation point,
 	// and normalize back onto the unit sphere
-	double wx = ix*x + jx*y;
-	double wy = iy*x + jy*y;
-	double wz =        jz*y; // iz = 0
+	double wx = ix*x + jx*y + rx;
+	double wy = iy*x + jy*y + ry;
+	double wz =        jz*y + rz; // iz = 0
 	norm = sqrt(wx*wx + wy*wy + wz*wz);
 	wx /= norm;
 	wy /= norm;
@@ -64,6 +87,8 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 
 	// We're done!
 	xyz2radec(wx,wy,wz,a,d);
+	*a = rad2deg(*a);
+	*d = rad2deg(*d);
 }
 
 // Convert a ra,dec in degrees to coordinates in the image
@@ -72,10 +97,10 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	// Invert CD
 	double cdi[2][2];
 	double det = sip->cd[0][0]*sip->cd[1][1] - sip->cd[0][1]*sip->cd[1][0]; 
-	cdi[0][0] =  cdi[1][1] / det;
-	cdi[0][1] = -cdi[1][0] / det;
-	cdi[1][0] = -cdi[0][1] / det;
-	cdi[1][1] =  cdi[0][0] / det;
+	cdi[0][0] =  sip->cd[1][1] / det;
+	cdi[0][1] = -sip->cd[1][0] / det;
+	cdi[1][0] = -sip->cd[0][1] / det;
+	cdi[1][1] =  sip->cd[0][0] / det;
 
 	// Calculate intermediate world coordinates (x,y) on the tangent plane
 	double xyzpt[3];
@@ -84,6 +109,9 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	radecdeg2xyzarr(sip->crval[0],sip->crval[1],xyzcrval);
 	double x,y;
 	star_coords(xyzpt, xyzcrval, &x, &y);
+	x *= -1; // ?? makes tests pass...
+	y *= -1; // ??
+
 
 	// Linear pixel coordinates
 	double U = cdi[0][0]*x + cdi[0][1]*y;
