@@ -331,17 +331,29 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	ezwriteimage(fn, TINT, hough, hsz, hsz);
 }
 
+struct IRAFsurface* dupiraf(struct IRAFsurface* in) 
+{
+	struct IRAFsurface* lngcor = malloc(sizeof(struct IRAFsurface));
+	memcpy(lngcor, in, sizeof(struct IRAFsurface));
+	lngcor->coeff = malloc(sizeof(double)*in->ncoeff);
+	memcpy(lngcor->coeff, in->coeff, sizeof(double)*in->ncoeff);
+	memcpy(lngcor->xbasis, in->xbasis, sizeof(double)*in->xorder);
+	memcpy(lngcor->ybasis, in->ybasis, sizeof(double)*in->yorder);
+	return lngcor;
+}
 wcs_t* copy_wcs(wcs_t* wcs)
 {
 	wcs_t* nwcs = malloc(sizeof(wcs_t));
 	memcpy(nwcs, wcs, sizeof(wcs_t));
 
-	// FIXME
+	// TNX distortion structures
 	if (wcs->lngcor || wcs->latcor) {
-		//struct IRAFsurface *lngcor;	/* RA/longitude correction structure */
-		//struct IRAFsurface *latcor;	/* Dec/latitude correction structure */
-		fprintf(stderr, "tweak: not implemented.");
-		assert(0);
+		if (wcs->lngcor) {
+			nwcs->lngcor = dupiraf(wcs->lngcor);
+		}
+		if (wcs->latcor) {
+			nwcs->latcor = dupiraf(wcs->latcor);
+		}
 	}
 
 	int i;
@@ -367,15 +379,27 @@ wcs_t* wcs_shift(wcs_t* wcs, double xs, double ys)
 
 	double crpixx = wcs->xrefpix;
 	double crpixy = wcs->yrefpix;
+	double crpix0 = wcs->crpix[0];
+	double crpix1 = wcs->crpix[1];
 
-	wcs->xrefpix -= xs;
-	wcs->yrefpix -= ys;
+	wcs->xrefpix += xs;
+	wcs->yrefpix += ys;
+	wcs->crpix[0] += xs;
+	wcs->crpix[1] += ys;
 
 	// now reproject the old crpix[xy] into swcs
-	pix2wcs(wcs, crpixx, crpixy, &swcs->xref, &swcs->yref);
+	double nxref, nyref;
+	pix2wcs(wcs, crpix0, crpix1, &nxref, &nyref);
+	//swcs->xref = nxref;
+	//swcs->yref = nyref;
+	//swcs->crval[0] = nxref;
+	//swcs->crval[1] = nyref;
+	wcsshift(swcs, nxref, nyref, "FK5");
 
 	wcs->xrefpix = crpixx;
 	wcs->yrefpix = crpixy;
+	wcs->crpix[0] = crpix0;
+	wcs->crpix[1] = crpix1;
 
 	//fprintf(stderr, "ra shift: %f", swcs->xref
 
@@ -521,7 +545,8 @@ int main(int argc, char *argv[])
 			pix2wcs(wcs, x[jj], y[jj], a+jj, d+jj);
 		}
 
-		ezwritescatter("scatter_image.fits", x,y,a,d,n);
+
+		ezscatter("scatter_image.fits", x,y,a,d,n);
 
 		// Find field center/radius
 		double ra_mean, dec_mean, radius;
@@ -553,10 +578,15 @@ int main(int argc, char *argv[])
 			        x_ref+jj, y_ref+jj, &offscr);
 		}
 
-		ezwritescatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
+		ezscatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
 
 		// Run our wonderful shift algorithm
 		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
+		wcs_t* swcs = wcs_shift(wcs, xshift, yshift);
+		for (jj=0; jj<n; jj++) {
+			pix2wcs(swcs, x[jj], y[jj], a+jj, d+jj);
+		}
+		ezscatter("scatter_image_shift.fits", x,y,a,d,n);
 		exit(1);
 	}
 

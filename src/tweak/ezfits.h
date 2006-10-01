@@ -7,7 +7,7 @@
 
 int ezwriteimage(char* fn, int datatype, void* data, int w, int h);
 
-int ezwritescatter(char* fn, double* x, double *y,
+int ezscatter(char* fn, double* x, double *y,
                    double* a, double *d, int n);
 
 #endif
