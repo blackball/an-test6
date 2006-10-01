@@ -23,8 +23,8 @@ typedef struct sip_s {
 	// terms are all zero, then the equation to get from pixel coordinates
 	// to intermediate world coordinates is:
 	//
-	//   u = pixel_x + crpix0
-	//   v = pixel_y + crpix1
+	//   u = pixel_x - crpix0
+	//   v = pixel_y - crpix1
 	// 
 	//   x  = [cd00 cd01] * u
 	//   y    [cd10 cd11]   v
@@ -47,7 +47,7 @@ typedef struct sip_s {
 	//            p,q
         //
 	//                           p    q
-	//   f(u,v) = SUM b[p][q] * u  * v  ,  p+q <= a_order
+	//   f(u,v) = SUM b[p][q] * u  * v  ,  p+q <= b_order
 	//            p,q
 	// 
 	// [1] The SIP convention for representing distortion in FITS image
@@ -92,5 +92,8 @@ typedef struct sip_s {
 	double ap[MAXORDER][MAXORDER];
 	double bp[MAXORDER][MAXORDER];
 } sip_t;
+
+void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d);
+void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 
 #endif
