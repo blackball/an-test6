@@ -19,7 +19,7 @@ tweak: $(OBJS)
 	$(CC) -o tweak $(OBJS) $(LIBS)
 
 test_sip: ../quads/starutil.o sip.o ../quads/mathutil.o test_sip.o
-	$(CC) -o test_sip test_sip.o ../quads/starutil.o sip.o ../quads/mathutil.o -lm
+	$(CC) -o test_sip test_sip.o ../quads/starutil.o sip.o ../quads/mathutil.o -L../wcstools-3.6.4/libwcs -lwcs -lm
 
 clean :
 	rm ${OBJS}

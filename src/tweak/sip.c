@@ -102,15 +102,16 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	cdi[1][0] = -sip->cd[0][1] / det;
 	cdi[1][1] =  sip->cd[0][0] / det;
 
+	// FIXME be robust near the poles
 	// Calculate intermediate world coordinates (x,y) on the tangent plane
 	double xyzpt[3];
 	radecdeg2xyzarr(a,d,xyzpt);
 	double xyzcrval[3];
 	radecdeg2xyzarr(sip->crval[0],sip->crval[1],xyzcrval);
 	double x,y;
-	star_coords(xyzpt, xyzcrval, &x, &y);
-	x *= -1; // ?? makes tests pass...
-	y *= -1; // ??
+	star_coords(xyzpt, xyzcrval, &y, &x);
+	//x *= -1; // ?? makes tests pass...
+	//y *= -1; // ??
 
 
 	// Linear pixel coordinates
@@ -137,6 +138,6 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	double v = V + gUV;
 
 	// Readd crpix to get pixel coordinates
-	*px = u + sip->crpix[0];
-	*py = v + sip->crpix[1];
+	*px = rad2deg(u + sip->crpix[0]);
+	*py = rad2deg(v + sip->crpix[1]);
 }
