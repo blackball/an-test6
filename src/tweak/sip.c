@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <assert.h>
 #include "sip.h"
 #include "starutil.h"
 
@@ -30,8 +31,17 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 {
 
 	// Get pixel coordinates relative to reference pixel
+	//double u = deg2rad(px) - sip->crpix[0];
+	//double v = deg2rad(py) - sip->crpix[1];
 	double u = px - sip->crpix[0];
 	double v = py - sip->crpix[1];
+
+	// Convert to radians??
+	u = deg2rad(u);
+	v = deg2rad(v);
+
+	//double u = px - sip->crpix[0];
+	//double v = py - sip->crpix[1];
 
 	// Do SIP distortion (in relative pixel coordinates)
 	// See the sip_t struct definition in header file for details
@@ -96,11 +106,23 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 {
 	// Invert CD
 	double cdi[2][2];
-	double det = sip->cd[0][0]*sip->cd[1][1] - sip->cd[0][1]*sip->cd[1][0]; 
-	cdi[0][0] =  sip->cd[1][1] / det;
-	cdi[0][1] = -sip->cd[1][0] / det;
-	cdi[1][0] = -sip->cd[0][1] / det;
-	cdi[1][1] =  sip->cd[0][0] / det;
+	double inv_det = 1.0/(sip->cd[0][0]*sip->cd[1][1] - sip->cd[0][1]*sip->cd[1][0]); 
+	cdi[0][0] =  sip->cd[1][1] * inv_det;
+	cdi[0][1] = -sip->cd[0][1] * inv_det;
+	cdi[1][0] = -sip->cd[1][0] * inv_det;
+	cdi[1][1] =  sip->cd[0][0] * inv_det;
+
+	/*
+	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ));
+	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][1] + sip->cd[0][1]*cdi[1][1] ));
+	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][0] + sip->cd[1][1]*cdi[1][0] ));
+	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][1] + sip->cd[1][1]*cdi[1][1] ));
+	*/
+
+	//assert( (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ) == 1.0);
+	//assert( (sip->cd[0][0]*cdi[0][1] + sip->cd[0][1]*cdi[1][1] ) == 0.0);
+	//assert( (sip->cd[1][0]*cdi[0][0] + sip->cd[1][1]*cdi[1][0] ) == 0.0);
+	//assert( (sip->cd[1][0]*cdi[0][1] + sip->cd[1][1]*cdi[1][1] ) == 1.0);
 
 	// FIXME be robust near the poles
 	// Calculate intermediate world coordinates (x,y) on the tangent plane
@@ -117,6 +139,9 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	// Linear pixel coordinates
 	double U = cdi[0][0]*x + cdi[0][1]*y;
 	double V = cdi[1][0]*x + cdi[1][1]*y;
+
+	U = rad2deg(U);
+	V = rad2deg(V);
 
 	// Invert SIP distortion
 	// Sanity check:
@@ -138,6 +163,8 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	double v = V + gUV;
 
 	// Readd crpix to get pixel coordinates
-	*px = rad2deg(u + sip->crpix[0]);
-	*py = rad2deg(v + sip->crpix[1]);
+	//*px = rad2deg(u + sip->crpix[0]);
+	//*py = rad2deg(v + sip->crpix[1]);
+	*px = (u + sip->crpix[0]);
+	*py = (v + sip->crpix[1]);
 }
