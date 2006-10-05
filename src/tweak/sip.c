@@ -39,6 +39,8 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	// Convert to radians??
 	u = deg2rad(u);
 	v = deg2rad(v);
+	//u *= -1;
+	//v *= -1;
 
 	//double u = px - sip->crpix[0];
 	//double v = py - sip->crpix[1];
@@ -58,14 +60,20 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 				guv += sip->b[p][q]*pow(u,p)*pow(v,q);
 	u += fuv;
 	v += guv;
+	printf("u=%lf v=%lf\n",u,v);
 
 	// Get intermediate world coordinates
 	double x = sip->cd[0][0] * u + sip->cd[0][1] * v;
 	double y = sip->cd[1][0] * u + sip->cd[1][1] * v;
+	printf("x=%lf y=%lf\n",x,y);
+
+	x *= -1;
+	y *= -1;
 
 	// Take r to be the threespace vector of crval
 	double rx, ry, rz;
 	radec2xyz(deg2rad(sip->crval[0]), deg2rad(sip->crval[1]), &rx, &ry, &rz);
+	printf("rx=%lf ry=%lf rz=%lf\n",rx,ry,rz);
 
 	// Form i = r cross north pole, which is in direction of z
 	double ix = ry;
@@ -74,6 +82,8 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double norm = sqrt(ix*ix + iy*iy);
 	ix /= norm;
 	iy /= norm;
+	printf("ix=%lf iy=%lf iz=0.0\n",ix,iy);
+	printf("r.i = %lf\n",ix*rx+iy*ry);
 
 	// Form j = r cross i, which is in the direction of y
 	double jx =  rx*rz;
@@ -84,6 +94,9 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	jx /= norm;
 	jy /= norm;
 	jz /= norm;
+	printf("jx=%lf jy=%lf jz=%lf\n",jx,jy,jz);
+	printf("r.j = %lf\n",jx*rx+jy*ry+jz*rz);
+	printf("i.j = %lf\n",ix*jx+iy*jy);
 
 	// Form the point on the tangent plane relative to observation point,
 	// and normalize back onto the unit sphere
@@ -94,6 +107,7 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	wx /= norm;
 	wy /= norm;
 	wz /= norm;
+	printf("wx=%lf wy=%lf wz=%lf\n",wx,wy,wz);
 
 	// We're done!
 	xyz2radec(wx,wy,wz,a,d);
@@ -112,11 +126,11 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	cdi[1][0] = -sip->cd[1][0] * inv_det;
 	cdi[1][1] =  sip->cd[0][0] * inv_det;
 
-	/*
 	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ));
 	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][1] + sip->cd[0][1]*cdi[1][1] ));
 	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][0] + sip->cd[1][1]*cdi[1][0] ));
 	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][1] + sip->cd[1][1]*cdi[1][1] ));
+	/*
 	*/
 
 	//assert( (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ) == 1.0);
