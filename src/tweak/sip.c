@@ -67,6 +67,7 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double y = sip->cd[1][0] * u + sip->cd[1][1] * v;
 	printf("x=%lf y=%lf\n",x,y);
 
+	// Mysterious! Who knows, but adding this makes WCS match with SIP. 
 	x *= -1;
 	y *= -1;
 
@@ -126,11 +127,11 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	cdi[1][0] = -sip->cd[1][0] * inv_det;
 	cdi[1][1] =  sip->cd[0][0] * inv_det;
 
+	/*
 	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ));
 	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][1] + sip->cd[0][1]*cdi[1][1] ));
 	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][0] + sip->cd[1][1]*cdi[1][0] ));
 	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][1] + sip->cd[1][1]*cdi[1][1] ));
-	/*
 	*/
 
 	//assert( (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ) == 1.0);
@@ -146,9 +147,6 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	radecdeg2xyzarr(sip->crval[0],sip->crval[1],xyzcrval);
 	double x,y;
 	star_coords(xyzpt, xyzcrval, &y, &x);
-	//x *= -1; // ?? makes tests pass...
-	//y *= -1; // ??
-
 
 	// Linear pixel coordinates
 	double U = cdi[0][0]*x + cdi[0][1]*y;

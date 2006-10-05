@@ -7,8 +7,8 @@
 #include "sip.h"
 #include "libwcs/wcs.h"
 #include "libwcs/fitsfile.h"
+#include "sip_util.h"
 
-typedef struct WorldCoor wcs_t;
 
 char simple[] = 
 "XTENSION= 'IMAGE   '           / Extension type                                 "
@@ -168,31 +168,6 @@ char simple5[] =
 "CD2_2   =                  0.0 / Coordinate matrix                              ";
 
 double epsilon = 0.00001;
-
-wcs_t* getwcs(char* buf)
-{
-	wcs_t* wcs = wcsninit(buf, strlen(buf));
-	assert(wcs);
-	return wcs;
-}
-
-void copy_wcs_into_sip(wcs_t* wcs, sip_t* sip)
-{
-	sip->crval[0] = wcs->crval[0];
-	sip->crval[1] = wcs->crval[1];
-	sip->crpix[0] = wcs->crpix[0];
-	sip->crpix[1] = wcs->crpix[1];
-	/*
-	sip->cd[0][0] = wcs->cd[0];
-	sip->cd[0][1] = wcs->cd[2];
-	sip->cd[1][0] = wcs->cd[1];
-	sip->cd[1][1] = wcs->cd[3];
-	*/
-	sip->cd[0][0] = wcs->cd[0];
-	sip->cd[0][1] = wcs->cd[1];
-	sip->cd[1][0] = wcs->cd[2];
-	sip->cd[1][1] = wcs->cd[3];
-}
 
 void tryad(sip_t* sip, wcs_t* wcs, double a, double d, char* name,
 		double *opx, double *opy)
@@ -365,12 +340,12 @@ int main()
 	srand(0);
 	int n=2;
 	sip_t* sip = createsip();
-	grinder(sip, getwcs(fobj059), n, "fobj059 without TNX");
-	grinder(sip, getwcs(simple) , n, "identity transform");
-	grinder(sip, getwcs(simple2), n, "non-zero crpix");
-	grinder(sip, getwcs(simple3), n, "non-zero crval");
-	grinder(sip, getwcs(simple4), n, "non-rotation identity");
-	grinder(sip, getwcs(simple5), n, "Simple case at 60,40deg");
+	grinder(sip, get_wcs_from_fits_header(fobj059), n, "fobj059 without TNX");
+	grinder(sip, get_wcs_from_fits_header(simple) , n, "identity transform");
+	grinder(sip, get_wcs_from_fits_header(simple2), n, "non-zero crpix");
+	grinder(sip, get_wcs_from_fits_header(simple3), n, "non-zero crval");
+	grinder(sip, get_wcs_from_fits_header(simple4), n, "non-rotation identity");
+	grinder(sip, get_wcs_from_fits_header(simple5), n, "Simple case at 60,40deg");
 	return 0;
 }
 

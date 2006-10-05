@@ -11,15 +11,15 @@ OBJS= tweak.o ../quads/starutil.o ../quads/mathutil.o \
 ../quads/qfits/xmemory.o   ../quads/qfits/fits_md5.o  ../quads/qfits/qerror.o \
 ../quads/fitsioutils.o ../quads/kdtree/kdtree_access.o \
 ../quads/kdtree/kdtree_dim.o ../quads/ioutils.o \
-../quads/healpix.o ezfits.o sip.o 
+../quads/healpix.o ezfits.o sip.o sip_util.o
 
 all: tweak test_sip
 
 tweak: $(OBJS)
 	$(CC) -o tweak $(OBJS) $(LIBS)
 
-test_sip: ../quads/starutil.o sip.o ../quads/mathutil.o test_sip.o
-	$(CC) -o test_sip test_sip.o ../quads/starutil.o sip.o ../quads/mathutil.o -L../wcstools-3.6.4/libwcs -lwcs -lm
+test_sip: ../quads/starutil.o sip.o ../quads/mathutil.o test_sip.o sip_util.o
+	$(CC) -o test_sip test_sip.o ../quads/starutil.o sip.o ../quads/mathutil.o sip_util.o -L../wcstools-3.6.4/libwcs -lwcs -lm -L../cfitsio -lcfitsio 
 
 clean :
 	rm ${OBJS}

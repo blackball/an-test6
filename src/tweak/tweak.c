@@ -35,6 +35,8 @@
 #include "assert.h"
 #include "healpix.h"
 #include "ezfits.h"
+#include "sip.h"
+#include "sip_util.h"
 
 double max(double x, double y)
 {
@@ -47,45 +49,7 @@ double min(double x, double y)
 	return y;
 }
 
-typedef struct WorldCoor wcs_t;
 
-// Hacky. Pull the complete hdu from the current hdu, then use wcstools to
-// figure out the wcs, and return it
-wcs_t* get_wcs_from_hdu(fitsfile* infptr)
-{
-	int mystatus = 0;
-	int* status = &mystatus;
-	int nkeys, ii;
-
-	if (ffghsp(infptr, &nkeys, NULL, status) > 0) {
-		fprintf(stderr, "nomem\n");
-		return NULL;
-	}
-	fprintf(stderr, "nkeys=%d\n",nkeys);
-
-	// Create a memory buffer to hold the header records
-	int tmpbufflen = nkeys*(FLEN_CARD-1)*sizeof(char)+1;
-	char* tmpbuff = malloc(tmpbufflen);
-	assert(tmpbuff);
-
-	// Read all of the header records in the input HDU
-	for (ii = 0; ii < nkeys; ii++) {
-		char* thiscard = tmpbuff + (ii * (FLEN_CARD-1));
-		if (ffgrec(infptr, ii+1, thiscard, status)) {
-			fits_report_error(stderr, *status);
-			exit(-1);
-		}
-
-		// Stupid hack because ffgrec null terminates
-		int n = strlen(thiscard);
-		if (n!=80) {
-			int jj;
-			for(jj=n;jj<80;jj++) 
-				thiscard[jj] = ' ';
-		}
-	}
-	return wcsninit(tmpbuff, tmpbufflen);
-}
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 {
