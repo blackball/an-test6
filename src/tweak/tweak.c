@@ -353,31 +353,34 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
 {
 	// Extract XY from FITS table as floats
-	int n, jj;
+	int jj;
 	float *xf, *yf;
-	get_xy(xyfptr, hdu, &xf, &yf, &n);
+	get_xy(xyfptr, hdu, &xf, &yf, &t->n);
 
 	// Convert to doubles FIXME cfitsio may be able to do this
-	t->x = malloc(sizeof(double)*n);
-	t->y = malloc(sizeof(double)*n);
-	for (jj=0; jj<n; jj++) {
+	t->x = malloc(sizeof(double)*t->n);
+	t->y = malloc(sizeof(double)*t->n);
+	for (jj=0; jj<t->n; jj++) {
 		t->x[jj] = xf[jj];
 		t->y[jj] = yf[jj];
 	}
 
 	// Convert to ra dec
-	t->a = malloc(sizeof(double)*n);
-	t->d = malloc(sizeof(double)*n);
-	for (jj=0; jj<n; jj++) {
+	t->a = malloc(sizeof(double)*t->n);
+	t->d = malloc(sizeof(double)*t->n);
+	for (jj=0; jj<t->n; jj++) {
 		pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
+//		if (jj < 30) 
+//			printf("::: %lf %lf\n", t->a[jj], t->d[jj]);
 	}
 
 //	ezscatter("scatter_image.fits", t->x,t->y,t->a,t->d,t->n);
 
 	// Find field center/radius
-	double ra_mean, dec_mean, radius;
-	get_center_and_radius(t->a, t->d, t->n, &t->a_bar, &t->a_bar, &t->radius);
-	fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",ra_mean, dec_mean, radius);
+	get_center_and_radius(t->a, t->d, t->n,
+	                      &t->a_bar, &t->d_bar, &t->radius);
+	fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",
+	                 t->a_bar, t->d_bar, t->radius);
 
 	// Get the reference stars from our catalog
 	get_reference_stars(t->a_bar, t->d_bar, t->radius,
@@ -406,14 +409,28 @@ sip_t* do_entire_shift_operation(tweak_t* t)
 {
 //	ezscatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
 
+	printf("----- entire shift\n");
 	// Run our wonderful shift algorithm
 	double xshift, yshift;
 	get_shift(t->x, t->y, t->n,              // Image
 	          t->x_ref, t->y_ref, t->n_ref,  // Reference
 	          &xshift, &yshift);
 	sip_t* swcs = wcs_shift(t->sip, xshift, yshift);
+	free(t->sip);
+	t->sip = swcs;
 	printf("xshift=%lf, yshift=%lf\n", xshift, yshift);
 	return NULL;
+}
+
+void free_extraneous(tweak_t* t) 
+{
+	// don't free x and y because we don't compute them
+	if (t->a) free(t->a);
+	if (t->d) free(t->d);
+	if (t->a_ref) free(t->a_ref);
+	if (t->d_ref) free(t->d_ref);
+	if (t->x_ref) free(t->x_ref);
+	if (t->y_ref) free(t->y_ref);
 }
 
 struct IRAFsurface* dupiraf(struct IRAFsurface* in) 
@@ -480,7 +497,7 @@ extern int optind, opterr, optopt;
 
 int main(int argc, char *argv[])
 {
-	sip_t* wcs;
+	//sip_t* wcs;
 	fitsfile *fptr, *xyfptr;  /* FITS file pointer, defined in fitsio.h */
 	//fitsfile *ofptr;        /* FITS file pointer to output file */
 	int status = 0; // FIXME should have ostatus too
@@ -570,15 +587,32 @@ int main(int argc, char *argv[])
 		tweak_t tweak;
 
 		// At this point, we have an image. Now get the WCS data
-		wcs = load_sip_from_fitsio(fptr);
-		if (!wcs) {
+		tweak.sip = load_sip_from_fitsio(fptr);
+		if (!tweak.sip) {
 			fprintf(stderr, "Problems with WCS info, skipping HDU\n");
 			continue;
 		}
-		print_sip(wcs);
+		print_sip(tweak.sip);
 
 
 		get_tweak_data(&tweak, xyfptr, hppat, kk);
+		do_entire_shift_operation(&tweak);
+		free_extraneous(&tweak);
+
+		get_tweak_data(&tweak, xyfptr, hppat, kk);
+		do_entire_shift_operation(&tweak);
+		free_extraneous(&tweak);
+
+		get_tweak_data(&tweak, xyfptr, hppat, kk);
+		do_entire_shift_operation(&tweak);
+		free_extraneous(&tweak);
+
+		get_tweak_data(&tweak, xyfptr, hppat, kk);
+		do_entire_shift_operation(&tweak);
+		free_extraneous(&tweak);
+
+
+
 
 
 		//ezscatter("scatter_image_shift.fits", x,y,a,d,n);
