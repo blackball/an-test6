@@ -50,6 +50,28 @@ double min(double x, double y)
 }
 
 
+typedef struct tweak_s {
+	sip_t* sip;
+
+	// For sources in the image
+	int n;
+	double *a;
+	double *d;
+	double *x;
+	double *y;
+
+	// Center of field estimate
+	double a_bar;  // degrees
+	double d_bar;  // degrees
+	double radius; // radians (genius!)
+
+	// Cached values of sources in the catalog
+	int n_ref;
+	double *x_ref;
+	double *y_ref;
+	double *a_ref;
+	double *d_ref;
+} tweak_t;
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 {
@@ -292,7 +314,106 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	static char c = '1';
 	static char fn[] = "houghN.fits";
 	fn[5] = c++;
-	ezwriteimage(fn, TINT, hough, hsz, hsz);
+//	ezwriteimage(fn, TINT, hough, hsz, hsz);
+}
+
+// Take shift in image plane and do a switcharoo to make the wcs something
+// better
+sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
+{
+	sip_t* swcs = malloc(sizeof(sip_t));
+	memcpy(swcs, wcs, sizeof(sip_t));
+
+	// Save
+	double crpix0 = wcs->crpix[0];
+	double crpix1 = wcs->crpix[1];
+
+	wcs->crpix[0] += xs;
+	wcs->crpix[1] += ys;
+
+	// now reproject the old crpix[xy] into swcs
+	double nxref, nyref;
+	pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
+
+	swcs->crval[0] = nxref;
+	swcs->crval[1] = nyref;
+
+	// Restore
+	wcs->crpix[0] = crpix0;
+	wcs->crpix[1] = crpix1;
+
+	return swcs;
+}
+// Grabs the data we need for tweak from various sources:
+// XY locations in pixel space
+// AD locations corresponding to sources
+// estimated field center / radius
+// XY reference locations
+// AD reference locations
+int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
+{
+	// Extract XY from FITS table as floats
+	int n, jj;
+	float *xf, *yf;
+	get_xy(xyfptr, hdu, &xf, &yf, &n);
+
+	// Convert to doubles FIXME cfitsio may be able to do this
+	t->x = malloc(sizeof(double)*n);
+	t->y = malloc(sizeof(double)*n);
+	for (jj=0; jj<n; jj++) {
+		t->x[jj] = xf[jj];
+		t->y[jj] = yf[jj];
+	}
+
+	// Convert to ra dec
+	t->a = malloc(sizeof(double)*n);
+	t->d = malloc(sizeof(double)*n);
+	for (jj=0; jj<n; jj++) {
+		pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
+	}
+
+//	ezscatter("scatter_image.fits", t->x,t->y,t->a,t->d,t->n);
+
+	// Find field center/radius
+	double ra_mean, dec_mean, radius;
+	get_center_and_radius(t->a, t->d, t->n, &t->a_bar, &t->a_bar, &t->radius);
+	fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",ra_mean, dec_mean, radius);
+
+	// Get the reference stars from our catalog
+	get_reference_stars(t->a_bar, t->d_bar, t->radius,
+			    &t->a_ref, &t->d_ref, &t->n_ref, hppat);
+	if (!t->n_ref)  {
+		// No reference stars? This is bad.
+		fprintf(stderr, "No reference stars; failing\n");
+		free(t->a);
+		free(t->d);
+		free(t->x);
+		free(t->y);
+		return 0;
+	}
+
+	// Shift runs in XY; project reference stars
+	t->x_ref = malloc(sizeof(double)*t->n_ref);
+	t->y_ref = malloc(sizeof(double)*t->n_ref);
+	for (jj=0; jj<t->n_ref; jj++) {
+		radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
+		              t->x_ref+jj, t->y_ref+jj);
+	}
+	return 1;
+}
+
+sip_t* do_entire_shift_operation(tweak_t* t)
+{
+//	ezscatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
+
+	// Run our wonderful shift algorithm
+	double xshift, yshift;
+	get_shift(t->x, t->y, t->n,              // Image
+	          t->x_ref, t->y_ref, t->n_ref,  // Reference
+	          &xshift, &yshift);
+	sip_t* swcs = wcs_shift(t->sip, xshift, yshift);
+	printf("xshift=%lf, yshift=%lf\n", xshift, yshift);
+	return NULL;
 }
 
 struct IRAFsurface* dupiraf(struct IRAFsurface* in) 
@@ -305,6 +426,7 @@ struct IRAFsurface* dupiraf(struct IRAFsurface* in)
 	memcpy(lngcor->ybasis, in->ybasis, sizeof(double)*in->yorder);
 	return lngcor;
 }
+
 wcs_t* copy_wcs(wcs_t* wcs)
 {
 	wcs_t* nwcs = malloc(sizeof(wcs_t));
@@ -335,40 +457,6 @@ wcs_t* copy_wcs(wcs_t* wcs)
 	return nwcs;
 }
 
-// Take shift in image plane and do a switcharoo to make the wcs something
-// better
-wcs_t* wcs_shift(wcs_t* wcs, double xs, double ys)
-{
-	wcs_t* swcs = copy_wcs(wcs);
-
-	double crpixx = wcs->xrefpix;
-	double crpixy = wcs->yrefpix;
-	double crpix0 = wcs->crpix[0];
-	double crpix1 = wcs->crpix[1];
-
-	wcs->xrefpix += xs;
-	wcs->yrefpix += ys;
-	wcs->crpix[0] += xs;
-	wcs->crpix[1] += ys;
-
-	// now reproject the old crpix[xy] into swcs
-	double nxref, nyref;
-	pix2wcs(wcs, crpix0, crpix1, &nxref, &nyref);
-	//swcs->xref = nxref;
-	//swcs->yref = nyref;
-	//swcs->crval[0] = nxref;
-	//swcs->crval[1] = nyref;
-	wcsshift(swcs, nxref, nyref, "FK5");
-
-	wcs->xrefpix = crpixx;
-	wcs->yrefpix = crpixy;
-	wcs->crpix[0] = crpix0;
-	wcs->crpix[1] = crpix1;
-
-	//fprintf(stderr, "ra shift: %f", swcs->xref
-
-	return swcs;
-}
 
 /* Fink-Hogg shift */
 
@@ -392,7 +480,7 @@ extern int optind, opterr, optopt;
 
 int main(int argc, char *argv[])
 {
-	wcs_t* wcs;
+	sip_t* wcs;
 	fitsfile *fptr, *xyfptr;  /* FITS file pointer, defined in fitsio.h */
 	//fitsfile *ofptr;        /* FITS file pointer to output file */
 	int status = 0; // FIXME should have ostatus too
@@ -479,78 +567,21 @@ int main(int argc, char *argv[])
 		}
 
 		// FIXME BREAK HERE into new function
+		tweak_t tweak;
 
 		// At this point, we have an image. Now get the WCS data
-		wcs = get_wcs_from_hdu(fptr);
+		wcs = load_sip_from_fitsio(fptr);
 		if (!wcs) {
 			fprintf(stderr, "Problems with WCS info, skipping HDU\n");
 			continue;
 		}
-
-		// Extract xy
-		int n,jj;
-		float *xf, *yf;
-		get_xy(xyfptr, kk, &xf, &yf, &n);
-
-		// Convert to doubles
-		double *x, *y;
-		x = malloc(sizeof(double)*n);
-		y = malloc(sizeof(double)*n);
-		for (jj=0; jj<n; jj++) {
-			x[jj] = xf[jj];
-			y[jj] = yf[jj];
-		}
-
-		// Convert to ra dec
-		double *a, *d;
-		a = malloc(sizeof(double)*n);
-		d = malloc(sizeof(double)*n);
-		for (jj=0; jj<n; jj++) {
-			pix2wcs(wcs, x[jj], y[jj], a+jj, d+jj);
-		}
+		print_sip(wcs);
 
 
-		ezscatter("scatter_image.fits", x,y,a,d,n);
+		get_tweak_data(&tweak, xyfptr, hppat, kk);
 
-		// Find field center/radius
-		double ra_mean, dec_mean, radius;
-		get_center_and_radius(a, d, n, &ra_mean, &dec_mean, &radius);
-		fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",ra_mean, dec_mean, radius);
 
-		// Get the reference stars from our catalog
-		double *a_ref, *d_ref;
-		int n_ref;
-		get_reference_stars(ra_mean, dec_mean, radius,
-		                    &a_ref, &d_ref, &n_ref, hppat);
-		if (!n_ref)  {
-			// No reference stars? This is bad.
-			fprintf(stderr, "No reference stars; failing\n");
-			free(a);
-			free(d);
-			free(x);
-			free(y);
-			continue;
-		}
-
-		// Shift runs in XY; project reference stars
-		double *x_ref = malloc(sizeof(double)*n_ref);
-		double *y_ref = malloc(sizeof(double)*n_ref);
-		double xshift, yshift;
-		int offscr;
-		for (jj=0; jj<n_ref; jj++) {
-			wcs2pix(wcs, a_ref[jj], d_ref[jj],
-			        x_ref+jj, y_ref+jj, &offscr);
-		}
-
-		ezscatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
-
-		// Run our wonderful shift algorithm
-		get_shift(x, y, n, x_ref, y_ref, n_ref, &xshift, &yshift);
-		wcs_t* swcs = wcs_shift(wcs, xshift, yshift);
-		for (jj=0; jj<n; jj++) {
-			pix2wcs(swcs, x[jj], y[jj], a+jj, d+jj);
-		}
-		ezscatter("scatter_image_shift.fits", x,y,a,d,n);
+		//ezscatter("scatter_image_shift.fits", x,y,a,d,n);
 		exit(1);
 	}
 

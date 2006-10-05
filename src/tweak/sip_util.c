@@ -34,19 +34,38 @@ void copy_wcs_into_sip(wcs_t* wcs, sip_t* sip)
 
 sip_t* load_sip_from_fitsio(fitsfile* fptr)
 {
-	wcs_t* wcs = get_wcs_from_hdu(fptr);
+	wcs_t* wcs = load_wcs_from_fitsio(fptr);
 
 	if (!wcs) 
 		return NULL;
 
 	sip_t* sip = malloc(sizeof(sip_t));
+	memset(sip, 0, sizeof(sip_t));
+	sip->a_order = sip->b_order = 0;
+	sip->ap_order = sip->bp_order = 0;
 	copy_wcs_into_sip(wcs, sip);
 	return sip;
 }
 
+void print_sip(sip_t* sip)
+{
+
+	printf("SIP Structure:\n");
+	printf("crval[0]=%lf\n", sip->crval[0]);
+	printf("crval[1]=%lf\n", sip->crval[1]);
+	printf("crpix[0]=%lf\n", sip->crpix[0]);
+	printf("crpix[1]=%lf\n", sip->crpix[1]);
+
+	printf("cd00=%lf\n", sip->cd[0][0]);
+	printf("cd01=%lf\n", sip->cd[0][1]);
+	printf("cd10=%lf\n", sip->cd[1][0]);
+	printf("cd11=%lf\n", sip->cd[1][1]);
+	printf("\n");
+}
+
 // Hacky. Pull the complete hdu from the current hdu, then use wcstools to
 // figure out the wcs, and return it
-wcs_t* get_wcs_from_hdu(fitsfile* infptr)
+wcs_t* load_wcs_from_fitsio(fitsfile* infptr)
 {
 	int mystatus = 0;
 	int* status = &mystatus;
