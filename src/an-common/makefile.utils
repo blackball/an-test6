@@ -1,0 +1,4 @@
+UTILS_DIR := $(BASEDIR)/an-common
+UTILS_INC := -I$(UTILS_DIR)
+UTILS_LIB := $(UTILS_DIR)/libutils.a
+UTILS_OBJS := $(addprefix $(UTILS_DIR)/, fitsioutils.o)

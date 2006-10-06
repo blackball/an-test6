@@ -1,0 +1,14 @@
+# Dependencies:           
+DEPS := $(subst .o,.dep,$(DEP_OBJ))
+
+deps: $(DEPS)
+	cat $(DEPS) > deps
+
+%.dep : %.c
+	$(CC) -MM $(CFLAGS) -c $< > $@
+
+ifneq ($(MAKECMDGOALS),clean)
+  ifneq ($(MAKECMDGOALS),realclean)
+    include deps
+  endif
+endif
