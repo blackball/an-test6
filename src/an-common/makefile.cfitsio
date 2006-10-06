@@ -4,8 +4,8 @@ CFITS_LIB := $(CFITS_DIR)/libcfitsio.a
 CFITS_CFLAGS := $(CFLAGS_DEF)
 
 
-#$(CFITSIO_LIB): $(wildcard cfitsio/*.c) $(wildcard cfitsio/*.h) cfitsio/Makefile
-#	$(MAKE) -C cfitsio
+$(CFITS_LIB): $(wildcard $(CFITS_DIR)/*.c) $(wildcard $(CFITS_DIR)/*.h) $(CFITS_DIR)/Makefile
+	$(MAKE) -C cfitsio
 
-#cfitsio/Makefile: cfitsio/Makefile.in
-#	cd cfitsio && ./configure
+$(CFITS_DIR)/Makefile: $(CFITS_DIR)/Makefile.in
+	cd $(CFITS_DIR) && ./configure
