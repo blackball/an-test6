@@ -73,6 +73,16 @@ fits_add_long_comment(qfits_header* dst, const char* format, ...) {
 	return rtn;
 }
 
+int 
+fits_add_long_history(qfits_header* dst, const char* format, ...) {
+	va_list lst;
+	int rtn;
+	va_start(lst, format);
+	rtn = add_long_line(dst, "HISTORY", "  ", format, lst);
+	va_end(lst);
+	return rtn;
+}
+
 int fits_add_args(qfits_header* hdr, char** args, int argc) {
 	int i;
 	for (i=0; i<argc; i++) {

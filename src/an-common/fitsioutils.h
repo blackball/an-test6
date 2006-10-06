@@ -15,6 +15,10 @@ int
 ATTRIB_FORMAT(printf,2,3)
 fits_add_long_comment(qfits_header* dst, const char* format, ...);
 
+int 
+ATTRIB_FORMAT(printf,2,3)
+fits_add_long_history(qfits_header* dst, const char* format, ...);
+
 // how many FITS blocks are required to hold 'size' bytes?
 int fits_blocks_needed(int size);
 

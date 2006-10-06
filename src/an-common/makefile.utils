@@ -1,4 +1,8 @@
-UTILS_DIR := $(BASEDIR)/an-common
-UTILS_INC := -I$(UTILS_DIR)
-UTILS_LIB := $(UTILS_DIR)/libutils.a
-UTILS_OBJS := $(addprefix $(UTILS_DIR)/, fitsioutils.o)
+ANUTILS_DIR := $(BASEDIR)/an-common
+ANUTILS_INC := -I$(ANUTILS_DIR)
+ANUTILS_LIB := $(ANUTILS_DIR)/libanutils.a
+
+#ANUTILS_OBJS := $(addprefix $(ANUTILS_DIR)/, fitsioutils.o)
+
+$(ANUTILS_LIB):
+	cd $(ANUTILS_DIR) && make

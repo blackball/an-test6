@@ -1,34 +1,31 @@
 CC := gcc
 
+AWK := awk
+#AWK := gawk --lint --lint-old
+
 CFLAGS_DEF := -g -Wall
 CFLAGS_DEF += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 CFLAGS_DEF += -D_GNU_SOURCE
 
+TEST_OPTION := -ffinite-math-only -fno-signaling-nans
+CFLAGS_DEF += $(shell $(CC) $(TEST_OPTION) -c -x c - < /dev/null > /dev/null 2> /dev/null && echo "$(TEST_OPTION)")
+
 MACHINE:=$(shell uname -m)
 ifeq ($(MACHINE), i686)
-	GCCVER:=$(shell gcc --version | head -1 | awk '{print $$3}' | awk 'BEGIN{FS="."} {print $$1 "." $$2}')
-	ifeq ($(GCCVER), 3.2)
-		CFLAGS += -mcpu=pentium4 
-	endif
-	ifeq ($(GCCVER), 4.0)
-		CFLAGS += -mtune=pentium4
-	endif
-	CFLAGS += -march=pentium4
-#CFLAGS += -mfpmath=sse -mmmx -msse -msse2
+# gcc before version 3.1 doesn't support "pentium4"; use "i686" instead.
+# gcc 3.1: "pentium4"
+	TEST_OPTION := -march=pentium4
+	TEST_FAIL_OPTION := -march=i686
+	CFLAGS_DEF += $(shell ($(CC) $(TEST_OPTION) -c -x c - < /dev/null >& /dev/null && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
 else
-  K8 := $(shell gcc -dM -E - < /dev/null | grep "\#define __tune_k8__ 1")
-  #$(warning K8 is "$(K8)")
-  ifneq ($(K8),)
-    ifeq ($(GCCVER), 3.2)
-      CFLAGS += -mcpu=k8
-    endif
-    ifeq ($(GCCVER), 4.0)
-      CFLAGS += -mtune=k8
-    endif
-    CFLAGS += -march=k8 -m64
-  else
-    CFLAGS += -DNOT_686
-  endif
+	K8 := $(shell gcc -dM -E - < /dev/null | grep "\#define __tune_k8__ 1")
+	ifneq ($(K8),)
+		CFLAGS_DEF += -march=k8 -m64
+	else
+		CFLAGS_DEF += -DNOT_686
+	endif
 endif
+
+$(warning CFLAGS default: $(CFLAGS_DEF))
 
 

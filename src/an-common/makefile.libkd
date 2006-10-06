@@ -2,6 +2,6 @@ LIBKD_DIR := $(BASEDIR)/libkd
 LIBKD_INC := -I$(LIBKD_DIR)
 LIBKD_LIB := $(LIBKD_DIR)/libkd.a
 
-#LIBKD_LIB:
-#	cd $(LIBKD_DIR) && make
+$(LIBKD_LIB):
+	cd $(LIBKD_DIR) && make
 
