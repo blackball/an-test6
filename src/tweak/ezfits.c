@@ -1,6 +1,8 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <errno.h>
+#include <unistd.h>
 #include "ezfits.h"
 
 int ezwriteimage(char* fn, int datatype, void* data, int w, int h)
@@ -32,8 +34,16 @@ int ezwriteimage(char* fn, int datatype, void* data, int w, int h)
 }
 
 int ezscatter(char* fn, double* x, double *y,
-                   double* a, double *d, int n)
+              double* a, double *d, int n)
 {
+
+	// Trash existing file if it exists
+	if (unlink(fn)) {
+		if (errno != ENOENT) {
+			printf("Trouble removing file: %s\n", fn);
+			perror(NULL);
+		}
+	}
 
 	int status = 0;
 	fitsfile *fptr;        /* FITS file pointer to output file */

@@ -11,7 +11,8 @@ OBJS= tweak.o ../quads/starutil.o ../quads/mathutil.o \
 ../quads/qfits/xmemory.o   ../quads/qfits/fits_md5.o  ../quads/qfits/qerror.o \
 ../quads/fitsioutils.o ../quads/kdtree/kdtree_access.o \
 ../quads/kdtree/kdtree_dim.o ../quads/ioutils.o \
-../quads/healpix.o ezfits.o sip.o sip_util.o
+../quads/healpix.o ezfits.o sip.o sip_util.o ../quads/bl.o \
+../quads/dualtree_rangesearch.o ../quads/dualtree.o
 
 all: tweak test_sip
 

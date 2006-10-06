@@ -26,17 +26,22 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
+#include <assert.h>
 #include "libwcs/fitsfile.h"
 #include "libwcs/wcs.h"
 #include "starutil.h"
 #include "fitsio.h"
 #include "kdtree.h"
 #include "kdtree_fits_io.h"
-#include "assert.h"
+#include "dualtree_rangesearch.h"
 #include "healpix.h"
 #include "ezfits.h"
 #include "sip.h"
 #include "sip_util.h"
+#include "bl.h"
+
+kdtree_t* cached_kd = NULL;
+int cached_kd_hp = 0;
 
 double max(double x, double y)
 {
@@ -71,6 +76,11 @@ typedef struct tweak_s {
 	double *y_ref;
 	double *a_ref;
 	double *d_ref;
+
+	// Correspondences
+	il* image;
+	il* ref;
+	dl* dist2;
 } tweak_t;
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
@@ -188,13 +198,19 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 {
 	// FIXME magical 9 constant == an_cat hp res NSide
 	int hp = radectohealpix_nside(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
-
-	char buf[1000];
-	snprintf(buf,1000, hppat, hp);
-	fprintf(stderr, "opening %s\n",buf);
-	kdtree_t* kd = kdtree_fits_read_file(buf);
-	fprintf(stderr, "success\n");
-	assert(kd);
+	kdtree_t* kd;
+	if (cached_kd_hp != hp || cached_kd == NULL) {
+		char buf[1000];
+		snprintf(buf,1000, hppat, hp);
+		fprintf(stderr, "opening %s\n",buf);
+		kd = kdtree_fits_read_file(buf);
+		fprintf(stderr, "success\n");
+		assert(kd);
+		cached_kd_hp = hp;
+		cached_kd = kd;
+	} else {
+		kd = cached_kd;
+	}
 
 	double xyz[3];
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
@@ -235,7 +251,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	}
 
 	kdtree_free_query(kq);
-	kdtree_fits_close(kd);
+//	kdtree_fits_close(kd);
 }
 
 void get_shift(double* ximg, double* yimg, int nimg,
@@ -422,6 +438,72 @@ sip_t* do_entire_shift_operation(tweak_t* t)
 	return NULL;
 }
 
+typedef struct { il* image; il* ref; dl* dist2; } dualtree_data_t;
+
+// Dualtree rangesearch callback. We want to keep track of correspondences.
+// If we get called multiple times with the same image_ind, then we take the
+// ref_ind which is closest.
+void match_callback(void* extra, int image_ind, int ref_ind, double dist2)
+{
+	tweak_t* t = extra;
+
+	int ind = il_find_index_ascending(t->image, image_ind);
+	if (ind == -1) {
+		int nind = il_insert_ascending(t->image, image_ind);
+		il_insert(t->ref, nind, ref_ind);
+		dl_insert(t->dist2, nind, dist2);
+	} else {
+		double old_dist2 = dl_get(t->dist2, ind);
+		printf("found new one!\n");
+		if (dist2 < old_dist2) {
+			printf("GOOD\n");
+			il_set(t->image, ind, image_ind);
+			il_set(t->ref, ind, ref_ind);
+			dl_set(t->dist2, ind, dist2);
+		}
+	}
+}
+
+void find_correspondences(tweak_t* t)
+{
+	kdtree_t* kd_image;
+	kdtree_t* kd_ref;
+
+	double* data_image = malloc(sizeof(double)*t->n*2);
+	double* data_ref = malloc(sizeof(double)*t->n_ref*2);
+
+	int i;
+	for (i=0; i<t->n; i++) {
+		data_image[2*i+0] = t->x[i];
+		data_image[2*i+1] = t->y[i];
+	}
+
+	int levels = kdtree_compute_levels(t->n, 4);
+	kd_image = kdtree_build(data_image, t->n, 2, levels);
+
+	for (i=0; i<t->n_ref; i++) {
+		data_ref[2*i+0] = t->x_ref[i];
+		data_ref[2*i+1] = t->y_ref[i];
+	}
+	levels = kdtree_compute_levels(t->n_ref, 4);
+	kd_ref = kdtree_build(data_ref, t->n_ref, 2, levels);
+
+	// Dualtree
+	t->image = il_new(600);
+	t->ref = il_new(600);
+	t->dist2 = dl_new(600);
+
+	// Distance is in pixels
+	dualtree_rangesearch(kd_image, kd_ref,
+	                     0.0, 10, // This min/max dist is in pixels
+	                     match_callback, t, NULL, NULL);
+
+	printf("im=%d\n", il_size(t->image)); 
+	printf("ref=%d\n", il_size(t->ref)); 
+	printf("dist2=%d\n", il_size(t->dist2)); 
+	dl_print(t->dist2);
+}
+
 void free_extraneous(tweak_t* t) 
 {
 	// don't free x and y because we don't compute them
@@ -480,6 +562,19 @@ wcs_t* copy_wcs(wcs_t* wcs)
 /* This one isn't going to be fun. */
 
 /* spherematch */
+
+void dump_data(tweak_t* t)
+{
+	static char s = '1';
+	char fn[] = "scatter_imageN.fits";
+	fn[13] = s;
+	ezscatter(fn, t->x,t->y,t->a,t->d,t->n);
+
+	char fn2[] = "scatter_ref__N.fits";
+	fn2[13] = s++;
+	ezscatter(fn2, t->x_ref,t->y_ref,t->a_ref,t->d_ref,t->n_ref);
+
+}
 
 void printHelp(char* progname)
 {
@@ -603,19 +698,23 @@ int main(int argc, char *argv[])
 		do_entire_shift_operation(&tweak);
 		free_extraneous(&tweak);
 
-		get_tweak_data(&tweak, xyfptr, hppat, kk);
-		do_entire_shift_operation(&tweak);
-		free_extraneous(&tweak);
+//		get_tweak_data(&tweak, xyfptr, hppat, kk);
+//		do_entire_shift_operation(&tweak);
+//		free_extraneous(&tweak);
 
 		get_tweak_data(&tweak, xyfptr, hppat, kk);
 		do_entire_shift_operation(&tweak);
 		free_extraneous(&tweak);
+		get_tweak_data(&tweak, xyfptr, hppat, kk);
+
+		dump_data(&tweak);
+
+		find_correspondences(&tweak);
 
 
 
-
-
-		//ezscatter("scatter_image_shift.fits", x,y,a,d,n);
+		if (cached_kd)
+			kdtree_fits_close(cached_kd);
 		exit(1);
 	}
 
