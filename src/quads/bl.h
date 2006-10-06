@@ -123,6 +123,7 @@ Inline int  il_get(il* list, const int n);
 void il_copy(il* list, int start, int length, int* vdest);
 il*  il_dupe(il* list);
 void il_print(il* list);
+void   il_insert(il* list, int indx, double data);
 int il_insert_ascending(il* list, int n);
 int il_insert_descending(il* list, int n);
 int  il_insert_unique_ascending(il* list, int p);
@@ -180,5 +181,6 @@ int    dl_check_consistency(dl* list);
 void   dl_insert(dl* list, int indx, double data);
 void   dl_remove_all(dl* list);
 void   dl_merge_lists(dl* list1, dl* list2);
+void   dl_print(dl* list);
 
 #endif

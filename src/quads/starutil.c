@@ -24,6 +24,9 @@ inline void radec2xyzarr(double ra, double dec, double* xyz) {
 	xyz[1] = cos(dec) * sin(ra);
 	xyz[2] = sin(dec);
 }
+inline void radecdeg2xyzarr(double ra, double dec, double* xyz) {
+	radec2xyzarr(deg2rad(ra),deg2rad(dec), xyz);
+}
 
 // xyz stored as xyzxyzxyz.
 inline void radec2xyzarrmany(double *ra, double *dec, double* xyz, int n) {

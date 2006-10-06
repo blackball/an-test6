@@ -13,6 +13,7 @@ static void bl_free_node(bl_node* node);
 #define NODE_DATA(node) ((void*)(((bl_node*)(node)) + 1))
 #define NODE_CHARDATA(node) ((char*)(((bl_node*)(node)) + 1))
 #define NODE_INTDATA(node) ((int*)(((bl_node*)(node)) + 1))
+#define NODE_DOUBLEDATA(node) ((double*)(((bl_node*)(node)) + 1))
 
 static void bl_sort_rec(bl* list, void* pivot,
 						int (*compare)(const void* v1, const void* v2)) {
@@ -1084,6 +1085,10 @@ int il_insert_unique_ascending(il* list, int n) {
 	return nskipped + lower + 1;
 }
 
+void   il_insert(il* list, int indx, double data) {
+	bl_insert(list, indx, &data);
+}
+
 void il_copy(il* list, int start, int length, int* vdest) {
 	bl_copy(list, start, length, vdest);
 }
@@ -1310,3 +1315,16 @@ dl* dl_dupe(dl* dlist) {
 void   dl_merge_lists(dl* list1, dl* list2) {
 	bl_append_list(list1, list2);
 }
+
+
+void dl_print(dl* list) {
+	bl_node* n;
+	int i;
+	for (n=list->head; n; n=n->next) {
+		printf("[ ");
+		for (i=0; i<n->N; i++)
+			printf("%lf, ", NODE_DOUBLEDATA(n)[i]);
+		printf("] ");
+	}
+}
+

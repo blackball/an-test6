@@ -39,6 +39,7 @@
 #include "sip.h"
 #include "sip_util.h"
 #include "bl.h"
+#include "lm.h"
 
 kdtree_t* cached_kd = NULL;
 int cached_kd_hp = 0;
@@ -54,6 +55,13 @@ double min(double x, double y)
 	return y;
 }
 
+
+enum opt_flags {
+	OPT_CRVAL = 1,
+	OPT_CRPIX = 2,
+	OPT_CD    = 4,
+	OPT_SIP   = 8
+};
 
 typedef struct tweak_s {
 	sip_t* sip;
@@ -81,6 +89,8 @@ typedef struct tweak_s {
 	il* image;
 	il* ref;
 	dl* dist2;
+
+	int flags;
 } tweak_t;
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
@@ -576,6 +586,162 @@ void dump_data(tweak_t* t)
 
 }
 
+// Our parameter vector is 'p' for LM. The breakdown of parameters into the
+// parameter vector goes in the following order:
+//
+// OPT_CRVAL       CRVAL0
+//                 CRVAL1
+//               
+// OPT_CRPIX       CRPIX0
+//                 CRPIX1
+//               
+// OPT_CD          CD1_1
+//                 CD1_2
+//                 CD2_1
+//                 CD2_2
+//                 
+// OPT_SIP         A_1_2         Note that A_1_1 is not present; it is 0
+//                 A_1_3
+//                 A_1_4
+//                 A_1_5
+//                 A_1_a_order   All A matrix terms listed in row-major order;
+//                               same for B matrix. All terms are such that
+//                               i+j <= a_order. Below-cross-diagonal terms
+//                               are implicitly zero.
+//                 B_1_1
+//                 B_1_2         ... and so on
+
+void unpack_params(sip_t* sip, double *pp, int flags) 
+{
+	assert(pp);
+	assert(sip);
+	if (flags & OPT_CRVAL) {
+		sip->crval[0] = *pp++;
+		sip->crval[1] = *pp++;
+	}
+	if (flags & OPT_CRPIX) {
+		sip->crpix[0] = *pp++;
+		sip->crpix[1] = *pp++;
+	}
+	if (flags & OPT_CD) {
+		sip->cd[0][0] = *pp++;
+		sip->cd[0][1] = *pp++;
+		sip->cd[1][0] = *pp++;
+		sip->cd[1][1] = *pp++;
+	}
+	if (flags & OPT_SIP) {
+		int p, q;
+		for (p=0; p<sip->a_order; p++)
+			for (q=0; q<sip->a_order; q++)
+				if (p+q <= sip->a_order && !(p==0&&q==0))
+					 sip->a[p][q] = *pp++;
+		for (p=0; p<sip->b_order; p++)
+			for (q=0; q<sip->b_order; q++)
+				if (p+q <= sip->b_order && !(p==0&&q==0))
+					 sip->b[p][q] = *pp++;
+	}
+}
+
+int pack_params(sip_t* sip, double *parameters, int flags) 
+{
+	double* pp = parameters;
+	if (flags & OPT_CRVAL) {
+		*pp++ = sip->crval[0];
+		*pp++ = sip->crval[1];
+	}
+	if (flags & OPT_CRPIX) {
+		*pp++ = sip->crpix[0];
+		*pp++ = sip->crpix[1];
+	}
+	if (flags & OPT_CD) {
+		*pp++ = sip->cd[0][0];
+		*pp++ = sip->cd[0][1];
+		*pp++ = sip->cd[1][0];
+		*pp++ = sip->cd[1][1];
+	}
+	printf("%d\n", flags | OPT_SIP);
+	if (flags & OPT_SIP) {
+		int p, q;
+		for (p=0; p<sip->a_order; p++)
+			for (q=0; q<sip->a_order; q++)
+				if (p+q <= sip->a_order && !(p==0&&q==0))
+					  *pp++ = sip->a[p][q];
+		for (p=0; p<sip->b_order; p++)
+			for (q=0; q<sip->b_order; q++)
+				if (p+q <= sip->b_order && !(p==0&&q==0))
+					  *pp++ = sip->b[p][q];
+	}
+
+	return pp - parameters;
+}
+
+// RIFE with optimization opportunities
+void cost(double *p, double *hx, int m, int n, void *adata)
+{
+	tweak_t* t = adata;
+
+	sip_t sip;
+	memcpy(&sip, t->sip, sizeof(sip_t));
+	unpack_params(&sip, p, t->flags);
+
+	// Run the gauntlet.
+	int i;
+	for (i=0; i<il_size(t->image); i++) {
+		int image_ind = il_get(t->image, i);
+		int ref_ind = il_get(t->ref, i);
+
+		double ref_xyz[3];
+		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
+
+		double a, d;
+		pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
+		double image_xyz[3];
+		radecdeg2xyzarr(a, d, image_xyz);
+
+		*hx++ = image_xyz[0];
+		*hx++ = image_xyz[1];
+		*hx++ = image_xyz[2];
+	}
+}
+
+void go_to_town(tweak_t* t)
+{
+	double params[410];
+	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
+//	t->flags |= OPT_SIP;
+//	t->sip->a_order = 7;
+//	t->sip->b_order = 7;
+	int m = pack_params(t->sip, params, t->flags);
+
+	// Pack target values
+	double *desired = malloc(sizeof(double)*il_size(t->image)*3);
+	double *hx = desired;
+	int i;
+	for (i=0; i<il_size(t->image); i++) {
+		int ref_ind = il_get(t->ref, i);
+		double ref_xyz[3];
+		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
+		*hx++ = ref_xyz[0];
+		*hx++ = ref_xyz[1];
+		*hx++ = ref_xyz[2];
+	}
+
+	int n = hx - desired;
+
+	printf("Starting optimization!!!!!!!!!!!\n");
+	double info[LM_INFO_SZ];
+	dlevmar_dif(cost, params, desired, m, n, 200,
+	            NULL, info, NULL, NULL, t);
+
+	printf("initial error^2 = %lf\n", info[0]);
+	printf("final   error^2 = %lf\n", info[1]);
+	printf("nr iterations   = %lf\n", info[5]);
+	printf("term reason     = %lf\n", info[6]);
+	printf("function evals  = %lf\n", info[7]);
+
+	unpack_params(t->sip, params, t->flags);
+}
+
 void printHelp(char* progname)
 {
 	fprintf(stderr, "%s usage:\n"
@@ -707,11 +873,14 @@ int main(int argc, char *argv[])
 		free_extraneous(&tweak);
 		get_tweak_data(&tweak, xyfptr, hppat, kk);
 
-		dump_data(&tweak);
-
 		find_correspondences(&tweak);
 
+		go_to_town(&tweak);
 
+		free_extraneous(&tweak);
+		get_tweak_data(&tweak, xyfptr, hppat, kk);
+
+		dump_data(&tweak);
 
 		if (cached_kd)
 			kdtree_fits_close(cached_kd);
