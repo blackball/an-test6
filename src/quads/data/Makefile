@@ -50,6 +50,8 @@ AN_TEMPLATE := $(AN_DIR)an_hp%03i.fits
 AN_NSIDE  := 9
 AN_CATALOG_PRESENT := $(AN_DIR)an-catalog-present
 
+IDFILES := no
+
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
 CUT_BASE      := $(CUT_DIR)an-sdss-
@@ -76,8 +78,6 @@ CATALOG    := $(CUT_BASE)
 INDEX      := $(INDEX_DIR)sdss-$(INDEX_ID)_
 TEMP1      := $(INDEX_DIR)phase1_
 TEMP2      := $(INDEX_DIR)phase2_
-
-IDFILES := no
 
 WGET            := wget --continue
 MKDIR           := mkdir -p
@@ -122,7 +122,9 @@ endef
 NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
 $(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
 INDEXES := $(addprefix index,$(NUMS2))
+#$(warning INDEXES: $(INDEXES))
 
+.PHONY: all
 all: $(INDEXES)
 
 #$(warning INDEXES: $(INDEXES))
@@ -146,11 +148,11 @@ $(TYCHO2_FITS_PRESENT):
 .PHONY: tycho2-fits
 tycho2-fits: $(TYCHO2_FITS_PRESENT)
 
-$(AN_CATALOG_PRESENT):
-	$(MAKE) -f makefile.an_catalog $@
-
 .PHONY: an-catalog
 an-catalog: $(AN_CATALOG_PRESENT)
+
+$(AN_CATALOG_PRESENT):
+	$(MAKE) -f makefile.an_catalog $@
 
 tycho2_download:
 	$(MAKE) -f makefile.tycho2 $@
@@ -161,9 +163,9 @@ define CUT_template
 .PHONY: cut$(1)
 $(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
 	$(MKDIR) $(CUT_DIR)
-	$(TOUCH) timestamp-cut-startree-$(1)-start
+	$(TOUCH) timestamp-startree-$(1)-start
 	$(STARTREE) -f $(CUT_BASE)$(1) -R $(CUT_NLEAF)
-	$(TOUCH) timestamp-cut-startree-$(1)-done
+	$(TOUCH) timestamp-startree-$(1)-done
 
 cut$(1): $(CUT_BASE)$(1).objs.fits
 
@@ -346,3 +348,4 @@ else
 $(warning Already included Makefile)
 
 endif
+
