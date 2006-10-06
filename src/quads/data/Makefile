@@ -74,10 +74,14 @@ CUT_NLEAF     := 15
 
 INDEX_ID   := 1
 INDEX_DIR  := sdss-$(INDEX_ID)/
+TEMP_DIR   := 
 CATALOG    := $(CUT_BASE)
 INDEX      := $(INDEX_DIR)sdss-$(INDEX_ID)_
-TEMP1      := $(INDEX_DIR)phase1_
-TEMP2      := $(INDEX_DIR)phase2_
+PHASE1     := $(INDEX_DIR)phase1_
+PHASE2     := $(INDEX_DIR)phase2_
+TEMP1      := $(TEMP_DIR)tmp.phase1_
+TEMP2      := $(TEMP_DIR)tmp.phase2_
+TEMPINDEX  := $(TEMP_DIR)tmp.sdss-$(INDEX_ID)_
 
 WGET            := wget --continue
 MKDIR           := mkdir -p
@@ -184,49 +188,49 @@ $(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
 
 define INDEX_template_B
 $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
-		$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).quad.fits
+		$(PHASE2)$(1).ckdt.fits $(PHASE2)$(1).quad.fits
 	$(TOUCH) timestamp-unpermute-quads-$(1)-start
-	$(UNPERMUTE_QUADS) -f $(TEMP2)$(1) -o tmp.$(INDEX)$(1)
-	$(MV) tmp.$(INDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
-	$(MV) tmp.$(INDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
+	$(UNPERMUTE_QUADS) -f $(PHASE2)$(1) -o $(TEMPINDEX)$(1)
+	$(MV) $(TEMPINDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
+	$(MV) $(TEMPINDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
 	$(TOUCH) timestamp-unpermute-quads-$(1)-done
 
 ifeq ($(IDFILES), yes)
-$(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits $(INDEX)$(1).id.fits : \
-		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(TEMP1)$(1).quad.fits
+$(INDEX)$(1).skdt.fits $(PHASE2)$(1).quad.fits $(INDEX)$(1).id.fits : \
+		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(PHASE1)$(1).quad.fits
 	$(TOUCH) timestamp-unpermute-stars-$(1)-start
-	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
-	$(MV) tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
-	$(MV) tmp.$(INDEX)$(1).id.fits   $(INDEX)$(1).id.fits
-	$(MV) tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(PHASE1)$(1) -o $(TEMPINDEX)$(1)
+	$(MV) $(TEMPINDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	$(MV) $(TEMPINDEX)$(1).id.fits   $(INDEX)$(1).id.fits
+	$(MV) $(TEMPINDEX)$(1).quad.fits $(PHASE2)$(1).quad.fits
 	$(TOUCH) timestamp-unpermute-stars-$(1)-done
 else
-$(INDEX)$(1).skdt.fits $(TEMP2)$(1).quad.fits : \
-		$(CATALOG)$(1).skdt.fits $(TEMP1)$(1).quad.fits
+$(INDEX)$(1).skdt.fits $(PHASE2)$(1).quad.fits : \
+		$(CATALOG)$(1).skdt.fits $(PHASE1)$(1).quad.fits
 	$(TOUCH) timestamp-unpermute-stars-$(1)-start
-	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(TEMP1)$(1) -o tmp.$(INDEX)$(1)
-	$(MV) tmp.$(INDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
-	$(MV) tmp.$(INDEX)$(1).quad.fits $(TEMP2)$(1).quad.fits
+	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(PHASE1)$(1) -o $(TEMPINDEX)$(1)
+	$(MV) $(TEMPINDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	$(MV) $(TEMPINDEX)$(1).quad.fits $(PHASE2)$(1).quad.fits
 	$(TOUCH) timestamp-unpermute-stars-$(1)-done
 endif
 
-$(TEMP2)$(1).ckdt.fits: $(TEMP1)$(1).code.fits
+$(PHASE2)$(1).ckdt.fits: $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-codetree-$(1)-start
-	$(CODETREE) $(CODETREE_OPTS) -f $(TEMP1)$(1) -o tmp.$(TEMP2)$(1)
-	$(MV) tmp.$(TEMP2)$(1).ckdt.fits $(TEMP2)$(1).ckdt.fits
+	$(CODETREE) $(CODETREE_OPTS) -f $(PHASE1)$(1) -o $(TEMP2)$(1)
+	$(MV) $(TEMP2)$(1).ckdt.fits $(PHASE2)$(1).ckdt.fits
 	$(TOUCH) timestamp-codetree-$(1)-done
 
-$(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
+$(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(TOUCH) timestamp-hpquads-$(1)-start
-	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o tmp.$(TEMP1)$(1)
+	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
 	$(MV) $(HPQUAD_TMP_NOQUADS) noquads$(1).rdls.fits
-	$(MV) tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
-	$(MV) tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
+	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
+	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
 
 SEC += \
-    $(addprefix $(TEMP1)$(1), .code.fits .quad.fits) \
-    $(addprefix $(TEMP2)$(1), .ckdt.fits .quad.fits)
+    $(addprefix $(PHASE1)$(1), .code.fits .quad.fits) \
+    $(addprefix $(PHASE2)$(1), .ckdt.fits .quad.fits)
 endef
 
 PHO := $(NUMS)
