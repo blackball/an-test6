@@ -104,9 +104,12 @@ EPSTOPNG		:= epstopng
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
+HPQUADS_TMP_NOQUADS := tmp.noquads.rdls.fits
 
+STARTREE_OPTIONS := -R $(CUT_NLEAF) -b -s -S
 CODETREE_OPTS := -R 15
-HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i $(INDEX_ID) -c -x 6 -y 6 -r 4
+#HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i $(INDEX_ID) -c -x 6 -y 6 -r 4
+HPQUADS_OPTS  := -l 4 -u 5 -n 1000 -i $(INDEX_ID) -c -x 4 -y 4 -r 3 -R -F $(HPQUADS_TMP_NOQUADS)
 QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
@@ -164,7 +167,7 @@ define CUT_template
 $(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
 	$(MKDIR) $(CUT_DIR)
 	$(TOUCH) timestamp-startree-$(1)-start
-	$(STARTREE) -f $(CUT_BASE)$(1) -R $(CUT_NLEAF)
+	$(STARTREE) -f $(CUT_BASE)$(1) $(STARTREE_OPTIONS)
 	$(TOUCH) timestamp-startree-$(1)-done
 
 cut$(1): $(CUT_BASE)$(1).objs.fits
@@ -216,6 +219,7 @@ $(TEMP2)$(1).ckdt.fits: $(TEMP1)$(1).code.fits
 $(TEMP1)$(1).quad.fits $(TEMP1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(TOUCH) timestamp-hpquads-$(1)-start
 	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o tmp.$(TEMP1)$(1)
+	$(MV) $(HPQUAD_TMP_NOQUADS) noquads$(1).rdls.fits
 	$(MV) tmp.$(TEMP1)$(1).quad.fits $(TEMP1)$(1).quad.fits
 	$(MV) tmp.$(TEMP1)$(1).code.fits $(TEMP1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
