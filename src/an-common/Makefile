@@ -8,9 +8,7 @@ CFLAGS := $(CFLAGS_DEF)
 CFLAGS += -O0
 CFLAGS += $(QFITS_INC)
 
-LIBUTILS := libutils.a
+all: $(ANUTILS_LIB)
 
-all: $(LIBUTILS) $(UTILS_OBJS)
-
-$(LIBUTILS): $(UTILS_OBJS)
+$(ANUTILS_LIB): fitsioutils.o
 	$(AR) rc $@ $^
