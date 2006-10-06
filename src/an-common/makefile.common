@@ -26,6 +26,6 @@ else
 	endif
 endif
 
-$(warning CFLAGS default: $(CFLAGS_DEF))
+#$(warning CFLAGS default: $(CFLAGS_DEF))
 
 
