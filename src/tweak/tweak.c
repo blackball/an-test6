@@ -60,7 +60,8 @@ enum opt_flags {
 	OPT_CRVAL = 1,
 	OPT_CRPIX = 2,
 	OPT_CD    = 4,
-	OPT_SIP   = 8
+	OPT_SIP   = 8,
+	OPT_SIP_INVERSE   = 16
 };
 
 typedef struct tweak_s {
@@ -89,8 +90,14 @@ typedef struct tweak_s {
 	il* image;
 	il* ref;
 	dl* dist2;
+	il* maybeinliers;
+	il* bestinliers;
+	il* included;
 
 	int flags;
+//	int n;
+//	int m;
+//	double parameters[500];
 
 	kdtree_t* kd_image;
 	kdtree_t* kd_ref;
@@ -472,6 +479,7 @@ void match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 	il_append(t->image, image_ind);
 	il_append(t->ref, ref_ind);
 	dl_append(t->dist2, dist2);
+	il_append(t->included, 1);
 }
 
 void find_correspondences(tweak_t* t)
@@ -499,10 +507,11 @@ void find_correspondences(tweak_t* t)
 	t->image = il_new(600);
 	t->ref = il_new(600);
 	t->dist2 = dl_new(600);
+	t->included = il_new(600);
 
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
-	                     RANGESEARCH_NO_LIMIT, 30, // This min/max dist is in pixels
+	                     RANGESEARCH_NO_LIMIT, 15, // This min/max dist is in pixels
 	                     match_callback, t,
 	                     NULL, NULL);
 
@@ -523,53 +532,6 @@ void free_extraneous(tweak_t* t)
 	if (t->y_ref) free(t->y_ref);
 }
 
-struct IRAFsurface* dupiraf(struct IRAFsurface* in) 
-{
-	struct IRAFsurface* lngcor = malloc(sizeof(struct IRAFsurface));
-	memcpy(lngcor, in, sizeof(struct IRAFsurface));
-	lngcor->coeff = malloc(sizeof(double)*in->ncoeff);
-	memcpy(lngcor->coeff, in->coeff, sizeof(double)*in->ncoeff);
-	memcpy(lngcor->xbasis, in->xbasis, sizeof(double)*in->xorder);
-	memcpy(lngcor->ybasis, in->ybasis, sizeof(double)*in->yorder);
-	return lngcor;
-}
-
-wcs_t* copy_wcs(wcs_t* wcs)
-{
-	wcs_t* nwcs = malloc(sizeof(wcs_t));
-	memcpy(nwcs, wcs, sizeof(wcs_t));
-
-	// TNX distortion structures
-	if (wcs->lngcor || wcs->latcor) {
-		if (wcs->lngcor) {
-			nwcs->lngcor = dupiraf(wcs->lngcor);
-		}
-		if (wcs->latcor) {
-			nwcs->latcor = dupiraf(wcs->latcor);
-		}
-	}
-
-	int i;
-	for (i=0; i<10; i++)
-		if (wcs->command_format[i]) 
-			nwcs->command_format[i] = strdup(wcs->command_format[i]);
-
-	// FIXME is this cool? Can we just copy this over blindly?
-	//struct WorldCoor *wcs;	/* WCS upon which this WCS depends */
-	//struct WorldCoor *wcsdep;	/* WCS depending on this WCS */
-
-  	if (wcs->wcsname)
-		nwcs->wcsname = strdup(wcs->wcsname);
-
-	return nwcs;
-}
-
-
-/* Fink-Hogg shift */
-
-/* This one isn't going to be fun. */
-
-/* spherematch */
 
 void dump_data(tweak_t* t)
 {
@@ -601,14 +563,18 @@ void dump_data(tweak_t* t)
 		int i;
 		for (i=0; i<il_size(t->image); i++) {
 			int im_ind = il_get(t->image, i);
-			a[i] = t->a[im_ind];
-			d[i] = t->d[im_ind];
 			x[i] = t->x[im_ind];
 			y[i] = t->y[im_ind];
+			pixelxy2radec(t->sip, x[i],y[i], a+i,d+i);
+//			a[i] = t->a[im_ind];
+//			d[i] = t->d[im_ind];
 
 			int ref_ind = il_get(t->ref, i);
 			a_ref[i] = t->a_ref[ref_ind];
 			d_ref[i] = t->d_ref[ref_ind];
+			// Must recompute ref xy's
+//			radec2pixelxy(t->sip, a_ref[i], d_ref[i], 
+//					x_ref +i, y_ref+i);
 			x_ref[i] = t->x_ref[ref_ind];
 			y_ref[i] = t->y_ref[ref_ind];
 
@@ -690,6 +656,17 @@ void unpack_params(sip_t* sip, double *pp, int flags)
 				if (p+q <= sip->b_order && !(p==0&&q==0))
 					 sip->b[p][q] = *pp++;
 	}
+	if (flags & OPT_SIP_INVERSE) {
+		int p, q;
+		for (p=0; p<sip->ap_order; p++)
+			for (q=0; q<sip->ap_order; q++)
+				if (p+q <= sip->ap_order && !(p==0&&q==0))
+					 sip->ap[p][q] = *pp++;
+		for (p=0; p<sip->bp_order; p++)
+			for (q=0; q<sip->bp_order; q++)
+				if (p+q <= sip->bp_order && !(p==0&&q==0))
+					 sip->bp[p][q] = *pp++;
+	}
 }
 
 int pack_params(sip_t* sip, double *parameters, int flags) 
@@ -710,17 +687,32 @@ int pack_params(sip_t* sip, double *parameters, int flags)
 		*pp++ = sip->cd[1][1];
 	}
 	if (flags & OPT_SIP) {
+		printf("Packing SIP||||||||\n");
 		int p, q;
 		for (p=0; p<sip->a_order; p++)
 			for (q=0; q<sip->a_order; q++)
-				if (p+q <= sip->a_order && !(p==0&&q==0))
+				if (p+q <= sip->a_order && !(p==0&&q==0)) {
+					if (sip->a[p][q] != 0.00) 
+						printf("Found nonzero=%le\n", sip->a[p][q]);
 					  *pp++ = sip->a[p][q];
+				}
 		for (p=0; p<sip->b_order; p++)
 			for (q=0; q<sip->b_order; q++)
 				if (p+q <= sip->b_order && !(p==0&&q==0))
 					  *pp++ = sip->b[p][q];
 	}
 
+	if (flags & OPT_SIP_INVERSE) {
+		int p, q;
+		for (p=0; p<sip->ap_order; p++)
+			for (q=0; q<sip->ap_order; q++)
+				if (p+q <= sip->ap_order && !(p==0&&q==0))
+					  *pp++ = sip->ap[p][q];
+		for (p=0; p<sip->bp_order; p++)
+			for (q=0; q<sip->bp_order; q++)
+				if (p+q <= sip->bp_order && !(p==0&&q==0))
+					  *pp++ = sip->bp[p][q];
+	}
 	return pp - parameters;
 }
 
@@ -737,11 +729,16 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 	double err = 0; // calculate our own sum-squared error
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
+//		if (!il_get(t->included, i)) 
+//			continue;
 		double a, d;
 		int image_ind = il_get(t->image, i);
 		pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
 		double image_xyz[3];
 		radecdeg2xyzarr(a, d, image_xyz);
+		*hx++ = image_xyz[0];
+		*hx++ = image_xyz[1];
+		*hx++ = image_xyz[2];
 
 		double ref_xyz[3];
 		int ref_ind = il_get(t->ref, i);
@@ -752,24 +749,48 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 		err += dx*dx+dy*dy+dz*dz;
 //		printf("dx=%le, dy=%le, dz=%le\n",dx,dy,dz);
 
-		*hx++ = image_xyz[0];
-		*hx++ = image_xyz[1];
-		*hx++ = image_xyz[2];
 	}
-//	printf("sqd error=%le\n", err);
+	printf("sqd error=%le\n", err);
 }
 
-void go_to_town(tweak_t* t)
+// Do a fit.
+// Requires: correspondences     t->image, t->ref,
+//           image sources       t->x,t->y,
+//           reference sources   t->a_ref,t->d_ref
+//           optimization flags  t->flags
+//           initial SIP guess   t->sip
+void lm_fit(tweak_t* t)
 {
 	double params[410];
-	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
-	t->flags |= OPT_SIP;
-	t->sip->a_order = 7;
-	t->sip->b_order = 7;
+//	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
+//	t->flags = OPT_CRVAL | OPT_CD;
+	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD | OPT_SIP;
+	t->sip->a_order = 3;
+	t->sip->b_order = 3;
 
 	printf("BEFORE::::::::::\n");
 	print_sip(t->sip);
-	int m = pack_params(t->sip, params, t->flags);
+
+	//WTF
+//	t->sip->cd[0][0] *= 1.41;
+//	t->sip->cd[0][1] *= 1.41;
+//	t->sip->cd[1][0] *= 1.41;
+//	t->sip->cd[1][1] *= 1.41;
+
+//	t->sip->crval[0] *= 1.61;
+//	t->sip->crval[1] *= 1.22;
+
+//	t->sip->crpix[0] *= 5.01;
+//	t->sip->crpix[1] *= 1.02;
+//	t->sip->a[2][2] = 5555;
+//	t->sip->b[2][2] = -1111;
+//	t->sip->a[1][1] = 44.44;
+//	t->sip->b[1][1] = -2.22;
+
+
+	print_sip(t->sip);
+
+	int m =  pack_params(t->sip, params, t->flags);
 	printf("REPACKED::::::::::\n");
 	sip_t sip;
 	memcpy(&sip, t->sip, sizeof(sip_t));
@@ -781,6 +802,8 @@ void go_to_town(tweak_t* t)
 	double *hx = desired;
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
+//		if (!il_get(t->included, i)) 
+//			continue;
 		int ref_ind = il_get(t->ref, i);
 		double ref_xyz[3];
 		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
@@ -789,14 +812,19 @@ void go_to_town(tweak_t* t)
 		*hx++ = ref_xyz[2];
 	}
 
-	int n = hx - desired;
+	int n = t->n = hx - desired;
 	assert(hx-desired == 3*il_size(t->image));
 
 	printf("Starting optimization m=%d n=%d!!!!!!!!!!!\n",m,n);
 	double info[LM_INFO_SZ];
 	int max_iterations = 200;
+	double opts[] = { 0.0000000001*LM_INIT_MU,
+	                  0.0000000001*LM_STOP_THRESH,
+	                  0.0000000001*LM_STOP_THRESH,
+		          0.0000000001*LM_STOP_THRESH,
+	                  0.0000000001*-LM_DIFF_DELTA};
 	dlevmar_dif(cost, params, desired, m, n, max_iterations,
-	            NULL, info, NULL, NULL, t);
+	            opts, info, NULL, NULL, t);
 
 	printf("initial error^2 = %le\n", info[0]);
 	printf("final   error^2 = %le\n", info[1]);
@@ -805,7 +833,74 @@ void go_to_town(tweak_t* t)
 	printf("function evals  = %lf\n", info[7]);
 
 	unpack_params(t->sip, params, t->flags);
+//	memcpy(t->parameters, params, sizeof(double)*t->n);
 }
+
+
+// RANSAC from Wikipedia:
+// Given:
+//     data - a set of observed data points
+//     model - a model that can be fitted to data points
+//     n - the minimum number of data values required to fit the model
+//     k - the maximum number of iterations allowed in the algorithm
+//     t - a threshold value for determining when a data point fits a model
+//     d - the number of close data values required to assert that a model fits well to data
+// Return:
+//     bestfit - model parameters which best fit the data (or nil if no good model is found)
+// iterations = 0
+// bestfit = nil
+// besterr = something really large
+// while iterations < k {
+//     maybeinliers = n randomly selected values from data
+//     maybemodel = model parameters fitted to maybeinliers
+//     alsoinliers = empty set
+//     for every point in data not in maybeinliers {
+//         if point fits maybemodel with an error smaller than t
+//              add point to alsoinliers
+//     }
+//     if the number of elements in alsoinliers is > d {
+//         % this implies that we may have found a good model
+//         % now test how good it is
+//         bettermodel = model parameters fitted to all points in maybeinliers and alsoinliers
+//         thiserr = a measure of how well model fits these points
+//         if thiserr < besterr {
+//             bestfit = bettermodel
+//             besterr = thiserr
+//         }
+//     }
+//     increment iterations
+// }
+// return bestfit
+
+/*
+void ransac(tweak_t* t)
+{
+	int iterations = 0;
+	int maxiter = 1000;
+
+	double *bestfit = malloc(sizeof(double)*t->m);
+	double *maybemodel = malloc(sizeof(double)*t->m);
+	memcpy(bestparameters, t->parameters, sizeof(double)*t->m);
+	memcpy(maybeparameters, t->parameters, sizeof(double)*t->m);
+
+	t->maybeinliers = il_new(600);
+	t->bestinliers = il_new(600);
+
+	double besterr = 100000000000000;
+	int min_data_points = 30;
+	int *maybeinliers = malloc(sizeof(int)*min_data_points);
+	int setsize = il_size(t->image);
+	while (iterations < maxiter) {
+		// select n random integers... with replacement because i'm
+		// really lazy
+		for (i=0; i<min_data_points; i++) {
+			maybeinliers[i] = rand()/(double)RAND_MAX * set_size;
+			printf("eeeeeeeeeeeeeeeee %d\n", maybeinliers[i]);
+		}
+	}
+}
+*/
+
 
 void printHelp(char* progname)
 {
@@ -942,7 +1037,8 @@ int main(int argc, char *argv[])
 
 		dump_data(&tweak);
 
-		go_to_town(&tweak);
+		lm_fit(&tweak);
+		print_sip(tweak.sip);
 //		free_extraneous(&tweak);
 //		get_tweak_data(&tweak, xyfptr, hppat, kk);
 

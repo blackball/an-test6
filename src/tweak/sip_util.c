@@ -56,10 +56,26 @@ void print_sip(sip_t* sip)
 	printf("crpix[0]=%lf\n", sip->crpix[0]);
 	printf("crpix[1]=%lf\n", sip->crpix[1]);
 
-	printf("cd00=%lf\n", sip->cd[0][0]);
-	printf("cd01=%lf\n", sip->cd[0][1]);
-	printf("cd10=%lf\n", sip->cd[1][0]);
-	printf("cd11=%lf\n", sip->cd[1][1]);
+	printf("cd00=%le\n", sip->cd[0][0]);
+	printf("cd01=%le\n", sip->cd[0][1]);
+	printf("cd10=%le\n", sip->cd[1][0]);
+	printf("cd11=%le\n", sip->cd[1][1]);
+
+	if (sip->a_order > 0) {
+		int p, q;
+		for (p=0; p<sip->a_order; p++)
+			for (q=0; q<sip->a_order; q++)
+				if (p+q <= sip->a_order && !(p==0&&q==0))
+					 printf("a%d%d=%le\n", p,q,sip->a[p][q]);
+	}
+	if (sip->b_order > 0) {
+		int p, q;
+		for (p=0; p<sip->b_order; p++)
+			for (q=0; q<sip->b_order; q++)
+				if (p+q <= sip->b_order && !(p==0&&q==0))
+					 printf("b%d%d=%le\n", p,q,sip->b[p][q]);
+	}
+
 	printf("\n");
 }
 
