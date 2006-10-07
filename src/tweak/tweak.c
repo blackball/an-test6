@@ -709,7 +709,6 @@ int pack_params(sip_t* sip, double *parameters, int flags)
 		*pp++ = sip->cd[1][0];
 		*pp++ = sip->cd[1][1];
 	}
-	printf("%d\n", flags | OPT_SIP);
 	if (flags & OPT_SIP) {
 		int p, q;
 		for (p=0; p<sip->a_order; p++)
@@ -735,6 +734,7 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 	unpack_params(&sip, p, t->flags);
 
 	// Run the gauntlet.
+	double err = 0; // calculate our own sum-squared error
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
 		double a, d;
@@ -743,20 +743,38 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 		double image_xyz[3];
 		radecdeg2xyzarr(a, d, image_xyz);
 
+		double ref_xyz[3];
+		int ref_ind = il_get(t->ref, i);
+		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
+		double dx = ref_xyz[0] - image_xyz[0];
+		double dy = ref_xyz[1] - image_xyz[1];
+		double dz = ref_xyz[2] - image_xyz[2];
+		err += dx*dx+dy*dy+dz*dz;
+//		printf("dx=%le, dy=%le, dz=%le\n",dx,dy,dz);
+
 		*hx++ = image_xyz[0];
 		*hx++ = image_xyz[1];
 		*hx++ = image_xyz[2];
 	}
+//	printf("sqd error=%le\n", err);
 }
 
 void go_to_town(tweak_t* t)
 {
 	double params[410];
 	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
-//	t->flags |= OPT_SIP;
-//	t->sip->a_order = 7;
-//	t->sip->b_order = 7;
+	t->flags |= OPT_SIP;
+	t->sip->a_order = 7;
+	t->sip->b_order = 7;
+
+	printf("BEFORE::::::::::\n");
+	print_sip(t->sip);
 	int m = pack_params(t->sip, params, t->flags);
+	printf("REPACKED::::::::::\n");
+	sip_t sip;
+	memcpy(&sip, t->sip, sizeof(sip_t));
+	unpack_params(&sip, params, t->flags);
+	print_sip(&sip);
 
 	// Pack target values
 	double *desired = malloc(sizeof(double)*il_size(t->image)*3);
@@ -772,14 +790,16 @@ void go_to_town(tweak_t* t)
 	}
 
 	int n = hx - desired;
+	assert(hx-desired == 3*il_size(t->image));
 
-	printf("Starting optimization!!!!!!!!!!!\n");
+	printf("Starting optimization m=%d n=%d!!!!!!!!!!!\n",m,n);
 	double info[LM_INFO_SZ];
-	dlevmar_dif(cost, params, desired, m, n, 200,
+	int max_iterations = 200;
+	dlevmar_dif(cost, params, desired, m, n, max_iterations,
 	            NULL, info, NULL, NULL, t);
 
-	printf("initial error^2 = %lf\n", info[0]);
-	printf("final   error^2 = %lf\n", info[1]);
+	printf("initial error^2 = %le\n", info[0]);
+	printf("final   error^2 = %le\n", info[1]);
 	printf("nr iterations   = %lf\n", info[5]);
 	printf("term reason     = %lf\n", info[6]);
 	printf("function evals  = %lf\n", info[7]);
@@ -923,11 +943,10 @@ int main(int argc, char *argv[])
 		dump_data(&tweak);
 
 		go_to_town(&tweak);
+//		free_extraneous(&tweak);
+//		get_tweak_data(&tweak, xyfptr, hppat, kk);
 
-		free_extraneous(&tweak);
-		get_tweak_data(&tweak, xyfptr, hppat, kk);
-
-//		dump_data(&tweak);
+		dump_data(&tweak);
 
 		if (cached_kd)
 			kdtree_fits_close(cached_kd);
