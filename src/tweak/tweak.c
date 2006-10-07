@@ -98,6 +98,7 @@ typedef struct tweak_s {
 //	int n;
 //	int m;
 //	double parameters[500];
+	double err;
 
 	kdtree_t* kd_image;
 	kdtree_t* kd_ref;
@@ -511,7 +512,7 @@ void find_correspondences(tweak_t* t)
 
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
-	                     RANGESEARCH_NO_LIMIT, 15, // This min/max dist is in pixels
+	                     RANGESEARCH_NO_LIMIT, 35, // This min/max dist is in pixels
 	                     match_callback, t,
 	                     NULL, NULL);
 
@@ -687,13 +688,13 @@ int pack_params(sip_t* sip, double *parameters, int flags)
 		*pp++ = sip->cd[1][1];
 	}
 	if (flags & OPT_SIP) {
-		printf("Packing SIP||||||||\n");
+//		printf("Packing SIP||||||||\n");
 		int p, q;
 		for (p=0; p<sip->a_order; p++)
 			for (q=0; q<sip->a_order; q++)
 				if (p+q <= sip->a_order && !(p==0&&q==0)) {
-					if (sip->a[p][q] != 0.00) 
-						printf("Found nonzero=%le\n", sip->a[p][q]);
+//					if (sip->a[p][q] != 0.00) 
+//						printf("Found nonzero=%le\n", sip->a[p][q]);
 					  *pp++ = sip->a[p][q];
 				}
 		for (p=0; p<sip->b_order; p++)
@@ -729,8 +730,8 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 	double err = 0; // calculate our own sum-squared error
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
-//		if (!il_get(t->included, i)) 
-//			continue;
+		if (!il_get(t->included, i)) 
+			continue;
 		double a, d;
 		int image_ind = il_get(t->image, i);
 		pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
@@ -750,7 +751,7 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 //		printf("dx=%le, dy=%le, dz=%le\n",dx,dy,dz);
 
 	}
-	printf("sqd error=%le\n", err);
+//	printf("sqd error=%le\n", err);
 }
 
 // Do a fit.
@@ -765,11 +766,11 @@ void lm_fit(tweak_t* t)
 //	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
 //	t->flags = OPT_CRVAL | OPT_CD;
 	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD | OPT_SIP;
-	t->sip->a_order = 3;
-	t->sip->b_order = 3;
+	t->sip->a_order = 7;
+	t->sip->b_order = 7;
 
-	printf("BEFORE::::::::::\n");
-	print_sip(t->sip);
+//	printf("BEFORE::::::::::\n");
+//	print_sip(t->sip);
 
 	//WTF
 //	t->sip->cd[0][0] *= 1.41;
@@ -788,22 +789,22 @@ void lm_fit(tweak_t* t)
 //	t->sip->b[1][1] = -2.22;
 
 
-	print_sip(t->sip);
+//	print_sip(t->sip);
 
 	int m =  pack_params(t->sip, params, t->flags);
-	printf("REPACKED::::::::::\n");
-	sip_t sip;
-	memcpy(&sip, t->sip, sizeof(sip_t));
-	unpack_params(&sip, params, t->flags);
-	print_sip(&sip);
+//	printf("REPACKED::::::::::\n");
+//	sip_t sip;
+//	memcpy(&sip, t->sip, sizeof(sip_t));
+//	unpack_params(&sip, params, t->flags);
+//	print_sip(&sip);
 
 	// Pack target values
 	double *desired = malloc(sizeof(double)*il_size(t->image)*3);
 	double *hx = desired;
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
-//		if (!il_get(t->included, i)) 
-//			continue;
+		if (!il_get(t->included, i)) 
+			continue;
 		int ref_ind = il_get(t->ref, i);
 		double ref_xyz[3];
 		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
@@ -812,27 +813,28 @@ void lm_fit(tweak_t* t)
 		*hx++ = ref_xyz[2];
 	}
 
-	int n = t->n = hx - desired;
-	assert(hx-desired == 3*il_size(t->image));
+	int n = hx - desired;
+//	assert(hx-desired == 3*il_size(t->image));
 
-	printf("Starting optimization m=%d n=%d!!!!!!!!!!!\n",m,n);
+//	printf("Starting optimization m=%d n=%d!!!!!!!!!!!\n",m,n);
 	double info[LM_INFO_SZ];
 	int max_iterations = 200;
-	double opts[] = { 0.0000000001*LM_INIT_MU,
-	                  0.0000000001*LM_STOP_THRESH,
-	                  0.0000000001*LM_STOP_THRESH,
-		          0.0000000001*LM_STOP_THRESH,
-	                  0.0000000001*-LM_DIFF_DELTA};
+	double opts[] = { 0.001*LM_INIT_MU,
+	                  0.001*LM_STOP_THRESH,
+	                  0.001*LM_STOP_THRESH,
+		          0.001*LM_STOP_THRESH,
+	                  0.001*-LM_DIFF_DELTA};
 	dlevmar_dif(cost, params, desired, m, n, max_iterations,
 	            opts, info, NULL, NULL, t);
 
-	printf("initial error^2 = %le\n", info[0]);
-	printf("final   error^2 = %le\n", info[1]);
-	printf("nr iterations   = %lf\n", info[5]);
-	printf("term reason     = %lf\n", info[6]);
-	printf("function evals  = %lf\n", info[7]);
+//	printf("initial error^2 = %le\n", info[0]);
+//	printf("final   error^2 = %le\n", info[1]);
+//	printf("nr iterations   = %lf\n", info[5]);
+//	printf("term reason     = %lf\n", info[6]);
+//	printf("function evals  = %lf\n", info[7]);
 
 	unpack_params(t->sip, params, t->flags);
+	t->err = info[1];
 //	memcpy(t->parameters, params, sizeof(double)*t->n);
 }
 
@@ -872,34 +874,104 @@ void lm_fit(tweak_t* t)
 // }
 // return bestfit
 
-/*
 void ransac(tweak_t* t)
 {
 	int iterations = 0;
-	int maxiter = 1000;
+	int maxiter = 40;
 
-	double *bestfit = malloc(sizeof(double)*t->m);
-	double *maybemodel = malloc(sizeof(double)*t->m);
-	memcpy(bestparameters, t->parameters, sizeof(double)*t->m);
-	memcpy(maybeparameters, t->parameters, sizeof(double)*t->m);
+	sip_t wcs_try, wcs_best;
+	memcpy(&wcs_try, t->sip, sizeof(sip_t));
+	memcpy(&wcs_best, t->sip, sizeof(sip_t));
 
-	t->maybeinliers = il_new(600);
-	t->bestinliers = il_new(600);
+	double besterr = 100000000000000.;
+	int min_data_points = 100;
+	int set_size = il_size(t->image);
+	il* maybeinliers = il_new(4);
+	il* alsoinliers = il_new(4);
 
-	double besterr = 100000000000000;
-	int min_data_points = 30;
-	int *maybeinliers = malloc(sizeof(int)*min_data_points);
-	int setsize = il_size(t->image);
-	while (iterations < maxiter) {
-		// select n random integers... with replacement because i'm
-		// really lazy
-		for (i=0; i<min_data_points; i++) {
-			maybeinliers[i] = rand()/(double)RAND_MAX * set_size;
-			printf("eeeeeeeeeeeeeeeee %d\n", maybeinliers[i]);
+	// we need to prevent pairing any reference star to multiple image
+	// stars, or multiple reference stars to single image stars
+	il* used_ref_sources = il_new(t->n_ref);
+	il* used_image_sources = il_new(t->n);
+
+	int i;
+	for (i=0; i<t->n_ref; i++) 
+		il_append(used_ref_sources, 0);
+	for (i=0; i<t->n; i++) 
+		il_append(used_image_sources, 0);
+	while (iterations++ < maxiter) {
+		printf("++++++++++ ITERATION %d\n", iterations);
+
+		// select n random pairs to use for the fit
+		il_remove_all(maybeinliers);
+		for (i=0; i<t->n_ref; i++) 
+			il_set(used_ref_sources, i, 0);
+		for (i=0; i<t->n; i++) 
+			il_set(used_image_sources, i, 0);
+		while (il_size(maybeinliers) < min_data_points) {
+			int r = rand()/(double)RAND_MAX * set_size;
+//			printf("eeeeeeeeeeeeeeeee %d\n", r);
+			// check to see if either star in this pairing is
+			// already taken before adding this pairing
+			int ref_ind = il_get(t->ref, r);
+			int image_ind = il_get(t->image, r);
+			if (!il_get(used_ref_sources, ref_ind) &&
+			    !il_get(used_image_sources, image_ind)) {
+				il_insert_unique_ascending(maybeinliers, r);
+				il_set(used_ref_sources, ref_ind, 1);
+				il_set(used_image_sources, image_ind, 1);
+			}
 		}
+		for (i=0; i<il_size(t->included); i++) 
+			il_set(t->included, i, 0);
+		for (i=0; i<il_size(maybeinliers); i++) 
+			il_set(t->included, il_get(maybeinliers,i), 1);
+		
+		// now do a fit with our random sample selection
+		lm_fit(t);
+
+		// now find other samples which do well under the model fit by
+		// the random sample set.
+		il_remove_all(alsoinliers);
+		for (i=0; i<il_size(t->included); i++) {
+			if (il_get(t->included, i))
+				continue;
+			double thresh = 2.e-04; // FIXME mystery parameter
+			double image_xyz[3];
+			double ref_xyz[3];
+			int ref_ind = il_get(t->ref, i);
+			int image_ind = il_get(t->image, i);
+			double a,d;
+			pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
+			radecdeg2xyzarr(a,d,image_xyz);
+			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
+			double dx = ref_xyz[0] - image_xyz[0];
+			double dy = ref_xyz[1] - image_xyz[1];
+			double dz = ref_xyz[2] - image_xyz[2];
+			double err = dx*dx+dy*dy+dz*dz;
+			if (sqrt(err) < thresh)
+				il_append(alsoinliers, i);
+		}
+
+		// if we found a good number of points which are really close,
+		// then fit both our random sample and the other close points
+		if (10 < il_size(alsoinliers)) { // FIXME mystery parameter
+
+			printf("found extra samples %d\n", il_size(alsoinliers));
+			for (i=0; i<il_size(alsoinliers); i++) 
+				il_set(t->included, il_get(alsoinliers,i), 1);
+			
+			// FIT AGAIN
+			lm_fit(t);
+			if (t->err < besterr) {
+				memcpy(&wcs_best, t->sip, sizeof(sip_t));
+				besterr = t->err;
+				printf("new best error %le\n", besterr);
+			}
+		}
+		printf("error=%le besterror=%le\n", t->err, besterr);
 	}
 }
-*/
 
 
 void printHelp(char* progname)
@@ -1037,7 +1109,7 @@ int main(int argc, char *argv[])
 
 		dump_data(&tweak);
 
-		lm_fit(&tweak);
+		ransac(&tweak);
 		print_sip(tweak.sip);
 //		free_extraneous(&tweak);
 //		get_tweak_data(&tweak, xyfptr, hppat, kk);
