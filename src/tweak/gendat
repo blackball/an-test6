@@ -1,0 +1,8 @@
+#!/bin/sh
+tablist -r scatter_ref__1.fits > re
+tablist -r scatter_image1.fits > im
+tablist -r scatter_corIM1.fits > corrim
+tablist -r scatter_corRE1.fits > corrre
+tablist -r scatter_corVE1.fits > corrve
+#echo "plot 'im','re','corrim' with points 3 4, 'corrre' with points 5 5" | gnuplot -persist
+echo "plot 'im','re' with points 5 5,'corrve' with vectors" | gnuplot -persist

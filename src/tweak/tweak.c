@@ -91,6 +91,9 @@ typedef struct tweak_s {
 	dl* dist2;
 
 	int flags;
+
+	kdtree_t* kd_image;
+	kdtree_t* kd_ref;
 } tweak_t;
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
@@ -457,28 +460,22 @@ void match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 {
 	tweak_t* t = extra;
 
-	int ind = il_find_index_ascending(t->image, image_ind);
-	if (ind == -1) {
-		int nind = il_insert_ascending(t->image, image_ind);
-		il_insert(t->ref, nind, ref_ind);
-		dl_insert(t->dist2, nind, dist2);
-	} else {
-		double old_dist2 = dl_get(t->dist2, ind);
-		printf("found new one!\n");
-		if (dist2 < old_dist2) {
-			printf("GOOD\n");
-			il_set(t->image, ind, image_ind);
-			il_set(t->ref, ind, ref_ind);
-			dl_set(t->dist2, ind, dist2);
-		}
-	}
+	image_ind = t->kd_image->perm[image_ind];
+	ref_ind = t->kd_ref->perm[ref_ind];
+
+
+	double dx = t->x[image_ind] - t->x_ref[ref_ind];
+	double dy = t->y[image_ind] - t->y_ref[ref_ind];
+
+	printf("found new one!: dx=%lf, dy=%lf, dist=%lf\n",
+			dx,dy,sqrt(dx*dx+dy*dy));
+	il_append(t->image, image_ind);
+	il_append(t->ref, ref_ind);
+	dl_append(t->dist2, dist2);
 }
 
 void find_correspondences(tweak_t* t)
 {
-	kdtree_t* kd_image;
-	kdtree_t* kd_ref;
-
 	double* data_image = malloc(sizeof(double)*t->n*2);
 	double* data_ref = malloc(sizeof(double)*t->n_ref*2);
 
@@ -489,24 +486,25 @@ void find_correspondences(tweak_t* t)
 	}
 
 	int levels = kdtree_compute_levels(t->n, 4);
-	kd_image = kdtree_build(data_image, t->n, 2, levels);
+	t->kd_image = kdtree_build(data_image, t->n, 2, levels);
 
 	for (i=0; i<t->n_ref; i++) {
 		data_ref[2*i+0] = t->x_ref[i];
 		data_ref[2*i+1] = t->y_ref[i];
 	}
 	levels = kdtree_compute_levels(t->n_ref, 4);
-	kd_ref = kdtree_build(data_ref, t->n_ref, 2, levels);
+	t->kd_ref = kdtree_build(data_ref, t->n_ref, 2, levels);
 
-	// Dualtree
+	// Storage for correspondences
 	t->image = il_new(600);
 	t->ref = il_new(600);
 	t->dist2 = dl_new(600);
 
-	// Distance is in pixels
-	dualtree_rangesearch(kd_image, kd_ref,
-	                     0.0, 10, // This min/max dist is in pixels
-	                     match_callback, t, NULL, NULL);
+	// Find closest neighbours
+	dualtree_rangesearch(t->kd_image, t->kd_ref,
+	                     RANGESEARCH_NO_LIMIT, 30, // This min/max dist is in pixels
+	                     match_callback, t,
+	                     NULL, NULL);
 
 	printf("im=%d\n", il_size(t->image)); 
 	printf("ref=%d\n", il_size(t->ref)); 
@@ -581,9 +579,61 @@ void dump_data(tweak_t* t)
 	ezscatter(fn, t->x,t->y,t->a,t->d,t->n);
 
 	char fn2[] = "scatter_ref__N.fits";
-	fn2[13] = s++;
+	fn2[13] = s;
 	ezscatter(fn2, t->x_ref,t->y_ref,t->a_ref,t->d_ref,t->n_ref);
 
+	if (t->image) {
+		double *a, *d, *x, *y;
+		a = malloc(sizeof(double)*il_size(t->image));
+		d = malloc(sizeof(double)*il_size(t->image));
+		x = malloc(sizeof(double)*il_size(t->image));
+		y = malloc(sizeof(double)*il_size(t->image));
+		double *a_ref, *d_ref, *x_ref, *y_ref;
+		a_ref = malloc(sizeof(double)*il_size(t->image));
+		d_ref = malloc(sizeof(double)*il_size(t->image));
+		x_ref = malloc(sizeof(double)*il_size(t->image));
+		y_ref = malloc(sizeof(double)*il_size(t->image));
+
+		double *dx, *dy;
+		dx = malloc(sizeof(double)*il_size(t->image));
+		dy = malloc(sizeof(double)*il_size(t->image));
+		
+		int i;
+		for (i=0; i<il_size(t->image); i++) {
+			int im_ind = il_get(t->image, i);
+			a[i] = t->a[im_ind];
+			d[i] = t->d[im_ind];
+			x[i] = t->x[im_ind];
+			y[i] = t->y[im_ind];
+
+			int ref_ind = il_get(t->ref, i);
+			a_ref[i] = t->a_ref[ref_ind];
+			d_ref[i] = t->d_ref[ref_ind];
+			x_ref[i] = t->x_ref[ref_ind];
+			y_ref[i] = t->y_ref[ref_ind];
+
+			dx[i] = x_ref[i] - x[i];
+			dy[i] = y_ref[i] - y[i];
+		}
+		char fn3[] = "scatter_corIMN.fits";
+		char fn4[] = "scatter_corREN.fits";
+		char fn5[] = "scatter_corVEN.fits";
+		fn3[13] = s;
+		fn4[13] = s;
+		fn5[13] = s;
+		ezscatter(fn3, x,y,a,d,il_size(t->image));
+		ezscatter(fn4, x_ref,y_ref,a_ref,d_ref,il_size(t->image));
+		ezscatter(fn5, x, y, dx, dy, il_size(t->image));
+		free(a);
+		free(d);
+		free(x);
+		free(y);
+		free(a_ref);
+		free(d_ref);
+		free(x_ref);
+		free(y_ref);
+	}
+	s++;
 }
 
 // Our parameter vector is 'p' for LM. The breakdown of parameters into the
@@ -687,13 +737,8 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 	// Run the gauntlet.
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
-		int image_ind = il_get(t->image, i);
-		int ref_ind = il_get(t->ref, i);
-
-		double ref_xyz[3];
-		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
-
 		double a, d;
+		int image_ind = il_get(t->image, i);
 		pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
 		double image_xyz[3];
 		radecdeg2xyzarr(a, d, image_xyz);
@@ -875,12 +920,14 @@ int main(int argc, char *argv[])
 
 		find_correspondences(&tweak);
 
+		dump_data(&tweak);
+
 		go_to_town(&tweak);
 
 		free_extraneous(&tweak);
 		get_tweak_data(&tweak, xyfptr, hppat, kk);
 
-		dump_data(&tweak);
+//		dump_data(&tweak);
 
 		if (cached_kd)
 			kdtree_fits_close(cached_kd);
