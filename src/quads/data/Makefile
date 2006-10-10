@@ -72,7 +72,7 @@ CUT_AN_CUT    := -R
 CUT_NLEAF     := 15
 
 
-INDEX_ID   := 1
+INDEX_ID   := 22
 INDEX_DIR  := sdss-$(INDEX_ID)/
 TEMP_DIR   := 
 CATALOG    := $(CUT_BASE)
@@ -111,7 +111,7 @@ EPSTOPNG		:= epstopng
 HPQUADS_TMP_NOQUADS := tmp.noquads.rdls.fits
 
 STARTREE_OPTIONS := -R $(CUT_NLEAF) -b -s -S
-CODETREE_OPTS := -R 15
+CODETREE_OPTS := -R 15 -b -s -S
 #HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i $(INDEX_ID) -c -x 6 -y 6 -r 4
 HPQUADS_OPTS  := -l 4 -u 5 -n 1000 -i $(INDEX_ID) -c -x 4 -y 4 -r 3 -R -F $(HPQUADS_TMP_NOQUADS)
 QUADLOC_OPTS  := -n 100 -n 1000
@@ -223,7 +223,7 @@ $(PHASE2)$(1).ckdt.fits: $(PHASE1)$(1).code.fits
 $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(TOUCH) timestamp-hpquads-$(1)-start
 	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
-	$(MV) $(HPQUAD_TMP_NOQUADS) noquads$(1).rdls.fits
+	$(MV) $(HPQUADS_TMP_NOQUADS) noquads$(1).rdls.fits
 	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
