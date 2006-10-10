@@ -1,7 +1,7 @@
 # Dependencies:           
 DEPS := $(subst .o,.dep,$(DEP_OBJ))
 
-deps: $(DEPS)
+deps: $(DEP_PREREQS) $(DEPS)
 	cat $(DEPS) > deps
 
 %.dep : %.c
