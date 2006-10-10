@@ -16,7 +16,7 @@ ifeq ($(MACHINE), i686)
 	TEST_FAIL_OPTION := -march=i686
 	FLAGS_DEF += $(shell ($(CC) $(TEST_OPTION) -c -o /dev/null -x c - < /dev/null >& /dev/null && echo "$(TEST_OPTION)" ) || echo "$(TEST_FAIL_OPTION)")
 else
-	K8 := $(shell gcc -dM -E - < /dev/null | grep "\#define __tune_k8__ 1")
+	K8 := $(shell $(CC) -dM -E - < /dev/null | grep "\#define __tune_k8__ 1")
 	ifneq ($(K8),)
 		FLAGS_DEF += -march=k8 -m64
 	else
