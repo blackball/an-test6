@@ -1,4 +1,5 @@
 #include <string.h>
+
 #include "dualtree_rangesearch.h"
 #include "dualtree.h"
 #include "mathutil.h"
@@ -91,21 +92,22 @@ static void rs_start_results(void* vparams,
 							 kdtree_t* ytree, int ynode) {
     rs_params* p = (rs_params*)vparams;
 	p->ydone += 1 + kdtree_right(ytree, ynode) - kdtree_left(ytree, ynode);
-	p->user_progress(p->user_progress_param, p->ydone);
+	if (p->user_progress)
+		p->user_progress(p->user_progress_param, p->ydone);
 }
 
 static bool rs_within_range(void* vparams,
 							kdtree_t* xtree, int xnode,
 							kdtree_t* ytree, int ynode) {
     rs_params* p = (rs_params*)vparams;
+	//printf("rs_within_range: %i / %i\n", xnode, ynode);
     if (p->usemax &&
 		kdtree_node_node_mindist2_exceeds(xtree, xnode, ytree, ynode,
 										  p->maxdistsq))
 		return FALSE;
 
     if (p->usemin &&
-		!kdtree_node_node_maxdist2_exceeds(xtree, xnode,
-										   ytree, ynode,
+		!kdtree_node_node_maxdist2_exceeds(xtree, xnode, ytree, ynode,
 										   p->mindistsq))
 		return FALSE;
 
@@ -128,21 +130,29 @@ static void rs_handle_result(void* vparams,
 	yl = kdtree_left (ytree, ynode);
 	yr = kdtree_right(ytree, ynode);
 
+	//printf("rs_handle_result: %i, %i.\n", xnode, ynode);
+	//printf("  [%i, %i].  [%i, %i].\n", xl, xr, yl, yr);
+
 	for (y=yl; y<=yr; y++) {
 		void* py = kdtree_get_data(ytree, y);
 		// check if we can eliminate the whole box for this point...
-		if (p->usemax &&
-			kdtree_node_point_mindist2_exceeds(xtree, xnode, py,
-											   p->maxdistsq))
-			continue;
-		if (p->usemin &&
-			!kdtree_node_point_maxdist2_exceeds(xtree, xnode, py,
-												p->mindistsq))
-			continue;
+		// HACK - can only do this if leaf nodes have bounding-boxes!
+		if (!KD_IS_LEAF(xtree, xnode)) {
+			if (p->usemax &&
+				kdtree_node_point_mindist2_exceeds(xtree, xnode, py,
+												   p->maxdistsq))
+				//printf("eliminated box.\n");
+				continue;
+			if (p->usemin &&
+				!kdtree_node_point_maxdist2_exceeds(xtree, xnode, py,
+													p->mindistsq))
+				continue;
+		}
 		for (x=xl; x<=xr; x++) {
 			double d2;
 			void* px = kdtree_get_data(xtree, x);
 			d2 = p->distsquared(px, py, D);
+			//printf("eliminated point.\n");
 			if ((p->usemax) && (d2 > p->maxdistsq))
 				continue;
 			if ((p->usemin) && (d2 < p->mindistsq))

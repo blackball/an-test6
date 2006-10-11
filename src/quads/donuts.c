@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "donuts.h"
 #include "dualtree_rangesearch.h"
@@ -91,9 +92,9 @@ void detect_donuts(int fieldnum, double* fieldxy, int* pnfield,
 	int Ndonuts;
 	int nextmerged;
 	double* fieldcopy;
-	//int* counts;
 	kdtree_qres_t* res = NULL;
-	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_SPLIT_PRECHECK;
+	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_SPLIT_PRECHECK |
+		KD_OPTIONS_NO_RESIZE_RESULTS;
 
 	N = *pnfield;
 	fieldcopy = malloc(N * 2 * sizeof(double));
@@ -102,36 +103,34 @@ void detect_donuts(int fieldnum, double* fieldxy, int* pnfield,
 	// Hey, doughbrain: be careful, "fieldcopy" will be scrambled after 
 	// creating a kdtree out of it.
 
-	tree = kdtree_build(NULL, fieldcopy, N, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX | KD_BUILD_SPLITDIM);
+	tree = kdtree_build(NULL, fieldcopy, N, 2, Nleaf, KDTT_DOUBLE,
+						KD_BUILD_BBOX | KD_BUILD_SPLITDIM);
 	assert(tree);
-	/*
-	  counts = calloc(N, sizeof(int));
-	  dualtree_rangecount(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist, distsq, counts);
-	  nearby = 0;
-	  for (i=0; i<N; i++)
-	  nearby += counts[i];
-	*/
 
+	nearby = 0;
 	for (i=0; i<N; i++) {
+		// HACK - should replace by "rangecount"
 		res = kdtree_rangesearch_options_reuse(tree, res, fieldcopy + i*2,
 											   nearbydist*nearbydist, options);
-		nearby += res->nres;
+		if (res) {
+			nearby += res->nres;
+			//printf("%i.\n", res->nres);
+		}
 	}
 	kdtree_free_query(res);
 
 	frac = (nearby - N) / (double)N;
-	/*
-	  fprintf(stderr, "Field %i: Donuts: %4.1f (%i of %i) in range.\n",
-	  fieldnum, frac, nearby - N, N);
-	*/
-	//free(counts);
+
+	printf("Field %i: found %i nearby pairs of stars (%i%%).\n",
+		   fieldnum, nearby-N, (int)nearbyint(100.0 * frac));
+
 	if (frac < thresh)
 		goto done;
 
 	lists = pl_new(32);
 	dualtree_rangesearch(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist,
 						 distsq, donut_pair_found, lists, NULL, NULL);
-	fprintf(stderr, "Found %i clusters:\n", pl_size(lists));
+	printf("Found %i clusters:\n", pl_size(lists));
 
 	// how many stars joined donuts?
 	nmerged = 0;
