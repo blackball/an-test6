@@ -15,47 +15,11 @@ LDFLAGS += -lm
 
 CFLAGS := $(CFLAGS_DEF)
 
-CFLAGS += -O0
-#CFLAGS += -O2
-#CFLAGS += -pg
-
-#CFLAGS += -O3 
-#CFLAGS += -fomit-frame-pointer
-#CFLAGS += -fno-math-errno -fno-trapping-math
-
-# to turn off asserts:
-CFLAGS += -DNDEBUG
-
-#CFLAGS += -Wextra
-#CFLAGS += -Wpointer-arith
-
-#CFLAGS += -fmudflap
-#LFLAGS += -lmudflap
-
-# What functions were and weren't inlined?
-#CFLAGS += -Winline
-#	-Wshadow -Wconversion -Wstrict-prototypes -Wmissing-prototypes \
-#	-Wmissing-declarations -Wredundant-decls
-
 # check out:
 #   __attribute__ ((nothrow))
 #   __attribute__ ((nonnull))
 #   -fforce-addr
 #   -fprefetch-loop-arrays
-
-# -fmudflap -fmudflapth -fmudflapir
-#    instrument all risky pointer/array dereferencing operations,	
-#    some standard library string/heap functions, and some other
-#    associated constructs with range/validity tests.
-#    The instrumentation relies on a separate runtime library (libmudflap),
-#    which will be linked into a program if -fmudflap is given at link time
-#    Run-time behavior of the instrumented program is controlled by the
-#    MUDFLAP_OPTIONS environment variable. See env MUDFLAP_OPTIONS=-help
-#    a.out for its options.
-#    Use -fmudflapth instead of -fmudflap to compile and to link if your program
-#    is multi-threaded. Use -fmudflapir, in addition to -fmudflap or -fmudflapth,
-#    if instrumentation should ignore pointer reads. This produces less
-#    instrumentation (and therefore faster execution) and still provides some protection against outright memory corrupting writes, but allows erroneously read data to propagate within a program.
 
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(CFITS_INC)
@@ -108,7 +72,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
-PIPELINE := usnobtofits tycho2tofits build_an_catalog hpowned cut_an startree \
+PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	hpquads codetree unpermute-quads unpermute-stars homer slave agreeable \
 	solvedserver printsolved
 
@@ -218,10 +182,10 @@ tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o healpix.o bl.o \
 
 hpowned: hpowned.o healpix.o mathutil.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-build_an_catalog: build_an_catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
+build-an-catalog: build-an-catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
 		tycho2.o usnob.o healpix.o bl.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-cut_an: cut_an.o an_catalog.o catalog.o idfile.o healpix.o bl.o \
+cut-an: cut-an.o an_catalog.o catalog.o idfile.o healpix.o bl.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 startree: startree.o starkd.o catalog.o $(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -247,7 +211,6 @@ slave: slave.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
 		xylist.o hitlist_healpix.o intmap.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -pthread
- #kdtree/kdtree_dim_4.o \
 
 agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist_healpix.o \
 		solvedfile.o solvedclient.o intmap.o healpix.o $(UTIL_OBJS) \
