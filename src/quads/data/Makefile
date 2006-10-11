@@ -54,7 +54,7 @@ AN_CATALOG_PRESENT := $(AN_DIR)an-catalog-present
 # name of this index.
 INAME         := sdss
 
-IDFILES := no
+IDFILES       := no
 
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
@@ -85,6 +85,9 @@ TEMP1      := $(TEMP_DIR)tmp.phase1-
 TEMP2      := $(TEMP_DIR)tmp.phase2-
 TEMPINDEX  := $(TEMP_DIR)tmp.$(INAME)-$(INDEX_ID)-
 
+SDSS_FIELDS := sdss-fields/
+SDSS_HOMER  := sdss-fields-homer/
+
 WGET            := wget --continue
 MKDIR           := mkdir -p
 TOUCH           := touch
@@ -100,6 +103,10 @@ UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars
 CODETREE        := codetree
 HPQUADS         := hpquads
+
+HOMER           := homer
+SLAVE           := slave
+
 QUADIDX			:= quadidx
 QUADLOCATIONS 	:= quadlocations 
 QUADSPERSTAR 	:= quadsperstar 
@@ -111,15 +118,17 @@ EPSTOPNG		:= epstopng
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
-HPQUADS_TMP_NOQUADS := tmp.noquads.rdls.fits
+TEMP_NOQUADS := $(TEMP_DIR)tmp.noquads.rdls.fits
+NOQUADS      := $(INDEX_DIR)tmp.noquads.rdls.fits
 
 STARTREE_OPTIONS := -R $(CUT_NLEAF) -b -s -S
 CODETREE_OPTS := -R 15 -b -s -S
 #HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i $(INDEX_ID) -c -x 6 -y 6 -r 4
-#HPQUADS_OPTS  := -l 4 -u 5 -n 1000 -i $(INDEX_ID) -c -x 4 -y 4 -r 3 -R -F $(HPQUADS_TMP_NOQUADS)
-HPQUADS_OPTS  := -l 4 -u 5 -n 4400 -i $(INDEX_ID) -c -x 1 -y 1 -r 6 -R -F $(HPQUADS_TMP_NOQUADS)
+#HPQUADS_OPTS  := -l 4 -u 5 -n 1000 -i $(INDEX_ID) -c -x 4 -y 4 -r 3 -R -F $(TEMP_NOQUADS)
+HPQUADS_OPTS  := -l 4 -u 5 -n 4400 -i $(INDEX_ID) -c -x 1 -y 1 -r 6 -R -F $(TEMP_NOQUADS)
 QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
+HOMER_OPTS    := -X ROWC -Y COLC -d 10 -t 0.25
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
 MATLAB_INIT   := addpath('~/quads')
@@ -225,7 +234,7 @@ $(PHASE2)$(1).ckdt.fits: $(PHASE1)$(1).code.fits
 $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(TOUCH) timestamp-hpquads-$(1)-start
 	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
-	$(MV) $(HPQUADS_TMP_NOQUADS) noquads$(1).rdls.fits
+	$(MV) $(TEMP_NOQUADS) $(NOQUADS)
 	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
@@ -346,6 +355,46 @@ qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 
 $(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
+
+define HOMER_template
+homer$(1): $(SDSS_HOMER)sdssfield$(1)-homer.xy.fits
+homer: homer$(1)
+$(SDSS_HOMER)sdssfield$(1)-homer.xy.fits: $(SDSS_FIELDS)sdssfield$(1).xy.fits
+	-$(MKDIR) $(SDSS_HOMER)
+	$(HOMER) -i $$< -o $$@.tmp $(HOMER_OPTS)
+	$(MV) $$@.tmp $$@
+endef
+
+FN := 01 02 03 04 05 06 07 08 09 10 \
+	  11 12 13 14 15 16 17 18 19 20 \
+	  21 22 23 24 25 26 27 28 29 30 \
+	  31 32 33 34 35
+$(foreach num,$(FN),$(eval $(call HOMER_template,$(num))))
+
+#solve1: homer
+solve1:
+	-$(MKDIR) input match done solved out err
+	-$(RM) input/input-*
+	./create-inputs-1
+	@echo
+	@echo
+	@echo "You might want to put this job in the background and"
+	@echo "watch the grass grow:"
+	@echo "    tail -f err/err-000 | grep Field   "
+	@echo
+	@echo
+	$(SLAVE) < input/input.000 > out/out-000 2> err/err-000
+
+#	$(SLAVE) < input/input.000 > out/out-000 2> err/err-000 &
+#	-tail -f err/err-000 | grep Field
+#	fg
+
+#	for x in 000 012 024 036 048 060 072 084 096 108 120 132 144 \
+#		156 168 180 192 204 216 228 240 252 264 276 288 300 312 324 \
+#		336 348 360 372 384 396 408; do \
+#		$(SLAVE) < input/input.$$x > out/out-$$x 2> err/err-$$x; \
+#	done
+
 
 
 else
