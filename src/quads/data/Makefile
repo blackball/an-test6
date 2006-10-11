@@ -50,13 +50,14 @@ AN_TEMPLATE := $(AN_DIR)an_hp%03i.fits
 AN_NSIDE  := 9
 AN_CATALOG_PRESENT := $(AN_DIR)an-catalog-present
 
+# name of this index.
+INAME         := sdss
+
 IDFILES := no
 
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
-CUT_BASE      := $(CUT_DIR)an-sdss-
-#CUT_TEMPLATE  := $(CUT_DIR)an-sdss-%02i
-#CUT_FILES     := $(shell for ((i=0; i<12; i++)); do printf "$(CUT_TEMPLATE) " $$i; done)
+CUT_BASE      := $(CUT_DIR)an-$(INAME)-
 CUT_PREFIXES  := $(addprefix $(CUT_PREFIX),$(NUMS2))
 CUT_OBJS      := $(addsuffix .objs.fits,$(CUT_PREFIXES))
 CUT_IDS       := $(addsuffix .id.fits,$(CUT_PREFIXES))
@@ -73,15 +74,15 @@ CUT_NLEAF     := 15
 
 
 INDEX_ID   := 22
-INDEX_DIR  := sdss-$(INDEX_ID)/
+INDEX_DIR  := $(INAME)-$(INDEX_ID)/
 TEMP_DIR   := 
 CATALOG    := $(CUT_BASE)
-INDEX      := $(INDEX_DIR)sdss-$(INDEX_ID)_
-PHASE1     := $(INDEX_DIR)phase1_
-PHASE2     := $(INDEX_DIR)phase2_
-TEMP1      := $(TEMP_DIR)tmp.phase1_
-TEMP2      := $(TEMP_DIR)tmp.phase2_
-TEMPINDEX  := $(TEMP_DIR)tmp.sdss-$(INDEX_ID)_
+INDEX      := $(INDEX_DIR)$(INAME)-$(INDEX_ID)-
+PHASE1      := $(INDEX_DIR)phase1-
+PHASE2      := $(INDEX_DIR)phase2-
+TEMP1      := $(TEMP_DIR)tmp.phase1-
+TEMP2      := $(TEMP_DIR)tmp.phase2-
+TEMPINDEX  := $(TEMP_DIR)tmp.$(INAME)-$(INDEX_ID)-
 
 WGET            := wget --continue
 MKDIR           := mkdir -p
@@ -90,8 +91,9 @@ MV              := mv
 
 USNOBTOFITS     := usnobtofits
 TYCHO2TOFITS    := tycho2tofits
-BUILD_AN        := build_an_catalog
-CUT_AN          := cut_an
+HPOWNED         := hpowned
+BUILD_AN        := build-an-catalog
+CUT_AN          := cut-an
 STARTREE        := startree
 
 UNPERMUTE_QUADS := unpermute-quads
@@ -179,7 +181,7 @@ $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
 	$(TOUCH) timestamp-cut-an-$(1)-start
 	$(CUT_AN) -H $(1) -o $(CUT_BASE)$(1).objs.fits -i $(CUT_BASE)$(1).id.fits \
 		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
-		`hpowned -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
+		`$(HPOWNED) -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
 	$(TOUCH) timestamp-cut-an-$(1)-done
 endef
 $(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
