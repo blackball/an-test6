@@ -228,13 +228,10 @@ $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
 
-SEC += \
+.SECONDARY: \
     $(addprefix $(PHASE1)$(1), .code.fits .quad.fits) \
     $(addprefix $(PHASE2)$(1), .ckdt.fits .quad.fits)
 endef
-
-PHO := $(NUMS)
-SEC := 
 
 INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
 
@@ -246,7 +243,7 @@ $(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
 	$(QUADIDX) -f $(INDEX)$(1)
 	$(TOUCH) timestamp-quadidx-$(1)-done
 
-PHO += prospectus$(1)
+.PHONY: prospectus$(1)
 prospectus$(1): ana$(1) plot$(1) dplot$(1) qps$(1)
 
 quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
@@ -257,15 +254,15 @@ quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
 proj$(1).m: $(INDEX)$(1).ckdt.fits
 	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
 
-PHO += ana$(1)
+.PHONY: ana$(1)
 ana$(1): quad$(1).png quad$(1)_small.png proj$(1).m
 
-PHO += plot$(1)
+.PHONY: plot$(1)
 plot$(1): cp_2dhists$(1).png cp_2dhists$(1)_small.png \
 	cp_1dhists$(1).png cp_1dhists$(1)_small.png \
 	cp_xy$(1).png cp_xy$(1)_small.png \
 
-PHO += dplot$(1)
+.PHONY: dplot$(1)
 dplot$(1): cp_2ddhists$(1).png cp_2ddhists$(1)_small.png \
 	cp_1ddhists$(1).png cp_1ddhists$(1)_small.png \
 	cp_dxy$(1).png cp_dxy$(1)_small.png
@@ -276,7 +273,7 @@ cp_2dhists$(1).eps cp_2ddhists$(1).eps cp_1dhists$(1).eps cp_xy$(1).eps: proj$(1
 		> /tmp/tmpscript$(1).m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
 
-PHO += qps$(1)
+.PHONY: qps$(1)
 qps$(1): qps_$(1).png qps_$(1)_small.png
 
 qps_$(1).eps: qps$(1).m
@@ -304,9 +301,6 @@ $(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 %.png: %.eps
 	$(EPSTOPNG) $< $@
-
-.PHONY: $(PHO)
-.SECONDARY: $(SEC)
 
 SUMPLOTS_EPS := cp_2dhists_sum.eps cp_2ddhists_sum.eps \
 	cp_1dhists_sum.eps cp_1ddhists_sum.eps \
