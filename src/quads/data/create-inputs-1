@@ -8,10 +8,13 @@ HPORDER="2 1 6 4 5 7 0 3 8 11 10 9"
 
 INDEX=$IBASE/sdss-22/sdss-22-%02i
 #FIELD_TEMPLATE=$FBASE/sdssfield%02i-homer.xy
-FIELD_TEMPLATE=$FBASE/sdssfield%02i.xy
+#FIELD_TEMPLATE=$FBASE/sdssfield%02i.xy
+FIELD_TEMPLATE=$FBASE/sdssfield%02i-hp02.xy
 
-XCOL=COLC
-YCOL=ROWC
+#XCOL=COLC
+#YCOL=ROWC
+XCOL=X
+YCOL=Y
 PARITY=0
 THREADS=1
 
@@ -44,14 +47,16 @@ OVERLAP_TOSOLVE=0.25
 OVERLAP_TOKEEP=0.25
 MIN_NINFIELD=50
 
-FIELD_CHUNKS=35
+#FIELD_CHUNKS=35
+FIELD_CHUNKS=1
 
 flds="0/9999"
 
 filenum=-1
 
 # healpixes
-for ((h=0; h<12; h++)); do
+#for ((h=0; h<12; h++)); do
+for ((h=0; h<1; h++)); do
 	cmd="{print \$$(($h+1))}"
 	i=`echo $HPORDER | gawk "$cmd"` 
 	index=`printf $INDEX $i`
@@ -91,7 +96,8 @@ for ((h=0; h<12; h++)); do
 	txt="${txt}threads $THREADS\n"
 
 	# chunks of field files.
-	for ((ff=1; ff<=35;)); do
+	#for ((ff=1; ff<=35;)); do
+	for ((ff=1; ff<=1;)); do
 
 		filenum=$((filenum +1))
 		filename=`printf $INPUT $filenum`
@@ -99,7 +105,8 @@ for ((h=0; h<12; h++)); do
 		rm -f $filename
 
 		# field files
-		for ((o=1; o<=FIELD_CHUNKS && ff<=35; o++, ff++)); do
+		#for ((o=1; o<=FIELD_CHUNKS && ff<=35; o++, ff++)); do
+		for ((o=1; o<=FIELD_CHUNKS && ff<=1; o++, ff++)); do
 			FIELDID=$ff
 			FIELD=`printf $FIELD_TEMPLATE $ff`
 			match=`printf $MATCH_TEMPLATE $filenum $ff`

@@ -117,6 +117,7 @@ int main(int argc, char** args) {
 				  printf("%i  ", i);
 		  }
 		  printf("\n");
+		  fflush(stdout);
 	  }
 
 	  for (i=0; i<N; i++)

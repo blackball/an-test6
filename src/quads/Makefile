@@ -120,6 +120,9 @@ whitebalance.o: whitebalance.c
 pnmutils.o: pnmutils.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
+rdlstohealpix: rdlstohealpix.o rdlist.o xylist.o fitsioutils.o ioutils.o \
+		healpix.o bl.o $(QFITS_LIB)
+
 .PHONY: tags
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
