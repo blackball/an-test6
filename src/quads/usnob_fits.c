@@ -195,7 +195,7 @@ usnob_fits* usnob_fits_open(char* fn) {
 	if (!usnob_fitstruct_inited)
 		init_usnob_fitstruct();
 
-	if (!is_fits_file(fn)) {
+	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		return NULL;
 	}

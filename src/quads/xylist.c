@@ -22,7 +22,7 @@ xylist* xylist_open(const char* fn) {
 	xylist* ls = NULL;
 	qfits_header* header;
 
-	if (!is_fits_file(fn)) {
+	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		return NULL;
 	}

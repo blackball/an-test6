@@ -21,10 +21,12 @@
 #include "starutil.h"
 #include "kdtree.h"
 
-typedef bool (*decision_function)(void* extra, kdtree_node_t* search, kdtree_node_t* query);
-typedef void (*start_of_results_function)(void* extra, kdtree_node_t* query);
-typedef void (*result_function)(void* extra, kdtree_node_t* search, kdtree_node_t* query);
-typedef void (*end_of_results_function)(void* extra, kdtree_node_t* query);
+typedef bool (*decision_function)(void* extra, kdtree_t* searchtree, int searchnode,
+								  kdtree_t* querytree, int querynode);
+typedef void (*start_of_results_function)(void* extra, kdtree_t* querytree, int querynode);
+typedef void (*result_function)(void* extra, kdtree_t* searchtree, int searchnode,
+								kdtree_t* querytree, int querynode);
+typedef void (*end_of_results_function)(void* extra, kdtree_t* querytree, int querynode);
 
 struct dualtree_callbacks {
 	decision_function          decision;

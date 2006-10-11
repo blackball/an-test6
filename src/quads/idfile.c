@@ -32,7 +32,7 @@ idfile* idfile_open(char* fn, int modifiable)
 	int mode, flags;
 	qfits_header* header = NULL;
 
-	if (!is_fits_file(fn)) {
+	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		goto bailout;
 	}

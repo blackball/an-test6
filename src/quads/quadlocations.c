@@ -163,8 +163,8 @@ int main(int argc, char** args) {
 			py = 0.5 + (py - 0.5) * 0.99;
 			for (j=0; j<Nimgs; j++) {
 				N = il_get(imgsizes, j);
-				X = (int)rint(px * N);
-				Y = (int)rint(py * N);
+				X = (int)nearbyint(px * N);
+				Y = (int)nearbyint(py * N);
 				(counts[j])[Y*N + X] += starcounts[i];
 			}
 		}

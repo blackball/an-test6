@@ -2,9 +2,7 @@
 #include <stdlib.h>
 
 #include "starkd.h"
-#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
-#include "kdtree_access.h"
 #include "starutil.h"
 
 static startree* startree_alloc() {
@@ -39,13 +37,7 @@ startree* startree_open(char* fn) {
 	if (!s)
 		return s;
 
-	s->header = qfits_header_read(fn);
-	if (!s->header) {
-		fprintf(stderr, "Failed to read FITS header from star kdtree file %s.\n", fn);
-		goto bailout;
-	}
-
-	s->tree = kdtree_fits_read_file(fn);
+	s->tree = kdtree_fits_read(fn, &s->header);
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read star kdtree from file %s\n", fn);
 		goto bailout;
@@ -54,8 +46,6 @@ startree* startree_open(char* fn) {
 	return s;
 
  bailout:
- 	if (s->header)
-		qfits_header_destroy(s->header);
 	free(s);
 	return NULL;
 }
@@ -67,7 +57,7 @@ int startree_close(startree* s) {
  	if (s->header)
 		qfits_header_destroy(s->header);
 	if (s->tree)
-		kdtree_close(s->tree);
+		kdtree_fits_close(s->tree);
 	free(s);
 	return 0;
 }
@@ -96,12 +86,11 @@ int startree_get(startree* s, uint starid, double* posn) {
 		fprintf(stderr, "Invalid star ID: %u >= %u.\n", starid, Ndata(s));
 		return -1;
 	}
-	if (s->inverse_perm)
-		memcpy(posn, s->tree->data + s->inverse_perm[starid] * DIM_STARS,
-			   DIM_STARS * sizeof(double));
-	else
-		memcpy(posn, s->tree->data + starid * DIM_STARS,
-			   DIM_STARS * sizeof(double));
+	if (s->inverse_perm) {
+		kdtree_copy_data_double(s->tree, s->inverse_perm[starid], 1, posn);
+	} else {
+		kdtree_copy_data_double(s->tree, starid, 1, posn);
+	}
 	return 0;
 }
 
@@ -113,11 +102,11 @@ startree* startree_new() {
 		free(s);
 		return NULL;
 	}
-	qfits_header_add(s->header, "AN_FILE", "SKDT", "This file is a star kdtree.", NULL);
+	qfits_header_add(s->header, "AN_FILE", AN_FILETYPE_STARTREE, "This file is a star kdtree.", NULL);
 	return s;
 }
 
 int startree_write_to_file(startree* s, char* fn) {
-	return kdtree_fits_write_file(s->tree, fn, s->header);
+	return kdtree_fits_write(s->tree, fn, s->header);
 }
 

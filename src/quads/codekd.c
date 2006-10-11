@@ -2,9 +2,7 @@
 #include <stdlib.h>
 
 #include "codekd.h"
-#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
-#include "kdtree_access.h"
 #include "starutil.h"
 
 static codetree* codetree_alloc() {
@@ -44,13 +42,7 @@ codetree* codetree_open(char* fn) {
 	if (!s)
 		return s;
 
-	s->header = qfits_header_read(fn);
-	if (!s->header) {
-		fprintf(stderr, "Failed to read FITS header from code kdtree file %s.\n", fn);
-		goto bailout;
-	}
-
-	s->tree = kdtree_fits_read_file(fn);
+	s->tree = kdtree_fits_read(fn, &s->header);
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read code kdtree from file %s\n", fn);
 		goto bailout;
@@ -59,8 +51,6 @@ codetree* codetree_open(char* fn) {
 	return s;
 
  bailout:
- 	if (s->header)
-		qfits_header_destroy(s->header);
 	free(s);
 	return NULL;
 }
@@ -69,10 +59,8 @@ int codetree_close(codetree* s) {
 	if (!s) return 0;
 	if (s->inverse_perm)
 		free(s->inverse_perm);
- 	if (s->header)
-		qfits_header_destroy(s->header);
 	if (s->tree)
-		kdtree_close(s->tree);
+		kdtree_fits_close(s->tree);
 	free(s);
 	return 0;
 }
@@ -102,11 +90,9 @@ int codetree_get(codetree* s, uint codeid, double* code) {
 		return -1;
 	}
 	if (s->inverse_perm)
-		memcpy(code, s->tree->data + s->inverse_perm[codeid] * DIM_CODES,
-			   DIM_CODES * sizeof(double));
+		kdtree_copy_data_double(s->tree, s->inverse_perm[codeid], 1, code);
 	else
-		memcpy(code, s->tree->data + codeid * DIM_CODES,
-			   DIM_CODES * sizeof(double));
+		kdtree_copy_data_double(s->tree, codeid, 1, code);
 	return 0;
 }
 
@@ -118,11 +104,11 @@ codetree* codetree_new() {
 		free(s);
 		return NULL;
 	}
-	qfits_header_add(s->header, "AN_FILE", "CKDT", "This file is a code kdtree.", NULL);
+	qfits_header_add(s->header, "AN_FILE", AN_FILETYPE_CODETREE, "This file is a code kdtree.", NULL);
 	return s;
 }
 
 int codetree_write_to_file(codetree* s, char* fn) {
-	return kdtree_fits_write_file(s->tree, fn, s->header);
+	return kdtree_fits_write(s->tree, fn, s->header);
 }
 

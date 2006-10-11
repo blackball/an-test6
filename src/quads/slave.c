@@ -124,8 +124,6 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	qfits_err_statset(1);
-
 	for (;;) {
 
 		tic();

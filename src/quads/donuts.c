@@ -66,13 +66,21 @@ static int compare_brightness(const void* v1, const void* v2) {
 	return 0;
 }
 
+static double distsq(void* va, void* vb, int D) {
+	double* a = va;
+	double* b = vb;
+	assert(D == 2);
+	return
+		(a[0]-b[0])*(a[0]-b[0]) +
+		(a[1]-b[1])*(a[1]-b[1]);
+}
+
 void detect_donuts(int fieldnum, double* fieldxy, int* pnfield,
 				   double nearbydist, double thresh) {
 	int i, N;
 	int nearby;
 	kdtree_t* tree;
-	int levels;
-	int* counts;
+	int Nleaf = 5;
 	double frac;
 	pl* lists;
 	bool* merged;
@@ -83,6 +91,9 @@ void detect_donuts(int fieldnum, double* fieldxy, int* pnfield,
 	int Ndonuts;
 	int nextmerged;
 	double* fieldcopy;
+	//int* counts;
+	kdtree_qres_t* res = NULL;
+	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_SPLIT_PRECHECK;
 
 	N = *pnfield;
 	fieldcopy = malloc(N * 2 * sizeof(double));
@@ -91,26 +102,35 @@ void detect_donuts(int fieldnum, double* fieldxy, int* pnfield,
 	// Hey, doughbrain: be careful, "fieldcopy" will be scrambled after 
 	// creating a kdtree out of it.
 
-	levels = kdtree_compute_levels(N, 5);
-	tree = kdtree_build(fieldcopy, N, 2, levels);
+	tree = kdtree_build(NULL, fieldcopy, N, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX | KD_BUILD_SPLITDIM);
 	assert(tree);
-	counts = calloc(N, sizeof(int));
-	dualtree_rangecount(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist, counts);
-	nearby = 0;
-	for (i=0; i<N; i++)
-		nearby += counts[i];
+	/*
+	  counts = calloc(N, sizeof(int));
+	  dualtree_rangecount(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist, distsq, counts);
+	  nearby = 0;
+	  for (i=0; i<N; i++)
+	  nearby += counts[i];
+	*/
+
+	for (i=0; i<N; i++) {
+		res = kdtree_rangesearch_options_reuse(tree, res, fieldcopy + i*2,
+											   nearbydist*nearbydist, options);
+		nearby += res->nres;
+	}
+	kdtree_free_query(res);
+
 	frac = (nearby - N) / (double)N;
 	/*
 	  fprintf(stderr, "Field %i: Donuts: %4.1f (%i of %i) in range.\n",
 	  fieldnum, frac, nearby - N, N);
 	*/
-	free(counts);
+	//free(counts);
 	if (frac < thresh)
 		goto done;
 
 	lists = pl_new(32);
 	dualtree_rangesearch(tree, tree, RANGESEARCH_NO_LIMIT, nearbydist,
-						 donut_pair_found, lists, NULL, NULL);
+						 distsq, donut_pair_found, lists, NULL, NULL);
 	fprintf(stderr, "Found %i clusters:\n", pl_size(lists));
 
 	// how many stars joined donuts?

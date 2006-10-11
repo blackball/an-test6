@@ -10,14 +10,11 @@
 #define DIM_QUADS 4
 #define DIM_XY 2
 
-typedef unsigned char bool;
 typedef unsigned char uchar;
 
 #ifndef TRUE
+typedef unsigned char bool;
 #define TRUE 1
-#endif
-
-#ifndef FALSE
 #define FALSE 0
 #endif
 

@@ -291,11 +291,14 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 						  double *ABCDpix, solver_params* params) {
 
     double thequery[4];
-    kdtree_qres_t* result;
+    kdtree_qres_t* result = NULL;
 	double tol = square(params->codetol);
 	double inorder[8];
 	int A=0, B=1, C=2, D=3;
 	double usertime, systime;
+	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
+		KD_OPTIONS_NO_RESIZE_RESULTS;
+
 	get_resource_stats(&usertime, &systime, NULL);
 	params->timeused = (usertime + systime) - params->starttime;
 	if (params->timeused < 0.0)
@@ -315,14 +318,12 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, C);
 		set_xy(inorder, 3, ABCDpix, D);
 
-		result = kdtree_rangesearch_options_4(params->codekd, thequery, tol,
-											  KD_OPTIONS_SMALL_RADIUS |
-											  KD_OPTIONS_COMPUTE_DISTS);
+		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
-		kdtree_free_query(result);
 		if (params->quitNow)
-			return;
+			goto quitnow;
 	} else
 		params->numcxdxskipped++;
 
@@ -340,14 +341,12 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, C);
 		set_xy(inorder, 3, ABCDpix, D);
 
-		result = kdtree_rangesearch_options_4(params->codekd, thequery, tol,
-											  KD_OPTIONS_SMALL_RADIUS |
-											  KD_OPTIONS_COMPUTE_DISTS);
+		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
-		kdtree_free_query(result);
 		if (params->quitNow)
-			return;
+			goto quitnow;
 	} else
 		params->numcxdxskipped++;
 
@@ -366,14 +365,12 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, D);
 		set_xy(inorder, 3, ABCDpix, C);
 
-		result = kdtree_rangesearch_options_4(params->codekd, thequery, tol,
-											  KD_OPTIONS_SMALL_RADIUS |
-											  KD_OPTIONS_COMPUTE_DISTS);
+		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
-		kdtree_free_query(result);
 		if (params->quitNow)
-			return;
+			goto quitnow;
 	} else
 		params->numcxdxskipped++;
 
@@ -392,17 +389,17 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		set_xy(inorder, 2, ABCDpix, D);
 		set_xy(inorder, 3, ABCDpix, C);
 
-		result = kdtree_rangesearch_options_4(params->codekd, thequery, tol,
-											  KD_OPTIONS_SMALL_RADIUS |
-											  KD_OPTIONS_COMPUTE_DISTS);
+		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+
 		if (result->nres)
 			resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
-		kdtree_free_query(result);
 		if (params->quitNow)
-			return;
+			goto quitnow;
 	} else
 		params->numcxdxskipped++;
 
+ quitnow:
+	kdtree_free_query(result);
 }
 
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,

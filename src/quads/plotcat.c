@@ -24,6 +24,7 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 #include "mathutil.h"
 #include "rdlist.h"
 #include "boilerplate.h"
+#include "starkd.h"
 
 #define OPTIONS "bhgN:f:ts"
 
@@ -42,7 +43,7 @@ static void printHelp(char* progname) {
 		   "\n"
 		   "  [-t]: for USNOB inputs, include Tycho-2 stars, even though their format isn't quite right.\n"
 		   "\n"
-		   "Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, and rdls.fits files.\n"
+		   "Can read Tycho2.fits, USNOB.fits, AN.fits, AN.objs.fits, AN.skdt.fits, and rdls.fits files.\n"
 		   "\n", progname);
 }
 		   
@@ -60,8 +61,8 @@ Inline void getxy(double px, double py, int N,
 				  int* X, int* Y) {
 	px = 0.5 + (px - 0.5) * 0.99;
 	py = 0.5 + (py - 0.5) * 0.99;
-	*X = (int)rint(px * N);
-	*Y = (int)rint(py * N);
+	*X = (int)nearbyint(px * N);
+	*Y = (int)nearbyint(py * N);
 }
 
 int main(int argc, char *argv[])
@@ -79,6 +80,7 @@ int main(int argc, char *argv[])
 	char* valstr;
 	int BLOCK = 100000;
 	catalog* cat;
+	startree* skdt;
 	an_catalog* ancat;
 	usnob_fits* usnob;
 	tycho2_fits* tycho;
@@ -153,6 +155,7 @@ int main(int argc, char *argv[])
 		int i;
 		char* key;
 		cat = NULL;
+		skdt = NULL;
 		ancat = NULL;
 		usnob = NULL;
 		tycho = NULL;
@@ -178,7 +181,7 @@ int main(int argc, char *argv[])
 			char* str = valstr;
 			fprintf(stderr, "Astrometry.net file type: \"%s\".\n", valstr);
 			if (str[0] == '\'') str++;
-			if (strncasecmp(str, CATALOG_AN_FILETYPE, strlen(CATALOG_AN_FILETYPE)) == 0) {
+			if (strncasecmp(str, AN_FILETYPE_CATALOG, strlen(AN_FILETYPE_CATALOG)) == 0) {
 				fprintf(stderr, "Looks like a catalog.\n");
 				cat = catalog_open(fname, 0);
 				if (!cat) {
@@ -186,6 +189,14 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 				numstars = cat->numstars;
+			} else if (strncasecmp(str, AN_FILETYPE_STARTREE, strlen(AN_FILETYPE_STARTREE)) == 0) {
+				fprintf(stderr, "Looks like a star kdtree.\n");
+				skdt = startree_open(fname);
+				if (!skdt) {
+					fprintf(stderr, "Couldn't open star kdtree.\n");
+					return 1;
+				}
+				numstars = startree_N(skdt);
 			} else if (strncasecmp(str, AN_FILETYPE_RDLS, strlen(AN_FILETYPE_RDLS)) == 0) {
 				rdlist* rdlsfile;
 				int nfields, f;
@@ -261,7 +272,7 @@ int main(int argc, char *argv[])
 			tycho->br.blocksize = BLOCK;
 		}
 		qfits_header_destroy(hdr);
-		if (!(cat || ancat || usnob || tycho || rdls)) {
+		if (!(cat || skdt || ancat || usnob || tycho || rdls)) {
 			fprintf(stderr, "I can't figure out what kind of file %s is.\n", fname);
 			exit(-1);
 		}
@@ -279,6 +290,15 @@ int main(int argc, char *argv[])
 			if (cat) {
 				double* xyz;
 				xyz = catalog_get_star(cat, i);
+				x = xyz[0];
+				y = xyz[1];
+				z = xyz[2];
+			} else if (skdt) {
+				double xyz[3];
+				if (startree_get(skdt, i, xyz)) {
+					fprintf(stderr, "Failed to read star %i from star kdtree.\n", i);
+					exit(-1);
+				}
 				x = xyz[0];
 				y = xyz[1];
 				z = xyz[2];

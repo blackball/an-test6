@@ -12,15 +12,19 @@ typedef void (*result_callback)(void* extra, int xind, int yind,
 
 typedef void (*progress_callback)(void* extra, int ydone);
 
-void dualtree_rangesearch(kdtree_t* x, kdtree_t* y,
+typedef double (*dist2_function)(void* px, void* py, int D);
+
+void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
 						  double mindist, double maxdist,
+						  dist2_function distsquared,
 						  result_callback callback,
-						  void* callback_param,
+						  void* param,
 						  progress_callback progress,
 						  void* progress_param);
 
 void dualtree_rangecount(kdtree_t* x, kdtree_t* y,
 						 double mindist, double maxdist,
+						 dist2_function distsquared,
 						 int* counts);
 
 #endif

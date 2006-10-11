@@ -35,7 +35,6 @@ void verify_hit(kdtree_t* startree,
 	// number of stars in the index that are within the bounds of the field.
 	int NI;
 	kdtree_t* itree;
-	int levels;
 	int Nleaf = 5;
 	double* dptr;
 	int Nmin;
@@ -74,14 +73,14 @@ void verify_hit(kdtree_t* startree,
 	for (j=0; j<res->nres; j++) {
 		double l1 = 0.0, l2 = 0.0;
 		for (i=0; i<3; i++) {
-			l1 += (res->results[j*3 + i] - mo->sMin[i]) * vec1[i];
-			l2 += (res->results[j*3 + i] - mo->sMin[i]) * vec2[i];
+			l1 += (res->results.d[j*3 + i] - mo->sMin[i]) * vec1[i];
+			l2 += (res->results.d[j*3 + i] - mo->sMin[i]) * vec2[i];
 		}
 		if ((l1 >= 0.0) && (l1 <= len1) &&
 			(l2 >= 0.0) && (l2 <= len2)) {
 			if (j != NI)
-				memmove(res->results + NI * 3,
-						res->results +  j * 3,
+				memmove(res->results.d + NI * 3,
+						res->results.d +  j * 3,
 						3 * sizeof(double));
 			if (indexstars)
 				il_append(indexstars, res->inds[j]);
@@ -133,8 +132,7 @@ void verify_hit(kdtree_t* startree,
 	  A counteracting note to the picky: if we build a kdtree over the
 	  index stars within range, the above comment is no longer true.
 	*/
-    levels = kdtree_compute_levels(NI, Nleaf);
-	itree = kdtree_build(res->results, NI, 3, levels);
+	itree = kdtree_build(NULL, res->results.d, NI, 3, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
 	matches = unmatches = conflicts = 0;
 	map = intmap_new(INTMAP_ONE_TO_ONE);

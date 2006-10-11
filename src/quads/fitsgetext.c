@@ -106,8 +106,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	qfits_err_statset(1);
-
 	fseeko(fin, 0, SEEK_END);
 	mapsize = ftello(fin);
 	fseeko(fin, 0, SEEK_SET);

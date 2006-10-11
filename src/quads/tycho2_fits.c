@@ -223,7 +223,7 @@ tycho2_fits* tycho2_fits_open(char* fn) {
 	if (!tycho2_fitstruct_inited)
 		init_tycho2_fitstruct();
 
-	if (!is_fits_file(fn)) {
+	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		return NULL;
 	}

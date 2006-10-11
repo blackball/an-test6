@@ -120,8 +120,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	qfits_err_statset(1);
-
 	// copy the main header exactly.
 	if (qfits_get_hdrinfo(infn, 0, &start, &size)) {
 		fprintf(stderr, "Couldn't get main header.\n");

@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include "qfits.h"
 
-#define CATALOG_AN_FILETYPE "OBJS"
+#define AN_FILETYPE_CATALOG "OBJS"
 
 struct catalog {
 	uint numstars;

@@ -155,15 +155,11 @@ int main(int argc, char **args) {
 	}
 
 	treeout = codetree_new();
-	treeout->tree = calloc(1, sizeof(kdtree_t));
-	treeout->tree->tree   = treein->tree->tree;
-	treeout->tree->data   = treein->tree->data;
-	treeout->tree->ndata  = treein->tree->ndata;
-	treeout->tree->ndim   = treein->tree->ndim;
-	treeout->tree->nnodes = treein->tree->nnodes;
+	treeout->tree = malloc(sizeof(kdtree_t));
+	memcpy(treeout->tree, treein->tree, sizeof(kdtree_t));
+	treeout->tree->perm = NULL;
 
 	hdr = codetree_header(treeout);
-	qfits_header_add(hdr, "AN_FILE", "CKDT", "This is a code kdtree.", NULL);
 	fits_copy_header(quadin->header, hdr, "HEALPIX");
 	boilerplate_add_fits_headers(hdr);
 	qfits_header_add(hdr, "HISTORY", "This file was created by the program \"unpermute-quads\".", NULL, NULL);
@@ -191,6 +187,7 @@ int main(int argc, char **args) {
 	free_fn(fn);
 
 	codetree_close(treein);
+	free(treeout);
 
 	return 0;
 }

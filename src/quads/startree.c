@@ -20,14 +20,19 @@
 #include "starkd.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hR:f:k:d:"
+#define OPTIONS "hR:f:k:d:t:bsS"
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s\n"
 		   "     -f <input-catalog-name>\n"
+		   "   (   [-b]: build bounding boxes\n"
+		   "    OR [-s]: build splitting planes   )\n"
 		   "    [-R Nleaf]: number of points in a kdtree leaf node (default 25)\n"
 		   "    [-k keep]:  number of points to keep\n"
+		   "    [-t  <tree type>]:  {double,float,u32,u16}, default u32.\n"
+		   "    [-d  <data type>]:  {double,float,u32,u16}, default u32.\n"
+		   "    [-S]: include separate splitdim array\n"
 		   "\n", progname);
 }
 
@@ -38,7 +43,6 @@ int main(int argc, char *argv[]) {
     int argidx, argchar;
     int nkeep = 0;
 	startree* starkd;
-    int levels;
     catalog* cat;
     int Nleaf = 25;
     char* basename = NULL;
@@ -46,6 +50,13 @@ int main(int argc, char *argv[]) {
     char* catfname = NULL;
 	char* progname = argv[0];
 	char val[32];
+
+	int convtype = KDT_CONV_NULL;
+	int datatype = KDT_DATA_NULL;
+	int treetype = KDT_TREE_NULL;
+	int tt;
+	int buildopts = 0;
+	int N, D;
 
     if (argc <= 2) {
 		printHelp(progname);
@@ -67,6 +78,21 @@ int main(int argc, char *argv[]) {
         case 'f':
             basename = optarg;
             break;
+		case 't':
+			treetype = kdtree_kdtype_parse_tree_string(optarg);
+			break;
+		case 'd':
+			datatype = kdtree_kdtype_parse_data_string(optarg);
+			break;
+		case 'b':
+			buildopts |= KD_BUILD_BBOX;
+			break;
+		case 's':
+			buildopts |= KD_BUILD_SPLIT;
+			break;
+		case 'S':
+			buildopts |= KD_BUILD_SPLITDIM;
+			break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
         case 'h':
@@ -80,13 +106,29 @@ int main(int argc, char *argv[]) {
         for (argidx = optind; argidx < argc; argidx++)
             fprintf (stderr, "Non-option argument %s\n", argv[argidx]);
 		printHelp(progname);
-        return 0;
+		exit(-1);
     }
+
+	if (!(buildopts & (KD_BUILD_BBOX | KD_BUILD_SPLIT))) {
+		printf("You need bounding-boxes or splitting planes!\n");
+		printHelp(progname);
+		exit(-1);
+	}
 
     if (!basename) {
         printHelp(progname);
         exit(-1);
     }
+
+	// defaults
+	if (!datatype)
+		datatype = KDT_DATA_U32;
+	if (!treetype)
+		treetype = KDT_TREE_U32;
+
+	// the outside world works in doubles.
+	if (datatype != KDT_DATA_DOUBLE)
+		convtype = KDT_CONV_DOUBLE;
 
     catfname = mk_catfn(basename);
 	treefname = mk_streefn(basename);
@@ -107,31 +149,53 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "keeping at most %i stars.\n", nkeep);
     }
 
-    fprintf(stderr, "  Building star KD tree...");
-    fflush(stderr);
-
-    levels = kdtree_compute_levels(cat->numstars, Nleaf);
-    fprintf(stderr, "Requesting %i levels.\n", levels);
-
 	starkd = startree_new();
 	if (!starkd) {
 		fprintf(stderr, "Failed to allocate startree.\n");
 		exit(-1);
 	}
-    starkd->tree = kdtree_build(catalog_get_base(cat), cat->numstars, DIM_STARS, levels);
+
+	tt = kdtree_kdtypes_to_treetype(convtype, treetype, datatype);
+	N = cat->numstars;
+	D = DIM_STARS;
+	starkd->tree = kdtree_new(N, D, Nleaf);
+	{
+		double low[D];
+		double high[D];
+		int d;
+		for (d=0; d<D; d++) {
+			low[d] = -1.0;
+			high[d] = 1.0;
+		}
+		kdtree_set_limits(starkd->tree, low, high);
+	}
+	if (convtype) {
+		fprintf(stderr, "Converting data...\n");
+		fflush(stderr);
+		starkd->tree = kdtree_convert_data(starkd->tree, catalog_get_base(cat),
+										   N, D, Nleaf, tt);
+		fprintf(stderr, "Building tree...");
+		fflush(stderr);
+		starkd->tree = kdtree_build(starkd->tree, starkd->tree->data.any, N, D,
+									Nleaf, tt, buildopts);
+	} else {
+		fprintf(stderr, "Building tree...");
+		fflush(stderr);
+		starkd->tree = kdtree_build(NULL, catalog_get_base(cat), N, D,
+									Nleaf, tt, buildopts);
+	}
+
     if (!starkd->tree) {
         catalog_close(cat);
         fprintf(stderr, "Couldn't build kdtree.\n");
         exit(-1);
     }
-    fprintf(stderr, "done (%d nodes)\n", startree_N(starkd));
+    //fprintf(stderr, "done (%d nodes)\n", startree_N(starkd));
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
 	sprintf(val, "%u", Nleaf);
 	qfits_header_add(startree_header(starkd), "NLEAF", val, "Target number of points in leaves.", NULL);
-	sprintf(val, "%u", levels);
-	qfits_header_add(startree_header(starkd), "LEVELS", val, "Number of kdtree levels.", NULL);
 	sprintf(val, "%u", nkeep);
 	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept.", NULL);
 

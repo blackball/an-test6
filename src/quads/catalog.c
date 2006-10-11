@@ -33,7 +33,7 @@ int catalog_write_to_file(catalog* cat, char* fn)
 	fits_add_double_size(hdr);
 	sprintf(val, "%u", cat->numstars);
 	qfits_header_add(hdr, "NSTARS", val, "Number of stars used.", NULL);
-	qfits_header_add(hdr, "AN_FILE", CATALOG_AN_FILETYPE, "This file has a list of object positions.", NULL);
+	qfits_header_add(hdr, "AN_FILE", AN_FILETYPE_CATALOG, "This file has a list of object positions.", NULL);
 	sprintf(val, "%i", cat->healpix);
 	qfits_header_add(hdr, "HEALPIX", val, "The healpix covered by this catalog.", NULL);
 	qfits_header_dump(hdr, catfid);
@@ -182,7 +182,7 @@ catalog* catalog_open(char* catfn, int modifiable)
 		goto bail;
 	}
 
-	if (!is_fits_file(catfn)) {
+	if (!qfits_is_fits(catfn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", catfn);
 		goto bail;
 	}

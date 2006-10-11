@@ -243,7 +243,7 @@ matchfile* matchfile_open(char* fn) {
 
 	if (!matchfile_fitstruct_inited)
 		init_matchfile_fitstruct();
-	if (!is_fits_file(fn)) {
+	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		return NULL;
 	}

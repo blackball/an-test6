@@ -75,10 +75,6 @@ static uint tycho2_id_to_int(int tyc1, int tyc2, int tyc3) {
 	return id;
 }
 
-static void qfits_dispfn(char* str) {
-	printf("qfits: %s\n", str);
-}
-
 int main(int argc, char** args) {
 	char* outfn = NULL;
 	int c;
@@ -116,9 +112,6 @@ int main(int argc, char** args) {
 		print_help(args[0]);
 		exit(-1);
 	}
-
-	qfits_err_register(qfits_dispfn);
-	qfits_err_statset(1);
 
 	HP = 12 * Nside * Nside;
 

@@ -313,7 +313,7 @@ Noinline
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy,
-					   double maxdot1, double maxdot2) {
+					   double maxdot1, double maxdot2, bool use_nuses) {
 	uint iA=0, iB, iC, iD, newpoint;
 	int rtn = 0;
 	int ninbox;
@@ -377,7 +377,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					q.star[3] = starinds[iD];
 
 					if (add_quad(&q)) {
-						drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
+						if (use_nuses)
+							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 						rtn = 1;
 						goto theend;
 					}
@@ -414,7 +415,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						q.star[3] = starinds[iD];
 
 						if (add_quad(&q)) {
-							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
+							if (use_nuses)
+								drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
 							iA = iAalloc;
 							goto theend;
@@ -449,7 +451,8 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 								   double* perp2,
 								   double* p_maxdot1, double* p_maxdot2,
 								   double dxfrac, double dyfrac,
-								   bool* p_failed_nostars) {
+								   bool* p_failed_nostars,
+								   bool use_nuses) {
 	static int Nhighwater = 0;
 	double origin[3];
 	double vx[3];
@@ -487,23 +490,25 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	if (p_yesstars)
 		(*p_yesstars)++;
 
-	// remove stars that have been used up.
-	destind = 0;
-	for (j=0; j<N; j++) {
-		if (!nuses[res->inds[j]])
-			continue;
-		res->inds[destind] = res->inds[j];
-		for (d=0; d<3; d++)
-			res->results[destind*3+d] = res->results[j*3+d];
-		destind++;
-	}
-	N = destind;
-	if (N < 4) {
-		kdtree_free_query(res);
-		if (p_nounused)
-			(*p_nounused)++;
-		if (p_N) *p_N = N;
-		return FALSE;
+	if (use_nuses) {
+		// remove stars that have been used up.
+		destind = 0;
+		for (j=0; j<N; j++) {
+			if (!nuses[res->inds[j]])
+				continue;
+			res->inds[destind] = res->inds[j];
+			for (d=0; d<3; d++)
+				res->results.d[destind*3+d] = res->results.d[j*3+d];
+			destind++;
+		}
+		N = destind;
+		if (N < 4) {
+			kdtree_free_query(res);
+			if (p_nounused)
+				(*p_nounused)++;
+			if (p_N) *p_N = N;
+			return FALSE;
+		}
 	}
 	if (p_nstarstotal)
 		(*p_nstarstotal) += N;
@@ -532,7 +537,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	for (j=0; j<N; j++) {
 		inds[j] = res->inds[perm[j]];
 		for (d=0; d<3; d++)
-			stars[j*3+d] = res->results[perm[j]*3+d];
+			stars[j*3+d] = res->results.d[perm[j]*3+d];
 	}
 	kdtree_free_query(res);
 
@@ -830,6 +835,7 @@ int main(int argc, char** argv) {
 	}
 
 	firstpass = TRUE;
+	Nquads = 0;
 
 	for (xpass=0; xpass<xpasses; xpass++) {
 		for (ypass=0; ypass<ypasses; ypass++) {
@@ -853,7 +859,6 @@ int main(int argc, char** argv) {
 			nyesstars = 0;
 			nnounused = 0;
 			lastgrass = 0;
-			Nquads = 0;
 			nbadscale = 0;
 			nbadcenter = 0;
 			nabok = 0;
@@ -888,7 +893,8 @@ int main(int argc, char** argv) {
 											&N, centre, perp1, perp2,
 											&maxdot1, &maxdot2,
 											dxfrac, dyfrac,
-											&failed_nostars);
+											&failed_nostars,
+											TRUE);
 
 				if (failedrdls) {
 					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
@@ -915,7 +921,7 @@ int main(int argc, char** argv) {
 				}
 
 				if (create_quad(stars, inds, N, circle,
-								centre, perp1, perp2, maxdot1, maxdot2)) {
+								centre, perp1, perp2, maxdot1, maxdot2, TRUE)) {
 					histogram_add(histnstars, (double)N);
 					nthispass++;
 				} else {
@@ -1004,6 +1010,77 @@ int main(int argc, char** argv) {
 				}
 			}
 
+			if (noreuse_pass) {
+				int i;
+				int nfailed1 = 0;
+				int nfailed2 = 0;
+				int nmade = 0;
+				lastgrass = -1;
+				if (failedrdls) {
+					if (rdlist_write_new_field(failedrdls)) {
+						fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
+						exit(-1);
+					}
+				}
+				printf("Making no-limit-on-number-of-times-a-star-can-be-used pass.\n");
+				printf("Trying %i healpixes.\n", il_size(noreuse_hps));
+				for (i=0; i<il_size(noreuse_hps); i++) {
+					double centre[3];
+					double perp1[3];
+					double perp2[3];
+					double maxdot1, maxdot2;
+					int N;
+					int hp = il_get(noreuse_hps, i);
+					if ((i * 80 / il_size(noreuse_hps)) != lastgrass) {
+						printf(".");
+						fflush(stdout);
+						lastgrass = i * 80 / il_size(noreuse_hps);
+					}
+
+					if (!find_stars_and_vectors(hp, Nside, radius2,
+												NULL, NULL, NULL, NULL, NULL,
+												&N, centre, perp1, perp2,
+												&maxdot1, &maxdot2, 0.0, 0.0,
+												NULL, FALSE)) {
+						nfailed1++;
+						goto failedhp2;
+					}
+					if (!create_quad(stars, inds, N, circle,
+									 centre, perp1, perp2, maxdot1, maxdot2, FALSE)) {
+						nfailed2++;
+						goto failedhp2;
+					}
+					nmade++;
+					continue;
+				failedhp2:
+					if (failedrdls) {
+						double radec[2];
+						xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
+						radec[0] = rad2deg(radec[0]);
+						radec[1] = rad2deg(radec[1]);
+						if (rdlist_write_entries(failedrdls, radec, 1)) {
+							fprintf(stderr, "Failed to write failed-RDLS entries.\n");
+							exit(-1);
+						}
+					}
+				}
+
+				printf("\n");
+				printf("Tried %i healpixes.\n", il_size(noreuse_hps));
+				printf("Failed at point 1: %i.\n", nfailed1);
+				printf("Failed at point 2: %i.\n", nfailed2);
+				printf("Made: %i\n", nmade);
+				il_remove_all(noreuse_hps);
+				if (failedrdls) {
+					if (rdlist_fix_field(failedrdls)) {
+						fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
+						exit(-1);
+					}
+				}
+			}
+
+
+
 			if ((xpass == xpasses-1) &&
 				(ypass == ypasses-1))
 				break;
@@ -1013,6 +1090,7 @@ int main(int argc, char** argv) {
 				quad* q = quadlist + i;
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
 			}
+			Nquads = 0;
 
 			/*
 			  printf("bt height is %i\n", bt_height(bigquadlist));
@@ -1037,84 +1115,8 @@ int main(int argc, char** argv) {
 		dl_free(noreuse_radec);
 		dl_free(noquads_radec);
 	}
-
-
-	if (noreuse_pass) {
-		int i;
-		int nfailed1 = 0;
-		int nfailed2 = 0;
-		int nmade = 0;
-		lastgrass = -1;
-		printf("Making no-limit-on-number-of-times-a-star-can-be-used pass.\n");
-
-		for (i=0; i<startree_N(starkd); i++)
-			nuses[i] = 255;
-
-		if (failedrdls) {
-			if (rdlist_write_new_field(failedrdls)) {
-				fprintf(stderr, "Failed to start a new field in failed RDLS file.\n");
-				exit(-1);
-			}
-		}
-
-		for (i=0; i<il_size(noreuse_hps); i++) {
-			double centre[3];
-			double perp1[3];
-			double perp2[3];
-			double maxdot1, maxdot2;
-			int N;
-			int hp = il_get(noreuse_hps, i);
-
-			if ((i * 80 / il_size(noreuse_hps)) != lastgrass) {
-				printf(".");
-				fflush(stdout);
-				lastgrass = i * 80 / il_size(noreuse_hps);
-			}
-
-			if (!find_stars_and_vectors(hp, Nside, radius2,
-										NULL, NULL, NULL, NULL, NULL,
-										&N, centre, perp1, perp2,
-										&maxdot1, &maxdot2, 0.0, 0.0,
-										NULL)) {
-				nfailed1++;
-				goto failedhp2;
-			}
-			if (!create_quad(stars, inds, N, circle,
-							 centre, perp1, perp2, maxdot1, maxdot2)) {
-				nfailed2++;
-				goto failedhp2;
-			}
-			nmade++;
-			continue;
-
-		failedhp2:
-			if (failedrdls) {
-				double radec[2];
-				xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
-				radec[0] = rad2deg(radec[0]);
-				radec[1] = rad2deg(radec[1]);
-				if (rdlist_write_entries(failedrdls, radec, 1)) {
-					fprintf(stderr, "Failed to write failed-RDLS entries.\n");
-					exit(-1);
-				}
-			}
-		}
-
-		printf("\n");
-		printf("Tried %i healpixes.\n", il_size(noreuse_hps));
-		printf("Failed at point 1: %i.\n", nfailed1);
-		printf("Failed at point 2: %i.\n", nfailed2);
-		printf("Made: %i\n", nmade);
-
+	if (noreuse_hps)
 		il_free(noreuse_hps);
-
-		if (failedrdls) {
-			if (rdlist_fix_field(failedrdls)) {
-				fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
-				exit(-1);
-			}
-		}
-	}
 
 	free(cq_pquads);
 	free(cq_inbox);

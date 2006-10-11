@@ -292,7 +292,7 @@ qps$(1).m: $(INDEX)$(1).qidx.fits
 	$(QUADSPERSTAR) $(INDEX)$(1) | sed s/-/_/ > $$@
 
 %$(1)_small.png: %$(1).png
-	pngtopnm -- $$< | pamscale -linear 0.2 | pnmtopng > $$@
+	pngtopnm $$< | pamscale -linear 0.2 | pnmtopng > $$@
 
 endef
 

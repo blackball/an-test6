@@ -17,13 +17,18 @@
 #include "codekd.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hR:f:o:"
+#define OPTIONS "hR:f:o:bsSt:d:"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s\n"
 		   "    -f <input-basename>\n"
 		   "    -o <output-basename>\n"
+		   "   (   [-b]: build bounding boxes\n"
+		   "    OR [-s]: build splitting planes   )\n"
+		   "    [-t  <tree type>]:  {double,float,u32,u16}, default u16.\n"
+		   "    [-d  <data type>]:  {double,float,u32,u16}, default u16.\n"
+		   "    [-S]: include separate splitdim array\n"
 		   "    [-R <target-leaf-node-size>]   (default 25)\n"
 		   "\n", progname);
 }
@@ -37,7 +42,6 @@ int main(int argc, char *argv[]) {
 
 	int Nleaf = 25;
     codetree *codekd = NULL;
-    int levels;
     char* basenamein = NULL;
     char* basenameout = NULL;
     char* treefname;
@@ -46,6 +50,12 @@ int main(int argc, char *argv[]) {
 	int rtn;
 	qfits_header* hdr;
 	char val[32];
+	int convtype = KDT_CONV_NULL;
+	int datatype = KDT_DATA_NULL;
+	int treetype = KDT_TREE_NULL;
+	int tt;
+	int buildopts = 0;
+	int N, D;
 
     if (argc <= 2) {
         printHelp(progname);
@@ -63,6 +73,21 @@ int main(int argc, char *argv[]) {
         case 'o':
             basenameout = optarg;
             break;
+		case 't':
+			treetype = kdtree_kdtype_parse_tree_string(optarg);
+			break;
+		case 'd':
+			datatype = kdtree_kdtype_parse_data_string(optarg);
+			break;
+		case 'b':
+			buildopts |= KD_BUILD_BBOX;
+			break;
+		case 's':
+			buildopts |= KD_BUILD_SPLIT;
+			break;
+		case 'S':
+			buildopts |= KD_BUILD_SPLITDIM;
+			break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
         case 'h':
@@ -82,9 +107,24 @@ int main(int argc, char *argv[]) {
 		printHelp(progname);
 		exit(-1);
     }
+	if (!(buildopts & (KD_BUILD_BBOX | KD_BUILD_SPLIT))) {
+		printf("You need bounding-boxes or splitting planes!\n");
+		printHelp(progname);
+		exit(-1);
+	}
 
 	codefname = mk_codefn(basenamein);
 	treefname = mk_ctreefn(basenameout);
+
+	// defaults
+	if (!datatype)
+		datatype = KDT_DATA_U16;
+	if (!treetype)
+		treetype = KDT_TREE_U16;
+
+	// the outside world works in doubles.
+	if (datatype != KDT_DATA_DOUBLE)
+		convtype = KDT_CONV_DOUBLE;
 
     fprintf(stderr, "codetree: building KD tree for %s\n", codefname);
     fprintf(stderr, "       will write KD tree file %s\n", treefname);
@@ -99,17 +139,48 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stderr, "got %u codes.\n", codes->numcodes);
 
-    fprintf(stderr, "  Building code KD tree...\n");
-    fflush(stderr);
-    levels = kdtree_compute_levels(codes->numcodes, Nleaf);
-    fprintf(stderr, "Requesting %i levels.\n", levels);
 	codekd = codetree_new();
 	if (!codekd) {
 		fprintf(stderr, "Failed to allocate a codetree structure.\n");
 		exit(-1);
 	}
-    codekd->tree = kdtree_build(codes->codearray, codes->numcodes, DIM_CODES, levels);
-    if (!codekd) {
+
+	tt = kdtree_kdtypes_to_treetype(convtype, treetype, datatype);
+	N = codes->numcodes;
+	D = DIM_CODES;
+	codekd->tree = kdtree_new(N, D, Nleaf);
+	{
+		double low[D];
+		double high[D];
+		int d;
+		bool circ = qfits_header_getboolean(codes->header, "CIRCLE", 0);
+		for (d=0; d<D; d++) {
+			if (circ) {
+				low [d] = 0.5 - M_SQRT1_2;
+				high[d] = 0.5 + M_SQRT1_2;
+			} else {
+				low [d] = 0.0;
+				high[d] = 1.0;
+			}
+		}
+		kdtree_set_limits(codekd->tree, low, high);
+	}
+	if (convtype) {
+		fprintf(stderr, "Converting data...\n");
+		fflush(stderr);
+		codekd->tree = kdtree_convert_data(codekd->tree, codes->codearray,
+										   N, D, Nleaf, tt);
+		fprintf(stderr, "Building tree...");
+		fflush(stderr);
+		codekd->tree = kdtree_build(codekd->tree, codekd->tree->data.any, N, D,
+									Nleaf, tt, buildopts);
+	} else {
+		fprintf(stderr, "Building tree...");
+		fflush(stderr);
+		codekd->tree = kdtree_build(NULL, codes->codearray, N, D,
+									Nleaf, tt, buildopts);
+	}
+    if (!codekd->tree) {
 		fprintf(stderr, "Failed to build code kdtree.\n");
 		exit(-1);
 	}
@@ -119,11 +190,8 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
 
 	hdr = codetree_header(codekd);
-	qfits_header_add(hdr, "AN_FILE", "CKDT", "This file is a code kdtree.", NULL);
 	sprintf(val, "%u", Nleaf);
 	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
-	sprintf(val, "%u", levels);
-	qfits_header_add(hdr, "LEVELS", val, "Number of kdtree levels.", NULL);
 	fits_copy_header(codes->header, hdr, "INDEXID");
 	fits_copy_header(codes->header, hdr, "HEALPIX");
 	fits_copy_header(codes->header, hdr, "CXDX");

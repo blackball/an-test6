@@ -1,8 +1,6 @@
 #! /bin/bash
 
 sigint_func () {
-	#echo "Got SIGINT!"
-	#got_sigint=1
 	kill $$
 	return;
 }
@@ -19,21 +17,12 @@ if [ $# -eq 0 ]; then
 	exit 0;
 fi
 
-#got_sigint=0
 trap sigint_func SIGINT
 
 for x in $*; do
 	fitsgetext -i $x -b | \
 		awk "{if (NR > 1) {if (\$16 > 0) { system(\"dd if=$x bs=2880 skip=\" \$13 \" count=\" \$16 \" 2> /dev/null | md5sum | awk '{print \$1, \\\"$x\\\", \\\"[\"\$2\"]\\\"}'\");}}}"
-
-#		awk "{print \$0; if (NR > 1) {print(\$2, \$6, \$9, \$13, \$16); if (\$16 > 0) { system(\"dd if=$x bs=2880 skip=\" \$13 \" count=\" \$16 \" | md5sum | awk '{print \$1, \\\"$x\\\", \\\"[\"\$2\"]\\\"}'\");}}}"
-#		awk "{print \$0; if (NR > 1) {print(\$2, \$6, \$9, \$13, \$16); if (\$16 > 0) { system(\"echo awk \'{print \$1, \\\"$x\\\", \\\"\"\$2\"\\\"}\'\");}}}"
-	#echo "rtn val: $?"
 	if [ $? -ne 0 ]; then
 		break;
 	fi
-	#if [ $got_sigint -ne 0 ]; then
-	#	echo "exiting due to SIGINT"
-	#	break;
-	#fi
 done

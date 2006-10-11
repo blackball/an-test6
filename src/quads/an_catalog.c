@@ -146,7 +146,7 @@ an_catalog* an_catalog_open(char* fn) {
 	if (!an_fitstruct_inited)
 		init_an_fitstruct();
 
-	if (!is_fits_file(fn)) {
+	if (!qfits_is_fits(fn)) {
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		return NULL;
 	}

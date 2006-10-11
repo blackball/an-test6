@@ -244,12 +244,9 @@ int main(int argc, char **args) {
 	}
 
 	treeout = startree_new();
-	treeout->tree   = calloc(1, sizeof(kdtree_t));
-	treeout->tree->tree   = treein->tree->tree;
-	treeout->tree->data   = treein->tree->data;
-	treeout->tree->ndata  = startree_N(treein);
-	treeout->tree->ndim   = startree_D(treein);
-	treeout->tree->nnodes = startree_nodes(treein);
+	treeout->tree = malloc(sizeof(kdtree_t));
+	memcpy(treeout->tree, treein->tree, sizeof(kdtree_t));
+	treeout->tree->perm = NULL;
 
 	fits_copy_header(qfin->header, startree_header(treeout), "HEALPIX");
 	qfits_header_add(startree_header(treeout), "HISTORY", "unpermute-stars command line:", NULL, NULL);
@@ -273,8 +270,8 @@ int main(int argc, char **args) {
 		exit(-1);
 	}
 	free_fn(fn);
-	startree_close(treeout);
 	startree_close(treein);
+	free(treeout);
 
 	return 0;
 }

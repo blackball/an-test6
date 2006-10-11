@@ -14,7 +14,6 @@
 #include "fileutil.h"
 #include "starutil.h"
 #include "codefile.h"
-#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 #include "keywords.h"
 #include "boilerplate.h"
@@ -176,14 +175,9 @@ int main(int argc, char *argv[])
 		Ncodes = cf->numcodes;
 	} else {
 		qfits_header* hdr;
-		ckdt = kdtree_fits_read_file(ckdtfname);
+		ckdt = kdtree_fits_read(ckdtfname, &hdr);
 		if (!ckdt) {
 			fprintf(stderr, "Failed to read code kdtree file %s.\n", ckdtfname);
-			exit(-1);
-		}
-		hdr = qfits_header_read(ckdtfname);
-		if (!hdr) {
-			fprintf(stderr, "Failed to read FITS header from code kdtree file %s.\n", ckdtfname);
 			exit(-1);
 		}
 		circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
@@ -246,7 +240,7 @@ int main(int argc, char *argv[])
 			onecode = codearr;
 		} else
 			//memcpy(onecode, ckdt->data + i*4, 4*sizeof(double));
-			onecode = ckdt->data + i*4;
+			onecode = ckdt->data.d + i*4;
 
 		if (allperms) {
 			for (perm = 0; perm < 4; perm++) {
@@ -301,7 +295,7 @@ int main(int argc, char *argv[])
 	if (cf)
 		codefile_close(cf);
 	else
-		kdtree_close(ckdt);
+		kdtree_fits_close(ckdt);
 
 	for (d = 0; d < Dims; d++) {
 		for (e = 0; e < d; e++) {

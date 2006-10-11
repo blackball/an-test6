@@ -2,7 +2,6 @@
 #include "dualtree_rangesearch.h"
 #include "dualtree.h"
 #include "mathutil.h"
-#include "kdtree_access.h"
 
 double RANGESEARCH_NO_LIMIT = 1.12345e308;
 
@@ -15,8 +14,8 @@ struct rs_params {
     double maxdistsq;
 
     // are we using the min/max limit?
-    int usemin:1;
-    int usemax:1;
+	bool usemin;
+	bool usemax;
 
 	// for "search"
     result_callback user_callback;
@@ -26,62 +25,22 @@ struct rs_params {
 	void* user_progress_param;
 	int ydone;
 
+	double (*distsquared)(void* px, void* py, int D);
+
 	// for "count"
 	int* counts;
 };
 typedef struct rs_params rs_params;
 
-bool rs_within_range(void* params, kdtree_node_t* search, kdtree_node_t* query);
-void rs_handle_result(void* params, kdtree_node_t* search, kdtree_node_t* query);
-void rs_start_results(void* params, kdtree_node_t* query);
-
-bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
-void rc_handle_result(void* params, kdtree_node_t* search, kdtree_node_t* query);
-
-void rc_self_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
-bool rc_self_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
-
-
-void dualtree_rangecount(kdtree_t* xtree, kdtree_t* ytree,
-						 double mindist, double maxdist,
-						 int* counts) {
-    dualtree_callbacks callbacks;
-    rs_params params;
-
-    memset(&callbacks, 0, sizeof(dualtree_callbacks));
-	if (xtree == ytree) {
-		callbacks.decision = rc_self_should_recurse;
-		callbacks.result = rc_self_handle_result;
-	} else {
-		callbacks.decision = rc_should_recurse;
-		callbacks.result = rc_handle_result;
-	}
-    callbacks.decision_extra = &params;
-    callbacks.result_extra = &params;
-
-    // set search params
-	memset(&params, 0, sizeof(params));
-    if (mindist == RANGESEARCH_NO_LIMIT) {
-		params.usemin = 0;
-    } else {
-		params.usemin = 1;
-		params.mindistsq = mindist * mindist;
-    }
-    if (maxdist == RANGESEARCH_NO_LIMIT) {
-		params.usemax = 0;
-    } else {
-		params.usemax = 1;
-		params.maxdistsq = maxdist * maxdist;
-    }
-	params.xtree = xtree;
-	params.ytree = ytree;
-	params.counts = counts;
-
-    dualtree_search(xtree, ytree, &callbacks);
-}
+static bool rs_within_range(void* params, kdtree_t* searchtree, int searchnode,
+							kdtree_t* querytree, int querynode);
+static void rs_handle_result(void* extra, kdtree_t* searchtree, int searchnode,
+							 kdtree_t* querytree, int querynode);
+static void rs_start_results(void* extra, kdtree_t* querytree, int querynode);
 
 void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
 						  double mindist, double maxdist,
+						  dist2_function distsquared,
 						  result_callback callback,
 						  void* param,
 						  progress_callback progress,
@@ -99,19 +58,20 @@ void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
     // set search params
 	memset(&params, 0, sizeof(params));
     if (mindist == RANGESEARCH_NO_LIMIT) {
-		params.usemin = 0;
+		params.usemin = FALSE;
     } else {
-		params.usemin = 1;
+		params.usemin = TRUE;
 		params.mindistsq = mindist * mindist;
     }
 
     if (maxdist == RANGESEARCH_NO_LIMIT) {
-		params.usemax = 0;
+		params.usemax = FALSE;
     } else {
-		params.usemax = 1;
+		params.usemax = TRUE;
 		params.maxdistsq = maxdist * maxdist;
     }
 
+	params.distsquared = distsquared;
     params.user_callback = callback;
     params.user_callback_param = param;
 	params.xtree = xtree;
@@ -127,60 +87,62 @@ void dualtree_rangesearch(kdtree_t* xtree, kdtree_t* ytree,
     dualtree_search(xtree, ytree, &callbacks);
 }
 
-void rs_start_results(void* vparams, kdtree_node_t* ynode) {
+static void rs_start_results(void* vparams,
+							 kdtree_t* ytree, int ynode) {
     rs_params* p = (rs_params*)vparams;
-	p->ydone += 1 + ynode->r - ynode->l;
+	p->ydone += 1 + kdtree_right(ytree, ynode) - kdtree_left(ytree, ynode);
 	p->user_progress(p->user_progress_param, p->ydone);
 }
 
-bool rs_within_range(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
+static bool rs_within_range(void* vparams,
+							kdtree_t* xtree, int xnode,
+							kdtree_t* ytree, int ynode) {
     rs_params* p = (rs_params*)vparams;
+    if (p->usemax &&
+		kdtree_node_node_mindist2_exceeds(xtree, xnode, ytree, ynode,
+										  p->maxdistsq))
+		return FALSE;
 
-    if (p->usemax) {
-		if (kdtree_node_node_mindist2_exceeds(p->xtree, xnode,
-											  p->ytree, ynode,
-											  p->maxdistsq))
-			return FALSE;
-    }
-    if (p->usemin) {
-		if (!kdtree_node_node_maxdist2_exceeds(p->xtree, xnode,
-											   p->ytree, ynode,
-											   p->mindistsq))
-			return FALSE;
-    }
+    if (p->usemin &&
+		!kdtree_node_node_maxdist2_exceeds(xtree, xnode,
+										   ytree, ynode,
+										   p->mindistsq))
+		return FALSE;
+
     return TRUE;
 }
 
-void rs_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
+static void rs_handle_result(void* vparams,
+							 kdtree_t* xtree, int xnode,
+							 kdtree_t* ytree, int ynode) {
     // go through all pairs of points in this pair of nodes, checking
     // that each pair's distance lies within the required range.  Call the
     // user's callback function on each satisfying pair.
 	int xl, xr, yl, yr;
 	int x, y;
     rs_params* p = (rs_params*)vparams;
-	int D = p->ytree->ndim;
+	int D = ytree->ndim;
 
-	xl = xnode->l;
-	xr = xnode->r;
-	yl = ynode->l;
-	yr = ynode->r;
+	xl = kdtree_left (xtree, xnode);
+	xr = kdtree_right(xtree, xnode);
+	yl = kdtree_left (ytree, ynode);
+	yr = kdtree_right(ytree, ynode);
 
 	for (y=yl; y<=yr; y++) {
-		double* py = p->ytree->data + y * D;
+		void* py = kdtree_get_data(ytree, y);
 		// check if we can eliminate the whole box for this point...
 		if (p->usemax &&
-			kdtree_node_point_mindist2_exceeds(p->xtree, xnode, py,
+			kdtree_node_point_mindist2_exceeds(xtree, xnode, py,
 											   p->maxdistsq))
 			continue;
 		if (p->usemin &&
-			!kdtree_node_point_maxdist2_exceeds(p->xtree, xnode, py,
+			!kdtree_node_point_maxdist2_exceeds(xtree, xnode, py,
 												p->mindistsq))
 			continue;
 		for (x=xl; x<=xr; x++) {
 			double d2;
-			double* px;
-			px = p->xtree->data + x * D;
-			d2 = distsq(px, py, D);
+			void* px = kdtree_get_data(xtree, x);
+			d2 = p->distsquared(px, py, D);
 			if ((p->usemax) && (d2 > p->maxdistsq))
 				continue;
 			if ((p->usemin) && (d2 < p->mindistsq))
@@ -190,121 +152,174 @@ void rs_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 	}
 }
 
-bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
-    rs_params* p = (rs_params*)vparams;
 
-	// does the bounding box partly overlap the desired range?
-    if (p->usemax) {
-		if (kdtree_node_node_mindist2_exceeds(p->xtree, xnode,
-											  p->ytree, ynode, p->maxdistsq))
-			return FALSE;
-    }
-    if (p->usemin) {
-		if (!kdtree_node_node_maxdist2_exceeds(p->xtree, xnode,
-											   p->ytree, ynode, p->mindistsq))
-			return FALSE;
-    }
+void dualtree_rangecount(kdtree_t* x, kdtree_t* y,
+						 double mindist, double maxdist,
+						 dist2_function distsquared,
+						 int* counts) {
+	printf("HACK - implement dualtree_rangecount.\n");
+}
 
-	/*
-	  ;
-	  // HACK - it's not clear that it's advantageous to do this here...
-	  // (NOTE, if you decide to uncomment this, be sure to fix
-	  /    rc_self_should_recurse, since the action to take is different.)
-	  // is the bounding box fully within the desired range?
-	  if (p->usemin) {
-	  // compute min bound if it hasn't already been...
-	  if (!p->usemax)
-	  mindistsq = kdtree_node_node_mindist2(p->xtree, xnode, p->ytree, ynode);
-	  if (mindistsq < p->mindistsq)
-	  allinrange = FALSE;
-	  }
-	  if (allinrange && p->usemax) {
-	  if (!p->usemin)
-	  maxdistsq = kdtree_node_node_maxdist2(p->xtree, xnode, p->ytree, ynode);
-	  if (maxdistsq > p->maxdistsq)
-	  allinrange = FALSE;
-	  }
-	  if (allinrange) {
-	  // we can stop at this pair of nodes; no need to recurse any further.
-	  // for each Y point, increment its counter by the number of points in the X node.
-	  int NX, yl, yr, y;
-	  NX = kdtree_node_npoints(xnode);
-	  yl = ynode->l;
-	  yr = ynode->r;
-	  for (y=yl; y<=yr; y++) {
-	  int iy = p->ytree->perm[y];
-	  p->counts[iy] += NX;
-	  }
-	  return FALSE;
-	  }
-	*/
+/*
+  bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
+  void rc_handle_result(void* params, kdtree_node_t* search, kdtree_node_t* query);
+  void rc_self_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
+  bool rc_self_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode);
+  void dualtree_rangecount(kdtree_t* xtree, kdtree_t* ytree,
+  double mindist, double maxdist,
+  int* counts) {
+  dualtree_callbacks callbacks;
+  rs_params params;
 
-    return TRUE;
+  memset(&callbacks, 0, sizeof(dualtree_callbacks));
+  if (xtree == ytree) {
+  callbacks.decision = rc_self_should_recurse;
+  callbacks.result = rc_self_handle_result;
+  } else {
+  callbacks.decision = rc_should_recurse;
+  callbacks.result = rc_handle_result;
+  }
+  callbacks.decision_extra = &params;
+  callbacks.result_extra = &params;
+
+  // set search params
+  memset(&params, 0, sizeof(params));
+  if (mindist == RANGESEARCH_NO_LIMIT) {
+  params.usemin = 0;
+  } else {
+  params.usemin = 1;
+  params.mindistsq = mindist * mindist;
+  }
+  if (maxdist == RANGESEARCH_NO_LIMIT) {
+  params.usemax = 0;
+  } else {
+  params.usemax = 1;
+  params.maxdistsq = maxdist * maxdist;
+  }
+  params.xtree = xtree;
+  params.ytree = ytree;
+  params.counts = counts;
+
+  dualtree_search(xtree, ytree, &callbacks);
+  }
+*/
+
+/*
+  bool rc_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
+  rs_params* p = (rs_params*)vparams;
+  // does the bounding box partly overlap the desired range?
+  if (p->usemax) {
+  if (kdtree_node_node_mindist2_exceeds(p->xtree, xnode,
+  p->ytree, ynode, p->maxdistsq))
+  return FALSE;
+  }
+  if (p->usemin) {
+  if (!kdtree_node_node_maxdist2_exceeds(p->xtree, xnode,
+  p->ytree, ynode, p->mindistsq))
+  return FALSE;
+  }
+*/
+/*
+  ;
+  // HACK - it's not clear that it's advantageous to do this here...
+  // (NOTE, if you decide to uncomment this, be sure to fix
+  /    rc_self_should_recurse, since the action to take is different.)
+  // is the bounding box fully within the desired range?
+  if (p->usemin) {
+  // compute min bound if it hasn't already been...
+  if (!p->usemax)
+  mindistsq = kdtree_node_node_mindist2(p->xtree, xnode, p->ytree, ynode);
+  if (mindistsq < p->mindistsq)
+  allinrange = FALSE;
+  }
+  if (allinrange && p->usemax) {
+  if (!p->usemin)
+  maxdistsq = kdtree_node_node_maxdist2(p->xtree, xnode, p->ytree, ynode);
+  if (maxdistsq > p->maxdistsq)
+  allinrange = FALSE;
+  }
+  if (allinrange) {
+  // we can stop at this pair of nodes; no need to recurse any further.
+  // for each Y point, increment its counter by the number of points in the X node.
+  int NX, yl, yr, y;
+  NX = kdtree_node_npoints(xnode);
+  yl = ynode->l;
+  yr = ynode->r;
+  for (y=yl; y<=yr; y++) {
+  int iy = p->ytree->perm[y];
+  p->counts[iy] += NX;
+  }
+  return FALSE;
+  }
+*/
+/*
+
+return TRUE;
 }
 
 void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
-    // go through all pairs of points in this pair of nodes, checking
-    // that each pair's distance lies within the required range.
-	int xl, xr, yl, yr;
-	int x, y;
-    rs_params* p = (rs_params*)vparams;
-	int D = p->ytree->ndim;
-	bool allinrange = TRUE;
+// go through all pairs of points in this pair of nodes, checking
+// that each pair's distance lies within the required range.
+int xl, xr, yl, yr;
+int x, y;
+rs_params* p = (rs_params*)vparams;
+int D = p->ytree->ndim;
+bool allinrange = TRUE;
 	
-	// is the bounding box fully within the desired range?
-	if (p->usemin) {
-		if (!kdtree_node_node_mindist2_exceeds(p->xtree, xnode, p->ytree, ynode,
-											   p->mindistsq))
-			allinrange = FALSE;
-	}
-	if (allinrange && p->usemax) {
-		if (kdtree_node_node_maxdist2_exceeds(p->xtree, xnode, p->ytree, ynode, p->maxdistsq))
-			allinrange = FALSE;
-	}
-	if (allinrange) {
-		// for each Y point, increment its counter by the number of points in the X node.
-		int NX, yl, yr, y;
-		NX = kdtree_node_npoints(xnode);
-		yl = ynode->l;
-		yr = ynode->r;
-		for (y=yl; y<=yr; y++) {
-			p->counts[y] += NX;
-		}
-		return;
-	}
+// is the bounding box fully within the desired range?
+if (p->usemin) {
+if (!kdtree_node_node_mindist2_exceeds(p->xtree, xnode, p->ytree, ynode,
+p->mindistsq))
+allinrange = FALSE;
+}
+if (allinrange && p->usemax) {
+if (kdtree_node_node_maxdist2_exceeds(p->xtree, xnode, p->ytree, ynode, p->maxdistsq))
+allinrange = FALSE;
+}
+if (allinrange) {
+// for each Y point, increment its counter by the number of points in the X node.
+int NX, yl, yr, y;
+NX = kdtree_node_npoints(xnode);
+yl = ynode->l;
+yr = ynode->r;
+for (y=yl; y<=yr; y++) {
+p->counts[y] += NX;
+}
+return;
+}
 
-	xl = xnode->l;
-	xr = xnode->r;
-	yl = ynode->l;
-	yr = ynode->r;
+xl = xnode->l;
+xr = xnode->r;
+yl = ynode->l;
+yr = ynode->r;
 
-	if (p->usemax && !p->usemin) {
-		for (y=yl; y<=yr; y++) {
-			double* py = p->ytree->data + y * D;
-			for (x=xl; x<=xr; x++) {
-				double* px;
-				px = p->xtree->data + x * D;
-				if (distsq_exceeds(px, py, D, p->maxdistsq))
-					continue;
-				p->counts[y]++;
-			}
-		}
-	} else {
-		for (y=yl; y<=yr; y++) {
-			double* py = p->ytree->data + y * D;
-			for (x=xl; x<=xr; x++) {
-				double d2;
-				double* px;
-				px = p->xtree->data + x * D;
-				d2 = distsq(px, py, D);
-				if ((p->usemax) && (d2 > p->maxdistsq))
-					continue;
-				if ((p->usemin) && (d2 < p->mindistsq))
-					continue;
-				p->counts[y]++;
-			}
-		}
-	}
+if (p->usemax && !p->usemin) {
+for (y=yl; y<=yr; y++) {
+double* py = p->ytree->data + y * D;
+for (x=xl; x<=xr; x++) {
+double* px;
+px = p->xtree->data + x * D;
+if (distsq_exceeds(px, py, D, p->maxdistsq))
+continue;
+p->counts[y]++;
+}
+}
+} else {
+for (y=yl; y<=yr; y++) {
+double* py = p->ytree->data + y * D;
+for (x=xl; x<=xr; x++) {
+double d2;
+double* px;
+px = p->xtree->data + x * D;
+d2 = distsq(px, py, D);
+if ((p->usemax) && (d2 > p->maxdistsq))
+continue;
+if ((p->usemin) && (d2 < p->mindistsq))
+continue;
+p->counts[y]++;
+}
+}
+}
 }
 
 
@@ -312,80 +327,81 @@ void rc_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode)
 
 
 bool rc_self_should_recurse(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
-	if (xnode > ynode)
-		return FALSE;
-	return rc_should_recurse(vparams, xnode, ynode);
+if (xnode > ynode)
+return FALSE;
+return rc_should_recurse(vparams, xnode, ynode);
 }
 
 void rc_self_handle_result(void* vparams, kdtree_node_t* xnode, kdtree_node_t* ynode) {
-	int xl, xr, yl, yr;
-	int x, y;
-    rs_params* p = (rs_params*)vparams;
-	int D = p->ytree->ndim;
+int xl, xr, yl, yr;
+int x, y;
+rs_params* p = (rs_params*)vparams;
+int D = p->ytree->ndim;
 
-	if (xnode > ynode)
-		return;
+if (xnode > ynode)
+return;
 
-	if (xnode == ynode) {
-		int x2;
-		xl = xnode->l;
-		xr = xnode->r;
+if (xnode == ynode) {
+int x2;
+xl = xnode->l;
+xr = xnode->r;
 
-		for (x=xl; x<=xr; x++) {
-			double* px = p->xtree->data + x * D;
-			for (x2=x+1; x2<=xr; x2++) {
-				double d2;
-				double* px2;
-				px2 = p->xtree->data + x2 * D;
-				d2 = distsq(px, px2, D);
-				if ((p->usemax) && (d2 > p->maxdistsq))
-					continue;
-				if ((p->usemin) && (d2 < p->mindistsq))
-					continue;
-				p->counts[x]++;
-				p->counts[x2]++;
-			}
-			// the diagonal...
-			if ((p->usemin) && (0.0 < p->mindistsq))
-				continue;
-			p->counts[x]++;
-		}
-		return;
-	}
-
-	xl = xnode->l;
-	xr = xnode->r;
-	yl = ynode->l;
-	yr = ynode->r;
-
-	if (p->usemax && !p->usemin) {
-		for (y=yl; y<=yr; y++) {
-			double* py = p->ytree->data + y * D;
-			for (x=xl; x<=xr; x++) {
-				double* px;
-				px = p->xtree->data + x * D;
-				if (distsq_exceeds(px, py, D, p->maxdistsq))
-					continue;
-				p->counts[y]++;
-				p->counts[x]++;
-			}
-		}
-	} else {
-		for (y=yl; y<=yr; y++) {
-			double* py = p->ytree->data + y * D;
-			for (x=xl; x<=xr; x++) {
-				double d2;
-				double* px;
-				px = p->xtree->data + x * D;
-				d2 = distsq(px, py, D);
-				if ((p->usemax) && (d2 > p->maxdistsq))
-					continue;
-				if ((p->usemin) && (d2 < p->mindistsq))
-					continue;
-				p->counts[y]++;
-				p->counts[x]++;
-			}
-		}
-	}
+for (x=xl; x<=xr; x++) {
+double* px = p->xtree->data + x * D;
+for (x2=x+1; x2<=xr; x2++) {
+double d2;
+double* px2;
+px2 = p->xtree->data + x2 * D;
+d2 = distsq(px, px2, D);
+if ((p->usemax) && (d2 > p->maxdistsq))
+continue;
+if ((p->usemin) && (d2 < p->mindistsq))
+continue;
+p->counts[x]++;
+p->counts[x2]++;
+}
+// the diagonal...
+if ((p->usemin) && (0.0 < p->mindistsq))
+continue;
+p->counts[x]++;
+}
+return;
 }
 
+xl = xnode->l;
+xr = xnode->r;
+yl = ynode->l;
+yr = ynode->r;
+
+if (p->usemax && !p->usemin) {
+for (y=yl; y<=yr; y++) {
+double* py = p->ytree->data + y * D;
+for (x=xl; x<=xr; x++) {
+double* px;
+px = p->xtree->data + x * D;
+if (distsq_exceeds(px, py, D, p->maxdistsq))
+continue;
+p->counts[y]++;
+p->counts[x]++;
+}
+}
+} else {
+for (y=yl; y<=yr; y++) {
+double* py = p->ytree->data + y * D;
+for (x=xl; x<=xr; x++) {
+double d2;
+double* px;
+px = p->xtree->data + x * D;
+d2 = distsq(px, py, D);
+if ((p->usemax) && (d2 > p->maxdistsq))
+continue;
+if ((p->usemin) && (d2 < p->mindistsq))
+continue;
+p->counts[y]++;
+p->counts[x]++;
+}
+}
+}
+}
+
+*/

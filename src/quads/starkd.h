@@ -4,6 +4,8 @@
 #include "kdtree.h"
 #include "qfits.h"
 
+#define AN_FILETYPE_STARTREE "SKDT"
+
 struct startree {
 	kdtree_t* tree;
 	qfits_header* header;
