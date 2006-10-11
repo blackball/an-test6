@@ -4,14 +4,13 @@ QFITS_INC := -I$(QFITS_INSTALL)/include
 QFITS_LIB := $(QFITS_INSTALL)/lib/libqfits.a
 QFITS_CFLAGS := $(CFLAGS_DEF)
 
-#$(QFITS_LIB):
-#	cd $(QFITS_DIR) && ./configure --enable-memory-mode=0 --enable-shared=no --prefix=`pwd`/stage CFLAGS="$(QFITS_CFLAGS)" && make && make install
+QFITS_CONFIGURE_FLAGS := --enable-memory-mode=0 --enable-shared=no --prefix=`pwd`/stage CFLAGS="$(QFITS_CFLAGS)"
 
 $(QFITS_LIB): $(QFITS_DIR)/Makefile
 	cd $(QFITS_DIR) && make && make install
 
 $(QFITS_DIR)/Makefile:
-	cd $(QFITS_DIR) && ./configure --enable-memory-mode=0 --enable-shared=no --prefix=`pwd`/stage CFLAGS="$(QFITS_CFLAGS)"
+	cd $(QFITS_DIR) && ./configure $(QFITS_CONFIGURE_FLAGS)
 
 REMAKE_QFITS := remake-qfits
 .PHONY: $(REMAKE_QFITS)
