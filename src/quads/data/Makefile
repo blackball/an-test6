@@ -348,8 +348,6 @@ $(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 
 
 else
-
-$(warning Already included Makefile)
-
+#$(warning Already included Makefile)
 endif
 
