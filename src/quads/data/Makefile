@@ -4,11 +4,13 @@ ifndef MAKEFILE_INCLUDED
 MAKEFILE_INCLUDED := 1
 export
 #export MAKEFILE_INCLUDED
+#$(warning Including Makefile)
 
 # no default rules
 .SUFFIXES :=
 
-$(warning Including Makefile)
+# don't delete "intermediate" files.
+.SECONDARY:
 
 comma := ,
 empty :=
@@ -21,7 +23,6 @@ $(warning make version $(VER))
 ifeq ($(VER), 3.79.1)
   $(error You are running a stupid version of Make.  Try version 3.81)
 endif
-
 
 TYCHO2_DIR := tycho2/
                     # (note, trailing '/' required!)
@@ -228,10 +229,11 @@ $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
 
-.SECONDARY: \
-    $(addprefix $(PHASE1)$(1), .code.fits .quad.fits) \
-    $(addprefix $(PHASE2)$(1), .ckdt.fits .quad.fits)
 endef
+
+#.SECONDARY: \
+#    $(addprefix $(PHASE1)$(1), .code.fits .quad.fits) \
+#    $(addprefix $(PHASE2)$(1), .ckdt.fits .quad.fits)
 
 INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
 
