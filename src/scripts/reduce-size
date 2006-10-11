@@ -1,0 +1,37 @@
+#! /bin/bash
+
+# Reduce the size of SDSS xy list files by:
+#  -converting from "D" (double) to "E" (float) format
+#  -keeping only the first 150 rows
+
+# Also changes the column names from "COLC, ROWC" to "X, Y".
+
+if [ $# -lt 2 ]; then
+	echo "Usage: $0 <in> <out> [#rows]"
+	exit
+fi
+in=$1
+out=$2
+if [ $# -eq 3 ]; then
+  n=$3
+fi
+
+for ((e=1;; e++)); do
+	E=`printf %04i $e`
+	fitsgetext -i $in -o tmp.$e -e 0 -e $e
+	if [ $? -ne 0 ]; then
+		break;
+	fi
+	rm -f tmp2.$E
+	if [ x$n != x ]; then
+		fitscopy tmp.$e"[col X(1E)=COLC;Y(1E)=ROWC][#row<=$n]" tmp2.$e
+	else
+		fitscopy tmp.$e"[col X(1E)=COLC;Y(1E)=ROWC]" tmp2.$e
+	fi
+	mv tmp2.$e tmp.$e
+	fitsgetext -i tmp.$e -o tmp2.$E -e 1
+	rm tmp.$e
+done
+fitsgetext -i $in -o tmp2.0000 -e 0
+cat tmp2.* > $out
+
