@@ -96,7 +96,6 @@ HPOWNED         := hpowned
 BUILD_AN        := build-an-catalog
 CUT_AN          := cut-an
 STARTREE        := startree
-
 UNPERMUTE_QUADS := unpermute-quads
 UNPERMUTE_STARS := unpermute-stars
 CODETREE        := codetree
