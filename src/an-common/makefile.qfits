@@ -2,9 +2,14 @@ QFITS_DIR := $(BASEDIR)/qfits-6.1.0
 QFITS_INSTALL := $(QFITS_DIR)/stage
 QFITS_INC := -I$(QFITS_INSTALL)/include
 QFITS_LIB := $(QFITS_INSTALL)/lib/libqfits.a
-QFITS_CFLAGS := $(CFLAGS_DEF)
 
-QFITS_CONFIGURE_FLAGS := --enable-memory-mode=0 --enable-shared=no --prefix=`pwd`/stage CFLAGS="$(QFITS_CFLAGS)"
+QFITS_CFLAGS := $(CFLAGS_DEF)
+QFITS_LDFLAGS := $(LDFLAGS_DEF)
+
+QFITS_CONFIGURE_FLAGS := --enable-memory-mode=0 --enable-shared=no \
+	--prefix=`pwd`/stage \
+	CFLAGS="$(QFITS_CFLAGS)" \
+	LDFLAGS="$(QFITS_LDFLAGS)"
 
 $(QFITS_LIB): $(QFITS_DIR)/Makefile
 	cd $(QFITS_DIR) && make && make install
