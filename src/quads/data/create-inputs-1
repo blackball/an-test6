@@ -19,7 +19,7 @@ PARITY=0
 THREADS=1
 
 INPUT=input/input.%03i
-SOLVED_TEMPLATE=solved/solved.%02i.%02i
+SOLVED_TEMPLATE=solved/solved.%02i
 MATCH_TEMPLATE=match/match.%02i.%02i
 DONE_TEMPLATE=done/done.%02i.%02i
 
