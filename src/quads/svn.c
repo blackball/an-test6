@@ -11,7 +11,7 @@ const char* svn_date() {
 	   be replaced by the correct, updated string whenever you run "svn up".  All hail
 	   subversion! */
 	/* That's not quite right - it seems you actually have to modify 
-		the file. */
+		the file.  Like this. */
 	const char* datestr = "$Date$";
 	// (I want to trim off the "$Date$" trailing: 7 chars at front and 2 at back)
 	strncpy(date_rtnval, datestr + 7, strlen(datestr) - 9);
