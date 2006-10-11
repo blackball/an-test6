@@ -45,11 +45,11 @@ USNOB_FITS_TEMPLATE := "$(USNOB_FITS_DIR)usnob10_hp%03i.fits"
 USNOB_FITS_NSIDE := 9
 USNOB_FITS_PRESENT := $(USNOB_FITS_DIR)usnob-fits-present
 
-AN_DIR    := an/
+AN_CAT_DIR    := an/
                # (note, a trailing '/' is required!)
-AN_TEMPLATE := $(AN_DIR)an_hp%03i.fits
+AN_TEMPLATE := $(AN_CAT_DIR)an_hp%03i.fits
 AN_NSIDE  := 9
-AN_CATALOG_PRESENT := $(AN_DIR)an-catalog-present
+AN_CATALOG_PRESENT := $(AN_CAT_DIR)an-catalog-present
 
 # name of this index.
 INAME         := sdss
@@ -93,28 +93,30 @@ MKDIR           := mkdir -p
 TOUCH           := touch
 MV              := mv
 
-USNOBTOFITS     := usnobtofits
-TYCHO2TOFITS    := tycho2tofits
-HPOWNED         := hpowned
-BUILD_AN        := build-an-catalog
-CUT_AN          := cut-an
-STARTREE        := startree
-UNPERMUTE_QUADS := unpermute-quads
-UNPERMUTE_STARS := unpermute-stars
-CODETREE        := codetree
-HPQUADS         := hpquads
+AN_DIR          := ../
 
-HOMER           := homer
-SLAVE           := slave
+USNOBTOFITS     := $(AN_DIR)usnobtofits
+TYCHO2TOFITS    := $(AN_DIR)tycho2tofits
+HPOWNED         := $(AN_DIR)hpowned
+BUILD_AN        := $(AN_DIR)build-an-catalog
+CUT_AN          := $(AN_DIR)cut-an
+STARTREE        := $(AN_DIR)startree
+UNPERMUTE_QUADS := $(AN_DIR)unpermute-quads
+UNPERMUTE_STARS := $(AN_DIR)unpermute-stars
+CODETREE        := $(AN_DIR)codetree
+HPQUADS         := $(AN_DIR)hpquads
 
-QUADIDX			:= quadidx
-QUADLOCATIONS 	:= quadlocations 
-QUADSPERSTAR 	:= quadsperstar 
-CODEPROJ        := codeprojections
+HOMER           := $(AN_DIR)homer
+SLAVE           := $(AN_DIR)slave
+
+QUADIDX			:= $(AN_DIR)quadidx
+QUADLOCATIONS 	:= $(AN_DIR)quadlocations 
+QUADSPERSTAR 	:= $(AN_DIR)quadsperstar 
+CODEPROJ        := $(AN_DIR)codeprojections
+EPSTOPNG		:= $(AN_DIR)epstopng
 MATLAB			:= matlab
 PNMTOPNG		:= pnmtopng
 PNGTOPNM		:= pngtopnm
-EPSTOPNG		:= epstopng
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
@@ -384,17 +386,6 @@ solve1: index02
 	@echo
 	@echo
 	$(SLAVE) < input/input.000 > out/out-000 2> err/err-000
-
-#	$(SLAVE) < input/input.000 > out/out-000 2> err/err-000 &
-#	-tail -f err/err-000 | grep Field
-#	fg
-
-#	for x in 000 012 024 036 048 060 072 084 096 108 120 132 144 \
-#		156 168 180 192 204 216 228 240 252 264 276 288 300 312 324 \
-#		336 348 360 372 384 396 408; do \
-#		$(SLAVE) < input/input.$$x > out/out-$$x 2> err/err-$$x; \
-#	done
-
 
 
 else
