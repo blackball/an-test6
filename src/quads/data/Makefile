@@ -107,6 +107,7 @@ QUADSPERSTAR 	:= quadsperstar
 CODEPROJ        := codeprojections
 MATLAB			:= matlab
 PNMTOPNG		:= pnmtopng
+PNGTOPNM		:= pngtopnm
 EPSTOPNG		:= epstopng
 
 % s=4;
@@ -116,7 +117,8 @@ HPQUADS_TMP_NOQUADS := tmp.noquads.rdls.fits
 STARTREE_OPTIONS := -R $(CUT_NLEAF) -b -s -S
 CODETREE_OPTS := -R 15 -b -s -S
 #HPQUADS_OPTS  := -l 4 -u 5 -n 700 -i $(INDEX_ID) -c -x 6 -y 6 -r 4
-HPQUADS_OPTS  := -l 4 -u 5 -n 1000 -i $(INDEX_ID) -c -x 4 -y 4 -r 3 -R -F $(HPQUADS_TMP_NOQUADS)
+#HPQUADS_OPTS  := -l 4 -u 5 -n 1000 -i $(INDEX_ID) -c -x 4 -y 4 -r 3 -R -F $(HPQUADS_TMP_NOQUADS)
+HPQUADS_OPTS  := -l 4 -u 5 -n 4400 -i $(INDEX_ID) -c -x 1 -y 1 -r 6 -R -F $(HPQUADS_TMP_NOQUADS)
 QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
@@ -292,14 +294,14 @@ qps$(1).m: $(INDEX)$(1).qidx.fits
 	$(QUADSPERSTAR) $(INDEX)$(1) | sed s/-/_/ > $$@
 
 %$(1)_small.png: %$(1).png
-	pngtopnm $$< | pamscale -linear 0.2 | pnmtopng > $$@
+	$(PNGTOPNM) $$< | pamscale -linear 0.2 | pnmtopng > $$@
 
 endef
 
 $(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 %.png: %.pgm
-	$(PNMTOPNG) -- $< > $@
+	$(PNMTOPNG) $< > $@
 
 %.png: %.eps
 	$(EPSTOPNG) $< $@
