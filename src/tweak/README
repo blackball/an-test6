@@ -1,0 +1,30 @@
+
+Levmar, for nonlinear optimization, must be compiled:
+cd ../levmar-2.1.2
+./configure
+make
+
+So does wcstools
+cd ../wcstools-3.6.4/
+./configure
+make
+
+And cfitsio
+cd ../cfitsio/
+./configure
+make
+
+Then make should work.
+
+To run tweak, use the runtweak script. Runtweak relies on fits2xy for source
+extraction, which is in ../simplexy. Build using 
+
+cd ../simplexy
+make
+
+The script also relies on some of the fits utilities, like tabsort. Those can
+be built in the quads directory and need to be in the path:
+
+cd ../quads
+make tabsort
+cp tabsort ~/bin
