@@ -372,7 +372,7 @@ FN := 01 02 03 04 05 06 07 08 09 10 \
 $(foreach num,$(FN),$(eval $(call HOMER_template,$(num))))
 
 #solve1: homer
-solve1:
+solve1: index02
 	-$(MKDIR) input match done solved out err
 	-$(RM) input/input-*
 	./create-inputs-1
