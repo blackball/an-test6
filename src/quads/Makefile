@@ -175,7 +175,7 @@ $(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
 
 2masstofits: $(2MASSOBJ) healpix.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) -lz
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o healpix.o bl.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)

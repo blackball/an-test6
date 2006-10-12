@@ -1,4 +1,6 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <math.h>  // to get NAN
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,10 +13,12 @@
 #include "2mass_catalog.h"
 #include "healpix.h"
 #include "starutil.h"
+#include "boilerplate.h"
 
 #define OPTIONS "ho:N:"
 
 void print_help(char* progname) {
+	boilerplate_help_header(stdout);
     printf("usage:\n"
 		   "  %s -o <output-filename-template>\n"
 		   "  [-N <healpix-nside>]  (default = 8.)\n"
@@ -116,6 +120,7 @@ int main(int argc, char** args) {
 					exit(-1);
 				}
 				// header remarks...
+				boilerplate_add_fits_headers(cats[hp]->header);
 				sprintf(val, "%u", hp);
 				qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 				sprintf(val, "%u", Nside);

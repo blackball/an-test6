@@ -1,7 +1,9 @@
 #ifndef TWOMASS_H
 #define TWOMASS_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <math.h>  // to get NAN
 
 /**
