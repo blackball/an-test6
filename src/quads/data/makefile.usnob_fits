@@ -1,21 +1,12 @@
 ifndef $(MAKEFILE_USNOB_FITS_INCLUDED)
 MAKEFILE_USNOB_FITS_INCLUDED := 1
-#export MAKEFILE_USNOB_FITS_INCLUDED
 export
-
-$(warning Including makefile.usnob_fits)
-#$(warning MAKEFILE_INCLUDED is $(MAKEFILE_INCLUDED))
-
-#export MAKEFILE_INCLUDED
 
 include Makefile
 include makefile.usnob
 
 USNOB_FITS_HP := $(shell echo $$(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
 USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf "$(USNOB_FITS_TEMPLATE) " $$i; done)
-
-#$(warning USNOB_FITS_HP is $(USNOB_FITS_HP))
-#$(warning USNOB FITS files: $(USNOB_FITS))
 
 $(USNOB_FITS_PRESENT): $(USNOB_FITS)
 	$(MKDIR) $(USNOB_FITS_DIR)
@@ -30,9 +21,5 @@ $(USNOB_FITS): $(USNOB_PRESENT)
 	@echo Running: $(USNOBTOFITS) -o $(USNOB_FITS_TEMPLATE) -N $(USNOB_FITS_NSIDE) "<usnob files>"
 	@$(USNOBTOFITS) -o $(USNOB_FITS_TEMPLATE) -N $(USNOB_FITS_NSIDE) $(USNOB)
 	$(TOUCH) timestamp-usnobtofits-done
-
-else
-
-$(warning Already included makefile.usnob_fits)
 
 endif

@@ -68,7 +68,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 	rdlist.o xylist.o histogram.o tic.o permutedsort.o codekd.o \
 	donuts.o verify.o dualtree_rangesearch.o dualtree.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o hitlist_healpix.o \
-	intmap.o hitsfile.o qidxfile.o #kdtree/kdtree_dim_4.o
+	intmap.o hitsfile.o qidxfile.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -93,8 +93,6 @@ ALL_OBJ += $(2MASSOBJ)
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) \
 	$(PIPELINE) $(PROSPECTUS) $(FITS_UTILS)
-
-#	$(REMAKE_QFITS)
 
 .PHONY: pipeline
 pipeline: $(PIPELINE)
@@ -147,27 +145,6 @@ tags:
 
 #wcscheck.o: wcscheck.c
 #	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
-
-#kdspeed: kdspeed.o kdtree/kdtree.o kdtree/kdtree_dim.o kdtree/kdtree_access.o \
-#	kdtree/kdtree_dim_4.o tic.o
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
-
-#kdtree/kdtree_dim_4.o: kdtree/kdtree_dim.c
-#	$(CC) $(CFLAGS) -o $@ -c $^ -DKD_DIM=4
-
-#hptst: hptst.o healpix.o
-#	$(CC) $(CFLAGS) -o $@ $^ -lm
-
-#CFITSIO_CFLAGS := -Icfitsio/include
-#CFITSIO_CFLAGS += -Wall -O2
-#CFITSIO_LFLAGS := $(CFITSIO_LIB) -lm
-
-#CFITSIO_CFLAGS := -Icfitsio -I../cfitsio
-#CFITSIO_CFLAGS += -Wall -O0 -g
-#CFITSIO_LIB := cfitsio/libcfitsio.a
-#CFITSIO_LFLAGS := -lm
-#CFITSIO_OBJS := $(addsuffix .o,$(CFITS_UTILS))
-#CFITSIO_SRCS := $(CFITSIO_OBJS:.o=.c)
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
@@ -280,10 +257,6 @@ sdssquad: sdssquad.o rdlist.o xylist.o bl.o permutedsort.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-#usnobtile-test: usnobtile.o merctree.o bl.o healpix.o \
-#		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS) $(NETPBM_L)
-
 zoomout: zoomout.o pnmutils.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
@@ -297,8 +270,6 @@ include $(COMMON)/makefile.deps
 
 allclean: clean
 	rm -f *.o *~ *.dep 
-#$(KD_LIB)/*.o 
-#$(QFITS_LIB)
 
 clean:
 	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \

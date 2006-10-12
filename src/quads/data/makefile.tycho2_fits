@@ -1,17 +1,11 @@
 ifndef $(MAKEFILE_TYCHO2_FITS_INCLUDED)
 MAKEFILE_TYCHO2_FITS_INCLUDED := 1
-#export MAKEFILE_TYCHO2_FITS_INCLUDED
 export
-
-$(warning Including makefile.tycho2_fits)
-#$(warning MAKEFILE_INCLUDED is $(MAKEFILE_INCLUDED))
 
 include Makefile
 include makefile.tycho2
 
 TYCHO2_FITS := $(addprefix $(TYCHO2_FITS_DIR),$(subst .dat,.fits,$(TYCHO2_FILES)))
-
-#$(warning TYCHO-2 FITS files: $(TYCHO2_FITS))
 
 $(TYCHO2_FITS_PRESENT): $(TYCHO2_FITS)
 	$(MKDIR) $(TYCHO2_FITS_DIR)
@@ -26,20 +20,4 @@ $(TYCHO2_FITS):: $(TYCHO2_FITS_DIR)%.fits : $(TYCHO2_DIR)%.dat
 	$(TYCHO2TOFITS) -o $@ $<
 	$(TOUCH) timestamp-tycho2tofits-$(basename $(notdir $@))-done
 
-#$(TYCHO2_FITS):: %.fits : %.dat
-
-#$(TYCHO2_FITS):: %.fits : $(TYCHO2_PRESENT)
-#	$(MKDIR) $(TYCHO2_FITS_DIR)
-#	$(TOUCH) timestamp-tycho2tofits-$(basename $(notdir $@))-start
-#	$(TYCHO2TOFITS) -o $@ $(subst .fits,.dat,$@)
-#	$(TOUCH) timestamp-tycho2tofits-$(basename $(notdir $@))-done
-
-#$(TYCHO2_FITS): $(TYCHO2_PRESENT)
-#	$(MKDIR) $(TYCHO2_FITS_DIR)
-#	$(TOUCH) timestamp-tycho2tofits-start
-#	$(TYCHO2TOFITS) -o $@ $<
-#	$(TOUCH) timestamp-tycho2tofits-done
-
-else
-$(warning Already included makefile.tycho2_fits)
 endif

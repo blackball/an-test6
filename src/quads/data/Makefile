@@ -1,10 +1,6 @@
-#$(warning Makefile: MAKEFILE_INCLUDED is is $(MAKEFILE_INCLUDED))
-
 ifndef MAKEFILE_INCLUDED
 MAKEFILE_INCLUDED := 1
 export
-#export MAKEFILE_INCLUDED
-#$(warning Including Makefile)
 
 # no default rules
 .SUFFIXES :=
@@ -73,8 +69,7 @@ CUT_AN_DEDUP  := 8
 CUT_AN_CUT    := -R
 CUT_NLEAF     := 15
 
-
-INDEX_ID   := 22
+INDEX_ID   := 1
 INDEX_DIR  := $(INAME)-$(INDEX_ID)/
 TEMP_DIR   := 
 CATALOG    := $(CUT_BASE)
@@ -139,16 +134,14 @@ NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
 INDEXES := $(addprefix index,$(NUMS2))
 
 .PHONY: all
-all: $(INDEXES)
+all: solve1
+#$(INDEXES)
 
 define INDEX_template_A
 .PHONY: index$(1)
 index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
 endef
-#$(warning index$(1) is $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits))
 $(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
-#$(warning INDEXES: $(INDEXES))
-#all: $(USNOB_FITS_PRESENT)
 
 $(USNOB_PRESENT):
 	$(MAKE) -f makefile.usnob $@
@@ -176,8 +169,6 @@ $(AN_CATALOG_PRESENT):
 
 tycho2_download:
 	$(MAKE) -f makefile.tycho2 $@
-
-#$(CUT_BASE)$(1).objs.fits: $(AN_FILES)
 
 define CUT_template
 .PHONY: cut$(1)
@@ -243,10 +234,6 @@ $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
 
 endef
-
-#.SECONDARY: \
-#    $(addprefix $(PHASE1)$(1), .code.fits .quad.fits) \
-#    $(addprefix $(PHASE2)$(1), .ckdt.fits .quad.fits)
 
 INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
 
@@ -374,7 +361,6 @@ FN := 01 02 03 04 05 06 07 08 09 10 \
 	  31 32 33 34 35
 $(foreach num,$(FN),$(eval $(call HOMER_template,$(num))))
 
-#solve1: homer
 solve1: index02
 	-$(MKDIR) input match done solved out err
 	-$(RM) input/input-*
@@ -386,10 +372,9 @@ solve1: index02
 	@echo "    tail -f err/err-000 | grep Field   "
 	@echo
 	@echo
+	touch timestamp-slave-solve1-start
 	$(SLAVE) <input/input.000 >out/out-000 2>err/err-000
+	touch timestamp-slave-solve1-done
 
-
-else
-#$(warning Already included Makefile)
 endif
 

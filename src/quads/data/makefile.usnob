@@ -1,27 +1,15 @@
 ifndef $(MAKEFILE_USNOB_INCLUDED)
 MAKEFILE_USNOB_INCLUDED := 1
-#export MAKEFILE_USNOB_INCLUDED
 export
-
-$(warning Including makefile.usnob)
-#$(warning MAKEFILE_INCLUDED is $(MAKEFILE_INCLUDED))
-
-#export MAKEFILE_INCLUDED
 
 include Makefile
 
 USNOB := $(shell for ((i=0; i<180; i++)); do for ((j=0; j<10; j++)); do printf "$(USNOB_DIR)%03i/b%03i%i.cat " $$i $$i $$j; done; done)
 
-#$(warning USNOB files: $(USNOB))
-
 $(USNOB_PRESENT): $(USNOB)
 	$(MKDIR) $(USNOB_DIR)
 	$(TOUCH) $@
 
-#$(USNOB): usnobfiles
-
-#.PHONY: usnobfiles
-#usnobfiles: 
 $(USNOB):
 	@echo "target: $@"
 	@echo
