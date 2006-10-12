@@ -5,9 +5,6 @@
 #include <math.h>
 
 #include "kdtree.h"
-#include "kdtree_fits_io.h"
-#include "kdtree_io.h"
-#include "kdtree_access.h"
 #include "starutil.h"
 #include "fileutil.h"
 #include "mathutil.h"
@@ -25,6 +22,8 @@
 #include "verify.h"
 #include "qfits.h"
 #include "ioutils.h"
+#include "starkd.h"
+#include "codekd.h"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -83,15 +82,11 @@ bool circle = FALSE;
 catalog* cat;
 idfile* id;
 quadfile* quads;
-kdtree_t *codetree;
+codetree* codekd;
 xylist* xyls;
 rdlist* rdls;
-kdtree_t* startree;
+startree* starkd;
 qidxfile* qidx;
-
-int* inverse_perm = NULL;
-
-int* code_inverse_perm = NULL;
 
 double arcsec_per_pixel_lower, arcsec_per_pixel_upper;
 double minAB, maxAB;
@@ -161,8 +156,7 @@ void find_corners(xy *thisfield, xy *cornerpix) {
 }
 
 void getstarcoord(uint iA, double *sA) {
-	memcpy(sA, startree->data + inverse_perm[iA] * DIM_STARS,
-		   DIM_STARS * sizeof(double));
+	startree_get(starkd, iA, sA);
 }
 
 int quadnum;
@@ -174,6 +168,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	double costheta, sintheta, scale, xxtmp;
 	xy *ABCDpix;
 	double* qcode;
+	double qcode_data[4];
 	double dist;
 	double code[4];
 	double d, c;
@@ -274,9 +269,9 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 	code[2] = Dx;
 	code[3] = Dy;
 
-	qcode = codetree->data +
-		code_inverse_perm[qm->quadnum] * codetree->ndim;
-	dist = sqrt(distsq(qcode, code, codetree->ndim));
+	codetree_get(codekd, qm->quadnum, qcode_data);
+	qcode = qcode_data;
+	dist = sqrt(distsq(qcode, code, DIM_CODES));
 	fprintf(stderr, "    Dist to quad %i: %g%s\n",
 			qm->quadnum, dist,
 			(dist < codetol) ? "   ==> HIT!" : "");
@@ -345,7 +340,7 @@ void findable_quad(quadmatch* qm, xy* thisfield, xy* cornerpix,
 			fld[i*2  ] = xy_refx(thisfield, i);
 			fld[i*2+1] = xy_refy(thisfield, i);
 		}
-		verify_hit(startree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts, NULL, NULL);
+		verify_hit(starkd->tree, mocopy, fld, nfield, verify_dist2, &matches, &unmatches, &conflicts, NULL, NULL);
 		free(fld);
 	}
 	if (verbose) {
@@ -477,7 +472,7 @@ void why_not() {
 			ra = rd_refra(thisrd, i);
 			dec = rd_refdec(thisrd, i);
 			radec2xyzarr(deg2rad(ra), deg2rad(dec), xyz);
-			res = kdtree_rangesearch(startree, xyz, nearbyd2);
+			res = kdtree_rangesearch(starkd->tree, xyz, nearbyd2);
 			assert(res);
 			assert(res->nres == 0 || res->nres == 1);
 			if (!res->nres)
@@ -547,7 +542,7 @@ void why_not() {
 			image_to_xyz(xy_refx(cornerpix, 2), xy_refy(cornerpix, 2), mo.sMinMax, transform);
 			image_to_xyz(xy_refx(cornerpix, 3), xy_refy(cornerpix, 3), mo.sMaxMin, transform);
 
-			verify_hit(startree, &mo, fld, nfield, verify_dist2,
+			verify_hit(starkd->tree, &mo, fld, nfield, verify_dist2,
 					   NULL, NULL, NULL, infield, NULL);
 
 			// make "infield" just be the ones that aren't in "indexed_radec".
@@ -803,8 +798,6 @@ int main(int argc, char *argv[]) {
 	fieldtoind = intmap_new(INTMAP_MANY_TO_ONE);
 	indtofield = intmap_new(INTMAP_ONE_TO_ONE);
 
-	qfits_err_statset(1);
-
 	for (;;) {
 		
 		tic();
@@ -830,7 +823,7 @@ int main(int argc, char *argv[]) {
 		agreetol = 0.0;
 		cat = NULL;
 		quads = NULL;
-		startree = NULL;
+		starkd = NULL;
 		xcolname = strdup("ROWC");
 		ycolname = strdup("COLC");
 		verify_dist2 = 0.0;
@@ -914,24 +907,15 @@ int main(int argc, char *argv[]) {
 		// Read .ckdt file...
 		fprintf(stderr, "Reading code KD tree from %s...", treefname);
 		fflush(stderr);
-		codetree = kdtree_fits_read_file(treefname);
-		if (!codetree)
+		codekd = codetree_open(treefname);
+		if (!codekd)
 			exit(-1);
 		fprintf(stderr, "done\n    (%d quads, %d nodes, dim %d).\n",
-				codetree->ndata, codetree->nnodes, codetree->ndim);
-		{
-			qfits_header* hdr;
-			hdr = qfits_header_read(treefname);
-			circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
-			qfits_header_destroy(hdr);
-		}
+				codekd->tree->ndata, codekd->tree->nnodes,
+				codekd->tree->ndim);
+		circle = qfits_header_getboolean(codekd->header, "CIRCLE", 0);
 		if (circle)
 			fprintf(stderr, "CKDT has the CIRCLE property.\n");
-
-		fprintf(stderr, "Computing inverse permutation...\n");
-		fflush(stderr);
-		code_inverse_perm = malloc(codetree->ndata * sizeof(int));
-		kdtree_inverse_permutation(codetree, code_inverse_perm);
 
 		// Read .qidx file...
 		fprintf(stderr, "Reading qidxfile %s...\n", qidxfname);
@@ -967,17 +951,15 @@ int main(int argc, char *argv[]) {
 		// Read .skdt file...
 		fprintf(stderr, "Reading star KD tree from %s...", startreefname);
 		fflush(stderr);
-		startree = kdtree_fits_read_file(startreefname);
-		if (!startree)
+		starkd = startree_open(startreefname);
+		if (!starkd)
 			fprintf(stderr, "Star kdtree not found or failed to read.\n");
 		else
 			fprintf(stderr, "done\n");
 
-		do_verify = startree && (verify_dist2 > 0.0);
+		do_verify = starkd && (verify_dist2 > 0.0);
 
-		if (startree) {
-			  inverse_perm = malloc(startree->ndata * sizeof(int));
-			  kdtree_inverse_permutation(startree, inverse_perm);
+		if (starkd) {
 			  cat = NULL;
 		} else {
 			// Read .objs file...
@@ -1011,13 +993,11 @@ int main(int argc, char *argv[]) {
 		free_fn(idfname);
 		free_fn(startreefname);
 
-		kdtree_close(codetree);
-		if (startree)
-			kdtree_close(startree);
+		codetree_close(codekd);
+		if (starkd)
+		   startree_close(starkd);
 		if (cat)
 			catalog_close(cat);
-		free(inverse_perm);
-		free(code_inverse_perm);
 		if (id)
 			idfile_close(id);
 		quadfile_close(quads);

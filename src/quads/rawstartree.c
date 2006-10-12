@@ -124,21 +124,17 @@ int main(int argc, char** args)
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "Creating kdtree...\n");
-	{
-		int levels;
-		levels = kdtree_compute_levels(N, Nleaf);
-		kd = kdtree_build(xyz, N, 3, levels + 1);
-		if (!kd) {
-			fprintf(stderr, "Failed to build kdtree.\n");
-			exit( -1);
-		}
-
-		fprintf(stderr, "Built kdtree with %i levels, %i nodes\n",
-		        levels, kd->nnodes);
+	kd = kdtree_build(NULL, xyz, N, 3, Nleaf, KDTT_DOUBLE,
+					  KD_BUILD_BBOX | KD_BUILD_SPLIT | KD_BUILD_SPLITDIM);
+	if (!kd) {
+		fprintf(stderr, "Failed to build kdtree.\n");
+		exit( -1);
 	}
 
+	fprintf(stderr, "Built kdtree with %i nodes\n", kd->nnodes);
+
 	fprintf(stderr, "Writing output to file %s...\n", outfn);
-	if (kdtree_fits_write_file(kd, outfn, NULL)) { // FIXME add extra headers?
+	if (kdtree_fits_write(kd, outfn, NULL)) { // FIXME add extra headers?
 		fprintf(stderr, "Failed to write kdtree to file %s.\n", outfn);
 		exit( -1);
 	}

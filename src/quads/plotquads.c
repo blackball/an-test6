@@ -5,8 +5,6 @@
 #include <math.h>
 
 #include "kdtree.h"
-#include "kdtree_fits_io.h"
-#include "kdtree_io.h"
 #include "qidxfile.h"
 #include "quadfile.h"
 #include "starutil.h"
@@ -14,6 +12,7 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "intmap.h"
+#include "starkd.h"
 
 static const char* OPTIONS = "hf:R:D:r:P";
 
@@ -31,7 +30,7 @@ int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
 
-	kdtree_t* startree;
+	startree* starkd;
 	char* indexfname = NULL;
 	char* fn;
 	kdtree_qres_t* res;
@@ -90,8 +89,8 @@ int main(int argc, char *argv[]) {
 	
 	fn = mk_streefn(indexfname);
 	fprintf(stderr, "Reading star kdtree from %s ...\n", fn);
-	startree = kdtree_fits_read_file(fn);
-	if (!startree) {
+	starkd = startree_open(fn);
+	if (!starkd) {
 		fprintf(stderr, "Failed to open star kdtree from file %s .\n", fn);
 		exit(-1);
 	}
@@ -115,7 +114,7 @@ int main(int argc, char *argv[]) {
 	}
 	free_fn(fn);
 
-	res = kdtree_rangesearch(startree, xyz, radius2);
+	res = kdtree_rangesearch(starkd->tree, xyz, radius2);
 	fprintf(stderr, "Found %i stars within range.\n", res->nres);
 
 	quadlist = il_new(32);
@@ -134,7 +133,7 @@ int main(int argc, char *argv[]) {
 		for (j=0; j<nquads; j++)
 			il_insert_ascending(quadlist, quads[j]);
 		// project the star
-		starpos = res->results + i*3;
+		starpos = res->results.d + i*3;
 		if (project) {
 			star_coords(starpos, xyz, &x, &y);
 		} else {
@@ -195,7 +194,7 @@ int main(int argc, char *argv[]) {
 
 	qidxfile_close(qidx);
 	quadfile_close(qf);
-	kdtree_close(startree);
+	startree_close(starkd);
 
 	return 0;
 }

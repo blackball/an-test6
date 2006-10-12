@@ -26,26 +26,6 @@ CFLAGS += $(CFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 
-OBJ := starutil.o fileutil.o xylist.o rdlist.o mathutil.o \
-	healpix.o idfile.o qidxfile.o \
-	hitsfile.o ioutils.o matchfile.o lsfile.o catalog.o \
-	codefile.o tic.o quadfile.o intmap.o bl.o \
-	dualtree_rangesearch.o dualtree.o dualtree_max.o \
-	hitlist_healpix.o verify.o donuts.o histogram.o \
-	solvedclient.o fieldcheck.o an_catalog.o permutedsort.o \
-	bt.o solvedfile.o starkd.o codekd.o merctree.o
-
-EXECS := whynot certifiable \
-	findquad findstar \
-	matchstats \
-	plotmatch \
-	plotquads matchtordls \
-	tunematch \
-	overlapstats \
-	render_mercator \
-	make-merctree \
-	rawstartree
-
 QFITS_UTILS := fitsgetext subtable tabsort
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
@@ -78,8 +58,18 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar
-# HCAK - codedensity is broken at the moment...
+# HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
+
+# old and miscellaneous executables that aren't part of the pipeline.
+OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
+	plotquads matchtordls tunematch overlapstats render_mercator \
+	make-merctree rawstartree
+
+OLDEXECS_OBJS := starkd.o catalog.o qidxfile.o histogram.o bl.o rdlist.o \
+	xylist.o verify.o hitlist_healpix.o intmap.o tic.o matchfile.o \
+	quadfile.o healpix.o an_catalog.o merctree.o codekd.o idfile.o \
+	$(UTIL_OBJS)
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
 PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
@@ -148,8 +138,8 @@ tags:
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
-$(EXECS) :: %: %.o $(OBJ) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LFLAGS)
+$(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
+		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 2masstofits: $(2MASSOBJ) healpix.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz

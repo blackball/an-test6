@@ -10,8 +10,7 @@
 #include "mathutil.h"
 #include "matchobj.h"
 #include "matchfile.h"
-#include "kdtree_fits_io.h"
-#include "kdtree_io.h"
+#include "starkd.h"
 
 char* OPTIONS = "hi:m:e:n:R:D:r:";
 
@@ -36,7 +35,7 @@ int main(int argc, char *argv[]) {
 	char* indexfname = NULL;
 	int entry = 0;
 	matchfile* mf = NULL;
-	kdtree_t* startree;
+	startree* starkd;
 	char* fn;
 	double xyz[3];
 	double radius2;
@@ -131,14 +130,14 @@ int main(int argc, char *argv[]) {
 
 	fn = mk_streefn(indexfname);
 	fprintf(stderr, "Reading star kdtree from %s ...\n", fn);
-	startree = kdtree_fits_read_file(fn);
-	if (!startree) {
+	starkd = startree_open(fn);
+	if (!starkd) {
 		fprintf(stderr, "Failed to open star kdtree from file %s .\n", fn);
 		exit(-1);
 	}
 	free_fn(fn);
 
-	res = kdtree_rangesearch(startree, xyz, radius2);
+	res = kdtree_rangesearch(starkd->tree, xyz, radius2);
 	fprintf(stderr, "Found %i stars within range.\n", res->nres);
 
 	//starxy = malloc(res->nres * 2 * sizeof(double));
@@ -147,7 +146,7 @@ int main(int argc, char *argv[]) {
 	printf("starxy=[");
 	for (i=0; i<res->nres; i++) {
 		double x, y;
-		star_coords(res->results + i*3, xyz, &x, &y);
+		star_coords(res->results.d + i*3, xyz, &x, &y);
 		/*
 		  starxy[i*2 + 0] = x;
 		  starxy[i*2 + 1] = y;
@@ -182,7 +181,7 @@ int main(int argc, char *argv[]) {
 		printf("dec=%g;\n", dec);
 	}
 
-	kdtree_close(startree);
+	startree_close(starkd);
 	if (mf)
 		matchfile_close(mf);
 

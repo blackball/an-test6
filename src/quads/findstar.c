@@ -5,9 +5,7 @@
 
 #include "starutil.h"
 #include "kdtree.h"
-#include "kdtree_access.h"
-#include "kdtree_io.h"
-#include "kdtree_fits_io.h"
+#include "starkd.h"
 #include "fileutil.h"
 #include "catalog.h"
 
@@ -29,12 +27,11 @@ int main(int argc, char *argv[])
 	uint numstars, whichstar;
 	double xx, yy, zz, ra, dec;
 	kdtree_qres_t *kq = NULL;
-	kdtree_t *starkd = NULL;
+	startree* starkd = NULL;
 	double qp[3];
 	double* qpp = NULL;
 	char scanrez = 1;
 	int ii;
-	int* invperm = NULL;
 
 	if (argc <= 3) {
 		fprintf(stderr, HelpString);
@@ -100,33 +97,12 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "findstar: getting stars from %s\n", treefname);
 	fflush(stderr);
-	starkd = kdtree_fits_read_file(treefname);
+	starkd = startree_open(treefname);
 	free_fn(treefname);
 	if (!starkd)
 		return 2;
-	numstars = starkd->ndata;
-	fprintf(stderr, "%u stars, %d nodes\n", starkd->ndata, starkd->nnodes);
-
-	if (whichset && !cat) {
-		if (starkd->perm) {
-			invperm = malloc(numstars * sizeof(int));
-			kdtree_inverse_permutation(starkd, invperm);
-		}
-	}
-
-	// DEBUG
-	/*
-	  {
-	  int i;
-	  for (i=0; i<starkd->ndata; i++) {
-	  assert(starkd->perm[i] < starkd->ndata);
-	  }
-	  fprintf(stderr, "Checking kdtree...\n");
-	  fflush(stderr);
-	  kdtree_check(starkd);
-	  fprintf(stderr, "done.\n");
-	  }
-	*/
+	numstars = startree_N(starkd);
+	fprintf(stderr, "%u stars\n", numstars);
 
 	while (!feof(stdin) && scanrez) {
 		if (whichset) {
@@ -138,9 +114,10 @@ int main(int argc, char *argv[])
 				}
 				if (cat)
 					qpp = catalog_get_star(cat, whichstar);
-				else
-					qpp = starkd->data + starkd->ndim *
-						(invperm ? invperm[whichstar] : whichstar);
+				else {
+					startree_get(starkd, whichstar, qp);
+					qpp = qp;
+				}
 			}
 		} else if (radecset) {
 			if (read_dtol) 
@@ -168,17 +145,19 @@ int main(int argc, char *argv[])
 		}
 
 		fprintf(stderr, "findstar:: Got info; searching\n");
-		kq = kdtree_rangesearch(starkd, qpp, dtol*dtol); 
+		kq = kdtree_rangesearch(starkd->tree, qpp, dtol*dtol); 
 		if (!kq) continue;
 		fprintf(stderr, "findstar:: got %d results\n", kq->nres);
 
 		fprintf(stdout, "{\n");
 		for (ii = 0; ii < kq->nres; ii++) {
+			double rx, ry, rz;
+			rx = kq->results.d[3*ii];
+			ry = kq->results.d[3*ii + 1];
+			rz = kq->results.d[3*ii + 2];
 			fprintf(stdout, "%u: ((%lf, %lf, %lf), (%lf, %lf)),\n",
-				kq->inds[ii],
-                kq->results[3*ii], kq->results[3*ii+1], kq->results[3*ii+2],
-				rad2deg(xy2ra(kq->results[3*ii], kq->results[3*ii+1])),
-				rad2deg(z2dec(kq->results[3*ii+2])));
+					kq->inds[ii], rx, ry, rz,
+					rad2deg(xy2ra(rx, ry)), rad2deg(z2dec(rz)));
 		}
 		fprintf(stdout, "}\n");
 		fflush(stdout);
@@ -189,8 +168,8 @@ int main(int argc, char *argv[])
 
 	if (cat)
 		catalog_close(cat);
-
-    kdtree_close(starkd);
+	else
+		startree_close(starkd);
 
 	return 0;
 }

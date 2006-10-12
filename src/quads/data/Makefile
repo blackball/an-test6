@@ -140,6 +140,8 @@ all: solve1
 define INDEX_template_A
 .PHONY: index$(1)
 index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+.PHONY: index
+index: index$(1)
 endef
 $(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
 

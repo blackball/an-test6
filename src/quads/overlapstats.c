@@ -10,8 +10,7 @@
 #include "mathutil.h"
 #include "matchfile.h"
 #include "kdtree.h"
-#include "kdtree_io.h"
-#include "kdtree_fits_io.h"
+#include "starkd.h"
 #include "xylist.h"
 #include "verify.h"
 
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
 	char* xname = NULL;
 	char* yname = NULL;
 	matchfile* matchin;
-	kdtree_t* startree;
+	startree* starkd;
 	xylist* xyls;
 	double overlap_rad = 0.0;
 	double overlap_d2;
@@ -105,13 +104,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (starfn) {
-		startree = kdtree_fits_read_file(starfn);
-		if (!startree) {
+		starkd = startree_open(starfn);
+		if (!starkd) {
 			fprintf(stderr, "Failed to open star kdtree %s.\n", starfn);
 			exit(-1);
 		}
 	} else
-		startree = NULL;
+		starkd = NULL;
 
 	if (xylsfn) {
 		xyls = xylist_open(xylsfn);
@@ -149,11 +148,11 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (startemplate && (mo->healpix != lasthp)) {
-			if (startree)
-				kdtree_close(startree);
+			if (starkd)
+				startree_close(starkd);
 			sprintf(fn, startemplate, mo->healpix);
-			startree = kdtree_fits_read_file(fn);
-			if (!startree) {
+			starkd = startree_open(fn);
+			if (!starkd) {
 				fprintf(stderr, "Failed to open star kdtree from file %s.\n", fn);
 				exit(-1);
 			}
@@ -186,7 +185,7 @@ int main(int argc, char *argv[]) {
 
 		dists2 = dl_new(256);
 
-		verify_hit(startree, mo, fielduv, NF, overlap_d2,
+		verify_hit(starkd->tree, mo, fielduv, NF, overlap_d2,
 				   &match, &unmatch, &conflict, NULL, dists2);
 		printf("Overlap: %g\n", mo->overlap);
 
@@ -203,7 +202,7 @@ int main(int argc, char *argv[]) {
 	if (xyls)
 		xylist_close(xyls);
 	matchfile_close(matchin);
-	if (startree)
-		kdtree_close(startree);
+	if (starkd)
+		startree_close(starkd);
 	return 0;
 }

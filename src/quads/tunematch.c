@@ -481,7 +481,7 @@ int main(int argc, char *argv[]) {
 		fieldxyz = realloc(fieldxyz, NF * 3 * sizeof(double));
 
 		NI = res->nres;
-		indxyz = res->results;
+		indxyz = res->results.d;
 		printf("NI=%i\n", NI);
 
 		// 5 sigmas

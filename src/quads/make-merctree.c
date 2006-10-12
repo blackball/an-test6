@@ -184,18 +184,15 @@ int main(int argc, char** args) {
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "Creating kdtree...\n");
-	{
-		int levels;
-		levels = kdtree_compute_levels(N, Nleaf);
-		mt->tree = kdtree_build(xy, N, 2, levels + 1);
-		if (!mt->tree) {
-			fprintf(stderr, "Failed to build kdtree.\n");
-			exit(-1);
-		}
 
-		fprintf(stderr, "Built kdtree with %i levels, %i nodes\n",
-				levels, mt->tree->nnodes);
+	mt->tree = kdtree_build(NULL, xy, N, 2, Nleaf, KDTT_DOUBLE,
+							KD_BUILD_BBOX | KD_BUILD_SPLIT | KD_BUILD_SPLITDIM);
+	if (!mt->tree) {
+		fprintf(stderr, "Failed to build kdtree.\n");
+		exit(-1);
 	}
+
+	fprintf(stderr, "Built kdtree with %i nodes\n", mt->tree->nnodes);
 
 
 	// permute the fluxes to match the kdtree.

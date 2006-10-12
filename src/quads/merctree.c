@@ -3,10 +3,7 @@
 #include <assert.h>
 
 #include "merctree.h"
-#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
-#include "kdtree_access.h"
-#include "kdtree_macros.h"
 #include "starutil.h"
 
 static merctree* merctree_alloc() {
@@ -36,12 +33,6 @@ merctree* merctree_open(char* fn) {
 	if (!s)
 		return s;
 
-	s->header = qfits_header_read(fn);
-	if (!s->header) {
-		fprintf(stderr, "Failed to read FITS header from merc kdtree file %s.\n", fn);
-		goto bailout;
-	}
-
 	memset(extras, 0, sizeof(extras));
 
 	stats->name = "merc_stats";
@@ -56,12 +47,11 @@ merctree* merctree_open(char* fn) {
 	fluxes->required = 1;
 	fluxes->compute_tablesize = merctree_flux_tablesize;
 
-	s->tree = kdtree_fits_read_file_extras(fn, extras, 2);
+	s->tree = kdtree_fits_read_extras(fn, &s->header, extras, 2);
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read merc kdtree from file %s\n", fn);
 		goto bailout;
 	}
-
 	s->stats = stats->ptr;
 	s->flux  = fluxes->ptr;
 
@@ -69,7 +59,7 @@ merctree* merctree_open(char* fn) {
 
  bailout:
 	if (s->tree)
-		kdtree_close(s->tree);
+		kdtree_fits_close(s->tree);
  	if (s->header)
 		qfits_header_destroy(s->header);
 	free(s);
@@ -83,14 +73,16 @@ int merctree_close(merctree* s) {
  	if (s->header)
 		qfits_header_destroy(s->header);
 	if (s->tree)
-		kdtree_close(s->tree);
+		kdtree_fits_close(s->tree);
 	free(s);
 	return 0;
 }
 
-static int Ndata(merctree* s) {
-	return s->tree->ndata;
-}
+/*
+  static int Ndata(merctree* s) {
+  return s->tree->ndata;
+  }
+*/
 
 void merctree_compute_stats(merctree* m) {
 	int i;
@@ -101,20 +93,22 @@ void merctree_compute_stats(merctree* m) {
 		return;
 	}
 	for (i=kd->nnodes; i>=0; i--) {
-		kdtree_node_t* node = NODE(i);
 		merc_flux* stats = &(m->stats[i].flux);
-		if (ISLEAF(i)) {
+		if (KD_IS_LEAF(m->tree, i)) {
 			int j;
+			int L, R;
 			stats->rflux = stats->bflux = stats->nflux = 0.0;
-			for (j=node->l; j<=node->r; j++) {
+			L = kdtree_left(m->tree, i);
+			R = kdtree_right(m->tree, i);
+			for (j=L; j<=R; j++) {
 				stats->rflux += m->flux[j].rflux;
 				stats->bflux += m->flux[j].bflux;
 				stats->nflux += m->flux[j].nflux;
 			}
 		} else {
 			merc_flux *flux1, *flux2;
-			flux1 = m->flux + CHILD_INDEX_NEG(i);
-			flux2 = m->flux + CHILD_INDEX_POS(i);
+			flux1 = m->flux + KD_CHILD_LEFT(i);
+			flux2 = m->flux + KD_CHILD_RIGHT(i);
 			stats->rflux = flux1->rflux + flux2->rflux;
 			stats->bflux = flux1->bflux + flux2->bflux;
 			stats->nflux = flux1->nflux + flux2->nflux;
@@ -152,6 +146,6 @@ int merctree_write_to_file(merctree* s, char* fn) {
 	fluxes->ptr = s->flux;
 	fluxes->found = 1;
 
-	return kdtree_fits_write_file_extras(s->tree, fn, s->header, extras, 2);
+	return kdtree_fits_write_extras(s->tree, fn, s->header, extras, 2);
 }
 
