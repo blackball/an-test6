@@ -120,8 +120,8 @@ PNGTOPNM		:= pngtopnm
 
 % s=4;
 % Nside = sqrt((4*pi) / ((s/60*pi/180).^2) / 12)
-TEMP_NOQUADS := $(TEMP_DIR)tmp.noquads.rdls.fits
-NOQUADS      := $(INDEX_DIR)tmp.noquads.rdls.fits
+TEMP_NOQUADS := $(TEMP_DIR)tmp.noquads.rd.fits
+NOQUADS      := $(INDEX_DIR)noquads
 
 STARTREE_OPTIONS := -R $(CUT_NLEAF) -b -s -S
 CODETREE_OPTS := -R 15 -b -s -S
@@ -234,9 +234,10 @@ $(PHASE2)$(1).ckdt.fits: $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-codetree-$(1)-done
 
 $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
+	$(MKDIR) $(INDEX_DIR)
 	$(TOUCH) timestamp-hpquads-$(1)-start
 	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
-	$(MV) $(TEMP_NOQUADS) $(NOQUADS)
+	$(MV) $(TEMP_NOQUADS) $(NOQUADS)$(1).rd.fits
 	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
