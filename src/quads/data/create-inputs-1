@@ -50,7 +50,8 @@ MIN_NINFIELD=50
 #FIELD_CHUNKS=35
 FIELD_CHUNKS=1
 
-flds="0/9999"
+#flds="0/9999"
+flds="0/2617"
 
 filenum=-1
 
