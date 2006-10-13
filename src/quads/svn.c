@@ -12,7 +12,7 @@ const char* svn_date() {
 	   subversion! */
 	/* That's not quite right - it seems you actually have to modify 
 		the file.  Like this. Or this. Ok, this is getting silly. Very.
-		Nuts, really. */
+		Nuts, really. Absurd. */
 	const char* datestr = "$Date$";
 	// (I want to trim off the first seven and last two characters.
 	strncpy(date_rtnval, datestr + 7, strlen(datestr) - 9);
