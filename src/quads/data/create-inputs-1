@@ -6,7 +6,7 @@ IBASE=.
 
 HPORDER="2 1 6 4 5 7 0 3 8 11 10 9"
 
-INDEX=$IBASE/sdss-22/sdss-22-%02i
+INDEX=$IBASE/sdss-1/sdss-1-%02i
 #FIELD_TEMPLATE=$FBASE/sdssfield%02i-homer.xy
 #FIELD_TEMPLATE=$FBASE/sdssfield%02i.xy
 FIELD_TEMPLATE=$FBASE/sdssfield%02i-hp02.xy
