@@ -201,6 +201,7 @@ int main(int argc, char** args) {
 		printf("Read %i entries.\n", nentries);
 	}
 
+	printf("Finishing up...\n");
 	for (i=0; i<HP; i++) {
 		if (!cats[i])
 			continue;
@@ -211,6 +212,7 @@ int main(int argc, char** args) {
 		}
 	}
 	free(cats);
+	printf("Done!\n");
 
 	return 0;
 }
