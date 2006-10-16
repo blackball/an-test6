@@ -148,16 +148,16 @@ all: solve1
 # We used to do this with Make's "define ... endef" and "eval(call(...))",
 # but this has different bugs in various versions of GNU make - 3.80 and
 # 3.81 are inconsistent, for example.
-makefile.%: makefile.%-template
+makefile.%-all: makefile.%-template
 	-rm -f /tmp/tmp.$@
 	for x in $(NUMS2); do \
 		$(SED) s/$$\(1\)/$$x/g $< >> /tmp/tmp.$@; \
 	done
 	mv /tmp/tmp.$@ $@
 
-include makefile.index
-include makefile.cut
-include makefile.prospectus
+include makefile.index-all
+include makefile.cut-all
+include makefile.prospectus-all
 
 $(USNOB_PRESENT):
 	$(MAKE) -f makefile.usnob $@
@@ -186,69 +186,9 @@ $(AN_CATALOG_PRESENT):
 tycho2_download:
 	$(MAKE) -f makefile.tycho2 $@
 
-INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
+include makefile.prospectus
 
-%.png: %.pgm
-	$(PNMTOPNG) $< > $@
-
-%.png: %.eps
-	$(EPSTOPNG) $< $@
-
-SUMPLOTS_EPS := cp_2dhists_sum.eps cp_2ddhists_sum.eps \
-	cp_1dhists_sum.eps cp_1ddhists_sum.eps \
-	cp_xy_sum.eps cp_dxy_sum.eps
-$(SUMPLOTS_EPS): $(addsuffix .m, $(addprefix proj, $(NUMS)))
-	echo "$(MATLAB_INIT); fprintf('\nGenerating sum plots...\n'); sumprojs; print_plots=1; plot_suffix='_sum'; batch=1; codeprojections; quit" > /tmp/tmpscript$(1).m
-	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
-
-SUMPLOTS_PNG := $(SUMPLOTS_EPS:.eps=.png)
-SUMPLOTS_SMALL := $(SUMPLOTS_PNG:.png=_small.png)
-
-.PHONY: prospectus_all
-prospectus_all: quadsall.png quadsall_small.png qps_sum.png qps_sum_small.png \
-	$(SUMPLOTS_PNG) $(SUMPLOTS_SMALL)
-
-.PHONY: prospectus
-prospectus: prospectus.html prospectus_all $(addprefix prospectus, $(NUMS))
-
-prospectus.html: prospectus.html.in
-	genprospectus $(INDEX) prospectus.html.in > $@
-
-quadsall.pgm quadsall_small.pgm: \
-	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
-	$(addsuffix .skdt.fits, $(addprefix $(INDEX), $(NUMS)))
-	$(QUADLOCATIONS) $(QUADLOC_OPTS) $(addprefix $(INDEX), $(NUMS)) \
-		-o quadsall_small.pgm -o quadsall.pgm
-
-qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
-	echo "$(MATLAB_INIT); qpssum=[]; for x=0:11, " \
-		"eval(sprintf('qps%02i', x));" \
-		"s=eval(sprintf('$(INDEX_UNDERSCORE)%02i', x));" \
-		"newsum=zeros(1,max(length(qpssum), length(s)));" \
-		"if length(qpssum), newsum(1:length(qpssum))=newsum(1:length(qpssum)) + qpssum; end,"\
-		"newsum(1:length(s))=newsum(1:length(s)) + s;"\
-		"qpssum = newsum;" \
-		"end," \
-		"bar([0:length(qpssum)-1], qpssum, 1);" \
-		"print('-depsc', '$@'); quit" > /tmp/tmpscript.m
-	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
-
-$(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
-	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
-
-#define HOMER_template
-#homer$(1): $(SDSS_HOMER)sdssfield$(1)-homer.xy.fits
-#homer: homer$(1)
-#$(SDSS_HOMER)sdssfield$(1)-homer.xy.fits: $(SDSS_FIELDS)sdssfield$(1).xy.fits
-#	-$(MKDIR) $(SDSS_HOMER)
-#	$(HOMER) -i $$< -o $$@.tmp $(HOMER_OPTS)
-#	$(MV) $$@.tmp $$@
-#endef
-#FN := 01 02 03 04 05 06 07 08 09 10 \
-#	  11 12 13 14 15 16 17 18 19 20 \
-#	  21 22 23 24 25 26 27 28 29 30 \
-#	  31 32 33 34 35
-#$(foreach num,$(FN),$(eval $(call HOMER_template,$(num))))
+#include makefile.homer
 
 solve1: index02
 	-$(MKDIR) input match done solved out err
