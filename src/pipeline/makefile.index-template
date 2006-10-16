@@ -1,0 +1,48 @@
+.PHONY: index$(1)
+index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
+.PHONY: index
+index: index$(1)
+
+$(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
+		$(PHASE2)$(1).ckdt.fits $(PHASE2)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-quads-$(1)-start
+	$(UNPERMUTE_QUADS) -f $(PHASE2)$(1) -o $(TEMPINDEX)$(1)
+	$(MV) $(TEMPINDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
+	$(MV) $(TEMPINDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-quads-$(1)-done
+
+ifeq ($(IDFILES), yes)
+$(INDEX)$(1).skdt.fits $(PHASE2)$(1).quad.fits $(INDEX)$(1).id.fits : \
+		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(PHASE1)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-start
+	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(PHASE1)$(1) -o $(TEMPINDEX)$(1)
+	$(MV) $(TEMPINDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	$(MV) $(TEMPINDEX)$(1).id.fits   $(INDEX)$(1).id.fits
+	$(MV) $(TEMPINDEX)$(1).quad.fits $(PHASE2)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-done
+else
+$(INDEX)$(1).skdt.fits $(PHASE2)$(1).quad.fits : \
+		$(CATALOG)$(1).skdt.fits $(PHASE1)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-start
+	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(PHASE1)$(1) -o $(TEMPINDEX)$(1)
+	$(MV) $(TEMPINDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
+	$(MV) $(TEMPINDEX)$(1).quad.fits $(PHASE2)$(1).quad.fits
+	$(TOUCH) timestamp-unpermute-stars-$(1)-done
+endif
+
+$(PHASE2)$(1).ckdt.fits: $(PHASE1)$(1).code.fits
+	$(TOUCH) timestamp-codetree-$(1)-start
+	$(CODETREE) $(CODETREE_OPTS) -f $(PHASE1)$(1) -o $(TEMP2)$(1)
+	$(MV) $(TEMP2)$(1).ckdt.fits $(PHASE2)$(1).ckdt.fits
+	$(TOUCH) timestamp-codetree-$(1)-done
+
+$(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
+	$(MKDIR) $(INDEX_DIR)
+	$(TOUCH) timestamp-hpquads-$(1)-start
+	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
+	$(MV) $(TEMP_NOQUADS) $(NOQUADS)$(1).rd.fits
+	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
+	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
+	$(TOUCH) timestamp-hpquads-$(1)-done
+
+
