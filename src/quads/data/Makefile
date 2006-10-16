@@ -58,7 +58,6 @@ CUT_AN_SWEEPS := 12
 CUT_AN_DEDUP  := 8
 CUT_AN_CUT    := -R
 CUT_NLEAF     := 15
-CUT_DONT_REBUILD_BASE := $(CUT_DIR)cut-dont-rebuild-
 
 INDEX_ID   := 1
 INDEX_DIR  := $(INAME)-$(INDEX_ID)/
@@ -147,11 +146,12 @@ include makefile.index-all
 include makefile.cut-all
 include makefile.prospectus-all
 
+# According to http://www.gnu.org/software/make/manual/make.html#Chained-Rules
+# this should cause make to not try to recreate the ".objs.fits" file just
+# because it doesn't exist.
+# We want this for the case where people download the skdt.
 .SECONDARY: $(CUT_OBJS)
-.SECONDARY: $(CUT_DONT_REBUILD)
 .SECONDARY: $(AN_CATALOG_PRESENT)
-$(CUT_DONT_REBUILD): $(CUT_OBJS)
-	$(TOUCH) $@
 
 # The USNO-B and Astrometry.net catalogs contain a large number of files.
 # It takes a long time for Make to generate the filenames, check the
