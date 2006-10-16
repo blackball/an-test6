@@ -8,19 +8,6 @@ export
 # don't delete "intermediate" files.
 .SECONDARY:
 
-# Older versions of GNU Make have trouble with "define ... endef"
-comma := ,
-empty :=
-VER := $(shell make --version | grep "GNU Make version" | awk '{print $$4}')
-ifeq ($(VER), $(empty))
-  VER := $(shell make --version | grep "GNU Make" | awk '{print $$3}')
-endif
-VER:=$(subst $(comma),$(empty),$(VER))
-$(warning make version $(VER))
-ifeq ($(VER), 3.79.1)
-  $(error You are running a stupid version of Make.  Try version 3.81)
-endif
-
 TYCHO2_DIR := tycho2/
                     # (note, trailing '/' required!)
 TYCHO2_FILES := catalog.dat suppl_1.dat
