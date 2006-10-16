@@ -1,5 +1,3 @@
-#define PROSPECTUS_template
-
 $(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
 	$(TOUCH) timestamp-quadidx-$(1)-start
 	$(QUADIDX) -f $(INDEX)$(1)
@@ -54,5 +52,3 @@ qps$(1).m: $(INDEX)$(1).qidx.fits
 %$(1)_small.png: %$(1).png
 	$(PNGTOPNM) $$< | pamscale -linear 0.2 | pnmtopng > $$@
 
-#endef
-#$(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))

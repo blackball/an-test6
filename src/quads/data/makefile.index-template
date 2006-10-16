@@ -1,14 +1,7 @@
-#define INDEX_template_A
-
 .PHONY: index$(1)
 index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
 .PHONY: index
 index: index$(1)
-
-#endef
-#$(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
-
-#define INDEX_template_B
 
 $(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
 		$(PHASE2)$(1).ckdt.fits $(PHASE2)$(1).quad.fits
@@ -52,6 +45,4 @@ $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) timestamp-hpquads-$(1)-done
 
-#endef
-#$(foreach num,$(NUMS2),$(eval $(call INDEX_template_B,$(num))))
 

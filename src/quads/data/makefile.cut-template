@@ -1,5 +1,3 @@
-#define CUT_template
-
 .PHONY: cut$(1)
 cut$(1): $(CUT_BASE)$(1).skdt.fits
 
@@ -16,7 +14,4 @@ $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
 		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
 		`$(HPOWNED) -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
 	$(TOUCH) timestamp-cut-an-$(1)-done
-
-#endef
-#$(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
 
