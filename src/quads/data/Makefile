@@ -8,6 +8,7 @@ export
 # don't delete "intermediate" files.
 .SECONDARY:
 
+# Older versions of GNU Make have trouble with "define ... endef"
 comma := ,
 empty :=
 VER := $(shell make --version | grep "GNU Make version" | awk '{print $$4}')
@@ -47,6 +48,8 @@ AN_TEMPLATE := $(AN_CAT_DIR)an_hp%03i.fits
 AN_NSIDE  := 9
 AN_CATALOG_PRESENT := $(AN_CAT_DIR)an-catalog-present
 
+NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
+
 # name of this index.
 INAME         := sdss
 
@@ -55,7 +58,7 @@ IDFILES       := no
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
 CUT_BASE      := $(CUT_DIR)an-$(INAME)-
-CUT_PREFIXES  := $(addprefix $(CUT_PREFIX),$(NUMS2))
+CUT_PREFIXES  := $(addprefix $(CUT_BASE),$(NUMS2))
 CUT_OBJS      := $(addsuffix .objs.fits,$(CUT_PREFIXES))
 CUT_IDS       := $(addsuffix .id.fits,$(CUT_PREFIXES))
 CUT_SKDTS     := $(addsuffix .skdt.fits,$(CUT_PREFIXES))
@@ -87,6 +90,7 @@ WGET            := wget --continue
 MKDIR           := mkdir -p
 TOUCH           := touch
 MV              := mv
+SED             := sed
 
 AN_DIR          := ../
 
@@ -130,20 +134,30 @@ MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
 MATLAB_INIT   := addpath('~/quads')
 
-NUMS2 := 00 01 02 03 04 05 06 07 08 09 10 11
 INDEXES := $(addprefix index,$(NUMS2))
 
 .PHONY: all
 all: solve1
-#$(INDEXES)
 
-define INDEX_template_A
-.PHONY: index$(1)
-index$(1) : $(addprefix $(INDEX)$(1), .quad.fits .ckdt.fits .skdt.fits)
-.PHONY: index
-index: index$(1)
-endef
-$(foreach num,$(NUMS2),$(eval $(call INDEX_template_A,$(num))))
+# A number of our Makefile rules are duplicated for each of the 12
+# healpixes.  In order to avoid duplicating code, we put the rules in
+# "template" files like "makefile.index-template".  This little script
+# substitutes $(1) into the two-digit healpix number: $(1) -> 04, for
+# example.  Note that it uses "sed", so it doesn't know anything about
+# makefile syntax, so will ruthlessly substitute any "$(1)" it runs across.
+# We used to do this with Make's "define ... endef" and "eval(call(...))",
+# but this has different bugs in various versions of GNU make - 3.80 and
+# 3.81 are inconsistent, for example.
+makefile.%: makefile.%-template
+	-rm -f /tmp/tmp.$@
+	for x in $(NUMS2); do \
+		$(SED) s/$$\(1\)/$$x/g $< >> /tmp/tmp.$@; \
+	done
+	mv /tmp/tmp.$@ $@
+
+include makefile.index
+include makefile.cut
+include makefile.prospectus
 
 $(USNOB_PRESENT):
 	$(MAKE) -f makefile.usnob $@
@@ -172,133 +186,7 @@ $(AN_CATALOG_PRESENT):
 tycho2_download:
 	$(MAKE) -f makefile.tycho2 $@
 
-define CUT_template
-.PHONY: cut$(1)
-$(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
-	$(MKDIR) $(CUT_DIR)
-	$(TOUCH) timestamp-startree-$(1)-start
-	$(STARTREE) -f $(CUT_BASE)$(1) $(STARTREE_OPTIONS)
-	$(TOUCH) timestamp-startree-$(1)-done
-
-cut$(1): $(CUT_BASE)$(1).objs.fits
-
-$(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
-	$(MKDIR) $(CUT_DIR)
-	$(TOUCH) timestamp-cut-an-$(1)-start
-	$(CUT_AN) -H $(1) -o $(CUT_BASE)$(1).objs.fits -i $(CUT_BASE)$(1).id.fits \
-		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
-		`$(HPOWNED) -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
-	$(TOUCH) timestamp-cut-an-$(1)-done
-endef
-$(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
-
-define INDEX_template_B
-$(INDEX)$(1).quad.fits $(INDEX)$(1).ckdt.fits : \
-		$(PHASE2)$(1).ckdt.fits $(PHASE2)$(1).quad.fits
-	$(TOUCH) timestamp-unpermute-quads-$(1)-start
-	$(UNPERMUTE_QUADS) -f $(PHASE2)$(1) -o $(TEMPINDEX)$(1)
-	$(MV) $(TEMPINDEX)$(1).ckdt.fits $(INDEX)$(1).ckdt.fits
-	$(MV) $(TEMPINDEX)$(1).quad.fits $(INDEX)$(1).quad.fits
-	$(TOUCH) timestamp-unpermute-quads-$(1)-done
-
-ifeq ($(IDFILES), yes)
-$(INDEX)$(1).skdt.fits $(PHASE2)$(1).quad.fits $(INDEX)$(1).id.fits : \
-		$(CATALOG)$(1).skdt.fits $(CATALOG)$(1).id.fits $(PHASE1)$(1).quad.fits
-	$(TOUCH) timestamp-unpermute-stars-$(1)-start
-	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(PHASE1)$(1) -o $(TEMPINDEX)$(1)
-	$(MV) $(TEMPINDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
-	$(MV) $(TEMPINDEX)$(1).id.fits   $(INDEX)$(1).id.fits
-	$(MV) $(TEMPINDEX)$(1).quad.fits $(PHASE2)$(1).quad.fits
-	$(TOUCH) timestamp-unpermute-stars-$(1)-done
-else
-$(INDEX)$(1).skdt.fits $(PHASE2)$(1).quad.fits : \
-		$(CATALOG)$(1).skdt.fits $(PHASE1)$(1).quad.fits
-	$(TOUCH) timestamp-unpermute-stars-$(1)-start
-	$(UNPERMUTE_STARS) -f $(CATALOG)$(1) -q $(PHASE1)$(1) -o $(TEMPINDEX)$(1)
-	$(MV) $(TEMPINDEX)$(1).skdt.fits $(INDEX)$(1).skdt.fits
-	$(MV) $(TEMPINDEX)$(1).quad.fits $(PHASE2)$(1).quad.fits
-	$(TOUCH) timestamp-unpermute-stars-$(1)-done
-endif
-
-$(PHASE2)$(1).ckdt.fits: $(PHASE1)$(1).code.fits
-	$(TOUCH) timestamp-codetree-$(1)-start
-	$(CODETREE) $(CODETREE_OPTS) -f $(PHASE1)$(1) -o $(TEMP2)$(1)
-	$(MV) $(TEMP2)$(1).ckdt.fits $(PHASE2)$(1).ckdt.fits
-	$(TOUCH) timestamp-codetree-$(1)-done
-
-$(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
-	$(MKDIR) $(INDEX_DIR)
-	$(TOUCH) timestamp-hpquads-$(1)-start
-	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
-	$(MV) $(TEMP_NOQUADS) $(NOQUADS)$(1).rd.fits
-	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
-	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
-	$(TOUCH) timestamp-hpquads-$(1)-done
-
-endef
-
 INDEX_UNDERSCORE := $(shell echo $(INDEX) | sed s/-/_/)
-
-$(foreach num,$(NUMS2),$(eval $(call INDEX_template_B,$(num))))
-
-define PROSPECTUS_template
-$(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
-	$(TOUCH) timestamp-quadidx-$(1)-start
-	$(QUADIDX) -f $(INDEX)$(1)
-	$(TOUCH) timestamp-quadidx-$(1)-done
-
-.PHONY: prospectus$(1)
-prospectus$(1): ana$(1) plot$(1) dplot$(1) qps$(1)
-
-quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
-	$(TOUCH) timestamp-quadlocations-$(1)-start
-	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o quad$(1)_small.pgm -o quad$(1).pgm $(INDEX)$(1)
-	$(TOUCH) timestamp-quadlocations-$(1)-done
-
-proj$(1).m: $(INDEX)$(1).ckdt.fits
-	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
-
-.PHONY: ana$(1)
-ana$(1): quad$(1).png quad$(1)_small.png proj$(1).m
-
-.PHONY: plot$(1)
-plot$(1): cp_2dhists$(1).png cp_2dhists$(1)_small.png \
-	cp_1dhists$(1).png cp_1dhists$(1)_small.png \
-	cp_xy$(1).png cp_xy$(1)_small.png \
-
-.PHONY: dplot$(1)
-dplot$(1): cp_2ddhists$(1).png cp_2ddhists$(1)_small.png \
-	cp_1ddhists$(1).png cp_1ddhists$(1)_small.png \
-	cp_dxy$(1).png cp_dxy$(1)_small.png
-
-cp_2dhists$(1).eps cp_2ddhists$(1).eps cp_1dhists$(1).eps cp_xy$(1).eps: proj$(1).m
-	echo "$(MATLAB_INIT); fprintf('\nGenerating plots for $(1)...\n'); proj$(1); " \
-		"print_plots=1; plot_suffix='$(1)'; batch=1; codeprojections; quit" \
-		> /tmp/tmpscript$(1).m
-	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript$(1).m
-
-.PHONY: qps$(1)
-qps$(1): qps_$(1).png qps_$(1)_small.png
-
-qps_$(1).eps: qps$(1).m
-	echo "$(MATLAB_INIT);" \
-		"fprintf('\nGenerating quads per star histograms...\n');" \
-		"qps$(1);" \
-		"x=$(INDEX_UNDERSCORE)$(1);" \
-		"bar([0:length(x)-1],x,1);" \
-		"print('-depsc', '$$@');" \
-		"quit" > /tmp/tmpscript.m
-	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
-
-qps$(1).m: $(INDEX)$(1).qidx.fits
-	$(QUADSPERSTAR) $(INDEX)$(1) | sed s/-/_/ > $$@
-
-%$(1)_small.png: %$(1).png
-	$(PNGTOPNM) $$< | pamscale -linear 0.2 | pnmtopng > $$@
-
-endef
-
-$(foreach num,$(NUMS2),$(eval $(call PROSPECTUS_template,$(num))))
 
 %.png: %.pgm
 	$(PNMTOPNG) $< > $@
@@ -348,20 +236,19 @@ qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 $(SUMPLOTS_SMALL) $(QPS_SMALL) qps_sum_small.png :: %_small.png: %.png
 	pngtopnm -- $< | pamscale -linear 0.2 | pnmtopng > $@
 
-define HOMER_template
-homer$(1): $(SDSS_HOMER)sdssfield$(1)-homer.xy.fits
-homer: homer$(1)
-$(SDSS_HOMER)sdssfield$(1)-homer.xy.fits: $(SDSS_FIELDS)sdssfield$(1).xy.fits
-	-$(MKDIR) $(SDSS_HOMER)
-	$(HOMER) -i $$< -o $$@.tmp $(HOMER_OPTS)
-	$(MV) $$@.tmp $$@
-endef
-
-FN := 01 02 03 04 05 06 07 08 09 10 \
-	  11 12 13 14 15 16 17 18 19 20 \
-	  21 22 23 24 25 26 27 28 29 30 \
-	  31 32 33 34 35
-$(foreach num,$(FN),$(eval $(call HOMER_template,$(num))))
+#define HOMER_template
+#homer$(1): $(SDSS_HOMER)sdssfield$(1)-homer.xy.fits
+#homer: homer$(1)
+#$(SDSS_HOMER)sdssfield$(1)-homer.xy.fits: $(SDSS_FIELDS)sdssfield$(1).xy.fits
+#	-$(MKDIR) $(SDSS_HOMER)
+#	$(HOMER) -i $$< -o $$@.tmp $(HOMER_OPTS)
+#	$(MV) $$@.tmp $$@
+#endef
+#FN := 01 02 03 04 05 06 07 08 09 10 \
+#	  11 12 13 14 15 16 17 18 19 20 \
+#	  21 22 23 24 25 26 27 28 29 30 \
+#	  31 32 33 34 35
+#$(foreach num,$(FN),$(eval $(call HOMER_template,$(num))))
 
 solve1: index02
 	-$(MKDIR) input match done solved out err

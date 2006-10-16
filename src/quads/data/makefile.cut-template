@@ -1,0 +1,22 @@
+#define CUT_template
+
+.PHONY: cut$(1)
+cut$(1): $(CUT_BASE)$(1).skdt.fits
+
+$(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
+	$(MKDIR) $(CUT_DIR)
+	$(TOUCH) timestamp-startree-$(1)-start
+	$(STARTREE) -f $(CUT_BASE)$(1) $(STARTREE_OPTIONS)
+	$(TOUCH) timestamp-startree-$(1)-done
+
+$(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
+	$(MKDIR) $(CUT_DIR)
+	$(TOUCH) timestamp-cut-an-$(1)-start
+	$(CUT_AN) -H $(1) -o $(CUT_BASE)$(1).objs.fits -i $(CUT_BASE)$(1).id.fits \
+		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
+		`$(HPOWNED) -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
+	$(TOUCH) timestamp-cut-an-$(1)-done
+
+#endef
+#$(foreach num,$(NUMS2),$(eval $(call CUT_template,$(num))))
+
