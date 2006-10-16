@@ -10,6 +10,7 @@ graph indexpipeline {
 	objs  [ label="Catalog\n(.objs)" ];
 
 	node [ shape=ellipse ];
+	cut_an [ label="cut-an" ];
 	ancat -- cut_an
 	cut_an -- objs
 	cut_an -- id
@@ -19,11 +20,5 @@ graph indexpipeline {
 
 // render with:
 //   dot -Tps2 -o pipeline0.eps pipeline0.dot
-//   epstopng pipeline.eps
-
-// to get bounding box:
-//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=bbox pipeline.ps
-// to render as png:
-//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=png16m -sOutputFile=pipeline.png -g850x162 pipeline.ps
-// (where 850x162 is determined by the output of the bounding-box stage)
+//   epstopng pipeline0.eps
 

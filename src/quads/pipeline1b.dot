@@ -22,12 +22,15 @@ graph P {
 
 	node [ shape=ellipse ];
 
-	skdt -- unpermute_stars2 -- skdt2
-	id   -- unpermute_stars2 -- id2
-	quad -- unpermute_stars2 -- quad2
+	unperm_stars [ label="unpermute-stars" ];
+	unperm_quads [ label="unpermute-quads" ];
 
-	quad2 -- unpermute_quads -- quad3
-	ckdt  -- unpermute_quads -- ckdt2
+	skdt -- unperm_stars -- skdt2
+	id   -- unperm_stars -- id2 [ style=dashed ];
+	quad -- unperm_stars -- quad2
+
+	quad2 -- unperm_quads -- quad3
+	ckdt  -- unperm_quads -- ckdt2
 
 	edge [ style=dashed ];
 	quad3 -- quadidx -- qidx

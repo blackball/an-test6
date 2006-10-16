@@ -23,11 +23,13 @@ graph P {
 	qidx [ label="Quad index\n(.qidx)" ];
 	quad2  [ label="Quad stars (2)\n(.quad)" ];
 
-
 	node [ shape=ellipse ];
+
+	cut_an [ label="cut-an" ];
+
 	ancat -- cut_an
 	cut_an -- objs
-	cut_an -- id
+	cut_an -- id [ style=dashed ];
 	objs -- startree -- skdt
 
 	skdt -- hpquads
@@ -35,17 +37,22 @@ graph P {
 	hpquads -- quad
 	code -- codetree -- ckdt
 
-	skdt -- unpermute_stars2 -- skdt2
-	id   -- unpermute_stars2 [ minlen=5 ];
-	unpermute_stars2 -- id2
-	quad -- unpermute_stars2 -- quad2
+	unperm_stars [ label="unpermute-stars" ];
 
-	quad2 -- unpermute_quads -- quad3
-	ckdt  -- unpermute_quads -- ckdt2
+	skdt -- unperm_stars -- skdt2
+	id   -- unperm_stars [ minlen=5, style=dashed ];
+	unperm_stars -- id2 [ style=dashed ];
+	quad -- unperm_stars -- quad2
+
+	unperm_quads [ label="unpermute-quads" ];
+
+	quad2 -- unperm_quads -- quad3
+	ckdt  -- unperm_quads -- ckdt2
 
 	skdt2 -- slave [ minlen=3 ];
 	ckdt2 -- slave
 	quad3 -- slave
+	id2   -- slave [ minlen=3, style=dashed ];
 
 	slave -- match
 

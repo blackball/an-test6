@@ -11,6 +11,7 @@ graph solvepipeline {
 		skdt [ label="Star kd-tree\n(.skdt)" ];
 		ckdt [ label="Code kd-tree\n(.ckdt)" ];
 		quad [ label="Quads\n(.quad)" ];
+		id [ label="Id\n(.id)" ];
 		node [ style=filled, fillcolor=white ];
 		match [ label="Match list\n(.match)" ];
 
@@ -20,6 +21,7 @@ graph solvepipeline {
 		skdt -- slave
 		ckdt -- slave
 		quad -- slave
+		id -- slave [ style=dashed ];
 
 		slave -- match
 	} 
@@ -38,7 +40,3 @@ graph solvepipeline {
 //   dot -Tps2 -o pipeline2.eps pipeline2.dot
 //   epstopng pipeline2.eps
 
-// to get bounding box:
-//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=bbox pipeline2.ps
-// to render as png:
-//   gs -q -dNOPAUSE -dBATCH -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sDEVICE=png16m -sOutputFile=pipeline2.png -g355x225 pipeline2.ps
