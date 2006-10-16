@@ -1,12 +1,10 @@
-ifndef $(MAKEFILE_USNOB_FITS_INCLUDED)
-MAKEFILE_USNOB_FITS_INCLUDED := 1
+ifndef $(MAKEFILE_USNOB_FITS_RULES_INCLUDED)
+MAKEFILE_USNOB_FITS_RULES_INCLUDED := 1
 export
 
 include Makefile
 include makefile.usnob
-
-USNOB_FITS_HP := $(shell echo $$(($(USNOB_FITS_NSIDE) * $(USNOB_FITS_NSIDE) * 12)))
-USNOB_FITS := $(shell for ((i=0; i<$(USNOB_FITS_HP); i++)); do printf "$(USNOB_FITS_TEMPLATE) " $$i; done)
+include makefile.usnob_fits.files
 
 $(USNOB_FITS_PRESENT): $(USNOB_FITS)
 	$(MKDIR) $(USNOB_FITS_DIR)

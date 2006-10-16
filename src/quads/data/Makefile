@@ -146,29 +146,48 @@ include makefile.index-all
 include makefile.cut-all
 include makefile.prospectus-all
 
+# The USNO-B and Astrometry.net catalogs contain a large number of files.
+# It takes a long time for Make to generate the filenames, check the
+# timestamps, and compute the dependencies.  In order to shortcut this
+# process, we use intermediate files, named like "usnob/usnob-present"
+# to represent the fact that the USNO-B catalog is present.  Then, instead
+# of depending directly on the catalog files, targets can depend on the
+# "-present" file.  The rules to build the "-present" file (and the files it
+# represents) are kept in a separate makefile - for USNO-B, it's called
+# "makefile.usnob".  
+
+# This trick is used for:
+#   Raw USNO-B             (usnob)
+#   USNO-B in FITS format  (usnob-fits)
+#   Tycho-2 in FITS        (tycho2-fits)
+#   Astrometry.net         (an-catalog)
+
+# Since Tycho-2 is only 3 files (only 2 of which we care about), we don't
+# use this trick for them.  Tycho-2-FITS is also only 2 files, but we use
+# the trick to make the Astrometry.net rules cleaner: USNO-B and Tycho-2
+# look the same this way.
+
 $(USNOB_PRESENT):
 	$(MAKE) -f makefile.usnob $@
 
 $(USNOB_FITS_PRESENT):
-	$(MAKE) -f makefile.usnob_fits $@
-
-.PHONY: usnob-fits
-usnob-fits: $(USNOB_FITS_PRESENT)
-
-#$(TYCHO2_PRESENT):
-#	$(MAKE) -f makefile.tycho2 $@
+	$(MAKE) -f makefile.usnob_fits.rules $@
 
 $(TYCHO2_FITS_PRESENT):
 	$(MAKE) -f makefile.tycho2_fits $@
+
+$(AN_CATALOG_PRESENT):
+	$(MAKE) -f makefile.an_catalog $@
+
+# These are attractively-named short-form rules:
+.PHONY: usnob-fits
+usnob-fits: $(USNOB_FITS_PRESENT)
 
 .PHONY: tycho2-fits
 tycho2-fits: $(TYCHO2_FITS_PRESENT)
 
 .PHONY: an-catalog
 an-catalog: $(AN_CATALOG_PRESENT)
-
-$(AN_CATALOG_PRESENT):
-	$(MAKE) -f makefile.an_catalog $@
 
 tycho2_download:
 	$(MAKE) -f makefile.tycho2 $@

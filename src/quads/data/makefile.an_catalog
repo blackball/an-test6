@@ -3,7 +3,7 @@ MAKEFILE_AN_CAT_INCLUDED := 1
 export
 
 include Makefile
-include makefile.usnob_fits
+include makefile.usnob_fits.files
 include makefile.tycho2_fits
 
 # no default rules

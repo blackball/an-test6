@@ -1,3 +1,4 @@
+# Shortcut rules like "cut00".
 .PHONY: cut$(1)
 cut$(1): $(CUT_BASE)$(1).skdt.fits
 
