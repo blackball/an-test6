@@ -1,6 +1,6 @@
 ifndef $(MAKEFILE_USNOB_INCLUDED)
 MAKEFILE_USNOB_INCLUDED := 1
-export
+#export
 
 include Makefile
 

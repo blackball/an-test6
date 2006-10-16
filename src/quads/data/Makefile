@@ -1,6 +1,6 @@
 ifndef MAKEFILE_INCLUDED
 MAKEFILE_INCLUDED := 1
-export
+#export
 
 # no default rules
 .SUFFIXES :=
@@ -146,7 +146,8 @@ include makefile.index-all
 include makefile.cut-all
 include makefile.prospectus-all
 
-# According to http://www.gnu.org/software/make/manual/make.html#Chained-Rules
+# According to
+#   http://www.gnu.org/s/h/260/dstn/mysql-5.0.26/var/mysql.socoftware/make/manual/make.html#Chained-Rules
 # this should cause make to not try to recreate the ".objs.fits" file just
 # because it doesn't exist.
 # We want this for the case where people download the skdt.

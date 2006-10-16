@@ -1,6 +1,6 @@
 ifndef $(MAKEFILE_AN_CAT_INCLUDED)
 MAKEFILE_AN_CAT_INCLUDED := 1
-export
+#export
 
 include Makefile
 include makefile.usnob_fits.files

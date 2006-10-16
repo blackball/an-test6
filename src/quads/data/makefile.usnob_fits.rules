@@ -1,6 +1,6 @@
 ifndef $(MAKEFILE_USNOB_FITS_RULES_INCLUDED)
 MAKEFILE_USNOB_FITS_RULES_INCLUDED := 1
-export
+#export
 
 include Makefile
 include makefile.usnob

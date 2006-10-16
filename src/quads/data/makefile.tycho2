@@ -1,6 +1,6 @@
 ifndef $(MAKEFILE_TYCHO2_INCLUDED)
 MAKEFILE_TYCHO2_INCLUDED := 1
-export
+#export
 
 include Makefile
 
