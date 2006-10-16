@@ -22,10 +22,8 @@ an_catalog: $(AN_FILES)
 $(AN_FILES): $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
 	$(MKDIR) $(AN_DIR)
 	$(TOUCH) timestamp-build-an-cat-start
-	$(BUILD_AN) -o $(AN_TEMPLATE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
+	@echo "Running: $(BUILD_AN) -o $(AN_TEMPLATE) -N $(AN_NSIDE) <<USNO-B FITS files>> <<Tycho-2 FITS files>>"
+	@$(BUILD_AN) -o $(AN_TEMPLATE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
 	$(TOUCH) timestamp-build-an-cat-done
-
-# cancel stupid implicit rules.
-makefile.an_catalog: ;
 
 endif

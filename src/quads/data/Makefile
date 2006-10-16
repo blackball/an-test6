@@ -153,6 +153,7 @@ include makefile.prospectus-all
 # We want this for the case where people download the skdt.
 .SECONDARY: $(CUT_OBJS)
 .SECONDARY: $(AN_CATALOG_PRESENT)
+#.SECONDARY: $(TYCHO2_FITS_PRESENT)
 
 # The USNO-B and Astrometry.net catalogs contain a large number of files.
 # It takes a long time for Make to generate the filenames, check the
@@ -225,6 +226,12 @@ makefile.prospectus: ;
 makefile.prospectus-template: ;
 makefile.cut-template: ;
 makefile.index-template: ;
+makefile.usnob: ;
+makefile.usnob_fits.files: ;
+makefile.usnob_fits.rules: ;
+makefile.tycho2: ;
+makefile.tycho2_fits: ;
+makefile.an_catalog: ;
 Makefile: ;
 
 endif

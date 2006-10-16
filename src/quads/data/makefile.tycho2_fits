@@ -6,6 +6,10 @@ include Makefile
 include makefile.tycho2
 
 TYCHO2_FITS := $(addprefix $(TYCHO2_FITS_DIR),$(subst .dat,.fits,$(TYCHO2_FILES)))
+TYCHO2_DAT  := $(addprefix $(TYCHO2_DIR),$(TYCHO2_FILES))
+
+.SECONDARY: $(TYCHO2_FITS)
+.SECONDARY: $(TYCHO2_DAT)
 
 $(TYCHO2_FITS_PRESENT): $(TYCHO2_FITS)
 	$(MKDIR) $(TYCHO2_FITS_DIR)
