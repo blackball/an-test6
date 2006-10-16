@@ -7,8 +7,8 @@ deps: $(DEP_PREREQS) $(DEPS)
 %.dep : %.c
 	$(CC) -MM $(CFLAGS) -c $< > $@
 
-ifneq ($(MAKECMDGOALS),clean)
-  ifneq ($(MAKECMDGOALS),realclean)
-    include deps
-  endif
+ifeq ($(MAKECMDGOALS),clean)
+else ifeq ($(MAKECMDGOALS),realclean)
+else ifeq ($(MAKECMDGOALS),allclean)
+  include deps
 endif
