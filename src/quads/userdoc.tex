@@ -1,7 +1,8 @@
-\documentclass[12pt,letterpaper]{article}
+\documentclass[12pt,letterpaper,titlepage]{article}
 \usepackage{fancyhdr}
 \usepackage{fullpage}
 \usepackage{lastpage}
+\usepackage{graphicx}
 
 \pdfpagewidth 8.5in
 \pdfpageheight 11in
@@ -30,7 +31,7 @@
 
 \newpage
 
-\section*{Introduction}
+\section{Introduction}
 
 This document is not meant to help you fix problems with building the \an{} code or 
 running the basic \code{Makefile}.  These kinds of problems should be reported to the
@@ -41,9 +42,38 @@ using our code to solve your images.
 %SDSS fields we supplied.
 
 There are at least three distinct phases of ``the pipeline'' where you might want to
-jump in.  
+jump in.  For the purposes of this document, we'll start with the Astrometry.net catalog,
+which is generated from the raw source catalogs: USNO-B and Tycho-2.  The
+process of building the Astrometry.net catalog is deterministic and has no parameters.
 
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=\textwidth]{userdoc-fig-pipeline}
+\caption{The blind solver pipeline, writ large.}
+\label{fig-pipeline}
+\end{center}
+\end{figure}
 
+The first major stage of the pipeline is \emph{making a cut}.  This involves selecting a 
+spatially-uniform set of stars that is expected to be bright in the band or bands you are
+interested in.  The two ``knobs'' of this process are determining which band you want to focus
+on, and how spatially uniform you want the cut to be.  There is a trade-off between choosing bright
+stars and ensuring that the chosen stars are spatially uniform.
 
+The second major stage of the pipeline is \emph{building an index}.  This involves finding
+``quads'': sets of four stars that satisfy particular local geometry constraints.  Again, there
+is a tradeoff between building bright quads and ensuring that the quads are uniformly distributed.
+
+The final stage of the pipeline is \emph{solving fields}.  The parameters in this stage tell the
+solver where to find its inputs and where to put its output, how hard to work on each field
+and how careful to be when deciding on a solution.
+
+We'll go through the stages in reverse order (and ``degree of difficulty'').
+
+\section{Solving}
+
+\section{Indexing}
+
+\section{Cutting}
 
 \end{document}

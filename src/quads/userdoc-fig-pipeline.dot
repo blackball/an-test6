@@ -1,0 +1,19 @@
+graph P {
+	graph [ rankdir = LR ];
+	node [ shape=box ];
+	edge [ dir=forward ];
+	node [ style=filled, fillcolor=azure2 ];
+	ancat  [ label="Astrometry.net Catalog" ];
+	cut1   [ label="Cut of the catalog" ];
+	index1 [ label="Index" ];
+	soln   [ label="Solution" ];
+
+	node [ style="" ];
+	node [ shape=ellipse ];
+
+	ancat -- cut -- cut1 -- index -- index1 -- solve -- soln
+}
+
+//  dot -Tps2 -o userdoc-fig-pipeline.eps userdoc-fig-pipeline.dot
+//  epstopng userdoc-fig-pipeline.eps
+//  epstopdf userdoc-fig-pipeline.eps
