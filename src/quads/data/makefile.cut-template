@@ -2,11 +2,17 @@
 .PHONY: cut$(1)
 cut$(1): $(CUT_BASE)$(1).skdt.fits
 
-$(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
+$(CUT_BASE)$(1).skdt.fits: $(CUT_DONT_REBUILD)
 	$(MKDIR) $(CUT_DIR)
 	$(TOUCH) timestamp-startree-$(1)-start
 	$(STARTREE) -f $(CUT_BASE)$(1) $(STARTREE_OPTIONS)
 	$(TOUCH) timestamp-startree-$(1)-done
+
+# According to http://www.gnu.org/software/make/manual/make.html#Chained-Rules
+# this should cause make to not try to recreate the ".objs.fits" file just
+# because it doesn't exist.
+# We want this for the case where people download the skdt.
+#.SECONDARY: $(CUT_BASE)$(1).objs.fits
 
 $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
 	$(MKDIR) $(CUT_DIR)

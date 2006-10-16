@@ -58,6 +58,7 @@ CUT_AN_SWEEPS := 12
 CUT_AN_DEDUP  := 8
 CUT_AN_CUT    := -R
 CUT_NLEAF     := 15
+CUT_DONT_REBUILD_BASE := $(CUT_DIR)cut-dont-rebuild-
 
 INDEX_ID   := 1
 INDEX_DIR  := $(INAME)-$(INDEX_ID)/
@@ -146,6 +147,12 @@ include makefile.index-all
 include makefile.cut-all
 include makefile.prospectus-all
 
+.SECONDARY: $(CUT_OBJS)
+.SECONDARY: $(CUT_DONT_REBUILD)
+.SECONDARY: $(AN_CATALOG_PRESENT)
+$(CUT_DONT_REBUILD): $(CUT_OBJS)
+	$(TOUCH) $@
+
 # The USNO-B and Astrometry.net catalogs contain a large number of files.
 # It takes a long time for Make to generate the filenames, check the
 # timestamps, and compute the dependencies.  In order to shortcut this
@@ -179,7 +186,7 @@ $(TYCHO2_FITS_PRESENT):
 $(AN_CATALOG_PRESENT):
 	$(MAKE) -f makefile.an_catalog $@
 
-# These are attractively-named short-form rules:
+# These are convenience short-form rules:
 .PHONY: usnob-fits
 usnob-fits: $(USNOB_FITS_PRESENT)
 
@@ -210,6 +217,14 @@ solve1: index02
 	touch timestamp-slave-solve1-start
 	$(SLAVE) <input/input.000 >out/out-000 2>err/err-000
 	touch timestamp-slave-solve1-done
+
+
+# Cancel stupid implicit rules that make has built-in.
+makefile.prospectus: ;
+makefile.prospectus-template: ;
+makefile.cut-template: ;
+makefile.index-template: ;
+Makefile: ;
 
 endif
 

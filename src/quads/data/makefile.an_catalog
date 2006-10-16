@@ -25,4 +25,7 @@ $(AN_FILES): $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
 	$(BUILD_AN) -o $(AN_TEMPLATE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
 	$(TOUCH) timestamp-build-an-cat-done
 
+# cancel stupid implicit rules.
+makefile.an_catalog: ;
+
 endif
