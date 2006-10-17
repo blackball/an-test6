@@ -49,7 +49,7 @@ static int read_parameters();
 
 static void reset_next_field();
 
-#define DEFAULT_CODE_TOL .002
+#define DEFAULT_CODE_TOL .01
 #define DEFAULT_PARITY_FLIP FALSE
 
 // params:
@@ -137,8 +137,8 @@ int main(int argc, char *argv[]) {
 		donefname = NULL;
 		solvedfname = NULL;
 		solvedserver = NULL;
-		xcolname = strdup("ROWC");
-		ycolname = strdup("COLC");
+		xcolname = strdup("X");
+		ycolname = strdup("Y");
 		parity = DEFAULT_PARITY_FLIP;
 		codetol = DEFAULT_CODE_TOL;
 		firstfield = lastfield = -1;
@@ -473,23 +473,17 @@ static int read_parameters() {
 		} else if (is_word(buffer, "solvedserver ", &nextword)) {
 			solvedserver = strdup(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
-			int d = atoi(nextword);
-			startdepth = d;
+			startdepth = atoi(nextword);
 		} else if (is_word(buffer, "depth ", &nextword)) {
-			int d = atoi(nextword);
-			enddepth = d;
+			enddepth = atoi(nextword);
 		} else if (is_word(buffer, "tol ", &nextword)) {
-			double t = atof(nextword);
-			codetol = t;
+			codetol = atof(nextword);
 		} else if (is_word(buffer, "parity ", &nextword)) {
-			int d = atoi(nextword);
-			parity = (d ? TRUE : FALSE);
+			parity = (atoi(nextword) ? TRUE : FALSE);
 		} else if (is_word(buffer, "fieldunits_lower ", &nextword)) {
-			double d = atof(nextword);
-			funits_lower = d;
+			funits_lower = atof(nextword);
 		} else if (is_word(buffer, "fieldunits_upper ", &nextword)) {
-			double d = atof(nextword);
-			funits_upper = d;
+			funits_upper = atof(nextword);
 		} else if (is_word(buffer, "firstfield ", &nextword)) {
 			firstfield = atoi(nextword);
 		} else if (is_word(buffer, "lastfield ", &nextword)) {
