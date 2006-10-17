@@ -42,9 +42,12 @@ INAME         := sdss
 
 IDFILES       := no
 
+TEMP_DIR   := 
+
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
 CUT_BASE      := $(CUT_DIR)an-$(INAME)-
+CUT_TEMP      := $(TEMP_DIR)an-$(INAME)-
 CUT_PREFIXES  := $(addprefix $(CUT_BASE),$(NUMS2))
 CUT_OBJS      := $(addsuffix .objs.fits,$(CUT_PREFIXES))
 CUT_IDS       := $(addsuffix .id.fits,$(CUT_PREFIXES))
@@ -61,7 +64,6 @@ CUT_NLEAF     := 15
 
 INDEX_ID   := 1
 INDEX_DIR  := $(INAME)-$(INDEX_ID)/
-TEMP_DIR   := 
 CATALOG    := $(CUT_BASE)
 INDEX      := $(INDEX_DIR)$(INAME)-$(INDEX_ID)-
 PHASE1      := $(INDEX_DIR)phase1-
@@ -79,7 +81,7 @@ TOUCH           := touch
 MV              := mv
 SED             := sed
 
-AN_DIR          := ../
+AN_DIR          := ../quads/
 
 USNOBTOFITS     := $(AN_DIR)usnobtofits
 TYCHO2TOFITS    := $(AN_DIR)tycho2tofits
@@ -116,7 +118,7 @@ CODETREE_OPTS := -R 15 -b -s -S
 HPQUADS_OPTS  := -l 4 -u 5 -n 4400 -i $(INDEX_ID) -c -x 1 -y 1 -r 6 -R -F $(TEMP_NOQUADS)
 QUADLOC_OPTS  := -n 100 -n 1000
 CODEPROJ_OPTS := -d
-HOMER_OPTS    := -X ROWC -Y COLC -d 10 -t 0.25
+HOMER_OPTS    := -X X -Y Y -d 10 -t 0.25
 MATLAB_OPTS   := -nojvm -nosplash -nodisplay
 
 MATLAB_INIT   := addpath('~/quads')
@@ -221,7 +223,7 @@ solve1: index02
 	touch timestamp-slave-solve1-done
 
 
-# Cancel stupid implicit rules that make has built-in.
+# Cancel stupid built-in implicit rules.
 makefile.prospectus: ;
 makefile.prospectus-template: ;
 makefile.cut-template: ;
