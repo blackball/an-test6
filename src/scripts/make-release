@@ -1,11 +1,11 @@
 #! /bin/bash
 
+BASE=quads
+
 echo "Retrieving release files..."
-rm -Rf quads pipeline
+rm -Rf quads pipeline ${BASE}.tar.gz ${BASE}.tar.bz2
 svn export svn+ssh://astrometry.net/svn/trunk/src/quads     quads
 svn export svn+ssh://astrometry.net/svn/trunk/src/pipeline  pipeline
-
-BASE=quads
 
 echo "Creating tar file..."
 tar cvf ${BASE}.tar quads pipeline
