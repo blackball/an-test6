@@ -96,7 +96,7 @@ CODETREE        := $(AN_RUN_DIR)an-run $(AN_DIR)codetree
 HPQUADS         := $(AN_RUN_DIR)an-run $(AN_DIR)hpquads
 
 HOMER           := $(AN_RUN_DIR)an-run $(AN_DIR)homer
-SLAVE           := $(AN_RUN_DIR)an-run $(AN_DIR)slave
+SLAVE           := $(AN_DIR)slave
 
 QUADIDX			:= $(AN_RUN_DIR)an-run $(AN_DIR)quadidx
 QUADLOCATIONS 	:= $(AN_RUN_DIR)an-run $(AN_DIR)quadlocations 
