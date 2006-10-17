@@ -82,25 +82,26 @@ MV              := mv
 SED             := sed
 
 AN_DIR          := ../quads/
+AN_RUN_DIR      := ./
 
-USNOBTOFITS     := $(AN_DIR)an-run $(AN_DIR)usnobtofits
-TYCHO2TOFITS    := $(AN_DIR)an-run $(AN_DIR)tycho2tofits
-HPOWNED         := $(AN_DIR)an-run $(AN_DIR)hpowned
-BUILD_AN        := $(AN_DIR)an-run $(AN_DIR)build-an-catalog
-CUT_AN          := $(AN_DIR)an-run $(AN_DIR)cut-an
-STARTREE        := $(AN_DIR)an-run $(AN_DIR)startree
-UNPERMUTE_QUADS := $(AN_DIR)an-run $(AN_DIR)unpermute-quads
-UNPERMUTE_STARS := $(AN_DIR)an-run $(AN_DIR)unpermute-stars
-CODETREE        := $(AN_DIR)an-run $(AN_DIR)codetree
-HPQUADS         := $(AN_DIR)an-run $(AN_DIR)hpquads
+USNOBTOFITS     := $(AN_RUN_DIR)an-run $(AN_DIR)usnobtofits
+TYCHO2TOFITS    := $(AN_RUN_DIR)an-run $(AN_DIR)tycho2tofits
+HPOWNED         := $(AN_RUN_DIR)an-run $(AN_DIR)hpowned
+BUILD_AN        := $(AN_RUN_DIR)an-run $(AN_DIR)build-an-catalog
+CUT_AN          := $(AN_RUN_DIR)an-run $(AN_DIR)cut-an
+STARTREE        := $(AN_RUN_DIR)an-run $(AN_DIR)startree
+UNPERMUTE_QUADS := $(AN_RUN_DIR)an-run $(AN_DIR)unpermute-quads
+UNPERMUTE_STARS := $(AN_RUN_DIR)an-run $(AN_DIR)unpermute-stars
+CODETREE        := $(AN_RUN_DIR)an-run $(AN_DIR)codetree
+HPQUADS         := $(AN_RUN_DIR)an-run $(AN_DIR)hpquads
 
-HOMER           := $(AN_DIR)an-run $(AN_DIR)homer
-SLAVE           := $(AN_DIR)an-run $(AN_DIR)slave
+HOMER           := $(AN_RUN_DIR)an-run $(AN_DIR)homer
+SLAVE           := $(AN_RUN_DIR)an-run $(AN_DIR)slave
 
-QUADIDX			:= $(AN_DIR)an-run $(AN_DIR)quadidx
-QUADLOCATIONS 	:= $(AN_DIR)an-run $(AN_DIR)quadlocations 
-QUADSPERSTAR 	:= $(AN_DIR)an-run $(AN_DIR)quadsperstar 
-CODEPROJ        := $(AN_DIR)an-run $(AN_DIR)codeprojections
+QUADIDX			:= $(AN_RUN_DIR)an-run $(AN_DIR)quadidx
+QUADLOCATIONS 	:= $(AN_RUN_DIR)an-run $(AN_DIR)quadlocations 
+QUADSPERSTAR 	:= $(AN_RUN_DIR)an-run $(AN_DIR)quadsperstar 
+CODEPROJ        := $(AN_RUN_DIR)an-run $(AN_DIR)codeprojections
 EPSTOPNG		:= $(AN_DIR)epstopng
 MATLAB			:= matlab
 PNMTOPNG		:= pnmtopng
