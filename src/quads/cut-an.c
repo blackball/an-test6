@@ -1,4 +1,6 @@
 #include <math.h>
+#include <errno.h>
+#include <string.h>
 
 #include "an_catalog.h"
 #include "catalog.h"
@@ -446,9 +448,12 @@ int main(int argc, char** args) {
 			stardata* sd = sweeplist + i;
 			radec2xyzarr(deg2rad(sd->ra), deg2rad(sd->dec), xyz);
 
-			catalog_write_star(cat, xyz);
-			idfile_write_anid(id, sd->id);
-				
+			if (catalog_write_star(cat, xyz) ||
+				idfile_write_anid(id, sd->id)) {
+				fprintf(stderr, "Failed to write star to catalog.  Possible cause: %s\n", strerror(errno));
+				exit(-1);
+			}
+
 			nwritten++;
 			if (nwritten == maxperbighp)
 				break;

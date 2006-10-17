@@ -292,9 +292,9 @@ double* catalog_get_star(catalog* cat, uint sid)
 int catalog_write_star(catalog* cat, double* star)
 {
 	if (!cat->fid) {
-		fprintf(stderr, "Couldn't write a star\n");
+		fprintf(stderr, "Couldn't write a star: file ID null.\n");
 		assert(0);
-		return *(int*)0x0;
+		return -1;
 	}
 
 	if (fwrite(star, sizeof(double), DIM_STARS, cat->fid) != DIM_STARS) {
