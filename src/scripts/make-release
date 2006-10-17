@@ -1,0 +1,20 @@
+#! /bin/bash
+
+echo "Retrieving release files..."
+rm -Rf quads pipeline
+svn export svn+ssh://astrometry.net/svn/trunk/src/quads     quads
+svn export svn+ssh://astrometry.net/svn/trunk/src/pipeline  pipeline
+
+BASE=quads
+
+echo "Creating tar file..."
+tar cvf ${BASE}.tar quads pipeline
+echo "Compressing with gzip..."
+gzip --stdout --best ${BASE}.tar > ${BASE}.tar.gz
+echo "Compressing with bzip2..."
+bzip2 --best ${BASE}.tar
+
+du -h ${BASE}.tar.gz ${BASE}.tar.bz2
+
+echo "Removing files..."
+rm -Rf quads pipeline
