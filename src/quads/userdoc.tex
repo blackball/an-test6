@@ -76,7 +76,8 @@ We'll go through the stages in reverse order (and ``degree of difficulty'').
 \section{Solving}
 
 -background: the solving process: fields (sorted in decreasing brightness),
- quads \& matching, (scale), agreement, verification.
+ quads \& matching, (scale), agreement, verification.  Healpixes.  Fields
+ (extensions within fields file); fieldids.
 
 The solver program is called \code{slave} for historical reasons: at one point we envisioned
 there being a \code{master} program that would plan how to solve a set of fields, and \code{slave}
@@ -124,9 +125,6 @@ threads 1
 quiet
 run
 \end{verbatim}
-%\vspace{10pt}
-%\rule{1pt}{5pt}
-%\rule{0pt}{0pt}
 \end{minipage}%
 \\
 \rule{0pt}{4pt} \\
@@ -139,7 +137,7 @@ run
 
 Let us briefly describe the various parameters.
 
-\subsection{Required parameters}
+\subsection{Required basic parameters}
 \begin{description}
 \item[\code{index <filename>}]: which index should be used.  The
   \code{slave} program will look for the files \code{<filename>.ckdt.fits},
@@ -153,19 +151,100 @@ Let us briefly describe the various parameters.
 \item[\code{tol <real number>}] (default 0.01): how close in shape do quads
   have to be to be considered ``matching''.
 \item[\code{run}]: run the solver with the parameters given.  This can be
-  used to include multiple runs in one parameter file.
+  used to include multiple runs in one parameter file: list the first set
+  of parameters, followed by \code{run}, then list the second set of
+  parameters followed by \code{run}.  Note that all parameters are reset
+  to their defaults after a \code{run} statement.
+\item[\code{fields <int> [<int> ...] or <start-field>/<end-field>}]:
+  either a list of field indices (starting with 0), or a range.\footnote{%
+	You can also request that \code{slave} ask the \code{solvedserver} for a
+	list of fields to try; see the \code{solvedserver} entry for details.}
 \end{description}
 
-\subsection{Recommended parameters}
+\subsection{Parameters you almost certainly want to set}
+
 \begin{description}
-\item[\code{agreetol <real>}]
-\item[\code{verify\_dist <real>}]
-\item[\code{nagree\_toverify <int>}]
-\item[\code{overlap\_tosolve <real>}]
-\item[\code{overlap\_tokeep <real>}]
-\item[\code{min\_ninfield <int>}]
 \item[\code{fieldunits\_lower <real>}]
-\item[\code{fieldunits\_upper <real>}]
+\item[\code{fieldunits\_upper <real>}]: these two parameters tell the solver
+  what your estimated (or known) pixel scale is, in arcseconds per pixel.
+  This allows it to vastly narrow down the number of quads it has to check,
+  which makes solving much much faster.  If you know the pixel scale exactly,
+  you should set these bounds to perhaps a percent or two below and above
+  the known value, in order to tolerate a bit of positional noise in the fields.
+  In the demonstration, these parameters are set to $0.39$ and $0.41$,
+  respectively.
+\item[\code{verify\_dist <real>}]: setting this parameter enables verification,
+  which you almost certainly want.  Recall that in the verification stage, the
+  solver takes a potential match and projects each field object through the
+  same transformation, then checks how many field objects overlap with
+  indexed stars.  This parameter sets the maximum distance, in arcseconds,
+  that a field object can be from an indexed star and still be considered
+  to overlap.  You will want to set this value to be large enough to
+  encompass the positional noise in the field objects and index stars, plus
+  the error incurred by applying a transformation computed from correspondences
+  between a small number of stars.  This value should also be at most half
+  the \emph{deduplication distance} of the cut, though slight violations of
+  this constraint won't cause huge problems.  In the demonstration, this
+  parameter is set to $4$ arcseconds.
+\item[\code{overlap\_tosolve <real>}]: when verification is enabled, this
+  parameter tells the solver how good a solution has to be for it to stop
+  trying further.  When a solution results in at least this fraction of
+  field and index stars overlapping, the solver considers the field to be
+  solved.  In the demonstration, it is set to $0.25$, though the majority of
+  correct solutions have much larger overlap values.
+\item[\code{overlap\_tokeep <real>}]: when verification is enabled, this
+  parameter tells the solver how good a solution has to be in order for it
+  to be recorded in the ``match'' file.  If you set it to a value smaller
+  than \code{overlap\_tosolve}, then the solver will record the potential
+  solution but continue to search further.  This is useful if you are
+  exploring the ROC curve (false positive vs false negative rate); you can
+  run the solver once, then use the program \code{agreeable} to see what
+  would have happened if you had set \code{overlap\_tosolve} lower.
+  In the demonstration this parameter is set to $0.25$.  Unless you are
+  exploring the ROC curve, you probably want to set it to the same value as
+  \code{overlap\_tosolve}.
+\item[\code{min\_ninfield <int>}]: when verification is enabled, this parameter
+  sets a minimum on the number of index stars that are contained in a
+  potential field location.  This is to prevent the case where a quad matches
+  a nearly empty region of the index, but a few field objects happen to overlap
+  with indexed stars, yielding a high \code{overlap} score.  This parameter sets
+  a minimum on the ``denominator'' of the \code{overlap} fraction.  That is,
+  when the bounds of the field are projected into the index, the index must
+  contain at least this number of stars or the match is rejected.  In the
+  demonstration this parameter is set to $50$.  You will probably want to set
+  it by computing the expected density of index stars in a field and taking
+  half or a third this value.
+\item[\code{nagree\_toverify <int>}]: this parameter determines how many
+  matches must \emph{agree} before the \emph{verification} process is run on
+  the matches.  This is useful because the verification process is relatively
+  expensive, so it can be useful to accumulate more evidence before testing
+  hypotheses.  The tradeoff is that if a field contains fewer than this number
+  of matches, then the correct match will never be tested and the field will
+  not be solved.  In the demonstration, this value is set to $2$.  In our
+  experiments we typically do a ``quick'' run with a setting of $2$, then a
+  more thorough run with a setting of $1$.  There is probably no point setting
+  this parameter to any value other than $1$ or $2$.
+\item[\code{agreetol <real>}]: this determines how close a pair of matches
+  must be to be considered ``in agreement''.
+  %It is specified as the RMS distance
+  %in arcseconds between the corners of the field proposed by the two matches.
+  %That is, 
+  We project the bottom-left and upper-right corner of the field 
+  onto the celestial sphere according
+  to the projections implied by the two matches,
+  and measure the RMS distance them, in arcseconds.
+\end{description}
+
+
+
+
+
+
+
+\begin{description}
+\item[\code{firstfield <int>} and \code{lastfield <int>}]: used in conjunction
+  with the \code{solvedserver} option: ask the \code{solvedserver} which fields
+  to try, in the range from \code{firstfield} to \code{lastfield}.
 \end{description}
 
 \subsection{Optional parameters}

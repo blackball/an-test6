@@ -85,6 +85,12 @@ int handle_request(FILE* fid) {
 			fclose(fid);
 			return -1;
 		}
+		if (lastfieldnum < fieldnum) {
+			fprintf(stderr, "Error: invalid \"getall\" request: lastfieldnum must be >= firstfieldnum.\n");
+			fflush(stderr);
+			fclose(fid);
+			return -1;
+		}
 	}
 
 	sprintf(fn, solvedfnpattern, filenum);

@@ -211,6 +211,9 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
+		// make agreetol be RMS.
+		agreetol *= sqrt(2.0);
+
 		reset_next_field();
 
 		mf = matchfile_open_for_writing(matchfname);
@@ -404,7 +407,7 @@ static int read_parameters() {
 					"    match <match-file-name>\n"
 					"    done <done-file-name>\n"
 					"    field <field-file-name>\n"
-					"    solvedfname <solved-filename>\n"
+					"    solved <solved-filename>\n"
 					"    fields [<field-number> or <start range>/<end range>...]\n"
 					"    sdepth <start-field-object>\n"
 					"    depth <end-field-object>\n"
@@ -446,8 +449,7 @@ static int read_parameters() {
 			idfname = mk_idfn(fname);
 			startreefname = mk_streefn(fname);
 		} else if (is_word(buffer, "verify_dist ", &nextword)) {
-			double d = atof(nextword);
-			verify_dist2 = arcsec2distsq(d);
+			verify_dist2 = arcsec2distsq(atof(nextword));
 		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
 			nagree_toverify = atoi(nextword);
 		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
@@ -457,19 +459,15 @@ static int read_parameters() {
 		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
 			min_ninfield = atoi(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
-			char* fname = nextword;
-			fieldfname = mk_fieldfn(fname);
+			fieldfname = mk_fieldfn(nextword);
 		} else if (is_word(buffer, "fieldid ", &nextword)) {
 			fieldid = atoi(nextword);
 		} else if (is_word(buffer, "match ", &nextword)) {
-			char* fname = nextword;
-			matchfname = strdup(fname);
+			matchfname = strdup(nextword);
 		} else if (is_word(buffer, "done ", &nextword)) {
-			char* fname = nextword;
-			donefname = strdup(fname);
+			donefname = strdup(nextword);
 		} else if (is_word(buffer, "solved ", &nextword)) {
-			char* fname = nextword;
-			solvedfname = strdup(fname);
+			solvedfname = strdup(nextword);
 		} else if (is_word(buffer, "solvedserver ", &nextword)) {
 			solvedserver = strdup(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
