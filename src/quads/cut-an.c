@@ -138,7 +138,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 	if ((!sdss && !galex) || (sdss && galex)) {
-		printf("Must choose one of SDSS or Galex.\n");
+		printf("Must choose one of SDSS (-R) or Galex (-G).\n");
 		print_help(args[0]);
 		exit(-1);
 	}
@@ -190,6 +190,7 @@ int main(int argc, char** args) {
 	sprintf(fn, outfn, bighp);
 	cat = catalog_open_for_writing(fn);
 	if (!cat) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open file %s for writing catalog.\n", fn);
 		exit(-1);
 	}
@@ -201,6 +202,7 @@ int main(int argc, char** args) {
 	sprintf(fn, idfn, bighp);
 	id = idfile_open_for_writing(fn);
 	if (!id) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open file %s for writing IDs.\n", fn);
 		exit(-1);
 	}
@@ -230,6 +232,7 @@ int main(int argc, char** args) {
 
 	if (catalog_write_header(cat) ||
 		idfile_write_header(id)) {
+		fflush(stdout);
 		fprintf(stderr, "Failed to write catalog or idfile header.\n");
 		exit(-1);
 	}
@@ -245,6 +248,7 @@ int main(int argc, char** args) {
 		infn = args[optind];
 		ancat = an_catalog_open(infn);
 		if (!ancat) {
+			fflush(stdout);
 			fprintf(stderr, "Couldn't open Astrometry.net catalog %s.\n", infn);
 			exit(-1);
 		}
@@ -267,6 +271,7 @@ int main(int argc, char** args) {
 
 			an = an_catalog_read_entry(ancat);
 			if (!an) {
+				fflush(stdout);
 				fprintf(stderr, "Failed to read Astrometry.net catalog entry.\n");
 				exit(-1);
 			}
@@ -450,6 +455,7 @@ int main(int argc, char** args) {
 
 			if (catalog_write_star(cat, xyz) ||
 				idfile_write_anid(id, sd->id)) {
+				fflush(stdout);
 				fprintf(stderr, "Failed to write star to catalog.  Possible cause: %s\n", strerror(errno));
 				exit(-1);
 			}
@@ -485,6 +491,7 @@ int main(int argc, char** args) {
 		catalog_close(cat) ||
 		idfile_fix_header(id) ||
 		idfile_close(id)) {
+		fflush(stdout);
 		fprintf(stderr, "Failed to close output files.\n");
 		exit(-1);
 	}

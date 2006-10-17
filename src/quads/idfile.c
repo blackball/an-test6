@@ -15,6 +15,7 @@ static idfile* new_idfile()
 {
 	idfile* id = calloc(1, sizeof(idfile));
 	if (!id) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't malloc a idfile struct: %s\n", strerror(errno));
 		return NULL;
 	}
@@ -33,21 +34,25 @@ idfile* idfile_open(char* fn, int modifiable)
 	qfits_header* header = NULL;
 
 	if (!qfits_is_fits(fn)) {
+		fflush(stdout);
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", fn);
 		goto bailout;
 	}
 	fid = fopen(fn, "rb");
 	if (!fid) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open file %s to read id file: %s\n", fn, strerror(errno));
 		goto bailout;
 	}
 	header = qfits_header_read(fn);
 	if (!header) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't read FITS header from %s.\n", fn);
 		goto bailout;
 	}
 
 	if (fits_check_endian(header)) {
+		fflush(stdout);
 		fprintf(stderr, "File %s was written with wrong endianness or uint size.\n", fn);
 		goto bailout;
 	}
@@ -61,17 +66,20 @@ idfile* idfile_open(char* fn, int modifiable)
 	id->healpix = qfits_header_getint(header, "HEALPIX", -1);
 
 	if (id->numstars == -1) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't find NUMSTARS of stars entries in FITS header.");
 		goto bailout;
 	}
-	fprintf(stderr, "nstars %u\n", id->numstars);
+	//fprintf(stderr, "nstars %u\n", id->numstars);
 
 	if (fits_find_table_column(fn, "ids", &off, &sizeanids)) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't find \"ids\" column in FITS file.");
 		goto bailout;
 	}
 
 	if (fits_blocks_needed(id->numstars * sizeof(uint64_t)) != sizeanids) {
+		fflush(stdout);
 		fprintf(stderr, "Number of stars promised does jive with the table size: %u vs %u.\n",
 		        fits_blocks_needed(id->numstars * sizeof(uint64_t)), sizeanids);
 		goto bailout;
@@ -89,6 +97,7 @@ idfile* idfile_open(char* fn, int modifiable)
 	fclose(fid);
 	fid = NULL;
 	if (map == MAP_FAILED) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't mmap file: %s\n", strerror(errno));
 		goto bailout;
 	}
@@ -113,12 +122,14 @@ int idfile_close(idfile* id)
 	int rtn = 0;
 	if (id->mmap_base)
 		if (munmap(id->mmap_base, id->mmap_size)) {
+			fflush(stdout);
 			fprintf(stderr, "Error munmapping idfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
 	if (id->fid) {
 		fits_pad_file(id->fid);
 		if (fclose(id->fid)) {
+			fflush(stdout);
 			fprintf(stderr, "Error closing idfile: %s\n", strerror(errno));
 			rtn = -1;
 		}
@@ -139,6 +150,7 @@ idfile* idfile_open_for_writing(char* fn)
 		goto bailout;
 	id->fid = fopen(fn, "wb");
 	if (!id->fid) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open file %s for FITS output: %s\n", fn, strerror(errno));
 		goto bailout;
 	}
@@ -168,6 +180,7 @@ bailout:
 int idfile_write_anid(idfile* id, uint64_t anid)
 {
 	if (!id->fid) {
+		fflush(stdout);
 		fprintf(stderr, "idfile_fits_write_anid: fid is null.\n");
 		return -1;
 	}
@@ -175,6 +188,7 @@ int idfile_write_anid(idfile* id, uint64_t anid)
 		id->numstars++;
 		return 0;
 	}
+	fflush(stdout);
 	fprintf(stderr, "idfile_fits_write_anid: failed to write: %s\n", strerror(errno));
 	return -1;
 }
@@ -192,6 +206,7 @@ int idfile_fix_header(idfile* id)
 	char* fn;
 
 	if (!id->fid) {
+		fflush(stdout);
 		fprintf(stderr, "idfile_fix_header: fid is null.\n");
 		return -1;
 	}
@@ -224,6 +239,7 @@ int idfile_fix_header(idfile* id)
 	new_header_end = ftello(id->fid);
 
 	if (new_header_end != id->header_end) {
+		fflush(stdout);
 		fprintf(stderr, "Warning: idfile header used to end at %lu, "
 		        "now it ends at %lu.\n", (unsigned long)id->header_end,
 		        (unsigned long)new_header_end);
@@ -260,12 +276,12 @@ int idfile_write_header(idfile* id)
 uint64_t idfile_get_anid(idfile* id, uint starid) 
 {
 	if (starid >= id->numstars) {
+		fflush(stdout);
 		fprintf(stderr, "Requested quadid %i, but number of quads is %i. SKY IS FALLING\n",
 		        starid, id->numstars);
 		assert(0);
 		return *(int*)0x0; /* explode gracefully */
 	}
-
 	return id->anidarray[starid];
 }
 

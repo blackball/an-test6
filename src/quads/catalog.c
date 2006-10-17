@@ -16,6 +16,7 @@ int catalog_write_to_file(catalog* cat, char* fn)
 	FILE *catfid = NULL;
 	catfid = fopen(fn, "wb");
 	if (!catfid) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open catalog output file %s: %s\n",
 		        fn, strerror(errno));
 		return -1;
@@ -55,6 +56,7 @@ int catalog_write_to_file(catalog* cat, char* fn)
 
 	if (fwrite(cat->stars, sizeof(double), cat->numstars*DIM_STARS, catfid) !=
 	        cat->numstars * DIM_STARS) {
+		fflush(stdout);
 		fprintf(stderr, "Failed to write catalog data to file %s: %s.\n",
 		        fn, strerror(errno));
 		fclose(catfid);
@@ -64,6 +66,7 @@ int catalog_write_to_file(catalog* cat, char* fn)
 	fits_pad_file(catfid);
 
 	if (fclose(catfid)) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't close catalog file %s: %s\n",
 		        fn, strerror(errno));
 		return -1;
@@ -80,6 +83,7 @@ int catalog_write_header(catalog* cat)
 	uint ncols, nrows, tablesize;
 	char* fn;
 	if (!cat->fid) {
+		fflush(stdout);
 		fprintf(stderr, "catalog_write_header: fid is null.\n");
 		return -1;
 	}
@@ -109,6 +113,7 @@ int catalog_fix_header(catalog* cat)
  	off_t offset;
 	off_t old_header_end;
 	if (!cat->fid) {
+		fflush(stdout);
 		fprintf(stderr, "catalog_fix_header: fid is null.\n");
 		return -1;
 	}
@@ -119,6 +124,7 @@ int catalog_fix_header(catalog* cat)
 	catalog_write_header(cat);
 
 	if (old_header_end != cat->header_end) {
+		fflush(stdout);
 		fprintf(stderr, "Warning: objfile header used to end at %lu, "
 		        "now it ends at %lu.\n", (unsigned long)old_header_end,
 				(unsigned long)cat->header_end);
@@ -172,22 +178,26 @@ catalog* catalog_open(char* catfn, int modifiable)
 
 	cat = calloc(1, sizeof(catalog));
 	if (!cat) {
+		fflush(stdout);
 		fprintf(stderr, "catalog_open: malloc failed.\n");
 		return cat;
 	}
 
 	catfid = fopen(catfn, "rb");
 	if (!catfid) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open catalog file %s: %s\n", catfn, strerror(errno));
 		goto bail;
 	}
 
 	if (!qfits_is_fits(catfn)) {
+		fflush(stdout);
 		fprintf(stderr, "File %s doesn't look like a FITS file.\n", catfn);
 		goto bail;
 	}
 	cat->header = qfits_header_read(catfn);
 	if (!cat->header) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't read FITS header from %s.\n", catfn);
 		goto bail;
 	}
@@ -195,20 +205,24 @@ catalog* catalog_open(char* catfn, int modifiable)
 	cat->healpix = qfits_header_getint(cat->header, "HEALPIX", -1);
 	if (fits_check_endian(cat->header) ||
 		fits_check_double_size(cat->header)) {
+		fflush(stdout);
 		fprintf(stderr, "File %s was written with wrong endianness or double size.\n", catfn);
 		goto bail;
 	}
 	if (cat->numstars == -1) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't find NSTARS header in file %s\n", catfn);
 		goto bail;
 	}
 
 	if (fits_find_table_column(catfn, "xyz", &offxyz, &sizexyz)) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't find \"xyz\" column in FITS file.");
 		goto bail;
 	}
 
 	if (fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS) != sizexyz) {
+		fflush(stdout);
 		fprintf(stderr, "Number of stars promised does jive with the xyz table size: %u vs %u.\n",
 			fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS), sizexyz);
 		goto bail;
@@ -225,6 +239,7 @@ catalog* catalog_open(char* catfn, int modifiable)
 	}
 	cat->mmap_cat = mmap(0, cat->mmap_cat_size, mode, flags, fileno(catfid), 0);
 	if (cat->mmap_cat == MAP_FAILED) {
+		fflush(stdout);
 		fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
 		goto bail;
 	}
@@ -246,12 +261,14 @@ catalog* catalog_open_for_writing(char* fn)
 	catalog* qf;
 	qf = calloc(1, sizeof(catalog));
 	if (!qf) {
+		fflush(stdout);
 		fprintf(stderr, "catalog_open_for_writing: malloc failed.\n");
 		goto bailout;
 	}
 	qf->healpix = -1;
 	qf->fid = fopen(fn, "wb");
 	if (!qf->fid) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't open file %s for FITS output: %s\n", fn, strerror(errno));
 		goto bailout;
 	}
@@ -282,6 +299,7 @@ bailout:
 double* catalog_get_star(catalog* cat, uint sid)
 {
 	if (sid >= cat->numstars) {
+		fflush(stdout);
 		fprintf(stderr, "catalog: asked for star %u, but catalog size is only %u.\n",
 		        sid, cat->numstars);
 		return NULL;
@@ -292,12 +310,14 @@ double* catalog_get_star(catalog* cat, uint sid)
 int catalog_write_star(catalog* cat, double* star)
 {
 	if (!cat->fid) {
+		fflush(stdout);
 		fprintf(stderr, "Couldn't write a star: file ID null.\n");
 		assert(0);
 		return -1;
 	}
 
 	if (fwrite(star, sizeof(double), DIM_STARS, cat->fid) != DIM_STARS) {
+		fflush(stdout);
 		fprintf(stderr, "Failed to write catalog data. No, I don't know what file it is you insensitive clod!: %s\n",
 		        strerror(errno));
 		return -1;
@@ -311,10 +331,12 @@ int catalog_close(catalog* cat)
 	int rtn = 0;
 	if (cat->fid) {
 		if (fits_pad_file(cat->fid)) {
+			fflush(stdout);
 			fprintf(stderr, "Failed to pad catalog FITS file.\n");
 			rtn = -1;
 		}
 		if (fclose(cat->fid)) {
+			fflush(stdout);
 			fprintf(stderr, "Failed to close catalog file.\n");
 			rtn = -1;
 		}
@@ -323,6 +345,7 @@ int catalog_close(catalog* cat)
 		qfits_header_destroy(cat->header);
 	if (cat->mmap_cat) {
 		if (munmap(cat->mmap_cat, cat->mmap_cat_size)) {
+			fflush(stdout);
 			fprintf(stderr, "Failed to munmap catalog file.\n");
 			rtn = -1;
 		}
