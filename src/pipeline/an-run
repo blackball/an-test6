@@ -1,12 +1,8 @@
 #! /bin/bash
 
 # base name of log file.
-#LOGBASE=$1
-#shift
-
-# base name of log file.
 if [ -z $LOG_BASE ]; then
-  LOG_BASE=log-
+  LOG_BASE=log
 fi
 
 # find name of executable to run
