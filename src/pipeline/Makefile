@@ -46,7 +46,7 @@ TEMP_DIR   :=
 
 TIMESTAMP_DIR := logs/
 LOG_DIR       := logs/
-LOG_BASE      := $(LOG_DIR)log-
+LOG_BASE      := $(LOG_DIR)log
 export LOG_BASE
 
 CUT_DIR       := cut/
