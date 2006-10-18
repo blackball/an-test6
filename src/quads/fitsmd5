@@ -21,7 +21,7 @@ trap sigint_func SIGINT
 
 for x in $*; do
 	fitsgetext -i $x -b | \
-		awk "{if (NR > 1) {if (\$16 > 0) { system(\"dd if=$x bs=2880 skip=\" \$13 \" count=\" \$16 \" 2> /dev/null | md5sum | awk '{print \$1, \\\"$x\\\", \\\"[\"\$2\"]\\\"}'\");}}}"
+		awk "{if (NR > 1) {if (\$16 > 0) { system(\"dd if=$x bs=2880 skip=\" \$13 \" count=\" \$16 \" 2> /dev/null | md5sum -b | awk '{print \$1, \\\"$x\\\", \\\"[\"\$2\"]\\\"}'\");}}}"
 	if [ $? -ne 0 ]; then
 		break;
 	fi
