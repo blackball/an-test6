@@ -1,18 +1,26 @@
 $(INDEX)$(1).qidx.fits: $(INDEX)$(1).quad.fits
-	$(TOUCH) timestamp-quadidx-$(1)-start
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadidx-$(1)-start
 	$(QUADIDX) -f $(INDEX)$(1)
-	$(TOUCH) timestamp-quadidx-$(1)-done
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadidx-$(1)-done
 
 .PHONY: prospectus$(1)
 prospectus$(1): ana$(1) plot$(1) dplot$(1) qps$(1)
 
 quad$(1).pgm quad$(1)_small.pgm: $(INDEX)$(1).skdt.fits $(INDEX)$(1).quad.fits
-	$(TOUCH) timestamp-quadlocations-$(1)-start
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadlocations-$(1)-start
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) -o quad$(1)_small.pgm -o quad$(1).pgm $(INDEX)$(1)
-	$(TOUCH) timestamp-quadlocations-$(1)-done
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadlocations-$(1)-done
 
 proj$(1).m: $(INDEX)$(1).ckdt.fits
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-codeproj-$(1)-start
 	$(CODEPROJ) $(CODEPROJ_OPTS) -F $$< > $$@
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-codeproj-$(1)-done
 
 .PHONY: ana$(1)
 ana$(1): quad$(1).png quad$(1)_small.png proj$(1).m
@@ -47,7 +55,11 @@ qps_$(1).eps: qps$(1).m
 	$(MATLAB) $(MATLAB_OPTS) < /tmp/tmpscript.m
 
 qps$(1).m: $(INDEX)$(1).qidx.fits
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadsperstar-$(1)-start
 	$(QUADSPERSTAR) $(INDEX)$(1) | sed s/-/_/ > $$@
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadsperstar-$(1)-done
 
 %$(1)_small.png: %$(1).png
 	$(PNGTOPNM) $$< | pamscale -linear 0.2 | pnmtopng > $$@

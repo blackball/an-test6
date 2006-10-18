@@ -44,6 +44,11 @@ IDFILES       := no
 
 TEMP_DIR   := 
 
+TIMESTAMP_DIR := logs/
+LOG_DIR       := logs/
+LOG_BASE      := $(LOG_DIR)log-
+export LOG_BASE
+
 CUT_DIR       := cut/
                     # (note, a trailing '/' is required!)
 CUT_BASE      := $(CUT_DIR)an-$(INAME)-

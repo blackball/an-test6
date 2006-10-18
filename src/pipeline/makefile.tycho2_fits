@@ -20,8 +20,10 @@ tycho2_fits: $(TYCHO2_FITS)
 
 $(TYCHO2_FITS):: $(TYCHO2_FITS_DIR)%.fits : $(TYCHO2_DIR)%.dat
 	$(MKDIR) $(TYCHO2_FITS_DIR)
-	$(TOUCH) timestamp-tycho2tofits-$(basename $(notdir $@))-start
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-tycho2tofits-$(basename $(notdir $@))-start
 	$(TYCHO2TOFITS) -o $@ $<
-	$(TOUCH) timestamp-tycho2tofits-$(basename $(notdir $@))-done
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-tycho2tofits-$(basename $(notdir $@))-done
 
 endif

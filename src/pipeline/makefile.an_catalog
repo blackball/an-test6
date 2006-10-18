@@ -21,9 +21,11 @@ an_catalog: $(AN_FILES)
 
 $(AN_FILES): $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
 	$(MKDIR) $(AN_DIR)
-	$(TOUCH) timestamp-build-an-cat-start
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-build-an-cat-start
 	@echo "Running: $(BUILD_AN) -o $(AN_TEMPLATE) -N $(AN_NSIDE) <<USNO-B FITS files>> <<Tycho-2 FITS files>>"
 	@$(BUILD_AN) -o $(AN_TEMPLATE) -N $(AN_NSIDE) $(USNOB_FITS) $(TYCHO2_FITS)
-	$(TOUCH) timestamp-build-an-cat-done
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-build-an-cat-done
 
 endif

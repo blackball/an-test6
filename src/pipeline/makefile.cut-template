@@ -3,18 +3,22 @@
 cut$(1): $(CUT_BASE)$(1).skdt.fits
 
 $(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
 	$(MKDIR) $(CUT_DIR)
-	$(TOUCH) timestamp-startree-$(1)-start
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-startree-$(1)-start
 	$(STARTREE) -f $(CUT_BASE)$(1) $(STARTREE_OPTIONS)
-	$(TOUCH) timestamp-startree-$(1)-done
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-startree-$(1)-done
 
 $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
 	$(MKDIR) $(CUT_DIR)
-	$(TOUCH) timestamp-cut-an-$(1)-start
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-cut-an-$(1)-start
 	$(CUT_AN) -H $(1) -o $(CUT_TEMP)$(1).objs.fits -i $(CUT_TEMP)$(1).id.fits \
 		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
 		`$(HPOWNED) -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
 	$(MV) $(CUT_TEMP)$(1).objs.fits $(CUT_BASE)$(1).objs.fits
 	$(MV) $(CUT_TEMP)$(1).id.fits   $(CUT_BASE)$(1).id.fits
-	$(TOUCH) timestamp-cut-an-$(1)-done
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-cut-an-$(1)-done
 

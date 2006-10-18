@@ -29,8 +29,12 @@ prospectus.html: prospectus.html.in
 quadsall.pgm quadsall_small.pgm: \
 	$(addsuffix .quad.fits, $(addprefix $(INDEX), $(NUMS))) \
 	$(addsuffix .skdt.fits, $(addprefix $(INDEX), $(NUMS)))
+	-$(MKDIR) $(TIMESTAMP_DIR)
+	-$(MKDIR) $(LOG_DIR)
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadlocations-start
 	$(QUADLOCATIONS) $(QUADLOC_OPTS) $(addprefix $(INDEX), $(NUMS)) \
 		-o quadsall_small.pgm -o quadsall.pgm
+	$(TOUCH) $(TIMESTAMP_DIR)timestamp-quadlocations-done
 
 qps_sum.eps: $(addsuffix .m, $(addprefix qps, $(NUMS)))
 	echo "$(MATLAB_INIT); qpssum=[]; for x=0:11, " \
