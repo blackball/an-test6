@@ -11,10 +11,10 @@ echo "Creating tar file..."
 tar cvf ${BASE}.tar quads pipeline
 echo "Compressing with gzip..."
 gzip --stdout --best ${BASE}.tar > ${BASE}.tar.gz
-echo "Compressing with bzip2..."
-bzip2 --best ${BASE}.tar
+#echo "Compressing with bzip2..."
+#bzip2 --best ${BASE}.tar
 
-du -h ${BASE}.tar.gz ${BASE}.tar.bz2
+du -h ${BASE}.tar.gz #${BASE}.tar.bz2
 
 echo "Removing files..."
 rm -Rf quads pipeline
