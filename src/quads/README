@@ -1,106 +1,18 @@
-August 2005 (Sam)
+The Blind Solver, part of the Astrometry.net suite.
 
-This is the ALPHA release of the quad indexing system.
+The Astrometry.net suite is Copyright 2006, Dustin Lang, Keir Mierle and
+Sam Roweis.
+The Astrometry.net suite is free software licensed under the GNU GPL,
+version 2.  See the file LICENSE for the full terms of the GNU GPL.
 
-To compile, just cp Makefile_Template to Makefile (linux users
-shouldn't need to do any modifications). Then do "make allclean"
-followed by "make".
+Dustin Lang can be reached at:
+  dstn (at) cs (dot) toronto (dot) edu
+or
+  dstndstn (at) gmail (dot) com
 
-You now have several programs at your disposal, which I'll
-very briefly describe below. For a recipe of how to use
-these programs to solve a SDSS field using an index built
-on a subset of USNO, see the file SLOAN_USNO_README.
+Keir Mierle can be reached at:
+  keir (at) cs (dot) toronto (dot) edu
 
-The programs all read in certain files and produce new files,
-so building a complete index involves running a sequence of commands
-which will produce a set of files. At the moment, piping the output
-of one command directly into another is not supported.
+Sam Roweis can be reached at:
+  roweis (at) cs (dot) toronto (dot) edu
 
-Some options are common to all programs:
--f index_base_name   specifies the base file name for index files 
-                     (.objs,.code,.ckdt,.skdt,.quad,.qidx)
--o field_base_name   specifies the base file name for field files
-                     (.xyls,.hits,.xyl0,.ids0,.qds0)
-[-a|-b]              specifies ASCII or BINARY format files when possible
-
-Running a program with no arguments produces a help message with a list of the
-command line arguments it wants. Arguments listed like this [q] mean that q
-is optional, arguments like this {u|v} mean that one of u,v are required.
-
-
-INDEX BUILDING
-
-startree -- Reads a .objs file containing a catalogue of objects
-            (positions only, no magnitudes) and writes a .skdt file 
-            containing a KD-tree built on those objects in the 
-            xyz (3space) coordinate representation.
-getquads -- Reads a .skdt KD-tree file and randomly picks points on
-            the sky near which to generate quads at a certain scale.
-            Writes a .quad_ and .code_ file containing the valid quads
-            it was able to find and their corresponding codes.
-quadidx  -- Reads a .quad_ and a .code_ file, deduplicates the
-            quads (since they were chosen randomly), and builds
-            an inverted index to allow reverse lookup from objectID->quad#.
-            Writes deduplicated .quad and .code files (the old .quad_
-            and .code_ files can be removed) and the inverted index .qidx
-codetree -- Reads a .code file and builds a KD tree in the 4D code space.
-            Writes out a .ckdt KD-tree file.
-
-SOLVING 
-
-solvexy  -- The solver itself. Reads the .ckdt,.quad and .objs files
-            as well as a .xyls file with the field(s) to be solved
-            and tries ALL POSSIBLE QUADS in each field against the
-            stored quads in the index, looking for matching codes
-            (to within some specified tolerance). All matching quads
-            are placed on a list and then that list is "resolved"
-            by finding 3 or more matches that agree (to within some
-            specified agreement accuracy) on pointing, rotation and scale.
-            Writes out a .hits file giving the solve information for
-            each field.
-
-(In principle, the .skdt,.code and .qidx files are not needed at solve
- time, and so if you don't want them around for debugging, you can
- delete them after the .ckdt and .quad files are generated.)
-
-
-
-DIAGNOSTICS
-
-fieldquads -- If you know some (or all) of the catalogue objects
-              that are present in some field(s), you can list these in 
-              a .ids0 file (one line per field).
-              (If the field was generated synthetically using genfields    
-              below, this file is created automatically.)
-              fieldquads will then tell you, for any given index
-              you've built, which quads from that index actually exist
-              in the field(s). Note that the order of the object IDS on
-              each line of the .ids0 file is irrelevant; fieldquads 
-              only cares about *which* objects are in each field, 
-              not how they match up with the xy list.
-findstar -- Gets objects from the .objs catalogue file, either by
-            ID number or by proximity to a given target point on the sky.
-findquad -- Gets quads/codes from the .quad/.code/.qidx files.
-            You can either look up a specific quad by number, or find
-            all quads involving a specific object ID from the catalogue.
-findcode -- Finds all quads having codes near a specified 4D code point.
-
-
-TOOLS FOR BUILDING SYNTHETIC CATALOGUES AND FIELDS
-
-randcat   -- Makes a .objs catalogue file by filling a portion of the 
-             sky with objects uniformly at random (positions only, no
-             magnitudes).
-genfields -- Generates a synthetic field using a virtual camera and
-             a .objs catalogue file. Pointing can be either random or
-             along a given direction; scale is specified. Image positions
-             of the objects can be "jittered" with noise, and random
-             extra "distractor" objects can be added to clutter the field.
-             Currently no support for nonsquare aspect ratios or for
-             control over rotation. Positions only, no magnitudes.
-             Writes out three files:
-               a .xyls file containing the field(s)
-               a .xyl0 file containing un-jittered objects without distractors
-               a .ids0 file containing the catalogue object ID of each star
-                            in each field (can be used with fieldquads above)
- 
