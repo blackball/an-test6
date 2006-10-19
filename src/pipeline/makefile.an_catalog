@@ -13,14 +13,14 @@ AN_HP     := $(shell echo $$(($(AN_NSIDE) * $(AN_NSIDE) * 12)))
 AN_FILES  := $(shell for ((i=0; i<$(AN_HP); i++)); do printf "$(AN_TEMPLATE) " $$i; done)
 
 $(AN_CATALOG_PRESENT): an_catalog #$(AN_FILES)
-	$(MKDIR) $(AN_DIR)
+	$(MKDIR) $(AN_CAT_DIR)
 	$(TOUCH) $@
 
 .PHONY: an_catalog
 an_catalog: $(AN_FILES)
 
 $(AN_FILES): $(USNOB_FITS_PRESENT) $(TYCHO2_FITS_PRESENT)
-	$(MKDIR) $(AN_DIR)
+	$(MKDIR) $(AN_CAT_DIR)
 	-$(MKDIR) $(TIMESTAMP_DIR)
 	-$(MKDIR) $(LOG_DIR)
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-build-an-cat-start
