@@ -11,11 +11,11 @@ $(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-startree-$(1)-done
 
 ifeq ($(IDFILES), yes)
-	CUT_CMDLINE_IDFILE := -i $(CUT_TEMP)$(1).id.fits
-	MV_ID_CMD := $(MV) $(CUT_TEMP)$(1).id.fits   $(CUT_BASE)$(1).id.fits
+  CUT_CMDLINE_IDFILE := -i $(CUT_TEMP)$(1).id.fits
+  MV_ID_CMD := $(MV) $(CUT_TEMP)$(1).id.fits   $(CUT_BASE)$(1).id.fits
 else
-	CUT_CMDLINE_IDFILE :=
-	MV_ID_CMD :=
+  CUT_CMDLINE_IDFILE :=
+  MV_ID_CMD := echo
 endif
 
 $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
