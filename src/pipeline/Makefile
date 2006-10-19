@@ -243,9 +243,9 @@ solve1: index02
 	@echo "    tail -f err/err-000 | grep Field   "
 	@echo
 	@echo
-	touch timestamp-slave-solve1-start
+	$(TOUCH) timestamp-slave-solve1-start
 	$(SLAVE) <input/input.000 >out/out-000 2>err/err-000
-	touch timestamp-slave-solve1-done
+	$(TOUCH) timestamp-slave-solve1-done
 	$(PRINTSOLVED) solved/solved.01 | $(GREP) -v File | $(WC) -w
 
 
