@@ -17,4 +17,4 @@ gzip --stdout --best ${BASE}.tar > ${BASE}.tar.gz
 du -h ${BASE}.tar.gz #${BASE}.tar.bz2
 
 echo "Removing files..."
-rm -Rf quads pipeline
+rm -Rf quads pipeline quads.tar
