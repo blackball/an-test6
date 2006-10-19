@@ -12,8 +12,10 @@ $(CUT_BASE)$(1).skdt.fits: $(CUT_BASE)$(1).objs.fits
 
 ifeq ($(IDFILES), yes)
 	CUT_CMDLINE_IDFILE := -i $(CUT_TEMP)$(1).id.fits
+	MV_ID_CMD := $(MV) $(CUT_TEMP)$(1).id.fits   $(CUT_BASE)$(1).id.fits
 else
 	CUT_CMDLINE_IDFILE :=
+	MV_ID_CMD :=
 endif
 
 $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
@@ -25,6 +27,6 @@ $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
 		-N $(CUT_AN_NSIDE) -n $(CUT_AN_SWEEPS) -d $(CUT_AN_DEDUP) $(CUT_AN_CUT) \
 		`$(HPOWNED) -f $(AN_TEMPLATE) -m -N $(AN_NSIDE) $(1)`
 	$(MV) $(CUT_TEMP)$(1).objs.fits $(CUT_BASE)$(1).objs.fits
-	$(MV) $(CUT_TEMP)$(1).id.fits   $(CUT_BASE)$(1).id.fits
+	$(MV_ID_CMD)
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-cut-an-$(1)-done
 

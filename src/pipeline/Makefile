@@ -91,7 +91,7 @@ AN_RUN_DIR      := ./
 
 USNOBTOFITS     := $(AN_RUN_DIR)an-run $(AN_DIR)usnobtofits
 TYCHO2TOFITS    := $(AN_RUN_DIR)an-run $(AN_DIR)tycho2tofits
-HPOWNED         := $(AN_RUN_DIR)an-run $(AN_DIR)hpowned
+HPOWNED         := $(AN_DIR)hpowned
 BUILD_AN        := $(AN_RUN_DIR)an-run $(AN_DIR)build-an-catalog
 CUT_AN          := $(AN_RUN_DIR)an-run $(AN_DIR)cut-an
 STARTREE        := $(AN_RUN_DIR)an-run $(AN_DIR)startree
