@@ -24,7 +24,9 @@ deps: $(DEP_PREREQS) $(DEPS)
 	$(CC) -MM $(CFLAGS) -c $< > $@
 
 ifeq ($(MAKECMDGOALS),clean)
-else ifeq ($(MAKECMDGOALS),realclean)
-else ifeq ($(MAKECMDGOALS),allclean)
-  include deps
+  ifeq ($(MAKECMDGOALS),realclean)
+    ifeq ($(MAKECMDGOALS),allclean)
+      include deps
+    endif
+  endif
 endif
