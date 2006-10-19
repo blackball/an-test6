@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 mkdir -p ./tmp_go_dir
 cd tmp_go_dir
 echo "Removing old files..."
