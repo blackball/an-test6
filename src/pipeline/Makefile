@@ -101,6 +101,8 @@ MKDIR           := mkdir -p
 TOUCH           := touch
 MV              := mv
 SED             := sed
+GREP            := grep
+WC              := wc
 
 AN_DIR          := ../quads/
 AN_RUN_DIR      := ./
@@ -118,6 +120,7 @@ HPQUADS         := $(AN_RUN_DIR)an-run $(AN_DIR)hpquads
 
 HOMER           := $(AN_RUN_DIR)an-run $(AN_DIR)homer
 SLAVE           := $(AN_DIR)slave
+PRINTSOLVED     := $(AN_DIR)printsolved
 
 QUADIDX			:= $(AN_RUN_DIR)an-run $(AN_DIR)quadidx
 QUADLOCATIONS 	:= $(AN_RUN_DIR)an-run $(AN_DIR)quadlocations 
@@ -243,6 +246,7 @@ solve1: index02
 	touch timestamp-slave-solve1-start
 	$(SLAVE) <input/input.000 >out/out-000 2>err/err-000
 	touch timestamp-slave-solve1-done
+	$(PRINTSOLVED) solved/solved.01 | $(GREP) -v File | $(WC) -w
 
 
 # Cancel stupid built-in implicit rules.
