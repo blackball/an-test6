@@ -224,7 +224,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 		char buf[1000];
 		snprintf(buf,1000, hppat, hp);
 		fprintf(stderr, "opening %s\n",buf);
-		kd = kdtree_fits_read_file(buf);
+		kd = kdtree_fits_read(buf, NULL);
 		fprintf(stderr, "success\n");
 		assert(kd);
 		cached_kd_hp = hp;
@@ -258,7 +258,7 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	int i;
 	fprintf(stderr, "ref stars:\n");
 	for (i=0; i<kq->nres; i++) {
-		double *xyz = kq->results+3*i;
+		double *xyz = kq->results.d+3*i;
 		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
 		(*dec)[i] = rad2deg(z2dec(xyz[2]));
 		/*
@@ -461,10 +461,10 @@ sip_t* do_entire_shift_operation(tweak_t* t)
 
 typedef struct { il* image; il* ref; dl* dist2; } dualtree_data_t;
 
-// Dualtree rangesearch callback. We want to keep track of correspondences.
+// DualTree RangeSearch callback. We want to keep track of correspondences.
 // If we get called multiple times with the same image_ind, then we take the
 // ref_ind which is closest.
-void match_callback(void* extra, int image_ind, int ref_ind, double dist2)
+void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 {
 	tweak_t* t = extra;
 
@@ -483,6 +483,20 @@ void match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 	il_append(t->included, 1);
 }
 
+// Dualtree rangesearch callback for distance calc. this should be integrated
+// with real dualtree rangesearch.
+double dtrs_dist2_callback(void* p1, void* p2, int D)
+{
+	double accum = 0;
+	double* pp1=p1, *pp2=p2;
+	int i;
+	for (i=0; i<D; i++) {
+		double delta = pp1[i]-pp2[i];
+		accum += delta*delta;
+	}
+	return accum;
+}
+
 void find_correspondences(tweak_t* t)
 {
 	double* data_image = malloc(sizeof(double)*t->n*2);
@@ -494,15 +508,19 @@ void find_correspondences(tweak_t* t)
 		data_image[2*i+1] = t->y[i];
 	}
 
-	int levels = kdtree_compute_levels(t->n, 4);
-	t->kd_image = kdtree_build(data_image, t->n, 2, levels);
+//	int levels = kdtree_compute_levels(t->n, 4);
+//	t->kd_image = kdtree_build(data_image, t->n, 2, levels);
+	t->kd_image = kdtree_build(NULL, data_image, t->n, 2, 4, KDTT_DOUBLE,
+	                           KD_BUILD_BBOX);
 
 	for (i=0; i<t->n_ref; i++) {
 		data_ref[2*i+0] = t->x_ref[i];
 		data_ref[2*i+1] = t->y_ref[i];
 	}
-	levels = kdtree_compute_levels(t->n_ref, 4);
-	t->kd_ref = kdtree_build(data_ref, t->n_ref, 2, levels);
+//	levels = kdtree_compute_levels(t->n_ref, 4);
+//	t->kd_ref = kdtree_build(data_ref, t->n_ref, 2, levels);
+	t->kd_ref = kdtree_build(NULL, data_ref, t->n_ref, 2, 4, KDTT_DOUBLE,
+                                 KD_BUILD_BBOX);
 
 	// Storage for correspondences
 	t->image = il_new(600);
@@ -513,7 +531,8 @@ void find_correspondences(tweak_t* t)
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
 	                     RANGESEARCH_NO_LIMIT, 35, // This min/max dist is in pixels
-	                     match_callback, t,
+	                     dtrs_dist2_callback,
+	                     dtrs_match_callback, t,
 	                     NULL, NULL);
 
 	printf("im=%d\n", il_size(t->image)); 
