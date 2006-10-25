@@ -44,66 +44,6 @@
 kdtree_t* cached_kd = NULL;
 int cached_kd_hp = 0;
 
-double max(double x, double y)
-{
-	if (x < y) return y;
-	return x;
-}
-double min(double x, double y)
-{
-	if (x < y) return x;
-	return y;
-}
-
-
-enum opt_flags {
-	OPT_CRVAL = 1,
-	OPT_CRPIX = 2,
-	OPT_CD    = 4,
-	OPT_SIP   = 8,
-	OPT_SIP_INVERSE   = 16
-};
-
-typedef struct tweak_s {
-	sip_t* sip;
-
-	// For sources in the image
-	int n;
-	double *a;
-	double *d;
-	double *x;
-	double *y;
-
-	// Center of field estimate
-	double a_bar;  // degrees
-	double d_bar;  // degrees
-	double radius; // radians (genius!)
-
-	// Cached values of sources in the catalog
-	int n_ref;
-	double *x_ref;
-	double *y_ref;
-	double *a_ref;
-	double *d_ref;
-
-	// Correspondences
-	il* image;
-	il* ref;
-	dl* dist2;
-	il* maybeinliers;
-	il* bestinliers;
-	il* included;
-
-	int flags;
-//	int n;
-//	int m;
-//	double parameters[500];
-	double err;
-
-	kdtree_t* kd_image;
-	kdtree_t* kd_ref;
-} tweak_t;
-
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 {
 	// Find this extension in fptr (which should be open to the xylist)
@@ -167,52 +107,6 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 	return 0;
 }
 
-void get_center_and_radius(double* ra, double* dec, int n,
-                          double* ra_mean, double* dec_mean, double* radius)
-{
-	double* xyz = malloc(3*n*sizeof(double));
-	double xyz_mean[3] = {0,0,0};
-	int i, j;
-	for (i=0; i<n; i++) {
-		radec2xyzarr(deg2rad(ra[i]),
-		             deg2rad(dec[i]),
-		             xyz + 3*i);
-	}
-
-	for (i=0; i<n; i++) 
-		for (j=0; j<3; j++) 
-			xyz_mean[j] += xyz[3*i+j];
-
-	/*
-	for (j=0; j<3; j++) 
-		xyz_mean[j] /= (double) n;
-		*/
-
-	double norm=0;
-	for (j=0; j<3; j++) 
-		norm += xyz_mean[j]*xyz_mean[j];
-	norm = sqrt(norm);
-
-	for (j=0; j<3; j++) 
-		xyz_mean[j] /= norm;
-
-	double maxdist2 = 0;
-	int maxind = -1;
-	for (i=0; i<n; i++) {
-		double dist2 = 0;
-		for (j=0; j<3; j++) {
-			double d = xyz_mean[j]-xyz[3*i+j];
-			dist2 += d*d;
-		}
-		if (maxdist2 < dist2) {
-			maxdist2 = dist2;
-			maxind = i;
-		}
-	}
-	*radius = sqrt(maxdist2);
-	*ra_mean = rad2deg(xy2ra(xyz_mean[0],xyz_mean[1]));
-	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
-}
 
 void get_reference_stars(double ra_mean, double dec_mean, double radius,
                          double** ra, double **dec, int *n, char* hppat)
@@ -250,17 +144,19 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 	if (!*n)
 		return;
 
-	*ra = malloc(sizeof(double)*kq->nres);
-	*dec = malloc(sizeof(double)*kq->nres);
-	assert(*ra);
-	assert(*dec);
+	tweak_push_ref_xyz()
 
-	int i;
-	fprintf(stderr, "ref stars:\n");
-	for (i=0; i<kq->nres; i++) {
-		double *xyz = kq->results.d+3*i;
-		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
-		(*dec)[i] = rad2deg(z2dec(xyz[2]));
+//	*ra = malloc(sizeof(double)*kq->nres);
+//	*dec = malloc(sizeof(double)*kq->nres);
+//	assert(*ra);
+//	assert(*dec);
+//
+//	int i;
+//	fprintf(stderr, "ref stars:\n");
+//	for (i=0; i<kq->nres; i++) {
+//		double *xyz = kq->results.d+3*i;
+//		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
+//		(*dec)[i] = rad2deg(z2dec(xyz[2]));
 		/*
 		if (i < 30) {
 			fprintf(stderr, "a=%f d=%f\n",(*ra)[i],(*dec)[i]);
@@ -269,90 +165,12 @@ void get_reference_stars(double ra_mean, double dec_mean, double radius,
 			fprintf(stderr, "distdeg=%f\n",sqrt(kq->sdists[i]));
 		}
 		*/
-	}
+//	}
 
 	kdtree_free_query(kq);
 //	kdtree_fits_close(kd);
 }
 
-void get_shift(double* ximg, double* yimg, int nimg,
-               double* xcat, double* ycat, int ncat, 
-               double* xshift, double* yshift)
-{
-
-	int i, j;
-
-	// hough transform 
-	int hsz = 1000; // hough size
-	int *hough = malloc(hsz*hsz*sizeof(double));
-	for (i=0; i<hsz*hsz; i++)
-		hough[i] = 0;
-
-	double maxdx = -1e100;
-	double mindx = 1e100;
-	double maxdy = -1e100;
-	double mindy = 1e100;
-	for (i=0; i<nimg; i++) {
-		for (j=0; j<ncat; j++) {
-			double dx = ximg[i]-xcat[j];
-			double dy = yimg[i]-ycat[j];
-			maxdx = max(dx,maxdx);
-			maxdy = max(dy,maxdy);
-			mindx = min(dx,mindx);
-			mindy = min(dy,mindy);
-		}
-	}
-
-
-	for (i=0; i<nimg; i++) {
-		for (j=0; j<ncat; j++) {
-			double dx = ximg[i]-xcat[j];
-			double dy = yimg[i]-ycat[j];
-			int hszi = hsz-1;
-			int iy = hszi*( (dy-mindy)/(maxdy-mindy) );
-			int ix = hszi*( (dx-mindx)/(maxdx-mindx) );
-			assert (iy >=0);
-			assert (ix >=0);
-			assert (iy*hsz+ ix < hsz*hsz);
-			if (0 < iy && iy < hsz+1 &&
-					0 < ix && ix < hsz+1) {
-				// approx gauss
-				hough[(iy-1)*hsz + (ix-1)] += 1;
-				hough[(iy+1)*hsz + (ix+1)] += 1;
-				hough[(iy-1)*hsz + (ix+1)] += 1;
-				hough[(iy+1)*hsz + (ix-1)] += 1;
-				hough[(iy-0)*hsz + (ix-1)] += 4;
-				hough[(iy-1)*hsz + (ix-0)] += 4;
-				hough[(iy+0)*hsz + (ix+1)] += 4;
-				hough[(iy+1)*hsz + (ix+0)] += 4;
-				hough[iy*hsz + ix] += 10;
-			}
-		}
-	}
-
-	int themax = 0;
-	int themaxind;
-	for (i=0; i<hsz*hsz; i++) {
-		if (themax < hough[i]) {
-			themaxind = i;
-			themax = hough[i];
-		}
-	}
-
-	int ys = themaxind/hsz;
-	int xs = themaxind%hsz;
-
-	fprintf(stderr, "xshsz = %d, yshsz=%d\n",xs,ys);
-
-	*yshift = ((double)(themaxind/hsz)/(double)hsz)*(maxdy-mindy)+mindy;
-	*xshift = ((double)(themaxind % hsz)/(double)hsz)*(maxdx-mindx)+mindx;
-	fprintf(stderr, "xs=%lf, ys=%lf\n", *xshift, *yshift);
-
-	static char c = '1';
-	static char fn[] = "houghN.fits";
-	fn[5] = c++;
-//	ezwriteimage(fn, TINT, hough, hsz, hsz);
-}
 
 // Take shift in image plane and do a switcharoo to make the wcs something
 // better
@@ -508,8 +326,6 @@ void find_correspondences(tweak_t* t)
 		data_image[2*i+1] = t->y[i];
 	}
 
-//	int levels = kdtree_compute_levels(t->n, 4);
-//	t->kd_image = kdtree_build(data_image, t->n, 2, levels);
 	t->kd_image = kdtree_build(NULL, data_image, t->n, 2, 4, KDTT_DOUBLE,
 	                           KD_BUILD_BBOX);
 
@@ -517,8 +333,6 @@ void find_correspondences(tweak_t* t)
 		data_ref[2*i+0] = t->x_ref[i];
 		data_ref[2*i+1] = t->y_ref[i];
 	}
-//	levels = kdtree_compute_levels(t->n_ref, 4);
-//	t->kd_ref = kdtree_build(data_ref, t->n_ref, 2, levels);
 	t->kd_ref = kdtree_build(NULL, data_ref, t->n_ref, 2, 4, KDTT_DOUBLE,
                                  KD_BUILD_BBOX);
 
@@ -570,6 +384,7 @@ void dump_data(tweak_t* t)
 		d = malloc(sizeof(double)*il_size(t->image));
 		x = malloc(sizeof(double)*il_size(t->image));
 		y = malloc(sizeof(double)*il_size(t->image));
+
 		double *a_ref, *d_ref, *x_ref, *y_ref;
 		a_ref = malloc(sizeof(double)*il_size(t->image));
 		d_ref = malloc(sizeof(double)*il_size(t->image));
@@ -647,25 +462,25 @@ void dump_data(tweak_t* t)
 //                 B_1_1
 //                 B_1_2         ... and so on
 
-void unpack_params(sip_t* sip, double *pp, int flags) 
+void unpack_params(sip_t* sip, double *pp, int opt_flags) 
 {
 	assert(pp);
 	assert(sip);
-	if (flags & OPT_CRVAL) {
+	if (opt_flags & OPT_CRVAL) {
 		sip->crval[0] = *pp++;
 		sip->crval[1] = *pp++;
 	}
-	if (flags & OPT_CRPIX) {
+	if (opt_flags & OPT_CRPIX) {
 		sip->crpix[0] = *pp++;
 		sip->crpix[1] = *pp++;
 	}
-	if (flags & OPT_CD) {
+	if (opt_flags & OPT_CD) {
 		sip->cd[0][0] = *pp++;
 		sip->cd[0][1] = *pp++;
 		sip->cd[1][0] = *pp++;
 		sip->cd[1][1] = *pp++;
 	}
-	if (flags & OPT_SIP) {
+	if (opt_flags & OPT_SIP) {
 		int p, q;
 		for (p=0; p<sip->a_order; p++)
 			for (q=0; q<sip->a_order; q++)
@@ -676,7 +491,7 @@ void unpack_params(sip_t* sip, double *pp, int flags)
 				if (p+q <= sip->b_order && !(p==0&&q==0))
 					 sip->b[p][q] = *pp++;
 	}
-	if (flags & OPT_SIP_INVERSE) {
+	if (opt_flags & OPT_SIP_INVERSE) {
 		int p, q;
 		for (p=0; p<sip->ap_order; p++)
 			for (q=0; q<sip->ap_order; q++)
@@ -689,24 +504,24 @@ void unpack_params(sip_t* sip, double *pp, int flags)
 	}
 }
 
-int pack_params(sip_t* sip, double *parameters, int flags) 
+int pack_params(sip_t* sip, double *parameters, int opt_flags) 
 {
 	double* pp = parameters;
-	if (flags & OPT_CRVAL) {
+	if (opt_flags & OPT_CRVAL) {
 		*pp++ = sip->crval[0];
 		*pp++ = sip->crval[1];
 	}
-	if (flags & OPT_CRPIX) {
+	if (opt_flags & OPT_CRPIX) {
 		*pp++ = sip->crpix[0];
 		*pp++ = sip->crpix[1];
 	}
-	if (flags & OPT_CD) {
+	if (opt_flags & OPT_CD) {
 		*pp++ = sip->cd[0][0];
 		*pp++ = sip->cd[0][1];
 		*pp++ = sip->cd[1][0];
 		*pp++ = sip->cd[1][1];
 	}
-	if (flags & OPT_SIP) {
+	if (opt_flags & OPT_SIP) {
 //		printf("Packing SIP||||||||\n");
 		int p, q;
 		for (p=0; p<sip->a_order; p++)
@@ -722,7 +537,7 @@ int pack_params(sip_t* sip, double *parameters, int flags)
 					  *pp++ = sip->b[p][q];
 	}
 
-	if (flags & OPT_SIP_INVERSE) {
+	if (opt_flags & OPT_SIP_INVERSE) {
 		int p, q;
 		for (p=0; p<sip->ap_order; p++)
 			for (q=0; q<sip->ap_order; q++)
@@ -743,7 +558,7 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 
 	sip_t sip;
 	memcpy(&sip, t->sip, sizeof(sip_t));
-	unpack_params(&sip, p, t->flags);
+	unpack_params(&sip, p, t->opt_flags);
 
 	// Run the gauntlet.
 	double err = 0; // calculate our own sum-squared error
@@ -777,14 +592,14 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 // Requires: correspondences     t->image, t->ref,
 //           image sources       t->x,t->y,
 //           reference sources   t->a_ref,t->d_ref
-//           optimization flags  t->flags
+//           optimization flags  t->opt_flags
 //           initial SIP guess   t->sip
 void lm_fit(tweak_t* t)
 {
 	double params[410];
-//	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
-//	t->flags = OPT_CRVAL | OPT_CD;
-	t->flags = OPT_CRVAL | OPT_CRPIX | OPT_CD | OPT_SIP;
+//	t->opt_flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
+//	t->opt_flags = OPT_CRVAL | OPT_CD;
+	t->opt_flags = OPT_CRVAL | OPT_CRPIX | OPT_CD | OPT_SIP;
 	t->sip->a_order = 7;
 	t->sip->b_order = 7;
 
@@ -810,11 +625,11 @@ void lm_fit(tweak_t* t)
 
 //	print_sip(t->sip);
 
-	int m =  pack_params(t->sip, params, t->flags);
+	int m =  pack_params(t->sip, params, t->opt_flags);
 //	printf("REPACKED::::::::::\n");
 //	sip_t sip;
 //	memcpy(&sip, t->sip, sizeof(sip_t));
-//	unpack_params(&sip, params, t->flags);
+//	unpack_params(&sip, params, t->opt_flags);
 //	print_sip(&sip);
 
 	// Pack target values
@@ -852,7 +667,7 @@ void lm_fit(tweak_t* t)
 //	printf("term reason     = %lf\n", info[6]);
 //	printf("function evals  = %lf\n", info[7]);
 
-	unpack_params(t->sip, params, t->flags);
+	unpack_params(t->sip, params, t->opt_flags);
 	t->err = info[1];
 //	memcpy(t->parameters, params, sizeof(double)*t->n);
 }
