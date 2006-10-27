@@ -95,6 +95,9 @@ int main(int argc, char *argv[]) {
 		printxyzasradec(mo->sMin);
 		printf(", max corner: ");
 		printxyzasradec(mo->sMax);
+
+		if (mo->parity)
+			printf(" with parity swapped");
 		printf("\n");
 	}
 
