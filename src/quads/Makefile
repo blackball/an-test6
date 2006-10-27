@@ -70,7 +70,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	hpquads codetree unpermute-quads unpermute-stars homer slave agreeable \
-	solvedserver printsolved
+	solvedserver printsolved xylist2fits
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar
@@ -126,6 +126,10 @@ pnmutils.o: pnmutils.c
 
 rdlstohealpix: rdlstohealpix.o rdlist.o xylist.o fitsioutils.o ioutils.o \
 		healpix.o bl.o $(QFITS_LIB)
+
+xylist2fits: xylist_texttofits.o bl.o xylist.o ioutils.o \
+		$(QFITS_LIB) $(ANUTILS_LIB)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 
 .PHONY: tags
 tags:

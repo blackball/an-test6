@@ -29,7 +29,7 @@
 #include "xylist.h"
 #include "bl.h"
 
-#define OPTIONS "hdx:y:t:"
+#define OPTIONS "chdx:y:t:"
 
 void print_help(char* progname) {
     printf("usage:\n"
@@ -37,6 +37,7 @@ void print_help(char* progname) {
 		   "    [-d]: use double format (float format is default)\n"
 		   "    [-x <name-of-x-column>]\n"
 		   "    [-y <name-of-y-column>]\n"
+		   "    [-c use simple 'x y\n' format; single field]\n"
 		   "    [-t <Astrometry.net filetype>]\n\n",
 		   progname);
 }
@@ -49,6 +50,7 @@ typedef pl xyarray;
 #define xya_size(l)           pl_size(l)
 
 xyarray *readxy(char* fn);
+xyarray *readxysimple(char* fn);
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -57,6 +59,7 @@ int main(int argc, char** args) {
 	char* infn = NULL;
 	char* outfn = NULL;
     int c;
+    int simple = 0;
 	xyarray* xya;
 	xylist* ls;
 	int i, N;
@@ -76,6 +79,9 @@ int main(int argc, char** args) {
 			break;
 		case 'x':
 			xname = optarg;
+			break;
+		case 'c':
+			simple = 1;
 			break;
 		case 'y':
 			yname = optarg;
@@ -102,7 +108,12 @@ int main(int argc, char** args) {
 	printf("input %s, output %s.\n", infn, outfn);
 
 	printf("reading input...\n");
-	xya = readxy(infn);
+
+	if (simple) {
+		xya = readxysimple(infn);
+	} else {
+		xya = readxy(infn);
+	}
 	if (!xya)
 		exit(-1);
 
@@ -202,5 +213,47 @@ xyarray *readxy(char* fn) {
 		}
 		fscanf(fid, "\n");
 	}
+	return thepix;
+}
+
+// Read a simple xy file; column 1 is x column 2 is y; space seperated.
+xyarray *readxysimple(char* fn) {
+	uint numxy=0;
+	xyarray *thepix = NULL;
+	FILE* fid;
+
+	fid = fopen(fn, "r");
+	if (!fid) {
+		fprintf(stderr, "Couldn't open file %s to read xylist.\n", fn);
+		return NULL;
+	}
+
+	// find how many stars there are
+	while (1) {
+		double x,y;
+		int n = fscanf(fid, "%lf %lf\n", &x, &y);
+		if (n != 2)
+			break;
+		numxy++;
+	}
+	rewind(fid);
+
+	thepix = mk_xyarray(1);
+
+	xya_set(thepix, 0, mk_xy(numxy) );
+
+	if (xya_ref(thepix, 0) == NULL) {
+		fprintf(stderr, "ERROR (readxy) - out of memory at field %u\n", 0);
+		free_xyarray(thepix);
+		return NULL;
+	}
+	int jj;
+	for (jj = 0;jj < numxy;jj++) {
+		double tmp1, tmp2;
+		fscanf(fid, "%lf %lf\n", &tmp1, &tmp2);
+		xy_setx(xya_ref(thepix, 0), jj, tmp1);
+		xy_sety(xya_ref(thepix, 0), jj, tmp2);
+	}
+		
 	return thepix;
 }
