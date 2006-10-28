@@ -98,6 +98,7 @@ double cxdx_margin;
 int maxquads;
 
 bool quiet;
+bool silent;
 
 int firstfield, lastfield;
 
@@ -123,16 +124,23 @@ int main(int argc, char *argv[]) {
 	int i;
 	int err;
 
-    if (argc != 1) {
+	if (argc == 2 && strcmp(argv[1],"-s") == 0) {
+		silent = TRUE;
+		fprintf(stderr, "premptive silence\n");
+	}
+
+	if (argc != 1 && !silent) {
 		printHelp(progname);
 		exit(-1);
-    }
+	}
 
-	printf("Running on host:\n");
-	fflush(stdout);
-	system("hostname");
-	printf("\n");
-	fflush(stdout);
+	if (!silent) {
+		printf("Running on host:\n");
+		fflush(stdout);
+		system("hostname");
+		printf("\n");
+		fflush(stdout);
+	}
 
 	fieldlist = il_new(256);
 
@@ -188,41 +196,43 @@ int main(int argc, char *argv[]) {
 		if (read_parameters())
 			break;
 
-		fprintf(stderr, "%s params:\n", progname);
-		fprintf(stderr, "fieldfname %s\n", fieldfname);
-		fprintf(stderr, "fieldid %i\n", fieldid);
-		fprintf(stderr, "treefname %s\n", treefname);
-		fprintf(stderr, "startreefname %s\n", startreefname);
-		fprintf(stderr, "quadfname %s\n", quadfname);
-		fprintf(stderr, "idfname %s\n", idfname);
-		fprintf(stderr, "matchfname %s\n", matchfname);
-		fprintf(stderr, "donefname %s\n", donefname);
-		fprintf(stderr, "solvedfname %s\n", solvedfname);
-		fprintf(stderr, "solvedserver %s\n", solvedserver);
-		fprintf(stderr, "parity %i\n", parity);
-		fprintf(stderr, "codetol %g\n", codetol);
-		fprintf(stderr, "startdepth %i\n", startdepth);
-		fprintf(stderr, "enddepth %i\n", enddepth);
-		fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
-		fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
-		fprintf(stderr, "agreetol %g\n", agreetol);
-		fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
-		fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
-		fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
-		fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
-		fprintf(stderr, "min_ninfield %i\n", min_ninfield);
-		fprintf(stderr, "xcolname %s\n", xcolname);
-		fprintf(stderr, "ycolname %s\n", ycolname);
-		fprintf(stderr, "do_correspond %i\n", do_correspond);
-		fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
-		fprintf(stderr, "maxquads %i\n", maxquads);
-		fprintf(stderr, "quiet %i\n", quiet);
-		fprintf(stderr, "threads %i\n", threads);
+		if (!silent) {
+			fprintf(stderr, "%s params:\n", progname);
+			fprintf(stderr, "fieldfname %s\n", fieldfname);
+			fprintf(stderr, "fieldid %i\n", fieldid);
+			fprintf(stderr, "treefname %s\n", treefname);
+			fprintf(stderr, "startreefname %s\n", startreefname);
+			fprintf(stderr, "quadfname %s\n", quadfname);
+			fprintf(stderr, "idfname %s\n", idfname);
+			fprintf(stderr, "matchfname %s\n", matchfname);
+			fprintf(stderr, "donefname %s\n", donefname);
+			fprintf(stderr, "solvedfname %s\n", solvedfname);
+			fprintf(stderr, "solvedserver %s\n", solvedserver);
+			fprintf(stderr, "parity %i\n", parity);
+			fprintf(stderr, "codetol %g\n", codetol);
+			fprintf(stderr, "startdepth %i\n", startdepth);
+			fprintf(stderr, "enddepth %i\n", enddepth);
+			fprintf(stderr, "fieldunits_lower %g\n", funits_lower);
+			fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
+			fprintf(stderr, "agreetol %g\n", agreetol);
+			fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
+			fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
+			fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
+			fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
+			fprintf(stderr, "min_ninfield %i\n", min_ninfield);
+			fprintf(stderr, "xcolname %s\n", xcolname);
+			fprintf(stderr, "ycolname %s\n", ycolname);
+			fprintf(stderr, "do_correspond %i\n", do_correspond);
+			fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
+			fprintf(stderr, "maxquads %i\n", maxquads);
+			fprintf(stderr, "quiet %i\n", quiet);
+			fprintf(stderr, "threads %i\n", threads);
 
-		fprintf(stderr, "fields ");
-		for (i=0; i<il_size(fieldlist); i++)
-			fprintf(stderr, "%i ", il_get(fieldlist, i));
-		fprintf(stderr, "\n");
+			fprintf(stderr, "fields ");
+			for (i=0; i<il_size(fieldlist); i++)
+				fprintf(stderr, "%i ", il_get(fieldlist, i));
+			fprintf(stderr, "\n");
+		}
 
 		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
 			fprintf(stderr, "Invalid params... this message is useless.\n");
@@ -247,33 +257,42 @@ int main(int argc, char *argv[]) {
 		}
 		
 		// Read .xyls file...
-		fprintf(stderr, "Reading fields file %s...", fieldfname);
-		fflush(stderr);
+		if (!silent) {
+			fprintf(stderr, "Reading fields file %s...", fieldfname);
+			fflush(stderr);
+		}
 		xyls = xylist_open(fieldfname);
 		if (!xyls) {
 			fprintf(stderr, "Failed to read xylist.\n");
 			exit(-1);
 		}
 		numfields = xyls->nfields;
-		fprintf(stderr, "got %u fields.\n", numfields);
+		if (!silent)
+			fprintf(stderr, "got %u fields.\n", numfields);
+		
 		if (parity) {
-			fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
+			if (!silent) 
+				fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
 			xyls->parity = 1;
 		}
 		xyls->xname = xcolname;
 		xyls->yname = ycolname;
 
 		// Read .ckdt file...
-		fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
-		fflush(stderr);
+		if (!silent) {
+			fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
+			fflush(stderr);
+		}
 		codekd = codetree_open(treefname);
 		if (!codekd)
 			exit(-1);
-		fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
-				codetree_N(codekd), codetree_nodes(codekd), codetree_D(codekd));
+		if (!silent) 
+			fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
+					codetree_N(codekd), codetree_nodes(codekd), codetree_D(codekd));
 
 		// Read .quad file...
-		fprintf(stderr, "Reading quads file %s...\n", quadfname);
+		if (!silent) 
+			fprintf(stderr, "Reading quads file %s...\n", quadfname);
 		quads = quadfile_open(quadfname, 0);
 		if (!quads) {
 			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
@@ -284,18 +303,23 @@ int main(int argc, char *argv[]) {
 		indexid = quads->indexid;
 		healpix = quads->healpix;
 
-		fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
+		if (!silent) 
+			fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
 
 		// Read .skdt file...
-		fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
-		fflush(stderr);
+		if (!silent) {
+			fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
+			fflush(stderr);
+		}
 		starkd = startree_open(startreefname);
 		if (!starkd) {
 			fprintf(stderr, "Failed to read star kdtree %s\n", startreefname);
 			exit(-1);
 		}
-		fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
-				startree_N(starkd), startree_nodes(starkd), startree_D(starkd));
+
+		if (!silent) 
+			fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
+					startree_N(starkd), startree_nodes(starkd), startree_D(starkd));
 
 		do_verify = (verify_dist2 > 0.0);
 		{
@@ -317,8 +341,9 @@ int main(int argc, char *argv[]) {
 			circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
 			qfits_header_destroy(hdr);
 		}
-		fprintf(stderr, "ckdt %s the CIRCLE header.\n",
-				(circle ? "contains" : "does not contain"));
+		if (!silent) 
+			fprintf(stderr, "ckdt %s the CIRCLE header.\n",
+					(circle ? "contains" : "does not contain"));
 
 		if (solvedserver) {
 			if (solvedclient_set_server(solvedserver)) {
@@ -329,17 +354,21 @@ int main(int argc, char *argv[]) {
 			if ((il_size(fieldlist) == 0) && (firstfield != -1) && (lastfield != -1)) {
 				int j;
 				free(fieldlist);
-				printf("Contacting solvedserver to get field list...\n");
+				if (!silent) 
+					printf("Contacting solvedserver to get field list...\n");
 				fieldlist = solvedclient_get_fields(fieldid, firstfield, lastfield, 0);
 				if (!fieldlist) {
 					fprintf(stderr, "Failed to get field list from solvedserver.\n");
 					exit(-1);
 				}
-				printf("Got %i fields from solvedserver: ", il_size(fieldlist));
-				for (j=0; j<il_size(fieldlist); j++) {
-					printf("%i ", il_get(fieldlist, j));
+				if (!silent) 
+					printf("Got %i fields from solvedserver: ", il_size(fieldlist));
+				if (!silent) {
+					for (j=0; j<il_size(fieldlist); j++) {
+						printf("%i ", il_get(fieldlist, j));
+					}
+					printf("\n");
 				}
-				printf("\n");
 			}
 		}
 
@@ -354,7 +383,8 @@ int main(int argc, char *argv[]) {
 
 		if (donefname) {
 			FILE* batchfid = NULL;
-			fprintf(stderr, "Writing marker file %s...\n", donefname);
+			if (!silent)
+				fprintf(stderr, "Writing marker file %s...\n", donefname);
 			batchfid = fopen(donefname, "wb");
 			if (batchfid)
 				fclose(batchfid);
@@ -369,7 +399,8 @@ int main(int argc, char *argv[]) {
 		xylist_close(xyls);
 		if (matchfile_fix_header(mf) ||
 			matchfile_close(mf)) {
-			fprintf(stderr, "Error closing matchfile.\n");
+			if (!silent)
+				fprintf(stderr, "Error closing matchfile.\n");
 		}
 		codetree_close(codekd);
 		startree_close(starkd);
@@ -389,7 +420,8 @@ int main(int argc, char *argv[]) {
 		free_fn(idfname);
 		free_fn(startreefname);
 
-		toc();
+		if (!silent)
+			toc();
 	}
 
 	il_free(fieldlist);
@@ -407,8 +439,9 @@ static int read_parameters() {
 	for (;;) {
 		char buffer[10240];
 		char* nextword;
-		fprintf(stderr, "\nAwaiting your command:\n");
-		fflush(stderr);
+//		if (!silent)
+//			fprintf(stderr, "\nAwaiting your command:\n");
+//		fflush(stderr);
 		if (!fgets(buffer, sizeof(buffer), stdin)) {
 			return -1;
 		}
@@ -416,8 +449,10 @@ static int read_parameters() {
 		if (buffer[strlen(buffer) - 1] == '\n')
 			buffer[strlen(buffer) - 1] = '\0';
 
-		fprintf(stderr, "Command: %s\n", buffer);
-		fflush(stderr);
+		if (!silent) {
+			fprintf(stderr, "Command: %s\n", buffer);
+			fflush(stderr);
+		}
 
 		if (is_word(buffer, "help", &nextword)) {
 			fprintf(stderr, "Commands:\n"
@@ -439,9 +474,13 @@ static int read_parameters() {
 					"    nagree_toverify <nagree>\n"
 					"    overlap_tosolve <overlap-fraction>\n"
 					"    overlap_tokeep <overlap-fraction>\n"
+					"    quiet Print less\n"
+					"    silent Don't print anything\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+		} else if (is_word(buffer, "silent", &nextword)) {
+			silent = TRUE;
 		} else if (is_word(buffer, "quiet", &nextword)) {
 			quiet = TRUE;
 		} else if (is_word(buffer, "maxquads ", &nextword)) {
@@ -702,7 +741,7 @@ void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
 	int matches, unmatches, conflicts;
 	verify_hit(starkd->tree, mo, field, nfield, verify_dist2,
 			   &matches, &unmatches, &conflicts, NULL, NULL);
-	if (!quiet)
+	if (!quiet && !silent)
 		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 				fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
  	fflush(stderr);
@@ -761,8 +800,10 @@ int handlehit(solver_params* p, MatchObj* mo) {
 
 		// we got enough overlaps to solve the field.
 		if (solved) {
-			fprintf(stderr, "Found a match that produces %4.1f%% overlapping stars.\n", 100.0 * mo->overlap);
-			fflush(stderr);
+			if (!silent) {
+				fprintf(stderr, "Found a match that produces %4.1f%% overlapping stars.\n", 100.0 * mo->overlap);
+				fflush(stderr);
+			}
 			my->winning_listind = listind;
 			p->quitNow = TRUE;
 		}
@@ -811,7 +852,8 @@ static void* solvethread_run(void* varg) {
 	int nfields;
 	double* field = NULL;
 
-	fprintf(stderr, "Thread %i starting.\n", my->threadnum);
+	if (!silent)
+		fprintf(stderr, "Thread %i starting.\n", my->threadnum);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
@@ -833,12 +875,14 @@ static void* solvethread_run(void* varg) {
 	if (funits_upper != 0.0) {
 		solver.arcsec_per_pixel_upper = funits_upper;
 		solver.minAB = index_scale_lower / funits_upper;
-		fprintf(stderr, "Set minAB to %g\n", solver.minAB);
+		if (!silent)
+			fprintf(stderr, "Set minAB to %g\n", solver.minAB);
 	}
 	if (funits_lower != 0.0) {
 		solver.arcsec_per_pixel_lower = funits_lower;
 		solver.maxAB = index_scale / funits_lower;
-		fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
+		if (!silent)
+			fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
 
 	nfields = xyls->nfields;
@@ -869,7 +913,8 @@ static void* solvethread_run(void* varg) {
 		if (solvedfname) {
 			if (solvedfile_get(solvedfname, fieldnum)) {
 				// file exists; field has already been solved.
-				fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solvedfname);
+				if (!silent)
+					fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solvedfname);
 				write_hits(fieldnum, NULL);
 				free_xy(thisfield);
 				continue;
@@ -881,7 +926,8 @@ static void* solvethread_run(void* varg) {
 		if (solvedserver) {
 			if (solvedclient_get(fieldid, fieldnum) == 1) {
 				// field has already been solved.
-				fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
+				if (!silent)
+					fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
 				write_hits(fieldnum, NULL);
 				free_xy(thisfield);
 				continue;
@@ -923,17 +969,19 @@ static void* solvethread_run(void* varg) {
 		// The real thing
 		solve_field(&solver);
 
-		fprintf(stderr, "field %i: tried %i quads, matched %i codes.\n",
-				fieldnum, solver.numtries, solver.nummatches);
+		if (!silent)
+			fprintf(stderr, "field %i: tried %i quads, matched %i codes.\n",
+					fieldnum, solver.numtries, solver.nummatches);
 
-		if (maxquads && solver.numtries >= maxquads) {
+		if (maxquads && solver.numtries >= maxquads && !silent) {
 			fprintf(stderr, "  exceeded the number of quads to try: %i >= %i.\n",
 					solver.numtries, maxquads);
 		}
 
 		if (my->winning_listind == -1) {
 			// didn't solve it...
-			fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
+			if (!silent)
+				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 			// ... but write the matches for which verification was run
 			// to collect good stats.
 			if (do_verify) {
@@ -962,9 +1010,10 @@ static void* solvethread_run(void* varg) {
 					if (mo->overlap > maxoverlap)
 						maxoverlap = mo->overlap;
 				}
-				fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
-						fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
-			} else
+				if (!silent)
+					fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
+							fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
+			} else if (!silent)
 				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(list));
 			
 			// write 'em!
@@ -975,7 +1024,8 @@ static void* solvethread_run(void* varg) {
 			pl_free(list);
 
 			if (solvedfname) {
-				fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, solvedfname);
+				if (!silent)
+					fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, solvedfname);
 				if (solvedfile_set(solvedfname, fieldnum)) {
 					fprintf(stderr, "Failed to write to solvedfile %s.\n", solvedfname);
 				}
@@ -993,19 +1043,20 @@ static void* solvethread_run(void* varg) {
 
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
-		fprintf(stderr, "Spent %g s user, %g s system, %g s total, %g s wall time.\n",
-				(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
-				millis_between(&last_wtime, &wtime) * 0.001);
+		if (!silent)
+			fprintf(stderr, "Spent %g s user, %g s system, %g s total, %g s wall time.\n\n\n",
+					(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
+					millis_between(&last_wtime, &wtime) * 0.001);
 		last_utime = utime;
 		last_stime = stime;
 		last_wtime = wtime;
-		fprintf(stderr, "\n\n");
 	}
 
 	free(field);
 	pl_free(my->verified);
 
-	fprintf(stderr, "Thread %i finished.\n", my->threadnum);
+	if (!silent)
+		fprintf(stderr, "Thread %i finished.\n", my->threadnum);
 	my->running = FALSE;
 	return 0;
 }

@@ -81,6 +81,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	int nsolved = 0;
 	for (;;) {
 		MatchObj* mo;
 		mo = matchfile_buffered_read_match(matchin);
@@ -99,6 +100,11 @@ int main(int argc, char *argv[]) {
 		if (mo->parity)
 			printf(" with parity swapped");
 		printf("\n");
+		nsolved++;
+	}
+
+	if (!nsolved) {
+		printf("No matches found\n");
 	}
 
 	return 0;

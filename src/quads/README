@@ -31,9 +31,9 @@ Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
    - What is in out?
    - About printsolved to see what actually got solved
    - input format the file needs to come in
+     - single field per file, one star per line
+     - each line is x y, as read by fscanf("%lf %lf\n")
    - how to get tunematch to give a real answer useful for inspection
-
-
  - Extended instructions for the interested
 
 
