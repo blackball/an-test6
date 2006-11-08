@@ -1,40 +1,45 @@
-The Blind Solver, part of the Astrometry.net suite.
-==================================================
-Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
+Research Code Snapshot (November 2006) for Astrometry.net
+=========================================================
+Copyright 2006, David Hogg, Dustin Lang, Keir Mierle and Sam Roweis.
 
-
- - This code is meant as an accompanyment for an upcoming paper and is meant to
-   allow reproducing the results of said paper.
- - Research code only (not for reducing data for scientific uses)
- - What is included in this release?
-   - A snapshot of all of the components of our current research code,
-     including routines to:
+ - This code is meant as an accompanyment for an upcoming paper and its
+   main purpose is to allow reproduction of the results in that paper.
+ - This is research code only and is not intended for scientific use
+   in reducing data or other analyses.
+ - This release includes a snapshot of all of the components of our
+   current research code, including routines to:
      - Convert raw USNO and Tycho2 into FITS format for easier use
      - Uniformize, deduplicate, and cut the FITSified catalogs
-     - Build indexes from the cuts for solving
-     - Solve fields without any WCS information (blind)
-     - A simple HEALPIX implementation
+     - A simple but powerful HEALPIX implementation
      - QFITS library with several modifications
      - libkd, a compact and high-performance kdtree library
-     - avl? bl?
- - Given entire 80gb USNOB raw catalog, the code in the tarball would be
-   sufficient to reproduce our indexing system.
-   - However, most people don't have raw USNO
-   - 1/12th of the sky binary kdtree drop
-   - With said system, it is possible to solve SDSS-like fields that overlap
-     that particular 1/12th of the sky. 
-   - Some example SDSS fields are included 
- - Instructions for the impatient
-   - Something similar to go.sh via the web
-   - How much disk space is required?
+     - Build the files and data structures our system requires
+       (indexes) to build a blind astrometry solver.
+ - In principle, the code in the tarball is sufficient to reproduce
+   our entire astrometry system and replicate our blind astrometry
+   results (e.g. on the SDSS fields). However, this requires the
+   entire USNO-B 1.0 catalogue which is about 80GB in size. Therefore,
+   as a proof of concept, we have released an intermediate file
+   representing the processed data from 1/12th of the sky (including
+   converting USNO to fits, uniformizing, cutting by magnitude and
+   building a kd-tree datastructure). 
+ - Using this intermediate file, it is possible to blindly solve the
+   astrometry for SDSS-like fields that are contained within that
+   particular 1/12th of the sky. We have included some example SDSS
+   fields in this region which can be used to verify that the system
+   has been installed correctly.
+ - Quick start instructions:
+   1) Go to a directory with ???GB free.
+   2) Download and run the file http://astrometry.net/???/getcode.sh
+      (it will take about ??mins on a modern workstation).
+ - Solving new fields???
    - What exactly do you need to do to solve a sloan field?
    - What is in out?
    - About printsolved to see what actually got solved
    - input format the file needs to come in
      - single field per file, one star per line
      - each line is x y, as read by fscanf("%lf %lf\n")
-   - how to get tunematch to give a real answer useful for inspection
- - Extended instructions for the interested
+   - printmatch
 
 
 SO YOU WANT TO REPRODUCE OUR RESULTS?
@@ -54,16 +59,4 @@ version 2.  See the file LICENSE for the full terms of the GNU GPL.
 
 CONTACT
 -------
-Dustin Lang can be reached at:
-  dstn (at) cs (dot) toronto (dot) edu
-or
-  dstndstn (at) gmail (dot) com
-
-Keir Mierle can be reached at:
-  keir (at) cs (dot) toronto (dot) edu
-
-Sam Roweis can be reached at:
-  roweis (at) cs (dot) toronto (dot) edu
-
-There is also a mailing list: astrometry@astrometry.net.
-
+Please send inquires/bug reports to code@astrometry.net
