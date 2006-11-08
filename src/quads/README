@@ -20,10 +20,11 @@ Copyright 2006, David Hogg, Dustin Lang, Keir Mierle and Sam Roweis.
    results (e.g. on the SDSS fields). However, this requires the
    entire USNO-B 1.0 catalogue which is about 80GB in size. Therefore,
    as a proof of concept, we have released an intermediate file
-   representing the processed data from 1/12th of the sky (including
+   representing the processed catalog data from 1/12th of the sky (including
    converting USNO to fits, uniformizing, cutting by magnitude and
-   building a kd-tree datastructure). 
- - Using this intermediate file, it is possible to blindly solve the
+   building a star kd-tree datastructure). 
+ - Using this intermediate file, it is possible to build the remainder of
+   the index files necessary to blindly solve the
    astrometry for SDSS-like fields that are contained within that
    particular 1/12th of the sky. We have included some example SDSS
    fields in this region which can be used to verify that the system
