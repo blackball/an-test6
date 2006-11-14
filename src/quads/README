@@ -2,56 +2,49 @@ Research Code Snapshot (November 2006) for Astrometry.net
 =========================================================
 Copyright 2006, David Hogg, Dustin Lang, Keir Mierle and Sam Roweis.
 
- - This code is meant as an accompanyment for an upcoming paper and its
-   main purpose is to allow reproduction of the results in that paper.
- - This is research code only and is not intended for scientific use
-   in reducing data or other analyses.
- - This release includes a snapshot of all of the components of our
-   current research code, including routines to:
-     - Convert raw USNO and Tycho2 into FITS format for easier use
-     - Uniformize, deduplicate, and cut the FITSified catalogs
-     - A simple but powerful HEALPIX implementation
-     - QFITS library with several modifications
-     - libkd, a compact and high-performance kdtree library
-     - Build the files and data structures our system requires
-       (indexes) to build a blind astrometry solver.
- - In principle, the code in the tarball is sufficient to reproduce
-   our entire astrometry system and replicate our blind astrometry
-   results (e.g. on the SDSS fields). However, this requires the
-   entire USNO-B 1.0 catalogue which is about 80GB in size. Therefore,
-   as a proof of concept, we have released an intermediate file
-   representing the processed catalog data from 1/12th of the sky (including
-   converting USNO to fits, uniformizing, cutting by magnitude and
-   building a star kd-tree datastructure). 
- - Using this intermediate file, it is possible to build the remainder of
-   the index files necessary to blindly solve the
-   astrometry for SDSS-like fields that are contained within that
-   particular 1/12th of the sky. We have included some example SDSS
-   fields in this region which can be used to verify that the system
-   has been installed correctly.
- - Quick start instructions:
-   1) Go to a directory with 3GB free.
-   2) Download and run the file http://astrometry.net/???/getcode.sh
-      (it will take about 20mins on a modern workstation).
- - Solving new fields???
-   - What exactly do you need to do to solve a sloan field?
-   - What is in out?
-   - About printsolved to see what actually got solved
-   - input format the file needs to come in
-     - single field per file, one star per line
-     - each line is x y, as read by fscanf("%lf %lf\n")
-   - printmatch
+This code is meant as an accompanyment for an upcoming paper and its main
+purpose is to allow reproduction of the results in that paper.
 
+This is research code only and is not intended for scientific use in reducing
+data or other analyses.
 
-SO YOU WANT TO REPRODUCE OUR RESULTS?
--------------------------------------
+This release includes a snapshot of all of the components of our current
+research code, including routines to:
+  * Convert raw USNO and Tycho2 into FITS format for easier use
+  * Uniformize, deduplicate, and cut the FITSified catalogs
+  * A simple but powerful HEALPIX implementation
+  * QFITS library with several modifications
+  * libkd, a compact and high-performance kdtree library
+  * Build the files and data structures our system requires
+    (indexes) to build a blind astrometry solver.
 
- * Run go.sh. It will download the source, download a catalog of 1 healpix
-   (1/12th of the sky), build an index, download sample SDSS fields, and solve
-   them.
+In principle, the code in the tarball is sufficient to reproduce our entire
+astrometry system and replicate our blind astrometry results (e.g. on the SDSS
+fields). However, this requires the entire USNO-B 1.0 catalogue which is about
+80GB in size. Therefore, as a proof of concept, we have released an
+intermediate file representing the processed catalog data from 1/12th of the
+sky (including converting USNO to fits, uniformizing, cutting by magnitude and
+building a star kd-tree datastructure). 
 
-bash < wget -O - http://trac.astrometry.net/browser/trunk/src/quads/gonew.sh?format=raw
+Using this intermediate file, it is possible to build the remainder of the
+index files necessary to blindly solve the astrometry for SDSS-like fields that
+are contained within that particular 1/12th of the sky. We have included some
+example SDSS fields in this region which can be used to verify that the system
+has been installed correctly.
 
+Quick start instructions:
+1) Go to a directory with 3GB free.
+2) Download and run the file http://astrometry.net/???/getcode.sh
+   (it will take about 20mins on a modern workstation).
+
+Solving new fields???
+- What exactly do you need to do to solve a sloan field?
+- What is in out?
+- About printsolved to see what actually got solved
+- input format the file needs to come in
+  - single field per file, one star per line
+  - each line is x y, as read by fscanf("%lf %lf\n")
+- printmatch
 
 LICENSE
 ------

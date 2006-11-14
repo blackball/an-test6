@@ -70,7 +70,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	hpquads codetree unpermute-quads unpermute-stars homer slave agreeable \
-	solvedserver printsolved xylist2fits
+	solvedserver printsolved xylist2fits printmatch
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar
@@ -80,7 +80,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats render_mercator \
-	make-merctree rawstartree printmatch
+	make-merctree rawstartree 
 
 OLDEXECS_OBJS := starkd.o catalog.o qidxfile.o histogram.o bl.o rdlist.o \
 	xylist.o verify.o hitlist_healpix.o intmap.o tic.o matchfile.o \
@@ -205,6 +205,8 @@ slave: slave.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
 agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist_healpix.o \
 		solvedfile.o solvedclient.o intmap.o healpix.o $(UTIL_OBJS) \
 		$(ANUTILS_LIB) $(QFITS_LIB)
+
+printmatch: printmatch.o matchfile.o bl.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 printsolved: printsolved.o solvedfile.o bl.o $(UTIL_OBJS) \
 		$(ANUTILS_LIB) $(QFITS_LIB) 
