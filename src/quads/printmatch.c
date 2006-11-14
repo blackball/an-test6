@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
+		printf("field: %d ", nsolved);
 		printf("min corner: ");
 		printxyzasradec(mo->sMin);
 		printf(", max corner: ");
