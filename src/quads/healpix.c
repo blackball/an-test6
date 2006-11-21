@@ -135,11 +135,28 @@ static uint xy_to_pnprime(uint x, uint y, uint Nside)
 	return pnprime;
 }
 
+/**
+   Returns the fine-scale healpix number given a large-scale healpix
+   and (x,y) coordinates within the large healpix.
+
+   This uses the Hierarchical numbering scheme if "Nside" is a power of 4,
+   and a lexicographical number for other "Nside" values.
+
+   See also healpix_compose_lex, which always uses the lexicographical scheme.
+ */
 uint healpix_compose(uint bighp, uint x, uint y, uint Nside) {
 	uint pnprime = xy_to_pnprime(x, y, Nside);
 	return bighp * Nside*Nside + pnprime;
 }
 
+/**
+   Given a fine-scale healpix number, computes the base healpix and (x,y)
+   coordinates within that healpix.  Uses the Heirarchical numbering scheme
+   for "Nside" values that are a power of 4, and the Lexicographical method
+   otherwise.
+
+   See also healpix_decompose_lex.
+ */
 void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
 	uint bighp;
 	uint pnprime;
@@ -150,10 +167,18 @@ void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside
 		*pbighp = bighp;
 }
 
+/**
+   Computes the fine-scale healpix number of a pixel in large-scale healpix
+   "bighp" and position (x,y) within the healpix.
+ */
 uint healpix_compose_lex(uint bighp, uint x, uint y, uint Nside) {
 	return (bighp * Nside * Nside) + (x * Nside) + y;
 }
 
+/**
+   Given a fine-scale healpix number, computes the large-scale healpix and (x,y)
+   coordinates within that healpix.
+ */
 void healpix_decompose_lex(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
 	uint hp;
 	if (pbighp) {
@@ -167,6 +192,10 @@ void healpix_decompose_lex(uint finehp, uint* pbighp, uint* px, uint* py, uint N
 		*py = hp % Nside;
 }
 
+/**
+   Given a large-scale healpix number, computes its neighbour in the
+   direction (dx,dy).  Returns -1 if there is no such neighbour.
+ */
 int healpix_get_neighbour(int hp, int dx, int dy)
 {
 	if (isnorthpolar(hp)) {
@@ -197,6 +226,16 @@ int healpix_get_neighbour(int hp, int dx, int dy)
 	return -1;
 }
 
+/**
+   Finds the fine-scale healpixes neighbouring the given
+   "pix".  Healpixes in the interior of a large healpix will
+   have eight neighbours; pixels near the edges can have fewer.
+
+   Make sure the "neighbour" array has space for at least eight
+   neighbours.
+
+   Returns the number of neighbours.
+ */
 uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 {
 	uint base;
