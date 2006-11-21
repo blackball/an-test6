@@ -474,8 +474,8 @@ static int read_parameters() {
 					"    nagree_toverify <nagree>\n"
 					"    overlap_tosolve <overlap-fraction>\n"
 					"    overlap_tokeep <overlap-fraction>\n"
-					"    quiet Print less\n"
-					"    silent Don't print anything\n"
+					"    quiet    (Print less)\n"
+					"    silent   (Don't print anything)\n"
 					"    run\n"
 					"    help\n"
 					"    quit\n");

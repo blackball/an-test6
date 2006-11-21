@@ -34,12 +34,12 @@
 void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s [options] <input-file> <output-file>\n"
-		   "    [-d]: use double format (float format is default)\n"
-		   "    [-x <name-of-x-column>]\n"
-		   "    [-y <name-of-y-column>]\n"
 		   "    [-c use simple 'x y\n' format; single field]\n"
-		   "    [-t <Astrometry.net filetype>]\n\n",
-		   progname);
+		   "    [-d]: use double format (float format is default)\n"
+		   "    [-x <name-of-x-column>] (default: X)\n"
+		   "    [-y <name-of-y-column>] (default: Y)\n"
+		   "    [-t <Astrometry.net filetype>] (default: %s)\n\n",
+		   progname, AN_FILETYPE_XYLS);
 }
 
 typedef pl xyarray;
