@@ -773,6 +773,7 @@ int main(int argc, char *argv[])
 		}
 		printf("final state: ");
 			tweak_print_state(&tweak);
+		print_sip(tweak.sip);
 		printf("\n");
 
 

@@ -533,7 +533,7 @@ void find_correspondences(tweak_t* t)
 	printf("im=%d\n", il_size(t->image)); 
 	printf("ref=%d\n", il_size(t->ref)); 
 	printf("dist2=%d\n", il_size(t->dist2)); 
-	dl_print(t->dist2);
+//	dl_print(t->dist2);
 }
 
 
