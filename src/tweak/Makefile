@@ -4,10 +4,10 @@ CFLAGS=-g -Wall -O0 -I../cfitsio -I../wcstools-3.6.4 -I../quads \
 LIBS= -L../cfitsio/ -lcfitsio -L../wcstools-3.6.4/libwcs -lwcs -lm \
       -L../levmar-2.1.2 -llevmar -L../quads/libkd -lkd \
       -L../quads/qfits-6.1.0/src/.libs/ -lqfits \
-      -L../quads/an-common/ -lanutils
+      -L../quads/an-common/ -lanutils -lg2c
 OBJS= tweak.o ../quads/starutil.o ../quads/mathutil.o \
 ../quads/healpix.o ezfits.o sip.o sip_util.o ../quads/bl.o \
-../quads/dualtree_rangesearch.o ../quads/dualtree.o tweak_internal.o
+../quads/dualtree_rangesearch.o ../quads/dualtree.o tweak_internal.o dgelsd.o
 
 #../quads/kdtree/kdtree.o   ../quads/kdtree/kdtree_fits_io.o \
 #../quads/qfits/byteswap.o  ../quads/qfits/fits_p.o    ../quads/qfits/simple.o \

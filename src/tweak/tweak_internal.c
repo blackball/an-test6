@@ -2,13 +2,19 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+//#include "f2c.h"
 
 #include "tweak_internal.h"
 #include "healpix.h"
 #include "dualtree_rangesearch.h"
-#include "kdtree.h"
 #include "kdtree_fits_io.h"
 
+typedef double doublereal;
+typedef long int integer;
+extern int dgelsd_(integer *m, integer *n, integer *nrhs, doublereal *a,
+		integer *lda, doublereal *b, integer *ldb, doublereal *s,
+		doublereal *rcond, integer *rank, doublereal *work, integer
+		*lwork, integer *iwork, integer *info);
 
 double max(double x, double y)
 {
