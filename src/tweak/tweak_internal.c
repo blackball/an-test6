@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
-//#include "f2c.h"
 
 #include "tweak_internal.h"
 #include "healpix.h"
@@ -552,6 +551,53 @@ void get_reference_stars(tweak_t* t)
 	kdtree_free_query(kq);
 }
 
+// Run a linear tweak; only changes CD matrix
+void do_linear_tweak(tweak_t* t)
+{
+
+	integer stride = 2*il_size(t->image);
+	double* A = malloc(4*stride*sizeof(double));
+	double* b = malloc(stride*sizeof(double));
+	assert(A);
+	assert(b);
+
+	// Fill A in column-major order for fortran dgelsd
+	// x1   u1 v1 0  0    cd11
+	// y1 = 0  0  u1 v1 * cd12
+	// x2   u2 v2 0  0    cd21
+	// y2   0  0  u2 v2   cd22
+	// ...
+	// where we minimize cd, and x,y are from refs in intermediate world
+	// coordinates. i.e. min_b || b - Ax||^2 with b refs, x unrolled cd
+	int i;
+	for (i=0; i<stride/2; i++) {
+		A[2*i+0 + stride*0] = t->x[il_get(t->image, i)] - t->sip->crpix[0];
+		A[2*i+0 + stride*1] = t->y[il_get(t->image, i)] - t->sip->crpix[1];
+		A[2*i+1 + stride*2] = t->x[il_get(t->image, i)] - t->sip->crpix[0];
+		A[2*i+1 + stride*3] = t->y[il_get(t->image, i)] - t->sip->crpix[1];
+
+		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] = A[2*i+0 + stride*2] =
+			A[2*i+0 + stride*3] = 0.0;
+
+		b[2*i+0] = t->x_ref[il_get(t->ref, i)] - t->sip->crpix[0];
+		b[2*i+1] = t->y_ref[il_get(t->ref, i)] - t->sip->crpix[1];
+	}
+
+	// allocate work areas and answers
+	
+	doublereal S[4];
+	doublereal RCOND=-1.; // nr right hand sides
+	integer N=4; // nr cols of A
+	integer NRHS=1; // nr right hand sides
+	integer rank;
+	integer lwork = 1000*1000;
+	doublereal* work = malloc(lwork*sizeof(double));
+	integer *iwork = malloc(lwork*sizeof(long int));
+	integer info;
+	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
+			&lwork, iwork, &info);
+}
+
 
 // Duct-tape dependencey system (DTDS)
 #define done(x) t->state |= x; return x;
@@ -677,7 +723,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		done(TWEAK_HAS_CORRESPONDENCES);
 	}
 
-	fprintf(stderr, "die for dependence: flag %p\n", flag);
+	fprintf(stderr, "die for dependence: flag %p\n", (void*)flag);
 	assert(0);
 }
 
