@@ -1,4 +1,7 @@
+#include <stdio.h>
 #include "tweak_internal.h"
+#include "healpix.h"
+
 
 double max(double x, double y)
 {
@@ -97,6 +100,47 @@ void get_shift(double* ximg, double* yimg, int nimg,
 //	ezwriteimage(fn, TINT, hough, hsz, hsz);
 }
 
+// Take shift in image plane and do a switcharoo to make the wcs something
+// better
+sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
+{
+	sip_t* swcs = malloc(sizeof(sip_t));
+	memcpy(swcs, wcs, sizeof(sip_t));
+
+	// Save
+	double crpix0 = wcs->crpix[0];
+	double crpix1 = wcs->crpix[1];
+
+	wcs->crpix[0] += xs;
+	wcs->crpix[1] += ys;
+
+	// now reproject the old crpix[xy] into swcs
+	double nxref, nyref;
+	pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
+
+	swcs->crval[0] = nxref;
+	swcs->crval[1] = nyref;
+
+	// Restore
+	wcs->crpix[0] = crpix0;
+	wcs->crpix[1] = crpix1;
+
+	return swcs;
+}
+
+sip_t* do_entire_shift_operation(tweak_t* t, double rho)
+{
+	get_shift(t->x, t->y, t->n,
+		  t->x_ref, t->y_ref, t->n_ref,
+		  rho*t->mindx, rho*t->mindy, rho*t->maxdx, rho*t->maxdy,
+		  &t->xs, &t->ys);
+	sip_t* swcs = wcs_shift(t->sip, t->xs, t->ys);
+	free(t->sip);
+	t->sip = swcs;
+	printf("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
+	return NULL;
+}
+
 tweak_t* tweak_new()
 {
 	tweak_t* t = malloc(sizeof(tweak_t));
@@ -117,6 +161,85 @@ tweak_t* tweak_new()
 	t->maybeinliers = t->bestinliers = t->included = NULL;
 }
 
+void tweak_print4_fp(FILE* f, double x, double y,
+                       double z, double w, int n)
+{
+	int i = 0;
+	fprintf(f, "%.15le ", x);
+	fprintf(f, "%.15le ", y);
+	fprintf(f, "%.15le ", z);
+	fprintf(f, "%.15le ", w);
+	fprintf(f, "\n");
+}
+
+void tweak_print2_fp(FILE* f, double x, double y, int n)
+{
+	int i = 0;
+	fprintf(f, "%.15le ", x);
+	fprintf(f, "%.15le ", y);
+	fprintf(f, "\n");
+}
+
+void tweak_print4(char* fn, double* x, double* y,
+                       double* z, double* w, int n)
+{
+	FILE* f = fopen(fn, "w");
+	int i = 0;
+	for (i=0; i<n; i++) 
+		tweak_print4_fp(f, x[i], y[i], z[i], w[i]); 
+	fclose(f);
+}
+
+#define BUFSZ 100
+#define USE_FILE(x) snprintf(fn, BUFSZ, (x) "_%p_%d.dat", t->flags, dump_nr)
+void tweak_dump_ascii(tweak_t* t)
+{
+	static int dump_nr = 0;
+	char fn[BUFSZ];
+	FILE* cor_im; // correspondences
+	FILE* cor_ref;
+	FILE* cor_delta;
+
+	USE_FILE("scatter_image");
+	tweak_print4(fn, t->x,t->y,t->a,t->d,t->n);
+
+	if (t->flags & TWEAK_HAS_REF_XY && 
+			t->flags & TWEAK_HAS_REF_AD) {
+		USE_FILE("scatter_ref");
+		tweak_print4(fn, t->x_ref,t->y_ref,t->a_ref,t->d_ref,t->n_ref);
+	}
+
+	if (t->image) {
+		USE_FILE("corr_im");
+		cor_im = fopen(fn, "w");
+		USE_FILE("corr_ref");
+		cor_ref = fopen(fn, "w");
+		USE_FILE("corr_delta");
+		cor_delta = fopen(fn, "w");
+		int i;
+		for (i=0; i<il_size(t->image); i++) {
+			double a,d;
+			int im_ind = il_get(t->image, i);
+			pixelxy2radec(t->sip, t->x[im_ind],t->y[im_ind], &a,&d);
+			tweak_print4_fp(cor_im, t->x[im_ind], t->y[im_ind],
+					a, d);
+
+			int ref_ind = il_get(t->ref, i);
+			tweak_print4_fp(cor_re,
+					t->x_ref[ref_ind], t->y_ref[ref_ind],
+					t->a_ref[ref_ind], t->d_ref[ref_ind]);
+
+			tweak_print4_fp(cor_delta,
+					t->x[im_ind], t->y[im_ind],
+					t->x_ref[ref_ind] - t->x[im_ind],
+					t->y_ref[ref_ind] - t->y[im_ind]);
+		}
+		fclose(cor_im);
+		fclose(cor_ref);
+		fclose(cor_delta);
+	}
+	dump_nr++;
+}
 void get_center_and_radius(double* ra, double* dec, int n,
                           double* ra_mean, double* dec_mean, double* radius)
 {
@@ -217,6 +340,22 @@ void tweak_clear_ref_ad(tweak_t* t)
 	}
 }
 
+void tweak_clear_image_ad(tweak_t* t)
+{
+	if (t->flags & TWEAK_HAS_IMAGE_AD) {
+		assert(t->a);
+		free(t->a);
+		assert(t->d);
+		free(t->d);
+
+		t->flags &= !TWEAK_HAS_IMAGE_AD;
+
+	} else {
+		assert(!t->a);
+		assert(!t->d);
+	}
+}
+
 void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 {
 	tweak_clear_ref_ad(t);
@@ -246,6 +385,42 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 
 	t->flags |= TWEAK_HAS_REF_AD;
 	t->flags |= TWEAK_HAS_REF_XYZ;
+}
+
+void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
+{
+	tweak_clear_image_xy(t);
+
+	assert(xyz);
+	assert(n);
+
+	assert(!t->xyz_ref); // no leaky
+	t->xyz_ref = malloc(sizeof(double)*3*n);
+	memcpy(t->xyz_ref, xyz, 3*n*sizeof(double));
+
+	double *ra = malloc(sizeof(double)*n);
+	double *dec = malloc(sizeof(double)*n);
+	assert(*ra);
+	assert(*dec);
+
+	int i;
+	for (i=0; i<n; i++) {
+		double *pt = xyz+3*i;
+		(*ra)[i] = rad2deg(xy2ra(pt[0],pt[1]));
+		(*dec)[i] = rad2deg(z2dec(pt[2]));
+	}
+
+	t->a_ref = ra;
+	t->d_ref = ra;
+	t->n_ref = n;
+
+	t->flags |= TWEAK_HAS_REF_AD;
+	t->flags |= TWEAK_HAS_REF_XYZ;
+}
+
+void tweak_push_hppath(tweak_t* t, char* hppath)
+{
+	t->hppath = strdup(hppath);
 }
 
 // DualTree RangeSearch callback. We want to keep track of correspondences.
@@ -320,6 +495,53 @@ void find_correspondences(tweak_t* t)
 }
 
 
+kdtree_t* cached_kd = NULL;
+int cached_kd_hp = 0;
+
+void get_reference_stars(tweak_t* t)
+{
+	double ra_mean = t->a_bar;
+	double dec_mean = t->d_bar;
+	double radius = t->radius;
+
+	// FIXME magical 9 constant == an_cat hp res NSide
+	int hp = radectohealpix_nside(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
+	kdtree_t* kd;
+	if (cached_kd_hp != hp || cached_kd == NULL) {
+		char buf[1000];
+		snprintf(buf,1000, t->hppath, hp);
+		fprintf(stderr, "opening %s\n",buf);
+		kd = kdtree_fits_read(buf, NULL);
+		fprintf(stderr, "success\n");
+		assert(kd);
+		cached_kd_hp = hp;
+		cached_kd = kd;
+	} else {
+		kd = cached_kd;
+	}
+
+	double xyz[3];
+	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
+	//radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
+
+	// Fudge radius factor because if the shift is really big, then we
+	// can't actually find the correct astrometry.
+	double radius_factor = 1.3;
+	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz,
+			radius*radius*radius_factor);
+	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
+
+	*n = kq->nres;
+
+	// No stars? That's bad. Run away.
+	if (!*n)
+		return;
+
+	tweak_push_ref_xyz(t, kq->results.d, kq->nres)
+
+	kdtree_free_query(kq);
+}
+
 
 // Duct-tape dependencey system (DTDS)
 #define done(x) t->flags |= x; return x;
@@ -334,16 +556,6 @@ void find_correspondences(tweak_t* t)
 
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 {
-
-//	want(TWEAK_HAS_SIP) {
-		// problems
-//		assert(0);
-
-		// FIXME in the future, we could probably try depending on
-		// correspondences and then estimate a SIP TAN header from
-		// that.
-//	} 
-
 	want(TWEAK_IMAGE_AD) {
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
@@ -407,10 +619,15 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	}
 
 	want(TWEAK_HAS_REF_XYZ) {
-		ensure(TWEAK_HAS_REF_AD);
+		if (t->flags & TWEAK_HAS_HEALPIX_PATH) {
+			ensure(TWEAK_HAS_AD_BAR_AND_R);
+			get_reference_stars(t);
+		} else {
+			ensure(TWEAK_HAS_REF_AD);
 
-		// need to fetch from rawstartree here
-		assert(0);
+			// try a conversion
+			assert(0);
+		}
 
 		done(TWEAK_HAS_REF_XYZ);
 	}
@@ -423,11 +640,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		               t->x_ref, t->y_ref, t->n_ref,
 		               t->mindx, t->mindy, t->maxdx, t->maxdy);
 
-		get_shift(t->x, t->y, t->n,
-		          t->x_ref, t->y_ref, t->n_ref,
-		          t->mindx, t->mindy, t->maxdx, t->maxdy,
-			  &t->xs, &t->ys);
-
+		do_entire_shift_operation(t, 1.0);
+		tweak_clear_image_ad(t);
 
 		done(TWEAK_HAS_COARSLY_SHIFTED);
 	}
@@ -436,13 +650,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_COARSLY_SHIFTED);
 
 		// Shrink size of hough box
-		double rho = 0.05;
-
-		get_shift(t->x, t->y, t->n,
-		          t->x_ref, t->y_ref, t->n_ref,
-		          rho*t->mindx, rho*t->mindy,
-			  rho*t->maxdx, rho*t->maxdy,
-			  &t->xs, &t->ys);
+		do_entire_shift_operation(t, .05);
+		tweak_clear_image_ad(t);
 
 		done(TWEAK_HAS_COARSLY_SHIFTED);
 	}
@@ -458,4 +667,12 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 	fprintf(stderr, "die for dependence: flag %p\n", flag);
 	assert(0);
+}
+
+void tweak_clear(tweak_t* t)
+{
+	// FIXME
+	assert(0);
+	if (cached_kd)
+		kdtree_fits_close(cached_kd);
 }

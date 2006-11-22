@@ -7,7 +7,7 @@ LIBS= -L../cfitsio/ -lcfitsio -L../wcstools-3.6.4/libwcs -lwcs -lm \
       -L../quads/an-common/ -lanutils
 OBJS= tweak.o ../quads/starutil.o ../quads/mathutil.o \
 ../quads/healpix.o ezfits.o sip.o sip_util.o ../quads/bl.o \
-../quads/dualtree_rangesearch.o ../quads/dualtree.o
+../quads/dualtree_rangesearch.o ../quads/dualtree.o tweak_internal.o
 
 #../quads/kdtree/kdtree.o   ../quads/kdtree/kdtree_fits_io.o \
 #../quads/qfits/byteswap.o  ../quads/qfits/fits_p.o    ../quads/qfits/simple.o \

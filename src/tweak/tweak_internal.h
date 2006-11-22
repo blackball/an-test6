@@ -29,10 +29,11 @@ enum tweak_flags {
 	TWEAK_HAS_RUN_RANSAC_OPT   = 1024,
 	TWEAK_HAS_COARSLY_SHIFTED  = 2048,
 	TWEAK_HAS_FINELY_SHIFTED   = 4096,
+	TWEAK_HAS_HEALPIX_PATH     = 8192
 };
 // FIXME add a method to print out the state in a readable way
 
-// Really what we want is some sort of fancy dependency system... oh well
+// Really what we want is some sort of fancy dependency system... DTDS!
 typedef struct tweak_s {
 	sip_t* sip;
 	unsigned int state; // bitfield of tweak_flags
@@ -77,13 +78,23 @@ typedef struct tweak_s {
 	// Size of Hough space for shift
 	double mindx, mindy, maxdx, maxdy;
 
+	// Size of last run shift operation
+	double xs, ys;
+
 	// Trees used for finding correspondences
 	kdtree_t* kd_image;
 	kdtree_t* kd_ref;
+
+	// path for raw star data
+	char* hppath;
 } tweak_t;
 
 tweak_t* tweak_new();
 void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n);
-int tweak_advance(tweak_t* t);
+unsigned int tweak_advance_to(tweak_t* t, unsigned int flag);
+void tweak_clear(tweak_t* t);
+void tweak_dump_ascii(tweak_t* t);
+void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n);
+void tweak_push_hppath(tweak_t* t, char* hppath);
 
 #endif

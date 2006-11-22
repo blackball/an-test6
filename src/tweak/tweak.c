@@ -40,9 +40,8 @@
 #include "sip_util.h"
 #include "bl.h"
 #include "lm.h"
+#include "tweak_internal.h"
 
-kdtree_t* cached_kd = NULL;
-int cached_kd_hp = 0;
 
 int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 {
@@ -107,98 +106,6 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 	return 0;
 }
 
-
-void get_reference_stars(double ra_mean, double dec_mean, double radius,
-                         double** ra, double **dec, int *n, char* hppat)
-{
-	// FIXME magical 9 constant == an_cat hp res NSide
-	int hp = radectohealpix_nside(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
-	kdtree_t* kd;
-	if (cached_kd_hp != hp || cached_kd == NULL) {
-		char buf[1000];
-		snprintf(buf,1000, hppat, hp);
-		fprintf(stderr, "opening %s\n",buf);
-		kd = kdtree_fits_read(buf, NULL);
-		fprintf(stderr, "success\n");
-		assert(kd);
-		cached_kd_hp = hp;
-		cached_kd = kd;
-	} else {
-		kd = cached_kd;
-	}
-
-	double xyz[3];
-	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
-	//radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
-
-	// Fudge radius factor because if the shift is really big, then we
-	// can't actually find the correct astrometry.
-	double radius_factor = 1.3;
-	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz,
-			radius*radius*radius_factor);
-	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
-
-	*n = kq->nres;
-
-	// No stars? That's bad. Run away.
-	if (!*n)
-		return;
-
-	tweak_push_ref_xyz()
-
-//	*ra = malloc(sizeof(double)*kq->nres);
-//	*dec = malloc(sizeof(double)*kq->nres);
-//	assert(*ra);
-//	assert(*dec);
-//
-//	int i;
-//	fprintf(stderr, "ref stars:\n");
-//	for (i=0; i<kq->nres; i++) {
-//		double *xyz = kq->results.d+3*i;
-//		(*ra)[i] = rad2deg(xy2ra(xyz[0],xyz[1]));
-//		(*dec)[i] = rad2deg(z2dec(xyz[2]));
-		/*
-		if (i < 30) {
-			fprintf(stderr, "a=%f d=%f\n",(*ra)[i],(*dec)[i]);
-			fprintf(stderr, "x=%f y=%f z=%f\n",xyz[0],xyz[1], xyz[2]);
-			fprintf(stderr, "dist=%f\n",sqrt(kq->sdists[i]));
-			fprintf(stderr, "distdeg=%f\n",sqrt(kq->sdists[i]));
-		}
-		*/
-//	}
-
-	kdtree_free_query(kq);
-//	kdtree_fits_close(kd);
-}
-
-
-// Take shift in image plane and do a switcharoo to make the wcs something
-// better
-sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
-{
-	sip_t* swcs = malloc(sizeof(sip_t));
-	memcpy(swcs, wcs, sizeof(sip_t));
-
-	// Save
-	double crpix0 = wcs->crpix[0];
-	double crpix1 = wcs->crpix[1];
-
-	wcs->crpix[0] += xs;
-	wcs->crpix[1] += ys;
-
-	// now reproject the old crpix[xy] into swcs
-	double nxref, nyref;
-	pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
-
-	swcs->crval[0] = nxref;
-	swcs->crval[1] = nyref;
-
-	// Restore
-	wcs->crpix[0] = crpix0;
-	wcs->crpix[1] = crpix1;
-
-	return swcs;
-}
 // Grabs the data we need for tweak from various sources:
 // XY locations in pixel space
 // AD locations corresponding to sources
@@ -221,21 +128,24 @@ int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
 	}
 
 	// Convert to ra dec
-	t->a = malloc(sizeof(double)*t->n);
-	t->d = malloc(sizeof(double)*t->n);
-	for (jj=0; jj<t->n; jj++) {
-		pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
+//	t->a = malloc(sizeof(double)*t->n);
+//	t->d = malloc(sizeof(double)*t->n);
+//	for (jj=0; jj<t->n; jj++) {
+//		pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
 //		if (jj < 30) 
 //			printf("::: %lf %lf\n", t->a[jj], t->d[jj]);
-	}
+//	}
 
 //	ezscatter("scatter_image.fits", t->x,t->y,t->a,t->d,t->n);
 
 	// Find field center/radius
-	get_center_and_radius(t->a, t->d, t->n,
-	                      &t->a_bar, &t->d_bar, &t->radius);
-	fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",
-	                 t->a_bar, t->d_bar, t->radius);
+//	get_center_and_radius(t->a, t->d, t->n,
+//	                      &t->a_bar, &t->d_bar, &t->radius);
+//	fprintf(stderr, "abar=%f, dbar=%f, radius in rad=%f\n",
+//	                 t->a_bar, t->d_bar, t->radius);
+
+	while( TWEAK_HAS_AD_BAR_AND_R !=
+			tweak_advance_to(TWEAK_HAS_AD_BAR_AND_R));
 
 	// Get the reference stars from our catalog
 	get_reference_stars(t->a_bar, t->d_bar, t->radius,
@@ -258,101 +168,6 @@ int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
 		              t->x_ref+jj, t->y_ref+jj);
 	}
 	return 1;
-}
-
-sip_t* do_entire_shift_operation(tweak_t* t)
-{
-//	ezscatter("scatter_usno.fits", x_ref,y_ref,a_ref,d_ref,n_ref);
-
-	printf("----- entire shift\n");
-	// Run our wonderful shift algorithm
-	double xshift, yshift;
-	get_shift(t->x, t->y, t->n,              // Image
-	          t->x_ref, t->y_ref, t->n_ref,  // Reference
-	          &xshift, &yshift);
-	sip_t* swcs = wcs_shift(t->sip, xshift, yshift);
-	free(t->sip);
-	t->sip = swcs;
-	printf("xshift=%lf, yshift=%lf\n", xshift, yshift);
-	return NULL;
-}
-
-typedef struct { il* image; il* ref; dl* dist2; } dualtree_data_t;
-
-// DualTree RangeSearch callback. We want to keep track of correspondences.
-// If we get called multiple times with the same image_ind, then we take the
-// ref_ind which is closest.
-void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
-{
-	tweak_t* t = extra;
-
-	image_ind = t->kd_image->perm[image_ind];
-	ref_ind = t->kd_ref->perm[ref_ind];
-
-
-	double dx = t->x[image_ind] - t->x_ref[ref_ind];
-	double dy = t->y[image_ind] - t->y_ref[ref_ind];
-
-	printf("found new one!: dx=%lf, dy=%lf, dist=%lf\n",
-			dx,dy,sqrt(dx*dx+dy*dy));
-	il_append(t->image, image_ind);
-	il_append(t->ref, ref_ind);
-	dl_append(t->dist2, dist2);
-	il_append(t->included, 1);
-}
-
-// Dualtree rangesearch callback for distance calc. this should be integrated
-// with real dualtree rangesearch.
-double dtrs_dist2_callback(void* p1, void* p2, int D)
-{
-	double accum = 0;
-	double* pp1=p1, *pp2=p2;
-	int i;
-	for (i=0; i<D; i++) {
-		double delta = pp1[i]-pp2[i];
-		accum += delta*delta;
-	}
-	return accum;
-}
-
-void find_correspondences(tweak_t* t)
-{
-	double* data_image = malloc(sizeof(double)*t->n*2);
-	double* data_ref = malloc(sizeof(double)*t->n_ref*2);
-
-	int i;
-	for (i=0; i<t->n; i++) {
-		data_image[2*i+0] = t->x[i];
-		data_image[2*i+1] = t->y[i];
-	}
-
-	t->kd_image = kdtree_build(NULL, data_image, t->n, 2, 4, KDTT_DOUBLE,
-	                           KD_BUILD_BBOX);
-
-	for (i=0; i<t->n_ref; i++) {
-		data_ref[2*i+0] = t->x_ref[i];
-		data_ref[2*i+1] = t->y_ref[i];
-	}
-	t->kd_ref = kdtree_build(NULL, data_ref, t->n_ref, 2, 4, KDTT_DOUBLE,
-                                 KD_BUILD_BBOX);
-
-	// Storage for correspondences
-	t->image = il_new(600);
-	t->ref = il_new(600);
-	t->dist2 = dl_new(600);
-	t->included = il_new(600);
-
-	// Find closest neighbours
-	dualtree_rangesearch(t->kd_image, t->kd_ref,
-	                     RANGESEARCH_NO_LIMIT, 35, // This min/max dist is in pixels
-	                     dtrs_dist2_callback,
-	                     dtrs_match_callback, t,
-	                     NULL, NULL);
-
-	printf("im=%d\n", il_size(t->image)); 
-	printf("ref=%d\n", il_size(t->ref)); 
-	printf("dist2=%d\n", il_size(t->dist2)); 
-	dl_print(t->dist2);
 }
 
 void free_extraneous(tweak_t* t) 
@@ -920,38 +735,42 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		print_sip(tweak.sip);
+		tweak.flags |= TWEAK_HAS_SIP;
 
 
-		get_tweak_data(&tweak, xyfptr, hppat, kk);
-		do_entire_shift_operation(&tweak);
-		free_extraneous(&tweak);
+		tweak_advance_to(&tweak, TWEAK_HAS_
 
-		get_tweak_data(&tweak, xyfptr, hppat, kk);
-		do_entire_shift_operation(&tweak);
-		free_extraneous(&tweak);
 
 //		get_tweak_data(&tweak, xyfptr, hppat, kk);
 //		do_entire_shift_operation(&tweak);
 //		free_extraneous(&tweak);
+//
+//		get_tweak_data(&tweak, xyfptr, hppat, kk);
+//		do_entire_shift_operation(&tweak);
+//		free_extraneous(&tweak);
+//
+//		get_tweak_data(&tweak, xyfptr, hppat, kk);
+//		do_entire_shift_operation(&tweak);
+//		free_extraneous(&tweak);
 
-		get_tweak_data(&tweak, xyfptr, hppat, kk);
-		do_entire_shift_operation(&tweak);
-		free_extraneous(&tweak);
-		get_tweak_data(&tweak, xyfptr, hppat, kk);
+//		get_tweak_data(&tweak, xyfptr, hppat, kk);
+//		do_entire_shift_operation(&tweak);
+//		free_extraneous(&tweak);
+//		get_tweak_data(&tweak, xyfptr, hppat, kk);
+//
+//		find_correspondences(&tweak);
+//
+//		dump_data(&tweak);
 
-		find_correspondences(&tweak);
-
-		dump_data(&tweak);
-
-		ransac(&tweak);
-		print_sip(tweak.sip);
+//		ransac(&tweak);
+//		print_sip(tweak.sip);
 //		free_extraneous(&tweak);
 //		get_tweak_data(&tweak, xyfptr, hppat, kk);
 
-		dump_data(&tweak);
+//		dump_data(&tweak);
 
-		if (cached_kd)
-			kdtree_fits_close(cached_kd);
+		tweak_clear(&tweak);
+
 		exit(1);
 	}
 
