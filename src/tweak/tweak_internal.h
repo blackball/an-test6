@@ -2,8 +2,10 @@
 #ifndef _TWEAK_INTERNAL_H
 #define _TWEAK_INTERNAL_H
 
-#include "kdtreeh."
+#include "kdtree.h"
 #include "bl.h"
+#include "sip.h"
+#include "starutil.h"
 
 enum opt_flags {
 	OPT_CRVAL         = 1,

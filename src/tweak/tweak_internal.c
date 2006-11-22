@@ -1,6 +1,13 @@
 #include <stdio.h>
+#include <assert.h>
+#include <string.h>
+#include <math.h>
+
 #include "tweak_internal.h"
 #include "healpix.h"
+#include "dualtree_rangesearch.h"
+#include "kdtree.h"
+#include "kdtree_fits_io.h"
 
 
 double max(double x, double y)
@@ -22,6 +29,8 @@ void get_dydx_range(double* ximg, double* yimg, int nimg,
 	*mindx = 1e100;
 	*maxdy = -1e100;
 	*mindy = 1e100;
+
+	int i, j;
 	for (i=0; i<nimg; i++) {
 		for (j=0; j<ncat; j++) {
 			double dx = ximg[i]-xcat[j];
@@ -91,7 +100,7 @@ void get_shift(double* ximg, double* yimg, int nimg,
 
 	*yshift = ((double)(themaxind/hsz)/(double)hsz)*(maxdy-mindy)+mindy;
 	*xshift = ((double)(themaxind % hsz)/(double)hsz)*(maxdx-mindx)+mindx;
-	fprintf(stderr, "get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy,);
+	fprintf(stderr, "get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
 	fprintf(stderr, "get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
 
 	static char c = '1';
@@ -159,12 +168,13 @@ tweak_t* tweak_new()
 	t->image = t->ref = t->dist2 = NULL;
 
 	t->maybeinliers = t->bestinliers = t->included = NULL;
+
+	return t;
 }
 
 void tweak_print4_fp(FILE* f, double x, double y,
-                       double z, double w, int n)
+                       double z, double w)
 {
-	int i = 0;
 	fprintf(f, "%.15le ", x);
 	fprintf(f, "%.15le ", y);
 	fprintf(f, "%.15le ", z);
@@ -172,9 +182,8 @@ void tweak_print4_fp(FILE* f, double x, double y,
 	fprintf(f, "\n");
 }
 
-void tweak_print2_fp(FILE* f, double x, double y, int n)
+void tweak_print2_fp(FILE* f, double x, double y)
 {
-	int i = 0;
 	fprintf(f, "%.15le ", x);
 	fprintf(f, "%.15le ", y);
 	fprintf(f, "\n");
@@ -191,7 +200,7 @@ void tweak_print4(char* fn, double* x, double* y,
 }
 
 #define BUFSZ 100
-#define USE_FILE(x) snprintf(fn, BUFSZ, (x) "_%p_%d.dat", t->flags, dump_nr)
+#define USE_FILE(x) snprintf(fn, BUFSZ, x "_%p_%d.dat", (void*)t->state, dump_nr)
 void tweak_dump_ascii(tweak_t* t)
 {
 	static int dump_nr = 0;
@@ -203,8 +212,8 @@ void tweak_dump_ascii(tweak_t* t)
 	USE_FILE("scatter_image");
 	tweak_print4(fn, t->x,t->y,t->a,t->d,t->n);
 
-	if (t->flags & TWEAK_HAS_REF_XY && 
-			t->flags & TWEAK_HAS_REF_AD) {
+	if (t->state & TWEAK_HAS_REF_XY && 
+			t->state & TWEAK_HAS_REF_AD) {
 		USE_FILE("scatter_ref");
 		tweak_print4(fn, t->x_ref,t->y_ref,t->a_ref,t->d_ref,t->n_ref);
 	}
@@ -225,7 +234,7 @@ void tweak_dump_ascii(tweak_t* t)
 					a, d);
 
 			int ref_ind = il_get(t->ref, i);
-			tweak_print4_fp(cor_re,
+			tweak_print4_fp(cor_ref,
 					t->x_ref[ref_ind], t->y_ref[ref_ind],
 					t->a_ref[ref_ind], t->d_ref[ref_ind]);
 
@@ -284,7 +293,7 @@ void get_center_and_radius(double* ra, double* dec, int n,
 
 void tweak_clear_correspondences(tweak_t* t)
 {
-	if (t->flags & TWEAK_HAS_CORRESPONDENCES) {
+	if (t->state & TWEAK_HAS_CORRESPONDENCES) {
 		// our correspondences are also now toast
 		assert(t->image);
 		assert(t->ref);
@@ -298,22 +307,22 @@ void tweak_clear_correspondences(tweak_t* t)
 		t->image = NULL;
 		t->ref = NULL;
 		t->dist2 = NULL;
-		t->flags &= !TWEAK_HAS_CORRESPONDENCES;
+		t->state &= !TWEAK_HAS_CORRESPONDENCES;
 	} else {
-		assert(!image);
-		assert(!ref);
-		assert(!dist2);
+		assert(!t->image);
+		assert(!t->ref);
+		assert(!t->dist2);
 	}
 }
 
 void tweak_clear_ref_xy(tweak_t* t)
 {
-	if (t->flags & TWEAK_HAS_REF_XY) {
+	if (t->state & TWEAK_HAS_REF_XY) {
 		assert(t->x_ref);
 		free(t->x_ref);
 		assert(t->y_ref);
 		free(t->y_ref);
-		t->flags &= !TWEAK_HAS_REF_XY;
+		t->state &= !TWEAK_HAS_REF_XY;
 
 	} else {
 		assert(!t->x_ref);
@@ -323,7 +332,7 @@ void tweak_clear_ref_xy(tweak_t* t)
 
 void tweak_clear_ref_ad(tweak_t* t)
 {
-	if (t->flags & TWEAK_HAS_REF_AD) {
+	if (t->state & TWEAK_HAS_REF_AD) {
 		assert(t->a_ref);
 		free(t->a_ref);
 		assert(t->d_ref);
@@ -332,7 +341,7 @@ void tweak_clear_ref_ad(tweak_t* t)
 
 		tweak_clear_correspondences(t);
 		tweak_clear_ref_xy(t);
-		t->flags &= !TWEAK_HAS_REF_AD;
+		t->state &= !TWEAK_HAS_REF_AD;
 
 	} else {
 		assert(!t->a_ref);
@@ -342,17 +351,33 @@ void tweak_clear_ref_ad(tweak_t* t)
 
 void tweak_clear_image_ad(tweak_t* t)
 {
-	if (t->flags & TWEAK_HAS_IMAGE_AD) {
+	if (t->state & TWEAK_HAS_IMAGE_AD) {
 		assert(t->a);
 		free(t->a);
 		assert(t->d);
 		free(t->d);
 
-		t->flags &= !TWEAK_HAS_IMAGE_AD;
+		t->state &= !TWEAK_HAS_IMAGE_AD;
 
 	} else {
 		assert(!t->a);
 		assert(!t->d);
+	}
+}
+
+void tweak_clear_image_xy(tweak_t* t)
+{
+	if (t->state & TWEAK_HAS_IMAGE_XY) {
+		assert(t->x);
+		free(t->x);
+		assert(t->y);
+		free(t->y);
+
+		t->state &= !TWEAK_HAS_IMAGE_XY;
+
+	} else {
+		assert(!t->x);
+		assert(!t->y);
 	}
 }
 
@@ -369,53 +394,34 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 
 	double *ra = malloc(sizeof(double)*n);
 	double *dec = malloc(sizeof(double)*n);
-	assert(*ra);
-	assert(*dec);
+	assert(ra);
+	assert(dec);
 
 	int i;
 	for (i=0; i<n; i++) {
 		double *pt = xyz+3*i;
-		(*ra)[i] = rad2deg(xy2ra(pt[0],pt[1]));
-		(*dec)[i] = rad2deg(z2dec(pt[2]));
+		ra[i] = rad2deg(xy2ra(pt[0],pt[1]));
+		dec[i] = rad2deg(z2dec(pt[2]));
 	}
 
 	t->a_ref = ra;
 	t->d_ref = ra;
 	t->n_ref = n;
 
-	t->flags |= TWEAK_HAS_REF_AD;
-	t->flags |= TWEAK_HAS_REF_XYZ;
+	t->state |= TWEAK_HAS_REF_AD;
+	t->state |= TWEAK_HAS_REF_XYZ;
 }
 
 void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
 {
 	tweak_clear_image_xy(t);
 
-	assert(xyz);
 	assert(n);
 
-	assert(!t->xyz_ref); // no leaky
-	t->xyz_ref = malloc(sizeof(double)*3*n);
-	memcpy(t->xyz_ref, xyz, 3*n*sizeof(double));
+	t->x = malloc(sizeof(double)*n);
+	t->y = malloc(sizeof(double)*n);
 
-	double *ra = malloc(sizeof(double)*n);
-	double *dec = malloc(sizeof(double)*n);
-	assert(*ra);
-	assert(*dec);
-
-	int i;
-	for (i=0; i<n; i++) {
-		double *pt = xyz+3*i;
-		(*ra)[i] = rad2deg(xy2ra(pt[0],pt[1]));
-		(*dec)[i] = rad2deg(z2dec(pt[2]));
-	}
-
-	t->a_ref = ra;
-	t->d_ref = ra;
-	t->n_ref = n;
-
-	t->flags |= TWEAK_HAS_REF_AD;
-	t->flags |= TWEAK_HAS_REF_XYZ;
+	t->state |= TWEAK_HAS_IMAGE_XY;
 }
 
 void tweak_push_hppath(tweak_t* t, char* hppath)
@@ -433,8 +439,8 @@ void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 	image_ind = t->kd_image->perm[image_ind];
 	ref_ind = t->kd_ref->perm[ref_ind];
 
-	double dx = t->x[image_ind] - t->x_ref[ref_ind];
-	double dy = t->y[image_ind] - t->y_ref[ref_ind];
+//	double dx = t->x[image_ind] - t->x_ref[ref_ind];
+//	double dy = t->y[image_ind] - t->y_ref[ref_ind];
 
 //	printf("found new one!: dx=%lf, dy=%lf, dist=%lf\n", dx,dy,sqrt(dx*dx+dy*dy));
 	il_append(t->image, image_ind);
@@ -462,8 +468,8 @@ void find_correspondences(tweak_t* t)
 	double* data_image = malloc(sizeof(double)*t->n*3);
 	double* data_ref = malloc(sizeof(double)*t->n_ref*3);
 
-	assert(t->flags & TWEAK_HAS_IMAGE_XYZ);
-	assert(t->flags & TWEAK_HAS_REF_XYZ);
+	assert(t->state & TWEAK_HAS_IMAGE_XYZ);
+	assert(t->state & TWEAK_HAS_REF_XYZ);
 	tweak_clear_correspondences(t);
 
 	memcpy(data_image, t->xyz,     3*t->n*sizeof(double));
@@ -531,32 +537,30 @@ void get_reference_stars(tweak_t* t)
 			radius*radius*radius_factor);
 	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
 
-	*n = kq->nres;
-
 	// No stars? That's bad. Run away.
-	if (!*n)
+	if (!kq->nres)
 		return;
 
-	tweak_push_ref_xyz(t, kq->results.d, kq->nres)
+	tweak_push_ref_xyz(t, kq->results.d, kq->nres);
 
 	kdtree_free_query(kq);
 }
 
 
 // Duct-tape dependencey system (DTDS)
-#define done(x) t->flags |= x; return x;
+#define done(x) t->state |= x; return x;
 #define want(x) \
-	if (flag == x && t->flags & x) \
+	if (flag == x && t->state & x) \
 		return x; \
 	else if (flag == x) 
 #define ensure(x) \
-	if (!t->flags & x) { \
-		return tweak_advance(t, x); \
+	if (!t->state & x) { \
+		return tweak_advance_to(t, x); \
 	}
 
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 {
-	want(TWEAK_IMAGE_AD) {
+	want(TWEAK_HAS_IMAGE_AD) {
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
@@ -565,38 +569,40 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		assert(!t->d);
 		t->a = malloc(sizeof(double)*t->n);
 		t->d = malloc(sizeof(double)*t->n);
+		int jj;
 		for (jj=0; jj<t->n; jj++) {
 			pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
 		}
 
-		done(TWEAK_IMAGE_AD);
+		done(TWEAK_HAS_IMAGE_AD);
 	}
 			
-	want(TWEAK_REF_XY) {
+	want(TWEAK_HAS_REF_XY) {
 		// FIXME this could be provided by rawstartree provided
 		//ensure(TWEAK_HAS_AD_BAR_AND_R);
 		ensure(TWEAK_HAS_REF_AD);
 
 		tweak_clear_ref_xy(t);
 
-		assert(t->flags & TWEAK_HAS_REF_AD);
+		assert(t->state & TWEAK_HAS_REF_AD);
 		assert(t->n_ref);
 		assert(!t->x_ref);
 		assert(!t->y_ref);
 		t->x_ref = malloc(sizeof(double)*t->n_ref);
 		t->y_ref = malloc(sizeof(double)*t->n_ref);
+		int jj;
 		for (jj=0; jj<t->n_ref; jj++) {
 			radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
 				      t->x_ref+jj, t->y_ref+jj);
 		}
 
-		done(TWEAK_REF_XY);
+		done(TWEAK_HAS_REF_XY);
 	}
 
 	want(TWEAK_HAS_AD_BAR_AND_R) {
 		ensure(TWEAK_HAS_REF_AD);
 
-		assert(t->flags & TWEAK_HAS_REF_AD);
+		assert(t->state & TWEAK_HAS_REF_AD);
 		get_center_and_radius(t->a_ref, t->d_ref, t->n_ref, 
 		                      &t->a_bar, &t->d_bar, &t->radius);
 
@@ -610,7 +616,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		t->xyz = malloc(3*t->n*sizeof(double));
 		int i;
-		for (i=0; i<n; i++) {
+		for (i=0; i<t->n; i++) {
 			radec2xyzarr(deg2rad(t->a[i]),
 				     deg2rad(t->d[i]),
 				     t->xyz + 3*i);
@@ -619,7 +625,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	}
 
 	want(TWEAK_HAS_REF_XYZ) {
-		if (t->flags & TWEAK_HAS_HEALPIX_PATH) {
+		if (t->state & TWEAK_HAS_HEALPIX_PATH) {
 			ensure(TWEAK_HAS_AD_BAR_AND_R);
 			get_reference_stars(t);
 		} else {
@@ -638,7 +644,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		get_dydx_range(t->x, t->y, t->n,
 		               t->x_ref, t->y_ref, t->n_ref,
-		               t->mindx, t->mindy, t->maxdx, t->maxdy);
+		               &t->mindx, &t->mindy, &t->maxdx, &t->maxdy);
 
 		do_entire_shift_operation(t, 1.0);
 		tweak_clear_image_ad(t);

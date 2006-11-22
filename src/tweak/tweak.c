@@ -112,6 +112,7 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 // estimated field center / radius
 // XY reference locations
 // AD reference locations
+#if 0
 int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
 {
 	// Extract XY from FITS table as floats
@@ -145,7 +146,7 @@ int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
 //	                 t->a_bar, t->d_bar, t->radius);
 
 	while( TWEAK_HAS_AD_BAR_AND_R !=
-			tweak_advance_to(TWEAK_HAS_AD_BAR_AND_R));
+			tweak_advance_to(t, TWEAK_HAS_AD_BAR_AND_R));
 
 	// Get the reference stars from our catalog
 	get_reference_stars(t->a_bar, t->d_bar, t->radius,
@@ -169,6 +170,7 @@ int get_tweak_data(tweak_t* t, fitsfile* xyfptr, char* hppat, int hdu)
 	}
 	return 1;
 }
+#endif
 
 void free_extraneous(tweak_t* t) 
 {
@@ -735,10 +737,10 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		print_sip(tweak.sip);
-		tweak.flags |= TWEAK_HAS_SIP;
+		tweak.state |= TWEAK_HAS_SIP;
 
 
-		tweak_advance_to(&tweak, TWEAK_HAS_
+		tweak_advance_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 
 
 //		get_tweak_data(&tweak, xyfptr, hppat, kk);
