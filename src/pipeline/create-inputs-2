@@ -34,19 +34,19 @@ THREADS=1
 #MATCH_TEMPLATE=match/match1.%02i.%02i
 #DONE_TEMPLATE=done/done1.%02i.%02i
 
-INPUT=input/input1
-SOLVED_TEMPLATE=solved/tmp.solved1
-MATCH_TEMPLATE=match/tmp.match1
-DONE_TEMPLATE=done/done1
+INPUT=input/input2
+SOLVED_TEMPLATE=solved/tmp.solved2
+MATCH_TEMPLATE=match/tmp.match2
+DONE_TEMPLATE=done/done2
 
 SDEPTH=0
-DEPTH=60
+DEPTH=80
 
 QUIET=1
 
 FUL=0.39
 FUU=0.41
-TOL=0.004
+TOL=0.006
 
 CXDX=0.05
 AGREETOL=10

@@ -232,22 +232,50 @@ include makefile.prospectus
 
 #include makefile.homer
 
-solve1: index02
+.PHONY: solve1
+#solve1: done/done1.00.01
+solve1: done/done1
+
+input/input1: create-inputs-1
 	-$(MKDIR) input match done solved out err
-	-$(RM) input/input1-*
+	-$(RM) input/input1
 	./create-inputs-1
+
+done/done1: input/input1 index02
 	@echo
 	@echo
 	@echo "You might want to put this job in the background and"
 	@echo "watch the grass grow:"
-	@echo "    tail -f err/err-000 | grep Field   "
+	@echo "    tail -f err/err1 | grep Field   "
 	@echo
 	@echo
 	$(TOUCH) timestamp-slave-solve1-start
-	$(SLAVE) <input/input1.000 >out/out1-000 2>err/err1-000
+	$(SLAVE) <input/input1 >out/out1 2>err/err1
 	$(TOUCH) timestamp-slave-solve1-done
-	$(PRINTSOLVED) solved/solved1.01 | $(GREP) -v File | $(WC) -w
+	$(MV) solved/tmp.solved1 solved/solved1
+	$(MV)  match/tmp.match1   match/match1
+	$(PRINTSOLVED) solved/solved1 | $(GREP) -v File | $(WC) -w
 
+.PHONY: solve2
+solve2: done/done2
+
+input/input2: create-inputs-2
+	-$(MKDIR) input match done solved out err
+	-$(RM) input/input2
+	./create-inputs-2
+
+done/done2: input/input2 index02
+	@echo
+	@echo
+	@echo "You might want to put this job in the background and"
+	@echo "watch the grass grow:"
+	@echo "    tail -f err/err2 | grep Field   "
+	@echo
+	@echo
+	$(TOUCH) timestamp-slave-solve2-start
+	$(SLAVE) <input/input2 >out/out2 2>err/err2
+	$(TOUCH) timestamp-slave-solve2-done
+	$(PRINTSOLVED) solved/solved2 | $(GREP) -v File | $(WC) -w
 
 # Cancel stupid built-in implicit rules.
 makefile.prospectus: ;
