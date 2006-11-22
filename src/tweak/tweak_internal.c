@@ -155,9 +155,8 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 	return NULL;
 }
 
-tweak_t* tweak_new()
+void tweak_init(tweak_t* t)
 {
-	tweak_t* t = malloc(sizeof(tweak_t));
 
 	t->n = 0;
 	t->a = t->d = t->x = t->y = NULL;
@@ -173,7 +172,12 @@ tweak_t* tweak_new()
 	t->image = t->ref = t->dist2 = NULL;
 
 	t->maybeinliers = t->bestinliers = t->included = NULL;
+}
 
+tweak_t* tweak_new()
+{
+	tweak_t* t = malloc(sizeof(tweak_t));
+	tweak_init(t);
 	return t;
 }
 
@@ -202,6 +206,30 @@ void tweak_print4(char* fn, double* x, double* y,
 	for (i=0; i<n; i++) 
 		tweak_print4_fp(f, x[i], y[i], z[i], w[i]); 
 	fclose(f);
+}
+
+void tweak_print_the_state(unsigned int state)
+{
+	if (state & TWEAK_HAS_SIP            ) printf("TWEAK_HAS_SIP, ");
+	if (state & TWEAK_HAS_IMAGE_XY       ) printf("TWEAK_HAS_IMAGE_XY, ");
+	if (state & TWEAK_HAS_IMAGE_XYZ      ) printf("TWEAK_HAS_IMAGE_XYZ, ");
+	if (state & TWEAK_HAS_IMAGE_AD       ) printf("TWEAK_HAS_IMAGE_AD, ");
+	if (state & TWEAK_HAS_REF_XY         ) printf("TWEAK_HAS_REF_XY, ");
+	if (state & TWEAK_HAS_REF_XYZ        ) printf("TWEAK_HAS_REF_XYZ, ");
+	if (state & TWEAK_HAS_REF_AD         ) printf("TWEAK_HAS_REF_AD, ");
+	if (state & TWEAK_HAS_AD_BAR_AND_R   ) printf("TWEAK_HAS_AD_BAR_AND_R, ");
+	if (state & TWEAK_HAS_CORRESPONDENCES) printf("TWEAK_HAS_CORRESPONDENCES, ");
+	if (state & TWEAK_HAS_RUN_OPT        ) printf("TWEAK_HAS_RUN_OPT, ");
+	if (state & TWEAK_HAS_RUN_RANSAC_OPT ) printf("TWEAK_HAS_RUN_RANSAC_OPT, ");
+	if (state & TWEAK_HAS_COARSLY_SHIFTED) printf("TWEAK_HAS_COARSLY_SHIFTED, ");
+	if (state & TWEAK_HAS_FINELY_SHIFTED ) printf("TWEAK_HAS_FINELY_SHIFTED, ");
+	if (state & TWEAK_HAS_HEALPIX_PATH   ) printf("TWEAK_HAS_HEALPIX_PATH, ");
+	if (state & TWEAK_HAS_LINEAR_CD      ) printf("TWEAK_HAS_LINEAR_CD, ");
+}
+
+void tweak_print_state(tweak_t* t)
+{
+	tweak_print_the_state(t->state);
 }
 
 #define BUFSZ 100
@@ -425,6 +453,8 @@ void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
 
 	t->x = malloc(sizeof(double)*n);
 	t->y = malloc(sizeof(double)*n);
+	memcpy(t->x, x, sizeof(double)*n);
+	memcpy(t->y, y, sizeof(double)*n);
 
 	t->state |= TWEAK_HAS_IMAGE_XY;
 }
@@ -432,6 +462,7 @@ void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
 void tweak_push_hppath(tweak_t* t, char* hppath)
 {
 	t->hppath = strdup(hppath);
+	t->state |= TWEAK_HAS_HEALPIX_PATH;
 }
 
 // DualTree RangeSearch callback. We want to keep track of correspondences.
@@ -611,12 +642,15 @@ void do_linear_tweak(tweak_t* t)
 		return x; \
 	else if (flag == x) 
 #define ensure(x) \
-	if (!t->state & x) { \
+	if (!(t->state & x)) { \
 		return tweak_advance_to(t, x); \
 	}
 
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 {
+	printf("WANT: ");
+	tweak_print_the_state(flag);
+	printf("\n");
 	want(TWEAK_HAS_IMAGE_AD) {
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
@@ -633,10 +667,16 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		done(TWEAK_HAS_IMAGE_AD);
 	}
+
+	want(TWEAK_HAS_REF_AD) {
+		ensure(TWEAK_HAS_REF_XYZ);
+
+		// FIXME
+
+		done(TWEAK_HAS_REF_AD);
+	}
 			
 	want(TWEAK_HAS_REF_XY) {
-		// FIXME this could be provided by rawstartree provided
-		//ensure(TWEAK_HAS_AD_BAR_AND_R);
 		ensure(TWEAK_HAS_REF_AD);
 
 		tweak_clear_ref_xy(t);
@@ -657,10 +697,10 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	}
 
 	want(TWEAK_HAS_AD_BAR_AND_R) {
-		ensure(TWEAK_HAS_REF_AD);
+		ensure(TWEAK_HAS_IMAGE_AD);
 
-		assert(t->state & TWEAK_HAS_REF_AD);
-		get_center_and_radius(t->a_ref, t->d_ref, t->n_ref, 
+		assert(t->state & TWEAK_HAS_IMAGE_AD);
+		get_center_and_radius(t->a, t->d, t->n, 
 		                      &t->a_bar, &t->d_bar, &t->radius);
 
 		done(TWEAK_HAS_AD_BAR_AND_R);
@@ -729,22 +769,28 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	}
 
 	want(TWEAK_HAS_LINEAR_CD) {
+		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_REF_XY);
 		ensure(TWEAK_HAS_IMAGE_XY);
+		ensure(TWEAK_HAS_CORRESPONDENCES);
 
 		do_linear_tweak(t);
 
-		done(TWEAK_HAS_CORRESPONDENCES);
+		done(TWEAK_HAS_LINEAR_CD);
 	}
 
-	fprintf(stderr, "die for dependence: flag %p\n", (void*)flag);
+	printf("die for dependence: "); 
+	tweak_print_the_state(flag);
+	printf("\n"); 
 	assert(0);
 }
 
 void tweak_clear(tweak_t* t)
 {
 	// FIXME
-	assert(0);
 	if (cached_kd)
 		kdtree_fits_close(cached_kd);
+
+	// FIXME this should free stuff
+	tweak_init(t);
 }

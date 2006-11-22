@@ -106,6 +106,23 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 	return 0;
 }
 
+void get_xy_data(tweak_t* t, fitsfile* xyfptr, int hdu)
+{
+	// Extract XY from FITS table as floats
+	int jj;
+	float *xf, *yf;
+	get_xy(xyfptr, hdu, &xf, &yf, &t->n);
+
+	// Convert to doubles FIXME cfitsio may be able to do this
+	t->x = malloc(sizeof(double)*t->n);
+	t->y = malloc(sizeof(double)*t->n);
+	for (jj=0; jj<t->n; jj++) {
+		t->x[jj] = xf[jj];
+		t->y[jj] = yf[jj];
+	}
+	t->state |= TWEAK_HAS_IMAGE_XY;
+}
+
 // Grabs the data we need for tweak from various sources:
 // XY locations in pixel space
 // AD locations corresponding to sources
@@ -729,6 +746,7 @@ int main(int argc, char *argv[])
 
 		// FIXME BREAK HERE into new function
 		tweak_t tweak;
+		tweak_init(&tweak);
 
 		// At this point, we have an image. Now get the WCS data
 		tweak.sip = load_sip_from_fitsio(fptr);
@@ -737,10 +755,25 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		print_sip(tweak.sip);
-		tweak.state |= TWEAK_HAS_SIP;
+		tweak.state = TWEAK_HAS_SIP;
 
+		// Now get image XY data
+		get_xy_data(&tweak, xyfptr, kk);
+		tweak_push_hppath(&tweak, hppat);
 
-		tweak_advance_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
+		printf("blah\n");
+		unsigned int dest_state = TWEAK_HAS_LINEAR_CD;
+//		dest_state = TWEAK_HAS_IMAGE_AD;
+		while(! (tweak.state & dest_state)) {
+			printf("%p\n", (void*)tweak.state);
+			tweak_print_state(&tweak);
+			printf("\n");
+			tweak_advance_to(&tweak, dest_state);
+			getchar();
+		}
+		printf("final state: ");
+			tweak_print_state(&tweak);
+		printf("\n");
 
 
 //		get_tweak_data(&tweak, xyfptr, hppat, kk);
@@ -771,7 +804,6 @@ int main(int argc, char *argv[])
 
 //		dump_data(&tweak);
 
-		tweak_clear(&tweak);
 
 		exit(1);
 	}

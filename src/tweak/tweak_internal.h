@@ -93,11 +93,13 @@ typedef struct tweak_s {
 } tweak_t;
 
 tweak_t* tweak_new();
+void tweak_init(tweak_t*);
 void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n);
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag);
 void tweak_clear(tweak_t* t);
 void tweak_dump_ascii(tweak_t* t);
 void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n);
 void tweak_push_hppath(tweak_t* t, char* hppath);
+void tweak_print_state(tweak_t* t);
 
 #endif
