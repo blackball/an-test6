@@ -234,7 +234,7 @@ include makefile.prospectus
 
 solve1: index02
 	-$(MKDIR) input match done solved out err
-	-$(RM) input/input-*
+	-$(RM) input/input1-*
 	./create-inputs-1
 	@echo
 	@echo
@@ -244,9 +244,9 @@ solve1: index02
 	@echo
 	@echo
 	$(TOUCH) timestamp-slave-solve1-start
-	$(SLAVE) <input/input.000 >out/out-000 2>err/err-000
+	$(SLAVE) <input/input1.000 >out/out1-000 2>err/err1-000
 	$(TOUCH) timestamp-slave-solve1-done
-	$(PRINTSOLVED) solved/solved.01 | $(GREP) -v File | $(WC) -w
+	$(PRINTSOLVED) solved/solved1.01 | $(GREP) -v File | $(WC) -w
 
 
 # Cancel stupid built-in implicit rules.

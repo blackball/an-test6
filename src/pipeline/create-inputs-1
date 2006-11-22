@@ -17,31 +17,22 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 FBASE=sdss-fields
-#FBASE=sdss-fields-homer
 IBASE=.
 
 HPORDER="2 1 6 4 5 7 0 3 8 11 10 9"
 
 INDEX=$IBASE/sdss-1/sdss-1-%02i
-#FIELD_TEMPLATE=$FBASE/sdssfield%02i-homer.xy
-#FIELD_TEMPLATE=$FBASE/sdssfield%02i.xy
 FIELD_TEMPLATE=$FBASE/sdssfield%02i-hp02.xy
 
-#XCOL=COLC
-#YCOL=ROWC
 XCOL=X
 YCOL=Y
 PARITY=0
 THREADS=1
 
-INPUT=input/input.%03i
-SOLVED_TEMPLATE=solved/solved.%02i
-MATCH_TEMPLATE=match/match.%02i.%02i
-DONE_TEMPLATE=done/done.%02i.%02i
-
-#MATCH=match/match.%03i
-#DONE=done/done.%03i
-#SOLVEDSERVER=masternode004:7575
+INPUT=input/input1.%03i
+SOLVED_TEMPLATE=solved/solved1.%02i
+MATCH_TEMPLATE=match/match1.%02i.%02i
+DONE_TEMPLATE=done/done1.%02i.%02i
 
 SDEPTH=0
 DEPTH=60
@@ -51,7 +42,6 @@ QUIET=1
 FUL=0.39
 FUU=0.41
 TOL=0.004
-#TOL=0.002
 
 CXDX=0.05
 AGREETOL=10
