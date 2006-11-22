@@ -31,7 +31,8 @@ enum tweak_flags {
 	TWEAK_HAS_RUN_RANSAC_OPT   = 1024,
 	TWEAK_HAS_COARSLY_SHIFTED  = 2048,
 	TWEAK_HAS_FINELY_SHIFTED   = 4096,
-	TWEAK_HAS_HEALPIX_PATH     = 8192
+	TWEAK_HAS_HEALPIX_PATH     = 8192,
+	TWEAK_HAS_LINEAR_CD        = 16384
 };
 // FIXME add a method to print out the state in a readable way
 

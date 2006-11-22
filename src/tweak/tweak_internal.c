@@ -596,6 +596,11 @@ void do_linear_tweak(tweak_t* t)
 	integer info;
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
+
+	t->sip->cd[0][0] = b[0]; // b is replaced with CD 
+	t->sip->cd[0][1] = b[1];
+	t->sip->cd[1][0] = b[2];
+	t->sip->cd[1][1] = b[3];
 }
 
 
@@ -719,6 +724,15 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_IMAGE_XYZ);
 
 		find_correspondences(t);
+
+		done(TWEAK_HAS_CORRESPONDENCES);
+	}
+
+	want(TWEAK_HAS_LINEAR_CD) {
+		ensure(TWEAK_HAS_REF_XY);
+		ensure(TWEAK_HAS_IMAGE_XY);
+
+		do_linear_tweak(t);
 
 		done(TWEAK_HAS_CORRESPONDENCES);
 	}
