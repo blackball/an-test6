@@ -241,6 +241,7 @@ input/input1: create-inputs-1
 	-$(RM) input/input1
 	./create-inputs-1
 
+#.SECONDARY: index02
 done/done1: input/input1 index02
 	@echo
 	@echo
@@ -256,15 +257,15 @@ done/done1: input/input1 index02
 	$(MV)  match/tmp.match1   match/match1
 	$(PRINTSOLVED) solved/solved1 | $(GREP) -v File | $(WC) -w
 
-.PHONY: solve2
 solve2: done/done2
+.PHONY: solve2
 
 input/input2: create-inputs-2
 	-$(MKDIR) input match done solved out err
 	-$(RM) input/input2
 	./create-inputs-2
 
-done/done2: input/input2 index02
+done/done2: done/done1 input/input2 index02
 	@echo
 	@echo
 	@echo "You might want to put this job in the background and"
@@ -276,6 +277,9 @@ done/done2: input/input2 index02
 	$(SLAVE) <input/input2 >out/out2 2>err/err2
 	$(TOUCH) timestamp-slave-solve2-done
 	$(PRINTSOLVED) solved/solved2 | $(GREP) -v File | $(WC) -w
+
+create-inputs-1: ;
+create-inputs-2: ;
 
 # Cancel stupid built-in implicit rules.
 makefile.prospectus: ;
