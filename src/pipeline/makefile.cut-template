@@ -46,3 +46,5 @@ $(CUT_BASE)$(1).objs.fits: $(AN_CATALOG_PRESENT)
 	$(MV_ID_CMD)
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-cut-an-$(1)-done
 
+
+.SECONDARY: $(CUT_BASE)$(1).skdt.fits $(CUT_BASE)$(1).objs.fits

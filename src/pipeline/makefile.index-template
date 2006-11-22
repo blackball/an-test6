@@ -71,4 +71,5 @@ $(PHASE1)$(1).quad.fits $(PHASE1)$(1).code.fits : $(CATALOG)$(1).skdt.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-hpquads-$(1)-done
 
-
+.SECONDARY: $(PHASE2)$(1).ckdt.fits $(PHASE2)$(1).quad.fits \
+	$(PHASE1)$(1).code.fits $(PHASE1)$(1).quad.fits
