@@ -20,8 +20,8 @@ env.Program('dedup_index',
                   'quadfile.c bl.c ioutils.c'))
 env.Program('codetree',
             KD + Split('codetree.c fileutil.c codefile.c'))
-env.Program('slave',
-            KD + Split('slave.c catalog.c  hitlist_healpix.c bl.c solver.c '
+env.Program('blind',
+            KD + Split('blind.c catalog.c  hitlist_healpix.c bl.c solver.c '
                        'fileutil.c intmap.c starutil.c tic.c quadfile.c '
                        'xylist.c matchfile.c mathutil.c healpix.c'))
 env.Program('findstar',

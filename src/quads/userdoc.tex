@@ -79,16 +79,17 @@ We'll go through the stages in reverse order (and ``degree of difficulty'').
  quads \& matching, (scale), agreement, verification.  Healpixes.  Fields
  (extensions within fields file); fieldids.
 
-The solver program is called \code{slave} for historical reasons: at one point we envisioned
-there being a \code{master} program that would plan how to solve a set of fields, and \code{slave}
-workers that would carry out the plan.  In the end, it wasn't really necessary to have a \code{master}.
+%The solver program is called \code{slave} for historical reasons: at one point we envisioned
+%there being a \code{master} program that would plan how to solve a set of fields, and \code{slave}
+%workers that would carry out the plan.  In the end, it wasn't really necessary to have a \code{master}.
 
-The \code{slave} program reads its parameters from a text file.  We typically generate a set of
+The blind solver program is called \code{blind}.
+\code{blind} reads its parameters from a text file.  We typically generate a set of
 input files by running a script, but if you are solving a few fields, it may just be easier to edit
 the input file by hand.
 
 In the demo distribution, the file \code{create-inputs-1} is a shell script that generates
-input files for \code{slave}.  In the demo, it only writes one output file, \code{input.000}.
+input files for \code{blind}.  In the demo, it only writes one output file, \code{input.000}.
 Its contents are shown below.
 
 \begin{figure}[h!]
@@ -131,7 +132,7 @@ run
 \hline
 \end{tabular}
 \end{center}
-\caption{Contents of \code{input.000} file: input file for \code{slave}.}
+\caption{Contents of \code{input.000} file: input file for \code{blind}.}
 \label{input000}
 \end{figure}
 
@@ -140,7 +141,7 @@ Let us briefly describe the various parameters.
 \subsection{Required basic parameters}
 \begin{description}
 \item[\code{index <filename>}]: which index should be used.  The
-  \code{slave} program will look for the files \code{<filename>.ckdt.fits},
+  \code{blind} program will look for the files \code{<filename>.ckdt.fits},
   \code{<filename>.skdt.fits}, and \code{<filename>.quad.fits}.
 \item[\code{field <filename>}]: file from which to read fields to solve.
   The program will look for the file \code{<filename>.fits}.
@@ -157,7 +158,7 @@ Let us briefly describe the various parameters.
   to their defaults after a \code{run} statement.
 \item[\code{fields <int> [<int> ...] or <start-field>/<end-field>}]:
   either a list of field indices (starting with 0), or a range.\footnote{%
-	You can also request that \code{slave} ask the \code{solvedserver} for a
+	You can also request that \code{blind} ask the \code{solvedserver} for a
 	list of fields to try; see the \code{solvedserver} entry for details.}
 \end{description}
 

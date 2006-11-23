@@ -18,10 +18,10 @@ else
   exit
 fi
 
-# check for another instance of "slave" running on this machine.
-if ps -C slave -o cmd h; then
-  PID=`ps -C slave -o pid h`
-  echo "Another instance of \"slave\" is running on this machine: pid $PID.  Exiting.";
+# check for another instance of "blind" running on this machine.
+if ps -C blind -o cmd h; then
+  PID=`ps -C blind -o pid h`
+  echo "Another instance of \"blind\" is running on this machine: pid $PID.  Exiting.";
   exit
 fi
 
@@ -53,8 +53,8 @@ for x in quad ckdt skdt; do
   $CMD
 done
 
-echo "starting slave..."
-/home/dstn/quads/slave < $input > $output 2> $err
+echo "starting blind..."
+/home/dstn/quads/blind < $input > $output 2> $err
 
 echo "removing files..."
 for x in quad ckdt skdt; do

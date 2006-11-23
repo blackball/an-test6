@@ -69,7 +69,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
-	hpquads codetree unpermute-quads unpermute-stars homer slave agreeable \
+	hpquads codetree unpermute-quads unpermute-stars homer blind agreeable \
 	solvedserver printsolved xylist2fits printmatch
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
@@ -196,7 +196,7 @@ unpermute-quads: unpermute-quads.o quadfile.o codekd.o \
 homer: homer.o donuts.o xylist.o bl.o dualtree_rangesearch.o dualtree.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-slave: slave.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
+blind: blind.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
 		solvedclient.o solvedfile.o healpix.o idfile.o verify.o \
 		xylist.o hitlist_healpix.o intmap.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)

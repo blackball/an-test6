@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 		boilerplate_add_fits_headers(mf->header);
-		qfits_header_add(mf->header, "HISTORY", "This file was created by the program \"slave\".", NULL, NULL);
+		qfits_header_add(mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
 		if (matchfile_write_header(mf)) {
 			fprintf(stderr, "Failed to write matchfile header.\n");
 			exit(-1);
