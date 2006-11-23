@@ -31,6 +31,7 @@
 #include "tic.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
+#include "svd.h"
 
 #include "kdtree.h"
 #define KD_DIM 4
@@ -499,6 +500,190 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		mo->code_err = krez->sdists[jj];
 
 		/*
+		// compute a simple WCS transformation:
+		{
+		double cmass[3];
+		double fieldcmass[2];
+		double proj[8];
+		double cov[4];
+		double U[4], V[4], S[2], R[4];
+		double scale;
+		int i, j, k;
+		// -set the tangent point to be the center of mass of the matching quad.
+		cmass[0] = (star[0] + star[3] + star[6] + star[9]) / 4.0;
+		cmass[1] = (star[1] + star[4] + star[7] + star[10]) / 4.0;
+		cmass[2] = (star[2] + star[5] + star[8] + star[11]) / 4.0;
+		normalize_3(cmass);
+		fieldcmass[0] = (field[0] + field[2] + field[4] + field[6]) / 4.0;
+		fieldcmass[1] = (field[1] + field[3] + field[5] + field[7]) / 4.0;
+		// -project the matching stars around this center
+		star_coords(star + 0, cmass, proj + 0, proj + 1);
+		star_coords(star + 3, cmass, proj + 2, proj + 3);
+		star_coords(star + 6, cmass, proj + 4, proj + 5);
+		star_coords(star + 9, cmass, proj + 6, proj + 7);
+		// -compute the covariance between field positions and projected
+		//  positions of the stars that form the quad.
+		for (i=0; i<4; i++)
+		cov[i] = 0.0;
+		for (i=0; i<4; i++)
+		for (j=0; j<2; j++)
+		for (k=0; k<2; k++)
+		cov[j*2 + k] += proj[i*2 + k] * (field[i*2 + j] - fieldcmass[j]);
+		// set up svd params
+		{
+		double* pcov[] = { cov, cov+2 };
+		double* pU[]   = { U,   U  +2 };
+		double* pV[]   = { V,   V  +2 };
+		double eps, tol;
+		eps = 1e-30;
+		tol = 1e-30;
+		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
+		}
+		// R = V U'
+		for (i=0; i<4; i++)
+		R[i] = 0.0;
+		for (i=0; i<2; i++)
+		for (j=0; j<2; j++)
+		for (k=0; k<2; k++)
+		R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
+		// -compute scale: proj' * R * field / (field' * field)
+		{
+		double numer, denom;
+		numer = denom = 0.0;
+		for (i=0; i<4; i++) {
+		double f0 = field[i*2+0] - fieldcmass[0];
+		double f1 = field[i*2+1] - fieldcmass[1];
+		double Rf0 = R[0] * f0 + R[1] * f1;
+		double Rf1 = R[2] * f0 + R[3] * f1;
+		numer += (Rf0 * proj[i*2 + 0]) + (Rf1 * proj[i*2 + 1]);
+		denom += (f0 * f0) + (f1 * f1);
+		}
+		scale = numer / denom;
+		}
+
+		for (i=0; i<4; i++)
+		printf("field%i = [%g, %g];\n", i, field[2*i]-fieldcmass[0],
+		field[2*i+1]-fieldcmass[1]);
+		for (i=0; i<4; i++)
+		printf("proj%i = [%g, %g];\n", i, proj[2*i], proj[2*i+1]);
+		*/
+		/*
+		  printf("cov=[");
+		  for (i=0; i<4; i++) printf("%g, ", cov[i]);
+		  printf("];\n");
+
+		  printf("U=[");
+		  for (i=0; i<4; i++) printf("%g, ", U[i]);
+		  printf("];\n");
+
+		  printf("V=[");
+		  for (i=0; i<4; i++) printf("%g, ", V[i]);
+		  printf("];\n");
+		*/
+		/*
+
+		printf("scale=%g;\n", scale);
+
+		printf("R=[");
+		for (i=0; i<4; i++) printf("%g, ", R[i]);
+		printf("];\n");
+
+		{
+		double x,y;
+		x = R[0] * (field[0] - fieldcmass[0]) +
+		R[1] * (field[1] - fieldcmass[1]);
+		y = R[2] * (field[0] - fieldcmass[0]) +
+		R[3] * (field[1] - fieldcmass[1]);
+		x *= scale;
+		y *= scale;
+		printf("x,y=(%g,%g), proj=(%g,%g)\n",
+		x, y, proj[0], proj[1]);
+		}
+
+		{
+		qfits_header* hdr;
+		FILE* fout;
+		char val[64];
+		double ra, dec;
+
+		fout = fopen("wcs", "wb");
+		if (!fout)
+		fprintf(stderr, "Failed to open WCS output file: %s\n", strerror(errno));
+
+		xyz2radec(cmass[0], cmass[1], cmass[2], &ra, &dec);
+
+		hdr = qfits_header_default();
+
+		qfits_header_add(hdr, "BITPIX", "8", " ", NULL);
+		qfits_header_add(hdr, "NAXIS", "0", "No image", NULL);
+		qfits_header_add(hdr, "EXTEND", "T", "FITS extensions may follow", NULL);
+
+		sprintf(val, "%.12g", fieldcmass[0]);
+		qfits_header_add(hdr, "CRPIX1 ", val, "X reference pixel", NULL);
+		sprintf(val, "%.12g", fieldcmass[1]);
+		qfits_header_add(hdr, "CRPIX2 ", val, "Y reference pixel", NULL);
+		*/
+		/*
+		  sprintf(val, "%.12g", rad2deg(scale));
+		  qfits_header_add(hdr, "CDELT1 ", val, "X pixel scale (deg/pix)", NULL);
+		  qfits_header_add(hdr, "CDELT2 ", val, "Y pixel scale (deg/pix)", NULL);
+		*/
+		/*
+		  qfits_header_add(hdr, "CUNIT1 ", "deg", "X pixel scale units", NULL);
+		  qfits_header_add(hdr, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
+		  scale = rad2deg(scale);
+
+		  sprintf(val, "%.12g", R[0] * scale);
+		  qfits_header_add(hdr, "CD1_1", val, "Transformation matrix", NULL);
+		  sprintf(val, "%.12g", R[1] * scale);
+		  qfits_header_add(hdr, "CD1_2", val, " ", NULL);
+		  sprintf(val, "%.12g", R[2] * scale);
+		  qfits_header_add(hdr, "CD2_1", val, " ", NULL);
+		  sprintf(val, "%.12g", R[3] * scale);
+		  qfits_header_add(hdr, "CD2_2", val, " ", NULL);
+
+		  qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
+		  qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
+		  sprintf(val, "%.12g", rad2deg(ra));
+		  qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
+		  sprintf(val, "%.12g", rad2deg(dec));
+		  qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
+
+		  if (fout)
+		  if (qfits_header_dump(hdr, fout)) {
+		  fprintf(stderr, "Failed to write FITS WCS header.\n");
+		  exit(-1);
+		  }
+
+		  qfits_header_destroy(hdr);
+
+		  if (fout) {
+		  fits_pad_file(fout);
+		  fclose(fout);
+		  }
+
+		  printf("corner0=[%g,%g];\n", getx(params->cornerpix,0), gety(params->cornerpix,0));
+		  xyz2radec(mo->sMin[0], mo->sMin[1], mo->sMin[2], &ra, &dec);
+		  printf("radecc0=[%g,%g];\n", rad2deg(ra), rad2deg(dec));
+		  printf("corner1=[%g,%g];\n", getx(params->cornerpix,1), gety(params->cornerpix,1));
+		  xyz2radec(mo->sMax[0], mo->sMax[1], mo->sMax[2], &ra, &dec);
+		  printf("radecc0=[%g,%g];\n", rad2deg(ra), rad2deg(dec));
+		  printf("corner2=[%g,%g];\n", getx(params->cornerpix,2), gety(params->cornerpix,2));
+		  xyz2radec(mo->sMinMax[0], mo->sMinMax[1], mo->sMinMax[2], &ra, &dec);
+		  printf("radecc0=[%g,%g];\n", rad2deg(ra), rad2deg(dec));
+		  printf("corner3=[%g,%g];\n", getx(params->cornerpix,3), gety(params->cornerpix,3));
+		  xyz2radec(mo->sMaxMin[0], mo->sMaxMin[1], mo->sMaxMin[2], &ra, &dec);
+		  printf("radecc0=[%g,%g];\n", rad2deg(ra), rad2deg(dec));
+
+
+		  exit(0);
+		  }
+		  }
+
+		*/
+
+
+		/*
 		  idA = getstarid(iA);
 		  idB = getstarid(iB);
 		  idC = getstarid(iC);
@@ -507,34 +692,34 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		/*
 
-		  mo->corners[0] = xy_refx(cornerpix, 0);
-		  mo->corners[1] = xy_refy(cornerpix, 0);
-		  mo->corners[2] = xy_refx(cornerpix, 1);
-		  mo->corners[3] = xy_refy(cornerpix, 1);
+		mo->corners[0] = xy_refx(cornerpix, 0);
+		mo->corners[1] = xy_refy(cornerpix, 0);
+		mo->corners[2] = xy_refx(cornerpix, 1);
+		mo->corners[3] = xy_refy(cornerpix, 1);
 
-		  mo->starA[0] = star_ref(sA, 0);
-		  mo->starA[1] = star_ref(sA, 1);
-		  mo->starA[2] = star_ref(sA, 2);
-		  mo->starB[0] = star_ref(sB, 0);
-		  mo->starB[1] = star_ref(sB, 1);
-		  mo->starB[2] = star_ref(sB, 2);
-		  mo->starC[0] = star_ref(sC, 0);
-		  mo->starC[1] = star_ref(sC, 1);
-		  mo->starC[2] = star_ref(sC, 2);
-		  mo->starD[0] = star_ref(sD, 0);
-		  mo->starD[1] = star_ref(sD, 1);
-		  mo->starD[2] = star_ref(sD, 2);
+		mo->starA[0] = star_ref(sA, 0);
+		mo->starA[1] = star_ref(sA, 1);
+		mo->starA[2] = star_ref(sA, 2);
+		mo->starB[0] = star_ref(sB, 0);
+		mo->starB[1] = star_ref(sB, 1);
+		mo->starB[2] = star_ref(sB, 2);
+		mo->starC[0] = star_ref(sC, 0);
+		mo->starC[1] = star_ref(sC, 1);
+		mo->starC[2] = star_ref(sC, 2);
+		mo->starD[0] = star_ref(sD, 0);
+		mo->starD[1] = star_ref(sD, 1);
+		mo->starD[2] = star_ref(sD, 2);
 
-		  mo->fieldA[0] = xy_refx(ABCDpix, 0);
-		  mo->fieldA[1] = xy_refy(ABCDpix, 0);
-		  mo->fieldB[0] = xy_refx(ABCDpix, 1);
-		  mo->fieldB[1] = xy_refy(ABCDpix, 1);
-		  mo->fieldC[0] = xy_refx(ABCDpix, 2);
-		  mo->fieldC[1] = xy_refy(ABCDpix, 2);
-		  mo->fieldD[0] = xy_refx(ABCDpix, 3);
-		  mo->fieldD[1] = xy_refy(ABCDpix, 3);
+		mo->fieldA[0] = xy_refx(ABCDpix, 0);
+		mo->fieldA[1] = xy_refy(ABCDpix, 0);
+		mo->fieldB[0] = xy_refx(ABCDpix, 1);
+		mo->fieldB[1] = xy_refy(ABCDpix, 1);
+		mo->fieldC[0] = xy_refx(ABCDpix, 2);
+		mo->fieldC[1] = xy_refy(ABCDpix, 2);
+		mo->fieldD[0] = xy_refx(ABCDpix, 3);
+		mo->fieldD[1] = xy_refy(ABCDpix, 3);
 
-		  mo->abcdorder = ABCD_ORDER;
+		mo->abcdorder = ABCD_ORDER;
 		*/
 
 		nagree = params->handlehit(params, mo);

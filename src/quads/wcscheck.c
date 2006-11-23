@@ -18,6 +18,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
 #include "wcs.h"
 #include "wcshdr.h"
@@ -34,6 +36,7 @@ int main(int argc, char** args) {
 	int ncards;
 	char* hdrstring;
 	int hdrstringlen;
+	FILE* f;
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s <FITS-file>\n", args[0]);
@@ -48,14 +51,24 @@ int main(int argc, char** args) {
 	}
 	ncards = hdr->n;
 
-	hdrstring = qfits_header_to_memblock(hdr, &hdrstringlen);
-	if (!hdrstring) {
-		fprintf(stderr, "failed to convert FITS header to string.\n");
-		exit(-1);
-	}
-	printf("Header string length: %i\n", hdrstringlen);
+	/*
+	  hdrstring = qfits_header_to_memblock(hdr, &hdrstringlen);
+	  if (!hdrstring) {
+	  fprintf(stderr, "failed to convert FITS header to string.\n");
+	  exit(-1);
+	  }
+	  printf("Header string length: %i\n", hdrstringlen);
+	*/
 
 	qfits_header_destroy(hdr);
+
+	hdrstringlen = FITS_LINESZ * ncards;
+	hdrstring = malloc(hdrstringlen);
+	f = fopen(fn, "rb");
+	if (fread(hdrstring, 1, hdrstringlen, f) != hdrstringlen) {
+		fprintf(stderr, "Failed to read FITS header: %s\n", strerror(errno));
+		exit(-1);
+	}
 
 	wcs.flag = -1;
 	if (wcsini(1, 2, &wcs)) {
@@ -106,6 +119,7 @@ int main(int argc, char** args) {
 		double ra, dec;
 		double xyz[3];
 
+		/*
 		pixels[0][0] = 0.0;
 		pixels[0][1] = 0.0;
 
@@ -117,6 +131,15 @@ int main(int argc, char** args) {
 
 		pixels[3][0] = 4096.0;
 		pixels[3][1] = 4096.0;
+		*/
+		  pixels[0][0] = 25.9374;
+		  pixels[0][1] = 75.5292;
+		  pixels[1][0] = 2003.38;
+		  pixels[1][1] = 1423.66;
+		  pixels[2][0] = 25.9374;
+		  pixels[2][1] = 1423.66;
+		  pixels[3][0] = 75.5292;
+		  pixels[3][1] = 2003.38;
 
 		rtn = wcsp2s(&wcs, Ncoords, Nelems, (const double*)pixels,
 					 (double*)imgcrd, 
