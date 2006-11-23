@@ -76,6 +76,8 @@ int main(int argc, char *argv[]) {
 	int buildopts = 0;
 	int N, D;
 
+	qfits_header* catheader = NULL;
+
     if (argc <= 2) {
 		printHelp(progname);
         return 0;
@@ -192,23 +194,29 @@ int main(int argc, char *argv[]) {
 		fflush(stderr);
 		starkd->tree = kdtree_convert_data(starkd->tree, catalog_get_base(cat),
 										   N, D, Nleaf, tt);
-		fprintf(stderr, "Building tree...");
+		// close the catalog to save space, but grab the FITS header first.
+		catheader = cat->header;
+		cat->header = NULL;
+        catalog_close(cat);
+
+		fprintf(stderr, "Building tree...\n");
 		fflush(stderr);
 		starkd->tree = kdtree_build(starkd->tree, starkd->tree->data.any, N, D,
 									Nleaf, tt, buildopts);
 	} else {
-		fprintf(stderr, "Building tree...");
+		fprintf(stderr, "Building tree...\n");
 		fflush(stderr);
 		starkd->tree = kdtree_build(NULL, catalog_get_base(cat), N, D,
 									Nleaf, tt, buildopts);
+		catheader = cat->header;
+		cat->header = NULL;
+        catalog_close(cat);
 	}
 
     if (!starkd->tree) {
-        catalog_close(cat);
         fprintf(stderr, "Couldn't build kdtree.\n");
         exit(-1);
     }
-    //fprintf(stderr, "done (%d nodes)\n", startree_N(starkd));
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
@@ -217,7 +225,7 @@ int main(int argc, char *argv[]) {
 	sprintf(val, "%u", nkeep);
 	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept.", NULL);
 
-	fits_copy_header(cat->header, startree_header(starkd), "HEALPIX");
+	fits_copy_header(catheader, startree_header(starkd), "HEALPIX");
 
 	boilerplate_add_fits_headers(startree_header(starkd));
 	qfits_header_add(startree_header(starkd), "HISTORY", "This file was created by the program \"startree\".", NULL, NULL);
@@ -226,7 +234,7 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(startree_header(starkd), "HISTORY", "(end of startree command line)", NULL, NULL);
 
 	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
-	fits_copy_all_headers(cat->header, startree_header(starkd), "HISTORY");
+	fits_copy_all_headers(catheader, startree_header(starkd), "HISTORY");
 	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
 
 	if (startree_write_to_file(starkd, treefname)) {
@@ -237,7 +245,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "done.\n");
 
     startree_close(starkd);
-    catalog_close(cat);
+	qfits_header_destroy(catheader);
     return 0;
 }
 
