@@ -124,7 +124,7 @@ CODETREE        := $(AN_RUN_DIR)an-run $(AN_DIR)codetree
 HPQUADS         := $(AN_RUN_DIR)an-run $(AN_DIR)hpquads
 
 HOMER           := $(AN_RUN_DIR)an-run $(AN_DIR)homer
-SLAVE           := $(AN_DIR)slave
+BLIND           := $(AN_DIR)blind
 PRINTSOLVED     := $(AN_DIR)printsolved
 
 QUADIDX			:= $(AN_RUN_DIR)an-run $(AN_DIR)quadidx
@@ -267,9 +267,9 @@ solved/solved1: input/input1 $(INDEX02)
 	@echo "    tail -f err/err1"
 	@echo
 	@echo
-	$(TOUCH) timestamp-slave-solve1-start
-	$(SLAVE) <input/input1 >out/out1 2>err/err1
-	$(TOUCH) timestamp-slave-solve1-done
+	$(TOUCH) timestamp-blind-solve1-start
+	$(BLIND) <input/input1 >out/out1 2>err/err1
+	$(TOUCH) timestamp-blind-solve1-done
 	$(MV) solved/tmp.solved1 solved/solved1
 	$(MV)  match/tmp.match1   match/match1
 
@@ -306,16 +306,16 @@ solved/solved2: done/done1 input/input2 $(INDEX02)
 	@echo
 	@echo
 	$(CP) solved/solved1 solved/tmp.solved2
-	$(TOUCH) timestamp-slave-solve2-start
-	$(SLAVE) <input/input2 >out/out2 2>err/err2
-	$(TOUCH) timestamp-slave-solve2-done
+	$(TOUCH) timestamp-blind-solve2-start
+	$(BLIND) <input/input2 >out/out2 2>err/err2
+	$(TOUCH) timestamp-blind-solve2-done
 	$(MV) solved/tmp.solved2 solved/solved2
 	$(MV)  match/tmp.match2   match/match2
 
+# Cancel stupid built-in implicit rules.
 create-inputs-1: ;
 create-inputs-2: ;
 
-# Cancel stupid built-in implicit rules.
 makefile.prospectus: ;
 makefile.prospectus-template: ;
 makefile.cut-template: ;

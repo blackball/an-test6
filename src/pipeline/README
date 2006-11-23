@@ -48,7 +48,7 @@ pipeline/sdss-1 directory:
 several other files will be generated along the way, but only these three
 are required to solve fields.
 
-Solving a field is done by the program "slave".  It reads an input file
+Solving a field is done by the program "blind".  It reads an input file
 which tells it where to find the files it needs and how to set the
 various parameters.  If you want to solve your own fields, it will probably
 be easiest to edit the input file used by the demo:
@@ -117,7 +117,7 @@ These are the output file names.  You could change them to, say,
 
 
 To run the solver, do:
-   slave < input.myfield
+   blind < input.myfield
 
 
 If a solution is found, it will be written to the file "match.myfield";
