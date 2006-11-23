@@ -97,10 +97,10 @@ static int nabok = 0;
 
 static unsigned char* nuses;
 
-static void* mymalloc(int n) {
+static void* mymalloc(unsigned int n, int linenum) {
 	void* rtn = malloc(n);
 	if (!rtn) {
-		fprintf(stderr, "Failed to malloc %i.\n", n);
+		fprintf(stderr, "mymalloc failed: line number %i: %u bytes.\n", linenum, n);
 		assert(0);
 		exit(-1);
 	}
@@ -345,8 +345,12 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 		free(cq_inbox);
 		free(cq_pquads);
 		Ncq = Nstars;
-		cq_inbox =  mymalloc(Nstars * sizeof(int));
-		cq_pquads = mymalloc(Nstars * Nstars * sizeof(pquad));
+		cq_inbox =  malloc(Nstars * sizeof(int));
+		cq_pquads = malloc(Nstars * Nstars * sizeof(pquad));
+		if (!cq_inbox || !cq_pquads) {
+			fprintf(stderr, "hpquads: failed to malloc cq_inbox or cq_pquads.  Nstars=%i.\n", Nstars);
+			exit(-1);
+		}
 	}
 	inbox = cq_inbox;
 	pquads = cq_pquads;
@@ -402,7 +406,11 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					}
 				}
 			}
-			pq->inbox = mymalloc(Nstars * sizeof(int));
+			pq->inbox = malloc(Nstars * sizeof(int));
+			if (!pq->inbox) {
+				fprintf(stderr, "hpquads: failed to malloc pq->inbox.\n");
+				exit(-1);
+			}
 			pq->ninbox = ninbox;
 			memcpy(pq->inbox, inbox, ninbox * sizeof(int));
 		}
@@ -541,9 +549,9 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 		free(perm);
 		free(inds);
 		free(stars);
-		perm  = mymalloc(N * sizeof(int));
-		inds  = mymalloc(N * sizeof(int));
-		stars = mymalloc(N * 3 * sizeof(double));
+		perm  = mymalloc(N * sizeof(int), __LINE__);
+		inds  = mymalloc(N * sizeof(int), __LINE__);
+		stars = mymalloc(N * 3 * sizeof(double), __LINE__);
 		Nhighwater = N;
 	}
 	// find permutation that sorts by index...
@@ -786,7 +794,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error, reuse (-r) must be less than 256.\n");
 		exit(-1);
 	}
-	nuses = mymalloc(startree_N(starkd) * sizeof(unsigned char));
+	nuses = mymalloc(startree_N(starkd) * sizeof(unsigned char), __LINE__);
 	for (i=0; i<startree_N(starkd); i++)
 		nuses[i] = Nreuse;
 
