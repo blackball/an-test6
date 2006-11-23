@@ -236,14 +236,30 @@ tycho2_download:
 include makefile.prospectus
 
 .PHONY: solve1
-solve1: done/done1
+
+solve1: solved/solved1
+	@S=`$(PRINTSOLVED) solved/solved1 | $(GREP) -v File | $(WC) -w`; \
+	S=$$((S)); \
+	T=$(TOTAL_FIELDS); \
+	U=$$((T - S)); \
+	R=`echo "scale=2; 100.0 * $$S / $$T" | $(BC)`; \
+	echo; \
+	echo "======================================"; \
+	echo "SOLVING COMPLETE"; \
+	echo; \
+	echo "    FIELDS SOLVED:   $$S"; \
+	echo "    FIELDS UNSOLVED: $$U"; \
+	echo "    TOTAL FIELDS:    $$T"; \
+	echo "    SOLVE RATE:      $$R %"; \
+	echo "======================================"; \
+	echo
 
 input/input1: create-inputs-1
 	-$(MKDIR) input match done solved out err
 	-$(RM) input/input1
 	./create-inputs-1
 
-done/done1: input/input1 $(INDEX02)
+solved/solved1: input/input1 $(INDEX02)
 	@echo
 	@echo
 	@echo "You might want to put this job in the background and"
@@ -256,44 +272,10 @@ done/done1: input/input1 $(INDEX02)
 	$(TOUCH) timestamp-slave-solve1-done
 	$(MV) solved/tmp.solved1 solved/solved1
 	$(MV)  match/tmp.match1   match/match1
-	@S=`$(PRINTSOLVED) solved/solved1 | $(GREP) -v File | $(WC) -w`; \
-	S=$$((S)); \
-	T=$(TOTAL_FIELDS); \
-	U=$$((T - S)); \
-	R=`echo "scale=2; 100.0 * $$S / $$T" | $(BC)`; \
-	echo; \
-	echo "======================================"; \
-	echo "SOLVING COMPLETE"; \
-	echo; \
-	echo "    FIELDS SOLVED: $$S"; \
-	echo "    FIELDS UNSOLVED: $$U"; \
-	echo "    TOTAL FIELDS:  $$T"; \
-	echo "    SOLVE RATE:    $$R %"; \
-	echo "======================================"; \
-	echo
 
-solve2: done/done2
 .PHONY: solve2
 
-input/input2: create-inputs-2
-	-$(MKDIR) input match done solved out err
-	-$(RM) input/input2
-	./create-inputs-2
-
-done/done2: done/done1 input/input2 $(INDEX02)
-	@echo
-	@echo
-	@echo "You might want to put this job in the background and"
-	@echo "watch the grass grow:"
-	@echo "    tail -f err/err2"
-	@echo
-	@echo
-	$(CP) solved/solved1 solved/tmp.solved2
-	$(TOUCH) timestamp-slave-solve2-start
-	$(SLAVE) <input/input2 >out/out2 2>err/err2
-	$(TOUCH) timestamp-slave-solve2-done
-	$(MV) solved/tmp.solved2 solved/solved2
-	$(MV)  match/tmp.match2   match/match2
+solve2: solved/solved2
 	@S=`$(PRINTSOLVED) solved/solved2 | $(GREP) -v File | $(WC) -w`; \
 	S=$$((S)); \
 	T=$(TOTAL_FIELDS); \
@@ -309,6 +291,26 @@ done/done2: done/done1 input/input2 $(INDEX02)
 	echo "    SOLVE RATE:      $$R %"; \
 	echo "======================================"; \
 	echo
+
+input/input2: create-inputs-2
+	-$(MKDIR) input match done solved out err
+	-$(RM) input/input2
+	./create-inputs-2
+
+solved/solved2: done/done1 input/input2 $(INDEX02)
+	@echo
+	@echo
+	@echo "You might want to put this job in the background and"
+	@echo "watch the grass grow:"
+	@echo "    tail -f err/err2"
+	@echo
+	@echo
+	$(CP) solved/solved1 solved/tmp.solved2
+	$(TOUCH) timestamp-slave-solve2-start
+	$(SLAVE) <input/input2 >out/out2 2>err/err2
+	$(TOUCH) timestamp-slave-solve2-done
+	$(MV) solved/tmp.solved2 solved/solved2
+	$(MV)  match/tmp.match2   match/match2
 
 create-inputs-1: ;
 create-inputs-2: ;
