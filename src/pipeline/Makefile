@@ -96,13 +96,18 @@ TEMPINDEX  := $(TEMP_DIR)tmp.$(INAME)-$(INDEX_ID)-
 SDSS_FIELDS := sdss-fields/
 SDSS_HOMER  := sdss-fields-homer/
 
+# Total number of fields in sdss-fields/sdssfield01-hp02.xy:
+TOTAL_FIELDS := 2618
+
 WGET            := wget --continue
 MKDIR           := mkdir -p
 TOUCH           := touch
 MV              := mv
+CP				:= cp
 SED             := sed
 GREP            := grep
 WC              := wc
+BC				:= bc -l
 
 AN_DIR          := ../quads/
 AN_RUN_DIR      := ./
@@ -230,10 +235,7 @@ tycho2_download:
 
 include makefile.prospectus
 
-#include makefile.homer
-
 .PHONY: solve1
-#solve1: done/done1.00.01
 solve1: done/done1
 
 input/input1: create-inputs-1
@@ -241,13 +243,12 @@ input/input1: create-inputs-1
 	-$(RM) input/input1
 	./create-inputs-1
 
-#.SECONDARY: index02
-done/done1: input/input1 index02
+done/done1: input/input1 $(INDEX02)
 	@echo
 	@echo
 	@echo "You might want to put this job in the background and"
 	@echo "watch the grass grow:"
-	@echo "    tail -f err/err1 | grep Field   "
+	@echo "    tail -f err/err1"
 	@echo
 	@echo
 	$(TOUCH) timestamp-slave-solve1-start
@@ -255,7 +256,21 @@ done/done1: input/input1 index02
 	$(TOUCH) timestamp-slave-solve1-done
 	$(MV) solved/tmp.solved1 solved/solved1
 	$(MV)  match/tmp.match1   match/match1
-	$(PRINTSOLVED) solved/solved1 | $(GREP) -v File | $(WC) -w
+	@S=`$(PRINTSOLVED) solved/solved1 | $(GREP) -v File | $(WC) -w`; \
+	S=$$((S)); \
+	T=$(TOTAL_FIELDS); \
+	U=$$((T - S)); \
+	R=`echo "scale=2; 100.0 * $$S / $$T" | $(BC)`; \
+	echo; \
+	echo "======================================"; \
+	echo "SOLVING COMPLETE"; \
+	echo; \
+	echo "    FIELDS SOLVED: $$S"; \
+	echo "    FIELDS UNSOLVED: $$U"; \
+	echo "    TOTAL FIELDS:  $$T"; \
+	echo "    SOLVE RATE:    $$R %"; \
+	echo "======================================"; \
+	echo
 
 solve2: done/done2
 .PHONY: solve2
@@ -265,18 +280,35 @@ input/input2: create-inputs-2
 	-$(RM) input/input2
 	./create-inputs-2
 
-done/done2: done/done1 input/input2 index02
+done/done2: done/done1 input/input2 $(INDEX02)
 	@echo
 	@echo
 	@echo "You might want to put this job in the background and"
 	@echo "watch the grass grow:"
-	@echo "    tail -f err/err2 | grep Field   "
+	@echo "    tail -f err/err2"
 	@echo
 	@echo
+	$(CP) solved/solved1 solved/tmp.solved2
 	$(TOUCH) timestamp-slave-solve2-start
 	$(SLAVE) <input/input2 >out/out2 2>err/err2
 	$(TOUCH) timestamp-slave-solve2-done
-	$(PRINTSOLVED) solved/solved2 | $(GREP) -v File | $(WC) -w
+	$(MV) solved/tmp.solved2 solved/solved2
+	$(MV)  match/tmp.match2   match/match2
+	@S=`$(PRINTSOLVED) solved/solved2 | $(GREP) -v File | $(WC) -w`; \
+	S=$$((S)); \
+	T=$(TOTAL_FIELDS); \
+	U=$$((T - S)); \
+	R=`echo "scale=2; 100.0 * $$S / $$T" | $(BC)`; \
+	echo; \
+	echo "======================================"; \
+	echo "SOLVING COMPLETE"; \
+	echo; \
+	echo "    FIELDS SOLVED:   $$S"; \
+	echo "    FIELDS UNSOLVED: $$U"; \
+	echo "    TOTAL FIELDS:    $$T"; \
+	echo "    SOLVE RATE:      $$R %"; \
+	echo "======================================"; \
+	echo
 
 create-inputs-1: ;
 create-inputs-2: ;
