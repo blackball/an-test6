@@ -65,7 +65,7 @@ int main(int argc, char** args) {
 	nomad_fits** nomads;
 
 	int i, HP;
-	int slicecounts[180];
+	int slicecounts[1800];
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -99,7 +99,7 @@ int main(int argc, char** args) {
 
 	nomads = calloc(HP, sizeof(nomad_fits*));
 
-	memset(slicecounts, 0, 180 * sizeof(uint));
+	memset(slicecounts, 0, 1800 * sizeof(uint));
 
 	nrecords = 0;
 	nfiles = 0;
@@ -114,6 +114,7 @@ int main(int argc, char** args) {
 		unsigned char* map;
 		size_t map_size;
 		int i;
+		int lastgrass;
 
 		infn = args[optind];
 		fid = fopen(infn, "rb");
@@ -148,14 +149,24 @@ int main(int argc, char** args) {
 					infn, (unsigned int)map_size, NOMAD_RECORD_SIZE);
 		}
 
+		printf("File %i of %i: %s: %i records.\n", optind - startoptind, argc - startoptind, infn, map_size / NOMAD_RECORD_SIZE);
+
+		lastgrass = 0;
 		for (i=0; i<map_size; i+=NOMAD_RECORD_SIZE) {
 			nomad_entry entry;
 			int hp;
 			int slice;
 
-			if (i && (i % 10000000 * NOMAD_RECORD_SIZE == 0)) {
-				printf("o");
+			/*
+			  if (i && (i % 10000000 * NOMAD_RECORD_SIZE == 0)) {
+			  printf("o");
+			  fflush(stdout);
+			  }
+			*/
+			if ((i * 80 / map_size) != lastgrass) {
+				printf(".");
 				fflush(stdout);
+				lastgrass = i * 80 / map_size;
 			}
 			
 			if (nomad_parse_entry(&entry, map + i)) {
@@ -213,8 +224,8 @@ int main(int argc, char** args) {
 		munmap(map, map_size);
 
 		nfiles++;
-		printf(".");
-		fflush(stdout);
+		printf("\n");
+		//fflush(stdout);
 	}
 	printf("\n");
 
