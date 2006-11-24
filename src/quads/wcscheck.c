@@ -25,24 +25,66 @@
 #include "wcshdr.h"
 #include "qfits.h"
 #include "starutil.h"
+#include "bl.h"
+
+const char* OPTIONS = "hx:y:";
+
+void print_help(char* progname) {
+	//boilerplate_help_header(stdout);
+	printf("\nUsage: %s\n"
+		   "  [-x <x-pixel-coord> -y <y-pixel>] (can be repeated)\n"
+		   "  <WCS-input-file>\n"
+		   "\n", progname);
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
 
 int main(int argc, char** args) {
+	int c;
 	char* fn;
 	struct wcsprm wcs;
 	qfits_header* hdr;
-	int Ncoords = 4;
+	int Ncoords;
 	int Nelems = 2;
 	int i;
 	int ncards;
 	char* hdrstring;
 	int hdrstringlen;
 	FILE* f;
+	dl* xpix;
+	dl* ypix;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s <FITS-file>\n", args[0]);
+	xpix = dl_new(16);
+	ypix = dl_new(16);
+
+    while ((c = getopt(argc, args, OPTIONS)) != -1) {
+        switch (c) {
+        case 'h':
+			print_help(args[0]);
+			exit(0);
+		case 'x':
+			dl_append(xpix, atof(optarg));
+			break;
+		case 'y':
+			dl_append(ypix, atof(optarg));
+			break;
+		}
+	}
+
+	if (optind != argc - 1) {
+		print_help(args[0]);
 		exit(-1);
 	}
-	fn = args[1];
+
+	if (dl_size(xpix) != dl_size(ypix)) {
+		printf("Number of x and y pixels must be equal!\n");
+		print_help(args[0]);
+		exit(-1);
+	}
+	Ncoords = dl_size(xpix);
+
+	fn = args[optind];
 
 	hdr = qfits_header_read(fn);
 	if (!hdr) {
@@ -50,16 +92,6 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 	ncards = hdr->n;
-
-	/*
-	  hdrstring = qfits_header_to_memblock(hdr, &hdrstringlen);
-	  if (!hdrstring) {
-	  fprintf(stderr, "failed to convert FITS header to string.\n");
-	  exit(-1);
-	  }
-	  printf("Header string length: %i\n", hdrstringlen);
-	*/
-
 	qfits_header_destroy(hdr);
 
 	hdrstringlen = FITS_LINESZ * ncards;
@@ -76,11 +108,6 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	/*
-	  for (i=0; i<Nelems; i++) {
-	  char key[64];
-	  sprintf(key, "
-	*/
 	{
 		int nreject;
 		int nwcs;
@@ -102,11 +129,7 @@ int main(int argc, char** args) {
 
 		if (nwcs == 1)
 			wcs = wcsii[0];
-
 	}
-
-	// print it out...
-	//wcsprt(&wcs);
 
 	{
 		double pixels[Ncoords][Nelems];
@@ -118,20 +141,22 @@ int main(int argc, char** args) {
 		int rtn;
 		double ra, dec;
 		double xyz[3];
+		int i;
+
+		for (i=0; i<Ncoords; i++) {
+			pixels[i][0] = dl_get(xpix, i);
+			pixels[i][1] = dl_get(ypix, i);
+		}
 
 		/*
-		pixels[0][0] = 0.0;
-		pixels[0][1] = 0.0;
-
-		pixels[1][0] = 0.0;
-		pixels[1][1] = 4096.0;
-
-		pixels[2][0] = 4096.0;
-		pixels[2][1] = 0.0;
-
-		pixels[3][0] = 4096.0;
-		pixels[3][1] = 4096.0;
-		*/
+		  pixels[0][0] = 0.0;
+		  pixels[0][1] = 0.0;
+		  pixels[1][0] = 0.0;
+		  pixels[1][1] = 4096.0;
+		  pixels[2][0] = 4096.0;
+		  pixels[2][1] = 0.0;
+		  pixels[3][0] = 4096.0;
+		  pixels[3][1] = 4096.0;
 		  pixels[0][0] = 25.9374;
 		  pixels[0][1] = 75.5292;
 		  pixels[1][0] = 2003.38;
@@ -140,6 +165,7 @@ int main(int argc, char** args) {
 		  pixels[2][1] = 1423.66;
 		  pixels[3][0] = 75.5292;
 		  pixels[3][1] = 2003.38;
+		*/
 
 		rtn = wcsp2s(&wcs, Ncoords, Nelems, (const double*)pixels,
 					 (double*)imgcrd, 
@@ -162,6 +188,15 @@ int main(int argc, char** args) {
 			printf("Phi,Theta (%g, %g)\n", phi[i], theta[i]);
 			printf("\n");
 		}
+
+		printf("worldra=[");
+		for (i=0; i<Ncoords; i++)
+			printf("%g,", world[i][0]);
+		printf("];\n");
+		printf("worlddec=[");
+		for (i=0; i<Ncoords; i++)
+			printf("%g,", world[i][1]);
+		printf("];\n");
 
 	}
 	wcsfree(&wcs);

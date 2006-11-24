@@ -135,9 +135,6 @@ xylist2fits: xylist_texttofits.o bl.o xylist.o ioutils.o \
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-#WCSLIB_LIB := /usr/local/wcslib-4.2/lib/libwcs.a
-#WCSLIB_INC := /usr/local/wcslib-4.2/include/wcslib
-
 #homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
 #	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
 
@@ -150,11 +147,16 @@ tags:
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
 
-#wcscheck: wcscheck.o starutil.o mathutil.o libqfits.a
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(WCSLIB_LIB)
+WCSLIB_LIB ?= /usr/local/wcslib-4.2/lib/libwcs.a
+WCSLIB_INC ?= /usr/local/wcslib-4.2/include/wcslib
+WCSLIB_LIB := $(WCSLIB_LIB)
+WCSLIB_INC := $(WCSLIB_INC)
 
-#wcscheck.o: wcscheck.c
-#	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
+wcscheck.o: wcscheck.c
+	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
+
+wcscheck: wcscheck.o starutil.o mathutil.o bl.o $(QFITS_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
