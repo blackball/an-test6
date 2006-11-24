@@ -16,22 +16,25 @@ if [ $# -eq 3 ]; then
   n=$3
 fi
 
+TMPDIR=`mktemp -d /tmp/tmp.reduce-size.XXXXXX`
+echo "Placing temp files in $TMPDIR"
+
 for ((e=1;; e++)); do
 	E=`printf %04i $e`
-	fitsgetext -i $in -o tmp.$e -e 0 -e $e
+	fitsgetext -i $in -o $TMPDIR/A$e -e 0 -e $e
 	if [ $? -ne 0 ]; then
 		break;
 	fi
-	rm -f tmp2.$E
+	rm -f $TMPDIR/B$E
 	if [ x$n != x ]; then
-		fitscopy tmp.$e"[col X(1E)=COLC;Y(1E)=ROWC][#row<=$n]" tmp2.$e
+		fitscopy $TMPDIR/A$e"[col X(1E)=COLC;Y(1E)=ROWC][#row<=$n]" $TMPDIR/B$E
 	else
-		fitscopy tmp.$e"[col X(1E)=COLC;Y(1E)=ROWC]" tmp2.$e
+		fitscopy $TMPDIR/A$e"[col X(1E)=COLC;Y(1E)=ROWC]" $TMPDIR/B$E
 	fi
-	mv tmp2.$e tmp.$e
-	fitsgetext -i tmp.$e -o tmp2.$E -e 1
-	rm tmp.$e
+	mv $TMPDIR/B$E $TMPDIR/A$e
+	fitsgetext -i $TMPDIR/A$e -o $TMPDIR/B$E -e 1
+	rm $TMPDIR/A$e
 done
-fitsgetext -i $in -o tmp2.0000 -e 0
-cat tmp2.* > $out
+fitsgetext -i $in -o $TMPDIR/B0000 -e 0
+cat $TMPDIR/B* > $out
 
