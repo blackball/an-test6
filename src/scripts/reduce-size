@@ -37,4 +37,5 @@ for ((e=1;; e++)); do
 done
 fitsgetext -i $in -o $TMPDIR/B0000 -e 0
 cat $TMPDIR/B* > $out
-
+rm $TMPDIR/B*
+rmdir $TMPDIR
