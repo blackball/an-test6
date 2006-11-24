@@ -38,7 +38,7 @@
 #include "starkd.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hR:f:k:d:t:bsS"
+#define OPTIONS "hR:f:k:d:t:bsSc"
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
@@ -51,6 +51,7 @@ void printHelp(char* progname) {
 		   "    [-t  <tree type>]:  {double,float,u32,u16}, default u32.\n"
 		   "    [-d  <data type>]:  {double,float,u32,u16}, default u32.\n"
 		   "    [-S]: include separate splitdim array\n"
+		   "    [-c]: run kdtree_check on the resulting tree\n"
 		   "\n", progname);
 }
 
@@ -75,6 +76,7 @@ int main(int argc, char *argv[]) {
 	int tt;
 	int buildopts = 0;
 	int N, D;
+	int checktree = 0;
 
 	qfits_header* catheader = NULL;
 
@@ -85,6 +87,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'c':
+			checktree = 1;
+			break;
         case 'R':
             Nleaf = (int)strtoul(optarg, NULL, 0);
             break;
@@ -217,6 +222,13 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Couldn't build kdtree.\n");
         exit(-1);
     }
+
+	if (checktree) {
+		fprintf(stderr, "Checking tree...\n");
+		if (kdtree_check(starkd->tree)) {
+			fprintf(stderr, "\n\nTree check failed!!\n\n\n");
+		}
+	}
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
