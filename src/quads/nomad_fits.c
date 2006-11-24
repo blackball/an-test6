@@ -91,6 +91,8 @@ static void init_nomad_fitstruct() {
 	fs[i].fitstype = TFITS_BIN_TYPE_UNKNOWN;
 	i++;
 
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "NOMAD_ID",         nil, nomad_id);
+
 	assert(i == NOMAD_FITS_COLUMNS);
 	nomad_fitstruct_inited = 1;
 }

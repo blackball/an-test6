@@ -85,6 +85,11 @@ struct nomad_entry {
 	bool bright_artifact;  // BSART   "Faint source is bright star artifact"
 	bool standard;         // USEME   "Recommended astrometric standard"
 	bool external;         // EXCAT   "External, non-astrometric object"
+
+	// sequence number assigned by us (it's not in the original catalogue),
+	// composed of the 1/10 degree DEC zone (top 11 bits) and the sequence
+	// number within the zone (bottom 21 bits).
+	uint nomad_id;
 };
 typedef struct nomad_entry nomad_entry;
 

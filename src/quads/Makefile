@@ -161,6 +161,9 @@ $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
+nomadtofits: nomadtofits.o nomad_fits.o nomad.o healpix.o bl.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+
 2masstofits: $(2MASSOBJ) healpix.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
 

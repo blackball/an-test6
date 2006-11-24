@@ -28,11 +28,11 @@
 #include <byteswap.h>
 #include <assert.h>
 
-#include "usnob.h"
+#include "nomad.h"
+#include "nomad_fits.h"
 #include "qfits.h"
 #include "healpix.h"
 #include "starutil.h"
-#include "usnob_fits.h"
 #include "fitsioutils.h"
 #include "boilerplate.h"
 
@@ -41,14 +41,14 @@
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage:\n"
-		   "  %s -o <output-filename-template>     [eg, usnob10_%%03i.fits]\n"
-		   "  [-N <healpix-nside>]  (default = 8)\n"
+		   "  %s -o <output-filename-template>     [eg, nomad_%%03i.fits]\n"
+		   "  [-N <healpix-nside>]  (default = 9)\n"
 		   "  <input-file> [<input-file> ...]\n"
 		   "\n"
 		   "The output-filename-template should contain a \"printf\" sequence like \"%%03i\";\n"
 		   "we use \"sprintf(filename, output-filename-template, healpix)\" to determine the filename\n"
 		   "to be used for each healpix.\n\n"
-		   "\nNOTE: WE ASSUME THE USNO-B1.0 FILES ARE GIVEN ON THE COMMAND LINE IN ORDER: 000/b0000.cat, 000/b0001.cat, etc.\n\n\n",
+		   "\nNOTE: WE ASSUME THE NOMAD FILES ARE GIVEN ON THE COMMAND LINE IN ORDER: 000/b0000.cat, 000/b0001.cat, etc.\n\n\n",
 		   progname);
 }
 
@@ -60,9 +60,9 @@ int main(int argc, char** args) {
     int c;
 	int startoptind;
 	uint nrecords, nobs, nfiles;
-	int Nside = 8;
+	int Nside = 9;
 
-	usnob_fits** usnobs;
+	nomad_fits** nomads;
 
 	int i, HP;
 	int slicecounts[180];
@@ -97,15 +97,14 @@ int main(int argc, char** args) {
 
 	printf("Nside = %i, using %i healpixes.\n", Nside, HP);
 
-	usnobs = calloc(HP, sizeof(usnob_fits*));
+	nomads = calloc(HP, sizeof(nomad_fits*));
 
 	memset(slicecounts, 0, 180 * sizeof(uint));
 
 	nrecords = 0;
-	nobs = 0;
 	nfiles = 0;
 
-	printf("Reading USNO files... ");
+	printf("Reading NOMAD files... ");
 	fflush(stdout);
 
 	startoptind = optind;
@@ -144,73 +143,71 @@ int main(int argc, char** args) {
 		}
 		fclose(fid);
 
-		if (map_size % USNOB_RECORD_SIZE) {
+		if (map_size % NOMAD_RECORD_SIZE) {
 			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-byte records.\n",
-					infn, (unsigned int)map_size, USNOB_RECORD_SIZE);
+					infn, (unsigned int)map_size, NOMAD_RECORD_SIZE);
 		}
 
-		for (i=0; i<map_size; i+=USNOB_RECORD_SIZE) {
-			usnob_entry entry;
+		for (i=0; i<map_size; i+=NOMAD_RECORD_SIZE) {
+			nomad_entry entry;
 			int hp;
 			int slice;
 
-			if (i && (i % 10000000 * USNOB_RECORD_SIZE == 0)) {
+			if (i && (i % 10000000 * NOMAD_RECORD_SIZE == 0)) {
 				printf("o");
 				fflush(stdout);
 			}
 			
-			if (usnob_parse_entry(map + i, &entry)) {
-				fprintf(stderr, "Failed to parse USNOB entry: offset %i in file %s.\n",
+			if (nomad_parse_entry(&entry, map + i)) {
+				fprintf(stderr, "Failed to parse NOMAD entry: offset %i in file %s.\n",
 						i, infn);
 				exit(-1);
 			}
 
-			// compute the usnob_id based on its DEC slice and index.
-			slice = (int)(entry.dec + 90.0);
-			assert(slice < 180);
-			assert((slicecounts[slice] & 0xff000000) == 0);
-			entry.usnob_id = (slice << 24) | (slicecounts[slice]);
+			// compute the nomad_id based on its DEC slice and index.
+			slice = (int)(10.0 * (entry.dec + 90.0));
+			assert(slice < 1800);
+			assert((slicecounts[slice] & 0xffe00000) == 0);
+			entry.nomad_id = (slice << 21) | (slicecounts[slice]);
 			slicecounts[slice]++;
 
 			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
 
-			if (!usnobs[hp]) {
+			if (!nomads[hp]) {
 				char fn[256];
 				char val[256];
 				sprintf(fn, outfn, hp);
-				usnobs[hp] = usnob_fits_open_for_writing(fn);
-				if (!usnobs[hp]) {
+				nomads[hp] = nomad_fits_open_for_writing(fn);
+				if (!nomads[hp]) {
 					fprintf(stderr, "Failed to initialized FITS file %i (filename %s).\n", hp, fn);
 					exit(-1);
 				}
 
 				// header remarks...
 				sprintf(val, "%u", hp);
-				qfits_header_add(usnobs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
+				qfits_header_add(nomads[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 				sprintf(val, "%u", Nside);
-				qfits_header_add(usnobs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-				// etc...
+				qfits_header_add(nomads[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
 
-				boilerplate_add_fits_headers(usnobs[hp]->header);
+				boilerplate_add_fits_headers(nomads[hp]->header);
 
-				qfits_header_add(usnobs[hp]->header, "HISTORY", "Created by the program \"usnobtofits\"", NULL, NULL);
-				qfits_header_add(usnobs[hp]->header, "HISTORY", "usnobtofits command line:", NULL, NULL);
-				fits_add_args(usnobs[hp]->header, args, argc);
-				qfits_header_add(usnobs[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
+				qfits_header_add(nomads[hp]->header, "HISTORY", "Created by the program \"nomadtofits\"", NULL, NULL);
+				qfits_header_add(nomads[hp]->header, "HISTORY", "nomadtofits command line:", NULL, NULL);
+				fits_add_args(nomads[hp]->header, args, argc);
+				qfits_header_add(nomads[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
 
-				if (usnob_fits_write_headers(usnobs[hp])) {
+				if (nomad_fits_write_headers(nomads[hp])) {
 					fprintf(stderr, "Failed to write header for FITS file %s.\n", fn);
 					exit(-1);
 				}
 			}
 
-			if (usnob_fits_write_entry(usnobs[hp], &entry)) {
+			if (nomad_fits_write_entry(nomads[hp], &entry)) {
 				fprintf(stderr, "Failed to write FITS entry.\n");
 				exit(-1);
 			}
 
 			nrecords++;
-			nobs += (entry.ndetections == 0 ? 1 : entry.ndetections);
 		}
 
 		munmap(map, map_size);
@@ -223,18 +220,18 @@ int main(int argc, char** args) {
 
 	// close all the files...
 	for (i=0; i<HP; i++) {
-		if (!usnobs[i])
+		if (!nomads[i])
 			continue;
-		if (usnob_fits_fix_headers(usnobs[i]) ||
-			usnob_fits_close(usnobs[i])) {
+		if (nomad_fits_fix_headers(nomads[i]) ||
+			nomad_fits_close(nomads[i])) {
 			fprintf(stderr, "Failed to close file %i: %s\n", i, strerror(errno));
 		}
 	}
 
-	printf("Read %u files, %u records, %u observations.\n",
-		   nfiles, nrecords, nobs);
+	printf("Read %u files, %u records.\n", nfiles, nrecords);
 
-	free(usnobs);
+	free(nomads);
 
 	return 0;
 }
+
