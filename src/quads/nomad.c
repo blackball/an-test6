@@ -1,3 +1,6 @@
+#include <stdint.h>
+typedef uint32_t u32;
+
 #include "nomad.h"
 
 #if __BYTE_ORDER == __BIG_ENDIAN

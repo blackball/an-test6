@@ -105,4 +105,5 @@ enum nomad_src {
 
 int nomad_parse_entry(struct nomad_entry* entry, void* encoded);
 
+#endif
 
