@@ -173,7 +173,8 @@ tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o healpix.o bl.o \
 hpowned: hpowned.o healpix.o mathutil.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 build-an-catalog: build-an-catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
-		tycho2.o usnob.o healpix.o bl.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		tycho2.o usnob.o 2mass_catalog.o 2mass.o healpix.o bl.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 cut-an: cut-an.o an_catalog.o catalog.o idfile.o healpix.o bl.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)

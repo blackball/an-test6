@@ -33,6 +33,7 @@
 #include "mathutil.h"
 #include "boilerplate.h"
 #include "fitsioutils.h"
+#include "2mass_catalog.h"
 
 #define OPTIONS "ho:N:"
 
@@ -65,11 +66,10 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int 
 	qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
 	sprintf(val, "%u", Nside);
 	qfits_header_add(cats[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-	// etc...
 
 	boilerplate_add_fits_headers(cats[hp]->header);
 
-	qfits_header_add(cats[hp]->header, "HISTORY", "Created by the program \"build_an_catalog\"", NULL, NULL);
+	qfits_header_add(cats[hp]->header, "HISTORY", "Created by the program \"build-an-catalog\"", NULL, NULL);
 	qfits_header_add(cats[hp]->header, "HISTORY", "build_an_catalog command line:", NULL, NULL);
 	fits_add_args(cats[hp]->header, args, argc);
 	qfits_header_add(cats[hp]->header, "HISTORY", "(end of command line)", NULL, NULL);
@@ -103,6 +103,7 @@ int main(int argc, char** args) {
 	int64_t starid;
 	int version = 0;
 	int nusnob = 0, ntycho = 0;
+	int n2mass = 0;
 	int BLOCK = 100000;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
@@ -142,9 +143,11 @@ int main(int argc, char** args) {
 		char* infn;
 		usnob_fits* usnob = NULL;
 		tycho2_fits* tycho = NULL;
+		twomass_catalog* twomass = NULL;
 		qfits_header* hdr;
 		bool is_usnob = FALSE;
 		bool is_tycho = FALSE;
+		bool is_2mass = FALSE;
 		an_entry an;
 		int hp;
 
@@ -158,17 +161,23 @@ int main(int argc, char** args) {
 		is_usnob = qfits_header_getboolean(hdr, "USNOB", 0);
 		if (!is_usnob) {
 			is_tycho = qfits_header_getboolean(hdr, "TYCHO_2", 0);
+			if (!is_tycho) {
+				is_2mass = qfits_header_getboolean(hdr, "2MASS", 0);
+			}
 		}
 		qfits_header_destroy(hdr);
-		if (!is_usnob && !is_tycho) {
+		if (!is_usnob && !is_tycho && !is_2mass) {
 			// guess...
 			printf("Guessing catalog type (this may generate a warning)...\n");
 			usnob = usnob_fits_open(infn);
 			if (!usnob) {
 				tycho = tycho2_fits_open(infn);
 				if (!tycho) {
-					fprintf(stderr, "Couldn't figure out what catalog file %s came from.\n", infn);
-					exit(-1);
+					twomass = twomass_catalog_open(infn);
+					if (!twomass) {
+						fprintf(stderr, "Couldn't figure out what catalog file %s came from.\n", infn);
+						exit(-1);
+					}
 				}
 			}
 		} else if (is_usnob) {
@@ -181,6 +190,12 @@ int main(int argc, char** args) {
 			tycho = tycho2_fits_open(infn);
 			if (!tycho) {
 				fprintf(stderr, "Couldn't open Tycho-2 catalog: %s\n", infn);
+				exit(-1);
+			}
+		} else if (is_2mass) {
+			twomass = twomass_catalog_open(infn);
+			if (!twomass) {
+				fprintf(stderr, "Couldn't open 2MASS catalog: %s\n", infn);
 				exit(-1);
 			}
 		}
@@ -326,6 +341,85 @@ int main(int argc, char** args) {
 			}
 			tycho2_fits_close(tycho);
 			printf("\n");
+
+		} else if (twomass) {
+			twomass_entry* entry;
+			int N = twomass_catalog_count_entries(twomass);
+			printf("Reading %i entries from 2MASS catalog file %s\n", N, infn);
+			twomass->br.blocksize = BLOCK;
+			for (i=0; i<N; i++) {
+				int ob;
+				if (!(i % 100000)) {
+					printf(".");
+					fflush(stdout);
+				}
+				entry = twomass_catalog_read_entry(twomass);
+				if (!entry) {
+					fprintf(stderr, "Failed to read 2MASS entry.\n");
+					exit(-1);
+				}
+
+				if (entry->minor_planet)
+					continue;
+				
+
+				memset(&an, 0, sizeof(an));
+
+				an.ra = entry->ra;
+				an.dec = entry->dec;
+				an.sigma_ra =
+					sqrt(square(cos(deg2rad(entry->err_angle)) * entry->err_major) +
+						 square(sin(deg2rad(entry->err_angle)) * entry->err_minor));
+				an.sigma_dec =
+					sqrt(square(sin(deg2rad(entry->err_angle)) * entry->err_major) +
+						 square(cos(deg2rad(entry->err_angle)) * entry->err_minor));
+
+				an.id = an_catalog_get_id(version, starid);
+				starid++;
+
+				ob = 0;
+				if ((entry->j_quality != TWOMASS_QUALITY_NO_BRIGHTNESS) &&
+					(entry->j_cc == TWOMASS_CC_NONE)) {
+					an.obs[ob].catalog = AN_SOURCE_2MASS;
+					an.obs[ob].band = 'J';
+					an.obs[ob].id = entry->key;
+					an.obs[ob].mag = entry->j_m;
+					an.obs[ob].sigma_mag = entry->j_msigcom;
+					ob++;
+				}
+				if ((entry->h_quality != TWOMASS_QUALITY_NO_BRIGHTNESS) &&
+					(entry->h_cc == TWOMASS_CC_NONE)) {
+					an.obs[ob].catalog = AN_SOURCE_2MASS;
+					an.obs[ob].band = 'H';
+					an.obs[ob].id = entry->key;
+					an.obs[ob].mag = entry->h_m;
+					an.obs[ob].sigma_mag = entry->h_msigcom;
+					ob++;
+				}
+				if ((entry->k_quality != TWOMASS_QUALITY_NO_BRIGHTNESS) &&
+					(entry->k_cc == TWOMASS_CC_NONE)) {
+					an.obs[ob].catalog = AN_SOURCE_2MASS;
+					an.obs[ob].band = 'K';
+					an.obs[ob].id = entry->key;
+					an.obs[ob].mag = entry->k_m;
+					an.obs[ob].sigma_mag = entry->k_msigcom;
+					ob++;
+				}
+				an.nobs = ob;
+				if (!an.nobs) {
+					//fprintf(stderr, "2MASS entry %i: no valid observations.\n", i);
+					continue;
+				}
+
+				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				if (!cats[hp]) {
+					init_catalog(cats, outfn, hp, Nside, argc, args);
+				}
+				an_catalog_write_entry(cats[hp], &an);
+				n2mass++;
+			}
+			twomass_catalog_close(twomass);
+			printf("\n");
 		}
 
 		// update and sync each output file...
@@ -344,8 +438,8 @@ int main(int argc, char** args) {
 		}
 	}
 
-	printf("Read %i USNO-B objects and %i Tycho-2 objects.\n",
-		   nusnob, ntycho);
+	printf("Read %i USNO-B objects, %i Tycho-2 objects and %i 2MASS objects.\n",
+		   nusnob, ntycho, n2mass);
 
 	for (i=0; i<HP; i++) {
 		char val[32];

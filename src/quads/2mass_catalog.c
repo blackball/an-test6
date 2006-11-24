@@ -49,7 +49,7 @@ static bool twomass_fitstruct_inited = 0;
 #define SET_ARRAY(A, i, t, n, u, fld, na, nul) { \
  twomass_entry x; \
  if (sizeof(x.fld) != fits_get_atom_size(t)*na) \
-    fprintf(stderr, "Warning, field %s has size %i in the struct but %i * %i in FITS.\n", \
+    fprintf(stderr, "Warning, 2MASS field \"%s\" has size %i in the struct but %i * %i in FITS.\n", \
 			#fld, sizeof(x.fld), fits_get_atom_size(t), na); \
  A[i].fieldname=n; \
  A[i].units=u; \

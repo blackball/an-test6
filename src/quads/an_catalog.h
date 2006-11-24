@@ -31,7 +31,8 @@ typedef uint64_t uint64;
 enum an_sources {
 	AN_SOURCE_UNKNOWN,
 	AN_SOURCE_USNOB,
-	AN_SOURCE_TYCHO2
+	AN_SOURCE_TYCHO2,
+	AN_SOURCE_2MASS
 };
 
 struct an_observation {
