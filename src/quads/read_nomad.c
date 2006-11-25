@@ -10,15 +10,16 @@
 #include "nomad.h"
 
 int main(int argc, char** args) {
-	int i;
+	int j;
 
-	for (i=1; i<argc; i++) {
+	for (j=1; j<argc; j++) {
 		char* infn;
 		FILE* fid;
 		unsigned char* map;
 		size_t map_size;
+		int i;
 
-		infn = args[i];
+		infn = args[j];
 		fid = fopen(infn, "rb");
 		if (!fid) {
 			fprintf(stderr, "Couldn't open input file %s: %s\n", infn, strerror(errno));
