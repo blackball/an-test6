@@ -20,6 +20,7 @@ int main(int argc, char** args) {
 		int i;
 
 		infn = args[j];
+		fprintf(stderr, "Reading file %s...\n", infn);
 		fid = fopen(infn, "rb");
 		if (!fid) {
 			fprintf(stderr, "Couldn't open input file %s: %s\n", infn, strerror(errno));
