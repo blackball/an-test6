@@ -12,6 +12,15 @@
 int main(int argc, char** args) {
 	int j;
 
+	printf("ra dec sigma_racosdec sigma_dec mu_racosdec mu_dec "
+		   "sigma_mu_racosdec sigma_mu_dec epoch_ra epoch_dec "
+		   "mag_B mag_V mag_R mag_J mag_H mag_K usnob_id twomass_id "
+		   "yb6_id ucac2_id tycho2_id astrometry_src blue_src visual_src "
+		   "red_src usnob_fail twomass_fail tycho_astrometry "
+		   "alt_radec alt_2mass alt_ucac alt_tycho blue_o red_e "
+		   "twomass_only hipp_astrometry diffraction confusion "
+		   "bright_confusion bright_artifact standard external\n");
+
 	for (j=1; j<argc; j++) {
 		char* infn;
 		FILE* fid;
@@ -42,15 +51,6 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-byte records.\n",
 					infn, (unsigned int)map_size, NOMAD_RECORD_SIZE);
 		}
-
-		printf("ra dec sigma_racosdec sigma_dec mu_racosdec mu_dec "
-			   "sigma_mu_racosdec sigma_mu_dec epoch_ra epoch_dec "
-			   "mag_B mag_V mag_R mag_J mag_H mag_K usnob_id twomass_id "
-			   "yb6_id ucac2_id tycho2_id astrometry_src blue_src visual_src "
-			   "red_src usnob_fail twomass_fail tycho_astrometry "
-			   "alt_radec alt_2mass alt_ucac alt_tycho blue_o red_e "
-			   "twomass_only hipp_astrometry diffraction confusion "
-			   "bright_confusion bright_artifact standard external\n");
 
 		for (i=0; i<map_size; i+=NOMAD_RECORD_SIZE) {
 			nomad_entry e;
