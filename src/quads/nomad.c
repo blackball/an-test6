@@ -98,7 +98,7 @@ int nomad_parse_entry(struct nomad_entry* entry, void* encoded) {
 
 	entry->tycho_astrometry = (uval >> 16) & 0x1;
 	entry->alt_radec        = (uval >> 17) & 0x1;
-	entry->alt_2mass        = (uval >> 18) & 0x1;
+	//entry->alt_2mass        = (uval >> 18) & 0x1;
 	entry->alt_ucac         = (uval >> 19) & 0x1;
 	entry->alt_tycho        = (uval >> 20) & 0x1;
 	entry->blue_o           = (uval >> 21) & 0x1;
@@ -110,7 +110,7 @@ int nomad_parse_entry(struct nomad_entry* entry, void* encoded) {
 	entry->bright_confusion = (uval >> 27) & 0x1;
 	entry->bright_artifact  = (uval >> 28) & 0x1;
 	entry->standard         = (uval >> 29) & 0x1;
-	entry->external         = (uval >> 30) & 0x1;
+	//entry->external         = (uval >> 30) & 0x1;
 
 	return 0;
 }

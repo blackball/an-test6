@@ -72,7 +72,8 @@ struct nomad_entry {
 	bool twomass_fail;     // TMBIT   "Fails Roc's test for clean 2MASS star"
 	bool tycho_astrometry; // TYBIT   "Astrometry comes from Tycho2"
 	bool alt_radec;        // XRBIT   "Alt correlations for same (RA,Dec)"
-	bool alt_2mass;        // ITMBIT  "Alt correlations for same 2MASS ID"
+	// This bit is NEVER set in NOMAD.
+	//bool alt_2mass;        // ITMBIT  "Alt correlations for same 2MASS ID"
 	bool alt_ucac;         // IUCBIT  "Alt correlations for same UCAC-2 ID"
 	bool alt_tycho;        // ITYBIT  "Alt correlations for same Tycho2 ID"
 	bool blue_o;           // OMAGBIT "Blue magnitude from O (not J) plate"
@@ -84,7 +85,8 @@ struct nomad_entry {
 	bool bright_confusion; // BSCONF  "Bright star has nearby faint source"
 	bool bright_artifact;  // BSART   "Faint source is bright star artifact"
 	bool standard;         // USEME   "Recommended astrometric standard"
-	bool external;         // EXCAT   "External, non-astrometric object"
+	// This bit is NEVER set in NOMAD.
+	//bool external;         // EXCAT   "External, non-astrometric object"
 
 	// sequence number assigned by us (it's not in the original catalogue),
 	// composed of the 1/10 degree DEC zone (top 11 bits) and the sequence

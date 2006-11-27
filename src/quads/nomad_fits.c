@@ -125,30 +125,26 @@ int nomad_fits_read_entries(nomad_fits* nomad, uint offset,
 			for (i=0; i<count; i++) {
 				unsigned char flags1;
 				unsigned char flags2;
-				unsigned char flags3;
-				flags1 = rawdata[3*i + 0];
-				flags2 = rawdata[3*i + 1];
-				flags3 = rawdata[3*i + 2];
+
+				flags1 = rawdata[2*i + 0];
+				flags2 = rawdata[2*i + 1];
 
 				entries[i].usnob_fail         = (flags1 >> 7) & 0x1;
 				entries[i].twomass_fail       = (flags1 >> 6) & 0x1;
 				entries[i].tycho_astrometry   = (flags1 >> 5) & 0x1;
 				entries[i].alt_radec          = (flags1 >> 4) & 0x1;
-				entries[i].alt_2mass          = (flags1 >> 3) & 0x1;
-				entries[i].alt_ucac           = (flags1 >> 2) & 0x1;
-				entries[i].alt_tycho          = (flags1 >> 1) & 0x1;
-				entries[i].blue_o             = (flags1 >> 0) & 0x1;
+				entries[i].alt_ucac           = (flags1 >> 3) & 0x1;
+				entries[i].alt_tycho          = (flags1 >> 2) & 0x1;
+				entries[i].blue_o             = (flags1 >> 1) & 0x1;
+				entries[i].red_e              = (flags1 >> 0) & 0x1;
 
-				entries[i].red_e              = (flags2 >> 7) & 0x1;
-				entries[i].twomass_only       = (flags2 >> 6) & 0x1;
-				entries[i].hipp_astrometry    = (flags2 >> 5) & 0x1;
-				entries[i].diffraction        = (flags2 >> 4) & 0x1;
-				entries[i].confusion          = (flags2 >> 3) & 0x1;
-				entries[i].bright_confusion   = (flags2 >> 2) & 0x1;
-				entries[i].bright_artifact    = (flags2 >> 1) & 0x1;
-				entries[i].standard           = (flags2 >> 0) & 0x1;
-
-				entries[i].external           = (flags3 >> 7) & 0x1;
+				entries[i].twomass_only       = (flags2 >> 7) & 0x1;
+				entries[i].hipp_astrometry    = (flags2 >> 6) & 0x1;
+				entries[i].diffraction        = (flags2 >> 5) & 0x1;
+				entries[i].confusion          = (flags2 >> 4) & 0x1;
+				entries[i].bright_confusion   = (flags2 >> 3) & 0x1;
+				entries[i].bright_artifact    = (flags2 >> 2) & 0x1;
+				entries[i].standard           = (flags2 >> 1) & 0x1;
 			}
 			free(rawdata);
 			continue;
@@ -176,30 +172,25 @@ int nomad_fits_write_entry(nomad_fits* nomad, nomad_entry* entry) {
 		(entry->twomass_fail      ? (1 << 6) : 0) |
 		(entry->tycho_astrometry  ? (1 << 5) : 0) |
 		(entry->alt_radec         ? (1 << 4) : 0) |
-		(entry->alt_2mass         ? (1 << 3) : 0) |
-		(entry->alt_ucac          ? (1 << 2) : 0) |
-		(entry->alt_tycho         ? (1 << 1) : 0) |
-		(entry->blue_o            ? (1 << 0) : 0);
+		(entry->alt_ucac          ? (1 << 3) : 0) |
+		(entry->alt_tycho         ? (1 << 2) : 0) |
+		(entry->blue_o            ? (1 << 1) : 0) |
+		(entry->red_e             ? (1 << 0) : 0);
 
 	flags[1] =
-		(entry->red_e             ? (1 << 7) : 0) |
-		(entry->twomass_only      ? (1 << 6) : 0) |
-		(entry->hipp_astrometry   ? (1 << 5) : 0) |
-		(entry->diffraction       ? (1 << 4) : 0) |
-		(entry->confusion         ? (1 << 3) : 0) |
-		(entry->bright_confusion  ? (1 << 2) : 0) |
-		(entry->bright_artifact   ? (1 << 1) : 0) |
-		(entry->standard          ? (1 << 0) : 0);
-
-	flags[2] =
-		(entry->external          ? (1 << 7) : 0);
+		(entry->twomass_only      ? (1 << 7) : 0) |
+		(entry->hipp_astrometry   ? (1 << 6) : 0) |
+		(entry->diffraction       ? (1 << 5) : 0) |
+		(entry->confusion         ? (1 << 4) : 0) |
+		(entry->bright_confusion  ? (1 << 3) : 0) |
+		(entry->bright_artifact   ? (1 << 2) : 0) |
+		(entry->standard          ? (1 << 1) : 0);
 
 	for (c=0; c<NOMAD_FITS_COLUMNS; c++) {
 		fitstruct* fs = nomad_fitstruct + c;
 		if (c == NOMAD_FLAGS_INDEX) {
 			if (fits_write_data_X(fid, flags[0]) ||
-				fits_write_data_X(fid, flags[1]) ||
-				fits_write_data_X(fid, flags[2])) {
+				fits_write_data_X(fid, flags[1])) {
 				return -1;
 			}
 			continue;
@@ -304,6 +295,27 @@ nomad_fits* nomad_fits_open_for_writing(char* fn) {
 	nomad->header = qfits_table_prim_header_default();
 	qfits_header_add(nomad->header, "NOMAD", "T", "This is a NOMAD catalog.", NULL);
 	qfits_header_add(nomad->header, "NOBJS", "0", "", NULL);
+	qfits_header_add(nomad->header, "COMMENT", "The FLAGS variable is composed of 15 boolean values packed into 2 bytes.", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "  Byte 0:", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x80: UBBIT / usnob_fail", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x40: TMBIT / twomass_fail", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x20: TYBIT / tycho_astrometry", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x10: XRBIT / alt_radec", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x08: IUCBIT / alt_ucac", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x04: ITYBIT / alt_tycho", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x02: OMAGBIT / blue_o", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x01: EMAGBIT / red_e", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "  Byte 1:", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x80: TMONLY / twomass_only", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x40: HIPAST / hipp_astrometry", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x20: SPIKE / diffraction", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x10: TYCONF / confusion", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x08: BSCONF / bright_confusion", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x04: BSART / bright_artifact", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x02: USEME / standard", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "    0x01: unused", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "  Note that the ITMBIT and EXCAT bits were not set for any entry in the ", NULL, NULL);
+	qfits_header_add(nomad->header, "COMMENT", "  released NOMAD catalog, so were not included here.", NULL, NULL);
 	return nomad;
 
  bailout:
@@ -386,7 +398,9 @@ static qfits_table* nomad_fits_get_table() {
 	for (col=0; col<NOMAD_FITS_COLUMNS; col++) {
 		fitstruct* fs = nomad_fitstruct + col;
 		if (col == NOMAD_FLAGS_INDEX) {
-			fits_add_column(table, col, TFITS_BIN_TYPE_X, 17, nil, fs->fieldname);
+			// "15" in the function call below is the number of BIT values
+			// in the flags array.
+			fits_add_column(table, col, TFITS_BIN_TYPE_X, 15, nil, fs->fieldname);
 			continue;
 		}
 		fits_add_column(table, col, fs->fitstype, 1, fs->units, fs->fieldname);
