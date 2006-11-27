@@ -24,10 +24,17 @@
 #include "xylist.h"
 #include "bl.h"
 
+/**
+   correspondences: for each field object (up to the maximum index that
+   .    we test, which is the minimum of the number of field objects and
+   .    the number of index objects in the field), if there is an index
+   .    object in range, then its index is set.  Otherwise, the array is
+   .    untouched, so you should initialize it to, eg, -1 before calling.
+ */
 void verify_hit(kdtree_t* startree, MatchObj* mo, double* field,
 				int nfield, double verify_dist2,
 				int* pmatches, int* punmatches, int* pconflicts,
-				il* indexstars, dl* bestd2s);
+				il* indexstars, dl* bestd2s, int* correspondences);
 
 
 #endif

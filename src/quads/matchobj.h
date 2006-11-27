@@ -62,20 +62,7 @@ struct match_struct {
 	// how many seconds of CPU time have we spent on this field?
 	float timeused;
 
-	/*
-	  double corners[4];
-	  double starA[3];
-	  double starB[3];
-	  double starC[3];
-	  double starD[3];
-	  double fieldA[2];
-	  double fieldB[2];
-	  double fieldC[2];
-	  double fieldD[2];
-	  int abcdorder;
-	*/
-
-	void* extra;
+	//void* extra;
 };
 typedef struct match_struct MatchObj;
 

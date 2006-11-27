@@ -747,10 +747,12 @@ static void write_hits(int fieldnum, pl* matches) {
 	return;
 }
 
-void verify(MatchObj* mo, double* field, int nfield, int fieldnum, int nagree) {
+void verify(MatchObj* mo, solver_params* params, double* field, int nfield, int fieldnum, int nagree,
+			int* correspondences) {
 	int matches, unmatches, conflicts;
+
 	verify_hit(starkd->tree, mo, field, nfield, verify_dist2,
-			   &matches, &unmatches, &conflicts, NULL, NULL);
+			   &matches, &unmatches, &conflicts, NULL, NULL, correspondences);
 	if (!quiet && !silent)
 		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 				fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
@@ -772,13 +774,13 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 
 	qfits_header* wcs = NULL;
 
+	// compute a simple WCS transformation:
+	// -get field & star positions of the matching quad.
 	for (i=0; i<4; i++) {
 		getstarcoord(mo->star[i], star + i*3);
 		field[i*2 + 0] = params->field[mo->field[i] * 2 + 0];
 		field[i*2 + 1] = params->field[mo->field[i] * 2 + 1];
 	}
-
-	// compute a simple WCS transformation:
 	// -set the tangent point to be the center of mass of the matching quad.
 	cmass[0] = (star[0] + star[3] + star[6] + star[9] ) / 4.0;
 	cmass[1] = (star[1] + star[4] + star[7] + star[10]) / 4.0;
@@ -929,10 +931,153 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 	return wcs;
 }
 
+static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
+								   int* corr) {
+	double star[12];
+	double field[8];
+	double cmass[3];
+	double fieldcmass[2];
+	double cov[4];
+	double U[4], V[4], S[2], R[4];
+	double scale;
+	int i, j, k;
+	int Ncorr;
+	// projected star coordinates
+	double* p;
+	// relative field coordinates
+	double* f;
+
+	qfits_header* wcs = NULL;
+
+	// compute a simple WCS transformation:
+	// -get field & star positions of the matching quad.
+	for (i=0; i<4; i++) {
+		getstarcoord(mo->star[i], star + i*3);
+		field[i*2 + 0] = params->field[mo->field[i] * 2 + 0];
+		field[i*2 + 1] = params->field[mo->field[i] * 2 + 1];
+	}
+	// -set the tangent point to be the center of mass of the matching quad.
+	cmass[0] = (star[0] + star[3] + star[6] + star[9] ) / 4.0;
+	cmass[1] = (star[1] + star[4] + star[7] + star[10]) / 4.0;
+	cmass[2] = (star[2] + star[5] + star[8] + star[11]) / 4.0;
+	normalize_3(cmass);
+	fieldcmass[0] = (field[0] + field[2] + field[4] + field[6]) / 4.0;
+	fieldcmass[1] = (field[1] + field[3] + field[5] + field[7]) / 4.0;
+
+	// -count how many corresponding stars there are.
+	Ncorr = 0;
+	for (i=0; i<params->nfield; i++)
+		if (corr[i] != -1)
+			Ncorr++;
+
+	// -allocate and fill "p" and "f" arrays.
+	p = malloc(Ncorr * 2 * sizeof(double));
+	f = malloc(Ncorr * 2 * sizeof(double));
+	j = 0;
+	for (i=0; i<params->nfield; i++)
+		if (corr[i] != -1) {
+			double xyz[3];
+			// -project the stars around the quad center
+			getstarcoord(corr[i], xyz);
+			star_coords(xyz, cmass, p + 2*j, p + 2*j + 1);
+			// -express the field coords relative to the quad center
+			f[2*j+0] = params->field[2*i+0] - fieldcmass[0];
+			f[2*j+1] = params->field[2*i+1] - fieldcmass[1];
+			j++;
+		}
+
+	// -compute the covariance between field positions and projected
+	//  positions of the corresponding stars.
+	for (i=0; i<4; i++)
+		cov[i] = 0.0;
+	for (i=0; i<Ncorr; i++)
+		for (j=0; j<2; j++)
+			for (k=0; k<2; k++)
+				cov[j*2 + k] += p[i*2 + k] * f[i*2 + j];
+	// set up svd params
+	{
+		double* pcov[] = { cov, cov+2 };
+		double* pU[]   = { U,   U  +2 };
+		double* pV[]   = { V,   V  +2 };
+		double eps, tol;
+		eps = 1e-30;
+		tol = 1e-30;
+		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
+	}
+	// R = V U'
+	for (i=0; i<4; i++)
+		R[i] = 0.0;
+	for (i=0; i<2; i++)
+		for (j=0; j<2; j++)
+			for (k=0; k<2; k++)
+				R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
+	// -compute scale: p' * R * f / (f' * f)
+	{
+		double numer, denom;
+		numer = denom = 0.0;
+		for (i=0; i<Ncorr; i++) {
+			double f0 = f[i*2+0];
+			double f1 = f[i*2+1];
+			double Rf0 = R[0] * f0 + R[1] * f1;
+			double Rf1 = R[2] * f0 + R[3] * f1;
+			numer += (Rf0 * p[i*2 + 0]) + (Rf1 * p[i*2 + 1]);
+			denom += (f0 * f0) + (f1 * f1);
+		}
+		scale = numer / denom;
+	}
+
+	{
+		qfits_header* hdr;
+		char val[64];
+		double ra, dec;
+
+		xyz2radec(cmass[0], cmass[1], cmass[2], &ra, &dec);
+		hdr = qfits_header_default();
+
+		qfits_header_add(hdr, "BITPIX", "8", " ", NULL);
+		qfits_header_add(hdr, "NAXIS", "0", "No image", NULL);
+		qfits_header_add(hdr, "EXTEND", "T", "FITS extensions may follow", NULL);
+
+		sprintf(val, "%.12g", fieldcmass[0]);
+		qfits_header_add(hdr, "CRPIX1 ", val, "X reference pixel", NULL);
+		sprintf(val, "%.12g", fieldcmass[1]);
+		qfits_header_add(hdr, "CRPIX2 ", val, "Y reference pixel", NULL);
+
+		qfits_header_add(hdr, "CUNIT1 ", "deg", "X pixel scale units", NULL);
+		qfits_header_add(hdr, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
+		scale = rad2deg(scale);
+
+		// bizarrely, this only seems to work when I swap the rows of R.
+		sprintf(val, "%.12g", R[2] * scale);
+		qfits_header_add(hdr, "CD1_1", val, "Transformation matrix", NULL);
+		sprintf(val, "%.12g", R[3] * scale);
+		qfits_header_add(hdr, "CD1_2", val, " ", NULL);
+		sprintf(val, "%.12g", R[0] * scale);
+		qfits_header_add(hdr, "CD2_1", val, " ", NULL);
+		sprintf(val, "%.12g", R[1] * scale);
+		qfits_header_add(hdr, "CD2_2", val, " ", NULL);
+
+		qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
+		qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
+		sprintf(val, "%.12g", rad2deg(ra));
+		qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
+		sprintf(val, "%.12g", rad2deg(dec));
+		qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
+
+		wcs = hdr;
+	}
+
+	free(p);
+	free(f);
+
+	return wcs;
+}
+
 int handlehit(solver_params* p, MatchObj* mo) {
 	int listind;
 	int n = 0;
 	threadargs* my = p->userdata;
+	int* corr = NULL;
 
 	assert(mo->timeused >= 0.0);
 
@@ -946,7 +1091,14 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	if (n < nagree_toverify)
 		return n;
 
-	verify(mo, p->field, p->nfield, p->fieldnum, n);
+	if (p->wcs_filename) {
+		int i;
+		corr = malloc(p->nfield * sizeof(int));
+		for (i=0; i<p->nfield; i++)
+			corr[i] = -1;
+	}
+
+	verify(mo, p, p->field, p->nfield, p->fieldnum, n, corr);
 
 	if (overlap_tosolve > 0.0) {
 		bool solved = FALSE;
@@ -958,7 +1110,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			for (j=0; j<pl_size(list); j++) {
 				mo1 = pl_get(list, j);
 				if (mo1->overlap == 0.0) {
-					verify(mo1, p->field, p->nfield, p->fieldnum, n);
+					verify(mo1, p, p->field, p->nfield, p->fieldnum, n, NULL);
 					if (mo1->overlap >= overlap_tokeep)
 						pl_append(my->verified, mo1);
 				}
@@ -988,7 +1140,7 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			p->quitNow = TRUE;
 
 			if (p->wcs_filename) {
-				qfits_header* wcs = compute_wcs(mo, p);
+				qfits_header* wcs = compute_wcs_2(mo, p, corr);
 				FILE* fout;
 				fout = fopen(p->wcs_filename, "ab");
 				if (!fout) {
@@ -1005,6 +1157,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			}
 		}
 	}
+
+	free(corr);
 
 	return n;
 }
@@ -1204,7 +1358,7 @@ static void* solvethread_run(void* varg) {
 					// run verification on any of the matches that haven't
 					// already been done.
 					if (mo->overlap == 0.0) {
-						verify(mo, solver.field, solver.nfield, solver.fieldnum, pl_size(list));
+						verify(mo, &solver, solver.field, solver.nfield, solver.fieldnum, pl_size(list), NULL);
 						if (do_verify)
 							pl_append(my->verified, mo);
 					}

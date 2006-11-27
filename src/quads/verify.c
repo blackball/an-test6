@@ -39,7 +39,8 @@ void verify_hit(kdtree_t* startree,
 				int* punmatches,
 				int* pconflicts,
 				il* indexstars,
-				dl* bestd2s) {
+				dl* bestd2s,
+				int* correspondences) {
 	int i, j;
 	double* fieldstars;
 	intmap* map;
@@ -167,9 +168,11 @@ void verify_hit(kdtree_t* startree,
 				conflicts++;
 			else
 				matches++;
+			if (bestd2s)
+				dl_append(bestd2s, bestd2);
+			if (correspondences)
+				correspondences[i] = ind;
 		}
-		if (ind != -1 && bestd2s)
-			dl_append(bestd2s, bestd2);
 	}
 
 	kdtree_free(itree);

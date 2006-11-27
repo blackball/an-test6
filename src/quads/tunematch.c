@@ -689,7 +689,7 @@ int main(int argc, char *argv[]) {
 				int unmatch;
 				int conflict;
 				verify_hit(skdt->tree, mo, fielduv, NF, overlap_d2,
-						   &match, &unmatch, &conflict, NULL, NULL);
+						   &match, &unmatch, &conflict, NULL, NULL, NULL);
 			}
 			printf("Overlap: %g\n", mo->overlap);
 

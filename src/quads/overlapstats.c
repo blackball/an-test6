@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
 		dists2 = dl_new(256);
 
 		verify_hit(starkd->tree, mo, fielduv, NF, overlap_d2,
-				   &match, &unmatch, &conflict, NULL, dists2);
+				   &match, &unmatch, &conflict, NULL, dists2, NULL);
 		printf("Overlap: %g\n", mo->overlap);
 
 		for (j=0; j<dl_size(dists2); j++)
