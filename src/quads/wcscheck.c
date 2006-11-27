@@ -26,13 +26,16 @@
 #include "qfits.h"
 #include "starutil.h"
 #include "bl.h"
+#include "xylist.h"
 
-const char* OPTIONS = "hx:y:";
+const char* OPTIONS = "hx:y:l:f:X:Y:";
 
 void print_help(char* progname) {
 	//boilerplate_help_header(stdout);
 	printf("\nUsage: %s\n"
 		   "  [-x <x-pixel-coord> -y <y-pixel>] (can be repeated)\n"
+		   "  [-l <xy-list file> -f <xy-list field index>]\n"
+		   "     [-X <x-column-name> -Y <y-column-name>]\n"
 		   "  <WCS-input-file>\n"
 		   "\n", progname);
 }
@@ -54,6 +57,11 @@ int main(int argc, char** args) {
 	FILE* f;
 	dl* xpix;
 	dl* ypix;
+	char* xylsfn = NULL;
+	xylist* xyls = NULL;
+	int fieldind = 0;
+	char* xcol = NULL;
+	char* ycol = NULL;
 
 	xpix = dl_new(16);
 	ypix = dl_new(16);
@@ -63,6 +71,18 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'l':
+			xylsfn = optarg;
+			break;
+		case 'f':
+			fieldind = atoi(optarg);
+			break;
+		case 'X':
+			xcol = optarg;
+			break;
+		case 'Y':
+			ycol = optarg;
+			break;
 		case 'x':
 			dl_append(xpix, atof(optarg));
 			break;
@@ -82,6 +102,33 @@ int main(int argc, char** args) {
 		print_help(args[0]);
 		exit(-1);
 	}
+
+	if (xylsfn) {
+		double* xyvals;
+		int i;
+		int nvals;
+		xyls = xylist_open(xylsfn);
+		if (!xyls) {
+			fprintf(stderr, "Failed to read an xylist from file %s.\n", xylsfn);
+			exit(-1);
+		}
+		if (xcol)
+			xyls->xname = xcol;
+		if (ycol)
+			xyls->yname = ycol;
+		nvals = xylist_n_entries(xyls, fieldind);
+		xyvals = malloc(2 * nvals * sizeof(double));
+		if (xylist_read_entries(xyls, fieldind, 0, nvals, xyvals)) {
+			fprintf(stderr, "Failed to read xylist data from file %s.\n", xylsfn);
+			exit(-1);
+		}
+		for (i=0; i<nvals; i++) {
+			dl_append(xpix, xyvals[2*i + 0]);
+			dl_append(ypix, xyvals[2*i + 1]);
+		}
+		free(xyvals);
+	}
+
 	Ncoords = dl_size(xpix);
 
 	fn = args[optind];
