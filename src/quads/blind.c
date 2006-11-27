@@ -767,6 +767,7 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 	double cmass[3];
 	double fieldcmass[2];
 	double proj[8];
+	double pcm[2];
 	double cov[4];
 	double U[4], V[4], S[2], R[4];
 	double scale;
@@ -793,6 +794,12 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 	star_coords(star + 3, cmass, proj + 2, proj + 3);
 	star_coords(star + 6, cmass, proj + 4, proj + 5);
 	star_coords(star + 9, cmass, proj + 6, proj + 7);
+	// -subtract out the projected center of mass.
+	pcm[0] = (proj[0] + proj[2] + proj[4] + proj[6]) / 4.0;
+	pcm[1] = (proj[1] + proj[3] + proj[5] + proj[7]) / 4.0;
+	for (i=0; i<4; i++)
+		for (j=0; j<2; j++)
+			proj[i*2 + j] -= pcm[j];
 	// -compute the covariance between field positions and projected
 	//  positions of the stars that form the quad.
 	for (i=0; i<4; i++)
@@ -812,7 +819,7 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 		tol = 1e-30;
 		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
 	}
-	// R = V U'
+	// rotation matrix R = V U'
 	for (i=0; i<4; i++)
 		R[i] = 0.0;
 	for (i=0; i<2; i++)
@@ -820,18 +827,31 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 			for (k=0; k<2; k++)
 				R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
 	// -compute scale: proj' * R * field / (field' * field)
+	/*{
+	  double numer, denom;
+	  numer = denom = 0.0;
+	  for (i=0; i<4; i++) {
+	  double f0 = field[i*2+0] - fieldcmass[0];
+	  double f1 = field[i*2+1] - fieldcmass[1];
+	  double Rf0 = R[0] * f0 + R[1] * f1;
+	  double Rf1 = R[2] * f0 + R[3] * f1;
+	  numer += (Rf0 * proj[i*2 + 0]) + (Rf1 * proj[i*2 + 1]);
+	  denom += (f0 * f0) + (f1 * f1);
+	  }
+	  scale = numer / denom;
+	  }
+	*/
+
+	// -compute scale: make the variances equal.
 	{
-		double numer, denom;
-		numer = denom = 0.0;
-		for (i=0; i<4; i++) {
-			double f0 = field[i*2+0] - fieldcmass[0];
-			double f1 = field[i*2+1] - fieldcmass[1];
-			double Rf0 = R[0] * f0 + R[1] * f1;
-			double Rf1 = R[2] * f0 + R[3] * f1;
-			numer += (Rf0 * proj[i*2 + 0]) + (Rf1 * proj[i*2 + 1]);
-			denom += (f0 * f0) + (f1 * f1);
-		}
-		scale = numer / denom;
+		double pvar, fvar;
+		pvar = fvar = 0.0;
+		for (i=0; i<4; i++)
+			for (j=0; j<2; j++) {
+				pvar += square(proj[i*2 + j]);
+				fvar += square(field[i*2 + j] - fieldcmass[j]);
+			}
+		scale = sqrt(pvar / fvar);
 	}
 
 	/*
@@ -890,6 +910,13 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 		qfits_header_add(hdr, "NAXIS", "0", "No image", NULL);
 		qfits_header_add(hdr, "EXTEND", "T", "FITS extensions may follow", NULL);
 
+		qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
+		qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
+		sprintf(val, "%.12g", rad2deg(ra));
+		qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
+		sprintf(val, "%.12g", rad2deg(dec));
+		qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
+
 		sprintf(val, "%.12g", fieldcmass[0]);
 		qfits_header_add(hdr, "CRPIX1 ", val, "X reference pixel", NULL);
 		sprintf(val, "%.12g", fieldcmass[1]);
@@ -918,13 +945,6 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 		sprintf(val, "%.12g", R[1] * scale);
 		qfits_header_add(hdr, "CD2_2", val, " ", NULL);
 
-		qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
-		qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
-		sprintf(val, "%.12g", rad2deg(ra));
-		qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
-		sprintf(val, "%.12g", rad2deg(dec));
-		qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
-
 		wcs = hdr;
 	}
 
@@ -946,6 +966,8 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 	double* p;
 	// relative field coordinates
 	double* f;
+	double pcm[2];
+	double fcm[2];
 
 	qfits_header* wcs = NULL;
 
@@ -974,17 +996,29 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 	p = malloc(Ncorr * 2 * sizeof(double));
 	f = malloc(Ncorr * 2 * sizeof(double));
 	j = 0;
+	pcm[0] = pcm[1] = fcm[0] = fcm[1] = 0.0;
 	for (i=0; i<params->nfield; i++)
 		if (corr[i] != -1) {
 			double xyz[3];
 			// -project the stars around the quad center
 			getstarcoord(corr[i], xyz);
 			star_coords(xyz, cmass, p + 2*j, p + 2*j + 1);
+			pcm[0] += p[2*j+0];
+			pcm[1] += p[2*j+1];
 			// -express the field coords relative to the quad center
-			f[2*j+0] = params->field[2*i+0] - fieldcmass[0];
-			f[2*j+1] = params->field[2*i+1] - fieldcmass[1];
+			f[2*j+0] = params->field[2*i+0];
+			f[2*j+1] = params->field[2*i+1];
+			fcm[0] += f[2*j+0];
+			fcm[1] += f[2*j+1];
 			j++;
 		}
+	// -subtract out the centers of mass.
+	for (i=0; i<Ncorr; i++) {
+		f[2*i + 0] -= fcm[0];
+		f[2*i + 1] -= fcm[1];
+		p[2*i + 0] -= pcm[0];
+		p[2*i + 1] -= pcm[1];
+	}
 
 	// -compute the covariance between field positions and projected
 	//  positions of the corresponding stars.
@@ -1004,7 +1038,7 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 		tol = 1e-30;
 		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
 	}
-	// R = V U'
+	// rotation matrix R = V U'
 	for (i=0; i<4; i++)
 		R[i] = 0.0;
 	for (i=0; i<2; i++)
@@ -1012,18 +1046,30 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 			for (k=0; k<2; k++)
 				R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
 	// -compute scale: p' * R * f / (f' * f)
+	/*{
+	  double numer, denom;
+	  numer = denom = 0.0;
+	  for (i=0; i<Ncorr; i++) {
+	  double f0 = f[i*2+0];
+	  double f1 = f[i*2+1];
+	  double Rf0 = R[0] * f0 + R[1] * f1;
+	  double Rf1 = R[2] * f0 + R[3] * f1;
+	  numer += (Rf0 * p[i*2 + 0]) + (Rf1 * p[i*2 + 1]);
+	  denom += (f0 * f0) + (f1 * f1);
+	  }
+	  scale = numer / denom;
+	  }*/
+
+	// -compute scale: make the variances equal.
 	{
-		double numer, denom;
-		numer = denom = 0.0;
-		for (i=0; i<Ncorr; i++) {
-			double f0 = f[i*2+0];
-			double f1 = f[i*2+1];
-			double Rf0 = R[0] * f0 + R[1] * f1;
-			double Rf1 = R[2] * f0 + R[3] * f1;
-			numer += (Rf0 * p[i*2 + 0]) + (Rf1 * p[i*2 + 1]);
-			denom += (f0 * f0) + (f1 * f1);
-		}
-		scale = numer / denom;
+		double pvar, fvar;
+		pvar = fvar = 0.0;
+		for (i=0; i<Ncorr; i++)
+			for (j=0; j<2; j++) {
+				pvar += square(p[i*2 + j]);
+				fvar += square(f[i*2 + j]);
+			}
+		scale = sqrt(pvar / fvar);
 	}
 
 	{
@@ -1037,6 +1083,13 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 		qfits_header_add(hdr, "BITPIX", "8", " ", NULL);
 		qfits_header_add(hdr, "NAXIS", "0", "No image", NULL);
 		qfits_header_add(hdr, "EXTEND", "T", "FITS extensions may follow", NULL);
+
+		qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
+		qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
+		sprintf(val, "%.12g", rad2deg(ra));
+		qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
+		sprintf(val, "%.12g", rad2deg(dec));
+		qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
 
 		sprintf(val, "%.12g", fieldcmass[0]);
 		qfits_header_add(hdr, "CRPIX1 ", val, "X reference pixel", NULL);
@@ -1056,13 +1109,6 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 		qfits_header_add(hdr, "CD2_1", val, " ", NULL);
 		sprintf(val, "%.12g", R[1] * scale);
 		qfits_header_add(hdr, "CD2_2", val, " ", NULL);
-
-		qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
-		qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
-		sprintf(val, "%.12g", rad2deg(ra));
-		qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
-		sprintf(val, "%.12g", rad2deg(dec));
-		qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
 
 		wcs = hdr;
 	}
@@ -1140,8 +1186,8 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			p->quitNow = TRUE;
 
 			if (p->wcs_filename) {
-				qfits_header* wcs = compute_wcs_2(mo, p, corr);
 				FILE* fout;
+				qfits_header* wcs = compute_wcs_2(mo, p, corr);
 				fout = fopen(p->wcs_filename, "ab");
 				if (!fout) {
 					fprintf(stderr, "Failed to open WCS output file %s: %s\n", p->wcs_filename, strerror(errno));
@@ -1152,8 +1198,17 @@ int handlehit(solver_params* p, MatchObj* mo) {
 					exit(-1);
 				}
 				fits_pad_file(fout);
-				fclose(fout);
 				qfits_header_destroy(wcs);
+
+				// 4-point WCS.
+				wcs = compute_wcs(mo, p);
+				if (qfits_header_dump(wcs, fout)) {
+					fprintf(stderr, "Failed to write FITS WCS header.\n");
+					exit(-1);
+				}
+				fits_pad_file(fout);
+
+				fclose(fout);
 			}
 		}
 	}
