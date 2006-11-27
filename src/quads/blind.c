@@ -121,12 +121,6 @@ bool circle;
 
 int nverified;
 
-/*
-  static void qfits_errmsg(char* msg) {
-  fprintf(stderr, "qfits error: %s\n", msg);
-  }
-*/
-
 int main(int argc, char *argv[]) {
     uint numfields;
 	char* progname = argv[0];
@@ -160,7 +154,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	qfits_err_statset(1);
-	//qfits_err_register(qfits_errmsg);
 
 	for (;;) {
 
