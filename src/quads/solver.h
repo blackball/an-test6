@@ -44,6 +44,7 @@ struct solver_params {
 	int fieldnum;
 	char* solvedfn;
 	bool do_solvedserver;
+	char* wcs_filename;
 	double cxdx_margin;
 	bool circle;
 	bool quiet;

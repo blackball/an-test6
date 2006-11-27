@@ -77,6 +77,7 @@ static void reset_next_field();
 char *fieldfname, *treefname, *quadfname, *startreefname;
 char *idfname, *matchfname, *donefname, *solvedfname, *solvedserver;
 char* xcolname, *ycolname;
+char* wcs_template;
 bool parity;
 double codetol;
 int startdepth;
@@ -168,6 +169,7 @@ int main(int argc, char *argv[]) {
 		donefname = NULL;
 		solvedfname = NULL;
 		solvedserver = NULL;
+		wcs_template = NULL;
 		xcolname = strdup("X");
 		ycolname = strdup("Y");
 		parity = DEFAULT_PARITY_FLIP;
@@ -203,6 +205,10 @@ int main(int argc, char *argv[]) {
 
 		if (!silent) {
 			fprintf(stderr, "%s params:\n", progname);
+			fprintf(stderr, "fields ");
+			for (i=0; i<il_size(fieldlist); i++)
+				fprintf(stderr, "%i ", il_get(fieldlist, i));
+			fprintf(stderr, "\n");
 			fprintf(stderr, "fieldfname %s\n", fieldfname);
 			fprintf(stderr, "fieldid %i\n", fieldid);
 			fprintf(stderr, "treefname %s\n", treefname);
@@ -213,6 +219,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "donefname %s\n", donefname);
 			fprintf(stderr, "solvedfname %s\n", solvedfname);
 			fprintf(stderr, "solvedserver %s\n", solvedserver);
+			fprintf(stderr, "wcs %s\n", wcs_template);
 			fprintf(stderr, "parity %i\n", parity);
 			fprintf(stderr, "codetol %g\n", codetol);
 			fprintf(stderr, "startdepth %i\n", startdepth);
@@ -232,11 +239,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "maxquads %i\n", maxquads);
 			fprintf(stderr, "quiet %i\n", quiet);
 			fprintf(stderr, "threads %i\n", threads);
-
-			fprintf(stderr, "fields ");
-			for (i=0; i<il_size(fieldlist); i++)
-				fprintf(stderr, "%i ", il_get(fieldlist, i));
-			fprintf(stderr, "\n");
 		}
 
 		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -419,6 +421,7 @@ int main(int argc, char *argv[]) {
 		free(matchfname);
 		free(xcolname);
 		free(ycolname);
+		free(wcs_template);
 		free_fn(fieldfname);
 		free_fn(treefname);
 		free_fn(quadfname);
@@ -488,6 +491,8 @@ static int read_parameters() {
 			silent = TRUE;
 		} else if (is_word(buffer, "quiet", &nextword)) {
 			quiet = TRUE;
+		} else if (is_word(buffer, "wcs ", &nextword)) {
+			wcs_template = strdup(nextword);
 		} else if (is_word(buffer, "maxquads ", &nextword)) {
 			maxquads = atoi(nextword);
 		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
@@ -982,13 +987,12 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			my->winning_listind = listind;
 			p->quitNow = TRUE;
 
-			//mo->extra = compute_wcs(mo, p);
-			if (0) {
+			if (p->wcs_filename) {
 				qfits_header* wcs = compute_wcs(mo, p);
 				FILE* fout;
-				fout = fopen("wcs", "ab");
+				fout = fopen(p->wcs_filename, "ab");
 				if (!fout) {
-					fprintf(stderr, "Failed to open WCS output file: %s\n", strerror(errno));
+					fprintf(stderr, "Failed to open WCS output file %s: %s\n", p->wcs_filename, strerror(errno));
 					exit(-1);
 				}
 				if (qfits_header_dump(wcs, fout)) {
@@ -1085,6 +1089,7 @@ static void* solvethread_run(void* varg) {
 		int fieldnum;
 		MatchObj template;
 		int nfield;
+		char wcs_fn[1024];
 
 		fieldnum = next_field(&thisfield);
 
@@ -1139,6 +1144,11 @@ static void* solvethread_run(void* varg) {
 		template.fieldfile = fieldid;
 		template.indexid = indexid;
 		template.healpix = healpix;
+
+		if (wcs_template) {
+			sprintf(wcs_fn, wcs_template, fieldnum);
+			solver.wcs_filename = wcs_fn;
+		}
 
 		solver.fieldid = fieldid;
 		solver.fieldnum = fieldnum;
