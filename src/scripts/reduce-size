@@ -2,7 +2,7 @@
 
 # Reduce the size of SDSS xy list files by:
 #  -converting from "D" (double) to "E" (float) format
-#  -keeping only the first 150 rows
+#  -keeping only the first N rows
 
 # Also changes the column names from "COLC, ROWC" to "X, Y".
 
@@ -19,23 +19,33 @@ fi
 TMPDIR=`mktemp -d /tmp/tmp.reduce-size.XXXXXX`
 echo "Placing temp files in $TMPDIR"
 
-for ((e=1;; e++)); do
-	E=`printf %04i $e`
-	fitsgetext -i $in -o $TMPDIR/A$e -e 0 -e $e
-	if [ $? -ne 0 ]; then
-		break;
-	fi
-	rm -f $TMPDIR/B$E
+fitsgetext -i $in -o $TMPDIR/ext%05i -a
+if [ $? -ne 0 ]; then
+	echo "fitsgetext failed.";
+	exit -1;
+fi
+
+shopt -s nullglob    # If no match, filename expands to nothing.
+EXTS=( $TMPDIR/ext* )
+EXT0=${EXTS[0]}
+#EXT0="$TMPDIR/ext00000"
+
+#echo "ext0: $EXT0"
+#echo "extensions: ${EXTS[*]}"
+
+for ((i=1; i<${#EXTS[*]}; i++)); do
+	echo "processing extension $i of ${#EXTS[*]}"
+	e="${EXTS[$i]}"
+	cat $EXT0 $e > $TMPDIR/E
 	if [ x$n != x ]; then
-		fitscopy $TMPDIR/A$e"[col X(1E)=COLC;Y(1E)=ROWC][#row<=$n]" $TMPDIR/B$E
+		fitscopy $TMPDIR/E"[col X(1E)=COLC;Y(1E)=ROWC][#row<=$n]" $TMPDIR/O
 	else
-		fitscopy $TMPDIR/A$e"[col X(1E)=COLC;Y(1E)=ROWC]" $TMPDIR/B$E
+		fitscopy $TMPDIR/E"[col X(1E)=COLC;Y(1E)=ROWC]" $TMPDIR/O
 	fi
-	mv $TMPDIR/B$E $TMPDIR/A$e
-	fitsgetext -i $TMPDIR/A$e -o $TMPDIR/B$E -e 1
-	rm $TMPDIR/A$e
+	fitsgetext -i $TMPDIR/O -o $TMPDIR/out.`basename $e` -e 1 > /dev/null
+	rm $TMPDIR/O
 done
-fitsgetext -i $in -o $TMPDIR/B0000 -e 0
-cat $TMPDIR/B* > $out
-rm $TMPDIR/B*
-rmdir $TMPDIR
+cat $EXT0 $TMPDIR/out.* > $out
+rm -R $TMPDIR
+
+exit 0;
