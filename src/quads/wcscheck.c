@@ -27,8 +27,9 @@
 #include "starutil.h"
 #include "bl.h"
 #include "xylist.h"
+#include "rdlist.h"
 
-const char* OPTIONS = "hx:y:l:f:X:Y:";
+const char* OPTIONS = "hx:y:l:f:X:Y:r:";
 
 void print_help(char* progname) {
 	//boilerplate_help_header(stdout);
@@ -36,6 +37,7 @@ void print_help(char* progname) {
 		   "  [-x <x-pixel-coord> -y <y-pixel>] (can be repeated)\n"
 		   "  [-l <xy-list file> -f <xy-list field index>]\n"
 		   "     [-X <x-column-name> -Y <y-column-name>]\n"
+		   "  [-r <rdls output file>]\n"
 		   "  <WCS-input-file>\n"
 		   "\n", progname);
 }
@@ -62,6 +64,8 @@ int main(int argc, char** args) {
 	int fieldind = 0;
 	char* xcol = NULL;
 	char* ycol = NULL;
+	char* rdlsfn = NULL;
+	rdlist* rdls = NULL;
 
 	xpix = dl_new(16);
 	ypix = dl_new(16);
@@ -71,6 +75,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'r':
+			rdlsfn = optarg;
+			break;
 		case 'l':
 			xylsfn = optarg;
 			break;
@@ -127,6 +134,19 @@ int main(int argc, char** args) {
 			dl_append(ypix, xyvals[2*i + 1]);
 		}
 		free(xyvals);
+	}
+
+	if (rdlsfn) {
+		rdls = rdlist_open_for_writing(rdlsfn);
+		if (!rdls) {
+			fprintf(stderr, "Failed to open file %s to write RDLS.\n", rdlsfn);
+			exit(-1);
+		}
+		if (rdlist_write_header(rdls) ||
+			rdlist_write_new_field(rdls)) {
+			fprintf(stderr, "Failed to write header to RDLS file %s.\n", rdlsfn);
+			exit(-1);
+		}
 	}
 
 	Ncoords = dl_size(xpix);
@@ -234,6 +254,12 @@ int main(int argc, char** args) {
 			printf("      xyz (%g, %g, %g)\n", xyz[0], xyz[1], xyz[2]);
 			printf("Phi,Theta (%g, %g)\n", phi[i], theta[i]);
 			printf("\n");
+
+			if (rdls &&
+				rdlist_write_entries(rdls, world[i], 1)) {
+				fprintf(stderr, "Failed to write entries to RDLS file.\n");
+				exit(-1);
+			}
 		}
 
 		printf("worldra=[");
@@ -247,6 +273,15 @@ int main(int argc, char** args) {
 
 	}
 	wcsfree(&wcs);
+
+	if (rdls) {
+		if (rdlist_fix_field(rdls) ||
+			rdlist_fix_header(rdls) ||
+			rdlist_close(rdls)) {
+			fprintf(stderr, "Failed to close RDLS file.\n");
+			exit(-1);
+		}
+	}
 
 	free(hdrstring);
 	return 0;

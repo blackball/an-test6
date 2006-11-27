@@ -155,7 +155,7 @@ WCSLIB_INC := $(WCSLIB_INC)
 wcscheck.o: wcscheck.c
 	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
 
-wcscheck: wcscheck.o starutil.o mathutil.o bl.o xylist.o \
+wcscheck: wcscheck.o starutil.o mathutil.o bl.o xylist.o rdlist.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
