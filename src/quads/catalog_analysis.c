@@ -101,13 +101,10 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 
 	int i, j;
 
-	//printf("Centerhp = %d\n", hpx);
-	
 	for (j = 0; j < 12 * Nside * Nside; j++) visited[j] = 0;
 
 	while (hpx != -1)
 	{
-		//printf("Considering %d\n", hpx);
 		int nneighbours; 
 		double thishpx_coords[3];
 		
@@ -116,8 +113,6 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 			goto getnext;
 		
 		maxmap[hpx] = 1;
-		//printf("We're in the max!\n");
-
 
 		nneighbours = healpix_get_neighbours_nside(hpx, neighbours, Nside);
 		
@@ -130,8 +125,7 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 		}
 
 		if (i == nneighbours) {
-			minmap[i] = 1;
-			//printf("We're in the min!\n");
+			minmap[hpx] = 1;
 		}
 		for (i = 0; i < nneighbours; i++) {
 			if (!visited[neighbours[i]]) {
@@ -158,6 +152,7 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 
 int main(int argc, char **argv)
 {
+	double max;
 	rect_field curfield;
 	int filled_min = 0, filled_max = 0;
 	int *hpmap_min, *hpmap_max;
@@ -235,6 +230,9 @@ int main(int argc, char **argv)
 		if (hpmap_max[i])
 			filled_max++;
 	}
-	printf("Min: %d\tMax: %d\tTotal:%d\n",filled_min,filled_max,12*Nside*Nside);
+	
+	max = 12 * Nside * Nside;
+	printf("Min: %f, Max: %f\n",((double)filled_min) / max, ((double)filled_max) / max);
+
 	return 0;
 }
