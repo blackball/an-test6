@@ -26,11 +26,13 @@
 #include "qfits.h"
 #include "bl.h"
 
-char* OPTIONS = "he:i:o:b";
+char* OPTIONS = "he:i:o:ba";
 
 void printHelp(char* progname) {
 	printf("%s    -i <input-file>\n"
 		   "      -o <output-file>\n"
+		   "      [-a]: write out ALL extensions; the output filename should be\n"
+		   "            a \"sprintf\" pattern such as  \"extension-%%04i\".\n"
 		   "      [-b]: print sizes and offsets in FITS blocks (of 2880 bytes)\n"
 		   "      -e <extension-number> ...\n\n",
 		   progname);
@@ -52,11 +54,16 @@ int main(int argc, char *argv[]) {
 	int mapsize;
 	char* progname = argv[0];
 	int inblocks = 0;
+	int allexts = 0;
+	int Next;
 
 	exts = il_new(16);
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'a':
+			allexts = 1;
+			break;
 		case 'b':
 			inblocks = 1;
 			break;
@@ -77,33 +84,37 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-	if (infn && !outfn) {
-		int next = qfits_query_n_ext(infn);
-		if (next == -1) {
+	if (infn) {
+		Next = qfits_query_n_ext(infn);
+		if (Next == -1) {
 			fprintf(stderr, "Couldn't determine how many extensions are in file %s.\n", infn);
+			exit(-1);
 		} else {
-			printf("File %s contains %i FITS extensions.\n", infn, next);
-			for (i=0; i<=next; i++) {
-				int hdrstart, hdrlen, datastart, datalen;
-				if (qfits_get_hdrinfo(infn, i, &hdrstart,  &hdrlen ) ||
-					qfits_get_datinfo(infn, i, &datastart, &datalen)) {
-					fprintf(stderr, "Error getting extents of extension %i.\n", i);
-					exit(-1);
-				}
-				if (inblocks) {
-					printf("Extension %i : header start %i , length %i ; data start %i , length %i blocks.\n",
-						   i, hdrstart/FITS_BLOCK_SIZE, hdrlen/FITS_BLOCK_SIZE,
-						   datastart/FITS_BLOCK_SIZE, datalen/FITS_BLOCK_SIZE);
-				} else {
-					printf("Extension %i : header start %i , length %i ; data start %i , length %i .\n",
-						   i, hdrstart, hdrlen, datastart, datalen);
-				}
+			printf("File %s contains %i FITS extensions.\n", infn, Next);
+		}
+	}
+
+	if (infn && !outfn) {
+		for (i=0; i<=Next; i++) {
+			int hdrstart, hdrlen, datastart, datalen;
+			if (qfits_get_hdrinfo(infn, i, &hdrstart,  &hdrlen ) ||
+				qfits_get_datinfo(infn, i, &datastart, &datalen)) {
+				fprintf(stderr, "Error getting extents of extension %i.\n", i);
+				exit(-1);
+			}
+			if (inblocks) {
+				printf("Extension %i : header start %i , length %i ; data start %i , length %i blocks.\n",
+					   i, hdrstart/FITS_BLOCK_SIZE, hdrlen/FITS_BLOCK_SIZE,
+					   datastart/FITS_BLOCK_SIZE, datalen/FITS_BLOCK_SIZE);
+			} else {
+				printf("Extension %i : header start %i , length %i ; data start %i , length %i .\n",
+					   i, hdrstart, hdrlen, datastart, datalen);
 			}
 		}
 		exit(0);
 	}
 
-	if (!infn || !outfn || !il_size(exts)) {
+	if (!infn || !outfn || !(il_size(exts) || allexts)) {
 		printHelp(progname);
 		exit(-1);
 	}
@@ -116,13 +127,15 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (outfn) {
+	if (!allexts) {
 		fout = fopen(outfn, "wb");
 		if (!fout) {
 			fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
 			exit(-1);
 		}
-	}
+	} else
+		for (i=0; i<=Next; i++)
+			il_append(exts, i);
 
 	fseeko(fin, 0, SEEK_END);
 	mapsize = ftello(fin);
@@ -137,6 +150,16 @@ int main(int argc, char *argv[]) {
 	for (i=0; i<il_size(exts); i++) {
 		int hdrstart, hdrlen, datastart, datalen;
 		int ext = il_get(exts, i);
+
+		if (allexts) {
+			char fn[256];
+			sprintf(fn, outfn, ext);
+			fout = fopen(fn, "wb");
+			if (!fout) {
+				fprintf(stderr, "Failed to open output file %s: %s\n", fn, strerror(errno));
+				exit(-1);
+			}
+		}
 
 		if (qfits_get_hdrinfo(infn, ext, &hdrstart,  &hdrlen ) ||
 			qfits_get_datinfo(infn, ext, &datastart, &datalen)) {
@@ -155,10 +178,17 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to write extension %i: %s\n", ext, strerror(errno));
 			exit(-1);
 		}
+
+		if (allexts)
+			if (fclose(fout)) {
+				fprintf(stderr, "Failed to close output file: %s\n", strerror(errno));
+				exit(-1);
+			}
 	}
 
 	munmap(map, mapsize);
-	fclose(fout);
+	if (!allexts)
+		fclose(fout);
 	il_free(exts);
 	return 0;
 }
