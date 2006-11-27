@@ -27,7 +27,7 @@ fi
 
 shopt -s nullglob    # If no match, filename expands to nothing.
 EXTS=( $TMPDIR/ext* )
-EXT0=${EXTS[0]}
+EXT0="${EXTS[0]}"
 #EXT0="$TMPDIR/ext00000"
 
 #echo "ext0: $EXT0"
@@ -45,7 +45,9 @@ for ((i=1; i<${#EXTS[*]}; i++)); do
 	fitsgetext -i $TMPDIR/O -o $TMPDIR/out.`basename $e` -e 1 > /dev/null
 	rm $TMPDIR/O
 done
-cat $EXT0 $TMPDIR/out.* > $out
+L=( $EXT0 $TMPDIR/out.* );
+echo "${L[*]}" | xargs -n 50 cat > $out
+#cat $EXT0 $TMPDIR/out.* > $out
 rm -R $TMPDIR
 
 exit 0;
