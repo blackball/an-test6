@@ -22,6 +22,7 @@
 #include "verify.h"
 #include "mathutil.h"
 #include "intmap.h"
+#include "pnpoly.h"
 
 /*
   #include "kdtree.h"
@@ -58,8 +59,29 @@ void verify_hit(kdtree_t* startree,
 	double* dptr;
 	int Nmin;
 
+	double polyx[4], polyy[4];
+
 	assert(mo->transform_valid);
 	assert(startree);
+
+	/*{
+	  double minrange = 1e300;
+	  int iminrange = -1;
+	  for (i=0; i<3; i++) {
+	  double minval, maxval;
+	  minval = maxval = mo->sMin[i];
+	  if (mo->sMinMax[i] < minval) minval = mo->sMinMax[i];
+	  if (mo->sMaxMin[i] < minval) minval = mo->sMaxMin[i];
+	  if (mo->sMax   [i] < minval) minval = mo->sMax   [i];
+	  if (mo->sMinMax[i] > maxval) maxval = mo->sMinMax[i];
+	  if (mo->sMaxMin[i] > maxval) maxval = mo->sMaxMin[i];
+	  if (mo->sMax   [i] > maxval) maxval = mo->sMax   [i];
+	  if (maxval - minval < minrange) {
+	  minrange = maxval - minval;
+	  iminrange = i;
+	  }
+	  }
+	  }*/
 
 	// compute vec1 and vec2, two vectors parallel to the two edges of the
 	// field.
@@ -75,6 +97,20 @@ void verify_hit(kdtree_t* startree,
 		len1 += (mo->sMax[i] - mo->sMin[i]) * vec1[i];
 		len2 += (mo->sMax[i] - mo->sMin[i]) * vec2[i];
 	}
+
+
+	// sMin
+	polyx[0] = 0.0;
+	polyy[0] = 0.0;
+	// sMinMax
+	polyx[1] = vec1[0]*vec1[0] + vec1[1]*vec1[1] + vec1[2]*vec1[2];
+	polyy[1] = vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2];
+	// sMax
+	polyx[2] = len1;
+	polyy[2] = len2;
+	// sMaxMin
+	polyx[3] = vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2];
+	polyy[3] = vec2[0]*vec2[0] + vec2[1]*vec2[1] + vec2[2]*vec2[2];
 
 	// find all the index stars that are inside the circle that bounds
 	// the field.
@@ -95,8 +131,11 @@ void verify_hit(kdtree_t* startree,
 			l1 += (res->results.d[j*3 + i] - mo->sMin[i]) * vec1[i];
 			l2 += (res->results.d[j*3 + i] - mo->sMin[i]) * vec2[i];
 		}
-		if ((l1 >= 0.0) && (l1 <= len1) &&
-			(l2 >= 0.0) && (l2 <= len2)) {
+		/*
+		  if ((l1 >= 0.0) && (l1 <= len1) &&
+		  (l2 >= 0.0) && (l2 <= len2)) {
+		*/
+		if (point_in_poly(polyx, polyy, 4, l1, l2)) {
 			if (j != NI) {
 				memmove(res->results.d + NI * 3,
 						res->results.d +  j * 3,
