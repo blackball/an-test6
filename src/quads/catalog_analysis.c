@@ -24,16 +24,14 @@ int is_inside_rect_field(rect_field *f, double *p)
 	double *side;
 	double *v1, *v2, *norm;
 	double dot_mypoint_norm, dot_c1_norm, u;
-	double *pprime;
+	double pprime[3];
 	double side2[3];
 	double tot_angle;
-	int i;	
+	long long i;	
 	
-	/* allocate space for two vectors that form the plane + the norm */
-	v1 = malloc(sizeof(double) * 3);
-	v2 = malloc(sizeof(double) * 3);
-	norm = malloc(sizeof(double) * 3);
-	
+	norm = malloc(3 * sizeof(double));
+	v1 = malloc(3 * sizeof(double));
+	v2 = malloc(3 * sizeof(double));
 	
 	/* fill the vectors */
 	for (i = 0; i < 3; i++)
@@ -49,9 +47,7 @@ int is_inside_rect_field(rect_field *f, double *p)
 	
 	if (dot_mypoint_norm == 0)
 	{
-		free(v1);
-		free(v2);
-		free(norm);
+		free(v1); free(v2); free(norm);
 		return 0;
 	}
 	/* Otherwise, solve for the constant that gives us the intersect */
@@ -59,11 +55,9 @@ int is_inside_rect_field(rect_field *f, double *p)
 	u = dot_c1_norm / dot_mypoint_norm;
 
 	/* Fill pprime with our point on the plane */
-	pprime = malloc(sizeof(double) * 3);
+		
 	assert (u < 1);
 	for (i = 0; i < 3; i++) pprime[i] = u*p[i];
-
-	free(v1); free(v2);
 
 	/* Reuse the space we allocated for norm */
 	side = norm;
@@ -87,14 +81,76 @@ int is_inside_rect_field(rect_field *f, double *p)
 	else {
 		retval = 0;
 	}
-	free(side);
-	free(pprime);
+	free(v1); free(v2); free(norm);
 	return retval;
 }
 
-void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside, 
+void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
+		rect_field *curfield, char *visited)
+{
+	double thishpx_coords[3];
+	uint neighbours[8];
+	uint nn;
+	if (visited[hpx / 8] & (1 << (hpx % 8)))
+		return;
+	visited[hpx / 8] |= 1 << (hpx % 8);
+	
+	healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
+	//printf("Examining healpix %d, centered at (%f, %f, %f)\n", hpx, 
+	//		thishpx_coords[0], thishpx_coords[1], thishpx_coords[2]);
+	if (is_inside_rect_field(curfield, thishpx_coords))
+	{
+		int j;
+		maxmap[hpx / 8] |= (1 << (hpx % 8));
+		nn = healpix_get_neighbours_nside(hpx, neighbours, Nside);
+		for (j = 0; j < nn; j++)
+		{
+				
+			double ncoords[3];
+			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[j], Nside, ncoords);
+
+            //printf("- Examining neighbour healpix %d, centered at (%f, %f, %f)\n", neighbours[j],
+			//	ncoords[0], ncoords[1], ncoords[2]);
+			
+			
+			if (!is_inside_rect_field(curfield, ncoords)) {
+				//printf("-- Not in field, breaking off neighbour search\n");
+				break;
+			}
+		}
+		if (j == nn)
+			minmap[(hpx / 8)] |= (1 << (hpx % 8));
+		for (j = 0; j < nn; j++)
+		{
+			//printf("Recursing on neighbour of %d, %d\n", hpx, neighbours[j]);
+			fill_maps_recursive(minmap, maxmap, neighbours[j], Nside,
+					curfield, visited);
+		}
+	}
+	else {
+		//printf("Healpix %d not in field\n", hpx);
+		return; // unnecessary I know
+	}
+}
+
+
+void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 		rect_field *curfield)
 {
+	char *visited = malloc(2 * Nside * Nside * sizeof(char));
+	int i;
+	for (i = 0; i < 2 * Nside * Nside; i++)
+		visited[i] = 0;
+
+	fill_maps_recursive(minmap, maxmap, hpx, Nside, curfield, visited);
+}
+
+/* Iterative version, somewhat old, doesn't use the bitmap but rather
+ * huge arrays (which was giving me problems obviously). I figured I should try
+ * the simpler recursive solution first.
+    
+void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
+		        rect_field *curfield)
 	char *visited = malloc(12 * Nside * Nside * sizeof(char));
 	uint *neighbours = malloc(8 * sizeof(uint));
 	struct ll_node *head = NULL;
@@ -148,14 +204,14 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 	}
 	free(neighbours);
 	free(visited);
-}
+}*/
 
 int main(int argc, char **argv)
 {
 	double max;
 	rect_field curfield;
 	int filled_min = 0, filled_max = 0;
-	int *hpmap_min, *hpmap_max;
+	char *hpmap_min, *hpmap_max;
 	char *buf = malloc(BUFSIZE * sizeof(char));
 	int ich, i;
 	int Nside = -1;
@@ -174,10 +230,14 @@ int main(int argc, char **argv)
 		fprintf(stderr, "specify an Nside value with -N, > 1\n");
 		exit(1);
 	}
-	hpmap_min = malloc(12 * Nside * Nside * sizeof(int));
-	hpmap_max = malloc(12 * Nside * Nside * sizeof(int));
-
-	for (i = 0; i < 12 * Nside * Nside; i++) {
+	hpmap_min = malloc(2 * Nside * Nside * sizeof(char));
+	hpmap_max = malloc(2 * Nside * Nside * sizeof(char));
+	if (hpmap_min == NULL || hpmap_max == NULL)
+	{
+		fprintf(stderr, "malloc failed!\n");
+		exit(1);
+	}	
+	for (i = 0; i < 2 * Nside * Nside; i++) {
 		hpmap_min[i] = 0;
 		hpmap_max[i] = 0;
 	}
@@ -215,19 +275,19 @@ int main(int argc, char **argv)
 				center[j] += curfield.corners[3*i + j];
 			}
 		}
-		printf("center = %f, %f, %f\n",center[0], center[1], center[2]);
 		for (i = 0; i < 3; i++)
 			center[i] /= 4;
 		normalize_3(center);
+		//printf("center = %f, %f, %f\n",center[0], center[1], center[2]);
 		centerhp = xyztohealpix_nside(center[0], center[1], 
 				center[2], (uint)Nside);
 		fill_maps(hpmap_min, hpmap_max, centerhp, (uint)Nside, &curfield);
 	}
 	for (i = 0; i < 12 * Nside * Nside; i++)
 	{
-		if (hpmap_min[i])
+		if (hpmap_min[i / 8] & (1 << (i % 8)))
 			filled_min++;
-		if (hpmap_max[i])
+		if (hpmap_max[i / 8] & (1 << (i % 8)))
 			filled_max++;
 	}
 	
