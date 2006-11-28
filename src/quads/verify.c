@@ -58,30 +58,20 @@ void verify_hit(kdtree_t* startree,
 	int Nleaf = 5;
 	double* dptr;
 	int Nmin;
-
 	double polyx[4], polyy[4];
 
 	assert(mo->transform_valid);
 	assert(startree);
 
-	/*{
-	  double minrange = 1e300;
-	  int iminrange = -1;
-	  for (i=0; i<3; i++) {
-	  double minval, maxval;
-	  minval = maxval = mo->sMin[i];
-	  if (mo->sMinMax[i] < minval) minval = mo->sMinMax[i];
-	  if (mo->sMaxMin[i] < minval) minval = mo->sMaxMin[i];
-	  if (mo->sMax   [i] < minval) minval = mo->sMax   [i];
-	  if (mo->sMinMax[i] > maxval) maxval = mo->sMinMax[i];
-	  if (mo->sMaxMin[i] > maxval) maxval = mo->sMaxMin[i];
-	  if (mo->sMax   [i] > maxval) maxval = mo->sMax   [i];
-	  if (maxval - minval < minrange) {
-	  minrange = maxval - minval;
-	  iminrange = i;
-	  }
-	  }
-	  }*/
+	/* We project the points into a 2D space whose origin is "sMin"
+	   and whose "unit vectors" are:
+	   .  vec1 = sMinMax - sMin
+	   .  vec2 = sMaxMin - sMin
+	   Note that these are neither unit length nor orthogonal, but that's
+	   okay.
+	   We project the corners of the field, and also the stars into this
+	   space and do a point-in-polygon test.
+	*/
 
 	// compute vec1 and vec2, two vectors parallel to the two edges of the
 	// field.
@@ -98,7 +88,7 @@ void verify_hit(kdtree_t* startree,
 		len2 += (mo->sMax[i] - mo->sMin[i]) * vec2[i];
 	}
 
-
+	// compute the corners of the field polygon:
 	// sMin
 	polyx[0] = 0.0;
 	polyy[0] = 0.0;
@@ -131,10 +121,6 @@ void verify_hit(kdtree_t* startree,
 			l1 += (res->results.d[j*3 + i] - mo->sMin[i]) * vec1[i];
 			l2 += (res->results.d[j*3 + i] - mo->sMin[i]) * vec2[i];
 		}
-		/*
-		  if ((l1 >= 0.0) && (l1 <= len1) &&
-		  (l2 >= 0.0) && (l2 <= len2)) {
-		*/
 		if (point_in_poly(polyx, polyy, 4, l1, l2)) {
 			if (j != NI) {
 				memmove(res->results.d + NI * 3,
