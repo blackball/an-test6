@@ -953,9 +953,8 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params) {
 
 static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 								   int* corr) {
-	double star[12];
-	double field[8];
-	double cmass[3];
+	double xyz[3];
+	double starcmass[3];
 	double fieldcmass[2];
 	double cov[4];
 	double U[4], V[4], S[2], R[4];
@@ -973,52 +972,95 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 
 	// compute a simple WCS transformation:
 	// -get field & star positions of the matching quad.
+	for (j=0; j<3; j++)
+		starcmass[j] = 0.0;
+	for (j=0; j<2; j++)
+		fieldcmass[j] = 0.0;
 	for (i=0; i<4; i++) {
-		getstarcoord(mo->star[i], star + i*3);
-		field[i*2 + 0] = params->field[mo->field[i] * 2 + 0];
-		field[i*2 + 1] = params->field[mo->field[i] * 2 + 1];
+		getstarcoord(mo->star[i], xyz);
+		for (j=0; j<3; j++)
+			starcmass[j] += xyz[j];
+		for (j=0; j<2; j++)
+			fieldcmass[j] += params->field[mo->field[i] * 2 + j];
 	}
 	// -set the tangent point to be the center of mass of the matching quad.
-	cmass[0] = (star[0] + star[3] + star[6] + star[9] ) / 4.0;
-	cmass[1] = (star[1] + star[4] + star[7] + star[10]) / 4.0;
-	cmass[2] = (star[2] + star[5] + star[8] + star[11]) / 4.0;
-	normalize_3(cmass);
-	fieldcmass[0] = (field[0] + field[2] + field[4] + field[6]) / 4.0;
-	fieldcmass[1] = (field[1] + field[3] + field[5] + field[7]) / 4.0;
+	for (j=0; j<2; j++)
+		fieldcmass[j] /= 4.0;
+	normalize_3(starcmass);
 
 	// -count how many corresponding stars there are.
-	Ncorr = 0;
-	for (i=0; i<params->nfield; i++)
-		if (corr[i] != -1)
-			Ncorr++;
+	/*
+	  Ncorr = 0;
+	  for (i=0; i<params->nfield; i++)
+	  if (corr[i] != -1)
+	  Ncorr++;
+	*/
+	Ncorr = 4;
 
 	// -allocate and fill "p" and "f" arrays.
 	p = malloc(Ncorr * 2 * sizeof(double));
 	f = malloc(Ncorr * 2 * sizeof(double));
 	j = 0;
-	pcm[0] = pcm[1] = fcm[0] = fcm[1] = 0.0;
-	for (i=0; i<params->nfield; i++)
-		if (corr[i] != -1) {
-			double xyz[3];
-			// -project the stars around the quad center
-			getstarcoord(corr[i], xyz);
-			star_coords(xyz, cmass, p + 2*j, p + 2*j + 1);
-			pcm[0] += p[2*j+0];
-			pcm[1] += p[2*j+1];
-			// -express the field coords relative to the quad center
-			f[2*j+0] = params->field[2*i+0];
-			f[2*j+1] = params->field[2*i+1];
-			fcm[0] += f[2*j+0];
-			fcm[1] += f[2*j+1];
-			j++;
-		}
-	// -subtract out the centers of mass.
-	for (i=0; i<Ncorr; i++) {
-		f[2*i + 0] -= fcm[0];
-		f[2*i + 1] -= fcm[1];
-		p[2*i + 0] -= pcm[0];
-		p[2*i + 1] -= pcm[1];
+	/*
+	  for (i=0; i<params->nfield; i++)
+	  if (corr[i] != -1) {
+	  // -project the stars around the quad center
+	  getstarcoord(corr[i], xyz);
+	  star_coords(xyz, starcmass, p + 2*j, p + 2*j + 1);
+	  // -express the field coords relative to the quad center
+	  f[2*j+0] = params->field[2*i+0];
+	  f[2*j+1] = params->field[2*i+1];
+	  j++;
+	  }
+	*/
+	for (i=0; i<4; i++) {
+		getstarcoord(mo->star[i], xyz);
+		star_coords(xyz, starcmass, p + 2*i, p + 2*i + 1);
+		f[2*i+0] = params->field[mo->field[i] * 2 + 0];
+		f[2*i+1] = params->field[mo->field[i] * 2 + 1];
 	}
+
+
+	fprintf(stderr, "Ncorr=%i;\n", Ncorr);
+	fprintf(stderr, "p=[");
+	for (i=0; i<Ncorr; i++)
+		fprintf(stderr, "%g,%g;", p[2*i], p[2*i+1]);
+	fprintf(stderr, "];\n");
+
+	fprintf(stderr, "f=[");
+	for (i=0; i<Ncorr; i++)
+		fprintf(stderr, "%g,%g;", f[2*i], f[2*i+1]);
+	fprintf(stderr, "];\n");
+
+	// -compute centers of mass
+	pcm[0] = pcm[1] = fcm[0] = fcm[1] = 0.0;
+	for (i=0; i<Ncorr; i++)
+		for (j=0; j<2; j++) {
+			pcm[j] += p[2*i+j];
+			fcm[j] += f[2*i+j];
+		}
+	pcm[0] /= (double)Ncorr;
+	pcm[1] /= (double)Ncorr;
+	fcm[0] /= (double)Ncorr;
+	fcm[1] /= (double)Ncorr;
+	// -subtract out the centers of mass.
+	for (i=0; i<Ncorr; i++)
+		for (j=0; j<2; j++) {
+			f[2*i + j] -= fcm[j];
+			p[2*i + j] -= pcm[j];
+		}
+	fprintf(stderr, "pcm=[%g,%g];\n", pcm[0], pcm[1]);
+	fprintf(stderr, "fcm=[%g,%g];\n", fcm[0], fcm[1]);
+
+	fprintf(stderr, "p2=[");
+	for (i=0; i<Ncorr; i++)
+		fprintf(stderr, "%g,%g;", p[2*i], p[2*i+1]);
+	fprintf(stderr, "];\n");
+
+	fprintf(stderr, "f2=[");
+	for (i=0; i<Ncorr; i++)
+		fprintf(stderr, "%g,%g;", f[2*i], f[2*i+1]);
+	fprintf(stderr, "];\n");
 
 	// -compute the covariance between field positions and projected
 	//  positions of the corresponding stars.
@@ -1028,7 +1070,7 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 		for (j=0; j<2; j++)
 			for (k=0; k<2; k++)
 				cov[j*2 + k] += p[i*2 + k] * f[i*2 + j];
-	// set up svd params
+	// -set up svd params
 	{
 		double* pcov[] = { cov, cov+2 };
 		double* pU[]   = { U,   U  +2 };
@@ -1038,27 +1080,13 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 		tol = 1e-30;
 		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
 	}
-	// rotation matrix R = V U'
+	// -compute rotation matrix R = V U'
 	for (i=0; i<4; i++)
 		R[i] = 0.0;
 	for (i=0; i<2; i++)
 		for (j=0; j<2; j++)
 			for (k=0; k<2; k++)
 				R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
-	// -compute scale: p' * R * f / (f' * f)
-	/*{
-	  double numer, denom;
-	  numer = denom = 0.0;
-	  for (i=0; i<Ncorr; i++) {
-	  double f0 = f[i*2+0];
-	  double f1 = f[i*2+1];
-	  double Rf0 = R[0] * f0 + R[1] * f1;
-	  double Rf1 = R[2] * f0 + R[3] * f1;
-	  numer += (Rf0 * p[i*2 + 0]) + (Rf1 * p[i*2 + 1]);
-	  denom += (f0 * f0) + (f1 * f1);
-	  }
-	  scale = numer / denom;
-	  }*/
 
 	// -compute scale: make the variances equal.
 	{
@@ -1069,7 +1097,30 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 				pvar += square(p[i*2 + j]);
 				fvar += square(f[i*2 + j]);
 			}
+		//fprintf(stderr, "before scaling: variances %g, %g\n", pvar, fvar);
 		scale = sqrt(pvar / fvar);
+		fprintf(stderr, "scale=%g;\n", scale);
+		/* check
+		  {
+		  double pscale = sqrt(pvar / (double)Ncorr);
+		  double fscale = sqrt(fvar / (double)Ncorr);
+		  fprintf(stderr, "pscale %g, fscale %g.\n", pscale, fscale);
+		  for (i=0; i<Ncorr; i++)
+		  for (j=0; j<2; j++) {
+		  p[i*2 + j] /= pscale;
+		  f[i*2 + j] /= fscale;
+		  }
+		  pvar = fvar = 0.0;
+		  for (i=0; i<Ncorr; i++)
+		  for (j=0; j<2; j++) {
+		  pvar += square(p[i*2 + j]);
+		  fvar += square(f[i*2 + j]);
+		  }
+		  pvar /= (double)Ncorr;
+		  fvar /= (double)Ncorr;
+		  fprintf(stderr, "after scaling: variances %g, %g\n", pvar, fvar);
+		  }
+		*/
 	}
 
 	{
@@ -1077,7 +1128,7 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 		char val[64];
 		double ra, dec;
 
-		xyz2radec(cmass[0], cmass[1], cmass[2], &ra, &dec);
+		xyz2radec(starcmass[0], starcmass[1], starcmass[2], &ra, &dec);
 		hdr = qfits_header_default();
 
 		qfits_header_add(hdr, "BITPIX", "8", " ", NULL);
@@ -1098,6 +1149,7 @@ static qfits_header* compute_wcs_2(MatchObj* mo, solver_params* params,
 
 		qfits_header_add(hdr, "CUNIT1 ", "deg", "X pixel scale units", NULL);
 		qfits_header_add(hdr, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
+
 		scale = rad2deg(scale);
 
 		// bizarrely, this only seems to work when I swap the rows of R.
