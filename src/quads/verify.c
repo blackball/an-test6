@@ -97,10 +97,12 @@ void verify_hit(kdtree_t* startree,
 		}
 		if ((l1 >= 0.0) && (l1 <= len1) &&
 			(l2 >= 0.0) && (l2 <= len2)) {
-			if (j != NI)
+			if (j != NI) {
 				memmove(res->results.d + NI * 3,
 						res->results.d +  j * 3,
 						3 * sizeof(double));
+				res->inds[NI] = res->inds[j];
+			}
 			if (indexstars)
 				il_append(indexstars, res->inds[j]);
 			NI++;
@@ -166,12 +168,14 @@ void verify_hit(kdtree_t* startree,
 			if (intmap_add(map, ind, i) == -1)
 				// a field object already selected star 'ind' as its nearest neighbour.
 				conflicts++;
-			else
+			else {
 				matches++;
+				if (correspondences)
+					//correspondences[i] = res->inds[itree->perm[ind]];
+					correspondences[i] = res->inds[ind];
+			}
 			if (bestd2s)
 				dl_append(bestd2s, bestd2);
-			if (correspondences)
-				correspondences[i] = ind;
 		}
 	}
 
