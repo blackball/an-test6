@@ -808,19 +808,12 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 				Ncorr++;
 	}
 
-	printf("quad:\n");
-	for (i=0; i<4; i++)
-		printf("  %u -> %u\n", mo->field[i], mo->star[i]);
-	printf("corr:\n");
-	for (i=0; i<params->nfield; i++)
-		if (corr[i] != -1)
-			printf("  %i -> %i\n", i, corr[i]);
-
 	// -allocate and fill "p" and "f" arrays.
 	p = malloc(Ncorr * 2 * sizeof(double));
 	f = malloc(Ncorr * 2 * sizeof(double));
 	j = 0;
 	if (!corr) {
+		// just use the four stars that compose the quad.
 		for (i=0; i<4; i++) {
 			getstarcoord(mo->star[i], xyz);
 			star_coords(xyz, starcmass, p + 2*i, p + 2*i + 1);
@@ -828,6 +821,7 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 			f[2*i+1] = params->field[mo->field[i] * 2 + 1];
 		}
 	} else {
+		// use all correspondences.
 		for (i=0; i<params->nfield; i++)
 			if (corr[i] != -1) {
 				// -project the stars around the quad center
@@ -840,17 +834,6 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 			}
 	}
 
-	fprintf(stderr, "Ncorr=%i;\n", Ncorr);
-	fprintf(stderr, "p=[");
-	for (i=0; i<Ncorr; i++)
-		fprintf(stderr, "%g,%g;", p[2*i], p[2*i+1]);
-	fprintf(stderr, "];\n");
-
-	fprintf(stderr, "f=[");
-	for (i=0; i<Ncorr; i++)
-		fprintf(stderr, "%g,%g;", f[2*i], f[2*i+1]);
-	fprintf(stderr, "];\n");
-
 	// -compute centers of mass
 	pcm[0] = pcm[1] = fcm[0] = fcm[1] = 0.0;
 	for (i=0; i<Ncorr; i++)
@@ -862,24 +845,13 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 	pcm[1] /= (double)Ncorr;
 	fcm[0] /= (double)Ncorr;
 	fcm[1] /= (double)Ncorr;
+
 	// -subtract out the centers of mass.
 	for (i=0; i<Ncorr; i++)
 		for (j=0; j<2; j++) {
 			f[2*i + j] -= fcm[j];
 			p[2*i + j] -= pcm[j];
 		}
-	fprintf(stderr, "pcm=[%g,%g];\n", pcm[0], pcm[1]);
-	fprintf(stderr, "fcm=[%g,%g];\n", fcm[0], fcm[1]);
-
-	fprintf(stderr, "p2=[");
-	for (i=0; i<Ncorr; i++)
-		fprintf(stderr, "%g,%g;", p[2*i], p[2*i+1]);
-	fprintf(stderr, "];\n");
-
-	fprintf(stderr, "f2=[");
-	for (i=0; i<Ncorr; i++)
-		fprintf(stderr, "%g,%g;", f[2*i], f[2*i+1]);
-	fprintf(stderr, "];\n");
 
 	// -compute the covariance between field positions and projected
 	//  positions of the corresponding stars.
@@ -889,7 +861,7 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 		for (j=0; j<2; j++)
 			for (k=0; k<2; k++)
 				cov[j*2 + k] += p[i*2 + k] * f[i*2 + j];
-	// -set up svd params
+	// -run SVD
 	{
 		double* pcov[] = { cov, cov+2 };
 		double* pU[]   = { U,   U  +2 };
@@ -916,32 +888,10 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 				pvar += square(p[i*2 + j]);
 				fvar += square(f[i*2 + j]);
 			}
-		//fprintf(stderr, "before scaling: variances %g, %g\n", pvar, fvar);
 		scale = sqrt(pvar / fvar);
-		fprintf(stderr, "scale=%g;\n", scale);
-		/* check
-		  {
-		  double pscale = sqrt(pvar / (double)Ncorr);
-		  double fscale = sqrt(fvar / (double)Ncorr);
-		  fprintf(stderr, "pscale %g, fscale %g.\n", pscale, fscale);
-		  for (i=0; i<Ncorr; i++)
-		  for (j=0; j<2; j++) {
-		  p[i*2 + j] /= pscale;
-		  f[i*2 + j] /= fscale;
-		  }
-		  pvar = fvar = 0.0;
-		  for (i=0; i<Ncorr; i++)
-		  for (j=0; j<2; j++) {
-		  pvar += square(p[i*2 + j]);
-		  fvar += square(f[i*2 + j]);
-		  }
-		  pvar /= (double)Ncorr;
-		  fvar /= (double)Ncorr;
-		  fprintf(stderr, "after scaling: variances %g, %g\n", pvar, fvar);
-		  }
-		*/
 	}
 
+	// -write the WCS header.
 	{
 		qfits_header* hdr;
 		char val[64];
