@@ -240,7 +240,7 @@ void qfits_header_add(
 
     if (hdr==NULL || key==NULL) return ;
     if (hdr->n<2) {
-		fprintf(stderr, "Caution: qfits thinks it knows better than you: %s:%i\n", __FILE__, __LINE__);
+		fprintf(stderr, "Caution: qfits thinks it knows better than you: %s:%i key=\"%s\"\n", __FILE__, __LINE__, key);
 		return ;
 	}
 
