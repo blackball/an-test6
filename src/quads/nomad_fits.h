@@ -25,7 +25,7 @@
 #include "nomad.h"
 #include "ioutils.h"
 
-#define NOMAD_FITS_COLUMNS 28
+#define NOMAD_FITS_COLUMNS 27
 
 struct nomad_fits {
 	qfits_table* table;

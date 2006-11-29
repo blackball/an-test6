@@ -64,7 +64,6 @@ static void init_nomad_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_DEC",            "arcsec/yr", mu_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_RACOSDEC", "arcsec/yr", sigma_mu_racosdec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_DEC",      "arcsec/yr", sigma_mu_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_DEC",      "arcsec/yr", sigma_mu_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_RA",          "yr", epoch_ra);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH_DEC",         "yr", epoch_dec);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MAG_B",             nil,  mag_B);
