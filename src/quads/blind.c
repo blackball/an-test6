@@ -1190,6 +1190,9 @@ static void* solvethread_run(void* varg) {
 		my->hits = hitlist_healpix_new(agreetol);
 		my->hits->do_correspond = do_correspond;
 
+		if (!silent)
+			fprintf(stderr, "Solving field %i.\n", fieldnum);
+
 		// The real thing
 		solve_field(&solver);
 

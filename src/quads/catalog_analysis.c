@@ -3,6 +3,7 @@
 #include <math.h>
 #include "healpix.h"
 #include "mathutil.h"
+#include "starutil.h"
 
 #define BUFSIZE 1000
 
@@ -35,10 +36,10 @@ int is_inside_rect_field(rect_field *f, double *p)
 	
 	/* fill the vectors */
 	for (i = 0; i < 3; i++)
-	{
-		v1[i] = f->corners[i+3] - f->corners[i];
-		v2[i] = f->corners[i+6] - f->corners[i+3];
-	}
+		{
+			v1[i] = f->corners[i+3] - f->corners[i];
+			v2[i] = f->corners[i+6] - f->corners[i+3];
+		}
 	/* Take the cross product to get the norm */
 	cross_product(v1, v2, norm);
 	
@@ -46,10 +47,10 @@ int is_inside_rect_field(rect_field *f, double *p)
 	dot_mypoint_norm = dot_product_3(norm, p);
 	
 	if (dot_mypoint_norm == 0)
-	{
-		free(v1); free(v2); free(norm);
-		return 0;
-	}
+		{
+			free(v1); free(v2); free(norm);
+			return 0;
+		}
 	/* Otherwise, solve for the constant that gives us the intersect */
 	dot_c1_norm = dot_product_3(norm, f->corners);
 	u = dot_c1_norm / dot_mypoint_norm;
@@ -63,21 +64,21 @@ int is_inside_rect_field(rect_field *f, double *p)
 	side = norm;
     tot_angle = 0;
 	for (i = 0; i < 4; i++)
-	{
-		uint j;
-		double costheta;
-		for (j = 0; j < 3; j++)
 		{
-			side[j] = f->corners[3 * i + j] - pprime[j];
-			side2[j] = f->corners[3 * ((i + 1) % 4)] - pprime[j];
+			uint j;
+			double costheta;
+			for (j = 0; j < 3; j++)
+				{
+					side[j] = f->corners[3 * i + j] - pprime[j];
+					side2[j] = f->corners[3 * ((i + 1) % 4)] - pprime[j];
+				}
+			costheta = dot_product_3(side, side2);
+			tot_angle += acos(costheta);
 		}
-		costheta = dot_product_3(side, side2);
-		tot_angle += acos(costheta);
-	}
 	if (fabs(tot_angle - 2*PI) < EPSILON)
-	{
-		retval = 1;
-	}
+		{
+			retval = 1;
+		}
 	else {
 		retval = 0;
 	}
@@ -86,7 +87,7 @@ int is_inside_rect_field(rect_field *f, double *p)
 }
 
 void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
-		rect_field *curfield, char *visited)
+						 rect_field *curfield, char *visited)
 {
 	double thishpx_coords[3];
 	uint neighbours[8];
@@ -99,34 +100,34 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 	//printf("Examining healpix %d, centered at (%f, %f, %f)\n", hpx, 
 	//		thishpx_coords[0], thishpx_coords[1], thishpx_coords[2]);
 	if (is_inside_rect_field(curfield, thishpx_coords))
-	{
-		int j;
-		maxmap[hpx / 8] |= (1 << (hpx % 8));
-		nn = healpix_get_neighbours_nside(hpx, neighbours, Nside);
-		for (j = 0; j < nn; j++)
 		{
+			int j;
+			maxmap[hpx / 8] |= (1 << (hpx % 8));
+			nn = healpix_get_neighbours_nside(hpx, neighbours, Nside);
+			for (j = 0; j < nn; j++)
+				{
 				
-			double ncoords[3];
-			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[j], Nside, ncoords);
+					double ncoords[3];
+					healpix_to_xyzarr_lex(0.5, 0.5, neighbours[j], Nside, ncoords);
 
-            //printf("- Examining neighbour healpix %d, centered at (%f, %f, %f)\n", neighbours[j],
-			//	ncoords[0], ncoords[1], ncoords[2]);
+					//printf("- Examining neighbour healpix %d, centered at (%f, %f, %f)\n", neighbours[j],
+					//	ncoords[0], ncoords[1], ncoords[2]);
 			
 			
-			if (!is_inside_rect_field(curfield, ncoords)) {
-				//printf("-- Not in field, breaking off neighbour search\n");
-				break;
-			}
+					if (!is_inside_rect_field(curfield, ncoords)) {
+						//printf("-- Not in field, breaking off neighbour search\n");
+						break;
+					}
+				}
+			if (j == nn)
+				minmap[(hpx / 8)] |= (1 << (hpx % 8));
+			for (j = 0; j < nn; j++)
+				{
+					//printf("Recursing on neighbour of %d, %d\n", hpx, neighbours[j]);
+					fill_maps_recursive(minmap, maxmap, neighbours[j], Nside,
+										curfield, visited);
+				}
 		}
-		if (j == nn)
-			minmap[(hpx / 8)] |= (1 << (hpx % 8));
-		for (j = 0; j < nn; j++)
-		{
-			//printf("Recursing on neighbour of %d, %d\n", hpx, neighbours[j]);
-			fill_maps_recursive(minmap, maxmap, neighbours[j], Nside,
-					curfield, visited);
-		}
-	}
 	else {
 		//printf("Healpix %d not in field\n", hpx);
 		return; // unnecessary I know
@@ -134,23 +135,25 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 }
 
 
-void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
-		rect_field *curfield)
-{
-	char *visited = malloc(2 * Nside * Nside * sizeof(char));
-	int i;
-	for (i = 0; i < 2 * Nside * Nside; i++)
-		visited[i] = 0;
+/*
+  void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
+  rect_field *curfield)
+  {
+  char *visited = malloc(2 * Nside * Nside * sizeof(char));
+  int i;
+  for (i = 0; i < 2 * Nside * Nside; i++)
+  visited[i] = 0;
 
-	fill_maps_recursive(minmap, maxmap, hpx, Nside, curfield, visited);
-}
+  fill_maps_recursive(minmap, maxmap, hpx, Nside, curfield, visited);
+  }
+*/
 
 /* Iterative version, somewhat old, doesn't use the bitmap but rather
  * huge arrays (which was giving me problems obviously). I figured I should try
  * the simpler recursive solution first.
-    
+ */    
 void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
-		        rect_field *curfield)
+			   rect_field *curfield) {
 	char *visited = malloc(12 * Nside * Nside * sizeof(char));
 	uint *neighbours = malloc(8 * sizeof(uint));
 	struct ll_node *head = NULL;
@@ -159,52 +162,109 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 
 	for (j = 0; j < 12 * Nside * Nside; j++) visited[j] = 0;
 
+	visited[hpx] = 1;
+
+	int NV = 0;
+	fprintf(stderr, "visit=[];\n");
+
 	while (hpx != -1)
-	{
-		int nneighbours; 
-		double thishpx_coords[3];
-		
-		healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
-		if (!is_inside_rect_field(curfield, thishpx_coords))
-			goto getnext;
-		
-		maxmap[hpx] = 1;
-
-		nneighbours = healpix_get_neighbours_nside(hpx, neighbours, Nside);
-		
-		for (i = 0; i < nneighbours; i++)
 		{
-			double coords[3];
-			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, coords);
-			if (!is_inside_rect_field(curfield, coords))
-				break;
-		}
+			int nneighbours; 
+			double thishpx_coords[3];
+			int nnin;
 
-		if (i == nneighbours) {
-			minmap[hpx] = 1;
-		}
-		for (i = 0; i < nneighbours; i++) {
-			if (!visited[neighbours[i]]) {
-				struct ll_node *n = malloc(sizeof(struct ll_node));
-				n->data = neighbours[i];
-				n->next = head;
-				head = n;
-				visited[neighbours[i]] = 1;
+			printf("Visiting healpix %i\n", hpx);
+		
+			healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
+			printf("Location: (%g, %g, %g)\n", thishpx_coords[0],
+				   thishpx_coords[1], thishpx_coords[2]);
+
+			{
+				double ra, dec;
+				ra = rad2deg(xy2ra(thishpx_coords[0], thishpx_coords[1]));
+				dec = rad2deg(z2dec(thishpx_coords[2]));
+				fprintf(stderr, "visit(%i,:)=[%g,%g];\n", NV+1, ra, dec);
+				NV++;
+			}
+
+			if (!is_inside_rect_field(curfield, thishpx_coords)) {
+				printf("Not inside.\n");
+				goto getnext;
+			}
+			printf("Inside.\n");
+
+			maxmap[hpx] = 1;
+
+			nneighbours = healpix_get_neighbours_nside(hpx, neighbours, Nside);
+
+			nnin = 0;
+			for (i = 0; i < nneighbours; i++)
+				{
+					double coords[3];
+					printf("  Neighbour %i: ", neighbours[i]);
+					healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, coords);
+					if (!is_inside_rect_field(curfield, coords)) {
+						printf("not inside.\n");
+					} else {
+						nnin++;
+						printf("inside; ");
+						if (!visited[neighbours[i]]) {
+							struct ll_node *n = malloc(sizeof(struct ll_node));
+							n->data = neighbours[i];
+							n->next = head;
+							head = n;
+							visited[neighbours[i]] = 1;
+							printf("queuing visit.\n");
+						} else
+							printf("already visited.\n");
+					}
+				}
+			if (nnin == nneighbours) {
+				minmap[hpx] = 1;
+			}
+			/*
+			  for (i = 0; i < nneighbours; i++)
+			  {
+			  double coords[3];
+			  printf("  Neighbour %i: ", neighbours[i]);
+			  healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, coords);
+			  if (!is_inside_rect_field(curfield, coords)) {
+			  printf("not inside.\n");
+			  break;
+			  }
+			  printf("inside!\n");
+			  }
+			  if (i == nneighbours) {
+			  minmap[hpx] = 1;
+			  }
+			  for (i = 0; i < nneighbours; i++) {
+			  if (!visited[neighbours[i]]) {
+			  struct ll_node *n = malloc(sizeof(struct ll_node));
+			  n->data = neighbours[i];
+			  n->next = head;
+			  head = n;
+			  visited[neighbours[i]] = 1;
+			  printf("  Neighbour %i: adding to visit list.\n",
+			  neighbours[i]);
+			  } else
+			  printf("  Neighbour %i: already visited.\n",
+			  neighbours[i]);
+			  }
+			*/
+
+		getnext:
+			if (head == NULL)
+				hpx = -1;
+			else {
+				struct ll_node *oldhead = head;
+				hpx = head->data;
+				head = head->next;
+				free(oldhead);
 			}
 		}
-		getnext:
-		if (head == NULL)
-			hpx = -1;
-		else {
-			struct ll_node *oldhead = head;
-			hpx = head->data;
-			head = head->next;
-			free(oldhead);
-		}
-	}
 	free(neighbours);
 	free(visited);
-}*/
+}
 
 int main(int argc, char **argv)
 {
@@ -217,27 +277,27 @@ int main(int argc, char **argv)
 	int Nside = -1;
 	uint fields;
 	while ((ich = getopt(argc, argv, "N:")) != EOF)
-	{
-		switch (ich)
 		{
-			case 'N':
-				Nside = atoi(optarg);
-				break;
+			switch (ich)
+				{
+				case 'N':
+					Nside = atoi(optarg);
+					break;
+				}
 		}
-	}
 	if (Nside < 1)
-	{
-		fprintf(stderr, "specify an Nside value with -N, > 1\n");
-		exit(1);
-	}
-	hpmap_min = malloc(2 * Nside * Nside * sizeof(char));
-	hpmap_max = malloc(2 * Nside * Nside * sizeof(char));
+		{
+			fprintf(stderr, "specify an Nside value with -N, > 1\n");
+			exit(1);
+		}
+	hpmap_min = malloc(12 * Nside * Nside * sizeof(char));
+	hpmap_max = malloc(12 * Nside * Nside * sizeof(char));
 	if (hpmap_min == NULL || hpmap_max == NULL)
-	{
-		fprintf(stderr, "malloc failed!\n");
-		exit(1);
-	}	
-	for (i = 0; i < 2 * Nside * Nside; i++) {
+		{
+			fprintf(stderr, "malloc failed!\n");
+			exit(1);
+		}	
+	for (i = 0; i < 12 * Nside * Nside; i++) {
 		hpmap_min[i] = 0;
 		hpmap_max[i] = 0;
 	}
@@ -245,51 +305,49 @@ int main(int argc, char **argv)
 	curfield.corners = malloc(3 * 4 * sizeof(double));
 	fields = 0;
 	while (fgets(buf, BUFSIZE, stdin) != NULL)
-	{
-		uint centerhp;
-		uint *neighbours;
-		int nneighbours;
-		int i, j;
-		double center[3];
-		center[0] = center[1] = center[2] = 0;
-		fields++;
-		//printf("Doing field %d\n",fields);
-		curfield.corners[0] = atof(strtok(buf, "\t"));
-		
-		/* 12 = 3 coords x 4 pts, got 1 */
-		for (j = 1; j < 12; j++)
 		{
-			char *tok = strtok(NULL, "\t");
-			if (tok == NULL)
-			{
-				fprintf(stderr, "Premature end of line!\n");
-				exit(1);
-			}
-			curfield.corners[j] = atof(tok);
-		}
+			uint centerhp;
+			int i, j;
+			double center[3];
+			center[0] = center[1] = center[2] = 0;
+			fields++;
+			//printf("Doing field %d\n",fields);
+			curfield.corners[0] = atof(strtok(buf, "\t"));
 		
-		for (i = 0; i < 4; i++)
-		{
-			for (j = 0; j < 3; j++)
-			{
-				center[j] += curfield.corners[3*i + j];
-			}
+			/* 12 = 3 coords x 4 pts, got 1 */
+			for (j = 1; j < 12; j++)
+				{
+					char *tok = strtok(NULL, "\t");
+					if (tok == NULL)
+						{
+							fprintf(stderr, "Premature end of line!\n");
+							exit(1);
+						}
+					curfield.corners[j] = atof(tok);
+				}
+		
+			for (i = 0; i < 4; i++)
+				{
+					for (j = 0; j < 3; j++)
+						{
+							center[j] += curfield.corners[3*i + j];
+						}
+				}
+			for (i = 0; i < 3; i++)
+				center[i] /= 4;
+			normalize_3(center);
+			printf("center = (%f, %f, %f)\n",center[0], center[1], center[2]);
+			centerhp = xyztohealpix_nside(center[0], center[1], 
+										  center[2], (uint)Nside);
+			fill_maps(hpmap_min, hpmap_max, centerhp, (uint)Nside, &curfield);
 		}
-		for (i = 0; i < 3; i++)
-			center[i] /= 4;
-		normalize_3(center);
-		//printf("center = %f, %f, %f\n",center[0], center[1], center[2]);
-		centerhp = xyztohealpix_nside(center[0], center[1], 
-				center[2], (uint)Nside);
-		fill_maps(hpmap_min, hpmap_max, centerhp, (uint)Nside, &curfield);
-	}
 	for (i = 0; i < 12 * Nside * Nside; i++)
-	{
-		if (hpmap_min[i / 8] & (1 << (i % 8)))
-			filled_min++;
-		if (hpmap_max[i / 8] & (1 << (i % 8)))
-			filled_max++;
-	}
+		{
+			if (hpmap_min[i])
+				filled_min++;
+			if (hpmap_max[i])
+				filled_max++;
+		}
 	
 	max = 12 * Nside * Nside;
 	printf("Min: %f, Max: %f\n",((double)filled_min) / max, ((double)filled_max) / max);
