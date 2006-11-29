@@ -47,7 +47,6 @@ for ((i=1; i<${#EXTS[*]}; i++)); do
 done
 L=( $EXT0 $TMPDIR/out.* );
 echo "${L[*]}" | xargs -n 50 cat > $out
-#cat $EXT0 $TMPDIR/out.* > $out
 rm -R $TMPDIR
 
 exit 0;
