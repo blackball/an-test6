@@ -77,8 +77,8 @@ $(PHASE1)$(1).quad.fit% $(PHASE1)$(1).code.fit% : $(CATALOG)$(1).skdt.fit%
 	-$(MKDIR) $(LOG_DIR)
 	$(MKDIR) $(INDEX_DIR)
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-hpquads-$(1)-start
-	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1)
-	$(MV) $(TEMP_NOQUADS) $(NOQUADS)$(1).rd.fits
+	$(HPQUADS) $(HPQUADS_OPTS) -f $(CATALOG)$(1) -o $(TEMP1)$(1) -F $(TEMP_NOQUADS)$(1).rd.fits
+	$(MV) $(TEMP_NOQUADS)$(1).rd.fits $(NOQUADS)$(1).rd.fits
 	$(MV) $(TEMP1)$(1).quad.fits $(PHASE1)$(1).quad.fits
 	$(MV) $(TEMP1)$(1).code.fits $(PHASE1)$(1).code.fits
 	$(TOUCH) $(TIMESTAMP_DIR)timestamp-hpquads-$(1)-done
