@@ -194,12 +194,10 @@ int main(int argc, char *argv[])
 			exit(-1);
 		}
 		// look for AN_FILE (Astrometry.net filetype) in the FITS header.
-		valstr = qfits_header_getstr(hdr, "AN_FILE");
+		valstr = qfits_pretty_string(qfits_header_getstr(hdr, "AN_FILE"));
 		if (valstr) {
-			char* str = valstr;
 			fprintf(stderr, "Astrometry.net file type: \"%s\".\n", valstr);
-			if (str[0] == '\'') str++;
-			if (strncasecmp(str, AN_FILETYPE_CATALOG, strlen(AN_FILETYPE_CATALOG)) == 0) {
+			if (strncasecmp(valstr, AN_FILETYPE_CATALOG, strlen(AN_FILETYPE_CATALOG)) == 0) {
 				fprintf(stderr, "Looks like a catalog.\n");
 				cat = catalog_open(fname, 0);
 				if (!cat) {
@@ -207,7 +205,7 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 				numstars = cat->numstars;
-			} else if (strncasecmp(str, AN_FILETYPE_STARTREE, strlen(AN_FILETYPE_STARTREE)) == 0) {
+			} else if (strncasecmp(valstr, AN_FILETYPE_STARTREE, strlen(AN_FILETYPE_STARTREE)) == 0) {
 				fprintf(stderr, "Looks like a star kdtree.\n");
 				skdt = startree_open(fname);
 				if (!skdt) {
@@ -215,7 +213,7 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 				numstars = startree_N(skdt);
-			} else if (strncasecmp(str, AN_FILETYPE_RDLS, strlen(AN_FILETYPE_RDLS)) == 0) {
+			} else if (strncasecmp(valstr, AN_FILETYPE_RDLS, strlen(AN_FILETYPE_RDLS)) == 0) {
 				rdlist* rdlsfile;
 				int nfields, f;
 				fprintf(stderr, "Looks like an rdls (RA,DEC list)\n");
@@ -252,7 +250,7 @@ int main(int argc, char *argv[])
 				rdlist_close(rdlsfile);
 				numstars = dl_size(rdls)/2;
 			} else {
-				fprintf(stderr, "Unknown Astrometry.net file type.\n");
+				fprintf(stderr, "Unknown Astrometry.net file type: \"%s\".\n", valstr);
 				exit(-1);
 			}
 		}

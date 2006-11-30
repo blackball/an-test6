@@ -1169,7 +1169,7 @@ static void* solvethread_run(void* varg) {
 		template.healpix = healpix;
 
 		if (fieldhdr) {
-			char* idstr = qfits_header_getstr(fieldhdr, "FIELDID");
+			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, "FIELDID"));
 			if (idstr)
 				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
 		}

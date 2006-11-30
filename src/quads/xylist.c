@@ -56,7 +56,7 @@ xylist* xylist_open(const char* fn) {
         goto bailout;
 	}
 
-	ls->antype = qfits_header_getstr(header, "AN_FILE");
+	ls->antype = qfits_pretty_string(qfits_header_getstr(header, "AN_FILE"));
 	ls->header = header;
 	ls->nfields = qfits_query_n_ext(fn);
 
