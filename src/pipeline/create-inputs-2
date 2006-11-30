@@ -38,6 +38,7 @@ INPUT=input/input2
 SOLVED_TEMPLATE=solved/tmp.solved2
 MATCH_TEMPLATE=match/tmp.match2
 DONE_TEMPLATE=done/done2
+WCS_TEMPLATE=wcs/wcs2.%04i
 
 SDEPTH=0
 DEPTH=100

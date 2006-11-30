@@ -255,7 +255,7 @@ solve1: solved/solved1
 	echo
 
 input/input1: create-inputs-1
-	-$(MKDIR) input match done solved out err
+	-$(MKDIR) input match done solved wcs out err
 	-$(RM) input/input1
 	./create-inputs-1
 
@@ -293,7 +293,7 @@ solve2: solved/solved2
 	echo
 
 input/input2: create-inputs-2
-	-$(MKDIR) input match done solved out err
+	-$(MKDIR) input match done solved wcs out err
 	-$(RM) input/input2
 	./create-inputs-2
 
