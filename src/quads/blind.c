@@ -1021,6 +1021,12 @@ int handlehit(solver_params* p, MatchObj* mo) {
 					fprintf(stderr, "Failed to open WCS output file %s: %s\n", p->wcs_filename, strerror(errno));
 					exit(-1);
 				}
+
+				boilerplate_add_fits_headers(wcs);
+				qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
+				if (p->mo_template && p->mo_template->fieldname[0])
+					qfits_header_add(wcs, fieldid_key, p->mo_template->fieldname, "Field name copied from input.", NULL);
+
 				if (qfits_header_dump(wcs, fout)) {
 					fprintf(stderr, "Failed to write FITS WCS header.\n");
 					exit(-1);
