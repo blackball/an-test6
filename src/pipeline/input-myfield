@@ -4,6 +4,12 @@
 # Filename of the field(s) to solve, excluding the filename suffix (.fits).
 field my-field.xy
 
+# Bounds on the pixel scale of your field, in arcseconds per pixel.
+# If you know the value exactly, set these to, say, +- 5% of the real value.
+# These are the values for SDSS.
+fieldunits_lower 0.39
+fieldunits_upper 0.41
+
 # Indices (extension numbers) of the fields to solve.  For a single field
 # just leave this as is.
 fields 0
@@ -12,12 +18,6 @@ fields 0
 # pixel coordinates.
 xcol X
 ycol Y
-
-# Bounds on the pixel scale of your field, in arcseconds per pixel.
-# If you know the value exactly, set these to, say, +- 5% of the real value.
-# These are the values for SDSS.
-fieldunits_lower 0.39
-fieldunits_upper 0.41
 
 # Where to put the output files:
 #  -WCS header(s), one per field.
