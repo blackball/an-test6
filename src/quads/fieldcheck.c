@@ -215,16 +215,17 @@ fieldcheck_file* fieldcheck_file_open(char* fn) {
 	mf = new_fieldcheck_file();
 	mf->fid = fid;
 	mf->header = header;
-	mf->fn = fn;
+	mf->fn = strdup(fn);
 	if (find_table(mf)) {
 		fprintf(stderr, "Couldn't find an appropriate FITS table in %s.\n", fn);
 		goto bailout;
 	}
 	mf->nrows = mf->table->nr;
-	mf->fn = strdup(fn);
 	return mf;
 
  bailout:
+	if (mf && mf->fn)
+		free(mf->fn);
 	if (mf)
 		free(mf);
 	if (fid)
