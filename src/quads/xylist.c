@@ -135,6 +135,14 @@ xy* xylist_get_field(xylist* ls, uint field) {
 	return rtn;
 }
 
+qfits_header* xylist_get_field_header(xylist* ls, uint field) {
+	qfits_header* hdr;
+	hdr = qfits_header_readext(ls->fn, field+1);
+	if (!hdr)
+		fprintf(stderr, "Failed to read FITS header for extension %i in file %s.\n", field+1, ls->fn);
+	return hdr;
+}
+
 int xylist_n_entries(xylist* ls, uint field) {
 	if (xylist_find_field(ls, field)) {
 		return -1;

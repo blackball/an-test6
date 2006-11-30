@@ -1036,7 +1036,7 @@ static void reset_next_field() {
 	next_field_index = 0;
 }
 
-static int next_field(xy** pfield) {
+static int next_field(xy** p_field, qfits_header** p_fieldhdr) {
 	int rtn;
 
 	if (pthread_mutex_lock(&fieldlist_mutex)) {
@@ -1049,8 +1049,10 @@ static int next_field(xy** pfield) {
 	else {
 		rtn = il_get(fieldlist, next_field_index);
 		next_field_index++;
-		if (pfield)
-			*pfield = xylist_get_field(xyls, rtn);
+		if (p_field)
+			*p_field = xylist_get_field(xyls, rtn);
+		if (p_fieldhdr)
+			*p_fieldhdr = xylist_get_field_header(xyls, rtn);
 	}
 
 	if (pthread_mutex_unlock(&fieldlist_mutex)) {
@@ -1111,22 +1113,23 @@ static void* solvethread_run(void* varg) {
 		MatchObj template;
 		int nfield;
 		char wcs_fn[1024];
+		qfits_header* fieldhdr = NULL;
 
-		fieldnum = next_field(&thisfield);
+		fieldnum = next_field(&thisfield, &fieldhdr);
 
 		if (fieldnum == -1)
 			break;
 		if (fieldnum >= nfields) {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			write_hits(fieldnum, NULL);
-			continue;
+			goto cleanup;
 		}
 		if (!thisfield) {
 			// HACK - why is this happening? QFITS + multithreading interaction bug?
 			// or running out of address space?
 			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
 			write_hits(fieldnum, NULL);
-			continue;
+			goto cleanup;
 		}
 
 		if (solvedfname) {
@@ -1135,8 +1138,7 @@ static void* solvethread_run(void* varg) {
 				if (!silent)
 					fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solvedfname);
 				write_hits(fieldnum, NULL);
-				free_xy(thisfield);
-				continue;
+				goto cleanup;
 			}
 			solver.solvedfn = solvedfname;
 		} else
@@ -1148,8 +1150,7 @@ static void* solvethread_run(void* varg) {
 				if (!silent)
 					fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
 				write_hits(fieldnum, NULL);
-				free_xy(thisfield);
-				continue;
+				goto cleanup;
 			}
 		}
 		solver.do_solvedserver = (solvedserver ? TRUE : FALSE);
@@ -1158,6 +1159,7 @@ static void* solvethread_run(void* varg) {
 		field = realloc(field, 2 * nfield * sizeof(double));
 		dl_copy(thisfield, 0, 2 * nfield, field);
 		free_xy(thisfield);
+		thisfield = NULL;
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
@@ -1165,6 +1167,12 @@ static void* solvethread_run(void* varg) {
 		template.fieldfile = fieldid;
 		template.indexid = indexid;
 		template.healpix = healpix;
+
+		if (fieldhdr) {
+			char* idstr = qfits_header_getstr(fieldhdr, "FIELDID");
+			if (idstr)
+				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
+		}
 
 		if (wcs_template) {
 			sprintf(wcs_fn, wcs_template, fieldnum);
@@ -1277,6 +1285,12 @@ static void* solvethread_run(void* varg) {
 		last_utime = utime;
 		last_stime = stime;
 		last_wtime = wtime;
+
+	cleanup:
+		if (thisfield)
+			free_xy(thisfield);
+		if (fieldhdr)
+			qfits_header_destroy(fieldhdr);
 	}
 
 	free(field);

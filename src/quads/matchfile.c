@@ -161,6 +161,7 @@ static bool matchfile_fitstruct_inited = 0;
 }
 
 static void init_matchfile_fitstruct() {
+	MatchObj mo;
 	fitstruct* fs = matchfile_fitstruct;
 	int i = 0;
 	char* nil = " ";
@@ -177,6 +178,7 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldnum", nil, fieldnum, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldid", nil, fieldfile, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "indexid", nil, indexid, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_A, "fieldname", nil, fieldname, sizeof(mo.fieldname), FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "healpix", nil, healpix, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "parity", nil, parity, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qtried", nil, quads_tried, 1, FALSE);
@@ -395,10 +397,6 @@ pl* matchfile_get_matches_for_field(matchfile* mf, uint field) {
 
 MatchObj* matchfile_buffered_read_match(matchfile* mf) {
 	MatchObj* mo = buffered_read(&mf->br);
-	/*
-	  if (!mo)
-	  fprintf(stderr, "Failed to read matchfile entry.\n");
-	*/
 	return mo;
 }
 

@@ -127,7 +127,7 @@ pnmutils.o: pnmutils.c
 rdlstohealpix: rdlstohealpix.o rdlist.o xylist.o fitsioutils.o ioutils.o \
 		healpix.o bl.o $(QFITS_LIB)
 
-xylist2fits: xylist_texttofits.o bl.o xylist.o ioutils.o \
+xylist2fits: xylist2fits.o bl.o xylist.o ioutils.o \
 		$(QFITS_LIB) $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 

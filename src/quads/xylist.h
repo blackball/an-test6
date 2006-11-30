@@ -82,6 +82,9 @@ xylist* xylist_open(const char* fn);
 // it's your responsibility to free_xy() this.
 xy* xylist_get_field(xylist* ls, uint field);
 
+// it's your responsibility to call qfits_header_destroy().
+qfits_header* xylist_get_field_header(xylist* ls, uint field);
+
 int xylist_n_entries(xylist* ls, uint field);
 
 //double* xylist_read_entry(xylist* ls);

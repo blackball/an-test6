@@ -46,6 +46,8 @@ struct match_struct {
 	int16_t indexid;
 	int16_t healpix;
 
+	char fieldname[32];
+
 	bool parity;
 
 	// how many field quads did we try before finding this one?
