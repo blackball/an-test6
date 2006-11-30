@@ -451,9 +451,6 @@ static int read_parameters() {
 	for (;;) {
 		char buffer[10240];
 		char* nextword;
-//		if (!silent)
-//			fprintf(stderr, "\nAwaiting your command:\n");
-//		fflush(stderr);
 		if (!fgets(buffer, sizeof(buffer), stdin)) {
 			return -1;
 		}
@@ -464,6 +461,14 @@ static int read_parameters() {
 		if (!silent) {
 			fprintf(stderr, "Command: %s\n", buffer);
 			fflush(stderr);
+		}
+
+		if (buffer[0] == '#') {
+			if (!silent) {
+				fprintf(stderr, "Skipping comment.\n");
+				fflush(stderr);
+			}
+			continue;
 		}
 
 		if (is_word(buffer, "help", &nextword)) {

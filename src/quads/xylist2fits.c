@@ -34,10 +34,10 @@
 void print_help(char* progname) {
     printf("usage:\n"
 		   "  %s [options] <input-file> <output-file>\n"
-		   "    [-c use simple 'x y\n' format; single field]\n"
-		   "    [-d]: use double format (float format is default)\n"
-		   "    [-x <name-of-x-column>] (default: X)\n"
-		   "    [-y <name-of-y-column>] (default: Y)\n"
+		   "    [-c]: read simple 'x y\\n' format; the input is a single field.\n"
+		   "    [-d]: write double format (float format is default).\n"
+		   "    [-x <name-of-x-column-to-write>] (default: X)\n"
+		   "    [-y <name-of-y-column-to-write>] (default: Y)\n"
 		   "    [-t <Astrometry.net filetype>] (default: %s)\n\n",
 		   progname, AN_FILETYPE_XYLS);
 }
