@@ -12,7 +12,7 @@ wget http://monte.ai.toronto.edu:8080/quads/sdssfield01-hp02.tar.gz
 echo "Extracting source..."
 tar xvzf quads.tar.gz
 echo "Extracting data..."
-tar xvzf cut-02.tar.gz
+tar xvzf cut-02new.tar.gz
 echo "Extracting fields..."
 tar xvzf sdssfield01-hp02.tar.gz
 echo "Building source..."
