@@ -78,6 +78,7 @@ char *fieldfname, *treefname, *quadfname, *startreefname;
 char *idfname, *matchfname, *donefname, *solvedfname, *solvedserver;
 char* xcolname, *ycolname;
 char* wcs_template;
+char* fieldid_key;
 bool parity;
 double codetol;
 int startdepth;
@@ -170,6 +171,7 @@ int main(int argc, char *argv[]) {
 		solvedfname = NULL;
 		solvedserver = NULL;
 		wcs_template = NULL;
+		fieldid_key = strdup("FIELDID");
 		xcolname = strdup("X");
 		ycolname = strdup("Y");
 		parity = DEFAULT_PARITY_FLIP;
@@ -220,6 +222,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "solvedfname %s\n", solvedfname);
 			fprintf(stderr, "solvedserver %s\n", solvedserver);
 			fprintf(stderr, "wcs %s\n", wcs_template);
+			fprintf(stderr, "fieldid_key %s\n", fieldid_key);
 			fprintf(stderr, "parity %i\n", parity);
 			fprintf(stderr, "codetol %g\n", codetol);
 			fprintf(stderr, "startdepth %i\n", startdepth);
@@ -422,6 +425,7 @@ int main(int argc, char *argv[]) {
 		free(xcolname);
 		free(ycolname);
 		free(wcs_template);
+		free(fieldid_key);
 		free_fn(fieldfname);
 		free_fn(treefname);
 		free_fn(quadfname);
@@ -493,6 +497,9 @@ static int read_parameters() {
 			quiet = TRUE;
 		} else if (is_word(buffer, "wcs ", &nextword)) {
 			wcs_template = strdup(nextword);
+		} else if (is_word(buffer, "fieldid_key ", &nextword)) {
+			free(fieldid_key);
+			fieldid_key = strdup(nextword);
 		} else if (is_word(buffer, "maxquads ", &nextword)) {
 			maxquads = atoi(nextword);
 		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
@@ -1169,7 +1176,7 @@ static void* solvethread_run(void* varg) {
 		template.healpix = healpix;
 
 		if (fieldhdr) {
-			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, "FIELDID"));
+			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, fieldid_key));
 			if (idstr)
 				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
 		}
