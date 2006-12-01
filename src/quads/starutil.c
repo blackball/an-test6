@@ -154,7 +154,7 @@ inline void star_coords(double *s, double *r, double *x, double *y)
 		double etax, etay, etaz, xix, xiy, xiz, eta_norm;
 		double inv_en, inv_sdotr;
 		// eta is a vector perpendicular to r
-		etax = -r[1];
+ 		etax = -r[1];
 		etay =  r[0];
 		etaz = 0.0;
 		eta_norm = hypot(etax, etay); //sqrt(etax * etax + etay * etay);
