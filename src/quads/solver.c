@@ -246,6 +246,9 @@ void solve_field(solver_params* params) {
 			}
 		}
 
+		if (params->quitNow)
+			break;
+
 		// quads with the new star not on the diagonal:
 		iD = newpoint;
 		setx(ABCDpix, 3, getx(params->field, iD));
