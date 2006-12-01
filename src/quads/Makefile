@@ -159,7 +159,7 @@ wcscheck: wcscheck.o starutil.o mathutil.o bl.o xylist.o rdlist.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
-noisesim: noisesim.o starutil.o mathutil.o
+noisesim: noisesim.o starutil.o mathutil.o bl.o
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
