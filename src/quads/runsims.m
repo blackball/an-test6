@@ -37,6 +37,7 @@ print -depsc 'simplot3.eps';
 mx=1.1 * max(abs([x-realx;y-realy]));
 %
 subplot(2,1,1);          
+[n,binx]=hist(x-realx,21);
 hist(x-realx,21);
 title('Codes have nearly Gaussian noise');
 xlabel('Code error_x');
@@ -44,25 +45,30 @@ a=axis;
 a(1)=-mx;
 a(2)=mx;
 axis(a);
+hold on;
+binw=binx(2)-binx(1);
+m=mean(x-realx);
+s= std(x-realx);
+xx=a(1):(a(2)-a(1))./100:a(2);
+yy=length(y).*binw./(s*sqrt(2*pi)).*exp(-(xx-m).^2./(2*(s.^2)));
+plot(xx, yy, 'r-', 'LineWidth', 2);
 %
 subplot(2,1,2); 
-hist(y-realy,21);
+[n,binx]=hist(y-realy, 21);
+hist(y-realy, 21);
 xlabel('Code error_y');
 axis(a);
+hold on;
+binw=binx(2)-binx(1);
+m=mean(y-realy);
+s= std(y-realy);
+xx=a(1):(a(2)-a(1))./100:a(2);
+yy=length(y).*binw./(s*sqrt(2*pi)).*exp(-(xx-m).^2./(2*s.^2));
+plot(xx, yy, 'r-', 'LineWidth', 2);
 %
 print -depsc 'simplot4.eps';
 
 subplot(111);
-
-%clear;
-%system('noisesim -n 10000 -e 0.0 -e 0.25 -e 0.5 -e 0.75 -e 1.0 -e 1.25 -e 1.5 -e 1.75 -e 2.0 > sim2.m');
-%sim2;
-%plot(noise,codestd,'bo-');
-%xlabel('Star Jitter (arcsec)');
-%ylabel('stddev(Code error)');
-%title('Error propagates nearly linearly');
-%print -depsc 'simplot5.eps';
-
 
 clear;
 system('noisesim -n 10000 -e 0.0 -e 0.25 -e 0.5 -e 0.75 -e 1.0 -e 1.25 -e 1.5 -e 1.75 -e 2.0 -a 4.0 > sim2a.m');
@@ -78,11 +84,19 @@ sim2c;
 n3=noise;
 e3=codestd;
 
-plot(n1, e1, 'bo-', n2, e2, 'ro-', n3, e3, 'ko-');
+s1 = n1' \ e1';
+s2 = n2' \ e2';
+s3 = n3' \ e3';
+
+xx=[min(n1),max(n1)];
+plot(n1, e1, 'bo-', xx, xx.*s1, 'b:', n2, e2, 'ro-', xx, xx.*s2, 'r:', n3, e3, 'ko-', xx, xx.*s3, 'k:');
 xlabel('Star Jitter (arcsec)');
 ylabel('stddev(Code error)');
 title('Error propagates nearly linearly');
-legend({'AB = 4.0 arcmin', 'AB = 4.5 arcmin', 'AB = 5.0 arcmin'}, 'Location', 'NorthWest');
+l1=sprintf('Best fit: slope %.3g', s1);
+l2=sprintf('Best fit: slope %.3g', s2);
+l3=sprintf('Best fit: slope %.3g', s3);
+legend({'AB = 4.0 arcmin', l1, 'AB = 4.5 arcmin', l2, 'AB = 5.0 arcmin', l3}, 'Location', 'NorthWest');
 print -depsc 'simplot5.eps';
 
 
