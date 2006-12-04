@@ -1,3 +1,23 @@
+/*
+  This file is part of the Astrometry.net suite.
+  Copyright 2006, David Warde-Farley, Dustin Lang, Keir Mierle
+  and Sam Roweis.
+
+  The Astrometry.net suite is free software; you can redistribute
+  it and/or modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation, version 2.
+
+  The Astrometry.net suite is distributed in the hope that it will be
+  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with the Astrometry.net suite ; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+*/
+
+
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
@@ -7,17 +27,24 @@
 #include "mathutil.h"
 #include "pnpoly.h"
 
+/* Size of the line buffer */
 #define BUFSIZE 1000
 
+/* Need to extend this structure to handle more complicated polygons */
 typedef struct {
 	double *corners;
 } rect_field;
 
+/* Dead simple linked list */
 struct ll_node {
 	uint data;
 	struct ll_node *next;
 };
 
+/* TODO: factor this out into mathutil or something similar. Eventually
+ * this file won't need it anymore anyway if the healpix code is rewritten
+ * to abandon the current behaviour of using hierarchical numbering for 
+ * powers of 4. */
 static Inline bool ispowerof4(uint x) {
 	if (x >= 0x40000)
 		return (					x == 0x40000   ||
@@ -32,7 +59,7 @@ static Inline bool ispowerof4(uint x) {
 				x == 0x10000);
 }
 
-
+/* Compute the min of n doubles */
 static double nmin(double *p, int n)
 {
 	int i;
@@ -47,6 +74,7 @@ static double nmin(double *p, int n)
 	return cmin;
 }
 
+/* Compute the min of n doubles and return the index rather than value */
 static int nminind(double *p, int n)
 {
 	int i;
@@ -64,6 +92,7 @@ static int nminind(double *p, int n)
 	return cminind;
 }
 
+/* Compute the max of n doubles */
 static double nmax(double *p, int n)
 {
 	int i;
@@ -77,21 +106,32 @@ static double nmax(double *p, int n)
 			cmax = p[i];
 	}
 	return cmax;															  
-}																			 
+}
 
+/* Compute the range from max to min of n points stored in a double vector. */
 static double range(double *p, int n)
 {
 	double max = nmax (p, n);
-	double min = nmax (p, n);
+	double min = nmin (p, n);
 	return fabs (max - min);
 }
 
 
-int is_inside_rect_field(rect_field *f, double *p)
+/* Wraps around point_in_poly to choose the axis along which the corners 
+ * have minimum variance in order to do the chop-off projection.
+ *
+ * TODO: generalize this to n-point convex polygons. Notes have been made
+ * as to where changes need to occur and what.
+ */
+int is_inside_field(rect_field *f, double *p)
 {
+	/* FIXME assumes 4 points, will need malloc'ing */
 	double coordtrans[12];
+	
 	double *coord1;
 	double *coord2;
+
+	/* FIXME assumes 4 points */
 	double *x = coordtrans;
 	double *y = coordtrans + 4;
 	double *z = coordtrans + 8;
@@ -99,6 +139,7 @@ int is_inside_rect_field(rect_field *f, double *p)
 	double ranges[3];
 	int i;
 	int xgot = 0, ygot = 0, zgot = 0;
+	/* FIXME Assumes 4 points */
 	for (i = 0; i < 12; i++)
 	{
 		int j = i % 3;
@@ -108,13 +149,16 @@ int is_inside_rect_field(rect_field *f, double *p)
 				coordtrans[xgot++] = f->corners[i];
 				break;
 			case 1:
+				/* FIXME 4+ should be n+ */
 				coordtrans[4 + ygot++] = f->corners[i];
 				break;
 			case 2:
+				/* FIXME 4+ should be n+ */
 				coordtrans[8 + zgot++] = f->corners[i];
 				break;
 		}
 	}
+	/* FIXME all these calls should use n */
 	ranges[0] = range(x, 4);
 	ranges[1] = range(y, 4);
 	ranges[2] = range(z, 4);
@@ -142,10 +186,13 @@ int is_inside_rect_field(rect_field *f, double *p)
 		default:
 			return -1;
 	}
+	/* FIXME should call with n rather than 4 */
 	return point_in_poly(coord1, coord2, 4, t_coord1, t_coord2);
 
 }
-
+/* An ugly recursive implementation written while still trying to get 
+ * the algorithm right, left here for... some reason */
+#if 0
 void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 		rect_field *curfield, char *visited)
 {
@@ -158,7 +205,7 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 	healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
 	//printf("Examining healpix %d, centered at (%f, %f, %f)\n", hpx, 
 	//		thishpx_coords[0], thishpx_coords[1], thishpx_coords[2]);
-	if (is_inside_rect_field(curfield, thishpx_coords))
+	if (is_inside_field(curfield, thishpx_coords))
 	{
 		int j;
 		maxmap[hpx / 8] |= (1 << (hpx % 8));
@@ -173,7 +220,7 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 			//	ncoords[0], ncoords[1], ncoords[2]);
 			
 			
-			if (!is_inside_rect_field(curfield, ncoords)) {
+			if (!is_inside_field(curfield, ncoords)) {
 				//printf("-- Not in field, breaking off neighbour search\n");
 				break;
 			}
@@ -187,10 +234,6 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 					curfield, visited);
 		}
 	}
-	else {
-		//printf("Healpix %d not in field\n", hpx);
-		return; // unnecessary I know
-	}
 }
 void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 		rect_field *curfield)
@@ -203,58 +246,95 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 
 	fill_maps_recursive(minmap, maxmap, hpx, Nside, curfield, visited);
 }
-#if 0
+#endif
+
+
+/* This basically takes two appropriately sized char[] arrays to be used
+ * as bitmaps for the min/max healpix mapping of the sky, as well as a 
+ * field we'd like to process and add to the bitmaps, and a healpix number
+ * to start adding from, and an Nside factor.
+ *
+ * This basically starts at the healpix closest to the center of a field 
+ * (actually it starts at hpx, see todo below) and percolates outward by
+ * checking neighbouring healpixes. A healpix is included in the upper bound
+ * map if it's center is inside the field boundaries, and included in the
+ * lower bound map only if all of its neighbours' centers are inside the
+ * field boundaries as well.
+ * 
+ * TODO: bring the center-computing code from main() up here
+ * TODO: factor that bitmap access ugliness out into some damned macros
+ */
 void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 				rect_field *curfield)
 
 {
+	/* Gotta love "are we done" switch variables */
 	bool done = FALSE;
+	
+	/* Bitmap we'll use to keep from revisiting the same healpixes */ 
 	char *visited = malloc(2 * Nside * Nside * sizeof(char));
-	int i;
+	
+	/* Store the head of the queue (actually a LIFO) of healpixes to examine */
 	struct ll_node *queue = NULL;
 	double thishpx_coords[3];
-	uint visitedcnt = 0;
-		
+
+	int i;
+
+	/* Initialize the visited map */	
 	for (i = 0; i < 2 * Nside * Nside; i++)
-		visited[i] = 0;	
+		visited[i] = 0;
 
 	do {
+		/* nn = "number of neighbours */
 		uint nn;
 		bool found_neighbour_outside = FALSE;
+		
+		/* always need room for at least 8 neighbours; actual number
+		 * gets stored in nn */
 		uint neighbours[8];
 		if (visited[hpx / 8] & (1 << (hpx % 8)))
 		{
+			/* should never happen */
 			assert(1 == 0);
-			goto getnext;
 		}
+		/* set that we've visited hpx */
 		visited[hpx / 8] |= (1 << (hpx % 8));
 		
+		/* compute the xyz location of the center of hpx */
 		healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
-		if (!is_inside_rect_field(curfield, thishpx_coords))
+		
+		/* skip the body of this loop if we can */
+		if (!is_inside_field(curfield, thishpx_coords))
 			goto getnext;
-
+		
+		/* always include in maxmap */
 		maxmap[hpx / 8] |= 1 << (hpx % 8);
+
 		nn = healpix_get_neighbours_nside(hpx, neighbours, Nside);
+
+		/* check inclusion for each neighbour and enqueue it if unvisited */
 		for (i = 0; i < nn; i++)
 		{
 			double ncoords[3];
-			struct ll_node *newnode;
 			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, ncoords);
-			if (!is_inside_rect_field(curfield, ncoords))
-			{
+			
+			if (!is_inside_field(curfield, ncoords))
 				found_neighbour_outside = TRUE;
-			}
+			
 			if (!(visited[neighbours[i] / 8] & (1 << (neighbours[i] % 8))))
 			{
-				newnode = malloc(sizeof(struct ll_node));
+				struct ll_node *newnode = malloc(sizeof(struct ll_node));
 				newnode->next = queue;
 				newnode->data = neighbours[i];
 				queue = newnode;
 			}
 		}
+
+		/* If no neighbours lie outside then include in the minmap */
 		if (!found_neighbour_outside)
 			minmap[hpx / 8] |= 1 << (hpx % 8);
 		
+		/* dequeue the next one to be checked and set hpx */
 		getnext:
 		if (queue != NULL)
 		{
@@ -264,13 +344,24 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 			queue = newhead;
 		}
 		else {
+			/* If the queue is empty and we've gone through the last iteration
+			 * then it's okay to terminate. note that right after dequeueing
+			 * you can have queue == NULL but still not be done, which is 
+			 * why we can't just use "queue != NULL" as our loop condition */
 			done = TRUE;
 		}
 	} while (!done);
 	
 	free(visited);
 }
-#endif
+
+static void print_help(FILE *f, char *name)
+{
+	fprintf(f, "This program computes statistics about a set of (for the moment) rectangular\nfields on the sky.\n\n");
+	fprintf(f, "\tUsage: %s -N <Nside> [-I <inputfile>]\n\n", name);
+	fprintf(f, "In the absence of a -I switch, reads coordinates from standard input.\n");
+	fprintf(f, "Input should be 4 XYZ coordinates per line, with components and coordinates\nseparated by tabs (i.e. 12 tab-delimited doubles)\n");
+}
 
 int main(int argc, char **argv)
 {
@@ -282,22 +373,60 @@ int main(int argc, char **argv)
 	int ich, i;
 	int Nside = -1;
 	uint fields;
-	while ((ich = getopt(argc, argv, "N:")) != EOF)
+	char *infilename = NULL;
+	FILE *input;
+	if (argc == 0)
+	{
+		print_help(stderr, argv[0]);
+		exit(1);
+	}
+	while ((ich = getopt(argc, argv, "N:I:")) != EOF)
 	{
 		switch (ich)
 		{
 			case 'N':
 				Nside = atoi(optarg);
 				break;
+			case 'I':
+				if (optarg == NULL)
+				{
+					print_help(stderr, argv[0]);
+					fprintf(stderr, "Error: -I requires argument");
+					exit(1);
+				}
+				infilename = strdup(optarg);
+				break;
 		}
 	}
 	if (Nside < 1)
 	{
-		fprintf(stderr, "specify an Nside value with -N, > 1\n");
+		print_help(stderr, argv[0]);
+		fprintf(stderr, "\nError: specify a positive Nside value with -N\n");
 		exit(1);
 	}
+	else if (ispowerof4(Nside))
+	{
+		print_help(stderr, argv[0]);
+		fprintf(stderr, "Error: Nside values that are powers of 4 \
+				are bad news at\n the moment, choose a different one\n");
+		exit(1);
+	}
+	
+	if (infilename) {
+		input = fopen(infilename, "r");
+		if (input == NULL)
+		{
+			perror(argv[0]);
+			exit(1);
+		}
+	}
+	else {
+		input = stdin;
+	}
+	/* We could get away with allocating ceil(2/3 * Nside * Nside) */
 	hpmap_min = malloc(2 * Nside * Nside * sizeof(char));
 	hpmap_max = malloc(2 * Nside * Nside * sizeof(char));
+	
 	if (hpmap_min == NULL || hpmap_max == NULL)
 	{
 		fprintf(stderr, "malloc failed!\n");
@@ -307,13 +436,12 @@ int main(int argc, char **argv)
 		hpmap_min[i] = 0;
 		hpmap_max[i] = 0;
 	}
-		
+	
 	curfield.corners = malloc(3 * 4 * sizeof(double));
 	fields = 0;
-	while (fgets(buf, BUFSIZE, stdin) != NULL)
+	while (fgets(buf, BUFSIZE, input) != NULL)
 	{
 		uint centerhp;
-		uint *neighbours;
 		int i, j;
 		double center[3];
 		center[0] = center[1] = center[2] = 0;
@@ -343,7 +471,7 @@ int main(int argc, char **argv)
 		for (i = 0; i < 3; i++)
 			center[i] /= 4;
 		normalize_3(center);
-		//printf("center = %f, %f, %f\n",center[0], center[1], center[2]);
+		
 		centerhp = xyztohealpix_nside(center[0], center[1], 
 				center[2], (uint)Nside);
 		fill_maps(hpmap_min, hpmap_max, centerhp, (uint)Nside, &curfield);
@@ -356,7 +484,11 @@ int main(int argc, char **argv)
 			filled_max++;
 	}
 	max = 12 * Nside * Nside;
-	printf("Min: %f, Max: %f\n",((double)filled_min) / max, ((double)filled_max) / max);
 
+	printf("Min: %f, Max: %f\n",
+			((double)filled_min) / max, 
+			((double)filled_max) / max);
+
+	fclose(input);
 	return 0;
 }
