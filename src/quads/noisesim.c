@@ -1,3 +1,11 @@
+/**
+   This program simulates noise in index star positions and
+   computes the resulting noise in the code values that are
+   produced.
+
+   See the wiki page:
+   -   http://trac.astrometry.net/wiki/ErrorAnalysis
+ */
 #include <math.h>
 #include <stdio.h>
 
@@ -6,6 +14,10 @@
 
 const char* OPTIONS = "e:n:ma:";
 
+/*
+  Given a point "pt", computes two unit vectors that are tangent
+  to the point and perpendicular to each other.
+*/
 void tan_vectors(double* pt, double* vec1, double* vec2) {
 	double etax, etay, etaz, xix, xiy, xiz, eta_norm;
 	double inv_en;
@@ -144,20 +156,6 @@ int main(int argc, char** args) {
 					sin(noiseangle) * noiseval * vb[i];
 			normalize_3(realD);
 
-			/*{
-			  double midAB[3];
-			  double dA, dB, dC, dD;
-			  star_midpoint(midAB, realA, realB);
-			  dA = sqrt(distsq(midAB, realA, 3));
-			  dB = sqrt(distsq(midAB, realB, 3));
-			  dC = sqrt(distsq(midAB, realC, 3));
-			  dD = sqrt(distsq(midAB, realD, 3));
-			  printf("dA=%g;\n", dA);
-			  printf("dB=%g;\n", dB);
-			  printf("dC=%g;\n", dC);
-			  printf("dD=%g;\n", dD);
-			  }*/
-
 			{
 				double midAB[3];
 				double Ax, Ay;
@@ -191,7 +189,9 @@ int main(int argc, char** args) {
 
 			// permute A
 			tan_vectors(realA, va, vb);
+			// magnitude of noise
 			noiseval = gaussian_sample(0.0, noisedist);
+			// direction of noise
 			noiseangle = uniform_sample(0.0, 2.0*M_PI);
 			for (i=0; i<3; i++)
 				A[i] = realA[i] +

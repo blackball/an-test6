@@ -161,6 +161,8 @@ wcscheck: wcscheck.o starutil.o mathutil.o bl.o xylist.o rdlist.o \
 
 noisesim: noisesim.o starutil.o mathutil.o bl.o
 
+noisesim2: noisesim2.o starutil.o mathutil.o bl.o
+
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
