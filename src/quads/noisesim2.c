@@ -94,6 +94,8 @@ int main(int argc, char** args) {
 	printf("noise=[];\n");
 	printf("codemean=[];\n");
 	printf("codestd=[];\n");
+	printf("abinvalid=[];\n");
+	printf("cdinvalid=[];\n");
 
 	if (dl_size(noises) == 0)
 		dl_append(noises, noise);
@@ -219,9 +221,6 @@ int main(int argc, char** args) {
 				codecx = Cx;
 				codecy = Cy;
 
-				if (((Cx*Cx - Cx) + (Cy*Cy - Cy)) > 0.0)
-					cdInvalid++;
-
 				Cx = D[0];
 				Cy = D[1];
 				Cx -= Ax;
@@ -232,7 +231,11 @@ int main(int argc, char** args) {
 				codedx = Cx;
 				codedy = Cy;
 
-				if (((Cx*Cx - Cx) + (Cy*Cy - Cy)) > 0.0)
+				//if (((Cx*Cx - Cx) + (Cy*Cy - Cy)) > 0.0)
+				//cdInvalid++;
+
+				if ((((codecx*codecx - codecx) + (codecy*codecy - codecy)) > 0.0) ||
+					(((codedx*codedx - codedx) + (codedy*codedy - codedy)) > 0.0))
 					cdInvalid++;
 			}
 
@@ -266,8 +269,8 @@ int main(int argc, char** args) {
 			printf("codestd(%i)=%g;\n", k+1, std);
 		}
 
-		printf("abinvalid = %g;\n", abInvalid / (double)N);
-		printf("cdinvalid = %g;\n", cdInvalid / (double)N);
+		printf("abinvalid(%i) = %g;\n", k+1, abInvalid / (double)N);
+		printf("cdinvalid(%i) = %g;\n", k+1, cdInvalid / (double)N);
 
 		dl_free(codedelta);
 	}
