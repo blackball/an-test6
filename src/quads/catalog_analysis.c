@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <string.h>
+
 #include "healpix.h"
 #include "mathutil.h"
+#include "pnpoly.h"
 
 #define BUFSIZE 1000
-
-#define PI 3.1415926535897931
-#define EPSILON 0.01
 
 typedef struct {
 	double *corners;
@@ -18,71 +18,132 @@ struct ll_node {
 	struct ll_node *next;
 };
 
+static Inline bool ispowerof4(uint x) {
+	if (x >= 0x40000)
+		return (					x == 0x40000   ||
+				 x == 0x100000   || x == 0x400000  ||
+				 x == 0x1000000  || x == 0x4000000 ||
+				 x == 0x10000000 || x == 0x40000000);
+	else
+		return (x == 0x1		|| x == 0x4	   ||
+				x == 0x10	   || x == 0x40	  ||
+				x == 0x100	  || x == 0x400	 ||
+				x == 0x1000	 || x == 0x4000	||
+				x == 0x10000);
+}
+
+
+static double nmin(double *p, int n)
+{
+	int i;
+	double cmin;
+	assert (n > 0);
+	cmin = p[0];
+	for (i = 1; i < n; i++)
+	{   
+		if (p[i] < cmin)
+		cmin = p[i];
+	}
+	return cmin;
+}
+
+static int nminind(double *p, int n)
+{
+	int i;
+	int cminind;
+	
+	assert (n > 0);
+	cminind = 0;
+	for (i = 1; i < n; i++)
+	{   
+		if (p[i] < p[cminind])
+		{   
+			cminind = i;
+		}
+	}
+	return cminind;
+}
+
+static double nmax(double *p, int n)
+{
+	int i;
+	double cmax;
+
+	assert (n > 0);
+	cmax = p[0];
+	for (i = 1; i < n; i++)
+	{   
+		if (p[i] > cmax)
+			cmax = p[i];
+	}
+	return cmax;															  
+}																			 
+
+static double range(double *p, int n)
+{
+	double max = nmax (p, n);
+	double min = nmax (p, n);
+	return fabs (max - min);
+}
+
+
 int is_inside_rect_field(rect_field *f, double *p)
 {
-	int retval;
-	double *side;
-	double *v1, *v2, *norm;
-	double dot_mypoint_norm, dot_c1_norm, u;
-	double pprime[3];
-	double side2[3];
-	double tot_angle;
-	long long i;	
-	
-	norm = malloc(3 * sizeof(double));
-	v1 = malloc(3 * sizeof(double));
-	v2 = malloc(3 * sizeof(double));
-	
-	/* fill the vectors */
-	for (i = 0; i < 3; i++)
+	double coordtrans[12];
+	double *coord1;
+	double *coord2;
+	double *x = coordtrans;
+	double *y = coordtrans + 4;
+	double *z = coordtrans + 8;
+	double t_coord1, t_coord2;
+	double ranges[3];
+	int i;
+	int xgot = 0, ygot = 0, zgot = 0;
+	for (i = 0; i < 12; i++)
 	{
-		v1[i] = f->corners[i+3] - f->corners[i];
-		v2[i] = f->corners[i+6] - f->corners[i+3];
-	}
-	/* Take the cross product to get the norm */
-	cross_product(v1, v2, norm);
-	
-	/* Return false if vector to p is perpendicular to the norm */ 
-	dot_mypoint_norm = dot_product_3(norm, p);
-	
-	if (dot_mypoint_norm == 0)
-	{
-		free(v1); free(v2); free(norm);
-		return 0;
-	}
-	/* Otherwise, solve for the constant that gives us the intersect */
-	dot_c1_norm = dot_product_3(norm, f->corners);
-	u = dot_c1_norm / dot_mypoint_norm;
-
-	/* Fill pprime with our point on the plane */
-		
-	assert (u < 1);
-	for (i = 0; i < 3; i++) pprime[i] = u*p[i];
-
-	/* Reuse the space we allocated for norm */
-	side = norm;
-    tot_angle = 0;
-	for (i = 0; i < 4; i++)
-	{
-		uint j;
-		double costheta;
-		for (j = 0; j < 3; j++)
+		int j = i % 3;
+		switch (j)
 		{
-			side[j] = f->corners[3 * i + j] - pprime[j];
-			side2[j] = f->corners[3 * ((i + 1) % 4)] - pprime[j];
+			case 0:
+				coordtrans[xgot++] = f->corners[i];
+				break;
+			case 1:
+				coordtrans[4 + ygot++] = f->corners[i];
+				break;
+			case 2:
+				coordtrans[8 + zgot++] = f->corners[i];
+				break;
 		}
-		costheta = dot_product_3(side, side2);
-		tot_angle += acos(costheta);
 	}
-	if (fabs(tot_angle - 2*PI) < EPSILON)
+	ranges[0] = range(x, 4);
+	ranges[1] = range(y, 4);
+	ranges[2] = range(z, 4);
+	
+	switch (nminind(ranges, 3))
 	{
-		retval = 1;
+		case 0:
+			coord1 = y;
+			coord2 = z;
+			t_coord1 = p[1];
+			t_coord2 = p[2];
+			break;
+		case 1:
+			coord1 = x;
+			coord2 = z;
+			t_coord1 = p[0];
+			t_coord2 = p[2];
+			break;
+		case 2:
+			coord1 = x;
+			coord2 = y;
+			t_coord1 = p[0];
+			t_coord2 = p[1];
+			break;
+		default:
+			return -1;
 	}
-	else {
-		retval = 0;
-	}
-	free(v1); free(v2); free(norm);
-	return retval;
+	return point_in_poly(coord1, coord2, 4, t_coord1, t_coord2);
+
 }
 
 void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
@@ -94,7 +155,6 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 	if (visited[hpx / 8] & (1 << (hpx % 8)))
 		return;
 	visited[hpx / 8] |= 1 << (hpx % 8);
-	
 	healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
 	//printf("Examining healpix %d, centered at (%f, %f, %f)\n", hpx, 
 	//		thishpx_coords[0], thishpx_coords[1], thishpx_coords[2]);
@@ -109,7 +169,7 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 			double ncoords[3];
 			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[j], Nside, ncoords);
 
-            //printf("- Examining neighbour healpix %d, centered at (%f, %f, %f)\n", neighbours[j],
+			//printf("- Examining neighbour healpix %d, centered at (%f, %f, %f)\n", neighbours[j],
 			//	ncoords[0], ncoords[1], ncoords[2]);
 			
 			
@@ -132,79 +192,85 @@ void fill_maps_recursive(char *minmap, char *maxmap, uint hpx, uint Nside,
 		return; // unnecessary I know
 	}
 }
-
-
 void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 		rect_field *curfield)
 {
 	char *visited = malloc(2 * Nside * Nside * sizeof(char));
-	int i;
+	uint i;
+	uint visitedcnt = 0;
 	for (i = 0; i < 2 * Nside * Nside; i++)
 		visited[i] = 0;
 
 	fill_maps_recursive(minmap, maxmap, hpx, Nside, curfield, visited);
 }
-
-/* Iterative version, somewhat old, doesn't use the bitmap but rather
- * huge arrays (which was giving me problems obviously). I figured I should try
- * the simpler recursive solution first.
-    
+#if 0
 void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
-		        rect_field *curfield)
-	char *visited = malloc(12 * Nside * Nside * sizeof(char));
-	uint *neighbours = malloc(8 * sizeof(uint));
-	struct ll_node *head = NULL;
+				rect_field *curfield)
 
-	int i, j;
+{
+	bool done = FALSE;
+	char *visited = malloc(2 * Nside * Nside * sizeof(char));
+	int i;
+	struct ll_node *queue = NULL;
+	double thishpx_coords[3];
+	uint visitedcnt = 0;
+		
+	for (i = 0; i < 2 * Nside * Nside; i++)
+		visited[i] = 0;	
 
-	for (j = 0; j < 12 * Nside * Nside; j++) visited[j] = 0;
-
-	while (hpx != -1)
-	{
-		int nneighbours; 
-		double thishpx_coords[3];
+	do {
+		uint nn;
+		bool found_neighbour_outside = FALSE;
+		uint neighbours[8];
+		if (visited[hpx / 8] & (1 << (hpx % 8)))
+		{
+			assert(1 == 0);
+			goto getnext;
+		}
+		visited[hpx / 8] |= (1 << (hpx % 8));
 		
 		healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
 		if (!is_inside_rect_field(curfield, thishpx_coords))
 			goto getnext;
-		
-		maxmap[hpx] = 1;
 
-		nneighbours = healpix_get_neighbours_nside(hpx, neighbours, Nside);
-		
-		for (i = 0; i < nneighbours; i++)
+		maxmap[hpx / 8] |= 1 << (hpx % 8);
+		nn = healpix_get_neighbours_nside(hpx, neighbours, Nside);
+		for (i = 0; i < nn; i++)
 		{
-			double coords[3];
-			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, coords);
-			if (!is_inside_rect_field(curfield, coords))
-				break;
-		}
-
-		if (i == nneighbours) {
-			minmap[hpx] = 1;
-		}
-		for (i = 0; i < nneighbours; i++) {
-			if (!visited[neighbours[i]]) {
-				struct ll_node *n = malloc(sizeof(struct ll_node));
-				n->data = neighbours[i];
-				n->next = head;
-				head = n;
-				visited[neighbours[i]] = 1;
+			double ncoords[3];
+			struct ll_node *newnode;
+			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, ncoords);
+			if (!is_inside_rect_field(curfield, ncoords))
+			{
+				found_neighbour_outside = TRUE;
+			}
+			if (!(visited[neighbours[i] / 8] & (1 << (neighbours[i] % 8))))
+			{
+				newnode = malloc(sizeof(struct ll_node));
+				newnode->next = queue;
+				newnode->data = neighbours[i];
+				queue = newnode;
 			}
 		}
+		if (!found_neighbour_outside)
+			minmap[hpx / 8] |= 1 << (hpx % 8);
+		
 		getnext:
-		if (head == NULL)
-			hpx = -1;
-		else {
-			struct ll_node *oldhead = head;
-			hpx = head->data;
-			head = head->next;
-			free(oldhead);
+		if (queue != NULL)
+		{
+			struct ll_node *newhead = queue->next;
+			hpx = queue->data;
+			free(queue);
+			queue = newhead;
 		}
-	}
-	free(neighbours);
+		else {
+			done = TRUE;
+		}
+	} while (!done);
+	
 	free(visited);
-}*/
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -248,7 +314,6 @@ int main(int argc, char **argv)
 	{
 		uint centerhp;
 		uint *neighbours;
-		int nneighbours;
 		int i, j;
 		double center[3];
 		center[0] = center[1] = center[2] = 0;
@@ -290,7 +355,6 @@ int main(int argc, char **argv)
 		if (hpmap_max[i / 8] & (1 << (i % 8)))
 			filled_max++;
 	}
-	
 	max = 12 * Nside * Nside;
 	printf("Min: %f, Max: %f\n",((double)filled_min) / max, ((double)filled_max) / max);
 
