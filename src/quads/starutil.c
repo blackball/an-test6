@@ -29,6 +29,10 @@ inline void xyz2radec(double x, double y, double z, double *ra, double *dec) {
 	*dec = z2dec(z);
 }
 
+inline void xyzarr2radec(double* xyz, double *ra, double *dec) {
+	xyz2radec(xyz[0], xyz[1], xyz[2], ra, dec);
+}
+
 inline void radec2xyz(double ra, double dec,
 					  double* x, double* y, double* z) {
 	double cosdec = cos(dec);

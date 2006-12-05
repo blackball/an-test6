@@ -163,6 +163,8 @@ noisesim: noisesim.o starutil.o mathutil.o bl.o
 
 noisesim2: noisesim2.o starutil.o mathutil.o bl.o
 
+hpgrid: hpgrid.o healpix.o mathutil.o starutil.o
+
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
