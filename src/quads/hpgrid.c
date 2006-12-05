@@ -76,51 +76,27 @@ int main(int argc, char** args) {
 	printf("texts=[];\n");
 	printf("lines=[];\n");
 
-	/*
-	  printf("function [newh] = wrapline(h)\n"
-	  "  x=get(h,'XData');\n"
-	  "  y=get(h,'YData');\n"
-	  // are points all on one side or the other?
-	  //"  if prod(double(x<1.5*pi)), return []; end;\n"
-	  //"  if prod(double(x>0.5*pi)), return []; end;\n"
-	  // do points span the wrap-around?
-	  "  if ~(sum(double(x<0.5*pi)) && sum(double(x>1.5*pi))), return []; end;\n"
-	  // copy any line segment that crosses between x<pi/2 and x>3pi/2.
-	  "  newx=[]; newy=[];\n"
-	  "  for i=1:length(x)-1,\n"
-	  "    if (x(i)<pi/2 && x(i+1)>3*pi/2) || (x(i)>3*pi/2 && x(i+1)<pi/2),\n"
-	  "      newx(length(newx)+[1:2])=[x(i),x(i+1)];\n"
-	  "      newy(length(newy)+[1:2])=[y(i),y(i+1)];\n"
-	  "    end;\n"
-	  "  end;\n"
-	  "  newh=copyobj(h,get(h,'Parent'));\n"
-	  "  set(newh,'XData',newx);\n"
-	  "  set(newh,'YData',newy);\n"
-	  "return;\n");
-	*/
 	for (hp=0; hp<12; hp++) {
 		double xyz[3];
-		double crd[8*2];
-		double xy[] = { 0.0,0.0,   0.0,0.001,   0.0,1.0,
-						0.999,1.0, 1.0,1.0,     1.0,0.999,
-						1.0,0.0,   0.001,0.0 };
-		for (i=0; i<8; i++) {
+
+		double crd[6*2];
+		double xy[] = { 0.0,0.001,   0.0,1.0,   0.999,1.0,
+						1.0,0.999,   1.0,0.0,   0.001,0.0 };
+		for (i=0; i<6; i++) {
 			healpix_to_xyzarr_lex(xy[i*2], xy[i*2+1], hp, 1, xyz);
 			xyzarr2radec(xyz, crd+i*2+0, crd+i*2+1);
 		}
-		printf("la(%i)=line([", hp+1);
-		for (i=0; i<9; i++)
-			printf("%g,", crd[(i%8)*2+0]);
-		printf("], [");
-		for (i=0; i<9; i++)
-			printf("%g,", crd[(i%8)*2+1]);
-		printf("]);\n");
-		printf("lb(%i)=wrapline(la(%i));\n", hp+1, hp+1);
-		printf("set(lb(%i), 'LineStyle', '--');\n", hp+1);
+		printf("xy=[");
+		for (i=0; i<7; i++)
+			printf("%g,%g;", crd[(i%6)*2+0], crd[(i%6)*2+1]);
+		printf("];\n");
+		printf("[la, lb] = wrapline(xy(:,1),xy(:,2));\n");
+		printf("set(la, 'Color', 'b');\n");
+		printf("set(lb, 'Color', 'b');\n");
 	}
 
 	for (hp=0; hp<HP; hp++) {
-		static int nlines = 1;
+		//static int nlines = 1;
 		uint neigh[8];
 		uint nn;
 
@@ -129,16 +105,35 @@ int main(int argc, char** args) {
 
 		nn = healpix_get_neighbours_nside(hp, neigh, Nside);
 		for (i=0; i<nn; i++) {
-			printf("lines(%i)=line([%g,%g], [%g,%g], "
+			/*
+			  printf("lines(%i)=line([%g,%g], [%g,%g], "
+			  "'Color', [0.5,0.5,0.5], "
+			  "'Marker', 'o', "
+			  "'MarkerEdgeColor', 'k', "
+			  "'MarkerFaceColor', 'none', "
+			  "'MarkerSize', 15);\n",
+			  nlines++,
+			  radecs[2*hp], radecs[2*neigh[i]], 
+			  radecs[2*hp+1], radecs[2*neigh[i]+1]);
+			*/
+			//printf("x=[%g,%g]; y=[%g,%g];\n", 
+			printf("[la,lb]=wrapline([%g,%g],[%g,%g]);\n",
+				   radecs[2*hp], radecs[2*neigh[i]], 
+				   radecs[2*hp+1], radecs[2*neigh[i]+1]);
+			printf("set([la,lb], "
 				   "'Color', [0.5,0.5,0.5], "
 				   "'Marker', 'o', "
 				   "'MarkerEdgeColor', 'k', "
-				   "'MarkerFaceColor', 'none', "
-				   "'MarkerSize', 15);\n",
-				   nlines++,
-				   radecs[2*hp], radecs[2*neigh[i]], 
-				   radecs[2*hp+1], radecs[2*neigh[i]+1]);
+				   //"'MarkerFaceColor', 'none', "
+				   "'MarkerFaceColor', 'white', "
+				   "'MarkerSize', 15);\n");
+			printf("set(lb, 'LineStyle', '--');\n");
 		}
+	}
+
+	for (hp=0; hp<HP; hp++) {
+		printf("texts(%i)=text(%g, %g, '%i', 'HorizontalAlignment', 'center');\n",
+			   hp+1, radecs[2*hp], radecs[2*hp+1], hp);
 	}
 
 	free(radecs);

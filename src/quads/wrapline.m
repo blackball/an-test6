@@ -6,7 +6,7 @@ function [hnorm, hdash] = wrapline(x, y)
 	hdash = [];
     return;
   end;
-  dir=sign(dx(switchinds(1)))
+  dir=sign(dx(switchinds(1)));
 
   nx=[x(1)];
   for i=1:length(dx),
@@ -16,12 +16,13 @@ function [hnorm, hdash] = wrapline(x, y)
 	end
   end
 
-  nx
+  %nx
   normx=[];
   normy=[];
   dashx=[];
   dashy=[];
-  inbounds = bitand(nx>=0, nx<=2*pi)
+  fudge = 0.001;
+  inbounds = bitand(nx>=(0-fudge), nx<=(2*pi+fudge));
   for i=2:length(nx),
     if inbounds(i) && inbounds(i-1),
 	  normx = [normx, nx(i-1), nx(i)];
