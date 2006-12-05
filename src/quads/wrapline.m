@@ -21,15 +21,29 @@ function [hnorm, hdash] = wrapline(x, y)
   normy=[];
   dashx=[];
   dashy=[];
-  fudge = 0.001;
+  %fudge = 0.001;
+  fudge = 0;
   inbounds = bitand(nx>=(0-fudge), nx<=(2*pi+fudge));
+
+  inbounds
+  switchinds
+
+  sw=1;
+  good=(inbounds(1) && inbounds(2));
   for i=2:length(nx),
-    if inbounds(i) && inbounds(i-1),
-	  normx = [normx, nx(i-1), nx(i)];
-	  normy = [normy, y(i-1),  y(i) ];
+	if good,
+	  normx=[normx, nx(i-1), nx(i)];
+	  normy=[normy, y(i-1), y(i)];
 	else,
-	  dashx = [dashx, nx(i-1), nx(i)];
-	  dashy = [dashy, y(i-1),  y(i) ];
+	  dashx=[dashx, nx(i-1), nx(i)];
+	  dashy=[dashy, y(i-1),  y(i)];
+	end
+    if i == switchinds(sw),
+	  good = ~good;
+	  sw = sw+1;
+	  if sw > length(switchinds),
+	    sw = 1;
+	  end
 	end
   end
 
