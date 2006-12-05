@@ -16,28 +16,20 @@ function [hnorm, hdash] = wrapline(x, y)
 	end
   end
 
-  %nx
   normx=[];
   normy=[];
   dashx=[];
   dashy=[];
 
-  normx2=[];
-  normy2=[];
-  dashx2=[];
-  dashy2=[];
+  nx2 = nx+dir*2*pi;
 
   %fudge = 0.001;
   fudge = 0;
   inbounds = bitand(nx>=(0-fudge), nx<=(2*pi+fudge));
-  inbounds2 = bitand(nx+dir*2*pi>=(0-fudge), nx+dir*2*pi<=(2*pi+fudge));
+  inbounds2 = bitand(nx2>=(0-fudge), nx2<=(2*pi+fudge));
 
-  inbounds
-  inbounds2
-  switchinds
-
-  good1=(inbounds(1) && inbounds(2));
-  good2=(inbounds2(1) && inbounds2(2));
+  inbounds;
+  inbounds2;
 
   for i=2:length(nx),
     if inbounds(i-1) && inbounds(i),
@@ -48,11 +40,11 @@ function [hnorm, hdash] = wrapline(x, y)
 	  dashy=[dashy, y(i-1),  y(i)];
 	end
     if inbounds2(i-1) && inbounds2(i),
-	  normx2=[normx2, nx(i-1), nx(i)];
-	  normy2=[normy2, y(i-1), y(i)];
+	  normx=[normx, nx2(i-1), nx2(i)];
+	  normy=[normy, y(i-1), y(i)];
 	else,
-	  dashx2=[dashx2, nx(i-1), nx(i)];
-	  dashy2=[dashy2, y(i-1),  y(i)];
+	  dashx=[dashx, nx2(i-1), nx2(i)];
+	  dashy=[dashy, y(i-1),  y(i)];
 	end
   end
 
@@ -60,44 +52,9 @@ function [hnorm, hdash] = wrapline(x, y)
   NY=reshape(normy, [2,length(normy)/2]);
   DX=reshape(dashx, [2,length(dashx)/2]);
   DY=reshape(dashy, [2,length(dashy)/2]);
-  NX2=reshape(normx2, [2,length(normx2)/2]);
-  NY2=reshape(normy2, [2,length(normy2)/2]);
-  DX2=reshape(dashx2, [2,length(dashx2)/2]);
-  DY2=reshape(dashy2, [2,length(dashy2)/2]);
 
-  hnorm = line([NX, NX2], [NY, NY2]);
-  hdash = line([DX, DX2], [DY, DY2]);
-
-  if 0,
-  sw=1;
-  good=1;
-  for i=2:length(nx),
-	if good,
-	  normx=[normx, nx(i-1), nx(i)];
-	  normy=[normy, y(i-1), y(i)];
-	else,
-	  dashx=[dashx, nx(i-1), nx(i)];
-	  dashy=[dashy, y(i-1),  y(i)];
-	end
-    if i == switchinds(sw),
-	  good = ~good;
-	  sw = sw+1;
-	  if sw > length(switchinds),
-	    sw = 1;
-	  end
-	end
-  end
-  end
-
-  if 0,
-    NX=reshape(normx, [2,length(normx)/2]);
-	NY=reshape(normy, [2,length(normy)/2]);
-	DX=reshape(dashx, [2,length(dashx)/2]);
-	DY=reshape(dashy, [2,length(dashy)/2]);
-
-    hnorm = line([NX, DX + dir*2*pi], [NY, DY]);
-    hdash = line([DX, NX + dir*2*pi], [DY, NY]);
-  end
+  hnorm = line(NX, NY);
+  hdash = line(DX, DY);
   set(hdash, 'LineStyle', '--');
 
 return;

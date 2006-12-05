@@ -100,8 +100,8 @@ int main(int argc, char** args) {
 		uint neigh[8];
 		uint nn;
 
-		printf("texts(%i)=text(%g, %g, '%i', 'HorizontalAlignment', 'center');\n",
-			   hp+1, radecs[2*hp], radecs[2*hp+1], hp);
+		//printf("texts(%i)=text(%g, %g, '%i', 'HorizontalAlignment', 'center');\n",
+		//hp+1, radecs[2*hp], radecs[2*hp+1], hp);
 
 		nn = healpix_get_neighbours_nside(hp, neigh, Nside);
 		for (i=0; i<nn; i++) {
