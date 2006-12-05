@@ -41,6 +41,8 @@ int main(int argc, char** args) {
 	int i;
 	double* radecs;
 
+	bool do_neighbours = TRUE;
+
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
 		case '?':
@@ -76,6 +78,7 @@ int main(int argc, char** args) {
 	printf("texts=[];\n");
 	printf("lines=[];\n");
 
+	// draw the large-healpix boundaries.
 	for (hp=0; hp<12; hp++) {
 		double xyz[3];
 
@@ -95,45 +98,122 @@ int main(int argc, char** args) {
 		printf("set(lb, 'Color', 'b');\n");
 	}
 
-	for (hp=0; hp<HP; hp++) {
-		//static int nlines = 1;
-		uint neigh[8];
-		uint nn;
-
-		//printf("texts(%i)=text(%g, %g, '%i', 'HorizontalAlignment', 'center');\n",
-		//hp+1, radecs[2*hp], radecs[2*hp+1], hp);
-
-		nn = healpix_get_neighbours_nside(hp, neigh, Nside);
-		for (i=0; i<nn; i++) {
-			/*
-			  printf("lines(%i)=line([%g,%g], [%g,%g], "
-			  "'Color', [0.5,0.5,0.5], "
-			  "'Marker', 'o', "
-			  "'MarkerEdgeColor', 'k', "
-			  "'MarkerFaceColor', 'none', "
-			  "'MarkerSize', 15);\n",
-			  nlines++,
-			  radecs[2*hp], radecs[2*neigh[i]], 
-			  radecs[2*hp+1], radecs[2*neigh[i]+1]);
-			*/
-			//printf("x=[%g,%g]; y=[%g,%g];\n", 
-			printf("[la,lb]=wrapline([%g,%g],[%g,%g]);\n",
-				   radecs[2*hp], radecs[2*neigh[i]], 
-				   radecs[2*hp+1], radecs[2*neigh[i]+1]);
-			printf("set([la,lb], "
-				   "'Color', [0.5,0.5,0.5], "
-				   "'Marker', 'o', "
-				   "'MarkerEdgeColor', 'k', "
-				   //"'MarkerFaceColor', 'none', "
-				   "'MarkerFaceColor', 'white', "
-				   "'MarkerSize', 15);\n");
-			printf("set(lb, 'LineStyle', '--');\n");
+	if (do_neighbours) {
+		for (hp=0; hp<HP; hp++) {
+			uint neigh[8];
+			uint nn;
+			nn = healpix_get_neighbours_nside(hp, neigh, Nside);
+			for (i=0; i<nn; i++) {
+				printf("[la,lb]=wrapline([%g,%g],[%g,%g]);\n",
+					   radecs[2*hp], radecs[2*neigh[i]], 
+					   radecs[2*hp+1], radecs[2*neigh[i]+1]);
+				printf("set([la,lb], "
+					   "'Color', [0.5,0.5,0.5], "
+					   "'Marker', 'o', "
+					   "'MarkerEdgeColor', 'k', "
+					   //"'MarkerFaceColor', 'none', "
+					   "'MarkerFaceColor', 'white', "
+					   "'MarkerSize', 15);\n");
+				printf("set(lb, 'LineStyle', '--');\n");
+			}
 		}
 	}
 
 	for (hp=0; hp<HP; hp++) {
-		printf("texts(%i)=text(%g, %g, '%i', 'HorizontalAlignment', 'center');\n",
-			   hp+1, radecs[2*hp], radecs[2*hp+1], hp);
+		printf("texts(%i)=text(%g, %g, '",
+			   hp+1, radecs[2*hp], radecs[2*hp+1]);
+		//printf("%i", hp);
+
+		//double ph;
+		//ph = (hp+1.0)/2.0;
+		//printf("%i", 1 + (int)floor(sqrt(ph - sqrt(floor(ph)))));
+
+		{
+			uint bighp,x,y;
+			int frow;
+			int F1, F2;
+			int v, h;
+			int ringind;
+			int longind;
+			int s;
+			int h2;
+			//int pixinring;
+
+			healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
+			//printf("%i,%i", x, y);
+			frow = bighp / 4;
+			F1 = frow + 2;
+			F2 = 2*(bighp % 4) - (frow % 2) + 1;
+			v = x + y;
+			h = x - y;
+			ringind = F1 * Nside - v - 1;
+
+			//pixinring = hp + 1 - 2*ringind*(ringind-1);
+
+			/*
+			  [1, Nside) : n pole
+			  [Nside, 2Nside] : n equatorial
+			  (2Nside+1, 3Nside] : s equat
+			  (3Nside, 4Nside-1] : s pole
+			*/
+			if ((ringind < 1) || (ringind >= 4*Nside)) {
+				fprintf(stderr, "Invalid ring index: %i\n", ringind);
+				return -1;
+			}
+			//if ((ringind < Nside) || (ringind > 3*Nside)) {
+			if ((ringind <= Nside) || (ringind >= 3*Nside)) {
+				// polar.
+				//s = 1;
+
+				h2 = (Nside - 1 - y);
+				longind = h2 + ringind*(ringind-1)*2
+					+ ((bighp % 4) * ringind);
+
+			} else {
+
+				//s = (ringind - Nside + 1) % 2;
+				s = (ringind - Nside) % 2;
+				longind = (F2 * Nside + h + s) / 2;
+
+				if ((bighp == 4) && (y > x)) {
+					longind += (4 * Nside - 1);
+				}
+				/*
+				  bighp:
+				  . 0   1   2   3
+				  4   5   6   7   4
+				  . 8   9   10  11
+
+				  frow:
+				  . 0   0   0   0
+				  1   1   1   1   1
+				  . 2   2   2   2
+
+				  F1:
+				  . 2   2   2   2
+				  3   3   3   3   3
+				    4   4   4   4
+
+				  bighp % 4:
+				  . 0   1   2   3
+				  0   1   2   3   0
+				  . 0   1   2   3
+
+				  F2:
+				  . 1   3   5   7
+				  0   2   4   6   0
+				  . 1   3   5   7
+				*/
+
+			}
+
+			//longind = (F2 * Nside + h + s) / 2;
+
+			printf("%i,%i", ringind, longind);
+			//printf("%i,%i", ringind, pixinring);
+		}
+
+		printf("', 'HorizontalAlignment', 'center');\n");
 	}
 
 	free(radecs);
