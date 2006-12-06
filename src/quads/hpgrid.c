@@ -128,21 +128,33 @@ int main(int argc, char** args) {
 		//printf("%i", healpix_lex_to_ring(hp, Nside));
 
 		{
-			int ri;
+			int ni;
 			int hp2;
-			uint ring, longind;
-			ri = healpix_lex_to_ring(hp, Nside);
-			/*
-			  printf("%i", ri);
-			  healpix_ring_decompose(ri, Nside, &ring, &longind);
-			  printf("%i,%i", ring, longind);
-			*/
-			hp2 = healpix_ring_to_lex(ri, Nside);
-			if (hp == hp2)
-				printf("%i",hp);
-			else
+			ni = healpix_lex_to_nested(hp, Nside);
+			hp2 = healpix_nested_to_lex(ni, Nside);
+			//printf("%i", ni);
+			if (hp != hp2)
 				printf("%i/%i", hp, hp2);
+			else
+				printf("%i", hp);
 		}
+
+		/*
+		  {
+		  int ri;
+		  int hp2;
+		  uint ring, longind;
+		  ri = healpix_lex_to_ring(hp, Nside);
+		  printf("%i", ri);
+		  healpix_ring_decompose(ri, Nside, &ring, &longind);
+		  printf("%i,%i", ring, longind);
+		  hp2 = healpix_ring_to_lex(ri, Nside);
+		  if (hp == hp2)
+		  printf("%i",hp);
+		  else
+		  printf("%i/%i", hp, hp2);
+		  }
+		*/
 
 		printf("', 'HorizontalAlignment', 'center');\n");
 	}

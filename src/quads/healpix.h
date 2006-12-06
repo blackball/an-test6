@@ -36,8 +36,17 @@
 Const int healpix_lex_to_ring(uint hp, uint Nside);
 
 /**
- */
+   Converts a ring-indexed healpix into a lexicographical-indexed healpix.
+*/
 Const int healpix_ring_to_lex(uint ring_index, uint Nside);
+
+/**
+ */
+Const int healpix_lex_to_nested(uint hp, uint Nside);
+
+/**
+ */
+Const int healpix_nested_to_lex(uint hp, uint Nside);
 
 /**
    Decomposes a ring index into the ring number (rings contain healpixels of equal

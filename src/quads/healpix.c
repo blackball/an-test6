@@ -29,6 +29,54 @@ Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
+Const int healpix_lex_to_nested(uint hp, uint Nside) {
+	uint bighp,x,y;
+	int index;
+	int i;
+
+	healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
+	if (!is_power_of_two(Nside)) {
+		fprintf(stderr, "healpix_lex_to_nested: Nside must be a power of two.\n");
+		return -1;
+	}
+
+	// We construct the index called p_n' in the healpix paper, whose bits
+	// are taken from the bits of x and y:
+	//    x = ... b4 b2 b0
+	//    y = ... b5 b3 b1
+	// We go through the bits of x,y, building up "index":
+	index = 0;
+	for (i=0; i<(8*sizeof(uint)/2); i++) {
+		index |= (((y & 1) << 1) | (x & 1)) << (i*2);
+		y >>= 1;
+		x >>= 1;
+		if (!x && !y) break;
+	}
+
+	return index + bighp * Nside * Nside;
+}
+
+Const int healpix_nested_to_lex(uint hp, uint Nside) {
+	uint bighp, x, y;
+	int index;
+	int i;
+	if (!is_power_of_two(Nside)) {
+		fprintf(stderr, "healpix_lex_to_nested: Nside must be a power of two.\n");
+		return -1;
+	}
+	bighp = hp / (Nside*Nside);
+	index = hp % (Nside*Nside);
+	x = y = 0;
+	for (i=0; i<(8*sizeof(uint)/2); i++) {
+		x |= (index & 0x1) << i;
+		index >>= 1;
+		y |= (index & 0x1) << i;
+		index >>= 1;
+		if (!index) break;
+	}
+	return healpix_compose_lex(bighp, x, y, Nside);
+}
+
 Const int healpix_ring_compose(uint ring, uint longind, uint Nside) {
 	if (ring <= Nside)
 		// north polar
