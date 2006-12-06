@@ -85,7 +85,7 @@ void healpix_ring_decompose(uint hp, uint Nside, uint* p_ring, uint* p_longind) 
 Const int healpix_ring_to_lex(uint ring, uint Nside) {
 	int bighp, x, y;
 	int ringind, longind;
-	healpix_ring_decompose(ring, Nside, &ringind, &longind);
+	healpix_ring_decompose(ring, Nside, (uint*)&ringind, (uint*)&longind);
 	if (ringind <= Nside) {
 		int ind;
 		int v;
@@ -99,251 +99,94 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 		v = F1*Nside - ringind - 1;
 		x = v - y;
 		return healpix_compose_lex(bighp, x, y, Nside);
-	}
-	if (ringind < 3*Nside) {
+	} else if (ringind < 3*Nside) {
 		int panel;
 		int ind;
 		int bottomleft;
 		int topleft;
 		int frow, F1, F2, s, v, h;
-		int bighp;
+		int bighp = -1;
 		int x, y;
 		int hp;
+		int R = 0;
 
 		panel = longind / Nside;
 		ind = longind % Nside;
 		bottomleft = ind < (ringind - Nside + 1) / 2;
 		topleft = ind < (3*Nside - ringind + 1)/2;
-		//if (bottomleft && topleft)
-		//fprintf(stderr, "L");
-		//if (!bottomleft && !topleft)
-		//fprintf(stderr, "R");
-		//if (!bottomleft && topleft)
-		//printf("T");
-		//if (bottomleft && !topleft)
-		//fprintf(stderr, "B");
 
 		if (!bottomleft && topleft) {
 			// top row.
 			bighp = panel;
-			frow = bighp / 4;
-			F1 = frow + 2;
-			F2 = 2*(bighp % 4) - (frow % 2) + 1;
-			s = (ringind - Nside) % 2;
-			v = F1*Nside - ringind - 1;
-			h = 2*longind - s - F2*Nside;
-			x = (v + h) / 2;
-			y = (v - h) / 2;
-			fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, "
-					"h=%i, x=%i, y=%i.\n",
-					bighp, frow, F1, F2, s, v, h, x, y);
-			if ((v != x+y) || (h != x-y)) {
-				if ((F2*Nside + s + h) % 2)
-					h--;
-				else
-					h++;
-				x = (v + h) / 2;
-				y = (v - h) / 2;
-				fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
-						h, x, y);
-			}
-			hp = healpix_compose_lex(bighp, x, y, Nside);
-			fprintf(stderr, "hp %i\n", hp);
-			return hp;
-		}
-		if (bottomleft && !topleft) {
+		} else if (bottomleft && !topleft) {
 			// bottom row.
 			bighp = 8 + panel;
-			frow = bighp / 4;
-			F1 = frow + 2;
-			F2 = 2*(bighp % 4) - (frow % 2) + 1;
-			s = (ringind - Nside) % 2;
-			v = F1*Nside - ringind - 1;
-			h = 2*longind - s - F2*Nside;
-			x = (v + h) / 2;
-			y = (v - h) / 2;
-			fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, "
-					"h=%i, x=%i, y=%i.\n",
-					bighp, frow, F1, F2, s, v, h, x, y);
-			if ((v != x+y) || (h != x-y)) {
-				if ((F2*Nside + s + h) % 2)
-					h--;
-				else
-					h++;
-				x = (v + h) / 2;
-				y = (v - h) / 2;
-				fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
-						h, x, y);
-			}
-			hp = healpix_compose_lex(bighp, x, y, Nside);
-			fprintf(stderr, "hp %i\n", hp);
-			return hp;
-		}
-		if (bottomleft && topleft) {
+		} else if (bottomleft && topleft) {
 			// left side.
 			bighp = 4 + panel;
-			frow = bighp / 4;
-			F1 = frow + 2;
-			F2 = 2*(bighp % 4) - (frow % 2) + 1;
-			s = (ringind - Nside) % 2;
-			v = F1*Nside - ringind - 1;
-			h = 2*longind - s - F2*Nside;
-			x = (v + h) / 2;
-			y = (v - h) / 2;
-			fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, "
-					"h=%i, x=%i, y=%i.\n",
-					bighp, frow, F1, F2, s, v, h, x, y);
-			/*
-			  if ((v != x+y) || (h != x-y)) {
-			  if ((F2*Nside + s + h) % 2)
-			  h--;
-			  else
-			  h++;
-			  //h = 2*longind - s - F2*Nside - 1;
-			  x = (v + h) / 2;
-			  y = (v - h) / 2;
-			  fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
-			  h, x, y);
-			  }
-			*/
-			if ((v != (x+y)) || (h != (x-y))) {
-				h--;
-				x = (v + h) / 2;
-				y = (v - h) / 2;
-				fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
-						h, x, y);
-				if ((v != x+y) || (h != x-y)) {
-					h+=2;
-					x = (v + h) / 2;
-					y = (v - h) / 2;
-					fprintf(stderr, "tweak2 h=%i, x=%i, y=%i\n",
-							h, x, y);
-				}
-			}
-
-
-			hp = healpix_compose_lex(bighp, x, y, Nside);
-			fprintf(stderr, "hp %i\n", hp);
-			return hp;
-		}
-		if (!bottomleft && !topleft) {
+		} else if (!bottomleft && !topleft) {
 			// right side.
 			bighp = 4 + (panel + 1) % 4;
-			if (bighp == 4)
+			if (bighp == 4) {
 				longind -= (4*Nside - 1);
-
-			frow = bighp / 4;
-			F1 = frow + 2;
-			F2 = 2*(bighp % 4) - (frow % 2) + 1;
-			s = (ringind - Nside) % 2;
-			v = F1*Nside - ringind - 1;
-			h = 2*longind - s - F2*Nside;
-			x = (v + h) / 2;
-			y = (v - h) / 2;
-			fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, "
-					"h=%i, x=%i, y=%i.\n",
-					bighp, frow, F1, F2, s, v, h, x, y);
-			if ((v != x+y) || (h != x-y)) {
-				if ((F2*Nside + s + h) % 2)
-					h--;
-				else
-					h++;
-				x = (v + h) / 2;
-				y = (v - h) / 2;
-				fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
-						h, x, y);
+				// Gah!  Wacky hack - it seems that since
+				// "longind" is negative in this case, the
+				// rounding behaves differently, so we end up
+				// computing the wrong "h" and have to correct
+				// for it.
+				R = 1;
 			}
-			hp = healpix_compose_lex(bighp, x, y, Nside);
-			fprintf(stderr, "hp %i\n", hp);
-			return hp;
 		}
 
-
-		return 0;
-	}
-	if (ringind < 3*Nside) {
-		//if (ringind <= 2*Nside) {
-		int s, h, F2, frow, bighp, F1, v;
-		int tmp;
-		int frowmod2;
-		int bighpmod4;
+		frow = bighp / 4;
+		F1 = frow + 2;
+		F2 = 2*(bighp % 4) - (frow % 2) + 1;
 		s = (ringind - Nside) % 2;
-
-		// option 1:
-		tmp = 2 * longind - s;
-		// h in [0, Nside-1].
-		h  = tmp % Nside;
-		F2 = tmp / Nside;
-		bighpmod4 = (F2 - 1) / 2;
-		frowmod2  = 2*bighpmod4 - F2 + 1;
-		if (frowmod2 == 0)
-			if (ringind < 2*Nside)
-				frow = 0;
-			else
-				frow = 2;
-		else
-			frow = 1;
-		bighp = frow * 4 + bighpmod4;
-		F1 = frow + 2;
 		v = F1*Nside - ringind - 1;
-		x = (h + v) / 2;
-		y = (v - h) / 2;
-		fprintf(stderr, "s=%i, h=%i, F2=%i, frowmod2=%i, bighpmod4=%i, "
-				"frow=%i, bighp=%i, F1=%i, v=%i, x=%i, y=%i\n",
-				s, h, F2, frowmod2, bighpmod4, frow, bighp, F1, v, x, y);
-
-		fprintf(stderr, "option2:\n");
-		// h in [-(Nside-1), -1].
-		h  = tmp % Nside - 3;
-		F2 = (tmp - h) / Nside;
-		bighpmod4 = (F2 - 1) / 2;
-		frowmod2  = 2*bighpmod4 - F2 + 1;
-		if (frowmod2 == 0)
-			if (ringind < 2*Nside)
-				frow = 0;
-			else
-				frow = 2;
-		else
-			frow = 1;
-		bighp = frow * 4 + bighpmod4;
-		F1 = frow + 2;
-		v = F1*Nside - ringind - 1;
+		h = 2*longind - s - F2*Nside;
+		if (R)
+			h--;
 		x = (v + h) / 2;
 		y = (v - h) / 2;
-		fprintf(stderr, "s=%i, h=%i, F2=%i, frowmod2=%i, bighpmod4=%i, "
-				"frow=%i, bighp=%i, F1=%i, v=%i, x=%i, y=%i\n",
-				s, h, F2, frowmod2, bighpmod4, frow, bighp, F1, v, x, y);
+		fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, "
+				"h=%i, x=%i, y=%i.\n",
+				bighp, frow, F1, F2, s, v, h, x, y);
 
+		if ((v != (x+y)) || (h != (x-y))) {
+			h++;
+			x = (v + h) / 2;
+			y = (v - h) / 2;
+			fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
+					h, x, y);
 
+			if ((v != (x+y)) || (h != (x-y))) {
+				fprintf(stderr, "still not right.\n");
+			}
+		}
+		hp = healpix_compose_lex(bighp, x, y, Nside);
+		fprintf(stderr, "hp %i\n", hp);
+		return hp;
+	} else {
+		int ind;
+		int v;
+		int F1;
+		int frow;
+		int ri;
 
-		if ((v == x+y) && (h == x-y))
-			return healpix_compose_lex(bighp, x, y, Nside);
-		/*
-		  fprintf(stderr, "option2:\n");
-		  tmp = 2 * longind - s - 1;
-		  F2 = tmp / Nside;
-		  h  = tmp % Nside;
-		  bighpmod4 = (F2 - 1) / 2;
-		  frowmod2  = 2*bighpmod4 - F2 + 1;
-		  if (frowmod2 == 0)
-		  if (ringind < 2*Nside)
-		  frow = 0;
-		  else
-		  frow = 2;
-		  else
-		  frow = 1;
-		  bighp = frow * 4 + bighpmod4;
-		  F1 = frow + 2;
-		  v = F1*Nside - ringind - 1;
-		  x = (h + v) / 2;
-		  y = (v - h) / 2;
-		  fprintf(stderr, "s=%i, h=%i, F2=%i, frowmod2=%i, bighpmod4=%i, "
-		  "frow=%i, bighp=%i, F1=%i, v=%i, x=%i, y=%i\n",
-		  s, h, F2, frowmod2, bighpmod4, frow, bighp, F1, v, x, y);
-		  return healpix_compose_lex(bighp, x, y, Nside);
-		*/
+		ri = 4*Nside - ringind;
+		bighp = 8 + longind / ri;
+		ind = longind - (bighp%4) * ri;
+		y = (ri-1) - ind;
+		frow = bighp / 4;
+		F1 = frow + 2;
+		v = F1*Nside - ringind - 1;
+		x = v - y;
+
+		fprintf(stderr, "ri %i, longind %i, bighp %i, ind %i, x %i, "
+				"v %i, y %i.\n", ri, longind, bighp, ind, x, v, y);
+
+		return healpix_compose_lex(bighp, x, y, Nside);
 	}
-	return 0;
 }
 
 Const int healpix_lex_to_ring(uint hp, uint Nside) {
