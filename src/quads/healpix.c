@@ -37,8 +37,6 @@ Const int healpix_ring_compose(uint ring, uint longind, uint Nside) {
 		// equatorial
 		return Nside*(Nside-1)*2 + Nside*4*(ring-Nside) + longind;
 	{
-		//int ind;
-		//ind = Nside*(Nside-1)*2 + Nside*4*(2*Nside-1)
 		int ri;
 		ri = 4*Nside - ring;
 		return 12*Nside*Nside-1 - ( ri*(ri-1)*2 + (ri*4 - 1 - longind) );
@@ -148,23 +146,20 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 			h--;
 		x = (v + h) / 2;
 		y = (v - h) / 2;
-		fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, "
-				"h=%i, x=%i, y=%i.\n",
-				bighp, frow, F1, F2, s, v, h, x, y);
+		//fprintf(stderr, "bighp=%i, frow=%i, F1=%i, F2=%i, s=%i, v=%i, h=%i, x=%i, y=%i.\n", bighp, frow, F1, F2, s, v, h, x, y);
 
 		if ((v != (x+y)) || (h != (x-y))) {
 			h++;
 			x = (v + h) / 2;
 			y = (v - h) / 2;
-			fprintf(stderr, "tweak h=%i, x=%i, y=%i\n",
-					h, x, y);
+			//fprintf(stderr, "tweak h=%i, x=%i, y=%i\n", h, x, y);
 
 			if ((v != (x+y)) || (h != (x-y))) {
-				fprintf(stderr, "still not right.\n");
+				//fprintf(stderr, "still not right.\n");
 			}
 		}
 		hp = healpix_compose_lex(bighp, x, y, Nside);
-		fprintf(stderr, "hp %i\n", hp);
+		//fprintf(stderr, "hp %i\n", hp);
 		return hp;
 	} else {
 		int ind;
@@ -172,7 +167,6 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 		int F1;
 		int frow;
 		int ri;
-
 		ri = 4*Nside - ringind;
 		bighp = 8 + longind / ri;
 		ind = longind - (bighp%4) * ri;
@@ -181,10 +175,6 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 		F1 = frow + 2;
 		v = F1*Nside - ringind - 1;
 		x = v - y;
-
-		fprintf(stderr, "ri %i, longind %i, bighp %i, ind %i, x %i, "
-				"v %i, y %i.\n", ri, longind, bighp, ind, x, v, y);
-
 		return healpix_compose_lex(bighp, x, y, Nside);
 	}
 }
@@ -253,9 +243,7 @@ Const int healpix_lex_to_ring(uint hp, uint Nside) {
 		// handle healpix #4 wrap-around
 		if ((bighp == 4) && (y > x))
 			index += (4 * Nside - 1);
-		fprintf(stderr, "frow=%i, F1=%i, v=%i, ringind=%i, s=%i, F2=%i, "
-				"h=%i, longind=%i.\n",
-				frow, F1, v, ring, s, F2, h, (F2*(int)Nside+h+s)/2);
+		//fprintf(stderr, "frow=%i, F1=%i, v=%i, ringind=%i, s=%i, F2=%i, h=%i, longind=%i.\n", frow, F1, v, ring, s, F2, h, (F2*(int)Nside+h+s)/2);
 	}
 	return index;
 }
