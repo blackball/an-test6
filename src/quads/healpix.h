@@ -36,6 +36,14 @@
 Const int healpix_lex_to_ring(uint hp, uint Nside);
 
 /**
+   Decomposes a ring index into the ring number (rings contain healpixels of equal
+   latitude) and longitude index.  Pixels within a ring have longitude index starting
+   at zero for the first pixel with RA >= 0.  Different rings contain different numbers
+   of healpixels.
+ */
+void healpix_ring_decompose(uint ring_index, uint Nside, uint* p_ring, uint* p_longind);
+
+/**
    The following two functions convert (ra,dec) or (x,y,z) into the
    base-level healpix in the range [0, 11].
 

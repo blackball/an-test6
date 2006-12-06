@@ -29,6 +29,43 @@ Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
+void healpix_ring_decompose(uint hp, uint Nside, uint* p_ring, uint* p_longind) {
+	// this could be written in closed form...
+	int longind;
+	int ring;
+	int offset = 0;
+	for (ring=1; ring<=Nside; ring++) {
+		if (offset + ring*4 > hp) {
+			longind = hp - offset;
+			goto gotit;
+		}
+		offset += ring*4;
+	}
+	for (; ring<(3*Nside); ring++) {
+		if (offset + Nside*4 > hp) {
+			longind = hp - offset;
+			goto gotit;
+		}
+		offset += Nside*4;
+	}
+	for (; ring<(4*Nside); ring++) {
+		if (offset + (Nside*4 - ring)*4 > hp) {
+			longind = hp - offset;
+			goto gotit;
+		}
+		offset += (Nside*4 - ring)*4;
+	}
+	fprintf(stderr, "healpix_ring_decompose: shouldn't get here!\n");
+	if (p_ring) *p_ring = (uint)-1;
+	if (p_longind) *p_longind = (uint)-1;
+	return;
+ gotit:
+	if (p_ring)
+		*p_ring = ring;
+	if (p_longind)
+		*p_longind = longind;
+}
+
 Const int healpix_lex_to_ring(uint hp, uint Nside) {
 	uint bighp,x,y;
 	int frow;

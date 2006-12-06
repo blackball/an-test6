@@ -122,7 +122,15 @@ int main(int argc, char** args) {
 	for (hp=0; hp<HP; hp++) {
 		printf("texts(%i)=text(%g, %g, '",
 			   hp+1, radecs[2*hp], radecs[2*hp+1]);
-		printf("%i", healpix_lex_to_ring(hp, Nside));
+		//printf("%i", healpix_lex_to_ring(hp, Nside));
+		{
+			int ri;
+			uint ring, longind;
+			ri = healpix_lex_to_ring(hp, Nside);
+			healpix_ring_decompose(ri, Nside, &ring, &longind);
+			printf("%i,%i", ring, longind);
+		}
+
 		printf("', 'HorizontalAlignment', 'center');\n");
 	}
 
