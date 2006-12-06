@@ -40,9 +40,11 @@ static void print_help(char* progname) {
 		   progname);
 }
 
-static void qfits_dispfn(char* str) {
-	printf("qfits: %s\n", str);
-}
+/*
+  static void qfits_dispfn(char* str) {
+  printf("qfits: %s\n", str);
+  }
+*/
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define IS_BIG_ENDIAN 1
@@ -124,8 +126,8 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	qfits_err_register(qfits_dispfn);
-	qfits_err_statset(1);
+	//qfits_err_register(qfits_dispfn);
+	//qfits_err_statset(1);
 
 	startoptind = optind;
 	for (; optind<argc; optind++) {

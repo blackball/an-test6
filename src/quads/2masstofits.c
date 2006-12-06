@@ -127,7 +127,7 @@ int main(int argc, char** args) {
 				exit(-1);
 			}
 
-			hp = radectohealpix_nside(deg2rad(e.ra), deg2rad(e.dec), Nside);
+			hp = radectohealpix(deg2rad(e.ra), deg2rad(e.dec), Nside);
 			if (!cats[hp]) {
 				char fn[256];
 				char val[256];

@@ -182,7 +182,7 @@ int main(int argc, char** args) {
 			entry.nomad_id = (slice << 21) | (slicecounts[slice]);
 			slicecounts[slice]++;
 
-			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
+			hp = radectohealpix(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
 
 			if (!nomads[hp]) {
 				char fn[256];

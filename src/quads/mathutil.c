@@ -32,7 +32,7 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 	return (res & 0x0000FFFF) + ((res >> 16) & 0x0000FFFF);
 }
 
-bool is_power_of_two(unsigned int x) {
+int is_power_of_two(unsigned int x) {
 	return (my_hweight32(x) == 1);
 }
 

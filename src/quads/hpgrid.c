@@ -67,8 +67,7 @@ int main(int argc, char** args) {
 	for (hp=0; hp<HP; hp++) {
 		double xyz[3];
 		double ra, dec;
-		//healpix_to_xyzarr_lex(0.0, 0.0, hp, Nside, xyz);
-		healpix_to_xyzarr_lex(0.5, 0.5, hp, Nside, xyz);
+		healpix_to_xyzarr(hp, Nside, 0.5, 0.5, xyz);
 		xyzarr2radec(xyz, &ra, &dec);
 		radecs[2*hp] = ra;
 		radecs[2*hp+1] = dec;
@@ -89,7 +88,7 @@ int main(int argc, char** args) {
 		double xy[] = { 0.0,0.001,   0.0,1.0,   0.999,1.0,
 						1.0,0.999,   1.0,0.0,   0.001,0.0 };
 		for (i=0; i<6; i++) {
-			healpix_to_xyzarr_lex(xy[i*2], xy[i*2+1], hp, 1, xyz);
+			healpix_to_xyzarr(hp, 1, xy[i*2], xy[i*2+1], xyz);
 			xyzarr2radec(xyz, crd+i*2+0, crd+i*2+1);
 		}
 		printf("xy=[");
@@ -105,7 +104,7 @@ int main(int argc, char** args) {
 		for (hp=0; hp<HP; hp++) {
 			uint neigh[8];
 			uint nn;
-			nn = healpix_get_neighbours_nside(hp, neigh, Nside);
+			nn = healpix_get_neighbours(hp, neigh, Nside);
 			for (i=0; i<nn; i++) {
 				printf("[la,lb]=wrapline([%g,%g],[%g,%g]);\n",
 					   radecs[2*hp], radecs[2*neigh[i]], 
@@ -130,8 +129,8 @@ int main(int argc, char** args) {
 		{
 			int ni;
 			int hp2;
-			ni = healpix_lex_to_nested(hp, Nside);
-			hp2 = healpix_nested_to_lex(ni, Nside);
+			ni = healpix_xy_to_nested(hp, Nside);
+			hp2 = healpix_nested_to_xy(ni, Nside);
 			//printf("%i", ni);
 			if (hp != hp2)
 				printf("%i/%i", hp, hp2);
@@ -162,8 +161,8 @@ int main(int argc, char** args) {
 	for (hp=0; hp<HP; hp++) {
 		uint ring, longind;
 		int hp2;
-		healpix_ring_decompose(hp, Nside, &ring, &longind);
-		hp2 = healpix_ring_compose(ring, longind, Nside);
+		healpix_decompose_ring(hp, Nside, &ring, &longind);
+		hp2 = healpix_compose_ring(ring, longind, Nside);
 		if (hp2 != hp) {
 			fprintf(stderr, "Error: %i -> ring %i, longind %i -> %i.\n",
 					hp, ring, longind, hp2);
@@ -172,15 +171,15 @@ int main(int argc, char** args) {
 
 	for (hp=0; hp<HP; hp++) {
 		int ring, hp2;
-		ring = healpix_lex_to_ring(hp, Nside);
-		hp2 = healpix_ring_to_lex(ring, Nside);
+		ring = healpix_xy_to_ring(hp, Nside);
+		hp2 = healpix_ring_to_xy(ring, Nside);
 		if (hp2 != hp) {
 			uint bighp, x, y;
 			uint bighp2, x2, y2;
 			uint ringind, longind;
-			healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
-			healpix_decompose_lex(hp2, &bighp2, &x2, &y2, Nside);
-			healpix_ring_decompose(ring, Nside, &ringind, &longind);
+			healpix_decompose_xy(hp, &bighp, &x, &y, Nside);
+			healpix_decompose_xy(hp2, &bighp2, &x2, &y2, Nside);
+			healpix_decompose_ring(ring, Nside, &ringind, &longind);
 			fprintf(stderr, "Error: hp %i (bighp %i, x %i, y %i) -> ring %i (ring %i, long %i) -> hp %i (bighp %i, x %i, y %i).\n",
 					hp, bighp, x, y, ring, ringind, longind, hp2, bighp2, x2, y2);
 		}

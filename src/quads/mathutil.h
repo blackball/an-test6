@@ -23,7 +23,7 @@
 #include "xylist.h"
 #include "keywords.h"
 
-bool is_power_of_two(unsigned int x);
+int is_power_of_two(unsigned int x);
 
 void matrix_matrix_3(double* m1, double* m2, double* result);
 

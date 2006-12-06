@@ -65,6 +65,10 @@ static void addstar(float* fluximg, int x, int y, int W, int H) {
 	}
 }
 
+typedef unsigned char bool;
+#define FALSE 0
+#define TRUE 1
+
 int main(int argc, char *argv[]) {
     int argchar;
 	bool gotx, goty, gotX, gotY, gotw, goth, gots, gotS;
