@@ -260,7 +260,7 @@ int main(int argc, char** args) {
 				}
 				an.nobs = ob;
 
-				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				hp = radectohealpix(deg2rad(an.ra), deg2rad(an.dec), Nside);
 				if (!cats[hp]) {
 					init_catalog(cats, outfn, hp, Nside, argc, args);
 				}
@@ -332,7 +332,7 @@ int main(int argc, char** args) {
 					continue;
 				}
 
-				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				hp = radectohealpix(deg2rad(an.ra), deg2rad(an.dec), Nside);
 				if (!cats[hp]) {
 					init_catalog(cats, outfn, hp, Nside, argc, args);
 				}
@@ -411,7 +411,7 @@ int main(int argc, char** args) {
 					continue;
 				}
 
-				hp = radectohealpix_nside(deg2rad(an.ra), deg2rad(an.dec), Nside);
+				hp = radectohealpix(deg2rad(an.ra), deg2rad(an.dec), Nside);
 				if (!cats[hp]) {
 					init_catalog(cats, outfn, hp, Nside, argc, args);
 				}

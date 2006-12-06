@@ -22,21 +22,20 @@
 
 #include "healpix.h"
 #include "mathutil.h"
-
-int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir);
+#include "starutil.h"
 
 Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
-Const int healpix_lex_to_nested(uint hp, uint Nside) {
+Const int healpix_xy_to_nested(uint hp, uint Nside) {
 	uint bighp,x,y;
 	int index;
 	int i;
 
-	healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
+	healpix_decompose_xy(hp, &bighp, &x, &y, Nside);
 	if (!is_power_of_two(Nside)) {
-		fprintf(stderr, "healpix_lex_to_nested: Nside must be a power of two.\n");
+		fprintf(stderr, "healpix_xy_to_nested: Nside must be a power of two.\n");
 		return -1;
 	}
 
@@ -56,12 +55,12 @@ Const int healpix_lex_to_nested(uint hp, uint Nside) {
 	return index + bighp * Nside * Nside;
 }
 
-Const int healpix_nested_to_lex(uint hp, uint Nside) {
+Const int healpix_nested_to_xy(uint hp, uint Nside) {
 	uint bighp, x, y;
 	int index;
 	int i;
 	if (!is_power_of_two(Nside)) {
-		fprintf(stderr, "healpix_lex_to_nested: Nside must be a power of two.\n");
+		fprintf(stderr, "healpix_xy_to_nested: Nside must be a power of two.\n");
 		return -1;
 	}
 	bighp = hp / (Nside*Nside);
@@ -74,10 +73,10 @@ Const int healpix_nested_to_lex(uint hp, uint Nside) {
 		index >>= 1;
 		if (!index) break;
 	}
-	return healpix_compose_lex(bighp, x, y, Nside);
+	return healpix_compose_xy(bighp, x, y, Nside);
 }
 
-Const int healpix_ring_compose(uint ring, uint longind, uint Nside) {
+Const int healpix_compose_ring(uint ring, uint longind, uint Nside) {
 	if (ring <= Nside)
 		// north polar
 		return ring * (ring-1) * 2 + longind;
@@ -91,7 +90,7 @@ Const int healpix_ring_compose(uint ring, uint longind, uint Nside) {
 	}
 }
 
-void healpix_ring_decompose(uint hp, uint Nside, uint* p_ring, uint* p_longind) {
+void healpix_decompose_ring(uint hp, uint Nside, uint* p_ring, uint* p_longind) {
 	// FIXME: this could be written in closed form...
 	int longind;
 	int ring;
@@ -117,7 +116,7 @@ void healpix_ring_decompose(uint hp, uint Nside, uint* p_ring, uint* p_longind) 
 		}
 		offset += (Nside*4 - ring)*4;
 	}
-	fprintf(stderr, "healpix_ring_decompose: shouldn't get here!\n");
+	fprintf(stderr, "healpix_decompose_ring: shouldn't get here!\n");
 	if (p_ring) *p_ring = (uint)-1;
 	if (p_longind) *p_longind = (uint)-1;
 	return;
@@ -128,10 +127,10 @@ void healpix_ring_decompose(uint hp, uint Nside, uint* p_ring, uint* p_longind) 
 		*p_longind = longind;
 }
 
-Const int healpix_ring_to_lex(uint ring, uint Nside) {
+Const int healpix_ring_to_xy(uint ring, uint Nside) {
 	int bighp, x, y;
 	int ringind, longind;
-	healpix_ring_decompose(ring, Nside, (uint*)&ringind, (uint*)&longind);
+	healpix_decompose_ring(ring, Nside, (uint*)&ringind, (uint*)&longind);
 	if (ringind <= Nside) {
 		int ind;
 		int v;
@@ -144,7 +143,7 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 		F1 = frow + 2;
 		v = F1*Nside - ringind - 1;
 		x = v - y;
-		return healpix_compose_lex(bighp, x, y, Nside);
+		return healpix_compose_xy(bighp, x, y, Nside);
 	} else if (ringind < 3*Nside) {
 		int panel;
 		int ind;
@@ -206,7 +205,7 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 				//fprintf(stderr, "still not right.\n");
 			}
 		}
-		hp = healpix_compose_lex(bighp, x, y, Nside);
+		hp = healpix_compose_xy(bighp, x, y, Nside);
 		//fprintf(stderr, "hp %i\n", hp);
 		return hp;
 	} else {
@@ -223,11 +222,11 @@ Const int healpix_ring_to_lex(uint ring, uint Nside) {
 		F1 = frow + 2;
 		v = F1*Nside - ringind - 1;
 		x = v - y;
-		return healpix_compose_lex(bighp, x, y, Nside);
+		return healpix_compose_xy(bighp, x, y, Nside);
 	}
 }
 
-Const int healpix_lex_to_ring(uint hp, uint Nside) {
+Const int healpix_xy_to_ring(uint hp, uint Nside) {
 	uint bighp,x,y;
 	int frow;
 	int F1;
@@ -235,7 +234,7 @@ Const int healpix_lex_to_ring(uint hp, uint Nside) {
 	int ring;
 	int index;
 
-	healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
+	healpix_decompose_xy(hp, &bighp, &x, &y, Nside);
 	frow = bighp / 4;
 	F1 = frow + 2;
 	v = x + y;
@@ -339,89 +338,15 @@ static Inline bool issouthpolar(int healpix)
 	return (healpix >= 8);
 }
 
-static Inline bool ispowerof4(uint x) {
-	if (x >= 0x40000)
-		return (                    x == 0x40000   ||
-				 x == 0x100000   || x == 0x400000  ||
-				 x == 0x1000000  || x == 0x4000000 ||
-				 x == 0x10000000 || x == 0x40000000);
-	else 
-		return (x == 0x1        || x == 0x4       || 
-				x == 0x10       || x == 0x40      ||
-				x == 0x100      || x == 0x400     ||
-				x == 0x1000     || x == 0x4000    ||
-				x == 0x10000);
+static uint compose_xy(uint x, uint y, uint Nside) {
+	return (x * Nside) + y;
 }
 
-static void pnprime_to_xy(uint pnprime, uint* px, uint* py, uint Nside)
-{
-	uint xbitmask, ybitmask;
-	uint x, y;
-	int bit;
-
-	if (!ispowerof4(Nside)) {
-		if (px) *px = pnprime / Nside;
-		if (py) *py = pnprime % (int)Nside;
-		return;
-	}
-
-	assert(px);
-	assert(py);
-
-	x = y = 0;
-	// oh, those wacky physicists...
-	xbitmask = 1;
-	ybitmask = 2;
-	for (bit = 0; bit < 16; bit++) {
-		x |= ( (pnprime & xbitmask) ? (1 << bit) : 0 );
-		y |= ( (pnprime & ybitmask) ? (1 << bit) : 0 );
-		xbitmask = xbitmask << 2;
-		ybitmask = ybitmask << 2;
-	}
-
-	if (px) *px = x;
-	if (py) *py = y;
+uint healpix_compose_xy(uint bighp, uint x, uint y, uint Nside) {
+	return (bighp * Nside * Nside) + compose_xy(x, y, Nside);
 }
 
-static uint xy_to_pnprime(uint x, uint y, uint Nside)
-{
-	uint pnprime = 0;
-	uint mask;
-	int bit;
-
-	if (!ispowerof4(Nside)) 
-		return x*Nside + y;
-
-	mask = 1;
-	for (bit = 0; bit < 16; bit++) {
-		pnprime |=
-		    ((x & mask) << bit) |
-		    ((y & mask) << (bit + 1));
-		mask = mask << 1;
-	}
-	return pnprime;
-}
-
-uint healpix_compose(uint bighp, uint x, uint y, uint Nside) {
-	uint pnprime = xy_to_pnprime(x, y, Nside);
-	return bighp * Nside*Nside + pnprime;
-}
-
-void healpix_decompose(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
-	uint bighp;
-	uint pnprime;
-	bighp   = finehp / (Nside * Nside);
-	pnprime = finehp % (Nside * Nside);
-	pnprime_to_xy(pnprime, px, py, Nside);
-	if (pbighp)
-		*pbighp = bighp;
-}
-
-uint healpix_compose_lex(uint bighp, uint x, uint y, uint Nside) {
-	return (bighp * Nside * Nside) + (x * Nside) + y;
-}
-
-void healpix_decompose_lex(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
+void healpix_decompose_xy(uint finehp, uint* pbighp, uint* px, uint* py, uint Nside) {
 	uint hp;
 	if (pbighp) {
 		uint bighp   = finehp / (Nside * Nside);
@@ -438,7 +363,7 @@ void healpix_decompose_lex(uint finehp, uint* pbighp, uint* px, uint* py, uint N
    Given a large-scale healpix number, computes its neighbour in the
    direction (dx,dy).  Returns -1 if there is no such neighbour.
  */
-int healpix_get_neighbour(int hp, int dx, int dy)
+static int healpix_get_neighbour(int hp, int dx, int dy)
 {
 	if (isnorthpolar(hp)) {
 		if ((dx ==  1) && (dy ==  0)) return (hp + 1) % 4;
@@ -468,7 +393,7 @@ int healpix_get_neighbour(int hp, int dx, int dy)
 	return -1;
 }
 
-uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
+uint healpix_get_neighbours(uint pix, uint* neighbour, uint Nside)
 {
 	uint base;
 	uint x, y;
@@ -477,7 +402,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 	int Ns2 = Nside * Nside;
 	uint nx, ny;
 
-	healpix_decompose(pix, &base, &x, &y, Nside);
+	healpix_decompose_xy(pix, &base, &x, &y, Nside);
 
 	// ( + , 0 )
 	nx = (x + 1) % Nside;
@@ -492,7 +417,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 		nbase = base;
 
 	//printf("(+ 0): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
-	neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+	neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 	nn++;
 
 
@@ -523,7 +448,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 	//printf("(+ +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
-		neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+		neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 		nn++;
 	}
 
@@ -543,7 +468,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 
 	//printf("(0 +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
-	neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+	neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 	nn++;
 
 
@@ -574,7 +499,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 	//printf("(- +): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
-		neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+		neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 		nn++;
 	}
 
@@ -593,7 +518,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 
 	//printf("(- 0): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
-	neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+	neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 	nn++;
 
 
@@ -625,7 +550,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 	//printf("(- -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
-		neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+		neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 		nn++;
 	}
 
@@ -644,7 +569,7 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 
 	//printf("(0 -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
-	neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+	neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 	nn++;
 
 
@@ -675,234 +600,14 @@ uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside)
 	//printf("(+ -): nbase=%i, nx=%i, ny=%i, pix=%i\n", nbase, nx, ny, nbase*Ns2+xy_to_pnprime(nx,ny,Nside));
 
 	if (nbase != -1) {
-		neighbour[nn] = nbase * Ns2 + xy_to_pnprime(nx, ny, Nside);
+		neighbour[nn] = nbase * Ns2 + compose_xy(nx, ny, Nside);
 		nn++;
 	}
 
 	return nn;
 }
 
-/*
-  "x" points in the northeast direction
-  "y" points in the northwest direction
- */
-int healpix_get_neighbours(int hp, int* neighbour, int* xdir, int* ydir)
-{
-	int nn = 0;
-	if (isnorthpolar(hp)) {
-
-		// NE
-		neighbour[nn] = (hp + 1) % 4;
-		xdir[nn] = 1;
-		ydir[nn] = 0;
-		nn++;
-
-		/*
-		  ;
-		  // E = NE
-		  neighbour[nn] = (hp + 1) % 4;
-		  xdir[nn] = 1;
-		  ydir[nn] = -1;
-		  nn++;
-		*/
-
-		// NW
-		neighbour[nn] = (hp + 3) % 4;
-		xdir[nn] = 0;
-		ydir[nn] = 1;
-		nn++;
-
-		/*
-		  ;
-		  // W = NW
-		  neighbour[nn] = (hp + 3) % 4;
-		  xdir[nn] = -1;
-		  ydir[nn] = 1;
-		  nn++;
-		*/
-
-		// N
-		neighbour[nn] = (hp + 2) % 4;
-		xdir[nn] = 1;
-		ydir[nn] = 1;
-		nn++;
-
-		// SW
-		neighbour[nn] = (hp + 4);
-		xdir[nn] = -1;
-		ydir[nn] = 0;
-		nn++;
-
-		// SE
-		neighbour[nn] = 4 + ((hp + 1) % 4);
-		xdir[nn] = 0;
-		ydir[nn] = -1;
-		nn++;
-
-		// S
-		neighbour[nn] = hp + 8;
-		xdir[nn] = -1;
-		ydir[nn] = -1;
-		nn++;
-
-	} else if (issouthpolar(hp)) {
-
-		/*
-		  ;
-		  // E
-		  neighbour[nn] = 8 + ((hp + 1) % 4);
-		  xdir[nn] = 1;
-		  ydir[nn] = -1;
-		  nn++;
-		*/
-
-		// SE
-		neighbour[nn] = 8 + ((hp + 1) % 4);
-		xdir[nn] = 0;
-		ydir[nn] = -1;
-		nn++;
-
-		/*
-		  ;
-		  // W
-		  neighbour[nn] = 8 + ((hp + 3) % 4);
-		  xdir[nn] = -1;
-		  ydir[nn] = 1;
-		  nn++;
-		*/
-
-		// SW
-		neighbour[nn] = 8 + ((hp + 3) % 4);
-		xdir[nn] = -1;
-		ydir[nn] = 0;
-		nn++;
-
-		// S
-		neighbour[nn] = 8 + ((hp + 2) % 4);
-		xdir[nn] = -1;
-		ydir[nn] = -1;
-		nn++;
-
-		// NW
-		neighbour[nn] = (hp - 4);
-		xdir[nn] = 0;
-		ydir[nn] = 1;
-		nn++;
-
-		// NE
-		neighbour[nn] = 4 + ((hp + 1) % 4);
-		xdir[nn] = 1;
-		ydir[nn] = 0;
-		nn++;
-
-		// N
-		neighbour[nn] = hp - 8;
-		xdir[nn] = 1;
-		ydir[nn] = 1;
-		nn++;
-
-	} else {
-		// equatorial.
-
-		// E
-		neighbour[nn] = 4 + ((hp + 1) % 4);
-		xdir[nn] = 1;
-		ydir[nn] = -1;
-		nn++;
-
-		// W
-		neighbour[nn] = 4 + ((hp - 1) % 4);
-		xdir[nn] = -1;
-		ydir[nn] = 1;
-		nn++;
-
-		// NE
-		neighbour[nn] = hp - 4;
-		xdir[nn] = 1;
-		ydir[nn] = 0;
-		nn++;
-
-		// NW
-		neighbour[nn] = (hp + 3) % 4;
-		xdir[nn] = 0;
-		ydir[nn] = 1;
-		nn++;
-
-		// SE
-		neighbour[nn] = hp + 4;
-		xdir[nn] = 0;
-		ydir[nn] = -1;
-		nn++;
-
-		// SW
-		neighbour[nn] = 8 + ((hp + 3) % 4);
-		xdir[nn] = -1;
-		ydir[nn] = 0;
-		nn++;
-	}
-	return nn;
-}
-
-int healpix_nested_to_ring_index(int nested,
-                                 int* p_ring, int* p_longitude,
-                                 uint Nside)
-{
-	int f;
-	uint pnprime;
-	int frow, F1, F2;
-	uint x, y;
-	uint v, h;
-	int ringind, longind;
-	int s;
-
-	// "nested" is called p_n in the Healpix paper.
-
-	// (this is right - we want floor)
-	f = nested / (Nside * Nside);
-	pnprime = nested % (Nside * Nside);
-
-	if ((f < 0) || (f >= 12)) {
-		fprintf(stderr, "Invalid nested index %i\n", nested);
-		return -1;
-	}
-
-	pnprime_to_xy(pnprime, &x, &y, Nside);
-
-	v = x + y;
-	h = x - y;
-
-	frow = f / 4;
-	F1 = frow + 2;
-	ringind = F1 * Nside - v - 1;
-
-	/*
-	  [1, Nside) : n pole
-	  [Nside, 2Nside] : n equatorial
-	  (2Nside+1, 3Nside] : s equat
-	  (3Nside, 4Nside-1] : s pole
-	*/
-	if ((ringind < 1) || (ringind >= 4*Nside)) {
-		fprintf(stderr, "Invalid ring index: %i\n", ringind);
-		return -1;
-	}
-	if ((ringind < Nside) || (ringind > 3*Nside)) {
-		// polar.
-		s = 1;
-	} else {
-		s = (ringind - Nside + 1) % 2;
-	}
-	F2 = 2 * (f % 4) - (frow % 2) + 1;
-	longind = (F2 * Nside + h + s) / 2;
-
-	if (p_ring)
-		*p_ring = ringind;
-	if (p_longitude)
-		*p_longitude = longind;
-	return 0;
-}
-
-uint xyztohealpix_nside(double x, double y, double z, uint Nside)
-{
+uint xyztohealpix(double x, double y, double z, uint Nside) {
 	double phi;
 	double phioverpi;
 	double twothirds = 2.0 / 3.0;
@@ -964,7 +669,7 @@ uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 		if (!north)
 			swap(&x, &y);
 
-		pnprime = xy_to_pnprime(x, y, Nside);
+		pnprime = compose_xy(x, y, Nside);
 
 		if (!north)
 			pnprime = Nside * Nside - 1 - pnprime;
@@ -1010,7 +715,7 @@ uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 			x += Nside;
 		if (y < 0)
 			y += Nside;
-		pnprime = xy_to_pnprime(x, y, Nside);
+		pnprime = compose_xy(x, y, Nside);
 
 		// now compute which big healpix it's in.
 		offset = (int)(phioverpi * 2.0);
@@ -1039,91 +744,21 @@ uint xyztohealpix_nside(double x, double y, double z, uint Nside)
 	return -1;
 }
 
-uint radectohealpix_nside(double ra, double dec, uint Nside)
-{
+uint radectohealpix(double ra, double dec, uint Nside) {
 	double x, y, z;
 	x = radec2x(ra, dec);
 	y = radec2y(ra, dec);
 	z = radec2z(ra, dec);
-	return xyztohealpix_nside(x, y, z, Nside);
+	return xyztohealpix(x, y, z, Nside);
 }
 
-/*
-  We should be able to do some simple trig to convert.
-  Just go via xyz for now.
-*/
-int radectohealpix(double ra, double dec)
-{
-	double x, y, z;
-	x = radec2x(ra, dec);
-	y = radec2y(ra, dec);
-	z = radec2z(ra, dec);
-	return xyztohealpix(x, y, z);
+uint xyzarrtohealpix(double* xyz, uint Nside) {
+	return xyztohealpix(xyz[0], xyz[1], xyz[2], Nside);
 }
 
-int xyztohealpix(double x, double y, double z)
-{
-	double phi;
-	double phioverpi;
-	double twothirds = 2.0 / 3.0;
-
-	phi = atan2(y, x);
-	if (phi < 0.0)
-		phi += 2.0 * M_PI;
-
-	phioverpi = phi / M_PI;
-
-	if ((z >= twothirds) || (z <= -twothirds)) {
-		// definitely in the polar regions.
-		int offset;
-		int pix;
-
-		// the north polar healpixes are 0,1,2,3
-		// the south polar healpixes are 8,9,10,11
-		if (z >= twothirds)
-			offset = 0;
-		else
-			offset = 8;
-
-		pix = (int)(phioverpi * 2.0);
-
-		return offset + pix;
-
-	} else {
-		// could be polar or equatorial.
-		double phimod;
-		int offset;
-		double z1, z2;
-
-		offset = (int)(phioverpi * 2.0);
-		phimod = phioverpi - offset * 0.5;
-
-		z1 = twothirds - (8.0 / 3.0) * phimod;
-		z2 = -twothirds + (8.0 / 3.0) * phimod;
-
-		if ((z >= z1) && (z >= z2)) {
-			// north polar
-			return offset;
-		} else if ((z <= z1) && (z <= z2)) {
-			// south polar
-			return offset + 8;
-		} else if (phimod < 0.25) {
-			// left equatorial
-			return offset + 4;
-		} else {
-			// right equatorial
-			return ((offset + 1) % 4) + 4;
-		}
-
-		// the polar pixel center is at (z,phi/pi) = (2/3, 1/4)
-		// the left pixel center is at (z,phi/pi) = (0, 0)
-		// the right pixel center is at (z,phi/pi) = (0, 1/2)
-	}
-}
-
-static
-void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
-						   double* rx, double *ry, double *rz, int lex)
+void healpix_to_xyz(uint hp, uint Nside,
+					double dx, double dy, 
+					double* rx, double *ry, double *rz)
 {
 	uint chp;
 	uint equatorial = 1;
@@ -1133,10 +768,7 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 	double pi = M_PI, phi;
 	double rad;
 
-	if (lex)
-		healpix_decompose_lex(hp, &chp, &xp, &yp, Nside);
-	else
-		healpix_decompose(hp, &chp, &xp, &yp, Nside);
+	healpix_decompose_xy(hp, &chp, &xp, &yp, Nside);
 
 	// this is x,y position in the healpix reference frame
 	x = xp+dx;
@@ -1246,19 +878,24 @@ void healpix_to_xyz_common(double dx, double dy, uint hp, uint Nside,
 	*rz = z;
 }
 
-void healpix_to_xyz_lex(double dx, double dy, uint hp, uint Nside,
-						double* p_x, double *p_y, double *p_z) {
-	healpix_to_xyz_common(dx, dy, hp, Nside, p_x, p_y, p_z, 1);
+void healpix_to_xyzarr(uint hp, uint Nside,
+					   double dx, double dy,
+					   double* xyz) {
+	healpix_to_xyz(dx, dy, hp, Nside, xyz, xyz+1, xyz+2);
 }
 
-void healpix_to_xyzarr_lex(double dx, double dy, uint hp, uint Nside,
-						   double* xyz) {
-	healpix_to_xyz_common(dx, dy, hp, Nside, xyz, xyz+1, xyz+2, 1);
+void healpix_to_radec(uint hp, uint Nside,
+					  double dx, double dy,
+					  double* ra, double* dec) {
+	double xyz[3];
+	healpix_to_xyzarr(dx, dy, hp, Nside, xyz);
+	xyzarr2radec(xyz, ra, dec);
 }
 
-void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
-                    double* p_x, double *p_y, double *p_z) {
-	healpix_to_xyz_common(dx, dy, hp, Nside, p_x, p_y, p_z, 0);
+void healpix_to_radecarr(uint hp, uint Nside,
+						 double dx, double dy,
+						 double* radec) {
+	double xyz[3];
+	healpix_to_xyzarr(dx, dy, hp, Nside, xyz);
+	xyzarr2radec(xyz, radec, radec+1);
 }
-
-

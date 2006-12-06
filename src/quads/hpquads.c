@@ -489,9 +489,9 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	int j, N;
 	int destind;
 
-	healpix_to_xyzarr_lex(0.0, 0.0, hp, Nside, origin);
-	healpix_to_xyzarr_lex(1.0, 0.0, hp, Nside, vx);
-	healpix_to_xyzarr_lex(0.0, 1.0, hp, Nside, vy);
+	healpix_to_xyzarr(hp, Nside, 0.0, 0.0, origin);
+	healpix_to_xyzarr(hp, Nside, 1.0, 0.0, vx);
+	healpix_to_xyzarr(hp, Nside, 0.0, 1.0, vy);
 	for (d=0; d<3; d++) {
 		vx[d] -= origin[d];
 		vy[d] -= origin[d];
@@ -818,7 +818,7 @@ int main(int argc, char** argv) {
 		bool* try = calloc(HEALPIXES, sizeof(bool));
 		for (i=0; i<HEALPIXES; i++) {
 			uint bighp, x, y;
-			healpix_decompose_lex(i, &bighp, &x, &y, Nside);
+			healpix_decompose_xy(i, &bighp, &x, &y, Nside);
 			if (bighp != hp)
 				continue;
 			try[i] = TRUE;
@@ -826,7 +826,7 @@ int main(int argc, char** argv) {
 				uint neigh[8];
 				uint nneigh;
 				int k;
-				nneigh = healpix_get_neighbours_nside(i, neigh, Nside);
+				nneigh = healpix_get_neighbours(i, neigh, Nside);
 				for (k=0; k<nneigh; k++)
 					try[neigh[k]] = TRUE;
 			}

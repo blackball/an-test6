@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
 	char* progname = argv[0];
 	int inblocks = 0;
 	int allexts = 0;
-	int Next;
+	int Next = -1;
 
 	exts = il_new(16);
 

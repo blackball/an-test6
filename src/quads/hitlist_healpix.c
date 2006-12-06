@@ -229,7 +229,7 @@ void ensure_pixinfo_inited(pixinfo* node, int pix, int Nside) {
 	uint neigh[8];
 	uint nn;
 	if (!node->neighbours) {
-		nn = healpix_get_neighbours_nside(pix, neigh, Nside);
+		nn = healpix_get_neighbours(pix, neigh, Nside);
 		node->neighbours = malloc((nn+1) * sizeof(int));
 		memcpy(node->neighbours, neigh, nn * sizeof(int));
 		node->neighbours[nn] = -1;
@@ -350,7 +350,7 @@ int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* match,
 	x = match->vector[0];
 	y = match->vector[1];
 	z = match->vector[2];
-	pix = xyztohealpix_nside(x, y, z, hlist->Nside);
+	pix = xyztohealpix(x, y, z, hlist->Nside);
 
 	pinfo = hlist->pix + pix;
 

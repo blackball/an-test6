@@ -301,7 +301,7 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 		visited[hpx / 8] |= (1 << (hpx % 8));
 		
 		/* compute the xyz location of the center of hpx */
-		healpix_to_xyzarr_lex(0.5, 0.5, hpx, Nside, thishpx_coords);
+		healpix_to_xyzarr(hpx, Nside, 0.5, 0.5, thishpx_coords);
 		
 		/* skip the body of this loop if we can */
 		if (!is_inside_field(curfield, thishpx_coords))
@@ -310,13 +310,13 @@ void fill_maps(char *minmap, char *maxmap, uint hpx, uint Nside,
 		/* always include in maxmap */
 		maxmap[hpx / 8] |= 1 << (hpx % 8);
 
-		nn = healpix_get_neighbours_nside(hpx, neighbours, Nside);
+		nn = healpix_get_neighbours(hpx, neighbours, Nside);
 
 		/* check inclusion for each neighbour and enqueue it if unvisited */
 		for (i = 0; i < nn; i++)
 		{
 			double ncoords[3];
-			healpix_to_xyzarr_lex(0.5, 0.5, neighbours[i], Nside, ncoords);
+			healpix_to_xyzarr(neighbours[i], Nside, 0.5, 0.5, ncoords);
 			
 			if (!is_inside_field(curfield, ncoords))
 				found_neighbour_outside = TRUE;
@@ -472,8 +472,7 @@ int main(int argc, char **argv)
 			center[i] /= 4;
 		normalize_3(center);
 		
-		centerhp = xyztohealpix_nside(center[0], center[1], 
-				center[2], (uint)Nside);
+		centerhp = xyzarrtohealpix(center, (uint)Nside);
 		fill_maps(hpmap_min, hpmap_max, centerhp, (uint)Nside, &curfield);
 	}
 	for (i = 0; i < 12 * Nside * Nside; i++)

@@ -165,7 +165,7 @@ int main(int argc, char** args) {
 			//printf("RA, DEC (%g, %g)\n", entry.RA, entry.DEC);
 
 			if (do_hp) {
-				hp = radectohealpix_nside(deg2rad(entry.RA), deg2rad(entry.DEC), Nside);
+				hp = radectohealpix(deg2rad(entry.RA), deg2rad(entry.DEC), Nside);
 			} else {
 				hp = 0;
 			}

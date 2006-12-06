@@ -170,7 +170,7 @@ $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-catalog_analysis: catalog_analysis.o healpix.o mathutil.o
+catalog_analysis: catalog_analysis.o healpix.o starutil.o mathutil.o pnpoly.o
 
 nomadtofits: nomadtofits.o nomad_fits.o nomad.o healpix.o bl.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)

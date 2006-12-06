@@ -172,7 +172,7 @@ int main(int argc, char** args) {
 			entry.usnob_id = (slice << 24) | (slicecounts[slice]);
 			slicecounts[slice]++;
 
-			hp = radectohealpix_nside(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
+			hp = radectohealpix(deg2rad(entry.ra), deg2rad(entry.dec), Nside);
 
 			if (!usnobs[hp]) {
 				char fn[256];

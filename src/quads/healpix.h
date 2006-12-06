@@ -24,120 +24,231 @@
 #include "keywords.h"
 
 /**
-   The HEALPix paper:
-
+   The HEALPix paper is here:
    http://www.journals.uchicago.edu/ApJ/journal/issues/ApJ/v622n2/61342/61342.web.pdf
 */
 
+/**
+   In this documentation we talk about "base healpixes": these are the big,
+   top-level healpixes.  There are 12 of these, with indices [0, 11].
+
+   We say "fine healpixes" or "healpixes" or "pixels" when we mean the fine-
+   scale healpixes; there are Nside^2 of these in each base healpix,
+   for a total of 12*Nside^2, indexed from zero.
+ */
 
 /**
-   Converts a lexicographical healpix index into a ring index.
+   Some notes about the different indexing schemes:
+
+   The healpix paper discusses two different ways to number healpixes, and
+   there is a third way, which we prefer, which is (in my opinion) more
+   sensible and easy.
+
+
+   -RING indexing.  Healpixes are numbered first in order of decreasing DEC,
+   then in order of increasing RA of the center of the pixel, ie:
+
+   .       0       1       2       3
+   .     4   5   6   7   8   9  10  11
+   .  12  13  14  15  16  17  18  19
+   .    20  21  22  23  24  25  26  27
+   .  28  29  30  31  32  33  34  35
+   .    36  37  38  39  40  41  42  43
+   .      44      45      46      47
+
+   Note that 12, 20 and 28 are part of base healpix 4, as is 27; it "wraps
+   around".
+
+   The RING index can be decomposed into the "ring number" and the index
+   within the ring (called "longitude index").  Note that different rings
+   contain different numbers of healpixes.  Also note that the ring number
+   starts from 1, but the longitude index starts from zero.
+
+
+   -NESTED indexing.  This only works for Nside parameters that are powers of
+   two.  This scheme is hierarchical in the sense that each pair of bits of
+   the index tells you where the pixel center is to finer and finer
+   resolution.  It doesn't really show with Nside=2, but here it is anyway:
+
+   .       3       7      11      15
+   .     2   1   6   5  10   9  14  13
+   .  19   0  23   4  27   8  31  12
+   .    17  22  21  26  25  30  29  18
+   .  16  35  20  39  24  43  28  47
+   .    34  33  38  37  42  41  46  45
+   .      32      36      40      44
+
+   Note that all the base healpixes have the same pattern; they're just
+   offset by factors of Nside^2.
+
+   Here's a zoom-in of the first base healpix, turned 45 degrees to the
+   right, for Nside=4:
+
+   .   10  11  14  15
+   .    8   9  12  13
+   .    2   3   6   7
+   .    0   1   4   5
+
+   Note that the bottom-left block of 4 have the smallest values, and within
+   that the bottom-left corner has the smallest value, followed by the
+   bottom-right, top-left, then top-right.
+
+   The NESTED index can't be decomposed into 'orthogonal' directions.
+
+
+   -XY indexing.  This is arguably the most natural, at least for the
+   internal usage of the healpix code.  Within each base healpix, the
+   healpixes are numbered starting with 0 for the southmost pixel, then
+   increasing first in the "y" (north-east), then in the "x" (north-west)
+   direction.  In other words, within each base healpix there is a grid
+   and we number the pixels "lexicographically" (mod a 135 degree turn).
+
+   .       3       7      11      15
+   .     1   2   5   6   9  10  13  14
+   .  19   0  23   4  27   8  31  12
+   .    18  21  22  25  26  29  30  17
+   .  16  35  20  39  24  43  28  47
+   .    33  34  37  38  41  42  45  46
+   .      32      36      40      44
+
+   Zooming in on the first base healpix, turning 45 degrees to the right,
+   for Nside=4 we get:
+
+   .    3   7  11  15
+   .    2   6  10  14
+   .    1   5   9  13
+   .    0   4   8  12
+
+   Notice that the numbers first increase from bottom to top, then left to
+   right.
+
+   The XY indexing can be decomposed into 'x' and 'y' coordinates
+   (in case that wasn't obvious).
+
+   The major advantage to this indexing scheme is that it extends to
+   fractional coordinates in a natural way: it is meaningful to talk about
+   the position (x,y) = (0.25, 0.6) and you can compute its position.
+
+
+
+
+   In this code, all healpix indexing uses the XY scheme.  If you want to
+   use the other schemes you will have to use the conversion routines:
+   .   healpix_xy_to_ring
+   .   healpix_ring_to_xy
+   .   healpix_xy_to_nested
+   .   healpix_nested_to_xy
 */
-Const int healpix_lex_to_ring(uint hp, uint Nside);
+
 
 /**
-   Converts a ring-indexed healpix into a lexicographical-indexed healpix.
+   Converts a healpix index from the XY scheme to the RING scheme.
 */
-Const int healpix_ring_to_lex(uint ring_index, uint Nside);
+Const int healpix_xy_to_ring(uint hp, uint Nside);
 
 /**
+   Converts a healpix index from the RING scheme to the XY scheme.
+*/
+Const int healpix_ring_to_xy(uint ring_index, uint Nside);
+
+/**
+   Converts a healpix index from the XY scheme to the NESTED scheme.
  */
-Const int healpix_lex_to_nested(uint hp, uint Nside);
+Const int healpix_xy_to_nested(uint hp, uint Nside);
 
 /**
+   Converts a healpix index from the NESTED scheme to the XY scheme.
  */
-Const int healpix_nested_to_lex(uint hp, uint Nside);
+Const int healpix_nested_to_xy(uint nested_index, uint Nside);
 
 /**
-   Decomposes a ring index into the ring number (rings contain healpixels of equal
-   latitude) and longitude index.  Pixels within a ring have longitude index starting
-   at zero for the first pixel with RA >= 0.  Different rings contain different numbers
-   of healpixels.
- */
-void healpix_ring_decompose(uint ring_index, uint Nside, uint* p_ring, uint* p_longind);
+   Decomposes a RING index into the "ring number" (each ring contain
+   healpixels of equal latitude) and "longitude index".  Pixels within a
+   ring have longitude index starting at zero for the first pixel with
+   RA >= 0.  Different rings contain different numbers of healpixels.
+*/
+void healpix_decompose_ring(uint ring_index, uint Nside,
+							uint* p_ring_number, uint* p_longitude_index);
 
 /**
-   Composes a ring index given the ring number and longitude index.
+   Composes a RING index given the "ring number" and "longitude index".
 
    Does NOT check that the values are legal!  Garbage in, garbage out.
- */
-Const int healpix_ring_compose(uint ring, uint longind, uint Nside);
+*/
+Const int healpix_compose_ring(uint ring, uint longind, uint Nside);
 
 /**
-   The following two functions convert (ra,dec) or (x,y,z) into the
-   base-level healpix in the range [0, 11].
-
-   RA, DEC in radians.
+   Decomposes an XY index into the "base healpix" and "x" and "y" coordinates
+   within that healpix.
 */
-Const int radectohealpix(double ra, double dec);
+void healpix_decompose_xy(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
 
-Const int xyztohealpix(double x, double y, double z);
+/**
+   Composes an XY index given the "base healpix" and "x" and "y" coordinates
+   within that healpix.
+*/
+Const uint healpix_compose_xy(uint bighp, uint x, uint y, uint Nside);
 
+
+
+
+/**
+   Converts (RA, DEC) coordinates (in radians) to healpix index.
+*/
+Const uint radectohealpix(double ra, double dec, uint Nside);
+
+/**
+   Converts (x,y,z) coordinates on the unit sphere into a healpix index.
+ */
+Const uint xyztohealpix(double x, double y, double z, uint Nside);
+
+/**
+   Converts (x,y,z) coordinates (stored in an array) on the unit sphere into
+   a healpix index.
+*/
+uint xyzarrtohealpix(double* xyz, uint Nside);
+
+/**
+   Converts a healpix index, plus fractional offsets (dx,dy), into (x,y,z)
+   coordinates on the unit sphere.  (dx,dy) must be in [0, 1].  (0.5, 0.5)
+   is the center of the healpix.  (0,0) is the southernmost corner, (1,1) is
+   the northernmost corner, (1,0) is the easternmost, and (0,1) the
+   westernmost.
+*/
+void healpix_to_xyz(uint hp, uint Nside, double dx, double dy,
+                    double* p_x, double *p_y, double *p_z);
+
+/**
+   Same as healpix_to_xyz, but (x,y,z) are stored in an array.
+*/
+void healpix_to_xyzarr(uint hp, uint Nside, double dx, double dy,
+					   double* xyz);
+
+/**
+   Same as healpix_to_xyz, but returns (RA,DEC) in radians.
+*/
+void healpix_to_radec(uint hp, uint Nside, double dx, double dy,
+					  double* ra, double* dec);
+
+/**
+   Same as healpix_to_radec, but (RA,DEC) are stored in an array.
+ */
+void healpix_to_radecarr(uint hp, uint Nside, double dx, double dy,
+						 double* radec);
+
+/**
+   Computes the approximate side length of a healpix, in arcminutes.
+ */
 Const double healpix_side_length_arcmin(uint Nside);
 
 /**
-   The following functions convert (ra,dec) or (x,y,z) into a finely-
-   pixelized healpix index, according to the HIERARCHICAL scheme,
-   in the range [0, 12 Nside^2).
+   Finds the healpixes neighbouring the given healpix, placing them in the
+   array "neighbour".  Returns the number of neighbours.  You must ensure
+   that "neighbour" has 8 elements.
 
-   RA, DEC in radians.
- */
-Const uint radectohealpix_nside(double ra, double dec, uint Nside);
-
-Const uint xyztohealpix_nside(double x, double y, double z, uint Nside);
-
-/**
-   Finds the fine-scale healpixes neighbouring the given
-   "pix".  Healpixes in the interior of a large healpix will
-   have eight neighbours; pixels near the edges can have fewer.
-
-   Make sure the "neighbour" array has space for at least eight
-   neighbours.
-
-   Returns the number of neighbours.
- */
-uint healpix_get_neighbours_nside(uint pix, uint* neighbour, uint Nside);
-
-void healpix_to_xyz(double dx, double dy, uint hp, uint Nside,
-                    double* rx, double *ry, double *rz);
-
-/**
-   Given a fine-scale healpix number, computes the base healpix and (x,y)
-   coordinates within that healpix.  Uses the Heirarchical numbering scheme
-   for "Nside" values that are a power of 4, and the Lexicographical method
-   otherwise.
-
-   See also healpix_decompose_lex.
- */
-void healpix_decompose(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
-
-/**
-   Returns the fine-scale healpix number given a large-scale healpix
-   and (x,y) coordinates within the large healpix.
-
-   This uses the Hierarchical numbering scheme if "Nside" is a power of 4,
-   and a lexicographical number for other "Nside" values.
-
-   See also healpix_compose_lex, which always uses the lexicographical scheme.
- */
-Const uint healpix_compose(uint bighp, uint x, uint y, uint Nside);
-
-/**
-   Given a fine-scale healpix number, computes the large-scale healpix and (x,y)
-   coordinates within that healpix.
- */
-void healpix_decompose_lex(uint finehp, uint* bighp, uint* x, uint* y, uint Nside);
-
-/**
-   Computes the fine-scale healpix number of a pixel in large-scale healpix
-   "bighp" and position (x,y) within the healpix.
- */
-Const uint healpix_compose_lex(uint bighp, uint x, uint y, uint Nside);
-
-void healpix_to_xyz_lex(double dx, double dy, uint hp, uint Nside,
-						double* p_x, double *p_y, double *p_z);
-
-void healpix_to_xyzarr_lex(double dx, double dy, uint hp, uint Nside,
-						   double* xyz);
+   Healpixes in the interior of a large healpix will have eight neighbours;
+   pixels near the edges can have fewer.
+*/
+uint healpix_get_neighbours(uint hp, uint* neighbour, uint Nside);
 
 #endif

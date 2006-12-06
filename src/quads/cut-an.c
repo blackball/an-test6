@@ -203,13 +203,13 @@ int main(int argc, char** args) {
 		for (i=0; i<HP; i++) {
 			uint big, x, y;
 			uint nn, neigh[8], k;
-			healpix_decompose(i, &big, &x, &y, Nside);
+			healpix_decompose_xy(i, &big, &x, &y, Nside);
 			if (big != bighp)
 				continue;
 			owned[i] = 1;
 			if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
 				// add its neighbours.
-				nn = healpix_get_neighbours_nside(i, neigh, Nside);
+				nn = healpix_get_neighbours(i, neigh, Nside);
 				for (k=0; k<nn; k++)
 					owned[neigh[k]] = 1;
 			}
@@ -311,7 +311,7 @@ int main(int argc, char** args) {
 				exit(-1);
 			}
 
-			hp = radectohealpix_nside(deg2rad(an->ra), deg2rad(an->dec), Nside);
+			hp = radectohealpix(deg2rad(an->ra), deg2rad(an->dec), Nside);
 
 			if (owned && !owned[hp]) {
 				ndiscarded++;
