@@ -29,6 +29,74 @@ Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
+Const int healpix_lex_to_ring(uint hp, uint Nside) {
+	uint bighp,x,y;
+	int frow;
+	int F1;
+	int v;
+	int ring;
+	int index;
+
+	healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
+	frow = bighp / 4;
+	F1 = frow + 2;
+	v = x + y;
+	// "ring" starts from 1 at the north pole and goes to 4Nside-1 at
+	// the south pole; the pixels in each ring have the same latitude.
+	ring = F1 * Nside - v - 1;
+	/*
+	  ring:
+	  [1, Nside] : n pole
+	  (Nside, 2Nside] : n equatorial
+	  (2Nside+1, 3Nside) : s equat
+	  [3Nside, 4Nside-1] : s pole
+	*/
+	// this probably can't happen...
+	if ((ring < 1) || (ring >= 4*Nside)) {
+		fprintf(stderr, "Invalid ring index: %i\n", ring);
+		return -1;
+	}
+	if (ring <= Nside) {
+		// north polar.
+		// left-to-right coordinate within this healpix
+		index = (Nside - 1 - y);
+		// offset from the other big healpixes
+		index += ((bighp % 4) * ring);
+		// offset from the other rings
+		index += ring*(ring-1)*2;
+	} else if (ring >= 3*Nside) {
+		// south polar.
+		// Here I first flip everything so that we label the pixels
+		// at zero starting in the southeast corner, increasing to the
+		// west and north, then subtract that from the total number of
+		// healpixels.
+		int ri = 4*Nside - ring;
+		// index within this healpix
+		index = (ri-1) - x;
+		// big healpixes
+		index += ((3-(bighp % 4)) * ri);
+		// other rings
+		index += ri*(ri-1)*2;
+		// flip!
+		index = 12*Nside*Nside - 1 - index;
+	} else {
+		// equatorial.
+		int s, F2, h;
+		s = (ring - Nside) % 2;
+		F2 = 2*((int)bighp % 4) - (frow % 2) + 1;
+		h = x - y;
+		index = (F2 * (int)Nside + h + s) / 2;
+		// offset from the north polar region:
+		index += Nside*(Nside-1)*2;
+		// offset within the equatorial region:
+		index += Nside * 4 * (ring - Nside);
+		// handle healpix #4 wrap-around
+		if ((bighp == 4) && (y > x))
+			index += (4 * Nside - 1);
+	}
+	return index;
+}
+
 Const double healpix_side_length_arcmin(uint Nside) {
 	return sqrt((4.0 * M_PI * mysquare(180.0 * 60.0 / M_PI)) /
 				(double)(12 * Nside * Nside));

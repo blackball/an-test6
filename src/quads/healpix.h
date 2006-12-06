@@ -31,6 +31,11 @@
 
 
 /**
+   Converts a lexicographical healpix index into a ring index.
+*/
+Const int healpix_lex_to_ring(uint hp, uint Nside);
+
+/**
    The following two functions convert (ra,dec) or (x,y,z) into the
    base-level healpix in the range [0, 11].
 
