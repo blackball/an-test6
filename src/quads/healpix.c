@@ -881,14 +881,14 @@ void healpix_to_xyz(uint hp, uint Nside,
 void healpix_to_xyzarr(uint hp, uint Nside,
 					   double dx, double dy,
 					   double* xyz) {
-	healpix_to_xyz(dx, dy, hp, Nside, xyz, xyz+1, xyz+2);
+	healpix_to_xyz(hp, Nside, dx, dy, xyz, xyz+1, xyz+2);
 }
 
 void healpix_to_radec(uint hp, uint Nside,
 					  double dx, double dy,
 					  double* ra, double* dec) {
 	double xyz[3];
-	healpix_to_xyzarr(dx, dy, hp, Nside, xyz);
+	healpix_to_xyzarr(hp, Nside, dx, dy, xyz);
 	xyzarr2radec(xyz, ra, dec);
 }
 
@@ -896,6 +896,6 @@ void healpix_to_radecarr(uint hp, uint Nside,
 						 double dx, double dy,
 						 double* radec) {
 	double xyz[3];
-	healpix_to_xyzarr(dx, dy, hp, Nside, xyz);
+	healpix_to_xyzarr(hp, Nside, dx, dy, xyz);
 	xyzarr2radec(xyz, radec, radec+1);
 }

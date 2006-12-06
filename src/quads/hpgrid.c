@@ -25,12 +25,14 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hN:n"
+#define OPTIONS "hN:nM:"
 
 void print_help(char* progname) {
     printf("usage:\n\n"
 		   "%s\n"
-		   "  [-N nside]  (default 1)\n"
+		   "  [-N <nside>]  (default 1)\n"
+		   "  [-n]: draw lines to show neighbours\n"
+		   "  [-M <marker-size>]: change the size of the circles on the endpoints of the neighbour lines.\n"
 		   "\n", progname);
 }
 
@@ -40,8 +42,9 @@ int main(int argc, char** args) {
 	int HP, hp;
 	int i;
 	double* radecs;
+	double markersize = 20.0;
 
-	bool do_neighbours = TRUE;
+	bool do_neighbours = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -53,7 +56,10 @@ int main(int argc, char** args) {
 			Nside = atoi(optarg);
 			break;
 		case 'n':
-			do_neighbours = FALSE;
+			do_neighbours = TRUE;
+			break;
+		case 'M':
+			markersize = atof(optarg);
 			break;
 		}
 	}
@@ -115,7 +121,7 @@ int main(int argc, char** args) {
 					   "'MarkerEdgeColor', 'k', "
 					   //"'MarkerFaceColor', 'none', "
 					   "'MarkerFaceColor', 'white', "
-					   "'MarkerSize', 15);\n");
+					   "'MarkerSize', %g);\n", markersize);
 				printf("set(lb, 'LineStyle', '--');\n");
 			}
 		}
