@@ -25,7 +25,7 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hN:"
+#define OPTIONS "hN:n"
 
 void print_help(char* progname) {
     printf("usage:\n\n"
@@ -51,6 +51,9 @@ int main(int argc, char** args) {
 			exit(0);
 		case 'N':
 			Nside = atoi(optarg);
+			break;
+		case 'n':
+			do_neighbours = FALSE;
 			break;
 		}
 	}
@@ -123,13 +126,71 @@ int main(int argc, char** args) {
 		printf("texts(%i)=text(%g, %g, '",
 			   hp+1, radecs[2*hp], radecs[2*hp+1]);
 		//printf("%i", healpix_lex_to_ring(hp, Nside));
+
 		{
 			int ri;
+			int hp2;
 			uint ring, longind;
 			ri = healpix_lex_to_ring(hp, Nside);
-			healpix_ring_decompose(ri, Nside, &ring, &longind);
-			printf("%i,%i", ring, longind);
+			//healpix_ring_decompose(ri, Nside, &ring, &longind);
+			//printf("%i,%i", ring, longind);
+			hp2 = healpix_ring_to_lex(ri, Nside);
+			printf("%i/%i", hp, hp2);
 		}
+
+		if (0) {
+			int ring;
+			uint ringind, longind;
+			
+			ring = healpix_lex_to_ring(hp, Nside);
+			healpix_ring_decompose(ring, Nside, &ringind, &longind);
+			if (ringind <= Nside) {
+			} else if (ringind <= 3*Nside) {
+				int panel;
+				int ind;
+				int bottomleft;
+				int topleft;
+				int frow, F1, F2, s, v, h;
+				int bighp;
+				int x, y;
+				int hp2;
+
+				panel = longind / Nside;
+				ind = longind % Nside;
+				bottomleft = ind < (ringind - Nside + 1) / 2;
+				topleft = ind < (3*Nside - ringind + 1)/2;
+				if (bottomleft && topleft)
+					printf("L");
+				if (!bottomleft && !topleft)
+					printf("R");
+				//if (!bottomleft && topleft)
+				//printf("T");
+				if (bottomleft && !topleft)
+					printf("B");
+
+				if (!bottomleft && topleft) {
+					// top row.
+					bighp = panel;
+					frow = bighp / 4;
+					F1 = frow + 2;
+					F2 = 2*(bighp % 4) - (frow % 2) + 1;
+					s = (ringind - Nside) % 2;
+					v = F1*Nside - ringind - 1;
+					h = 2*longind - s - F2*Nside;
+					x = (v + h) / 2;
+					y = (v - h) / 2;
+					if ((v != x+y) || (h != x-y)) {
+						h--;
+						x = (v + h) / 2;
+						y = (v - h) / 2;
+					}
+					hp2 = healpix_compose_lex(bighp, x, y, Nside);
+					//printf("%i/%i", hp, hp2);
+					printf("%i,%i,%i", bighp, x, y);
+				}
+			}
+		}
+		
 
 		printf("', 'HorizontalAlignment', 'center');\n");
 	}
@@ -142,6 +203,22 @@ int main(int argc, char** args) {
 		if (hp2 != hp) {
 			fprintf(stderr, "Error: %i -> ring %i, longind %i -> %i.\n",
 					hp, ring, longind, hp2);
+		}
+	}
+
+	for (hp=0; hp<HP; hp++) {
+		int ring, hp2;
+		ring = healpix_lex_to_ring(hp, Nside);
+		hp2 = healpix_ring_to_lex(ring, Nside);
+		if (hp2 != hp) {
+			uint bighp, x, y;
+			uint bighp2, x2, y2;
+			uint ringind, longind;
+			healpix_decompose_lex(hp, &bighp, &x, &y, Nside);
+			healpix_decompose_lex(hp2, &bighp2, &x2, &y2, Nside);
+			healpix_ring_decompose(ring, Nside, &ringind, &longind);
+			fprintf(stderr, "Error: hp %i (bighp %i, x %i, y %i) -> ring %i (ring %i, long %i) -> hp %i (bighp %i, x %i, y %i).\n",
+					hp, bighp, x, y, ring, ringind, longind, hp2, bighp2, x2, y2);
 		}
 	}
 
