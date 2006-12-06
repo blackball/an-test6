@@ -25,7 +25,7 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hN:nM:"
+#define OPTIONS "hN:nM:F:rRe"
 
 void print_help(char* progname) {
     printf("usage:\n\n"
@@ -33,8 +33,20 @@ void print_help(char* progname) {
 		   "  [-N <nside>]  (default 1)\n"
 		   "  [-n]: draw lines to show neighbours\n"
 		   "  [-M <marker-size>]: change the size of the circles on the endpoints of the neighbour lines.\n"
+		   "  [-F <font-size>]\n"
+		   "  [-r]: show RING index\n"
+		   "  [-R]: show decomposed RING index (ring number + longitude index)\n"
+		   "  [-e]: show NESTED index\n"
 		   "\n", progname);
 }
+
+enum modes {
+	MODE_XY,
+	MODE_XY_D,
+	MODE_RING,
+	MODE_RING_D,
+	MODE_NESTED
+};
 
 int main(int argc, char** args) {
     int c;
@@ -43,8 +55,10 @@ int main(int argc, char** args) {
 	int i;
 	double* radecs;
 	double markersize = 20.0;
-
+	double fontsize = 10.0;
 	bool do_neighbours = FALSE;
+
+	int mode = MODE_XY;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -60,6 +74,18 @@ int main(int argc, char** args) {
 			break;
 		case 'M':
 			markersize = atof(optarg);
+			break;
+		case 'F':
+			fontsize = atof(optarg);
+			break;
+		case 'r':
+			mode = MODE_RING;
+			break;
+		case 'R':
+			mode = MODE_RING_D;
+			break;
+		case 'e':
+			mode = MODE_NESTED;
 			break;
 		}
 	}
@@ -130,40 +156,39 @@ int main(int argc, char** args) {
 	for (hp=0; hp<HP; hp++) {
 		printf("texts(%i)=text(%g, %g, '",
 			   hp+1, radecs[2*hp], radecs[2*hp+1]);
-		//printf("%i", healpix_lex_to_ring(hp, Nside));
 
-		{
-			int ni;
-			int hp2;
-			ni = healpix_xy_to_nested(hp, Nside);
-			hp2 = healpix_nested_to_xy(ni, Nside);
-			//printf("%i", ni);
-			if (hp != hp2)
-				printf("%i/%i", hp, hp2);
-			else
-				printf("%i", hp);
+		switch (mode) {
+		case MODE_XY:
+			printf("%i", hp);
+			break;
+		case MODE_XY_D:
+			{
+				uint bighp, x, y;
+				healpix_decompose_xy(hp, &bighp, &x, &y, Nside);
+				printf("%i,%i,%i", bighp, x, y);
+			}
+			break;
+		case MODE_RING:
+			printf("%i", healpix_xy_to_ring(hp, Nside));
+			break;
+		case MODE_RING_D:
+			{
+				uint ring;
+				uint ringnum, longind;
+				ring = healpix_xy_to_ring(hp, Nside);
+				healpix_decompose_ring(ring, Nside, &ringnum, &longind);
+				printf("%i,%i", ringnum, longind);
+			}
+			break;
+		case MODE_NESTED:
+			printf("%i", healpix_xy_to_nested(hp, Nside));
+			break;
 		}
 
-		/*
-		  {
-		  int ri;
-		  int hp2;
-		  uint ring, longind;
-		  ri = healpix_lex_to_ring(hp, Nside);
-		  printf("%i", ri);
-		  healpix_ring_decompose(ri, Nside, &ring, &longind);
-		  printf("%i,%i", ring, longind);
-		  hp2 = healpix_ring_to_lex(ri, Nside);
-		  if (hp == hp2)
-		  printf("%i",hp);
-		  else
-		  printf("%i/%i", hp, hp2);
-		  }
-		*/
-
-		printf("', 'HorizontalAlignment', 'center');\n");
+		printf("', 'HorizontalAlignment', 'center', 'FontSize', %g);\n", fontsize);
 	}
 
+	// Verify decompose / compose RING.
 	for (hp=0; hp<HP; hp++) {
 		uint ring, longind;
 		int hp2;
@@ -175,6 +200,7 @@ int main(int argc, char** args) {
 		}
 	}
 
+	// Verify   XY -> RING -> XY
 	for (hp=0; hp<HP; hp++) {
 		int ring, hp2;
 		ring = healpix_xy_to_ring(hp, Nside);
