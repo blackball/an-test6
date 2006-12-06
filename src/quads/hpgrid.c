@@ -134,6 +134,17 @@ int main(int argc, char** args) {
 		printf("', 'HorizontalAlignment', 'center');\n");
 	}
 
+	for (hp=0; hp<HP; hp++) {
+		uint ring, longind;
+		int hp2;
+		healpix_ring_decompose(hp, Nside, &ring, &longind);
+		hp2 = healpix_ring_compose(ring, longind, Nside);
+		if (hp2 != hp) {
+			fprintf(stderr, "Error: %i -> ring %i, longind %i -> %i.\n",
+					hp, ring, longind, hp2);
+		}
+	}
+
 	free(radecs);
 
 	return 0;

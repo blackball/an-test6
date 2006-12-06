@@ -29,6 +29,22 @@ Const static Inline double mysquare(double d) {
 	return d*d;
 }
 
+Const int healpix_ring_compose(uint ring, uint longind, uint Nside) {
+	if (ring <= Nside)
+		// north polar
+		return ring * (ring-1) * 2 + longind;
+	if (ring < 3*Nside)
+		// equatorial
+		return Nside*(Nside-1)*2 + Nside*4*(ring-Nside) + longind;
+	{
+		//int ind;
+		//ind = Nside*(Nside-1)*2 + Nside*4*(2*Nside-1)
+		int ri;
+		ri = 4*Nside - ring;
+		return 12*Nside*Nside-1 - ( ri*(ri-1)*2 + (ri*4 - 1 - longind) );
+	}
+}
+
 void healpix_ring_decompose(uint hp, uint Nside, uint* p_ring, uint* p_longind) {
 	// this could be written in closed form...
 	int longind;

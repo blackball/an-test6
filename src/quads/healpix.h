@@ -44,6 +44,13 @@ Const int healpix_lex_to_ring(uint hp, uint Nside);
 void healpix_ring_decompose(uint ring_index, uint Nside, uint* p_ring, uint* p_longind);
 
 /**
+   Composes a ring index given the ring number and longitude index.
+
+   Does NOT check that the values are legal!  Garbage in, garbage out.
+ */
+Const int healpix_ring_compose(uint ring, uint longind, uint Nside);
+
+/**
    The following two functions convert (ra,dec) or (x,y,z) into the
    base-level healpix in the range [0, 11].
 
