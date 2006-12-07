@@ -36,7 +36,7 @@
 #include "boilerplate.h"
 #include "handlehits.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:RS:at";
+char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:S:at";
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -62,7 +62,6 @@ void printHelp(char* progname) {
 			"   [-t]: print agreement distances.\n"
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
-			"   [-R]: read all at once\n"
 			"   <input-match-file> ...\n"
 			"\n", progname);
 }
@@ -140,7 +139,6 @@ int main(int argc, char *argv[]) {
 	int firstfieldfile=1, lastfieldfile=INT_MAX-1;
 	bool leftovers = FALSE;
 	bool agree = FALSE;
-	//double ramin, ramax, decmin, decmax;
 	double agreetolarcsec = DEFAULT_AGREE_TOL;
 	matchfile** mfs;
 	MatchObj** mos;
@@ -155,17 +153,11 @@ int main(int argc, char *argv[]) {
 	//bool do_agree_overlap = FALSE;
 	int fieldfile;
 	int totalsolved, totalunsolved;
-	bool read_all = FALSE;
-	bl** lists;
-	int* inds;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'S':
 			solvedfile = optarg;
-			break;
-		case 'R':
-			read_all = TRUE;
 			break;
 		case 's':
 			solvedserver = optarg;
@@ -185,20 +177,6 @@ int main(int argc, char *argv[]) {
 		case 'm':
 			agreetolarcsec = atof(optarg);
 			break;
-			/*
-			  case 'r':
-			  ramin = atof(optarg);
-			  break;
-			  case 'R':
-			  ramax = atof(optarg);
-			  break;
-			  case 'd':
-			  decmin = atof(optarg);
-			  break;
-			  case 'D':
-			  decmax = atof(optarg);
-			  break;
-			*/
 		case 'o':
 			overlap_tokeep = atof(optarg);
 			break;
@@ -328,46 +306,16 @@ int main(int argc, char *argv[]) {
 	mos =  calloc(ninputfiles, sizeof(MatchObj*));
 	eofs = calloc(ninputfiles, sizeof(bool));
 	eofieldfile = malloc(ninputfiles * sizeof(bool));
+	mfs = malloc(ninputfiles * sizeof(matchfile*));
 
-	if (read_all) {
-		mfs = NULL;
-		lists = malloc(ninputfiles * sizeof(bl*));
-		inds = calloc(ninputfiles, sizeof(int));
-
-		for (i=0; i<ninputfiles; i++) {
-			matchfile* mf;
-			lists[i] = bl_new(1024, sizeof(MatchObj));
-			fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
-			mf = matchfile_open(inputfiles[i]);
-			if (!mf) {
-				fprintf(stderr, "Failed to open matchfile %s.\n", inputfiles[i]);
-				exit(-1);
-			}
-			for (;;) {
-				MatchObj* mo = matchfile_buffered_read_match(mf);
-				if (!mo)
-					break;
-				bl_append(lists[i], mo);
-			}
-			fprintf(stderr, "Read %i matches.\n", bl_size(lists[i]));
-			matchfile_close(mf);
-		}
-
-	} else {
-		mfs = malloc(ninputfiles * sizeof(matchfile*));
-		lists = NULL;
-		inds = NULL;
-
-		for (i=0; i<ninputfiles; i++) {
-			fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
-			mfs[i] = matchfile_open(inputfiles[i]);
-			if (!mfs[i]) {
-				fprintf(stderr, "Failed to open matchfile %s.\n", inputfiles[i]);
-				exit(-1);
-			}
+	for (i=0; i<ninputfiles; i++) {
+		fprintf(stderr, "Opening file %s...\n", inputfiles[i]);
+		mfs[i] = matchfile_open(inputfiles[i]);
+		if (!mfs[i]) {
+			fprintf(stderr, "Failed to open matchfile %s.\n", inputfiles[i]);
+			exit(-1);
 		}
 	}
-
 
 	// we assume the matchfiles are sorted by field id and number.
 	for (fieldfile=firstfieldfile; fieldfile<=lastfieldfile; fieldfile++) {
@@ -403,19 +351,12 @@ int main(int argc, char *argv[]) {
 				int ns = 0;
 
 				while (1) {
+					MatchObj* copy;
+
 					if (eofs[i])
 						break;
-					if (!mos[i]) {
-						if (read_all) {
-							if (unlikely(inds[i] == bl_size(lists[i])))
-								mos[i] = NULL;
-							else {
-								mos[i] = bl_access(lists[i], inds[i]);
-								inds[i]++;
-							}
-						} else
-							mos[i] = matchfile_buffered_read_match(mfs[i]);
-					}
+					if (!mos[i])
+						mos[i] = matchfile_buffered_read_match(mfs[i]);
 					if (unlikely(!mos[i])) {
 						eofs[i] = TRUE;
 						break;
@@ -447,11 +388,9 @@ int main(int argc, char *argv[]) {
 						fflush(stderr);
 					}
 
-					if (!read_all) {
-						MatchObj* copy = malloc(sizeof(MatchObj));
-						memcpy(copy, mos[i], sizeof(MatchObj));
-						mos[i] = copy;
-					}
+					copy = malloc(sizeof(MatchObj));
+					memcpy(copy, mos[i], sizeof(MatchObj));
+					mos[i] = copy;
 
 					if (do_best_overlap) {
 						pl_insert_sorted(overlaps, mos[i], compare_overlaps);
@@ -468,20 +407,15 @@ int main(int argc, char *argv[]) {
 
 			write_field(hits, overlaps, fieldfile, fieldnum, leftovers, agree, TRUE);
 
-			// check for memleaks...
+			// FIXME: check for memleaks...
 			if (hits)
 				handlehits_clear(hits);
 
-			if (read_all) {
-				if (overlaps)
-					pl_remove_all(overlaps);
-			} else {
-				if (overlaps) {
-					int i;
-					for (i=0; i<pl_size(overlaps); i++)
-						free_MatchObj(pl_get(overlaps, i));
-					pl_remove_all(overlaps);
-				}
+			if (overlaps) {
+				int i;
+				for (i=0; i<pl_size(overlaps); i++)
+					free_MatchObj(pl_get(overlaps, i));
+				pl_remove_all(overlaps);
 			}
 
 			fprintf(stderr, "This file: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
@@ -497,19 +431,11 @@ int main(int argc, char *argv[]) {
 			break;
 	}
 
-	if (read_all) {
-		for (i=0; i<ninputfiles; i++)
-			bl_free(lists[i]);
-		free(lists);
-		free(inds);
-	} else {
-		for (i=0; i<ninputfiles; i++)
-			matchfile_close(mfs[i]);
-		free(mfs);
-	}
+	for (i=0; i<ninputfiles; i++)
+		matchfile_close(mfs[i]);
+	free(mfs);
 	free(mos);
 	free(eofs);
-
 
 	fprintf(stderr, "\nRead %i matches.\n", nread);
 	fflush(stderr);
