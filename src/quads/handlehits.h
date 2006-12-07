@@ -48,8 +48,6 @@ struct handlehits {
 	// number of times we've run verification
 	int nverified;
 
-	// NO (best keepable hit found so far (highest overlap))
-
 	// best hit that surpasses the "solve" requirements.
 	MatchObj* bestmo;
 	// index in the hitlist of "bestmo" 

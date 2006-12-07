@@ -31,7 +31,6 @@ struct match_struct {
 	double sMax[3];
 	double sMinMax[3];
 	double sMaxMin[3];
-    //double vector[6];
 	bool transform_valid;
 	double transform[9];
 	int16_t noverlap;
@@ -40,10 +39,11 @@ struct match_struct {
 	// this isn't stored, it's computed from noverlap and ninfield.
 	float overlap;
 
+	// WCS params?
+
 	// proposed location of the center of the field
 	//  = normalize(sMin + sMax);
 	double center[3];
-	//bool center_valid;
 
 	int fieldnum;
 	int fieldfile;
@@ -53,6 +53,8 @@ struct match_struct {
 	char fieldname[32];
 
 	bool parity;
+
+	// int nagree?
 
 	// how many field quads did we try before finding this one?
 	int quads_tried;
