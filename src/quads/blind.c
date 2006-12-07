@@ -728,11 +728,6 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	  fflush(stderr);
 	  }
 	*/
-
-	/*
-	  p->quitNow = TRUE;
-	*/
-
 	return 1;
 }
 
@@ -884,6 +879,7 @@ static void solve_fields() {
 		solver.mo_template = &template;
 		solver.circle = circle;
 
+		handlehits_free_matchobjs(hits);
 		handlehits_clear(hits);
 
 		hits->field = field;

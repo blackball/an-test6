@@ -66,6 +66,9 @@ bool handlehits_add(handlehits* hh, MatchObj* mo);
 // retrieve the list of MatchObj* with overlap above the "keep" threshold
 //pl* handlehits_get_keepers(handlehits* hh);
 
+// goes through the hitlist and frees MatchObjs.
+void handlehits_free_matchobjs(handlehits* hh);
+
 // reset state: empty the lists, etc, in preparation for starting a new field.
 void handlehits_clear(handlehits* hh);
 

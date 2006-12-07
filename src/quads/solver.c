@@ -492,15 +492,6 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		memcpy(mo->sMinMax, sMinMax, 3 * sizeof(double));
 		memcpy(mo->sMaxMin, sMaxMin, 3 * sizeof(double));
 
-		/*
-		  mo->vector[0] = sMin[0];
-		  mo->vector[1] = sMin[1];
-		  mo->vector[2] = sMin[2];
-		  mo->vector[3] = sMax[0];
-		  mo->vector[4] = sMax[1];
-		  mo->vector[5] = sMax[2];
-		*/
-
 		mo->code_err = krez->sdists[jj];
 
 		/*
@@ -508,38 +499,6 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		  idB = getstarid(iB);
 		  idC = getstarid(iC);
 		  idD = getstarid(iD);
-		*/
-
-		/*
-
-		mo->corners[0] = xy_refx(cornerpix, 0);
-		mo->corners[1] = xy_refy(cornerpix, 0);
-		mo->corners[2] = xy_refx(cornerpix, 1);
-		mo->corners[3] = xy_refy(cornerpix, 1);
-
-		mo->starA[0] = star_ref(sA, 0);
-		mo->starA[1] = star_ref(sA, 1);
-		mo->starA[2] = star_ref(sA, 2);
-		mo->starB[0] = star_ref(sB, 0);
-		mo->starB[1] = star_ref(sB, 1);
-		mo->starB[2] = star_ref(sB, 2);
-		mo->starC[0] = star_ref(sC, 0);
-		mo->starC[1] = star_ref(sC, 1);
-		mo->starC[2] = star_ref(sC, 2);
-		mo->starD[0] = star_ref(sD, 0);
-		mo->starD[1] = star_ref(sD, 1);
-		mo->starD[2] = star_ref(sD, 2);
-
-		mo->fieldA[0] = xy_refx(ABCDpix, 0);
-		mo->fieldA[1] = xy_refy(ABCDpix, 0);
-		mo->fieldB[0] = xy_refx(ABCDpix, 1);
-		mo->fieldB[1] = xy_refy(ABCDpix, 1);
-		mo->fieldC[0] = xy_refx(ABCDpix, 2);
-		mo->fieldC[1] = xy_refy(ABCDpix, 2);
-		mo->fieldD[0] = xy_refx(ABCDpix, 3);
-		mo->fieldD[1] = xy_refy(ABCDpix, 3);
-
-		mo->abcdorder = ABCD_ORDER;
 		*/
 
 		if (params->handlehit(params, mo))

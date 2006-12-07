@@ -25,6 +25,11 @@ handlehits* handlehits_new() {
 	return hh;
 }
 
+void handlehits_free_matchobjs(handlehits* hh) {
+	if (!hh || !hh->hits) return;
+	hitlist_free_matchobjs(hh->hits);
+}
+
 void handlehits_clear(handlehits* hh) {
 	if (hh->hits)
 		hitlist_clear(hh->hits);
