@@ -229,9 +229,6 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		// make agreetol be RMS.
-		agreetol *= sqrt(2.0);
-
 		reset_next_field();
 
 		mf = matchfile_open_for_writing(matchfname);

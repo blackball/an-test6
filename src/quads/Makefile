@@ -219,9 +219,9 @@ blind: blind.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -pthread
 
-agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist_healpix.o \
-		solvedfile.o solvedclient.o intmap.o healpix.o $(UTIL_OBJS) \
-		$(ANUTILS_LIB) $(QFITS_LIB)
+agreeable: agreeable.o matchfile.o bl.o hitsfile.o hitlist.o handlehits.o \
+		solvedfile.o solvedclient.o intmap.o healpix.o verify.o pnpoly.o \
+		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 printmatch: printmatch.o matchfile.o bl.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
