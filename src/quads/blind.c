@@ -32,8 +32,6 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include <sched.h>
-#include <pthread.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -65,9 +63,7 @@ static void printHelp(char* progname) {
 }
 
 static void solve_fields();
-
 static int read_parameters();
-
 static void reset_next_field();
 
 #define DEFAULT_CODE_TOL .01
@@ -98,7 +94,6 @@ double overlap_tosolve;
 double overlap_tokeep;
 int min_ninfield;
 int do_correspond;
-int threads;
 double cxdx_margin;
 int maxquads;
 
@@ -106,13 +101,9 @@ bool quiet;
 bool silent;
 
 int firstfield, lastfield;
-
 il* fieldlist;
-pthread_mutex_t fieldlist_mutex;
 
 matchfile* mf;
-pthread_mutex_t matchfile_mutex;
-
 idfile* id;
 quadfile* quads;
 xylist* xyls;
@@ -127,7 +118,6 @@ int main(int argc, char *argv[]) {
     uint numfields;
 	char* progname = argv[0];
 	int i;
-	int err;
 
 	if (argc == 2 && strcmp(argv[1],"-s") == 0) {
 		silent = TRUE;
@@ -148,17 +138,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	fieldlist = il_new(256);
-
-	if ((err = pthread_mutex_init(&fieldlist_mutex, NULL)) ||
-		(err = pthread_mutex_init(&matchfile_mutex, NULL))) {
-		fprintf(stderr, "pthread_mutex_init failed: %s\n", strerror(errno));
-		exit(-1);
-	}
-
 	qfits_err_statset(1);
 
 	for (;;) {
-
 		tic();
 
 		fieldfname = NULL;
@@ -192,12 +174,9 @@ int main(int argc, char *argv[]) {
 		overlap_tokeep = 0.0;
 		min_ninfield = 0;
 		do_correspond = 1;
-		threads = 1;
 		cxdx_margin = 0.0;
 		quiet = FALSE;
-
 		il_remove_all(fieldlist);
-
 		quads = NULL;
 		starkd = NULL;
 		nverified = 0;
@@ -241,7 +220,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
 			fprintf(stderr, "maxquads %i\n", maxquads);
 			fprintf(stderr, "quiet %i\n", quiet);
-			fprintf(stderr, "threads %i\n", threads);
 		}
 
 		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -344,7 +322,6 @@ int main(int argc, char *argv[]) {
 				if (!cxdx) {
 					fprintf(stderr, "Warning: you asked for a CXDX margin, but ckdt file %s does not have the CXDX FITS header.\n",
 							treefname);
-					//exit(-1);
 				}
 			}
 			// check for CIRCLE field in ckdt header...
@@ -435,13 +412,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	il_free(fieldlist);
-
-	if ((err = pthread_mutex_destroy(&fieldlist_mutex)) ||
-		(err = pthread_mutex_destroy(&matchfile_mutex))) {
-		fprintf(stderr, "pthread_mutex_destroy failed: %s\n", strerror(err));
-		exit(-1);
-	}
-
 	return 0;
 }
 
@@ -515,8 +485,6 @@ static int read_parameters() {
 		} else if (is_word(buffer, "ycol ", &nextword)) {
 			free(ycolname);
 			ycolname = strdup(nextword);
-		} else if (is_word(buffer, "threads ", &nextword)) {
-			threads = atoi(nextword);
 		} else if (is_word(buffer, "agreetol ", &nextword)) {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "index ", &nextword)) {
@@ -606,8 +574,6 @@ static int read_parameters() {
 
 struct solvethread_args {
 	pl* winning_list;
-	int threadnum;
-	bool running;
 	hitlist* hits;
 	pl* verified;
 };
@@ -634,11 +600,6 @@ static void write_hits(int fieldnum, pl* matches) {
 	static int index = 0;
 	static bl* cached = NULL;
 	int k, nextfld;
-
-	if (pthread_mutex_lock(&matchfile_mutex)) {
-		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
-		exit(-1);
-	}
 
 	if (!cached)
 		cached = bl_new(16, sizeof(cached_hits));
@@ -749,11 +710,6 @@ static void write_hits(int fieldnum, pl* matches) {
 	}
 
  bailout:
-	if (pthread_mutex_unlock(&matchfile_mutex)) {
-		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
-		exit(-1);
-	}
-
 	return;
 }
 
@@ -1064,11 +1020,6 @@ static void reset_next_field() {
 static int next_field(xy** p_field, qfits_header** p_fieldhdr) {
 	int rtn;
 
-	if (pthread_mutex_lock(&fieldlist_mutex)) {
-		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
-		exit(-1);
-	}
-
 	if (next_field_index >= il_size(fieldlist))
 		rtn = -1;
 	else {
@@ -1080,25 +1031,16 @@ static int next_field(xy** p_field, qfits_header** p_fieldhdr) {
 			*p_fieldhdr = xylist_get_field_header(xyls, rtn);
 	}
 
-	if (pthread_mutex_unlock(&fieldlist_mutex)) {
-		fprintf(stderr, "pthread_mutex_lock failed: %s\n", strerror(errno));
-		exit(-1);
-	}
-
 	return rtn;
 }
 
-static void* solvethread_run(void* varg) {
-	threadargs* my = varg;
+static void* solvethread_run(threadargs* my) {
 	solver_params solver;
 	double last_utime, last_stime;
 	double utime, stime;
 	struct timeval wtime, last_wtime;
 	int nfields;
 	double* field = NULL;
-
-	if (!silent)
-		fprintf(stderr, "Thread %i starting.\n", my->threadnum);
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
@@ -1114,8 +1056,6 @@ static void* solvethread_run(void* varg) {
 
 	if (do_verify)
 		my->verified = pl_new(32);
-	else
-		my->verified = NULL;
 
 	if (funits_upper != 0.0) {
 		solver.arcsec_per_pixel_upper = funits_upper;
@@ -1321,58 +1261,16 @@ static void* solvethread_run(void* varg) {
 	free(field);
 	pl_free(my->verified);
 
-	if (!silent)
-		fprintf(stderr, "Thread %i finished.\n", my->threadnum);
-	my->running = FALSE;
 	return 0;
 }
 
 static void solve_fields() {
-	int i;
-	int STACKSIZE = 1024*1024;
-	threadargs* allargs[threads];
-	unsigned char* allstacks[threads];
+	threadargs args;
 
-	for (i=0; i<threads; i++) {
-		threadargs* args;
-		unsigned char* stack;
-		args = calloc(1, sizeof(threadargs));
-		stack = calloc(STACKSIZE, 1);
-		allargs[i] = args;
-		allstacks[i] = stack;
-		args->threadnum = (i+1);
-		args->running = TRUE;
-		if (i == (threads - 1))
-			solvethread_run(args);
-		else {
-			pthread_t thread;
-			if (pthread_create(&thread, NULL, solvethread_run, args)) {
-				fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
-				break;
-			}
-		}
-	}
-
-	for (;;) {
-		bool alldone = TRUE;
-		for (i=0; i<(threads-1); i++) {
-			if (allargs[i]->running) {
-				alldone = FALSE;
-				break;
-			}
-		}
-		if (alldone)
-			break;
-		sleep(5);
-	}
-
+	memset(&args, 0, sizeof(threadargs));
+	solvethread_run(&args);
 	// DEBUG
 	write_hits(-1, NULL);
-
-	for (i=0; i<threads; i++) {
-		free(allargs[i]);
-		free(allstacks[i]);
-	}
 }
 
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
