@@ -65,17 +65,26 @@ void hitlist_compute_vector(MatchObj* mo);
 
 hitlist* hitlist_new(double AgreeTolArcSec, int maxNside);
 
-void hitlist_remove_all(hitlist* hlist);
+//void hitlist_remove_all(hitlist* hlist);
 
 void hitlist_clear(hitlist* hlist);
 
 void hitlist_free(hitlist* hlist);
 
-//pl* hitlist_healpix_copy_list(hitlist* hlist, int agreelistindex);
-//int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* mo, int* p_agreelistindex);
-
+/**
+   Adds a hit.  Returns the index where the MatchObj was stored; this can
+   be used later to retrieve a list of agreeing hits, etc.
+*/
 int hitlist_add_hit(hitlist* hlist, MatchObj* mo);
 
+/**
+   Retrieves a list of hits that agree with the hit stored at the given
+   index.
+
+   If "alist" is non-NULL, uses that to stored the hits (and returns it).
+   Otherwise, allocates and returns a new list (if any hits agree) or NULL;
+   you are responsible for calling pl_free on it.
+ */
 pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist);
 
 #endif

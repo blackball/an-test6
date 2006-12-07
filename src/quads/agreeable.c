@@ -29,7 +29,7 @@
 #include "bl.h"
 #include "matchobj.h"
 #include "hitsfile.h"
-#include "hitlist_healpix.h"
+#include "hitlist.h"
 #include "matchfile.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
 	if (do_best_overlap || do_first_overlap)
 		overlaps = pl_new(32);
 	else
-		hl = hitlist_healpix_new(agreetolarcsec);
+		hl = hitlist_new(agreetolarcsec, 0);
 
 	solved = il_new(256);
 	unsolved = il_new(256);
@@ -451,9 +451,9 @@ int main(int argc, char *argv[]) {
 						pl_insert_sorted(overlaps, mos[i], compare_objs_used);
 					} else {
 						// compute (x,y,z) center, scale, rotation.
-						hitlist_healpix_compute_vector(mos[i]);
+						hitlist_compute_vector(mos[i]);
 						// add the match...
-						hitlist_healpix_add_hit(hl, mos[i], NULL);
+						hitlist_add_hit(hl, mos[i], NULL);
 					}
 					mos[i] = NULL;
 				}
@@ -465,12 +465,12 @@ int main(int argc, char *argv[]) {
 
 			if (read_all) {
 				if (hl)
-					hitlist_healpix_remove_all(hl);
+					hitlist_remove_all(hl);
 				if (overlaps)
 					pl_remove_all(overlaps);
 			} else {
 				if (hl)
-					hitlist_healpix_clear(hl);
+					hitlist_clear(hl);
 				if (overlaps) {
 					int i;
 					for (i=0; i<pl_size(overlaps); i++)
@@ -510,7 +510,7 @@ int main(int argc, char *argv[]) {
 	fflush(stderr);
 
 	if (hl)
-		hitlist_healpix_free(hl);
+		hitlist_free(hl);
 	if (overlaps)
 		pl_free(overlaps);
 

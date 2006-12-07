@@ -55,7 +55,6 @@ void hitlist_compute_vector(MatchObj* mo) {
 	mo->center[1] = (mo->sMin[1] + mo->sMax[1]);
 	mo->center[2] = (mo->sMin[2] + mo->sMax[2]);
 	normalize_3(mo->center);
-	//mo->center_valid = TRUE;
 }
 
 hitlist* hitlist_new(double AgreeArcSec, int maxNside) {
@@ -107,23 +106,6 @@ int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double*
 			*p_agreedist2 = -1.0;
 		return 0;
 	}
-
-	/*
-	  if (!m1->center_valid) {
-	  m1->center[0] = (m1->sMin[0] + m1->sMax[0]);
-	  m1->center[1] = (m1->sMin[1] + m1->sMax[1]);
-	  m1->center[2] = (m1->sMin[2] + m1->sMax[2]);
-	  normalize_3(m1->center);
-	  m1->center_valid = TRUE;
-	  }
-	  if (!m2->center_valid) {
-	  m2->center[0] = (m2->sMin[0] + m2->sMax[0]);
-	  m2->center[1] = (m2->sMin[1] + m2->sMax[1]);
-	  m2->center[2] = (m2->sMin[2] + m2->sMax[2]);
-	  normalize_3(m2->center);
-	  m2->center_valid = TRUE;
-	  }
-	*/
 
 	d2 = distsq(m1->center, m2->center, 3);
 	if (p_agreedist2)

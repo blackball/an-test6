@@ -43,7 +43,6 @@
 #include "solver_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
-//#include "hitlist_healpix.h"
 #include "hitlist.h"
 #include "tic.h"
 #include "quadfile.h"
@@ -384,10 +383,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		id = idfile_open(idfname, 0);
-		if (!id) {
+		if (!id)
 			fprintf(stderr, "Couldn't open id file %s.\n", idfname);
-			//exit(-1);
-		}
 
 		// Do it!
 		solve_fields();
@@ -608,7 +605,6 @@ static int read_parameters() {
 }
 
 struct solvethread_args {
-	//int winning_moind;
 	pl* winning_list;
 	int threadnum;
 	bool running;
@@ -1027,7 +1023,6 @@ int handlehit(solver_params* p, MatchObj* mo) {
 			fprintf(stderr, "Found a match that produces %4.1f%% overlapping stars.\n", 100.0 * mo->overlap);
 			fflush(stderr);
 		}
-		//my->winning_moind = moindex;
 		my->winning_list = pl_dup(agreelist);
 		pl_append(my->winning_list, mo);
 		p->quitNow = TRUE;
@@ -1224,7 +1219,6 @@ static void* solvethread_run(void* varg) {
 		solver.circle = circle;
 		solver.userdata = my;
 
-		//my->winning_moind = -1;
 		my->winning_list = NULL;
 		my->hits = hitlist_new(agreetol, 0);
 
@@ -1243,7 +1237,6 @@ static void* solvethread_run(void* varg) {
 					solver.numtries, maxquads);
 		}
 
-		//if (my->winning_moind == -1) {
 		if (!my->winning_list) {
 			// didn't solve it...
 			if (!silent)
