@@ -44,7 +44,6 @@ struct solver_params {
 	int fieldnum;
 	char* solvedfn;
 	bool do_solvedserver;
-	char* wcs_filename;
 	double cxdx_margin;
 	bool circle;
 	bool quiet;
@@ -76,7 +75,7 @@ struct solver_params {
 	int numtries;
 	int nummatches;
 	int numscaleok;
-	int mostagree;
+	//int mostagree;
 	// this is set to an absolute value.
 	int objsused;
 	// number of quads skipped because of cxdx constraints.

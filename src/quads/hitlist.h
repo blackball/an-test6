@@ -84,7 +84,10 @@ int hitlist_add_hit(hitlist* hlist, MatchObj* mo);
    If "alist" is non-NULL, uses that to stored the hits (and returns it).
    Otherwise, allocates and returns a new list (if any hits agree) or NULL;
    you are responsible for calling pl_free on it.
+
+   If "ilist" is non-NULL, places the indices of the agreeing hits in it.
  */
-pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist);
+pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist,
+						 il* ilist);
 
 #endif

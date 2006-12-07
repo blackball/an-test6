@@ -287,8 +287,8 @@ void solve_field(solver_params* params) {
 
 		if (!params->quiet)
 			fprintf(stderr,
-					"  field %u, object %u of %u: %i agree, %i tried, %i matched.\n",
-					params->fieldnum, newpoint+1, numxy, params->mostagree, params->numtries, params->nummatches);
+					"  field %u, object %u of %u: %i quads tried, %i matched.\n",
+					params->fieldnum, newpoint+1, numxy, params->numtries, params->nummatches);
 
 		if ((params->maxtries && (params->numtries >= params->maxtries)) ||
 			params->quitNow)
@@ -543,13 +543,11 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		mo->abcdorder = ABCD_ORDER;
 		*/
 
-		nagree = params->handlehit(params, mo);
+		if (params->handlehit(params, mo))
+			return;
 		// Note - after this call returns, the "mo" may
 		// have been freed!
 
-		if (nagree > params->mostagree) {
-			params->mostagree = nagree;
-		}
 		if (params->quitNow)
 			return;
     }

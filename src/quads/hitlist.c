@@ -115,7 +115,8 @@ int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double*
 	return 1;
 }
 
-pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist) {
+pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist,
+						 il* ilist) {
 	MatchObj* match;
 	int p, pix;
 	pixinfo* pinfo;
@@ -169,6 +170,8 @@ pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist) {
 				agreelist = pl_new(4);
 
 			pl_append(agreelist, mo);
+			if (ilist)
+				il_append(ilist, ind);
 		}
 	}
 	return agreelist;

@@ -56,6 +56,7 @@
 #include "svd.h"
 #include "fitsioutils.h"
 #include "qfits_error.h"
+#include "handlehits.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -65,6 +66,7 @@ static void printHelp(char* progname) {
 static void solve_fields();
 static int read_parameters();
 static void reset_next_field();
+static void write_hits(int fieldnum, pl* matches);
 
 #define DEFAULT_CODE_TOL .01
 #define DEFAULT_PARITY_FLIP FALSE
@@ -90,10 +92,10 @@ double agreetol;
 bool do_verify;
 int nagree_toverify;
 double verify_dist2;
-double overlap_tosolve;
 double overlap_tokeep;
-int min_ninfield;
-int do_correspond;
+double overlap_tosolve;
+int ninfield_tokeep;
+int ninfield_tosolve;
 double cxdx_margin;
 int maxquads;
 
@@ -109,10 +111,10 @@ quadfile* quads;
 xylist* xyls;
 startree* starkd;
 codetree *codekd;
-
 bool circle;
-
 int nverified;
+
+handlehits* hits;
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -170,10 +172,10 @@ int main(int argc, char *argv[]) {
 		agreetol = 0.0;
 		nagree_toverify = 0;
 		verify_dist2 = 0.0;
-		overlap_tosolve = 0.0;
 		overlap_tokeep = 0.0;
-		min_ninfield = 0;
-		do_correspond = 1;
+		overlap_tosolve = 0.0;
+		ninfield_tosolve = 0;
+		ninfield_tokeep = 0;
 		cxdx_margin = 0.0;
 		quiet = FALSE;
 		il_remove_all(fieldlist);
@@ -211,12 +213,12 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "agreetol %g\n", agreetol);
 			fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
 			fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
-			fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
 			fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
-			fprintf(stderr, "min_ninfield %i\n", min_ninfield);
+			fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
+			fprintf(stderr, "ninfield_tokeep %i\n", ninfield_tokeep);
+			fprintf(stderr, "ninfield_tosolve %i\n", ninfield_tosolve);
 			fprintf(stderr, "xcolname %s\n", xcolname);
 			fprintf(stderr, "ycolname %s\n", ycolname);
-			fprintf(stderr, "do_correspond %i\n", do_correspond);
 			fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
 			fprintf(stderr, "maxquads %i\n", maxquads);
 			fprintf(stderr, "quiet %i\n", quiet);
@@ -365,6 +367,8 @@ int main(int argc, char *argv[]) {
 
 		// Do it!
 		solve_fields();
+		// DEBUG
+		write_hits(-1, NULL);
 
 		if (donefname) {
 			FILE* batchfid = NULL;
@@ -464,6 +468,33 @@ static int read_parameters() {
 					"    run\n"
 					"    help\n"
 					"    quit\n");
+
+		} else if (is_word(buffer, "agreetol ", &nextword)) {
+			agreetol = atof(nextword);
+		} else if (is_word(buffer, "verify_dist ", &nextword)) {
+			verify_dist2 = arcsec2distsq(atof(nextword));
+		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
+			nagree_toverify = atoi(nextword);
+		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
+			overlap_tosolve = atof(nextword);
+		} else if (is_word(buffer, "overlap_tokeep ", &nextword)) {
+			overlap_tokeep = atof(nextword);
+		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
+			// LEGACY
+			fprintf(stderr, "Warning, the \"min_ninfield\" command is deprecated."
+					"Use \"ninfield_tokeep\" and \"ninfield_tosolve\" instead.\n");
+			ninfield_tokeep = ninfield_tosolve = atoi(nextword);
+		} else if (is_word(buffer, "ninfield_tokeep ", &nextword)) {
+			ninfield_tokeep = atoi(nextword);
+		} else if (is_word(buffer, "ninfield_tosolve ", &nextword)) {
+			ninfield_tosolve = atoi(nextword);
+		} else if (is_word(buffer, "match ", &nextword)) {
+			matchfname = strdup(nextword);
+		} else if (is_word(buffer, "solved ", &nextword)) {
+			solvedfname = strdup(nextword);
+		} else if (is_word(buffer, "solvedserver ", &nextword)) {
+			solvedserver = strdup(nextword);
+
 		} else if (is_word(buffer, "silent", &nextword)) {
 			silent = TRUE;
 		} else if (is_word(buffer, "quiet", &nextword)) {
@@ -477,44 +508,24 @@ static int read_parameters() {
 			maxquads = atoi(nextword);
 		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
 			cxdx_margin = atof(nextword);
-		} else if (is_word(buffer, "do_correspond ", &nextword)) {
-			do_correspond = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
 			free(xcolname);
 			xcolname = strdup(nextword);
 		} else if (is_word(buffer, "ycol ", &nextword)) {
 			free(ycolname);
 			ycolname = strdup(nextword);
-		} else if (is_word(buffer, "agreetol ", &nextword)) {
-			agreetol = atof(nextword);
 		} else if (is_word(buffer, "index ", &nextword)) {
 			char* fname = nextword;
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			idfname = mk_idfn(fname);
 			startreefname = mk_streefn(fname);
-		} else if (is_word(buffer, "verify_dist ", &nextword)) {
-			verify_dist2 = arcsec2distsq(atof(nextword));
-		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
-			nagree_toverify = atoi(nextword);
-		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
-			overlap_tosolve = atof(nextword);
-		} else if (is_word(buffer, "overlap_tokeep ", &nextword)) {
-			overlap_tokeep = atof(nextword);
-		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
-			min_ninfield = atoi(nextword);
 		} else if (is_word(buffer, "field ", &nextword)) {
 			fieldfname = mk_fieldfn(nextword);
 		} else if (is_word(buffer, "fieldid ", &nextword)) {
 			fieldid = atoi(nextword);
-		} else if (is_word(buffer, "match ", &nextword)) {
-			matchfname = strdup(nextword);
 		} else if (is_word(buffer, "done ", &nextword)) {
 			donefname = strdup(nextword);
-		} else if (is_word(buffer, "solved ", &nextword)) {
-			solvedfname = strdup(nextword);
-		} else if (is_word(buffer, "solvedserver ", &nextword)) {
-			solvedserver = strdup(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
 			startdepth = atoi(nextword);
 		} else if (is_word(buffer, "depth ", &nextword)) {
@@ -571,13 +582,6 @@ static int read_parameters() {
 		}
 	}
 }
-
-struct solvethread_args {
-	pl* winning_list;
-	hitlist* hits;
-	pl* verified;
-};
-typedef struct solvethread_args threadargs;
 
 struct cached_hits {
 	int fieldnum;
@@ -711,20 +715,6 @@ static void write_hits(int fieldnum, pl* matches) {
 
  bailout:
 	return;
-}
-
-void verify(MatchObj* mo, solver_params* params, double* field, int nfield, int fieldnum, int nagree,
-			int* correspondences) {
-	int matches, unmatches, conflicts;
-
-	verify_hit(starkd->tree, mo, field, nfield, verify_dist2,
-			   &matches, &unmatches, &conflicts, NULL, NULL, correspondences);
-	if (!quiet && !silent)
-		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
-				fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
- 	fflush(stderr);
-	mo->nverified = nverified;
-	nverified++;
 }
 
 static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
@@ -906,110 +896,28 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 	return wcs;
 }
 
-int handlehit(solver_params* p, MatchObj* mo) {
-	static pl* agreelist = NULL;
+static int blind_handle_hit(solver_params* p, MatchObj* mo) {
+	bool solved;
 
-	int n = 0;
-	threadargs* my = p->userdata;
-	int* corr = NULL;
-	int moindex;
-	bool solved = FALSE;
+	solved = handlehits_add(hits, mo);
+	if (!solved)
+		return 0;
 
-	assert(mo->timeused >= 0.0);
+	/*
+	  if (!quiet && !silent)
+	  fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
+	  fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
+	  fflush(stderr);
+	  }
+	*/
 
-	// for safety's sake (this should be cleared already, but just in case)...
-	if (agreelist)
-		pl_remove_all(agreelist);
+	/*
+	  p->quitNow = TRUE;
+	*/
 
-	// compute field center.
-	hitlist_compute_vector(mo);
-	moindex = hitlist_add_hit(my->hits, mo);
-	agreelist = hitlist_get_agreeing(my->hits, moindex, agreelist);
-	n = 1 + (agreelist ? pl_size(agreelist) : 0);
-
-	if (!do_verify || (n < nagree_toverify)) {
-		if (agreelist) pl_remove_all(agreelist);
-		return n;
-	}
-
-	if (p->wcs_filename) {
-		int i;
-		corr = malloc(p->nfield * sizeof(int));
-		for (i=0; i<p->nfield; i++)
-			corr[i] = -1;
-	}
-
-	verify(mo, p, p->field, p->nfield, p->fieldnum, n, corr);
-	
-	if (overlap_tosolve == 0.0) {
-		free(corr);
-		if (agreelist) pl_remove_all(agreelist);
-		return n;
-	}
-
-	if (n == nagree_toverify) {
-		// run verification on the other matches
-		int j;
-		MatchObj* mo1 = NULL;
-		for (j=0; agreelist && j<pl_size(agreelist); j++) {
-			mo1 = pl_get(agreelist, j);
-			if (mo1->overlap == 0.0) {
-				verify(mo1, p, p->field, p->nfield, p->fieldnum, n, NULL);
-				if (mo1->overlap >= overlap_tokeep)
-					pl_append(my->verified, mo1);
-			}
-			if (mo1->overlap >= overlap_tosolve)
-				solved = TRUE;
-		}
-	}
-	if (mo->overlap >= overlap_tokeep)
-		pl_append(my->verified, mo);
-	if (mo->overlap >= overlap_tosolve)
-		solved = TRUE;
-
-	if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
-		fprintf(stderr, "    Match has only %i index stars in the field; %i required.\n",
-				mo->ninfield, min_ninfield);
-		solved = FALSE;
-	}
-
-	// we got enough overlaps to solve the field.
-	if (solved) {
-		if (!silent) {
-			fprintf(stderr, "Found a match that produces %4.1f%% overlapping stars.\n", 100.0 * mo->overlap);
-			fflush(stderr);
-		}
-		my->winning_list = pl_dup(agreelist);
-		pl_append(my->winning_list, mo);
-		p->quitNow = TRUE;
-
-		if (p->wcs_filename) {
-			FILE* fout;
-			qfits_header* wcs = compute_wcs(mo, p, corr);
-			fout = fopen(p->wcs_filename, "ab");
-			if (!fout) {
-				fprintf(stderr, "Failed to open WCS output file %s: %s\n", p->wcs_filename, strerror(errno));
-				exit(-1);
-			}
-
-			boilerplate_add_fits_headers(wcs);
-			qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
-			if (p->mo_template && p->mo_template->fieldname[0])
-				qfits_header_add(wcs, fieldid_key, p->mo_template->fieldname, "Field name copied from input.", NULL);
-
-			if (qfits_header_dump(wcs, fout)) {
-				fprintf(stderr, "Failed to write FITS WCS header.\n");
-				exit(-1);
-			}
-			fits_pad_file(fout);
-			qfits_header_destroy(wcs);
-			fclose(fout);
-		}
-	}
-	if (agreelist) pl_remove_all(agreelist);
-	free(corr);
-	return n;
+	return 1;
 }
+
 
 static int next_field_index = 0;
 
@@ -1034,7 +942,7 @@ static int next_field(xy** p_field, qfits_header** p_fieldhdr) {
 	return rtn;
 }
 
-static void* solvethread_run(threadargs* my) {
+static void solve_fields() {
 	solver_params solver;
 	double last_utime, last_stime;
 	double utime, stime;
@@ -1050,12 +958,9 @@ static void* solvethread_run(threadargs* my) {
 	solver.endobj = enddepth;
 	solver.maxtries = maxquads;
 	solver.codetol = codetol;
-	solver.handlehit = handlehit;
+	solver.handlehit = blind_handle_hit;
 	solver.cxdx_margin = cxdx_margin;
 	solver.quiet = quiet;
-
-	if (do_verify)
-		my->verified = pl_new(32);
 
 	if (funits_upper != 0.0) {
 		solver.arcsec_per_pixel_upper = funits_upper;
@@ -1070,6 +975,17 @@ static void* solvethread_run(threadargs* my) {
 			fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
 
+	hits = handlehits_new();
+	hits->agreetol = agreetol;
+	hits->verify_dist2 = verify_dist2;
+	hits->nagree_toverify = nagree_toverify;
+	hits->overlap_tokeep  = overlap_tokeep;
+	hits->overlap_tosolve = overlap_tosolve;
+	hits->ninfield_tokeep  = ninfield_tokeep;
+	hits->ninfield_tosolve = ninfield_tosolve;
+	hits->startree = starkd->tree;
+	hits->do_corr = (wcs_template ? 1 : 0);
+
 	nfields = xyls->nfields;
 
 	for (;;) {
@@ -1077,7 +993,6 @@ static void* solvethread_run(threadargs* my) {
 		int fieldnum;
 		MatchObj template;
 		int nfield;
-		char wcs_fn[1024];
 		qfits_header* fieldhdr = NULL;
 
 		fieldnum = next_field(&thisfield, &fieldhdr);
@@ -1139,17 +1054,11 @@ static void* solvethread_run(threadargs* my) {
 				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
 		}
 
-		if (wcs_template) {
-			sprintf(wcs_fn, wcs_template, fieldnum);
-			solver.wcs_filename = wcs_fn;
-		}
-
 		solver.fieldid = fieldid;
 		solver.fieldnum = fieldnum;
 		solver.numtries = 0;
 		solver.nummatches = 0;
 		solver.numscaleok = 0;
-		solver.mostagree = 0;
 		solver.numcxdxskipped = 0;
 		solver.startobj = startdepth;
 		solver.field = field;
@@ -1157,10 +1066,11 @@ static void* solvethread_run(threadargs* my) {
 		solver.quitNow = FALSE;
 		solver.mo_template = &template;
 		solver.circle = circle;
-		solver.userdata = my;
 
-		my->winning_list = NULL;
-		my->hits = hitlist_new(agreetol, 0);
+		handlehits_clear(hits);
+
+		hits->field = field;
+		hits->nfield = nfield;
 
 		if (!silent)
 			fprintf(stderr, "Solving field %i.\n", fieldnum);
@@ -1177,52 +1087,45 @@ static void* solvethread_run(threadargs* my) {
 					solver.numtries, maxquads);
 		}
 
-		if (!my->winning_list) {
-			// didn't solve it...
+		// Write the keepable hits.
+		if (hits->keepers)
+			write_hits(fieldnum, hits->keepers);
+		else
+			write_hits(fieldnum, NULL);
+
+		if (hits->bestmo) {
+			// Field solved!
 			if (!silent)
-				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
-			// ... but write the matches for which verification was run
-			// to collect good stats.
-			if (do_verify) {
-				// write 'em!
-				write_hits(fieldnum, my->verified);
-			} else {
-				write_hits(fieldnum, NULL);
-			}
-		} else {
-			double maxoverlap = 0;
-			double sumoverlap = 0;
-			if (do_verify) {
-				int k;
-				for (k=0; k<pl_size(my->winning_list); k++) {
-					MatchObj* mo = pl_get(my->winning_list, k);
-					// run verification on any of the matches that haven't
-					// already been done.
-					if (mo->overlap == 0.0) {
-						verify(mo, &solver, solver.field, solver.nfield,
-							   solver.fieldnum, pl_size(my->winning_list), NULL);
-						if (do_verify)
-							pl_append(my->verified, mo);
-					}
+				fprintf(stderr, "Field %i solved with overlap %g.\n", fieldnum,
+						hits->bestmo->overlap);
 
-					sumoverlap += mo->overlap;
-					if (mo->overlap > maxoverlap)
-						maxoverlap = mo->overlap;
+			// Write WCS, if requested.
+			if (wcs_template) {
+				char wcs_fn[1024];
+				FILE* fout;
+				qfits_header* wcs;
+
+				sprintf(wcs_fn, wcs_template, fieldnum);
+				fout = fopen(wcs_fn, "ab");
+				if (!fout) {
+					fprintf(stderr, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
+					exit(-1);
 				}
-				if (!silent)
-					fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
-							fieldnum, pl_size(my->winning_list), maxoverlap, sumoverlap / (double)pl_size(my->winning_list));
-			} else if (!silent)
-				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(my->winning_list));
-			
-			// write 'em!
-			if (do_verify)
-				write_hits(fieldnum, my->verified);
-			else
-				write_hits(fieldnum, my->winning_list);
-			pl_free(my->winning_list);
-			my->winning_list = NULL;
+				wcs = compute_wcs(hits->bestmo, &solver, hits->bestcorr);
+				boilerplate_add_fits_headers(wcs);
+				qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
+				if (solver.mo_template && solver.mo_template->fieldname[0])
+					qfits_header_add(wcs, fieldid_key, solver.mo_template->fieldname, "Field name (copied from input field)", NULL);
+				if (qfits_header_dump(wcs, fout)) {
+					fprintf(stderr, "Failed to write FITS WCS header.\n");
+					exit(-1);
+				}
+				fits_pad_file(fout);
+				qfits_header_destroy(wcs);
+				fclose(fout);
+			}
 
+			// Record in solved file, or send to solved server.
 			if (solvedfname) {
 				if (!silent)
 					fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, solvedfname);
@@ -1234,12 +1137,11 @@ static void* solvethread_run(threadargs* my) {
 				solvedclient_set(fieldid, fieldnum);
 			}
 
+		} else {
+			// Field unsolved.
+			if (!silent)
+				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 		}
-		hitlist_clear(my->hits);
-		hitlist_free(my->hits);
-
-		if (do_verify)
-			pl_remove_all(my->verified);
 
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
@@ -1259,18 +1161,7 @@ static void* solvethread_run(threadargs* my) {
 	}
 
 	free(field);
-	pl_free(my->verified);
-
-	return 0;
-}
-
-static void solve_fields() {
-	threadargs args;
-
-	memset(&args, 0, sizeof(threadargs));
-	solvethread_run(&args);
-	// DEBUG
-	write_hits(-1, NULL);
+	handlehits_free(hits);
 }
 
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
