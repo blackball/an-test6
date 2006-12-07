@@ -55,11 +55,13 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 			corr[i] = -1;
 	}
 
-	verify_hit(hh->startree, mo, hh->field, hh->nfield, hh->verify_dist2,
-			   NULL, NULL, NULL,
-			   NULL, NULL,
-			   corr);
-	mo->nverified = hh->nverified++;
+	if (mo->overlap == 0.0) {
+		verify_hit(hh->startree, mo, hh->field, hh->nfield, hh->verify_dist2,
+				   NULL, NULL, NULL,
+				   NULL, NULL,
+				   corr);
+		mo->nverified = hh->nverified++;
+	}
 
 	if ((mo->overlap < hh->overlap_tokeep) ||
 		(mo->ninfield < hh->ninfield_tokeep)) {
