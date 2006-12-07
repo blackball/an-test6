@@ -215,7 +215,7 @@ homer: homer.o donuts.o xylist.o bl.o dualtree_rangesearch.o dualtree.o \
 
 blind: blind.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
 		solvedclient.o solvedfile.o healpix.o idfile.o verify.o svd.o \
-		xylist.o hitlist_healpix.o intmap.o pnpoly.o \
+		xylist.o hitlist.o intmap.o pnpoly.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -pthread
 

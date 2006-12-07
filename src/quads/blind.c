@@ -43,7 +43,8 @@
 #include "solver_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
-#include "hitlist_healpix.h"
+//#include "hitlist_healpix.h"
+#include "hitlist.h"
 #include "tic.h"
 #include "quadfile.h"
 #include "idfile.h"
@@ -607,7 +608,8 @@ static int read_parameters() {
 }
 
 struct solvethread_args {
-	int winning_listind;
+	//int winning_moind;
+	pl* winning_list;
 	int threadnum;
 	bool running;
 	hitlist* hits;
@@ -953,22 +955,30 @@ static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
 }
 
 int handlehit(solver_params* p, MatchObj* mo) {
-	int listind;
+	static pl* agreelist = NULL;
+
 	int n = 0;
 	threadargs* my = p->userdata;
 	int* corr = NULL;
+	int moindex;
+	bool solved = FALSE;
 
 	assert(mo->timeused >= 0.0);
 
-	// compute (x,y,z) center, scale, rotation.
-	hitlist_healpix_compute_vector(mo);
-	n = hitlist_healpix_add_hit(my->hits, mo, &listind);
+	// for safety's sake (this should be cleared already, but just in case)...
+	if (agreelist)
+		pl_remove_all(agreelist);
 
-	if (!do_verify)
-		return n;
+	// compute field center.
+	hitlist_compute_vector(mo);
+	moindex = hitlist_add_hit(my->hits, mo);
+	agreelist = hitlist_get_agreeing(my->hits, moindex, agreelist);
+	n = 1 + (agreelist ? pl_size(agreelist) : 0);
 
-	if (n < nagree_toverify)
+	if (!do_verify || (n < nagree_toverify)) {
+		if (agreelist) pl_remove_all(agreelist);
 		return n;
+	}
 
 	if (p->wcs_filename) {
 		int i;
@@ -978,73 +988,75 @@ int handlehit(solver_params* p, MatchObj* mo) {
 	}
 
 	verify(mo, p, p->field, p->nfield, p->fieldnum, n, corr);
-
-	if (overlap_tosolve > 0.0) {
-		bool solved = FALSE;
-		if (n == nagree_toverify) {
-			// run verification on the other matches
-			int j;
-			MatchObj* mo1 = NULL;
-			pl* list = hitlist_healpix_copy_list(my->hits, listind);
-			for (j=0; j<pl_size(list); j++) {
-				mo1 = pl_get(list, j);
-				if (mo1->overlap == 0.0) {
-					verify(mo1, p, p->field, p->nfield, p->fieldnum, n, NULL);
-					if (mo1->overlap >= overlap_tokeep)
-						pl_append(my->verified, mo1);
-				}
-				if (mo1->overlap >= overlap_tosolve)
-					solved = TRUE;
-			}
-			pl_free(list);
-		}
-		if (mo->overlap >= overlap_tokeep)
-			pl_append(my->verified, mo);
-		if (mo->overlap >= overlap_tosolve)
-			solved = TRUE;
-
-		if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
-			fprintf(stderr, "    Match has only %i index stars in the field; %i required.\n",
-					mo->ninfield, min_ninfield);
-			solved = FALSE;
-		}
-
-		// we got enough overlaps to solve the field.
-		if (solved) {
-			if (!silent) {
-				fprintf(stderr, "Found a match that produces %4.1f%% overlapping stars.\n", 100.0 * mo->overlap);
-				fflush(stderr);
-			}
-			my->winning_listind = listind;
-			p->quitNow = TRUE;
-
-			if (p->wcs_filename) {
-				FILE* fout;
-				qfits_header* wcs = compute_wcs(mo, p, corr);
-				fout = fopen(p->wcs_filename, "ab");
-				if (!fout) {
-					fprintf(stderr, "Failed to open WCS output file %s: %s\n", p->wcs_filename, strerror(errno));
-					exit(-1);
-				}
-
-				boilerplate_add_fits_headers(wcs);
-				qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
-				if (p->mo_template && p->mo_template->fieldname[0])
-					qfits_header_add(wcs, fieldid_key, p->mo_template->fieldname, "Field name copied from input.", NULL);
-
-				if (qfits_header_dump(wcs, fout)) {
-					fprintf(stderr, "Failed to write FITS WCS header.\n");
-					exit(-1);
-				}
-				fits_pad_file(fout);
-				qfits_header_destroy(wcs);
-				fclose(fout);
-			}
-		}
+	
+	if (overlap_tosolve == 0.0) {
+		free(corr);
+		if (agreelist) pl_remove_all(agreelist);
+		return n;
 	}
 
-	free(corr);
+	if (n == nagree_toverify) {
+		// run verification on the other matches
+		int j;
+		MatchObj* mo1 = NULL;
+		for (j=0; agreelist && j<pl_size(agreelist); j++) {
+			mo1 = pl_get(agreelist, j);
+			if (mo1->overlap == 0.0) {
+				verify(mo1, p, p->field, p->nfield, p->fieldnum, n, NULL);
+				if (mo1->overlap >= overlap_tokeep)
+					pl_append(my->verified, mo1);
+			}
+			if (mo1->overlap >= overlap_tosolve)
+				solved = TRUE;
+		}
+	}
+	if (mo->overlap >= overlap_tokeep)
+		pl_append(my->verified, mo);
+	if (mo->overlap >= overlap_tosolve)
+		solved = TRUE;
 
+	if (solved && min_ninfield && (mo->ninfield < min_ninfield)) {
+		fprintf(stderr, "    Match has only %i index stars in the field; %i required.\n",
+				mo->ninfield, min_ninfield);
+		solved = FALSE;
+	}
+
+	// we got enough overlaps to solve the field.
+	if (solved) {
+		if (!silent) {
+			fprintf(stderr, "Found a match that produces %4.1f%% overlapping stars.\n", 100.0 * mo->overlap);
+			fflush(stderr);
+		}
+		//my->winning_moind = moindex;
+		my->winning_list = pl_dup(agreelist);
+		pl_append(my->winning_list, mo);
+		p->quitNow = TRUE;
+
+		if (p->wcs_filename) {
+			FILE* fout;
+			qfits_header* wcs = compute_wcs(mo, p, corr);
+			fout = fopen(p->wcs_filename, "ab");
+			if (!fout) {
+				fprintf(stderr, "Failed to open WCS output file %s: %s\n", p->wcs_filename, strerror(errno));
+				exit(-1);
+			}
+
+			boilerplate_add_fits_headers(wcs);
+			qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
+			if (p->mo_template && p->mo_template->fieldname[0])
+				qfits_header_add(wcs, fieldid_key, p->mo_template->fieldname, "Field name copied from input.", NULL);
+
+			if (qfits_header_dump(wcs, fout)) {
+				fprintf(stderr, "Failed to write FITS WCS header.\n");
+				exit(-1);
+			}
+			fits_pad_file(fout);
+			qfits_header_destroy(wcs);
+			fclose(fout);
+		}
+	}
+	if (agreelist) pl_remove_all(agreelist);
+	free(corr);
 	return n;
 }
 
@@ -1212,9 +1224,9 @@ static void* solvethread_run(void* varg) {
 		solver.circle = circle;
 		solver.userdata = my;
 
-		my->winning_listind = -1;
-		my->hits = hitlist_healpix_new(agreetol);
-		my->hits->do_correspond = do_correspond;
+		//my->winning_moind = -1;
+		my->winning_list = NULL;
+		my->hits = hitlist_new(agreetol, 0);
 
 		if (!silent)
 			fprintf(stderr, "Solving field %i.\n", fieldnum);
@@ -1231,7 +1243,8 @@ static void* solvethread_run(void* varg) {
 					solver.numtries, maxquads);
 		}
 
-		if (my->winning_listind == -1) {
+		//if (my->winning_moind == -1) {
+		if (!my->winning_list) {
 			// didn't solve it...
 			if (!silent)
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
@@ -1246,15 +1259,15 @@ static void* solvethread_run(void* varg) {
 		} else {
 			double maxoverlap = 0;
 			double sumoverlap = 0;
-			pl* list = hitlist_healpix_copy_list(my->hits, my->winning_listind);
 			if (do_verify) {
 				int k;
-				for (k=0; k<pl_size(list); k++) {
-					MatchObj* mo = pl_get(list, k);
+				for (k=0; k<pl_size(my->winning_list); k++) {
+					MatchObj* mo = pl_get(my->winning_list, k);
 					// run verification on any of the matches that haven't
 					// already been done.
 					if (mo->overlap == 0.0) {
-						verify(mo, &solver, solver.field, solver.nfield, solver.fieldnum, pl_size(list), NULL);
+						verify(mo, &solver, solver.field, solver.nfield,
+							   solver.fieldnum, pl_size(my->winning_list), NULL);
 						if (do_verify)
 							pl_append(my->verified, mo);
 					}
@@ -1265,16 +1278,17 @@ static void* solvethread_run(void* varg) {
 				}
 				if (!silent)
 					fprintf(stderr, "Field %i: %i in agreement.  Overlap of winning cluster: max %f, avg %f\n",
-							fieldnum, pl_size(list), maxoverlap, sumoverlap / (double)pl_size(list));
+							fieldnum, pl_size(my->winning_list), maxoverlap, sumoverlap / (double)pl_size(my->winning_list));
 			} else if (!silent)
-				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(list));
+				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, pl_size(my->winning_list));
 			
 			// write 'em!
 			if (do_verify)
 				write_hits(fieldnum, my->verified);
 			else
-				write_hits(fieldnum, list);
-			pl_free(list);
+				write_hits(fieldnum, my->winning_list);
+			pl_free(my->winning_list);
+			my->winning_list = NULL;
 
 			if (solvedfname) {
 				if (!silent)
@@ -1288,8 +1302,8 @@ static void* solvethread_run(void* varg) {
 			}
 
 		}
-		hitlist_healpix_clear(my->hits);
-		hitlist_healpix_free(my->hits);
+		hitlist_clear(my->hits);
+		hitlist_free(my->hits);
 
 		if (do_verify)
 			pl_remove_all(my->verified);

@@ -493,12 +493,14 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		memcpy(mo->sMinMax, sMinMax, 3 * sizeof(double));
 		memcpy(mo->sMaxMin, sMaxMin, 3 * sizeof(double));
 
-		mo->vector[0] = sMin[0];
-		mo->vector[1] = sMin[1];
-		mo->vector[2] = sMin[2];
-		mo->vector[3] = sMax[0];
-		mo->vector[4] = sMax[1];
-		mo->vector[5] = sMax[2];
+		/*
+		  mo->vector[0] = sMin[0];
+		  mo->vector[1] = sMin[1];
+		  mo->vector[2] = sMin[2];
+		  mo->vector[3] = sMax[0];
+		  mo->vector[4] = sMax[1];
+		  mo->vector[5] = sMax[2];
+		*/
 
 		mo->code_err = krez->sdists[jj];
 

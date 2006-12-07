@@ -76,6 +76,6 @@ void hitlist_free(hitlist* hlist);
 
 int hitlist_add_hit(hitlist* hlist, MatchObj* mo);
 
-pl* hitlist_get_agreeing(hitlist* hlist, int moindex);
+pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist);
 
 #endif

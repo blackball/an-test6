@@ -31,7 +31,7 @@ struct match_struct {
 	double sMax[3];
 	double sMinMax[3];
 	double sMaxMin[3];
-    double vector[6];
+    //double vector[6];
 	bool transform_valid;
 	double transform[9];
 	int16_t noverlap;
@@ -40,7 +40,11 @@ struct match_struct {
 	// this isn't stored, it's computed from noverlap and ninfield.
 	float overlap;
 
-	// formerly matchfile_entry:
+	// proposed location of the center of the field
+	//  = normalize(sMin + sMax);
+	double center[3];
+	//bool center_valid;
+
 	int fieldnum;
 	int fieldfile;
 	int16_t indexid;
@@ -63,8 +67,6 @@ struct match_struct {
 	int nverified;
 	// how many seconds of CPU time have we spent on this field?
 	float timeused;
-
-	//void* extra;
 };
 typedef struct match_struct MatchObj;
 

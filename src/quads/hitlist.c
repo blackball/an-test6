@@ -51,15 +51,14 @@ static void clear_pixinfo(pixinfo* node) {
 }
 
 void hitlist_compute_vector(MatchObj* mo) {
-	mo->center[0] = (m1->sMin[0] + m1->sMax[0]);
-	mo->center[1] = (m1->sMin[1] + m1->sMax[1]);
-	mo->center[2] = (m1->sMin[2] + m1->sMax[2]);
+	mo->center[0] = (mo->sMin[0] + mo->sMax[0]);
+	mo->center[1] = (mo->sMin[1] + mo->sMax[1]);
+	mo->center[2] = (mo->sMin[2] + mo->sMax[2]);
 	normalize_3(mo->center);
 	//mo->center_valid = TRUE;
 }
 
 hitlist* hitlist_new(double AgreeArcSec, int maxNside) {
-	int p;
 	double AgreeTol2;
 	int Nside;
 	hitlist* hl;
@@ -126,7 +125,7 @@ int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double*
 	  }
 	*/
 
-	d2 = distsq(vec1, vec2, 3);
+	d2 = distsq(m1->center, m2->center, 3);
 	if (p_agreedist2)
 		*p_agreedist2 = d2;
 	if (d2 > maxagreedist2)
@@ -134,11 +133,13 @@ int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double*
 	return 1;
 }
 
-pl* hitlist_get_agreeing(hitlist* hlist, int moindex) {
+pl* hitlist_get_agreeing(hitlist* hlist, int moindex, pl* alist) {
 	MatchObj* match;
-	int pix;
+	int p, pix;
 	pixinfo* pinfo;
-	pl* agreelist = NULL;
+	pl* agreelist;
+
+	agreelist = (alist ? alist : NULL);
 
 	match = pl_get(hlist->matchlist, moindex);
 
@@ -193,7 +194,6 @@ pl* hitlist_get_agreeing(hitlist* hlist, int moindex) {
 
 int hitlist_add_hit(hitlist* hlist, MatchObj* match) {
 	int pix;
-	int p;
 	int matchind;
 	pixinfo* pinfo;
 
