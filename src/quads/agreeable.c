@@ -318,6 +318,7 @@ int main(int argc, char *argv[]) {
 					// remaining matches in this file...
 					if (solved_it && (mode == MODE_FIRST)) {
 						ns++;
+						mos[i] = NULL;
 						continue;
 					}
 

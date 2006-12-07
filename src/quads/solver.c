@@ -502,7 +502,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		*/
 
 		if (params->handlehit(params, mo))
-			return;
+			params->quitNow = TRUE;
 		// Note - after this call returns, the "mo" may
 		// have been freed!
 

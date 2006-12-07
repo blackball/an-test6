@@ -46,8 +46,10 @@ void handlehits_clear(handlehits* hh) {
 }
 
 void handlehits_free(handlehits* hh) {
+	if (!hh) return;
 	handlehits_clear(hh);
-	hitlist_free(hh->hits);
+	if (hh->hits)
+		hitlist_free(hh->hits);
 	free(hh);
 }
 
