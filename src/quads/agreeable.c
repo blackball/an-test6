@@ -28,7 +28,6 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "matchobj.h"
-#include "hitsfile.h"
 #include "hitlist.h"
 #include "matchfile.h"
 #include "solvedclient.h"
@@ -36,7 +35,7 @@
 #include "boilerplate.h"
 #include "handlehits.h"
 
-char* OPTIONS = "hH:n:A:B:L:M:m:o:f:bFs:I:J:S:at";
+char* OPTIONS = "hn:A:B:L:M:m:o:f:bFs:I:J:S:at";
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -45,12 +44,11 @@ void printHelp(char* progname) {
 			"   [-B last-field]\n"
 			"   [-I first-field-filenum]\n"
 			"   [-J last-field-filenum]\n"
-			"   [-H hits-file]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
 			"   [-m agreement-tolerance-in-arcsec]\n"
- 			"   [-n agreeing-matches_needed_to_agree]\n"
-			"   [-o overlap_needed_to_solve]\n"
+ 			"   [-n matches-needed-to-agree]\n"
+			"   [-o overlap-needed-to-solve]\n"
 			"   [-f minimum-field-objects-needed-to-solve]\n"
 			"   (      [-b]: best-overlap mode\n"
 			"     or   [-F]: first-solved mode (smallest number of field objs)\n"
@@ -66,9 +64,6 @@ void printHelp(char* progname) {
 			"\n", progname);
 }
 
-static int find_correspondences(pl* hits, uint* starids, uint* fieldids,
-								int* p_ok);
-
 static void write_field(handlehits* hits,
 						pl* overlaps,
 						int fieldfile,
@@ -82,8 +77,6 @@ static void write_field(handlehits* hits,
 
 unsigned int min_matches_to_agree = DEFAULT_MIN_MATCHES_TO_AGREE;
 
-FILE *hitfid = NULL;
-char *hitfname = NULL;
 char* leftoverfname = NULL;
 matchfile* leftovermf = NULL;
 char* agreefname = NULL;
@@ -131,7 +124,6 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[]) {
     int argchar;
 	char* progname = argv[0];
-	hits_header hitshdr;
 	char** inputfiles = NULL;
 	int ninputfiles = 0;
 	int i;
@@ -201,9 +193,6 @@ int main(int argc, char *argv[]) {
 		case 'B':
 			lastfield = atoi(optarg);
 			break;
-		case 'H':
-			hitfname = optarg;
-			break;
 		case 'n':
 			min_matches_to_agree = atoi(optarg);
 			break;
@@ -241,9 +230,6 @@ int main(int argc, char *argv[]) {
 	if (print_agree) {
 		agreedistlist = dl_new(256);
 	}
-
-	if (hitfname)
-		fopenout(hitfname, &hitfid);
 
 	if (leftoverfname) {
 		leftovermf = matchfile_open_for_writing(leftoverfname);
@@ -290,16 +276,6 @@ int main(int argc, char *argv[]) {
 
 	solved = il_new(256);
 	unsolved = il_new(256);
-
-	if (hitfid) {
-		// write HITS header.
-		hits_header_init(&hitshdr);
-		hitshdr.min_matches_to_agree = min_matches_to_agree;
-		hitshdr.overlap_needed = overlap_tokeep;
-		hitshdr.field_objs_needed = ninfield_tokeep;
-		hitshdr.agreetol = agreetolarcsec;
-		hits_write_header(hitfid, &hitshdr);
-	}
 
 	totalsolved = totalunsolved = 0;
 
@@ -448,12 +424,6 @@ int main(int argc, char *argv[]) {
 	il_free(solved);
 	il_free(unsolved);
 
-	// finish up HITS file...
-	if (hitfid) {
-		hits_write_tailer(hitfid);
-		fclose(hitfid);
-	}
-
 	if (leftovermf) {
 		matchfile_fix_header(leftovermf);
 		matchfile_close(leftovermf);
@@ -483,12 +453,7 @@ static void write_field(handlehits* hits,
 						bool doagree,
 						bool unsolvedstubs) {
 	pl* best = NULL;
-	hits_field fieldhdr;
 	int j;
-	uint* starids;
-	uint* fieldids;
-	int correspond_ok = 1;
-	int Ncorrespond;
 	bool issolved = FALSE;
 	int nbest;
 	int nall;
@@ -504,9 +469,6 @@ static void write_field(handlehits* hits,
 		nall = pl_size(overlaps);
 		nbest = (nall ? 1 : 0);
 	}
-
-	hits_field_init(&fieldhdr);
-	fieldhdr.field = fieldnum;
 
 	if (overlap_tokeep > 0.0) {
 		pl* lists = pl_new(32);
@@ -626,14 +588,6 @@ static void write_field(handlehits* hits,
 
 	if (!issolved) {
 		il_append(unsolved, fieldnum);
-		if (hitfid && unsolvedstubs) {
-			fieldhdr.failed = TRUE;
-			hits_write_field_header(hitfid, &fieldhdr);
-			hits_start_hits_list(hitfid);
-			hits_end_hits_list(hitfid);
-			hits_write_field_tailer(hitfid);
-			fflush(hitfid);
-		}
 		if (doleftovers) {
 			int NA;
 			pl* all;
@@ -668,15 +622,8 @@ static void write_field(handlehits* hits,
 		solvedfile_set(fn, fieldnum);
 	}
 
-	if (hitfid) {
-		hits_write_field_header(hitfid, &fieldhdr);
-		hits_start_hits_list(hitfid);
-	}
-
 	for (j=0; j<pl_size(best); j++) {
 		MatchObj* mo = pl_get(best, j);
-		if (hitfid)
-			hits_write_hit(hitfid, mo);
 		if (doagree) {
 			if (matchfile_write_match(agreemf, mo)) {
 				fprintf(stderr, "Error writing an agreeing match.");
@@ -686,56 +633,6 @@ static void write_field(handlehits* hits,
 			fprintf(stderr, "Field %i: Overlap %f\n", fieldnum, mo->overlap);
 	}
 
-	if (hitfid) {
-		hits_end_hits_list(hitfid);
-		nbest = pl_size(best);
-		starids  = malloc(nbest * 4 * sizeof(uint));
-		fieldids = malloc(nbest * 4 * sizeof(uint));
-		Ncorrespond = find_correspondences(best, starids, fieldids, &correspond_ok);
-		hits_write_correspondences(hitfid, starids, fieldids, Ncorrespond, correspond_ok);
-		free(starids);
-		free(fieldids);
-		hits_write_field_tailer(hitfid);
-		fflush(hitfid);
-	}
 	pl_free(best);
 }
 
-static void add_correspondence(uint* starids, uint* fieldids,
-							   uint starid, uint fieldid,
-							   int* p_nids, int* p_ok) {
-	int i;
-	int ok = 1;
-	for (i=0; i<(*p_nids); i++) {
-		if ((starids[i] == starid) &&
-			(fieldids[i] == fieldid)) {
-			return;
-		} else if ((starids[i] == starid) ||
-				   (fieldids[i] == fieldid)) {
-			ok = 0;
-		}
-	}
-	starids[*p_nids] = starid;
-	fieldids[*p_nids] = fieldid;
-	(*p_nids)++;
-	if (p_ok && !ok) *p_ok = 0;
-}
-
-static int find_correspondences(pl* hits, uint* starids, uint* fieldids,
-								int* p_ok) {
-	int i, N;
-	int M;
-	int ok = 1;
-	MatchObj* mo;
-	if (!hits) return 0;
-	N = pl_size(hits);
-	M = 0;
-	for (i=0; i<N; i++) {
-		mo = (MatchObj*)pl_get(hits, i);
-		int k;
-		for (k=0; k<4; k++)
-			add_correspondence(starids, fieldids, mo->star[k], mo->field[k], &M, &ok);
-	}
-	if (p_ok && !ok) *p_ok = 0;
-	return M;
-}
