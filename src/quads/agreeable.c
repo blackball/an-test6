@@ -35,20 +35,9 @@
 #include "boilerplate.h"
 #include "handlehits.h"
 
-char* OPTIONS = "hn:A:B:L:M:m:o:f:bFs:I:J:S:a";
+char* OPTIONS = "hA:B:I:J:L:M:m:n:o:f:s:S:Fa";
 
-/*
-  There is one weird case in which "agreeable" does not let you replay
-  exactly what happened when "blind" ran.
-
-  Assume that there is a match that produces overlap insufficient to pass
-  the "keep" thresholds.  Assume that a correct match agrees with this one
-  and that there are enough agreeing matches to put it over the "solve"
-  threshold.  The second match will be written out, but the first one will
-  not.
-
-  (Logic added to "handlehits" fixes this)
- */
+#define DEFAULT_AGREE_TOL 10.0
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -59,10 +48,10 @@ void printHelp(char* progname) {
 			"   [-J last-field-filenum]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
-			"   [-m agreement-tolerance-in-arcsec]\n"
- 			"   [-n matches-needed-to-agree]\n"
+			"   [-m agreement-tolerance-in-arcsec] (default %g)\n"
+ 			"   [-n matches-needed-to-agree] (default 1)\n"
 			"   [-o overlap-needed-to-solve]\n"
-			"   [-f minimum-field-objects-needed-to-solve]\n"
+			"   [-f minimum-field-objects-needed-to-solve] (default: no minimum)\n"
 			"   (      [-F]: write out the first sufficient match to surpass the solve threshold.\n"
 			"     or   [-a]: write out all matches passing the solve threshold.\n"
 			"          (default is to write out the single best match (largest overlap))\n"
@@ -70,15 +59,13 @@ void printHelp(char* progname) {
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
 			"   <input-match-file> ...\n"
-			"\n", progname);
+			"\n", progname, DEFAULT_AGREE_TOL);
 }
 
 static void write_field(pl* agreeing,
 						pl* leftover,
 						int fieldfile,
 						int fieldnum);
-
-#define DEFAULT_AGREE_TOL 10.0
 
 unsigned int min_matches_to_agree = 1;
 char* leftoverfname = NULL;
@@ -91,20 +78,6 @@ char* solvedserver = NULL;
 char* solvedfile = NULL;
 double overlap_tokeep = 0.0;
 int ninfield_tokeep = 0;
-
-/*
-  static int compare_objs_used(const void* v1, const void* v2) {
-  const MatchObj* mo1 = v1;
-  const MatchObj* mo2 = v2;
-  // this is backward so the list is sorted in INCREASING order of objs_tried.
-  int diff = mo1->objs_tried - mo2->objs_tried;
-  if (diff > 0)
-  return 1;
-  if (diff == 0)
-  return 0;
-  return -1;
-  }
-*/
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -380,7 +353,7 @@ int main(int argc, char *argv[]) {
 
 			if (leftovers) {
 				int i;
-				/* Hackish - steal the list directly from the hitlist...
+				/* Hack - steal the list directly from the hitlist...
 				   so much for information hiding! */
 				leftovermatches = hits->hits->matchlist;
 				hits->hits->matchlist = NULL;
