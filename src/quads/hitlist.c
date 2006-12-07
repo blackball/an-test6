@@ -216,14 +216,12 @@ static void do_clear(hitlist* hlist, int freeobjs) {
 	pl_remove_all(hlist->matchlist);
 }
 
-/*
-  void hitlist_remove_all(hitlist* hlist) {
-  do_clear(hlist, 0);
-  }
-*/
+void hitlist_free_matchobjs(hitlist* hlist) {
+	do_clear(hlist, 1);
+}
 
 void hitlist_clear(hitlist* hlist) {
-	do_clear(hlist, 1);
+	do_clear(hlist, 0);
 }
 
 void hitlist_free(hitlist* hl) {

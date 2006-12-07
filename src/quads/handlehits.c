@@ -108,6 +108,14 @@ bool handlehits_add(handlehits* hh, MatchObj* mo) {
 	agreelist = hitlist_get_agreeing(hh->hits, moindex, NULL, indlist);
 	nagree = 1 + (agreelist ? pl_size(agreelist) : 0);
 
+	// This little jig dances around a strange case where not all the
+	// matches that are part of an agreement cluster are written out, and as
+	// a result, "agreeable" gives different answers than "blind".
+	if (nagree > mo->nagree)
+		mo->nagree = nagree;
+	else
+		nagree = mo->nagree;
+
 	if (nagree < hh->nagree_toverify)
 		goto cleanup;
 

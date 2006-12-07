@@ -446,10 +446,13 @@ static void bl_append_node(bl* list, bl_node* node) {
 /*
  * Append an item to this bl node.  If this node is full, then create a new
  * node and insert it into the list.
+ *
+ * Returns the location where the new item was copied.
  */
-void bl_node_append(bl* list, bl_node* node, void* data) {
+void* bl_node_append(bl* list, bl_node* node, void* data) {
+	void* dest;
 	if (node->N == list->blocksize) {
-		// create new node and insert it.
+		// create a new node and insert it after the current node.
 		bl_node* newnode;
 		newnode = bl_new_node(list);
 		newnode->next = node->next;
@@ -459,17 +462,19 @@ void bl_node_append(bl* list, bl_node* node, void* data) {
 		node = newnode;
 	}
 	// space remains at this node.  add item.
-	memcpy(NODE_CHARDATA(node) + node->N * list->datasize, data, list->datasize);
+	dest = NODE_CHARDATA(node) + node->N * list->datasize;
+	memcpy(dest, data, list->datasize);
 	node->N++;
 	list->N++;
+	return dest;
 }
 
-void bl_append(bl* list, void* data) {
+void* bl_append(bl* list, void* data) {
 	if (!list->tail)
 		// empty list; create a new node.
 		bl_append_node(list, bl_new_node(list));
 	// append the item to the tail.  if the tail node is full, a new tail node may be created.
-	bl_node_append(list, list->tail, data);
+	return bl_node_append(list, list->tail, data);
 }
 
 void bl_print_structure(bl* list) {
@@ -990,8 +995,8 @@ void il_push(il* list, int data) {
 	bl_append(list, &data);
 }
 
-void il_append(il* list, int data) {
-	bl_append(list, &data);
+int* il_append(il* list, int data) {
+	return bl_append(list, &data);
 }
 
 void il_merge_lists(il* list1, il* list2) {
@@ -1182,7 +1187,8 @@ int pl_insert_unique_ascending(bl* list, void* p) {
 
 int pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2)) {
 	// we don't just call bl_insert_sorted because then we end up passing
-	// "void**" rather than "void*" args to the compare function.
+	// "void**" rather than "void*" args to the compare function, which 
+	// violates the principle of least surprise.
 	int lower, upper;
 	lower = -1;
 	upper = list->N;
@@ -1211,6 +1217,28 @@ void pl_free(pl* list) {
 
 void  pl_remove(pl* list, int index) {
 	bl_remove_index(list, index);
+}
+
+int pl_remove_value(pl* plist, void* value) {
+    bl* list = plist;
+	bl_node *node, *prev;
+	int istart = 0;
+	for (node=list->head, prev=NULL;
+		 node;
+		 prev=node, node=node->next) {
+		int i;
+		void** pdat;
+		pdat = NODE_DATA(node);
+		for (i=0; i<node->N; i++)
+			if (pdat[i] == value) {
+				bl_remove_from_node(list, node, prev, i);
+				list->last_access = prev;
+				list->last_access_n = istart;
+				return istart + i;
+			}
+		istart += node->N;
+	}
+	return -1;
 }
 
 void  pl_remove_all(pl* list) {
@@ -1290,8 +1318,8 @@ void dl_push(dl* list, double data) {
 	bl_append(list, &data);
 }
 
-void   dl_append(dl* list, double data) {
-	bl_append(list, &data);
+double* dl_append(dl* list, double data) {
+	return bl_append(list, &data);
 }
 
 double dl_pop(dl* list) {

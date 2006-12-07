@@ -175,6 +175,7 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "noverlap", nil, noverlap, 1, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nconflict", nil, nconflict, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "ninfield", nil, ninfield, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nagree", nil, nagree, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldnum", nil, fieldnum, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldid", nil, fieldfile, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "indexid", nil, indexid, 1, FALSE);

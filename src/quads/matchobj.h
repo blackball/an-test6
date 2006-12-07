@@ -39,6 +39,9 @@ struct match_struct {
 	// this isn't stored, it's computed from noverlap and ninfield.
 	float overlap;
 
+	// how many other matches agreed with this one *at the time it was found*
+	int nagree;
+
 	// WCS params?
 
 	// proposed location of the center of the field
@@ -53,8 +56,6 @@ struct match_struct {
 	char fieldname[32];
 
 	bool parity;
-
-	// int nagree?
 
 	// how many field quads did we try before finding this one?
 	int quads_tried;

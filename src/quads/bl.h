@@ -59,7 +59,8 @@ Malloc bl*  bl_new(int blocksize, int datasize);
 Pure Inline int  bl_size(const bl* list);
 void bl_init(bl* l, int blocksize, int datasize);
 void bl_free(bl* list);
-void bl_append(bl* list, void* data);
+/** Appends an element, returning the location whereto it was copied. */
+void* bl_append(bl* list, void* data);
 
 /*
  * Appends "list2" to the end of "list1", and removes all elements
@@ -131,7 +132,7 @@ void il_init(il* list, int blocksize);
 void il_remove_all(il* list);
 void il_remove_all_reuse(il* list);
 void il_free(il* list);
-void il_append(il* list, int data);
+int* il_append(il* list, int data);
 void il_merge_lists(il* list1, il* list2);
 void il_push(il* list, int data);
 int  il_pop(il* list);
@@ -177,6 +178,7 @@ void  pl_print(pl* list);
 int   pl_insert_unique_ascending(pl* list, void* p);
 int   pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2));
 void  pl_remove(pl* list, int ind);
+int   pl_remove_value(pl* list, void* value);
 void  pl_remove_all(pl* list);
 void  pl_merge_lists(pl* list1, pl* list2);
 
@@ -188,7 +190,7 @@ dl*    dl_new(int blocksize);
 void   dl_init(dl* list, int blocksize);
 void   dl_free(dl* list);
 int    dl_size(dl* list);
-void   dl_append(dl* list, double data);
+double* dl_append(dl* list, double data);
 void   dl_push(dl* list, double data);
 double dl_pop(dl* list);
 double dl_get(dl* list, int n);

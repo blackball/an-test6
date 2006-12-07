@@ -65,7 +65,7 @@ void hitlist_compute_vector(MatchObj* mo);
 
 hitlist* hitlist_new(double AgreeTolArcSec, int maxNside);
 
-//void hitlist_remove_all(hitlist* hlist);
+void hitlist_free_matchobjs(hitlist* hlist);
 
 void hitlist_clear(hitlist* hlist);
 

@@ -35,7 +35,7 @@
 #include "boilerplate.h"
 #include "handlehits.h"
 
-char* OPTIONS = "hn:A:B:L:M:m:o:f:bFs:I:J:S:at";
+char* OPTIONS = "hn:A:B:L:M:m:o:f:bFs:I:J:S:a";
 
 /*
   There is one weird case in which "agreeable" does not let you replay
@@ -46,6 +46,8 @@ char* OPTIONS = "hn:A:B:L:M:m:o:f:bFs:I:J:S:at";
   and that there are enough agreeing matches to put it over the "solve"
   threshold.  The second match will be written out, but the first one will
   not.
+
+  (Logic added to "handlehits" fixes this)
  */
 
 void printHelp(char* progname) {
@@ -61,26 +63,20 @@ void printHelp(char* progname) {
  			"   [-n matches-needed-to-agree]\n"
 			"   [-o overlap-needed-to-solve]\n"
 			"   [-f minimum-field-objects-needed-to-solve]\n"
-			"   (      [-b]: best-overlap mode\n"
-			"     or   [-F]: first-solved mode (smallest number of field objs)\n"
-			"     or   [-a]: agreement mode (waits until enough agreeing matches have been found,\n"
-			"                         prints the last one if it is above the overlap thresh,\n"
-			"                         otherwise prints the last one but steals the 'overlap'\n"
-			"                         from the largest-overlap match)\n"
+			"   (      [-F]: write out the first sufficient match to surpass the solve threshold.\n"
+			"     or   [-a]: write out all matches passing the solve threshold.\n"
+			"          (default is to write out the single best match (largest overlap))\n"
 			"   )\n"
-			"   [-t]: print agreement distances.\n"
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
 			"   <input-match-file> ...\n"
 			"\n", progname);
 }
 
-static void write_field(handlehits* hits,
+static void write_field(pl* agreeing,
+						pl* leftover,
 						int fieldfile,
-						int fieldnum,
-						bool doleftovers,
-						bool doagree,
-						bool unsolvedstubs);
+						int fieldnum);
 
 #define DEFAULT_AGREE_TOL 10.0
 
@@ -96,20 +92,19 @@ char* solvedfile = NULL;
 double overlap_tokeep = 0.0;
 int ninfield_tokeep = 0;
 
-bool print_agree = FALSE;
-dl* agreedistlist;
-
-static int compare_objs_used(const void* v1, const void* v2) {
-	const MatchObj* mo1 = v1;
-	const MatchObj* mo2 = v2;
-	// this is backward so the list is sorted in INCREASING order of objs_tried.
-	int diff = mo1->objs_tried - mo2->objs_tried;
-	if (diff > 0)
-		return 1;
-	if (diff == 0)
-		return 0;
-	return -1;
-}
+/*
+  static int compare_objs_used(const void* v1, const void* v2) {
+  const MatchObj* mo1 = v1;
+  const MatchObj* mo2 = v2;
+  // this is backward so the list is sorted in INCREASING order of objs_tried.
+  int diff = mo1->objs_tried - mo2->objs_tried;
+  if (diff > 0)
+  return 1;
+  if (diff == 0)
+  return 0;
+  return -1;
+  }
+*/
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -117,7 +112,6 @@ extern int optind, opterr, optopt;
 enum modes {
 	MODE_BEST,
 	MODE_FIRST,
-	MODE_AGREE,
 	MODE_ALL
 };
 
@@ -151,19 +145,11 @@ int main(int argc, char *argv[]) {
 		case 's':
 			solvedserver = optarg;
 			break;
-			/*
-			  case 'b':
-			  mode = MODE_BEST;
-			  break;
-			*/
 		case 'F':
 			mode = MODE_FIRST;
 			break;
 		case 'a':
-			mode = MODE_AGREE;
-			break;
-		case 't':
-			print_agree = TRUE;
+			mode = MODE_ALL;
 			break;
 		case 'm':
 			agreetolarcsec = atof(optarg);
@@ -220,10 +206,6 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-	if (print_agree) {
-		agreedistlist = dl_new(256);
-	}
-
 	if (leftoverfname) {
 		leftovermf = matchfile_open_for_writing(leftoverfname);
 		if (!leftovermf) {
@@ -260,8 +242,6 @@ int main(int argc, char *argv[]) {
 	hits->overlap_tosolve = overlap_tokeep;
 	hits->ninfield_tokeep  = ninfield_tokeep;
 	hits->ninfield_tosolve = ninfield_tokeep;
-	//hits->verify_dist2 = verify_dist2;
-	//hits->do_corr = 
 
 	solved = il_new(256);
 	unsolved = il_new(256);
@@ -291,8 +271,10 @@ int main(int argc, char *argv[]) {
 		for (f=firstfield; f<=lastfield; f++) {
 			int fieldnum = f;
 			bool donefieldfile;
-			bool solvedit;
+			bool solved_it;
 			bl* allmatches;
+			pl* writematches = NULL;
+			pl* leftovermatches = NULL;
 
 			// quit if we've reached the end of all the input files.
 			alldone = TRUE;
@@ -315,8 +297,9 @@ int main(int argc, char *argv[]) {
 			if (donefieldfile)
 				break;
 
+			// start a new field.
 			fprintf(stderr, "File %i, Field %i.\n", fieldfile, f);
-			solvedit = FALSE;
+			solved_it = FALSE;
 			allmatches = bl_new(256, sizeof(MatchObj));
 
 			for (i=0; i<ninputfiles; i++) {
@@ -360,32 +343,61 @@ int main(int argc, char *argv[]) {
 
 					// if we've already found a solution, skip past the
 					// remaining matches in this file...
-					if (solvedit && (mode == MODE_AGREE)) {
+					if (solved_it && (mode == MODE_FIRST)) {
 						ns++;
 						continue;
 					}
 
 					nr++;
 
-					bl_append(allmatches, mos[i]);
-					mos[i] = bl_access(allmatches, bl_size(allmatches)-1);
+					// make a copy of this MatchObj by adding it to our
+					// list, and get a pointer to its copied location.
+					mos[i] = bl_append(allmatches, mos[i]);
 
-					solvedit = handlehits_add(hits, mos[i]);
+					solved_it = handlehits_add(hits, mos[i]);
 					mos[i] = NULL;
 
-					/*
-					  if (solvedit && (mode == MODE_AGREE)) {
-					  break;
-					  }
-					*/
 				}
 				if (nr || ns)
 					fprintf(stderr, "File %s: read %i matches, skipped %i matches.\n", inputfiles[i], nr, ns);
 			}
 
-			write_field(hits, fieldfile, fieldnum, leftovers, agree, TRUE);
+			// which matches do we want to write out?
+			if (agree) {
+				writematches = pl_new(32);
+
+				switch (mode) {
+				case MODE_BEST:
+				case MODE_FIRST:
+					if (hits->bestmo)
+						pl_append(writematches, hits->bestmo);
+					break;
+				case MODE_ALL:
+					pl_merge_lists(writematches, hits->keepers);
+					break;
+				}
+			}
+
+			if (leftovers) {
+				int i;
+				/* Hackish - steal the list directly from the hitlist...
+				   so much for information hiding! */
+				leftovermatches = hits->hits->matchlist;
+				hits->hits->matchlist = NULL;
+				// remove all the "successful" matches.
+				for (i=0; i<pl_size(writematches); i++)
+					pl_remove_value(leftovermatches,
+									pl_get(writematches, i));
+			}
+
+			write_field(writematches, leftovermatches, fieldfile, fieldnum);
+
+			if (leftovers)
+				pl_free(leftovermatches);
+			if (agree)
+				pl_free(writematches);
+
 			handlehits_clear(hits);
-			//bl_remove_all_but_first(allmatches);
 			bl_free(allmatches);
 
 			fprintf(stderr, "This file: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
@@ -425,204 +437,43 @@ int main(int argc, char *argv[]) {
 		matchfile_close(agreemf);
 	}
 
-	if (print_agree) {
-		printf("agree_dists = [");
-		for (i=0; i<dl_size(agreedistlist); i++)
-			printf("%g, ", dl_get(agreedistlist, i));
-		printf("];\n");
-		dl_free(agreedistlist);
-	}
-
 	return 0;
 }
 
-static void write_field(handlehits* hits,
+static void write_field(pl* agreeing,
+						pl* leftover,
 						int fieldfile,
-						int fieldnum,
-						bool doleftovers,
-						bool doagree,
-						bool unsolvedstubs) {
-	pl* best = NULL;
-	int j;
-	bool issolved = FALSE;
-	int nbest;
-	int nall;
+						int fieldnum) {
+	int i;
 
-	assert(hits || overlaps);
-
-	if (hits) {
-		/*
-		  nbest = hitlist_healpix_count_best(hl);
-		  nall = hitlist_healpix_count_all(hl);
-		*/
-	} else {
-		nall = pl_size(overlaps);
-		nbest = (nall ? 1 : 0);
-	}
-
-	if (overlap_tokeep > 0.0) {
-		pl* lists = pl_new(32);
-		if (hits) {
-			/*
-			  int nlists = hitlist_healpix_count_lists(hl);
-			  for (j=0; j<nlists; j++) {
-			  pl* list = hitlist_healpix_copy_list(hl, j);
-			  if (!list)
-			  continue;
-			  pl_append(lists, list);
-			  }
-			*/
-		} else {
-			pl* copy = pl_dup(overlaps);
-			pl_append(lists, copy);
-		}
-
-		for (j=0; j<pl_size(lists); j++) {
-			int i;
-			bool gotit = FALSE;
-			pl* list = pl_get(lists, j);
-			MatchObj* mo = NULL;
-			MatchObj* mbest = NULL;
-			double bestoverlap = 0.0;
-
-			for (i=0; i<pl_size(list); i++) {
-				mo = pl_get(list, i);
-
-				if (i && hits && print_agree) {
-					double bestd2 = 1e300;
-					int j;
-					for (j=0; j<i; j++) {
-						double d2 = -1.0;
-						MatchObj* mo2 = pl_get(list, j);
-						//hitlist_hits_agree(mo, mo2, hits->agreedist2, &d2);
-						if (d2 < bestd2)
-							bestd2 = d2;
-					}
-					if (bestd2 < 1e300)
-						dl_append(agreedistlist, distsq2arcsec(bestd2));
-				}
-
-				if (do_agree_overlap) {
-					// slightly strange rules, as a result of the way slave
-					// combines agreement and overlap.  Once "nagree" hits
-					// have accumulated, overlap is computed for each of them
-					// and if one passes threshold, the whole cluster is
-					// written out.
-
-					// For analyzing the solver parameters, we want to know
-					// how many objects we had to look at before this
-					// happened, so we want stats for the first object that
-					// has sufficient nagree and is part of a cluster that
-					// has sufficient overlap.  HOWEVER, in order to not
-					// screw up further analysis, we want the overlap of the
-					// best solution.
-
-					if ((mo->overlap >= bestoverlap) &&
-						(mo->ninfield >= ninfield_tokeep)) {
-						mbest = mo;
-						bestoverlap = mo->overlap;
-					}
-					if ((i >= (min_matches_to_agree-1)) &&
-						(bestoverlap >= overlap_tokeep)) {
-						gotit = TRUE;
-						break;
-					}
-					
-				} else {
-					if ((mo->overlap >= overlap_tokeep) &&
-						(mo->ninfield >= ninfield_tokeep)) {
-						gotit = TRUE;
-						break;
-					}
-				}
-			}
-			if (gotit) {
-				if (!best)
-					best = pl_new(32);
-				if (overlaps) {
-					if (mbest) {
-						mo->noverlap  = mbest->noverlap;
-						mo->nconflict = mbest->nconflict;
-						mo->ninfield  = mbest->ninfield;
-						mo->overlap   = mbest->overlap;
-					}
-					// just take the first/best one.
-					pl_append(best, mo);
-				}
-				else 
-					// take the whole list.
-					pl_merge_lists(best, list);
-			}
-			pl_free(list);
-		}
-		pl_free(lists);
-		issolved = (best != NULL);
-
-	} else {
-		if (hits) {
-			if (nbest < min_matches_to_agree) {
-				issolved = FALSE;
-			} else {
-				issolved = TRUE;
-				fprintf(stderr, "Field %i: %i in agreement.\n", fieldnum, nbest);
-				//best = hitlist_healpix_get_best(hl);
-			}
-		} else {
-			issolved = (nbest ? TRUE : FALSE);
-			if (issolved) {
-				best = pl_new(32);
-				pl_append(best, pl_get(overlaps, 0));
-			}
-		}
-	}
-
-	if (!issolved) {
+	if (!pl_size(agreeing))
 		il_append(unsolved, fieldnum);
-		if (doleftovers) {
-			int NA;
-			pl* all;
-			if (hits) {
-				//all = hitlist_healpix_get_all(hl);
-			} else {
-				all = overlaps;
-			}
-			NA = pl_size(all);
-			fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum, NA);
-			for (j=0; j<NA; j++) {
-				MatchObj* mo = pl_get(all, j);
-				if (matchfile_write_match(leftovermf, mo)) {
-					fprintf(stderr, "Error writing a leftover match.\n");
-					break;
-				}
-			}
-			if (hits)
-				pl_free(all);
+	else {
+		il_append(solved, fieldnum);
+		if (solvedserver)
+			solvedclient_set(fieldfile, fieldnum);
+		if (solvedfile) {
+			char fn[256];
+			sprintf(fn, solvedfile, fieldfile);
+			solvedfile_set(fn, fieldnum);
 		}
-		return;
 	}
 
-	// solved field.
-	il_append(solved, fieldnum);
-
-	if (solvedserver)
-		solvedclient_set(fieldfile, fieldnum);
-	if (solvedfile) {
-		char fn[256];
-		sprintf(fn, solvedfile, fieldfile);
-		solvedfile_set(fn, fieldnum);
+	for (i=0; agreeing && i<pl_size(agreeing); i++) {
+		MatchObj* mo = pl_get(agreeing, i);
+		if (matchfile_write_match(agreemf, mo))
+			fprintf(stderr, "Error writing an agreeing match.");
+		fprintf(stderr, "Field %i: Overlap %f\n", fieldnum, mo->overlap);
 	}
 
-	for (j=0; j<pl_size(best); j++) {
-		MatchObj* mo = pl_get(best, j);
-		if (doagree) {
-			if (matchfile_write_match(agreemf, mo)) {
-				fprintf(stderr, "Error writing an agreeing match.");
-			}
+	if (leftover && pl_size(leftover)) {
+		fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum,
+				pl_size(leftover));
+		for (i=0; i<pl_size(leftover); i++) {
+			MatchObj* mo = pl_get(leftover, i);
+			if (matchfile_write_match(leftovermf, mo))
+				fprintf(stderr, "Error writing a leftover match.");
 		}
-		if (overlap_tokeep > 0.0)
-			fprintf(stderr, "Field %i: Overlap %f\n", fieldnum, mo->overlap);
 	}
-
-	pl_free(best);
 }
 
