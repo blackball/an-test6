@@ -53,10 +53,10 @@
 #include "starkd.h"
 #include "codekd.h"
 #include "boilerplate.h"
-#include "svd.h"
 #include "fitsioutils.h"
 #include "qfits_error.h"
 #include "handlehits.h"
+#include "blind_wcs.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -714,185 +714,6 @@ static void write_hits(int fieldnum, pl* matches) {
 	return;
 }
 
-static qfits_header* compute_wcs(MatchObj* mo, solver_params* params,
-								 int* corr) {
-	double xyz[3];
-	double starcmass[3];
-	double fieldcmass[2];
-	double cov[4];
-	double U[4], V[4], S[2], R[4];
-	double scale;
-	int i, j, k;
-	int Ncorr;
-	// projected star coordinates
-	double* p;
-	// relative field coordinates
-	double* f;
-	double pcm[2];
-	double fcm[2];
-
-	qfits_header* wcs = NULL;
-
-	// compute a simple WCS transformation:
-	// -get field & star positions of the matching quad.
-	for (j=0; j<3; j++)
-		starcmass[j] = 0.0;
-	for (j=0; j<2; j++)
-		fieldcmass[j] = 0.0;
-	for (i=0; i<4; i++) {
-		getstarcoord(mo->star[i], xyz);
-		for (j=0; j<3; j++)
-			starcmass[j] += xyz[j];
-		for (j=0; j<2; j++)
-			fieldcmass[j] += params->field[mo->field[i] * 2 + j];
-	}
-	// -set the tangent point to be the center of mass of the matching quad.
-	for (j=0; j<2; j++)
-		fieldcmass[j] /= 4.0;
-	normalize_3(starcmass);
-
-	// -count how many corresponding stars there are.
-	if (!corr)
-		Ncorr = 4;
-	else {
-		Ncorr = 0;
-		for (i=0; i<params->nfield; i++)
-			if (corr[i] != -1)
-				Ncorr++;
-	}
-
-	// -allocate and fill "p" and "f" arrays.
-	p = malloc(Ncorr * 2 * sizeof(double));
-	f = malloc(Ncorr * 2 * sizeof(double));
-	j = 0;
-	if (!corr) {
-		// just use the four stars that compose the quad.
-		for (i=0; i<4; i++) {
-			getstarcoord(mo->star[i], xyz);
-			star_coords(xyz, starcmass, p + 2*i, p + 2*i + 1);
-			f[2*i+0] = params->field[mo->field[i] * 2 + 0];
-			f[2*i+1] = params->field[mo->field[i] * 2 + 1];
-		}
-	} else {
-		// use all correspondences.
-		for (i=0; i<params->nfield; i++)
-			if (corr[i] != -1) {
-				// -project the stars around the quad center
-				getstarcoord(corr[i], xyz);
-				star_coords(xyz, starcmass, p + 2*j, p + 2*j + 1);
-				// -grab the corresponding field coords.
-				f[2*j+0] = params->field[2*i+0];
-				f[2*j+1] = params->field[2*i+1];
-				j++;
-			}
-	}
-
-	// -compute centers of mass
-	pcm[0] = pcm[1] = fcm[0] = fcm[1] = 0.0;
-	for (i=0; i<Ncorr; i++)
-		for (j=0; j<2; j++) {
-			pcm[j] += p[2*i+j];
-			fcm[j] += f[2*i+j];
-		}
-	pcm[0] /= (double)Ncorr;
-	pcm[1] /= (double)Ncorr;
-	fcm[0] /= (double)Ncorr;
-	fcm[1] /= (double)Ncorr;
-
-	// -subtract out the centers of mass.
-	for (i=0; i<Ncorr; i++)
-		for (j=0; j<2; j++) {
-			f[2*i + j] -= fcm[j];
-			p[2*i + j] -= pcm[j];
-		}
-
-	// -compute the covariance between field positions and projected
-	//  positions of the corresponding stars.
-	for (i=0; i<4; i++)
-		cov[i] = 0.0;
-	for (i=0; i<Ncorr; i++)
-		for (j=0; j<2; j++)
-			for (k=0; k<2; k++)
-				cov[j*2 + k] += p[i*2 + k] * f[i*2 + j];
-	// -run SVD
-	{
-		double* pcov[] = { cov, cov+2 };
-		double* pU[]   = { U,   U  +2 };
-		double* pV[]   = { V,   V  +2 };
-		double eps, tol;
-		eps = 1e-30;
-		tol = 1e-30;
-		svd(2, 2, 1, 1, eps, tol, pcov, S, pU, pV);
-	}
-	// -compute rotation matrix R = V U'
-	for (i=0; i<4; i++)
-		R[i] = 0.0;
-	for (i=0; i<2; i++)
-		for (j=0; j<2; j++)
-			for (k=0; k<2; k++)
-				R[i*2 + j] += V[i*2 + k] * U[j*2 + k];
-
-	// -compute scale: make the variances equal.
-	{
-		double pvar, fvar;
-		pvar = fvar = 0.0;
-		for (i=0; i<Ncorr; i++)
-			for (j=0; j<2; j++) {
-				pvar += square(p[i*2 + j]);
-				fvar += square(f[i*2 + j]);
-			}
-		scale = sqrt(pvar / fvar);
-	}
-
-	// -write the WCS header.
-	{
-		qfits_header* hdr;
-		char val[64];
-		double ra, dec;
-
-		xyz2radec(starcmass[0], starcmass[1], starcmass[2], &ra, &dec);
-		hdr = qfits_header_default();
-
-		qfits_header_add(hdr, "BITPIX", "8", " ", NULL);
-		qfits_header_add(hdr, "NAXIS", "0", "No image", NULL);
-		qfits_header_add(hdr, "EXTEND", "T", "FITS extensions may follow", NULL);
-
-		qfits_header_add(hdr, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
-		qfits_header_add(hdr, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
-		sprintf(val, "%.12g", rad2deg(ra));
-		qfits_header_add(hdr, "CRVAL1 ", val, "RA  of reference point", NULL);
-		sprintf(val, "%.12g", rad2deg(dec));
-		qfits_header_add(hdr, "CRVAL2 ", val, "DEC of reference point", NULL);
-
-		sprintf(val, "%.12g", fieldcmass[0]);
-		qfits_header_add(hdr, "CRPIX1 ", val, "X reference pixel", NULL);
-		sprintf(val, "%.12g", fieldcmass[1]);
-		qfits_header_add(hdr, "CRPIX2 ", val, "Y reference pixel", NULL);
-
-		qfits_header_add(hdr, "CUNIT1 ", "deg", "X pixel scale units", NULL);
-		qfits_header_add(hdr, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
-
-		scale = rad2deg(scale);
-
-		// bizarrely, this only seems to work when I swap the rows of R.
-		sprintf(val, "%.12g", R[2] * scale);
-		qfits_header_add(hdr, "CD1_1", val, "Transformation matrix", NULL);
-		sprintf(val, "%.12g", R[3] * scale);
-		qfits_header_add(hdr, "CD1_2", val, " ", NULL);
-		sprintf(val, "%.12g", R[0] * scale);
-		qfits_header_add(hdr, "CD2_1", val, " ", NULL);
-		sprintf(val, "%.12g", R[1] * scale);
-		qfits_header_add(hdr, "CD2_2", val, " ", NULL);
-
-		wcs = hdr;
-	}
-
-	free(p);
-	free(f);
-
-	return wcs;
-}
-
 static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	bool solved;
 
@@ -914,7 +735,6 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 
 	return 1;
 }
-
 
 static int next_field_index = 0;
 
@@ -1108,7 +928,14 @@ static void solve_fields() {
 					fprintf(stderr, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
 					exit(-1);
 				}
-				wcs = compute_wcs(hits->bestmo, &solver, hits->bestcorr);
+
+				blind_wcs_compute(hits->bestmo, field, nfield,
+								  hits->bestcorr, hits->bestmo->crval,
+								  hits->bestmo->crpix, hits->bestmo->CD);
+				hits->bestmo->wcs_valid = 1;
+				wcs = blind_wcs_get_header(hits->bestmo->crval,
+										   hits->bestmo->crpix,
+										   hits->bestmo->CD);
 				boilerplate_add_fits_headers(wcs);
 				qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
 				if (solver.mo_template && solver.mo_template->fieldname[0])

@@ -434,7 +434,6 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 	double sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
 
     for (jj=0; jj<krez->nres; jj++) {
-		int nagree;
 		//uint64_t idA, idB, idC, idD;
 		double star[12];
 		double starscale;

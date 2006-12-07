@@ -42,7 +42,14 @@ struct match_struct {
 	// how many other matches agreed with this one *at the time it was found*
 	int nagree;
 
-	// WCS params?
+	// WCS params
+	bool wcs_valid;
+	// RA,DEC of reference point.
+	double crval[2];
+	// Pixel coords of reference point.
+	double crpix[2];
+	// Transformation matrix.
+	double CD[4];
 
 	// proposed location of the center of the field
 	//  = normalize(sMin + sMax);
