@@ -134,24 +134,17 @@ int hitlist_hits_agree(MatchObj* m1, MatchObj* m2, double maxagreedist2, double*
 	return 1;
 }
 
-pl* hitlist_add_hit(hitlist* hlist, MatchObj* match) {
+pl* hitlist_get_agreeing(hitlist* hlist, int moindex) {
+	MatchObj* match;
 	int pix;
-	int p;
-	int matchind;
 	pixinfo* pinfo;
 	pl* agreelist = NULL;
+
+	match = pl_get(hlist->matchlist, moindex);
 
 	// find which healpixel this hit belongs in
 	pix = xyzarrtohealpix(match->center, hlist->Nside);
 	pinfo = hlist->pix + pix;
-	ensure_pixinfo_inited(pinfo, pix, hlist->Nside);
-
-	// add this MatchObj to the master list
-	pl_append(hlist->matchlist, match);
-	matchind = pl_size(hlist->matchlist) - 1;
-
-	// add this MatchObj's index to its pixel's list.
-	il_append(pinfo->matchinds, matchind);
 
 	// look at all the MatchObjs in "pix" and its neighbouring pixels,
 	// gathering agreements.
@@ -175,12 +168,15 @@ pl* hitlist_add_hit(hitlist* hlist, MatchObj* match) {
 		for (m=0; m<M; m++) {
 			int ind;
 			MatchObj* mo;
-			int agreeind;
 
 			// get the index of the MO
 			ind = il_get(pixel->matchinds, m);
 			// get the MO from the master list
 			mo = (MatchObj*)pl_get(hlist->matchlist, ind);
+
+			// don't count vacuous agreement with yourself...
+			if (mo == match)
+				continue;
 
 			if (!hitlist_hits_agree(match, mo, hlist->agreedist2, NULL))
 				continue;
@@ -193,6 +189,27 @@ pl* hitlist_add_hit(hitlist* hlist, MatchObj* match) {
 		}
 	}
 	return agreelist;
+}
+
+int hitlist_add_hit(hitlist* hlist, MatchObj* match) {
+	int pix;
+	int p;
+	int matchind;
+	pixinfo* pinfo;
+
+	// find which healpixel this hit belongs in
+	pix = xyzarrtohealpix(match->center, hlist->Nside);
+	pinfo = hlist->pix + pix;
+	ensure_pixinfo_inited(pinfo, pix, hlist->Nside);
+
+	// add this MatchObj to the master list
+	pl_append(hlist->matchlist, match);
+	matchind = pl_size(hlist->matchlist) - 1;
+
+	// add this MatchObj's index to its pixel's list.
+	il_append(pinfo->matchinds, matchind);
+
+	return matchind;
 }
 
 static void do_clear(hitlist* hlist, int freeobjs) {

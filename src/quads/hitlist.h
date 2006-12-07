@@ -74,6 +74,8 @@ void hitlist_free(hitlist* hlist);
 //pl* hitlist_healpix_copy_list(hitlist* hlist, int agreelistindex);
 //int hitlist_healpix_add_hit(hitlist* hlist, MatchObj* mo, int* p_agreelistindex);
 
-pl* hitlist_add_hit(hitlist* hlist, MatchObj* mo);
+int hitlist_add_hit(hitlist* hlist, MatchObj* mo);
+
+pl* hitlist_get_agreeing(hitlist* hlist, int moindex);
 
 #endif
