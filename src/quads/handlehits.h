@@ -39,7 +39,7 @@ struct handlehits {
 	kdtree_t* startree;
 	double* field;
 	int nfield;
-	int do_corr;
+	int do_wcs;
 
 	// state:
 

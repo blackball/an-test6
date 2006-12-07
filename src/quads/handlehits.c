@@ -18,6 +18,7 @@
 
 #include "handlehits.h"
 #include "verify.h"
+#include "blind_wcs.h"
 
 handlehits* handlehits_new() {
 	handlehits* hh;
@@ -53,18 +54,22 @@ void handlehits_free(handlehits* hh) {
 static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 	int* corr = NULL;
 
-	if (hh->do_corr) {
-		int i;
-		corr = malloc(hh->nfield * sizeof(int));
-		for (i=0; i<hh->nfield; i++)
-			corr[i] = -1;
-	}
-
+	// this check is here to handle the "agreeable" case, where the overlap
+	// has already been computed and stored in the matchfile, and we no
+	// longer have access to the startree, etc.
 	if (mo->overlap == 0.0) {
+		if (hh->do_wcs) {
+			int i;
+			corr = malloc(hh->nfield * sizeof(int));
+			for (i=0; i<hh->nfield; i++)
+				corr[i] = -1;
+		}
+
 		verify_hit(hh->startree, mo, hh->field, hh->nfield, hh->verify_dist2,
 				   NULL, NULL, NULL,
 				   NULL, NULL,
 				   corr);
+
 		mo->nverified = hh->nverified++;
 	}
 
@@ -72,6 +77,12 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 		(mo->ninfield < hh->ninfield_tokeep)) {
 		free(corr);
 		return FALSE;
+	}
+
+	if (corr) {
+		blind_wcs_compute(mo, hh->field, hh->nfield, corr,
+						  mo->crval, mo->crpix, mo->CD);
+		mo->wcs_valid = 1;
 	}
 
 	if (!hh->keepers)

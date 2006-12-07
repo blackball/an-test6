@@ -450,3 +450,10 @@ static void write_field(pl* agreeing,
 	}
 }
 
+
+// HACK - we need a stub for this function because it is linked by
+//   handlehits -> blind_wcs
+void getstarcoord(uint iA, double *star) {
+	fprintf(stderr, "ERROR: getstarcoord() called in agreeable.\n");
+	exit(-1);
+}

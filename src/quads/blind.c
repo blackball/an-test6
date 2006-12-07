@@ -796,7 +796,7 @@ static void solve_fields() {
 	hits->ninfield_tokeep  = ninfield_tokeep;
 	hits->ninfield_tosolve = ninfield_tosolve;
 	hits->startree = starkd->tree;
-	hits->do_corr = (wcs_template ? 1 : 0);
+	hits->do_wcs = (wcs_template ? 1 : 0);
 
 	nfields = xyls->nfields;
 
@@ -925,10 +925,8 @@ static void solve_fields() {
 					exit(-1);
 				}
 
-				blind_wcs_compute(hits->bestmo, field, nfield,
-								  hits->bestcorr, hits->bestmo->crval,
-								  hits->bestmo->crpix, hits->bestmo->CD);
-				hits->bestmo->wcs_valid = 1;
+				assert(hits->bestmo->wcs_valid);
+
 				wcs = blind_wcs_get_header(hits->bestmo->crval,
 										   hits->bestmo->crpix,
 										   hits->bestmo->CD);

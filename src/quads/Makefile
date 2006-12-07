@@ -221,6 +221,7 @@ blind: blind.o solver.o starkd.o codekd.o quadfile.o matchfile.o bl.o tic.o \
 
 agreeable: agreeable.o matchfile.o bl.o hitlist.o handlehits.o \
 		solvedfile.o solvedclient.o intmap.o healpix.o verify.o pnpoly.o \
+		blind_wcs.o svd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 printmatch: printmatch.o matchfile.o bl.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
