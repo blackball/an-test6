@@ -63,8 +63,8 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o bl.o \
 	bt.o an_catalog.o catalog.o idfile.o starkd.o quadfile.o codefile.o \
 	rdlist.o xylist.o histogram.o tic.o permutedsort.o codekd.o \
 	donuts.o verify.o dualtree_rangesearch.o dualtree.o dualtree_max.o \
-	solver.o matchfile.o solvedclient.o solvedfile.o hitlist_healpix.o \
-	intmap.o hitsfile.o qidxfile.o
+	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o handlehits.o \
+	intmap.o hitsfile.o qidxfile.o pnpoly.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -83,7 +83,7 @@ OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	make-merctree rawstartree 
 
 OLDEXECS_OBJS := starkd.o catalog.o qidxfile.o histogram.o bl.o rdlist.o \
-	xylist.o verify.o hitlist_healpix.o intmap.o tic.o matchfile.o \
+	xylist.o verify.o intmap.o tic.o matchfile.o \
 	quadfile.o healpix.o an_catalog.o merctree.o codekd.o idfile.o \
 	$(UTIL_OBJS)
 
