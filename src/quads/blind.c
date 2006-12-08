@@ -63,7 +63,6 @@ static void printHelp(char* progname) {
 
 static void solve_fields();
 static int read_parameters();
-static void write_hits(int fieldnum, pl* matches);
 
 #define DEFAULT_CODE_TOL .01
 #define DEFAULT_PARITY_FLIP FALSE
@@ -363,8 +362,6 @@ int main(int argc, char *argv[]) {
 
 		// Do it!
 		solve_fields();
-		// DEBUG
-		write_hits(-1, NULL);
 
 		if (donefname) {
 			FILE* batchfid = NULL;
@@ -580,140 +577,6 @@ static int read_parameters() {
 	}
 }
 
-struct cached_hits {
-	int fieldnum;
-	pl* matches;
-};
-typedef struct cached_hits cached_hits;
-
-static int cached_hits_compare(const void* v1, const void* v2) {
-	const cached_hits* ch1 = v1;
-	const cached_hits* ch2 = v2;
-	if (ch1->fieldnum > ch2->fieldnum)
-		return 1;
-	if (ch1->fieldnum < ch2->fieldnum)
-		return -1;
-	return 0;
-}
-
-// if "matches" are NULL, marks "fieldnum" as having been done.
-static void write_hits(int fieldnum, pl* matches) {
-	static int index = 0;
-	static bl* cached = NULL;
-	int k, nextfld;
-
-	if (!cached)
-		cached = bl_new(16, sizeof(cached_hits));
-
-	// DEBUG - ensure cache is empty.
-	if (fieldnum == -1) {
-		cached_hits* cache;
-		if (!bl_size(cached))
-			goto done_cacheflush;
-		fprintf(stderr, "Warning: cache was not empty at the end of the run.\n");
-		fprintf(stderr, "Cache: [ ");
-		for (k=0; k<bl_size(cached); k++) {
-			cached_hits* ch = bl_access(cached, k);
-			fprintf(stderr, "%i ", ch->fieldnum);
-		}
-		fprintf(stderr, "]\n");
-		nextfld = il_get(fieldlist, index);
-		fprintf(stderr, "nextfld=%i\n", nextfld);
-
-		// write it!
-		for (k=0; k<bl_size(cached); k++) {
-			cache = bl_access(cached, k);
-			if (cache->matches) {
-				for (k=0; k<pl_size(cache->matches); k++) {
-					MatchObj* mo = pl_get(cache->matches, k);
-					if (matchfile_write_match(mf, mo))
-						fprintf(stderr, "Error writing a match.\n");
-				}
-				for (k=0; k<pl_size(cache->matches); k++) {
-					MatchObj* mo = pl_get(cache->matches, k);
-					free(mo);
-				}
-				pl_free(cache->matches);
-			}
-		}
-		if (matchfile_fix_header(mf)) {
-			fprintf(stderr, "Failed to fix matchfile header.\n");
-		}
-	done_cacheflush:
-		bl_free(cached);
-		cached = NULL;
-		index = 0;
-		goto bailout;
-	}
-
-	nextfld = il_get(fieldlist, index);
-
-	if (nextfld == fieldnum) {
-		cached_hits ch;
-		cached_hits* cache;
-		bool freeit = FALSE;
-
-		ch.fieldnum = fieldnum;
-		ch.matches = matches;
-		cache = &ch;
-
-		for (;;) {
-			// write it!
-			if (cache->matches) {
-				for (k=0; k<pl_size(cache->matches); k++) {
-					MatchObj* mo = pl_get(cache->matches, k);
-					if (matchfile_write_match(mf, mo))
-						fprintf(stderr, "Error writing a match.\n");
-				}
-			}
-			index++;
-
-			if (freeit) {
-				if (cache->matches) {
-					for (k=0; k<pl_size(cache->matches); k++) {
-						MatchObj* mo = pl_get(cache->matches, k);
-						free(mo);
-					}
-					pl_free(cache->matches);
-				}
-				bl_remove_index(cached, 0);
-			}
-			freeit = TRUE;
-			if (bl_size(cached) == 0)
-				break;
-			nextfld = il_get(fieldlist, index);
-			cache = bl_access(cached, 0);
-
-			if (cache->fieldnum != nextfld)
-				break;
-		}
-		if (matchfile_fix_header(mf)) {
-			fprintf(stderr, "Failed to fix matchfile header.\n");
-			goto bailout;
-		}
-	} else {
-		// cache it!
-		cached_hits cache;
-		// deep copy
-		cache.fieldnum = fieldnum;
-		if (matches) {
-			cache.matches = pl_new(32);
-			for (k=0; k<pl_size(matches); k++) {
-				MatchObj* mo = pl_get(matches, k);
-				MatchObj* copy = malloc(sizeof(MatchObj));
-				memcpy(copy, mo, sizeof(MatchObj));
-				pl_append(cache.matches, copy);
-			}
-		} else
-			cache.matches = NULL;
-
-		bl_insert_sorted(cached, &cache, cached_hits_compare);
-	}
-
- bailout:
-	return;
-}
-
 static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	bool solved;
 
@@ -786,8 +649,8 @@ static void solve_fields() {
 
 		fieldnum = il_get(fieldlist, fi);
 		if (fieldnum >= nfields) {
-			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
-			write_hits(-1, NULL);
+			if (!silent)
+				fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			goto cleanup;
 		}
 
@@ -797,7 +660,6 @@ static void solve_fields() {
 				// file exists; field has already been solved.
 				if (!silent)
 					fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solvedfname);
-				write_hits(fieldnum, NULL);
 				goto cleanup;
 			}
 			solver.solvedfn = solvedfname;
@@ -809,7 +671,6 @@ static void solve_fields() {
 				// field has already been solved.
 				if (!silent)
 					fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
-				write_hits(fieldnum, NULL);
 				goto cleanup;
 			}
 		}
@@ -875,10 +736,16 @@ static void solve_fields() {
 		}
 
 		// Write the keepable hits.
-		if (hits->keepers)
-			write_hits(fieldnum, hits->keepers);
-		else
-			write_hits(fieldnum, NULL);
+		if (hits->keepers) {
+			int i;
+			for (i=0; i<pl_size(hits->keepers); i++) {
+				MatchObj* mo = pl_get(hits->keepers, i);
+				if (matchfile_write_match(mf, mo))
+					fprintf(stderr, "Field %i: error writing a match.\n", fieldnum);
+			}
+			if (matchfile_fix_header(mf))
+				fprintf(stderr, "Failed to fix the matchfile header for field %i.\n", fieldnum);
+		}
 
 		if (hits->bestmo) {
 			// Field solved!
