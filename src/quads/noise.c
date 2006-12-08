@@ -20,7 +20,28 @@ void sample_star_in_circle(double* center, double ABangle,
 	int i;
 
 	tan_vectors(center, va, vb);
-	noisemag = sqrt(arcsec2distsq(60.0 * ABangle) * 0.25 * uniform_sample(0.0, 1.0));
+	noisemag = sqrt(arcsec2distsq(60.0 * ABangle) * uniform_sample(0.0, 1.0));
+	noiseangle = uniform_sample(0.0, 2.0*M_PI);
+	for (i=0; i<3; i++)
+		point[i] = center[i] +
+			cos(noiseangle) * noisemag * va[i] +
+			sin(noiseangle) * noisemag * vb[i];
+	normalize_3(point);
+}
+
+void sample_star_in_ring(double* center,
+						 double minAngle,
+						 double maxAngle,
+						 double* point) {
+	double va[3], vb[3];
+	double noisemag, noiseangle;
+	int i;
+	double d2min, d2max;
+
+	tan_vectors(center, va, vb);
+	d2min = arcsec2distsq(60.0 * minAngle);
+	d2max = arcsec2distsq(60.0 * maxAngle);
+	noisemag = sqrt(uniform_sample(d2min, d2max));
 	noiseangle = uniform_sample(0.0, 2.0*M_PI);
 	for (i=0; i<3; i++)
 		point[i] = center[i] +

@@ -1,8 +1,16 @@
 #ifndef NOISE_H
 #define NOISE_H
 
-void sample_star_in_circle(double* center, double ABangle,
+/**
+   angleArcMin: radius in arcminutes.
+ */
+void sample_star_in_circle(double* center, double angleArcMin,
 						   double* point);
+
+void sample_star_in_ring(double* center,
+						 double minAngleArcMin,
+						 double maxAngleArcMin,
+						 double* point);
 
 void sample_field_in_circle(double* center, double radius,
 							double* point);

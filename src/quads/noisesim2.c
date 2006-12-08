@@ -26,8 +26,6 @@ int main(int argc, char** args) {
 	double upperAngle = 5.0;
 
 	double noisedist;
-	double noiseangle;
-	double noiseval;
 
 	double realA[2];
 	double realB[2];
@@ -50,6 +48,7 @@ int main(int argc, char** args) {
 	int matlab = FALSE;
 
 	dl* codedelta;
+	dl* codedists;
 	dl* noises;
 
 	int abInvalid = 0;
@@ -107,11 +106,14 @@ int main(int argc, char** args) {
 		noisedist = noise / pixscale;
 
 		codedelta = dl_new(256);
+		codedists = dl_new(256);
 
 		abInvalid = cdInvalid = 0;
 
 		for (j=0; j<N; j++) {
 			double midAB[2];
+			double realcode[4];
+			double code[4];
 
 			midAB[0] = (realA[0] + realB[0]) / 2.0;
 			midAB[1] = (realA[1] + realB[1]) / 2.0;
@@ -125,12 +127,11 @@ int main(int argc, char** args) {
 			sample_field_in_circle(midAB, ABangle * 60.0 / pixscale, realD);
 
 			{
-				double code[4];
-				compute_field_code(realA, realB, realC, realD, code, NULL);
-				realcodecx = code[0];
-				realcodecy = code[1];
-				realcodedx = code[2];
-				realcodedy = code[3];
+				compute_field_code(realA, realB, realC, realD, realcode, NULL);
+				realcodecx = realcode[0];
+				realcodecy = realcode[1];
+				realcodedx = realcode[2];
+				realcodedy = realcode[3];
 			}
 
 			// permute A,B,C,D
@@ -140,7 +141,6 @@ int main(int argc, char** args) {
 			add_field_noise(realD, noisedist, D);
 
 			{
-				double code[4];
 				double scale;
 				compute_field_code(A, B, C, D, code, &scale);
 				codecx = code[0];
@@ -169,29 +169,45 @@ int main(int argc, char** args) {
 			dl_append(codedelta, codecy - realcodecy);
 			dl_append(codedelta, codedx - realcodedx);
 			dl_append(codedelta, codedy - realcodedy);
+
+			dl_append(codedists, sqrt(distsq(realcode, code, 4)));
 		}
 
 		{
 			double mean, std;
 			mean = 0.0;
-			for (j=0; j<dl_size(codedelta); j++)
-				mean += dl_get(codedelta, j);
-			mean /= (double)dl_size(codedelta);
+			for (j=0; j<dl_size(codedists); j++)
+				mean += dl_get(codedists, j);
+			mean /= (double)dl_size(codedists);
 			std = 0.0;
-			for (j=0; j<dl_size(codedelta); j++)
-				std += square(dl_get(codedelta, j) - mean);
-			std /= ((double)dl_size(codedelta) - 1);
+			for (j=0; j<dl_size(codedists); j++)
+				std += square(dl_get(codedists, j) - mean);
+			std /= ((double)dl_size(codedists) - 1);
 			std = sqrt(std);
 
 			printf("noise(%i)=%g; %%arcsec\n", k+1, noise);
-			printf("codemean(%i)=%g;\n", k+1, mean);
-			printf("codestd(%i)=%g;\n", k+1, std);
+			printf("codedistmean(%i)=%g;\n", k+1, mean);
+			printf("codediststd(%i)=%g;\n", k+1, std);
+
+			/*
+			  mean = 0.0;
+			  for (j=0; j<dl_size(codedelta); j++)
+			  mean += dl_get(codedelta, j);
+			  mean /= (double)dl_size(codedelta);
+			  std = 0.0;
+			  for (j=0; j<dl_size(codedelta); j++)
+			  std += square(dl_get(codedelta, j) - mean);
+			  std /= ((double)dl_size(codedelta) - 1);
+			  printf("codemean(%i)=%g;\n", k+1, mean);
+			  printf("codestd(%i)=%g;\n", k+1, std);
+			*/
 		}
 
 		printf("abinvalid(%i) = %g;\n", k+1, abInvalid / (double)N);
 		printf("cdinvalid(%i) = %g;\n", k+1, cdInvalid / (double)N);
 
 		dl_free(codedelta);
+		dl_free(codedists);
 	}
 
 	dl_free(noises);

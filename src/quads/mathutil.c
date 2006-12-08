@@ -193,6 +193,7 @@ double gaussian_sample(double mean, double stddev) {
 }
 
 double uniform_sample(double low, double high) {
+	if (low == high) return low;
 	return low + (high - low)*((double)rand() / (double)RAND_MAX);
 }
 

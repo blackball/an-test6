@@ -163,6 +163,8 @@ noisesim: noisesim.o noise.o starutil.o mathutil.o bl.o
 
 noisesim2: noisesim2.o noise.o starutil.o mathutil.o bl.o
 
+noisesim3: noisesim3.o noise.o starutil.o mathutil.o bl.o
+
 hpgrid: hpgrid.o healpix.o mathutil.o starutil.o
 
 get-healpix: get-healpix.o healpix.o mathutil.o starutil.o

@@ -101,11 +101,11 @@ int main(int argc, char** args) {
 
 			// C
 			// place C uniformly in the circle around the midpoint of AB.
-			sample_star_in_circle(midAB, ABangle, realC);
+			sample_star_in_circle(midAB, ABangle/2.0, realC);
 
 			// D
 			// place D uniformly in the circle around the midpoint of AB.
-			sample_star_in_circle(midAB, ABangle, realD);
+			sample_star_in_circle(midAB, ABangle/2.0, realD);
 
 			{
 				double code[4];
