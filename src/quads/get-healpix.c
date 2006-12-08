@@ -113,15 +113,24 @@ int main(int argc, char** args) {
     }
 
 	{
-		uint ri, ni;
+		uint ri;
 		uint ringnum, longind;
-		printf("Healpix=%i in the XY scheme.\n", healpix);
+		uint bighp, x, y;
+		double center[2];
+		healpix_decompose_xy(healpix, &bighp, &x, &y, Nside);
+		printf("Healpix=%i in the XY scheme (bighp=%i, x=%i, y=%i)\n",
+			   healpix, bighp, x, y);
 		ri = healpix_xy_to_ring(healpix, Nside);
 		healpix_decompose_ring(ri, Nside, &ringnum, &longind);
-		printf("Healpix=%i in the RING scheme (ringnum=%i, longind=%i)\n",
+		printf("  healpix=%i in the RING scheme (ringnum=%i, longind=%i)\n",
 			   ri, ringnum, longind);
-		ni = healpix_xy_to_nested(healpix, Nside);
-		printf("Healpix=%i in the NESTED scheme.\n", ni);
+		if (is_power_of_two(Nside)) {
+			int ni = healpix_xy_to_nested(healpix, Nside);
+			printf("  healpix=%i in the NESTED scheme.\n", ni);
+		}
+		healpix_to_radecarr(healpix, Nside, 0.5, 0.5, center);
+		printf("Healpix center is (%g, %g) degrees\n",
+			   rad2deg(center[0]), rad2deg(center[1]));
 	}
 
 	if (neighbours) {
