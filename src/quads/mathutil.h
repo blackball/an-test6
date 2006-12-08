@@ -23,6 +23,12 @@
 #include "xylist.h"
 #include "keywords.h"
 
+/*
+  Given a point "pt", computes two unit vectors that are tangent
+  to the point and perpendicular to each other.
+*/
+void tan_vectors(double* pt, double* vec1, double* vec2);
+
 int is_power_of_two(unsigned int x);
 
 void matrix_matrix_3(double* m1, double* m2, double* result);

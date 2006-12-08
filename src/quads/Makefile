@@ -159,9 +159,9 @@ wcscheck: wcscheck.o starutil.o mathutil.o bl.o xylist.o rdlist.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
-noisesim: noisesim.o starutil.o mathutil.o bl.o
+noisesim: noisesim.o noise.o starutil.o mathutil.o bl.o
 
-noisesim2: noisesim2.o starutil.o mathutil.o bl.o
+noisesim2: noisesim2.o noise.o starutil.o mathutil.o bl.o
 
 hpgrid: hpgrid.o healpix.o mathutil.o starutil.o
 

@@ -11,6 +11,7 @@
 
 #include "starutil.h"
 #include "mathutil.h"
+#include "noise.h"
 
 const char* OPTIONS = "e:n:ma:u:l:";
 
@@ -110,129 +111,47 @@ int main(int argc, char** args) {
 		abInvalid = cdInvalid = 0;
 
 		for (j=0; j<N; j++) {
+			double midAB[2];
+
+			midAB[0] = (realA[0] + realB[0]) / 2.0;
+			midAB[1] = (realA[1] + realB[1]) / 2.0;
 
 			// C
 			// place C uniformly in the circle around the midpoint of AB.
-			realC[0] = (realA[0] + realB[0]) / 2.0;
-			realC[1] = (realA[1] + realB[1]) / 2.0;
-			noiseval = ABangle * 60.0 / pixscale * sqrt(0.25 * uniform_sample(0.0, 1.0));
-			noiseangle = uniform_sample(0.0, 2.0*M_PI);
-			realC[0] += cos(noiseangle) * noiseval;
-			realC[1] += sin(noiseangle) * noiseval;
+			sample_field_in_circle(midAB, ABangle * 60.0 / pixscale, realC);
 
 			// D
 			// place D uniformly in the circle around the midpoint of AB.
-			realD[0] = (realA[0] + realB[0]) / 2.0;
-			realD[1] = (realA[1] + realB[1]) / 2.0;
-			noiseval = ABangle * 60.0 / pixscale * sqrt(0.25 * uniform_sample(0.0, 1.0));
-			noiseangle = uniform_sample(0.0, 2.0*M_PI);
-			realD[0] += cos(noiseangle) * noiseval;
-			realD[1] += sin(noiseangle) * noiseval;
+			sample_field_in_circle(midAB, ABangle * 60.0 / pixscale, realD);
 
 			{
-				double Ax, Ay, Bx, By, dx, dy, scale;
-				double costheta, sintheta;
-				double Cx, Cy, xxtmp;
-
-				Ax = realA[0];
-				Ay = realA[1];
-				Bx = realB[0];
-				By = realB[1];
-				dx = Bx - Ax;
-				dy = By - Ay;
-				scale = dx*dx + dy*dy;
-				costheta = (dy + dx) / scale;
-				sintheta = (dy - dx) / scale;
-
-				Cx = realC[0];
-				Cy = realC[1];
-				Cx -= Ax;
-				Cy -= Ay;
-				xxtmp = Cx;
-				Cx =     Cx * costheta + Cy * sintheta;
-				Cy = -xxtmp * sintheta + Cy * costheta;
-				realcodecx = Cx;
-				realcodecy = Cy;
-
-				Cx = realD[0];
-				Cy = realD[1];
-				Cx -= Ax;
-				Cy -= Ay;
-				xxtmp = Cx;
-				Cx =     Cx * costheta + Cy * sintheta;
-				Cy = -xxtmp * sintheta + Cy * costheta;
-				realcodedx = Cx;
-				realcodedy = Cy;
+				double code[4];
+				compute_field_code(realA, realB, realC, realD, code, NULL);
+				realcodecx = code[0];
+				realcodecy = code[1];
+				realcodedx = code[2];
+				realcodedy = code[3];
 			}
 
-			// permute A
-			// magnitude of noise
-			noiseval = gaussian_sample(0.0, noisedist);
-			// direction of noise
-			noiseangle = uniform_sample(0.0, 2.0*M_PI);
-			A[0] = realA[0] + cos(noiseangle) * noiseval;
-			A[1] = realA[1] + sin(noiseangle) * noiseval;
-
-			// permute B
-			noiseval = gaussian_sample(0.0, noisedist);
-			noiseangle = uniform_sample(0.0, 2.0*M_PI);
-			B[0] = realB[0] + cos(noiseangle) * noiseval;
-			B[1] = realB[1] + sin(noiseangle) * noiseval;
-
-			// permute C
-			noiseval = gaussian_sample(0.0, noisedist);
-			noiseangle = uniform_sample(0.0, 2.0*M_PI);
-			C[0] = realC[0] + cos(noiseangle) * noiseval;
-			C[1] = realC[1] + sin(noiseangle) * noiseval;
-
-			// permute D
-			noiseval = gaussian_sample(0.0, noisedist);
-			noiseangle = uniform_sample(0.0, 2.0*M_PI);
-			D[0] = realD[0] + cos(noiseangle) * noiseval;
-			D[1] = realD[1] + sin(noiseangle) * noiseval;
+			// permute A,B,C,D
+			add_field_noise(realA, noisedist, A);
+			add_field_noise(realB, noisedist, B);
+			add_field_noise(realC, noisedist, C);
+			add_field_noise(realD, noisedist, D);
 
 			{
-				double Ax, Ay, Bx, By, dx, dy, scale;
-				double costheta, sintheta;
-				double Cx, Cy, xxtmp;
-
-				Ax = A[0];
-				Ay = A[1];
-				Bx = B[0];
-				By = B[1];
-				dx = Bx - Ax;
-				dy = By - Ay;
-				scale = dx*dx + dy*dy;
-				costheta = (dy + dx) / scale;
-				sintheta = (dy - dx) / scale;
+				double code[4];
+				double scale;
+				compute_field_code(A, B, C, D, code, &scale);
+				codecx = code[0];
+				codecy = code[1];
+				codedx = code[2];
+				codedy = code[3];
 
 				if ((scale < square(lowerAngle * 60.0 / pixscale)) ||
 					(scale > square(upperAngle * 60.0 / pixscale))) {
 					abInvalid++;
 				}
-
-				Cx = C[0];
-				Cy = C[1];
-				Cx -= Ax;
-				Cy -= Ay;
-				xxtmp = Cx;
-				Cx =     Cx * costheta + Cy * sintheta;
-				Cy = -xxtmp * sintheta + Cy * costheta;
-				codecx = Cx;
-				codecy = Cy;
-
-				Cx = D[0];
-				Cy = D[1];
-				Cx -= Ax;
-				Cy -= Ay;
-				xxtmp = Cx;
-				Cx =     Cx * costheta + Cy * sintheta;
-				Cy = -xxtmp * sintheta + Cy * costheta;
-				codedx = Cx;
-				codedy = Cy;
-
-				//if (((Cx*Cx - Cx) + (Cy*Cy - Cy)) > 0.0)
-				//cdInvalid++;
 
 				if ((((codecx*codecx - codecx) + (codecy*codecy - codecy)) > 0.0) ||
 					(((codedx*codedx - codedx) + (codedy*codedy - codedy)) > 0.0))

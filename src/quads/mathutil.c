@@ -32,6 +32,33 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 	return (res & 0x0000FFFF) + ((res >> 16) & 0x0000FFFF);
 }
 
+void tan_vectors(double* pt, double* vec1, double* vec2) {
+	double etax, etay, etaz, xix, xiy, xiz, eta_norm;
+	double inv_en;
+	// eta is a vector perpendicular to pt
+	etax = -pt[1];
+	etay =  pt[0];
+	etaz = 0.0;
+	eta_norm = hypot(etax, etay); //sqrt(etax * etax + etay * etay);
+	inv_en = 1.0 / eta_norm;
+	etax *= inv_en;
+	etay *= inv_en;
+
+	vec1[0] = etax;
+	vec1[1] = etay;
+	vec1[2] = etaz;
+
+	// xi =  pt cross eta
+	xix = -pt[2] * etay;
+	xiy =  pt[2] * etax;
+	xiz =  pt[0] * etay - pt[1] * etax;
+	// xi has unit length since pt and eta have unit length.
+
+	vec2[0] = xix;
+	vec2[1] = xiy;
+	vec2[2] = xiz;
+}
+
 int is_power_of_two(unsigned int x) {
 	return (my_hweight32(x) == 1);
 }
