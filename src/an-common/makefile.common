@@ -53,7 +53,7 @@ FLAGS_DEF += -fno-math-errno -fno-trapping-math
 
 # debuggy!
 #FLAGS_DEF += -O0
-#FLAGS_DEF += -g
+FLAGS_DEF += -g
 
 # profily!
 #FLAGS_DEF += -pg
