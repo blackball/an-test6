@@ -95,39 +95,39 @@ int main(int argc, char** args) {
 			dec *= M_PI / 180.0;
 		}
 
-		if (Nside > 1)
-			healpix = radectohealpix_nside(ra, dec, Nside);
-		else
-			healpix = radectohealpix(ra, dec);
+		healpix = radectohealpix(ra, dec, Nside);
 	
 		printf("(RA, DEC) = (%g, %g) degrees\n", ra*180/M_PI, dec*180/M_PI);
 		printf("(RA, DEC) = (%g, %g) radians\n", ra, dec);
-		printf("Healpix=%i\n", healpix);
 
 		radec2xyzarr(ra, dec, xyz);
 
     } else if (nargs == 3) {
-		double x = argvals[0];
-		double y = argvals[1];
-		double z = argvals[2];
+		xyz[0] = argvals[0];
+		xyz[1] = argvals[1];
+		xyz[2] = argvals[2];
 
-		if (Nside > 1)
-			healpix = xyztohealpix_nside(x, y, z, Nside);
-		else
-			healpix = xyztohealpix(x, y, z);
+		healpix = xyzarrtohealpix(xyz, Nside);
 
-		printf("(x, y, z) = (%g, %g, %g)\n", x, y, z);
-		printf("Healpix=%i\n", healpix);
-
-		xyz[0] = x;
-		xyz[1] = y;
-		xyz[2] = z;
+		printf("(x, y, z) = (%g, %g, %g)\n", xyz[0], xyz[1], xyz[2]);
     }
+
+	{
+		uint ri, ni;
+		uint ringnum, longind;
+		printf("Healpix=%i in the XY scheme.\n", healpix);
+		ri = healpix_xy_to_ring(healpix, Nside);
+		healpix_decompose_ring(ri, Nside, &ringnum, &longind);
+		printf("Healpix=%i in the RING scheme (ringnum=%i, longind=%i)\n",
+			   ri, ringnum, longind);
+		ni = healpix_xy_to_nested(healpix, Nside);
+		printf("Healpix=%i in the NESTED scheme.\n", ni);
+	}
 
 	if (neighbours) {
 		uint neigh[8];
 		uint nneigh;
-		nneigh = healpix_get_neighbours_nside(healpix, neigh, Nside);
+		nneigh = healpix_get_neighbours(healpix, neigh, Nside);
 		printf("Neighbours=[ ");
 		for (i=0; i<nneigh; i++)
 			printf("%i ", neigh[i]);
@@ -148,9 +148,9 @@ int main(int argc, char** args) {
 		double* bdydir;
 		double d2;
 
-		healpix_to_xyzarr_lex(0.0, 0.0, healpix, Nside, origin);
-		healpix_to_xyzarr_lex(1.0, 0.0, healpix, Nside, vx);
-		healpix_to_xyzarr_lex(0.0, 1.0, healpix, Nside, vy);
+		healpix_to_xyzarr(healpix, Nside, 0.0, 0.0, origin);
+		healpix_to_xyzarr(healpix, Nside, 1.0, 0.0, vx);
+		healpix_to_xyzarr(healpix, Nside, 0.0, 1.0, vy);
 		for (d=0; d<3; d++) {
 			vx[d] -= origin[d];
 			vy[d] -= origin[d];
