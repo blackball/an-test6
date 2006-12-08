@@ -63,7 +63,6 @@ static void printHelp(char* progname) {
 
 static void solve_fields();
 static int read_parameters();
-static void reset_next_field();
 static void write_hits(int fieldnum, pl* matches);
 
 #define DEFAULT_CODE_TOL .01
@@ -230,8 +229,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Invalid params... this message is useless.\n");
 			exit(-1);
 		}
-
-		reset_next_field();
 
 		mf = matchfile_open_for_writing(matchfname);
 		if (!mf) {
@@ -734,29 +731,6 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	return 1;
 }
 
-static int next_field_index = 0;
-
-static void reset_next_field() {
-	next_field_index = 0;
-}
-
-static int next_field(xy** p_field, qfits_header** p_fieldhdr) {
-	int rtn;
-
-	if (next_field_index >= il_size(fieldlist))
-		rtn = -1;
-	else {
-		rtn = il_get(fieldlist, next_field_index);
-		next_field_index++;
-		if (p_field)
-			*p_field = xylist_get_field(xyls, rtn);
-		if (p_fieldhdr)
-			*p_fieldhdr = xylist_get_field_header(xyls, rtn);
-	}
-
-	return rtn;
-}
-
 static void solve_fields() {
 	solver_params solver;
 	double last_utime, last_stime;
@@ -764,6 +738,7 @@ static void solve_fields() {
 	struct timeval wtime, last_wtime;
 	int nfields;
 	double* field = NULL;
+	int fi;
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
@@ -803,30 +778,20 @@ static void solve_fields() {
 
 	nfields = xyls->nfields;
 
-	for (;;) {
-		xy *thisfield = NULL;
+	for (fi=0; fi<il_size(fieldlist); fi++) {
 		int fieldnum;
 		MatchObj template;
 		int nfield;
 		qfits_header* fieldhdr = NULL;
 
-		fieldnum = next_field(&thisfield, &fieldhdr);
-
-		if (fieldnum == -1)
-			break;
+		fieldnum = il_get(fieldlist, fi);
 		if (fieldnum >= nfields) {
 			fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
-			write_hits(fieldnum, NULL);
-			goto cleanup;
-		}
-		if (!thisfield) {
-			// HACK - why is this happening? QFITS + multithreading interaction bug?
-			// or running out of address space?
-			fprintf(stderr, "Couldn't get field %i\n", fieldnum);
-			write_hits(fieldnum, NULL);
+			write_hits(-1, NULL);
 			goto cleanup;
 		}
 
+		// Has the field already been solved?
 		if (solvedfname) {
 			if (solvedfile_get(solvedfname, fieldnum)) {
 				// file exists; field has already been solved.
@@ -850,11 +815,18 @@ static void solve_fields() {
 		}
 		solver.do_solvedserver = (solvedserver ? TRUE : FALSE);
 
-		nfield = xy_size(thisfield);
+
+		// Get the field.
+		nfield = xylist_n_entries(xyls, fieldnum);
+		if (nfield == -1) {
+			fprintf(stderr, "Couldn't determine how many objects are in field %i.\n", fieldnum);
+			goto cleanup;
+		}
 		field = realloc(field, 2 * nfield * sizeof(double));
-		dl_copy(thisfield, 0, 2 * nfield, field);
-		free_xy(thisfield);
-		thisfield = NULL;
+		if (xylist_read_entries(xyls, fieldnum, 0, nfield, field)) {
+			fprintf(stderr, "Failed to read field.\n");
+			goto cleanup;
+		}
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
@@ -863,10 +835,12 @@ static void solve_fields() {
 		template.indexid = indexid;
 		template.healpix = healpix;
 
+		fieldhdr = xylist_get_field_header(xyls,fieldnum);
 		if (fieldhdr) {
 			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, fieldid_key));
 			if (idstr)
 				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
+			qfits_header_destroy(fieldhdr);
 		}
 
 		solver.fieldid = fieldid;
@@ -975,10 +949,7 @@ static void solve_fields() {
 		handlehits_clear(hits);
 
 	cleanup:
-		if (thisfield)
-			free_xy(thisfield);
-		if (fieldhdr)
-			qfits_header_destroy(fieldhdr);
+		if (0) {} // to keep gcc happy...
 	}
 
 	free(field);
