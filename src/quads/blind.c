@@ -17,7 +17,7 @@
 */
 
 /**
- *   Solve fields (with slavish devotion)
+ *   Solve fields blindly
  *
  * Inputs: .ckdt .quad .skdt
  * Output: .match
@@ -41,12 +41,9 @@
 #include "solver_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
-#include "hitlist.h"
 #include "tic.h"
 #include "quadfile.h"
 #include "idfile.h"
-#include "intmap.h"
-#include "verify.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
 #include "ioutils.h"
@@ -54,9 +51,10 @@
 #include "codekd.h"
 #include "boilerplate.h"
 #include "fitsioutils.h"
-#include "qfits_error.h"
 #include "handlehits.h"
 #include "blind_wcs.h"
+#include "qfits_error.h"
+#include "qfits_cache.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -183,8 +181,12 @@ int main(int argc, char *argv[]) {
 		starkd = NULL;
 		nverified = 0;
 
-		if (read_parameters())
+		if (read_parameters()) {
+			free(xcolname);
+			free(ycolname);
+			free(fieldid_key);
 			break;
+		}
 
 		if (!silent) {
 			fprintf(stderr, "%s params:\n", progname);
@@ -413,6 +415,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	il_free(fieldlist);
+	qfits_cache_purge(); // for valgrind
 	return 0;
 }
 
@@ -879,9 +882,6 @@ static void solve_fields() {
 		solver.mo_template = &template;
 		solver.circle = circle;
 
-		handlehits_free_matchobjs(hits);
-		handlehits_clear(hits);
-
 		hits->field = field;
 		hits->nfield = nfield;
 
@@ -970,6 +970,9 @@ static void solve_fields() {
 		last_utime = utime;
 		last_stime = stime;
 		last_wtime = wtime;
+
+		handlehits_free_matchobjs(hits);
+		handlehits_clear(hits);
 
 	cleanup:
 		if (thisfield)

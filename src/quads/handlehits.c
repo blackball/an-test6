@@ -34,7 +34,6 @@ void handlehits_free_matchobjs(handlehits* hh) {
 void handlehits_clear(handlehits* hh) {
 	if (hh->hits)
 		hitlist_clear(hh->hits);
-	hh->hits = NULL;
 	hh->nverified = 0;
 	hh->bestmo = NULL;
 	hh->bestmoindex = 0;
@@ -152,7 +151,7 @@ bool handlehits_add(handlehits* hh, MatchObj* mo) {
 	}
 
  cleanup:
-	if (agreelist) pl_remove_all(agreelist);
+	if (agreelist) pl_free(agreelist);
 	il_free(indlist);
 	return solved;
 }

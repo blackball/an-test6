@@ -77,6 +77,8 @@ int codetree_close(codetree* s) {
 	if (!s) return 0;
 	if (s->inverse_perm)
 		free(s->inverse_perm);
+	if (s->header)
+		qfits_header_destroy(s->header);
 	if (s->tree)
 		kdtree_fits_close(s->tree);
 	free(s);
