@@ -145,6 +145,13 @@ int main(int argc, char** args) {
 			std /= ((double)dl_size(codedists) - 1);
 			std = sqrt(std);
 
+			if (matlab) {
+				printf("codedists=[");
+				for (j=0; j<dl_size(codedists); j++)
+					printf("%g,", dl_get(codedists, j));
+				printf("];\n");
+			}
+
 			printf("noise(%i)=%g; %%arcsec\n", k+1, noise);
 			printf("codedistmean(%i)=%g;\n", k+1, mean);
 			printf("codediststd(%i)=%g;\n", k+1, std);
