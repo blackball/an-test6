@@ -1,5 +1,6 @@
 clear;
-system('noisesim -n 1000 -m -e 2.7 > sim1.m');
+jitter = 1;
+system(sprintf('noisesim -n 1000 -m -e %g > sim1.m', jitter));
 sim1;
 
 subplot(111);
@@ -19,7 +20,7 @@ axis equal;
 legend({'cx (-0.2)', 'cy (0.0)', 'dx (+0.2)', 'dy (+0.4)'}, 'Location', 'SouthEast');
 xlabel('True code value');
 ylabel('Noisy code value');
-title('Noisy codes (e=2.7 arcseconds)');
+title(sprintf('Noisy codes (e=%g arcseconds)', jitter));
 print -depsc 'simplot2.eps';
 
 realx=[realcode(:,1);realcode(:,3)];
@@ -71,32 +72,56 @@ print -depsc 'simplot4.eps';
 subplot(111);
 
 clear;
-system('noisesim -n 10000 -e 0.0 -e 0.25 -e 0.5 -e 0.75 -e 1.0 -e 1.25 -e 1.5 -e 1.75 -e 2.0 -a 4.0 > sim2a.m');
+errs=[0:0.1:1];
+errstr=sprintf('-e %g ', errs);
+system(['noisesim -n 10000 ', errstr, ' -a 4.0 > sim2a.m']);
 sim2a;
 n1=noise;
-e1=codestd;
-system('noisesim -n 10000 -e 0.0 -e 0.25 -e 0.5 -e 0.75 -e 1.0 -e 1.25 -e 1.5 -e 1.75 -e 2.0 -a 4.5 > sim2b.m');
+%e1=codestd;
+e1=codedistmean;
+std1=codediststd;
+system(['noisesim -n 10000 ', errstr, ' -a 4.5 > sim2b.m']);
 sim2b;
 n2=noise;
-e2=codestd;
-system('noisesim -n 10000 -e 0.0 -e 0.25 -e 0.5 -e 0.75 -e 1.0 -e 1.25 -e 1.5 -e 1.75 -e 2.0 -a 5.0 > sim2c.m');
+%e2=codestd;
+e2=codedistmean;
+std2=codediststd;
+system(['noisesim -n 10000 ', errstr, ' -a 5.0 > sim2c.m']);
 sim2c;
 n3=noise;
-e3=codestd;
+%e3=codestd;
+e3=codedistmean;
+std3=codediststd;
 
 s1 = n1' \ e1';
 s2 = n2' \ e2';
 s3 = n3' \ e3';
 
+ss1 = n1' \ std1';
+ss2 = n2' \ std2';
+ss3 = n3' \ std3';
+
 xx=[min(n1),max(n1)];
-plot(n1, e1, 'bo-', xx, xx.*s1, 'b:', n2, e2, 'ro-', xx, xx.*s2, 'r:', n3, e3, 'ko-', xx, xx.*s3, 'k:');
+%p1=plot(n1, e1, 'bo-', xx, xx.*s1, 'b--', n2, e2, 'ro-', xx, xx.*s2, 'r--', n3, e3, 'ko-', xx, xx.*s3, 'k--');
+p1=plot(n1, e1, 'bo', xx, xx.*s1, 'b-', n2, e2, 'ro', xx, xx.*s2, 'r-', n3, e3, 'ko', xx, xx.*s3, 'k-');
+hold on;
+p2=plot(n1, e1+std1, 'b:', n1, e1-std1, 'b:');
+p3=plot(n2, e2+std2, 'r:', n2, e2-std2, 'r:');
+p4=plot(n3, e3+std3, 'k:', n3, e3-std3, 'k:');
+plot([0 1], [0.01 0.01], 'Color', [0.5,0.5,0.5]);
+hold off;
 xlabel('Star Jitter (arcsec)');
-ylabel('stddev(Code error)');
-title('Error propagates nearly linearly');
+%ylabel('stddev(Code error)');
+ylabel('Code Error');
+title('Code error propagates nearly linearly with star jitter');
 l1=sprintf('Best fit: slope %.3g', s1);
 l2=sprintf('Best fit: slope %.3g', s2);
 l3=sprintf('Best fit: slope %.3g', s3);
-legend({'AB = 4.0 arcmin', l1, 'AB = 4.5 arcmin', l2, 'AB = 5.0 arcmin', l3}, 'Location', 'NorthWest');
+ls1=sprintf('+- one sigma: slope %.2g', ss1);
+ls2=sprintf('+- one sigma: slope %.2g', ss2);
+ls3=sprintf('+- one sigma: slope %.2g', ss3);
+legend([p1(1:2); p2(1); p1(3:4); p3(1); p1(5:6); p4(1)], {'AB = 4.0 arcmin', l1, ls1, 'AB = 4.5 arcmin', l2, ls2, 'AB = 5.0 arcmin', l3, ls3}, 'Location', 'NorthWest');
+axis([0 1 0 0.02]);
 print -depsc 'simplot5.eps';
 
 

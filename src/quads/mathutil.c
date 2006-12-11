@@ -32,7 +32,7 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 	return (res & 0x0000FFFF) + ((res >> 16) & 0x0000FFFF);
 }
 
-void tan_vectors(double* pt, double* vec1, double* vec2) {
+void tan_vectors(const double* pt, double* vec1, double* vec2) {
 	double etax, etay, etaz, xix, xiy, xiz, eta_norm;
 	double inv_en;
 	// eta is a vector perpendicular to pt
@@ -181,8 +181,8 @@ double gaussian_sample(double mean, double stddev) {
 		return mean + y1 * stddev;
 	}
 	do {
-		x1 = uniform_sample(-0.5, 0.5);
-		x2 = uniform_sample(-0.5, 0.5);
+		x1 = uniform_sample(-1, 1);
+		x2 = uniform_sample(-1, 1);
 		w = x1 * x1 + x2 * x2;
 	} while ( w >= 1.0 );
 
