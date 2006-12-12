@@ -13,7 +13,7 @@
 #include "mathutil.h"
 #include "noise.h"
 
-const char* OPTIONS = "e:n:ma:u:l:";
+const char* OPTIONS = "e:n:ma:u:l:c";
 
 int main(int argc, char** args) {
 	int argchar;
@@ -46,6 +46,7 @@ int main(int argc, char** args) {
 	int N=1000;
 
 	int matlab = FALSE;
+	int print_codedists = FALSE;
 
 	dl* codedelta;
 	dl* codedists;
@@ -61,6 +62,9 @@ int main(int argc, char** args) {
 		case 'e':
 			noise = atof(optarg);
 			dl_append(noises, noise);
+			break;
+		case 'c':
+			print_codedists = TRUE;
 			break;
 		case 'm':
 			matlab = TRUE;
@@ -184,6 +188,13 @@ int main(int argc, char** args) {
 				std += square(dl_get(codedists, j) - mean);
 			std /= ((double)dl_size(codedists) - 1);
 			std = sqrt(std);
+
+			if (print_codedists) {
+				printf("codedists=[");
+				for (j=0; j<dl_size(codedists); j++)
+					printf("%g,", dl_get(codedists, j));
+				printf("];\n");
+			}
 
 			printf("noise(%i)=%g; %%arcsec\n", k+1, noise);
 			printf("codedistmean(%i)=%g;\n", k+1, mean);

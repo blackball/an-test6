@@ -65,13 +65,12 @@ void add_star_noise(const double* real, double noisevar, double* noisy) {
 }
 
 void add_field_noise(const double* real, double noisevar, double* noisy) {
-	double noisemag, noiseangle;
+	double mag1, mag2;
 	// magnitude of noise
-	noisemag = gaussian_sample(0.0, noisevar);
-	// direction of noise
-	noiseangle = uniform_sample(0.0, 2.0*M_PI);
-	noisy[0] = real[0] + cos(noiseangle) * noisemag;
-	noisy[1] = real[1] + sin(noiseangle) * noisemag;
+	mag1 = gaussian_sample(0.0, noisevar);
+	mag2 = gaussian_sample(0.0, noisevar);
+	noisy[0] = real[0] + mag1;
+	noisy[1] = real[1] + mag2;
 }
 
 void compute_star_code(double* A, double* B, double* C, double* D,

@@ -44,6 +44,8 @@
 
 const char* OPTIONS = "e:n:ma:u:l:";
 
+#define xy2ra_nowrap(x,y) atan2(y,x)
+
 int main(int argc, char** args) {
 	int argchar;
 
@@ -254,6 +256,74 @@ int main(int argc, char** args) {
 
 				if (matlab) {
 					static int nhere = 1;
+					double pA[3];
+					double pB[3];
+					double pC[3];
+					double pD[3];
+					double pC0[3];
+					double pC1[3];
+					double pC2[3];
+					double pC3[3];
+					/*
+					  printf("starA(%i,:)=[%g,%g];\n", nhere, 1.0/pixscale * rad2arcsec(xy2ra(sA[0], sA[1])), 1.0/pixscale * rad2arcsec(z2dec(sA[2])));
+					  printf("starB(%i,:)=[%g,%g];\n", nhere, 1.0/pixscale * rad2arcsec(xy2ra(sB[0], sB[1])), 1.0/pixscale * rad2arcsec(z2dec(sB[2])));
+					  printf("starC(%i,:)=[%g,%g];\n", nhere, 1.0/pixscale * rad2arcsec(xy2ra(sC[0], sC[1])), 1.0/pixscale * rad2arcsec(z2dec(sC[2])));
+					  printf("starD(%i,:)=[%g,%g];\n", nhere, 1.0/pixscale * rad2arcsec(xy2ra(sD[0], sD[1])), 1.0/pixscale * rad2arcsec(z2dec(sD[2])));
+					  printf("fieldA(%i,:)=[%g,%g];\n", nhere, fA[0], fA[1]);
+					  printf("fieldB(%i,:)=[%g,%g];\n", nhere, fB[0], fB[1]);
+					  printf("fieldC(%i,:)=[%g,%g];\n", nhere, fC[0], fC[1]);
+					  printf("fieldD(%i,:)=[%g,%g];\n", nhere, fD[0], fD[1]);
+					*/
+					printf("sx(%i,:)=[%g,%g,%g,%g];\n", nhere,
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(sA[0], sA[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(sB[0], sB[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(sC[0], sC[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(sD[0], sD[1])));
+					printf("sy(%i,:)=[%g,%g,%g,%g];\n", nhere,
+						   1.0/pixscale * rad2arcsec(z2dec(sA[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(sB[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(sC[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(sD[2])));
+					printf("fx(%i,:)=[%g,%g,%g,%g];\n", nhere, fA[0], fB[0], fC[0], fD[0]);
+					printf("fy(%i,:)=[%g,%g,%g,%g];\n", nhere, fA[1], fB[1], fC[1], fD[1]);
+					image_to_xyz(fA[0], fA[1], pA, transform);
+					image_to_xyz(fB[0], fB[1], pB, transform);
+					image_to_xyz(fC[0], fC[1], pC, transform);
+					image_to_xyz(fD[0], fD[1], pD, transform);
+					printf("px(%i,:)=[%g,%g,%g,%g];\n", nhere,
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pA[0], pA[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pB[0], pB[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pC[0], pC[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pD[0], pD[1])));
+					printf("py(%i,:)=[%g,%g,%g,%g];\n", nhere,
+						   1.0/pixscale * rad2arcsec(z2dec(pA[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pB[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pC[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pD[2])));
+					image_to_xyz(0, 0, pC0, transform);
+					image_to_xyz(W, 0, pC1, transform);
+					image_to_xyz(W, H, pC2, transform);
+					image_to_xyz(0, H, pC3, transform);
+					printf("cx(%i,:)=[%g,%g,%g,%g,%g];\n", nhere,
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pC0[0], pC0[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pC1[0], pC1[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pC2[0], pC2[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pC3[0], pC3[1])),
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pC0[0], pC0[1])));
+					printf("cy(%i,:)=[%g,%g,%g,%g,%g];\n", nhere,
+						   1.0/pixscale * rad2arcsec(z2dec(pC0[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pC1[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pC2[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pC3[2])),
+						   1.0/pixscale * rad2arcsec(z2dec(pC0[2])));
+					printf("cenx(%i)=%g;\n", nhere,
+						   1.0/pixscale * rad2arcsec(xy2ra_nowrap(pCenter[0], pCenter[1])));
+					printf("ceny(%i)=%g;\n", nhere,
+						   1.0/pixscale * rad2arcsec(z2dec(pCenter[2])));
+					printf("scode(%i,:)=[%g,%g,%g,%g];\n", nhere,
+						   realcode[0], realcode[1], realcode[2], realcode[3]);
+					printf("fcode(%i,:)=[%g,%g,%g,%g];\n", nhere,
+						   code[0], code[1], code[2], code[3]);
 					printf("agreedists(%i)=%g;\n", nhere, agree);
 					nhere++;
 				}
@@ -278,6 +348,7 @@ int main(int argc, char** args) {
 			std = sqrt(std);
 
 			printf("noise(%i)=%g; %%arcsec\n", k+1, noise);
+			printf("agreemean(%i)=%g;\n", k+1, mean);
 			printf("agreestd(%i)=%g;\n", k+1, std);
 		}
 
