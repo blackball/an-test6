@@ -359,7 +359,7 @@ int main(int argc, char *argv[]) {
 				leftovermatches = hits->hits->matchlist;
 				hits->hits->matchlist = NULL;
 				// remove all the "successful" matches.
-				for (i=0; i<pl_size(writematches); i++)
+				for (i=0; writematches && i<pl_size(writematches); i++)
 					pl_remove_value(leftovermatches,
 									pl_get(writematches, i));
 			}

@@ -335,6 +335,7 @@ int main(int argc, char** args) {
 		printf("codeinvalid=%g\n", (double)codeInvalid / (double)N);
 		printf("ok=%g\n", (double)dl_size(agreedists) / (double)N);
 
+		printf("I=163; plot(sx(I,:), sy(I,:),'ro-', px(I,:), py(I,:), 'bx--', cx(I,:), cy(I,:), 'k--', cenx(I), ceny(I), 'mx', 0, 0, 'ro'); axis equal;\n");
 		{
 			double mean, std;
 			mean = 0.0;

@@ -41,6 +41,10 @@ struct handlehits {
 	int nfield;
 	int do_wcs;
 
+	// callback:
+	// called after verification is run on a match.
+	void (*verified)(struct handlehits* me, MatchObj* mo);
+
 	// state:
 
 	hitlist* hits;

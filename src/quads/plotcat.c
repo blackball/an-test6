@@ -348,6 +348,8 @@ int main(int argc, char *argv[])
 
 		if (cat)
 			catalog_close(cat);
+		if (skdt)
+			startree_close(skdt);
 		if (rdls)
 			dl_free(rdls);
 		if (ancat)

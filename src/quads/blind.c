@@ -577,6 +577,15 @@ static int read_parameters() {
 	}
 }
 
+static void verified(handlehits* hh, MatchObj* mo) {
+	if (!quiet && !silent)
+		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
+				mo->fieldnum, mo->nagree, 100.0 * mo->overlap,
+				mo->ninfield, mo->noverlap,
+				(mo->ninfield - mo->noverlap - mo->nconflict), mo->nconflict);
+	  fflush(stderr);
+}
+
 static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	bool solved;
 
@@ -638,6 +647,7 @@ static void solve_fields() {
 	hits->ninfield_tosolve = ninfield_tosolve;
 	hits->startree = starkd->tree;
 	hits->do_wcs = (wcs_template ? 1 : 0);
+	hits->verified = verified;
 
 	nfields = xyls->nfields;
 

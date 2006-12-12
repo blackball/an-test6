@@ -72,6 +72,9 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 				   corr);
 
 		mo->nverified = hh->nverified++;
+
+		if (hh->verified)
+			hh->verified(hh, mo);
 	}
 
 	if ((mo->overlap < hh->overlap_tokeep) ||
