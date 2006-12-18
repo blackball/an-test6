@@ -15,15 +15,17 @@ def line(v1,v2, color='b', style=None, linewidth=None, alpha=None, zorder=None):
         l.set_zorder(zorder)
     gca().add_line(l)
 
-imdat = load('scatter_image_0xf9ff_13.dat')
-redat = load('scatter_ref_0xf9ff_13.dat')
-dedat = load('corr_delta_0xf9ff_13.dat')
+imdat = load('scatter_image_0xf9ff_14.dat')
+redat = load('scatter_ref_0xf9ff_14.dat')
+dedat = load('corr_delta_0xf9ff_14.dat')
 
 hold(True)
 plot(imdat[:,0], imdat[:,1], 'r.')
+ax = axis()
 plot(redat[:,0], redat[:,1], 'bs', markerfacecolor=None)
 plot(dedat[:,0], dedat[:,1], 'gd', markeredgecolor='g', markerfacecolor=None, markersize=20)
-for x,y,dx,dy in dedat:
-    line([x,y],[x+dx,y+dy])
+#for x,y,dx,dy in dedat:
+#    line([x,y],[x+dx,y+dy])
+axis(ax)
 show()
 #quiver(dedat[:,0], dedat[:,1],dedat[:,2],dedat[:,3],scale=1.0)

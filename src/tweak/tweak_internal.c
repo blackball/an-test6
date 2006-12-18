@@ -282,15 +282,17 @@ void tweak_dump_ascii(tweak_t* t)
 			tweak_print4_fp(cor_im, t->x[im_ind], t->y[im_ind],
 					a, d);
 
-			int ref_ind = il_get(t->ref, i);
-			tweak_print4_fp(cor_ref,
-					t->x_ref[ref_ind], t->y_ref[ref_ind],
-					t->a_ref[ref_ind], t->d_ref[ref_ind]);
+			if (t->state & TWEAK_HAS_REF_XY) {
+				int ref_ind = il_get(t->ref, i);
+				tweak_print4_fp(cor_ref,
+						t->x_ref[ref_ind], t->y_ref[ref_ind],
+						t->a_ref[ref_ind], t->d_ref[ref_ind]);
 
-			tweak_print4_fp(cor_delta,
-					t->x[im_ind], t->y[im_ind],
-					t->x_ref[ref_ind] - t->x[im_ind],
-					t->y_ref[ref_ind] - t->y[im_ind]);
+				tweak_print4_fp(cor_delta,
+						t->x[im_ind], t->y[im_ind],
+						t->x_ref[ref_ind] - t->x[im_ind],
+						t->y_ref[ref_ind] - t->y[im_ind]);
+			}
 		}
 		fclose(cor_im);
 		fclose(cor_ref);
@@ -634,11 +636,19 @@ void do_linear_tweak(tweak_t* t)
 		A[2*i+1 + stride*2] = deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
 		A[2*i+1 + stride*3] = deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
 
-		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] = A[2*i+0 + stride*2] =
-			A[2*i+0 + stride*3] = 0.0;
+		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] =
+		A[2*i+0 + stride*2] = A[2*i+0 + stride*3] = 0.0;
 
-		b[2*i+0] = deg2rad(t->x_ref[il_get(t->ref, i)] - t->sip->crpix[0]);
-		b[2*i+1] = deg2rad(t->y_ref[il_get(t->ref, i)] - t->sip->crpix[1]);
+		// xref and yref should be intermediate WC's not image x and y!
+		double xyzpt[3];
+		double xyzcrval[3];
+		double x,y;
+		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], xyzpt);
+		radecdeg2xyzarr(t->sip->crval[0], t->sip->crval[1], xyzcrval);
+		star_coords(xyzpt, xyzcrval, &y, &x);
+
+		b[2*i+0] = x;
+		b[2*i+1] = y;
 	}
 
 	// allocate work areas and answers
@@ -655,10 +665,14 @@ void do_linear_tweak(tweak_t* t)
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 
-	t->sip->cd[0][0] = b[0]; // b is replaced with CD 
-	t->sip->cd[0][1] = b[1];
-	t->sip->cd[1][0] = b[2];
-	t->sip->cd[1][1] = b[3];
+//	t->sip->cd[0][0] = rad2deg(b[0]); // b is replaced with CD 
+//	t->sip->cd[0][1] = rad2deg(b[1]);
+//	t->sip->cd[1][0] = rad2deg(b[2]);
+//	t->sip->cd[1][1] = rad2deg(b[3]);
+	t->sip->cd[0][0] = (b[0]); // b is replaced with CD 
+	t->sip->cd[0][1] = (b[1]);
+	t->sip->cd[1][0] = (b[2]);
+	t->sip->cd[1][1] = (b[3]);
 }
 
 
@@ -821,6 +835,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_CORRESPONDENCES);
 
 		do_linear_tweak(t);
+		tweak_clear_image_ad(t);
+		tweak_clear_ref_xy(t);
 
 		done(TWEAK_HAS_LINEAR_CD);
 	}

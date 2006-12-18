@@ -772,8 +772,18 @@ int main(int argc, char *argv[])
 			tweak_dump_ascii(&tweak);
 			getchar();
 		}
+		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
+		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
+		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
+		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
+		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
 		printf("final state: ");
-			tweak_print_state(&tweak);
+		tweak_print_state(&tweak);
+		tweak_dump_ascii(&tweak);
 		print_sip(tweak.sip);
 		printf("\n");
 
