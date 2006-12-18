@@ -611,22 +611,52 @@ void get_reference_stars(tweak_t* t)
 	kdtree_free_query(kq);
 }
 
+double figure_of_merit(tweak_t* t) 
+{
+
+	// works on the sky
+	double sqerr = 0.0;
+	int i;
+	for (i=0; i<il_size(t->image); i++) {
+		double a,d;
+		pixelxy2radec(t->sip, t->x[il_get(t->image, i)],
+				t->y[il_get(t->image, i)], &a, &d);
+		// xref and yref should be intermediate WC's not image x and y!
+		double xyzpt[3];
+		radecdeg2xyzarr(a, d, xyzpt);
+		double xyzpt_ref[3];
+		double xyzerr[3];
+		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)],
+				t->d_ref[il_get(t->ref, i)], xyzpt_ref);
+
+		xyzerr[0] = xyzpt[0]-xyzpt_ref[0];
+		xyzerr[1] = xyzpt[1]-xyzpt_ref[1];
+		xyzerr[2] = xyzpt[2]-xyzpt_ref[2];
+		sqerr += xyzerr[0]*xyzerr[0] + xyzerr[1]*xyzerr[1] + xyzerr[2]*xyzerr[2];  
+	}
+	return sqerr;
+
+}
+
 // Run a linear tweak; only changes CD matrix
 void do_linear_tweak(tweak_t* t)
 {
 
 	integer stride = 2*il_size(t->image);
-	double* A = malloc(4*stride*sizeof(double));
+	double* A = malloc(6*stride*sizeof(double));
 	double* b = malloc(stride*sizeof(double));
 	assert(A);
 	assert(b);
 
+	printf("sqerr=%le\n", figure_of_merit(t));
+
 	// Fill A in column-major order for fortran dgelsd
-	// x1   u1 v1 0  0    cd11
-	// y1 = 0  0  u1 v1 * cd12
-	// x2   u2 v2 0  0    cd21
-	// y2   0  0  u2 v2   cd22
-	// ...
+	// x1   u1 v1 0  0   1  0   cd11
+	// y1 = 0  0  u1 v1  0  1 * cd12
+	// x2   u2 v2 0  0   1  0   cd21
+	// y2   0  0  u2 v2  0  1   cd22
+	// ...                      dx
+	//                          dy
 	// where we minimize cd, and x,y are from refs in intermediate world
 	// coordinates. i.e. min_b || b - Ax||^2 with b refs, x unrolled cd
 	int i;
@@ -638,6 +668,9 @@ void do_linear_tweak(tweak_t* t)
 
 		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] =
 		A[2*i+0 + stride*2] = A[2*i+0 + stride*3] = 0.0;
+
+		A[2*i+0 + stride*4] = A[2*i+1 + stride*5] = 1.0;
+		A[2*i+1 + stride*4] = A[2*i+0 + stride*5] = 0.0;
 
 		// xref and yref should be intermediate WC's not image x and y!
 		double xyzpt[3];
@@ -653,9 +686,9 @@ void do_linear_tweak(tweak_t* t)
 
 	// allocate work areas and answers
 	
-	doublereal S[4];
+	doublereal S[6];
 	doublereal RCOND=-1.; // nr right hand sides
-	integer N=4; // nr cols of A
+	integer N=6; // nr cols of A
 	integer NRHS=1; // nr right hand sides
 	integer rank;
 	integer lwork = 1000*1000;
@@ -665,14 +698,17 @@ void do_linear_tweak(tweak_t* t)
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 
-//	t->sip->cd[0][0] = rad2deg(b[0]); // b is replaced with CD 
-//	t->sip->cd[0][1] = rad2deg(b[1]);
-//	t->sip->cd[1][0] = rad2deg(b[2]);
-//	t->sip->cd[1][1] = rad2deg(b[3]);
-	t->sip->cd[0][0] = (b[0]); // b is replaced with CD 
-	t->sip->cd[0][1] = (b[1]);
-	t->sip->cd[1][0] = (b[2]);
-	t->sip->cd[1][1] = (b[3]);
+	t->sip->cd[0][0] = rad2deg(b[0]); // b is replaced with CD 
+	t->sip->cd[0][1] = rad2deg(b[1]);
+	t->sip->cd[1][0] = rad2deg(b[2]);
+	t->sip->cd[1][1] = rad2deg(b[3]);
+	sip_t* swcs = wcs_shift(t->sip, rad2deg(b[4]), rad2deg(b[5]));
+//	sip_t* swcs = wcs_shift(t->sip, (b[4]), (b[5]));
+	free(t->sip);
+	t->sip = swcs;
+	printf("shiftx=%le, shifty=%le\n",(b[4]), b[5]);
+
+	printf("sqerr=%le\n", figure_of_merit(t));
 }
 
 

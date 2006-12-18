@@ -1,5 +1,6 @@
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 #include "sip.h"
 #include "sip_util.h"
 #include "libwcs/wcs.h"
@@ -75,6 +76,14 @@ void print_sip(sip_t* sip)
 				if (p+q <= sip->b_order && !(p==0&&q==0))
 					 printf("b%d%d=%le\n", p,q,sip->b[p][q]);
 	}
+
+	double det = (sip->cd[0][0]*sip->cd[1][1]) - (sip->cd[0][1]*sip->cd[1][0]);
+	double pixsc = 3600*sqrt(fabs(det));
+	printf("det(CD)=%le [arcsec]\n", det);
+	printf("abs det(CD)=%le [arcsec]\n", fabs(det));
+	printf("sqrt(det(CD))=%le [arcsec]\n", 5e-9);
+	printf("sqrt(det(CD))=%le [arcsec]\n", pixsc);
+
 
 	printf("\n");
 }
