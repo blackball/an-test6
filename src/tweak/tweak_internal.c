@@ -631,10 +631,10 @@ void do_linear_tweak(tweak_t* t)
 	// coordinates. i.e. min_b || b - Ax||^2 with b refs, x unrolled cd
 	int i;
 	for (i=0; i<stride/2; i++) {
-		A[2*i+0 + stride*0] = deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
-		A[2*i+0 + stride*1] = deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
-		A[2*i+1 + stride*2] = deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
-		A[2*i+1 + stride*3] = deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
+		A[2*i+0 + stride*0] = A[2*i+1 + stride*2] =
+			deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
+		A[2*i+0 + stride*1] = A[2*i+1 + stride*3] =
+			deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
 
 		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] =
 		A[2*i+0 + stride*2] = A[2*i+0 + stride*3] = 0.0;
