@@ -7,6 +7,7 @@
 #include "healpix.h"
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
+#include "ezfits.h"
 
 typedef double doublereal;
 typedef long int integer;
@@ -69,9 +70,15 @@ void get_shift(double* ximg, double* yimg, int nimg,
 			int hszi = hsz-1;
 			int iy = hszi*( (dy-mindy)/(maxdy-mindy) );
 			int ix = hszi*( (dx-mindx)/(maxdx-mindx) );
-			assert (iy >=0);
-			assert (ix >=0);
-			assert (iy*hsz+ ix < hsz*hsz);
+
+			// check to make sure the point is in the box
+//			if ( !(iy >=0) || !(ix >=0) || !(iy*hsz+ ix < hsz*hsz))
+//			if ( !(iy >=0) || !(ix >=0) || !(iy*hsz+ ix < hsz*hsz) ||
+//			if ( iy < 0 || ix < 0 || iy > hsz || ix > hsz )
+//				continue;
+//			assert (iy >=0);
+//			assert (ix >=0);
+//			assert (iy*hsz+ ix < hsz*hsz);
 			if (0 < iy && iy < hsz+1 &&
 					0 < ix && ix < hsz+1) {
 				// approx gauss
@@ -88,6 +95,11 @@ void get_shift(double* ximg, double* yimg, int nimg,
 			}
 		}
 	}
+
+	FILE* ff = fopen("hough.dat", "w");
+	fwrite(hough, sizeof(double), hsz*hsz, ff);
+	fclose(ff);
+
 
 	int themax = 0;
 	int themaxind;
@@ -111,7 +123,7 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	static char c = '1';
 	static char fn[] = "houghN.fits";
 	fn[5] = c++;
-//	ezwriteimage(fn, TINT, hough, hsz, hsz);
+	ezwriteimage(fn, TINT, hough, hsz, hsz);
 }
 
 // Take shift in image plane and do a switcharoo to make the wcs something
@@ -204,7 +216,10 @@ void tweak_print4(char* fn, double* x, double* y,
 	FILE* f = fopen(fn, "w");
 	int i = 0;
 	for (i=0; i<n; i++) 
-		tweak_print4_fp(f, x[i], y[i], z[i], w[i]); 
+		if (!z && !w)
+			tweak_print2_fp(f, x[i], y[i]); 
+		else
+			tweak_print4_fp(f, x[i], y[i], z[i], w[i]); 
 	fclose(f);
 }
 
@@ -223,6 +238,7 @@ void tweak_print_the_state(unsigned int state)
 	if (state & TWEAK_HAS_RUN_RANSAC_OPT ) printf("TWEAK_HAS_RUN_RANSAC_OPT, ");
 	if (state & TWEAK_HAS_COARSLY_SHIFTED) printf("TWEAK_HAS_COARSLY_SHIFTED, ");
 	if (state & TWEAK_HAS_FINELY_SHIFTED ) printf("TWEAK_HAS_FINELY_SHIFTED, ");
+	if (state & TWEAK_HAS_REALLY_FINELY_SHIFTED ) printf("TWEAK_HAS_REALLY_FINELY_SHIFTED, ");
 	if (state & TWEAK_HAS_HEALPIX_PATH   ) printf("TWEAK_HAS_HEALPIX_PATH, ");
 	if (state & TWEAK_HAS_LINEAR_CD      ) printf("TWEAK_HAS_LINEAR_CD, ");
 }
@@ -340,7 +356,7 @@ void tweak_clear_correspondences(tweak_t* t)
 		t->image = NULL;
 		t->ref = NULL;
 		t->dist2 = NULL;
-		t->state &= !TWEAK_HAS_CORRESPONDENCES;
+		t->state &= ~TWEAK_HAS_CORRESPONDENCES;
 	} else {
 		assert(!t->image);
 		assert(!t->ref);
@@ -354,8 +370,10 @@ void tweak_clear_ref_xy(tweak_t* t)
 		assert(t->x_ref);
 		free(t->x_ref);
 		assert(t->y_ref);
+		t->x_ref = NULL;
 		free(t->y_ref);
-		t->state &= !TWEAK_HAS_REF_XY;
+		t->y_ref = NULL;
+		t->state &= ~TWEAK_HAS_REF_XY;
 
 	} else {
 		assert(!t->x_ref);
@@ -368,13 +386,15 @@ void tweak_clear_ref_ad(tweak_t* t)
 	if (t->state & TWEAK_HAS_REF_AD) {
 		assert(t->a_ref);
 		free(t->a_ref);
+		t->a_ref = NULL;
 		assert(t->d_ref);
 		free(t->d_ref);
+		t->d_ref = NULL;
 		t->n_ref = 0;
 
 		tweak_clear_correspondences(t);
 		tweak_clear_ref_xy(t);
-		t->state &= !TWEAK_HAS_REF_AD;
+		t->state &= ~TWEAK_HAS_REF_AD;
 
 	} else {
 		assert(!t->a_ref);
@@ -387,10 +407,12 @@ void tweak_clear_image_ad(tweak_t* t)
 	if (t->state & TWEAK_HAS_IMAGE_AD) {
 		assert(t->a);
 		free(t->a);
+		t->a = NULL;
 		assert(t->d);
 		free(t->d);
+		t->d = NULL;
 
-		t->state &= !TWEAK_HAS_IMAGE_AD;
+		t->state &= ~TWEAK_HAS_IMAGE_AD;
 
 	} else {
 		assert(!t->a);
@@ -403,10 +425,12 @@ void tweak_clear_image_xy(tweak_t* t)
 	if (t->state & TWEAK_HAS_IMAGE_XY) {
 		assert(t->x);
 		free(t->x);
+		t->x = NULL;
 		assert(t->y);
 		free(t->y);
+		t->y = NULL;
 
-		t->state &= !TWEAK_HAS_IMAGE_XY;
+		t->state &= ~TWEAK_HAS_IMAGE_XY;
 
 	} else {
 		assert(!t->x);
@@ -682,7 +706,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_REF_XY) {
 		ensure(TWEAK_HAS_REF_AD);
 
-		tweak_clear_ref_xy(t);
+		//tweak_clear_ref_xy(t);
 
 		assert(t->state & TWEAK_HAS_REF_AD);
 		assert(t->n_ref);
@@ -748,18 +772,35 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		do_entire_shift_operation(t, 1.0);
 		tweak_clear_image_ad(t);
+		tweak_clear_ref_xy(t);
 
 		done(TWEAK_HAS_COARSLY_SHIFTED);
 	}
 
 	want(TWEAK_HAS_FINELY_SHIFTED) {
+		ensure(TWEAK_HAS_REF_XY);
+		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_COARSLY_SHIFTED);
 
 		// Shrink size of hough box
-		do_entire_shift_operation(t, .05);
+		do_entire_shift_operation(t, 0.3);
 		tweak_clear_image_ad(t);
+		tweak_clear_ref_xy(t);
 
-		done(TWEAK_HAS_COARSLY_SHIFTED);
+		done(TWEAK_HAS_FINELY_SHIFTED);
+	}
+
+	want(TWEAK_HAS_REALLY_FINELY_SHIFTED) {
+		ensure(TWEAK_HAS_REF_XY);
+		ensure(TWEAK_HAS_IMAGE_XY);
+		ensure(TWEAK_HAS_FINELY_SHIFTED);
+
+		// Shrink size of hough box
+		do_entire_shift_operation(t, 0.03);
+		tweak_clear_image_ad(t);
+		tweak_clear_ref_xy(t);
+
+		done(TWEAK_HAS_REALLY_FINELY_SHIFTED);
 	}
 
 	want(TWEAK_HAS_CORRESPONDENCES) {
@@ -773,6 +814,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 	want(TWEAK_HAS_LINEAR_CD) {
 		ensure(TWEAK_HAS_SIP);
+		ensure(TWEAK_HAS_REALLY_FINELY_SHIFTED);
 		ensure(TWEAK_HAS_REF_XY);
 		ensure(TWEAK_HAS_REF_AD);
 		ensure(TWEAK_HAS_IMAGE_XY);
