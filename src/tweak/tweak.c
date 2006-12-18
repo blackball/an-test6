@@ -769,6 +769,7 @@ int main(int argc, char *argv[])
 			tweak_print_state(&tweak);
 			printf("\n");
 			tweak_advance_to(&tweak, dest_state);
+			tweak_dump_ascii(&tweak);
 			getchar();
 		}
 		printf("final state: ");

@@ -438,7 +438,7 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 	}
 
 	t->a_ref = ra;
-	t->d_ref = ra;
+	t->d_ref = dec;
 	t->n_ref = n;
 
 	t->state |= TWEAK_HAS_REF_AD;
@@ -523,9 +523,12 @@ void find_correspondences(tweak_t* t)
 	t->dist2 = dl_new(600);
 	t->included = il_new(600);
 
+	double jitter = 2.0 /3600.0 * 180 / M_PI / 10.0/10.0/10.0;
+	printf("jitter=%lf\n",jitter);
+
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
-	                     RANGESEARCH_NO_LIMIT, 0.32, // This min/max dist is in pixels
+	                     RANGESEARCH_NO_LIMIT, jitter, // This min/max dist is in radians
 	                     dtrs_dist2_callback,
 	                     dtrs_match_callback, t,
 	                     NULL, NULL);
@@ -547,7 +550,7 @@ void get_reference_stars(tweak_t* t)
 	double radius = t->radius;
 
 	// FIXME magical 9 constant == an_cat hp res NSide
-	int hp = radectohealpix_nside(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
+	int hp = radectohealpix(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
 	kdtree_t* kd;
 	if (cached_kd_hp != hp || cached_kd == NULL) {
 		char buf[1000];
@@ -602,16 +605,16 @@ void do_linear_tweak(tweak_t* t)
 	// coordinates. i.e. min_b || b - Ax||^2 with b refs, x unrolled cd
 	int i;
 	for (i=0; i<stride/2; i++) {
-		A[2*i+0 + stride*0] = t->x[il_get(t->image, i)] - t->sip->crpix[0];
-		A[2*i+0 + stride*1] = t->y[il_get(t->image, i)] - t->sip->crpix[1];
-		A[2*i+1 + stride*2] = t->x[il_get(t->image, i)] - t->sip->crpix[0];
-		A[2*i+1 + stride*3] = t->y[il_get(t->image, i)] - t->sip->crpix[1];
+		A[2*i+0 + stride*0] = deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
+		A[2*i+0 + stride*1] = deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
+		A[2*i+1 + stride*2] = deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
+		A[2*i+1 + stride*3] = deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
 
 		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] = A[2*i+0 + stride*2] =
 			A[2*i+0 + stride*3] = 0.0;
 
-		b[2*i+0] = t->x_ref[il_get(t->ref, i)] - t->sip->crpix[0];
-		b[2*i+1] = t->y_ref[il_get(t->ref, i)] - t->sip->crpix[1];
+		b[2*i+0] = deg2rad(t->x_ref[il_get(t->ref, i)] - t->sip->crpix[0]);
+		b[2*i+1] = deg2rad(t->y_ref[il_get(t->ref, i)] - t->sip->crpix[1]);
 	}
 
 	// allocate work areas and answers
@@ -771,6 +774,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_LINEAR_CD) {
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_REF_XY);
+		ensure(TWEAK_HAS_REF_AD);
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_CORRESPONDENCES);
 

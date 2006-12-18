@@ -1,9 +1,9 @@
 CC=gcc
 CFLAGS=-g -Wall -O0 -I../cfitsio -I../wcstools-3.6.4 -I../quads \
-       -I../quads/libkd -I../qfits-6.1.0 -I../qfits-6.1.0/src -I../levmar-2.1.2
+       -I../quads/libkd -I../qfits-an -I../qfits-an/src -I../levmar-2.1.2
 LIBS= -L../cfitsio/ -lcfitsio -L../wcstools-3.6.4/libwcs -lwcs -lm \
       -L../levmar-2.1.2 -llevmar -L../quads/libkd -lkd \
-      -L../quads/qfits-6.1.0/src/.libs/ -lqfits \
+      -L../quads/qfits-an/src/.libs/ -lqfits \
       -L../quads/an-common/ -lanutils -lg2c
 OBJS= tweak.o ../quads/starutil.o ../quads/mathutil.o \
 ../quads/healpix.o ezfits.o sip.o sip_util.o ../quads/bl.o \
