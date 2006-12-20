@@ -173,3 +173,8 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	*px = u + sip->crpix[0];
 	*py = v + sip->crpix[1];
 }
+
+double sip_det_cd(sip_t* sip)
+{
+	return (sip->cd[0][0]*sip->cd[1][1] - sip->cd[0][1]*sip->cd[1][0]); 
+}

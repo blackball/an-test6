@@ -13,8 +13,7 @@ enum opt_flags {
 	OPT_CD            = 4,
 	OPT_SIP           = 8,
 	OPT_SIP_INVERSE   = 16,
-	OPT_SHIFT         = 32
-};
+	OPT_SHIFT         = 32 };
 
 // These flags represent the work already done on a tweak problem
 enum tweak_flags {
@@ -102,5 +101,10 @@ void tweak_dump_ascii(tweak_t* t);
 void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n);
 void tweak_push_hppath(tweak_t* t, char* hppath);
 void tweak_print_state(tweak_t* t);
+void tweak_go_to(tweak_t* t, unsigned int flag);
+void tweak_clear_correspondences(tweak_t* t);
+void tweak_clear_image_ad(tweak_t* t);
+void tweak_clear_ref_xy(tweak_t* t);
+void tweak_clear_image_xyz(tweak_t* t);
 
 #endif

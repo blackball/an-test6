@@ -9,6 +9,25 @@
 #include "kdtree_fits_io.h"
 #include "ezfits.h"
 
+// TODO: 
+//
+//  1. Write the document which explains every step of tweak in detail with
+//     comments relating exactly to the code.
+//  2. Implement polynomial terms - use order parameter to zero out A matrix
+//  3. Make it robust to outliers
+//     - Make jitter evolve as fit evolves
+//     - Sigma clipping
+//  4. Need test image with non-trivial rotation to test CD transpose problem
+//
+//
+//  - Put CD inverse into it's own function
+//
+//  BUG? transpose of CD matrix is similar to CD matrix!
+//  BUG? inverse when computing sx/sy (i.e. same transpose issue)
+//  Ability to fit without re-doing correspondences
+//  Note: USNO has about 1 arcsecond jitter, so don't go tighter than that!
+//  Split fit x/y (i.e. two fits one for x one for y)
+
 typedef double doublereal;
 typedef long int integer;
 extern int dgelsd_(integer *m, integer *n, integer *nrhs, doublereal *a,
@@ -364,6 +383,18 @@ void tweak_clear_correspondences(tweak_t* t)
 		assert(!t->ref);
 		assert(!t->dist2);
 	}
+	assert(!t->image);
+	assert(!t->ref);
+	assert(!t->dist2);
+}
+
+void tweak_clear_on_sip_change(tweak_t* t)
+{
+	tweak_clear_correspondences(t);
+	tweak_clear_image_ad(t);
+	tweak_clear_ref_xy(t);
+	tweak_clear_image_xyz(t);
+
 }
 
 void tweak_clear_ref_xy(tweak_t* t)
@@ -419,6 +450,19 @@ void tweak_clear_image_ad(tweak_t* t)
 	} else {
 		assert(!t->a);
 		assert(!t->d);
+	}
+}
+
+void tweak_clear_image_xyz(tweak_t* t)
+{
+	if (t->state & TWEAK_HAS_IMAGE_XYZ) {
+		assert(t->xyz);
+		free(t->xyz);
+		t->xyz = NULL;
+		t->state &= ~TWEAK_HAS_IMAGE_XYZ;
+
+	} else {
+		assert(!t->xyz);
 	}
 }
 
@@ -525,7 +569,8 @@ double dtrs_dist2_callback(void* p1, void* p2, int D)
 	return accum;
 }
 
-void find_correspondences(tweak_t* t)
+// The jitter is in radians
+void find_correspondences(tweak_t* t, double jitter)
 {
 	double* data_image = malloc(sizeof(double)*t->n*3);
 	double* data_ref = malloc(sizeof(double)*t->n_ref*3);
@@ -549,7 +594,6 @@ void find_correspondences(tweak_t* t)
 	t->dist2 = dl_new(600);
 	t->included = il_new(600);
 
-	double jitter = 2.0 /3600.0 * 180 / M_PI / 10.0/10.0/10.0;
 	printf("jitter=%lf\n",jitter);
 
 	// Find closest neighbours
@@ -559,10 +603,14 @@ void find_correspondences(tweak_t* t)
 	                     dtrs_match_callback, t,
 	                     NULL, NULL);
 
-	printf("im=%d\n", il_size(t->image)); 
-	printf("ref=%d\n", il_size(t->ref)); 
-	printf("dist2=%d\n", il_size(t->dist2)); 
-//	dl_print(t->dist2);
+	kdtree_free(t->kd_image);
+	kdtree_free(t->kd_ref);
+	t->kd_image = NULL;
+	t->kd_ref = NULL;
+	free(data_image);
+	free(data_ref);
+
+	printf("correspondences=%d\n", il_size(t->dist2)); 
 }
 
 
@@ -611,6 +659,7 @@ void get_reference_stars(tweak_t* t)
 	kdtree_free_query(kq);
 }
 
+// in arcseconds (chi-sq)
 double figure_of_merit(tweak_t* t) 
 {
 
@@ -634,37 +683,64 @@ double figure_of_merit(tweak_t* t)
 		xyzerr[2] = xyzpt[2]-xyzpt_ref[2];
 		sqerr += xyzerr[0]*xyzerr[0] + xyzerr[1]*xyzerr[1] + xyzerr[2]*xyzerr[2];  
 	}
-	return sqerr;
+	return rad2arcsec(1)*rad2arcsec(1)*sqerr;
 
+}
+
+double figure_of_merit2(tweak_t* t) 
+{
+	// works on the pixel coordinates
+	double sqerr = 0.0;
+	int i;
+	for (i=0; i<il_size(t->image); i++) {
+		double x,y;
+		radec2pixelxy(t->sip, t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], &x, &y);
+		double dx = t->x[il_get(t->image, i)] - x;
+		double dy = t->y[il_get(t->image, i)] - y;
+		sqerr += dx*dx + dy*dy;
+	}
+	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // arcseconds
 }
 
 // Run a linear tweak; only changes CD matrix
 void do_linear_tweak(tweak_t* t)
 {
+	int i;
+	// Find included pairs
+//	assert(t->included);
+//	for (i=0; i<il_size(t->image); i++) {
+//		if (!il_get(t->included, i)) 
+//			continue;
 
 	integer stride = 2*il_size(t->image);
 	double* A = malloc(6*stride*sizeof(double));
 	double* b = malloc(stride*sizeof(double));
+	double* A2 = malloc(6*stride*sizeof(double));
+	double* b2 = malloc(stride*sizeof(double));
 	assert(A);
 	assert(b);
 
 	printf("sqerr=%le\n", figure_of_merit(t));
+	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// Fill A in column-major order for fortran dgelsd
-	// x1   u1 v1 0  0   1  0   cd11
+	// 
+	// +--------- Intermediate world coordinates in DEGREES
+	// |    +---- Pixel coordinates 
+	// v    v
+	// x1   u1 v1 0  0   1  0   cd11  - In degrees per pixel
 	// y1 = 0  0  u1 v1  0  1 * cd12
 	// x2   u2 v2 0  0   1  0   cd21
 	// y2   0  0  u2 v2  0  1   cd22
-	// ...                      dx
-	//                          dy
+	// ...                      dx    - shift x (need to est this too)
+	//                          dy    - shift y (in DEGREES)
 	// where we minimize cd, and x,y are from refs in intermediate world
 	// coordinates. i.e. min_b || b - Ax||^2 with b refs, x unrolled cd
-	int i;
 	for (i=0; i<stride/2; i++) {
 		A[2*i+0 + stride*0] = A[2*i+1 + stride*2] =
-			deg2rad(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
+			(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
 		A[2*i+0 + stride*1] = A[2*i+1 + stride*3] =
-			deg2rad(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
+			(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
 
 		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] =
 		A[2*i+0 + stride*2] = A[2*i+0 + stride*3] = 0.0;
@@ -680,9 +756,15 @@ void do_linear_tweak(tweak_t* t)
 		radecdeg2xyzarr(t->sip->crval[0], t->sip->crval[1], xyzcrval);
 		star_coords(xyzpt, xyzcrval, &y, &x);
 
-		b[2*i+0] = x;
-		b[2*i+1] = y;
+		b[2*i+0] = rad2deg(x);
+		b[2*i+1] = rad2deg(y);
 	}
+
+
+
+	// save ab
+	memcpy(A2,A,sizeof(double)*stride*6);
+	memcpy(b2,b,sizeof(double)*stride);
 
 	// allocate work areas and answers
 	
@@ -698,19 +780,39 @@ void do_linear_tweak(tweak_t* t)
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 
-	t->sip->cd[0][0] = rad2deg(b[0]); // b is replaced with CD 
-	t->sip->cd[0][1] = rad2deg(b[1]);
-	t->sip->cd[1][0] = rad2deg(b[2]);
-	t->sip->cd[1][1] = rad2deg(b[3]);
-	sip_t* swcs = wcs_shift(t->sip, rad2deg(b[4]), rad2deg(b[5]));
-//	sip_t* swcs = wcs_shift(t->sip, (b[4]), (b[5]));
+	t->sip->cd[0][0] = b[0]; // b is replaced with CD during dgelsd
+	t->sip->cd[0][1] = b[1];
+	t->sip->cd[1][0] = b[2];
+	t->sip->cd[1][1] = b[3];
+	double cdi[2][2];
+	double inv_det = 1.0/sip_det_cd(t->sip);
+	cdi[0][0] =  t->sip->cd[1][1] * inv_det;
+	cdi[0][1] = -t->sip->cd[0][1] * inv_det;
+	cdi[1][0] = -t->sip->cd[1][0] * inv_det;
+	cdi[1][1] =  t->sip->cd[0][0] * inv_det;
+	double sx, sy;
+	sx = cdi[0][0]*b[4] + cdi[0][1]*b[5];
+	sy = cdi[1][0]*b[4] + cdi[1][1]*b[5];
+	sip_t* swcs = wcs_shift(t->sip, -sx, -sy);
 	free(t->sip);
 	t->sip = swcs;
 	printf("shiftx=%le, shifty=%le\n",(b[4]), b[5]);
 
 	printf("sqerr=%le\n", figure_of_merit(t));
-}
+	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
+
+	// Calculate chi2 for sanity
+	double chisq=0;
+	for(i=0; i<stride; i++) {
+		double sum=0;
+		int j;
+		for(j=0; j<6; j++) 
+			sum += A2[i+stride*j]*b[j];
+		chisq += (sum-b2[i])*(sum-b2[i]);
+	}
+	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
+}
 
 // Duct-tape dependencey system (DTDS)
 #define done(x) t->state |= x; return x;
@@ -857,7 +959,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XYZ);
 		ensure(TWEAK_HAS_IMAGE_XYZ);
 
-		find_correspondences(t);
+		find_correspondences(t, arcsec2rad(10));
 
 		done(TWEAK_HAS_CORRESPONDENCES);
 	}
@@ -871,8 +973,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_CORRESPONDENCES);
 
 		do_linear_tweak(t);
-		tweak_clear_image_ad(t);
-		tweak_clear_ref_xy(t);
+
+		tweak_clear_on_sip_change(t);
 
 		done(TWEAK_HAS_LINEAR_CD);
 	}
@@ -883,6 +985,113 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	assert(0);
 }
 
+void tweak_go_to(tweak_t* t, unsigned int dest_state)
+{
+	while(! (t->state & dest_state))
+		tweak_advance_to(t, dest_state);
+}
+
+void my_ransac(tweak_t* t)
+{
+	int iterations = 0;
+	int maxiter = 40;
+
+	sip_t wcs_try, wcs_best;
+	memcpy(&wcs_try, t->sip, sizeof(sip_t));
+	memcpy(&wcs_best, t->sip, sizeof(sip_t));
+
+	double besterr = 100000000000000.;
+	int min_data_points = 100;
+	int set_size = il_size(t->image);
+	il* maybeinliers = il_new(4);
+	il* alsoinliers = il_new(4);
+
+	// we need to prevent pairing any reference star to multiple image
+	// stars, or multiple reference stars to single image stars
+	il* used_ref_sources = il_new(t->n_ref);
+	il* used_image_sources = il_new(t->n);
+
+	int i;
+	for (i=0; i<t->n_ref; i++) 
+		il_append(used_ref_sources, 0);
+	for (i=0; i<t->n; i++) 
+		il_append(used_image_sources, 0);
+	while (iterations++ < maxiter) {
+		printf("++++++++++ ITERATION %d\n", iterations);
+
+		// select n random pairs to use for the fit
+		il_remove_all(maybeinliers);
+		for (i=0; i<t->n_ref; i++) 
+			il_set(used_ref_sources, i, 0);
+		for (i=0; i<t->n; i++) 
+			il_set(used_image_sources, i, 0);
+		while (il_size(maybeinliers) < min_data_points) {
+			int r = rand()/(double)RAND_MAX * set_size;
+//			printf("eeeeeeeeeeeeeeeee %d\n", r);
+			// check to see if either star in this pairing is
+			// already taken before adding this pairing
+			int ref_ind = il_get(t->ref, r);
+			int image_ind = il_get(t->image, r);
+			if (!il_get(used_ref_sources, ref_ind) &&
+			    !il_get(used_image_sources, image_ind)) {
+				il_insert_unique_ascending(maybeinliers, r);
+				il_set(used_ref_sources, ref_ind, 1);
+				il_set(used_image_sources, image_ind, 1);
+			}
+		}
+		for (i=0; i<il_size(t->included); i++) 
+			il_set(t->included, i, 0);
+		for (i=0; i<il_size(maybeinliers); i++) 
+			il_set(t->included, il_get(maybeinliers,i), 1);
+		
+		// now do a fit with our random sample selection
+//		lm_fit(t);
+		t->state &= ~TWEAK_HAS_LINEAR_CD;
+		tweak_go_to(t, TWEAK_HAS_LINEAR_CD);
+
+		// now find other samples which do well under the model fit by
+		// the random sample set.
+		il_remove_all(alsoinliers);
+		for (i=0; i<il_size(t->included); i++) {
+			if (il_get(t->included, i))
+				continue;
+			double thresh = 2.e-04; // FIXME mystery parameter
+			double image_xyz[3];
+			double ref_xyz[3];
+			int ref_ind = il_get(t->ref, i);
+			int image_ind = il_get(t->image, i);
+			double a,d;
+			pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
+			radecdeg2xyzarr(a,d,image_xyz);
+			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
+			double dx = ref_xyz[0] - image_xyz[0];
+			double dy = ref_xyz[1] - image_xyz[1];
+			double dz = ref_xyz[2] - image_xyz[2];
+			double err = dx*dx+dy*dy+dz*dz;
+			if (sqrt(err) < thresh)
+				il_append(alsoinliers, i);
+		}
+
+		// if we found a good number of points which are really close,
+		// then fit both our random sample and the other close points
+		if (10 < il_size(alsoinliers)) { // FIXME mystery parameter
+
+			printf("found extra samples %d\n", il_size(alsoinliers));
+			for (i=0; i<il_size(alsoinliers); i++) 
+				il_set(t->included, il_get(alsoinliers,i), 1);
+			
+			// FIT AGAIN
+			//lm_fit(t);
+			//FIXME
+			if (t->err < besterr) {
+				memcpy(&wcs_best, t->sip, sizeof(sip_t));
+				besterr = t->err;
+				printf("new best error %le\n", besterr);
+			}
+		}
+		printf("error=%le besterror=%le\n", t->err, besterr);
+	}
+}
 void tweak_clear(tweak_t* t)
 {
 	// FIXME

@@ -506,7 +506,6 @@ void lm_fit(tweak_t* t)
 //	memcpy(t->parameters, params, sizeof(double)*t->n);
 }
 
-
 // RANSAC from Wikipedia:
 // Given:
 //     data - a set of observed data points
@@ -772,50 +771,19 @@ int main(int argc, char *argv[])
 			tweak_dump_ascii(&tweak);
 			getchar();
 		}
-		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
-		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
-		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
-		tweak_advance_to(&tweak, TWEAK_HAS_REF_XY);
-		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
-		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
-		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
-		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
-		tweak_advance_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		int k;
+		for (k=0; k<20; k++) {
+			tweak.state &= ~TWEAK_HAS_LINEAR_CD;
+			tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
+		}
+		tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
+		tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 		printf("final state: ");
 		tweak_print_state(&tweak);
 		tweak_dump_ascii(&tweak);
 		print_sip(tweak.sip);
 		printf("\n");
-
-
-//		get_tweak_data(&tweak, xyfptr, hppat, kk);
-//		do_entire_shift_operation(&tweak);
-//		free_extraneous(&tweak);
-//
-//		get_tweak_data(&tweak, xyfptr, hppat, kk);
-//		do_entire_shift_operation(&tweak);
-//		free_extraneous(&tweak);
-//
-//		get_tweak_data(&tweak, xyfptr, hppat, kk);
-//		do_entire_shift_operation(&tweak);
-//		free_extraneous(&tweak);
-
-//		get_tweak_data(&tweak, xyfptr, hppat, kk);
-//		do_entire_shift_operation(&tweak);
-//		free_extraneous(&tweak);
-//		get_tweak_data(&tweak, xyfptr, hppat, kk);
-//
-//		find_correspondences(&tweak);
-//
-//		dump_data(&tweak);
-
-//		ransac(&tweak);
-//		print_sip(tweak.sip);
-//		free_extraneous(&tweak);
-//		get_tweak_data(&tweak, xyfptr, hppat, kk);
-
-//		dump_data(&tweak);
-
 
 		exit(1);
 	}
