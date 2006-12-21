@@ -8,6 +8,7 @@
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
 #include "ezfits.h"
+#include "sip_util.h"
 
 // TODO: 
 //
@@ -702,78 +703,124 @@ double figure_of_merit2(tweak_t* t)
 	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // arcseconds
 }
 
+// FIXME: adapt this function to take as input the correspondences to use VVVVV
+//    wic is World Intermediate Coordinates, either along ra or dec
+//       i.e. canonical image coordinates
+//    wic_corr is the list of corresponding indexes for wip
+//    pix_corr is the list of corresponding indexes for pixels
+//    pix is raw image pixels (either u or v)
+//    siporder is the sip order up to MAXORDER (defined in sip.h)
+//    the correspondences are passed so that we can stick RANSAC around the whole
+//    thing for better estimation.
+
 // Run a linear tweak; only changes CD matrix
 void do_linear_tweak(tweak_t* t)
 {
-	int i;
-	// Find included pairs
-//	assert(t->included);
-//	for (i=0; i<il_size(t->image); i++) {
-//		if (!il_get(t->included, i)) 
-//			continue;
 
-	integer stride = 2*il_size(t->image);
-	double* A = malloc(6*stride*sizeof(double));
-	double* b = malloc(stride*sizeof(double));
-	double* A2 = malloc(6*stride*sizeof(double));
-	double* b2 = malloc(stride*sizeof(double));
+	int sip_order = 0;
+	// The SIP coefficients form a order x order upper triangular matrix missing
+	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
+	// That's why the computation of the number of SIP terms is calculated by
+	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
+	// The in the end, we drop the p^0q^0 term by integrating it into crpix)
+	int sip_coeffs = (sip_order+1)*(sip_order+2)/2; // upper triangle
+
+	integer stride = il_size(t->image); // number of rows
+	double* A = malloc((2+sip_coeffs)*stride*sizeof(double));
+	double* b = malloc(2*stride*sizeof(double));
+	double* A2 = malloc((2+sip_coeffs)*stride*sizeof(double));
+	double* b2 = malloc(2*stride*sizeof(double));
 	assert(A);
 	assert(b);
 
 	printf("sqerr=%le\n", figure_of_merit(t));
-	printf("sqerrxy=%le\n", figure_of_merit2(t));
+//	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
-	// Fill A in column-major order for fortran dgelsd
+	// We use a clever trick to estimate CD, A, and B terms in two
+	// seperated least squares fits, then finding A and B by multiplying
+	// the found parameters by CD inverse.
+	//
+	// Rearranging the SIP equations (see sip.h) we get the following
+	// matrix operation to compute x and y in world intermediate
+	// coordinates, which is convienently written in a way which allows
+	// least squares estimation of CD and terms related to A and B.
+	//
+	// First use the x's to find the first set of parametetrs
+	//
+	//   +-------------- Intermediate world coordinates in DEGREES
+	//   |    +--------- Pixel coordinates u and v in PIXELS
+	//   |    |     +--- Polynomial u,v terms in powers of PIXELS
+	//   v    v     v
+	//   x1 = u1 v1 p1 * cd11            : scalar, degrees per pixel
+	//   x2 = u2 v2 p2   cd12            : scalar, degrees per pixel
+	//   x3 = u3 v3 p3   cd11*A + cd12*B : mixture of SIP terms and CD
+	//   ...
 	// 
-	// +--------- Intermediate world coordinates in DEGREES
-	// |    +---- Pixel coordinates 
-	// v    v
-	// x1   u1 v1 0  0   1  0   cd11  - In degrees per pixel
-	// y1 = 0  0  u1 v1  0  1 * cd12
-	// x2   u2 v2 0  0   1  0   cd21
-	// y2   0  0  u2 v2  0  1   cd22
-	// ...                      dx    - shift x (need to est this too)
-	//                          dy    - shift y (in DEGREES)
-	// where we minimize cd, and x,y are from refs in intermediate world
-	// coordinates. i.e. min_b || b - Ax||^2 with b refs, x unrolled cd
-	for (i=0; i<stride/2; i++) {
-		A[2*i+0 + stride*0] = A[2*i+1 + stride*2] =
-			(t->x[il_get(t->image, i)] - t->sip->crpix[0]);
-		A[2*i+0 + stride*1] = A[2*i+1 + stride*3] =
-			(t->y[il_get(t->image, i)] - t->sip->crpix[1]);
+	// Then find cd21 and cd22 with the y's
+	//
+	//   y1 = u1 v1 p1 * cd21            : scalar, degrees per pixel   
+	//   y2 = u2 v2 p2   cd22            : scalar, degrees per pixel   
+	//   y3 = u3 v3 p3   cd21*A + cd22*B : mixture of SIP terms and CD 
+	//   ...
+	//
+	// These are both standard least squares problems which we solve by
+	// netlib's dgelsd. i.e. min_b || b - Ax||^2 with b reference, x
+	// unrolled parameters.
+	//
+	// Now, note that 
+	//                 -1
+	//   A = [cd11 cd12]    *  [cd11*A + cd12*B]
+	//   B   [cd21 cd22]       [cd21*A + cd22*B]
+	//
+	// which recovers the A and B's.
 
-		A[2*i+1 + stride*0] = A[2*i+1 + stride*1] =
-		A[2*i+0 + stride*2] = A[2*i+0 + stride*3] = 0.0;
+	// Fill A in column-major order for fortran dgelsd and create 
+	// Note: this code assumes a_order == b_order
+	double xyzcrval[3];
+	radecdeg2xyzarr(t->sip->crval[0], t->sip->crval[1], xyzcrval);
+	int i;
+	for (i=0; i<stride; i++) {
+		double u = t->x[il_get(t->image, i)] - t->sip->crpix[0];
+		double v = t->y[il_get(t->image, i)] - t->sip->crpix[1];
+		A[i] = u;
+		A[i + stride] = v;
 
-		A[2*i+0 + stride*4] = A[2*i+1 + stride*5] = 1.0;
-		A[2*i+1 + stride*4] = A[2*i+0 + stride*5] = 0.0;
+		// Poly terms for SIP.  Note that this includes the constant
+		// shift parameter which we extract and apply to crpix (and
+		// don't include in SIP terms)
+		int j = 2;
+		int p, q;
+		for (p=0; p<sip_order; p++)
+			for (q=0; q<sip_order; q++)
+				if (p+q <= sip_order) {
+					assert(2 <= j);
+					assert(j < 2+sip_coeffs);
+					A[i + stride*j] = pow(u,p)*pow(v,q);
+					j++;
+				}
 
 		// xref and yref should be intermediate WC's not image x and y!
-		double xyzpt[3];
-		double xyzcrval[3];
 		double x,y;
+		double xyzpt[3];
 		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], xyzpt);
-		radecdeg2xyzarr(t->sip->crval[0], t->sip->crval[1], xyzcrval);
 		star_coords(xyzpt, xyzcrval, &y, &x);
 
-		b[2*i+0] = rad2deg(x);
-		b[2*i+1] = rad2deg(y);
+		b[i] = rad2deg(x);
+		b[i+stride] = rad2deg(y);
 	}
 
+	// Save A, bx, and by for computing chisq
+	memcpy(A2,A,sizeof(double)*stride*(2+sip_coeffs));
+	memcpy(b2,b,sizeof(double)*stride*2);
 
-
-	// save ab
-	memcpy(A2,A,sizeof(double)*stride*6);
-	memcpy(b2,b,sizeof(double)*stride);
-
-	// allocate work areas and answers
-	
-	doublereal S[6];
-	doublereal RCOND=-1.; // nr right hand sides
-	integer N=6; // nr cols of A
-	integer NRHS=1; // nr right hand sides
-	integer rank;
-	integer lwork = 1000*1000;
+	// Allocate work areas and answers
+	integer N=2+sip_coeffs;          // nr cols of A
+	doublereal S[N];      // min(N,M); is singular vals of A in dec order
+	doublereal RCOND=-1.; // used to determine effective rank of A; -1
+	                      // means use machine precision
+	integer NRHS=2;       // number of right hand sides (one for x and y)
+	integer rank;         // output effective rank of A
+	integer lwork = 1000*1000; /// FIXME ???
 	doublereal* work = malloc(lwork*sizeof(double));
 	integer *iwork = malloc(lwork*sizeof(long int));
 	integer info;
@@ -782,8 +829,8 @@ void do_linear_tweak(tweak_t* t)
 
 	t->sip->cd[0][0] = b[0]; // b is replaced with CD during dgelsd
 	t->sip->cd[0][1] = b[1];
-	t->sip->cd[1][0] = b[2];
-	t->sip->cd[1][1] = b[3];
+	t->sip->cd[1][0] = b[N];
+	t->sip->cd[1][1] = b[N+1];
 	double cdi[2][2];
 	double inv_det = 1.0/sip_det_cd(t->sip);
 	cdi[0][0] =  t->sip->cd[1][1] * inv_det;
@@ -791,15 +838,32 @@ void do_linear_tweak(tweak_t* t)
 	cdi[1][0] = -t->sip->cd[1][0] * inv_det;
 	cdi[1][1] =  t->sip->cd[0][0] * inv_det;
 	double sx, sy;
-	sx = cdi[0][0]*b[4] + cdi[0][1]*b[5];
-	sy = cdi[1][0]*b[4] + cdi[1][1]*b[5];
+	sx = cdi[0][0]*b[2] + cdi[0][1]*b[N+2]; // Approximate shift ignoring SIP
+	sy = cdi[1][0]*b[2] + cdi[1][1]*b[N+2]; // because inverting SIP is ugly FIXME!
 	sip_t* swcs = wcs_shift(t->sip, -sx, -sy);
 	free(t->sip);
 	t->sip = swcs;
-	printf("shiftx=%le, shifty=%le\n",(b[4]), b[5]);
 
+	// Extract the SIP coefficients
+	int j = 3;
+	int p, q;
+	for (p=0; p<sip_order; p++)
+		for (q=0; q<sip_order; q++)
+			if (p+q <= sip_order && !(p==0&&q==0)) {
+				assert(2 <= j);
+				assert(j < 2+sip_coeffs);
+				t->sip->a[p][q] = cdi[0][0]*b[j] + cdi[0][1]*b[N+j]; 
+				t->sip->b[p][q] = cdi[1][0]*b[j] + cdi[1][1]*b[N+j];
+				j++;
+			}
+	t->sip->a_order = sip_order;
+	t->sip->b_order = sip_order;
+
+	printf("New sip header:\n");
+	print_sip(t->sip);
+	printf("shiftx=%le, shifty=%le\n",sx, sy);
 	printf("sqerr=%le\n", figure_of_merit(t));
-	printf("sqerrxy=%le\n", figure_of_merit2(t));
+//	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 
 	// Calculate chi2 for sanity
@@ -811,7 +875,7 @@ void do_linear_tweak(tweak_t* t)
 			sum += A2[i+stride*j]*b[j];
 		chisq += (sum-b2[i])*(sum-b2[i]);
 	}
-	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
+//	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
 }
 
 // Duct-tape dependencey system (DTDS)
