@@ -827,9 +827,9 @@ void do_linear_tweak(tweak_t* t)
 
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 {
-	printf("WANT: ");
-	tweak_print_the_state(flag);
-	printf("\n");
+//	printf("WANT: ");
+//	tweak_print_the_state(flag);
+//	printf("\n");
 	want(TWEAK_HAS_IMAGE_AD) {
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
@@ -881,6 +881,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		assert(t->state & TWEAK_HAS_IMAGE_AD);
 		get_center_and_radius(t->a, t->d, t->n, 
 		                      &t->a_bar, &t->d_bar, &t->radius);
+		printf("a_bar=%lf [deg], d_bar=%lf [deg], radius=%lf [arcmin]\n",
+				t->a_bar, t->d_bar, rad2arcmin(t->radius));
 
 		done(TWEAK_HAS_AD_BAR_AND_R);
 	}

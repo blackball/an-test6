@@ -53,6 +53,7 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
+	printf("Found %d HDU's\n",nhdus);
 
 	// Search each HDU looking for the one with SRCEXT==hdu
 	int i, ext=-1;
@@ -764,9 +765,9 @@ int main(int argc, char *argv[])
 		unsigned int dest_state = TWEAK_HAS_LINEAR_CD;
 //		dest_state = TWEAK_HAS_IMAGE_AD;
 		while(! (tweak.state & dest_state)) {
-			printf("%p\n", (void*)tweak.state);
-			tweak_print_state(&tweak);
-			printf("\n");
+//			printf("%p\n", (void*)tweak.state);
+//			tweak_print_state(&tweak);
+//			printf("\n");
 			tweak_advance_to(&tweak, dest_state);
 			tweak_dump_ascii(&tweak);
 			getchar();
