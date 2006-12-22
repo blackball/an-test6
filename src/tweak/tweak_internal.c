@@ -716,7 +716,7 @@ void invert_sip_polynomial(tweak_t* t)
 	t->sip->bp_order = t->sip->ap_order;
 	int inv_sip_order = t->sip->ap_order;
 
-	int ngrid = 2*(t->sip->ap_order+1);
+	int ngrid = 10*(t->sip->ap_order+1);
 
 	// The SIP coefficients form a order x order upper triangular matrix missing
 	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
@@ -760,7 +760,6 @@ void invert_sip_polynomial(tweak_t* t)
 	//   ...
 	//
 	// which recovers the A and B's.
-
 	
 	// Find image boundaries
 	double maxu,maxv,minu,minv;
@@ -778,8 +777,7 @@ void invert_sip_polynomial(tweak_t* t)
 
 	// Fill A in column-major order for fortran dgelsd
 	// Note: this code assumes a_order == b_order
-	double xyzcrval[3];
-	radecdeg2xyzarr(t->sip->crval[0], t->sip->crval[1], xyzcrval);
+	// We just make a big grid and hope for the best
 	i = 0;
 	int gu, gv;
 	for (gu=0; gu<ngrid; gu++) {
@@ -849,12 +847,14 @@ void invert_sip_polynomial(tweak_t* t)
 		for(j=0; j<inv_sip_coeffs; j++) 
 			sum += A2[i+stride*j]*b[j];
 		chisq += (sum-b2[i])*(sum-b2[i]);
+		sum=0;
 		for(j=0; j<inv_sip_coeffs; j++) 
 			sum += A2[i+stride*j]*b[j+stride];
 		chisq += (sum-b2[i+stride])*(sum-b2[i+stride]);
 	}
 	printf("sip_invert_chisq=%lf\n",chisq);
 	printf("sip_invert_chisq/%d=%lf\n",ngrid*ngrid,(chisq/ngrid)/ngrid);
+	printf("sip_invert_sqrt(chisq/%d=%lf)\n",ngrid*ngrid,sqrt((chisq/ngrid)/ngrid));
 }
 
 	
@@ -874,7 +874,7 @@ void invert_sip_polynomial(tweak_t* t)
 void do_linear_tweak(tweak_t* t)
 {
 
-	int sip_order = 2;
+	int sip_order = 3;
 	// The SIP coefficients form a order x order upper triangular matrix missing
 	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
 	// That's why the computation of the number of SIP terms is calculated by
@@ -958,7 +958,7 @@ void do_linear_tweak(tweak_t* t)
 				}
 
 		// Be sure about shift coefficient
-		A[i+stride*2] = 0.0;
+		A[i+stride*2] = 1.0;
 
 		// xref and yref should be intermediate WC's not image x and y!
 		double x,y;
@@ -993,13 +993,13 @@ void do_linear_tweak(tweak_t* t)
 	t->sip->cd[1][0] = b[stride];
 	t->sip->cd[1][1] = b[stride+1];
 
+	// Extract the SIP coefficients
 	double cdi[2][2];
 	double inv_det = 1.0/sip_det_cd(t->sip);
 	cdi[0][0] =  t->sip->cd[1][1] * inv_det;
 	cdi[0][1] = -t->sip->cd[0][1] * inv_det;
 	cdi[1][0] = -t->sip->cd[1][0] * inv_det;
 	cdi[1][1] =  t->sip->cd[0][0] * inv_det;
-	// Extract the SIP coefficients
 	int j = 3;
 	int p, q;
 	for (p=0; p<sip_order; p++)
@@ -1016,7 +1016,7 @@ void do_linear_tweak(tweak_t* t)
 
 	invert_sip_polynomial(t);
 
-	/*
+	// Now apply the shift
 	double sU, sV;
 	sU = cdi[0][0]*b[2] + cdi[0][1]*b[stride+2]; // Approximate shift ignoring SIP
 	sV = cdi[1][0]*b[2] + cdi[1][1]*b[stride+2]; // because inverting SIP is ugly FIXME!
@@ -1025,13 +1025,13 @@ void do_linear_tweak(tweak_t* t)
 	sip_t* swcs = wcs_shift(t->sip, -su, -sv);
 	free(t->sip);
 	t->sip = swcs;
-	*/
-
 
 	printf("New sip header:\n");
 	print_sip(t->sip);
-//	printf("shiftx=%le, shifty=%le\n",su, sv);
+	printf("shiftxun=%le, shiftyun=%le\n",sU, sV);
+	printf("shiftx=%le, shifty=%le\n",su, sv);
 	printf("sqerr=%le\n", figure_of_merit(t));
+	printf("rms=%lf\n", sqrt(figure_of_merit(t)/stride));
 //	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// Calculate chi2 for sanity

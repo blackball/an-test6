@@ -779,7 +779,7 @@ int main(int argc, char *argv[])
 		tweak_dump_ascii(&tweak);
 
 		int k;
-		for (k=0; k<0; k++) {
+		for (k=0; k<2; k++) {
 			tweak.state &= ~TWEAK_HAS_LINEAR_CD;
 			tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 		}

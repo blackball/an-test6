@@ -15,31 +15,32 @@ def line(v1,v2, color='b', style=None, linewidth=None, alpha=None, zorder=None):
         l.set_zorder(zorder)
     gca().add_line(l)
 
-#imdat = load('scatter_image_0xf9ff_0.dat')
-#redat = load('scatter_ref_0xf9ff_0.dat')
-#dedat = load('corr_delta_0xf9ff_0.dat')
-imdat = load('scatter_image_0xf9ff_1.dat')
-redat = load('scatter_ref_0xf9ff_1.dat')
-dedat = load('corr_delta_0xf9ff_1.dat')
+suff = '_0xf9ff_0.dat'
+#suff = '_0xf9ff_1.dat'
+imdat = load('scatter_image'+suff)
+redat = load('scatter_ref'+suff)
+dedat = load('corr_delta'+suff)
 
 figure()
 hold(True)
-t=2
+t=0
 plot(imdat[:,t], imdat[:,t+1], 'r.')
 ax = axis()
 plot(redat[:,t], redat[:,t+1], 'bs', markerfacecolor=None)
 #plot(dedat[:,0], dedat[:,1], 'gd', markeredgecolor='g', markerfacecolor=None, markersize=20)
-for x,y,dx,dy in dedat:
-    line([x,y],[x+dx,y+dy])
-axis(ax)
-axis('equal')
-axis(ax)
+#for x,y,dx,dy in dedat:
+#    line([x,y],[x+dx,y+dy])
+#axis(ax)
+#axis('equal')
+#axis(ax)
 show()
 #quiver(dedat[:,0], dedat[:,1],dedat[:,2],dedat[:,3],scale=1.0)
 savefig('/home/keir/tweak_fit.ps')
+title(suff)
 show()
 
 figure()
+title(suff)
 subplot(211)
 hist(dedat[:,2],20)
 title('dx distribution (pixels)')

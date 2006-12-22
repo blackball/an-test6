@@ -36,8 +36,6 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double u = px - sip->crpix[0];
 	double v = py - sip->crpix[1];
 
-	// Convert to radians?? Apparently!
-
 	double U, V;
 	sip_calc_distortion(sip, u, v, &U, &V);
 //	printf("u=%lf v=%lf\n",u,v);
