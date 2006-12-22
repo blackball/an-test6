@@ -703,6 +703,179 @@ double figure_of_merit2(tweak_t* t)
 	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // arcseconds
 }
 
+// FIXME FIXME blatently incomplete
+void invert_sip_polynomial(tweak_t* t)
+{
+	t->sip->ap_order = t->sip->a_order + 2;
+	if (t->sip->ap_order > MAXORDER)
+		t->sip->ap_order = MAXORDER;
+	t->sip->ap_order = t->sip->bp_order;
+	int inv_sip_order = t->sip->ap_order;
+
+	int ngrid = 2*(t->sip->ap_order+1);
+
+	// The SIP coefficients form a order x order upper triangular matrix missing
+	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
+	// That's why the computation of the number of SIP terms is calculated by
+	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
+	// The in the end, we drop the p^0q^0 term by integrating it into crpix)
+	int inv_sip_coeffs = (inv_sip_order+1)*(inv_sip_order+2)/2; // upper triangle
+
+	integer stride = ngrid*ngrid; // Number of rows
+	double* A = malloc(inv_sip_coeffs*stride*sizeof(double));
+	double* b = malloc(2*stride*sizeof(double));
+	double* A2 = malloc(inv_sip_coeffs*stride*sizeof(double));
+	double* b2 = malloc(2*stride*sizeof(double));
+	assert(A);
+	assert(b);
+
+	// Rearranging formula (4), (5), and (6) from the SIP paper gives the
+	// following equations:
+	//
+	//   +----------------------- Linear pixel coordinates in PIXELS 
+	//   |                        before SIP correction
+	//   |                   +--- Intermediate world coordinates in DEGREES
+	//   |                   |
+	//   v                   v     
+	//                  -1
+	//   U = [CD11 CD12]   * x
+	//   V   [CD21 CD22]     y
+	//
+	//   +-------------- Final PIXEL coordinates after SIP correction
+	//   |    +--------- Linear PIXEL coordinates before SIP correction
+	//   |    |     +--- Polynomial U,V terms in powers of PIXELS
+	//   v    v     v
+	//
+	//   u1 - U1 =  p11 p12 p13 p14 p15 ... * ap1
+	//   u2 - U2 =  p21 p22 p23 p24 p25 ...   ap2
+	//   ...
+	//
+	//   v1 - V1 =  p11 p12 p13 p14 p15 ... * bp1
+	//   v2 - V2 =  p21 p22 p23 p24 p25 ...   bp2
+	//   ...
+	//
+	// which recovers the A and B's.
+
+	
+	// Find image boundaries
+	double maxu,maxv,minu,minv;
+	minu = minv =  1e100;
+	maxu = maxv = -1e100;
+	int i;
+	for (i=0; i<t->n; i++) {
+		minu = min(minu, t->x[i]);
+		minv = min(minv, t->y[i]);
+		maxu = max(maxu, t->x[i]);
+		maxv = max(maxv, t->y[i]);
+	}
+	
+	// Fill A in column-major order for fortran dgelsd
+	// Note: this code assumes a_order == b_order
+	double xyzcrval[3];
+	radecdeg2xyzarr(t->sip->crval[0], t->sip->crval[1], xyzcrval);
+	for (i=0; i<stride; i++) {
+		double u = t->x[il_get(t->image, i)] - t->sip->crpix[0];
+		double v = t->y[il_get(t->image, i)] - t->sip->crpix[1];
+		A[i] = u;
+		A[i + stride] = v;
+
+		// Poly terms for SIP.  Note that this includes the constant
+		// shift parameter which we extract and apply to crpix (and
+		// don't include in SIP terms)
+		int j = 2;
+		int p, q;
+		for (p=0; p<inv_sip_order; p++)
+			for (q=0; q<inv_sip_order; q++)
+				if (p+q <= inv_sip_order) {
+					assert(2 <= j);
+					assert(j < 2+inv_sip_coeffs);
+					A[i + stride*j] = pow(u,p)*pow(v,q);
+					j++;
+				}
+
+		// Be sure about shift coefficient
+		A[i+stride*2] = 1.0;
+
+		// xref and yref should be intermediate WC's not image x and y!
+		double x,y;
+		double xyzpt[3];
+		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], xyzpt);
+		star_coords(xyzpt, xyzcrval, &y, &x);
+
+		b[i] = rad2deg(x);
+		b[i+stride] = rad2deg(y);
+	}
+
+	// Save A, bx, and by for computing chisq
+	memcpy(A2,A,sizeof(double)*stride*inv_sip_coeffs);
+	memcpy(b2,b,sizeof(double)*stride*2);
+
+	// Allocate work areas and answers
+	integer N=inv_sip_coeffs;          // nr cols of A
+	doublereal S[N];      // min(N,M); is singular vals of A in dec order
+	doublereal RCOND=-1.; // used to determine effective rank of A; -1
+	                      // means use machine precision
+	integer NRHS=2;       // number of right hand sides (one for x and y)
+	integer rank;         // output effective rank of A
+	integer lwork = 1000*1000; /// FIXME ???
+	doublereal* work = malloc(lwork*sizeof(double));
+	integer *iwork = malloc(lwork*sizeof(long int));
+	integer info;
+	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
+			&lwork, iwork, &info);
+
+	t->sip->cd[0][0] = b[0]; // b is replaced with CD during dgelsd
+	t->sip->cd[0][1] = b[1];
+	t->sip->cd[1][0] = b[stride];
+	t->sip->cd[1][1] = b[stride+1];
+	double cdi[2][2];
+	double inv_det = 1.0/sip_det_cd(t->sip);
+	cdi[0][0] =  t->sip->cd[1][1] * inv_det;
+	cdi[0][1] = -t->sip->cd[0][1] * inv_det;
+	cdi[1][0] = -t->sip->cd[1][0] * inv_det;
+	cdi[1][1] =  t->sip->cd[0][0] * inv_det;
+	double sx, sy;
+	sx = cdi[0][0]*b[2] + cdi[0][1]*b[stride+2]; // Approximate shift ignoring SIP
+	sy = cdi[1][0]*b[2] + cdi[1][1]*b[stride+2]; // because inverting SIP is ugly FIXME!
+	sip_t* swcs = wcs_shift(t->sip, -sx, -sy);
+	free(t->sip);
+	t->sip = swcs;
+
+	// Extract the SIP coefficients
+	int j = 3;
+	int p, q;
+	for (p=0; p<inv_sip_order; p++)
+		for (q=0; q<inv_sip_order; q++)
+			if (p+q <= inv_sip_order && !(p==0&&q==0)) {
+				assert(j < inv_sip_coeffs);
+				t->sip->a[p][q] = cdi[0][0]*b[j] + cdi[0][1]*b[stride+j]; 
+				t->sip->b[p][q] = cdi[1][0]*b[j] + cdi[1][1]*b[stride+j];
+				j++;
+			}
+	t->sip->a_order = inv_sip_order;
+	t->sip->b_order = inv_sip_order;
+
+	printf("New sip header:\n");
+	print_sip(t->sip);
+	printf("shiftx=%le, shifty=%le\n",sx, sy);
+	printf("sqerr=%le\n", figure_of_merit(t));
+//	printf("sqerrxy=%le\n", figure_of_merit2(t));
+
+
+	// Calculate chi2 for sanity
+	double chisq=0;
+	for(i=0; i<stride; i++) {
+		double sum=0;
+		int j;
+		for(j=0; j<6; j++) 
+			sum += A2[i+stride*j]*b[j];
+		chisq += (sum-b2[i])*(sum-b2[i]);
+	}
+//	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
+}
+
+	
+
 // FIXME: adapt this function to take as input the correspondences to use VVVVV
 //    wic is World Intermediate Coordinates, either along ra or dec
 //       i.e. canonical image coordinates
@@ -712,6 +885,7 @@ double figure_of_merit2(tweak_t* t)
 //    siporder is the sip order up to MAXORDER (defined in sip.h)
 //    the correspondences are passed so that we can stick RANSAC around the whole
 //    thing for better estimation.
+
 
 // Run a linear tweak; only changes CD matrix
 void do_linear_tweak(tweak_t* t)
@@ -1162,6 +1336,7 @@ void my_ransac(tweak_t* t)
 		printf("error=%le besterror=%le\n", t->err, besterr);
 	}
 }
+
 void tweak_clear(tweak_t* t)
 {
 	// FIXME
