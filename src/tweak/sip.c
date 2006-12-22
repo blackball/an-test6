@@ -37,8 +37,6 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double v = py - sip->crpix[1];
 
 	// Convert to radians?? Apparently!
-	u = deg2rad(u);
-	v = deg2rad(v);
 
 	// Do SIP distortion (in relative pixel coordinates)
 	// See the sip_t struct definition in header file for details
@@ -62,9 +60,9 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 	double y = sip->cd[1][0] * u + sip->cd[1][1] * v;
 //	printf("x=%lf y=%lf\n",x,y);
 
-	// Mysterious! Who knows, but adding this makes WCS match with SIP. 
-	x *= -1;
-	y *= -1;
+	// Mysterious! Who knows, but negating these coordinates makes WCStools match with SIP. 
+	x = -deg2rad(x);
+	y = -deg2rad(y);
 
 	// Take r to be the threespace vector of crval
 	double rx, ry, rz;
