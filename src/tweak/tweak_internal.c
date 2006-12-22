@@ -734,6 +734,7 @@ void do_linear_tweak(tweak_t* t)
 	assert(b);
 
 	printf("sqerr=%le\n", figure_of_merit(t));
+	print_sip(t->sip);
 //	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// We use a clever trick to estimate CD, A, and B terms in two
@@ -799,6 +800,9 @@ void do_linear_tweak(tweak_t* t)
 					j++;
 				}
 
+		// Be sure about shift coefficient
+		A[i+stride*2] = 1.0;
+
 		// xref and yref should be intermediate WC's not image x and y!
 		double x,y;
 		double xyzpt[3];
@@ -829,8 +833,8 @@ void do_linear_tweak(tweak_t* t)
 
 	t->sip->cd[0][0] = b[0]; // b is replaced with CD during dgelsd
 	t->sip->cd[0][1] = b[1];
-	t->sip->cd[1][0] = b[N];
-	t->sip->cd[1][1] = b[N+1];
+	t->sip->cd[1][0] = b[stride];
+	t->sip->cd[1][1] = b[stride+1];
 	double cdi[2][2];
 	double inv_det = 1.0/sip_det_cd(t->sip);
 	cdi[0][0] =  t->sip->cd[1][1] * inv_det;
@@ -838,8 +842,8 @@ void do_linear_tweak(tweak_t* t)
 	cdi[1][0] = -t->sip->cd[1][0] * inv_det;
 	cdi[1][1] =  t->sip->cd[0][0] * inv_det;
 	double sx, sy;
-	sx = cdi[0][0]*b[2] + cdi[0][1]*b[N+2]; // Approximate shift ignoring SIP
-	sy = cdi[1][0]*b[2] + cdi[1][1]*b[N+2]; // because inverting SIP is ugly FIXME!
+	sx = cdi[0][0]*b[2] + cdi[0][1]*b[stride+2]; // Approximate shift ignoring SIP
+	sy = cdi[1][0]*b[2] + cdi[1][1]*b[stride+2]; // because inverting SIP is ugly FIXME!
 	sip_t* swcs = wcs_shift(t->sip, -sx, -sy);
 	free(t->sip);
 	t->sip = swcs;
@@ -852,8 +856,8 @@ void do_linear_tweak(tweak_t* t)
 			if (p+q <= sip_order && !(p==0&&q==0)) {
 				assert(2 <= j);
 				assert(j < 2+sip_coeffs);
-				t->sip->a[p][q] = cdi[0][0]*b[j] + cdi[0][1]*b[N+j]; 
-				t->sip->b[p][q] = cdi[1][0]*b[j] + cdi[1][1]*b[N+j];
+				t->sip->a[p][q] = cdi[0][0]*b[j] + cdi[0][1]*b[stride+j]; 
+				t->sip->b[p][q] = cdi[1][0]*b[j] + cdi[1][1]*b[stride+j];
 				j++;
 			}
 	t->sip->a_order = sip_order;
