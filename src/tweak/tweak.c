@@ -761,19 +761,25 @@ int main(int argc, char *argv[])
 		get_xy_data(&tweak, xyfptr, kk);
 		tweak_push_hppath(&tweak, hppat);
 
-		printf("blah\n");
-		unsigned int dest_state = TWEAK_HAS_LINEAR_CD;
+//		unsigned int dest_state = TWEAK_HAS_LINEAR_CD;
 //		dest_state = TWEAK_HAS_IMAGE_AD;
-		while(! (tweak.state & dest_state)) {
+//		while(! (tweak.state & dest_state)) {
 //			printf("%p\n", (void*)tweak.state);
 //			tweak_print_state(&tweak);
 //			printf("\n");
-			tweak_advance_to(&tweak, dest_state);
-			tweak_dump_ascii(&tweak);
-			getchar();
-		}
+//			tweak_advance_to(&tweak, dest_state);
+//			tweak_dump_ascii(&tweak);
+//			getchar();
+//		}
+//		tweak.state &= ~TWEAK_HAS_LINEAR_CD;
+		tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
+		tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
+		tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
+		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
+		tweak_dump_ascii(&tweak);
+
 		int k;
-		for (k=0; k<20; k++) {
+		for (k=0; k<0; k++) {
 			tweak.state &= ~TWEAK_HAS_LINEAR_CD;
 			tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 		}

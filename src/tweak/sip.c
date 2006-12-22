@@ -38,26 +38,13 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 
 	// Convert to radians?? Apparently!
 
-	// Do SIP distortion (in relative pixel coordinates)
-	// See the sip_t struct definition in header file for details
-	int p, q;
-	double fuv=0.;
-	for (p=0; p<sip->a_order; p++)
-		for (q=0; q<sip->a_order; q++)
-			if (p+q <= sip->a_order && !(p==0&&q==0))
-				fuv += sip->a[p][q]*pow(u,p)*pow(v,q);
-	double guv=0.;
-	for (p=0; p<sip->b_order; p++) 
-		for (q=0; q<sip->b_order; q++) 
-			if (p+q <= sip->b_order && !(p==0&&q==0)) 
-				guv += sip->b[p][q]*pow(u,p)*pow(v,q);
-	u += fuv;
-	v += guv;
+	double U, V;
+	sip_calc_distortion(sip, u, v, &U, &V);
 //	printf("u=%lf v=%lf\n",u,v);
 
 	// Get intermediate world coordinates
-	double x = sip->cd[0][0] * u + sip->cd[0][1] * v;
-	double y = sip->cd[1][0] * u + sip->cd[1][1] * v;
+	double x = sip->cd[0][0] * U + sip->cd[0][1] * V;
+	double y = sip->cd[1][0] * U + sip->cd[1][1] * V;
 //	printf("x=%lf y=%lf\n",x,y);
 
 	// Mysterious! Who knows, but negating these coordinates makes WCStools match with SIP. 
@@ -155,6 +142,36 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 		fprintf(stderr, "suspicious inversion; no inversion SIP coeffs "
 				"yet there are forward SIP coeffs\n");
 	}
+
+	double u, v;
+	sip_calc_inv_distortion(sip, U, V, &u, &v);
+
+	// Re-add crpix to get pixel coordinates
+	*px = u + sip->crpix[0];
+	*py = v + sip->crpix[1];
+}
+
+void sip_calc_distortion(sip_t* sip, double u, double v, double* U, double *V)
+{
+	// Do SIP distortion (in relative pixel coordinates)
+	// See the sip_t struct definition in header file for details
+	int p, q;
+	double fuv=0.;
+	for (p=0; p<sip->a_order; p++)
+		for (q=0; q<sip->a_order; q++)
+			if (p+q <= sip->a_order && !(p==0&&q==0))
+				fuv += sip->a[p][q]*pow(u,p)*pow(v,q);
+	double guv=0.;
+	for (p=0; p<sip->b_order; p++) 
+		for (q=0; q<sip->b_order; q++) 
+			if (p+q <= sip->b_order && !(p==0&&q==0)) 
+				guv += sip->b[p][q]*pow(u,p)*pow(v,q);
+	*U = u + fuv;
+	*V = v + guv;
+}
+
+void sip_calc_inv_distortion(sip_t* sip, double U, double V, double* u, double *v)
+{
 	int p, q;
 	double fUV=0.;
 	for (p=0; p<sip->ap_order; p++)
@@ -165,12 +182,8 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 		for (q=0; q<sip->bp_order; q++) 
 			gUV += sip->bp[p][q]*pow(U,p)*pow(V,q);
 
-	double u = U + fUV;
-	double v = V + gUV;
-
-	// Re-add crpix to get pixel coordinates
-	*px = u + sip->crpix[0];
-	*py = v + sip->crpix[1];
+	*u = U + fUV;
+	*v = V + gUV;
 }
 
 double sip_det_cd(sip_t* sip)
