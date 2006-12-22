@@ -710,9 +710,10 @@ void invert_sip_polynomial(tweak_t* t)
 	printf("INVERTING!!!!!!!!!!\n");
 	assert(t->sip->a_order == t->sip->b_order);
 
-	t->sip->ap_order = t->sip->a_order + 2;
-	if (t->sip->ap_order > MAXORDER)
-		t->sip->ap_order = MAXORDER;
+	t->sip->ap_order = t->sip->a_order;
+//	t->sip->ap_order = t->sip->a_order + 2;
+//	if (t->sip->ap_order > MAXORDER)
+//		t->sip->ap_order = MAXORDER;
 	t->sip->bp_order = t->sip->ap_order;
 	int inv_sip_order = t->sip->ap_order;
 
@@ -1193,7 +1194,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XYZ);
 		ensure(TWEAK_HAS_IMAGE_XYZ);
 
-		find_correspondences(t, arcsec2rad(10));
+		find_correspondences(t, arcsec2rad(6));
 
 		done(TWEAK_HAS_CORRESPONDENCES);
 	}

@@ -15,15 +15,15 @@ def line(v1,v2, color='b', style=None, linewidth=None, alpha=None, zorder=None):
         l.set_zorder(zorder)
     gca().add_line(l)
 
-suff = '_0xf9ff_0.dat'
-#suff = '_0xf9ff_1.dat'
+#suff = '_0xf9ff_0.dat'
+suff = '_0xf9ff_1.dat'
 imdat = load('scatter_image'+suff)
 redat = load('scatter_ref'+suff)
 dedat = load('corr_delta'+suff)
 
 figure()
 hold(True)
-t=0
+t=2
 plot(imdat[:,t], imdat[:,t+1], 'r.')
 ax = axis()
 plot(redat[:,t], redat[:,t+1], 'bs', markerfacecolor=None)
