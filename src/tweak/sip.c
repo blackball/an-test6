@@ -141,12 +141,13 @@ void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	double x,y;
 	star_coords(xyzpt, xyzcrval, &y, &x);
 
+	// Switch intermediate world coordinates into degrees
+	x = rad2deg(x);
+	y = rad2deg(y);
+
 	// Linear pixel coordinates
 	double U = cdi[0][0]*x + cdi[0][1]*y;
 	double V = cdi[1][0]*x + cdi[1][1]*y;
-
-	U = rad2deg(U);
-	V = rad2deg(V);
 
 	// Invert SIP distortion
 	// Sanity check:
