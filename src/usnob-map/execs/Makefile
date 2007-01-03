@@ -22,6 +22,7 @@ all:
 
 include $(COMMON)/makefile.common
 include $(COMMON)/makefile.utils
+include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
 
@@ -59,24 +60,24 @@ usnobtile: usnobtile.o merctree.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-sdsstile: sdsstile.o rdlist.o xylist.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+sdsstile: sdsstile.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-sdssfieldtile: sdssfieldtile.o xylist.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+sdssfieldtile: sdssfieldtile.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-indextile: indextile.o starkd.o \
+indextile: indextile.o \
 		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-indexquad: indexquad.o starkd.o permutedsort.o \
-		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+indexquad: indexquad.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-sdssquad: sdssquad.o rdlist.o xylist.o permutedsort.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+sdssquad: sdssquad.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 #	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 zoomout: zoomout.o pnmutils.o
