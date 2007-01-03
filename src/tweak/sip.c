@@ -4,7 +4,7 @@
 #include "sip.h"
 #include "starutil.h"
 
-sip_t* createsip() {
+sip_t* sip_create() {
 	sip_t* sip = malloc(sizeof(sip_t));
 
 	sip->crval[0] = 0;
@@ -27,7 +27,7 @@ sip_t* createsip() {
 }
 
 // Convert a ra,dec in degrees to coordinates in the image
-void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
+void sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 {
 
 	// Get pixel coordinates relative to reference pixel
@@ -95,7 +95,7 @@ void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 }
 
 // Convert a ra,dec in degrees to coordinates in the image
-void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
+void sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 {
 	// Invert CD
 	double cdi[2][2];

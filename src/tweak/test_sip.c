@@ -175,7 +175,7 @@ void tryad(sip_t* sip, wcs_t* wcs, double a, double d, char* name,
 	printf("AD -> XY Test: %s\n",name);
 	printf("a =%lf, d =%lf\n", a,d);
 	double px, py;
-	radec2pixelxy(sip, a,d,&px,&py);
+	sip_radec2pixelxy(sip, a,d,&px,&py);
 
 	int offscr;
 	double wcspx,wcspy;
@@ -208,7 +208,7 @@ void tryxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 	printf("XY -> AD Test: %s\n",name);
 	double wcsa, wcsd, a, d;
 	printf("TEST px=%lf, py=%lf\n", px,py);
-	pixelxy2radec(sip, px,py, &a, &d);
+	sip_pixelxy2radec(sip, px,py, &a, &d);
 	pix2wcs(wcs, px, py, &wcsa, &wcsd);
 	printf("sa=%lf, sd=%lf\n", a,d);
 	printf("wa=%lf, wd=%lf\n", wcsa,wcsd);
@@ -234,7 +234,7 @@ void tryxyadxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 	printf("test px=%lf, py=%lf\n", px,py);
 
 	double a, d;
-	pixelxy2radec(sip, px,py, &a, &d);
+	sip_pixelxy2radec(sip, px,py, &a, &d);
 
 	double wcsa, wcsd;
 	pix2wcs(wcs, px, py, &wcsa, &wcsd);
@@ -243,7 +243,7 @@ void tryxyadxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 	printf("wa=%lf, wd=%lf\n", wcsa,wcsd);
 
 	double pxp, pyp;
-	radec2pixelxy(sip, a, d, &pxp, &pyp);
+	sip_radec2pixelxy(sip, a, d, &pxp, &pyp);
 
 	int offscr;
 	double wcspx,wcspy;
@@ -339,7 +339,7 @@ int main()
 {
 	srand(0);
 	int n=2;
-	sip_t* sip = createsip();
+	sip_t* sip = sip_create();
 	grinder(sip, get_wcs_from_fits_header(fobj059), n, "fobj059 without TNX");
 	grinder(sip, get_wcs_from_fits_header(simple) , n, "identity transform");
 	grinder(sip, get_wcs_from_fits_header(simple2), n, "non-zero crpix");

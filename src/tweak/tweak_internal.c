@@ -122,7 +122,7 @@ void get_shift(double* ximg, double* yimg, int nimg,
 
 
 	int themax = 0;
-	int themaxind;
+	int themaxind = -1;
 	for (i=0; i<hsz*hsz; i++) {
 		if (themax < hough[i]) {
 			themaxind = i;
@@ -162,7 +162,7 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 
 	// now reproject the old crpix[xy] into swcs
 	double nxref, nyref;
-	pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
+	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
 
 	swcs->crval[0] = nxref;
 	swcs->crval[1] = nyref;
@@ -298,7 +298,7 @@ void tweak_dump_ascii(tweak_t* t)
 		for (i=0; i<il_size(t->image); i++) {
 			double a,d;
 			int im_ind = il_get(t->image, i);
-			pixelxy2radec(t->sip, t->x[im_ind],t->y[im_ind], &a,&d);
+			sip_pixelxy2radec(t->sip, t->x[im_ind],t->y[im_ind], &a,&d);
 			tweak_print4_fp(cor_im, t->x[im_ind], t->y[im_ind],
 					a, d);
 
@@ -670,7 +670,7 @@ double figure_of_merit(tweak_t* t)
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
 		double a,d;
-		pixelxy2radec(t->sip, t->x[il_get(t->image, i)],
+		sip_pixelxy2radec(t->sip, t->x[il_get(t->image, i)],
 				t->y[il_get(t->image, i)], &a, &d);
 		// xref and yref should be intermediate WC's not image x and y!
 		double xyzpt[3];
@@ -696,7 +696,7 @@ double figure_of_merit2(tweak_t* t)
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
 		double x,y;
-		radec2pixelxy(t->sip, t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], &x, &y);
+		sip_radec2pixelxy(t->sip, t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], &x, &y);
 		double dx = t->x[il_get(t->image, i)] - x;
 		double dy = t->y[il_get(t->image, i)] - y;
 		sqerr += dx*dx + dy*dy;
@@ -1074,7 +1074,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		t->d = malloc(sizeof(double)*t->n);
 		int jj;
 		for (jj=0; jj<t->n; jj++) {
-			pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
+			sip_pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
 		}
 
 		done(TWEAK_HAS_IMAGE_AD);
@@ -1101,7 +1101,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		t->y_ref = malloc(sizeof(double)*t->n_ref);
 		int jj;
 		for (jj=0; jj<t->n_ref; jj++) {
-			radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
+			sip_radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
 				      t->x_ref+jj, t->y_ref+jj);
 		}
 
@@ -1218,6 +1218,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	tweak_print_the_state(flag);
 	printf("\n"); 
 	assert(0);
+	return -1;
 }
 
 void tweak_go_to(tweak_t* t, unsigned int dest_state)
@@ -1296,7 +1297,7 @@ void my_ransac(tweak_t* t)
 			int ref_ind = il_get(t->ref, i);
 			int image_ind = il_get(t->image, i);
 			double a,d;
-			pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
+			sip_pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
 			radecdeg2xyzarr(a,d,image_xyz);
 			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
 			double dx = ref_xyz[0] - image_xyz[0];

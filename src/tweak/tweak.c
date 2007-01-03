@@ -235,7 +235,7 @@ void dump_data(tweak_t* t)
 			int im_ind = il_get(t->image, i);
 			x[i] = t->x[im_ind];
 			y[i] = t->y[im_ind];
-			pixelxy2radec(t->sip, x[i],y[i], a+i,d+i);
+			sip_pixelxy2radec(t->sip, x[i],y[i], a+i,d+i);
 //			a[i] = t->a[im_ind];
 //			d[i] = t->d[im_ind];
 
@@ -403,7 +403,7 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 			continue;
 		double a, d;
 		int image_ind = il_get(t->image, i);
-		pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
+		sip_pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
 		double image_xyz[3];
 		radecdeg2xyzarr(a, d, image_xyz);
 		*hx++ = image_xyz[0];
@@ -610,7 +610,7 @@ void ransac(tweak_t* t)
 			int ref_ind = il_get(t->ref, i);
 			int image_ind = il_get(t->image, i);
 			double a,d;
-			pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
+			sip_pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
 			radecdeg2xyzarr(a,d,image_xyz);
 			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
 			double dx = ref_xyz[0] - image_xyz[0];

@@ -93,9 +93,9 @@ typedef struct sip_s {
 	double bp[MAXORDER][MAXORDER];
 } sip_t;
 
-sip_t* createsip(void);
-void pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d);
-void radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
+sip_t* sip_create(void);
+void sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d);
+void sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 double sip_det_cd(sip_t* sip);
 void sip_calc_inv_distortion(sip_t* sip, double U, double V, double* u, double *v);
 void sip_calc_distortion(sip_t* sip, double u, double v, double* U, double *V);
