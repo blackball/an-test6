@@ -75,7 +75,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats \
-#render_mercator make-merctree rawstartree 
+	rawstartree 
 
 OLDEXECS_OBJS := catalog.o qidxfile.o histogram.o \
 	verify.o intmap.o tic.o matchfile.o \
