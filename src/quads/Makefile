@@ -56,7 +56,7 @@ NETPBM_L := -L. -lnetpbm
 #CFLAGS += $(NETPBM_I)
 #LFLAGS += $(NETPBM_L)
 
-UTIL_OBJS := ioutils.o fileutil.o mathutil.o boilerplate.o svn.o
+UTIL_OBJS := ioutils.o fileutil.o boilerplate.o svn.o
 
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o \
 	bt.o an_catalog.o catalog.o idfile.o starkd.o quadfile.o codefile.o \
@@ -154,26 +154,26 @@ WCSLIB_INC := $(WCSLIB_INC)
 wcscheck.o: wcscheck.c
 	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
 
-wcscheck: wcscheck.o mathutil.o xylist.o rdlist.o \
+wcscheck: wcscheck.o xylist.o rdlist.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
-noisesim: noisesim.o noise.o mathutil.o $(ANUTILS_LIB)
+noisesim: noisesim.o noise.o $(ANUTILS_LIB)
 
-noisesim2: noisesim2.o noise.o mathutil.o $(ANUTILS_LIB)
+noisesim2: noisesim2.o noise.o $(ANUTILS_LIB)
 
-noisesim3: noisesim3.o noise.o mathutil.o $(ANUTILS_LIB)
+noisesim3: noisesim3.o noise.o $(ANUTILS_LIB)
 
-hpgrid: hpgrid.o healpix.o mathutil.o $(ANUTILS_LIB)
+hpgrid: hpgrid.o healpix.o $(ANUTILS_LIB)
 
-get-healpix: get-healpix.o healpix.o mathutil.o $(ANUTILS_LIB)
+get-healpix: get-healpix.o healpix.o $(ANUTILS_LIB)
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-catalog_analysis: catalog_analysis.o healpix.o mathutil.o pnpoly.o $(ANUTILS_LIB)
+catalog_analysis: catalog_analysis.o healpix.o pnpoly.o $(ANUTILS_LIB)
 
 nomadtofits: nomadtofits.o nomad_fits.o nomad.o healpix.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -189,7 +189,7 @@ usnobtofits: usnobtofits.o usnob_fits.o usnob.o healpix.o \
 tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o healpix.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-hpowned: hpowned.o healpix.o mathutil.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+hpowned: hpowned.o healpix.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 build-an-catalog: build-an-catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
 		tycho2.o usnob.o 2mass_catalog.o 2mass.o healpix.o \
@@ -256,7 +256,7 @@ quadscales: quadscales.o histogram.o starkd.o quadfile.o $(UTIL_OBJS) $(ANUTILS_
 quadsperstar: quadsperstar.o qidxfile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-fitsgetext: fitsgetext.o $(QFITS_LIB)
+fitsgetext: fitsgetext.o $(ANUTILS_LIB) $(QFITS_LIB)
 
 subtable: subtable.o $(UTIL_OBJS) $(ANUTILS_LIB) ioutils.o $(QFITS_LIB)
 
