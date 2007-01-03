@@ -42,6 +42,7 @@ USNOBMAP_EXECS := usnobcount usnobtile sdsstile sdssfieldtile \
 # indextile    (currently broken)
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
+MISC_MAIN_OBJS := $(addsuffix .o,$(MISC_EXECS))
 
 NETPBM_I :=
 NETPBM_L := -L. -lnetpbm
@@ -105,7 +106,7 @@ pnmutils.o: pnmutils.c
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS)
+ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS) $(MISC_MAIN_OBJS)
 
 DEP_OBJ := $(ALL_OBJS)
 DEP_PREREQS := $(QFITS_LIB)
@@ -117,7 +118,7 @@ allclean: clean
 	rm -f *.o *~ *.dep 
 
 clean:
-	rm -f $(USNOBMAP_EXECS) $(ALL_OBJS)
+	rm -f $(USNOBMAP_EXECS) $(MISC_EXECS) $(ALL_OBJS) \
 		$(DEPS) deps
 
 
