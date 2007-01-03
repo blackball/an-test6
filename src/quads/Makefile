@@ -22,6 +22,7 @@ all:
 
 include $(COMMON)/makefile.common
 include $(COMMON)/makefile.utils
+include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
@@ -41,6 +42,7 @@ CFLAGS += $(QFITS_INC)
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
+CFLAGS += $(ANFILES_INC)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
@@ -48,10 +50,11 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-MISC_EXECS := ppmnormrgb whitebalance 2masstofits 
+MISC_EXECS := 2masstofits 
+#ppmnormrgb whitebalance 
 
-NETPBM_I :=
-NETPBM_L := -L. -lnetpbm
+#NETPBM_I :=
+#NETPBM_L := -L. -lnetpbm
 
 #CFLAGS += $(NETPBM_I)
 #LFLAGS += $(NETPBM_L)
@@ -127,7 +130,7 @@ rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 
 xylist2fits: xylist2fits.o \
-		$(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 
 .PHONY: tags
@@ -193,32 +196,33 @@ hpowned: hpowned.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 build-an-catalog: build-an-catalog.o usnob_fits.o tycho2_fits.o \
 		tycho2.o usnob.o 2mass_catalog.o 2mass.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 cut-an: cut-an.o catalog.o idfile.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-startree: startree.o catalog.o $(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+startree: startree.o catalog.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 hpquads: hpquads.o quadfile.o codefile.o bt.o histogram.o tic.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+codetree: codetree.o codekd.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-codetree: codetree.o codekd.o codefile.o $(UTIL_OBJS) \
-		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-unpermute-stars: unpermute-stars.o quadfile.o idfile.o $(UTIL_OBJS) \
-		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+unpermute-stars: unpermute-stars.o quadfile.o idfile.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 unpermute-quads: unpermute-quads.o quadfile.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 homer: homer.o donuts.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 blind: blind.o solver.o codekd.o quadfile.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \
 		solvedfile.o solvedclient.o intmap.o verify.o pnpoly.o \
@@ -236,7 +240,7 @@ solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LI
 
 plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
 		usnob_fits.o usnob.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 quadidx: quadidx.o quadfile.o qidxfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -247,10 +251,10 @@ codeprojections: codeprojections.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 quadlocations: quadlocations.o quadfile.o catalog.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 quadscales: quadscales.o histogram.o quadfile.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 quadsperstar: quadsperstar.o qidxfile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -299,7 +303,7 @@ tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LI
 DEP_OBJ := $(ALL_OBJ)
 DEP_PREREQS := $(QFITS_LIB)
 
-CFLAGS += $(CFITSIO_CFLAGS) $(NETPBM_I)
+CFLAGS += $(CFITSIO_CFLAGS) #$(NETPBM_I)
 include $(COMMON)/makefile.deps
 
 allclean: clean
