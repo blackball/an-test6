@@ -19,13 +19,16 @@ COMMON := .
 include $(COMMON)/makefile.common
 include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.qfits
+include $(COMMON)/makefile.libkd
 
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
+CFLAGS += $(LIBKD_INC)
 
 all: $(ANUTILS_LIB)
 
-ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o
+ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o healpix.o \
+	dualtree.o dualtree_rangesearch.o
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
