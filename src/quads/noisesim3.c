@@ -53,7 +53,9 @@ int main(int argc, char** args) {
 	double lowerAngle = 4.0;
 	double upperAngle = 5.0;
 	double pixscale = 0.396; // arcsec / pixel
-	double noise = 3; // arcsec
+	//double noise = 1; // arcsec
+	double FWHM = 2 * sqrt(2.0 * log(2.0));
+	double noise = 1.0 / FWHM; // arcsec
 	double W = 2048; // field size in pixels
 	double H = 1500;
 	double codetol = 0.01;
@@ -138,11 +140,11 @@ int main(int argc, char** args) {
 			for (;;) {
 				double x,y;
 				sample_star_in_circle(sCenter, fieldhyp/2.0 * pixscale / 60.0, sA);
-				// reject stars not in the field
 				star_coords(sA, sCenter, &x, &y);
 				// radian-like units
 				x = rad2arcsec(x) / pixscale + W/2.0;
 				y = rad2arcsec(y) / pixscale + H/2.0;
+				// reject stars not in the field
 				if (x < 0 || x > W || y < 0 || y > H)
 					continue;
 				fA[0] = x;
@@ -150,11 +152,10 @@ int main(int argc, char** args) {
 				break;
 			}
 
-			// sample B in a ring around A.
+			// sample B in a circle around A.
 			for (;;) {
 				double x,y;
 				sample_star_in_ring(sA, ABangle, ABangle, sB);
-				// reject stars not in the field
 				star_coords(sB, sCenter, &x, &y);
 				x = rad2arcsec(x) / pixscale + W/2.0;
 				y = rad2arcsec(y) / pixscale + H/2.0;
@@ -172,7 +173,6 @@ int main(int argc, char** args) {
 				star_midpoint(midAB, sA, sB);
 				for (;;) {
 					sample_star_in_circle(midAB, ABangle/2.0, sC);
-					// reject stars not in the field
 					star_coords(sC, sCenter, &x, &y);
 					x = rad2arcsec(x) / pixscale + W/2.0;
 					y = rad2arcsec(y) / pixscale + H/2.0;
@@ -184,7 +184,6 @@ int main(int argc, char** args) {
 				}
 				for (;;) {
 					sample_star_in_circle(midAB, ABangle/2.0, sD);
-					// reject stars not in the field
 					star_coords(sD, sCenter, &x, &y);
 					x = rad2arcsec(x) / pixscale + W/2.0;
 					y = rad2arcsec(y) / pixscale + H/2.0;
@@ -196,14 +195,16 @@ int main(int argc, char** args) {
 				}
 			}
 
+			// real code:
+			compute_star_code(sA, sB, sC, sD, realcode);
+
 			// add noise to the field positions.
 			add_field_noise(fA, noisedist, fA);
 			add_field_noise(fB, noisedist, fB);
 			add_field_noise(fC, noisedist, fC);
 			add_field_noise(fD, noisedist, fD);
 
-			// codes
-			compute_star_code(sA, sB, sC, sD, realcode);
+			// measured code:
 			{
 				double scale;
 				compute_field_code(fA, fB, fC, fD, code, &scale);
@@ -324,6 +325,7 @@ int main(int argc, char** args) {
 						   realcode[0], realcode[1], realcode[2], realcode[3]);
 					printf("fcode(%i,:)=[%g,%g,%g,%g];\n", nhere,
 						   code[0], code[1], code[2], code[3]);
+					printf("codedist(%i)=%g;\n", nhere, sqrt(distsq(code, realcode, 4)));
 					printf("agreedists(%i)=%g;\n", nhere, agree);
 					nhere++;
 				}
@@ -335,7 +337,7 @@ int main(int argc, char** args) {
 		printf("codeinvalid=%g\n", (double)codeInvalid / (double)N);
 		printf("ok=%g\n", (double)dl_size(agreedists) / (double)N);
 
-		printf("I=163; plot(sx(I,:), sy(I,:),'ro-', px(I,:), py(I,:), 'bx--', cx(I,:), cy(I,:), 'k--', cenx(I), ceny(I), 'mx', 0, 0, 'ro'); axis equal;\n");
+		printf("I=173; plot(sx(I,:), sy(I,:),'ro-', px(I,:), py(I,:), 'bx--', cx(I,:), cy(I,:), 'k--', cenx(I), ceny(I), 'mx', 0, 0, 'ro'); axis equal;\n");
 		{
 			double mean, std;
 			mean = 0.0;

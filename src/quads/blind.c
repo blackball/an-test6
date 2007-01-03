@@ -834,12 +834,7 @@ static void solve_fields() {
 }
 
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
-	uint sA, sB, sC, sD;
-	quadfile_get_starids(quads, thisquad, &sA, &sB, &sC, &sD);
-	*iA = sA;
-	*iB = sB;
-	*iC = sC;
-	*iD = sD;
+	quadfile_get_starids(quads, thisquad, iA, iB, iC, iD);
 }
 
 void getstarcoord(uint iA, double *sA) {

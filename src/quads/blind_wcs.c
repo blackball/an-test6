@@ -151,6 +151,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 		scale = sqrt(pvar / fvar);
 	}
 
+	// -compute WCS parameters.
 	{
 		double ra, dec;
 		xyz2radec(starcmass[0], starcmass[1], starcmass[2], &ra, &dec);
