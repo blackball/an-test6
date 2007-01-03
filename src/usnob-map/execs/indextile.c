@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
 		  minx = miny = minxnz = 1e100;
 		  maxx = maxy = -1e100;
 		  for (j=0; j<4; j++) {
-		  healpix_to_xyz(dx[j], dy[j], i, Nside, &x, &y, &z);
+		  healpix_to_xyz(i, Nside, dx[j], dy[j], &x, &y, &z);
 		  xyz2radec(x, y, z, &ra, &dec);
 		  x = ra / (2.0 * M_PI);
 		  y = (asinh(tan(dec)) + M_PI) / (2.0 * M_PI);
