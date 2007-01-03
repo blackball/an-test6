@@ -28,11 +28,10 @@
 #include "ppm.h"
 #include "pnm.h"
 #undef bool
+#undef TRUE
 
 #include "starkd.h"
-#include "kdtree/kdtree.h"
-#include "kdtree/kdtree_macros.h"
-#include "kdtree/kdtree_access.h"
+#include "kdtree.h"
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"

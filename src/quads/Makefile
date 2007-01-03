@@ -263,6 +263,9 @@ subtable: subtable.o bl.o $(UTIL_OBJS) $(ANUTILS_LIB) ioutils.o $(QFITS_LIB)
 
 tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) ioutils.o permutedsort.o fileutil.o $(QFITS_LIB)
 
+usnobmap: usnobcount usnobtile sdsstile sdssfieldtile indexquad sdssquad
+# indextile    (currently broken)
+
 usnobcount: usnobcount.o 
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
