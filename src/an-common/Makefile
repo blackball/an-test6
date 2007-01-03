@@ -26,5 +26,5 @@ CFLAGS += $(QFITS_INC)
 
 all: $(ANUTILS_LIB)
 
-$(ANUTILS_LIB): fitsioutils.o
+$(ANUTILS_LIB): fitsioutils.o starutil.o bl.o
 	$(AR) rc $@ $^
