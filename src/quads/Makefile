@@ -51,13 +51,6 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
 MISC_EXECS := 2masstofits 
-#ppmnormrgb whitebalance 
-
-#NETPBM_I :=
-#NETPBM_L := -L. -lnetpbm
-
-#CFLAGS += $(NETPBM_I)
-#LFLAGS += $(NETPBM_L)
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
@@ -81,8 +74,8 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
-	plotquads matchtordls tunematch overlapstats render_mercator \
-	make-merctree rawstartree 
+	plotquads matchtordls tunematch overlapstats \
+#render_mercator make-merctree rawstartree 
 
 OLDEXECS_OBJS := catalog.o qidxfile.o histogram.o \
 	verify.o intmap.o tic.o matchfile.o \
@@ -110,21 +103,6 @@ prospectus_progs: $(PROSPECTUS)
 
 .PHONY: fitsutils
 fitsutils: $(FITS_UTILS)
-
-#ppmnormrgb: ppmnormrgb.o
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
-
-#ppmnormrgb.o: ppmnormrgb.c
-#	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
-
-#whitebalance: whitebalance.o pnmutils.o
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
-
-#whitebalance.o: whitebalance.c
-#	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
-
-#pnmutils.o: pnmutils.c
-#	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
 rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
@@ -265,45 +243,12 @@ subtable: subtable.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LIB)
 
-#usnobmap: usnobcount usnobtile sdsstile sdssfieldtile indexquad sdssquad
-# indextile    (currently broken)
-
-#usnobcount: usnobcount.o 
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-
-#usnobtile: usnobtile.o merctree.o \
-#		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
-#sdsstile: sdsstile.o rdlist.o xylist.o \
-#		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
-#sdssfieldtile: sdssfieldtile.o xylist.o \
-#		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
-#indextile: indextile.o starkd.o \
-#		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
-#indexquad: indexquad.o starkd.o permutedsort.o \
-#		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
-#sdssquad: sdssquad.o rdlist.o xylist.o permutedsort.o \
-#		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-
-#zoomout: zoomout.o pnmutils.o
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
 tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 DEP_OBJ := $(ALL_OBJ)
 DEP_PREREQS := $(QFITS_LIB)
 
-CFLAGS += $(CFITSIO_CFLAGS) #$(NETPBM_I)
+CFLAGS += $(CFITSIO_CFLAGS)
 include $(COMMON)/makefile.deps
 
 allclean: clean
