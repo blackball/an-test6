@@ -28,7 +28,8 @@ CFLAGS += $(LIBKD_INC)
 all: $(ANUTILS_LIB)
 
 ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o healpix.o \
-	dualtree.o dualtree_rangesearch.o
+	dualtree.o dualtree_rangesearch.o permutedsort.o ioutils.o \
+	starkd.o rdlist.o xylist.o an_catalog.o
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
