@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <time.h>
 
-#include "fileutil.h"
 #include "starutil.h"
 #include "an_catalog.h"
 #include "mathutil.h"

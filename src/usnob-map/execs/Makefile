@@ -38,10 +38,8 @@ CFLAGS += $(ANUTILS_INC)
 MISC_EXECS := ppmnormrgb whitebalance
 
 USNOBMAP_EXECS := usnobcount usnobtile sdsstile sdssfieldtile \
-	indexquad sdssquad
+	indexquad sdssquad render-mercator make-merctree
 # indextile    (currently broken)
-
-#UTIL_OBJS := ioutils.o fileutil.o boilerplate.o svn.o
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
 
@@ -51,32 +49,38 @@ NETPBM_L := -L. -lnetpbm
 #CFLAGS += $(NETPBM_I)
 #LFLAGS += $(NETPBM_L)
 
-all: $(USNOBMAP_EXECS)
+all: $(USNOBMAP_EXECS) $(MISC_EXECS)
+
+render-mercator: render-mercator.o \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+make-merctree: make-merctree.o merctree.o \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 usnobcount: usnobcount.o 
 
 usnobtile: usnobtile.o merctree.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 sdsstile: sdsstile.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 sdssfieldtile: sdssfieldtile.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 indextile: indextile.o \
-		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 indexquad: indexquad.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 sdssquad: sdssquad.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 zoomout: zoomout.o pnmutils.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
@@ -101,7 +105,7 @@ pnmutils.o: pnmutils.c
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-ALL_OBJS := $(UTIL_OBJS) $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS)
+ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS)
 
 DEP_OBJ := $(ALL_OBJS)
 DEP_PREREQS := $(QFITS_LIB)

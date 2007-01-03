@@ -26,7 +26,6 @@
 #include <time.h>
 
 #include "merctree.h"
-#include "fileutil.h"
 #include "starutil.h"
 #include "an_catalog.h"
 #include "mathutil.h"
