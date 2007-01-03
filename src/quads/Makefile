@@ -58,10 +58,10 @@ NETPBM_L := -L. -lnetpbm
 
 UTIL_OBJS := ioutils.o fileutil.o boilerplate.o svn.o
 
-OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o healpix.o \
+OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 	bt.o an_catalog.o catalog.o idfile.o starkd.o quadfile.o codefile.o \
 	rdlist.o xylist.o histogram.o tic.o permutedsort.o codekd.o \
-	donuts.o verify.o dualtree_rangesearch.o dualtree.o dualtree_max.o \
+	donuts.o verify.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o handlehits.o \
 	intmap.o qidxfile.o pnpoly.o blind_wcs.o
 
@@ -83,7 +83,7 @@ OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 
 OLDEXECS_OBJS := starkd.o catalog.o qidxfile.o histogram.o rdlist.o \
 	xylist.o verify.o intmap.o tic.o matchfile.o \
-	quadfile.o healpix.o an_catalog.o merctree.o codekd.o idfile.o \
+	quadfile.o an_catalog.o merctree.o codekd.o idfile.o \
 	$(UTIL_OBJS)
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
@@ -123,8 +123,8 @@ whitebalance.o: whitebalance.c
 pnmutils.o: pnmutils.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
-rdlstohealpix: rdlstohealpix.o rdlist.o xylist.o fitsioutils.o ioutils.o \
-		healpix.o $(ANUTILS_LIB) $(QFITS_LIB)
+rdlstohealpix: rdlstohealpix.o rdlist.o xylist.o ioutils.o \
+		$(ANUTILS_LIB) $(QFITS_LIB)
 
 xylist2fits: xylist2fits.o xylist.o ioutils.o \
 		$(QFITS_LIB) $(ANUTILS_LIB)
@@ -164,44 +164,44 @@ noisesim2: noisesim2.o noise.o $(ANUTILS_LIB)
 
 noisesim3: noisesim3.o noise.o $(ANUTILS_LIB)
 
-hpgrid: hpgrid.o healpix.o $(ANUTILS_LIB)
+hpgrid: hpgrid.o $(ANUTILS_LIB)
 
-get-healpix: get-healpix.o healpix.o $(ANUTILS_LIB)
+get-healpix: get-healpix.o $(ANUTILS_LIB)
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-catalog_analysis: catalog_analysis.o healpix.o pnpoly.o $(ANUTILS_LIB)
+catalog_analysis: catalog_analysis.o pnpoly.o $(ANUTILS_LIB)
 
-nomadtofits: nomadtofits.o nomad_fits.o nomad.o healpix.o \
+nomadtofits: nomadtofits.o nomad_fits.o nomad.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 read_nomad: read_nomad.o nomad.o
 
-2masstofits: $(2MASSOBJ) healpix.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+2masstofits: $(2MASSOBJ) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
 
-usnobtofits: usnobtofits.o usnob_fits.o usnob.o healpix.o \
+usnobtofits: usnobtofits.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o healpix.o \
+tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-hpowned: hpowned.o healpix.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+hpowned: hpowned.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 build-an-catalog: build-an-catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
-		tycho2.o usnob.o 2mass_catalog.o 2mass.o healpix.o \
+		tycho2.o usnob.o 2mass_catalog.o 2mass.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-cut-an: cut-an.o an_catalog.o catalog.o idfile.o healpix.o \
+cut-an: cut-an.o an_catalog.o catalog.o idfile.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 startree: startree.o starkd.o catalog.o $(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 hpquads: hpquads.o starkd.o quadfile.o codefile.o bt.o rdlist.o xylist.o \
-		healpix.o histogram.o tic.o permutedsort.o \
+		histogram.o tic.o permutedsort.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codetree: codetree.o codekd.o codefile.o $(UTIL_OBJS) \
@@ -213,16 +213,16 @@ unpermute-stars: unpermute-stars.o starkd.o quadfile.o idfile.o $(UTIL_OBJS) \
 unpermute-quads: unpermute-quads.o quadfile.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-homer: homer.o donuts.o xylist.o dualtree_rangesearch.o dualtree.o \
+homer: homer.o donuts.o xylist.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 blind: blind.o solver.o starkd.o codekd.o quadfile.o matchfile.o tic.o \
-		solvedclient.o solvedfile.o healpix.o idfile.o verify.o svd.o \
+		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		xylist.o hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \
-		solvedfile.o solvedclient.o intmap.o healpix.o verify.o pnpoly.o \
+		solvedfile.o solvedclient.o intmap.o verify.o pnpoly.o \
 		blind_wcs.o svd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -236,7 +236,7 @@ solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LI
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o rdlist.o \
-		xylist.o usnob_fits.o usnob.o healpix.o starkd.o \
+		xylist.o usnob_fits.o usnob.o starkd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 quadidx: quadidx.o quadfile.o qidxfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -268,7 +268,7 @@ usnobmap: usnobcount usnobtile sdsstile sdssfieldtile indexquad sdssquad
 usnobcount: usnobcount.o 
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-usnobtile: usnobtile.o merctree.o healpix.o \
+usnobtile: usnobtile.o merctree.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
@@ -280,7 +280,7 @@ sdssfieldtile: sdssfieldtile.o xylist.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-indextile: indextile.o starkd.o healpix.o \
+indextile: indextile.o starkd.o \
 		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
