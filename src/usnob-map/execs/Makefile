@@ -54,7 +54,6 @@ NETPBM_L := -L. -lnetpbm
 all: $(USNOBMAP_EXECS)
 
 usnobcount: usnobcount.o 
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 usnobtile: usnobtile.o merctree.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -78,7 +77,6 @@ indexquad: indexquad.o \
 
 sdssquad: sdssquad.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 zoomout: zoomout.o pnmutils.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
