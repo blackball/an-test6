@@ -16,8 +16,12 @@
 
 BASEDIR := ..
 COMMON := .
+
+all:
+
 include $(COMMON)/makefile.common
-include $(COMMON)/makefile.utils
+#include $(COMMON)/makefile.utils
+#include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
 
@@ -25,17 +29,25 @@ CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
 
-all: $(ANUTILS_LIB)
+ANFILES_LIB := libanfiles.a
+ANUTILS_LIB := libanutils.a
+
+all: $(ANUTILS_LIB) $(ANFILES_LIB)
 
 ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o healpix.o \
-	dualtree.o dualtree_rangesearch.o permutedsort.o ioutils.o \
-	starkd.o rdlist.o xylist.o an_catalog.o
+	dualtree.o dualtree_rangesearch.o permutedsort.o ioutils.o
+
+ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
 
-DEP_OBJ := $(ANUTILS_OBJ)
+$(ANFILES_LIB): $(ANFILES_OBJ)
+	$(AR) rc $@ $^
+
+DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ)
 include $(COMMON)/makefile.deps
 
 clean:
-	rm -f $(ANUTILS_LIB) $(ANUTILS_OBJ) $(DEPS) deps
+	rm -f $(ANUTILS_LIB) $(ANUTILS_OBJ) $(ANFILES_LIB) $(ANFILES_OBJ) \
+		$(DEPS) deps
