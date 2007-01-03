@@ -35,7 +35,7 @@ CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 
-MISC_EXECS := ppmnormrgb whitebalance
+MISC_EXECS := ppmnormrgb whitebalance zoomout
 
 USNOBMAP_EXECS := usnobcount usnobtile sdsstile sdssfieldtile \
 	indexquad sdssquad render-mercator make-merctree
