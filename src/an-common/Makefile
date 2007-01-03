@@ -21,10 +21,17 @@ include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.qfits
 
 CFLAGS := $(CFLAGS_DEF)
-CFLAGS += -O0
 CFLAGS += $(QFITS_INC)
 
 all: $(ANUTILS_LIB)
 
-$(ANUTILS_LIB): fitsioutils.o starutil.o bl.o
+ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o
+
+$(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
+
+DEP_OBJ := $(ANUTILS_OBJ)
+include $(COMMON)/makefile.deps
+
+clean:
+	rm -f $(ANUTILS_LIB) $(ANUTILS_OBJ) $(DEPS) deps

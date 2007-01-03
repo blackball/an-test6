@@ -20,7 +20,6 @@
 #define MATHUTIL_H
 
 #include "starutil.h"
-#include "xylist.h"
 #include "keywords.h"
 
 /*
