@@ -18,6 +18,19 @@ CC := gcc
 #FC := gfortran
 FC := g77
 
+LIBFORTRAN :=
+ifeq ($(FC),g77)
+#	LDFLAGS += -lg2c
+#	LDFLAGS += -L`dirname \`g77 -print-file-name=libg2c.so\``
+#	LDFLAGS += `g77 -print-file-name=libg2c.a`
+#	LIBFORTRAN := `g77 -print-file-name=libg2c.a`
+	LIBFORTRAN := $(shell g77 -print-file-name=libg2c.a)
+endif
+ifeq ($(FC),gfortran)
+#	LDFLAGS += -lgfortran
+	LIBFORTRAN := $(shell gfortran -print-file-name=libgfortran.a)
+endif
+
 AWK := awk
 #AWK := gawk --lint --lint-old
 
