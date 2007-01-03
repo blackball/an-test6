@@ -56,11 +56,11 @@ NETPBM_L := -L. -lnetpbm
 #CFLAGS += $(NETPBM_I)
 #LFLAGS += $(NETPBM_L)
 
-UTIL_OBJS := ioutils.o fileutil.o boilerplate.o svn.o
+UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
-	bt.o an_catalog.o catalog.o idfile.o starkd.o quadfile.o codefile.o \
-	rdlist.o xylist.o histogram.o tic.o permutedsort.o codekd.o \
+	bt.o catalog.o idfile.o quadfile.o codefile.o \
+	histogram.o tic.o codekd.o \
 	donuts.o verify.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o handlehits.o \
 	intmap.o qidxfile.o pnpoly.o blind_wcs.o
@@ -81,9 +81,9 @@ OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats render_mercator \
 	make-merctree rawstartree 
 
-OLDEXECS_OBJS := starkd.o catalog.o qidxfile.o histogram.o rdlist.o \
-	xylist.o verify.o intmap.o tic.o matchfile.o \
-	quadfile.o an_catalog.o merctree.o codekd.o idfile.o \
+OLDEXECS_OBJS := catalog.o qidxfile.o histogram.o \
+	verify.o intmap.o tic.o matchfile.o \
+	quadfile.o codekd.o idfile.o \
 	$(UTIL_OBJS)
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
@@ -108,26 +108,26 @@ prospectus_progs: $(PROSPECTUS)
 .PHONY: fitsutils
 fitsutils: $(FITS_UTILS)
 
-ppmnormrgb: ppmnormrgb.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
+#ppmnormrgb: ppmnormrgb.o
+#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
 
-ppmnormrgb.o: ppmnormrgb.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+#ppmnormrgb.o: ppmnormrgb.c
+#	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
-whitebalance: whitebalance.o pnmutils.o
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
+#whitebalance: whitebalance.o pnmutils.o
+#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ $(NETPBM_L) -lm
 
-whitebalance.o: whitebalance.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+#whitebalance.o: whitebalance.c
+#	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
-pnmutils.o: pnmutils.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
+#pnmutils.o: pnmutils.c
+#	$(CC) $(CFLAGS) -c $< -o $@ $(NETPBM_I)
 
-rdlstohealpix: rdlstohealpix.o rdlist.o xylist.o ioutils.o \
+rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 
-xylist2fits: xylist2fits.o xylist.o ioutils.o \
-		$(QFITS_LIB) $(ANUTILS_LIB)
+xylist2fits: xylist2fits.o \
+		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 
 .PHONY: tags
@@ -154,7 +154,7 @@ WCSLIB_INC := $(WCSLIB_INC)
 wcscheck.o: wcscheck.c
 	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
 
-wcscheck: wcscheck.o xylist.o rdlist.o \
+wcscheck: wcscheck.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
 
@@ -191,40 +191,39 @@ tycho2tofits: tycho2tofits.o tycho2_fits.o tycho2.o \
 
 hpowned: hpowned.o boilerplate.o svn.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-build-an-catalog: build-an-catalog.o an_catalog.o usnob_fits.o tycho2_fits.o \
+build-an-catalog: build-an-catalog.o usnob_fits.o tycho2_fits.o \
 		tycho2.o usnob.o 2mass_catalog.o 2mass.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-cut-an: cut-an.o an_catalog.o catalog.o idfile.o \
+cut-an: cut-an.o catalog.o idfile.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-startree: startree.o starkd.o catalog.o $(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+startree: startree.o catalog.o $(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-hpquads: hpquads.o starkd.o quadfile.o codefile.o bt.o rdlist.o xylist.o \
-		histogram.o tic.o permutedsort.o \
+hpquads: hpquads.o quadfile.o codefile.o bt.o histogram.o tic.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codetree: codetree.o codekd.o codefile.o $(UTIL_OBJS) \
 		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-unpermute-stars: unpermute-stars.o starkd.o quadfile.o idfile.o $(UTIL_OBJS) \
-		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+unpermute-stars: unpermute-stars.o quadfile.o idfile.o $(UTIL_OBJS) \
+		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 unpermute-quads: unpermute-quads.o quadfile.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-homer: homer.o donuts.o xylist.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+homer: homer.o donuts.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-blind: blind.o solver.o starkd.o codekd.o quadfile.o matchfile.o tic.o \
+blind: blind.o solver.o codekd.o quadfile.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
-		xylist.o hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \
 		solvedfile.o solvedclient.o intmap.o verify.o pnpoly.o \
 		blind_wcs.o svd.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 printmatch: printmatch.o matchfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -235,9 +234,9 @@ printsolved: printsolved.o solvedfile.o $(UTIL_OBJS) \
 solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-plotcat: plotcat.o an_catalog.o catalog.o tycho2_fits.o tycho2.o rdlist.o \
-		xylist.o usnob_fits.o usnob.o starkd.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
+		usnob_fits.o usnob.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 quadidx: quadidx.o quadfile.o qidxfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -247,53 +246,53 @@ codedensity: codedensity.o codekd.o dualtree_max.o \
 codeprojections: codeprojections.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-quadlocations: quadlocations.o quadfile.o catalog.o starkd.o $(UTIL_OBJS) $(ANUTILS_LIB) \
-		$(LIBKD_LIB) $(QFITS_LIB)
+quadlocations: quadlocations.o quadfile.o catalog.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-quadscales: quadscales.o histogram.o starkd.o quadfile.o $(UTIL_OBJS) $(ANUTILS_LIB) \
-		$(LIBKD_LIB) $(QFITS_LIB)
+quadscales: quadscales.o histogram.o quadfile.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 quadsperstar: quadsperstar.o qidxfile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 fitsgetext: fitsgetext.o $(ANUTILS_LIB) $(QFITS_LIB)
 
-subtable: subtable.o $(UTIL_OBJS) $(ANUTILS_LIB) ioutils.o $(QFITS_LIB)
+subtable: subtable.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) ioutils.o permutedsort.o fileutil.o $(QFITS_LIB)
+tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LIB)
 
-usnobmap: usnobcount usnobtile sdsstile sdssfieldtile indexquad sdssquad
+#usnobmap: usnobcount usnobtile sdsstile sdssfieldtile indexquad sdssquad
 # indextile    (currently broken)
 
-usnobcount: usnobcount.o 
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+#usnobcount: usnobcount.o 
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-usnobtile: usnobtile.o merctree.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+#usnobtile: usnobtile.o merctree.o \
+#		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-sdsstile: sdsstile.o rdlist.o xylist.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+#sdsstile: sdsstile.o rdlist.o xylist.o \
+#		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-sdssfieldtile: sdssfieldtile.o xylist.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+#sdssfieldtile: sdssfieldtile.o xylist.o \
+#		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-indextile: indextile.o starkd.o \
-		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+#indextile: indextile.o starkd.o \
+#		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-indexquad: indexquad.o starkd.o permutedsort.o \
-		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+#indexquad: indexquad.o starkd.o permutedsort.o \
+#		$(LIBKD_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
-sdssquad: sdssquad.o rdlist.o xylist.o permutedsort.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+#sdssquad: sdssquad.o rdlist.o xylist.o permutedsort.o \
+#		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-zoomout: zoomout.o pnmutils.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+#zoomout: zoomout.o pnmutils.o
+#	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 

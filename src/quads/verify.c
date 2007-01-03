@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 
 #include "verify.h"
 #include "mathutil.h"
