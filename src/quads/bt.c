@@ -254,7 +254,7 @@ static bt_node* next_node(bt_node** ancestors, int nancestors,
 						  bt_node** nextancestors, int* nnextancestors) {
 	// -first, find the first ancestor of whom we are a left
 	//  (grand^n)-child.
-	bt_node* parent;
+	bt_node* parent = NULL;
 	int i, j;
 	for (i=nancestors-1; i>=0; i--) {
 		parent = ancestors[i];

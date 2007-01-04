@@ -50,7 +50,7 @@ static bool twomass_fitstruct_inited = 0;
  twomass_entry x; \
  if (sizeof(x.fld) != fits_get_atom_size(t)*na) \
     fprintf(stderr, "Warning, 2MASS field \"%s\" has size %i in the struct but %i * %i in FITS.\n", \
-			#fld, sizeof(x.fld), fits_get_atom_size(t), na); \
+	    #fld, (int)sizeof(x.fld), fits_get_atom_size(t), na);	\
  A[i].fieldname=n; \
  A[i].units=u; \
  A[i].offset=offsetof(twomass_entry, fld); \

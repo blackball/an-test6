@@ -16,14 +16,24 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
-#include <endian.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
-#include <byteswap.h>
 #include <assert.h>
 #include <stdio.h>
+//#include <endian.h>
+//#include <byteswap.h>
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define IS_BIG_ENDIAN 1
+#if __APPLE__ == 1
+// Apple gcc
+static uint __bswap_32(uint x) {
+    return (((x & 0x000000ff) << 24) |
+	    ((x & 0x0000ff00) << 8) |
+	    ((x & 0x00ff0000) >> 8) |
+	    ((x & 0xff000000) >> 24));
+}
+#endif
 #else
 #define IS_BIG_ENDIAN 0
 #endif

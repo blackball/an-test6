@@ -23,10 +23,10 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
-#include <endian.h>
 #include <netinet/in.h>
-#include <byteswap.h>
 #include <assert.h>
+//#include <endian.h>
+//#include <byteswap.h>
 
 #include "usnob.h"
 #include "qfits.h"

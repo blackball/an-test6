@@ -19,6 +19,7 @@
 #ifndef USNOB_H
 #define USNOB_H
 
+#include "an-bool.h"
 #include <stdint.h>
 
 #include "starutil.h"

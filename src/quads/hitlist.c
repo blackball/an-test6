@@ -86,7 +86,7 @@ hitlist* hitlist_new(double AgreeArcSec, int maxNside) {
 	hl->pix = calloc(hl->npix, sizeof(pixinfo));
 	if (!hl->pix) {
 		fprintf(stderr, "hitlist: failed to malloc the pixel array: %i bytes: %s.\n",
-				hl->npix * sizeof(pixinfo), strerror(errno));
+			(int)(hl->npix * sizeof(pixinfo)), strerror(errno));
 		free(hl);
 		return NULL;
 	}

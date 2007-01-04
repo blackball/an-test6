@@ -35,6 +35,11 @@
 #include "fitsioutils.h"
 #include "2mass_catalog.h"
 
+#ifdef __APPLE__
+// provide a stub.
+int fdatasync(int fd) { return 0; }
+#endif
+
 #define OPTIONS "ho:N:"
 
 static void print_help(char* progname) {
