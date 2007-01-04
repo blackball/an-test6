@@ -22,6 +22,8 @@
 #include "mathutil.h"
 #include "svd.h"
 
+//#include "sip.h"
+
 void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 					   int* corr,
 					   double* crval, double* crpix, double* CD) {
@@ -165,6 +167,49 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 		CD[2] = R[0] * scale; // CD2_1
 		CD[3] = R[1] * scale; // CD2_2
 	}
+
+	// -verify.
+	/*
+	  {
+	  sip_t* sip;
+	  double ra, dec;
+	  double xyz2[3];
+	  double d2, arcsec;
+	  double minarc, maxarc, meanarc;
+
+	  sip = sip_create();
+	  sip->crval[0] = crval[0];
+	  sip->crval[1] = crval[1];
+	  sip->crpix[0] = crpix[0];
+	  sip->crpix[1] = crpix[1];
+	  sip->cd[0][0] = CD[0];
+	  sip->cd[0][1] = CD[1];
+	  sip->cd[1][0] = CD[2];
+	  sip->cd[1][1] = CD[3];
+
+	  minarc = 1e300;
+	  maxarc = -1;
+	  meanarc = 0;
+	  for (i=0; i<nfield; i++) {
+	  if (corr[i] == -1)
+	  continue;
+	  sip_pixelxy2radec(sip, field[i*2], field[i*2+1], &ra, &dec);
+	  radec2xyzarr(deg2rad(ra), deg2rad(dec), xyz2);
+	  getstarcoord(corr[i], xyz);
+	  d2 = distsq(xyz, xyz2, 3);
+	  arcsec = distsq2arcsec(d2);
+	  if (arcsec < minarc) minarc = arcsec;
+	  if (arcsec > maxarc) maxarc = arcsec;
+	  meanarc += arcsec;
+	  }
+	  meanarc /= (double)Ncorr;
+
+	  printf("projection dist: mean %g, range [%g, %g] arcsec.\n",
+	  meanarc, minarc, maxarc);
+
+	  sip_free(sip);
+	  }
+	*/
 
 	free(p);
 	free(f);
