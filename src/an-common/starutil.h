@@ -20,6 +20,7 @@
 #define STARUTIL_H
 
 #include <unistd.h>
+#include "an-bool.h"
 #include "bl.h"
 #include "keywords.h"
 
@@ -29,12 +30,6 @@
 #define DIM_XY 2
 
 typedef unsigned char uchar;
-
-#ifndef TRUE
-typedef unsigned char bool;
-#define TRUE 1
-#define FALSE 0
-#endif
 
 #define PIl          3.1415926535897932384626433832795029L  /* pi */
 

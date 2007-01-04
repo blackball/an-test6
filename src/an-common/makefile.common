@@ -18,6 +18,8 @@ CC := gcc
 #FC := gfortran
 FC := g77
 
+RANLIB := ranlib
+
 LIBFORTRAN :=
 ifeq ($(FC),g77)
 #	LDFLAGS += -lg2c
@@ -52,6 +54,10 @@ else
 		FLAGS_DEF += -march=k8 -m64
 	else
 		FLAGS_DEF += -DNOT_686
+		APPLE := $(shell echo | $(CC) -dM -E - | grep __APPLE__)
+		ifneq ($(APPLE),)
+		     FLAGS_DEF += -DNOBOOL
+		endif
 	endif
 endif
 

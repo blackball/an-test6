@@ -28,6 +28,7 @@ include $(COMMON)/makefile.libkd
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
+CFLAGS += -I.
 
 ANFILES_LIB := libanfiles.a
 ANUTILS_LIB := libanutils.a
@@ -41,9 +42,11 @@ ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
+	$(RANLIB) $@
 
 $(ANFILES_LIB): $(ANFILES_OBJ)
 	$(AR) rc $@ $^
+	$(RANLIB) $@
 
 DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ)
 include $(COMMON)/makefile.deps
