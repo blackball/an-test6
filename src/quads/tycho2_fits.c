@@ -103,7 +103,7 @@ static void init_tycho2_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MAG_HP", nil, sigma_HP);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "PROX", "arcsec", prox);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "CORRELATION", nil, correlation);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "HIPPARCOS_ID", nil, hipparcos_id);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "HIPPARCOS_ID", nil, hipparcos_id);
 
 	assert(i == TYCHO2_FITS_COLUMNS);
 	tycho2_fitstruct_inited = 1;
