@@ -353,6 +353,7 @@ int tycho2_supplement_parse_entry(char* line, tycho2_entry* entry) {
 		entry->sigma_VT = d12;
 	}
 	entry->prox = u1 * 0.1;
+	entry->hipparcos_id = u2;
 
 	return 0;
 }
