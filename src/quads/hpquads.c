@@ -200,14 +200,14 @@ static Inline void drop_quad(int iA, int iB, int iC, int iD) {
 }
 
 struct potential_quad {
-	bool scale_ok;
-	int iA, iB;
-	uint staridA, staridB;
 	double midAB[3];
 	double Ax, Ay;
 	double costheta, sintheta;
+	int iA, iB;
+	uint staridA, staridB;
 	int* inbox;
 	int ninbox;
+	bool scale_ok;
 };
 typedef struct potential_quad pquad;
 

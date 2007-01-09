@@ -56,7 +56,7 @@ UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 	bt.o catalog.o idfile.o quadfile.o codefile.o \
-	histogram.o tic.o codekd.o \
+	histogram.o tic.o codekd.o svd.o \
 	donuts.o verify.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o handlehits.o \
 	intmap.o qidxfile.o pnpoly.o blind_wcs.o
