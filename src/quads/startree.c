@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
 	sprintf(val, "%u", Nleaf);
 	qfits_header_add(startree_header(starkd), "NLEAF", val, "Target number of points in leaves.", NULL);
 	sprintf(val, "%u", nkeep);
-	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept.", NULL);
+	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept (0=no limit).", NULL);
 
 	fits_copy_header(catheader, startree_header(starkd), "HEALPIX");
 
