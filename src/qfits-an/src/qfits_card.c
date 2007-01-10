@@ -232,24 +232,25 @@ char * qfits_getkey(const char * line)
         strcpy(key, "END");
         return key ;
     }
+	/* Neither does CONTINUE. */
+    if (!strncmp(line, "CONTINUE ", 9)) {
+        strcpy(key, "CONTINUE");
+        return key ;
+    }
 
     memset(key, 0, 81);
     /* General case: look for the first equal sign */
     i=0 ;
     while (line[i]!='=' && i<80) i++ ;
     if (i>=80) {
-#ifdef DEBUG_FITSHEADER
-        printf("qfits_getkey: cannot find equal sign\n");
-#endif
+        qfits_error("qfits_getkey: cannot find equal sign in line: \"%s\"\n", line);
         return NULL ;
     }
     i-- ;
     /* Equal sign found, now backtrack on blanks */
     while (line[i]==' ' && i>=0) i-- ;
     if (i<=0) {
-#ifdef DEBUG_FITSHEADER
-        printf("qfits_getkey: error backtracking on blanks\n");
-#endif
+        qfits_error("qfits_getkey: error backtracking on blanks in line: \"%s\"\n", line);
         return NULL ;
     }
     i++ ;
