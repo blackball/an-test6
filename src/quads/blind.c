@@ -731,7 +731,7 @@ static void solve_fields() {
 		hits->nfield = nfield;
 
 		if (!silent)
-			fprintf(stderr, "Solving field %i.\n", fieldnum);
+			fprintf(stderr, "\nSolving field %i.\n", fieldnum);
 
 		// The real thing
 		solve_field(&solver);
@@ -812,18 +812,19 @@ static void solve_fields() {
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 		}
 
+		handlehits_free_matchobjs(hits);
+		handlehits_clear(hits);
+
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
 		if (!silent)
-			fprintf(stderr, "Spent %g s user, %g s system, %g s total, %g s wall time.\n\n\n",
+			fprintf(stderr, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n\n",
 					(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
 					millis_between(&last_wtime, &wtime) * 0.001);
+
 		last_utime = utime;
 		last_stime = stime;
 		last_wtime = wtime;
-
-		handlehits_free_matchobjs(hits);
-		handlehits_clear(hits);
 
 	cleanup:
 		if (0) {} // to keep gcc happy...
