@@ -20,3 +20,8 @@ ANFILES_LIB := $(ANFILES_DIR)/libanfiles.a
 
 $(ANFILES_LIB):
 	cd $(ANFILES_DIR) && make
+
+REMAKE_ANFILES := remake-anfiles
+.PHONY: $(REMAKE_ANFILES)
+$(REMAKE_ANFILES):
+	cd $(ANFILES_DIR) && make
