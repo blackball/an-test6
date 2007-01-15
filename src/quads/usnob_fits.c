@@ -209,6 +209,7 @@ usnob_fits* usnob_fits_open(char* fn) {
 	int c;
 	usnob_fits* usnob = NULL;
 	int good = 0;
+	qfits_header* hdr;
 
 	if (!usnob_fitstruct_inited)
 		init_usnob_fitstruct();
@@ -218,7 +219,14 @@ usnob_fits* usnob_fits_open(char* fn) {
 		return NULL;
 	}
 
+	hdr = qfits_header_read(fn);
+	if (!hdr) {
+		fprintf(stderr, "Failed to read FITS header from file %s.\n", fn);
+		return NULL;
+	}
+
 	usnob = usnob_fits_new();
+	usnob->header = hdr;
 
 	// find a table containing all the columns needed...
 	// (and find the indices of the columns we need.)

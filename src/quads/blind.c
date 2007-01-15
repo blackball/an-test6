@@ -818,7 +818,7 @@ static void solve_fields() {
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
 		if (!silent)
-			fprintf(stderr, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n\n",
+			fprintf(stderr, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n",
 					(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
 					millis_between(&last_wtime, &wtime) * 0.001);
 

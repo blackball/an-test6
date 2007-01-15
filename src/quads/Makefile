@@ -50,7 +50,7 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-MISC_EXECS := 2masstofits 
+MISC_EXECS := 2masstofits project-usnob
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
@@ -163,6 +163,9 @@ read_nomad: read_nomad.o nomad.o
 
 2masstofits: $(2MASSOBJ) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
+
+project-usnob: project-usnob.o usnob_fits.o \
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)

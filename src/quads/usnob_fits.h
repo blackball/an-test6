@@ -30,10 +30,10 @@
 struct usnob_fits {
 	qfits_table* table;
 	int columns[USNOB_FITS_COLUMNS];
+	qfits_header* header;
 	// buffered reading
 	bread br;
 	// when writing:
-	qfits_header* header;
 	FILE* fid;
 	off_t header_end;
 	uint nentries;
