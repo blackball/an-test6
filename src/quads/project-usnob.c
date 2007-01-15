@@ -24,13 +24,14 @@
 #include "healpix.h"
 #include "boilerplate.h"
 
-#define OPTIONS "h"
+#define OPTIONS "h" //H:N:"
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage:\n"
 		   "  %s <usnob-file.fits>\n"
 		   , progname);
+	//-H <healpix> -N <nside> 
 }
 
 extern char *optarg;
@@ -82,7 +83,7 @@ int main(int argc, char** args) {
 	// for each star...
 	N = usnob_fits_count_entries(usnob);
 	fprintf(stderr, "File contains %i stars.\n", N);
-	printf("xy=[];\n");
+	printf("xy=zeros(%i,2);\n", N);
 	for (i=0; i<N; i++) {
 		double xyz[3];
 		double px, py;
@@ -93,7 +94,7 @@ int main(int argc, char** args) {
 		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 		// project it around the center
 		star_coords(xyz, center, &px, &py);
-		printf("xy(%i)=[%g,%g];\n", i+1, px, py);
+		printf("xy(%i,:)=[%g,%g];\n", i+1, px, py);
 	}
 
 	usnob_fits_close(usnob);
