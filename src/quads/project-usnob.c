@@ -84,6 +84,7 @@ int main(int argc, char** args) {
 	N = usnob_fits_count_entries(usnob);
 	fprintf(stderr, "File contains %i stars.\n", N);
 	printf("xy=zeros(%i,2);\n", N);
+        //printf("xy=[\n");
 	for (i=0; i<N; i++) {
 		double xyz[3];
 		double px, py;
@@ -95,7 +96,9 @@ int main(int argc, char** args) {
 		// project it around the center
 		star_coords(xyz, center, &px, &py);
 		printf("xy(%i,:)=[%g,%g];\n", i+1, px, py);
+                //printf("%g, %g;\n");
 	}
+        //printf("];\n");
 
 	usnob_fits_close(usnob);
 
