@@ -25,8 +25,14 @@
 
 void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 					   int* correspondences,
-					   // outputs:
+					   // output:
 					   tan_t* wcstan);
+
+void blind_wcs_compute_2(double* starxyz,
+						 double* fieldxy,
+						 int nobjs,
+						 // output:
+						 tan_t* wcstan);
 
 qfits_header* blind_wcs_get_header(tan_t* wcstan);
 

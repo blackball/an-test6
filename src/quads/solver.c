@@ -32,6 +32,7 @@
 #include "solvedclient.h"
 #include "solvedfile.h"
 #include "svd.h"
+#include "blind_wcs.h"
 
 #include "kdtree.h"
 #define KD_DIM 4
@@ -439,6 +440,8 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		//uint64_t idA, idB, idC, idD;
 		double star[12];
 		double starscale;
+		double field[8];
+		tan_t tan;
 
 		params->nummatches++;
 
@@ -448,6 +451,20 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		getstarcoord(iB, star + 1*3);
 		getstarcoord(iC, star + 2*3);
 		getstarcoord(iD, star + 3*3);
+
+		field[0] = getx(params->field, fA);
+		field[1] = gety(params->field, fA);
+		field[2] = getx(params->field, fB);
+		field[3] = gety(params->field, fB);
+		field[4] = getx(params->field, fC);
+		field[5] = gety(params->field, fC);
+		field[6] = getx(params->field, fD);
+		field[7] = gety(params->field, fD);
+
+		// compute WCS from the matching quad alone.
+		blind_wcs_compute_2(star, field, 4, &tan);
+
+		// FIXME (finish WCS; get rid of "transform")
 
 		fit_transform(star, field, 4, transform);
 		image_to_xyz(getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin, transform);
