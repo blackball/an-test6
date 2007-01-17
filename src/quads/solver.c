@@ -104,6 +104,7 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
     // check which C, D points are inside the square/circle.
     for (i=start; i<pq->ninbox; i++) {
 		double Cx, Cy, xxtmp;
+		double tol = params->codetol;
 		if (!pq->inbox[i]) continue;
 		Cx = getx(params->field, i);
 		Cy = gety(params->field, i);
@@ -113,19 +114,20 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
 		Cx =     Cx * pq->costheta + Cy * pq->sintheta;
 		Cy = -xxtmp * pq->sintheta + Cy * pq->costheta;
 		if (params->circle) {
-			// make sure it's in the circle centered at (0.5, 0.5)...
-			// (x-1/2)^2 + (y-1/2)^2   <=   r^2
-			// x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2))^2
-			// x^2-x + y^2-y + 1/2     <=   1/2
-			// x^2-x + y^2-y           <=   0
+			// make sure it's in the circle centered at (0.5, 0.5)
+			// with radius 1/sqrt(2) (plus codetol for fudge):
+			// (x-1/2)^2 + (y-1/2)^2   <=   (r + codetol)^2
+			// x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2) + codetol)^2
+			// x^2-x + y^2-y + 1/2     <=   1/2 + sqrt(2)*codetol + codetol^2
+			// x^2-x + y^2-y           <=   sqrt(2)*codetol + codetol^2
 			double r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
-			if (r > 0.0) {
+			if (r > (tol * (M_SQRT2 + tol))) {
 				pq->inbox[i] = 0;
 				continue;
 			}
 		} else {
-			if ((Cx > 1.0) || (Cx < 0.0) ||
-				(Cy > 1.0) || (Cy < 0.0)) {
+			if ((Cx > (1.0 + tol)) || (Cx < (0.0 - tol)) ||
+				(Cy > (1.0 + tol)) || (Cy < (0.0 - tol))) {
 				pq->inbox[i] = 0;
 				continue;
 			}

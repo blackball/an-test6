@@ -599,7 +599,7 @@ static void solve_fields() {
 	int nfields;
 	double* field = NULL;
 	int fi;
-	double fudgepixels = 0.0;
+	double scalefudge = 0.0; // in pixels
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
@@ -632,16 +632,19 @@ static void solve_fields() {
 		//  can move before exceeding the code tolerance, in arcsec.
 		// -that divided by the smallest arcsec-per-pixel scale
 		//  gives the largest motion in pixels.
-		fudgepixels = index_scale * M_SQRT1_2 * codetol / funits_upper;
-		if (!silent)
-			fprintf(stderr, "Fudgepixels: %g.\n", fudgepixels);
+		scalefudge = index_scale * M_SQRT1_2 * codetol / funits_upper;
 
-		if (!silent)
+		solver.minAB -= scalefudge;
+
+		if (!silent) {
+			fprintf(stderr, "Scale fudge: %g pixels.\n", scalefudge);
 			fprintf(stderr, "Set minAB to %g\n", solver.minAB);
+		}
 	}
 	if (funits_lower != 0.0) {
 		solver.arcsec_per_pixel_lower = funits_lower;
 		solver.maxAB = index_scale / funits_lower;
+		solver.maxAB += scalefudge;
 		if (!silent)
 			fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
 	}
