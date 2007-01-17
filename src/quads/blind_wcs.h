@@ -21,13 +21,13 @@
 
 #include "qfits.h"
 #include "matchobj.h"
+#include "sip.h"
 
 void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 					   int* correspondences,
 					   // outputs:
-					   double* crval, double* crpix, double* CD);
+					   tan_t* wcstan);
 
-qfits_header* blind_wcs_get_header(double* crval, double* crpix,
-								   double* CD);
+qfits_header* blind_wcs_get_header(tan_t* wcstan);
 
 #endif

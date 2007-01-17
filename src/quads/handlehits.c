@@ -84,8 +84,7 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 	}
 
 	if (corr) {
-		blind_wcs_compute(mo, hh->field, hh->nfield, corr,
-						  mo->crval, mo->crpix, mo->CD);
+		blind_wcs_compute(mo, hh->field, hh->nfield, corr, &(mo->wcstan));
 		mo->wcs_valid = 1;
 	}
 

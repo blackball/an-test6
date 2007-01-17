@@ -790,9 +790,7 @@ static void solve_fields() {
 
 				assert(hits->bestmo->wcs_valid);
 
-				wcs = blind_wcs_get_header(hits->bestmo->crval,
-										   hits->bestmo->crpix,
-										   hits->bestmo->CD);
+				wcs = blind_wcs_get_header(&(hits->bestmo->wcstan));
 				boilerplate_add_fits_headers(wcs);
 				qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
 				if (solver.mo_template && solver.mo_template->fieldname[0])

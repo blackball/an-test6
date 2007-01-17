@@ -22,11 +22,9 @@
 #include "mathutil.h"
 #include "svd.h"
 
-//#include "sip.h"
-
 void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 					   int* corr,
-					   double* crval, double* crpix, double* CD) {
+					   tan_t* tan) {
 	double xyz[3];
 	double starcmass[3];
 	double fieldcmass[2];
@@ -157,15 +155,15 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 	{
 		double ra, dec;
 		xyz2radec(starcmass[0], starcmass[1], starcmass[2], &ra, &dec);
-		crval[0] = rad2deg(ra);
-		crval[1] = rad2deg(dec);
-		crpix[0] = fieldcmass[0];
-		crpix[1] = fieldcmass[1];
+		tan->crval[0] = rad2deg(ra);
+		tan->crval[1] = rad2deg(dec);
+		tan->crpix[0] = fieldcmass[0];
+		tan->crpix[1] = fieldcmass[1];
 		scale = rad2deg(scale);
-		CD[0] = R[2] * scale; // CD1_1
-		CD[1] = R[3] * scale; // CD1_2
-		CD[2] = R[0] * scale; // CD2_1
-		CD[3] = R[1] * scale; // CD2_2
+		tan->cd[0][0] = R[2] * scale; // CD1_1
+		tan->cd[0][1] = R[3] * scale; // CD1_2
+		tan->cd[1][0] = R[0] * scale; // CD2_1
+		tan->cd[1][1] = R[1] * scale; // CD2_2
 	}
 
 	// -verify.
@@ -215,8 +213,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 	free(f);
 }
 
-qfits_header* blind_wcs_get_header(double* crval, double* crpix,
-								   double* CD) {
+qfits_header* blind_wcs_get_header(tan_t* tan) {
 	qfits_header* wcs = NULL;
 	char val[64];
 
@@ -224,27 +221,27 @@ qfits_header* blind_wcs_get_header(double* crval, double* crpix,
 
 	qfits_header_add(wcs, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
 	qfits_header_add(wcs, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
-	sprintf(val, "%.12g", crval[0]);
+	sprintf(val, "%.12g", tan->crval[0]);
 	qfits_header_add(wcs, "CRVAL1 ", val, "RA  of reference point", NULL);
-	sprintf(val, "%.12g", crval[1]);
+	sprintf(val, "%.12g", tan->crval[1]);
 	qfits_header_add(wcs, "CRVAL2 ", val, "DEC of reference point", NULL);
 
-	sprintf(val, "%.12g", crpix[0]);
+	sprintf(val, "%.12g", tan->crpix[0]);
 	qfits_header_add(wcs, "CRPIX1 ", val, "X reference pixel", NULL);
-	sprintf(val, "%.12g", crpix[1]);
+	sprintf(val, "%.12g", tan->crpix[1]);
 	qfits_header_add(wcs, "CRPIX2 ", val, "Y reference pixel", NULL);
 
 	qfits_header_add(wcs, "CUNIT1 ", "deg", "X pixel scale units", NULL);
 	qfits_header_add(wcs, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
 
 	// bizarrely, this only seems to work when I swap the rows of R.
-	sprintf(val, "%.12g", CD[0]);
+	sprintf(val, "%.12g", tan->cd[0][0]);
 	qfits_header_add(wcs, "CD1_1", val, "Transformation matrix", NULL);
-	sprintf(val, "%.12g", CD[1]);
+	sprintf(val, "%.12g", tan->cd[0][1]);
 	qfits_header_add(wcs, "CD1_2", val, " ", NULL);
-	sprintf(val, "%.12g", CD[2]);
+	sprintf(val, "%.12g", tan->cd[1][0]);
 	qfits_header_add(wcs, "CD2_1", val, " ", NULL);
-	sprintf(val, "%.12g", CD[3]);
+	sprintf(val, "%.12g", tan->cd[1][1]);
 	qfits_header_add(wcs, "CD2_2", val, " ", NULL);
 
 	return wcs;

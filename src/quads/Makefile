@@ -26,6 +26,8 @@ include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
+include $(COMMON)/makefile.libtweak
+include $(COMMON)/makefile.libwcs
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -43,6 +45,8 @@ CFLAGS += $(CFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
+CFLAGS += $(LIBTWEAK_INC)
+CFLAGS += $(LIBWCS_INC)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
@@ -92,7 +96,7 @@ ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 ALL_OBJ += $(2MASSOBJ)
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
-	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) \
+	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_LIBTWEAK) \
 	$(PIPELINE) $(PROSPECTUS) $(FITS_UTILS)
 
 .PHONY: pipeline
@@ -203,6 +207,7 @@ homer: homer.o donuts.o \
 blind: blind.o solver.o codekd.o quadfile.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
+		$(LIBTWEAK_LIB) \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \

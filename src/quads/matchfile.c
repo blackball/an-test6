@@ -176,9 +176,9 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nconflict", nil, nconflict, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "ninfield", nil, ninfield, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nagree", nil, nagree, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crval", nil, crval, 2, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crpix", nil, crpix, 2, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "CD", nil, CD, 4, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crval", nil, wcstan.crval, 2, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crpix", nil, wcstan.crpix, 2, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "CD", nil, wcstan.cd, 4, FALSE); // FIXME: is the order right?
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "wcs_valid", nil, wcs_valid, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldnum", nil, fieldnum, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldid", nil, fieldfile, 1, FALSE);

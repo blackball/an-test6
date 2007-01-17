@@ -20,7 +20,9 @@
 #define MATCHOBJ_H
 
 #include <stdint.h>
+
 #include "starutil.h"
+#include "sip.h"
 
 struct match_struct {
     uint quadno;
@@ -44,12 +46,16 @@ struct match_struct {
 
 	// WCS params
 	bool wcs_valid;
+	tan_t wcstan;
+
+	/*
 	// RA,DEC of reference point.
 	double crval[2];
 	// Pixel coords of reference point.
 	double crpix[2];
 	// Transformation matrix.
 	double CD[4];
+	*/
 
 	// proposed location of the center of the field
 	//  = normalize(sMin + sMax);
