@@ -92,8 +92,8 @@ double overlap_tokeep;
 double overlap_tosolve;
 int ninfield_tokeep;
 int ninfield_tosolve;
-double cxdx_margin;
 int maxquads;
+double cxdx_margin;
 
 bool quiet;
 bool silent;
@@ -219,7 +219,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "ninfield_tosolve %i\n", ninfield_tosolve);
 			fprintf(stderr, "xcolname %s\n", xcolname);
 			fprintf(stderr, "ycolname %s\n", ycolname);
-			fprintf(stderr, "cxdx_margin %g\n", cxdx_margin);
 			fprintf(stderr, "maxquads %i\n", maxquads);
 			fprintf(stderr, "quiet %i\n", quiet);
 		}
@@ -307,24 +306,15 @@ int main(int argc, char *argv[]) {
 					startree_N(starkd), startree_nodes(starkd), startree_D(starkd));
 
 		do_verify = (verify_dist2 > 0.0);
-		{
-			qfits_header* hdr = qfits_header_read(treefname);
-			if (!hdr) {
-				fprintf(stderr, "Failed to read FITS header from ckdt file %s\n", treefname);
-				exit(-1);
-			}
-			if (cxdx_margin > 0.0) {
-				// check for CXDX field in ckdt header...
-				int cxdx = qfits_header_getboolean(hdr, "CXDX", 0);
-				if (!cxdx) {
-					fprintf(stderr, "Warning: you asked for a CXDX margin, but ckdt file %s does not have the CXDX FITS header.\n",
-							treefname);
-				}
-			}
-			// check for CIRCLE field in ckdt header...
-			circle = qfits_header_getboolean(hdr, "CIRCLE", 0);
-			qfits_header_destroy(hdr);
-		}
+
+		// If the code kdtree has CXDX set, set cxdx_margin.
+		if (qfits_header_getboolean(codekd->header, "CXDX", 0))
+			// 1.5 = sqrt(2) + fudge factor.
+			cxdx_margin = 1.5 * codetol;
+
+		// check for CIRCLE field in ckdt header...
+		circle = qfits_header_getboolean(codekd->header, "CIRCLE", 0);
+
 		if (!silent) 
 			fprintf(stderr, "ckdt %s the CIRCLE header.\n",
 					(circle ? "contains" : "does not contain"));
@@ -500,8 +490,6 @@ static int read_parameters() {
 			fieldid_key = strdup(nextword);
 		} else if (is_word(buffer, "maxquads ", &nextword)) {
 			maxquads = atoi(nextword);
-		} else if (is_word(buffer, "cxdx_margin ", &nextword)) {
-			cxdx_margin = atof(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
 			free(xcolname);
 			xcolname = strdup(nextword);
