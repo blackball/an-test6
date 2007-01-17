@@ -94,6 +94,7 @@ typedef struct sip_s {
 } sip_t;
 
 sip_t* sip_create(void);
+void sip_free(sip_t* sip);
 void sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d);
 void sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 double sip_det_cd(sip_t* sip);

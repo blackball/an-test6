@@ -26,6 +26,10 @@ sip_t* sip_create() {
 	return sip;
 }
 
+void sip_free(sip_t* sip) {
+	free(sip);
+}
+
 // Convert a ra,dec in degrees to coordinates in the image
 void sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 {
