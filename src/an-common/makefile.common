@@ -15,23 +15,18 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 CC := gcc
-#FC := gfortran
-FC := g77
-
-RANLIB := ranlib
 
 LIBFORTRAN :=
-ifeq ($(FC),g77)
-#	LDFLAGS += -lg2c
-#	LDFLAGS += -L`dirname \`g77 -print-file-name=libg2c.so\``
-#	LDFLAGS += `g77 -print-file-name=libg2c.a`
-#	LIBFORTRAN := `g77 -print-file-name=libg2c.a`
-	LIBFORTRAN := $(shell g77 -print-file-name=libg2c.a)
+WHICHG77 := $(shell which g77)
+ifeq ($(WHICHG77),)
+  FC := gfortran
+  LIBFORTRAN := $(shell gfortran -print-file-name=libgfortran.a)
+else
+  FC := g77
+  LIBFORTRAN := $(shell g77 -print-file-name=libg2c.a)
 endif
-ifeq ($(FC),gfortran)
-#	LDFLAGS += -lgfortran
-	LIBFORTRAN := $(shell gfortran -print-file-name=libgfortran.a)
-endif
+
+RANLIB := ranlib
 
 AWK := awk
 #AWK := gawk --lint --lint-old
