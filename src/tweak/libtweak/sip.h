@@ -3,11 +3,8 @@
 
 #define MAXORDER 10
 
-// Flat structure for minimal SIP wcs. This structure should contain enough
-// information to effectively represent any image, provided it is possible to
-// convert that image's projecton to a TAN projection and the distortion to SIP
-// distortion.
-typedef struct sip_s {
+// WCS TAN header.
+typedef struct tan_s {
 
 	// World coordinate of the tangent point, in ra,dec.
 	double crval[2];
@@ -33,6 +30,17 @@ typedef struct sip_s {
 	// along negative ra and y points to positive dec) and u,v are in pixel
 	// coordinates.
 	double cd[2][2];
+
+} tan_t;
+
+// Flat structure for minimal SIP wcs. This structure should contain enough
+// information to effectively represent any image, provided it is possible to
+// convert that image's projecton to a TAN projection and the distortion to SIP
+// distortion.
+typedef struct sip_s {
+
+	// A basic TAN header.
+	tan_t tan;
 
 	// Forward SIP coefficients
 	// The transformation from relative pixel coordinates to intermediate

@@ -23,16 +23,16 @@ void copy_wcs_into_sip(wcs_t* wcs, sip_t* sip)
 	// large, as it handles more and more actual image headers that we see
 	// in the wild.
 
-	sip->crval[0] = wcs->crval[0];
-	sip->crval[1] = wcs->crval[1];
-	sip->crpix[0] = wcs->crpix[0];
-	sip->crpix[1] = wcs->crpix[1];
+	sip->tan.crval[0] = wcs->crval[0];
+	sip->tan.crval[1] = wcs->crval[1];
+	sip->tan.crpix[0] = wcs->crpix[0];
+	sip->tan.crpix[1] = wcs->crpix[1];
 
 	// wcs->cd is in row major
-	sip->cd[0][0] = wcs->cd[0];
-	sip->cd[0][1] = wcs->cd[1];
-	sip->cd[1][0] = wcs->cd[2];
-	sip->cd[1][1] = wcs->cd[3];
+	sip->tan.cd[0][0] = wcs->cd[0];
+	sip->tan.cd[0][1] = wcs->cd[1];
+	sip->tan.cd[1][0] = wcs->cd[2];
+	sip->tan.cd[1][1] = wcs->cd[3];
 }
 
 sip_t* load_sip_from_fitsio(fitsfile* fptr)
@@ -54,15 +54,15 @@ void print_sip(sip_t* sip)
 {
 
 	printf("SIP Structure:\n");
-	printf("crval[0]=%lf\n", sip->crval[0]);
-	printf("crval[1]=%lf\n", sip->crval[1]);
-	printf("crpix[0]=%lf\n", sip->crpix[0]);
-	printf("crpix[1]=%lf\n", sip->crpix[1]);
+	printf("crval[0]=%lf\n", sip->tan.crval[0]);
+	printf("crval[1]=%lf\n", sip->tan.crval[1]);
+	printf("crpix[0]=%lf\n", sip->tan.crpix[0]);
+	printf("crpix[1]=%lf\n", sip->tan.crpix[1]);
 
-	printf("cd00=%le\n", sip->cd[0][0]);
-	printf("cd01=%le\n", sip->cd[0][1]);
-	printf("cd10=%le\n", sip->cd[1][0]);
-	printf("cd11=%le\n", sip->cd[1][1]);
+	printf("cd00=%le\n", sip->tan.cd[0][0]);
+	printf("cd01=%le\n", sip->tan.cd[0][1]);
+	printf("cd10=%le\n", sip->tan.cd[1][0]);
+	printf("cd11=%le\n", sip->tan.cd[1][1]);
 
 	if (sip->a_order > 0) {
 		int p, q;

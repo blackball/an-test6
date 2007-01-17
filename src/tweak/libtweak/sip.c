@@ -7,16 +7,16 @@
 sip_t* sip_create() {
 	sip_t* sip = malloc(sizeof(sip_t));
 
-	sip->crval[0] = 0;
-	sip->crval[1] = 0;
+	sip->tan.crval[0] = 0;
+	sip->tan.crval[1] = 0;
 
-	sip->crpix[0] = 0;
-	sip->crpix[1] = 0;
+	sip->tan.crpix[0] = 0;
+	sip->tan.crpix[1] = 0;
 
-	sip->cd[0][0] = 1;
-	sip->cd[0][1] = 0;
-	sip->cd[1][0] = 0;
-	sip->cd[1][1] = 1;
+	sip->tan.cd[0][0] = 1;
+	sip->tan.cd[0][1] = 0;
+	sip->tan.cd[1][0] = 0;
+	sip->tan.cd[1][1] = 1;
 
 	sip->a_order = 0;
 	sip->b_order = 0;
@@ -35,18 +35,18 @@ void sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 {
 
 	// Get pixel coordinates relative to reference pixel
-	//double u = deg2rad(px) - sip->crpix[0];
-	//double v = deg2rad(py) - sip->crpix[1];
-	double u = px - sip->crpix[0];
-	double v = py - sip->crpix[1];
+	//double u = deg2rad(px) - sip->tan.crpix[0];
+	//double v = deg2rad(py) - sip->tan.crpix[1];
+	double u = px - sip->tan.crpix[0];
+	double v = py - sip->tan.crpix[1];
 
 	double U, V;
 	sip_calc_distortion(sip, u, v, &U, &V);
 //	printf("u=%lf v=%lf\n",u,v);
 
 	// Get intermediate world coordinates
-	double x = sip->cd[0][0] * U + sip->cd[0][1] * V;
-	double y = sip->cd[1][0] * U + sip->cd[1][1] * V;
+	double x = sip->tan.cd[0][0] * U + sip->tan.cd[0][1] * V;
+	double y = sip->tan.cd[1][0] * U + sip->tan.cd[1][1] * V;
 //	printf("x=%lf y=%lf\n",x,y);
 
 	// Mysterious! Who knows, but negating these coordinates makes WCStools match with SIP. 
@@ -55,7 +55,7 @@ void sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 
 	// Take r to be the threespace vector of crval
 	double rx, ry, rz;
-	radec2xyz(deg2rad(sip->crval[0]), deg2rad(sip->crval[1]), &rx, &ry, &rz);
+	radec2xyz(deg2rad(sip->tan.crval[0]), deg2rad(sip->tan.crval[1]), &rx, &ry, &rz);
 //	printf("rx=%lf ry=%lf rz=%lf\n",rx,ry,rz);
 
 	// Form i = r cross north pole, which is in direction of z
@@ -103,30 +103,30 @@ void sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 {
 	// Invert CD
 	double cdi[2][2];
-	double inv_det = 1.0/(sip->cd[0][0]*sip->cd[1][1] - sip->cd[0][1]*sip->cd[1][0]); 
-	cdi[0][0] =  sip->cd[1][1] * inv_det;
-	cdi[0][1] = -sip->cd[0][1] * inv_det;
-	cdi[1][0] = -sip->cd[1][0] * inv_det;
-	cdi[1][1] =  sip->cd[0][0] * inv_det;
+	double inv_det = 1.0/(sip->tan.cd[0][0]*sip->tan.cd[1][1] - sip->tan.cd[0][1]*sip->tan.cd[1][0]); 
+	cdi[0][0] =  sip->tan.cd[1][1] * inv_det;
+	cdi[0][1] = -sip->tan.cd[0][1] * inv_det;
+	cdi[1][0] = -sip->tan.cd[1][0] * inv_det;
+	cdi[1][1] =  sip->tan.cd[0][0] * inv_det;
 
 	/*
-	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ));
-	printf(":: %lf\n",  (sip->cd[0][0]*cdi[0][1] + sip->cd[0][1]*cdi[1][1] ));
-	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][0] + sip->cd[1][1]*cdi[1][0] ));
-	printf(":: %lf\n",  (sip->cd[1][0]*cdi[0][1] + sip->cd[1][1]*cdi[1][1] ));
+	printf(":: %lf\n",  (sip->tan.cd[0][0]*cdi[0][0] + sip->tan.cd[0][1]*cdi[1][0] ));
+	printf(":: %lf\n",  (sip->tan.cd[0][0]*cdi[0][1] + sip->tan.cd[0][1]*cdi[1][1] ));
+	printf(":: %lf\n",  (sip->tan.cd[1][0]*cdi[0][0] + sip->tan.cd[1][1]*cdi[1][0] ));
+	printf(":: %lf\n",  (sip->tan.cd[1][0]*cdi[0][1] + sip->tan.cd[1][1]*cdi[1][1] ));
 	*/
 
-	//assert( (sip->cd[0][0]*cdi[0][0] + sip->cd[0][1]*cdi[1][0] ) == 1.0);
-	//assert( (sip->cd[0][0]*cdi[0][1] + sip->cd[0][1]*cdi[1][1] ) == 0.0);
-	//assert( (sip->cd[1][0]*cdi[0][0] + sip->cd[1][1]*cdi[1][0] ) == 0.0);
-	//assert( (sip->cd[1][0]*cdi[0][1] + sip->cd[1][1]*cdi[1][1] ) == 1.0);
+	//assert( (sip->tan.cd[0][0]*cdi[0][0] + sip->tan.cd[0][1]*cdi[1][0] ) == 1.0);
+	//assert( (sip->tan.cd[0][0]*cdi[0][1] + sip->tan.cd[0][1]*cdi[1][1] ) == 0.0);
+	//assert( (sip->tan.cd[1][0]*cdi[0][0] + sip->tan.cd[1][1]*cdi[1][0] ) == 0.0);
+	//assert( (sip->tan.cd[1][0]*cdi[0][1] + sip->tan.cd[1][1]*cdi[1][1] ) == 1.0);
 
 	// FIXME be robust near the poles
 	// Calculate intermediate world coordinates (x,y) on the tangent plane
 	double xyzpt[3];
 	radecdeg2xyzarr(a,d,xyzpt);
 	double xyzcrval[3];
-	radecdeg2xyzarr(sip->crval[0],sip->crval[1],xyzcrval);
+	radecdeg2xyzarr(sip->tan.crval[0],sip->tan.crval[1],xyzcrval);
 	double x,y;
 	star_coords(xyzpt, xyzcrval, &y, &x);
 
@@ -149,8 +149,8 @@ void sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py)
 	sip_calc_inv_distortion(sip, U, V, &u, &v);
 
 	// Re-add crpix to get pixel coordinates
-	*px = u + sip->crpix[0];
-	*py = v + sip->crpix[1];
+	*px = u + sip->tan.crpix[0];
+	*py = v + sip->tan.crpix[1];
 }
 
 void sip_calc_distortion(sip_t* sip, double u, double v, double* U, double *V)
@@ -190,5 +190,5 @@ void sip_calc_inv_distortion(sip_t* sip, double U, double V, double* u, double *
 
 double sip_det_cd(sip_t* sip)
 {
-	return (sip->cd[0][0]*sip->cd[1][1] - sip->cd[0][1]*sip->cd[1][0]); 
+	return (sip->tan.cd[0][0]*sip->tan.cd[1][1] - sip->tan.cd[0][1]*sip->tan.cd[1][0]); 
 }
