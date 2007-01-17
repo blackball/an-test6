@@ -83,8 +83,7 @@ int main(int argc, char** args) {
 	// for each star...
 	N = usnob_fits_count_entries(usnob);
 	fprintf(stderr, "File contains %i stars.\n", N);
-	//printf("xy=zeros(%i,2);\n", N);
-        printf("xy=[\n");
+	printf("xy=[\n");
 	for (i=0; i<N; i++) {
 		double xyz[3];
 		double px, py;
@@ -95,11 +94,9 @@ int main(int argc, char** args) {
 		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 		// project it around the center
 		star_coords(xyz, center, &px, &py);
-		//printf("xy(%i,:)=[%g,%g];\n", i+1, px, py);
-                printf("%g, %g", px, py);
-		if(i < N-1) printf(";\n");
+		printf("%g,%g;\n", px, py);
 	}
-        printf("];\n");
+	printf("];\n");
 
 	usnob_fits_close(usnob);
 
