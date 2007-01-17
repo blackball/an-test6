@@ -154,22 +154,22 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 	memcpy(swcs, wcs, sizeof(sip_t));
 
 	// Save
-	double crpix0 = wcs->tan.crpix[0];
-	double crpix1 = wcs->tan.crpix[1];
+	double crpix0 = wcs->wcstan.crpix[0];
+	double crpix1 = wcs->wcstan.crpix[1];
 
-	wcs->tan.crpix[0] += xs;
-	wcs->tan.crpix[1] += ys;
+	wcs->wcstan.crpix[0] += xs;
+	wcs->wcstan.crpix[1] += ys;
 
 	// now reproject the old crpix[xy] into swcs
 	double nxref, nyref;
 	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
 
-	swcs->tan.crval[0] = nxref;
-	swcs->tan.crval[1] = nyref;
+	swcs->wcstan.crval[0] = nxref;
+	swcs->wcstan.crval[1] = nyref;
 
 	// Restore
-	wcs->tan.crpix[0] = crpix0;
-	wcs->tan.crpix[1] = crpix1;
+	wcs->wcstan.crpix[0] = crpix0;
+	wcs->wcstan.crpix[1] = crpix1;
 
 	return swcs;
 }
@@ -768,10 +768,10 @@ void invert_sip_polynomial(tweak_t* t)
 	maxu = maxv = -1e100;
 	int i;
 	for (i=0; i<t->n; i++) {
-		minu = min(minu, t->x[i] - t->sip->tan.crpix[0]);
-		minv = min(minv, t->y[i] - t->sip->tan.crpix[1]);
-		maxu = max(maxu, t->x[i] - t->sip->tan.crpix[0]);
-		maxv = max(maxv, t->y[i] - t->sip->tan.crpix[1]);
+		minu = min(minu, t->x[i] - t->sip->wcstan.crpix[0]);
+		minv = min(minv, t->y[i] - t->sip->wcstan.crpix[1]);
+		maxu = max(maxu, t->x[i] - t->sip->wcstan.crpix[0]);
+		maxv = max(maxv, t->y[i] - t->sip->wcstan.crpix[1]);
 	}
 	printf("maxu=%lf, minu=%lf\n", maxu, minu);
 	printf("maxv=%lf, minv=%lf\n", maxv, minv);
@@ -936,11 +936,11 @@ void do_linear_tweak(tweak_t* t)
 	// Fill A in column-major order for fortran dgelsd and create 
 	// Note: this code assumes a_order == b_order
 	double xyzcrval[3];
-	radecdeg2xyzarr(t->sip->tan.crval[0], t->sip->tan.crval[1], xyzcrval);
+	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
 	int i;
 	for (i=0; i<stride; i++) {
-		double u = t->x[il_get(t->image, i)] - t->sip->tan.crpix[0];
-		double v = t->y[il_get(t->image, i)] - t->sip->tan.crpix[1];
+		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
+		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 		A[i] = u;
 		A[i + stride] = v;
 
@@ -989,18 +989,18 @@ void do_linear_tweak(tweak_t* t)
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 
-	t->sip->tan.cd[0][0] = b[0]; // b is replaced with CD during dgelsd
-	t->sip->tan.cd[0][1] = b[1];
-	t->sip->tan.cd[1][0] = b[stride];
-	t->sip->tan.cd[1][1] = b[stride+1];
+	t->sip->wcstan.cd[0][0] = b[0]; // b is replaced with CD during dgelsd
+	t->sip->wcstan.cd[0][1] = b[1];
+	t->sip->wcstan.cd[1][0] = b[stride];
+	t->sip->wcstan.cd[1][1] = b[stride+1];
 
 	// Extract the SIP coefficients
 	double cdi[2][2];
 	double inv_det = 1.0/sip_det_cd(t->sip);
-	cdi[0][0] =  t->sip->tan.cd[1][1] * inv_det;
-	cdi[0][1] = -t->sip->tan.cd[0][1] * inv_det;
-	cdi[1][0] = -t->sip->tan.cd[1][0] * inv_det;
-	cdi[1][1] =  t->sip->tan.cd[0][0] * inv_det;
+	cdi[0][0] =  t->sip->wcstan.cd[1][1] * inv_det;
+	cdi[0][1] = -t->sip->wcstan.cd[0][1] * inv_det;
+	cdi[1][0] = -t->sip->wcstan.cd[1][0] * inv_det;
+	cdi[1][1] =  t->sip->wcstan.cd[0][0] * inv_det;
 	int j = 3;
 	int p, q;
 	for (p=0; p<sip_order; p++)

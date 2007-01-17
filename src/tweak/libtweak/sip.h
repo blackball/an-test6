@@ -40,7 +40,7 @@ typedef struct tan_s {
 typedef struct sip_s {
 
 	// A basic TAN header.
-	tan_t tan;
+	tan_t wcstan;
 
 	// Forward SIP coefficients
 	// The transformation from relative pixel coordinates to intermediate
