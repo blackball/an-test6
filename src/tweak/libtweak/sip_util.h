@@ -1,7 +1,9 @@
 #ifndef SIP_UTIL_H
 
-#include "libwcs/fitsfile.h"
-#include "libwcs/wcs.h"
+// libwcs:
+#include "fitsfile.h"
+#include "wcs.h"
+
 #include "sip.h"
 #include "fitsio.h"
 

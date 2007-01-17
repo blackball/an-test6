@@ -3,8 +3,10 @@
 #include <math.h>
 #include "sip.h"
 #include "sip_util.h"
-#include "libwcs/wcs.h"
-#include "libwcs/fitsfile.h"
+
+// libwcs:
+#include "wcs.h"
+#include "fitsfile.h"
 
 wcs_t* get_wcs_from_fits_header(char* buf)
 {
