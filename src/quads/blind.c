@@ -288,7 +288,8 @@ int main(int argc, char *argv[]) {
 		healpix = quads->healpix;
 
 		if (!silent) 
-			fprintf(stderr, "Index scale: %g arcmin, %g arcsec\n", index_scale/60.0, index_scale);
+			fprintf(stderr, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+					index_scale_lower/60.0, index_scale/60.0, index_scale_lower, index_scale);
 
 		// Read .skdt file...
 		if (!silent) {
@@ -441,7 +442,6 @@ static int read_parameters() {
 					"    tol <code-tolerance>\n"
 					"    fieldunits_lower <arcsec-per-pixel>\n"
 					"    fieldunits_upper <arcsec-per-pixel>\n"
-					"    index_lower <index-size-lower-bound-fraction>\n"
 					"    agreetol <agreement-tolerance (arcsec)>\n"
 					"    verify_dist <early-verification-dist (arcsec)>\n"
 					"    nagree_toverify <nagree>\n"
@@ -599,6 +599,7 @@ static void solve_fields() {
 	int nfields;
 	double* field = NULL;
 	int fi;
+	double fudgepixels = 0.0;
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
@@ -615,6 +616,26 @@ static void solve_fields() {
 	if (funits_upper != 0.0) {
 		solver.arcsec_per_pixel_upper = funits_upper;
 		solver.minAB = index_scale_lower / funits_upper;
+
+		// compute fudge factor for quad scale: what are the extreme
+		// ranges of quad scales that should be accepted, given the
+		// code tolerance?
+
+		// -what is the maximum number of pixels a C or D star can move
+		//  to singlehandedly exceed the code tolerance?
+		// -largest quad
+		// -smallest arcsec-per-pixel scale
+
+		// -index_scale_upper * 1/sqrt(2) is the side length of
+		//  the unit-square of code space, in arcseconds.
+		// -that times the code tolerance is how far a C/D star
+		//  can move before exceeding the code tolerance, in arcsec.
+		// -that divided by the smallest arcsec-per-pixel scale
+		//  gives the largest motion in pixels.
+		fudgepixels = index_scale * M_SQRT1_2 * codetol / funits_upper;
+		if (!silent)
+			fprintf(stderr, "Fudgepixels: %g.\n", fudgepixels);
+
 		if (!silent)
 			fprintf(stderr, "Set minAB to %g\n", solver.minAB);
 	}

@@ -83,22 +83,22 @@ unsigned char usnob_get_survey_band(int survey) {
 	// from Tables 1 and 3 (esp footnote h) of the USNO-B paper.
 	switch (survey) {
 	case USNOB_SURVEY_POSS_I_O:
-		return 'O';
+		return 'O'; // blue (350-500 mm)
 	case USNOB_SURVEY_POSS_I_E:
-		return 'E';
+		return 'E'; // red  (620-670 mm)
 	case USNOB_SURVEY_POSS_II_J:
 	case USNOB_SURVEY_SERC_J:
 		//case USNOB_SURVEY_SERC_EJ:
-		return 'J';
+		return 'J'; // blue (385-540 mm)
 	case USNOB_SURVEY_POSS_II_F:
 	case USNOB_SURVEY_ESO_R:
 		//case USNOB_SURVEY_SERC_ER:
 	case USNOB_SURVEY_AAO_R:
-		return 'F';
+		return 'F'; // red  (590, 610 or 630-690 mm)
 	case USNOB_SURVEY_POSS_II_N:
 	case USNOB_SURVEY_SERC_I:
 	case USNOB_SURVEY_SERC_I_OR_POSS_II_N:
-		return 'N';
+		return 'N'; // infrared (715 or 730-900 mm)
 	default:
 		return '\0';
 	}

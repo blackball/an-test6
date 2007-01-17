@@ -210,18 +210,14 @@ errstr=sprintf('-e %g ', err ./ fwhm);
 for i=1:length(AB),
 	ab=AB(i);
 	cmd=sprintf(['noisesim2 -n 10000 ', errstr, '-l 4.0 -u 5.0 -a %g > sim2d%i.m'], ab, i);
-	%fprintf('cmd=%s\n', cmd);
 	system(cmd);
-	%sim2d;
 	eval(sprintf('sim2d%i', i));
-	%fprintf('abinv=%g\n', abinvalid);
 	IA(i)=abinvalid(1);
 	IC(i)=cdinvalid(1);
 end
 
-p1=plot(AB, IA+IC, 'ro-', AB, IA, 'bo-');
+p1=plot(AB, IC, 'ro-', AB, IA, 'bo-'); %, AB, IA+IC, 'mo-');
 set(p1, 'LineWidth', 2);
-%axis([4, 5, 0, 0.6]);
 axis([3.9, 5.1, 0, 0.55]);
 xlabel('AB angle');
 ylabel('Proportion of Invalidated Quads');
@@ -229,3 +225,20 @@ title(sprintf('Quads with scales near the boundaries can become invalid (error =
 legend({'CD positions invalid', 'AB scale invalid'}, 'Location', 'North');
 print -depsc 'simplot8b.eps';
 
+
+system(sprintf(['noisesim2 -n 10000 -e %g -l 4.0 -u 5.0 -a 4.0 -m | grep scale > sim2e1.m'], 1.0 ./ fwhm));
+sim2e1;
+scales1 = scale;
+system(sprintf(['noisesim2 -n 10000 -e %g -l 4.0 -u 5.0 -a 5.0 -m | grep scale > sim2e2.m'], 1.0 ./ fwhm));
+sim2e2;
+scales2 = scale;
+subplot(2,1,1);
+hist(scales1, 20);
+title('Actual scales of quads with true scale near the limits (noise = 1 arcsec FWHM)');
+ylabel('Counts');
+subplot(2,1,2);
+hist(scales2, 20);
+xlabel('AB Scale (arcmin)');
+print -depsc 'simplot9.eps';
+
+subplot(111);

@@ -100,6 +100,7 @@ int main(int argc, char** args) {
 	printf("codestd=[];\n");
 	printf("abinvalid=[];\n");
 	printf("cdinvalid=[];\n");
+	printf("scale=[];\n");
 
 	if (dl_size(noises) == 0)
 		dl_append(noises, noise);
@@ -153,13 +154,14 @@ int main(int argc, char** args) {
 				codedy = code[3];
 
 				if ((scale < square(lowerAngle * 60.0 / pixscale)) ||
-					(scale > square(upperAngle * 60.0 / pixscale))) {
+					(scale > square(upperAngle * 60.0 / pixscale)))
 					abInvalid++;
-				}
-
-				if ((((codecx*codecx - codecx) + (codecy*codecy - codecy)) > 0.0) ||
-					(((codedx*codedx - codedx) + (codedy*codedy - codedy)) > 0.0))
+				else if ((((codecx*codecx - codecx) + (codecy*codecy - codecy)) > 0.0) ||
+						 (((codedx*codedx - codedx) + (codedy*codedy - codedy)) > 0.0))
 					cdInvalid++;
+
+				if (matlab)
+					printf("scale(%i)=%g;\n", j+1, sqrt(scale)*pixscale/60.0);
 			}
 
 			if (matlab) {
