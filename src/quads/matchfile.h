@@ -29,7 +29,7 @@
 
 #define MATCHFILE_AN_FILETYPE "MATCH"
 
-#define MATCHFILE_FITS_COLUMNS 26
+#define MATCHFILE_FITS_COLUMNS 27
 
 struct matchfile {
 	// when writing:
