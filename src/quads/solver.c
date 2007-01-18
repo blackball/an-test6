@@ -434,16 +434,8 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
     uint iA, iB, iC, iD;
     MatchObj *mo;
 	double sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
-	/*
-	  double fieldxy[] = {
-	  getx(params->field, fA), gety(params->field, fA),
-	  getx(params->field, fB), gety(params->field, fB),
-	  getx(params->field, fC), gety(params->field, fC),
-	  getx(params->field, fD), gety(params->field, fD) };
-	*/
 
     for (jj=0; jj<krez->nres; jj++) {
-		//uint64_t idA, idB, idC, idD;
 		double star[12];
 		double starscale;
 		tan_t tan;
@@ -510,12 +502,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		mo->code_err = krez->sdists[jj];
 
-		/*
-		  idA = getstarid(iA);
-		  idB = getstarid(iB);
-		  idC = getstarid(iC);
-		  idD = getstarid(iD);
-		*/
+		mo->ids[0] = getstarid(iA);
+		mo->ids[1] = getstarid(iB);
+		mo->ids[2] = getstarid(iC);
+		mo->ids[3] = getstarid(iD);
 
 		if (params->handlehit(params, mo))
 			params->quitNow = TRUE;

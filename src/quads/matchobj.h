@@ -28,6 +28,7 @@ struct match_struct {
     uint quadno;
 	uint star[4];
 	uint field[4];
+	uint64_t ids[4];
     float code_err;
 	double sMin[3];
 	double sMax[3];

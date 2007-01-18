@@ -169,6 +169,7 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldobjs", nil, field, 4, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_K, "ids", nil, ids, 4, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "codeerr", nil, code_err, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "mincorner", nil, sMin, 3, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3, TRUE);

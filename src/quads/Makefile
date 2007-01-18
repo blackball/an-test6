@@ -213,7 +213,7 @@ blind: blind.o solver.o codekd.o quadfile.o matchfile.o tic.o \
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \
 		solvedfile.o solvedclient.o intmap.o verify.o pnpoly.o \
 		blind_wcs.o svd.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(LIBTWEAK_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 printmatch: printmatch.o matchfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 

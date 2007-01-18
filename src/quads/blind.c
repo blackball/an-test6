@@ -348,8 +348,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		id = idfile_open(idfname, 0);
-		if (!id)
+		if (!id) {
 			fprintf(stderr, "Couldn't open id file %s.\n", idfname);
+			fprintf(stderr, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
+		}
 
 		// Do it!
 		solve_fields();
