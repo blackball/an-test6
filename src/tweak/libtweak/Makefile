@@ -24,7 +24,6 @@ include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.libwcs
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.cfitsio
-include $(COMMON)/makefile.libwcs
 include $(COMMON)/makefile.qfits
 
 TWEAK_C_OBJ := ezfits.o sip.o sip_util.o tweak_internal.o
