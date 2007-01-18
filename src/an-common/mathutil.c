@@ -96,10 +96,10 @@ void matrix_vector_3(double* m, double* v, double* result) {
 }
 
 inline void normalize(double* x, double* y, double* z) {
-	double l = sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
-	*x /= l;
-	*y /= l;
-	*z /= l;
+	double invl = 1.0 / sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
+	*x *= invl;
+	*y *= invl;
+	*z *= invl;
 }
 
 inline void normalize_3(double* xyz) {
