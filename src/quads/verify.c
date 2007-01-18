@@ -61,7 +61,7 @@ void verify_hit(kdtree_t* startree,
 	int Nmin;
 	double polyx[4], polyy[4];
 
-	assert(mo->transform_valid);
+	assert(mo->transform_valid || mo->wcs_valid);
 	assert(startree);
 
 	/* We project the points into a 2D space whose origin is "sMin"
@@ -172,7 +172,10 @@ void verify_hit(kdtree_t* startree,
 		dptr++;
 		v = *dptr;
 		dptr++;
-		image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
+		if (mo->wcs_valid)
+			tan_pixelxy2xyzarr(&(mo->wcstan), u, v, fieldstars + 3*i);
+		else if (mo->transform_valid)
+			image_to_xyz(u, v, fieldstars + 3*i, mo->transform);
 	}
 
 	/*

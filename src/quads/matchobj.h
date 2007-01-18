@@ -48,15 +48,6 @@ struct match_struct {
 	bool wcs_valid;
 	tan_t wcstan;
 
-	/*
-	// RA,DEC of reference point.
-	double crval[2];
-	// Pixel coords of reference point.
-	double crpix[2];
-	// Transformation matrix.
-	double CD[4];
-	*/
-
 	// proposed location of the center of the field
 	//  = normalize(sMin + sMax);
 	double center[3];

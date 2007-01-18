@@ -432,15 +432,20 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 							solver_params* params) {
     uint jj, thisquadno;
     uint iA, iB, iC, iD;
-    double transform[9];
     MatchObj *mo;
 	double sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
+	/*
+	  double fieldxy[] = {
+	  getx(params->field, fA), gety(params->field, fA),
+	  getx(params->field, fB), gety(params->field, fB),
+	  getx(params->field, fC), gety(params->field, fC),
+	  getx(params->field, fD), gety(params->field, fD) };
+	*/
 
     for (jj=0; jj<krez->nres; jj++) {
 		//uint64_t idA, idB, idC, idD;
 		double star[12];
 		double starscale;
-		double field[8];
 		tan_t tan;
 
 		params->nummatches++;
@@ -452,35 +457,15 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		getstarcoord(iC, star + 2*3);
 		getstarcoord(iD, star + 3*3);
 
-		field[0] = getx(params->field, fA);
-		field[1] = gety(params->field, fA);
-		field[2] = getx(params->field, fB);
-		field[3] = gety(params->field, fB);
-		field[4] = getx(params->field, fC);
-		field[5] = gety(params->field, fC);
-		field[6] = getx(params->field, fD);
-		field[7] = gety(params->field, fD);
-
-		// compute WCS from the matching quad alone.
+		// compute TAN projection from the matching quad alone.
 		blind_wcs_compute_2(star, field, 4, &tan);
 
-		// FIXME (finish WCS; get rid of "transform")
+		// transform the corners of the field...
+		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin);
+		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 1), gety(params->cornerpix, 1), sMax);
 
-		fit_transform(star, field, 4, transform);
-		image_to_xyz(getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin, transform);
-		image_to_xyz(getx(params->cornerpix, 1), gety(params->cornerpix, 1), sMax, transform);
-
-		{
-			double smin2[3];
-			//double smax2[3];
-			tan_pixelxy2xyzarr(&tan,
-							   getx(params->cornerpix, 0),
-							   gety(params->cornerpix, 0),
-							   smin2);
-			fprintf(stderr, "Smin2 dist: %g arcsec.\n",
-					distsq2arcsec(distsq(sMin, smin2, 3)));
-		}
-
+		// FIXME - we could check the scale more directly!
+		// FIXME - should there be scale fudge here?
 
 		// check scale
 		starscale  = square(sMax[0] - sMin[0]);
@@ -493,20 +478,20 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		params->numscaleok++;
 
-		image_to_xyz(getx(params->cornerpix, 2), gety(params->cornerpix, 2), sMinMax, transform);
-		image_to_xyz(getx(params->cornerpix, 3), gety(params->cornerpix, 3), sMaxMin, transform);
+		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 2), gety(params->cornerpix, 2), sMinMax);
+		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 3), gety(params->cornerpix, 3), sMaxMin);
 
 		mo = mk_MatchObj();
 		if (params->mo_template)
 			memcpy(mo, params->mo_template, sizeof(MatchObj));
 
+		memcpy(&(mo->wcstan), &tan, sizeof(tan_t));
+		mo->wcs_valid = TRUE;
+
 		mo->quads_tried   = params->numtries;
 		mo->quads_matched = params->nummatches;
 		mo->quads_scaleok = params->numscaleok;
 		mo->timeused = params->timeused;
-
-		memcpy(mo->transform, transform, sizeof(mo->transform));
-		mo->transform_valid = TRUE;
 
 		mo->quadno = thisquadno;
 		mo->star[0] = iA;
