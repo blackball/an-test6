@@ -97,6 +97,7 @@ double cxdx_margin;
 
 bool quiet;
 bool silent;
+bool verbose;
 
 int firstfield, lastfield;
 il* fieldlist;
@@ -174,6 +175,7 @@ int main(int argc, char *argv[]) {
 		ninfield_tokeep = 0;
 		cxdx_margin = 0.0;
 		quiet = FALSE;
+		verbose = FALSE;
 		il_remove_all(fieldlist);
 		quads = NULL;
 		starkd = NULL;
@@ -221,6 +223,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "ycolname %s\n", ycolname);
 			fprintf(stderr, "maxquads %i\n", maxquads);
 			fprintf(stderr, "quiet %i\n", quiet);
+			fprintf(stderr, "verbose %i\n", verbose);
 		}
 
 		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -485,6 +488,8 @@ static int read_parameters() {
 			silent = TRUE;
 		} else if (is_word(buffer, "quiet", &nextword)) {
 			quiet = TRUE;
+		} else if (is_word(buffer, "verbose", &nextword)) {
+			verbose = TRUE;
 		} else if (is_word(buffer, "wcs ", &nextword)) {
 			wcs_template = strdup(nextword);
 		} else if (is_word(buffer, "fieldid_key ", &nextword)) {
@@ -568,7 +573,7 @@ static int read_parameters() {
 }
 
 static void verified(handlehits* hh, MatchObj* mo) {
-	if (!quiet && !silent)
+	if (!quiet && !silent && verbose)
 		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 				mo->fieldnum, mo->nagree, 100.0 * mo->overlap,
 				mo->ninfield, mo->noverlap,
