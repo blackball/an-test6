@@ -470,6 +470,18 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		image_to_xyz(getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin, transform);
 		image_to_xyz(getx(params->cornerpix, 1), gety(params->cornerpix, 1), sMax, transform);
 
+		{
+			double smin2[3];
+			//double smax2[3];
+			tan_pixelxy2xyzarr(&tan,
+							   getx(params->cornerpix, 0),
+							   gety(params->cornerpix, 0),
+							   smin2);
+			fprintf(stderr, "Smin2 dist: %g arcsec.\n",
+					distsq2arcsec(distsq(sMin, smin2, 3)));
+		}
+
+
 		// check scale
 		starscale  = square(sMax[0] - sMin[0]);
 		starscale += square(sMax[1] - sMin[1]);
