@@ -9,6 +9,10 @@
 #define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 #define FREEALL FREEVEC(sel);FREEVEC(isel)
 
+// This is adapted from Numerical Recipes, and is an implementation of
+// selection, i.e. find the kth largest element among n elements of arr.
+// For a better description, see the original Numeric Recipes version
+// http://dollywood.itp.tuwien.ac.at/numrec/f8-5.pdf
 float dselip(unsigned long k, unsigned long n, float *arr)
 {
 	void dshell(unsigned long n, float *a);
@@ -62,6 +66,7 @@ float dselip(unsigned long k, unsigned long n, float *arr)
 				ju = M + 2;
 				while (ju - jl > 1) {
 					jm = (ju + jl) / 2;
+//					printf("i=%lu, jl=%lu, ju=%lu, jm=%lu\n",i,jl,ju,jm);
 					if (arr[i - 1] >= sel[jm - 1])
 						jl = jm;
 					else
