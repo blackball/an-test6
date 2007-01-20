@@ -3,7 +3,8 @@
 #include <string.h>
 #include <math.h>
 
-#define M 64
+//#define M 64
+#define M 128
 #define BIG 1.0e30
 
 #define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
@@ -23,6 +24,7 @@ float dselip(unsigned long k, unsigned long n, float *arr)
 		printf("bad input to selip");
 		exit(1);
 	}
+//	printf("dselip: k=%lu n=%lu\n",k,n);
 	isel = (unsigned long *) malloc(sizeof(unsigned long) * (M + 2));
 	sel = (float *) malloc(sizeof(float) * (M + 2));
 	kk = k + 1;

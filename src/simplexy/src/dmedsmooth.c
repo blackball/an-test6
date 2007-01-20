@@ -38,6 +38,8 @@ int dmedsmooth(float *image,
 	int ypsize, ymsize, xpsize, xmsize;
 	float dx, dy, xkernel, ykernel;
 
+//	printf("entering dmedsmooth nx=%d ny=%d box=%d\n", nx,ny,box);
+
 	/* guarantee odd */
 	sp = box;
 
@@ -91,7 +93,9 @@ int dmedsmooth(float *image,
 		jst = ylo[j];
 		jnd = yhi[j];
 		nyt = jnd - jst + 1;
+//		printf("j=%d over nygrid\n", j);
 		for (i = 0;i < nxgrid;i++) {
+//			printf("i=%d over nxgrid\n", i);
 			ist = xlo[i];
 			ind = xhi[i];
 			nxt = ind - ist + 1;
@@ -103,6 +107,7 @@ int dmedsmooth(float *image,
 						nb++;
 					}
 				}
+//			printf("j=%d over nygrid i=%d over nxgrid\n", j, i);
 			if (nb > 1) {
 				nm = nb / 2;
 				grid[i + j*nxgrid] = dselip(nm, nb, arr);

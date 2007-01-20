@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	int naxis;
 	long naxisn[100];
 	int fix = 0;
-	int kk, jj;
+	int kk;
 	char* infile = NULL;
 	char argchar;
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	}
 
 	int hdutype;
-	int nimgs = 0;
+//	int nimgs = 0;
 	int broken = 0; // Correct until proven otherwise!
 
 	// Check axis on each one
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"broken: actual naxis %d \n", naxis_actual);
 
 		if (fix) {
-			char comment[80];
+//			char comment[80];
 			//fits_read_key(fptr, TINT, "NAXIS", &naxis, comment, &status);
 			//fprintf(stderr, "%s\n", comment);
 			//assert(!status);
