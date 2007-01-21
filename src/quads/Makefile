@@ -168,7 +168,7 @@ read_nomad: read_nomad.o nomad.o
 2masstofits: $(2MASSOBJ) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lz
 
-project-usnob: project-usnob.o usnob_fits.o \
+project-usnob: project-usnob.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 usnobtofits: usnobtofits.o usnob_fits.o usnob.o \

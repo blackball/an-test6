@@ -114,7 +114,7 @@ int main(int argc, char** args) {
 
 		for (j=0; j<5; j++){
 		  printf("%g", star->obs[j].mag);
-//                  fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
+		  fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
 		  if(j<4){
 		    printf(", ");
 		  }
