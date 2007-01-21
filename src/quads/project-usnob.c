@@ -41,7 +41,7 @@ int main(int argc, char** args) {
     int c;
 	char* infn;
 	usnob_fits* usnob;
-	int i, N;
+	int i, j, N;
 	int hp, Nside;
 	double center[3];
 
@@ -83,7 +83,22 @@ int main(int argc, char** args) {
 	// for each star...
 	N = usnob_fits_count_entries(usnob);
 	fprintf(stderr, "File contains %i stars.\n", N);
-	printf("xy=[\n");
+	/*
+	printf("obs=[\n");
+	for (i=0; i<N; i++) {
+	  usnob_entry* star;
+	  star = usnob_fits_read_entry(usnob);
+	  for (j=0; j<5; j++){
+	    printf("%g", star->obs[j].mag);
+	    if(j<4){
+	      printf(", ");
+	    }
+	  }
+	  printf(";\n");
+	}
+	printf("];\n");
+	*/
+	printf("stars=[\n");
 	for (i=0; i<N; i++) {
 		double xyz[3];
 		double px, py;
@@ -94,7 +109,20 @@ int main(int argc, char** args) {
 		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 		// project it around the center
 		star_coords(xyz, center, &px, &py);
-		printf("%g,%g;\n", px, py);
+		printf("%g, %g,", px, py);
+
+
+		for (j=0; j<5; j++){
+		  printf("%g", star->obs[j].mag);
+//                  fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
+		  if(j<4){
+		    printf(", ");
+		  }
+		}
+
+		printf(";\n");
+                fprintf(stderr, "\n");
+
 	}
 	printf("];\n");
 
