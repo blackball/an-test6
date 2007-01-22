@@ -1,6 +1,6 @@
 <?php
 	function loggit($mesg) {
-		error_log($mesg, 3, "/h/42/dstn/software/apache-2.2.3/logs/usnob.log");
+		error_log($mesg, 3, "/h/260/dstn/software/apache-2.2.3/logs/usnob.log");
 	}
 	header("Content-type: image/png");
 	// DEBUG
@@ -40,6 +40,9 @@
 	$sdss_file  = $_REQUEST["SDSS_FILE"];
 	$sdss_field = $_REQUEST["SDSS_FIELD"];
 
+	$rdls_field_str = $_REQUEST["RDLS_FIELD"];
+	$rdls_filename  = $_REQUEST["RDLS_FILE"];
+
 	$hpstr = $_REQUEST["HP"];
 
 	loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
@@ -67,7 +70,7 @@
 			exit;
 	}
 
-	$N = 0;
+	$rdls_field = 0;
 	if (strlen("$sdss_file") && strlen("$sdss_field")) {
 		if ($map == "sdssfield") {
 			$gotsdssfield = 1;
@@ -82,16 +85,36 @@
 			printf("<html><body>Invalid request: failed to parse SDSS_{FILE,FIELD}.</body></html>\n\n");
 			exit;
 		}
-		$nstr = $_REQUEST["N"];
-		if (strlen($nstr)) {
-			if (sscanf($nstr, "%d", $N) != 1) {
-				loggit("Failed to parse N.\n");
+	} else if (strlen("$rdls_filename")) {
+		if ($map == "rdls") {
+			$gotrdls = 1;
+		} else {
+			header("Content-type: text/html");
+			printf("<html><body>Invalid request: failed to parse.</body></html>\n\n");
+			exit;
+		}
+
+		if (strlen("$rdls_field_str")) {
+			if (sscanf($rdls_field_str, "%d", $rdls_field) != 1) {
+				loggit("Failed to parse RDLS field number.\n");
 				header("Content-type: text/html");
 				printf("<html><body>Invalid request: failed to parse.</body></html>\n\n");
 				exit;
 			}
 		}
 	}
+
+	$N = 0;
+	$nstr = $_REQUEST["N"];
+	if (strlen($nstr)) {
+		if (sscanf($nstr, "%d", $N) != 1) {
+			loggit("Failed to parse N.\n");
+			header("Content-type: text/html");
+			printf("<html><body>Invalid request: failed to parse.</body></html>\n\n");
+			exit;
+		}
+	}
+
 	if (strlen("$hpstr")) {
 		$gothp = 1;
 		if (sscanf($hpstr, "%d", $hp) != 1) {
@@ -140,6 +163,11 @@
 		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
 	} else if ($gotsdssfield) {
 		$cmd = sprintf("sdssfieldtile -s %d -S %d", $sdssfile, $sdssfield);
+	} else if ($gotrdls) {
+		$cmd = sprintf("rdlstile -f \"%s\"", escapeshellarg($rdls_filename));
+		if ($rdls_field > 0) {
+			$cmd = $cmd . sprintf(" -F %d", $rdls_field);
+		}
 	} else {
 		$cmd = "usnobtile";
 		if ($lines) {
