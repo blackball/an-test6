@@ -43,7 +43,7 @@
 #include "starkd.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:R"
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RH"
 
 static void print_help(char* progname)
 {
@@ -61,8 +61,9 @@ static void print_help(char* progname)
 		   "     [-R]            make a second pass through healpixes in which quads couldn't be made,\n"
 		   "                     removing the \"-r\" restriction on the number of times a star can be used.\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
-		   "     [-F <failed-rdls-file>] write the centers of the healpixes in which quads can't be made.\n\n"
-	       "Reads skdt, writes {code, quad}.\n\n"
+		   "     [-F <failed-rdls-file>] write the centers of the healpixes in which quads can't be made.\n"
+		   "     [-H]: print histograms.\n"
+		   "\nReads skdt, writes {code, quad}.\n\n"
 	       , progname);
 }
 
@@ -96,6 +97,8 @@ static int nbadcenter = 0;
 static int nabok = 0;
 
 static unsigned char* nuses;
+
+static bool hists = FALSE;
 
 static void* mymalloc(unsigned int n, int linenum) {
 	void* rtn = malloc(n);
@@ -659,6 +662,9 @@ int main(int argc, char** argv) {
 			quad_scale_lower2 = square(rads);
 			quad_dist2_lower = square(tan(rads));
 			break;
+		case 'H':
+			hists = TRUE;
+			break;
 		default:
 			return -1;
 		}
@@ -873,8 +879,13 @@ int main(int argc, char** argv) {
 			int nstarstotal = 0;
 			int ncounted = 0;
 
-			histogram* histnstars = histogram_new_nbins(0.0, 100.0, 100);
-			histogram* histnstars_failed = histogram_new_nbins(0.0, 100.0, 100);
+			histogram* histnstars = NULL;
+			histogram* histnstars_failed = NULL;
+
+			if (hists) {
+				histnstars = histogram_new_nbins(0.0, 100.0, 100);
+				histnstars_failed = histogram_new_nbins(0.0, 100.0, 100);
+			}
 
 			dxfrac = xpass / (double)xpasses;
 			dyfrac = ypass / (double)ypasses;
@@ -942,13 +953,15 @@ int main(int argc, char** argv) {
 							dl_append(noreuse_radec, radec[1]);
 						}
 					}
-					histogram_add(histnstars_failed, (double)N);
+					if (histnstars_failed)
+						histogram_add(histnstars_failed, (double)N);
 					continue;
 				}
 
 				if (create_quad(stars, inds, N, circle,
 								centre, perp1, perp2, maxdot1, maxdot2, TRUE)) {
-					histogram_add(histnstars, (double)N);
+					if (histnstars)
+						histogram_add(histnstars, (double)N);
 					nthispass++;
 				} else {
 					if (noreuse_pass)
@@ -957,29 +970,31 @@ int main(int argc, char** argv) {
 						dl_append(noquads_radec, radec[0]);
 						dl_append(noquads_radec, radec[1]);
 					}
-					histogram_add(histnstars_failed, (double)N);
+					if (histnstars_failed)
+						histogram_add(histnstars_failed, (double)N);
 				}
 			}
 			printf("\n");
 
-			printf("Number of stars per healpix histogram:\n");
-			printf("hist_nstars=");
-			histogram_print_matlab(histnstars, stdout);
-			printf("\n");
-			printf("hist_nstars_bins=");
-			histogram_print_matlab_bin_centers(histnstars, stdout);
-			printf("\n");
+			if (hists) {
+				printf("Number of stars per healpix histogram:\n");
+				printf("hist_nstars=");
+				histogram_print_matlab(histnstars, stdout);
+				printf("\n");
+				printf("hist_nstars_bins=");
+				histogram_print_matlab_bin_centers(histnstars, stdout);
+				printf("\n");
+				printf("Number of stars per healpix, for failed healpixes:\n");
+				printf("hist_nstars_failed=");
+				histogram_print_matlab(histnstars_failed, stdout);
+				printf("\n");
+				printf("hist_nstars_failed_bins=");
+				histogram_print_matlab_bin_centers(histnstars_failed, stdout);
+				printf("\n");
 
-			printf("Number of stars per healpix, for failed healpixes:\n");
-			printf("hist_nstars_failed=");
-			histogram_print_matlab(histnstars_failed, stdout);
-			printf("\n");
-			printf("hist_nstars_failed_bins=");
-			histogram_print_matlab_bin_centers(histnstars_failed, stdout);
-			printf("\n");
-
-			histogram_free(histnstars);
-			histogram_free(histnstars_failed);
+				histogram_free(histnstars);
+				histogram_free(histnstars_failed);
+			}
 
 			printf("Each non-empty healpix had on average %g stars.\n",
 				   nstarstotal / (double)ncounted);
@@ -1048,7 +1063,7 @@ int main(int argc, char** argv) {
 						exit(-1);
 					}
 				}
-				printf("Making no-limit-on-number-of-times-a-star-can-be-used pass.\n");
+				printf("Making a pass with no limit on the number of times a star can be used.\n");
 				printf("Trying %i healpixes.\n", il_size(noreuse_hps));
 				for (i=0; i<il_size(noreuse_hps); i++) {
 					double centre[3];
@@ -1117,18 +1132,6 @@ int main(int argc, char** argv) {
 				bt_insert(bigquadlist, q, FALSE, compare_quads);
 			}
 			Nquads = 0;
-
-			/*
-			  printf("bt height is %i\n", bt_height(bigquadlist));
-			  {
-			  double opth = log(bt_size(bigquadlist) / (double)bigquadlist->blocksize) / log(2.0);
-			  int nleaves;
-			  printf("(optimal height is %g.)\n", opth);
-			  nleaves = bt_count_leaves(bigquadlist);
-			  printf("bt contains %i leaves.\n", nleaves);
-			  printf("leaves are on average %.1f%% full.\n", 100.0 * bt_size(bigquadlist) / (double)(nleaves * bigquadlist->blocksize));
-			  }
-			*/
 
 			firstpass = FALSE;
 
