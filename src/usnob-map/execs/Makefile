@@ -34,11 +34,12 @@ CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
+CFLAGS += $(ANFILES_INC)
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
 USNOBMAP_EXECS := usnobcount usnobtile sdsstile sdssfieldtile \
-	indexquad sdssquad render-mercator make-merctree
+	indexquad sdssquad render-mercator make-merctree rdlstile
 # indextile    (currently broken)
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
@@ -51,6 +52,9 @@ NETPBM_L := -L. -lnetpbm
 #LFLAGS += $(NETPBM_L)
 
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
+
+rdlstile: rdlstile.o \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 render-mercator: render-mercator.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
