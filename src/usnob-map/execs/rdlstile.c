@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 	double pixperx, pixpery;
 
 	xylist* rdls;
-	double* rd;
+	double* rdvals;
 	int Nstars;
 
 	int pixelmargin = 4;
@@ -184,10 +184,10 @@ int main(int argc, char *argv[]) {
 	if (N && N < Nstars)
 		Nstars = N;
 
-	rd = malloc(Nstars * 2 * sizeof(double));
-	if (rdlist_read_entries(rdls, fieldnum, 0, Nstars, rd)) {
+	rdvals = malloc(Nstars * 2 * sizeof(double));
+	if (rdlist_read_entries(rdls, fieldnum, 0, Nstars, rdvals)) {
 		fprintf(stderr, "Failed to read RDLS file.\n");
-		free(rd);
+		free(rdvals);
 		exit(-1);
 	}
 
@@ -217,8 +217,8 @@ int main(int argc, char *argv[]) {
 		yscale = pixpery;
 		wrapra = (px1 > 1.0);
 		for (i=0; i<Nstars; i++) {
-			double mx = rd[i*2+0] / 360.0;
-			double my = (M_PI + asinh(tan(deg2rad(rd[i*2+1])))) / (2.0 * M_PI);
+			double mx = rdvals[i*2+0] / 360.0;
+			double my = (M_PI + asinh(tan(deg2rad(rdvals[i*2+1])))) / (2.0 * M_PI);
 			int ix1, ix2=0, iy;
 			bool ok;
 
@@ -227,18 +227,12 @@ int main(int argc, char *argv[]) {
 					  (mx >= px0 - xmargin));
 			else
 				ok = (mx >= px0 - xmargin) &&
-					(mx <= px0 + xmargin);
+					(mx <= px1 + xmargin);
 			if (!ok) continue;
 			ok = (my  >= py0 - ymargin) &&
-				(my  <= py0 + ymargin);
+				(my  <= py1 + ymargin);
 			if (!ok) continue;
 
-			/*
-			  if (wrapra && (mx <= px1 - 1.0 + xmargin))
-			  ix = (int)rint((mx + 1.0 - xorigin) * xscale);
-			  else
-			  ix = (int)rint((mx - xorigin) * xscale);
-			*/
 			ix1 = (int)rint((mx - xorigin) * xscale);
 			if (wrapra)
 				ix2 = (int)rint((mx + 1.0 - xorigin) * xscale);

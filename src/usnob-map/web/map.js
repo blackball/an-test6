@@ -24,6 +24,7 @@ var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
 var FIELD_URL;
 var SDSS_URL;
+var RDLS_URL;
 
 var gotquad = false;
 var gotfieldquad = false;
@@ -62,6 +63,14 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 		}
 		fieldobjs = sdssobjs;
 		gotfieldquad = gotquad;
+	}
+}
+if ("RDLS_FILE" in getdata) {
+	var rdls = true;
+	var rdlsfile = getdata["RDLS_FILE"];
+	RDLS_URL = TILE_URL + "map=rdls" + "&RDLS_FILE=" + rdlsfile;
+	if ("RDLS_FIELD" in getdata) {
+		RDLS_URL = RDLS_URL + "&RDLS_FIELD=" + Number(getdata["RDLS_FIELD"]);
 	}
 }
 if ("HP" in getdata) {
@@ -131,6 +140,12 @@ indexTransTile.myFormat='image/png';
 indexTransTile.myBaseURL=INDEX_URL + "&trans=1";
 indexTransTile.getTileUrl=CustomGetTileUrl;
 
+var rdlsTile = new GTileLayer(new GCopyrightCollection(""),1,17);
+rdlsTile.myLayers='rdls';
+rdlsTile.myFormat='image/png';
+rdlsTile.myBaseURL=RDLS_URL;
+rdlsTile.getTileUrl=CustomGetTileUrl;
+
 /*
   http://monte.ai.toronto.edu:8080/usnob/map.html?SDSS_FILE=1&SDSS_FIELD=6&SDSS_QUAD=0,9,13,6&ra=241.55&dec=26.93&zoom=11&HP=2&INDEX_QUAD=4763876,4763639,4763878,4732341&over=no
 */
@@ -140,6 +155,10 @@ var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNO
 if (sdss) {
 	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
 	var sdssAlone = new GMapType([sdssTile], G_SATELLITE_MAP.getProjection(), "SDSS", G_SATELLITE_MAP);
+}
+if (rdls) {
+	var rdlsUsnob = new GMapType([rdlsTile, usnobTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
+	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
 }
 
 if (gothp) {
@@ -159,6 +178,10 @@ if (gothp) {
 if (sdss) {
 	map.addMapType(sdssAlone);
 	map.addMapType(sdssField);
+}
+if (rdls) {
+	map.addMapType(rdlsAlone);
+	map.addMapType(rdlsUsnob);
 }
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
