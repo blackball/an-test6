@@ -105,23 +105,29 @@ int main(int argc, char** args) {
 		usnob_entry* star;
 		// grab the star...
 		star = usnob_fits_read_entry(usnob);
-		// find its xyz position
-		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
-		// project it around the center
-		star_coords(xyz, center, &px, &py);
-		printf("%g, %g,", px, py);
+
+		// only output the stars flagged as diffraction spikes
+		// NOTE: to output all stars, set diffraction_only to false 
+		bool diffraction_only = 1;
+		if (diffraction_only & star->diffraction_spike){
+			// find its xyz position
+			radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
+			// project it around the center
+			star_coords(xyz, center, &px, &py);
+			printf("%g, %g,", px, py);
 
 
-		for (j=0; j<5; j++){
-		  printf("%g", star->obs[j].mag);
-		  fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
-		  if(j<4){
-		    printf(", ");
-		  }
+			for (j=0; j<5; j++){
+				printf("%g", star->obs[j].mag);
+		  		fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
+		  		if(j<4){
+		    		printf(", ");
+		  		}
+			}
+
+			printf(";\n");
+			fprintf(stderr, "\n");
 		}
-
-		printf(";\n");
-                fprintf(stderr, "\n");
 
 	}
 	printf("];\n");
