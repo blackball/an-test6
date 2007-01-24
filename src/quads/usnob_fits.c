@@ -158,10 +158,15 @@ int usnob_fits_write_entry(usnob_fits* usnob, usnob_entry* entry) {
 	if (!usnob_fitstruct_inited)
 		init_usnob_fitstruct();
 
-	flags =
-		(entry->diffraction_spike ? (1 << 7) : 0) |
-		(entry->motion_catalog    ? (1 << 6) : 0) |
-		(entry->ys4               ? (1 << 5) : 0);
+	// These flags are only valid for non-Tycho stars;
+	// Tycho stars have ndetections = 0.
+	if (entry->ndetections)
+		flags =
+			(entry->diffraction_spike ? (1 << 7) : 0) |
+			(entry->motion_catalog    ? (1 << 6) : 0) |
+			(entry->ys4               ? (1 << 5) : 0);
+	else
+		flags = 0;
 
 	for (c=0; c<USNOB_FITS_COLUMNS; c++) {
 		fitstruct* fs = usnob_fitstruct + c;
