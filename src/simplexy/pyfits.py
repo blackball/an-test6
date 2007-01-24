@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# $Id: NP_pyfits.py 227 2006-08-23 17:11:49Z chanley $
+# $Id$
 
 """
 A module for reading and writing FITS files and manipulating their contents.
@@ -41,10 +41,10 @@ import urllib
 import tempfile
 import gzip
 import zipfile
-import numpy.core as np
-from numpy.core import char as chararray
-from numpy.core import rec
-from numpy.core import memmap as Memmap
+import numpy as np
+from numpy import char as chararray
+import rec
+from numpy import memmap as Memmap
 from string import maketrans
 import types
 
@@ -995,9 +995,12 @@ class Header:
         elif (force == 0) and (newkey in self.ascard._keylist):
             raise ValueError, 'Intended keyword %s already exists in header.' % newkey
         _index = self.ascard.index_of(oldkey)
-        self.ascard[_index].__dict__['key']=newkey
-        self.ascard[_index].ascardimage()
-        self.ascard._keylist[_index] = newkey
+        _comment = self.ascard[_index].comment
+        _value = self.ascard[_index].value
+        self.ascard[_index] = Card(newkey, _value, _comment)
+#        self.ascard[_index].__dict__['key']=newkey
+#        self.ascard[_index].ascardimage()
+#        self.ascard._keylist[_index] = newkey
 
     def get(self, key, default=None):
         """Get a keyword value from the CardList.
@@ -1895,7 +1898,7 @@ class Section:
         return raw_data
 
 
-class _ImageBaseHDU(_ValidHDU):
+class _py_ImageBaseHDU(_ValidHDU):
     """FITS image HDU base class."""
 
     """Attributes:
@@ -2111,11 +2114,11 @@ class _ImageBaseHDU(_ValidHDU):
                 # the shape will be in the order of NAXIS's which is the
                 # reverse of the numarray shape
                 if isinstance(self, GroupsHDU):
-                    _shape = list(self.data.data.getshape())[1:]
-                    _format = `self.data._parent.field(0).type()`
+                    _shape = list(self.data.data.shape)[1:]
+                    _format = `self.data._parent.field(0).dtype.name`
                 else:
-                    _shape = list(self.data.getshape())
-                    _format = `self.data.type()`
+                    _shape = list(self.data.shape)
+                    _format = `self.data.dtype.name`
                 _shape.reverse()
                 _shape = tuple(_shape)
                 _format = _format[_format.rfind('.')+1:]
@@ -2212,6 +2215,69 @@ class _ImageBaseHDU(_ValidHDU):
         if self.data._type != _type:
             self.data = np.array(np.around(self.data), dtype=_type) #0.7.7.1
 
+class _st_ImageBaseHDU(_py_ImageBaseHDU):
+    """A class that extends the _py_ImageBaseHDU class to extend its behavior
+       to implement STScI specific extensions to Pyfits.
+    """
+
+    def __getattr__(self, attr):
+        """Extend pyfits._ImageBaseHDU.__getattr__ to support STScI specific
+           extensions to pyfits.  Currently, these extensions include Constant
+           Value Data Arrays.
+        """
+
+        if (attr == 'data' and self.header.has_key('PIXVALUE') and
+           self.header['NAXIS'] > 0):
+            self.__dict__[attr] = None
+            _bitpix = self.header['BITPIX']
+            if isinstance(self, GroupsHDU):
+                dims = self.size()*8/abs(_bitpix)
+            else:
+                dims = self._dimShape()
+
+            code = _ImageBaseHDU.NumCode[_bitpix]
+            pixVal = self.header['PIXVALUE']
+
+            if code in ['uint8','int16','int32','int64']:
+               pixVal = long(pixVal)
+
+            raw_data = np.zeros(shape=dims,dtype=code) + pixVal
+            raw_data = raw_data.byteswap()
+            raw_data.dtype = raw_data.dtype.newbyteorder('>')
+
+            if (self._bzero != 0 or self._bscale != 1):
+                if _bitpix > 0:  # scale integers to Float32
+                    self.data = np.array(raw_data, dtype=np.float32)
+                else:  # floating point cases
+                    self.data = raw_data
+
+                if self._bscale != 1:
+                    np.multiply(self.data, self._bscale, self.data)
+                if self._bzero != 0:
+                    self.data += self._bzero
+
+                # delete the keywords BSCALE and BZERO after scaling
+                del self.header['BSCALE']
+                del self.header['BZERO']
+                self.header['BITPIX'] = _ImageBaseHDU.ImgCode[self.data.dtype.name]
+            else:
+                self.data = raw_data
+
+            rtn_value = self.data
+        else:
+#
+#           This is not a STScI extenstion so call the base class
+#           method.
+#
+            rtn_value = _py_ImageBaseHDU.__getattr__(self, attr)
+
+        return rtn_value
+
+#
+# Define _ImageBaseHDU class to use the version that handles STScI
+# extensions.
+#
+_ImageBaseHDU = _st_ImageBaseHDU
 
 class PrimaryHDU(_ImageBaseHDU):
     """FITS primary HDU class."""
@@ -2605,27 +2671,34 @@ def _makep(input, desp_output, dtype):
 
 class _VLF(np.ndarray):
     """variable length field object."""
-    def __init__(self, input):
+
+    def __new__(subtype, input):
         """
             input: a sequence of variable-sized elements.
         """
-        objects.ObjectArray.__init__(self, input)
+        self = np.ndarray.__new__(subtype, shape=(len(input)), dtype=np.object)
         self._max = 0
+        return self
 
+    def __array_finalize__(self,obj):
+        if obj is None:
+            return 
+        self._max = obj._max
+        
     def __setitem__(self, key, value):
         """To make sure the new item has consistent data type to avoid
            misalignment.
         """
 
-        if isinstance(value, np.ndarray) and value.type() == self._dtype:
+        if isinstance(value, np.ndarray) and value.dtype == self.dtype:
             pass
-        elif isinstance(value, chararray.CharArray) and value.itemsize() == 1:
+        elif isinstance(value, chararray.chararray) and value.itemsize == 1:
             pass
         elif self._dtype == 'a':
             value = chararray.array(value, itemsize=1)
         else:
             value = np.array(value, type=self._dtype)
-        objects.ObjectArray.__setitem__(self, key, value)
+        np.ndarray.__setitem__(self, key, value)
         self._max = max(self._max, len(value))
 
 
@@ -3102,20 +3175,16 @@ def new_table (input, header=None, nrows=0, fill=0, tbtype='BinTableHDU'):
         if n > 0:
             if isinstance(tmp._recformats[i], _FormatX):
                 if tmp._arrays[i][:n].shape[-1] == tmp._recformats[i]._nx:
-#                    _wrapx(tmp._arrays[i][:n], hdu.data._parent.field(i)[:n], tmp._recformats[i]._nx)
                     _wrapx(tmp._arrays[i][:n], rec.recarray.field(hdu.data,i)[:n], tmp._recformats[i]._nx)
                 else: # from a table parent data, just pass it
-#                    hdu.data._parent.field(i)[:n] = tmp._arrays[i][:n]
                     rec.recarray.field(hdu.data,i)[:n] = tmp._arrays[i][:n]
             elif isinstance(tmp._recformats[i], _FormatP):
-#                hdu.data._convert[i] = _makep(tmp._arrays[i][:n], hdu.data._parent.field(i)[:n], tmp._recformats[i]._dtype)
                 hdu.data._convert[i] = _makep(tmp._arrays[i][:n], rec.recarray.field(hdu.data,i)[:n], tmp._recformats[i]._dtype)
             else:
                 if tbtype == 'TableHDU':
 
                     # string no need to convert,
                     if isinstance(tmp._arrays[i], chararray.CharArray):
-#                        hdu.data._parent.field(i)[:n] = tmp._arrays[i][:n]
                         rec.recarray.field(hdu.data,i)[:n] = tmp._arrays[i][:n]
                     else:
                         hdu.data._convert[i] = np.zeros(nrows, type=tmp._arrays[i].type())
@@ -3129,19 +3198,15 @@ def new_table (input, header=None, nrows=0, fill=0, tbtype='BinTableHDU'):
                             _arr += bzero
                         hdu.data._convert[i][:n] = _arr
                 else:
-#                    hdu.data._parent.field(i)[:n] = tmp._arrays[i][:n]
                     rec.recarray.field(hdu.data,i)[:n] = tmp._arrays[i][:n]
 
         if n < nrows:
             if tbtype == 'BinTableHDU':
-#                if isinstance(hdu.data._parent.field(i), np.ndarray):
                 if isinstance(rec.recarray.field(hdu.data,i), np.ndarray):
 
                     # make the scaled data = 0, not the stored data
-#                    hdu.data._parent.field(i)[n:] = -bzero/bscale
                     rec.recarray.field(hdu.data,i)[n:] = -bzero/bscale
                 else:
-#                    hdu.data._parent.field(i)[n:] = ''
                     rec.recarray.field(hdu.data,i)[n:] = ''
 
     hdu.update()
@@ -3195,21 +3260,14 @@ class FITS_rec(rec.recarray):
     def __new__(subtype, input):
         """Construct a FITS record array from a recarray."""
         # input should be a record array
-#        self.__setstate__(input.__getstate__())
-
         if input.dtype.subdtype is None:
             self = rec.recarray.__new__(subtype, input.shape, input.dtype, 
-                                        buf=input.data)
+                                        buf=input.data,heapoffset=input._heapoffset,file=input._file)
         else:
             self = rec.recarray.__new__(subtype, input.shape, input.dtype, 
-                                        buf=input.data, strides=input.strides)
+                                        buf=input.data, strides=input.strides,heapoffset=input._heapoffset,file=input._file)
 
-        # _parent is the original (storage) array,
-        # _convert is the scaled (physical) array.
-#        self._parent = input
         self._nfields = len(self.dtype.names)
-#        self._convert = [None]*self._nfields
-#        print "self.size: ",self.size
         self._convert = [None]*len(self.dtype.names)
         self._coldefs = None
         self._gap = 0
@@ -3220,7 +3278,6 @@ class FITS_rec(rec.recarray):
     def __array_finalize__(self,obj):
         if obj is None:
             return 
-#        self._parent = obj._parent
         self._convert = obj._convert
         self._coldefs = obj._coldefs
         self._nfields = obj._nfields
@@ -3300,9 +3357,7 @@ class FITS_rec(rec.recarray):
             # for X format
             if isinstance(self._coldefs._recformats[indx], _FormatX):
                 _nx = self._coldefs._recformats[indx]._nx
-#                dummy = np.zeros(self._parent.shape+(_nx,), dtype=np.Bool)
                 dummy = np.zeros(self.shape+(_nx,), dtype=np.bool_)
-#                _unwrapx(self._parent.field(indx), dummy, _nx)
                 _unwrapx(rec.recarray.field(self,indx), dummy, _nx)
                 self._convert[indx] = dummy
                 return self._convert[indx]
@@ -3311,32 +3366,25 @@ class FITS_rec(rec.recarray):
 
             # for P format
             if isinstance(self._coldefs._recformats[indx], _FormatP):
-#                dummy = _VLF([None]*len(self._parent))
                 dummy = _VLF([None]*len(self))
                 dummy._dtype = self._coldefs._recformats[indx]._dtype
-#                for i in range(len(self._parent)):
                 for i in range(len(self)):
-#                    _offset = self._parent.field(indx)[i,1] + self._heapoffset
                     _offset = rec.recarray.field(self,indx)[i,1] + self._heapoffset
                     self._file.seek(_offset)
                     if self._coldefs._recformats[indx]._dtype is 'a':
-#                        dummy[i] = chararray.array(self._file, itemsize=self._parent.field(indx)[i,0], shape=1)
                         dummy[i] = chararray.array(self._file, itemsize=rec.recarray.field(self,indx)[i,0], shape=1)
                     else:
-#                        dummy[i] = np.array(self._file, type=self._coldefs._recformats[indx]._dtype, shape=self._parent.field(indx)[i,0])
-                        dummy[i] = np.array(self._file, type=self._coldefs._recformats[indx]._dtype, shape=rec.recarray.field(self,indx)[i,0])
-#                        dummy[i]._byteorder = 'big'
+                        dummy[i] = np.array(self._file, dtype=self._coldefs._recformats[indx]._dtype)
+                        dummy[i] = dummy[i].reshape(rec.recarray.field(self,indx)[i,0])
                         dummy[i].dtype = dummy[i].dtype.newbyteorder(">")
 
                 # scale by TSCAL and TZERO
                 if _scale or _zero:
-#                    for i in range(len(self._parent)):
                     for i in range(len(self)):
                         dummy[i][:] = dummy[i]*bscale+bzero
 
                 # Boolean (logical) column
                 if self._coldefs._recformats[indx]._dtype is _booltype:
-#                    for i in range(len(self._parent)):
                     for i in range(len(self)):
                         dummy[i] = np.equal(dummy[i], ord('T'))
 
@@ -3344,7 +3392,6 @@ class FITS_rec(rec.recarray):
                 return self._convert[indx]
 
             if _str:
-#                return self._parent.field(indx)
                 return rec.recarray.field(self,indx)
 
             # ASCII table, convert strings to numbers
@@ -3354,18 +3401,13 @@ class FITS_rec(rec.recarray):
 
                 # if the string = TNULL, return ASCIITNULL
                 nullval = self._coldefs.nulls[indx].strip()
-#                dummy = np.zeros(len(self._parent), dtype=_type)
                 dummy = np.zeros(len(self), dtype=_type)
                 dummy[:] = ASCIITNULL
                 self._convert[indx] = dummy
-#                for i in range(len(self._parent)):
                 for i in range(len(self)):
-#                    if self._parent.field(indx)[i].strip() != nullval:
                     if rec.recarray.field(self,indx)[i].strip() != nullval:
-#                        dummy[i] = float(self._parent.field(indx)[i].replace('D', 'E'))
                         dummy[i] = float(rec.recarray.field(self,indx)[i].replace('D', 'E'))
             else:
-#                dummy = self._parent.field(indx)
                 dummy = rec.recarray.field(self,indx)
 
             # further conversion for both ASCII and binary tables
@@ -3393,7 +3435,6 @@ class FITS_rec(rec.recarray):
             _loc = [1]
             _width = []
             for i in range(len(self.dtype.names)):
-#                _loc.append(_loc[-1]+self._parent.field(i).itemsize())
                 _loc.append(_loc[-1]+rec.recarray.field(self,i).itemsize())
                 _width.append(_convert_ASCII_format(self._coldefs._Formats[i])[1])
 
@@ -3401,7 +3442,6 @@ class FITS_rec(rec.recarray):
         for indx in range(len(self.dtype.names)):
             if (self._convert[indx] is not None):
                 if isinstance(self._coldefs._recformats[indx], _FormatX):
-#                    _wrapx(self._convert[indx], self._parent.field(indx), self._coldefs._recformats[indx]._nx)
                     _wrapx(self._convert[indx], rec.recarray.field(self,indx), self._coldefs._recformats[indx]._nx)
                     continue
 
@@ -3410,7 +3450,6 @@ class FITS_rec(rec.recarray):
                 # add the location offset of the heap area for each
                 # variable length column
                 if isinstance(self._coldefs._recformats[indx], _FormatP):
-#                    desc = self._parent.field(indx)
                     desc = rec.recarray.field(self,indx)
                     desc[:] = 0 # reset
                     _npts = map(len, self._convert[indx])
@@ -3456,31 +3495,21 @@ class FITS_rec(rec.recarray):
                             if len(x) > (_loc[indx+1]-_loc[indx]):
                                 raise ValueError, "number `%s` does not fit into the output's itemsize of %s" % (x, _width[indx])
                             else:
-#                                self._parent.field(indx)[i] = x
                                 rec.recarray.field(self,indx)[i] = x
                         if 'D' in _format:
-#                            self._parent.field(indx).sub('E', 'D')
                             rec.recarray.field(self,indx).sub('E', 'D')
 
 
                     # binary table
                     else:
-#                        if isinstance(self._parent.field(indx)[0], np.integer):
                         if isinstance(rec.recarray.field(self,indx)[0], np.integer):
                             dummy = np.around(dummy)
-                        #print "dumpy.dtype: ",dummy.dtype
-                        #print "self.field(indx)[:].dtype: ",self._parent.field(indx)[:].dtype
-#                        self._parent.field(indx)[:] = dummy.astype(self._parent.field(indx).dtype)
                         rec.recarray.field(self,indx)[:] = dummy.astype(rec.recarray.field(self,indx).dtype)
 
                     del dummy
 
                 # ASCII table does not have Boolean type
                 elif _bool:
-#                    self.field(indx)[:] = np.choose(self._convert[indx], (ord('F'),ord('T')))
-#                    self._parent.field(indx)[:] = np.choose(self._convert[indx], 
-#                                                            (np.array([ord('F')],dtype=np.int8)[0],
-#                                                            np.array([ord('T')],dtype=np.int8)[0]))
                     rec.recarray.field(self,indx)[:] = np.choose(self._convert[indx], 
                                                     (np.array([ord('F')],dtype=np.int8)[0],
                                                     np.array([ord('T')],dtype=np.int8)[0]))
@@ -3514,7 +3543,7 @@ class GroupData(FITS_rec):
            parbzeros: list of bzeros for the parameters
         """
 
-        if isinstance(input, np.ndarray):
+        if not isinstance(input, FITS_rec):
             _formats = ''
             _cols = []
             if pardata is None:
@@ -3528,7 +3557,7 @@ class GroupData(FITS_rec):
                 parbzeros = [None]*npars
 
             if bitpix is None:
-                bitpix = _ImageBaseHDU.ImgCode[input.type()]
+                bitpix = _ImageBaseHDU.ImgCode[input.dtype.name]
             fits_fmt = GroupsHDU._dict[bitpix] # -32 -> 'E'
             _fmt = _fits2rec[fits_fmt] # 'E' -> 'f4'
             _formats = (_fmt+',') * npars
@@ -3542,10 +3571,10 @@ class GroupData(FITS_rec):
             subtype.parnames = [i.lower() for i in parnames]
             
             # need to inherit from FITS rec.  What is being done here?
-            tmp = FITS_rec(rec.array(None, formats=_formats, shape=gcount, names= self._coldefs.names))
-            self.__setstate__(tmp.__getstate__())
+ #           tmp = FITS_rec(rec.array(None, formats=_formats, shape=gcount, names= self._coldefs.names))
+ #           self.__setstate__(tmp.__getstate__())
             
-            
+            self = FITS_rec(rec.array(None, formats=_formats, names=self._coldefs.names, shape=gcount))
             
             for i in range(npars):
                 (_scale, _zero)  = self._get_scale_factors(i)[3:5]
@@ -3561,7 +3590,20 @@ class GroupData(FITS_rec):
 #                self._parent.field(npars)[:] = input
                 rec.recarray.field(self,npars)[:] = input
         else:
-            self.__setstate__(input.__getstate__())
+#            self.__setstate__(input.__getstate__())
+             self = FITS_rec.__new__(subtype,input)
+        return self
+
+    def __str__(self):
+
+        # Byteswap temporarily the byte order for presentation (if needed)
+        outlist = []
+        for i in self:
+            outlist.append(FITS_record.__str__(i))
+
+        # When finished, restore the byte order (if needed)
+        return "RecArray[ \n" + ",\n".join(outlist) + "\n]"
+
 
     def __getattr__(self, attr):
         if attr == 'data':
@@ -3688,8 +3730,8 @@ class _TableBaseHDU(_ExtensionHDU):
 
         if (data is not DELAYED):
             if isinstance(data, rec.recarray):
-                self.header['NAXIS1'] = data._itemsize
-                self.header['NAXIS2'] = data._shape[0]
+                self.header['NAXIS1'] = data.itemsize
+                self.header['NAXIS2'] = data.shape[0]
                 self.header['TFIELDS'] = data._nfields
                 self.data = data
                 self.columns = data._coldefs
@@ -3903,14 +3945,14 @@ urllib._urlopener = ErrorURLopener() # Assign the locally subclassed opener
 urllib._urlopener.tempcache = {} # Initialize tempcache with an empty
                                  # dictionary to enable file cacheing
 
-class _File:
+class _py_File:
     """A file I/O class"""
 
     def __init__(self, name, mode='copyonwrite', memmap=0):
         if mode not in _python_mode.keys():
             raise "Mode '%s' not recognized" % mode
 
-        if mode != 'append':
+        if mode != 'append' and not os.path.exists(name):
            self.name, fileheader = urllib.urlretrieve(name)
         else:
            self.name = name
@@ -4090,11 +4132,11 @@ class _File:
                             for i in coldata:
                                 if not isinstance(i, chararray.chararray):
                                     if hdu.data.field(i).itemsize > 1:
-                                        if hdu.data.field(i).dtype.byteorder != '>':
+                                        if hdu.data.field(i).dtype.str[0] != '>':
                                             hdu.data.field(i)[:] = hdu.data.field(i).byteswap()
                         else:
                             if coldata.itemsize > 1:
-                                if hdu.data.field(i).dtype.byteorder != '>':
+                                if hdu.data.field(i).dtype.str[0] != '>':
                                     hdu.data.field(i)[:] = hdu.data.field(i).byteswap()
 
                 # In case the FITS_rec was created in a LittleEndian machine
@@ -4141,6 +4183,168 @@ class _File:
         """Close the 'physical' FITS file."""
 
         self.__file.close()
+
+class _st_File(_py_File):
+    """A class that extends the _py_File class to extend its behavior to
+       implement STScI specific extensions to Pyfits.
+    """
+
+    def _readHDU(self):
+        """Extend _py_File._readHDU to support STScI specific extensions to
+           pyfits.  Currently, these extensions include Constant Value Data
+           Arrays.
+        """
+#
+#       Call base class _readHDU to perform generic reading of header
+#
+        hdu = _py_File._readHDU(self)
+#
+#       Convert header for HDU's with constant value data arrays
+#
+        pixvalue_RE = re.compile('PIXVALUE=')
+        mo = pixvalue_RE.search(hdu._raw)
+
+        if mo:
+#
+#           Add NAXISn keywords for each NPIXn keyword in the raw header
+#           and remove the NPIXx keyword
+#
+            naxis_RE = re.compile('NAXIS   = ')
+            mo = naxis_RE.search(hdu._raw)
+            naxis_sidx = mo.start()
+
+            npixn_RE = re.compile(r'NPIX(\d+)\s*=\s*(\d+)')
+            iterator = npixn_RE.finditer(hdu._raw)
+            numAxis = 0
+
+            for mo in iterator:
+                numAxis = numAxis + 1
+                sidx = mo.start()
+                nAxisStr = 'NAXIS' + str(numAxis) + \
+                           (3-len(str(numAxis)))*' ' + \
+                           hdu._raw[sidx+8:sidx+80]
+                hdu._raw = hdu._raw[:naxis_sidx+(80*numAxis)] + nAxisStr + \
+                           (80-len(nAxisStr))*' ' + \
+                           hdu._raw[naxis_sidx+(80*numAxis):sidx] + \
+                           hdu._raw[sidx+80:]
+#
+#           Replace NAXIS=0 keywords with NAZIS=n keywords where n is the
+#           number of NPIXn keywords
+#
+            numAxisS = '%d'%numAxis
+            lstr = len(numAxisS)
+
+            naxis_RE = re.compile('NAXIS   = ')
+            mo = naxis_RE.search(hdu._raw)
+            sidx = mo.start()
+
+            if lstr == 1:
+                naxisVal_RE = re.compile('0')
+            elif lstr == 2:
+                naxisVal_RE = re.compile('[ 0]|[0 ]')
+            elif lstr == 3:
+                naxisVal_RE = re.compile('[  0]|[ 0 ]|[0  ]')
+            else:
+                raise \
+                   "More than 999 NPIXn keywords in constant data value header"
+
+            tmpRaw, nSub = naxisVal_RE.subn(numAxisS, hdu._raw[sidx+10:],1)
+
+            if nSub != 1:
+                raise "Unable to substitute NAXISn for NPIXn in the header"
+
+            hdu._raw = hdu._raw[:sidx+10] + tmpRaw
+        return hdu
+
+    def writeHDUheader(self, hdu):
+        """Extend _st_File.writeHDUheader to support STScI specific
+           extensions to pyfits.  Currently, these extensions include Constant
+           Value Data Arrays.
+        """
+
+        if (hdu.header.has_key('PIXVALUE') and hdu.header['NAXIS'] > 0):
+#
+#           This is a Constant Value Data Array.  Verify that the data actually
+#           matches the PIXVALUE.
+#
+            pixVal = hdu.header['PIXVALUE']
+            arrayVal = np.reshape(hdu.data,(hdu.data.size,))[0]
+
+            if hdu.header['BITPIX'] > 0:
+               pixVal = long(pixVal)
+
+            if np.all(hdu.data == arrayVal):
+                st_ext = True
+                if arrayVal != pixVal:
+                    hdu.header['PIXVALUE'] = arrayVal
+
+                newHeader = hdu.header.copy()
+                naxis = hdu.header['NAXIS']
+                newHeader['NAXIS'] = 0
+
+                for n in range(naxis,0,-1):
+                    axisval = hdu.header['NAXIS'+str(n)]
+                    newHeader.update('NPIX'+str(n), axisval,
+                                     'length of constant array axis '+str(n),
+                                     after='PIXVALUE')
+                    del newHeader['NAXIS'+str(n)]
+                blocks = repr(newHeader.ascard)
+                blocks = blocks + _pad('END')
+                blocks = blocks + _padLength(len(blocks))*' '
+
+                if len(blocks)%_blockLen != 0:
+                    raise IOError
+                self._py_File__file.flush()
+                loc = self._py_File__file.tell()
+                self._py_File__file.write(blocks)
+
+                # flush, to make sure the content is written
+                self._py_File__file.flush()
+            else:
+#
+#               All elements in array are not the same value.
+#               so this is no longer a constant data value array
+#
+                del hdu.header['PIXVALUE']
+                st_ext = False
+        else:
+            st_ext = False
+
+        if not st_ext:
+#
+#          This is not a STScI extension so call the base class method
+#          to write the header.
+#
+           loc = _py_File.writeHDUheader(self,hdu)
+
+        return loc
+
+    def writeHDUdata(self, hdu):
+        """Extend pyfits._File.writeHDUdata to support STScI specific
+           extensions to pyfits.  Currently, these extensions include Constant
+           Value Data Arrays.
+        """
+
+        if (hdu.header.has_key('PIXVALUE')):
+#
+#           This is a Constant Value Data Array.
+#
+            self._py_File__file.flush()
+            loc = self._py_File__file.tell()
+            _size = 0
+        else:
+#
+#          This is not a STScI extension so call the base class method
+#          to write the data.
+#
+            loc, _size =  _py_File.writeHDUdata(self,hdu)
+
+        # return both the location and the size of the data area
+        return loc, _size+_padLength(_size)
+#
+# Define _File class to be the one that handles STScI extensions.
+#
+_File = _st_File
 
 class HDUList(list, _Verify):
     """HDU list class.  This is the top-level FITS object.  When a FITS
@@ -4478,7 +4682,7 @@ class HDUList(list, _Verify):
 
 
         if output_verify == 'warn':
-            output_verify == 'exception'
+            output_verify = 'exception'
         self.verify(option=output_verify)
 
         # check if the output file already exists

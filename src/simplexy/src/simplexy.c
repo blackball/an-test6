@@ -43,6 +43,11 @@ int simplexy(float *image,
 	float minpeak;
 	int i, j;
 
+    printf("simplexy: nx=%d, ny=%d\n",nx,ny);
+    printf("simplexy: dpsf=%f, plim=%f, dlim=%f\n",dpsf,plim,dlim);
+    printf("simplexy: saddle=%f\n",saddle);
+    printf("simplexy: maxper=%d, maxnpeaks=%d\n",maxper, maxnpeaks);
+
 	/* determine sigma */
 	dsigma(image, nx, ny, 5, sigma);
 	invvar = (float *) malloc(nx * ny * sizeof(float));

@@ -11,7 +11,7 @@ fixaxis: $(FIXAXIS)
 	$(CC) -o fixaxis $(FIXAXIS) -L../cfitsio/ -lcfitsio -I../cfitsio -lm
 
 simplexy_shared:
-	$(CC) -shared -o simplexy.so $(SIMPLEXY_SHARED)
+	$(CC) -shared -o _simplexy.so $(SIMPLEXY_SHARED)
 
 $(SIMPLEXY) : src/dimage.h
 

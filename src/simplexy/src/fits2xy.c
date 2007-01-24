@@ -174,9 +174,11 @@ int main(int argc, char *argv[])
 		assert(!status);
 		fits_modify_comment(ofptr, "TTYPE3", "Flux of source", &status);
 		assert(!status);
-		fits_write_key(ofptr, TINT, "SRCEXT", &kk, "Extension number in src image", &status);
+		fits_write_key(ofptr, TINT, "SRCEXT", &kk,
+				"Extension number in src image", &status);
 		assert(!status);
-		fits_write_key(ofptr, TFLOAT, "ESTSIGMA", &sigma, "Estimated source image variance", &status);
+		fits_write_key(ofptr, TFLOAT, "ESTSIGMA", &sigma,
+				"Estimated source image variance", &status);
 		fits_write_comment(ofptr,
 			"The X and Y points are specified assuming 1,1 is "
 			"the center of the leftmost bottom pixel of the "

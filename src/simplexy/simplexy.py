@@ -42,15 +42,17 @@ import ctypes
 import numpy
 # Use the wonderful ctypeslib
 from ctypes import byref, c_float, c_int, POINTER
-from numpy.ctypeslib import ndpointer
+from numpy.ctypeslib import ndpointer, ndarray
 
+# Apparently these are broken rigth now, not sure what the deal is.
 OutArrayPtr = ndpointer(dtype=numpy.float32, ndim=1, flags='CONTIGUOUS')
 InArrayPtr = ndpointer(dtype=numpy.float32, ndim=2, flags='CONTIGUOUS')
 
-simplexy_dll = ctypes.CDLL('./simplexy_module.so')
+simplexy_dll = ctypes.CDLL('./_simplexy.so')
 simplexy_fn = simplexy_dll.simplexy
 simplexy_fn.restype = ctypes.c_int
-simplexy_fn.argtypes = [InArrayPtr,           # image
+#simplexy_fn.argtypes = [InArrayPtr,           # image
+simplexy_fn.argtypes = [POINTER(c_float),
                         c_int,         # nx
                         c_int,         # ny
                         c_float,       # dpsf
@@ -59,34 +61,44 @@ simplexy_fn.argtypes = [InArrayPtr,           # image
                         c_float,       # saddle
                         c_int,         # max peaks per object
                         c_int,         # max peaks total
-                        POINTER(ctypes.c_float),     # sigma  OUT
-                        OutArrayPtr,          # x      OUT
-                        OutArrayPtr,          # y      OUT
-                        OutArrayPtr,          # flux   OUT
+                        POINTER(c_float),     # sigma  OUT
+                        POINTER(c_float),
+                        POINTER(c_float),
+                        POINTER(c_float),
+#                        OutArrayPtr,          # x      OUT
+#                        OutArrayPtr,          # y      OUT
+#                        OutArrayPtr,          # flux   OUT
                         POINTER(ctypes.c_int),       # npeaks OUT
                        ]
 
 def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
              maxnpeaks=100000):
 
-    x = numpy.zeros(maxpeaks, dtype=numpy.float32)
-    y = numpy.zeros(maxpeaks, dtype=numpy.float32)
-    sigma = ctypes.c_float()
-    flux = numpy.zeros(maxpeaks, dtype=numpy.float32)
-    npeaks = ctypes.c_int()
+    x = numpy.zeros(maxnpeaks, dtype=numpy.float32)
+    y = numpy.zeros(maxnpeaks, dtype=numpy.float32)
+    sigma = ctypes.c_float(0.0)
+    flux = numpy.zeros(maxnpeaks, dtype=numpy.float32)
+    npeaks = ctypes.c_int(0)
 
-    success = simplexy_fn(byref(image.astype(numpy.float64)),
+    print repr(image)
+    imf32 = image.astype(numpy.float32)
+    success = simplexy_fn(
+                          imf32.ctypes.data_as(POINTER(c_float)),
                           image.shape[1],
                           image.shape[0],
-                          dpsf, plim, dlim, saddle, maxper, maxpeaks,
+                          dpsf, plim, dlim, saddle, maxper, maxnpeaks,
                           byref(sigma),
-                          byref(x),
-                          byref(y),
-                          byref(flux),
+                          x.ctypes.data_as(POINTER(c_float)),
+                          y.ctypes.data_as(POINTER(c_float)),
+                          flux.ctypes.data_as(POINTER(c_float)),
                           byref(npeaks))
 
-    assert success # bail on no success for now
+    assert success # bail on failure for now
 
-    return x, y, float(flux), float(sigma)
+    print npeaks, sigma
+    x = resize(x, (npeaks,))
+    y = resize(y, (npeaks,))
+    flux = resize(flux, (npeaks,))
+    return x, y, flux, sigma.value
 
 simplexy.__doc__ = __doc__
