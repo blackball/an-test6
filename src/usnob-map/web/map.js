@@ -151,7 +151,7 @@ var rdlsTransTile = new GTileLayer(new GCopyrightCollection(""),1,17);
 rdlsTransTile.myLayers='rdls';
 rdlsTransTile.myFormat='image/png';
 rdlsTransTile.myBaseURL=RDLS_URL + "&trans=1";
-rdlsTransile.getTileUrl=CustomGetTileUrl;
+rdlsTransTile.getTileUrl=CustomGetTileUrl;
 
 /*
   http://monte.ai.toronto.edu:8080/usnob/map.html?SDSS_FILE=1&SDSS_FIELD=6&SDSS_QUAD=0,9,13,6&ra=241.55&dec=26.93&zoom=11&HP=2&INDEX_QUAD=4763876,4763639,4763878,4732341&over=no
