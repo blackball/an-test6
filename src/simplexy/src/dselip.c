@@ -29,7 +29,7 @@ float dselip(unsigned long k, unsigned long n, float *arr)
 	return past_data[k];
 }
 
-// OBSOLETED. above sort version is faster because of float magic
+// OBSOLETED. above sort version is faster because of radix magic
 // This is adapted from Numerical Recipes, and is an implementation of
 // selection, i.e. find the kth largest element among n elements of arr.
 // For a better description, see the original Numeric Recipes version

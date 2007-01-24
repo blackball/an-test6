@@ -80,7 +80,7 @@ def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
     flux = numpy.zeros(maxnpeaks, dtype=numpy.float32)
     npeaks = ctypes.c_int(0)
 
-    print repr(image)
+#    print repr(image)
     imf32 = image.astype(numpy.float32)
     success = simplexy_fn(
                           imf32.ctypes.data_as(POINTER(c_float)),
@@ -95,10 +95,10 @@ def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
 
     assert success # bail on failure for now
 
-    print npeaks, sigma
-    x = resize(x, (npeaks,))
-    y = resize(y, (npeaks,))
-    flux = resize(flux, (npeaks,))
+#    print npeaks, sigma
+    x = numpy.resize(x, (npeaks.value,))
+    y = numpy.resize(y, (npeaks.value,))
+    flux = numpy.resize(flux, (npeaks.value,))
     return x, y, flux, sigma.value
 
 simplexy.__doc__ = __doc__
