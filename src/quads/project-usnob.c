@@ -98,7 +98,7 @@ int main(int argc, char** args) {
 	}
 	printf("];\n");
 	*/
-	printf("stars=[\n");
+	printf("allstars=[\n");
 	for (i=0; i<N; i++) {
 		double xyz[3];
 		double px, py;
