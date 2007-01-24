@@ -154,7 +154,7 @@ int tycho2_fits_read_entries(tycho2_fits* tycho2, uint offset,
 					entries[i].hip_ccdm[3] = '\0';
 				}
 			}
-			free(rawdata);
+			qfits_free(rawdata);
 			continue;
 		}
 		assert(tycho2->table->col[tycho2->columns[c]].atom_size == tycho2_fitstruct[c].size);

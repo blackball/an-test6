@@ -145,7 +145,7 @@ int nomad_fits_read_entries(nomad_fits* nomad, uint offset,
 				entries[i].bright_artifact    = (flags2 >> 2) & 0x1;
 				entries[i].standard           = (flags2 >> 1) & 0x1;
 			}
-			free(rawdata);
+			qfits_free(rawdata);
 			continue;
 		}
 		assert(nomad->table->col[nomad->columns[c]].atom_size == nomad_fitstruct[c].size);
