@@ -109,7 +109,7 @@ int main(int argc, char** args) {
 		// only output the stars flagged as diffraction spikes
 		// NOTE: to output all stars, set diffraction_only to false 
 		bool diffraction_only = 1;
-		if (diffraction_only & star->diffraction_spike){
+		if (diffraction_only && star->diffraction_spike){
 			// find its xyz position
 			radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 			// project it around the center

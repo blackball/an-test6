@@ -233,8 +233,8 @@ int usnob_parse_entry(unsigned char* line, usnob_entry* usnob) {
 	usnob->epoch = 1950.0 + 0.1 * e;
 
 	// k: YS4.0 correlation flag: 0=no, 1=yes.
-	usnob->ys4 = k;
-
+	assert((k == 0) || (k == 1));
+	usnob->ys4 = (k == 1) ? 1 : 0;
 
 	for (obs=0; obs<5; obs++) {
 		uint G, S, F, m, C, r, R;

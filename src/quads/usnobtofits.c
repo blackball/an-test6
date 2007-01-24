@@ -204,6 +204,15 @@ int main(int argc, char** args) {
 				}
 			}
 
+			/* Debugging diffraction_spike errors.
+			   if (entry.diffraction_spike) {
+			   fprintf(stderr, "\nSpike: %i\n", entry.usnob_id);
+			   }
+			   if (entry.ys4 > 1) {
+			   fprintf(stderr, "\nYs4: %i (id %i)\n", entry.ys4, entry.usnob_id);
+			   }
+			*/
+
 			if (usnob_fits_write_entry(usnobs[hp], &entry)) {
 				fprintf(stderr, "Failed to write FITS entry.\n");
 				exit(-1);

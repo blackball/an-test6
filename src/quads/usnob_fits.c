@@ -159,9 +159,9 @@ int usnob_fits_write_entry(usnob_fits* usnob, usnob_entry* entry) {
 		init_usnob_fitstruct();
 
 	flags =
-		(entry->diffraction_spike << 7) |
-		(entry->motion_catalog    << 6) |
-		(entry->ys4               << 5);
+		(entry->diffraction_spike ? (1 << 7) : 0) |
+		(entry->motion_catalog    ? (1 << 6) : 0) |
+		(entry->ys4               ? (1 << 5) : 0);
 
 	for (c=0; c<USNOB_FITS_COLUMNS; c++) {
 		fitstruct* fs = usnob_fitstruct + c;
