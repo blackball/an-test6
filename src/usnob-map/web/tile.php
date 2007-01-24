@@ -180,7 +180,7 @@
 	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
-	if (($gotsdss || $gothp) && $transparent) {
+	if (($gotsdss || $gothp || $gotrdls) && $transparent) {
 		// NOTE, that space between "-transparent" and "=black" is supposed
 		// to be there!
 		$cmd = $cmd . " -transparent =black";
