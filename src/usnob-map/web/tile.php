@@ -164,7 +164,7 @@
 	} else if ($gotsdssfield) {
 		$cmd = sprintf("sdssfieldtile -s %d -S %d", $sdssfile, $sdssfield);
 	} else if ($gotrdls) {
-		$cmd = sprintf("rdlstile -f \"%s\"", escapeshellarg($rdls_filename));
+		$cmd = sprintf("rdlstile -f %s", escapeshellarg($rdls_filename));
 		if ($rdls_field > 0) {
 			$cmd = $cmd . sprintf(" -F %d", $rdls_field);
 		}
