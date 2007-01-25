@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include "fitsio.h"
 #include "dimage.h"
-#include "../ver.h"
+#include "ver.h"
 #include <assert.h>
 
 void printHelp(char* progname)

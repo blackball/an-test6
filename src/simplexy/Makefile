@@ -1,16 +1,41 @@
-CC=gcc
-CFLAGS=-g -Wall -O3 -I../cfitsio
-CPPFLAGS=-g -Wall -O3 
-SIMPLEXY= src/dallpeaks.o src/dcen3x3.o src/dfind.o src/dmedsmooth.o src/dobjects.o src/dpeaks.o src/dselip.o src/dsigma.o src/dsmooth.o src/fits2xy.o src/simplexy.o src/radix.o
-SIMPLEXY_SHARED= src/simplexy.o src/dsigma.o src/dmedsmooth.o src/dallpeaks.o src/dpeaks.o src/dobjects.o src/dselip.o src/dsmooth.o src/dcen3x3.o src/dfind.o src/radix.o
+BASEDIR := .
+COMMON := an-common
+
+.PHONY: all
+all:
+
+include $(COMMON)/makefile.common
+include $(COMMON)/makefile.cfitsio
+
+LDFLAGS := $(LDFLAGS_DEF)
+LDFLAGS += -lm
+
+CFLAGS := $(CFLAGS_DEF)
+CFLAGS += $(CFITS_INC)
+CFLAGS += -Iver
+
+CPPFLAGS := $(CFLAGS)
+
+SIMPLEXY= src/dallpeaks.o src/dcen3x3.o src/dfind.o \
+	src/dmedsmooth.o src/dobjects.o src/dpeaks.o src/dselip.o \
+	src/dsigma.o src/dsmooth.o src/fits2xy.o src/simplexy.o \
+	src/radix.o
+
+SIMPLEXY_SHARED= src/simplexy.o src/dsigma.o src/dmedsmooth.o \
+	src/dallpeaks.o src/dpeaks.o src/dobjects.o src/dselip.o \
+	src/dsmooth.o src/dcen3x3.o src/dfind.o src/radix.o
+
 FIXAXIS= src/fixaxis.o
-all: simplexy fixaxis simplexy_shared
 
-simplexy: $(SIMPLEXY)
-	$(CC) -o fits2xy $(SIMPLEXY) -L../cfitsio/ -lcfitsio -I../cfitsio -lm
+all: $(REMAKE_CFITSIO) simplexy fixaxis simplexy_shared
 
-fixaxis: $(FIXAXIS)
-	$(CC) -o fixaxis $(FIXAXIS) -L../cfitsio/ -lcfitsio -I../cfitsio -lm
+simplexy: fits2xy
+
+fits2xy: $(SIMPLEXY) $(CFITS_LIB)
+	$(CC) -o fits2xy $^ $(LDFLAGS)
+
+fixaxis: $(FIXAXIS) $(CFITS_LIB)
+	$(CC) -o fixaxis $^ $(LDFLAGS)
 
 simplexy_shared:
 	$(CC) -shared -o _simplexy.so $(SIMPLEXY_SHARED)
@@ -18,4 +43,4 @@ simplexy_shared:
 $(SIMPLEXY) : src/dimage.h
 
 clean :
-	rm ${SIMPLEXY} ${FIXAXIS}
+	-rm ${SIMPLEXY} ${FIXAXIS} fits2xy fixaxis _simplexy.so
