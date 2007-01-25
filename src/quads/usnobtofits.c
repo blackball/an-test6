@@ -27,6 +27,8 @@
 #include <assert.h>
 //#include <endian.h>
 //#include <byteswap.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "usnob.h"
 #include "qfits.h"
@@ -96,6 +98,17 @@ int main(int argc, char** args) {
 	HP = 12 * Nside * Nside;
 
 	printf("Nside = %i, using %i healpixes.\n", Nside, HP);
+
+	{
+		struct rlimit lim;
+		getrlimit(RLIMIT_NOFILE, &lim);
+		printf("Maximum number of files that can be opened: %li soft, %li hard\n",
+			   (long int)lim.rlim_cur, (long int)lim.rlim_max);
+		if (lim.rlim_cur < HP) {
+			printf("\n\nWARNING: This process is likely to fail - probably after working for many hours!\n\n\n");
+			sleep(5);
+		}
+	}
 
 	usnobs = calloc(HP, sizeof(usnob_fits*));
 
