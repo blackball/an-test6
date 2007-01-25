@@ -452,44 +452,6 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 
-			/*{
-			  real *lo, *hi;
-			  int ix1, ix2, iy1, iy2;
-			  //int ix, iy;
-			  lo = kdtree_get_bb_low (merc->tree, kdtree_get_root(merc->tree));
-			  hi = kdtree_get_bb_high(merc->tree, kdtree_get_root(merc->tree));
-			  fprintf(stderr, "Merctree bounding box: x:[%g,%g], y:[%g,%g]\n",
-			  lo[0], hi[0], lo[1], hi[1]);
-			  ix1 = (int)rint((lo[0] - querylow[0]) * xscale);
-			  ix2 = (int)rint((hi[0] - querylow[0]) * xscale);
-			  // flip the image vertically
-			  iy2 = h - (int)rint((lo[1] - querylow[1]) * yscale);
-			  iy1 = h - (int)rint((hi[1] - querylow[1]) * yscale);
-			  fprintf(stderr, "In pixels: x:[%i,%i], y:[%i,%i]\n", ix1, ix2, iy1, iy2);
-
-			  if (ix1 >= 0 && ix1 < w)
-			  for (iy=iy1; iy<=iy2; iy++)
-			  if (iy >= 0 && iy < h)
-			  fluximg[3*(iy*w+ix1)+0] += exp(-1);
-			  if (ix2 >= 0 && ix2 < w)
-			  for (iy=iy1; iy<=iy2; iy++)
-			  if (iy >= 0 && iy < h)
-			  fluximg[3*(iy*w+ix2)+0] += exp(-1);
-			  if (iy1 >= 0 && iy1 < h)
-			  for (ix=ix1; ix<=ix2; ix++)
-			  if (ix >= 0 && ix < w)
-			  fluximg[3*(iy1*w+ix)+0] += exp(-1);
-			  if (iy2 >= 0 && iy2 < h)
-			  for (ix=ix1; ix<=ix2; ix++)
-			  if (ix >= 0 && ix < w)
-			  fluximg[3*(iy2*w+ix)+0] += exp(-1);
-			  for (iy=iy1; iy<iy2; iy++)
-			  if (iy >= 0 && iy < h)
-			  for (ix=ix1; ix<ix2; ix++)
-			  if (ix >= 0 && ix < w)
-			  fluximg[3*(iy*w+ix)+2] += exp(-1);
-			  }*/
-
 			kdtree_nodes_contained(merc->tree, querylow, queryhigh, add_node, add_node, nodelist);
 			iwnode = il_size(nodelist);
 			if (wrapra) {
