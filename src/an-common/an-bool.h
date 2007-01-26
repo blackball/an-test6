@@ -20,11 +20,16 @@
 #define AN_BOOL_H
 
 #ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
 #ifndef __cplusplus
+#ifndef HAVE_BOOL
+#define HAVE_BOOL 1
 typedef unsigned char bool;
 #endif
-#define TRUE 1
-#define FALSE 0
 #endif
 
 #endif
