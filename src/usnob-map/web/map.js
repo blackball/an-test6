@@ -19,7 +19,8 @@ function debug(txt) {
 
 var map = new GMap(document.getElementById("map"));
 
-var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
+//var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
+var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
 var FIELD_URL;

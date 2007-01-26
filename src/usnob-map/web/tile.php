@@ -1,7 +1,13 @@
 <?php
 	function loggit($mesg) {
-		error_log($mesg, 3, "/h/260/dstn/software/apache-2.2.3/logs/usnob.log");
+		//error_log($mesg, 3, "/h/260/dstn/software/apache-2.2.3/logs/usnob.log");
+		error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
 	}
+
+
+	$path = "/home/gmaps/usnob-map/execs/";
+
+
 	header("Content-type: image/png");
 	// DEBUG
 	header("Connection: close");
@@ -177,7 +183,7 @@
 	if ($N > 0) {
 		$cmd = $cmd . sprintf(" -N %d", $N);
 	}
-	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
+	$cmd = $path . $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
 	if (($gotsdss || $gothp || $gotrdls) && $transparent) {
