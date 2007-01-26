@@ -121,8 +121,10 @@ int main(int argc, char *argv[]) {
 	bool gotx, goty, gotX, gotY, gotw, goth;
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int w=0, h=0;
-	char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
-	char* merc_template = "/h/42/dstn/local/maps/merc/merc_hp%03i.fits";
+	//char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
+	//char* merc_template = "/h/42/dstn/local/maps/merc/merc_hp%03i.fits";
+	char* map_template = "/home/gmaps/usnob-images/maps/usnob-zoom%i.ppm";
+	char* merc_template = "/home/gmaps/usnob-images/merc/merc_hp%03i.fits";
 	char fn[256];
 	int i;
 	double lines = 0.0;

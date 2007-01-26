@@ -194,7 +194,8 @@ int main(int argc, char *args[]) {
 		//if ((zoom <= 5.0) || forceimg) {
 		if ((!forcecat && (zoom <= 4.0)) || forceimg || whitebalframe) {
 			int zi;
-			char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
+			//char* map_template = "/h/42/dstn/local/maps/usnob-zoom%i.ppm";
+			char* map_template = "/home/gmaps/usnob-images/maps/usnob-zoom%i.ppm";
 			char fn[256];
 			int left, right, top, bottom;
 			double scaleadj;
