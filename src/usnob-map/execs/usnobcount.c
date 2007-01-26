@@ -23,13 +23,14 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include "ppm.h"
+#include "pnm.h"
+
 #include "an_catalog.h"
 #include "starutil.h"
 #include "healpix.h"
 #include "mathutil.h"
 #include "bl.h"
-#include "ppm.h"
-#include "pnm.h"
 
 #define OPTIONS "r:d:w:h:z:"
 

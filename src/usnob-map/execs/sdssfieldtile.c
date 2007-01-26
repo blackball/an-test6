@@ -24,10 +24,10 @@
 #include <limits.h>
 #include <sys/mman.h>
 
-#define TRUE 1
+#include "an-bool.h"
+
 #include "ppm.h"
 #include "pnm.h"
-#undef bool
 
 #include "starutil.h"
 #include "mathutil.h"
@@ -64,10 +64,6 @@ static void addstar(float* fluximg, int x, int y, int W, int H) {
 		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 2] += bflux;
 	}
 }
-
-typedef unsigned char bool;
-#define FALSE 0
-#define TRUE 1
 
 int main(int argc, char *argv[]) {
     int argchar;
