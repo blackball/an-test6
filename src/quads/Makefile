@@ -59,7 +59,7 @@ MISC_EXECS := 2masstofits project-usnob diffractionFlag_check
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
-	bt.o catalog.o idfile.o quadfile.o codefile.o \
+	bt.o catalog.o idfile.o codefile.o \
 	histogram.o tic.o codekd.o svd.o \
 	donuts.o verify.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o handlehits.o \
@@ -82,8 +82,7 @@ OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	rawstartree 
 
 OLDEXECS_OBJS := catalog.o histogram.o \
-	verify.o intmap.o tic.o matchfile.o \
-	quadfile.o codekd.o idfile.o \
+	verify.o intmap.o tic.o matchfile.o codekd.o idfile.o \
 	$(UTIL_OBJS)
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
@@ -192,22 +191,22 @@ cut-an: cut-an.o catalog.o idfile.o \
 startree: startree.o catalog.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-hpquads: hpquads.o quadfile.o codefile.o bt.o histogram.o tic.o \
+hpquads: hpquads.o codefile.o bt.o histogram.o tic.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codetree: codetree.o codekd.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-unpermute-stars: unpermute-stars.o quadfile.o idfile.o \
+unpermute-stars: unpermute-stars.o idfile.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-unpermute-quads: unpermute-quads.o quadfile.o codekd.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+unpermute-quads: unpermute-quads.o codekd.o \
+		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 homer: homer.o donuts.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-blind: blind.o solver.o codekd.o quadfile.o matchfile.o tic.o \
+blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
 		$(LIBTWEAK_LIB) \
@@ -231,7 +230,7 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
 		usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-quadidx: quadidx.o quadfile.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codedensity: codedensity.o codekd.o dualtree_max.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -239,10 +238,10 @@ codedensity: codedensity.o codekd.o dualtree_max.o \
 codeprojections: codeprojections.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-quadlocations: quadlocations.o quadfile.o catalog.o \
+quadlocations: quadlocations.o catalog.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-quadscales: quadscales.o histogram.o quadfile.o \
+quadscales: quadscales.o histogram.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 quadsperstar: quadsperstar.o \
