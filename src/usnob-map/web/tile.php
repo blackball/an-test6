@@ -49,6 +49,8 @@
 	$rdls_field_str = $_REQUEST["RDLS_FIELD"];
 	$rdls_filename  = $_REQUEST["RDLS_FILE"];
 
+	$index_file = $_REQUEST["INDEX_FILE"];
+
 	$hpstr = $_REQUEST["HP"];
 
 	loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
@@ -121,32 +123,20 @@
 		}
 	}
 
-	if (strlen("$hpstr")) {
-		$gothp = 1;
-		if (sscanf($hpstr, "%d", $hp) != 1) {
-			loggit("Failed to parse healpix.\n");
-			header("Content-type: text/html");
-			printf("<html><body>Invalid request: failed to parse healpix.</body></html>\n\n");
-			exit;
-		}
+	if (strlen("$index_file")) {
+		$gotindex = 1;
 	}
 
 	$transparent = ($_REQUEST["trans"] == "1");
 
-	$layers = explode(" ", $lay);
 	$lines = false;
 	$linesize = 0;
-	//loggit("Layers: $layers");
-	//$layerscmd = "";
-	foreach ($layers as $l => $lval) {
-		loggit("Layer $l, val $lval\n");
-		/*
-			if (strlen($lval) > 0) {
-			$layerscmd += "-l " . escapeshellarg($lval);
-			}
-		*/
-	}
-
+	$layers = explode(" ", $lay);
+	/*
+		foreach ($layers as $l => $lval) {
+			loggit("Layer $l, val $lval\n");
+		}
+	*/
 	if (in_array("lines10", $layers)) {
 		loggit("Including RA/DEC lines.\n");
 		$lines = true;
@@ -156,6 +146,7 @@
 	loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1.\n");
 	loggit("w=$w, h=$h.\n");
 	loggit("sdss file=$sdssfile field=$sdssfield.\n");
+	loggit("index file=$index_file field=$sdssfield.\n");
 	loggit("hp=$hp\n");
 	if ($lines) {
 		loggit("linesize=$linesize\n");
@@ -163,8 +154,8 @@
 
 	// http://ca.php.net/manual/en/function.escapeshellarg.php
 
-	if ($gothp) {
-		$cmd = sprintf("indextile -H %d", $hp);
+	if ($gotindex) {
+		$cmd = sprintf("indextile -f %s", escapeshellarg($index_filename));
 	} else if ($gotsdss) {
 		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
 	} else if ($gotsdssfield) {

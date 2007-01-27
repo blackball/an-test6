@@ -25,6 +25,7 @@ var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
 var COUNT_URL = BASE_URL + "/count.php?map=usnob";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
+var INDEX_URL = TILE_URL + "map=index";
 var FIELD_URL;
 var SDSS_URL;
 var RDLS_URL;
@@ -76,12 +77,10 @@ if ("RDLS_FILE" in getdata) {
 		RDLS_URL = RDLS_URL + "&RDLS_FIELD=" + Number(getdata["RDLS_FIELD"]);
 	}
 }
-if ("HP" in getdata) {
-	var hp = Number(getdata["HP"]);
-	if (hp >= 0 && hp < 12) {
-		var gothp = true;
-		var INDEX_URL = TILE_URL + "map=index" + "&HP=" + hp;
-	}
+if ("INDEX_FILE" in getdata) {
+	var index = true;
+	var indexfile = getdata["INDEX_FILE"];
+
 	if ("INDEX_QUAD" in getdata) {
 		var quadstr = getdata["INDEX_QUAD"];
 		debug("quadstr is " + quadstr + "\n");
@@ -170,17 +169,19 @@ if (rdls) {
 	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
 	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
 }
-
-if (gothp) {
+if (index) {
 	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
 	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
 	var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
+}
+if (rdls && index) {
+	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
 }
 
 map.getMapTypes().length = 0;
 map.addMapType(usnobType);
 
-if (gothp) {
+if (index) {
 	map.addMapType(usnobPlusIndex);
 	map.addMapType(indexAlone);
 	map.addMapType(indexPlusSDSS);
@@ -192,6 +193,9 @@ if (sdss) {
 if (rdls) {
 	map.addMapType(rdlsAlone);
 	map.addMapType(rdlsUsnob);
+}
+if (rdls && index) {
+	map.addMapType(rdlsIndex);
 }
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
