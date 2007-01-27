@@ -155,7 +155,7 @@
 	// http://ca.php.net/manual/en/function.escapeshellarg.php
 
 	if ($gotindex) {
-		$cmd = sprintf("indextile -f %s", escapeshellarg($index_filename));
+		$cmd = sprintf("indextile -f %s", escapeshellarg($index_file));
 	} else if ($gotsdss) {
 		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
 	} else if ($gotsdssfield) {
