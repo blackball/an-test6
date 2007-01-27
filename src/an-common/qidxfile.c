@@ -25,7 +25,6 @@
 #include "qfits.h"
 #include "fitsioutils.h"
 #include "starutil.h"
-#include "fileutil.h"
 #include "ioutils.h"
 #include "qidxfile.h"
 

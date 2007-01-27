@@ -20,8 +20,6 @@ COMMON := .
 all:
 
 include $(COMMON)/makefile.common
-#include $(COMMON)/makefile.utils
-#include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
 
@@ -38,7 +36,7 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB)
 ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o healpix.o \
 	dualtree.o dualtree_rangesearch.o permutedsort.o ioutils.o
 
-ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o
+ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o qidxfile.o
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
