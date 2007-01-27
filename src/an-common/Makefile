@@ -36,7 +36,8 @@ all: $(ANUTILS_LIB) $(ANFILES_LIB)
 ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o healpix.o \
 	dualtree.o dualtree_rangesearch.o permutedsort.o ioutils.o
 
-ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o qidxfile.o
+ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o qidxfile.o \
+	quadfile.o
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
