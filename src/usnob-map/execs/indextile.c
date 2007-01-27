@@ -37,7 +37,7 @@
 #include "mathutil.h"
 #include "bl.h"
 
-#define OPTIONS "x:y:X:Y:w:h:H:"
+#define OPTIONS "x:y:X:Y:w:h:H:f:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -73,7 +73,11 @@ int main(int argc, char *argv[]) {
 	bool gotx, goty, gotX, gotY, gotw, goth, gotH;
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int w=0, h=0;
+	// legacy.
 	char* skdt_template = "/p/learning/stars/INDEXES/sdss-18/sdss-18_%02i.skdt.fits";
+
+	char* base_dir = "/p/learning/stars/GOOGLE_MAPS/";
+	char* filename = NULL;
 	char fn[256];
 	int i;
 
@@ -82,7 +86,7 @@ int main(int argc, char *argv[]) {
 	double xzoom, yzoom;
 	int zoomlevel;
 	int xpix0, xpix1, ypix0, ypix1;
-	int healpix = 0;
+	int healpix = -1;
 
 	int pixelmargin = 4;
 
@@ -90,6 +94,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'f':
+			filename = optarg;
+			break;
 		case 'H':
 			healpix = atoi(optarg);
 			gotH = TRUE;
@@ -120,7 +127,8 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
-	if (!(gotx && goty && gotX && gotY && gotw && goth && gotH)) {
+	if (!(gotx && goty && gotX && gotY && gotw && goth &&
+		  (gotH || filename))) {
 		fprintf(stderr, "Invalid inputs.\n");
 		exit(-1);
 	}
@@ -173,7 +181,7 @@ int main(int argc, char *argv[]) {
 	zoomlevel = (int)rint(log(xzoom) / log(2.0));
 	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 
-	if (zoomlevel < 7) {
+	if (zoomlevel < 3) {
 		fprintf(stderr, "Zoomed out too far!\n");
 		printf("P6 %d %d %d\n", w, h, 255);
 		for (i=0; i<(w*h); i++) {
@@ -210,11 +218,11 @@ int main(int argc, char *argv[]) {
 		int Noob;
 		int Nib;
 		startree* skdt;
-		real querylow[2], queryhigh[2];
-		real wraplow[2], wraphigh[2];
+		double querylow[2], queryhigh[2];
+		double wraplow[2], wraphigh[2];
 		bool wrapra;
-		real query[3];
-		real maxd2;
+		double query[3];
+		double maxd2;
 		double xmargin = (double)pixelmargin / pixperx;
 		double ymargin = (double)pixelmargin / pixpery;
 		double xorigin, yorigin;
@@ -256,53 +264,6 @@ int main(int argc, char *argv[]) {
 
 		il_append(hplist, healpix);
 
-		/*
-		  {
-		  double x,y,z;
-		  double ra,dec;
-		  real bblo[2], bbhi[2];
-		  double minx, miny, maxx, maxy, minxnz;
-		  double dx[] = { 0.0, 0.0, 1.0, 1.0 };
-		  double dy[] = { 0.0, 1.0, 1.0, 0.0 };
-		  int j;
-
-		  i = healpix;
-
-		  minx = miny = minxnz = 1e100;
-		  maxx = maxy = -1e100;
-		  for (j=0; j<4; j++) {
-		  healpix_to_xyz(i, Nside, dx[j], dy[j], &x, &y, &z);
-		  xyz2radec(x, y, z, &ra, &dec);
-		  x = ra / (2.0 * M_PI);
-		  y = (asinh(tan(dec)) + M_PI) / (2.0 * M_PI);
-		  if (x > maxx) maxx = x;
-		  if (x < minx) minx = x;
-		  if ((x != 0.0) && (x < minxnz)) minxnz = x;
-		  if (y > maxy) maxy = y;
-		  if (y < miny) miny = y;
-		  }
-
-		  if (minx == 0.0) {
-		  if ((1.0 - minxnz) < (maxx - minx)) {
-		  // RA wrap-around.
-		  minx = 0.0;
-		  maxx = 1.0;
-		  }
-		  }
-
-		  bblo[0] = minx;
-		  bbhi[0] = maxx;
-		  bblo[1] = miny;
-		  bbhi[1] = maxy;
-
-		  if (kdtree_do_boxes_overlap(bblo, bbhi, querylow, queryhigh, 2) ||
-		  (wrapra && kdtree_do_boxes_overlap(bblo, bbhi, wraplow, wraphigh, 2))) {
-		  fprintf(stderr, "HP %i overlaps: x:[%g,%g], y:[%g,%g]\n",
-		  i, bblo[0], bbhi[0], bblo[1], bbhi[1]);
-		  il_append(hplist, i);
-		  }
-		  }
-		*/
 		{
 			double racenter = (x0 + x1)*0.5;
 			double deccenter = (y0 + y1)*0.5;
@@ -319,11 +280,16 @@ int main(int argc, char *argv[]) {
 			int j;
 
 			hp = il_get(hplist, i);
-			sprintf(fn, skdt_template, hp);
+
+			if (filename) {
+				snprintf(fn, sizeof(fn), "%s%s", base_dir, filename);
+			} else {
+				sprintf(fn, skdt_template, hp);
+			}
 			fprintf(stderr, "Opening file %s...\n", fn);
 			skdt = startree_open(fn);
 			if (!skdt) {
-				fprintf(stderr, "Failed to open startree for healpix %i.\n", hp);
+				fprintf(stderr, "Failed to open startree.\n");
 				continue;
 			}
 
@@ -336,7 +302,7 @@ int main(int argc, char *argv[]) {
 				double* xyz;
 				double px, py;
 				int ix, iy;
-				xyz = res->results + j*3;
+				xyz = res->results.d + j*3;
 				xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
 				px = ra / (2.0 * M_PI);
 				py = (M_PI + asinh(tan(dec))) / (2.0 * M_PI);

@@ -39,8 +39,8 @@ CFLAGS += $(ANFILES_INC)
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
 USNOBMAP_EXECS := usnobcount usnobtile sdsstile sdssfieldtile \
-	indexquad sdssquad render-mercator make-merctree rdlstile
-# indextile    (currently broken)
+	indexquad sdssquad render-mercator make-merctree rdlstile \
+	indextile
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
 MISC_MAIN_OBJS := $(addsuffix .o,$(MISC_EXECS))
@@ -77,8 +77,7 @@ sdssfieldtile: sdssfieldtile.o \
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 indextile: indextile.o \
-		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
+		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 indexquad: indexquad.o \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)

@@ -67,7 +67,6 @@ int main(int argc, char *argv[]) {
 	int i;
 	int fieldnum = 0;
 
-	//char* rdls_dir = "/p/learning/stars/GOOGLE_MAPS_RDLS/";
 	char* rdls_dir = "/home/gmaps/gmaps-rdls/";
 
 	double px0, py0, px1, py1;
