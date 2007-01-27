@@ -93,14 +93,14 @@ int main(int argc, char *argv[]) {
 	int Noob;
 	int Nib;
 	startree* skdt;
-	double querylow[2], queryhigh[2];
-	double wraplow[2], wraphigh[2];
 	bool wrapra;
 	double query[3];
 	double maxd2;
 	double xmargin;
 	double ymargin;
 	double xorigin, yorigin;
+
+	double xlo, xhi, ylo, yhi, xlo2, xhi2;
 
 	kdtree_qres_t* res;
 	int j;
@@ -218,22 +218,18 @@ int main(int argc, char *argv[]) {
 	wrapra = (px1 > 1.0);
 	xmargin = (double)pixelmargin / pixperx;
 	ymargin= (double)pixelmargin / pixpery;
+
+	xlo = px0 - xmargin;
+	xhi = px1 + xmargin;
+	ylo = py0 - ymargin;
+	yhi = py1 + ymargin;
+
 	if (wrapra) {
-		querylow[0] = px0 - xmargin;
-		queryhigh[0] = 1.0;
-		querylow[1] = py0 - ymargin;
-		queryhigh[1] = py1 + ymargin;
-		wraplow[0] = 0.0;
-		wraphigh[0] = px1 - 1.0 + xmargin;
-		wraplow[1] = py0 - ymargin;
-		wraphigh[1] = py1 + ymargin;
+		xlo2 = 0.0;
+		xhi2 = xhi - 1.0;
+		xhi = 1.0;
 	} else {
-		querylow[0] = px0 - xmargin;
-		querylow[1] = py0 - ymargin;
-		queryhigh[0] = px1 + xmargin;
-		queryhigh[1] = py1 + ymargin;
-		// quell gcc warnings
-		wraphigh[0] = wraphigh[1] = wraplow[0] = wraplow[1] = 0.0;
+		xlo2 = xhi2 = 0.0;
 	}
 
 	img = calloc(w*h*3, sizeof(uchar));
@@ -249,12 +245,10 @@ int main(int argc, char *argv[]) {
 	Nib = 0;
 
 	{
-		double racenter = (x0 + x1)*0.5;
-		double deccenter = (y0 + y1)*0.5;
 		double p0[3], p1[3];
-		radec2xyzarr(racenter, deccenter, query);
 		radec2xyzarr(x0, y0, p0);
 		radec2xyzarr(x1, y1, p1);
+		star_midpoint(query, p0, p1);
 		maxd2 = 0.25 * distsq(p0, p1, 3);
 	}
 
@@ -279,17 +273,18 @@ int main(int argc, char *argv[]) {
 		xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
 		px = ra / (2.0 * M_PI);
 		py = (M_PI + asinh(tan(dec))) / (2.0 * M_PI);
-		if (!(((px >= querylow[0]) && (px <= queryhigh[0]) &&
-			   (py >= querylow[1]) && (py <= queryhigh[1])) ||
-			  (wrapra &&
-			   (px >= wraplow[0]) && (px <= wraphigh[0]) &&
-			   (py >= wraplow[1]) && (py <= wraphigh[1]))))
+
+		if (!( (py >= ylo) && (py <= yhi) &&
+			   ( ((px >= xlo) && (px <= xhi)) ||
+				 (wrapra && (px >= xlo2) && (px <= xhi2)) ) ))
 			continue;
+
 		ix = (int)rint((px - xorigin) * xscale);
-		iy = h - (int)rint((py - yorigin) * yscale);
 		if (ix + pixelmargin < 0 ||
-			ix - pixelmargin >= w ||
-			iy + pixelmargin < 0 ||
+			ix - pixelmargin >= w)
+			continue;
+		iy = h - (int)rint((py - yorigin) * yscale);
+		if (iy + pixelmargin < 0 ||
 			iy - pixelmargin >= h)
 			continue;
 		addstar(img, ix, iy, w, h, 0x90, 0xa8, 255);
