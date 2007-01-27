@@ -21,6 +21,8 @@ var map = new GMap(document.getElementById("map"));
 
 //var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
 var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
+//var COUNT_URL = "http://monte.ai.toronto.edu:8080/usnob/count.php?map=usnob";
+var COUNT_URL = BASE_URL + "/count.php?map=usnob";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
 var FIELD_URL;
@@ -231,7 +233,6 @@ function moveended() {
 	var sw = bounds.getSouthWest();
 	var ne = bounds.getNorthEast();
 
-	var COUNT_URL = "http://monte.ai.toronto.edu:8080/usnob/count.php?map=usnob";
 	var url = COUNT_URL + "&center_ra=" + center.lng() + "&center_dec=" + center.lat()
 		+ "&zoom=" + zoom + "&width=" + pixelsize.width + "&height=" + pixelsize.height;
 	GDownloadUrl(url, function(txt) {
@@ -252,7 +253,9 @@ function moveCenter() {
 	var dec = document.dummyform.dec_center.value;
 	var zoom = document.dummyform.zoom.value;
 	// jump directly
-	map.setCenter(new GLatLng(dec, ra), zoom);
+	//map.setCenter(new GLatLng(dec, ra), zoom);
+	map.setCenter(new GLatLng(dec, ra));
+	map.setZoom(zoom);
 }
 
 GEvent.addListener(map, "move", mapmoved);
@@ -264,6 +267,7 @@ map.setCenter(new GLatLng(0,0), 0);
 
 // if this page's URL has "ra", "dec", and "zoom" args, then go there.
 function parseget() {
+	debug("parseget() running.\n");
 	var get = getGetData();
 	if (("ra" in get) && ("dec" in get) && ("zoom" in get)) {
 		var ra = Number(get["ra"]);
@@ -594,6 +598,7 @@ function addfieldquad() {
 	});
 }
 
+debug("here 1\n");
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
