@@ -63,7 +63,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 	histogram.o tic.o codekd.o svd.o \
 	donuts.o verify.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o handlehits.o \
-	intmap.o qidxfile.o pnpoly.o blind_wcs.o
+	intmap.o pnpoly.o blind_wcs.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -81,7 +81,7 @@ OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats \
 	rawstartree 
 
-OLDEXECS_OBJS := catalog.o qidxfile.o histogram.o \
+OLDEXECS_OBJS := catalog.o histogram.o \
 	verify.o intmap.o tic.o matchfile.o \
 	quadfile.o codekd.o idfile.o \
 	$(UTIL_OBJS)
@@ -231,7 +231,7 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
 		usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-quadidx: quadidx.o quadfile.o qidxfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+quadidx: quadidx.o quadfile.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codedensity: codedensity.o codekd.o dualtree_max.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -245,8 +245,8 @@ quadlocations: quadlocations.o quadfile.o catalog.o \
 quadscales: quadscales.o histogram.o quadfile.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
-quadsperstar: quadsperstar.o qidxfile.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+quadsperstar: quadsperstar.o \
+		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 fitsgetext: fitsgetext.o $(ANUTILS_LIB) $(QFITS_LIB)
 
