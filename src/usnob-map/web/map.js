@@ -80,6 +80,7 @@ if ("RDLS_FILE" in getdata) {
 if ("INDEX_FILE" in getdata) {
 	var index = true;
 	var indexfile = getdata["INDEX_FILE"];
+	INDEX_URL = INDEX_URL + "&INDEX_FILE=" + indexfile;
 
 	if ("INDEX_QUAD" in getdata) {
 		var quadstr = getdata["INDEX_QUAD"];
@@ -130,7 +131,7 @@ sdssFieldTile.myFormat='image/png';
 sdssFieldTile.myBaseURL=FIELD_URL;
 sdssFieldTile.getTileUrl=CustomGetTileUrl;
 
-var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
+var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) Astrometry.net"),1,17);
 indexTile.myLayers='index';
 indexTile.myFormat='image/png';
 indexTile.myBaseURL=INDEX_URL;
@@ -161,42 +162,34 @@ rdlsTransTile.getTileUrl=CustomGetTileUrl;
 
 var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
 
-if (sdss) {
-	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
-	var sdssAlone = new GMapType([sdssTile], G_SATELLITE_MAP.getProjection(), "SDSS", G_SATELLITE_MAP);
-}
-if (rdls) {
-	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
-	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
-}
-if (index) {
-	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
-	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
-	var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
-}
-if (rdls && index) {
-	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
-}
-
 map.getMapTypes().length = 0;
 map.addMapType(usnobType);
 
-if (index) {
-	map.addMapType(usnobPlusIndex);
-	map.addMapType(indexAlone);
-	map.addMapType(indexPlusSDSS);
-}
 if (sdss) {
-	map.addMapType(sdssAlone);
+	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
 	map.addMapType(sdssField);
+	var sdssAlone = new GMapType([sdssTile], G_SATELLITE_MAP.getProjection(), "SDSS", G_SATELLITE_MAP);
+	map.addMapType(sdssAlone);
 }
 if (rdls) {
-	map.addMapType(rdlsAlone);
+	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
 	map.addMapType(rdlsUsnob);
+	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
+	map.addMapType(rdlsAlone);
+}
+if (index) {
+	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
+	map.addMapType(usnobPlusIndex);
+	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
+	map.addMapType(indexAlone);
+	var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
+	map.addMapType(indexPlusSDSS);
 }
 if (rdls && index) {
+	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
 	map.addMapType(rdlsIndex);
 }
+
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
 //map.addControl(new GScaleControl());
