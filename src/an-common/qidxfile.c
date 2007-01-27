@@ -28,19 +28,16 @@
 #include "ioutils.h"
 #include "qidxfile.h"
 
-static qidxfile* new_qidxfile()
-{
-	qidxfile* qf = malloc(sizeof(qidxfile));
+static qidxfile* new_qidxfile() {
+	qidxfile* qf = calloc(1, sizeof(qidxfile));
 	if (!qf) {
 		fprintf(stderr, "Couldn't malloc a qidxfile struct: %s\n", strerror(errno));
 		return NULL;
 	}
-	memset(qf, 0, sizeof(qidxfile));
 	return qf;
 }
 
-qidxfile* qidxfile_open(char* fn, int modifiable)
-{
+qidxfile* qidxfile_open(char* fn, int modifiable) {
 	FILE* fid = NULL;
 	qfits_header* header = NULL;
 	qidxfile* qf = NULL;
@@ -76,7 +73,7 @@ qidxfile* qidxfile_open(char* fn, int modifiable)
 
 	qf->numstars = qfits_header_getint(header, "NSTARS", -1);
 	qf->numquads = qfits_header_getint(header, "NQUADS", -1);
-	qfits_header_destroy(header);
+	qf->header = header;
 
 	if ((qf->numstars == -1) || (qf->numquads == -1)) {
 		fprintf(stderr, "Couldn't find NSTARS or NQUADS entries in FITS header.");
@@ -120,6 +117,8 @@ qidxfile* qidxfile_open(char* fn, int modifiable)
 	return qf;
 
 bailout:
+	if (qf->header)
+		qfits_header_destroy(qf->header);
 	if (qf)
 		free(qf);
 	if (fid)

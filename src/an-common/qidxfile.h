@@ -35,9 +35,9 @@ struct qidxfile {
 
 	// when writing:
 	FILE* fid;
-	qfits_header* header;
 	off_t header_end;
 
+	qfits_header* header;
 	uint cursor_index;
 	uint cursor_heap;
 };
