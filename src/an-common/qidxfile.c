@@ -117,7 +117,7 @@ qidxfile* qidxfile_open(char* fn, int modifiable) {
 	return qf;
 
 bailout:
-	if (qf->header)
+	if (qf && qf->header)
 		qfits_header_destroy(qf->header);
 	if (qf)
 		free(qf);
