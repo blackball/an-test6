@@ -37,7 +37,7 @@
 #include "mathutil.h"
 #include "bl.h"
 
-#define OPTIONS "x:y:X:Y:w:h:H:f:"
+#define OPTIONS "x:y:X:Y:w:h:f:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -70,14 +70,13 @@ static void addstar(uchar* img, int x, int y, int W, int H,
 
 int main(int argc, char *argv[]) {
     int argchar;
-	bool gotx, goty, gotX, gotY, gotw, goth, gotH;
+	bool gotx, goty, gotX, gotY, gotw, goth;
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int w=0, h=0;
-	// legacy.
-	char* skdt_template = "/p/learning/stars/INDEXES/sdss-18/sdss-18_%02i.skdt.fits";
 
-	char* base_dir = "/p/learning/stars/GOOGLE_MAPS/";
 	char* filename = NULL;
+	char* basedir = "/home/gmaps/gmaps-indexes/";
+
 	char fn[256];
 	int i;
 
@@ -86,20 +85,32 @@ int main(int argc, char *argv[]) {
 	double xzoom, yzoom;
 	int zoomlevel;
 	int xpix0, xpix1, ypix0, ypix1;
-	int healpix = -1;
 
 	int pixelmargin = 4;
 
-	gotx = goty = gotX = gotY = gotw = goth = gotH = FALSE;
+	uchar* img;
+	float xscale, yscale;
+	int Noob;
+	int Nib;
+	startree* skdt;
+	double querylow[2], queryhigh[2];
+	double wraplow[2], wraphigh[2];
+	bool wrapra;
+	double query[3];
+	double maxd2;
+	double xmargin;
+	double ymargin;
+	double xorigin, yorigin;
+
+	kdtree_qres_t* res;
+	int j;
+
+	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
 		case 'f':
 			filename = optarg;
-			break;
-		case 'H':
-			healpix = atoi(optarg);
-			gotH = TRUE;
 			break;
 		case 'x':
 			x0 = atof(optarg);
@@ -127,8 +138,7 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
-	if (!(gotx && goty && gotX && gotY && gotw && goth &&
-		  (gotH || filename))) {
+	if (!(gotx && goty && gotX && gotY && gotw && goth && filename)) {
 		fprintf(stderr, "Invalid inputs.\n");
 		exit(-1);
 	}
@@ -171,13 +181,6 @@ int main(int argc, char *argv[]) {
 		fyzoom = log(yzoom) / log(2.0);
 		fprintf(stderr, "fzoom %g, %g\n", fxzoom, fyzoom);
 	}
-	/*
-	  if ((fabs(xzoom - rint(xzoom)) > 0.05) ||
-	  (fabs(xzoom - yzoom) > 0.05)) {
-	  fprintf(stderr, "Invalid zoom level.\n");
-	  exit(-1);
-	  }
-	*/
 	zoomlevel = (int)rint(log(xzoom) / log(2.0));
 	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 
@@ -210,132 +213,96 @@ int main(int argc, char *argv[]) {
 	xpix1 = xpix0 + w;
 	ypix1 = ypix0 + h;
 
-	{
-		//int Nside = 1;
-		il* hplist;
-		uchar* img;
-		float xscale, yscale;
-		int Noob;
-		int Nib;
-		startree* skdt;
-		double querylow[2], queryhigh[2];
-		double wraplow[2], wraphigh[2];
-		bool wrapra;
-		double query[3];
-		double maxd2;
-		double xmargin = (double)pixelmargin / pixperx;
-		double ymargin = (double)pixelmargin / pixpery;
-		double xorigin, yorigin;
-
-		xorigin = px0;
-		yorigin = py0;
-		wrapra = (px1 > 1.0);
-		if (wrapra) {
-			querylow[0] = px0 - xmargin;
-			queryhigh[0] = 1.0;
-			querylow[1] = py0 - ymargin;
-			queryhigh[1] = py1 + ymargin;
-			wraplow[0] = 0.0;
-			wraphigh[0] = px1 - 1.0 + xmargin;
-			wraplow[1] = py0 - ymargin;
-			wraphigh[1] = py1 + ymargin;
-		} else {
-			querylow[0] = px0 - xmargin;
-			querylow[1] = py0 - ymargin;
-			queryhigh[0] = px1 + xmargin;
-			queryhigh[1] = py1 + ymargin;
-			// quell gcc warnings
-			wraphigh[0] = wraphigh[1] = wraplow[0] = wraplow[1] = 0.0;
-		}
-
-		hplist = il_new(12);
-
-		img = calloc(w*h*3, sizeof(uchar));
-		if (!img) {
-			fprintf(stderr, "Failed to allocate  image.\n");
-			exit(-1);
-		}
-
-		xscale = pixperx;
-		yscale = pixpery;
-
-		Noob = 0;
-		Nib = 0;
-
-		il_append(hplist, healpix);
-
-		{
-			double racenter = (x0 + x1)*0.5;
-			double deccenter = (y0 + y1)*0.5;
-			double p0[3], p1[3];
-			radec2xyzarr(racenter, deccenter, query);
-			radec2xyzarr(x0, y0, p0);
-			radec2xyzarr(x1, y1, p1);
-			maxd2 = 0.25 * distsq(p0, p1, 3);
-		}
-
-		for (i=0; i<il_size(hplist); i++) {
-			kdtree_qres_t* res;
-			int hp;
-			int j;
-
-			hp = il_get(hplist, i);
-
-			if (filename) {
-				snprintf(fn, sizeof(fn), "%s%s", base_dir, filename);
-			} else {
-				sprintf(fn, skdt_template, hp);
-			}
-			fprintf(stderr, "Opening file %s...\n", fn);
-			skdt = startree_open(fn);
-			if (!skdt) {
-				fprintf(stderr, "Failed to open startree.\n");
-				continue;
-			}
-
-			res = kdtree_rangesearch_options(skdt->tree, query, maxd2, 0);
-			if (res)
-				fprintf(stderr, "%i results.\n", res->nres);
-
-			for (j=0; res && j<res->nres; j++) {
-				double ra, dec;
-				double* xyz;
-				double px, py;
-				int ix, iy;
-				xyz = res->results.d + j*3;
-				xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
-				px = ra / (2.0 * M_PI);
-				py = (M_PI + asinh(tan(dec))) / (2.0 * M_PI);
-				if (!(((px >= querylow[0]) && (px <= queryhigh[0]) &&
-					   (py >= querylow[1]) && (py <= queryhigh[1])) ||
-					  (wrapra &&
-					   (px >= wraplow[0]) && (px <= wraphigh[0]) &&
-					   (py >= wraplow[1]) && (py <= wraphigh[1]))))
-					continue;
-				ix = (int)rint((px - xorigin) * xscale);
-				iy = h - (int)rint((py - yorigin) * yscale);
-				if (ix + pixelmargin < 0 ||
-					ix - pixelmargin >= w ||
-					iy + pixelmargin < 0 ||
-					iy - pixelmargin >= h)
-					continue;
-				//addstar(img, ix, iy, w, h, 255, 255, 255);
-				//addstar(img, ix, iy, w, h, 255, 255, 255);
-				addstar(img, ix, iy, w, h, 0x90, 0xa8, 255);
-				Nib++;
-			}
-
-			kdtree_free_query(res);
-			startree_close(skdt);
-		}
-
-		fprintf(stderr, "%i stars inside image bounds.\n", Nib);
-
-		il_free(hplist);
-
-		printf("P6 %d %d %d\n", w, h, 255);
-		fwrite(img, 1, 3*w*h, stdout);
-		free(img);
-		return 0;
+	xorigin = px0;
+	yorigin = py0;
+	wrapra = (px1 > 1.0);
+	xmargin = (double)pixelmargin / pixperx;
+	ymargin= (double)pixelmargin / pixpery;
+	if (wrapra) {
+		querylow[0] = px0 - xmargin;
+		queryhigh[0] = 1.0;
+		querylow[1] = py0 - ymargin;
+		queryhigh[1] = py1 + ymargin;
+		wraplow[0] = 0.0;
+		wraphigh[0] = px1 - 1.0 + xmargin;
+		wraplow[1] = py0 - ymargin;
+		wraphigh[1] = py1 + ymargin;
+	} else {
+		querylow[0] = px0 - xmargin;
+		querylow[1] = py0 - ymargin;
+		queryhigh[0] = px1 + xmargin;
+		queryhigh[1] = py1 + ymargin;
+		// quell gcc warnings
+		wraphigh[0] = wraphigh[1] = wraplow[0] = wraplow[1] = 0.0;
 	}
+
+	img = calloc(w*h*3, sizeof(uchar));
+	if (!img) {
+		fprintf(stderr, "Failed to allocate  image.\n");
+		exit(-1);
+	}
+
+	xscale = pixperx;
+	yscale = pixpery;
+
+	Noob = 0;
+	Nib = 0;
+
+	{
+		double racenter = (x0 + x1)*0.5;
+		double deccenter = (y0 + y1)*0.5;
+		double p0[3], p1[3];
+		radec2xyzarr(racenter, deccenter, query);
+		radec2xyzarr(x0, y0, p0);
+		radec2xyzarr(x1, y1, p1);
+		maxd2 = 0.25 * distsq(p0, p1, 3);
+	}
+
+	snprintf(fn, sizeof(fn), "%s%s", basedir, filename);
+	fprintf(stderr, "Opening file %s...\n", fn);
+	skdt = startree_open(fn);
+	if (!skdt) {
+		fprintf(stderr, "Failed to open startree.\n");
+		exit(-1);
+	}
+
+	res = kdtree_rangesearch_options(skdt->tree, query, maxd2, 0);
+	if (res)
+		fprintf(stderr, "%i results.\n", res->nres);
+
+	for (j=0; res && j<res->nres; j++) {
+		double ra, dec;
+		double* xyz;
+		double px, py;
+		int ix, iy;
+		xyz = res->results.d + j*3;
+		xyz2radec(xyz[0], xyz[1], xyz[2], &ra, &dec);
+		px = ra / (2.0 * M_PI);
+		py = (M_PI + asinh(tan(dec))) / (2.0 * M_PI);
+		if (!(((px >= querylow[0]) && (px <= queryhigh[0]) &&
+			   (py >= querylow[1]) && (py <= queryhigh[1])) ||
+			  (wrapra &&
+			   (px >= wraplow[0]) && (px <= wraphigh[0]) &&
+			   (py >= wraplow[1]) && (py <= wraphigh[1]))))
+			continue;
+		ix = (int)rint((px - xorigin) * xscale);
+		iy = h - (int)rint((py - yorigin) * yscale);
+		if (ix + pixelmargin < 0 ||
+			ix - pixelmargin >= w ||
+			iy + pixelmargin < 0 ||
+			iy - pixelmargin >= h)
+			continue;
+		addstar(img, ix, iy, w, h, 0x90, 0xa8, 255);
+		Nib++;
+	}
+
+	kdtree_free_query(res);
+	startree_close(skdt);
+
+	fprintf(stderr, "%i stars inside image bounds.\n", Nib);
+
+	printf("P6 %d %d %d\n", w, h, 255);
+	fwrite(img, 1, 3*w*h, stdout);
+	free(img);
+	return 0;
 }
