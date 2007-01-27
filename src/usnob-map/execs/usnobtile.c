@@ -605,9 +605,16 @@ int main(int argc, char *argv[]) {
 			printf("P6 %d %d %d\n", w, h, 255);
 			for (i=0; i<(w*h); i++) {
 				unsigned char pix[3];
-				pix[0] = (log(max(fluximg[3*i+0], minval)) - offset) * rscale;
-				pix[1] = (log(max(fluximg[3*i+1], minval)) - offset) * bscale;
-				pix[2] = (log(max(fluximg[3*i+2], minval)) - offset) * nscale;
+				/*
+					pix[0] = (log(max(fluximg[3*i+0], minval)) - offset) * rscale;
+					pix[1] = (log(max(fluximg[3*i+1], minval)) - offset) * bscale;
+					pix[2] = (log(max(fluximg[3*i+2], minval)) - offset) * nscale;
+				*/
+				// fluximg stored the channels in RBN order.
+				// we want to make N->red, R->green, B->blue
+				pix[0] = (log(max(fluximg[3*i+2], minval)) - offset) * nscale;
+				pix[1] = (log(max(fluximg[3*i+0], minval)) - offset) * rscale;
+				pix[2] = (log(max(fluximg[3*i+1], minval)) - offset) * bscale;
 				fwrite(pix, 1, 3, stdout);
 			}
 		}

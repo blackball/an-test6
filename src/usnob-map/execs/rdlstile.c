@@ -24,13 +24,10 @@
 #include <limits.h>
 #include <sys/mman.h>
 
-#define TRUE 1
+#include "an-bool.h"
+
 #include "ppm.h"
 #include "pnm.h"
-#undef bool
-
-#undef TRUE
-#include "an-bool.h"
 
 #include "starutil.h"
 #include "mathutil.h"
@@ -70,7 +67,8 @@ int main(int argc, char *argv[]) {
 	int i;
 	int fieldnum = 0;
 
-	char* rdls_dir = "/p/learning/stars/GOOGLE_MAPS_RDLS/";
+	//char* rdls_dir = "/p/learning/stars/GOOGLE_MAPS_RDLS/";
+	char* rdls_dir = "/home/gmaps/gmaps-rdls/";
 
 	double px0, py0, px1, py1;
 	double pixperx, pixpery;
