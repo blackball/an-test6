@@ -77,7 +77,6 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "RA,DEC [%g,%g] degrees\n", ra, dec);
 	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 	fprintf(stderr, "Pixel size (%i,%i).\n", w, h);
-
 	{
 		// projected position of center
 		double px, py;

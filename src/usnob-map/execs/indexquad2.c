@@ -39,7 +39,7 @@
 #include "qidxfile.h"
 #include "quadfile.h"
 
-#define OPTIONS "x:y:X:Y:w:h:f:"
+#define OPTIONS "r:d:w:h:z:f:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -52,42 +52,39 @@ int main(int argc, char *argv[]) {
 	qidxfile* qidx;
 	quadfile* qfile;
 
-	bool gotx, goty, gotX, gotY, gotw, goth;
-	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
-	int w=0, h=0;
+	bool gotr, gotd, gotw, goth, gotz;
+	double ra=0.0, dec=0.0;
+	int w=0, h=0, zoomlevel=0;
+
 	char* filename = NULL;
 	char* basedir = "/home/gmaps/gmaps-indexes/";
 	double query[3];
 	double maxd2;
+	double x0, x1, y0, y1;
 	double px0, py0, px1, py1;
 	double pixperx, pixpery;
 	double xzoom, yzoom;
-	int zoomlevel;
 
 	kdtree_qres_t* res;
 
-	gotx = goty = gotX = gotY = gotw = goth = FALSE;
+	gotr = gotd = gotw = goth = gotz = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
 		case 'f':
 			filename = optarg;
 			break;
-		case 'x':
-			x0 = atof(optarg);
-			gotx = TRUE;
+		case 'r':
+			ra = atof(optarg);
+			gotr = TRUE;
 			break;
-		case 'X':
-			x1 = atof(optarg);
-			goty = TRUE;
+		case 'd':
+			dec = atof(optarg);
+			gotd = TRUE;
 			break;
-		case 'y':
-			y0 = atof(optarg);
-			gotX = TRUE;
-			break;
-		case 'Y':
-			y1 = atof(optarg);
-			gotY = TRUE;
+		case 'z':
+			zoomlevel = atoi(optarg);
+			gotz = TRUE;
 			break;
 		case 'w':
 			w = atoi(optarg);
@@ -99,32 +96,70 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
-	if (!(gotx && goty && gotX && gotY && gotw && goth && filename)) {
+	if (!(gotr && gotd && gotz && gotw && goth && filename)) {
 		fprintf(stderr, "Invalid inputs.\n");
 		exit(-1);
 	}
 
-	fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
-	fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
+	fprintf(stderr, "RA,DEC [%g,%g] degrees\n", ra, dec);
+	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
+	fprintf(stderr, "Pixel size (%i,%i).\n", w, h);
 
-	x0 = deg2rad(x0);
-	x1 = deg2rad(x1);
-	y0 = deg2rad(y0);
-	y1 = deg2rad(y1);
+	{
+		// projected position of center
+		double px, py;
+		double zoomval;
+		double xlo, xhi, ylo, yhi;
 
-	// Mercator projected position
-	px0 = x0 / (2.0 * M_PI);
-	px1 = x1 / (2.0 * M_PI);
-	py0 = (M_PI + asinh(tan(y0))) / (2.0 * M_PI);
-	py1 = (M_PI + asinh(tan(y1))) / (2.0 * M_PI);
-	if (px1 < px0) {
-		fprintf(stderr, "Error, px1 < px0 (%g < %g)\n", px1, px0);
-		exit(-1);
+		px = ra / 360.0;
+		if (px < 0.0)
+			px += 1.0;
+		py = (M_PI + asinh(tan(deg2rad(dec)))) / (2.0 * M_PI);
+		zoomval = pow(2.0, (double)(zoomlevel-1));
+		xlo = px - (0.5 * w / (double)(zoomval * 256.0));
+		xhi = px + (0.5 * w / (double)(zoomval * 256.0));
+		ylo = py - (0.5 * h / (double)(zoomval * 256.0));
+		yhi = py + (0.5 * h / (double)(zoomval * 256.0));
+		fprintf(stderr, "Projected ranges: x [%g, %g], y [%g, %g]\n",
+				xlo, xhi, ylo, yhi);
+		if (ylo < 0.0)
+			ylo = 0.0;
+		if (yhi > 1.0)
+			yhi = 1.0;
+
+		px0 = xlo;
+		px1 = xhi;
+		py0 = ylo;
+		py1 = yhi;
+
+		x0 = px0 * (2.0 * M_PI);
+		x1 = px1 * (2.0 * M_PI);
+		y0 = atan(sinh(py0 * (2.0 * M_PI) - M_PI));
+		y1 = atan(sinh(py1 * (2.0 * M_PI) - M_PI));
 	}
-	if (py1 < py0) {
-		fprintf(stderr, "Error, py1 < py0 (%g < %g)\n", py1, py0);
-		exit(-1);
-	}
+
+	/*
+	  fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
+	  fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
+	  x0 = deg2rad(x0);
+	  x1 = deg2rad(x1);
+	  y0 = deg2rad(y0);
+	  y1 = deg2rad(y1);
+
+	  // Mercator projected position
+	  px0 = x0 / (2.0 * M_PI);
+	  px1 = x1 / (2.0 * M_PI);
+	  py0 = (M_PI + asinh(tan(y0))) / (2.0 * M_PI);
+	  py1 = (M_PI + asinh(tan(y1))) / (2.0 * M_PI);
+	  if (px1 < px0) {
+	  fprintf(stderr, "Error, px1 < px0 (%g < %g)\n", px1, px0);
+	  exit(-1);
+	  }
+	  if (py1 < py0) {
+	  fprintf(stderr, "Error, py1 < py0 (%g < %g)\n", py1, py0);
+	  exit(-1);
+	  }
+	*/
 
 	pixperx = (double)w / (px1 - px0);
 	pixpery = (double)h / (py1 - py0);

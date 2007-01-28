@@ -22,10 +22,11 @@ var map = new GMap(document.getElementById("map"));
 //var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
 var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
 //var COUNT_URL = "http://monte.ai.toronto.edu:8080/usnob/count.php?map=usnob";
-var COUNT_URL = BASE_URL + "/count.php?map=usnob";
+var COUNT_URL = BASE_URL + "count.php?map=usnob";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
 var INDEX_URL = TILE_URL + "map=index";
+var QUAD_URL = BASE_URL + "quad2.php?";
 var FIELD_URL;
 var SDSS_URL;
 var RDLS_URL;
@@ -77,28 +78,33 @@ if ("RDLS_FILE" in getdata) {
 		RDLS_URL = RDLS_URL + "&RDLS_FIELD=" + Number(getdata["RDLS_FIELD"]);
 	}
 }
+
+var index = false;
 if ("INDEX_FILE" in getdata) {
-	var index = true;
+	index = true;
 	var indexfile = getdata["INDEX_FILE"];
 	INDEX_URL = INDEX_URL + "&INDEX_FILE=" + indexfile;
+	INDEX_QUAD_URL = QUAD_URL + "&index=" + indexfile;
 
-	if ("INDEX_QUAD" in getdata) {
+	/*
+		if ("INDEX_QUAD" in getdata) {
 		var quadstr = getdata["INDEX_QUAD"];
 		debug("quadstr is " + quadstr + "\n");
 		if (quadstr.match(/^\d*(,\d*){3}(;\d*(,\d*){3})*$/) != null) {
-			debug("quadstr matches.\n");
-			var indexobjs = quadstr.match(/\d+/g);
-			debug("indexobjs is " + indexobjs + "\n");
-			if (indexobjs != null) {
-				for (var i=0; i<indexobjs.length; i++) {
-					debug("indexobjs[" + i + "] is " + indexobjs[i] + "\n");
-				}
-			}
-			if (indexobjs != null && (indexobjs.length % 4 == 0)) {
-				var gotindexquad = true;
-			}
+		debug("quadstr matches.\n");
+		var indexobjs = quadstr.match(/\d+/g);
+		debug("indexobjs is " + indexobjs + "\n");
+		if (indexobjs != null) {
+		for (var i=0; i<indexobjs.length; i++) {
+		debug("indexobjs[" + i + "] is " + indexobjs[i] + "\n");
 		}
-	}
+		}
+		if (indexobjs != null && (indexobjs.length % 4 == 0)) {
+		var gotindexquad = true;
+		}
+		}
+		}
+	*/
 }
 
 
@@ -235,6 +241,33 @@ function moveended() {
 	GDownloadUrl(url, function(txt) {
 		document.infoform.nobjs.value = txt;
 	});
+
+	if (index && indexQuadState) {
+		url = INDEX_QUAD_URL + "&zoom=" + zoom 
+			+ "&ra=" + center.lng() + "&dec=" + center.lat()
+			+ "&width=" + pixelsize.width
+			+ "&height=" + pixelsize.height;
+
+		GDownloadUrl(URL, function(data, responseCode){
+			var xml = GXml.parse(data);
+			var quads = xml.documentElement.getElementsByTagName("quad");
+			for (var i = 0; i < quads.length; i++) {
+				var points = [];
+				for (var j=0; j<4; j++) {
+					points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
+											parseFloat(quads[i].getAttribute("ra"+j))));
+				}
+				points.push(points[0]);
+				indexQuads.push(new GPolyline(points, "#90a8ff"));
+			}
+			if (indexQuadState) {
+				for (var i=0; i<indexQuads.length; i++) {
+					map.addOverlay(indexQuads[i]);
+				}
+			}
+			map.addControl(new IndexQuadControl());
+		});
+	}
 }
 
 function mousemoved(latlong) {
