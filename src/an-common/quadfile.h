@@ -35,6 +35,8 @@ struct quadfile {
 	// healpix covered by this index
 	int healpix;
 
+	qfits_header* header;
+
 	// when reading:
 	void*  mmap_quad;
 	size_t mmap_quad_size;
@@ -42,7 +44,6 @@ struct quadfile {
 
 	// when writing:
 	FILE* fid;
-	qfits_header* header;
 	off_t header_end;
 };
 typedef struct quadfile quadfile;
