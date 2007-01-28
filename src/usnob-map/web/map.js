@@ -265,7 +265,6 @@ function moveended() {
 					map.addOverlay(indexQuads[i]);
 				}
 			}
-			map.addControl(new IndexQuadControl());
 		});
 	}
 }
@@ -570,7 +569,8 @@ function addquad() {
 	});
 }
 
-function addindexquad() {
+/*
+	function addindexquad() {
 	var URL = BASE_URL + "quad.php?src=index&hp=" + hp +
 		"&quad=";
 	for (var i=0; i<indexobjs.length; i++) {
@@ -598,7 +598,8 @@ function addindexquad() {
 		}
 		map.addControl(new IndexQuadControl());
 	});
-}
+	}
+*/
 
 function addfieldquad() {
 	var URL = BASE_URL + "quad.php?src=field&file=" + filenum + "&field=" + fieldnum +
@@ -632,6 +633,11 @@ debug("here 1\n");
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
 setTimeout("parseget()", 3);
+
+if (index) {
+	map.addControl(new IndexQuadControl());
+}
+
 if (gotquad) {
 	setTimeout("addquad();", 5);
 }
