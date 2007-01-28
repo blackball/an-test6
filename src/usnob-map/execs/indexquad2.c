@@ -179,16 +179,10 @@ int main(int argc, char *argv[]) {
 	zoomlevel = (int)rint(log(xzoom) / log(2.0));
 	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 
-	if (zoomlevel < 3) {
+	if (zoomlevel < 5) {
 		fprintf(stderr, "Zoomed out too far!\n");
-		printf("P6 %d %d %d\n", w, h, 255);
-		for (i=0; i<(w*h); i++) {
-			unsigned char pix[3];
-			pix[0] = 128;
-			pix[1] = 128;
-			pix[2] = 128;
-			fwrite(pix, 1, 3, stdout);
-		}
+		printf("<quads>\n");
+		printf("</quads>\n");
 		return 0;
 	}
 
