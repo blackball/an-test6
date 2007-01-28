@@ -2,6 +2,11 @@
 	function loggit($mesg) {
 		error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
 	}
+
+        $path = "/home/gmaps/usnob-map/execs/";
+
+	$maxquads = 200;
+
 	header("Content-type: text/plain");
 	// DEBUG
 	header("Connection: close");
@@ -46,6 +51,7 @@
 	loggit("ra=$ra, dec=$dec, w=$w, h=$h, z=$zoom\n");
 
 	$cmd = sprintf("indexquad2 -r %f -d %f -w %d -h %d -z %d -f %s", $ra, $dec, $w, $h, $zoom, escapeshellarg($index));
+	$cmd = $path . $cmd . " -m $maxquads";
 
 	loggit("Command: $cmd\n");
 

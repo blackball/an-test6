@@ -37,6 +37,10 @@ var sdssobjs = [];
 var fieldobjs = [];
 
 var getdata = getGetData();
+
+var indexQuadState = ("iq" in getdata);
+//var indexQuadState = true;
+
 if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 	var filenum = Number(getdata["SDSS_FILE"]);
 	var fieldnum = Number(getdata["SDSS_FIELD"]);
@@ -242,7 +246,7 @@ function moveended() {
 		document.infoform.nobjs.value = txt;
 	});
 
-	debug("move ended.\n");
+	//debug("move ended.  index=" + index + ", iqs=" + indexQuadState + "\n");
 
 	if (index && indexQuadState) {
 		url = INDEX_QUAD_URL + "&zoom=" + zoom 
@@ -250,9 +254,9 @@ function moveended() {
 			+ "&width=" + pixelsize.width
 			+ "&height=" + pixelsize.height;
 
-		debug("index quad url = " + url + "\n");
+		debug("quads: " + url + "\n");
 
-		GDownloadUrl(URL, function(data, responseCode){
+		GDownloadUrl(url, function(data, responseCode){
 			var xml = GXml.parse(data);
 			var quads = xml.documentElement.getElementsByTagName("quad");
 			for (var i = 0; i < quads.length; i++) {
@@ -333,7 +337,6 @@ function linktohere() {
 
 var indexQuads = [];
 var indexTxt  = "INDEX QUAD";
-var indexQuadState = ("iq" in getdata);
 
 var sdssQuads = [];
 var sdssTxt  = "SDSS QUAD";
@@ -645,9 +648,11 @@ if (index) {
 if (gotquad) {
 	setTimeout("addquad();", 5);
 }
-if (gotindexquad) {
+/*
+	if (gotindexquad) {
 	setTimeout("addindexquad();", 6);
-}
+	}
+*/
 if (gotfieldquad) {
 	setTimeout("addfieldquad();", 7);
 }
@@ -678,11 +683,13 @@ if ("view" in getdata) {
 if (type.length) {
 	setTimeout("map.setMapType(" + type + ");", 8);
 } else {
-	if (gothp) {
-		setTimeout("map.setMapType(indexPlusSDSS);", 4);
-	} else if (sdss) {
-		setTimeout("map.setMapType(usnobPlusSDSS);", 4);
-	}
+	/*
+		if (gothp) {
+			setTimeout("map.setMapType(indexPlusSDSS);", 4);
+		} else if (sdss) {
+			setTimeout("map.setMapType(usnobPlusSDSS);", 4);
+		}
+	*/
 }
 
 // DEBUG

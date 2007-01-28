@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
 		maxd2 = 0.25 * distsq(p0, p1, 3);
 	}
 
-	snprintf(fn, sizeof(fn), "%s%s", basedir, filename);
+	snprintf(fn, sizeof(fn), "%s%s.skdt.fits", basedir, filename);
 	fprintf(stderr, "Opening file %s...\n", fn);
 	skdt = startree_open(fn);
 	if (!skdt) {

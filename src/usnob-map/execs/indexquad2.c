@@ -39,7 +39,7 @@
 #include "qidxfile.h"
 #include "quadfile.h"
 
-#define OPTIONS "r:d:w:h:z:f:"
+#define OPTIONS "r:d:w:h:z:f:m:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -66,11 +66,16 @@ int main(int argc, char *argv[]) {
 	double xzoom, yzoom;
 
 	kdtree_qres_t* res;
+	int maxquads = 0;
+	int totalquads;
 
 	gotr = gotd = gotw = goth = gotz = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'm':
+			maxquads = atoi(optarg);
+			break;
 		case 'f':
 			filename = optarg;
 			break;
@@ -138,29 +143,6 @@ int main(int argc, char *argv[]) {
 		y1 = atan(sinh(py1 * (2.0 * M_PI) - M_PI));
 	}
 
-	/*
-	  fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
-	  fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
-	  x0 = deg2rad(x0);
-	  x1 = deg2rad(x1);
-	  y0 = deg2rad(y0);
-	  y1 = deg2rad(y1);
-
-	  // Mercator projected position
-	  px0 = x0 / (2.0 * M_PI);
-	  px1 = x1 / (2.0 * M_PI);
-	  py0 = (M_PI + asinh(tan(y0))) / (2.0 * M_PI);
-	  py1 = (M_PI + asinh(tan(y1))) / (2.0 * M_PI);
-	  if (px1 < px0) {
-	  fprintf(stderr, "Error, px1 < px0 (%g < %g)\n", px1, px0);
-	  exit(-1);
-	  }
-	  if (py1 < py0) {
-	  fprintf(stderr, "Error, py1 < py0 (%g < %g)\n", py1, py0);
-	  exit(-1);
-	  }
-	*/
-
 	pixperx = (double)w / (px1 - px0);
 	pixpery = (double)h / (py1 - py0);
 	fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
@@ -220,16 +202,20 @@ int main(int argc, char *argv[]) {
 
 	res = kdtree_rangesearch_options(skdt->tree, query, maxd2, 0);
 	if (res)
-		fprintf(stderr, "%i results.\n", res->nres);
+		fprintf(stderr, "%i stars.\n", res->nres);
 
 	printf("<quads>\n");
+	totalquads = 0;
 	for (j=0; res && j<res->nres; j++) {
 		uint* quads;
 		uint nquads;
 		int k, s;
 
 		qidxfile_get_quads(qidx, res->inds[j], &quads, &nquads);
-
+		totalquads += nquads;
+		if (maxquads && (totalquads > maxquads)) {
+			nquads = totalquads - maxquads;
+		}
 		for (k=0; k<nquads; k++) {
 			uint stars[4];
 			double xyzs[12];
@@ -262,8 +248,14 @@ int main(int argc, char *argv[]) {
 			}
 			printf("/>\n");
 		}
+		if (maxquads && (totalquads >= maxquads)) {
+			fprintf(stderr, "Exceeded %i quads\n", maxquads);
+			break;
+		}
 	}
 	printf("</quads>\n");
+
+	fprintf(stderr, "Total number of quads: %i.\n", totalquads);
 
 	startree_close(skdt);
 	qidxfile_close(qidx);
