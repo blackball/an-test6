@@ -14,7 +14,7 @@ function getGetData(){
 }
 
 function debug(txt) {
-	//document.debugform.debug.value += txt;
+	document.debugform.debug.value += txt;
 }
 
 var map = new GMap(document.getElementById("map"));
@@ -242,11 +242,15 @@ function moveended() {
 		document.infoform.nobjs.value = txt;
 	});
 
+	debug("move ended.\n");
+
 	if (index && indexQuadState) {
 		url = INDEX_QUAD_URL + "&zoom=" + zoom 
 			+ "&ra=" + center.lng() + "&dec=" + center.lat()
 			+ "&width=" + pixelsize.width
 			+ "&height=" + pixelsize.height;
+
+		debug("index quad url = " + url + "\n");
 
 		GDownloadUrl(URL, function(data, responseCode){
 			var xml = GXml.parse(data);
