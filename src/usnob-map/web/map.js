@@ -191,12 +191,14 @@ if (index) {
 	map.addMapType(usnobPlusIndex);
 	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
 	map.addMapType(indexAlone);
-	var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
-	map.addMapType(indexPlusSDSS);
 }
 if (rdls && index) {
 	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
 	map.addMapType(rdlsIndex);
+}
+if (index && sdss) {
+	var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
+	map.addMapType(indexPlusSDSS);
 }
 
 map.addControl(new GLargeMapControl());
