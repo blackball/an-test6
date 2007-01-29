@@ -25,10 +25,6 @@
 #include <sys/mman.h>
 
 #include "an-bool.h"
-
-#include "ppm.h"
-#include "pnm.h"
-
 #include "starutil.h"
 #include "mathutil.h"
 #include "rdlist.h"
@@ -201,6 +197,7 @@ int main(int argc, char *argv[]) {
 		double xorigin, yorigin;
 		float* img;
 		float xscale, yscale;
+		int Nib = 0;
 
 		img = calloc(w*h*3, sizeof(float));
 		if (!img) {
@@ -219,6 +216,10 @@ int main(int argc, char *argv[]) {
 			int ix1, ix2=0, iy;
 			bool ok;
 
+			ok = (my  >= py0 - ymargin) &&
+				(my  <= py1 + ymargin);
+			if (!ok) continue;
+
 			if (wrapra)
 				ok = ((mx <= px1 - 1.0 + xmargin) ||
 					  (mx >= px0 - xmargin));
@@ -226,16 +227,11 @@ int main(int argc, char *argv[]) {
 				ok = (mx >= px0 - xmargin) &&
 					(mx <= px1 + xmargin);
 			if (!ok) continue;
-			ok = (my  >= py0 - ymargin) &&
-				(my  <= py1 + ymargin);
-			if (!ok) continue;
 
 			ix1 = (int)rint((mx - xorigin) * xscale);
 			if (wrapra)
 				ix2 = (int)rint((mx + 1.0 - xorigin) * xscale);
 
-			// ??
-			//if ((ix + pixelmargin < 0) || (ix - pixelmargin) >= w) {
 			iy = (int)rint((my - yorigin) * yscale);
 			// flip.
 			iy = h - iy;
@@ -243,8 +239,10 @@ int main(int argc, char *argv[]) {
 			addstar(img, ix1, iy, w, h);
 			if (wrapra)
 				addstar(img, ix2, iy, w, h);
+			Nib++;
 		}
 
+		fprintf(stderr, "%i stars inside image bounds.\n", Nib);
 
 		printf("P6 %d %d %d\n", w, h, 255);
 		for (i=0; i<(w*h); i++) {

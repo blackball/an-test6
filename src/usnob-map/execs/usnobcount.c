@@ -23,9 +23,7 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#include "ppm.h"
-#include "pnm.h"
-
+#include "an-bool.h"
 #include "an_catalog.h"
 #include "starutil.h"
 #include "healpix.h"

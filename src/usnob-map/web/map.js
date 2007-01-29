@@ -19,9 +19,7 @@ function debug(txt) {
 
 var map = new GMap(document.getElementById("map"));
 
-//var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
 var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
-//var COUNT_URL = "http://monte.ai.toronto.edu:8080/usnob/count.php?map=usnob";
 var COUNT_URL = BASE_URL + "count.php?map=usnob";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
@@ -45,11 +43,9 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 	var fieldnum = Number(getdata["SDSS_FIELD"]);
 	if (filenum > 0 && filenum <= 35 && fieldnum >= 0 && fieldnum < 10000) {
 		var sdss = true;
-		SDSS_URL = TILE_URL + "map=sdss" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
 		FIELD_URL = TILE_URL + "map=sdssfield" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
 		if ("nf" in getdata) {
 			var nf = Number(getdata["nf"]);
-			SDSS_URL = SDSS_URL + "&N=" + nf;
 			FIELD_URL = FIELD_URL + "&N=" + nf;
 		}
 	}
@@ -122,18 +118,6 @@ usnobTile.myFormat='image/png';
 usnobTile.myBaseURL=USNOB_URL;
 usnobTile.getTileUrl=CustomGetTileUrl;
 
-var sdssTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
-sdssTile.myLayers='sdss';
-sdssTile.myFormat='image/png';
-sdssTile.myBaseURL=SDSS_URL;
-sdssTile.getTileUrl=CustomGetTileUrl;
-
-var sdssTransTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
-sdssTransTile.myLayers='sdss';
-sdssTransTile.myFormat='image/png';
-sdssTransTile.myBaseURL=SDSS_URL + "&trans=1";
-sdssTransTile.getTileUrl=CustomGetTileUrl;
-
 var sdssFieldTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),0,17);
 sdssFieldTile.myLayers='sdssfield';
 sdssFieldTile.myFormat='image/png';
@@ -165,10 +149,6 @@ rdlsTransTile.myFormat='image/png';
 rdlsTransTile.myBaseURL=RDLS_URL + "&trans=1";
 rdlsTransTile.getTileUrl=CustomGetTileUrl;
 
-/*
-  http://monte.ai.toronto.edu:8080/usnob/map.html?SDSS_FILE=1&SDSS_FIELD=6&SDSS_QUAD=0,9,13,6&ra=241.55&dec=26.93&zoom=11&HP=2&INDEX_QUAD=4763876,4763639,4763878,4732341&over=no
-*/
-
 var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
 
 map.getMapTypes().length = 0;
@@ -177,8 +157,6 @@ map.addMapType(usnobType);
 if (sdss) {
 	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
 	map.addMapType(sdssField);
-	var sdssAlone = new GMapType([sdssTile], G_SATELLITE_MAP.getProjection(), "SDSS", G_SATELLITE_MAP);
-	map.addMapType(sdssAlone);
 }
 if (rdls) {
 	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
@@ -195,10 +173,6 @@ if (index) {
 if (rdls && index) {
 	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
 	map.addMapType(rdlsIndex);
-}
-if (index && sdss) {
-	var indexPlusSDSS = new GMapType([indexTile,sdssTransTile], G_SATELLITE_MAP.getProjection(), "I+S", G_SATELLITE_MAP);
-	map.addMapType(indexPlusSDSS);
 }
 
 map.addControl(new GLargeMapControl());
@@ -668,10 +642,6 @@ if ("view" in getdata) {
 		type = "usnobPlusIndex";
 	} else if (view == "index") {
 		type = "indexAlone";
-	} else if (view == "i+s") {
-		type = "indexPlusSDSS";
-	} else if (view == "sdss") {
-		type = "sdssAlone";
 	} else if (view == "field") {
 		type = "sdssField";
 	} else if (view == "r+i") {

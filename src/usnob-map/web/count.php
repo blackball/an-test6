@@ -1,6 +1,6 @@
 <?php
 	function loggit($mesg) {
-		error_log($mesg, 3, "/h/42/dstn/software/apache-2.2.3/logs/usnob.log");
+		error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
 	}
 	header("Content-type: text/plain");
 	// DEBUG

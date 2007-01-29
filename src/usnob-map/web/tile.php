@@ -1,6 +1,5 @@
 <?php
 	function loggit($mesg) {
-		//error_log($mesg, 3, "/h/260/dstn/software/apache-2.2.3/logs/usnob.log");
 		error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
 	}
 
@@ -51,11 +50,8 @@
 
 	$index_file = $_REQUEST["INDEX_FILE"];
 
-	$hpstr = $_REQUEST["HP"];
-
 	loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
 	loggit("SDSS file $sdss_file, field $sdss_field\n");
-	loggit("Healpix $hpstr\n");
 
 	if ($epsg != "EPSG:4326") {
 			loggit("Wrong EPSG: $epsg.\n");
@@ -82,8 +78,6 @@
 	if (strlen("$sdss_file") && strlen("$sdss_field")) {
 		if ($map == "sdssfield") {
 			$gotsdssfield = 1;
-		} else {
-			$gotsdss = 1;
 		}
 		if ((sscanf($sdss_file, "%d", $sdssfile) != 1) ||
 			(sscanf($sdss_field, "%d", $sdssfield) != 1) ||
@@ -147,7 +141,6 @@
 	loggit("w=$w, h=$h.\n");
 	loggit("sdss file=$sdssfile field=$sdssfield.\n");
 	loggit("index file=$index_file field=$sdssfield.\n");
-	loggit("hp=$hp\n");
 	if ($lines) {
 		loggit("linesize=$linesize\n");
 	}
@@ -156,8 +149,6 @@
 
 	if ($gotindex) {
 		$cmd = sprintf("indextile -f %s", escapeshellarg($index_file));
-	} else if ($gotsdss) {
-		$cmd = sprintf("sdsstile -s %d -S %d", $sdssfile, $sdssfield);
 	} else if ($gotsdssfield) {
 		$cmd = sprintf("sdssfieldtile -s %d -S %d", $sdssfile, $sdssfield);
 	} else if ($gotrdls) {
@@ -177,7 +168,7 @@
 	$cmd = $path . $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
 	$cmd = $cmd . " | pnmtopng";
-	if (($gotsdss || $gothp || $gotrdls) && $transparent) {
+	if (($gotrdls) && $transparent) {
 		// NOTE, that space between "-transparent" and "=black" is supposed
 		// to be there!
 		$cmd = $cmd . " -transparent =black";

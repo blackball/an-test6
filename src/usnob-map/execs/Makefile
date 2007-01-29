@@ -38,7 +38,7 @@ CFLAGS += $(ANFILES_INC)
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
-USNOBMAP_EXECS := usnobcount usnobtile sdsstile sdssfieldtile \
+USNOBMAP_EXECS := usnobcount usnobtile sdssfieldtile \
 	indexquad sdssquad render-mercator make-merctree rdlstile \
 	indextile indexquad2
 
@@ -68,10 +68,6 @@ usnobcount: usnobcount.o
 
 usnobtile: usnobtile.o merctree.o \
 		$(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
-
-sdsstile: sdsstile.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 sdssfieldtile: sdssfieldtile.o \
