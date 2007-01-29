@@ -14,7 +14,7 @@ function getGetData(){
 }
 
 function debug(txt) {
-	document.debugform.debug.value += txt;
+	//document.debugform.debug.value += txt;
 }
 
 var map = new GMap(document.getElementById("map"));
