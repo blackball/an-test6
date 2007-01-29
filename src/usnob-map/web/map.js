@@ -240,14 +240,6 @@ function moveended() {
 	var sw = bounds.getSouthWest();
 	var ne = bounds.getNorthEast();
 
-	/*
-	  var url = COUNT_URL + "&center_ra=" + center.lng() + "&center_dec=" + center.lat()
-	  + "&zoom=" + zoom + "&width=" + pixelsize.width + "&height=" + pixelsize.height;
-	  GDownloadUrl(url, function(txt) {
-	  document.infoform.nobjs.value = txt;
-	  });
-	*/
-
 	//debug("move ended.  index=" + index + ", iqs=" + indexQuadState + "\n");
 
 	if (index && indexQuadState) {
