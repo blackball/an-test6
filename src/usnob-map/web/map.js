@@ -39,7 +39,6 @@ var fieldobjs = [];
 var getdata = getGetData();
 
 var indexQuadState = ("iq" in getdata);
-//var indexQuadState = true;
 
 if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 	var filenum = Number(getdata["SDSS_FILE"]);
@@ -410,6 +409,7 @@ IndexQuadControl.prototype.initialize = function(map) {
 			}
 			buttonStyleOn(toggleDiv);
 		}
+		indexQuadState = on;
 	});
 	map.getContainer().appendChild(container);
 	return container;
@@ -672,18 +672,12 @@ if ("view" in getdata) {
 		type = "sdssAlone";
 	} else if (view == "field") {
 		type = "sdssField";
+	} else if (view == "r+i") {
+		type = "rdlsIndex";
 	}
 }
 if (type.length) {
 	setTimeout("map.setMapType(" + type + ");", 8);
-} else {
-	/*
-		if (gothp) {
-			setTimeout("map.setMapType(indexPlusSDSS);", 4);
-		} else if (sdss) {
-			setTimeout("map.setMapType(usnobPlusSDSS);", 4);
-		}
-	*/
 }
 
 // DEBUG
