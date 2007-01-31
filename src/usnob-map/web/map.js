@@ -646,6 +646,8 @@ if ("view" in getdata) {
 		type = "sdssField";
 	} else if (view == "r+i") {
 		type = "rdlsIndex";
+	} else if (view == "r+u") {
+		type = "rdlsUsnob";
 	}
 }
 if (type.length) {
