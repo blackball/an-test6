@@ -94,6 +94,7 @@ typedef struct tweak_s {
 
 tweak_t* tweak_new();
 void tweak_init(tweak_t*);
+void tweak_push_wcs_tan(tweak_t* t, tan_t* wcs);
 void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n);
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag);
 void tweak_clear(tweak_t* t);
@@ -106,5 +107,6 @@ void tweak_clear_correspondences(tweak_t* t);
 void tweak_clear_image_ad(tweak_t* t);
 void tweak_clear_ref_xy(tweak_t* t);
 void tweak_clear_image_xyz(tweak_t* t);
+void tweak_free(tweak_t* t);
 
 #endif

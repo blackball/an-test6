@@ -200,6 +200,8 @@ void tweak_init(tweak_t* t)
 	t->a_ref = t->d_ref = t->x_ref = t->y_ref = NULL;
 	t->xyz_ref = NULL;
 
+	t->state = 0;
+
 	// FIXME maybe these should be allocated at the outset
 	t->image = t->ref = t->dist2 = NULL;
 
@@ -1221,6 +1223,14 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	return -1;
 }
 
+void tweak_push_wcs_tan(tweak_t* t, tan_t* wcs) {
+	if (!t->sip) {
+		t->sip = sip_create();
+	}
+	memcpy(&(t->sip->wcstan), wcs, sizeof(tan_t));
+	t->state |= TWEAK_HAS_SIP;
+}
+
 void tweak_go_to(tweak_t* t, unsigned int dest_state)
 {
 	while(! (t->state & dest_state))
@@ -1337,4 +1347,10 @@ void tweak_clear(tweak_t* t)
 
 	// FIXME this should free stuff
 	tweak_init(t);
+}
+
+void tweak_free(tweak_t* t) {
+	// FIXME ...
+	tweak_clear(t);
+	free(t);
 }
