@@ -47,7 +47,10 @@ struct handlehits {
 
 	// state:
 
+	// used when nagree_toverify > 1
 	hitlist* hits;
+	// used when nagree_toverify == 1
+	pl* singles;
 
 	// number of times we've run verification
 	int nverified;

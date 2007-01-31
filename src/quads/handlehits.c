@@ -27,8 +27,15 @@ handlehits* handlehits_new() {
 }
 
 void handlehits_free_matchobjs(handlehits* hh) {
-	if (!hh || !hh->hits) return;
-	hitlist_free_matchobjs(hh->hits);
+	if (!hh) return;
+	if (hh->hits)
+		hitlist_free_matchobjs(hh->hits);
+	if (hh->singles) {
+		int i;
+		for (i=0; i<pl_size(hh->singles); i++)
+			free(pl_get(hh->singles, i));
+		pl_remove_all(hh->singles);
+	}
 }
 
 void handlehits_clear(handlehits* hh) {
@@ -42,6 +49,9 @@ void handlehits_clear(handlehits* hh) {
 	if (hh->keepers)
 		pl_free(hh->keepers);
 	hh->keepers = NULL;
+	if (hh->singles)
+		pl_free(hh->singles);
+	hh->singles = NULL;
 }
 
 void handlehits_free(handlehits* hh) {
@@ -111,51 +121,65 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 }
 
 bool handlehits_add(handlehits* hh, MatchObj* mo) {
-	pl* agreelist;
 	int moindex;
 	bool solved = FALSE;
-	int nagree;
-	il* indlist;
 
-	if (!hh->hits)
-		hh->hits = hitlist_new(hh->agreetol, 0);
+	if (hh->nagree_toverify == 0) {
 
-	// compute field center.
-	hitlist_compute_vector(mo);
-	indlist = il_new(8);
-	moindex = hitlist_add_hit(hh->hits, mo);
-	agreelist = hitlist_get_agreeing(hh->hits, moindex, NULL, indlist);
-	nagree = 1 + (agreelist ? pl_size(agreelist) : 0);
+		if (!hh->singles)
+			hh->singles = pl_new(1024);
 
-	// This little jig dances around a strange case where not all the
-	// matches that are part of an agreement cluster are written out, and as
-	// a result, "agreeable" gives different answers than "blind".
-	if (nagree > mo->nagree)
-		mo->nagree = nagree;
-	else
-		nagree = mo->nagree;
+		// Required?
+		//hitlist_compute_vector(mo);
 
-	if (nagree < hh->nagree_toverify)
-		goto cleanup;
+		moindex = pl_size(hh->singles);
+		pl_append(hh->singles, mo);
+		solved |= verify(hh, mo, moindex);
 
-	solved |= verify(hh, mo, moindex);
+	} else {
+		pl* agreelist;
+		int nagree;
+		il* indlist;
 
-	if (nagree == hh->nagree_toverify) {
-		// run verification on the other matches
-		int j;
-		for (j=0; agreelist && j<pl_size(agreelist); j++) {
-			MatchObj* mo1 = pl_get(agreelist, j);
-			if (mo1->overlap == 0.0) {
-				int moind1 = il_get(indlist, j);
-				solved |= verify(hh, mo1, moind1);
+		if (!hh->hits)
+			hh->hits = hitlist_new(hh->agreetol, 0);
+
+		// compute field center.
+		hitlist_compute_vector(mo);
+		indlist = il_new(8);
+		moindex = hitlist_add_hit(hh->hits, mo);
+		agreelist = hitlist_get_agreeing(hh->hits, moindex, NULL, indlist);
+		nagree = 1 + (agreelist ? pl_size(agreelist) : 0);
+
+		// This little jig dances around a strange case where not all the
+		// matches that are part of an agreement cluster are written out, and as
+		// a result, "agreeable" gives different answers than "blind".
+		if (nagree > mo->nagree)
+			mo->nagree = nagree;
+		else
+			nagree = mo->nagree;
+
+		if (nagree < hh->nagree_toverify)
+			goto cleanup;
+
+		solved |= verify(hh, mo, moindex);
+
+		if (nagree == hh->nagree_toverify) {
+			// run verification on the other matches
+			int j;
+			for (j=0; agreelist && j<pl_size(agreelist); j++) {
+				MatchObj* mo1 = pl_get(agreelist, j);
+				if (mo1->overlap == 0.0) {
+					int moind1 = il_get(indlist, j);
+					solved |= verify(hh, mo1, moind1);
+				}
 			}
 		}
-	}
 
- cleanup:
-	if (agreelist) pl_free(agreelist);
-	il_free(indlist);
+	cleanup:
+		if (agreelist) pl_free(agreelist);
+		il_free(indlist);
+	}
 	return solved;
 }
-
 

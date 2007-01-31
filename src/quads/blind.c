@@ -578,12 +578,16 @@ static int read_parameters() {
 }
 
 static void verified(handlehits* hh, MatchObj* mo) {
-	if (!quiet && !silent && verbose && (mo->overlap >= overlap_toprint))
-		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
-				mo->fieldnum, mo->nagree, 100.0 * mo->overlap,
+	if (!quiet && !silent && verbose && (mo->overlap >= overlap_toprint)) {
+		fprintf(stderr, "    field %i", mo->fieldnum);
+		if (hh->nagree_toverify)
+			fprintf(stderr, " (%i agree)", mo->nagree);
+		fprintf(stderr, ": overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
+				100.0 * mo->overlap,
 				mo->ninfield, mo->noverlap,
 				(mo->ninfield - mo->noverlap - mo->nconflict), mo->nconflict);
-	  fflush(stderr);
+		fflush(stderr);
+	}
 }
 
 static int blind_handle_hit(solver_params* p, MatchObj* mo) {
