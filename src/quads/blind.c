@@ -597,15 +597,10 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	if (!solved)
 		return 0;
 
-	/*
-	  if (!quiet && !silent)
-	  fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
-	  fieldnum, nagree, 100.0 * mo->overlap, mo->ninfield, matches, unmatches, conflicts);
-	  fflush(stderr);
-	  }
-	*/
 	return 1;
 }
+
+static double iter_wcs_rads[] = { 2, 3, 4, 5, 6, 7, 8, 9 };
 
 static void solve_fields() {
 	solver_params solver;
@@ -676,6 +671,11 @@ static void solve_fields() {
 	hits->startree = starkd->tree;
 	hits->do_wcs = (wcs_template ? 1 : 0);
 	hits->verified = verified;
+
+	//hits->iter_wcs_steps = 3;
+	hits->iter_wcs_steps = sizeof(iter_wcs_rads)/sizeof(double);
+	hits->iter_wcs_thresh = 0.05;
+	hits->iter_wcs_rads = iter_wcs_rads;
 
 	nfields = xyls->nfields;
 

@@ -41,6 +41,13 @@ struct handlehits {
 	int nfield;
 	int do_wcs;
 
+	// maximum number of iterations of WCS solving
+	int iter_wcs_steps;
+	// minimum overlap threshold to invoke the iterative WCS process
+	double iter_wcs_thresh;
+	// number of quad radiuses to look at during each iteration...
+	double* iter_wcs_rads;
+
 	// callback:
 	// called after verification is run on a match.
 	void (*verified)(struct handlehits* me, MatchObj* mo);

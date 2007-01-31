@@ -69,11 +69,17 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 	// has already been computed and stored in the matchfile, and we no
 	// longer have access to the startree, etc.
 	if (mo->overlap == 0.0) {
-		if (hh->do_wcs) {
+		tan_t origwcs;
+
+		//if (hh->do_wcs) {
+		if (hh->iter_wcs_steps) {
 			int i;
 			corr = malloc(hh->nfield * sizeof(int));
 			for (i=0; i<hh->nfield; i++)
 				corr[i] = -1;
+
+			// copy the original WCS
+			memcpy(&origwcs, &(mo->wcstan), sizeof(tan_t));
 		}
 
 		verify_hit(hh->startree, mo, hh->field, hh->nfield, hh->verify_dist2,
@@ -82,6 +88,17 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 				   corr);
 
 		mo->nverified = hh->nverified++;
+
+		if (hh->iter_wcs_steps &&
+			(mo->overlap >= hh->iter_wcs_thresh)) {
+
+			verify_iterate_wcs(hh->startree, mo, hh->field,
+							   hh->nfield, hh->verify_dist2,
+							   corr,
+							   hh->iter_wcs_steps,
+							   hh->iter_wcs_rads);
+		}
+
 
 		if (hh->verified)
 			hh->verified(hh, mo);
@@ -93,10 +110,14 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 		return FALSE;
 	}
 
-	if (corr) {
-		blind_wcs_compute(mo, hh->field, hh->nfield, corr, &(mo->wcstan));
-		mo->wcs_valid = 1;
-	}
+	// This computes a WCS solution that uses all of the stars
+	// that are (supposedly) in correspondence.
+	/*
+	  if (corr) {
+	  blind_wcs_compute(mo, hh->field, hh->nfield, corr, &(mo->wcstan));
+	  mo->wcs_valid = 1;
+	  }
+	*/
 
 	if (!hh->keepers)
 		hh->keepers = pl_new(32);
