@@ -55,6 +55,7 @@
 #include "blind_wcs.h"
 #include "qfits_error.h"
 #include "qfits_cache.h"
+#include "tweak_internal.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -113,6 +114,8 @@ bool circle;
 int nverified;
 
 handlehits* hits;
+
+bool do_tweak = FALSE;
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -495,6 +498,8 @@ static int read_parameters() {
 			quiet = TRUE;
 		} else if (is_word(buffer, "verbose", &nextword)) {
 			verbose = TRUE;
+		} else if (is_word(buffer, "tweak", &nextword)) {
+			do_tweak = TRUE;
 		} else if (is_word(buffer, "wcs ", &nextword)) {
 			wcs_template = strdup(nextword);
 		} else if (is_word(buffer, "fieldid_key ", &nextword)) {
@@ -575,6 +580,101 @@ static int read_parameters() {
 			fflush(stderr);
 		}
 	}
+}
+
+static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
+	tweak_t* twee = NULL;
+	double *imgx = NULL, *imgy = NULL;
+	int i;
+	double* starxyz;
+	int nstars;
+	kdtree_qres_t* res = NULL;
+	double fieldcenter[3];
+	double fieldr2;
+
+	fflush(NULL);
+	printf("Tweaking!\n");
+
+	twee = tweak_new();
+
+	tweak_print_state(twee);
+	printf("\n");
+
+	// pull out the field coordinates.
+	imgx = malloc(p->nfield * sizeof(double));
+	imgy = malloc(p->nfield * sizeof(double));
+	for (i=0; i<p->nfield; i++) {
+		imgx[i] = p->field[i*2 + 0];
+		imgy[i] = p->field[i*2 + 1];
+	}
+	printf("Pushing %i image coordinates.\n", p->nfield);
+	tweak_push_image_xy(twee, imgx, imgy, p->nfield);
+	tweak_print_state(twee);
+	printf("\n");
+
+	// find all the index stars that are inside the circle that bounds
+	// the field.
+	for (i=0; i<3; i++)
+		fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
+	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
+	// 1.05 is a little safety factor.
+	res = kdtree_rangesearch_options(starkd->tree, fieldcenter,
+									 fieldr2 * 1.05,
+									 KD_OPTIONS_SMALL_RADIUS |
+									 KD_OPTIONS_RETURN_POINTS);
+	if (!res || !res->nres)
+		goto bailout;
+	starxyz = res->results.d;
+	nstars = res->nres;
+	printf("Pushing %i star coordinates.\n", nstars);
+	tweak_push_ref_xyz(twee, starxyz, nstars);
+	tweak_print_state(twee);
+	printf("\n");
+
+	// HACK -
+	tweak_push_hppath(twee, startreefname);
+	tweak_print_state(twee);
+	printf("\n");
+
+	/*
+	  if (!twee->sip) {
+	  twee->sip = sip_create();
+	  }
+	  memcpy(twee->sip.wcstan, mo->wcstan, sizeof(tan_t));
+	*/
+
+	tweak_push_wcs_tan(twee, &(mo->wcstan));
+	{
+		sip_t* sip = twee->sip;
+		sip->a_order = sip->b_order = 2;
+		sip->ap_order = sip->bp_order = 4;
+	}
+
+	tweak_print_state(twee);
+	printf("\n");
+
+
+	//tweak_go_to(TWEAK_HAS_LINEAR_CD);
+
+	printf("Begin advancing...\n");
+	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
+		unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
+		tweak_print_state(twee);
+		printf("\n");
+		if (r == -1) {
+			printf("Error!\n");
+			goto bailout;
+		}
+	}
+
+	printf("Done!\n");
+	fflush(NULL);
+
+ bailout:
+	kdtree_free_query(res);
+	free(imgx);
+	free(imgy);
+	tweak_free(twee);
 }
 
 static void verified(handlehits* hh, MatchObj* mo) {
@@ -792,6 +892,11 @@ static void solve_fields() {
 			if (!silent)
 				fprintf(stderr, "Field %i solved with overlap %g.\n", fieldnum,
 						hits->bestmo->overlap);
+
+			// Tweak, if requested.
+			if (do_tweak) {
+				tweak(hits->bestmo, &solver, starkd);
+			}
 
 			// Write WCS, if requested.
 			if (wcs_template) {
