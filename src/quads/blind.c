@@ -600,7 +600,7 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	return 1;
 }
 
-static double iter_wcs_rads[] = { 2, 3, 4, 5, 6, 7, 8, 9 };
+//static double iter_wcs_rads[] = { 2, 3, 4, 5, 6, 7, 8, 9 };
 
 static void solve_fields() {
 	solver_params solver;
@@ -672,10 +672,12 @@ static void solve_fields() {
 	hits->do_wcs = (wcs_template ? 1 : 0);
 	hits->verified = verified;
 
-	//hits->iter_wcs_steps = 3;
-	hits->iter_wcs_steps = sizeof(iter_wcs_rads)/sizeof(double);
-	hits->iter_wcs_thresh = 0.05;
-	hits->iter_wcs_rads = iter_wcs_rads;
+	hits->iter_wcs_steps = 0;
+	/*
+	  hits->iter_wcs_steps = sizeof(iter_wcs_rads)/sizeof(double);
+	  hits->iter_wcs_thresh = 0.05;
+	  hits->iter_wcs_rads = iter_wcs_rads;
+	*/
 
 	nfields = xyls->nfields;
 
