@@ -88,6 +88,7 @@ double agreetol;
 bool do_verify;
 int nagree_toverify;
 double verify_dist2;
+double overlap_toprint;
 double overlap_tokeep;
 double overlap_tosolve;
 int ninfield_tokeep;
@@ -169,6 +170,7 @@ int main(int argc, char *argv[]) {
 		agreetol = 0.0;
 		nagree_toverify = 0;
 		verify_dist2 = 0.0;
+		overlap_toprint = 0.0;
 		overlap_tokeep = 0.0;
 		overlap_tosolve = 0.0;
 		ninfield_tosolve = 0;
@@ -215,6 +217,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "agreetol %g\n", agreetol);
 			fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
 			fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
+			fprintf(stderr, "overlap_toprint %f\n", overlap_toprint);
 			fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
 			fprintf(stderr, "overlap_tosolve %f\n", overlap_tosolve);
 			fprintf(stderr, "ninfield_tokeep %i\n", ninfield_tokeep);
@@ -468,6 +471,8 @@ static int read_parameters() {
 			overlap_tosolve = atof(nextword);
 		} else if (is_word(buffer, "overlap_tokeep ", &nextword)) {
 			overlap_tokeep = atof(nextword);
+		} else if (is_word(buffer, "overlap_toprint ", &nextword)) {
+			overlap_toprint = atof(nextword);
 		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
 			// LEGACY
 			fprintf(stderr, "Warning, the \"min_ninfield\" command is deprecated."
@@ -573,7 +578,7 @@ static int read_parameters() {
 }
 
 static void verified(handlehits* hh, MatchObj* mo) {
-	if (!quiet && !silent && verbose)
+	if (!quiet && !silent && verbose && (mo->overlap >= overlap_toprint))
 		fprintf(stderr, "    field %i (%i agree): overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 				mo->fieldnum, mo->nagree, 100.0 * mo->overlap,
 				mo->ninfield, mo->noverlap,
