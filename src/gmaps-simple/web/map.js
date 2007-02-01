@@ -45,9 +45,6 @@ var visiblePolygons = [];
 // Show polygons?
 var showPolygons = true;
 
-// Are we in the middle of a multi-step move?
-var moving = false;
-
 /*
   Retrieves a new list of polygons from the server.
 */
@@ -72,59 +69,59 @@ function getNewPolygons() {
 
 	// Contact the quad server with our current position...
 	GDownloadUrl(url, function(data, responseCode){
-		// Remove old polygons.
-		for (var i=0; i<visiblePolygons.length; i++) {
-			map.removeOverlay(visiblePolygons[i]);
-		}
-		visiblePolygons.length = 0;
+              // Remove old polygons.
+              for (var i=0; i<visiblePolygons.length; i++) {
+                      map.removeOverlay(visiblePolygons[i]);
+              }
+              visiblePolygons.length = 0;
 
-		// Parse new polygons
-		var xml = GXml.parse(data);
-		var polys = xml.documentElement.getElementsByTagName("poly");
-		polygons.length = 0;
-		for (var i=0; i<polys.length; i++) {
-			var points = [];
-			for (var j=0;; j++) {
-				if (!(polys[i].hasAttribute("dec"+j) &&
-					  polys[i].hasAttribute("ra"+j)))
-					break;
-				points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
-										parseFloat(polys[i].getAttribute("ra"+j))));
-			}
-			points.push(points[0]);
-			polygons.push(new GPolyline(points, "#90a8ff"));
-		}
-		debug("got " + polygons.length + " polygons.\n");
+              // Parse new polygons
+              var xml = GXml.parse(data);
+              var polys = xml.documentElement.getElementsByTagName("poly");
+              polygons.length = 0;
+              for (var i=0; i<polys.length; i++) {
+                      var points = [];
+                      for (var j=0;; j++) {
+                              if (!(polys[i].hasAttribute("dec"+j) &&
+                                        polys[i].hasAttribute("ra"+j)))
+                                      break;
+                              points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
+                                                                              parseFloat(polys[i].getAttribute("ra"+j))));
+                      }
+                      points.push(points[0]);
+                      polygons.push(new GPolyline(points, "#90a8ff"));
+              }
+              debug("got " + polygons.length + " polygons.\n");
 
-		if (showPolygons) {
-			// Show new polygons.
-			for (var i=0; i<polygons.length; i++) {
-				map.addOverlay(polygons[i]);
-				visiblePolygons.push(polygons[i]);
-			}
-		}
-	});
+              if (showPolygons) {
+                      // Show new polygons.
+                      for (var i=0; i<polygons.length; i++) {
+                              map.addOverlay(polygons[i]);
+                              visiblePolygons.push(polygons[i]);
+                      }
+              }
+      });
 }
 
-/*
+ /*
   This function gets called as the user moves the map.
 */
 function mapmoved() {
-	center = map.getCenter();
-	// update the center ra,dec textboxes.
-	ra = center.lng();
-	if (ra < 0.0) { ra += 360.0; }
-	document.gotoform.ra_center.value  = "" + ra;
-	document.gotoform.dec_center.value = "" + center.lat();
+       center = map.getCenter();
+       // update the center ra,dec textboxes.
+       ra = center.lng();
+       if (ra < 0.0) { ra += 360.0; }
+       document.gotoform.ra_center.value  = "" + ra;
+       document.gotoform.dec_center.value = "" + center.lat();
 }
 
 /*
   This function gets called when the user changes the zoom level.
 */
 function mapzoomed(oldzoom, newzoom) {
-	// update the "zoom" textbox.
-	document.gotoform.zoomlevel.value = "" + newzoom;
-	mapmoved();
+       // update the "zoom" textbox.
+       document.gotoform.zoomlevel.value = "" + newzoom;
+       mapmoved();
 }
 
 /*
@@ -132,11 +129,10 @@ function mapzoomed(oldzoom, newzoom) {
   and also after it's moved programmatically (via setCenter(), etc).
 */
 function moveended() {
-	mapmoved();
-
-	if (!moving)
-		getNewPolygons();
+       mapmoved();
+	getNewPolygons();
 }
+
 
 /*
   This function gets called when the mouse is moved.
@@ -156,34 +152,8 @@ function moveCenter() {
 	var ra   = document.gotoform.ra_center.value;
 	var dec  = document.gotoform.dec_center.value;
 	var zoom = document.gotoform.zoomlevel.value;
-
-	debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ", old zoom " + map.getZoom() + "\n");
-
-	/*
-		map.setCenter(new GLatLng(dec, ra));
-		map.setZoom(zoom);
-	*/
-	/*
-		map.setCenter(new GLatLng(dec, ra), zoom);
-	*/
-
-	moving = true;
-
-	map.setCenter(new GLatLng(dec, ra));
-	var oldzoom = map.getZoom();
-	while (zoom > oldzoom) {
-		map.zoomIn();
-		oldzoom++;
-	}
-	while (zoom < oldzoom) {
-		map.zoomOut();
-		oldzoom--;
-	}
-	//map.setZoom(zoom);
-
-	moving = false;
-
-	getNewPolygons();
+	//debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ", old zoom " + map.getZoom() + "\n");
+	map.setCenter(new GLatLng(dec, ra), Number(zoom));
 }
 
 /*
