@@ -246,20 +246,23 @@ function startup() {
 	map = new GMap(document.getElementById("map"));
 
 	// Base URL of the tile and quad servers.
-	BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
+	BASE_URL = "http://oven.cosmo.fas.nyu.edu/simple/";
 	TILE_URL = BASE_URL + "tile.php?";
 	QUAD_URL = BASE_URL + "quad.php?";
 	getdata = getGetData();
 
 	// Describe the tile server...
-	var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"), 1, 17);
+	var myTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	myTile.myLayers='mylayer';
 	myTile.myFormat='image/png';
 	myTile.myBaseURL=TILE_URL;
 	myTile.getTileUrl=CustomGetTileUrl;
+	//myTile=CustomGetTileUrl;
 
+	/*
 	map.getMapTypes().length = 0;
 	map.addMapType(myTile);
+	*/
 
 	// Show an overview map?
 	var overview = true;
@@ -301,19 +304,20 @@ function startup() {
 	if ("zoom" in getdata) {
 		zoom = Number(getdata["zoom"]);
 	}
-	//map.setCenter(new GLatLng(dec, ra), zoom);
+	map.setCenter(new GLatLng(dec, ra), zoom);
 	/*
 	  var cmd = "map.setCenter(new GLatLng(" + dec + ", " + ra + "), " + zoom + ");"
 	  debug("cmd = " + cmd + "\n");
 	  setTimeout(cmd, 1);
-	*/
+
 	var cmd1 = "map.setCenter(new GLatLng(" + dec + ", " + ra + "));";
 	debug("cmd1 = " + cmd1 + "\n");
 	setTimeout(cmd1, 1);
 
 	var cmd2 = "map.setZoom(" + zoom + ");";
 	debug("cmd2 = " + cmd2 + "\n");
-	setTimeout(cmd, 2);
+	setTimeout(cmd2, 2);
+	*/
 
 	setTimeout("moveended();", 3);
 	setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 4);
