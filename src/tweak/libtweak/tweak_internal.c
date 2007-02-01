@@ -801,13 +801,14 @@ void invert_sip_polynomial(tweak_t* t)
 			// Calculate polynomial terms but this time for inverse
 			int j = 0;
 			int p,q;
-			for (p=0; p<inv_sip_order; p++)
-				for (q=0; q<inv_sip_order; q++)
+			for (p=0; p<=inv_sip_order; p++)
+				for (q=0; q<=inv_sip_order; q++)
 					if (p+q <= inv_sip_order && !(p==0&&q==0)) {
 						assert(j < inv_sip_coeffs);
 						A[i + stride*j] = pow(U,p)*pow(V,q);
 						j++;
 					}
+			assert(j == inv_sip_coeffs);
 
 			b[i] = -fuv;
 			b[i+stride] = -guv;
@@ -836,14 +837,15 @@ void invert_sip_polynomial(tweak_t* t)
 	// Extract the inverted SIP coefficients
 	int j = 0;
 	int p, q;
-	for (p=0; p<inv_sip_order; p++)
-		for (q=0; q<inv_sip_order; q++)
+	for (p=0; p<=inv_sip_order; p++)
+		for (q=0; q<=inv_sip_order; q++)
 			if (p+q <= inv_sip_order && !(p==0&&q==0)) {
 				assert(j < inv_sip_coeffs);
 				t->sip->ap[p][q] = b[j];
 				t->sip->bp[p][q] = b[stride+j];
 				j++;
 			}
+	assert(j == inv_sip_coeffs);
 
 	// Calculate chi2 for sanity
 	double chisq=0;
@@ -880,7 +882,9 @@ void invert_sip_polynomial(tweak_t* t)
 void do_linear_tweak(tweak_t* t)
 {
 
-	int sip_order = 3;
+	// a_order and b_order should be the same!
+	assert(t->sip->a_order == t->sip->b_order);
+	int sip_order = t->sip->a_order;
 	// The SIP coefficients form a order x order upper triangular matrix missing
 	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
 	// That's why the computation of the number of SIP terms is calculated by
@@ -954,14 +958,15 @@ void do_linear_tweak(tweak_t* t)
 		// don't include in SIP terms)
 		int j = 2;
 		int p, q;
-		for (p=0; p<sip_order; p++)
-			for (q=0; q<sip_order; q++)
+		for (p=0; p<=sip_order; p++)
+			for (q=0; q<=sip_order; q++)
 				if (p+q <= sip_order) {
 					assert(2 <= j);
 					assert(j < 2+sip_coeffs);
 					A[i + stride*j] = pow(u,p)*pow(v,q);
 					j++;
 				}
+		assert(j == 2+sip_coeffs);
 
 		// Be sure about shift coefficient
 		A[i+stride*2] = 1.0;
@@ -1008,8 +1013,8 @@ void do_linear_tweak(tweak_t* t)
 	cdi[1][1] =  t->sip->wcstan.cd[0][0] * inv_det;
 	int j = 3;
 	int p, q;
-	for (p=0; p<sip_order; p++)
-		for (q=0; q<sip_order; q++)
+	for (p=0; p<=sip_order; p++)
+		for (q=0; q<=sip_order; q++)
 			if (p+q <= sip_order && !(p==0&&q==0)) {
 				assert(2 <= j);
 				assert(j < 2+sip_coeffs);
@@ -1017,6 +1022,8 @@ void do_linear_tweak(tweak_t* t)
 				t->sip->b[p][q] = cdi[1][0]*b[j] + cdi[1][1]*b[stride+j];
 				j++;
 			}
+	assert(j == 2+sip_coeffs);
+
 	t->sip->a_order = sip_order;
 	t->sip->b_order = sip_order;
 
