@@ -29,28 +29,14 @@ function debug(txt) {
 	document.debugform.debug.value += txt;
 }
 
-// Create a new Google Maps client in the "map" <div>.
-var map = new GMap(document.getElementById("map"));
+var map;
 
 // Base URL of the tile and quad servers.
-var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
-var TILE_URL = BASE_URL + "tile.php?";
-var QUAD_URL = BASE_URL + "quad.php?";
+var BASE_URL;
+var TILE_URL;
+var QUAD_URL;
 
-var getdata = getGetData();
-
-// Describe the tile server...
-var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
-myTile.myLayers='mylayer';
-myTile.myFormat='image/png';
-myTile.myBaseURL=TILE_URL;
-myTile.getTileUrl=CustomGetTileUrl;
-
-map.getMapTypes().length = 0;
-map.addMapType(myType);
-
-map.addControl(new GLargeMapControl());
-map.addControl(new GMapTypeControl());
+var getdata;
 
 // The current polylines.
 var polygons = [];
@@ -58,20 +44,6 @@ var polygons = [];
 var visiblePolygons = [];
 // Show polygons?
 var showPolygons = true;
-
-// Show an overview map?
-var overview = true;
-if (("over" in getdata) && (getdata["over"] == "no")) {
-	overview = false;
-}
-if (overview) {
-	var w = 800;
-	var h = 600;
-	var ow = 150;
-	var oh = 150;
-	overviewControl = new GOverviewMapControl(new GSize(ow,oh));
-	map.addControl(overviewControl);
-}
 
 /*
   This function gets called as the user moves the map.
@@ -176,30 +148,6 @@ function moveCenter() {
 	map.setZoom(zoom);
 }
 
-// Connect up the event listeners...
-GEvent.addListener(map, "move", mapmoved);
-GEvent.addListener(map, "moveend", moveended);
-GEvent.addListener(map, "zoomend", mapzoomed);
-GEvent.addListener(map, "mousemove", mousemoved);
-GEvent.bindDom(window,"resize",map,map.onResize);
-
-var ra=0;
-var dec=0;
-var zoom=0;
-
-if ("ra" in getdata) {
-	ra = Number(getdata["ra"]);
-}
-if ("dec" in getdata) {
-	dec = Number(getdata["dec"]);
-}
-if ("zoom" in getdata) {
-	zoom = Number(getdata["zoom"]);
-}
-
-map.setCenter(new GLatLng(dec, ra), zoom);
-
-
 /*
   Create a URL with "ra", "dec", and "zoom" GET args, and go there.
 */
@@ -254,7 +202,7 @@ PolygonControl.prototype = new GControl();
 PolygonControl.prototype.initialize = function(map) {
 	var container = document.createElement("div");
 	var toggleDiv = document.createElement("div");
-	var txtNode = document.createTextNode(indexTxt);
+	var txtNode = document.createTextNode("POLY");
 	this.setButtonStyle_(toggleDiv);
 	container.appendChild(toggleDiv);
 	toggleDiv.appendChild(txtNode);
@@ -290,8 +238,72 @@ PolygonControl.prototype.setButtonStyle_ = function(button) {
 	}
 }
 
-map.addControl(new PolygonControl());
+/*
+  This function gets called when the page loads.
+*/
+function startup() {
+  // Create a new Google Maps client in the "map" <div>.
+  map = new GMap(document.getElementById("map"));
 
-setTimeout("moveended();", 1);
-setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
+  // Base URL of the tile and quad servers.
+  BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
+  TILE_URL = BASE_URL + "tile.php?";
+  QUAD_URL = BASE_URL + "quad.php?";
+  getdata = getGetData();
 
+  // Describe the tile server...
+  var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
+  myTile.myLayers='mylayer';
+  myTile.myFormat='image/png';
+  myTile.myBaseURL=TILE_URL;
+  myTile.getTileUrl=CustomGetTileUrl;
+
+  map.getMapTypes().length = 0;
+  map.addMapType(myTile);
+
+  // Show an overview map?
+  var overview = true;
+  if (("over" in getdata) && (getdata["over"] == "no")) {
+	overview = false;
+  }
+  if (overview) {
+	var w = 800;
+	var h = 600;
+	var ow = 150;
+	var oh = 150;
+	overviewControl = new GOverviewMapControl(new GSize(ow,oh));
+	map.addControl(overviewControl);
+  }
+
+  // Connect up the event listeners...
+  GEvent.addListener(map, "move", mapmoved);
+  GEvent.addListener(map, "moveend", moveended);
+  GEvent.addListener(map, "zoomend", mapzoomed);
+  GEvent.addListener(map, "mousemove", mousemoved);
+  GEvent.bindDom(window, "resize", map, map.onResize);
+
+  map.addControl(new GLargeMapControl());
+  map.addControl(new GMapTypeControl());
+  map.addControl(new PolygonControl());
+
+  var ra=0;
+  var dec=0;
+  var zoom=0;
+
+  if ("ra" in getdata) {
+	ra = Number(getdata["ra"]);
+  }
+  if ("dec" in getdata) {
+	dec = Number(getdata["dec"]);
+  }
+  if ("zoom" in getdata) {
+	zoom = Number(getdata["zoom"]);
+  }
+  //map.setCenter(new GLatLng(dec, ra), zoom);
+  var cmd = "map.setCenter(new GLatLng(" + dec + ", " + ra + "), " + zoom + ");"
+  debug("cmd = " + cmd + "\n");
+  setTimeout(cmd, 1);
+
+  setTimeout("moveended();", 2);
+  setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 3);
+}
