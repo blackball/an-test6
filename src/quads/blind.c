@@ -56,6 +56,7 @@
 #include "qfits_error.h"
 #include "qfits_cache.h"
 #include "tweak_internal.h"
+#include "rdlist.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -115,7 +116,10 @@ int nverified;
 
 handlehits* hits;
 
-bool do_tweak = FALSE;
+char* rdlsfname;
+rdlist* rdls;
+
+bool do_tweak;
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -154,6 +158,8 @@ int main(int argc, char *argv[]) {
 		matchfname = NULL;
 		donefname = NULL;
 		solvedfname = NULL;
+		rdlsfname = NULL;
+		do_tweak = FALSE;
 		solvedserver = NULL;
 		wcs_template = NULL;
 		fieldid_key = strdup("FIELDID");
@@ -184,6 +190,7 @@ int main(int argc, char *argv[]) {
 		il_remove_all(fieldlist);
 		quads = NULL;
 		starkd = NULL;
+		rdls = NULL;
 		nverified = 0;
 
 		if (read_parameters()) {
@@ -362,6 +369,20 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
 		}
 
+		if (rdlsfname) {
+			rdls = rdlist_open_for_writing(rdlsfname);
+			if (rdls) {
+				if (rdlist_write_header(rdls)) {
+					fprintf(stderr, "Failed to write RDLS header.\n");
+					rdlist_close(rdls);
+					rdls = NULL;
+				}
+			} else {
+				fprintf(stderr, "Failed to open RDLS file %s for writing.\n",
+						rdlsfname);
+			}
+		}
+
 		// Do it!
 		solve_fields();
 
@@ -392,10 +413,19 @@ int main(int argc, char *argv[]) {
 			idfile_close(id);
 		quadfile_close(quads);
 
+		if (rdls) {
+			if (rdlist_fix_header(rdls) ||
+				rdlist_close(rdls)) {
+				fprintf(stderr, "Failed to close RDLS file.\n");
+			}
+			rdls = NULL;
+		}
+
 		free(donefname);
 		free(solvedfname);
 		free(solvedserver);
 		free(matchfname);
+		free(rdlsfname);
 		free(xcolname);
 		free(ycolname);
 		free(wcs_template);
@@ -487,6 +517,8 @@ static int read_parameters() {
 			ninfield_tosolve = atoi(nextword);
 		} else if (is_word(buffer, "match ", &nextword)) {
 			matchfname = strdup(nextword);
+		} else if (is_word(buffer, "rdls ", &nextword)) {
+			rdlsfname = strdup(nextword);
 		} else if (is_word(buffer, "solved ", &nextword)) {
 			solvedfname = strdup(nextword);
 		} else if (is_word(buffer, "solvedserver ", &nextword)) {
@@ -887,6 +919,12 @@ static void solve_fields() {
 				fprintf(stderr, "Failed to fix the matchfile header for field %i.\n", fieldnum);
 		}
 
+		if (rdls) {
+			if (rdlist_write_new_field(rdls)) {
+				fprintf(stderr, "Failed to write RDLS field header.\n");
+			}
+		}
+
 		if (hits->bestmo) {
 			sip_t* sip = NULL;
 			// Field solved!
@@ -932,6 +970,29 @@ static void solve_fields() {
 				fclose(fout);
 			}
 
+			if (rdls) {
+				double* radec = malloc(nfield * 2 * sizeof(double));
+				int i;
+				if (sip) {
+					for (i=0; i<nfield; i++)
+						sip_pixelxy2radec(sip,
+										  field[i*2], field[i*2+1],
+										  radec+i*2, radec+i*2+1);
+				} else {
+					for (i=0; i<nfield; i++)
+						tan_pixelxy2radec(&(hits->bestmo->wcstan),
+										  field[i*2], field[i*2+1],
+										  radec+i*2, radec+i*2+1);
+				}
+				if (rdlist_write_entries(rdls, radec, nfield)) {
+					fprintf(stderr, "Failed to write RDLS entry.\n");
+				}
+				free(radec);
+			}
+
+			if (sip) {
+				sip_free(sip);
+			}
 			// Record in solved file, or send to solved server.
 			if (solvedfname) {
 				if (!silent)
@@ -948,6 +1009,12 @@ static void solve_fields() {
 			// Field unsolved.
 			if (!silent)
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
+		}
+
+		if (rdls) {
+			if (rdlist_fix_field(rdls)) {
+				fprintf(stderr, "Failed to fix RDLS field header.\n");
+			}
 		}
 
 		handlehits_free_matchobjs(hits);
