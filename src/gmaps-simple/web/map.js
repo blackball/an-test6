@@ -1,3 +1,12 @@
+/*
+  Pulls entries out of the GET line and puts them in an array.
+  ie, if the current URL is:
+  .  http://wherever.com/map.html?a=b&x=4&z=9
+  then this will return:
+  .  ["a"] = "b"
+  .  ["x"] = "4"
+  .  ["z"] = "9"
+*/
 function getGetData(){
 	GET_DATA=new Object();
 	var getDataString=new String(window.location);
@@ -13,171 +22,41 @@ function getGetData(){
 	return GET_DATA;
 }
 
+/*
+  Prints text to the debug form.
+ */
 function debug(txt) {
-	//document.debugform.debug.value += txt;
+	document.debugform.debug.value += txt;
 }
 
+// Create a new Google Maps client in the "map" <div>.
 var map = new GMap(document.getElementById("map"));
 
+// Base URL of the tile and quad servers.
 var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
-var COUNT_URL = BASE_URL + "count.php?map=usnob";
 var TILE_URL = BASE_URL + "tile.php?";
-var USNOB_URL = TILE_URL + "map=usnob";
-var INDEX_URL = TILE_URL + "map=index";
-var QUAD_URL = BASE_URL + "quad2.php?";
-var FIELD_URL;
-var SDSS_URL;
-var RDLS_URL;
-
-var gotquad = false;
-var gotfieldquad = false;
-var sdssobjs = [];
-var fieldobjs = [];
+var QUAD_URL = BASE_URL + "quad.php?";
 
 var getdata = getGetData();
 
-var indexQuadState = ("iq" in getdata);
-
-if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
-	var filenum = Number(getdata["SDSS_FILE"]);
-	var fieldnum = Number(getdata["SDSS_FIELD"]);
-	if (filenum > 0 && filenum <= 35 && fieldnum >= 0 && fieldnum < 10000) {
-		var sdss = true;
-		FIELD_URL = TILE_URL + "map=sdssfield" + "&SDSS_FILE=" + filenum + "&SDSS_FIELD=" + fieldnum;
-		if ("nf" in getdata) {
-			var nf = Number(getdata["nf"]);
-			FIELD_URL = FIELD_URL + "&N=" + nf;
-		}
-	}
-	if ("SDSS_QUAD" in getdata) {
-		var quadstr = getdata["SDSS_QUAD"];
-		debug("quadstr is " + quadstr + "\n");
-		if (quadstr.match(/^\d*(,\d*){3}(;\d*(,\d*){3})*$/) != null) {
-			debug("quadstr matches.\n");
-			sdssobjs = quadstr.match(/\d+/g);
-			debug("sdssobjs is " + sdssobjs + "\n");
-			if (sdssobjs != null) {
-				for (var i=0; i<sdssobjs.length; i++) {
-					debug("sdssobjs[" + i + "] is " + sdssobjs[i] + "\n");
-				}
-			}
-			if (sdssobjs != null && (sdssobjs.length % 4 == 0)) {
-				gotquad = true;
-			}
-		}
-		fieldobjs = sdssobjs;
-		gotfieldquad = gotquad;
-	}
-}
-if ("RDLS_FILE" in getdata) {
-	var rdls = true;
-	var rdlsfile = getdata["RDLS_FILE"];
-	RDLS_URL = TILE_URL + "map=rdls" + "&RDLS_FILE=" + rdlsfile;
-	if ("RDLS_FIELD" in getdata) {
-		RDLS_URL = RDLS_URL + "&RDLS_FIELD=" + Number(getdata["RDLS_FIELD"]);
-	}
-}
-
-var index = false;
-if ("INDEX_FILE" in getdata) {
-	index = true;
-	var indexfile = getdata["INDEX_FILE"];
-	INDEX_URL = INDEX_URL + "&INDEX_FILE=" + indexfile;
-	INDEX_QUAD_URL = QUAD_URL + "&index=" + indexfile;
-
-	/*
-		if ("INDEX_QUAD" in getdata) {
-		var quadstr = getdata["INDEX_QUAD"];
-		debug("quadstr is " + quadstr + "\n");
-		if (quadstr.match(/^\d*(,\d*){3}(;\d*(,\d*){3})*$/) != null) {
-		debug("quadstr matches.\n");
-		var indexobjs = quadstr.match(/\d+/g);
-		debug("indexobjs is " + indexobjs + "\n");
-		if (indexobjs != null) {
-		for (var i=0; i<indexobjs.length; i++) {
-		debug("indexobjs[" + i + "] is " + indexobjs[i] + "\n");
-		}
-		}
-		if (indexobjs != null && (indexobjs.length % 4 == 0)) {
-		var gotindexquad = true;
-		}
-		}
-		}
-	*/
-}
-
-
+// Show an overview map?
 var overview = true;
 if (("over" in getdata) && (getdata["over"] == "no")) {
 	overview = false;
 }
 
-var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
-usnobTile.myLayers='usnob';
-usnobTile.myFormat='image/png';
-usnobTile.myBaseURL=USNOB_URL;
-usnobTile.getTileUrl=CustomGetTileUrl;
-
-var sdssFieldTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),0,17);
-sdssFieldTile.myLayers='sdssfield';
-sdssFieldTile.myFormat='image/png';
-sdssFieldTile.myBaseURL=FIELD_URL;
-sdssFieldTile.getTileUrl=CustomGetTileUrl;
-
-var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) Astrometry.net"),1,17);
-indexTile.myLayers='index';
-indexTile.myFormat='image/png';
-indexTile.myBaseURL=INDEX_URL;
-indexTile.getTileUrl=CustomGetTileUrl;
-
-var indexTransTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
-indexTransTile.myLayers='index';
-indexTransTile.myFormat='image/png';
-indexTransTile.myBaseURL=INDEX_URL + "&trans=1";
-indexTransTile.getTileUrl=CustomGetTileUrl;
-
-var rdlsTile = new GTileLayer(new GCopyrightCollection(""),1,17);
-rdlsTile.myLayers='rdls';
-rdlsTile.myFormat='image/png';
-rdlsTile.myBaseURL=RDLS_URL;
-rdlsTile.getTileUrl=CustomGetTileUrl;
-
-// transparent version of the above
-var rdlsTransTile = new GTileLayer(new GCopyrightCollection(""),1,17);
-rdlsTransTile.myLayers='rdls';
-rdlsTransTile.myFormat='image/png';
-rdlsTransTile.myBaseURL=RDLS_URL + "&trans=1";
-rdlsTransTile.getTileUrl=CustomGetTileUrl;
-
-var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
+// Describe the tile server...
+var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
+myTile.myLayers='mylayer';
+myTile.myFormat='image/png';
+myTile.myBaseURL=TILE_URL;
+myTile.getTileUrl=CustomGetTileUrl;
 
 map.getMapTypes().length = 0;
-map.addMapType(usnobType);
-
-if (sdss) {
-	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
-	map.addMapType(sdssField);
-}
-if (rdls) {
-	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
-	map.addMapType(rdlsUsnob);
-	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
-	map.addMapType(rdlsAlone);
-}
-if (index) {
-	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
-	map.addMapType(usnobPlusIndex);
-	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
-	map.addMapType(indexAlone);
-}
-if (rdls && index) {
-	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
-	map.addMapType(rdlsIndex);
-}
+map.addMapType(myType);
 
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
-//map.addControl(new GScaleControl());
 
 if (overview) {
 	var w = 800;
@@ -186,106 +65,124 @@ if (overview) {
 	var oh = 150;
 	overviewControl = new GOverviewMapControl(new GSize(ow,oh));
 	map.addControl(overviewControl);
-	//map.hideControls([overviewControl]);
 }
 
 GEvent.bindDom(window,"resize",map,map.onResize);
 
+/*
+  This function gets called as the user moves the map.
+*/
 function mapmoved() {
 	center = map.getCenter();
 	// update the center ra,dec textboxes.
 	ra = center.lng();
 	if (ra < 0.0) { ra += 360.0; }
-	document.dummyform.ra_center.value  = "" + ra;
-	document.dummyform.dec_center.value = "" + center.lat();
+	document.gotoform.ra_center.value  = "" + ra;
+	document.gotoform.dec_center.value = "" + center.lat();
 }
 
+/*
+  This function gets called when the user changes the zoom level.
+ */
 function mapzoomed(oldzoom, newzoom) {
 	// update the "zoom" textbox.
-	document.dummyform.zoom.value = "" + newzoom;
+	document.gotoform.zoom.value = "" + newzoom;
 	mapmoved();
 }
 
+/*
+  This function gets called when the user stops moving the map (mouse drag).
+ */
 function moveended() {
 	mapmoved();
-	// update the object count textbox.
+
+	// Get the current view...
 	var bounds = map.getBounds();
 	var pixelsize = map.getSize();
 	var zoom = map.getZoom();
+	var center = map.getCenter();
 	var sw = bounds.getSouthWest();
 	var ne = bounds.getNorthEast();
 
-	//debug("move ended.  index=" + index + ", iqs=" + indexQuadState + "\n");
+	/*
+	  url = INDEX_QUAD_URL + "&zoom=" + zoom 
+	  + "&ra=" + center.lng() + "&dec=" + center.lat()
+	  + "&width=" + pixelsize.width
+	  + "&height=" + pixelsize.height;
 
-	if (index && indexQuadState) {
-		url = INDEX_QUAD_URL + "&zoom=" + zoom 
-			+ "&ra=" + center.lng() + "&dec=" + center.lat()
-			+ "&width=" + pixelsize.width
-			+ "&height=" + pixelsize.height;
+	  debug("quads: " + url + "\n");
+	*/
 
-		debug("quads: " + url + "\n");
-
-		GDownloadUrl(url, function(data, responseCode){
-			var xml = GXml.parse(data);
-			var quads = xml.documentElement.getElementsByTagName("quad");
-			for (var i = 0; i < quads.length; i++) {
-				var points = [];
-				for (var j=0; j<4; j++) {
-					points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
-											parseFloat(quads[i].getAttribute("ra"+j))));
-				}
-				points.push(points[0]);
-				indexQuads.push(new GPolyline(points, "#90a8ff"));
-			}
-			if (indexQuadState) {
-				for (var i=0; i<indexQuads.length; i++) {
-					map.addOverlay(indexQuads[i]);
-				}
-			}
-		});
-	}
+	// Contact the quad server with our current position...
+	/*
+	  GDownloadUrl(url, function(data, responseCode){
+	  var xml = GXml.parse(data);
+	  var quads = xml.documentElement.getElementsByTagName("quad");
+	  for (var i = 0; i < quads.length; i++) {
+	  var points = [];
+	  for (var j=0; j<4; j++) {
+	  points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
+	  parseFloat(quads[i].getAttribute("ra"+j))));
+	  }
+	  points.push(points[0]);
+	  indexQuads.push(new GPolyline(points, "#90a8ff"));
+	  }
+	  for (var i=0; i<indexQuads.length; i++) {
+	  map.addOverlay(indexQuads[i]);
+	  }
+	  }
+	  });
+	*/
 }
 
+/*
+  This function gets called when the mouse is moved.
+*/
 function mousemoved(latlong) {
 	var ra = latlong.lng();
 	if (ra < 0.0) { ra += 360.0; }
-	document.dummyform.ra_mouse.value  = "" + ra;
-	document.dummyform.dec_mouse.value = "" + latlong.lat();
+	document.gotoform.ra_mouse.value  = "" + ra;
+	document.gotoform.dec_mouse.value = "" + latlong.lat();
 }
 
+/*
+  This function gets called when the "Go" button is pressed, or when Enter
+  is hit in one of the ra/dec/zoom textfields.
+*/
 function moveCenter() {
-	// "Go!" button / Enter in textfields
-	var ra = document.dummyform.ra_center.value;
-	var dec = document.dummyform.dec_center.value;
-	var zoom = document.dummyform.zoom.value;
-	// jump directly
-	//map.setCenter(new GLatLng(dec, ra), zoom);
+	var ra = document.gotoform.ra_center.value;
+	var dec = document.gotoform.dec_center.value;
+	var zoom = document.gotoform.zoom.value;
 	map.setCenter(new GLatLng(dec, ra));
 	map.setZoom(zoom);
 }
 
+// Connect up the event listeners...
 GEvent.addListener(map, "move", mapmoved);
 GEvent.addListener(map, "moveend", moveended);
 GEvent.addListener(map, "zoomend", mapzoomed);
 GEvent.addListener(map, "mousemove", mousemoved);
 
-map.setCenter(new GLatLng(0,0), 0);
+var ra=0;
+var dec=0;
+var zoom=0;
 
-// if this page's URL has "ra", "dec", and "zoom" args, then go there.
-function parseget() {
-	debug("parseget() running.\n");
-	var get = getGetData();
-	if (("ra" in get) && ("dec" in get) && ("zoom" in get)) {
-		var ra = Number(get["ra"]);
-		var dec = Number(get["dec"]);
-		var zoom = Number(get["zoom"]);
-		//document.debugform.debug.value = "ra=" + ra + ", dec=" + dec + ", zoom=" + zoom;
-		map.setZoom(zoom);
-		map.setCenter(new GLatLng(dec,ra));
-	}
+if ("ra" in getdata) {
+	ra = Number(getdata["ra"]);
+}
+if ("dec" in getdata) {
+	dec = Number(getdata["dec"];);
+}
+if ("zoom" in getdata) {
+	zoom = Number(getdata["zoom"]);
 }
 
-// create a URL with "ra", "dec", and "zoom" GET args, and go there.
+map.setCenter(new GLatLng(dec, ra), zoom);
+
+
+/*
+  Create a URL with "ra", "dec", and "zoom" GET args, and go there.
+*/
 function linktohere() {
 	var url=new String(window.location);
 	var qm=url.search(/\?/);
@@ -298,37 +195,10 @@ function linktohere() {
     if (!overview) {
 		url = url + "&over=no";
     }
-    if (sdss) {
-		url = url + "&SDSS_FILE=$filenum&SDSS_FIELD=$fieldnum";
-	}
 	window.location = url;
 }
 
-var indexQuads = [];
-var indexTxt  = "INDEX QUAD";
-
-var sdssQuads = [];
-var sdssTxt  = "SDSS QUAD";
-var sdssQuadState = ("sq" in getdata);
-
-var sdssBoundary = null;
-var sdssBoundaryTxt  = "SDSS BOX";
-var pts=[];
-// HACK!  Hard-code this for now...
-pts.push(new GLatLng(26.884,241.39));
-pts.push(new GLatLng(27.071,241.54));
-pts.push(new GLatLng(26.978,241.69));
-pts.push(new GLatLng(26.791,241.55));
-pts.push(pts[0]);
-sdssBoundary = new GPolyline(pts, "ffc800");
-var sdssBoundaryState = ("sb" in getdata);
-if (sdssBoundaryState) {
-	map.addOverlay(sdssBoundary);
-}
-
-var sdssFieldQuads = [];
-var sdssFieldTxt  = "FIELD QUAD";
-var sdssFieldQuadState = ("fq" in getdata);
+//var indexQuads = [];
 
 function buttonStyleOn(button) {
 	button.style.borderTopColor    = "#b0b0b0";
@@ -400,266 +270,8 @@ IndexQuadControl.prototype.setButtonStyle_ = function(button) {
 	}
 }
 
-function SdssQuadControl() {}
-SdssQuadControl.prototype = new GControl();
-SdssQuadControl.prototype.initialize = function(map) {
-	var on = sdssQuadState;
-	var container = document.createElement("div");
-	var toggleDiv = document.createElement("div");
-	var txtNode = document.createTextNode(sdssTxt);
-	this.setButtonStyle_(toggleDiv);
-	container.appendChild(toggleDiv);
-	toggleDiv.appendChild(txtNode);
-	GEvent.addDomListener(toggleDiv, "click", function(){
-		if (on) {
-			on = false;
-			for (var i=0; i<sdssQuads.length; i++) {
-				map.removeOverlay(sdssQuads[i]);
-			}
-			buttonStyleOff(toggleDiv);
-		} else {
-			on = true;
-			for (var i=0; i<sdssQuads.length; i++) {
-				map.addOverlay(sdssQuads[i]);
-			}
-			buttonStyleOn(toggleDiv);
-		}
-	});
-	map.getContainer().appendChild(container);
-	return container;
-}
-SdssQuadControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(1*78 + 7, 30));
-}
-SdssQuadControl.prototype.setButtonStyle_ = function(button) {
-	buttonStyleCommon(button);
-	if (!sdssQuadState) {
-		buttonStyleOff(button);
-	}
-}
+map.addControl(new IndexQuadControl());
 
-function SdssBoundaryControl() {}
-SdssBoundaryControl.prototype = new GControl();
-SdssBoundaryControl.prototype.initialize = function(map) {
-	var on = sdssBoundaryState;
-	var container = document.createElement("div");
-	var toggleDiv = document.createElement("div");
-	var txtNode = document.createTextNode(sdssBoundaryTxt);
-	this.setButtonStyle_(toggleDiv);
-	container.appendChild(toggleDiv);
-	toggleDiv.appendChild(txtNode);
-	GEvent.addDomListener(toggleDiv, "click", function(){
-		if (on) {
-			on = false;
-			if (sdssBoundary != null) {
-				map.removeOverlay(sdssBoundary);
-			}
-			buttonStyleOff(toggleDiv);
-		} else {
-			on = true;
-			if (sdssBoundary != null) {
-				map.addOverlay(sdssBoundary);
-			}
-			buttonStyleOn(toggleDiv);
-		}
-	});
-	map.getContainer().appendChild(container);
-	return container;
-}
-SdssBoundaryControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(2*78 + 7, 30));
-}
-SdssBoundaryControl.prototype.setButtonStyle_ = function(button) {
-	buttonStyleCommon(button);
-	if (!sdssBoundaryState) {
-		buttonStyleOff(button);
-	}
-}
-
-function FieldQuadControl() {}
-FieldQuadControl.prototype = new GControl();
-FieldQuadControl.prototype.initialize = function(map) {
-	var on = sdssFieldQuadState;
-	var container = document.createElement("div");
-	var toggleDiv = document.createElement("div");
-	var txtNode = document.createTextNode(sdssFieldTxt);
-	this.setButtonStyle_(toggleDiv);
-	container.appendChild(toggleDiv);
-	toggleDiv.appendChild(txtNode);
-	GEvent.addDomListener(toggleDiv, "click", function(){
-		if (on) {
-			on = false;
-			for (var i=0; i<sdssFieldQuads.length; i++) {
-				map.removeOverlay(sdssFieldQuads[i]);
-			}
-			buttonStyleOff(toggleDiv);
-		} else {
-			on = true;
-			for (var i=0; i<sdssFieldQuads.length; i++) {
-				map.addOverlay(sdssFieldQuads[i]);
-			}
-			buttonStyleOn(toggleDiv);
-		}
-	});
-	map.getContainer().appendChild(container);
-	return container;
-}
-FieldQuadControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(7, 30));
-}
-FieldQuadControl.prototype.setButtonStyle_ = function(button) {
-	buttonStyleCommon(button);
-	if (!sdssFieldQuadState) {
-		buttonStyleOff(button);
-	}
-}
-
-function addquad() {
-	var URL = BASE_URL + "quad.php?src=sdss&file=" + filenum + "&field=" + fieldnum +
-		"&quad=";
-	for (var i=0; i<sdssobjs.length; i++) {
-		if (i) { URL = URL + ","; }
-		URL = URL + sdssobjs[i];
-	}
-
-	GDownloadUrl(URL, function(data, responseCode){
-		var xml = GXml.parse(data);
-		var quads = xml.documentElement.getElementsByTagName("quad");
-		for (var i = 0; i < quads.length; i++) {
-			var points = [];
-			for (var j=0; j<4; j++) {
-				points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
-										parseFloat(quads[i].getAttribute("ra"+j))));
-			}
-			points.push(points[0]);
-			sdssQuads.push(new GPolyline(points, "#ffc800"));
-			//    sdssQuad = new GPolyline(points, "#0000ff");
-			//    sdssQuad = new GPolyline(points, "#00e000");
-			//sdssQuad = new GPolyline(points, "#ffc800");
-		}
-		if (sdssQuadState) {
-			for (var i=0; i<sdssQuads.length; i++) {
-				map.addOverlay(sdssQuads[i]);
-			}
-		}
-		map.addControl(new SdssQuadControl());
-	});
-}
-
-/*
-	function addindexquad() {
-	var URL = BASE_URL + "quad.php?src=index&hp=" + hp +
-		"&quad=";
-	for (var i=0; i<indexobjs.length; i++) {
-		if (i) { URL = URL + ","; }
-		URL = URL + indexobjs[i];
-	}
-	GDownloadUrl(URL, function(data, responseCode){
-		var xml = GXml.parse(data);
-		var quads = xml.documentElement.getElementsByTagName("quad");
-		for (var i = 0; i < quads.length; i++) {
-			var points = [];
-			for (var j=0; j<4; j++) {
-				points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
-										parseFloat(quads[i].getAttribute("ra"+j))));
-			}
-			points.push(points[0]);
-			indexQuads.push(new GPolyline(points, "#90a8ff"));
-			//indexQuad = new GPolyline(points, "#ff0000");
-			//indexQuad = new GPolyline(points, "#90a8ff");
-		}
-		if (indexQuadState) {
-			for (var i=0; i<indexQuads.length; i++) {
-				map.addOverlay(indexQuads[i]);
-			}
-		}
-		map.addControl(new IndexQuadControl());
-	});
-	}
-*/
-
-function addfieldquad() {
-	var URL = BASE_URL + "quad.php?src=field&file=" + filenum + "&field=" + fieldnum +
-		"&quad=";
-	for (var i=0; i<fieldobjs.length; i++) {
-		if (i) { URL = URL + ","; }
-		URL = URL + fieldobjs[i];
-	}
-	GDownloadUrl(URL, function(data, responseCode){
-		var xml = GXml.parse(data);
-		var quads = xml.documentElement.getElementsByTagName("quad");
-		for (var i = 0; i < quads.length; i++) {
-			var points = [];
-			for (var j=0; j<4; j++) {
-				points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
-										parseFloat(quads[i].getAttribute("ra"+j))));
-			}
-			points.push(points[0]);
-			sdssFieldQuads.push(new GPolyline(points, "#ffc800"));
-		}
-		if (sdssFieldQuadState) {
-			for (var i=0; i<sdssFieldQuads.length; i++) {
-				map.addOverlay(sdssFieldQuads[i]);
-			}
-		}
-		map.addControl(new FieldQuadControl());
-	});
-}
-
-debug("here 1\n");
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
-setTimeout("parseget()", 3);
 
-if (index) {
-	map.addControl(new IndexQuadControl());
-}
-
-if (gotquad) {
-	setTimeout("addquad();", 5);
-}
-/*
-	if (gotindexquad) {
-	setTimeout("addindexquad();", 6);
-	}
-*/
-if (gotfieldquad) {
-	setTimeout("addfieldquad();", 7);
-}
-if (sdss) {
-	if (sdssBoundaryState) {
-		map.addOverlay(sdssBoundary);
-	}
-	map.addControl(new SdssBoundaryControl());
-}
-
-var type="";
-if ("view" in getdata) {
-	var view = getdata["view"];
-	if (view == "usnob") {
-		type = "usnobType";
-	} else if (view == "u+i") {
-		type = "usnobPlusIndex";
-	} else if (view == "index") {
-		type = "indexAlone";
-	} else if (view == "field") {
-		type = "sdssField";
-	} else if (view == "r+i") {
-		type = "rdlsIndex";
-	} else if (view == "r+u") {
-		type = "rdlsUsnob";
-	}
-}
-if (type.length) {
-	setTimeout("map.setMapType(" + type + ");", 8);
-}
-
-// DEBUG
-//setTimeout("map.setMapType(sdssField); map.setZoom(2); map.setCenter(new GLatLng(8.41,179.65));", 8);
-//setTimeout("map.setMapType(sdssAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
-//setTimeout("map.setMapType(indexAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
-
-/*
-  info_html = "<b>testing</b>";
-  document.getElementById("info").innerHTML += info_html;
-*/
