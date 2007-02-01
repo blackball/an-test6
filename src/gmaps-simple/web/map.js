@@ -39,12 +39,6 @@ var QUAD_URL = BASE_URL + "quad.php?";
 
 var getdata = getGetData();
 
-// Show an overview map?
-var overview = true;
-if (("over" in getdata) && (getdata["over"] == "no")) {
-	overview = false;
-}
-
 // Describe the tile server...
 var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
 myTile.myLayers='mylayer';
@@ -58,6 +52,18 @@ map.addMapType(myType);
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
 
+// The current polylines.
+var polygons = [];
+// The currently visible polylines.
+var visiblePolygons = [];
+// Show polygons?
+var showPolygons = true;
+
+// Show an overview map?
+var overview = true;
+if (("over" in getdata) && (getdata["over"] == "no")) {
+	overview = false;
+}
 if (overview) {
 	var w = 800;
 	var h = 600;
@@ -66,8 +72,6 @@ if (overview) {
 	overviewControl = new GOverviewMapControl(new GSize(ow,oh));
 	map.addControl(overviewControl);
 }
-
-GEvent.bindDom(window,"resize",map,map.onResize);
 
 /*
   This function gets called as the user moves the map.
@@ -104,35 +108,50 @@ function moveended() {
 	var sw = bounds.getSouthWest();
 	var ne = bounds.getNorthEast();
 
-	/*
-	  url = INDEX_QUAD_URL + "&zoom=" + zoom 
-	  + "&ra=" + center.lng() + "&dec=" + center.lat()
-	  + "&width=" + pixelsize.width
-	  + "&height=" + pixelsize.height;
+	// Construct the URL for the quad server.
+	url = TILE_URL
+		//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
+		+  "ra1=" + sw.lng() + "&dec1=" + sw.lat() +
+		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat() +
+		+ "&width=" + pixelsize.width
+		+ "&height=" + pixelsize.height;
 
-	  debug("quads: " + url + "\n");
-	*/
+	debug("polygon url: " + url + "\n");
 
 	// Contact the quad server with our current position...
-	/*
-	  GDownloadUrl(url, function(data, responseCode){
-	  var xml = GXml.parse(data);
-	  var quads = xml.documentElement.getElementsByTagName("quad");
-	  for (var i = 0; i < quads.length; i++) {
-	  var points = [];
-	  for (var j=0; j<4; j++) {
-	  points.push(new GLatLng(parseFloat(quads[i].getAttribute("dec"+j)),
-	  parseFloat(quads[i].getAttribute("ra"+j))));
-	  }
-	  points.push(points[0]);
-	  indexQuads.push(new GPolyline(points, "#90a8ff"));
-	  }
-	  for (var i=0; i<indexQuads.length; i++) {
-	  map.addOverlay(indexQuads[i]);
-	  }
-	  }
-	  });
-	*/
+	GDownloadUrl(url, function(data, responseCode){
+		// Remove old polygons.
+		for (var i=0; i<visiblePolygons.length; i++) {
+			map.removeOverlay(visiblePolygons[i]);
+		}
+		visiblePolygons.length = 0;
+
+		// Parse new polygons
+		var xml = GXml.parse(data);
+		var polys = xml.documentElement.getElementsByTagName("poly");
+		polygons.length = 0;
+		for (var i=0; i<polys.length; i++) {
+			var points = [];
+			for (var j=0;; j++) {
+				if (!(polys[i].hasAttribute("dec"+j) &&
+					  polys[i].hasAttribute("ra"+j)))
+					break;
+				points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
+										parseFloat(polys[i].getAttribute("ra"+j))));
+			}
+			points.push(points[0]);
+			polygons.push(new GPolyline(points, "#90a8ff"));
+		}
+		debug("got " + polygons.length + " polygons.");
+
+		if (showPolygons) {
+			// Show new polygons.
+			for (var i=0; i<polygons.length; i++) {
+				map.addOverlay(polygons[i]);
+				visiblePolygons.push(polygons[i]);
+			}
+		}
+	});
 }
 
 /*
@@ -162,6 +181,7 @@ GEvent.addListener(map, "move", mapmoved);
 GEvent.addListener(map, "moveend", moveended);
 GEvent.addListener(map, "zoomend", mapzoomed);
 GEvent.addListener(map, "mousemove", mousemoved);
+GEvent.bindDom(window,"resize",map,map.onResize);
 
 var ra=0;
 var dec=0;
@@ -198,8 +218,6 @@ function linktohere() {
 	window.location = url;
 }
 
-//var indexQuads = [];
-
 function buttonStyleOn(button) {
 	button.style.borderTopColor    = "#b0b0b0";
 	button.style.borderLeftColor   = "#b0b0b0";
@@ -231,10 +249,9 @@ function buttonStyleCommon(button) {
 	buttonStyleOn(button);
 }
 
-function IndexQuadControl() {}
-IndexQuadControl.prototype = new GControl();
-IndexQuadControl.prototype.initialize = function(map) {
-	var on = indexQuadState;
+function PolygonControl() {}
+PolygonControl.prototype = new GControl();
+PolygonControl.prototype.initialize = function(map) {
 	var container = document.createElement("div");
 	var toggleDiv = document.createElement("div");
 	var txtNode = document.createTextNode(indexTxt);
@@ -242,35 +259,38 @@ IndexQuadControl.prototype.initialize = function(map) {
 	container.appendChild(toggleDiv);
 	toggleDiv.appendChild(txtNode);
 	GEvent.addDomListener(toggleDiv, "click", function(){
-		if (on) {
-			on = false;
-			for (var i=0; i<indexQuads.length; i++) {
-				map.removeOverlay(indexQuads[i]);
+		if (showPolygons) {
+			showPolygons = false;
+			// Remove polygons.
+			for (var i=0; i<visiblePolygons.length; i++) {
+				map.removeOverlay(visiblePolygons[i]);
 			}
+			visiblePolygons.length = 0;
 			buttonStyleOff(toggleDiv);
 		} else {
-			on = true;
-			for (var i=0; i<indexQuads.length; i++) {
-				map.addOverlay(indexQuads[i]);
+			showPolygons = true;
+			// Add polygons.
+			for (var i=0; i<polygons.length; i++) {
+				map.addOverlay(polygons[i]);
+				visiblePolygons.push(polygons[i]);
 			}
 			buttonStyleOn(toggleDiv);
 		}
-		indexQuadState = on;
 	});
 	map.getContainer().appendChild(container);
 	return container;
 }
-IndexQuadControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(3*78 + 7, 30));
+PolygonControl.prototype.getDefaultPosition = function() {
+	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(0*78 + 7, 30));
 }
-IndexQuadControl.prototype.setButtonStyle_ = function(button) {
+PolygonControl.prototype.setButtonStyle_ = function(button) {
 	buttonStyleCommon(button);
-	if (!indexQuadState) {
+	if (!showPolygons) {
 		buttonStyleOff(button);
 	}
 }
 
-map.addControl(new IndexQuadControl());
+map.addControl(new PolygonControl());
 
 setTimeout("moveended();", 1);
 setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 2);
