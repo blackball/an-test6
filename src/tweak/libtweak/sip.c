@@ -29,12 +29,10 @@ void sip_pixelxy2radec(sip_t* sip, double px, double py,
 	double u = px - sip->wcstan.crpix[0];
 	double v = py - sip->wcstan.crpix[1];
 	sip_calc_distortion(sip, u, v, &U, &V);
-
+	U += sip->wcstan.crpix[0];
+	V += sip->wcstan.crpix[1];
 	// Run a normal TAN conversion on the distorted pixel coords.
-	tan_pixelxy2radec(&(sip->wcstan),
-					  U + sip->wcstan.crpix[0],
-					  V + sip->wcstan.crpix[1],
-					  ra, dec);
+	tan_pixelxy2radec(&(sip->wcstan), U, V, ra, dec);
 }
 
 // Convert a ra,dec in degrees to coordinates in the image
@@ -118,8 +116,8 @@ void sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py
 				"yet there are forward SIP coeffs\n");
 	}
 
-	U = *px + sip->wcstan.crpix[0];
-	V = *py + sip->wcstan.crpix[1];
+	U = *px - sip->wcstan.crpix[0];
+	V = *py - sip->wcstan.crpix[1];
 
 	sip_calc_inv_distortion(sip, U, V, &u, &v);
 
@@ -211,3 +209,42 @@ double sip_det_cd(sip_t* sip)
 {
 	return (sip->wcstan.cd[0][0]*sip->wcstan.cd[1][1] - sip->wcstan.cd[0][1]*sip->wcstan.cd[1][0]); 
 }
+
+void sip_print(sip_t* sip)
+{
+
+	printf("SIP Structure:\n");
+	printf("crval[0]=%lf\n", sip->wcstan.crval[0]);
+	printf("crval[1]=%lf\n", sip->wcstan.crval[1]);
+	printf("crpix[0]=%lf\n", sip->wcstan.crpix[0]);
+	printf("crpix[1]=%lf\n", sip->wcstan.crpix[1]);
+
+	printf("cd00=%le\n", sip->wcstan.cd[0][0]);
+	printf("cd01=%le\n", sip->wcstan.cd[0][1]);
+	printf("cd10=%le\n", sip->wcstan.cd[1][0]);
+	printf("cd11=%le\n", sip->wcstan.cd[1][1]);
+
+	if (sip->a_order > 0) {
+		int p, q;
+		for (p=0; p<sip->a_order; p++)
+			for (q=0; q<sip->a_order; q++)
+				if (p+q <= sip->a_order && !(p==0&&q==0))
+					 printf("a%d%d=%le\n", p,q,sip->a[p][q]);
+	}
+	if (sip->b_order > 0) {
+		int p, q;
+		for (p=0; p<sip->b_order; p++)
+			for (q=0; q<sip->b_order; q++)
+				if (p+q <= sip->b_order && !(p==0&&q==0))
+					 printf("b%d%d=%le\n", p,q,sip->b[p][q]);
+	}
+
+	double det = sip_det_cd(sip);
+	double pixsc = 3600*sqrt(fabs(det));
+	printf("det(CD)=%le [arcsec]\n", det);
+	printf("sqrt(det(CD))=%le [arcsec]\n", pixsc);
+
+
+	printf("\n");
+}
+

@@ -11,7 +11,7 @@
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
 #include "ezfits.h"
-#include "sip_util.h"
+//#include "sip_util.h"
 
 // TODO: 
 //
@@ -147,12 +147,12 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	int ys = themaxind/hsz;
 	int xs = themaxind%hsz;
 
-	fprintf(stderr, "xshsz = %d, yshsz=%d\n",xs,ys);
+	printf("xshsz = %d, yshsz=%d\n",xs,ys);
 
 	*yshift = ((double)(themaxind/hsz)/(double)hsz)*(maxdy-mindy)+mindy;
 	*xshift = ((double)(themaxind % hsz)/(double)hsz)*(maxdx-mindx)+mindx;
-	fprintf(stderr, "get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
-	fprintf(stderr, "get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
+	printf("get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
+	printf("get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
 
 	/*
 	  static char c = '1';
@@ -638,9 +638,9 @@ void get_reference_stars(tweak_t* t)
 	if (cached_kd_hp != hp || cached_kd == NULL) {
 		char buf[1000];
 		snprintf(buf,1000, t->hppath, hp);
-		fprintf(stderr, "opening %s\n",buf);
+		printf("opening %s\n",buf);
 		kd = kdtree_fits_read(buf, NULL);
-		fprintf(stderr, "success\n");
+		printf("success\n");
 		assert(kd);
 		cached_kd_hp = hp;
 		cached_kd = kd;
@@ -657,7 +657,7 @@ void get_reference_stars(tweak_t* t)
 	double radius_factor = 1.3;
 	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz,
 			radius*radius*radius_factor);
-	fprintf(stderr, "Did range search got %u stars\n", kq->nres);
+	printf("Did range search got %u stars\n", kq->nres);
 
 	// No stars? That's bad. Run away.
 	if (!kq->nres)
@@ -899,7 +899,7 @@ void do_linear_tweak(tweak_t* t)
 	assert(b);
 
 	printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t));
-	print_sip(t->sip);
+	sip_print(t->sip);
 //	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// We use a clever trick to estimate CD, A, and B terms in two
@@ -1035,7 +1035,7 @@ void do_linear_tweak(tweak_t* t)
 	t->sip = swcs;
 
 	printf("New sip header:\n");
-	print_sip(t->sip);
+	sip_print(t->sip);
 	printf("shiftxun=%le, shiftyun=%le\n",sU, sV);
 	printf("shiftx=%le, shifty=%le\n",su, sv);
 	printf("sqerr=%le\n", figure_of_merit(t));
