@@ -45,33 +45,13 @@ var visiblePolygons = [];
 // Show polygons?
 var showPolygons = true;
 
-/*
-  This function gets called as the user moves the map.
-*/
-function mapmoved() {
-	center = map.getCenter();
-	// update the center ra,dec textboxes.
-	ra = center.lng();
-	if (ra < 0.0) { ra += 360.0; }
-	document.gotoform.ra_center.value  = "" + ra;
-	document.gotoform.dec_center.value = "" + center.lat();
-}
+// Are we in the middle of a multi-step move?
+var moving = false;
 
 /*
-  This function gets called when the user changes the zoom level.
+  Retrieves a new list of polygons from the server.
 */
-function mapzoomed(oldzoom, newzoom) {
-	// update the "zoom" textbox.
-	document.gotoform.zoomlevel.value = "" + newzoom;
-	mapmoved();
-}
-
-/*
-  This function gets called when the user stops moving the map (mouse drag).
-*/
-function moveended() {
-	mapmoved();
-
+function getNewPolygons() {
 	// Get the current view...
 	var bounds = map.getBounds();
 	var pixelsize = map.getSize();
@@ -82,13 +62,12 @@ function moveended() {
 
 	// Construct the URL for the quad server.
 	url = TILE_URL
-		+  "ra1=" + sw.lng() + "&dec1=" + sw.lat() +
-		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat() +
+		+  "ra1=" + sw.lng() + "&dec1=" + sw.lat()
+		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat()
 		+ "&width=" + pixelsize.width
 		+ "&height=" + pixelsize.height;
 		//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
 
-	/*
 	debug("polygon url: " + url + "\n");
 
 	// Contact the quad server with our current position...
@@ -125,7 +104,38 @@ function moveended() {
 			}
 		}
 	});
-	*/
+}
+
+/*
+  This function gets called as the user moves the map.
+*/
+function mapmoved() {
+	center = map.getCenter();
+	// update the center ra,dec textboxes.
+	ra = center.lng();
+	if (ra < 0.0) { ra += 360.0; }
+	document.gotoform.ra_center.value  = "" + ra;
+	document.gotoform.dec_center.value = "" + center.lat();
+}
+
+/*
+  This function gets called when the user changes the zoom level.
+*/
+function mapzoomed(oldzoom, newzoom) {
+	// update the "zoom" textbox.
+	document.gotoform.zoomlevel.value = "" + newzoom;
+	mapmoved();
+}
+
+/*
+  This function gets called when the user stops moving the map (mouse drag),
+  and also after it's moved programmatically (via setCenter(), etc).
+*/
+function moveended() {
+	mapmoved();
+
+	if (!moving)
+		getNewPolygons();
 }
 
 /*
@@ -146,17 +156,20 @@ function moveCenter() {
 	var ra   = document.gotoform.ra_center.value;
 	var dec  = document.gotoform.dec_center.value;
 	var zoom = document.gotoform.zoomlevel.value;
+
+	debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ", old zoom " + map.getZoom() + "\n");
+
 	/*
 		map.setCenter(new GLatLng(dec, ra));
 		map.setZoom(zoom);
 	*/
-	debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ".\n");
 	/*
 		map.setCenter(new GLatLng(dec, ra), zoom);
-		map.setZoom(zoom);
 	*/
-	map.setCenter(new GLatLng(dec, ra));
 
+	moving = true;
+
+	map.setCenter(new GLatLng(dec, ra));
 	var oldzoom = map.getZoom();
 	while (zoom > oldzoom) {
 		map.zoomIn();
@@ -166,7 +179,11 @@ function moveCenter() {
 		map.zoomOut();
 		oldzoom--;
 	}
+	//map.setZoom(zoom);
 
+	moving = false;
+
+	getNewPolygons();
 }
 
 /*
@@ -250,7 +267,7 @@ PolygonControl.prototype.initialize = function(map) {
 	return container;
 }
 PolygonControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(0*78 + 7, 30));
+	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(0*78 + 7, 7));
 }
 PolygonControl.prototype.setButtonStyle_ = function(button) {
 	buttonStyleCommon(button);
@@ -282,10 +299,6 @@ function startup() {
 		zoom = Number(getdata["zoom"]);
 	}
 	map.setCenter(new GLatLng(dec, ra), zoom);
-	/*
-		setTimeout("moveended();", 3);
-		setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 4);
-	*/
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/simple/";
@@ -303,6 +316,7 @@ function startup() {
 
 	map.getMapTypes().length = 0;
 	map.addMapType(myMapType);
+	map.setMapType(myMapType);
 
 	// Show an overview map?
 	var overview = true;
@@ -325,7 +339,7 @@ function startup() {
 
 	map.addControl(new GLargeMapControl());
 	map.addControl(new GMapTypeControl());
-	//map.addControl(new PolygonControl());
+	map.addControl(new PolygonControl());
 
 	moveended();
 	mapzoomed(map.getZoom(), map.getZoom());
