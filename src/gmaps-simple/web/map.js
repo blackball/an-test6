@@ -191,7 +191,7 @@ if ("ra" in getdata) {
 	ra = Number(getdata["ra"]);
 }
 if ("dec" in getdata) {
-	dec = Number(getdata["dec"];);
+	dec = Number(getdata["dec"]);
 }
 if ("zoom" in getdata) {
 	zoom = Number(getdata["zoom"]);
