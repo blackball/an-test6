@@ -62,7 +62,7 @@ function mapmoved() {
 */
 function mapzoomed(oldzoom, newzoom) {
 	// update the "zoom" textbox.
-	document.gotoform.zoom.value = "" + newzoom;
+	document.gotoform.zoomlevel.value = "" + newzoom;
 	mapmoved();
 }
 
@@ -88,6 +88,7 @@ function moveended() {
 		+ "&height=" + pixelsize.height;
 		//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
 
+	/*
 	debug("polygon url: " + url + "\n");
 
 	// Contact the quad server with our current position...
@@ -114,7 +115,7 @@ function moveended() {
 			points.push(points[0]);
 			polygons.push(new GPolyline(points, "#90a8ff"));
 		}
-		debug("got " + polygons.length + " polygons.");
+		debug("got " + polygons.length + " polygons.\n");
 
 		if (showPolygons) {
 			// Show new polygons.
@@ -124,6 +125,7 @@ function moveended() {
 			}
 		}
 	});
+	*/
 }
 
 /*
@@ -141,11 +143,30 @@ function mousemoved(latlong) {
   is hit in one of the ra/dec/zoom textfields.
 */
 function moveCenter() {
-	var ra = document.gotoform.ra_center.value;
-	var dec = document.gotoform.dec_center.value;
-	var zoom = document.gotoform.zoom.value;
+	var ra   = document.gotoform.ra_center.value;
+	var dec  = document.gotoform.dec_center.value;
+	var zoom = document.gotoform.zoomlevel.value;
+	/*
+		map.setCenter(new GLatLng(dec, ra));
+		map.setZoom(zoom);
+	*/
+	debug("Moving map to (" + ra + ", " + dec + ") zoom " + zoom + ".\n");
+	/*
+		map.setCenter(new GLatLng(dec, ra), zoom);
+		map.setZoom(zoom);
+	*/
 	map.setCenter(new GLatLng(dec, ra));
-	map.setZoom(zoom);
+
+	var oldzoom = map.getZoom();
+	while (zoom > oldzoom) {
+		map.zoomIn();
+		oldzoom++;
+	}
+	while (zoom < oldzoom) {
+		map.zoomOut();
+		oldzoom--;
+	}
+
 }
 
 /*
@@ -242,14 +263,34 @@ PolygonControl.prototype.setButtonStyle_ = function(button) {
   This function gets called when the page loads.
 */
 function startup() {
+	getdata = getGetData();
+
 	// Create a new Google Maps client in the "map" <div>.
 	map = new GMap(document.getElementById("map"));
+
+	var ra=0;
+	var dec=0;
+	var zoom=0;
+
+	if ("ra" in getdata) {
+		ra = Number(getdata["ra"]);
+	}
+	if ("dec" in getdata) {
+		dec = Number(getdata["dec"]);
+	}
+	if ("zoom" in getdata) {
+		zoom = Number(getdata["zoom"]);
+	}
+	map.setCenter(new GLatLng(dec, ra), zoom);
+	/*
+		setTimeout("moveended();", 3);
+		setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 4);
+	*/
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/simple/";
 	TILE_URL = BASE_URL + "tile.php?";
 	QUAD_URL = BASE_URL + "quad.php?";
-	getdata = getGetData();
 
 	// Describe the tile server...
 	var myTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
@@ -257,12 +298,11 @@ function startup() {
 	myTile.myFormat='image/png';
 	myTile.myBaseURL=TILE_URL;
 	myTile.getTileUrl=CustomGetTileUrl;
-	//myTile=CustomGetTileUrl;
 
-	/*
+	var myMapType = new GMapType([myTile], G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
+
 	map.getMapTypes().length = 0;
-	map.addMapType(myTile);
-	*/
+	map.addMapType(myMapType);
 
 	// Show an overview map?
 	var overview = true;
@@ -270,10 +310,6 @@ function startup() {
 		overview = false;
 	}
 	if (overview) {
-		/*
-		  var w = 800;
-		  var h = 600;
-		*/
 		var ow = 150;
 		var oh = 150;
 		overviewControl = new GOverviewMapControl(new GSize(ow,oh));
@@ -291,34 +327,6 @@ function startup() {
 	map.addControl(new GMapTypeControl());
 	//map.addControl(new PolygonControl());
 
-	var ra=0;
-	var dec=0;
-	var zoom=0;
-
-	if ("ra" in getdata) {
-		ra = Number(getdata["ra"]);
-	}
-	if ("dec" in getdata) {
-		dec = Number(getdata["dec"]);
-	}
-	if ("zoom" in getdata) {
-		zoom = Number(getdata["zoom"]);
-	}
-	map.setCenter(new GLatLng(dec, ra), zoom);
-	/*
-	  var cmd = "map.setCenter(new GLatLng(" + dec + ", " + ra + "), " + zoom + ");"
-	  debug("cmd = " + cmd + "\n");
-	  setTimeout(cmd, 1);
-
-	var cmd1 = "map.setCenter(new GLatLng(" + dec + ", " + ra + "));";
-	debug("cmd1 = " + cmd1 + "\n");
-	setTimeout(cmd1, 1);
-
-	var cmd2 = "map.setZoom(" + zoom + ");";
-	debug("cmd2 = " + cmd2 + "\n");
-	setTimeout(cmd2, 2);
-	*/
-
-	setTimeout("moveended();", 3);
-	setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 4);
+	moveended();
+	mapzoomed(map.getZoom(), map.getZoom());
 }

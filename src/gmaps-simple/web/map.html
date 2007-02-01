@@ -21,18 +21,24 @@
 <br>
 <center>
 <FORM NAME="gotoform" ACTION="" METHOD="GET">
-Center RA: <INPUT TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
-DEC: <INPUT TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10> degrees.
+Center RA:
+<INPUT TYPE="text" NAME="ra_center" VALUE="" onChange="moveCenter()" size=10>
+DEC:
+<INPUT TYPE="text" NAME="dec_center" VALUE="" onChange="moveCenter()" size=10>
+degrees.
 &nbsp;
-Zoom level: <input type="text" name="zoom" id="zoombox" VALUE="" onChange="moveCenter()" size=4>
+Zoom level:
+<input TYPE="text" NAME="zoomlevel" VALUE="" onChange="moveCenter()" size=4>
 &nbsp;
-<INPUT TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()")
+<INPUT TYPE="button" NAME="set_center" VALUE="Go!" onClick="moveCenter()">
 &nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp;&nbsp;&nbsp;
 <input type="button" name="linkhere" value="Link to this view" onClick="linktohere()">
 <p>
-Mouse RA: <INPUT TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
-DEC: <INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
+Mouse RA:
+<INPUT TYPE="text" NAME="ra_mouse" VALUE="" readonly size=10>
+DEC:
+<INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
 </FORM>
 
 <br>
@@ -40,7 +46,7 @@ DEC: <INPUT TYPE="text" NAME="dec_mouse" VALUE="" readonly size=10> degrees
 <!-- Add a textbox for printing debugging info.-->
 Debug:
   <FORM name="debugform" ACTION="" METHOD="GET">
-  <textarea COLS=60 NAME="debug" READONLY>
+  <textarea COLS=60 ROWS=10 NAME="debug" READONLY>
   </textarea>
   </FORM>
 
