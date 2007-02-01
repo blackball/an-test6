@@ -596,6 +596,7 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("Tweaking!\n");
 
 	twee = tweak_new();
+	twee->jitter = 2.0 * distsq2arcsec(verify_dist2);
 
 	tweak_print_state(twee);
 	printf("\n");
@@ -636,13 +637,6 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	tweak_print_state(twee);
 	printf("\n");
 
-	/*
-	  if (!twee->sip) {
-	  twee->sip = sip_create();
-	  }
-	  memcpy(twee->sip.wcstan, mo->wcstan, sizeof(tan_t));
-	*/
-
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	{
 		sip_t* sip = twee->sip;
@@ -653,12 +647,14 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	tweak_print_state(twee);
 	printf("\n");
 
-
 	//tweak_go_to(TWEAK_HAS_LINEAR_CD);
 
 	printf("Begin advancing...\n");
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
+		printf("\n");
 		unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
+		printf("\n");
+		printf("State: ");
 		tweak_print_state(twee);
 		printf("\n");
 		if (r == -1) {
