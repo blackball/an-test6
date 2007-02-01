@@ -3,6 +3,9 @@
 #include <string.h>
 #include <math.h>
 
+// debug
+#include <netinet/in.h>
+
 #include "tweak_internal.h"
 #include "healpix.h"
 #include "dualtree_rangesearch.h"
@@ -79,9 +82,7 @@ void get_shift(double* ximg, double* yimg, int nimg,
 
 	// hough transform 
 	int hsz = 1000; // hough size
-	int *hough = malloc(hsz*hsz*sizeof(double));
-	for (i=0; i<hsz*hsz; i++)
-		hough[i] = 0;
+	int *hough = calloc(hsz*hsz, sizeof(int));
 
 	for (i=0; i<nimg; i++) {
 		for (j=0; j<ncat; j++) {
@@ -99,8 +100,8 @@ void get_shift(double* ximg, double* yimg, int nimg,
 //			assert (iy >=0);
 //			assert (ix >=0);
 //			assert (iy*hsz+ ix < hsz*hsz);
-			if (0 < iy && iy < hsz+1 &&
-					0 < ix && ix < hsz+1) {
+			if (0 < iy && iy < hsz-1 &&
+				0 < ix && ix < hsz-1) {
 				// approx gauss
 				// FIMXE use a better approx: see hogg ticket
 				hough[(iy-1)*hsz + (ix-1)] += 1;
@@ -116,10 +117,23 @@ void get_shift(double* ximg, double* yimg, int nimg,
 		}
 	}
 
-	FILE* ff = fopen("hough.dat", "w");
-	fwrite(hough, sizeof(double), hsz*hsz, ff);
-	fclose(ff);
-
+	/*
+	  FILE* ff = fopen("hough.dat", "w");
+	  fwrite(hough, sizeof(int), hsz*hsz, ff);
+	  fclose(ff);
+	*/
+	{
+		static char fn[] = "hough#.pgm";
+		static char c = '1';
+		fn[5] = c++;
+		FILE* ff = fopen(fn, "wb");
+		fprintf(ff, "P5 %i %i 65535\n", hsz, hsz);
+		for (i=0; i<(hsz*hsz); i++) {
+			uint16_t u = htons((hough[i] < 65535) ? hough[i] : 65535);
+			fwrite(&u, 2, 1, ff);
+		}
+		fclose(ff);
+	}
 
 	int themax = 0;
 	int themaxind = -1;
@@ -140,10 +154,13 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	fprintf(stderr, "get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
 	fprintf(stderr, "get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
 
-	static char c = '1';
-	static char fn[] = "houghN.fits";
-	fn[5] = c++;
-//	ezwriteimage(fn, TINT, hough, hsz, hsz);
+	/*
+	  static char c = '1';
+	  static char fn[] = "houghN.fits";
+	  fn[5] = c++;
+	  ezwriteimage(fn, TINT, hough, hsz, hsz);
+	*/
+	free(hough);
 }
 
 // Take shift in image plane and do a switcharoo to make the wcs something
@@ -181,7 +198,7 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 		  rho*t->mindx, rho*t->mindy, rho*t->maxdx, rho*t->maxdy,
 		  &t->xs, &t->ys);
 	sip_t* swcs = wcs_shift(t->sip, t->xs, t->ys);
-	free(t->sip);
+	sip_free(t->sip);
 	t->sip = swcs;
 	printf("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
 	return NULL;
@@ -189,23 +206,11 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 
 void tweak_init(tweak_t* t)
 {
-
-	t->n = 0;
-	t->a = t->d = t->x = t->y = NULL;
-	t->xyz = NULL;
-
-	t->a_bar = t->d_bar = t->radius = 0.0;
-
-	t->n_ref = 0;
-	t->a_ref = t->d_ref = t->x_ref = t->y_ref = NULL;
-	t->xyz_ref = NULL;
-
-	t->state = 0;
+	memset(t, 0, sizeof(tweak_t));
 
 	// FIXME maybe these should be allocated at the outset
-	t->image = t->ref = t->dist2 = NULL;
-
-	t->maybeinliers = t->bestinliers = t->included = NULL;
+	//t->image = t->ref = t->dist2 = NULL;
+	//t->maybeinliers = t->bestinliers = t->included = NULL;
 }
 
 tweak_t* tweak_new()
@@ -529,6 +534,7 @@ void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
 	t->y = malloc(sizeof(double)*n);
 	memcpy(t->x, x, sizeof(double)*n);
 	memcpy(t->y, y, sizeof(double)*n);
+	t->n = n;
 
 	t->state |= TWEAK_HAS_IMAGE_XY;
 }
@@ -627,8 +633,7 @@ void get_reference_stars(tweak_t* t)
 	double dec_mean = t->d_bar;
 	double radius = t->radius;
 
-	// FIXME magical 9 constant == an_cat hp res NSide
-	int hp = radectohealpix(deg2rad(ra_mean), deg2rad(dec_mean), 9); 
+	int hp = radectohealpix(deg2rad(ra_mean), deg2rad(dec_mean), t->Nside); 
 	kdtree_t* kd;
 	if (cached_kd_hp != hp || cached_kd == NULL) {
 		char buf[1000];
@@ -1026,7 +1031,7 @@ void do_linear_tweak(tweak_t* t)
 	double su, sv;
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
 	sip_t* swcs = wcs_shift(t->sip, -su, -sv);
-	free(t->sip);
+	sip_free(t->sip);
 	t->sip = swcs;
 
 	printf("New sip header:\n");
@@ -1069,6 +1074,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
+		printf("Satisfying TWEAK_HAS_IMAGE_AD\n");
+
 		// Convert to ra dec
 		assert(!t->a);
 		assert(!t->d);
@@ -1086,6 +1093,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XYZ);
 
 		// FIXME
+		printf("Satisfying TWEAK_HAS_REF_AD\n");
+		printf("FIXME!\n");
 
 		done(TWEAK_HAS_REF_AD);
 	}
@@ -1095,6 +1104,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		//tweak_clear_ref_xy(t);
 
+		printf("Satisfying TWEAK_HAS_REF_XY\n");
 		assert(t->state & TWEAK_HAS_REF_AD);
 		assert(t->n_ref);
 		assert(!t->x_ref);
@@ -1113,6 +1123,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_AD_BAR_AND_R) {
 		ensure(TWEAK_HAS_IMAGE_AD);
 
+		printf("Satisfying TWEAK_HAS_AD_BAR_AND_R\n");
+
 		assert(t->state & TWEAK_HAS_IMAGE_AD);
 		get_center_and_radius(t->a, t->d, t->n, 
 		                      &t->a_bar, &t->d_bar, &t->radius);
@@ -1125,6 +1137,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_IMAGE_XYZ) {
 		ensure(TWEAK_HAS_IMAGE_AD);
 
+		printf("Satisfying TWEAK_HAS_IMAGE_XYZ\n");
 		assert(!t->xyz);
 
 		t->xyz = malloc(3*t->n*sizeof(double));
@@ -1140,9 +1153,13 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_REF_XYZ) {
 		if (t->state & TWEAK_HAS_HEALPIX_PATH) {
 			ensure(TWEAK_HAS_AD_BAR_AND_R);
+			printf("Satisfying TWEAK_HAS_REF_XYZ\n");
 			get_reference_stars(t);
 		} else {
 			ensure(TWEAK_HAS_REF_AD);
+
+			printf("Satisfying TWEAK_HAS_REF_XYZ\n");
+			printf("FIXME!\n");
 
 			// try a conversion
 			assert(0);
@@ -1154,6 +1171,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	want(TWEAK_HAS_COARSLY_SHIFTED) {
 		ensure(TWEAK_HAS_REF_XY);
 		ensure(TWEAK_HAS_IMAGE_XY);
+
+		printf("Satisfying TWEAK_HAS_COARSLY_SHIFTED\n");
 
 		get_dydx_range(t->x, t->y, t->n,
 		               t->x_ref, t->y_ref, t->n_ref,
@@ -1171,6 +1190,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_COARSLY_SHIFTED);
 
+		printf("Satisfying TWEAK_HAS_FINELY_SHIFTED\n");
+
 		// Shrink size of hough box
 		do_entire_shift_operation(t, 0.3);
 		tweak_clear_image_ad(t);
@@ -1184,6 +1205,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_FINELY_SHIFTED);
 
+		printf("Satisfying TWEAK_HAS_REALLY_FINELY_SHIFTED\n");
+
 		// Shrink size of hough box
 		do_entire_shift_operation(t, 0.03);
 		tweak_clear_image_ad(t);
@@ -1196,7 +1219,9 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_XYZ);
 		ensure(TWEAK_HAS_IMAGE_XYZ);
 
-		find_correspondences(t, arcsec2rad(6));
+		printf("Satisfying TWEAK_HAS_CORRESPONDENCES\n");
+
+		find_correspondences(t, arcsec2rad(t->jitter));
 
 		done(TWEAK_HAS_CORRESPONDENCES);
 	}
@@ -1208,6 +1233,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		ensure(TWEAK_HAS_REF_AD);
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_CORRESPONDENCES);
+
+		printf("Satisfying TWEAK_HAS_LINEAR_CD\n");
 
 		do_linear_tweak(t);
 

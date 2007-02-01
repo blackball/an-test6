@@ -6,23 +6,12 @@
 #include "mathutil.h"
 
 sip_t* sip_create() {
-	sip_t* sip = malloc(sizeof(sip_t));
-
-	sip->wcstan.crval[0] = 0;
-	sip->wcstan.crval[1] = 0;
-
-	sip->wcstan.crpix[0] = 0;
-	sip->wcstan.crpix[1] = 0;
+	sip_t* sip = calloc(1, sizeof(sip_t));
 
 	sip->wcstan.cd[0][0] = 1;
 	sip->wcstan.cd[0][1] = 0;
 	sip->wcstan.cd[1][0] = 0;
 	sip->wcstan.cd[1][1] = 1;
-
-	sip->a_order = 0;
-	sip->b_order = 0;
-	sip->ap_order = 0;
-	sip->bp_order = 0;
 
 	return sip;
 }

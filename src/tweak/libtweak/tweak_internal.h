@@ -90,6 +90,10 @@ typedef struct tweak_s {
 
 	// path for raw star data
 	char* hppath;
+	// Nside for healpixed star kdtree... necessary?
+	int Nside;
+	// star jitter, in arcseconds.
+	double jitter;
 } tweak_t;
 
 tweak_t* tweak_new();
