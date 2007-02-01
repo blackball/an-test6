@@ -24,7 +24,7 @@ function getGetData(){
 
 /*
   Prints text to the debug form.
- */
+*/
 function debug(txt) {
 	document.debugform.debug.value += txt;
 }
@@ -59,7 +59,7 @@ function mapmoved() {
 
 /*
   This function gets called when the user changes the zoom level.
- */
+*/
 function mapzoomed(oldzoom, newzoom) {
 	// update the "zoom" textbox.
 	document.gotoform.zoom.value = "" + newzoom;
@@ -68,7 +68,7 @@ function mapzoomed(oldzoom, newzoom) {
 
 /*
   This function gets called when the user stops moving the map (mouse drag).
- */
+*/
 function moveended() {
 	mapmoved();
 
@@ -82,11 +82,11 @@ function moveended() {
 
 	// Construct the URL for the quad server.
 	url = TILE_URL
-		//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
 		+  "ra1=" + sw.lng() + "&dec1=" + sw.lat() +
 		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat() +
 		+ "&width=" + pixelsize.width
 		+ "&height=" + pixelsize.height;
+		//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
 
 	debug("polygon url: " + url + "\n");
 
@@ -242,68 +242,79 @@ PolygonControl.prototype.setButtonStyle_ = function(button) {
   This function gets called when the page loads.
 */
 function startup() {
-  // Create a new Google Maps client in the "map" <div>.
-  map = new GMap(document.getElementById("map"));
+	// Create a new Google Maps client in the "map" <div>.
+	map = new GMap(document.getElementById("map"));
 
-  // Base URL of the tile and quad servers.
-  BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
-  TILE_URL = BASE_URL + "tile.php?";
-  QUAD_URL = BASE_URL + "quad.php?";
-  getdata = getGetData();
+	// Base URL of the tile and quad servers.
+	BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
+	TILE_URL = BASE_URL + "tile.php?";
+	QUAD_URL = BASE_URL + "quad.php?";
+	getdata = getGetData();
 
-  // Describe the tile server...
-  var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
-  myTile.myLayers='mylayer';
-  myTile.myFormat='image/png';
-  myTile.myBaseURL=TILE_URL;
-  myTile.getTileUrl=CustomGetTileUrl;
+	// Describe the tile server...
+	var myTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"), 1, 17);
+	myTile.myLayers='mylayer';
+	myTile.myFormat='image/png';
+	myTile.myBaseURL=TILE_URL;
+	myTile.getTileUrl=CustomGetTileUrl;
 
-  map.getMapTypes().length = 0;
-  map.addMapType(myTile);
+	map.getMapTypes().length = 0;
+	map.addMapType(myTile);
 
-  // Show an overview map?
-  var overview = true;
-  if (("over" in getdata) && (getdata["over"] == "no")) {
-	overview = false;
-  }
-  if (overview) {
-	var w = 800;
-	var h = 600;
-	var ow = 150;
-	var oh = 150;
-	overviewControl = new GOverviewMapControl(new GSize(ow,oh));
-	map.addControl(overviewControl);
-  }
+	// Show an overview map?
+	var overview = true;
+	if (("over" in getdata) && (getdata["over"] == "no")) {
+		overview = false;
+	}
+	if (overview) {
+		/*
+		  var w = 800;
+		  var h = 600;
+		*/
+		var ow = 150;
+		var oh = 150;
+		overviewControl = new GOverviewMapControl(new GSize(ow,oh));
+		map.addControl(overviewControl);
+	}
 
-  // Connect up the event listeners...
-  GEvent.addListener(map, "move", mapmoved);
-  GEvent.addListener(map, "moveend", moveended);
-  GEvent.addListener(map, "zoomend", mapzoomed);
-  GEvent.addListener(map, "mousemove", mousemoved);
-  GEvent.bindDom(window, "resize", map, map.onResize);
+	// Connect up the event listeners...
+	GEvent.addListener(map, "move", mapmoved);
+	GEvent.addListener(map, "moveend", moveended);
+	GEvent.addListener(map, "zoomend", mapzoomed);
+	GEvent.addListener(map, "mousemove", mousemoved);
+	GEvent.bindDom(window, "resize", map, map.onResize);
 
-  map.addControl(new GLargeMapControl());
-  map.addControl(new GMapTypeControl());
-  map.addControl(new PolygonControl());
+	map.addControl(new GLargeMapControl());
+	map.addControl(new GMapTypeControl());
+	//map.addControl(new PolygonControl());
 
-  var ra=0;
-  var dec=0;
-  var zoom=0;
+	var ra=0;
+	var dec=0;
+	var zoom=0;
 
-  if ("ra" in getdata) {
-	ra = Number(getdata["ra"]);
-  }
-  if ("dec" in getdata) {
-	dec = Number(getdata["dec"]);
-  }
-  if ("zoom" in getdata) {
-	zoom = Number(getdata["zoom"]);
-  }
-  //map.setCenter(new GLatLng(dec, ra), zoom);
-  var cmd = "map.setCenter(new GLatLng(" + dec + ", " + ra + "), " + zoom + ");"
-  debug("cmd = " + cmd + "\n");
-  setTimeout(cmd, 1);
+	if ("ra" in getdata) {
+		ra = Number(getdata["ra"]);
+	}
+	if ("dec" in getdata) {
+		dec = Number(getdata["dec"]);
+	}
+	if ("zoom" in getdata) {
+		zoom = Number(getdata["zoom"]);
+	}
+	//map.setCenter(new GLatLng(dec, ra), zoom);
+	/*
+	  var cmd = "map.setCenter(new GLatLng(" + dec + ", " + ra + "), " + zoom + ");"
+	  debug("cmd = " + cmd + "\n");
+	  setTimeout(cmd, 1);
+	*/
+	var cmd1 = "map.setCenter(new GLatLng(" + dec + ", " + ra + "));";
+	debug("cmd1 = " + cmd1 + "\n");
+	setTimeout(cmd1, 1);
 
-  setTimeout("moveended();", 2);
-  setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 3);
+	var cmd2 = "map.setZoom(" + zoom + ");";
+	debug("cmd2 = " + cmd2 + "\n");
+	setTimeout(cmd, 2);
+
+	setTimeout("moveended();", 3);
+	setTimeout("mapzoomed(map.getZoom(),map.getZoom());", 4);
 }
