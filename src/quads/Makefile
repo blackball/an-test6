@@ -210,7 +210,7 @@ blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		hitlist.o handlehits.o intmap.o pnpoly.o blind_wcs.o \
 		$(UTIL_OBJS) \
-		$(LIBTWEAK_LIB) $(LEVMAR_LIB) $(LIBWCS_LIB) $(LIBFORTRAN) $(CFITS_LIB) \
+		$(LIBTWEAK_LIB) $(LEVMAR_LIB) $(LIBWCS_LIB) $(LIBFORTRAN) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \

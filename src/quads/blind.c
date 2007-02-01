@@ -666,6 +666,8 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("Done!\n");
 	fflush(NULL);
 
+	
+
  bailout:
 	kdtree_free_query(res);
 	free(imgx);
