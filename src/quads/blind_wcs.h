@@ -36,4 +36,6 @@ void blind_wcs_compute_2(double* starxyz,
 
 qfits_header* blind_wcs_get_header(tan_t* wcstan);
 
+qfits_header* blind_wcs_get_sip_header(sip_t* wcstan);
+
 #endif

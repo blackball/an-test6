@@ -582,7 +582,7 @@ static int read_parameters() {
 	}
 }
 
-static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
+static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	tweak_t* twee = NULL;
 	double *imgx = NULL, *imgy = NULL;
 	int i;
@@ -591,6 +591,7 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	kdtree_qres_t* res = NULL;
 	double fieldcenter[3];
 	double fieldr2;
+	sip_t* sip = NULL;
 
 	fflush(NULL);
 	printf("Tweaking!\n");
@@ -638,11 +639,10 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("\n");
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
-	{
-		sip_t* sip = twee->sip;
-		sip->a_order = sip->b_order = 2;
-		sip->ap_order = sip->bp_order = 4;
-	}
+	sip = twee->sip;
+	sip->a_order = sip->b_order = 2;
+	sip->ap_order = sip->bp_order = 4;
+	sip = NULL;
 
 	tweak_print_state(twee);
 	printf("\n");
@@ -666,13 +666,15 @@ static void tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("Done!\n");
 	fflush(NULL);
 
-	
+	sip = twee->sip;
+	twee->sip = NULL;
 
  bailout:
 	kdtree_free_query(res);
 	free(imgx);
 	free(imgy);
 	tweak_free(twee);
+	return sip;
 }
 
 static void verified(handlehits* hh, MatchObj* mo) {
@@ -886,6 +888,7 @@ static void solve_fields() {
 		}
 
 		if (hits->bestmo) {
+			sip_t* sip = NULL;
 			// Field solved!
 			if (!silent)
 				fprintf(stderr, "Field %i solved with overlap %g.\n", fieldnum,
@@ -893,14 +896,14 @@ static void solve_fields() {
 
 			// Tweak, if requested.
 			if (do_tweak) {
-				tweak(hits->bestmo, &solver, starkd);
+				sip = tweak(hits->bestmo, &solver, starkd);
 			}
 
 			// Write WCS, if requested.
 			if (wcs_template) {
 				char wcs_fn[1024];
 				FILE* fout;
-				qfits_header* wcs;
+				qfits_header* hdr;
 
 				sprintf(wcs_fn, wcs_template, fieldnum);
 				fout = fopen(wcs_fn, "ab");
@@ -911,17 +914,21 @@ static void solve_fields() {
 
 				assert(hits->bestmo->wcs_valid);
 
-				wcs = blind_wcs_get_header(&(hits->bestmo->wcstan));
-				boilerplate_add_fits_headers(wcs);
-				qfits_header_add(wcs, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
+				if (sip)
+					hdr = blind_wcs_get_sip_header(sip);
+				else
+					hdr = blind_wcs_get_header(&(hits->bestmo->wcstan));
+
+				boilerplate_add_fits_headers(hdr);
+				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
 				if (solver.mo_template && solver.mo_template->fieldname[0])
-					qfits_header_add(wcs, fieldid_key, solver.mo_template->fieldname, "Field name (copied from input field)", NULL);
-				if (qfits_header_dump(wcs, fout)) {
+					qfits_header_add(hdr, fieldid_key, solver.mo_template->fieldname, "Field name (copied from input field)", NULL);
+				if (qfits_header_dump(hdr, fout)) {
 					fprintf(stderr, "Failed to write FITS WCS header.\n");
 					exit(-1);
 				}
 				fits_pad_file(fout);
-				qfits_header_destroy(wcs);
+				qfits_header_destroy(hdr);
 				fclose(fout);
 			}
 

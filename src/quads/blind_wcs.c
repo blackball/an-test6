@@ -282,84 +282,101 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 		tan->cd[1][1] = R[1] * scale; // CD2_2
 	}
 
-	// -verify.
-	/*
-	  {
-	  sip_t* sip;
-	  double ra, dec;
-	  double xyz2[3];
-	  double d2, arcsec;
-	  double minarc, maxarc, meanarc;
-
-	  sip = sip_create();
-	  sip->crval[0] = crval[0];
-	  sip->crval[1] = crval[1];
-	  sip->crpix[0] = crpix[0];
-	  sip->crpix[1] = crpix[1];
-	  sip->cd[0][0] = CD[0];
-	  sip->cd[0][1] = CD[1];
-	  sip->cd[1][0] = CD[2];
-	  sip->cd[1][1] = CD[3];
-
-	  minarc = 1e300;
-	  maxarc = -1;
-	  meanarc = 0;
-	  for (i=0; i<nfield; i++) {
-	  if (corr[i] == -1)
-	  continue;
-	  sip_pixelxy2radec(sip, field[i*2], field[i*2+1], &ra, &dec);
-	  radec2xyzarr(deg2rad(ra), deg2rad(dec), xyz2);
-	  getstarcoord(corr[i], xyz);
-	  d2 = distsq(xyz, xyz2, 3);
-	  arcsec = distsq2arcsec(d2);
-	  if (arcsec < minarc) minarc = arcsec;
-	  if (arcsec > maxarc) maxarc = arcsec;
-	  meanarc += arcsec;
-	  }
-	  meanarc /= (double)Ncorr;
-
-	  printf("projection dist: mean %g, range [%g, %g] arcsec.\n",
-	  meanarc, minarc, maxarc);
-
-	  sip_free(sip);
-	  }
-	*/
-
 	free(p);
 	free(f);
 }
 
-qfits_header* blind_wcs_get_header(tan_t* tan) {
-	qfits_header* wcs = NULL;
+static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	char val[64];
-
-	wcs = qfits_table_prim_header_default();
-
-	qfits_header_add(wcs, "CTYPE1 ", "RA---TAN", "TAN (gnomic) projection", NULL);
-	qfits_header_add(wcs, "CTYPE2 ", "DEC--TAN", "TAN (gnomic) projection", NULL);
 	sprintf(val, "%.12g", tan->crval[0]);
-	qfits_header_add(wcs, "CRVAL1 ", val, "RA  of reference point", NULL);
+	qfits_header_add(hdr, "CRVAL1", val, "RA  of reference point", NULL);
 	sprintf(val, "%.12g", tan->crval[1]);
-	qfits_header_add(wcs, "CRVAL2 ", val, "DEC of reference point", NULL);
+	qfits_header_add(hdr, "CRVAL2", val, "DEC of reference point", NULL);
 
 	sprintf(val, "%.12g", tan->crpix[0]);
-	qfits_header_add(wcs, "CRPIX1 ", val, "X reference pixel", NULL);
+	qfits_header_add(hdr, "CRPIX1", val, "X reference pixel", NULL);
 	sprintf(val, "%.12g", tan->crpix[1]);
-	qfits_header_add(wcs, "CRPIX2 ", val, "Y reference pixel", NULL);
+	qfits_header_add(hdr, "CRPIX2", val, "Y reference pixel", NULL);
 
-	qfits_header_add(wcs, "CUNIT1 ", "deg", "X pixel scale units", NULL);
-	qfits_header_add(wcs, "CUNIT2 ", "deg", "Y pixel scale units", NULL);
+	qfits_header_add(hdr, "CUNIT1", "deg", "X pixel scale units", NULL);
+	qfits_header_add(hdr, "CUNIT2", "deg", "Y pixel scale units", NULL);
 
 	// bizarrely, this only seems to work when I swap the rows of R.
 	sprintf(val, "%.12g", tan->cd[0][0]);
-	qfits_header_add(wcs, "CD1_1", val, "Transformation matrix", NULL);
+	qfits_header_add(hdr, "CD1_1", val, "Transformation matrix", NULL);
 	sprintf(val, "%.12g", tan->cd[0][1]);
-	qfits_header_add(wcs, "CD1_2", val, " ", NULL);
+	qfits_header_add(hdr, "CD1_2", val, " ", NULL);
 	sprintf(val, "%.12g", tan->cd[1][0]);
-	qfits_header_add(wcs, "CD2_1", val, " ", NULL);
+	qfits_header_add(hdr, "CD2_1", val, " ", NULL);
 	sprintf(val, "%.12g", tan->cd[1][1]);
-	qfits_header_add(wcs, "CD2_2", val, " ", NULL);
+	qfits_header_add(hdr, "CD2_2", val, " ", NULL);
+}
 
-	return wcs;
+qfits_header* blind_wcs_get_header(tan_t* tan) {
+	qfits_header* hdr = NULL;
+
+	hdr = qfits_table_prim_header_default();
+
+	qfits_header_add(hdr, "CTYPE1", "RA---TAN", "TAN (gnomic) projection", NULL);
+	qfits_header_add(hdr, "CTYPE2", "DEC--TAN", "TAN (gnomic) projection", NULL);
+
+	wcs_hdr_common(hdr, tan);
+
+	return hdr;
+}
+
+qfits_header* blind_wcs_get_sip_header(sip_t* sip) {
+	qfits_header* hdr;
+	char key[64];
+	char val[64];
+	int i, j;
+
+	hdr = qfits_table_prim_header_default();
+	qfits_header_add(hdr, "CTYPE1", "RA---TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
+	qfits_header_add(hdr, "CTYPE2", "DEC--TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
+
+	wcs_hdr_common(hdr, &(sip->wcstan));
+
+	sprintf(val, "%i", sip->a_order);
+	qfits_header_add(hdr, "A_ORDER", val, "Polynomial order, axis 1", NULL);
+
+	for (i=0; i<sip->a_order; i++)
+		for (j=0; (i+j)<sip->a_order && (i || j); j++) {
+			sprintf(key, "A_%i_%i", i, j);
+			sprintf(val, "%.12g", sip->a[i][j]);
+			qfits_header_add(hdr, key, val, NULL, NULL);
+		}
+
+	sprintf(val, "%i", sip->b_order);
+	qfits_header_add(hdr, "B_ORDER", val, "Polynomial order, axis 2", NULL);
+
+	for (i=0; i<sip->b_order; i++)
+		for (j=0; (i+j)<sip->b_order && (i || j); j++) {
+			sprintf(key, "B_%i_%i", i, j);
+			sprintf(val, "%.12g", sip->b[i][j]);
+			qfits_header_add(hdr, key, val, NULL, NULL);
+		}
+
+	sprintf(val, "%i", sip->ap_order);
+	qfits_header_add(hdr, "AP_ORDER", val, "Inv polynomial order, axis 1", NULL);
+
+	for (i=0; i<sip->ap_order; i++)
+		for (j=0; (i+j)<sip->ap_order && (i || j); j++) {
+			sprintf(key, "AP_%i_%i", i, j);
+			sprintf(val, "%.12g", sip->ap[i][j]);
+			qfits_header_add(hdr, key, val, NULL, NULL);
+		}
+
+	sprintf(val, "%i", sip->bp_order);
+	qfits_header_add(hdr, "BP_ORDER", val, "Inv polynomial order, axis 2", NULL);
+
+	for (i=0; i<sip->bp_order; i++)
+		for (j=0; (i+j)<sip->bp_order && (i || j); j++) {
+			sprintf(key, "BP_%i_%i", i, j);
+			sprintf(val, "%.12g", sip->bp[i][j]);
+			qfits_header_add(hdr, key, val, NULL, NULL);
+		}
+
+	return hdr;
 }
 
