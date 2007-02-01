@@ -10,8 +10,6 @@
 #include "healpix.h"
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
-#include "ezfits.h"
-//#include "sip_util.h"
 
 // TODO: 
 //

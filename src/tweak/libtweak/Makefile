@@ -26,8 +26,7 @@ include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
 
-TWEAK_C_OBJ := ezfits.o sip.o tweak_internal.o
-# sip_util.o 
+TWEAK_C_OBJ := sip.o tweak_internal.o
 TWEAK_F_OBJ := dgelsd.o
 TWEAK_OBJ := $(TWEAK_C_OBJ) $(TWEAK_F_OBJ)
 
@@ -39,7 +38,6 @@ CFLAGS += $(LIBWCS_INC)
 CFLAGS += $(QFITS_INC)
 
 LDFLAGS := $(LDFLAGS_DEF)
-#LDFLAGS += -lm
 
 LIBTWEAK := libtweak.a
 
