@@ -68,6 +68,8 @@ static int read_parameters();
 
 #define DEFAULT_CODE_TOL .01
 #define DEFAULT_PARITY_FLIP FALSE
+#define DEFAULT_TWEAK_ABORDER 3
+#define DEFAULT_TWEAK_ABPORDER 3
 
 // params:
 char *fieldfname, *treefname, *quadfname, *startreefname;
@@ -120,6 +122,8 @@ char* rdlsfname;
 rdlist* rdls;
 
 bool do_tweak;
+int tweak_aborder;
+int tweak_abporder;
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -629,7 +633,7 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("Tweaking!\n");
 
 	twee = tweak_new();
-	twee->jitter = 2.0 * distsq2arcsec(verify_dist2);
+	twee->jitter = distsq2arcsec(verify_dist2);
 
 	tweak_print_state(twee);
 	printf("\n");
@@ -671,10 +675,8 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("\n");
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
-	sip = twee->sip;
-	sip->a_order = sip->b_order = 3;
-	sip->ap_order = sip->bp_order = 3;
-	sip = NULL;
+	twee->sip->a_order  = twee->sip->b_order  = 3;
+	twee->sip->ap_order = twee->sip->bp_order = 3;
 
 	tweak_print_state(twee);
 	printf("\n");
