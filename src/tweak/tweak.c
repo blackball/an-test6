@@ -302,18 +302,18 @@ void unpack_params(sip_t* sip, double *pp, int opt_flags)
 	assert(pp);
 	assert(sip);
 	if (opt_flags & OPT_CRVAL) {
-		sip->crval[0] = *pp++;
-		sip->crval[1] = *pp++;
+		sip->wcstan.crval[0] = *pp++;
+		sip->wcstan.crval[1] = *pp++;
 	}
 	if (opt_flags & OPT_CRPIX) {
-		sip->crpix[0] = *pp++;
-		sip->crpix[1] = *pp++;
+		sip->wcstan.crpix[0] = *pp++;
+		sip->wcstan.crpix[1] = *pp++;
 	}
 	if (opt_flags & OPT_CD) {
-		sip->cd[0][0] = *pp++;
-		sip->cd[0][1] = *pp++;
-		sip->cd[1][0] = *pp++;
-		sip->cd[1][1] = *pp++;
+		sip->wcstan.cd[0][0] = *pp++;
+		sip->wcstan.cd[0][1] = *pp++;
+		sip->wcstan.cd[1][0] = *pp++;
+		sip->wcstan.cd[1][1] = *pp++;
 	}
 	if (opt_flags & OPT_SIP) {
 		int p, q;
@@ -343,18 +343,18 @@ int pack_params(sip_t* sip, double *parameters, int opt_flags)
 {
 	double* pp = parameters;
 	if (opt_flags & OPT_CRVAL) {
-		*pp++ = sip->crval[0];
-		*pp++ = sip->crval[1];
+		*pp++ = sip->wcstan.crval[0];
+		*pp++ = sip->wcstan.crval[1];
 	}
 	if (opt_flags & OPT_CRPIX) {
-		*pp++ = sip->crpix[0];
-		*pp++ = sip->crpix[1];
+		*pp++ = sip->wcstan.crpix[0];
+		*pp++ = sip->wcstan.crpix[1];
 	}
 	if (opt_flags & OPT_CD) {
-		*pp++ = sip->cd[0][0];
-		*pp++ = sip->cd[0][1];
-		*pp++ = sip->cd[1][0];
-		*pp++ = sip->cd[1][1];
+		*pp++ = sip->wcstan.cd[0][0];
+		*pp++ = sip->wcstan.cd[0][1];
+		*pp++ = sip->wcstan.cd[1][0];
+		*pp++ = sip->wcstan.cd[1][1];
 	}
 	if (opt_flags & OPT_SIP) {
 //		printf("Packing SIP||||||||\n");
@@ -757,7 +757,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Problems with WCS info, skipping HDU\n");
 			continue;
 		}
-		print_sip(tweak.sip);
+		sip_print(tweak.sip);
 		tweak.state = TWEAK_HAS_SIP;
 
 		// Now get image XY data
@@ -792,7 +792,7 @@ int main(int argc, char *argv[])
 		printf("final state: ");
 		tweak_print_state(&tweak);
 		tweak_dump_ascii(&tweak);
-		print_sip(tweak.sip);
+		sip_print(tweak.sip);
 		printf("\n");
 
 		exit(1);
