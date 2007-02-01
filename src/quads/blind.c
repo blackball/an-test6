@@ -640,8 +640,8 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	sip = twee->sip;
-	sip->a_order = sip->b_order = 2;
-	sip->ap_order = sip->bp_order = 4;
+	sip->a_order = sip->b_order = 3;
+	sip->ap_order = sip->bp_order = 3;
 	sip = NULL;
 
 	tweak_print_state(twee);

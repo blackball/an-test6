@@ -339,43 +339,47 @@ qfits_header* blind_wcs_get_sip_header(sip_t* sip) {
 
 	sprintf(val, "%i", sip->a_order);
 	qfits_header_add(hdr, "A_ORDER", val, "Polynomial order, axis 1", NULL);
-
-	for (i=0; i<sip->a_order; i++)
-		for (j=0; (i+j)<sip->a_order && (i || j); j++) {
-			sprintf(key, "A_%i_%i", i, j);
-			sprintf(val, "%.12g", sip->a[i][j]);
-			qfits_header_add(hdr, key, val, NULL, NULL);
-		}
+	
+	for (i=0; i<=sip->a_order; i++)
+		for (j=0; (i+j)<=sip->a_order; j++)
+			if (i || j) {
+				sprintf(key, "A_%i_%i", i, j);
+				sprintf(val, "%.12g", sip->a[i][j]);
+				qfits_header_add(hdr, key, val, NULL, NULL);
+			}
 
 	sprintf(val, "%i", sip->b_order);
 	qfits_header_add(hdr, "B_ORDER", val, "Polynomial order, axis 2", NULL);
-
-	for (i=0; i<sip->b_order; i++)
-		for (j=0; (i+j)<sip->b_order && (i || j); j++) {
-			sprintf(key, "B_%i_%i", i, j);
-			sprintf(val, "%.12g", sip->b[i][j]);
-			qfits_header_add(hdr, key, val, NULL, NULL);
-		}
+	
+	for (i=0; i<=sip->b_order; i++)
+		for (j=0; (i+j)<=sip->b_order; j++)
+			if (i || j) {
+				sprintf(key, "B_%i_%i", i, j);
+				sprintf(val, "%.12g", sip->b[i][j]);
+				qfits_header_add(hdr, key, val, NULL, NULL);
+			}
 
 	sprintf(val, "%i", sip->ap_order);
 	qfits_header_add(hdr, "AP_ORDER", val, "Inv polynomial order, axis 1", NULL);
 
-	for (i=0; i<sip->ap_order; i++)
-		for (j=0; (i+j)<sip->ap_order && (i || j); j++) {
-			sprintf(key, "AP_%i_%i", i, j);
-			sprintf(val, "%.12g", sip->ap[i][j]);
-			qfits_header_add(hdr, key, val, NULL, NULL);
-		}
+	for (i=0; i<=sip->ap_order; i++)
+		for (j=0; (i+j)<=sip->ap_order; j++)
+			if (i || j) {
+				sprintf(key, "AP_%i_%i", i, j);
+				sprintf(val, "%.12g", sip->ap[i][j]);
+				qfits_header_add(hdr, key, val, NULL, NULL);
+			}
 
 	sprintf(val, "%i", sip->bp_order);
 	qfits_header_add(hdr, "BP_ORDER", val, "Inv polynomial order, axis 2", NULL);
 
-	for (i=0; i<sip->bp_order; i++)
-		for (j=0; (i+j)<sip->bp_order && (i || j); j++) {
-			sprintf(key, "BP_%i_%i", i, j);
-			sprintf(val, "%.12g", sip->bp[i][j]);
-			qfits_header_add(hdr, key, val, NULL, NULL);
-		}
+	for (i=0; i<=sip->bp_order; i++)
+		for (j=0; (i+j)<=sip->bp_order; j++)
+			if (i || j) {
+				sprintf(key, "BP_%i_%i", i, j);
+				sprintf(val, "%.12g", sip->bp[i][j]);
+				qfits_header_add(hdr, key, val, NULL, NULL);
+			}
 
 	return hdr;
 }
