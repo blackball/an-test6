@@ -747,6 +747,9 @@ int main(int argc, char *argv[])
 		// FIXME BREAK HERE into new function
 		tweak_t tweak;
 		tweak_init(&tweak);
+		// set jitter: 6 arcsec.
+		tweak.jitter = 6.0;
+		tweak.Nside = Nside;
 
 		// At this point, we have an image. Now get the WCS data
 		tweak.sip = load_sip_from_fitsio(fptr);
