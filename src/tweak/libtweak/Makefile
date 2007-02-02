@@ -20,6 +20,7 @@ COMMON := $(BASEDIR)/an-common
 all:
 
 include $(COMMON)/makefile.common
+include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.libwcs
 include $(COMMON)/makefile.libkd
@@ -34,8 +35,10 @@ CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(CFITS_INC)
-CFLAGS += $(LIBWCS_INC)
 CFLAGS += $(QFITS_INC)
+CFLAGS += $(LIBWCS_INC)
+CFLAGS += -I../../qfits-an/src
+CFLAGS += -I../../qfits-an/
 
 LDFLAGS := $(LDFLAGS_DEF)
 
@@ -43,9 +46,34 @@ LIBTWEAK := libtweak.a
 
 all: $(LIBTWEAK)
 
-$(LIBTWEAK): $(TWEAK_OBJ)
+$(LIBTWEAK): $(TWEAK_OBJ) $(QFITS_LIB)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
+
+TWEAK_COMMON := $(COMMON)/starutil.o
+TWEAK_COMMON += $(COMMON)/mathutil.o
+TWEAK_COMMON += $(COMMON)/bl.o
+TWEAK_COMMON += $(COMMON)/dualtree_rangesearch.o
+TWEAK_COMMON += $(COMMON)/dualtree.o
+TWEAK_COMMON += $(COMMON)/healpix.o
+TWEAK_COMMON += $(COMMON)/fitsioutils.o
+TWEAK_COMMON += ../qfits-an/src/qfits_header.o
+TWEAK_COMMON += ../qfits-an/src/qfits_table.o
+TWEAK_COMMON += ../qfits-an/src/qfits_tools.o
+TWEAK_COMMON += ../qfits-an/src/qfits_rw.o
+TWEAK_COMMON += ../qfits-an/src/qfits_card.o
+TWEAK_COMMON += ../qfits-an/src/qfits_memory.o
+TWEAK_COMMON += ../qfits-an/src/qfits_error.o
+TWEAK_COMMON += ../qfits-an/src/qfits_byteswap.o
+TWEAK_COMMON += ../qfits-an/src/qfits_time.o
+TWEAK_COMMON += ../qfits-an/src/md5.o
+TWEAK_COMMON += ../qfits-an/src/qfits_md5.o
+TWEAK_COMMON += ../qfits-an/src/qfits_filename.o
+TWEAK_COMMON += ../qfits-an/src/qfits_float.o
+TWEAK_COMMON += ../qfits-an/src/qfits_cache.o
+
+libtweak.so: $(TWEAK_OBJ) $(QFITS_LIB) $(TWEAK_COMMON) $(COMMON_LIB) $(LIBKD_LIB)
+	gcc -shared -lf2c -o $@ $^
 
 .PHONY: clean
 clean:
