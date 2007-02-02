@@ -38,3 +38,4 @@ VT=[v1, v2, v3, z4];
 HP=[h1, h2, h3, h4];
 
 plot(L, BT, 'b-', L, VT, 'r-', L, HP, 'g-');
+legend({'B_T', 'V_T', 'H_P'});
