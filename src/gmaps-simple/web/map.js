@@ -58,7 +58,7 @@ function getNewPolygons() {
 	var ne = bounds.getNorthEast();
 
 	// Construct the URL for the quad server.
-	url = TILE_URL
+	url = QUAD_URL
 		+  "ra1=" + sw.lng() + "&dec1=" + sw.lat()
 		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat()
 		+ "&width=" + pixelsize.width
@@ -280,6 +280,8 @@ function startup() {
 	myTile.myLayers='mylayer';
 	myTile.myFormat='image/png';
 	myTile.myBaseURL=TILE_URL;
+	// Transparent tiles:
+	//myTile.myBaseURL=TILE_URL + "&trans=1";
 	myTile.getTileUrl=CustomGetTileUrl;
 
 	var myMapType = new GMapType([myTile], G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
