@@ -79,6 +79,7 @@ function getNewPolygons() {
 		var xml = GXml.parse(data);
 		var polys = xml.documentElement.getElementsByTagName("poly");
 		polygons.length = 0;
+		debug("parsing polygons...\n");
 		for (var i=0; i<polys.length; i++) {
 			var points = [];
 			for (var j=0;; j++) {
@@ -88,7 +89,8 @@ function getNewPolygons() {
 				points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
 										parseFloat(polys[i].getAttribute("ra"+j))));
 			}
-			points.push(points[0]);
+			//points.push(points[0]);
+			debug("  polygon: " + points.length + " points.\n");
 			polygons.push(new GPolyline(points, "#90a8ff"));
 		}
 		debug("got " + polygons.length + " polygons.\n");
