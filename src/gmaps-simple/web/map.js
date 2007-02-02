@@ -63,65 +63,65 @@ function getNewPolygons() {
 		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat()
 		+ "&width=" + pixelsize.width
 		+ "&height=" + pixelsize.height;
-		//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
+	//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
 
 	debug("polygon url: " + url + "\n");
 
 	// Contact the quad server with our current position...
 	GDownloadUrl(url, function(data, responseCode){
-              // Remove old polygons.
-              for (var i=0; i<visiblePolygons.length; i++) {
-                      map.removeOverlay(visiblePolygons[i]);
-              }
-              visiblePolygons.length = 0;
+		// Remove old polygons.
+		for (var i=0; i<visiblePolygons.length; i++) {
+			map.removeOverlay(visiblePolygons[i]);
+		}
+		visiblePolygons.length = 0;
 
-              // Parse new polygons
-              var xml = GXml.parse(data);
-              var polys = xml.documentElement.getElementsByTagName("poly");
-              polygons.length = 0;
-              for (var i=0; i<polys.length; i++) {
-                      var points = [];
-                      for (var j=0;; j++) {
-                              if (!(polys[i].hasAttribute("dec"+j) &&
-                                        polys[i].hasAttribute("ra"+j)))
-                                      break;
-                              points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
-                                                                              parseFloat(polys[i].getAttribute("ra"+j))));
-                      }
-                      points.push(points[0]);
-                      polygons.push(new GPolyline(points, "#90a8ff"));
-              }
-              debug("got " + polygons.length + " polygons.\n");
+		// Parse new polygons
+		var xml = GXml.parse(data);
+		var polys = xml.documentElement.getElementsByTagName("poly");
+		polygons.length = 0;
+		for (var i=0; i<polys.length; i++) {
+			var points = [];
+			for (var j=0;; j++) {
+				if (!(polys[i].hasAttribute("dec"+j) &&
+					  polys[i].hasAttribute("ra"+j)))
+					break;
+				points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
+										parseFloat(polys[i].getAttribute("ra"+j))));
+			}
+			points.push(points[0]);
+			polygons.push(new GPolyline(points, "#90a8ff"));
+		}
+		debug("got " + polygons.length + " polygons.\n");
 
-              if (showPolygons) {
-                      // Show new polygons.
-                      for (var i=0; i<polygons.length; i++) {
-                              map.addOverlay(polygons[i]);
-                              visiblePolygons.push(polygons[i]);
-                      }
-              }
-      });
+		if (showPolygons) {
+			// Show new polygons.
+			for (var i=0; i<polygons.length; i++) {
+				map.addOverlay(polygons[i]);
+				visiblePolygons.push(polygons[i]);
+			}
+		}
+	});
 }
 
- /*
+/*
   This function gets called as the user moves the map.
 */
 function mapmoved() {
-       center = map.getCenter();
-       // update the center ra,dec textboxes.
-       ra = center.lng();
-       if (ra < 0.0) { ra += 360.0; }
-       document.gotoform.ra_center.value  = "" + ra;
-       document.gotoform.dec_center.value = "" + center.lat();
+	center = map.getCenter();
+	// update the center ra,dec textboxes.
+	ra = center.lng();
+	if (ra < 0.0) { ra += 360.0; }
+	document.gotoform.ra_center.value  = "" + ra;
+	document.gotoform.dec_center.value = "" + center.lat();
 }
 
 /*
   This function gets called when the user changes the zoom level.
 */
 function mapzoomed(oldzoom, newzoom) {
-       // update the "zoom" textbox.
-       document.gotoform.zoomlevel.value = "" + newzoom;
-       mapmoved();
+	// update the "zoom" textbox.
+	document.gotoform.zoomlevel.value = "" + newzoom;
+	mapmoved();
 }
 
 /*
@@ -129,7 +129,7 @@ function mapzoomed(oldzoom, newzoom) {
   and also after it's moved programmatically (via setCenter(), etc).
 */
 function moveended() {
-       mapmoved();
+	mapmoved();
 	getNewPolygons();
 }
 
