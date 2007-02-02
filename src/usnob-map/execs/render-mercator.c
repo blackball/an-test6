@@ -26,7 +26,7 @@
 #include "an_catalog.h"
 #include "mathutil.h"
 
-#define OPTIONS "hW:H:m:"
+#define OPTIONS "hW:H:m:M:"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "%s usage:\n"
