@@ -885,11 +885,11 @@ void do_linear_tweak(tweak_t* t)
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
 	int sip_order = t->sip->a_order;
-	// The SIP coefficients form a order x order upper triangular matrix missing
-	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
-	// That's why the computation of the number of SIP terms is calculated by
+	// The SIP coefficients form an (order x order) upper triangular matrix missing
+	// the 0,0 element. We limit ourselves to an order 10 SIP distortion. 
+	// That's why the number of SIP terms is calculated by
 	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
-	// The in the end, we drop the p^0q^0 term by integrating it into crpix)
+	// Then in the end, we drop the p^0q^0 term by integrating it into crpix)
 	int sip_coeffs = (sip_order+1)*(sip_order+2)/2; // upper triangle
 
 	integer stride = il_size(t->image); // number of rows
@@ -899,10 +899,12 @@ void do_linear_tweak(tweak_t* t)
 	double* b2 = malloc(2*stride*sizeof(double));
 	assert(A);
 	assert(b);
+	assert(A2);
+	assert(b2);
 
 	printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t));
 	sip_print(t->sip);
-//	printf("sqerrxy=%le\n", figure_of_merit2(t));
+	//	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// We use a clever trick to estimate CD, A, and B terms in two
 	// seperated least squares fits, then finding A and B by multiplying
@@ -942,20 +944,33 @@ void do_linear_tweak(tweak_t* t)
 	//
 	// which recovers the A and B's.
 
-	// Fill A in column-major order for fortran dgelsd and create 
-	// Note: this code assumes a_order == b_order
+
+	/*
+	  Fill "A" in column-major order for fortran dgelsd.
+
+	  "A" contains "sip_coeffs" terms for each of the "stride" points that
+	  are in correspondence.
+
+	  (THE FOLLOWING ISN'T QUITE RIGHT)
+
+	  A(i, j) is the j-th SIP coefficient for the i-th point.
+
+	  Since the terms are stored in column-major order, and "A" has "stride"
+	  rows, term A(i, j) is at address A[i + stride*j].
+	*/
 	double xyzcrval[3];
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
 	int i;
 	for (i=0; i<stride; i++) {
 		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
 		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
-		A[i] = u;
-		A[i + stride] = v;
+
+		A[i + stride*0] = u;
+		A[i + stride*1] = v;
 
 		// Poly terms for SIP.  Note that this includes the constant
-		// shift parameter which we extract and apply to crpix (and
-		// don't include in SIP terms)
+		// shift parameter (SIP term 0,0) which we extract and apply to
+		// crpix (and don't include in SIP terms)
 		int j = 2;
 		int p, q;
 		for (p=0; p<=sip_order; p++)
@@ -963,13 +978,13 @@ void do_linear_tweak(tweak_t* t)
 				if (p+q <= sip_order) {
 					assert(2 <= j);
 					assert(j < 2+sip_coeffs);
-					A[i + stride*j] = pow(u,p)*pow(v,q);
+					A[i + stride*j] = pow(u,p) * pow(v,q);
 					j++;
 				}
 		assert(j == 2+sip_coeffs);
 
-		// Be sure about shift coefficient
-		A[i+stride*2] = 1.0;
+		// DEBUG - Be sure about shift coefficient
+		A[i + stride*2] = 1.0;
 
 		// xref and yref should be intermediate WC's not image x and y!
 		double x,y;
@@ -977,8 +992,8 @@ void do_linear_tweak(tweak_t* t)
 		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], xyzpt);
 		star_coords(xyzpt, xyzcrval, &y, &x);
 
-		b[i] = rad2deg(x);
-		b[i+stride] = rad2deg(y);
+		b[i + stride*0] = rad2deg(x);
+		b[i + stride*1] = rad2deg(y);
 	}
 
 	// Save A, bx, and by for computing chisq
@@ -993,16 +1008,16 @@ void do_linear_tweak(tweak_t* t)
 	integer NRHS=2;       // number of right hand sides (one for x and y)
 	integer rank;         // output effective rank of A
 	integer lwork = 1000*1000; /// FIXME ???
-	doublereal* work = malloc(lwork*sizeof(double));
-	integer *iwork = malloc(lwork*sizeof(long int));
+	doublereal* work = malloc(lwork*sizeof(doublereal));
+	integer *iwork = malloc(lwork*sizeof(integer));
 	integer info;
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 
-	t->sip->wcstan.cd[0][0] = b[0]; // b is replaced with CD during dgelsd
-	t->sip->wcstan.cd[0][1] = b[1];
-	t->sip->wcstan.cd[1][0] = b[stride];
-	t->sip->wcstan.cd[1][1] = b[stride+1];
+	t->sip->wcstan.cd[0][0] = b[0 + stride*0]; // b is replaced with CD during dgelsd
+	t->sip->wcstan.cd[0][1] = b[1 + stride*0];
+	t->sip->wcstan.cd[1][0] = b[0 + stride*1];
+	t->sip->wcstan.cd[1][1] = b[1 + stride*1];
 
 	// Extract the SIP coefficients
 	double cdi[2][2];
