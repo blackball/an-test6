@@ -273,7 +273,7 @@ function startup() {
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
 	// Base URL of the tile and quad servers.
-	BASE_URL = "http://oven.cosmo.fas.nyu.edu/simple/";
+	BASE_URL = "http://oven.cosmo.fas.nyu.edu/survey/";
 	TILE_URL = BASE_URL + "tile.php?";
 	QUAD_URL = BASE_URL + "quad.php?";
 

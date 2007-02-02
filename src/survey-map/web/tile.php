@@ -10,11 +10,11 @@
 Write a message to the log file.
 */
 function loggit($mesg) {
-	error_log($mesg, 3, "/home/gmaps/gmaps-simple/simple.log");
+	error_log($mesg, 3, "/home/gmaps/survey-map/survey.log");
 }
 
 // Where to look for executables.
-$path = "/home/gmaps/gmaps-simple/execs/";
+$path = "/home/gmaps/survey-map/execs/";
 
 // Write headers...
 header("Content-type: image/png");
