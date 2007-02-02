@@ -23,13 +23,19 @@ dedat = load('corr_delta'+suff)
 
 figure()
 hold(True)
+
+# Toggle t=2 and t=0 for plotting in RA/Dec or pixel coords
 t=2
+#t=0
 plot(imdat[:,t], imdat[:,t+1], 'r.')
 ax = axis()
 plot(redat[:,t], redat[:,t+1], 'bs', markerfacecolor=None)
+
+# Plot correspondences; only applys to pixel space
 #plot(dedat[:,0], dedat[:,1], 'gd', markeredgecolor='g', markerfacecolor=None, markersize=20)
 #for x,y,dx,dy in dedat:
 #    line([x,y],[x+dx,y+dy])
+
 #axis(ax)
 #axis('equal')
 #axis(ax)

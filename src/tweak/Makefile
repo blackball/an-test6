@@ -27,7 +27,7 @@ CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += -I.
 
-TWEAK_OBJS := tweak.o ezfits.o
+TWEAK_OBJS := tweak.o ezfits.o sip_util.o
 TEST_SIP_OBJS := test_sip.o sip_util.o ezfits.o
 
 all: $(REMAKE_LIBTWEAK) tweak test_sip

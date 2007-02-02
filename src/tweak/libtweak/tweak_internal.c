@@ -755,11 +755,11 @@ void invert_sip_polynomial(tweak_t* t)
 	//   U = [CD11 CD12]   * x
 	//   V   [CD21 CD22]     y
 	//
-	//   +-------------- PIXEL distortion delta from telescope to 
-	//   |               linear coordinates
-	//   |    +--------- Linear PIXEL coordinates before SIP correction
-	//   |    |     +--- Polynomial U,V terms in powers of PIXELS
-	//   v    v     v
+	//   +---------------- PIXEL distortion delta from telescope to 
+	//   |                 linear coordinates
+	//   |    +----------- Linear PIXEL coordinates before SIP correction
+	//   |    |       +--- Polynomial U,V terms in powers of PIXELS
+	//   v    v       v
 	//
 	//   -f(u1,v1) =  p11 p12 p13 p14 p15 ... * ap1
 	//   -f(u2,v2) =  p21 p22 p23 p24 p25 ...   ap2
@@ -994,7 +994,12 @@ void do_linear_tweak(tweak_t* t)
 				if (p+q <= sip_order) {
 					assert(2 <= j);
 					assert(j < 2+sip_coeffs);
-					A[i + stride*j] = pow(u,p) * pow(v,q);
+					if (p+q != 1) 
+						A[i + stride*j] = pow(u,p) * pow(v,q);
+					else
+						// We don't want repeated
+						// linear terms
+						A[i + stride*j] = 0.0;
 					j++;
 				}
 		assert(j == 2+sip_coeffs);
@@ -1071,10 +1076,8 @@ void do_linear_tweak(tweak_t* t)
 	double sU, sV;
 	// FIXME - Approximate shift ignoring SIP
 	// because inverting SIP is ugly!
-	sU = cdi[0][0] * b[2 + stride*0] +
-		cdi[0][1]  * b[2 + stride*1];
-	sV = cdi[1][0] * b[2 + stride*0] +
-		cdi[1][1]  * b[2 + stride*1];
+	sU = cdi[0][0] * b[2 + stride*0] + cdi[0][1]  * b[2 + stride*1];
+	sV = cdi[1][0] * b[2 + stride*0] + cdi[1][1]  * b[2 + stride*1];
 	double su, sv;
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
 	sip_t* swcs = wcs_shift(t->sip, -su, -sv);
