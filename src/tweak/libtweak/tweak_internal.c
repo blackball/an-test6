@@ -715,11 +715,13 @@ void invert_sip_polynomial(tweak_t* t)
 	printf("INVERTING!!!!!!!!!!\n");
 	assert(t->sip->a_order == t->sip->b_order);
 
-	t->sip->ap_order = t->sip->a_order;
-//	t->sip->ap_order = t->sip->a_order + 2;
-//	if (t->sip->ap_order > MAXORDER)
-//		t->sip->ap_order = MAXORDER;
-	t->sip->bp_order = t->sip->ap_order;
+	/*
+	  UMMM... this can't be right, can it?
+	  t->sip->ap_order = t->sip->a_order;
+	  t->sip->bp_order = t->sip->ap_order;
+	*/
+	assert(t->sip->ap_order == t->sip->bp_order);
+
 	int inv_sip_order = t->sip->ap_order;
 
 	int ngrid = 10*(t->sip->ap_order+1);
@@ -732,12 +734,14 @@ void invert_sip_polynomial(tweak_t* t)
 	int inv_sip_coeffs = (inv_sip_order+1)*(inv_sip_order+2)/2; // upper triangle
 
 	integer stride = ngrid*ngrid; // Number of rows
-	double* A = malloc(inv_sip_coeffs*stride*sizeof(double));
-	double* b = malloc(2*stride*sizeof(double));
+	double* A  = malloc(inv_sip_coeffs*stride*sizeof(double));
+	double* b  = malloc(2*stride*sizeof(double));
 	double* A2 = malloc(inv_sip_coeffs*stride*sizeof(double));
 	double* b2 = malloc(2*stride*sizeof(double));
 	assert(A);
 	assert(b);
+	assert(A2);
+	assert(b2);
 
 	// Rearranging formula (4), (5), and (6) from the SIP paper gives the
 	// following equations:
@@ -782,7 +786,6 @@ void invert_sip_polynomial(tweak_t* t)
 	printf("maxv=%lf, minv=%lf\n", maxv, minv);
 
 	// Fill A in column-major order for fortran dgelsd
-	// Note: this code assumes a_order == b_order
 	// We just make a big grid and hope for the best
 	i = 0;
 	int gu, gv;
@@ -799,15 +802,23 @@ void invert_sip_polynomial(tweak_t* t)
 			double guv = V-v;
 
 			// Calculate polynomial terms but this time for inverse
-			int j = 0;
 			int p,q;
+			//int j = 0;
+			/*
+			  Maybe we want to explicitly set the (0,0) term to zero...:
+			*/
+			A[i + stride*0] = 0;
+			int j = 1;
 			for (p=0; p<=inv_sip_order; p++)
 				for (q=0; q<=inv_sip_order; q++)
 					if (p+q <= inv_sip_order && !(p==0&&q==0)) {
+						// we're skipping the (0, 0) term.
+						//assert(j < (inv_sip_coeffs-1));
 						assert(j < inv_sip_coeffs);
 						A[i + stride*j] = pow(U,p)*pow(V,q);
 						j++;
 					}
+			//assert(j == (inv_sip_coeffs-1));
 			assert(j == inv_sip_coeffs);
 
 			b[i] = -fuv;
@@ -835,7 +846,8 @@ void invert_sip_polynomial(tweak_t* t)
 			&lwork, iwork, &info);
 
 	// Extract the inverted SIP coefficients
-	int j = 0;
+	//int j = 0;
+	int j = 1;
 	int p, q;
 	for (p=0; p<=inv_sip_order; p++)
 		for (q=0; q<=inv_sip_order; q++)
@@ -877,6 +889,9 @@ void invert_sip_polynomial(tweak_t* t)
 //    the correspondences are passed so that we can stick RANSAC around the whole
 //    thing for better estimation.
 
+// column-major array reference macro - NOTE bad behaviour: assume the
+// "stride" variable exists.
+//#define ref(A, i, j)  ((A)[(i) + (stride)*(j)])
 
 // Run a linear tweak; only changes CD matrix
 void do_linear_tweak(tweak_t* t)
@@ -965,6 +980,7 @@ void do_linear_tweak(tweak_t* t)
 		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
 		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 
+		//ref(A, i, 0) = u;
 		A[i + stride*0] = u;
 		A[i + stride*1] = v;
 
@@ -989,7 +1005,8 @@ void do_linear_tweak(tweak_t* t)
 		// xref and yref should be intermediate WC's not image x and y!
 		double x,y;
 		double xyzpt[3];
-		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], xyzpt);
+		int refi = il_get(t->ref, i);
+		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
 		star_coords(xyzpt, xyzcrval, &y, &x);
 
 		b[i + stride*0] = rad2deg(x);
@@ -1026,6 +1043,8 @@ void do_linear_tweak(tweak_t* t)
 	cdi[0][1] = -t->sip->wcstan.cd[0][1] * inv_det;
 	cdi[1][0] = -t->sip->wcstan.cd[1][0] * inv_det;
 	cdi[1][1] =  t->sip->wcstan.cd[0][0] * inv_det;
+
+	// This magic *3* is here because we skip the (0, 0) term.
 	int j = 3;
 	int p, q;
 	for (p=0; p<=sip_order; p++)
@@ -1033,8 +1052,12 @@ void do_linear_tweak(tweak_t* t)
 			if (p+q <= sip_order && !(p==0&&q==0)) {
 				assert(2 <= j);
 				assert(j < 2+sip_coeffs);
-				t->sip->a[p][q] = cdi[0][0]*b[j] + cdi[0][1]*b[stride+j]; 
-				t->sip->b[p][q] = cdi[1][0]*b[j] + cdi[1][1]*b[stride+j];
+				t->sip->a[p][q] =
+					cdi[0][0] * b[j + stride*0] +
+					cdi[0][1] * b[j + stride*1];
+				t->sip->b[p][q] =
+					cdi[1][0] * b[j + stride*0] +
+					cdi[1][1] * b[j + stride*1];
 				j++;
 			}
 	assert(j == 2+sip_coeffs);
@@ -1046,8 +1069,12 @@ void do_linear_tweak(tweak_t* t)
 
 	// Now apply the shift
 	double sU, sV;
-	sU = cdi[0][0]*b[2] + cdi[0][1]*b[stride+2]; // Approximate shift ignoring SIP
-	sV = cdi[1][0]*b[2] + cdi[1][1]*b[stride+2]; // because inverting SIP is ugly FIXME!
+	// FIXME - Approximate shift ignoring SIP
+	// because inverting SIP is ugly!
+	sU = cdi[0][0] * b[2 + stride*0] +
+		cdi[0][1]  * b[2 + stride*1];
+	sV = cdi[1][0] * b[2 + stride*0] +
+		cdi[1][1]  * b[2 + stride*1];
 	double su, sv;
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
 	sip_t* swcs = wcs_shift(t->sip, -su, -sv);
@@ -1060,7 +1087,7 @@ void do_linear_tweak(tweak_t* t)
 	printf("shiftx=%le, shifty=%le\n",su, sv);
 	printf("sqerr=%le\n", figure_of_merit(t));
 	printf("rms=%lf\n", sqrt(figure_of_merit(t)/stride));
-//	printf("sqerrxy=%le\n", figure_of_merit2(t));
+	//	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// Calculate chi2 for sanity
 	double chisq=0;
@@ -1071,7 +1098,7 @@ void do_linear_tweak(tweak_t* t)
 			sum += A2[i+stride*j]*b[j];
 		chisq += (sum-b2[i])*(sum-b2[i]);
 	}
-//	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
+	//	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
 }
 
 // Duct-tape dependencey system (DTDS)
@@ -1085,11 +1112,10 @@ void do_linear_tweak(tweak_t* t)
 		return tweak_advance_to(t, x); \
 	}
 
-unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
-{
-//	printf("WANT: ");
-//	tweak_print_the_state(flag);
-//	printf("\n");
+unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
+	//	printf("WANT: ");
+	//	tweak_print_the_state(flag);
+	//	printf("\n");
 	want(TWEAK_HAS_IMAGE_AD) {
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
