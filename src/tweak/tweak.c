@@ -759,11 +759,6 @@ int main(int argc, char *argv[])
 		}
 		sip_print(tweak.sip);
 		tweak.state = TWEAK_HAS_SIP;
-        int order = 4;
-        tweak.sip->a_order = order;
-        tweak.sip->b_order = order;
-        tweak.sip->ap_order = order;
-        tweak.sip->bp_order = order;
 
 		// Now get image XY data
 		get_xy_data(&tweak, xyfptr, kk);
@@ -786,8 +781,16 @@ int main(int argc, char *argv[])
 		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 		tweak_dump_ascii(&tweak);
 
+        int order = 4;
+        tweak.sip->a_order = order;
+        tweak.sip->b_order = order;
+        tweak.sip->ap_order = order;
+        tweak.sip->bp_order = order;
+
 		int k;
-		for (k=0; k<4; k++) {
+		for (k=0; k<6; k++) {
+            printf("\n");
+            printf("--------------------------------\n");
             printf("Iterating linear tweak number %d\n", k);
 			tweak.state &= ~TWEAK_HAS_LINEAR_CD;
 			tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);

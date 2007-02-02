@@ -1066,18 +1066,24 @@ void do_linear_tweak(tweak_t* t)
 				j++;
 			}
 	assert(j == 2+sip_coeffs);
+	// Since the linear terms should be zero, and we set the coefficients
+	// that way, we don't know what the optimizer set them to. Thus,
+	// explicitly set them to zero here.
+	
 
 	t->sip->a_order = sip_order;
 	t->sip->b_order = sip_order;
+	t->sip->a[0][1] = 0.0;
+	t->sip->a[1][0] = 0.0;
+	t->sip->b[0][1] = 0.0;
+	t->sip->b[1][0] = 0.0;
 
 	invert_sip_polynomial(t);
 
-	// Now apply the shift
+	// Apply the shift
 	double sU, sV;
-	// FIXME - Approximate shift ignoring SIP
-	// because inverting SIP is ugly!
-	sU = cdi[0][0] * b[2 + stride*0] + cdi[0][1]  * b[2 + stride*1];
-	sV = cdi[1][0] * b[2 + stride*0] + cdi[1][1]  * b[2 + stride*1];
+	sU = cdi[0][0]*b[2 + stride*0] + cdi[0][1]*b[2 + stride*1];
+	sV = cdi[1][0]*b[2 + stride*0] + cdi[1][1]*b[2 + stride*1];
 	double su, sv;
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
 	sip_t* swcs = wcs_shift(t->sip, -su, -sv);
