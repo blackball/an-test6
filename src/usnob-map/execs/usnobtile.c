@@ -247,7 +247,6 @@ int main(int argc, char *argv[]) {
 		unsigned char* outimg;
 
 		sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
-		//sprintf(fn, map_template, zoomlevel);
 		fprintf(stderr, "Loading image from file %s.\n", fn);
 		fin = pm_openr_seekable(fn);
 		ppm_readppminit(fin, &cols, &rows, &maxval, &format);
