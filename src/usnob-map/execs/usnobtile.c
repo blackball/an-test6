@@ -121,7 +121,10 @@ int main(int argc, char *argv[]) {
 	bool gotx, goty, gotX, gotY, gotw, goth;
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int w=0, h=0;
-	char* map_template = "/home/gmaps/usnob-images/maps/usnob-zoom%i.ppm";
+
+	//char* map_template = "/home/gmaps/usnob-images/maps/usnob-zoom%i.ppm";
+	char* map_template = "/home/gmaps/usnob-sandbox/web/maps/usnob-zoom%i_%02i_%02i.ppm";
+
 	char* merc_template = "/home/gmaps/usnob-images/merc/merc_hp%03i.fits";
 	char fn[256];
 	int i;
@@ -225,8 +228,7 @@ int main(int argc, char *argv[]) {
 
 	xpix0 = px0 * pixperx;
 	ypix0 = py0 * pixpery;
-	xpix1 = px1 * pixperx;
-	ypix1 = py1 * pixpery;
+
 
 	fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
 
@@ -245,10 +247,14 @@ int main(int argc, char *argv[]) {
 		int y;
 		unsigned char* outimg;
 
-		sprintf(fn, map_template, zoomlevel);
+		sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
+		//sprintf(fn, map_template, zoomlevel);
 		fprintf(stderr, "Loading image from file %s.\n", fn);
 		fin = pm_openr_seekable(fn);
 		ppm_readppminit(fin, &cols, &rows, &maxval, &format);
+
+
+		// CHECK FILE FORMAT INFORMATION
 		if (PNM_FORMAT_TYPE(format) != PPM_TYPE) {
 			fprintf(stderr, "Map file must be PPM.\n");
 			exit(-1);
@@ -264,8 +270,17 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to mmap image file.\n");
 			exit(-1);
 		}
+
+		// pts to the the image (after the headers)
 		img = map + imgstart;
 
+		// output PPM.
+		printf("P6 %d %d %d\n", w, h, 255);
+		for (y=h-1; y>=0; y--){
+			fwrite(img + y*w*3, 1, w*3, stdout);
+		}
+
+		/*
 		if (xpix0 < 0 || ypix0 < 0 || xpix1 > cols || ypix1 > rows) {
 			fprintf(stderr, "Requested pixels (%i,%i) to (%i,%i) aren't within image bounds (0,0),(%i,%i)\n",
 					xpix0, ypix0, xpix1, ypix1, cols, rows);
@@ -328,6 +343,7 @@ int main(int argc, char *argv[]) {
 			fwrite(outimg + y*w*3, 1, w*3, stdout);
 
 		free(outimg);
+		*/
 
 		return 0;
 	} else {
