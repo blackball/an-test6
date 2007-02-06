@@ -122,8 +122,7 @@ int main(int argc, char *argv[]) {
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int w=0, h=0;
 
-	//char* map_template = "/home/gmaps/usnob-images/maps/usnob-zoom%i.ppm";
-	char* map_template = "/home/gmaps/usnob-sandbox/web/maps/usnob-zoom%i_%02i_%02i.ppm";
+	char* map_template = "/home/gmaps/usnob-images/maps/diced/usnob-zoom%i_%02i_%02i.ppm";
 
 	char* merc_template = "/home/gmaps/usnob-images/merc/merc_hp%03i.fits";
 	char fn[256];
