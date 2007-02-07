@@ -1,5 +1,10 @@
 <?php
 
+//$resultdir = "/h/260/dstn/local/ontheweb-results/";
+$resultdir = "/p/learning/stars/ontheweb/";
+$indexdir  = "/h/260/dstn/raid3/INDEXES/";
+
+
 function loggit($mesg) {
 	error_log($mesg, 3, "/tmp/ontheweb.log");
 }
@@ -75,27 +80,7 @@ $tweak_val = ($ok_tweak ? $headers["tweak"] : TRUE);
 
 $all_ok = $ok_fitsfile && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree & $ok_tweak;
 if ($all_ok) {
-    //echo "<h3>Looks good!</h3>";
-
-    // 
-    /**
-bool move_uploaded_file ( string filename, string destination )
-  This function checks to ensure that the file designated by filename is a valid upload file (meaning that it was uploaded via PHP's HTTP POST upload mechanism). If the file is valid, it will be moved to the filename given by destination.
-  If filename is not a valid upload file, then no action will occur, and move_uploaded_file() will return FALSE.
-  If filename is a valid upload file, but cannot be moved for some reason, no action will occur, and move_uploaded_file() will return FALSE. Additionally, a warning will be issued. 
-
-bool file_exists ( string filename )
-  Returns TRUE if the file or directory specified by filename exists; FALSE otherwise. 
-
-bool mkdir ( string pathname [, int mode [, bool recursive [, resource context]]] )
-  Attempts to create the directory specified by pathname.
-  Note that you probably want to specify the mode as an octal number, which means it should have a leading zero. The mode is also modified by the current umask, which you can change using umask(). 
-  
-int mt_rand ( [int min, int max] )
-
-  */
-
-    $resultdir = "/h/260/dstn/local/ontheweb-results/";
+    // Launch!
 
 	// Create a directory for this request.
     while (TRUE) {
@@ -153,10 +138,8 @@ int mt_rand ( [int min, int max] )
 
 	fprintf($fin, "log " . $logfile . "\n");
 
-	//foreach ($indexes as $ind) {
-	for ($i=0; $i<count($indexes); $i++) {
-		//$suffix = ((count($indexes) > 1) ? $i : "");
-		fprintf($fin, "index " . $indexes[$i] . "\n");
+	foreach ($indexes as $ind) {
+		fprintf($fin, "index " . $indexdir . $ind . "\n");
 	}
 
 	fprintf($fin,
@@ -171,7 +154,8 @@ int mt_rand ( [int min, int max] )
 			"xcol " . $x_col_val . "\n" .
 			"ycol " . $y_col_val . "\n" .
 			"sdepth 0\n" .
-			"depth 100\n" .
+			//"depth 100\n" .
+			"depth 60\n" .
 			"parity 0\n" .
 			"fieldunits_lower " . $fu_lower . "\n" .
 			"fieldunits_upper " . $fu_upper . "\n" .

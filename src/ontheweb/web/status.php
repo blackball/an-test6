@@ -6,7 +6,10 @@ Astrometry.net: Job Status
 </head>
 <body>
 <?php
-$resultdir = "/h/260/dstn/local/ontheweb-results/";
+//$resultdir = "/h/260/dstn/local/ontheweb-results/";
+$resultdir = "/p/learning/stars/ontheweb/";
+$statuspath = "status/";
+//$statuspath = "";
 $headers = $_REQUEST;
 
 if (!array_key_exists("job", $headers)) {
@@ -17,6 +20,11 @@ if (!array_key_exists("job", $headers)) {
 $myname = $headers["job"];
 
 $mydir = $resultdir . $myname . "/";
+
+$statuspath .= $myname . "/";
+$host  = $_SERVER['HTTP_HOST'];
+$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+$statusurl = "http://" . $host . $uri . "/" . $statuspath;
 
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
@@ -31,6 +39,10 @@ $qfile = $resultdir . "queue";
 $inputfile = $mydir . "input";
 $startfile = $mydir . "start";
 $donefile  = $mydir . "done";
+$rdlist = $mydir . "field.rd.fits";
+$logfile = $mydir . "log";
+$solvedfile = $mydir . "solved";
+$wcsfile = $mydir . "wcs.fits";
 
 $now = time();
 
@@ -43,6 +55,16 @@ function dtime2str($secs) {
 		return sprintf("%.1f minutes", (float)$secs/(float)(60));
 	} else {
 		return sprintf("%d seconds", $secs);
+	}
+}
+
+function print_link($f) {
+	global $statusurl;
+	if (file_exists($f)) {
+		echo "<a href=" . $statusurl . basename($f) . ">" .
+			basename($f) . "</a>";
+	} else {
+		echo "(not available)";
 	}
 }
 ?>
@@ -117,10 +139,79 @@ if ($pos == -1) {
 ?>
 </td></tr>
 
+<tr><td>Field Solved:</td><td>
+<?php
+if (file_exists($solvedfile)) {
+	$fin = fopen($solvedfile, "rb");
+	if (!$fin) {
+		echo "(failed to open file)";
+	} else {
+		$s = '';
+		while (!feof($fin)) {
+			$rd = fread($fin, 1024);
+			if ($rd == FALSE) {
+				echo "(error reading file)";
+				break;
+			}
+			$s .= $rd;
+		}
+		//echo 'Read ' . strlen($s) . ' entries.';
+		if (ord($s[0]) == 1) {
+			echo "yes";
+		} else if (ord($s[0]) == 0) {
+			echo "no";
+		} else {
+			echo "(unexpected value " . ord($s[0]) . ")";
+		}
+		fclose($fin);
+	}
+} else {
+	echo "no";
+}
+?>
+</td></tr>
+
+<tr><td>WCS file:</td><td>
+<?php
+print_link($wcsfile);
+?>
+</td></tr>
+
+
+<tr><td>RA,DEC list:</td><td>
+<?php
+print_link($rdlist);
+?>
+</td></tr>
+
+<tr><td>Log file:</td><td>
+<?php
+print_link($logfile);
+?>
+</td></tr>
+
+
 </table>
 </center>
 
 <hr>
+
+<center>
+<table border=1>
+<tr><td>Log File</td></tr>
+<tr><td>
+<pre>
+<?php
+if (file_exists($logfile)) {
+	echo file_get_contents($logfile);
+} else {
+	echo "(not available)";
+}
+?>
+</pre>
+</td></tr>
+</table>
+</center>
 
 </body>
 </html>

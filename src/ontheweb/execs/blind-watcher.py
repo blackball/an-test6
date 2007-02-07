@@ -6,31 +6,48 @@ from Queue import Queue
 from subprocess import Popen
 
 BLIND = 'blind';
-IN_SUFFIX  = '.in';
-OUT_SUFFIX = '.out';
+#IN_SUFFIX  = '.in';
+IN_FILENAME  = 'input';
+#OUT_SUFFIX = '.out';
+
+queuefile = "queue";
 
 def sigint(signum, frame):
     print 'SIGINT received.'
     eq.quit()
 
 class Enqueuer(ProcessEvent):
-    def __init__(self):
+    def __init__(self, filename):
         self.q = Queue(0)
+        self.qlist = []
+        self.filename = filename
 
     def quit(self):
         self.q.put('QUIT')
 
     def get(self):
         try:
-            return self.q.get(True)
+            item = self.q.get(True)
+            self.qlist.remove(item)
+            return item
         except KeyboardInterrupt:
             return 'QUIT'
-        
+
+    def write_queue(self):
+        f = open(self.filename, "w")
+        for item in self.qlist:
+            f.write(item)
+        f.close();
+
     def handle(self, path):
-        if (not(path.endswith(IN_SUFFIX))):
+        #if (not(path.endswith(IN_SUFFIX))):
+        if (not(os.basename(path) == IN_FILENAME)):
+            print "Path changed: %s\n" % path
             return
+        self.qlist.put(path)
         self.q.put(path)
         print "Queue has %i entries." % self.q.qsize()
+        write_queue(self)
 
     def process_IN_CLOSE_WRITE(self, event):
         print "Closed write: %s" %  os.path.join(event.path, event.name)
@@ -43,12 +60,15 @@ class Enqueuer(ProcessEvent):
 
 
 wm = WatchManager()
-eq = Enqueuer()
+eq = Enqueuer(queuefile)
 signal.signal(signal.SIGINT, sigint)
 notifier = ThreadedNotifier(wm, eq)
 notifier.start()
 mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO
-wdd = wm.add_watch('/tmp', mask)
+cwd = os.getcwd()
+print "Watching: %s\n" % cwd
+wdd = wm.add_watch(cwd, mask, rec=True, auto_add=True)
+#print "Path: %s\n" % wm.get_path(wdd);
 
 while True:
     try:
@@ -58,9 +78,11 @@ while True:
             break
 
         # run blind with the new input file.
-        outfile = filename[0:len(filename) - len(IN_SUFFIX)] + '.out'
-        print 'Output file: %s' % outfile
-        rtnval = os.system(BLIND + ' <' + filename + ' >' + outfile + ' 2>&1')
+
+        #outfile = filename[0:len(filename) - len(IN_SUFFIX)] + '.out'
+        #print 'Output file: %s' % outfile
+        #rtnval = os.system(BLIND + ' <' + filename + ' >' + outfile + ' 2>&1')
+        rtnval = os.system(BLIND + ' <' + filename)
         if (rtnval):
             print 'Blind failed.'
         else:
