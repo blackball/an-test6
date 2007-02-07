@@ -25,28 +25,32 @@ echo '<hr><pre>';
 print_r($_FILES);
 echo '</pre><hr>';
 
-$got_fitsfile = array_key_exists("fitsfile", $_FILES);
 $got_fitstmpfile = array_key_exists("fits_tmpfile", $headers);
 if ($got_fitstmpfile) {
 	$fitsfilename = $headers["fits_filename"];
 	$fitstempfilename = $headers["fits_tmpfile"];
 }
+$got_fitsfile = array_key_exists("fitsfile", $_FILES);
 if ($got_fitsfile) {
 	$fitsfile = $_FILES["fitsfile"];
-	$got_fitsfile = $got_fitsfile and ($fitsfile["error"] == 0);
+        echo 'error = ' . $fitsfile["error"] . "<br>";
+	$got_fitsfile = ($fitsfile["error"] == 0);
 	if ($got_fitsfile) {
 		$fitsfilename = $fitsfile["name"];
 		$fitstempfilename = $fitsfile['tmp_name'];
 	}
-	//echo "got_fitsfile = " . $got_fitsfile;
 }
-$ok_fitsfile = $got_fitsfile or $got_fitstmpfile;
+$ok_fitsfile = $got_fitsfile || $got_fitstmpfile;
+echo "got_fitsfile = " . $got_fitsfile . "<br>";
+echo "got_fitstmpfile = " . $got_fitstmpfile . "<br>";
 echo "ok_fitsfile = " . $ok_fitsfile . "<br>";
 echo "fitsfilename = " . $fitsfilename . "<br>";
 echo "fitstempfilename = " . $fitstempfilename . "<br>";
 
-$ok_x_col = array_key_exists("x_col", $headers);
-$ok_y_col = array_key_exists("y_col", $headers);
+$exist_x_col = array_key_exists("x_col", $headers);
+$ok_x_col = (!$exist_x_col) || ($exist_x_col && (strlen($headers["x_col"]) > 0));
+$exist_y_col = array_key_exists("y_col", $headers);
+$ok_y_col = (!$exist_y_col) || ($exist_y_col && (strlen($headers["y_col"]) > 0));
 $ok_fu_lower = array_key_exists("fu_lower", $headers);
 if ($ok_fu_lower) {
 	$fu_lower = (int)$headers["fu_lower"];
@@ -76,6 +80,17 @@ if ($ok_agree) {
 	}
 }
 
+$newform = (count($headers) == 0);
+if ($newform) {
+     $redinput = "";
+     $redfont_open   = "";
+     $redfont_close  = "";
+} else {
+     $redinput = ' class="redinput"';
+     $redfont_open   = '<font color="red">';
+     $redfont_close  = "</font>";
+}
+
 
 /*
 echo "HTTP Request headers:\n";
@@ -100,9 +115,9 @@ Astrometry.net: Web Edition
 <form name="blindform" action="index.php" method="POST" enctype="multipart/form-data">
 
 <?php
-$fitsfile_ok = $ok_fitsfile and $ok_x_col and $ok_y_col;
+$fitsfile_ok = $ok_fitsfile && $ok_x_col && $ok_y_col;
 if (!$fitsfile_ok) {
-	echo "<font color=red>";
+    echo $redfont_open;
 }
 ?>
 
@@ -110,7 +125,7 @@ FITS file containing a table of detected objects, sorted by
 brightest objects first
 <?php
 if (!$fitsfile_ok) {
-	echo "</font>";
+    echo $redfont_close;
 }
 ?>
 
@@ -125,7 +140,7 @@ if ($fitsfile_ok) {
 }
 echo '<input type="file" name="fitsfile" size="30"';
 if (!$fitsfile_ok) {
-    echo ' class="redinput"';
+    echo $redinput;
 }
 echo ">\n";
 echo "\n";
@@ -133,26 +148,27 @@ echo "\n";
 
 <?php
 printf('<li>X column name: <input type="text" name="x_col" value="%s" size="10"%s>',
-	   ($ok_x_col ? $headers["x_col"] : "X"),
-	   ($ok_x_col ? "" : ' class="redinput"'));
+       ($exist_x_col ? $headers["x_col"] : "X"),
+       ($ok_x_col ? "" : ' class="redinput"'));
 echo "\n";
 printf('<li>Y column name: <input type="text" name="y_col" value="%s" size="10"%s>',
-	   ($ok_y_col ? $headers["y_col"] : "Y"),
-	   ($ok_y_col ? "" : ' class="redinput"'));
+       ($exist_y_col ? $headers["y_col"] : "Y"),
+       ($ok_y_col ? "" : ' class="redinput"'));
 ?>
 
 </ul><br>
 
 <?php
-$bounds_ok = $ok_fu_lower and $ok_fu_upper;
+$bounds_ok = $ok_fu_lower && $ok_fu_upper;
 if (!$bounds_ok) {
-	 echo '<font color="red">';
+    echo $redfont_open;
 }
 ?>
-'Bounds on the pixel scale of the image, in arcseconds per pixel:';
+Bounds on the pixel scale of the image, in arcseconds per pixel:
 <?php
 if (!$bounds_ok) {
-	 echo "</font>";
+    echo $redfont_close;
+
 }
 ?>
 
@@ -162,7 +178,7 @@ if (!$bounds_ok) {
 if ($ok_fu_lower) {
     echo 'value="' . $headers["fu_lower"] . '"';
 } else {
-    echo 'class="redinput"';
+    echo $redinput;
 }
 ?>
 >
@@ -171,7 +187,7 @@ if ($ok_fu_lower) {
 if ($ok_fu_upper) {
     echo 'value="' . $headers["fu_upper"] . '"';
 } else {
-    echo 'class="redinput"';
+    echo $redinput;
 }
 ?>
 >
@@ -188,7 +204,7 @@ Index to use:
 
 <?php
 if (!$ok_verify) {
-    echo '<font color="red">';
+    echo $redfont_open;
 }
 ?>
 
@@ -196,7 +212,7 @@ Star positional error (verification tolerance), in arcseconds:
 
 <?php
 if (!$ok_verify) {
-    echo "</font>";
+    echo $redfont_close;
 }
 ?>
 
@@ -205,7 +221,7 @@ if (!$ok_verify) {
 if ($ok_verify) {
     echo 'value="' . $verify . '"';
 } else {
-    echo 'class="redinput"'; 
+    echo $redinput;
 }
 ?>
 >
@@ -229,7 +245,7 @@ Number of agreeing matches required:
 
 <?php
 if (!$ok_verify) {
-    echo '<font color="red">';
+    echo $redfont_open;
 }
 ?>
 
@@ -237,7 +253,7 @@ Agreement radius (in arcseconds):
 
 <?php
 if (!$ok_verify) {
-    echo "</font>";
+    echo $redfont_close;
 }
 ?>
 
@@ -246,7 +262,7 @@ if (!$ok_verify) {
 if ($ok_agree) {
     echo 'value="' . $agree . '"';
 } else {
-    echo 'class="redinput"'; 
+    echo $redinput;
 }
 ?>
 >
