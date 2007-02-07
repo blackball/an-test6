@@ -53,31 +53,41 @@ $exist_y_col = array_key_exists("y_col", $headers);
 $ok_y_col = (!$exist_y_col) || ($exist_y_col && (strlen($headers["y_col"]) > 0));
 $ok_fu_lower = array_key_exists("fu_lower", $headers);
 if ($ok_fu_lower) {
-	$fu_lower = (int)$headers["fu_lower"];
+	$fu_lower = (float)$headers["fu_lower"];
 	if ($fu_lower <= 0) {
 		$ok_fu_lower = 0;
 	}
 }
 $ok_fu_upper = array_key_exists("fu_upper", $headers);
 if ($ok_fu_upper) {
-	$fu_upper = (int)$headers["fu_upper"];
+	$fu_upper = (float)$headers["fu_upper"];
 	if ($fu_upper <= 0) {
 		$ok_fu_upper = 0;
 	}
 }
 $ok_verify = array_key_exists("verify", $headers);
 if ($ok_verify) {
-	$verify = (int)$headers["verify"];
+	$verify = (float)$headers["verify"];
 	if ($verify <= 0) {
 		$ok_verify = 0;
 	}
 }
 $ok_agree = array_key_exists("agree", $headers);
 if ($ok_agree) {
-	$agree = (int)$headers["agree"];
+	$agree = (float)$headers["agree"];
 	if ($agree <= 0) {
 		$ok_agree = 0;
 	}
+}
+
+$ok_codetol = array_key_exists("codetol", $headers);
+$ok_nagree  = array_key_exists("nagree" , $headers);
+
+$all_ok = $ok_fitsfile && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree;
+if ($all_ok) {
+
+    echo "<h3>Looks good!</h3>";
+
 }
 
 $newform = (count($headers) == 0);
@@ -90,17 +100,6 @@ if ($newform) {
      $redfont_open   = '<font color="red">';
      $redfont_close  = "</font>";
 }
-
-
-/*
-echo "HTTP Request headers:\n";
-$hdrs = apache_request_headers();
-echo "<table border=1>\n";
-foreach ($hdrs as $header => $value) {
-	printf("<tr><td>$header</td><td>$value</td></tr>\n");
-}
-printf("</table>\n");
-*/
 
 ?>
 
@@ -229,35 +228,63 @@ if ($ok_verify) {
 <br>
 Code tolerance:
 <select name="codetol">
-<option value="0.005">0.005 (fast)</option>
-<option value="0.01" selected>0.01 (standard)</option>
-<option value="0.02">0.02 (exhaustive)</option>
+
+<?php
+$tols = array(array("0.005", "0.005 (fast)"),
+              array("0.01" , "0.01  (standard)"),
+              array("0.02" , "0.02  (exhaustive)"));
+if ($ok_codetol) {
+    $codesel = $headers["codetol"];
+} else {
+    $codesel = "0.01"; // default
+}
+foreach ($tols as $tol) {
+    echo '<option value="' . $tol[0] . '"';
+    if ($tol[0] == $codesel) {
+        echo " selected";
+    }
+    echo '>' . $tol[1] . "</option>";
+}
+?>
+
 </select>
 <br>
 <br>
 Number of agreeing matches required:
 <select name="nagree">
-<option value="1">1 (exhaustive)</option>
-<option value="2" selected>2 (standard)</option>
+<?php
+$ns = array(array("1", "1 (exhaustive)"),
+              array("2", "2 (standard)"));
+if ($ok_nagree) {
+    $nagreesel = $headers["nagree"];
+} else {
+    $nagreesel = "2"; // default
+}
+foreach ($ns as $na) {
+    echo '<option value="' . $na[0] . '"';
+    if ($na[0] == $nagreesel) {
+        echo " selected";
+    }
+    echo '>' . $na[1] . "</option>";
+}
+?>
 </select>
 <br>
 <br>
 
 <?php
-if (!$ok_verify) {
+if (!$ok_agree) {
     echo $redfont_open;
 }
 ?>
-
 Agreement radius (in arcseconds):
-
 <?php
-if (!$ok_verify) {
+if (!$ok_agree) {
     echo $redfont_close;
 }
 ?>
 
-<input type="text" name="agreedist" size="10"
+<input type="text" name="agree" size="10"
 <?php
 if ($ok_agree) {
     echo 'value="' . $agree . '"';
