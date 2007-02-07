@@ -183,6 +183,7 @@ bl* bl_new(int blocksize, int datasize) {
 }
 
 void bl_free(bl* list) {
+	if (!list) return;
 	bl_remove_all(list);
 	free(list);
 }
