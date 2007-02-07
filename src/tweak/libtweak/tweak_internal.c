@@ -204,16 +204,34 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 
 void tweak_init(tweak_t* t)
 {
-	memset(t, 0, sizeof(tweak_t));
+	if (!t) return;
+	free(t->a);
+	free(t->d);
+	free(t->x);
+	free(t->y);
+	free(t->xyz);
+	free(t->a_ref);
+	free(t->d_ref);
+	free(t->x_ref);
+	free(t->y_ref);
+	free(t->xyz_ref);
+	sip_free(t->sip);
+	il_free(t->image);
+	il_free(t->ref);
+	dl_free(t->dist2);
+	il_free(t->maybeinliers);
+	il_free(t->bestinliers);
+	il_free(t->included);
+	kdtree_free(t->kd_image);
+	kdtree_free(t->kd_ref);
+	free(t->hppath);
 
-	// FIXME maybe these should be allocated at the outset
-	//t->image = t->ref = t->dist2 = NULL;
-	//t->maybeinliers = t->bestinliers = t->included = NULL;
+	memset(t, 0, sizeof(tweak_t));
 }
 
 tweak_t* tweak_new()
 {
-	tweak_t* t = malloc(sizeof(tweak_t));
+	tweak_t* t = calloc(1, sizeof(tweak_t));
 	tweak_init(t);
 	return t;
 }
@@ -844,6 +862,8 @@ void invert_sip_polynomial(tweak_t* t)
 	integer info;
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
+	free(work);
+	free(iwork);
 
 	// Extract the inverted SIP coefficients
 	//int j = 0;
@@ -875,6 +895,11 @@ void invert_sip_polynomial(tweak_t* t)
 	printf("sip_invert_chisq=%lf\n",chisq);
 	printf("sip_invert_chisq/%d=%lf\n",ngrid*ngrid,(chisq/ngrid)/ngrid);
 	printf("sip_invert_sqrt(chisq/%d=%lf)\n",ngrid*ngrid,sqrt((chisq/ngrid)/ngrid));
+
+	free(A);
+	free(b);
+	free(A2);
+	free(b2);
 }
 
 	
@@ -966,7 +991,8 @@ void do_linear_tweak(tweak_t* t)
 	  "A" contains "sip_coeffs" terms for each of the "stride" points that
 	  are in correspondence.
 
-	  (THE FOLLOWING ISN'T QUITE RIGHT)
+	  (THE FOLLOWING ISN'T QUITE RIGHT: The linear terms are at the
+	  beginning of the array.)
 
 	  A(i, j) is the j-th SIP coefficient for the i-th point.
 
@@ -1035,6 +1061,8 @@ void do_linear_tweak(tweak_t* t)
 	integer info;
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
+	free(work);
+	free(iwork);
 
 	t->sip->wcstan.cd[0][0] = b[0 + stride*0]; // b is replaced with CD during dgelsd
 	t->sip->wcstan.cd[0][1] = b[1 + stride*0];
@@ -1108,6 +1136,11 @@ void do_linear_tweak(tweak_t* t)
 		chisq += (sum-b2[i])*(sum-b2[i]);
 	}
 	//	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
+
+	free(A);
+	free(b);
+	free(A2);
+	free(b2);
 }
 
 // Duct-tape dependencey system (DTDS)
