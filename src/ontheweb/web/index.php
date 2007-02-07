@@ -130,6 +130,10 @@ int mt_rand ( [int min, int max] )
 	$wcsfile = $mydir . "wcs.fits";
 	$matchfile = $mydir . "match"; // .fits
 	$inputfile = $mydir . "input";
+	$solvedfile = $mydir . "solved";
+	$startfile = $mydir . "start";
+	$donefile = $mydir . "done";
+	$logfile = $mydir . "log";
 
 	// Write the input file for blind...
 	$fin = fopen($inputfile, "w");
@@ -149,10 +153,15 @@ int mt_rand ( [int min, int max] )
 
 	//foreach ($indexes as $ind) {
 	for ($i=0; $i<count($indexes); $i++) {
+		$suffix = ((count($indexes) > 1) ? $i : "");
 		fprintf($fin,
+				"log " . $logfile . "\n" .
 				"index " . $indexes[$i] . "\n" .
 				"field " . $xylist . "\n" .
-				"match " . $matchfile . ((count($indexes) > 1) ? $i : "") . ".fits" . "\n" .
+				"match " . $matchfile . $suffix . ".fits" . "\n" .
+				"start " . $startfile . $suffix . "\n" .
+				"done " . $donefile . $suffix . "\n" .
+				"solved " . $solvedfile . "\n" .
 				"wcs " . $wcsfile . "\n" .
 				"rdls " . $rdlist . "\n" .
 				"fields 0\n" .
@@ -181,18 +190,15 @@ int mt_rand ( [int min, int max] )
 		exit;
 	}
 
-	// Write the status script...
-
 	// Redirect the client to the status script...
-
-	$status_url = "/status/" . $myname . "/status.php";
+	$status_url = "status.php?job=" . $myname;
 
 	$host  = $_SERVER['HTTP_HOST'];
-	//$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	//$extra = 'mypage.php';
 	//header("Location: http://$host$uri/$extra");
 
-	header("Location: http://" . $host . $status_url);
+	header("Location: http://" . $host . $uri . "/" . $status_url);
 	
 	exit;
 }
