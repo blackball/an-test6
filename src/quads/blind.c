@@ -73,7 +73,8 @@ static int read_parameters();
 
 // params:
 char *fieldfname, *treefname, *quadfname, *startreefname;
-char *idfname, *matchfname, *donefname, *solvedfname, *solvedserver;
+char *idfname, *matchfname, *donefname, *startfname;
+char *solvedfname, *solvedserver;
 char* xcolname, *ycolname;
 char* wcs_template;
 char* fieldid_key;
@@ -161,6 +162,7 @@ int main(int argc, char *argv[]) {
 		idfname = NULL;
 		matchfname = NULL;
 		donefname = NULL;
+		startfname = NULL;
 		solvedfname = NULL;
 		rdlsfname = NULL;
 		do_tweak = FALSE;
@@ -217,6 +219,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "quadfname %s\n", quadfname);
 			fprintf(stderr, "idfname %s\n", idfname);
 			fprintf(stderr, "matchfname %s\n", matchfname);
+			fprintf(stderr, "startfname %s\n", startfname);
 			fprintf(stderr, "donefname %s\n", donefname);
 			fprintf(stderr, "solvedfname %s\n", solvedfname);
 			fprintf(stderr, "solvedserver %s\n", solvedserver);
@@ -387,6 +390,17 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		if (startfname) {
+			FILE* batchfid = NULL;
+			if (!silent)
+				fprintf(stderr, "Writing marker file %s...\n", startfname);
+			batchfid = fopen(startfname, "wb");
+			if (batchfid)
+				fclose(batchfid);
+			else
+				fprintf(stderr, "Failed to write marker file %s: %s\n", startfname, strerror(errno));
+		}
+
 		// Do it!
 		solve_fields();
 
@@ -426,6 +440,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		free(donefname);
+		free(startfname);
 		free(solvedfname);
 		free(solvedserver);
 		free(matchfname);
@@ -478,6 +493,7 @@ static int read_parameters() {
 					"    index <index-file-name>\n"
 					"    match <match-file-name>\n"
 					"    done <done-file-name>\n"
+					"    start <start-file-name>\n"
 					"    field <field-file-name>\n"
 					"    solved <solved-filename>\n"
 					"    fields [<field-number> or <start range>/<end range>...]\n"
@@ -561,6 +577,8 @@ static int read_parameters() {
 			fieldid = atoi(nextword);
 		} else if (is_word(buffer, "done ", &nextword)) {
 			donefname = strdup(nextword);
+		} else if (is_word(buffer, "start ", &nextword)) {
+			startfname = strdup(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
 			startdepth = atoi(nextword);
 		} else if (is_word(buffer, "depth ", &nextword)) {
