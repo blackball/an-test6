@@ -1,7 +1,7 @@
 <html>
 <head>
 <title>
-Astrometry.net: Status
+Astrometry.net: Job Status
 </title>
 </head>
 <body>
@@ -26,9 +26,10 @@ if (substr($rp2, 0, strlen($rp1)) != $rp1) {
 	exit;
 }
 
+$qfile = $resultdir . "queue";
+
 $inputfile = $mydir . "input";
 $startfile = $mydir . "start";
-
 
 $now = time();
 
@@ -46,7 +47,7 @@ function dtime2str($secs) {
 ?>
 
 <h2>
-Astrometry.net Job Status
+Astrometry.net: Job Status
 </h2>
 
 <hr>
@@ -88,6 +89,29 @@ foreach ($files as $f) {
 }
 if (!$found) {
 	echo "(job not started)";
+}
+?>
+</td></tr>
+
+<tr><td>Position in Queue:</td><td>
+<?php
+//try {
+$q = @file($qfile);
+//} catch (Exception $e) {
+//}
+//for ($q as $entry) {
+$pos = -1;
+for ($i=0; $i<count($q); $i++) {
+	$entry = rtrim($q[$i]);
+	if ($entry == $myname) {
+		$pos = $i;
+		break;
+	}
+}
+if ($pos == -1) {
+	echo '(not in the queue)';
+} else {
+	echo sprintf("%d of %d", $pos+1, count($q));
 }
 ?>
 </td></tr>
