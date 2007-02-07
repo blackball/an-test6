@@ -73,7 +73,10 @@ static int read_parameters();
 
 // params:
 char *fieldfname, *treefname, *quadfname, *startreefname;
-char *idfname, *matchfname, *donefname, *startfname;
+char *idfname, *matchfname, *donefname, *startfname, *logfname;
+FILE* logfd;
+int dup_stderr;
+int dup_stdout;
 char *solvedfname, *solvedserver;
 char* xcolname, *ycolname;
 char* wcs_template;
@@ -142,11 +145,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (!silent) {
-		printf("Running on host:\n");
-		fflush(stdout);
-		system("hostname");
-		printf("\n");
-		fflush(stdout);
+		/*
+		  printf("Running on host:\n");
+		  fflush(stdout);
+		  system("hostname");
+		  printf("\n");
+		  fflush(stdout);
+		*/
 	}
 
 	fieldlist = il_new(256);
@@ -161,6 +166,7 @@ int main(int argc, char *argv[]) {
 		startreefname = NULL;
 		idfname = NULL;
 		matchfname = NULL;
+		logfname = NULL;
 		donefname = NULL;
 		startfname = NULL;
 		solvedfname = NULL;
@@ -244,6 +250,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "maxquads %i\n", maxquads);
 			fprintf(stderr, "quiet %i\n", quiet);
 			fprintf(stderr, "verbose %i\n", verbose);
+			fprintf(stderr, "logfname %s\n", logfname);
 		}
 
 		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -439,6 +446,26 @@ int main(int argc, char *argv[]) {
 			rdls = NULL;
 		}
 
+		if (!silent)
+			toc();
+
+		// Put stdout and stderr back to the way they were!
+		if (logfname) {
+			if (dup2(dup_stdout, fileno(stdout)) == -1) {
+				fprintf(stderr, "Failed to dup2() back to stdout.\n");
+			}
+			if (dup2(dup_stderr, fileno(stderr)) == -1) {
+				fprintf(stderr, "Failed to dup2() back to stderr.\n");
+			}
+			if (close(dup_stdout) || close(dup_stderr)) {
+				fprintf(stderr, "Failed to close duplicate stdout/stderr: %s\n", strerror(errno));
+			}
+			if (fclose(logfd)) {
+				fprintf(stderr, "Failed to close log file: %s\n",
+						strerror(errno));
+			}
+		}
+		free(logfname);
 		free(donefname);
 		free(startfname);
 		free(solvedfname);
@@ -454,9 +481,6 @@ int main(int argc, char *argv[]) {
 		free_fn(quadfname);
 		free_fn(idfname);
 		free_fn(startreefname);
-
-		if (!silent)
-			toc();
 	}
 
 	il_free(fieldlist);
@@ -541,9 +565,41 @@ static int read_parameters() {
 			rdlsfname = strdup(nextword);
 		} else if (is_word(buffer, "solved ", &nextword)) {
 			solvedfname = strdup(nextword);
+		} else if (is_word(buffer, "log ", &nextword)) {
+			// Open the log file...
+			logfname = strdup(nextword);
+			logfd = fopen(logfname, "a");
+			if (!logfd) {
+				fprintf(stderr, "Failed to open log file %s: %s\n", logfname, strerror(errno));
+				goto bailout;
+			}
+			// Save old stdout/stderr...
+			dup_stdout = dup(fileno(stdout));
+			if (dup_stdout == -1) {
+				fprintf(stderr, "Failed to dup stdout: %s\n", strerror(errno));
+				goto bailout;
+			}
+			dup_stderr = dup(fileno(stderr));
+			if (dup_stderr == -1) {
+				fprintf(stderr, "Failed to dup stderr: %s\n", strerror(errno));
+				goto bailout;
+			}
+			// Replace stdout/stderr with logfile...
+			if (dup2(fileno(logfd), fileno(stderr)) == -1) {
+				fprintf(stderr, "Failed to dup2 log file: %s\n", strerror(errno));
+				goto bailout;
+			}
+			if (dup2(fileno(logfd), fileno(stdout)) == -1) {
+				fprintf(stderr, "Failed to dup2 log file: %s\n", strerror(errno));
+				goto bailout;
+			}
+			continue;
+			bailout:
+			if (logfd) fclose(logfd);
+			free(logfname);
+			logfname = NULL;
 		} else if (is_word(buffer, "solvedserver ", &nextword)) {
 			solvedserver = strdup(nextword);
-
 		} else if (is_word(buffer, "silent", &nextword)) {
 			silent = TRUE;
 		} else if (is_word(buffer, "quiet", &nextword)) {
