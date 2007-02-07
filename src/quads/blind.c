@@ -72,8 +72,8 @@ static int read_parameters();
 #define DEFAULT_TWEAK_ABPORDER 3
 
 // params:
-char *fieldfname, *treefname, *quadfname, *startreefname;
-char *idfname, *matchfname, *donefname, *startfname, *logfname;
+char *fieldfname, *matchfname, *donefname, *startfname, *logfname;
+pl* indexes;
 FILE* logfd;
 int dup_stderr;
 int dup_stdout;
@@ -155,16 +155,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	fieldlist = il_new(256);
+	indexes = pl_new(16);
 	qfits_err_statset(1);
 
 	for (;;) {
+		int I;
 		tic();
 
 		fieldfname = NULL;
-		treefname = NULL;
-		quadfname = NULL;
-		startreefname = NULL;
-		idfname = NULL;
 		matchfname = NULL;
 		logfname = NULL;
 		donefname = NULL;
@@ -200,6 +198,7 @@ int main(int argc, char *argv[]) {
 		quiet = FALSE;
 		verbose = FALSE;
 		il_remove_all(fieldlist);
+		pl_remove_all(indexes);
 		quads = NULL;
 		starkd = NULL;
 		rdls = NULL;
@@ -212,18 +211,26 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
+		
+
 		if (!silent) {
 			fprintf(stderr, "%s params:\n", progname);
 			fprintf(stderr, "fields ");
 			for (i=0; i<il_size(fieldlist); i++)
 				fprintf(stderr, "%i ", il_get(fieldlist, i));
 			fprintf(stderr, "\n");
+			fprintf(stderr, "indexes ");
+			for (i=0; i<pl_size(indexes); i++)
+				fprintf(stderr, "%s ", (char*)pl_get(indexes, i));
+			fprintf(stderr, "\n");
 			fprintf(stderr, "fieldfname %s\n", fieldfname);
 			fprintf(stderr, "fieldid %i\n", fieldid);
-			fprintf(stderr, "treefname %s\n", treefname);
-			fprintf(stderr, "startreefname %s\n", startreefname);
-			fprintf(stderr, "quadfname %s\n", quadfname);
-			fprintf(stderr, "idfname %s\n", idfname);
+			/*
+			  fprintf(stderr, "treefname %s\n", treefname);
+			  fprintf(stderr, "startreefname %s\n", startreefname);
+			  fprintf(stderr, "quadfname %s\n", quadfname);
+			  fprintf(stderr, "idfname %s\n", idfname);
+			*/
 			fprintf(stderr, "matchfname %s\n", matchfname);
 			fprintf(stderr, "startfname %s\n", startfname);
 			fprintf(stderr, "donefname %s\n", donefname);
@@ -253,7 +260,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "logfname %s\n", logfname);
 		}
 
-		if (!treefname || !fieldfname || (codetol < 0.0) || !matchfname) {
+		if (!pl_size(indexes) || !fieldfname || (codetol < 0.0) || !matchfname) {
 			fprintf(stderr, "Invalid params... this message is useless.\n");
 			exit(-1);
 		}
@@ -292,64 +299,6 @@ int main(int argc, char *argv[]) {
 		xyls->xname = xcolname;
 		xyls->yname = ycolname;
 
-		// Read .ckdt file...
-		if (!silent) {
-			fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
-			fflush(stderr);
-		}
-		codekd = codetree_open(treefname);
-		if (!codekd)
-			exit(-1);
-		if (!silent) 
-			fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
-					codetree_N(codekd), codetree_nodes(codekd), codetree_D(codekd));
-
-		// Read .quad file...
-		if (!silent) 
-			fprintf(stderr, "Reading quads file %s...\n", quadfname);
-		quads = quadfile_open(quadfname, 0);
-		if (!quads) {
-			fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
-			exit(-1);
-		}
-		index_scale = quadfile_get_index_scale_arcsec(quads);
-		index_scale_lower = quadfile_get_index_scale_lower_arcsec(quads);
-		indexid = quads->indexid;
-		healpix = quads->healpix;
-
-		if (!silent) 
-			fprintf(stderr, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-					index_scale_lower/60.0, index_scale/60.0, index_scale_lower, index_scale);
-
-		// Read .skdt file...
-		if (!silent) {
-			fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
-			fflush(stderr);
-		}
-		starkd = startree_open(startreefname);
-		if (!starkd) {
-			fprintf(stderr, "Failed to read star kdtree %s\n", startreefname);
-			exit(-1);
-		}
-
-		if (!silent) 
-			fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
-					startree_N(starkd), startree_nodes(starkd), startree_D(starkd));
-
-		do_verify = (verify_dist2 > 0.0);
-
-		// If the code kdtree has CXDX set, set cxdx_margin.
-		if (qfits_header_getboolean(codekd->header, "CXDX", 0))
-			// 1.5 = sqrt(2) + fudge factor.
-			cxdx_margin = 1.5 * codetol;
-
-		// check for CIRCLE field in ckdt header...
-		circle = qfits_header_getboolean(codekd->header, "CIRCLE", 0);
-
-		if (!silent) 
-			fprintf(stderr, "ckdt %s the CIRCLE header.\n",
-					(circle ? "contains" : "does not contain"));
-
 		if (solvedserver) {
 			if (solvedclient_set_server(solvedserver)) {
 				fprintf(stderr, "Error setting solvedserver.\n");
@@ -377,11 +326,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		id = idfile_open(idfname, 0);
-		if (!id) {
-			fprintf(stderr, "Couldn't open id file %s.\n", idfname);
-			fprintf(stderr, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
-		}
+		do_verify = (verify_dist2 > 0.0);
 
 		if (rdlsfname) {
 			rdls = rdlist_open_for_writing(rdlsfname);
@@ -408,8 +353,97 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Failed to write marker file %s: %s\n", startfname, strerror(errno));
 		}
 
-		// Do it!
-		solve_fields();
+		for (I=0; I<pl_size(indexes); I++) {
+			char *idfname, *treefname, *quadfname, *startreefname;
+			char* fname = pl_get(indexes, I);
+			treefname = mk_ctreefn(fname);
+			quadfname = mk_quadfn(fname);
+			idfname = mk_idfn(fname);
+			startreefname = mk_streefn(fname);
+
+			// Read .ckdt file...
+			if (!silent) {
+				fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
+				fflush(stderr);
+			}
+			codekd = codetree_open(treefname);
+			if (!codekd)
+				exit(-1);
+			if (!silent) 
+				fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
+						codetree_N(codekd), codetree_nodes(codekd), codetree_D(codekd));
+
+			// Read .quad file...
+			if (!silent) 
+				fprintf(stderr, "Reading quads file %s...\n", quadfname);
+			quads = quadfile_open(quadfname, 0);
+			if (!quads) {
+				fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
+				exit(-1);
+			}
+			index_scale = quadfile_get_index_scale_arcsec(quads);
+			index_scale_lower = quadfile_get_index_scale_lower_arcsec(quads);
+			indexid = quads->indexid;
+			healpix = quads->healpix;
+
+			if (!silent) 
+				fprintf(stderr, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+						index_scale_lower/60.0, index_scale/60.0, index_scale_lower, index_scale);
+
+			// Read .skdt file...
+			if (!silent) {
+				fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
+				fflush(stderr);
+			}
+			starkd = startree_open(startreefname);
+			if (!starkd) {
+				fprintf(stderr, "Failed to read star kdtree %s\n", startreefname);
+				exit(-1);
+			}
+
+			if (!silent) 
+				fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
+						startree_N(starkd), startree_nodes(starkd), startree_D(starkd));
+
+			// If the code kdtree has CXDX set, set cxdx_margin.
+			if (qfits_header_getboolean(codekd->header, "CXDX", 0))
+				// 1.5 = sqrt(2) + fudge factor.
+				cxdx_margin = 1.5 * codetol;
+
+			// check for CIRCLE field in ckdt header...
+			circle = qfits_header_getboolean(codekd->header, "CIRCLE", 0);
+
+			if (!silent) 
+				fprintf(stderr, "ckdt %s the CIRCLE header.\n",
+						(circle ? "contains" : "does not contain"));
+
+			// Read .id file...
+			id = idfile_open(idfname, 0);
+			if (!id) {
+				fprintf(stderr, "Couldn't open id file %s.\n", idfname);
+				fprintf(stderr, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
+			}
+
+			// Do it!
+			solve_fields();
+
+			// Clean up this index...
+			codetree_close(codekd);
+			startree_close(starkd);
+			if (id)
+				idfile_close(id);
+			quadfile_close(quads);
+
+			codekd = NULL;
+			starkd = NULL;
+			id = NULL;
+			quads = NULL;
+
+			free_fn(treefname);
+			free_fn(quadfname);
+			free_fn(idfname);
+			free_fn(startreefname);
+		}
 
 		if (donefname) {
 			FILE* batchfid = NULL;
@@ -432,11 +466,6 @@ int main(int argc, char *argv[]) {
 			if (!silent)
 				fprintf(stderr, "Error closing matchfile.\n");
 		}
-		codetree_close(codekd);
-		startree_close(starkd);
-		if (id)
-			idfile_close(id);
-		quadfile_close(quads);
 
 		if (rdls) {
 			if (rdlist_fix_header(rdls) ||
@@ -477,13 +506,10 @@ int main(int argc, char *argv[]) {
 		free(wcs_template);
 		free(fieldid_key);
 		free_fn(fieldfname);
-		free_fn(treefname);
-		free_fn(quadfname);
-		free_fn(idfname);
-		free_fn(startreefname);
 	}
 
 	il_free(fieldlist);
+	pl_free(indexes);
 	qfits_cache_purge(); // for valgrind
 	return 0;
 }
@@ -622,11 +648,7 @@ static int read_parameters() {
 			free(ycolname);
 			ycolname = strdup(nextword);
 		} else if (is_word(buffer, "index ", &nextword)) {
-			char* fname = nextword;
-			treefname = mk_ctreefn(fname);
-			quadfname = mk_quadfn(fname);
-			idfname = mk_idfn(fname);
-			startreefname = mk_streefn(fname);
+			pl_append(indexes, strdup(nextword));
 		} else if (is_word(buffer, "field ", &nextword)) {
 			fieldfname = mk_fieldfn(nextword);
 		} else if (is_word(buffer, "fieldid ", &nextword)) {
@@ -737,7 +759,7 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	tweak_push_ref_xyz(twee, starxyz, nstars);
 
 	// HACK - probably don't need this...
-	tweak_push_hppath(twee, startreefname);
+	//tweak_push_hppath(twee, startreefname);
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	twee->sip->a_order  = twee->sip->b_order  = 3;
