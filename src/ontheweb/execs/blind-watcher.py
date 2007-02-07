@@ -41,13 +41,13 @@ class Enqueuer(ProcessEvent):
 
     def handle(self, path):
         #if (not(path.endswith(IN_SUFFIX))):
-        if (not(os.basename(path) == IN_FILENAME)):
+        if (not(os.path.basename(path) == IN_FILENAME)):
             print "Path changed: %s\n" % path
             return
-        self.qlist.put(path)
+        self.qlist.append(path)
         self.q.put(path)
         print "Queue has %i entries." % self.q.qsize()
-        write_queue(self)
+        self.write_queue()
 
     def process_IN_CLOSE_WRITE(self, event):
         print "Closed write: %s" %  os.path.join(event.path, event.name)
