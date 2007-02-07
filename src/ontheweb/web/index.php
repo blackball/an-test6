@@ -128,7 +128,7 @@ int mt_rand ( [int min, int max] )
 
 	$rdlist = $mydir . "field.rd.fits";
 	$wcsfile = $mydir . "wcs.fits";
-	$matchfile = $mydir . "match"; // .fits
+	$matchfile = $mydir . "match.fits";
 	$inputfile = $mydir . "input";
 	$solvedfile = $mydir . "solved";
 	$startfile = $mydir . "start";
@@ -151,39 +151,41 @@ int mt_rand ( [int min, int max] )
 
 	$indexes = $indexmap[$headers["index"]];
 
+	fprintf($fin, "log " . $logfile . "\n");
+
 	//foreach ($indexes as $ind) {
 	for ($i=0; $i<count($indexes); $i++) {
-		$suffix = ((count($indexes) > 1) ? $i : "");
-		fprintf($fin,
-				"log " . $logfile . "\n" .
-				"index " . $indexes[$i] . "\n" .
-				"field " . $xylist . "\n" .
-				"match " . $matchfile . $suffix . ".fits" . "\n" .
-				"start " . $startfile . $suffix . "\n" .
-				"done " . $donefile . $suffix . "\n" .
-				"solved " . $solvedfile . "\n" .
-				"wcs " . $wcsfile . "\n" .
-				"rdls " . $rdlist . "\n" .
-				"fields 0\n" .
-				"xcol " . $x_col_val . "\n" .
-				"ycol " . $y_col_val . "\n" .
-				"sdepth 0\n" .
-				"depth 100\n" .
-				"parity 0\n" .
-				"fieldunits_lower " . $fu_lower . "\n" .
-				"fieldunits_upper " . $fu_upper . "\n" .
-				"tol " . $headers["codetol"] . "\n" .
-				"verify_dist " . $verify . "\n" .
-				"agreetol " . $agree . "\n" .
-				"nagree_toverify " . $nagree . "\n" .
-				"ninfield_tokeep 50\n" .
-				"ninfield_tosolve 50\n" .
-				"overlap_tokeep 0.25\n" .
-				"overlap_tosolve 0.25\n" .
-				($tweak_val ? "tweak\n" : "") .
-				"run\n" .
-				"\n");
+		//$suffix = ((count($indexes) > 1) ? $i : "");
+		fprintf($fin, "index " . $indexes[$i] . "\n");
 	}
+
+	fprintf($fin,
+			"field " . $xylist . "\n" .
+			"match " . $matchfile . "\n" .
+			"start " . $startfile . "\n" .
+			"done " . $donefile . "\n" .
+			"solved " . $solvedfile . "\n" .
+			"wcs " . $wcsfile . "\n" .
+			"rdls " . $rdlist . "\n" .
+			"fields 0\n" .
+			"xcol " . $x_col_val . "\n" .
+			"ycol " . $y_col_val . "\n" .
+			"sdepth 0\n" .
+			"depth 100\n" .
+			"parity 0\n" .
+			"fieldunits_lower " . $fu_lower . "\n" .
+			"fieldunits_upper " . $fu_upper . "\n" .
+			"tol " . $headers["codetol"] . "\n" .
+			"verify_dist " . $verify . "\n" .
+			"agreetol " . $agree . "\n" .
+			"nagree_toverify " . $nagree . "\n" .
+			"ninfield_tokeep 50\n" .
+			"ninfield_tosolve 50\n" .
+			"overlap_tokeep 0.25\n" .
+			"overlap_tosolve 0.25\n" .
+			($tweak_val ? "tweak\n" : "") .
+			"run\n" .
+			"\n");
 
 	if (!fclose($fin)) {
 		echo "<html><body><h3>Failed to close input file " . $inputfile . "</h3></body></html>";

@@ -30,6 +30,7 @@ $qfile = $resultdir . "queue";
 
 $inputfile = $mydir . "input";
 $startfile = $mydir . "start";
+$donefile  = $mydir . "done";
 
 $now = time();
 
@@ -75,31 +76,31 @@ if (file_exists($inputfile)) {
 
 <tr><td>Started</td><td>
 <?php
-$found = FALSE;
-$files = array($startfile,
-			   $startfile . "0");
-foreach ($files as $f) {
-	if (file_exists($f)) {
-		$t = filemtime($f);
-		$dt = dtime2str($now - $t);
-		echo $dt . " ago";
-		$found = TRUE;
-		break;
-	}
-}
-if (!$found) {
+if (file_exists($startfile)) {
+	$t = filemtime($startfile);
+	$dt = dtime2str($now - $t);
+	echo $dt . " ago";
+} else {
 	echo "(job not started)";
+}
+?>
+</td></tr>
+
+<tr><td>Finished</td><td>
+<?php
+if (file_exists($donefile)) {
+	$t = filemtime($donefile);
+	$dt = dtime2str($now - $t);
+	echo $dt . " ago";
+} else {
+	echo "(job not finished)";
 }
 ?>
 </td></tr>
 
 <tr><td>Position in Queue:</td><td>
 <?php
-//try {
 $q = @file($qfile);
-//} catch (Exception $e) {
-//}
-//for ($q as $entry) {
 $pos = -1;
 for ($i=0; $i<count($q); $i++) {
 	$entry = rtrim($q[$i]);
