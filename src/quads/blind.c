@@ -219,18 +219,11 @@ int main(int argc, char *argv[]) {
 			for (i=0; i<il_size(fieldlist); i++)
 				fprintf(stderr, "%i ", il_get(fieldlist, i));
 			fprintf(stderr, "\n");
-			fprintf(stderr, "indexes ");
+			fprintf(stderr, "indexes:\n");
 			for (i=0; i<pl_size(indexes); i++)
-				fprintf(stderr, "%s ", (char*)pl_get(indexes, i));
-			fprintf(stderr, "\n");
+				fprintf(stderr, "  %s\n", (char*)pl_get(indexes, i));
 			fprintf(stderr, "fieldfname %s\n", fieldfname);
 			fprintf(stderr, "fieldid %i\n", fieldid);
-			/*
-			  fprintf(stderr, "treefname %s\n", treefname);
-			  fprintf(stderr, "startreefname %s\n", startreefname);
-			  fprintf(stderr, "quadfname %s\n", quadfname);
-			  fprintf(stderr, "idfname %s\n", idfname);
-			*/
 			fprintf(stderr, "matchfname %s\n", matchfname);
 			fprintf(stderr, "startfname %s\n", startfname);
 			fprintf(stderr, "donefname %s\n", donefname);
