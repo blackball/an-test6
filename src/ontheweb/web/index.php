@@ -1,29 +1,10 @@
-<html>
-<head>
-<title>
-Astrometry.net: Web Edition
-</title>
-<style type="text/css">
-<!-- 
-input.redinput {
-background-color: pink;
-}
--->
-</style>
-</head>
-
 <?php
-$headers = $_REQUEST;
 
-printf("<table border=1>\n");
-foreach ($headers as $header => $value) {
-	printf("<tr><td>$header</td><td>$value</td></tr>\n");
+function loggit($mesg) {
+	error_log($mesg, 3, "/tmp/ontheweb.log");
 }
-printf("</table>\n");
 
-echo '<hr><pre>';
-print_r($_FILES);
-echo '</pre><hr>';
+$headers = $_REQUEST;
 
 $got_fitstmpfile = array_key_exists("fits_tmpfile", $headers);
 if ($got_fitstmpfile) {
@@ -33,7 +14,7 @@ if ($got_fitstmpfile) {
 $got_fitsfile = array_key_exists("fitsfile", $_FILES);
 if ($got_fitsfile) {
 	$fitsfile = $_FILES["fitsfile"];
-        echo 'error = ' . $fitsfile["error"] . "<br>";
+        //echo 'error = ' . $fitsfile["error"] . "<br>";
 	$got_fitsfile = ($fitsfile["error"] == 0);
 	if ($got_fitsfile) {
 		$fitsfilename = $fitsfile["name"];
@@ -41,16 +22,21 @@ if ($got_fitsfile) {
 	}
 }
 $ok_fitsfile = $got_fitsfile || $got_fitstmpfile;
-echo "got_fitsfile = " . $got_fitsfile . "<br>";
-echo "got_fitstmpfile = " . $got_fitstmpfile . "<br>";
-echo "ok_fitsfile = " . $ok_fitsfile . "<br>";
-echo "fitsfilename = " . $fitsfilename . "<br>";
-echo "fitstempfilename = " . $fitstempfilename . "<br>";
 
 $exist_x_col = array_key_exists("x_col", $headers);
 $ok_x_col = (!$exist_x_col) || ($exist_x_col && (strlen($headers["x_col"]) > 0));
+if ($exist_x_col) {
+	$x_col_val = $headers["x_col"];
+} else {
+	$x_col_val = "X";
+}
 $exist_y_col = array_key_exists("y_col", $headers);
 $ok_y_col = (!$exist_y_col) || ($exist_y_col && (strlen($headers["y_col"]) > 0));
+if ($exist_y_col) {
+	$y_col_val = $headers["y_col"];
+} else {
+	$y_col_val = "Y";
+}
 $ok_fu_lower = array_key_exists("fu_lower", $headers);
 if ($ok_fu_lower) {
 	$fu_lower = (float)$headers["fu_lower"];
@@ -82,12 +68,133 @@ if ($ok_agree) {
 
 $ok_codetol = array_key_exists("codetol", $headers);
 $ok_nagree  = array_key_exists("nagree" , $headers);
+$ok_tweak   = array_key_exists("tweak"  , $headers);
+$ok_index   = array_key_exists("index"  , $headers);
 
-$all_ok = $ok_fitsfile && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree;
+$tweak_val = ($ok_tweak ? $headers["tweak"] : TRUE);
+
+$all_ok = $ok_fitsfile && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree & $ok_tweak;
 if ($all_ok) {
+    //echo "<h3>Looks good!</h3>";
 
-    echo "<h3>Looks good!</h3>";
+    // 
+    /**
+bool move_uploaded_file ( string filename, string destination )
+  This function checks to ensure that the file designated by filename is a valid upload file (meaning that it was uploaded via PHP's HTTP POST upload mechanism). If the file is valid, it will be moved to the filename given by destination.
+  If filename is not a valid upload file, then no action will occur, and move_uploaded_file() will return FALSE.
+  If filename is a valid upload file, but cannot be moved for some reason, no action will occur, and move_uploaded_file() will return FALSE. Additionally, a warning will be issued. 
 
+bool file_exists ( string filename )
+  Returns TRUE if the file or directory specified by filename exists; FALSE otherwise. 
+
+bool mkdir ( string pathname [, int mode [, bool recursive [, resource context]]] )
+  Attempts to create the directory specified by pathname.
+  Note that you probably want to specify the mode as an octal number, which means it should have a leading zero. The mode is also modified by the current umask, which you can change using umask(). 
+  
+int mt_rand ( [int min, int max] )
+
+  */
+
+    $resultdir = "/h/260/dstn/local/ontheweb-results/";
+
+	// Create a directory for this request.
+    while (TRUE) {
+        // Generate a random string.
+        $str = '';
+        for ($i=0; $i<5; $i++) {
+            $str .= chr(mt_rand(0, 255));
+        }
+        // Convert it to hex.
+        $myname = bin2hex($str);
+
+        // See if that dir already exists.
+        $mydir = $resultdir . $myname;
+        if (!file_exists($mydir)) {
+			break;
+		}
+    }
+	if (!mkdir($mydir)) {
+		echo "<html><body><h3>Failed to create dir " . $mydir . "</h3></body></html>";
+		exit;
+	}
+	$mydir = $mydir . "/";
+
+	// Move the xylist into place...
+	$xylist = $mydir . "field.xy"; // .fits
+	if (!move_uploaded_file($fitstempfilename, $xylist . ".fits")) {
+		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $xylist . "</h3></body></html>";
+		exit;
+	}
+
+	$rdlist = $mydir . "field.rd.fits";
+	$wcsfile = $mydir . "wcs.fits";
+	$matchfile = $mydir . "match"; // .fits
+	$inputfile = $mydir . "input";
+
+	// Write the input file for blind...
+	$fin = fopen($inputfile, "w");
+	if (!$fin) {
+		echo "<html><body><h3>Failed to write input file " . $inputfile . ".fits" . "</h3></body></html>";
+		exit;
+	}
+
+	for ($i=0; $i<12; $i++) {
+		$sdssfiles[$i] = sprintf("sdss-24/sdss-24-%02d", $i);
+	}
+
+	$indexmap = array("sdss-24" => $sdssfiles,
+					  "marshall-30" => array("marshall-30/marshall-30c"));
+
+	$indexes = $indexmap[$headers["index"]];
+
+	//foreach ($indexes as $ind) {
+	for ($i=0; $i<count($indexes); $i++) {
+		fprintf($fin,
+				"index " . $indexes[$i] . "\n" .
+				"field " . $xylist . "\n" .
+				"match " . $matchfile . ((count($indexes) > 1) ? $i : "") . ".fits" . "\n" .
+				"wcs " . $wcsfile . "\n" .
+				"rdls " . $rdlist . "\n" .
+				"fields 0\n" .
+				"xcol " . $x_col_val . "\n" .
+				"ycol " . $y_col_val . "\n" .
+				"sdepth 0\n" .
+				"depth 100\n" .
+				"parity 0\n" .
+				"fieldunits_lower " . $fu_lower . "\n" .
+				"fieldunits_upper " . $fu_upper . "\n" .
+				"tol " . $headers["codetol"] . "\n" .
+				"verify_dist " . $verify . "\n" .
+				"agreetol " . $agree . "\n" .
+				"nagree_toverify " . $nagree . "\n" .
+				"ninfield_tokeep 50\n" .
+				"ninfield_tosolve 50\n" .
+				"overlap_tokeep 0.25\n" .
+				"overlap_tosolve 0.25\n" .
+				($tweak_val ? "tweak\n" : "") .
+				"run\n" .
+				"\n");
+	}
+
+	if (!fclose($fin)) {
+		echo "<html><body><h3>Failed to close input file " . $inputfile . "</h3></body></html>";
+		exit;
+	}
+
+	// Write the status script...
+
+	// Redirect the client to the status script...
+
+	$status_url = "/status/" . $myname . "/status.php";
+
+	$host  = $_SERVER['HTTP_HOST'];
+	//$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+	//$extra = 'mypage.php';
+	//header("Location: http://$host$uri/$extra");
+
+	header("Location: http://" . $host . $status_url);
+	
+	exit;
 }
 
 $newform = (count($headers) == 0);
@@ -103,7 +210,47 @@ if ($newform) {
 
 ?>
 
+
+<html>
+<head>
+<title>
+Astrometry.net: Web Edition
+</title>
+<style type="text/css">
+<!-- 
+input.redinput {
+background-color: pink;
+}
+-->
+</style>
+</head>
+
 <body>
+
+<hr>
+
+<?php
+printf("<table border=1>\n");
+foreach ($headers as $header => $value) {
+	printf("<tr><td>$header</td><td>$value</td></tr>\n");
+}
+printf("</table>\n");
+
+echo '<hr><pre>';
+print_r($_FILES);
+echo '</pre><hr>';
+
+echo "got_fitsfile = " . $got_fitsfile . "<br>";
+echo "got_fitstmpfile = " . $got_fitstmpfile . "<br>";
+echo "ok_fitsfile = " . $ok_fitsfile . "<br>";
+echo "fitsfilename = " . $fitsfilename . "<br>";
+echo "fitstempfilename = " . $fitstempfilename . "<br>";
+?>
+
+<hr>
+
+
+
 
 <h2>
 Astrometry.net: Web Edition
@@ -147,11 +294,11 @@ echo "\n";
 
 <?php
 printf('<li>X column name: <input type="text" name="x_col" value="%s" size="10"%s>',
-       ($exist_x_col ? $headers["x_col"] : "X"),
+	   $x_col_val,
        ($ok_x_col ? "" : ' class="redinput"'));
 echo "\n";
 printf('<li>Y column name: <input type="text" name="y_col" value="%s" size="10"%s>',
-       ($exist_y_col ? $headers["y_col"] : "Y"),
+	   $y_col_val,
        ($ok_y_col ? "" : ' class="redinput"'));
 ?>
 
@@ -195,8 +342,23 @@ if ($ok_fu_upper) {
 
 Index to use:
 <select name="index">
-<option value="marshall-30">Wide-Field Digital Camera</option>
-<option value="sdss-24">SDSS: Sloan Digital Sky Survey</option>
+
+<?php
+$vals = array(array("marshall-30", "Wide-Field Digital Camera"),
+              array("sdss-24", "SDSS: Sloan Digital Sky Survey"));
+if ($ok_index) {
+    $sel = $headers["index"];
+} else {
+    $sel = "marshall-30"; // default
+}
+foreach ($vals as $val) {
+    echo '<option value="' . $val[0] . '"';
+    if ($val[0] == $sel) {
+        echo " selected";
+    }
+    echo '>' . $val[1] . "</option>";
+}
+?>
 </select>
 <br>
 <br>
@@ -299,7 +461,13 @@ if ($ok_agree) {
 <!-- Number of objects to look at: -->
 <!-- input type="text" name="maxobj" size=10 -->
 
-<input type="checkbox" name="tweak" checked>
+<input type="checkbox" name="tweak"
+<?php
+if ($tweak_val) {
+	echo " checked";
+}
+?>
+>
 Tweak (fine-tune the WCS by computing polynomial SIP distortion)
 <br>
 <br>
