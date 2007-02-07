@@ -709,11 +709,6 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	twee = tweak_new();
 	twee->jitter = distsq2arcsec(verify_dist2);
 
-	/*
-	  tweak_print_state(twee);
-	  printf("\n");
-	*/
-
 	// pull out the field coordinates.
 	imgx = malloc(p->nfield * sizeof(double));
 	imgy = malloc(p->nfield * sizeof(double));
@@ -723,10 +718,6 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	}
 	printf("Pushing %i image coordinates.\n", p->nfield);
 	tweak_push_image_xy(twee, imgx, imgy, p->nfield);
-	/*
-	  tweak_print_state(twee);
-	  printf("\n");
-	*/
 
 	// find all the index stars that are inside the circle that bounds
 	// the field.
@@ -744,26 +735,13 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	nstars = res->nres;
 	printf("Pushing %i star coordinates.\n", nstars);
 	tweak_push_ref_xyz(twee, starxyz, nstars);
-	/*
-	  tweak_print_state(twee);
-	  printf("\n");
-	*/
 
 	// HACK - probably don't need this...
 	tweak_push_hppath(twee, startreefname);
-	/*
-	  tweak_print_state(twee);
-	  printf("\n");
-	*/
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	twee->sip->a_order  = twee->sip->b_order  = 3;
 	twee->sip->ap_order = twee->sip->bp_order = 3;
-
-	/*
-	  tweak_print_state(twee);
-	  printf("\n");
-	*/
 
 	//tweak_go_to(TWEAK_HAS_LINEAR_CD);
 
@@ -771,12 +749,6 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
 		printf("\n");
 		unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
-		/*
-		  printf("\n");
-		  printf("State: ");
-		  tweak_print_state(twee);
-		  printf("\n");
-		*/
 		if (r == -1) {
 			printf("Error!\n");
 			goto bailout;
@@ -786,7 +758,9 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("Done!\n");
 	fflush(NULL);
 
+	// Steal the resulting SIP structure
 	sip = twee->sip;
+	// Set it NULL so tweak_free() doesn't delete it.
 	twee->sip = NULL;
 
  bailout:
