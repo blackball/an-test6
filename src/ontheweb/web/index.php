@@ -3,7 +3,59 @@
 <title>
 Astrometry.net: Web Edition
 </title>
+<style type="text/css">
+<!-- 
+input.redinput {
+color:black;
+background-color: pink;
+border:none;
+}
+-->
+</style>
 </head>
+
+<?php
+$headers = $_REQUEST;
+
+printf("<table border=1>\n");
+foreach ($headers as $header => $value) {
+	printf("<tr><td>$header</td><td>$value</td></tr>\n");
+}
+printf("</table>\n");
+
+echo '<hr><pre>';
+print_r($_FILES);
+echo '</pre><hr>';
+
+//$ok_fitsfile = in_array("fitsfile", $headers) && in_array("fitsfile", $_FILES);
+$ok_fitsfile = array_key_exists("fitsfile", $_FILES);
+echo "ok_fitsfile = " . $ok_fitsfile;
+if ($ok_fitsfile) {
+	$fitsfile = $_FILES["fitsfile"];
+	/*
+	echo "<pre>fitsfile=";
+	print_r($fitsfile);
+	echo "</pre>";
+	*/
+	$ok_fitsfile = $ok_fitsfile and ($fitsfile["error"] == 0);
+	echo "ok_fitsfile = " . $ok_fitsfile;
+}
+$ok_x_col = array_key_exists("x_col", $headers);
+$ok_y_col = array_key_exists("y_col", $headers);
+$ok_fu_lower = array_key_exists("fu_lower", $headers);
+$ok_fu_upper = array_key_exists("fu_upper", $headers);
+
+/*
+echo "HTTP Request headers:\n";
+$hdrs = apache_request_headers();
+echo "<table border=1>\n";
+foreach ($hdrs as $header => $value) {
+	printf("<tr><td>$header</td><td>$value</td></tr>\n");
+}
+printf("</table>\n");
+*/
+
+?>
 
 <body>
 
@@ -13,14 +65,38 @@ Astrometry.net: Web Edition
 
 <hr>
 
-<form name="blindform" action="blind.php" method="PUT">
+<form name="blindform" action="index.php" method="POST" enctype="multipart/form-data">
 
-FITS file containing a table of detected objects, sorted by
-brightest objects first:
-<br>
-<ul>
-<li>File: <input type="file"   name="file" size=30>
-<li>X column name: <input type="text" name="x_col" value="X" size=10>
+<?php
+$fitsfile_ok = $ok_fitsfile and $ok_x_col and $ok_y_col;
+if ($fitsfile_ok) {
+} else {
+	echo "<font color=red>\n";
+}
+echo "FITS file containing a table of detected objects, sorted by ";
+echo "brightest objects first:\n<br>\n<ul>\n";
+
+/*
+printf('<li>File: <input type="file"   name="fitsfile" size=30 %s>',
+	   ($fitsfile_ok ? 'value="' . $fitsfile['name'] . '"' : 'class=redinput'));
+*/
+echo '<li>File: ';
+if ($fitsfile_ok) {
+	echo 'using <input type="input" readonly value="' . $fitsfile['name'] . '">';
+	echo '<input type="hidden" name="fits_tmpfile" value="' . $fitsfile['tmp_name'] . '">';
+	echo ' or replace:';
+} else {
+}
+echo '<input type="file" name="fitsfile" size=30>';
+
+if ($fitsfile_ok) {
+} else {
+	echo "</font>\n";
+}
+?>
+
+<!-- <li>File: <input type="file"   name="file" size=30 class="redinput"> -->
+<li>X column name: <input type="text" name="x_col" value="X" size=10 color=pink>
 <li>Y column name: <input type="text" name="y_col" value="Y" size=10>
 <!-- li --><!-- input type="radio" name="parity" value="1" -->
 </ul>
