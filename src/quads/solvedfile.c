@@ -138,7 +138,7 @@ int solvedfile_set(char* fn, int fieldnum) {
 	int f;
 	unsigned char val;
 	off_t off;
-	f = open(fn, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+	f = open(fn, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 	if (f == -1) {
 		fprintf(stderr, "Error: failed to open file %s for writing: %s\n",
 				fn, strerror(errno));
