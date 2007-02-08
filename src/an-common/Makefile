@@ -19,13 +19,29 @@ COMMON := .
 
 all:
 
+# You can build stripped-down versions of the AN libraries that do not
+# depend on libkd or libqfits by defining the following in your Makefile
+# before calling make in the an-common directory:
+#   NO_KDTREE := 1
+#   export NO_KDTREE
+#   NO_QFITS := 1
+#   export NO_QFITS
+
 include $(COMMON)/makefile.common
+ifndef NO_QFITS
 include $(COMMON)/makefile.qfits
+endif
+ifndef NO_KDTREE
 include $(COMMON)/makefile.libkd
+endif
 
 CFLAGS := $(CFLAGS_DEF)
+ifndef NO_QFITS
 CFLAGS += $(QFITS_INC)
+endif
+ifndef NO_KDTREE
 CFLAGS += $(LIBKD_INC)
+endif
 CFLAGS += -I.
 
 ANFILES_LIB := libanfiles.a
@@ -33,11 +49,19 @@ ANUTILS_LIB := libanutils.a
 
 all: $(ANUTILS_LIB) $(ANFILES_LIB)
 
-ANUTILS_OBJ := fitsioutils.o starutil.o mathutil.o bl.o healpix.o \
-	dualtree.o dualtree_rangesearch.o permutedsort.o ioutils.o
+ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o
+ifndef NO_QFITS
+ANUTILS_OBJ := $(ANUTILS_OBJ) fitsioutils.o
+endif
+ifndef NO_KDTREE
+ANUTILS_OBJ := $(ANUTILS_OBJ) dualtree.o dualtree_rangesearch.o
+endif
 
-ANFILES_OBJ := starkd.o rdlist.o xylist.o an_catalog.o qidxfile.o \
-	quadfile.o
+ANFILES_OBJ := 
+ifndef NO_QFITS
+ANFILES_OBJ := $(ANFILES_OBJ) starkd.o rdlist.o xylist.o an_catalog.o \
+	qidxfile.o quadfile.o
+endif
 
 $(ANUTILS_LIB): $(ANUTILS_OBJ)
 	$(AR) rc $@ $^
