@@ -6,6 +6,8 @@
 #include <string.h>
 #include <limits.h>
 #include <unistd.h>
+#include <libgen.h>
+#include <signal.h>
 
 #include <pthread.h>
 #include <sys/inotify.h>
@@ -18,6 +20,9 @@ pthread_t parentthread;
 int quitNow = 0;
 
 uint32_t eventmask;
+
+char* blind = "blind";
+char* inputfile = "input";
 char* qfile = "queue";
 char* qtempfile = "queue.tmp";
 pl* q;
@@ -102,6 +107,18 @@ struct childinfo {
 typedef struct childinfo childinfo;
 
 void file_created(childinfo* info, struct inotify_event* evt, char* path) {
+	char* pathcopy;
+	char* base;
+	int q_it = 0;
+	pathcopy = strdup(path);
+	base = basename(pathcopy);
+	if (!strcmp(base, inputfile))
+		q_it = 1;
+	free(pathcopy);
+	if (!q_it) {
+		fprintf(stderr, "Ignoring file %s.\n", path);
+		return;
+	}
 	queue_append(path);
 	fprintf(info->pipeout, "%s\n", path);
 	fflush(info->pipeout);
@@ -223,6 +240,8 @@ void child_process(int pipeout) {
 		ssize_t nr;
 		struct inotify_event* evt;
 		ssize_t cursor;
+		if (quitNow)
+			break;
 		nr = read(info.inot, buf, sizeof(buf));
 		if (!nr) {
 			fprintf(stderr, "End-of-file on inotify file.\n");
@@ -253,12 +272,53 @@ void child_process(int pipeout) {
 	il_free(info.wds);
 	close(info.inot);
 	fclose(info.pipeout);
+
+	fprintf(stderr, "Child process finished.\n");
 }
 
 void* child_start_routine(void* arg) {
 	int* thepipe = (int*)arg;
 	child_process(thepipe[1]);
 	return NULL;
+}
+
+void run(char* path) {
+	char* pathcopy;
+	char* dir;
+	char cmdline[1024];
+	int ret;
+
+	pathcopy = strdup(path);
+	dir = dirname(pathcopy);
+	if (chdir(dir)) {
+		fprintf(stderr, "Failed to chdir to %s: %s\n", dir, strerror(errno));
+		goto bailout;
+	}
+	if (snprintf(cmdline, sizeof(cmdline), "%s < %s", blind, path) == -1) {
+		fprintf(stderr, "Command line was too long.\n");
+		goto bailout;
+	}
+	free(pathcopy);
+	pathcopy = NULL;
+
+	ret = system(cmdline);
+	if (ret == -1) {
+		fprintf(stderr, "Failed to execute command: \"%s\": %s\n", cmdline, strerror(errno));
+		goto bailout;
+	}
+	if (WIFSIGNALED(ret) &&
+		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
+		fprintf(stderr, "Blind was killed.\n");
+		//quitNow = 1;
+	} else {
+		if (WEXITSTATUS(ret) == 127) {
+			fprintf(stderr, "Blind executable not found.  Command-line: \"%s\"\n", cmdline);
+		} else {
+			fprintf(stderr, "Blind return value: %i\n", WEXITSTATUS(ret));
+		}
+	}
+ bailout:
+	free(pathcopy);
 }
 
 void parent_process(int pipein) {
@@ -274,7 +334,6 @@ void parent_process(int pipein) {
 	for (;;) {
 		char str[1024];
 		// read a line from the pipe
-		//fprintf(stderr, "Main thread: waiting for input...\n");
 		if (quitNow)
 			break;
 		if (!fgets(str, sizeof(str), fin)) {
@@ -298,7 +357,8 @@ void parent_process(int pipein) {
 			pthread_exit(NULL);
 		}
 		printf("Processing %s...\n", str);
-		sleep(3);
+		//sleep(3);
+		run(str);
 		printf("Processed %s\n", str);
 		queue_pop(str);
 	}
