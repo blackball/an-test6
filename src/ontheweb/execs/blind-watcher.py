@@ -31,6 +31,7 @@ class Enqueuer(ProcessEvent):
         try:
             item = self.q.get(True)
             self.qlist.remove(item)
+			self.write_queue()
             return item
         except KeyboardInterrupt:
             return 'QUIT'
