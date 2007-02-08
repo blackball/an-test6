@@ -64,7 +64,7 @@ eq = Enqueuer(queuefile)
 signal.signal(signal.SIGINT, sigint)
 notifier = ThreadedNotifier(wm, eq)
 notifier.start()
-mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO
+mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO | EventsCodes.IN_CREATE
 cwd = os.getcwd()
 print "Watching: %s\n" % cwd
 wdd = wm.add_watch(cwd, mask, rec=True, auto_add=True)
