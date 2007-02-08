@@ -1,11 +1,11 @@
 <?php
 
-//$resultdir = "/h/260/dstn/local/ontheweb-results/";
-//$resultdir = "/p/learning/stars/ontheweb/";
 $resultdir = "/home/gmaps/ontheweb-data/";
-//$indexdir  = "/h/260/dstn/raid3/INDEXES/";
 $indexdir = "/home/gmaps/ontheweb-indexes/";
 
+$maxfilesize = 10*1024*1024;
+
+$check_xhtml=1;
 
 umask(0002); // in octal
 
@@ -210,11 +210,16 @@ if ($newform) {
      $redfont_open   = '<font color="red">';
      $redfont_close  = "</font>";
 }
-
 ?>
 
+<?php
+echo '<?xml version="1.0" encoding="UTF-8"?>';
+?>
 
-<html>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <title>
 Astrometry.net: Web Edition
@@ -230,27 +235,30 @@ background-color: pink;
 
 <body>
 
-<hr>
+<hr />
 
 <?php
-/*
-printf("<table border=1>\n");
+
+printf("<table border=\"1\">\n");
+printf("<tr><th>Header</th><th>Value</th></tr>\n");
 foreach ($headers as $header => $value) {
 	printf("<tr><td>$header</td><td>$value</td></tr>\n");
 }
 printf("</table>\n");
-
+/*
 echo '<hr><pre>';
 print_r($_FILES);
 echo '</pre><hr>';
-
-echo "got_fitsfile = " . $got_fitsfile . "<br>";
-echo "got_fitstmpfile = " . $got_fitstmpfile . "<br>";
-echo "ok_fitsfile = " . $ok_fitsfile . "<br>";
-echo "fitsfilename = " . $fitsfilename . "<br>";
-echo "fitstempfilename = " . $fitstempfilename . "<br>";
-echo "<hr>";
 */
+echo "<p>";
+echo "got_fitsfile = " . $got_fitsfile . "<br />";
+echo "got_fitstmpfile = " . $got_fitstmpfile . "<br />";
+echo "ok_fitsfile = " . $ok_fitsfile . "<br />";
+echo "fitsfilename = " . $fitsfilename . "<br />";
+echo "fitstempfilename = " . $fitstempfilename . "<br />";
+echo "</p>";
+echo "<hr />";
+
 ?>
 
 
@@ -261,9 +269,9 @@ echo "<hr>";
 Astrometry.net: Web Edition
 </h2>
 
-<hr>
+<hr />
 
-<form name="blindform" action="index.php" method="POST" enctype="multipart/form-data">
+<form id="blindform" action="index.php" method="post" enctype="multipart/form-data">
 
 <?php
 $fitsfile_ok = $ok_fitsfile && $ok_x_col && $ok_y_col;
@@ -272,43 +280,46 @@ if (!$fitsfile_ok) {
 }
 ?>
 
+<p>
 FITS file containing a table of detected objects, sorted by
 brightest objects first
+</p>
 <?php
 if (!$fitsfile_ok) {
     echo $redfont_close;
 }
 ?>
 
-<br>
 <ul>
 <li>File: 
 <?php
-if ($fitsfile_ok) {
-	echo 'using <input type="input" name="fits_filename" readonly value="' . $fitsfilename . '">';
+if ($ok_fitsfile) {
+	echo 'using <input type="input" name="fits_filename" readonly value="' . $fitsfilename . '" />';
 	echo '<input type="hidden" name="fits_tmpfile" value="' . $fitstempfilename . '">';
 	echo ' or replace:';
 }
+printf('<input type="hidden" name="MAX_FILE_SIZE" value="%d" />', $maxfilesize);
 echo '<input type="file" name="fitsfile" size="30"';
 if (!$fitsfile_ok) {
     echo $redinput;
 }
-echo ">\n";
+echo " /></li>\n";
 echo "\n";
 ?>
 
 <?php
-printf('<li>X column name: <input type="text" name="x_col" value="%s" size="10"%s>',
+printf('<li>X column name: <input type="text" name="x_col" value="%s" size="10"%s /></li>',
 	   $x_col_val,
        ($ok_x_col ? "" : ' class="redinput"'));
 echo "\n";
-printf('<li>Y column name: <input type="text" name="y_col" value="%s" size="10"%s>',
+printf('<li>Y column name: <input type="text" name="y_col" value="%s" size="10"%s /></li>',
 	   $y_col_val,
        ($ok_y_col ? "" : ' class="redinput"'));
 ?>
 
-</ul><br>
+</ul>
 
+<p>
 <?php
 $bounds_ok = $ok_fu_lower && $ok_fu_upper;
 if (!$bounds_ok) {
@@ -322,6 +333,7 @@ if (!$bounds_ok) {
 
 }
 ?>
+</p>
 
 <ul>
 <li>Lower bound: <input type="text" name="fu_lower" size="10"
@@ -332,7 +344,7 @@ if ($ok_fu_lower) {
     echo $redinput;
 }
 ?>
->
+ /></li>
 <li>Upper bound: <input type="text" name="fu_upper" size="10"
 <?php
 if ($ok_fu_upper) {
@@ -341,10 +353,10 @@ if ($ok_fu_upper) {
     echo $redinput;
 }
 ?>
->
+ /></li>
 </ul>
-<br>
 
+<p>
 Index to use:
 <select name="index">
 
@@ -359,14 +371,13 @@ if ($ok_index) {
 foreach ($vals as $val) {
     echo '<option value="' . $val[0] . '"';
     if ($val[0] == $sel) {
-        echo " selected";
+        echo ' selected="selected"';
     }
     echo '>' . $val[1] . "</option>";
 }
 ?>
 </select>
-<br>
-<br>
+</p>
 
 <?php
 if (!$ok_verify) {
@@ -374,6 +385,7 @@ if (!$ok_verify) {
 }
 ?>
 
+<p>
 Star positional error (verification tolerance), in arcseconds:
 
 <?php
@@ -390,12 +402,12 @@ if ($ok_verify) {
     echo $redinput;
 }
 ?>
->
-<br>
-<br>
+ />
+</p>
+
+<p>
 Code tolerance:
 <select name="codetol">
-
 <?php
 $tols = array(array("0.005", "0.005 (fast)"),
               array("0.01" , "0.01  (standard)"),
@@ -408,15 +420,15 @@ if ($ok_codetol) {
 foreach ($tols as $tol) {
     echo '<option value="' . $tol[0] . '"';
     if ($tol[0] == $codesel) {
-        echo " selected";
+        echo ' selected="selected"';
     }
     echo '>' . $tol[1] . "</option>";
 }
 ?>
-
 </select>
-<br>
-<br>
+</p>
+
+<p>
 Number of agreeing matches required:
 <select name="nagree">
 <?php
@@ -430,15 +442,15 @@ if ($ok_nagree) {
 foreach ($ns as $na) {
     echo '<option value="' . $na[0] . '"';
     if ($na[0] == $nagreesel) {
-        echo " selected";
+        echo ' selected="selected"';
     }
     echo '>' . $na[1] . "</option>";
 }
 ?>
 </select>
-<br>
-<br>
+</p>
 
+<p>
 <?php
 if (!$ok_agree) {
     echo $redfont_open;
@@ -459,30 +471,45 @@ if ($ok_agree) {
     echo $redinput;
 }
 ?>
->
-<br>
-<br>
+ />
+</p>
 
 <!-- Number of objects to look at: -->
 <!-- input type="text" name="maxobj" size=10 -->
 
+<p>
 <input type="checkbox" name="tweak"
 <?php
 if ($tweak_val) {
-	echo " checked";
+	echo ' checked="checked"';
 }
 ?>
->
+ />
 Tweak (fine-tune the WCS by computing polynomial SIP distortion)
-<br>
-<br>
+</p>
 
-<input type="submit" value="Submit">
+<p>
+<input type="submit" value="Submit" />
+</p>
 
 </form>
 
 
-<hr>
+<hr />
+
+
+
+<?php
+if ($check_xhtml) {
+print <<<END
+<p>
+    <a href="http://validator.w3.org/check?uri=referer"><img
+        src="http://www.w3.org/Icons/valid-xhtml10"
+        alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+</p>
+END;
+}
+?>  
 
 </body>
 
