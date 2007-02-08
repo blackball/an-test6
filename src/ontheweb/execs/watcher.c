@@ -22,7 +22,7 @@ int quitNow = 0;
 
 uint32_t eventmask;
 
-char* blind = "blind";
+char* blind = "blind < %s";
 char* inputfile = "input";
 char* qfile = "queue";
 char* qtempfile = "queue.tmp";
@@ -150,7 +150,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 	// Ignore writes to the queue file and log file.
 	if (evt->len && (!strcmp(evt->name, qfile) ||
 					 !strcmp(evt->name, qtempfile) ||
-					 !strcmp(evt->name, logfile)))
+					 (logfile && !strcmp(evt->name, logfile))))
 		return;
 
 	// Watch for write to the file "quit".
@@ -303,13 +303,14 @@ void run(char* path) {
 		loggit("Failed to chdir to %s: %s\n", dir, strerror(errno));
 		goto bailout;
 	}
-	if (snprintf(cmdline, sizeof(cmdline), "%s < %s", blind, path) >= sizeof(cmdline)) {
+	if (snprintf(cmdline, sizeof(cmdline), blind, path) >= sizeof(cmdline)) {
 		loggit("Command line was too long.\n");
 		goto bailout;
 	}
 	free(pathcopy);
 	pathcopy = NULL;
 
+	loggit("Runnning: \"%s\"\n", cmdline);
 	ret = system(cmdline);
 	if (ret == -1) {
 		loggit("Failed to execute command: \"%s\": %s\n", cmdline, strerror(errno));
@@ -383,7 +384,7 @@ void* parent_start_routine(void* arg) {
 	return NULL;
 }
 
-const char* OPTIONS = "hDl:";
+const char* OPTIONS = "hDl:c:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage:\n\n"
@@ -392,7 +393,10 @@ void printHelp(char* progname) {
 			"           file (\"watcher.log\" in the current directory)\n"
 			"           if logging is not specified with -l.\n"
 			"      [-l <logfile>]: log to the specified file.\n"
-			"\n", progname);
+			"      [-c <command>]: run the given command; it should be a printf\n"
+			"                      pattern; it will be passed the path of the file.\n"
+			"                      default: \"%s\"\n"
+			"\n", progname, blind);
 }
 
 extern char *optarg;
@@ -413,6 +417,9 @@ int main(int argc, char** args) {
 			break;
 		case 'l':
 			logfile = optarg;
+			break;
+		case 'c':
+			blind = optarg;
 			break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
