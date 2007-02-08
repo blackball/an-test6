@@ -1,8 +1,18 @@
-<html>
+<?php
+$check_xhtml = 1;
+?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <title>
 Astrometry.net: Job Status
 </title>
+<style type="text/css">
+body {text-align:center;}
+table.c {margin-left:auto; margin-right:auto;}
+</style>
 </head>
 <body>
 <?php
@@ -74,10 +84,9 @@ function print_link($f) {
 Astrometry.net: Job Status
 </h2>
 
-<hr>
+<hr />
 
-<center>
-<table border=1>
+<table border="1" class="c">
 
 <tr><td>Job Id</td><td>
 <?php
@@ -193,12 +202,10 @@ print_link($logfile);
 
 
 </table>
-</center>
 
-<hr>
+<hr />
 
-<center>
-<table border=1>
+<table border="1" class="c">
 <tr><td>Log File</td></tr>
 <tr><td>
 <pre>
@@ -212,7 +219,20 @@ if (file_exists($logfile)) {
 </pre>
 </td></tr>
 </table>
-</center>
+
+<hr />
+
+<?php
+if ($check_xhtml) {
+print <<<END
+<p>
+    <a href="http://validator.w3.org/check?uri=referer"><img
+        src="http://www.w3.org/Icons/valid-xhtml10"
+        alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+</p>
+END;
+}
+?>  
 
 </body>
 </html>

@@ -5,7 +5,8 @@ $indexdir = "/home/gmaps/ontheweb-indexes/";
 
 $maxfilesize = 10*1024*1024;
 
-$check_xhtml=1;
+$check_xhtml = 1;
+$debug = 1;
 
 umask(0002); // in octal
 
@@ -28,6 +29,15 @@ if ($got_fitsfile) {
 	if ($got_fitsfile) {
 		$fitsfilename = $fitsfile["name"];
 		$fitstempfilename = $fitsfile['tmp_name'];
+
+		// Move the file right away, because otherwise it gets
+		// deleted when this form completes.
+		$newname = $fitstempfilename . ".tmp";
+		if (!move_uploaded_file($fitstempfilename, $newname)) {
+			echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
+			exit;
+		}
+		$fitstempfilename = $newname;
 	}
 }
 $ok_fitsfile = $got_fitsfile || $got_fitstmpfile;
@@ -113,8 +123,15 @@ if ($all_ok) {
 
 	// Move the xylist into place...
 	$xylist = $mydir . "field.xy"; // .fits
+	/*
 	if (!move_uploaded_file($fitstempfilename, $xylist . ".fits")) {
 		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $xylist . "</h3></body></html>";
+		exit;
+	}
+	*/
+	$newname = $xylist . ".fits";
+	if (!rename($fitstempfilename, $newname)) {
+		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
 		exit;
 	}
 	if (!chmod($xylist . ".fits", 0664)) {
@@ -200,6 +217,23 @@ if ($all_ok) {
 	exit;
 }
 
+// If the user uploaded a file but the form contains some other
+// missing elements, then copy the uploaded file to a new
+// location (because otherwise it gets deleted when this form
+// completes).
+/*
+if ($got_fitsfile) {
+	$newname = $fitstempfilename . ".tmp";
+	if (!move_uploaded_file($fitstempfilename, $newname)) {
+		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
+		exit;
+	}
+	$fitstempfilename = $newname;
+}
+*/
+
+// Don't highlight the missing elements in red if this is the
+// first time the page has been loaded.
 $newform = (count($headers) == 0);
 if ($newform) {
      $redinput = "";
@@ -238,27 +272,27 @@ background-color: pink;
 <hr />
 
 <?php
+if ($debug) {
+	printf("<table border=\"1\">\n");
+	printf("<tr><th>Header</th><th>Value</th></tr>\n");
+	foreach ($headers as $header => $value) {
+		printf("<tr><td>$header</td><td>$value</td></tr>\n");
+	}
+	printf("</table>\n");
 
-printf("<table border=\"1\">\n");
-printf("<tr><th>Header</th><th>Value</th></tr>\n");
-foreach ($headers as $header => $value) {
-	printf("<tr><td>$header</td><td>$value</td></tr>\n");
+	echo '<hr /><p><pre>';
+	print_r($_FILES);
+	echo '</pre></p>';
+
+	echo "<hr /><p>";
+	echo "got_fitsfile = " . $got_fitsfile . "<br />";
+	echo "got_fitstmpfile = " . $got_fitstmpfile . "<br />";
+	echo "ok_fitsfile = " . $ok_fitsfile . "<br />";
+	echo "fitsfilename = " . $fitsfilename . "<br />";
+	echo "fitstempfilename = " . $fitstempfilename . "<br />";
+	echo "</p>";
+	echo "<hr />";
 }
-printf("</table>\n");
-/*
-echo '<hr><pre>';
-print_r($_FILES);
-echo '</pre><hr>';
-*/
-echo "<p>";
-echo "got_fitsfile = " . $got_fitsfile . "<br />";
-echo "got_fitstmpfile = " . $got_fitstmpfile . "<br />";
-echo "ok_fitsfile = " . $ok_fitsfile . "<br />";
-echo "fitsfilename = " . $fitsfilename . "<br />";
-echo "fitstempfilename = " . $fitstempfilename . "<br />";
-echo "</p>";
-echo "<hr />";
-
 ?>
 
 
