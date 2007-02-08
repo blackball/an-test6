@@ -13,6 +13,10 @@
 #include "bl.h"
 
 pthread_t childthread;
+pthread_t parentthread;
+
+int quitNow = 0;
+
 uint32_t eventmask;
 char* qfile = "queue";
 char* qtempfile = "queue.tmp";
@@ -66,7 +70,27 @@ void queue_pop(char* str) {
 	pthread_mutex_unlock(&qmutex);
 }
 
-#define PRINT_EVT(x) 	if (evt->mask & (x)) { fprintf(stderr, " " #x); }
+//#define PRINT_EVT(x) 	if (evt->mask & (x)) { fprintf(stderr, " " #x); }
+#define PRINT_EVT(val, tst, fid) 	if ((val) & (tst)) { fprintf(fid, " " #tst); }
+
+void print_events(FILE* fid, uint32_t val) {
+	PRINT_EVT(val, IN_ACCESS       , fid);
+	PRINT_EVT(val, IN_ATTRIB       , fid);
+	PRINT_EVT(val, IN_CLOSE_WRITE  , fid);
+	PRINT_EVT(val, IN_CLOSE_NOWRITE, fid);
+	PRINT_EVT(val, IN_CREATE       , fid);
+	PRINT_EVT(val, IN_DELETE       , fid);
+	PRINT_EVT(val, IN_DELETE_SELF  , fid);
+	PRINT_EVT(val, IN_MODIFY       , fid);
+	PRINT_EVT(val, IN_MOVE_SELF    , fid);
+	PRINT_EVT(val, IN_MOVED_FROM   , fid);
+	PRINT_EVT(val, IN_MOVED_TO     , fid);
+	PRINT_EVT(val, IN_OPEN         , fid);
+	PRINT_EVT(val, IN_IGNORED      , fid);
+	PRINT_EVT(val, IN_ISDIR        , fid);
+	PRINT_EVT(val, IN_Q_OVERFLOW   , fid);
+	PRINT_EVT(val, IN_UNMOUNT      , fid);
+}
 
 struct childinfo {
 	int inot;
@@ -94,24 +118,14 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 	if (evt->len && (!strcmp(evt->name, qfile) || !strcmp(evt->name, qtempfile)))
 		return;
 
-	fprintf(stderr, "Events:");
-	PRINT_EVT(IN_ACCESS);
-	PRINT_EVT(IN_ATTRIB);
-	PRINT_EVT(IN_CLOSE_WRITE);
-	PRINT_EVT(IN_CLOSE_NOWRITE);
-	PRINT_EVT(IN_CREATE);
-	PRINT_EVT(IN_DELETE);
-	PRINT_EVT(IN_DELETE_SELF);
-	PRINT_EVT(IN_MODIFY);
-	PRINT_EVT(IN_MOVE_SELF);
-	PRINT_EVT(IN_MOVED_FROM);
-	PRINT_EVT(IN_MOVED_TO);
-	PRINT_EVT(IN_OPEN);
-	PRINT_EVT(IN_IGNORED);
-	PRINT_EVT(IN_ISDIR);
-	PRINT_EVT(IN_Q_OVERFLOW);
-	PRINT_EVT(IN_UNMOUNT);
-	fprintf(stderr, "\n");
+	// Watch for write to the file "quit".
+	if (evt->len && (!strcmp(evt->name, "quit"))) {
+		fprintf(info->pipeout, "quit\n");
+		fflush(info->pipeout);
+		quitNow = 1;
+		printf("Child thread quitting.\n");
+		pthread_exit(NULL);
+	}
 
 	i = il_index_of(info->wds, evt->wd);
 	if (i == -1) {
@@ -119,11 +133,14 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		return;
 	}
 	dir = pl_get(info->paths, i);
-	fprintf(stderr, "Dir: %s\n", dir);
+	//fprintf(stderr, "Dir: %s\n", dir);
 
 	snprintf(buf, sizeof(buf), "%s/%s", dir, evt->name);
 	path = buf;
 	fprintf(stderr, "Path: %s\n", path);
+	fprintf(stderr, "Events:");
+	print_events(stderr, evt->mask);
+	fprintf(stderr, "\n");
 
 	if ((evt->mask & IN_UNMOUNT) ||
 		((evt->mask & IN_DELETE_SELF) && (evt->wd == il_get(info->wds, 0)))) {
@@ -238,40 +255,28 @@ void child_process(int pipeout) {
 	fclose(info.pipeout);
 }
 
-void* start_routine(void* arg) {
+void* child_start_routine(void* arg) {
 	int* thepipe = (int*)arg;
 	child_process(thepipe[1]);
 	return NULL;
 }
 
-int main(int argc, char** args) {
-	int thepipe[2];
+void parent_process(int pipein) {
 	FILE* fin;
-
-	q = pl_new(16);
-	pthread_mutex_init(&qmutex, NULL);
-
-	if (pipe(thepipe) == -1) {
-		fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
-		exit(-1);
-	}
-
-	if (pthread_create(&childthread, NULL, start_routine, thepipe)) {
-		fprintf(stderr, "Failed to create child process: %s\n", strerror(errno));
-		exit(-1);
-	}
-
+	fprintf(stderr, "Parent process started.\n");
 	// parent:
-	fin = fdopen(thepipe[0], "r");
+	fin = fdopen(pipein, "r");
 	if (!fin) {
 		fprintf(stderr, "Error fdopening the pipe: %s\n", strerror(errno));
-		exit(-1);
+		pthread_exit(NULL);
 	}
 
 	for (;;) {
 		char str[1024];
 		// read a line from the pipe
 		//fprintf(stderr, "Main thread: waiting for input...\n");
+		if (quitNow)
+			break;
 		if (!fgets(str, sizeof(str), fin)) {
 			if (feof(fin)) {
 				fprintf(stderr, "End of file reading from pipe.\n");
@@ -288,19 +293,91 @@ int main(int argc, char** args) {
 			str[strlen(str) - 1] = '\0';
 
 		printf("Got: %s\n", str);
+		if (!strcmp(str, "quit")) {
+			printf("Parent thread quitting.\n");
+			pthread_exit(NULL);
+		}
 		printf("Processing %s...\n", str);
 		sleep(3);
 		printf("Processed %s\n", str);
 		queue_pop(str);
 	}
 
-	printf("Main thread finished.\n");
+	printf("Parent thread finished.\n");
+}
 
+void* parent_start_routine(void* arg) {
+	int* thepipe = (int*)arg;
+	parent_process(thepipe[0]);
+	return NULL;
+}
+
+const char* OPTIONS = "hD";
+
+void printHelp(char* progname) {
+}
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+int main(int argc, char** args) {
+    int argidx, argchar;
+	int thepipe[2];
+	int be_daemon = 0;
+
+    while ((argchar = getopt (argc, args, OPTIONS)) != -1)
+        switch (argchar) {
+		case 'D':
+			be_daemon = 1;
+			break;
+        case '?':
+            fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+		case 'h':
+			printHelp(args[0]);
+			exit(0);
+		}
+    if (optind < argc) {
+        for (argidx = optind; argidx < argc; argidx++)
+            fprintf (stderr, "Non-option argument %s\n", args[argidx]);
+		printHelp(args[0]);
+		exit(-1);
+    }
+
+	q = pl_new(16);
+	pthread_mutex_init(&qmutex, NULL);
+
+	if (pipe(thepipe) == -1) {
+		fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	if (be_daemon) {
+		//pthread_detach(childthread);
+		//pthread_detach(parentthread);
+		//sleep(3);
+		printf("Becoming daemon...\n");
+		if (daemon(1, 1) == -1) {
+			fprintf(stderr, "Failed to set daemon process: %s\n", strerror(errno));
+			exit(-1);
+		}
+	}
+
+	if (pthread_create(&childthread, NULL, child_start_routine, thepipe)) {
+		fprintf(stderr, "Failed to create child process: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	if (pthread_create(&parentthread, NULL, parent_start_routine, thepipe)) {
+		fprintf(stderr, "Failed to create parent process: %s\n", strerror(errno));
+		exit(-1);
+	}
+
+	//else {
+	pthread_join(childthread , NULL);
+	pthread_join(parentthread, NULL);
 	pthread_mutex_destroy(&qmutex);
 	pl_free(q);
-
-	//pthread_join(&childthread);
-
+	//}
 	return 0;
 }
 
