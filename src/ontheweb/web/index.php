@@ -6,7 +6,7 @@ $indexdir = "/home/gmaps/ontheweb-indexes/";
 $maxfilesize = 10*1024*1024;
 
 $check_xhtml = 1;
-$debug = 1;
+$debug = 0;
 
 umask(0002); // in octal
 
@@ -24,7 +24,6 @@ if ($got_fitstmpfile) {
 $got_fitsfile = array_key_exists("fitsfile", $_FILES);
 if ($got_fitsfile) {
 	$fitsfile = $_FILES["fitsfile"];
-        //echo 'error = ' . $fitsfile["error"] . "<br>";
 	$got_fitsfile = ($fitsfile["error"] == 0);
 	if ($got_fitsfile) {
 		$fitsfilename = $fitsfile["name"];
@@ -37,6 +36,7 @@ if ($got_fitsfile) {
 			echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
 			exit;
 		}
+		loggit("moved uploaded file " . $fitstempfilename . " to " . $newname . ".\n");
 		$fitstempfilename = $newname;
 	}
 }
@@ -119,17 +119,10 @@ if ($all_ok) {
 	}
 	$mydir = $mydir . "/";
 
-	//loggit(sprintf("old umask: %o\n", umask()));
-
 	// Move the xylist into place...
 	$xylist = $mydir . "field.xy"; // .fits
-	/*
-	if (!move_uploaded_file($fitstempfilename, $xylist . ".fits")) {
-		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $xylist . "</h3></body></html>";
-		exit;
-	}
-	*/
 	$newname = $xylist . ".fits";
+	loggit("renaming temp uploaded file " . $fitstempfilename . " to " . $newname . ".\n");
 	if (!rename($fitstempfilename, $newname)) {
 		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
 		exit;
@@ -216,21 +209,6 @@ if ($all_ok) {
 	
 	exit;
 }
-
-// If the user uploaded a file but the form contains some other
-// missing elements, then copy the uploaded file to a new
-// location (because otherwise it gets deleted when this form
-// completes).
-/*
-if ($got_fitsfile) {
-	$newname = $fitstempfilename . ".tmp";
-	if (!move_uploaded_file($fitstempfilename, $newname)) {
-		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
-		exit;
-	}
-	$fitstempfilename = $newname;
-}
-*/
 
 // Don't highlight the missing elements in red if this is the
 // first time the page has been loaded.
