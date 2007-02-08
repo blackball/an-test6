@@ -1,9 +1,13 @@
 <?php
 
 //$resultdir = "/h/260/dstn/local/ontheweb-results/";
-$resultdir = "/p/learning/stars/ontheweb/";
-$indexdir  = "/h/260/dstn/raid3/INDEXES/";
+//$resultdir = "/p/learning/stars/ontheweb/";
+$resultdir = "/home/gmaps/ontheweb-data/";
+//$indexdir  = "/h/260/dstn/raid3/INDEXES/";
+$indexdir = "/home/gmaps/ontheweb-indexes/";
 
+
+umask(0002);
 
 function loggit($mesg) {
 	error_log($mesg, 3, "/tmp/ontheweb.log");
@@ -98,16 +102,23 @@ if ($all_ok) {
 			break;
 		}
     }
+
 	if (!mkdir($mydir)) {
 		echo "<html><body><h3>Failed to create dir " . $mydir . "</h3></body></html>";
 		exit;
 	}
 	$mydir = $mydir . "/";
 
+	//loggit(sprintf("old umask: %o\n", umask()));
+
 	// Move the xylist into place...
 	$xylist = $mydir . "field.xy"; // .fits
 	if (!move_uploaded_file($fitstempfilename, $xylist . ".fits")) {
 		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $xylist . "</h3></body></html>";
+		exit;
+	}
+	if (!chmod($xylist . ".fits", 0664)) {
+		echo "<html><body><h3>Failed to chmod xylist " . $xylist . "</h3></body></html>";
 		exit;
 	}
 
@@ -222,6 +233,7 @@ background-color: pink;
 <hr>
 
 <?php
+/*
 printf("<table border=1>\n");
 foreach ($headers as $header => $value) {
 	printf("<tr><td>$header</td><td>$value</td></tr>\n");
@@ -237,9 +249,10 @@ echo "got_fitstmpfile = " . $got_fitstmpfile . "<br>";
 echo "ok_fitsfile = " . $ok_fitsfile . "<br>";
 echo "fitsfilename = " . $fitsfilename . "<br>";
 echo "fitstempfilename = " . $fitstempfilename . "<br>";
+echo "<hr>";
+*/
 ?>
 
-<hr>
 
 
 

@@ -7,7 +7,8 @@ Astrometry.net: Job Status
 <body>
 <?php
 //$resultdir = "/h/260/dstn/local/ontheweb-results/";
-$resultdir = "/p/learning/stars/ontheweb/";
+//$resultdir = "/p/learning/stars/ontheweb/";
+$resultdir = "/home/gmaps/ontheweb-data/";
 $statuspath = "status/";
 //$statuspath = "";
 $headers = $_REQUEST;

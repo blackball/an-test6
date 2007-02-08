@@ -5,6 +5,8 @@ import os, signal
 from Queue import Queue
 from subprocess import Popen
 
+os.umask(0002); # in octal
+
 BLIND = 'blind';
 #IN_SUFFIX  = '.in';
 IN_FILENAME  = 'input';
@@ -64,7 +66,7 @@ eq = Enqueuer(queuefile)
 signal.signal(signal.SIGINT, sigint)
 notifier = ThreadedNotifier(wm, eq)
 notifier.start()
-mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO | EventsCodes.IN_CREATE
+mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO | EventsCodes.IN_CREATE | EventsCodes.IN_MODIFY
 cwd = os.getcwd()
 print "Watching: %s\n" % cwd
 wdd = wm.add_watch(cwd, mask, rec=True, auto_add=True)
