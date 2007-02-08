@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 from pyinotify import WatchManager, Notifier, ThreadedNotifier, EventsCodes, ProcessEvent
-import os, signal
+import os, signal, time
 from Queue import Queue
 from subprocess import Popen
 
@@ -19,10 +19,11 @@ def sigint(signum, frame):
     eq.quit()
 
 class Enqueuer(ProcessEvent):
-    def __init__(self, filename):
+    def __init__(self, qfile, emask):
         self.q = Queue(0)
         self.qlist = []
-        self.filename = filename
+        self.qfile = qfile
+        self.emask = emask
 
     def quit(self):
         self.q.put('QUIT')
@@ -31,46 +32,63 @@ class Enqueuer(ProcessEvent):
         try:
             item = self.q.get(True)
             self.qlist.remove(item)
-			self.write_queue()
+            self.write_queue()
             return item
         except KeyboardInterrupt:
             return 'QUIT'
 
     def write_queue(self):
-        f = open(self.filename, "w")
+        f = open(self.qfile, "w")
         for item in self.qlist:
             f.write(item)
         f.close();
 
     def handle(self, path):
         #if (not(path.endswith(IN_SUFFIX))):
+        print "Path changed: %s\n" % path
         if (not(os.path.basename(path) == IN_FILENAME)):
-            print "Path changed: %s\n" % path
             return
         self.qlist.append(path)
-        self.q.put(path)
-        print "Queue has %i entries." % self.q.qsize()
         self.write_queue()
+        print "Queue has %i entries." % self.q.qsize()
+        self.q.put(path)
+
+    def process_IN_CREATE(self, event):
+        print "Created: %s\n" % event.name
+        if (not(event.is_dir)):
+            print "Not a directory.\n"
+            return
+        #time.sleep(5)
+        wm.add_watch(event.name, self.emask)
+        now = time.time()
+        # check the directory for files created before "now".
+        files = os.listdir(event.name)
+        print "Now: %f" % now
+        print "Listing of directory:"
+        for f in files:
+            st = os.stat(f)
+            print "  %s: %f\n" % (f, st.st_mtime)
 
     def process_IN_CLOSE_WRITE(self, event):
         print "Closed write: %s" %  os.path.join(event.path, event.name)
-        self.handle(os.path.join(event.path, event.name));
+        #self.handle(os.path.join(event.path, event.name));
 
-    def process_IN_MOVED_TO(self, event):
-        print "Moved in: %s" %  os.path.join(event.path, event.name)
-        self.handle(os.path.join(event.path, event.name));
+    #def process_IN_MOVED_TO(self, event):
+    #    print "Moved in: %s" %  os.path.join(event.path, event.name)
+    #    self.handle(os.path.join(event.path, event.name));
 
 
 
+mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO | EventsCodes.IN_CREATE | EventsCodes.IN_MODIFY
 wm = WatchManager()
-eq = Enqueuer(queuefile)
+eq = Enqueuer(queuefile, mask)
 signal.signal(signal.SIGINT, sigint)
 notifier = ThreadedNotifier(wm, eq)
 notifier.start()
-mask = EventsCodes.IN_CLOSE_WRITE | EventsCodes.IN_MOVED_TO | EventsCodes.IN_CREATE | EventsCodes.IN_MODIFY
 cwd = os.getcwd()
 print "Watching: %s\n" % cwd
-wdd = wm.add_watch(cwd, mask, rec=True, auto_add=True)
+#wdd = wm.add_watch(cwd, mask, rec=True, auto_add=True)
+wdd = wm.add_watch(cwd, mask)
 #print "Path: %s\n" % wm.get_path(wdd);
 
 while True:
