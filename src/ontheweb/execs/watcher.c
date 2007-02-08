@@ -236,7 +236,7 @@ void child_process(int pipeout) {
 
 	loggit("Watching: %s\n", cwd);
 
-	eventmask = IN_CLOSE_WRITE | IN_CREATE | IN_MODIFY | IN_MOVED_TO | IN_DELETE_SELF;
+	eventmask = IN_CLOSE_WRITE | IN_CREATE /*| IN_MODIFY*/ | IN_MOVED_TO | IN_DELETE_SELF;
 
 	if ((wd = inotify_add_watch(info.inot, cwd, eventmask)) == -1) {
 		loggit("Failed to add watch to directory %s: %s\n", cwd, strerror(errno));
