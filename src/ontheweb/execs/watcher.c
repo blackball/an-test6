@@ -480,6 +480,14 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 	}
+	if (logfile) {
+		// redirect stdout and stderr to the log.
+		if ((dup2(fileno(flog), fileno(stdout)) == -1) ||
+			(dup2(fileno(flog), fileno(stderr)) == -1)) {
+			fprintf(stderr, "Failed to redirect stdout and stderr to log: %s\n", strerror(errno));
+			exit(-1);
+		}
+	}
 
 	if (pthread_create(&childthread, NULL, child_start_routine, thepipe)) {
 		loggit("Failed to create child process: %s\n", strerror(errno));
