@@ -29,7 +29,7 @@ include $(COMMON)/makefile.common
 include $(COMMON)/makefile.utils
 
 LDFLAGS := $(LDFLAGS_DEF)
-LDFLAGS += -lm
+LDFLAGS += -lm -lpthread
 
 CFLAGS := $(CFLAGS_DEF)
 
@@ -37,9 +37,9 @@ CFLAGS += $(ANUTILS_INC)
 
 EXECS := watcher
 
-$(ANUTILS_LIB): $(REMAKE_ANUTILS)
-
 all: $(EXECS)
+
+$(ANUTILS_LIB): $(REMAKE_ANUTILS)
 
 watcher: watcher.o \
 		$(ANUTILS_LIB)
