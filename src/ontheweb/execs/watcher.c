@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <math.h>
 #include <errno.h>
 #include <string.h>
@@ -25,35 +26,51 @@ char* blind = "blind";
 char* inputfile = "input";
 char* qfile = "queue";
 char* qtempfile = "queue.tmp";
+
+char* qpath = NULL;
+char* qtemppath = NULL;
+
+char* logfile = NULL;
 pl* q;
 pthread_mutex_t qmutex;
+FILE* flog;
+char* cwd = NULL;
+
+void loggit(const char* format, ...) {
+	va_list va;
+	va_start(va, format);
+	vfprintf(flog, format, va);
+	fflush(flog);
+	fsync(fileno(flog));
+	va_end(va);
+}
 
 void write_queue() {
 	int i;
-	FILE* fid = fopen(qtempfile, "w");
+	FILE* fid;
+	fid = fopen(qtemppath, "w");
 	if (!fid) {
-		fprintf(stderr, "Failed to open file %s: %s\n", qtempfile, strerror(errno));
+		loggit("Failed to open file %s: %s\n", qtemppath, strerror(errno));
 		return;
 	}
-	fprintf(stderr, "---- Queue contains: ----\n");
+	loggit("---- Queue contains: ----\n");
 	for (i=0; i<pl_size(q); i++) {
 		fprintf(fid, "%s\n", (char*)pl_get(q, i));
-		fprintf(stderr, "  %s\n", (char*)pl_get(q, i));
+		loggit("  %s\n", (char*)pl_get(q, i));
 	}
-	fprintf(stderr, "-------------------------\n");
-	fflush(stderr);
+	loggit("-------------------------\n");
 	if (fclose(fid)) {
-		fprintf(stderr, "Failed to close file %s: %s\n", qtempfile, strerror(errno));
+		loggit("Failed to close file %s: %s\n", qtemppath, strerror(errno));
 		return;
 	}
-	if (rename(qtempfile, qfile)) {
-		fprintf(stderr, "Failed to rename %s to %s: %s\n", qtempfile, qfile, strerror(errno));
+	if (rename(qtemppath, qpath)) {
+		loggit("Failed to rename %s to %s: %s\n", qtemppath, qpath, strerror(errno));
 	}
 }
 
 void queue_append(char* str) {
 	pthread_mutex_lock(&qmutex);
-	fprintf(stderr, "Appending %s\n", str);
+	loggit("Appending %s\n", str);
 	pl_append(q, strdup(str));
 	write_queue();
 	pthread_mutex_unlock(&qmutex);
@@ -62,7 +79,7 @@ void queue_append(char* str) {
 void queue_pop(char* str) {
 	int i;
 	pthread_mutex_lock(&qmutex);
-	fprintf(stderr, "Popping %s\n", str);
+	loggit("Popping %s\n", str);
 	for (i=0; i<pl_size(q); i++) {
 		char* s = pl_get(q, i);
 		if (!strcmp(s, str)) {
@@ -75,7 +92,6 @@ void queue_pop(char* str) {
 	pthread_mutex_unlock(&qmutex);
 }
 
-//#define PRINT_EVT(x) 	if (evt->mask & (x)) { fprintf(stderr, " " #x); }
 #define PRINT_EVT(val, tst, fid) 	if ((val) & (tst)) { fprintf(fid, " " #tst); }
 
 void print_events(FILE* fid, uint32_t val) {
@@ -116,7 +132,7 @@ void file_created(childinfo* info, struct inotify_event* evt, char* path) {
 		q_it = 1;
 	free(pathcopy);
 	if (!q_it) {
-		fprintf(stderr, "Ignoring file %s.\n", path);
+		loggit("Ignoring file %s.\n", path);
 		return;
 	}
 	queue_append(path);
@@ -131,8 +147,10 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 	char* path;
 	int i;
 
-	// Ignore writes to the queue file.
-	if (evt->len && (!strcmp(evt->name, qfile) || !strcmp(evt->name, qtempfile)))
+	// Ignore writes to the queue file and log file.
+	if (evt->len && (!strcmp(evt->name, qfile) ||
+					 !strcmp(evt->name, qtempfile) ||
+					 !strcmp(evt->name, logfile)))
 		return;
 
 	// Watch for write to the file "quit".
@@ -140,40 +158,39 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		fprintf(info->pipeout, "quit\n");
 		fflush(info->pipeout);
 		quitNow = 1;
-		printf("Child thread quitting.\n");
+		loggit("Child thread quitting.\n");
 		pthread_exit(NULL);
 	}
 
 	i = il_index_of(info->wds, evt->wd);
 	if (i == -1) {
-		fprintf(stderr, "wd %i not found.\n", evt->wd);
+		loggit("wd %i not found.\n", evt->wd);
 		return;
 	}
 	dir = pl_get(info->paths, i);
-	//fprintf(stderr, "Dir: %s\n", dir);
 
 	snprintf(buf, sizeof(buf), "%s/%s", dir, evt->name);
 	path = buf;
-	fprintf(stderr, "Path: %s\n", path);
-	fprintf(stderr, "Events:");
-	print_events(stderr, evt->mask);
-	fprintf(stderr, "\n");
+	loggit("Path: %s\n", path);
+	loggit("Events:");
+	print_events(flog, evt->mask);
+	loggit("\n");
 
 	if ((evt->mask & IN_UNMOUNT) ||
 		((evt->mask & IN_DELETE_SELF) && (evt->wd == il_get(info->wds, 0)))) {
 		// the base directory went away.
 		// NOTE, this doesn't seem to work...
-		fprintf(stderr, "Base directory went away.  Quitting.\n");
+		loggit("Base directory went away.  Quitting.\n");
 		fprintf(info->pipeout, "quit\n");
 		fflush(info->pipeout);
 		pthread_exit(NULL);
 	} else if (evt->mask & IN_DELETE_SELF) {
 		// a subdirectory we were watching was deleted.
-		fprintf(stderr, "Watched directory removed; removing watch.\n");
+		loggit("Watched directory removed; removing watch.\n");
 		inotify_rm_watch(info->inot, evt->wd);
 		i = il_index_of(info->wds, evt->wd);
 		if (i == -1) {
-			fprintf(stderr, "wd not found.\n");
+			loggit("wd not found.\n");
 		} else {
 			il_remove(info->wds, i);
 			pl_remove(info->paths, i);
@@ -183,7 +200,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		// add a watch.
 		wd = inotify_add_watch(info->inot, path, eventmask);
 		if (wd == -1) {
-			fprintf(stderr, "Failed to add watch to path %s.\n", path);
+			loggit("Failed to add watch to path %s.\n", path);
 			return;
 		}
 		il_append(info->wds, wd);
@@ -198,39 +215,31 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 void child_process(int pipeout) {
 	childinfo info;
 	char buf[1024];
-	char* cwd;
 	int wd;
 	int i;
 
-	fprintf(stderr, "Child process started.\n");
+	loggit("Child process started.\n");
 
 	info.wds = il_new(16);
 	info.paths = pl_new(16);
-	info.qfile = qfile;
+	info.qfile = qpath;
 	info.pipeout = fdopen(pipeout, "w");
 	if (!info.pipeout) {
-		fprintf(stderr, "Failed to open writing pipe: %s\n", strerror(errno));
+		loggit("Failed to open writing pipe: %s\n", strerror(errno));
 		pthread_exit(NULL);
 	}
 
 	if ((info.inot = inotify_init()) == -1) {
-		fprintf(stderr, "Failed to initialize inotify system: %s\n", strerror(errno));
+		loggit("Failed to initialize inotify system: %s\n", strerror(errno));
 		pthread_exit(NULL);
 	}
 
-	if (!getcwd(buf, sizeof(buf))) {
-		fprintf(stderr, "Failed to getcwd(): %s\n", strerror(errno));
-		pthread_exit(NULL);
-	}
-	cwd = buf;
-	fprintf(stderr, "Watching: %s\n", cwd);
+	loggit("Watching: %s\n", cwd);
 
-	eventmask = IN_CLOSE_WRITE | IN_CREATE | IN_MODIFY | IN_MOVED_TO |
-		IN_DELETE_SELF;
-	//eventmask = IN_ALL_EVENTS;
+	eventmask = IN_CLOSE_WRITE | IN_CREATE | IN_MODIFY | IN_MOVED_TO | IN_DELETE_SELF;
 
 	if ((wd = inotify_add_watch(info.inot, cwd, eventmask)) == -1) {
-		fprintf(stderr, "Failed to add watch to directory %s: %s\n", cwd, strerror(errno));
+		loggit("Failed to add watch to directory %s: %s\n", cwd, strerror(errno));
 		pthread_exit(NULL);
 	}
 	il_append(info.wds, wd);
@@ -244,11 +253,11 @@ void child_process(int pipeout) {
 			break;
 		nr = read(info.inot, buf, sizeof(buf));
 		if (!nr) {
-			fprintf(stderr, "End-of-file on inotify file.\n");
+			loggit("End-of-file on inotify file.\n");
 			break;
 		}
 		if (nr == -1) {
-			fprintf(stderr, "Error reading from inotify file: %s\n", strerror(errno));
+			loggit("Error reading from inotify file: %s\n", strerror(errno));
 			break;
 		}
 		cursor = 0;
@@ -262,7 +271,7 @@ void child_process(int pipeout) {
 	for (i=0; i<il_size(info.wds); i++) {
 		wd = il_get(info.wds, i);
 		if (inotify_rm_watch(info.inot, wd) == -1) {
-			fprintf(stderr, "Failed to remove watch: %s\n", strerror(errno));
+			loggit("Failed to remove watch: %s\n", strerror(errno));
 			pthread_exit(NULL);
 		}
 	}
@@ -273,7 +282,7 @@ void child_process(int pipeout) {
 	close(info.inot);
 	fclose(info.pipeout);
 
-	fprintf(stderr, "Child process finished.\n");
+	loggit("Child process finished.\n");
 }
 
 void* child_start_routine(void* arg) {
@@ -291,11 +300,11 @@ void run(char* path) {
 	pathcopy = strdup(path);
 	dir = dirname(pathcopy);
 	if (chdir(dir)) {
-		fprintf(stderr, "Failed to chdir to %s: %s\n", dir, strerror(errno));
+		loggit("Failed to chdir to %s: %s\n", dir, strerror(errno));
 		goto bailout;
 	}
-	if (snprintf(cmdline, sizeof(cmdline), "%s < %s", blind, path) == -1) {
-		fprintf(stderr, "Command line was too long.\n");
+	if (snprintf(cmdline, sizeof(cmdline), "%s < %s", blind, path) >= sizeof(cmdline)) {
+		loggit("Command line was too long.\n");
 		goto bailout;
 	}
 	free(pathcopy);
@@ -303,19 +312,22 @@ void run(char* path) {
 
 	ret = system(cmdline);
 	if (ret == -1) {
-		fprintf(stderr, "Failed to execute command: \"%s\": %s\n", cmdline, strerror(errno));
+		loggit("Failed to execute command: \"%s\": %s\n", cmdline, strerror(errno));
 		goto bailout;
 	}
 	if (WIFSIGNALED(ret) &&
 		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
-		fprintf(stderr, "Blind was killed.\n");
-		//quitNow = 1;
+		loggit("Blind was killed.\n");
 	} else {
 		if (WEXITSTATUS(ret) == 127) {
-			fprintf(stderr, "Blind executable not found.  Command-line: \"%s\"\n", cmdline);
+			loggit("Blind executable not found.  Command-line: \"%s\"\n", cmdline);
 		} else {
-			fprintf(stderr, "Blind return value: %i\n", WEXITSTATUS(ret));
+			loggit("Blind return value: %i\n", WEXITSTATUS(ret));
 		}
+	}
+	if (chdir("/")) {
+		loggit("Failed to chdir back to /: %s\n", strerror(errno));
+		goto bailout;
 	}
  bailout:
 	free(pathcopy);
@@ -323,11 +335,11 @@ void run(char* path) {
 
 void parent_process(int pipein) {
 	FILE* fin;
-	fprintf(stderr, "Parent process started.\n");
+	loggit("Parent process started.\n");
 	// parent:
 	fin = fdopen(pipein, "r");
 	if (!fin) {
-		fprintf(stderr, "Error fdopening the pipe: %s\n", strerror(errno));
+		loggit("Error fdopening the pipe: %s\n", strerror(errno));
 		pthread_exit(NULL);
 	}
 
@@ -338,11 +350,11 @@ void parent_process(int pipein) {
 			break;
 		if (!fgets(str, sizeof(str), fin)) {
 			if (feof(fin)) {
-				fprintf(stderr, "End of file reading from pipe.\n");
+				loggit("End of file reading from pipe.\n");
 				break;
 			}
 			if (ferror(fin)) {
-				fprintf(stderr, "Error reading from pipe: %s\n", strerror(errno));
+				loggit("Error reading from pipe: %s\n", strerror(errno));
 				break;
 			}
 			continue;
@@ -351,19 +363,18 @@ void parent_process(int pipein) {
 		if (str[strlen(str) - 1] == '\n')
 			str[strlen(str) - 1] = '\0';
 
-		printf("Got: %s\n", str);
+		loggit("Got: %s\n", str);
 		if (!strcmp(str, "quit")) {
-			printf("Parent thread quitting.\n");
+			loggit("Parent thread quitting.\n");
 			pthread_exit(NULL);
 		}
-		printf("Processing %s...\n", str);
-		//sleep(3);
+		loggit("Processing %s...\n", str);
 		run(str);
-		printf("Processed %s\n", str);
+		loggit("Processed %s\n", str);
 		queue_pop(str);
 	}
 
-	printf("Parent thread finished.\n");
+	loggit("Parent thread finished.\n");
 }
 
 void* parent_start_routine(void* arg) {
@@ -372,9 +383,16 @@ void* parent_start_routine(void* arg) {
 	return NULL;
 }
 
-const char* OPTIONS = "hD";
+const char* OPTIONS = "hDl:";
 
 void printHelp(char* progname) {
+	fprintf(stderr, "Usage:\n\n"
+			"%s [options], where options include:\n"
+			"      [D]: become a daemon; implies logging to the default\n"
+			"           file (\"watcher.log\" in the current directory)\n"
+			"           if logging is not specified with -l.\n"
+			"      [-l <logfile>]: log to the specified file.\n"
+			"\n", progname);
 }
 
 extern char *optarg;
@@ -384,11 +402,17 @@ int main(int argc, char** args) {
     int argidx, argchar;
 	int thepipe[2];
 	int be_daemon = 0;
+	char buf[1024];
+
+	flog = stderr;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
 		case 'D':
 			be_daemon = 1;
+			break;
+		case 'l':
+			logfile = optarg;
 			break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -403,6 +427,19 @@ int main(int argc, char** args) {
 		exit(-1);
     }
 
+	if (be_daemon && !logfile) {
+		logfile = "watcher.log";
+	}
+
+	if (logfile) {
+		FILE* f = fopen(logfile, "a");
+		if (!f) {
+			fprintf(stderr, "Failed to open log file %s: %s\n", logfile, strerror(errno));
+			exit(-1);
+		}
+		flog = f;
+	}
+
 	q = pl_new(16);
 	pthread_mutex_init(&qmutex, NULL);
 
@@ -411,33 +448,56 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	if (!getcwd(buf, sizeof(buf))) {
+		fprintf(stderr, "Failed to getcwd(): %s\n", strerror(errno));
+		exit(-1);
+	}
+	cwd = strdup(buf);
+
+	if (snprintf(buf, sizeof(buf), "%s/%s", cwd, qtempfile) >= sizeof(buf)) {
+		fprintf(stderr, "Path of queue temp file is too long.\n");
+		exit(-1);
+	}
+	qtemppath = strdup(buf);
+
+	if (snprintf(buf, sizeof(buf), "%s/%s", cwd, qfile) >= sizeof(buf)) {
+		fprintf(stderr, "Path of queue file is too long.\n");
+		exit(-1);
+	}
+	qpath = strdup(buf);
+
 	if (be_daemon) {
-		//pthread_detach(childthread);
-		//pthread_detach(parentthread);
-		//sleep(3);
-		printf("Becoming daemon...\n");
-		if (daemon(1, 1) == -1) {
+		fprintf(stderr, "Becoming daemon...\n");
+		if (daemon(0, 0) == -1) {
 			fprintf(stderr, "Failed to set daemon process: %s\n", strerror(errno));
 			exit(-1);
 		}
 	}
 
 	if (pthread_create(&childthread, NULL, child_start_routine, thepipe)) {
-		fprintf(stderr, "Failed to create child process: %s\n", strerror(errno));
+		loggit("Failed to create child process: %s\n", strerror(errno));
 		exit(-1);
 	}
 
 	if (pthread_create(&parentthread, NULL, parent_start_routine, thepipe)) {
-		fprintf(stderr, "Failed to create parent process: %s\n", strerror(errno));
+		loggit("Failed to create parent process: %s\n", strerror(errno));
 		exit(-1);
 	}
 
-	//else {
 	pthread_join(childthread , NULL);
 	pthread_join(parentthread, NULL);
 	pthread_mutex_destroy(&qmutex);
 	pl_free(q);
-	//}
+	free(cwd);
+	free(qpath);
+	free(qtemppath);
+
+	if (logfile) {
+		if (fclose(flog)) {
+			fprintf(stderr, "Failed to close log file: %s\n", strerror(errno));
+		}
+	}
+
 	return 0;
 }
 
