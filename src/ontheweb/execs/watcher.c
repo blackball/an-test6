@@ -45,11 +45,8 @@ void write_queue() {
 void queue_append(char* str) {
 	pthread_mutex_lock(&qmutex);
 	fprintf(stderr, "Appending %s\n", str);
-	//fprintf(stderr, "Size before: %i\n", pl_size(q));
 	pl_append(q, strdup(str));
-	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	write_queue();
-	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	pthread_mutex_unlock(&qmutex);
 }
 
@@ -57,7 +54,6 @@ void queue_pop(char* str) {
 	int i;
 	pthread_mutex_lock(&qmutex);
 	fprintf(stderr, "Popping %s\n", str);
-	//fprintf(stderr, "Size before: %i\n", pl_size(q));
 	for (i=0; i<pl_size(q); i++) {
 		char* s = pl_get(q, i);
 		if (!strcmp(s, str)) {
@@ -66,9 +62,7 @@ void queue_pop(char* str) {
 			break;
 		}
 	}
-	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	write_queue();
-	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	pthread_mutex_unlock(&qmutex);
 }
 
@@ -138,7 +132,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		fprintf(stderr, "Base directory went away.  Quitting.\n");
 		fprintf(info->pipeout, "quit\n");
 		fflush(info->pipeout);
-		exit(-1);
+		pthread_exit(NULL);
 	} else if (evt->mask & IN_DELETE_SELF) {
 		// a subdirectory we were watching was deleted.
 		fprintf(stderr, "Watched directory removed; removing watch.\n");
@@ -182,17 +176,17 @@ void child_process(int pipeout) {
 	info.pipeout = fdopen(pipeout, "w");
 	if (!info.pipeout) {
 		fprintf(stderr, "Failed to open writing pipe: %s\n", strerror(errno));
-		exit(-1);
+		pthread_exit(NULL);
 	}
 
 	if ((info.inot = inotify_init()) == -1) {
 		fprintf(stderr, "Failed to initialize inotify system: %s\n", strerror(errno));
-		exit(-1);
+		pthread_exit(NULL);
 	}
 
 	if (!getcwd(buf, sizeof(buf))) {
 		fprintf(stderr, "Failed to getcwd(): %s\n", strerror(errno));
-		exit(-1);
+		pthread_exit(NULL);
 	}
 	cwd = buf;
 	fprintf(stderr, "Watching: %s\n", cwd);
@@ -203,7 +197,7 @@ void child_process(int pipeout) {
 
 	if ((wd = inotify_add_watch(info.inot, cwd, eventmask)) == -1) {
 		fprintf(stderr, "Failed to add watch to directory %s: %s\n", cwd, strerror(errno));
-		exit(-1);
+		pthread_exit(NULL);
 	}
 	il_append(info.wds, wd);
 	pl_append(info.paths, strdup(cwd));
@@ -233,7 +227,7 @@ void child_process(int pipeout) {
 		wd = il_get(info.wds, i);
 		if (inotify_rm_watch(info.inot, wd) == -1) {
 			fprintf(stderr, "Failed to remove watch: %s\n", strerror(errno));
-			exit(-1);
+			pthread_exit(NULL);
 		}
 	}
 
