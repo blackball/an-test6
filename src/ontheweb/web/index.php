@@ -7,7 +7,7 @@ $resultdir = "/home/gmaps/ontheweb-data/";
 $indexdir = "/home/gmaps/ontheweb-indexes/";
 
 
-umask(0002);
+umask(0002); // in octal
 
 function loggit($mesg) {
 	error_log($mesg, 3, "/tmp/ontheweb.log");
