@@ -12,27 +12,26 @@
 
 #include "bl.h"
 
+pthread_t childthread;
 uint32_t eventmask;
 char* qfile = "queue";
 char* qtempfile = "queue.tmp";
-pl* volatile q;
+pl* q;
 pthread_mutex_t qmutex;
 
 void write_queue() {
 	int i;
 	FILE* fid = fopen(qtempfile, "w");
-	//pl* q = (pl*)theq;
 	if (!fid) {
 		fprintf(stderr, "Failed to open file %s: %s\n", qtempfile, strerror(errno));
 		return;
 	}
-	fprintf(stderr, "Queue contains:\n");
-	fprintf(stderr, "----\n");
+	fprintf(stderr, "---- Queue contains: ----\n");
 	for (i=0; i<pl_size(q); i++) {
 		fprintf(fid, "%s\n", (char*)pl_get(q, i));
 		fprintf(stderr, "  %s\n", (char*)pl_get(q, i));
 	}
-	fprintf(stderr, "----\n");
+	fprintf(stderr, "-------------------------\n");
 	fflush(stderr);
 	if (fclose(fid)) {
 		fprintf(stderr, "Failed to close file %s: %s\n", qtempfile, strerror(errno));
@@ -44,25 +43,21 @@ void write_queue() {
 }
 
 void queue_append(char* str) {
-	//pl* q;
 	pthread_mutex_lock(&qmutex);
-	//q = (pl*)theq;
 	fprintf(stderr, "Appending %s\n", str);
-	fprintf(stderr, "Size before: %i\n", pl_size(q));
+	//fprintf(stderr, "Size before: %i\n", pl_size(q));
 	pl_append(q, strdup(str));
-	fprintf(stderr, "Size after: %i\n", pl_size(q));
+	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	write_queue();
-	fprintf(stderr, "Size after: %i\n", pl_size(q));
+	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	pthread_mutex_unlock(&qmutex);
 }
 
 void queue_pop(char* str) {
 	int i;
-	//pl* q;
 	pthread_mutex_lock(&qmutex);
-	//q = theq;
 	fprintf(stderr, "Popping %s\n", str);
-	fprintf(stderr, "Size before: %i\n", pl_size(q));
+	//fprintf(stderr, "Size before: %i\n", pl_size(q));
 	for (i=0; i<pl_size(q); i++) {
 		char* s = pl_get(q, i);
 		if (!strcmp(s, str)) {
@@ -71,9 +66,9 @@ void queue_pop(char* str) {
 			break;
 		}
 	}
-	fprintf(stderr, "Size after: %i\n", pl_size(q));
+	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	write_queue();
-	fprintf(stderr, "Size after: %i\n", pl_size(q));
+	//fprintf(stderr, "Size after: %i\n", pl_size(q));
 	pthread_mutex_unlock(&qmutex);
 }
 
@@ -84,13 +79,14 @@ struct childinfo {
 	il* wds;
 	pl* paths;
 	char* qfile;
+	FILE* pipeout;
 };
 typedef struct childinfo childinfo;
 
 void file_created(childinfo* info, struct inotify_event* evt, char* path) {
 	queue_append(path);
-	printf("%s\n", path);
-	fflush(stdout);
+	fprintf(info->pipeout, "%s\n", path);
+	fflush(info->pipeout);
 }
 
 void handle_event(childinfo* info, struct inotify_event* evt) {
@@ -99,7 +95,6 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 	char* dir;
 	char* path;
 	int i;
-	//fprintf(stderr, "Event: %s\n", evt->name);
 
 	// Ignore writes to the queue file.
 	if (evt->len && (!strcmp(evt->name, qfile) || !strcmp(evt->name, qtempfile)))
@@ -141,8 +136,8 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		// the base directory went away.
 		// NOTE, this doesn't seem to work...
 		fprintf(stderr, "Base directory went away.  Quitting.\n");
-		printf("quit\n");
-		fflush(stdout);
+		fprintf(info->pipeout, "quit\n");
+		fflush(info->pipeout);
 		exit(-1);
 	} else if (evt->mask & IN_DELETE_SELF) {
 		// a subdirectory we were watching was deleted.
@@ -172,21 +167,23 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 	}
 }
 
-void child_process() {
+void child_process(int pipeout) {
 	childinfo info;
 	char buf[1024];
 	char* cwd;
-	//uint32_t eventmask;
 	int wd;
 	int i;
+
+	fprintf(stderr, "Child process started.\n");
 
 	info.wds = il_new(16);
 	info.paths = pl_new(16);
 	info.qfile = qfile;
-
-	fflush(NULL);
-	fprintf(stderr, "Child process started.\n");
-	fflush(NULL);
+	info.pipeout = fdopen(pipeout, "w");
+	if (!info.pipeout) {
+		fprintf(stderr, "Failed to open writing pipe: %s\n", strerror(errno));
+		exit(-1);
+	}
 
 	if ((info.inot = inotify_init()) == -1) {
 		fprintf(stderr, "Failed to initialize inotify system: %s\n", strerror(errno));
@@ -244,11 +241,17 @@ void child_process() {
 	pl_free(info.paths);
 	il_free(info.wds);
 	close(info.inot);
+	fclose(info.pipeout);
+}
+
+void* start_routine(void* arg) {
+	int* thepipe = (int*)arg;
+	child_process(thepipe[1]);
+	return NULL;
 }
 
 int main(int argc, char** args) {
 	int thepipe[2];
-	pid_t pid;
 	FILE* fin;
 
 	q = pl_new(16);
@@ -259,27 +262,12 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	if ((pid = fork()) == -1) {
-		fprintf(stderr, "Error forking: %s\n", strerror(errno));
+	if (pthread_create(&childthread, NULL, start_routine, thepipe)) {
+		fprintf(stderr, "Failed to create child process: %s\n", strerror(errno));
 		exit(-1);
-	} else if (pid == 0) {
-		// child
-		if ((dup2(thepipe[1], fileno(stdout)) == -1) ||
-			(close(thepipe[0]) == -1) ||
-			(close(thepipe[1]) == -1)) {
-			fprintf(stderr, "Error in dup2/close: %s\n", strerror(errno));
-			exit(-1);
-		}
-		child_process();
-		exit(0);
 	}
 
 	// parent:
-	if (close(thepipe[1]) == -1) {
-		fprintf(stderr, "Error closing pipe: %s\n", strerror(errno));
-		exit(-1);
-	}
-
 	fin = fdopen(thepipe[0], "r");
 	if (!fin) {
 		fprintf(stderr, "Error fdopening the pipe: %s\n", strerror(errno));
@@ -289,6 +277,7 @@ int main(int argc, char** args) {
 	for (;;) {
 		char str[1024];
 		// read a line from the pipe
+		//fprintf(stderr, "Main thread: waiting for input...\n");
 		if (!fgets(str, sizeof(str), fin)) {
 			if (feof(fin)) {
 				fprintf(stderr, "End of file reading from pipe.\n");
@@ -315,6 +304,8 @@ int main(int argc, char** args) {
 
 	pthread_mutex_destroy(&qmutex);
 	pl_free(q);
+
+	//pthread_join(&childthread);
 
 	return 0;
 }
