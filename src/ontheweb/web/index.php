@@ -141,6 +141,10 @@ if ($all_ok) {
 	$donefile = $mydir . "done";
 	$logfile = $mydir . "log";
 
+	// MAJOR HACK - pause to let the watcher notice the new directory
+	// was created.
+	sleep(1);
+
 	// Write the input file for blind...
 	$fin = fopen($inputfile, "w");
 	if (!$fin) {
@@ -199,12 +203,8 @@ if ($all_ok) {
 
 	// Redirect the client to the status script...
 	$status_url = "status.php?job=" . $myname;
-
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-	//$extra = 'mypage.php';
-	//header("Location: http://$host$uri/$extra");
-
 	header("Location: http://" . $host . $uri . "/" . $status_url);
 	
 	exit;

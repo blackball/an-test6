@@ -10,17 +10,13 @@ $check_xhtml = 1;
 Astrometry.net: Job Status
 </title>
 <style type="text/css">
-body {text-align:center;}
 table.c {margin-left:auto; margin-right:auto;}
 </style>
 </head>
 <body>
 <?php
-//$resultdir = "/h/260/dstn/local/ontheweb-results/";
-//$resultdir = "/p/learning/stars/ontheweb/";
 $resultdir = "/home/gmaps/ontheweb-data/";
 $statuspath = "status/";
-//$statuspath = "";
 $headers = $_REQUEST;
 
 if (!array_key_exists("job", $headers)) {
