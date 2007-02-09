@@ -17,7 +17,9 @@ $mydir = $resultdir . $myname . "/";
 $rp1 = realpath($resultdir);
 $rp2 = realpath($mydir);
 if (substr($rp2, 0, strlen($rp1)) != $rp1) {
-	echo "<h3>Attempted tricky \"job\" argument.  Naughty!</h3></body></html>\n";
+	echo "<h3>Attempted tricky \"job\" argument.  Naughty!</h3>";
+	echo "<pre>" . $rp1 . "\n" . $rp2 . "\n";
+	echo substr($rp2, 0, strlen($rp1)) . "\n</pre></body></html>\n";
 	exit;
 }
 
@@ -30,16 +32,24 @@ $logfile = $mydir . "log";
 $solvedfile = $mydir . "solved";
 $wcsfile = $mydir . "wcs.fits";
 
+$input_exists = file_exists($inputfile);
+$job_submitted = $input_exists;
+$job_started = file_exists($startfile);
+$job_done = file_exists($donefile);
+$job_queued = $job_submitted && !($job_started);
+
 $do_refresh = !array_key_exists("norefresh", $headers);
-if (!file_exists($inputfile)) {
+
+if (!$job_submitted) {
 	// input file not found; don't refresh.
 	$do_refresh = 0;
 }
-if (file_exists($donefile)) {
+if ($job_done) {
 	// job done; don't refresh.
 	$do_refresh = 0;
 }
 ?>
+
 <!DOCTYPE html 
      PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -51,14 +61,17 @@ Astrometry.net: Job Status
 <style type="text/css">
 table.c {margin-left:auto; margin-right:auto;}
 </style>
+
 <?php
 if ($do_refresh) {
 	echo '<meta http-equiv="refresh" content="5">';
 	// content="5; URL=html-redirect.html"
 }
 ?>
+
 </head>
 <body>
+
 <?php
 $statuspath .= $myname . "/";
 $host  = $_SERVER['HTTP_HOST'];
@@ -104,105 +117,106 @@ echo $myname
 ?>
 </td></tr>
 
-<tr><td>Submitted</td><td>
+<tr><td>Status</td><td>
 <?php
-if (file_exists($inputfile)) {
+if (!$job_submitted) {
+	echo "Not submitted";
+} else if ($job_done) {
+	echo "Finished";
+} else if ($job_started) {
+	echo "Running";
+} else if ($job_queued) {
+	echo "Submitted";
+} else {
+	echo "(unknown)";
+}
+?>
+</td></tr>
+
+<?php
+if ($job_submitted) {
+	echo '<tr><td>Submitted</td><td>';
 	$t = filemtime($inputfile);
 	$dt = dtime2str($now - $t);
 	echo $dt . " ago";
-} else {
-	echo "(job not found!)";
+	echo "</td></tr>\n";
 }
-?>
-</td></tr>
 
-<tr><td>Started</td><td>
-<?php
-if (file_exists($startfile)) {
+if ($job_started) {
+	echo '<tr><td>Started</td><td>';
 	$t = filemtime($startfile);
 	$dt = dtime2str($now - $t);
 	echo $dt . " ago";
-} else {
-	echo "(job not started)";
+	echo "</td></tr>\n";
 }
-?>
-</td></tr>
 
-<tr><td>Finished</td><td>
-<?php
-if (file_exists($donefile)) {
+if ($job_done) {
+	echo '<tr><td>Finished</td><td>';
 	$t = filemtime($donefile);
 	$dt = dtime2str($now - $t);
 	echo $dt . " ago";
-} else {
-	echo "(job not finished)";
+	echo "</td></tr>\n";
 }
-?>
-</td></tr>
 
-<tr><td>Position in Queue:</td><td>
-<?php
-$q = @file($qfile);
-$pos = -1;
-for ($i=0; $i<count($q); $i++) {
-	$entry = rtrim($q[$i]);
-	if ($entry == $myname) {
-		$pos = $i;
-		break;
+if ($job_queued) {
+	echo '<tr><td>Position in Queue:</td><td>';
+	$q = @file($qfile);
+	$pos = -1;
+	for ($i=0; $i<count($q); $i++) {
+		$entry = rtrim($q[$i]);
+		if ($entry == $myname) {
+			$pos = $i;
+			break;
+		}
 	}
-}
-if ($pos == -1) {
-	echo '(not in the queue)';
-} else {
-	echo sprintf("%d of %d", $pos+1, count($q));
-}
-?>
-</td></tr>
-
-<tr><td>Field Solved:</td><td>
-<?php
-if (file_exists($solvedfile)) {
-	$fin = fopen($solvedfile, "rb");
-	if (!$fin) {
-		echo "(failed to open file)";
+	if ($pos == -1) {
+		echo '(job not found)';
 	} else {
-		$s = '';
-		while (!feof($fin)) {
-			$rd = fread($fin, 1024);
-			if ($rd == FALSE) {
-				echo "(error reading file)";
-				break;
-			}
-			$s .= $rd;
-		}
-		//echo 'Read ' . strlen($s) . ' entries.';
-		if (ord($s[0]) == 1) {
-			echo "yes";
-		} else if (ord($s[0]) == 0) {
-			echo "no";
-		} else {
-			echo "(unexpected value " . ord($s[0]) . ")";
-		}
-		fclose($fin);
+		echo sprintf("%d of %d", $pos+1, count($q));
 	}
-} else {
-	echo "no";
+	echo "</td></tr>\n";
+}
+
+if ($job_done) {
+	echo '<tr><td>Field Solved:</td><td>';
+	if (file_exists($solvedfile)) {
+		$fin = fopen($solvedfile, "rb");
+		if (!$fin) {
+			echo "(failed to open file)";
+		} else {
+			$s = '';
+			while (!feof($fin)) {
+				$rd = fread($fin, 1024);
+				if ($rd == FALSE) {
+					echo "(error reading file)";
+					break;
+				}
+				$s .= $rd;
+			}
+			//echo 'Read ' . strlen($s) . ' entries.';
+			if (ord($s[0]) == 1) {
+				echo "yes";
+			} else if (ord($s[0]) == 0) {
+				echo "no";
+			} else {
+				echo "(unexpected value " . ord($s[0]) . ")";
+			}
+			fclose($fin);
+		}
+	} else {
+		echo "no";
+	}
+	echo "</td></tr>\n";
+
+	echo '<tr><td>WCS file:</td><td>';
+	print_link($wcsfile);
+	echo "</td></tr>\n";
+
+	echo '<tr><td>RA,DEC list:</td><td>';
+	print_link($rdlist);
+	echo "</td></tr>\n";
 }
 ?>
-</td></tr>
-
-<tr><td>WCS file:</td><td>
-<?php
-print_link($wcsfile);
-?>
-</td></tr>
-
-
-<tr><td>RA,DEC list:</td><td>
-<?php
-print_link($rdlist);
-?>
-</td></tr>
 
 <tr><td>Log file:</td><td>
 <?php
