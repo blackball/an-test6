@@ -1,6 +1,9 @@
 BASEDIR := .
 COMMON := an-common
 
+NO_QFITS := 1
+export NO_QFITS
+
 .PHONY: all
 all:
 
@@ -37,8 +40,10 @@ fits2xy: $(SIMPLEXY) $(CFITS_LIB)
 fixaxis: $(FIXAXIS) $(CFITS_LIB)
 	$(CC) -o fixaxis $^ $(LDFLAGS)
 
-simplexy_shared:
-	$(CC) -shared -o _simplexy.so $(SIMPLEXY_SHARED)
+simplexy_shared: _simplexy.so
+
+_simplexy.so: $(SIMPLEXY_SHARED)
+	$(CC) -shared -o $@ $^
 
 $(SIMPLEXY) : src/dimage.h
 
