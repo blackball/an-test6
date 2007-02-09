@@ -113,6 +113,7 @@ CustomGetTileUrl=function(a,b,c) {
 	lURL+="&WIDTH=256";
 	lURL+="&HEIGHT=256";
 	lURL+="&reaspect=false";
+	lURL+="&zoom="+document.dummyform.zoom.value;
 	//document.write(lURL + "<br/>")
 	//alert(" url is " + lURL);
 	return lURL;
