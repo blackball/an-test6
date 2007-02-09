@@ -1,5 +1,44 @@
 <?php
+$resultdir = "/home/gmaps/ontheweb-data/";
+$statuspath = "status/";
 $check_xhtml = 1;
+
+$headers = $_REQUEST;
+
+if (!array_key_exists("job", $headers)) {
+	echo "<h3>No \"job\" argument</h3></body></html>\n";
+	exit;
+}
+
+$myname = $headers["job"];
+$mydir = $resultdir . $myname . "/";
+
+// Make sure the path is legit...
+$rp1 = realpath($resultdir);
+$rp2 = realpath($mydir);
+if (substr($rp2, 0, strlen($rp1)) != $rp1) {
+	echo "<h3>Attempted tricky \"job\" argument.  Naughty!</h3></body></html>\n";
+	exit;
+}
+
+$qfile = $resultdir . "queue";
+$inputfile = $mydir . "input";
+$startfile = $mydir . "start";
+$donefile  = $mydir . "done";
+$rdlist = $mydir . "field.rd.fits";
+$logfile = $mydir . "log";
+$solvedfile = $mydir . "solved";
+$wcsfile = $mydir . "wcs.fits";
+
+$do_refresh = !array_key_exists("norefresh", $headers);
+if (!file_exists($inputfile)) {
+	// input file not found; don't refresh.
+	$do_refresh = 0;
+}
+if (file_exists($donefile)) {
+	// job done; don't refresh.
+	$do_refresh = 0;
+}
 ?>
 <!DOCTYPE html 
      PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -12,44 +51,19 @@ Astrometry.net: Job Status
 <style type="text/css">
 table.c {margin-left:auto; margin-right:auto;}
 </style>
+<?php
+if ($do_refresh) {
+	echo '<meta http-equiv="refresh" content="5">';
+	// content="5; URL=html-redirect.html"
+}
+?>
 </head>
 <body>
 <?php
-$resultdir = "/home/gmaps/ontheweb-data/";
-$statuspath = "status/";
-$headers = $_REQUEST;
-
-if (!array_key_exists("job", $headers)) {
-	echo "<h3>No \"job\" argument</h3></body></html>\n";
-	exit;
-}
-
-$myname = $headers["job"];
-
-$mydir = $resultdir . $myname . "/";
-
 $statuspath .= $myname . "/";
 $host  = $_SERVER['HTTP_HOST'];
 $uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $statusurl = "http://" . $host . $uri . "/" . $statuspath;
-
-// Make sure the path is legit...
-$rp1 = realpath($resultdir);
-$rp2 = realpath($mydir);
-if (substr($rp2, 0, strlen($rp1)) != $rp1) {
-	echo "<h3>Attempted tricky \"job\" argument.  Naughty!</h3></body></html>\n";
-	exit;
-}
-
-$qfile = $resultdir . "queue";
-
-$inputfile = $mydir . "input";
-$startfile = $mydir . "start";
-$donefile  = $mydir . "done";
-$rdlist = $mydir . "field.rd.fits";
-$logfile = $mydir . "log";
-$solvedfile = $mydir . "solved";
-$wcsfile = $mydir . "wcs.fits";
 
 $now = time();
 
