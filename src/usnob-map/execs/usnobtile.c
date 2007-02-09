@@ -277,71 +277,7 @@ int main(int argc, char *argv[]) {
 		for (y=h-1; y>=0; y--){
 			fwrite(img + y*w*3, 1, w*3, stdout);
 		}
-
-		/*
-		if (xpix0 < 0 || ypix0 < 0 || xpix1 > cols || ypix1 > rows) {
-			fprintf(stderr, "Requested pixels (%i,%i) to (%i,%i) aren't within image bounds (0,0),(%i,%i)\n",
-					xpix0, ypix0, xpix1, ypix1, cols, rows);
-			exit(-1);
-		}
-
-		outimg = malloc(3 * w * h);
-		for (y=ypix0; y<ypix1; y++) {
-			unsigned char* start = img + 3*((y * cols) + xpix0);
-			memcpy(outimg + 3*w*(y-ypix0), start, 3*w);
-		}
-
 		munmap(map, mapsize);
-
-		if (lines != 0.0) {
-			double rstart, rend, dstart, dend;
-			double r, d;
-			unsigned char linecolor[] = { 255, 0, 0 };
-			double linealpha = 0.25;
-			int c;
-			int x;
-			double x0wrap = (x0 < 0.0 ? 2.0*M_PI : 0.0);
-
-			rstart = floor(rad2deg(x0 + x0wrap) / lines) * lines;
-			rend   =  ceil(rad2deg(x1 + x0wrap) / lines) * lines;
-			dstart = floor(rad2deg(y0) / lines) * lines;
-			dend   =  ceil(rad2deg(y1) / lines) * lines;
-			for (r=rstart; r<=rend; r+=lines) {
-				int px;
-				px = (int)rint(((deg2rad(r) - (x0 + x0wrap)) / (2.0*M_PI)) * pixperx);
-				//fprintf(stderr, "RA %g: pix %i.\n", r, px);
-				if (px < 0 || px >= w)
-					continue;
-				for (y=0; y<h; y++) {
-					for (c=0; c<3; c++) {
-						int ind = 3*((y*w) + px) + c;
-						outimg[ind] = (unsigned char)(outimg[ind] * (1.0 - linealpha) + linecolor[c] * linealpha);
-					}
-				}
-			}
-			for (d=dstart; d<=dend; d+=lines) {
-				int py;
-				py = (int)rint( ((M_PI + asinh(tan(deg2rad(d)))) / (2.0*M_PI)) * pixpery) - ypix0;
-				//fprintf(stderr, "DEC %g: pix %i.\n", d, py);
-				if (py < 0 || py >= h)
-					continue;
-				for (x=0; x<w; x++) {
-					for (c=0; c<3; c++) {
-						int ind = 3*((py*w) + x) + c;
-						outimg[ind] = (unsigned char)(outimg[ind] * (1.0 - linealpha) + linecolor[c] * linealpha);
-					}
-				}
-			}
-		}
-
-		// output PPM.
-		printf("P6 %d %d %d\n", w, h, 255);
-		// flip the image vertically here at the last step.
-		for (y=h-1; y>=0; y--)
-			fwrite(outimg + y*w*3, 1, w*3, stdout);
-
-		free(outimg);
-		*/
 
 		return 0;
 	} else {
