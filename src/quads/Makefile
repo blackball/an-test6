@@ -231,6 +231,9 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
 		usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
+plotxy: plotxy.o \
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codedensity: codedensity.o codekd.o dualtree_max.o \
