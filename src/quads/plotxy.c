@@ -46,9 +46,10 @@ static void draw_circle(unsigned char* img, int W, int H,
 
 	for (ix=floor(xc - rad); ix<=ceil(xc + rad); ix++) {
 		double dy;
+		double dx = ix - xc;
 		if (ix < 0 || ix >= W)
 			continue;
-		dy = sqrt(rad*rad - ix*ix);
+		dy = sqrt(rad*rad - dx*dx);
 		iy = rint(yc + dy);
 		if (iy >= 0 && iy < H) {
 			img[iy * W + ix] = 255;
@@ -61,9 +62,10 @@ static void draw_circle(unsigned char* img, int W, int H,
 
 	for (iy=floor(yc - rad); iy<=ceil(yc + rad); iy++) {
 		double dx;
+		double dy = iy - yc;
 		if (iy < 0 || iy >= H)
 			continue;
-		dx = sqrt(rad*rad - iy*iy);
+		dx = sqrt(rad*rad - dy*dy);
 		ix = rint(xc + dx);
 		if (ix >= 0 && ix < W) {
 			img[iy * W + ix] = 255;
@@ -177,6 +179,8 @@ int main(int argc, char *args[]) {
 		H = ceil(maxY + rad);
 	}
 
+	fprintf(stderr, "Image size %i x %i.\n", W, H);
+
 	// Allocate image.
 	img = calloc(W * H, 1);
 
@@ -193,7 +197,9 @@ int main(int argc, char *args[]) {
 
 	// Write pgm img.
 	printf("P5 %d %d %d\n", W, H, 255);
-	fwrite(img, 1, W*H, stdout);
+	if (fwrite(img, 1, W*H, stdout) < W*H) {
+		fprintf(stderr, "Error writing: %s\n", strerror(errno));
+	}
 
 	free(img);
 
