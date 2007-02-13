@@ -1063,55 +1063,57 @@ int main(int argc, char** argv) {
 						exit(-1);
 					}
 				}
-				printf("Making a pass with no limit on the number of times a star can be used.\n");
-				printf("Trying %i healpixes.\n", il_size(noreuse_hps));
-				for (i=0; i<il_size(noreuse_hps); i++) {
-					double centre[3];
-					double perp1[3];
-					double perp2[3];
-					double maxdot1, maxdot2;
-					int N;
-					int hp = il_get(noreuse_hps, i);
-					if ((i * 80 / il_size(noreuse_hps)) != lastgrass) {
-						printf(".");
-						fflush(stdout);
-						lastgrass = i * 80 / il_size(noreuse_hps);
-					}
+				if (il_size(noreuse_hps)) {
+					printf("Making a pass with no limit on the number of times a star can be used.\n");
+					printf("Trying %i healpixes.\n", il_size(noreuse_hps));
+					for (i=0; i<il_size(noreuse_hps); i++) {
+						double centre[3];
+						double perp1[3];
+						double perp2[3];
+						double maxdot1, maxdot2;
+						int N;
+						int hp = il_get(noreuse_hps, i);
+						if ((i * 80 / il_size(noreuse_hps)) != lastgrass) {
+							printf(".");
+							fflush(stdout);
+							lastgrass = i * 80 / il_size(noreuse_hps);
+						}
 
-					if (!find_stars_and_vectors(hp, Nside, radius2,
-												NULL, NULL, NULL, NULL, NULL,
-												&N, centre, perp1, perp2,
-												&maxdot1, &maxdot2, 0.0, 0.0,
-												NULL, FALSE)) {
-						nfailed1++;
-						goto failedhp2;
-					}
-					if (!create_quad(stars, inds, N, circle,
-									 centre, perp1, perp2, maxdot1, maxdot2, FALSE)) {
-						nfailed2++;
-						goto failedhp2;
-					}
-					nmade++;
-					continue;
-				failedhp2:
-					if (failedrdls) {
-						double radec[2];
-						xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
-						radec[0] = rad2deg(radec[0]);
-						radec[1] = rad2deg(radec[1]);
-						if (rdlist_write_entries(failedrdls, radec, 1)) {
-							fprintf(stderr, "Failed to write failed-RDLS entries.\n");
-							exit(-1);
+						if (!find_stars_and_vectors(hp, Nside, radius2,
+													NULL, NULL, NULL, NULL, NULL,
+													&N, centre, perp1, perp2,
+													&maxdot1, &maxdot2, 0.0, 0.0,
+													NULL, FALSE)) {
+							nfailed1++;
+							goto failedhp2;
+						}
+						if (!create_quad(stars, inds, N, circle,
+										 centre, perp1, perp2, maxdot1, maxdot2, FALSE)) {
+							nfailed2++;
+							goto failedhp2;
+						}
+						nmade++;
+						continue;
+					failedhp2:
+						if (failedrdls) {
+							double radec[2];
+							xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
+							radec[0] = rad2deg(radec[0]);
+							radec[1] = rad2deg(radec[1]);
+							if (rdlist_write_entries(failedrdls, radec, 1)) {
+								fprintf(stderr, "Failed to write failed-RDLS entries.\n");
+								exit(-1);
+							}
 						}
 					}
-				}
 
-				printf("\n");
-				printf("Tried %i healpixes.\n", il_size(noreuse_hps));
-				printf("Failed at point 1: %i.\n", nfailed1);
-				printf("Failed at point 2: %i.\n", nfailed2);
-				printf("Made: %i\n", nmade);
-				il_remove_all(noreuse_hps);
+					printf("\n");
+					printf("Tried %i healpixes.\n", il_size(noreuse_hps));
+					printf("Failed at point 1: %i.\n", nfailed1);
+					printf("Failed at point 2: %i.\n", nfailed2);
+					printf("Made: %i\n", nmade);
+					il_remove_all(noreuse_hps);
+				}
 				if (failedrdls) {
 					if (rdlist_fix_field(failedrdls)) {
 						fprintf(stderr, "Failed to fix a field in failed RDLS file.\n");
