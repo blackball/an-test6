@@ -76,6 +76,7 @@ Astrometry.net: Job Status
 </title>
 <style type="text/css">
 table.c {margin-left:auto; margin-right:auto;}
+p.c {margin-left:auto; margin-right:auto; text-align:center;}
 form.c {margin-left:auto; margin-right:auto; text-align:center;}
 </style>
 
@@ -130,12 +131,15 @@ function print_link($f) {
 if ($img) {
 	echo "<h2>Source extraction:</h2>\n";
 	echo "<hr />\n";
-	echo '<p align="center"><img src="' . get_url($overlayfile) . '" /></p>';
+	echo '<p class="c"><img src="' . get_url($overlayfile) . '" ';
+	echo 'alt="Your image, overlayed with the objects extracted" /></p>';
 	echo "<hr />\n";
 	echo '<form action="status.php" method="get" class="c">';
 	echo "\n";
-	echo "<input type=\"hidden\" name=\"job\" value=\"" . $myname . "\">\n";
-	echo "<input type=\"submit\" value=\"Looks good - proceed!\">\n";
+	echo "<p class=\"c\">\n";
+	echo "<input type=\"hidden\" name=\"job\" value=\"" . $myname . "\" />\n";
+	echo "<input type=\"submit\" value=\"Looks good - proceed!\" />\n";
+	echo "</p>\n";
 	echo "</form>\n";
 	echo "<hr />\n";
 

@@ -245,7 +245,8 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 
 	$objimg = $mydir . "objs.pgm";
 	$objimg_orig = $objimg;
-	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H . " > " . $objimg;
+	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H .
+		" -x 1 -y 1 " . " > " . $objimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
