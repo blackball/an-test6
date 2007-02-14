@@ -29,6 +29,7 @@ $qfile = $resultdir . "queue";
 $inputfile = $mydir . "input";
 $startfile = $mydir . "start";
 $donefile  = $mydir . "done";
+$xylist = $mydir . "field.xy.fits";
 $rdlist = $mydir . "field.rd.fits";
 $logfile = $mydir . "log";
 $solvedfile = $mydir . "solved";
@@ -230,6 +231,12 @@ if ($job_queued) {
 	} else {
 		echo sprintf("%d of %d", $pos+1, count($q));
 	}
+	echo "</td></tr>\n";
+}
+
+if ($job_submitted && file_exists($overlayfile) && (file_exists($xylist))) {
+	echo "<tr><td>Extracted objects:</td><td>\n";
+	print_link($xylist);
 	echo "</td></tr>\n";
 }
 

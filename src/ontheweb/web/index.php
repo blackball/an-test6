@@ -17,6 +17,16 @@ function loggit($mesg) {
 	error_log($mesg, 3, "/tmp/ontheweb.log");
 }
 
+/*
+ // It appears you can't change these at runtime:
+ // upload_max_filesize  integer  
+ // post_max_size  integer  
+if (!ini_set("upload_max_filesize", $maxfilesize) ||
+	!ini_set("post_max_size", $maxfilesize + 1024*1024)) {
+	loggit("Failed to change the max uploaded file size.\n");
+}
+*/
+
 $headers = $_REQUEST;
 
 $got_imgtmpfile = array_key_exists("img_tmpfile", $headers);
@@ -25,9 +35,17 @@ if ($got_imgtmpfile) {
 	$imgtempfilename = $headers["img_tmpfile"];
 }
 $got_imgfile = array_key_exists("imgfile", $_FILES);
+loggit("got imgfile: " . $got_imgfile . "\n");
 if ($got_imgfile) {
 	$imgfile = $_FILES["imgfile"];
 	$got_imgfile = ($imgfile["error"] == 0);
+	loggit("error: " . $imgfile["error"] . "\n");
+	/*
+	if ($imgfile["error"]) {
+		phpinfo();
+		exit;
+	}
+	*/
 	if ($got_imgfile) {
 		$imgfilename = $imgfile["name"];
 		$imgtempfilename = $imgfile['tmp_name'];
@@ -45,6 +63,10 @@ if ($got_imgfile) {
 		loggit("image file: " . filesize($imgtempfilename) . " bytes.\n");
 	}
 }
+
+loggit("image orig filename: " . $imgfilename . "\n");
+loggit("image temp filename: " . $imgtempfilename . "\n");
+
 $ok_imgfile = $got_imgfile || $got_imgtmpfile;
 
 $got_fitstmpfile = array_key_exists("fits_tmpfile", $headers);
@@ -125,7 +147,8 @@ $ok_index   = array_key_exists("index"  , $headers);
 
 $tweak_val = ($ok_tweak ? $headers["tweak"] : TRUE);
 
-function convert_image($imgfilename, $imgtempfilename, $mydir) {
+function convert_image($imgfilename, $imgtempfilename, $mydir,
+					   &$errstr) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy;
@@ -147,6 +170,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	loggit("image file: " . $imgfilename . ", using type: " . $usetype . "\n");
 	if (!strlen($usetype)) {
 		loggit("unknown image file type.\n");
+		$errstr = "Unknown image file type.";
 		return FALSE;
 	}
 
@@ -154,14 +178,14 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$newname = $img;
 	loggit("renaming temp uploaded file " . $imgtempfilename . " to " . $newname . ".\n");
 	if (!rename($imgtempfilename, $newname)) {
-		echo "<html><body><h3>Failed to move temp file from " . $imgtempfilename . " to " . $newname . "</h3></body></html>";
-		exit;
+		$errstr = "Failed to move temp file from \"" . $imgtempfilename . "\" to \"" . $newname . "\"";
+		return FALSE;
 	}
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
 	if (!chmod($newname, 0664)) {
-		echo "<html><body><h3>Failed to chmod file " . $newname . "</h3></body></html>";
-		exit;
+		$errstr = "Failed to chmod file " . $newname;
+		return FALSE;
 	}
 
 	$pnmimg = $mydir . "image.pnm";
@@ -172,6 +196,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to convert image file.";
 		return FALSE;
 	}
 
@@ -179,17 +204,10 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = shell_exec($cmd);
-	/*
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		return FALSE;
-	}
-	*/
 	loggit("Pnmfile: " . $res . "\n");
 
 	$ss = strstr($res, "PPM");
 	loggit("strstr: " . $ss . "\n");
-	//if (!strstr($res, "PPM")) {
 	if (strlen($ss)) {
 		// reduce to PGM.
 		$pgmimg = $mydir . "image.pgm";
@@ -199,6 +217,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 		$res = system($cmd, $retval);
 		if ($retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to reduce image to grayscale.";
 			return FALSE;
 		}
 		$pnmimg = $pgmimg;
@@ -211,6 +230,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to convert image to FITS.";
 		return FALSE;
 	}
 
@@ -221,6 +241,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to perform source extraction.";
 		return FALSE;
 	}
 	$xylist = $mydir . "field.xy.fits";
@@ -228,14 +249,6 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
 	loggit("Command: " . $cmd . "\n");
 	$W = (int)rtrim(shell_exec($cmd));
-	/*
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		return FALSE;
-	}
-	*/
 	loggit("naxis1 = " . $W . "\n");
 
 	$cmd = $modhead . " " . $fitsimg . " NAXIS2 | awk '{print $3}'";
@@ -252,6 +265,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to plot extracted sources.";
 		return FALSE;
 	}
 
@@ -262,6 +276,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to create image of extracted sources.";
 		return FALSE;
 	}
 	$objimg = $redimg;
@@ -274,6 +289,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to composite image of extracted sources.";
 		return FALSE;
 	}
 
@@ -284,6 +300,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$res = system($cmd, $retval);
 	if ($retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to convert composite image of extracted sources to PNG.";
 		return FALSE;
 	}
 
@@ -322,7 +339,9 @@ if ($all_ok) {
 	// If an image was uploaded, move it into place, and run object
 	// extraction on it.
 	if ($ok_imgfile) {
-		if (!convert_image($imgfilename, $imgtempfilename, $mydir)) {
+		$errstr = "";
+		if (!convert_image($imgfilename, $imgtempfilename, $mydir, $errstr)) {
+			echo "<html><body><h3>" . $errstr . "</h3></body></html>\n";
 			exit;
 		}
 	} else {
