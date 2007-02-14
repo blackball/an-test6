@@ -35,9 +35,14 @@ $solvedfile = $mydir . "solved";
 $wcsfile = $mydir . "wcs.fits";
 $overlayfile = $mydir . "objs.png";
 
-// FIXME - implement here!
-if (!$img) {
-	// if the file "input.tmp" exists but "input" doesn't, then rename it!
+if (!$img && !file_exists($inputfile) && file_exists($inputfile . ".tmp")) {
+	// Rename it...
+	if (!rename($inputfile . ".tmp", $inputfile)) {
+		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
+		exit;
+	}
+	// Hack - pause a moment...
+	sleep(1);
 }
 
 $input_exists = file_exists($inputfile);
@@ -71,7 +76,7 @@ Astrometry.net: Job Status
 </title>
 <style type="text/css">
 table.c {margin-left:auto; margin-right:auto;}
-table.c {margin-left:auto; margin-right:auto;}
+form.c {margin-left:auto; margin-right:auto; text-align:center;}
 </style>
 
 <?php
@@ -127,14 +132,25 @@ if ($img) {
 	echo "<hr />\n";
 	echo '<p align="center"><img src="' . get_url($overlayfile) . '" /></p>';
 	echo "<hr />\n";
-	echo "<p align=\"center\">\n";
-	echo '<form action="status.php" method="get">';
+	echo '<form action="status.php" method="get" class="c">';
 	echo "\n";
 	echo "<input type=\"hidden\" name=\"job\" value=\"" . $myname . "\">\n";
-	echo "<input type=\"submit\" value=\"Looks good!\">\n";
-	echo "</form></p>\n";
+	echo "<input type=\"submit\" value=\"Looks good - proceed!\">\n";
+	echo "</form>\n";
 	echo "<hr />\n";
+
+	if ($check_xhtml) {
+		print <<<END
+			<p>
+			<a href="http://validator.w3.org/check?uri=referer"><img
+			src="http://www.w3.org/Icons/valid-xhtml10"
+			alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+			</p>
+END;
+	}
+
 	echo "</body></html>\n";
+
 	exit;
 }
 ?>

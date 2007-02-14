@@ -6,7 +6,7 @@ $fits2xy = "/home/gmaps/simplexy/fits2xy";
 $plotxy = "/home/gmaps/quads/plotxy";
 $modhead = "/home/gmaps/quads/modhead";
 
-$maxfilesize = 10*1024*1024;
+$maxfilesize = 100*1024*1024;
 
 $check_xhtml = 1;
 $debug = 0;
@@ -244,6 +244,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	loggit("naxis2 = " . $H . "\n");
 
 	$objimg = $mydir . "objs.pgm";
+	$objimg_orig = $objimg;
 	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H . " > " . $objimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
@@ -265,7 +266,8 @@ function convert_image($imgfilename, $imgtempfilename, $mydir) {
 	$objimg = $redimg;
 
 	$sumimg = $mydir . "sum.ppm";
-	$cmd = "pnmarith -max " . $objimg . " " . $pnmimg_orig . " > " . $sumimg;
+	//$cmd = "pnmarith -max " . $objimg . " " . $pnmimg_orig . " > " . $sumimg;
+	$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " . $pnmimg_orig . " " . $sumimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
@@ -464,7 +466,7 @@ input.redinput {
 
 <?php
 if ($debug) {
-	phpinfo();
+	//phpinfo();
 
 	printf("<table border=\"1\">\n");
 	printf("<tr><th>Header</th><th>Value</th></tr>\n");
@@ -473,9 +475,9 @@ if ($debug) {
 	}
 	printf("</table>\n");
 
-	echo '<hr /><p><pre>';
+	echo '<hr /><pre>';
 	print_r($_FILES);
-	echo '</pre></p>';
+	echo '</pre>';
 
 	echo "<hr /><p>";
 	echo "got_fitsfile = " . $got_fitsfile . "<br />";
@@ -500,21 +502,39 @@ Astrometry.net: Web Edition
 
 <form id="blindform" action="index.php" method="post" enctype="multipart/form-data">
 
+<p>
+Field to solve: upload one of the following:
+</p>
+<ul>
+<li>
+
+<p>
 <?php
 $fitsfile_ok = $ok_fitsfile && $ok_x_col && $ok_y_col;
-if (!$fitsfile_ok) {
+$file_ok = $ok_imgfile || $fitsfile_ok;
+
+if (!$file_ok) {
     echo $redfont_open;
 }
 ?>
-
-<p>
 FITS file containing a table of detected objects, sorted by
 brightest objects first
-</p>
 <?php
-if (!$fitsfile_ok) {
+if (!$file_ok) {
     echo $redfont_close;
 }
+?>
+</p>
+
+<?php
+/*
+echo "<p>ok_fitsfile: " . $ok_fitsfile . "</p>\n";
+echo "<p>ok_imgfile: " . $ok_imgfile . "</p>\n";
+echo "<p>ok_x_col: " . $ok_x_col . "</p>\n";
+echo "<p>ok_y_col: " . $ok_y_col . "</p>\n";
+echo "<p>fitsfile_ok: " . $fitsfile_ok . "</p>\n";
+echo "<p>file_ok: " . $file_ok . "</p>\n";
+*/
 ?>
 
 <ul>
@@ -527,32 +547,47 @@ if ($ok_fitsfile) {
 }
 printf('<input type="hidden" name="MAX_FILE_SIZE" value="%d" />', $maxfilesize);
 echo '<input type="file" name="fitsfile" size="30"';
-if (!$fitsfile_ok) {
+if (!$file_ok && !$ok_fitsfile) {
     echo $redinput;
 }
-echo " /></li>\n";
+echo " />\n";
+echo "</li>\n";
 echo "\n";
 ?>
 
 <?php
 printf('<li>X column name: <input type="text" name="x_col" value="%s" size="10"%s /></li>',
 	   $x_col_val,
-       ($ok_x_col ? "" : ' class="redinput"'));
+       ($file_ok || $ok_x_col ? "" : ' class="redinput"'));
 echo "\n";
 printf('<li>Y column name: <input type="text" name="y_col" value="%s" size="10"%s /></li>',
 	   $y_col_val,
-       ($ok_y_col ? "" : ' class="redinput"'));
+       ($file_ok || $ok_y_col ? "" : ' class="redinput"'));
 ?>
 
 </ul>
 
+</li>
+
+<li>
 <p>
 Image file:
 <?php
+if ($ok_imgfile) {
+	echo 'using <input type="input" name="img_filename" readonly value="' . $imgfilename . '" />';
+	echo '<input type="hidden" name="img_tmpfile" value="' . $imgtempfilename . '">';
+	echo ' or replace:';
+}
 printf('<input type="hidden" name="MAX_FILE_SIZE" value="%d" />', $maxfilesize);
+echo '<input type="file" name="imgfile" size="30"';
+if (!$ok_imgfile && !($ok_fitsfile && $ok_x_col && $ok_y_col)) {
+    echo $redinput;
+}
+echo " />\n";
 ?>
-<input type="file" name="imgfile" size="30">
 </p>
+</li>
+</ul>
 
 <p>
 <?php
@@ -729,6 +764,11 @@ Tweak (fine-tune the WCS by computing polynomial SIP distortion)
 
 </form>
 
+<?php
+echo "<hr /><p>Note, there is a file size limit of ";
+printf("%d", $maxfilesize / (1024*1024));
+echo " MB.  Your browser may fail silently if you try to upload a file that exceeds this.)</p>\n";
+?>
 
 <hr />
 
