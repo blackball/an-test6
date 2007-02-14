@@ -145,6 +145,7 @@ $ok_tweak   = array_key_exists("tweak"  , $headers);
 $ok_index   = array_key_exists("index"  , $headers);
 
 $tweak_val = ($ok_tweak ? $headers["tweak"] : TRUE);
+$parity_val = (array_key_exists("parity", $headers) && $headers["parity"] == "1") ? 1 : 0;
 
 function convert_image($imgfilename, $imgtempfilename, $mydir,
 					   &$errstr) {
@@ -249,7 +250,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 	// sort by FLUX.
 	$tabsortout = $mydir . "tabsort.out";
 	$sortedlist = $mydir . "field.xy.fits";
-	$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d";
+	$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
@@ -429,7 +430,7 @@ if ($all_ok) {
 			"sdepth 0\n" .
 			//"depth 100\n" .
 			"depth 60\n" .
-			"parity 0\n" .
+			"parity " . $parity_val . "\n" .
 			"fieldunits_lower " . $fu_lower . "\n" .
 			"fieldunits_upper " . $fu_upper . "\n" .
 			"tol " . $headers["codetol"] . "\n" .
@@ -626,6 +627,23 @@ echo " />\n";
 </ul>
 
 <p>
+<input type="radio" name="parity" value="0" 
+<?php
+if (!$parity_val) {
+	echo 'checked="checked"';
+}
+?>
+/>"Right-handed" image: North-Up, East-Right <br />
+<input type="radio" name="parity" value="1" 
+<?php
+if ($parity_val) {
+	echo 'checked="checked"';
+}
+?>
+/>"Left-handed" image: North-Up, West-Right
+</p>
+
+<p>
 <?php
 $bounds_ok = $ok_fu_lower && $ok_fu_upper;
 if (!$bounds_ok) {
@@ -803,7 +821,7 @@ Tweak (fine-tune the WCS by computing polynomial SIP distortion)
 <?php
 echo "<hr /><p>Note, there is a file size limit of ";
 printf("%d", $maxfilesize / (1024*1024));
-echo " MB.  Your browser may fail silently if you try to upload a file that exceeds this.)</p>\n";
+echo " MB.  Your browser may fail silently if you try to upload a file that exceeds this.</p>\n";
 ?>
 
 <hr />
