@@ -122,7 +122,8 @@ int main(int argc, char *argv[]) {
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int w=0, h=0;
 
-	char* map_template = "/home/gmaps/usnob-images/maps/diced/usnob-zoom%i_%02i_%02i.ppm";
+	char* map_template = "/home/gmaps/usnob-images/maps/diced/usnob-zoom%i_%02i_%02i.png";
+	
 
 	char* merc_template = "/home/gmaps/usnob-images/merc/merc_hp%03i.fits";
 	char fn[256];
@@ -236,48 +237,17 @@ int main(int argc, char *argv[]) {
 
 	if (!forcetree && (zoomlevel <= 5)) {
 		char fn[256];
-		FILE* fin;
-		int rows, cols, format;
-		pixval maxval;
-		off_t imgstart;
-		unsigned char* map;
-		size_t mapsize;
-		unsigned char* img;
-		int y;
-		unsigned char* outimg;
+		int c;
 
+		// set filename so that correct tile is returned
 		sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
+
 		fprintf(stderr, "Loading image from file %s.\n", fn);
-		fin = pm_openr_seekable(fn);
-		ppm_readppminit(fin, &cols, &rows, &maxval, &format);
+		FILE *fp = fopen(fn, "r");
 
-
-		// CHECK FILE FORMAT INFORMATION
-		if (PNM_FORMAT_TYPE(format) != PPM_TYPE) {
-			fprintf(stderr, "Map file must be PPM.\n");
-			exit(-1);
-		}
-		if (maxval != 255) {
-			fprintf(stderr, "Error: PPM maxval %i (not 255).\n", maxval);
-			exit(-1);
-		}
-		imgstart = ftello(fin);
-		mapsize = cols * rows * 3;
-		map = mmap(NULL, mapsize, PROT_READ, MAP_PRIVATE, fileno(fin), 0);
-		if (map == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap image file.\n");
-			exit(-1);
-		}
-
-		// pts to the the image (after the headers)
-		img = map + imgstart;
-
-		// output PPM.
-		printf("P6 %d %d %d\n", w, h, 255);
-		for (y=h-1; y>=0; y--){
-			fwrite(img + y*w*3, 1, w*3, stdout);
-		}
-		munmap(map, mapsize);
+		// write file to stdout
+		while ((c = fgetc(fp)) != EOF)
+			putchar(c);
 
 		return 0;
 	} else {

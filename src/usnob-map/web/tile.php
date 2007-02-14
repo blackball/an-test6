@@ -1,11 +1,11 @@
 <?php
 	function loggit($mesg) {
-		error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
+		error_log($mesg, 3, "/home/gmaps/usnob-sandbox/usnob.log");
 	}
 
-
-	$path = "/home/gmaps/usnob-map/execs/";
-
+	// CSTUMM BEGIN
+	$path = "/home/gmaps/usnob-sandbox/execs/";
+	// CSTUMM END
 
 	header("Content-type: image/png");
 	// DEBUG
@@ -25,7 +25,7 @@
 	   loggit("  $header: $value\n");
 	}
 	
-	$needed = array("WIDTH", "HEIGHT", "SRS", "BBOX");
+	$needed = array("WIDTH", "HEIGHT", "SRS", "BBOX", "zoom");
 	foreach ($needed as $n => $val) {
 		if (!array_key_exists($val, $_REQUEST)) {
 			loggit("Request doesn't contain $val.\n");
@@ -41,6 +41,7 @@
 	$epsg = $_REQUEST["SRS"];
 	$lay = $_REQUEST["LAYERS"];
 	$map = $_REQUEST["map"];
+	$zoom = $_REQUEST["zoom"];
 
 	$sdss_file  = $_REQUEST["SDSS_FILE"];
 	$sdss_field = $_REQUEST["SDSS_FIELD"];
@@ -167,12 +168,16 @@
 	}
 	$cmd = $path . $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 	//$cmd = $cmd . $layerscmd;
-	$cmd = $cmd . " | pnmtopng";
 
-	if ($transparent) {
-		// NOTE, that space between "-transparent" and "=black" is supposed
-		// to be there!
-		$cmd = $cmd . " -transparent =black";
+	// for images that are not pre-rendered
+	if($zoom>4){
+		$cmd = $cmd . " | pnmtopng";
+
+		if ($transparent) {
+			// NOTE, that space between "-transparent" and "=black" is supposed
+			// to be there!
+			$cmd = $cmd . " -transparent =black";
+		}
 	}
 
 	loggit("Command: $cmd\n");
