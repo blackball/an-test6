@@ -5,6 +5,7 @@ $indexdir = "/home/gmaps/ontheweb-indexes/";
 $fits2xy = "/home/gmaps/simplexy/fits2xy";
 $plotxy = "/home/gmaps/quads/plotxy";
 $modhead = "/home/gmaps/quads/modhead";
+$tabsort = "/home/gmaps/quads/tabsort";
 
 $maxfilesize = 100*1024*1024;
 
@@ -19,8 +20,6 @@ function loggit($mesg) {
 
 /*
  // It appears you can't change these at runtime:
- // upload_max_filesize  integer  
- // post_max_size  integer  
 if (!ini_set("upload_max_filesize", $maxfilesize) ||
 	!ini_set("post_max_size", $maxfilesize + 1024*1024)) {
 	loggit("Failed to change the max uploaded file size.\n");
@@ -152,6 +151,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 	global $fits2xy;
 	global $modhead;
 	global $plotxy;
+	global $tabsort;
 
 	// try to figure out what kind of file it is...
 	// use Xtopnm:
@@ -223,7 +223,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 		$pnmimg = $pgmimg;
 	}
 
-	$fitsimg = $mydir . "field.fits";
+	$fitsimg = $mydir . "image.fits";
 	$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
@@ -244,7 +244,21 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 		$errstr = "Failed to perform source extraction.";
 		return FALSE;
 	}
-	$xylist = $mydir . "field.xy.fits";
+	$xylist = $mydir . "image.xy.fits";
+
+	// sort by FLUX.
+	$tabsortout = $mydir . "tabsort.out";
+	$sortedlist = $mydir . "field.xy.fits";
+	$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d";
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to perform source extraction.";
+		return FALSE;
+	}
+	$xylist = $sortedlist;
 
 	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
 	loggit("Command: " . $cmd . "\n");
@@ -384,11 +398,13 @@ if ($all_ok) {
 		exit;
 	}
 
+
 	for ($i=0; $i<12; $i++) {
 		$sdssfiles[$i] = sprintf("sdss-24/sdss-24-%02d", $i);
 	}
 
 	$indexmap = array("sdss-24" => $sdssfiles,
+					  "sdss-23" => array("sdss-23/sdss-23-allsky"),
 					  "marshall-30" => array("marshall-30/marshall-30c"));
 
 	$indexes = $indexmap[$headers["index"]];
@@ -652,7 +668,7 @@ Index to use:
 
 <?php
 $vals = array(array("marshall-30", "Wide-Field Digital Camera"),
-              array("sdss-24", "SDSS: Sloan Digital Sky Survey"));
+              array("sdss-23", "SDSS: Sloan Digital Sky Survey"));
 if ($ok_index) {
     $sel = $headers["index"];
 } else {
