@@ -13,6 +13,8 @@ if (!array_key_exists("job", $headers)) {
 $myname = $headers["job"];
 $mydir = $resultdir . $myname . "/";
 
+$img = array_key_exists("img", $headers);
+
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
 $rp2 = realpath($mydir);
@@ -31,6 +33,12 @@ $rdlist = $mydir . "field.rd.fits";
 $logfile = $mydir . "log";
 $solvedfile = $mydir . "solved";
 $wcsfile = $mydir . "wcs.fits";
+$overlayfile = $mydir . "objs.png";
+
+// FIXME - implement here!
+if (!$img) {
+	// if the file "input.tmp" exists but "input" doesn't, then rename it!
+}
 
 $input_exists = file_exists($inputfile);
 $job_submitted = $input_exists;
@@ -48,6 +56,9 @@ if ($job_done) {
 	// job done; don't refresh.
 	$do_refresh = 0;
 }
+if ($img) {
+	$do_refresh = 0;
+}
 ?>
 
 <!DOCTYPE html 
@@ -60,6 +71,7 @@ Astrometry.net: Job Status
 </title>
 <style type="text/css">
 table.c {margin-left:auto; margin-right:auto;}
+table.c {margin-left:auto; margin-right:auto;}
 </style>
 
 <?php
@@ -71,6 +83,7 @@ if ($do_refresh) {
 
 </head>
 <body>
+
 
 <?php
 $statuspath .= $myname . "/";
@@ -92,14 +105,37 @@ function dtime2str($secs) {
 	}
 }
 
-function print_link($f) {
+function get_url($f) {
 	global $statusurl;
+	return $statusurl . basename($f);
+}
+
+function print_link($f) {
 	if (file_exists($f)) {
-		echo "<a href=" . $statusurl . basename($f) . ">" .
+		$url = get_url($f);
+		echo "<a href=" . $url . ">" .
 			basename($f) . "</a>";
 	} else {
 		echo "(not available)";
 	}
+}
+?>
+
+<?php
+if ($img) {
+	echo "<h2>Source extraction:</h2>\n";
+	echo "<hr />\n";
+	echo '<p align="center"><img src="' . get_url($overlayfile) . '" /></p>';
+	echo "<hr />\n";
+	echo "<p align=\"center\">\n";
+	echo '<form action="status.php" method="get">';
+	echo "\n";
+	echo "<input type=\"hidden\" name=\"job\" value=\"" . $myname . "\">\n";
+	echo "<input type=\"submit\" value=\"Looks good!\">\n";
+	echo "</form></p>\n";
+	echo "<hr />\n";
+	echo "</body></html>\n";
+	exit;
 }
 ?>
 

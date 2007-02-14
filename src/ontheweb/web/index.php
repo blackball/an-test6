@@ -2,6 +2,9 @@
 
 $resultdir = "/home/gmaps/ontheweb-data/";
 $indexdir = "/home/gmaps/ontheweb-indexes/";
+$fits2xy = "/home/gmaps/simplexy/fits2xy";
+$plotxy = "/home/gmaps/quads/plotxy";
+$modhead = "/home/gmaps/quads/modhead";
 
 $maxfilesize = 10*1024*1024;
 
@@ -15,6 +18,34 @@ function loggit($mesg) {
 }
 
 $headers = $_REQUEST;
+
+$got_imgtmpfile = array_key_exists("img_tmpfile", $headers);
+if ($got_imgtmpfile) {
+	$imgfilename = $headers["img_filename"];
+	$imgtempfilename = $headers["img_tmpfile"];
+}
+$got_imgfile = array_key_exists("imgfile", $_FILES);
+if ($got_imgfile) {
+	$imgfile = $_FILES["imgfile"];
+	$got_imgfile = ($imgfile["error"] == 0);
+	if ($got_imgfile) {
+		$imgfilename = $imgfile["name"];
+		$imgtempfilename = $imgfile['tmp_name'];
+		loggit("image temp file: " . filesize($imgtempfilename) . " bytes.\n");
+
+		// Move the file right away, because otherwise it gets
+		// deleted when this form completes.
+		$newname = $imgtempfilename . ".tmp";
+		if (!move_uploaded_file($imgtempfilename, $newname)) {
+			echo "<html><body><h3>Failed to move temp file from " . $imgtempfilename . " to " . $newname . "</h3></body></html>";
+			exit;
+		}
+		loggit("moved uploaded file " . $imgtempfilename . " to " . $newname . ".\n");
+		$imgtempfilename = $newname;
+		loggit("image file: " . filesize($imgtempfilename) . " bytes.\n");
+	}
+}
+$ok_imgfile = $got_imgfile || $got_imgtmpfile;
 
 $got_fitstmpfile = array_key_exists("fits_tmpfile", $headers);
 if ($got_fitstmpfile) {
@@ -41,6 +72,8 @@ if ($got_fitsfile) {
 	}
 }
 $ok_fitsfile = $got_fitsfile || $got_fitstmpfile;
+
+$ok_file = $ok_fitsfile || $ok_imgfile;
 
 $exist_x_col = array_key_exists("x_col", $headers);
 $ok_x_col = (!$exist_x_col) || ($exist_x_col && (strlen($headers["x_col"]) > 0));
@@ -92,7 +125,169 @@ $ok_index   = array_key_exists("index"  , $headers);
 
 $tweak_val = ($ok_tweak ? $headers["tweak"] : TRUE);
 
-$all_ok = $ok_fitsfile && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree & $ok_tweak;
+function convert_image($imgfilename, $imgtempfilename, $mydir) {
+	global $fits2xy;
+	global $modhead;
+	global $plotxy;
+
+	// try to figure out what kind of file it is...
+	// use Xtopnm:
+	$typemap = array("jpg" => "jpeg",
+					 "jpeg" => "jpeg",
+					 "png" => "png",
+					 "fits" => "fits",
+					 "gif" => "gif");
+	$usetype = "";
+	foreach ($typemap as $ending => $type) {
+		if (!strcasecmp(substr($imgfilename, -strlen($ending)), $ending)) {
+			$usetype = $type;
+			break;
+		}
+	}
+	loggit("image file: " . $imgfilename . ", using type: " . $usetype . "\n");
+	if (!strlen($usetype)) {
+		loggit("unknown image file type.\n");
+		return FALSE;
+	}
+
+	$img = $mydir . "image." . $usetype;
+	$newname = $img;
+	loggit("renaming temp uploaded file " . $imgtempfilename . " to " . $newname . ".\n");
+	if (!rename($imgtempfilename, $newname)) {
+		echo "<html><body><h3>Failed to move temp file from " . $imgtempfilename . " to " . $newname . "</h3></body></html>";
+		exit;
+	}
+	loggit("image file: " . filesize($img) . " bytes.\n");
+
+	if (!chmod($newname, 0664)) {
+		echo "<html><body><h3>Failed to chmod file " . $newname . "</h3></body></html>";
+		exit;
+	}
+
+	$pnmimg = $mydir . "image.pnm";
+	$pnmimg_orig = $pnmimg;
+	$cmd = $usetype . "topnm " . $img . " > " . $pnmimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+
+	$cmd = "pnmfile " . $pnmimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = shell_exec($cmd);
+	/*
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+	*/
+	loggit("Pnmfile: " . $res . "\n");
+
+	$ss = strstr($res, "PPM");
+	loggit("strstr: " . $ss . "\n");
+	//if (!strstr($res, "PPM")) {
+	if (strlen($ss)) {
+		// reduce to PGM.
+		$pgmimg = $mydir . "image.pgm";
+		$cmd = "ppmtopgm " . $pnmimg . " > " . $pgmimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = FALSE;
+		$res = system($cmd, $retval);
+		if ($retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			return FALSE;
+		}
+		$pnmimg = $pgmimg;
+	}
+
+	$fitsimg = $mydir . "field.fits";
+	$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+
+	$fits2xyout = $mydir . "fits2xy.out";
+	$cmd = $fits2xy . " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+	$xylist = $mydir . "field.xy.fits";
+
+	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
+	loggit("Command: " . $cmd . "\n");
+	$W = (int)rtrim(shell_exec($cmd));
+	/*
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+	*/
+	loggit("naxis1 = " . $W . "\n");
+
+	$cmd = $modhead . " " . $fitsimg . " NAXIS2 | awk '{print $3}'";
+	loggit("Command: " . $cmd . "\n");
+	$H = (int)rtrim(shell_exec($cmd));
+	loggit("naxis2 = " . $H . "\n");
+
+	$objimg = $mydir . "objs.pgm";
+	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H . " > " . $objimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+
+	$redimg = $mydir . "red.pgm";
+	$cmd = "pgmtoppm red " . $objimg . " > " . $redimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+	$objimg = $redimg;
+
+	$sumimg = $mydir . "sum.ppm";
+	$cmd = "pnmarith -max " . $objimg . " " . $pnmimg_orig . " > " . $sumimg;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+
+	$sumimgpng = $mydir . "objs.png";
+	$cmd = "pnmtopng " . $sumimg . " > " . $sumimgpng;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+$all_ok = $ok_file && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree & $ok_tweak;
 if ($all_ok) {
     // Launch!
 
@@ -119,17 +314,26 @@ if ($all_ok) {
 	}
 	$mydir = $mydir . "/";
 
-	// Move the xylist into place...
 	$xylist = $mydir . "field.xy"; // .fits
-	$newname = $xylist . ".fits";
-	loggit("renaming temp uploaded file " . $fitstempfilename . " to " . $newname . ".\n");
-	if (!rename($fitstempfilename, $newname)) {
-		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
-		exit;
-	}
-	if (!chmod($xylist . ".fits", 0664)) {
-		echo "<html><body><h3>Failed to chmod xylist " . $xylist . "</h3></body></html>";
-		exit;
+
+	// If an image was uploaded, move it into place, and run object
+	// extraction on it.
+	if ($ok_imgfile) {
+		if (!convert_image($imgfilename, $imgtempfilename, $mydir)) {
+			exit;
+		}
+	} else {
+		// Move the xylist into place...
+		$newname = $xylist . ".fits";
+		loggit("renaming temp uploaded file " . $fitstempfilename . " to " . $newname . ".\n");
+		if (!rename($fitstempfilename, $newname)) {
+			echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
+			exit;
+		}
+		if (!chmod($xylist . ".fits", 0664)) {
+			echo "<html><body><h3>Failed to chmod xylist " . $xylist . "</h3></body></html>";
+			exit;
+		}
 	}
 
 	$rdlist = $mydir . "field.rd.fits";
@@ -140,6 +344,12 @@ if ($all_ok) {
 	$startfile = $mydir . "start";
 	$donefile = $mydir . "done";
 	$logfile = $mydir . "log";
+
+	if ($ok_imgfile) {
+		// Write to "input.tmp" instead of "input", so we don't trigger
+		// the solver just yet...
+		$inputfile = $inputfile . ".tmp";
+	}
 
 	// MAJOR HACK - pause to let the watcher notice the new directory
 	// was created.
@@ -203,6 +413,9 @@ if ($all_ok) {
 
 	// Redirect the client to the status script...
 	$status_url = "status.php?job=" . $myname;
+	if ($ok_imgfile) {
+		$status_url .= "&img";
+	}
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	header("Location: http://" . $host . $uri . "/" . $status_url);
@@ -214,13 +427,13 @@ if ($all_ok) {
 // first time the page has been loaded.
 $newform = (count($headers) == 0);
 if ($newform) {
-     $redinput = "";
-     $redfont_open   = "";
-     $redfont_close  = "";
+	$redinput = "";
+	$redfont_open   = "";
+	$redfont_close  = "";
 } else {
-     $redinput = ' class="redinput"';
-     $redfont_open   = '<font color="red">';
-     $redfont_close  = "</font>";
+	$redinput = ' class="redinput"';
+	$redfont_open   = '<font color="red">';
+	$redfont_close  = "</font>";
 }
 ?>
 
@@ -229,8 +442,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
 ?>
 
 <!DOCTYPE html 
-     PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <title>
@@ -239,7 +452,7 @@ Astrometry.net: Web Edition
 <style type="text/css">
 <!-- 
 input.redinput {
-background-color: pink;
+	background-color: pink;
 }
 -->
 </style>
@@ -251,6 +464,8 @@ background-color: pink;
 
 <?php
 if ($debug) {
+	phpinfo();
+
 	printf("<table border=\"1\">\n");
 	printf("<tr><th>Header</th><th>Value</th></tr>\n");
 	foreach ($headers as $header => $value) {
@@ -330,6 +545,14 @@ printf('<li>Y column name: <input type="text" name="y_col" value="%s" size="10"%
 ?>
 
 </ul>
+
+<p>
+Image file:
+<?php
+printf('<input type="hidden" name="MAX_FILE_SIZE" value="%d" />', $maxfilesize);
+?>
+<input type="file" name="imgfile" size="30">
+</p>
 
 <p>
 <?php
