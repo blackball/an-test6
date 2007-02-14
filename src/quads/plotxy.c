@@ -24,7 +24,7 @@
 #include "xylist.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hW:H:N:r:s:i:e:"
+#define OPTIONS "hW:H:N:r:s:i:e:x:y:"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
@@ -32,6 +32,8 @@ static void printHelp(char* progname) {
 		   "  -i <input-file>   Input file (xylist)\n"
 		   "  [-W <width>   ]   Width of output image (default: data-dependent).\n"
 		   "  [-H <height>  ]   Height of output image (default: data-dependent).\n"
+		   "  [-x <x-offset>]   X offset: position of the bottom-left pixel.\n"
+		   "  [-y <y-offset>]   Y offset: position of the bottom-left pixel.\n"
 		   "  [-N <num-objs>]   Number of objects to plot (default: all).\n"
 		   "  [-r <radius>]     Size of markers to plot (default: 5).\n"
 		   "  [-s <shape>]      Shape of markers (default: c):\n"
@@ -86,6 +88,7 @@ int main(int argc, char *args[]) {
 	char* fname = NULL;
 	int W = 0, H = 0;
 	int N = 0;
+	double xoff = 0.0, yoff = 0.0;
 	int ext = 0;
 	double rad = 5.0;
 	char shape = 'c';
@@ -99,6 +102,12 @@ int main(int argc, char *args[]) {
 		switch (argchar) {
 		case 'i':
 			fname = optarg;
+			break;
+		case 'x':
+			xoff = atof(optarg);
+			break;
+		case 'y':
+			yoff = atof(optarg);
 			break;
 		case 'W':
 			W = atoi(optarg);
@@ -169,14 +178,14 @@ int main(int argc, char *args[]) {
 		for (i=0; i<Nxy; i++)
 			if (xyvals[2*i] > maxX)
 				maxX = xyvals[2*i];
-		W = ceil(maxX + rad);
+		W = ceil(maxX + rad - xoff);
 	}
 	if (!H) {
 		double maxY = 0.0;
 		for (i=0; i<Nxy; i++)
 			if (xyvals[2*i+1] > maxY)
 				maxY = xyvals[2*i+1];
-		H = ceil(maxY + rad);
+		H = ceil(maxY + rad - yoff);
 	}
 
 	fprintf(stderr, "Image size %i x %i.\n", W, H);
@@ -188,7 +197,7 @@ int main(int argc, char *args[]) {
 	for (i=0; i<Nxy; i++) {
 		switch (shape) {
 		case 'c':
-			draw_circle(img, W, H, xyvals[2*i], xyvals[2*i+1], rad);
+			draw_circle(img, W, H, xyvals[2*i] - xoff, xyvals[2*i+1] - yoff, rad);
 			break;
 		}
 	}
