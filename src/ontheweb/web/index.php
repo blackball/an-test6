@@ -9,6 +9,8 @@ $tabsort = "/home/gmaps/quads/tabsort";
 
 $maxfilesize = 100*1024*1024;
 
+$maxquads = 50000;
+
 $check_xhtml = 1;
 $debug = 0;
 
@@ -399,51 +401,56 @@ if ($all_ok) {
 		exit;
 	}
 
-
 	for ($i=0; $i<12; $i++) {
 		$sdssfiles[$i] = sprintf("sdss-24/sdss-24-%02d", $i);
 	}
-
 	$indexmap = array("sdss-24" => $sdssfiles,
 					  "sdss-23" => array("sdss-23/sdss-23-allsky"),
+					  "allsky-31" => array("allsky-31/allsky-31"),
 					  "marshall-30" => array("marshall-30/marshall-30c"));
 
 	$indexes = $indexmap[$headers["index"]];
 
-	fprintf($fin, "log " . $logfile . "\n");
-
-	foreach ($indexes as $ind) {
-		fprintf($fin, "index " . $indexdir . $ind . "\n");
+	// Try both parities.
+	for ($ip=0; $ip<2; $ip++) {
+		fprintf($fin, "log " . $logfile . "\n");
+		foreach ($indexes as $ind) {
+			fprintf($fin, "index " . $indexdir . $ind . "\n");
+		}
+		fprintf($fin,
+				"field " . $xylist . "\n" .
+				"match " . $matchfile . "\n" .
+				"start " . $startfile . "\n" .
+				"done " . $donefile . "\n" .
+				"solved " . $solvedfile . "\n" .
+				"wcs " . $wcsfile . "\n" .
+				"rdls " . $rdlist . "\n" .
+				"fields 0\n" .
+				"xcol " . $x_col_val . "\n" .
+				"ycol " . $y_col_val . "\n" .
+				"sdepth 0\n" .
+				"depth 200\n" .
+				//"depth 150\n" .
+				//"depth 100\n" .
+				//"depth 60\n" .
+				($ip == 0 ?
+				 "parity " . $parity_val . "\n" :
+				 "parity " . (1 - $parity_val) . "\n") .
+				"fieldunits_lower " . $fu_lower . "\n" .
+				"fieldunits_upper " . $fu_upper . "\n" .
+				"tol " . $headers["codetol"] . "\n" .
+				"verify_dist " . $verify . "\n" .
+				"agreetol " . $agree . "\n" .
+				"nagree_toverify " . $nagree . "\n" .
+				"ninfield_tokeep 50\n" .
+				"ninfield_tosolve 50\n" .
+				"overlap_tokeep 0.25\n" .
+				"overlap_tosolve 0.25\n" .
+				"maxquads " . $maxquads . "\n" .
+				($tweak_val ? "tweak\n" : "") .
+				"run\n" .
+				"\n");
 	}
-
-	fprintf($fin,
-			"field " . $xylist . "\n" .
-			"match " . $matchfile . "\n" .
-			"start " . $startfile . "\n" .
-			"done " . $donefile . "\n" .
-			"solved " . $solvedfile . "\n" .
-			"wcs " . $wcsfile . "\n" .
-			"rdls " . $rdlist . "\n" .
-			"fields 0\n" .
-			"xcol " . $x_col_val . "\n" .
-			"ycol " . $y_col_val . "\n" .
-			"sdepth 0\n" .
-			//"depth 100\n" .
-			"depth 60\n" .
-			"parity " . $parity_val . "\n" .
-			"fieldunits_lower " . $fu_lower . "\n" .
-			"fieldunits_upper " . $fu_upper . "\n" .
-			"tol " . $headers["codetol"] . "\n" .
-			"verify_dist " . $verify . "\n" .
-			"agreetol " . $agree . "\n" .
-			"nagree_toverify " . $nagree . "\n" .
-			"ninfield_tokeep 50\n" .
-			"ninfield_tosolve 50\n" .
-			"overlap_tokeep 0.25\n" .
-			"overlap_tosolve 0.25\n" .
-			($tweak_val ? "tweak\n" : "") .
-			"run\n" .
-			"\n");
 
 	if (!fclose($fin)) {
 		echo "<html><body><h3>Failed to close input file " . $inputfile . "</h3></body></html>";
@@ -686,6 +693,7 @@ Index to use:
 
 <?php
 $vals = array(array("marshall-30", "Wide-Field Digital Camera"),
+			  array("allsky-31", "25-arcminute Fields"),
               array("sdss-23", "SDSS: Sloan Digital Sky Survey"));
 if ($ok_index) {
     $sel = $headers["index"];
