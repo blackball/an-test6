@@ -8,17 +8,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-//#include <windows.h>	// QueryPerformanceCounter
+#include <stdint.h>
 
 // ------------------------------------------------------------------------------------------------
 // ---- Basic types
 
-typedef long int32;
-typedef unsigned long uint32;
-typedef float real32;
-typedef double real64;
-typedef unsigned char uint8;
-typedef const char *cpointer;
+typedef int32_t  int32;
+typedef uint32_t uint32;
+typedef uint8_t  uint8;
+typedef float    real32;
+typedef double   real64;
+//typedef const char* cpointer;
 
 // ------------------------------------------------------------------------------------------------
 // Configuration/Testing
@@ -65,14 +65,14 @@ const uint32 ct = 65536;
 // ================================================================================================
 finline uint32 FloatFlip(uint32 f)
 {
-	uint32 mask = -int32(f >> 31) | 0x80000000;
+	uint32 mask = -(int32)(f >> 31) | 0x80000000;
 	return f ^ mask;
 }
 
-finline void FloatFlipX(uint32 &f)
+finline void FloatFlipX(uint32* pf)
 {
-	uint32 mask = -int32(f >> 31) | 0x80000000;
-	f ^= mask;
+	uint32 mask = -(int32)(*pf >> 31) | 0x80000000;
+	*pf ^= mask;
 }
 
 // ================================================================================================
@@ -95,9 +95,13 @@ finline uint32 IFloatFlip(uint32 f)
 // ================================================================================================
 // Main radix sort
 // ================================================================================================
+#if __cplusplus
 extern "C" {
+#endif
 void RadixSort11(real32 *farray, real32 *sorted, uint32 elements);
+#if __cplusplus
 }
+#endif
 void RadixSort11(real32 *farray, real32 *sorted, uint32 elements)
 {
 	uint32 i;
@@ -122,7 +126,7 @@ void RadixSort11(real32 *farray, real32 *sorted, uint32 elements)
 		
 		pf(array);
 
-		uint32 fi = FloatFlip((uint32&)array[i]);
+		uint32 fi = FloatFlip((uint32)array[i]);
 
 		b0[_0(fi)] ++;
 		b1[_1(fi)] ++;
@@ -153,7 +157,7 @@ void RadixSort11(real32 *farray, real32 *sorted, uint32 elements)
 	for (i = 0; i < elements; i++) {
 
 		uint32 fi = array[i];
-		FloatFlipX(fi);
+		FloatFlipX(&fi);
 		uint32 pos = _0(fi);
 		
 		pf2(array);
@@ -183,49 +187,3 @@ void RadixSort11(real32 *farray, real32 *sorted, uint32 elements)
 	// memcpy(array, sorted, elements * 4);
 }
 
-/*
-// Simple test of radix
-int main(int argc, char* argv[])
-{
-	uint32 i;
-
-	const uint32 trials = 100;
-	
-	real32 *a = new real32[ct];
-	real32 *b = new real32[ct];
-
-	for (i = 0; i < ct; i++) {
-		a[i] = real32(rand()) / 2048;
-		if (rand() & 1) {
-			a[i] = -a[i];
-		}
-	}
-
-	LARGE_INTEGER s1, s2, f;
-	QueryPerformanceFrequency(&f);
-	QueryPerformanceCounter(&s1);
-
-
-	for (i = 0; i < trials; i++) {
-		RadixSort11(a, b, ct);
-	}
-
-	QueryPerformanceCounter(&s2);
-	real64 hz = real64(f.QuadPart) / (s2.QuadPart - s1.QuadPart);
-	printf("%d elements: %f/s\n", ct, hz * trials);
-
-#if CORRECTNESS
-	for (i = 1; i < ct; i++) {
-		if (b[i - 1] >  b[i]) {
-			printf("Wrong at %d\n", i);
-		}
-
-	}
-#endif
-
-	delete a;
-	delete b;
-	
-	return 0;
-}
-*/
