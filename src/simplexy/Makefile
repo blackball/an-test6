@@ -16,8 +16,7 @@ LDFLAGS += -lm
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(CFITS_INC)
 CFLAGS += -Iver
-
-CPPFLAGS := $(CFLAGS)
+CFLAGS += -fPIC
 
 SIMPLEXY= src/dallpeaks.o src/dcen3x3.o src/dfind.o \
 	src/dmedsmooth.o src/dobjects.o src/dpeaks.o src/dselip.o \
