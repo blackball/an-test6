@@ -9,7 +9,7 @@ $tabsort = "/home/gmaps/quads/tabsort";
 
 $maxfilesize = 100*1024*1024;
 
-$maxquads = 50000;
+$maxquads = 1000000;
 
 $check_xhtml = 1;
 $debug = 0;
@@ -407,6 +407,8 @@ if ($all_ok) {
 	$indexmap = array("sdss-24" => $sdssfiles,
 					  "sdss-23" => array("sdss-23/sdss-23-allsky"),
 					  "allsky-31" => array("allsky-31/allsky-31"),
+					  "allsky-32" => array("allsky-32/allsky-32"),
+					  "allsky-33" => array("allsky-33/allsky-33"),
 					  "marshall-30" => array("marshall-30/marshall-30c"));
 
 	$indexes = $indexmap[$headers["index"]];
@@ -693,7 +695,9 @@ Index to use:
 
 <?php
 $vals = array(array("marshall-30", "Wide-Field Digital Camera"),
-			  array("allsky-31", "25-arcminute Fields"),
+			  array("allsky-31", "30-arcminute Fields"),
+			  array("allsky-32", "1-degree Fields"),
+			  array("allsky-33", "2-degree Fields"),
               array("sdss-23", "SDSS: Sloan Digital Sky Survey"));
 if ($ok_index) {
     $sel = $headers["index"];
