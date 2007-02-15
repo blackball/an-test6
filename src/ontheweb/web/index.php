@@ -413,6 +413,7 @@ if ($all_ok) {
 
 	$indexes = $indexmap[$headers["index"]];
 
+
 	// Try both parities.
 	for ($ip=0; $ip<2; $ip++) {
 		fprintf($fin, "log " . $logfile . "\n");
@@ -420,10 +421,12 @@ if ($all_ok) {
 			fprintf($fin, "index " . $indexdir . $ind . "\n");
 		}
 		fprintf($fin,
+				($ip == 0 ?
+				 "start " . $startfile . "\n" : "") .
+				($ip == 1 ?
+				 "done " . $donefile . "\n" : "") .
 				"field " . $xylist . "\n" .
 				"match " . $matchfile . "\n" .
-				"start " . $startfile . "\n" .
-				"done " . $donefile . "\n" .
 				"solved " . $solvedfile . "\n" .
 				"wcs " . $wcsfile . "\n" .
 				"rdls " . $rdlist . "\n" .

@@ -59,11 +59,61 @@ function create_random_dir($basedir) {
 	if (!mkdir($mydir)) {
 		return FALSE;
 	}
-	$mydir = $mydir . "/";
-	return $mydir;
+	//$mydir = $mydir . "/";
+	//return $mydir;
+	return $myname;
 }
 
 $headers = $_REQUEST;
+
+$have_script = array_key_exists("script", $headers);
+$have_jobid = array_key_exists("job", $headers);
+if ($have_jobid) {
+	$myname = $headers["job"];
+	$mydir = $resultdir . $myname . "/";
+	// Make sure the path is legit...
+	$rp1 = realpath($resultdir);
+	$rp2 = realpath($mydir);
+	if (substr($rp2, 0, strlen($rp1)) != $rp1) {
+		/*
+	    $have_jobid = 0;
+		$myname = "";
+		$mydir = "";
+		*/
+		loggit("No such job: " . $myname);
+		die("no such job.");
+	}
+}
+if ($have_script && $have_jobid) {
+	// Write out the script.
+	if (!file_exists("offline.sh")) {
+		loggit("No offline.sh script.\n");
+		die("no offline.sh.");
+	}
+	$script = file_get_contents("offline.sh");
+	/*
+	$script = str_replace('"', '\"', $script);
+	$job = $myname;
+	$str = "";
+	eval("\$str = \"$script\";");
+	echo $str;
+	*/
+
+	$host  = $_SERVER['HTTP_HOST'];
+	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+	$fits2xy_tarball = $host . $uri . "/" . "fits2xy.tar.gz";
+
+	$replacements = array('##JOB##' => $myname,
+						  '##FITS2XY_TARBALL##' => $fits2xy_tarball);
+
+	foreach ($replacements as $fromrep => $torep) {
+		$script = str_replace($fromrep, $torep, $script);
+	}
+
+	echo $script;
+
+	exit;
+}
 
 $have_email = array_key_exists("email", $headers);
 $email_val = $have_email ? $headers["email"] : "";
@@ -99,11 +149,12 @@ if ($have_parity) {
 
 $all_ok = $have_parity && $have_fu_lower && $have_fu_upper;
 if ($all_ok) {
-	$mydir = create_random_dir($resultdir);
-	if (!$mydir) {
+	$myname = create_random_dir($resultdir);
+	if (!$myname) {
 		echo "<html><body><h3>Failed to create temp dir.</h3></body></html>";
 		exit;
 	}
+	$mydir = $resultdir . $myname . "/";
 	$dbpath = $mydir . "db";
 
 	// create database.
@@ -133,24 +184,11 @@ if ($all_ok) {
 		die($res->getMessage());
 	}
 
+	// Update values.
 	$vals = array("email"    => $db->quote($email_val, 'text'),
 				  "fu_lower" => $fu_lower,
 				  "fu_upper" => $fu_upper,
 				  "parity"   => $parity_val,);
-
-	/* Doesn't seem to support inserting multiple values...
-    $q = 'REPLACE INTO forms VALUES ';
-	foreach ($vals as $key => $val) {
-		$q .= '("' . $key . '", "' . $val . '"), ';
-	}
-	$q = rtrim($q, ", ");
-	$q .= ";";
-	loggit("Query: " . $q . "\n");
-	$res =& $db->exec($q);
-	if (PEAR::isError($res)) {
-		die($res->getMessage());
-	}
-	*/
 
 	foreach ($vals as $key => $val) {
 		$q = 'REPLACE INTO forms VALUES ("' . $key . '", "' . $val . '");';
@@ -162,7 +200,43 @@ if ($all_ok) {
 	}
 
 	$db->disconnect();
-	echo "<html><body>OK.</body></html>\n";
+
+
+	// Present command to copy-n-paste:
+	echo <<<END
+<html>
+<title>
+Astrometry.net: Bulk-processing Edition
+</title>
+<body>
+<hr />
+<h2>
+Astrometry.net: Bulk-processing Edition
+</h2>
+<hr />
+
+<p>
+		Please do the following:
+</p>
+<ul>
+<li>
+open a terminal window
+</li>
+<li>
+<tt>cd</tt> into the directory that contains the images you wish to solve
+</li>
+<li>
+run the following command:
+<table border="1" bgcolor="#becb64" cellpadding="25">
+<tr><td><pre>wget -q "http://oven.cosmo.fas.nyu.edu/blind/offline.php?job=$myname&script" -O - | bash -</pre></td></tr>
+</table>
+</li>
+</ul>
+
+<hr />
+</body>
+</html>
+END;
 	exit;
 }
 ?>
