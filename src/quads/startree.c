@@ -238,6 +238,7 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept (0=no limit).", NULL);
 
 	fits_copy_header(catheader, startree_header(starkd), "HEALPIX");
+	fits_copy_header(catheader, startree_header(starkd), "ALLSKY");
 
 	boilerplate_add_fits_headers(startree_header(starkd));
 	qfits_header_add(startree_header(starkd), "HISTORY", "This file was created by the program \"startree\".", NULL, NULL);
