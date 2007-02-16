@@ -78,7 +78,7 @@ pl* indexes;
 FILE* logfd;
 int dup_stderr;
 int dup_stdout;
-char *solvedfname, *solvedserver;
+char *solved_in, *solved_out, *solvedserver;
 char* xcolname, *ycolname;
 char* wcs_template;
 char* fieldid_key;
@@ -177,7 +177,8 @@ int main(int argc, char *argv[]) {
 		logfname = NULL;
 		donefname = NULL;
 		startfname = NULL;
-		solvedfname = NULL;
+		solved_in = NULL;
+		solved_out = NULL;
 		rdlsfname = NULL;
 		do_tweak = FALSE;
 		solvedserver = NULL;
@@ -238,7 +239,8 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "matchfname %s\n", matchfname);
 			fprintf(stderr, "startfname %s\n", startfname);
 			fprintf(stderr, "donefname %s\n", donefname);
-			fprintf(stderr, "solvedfname %s\n", solvedfname);
+			fprintf(stderr, "solved_in %s\n", solved_in);
+			fprintf(stderr, "solved_out %s\n", solved_out);
 			fprintf(stderr, "solvedserver %s\n", solvedserver);
 			fprintf(stderr, "wcs %s\n", wcs_template);
 			fprintf(stderr, "fieldid_key %s\n", fieldid_key);
@@ -577,7 +579,8 @@ int main(int argc, char *argv[]) {
 		free(logfname);
 		free(donefname);
 		free(startfname);
-		free(solvedfname);
+		free(solved_in);
+		free(solved_out);
 		free(solvedserver);
 		free(matchfname);
 		free(rdlsfname);
@@ -674,7 +677,16 @@ static int read_parameters() {
 		} else if (is_word(buffer, "rdls ", &nextword)) {
 			rdlsfname = strdup(nextword);
 		} else if (is_word(buffer, "solved ", &nextword)) {
-			solvedfname = strdup(nextword);
+			free(solved_in);
+			free(solved_out);
+			solved_in = strdup(nextword);
+			solved_out = strdup(nextword);
+		} else if (is_word(buffer, "solved_in ", &nextword)) {
+			free(solved_in);
+			solved_in = strdup(nextword);
+		} else if (is_word(buffer, "solved_out ", &nextword)) {
+			free(solved_out);
+			solved_out = strdup(nextword);
 		} else if (is_word(buffer, "log ", &nextword)) {
 			// Open the log file...
 			logfname = strdup(nextword);
@@ -995,14 +1007,14 @@ static void solve_fields() {
 		}
 
 		// Has the field already been solved?
-		if (solvedfname) {
-			if (solvedfile_get(solvedfname, fieldnum)) {
+		if (solved_in) {
+			if (solvedfile_get(solved_in, fieldnum)) {
 				// file exists; field has already been solved.
 				if (!silent)
-					fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solvedfname);
+					fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, solved_in);
 				goto cleanup;
 			}
-			solver.solvedfn = solvedfname;
+			solver.solvedfn = solved_in;
 		} else
 			solver.solvedfn = NULL;
 
@@ -1170,11 +1182,11 @@ static void solve_fields() {
 				sip_free(sip);
 			}
 			// Record in solved file, or send to solved server.
-			if (solvedfname) {
+			if (solved_out) {
 				if (!silent)
-					fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, solvedfname);
-				if (solvedfile_set(solvedfname, fieldnum)) {
-					fprintf(stderr, "Failed to write to solvedfile %s.\n", solvedfname);
+					fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, solved_out);
+				if (solvedfile_set(solved_out, fieldnum)) {
+					fprintf(stderr, "Failed to write to solvedfile %s.\n", solved_out);
 				}
 			}
 			if (solvedserver) {
