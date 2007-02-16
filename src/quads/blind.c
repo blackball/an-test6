@@ -20,7 +20,7 @@
  *   Solve fields blindly
  *
  * Inputs: .ckdt .quad .skdt
- * Output: .match
+ * Output: .match .rdls .wcs
  */
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -32,6 +32,7 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
+#include <signal.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -125,9 +126,19 @@ handlehits* hits;
 char* rdlsfname;
 rdlist* rdls;
 
+int cpulimit;
+bool* p_quitNow;
+
 bool do_tweak;
 int tweak_aborder;
 int tweak_abporder;
+
+static void cpu_time_limit(int sig) {
+	fprintf(stderr, "CPU time limit reached!\n");
+	if (p_quitNow) {
+		*p_quitNow = TRUE;
+	}
+}
 
 int main(int argc, char *argv[]) {
     uint numfields;
@@ -142,16 +153,6 @@ int main(int argc, char *argv[]) {
 	if (argc != 1 && !silent) {
 		printHelp(progname);
 		exit(-1);
-	}
-
-	if (!silent) {
-		/*
-		  printf("Running on host:\n");
-		  fflush(stdout);
-		  system("hostname");
-		  printf("\n");
-		  fflush(stdout);
-		*/
 	}
 
 	fieldlist = il_new(256);
@@ -203,6 +204,8 @@ int main(int argc, char *argv[]) {
 		starkd = NULL;
 		rdls = NULL;
 		nverified = 0;
+		cpulimit = 0;
+		p_quitNow = NULL;
 
 		if (read_parameters()) {
 			free(xcolname);
@@ -210,8 +213,6 @@ int main(int argc, char *argv[]) {
 			free(fieldid_key);
 			break;
 		}
-
-		
 
 		if (!silent) {
 			fprintf(stderr, "%s params:\n", progname);
@@ -251,6 +252,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "quiet %i\n", quiet);
 			fprintf(stderr, "verbose %i\n", verbose);
 			fprintf(stderr, "logfname %s\n", logfname);
+			fprintf(stderr, "cpulimit %i\n", cpulimit);
 		}
 
 		if (!pl_size(indexes) || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -349,6 +351,8 @@ int main(int argc, char *argv[]) {
 		for (I=0; I<pl_size(indexes); I++) {
 			char *idfname, *treefname, *quadfname, *startreefname;
 			char* fname = pl_get(indexes, I);
+			sighandler_t oldsigcpu = NULL;
+
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			idfname = mk_idfn(fname);
@@ -417,8 +421,55 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
 			}
 
+			// Set CPU time limit.
+			if (cpulimit) {
+				struct rusage r;
+				struct rlimit rlim;
+				int sofar;
+
+				if (getrusage(RUSAGE_SELF, &r)) {
+					fprintf(stderr, "Failed to get resource usage: %s\n", strerror(errno));
+					exit(-1);
+				}
+				sofar = ceil((float)(r.ru_utime.tv_sec + r.ru_stime.tv_sec) +
+							 (float)(1e-6 * r.ru_utime.tv_usec + r.ru_stime.tv_usec));
+
+				if (getrlimit(RLIMIT_CPU, &rlim)) {
+					fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
+					exit(-1);
+				}
+				//printf("Old CPU limit: %i/%i\n", (int)rlim.rlim_cur, (int)rlim.rlim_max);
+				rlim.rlim_cur = cpulimit + sofar;
+
+				//rlim.rlim_max = rlim.rlim_cur = cpulimit + sofar;
+				if (setrlimit(RLIMIT_CPU, &rlim)) {
+					fprintf(stderr, "Failed to set CPU time limit: %s\n", strerror(errno));
+					exit(-1);
+				}
+
+				/*
+				  if (getrlimit(RLIMIT_CPU, &rlim)) {
+				  fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
+				  exit(-1);
+				  }
+				  printf("New CPU limit: %i/%i\n", (int)rlim.rlim_cur, (int)rlim.rlim_max);
+				*/
+				oldsigcpu = signal(SIGXCPU, cpu_time_limit);
+				if (oldsigcpu == SIG_ERR) {
+					fprintf(stderr, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
+					exit(-1);
+				}
+			}
+
 			// Do it!
 			solve_fields();
+
+			if (oldsigcpu) {
+				if (signal(SIGXCPU, oldsigcpu) == SIG_ERR) {
+					fprintf(stderr, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
+					exit(-1);
+				}
+			}
 
 			// Clean up this index...
 			codetree_close(codekd);
@@ -557,6 +608,8 @@ static int read_parameters() {
 					"    help\n"
 					"    quit\n");
 
+		} else if (is_word(buffer, "cpulimit ", &nextword)) {
+			cpulimit = atoi(nextword);
 		} else if (is_word(buffer, "agreetol ", &nextword)) {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "verify_dist ", &nextword)) {
@@ -750,9 +803,6 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	nstars = res->nres;
 	printf("Pushing %i star coordinates.\n", nstars);
 	tweak_push_ref_xyz(twee, starxyz, nstars);
-
-	// HACK - probably don't need this...
-	//tweak_push_hppath(twee, startreefname);
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	twee->sip->a_order  = twee->sip->b_order  = 3;
@@ -966,6 +1016,8 @@ static void solve_fields() {
 		solver.mo_template = &template;
 		solver.circle = circle;
 
+		p_quitNow = &solver.quitNow;
+
 		hits->field = field;
 		hits->nfield = nfield;
 
@@ -974,6 +1026,8 @@ static void solve_fields() {
 
 		// The real thing
 		solve_field(&solver);
+
+		p_quitNow = NULL;
 
 		if (!silent)
 			fprintf(stderr, "field %i: tried %i quads, matched %i codes.\n",
