@@ -37,7 +37,10 @@ struct solver_params {
 	kdtree_t* codekd;
 	int startobj;
 	int endobj;
+	// number of field quads to try
 	int maxtries;
+	// number of quad matches to try
+	int maxmatches;
 	double codetol;
 	bool quitNow;
 	int fieldid;

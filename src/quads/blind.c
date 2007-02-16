@@ -103,6 +103,7 @@ double overlap_tosolve;
 int ninfield_tokeep;
 int ninfield_tosolve;
 int maxquads;
+int maxmatches;
 double cxdx_margin;
 
 bool quiet;
@@ -258,6 +259,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "xcolname %s\n", xcolname);
 			fprintf(stderr, "ycolname %s\n", ycolname);
 			fprintf(stderr, "maxquads %i\n", maxquads);
+			fprintf(stderr, "maxmatches %i\n", maxmatches);
 			fprintf(stderr, "quiet %i\n", quiet);
 			fprintf(stderr, "verbose %i\n", verbose);
 			fprintf(stderr, "logfname %s\n", logfname);
@@ -723,6 +725,8 @@ static int read_parameters() {
 			fieldid_key = strdup(nextword);
 		} else if (is_word(buffer, "maxquads ", &nextword)) {
 			maxquads = atoi(nextword);
+		} else if (is_word(buffer, "maxmatches ", &nextword)) {
+			maxmatches = atoi(nextword);
 		} else if (is_word(buffer, "xcol ", &nextword)) {
 			free(xcolname);
 			xcolname = strdup(nextword);
@@ -914,6 +918,7 @@ static void solve_fields() {
 	solver.codekd = codekd->tree;
 	solver.endobj = enddepth;
 	solver.maxtries = maxquads;
+	solver.maxmatches = maxquads;
 	solver.codetol = codetol;
 	solver.handlehit = blind_handle_hit;
 	solver.cxdx_margin = cxdx_margin;
@@ -1069,9 +1074,13 @@ static void solve_fields() {
 			fprintf(stderr, "field %i: tried %i quads, matched %i codes.\n",
 					fieldnum, solver.numtries, solver.nummatches);
 
-		if (maxquads && solver.numtries >= maxquads && !silent) {
+		if (!silent && maxquads && solver.numtries >= maxquads) {
 			fprintf(stderr, "  exceeded the number of quads to try: %i >= %i.\n",
 					solver.numtries, maxquads);
+		}
+		if (!silent && maxmatches && solver.nummatches >= maxmatches) {
+			fprintf(stderr, "  exceeded the number of quads to match: %i >= %i.\n",
+					solver.nummatches, maxmatches);
 		}
 
 		// Write the keepable hits.

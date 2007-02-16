@@ -293,7 +293,8 @@ void solve_field(solver_params* params) {
 					"  field %u, object %u of %u: %i quads tried, %i matched.\n",
 					params->fieldnum, newpoint+1, numxy, params->numtries, params->nummatches);
 
-		if ((params->maxtries && (params->numtries >= params->maxtries)) ||
+		if ((params->maxtries   && (params->numtries   >= params->maxtries)) ||
+			(params->maxmatches && (params->nummatches >= params->maxmatches)) ||
 			params->quitNow)
 			break;
 	}
