@@ -81,6 +81,11 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	// hough transform 
 	int hsz = 1000; // hough size
 	int *hough = calloc(hsz*hsz, sizeof(int));
+	int kern[] = {0,  2,  3, 2,  0,
+		      2,  7, 12, 7,  2,
+		      3, 12, 20, 12, 3,
+		      2,  7, 12, 7,  2,
+		      0,  2,  3, 2,  0};
 
 	for (i=0; i<nimg; i++) {
 		for (j=0; j<ncat; j++) {
@@ -98,10 +103,18 @@ void get_shift(double* ximg, double* yimg, int nimg,
 //			assert (iy >=0);
 //			assert (ix >=0);
 //			assert (iy*hsz+ ix < hsz*hsz);
-			if (0 < iy && iy < hsz-1 &&
-				0 < ix && ix < hsz-1) {
+			if (1 < iy && iy < hsz-2 &&
+				1 < ix && ix < hsz-2) {
 				// approx gauss
 				// FIMXE use a better approx: see hogg ticket
+				int kx, ky;
+				for (ky=-2; ky<=2; ky++)
+					for (kx=-2; kx<=2; kx++)
+						hough[(iy-ky)*hsz + (ix-kx)] += kern[(ky+2)*5+(kx+2)];
+
+
+				// Old version
+				/*
 				hough[(iy-1)*hsz + (ix-1)] += 1;
 				hough[(iy+1)*hsz + (ix+1)] += 1;
 				hough[(iy-1)*hsz + (ix+1)] += 1;
@@ -111,6 +124,7 @@ void get_shift(double* ximg, double* yimg, int nimg,
 				hough[(iy+0)*hsz + (ix+1)] += 4;
 				hough[(iy+1)*hsz + (ix+0)] += 4;
 				hough[iy*hsz + ix] += 10;
+				*/
 			}
 		}
 	}
