@@ -697,11 +697,11 @@ Index to use:
 <select name="index">
 
 <?php
-$vals = array(array("marshall-30", "Wide-Field Digital Camera"),
-			  array("allsky-31", "30-arcminute Fields"),
-			  array("allsky-32", "1-degree Fields"),
-			  array("allsky-33", "2-degree Fields"),
-              array("sdss-23", "SDSS: Sloan Digital Sky Survey"));
+ $vals = array(array("sdss-23", "12-arcmin Fields (eg, Sloan Digital Sky Survey)"),
+			   array("allsky-31", "30-arcminute Fields"),
+			   array("allsky-32", "1-degree Fields"),
+			   array("allsky-33", "2-degree Fields"),
+			   array("marshall-30", "Wide Fields (eg, Digital Camera)"));
 if ($ok_index) {
     $sel = $headers["index"];
 } else {
