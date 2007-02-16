@@ -9,7 +9,9 @@ $tabsort = "/home/gmaps/quads/tabsort";
 
 $maxfilesize = 100*1024*1024;
 
-$maxquads = 1000000;
+$maxtime = 120; // Two minute max!
+$maxquads = 0; // 1000000;
+$maxcpu = 0;
 
 $check_xhtml = 1;
 $debug = 0;
@@ -435,9 +437,6 @@ if ($all_ok) {
 				"ycol " . $y_col_val . "\n" .
 				"sdepth 0\n" .
 				"depth 200\n" .
-				//"depth 150\n" .
-				//"depth 100\n" .
-				//"depth 60\n" .
 				($ip == 0 ?
 				 "parity " . $parity_val . "\n" :
 				 "parity " . (1 - $parity_val) . "\n") .
@@ -452,6 +451,8 @@ if ($all_ok) {
 				"overlap_tokeep 0.25\n" .
 				"overlap_tosolve 0.25\n" .
 				"maxquads " . $maxquads . "\n" .
+				"cpulimit " . $maxcpu . "\n" .
+				"timelimit " . $maxtime . "\n" .
 				($tweak_val ? "tweak\n" : "") .
 				"run\n" .
 				"\n");
