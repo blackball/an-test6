@@ -288,6 +288,12 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 
 static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	char val[64];
+
+	qfits_header_add(hdr, "WCSAXES", "2", NULL, NULL);
+	qfits_header_mod(hdr, "NAXIS", "2", NULL);
+	qfits_header_add(hdr, "NAXIS1", "1", NULL, NULL);
+	qfits_header_add(hdr, "NAXIS2", "1", NULL, NULL);
+
 	sprintf(val, "%.12g", tan->crval[0]);
 	qfits_header_add(hdr, "CRVAL1", val, "RA  of reference point", NULL);
 	sprintf(val, "%.12g", tan->crval[1]);

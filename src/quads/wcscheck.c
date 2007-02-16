@@ -216,14 +216,46 @@ int main(int argc, char** args) {
 
 	wcs = wcsninit(hdrstring, hdrstringlen);
 	if (!wcs) {
-		fprintf(stderr, "Failed to parse WCS from FITS header.\n");
+		fprintf(stderr, "Failed to parse WCS from FITS header:\n");
+		wcserr();
 		exit(-1);
 	}
 
 	if (!iswcs(wcs)) {
 		fprintf(stderr, "No WCS structure found.\n");
+		wcserr();
 		exit(-1);
 	}
+
+	printf("xref: %g deg\n", wcs->xref);
+	printf("yref: %g deg\n", wcs->yref);
+	printf("xrefpix: %g\n", wcs->xrefpix);
+	printf("yrefpix: %g\n", wcs->yrefpix);
+	printf("xinc: %g deg/pix\n", wcs->xinc);
+	printf("yinc: %g deg/pix\n", wcs->yinc);
+	printf("rot: %g deg\n", wcs->rot);
+	printf("cd[0]: %g\n", wcs->cd[0]);
+	printf("cd[1]: %g\n", wcs->cd[1]);
+	printf("cd[2]: %g\n", wcs->cd[2]);
+	printf("cd[3]: %g\n", wcs->cd[3]);
+	printf("dc[0]: %g\n", wcs->dc[0]);
+	printf("dc[1]: %g\n", wcs->dc[1]);
+	printf("dc[2]: %g\n", wcs->dc[2]);
+	printf("dc[3]: %g\n", wcs->dc[3]);
+	printf("equinox: %g\n", wcs->equinox);
+	printf("epoch: %g\n", wcs->epoch);
+	printf("nxpix: %g\n", wcs->nxpix);
+	printf("nypix: %g\n", wcs->nypix);
+
+	printf("prjcode: %i\n", wcs->prjcode);
+	printf("c1type: %9s\n", wcs->c1type);
+	printf("c2type: %9s\n", wcs->c2type);
+	printf("ptype: %9s\n", wcs->ptype);
+	printf("radecsys: %32s\n", wcs->radecsys);
+	printf("radecout: %32s\n", wcs->radecout);
+	printf("radecin: %32s\n", wcs->radecin);
+
+	printf("sys(in,wcs,out): %i, %i, %i\n", wcs->sysin, wcs->syswcs, wcs->sysout);
 
 	{
 		double pixels[Ncoords][Nelems];
@@ -273,12 +305,12 @@ int main(int argc, char** args) {
 
 		}
 	}
-	wcsfree(&wcs);
+	wcsfree(wcs);
 
 	if (invert) {
-		if (xylist_fix_field(rdls) ||
-			xylist_fix_header(rdls) ||
-			xylist_close(rdls)) {
+		if (xylist_fix_field(xyls) ||
+			xylist_fix_header(xyls) ||
+			xylist_close(xyls)) {
 			fprintf(stderr, "Failed to close XYLS file.\n");
 			exit(-1);
 		}
