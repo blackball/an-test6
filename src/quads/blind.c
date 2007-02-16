@@ -140,6 +140,13 @@ static void cpu_time_limit(int sig) {
 	}
 }
 
+static void wall_time_limit(int sig) {
+	fprintf(stderr, "Wall-clock time limit reached!\n");
+	if (p_quitNow) {
+		*p_quitNow = TRUE;
+	}
+}
+
 int main(int argc, char *argv[]) {
     uint numfields;
 	char* progname = argv[0];
@@ -455,9 +462,20 @@ int main(int argc, char *argv[]) {
 			// Do it!
 			solve_fields();
 
-			if (oldsigcpu) {
+			if (cpulimit) {
+				struct rlimit rlim;
 				if (signal(SIGXCPU, oldsigcpu) == SIG_ERR) {
 					fprintf(stderr, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
+					exit(-1);
+				}
+				// Remove CPU limit.
+				if (getrlimit(RLIMIT_CPU, &rlim)) {
+					fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
+					exit(-1);
+				}
+				rlim.rlim_cur = rlim.rlim_max;
+				if (setrlimit(RLIMIT_CPU, &rlim)) {
+					fprintf(stderr, "Failed to remove CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 			}
