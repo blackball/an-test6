@@ -72,7 +72,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	solvedserver printsolved xylist2fits printmatch
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar plotxy
+	quadscales quadsperstar plotxy wcscheck
 # HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
 
