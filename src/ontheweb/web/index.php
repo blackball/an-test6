@@ -373,7 +373,6 @@ if ($all_ok) {
 			break;
 		}
     }
-
 	if (!mkdir($mydir)) {
 		echo "<html><body><h3>Failed to create dir " . $mydir . "</h3></body></html>";
 		exit;
@@ -404,11 +403,13 @@ if ($all_ok) {
 		}
 	}
 
-	$rdlist = $mydir . "field.rd.fits";
-	$wcsfile = $mydir . "wcs.fits";
-	$matchfile = $mydir . "match.fits";
 	$inputfile = $mydir . "input";
-	$solvedfile = $mydir . "solved";
+	$donescript = $mydir . "donescript";
+	$rdlist = $mydir . "field%i.rd.fits";
+	$matchfile = $mydir . "match%i.fits";
+	$solvedfile = $mydir . "solved%i";
+	//$wcsfile = $mydir . "wcs%i.fits";
+	$wcsfile = $mydir . "wcs.fits";
 	$startfile = $mydir . "start";
 	$donefile = $mydir . "done";
 	$logfile = $mydir . "log";
@@ -426,7 +427,29 @@ if ($all_ok) {
 	// Write the input file for blind...
 	$fin = fopen($inputfile, "w");
 	if (!$fin) {
-		echo "<html><body><h3>Failed to write input file " . $inputfile . ".fits" . "</h3></body></html>";
+		echo "<html><body><h3>Failed to write input file " . $inputfile . "</h3></body></html>";
+		exit;
+	}
+
+	// Write the donescript for blind...
+	$fdone = fopen($donescript, "w");
+	if (!$fdone) {
+		echo "<html><body><h3>Failed to write donescript " . $donescript . "</h3></body></html>";
+		exit;
+	}
+	fprintf($fdone,
+			"touch done\n"
+			// merge solved files
+			// concat match files
+			// merge rdls files (fits table copy util?)
+			);
+			
+	if (!fclose($fdone)) {
+		echo "<html><body><h3>Failed to close donescript " . $donescript . "</h3></body></html>";
+		exit;
+	}
+	if (!chmod($donescript, 0775)) {
+		echo "<html><body><h3>Failed to chmod donescript xylist " . $donescript . "</h3></body></html>";
 		exit;
 	}
 
@@ -455,10 +478,15 @@ if ($all_ok) {
 				($ip == 1 ?
 				 "done " . $donefile . "\n" : "") .
 				"field " . $xylist . "\n" .
-				"match " . $matchfile . "\n" .
-				"solved " . $solvedfile . "\n" .
+				//"solved " . $solvedfile . "\n" .
+				($ip == 0 ?
+				 "solved " . sprintf($solvedfile, $ip) . "\n" :
+				 "solved_in " . sprintf($solvedfile, $ip-1) . "\n" .
+				 "solved_out " . sprintf($solvedfile, $ip) . "\n") .
+				"match " . sprintf($matchfile, $ip) . "\n" .
+				"rdls " . sprintf($rdlist, $ip) . "\n" .
+				//"wcs " . sprintf($wcsfile, $ip) . "\n" .
 				"wcs " . $wcsfile . "\n" .
-				"rdls " . $rdlist . "\n" .
 				"fields 0\n" .
 				"xcol " . $x_col_val . "\n" .
 				"ycol " . $y_col_val . "\n" .
@@ -489,6 +517,8 @@ if ($all_ok) {
 		echo "<html><body><h3>Failed to close input file " . $inputfile . "</h3></body></html>";
 		exit;
 	}
+
+	// Create a link from the Google Maps RDLS directory to
 
 	// Redirect the client to the status script...
 	$status_url = "status.php?job=" . $myname;

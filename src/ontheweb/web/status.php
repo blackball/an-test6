@@ -1,5 +1,6 @@
 <?php
 $resultdir = "/home/gmaps/ontheweb-data/";
+$gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
 $check_xhtml = 1;
 
@@ -14,6 +15,7 @@ $myname = $headers["job"];
 $mydir = $resultdir . $myname . "/";
 
 $img = array_key_exists("img", $headers);
+$overlay = array_key_exists("overlay", $headers);
 
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
@@ -34,7 +36,8 @@ $rdlist = $mydir . "field.rd.fits";
 $logfile = $mydir . "log";
 $solvedfile = $mydir . "solved";
 $wcsfile = $mydir . "wcs.fits";
-$overlayfile = $mydir . "objs.png";
+$objsfile = $mydir . "objs.png";
+$overlayfile = $mydir . "overlay.png";
 
 if (!$img && !file_exists($inputfile) && file_exists($inputfile . ".tmp")) {
 	// Rename it...
@@ -132,7 +135,7 @@ function print_link($f) {
 if ($img) {
 	echo "<h2>Source extraction:</h2>\n";
 	echo "<hr />\n";
-	echo '<p class="c"><img src="' . get_url($overlayfile) . '" ';
+	echo '<p class="c"><img src="' . get_url($objsfile) . '" ';
 	echo 'alt="Your image, overlayed with the objects extracted" /></p>';
 	echo "<hr />\n";
 	echo '<form action="status.php" method="get" class="c">';
@@ -158,6 +161,17 @@ END;
 
 	exit;
 }
+
+if ($overlay) {
+	if (!file_exists($overlayfile)) {
+		// render it!
+		// FIXME
+	}
+	header('Content-type: image/png');
+	readfile($overlayfile);
+	exit;
+}
+
 ?>
 
 <h2>
@@ -234,7 +248,7 @@ if ($job_queued) {
 	echo "</td></tr>\n";
 }
 
-if ($job_submitted && file_exists($overlayfile) && (file_exists($xylist))) {
+if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
 	echo "<tr><td>Extracted objects:</td><td>\n";
 	print_link($xylist);
 	echo "</td></tr>\n";
@@ -242,7 +256,8 @@ if ($job_submitted && file_exists($overlayfile) && (file_exists($xylist))) {
 
 if ($job_done) {
 	echo '<tr><td>Field Solved:</td><td>';
-	if (file_exists($solvedfile)) {
+	$didsolve = file_exists($solvedfile);
+	if ($didsolve) {
 		$fin = fopen($solvedfile, "rb");
 		if (!$fin) {
 			echo "(failed to open file)";
@@ -271,13 +286,31 @@ if ($job_done) {
 	}
 	echo "</td></tr>\n";
 
-	echo '<tr><td>WCS file:</td><td>';
-	print_link($wcsfile);
-	echo "</td></tr>\n";
+	if ($didsolve) {
+		echo '<tr><td>WCS file:</td><td>';
+		print_link($wcsfile);
+		echo "</td></tr>\n";
 
-	echo '<tr><td>RA,DEC list:</td><td>';
-	print_link($rdlist);
-	echo "</td></tr>\n";
+		echo '<tr><td>RA,DEC list:</td><td>';
+		print_link($rdlist);
+		echo "</td></tr>\n";
+
+		if (file_exists($objsfile)) {
+			echo '<tr><td>Graphical representation:</td><td>';
+			echo "<a href=\"";
+			echo "http://" . $host . $uri . "/status.php?job=" . $myname . "&overlay";
+			echo "\">overlay.png</a>\n";
+			echo "</td></tr>\n";
+		}
+
+		echo '<tr><td>Google Maps view:</td><td>';
+		echo "<a href=\"";
+		echo $gmaps_url . "?ra=" . "&dec=" . "&zoom=" . "&over=no" .
+			"&rdls=" . $myname . "/field.rd.fits" .
+			"&view=r+i";
+		echo "\">browse</a>\n";
+		echo "</td></tr>\n";
+	}
 }
 ?>
 
