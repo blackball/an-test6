@@ -130,17 +130,8 @@ tags:
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
 
-WCSLIB_LIB ?= /usr/local/wcslib-4.2/lib/libwcs.a
-WCSLIB_INC ?= /usr/local/wcslib-4.2/include/wcslib
-WCSLIB_LIB := $(WCSLIB_LIB)
-WCSLIB_INC := $(WCSLIB_INC)
-
-wcscheck.o: wcscheck.c
-	$(CC) $(CFLAGS) -c $< -o $@ -I$(WCSLIB_INC)
-
 wcscheck: wcscheck.o \
-		$(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(WCSLIB_LIB)
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(LIBWCS_LIB)
 
 noisesim: noisesim.o noise.o $(ANUTILS_LIB)
 

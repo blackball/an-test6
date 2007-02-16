@@ -22,14 +22,13 @@
 #include <string.h>
 
 #include "wcs.h"
-#include "wcshdr.h"
 #include "qfits.h"
 #include "starutil.h"
 #include "bl.h"
 #include "xylist.h"
 #include "rdlist.h"
 
-const char* OPTIONS = "hx:y:l:f:X:Y:r:";
+const char* OPTIONS = "hx:y:l:f:X:Y:r:I";
 
 void print_help(char* progname) {
 	//boilerplate_help_header(stdout);
@@ -38,6 +37,7 @@ void print_help(char* progname) {
 		   "  [-l <xy-list file> -f <xy-list field index>]\n"
 		   "     [-X <x-column-name> -Y <y-column-name>]\n"
 		   "  [-r <rdls output file>]\n"
+		   "  [-I]: invert (rdls -> xyls)\n"
 		   "  <WCS-input-file>\n"
 		   "\n", progname);
 }
@@ -48,7 +48,7 @@ extern int optind, opterr, optopt;
 int main(int argc, char** args) {
 	int c;
 	char* fn;
-	struct wcsprm wcs;
+	struct WorldCoor* wcs;
 	qfits_header* hdr;
 	int Ncoords;
 	int Nelems = 2;
@@ -66,6 +66,7 @@ int main(int argc, char** args) {
 	char* ycol = NULL;
 	char* rdlsfn = NULL;
 	rdlist* rdls = NULL;
+	int invert = 0;
 
 	xpix = dl_new(16);
 	ypix = dl_new(16);
@@ -75,6 +76,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'I':
+			invert = 1;
+			break;
 		case 'r':
 			rdlsfn = optarg;
 			break;
@@ -110,9 +114,14 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	if (xylsfn) {
+	if (invert && !(xylsfn && rdlsfn)) {
+		printf("To invert, you must supply RDLS and XYLS filenames.\n");
+		print_help(args[0]);
+		exit(-1);
+	}
+
+	if (xylsfn && !invert) {
 		double* xyvals;
-		int i;
 		int nvals;
 		xyls = xylist_open(xylsfn);
 		if (!xyls) {
@@ -136,7 +145,7 @@ int main(int argc, char** args) {
 		free(xyvals);
 	}
 
-	if (rdlsfn) {
+	if (rdlsfn && !invert) {
 		rdls = rdlist_open_for_writing(rdlsfn);
 		if (!rdls) {
 			fprintf(stderr, "Failed to open file %s to write RDLS.\n", rdlsfn);
@@ -147,6 +156,42 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to write header to RDLS file %s.\n", rdlsfn);
 			exit(-1);
 		}
+	}
+
+	if (invert) {
+		double* rdvals;
+		int i;
+		int nvals;
+		xyls = xylist_open_for_writing(xylsfn);
+		if (!xyls) {
+			fprintf(stderr, "Failed to write xylist to file %s.\n", xylsfn);
+			exit(-1);
+		}
+		if (xcol)
+			xyls->xname = xcol;
+		if (ycol)
+			xyls->yname = ycol;
+		if (xylist_write_header(xyls) ||
+			xylist_write_new_field(xyls)) {
+			fprintf(stderr, "Failed to write header to XYLS file %s.\n", xylsfn);
+			exit(-1);
+		}
+		rdls = rdlist_open(rdlsfn);
+		if (!rdls) {
+			fprintf(stderr, "Failed to read an RDLS from file %s.\n", rdlsfn);
+			exit(-1);
+		}
+		nvals = rdlist_n_entries(rdls, fieldind);
+		rdvals = malloc(2 * nvals * sizeof(double));
+		if (rdlist_read_entries(rdls, fieldind, 0, nvals, rdvals)) {
+			fprintf(stderr, "Failed to read RDLS data from file %s.\n", rdlsfn);
+			exit(-1);
+		}
+		for (i=0; i<nvals; i++) {
+			dl_append(xpix, rdvals[2*i + 0]);
+			dl_append(ypix, rdvals[2*i + 1]);
+		}
+		free(rdvals);
 	}
 
 	Ncoords = dl_size(xpix);
@@ -169,112 +214,77 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	wcs.flag = -1;
-	if (wcsini(1, 2, &wcs)) {
-		fprintf(stderr, "wcsini() failed.\n");
+	wcs = wcsninit(hdrstring, hdrstringlen);
+	if (!wcs) {
+		fprintf(stderr, "Failed to parse WCS from FITS header.\n");
+		exit(-1);
+	}
+
+	if (!iswcs(wcs)) {
+		fprintf(stderr, "No WCS structure found.\n");
 		exit(-1);
 	}
 
 	{
-		int nreject;
-		int nwcs;
-		int rtn;
-		struct wcsprm* wcsii;
-		rtn = wcspih(hdrstring, ncards, 0, 3, &nreject, &nwcs, &wcsii);
-		if (rtn) {
-			fprintf(stderr, "wcspih() failed: return val %i.\n", rtn);
-		}
-		printf("Got %i WCS representations, %i cards rejected.\n",
-			   nwcs, nreject);
-		// print it out...
-		for (i=0; i<nwcs; i++) {
-			printf("WCS %i:\n", i);
-			wcsset(wcsii + i);
-			wcsprt(wcsii + i);
-			printf("\n");
-		}
-
-		if (nwcs == 1)
-			wcs = wcsii[0];
-	}
-
-	{
 		double pixels[Ncoords][Nelems];
-		double imgcrd[Ncoords][Nelems];
-		double phi[Ncoords];
-		double theta[Ncoords];
 		double world[Ncoords][Nelems];
-		int status[Ncoords];
-		int rtn;
-		double ra, dec;
+		double u, v, ra, dec;
 		double xyz[3];
 		int i;
 
 		for (i=0; i<Ncoords; i++) {
-			pixels[i][0] = dl_get(xpix, i);
-			pixels[i][1] = dl_get(ypix, i);
-		}
-
-		/*
-		  pixels[0][0] = 0.0;
-		  pixels[0][1] = 0.0;
-		  pixels[1][0] = 0.0;
-		  pixels[1][1] = 4096.0;
-		  pixels[2][0] = 4096.0;
-		  pixels[2][1] = 0.0;
-		  pixels[3][0] = 4096.0;
-		  pixels[3][1] = 4096.0;
-		  pixels[0][0] = 25.9374;
-		  pixels[0][1] = 75.5292;
-		  pixels[1][0] = 2003.38;
-		  pixels[1][1] = 1423.66;
-		  pixels[2][0] = 25.9374;
-		  pixels[2][1] = 1423.66;
-		  pixels[3][0] = 75.5292;
-		  pixels[3][1] = 2003.38;
-		*/
-
-		rtn = wcsp2s(&wcs, Ncoords, Nelems, (const double*)pixels,
-					 (double*)imgcrd, 
-					 phi, theta, (double*)world, status);
-		if (rtn) {
-			fprintf(stderr, "wcsp2s failed: return value %i\n", rtn);
-			exit(-1);
+			if (invert) {
+				int offscale;
+				ra  = dl_get(xpix, i);
+				dec = dl_get(ypix, i);
+				wcs2pix(wcs, ra, dec, &u, &v, &offscale);
+			} else {
+				u = dl_get(xpix, i);
+				v = dl_get(ypix, i);
+				pix2wcs(wcs, u, v, &ra, &dec);
+			}
+			pixels[i][0] = u;
+			pixels[i][1] = v;
+			world [i][0] = ra;
+			world [i][1] = dec;
 		}
 
 		for (i=0; i<Ncoords; i++) {
-			printf("Status     %i\n", status[i]);
-			printf("wcs.lng = %i, wcs.lat = %i.\n", wcs.lng, wcs.lat);
 			printf("Pixel     (%g, %g)\n", pixels[i][0], pixels[i][1]);
-			printf("Image     (%g, %g)\n", imgcrd[i][0], imgcrd[i][1]);
 			printf("World     (%g, %g)\n", world[i][0], world[i][1]);
 			ra  = deg2rad(world[i][0]);
 			dec = deg2rad(world[i][1]);
 			radec2xyzarr(ra, dec, xyz);
 			printf("      xyz (%g, %g, %g)\n", xyz[0], xyz[1], xyz[2]);
-			printf("Phi,Theta (%g, %g)\n", phi[i], theta[i]);
 			printf("\n");
 
-			if (rdls &&
-				rdlist_write_entries(rdls, world[i], 1)) {
-				fprintf(stderr, "Failed to write entries to RDLS file.\n");
-				exit(-1);
+			if (invert) {
+				if (xylist_write_entries(xyls, pixels[i], 1)) {
+					fprintf(stderr, "Failed to write entry to XYLS file.\n");
+					exit(-1);
+				}
+			} else {
+				if (rdls &&
+					rdlist_write_entries(rdls, world[i], 1)) {
+					fprintf(stderr, "Failed to write entries to RDLS file.\n");
+					exit(-1);
+				}
 			}
+
 		}
-
-		printf("worldra=[");
-		for (i=0; i<Ncoords; i++)
-			printf("%g,", world[i][0]);
-		printf("];\n");
-		printf("worlddec=[");
-		for (i=0; i<Ncoords; i++)
-			printf("%g,", world[i][1]);
-		printf("];\n");
-
 	}
 	wcsfree(&wcs);
 
-	if (rdls) {
+	if (invert) {
+		if (xylist_fix_field(rdls) ||
+			xylist_fix_header(rdls) ||
+			xylist_close(rdls)) {
+			fprintf(stderr, "Failed to close XYLS file.\n");
+			exit(-1);
+		}
+	}
+
+	if (!invert && rdls) {
 		if (rdlist_fix_field(rdls) ||
 			rdlist_fix_header(rdls) ||
 			rdlist_close(rdls)) {
