@@ -265,6 +265,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 	}
 	$xylist = $sortedlist;
 
+	// Get the image size:
 	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
 	loggit("Command: " . $cmd . "\n");
 	$W = (int)rtrim(shell_exec($cmd));
@@ -275,10 +276,36 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 	$H = (int)rtrim(shell_exec($cmd));
 	loggit("naxis2 = " . $H . "\n");
 
+	// Plot the extracted objects.
+	$Nbright = 100;
+	// -the brightest:
+	$objimg1 = $mydir . "objs1.pgm";
+	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H .
+		" -x 1 -y 1 " . "-N " . $Nbright . " > " . $objimg1;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to plot extracted sources.";
+		return FALSE;
+	}
+	// -the rest:
+	$objimg2 = $mydir . "objs2.pgm";
+	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H .
+		" -x 1 -y 1" . " -n " . $Nbright . " -r 3" . " > " . $objimg2;
+	loggit("Command: " . $cmd . "\n");
+	$res = FALSE;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to plot extracted sources.";
+		return FALSE;
+	}
+	// -the sum:
 	$objimg = $mydir . "objs.pgm";
 	$objimg_orig = $objimg;
-	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H .
-		" -x 1 -y 1 " . " > " . $objimg;
+	$cmd = "pnmarith -max " . $objimg1 . " " . $objimg2 . " > " . $objimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
