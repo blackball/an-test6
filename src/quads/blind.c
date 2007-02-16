@@ -438,22 +438,13 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
-				//printf("Old CPU limit: %i/%i\n", (int)rlim.rlim_cur, (int)rlim.rlim_max);
 				rlim.rlim_cur = cpulimit + sofar;
 
-				//rlim.rlim_max = rlim.rlim_cur = cpulimit + sofar;
 				if (setrlimit(RLIMIT_CPU, &rlim)) {
 					fprintf(stderr, "Failed to set CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 
-				/*
-				  if (getrlimit(RLIMIT_CPU, &rlim)) {
-				  fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
-				  exit(-1);
-				  }
-				  printf("New CPU limit: %i/%i\n", (int)rlim.rlim_cur, (int)rlim.rlim_max);
-				*/
 				oldsigcpu = signal(SIGXCPU, cpu_time_limit);
 				if (oldsigcpu == SIG_ERR) {
 					fprintf(stderr, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
