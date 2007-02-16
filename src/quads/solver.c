@@ -187,6 +187,7 @@ void solve_field(solver_params* params) {
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
 		double ABCDpix[8];
 		// check if the field has already been solved...
+		// FIXME - should only check this if a sufficient time period has passed...
 		if (params->solvedfn && solvedfile_get(params->solvedfn, params->fieldnum)) {
 			fprintf(stderr, "  field %u: file %s indicates that the field has been solved.\n",
 					params->fieldnum, params->solvedfn);
