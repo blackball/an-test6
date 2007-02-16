@@ -216,20 +216,25 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 	return NULL;
 }
 
+#define SAFE_FREE(xx) if ((xx)) {free((xx)); xx = NULL;}
+
 void tweak_init(tweak_t* t)
 {
 	if (!t) return;
-	free(t->a);
-	free(t->d);
-	free(t->x);
-	free(t->y);
-	free(t->xyz);
-	free(t->a_ref);
-	free(t->d_ref);
-	free(t->x_ref);
-	free(t->y_ref);
-	free(t->xyz_ref);
-	sip_free(t->sip);
+	SAFE_FREE(t->a);
+	SAFE_FREE(t->d);
+	SAFE_FREE(t->x);
+	SAFE_FREE(t->y);
+	SAFE_FREE(t->xyz);
+	SAFE_FREE(t->a_ref);
+	SAFE_FREE(t->d_ref);
+	SAFE_FREE(t->x_ref);
+	SAFE_FREE(t->y_ref);
+	SAFE_FREE(t->xyz_ref);
+	if (t->sip) {
+		sip_free(t->sip);
+		t->sip = NULL;
+	}
 	il_free(t->image);
 	il_free(t->ref);
 	dl_free(t->dist2);
@@ -238,7 +243,7 @@ void tweak_init(tweak_t* t)
 	il_free(t->included);
 	kdtree_free(t->kd_image);
 	kdtree_free(t->kd_ref);
-	free(t->hppath);
+	SAFE_FREE(t->hppath);
 
 	memset(t, 0, sizeof(tweak_t));
 }
