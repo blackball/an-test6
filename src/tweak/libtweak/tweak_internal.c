@@ -216,35 +216,13 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 	return NULL;
 }
 
-#define SAFE_FREE(xx) if ((xx)) {free((xx)); xx = NULL;}
 
+/* This function is intended only for initializing newly allocated tweak
+ * strurctures, NOT for operating on existing ones.*/
 void tweak_init(tweak_t* t)
 {
-	if (!t) return;
-	SAFE_FREE(t->a);
-	SAFE_FREE(t->d);
-	SAFE_FREE(t->x);
-	SAFE_FREE(t->y);
-	SAFE_FREE(t->xyz);
-	SAFE_FREE(t->a_ref);
-	SAFE_FREE(t->d_ref);
-	SAFE_FREE(t->x_ref);
-	SAFE_FREE(t->y_ref);
-	SAFE_FREE(t->xyz_ref);
-	if (t->sip) {
-		sip_free(t->sip);
-		t->sip = NULL;
-	}
-	il_free(t->image);
-	il_free(t->ref);
-	dl_free(t->dist2);
-	il_free(t->maybeinliers);
-	il_free(t->bestinliers);
-	il_free(t->included);
-	kdtree_free(t->kd_image);
-	kdtree_free(t->kd_ref);
-	SAFE_FREE(t->hppath);
-
+	// This does not really set things properly but whatever, it should
+	// still work
 	memset(t, 0, sizeof(tweak_t));
 }
 
@@ -1473,6 +1451,7 @@ void my_ransac(tweak_t* t)
 	}
 }
 
+#define SAFE_FREE(xx) if ((xx)) {free((xx)); xx = NULL;}
 void tweak_clear(tweak_t* t)
 {
 	// FIXME
@@ -1480,7 +1459,30 @@ void tweak_clear(tweak_t* t)
 		kdtree_fits_close(cached_kd);
 
 	// FIXME this should free stuff
-	tweak_init(t);
+	if (!t) return;
+	SAFE_FREE(t->a);
+	SAFE_FREE(t->d);
+	SAFE_FREE(t->x);
+	SAFE_FREE(t->y);
+	SAFE_FREE(t->xyz);
+	SAFE_FREE(t->a_ref);
+	SAFE_FREE(t->d_ref);
+	SAFE_FREE(t->x_ref);
+	SAFE_FREE(t->y_ref);
+	SAFE_FREE(t->xyz_ref);
+	if (t->sip) {
+		sip_free(t->sip);
+		t->sip = NULL;
+	}
+	il_free(t->image);
+	il_free(t->ref);
+	dl_free(t->dist2);
+	il_free(t->maybeinliers);
+	il_free(t->bestinliers);
+	il_free(t->included);
+	kdtree_free(t->kd_image);
+	kdtree_free(t->kd_ref);
+	SAFE_FREE(t->hppath);
 }
 
 void tweak_free(tweak_t* t) {
