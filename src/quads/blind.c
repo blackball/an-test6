@@ -127,6 +127,7 @@ char* rdlsfname;
 rdlist* rdls;
 
 int cpulimit;
+int timelimit;
 bool* p_quitNow;
 
 bool do_tweak;
@@ -212,6 +213,7 @@ int main(int argc, char *argv[]) {
 		rdls = NULL;
 		nverified = 0;
 		cpulimit = 0;
+		timelimit = 0;
 		p_quitNow = NULL;
 
 		if (read_parameters()) {
@@ -260,6 +262,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "verbose %i\n", verbose);
 			fprintf(stderr, "logfname %s\n", logfname);
 			fprintf(stderr, "cpulimit %i\n", cpulimit);
+			fprintf(stderr, "timelimit %i\n", timelimit);
 		}
 
 		if (!pl_size(indexes) || !fieldfname || (codetol < 0.0) || !matchfname) {
@@ -359,6 +362,7 @@ int main(int argc, char *argv[]) {
 			char *idfname, *treefname, *quadfname, *startreefname;
 			char* fname = pl_get(indexes, I);
 			sighandler_t oldsigcpu = NULL;
+			sighandler_t oldsigalarm = NULL;
 
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
@@ -459,11 +463,32 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
+			// Set wall-clock time limit.
+			if (timelimit) {
+				alarm(timelimit);
+				oldsigalarm = signal(SIGALRM, wall_time_limit);
+				if (oldsigalarm == SIG_ERR) {
+					fprintf(stderr, "Failed to set wall time limit signal handler: %s\n", strerror(errno));
+					exit(-1);
+				}
+			}
+
 			// Do it!
 			solve_fields();
 
+			// Cancel wall-clock time limit.
+			if (timelimit) {
+				alarm(0);
+				if (signal(SIGALRM, oldsigalarm) == SIG_ERR) {
+					fprintf(stderr, "Failed to restore wall time limit signal handler: %s\n", strerror(errno));
+					exit(-1);
+				}
+			}
+
+			// Restore CPU time limit.
 			if (cpulimit) {
 				struct rlimit rlim;
+				// Restore old CPU limit signal handler.
 				if (signal(SIGXCPU, oldsigcpu) == SIG_ERR) {
 					fprintf(stderr, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
@@ -619,6 +644,8 @@ static int read_parameters() {
 
 		} else if (is_word(buffer, "cpulimit ", &nextword)) {
 			cpulimit = atoi(nextword);
+		} else if (is_word(buffer, "timelimit ", &nextword)) {
+			timelimit = atoi(nextword);
 		} else if (is_word(buffer, "agreetol ", &nextword)) {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "verify_dist ", &nextword)) {
