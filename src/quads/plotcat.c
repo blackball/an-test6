@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 				}
 				for (f=0; f<nfields; f++) {
 					int fld;
-					rd* rd;
+					dl* rd;
 					int j, M;
 					if (il_size(fields))
 						fld = il_get(fields, f);
