@@ -31,19 +31,36 @@
 
 #define OPTIONS "x:y:X:Y:w:h:N:f:F:"
 
+#define MIN(a, b) ((a)<=(b) ? (a) : (b))
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 static void addstar(float* fluximg, int x, int y, int W, int H) {
-	int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2,
-				  1,  0, -1,  2,  3,  2,  3,  0, -1 };
-	int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2,
-				  0, -1, -2,  1,  2, -1, -2,  1,  2 };
+	// X
+	/*
+	  int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2,
+	  1,  0, -1,  2,  3,  2,  3,  0, -1 };
+	  int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2,
+	  0, -1, -2,  1,  2, -1, -2,  1,  2 };
+	*/
+	// O
+	int dx[] = { -1,  0,  1,  2, -1,  0,  1,  2,
+				 -2, -2, -2, -2,  3,  3,  3,  3 };
+	int dy[] = { -2, -2, -2, -2,  3,  3,  3,  3,
+				 -1,  0,  1,  2, -1,  0,  1,  2 };
+
 	float rflux, gflux, bflux;
 	int i;
+	/*
+		rflux = 255.0;
+		gflux = 200.0;
+		bflux = 0.0;
+	*/
 	rflux = 255.0;
-	gflux = 200.0;
-	bflux = 0.0;
+	gflux = 255.0;
+	bflux = 255.0;
+
 	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
 		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;
 		if ((y + dy[i] < 0) || (y + dy[i] >= H)) continue;
@@ -63,7 +80,8 @@ int main(int argc, char *argv[]) {
 	int i;
 	int fieldnum = 0;
 
-	char* rdls_dir = "/home/gmaps/gmaps-rdls/";
+	char* rdls_dir1 = "/home/gmaps/gmaps-rdls/";
+	char* rdls_dir2 = "/home/gmaps/ontheweb-data/";
 
 	double px0, py0, px1, py1;
 	double pixperx, pixpery;
@@ -161,13 +179,21 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
 	}
 
-	snprintf(fn, sizeof(fn), "%s/%s", rdls_dir, filename);
-	fprintf(stderr, "Opening file: %s\n", fn);
+	snprintf(fn, sizeof(fn), "%s/%s", rdls_dir1, filename);
+	fprintf(stderr, "Trying file: %s\n", fn);
 	rdls = rdlist_open(fn);
 	if (!rdls) {
 		fprintf(stderr, "Failed to open RDLS file.\n");
-		exit(-1);
+
+		snprintf(fn, sizeof(fn), "%s/%s", rdls_dir2, filename);
+		fprintf(stderr, "Trying file: %s\n", fn);
+		rdls = rdlist_open(fn);
+		if (!rdls) {
+			fprintf(stderr, "Failed to open RDLS file.\n");
+			exit(-1);
+		}
 	}
+
 	Nstars = rdlist_n_entries(rdls, fieldnum);
 	if (Nstars == -1) {
 		fprintf(stderr, "Failed to read RDLS file.\n");
@@ -247,9 +273,9 @@ int main(int argc, char *argv[]) {
 		printf("P6 %d %d %d\n", w, h, 255);
 		for (i=0; i<(w*h); i++) {
 			unsigned char pix[3];
-			pix[0] = img[3*i+0];
-			pix[1] = img[3*i+1];
-			pix[2] = img[3*i+2];
+			pix[0] = MIN(img[3*i+0], 255);
+			pix[1] = MIN(img[3*i+1], 255);
+			pix[2] = MIN(img[3*i+2], 255);
 			fwrite(pix, 1, 3, stdout);
 		}
 

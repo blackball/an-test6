@@ -69,12 +69,19 @@ if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 		gotfieldquad = gotquad;
 	}
 }
-if ("RDLS_FILE" in getdata) {
+if (("RDLS_FILE" in getdata) || ("rdls" in getdata)) {
 	var rdls = true;
-	var rdlsfile = getdata["RDLS_FILE"];
-	RDLS_URL = TILE_URL + "map=rdls" + "&RDLS_FILE=" + rdlsfile;
+	if ("RDLS_FILE" in getdata) {
+		var rdlsfile = getdata["RDLS_FILE"];
+	} else {
+		var rdlsfile = getdata["rdls"];
+	}
+	RDLS_URL = TILE_URL + "map=rdls" + "&rdls=" + rdlsfile;
 	if ("RDLS_FIELD" in getdata) {
 		RDLS_URL = RDLS_URL + "&RDLS_FIELD=" + Number(getdata["RDLS_FIELD"]);
+	}
+	if ("nr" in getdata) {
+		RDLS_URL = RDLS_URL + "&N=" + Number(getdata["nr"]);
 	}
 }
 
@@ -650,7 +657,9 @@ if ("view" in getdata) {
 		type = "rdlsUsnob";
 	}
 }
+
 if (type.length) {
+	map.setMapType(type);
 	setTimeout("map.setMapType(" + type + ");", 8);
 }
 

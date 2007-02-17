@@ -285,7 +285,8 @@ int main(int argc, char *argv[]) {
 		if (iy + pixelmargin < 0 ||
 			iy - pixelmargin >= h)
 			continue;
-		addstar(img, ix, iy, w, h, 0x90, 0xa8, 255);
+		//addstar(img, ix, iy, w, h, 0x90, 0xa8, 255);
+		addstar(img, ix, iy, w, h, 255, 0, 0);
 		Nib++;
 	}
 

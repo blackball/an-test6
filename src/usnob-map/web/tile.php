@@ -48,6 +48,9 @@
 
 	$rdls_field_str = $_REQUEST["RDLS_FIELD"];
 	$rdls_filename  = $_REQUEST["RDLS_FILE"];
+if (!strlen($rdls_filename)) {
+	$rdls_filename = $_REQUEST["rdls"];
+}
 
 	$index_file = $_REQUEST["INDEX_FILE"];
 
