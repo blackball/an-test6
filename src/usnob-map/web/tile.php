@@ -1,11 +1,9 @@
 <?php
 	function loggit($mesg) {
-		error_log($mesg, 3, "/home/gmaps/usnob-sandbox/usnob.log");
+		error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
 	}
 
-	// CSTUMM BEGIN
-	$path = "/home/gmaps/usnob-sandbox/execs/";
-	// CSTUMM END
+	$path = "/home/gmaps/usnob-map/execs/";
 
 	header("Content-type: image/png");
 	// DEBUG
