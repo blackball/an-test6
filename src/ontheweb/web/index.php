@@ -8,6 +8,7 @@ $modhead = "/home/gmaps/quads/modhead";
 $tabsort = "/home/gmaps/quads/tabsort";
 $tabmerge = "/home/gmaps/quads/tabmerge";
 $mergesolved = "/home/gmaps/quads/mergesolved";
+$rdlsinfo = "/home/gmaps/quads/rdlsinfo";
 
 $maxfilesize = 100*1024*1024;
 
@@ -409,6 +410,7 @@ if ($all_ok) {
 	$donescript = $mydir . "donescript";
 	$rdlists = $mydir . "field%d.rd.fits";
 	$rdlist = $mydir . "field.rd.fits";
+	$rdlsinfofile = $mydir . "rdlsinfo";
 	$matchfile = $mydir . "match.fits";
 	$matchfiles = $mydir . "match%d.fits";
 	$solvedfile = $mydir . "solved";
@@ -458,7 +460,9 @@ if ($all_ok) {
 			// FIXME - the +1 causes only the first extension to be copied...
 			"echo Merging rdls files...\n" .
 			"cp " . sprintf($rdlists, 0) . " " . $rdlist . "\n" .
-			$tabmerge . " " . sprintf($rdlists, 1) . "+1 " . sprintf($rdlists, 0) . "+1\n"
+			$tabmerge . " " . sprintf($rdlists, 1) . "+1 " . $rdlist . "+1\n" .
+			"echo Running rdlsinfo...\n" .
+			$rdlsinfo . " " . $rdlist . " > " . $rdlsinfofile . "\n"
 			);
 			
 	if (!fclose($fdone)) {

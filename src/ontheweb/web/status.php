@@ -38,6 +38,7 @@ $solvedfile = $mydir . "solved";
 $wcsfile = $mydir . "wcs.fits";
 $objsfile = $mydir . "objs.png";
 $overlayfile = $mydir . "overlay.png";
+$rdlsinfofile = $mydir . "rdlsinfo";
 
 if (!$img && !file_exists($inputfile) && file_exists($inputfile . ".tmp")) {
 	// Rename it...
@@ -180,15 +181,15 @@ Astrometry.net: Job Status
 
 <hr />
 
-<table border="1" class="c">
+<table cellpadding="3" border="1" class="c">
 
-<tr><td>Job Id</td><td>
+<tr><td>Job Id:</td><td>
 <?php
 echo $myname
 ?>
 </td></tr>
 
-<tr><td>Status</td><td>
+<tr><td>Status:</td><td>
 <?php
 if (!$job_submitted) {
 	echo "Not submitted";
@@ -206,7 +207,7 @@ if (!$job_submitted) {
 
 <?php
 if ($job_submitted) {
-	echo '<tr><td>Submitted</td><td>';
+	echo '<tr><td>Submitted:</td><td>';
 	$t = filemtime($inputfile);
 	$dt = dtime2str($now - $t);
 	echo $dt . " ago";
@@ -214,7 +215,7 @@ if ($job_submitted) {
 }
 
 if ($job_started) {
-	echo '<tr><td>Started</td><td>';
+	echo '<tr><td>Started:</td><td>';
 	$t = filemtime($startfile);
 	$dt = dtime2str($now - $t);
 	echo $dt . " ago";
@@ -222,7 +223,7 @@ if ($job_started) {
 }
 
 if ($job_done) {
-	echo '<tr><td>Finished</td><td>';
+	echo '<tr><td>Finished:</td><td>';
 	$t = filemtime($donefile);
 	$dt = dtime2str($now - $t);
 	echo $dt . " ago";
@@ -287,6 +288,28 @@ if ($job_done) {
 	echo "</td></tr>\n";
 
 	if ($didsolve) {
+		if (file_exists($rdlsinfofile)) {
+			$info = file($rdlsinfofile);
+			foreach ($info as $str) {
+				$words = explode(" ", $str);
+				$infomap[$words[0]] = implode(" ", array_slice($words, 1));
+			}
+			$rac_merc = $infomap["ra_center_merc"];
+			$decc_merc = $infomap["dec_center_merc"];
+			$zoom = $infomap["zoom_merc"];
+			$rac = $infomap["ra_center"];
+			$decc = $infomap["dec_center"];
+			$fieldsize = $infomap["field_size"];
+		}
+
+		echo '<tr><td>(RA, DEC) center:</td><td>';
+		echo "(" . $rac . ", " . $decc . ") degrees\n";
+		echo "</td></tr>\n";
+
+		echo '<tr><td>Field size (approx):</td><td>';
+		echo $fieldsize;
+		echo "</td></tr>\n";
+
 		echo '<tr><td>WCS file:</td><td>';
 		print_link($wcsfile);
 		echo "</td></tr>\n";
@@ -305,9 +328,10 @@ if ($job_done) {
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";
-		echo $gmaps_url . "?ra=" . "&dec=" . "&zoom=" . "&over=no" .
+		echo $gmaps_url . "?ra=" . $rac_merc . "&dec=" . $decc_merc .
+			"&zoom=" . $zoom . "&over=no" .
 			"&rdls=" . $myname . "/field.rd.fits" .
-			"&view=r+i";
+			"&view=r+u&nr=200";
 		echo "\">browse</a>\n";
 		echo "</td></tr>\n";
 	}
