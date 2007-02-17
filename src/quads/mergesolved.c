@@ -26,11 +26,12 @@
 #include "boilerplate.h"
 #include "solvedfile.h"
 
-const char* OPTIONS = "ho:";
+const char* OPTIONS = "ho:e";
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
 	fprintf(stderr, "\nUsage: %s -o <output-file> <input-file> ...\n"
+			"    [-e]: no error if file no found (assume empty)\n"
 			"\n", progname);
 }
 
@@ -46,11 +47,15 @@ int main(int argc, char** args) {
 	char* outfile = NULL;
 	int N;
 	char* solved;
+	int noerr = 0;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'o':
 			outfile = optarg;
+			break;
+		case 'e':
+			noerr = 1;
 			break;
 		case 'h':
 		default:
@@ -70,8 +75,10 @@ int main(int argc, char** args) {
 	for (i=0; i<ninputfiles; i++) {
 		int n = solvedfile_getsize(inputfiles[i]);
 		if (n == -1) {
-			fprintf(stderr, "Failed to get size of input file %s.\n", inputfiles[i]);
-			exit(-1);
+			if (!noerr) {
+				fprintf(stderr, "Failed to get size of input file %s.\n", inputfiles[i]);
+				exit(-1);
+			}
 		}
 		if (n > N) N = n;
 	}
