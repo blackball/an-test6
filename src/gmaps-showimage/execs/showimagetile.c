@@ -51,6 +51,11 @@ static double deg2rad(double r)
 {
 	return r * M_PI / 180.0;
 }
+// Converts degrees to radians.
+static double rad2deg(double d)
+{
+	return d * 180.0 / M_PI;
+}
 
 #define FALSE 0
 #define TRUE  1
@@ -179,14 +184,21 @@ int main(int argc, char *argv[])
 	// every tile. nevertheless, slow working code is better than no code!
 	FILE* f = fopen(imagefn, "r");
 	int imw, imh;
-	unsigned char* imbuf = malloc(imw*imh*3);
 	// THIS IS COMPLETELY DEPENDENT ON IMAGEMAGICK's 'convert' PPM OUTPUT!
 	// The actual ppm 'standard' allows any whitespace between the tokens
 	// P6 w h vpp data, but for fscanf we only accept one form, which is
 	// what 'convert' outptus.
-	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
+	fscanf(f, "P6");
+	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
+	fscanf(f, "%d %d\n255\n", &imw, &imh);
+	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
+	fprintf(stderr, "got imwid=%d, imheight=%d\n", imw, imh);
+	unsigned char* imbuf = malloc(imw*imh*3);
+//	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
+//	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
+//	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
 	fread(imbuf, 1, imw*imh*3, f);
-	printf("position after fscanf: %ld\n", ftell(f));
+	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
 
 	// READ THE WCS
 	// read wcs into tan structure. IGNORES SIP.
@@ -194,12 +206,22 @@ int main(int argc, char *argv[])
 	qfits_header* wcshead = qfits_header_read(wcsfn);
 	wcs.crpix[0] = qfits_header_getdouble(wcshead, "CRPIX1",1e300);
 	wcs.crpix[1] = qfits_header_getdouble(wcshead, "CRPIX2",1e300);
-	wcs.crval[0] = qfits_header_getdouble(wcshead, "CRVAL", 1e300);
-	wcs.crval[1] = qfits_header_getdouble(wcshead, "CRVAL", 1e300);
+	wcs.crval[0] = qfits_header_getdouble(wcshead, "CRVAL1", 1e300);
+	wcs.crval[1] = qfits_header_getdouble(wcshead, "CRVAL2", 1e300);
 	wcs.cd[0][0] = qfits_header_getdouble(wcshead, "CD1_1", 1e300);
 	wcs.cd[0][1] = qfits_header_getdouble(wcshead, "CD1_2", 1e300);
 	wcs.cd[1][0] = qfits_header_getdouble(wcshead, "CD2_1", 1e300);
 	wcs.cd[1][1] = qfits_header_getdouble(wcshead, "CD2_2", 1e300);
+
+	fprintf(stderr, "wcs.crpix[0] =%lf\n", wcs.crpix[0]);
+	fprintf(stderr, "wcs.crpix[1] =%lf\n", wcs.crpix[1]);
+	fprintf(stderr, "wcs.crval[0] =%lf\n", wcs.crval[0]);
+	fprintf(stderr, "wcs.crval[1] =%lf\n", wcs.crval[1]);
+	fprintf(stderr, "wcs.cd[0][0] =%lf\n", wcs.cd[0][0]);
+	fprintf(stderr, "wcs.cd[0][1] =%lf\n", wcs.cd[0][1]);
+	fprintf(stderr, "wcs.cd[1][0] =%lf\n", wcs.cd[1][0]);
+	fprintf(stderr, "wcs.cd[1][1] =%lf\n", wcs.cd[1][1]);
+
 
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
@@ -251,14 +273,17 @@ int main(int argc, char *argv[])
 
 
 	// want to iterate over mercator space 
-	double mpx, mpy, ra, dec;
+	double mpx =px0, mpy = py0, ra, dec;
 	double imagex, imagey;
+//	imh = 600; imw=800;
 	for (j=0; j<h; j++) {
 		for (i=0; i<w; i++) {
-			mpx = px0 + xperpixel;
-			mpy = py0 + yperpixel;
-			ra = mercx2ra(mpx);
-			dec = mercy2dec(mpy);
+//			mpx += xperpixel;
+//			mpy += yperpixel;
+			mpx = px0 + i*(px1-px0)/w;
+			mpy = py0 + j*(py1-py0)/h;
+			ra = rad2deg(mercx2ra(mpx));
+			dec = rad2deg(mercy2dec(mpy));
 
 			tan_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey);
 			int pppx = lround(imagex);
@@ -269,6 +294,9 @@ int main(int argc, char *argv[])
 				img[3 * (j * w + i) + 0] = imbuf[3 * (imw * pppy + pppx) + 0];
 				img[3 * (j * w + i) + 1] = imbuf[3 * (imw * pppy + pppx) + 1];
 				img[3 * (j * w + i) + 2] = imbuf[3 * (imw * pppy + pppx) + 2];
+				fprintf(stderr, "HIT pppx=%d, pppy=%d\n", pppx, pppy);
+				fprintf(stderr, "    i(x)=%d, j(y)=%d\n", i, j);
+				fprintf(stderr, "    ra  =%lf, dec=%lf\n", ra, dec);
 
 			}
 		}
@@ -278,7 +306,7 @@ int main(int argc, char *argv[])
 	printf("P6 %d %d %d\n", w, h, 255);
 	fwrite(img, 1, 3*h*w, stdout);
 
-	free(img);
+	//free(img);
 
 	return 0;
 }
