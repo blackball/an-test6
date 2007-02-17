@@ -130,14 +130,14 @@ int main(int argc, char** args) {
 		printf("dec_center %g\n", (decmin + decmax) / 2.0);
 
 		if (arc >= 1) {
-			printf("field_size %.2g degrees\n", arc);
+			printf("field_size %.3g degrees\n", arc);
 		} else {
 			arc *= 60.0;
 			if (arc >= 1) {
-				printf("field_size %.2g arcminutes\n", arc);
+				printf("field_size %.3g arcminutes\n", arc);
 			} else {
 				arc *= 60.0;
-				printf("field_size %.2g arcseconds\n", arc);
+				printf("field_size %.3g arcseconds\n", arc);
 			}
 		}
 
