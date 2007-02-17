@@ -74,6 +74,7 @@ static int read_parameters();
 
 // params:
 char *fieldfname, *matchfname, *donefname, *startfname, *logfname;
+char *donescript;
 pl* indexes;
 FILE* logfd;
 int dup_stderr;
@@ -175,6 +176,7 @@ int main(int argc, char *argv[]) {
 		fieldfname = NULL;
 		matchfname = NULL;
 		logfname = NULL;
+		donescript = NULL;
 		donefname = NULL;
 		startfname = NULL;
 		solved_in = NULL;
@@ -239,6 +241,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "matchfname %s\n", matchfname);
 			fprintf(stderr, "startfname %s\n", startfname);
 			fprintf(stderr, "donefname %s\n", donefname);
+			fprintf(stderr, "donescript %s\n", donescript);
 			fprintf(stderr, "solved_in %s\n", solved_in);
 			fprintf(stderr, "solved_out %s\n", solved_out);
 			fprintf(stderr, "solvedserver %s\n", solvedserver);
@@ -557,6 +560,15 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Failed to write marker file %s: %s\n", donefname, strerror(errno));
 		}
 
+		if (donescript) {
+			int rtn = system(donescript);
+			if (rtn == -1) {
+				fprintf(stderr, "Donescript failed.\n");
+			} else {
+				fprintf(stderr, "Donescript returned %i.\n", rtn);
+			}
+		}
+
 		if (!silent)
 			toc();
 
@@ -579,6 +591,7 @@ int main(int argc, char *argv[]) {
 
 		free(logfname);
 		free(donefname);
+		free(donescript);
 		free(startfname);
 		free(solved_in);
 		free(solved_out);
@@ -754,6 +767,8 @@ static int read_parameters() {
 			fieldid = atoi(nextword);
 		} else if (is_word(buffer, "done ", &nextword)) {
 			donefname = strdup(nextword);
+		} else if (is_word(buffer, "donescript ", &nextword)) {
+			donescript = strdup(nextword);
 		} else if (is_word(buffer, "start ", &nextword)) {
 			startfname = strdup(nextword);
 		} else if (is_word(buffer, "sdepth ", &nextword)) {
