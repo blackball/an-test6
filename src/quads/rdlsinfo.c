@@ -25,6 +25,7 @@
 #include <math.h>
 
 #include "starutil.h"
+#include "mathutil.h"
 #include "boilerplate.h"
 #include "rdlist.h"
 
@@ -90,6 +91,8 @@ int main(int argc, char** args) {
 		double ramax, ramin, decmax, decmin;
 		double dx, dy;
 		double maxd;
+		double xyz1[3], xyz2[3];
+		double arc;
 		int i;
 		ramax = decmax = -1e100;
 		ramin = decmin =  1e100;
@@ -115,12 +118,28 @@ int main(int argc, char** args) {
 			}
 		}
 
+		radec2xyzarr(deg2rad(ramin), deg2rad(decmin), xyz1);
+		radec2xyzarr(deg2rad(ramax), deg2rad(decmax), xyz2);
+		arc = rad2deg(distsq2arc(distsq(xyz1, xyz2, 3) / 2.0));
+
 		printf("ra_min %g\n", ramin);
 		printf("ra_max %g\n", ramax);
 		printf("dec_min %g\n", decmin);
 		printf("dec_max %g\n", decmax);
 		printf("ra_center %g\n", (ramin + ramax) / 2.0);
 		printf("dec_center %g\n", (decmin + decmax) / 2.0);
+
+		if (arc >= 1) {
+			printf("field_size %.2g degrees\n", arc);
+		} else {
+			arc *= 60.0;
+			if (arc >= 1) {
+				printf("field_size %.2g arcminutes\n", arc);
+			} else {
+				arc *= 60.0;
+				printf("field_size %.2g arcseconds\n", arc);
+			}
+		}
 
 		// mercator
 		printf("ra_center_merc %g\n", (ramin + ramax)/2.0);
