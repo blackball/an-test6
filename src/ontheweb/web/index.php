@@ -6,6 +6,8 @@ $fits2xy = "/home/gmaps/simplexy/fits2xy";
 $plotxy = "/home/gmaps/quads/plotxy";
 $modhead = "/home/gmaps/quads/modhead";
 $tabsort = "/home/gmaps/quads/tabsort";
+$tabmerge = "/home/gmaps/quads/tabmerge";
+$mergesolved = "/home/gmaps/quads/mergesolved";
 
 $maxfilesize = 100*1024*1024;
 
@@ -405,10 +407,13 @@ if ($all_ok) {
 
 	$inputfile = $mydir . "input";
 	$donescript = $mydir . "donescript";
-	$rdlist = $mydir . "field%i.rd.fits";
-	$matchfile = $mydir . "match%i.fits";
-	$solvedfile = $mydir . "solved%i";
-	//$wcsfile = $mydir . "wcs%i.fits";
+	$rdlists = $mydir . "field%d.rd.fits";
+	$rdlist = $mydir . "field.rd.fits";
+	$matchfile = $mydir . "match.fits";
+	$matchfiles = $mydir . "match%d.fits";
+	$solvedfile = $mydir . "solved";
+	$solvedfiles = $mydir . "solved%d";
+	//$wcsfile = $mydir . "wcs%d.fits";
 	$wcsfile = $mydir . "wcs.fits";
 	$startfile = $mydir . "start";
 	$donefile = $mydir . "done";
@@ -438,10 +443,22 @@ if ($all_ok) {
 		exit;
 	}
 	fprintf($fdone,
-			"touch done\n"
+			"touch done\n" .
+			// FIXME - this should probably be replaced by "agreeable"...
 			// merge solved files
-			// concat match files
-			// merge rdls files (fits table copy util?)
+			"echo Merging solved files...\n" .
+			$mergesolved . " -e -o " . $solvedfile . " " .
+			sprintf($solvedfiles, 0) . " " .
+			sprintf($solvedfiles, 1) . "\n" .
+			// merge match files
+			"echo Merging match files...\n" .
+			"cp " . sprintf($matchfiles, 0) . " " . $matchfile . "\n" .
+			$tabmerge . " " . sprintf($matchfiles, 1) . "+1 " . $matchfile . "+1\n" .
+			// merge rdls files
+			// FIXME - the +1 causes only the first extension to be copied...
+			"echo Merging rdls files...\n" .
+			"cp " . sprintf($rdlists, 0) . " " . $rdlist . "\n" .
+			$tabmerge . " " . sprintf($rdlists, 1) . "+1 " . sprintf($rdlists, 0) . "+1\n"
 			);
 			
 	if (!fclose($fdone)) {
@@ -476,15 +493,16 @@ if ($all_ok) {
 				($ip == 0 ?
 				 "start " . $startfile . "\n" : "") .
 				($ip == 1 ?
-				 "done " . $donefile . "\n" : "") .
+				 //"done " . $donefile . "\n" .
+				 "donescript " . $donescript . "\n" : "") .
 				"field " . $xylist . "\n" .
 				//"solved " . $solvedfile . "\n" .
 				($ip == 0 ?
-				 "solved " . sprintf($solvedfile, $ip) . "\n" :
-				 "solved_in " . sprintf($solvedfile, $ip-1) . "\n" .
-				 "solved_out " . sprintf($solvedfile, $ip) . "\n") .
-				"match " . sprintf($matchfile, $ip) . "\n" .
-				"rdls " . sprintf($rdlist, $ip) . "\n" .
+				 "solved " . sprintf($solvedfiles, $ip) . "\n" :
+				 "solved_in " . sprintf($solvedfiles, $ip-1) . "\n" .
+				 "solved_out " . sprintf($solvedfiles, $ip) . "\n") .
+				"match " . sprintf($matchfiles, $ip) . "\n" .
+				"rdls " . sprintf($rdlists, $ip) . "\n" .
 				//"wcs " . sprintf($wcsfile, $ip) . "\n" .
 				"wcs " . $wcsfile . "\n" .
 				"fields 0\n" .
