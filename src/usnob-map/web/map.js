@@ -659,7 +659,7 @@ if ("view" in getdata) {
 }
 
 if (type.length) {
-	map.setMapType(type);
+	//map.setMapType(type);
 	setTimeout("map.setMapType(" + type + ");", 8);
 }
 

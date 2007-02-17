@@ -229,11 +229,10 @@ int main(int argc, char *argv[]) {
 	xpix0 = px0 * pixperx;
 	ypix0 = py0 * pixpery;
 
-
-	fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
-
 	xpix1 = xpix0 + w;
 	ypix1 = ypix0 + h;
+
+	fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
 
 	if (!forcetree && (zoomlevel <= 5)) {
 		char fn[256];

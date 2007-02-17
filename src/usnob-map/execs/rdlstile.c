@@ -179,13 +179,13 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
 	}
 
-	snprintf(fn, sizeof(fn), "%s/%s", rdls_dir1, filename);
+	snprintf(fn, sizeof(fn), "%s/%s", rdls_dir2, filename);
 	fprintf(stderr, "Trying file: %s\n", fn);
 	rdls = rdlist_open(fn);
 	if (!rdls) {
 		fprintf(stderr, "Failed to open RDLS file.\n");
 
-		snprintf(fn, sizeof(fn), "%s/%s", rdls_dir2, filename);
+		snprintf(fn, sizeof(fn), "%s/%s", rdls_dir1, filename);
 		fprintf(stderr, "Trying file: %s\n", fn);
 		rdls = rdlist_open(fn);
 		if (!rdls) {
