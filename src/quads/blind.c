@@ -527,17 +527,6 @@ int main(int argc, char *argv[]) {
 			free_fn(startreefname);
 		}
 
-		if (donefname) {
-			FILE* batchfid = NULL;
-			if (!silent)
-				fprintf(stderr, "Writing marker file %s...\n", donefname);
-			batchfid = fopen(donefname, "wb");
-			if (batchfid)
-				fclose(batchfid);
-			else
-				fprintf(stderr, "Failed to write marker file %s: %s\n", donefname, strerror(errno));
-		}
-
 		if (solvedserver) {
 			solvedclient_set_server(NULL);
 		}
@@ -555,6 +544,17 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "Failed to close RDLS file.\n");
 			}
 			rdls = NULL;
+		}
+
+		if (donefname) {
+			FILE* batchfid = NULL;
+			if (!silent)
+				fprintf(stderr, "Writing marker file %s...\n", donefname);
+			batchfid = fopen(donefname, "wb");
+			if (batchfid)
+				fclose(batchfid);
+			else
+				fprintf(stderr, "Failed to write marker file %s: %s\n", donefname, strerror(errno));
 		}
 
 		if (!silent)
@@ -576,6 +576,7 @@ int main(int argc, char *argv[]) {
 						strerror(errno));
 			}
 		}
+
 		free(logfname);
 		free(donefname);
 		free(startfname);
