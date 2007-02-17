@@ -5,6 +5,7 @@
 #include <string.h>
 #include <limits.h>
 #include <unistd.h>
+#include "qfits.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
