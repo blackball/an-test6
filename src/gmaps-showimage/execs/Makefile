@@ -1,9 +1,11 @@
+COMMON := ../../an-common
+include $(COMMON)/makefile.common
 
-all: simpletile simplequad
+
+all: showimagetile
 
 CFLAGS  := -g -Wall
+CFLAGS += $(QFITS_INC)
 LDFLAGS := -lm
 
-simpletile: simpletile.o
-
-simplequad: simplequad.o
+showimagetile: showimagetile.o
