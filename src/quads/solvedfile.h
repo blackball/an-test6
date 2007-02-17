@@ -23,6 +23,8 @@
 
 int solvedfile_get(char* fn, int fieldnum);
 
+int solvedfile_getsize(char* fn);
+
 /**
    Get a list of unsolved fields between "firstfield" and
    "lastfield", up to a maximum of "maxfields" (no limit if
@@ -36,5 +38,7 @@ il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields);
 il* solvedfile_getall_solved(char* fn, int firstfield, int lastfield, int maxfields);
 
 int solvedfile_set(char* fn, int fieldnum);
+
+int solvedfile_setsize(char* fn, int fieldnum);
 
 #endif

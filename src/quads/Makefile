@@ -69,7 +69,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	hpquads codetree unpermute-quads unpermute-stars homer blind agreeable \
-	solvedserver printsolved xylist2fits printmatch
+	solvedserver printsolved xylist2fits printmatch mergesolved
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar plotxy wcscheck
@@ -213,7 +213,9 @@ printmatch: printmatch.o matchfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 printsolved: printsolved.o solvedfile.o $(UTIL_OBJS) \
 		$(ANUTILS_LIB) $(QFITS_LIB) 
-	$(CC) $(CFLAGS) -o $@ $^ -lm
+
+mergesolved: mergesolved.o solvedfile.o $(UTIL_OBJS) \
+		$(ANUTILS_LIB) $(QFITS_LIB) 
 
 solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm

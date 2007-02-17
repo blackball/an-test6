@@ -28,6 +28,23 @@
 
 #include "solvedfile.h"
 
+int solvedfile_getsize(char* fn) {
+	FILE* f;
+	off_t end;
+	f = fopen(fn, "rb");
+	if (!f) {
+		return -1;
+	}
+	if (fseek(f, 0, SEEK_END) ||
+		((end = ftello(f)) == -1)) {
+		fprintf(stderr, "Error: seeking to end of file %s: %s\n",
+				fn, strerror(errno));
+		fclose(f);
+		return -1;
+	}
+	return (int)end;
+}
+
 int solvedfile_get(char* fn, int fieldnum) {
 	FILE* f;
 	unsigned char val;
@@ -132,6 +149,43 @@ il* solvedfile_getall(char* fn, int firstfield, int lastfield, int maxfields) {
 
 il* solvedfile_getall_solved(char* fn, int firstfield, int lastfield, int maxfields) {
 	return solvedfile_getall_val(fn, firstfield, lastfield, maxfields, 1);
+}
+
+int solvedfile_setsize(char* fn, int sz) {
+	int f;
+	unsigned char val;
+	off_t off;
+	f = open(fn, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+	if (f == -1) {
+		fprintf(stderr, "Error: failed to open file %s for writing: %s\n",
+				fn, strerror(errno));
+		return -1;
+	}
+	off = lseek(f, 0, SEEK_END);
+	if (off == -1) {
+		fprintf(stderr, "Error: failed to lseek() to end of file %s: %s\n", fn, strerror(errno));
+		close(f);
+		return -1;
+	}
+	// this gives you the offset one past the end of the file.
+	if (off < sz) {
+		// pad.
+		int npad = sz - off;
+		int i;
+		val = 0;
+		for (i=0; i<npad; i++)
+			if (write(f, &val, 1) != 1) {
+				fprintf(stderr, "Error: failed to write padding to file %s: %s\n",
+						fn, strerror(errno));
+				close(f);
+				return -1;
+			}
+	}
+	if (close(f)) {
+		fprintf(stderr, "Error closing file %s: %s\n", fn, strerror(errno));
+		return -1;
+	}
+	return 0;
 }
 
 int solvedfile_set(char* fn, int fieldnum) {
