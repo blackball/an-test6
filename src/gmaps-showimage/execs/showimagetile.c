@@ -203,6 +203,7 @@ int main(int argc, char *argv[])
 	// READ THE WCS
 	// read wcs into tan structure. IGNORES SIP.
 	tan_t wcs;
+	fprintf(stderr, "wcsfn: %s\n",wcsfn);
 	qfits_header* wcshead = qfits_header_read(wcsfn);
 	wcs.crpix[0] = qfits_header_getdouble(wcshead, "CRPIX1",1e300);
 	wcs.crpix[1] = qfits_header_getdouble(wcshead, "CRPIX2",1e300);
@@ -281,7 +282,7 @@ int main(int argc, char *argv[])
 //			mpx += xperpixel;
 //			mpy += yperpixel;
 			mpx = px0 + i*(px1-px0)/w;
-			mpy = py0 + j*(py1-py0)/h;
+			mpy = py0 - j*(py1-py0)/h;
 			ra = rad2deg(mercx2ra(mpx));
 			dec = rad2deg(mercy2dec(mpy));
 
@@ -294,9 +295,9 @@ int main(int argc, char *argv[])
 				img[3 * (j * w + i) + 0] = imbuf[3 * (imw * pppy + pppx) + 0];
 				img[3 * (j * w + i) + 1] = imbuf[3 * (imw * pppy + pppx) + 1];
 				img[3 * (j * w + i) + 2] = imbuf[3 * (imw * pppy + pppx) + 2];
-				fprintf(stderr, "HIT pppx=%d, pppy=%d\n", pppx, pppy);
-				fprintf(stderr, "    i(x)=%d, j(y)=%d\n", i, j);
-				fprintf(stderr, "    ra  =%lf, dec=%lf\n", ra, dec);
+				//fprintf(stderr, "HIT pppx=%d, pppy=%d\n", pppx, pppy);
+				//fprintf(stderr, "    i(x)=%d, j(y)=%d\n", i, j);
+				//fprintf(stderr, "    ra  =%lf, dec=%lf\n", ra, dec);
 
 			}
 		}

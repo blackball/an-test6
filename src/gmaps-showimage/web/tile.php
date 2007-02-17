@@ -14,7 +14,7 @@ function loggit($mesg) {
 }
 
 // Where to look for executables.
-$path = "/home/gmaps/gmaps-simple/execs/";
+$path = "/home/gmaps/astrometry/src/gmaps-showimage/execs/";
 
 // Write headers...
 header("Content-type: image/png");
@@ -80,7 +80,9 @@ foreach ($layers as $l => $lval) {
 */
 
 // The command to run...
-$cmd = "simpletile";
+$cmd = "showimagetile";
+$cmd = $cmd . " -F/home/gmaps/astrometry/src/gmaps-showimage/execs/test/wcs.001 ";
+$cmd = $cmd . " -f/home/gmaps/astrometry/src/gmaps-showimage/execs/test/rosette.ppm ";
 $cmd = $path . $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 
 $cmd = $cmd . " | pnmtopng";
