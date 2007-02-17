@@ -1015,6 +1015,12 @@ static void solve_fields() {
 		int nfield;
 		qfits_header* fieldhdr = NULL;
 
+		if (rdls) {
+			if (rdlist_write_new_field(rdls)) {
+				fprintf(stderr, "Failed to write RDLS field header.\n");
+			}
+		}
+
 		fieldnum = il_get(fieldlist, fi);
 		if (fieldnum >= nfields) {
 			if (!silent)
@@ -1123,12 +1129,6 @@ static void solve_fields() {
 				fprintf(stderr, "Failed to fix the matchfile header for field %i.\n", fieldnum);
 		}
 
-		if (rdls) {
-			if (rdlist_write_new_field(rdls)) {
-				fprintf(stderr, "Failed to write RDLS field header.\n");
-			}
-		}
-
 		if (hits->bestmo) {
 			sip_t* sip = NULL;
 			// Field solved!
@@ -1215,12 +1215,6 @@ static void solve_fields() {
 				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
 		}
 
-		if (rdls) {
-			if (rdlist_fix_field(rdls)) {
-				fprintf(stderr, "Failed to fix RDLS field header.\n");
-			}
-		}
-
 		handlehits_free_matchobjs(hits);
 		handlehits_clear(hits);
 
@@ -1236,7 +1230,11 @@ static void solve_fields() {
 		last_wtime = wtime;
 
 	cleanup:
-		if (0) {} // to keep gcc happy...
+		if (rdls) {
+			if (rdlist_fix_field(rdls)) {
+				fprintf(stderr, "Failed to fix RDLS field header.\n");
+			}
+		}
 	}
 
 	free(field);
