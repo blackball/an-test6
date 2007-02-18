@@ -327,14 +327,14 @@ int main(int argc, char *argv[])
 				img[4 * (j * w + i) + 1] = imbuf[3 * (imw * pppy + pppx) + 1];
 				img[4 * (j * w + i) + 2] = imbuf[3 * (imw * pppy + pppx) + 2];
 				img[4 * (j * w + i) + 3] = 255;
-				fprintf(stderr, "VVV  HIT pppx=%d, pppy=%d\n", pppx, pppy);
-				fprintf(stderr, "VVV     i(x)=%d, j(y)=%d\n", i, j);
-				fprintf(stderr, "VVV     ra  =%lf, dec=%lf\n", ra, dec);
-				fprintf(stderr, "VVV     mpx =%lf, mpy=%lf\n", mpx,mpy);
+				//fprintf(stderr, "VVV  HIT pppx=%d, pppy=%d\n", pppx, pppy);
+				//fprintf(stderr, "VVV     i(x)=%d, j(y)=%d\n", i, j);
+				//fprintf(stderr, "VVV     ra  =%lf, dec=%lf\n", ra, dec);
+				//fprintf(stderr, "VVV     mpx =%lf, mpy=%lf\n", mpx,mpy);
 
 		  } else {
 				// for now only semitransparent
-				img[4 * (j * w + i) + 3] = 55;
+				img[4 * (j * w + i) + 3] = 0;
 		  }
 		}
 	}
