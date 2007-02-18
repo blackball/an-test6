@@ -71,7 +71,7 @@ function userimagetile_render($x0, $x1, $y0, $y1, $w, $h, $tag, $outfname) {
 	system($cmd);
 }
 
-backend_register('userimagetile_render', 'userimagetile_getdir');
+backend_register('userimagetile', 'userimagetile_render', 'userimagetile_getdir');
 
 /**********************************************
  ************ main tilecache entry ************
