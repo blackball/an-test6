@@ -228,15 +228,15 @@ int main(int argc, char *argv[])
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
 	// it around...
-	if (px0 < 0.0) {
-	//if (0) {
+	//if (px0 < 0.0) {
+	if (0) {
 		px0 += 1.0;
 		px1 += 1.0;
 		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
 	}
 
 	// Allocate a black image.
-	img = calloc(3 * w * h, 1);
+	img = calloc(4 * w * h, 1);
 
 	// draw a nice border in white.
 	for (i = 0; i < 2; i++) {
@@ -294,20 +294,31 @@ int main(int argc, char *argv[])
 			if (0 <= pppx && pppx < imw &&
 			    0 <= pppy && pppy < imh) {
 				// nearest neighbour. bilinear is for weenies.
-				img[3 * (j * w + i) + 0] = imbuf[3 * (imw * pppy + pppx) + 0];
-				img[3 * (j * w + i) + 1] = imbuf[3 * (imw * pppy + pppx) + 1];
-				img[3 * (j * w + i) + 2] = imbuf[3 * (imw * pppy + pppx) + 2];
-				//fprintf(stderr, "HIT pppx=%d, pppy=%d\n", pppx, pppy);
-				//fprintf(stderr, "    i(x)=%d, j(y)=%d\n", i, j);
-				//fprintf(stderr, "    ra  =%lf, dec=%lf\n", ra, dec);
+				img[4 * (j * w + i) + 0] = imbuf[3 * (imw * pppy + pppx) + 0];
+				img[4 * (j * w + i) + 1] = imbuf[3 * (imw * pppy + pppx) + 1];
+				img[4 * (j * w + i) + 2] = imbuf[3 * (imw * pppy + pppx) + 2];
+				img[4 * (j * w + i) + 3] = 255;
+				fprintf(stderr, "VVV  HIT pppx=%d, pppy=%d\n", pppx, pppy);
+				fprintf(stderr, "VVV     i(x)=%d, j(y)=%d\n", i, j);
+				fprintf(stderr, "VVV     ra  =%lf, dec=%lf\n", ra, dec);
+				fprintf(stderr, "VVV     mpx =%lf, mpy=%lf\n", mpx,mpy);
 
-			}
+		  } else {
+				// for now only semitransparent
+				img[4 * (j * w + i) + 3] = 55;
+		  }
 		}
 	}
 
 	// write PPM on stdout.
-	printf("P6 %d %d %d\n", w, h, 255);
-	fwrite(img, 1, 3*h*w, stdout);
+	printf("P7\n");
+   printf("WIDTH %d\n",w);
+   printf("HEIGHT %d\n",h);
+   printf("DEPTH 4\n");
+   printf("MAXVAL 255\n");
+   printf("TUPLETYPE RGB_ALPHA\n");
+   printf("ENDHDR\n");
+	fwrite(img, 1, 4*h*w, stdout);
 
 	//free(img);
 
