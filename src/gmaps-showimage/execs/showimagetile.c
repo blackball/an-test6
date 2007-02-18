@@ -146,8 +146,9 @@ int main(int argc, char *argv[])
 		exit( -1);
 	}
 
-	fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
-	fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
+	fprintf(stderr, "VVV----------------------\n");
+	fprintf(stderr, "VVV X range: [%g, %g] degrees\n", x0, x1);
+	fprintf(stderr, "VVV Y range: [%g, %g] degrees\n", y0, y1);
 
 	// Mercator projected coordinates
 	px0 = ra2mercx(deg2rad(x0));
@@ -155,8 +156,8 @@ int main(int argc, char *argv[])
 	py0 = dec2mercy(deg2rad(y0));
 	py1 = dec2mercy(deg2rad(y1));
 
-	fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
-	fprintf(stderr, "Projected Y range: [%g, %g]\n", py0, py1);
+	fprintf(stderr, "VVV Projected X range: [%g, %g]\n", px0, px1);
+	fprintf(stderr, "VVV Projected Y range: [%g, %g]\n", py0, py1);
 
 	if (px1 < px0) {
 		fprintf(stderr, "Error, px1 < px0 (%g < %g)\n", px1, px0);
@@ -171,7 +172,7 @@ int main(int argc, char *argv[])
 	pixpery = (double)h / (py1 - py0);
 	xperpixel = 1.0 / pixperx;
 	yperpixel = 1.0 / pixpery;
-	fprintf(stderr, "X,Y pixel scale: %g, %g.\n", pixperx, pixpery);
+	fprintf(stderr, "VVV X,Y pixel scale: %g, %g.\n", pixperx, pixpery);
 	xzoom = pixperx / 256.0;
 	yzoom = pixpery / 256.0;
 	fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
@@ -228,6 +229,7 @@ int main(int argc, char *argv[])
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
 	// it around...
 	if (px0 < 0.0) {
+	//if (0) {
 		px0 += 1.0;
 		px1 += 1.0;
 		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
@@ -282,7 +284,7 @@ int main(int argc, char *argv[])
 //			mpx += xperpixel;
 //			mpy += yperpixel;
 			mpx = px0 + i*(px1-px0)/w;
-			mpy = py0 - j*(py1-py0)/h;
+			mpy = py1 - j*(py1-py0)/h;
 			ra = rad2deg(mercx2ra(mpx));
 			dec = rad2deg(mercy2dec(mpy));
 
