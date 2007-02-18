@@ -44,10 +44,9 @@ void writeimage(unsigned char * img, int w, int h)
 
 	png_set_IHDR(png_ptr, png_info, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-	//png_set_bgr(png_ptr); // not here?
 	png_write_info(png_ptr, png_info);
 
-	png_write_image(png_ptr, image_rows); // <-- FAILING
+	png_write_image(png_ptr, image_rows);
 	png_write_end(png_ptr, png_info);
 
 	free(image_rows);
