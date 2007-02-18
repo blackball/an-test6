@@ -44,7 +44,8 @@ function backend_register($layer_name, $render_callback, $getdir_callback)
 }
 
 function backend_exists($layer_name) {
-	return in_array($layer_render_callbacks);
+	global $layer_render_callbacks;
+	return array_key_exists($layer_name, $layer_render_callbacks);
 }
 
 /* ------------------------------------------*/
@@ -55,11 +56,13 @@ $USERIMAGETILE_CACHEDIR = "/home/gmaps/astrometry/src/gmaps-showimage/cache";
 
 /* each backend maps a tag to a directory where the cached images are stored */
 function userimagetile_getdir($tag) {
-	return "$USERIMAGETILE_CACHEDIR/$tag"
+   global $USERIMAGETILE_CACHEDIR;
+	return "$USERIMAGETILE_CACHEDIR/$tag";
 }
 
 // Render a single tile to $outfname
 function userimagetile_render($x0, $x1, $y0, $y1, $w, $h, $tag, $outfname) {
+   global $USERIMAGETILE_CACHEDIR, $USERIMAGETILE_CACHEBIN;
 	$tag = "test_tag"; // fake a tag for now
 	// FIXME check for tag validity
 	$wcs = "$USERIMAGETILE_CACHEDIR/$tag/wcs.000";
@@ -77,19 +80,18 @@ backend_register('userimagetile', 'userimagetile_render', 'userimagetile_getdir'
  ************ main tilecache entry ************
  **********************************************/
 
+// Write a message to the log file.
+function loggit($mesg) {
+	//error_log($mesg, 3, "/home/gmaps/astrometry/src/tilecache/tilecache.log");
+	error_log($mesg, 3, "/tmp/tilecache.log");
+}
+
 /*
   This script gets called by the client to request a map tile.  Map tiles are
   256x256 pixels and are specified in terms of the RA,DEC bounding box.
   This script just parses the values and formats a command-line for a C program.
  */
 
-// Write a message to the log file.
-function loggit($mesg) {
-	error_log($mesg, 3, "/home/gmaps/astrometry/src/tilecache/tilecache.log");
-}
-
-// Write headers...
-header("Content-type: image/png");
 
 loggit("Tile request headers:\n");
 $headers = $_REQUEST;
@@ -155,18 +157,21 @@ if (!backend_exists($lay))  {
 $tilestring = "x0=$x0, x1=$x1, y0=$y0, y1=$y1, w=$w, h=$h";
 $tilehash = hash('sha256', $tilestring);
 
-$dir = $getdir_callbacks[$lay]($tag);
-$tilefile = "$dir/tile-$tilehash.png";
+$tcb = $getdir_callbacks[$lay];
+//$tilecachedir = $getdir_callbacks[$lay]($tag);
+$tilecachedir = $tcb($tag);
+$tilefile = "$tilecachedir/tile-$tilehash.png";
 if (!file_exists($tilefile)) {
-	loggit("Missed cache\n");
-	$render_callbacks[$lay]($x0, $x1, $y0, $y1, $w, $h, $tag, $tilefile);
+	$callback = $layer_render_callbacks[$lay];
+	loggit("Missed cache, rendering to ($tilecachedir) $tilefile via $callback\n");
+	$callback($x0, $x1, $y0, $y1, $w, $h, $tag, $tilefile);
 } else {
 	loggit("HIT THE CACHE\n");
 }
 
 // Make sure the file actually rendered
 if (!file_exists($tilefile)) {
-	$msg = "Something bad happened when rendering layer:$lay tag:$tag... ???\n";
+	$msg = "Something bad happened when rendering 'layer:$lay'  tag:$tag... ???\n";
 	loggit($msg);
 	header("Content-type: text/html");
 	printf("<html><body>$msg</body></html>\n\n");
@@ -174,6 +179,7 @@ if (!file_exists($tilefile)) {
 }
 
 // Slam the file over the wire
+header("Content-type: image/png");
 $fp = fopen($tilefile, 'rb');
 fpassthru($fp);
 exit;

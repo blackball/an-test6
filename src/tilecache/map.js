@@ -275,16 +275,16 @@ function startup() {
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
-	TILE_URL = BASE_URL + "tile.php?";
+	TILE_URL = BASE_URL + "tilecache.php?";
 	//QUAD_URL = BASE_URL + "quad.php?";
 
 	// Describe the tile server...
 	var myTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	myTile.myLayers='mylayer';
+	myTile.myLayers='userimagetile';
 	myTile.myFormat='image/png';
 	myTile.myBaseURL=TILE_URL;
 	// Transparent tiles:
-	myTile.myBaseURL=TILE_URL + "&tag=fake";
+	myTile.myBaseURL=TILE_URL + "&tag=test_tag";
 	myTile.getTileUrl=CustomGetTileUrl;
 
 	var myMapType = new GMapType([myTile], G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
