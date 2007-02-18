@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <assert.h>
+#include <png.h>
 #include "qfits.h"
 #include "sip.h"
 
@@ -24,6 +25,35 @@
 */
 
 #define OPTIONS "x:y:X:Y:w:h:F:f:"
+
+// fires an ALPHA png out stdout
+void writeimage(unsigned char * img, int w, int h) 
+{
+	png_bytepp image_rows;
+	int n;
+
+	image_rows = malloc(sizeof(png_bytep)*h);
+	for (n = 0; n < h; n++)
+		image_rows[n] = (unsigned char *) img + 4*n*w;
+
+	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_infop png_info = png_create_info_struct(png_ptr);
+	png_init_io(png_ptr, stdout);
+	png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
+	png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+
+	png_set_IHDR(png_ptr, png_info, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+	//png_set_bgr(png_ptr); // not here?
+	png_write_info(png_ptr, png_info);
+
+	png_write_image(png_ptr, image_rows); // <-- FAILING
+	png_write_end(png_ptr, png_info);
+
+	free(image_rows);
+
+	png_destroy_write_struct(&png_ptr, &png_info);
+}
 
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
 static double ra2mercx(double ra)
@@ -310,17 +340,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// write PPM on stdout.
-	printf("P7\n");
-   printf("WIDTH %d\n",w);
-   printf("HEIGHT %d\n",h);
-   printf("DEPTH 4\n");
-   printf("MAXVAL 255\n");
-   printf("TUPLETYPE RGB_ALPHA\n");
-   printf("ENDHDR\n");
-	fwrite(img, 1, 4*h*w, stdout);
-
-	//free(img);
+	writeimage(img, w, h);
 
 	return 0;
 }

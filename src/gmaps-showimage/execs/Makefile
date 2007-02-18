@@ -14,6 +14,7 @@ CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
-LDFLAGS := -lm
+CFLAGS += `pkg-config --cflags libpng`
+LDFLAGS := -lm `pkg-config --libs libpng`
 
 showimagetile: showimagetile.o $(QFITS_LIB) $(LIBTWEAK_LIB) $(ANUTILS_LIB) $(ANFILES_LIB)
