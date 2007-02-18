@@ -280,7 +280,8 @@ function startup() {
 
 	// Describe the tile server...
 	var myTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	myTile.myLayers='userimagetile';
+	myTile.myLayers='usnob';
+	//myTile.myLayers='userimagetile';
 	myTile.myFormat='image/png';
 	myTile.myBaseURL=TILE_URL;
 	// Transparent tiles:

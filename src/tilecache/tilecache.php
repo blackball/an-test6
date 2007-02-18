@@ -76,6 +76,28 @@ function userimagetile_render($x0, $x1, $y0, $y1, $w, $h, $tag, $outfname) {
 
 backend_register('userimagetile', 'userimagetile_render', 'userimagetile_getdir');
 
+/* ------------------------------------------*/
+/* First start with a showimagetile backend. */
+
+$USNOB_BIN = "/home/gmaps/usnob-map/execs/usnobtile";
+$USNOB_CACHEDIR = "/data1/usnobcache";
+
+function usnob_getdir($tag) {
+   global $USNOB_CACHEDIR;
+	return $USNOB_CACHEDIR;
+}
+
+function usnob_render($x0, $x1, $y0, $y1, $w, $h, $tag, $outfname) {
+   global $USNOB_CACHEDIR, $USNOB_BIN;
+	$cmd = $USNOB_BIN . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
+	//$cmd = "$cmd | pnmtopng > $outfname";
+	$cmd = "$cmd > $outfname";
+	loggit("Userimagetile backend: $cmd\n");
+	system($cmd);
+}
+
+backend_register('usnob', 'usnob_render', 'usnob_getdir');
+
 /**********************************************
  ************ main tilecache entry ************
  **********************************************/
