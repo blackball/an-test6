@@ -81,17 +81,9 @@ foreach ($layers as $l => $lval) {
 
 // The command to run...
 $cmd = "showimagetile";
-$cmd = $cmd . " -F/home/gmaps/astrometry/src/gmaps-showimage/execs/test/wcs.000 ";
+$cmd = $cmd . " -F/home/gmaps/astrometry/src/gmaps-showimage/execs/test/wcs.001 ";
 $cmd = $cmd . " -f/home/gmaps/astrometry/src/gmaps-showimage/execs/test/rosette.ppm ";
 $cmd = $path . $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
-
-$cmd = $cmd . " | pnmtopng";
-
-if ($transparent) {
-	// NOTE, that space between "-transparent" and "=black" is supposed
-	// to be there!
-	$cmd = $cmd . " -transparent =black";
-}
 
 loggit("Command: $cmd\n");
 
