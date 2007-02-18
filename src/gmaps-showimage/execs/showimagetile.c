@@ -213,6 +213,10 @@ int main(int argc, char *argv[])
 	// require ppm input, and insane to require re-reading the image for
 	// every tile. nevertheless, slow working code is better than no code!
 	FILE* f = fopen(imagefn, "r");
+	if (!f) {
+		fprintf(stderr, "image didn't open; bailing\n");
+		exit(1);
+	}
 	int imw, imh;
 	// THIS IS COMPLETELY DEPENDENT ON IMAGEMAGICK's 'convert' PPM OUTPUT!
 	// The actual ppm 'standard' allows any whitespace between the tokens
@@ -235,6 +239,11 @@ int main(int argc, char *argv[])
 	tan_t wcs;
 	fprintf(stderr, "wcsfn: %s\n",wcsfn);
 	qfits_header* wcshead = qfits_header_read(wcsfn);
+
+	if (!wcshead) {
+		fprintf(stderr, "wcs didn't open; bailing\n");
+		exit(1);
+	}
 	wcs.crpix[0] = qfits_header_getdouble(wcshead, "CRPIX1",1e300);
 	wcs.crpix[1] = qfits_header_getdouble(wcshead, "CRPIX2",1e300);
 	wcs.crval[0] = qfits_header_getdouble(wcshead, "CRVAL1", 1e300);
