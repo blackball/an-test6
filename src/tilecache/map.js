@@ -279,16 +279,24 @@ function startup() {
 	//QUAD_URL = BASE_URL + "quad.php?";
 
 	// Describe the tile server...
-	var myTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	myTile.myLayers='usnob';
-	//myTile.myLayers='userimagetile';
-	myTile.myFormat='image/png';
-	myTile.myBaseURL=TILE_URL;
-	// Transparent tiles:
-	myTile.myBaseURL=TILE_URL + "&tag=test_tag";
-	myTile.getTileUrl=CustomGetTileUrl;
+	// USNOB underneath
+	var usnobTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	usnobTile.myLayers='usnob';
+	usnobTile.myFormat='image/png';
+	usnobTile.myBaseURL=TILE_URL;
+	usnobTile.myBaseURL=TILE_URL + "&tag=test_tag";
+	usnobTile.getTileUrl=CustomGetTileUrl;
 
-	var myMapType = new GMapType([myTile], G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
+	// Describe the tile server...
+	var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	userimageTile.myLayers='userimagetile';
+	userimageTile.myFormat='image/png';
+	userimageTile.myBaseURL=TILE_URL;
+	userimageTile.myBaseURL=TILE_URL + "&tag=test_tag";
+	userimageTile.getTileUrl=CustomGetTileUrl;
+
+	var myMapType = new GMapType([usnobTile, userimageTile],
+				G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
 
 	map.getMapTypes().length = 0;
 	map.addMapType(myMapType);

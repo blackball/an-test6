@@ -52,7 +52,8 @@ function backend_exists($layer_name) {
 /* First start with a showimagetile backend. */
 
 $USERIMAGETILE_CACHEBIN = "/home/gmaps/astrometry/src/gmaps-showimage/execs/showimagetile";
-$USERIMAGETILE_CACHEDIR = "/home/gmaps/astrometry/src/gmaps-showimage/cache";
+//$USERIMAGETILE_CACHEDIR = "/home/gmaps/astrometry/src/gmaps-showimage/cache";
+$USERIMAGETILE_CACHEDIR = "/data1/userimagetilecache";
 
 /* each backend maps a tag to a directory where the cached images are stored */
 function userimagetile_getdir($tag) {
