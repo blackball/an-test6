@@ -63,7 +63,6 @@ endif
 # linking.  CFLAGS_DEF are compile flags, LDFLAGS_DEG are link flags.
 
 # speedy!
-#FLAGS_DEF += -O
 FLAGS_DEF += -O3
 FLAGS_DEF += -fomit-frame-pointer
 FLAGS_DEF += -fno-math-errno -fno-trapping-math

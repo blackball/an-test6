@@ -24,6 +24,17 @@
 #include "mathutil.h"
 #include "keywords.h"
 
+#define POGSON 2.51188643150958
+#define LOGP   0.92103403719762
+
+double mag2flux(double mag) {
+	return pow(POGSON, -mag);
+}
+
+double flux2mag(double flux) {
+	return -log(flux) * LOGP;
+}
+
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec) {
 	*ra = xy2ra(x, y);
 	*dec = z2dec(z);

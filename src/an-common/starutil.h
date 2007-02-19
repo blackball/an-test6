@@ -58,6 +58,8 @@ typedef unsigned char uchar;
 #define xy2ra(x,y) ((atan2(y,x)>=0.0)?(atan2(y,x)):(2*(double)PIl+atan2(y,x))) // result in radians
 #define z2dec(z) (asin(z)) // result in radians
 
+double mag2flux(double mag);
+
 inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec);
 inline void xyzarr2radec(double* xyz, double *ra, double *dec);
