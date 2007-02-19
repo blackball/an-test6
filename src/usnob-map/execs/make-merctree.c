@@ -30,16 +30,24 @@
 #include "an_catalog.h"
 #include "mathutil.h"
 
-#define OPTIONS "ho:l:m:"
+#define OPTIONS "ho:l:m:t:d:bsSc" // T
 
 void printHelp(char* progname) {
 	fprintf(stderr, "%s usage:\n"
 			"   -o <output-file>\n"
 			"  [-m <max-y-val>]: Maximum y value of the projection (default: Pi)\n"
 			"  [-l <n-leaf-point>]: Target number of points in the leaves of the tree (default 15).\n"
+			//"  [-T]: Use Tycho-2 mapping: B->blue, V->red, H->green.\n"
+			"  [-t  <tree type>]:  {double,float,u32,u16}, default u32.\n"
+			"  [-d  <data type>]:  {double,float,u32,u16}, default u32.\n"
+			"   (   [-b]: build bounding boxes\n"
+			"    OR [-s]: build splitting planes   )\n"
+			"  [-S]: include separate splitdim array\n"
+			"  [-c]: run kdtree_check on the resulting tree\n"
 			"\n"
 			"  <input-catalog> ...\n"
 			"\n"
+			"    (Input files are Astrometry.net catalogs.)\n"
 			"\n", progname);
 }
 
@@ -58,6 +66,12 @@ int main(int argc, char** args) {
 	int N;
 	int infile;
 	double* xy;
+	int convtype = KDT_CONV_NULL;
+	int datatype = KDT_DATA_NULL;
+	int treetype = KDT_TREE_NULL;
+	int tt;
+	int buildopts = 0;
+	int checktree = 0;
 
 	start = time(NULL);
 
@@ -66,6 +80,9 @@ int main(int argc, char** args) {
 		case 'h':
 			printHelp(progname);
 			exit(0);
+		case 'c':
+			checktree = 1;
+			break;
 		case 'o':
 			outfn = optarg;
 			break;
@@ -75,6 +92,21 @@ int main(int argc, char** args) {
 		case 'm':
 			maxy = atof(optarg);
 			break;
+		case 't':
+			treetype = kdtree_kdtype_parse_tree_string(optarg);
+			break;
+		case 'd':
+			datatype = kdtree_kdtype_parse_data_string(optarg);
+			break;
+		case 'b':
+			buildopts |= KD_BUILD_BBOX;
+			break;
+		case 's':
+			buildopts |= KD_BUILD_SPLIT;
+			break;
+		case 'S':
+			buildopts |= KD_BUILD_SPLITDIM;
+			break;
 		}
 
 	if (!outfn || (optind == argc)) {
@@ -82,12 +114,32 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	if (!(buildopts & (KD_BUILD_BBOX | KD_BUILD_SPLIT))) {
+		printf("You need bounding-boxes or splitting planes!\n");
+		printHelp(progname);
+		exit(-1);
+	}
+
+	// defaults
+	if (!datatype)
+		datatype = KDT_DATA_U32;
+	if (!treetype)
+		treetype = KDT_TREE_U32;
+
+	// the outside world works in doubles.
+	if (datatype != KDT_DATA_DOUBLE)
+		convtype = KDT_CONV_DOUBLE;
+
+	tt = kdtree_kdtypes_to_treetype(convtype, treetype, datatype);
+
 	mt = merctree_new();
 	if (!mt) {
 		fprintf(stderr, "Failed to allocate a merctree.\n");
 		exit(-1);
 	}
 
+	// Read all the catalogs to see how many points there are in total.
+	fprintf(stderr, "Reading catalogs to find total number of points...\n");
 	N = 0;
 	for (infile = optind; infile<argc; infile++) {
 		char* fn;
@@ -98,10 +150,13 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to open Astrometry.net catalog %s\n", fn);
 			exit(-1);
 		}
+		fprintf(stderr, "  %i in %s\n", ancat->nentries, fn);
 		N += ancat->nentries;
 		an_catalog_close(ancat);
 	}
+	fprintf(stderr, "Total: %i points.\n", N);
 
+	// Allocate space for star locations & flux.
 	xy = malloc(N * 2 * sizeof(double));
 	mt->flux = calloc(N, sizeof(merc_flux));
 
@@ -151,6 +206,37 @@ int main(int argc, char** args) {
 			xy[i*2] = x;
 			xy[i*2+1] = y;
 
+			/*
+			  if (tycho) {
+			  float rflux, bflux;
+			  float gflux;
+			  rflux = bflux = 0.0;
+			  for (o=0; o<entry->nobs; o++) {
+			  an_observation* ob = entry->obs + o;
+			  float flux;
+			  if (ob->catalog != AN_SOURCE_TYCHO2)
+			  continue;
+			  flux = mag2flux(ob->mag) * vertscale;
+			  // Cheating :)
+			  switch (ob->band) {
+			  case 'B':
+			  bflux = flux;
+			  break;
+			  case 'V':
+			  rflux = flux;
+			  break;
+			  case 'H':
+			  rflux = bflux = flux;
+			  break;
+			  }
+			  }
+			  // assume that "green" flux is the geometric mean...
+			  gflux = sqrt(rflux * bflux);
+			  mt->flux[i].nflux += rflux;
+			  mt->flux[i].rflux += gflux;
+			  mt->flux[i].bflux += bflux;
+			  } else {
+			*/
 			for (o=0; o<entry->nobs; o++) {
 				bool red = FALSE, blue = FALSE, ir = FALSE;
 				float flux;
@@ -187,7 +273,7 @@ int main(int argc, char** args) {
 					break;
 				}
 
-				flux = exp(-ob->mag) * vertscale;
+				flux = mag2flux(ob->mag) * vertscale;
 				if (red)
 					mt->flux[i].rflux += flux;
 				if (blue)
@@ -195,15 +281,37 @@ int main(int argc, char** args) {
 				if (ir)
 					mt->flux[i].nflux += flux;
 			}
+			//}
 		}
 		an_catalog_close(ancat);
+		fprintf(stderr, "\n");
 	}
-	fprintf(stderr, "\n");
 
 	fprintf(stderr, "Creating kdtree...\n");
 
-	mt->tree = kdtree_build(NULL, xy, N, 2, Nleaf, KDTT_DOUBLE,
-							KD_BUILD_BBOX | KD_BUILD_SPLIT | KD_BUILD_SPLITDIM);
+	mt->tree = kdtree_new(N, 2, Nleaf);
+	// Set the range...
+	{
+		double lo[] = { 0.0, 0.0 };
+		double hi[] = { 1.0, 1.0 };
+		kdtree_set_limits(mt->tree, lo, hi);
+	}
+
+	if (convtype) {
+		fprintf(stderr, "Converting data...\n");
+		fflush(stderr);
+		mt->tree = kdtree_convert_data(mt->tree, xy, N, 2, Nleaf, tt);
+		free(xy);
+		fprintf(stderr, "Building tree...\n");
+		fflush(stderr);
+		mt->tree = kdtree_build(mt->tree, mt->tree->data.any, N, 2,
+								Nleaf, tt, buildopts);
+	} else {
+		fprintf(stderr, "Building tree...\n");
+		fflush(stderr);
+		mt->tree = kdtree_build(NULL, xy, N, 2, Nleaf, tt, buildopts);
+	}
+
 	if (!mt->tree) {
 		fprintf(stderr, "Failed to build kdtree.\n");
 		exit(-1);
@@ -211,6 +319,12 @@ int main(int argc, char** args) {
 
 	fprintf(stderr, "Built kdtree with %i nodes\n", mt->tree->nnodes);
 
+	if (checktree) {
+		fprintf(stderr, "Checking tree...\n");
+		if (kdtree_check(mt->tree)) {
+			fprintf(stderr, "\n\nTree check failed!!\n\n\n");
+		}
+	}
 
 	// permute the fluxes to match the kdtree.
 	fprintf(stderr, "Permuting fluxes...\n");
