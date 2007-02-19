@@ -256,34 +256,8 @@ if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
 }
 
 function field_solved($solvedfile, &$msg) {
-	if (!file_exists($solvedfile)) {
-		//$msg = "(file not found)";
-		return FALSE;
-	}
-	$fin = fopen($solvedfile, "rb");
-	if (!$fin) {
-		$msg = "(failed to open file)";
-		return FALSE;
-	}
-	$s = '';
-	while (!feof($fin)) {
-		$rd = fread($fin, 1024);
-		if ($rd == FALSE) {
-			fclose($fin);
-			$msg = "(error reading file)";
-			return FALSE;
-		}
-		$s .= $rd;
-	}
-	fclose($fin);
-	//echo 'Read ' . strlen($s) . ' entries.';
-	if (ord($s[0]) == 1) {
-		return TRUE;
-	} else if (ord($s[0]) == 0) {
-	} else {
-		$msg = "(unexpected value " . ord($s[0]) . ")";
-	}
-	return FALSE;
+	$contents = file_get_contents($solvedfile);
+	return (strlen($contents) && (ord($contents[0]) == 1));
 }
 
 if ($job_done) {
