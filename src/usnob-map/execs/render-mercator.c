@@ -26,7 +26,7 @@
 #include "an_catalog.h"
 #include "mathutil.h"
 
-#define OPTIONS "hW:H:m:M:"
+#define OPTIONS "hW:H:m:M:T"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "%s usage:\n"
@@ -34,6 +34,7 @@ void printHelp(char* progname) {
 			"  -H <height>   Height of the output.\n"
 			"  [-m <max-y-val>]: Maximum y value of the projection (default: Pi)\n"
 			"  [-M <min-mag>]:    Minimum-magnitude star in the catalog (default: 25).\n"
+			"  [-T]: Use Tycho-2 mapping: B->blue, V->red, H->green.\n"
 			"\n"
 			"  <input-catalog> ...\n"
 			"\n"
@@ -45,6 +46,7 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 #define max(a,b) (((a)>(b))?(a):(b))
+#define min(a,b) (((a)<(b))?(a):(b))
 
 int main(int argc, char** args) {
 	int argchar;
@@ -59,6 +61,7 @@ int main(int argc, char** args) {
 	int i, j;
 	float minmag = 25.0;
 	time_t start;
+	bool tycho = FALSE;
 
 	start = time(NULL);
 
@@ -67,6 +70,9 @@ int main(int argc, char** args) {
 		case 'h':
 			printHelp(progname);
 			exit(0);
+		case 'T':
+			tycho = TRUE;
+			break;
 		case 'M':
 			minmag = atof(optarg);
 			break;
@@ -87,7 +93,6 @@ int main(int argc, char** args) {
 	}
 
 	// A.N catalog RA,DEC entries are in degrees.
-	//xscale = 2.0 * M_PI / (float)W;
 	xscale = (float)W / 360.0;
 	yscale = (float)H / (2.0 * maxy);
 	yoffset = (float)H / 2.0;
@@ -103,6 +108,10 @@ int main(int argc, char** args) {
 		int oob = 0;
 		int lastgrass = 0;
 
+		/*
+		  int buckets[8];
+		  memset(buckets, 0, sizeof(buckets));
+		*/
 		fn = args[optind];
 		ancat = an_catalog_open(fn);
 		if (!ancat) {
@@ -115,6 +124,8 @@ int main(int argc, char** args) {
 			int x, y;
 			int grass;
 			float vertscale;
+			//int bucket = 0;
+
 			entry = an_catalog_read_entry(ancat);
 			if (!entry)
 				break;
@@ -149,53 +160,94 @@ int main(int argc, char** args) {
 			// projection: sec(dec) = 1/cos(dec)
 			vertscale = 1.0 / cos(deg2rad(entry->dec));
 
-			for (i=0; i<entry->nobs; i++) {
-				bool red = FALSE, blue = FALSE, ir = FALSE;
-				float flux;
-				an_observation* ob = entry->obs + i;
-				switch (ob->catalog) {
-				case AN_SOURCE_USNOB:
-					switch (ob->band) {
-					case 'J':
-					case 'O':
-						blue = TRUE;
-						break;
-					case 'E':
-					case 'F':
-						red = TRUE;
-						break;
-					case 'N':
-						ir = TRUE;
-						break;
-					}
-					break;
-				case AN_SOURCE_TYCHO2:
+			if (tycho) {
+				float rflux, bflux;
+				float gflux;
+				rflux = bflux = 0.0;
+				for (i=0; i<entry->nobs; i++) {
+					an_observation* ob = entry->obs + i;
+					float flux;
+					if (ob->catalog != AN_SOURCE_TYCHO2)
+						continue;
+					flux = mag2flux(ob->mag) * vertscale;
+					// Cheating :)
 					switch (ob->band) {
 					case 'B':
-						blue = TRUE;
+						bflux = flux;
 						break;
 					case 'V':
-						red = TRUE;
+						rflux = flux;
 						break;
 					case 'H':
-						blue = TRUE;
-						red = TRUE;
+						rflux = bflux = flux;
 						break;
 					}
-					break;
 				}
 
-				flux = exp(-ob->mag) * vertscale;
-				if (red)
-					redimg[y * W + x] += flux;
-				if (blue)
-					blueimg[y * W + x] += flux;
-				if (ir)
-					nimg[y * W + x] += flux;
+				// assume that "green" flux is the geometric mean...
+				gflux = sqrt(rflux * bflux);
+
+				nimg   [y * W + x] += rflux;
+				redimg [y * W + x] += gflux;
+				blueimg[y * W + x] += bflux;
+
+			} else {
+				for (i=0; i<entry->nobs; i++) {
+					bool red = FALSE, blue = FALSE, ir = FALSE;
+					float flux;
+					an_observation* ob = entry->obs + i;
+					switch (ob->catalog) {
+					case AN_SOURCE_USNOB:
+						switch (ob->band) {
+						case 'J':
+						case 'O':
+							blue = TRUE;
+							break;
+						case 'E':
+						case 'F':
+							red = TRUE;
+							break;
+						case 'N':
+							ir = TRUE;
+							break;
+						}
+						break;
+					case AN_SOURCE_TYCHO2:
+						switch (ob->band) {
+						case 'B':
+							blue = TRUE;
+							break;
+						case 'V':
+							red = TRUE;
+							break;
+						case 'H':
+							blue = TRUE;
+							red = TRUE;
+							break;
+						}
+						break;
+					}
+					
+					flux = mag2flux(ob->mag) * vertscale;
+					if (red)
+						redimg[y * W + x] += flux;
+					if (blue)
+						blueimg[y * W + x] += flux;
+					if (ir)
+						nimg[y * W + x] += flux;
+				}
+
+				//buckets[bucket]++;
 			}
 		}
 		fprintf(stderr, "\n");
 		an_catalog_close(ancat);
+
+		/*
+		  for (j=0; j<8; j++) {
+		  fprintf(stderr, "Bucket %i: %i\n", j, buckets[j]);
+		  }
+		*/
 	}
 
 	fprintf(stderr, "Rendering image...\n");
@@ -241,19 +293,110 @@ int main(int argc, char** args) {
 		  fprintf(stderr, "Nmax %g\n", (float)nmax);
 		*/
 
-		rscale = 255.0 / (log(rmax) - offset);
-		bscale = 255.0 / (log(bmax) - offset);
-		nscale = 255.0 / (log(nmax) - offset);
-		printf("P6 %d %d %d\n", W, H, 255);
-		for (i=0; i<(W*H); i++) {
-			unsigned char pix;
-			pix = (log(max(redimg[i], minval)) - offset) * rscale;
-			putc(pix, stdout);
-			pix = (log(max(blueimg[i], minval)) - offset) * bscale;
-			putc(pix, stdout);
-			pix = (log(max(nimg[i], minval)) - offset) * nscale;
-			putc(pix, stdout);
+		/*
+		  rscale = 255.0 / (log(rmax) - offset);
+		  bscale = 255.0 / (log(bmax) - offset);
+		  nscale = 255.0 / (log(nmax) - offset);
+		  printf("P6 %d %d %d\n", W, H, 255);
+		  for (i=0; i<(W*H); i++) {
+		  unsigned char pix;
+		  pix = (log(max(redimg[i], minval)) - offset) * rscale;
+		  putc(pix, stdout);
+		  pix = (log(max(blueimg[i], minval)) - offset) * bscale;
+		  putc(pix, stdout);
+		  pix = (log(max(nimg[i], minval)) - offset) * nscale;
+		  putc(pix, stdout);
+		  }
+		*/
+
+		// Linear (looks bad!)
+		/*
+		  rscale = 255.0 / rmax;
+		  bscale = 255.0 / bmax;
+		  nscale = 255.0 / nmax;
+		  offset = 0;
+		  printf("P6 %d %d %d\n", W, H, 255);
+		  for (i=0; i<(W*H); i++) {
+		  unsigned char pix;
+		  pix = (redimg[i] * rscale);
+		  putc(pix, stdout);
+		  pix = (blueimg[i] * bscale);
+		  putc(pix, stdout);
+		  pix = (nimg[i] * nscale);
+		  putc(pix, stdout);
+		  }
+		*/
+
+		// Sqrt (very cyan!)
+		/*
+		  rscale = 255.0 / sqrt(rmax);
+		  bscale = 255.0 / sqrt(bmax);
+		  nscale = 255.0 / sqrt(nmax);
+		  offset = 0;
+		  printf("P6 %d %d %d\n", W, H, 255);
+		  for (i=0; i<(W*H); i++) {
+		  unsigned char pix;
+		  pix = min(255, (sqrt(redimg[i]) * rscale));
+		  putc(pix, stdout);
+		  pix = min(255, (sqrt(blueimg[i]) * bscale));
+		  putc(pix, stdout);
+		  pix = min(255, (sqrt(nimg[i]) * nscale));
+		  putc(pix, stdout);
+		  }
+		*/
+
+		{
+			float over = 4.0;
+			float mapr=0, mapb=0, mapn=0;
+			for (i=0; i<(W*H); i++) {
+				redimg[i]  = pow(redimg[i],  0.25);
+				blueimg[i] = pow(blueimg[i], 0.25);
+				nimg[i]    = pow(nimg[i],    0.25);
+				/*
+				  redimg[i]  = pow(redimg[i],  0.333);
+				  blueimg[i] = pow(blueimg[i], 0.333);
+				  nimg[i]    = pow(nimg[i],    0.333);
+				*/
+				if (redimg[i]  > mapr) mapr = redimg[i];
+				if (blueimg[i] > mapb) mapb = blueimg[i];
+				if (nimg[i]    > mapn) mapn = nimg[i];
+			}
+			rscale = 255.0 / mapr * over;
+			bscale = 255.0 / mapb * over;
+			nscale = 255.0 / mapn * over;
+			printf("P6 %d %d %d\n", W, H, 255);
+			for (i=0; i<(W*H); i++) {
+				unsigned char pix;
+				pix = min(255, (redimg[i] * rscale));
+				putc(pix, stdout);
+				pix = min(255, (blueimg[i] * bscale));
+				putc(pix, stdout);
+				pix = min(255, (nimg[i] * nscale));
+				putc(pix, stdout);
+			}
 		}
+
+		/*
+		  {
+		  double maxmax = max(rmax, bmax);
+		  maxmax = max(maxmax, nmax);
+		  maxmax /= 4.0;
+		  rscale = 255.0 / sqrt(maxmax);
+		  bscale = 255.0 / sqrt(maxmax);
+		  nscale = 255.0 / sqrt(maxmax);
+		  }
+		  offset = 0;
+		  printf("P6 %d %d %d\n", W, H, 255);
+		  for (i=0; i<(W*H); i++) {
+		  unsigned char pix;
+		  pix = min(255, (sqrt(redimg[i]) * rscale));
+		  putc(pix, stdout);
+		  pix = min(255, (sqrt(blueimg[i]) * bscale));
+		  putc(pix, stdout);
+		  pix = min(255, (sqrt(nimg[i]) * nscale));
+		  putc(pix, stdout);
+		  }
+		*/
 	}
 
 	fprintf(stderr, "That took %i seconds.\n", (int)(time(NULL) - start));
