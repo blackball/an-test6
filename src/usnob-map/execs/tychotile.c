@@ -46,61 +46,61 @@ static void expand_node(kdtree_t* kd, int node);
 static void addstar(double xp, double yp, merc_flux* flux);
 
 /*
-static void check_merctree(merctree* m, int node) {
-	merc_flux* stats = &(m->stats[node].flux);
-	float r, b, n;
-	float drel;
-	r = b = n = 0.0;
-	if (KD_IS_LEAF(m->tree, node)) {
-		int j, L, R;
-		L = kdtree_left(m->tree, node);
-		R = kdtree_right(m->tree, node);
-		for (j=L; j<=R; j++) {
-			r += m->flux[j].rflux;
-			b += m->flux[j].bflux;
-			n += m->flux[j].nflux;
-		}
+  static void check_merctree(merctree* m, int node) {
+  merc_flux* stats = &(m->stats[node].flux);
+  float r, b, n;
+  float drel;
+  r = b = n = 0.0;
+  if (KD_IS_LEAF(m->tree, node)) {
+  int j, L, R;
+  L = kdtree_left(m->tree, node);
+  R = kdtree_right(m->tree, node);
+  for (j=L; j<=R; j++) {
+  r += m->flux[j].rflux;
+  b += m->flux[j].bflux;
+  n += m->flux[j].nflux;
+  }
 
-		drel = fabs(r - stats->rflux) / (r + stats->rflux);
-		if (drel > 1e-6)
-			fprintf(stderr, "Node %i: r %-15g %-15g\n", node, r, stats->rflux);
+  drel = fabs(r - stats->rflux) / (r + stats->rflux);
+  if (drel > 1e-6)
+  fprintf(stderr, "Node %i: r %-15g %-15g\n", node, r, stats->rflux);
 
-		drel = fabs(b - stats->bflux) / (b + stats->bflux);
-		if (drel > 1e-6)
-			fprintf(stderr, "Node %i: b %-15g %-15g\n", node, b, stats->bflux);
+  drel = fabs(b - stats->bflux) / (b + stats->bflux);
+  if (drel > 1e-6)
+  fprintf(stderr, "Node %i: b %-15g %-15g\n", node, b, stats->bflux);
 
-		drel = fabs(n - stats->nflux) / (n + stats->nflux);
-		if (drel > 1e-6)
-			fprintf(stderr, "Node %i: n %-15g %-15g\n", node, n, stats->nflux);
+  drel = fabs(n - stats->nflux) / (n + stats->nflux);
+  if (drel > 1e-6)
+  fprintf(stderr, "Node %i: n %-15g %-15g\n", node, n, stats->nflux);
 
-	} else {
-		merc_flux* stats1 = &(m->stats[ KD_CHILD_LEFT(node)].flux);
-		merc_flux* stats2 = &(m->stats[KD_CHILD_RIGHT(node)].flux);
+  } else {
+  merc_flux* stats1 = &(m->stats[ KD_CHILD_LEFT(node)].flux);
+  merc_flux* stats2 = &(m->stats[KD_CHILD_RIGHT(node)].flux);
 
-		check_merctree(m, KD_CHILD_LEFT(node));
-		check_merctree(m, KD_CHILD_RIGHT(node));
+  check_merctree(m, KD_CHILD_LEFT(node));
+  check_merctree(m, KD_CHILD_RIGHT(node));
 
-		r = stats1->rflux + stats2->rflux;
-		b = stats1->bflux + stats2->bflux;
-		n = stats1->nflux + stats2->nflux;
+  r = stats1->rflux + stats2->rflux;
+  b = stats1->bflux + stats2->bflux;
+  n = stats1->nflux + stats2->nflux;
 
-		drel = fabs(r - stats->rflux) / (r + stats->rflux);
-		if (drel > 1e-6) {
-			fprintf(stderr, "PNode %i: r %-15g %-15g\n", node, r, stats->rflux);
-			fprintf(stderr, "   Node %i: r %-15g\n", KD_CHILD_LEFT(node), stats1->rflux);
-			fprintf(stderr, "   Node %i: r %-15g\n", KD_CHILD_RIGHT(node), stats2->rflux);
-		}
+  drel = fabs(r - stats->rflux) / (r + stats->rflux);
+  if (drel > 1e-6) {
+  fprintf(stderr, "PNode %i: r %-15g %-15g\n", node, r, stats->rflux);
+  fprintf(stderr, "   Node %i: r %-15g\n", KD_CHILD_LEFT(node), stats1->rflux);
+  fprintf(stderr, "   Node %i: r %-15g\n", KD_CHILD_RIGHT(node), stats2->rflux);
+  }
 
-		drel = fabs(b - stats->bflux) / (b + stats->bflux);
-		if (drel > 1e-6)
-			fprintf(stderr, "PNode %i: b %-15g %-15g\n", node, b, stats->bflux);
+  drel = fabs(b - stats->bflux) / (b + stats->bflux);
+  if (drel > 1e-6)
+  fprintf(stderr, "PNode %i: b %-15g %-15g\n", node, b, stats->bflux);
 
-		drel = fabs(n - stats->nflux) / (n + stats->nflux);
-		if (drel > 1e-6)
-			fprintf(stderr, "PNode %i: n %-15g %-15g\n", node, n, stats->nflux);
+  drel = fabs(n - stats->nflux) / (n + stats->nflux);
+  if (drel > 1e-6)
+  fprintf(stderr, "PNode %i: n %-15g %-15g\n", node, n, stats->nflux);
 		
-	}
-}
+  }
+  }
 */
 
 /*
@@ -125,27 +125,6 @@ double xlimit, ylimit;
 // The merctree.
 merctree* merc;
 
-/*
-static void write_merctree_node(merctree* m, int L, float* img,
-								int node, int level) {
-	kdtree_t* kd = m->tree;
-	int x0, x1, y0, y1;
-	if (level > L)
-		return;
-	if (level < L) {
-		write_merctree_node(m, L, img, KDTREE_CHILD_LEFT(kd, node), level+1);
-		write_merctree_node(m, L, img, KDTREE_CHILD_RIGHT(kd, node), level+1);
-		return;
-	}
-
-	if ( = (int)((xp - xorigin) * xscale);
-
-}
-
-static void write_merctree(merctree* m, int level, float* img) {
-	write_merctree_node(m, level, img, 0, 0);
-}
-*/
 int main(int argc, char *argv[]) {
     int argchar;
 	bool gotx, goty, gotX, gotY, gotw, goth;
@@ -265,13 +244,11 @@ int main(int argc, char *argv[]) {
 
 	if (!forcetree && (zoomlevel <= 0)) {
 		char buff[1024];
+		FILE *fp;
 
-		// set filename so that correct tile is returned
 		sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
-
 		fprintf(stderr, "Loading image from file %s.\n", fn);
-		FILE *fp = fopen(fn, "r");
-
+		fp = fopen(fn, "r");
 		// write file to stdout
 		for (;;) {
 			int nr = fread(buff, 1, sizeof(buff), fp);
@@ -331,47 +308,12 @@ int main(int argc, char *argv[]) {
 					wraplow[0], wraphigh[0], wraplow[1], wraphigh[1]);
 
 
-		fprintf(stderr, "Opening file %s...\n", merc_file);
+		//fprintf(stderr, "Opening file %s...\n", merc_file);
 		merc = merctree_open(merc_file);
 		if (!merc) {
 			fprintf(stderr, "Failed to open merctree %s\n", merc_file);
 			exit(-1);
 		}
-
-		//check_merctree(merc, 0);
-
-		/*
-		{
-			int k;
-			for (k=0; k<merc->tree->nlevels; k++) {
-				char fn[256];
-				FILE* f;
-				float* img;
-				float mx;
-				img = calloc(w*h*3, sizeof(float));
-				write_merctree(merc, k, img);
-				sprintf(fn, "merc%i.ppm", k);
-				f = fopen(fn, "wb");
-				if (!f) {
-					fprintf(stderr, "open: %s\n", strerror(errno));
-					exit(-1);
-				}
-				fprintf("P6 %i %i %i\n", w, h, 255);
-				mx = 0.0;
-				for (i=0; i<(3*w*h); i++) {
-					img[i] = pow(img[i], 0.25);
-					mx = max(mx, img[i]);
-				}
-				for (i=0; i<(3*w*h); i++) {
-					unsigned char pix;
-					pix = min(255, 4 * 255.0 / mx * img[i]);
-					fputc(pix);
-				}
-				fclose(f);
-				free(img);
-			}
-		}
-		*/
 
 		qlo = querylow;
 		qhi = queryhigh;
@@ -381,7 +323,7 @@ int main(int argc, char *argv[]) {
 		xlimit  = qhi[0];
 		ylimit  = qhi[1];
 
-		fprintf(stderr, "NODES CONTAINED\n");
+		//fprintf(stderr, "NODES CONTAINED\n");
 		kdtree_nodes_contained(merc->tree, qlo, qhi,
 							   node_contained, node_overlaps, NULL);
 	
@@ -392,7 +334,7 @@ int main(int argc, char *argv[]) {
 
 			qlo = wraplow;
 			qhi = wraphigh;
-			fprintf(stderr, "NODES CONTAINED (wrap)\n");
+			//fprintf(stderr, "NODES CONTAINED (wrap)\n");
 			kdtree_nodes_contained(merc->tree, qlo, qhi,
 								   node_contained, node_overlaps, NULL);
 		}
@@ -455,14 +397,13 @@ int main(int argc, char *argv[]) {
 
 // Non-leaf nodes that are fully contained within the query rectangle.
 static void node_contained(kdtree_t* kd, int node, void* extra) {
-	fprintf(stderr, "Node contained: %i\n", node);
+	//fprintf(stderr, "Node contained: %i\n", node);
 	expand_node(kd, node);
-	//leaf_node(kd, node);
 }
 
 // Leaf nodes that overlap the query rectangle.
 static void node_overlaps(kdtree_t* kd, int node, void* extra) {
-	fprintf(stderr, "Node overlaps: %i\n", node);
+	//fprintf(stderr, "Node overlaps: %i\n", node);
 	leaf_node(kd, node);
 }
 
@@ -478,35 +419,22 @@ static void expand_node(kdtree_t* kd, int node) {
 
 	// check if this whole box fits inside a pixel.
 	if (!kdtree_get_bboxes(kd, node, bblo, bbhi)) {
-		fprintf(stderr, "Error, tree does not have bounding boxes.\n");
+		fprintf(stderr, "Error, node %i does not have bounding boxes.\n", node);
 		exit(-1);
 	}
-	/*
-	  xp0 = (int)floor(xscale * (bblo[0] - xorigin));
-	  xp1 = (int) ceil(xscale * (bbhi[0] - xorigin));
-	*/
 	xp0 = (int)(xscale * (bblo[0] - xorigin));
 	xp1 = (int)(xscale * (bbhi[0] - xorigin));
-	//if (xp1 - xp0 <= 1) {
 	if (xp1 == xp0) {
-		/*
-		  yp0 = (int)floor(yscale * (bblo[1] - yorigin));
-		  yp1 = (int) ceil(yscale * (bbhi[1] - yorigin));
-		*/
 		yp0 = (int)(yscale * (bblo[1] - yorigin));
 		yp1 = (int)(yscale * (bbhi[1] - yorigin));
-		//if (yp1 - yp0 <= 1) {
 		if (yp1 == yp0) {
 			// This node fits inside a single pixel of the output image.
-			fprintf(stderr, "Whole box fits in a pixel: %i (%i pts)\n",
-					node, kdtree_npoints(kd, node));
-			//addstar(0.5*(bblo[0]+bbhi[0]), 0.5*(bblo[1]+bbhi[1]), &(merc->stats[node].flux));
-
-			//check_merctree(merc, node);
-
-			fprintf(stderr, "BB: x=[%g, %g], y=[%g, %g]\n",
-					bblo[0], bbhi[0], bblo[1], bbhi[1]);
-
+			/*
+			  fprintf(stderr, "Whole box fits in a pixel: %i (%i pts)\n",
+			  node, kdtree_npoints(kd, node));
+			  fprintf(stderr, "BB: x=[%g, %g], y=[%g, %g]\n",
+			  bblo[0], bbhi[0], bblo[1], bbhi[1]);
+			*/
 			addstar(bblo[0], bblo[1], &(merc->stats[node].flux));
 			return;
 		}
@@ -523,7 +451,7 @@ static void leaf_node(kdtree_t* kd, int node) {
 	L = kdtree_left(kd, node);
 	R = kdtree_right(kd, node);
 
-	fprintf(stderr, "Leaf node: %i (%i pts)\n", node, R+1-L);
+	//fprintf(stderr, "Leaf node: %i (%i pts)\n", node, R+1-L);
 
 	for (k=L; k<=R; k++) {
 		double pt[2];
@@ -557,7 +485,6 @@ static void addstar(double xp, double yp,
 	int mindy = 0;
 	int maxdy = 0;
 
-	//x = (int)rint((xp - xorigin) * xscale);
 	// special-case...
 	if (unlikely(xp == xlimit)) {
 		x = w-1;
@@ -570,7 +497,6 @@ static void addstar(double xp, double yp,
 		return;
 	}
 	// flip vertically
-	//y = (h-1) - (int)rint((yp - yorigin) * yscale);
 	if (unlikely(yp == ylimit)) {
 		y = 0;
 	} else {
@@ -595,11 +521,6 @@ static void addstar(double xp, double yp,
 		if ((ix < 0) || (ix >= w)) continue;
 		iy = y + dy[i];
 		if ((iy < 0) || (iy >= h)) continue;
-		/*
-		  fluximg[3*(iy*w + ix) + 0] += flux->rflux * scale[i];
-		  fluximg[3*(iy*w + ix) + 1] += flux->bflux * scale[i];
-		  fluximg[3*(iy*w + ix) + 2] += flux->nflux * scale[i];
-		*/
 		r = flux->rflux;
 		b = flux->bflux;
 		g = sqrt(r * b);
