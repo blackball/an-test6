@@ -149,7 +149,7 @@ if ($lines) {
 
 // http://ca.php.net/manual/en/function.escapeshellarg.php
 
-
+$pngformat = FALSE;
 
 if ($gotindex) {
 	$cmd = sprintf("indextile -f %s", escapeshellarg($index_file));
@@ -165,17 +165,19 @@ if ($gotindex) {
 	if ($lines) {
 		$cmd = $cmd . sprintf(" -l %f", $linesize);
 	}
+
+	if ($zoom <= 4) {
+		$pngformat = TRUE;
+	}
 }
 if ($N > 0) {
 	$cmd = $cmd . sprintf(" -N %d", $N);
 }
 $cmd = $path . $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
-//$cmd = $cmd . $layerscmd;
 
 // for images that are not pre-rendered
-if($zoom>4){
+if (!$pngformat) {
 	$cmd = $cmd . " | pnmtopng";
-
 	if ($transparent) {
 		// NOTE, that space between "-transparent" and "=black" is supposed
 		// to be there!
