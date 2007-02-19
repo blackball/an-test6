@@ -96,12 +96,6 @@ int merctree_close(merctree* s) {
 	return 0;
 }
 
-/*
-  static int Ndata(merctree* s) {
-  return s->tree->ndata;
-  }
-*/
-
 void merctree_compute_stats(merctree* m) {
 	int i;
 	kdtree_t* kd = m->tree;
@@ -110,7 +104,7 @@ void merctree_compute_stats(merctree* m) {
 		assert(0);
 		return;
 	}
-	for (i=kd->nnodes; i>=0; i--) {
+	for (i=kd->nnodes-1; i>=0; i--) {
 		merc_flux* stats = &(m->stats[i].flux);
 		if (KD_IS_LEAF(m->tree, i)) {
 			int j;
@@ -125,8 +119,8 @@ void merctree_compute_stats(merctree* m) {
 			}
 		} else {
 			merc_flux *flux1, *flux2;
-			flux1 = m->flux + KD_CHILD_LEFT(i);
-			flux2 = m->flux + KD_CHILD_RIGHT(i);
+			flux1 = &(m->stats[KD_CHILD_LEFT(i) ].flux);
+			flux2 = &(m->stats[KD_CHILD_RIGHT(i)].flux);
 			stats->rflux = flux1->rflux + flux2->rflux;
 			stats->bflux = flux1->bflux + flux2->bflux;
 			stats->nflux = flux1->nflux + flux2->nflux;
