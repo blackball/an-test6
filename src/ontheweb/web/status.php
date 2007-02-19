@@ -291,7 +291,7 @@ if ($job_done) {
 		if (file_exists($rdlsinfofile)) {
 			$info = file($rdlsinfofile);
 			foreach ($info as $str) {
-				$words = explode(" ", $str);
+				$words = explode(" ", rtrim($str, "\n"));
 				$infomap[$words[0]] = implode(" ", array_slice($words, 1));
 			}
 			$rac_merc = $infomap["ra_center_merc"];

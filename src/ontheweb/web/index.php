@@ -597,6 +597,12 @@ input.redinput {
 if ($debug) {
 	//phpinfo();
 
+	loggit("HTTP Request headers:\n");
+	$headers = apache_request_headers();
+	foreach ($headers as $header => $value) {
+		loggit("  $header: $value\n");
+	}
+
 	printf("<table border=\"1\">\n");
 	printf("<tr><th>Header</th><th>Value</th></tr>\n");
 	foreach ($headers as $header => $value) {
