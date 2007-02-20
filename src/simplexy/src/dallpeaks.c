@@ -39,6 +39,9 @@ int objects_compare(const void *first, const void *second)
 	return (0);
 }
 
+/* Finds all peaks in the image by cutting a bounding box out around each one
+ * */
+
 int dallpeaks(float *image,
               int nx,
               int ny,

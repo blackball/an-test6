@@ -33,6 +33,9 @@ all: $(REMAKE_CFITSIO) simplexy fixaxis simplexy_shared
 
 simplexy: fits2xy
 
+test_dfind: src/dfind.o src/test_dfind.o
+	$(CC) -o test_dfind $^
+
 fits2xy: $(SIMPLEXY) $(CFITS_LIB)
 	$(CC) -o fits2xy $^ $(LDFLAGS)
 
