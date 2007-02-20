@@ -116,17 +116,19 @@ if ("INDEX_FILE" in getdata) {
 	*/
 }
 
-var tycho = false;
-if (("map" in getdata) && (getdata["map"] == "tycho")) {
-	tycho = true;
-}
-
 var overview = true;
 if (("over" in getdata) && (getdata["over"] == "no")) {
 	overview = false;
 }
 
 var usnob = true;
+/*
+  var tycho = false;
+  if (("map" in getdata) && (getdata["map"] == "tycho")) {
+  tycho = true;
+  }
+*/
+var tycho = true;
 
 map.getMapTypes().length = 0;
 
@@ -137,9 +139,9 @@ if (tycho) {
 	tychoTile.myBaseURL=TYCHO_URL;
 	tychoTile.getTileUrl=CustomGetTileUrl;
 
-	var tychoType = new GMapType([tychoTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
+	var tychoType = new GMapType([tychoTile], G_SATELLITE_MAP.getProjection(), "TYCHO", G_SATELLITE_MAP);
 	map.addMapType(tychoType);
-	usnob = false;
+	//usnob = false;
 }
 
 if (usnob) {
@@ -178,10 +180,18 @@ if (rdls) {
 	rdlsTransTile.myBaseURL=RDLS_URL + "&trans=1";
 	rdlsTransTile.getTileUrl=CustomGetTileUrl;
 
-	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
-	map.addMapType(rdlsUsnob);
 	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
 	map.addMapType(rdlsAlone);
+}
+
+if (rdls && usnob) {
+	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+U", G_SATELLITE_MAP);
+	map.addMapType(rdlsUsnob);
+}
+
+if (rdls && tycho) {
+	var rdlsTycho = new GMapType([tychoTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+T", G_SATELLITE_MAP);
+	map.addMapType(rdlsTycho);
 }
 
 if (index) {
@@ -197,10 +207,18 @@ if (index) {
 	indexTransTile.myBaseURL=INDEX_URL + "&trans=1";
 	indexTransTile.getTileUrl=CustomGetTileUrl;
 
-	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
-	map.addMapType(usnobPlusIndex);
 	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
 	map.addMapType(indexAlone);
+}
+
+if (usnob && index) {
+	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
+	map.addMapType(usnobPlusIndex);
+}
+
+if (tycho && index) {
+	var tychoPlusIndex = new GMapType([tychoTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "T+I", G_SATELLITE_MAP);
+	map.addMapType(tychoPlusIndex);
 }
 
 if (rdls && index) {
