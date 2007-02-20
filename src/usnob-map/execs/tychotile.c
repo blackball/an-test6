@@ -46,64 +46,6 @@ static void expand_node(kdtree_t* kd, int node);
 static void addstar(double xp, double yp, merc_flux* flux);
 
 /*
-  static void check_merctree(merctree* m, int node) {
-  merc_flux* stats = &(m->stats[node].flux);
-  float r, b, n;
-  float drel;
-  r = b = n = 0.0;
-  if (KD_IS_LEAF(m->tree, node)) {
-  int j, L, R;
-  L = kdtree_left(m->tree, node);
-  R = kdtree_right(m->tree, node);
-  for (j=L; j<=R; j++) {
-  r += m->flux[j].rflux;
-  b += m->flux[j].bflux;
-  n += m->flux[j].nflux;
-  }
-
-  drel = fabs(r - stats->rflux) / (r + stats->rflux);
-  if (drel > 1e-6)
-  fprintf(stderr, "Node %i: r %-15g %-15g\n", node, r, stats->rflux);
-
-  drel = fabs(b - stats->bflux) / (b + stats->bflux);
-  if (drel > 1e-6)
-  fprintf(stderr, "Node %i: b %-15g %-15g\n", node, b, stats->bflux);
-
-  drel = fabs(n - stats->nflux) / (n + stats->nflux);
-  if (drel > 1e-6)
-  fprintf(stderr, "Node %i: n %-15g %-15g\n", node, n, stats->nflux);
-
-  } else {
-  merc_flux* stats1 = &(m->stats[ KD_CHILD_LEFT(node)].flux);
-  merc_flux* stats2 = &(m->stats[KD_CHILD_RIGHT(node)].flux);
-
-  check_merctree(m, KD_CHILD_LEFT(node));
-  check_merctree(m, KD_CHILD_RIGHT(node));
-
-  r = stats1->rflux + stats2->rflux;
-  b = stats1->bflux + stats2->bflux;
-  n = stats1->nflux + stats2->nflux;
-
-  drel = fabs(r - stats->rflux) / (r + stats->rflux);
-  if (drel > 1e-6) {
-  fprintf(stderr, "PNode %i: r %-15g %-15g\n", node, r, stats->rflux);
-  fprintf(stderr, "   Node %i: r %-15g\n", KD_CHILD_LEFT(node), stats1->rflux);
-  fprintf(stderr, "   Node %i: r %-15g\n", KD_CHILD_RIGHT(node), stats2->rflux);
-  }
-
-  drel = fabs(b - stats->bflux) / (b + stats->bflux);
-  if (drel > 1e-6)
-  fprintf(stderr, "PNode %i: b %-15g %-15g\n", node, b, stats->bflux);
-
-  drel = fabs(n - stats->nflux) / (n + stats->nflux);
-  if (drel > 1e-6)
-  fprintf(stderr, "PNode %i: n %-15g %-15g\n", node, n, stats->nflux);
-		
-  }
-  }
-*/
-
-/*
   char* map_template  = "/home/gmaps/usnob-images/tycho-maps/tycho-zoom%i_%02i_%02i.png";
   char* merc_file     = "/home/gmaps/usnob-images/tycho-merc/tycho.mkdt.fits";
 */
@@ -120,8 +62,6 @@ int w=0, h=0;
 double *qlo, *qhi;
 // The lower-left corner of the image.
 double xorigin, yorigin;
-// The upper-right
-double xlimit, ylimit;
 // The merctree.
 merctree* merc;
 
@@ -187,8 +127,10 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
-	fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
+	/*
+	  fprintf(stderr, "X range: [%g, %g] degrees\n", x0, x1);
+	  fprintf(stderr, "Y range: [%g, %g] degrees\n", y0, y1);
+	*/
 
 	x0 = deg2rad(x0);
 	x1 = deg2rad(x1);
@@ -209,37 +151,39 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 	if (py0 < 0.0) {
-		fprintf(stderr, "Tweaking py0 %.10g -> %.10g.\n", py0, 0.0);
+		//fprintf(stderr, "Tweaking py0 %.10g -> %.10g.\n", py0, 0.0);
 		py0 = 0.0;
 	}
 	if (py1 > 1.0) {
-		fprintf(stderr, "Tweaking py1 %.10g -> %.10g.\n", py1, 1.0);
+		//fprintf(stderr, "Tweaking py1 %.10g -> %.10g.\n", py1, 1.0);
 		py1 = 1.0;
 	}
 
 	pixperx = (double)w / (px1 - px0);
 	pixpery = (double)h / (py1 - py0);
 
-	fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
-	fprintf(stderr, "Projected Y range: [%g, %g]\n", py0, py1);
-	fprintf(stderr, "X,Y pixel scale: %g, %g.\n", pixperx, pixpery);
+	/*
+	  fprintf(stderr, "Projected X range: [%g, %g]\n", px0, px1);
+	  fprintf(stderr, "Projected Y range: [%g, %g]\n", py0, py1);
+	  fprintf(stderr, "X,Y pixel scale: %g, %g.\n", pixperx, pixpery);
+	*/
 	xzoom = pixperx / 256.0;
 	yzoom = pixpery / 256.0;
-	fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
+	//fprintf(stderr, "X,Y zoom %g, %g\n", xzoom, yzoom);
 	{
 		double fxzoom;
 		double fyzoom;
 		fxzoom = log(xzoom) / log(2.0);
 		fyzoom = log(yzoom) / log(2.0);
-		fprintf(stderr, "fzoom %g, %g\n", fxzoom, fyzoom);
+		//fprintf(stderr, "fzoom %g, %g\n", fxzoom, fyzoom);
 	}
 	zoomlevel = (int)rint(log(xzoom) / log(2.0));
-	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
+	//fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 
 	if (px0 < 0.0) {
 		px0 += 1.0;
 		px1 += 1.0;
-		fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
+		//fprintf(stderr, "Wrapping X around to projected range [%g, %g]\n", px0, px1);
 	}
 
 	xpix0 = px0 * pixperx;
@@ -247,7 +191,7 @@ int main(int argc, char *argv[]) {
 	xpix1 = xpix0 + w;
 	ypix1 = ypix0 + h;
 
-	fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
+	//fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
 
 	if (!forcetree && (zoomlevel <= 0)) {
 		char buff[1024];
@@ -308,13 +252,14 @@ int main(int argc, char *argv[]) {
 		Noob = 0;
 		Nib = 0;
 
-		fprintf(stderr, "Query: x:[%g,%g] y:[%g,%g]\n",
-				querylow[0], queryhigh[0], querylow[1], queryhigh[1]);
-		if (wrapra)
-			fprintf(stderr, "Query': x:[%g,%g] y:[%g,%g]\n",
-					wraplow[0], wraphigh[0], wraplow[1], wraphigh[1]);
+		/*
+		  fprintf(stderr, "Query: x:[%g,%g] y:[%g,%g]\n",
+		  querylow[0], queryhigh[0], querylow[1], queryhigh[1]);
+		  if (wrapra)
+		  fprintf(stderr, "Query': x:[%g,%g] y:[%g,%g]\n",
+		  wraplow[0], wraphigh[0], wraplow[1], wraphigh[1]);
+		*/
 
-		//fprintf(stderr, "Opening file %s...\n", merc_file);
 		merc = merctree_open(merc_file);
 		if (!merc) {
 			fprintf(stderr, "Failed to open merctree %s\n", merc_file);
@@ -323,20 +268,13 @@ int main(int argc, char *argv[]) {
 
 		qlo = querylow;
 		qhi = queryhigh;
-
 		xorigin = qlo[0];
 		yorigin = qlo[1];
-		xlimit  = qhi[0];
-		ylimit  = qhi[1];
-
 		kdtree_nodes_contained(merc->tree, qlo, qhi,
 							   node_contained, node_overlaps, NULL);
 	
 		if (wrapra) {
-
 			xorigin = querylow [0] - 1.0;
-			xlimit  = queryhigh[0] - 1.0;
-
 			qlo = wraplow;
 			qhi = wraphigh;
 			kdtree_nodes_contained(merc->tree, qlo, qhi,
@@ -349,38 +287,22 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%i points inside image bounds.\n", Nib);
 
 		{
-			//float rmax, bmax, nmax;
 			float rscale, bscale, nscale;
-			float sat = 4.0;
-			//rmax = bmax = nmax = 0.0;
+			float amp = 0.0;
 			for (i=0; i<(w*h); i++) {
 				fluximg[3*i+0] = pow(fluximg[3*i+0], 0.25);
 				fluximg[3*i+1] = pow(fluximg[3*i+1], 0.25);
 				fluximg[3*i+2] = pow(fluximg[3*i+2], 0.25);
-				/*
-				  if (fluximg[3*i + 0] > rmax) rmax = fluximg[3*i + 0];
-				  if (fluximg[3*i + 1] > bmax) bmax = fluximg[3*i + 1];
-				  if (fluximg[3*i + 2] > nmax) nmax = fluximg[3*i + 2];
-				*/
 			}
-
-			/*
-			  fprintf(stderr, "Maxes: %g, %g, %g.\n", rmax, bmax, nmax);
-			  rscale = 255.0 / rmax * sat;
-			  bscale = 255.0 / bmax * sat;
-			  nscale = 255.0 / nmax * sat;
-			  if (rmax == 0) rscale = 0;
-			  if (bmax == 0) bscale = 0;
-			  if (nmax == 0) nscale = 0;
-			*/
 
 			switch (zoomlevel) {
 			case 1:
 			default:
-				rscale = 255.0 / 1.0 * sat;
-				bscale = 255.0 / 1.0 * sat;
-				nscale = 255.0 / 1.0 * sat;
+				amp = 4.0;
 			}
+			rscale = 255.0 / 1.0 * amp;
+			bscale = 255.0 / 1.0 * amp;
+			nscale = 255.0 / 1.0 * amp;
 
 			printf("P6 %d %d %d\n", w, h, 255);
 			for (i=0; i<(w*h); i++) {
@@ -401,13 +323,11 @@ int main(int argc, char *argv[]) {
 
 // Non-leaf nodes that are fully contained within the query rectangle.
 static void node_contained(kdtree_t* kd, int node, void* extra) {
-	//fprintf(stderr, "Node contained: %i\n", node);
 	expand_node(kd, node);
 }
 
 // Leaf nodes that overlap the query rectangle.
 static void node_overlaps(kdtree_t* kd, int node, void* extra) {
-	//fprintf(stderr, "Node overlaps: %i\n", node);
 	leaf_node(kd, node);
 }
 
@@ -433,12 +353,6 @@ static void expand_node(kdtree_t* kd, int node) {
 		yp1 = mercy2pix(bbhi[1]);
 		if (yp1 == yp0) {
 			// This node fits inside a single pixel of the output image.
-			/*
-			  fprintf(stderr, "Whole box fits in a pixel: %i (%i pts)\n",
-			  node, kdtree_npoints(kd, node));
-			  fprintf(stderr, "BB: x=[%g, %g], y=[%g, %g]\n",
-			  bblo[0], bbhi[0], bblo[1], bbhi[1]);
-			*/
 			addstar(bblo[0], bblo[1], &(merc->stats[node].flux));
 			return;
 		}
@@ -454,8 +368,6 @@ static void leaf_node(kdtree_t* kd, int node) {
 
 	L = kdtree_left(kd, node);
 	R = kdtree_right(kd, node);
-
-	//fprintf(stderr, "Leaf node: %i (%i pts)\n", node, R+1-L);
 
 	for (k=L; k<=R; k++) {
 		double pt[2];
@@ -490,39 +402,20 @@ static void addstar(double xp, double yp,
 	int maxdy = 0;
 
 	// special-case...
-	/*
-	  if (unlikely(xp == xlimit)) {
-	  x = w-1;
-	  } else {
-	*/
-	//x = (int)((xp - xorigin) * xscale);
 	x = mercx2pix(xp);
-	//}
 	if (x+maxdx < 0 || x+mindx >= w) {
 		fprintf(stderr, "x %i (xo=%g, xp=%g)\n", x, xorigin, xp);
 		Noob++;
 		return;
 	}
 	// flip vertically
-	/*
-	  if (unlikely(yp == ylimit)) {
-	  y = 0;
-	  } else {
-	*/
-	//y = (h-1) - (int)((yp - yorigin) * yscale);
 	y = mercy2pix(yp);
-	//}
 	if (y+maxdy < 0 || y+mindy >= h) {
 		fprintf(stderr, "y %i (yo=%g, yp=%g)\n", y, yorigin, yp);
 		Noob++;
 		return;
 	}
 	Nib++;
-
-	/*
-	  fprintf(stderr, "flux %g, %g, %g\n", flux->rflux, flux->bflux, flux->nflux);
-	  fprintf(stderr, "x %i, y %i.\n", x, y);
-	*/
 
 	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
 		int ix, iy;
