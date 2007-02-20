@@ -125,6 +125,13 @@ double xlimit, ylimit;
 // The merctree.
 merctree* merc;
 
+static int mercx2pix(double xp) {
+	return (int)floor(xscale * (xp - xorigin));
+}
+static int mercy2pix(double yp) {
+	return (h-1) - (int)floor(yscale * (yp - yorigin));
+}
+
 int main(int argc, char *argv[]) {
     int argchar;
 	bool gotx, goty, gotX, gotY, gotw, goth;
@@ -202,11 +209,11 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 	if (py0 < 0.0) {
-		fprintf(stderr, "Tweaking py0 %g -> %g.\n", py0, 0.0);
+		fprintf(stderr, "Tweaking py0 %.10g -> %.10g.\n", py0, 0.0);
 		py0 = 0.0;
 	}
 	if (py1 > 1.0) {
-		fprintf(stderr, "Tweaking py1 %g -> %g.\n", py1, 1.0);
+		fprintf(stderr, "Tweaking py1 %.10g -> %.10g.\n", py1, 1.0);
 		py1 = 1.0;
 	}
 
@@ -307,7 +314,6 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Query': x:[%g,%g] y:[%g,%g]\n",
 					wraplow[0], wraphigh[0], wraplow[1], wraphigh[1]);
 
-
 		//fprintf(stderr, "Opening file %s...\n", merc_file);
 		merc = merctree_open(merc_file);
 		if (!merc) {
@@ -323,7 +329,6 @@ int main(int argc, char *argv[]) {
 		xlimit  = qhi[0];
 		ylimit  = qhi[1];
 
-		//fprintf(stderr, "NODES CONTAINED\n");
 		kdtree_nodes_contained(merc->tree, qlo, qhi,
 							   node_contained, node_overlaps, NULL);
 	
@@ -334,7 +339,6 @@ int main(int argc, char *argv[]) {
 
 			qlo = wraplow;
 			qhi = wraphigh;
-			//fprintf(stderr, "NODES CONTAINED (wrap)\n");
 			kdtree_nodes_contained(merc->tree, qlo, qhi,
 								   node_contained, node_overlaps, NULL);
 		}
@@ -422,11 +426,11 @@ static void expand_node(kdtree_t* kd, int node) {
 		fprintf(stderr, "Error, node %i does not have bounding boxes.\n", node);
 		exit(-1);
 	}
-	xp0 = (int)(xscale * (bblo[0] - xorigin));
-	xp1 = (int)(xscale * (bbhi[0] - xorigin));
+	xp0 = mercx2pix(bblo[0]);
+	xp1 = mercx2pix(bbhi[0]);
 	if (xp1 == xp0) {
-		yp0 = (int)(yscale * (bblo[1] - yorigin));
-		yp1 = (int)(yscale * (bbhi[1] - yorigin));
+		yp0 = mercy2pix(bblo[1]);
+		yp1 = mercy2pix(bbhi[1]);
 		if (yp1 == yp0) {
 			// This node fits inside a single pixel of the output image.
 			/*
@@ -486,22 +490,28 @@ static void addstar(double xp, double yp,
 	int maxdy = 0;
 
 	// special-case...
-	if (unlikely(xp == xlimit)) {
-		x = w-1;
-	} else {
-		x = (int)((xp - xorigin) * xscale);
-	}
+	/*
+	  if (unlikely(xp == xlimit)) {
+	  x = w-1;
+	  } else {
+	*/
+	//x = (int)((xp - xorigin) * xscale);
+	x = mercx2pix(xp);
+	//}
 	if (x+maxdx < 0 || x+mindx >= w) {
 		fprintf(stderr, "x %i (xo=%g, xp=%g)\n", x, xorigin, xp);
 		Noob++;
 		return;
 	}
 	// flip vertically
-	if (unlikely(yp == ylimit)) {
-		y = 0;
-	} else {
-		y = (h-1) - (int)((yp - yorigin) * yscale);
-	}
+	/*
+	  if (unlikely(yp == ylimit)) {
+	  y = 0;
+	  } else {
+	*/
+	//y = (h-1) - (int)((yp - yorigin) * yscale);
+	y = mercy2pix(yp);
+	//}
 	if (y+maxdy < 0 || y+mindy >= h) {
 		fprintf(stderr, "y %i (yo=%g, yp=%g)\n", y, yorigin, yp);
 		Noob++;
