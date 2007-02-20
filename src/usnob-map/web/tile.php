@@ -1,9 +1,11 @@
 <?php
 function loggit($mesg) {
 	error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
+	//error_log($mesg, 3, "/tmp/usnob.log");
 }
 
 $path = "/home/gmaps/usnob-map/execs/";
+//$path = "/h/260/dstn/usnob-map/execs/";
 
 header("Content-type: image/png");
 // DEBUG
@@ -123,6 +125,10 @@ if (strlen("$index_file")) {
 	$gotindex = 1;
 }
 
+if ($map == "tycho") {
+	$gottycho = 1;
+}
+
 $transparent = ($_REQUEST["trans"] == "1");
 
 $lines = false;
@@ -160,6 +166,8 @@ if ($gotindex) {
 	if ($rdls_field > 0) {
 		$cmd = $cmd . sprintf(" -F %d", $rdls_field);
 	}
+} else if ($gottycho) {
+	$cmd = "tychotile";
 } else {
 	$cmd = "usnobtile";
 	if ($lines) {
