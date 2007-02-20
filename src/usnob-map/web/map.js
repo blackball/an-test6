@@ -20,14 +20,17 @@ function debug(txt) {
 var map = new GMap(document.getElementById("map"));
 
 var BASE_URL = "http://oven.cosmo.fas.nyu.edu/usnob/";
+//var BASE_URL = "http://monte.ai.toronto.edu:8080/usnob/";
 var COUNT_URL = BASE_URL + "count.php?map=usnob";
 var TILE_URL = BASE_URL + "tile.php?";
 var USNOB_URL = TILE_URL + "map=usnob";
 var INDEX_URL = TILE_URL + "map=index";
+var TYCHO_URL = TILE_URL + "map=tycho";
 var QUAD_URL = BASE_URL + "quad2.php?";
 var FIELD_URL;
 var SDSS_URL;
 var RDLS_URL;
+var INDEX_URL;
 
 var gotquad = false;
 var gotfieldquad = false;
@@ -113,74 +116,101 @@ if ("INDEX_FILE" in getdata) {
 	*/
 }
 
+var tycho = false;
+if (("map" in getdata) && (getdata["map"] == "tycho")) {
+	tycho = true;
+}
 
 var overview = true;
 if (("over" in getdata) && (getdata["over"] == "no")) {
 	overview = false;
 }
 
-var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
-usnobTile.myLayers='usnob';
-usnobTile.myFormat='image/png';
-usnobTile.myBaseURL=USNOB_URL;
-usnobTile.getTileUrl=CustomGetTileUrl;
-
-var sdssFieldTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),0,17);
-sdssFieldTile.myLayers='sdssfield';
-sdssFieldTile.myFormat='image/png';
-sdssFieldTile.myBaseURL=FIELD_URL;
-sdssFieldTile.getTileUrl=CustomGetTileUrl;
-
-var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) Astrometry.net"),1,17);
-indexTile.myLayers='index';
-indexTile.myFormat='image/png';
-indexTile.myBaseURL=INDEX_URL;
-indexTile.getTileUrl=CustomGetTileUrl;
-
-var indexTransTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
-indexTransTile.myLayers='index';
-indexTransTile.myFormat='image/png';
-indexTransTile.myBaseURL=INDEX_URL + "&trans=1";
-indexTransTile.getTileUrl=CustomGetTileUrl;
-
-var rdlsTile = new GTileLayer(new GCopyrightCollection(""),1,17);
-rdlsTile.myLayers='rdls';
-rdlsTile.myFormat='image/png';
-rdlsTile.myBaseURL=RDLS_URL;
-rdlsTile.getTileUrl=CustomGetTileUrl;
-
-// transparent version of the above
-var rdlsTransTile = new GTileLayer(new GCopyrightCollection(""),1,17);
-rdlsTransTile.myLayers='rdls';
-rdlsTransTile.myFormat='image/png';
-rdlsTransTile.myBaseURL=RDLS_URL + "&trans=1";
-rdlsTransTile.getTileUrl=CustomGetTileUrl;
-
-var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
+var usnob = true;
 
 map.getMapTypes().length = 0;
-map.addMapType(usnobType);
+
+if (tycho) {
+	var tychoTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
+	tychoTile.myLayers='tycho';
+	tychoTile.myFormat='image/png';
+	tychoTile.myBaseURL=TYCHO_URL;
+	tychoTile.getTileUrl=CustomGetTileUrl;
+
+	var tychoType = new GMapType([tychoTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
+	map.addMapType(tychoType);
+	usnob = false;
+}
+
+if (usnob) {
+	var usnobTile= new GTileLayer(new GCopyrightCollection("Catalog (c) USNO"),1,17);
+	usnobTile.myLayers='usnob';
+	usnobTile.myFormat='image/png';
+	usnobTile.myBaseURL=USNOB_URL;
+	usnobTile.getTileUrl=CustomGetTileUrl;
+
+	var usnobType = new GMapType([usnobTile], G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
+	map.addMapType(usnobType);
+}
 
 if (sdss) {
+	var sdssFieldTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),0,17);
+	sdssFieldTile.myLayers='sdssfield';
+	sdssFieldTile.myFormat='image/png';
+	sdssFieldTile.myBaseURL=FIELD_URL;
+	sdssFieldTile.getTileUrl=CustomGetTileUrl;
+
 	var sdssField = new GMapType([sdssFieldTile], G_SATELLITE_MAP.getProjection(), "FIELD", G_SATELLITE_MAP);
 	map.addMapType(sdssField);
 }
+
 if (rdls) {
+	var rdlsTile = new GTileLayer(new GCopyrightCollection(""),1,17);
+	rdlsTile.myLayers='rdls';
+	rdlsTile.myFormat='image/png';
+	rdlsTile.myBaseURL=RDLS_URL;
+	rdlsTile.getTileUrl=CustomGetTileUrl;
+
+	// transparent version of the above
+	var rdlsTransTile = new GTileLayer(new GCopyrightCollection(""),1,17);
+	rdlsTransTile.myLayers='rdls';
+	rdlsTransTile.myFormat='image/png';
+	rdlsTransTile.myBaseURL=RDLS_URL + "&trans=1";
+	rdlsTransTile.getTileUrl=CustomGetTileUrl;
+
 	var rdlsUsnob = new GMapType([usnobTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "RDLS+U", G_SATELLITE_MAP);
 	map.addMapType(rdlsUsnob);
 	var rdlsAlone = new GMapType([rdlsTile], G_SATELLITE_MAP.getProjection(), "RDLS", G_SATELLITE_MAP);
 	map.addMapType(rdlsAlone);
 }
+
 if (index) {
+	var indexTile = new GTileLayer(new GCopyrightCollection("Catalog (c) Astrometry.net"),1,17);
+	indexTile.myLayers='index';
+	indexTile.myFormat='image/png';
+	indexTile.myBaseURL=INDEX_URL;
+	indexTile.getTileUrl=CustomGetTileUrl;
+
+	var indexTransTile = new GTileLayer(new GCopyrightCollection("Catalog (c) SDSS"),1,17);
+	indexTransTile.myLayers='index';
+	indexTransTile.myFormat='image/png';
+	indexTransTile.myBaseURL=INDEX_URL + "&trans=1";
+	indexTransTile.getTileUrl=CustomGetTileUrl;
+
 	var usnobPlusIndex = new GMapType([usnobTile, indexTransTile], G_SATELLITE_MAP.getProjection(), "U+I", G_SATELLITE_MAP);
 	map.addMapType(usnobPlusIndex);
 	var indexAlone = new GMapType([indexTile], G_SATELLITE_MAP.getProjection(), "INDEX", G_SATELLITE_MAP);
 	map.addMapType(indexAlone);
 }
+
 if (rdls && index) {
 	var rdlsIndex = new GMapType([indexTile, rdlsTransTile], G_SATELLITE_MAP.getProjection(), "R+I", G_SATELLITE_MAP);
 	map.addMapType(rdlsIndex);
 }
+
+//if (rdls && gotindex) {
+//	map.addMapType(rdlsIndex);
+//}
 
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
