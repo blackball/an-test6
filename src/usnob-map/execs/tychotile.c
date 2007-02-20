@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
 		//fprintf(stderr, "fzoom %g, %g\n", fxzoom, fyzoom);
 	}
 	zoomlevel = (int)rint(log(xzoom) / log(2.0));
-	//fprintf(stderr, "Zoom level %i.\n", zoomlevel);
+	fprintf(stderr, "Zoom level %i.\n", zoomlevel);
 
 	if (px0 < 0.0) {
 		px0 += 1.0;
@@ -289,20 +289,40 @@ int main(int argc, char *argv[]) {
 		{
 			float rscale, bscale, nscale;
 			float amp = 0.0;
+
+			// This tries to keep to same brightness per unit sky, which
+			// isn't really the right thing to do since fewer and fewer
+			// pixels are filled, so we tend to saturate any pixel that
+			// has any flux...
+			amp = pow(4.0, zoomlevel) * 64.0;
+			//amp = (zoomlevel*2) << 64.0;
+			/*
+			  switch (zoomlevel) {
+			  case 1:
+			  amp = 256.0;
+			  break;
+			  case 2:
+			  amp = 1024.0;
+			  break;
+			  case 3:
+			  amp = 4096.0;
+			  break;
+			  case 4:
+			  default:
+			  amp = 16384.0;
+			  break;
+			  }
+			*/
+
 			for (i=0; i<(w*h); i++) {
-				fluximg[3*i+0] = pow(fluximg[3*i+0], 0.25);
-				fluximg[3*i+1] = pow(fluximg[3*i+1], 0.25);
-				fluximg[3*i+2] = pow(fluximg[3*i+2], 0.25);
+				fluximg[3*i+0] = pow(fluximg[3*i+0] * amp, 0.25);
+				fluximg[3*i+1] = pow(fluximg[3*i+1] * amp, 0.25);
+				fluximg[3*i+2] = pow(fluximg[3*i+2] * amp, 0.25);
 			}
 
-			switch (zoomlevel) {
-			case 1:
-			default:
-				amp = 4.0;
-			}
-			rscale = 255.0 / 1.0 * amp;
-			bscale = 255.0 / 1.0 * amp;
-			nscale = 255.0 / 1.0 * amp;
+			rscale = 255.0 / 1.0;
+			bscale = 255.0 / 1.0;
+			nscale = 255.0 / 1.0;
 
 			printf("P6 %d %d %d\n", w, h, 255);
 			for (i=0; i<(w*h); i++) {
@@ -404,14 +424,14 @@ static void addstar(double xp, double yp,
 	// special-case...
 	x = mercx2pix(xp);
 	if (x+maxdx < 0 || x+mindx >= w) {
-		fprintf(stderr, "x %i (xo=%g, xp=%g)\n", x, xorigin, xp);
+		//fprintf(stderr, "x %i (xo=%g, xp=%g)\n", x, xorigin, xp);
 		Noob++;
 		return;
 	}
 	// flip vertically
 	y = mercy2pix(yp);
 	if (y+maxdy < 0 || y+mindy >= h) {
-		fprintf(stderr, "y %i (yo=%g, yp=%g)\n", y, yorigin, yp);
+		//fprintf(stderr, "y %i (yo=%g, yp=%g)\n", y, yorigin, yp);
 		Noob++;
 		return;
 	}
