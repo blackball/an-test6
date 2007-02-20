@@ -37,7 +37,6 @@ void printHelp(char* progname) {
 			"   -o <output-file>\n"
 			"  [-m <max-y-val>]: Maximum y value of the projection (default: Pi)\n"
 			"  [-l <n-leaf-point>]: Target number of points in the leaves of the tree (default 15).\n"
-			//"  [-T]: Use Tycho-2 mapping: B->blue, V->red, H->green.\n"
 			"  [-t  <tree type>]:  {double,float,u32,u16}, default u32.\n"
 			"  [-d  <data type>]:  {double,float,u32,u16}, default u32.\n"
 			"   (   [-b]: build bounding boxes\n"
@@ -206,37 +205,6 @@ int main(int argc, char** args) {
 			xy[i*2] = x;
 			xy[i*2+1] = y;
 
-			/*
-			  if (tycho) {
-			  float rflux, bflux;
-			  float gflux;
-			  rflux = bflux = 0.0;
-			  for (o=0; o<entry->nobs; o++) {
-			  an_observation* ob = entry->obs + o;
-			  float flux;
-			  if (ob->catalog != AN_SOURCE_TYCHO2)
-			  continue;
-			  flux = mag2flux(ob->mag) * vertscale;
-			  // Cheating :)
-			  switch (ob->band) {
-			  case 'B':
-			  bflux = flux;
-			  break;
-			  case 'V':
-			  rflux = flux;
-			  break;
-			  case 'H':
-			  rflux = bflux = flux;
-			  break;
-			  }
-			  }
-			  // assume that "green" flux is the geometric mean...
-			  gflux = sqrt(rflux * bflux);
-			  mt->flux[i].nflux += rflux;
-			  mt->flux[i].rflux += gflux;
-			  mt->flux[i].bflux += bflux;
-			  } else {
-			*/
 			for (o=0; o<entry->nobs; o++) {
 				bool red = FALSE, blue = FALSE, ir = FALSE;
 				float flux;
