@@ -180,7 +180,7 @@ int main(int argc, char** args) {
 
 		fprintf(stderr, "Reading %i entries for catalog file %s.\n", ancat->nentries, fn);
 
-		for (j=0; j<ancat->nentries; j++, i++) {
+		for (j=0; j<ancat->nentries; j++) {
 			int grass;
 			float vertscale;
 			an_entry* entry;
@@ -201,6 +201,16 @@ int main(int argc, char** args) {
 			x = (entry->ra / 360.0);
 			y = (maxy + asinh(tan(deg2rad(entry->dec)))) / (2.0 * maxy);
 			vertscale = 1.0 / cos(deg2rad(entry->dec));
+
+			if (x < 0.0 || x >= 1.0) {
+				fprintf(stderr, "x out of range: %g\n", x);
+				continue;
+			}
+			if (y < 0.0 || y > 1.0) {
+				// This is to be expected for points in the polar caps.
+				//fprintf(stderr, "y out of range: %g\n", y);
+				continue;
+			}
 
 			xy[i*2] = x;
 			xy[i*2+1] = y;
@@ -249,11 +259,17 @@ int main(int argc, char** args) {
 				if (ir)
 					mt->flux[i].nflux += flux;
 			}
-			//}
+
+			i++;
 		}
 		an_catalog_close(ancat);
 		fprintf(stderr, "\n");
 	}
+
+	// The total number of points kept:
+	N = i;
+
+	fprintf(stderr, "Kep: %i points within range.\n", N);
 
 	fprintf(stderr, "Creating kdtree...\n");
 
