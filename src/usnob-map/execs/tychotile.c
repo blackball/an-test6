@@ -34,7 +34,7 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-#define OPTIONS "x:y:X:Y:w:h:l:f"
+#define OPTIONS "x:y:X:Y:w:h:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -46,7 +46,7 @@ static void expand_node(kdtree_t* kd, int node);
 static void addstar(double xp, double yp, merc_flux* flux);
 
 /*
-char* merc_file     = "/h/260/dstn/local/tycho-maps/tycho.mkdt.fits";
+  char* merc_file     = "/h/260/dstn/local/tycho-maps/tycho.mkdt.fits";
 */
 char* map_template  = "/home/gmaps/usnob-images/tycho-maps/tycho-zoom%i_%02i_%02i.png";
 char* merc_file     = "/home/gmaps/usnob-images/tycho.mkdt.fits";
@@ -57,8 +57,6 @@ int Noob;
 int Nib;
 int w=0, h=0;
 
-// The current query region
-double *qlo, *qhi;
 // The lower-left corner of the image.
 double xorigin, yorigin;
 // The merctree.
@@ -76,25 +74,16 @@ int main(int argc, char *argv[]) {
 	bool gotx, goty, gotX, gotY, gotw, goth;
 	double x0=0.0, x1=0.0, y0=0.0, y1=0.0;
 	int i;
-	double lines = 0.0;
 	double px0, py0, px1, py1;
 	double pixperx, pixpery;
 	double xzoom, yzoom;
 	int zoomlevel;
 	int xpix0, xpix1, ypix0, ypix1;
-	bool forcetree = FALSE;
-	char fn[256];
 
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
-		case 'f':
-			forcetree = TRUE;
-			break;
-		case 'l':
-			lines = atof(optarg);
-			break;
 		case 'x':
 			x0 = atof(optarg);
 			gotx = TRUE;
@@ -192,53 +181,65 @@ int main(int argc, char *argv[]) {
 
 	//fprintf(stderr, "Pixel positions: (%i,%i), (%i,%i) vs (%i,%i)\n", xpix0, ypix0, xpix0+w, ypix0+h, xpix1, ypix1);
 
-	if (!forcetree && (zoomlevel <= 0)) {
-		char buff[1024];
-		FILE *fp;
+	/*
+	  if (!forcetree && (zoomlevel <= 0)) {
+	  char fn[256];
+	  char buff[1024];
+	  FILE *fp;
 
-		sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
-		fprintf(stderr, "Loading image from file %s.\n", fn);
-		fp = fopen(fn, "r");
-		// write file to stdout
-		for (;;) {
-			int nr = fread(buff, 1, sizeof(buff), fp);
-			if (!nr) {
-				if (feof(fp))
-					break;
-				if (ferror(fp)) {
-					fprintf(stderr, "Error reading from file %s: %s\n", fn, strerror(errno));
-					break;
-				}
-			}
-			if (fwrite(buff, 1, nr, stdout) != nr) {
-				fprintf(stderr, "Error writing: %s\n", strerror(errno));
-				break;
-			}
-		}
-		return 0;
-	}
-
+	  sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
+	  fprintf(stderr, "Loading image from file %s.\n", fn);
+	  fp = fopen(fn, "r");
+	  // write file to stdout
+	  for (;;) {
+	  int nr = fread(buff, 1, sizeof(buff), fp);
+	  if (!nr) {
+	  if (feof(fp))
+	  break;
+	  if (ferror(fp)) {
+	  fprintf(stderr, "Error reading from file %s: %s\n", fn, strerror(errno));
+	  break;
+	  }
+	  }
+	  if (fwrite(buff, 1, nr, stdout) != nr) {
+	  fprintf(stderr, "Error writing: %s\n", strerror(errno));
+	  break;
+	  }
+	  }
+	  return 0;
+	  }
+	*/
 	{
 		double querylow[2], queryhigh[2];
 		double wraplow[2], wraphigh[2];
 		bool wrapra;
+		double xmargin, ymargin;
+
+		// Magic number 2: number of pixels around a star.
+		xmargin = 2.0 / pixperx;
+		ymargin = 2.0 / pixpery;
+		fprintf(stderr, "margins: %g, %g\n", xmargin, ymargin);
 
 		wrapra = (px1 > 1.0);
 		if (wrapra) {
-			querylow [0] = px0;
+			querylow [0] = px0 - xmargin;
 			queryhigh[0] = 1.0;
-			querylow [1] = py0;
-			queryhigh[1] = py1;
 			wraplow  [0] = 0.0;
-			wraphigh [0] = px1 - 1.0;
-			wraplow  [1] = py0;
-			wraphigh [1] = py1;
+			wraphigh [0] = px1 - 1.0 + xmargin;
+			if (wraplow [0] < 0.0) wraplow [0] = 0.0;
+			if (wraphigh[0] > 1.0) wraphigh[0] = 1.0;
 		} else {
-			querylow [0] = px0;
-			querylow [1] = py0;
-			queryhigh[0] = px1;
-			queryhigh[1] = py1;
+			querylow [0] = px0 - xmargin;
+			queryhigh[0] = px1 + xmargin;
 		}
+		querylow [1] = wraplow [1] = py0 - ymargin;
+		queryhigh[1] = wraphigh[1] = py1 + ymargin;
+		if (querylow [0] < 0.0) querylow [0] = 0.0;
+		if (querylow [1] < 0.0) querylow [1] = 0.0;
+		if (queryhigh[0] > 1.0) queryhigh[0] = 1.0;
+		if (queryhigh[1] > 1.0) queryhigh[1] = 1.0;
+		if (wraplow [1] < 0.0) wraplow [1] = 0.0;
+		if (wraphigh[1] > 1.0) wraphigh[1] = 1.0;
 
 		fluximg = calloc(w*h*3, sizeof(float));
 		if (!fluximg) {
@@ -265,18 +266,14 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		qlo = querylow;
-		qhi = queryhigh;
-		xorigin = qlo[0];
-		yorigin = qlo[1];
-		kdtree_nodes_contained(merc->tree, qlo, qhi,
+		xorigin = px0;
+		yorigin = py0;
+		kdtree_nodes_contained(merc->tree, querylow, queryhigh,
 							   node_contained, node_overlaps, NULL);
 	
 		if (wrapra) {
-			xorigin = querylow [0] - 1.0;
-			qlo = wraplow;
-			qhi = wraphigh;
-			kdtree_nodes_contained(merc->tree, qlo, qhi,
+			xorigin = px0 - 1.0;
+			kdtree_nodes_contained(merc->tree, wraplow, wraphigh,
 								   node_contained, node_overlaps, NULL);
 		}
 		merctree_close(merc);
@@ -293,7 +290,8 @@ int main(int argc, char *argv[]) {
 			// isn't really the right thing to do since fewer and fewer
 			// pixels are filled, so we tend to saturate any pixel that
 			// has any flux...
-			amp = pow(4.0, zoomlevel) * 64.0;
+			amp = pow(4.0, zoomlevel) * 32.0;
+			//amp = pow(4.0, zoomlevel) * 64.0;
 			//amp = (zoomlevel*2) << 64.0;
 			/*
 			  switch (zoomlevel) {
@@ -409,16 +407,47 @@ static void addstar(double xp, double yp,
 	  int mindy = -1;
 	  int maxdy = 1;
 	*/
+	int dx[] = { -2, -1,  0,  1,  2, 
+				 -2, -1,  0,  1,  2, 
+				 -2, -1,  0,  1,  2, 
+				 -2, -1,  0,  1,  2, 
+				 -2, -1,  0,  1,  2 };
+	int dy[] = {  -2, -2, -2, -2, -2,
+				  -1, -1, -1, -1, -1,
+				  0,  0,  0,  0,  0,
+				  1,  1,  1,  1,  1,
+				  2,  2,  2,  2,  2 };
+	/*
+	  x=[-2:2];
+	  y=[-2:2];
+	  xx=repmat(x, [5,1]);
+	  yy=repmat(y', [1,5]);
+	  E=exp(-(xx.^2 + yy.^2)/(2 * 0.5));
+	  E./sum(sum(E))
+	*/
+	float scale[] = {
+		0.00010678874539,  0.00214490928858,   0.00583046794284,  0.00214490928858,  0.00010678874539,
+		0.00214490928858,  0.04308165471265,  0.11710807914534,  0.04308165471265,  0.00214490928858,
+		0.00583046794284,  0.11710807914534,  0.31833276350651,  0.11710807914534,  0.00583046794284,
+		0.00214490928858,  0.04308165471265,  0.11710807914534,  0.04308165471265,  0.00214490928858,
+		0.00010678874539,  0.00214490928858,  0.00583046794284,  0.00214490928858,  0.00010678874539 };
+	int mindx = -2;
+	int maxdx = 2;
+	int mindy = -2;
+	int maxdy = 2;
+
 	int i;
 	int x, y;
 
-	int dx[] = { 0 };
-	int dy[] = { 0 };
-	float scale[] = { 1 };
-	int mindx = 0;
-	int maxdx = 0;
-	int mindy = 0;
-	int maxdy = 0;
+	/*
+	  int dx[] = { 0 };
+	  int dy[] = { 0 };
+	  float scale[] = { 1 };
+	  int mindx = 0;
+	  int maxdx = 0;
+	  int mindy = 0;
+	  int maxdy = 0;
+	*/
 
 	// special-case...
 	x = mercx2pix(xp);
