@@ -127,13 +127,6 @@ if (strlen("$index_file")) {
 
 if ($map == "tycho") {
 	$gottycho = 1;
-	$gain = 0;
-	$gainstr = $_REQUEST["gain"];
-	if (strlen($gainstr)) {
-		if (sscanf($gainstr, "%f", $gain) != 1) {
-			loggit("Failed to parse gain: \"" . $gainstr . "\"\n");
-		}
-	}
 }
 
 $transparent = ($_REQUEST["trans"] == "1");
@@ -174,7 +167,30 @@ if ($gotindex) {
 		$cmd = $cmd . sprintf(" -F %d", $rdls_field);
 	}
 } else if ($gottycho) {
-	$cmd = "tychotile" . " -g " . $gain;
+	$cmd = "tychotile";
+
+	/*
+	$gainstr = $_REQUEST["gain"];
+	if (strlen($gainstr)) {
+		if (sscanf($gainstr, "%f", $gain) != 1) {
+			loggit("Failed to parse gain: \"" . $gainstr . "\"\n");
+		}
+	}
+	*/
+	if (array_key_exists("gain", $_REQUEST)) {
+		sscanf($_REQUEST["gain"], "%f", $gain);
+		$cmd .= " -g " . $gain;
+	}
+	if (array_key_exists("cc", $_REQUEST)) {
+		sscanf($_REQUEST["cc"], "%f", $cc);
+		$cmd .= " -c " . $cc;
+	}
+	if (array_key_exists("arith", $_REQUEST)) {
+		$cmd .= " -a";
+	}
+	if (array_key_exists("arcsinh", $_REQUEST)) {
+		$cmd .= " -s";
+	}
 } else {
 	$cmd = "usnobtile";
 	if ($lines) {

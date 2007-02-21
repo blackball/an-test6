@@ -44,6 +44,15 @@ var indexQuadState = ("iq" in getdata);
 if ("gain" in getdata) {
 	TYCHO_URL = TYCHO_URL + "&gain=" + Number(getdata["gain"]);
 }
+if ("arcsinh" in getdata) {
+	TYCHO_URL = TYCHO_URL + "&arcsinh";
+}
+if ("arith" in getdata) {
+	TYCHO_URL = TYCHO_URL + "&arith";
+}
+if ("cc" in getdata) {
+	TYCHO_URL = TYCHO_URL + "&cc=" + Number(getdata["cc"]);
+}
 
 if (("SDSS_FILE" in getdata) && ("SDSS_FIELD" in getdata)) {
 	var filenum = Number(getdata["SDSS_FILE"]);
