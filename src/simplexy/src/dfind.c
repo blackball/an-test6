@@ -48,7 +48,7 @@ int dfind2(int *image,
 			if (!image[nx*iy+ix])
 				continue;
 
-			if (nx && image[nx*iy+ix-1]) {
+			if (ix && image[nx*iy+ix-1]) {
 				/* Old group */
 				object[nx*iy+ix] = object[nx*iy+ix-1];
 
@@ -65,7 +65,7 @@ int dfind2(int *image,
 			while (equivs[thislabelmin] != thislabelmin)
 				thislabelmin = equivs[thislabelmin];
 
-			if (ny) {
+			if (iy) {
 				for (i=max(0,ix-1); i<min(ix+2,nx); i++) {
 					if (image[nx*(iy-1)+i]) {
 						int otherlabel = object[nx*(iy-1) + i];
@@ -79,9 +79,12 @@ int dfind2(int *image,
 						if (thislabelmin != otherlabelmin) {
 							int oldlabelmin = max(thislabelmin, otherlabelmin);
 							int newlabelmin = min(thislabelmin, otherlabelmin);
+							printf("RELABEL:\n");
 							for (j=0; j<maxlabel; j++) 
-								if (equivs[j] == oldlabelmin)
+								if (equivs[j] == oldlabelmin) {
+									printf("ix%d iy%d making equivs[%d] = %d, was %d\n", ix, iy, j, newlabelmin, equivs[j]);
 									equivs[j] = newlabelmin;
+								}
 							thislabelmin = newlabelmin;
 							equivs[object[nx*iy+ix]] = newlabelmin;
 						}
