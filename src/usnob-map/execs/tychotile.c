@@ -34,7 +34,7 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-#define OPTIONS "x:y:X:Y:w:h:g:as"
+#define OPTIONS "x:y:X:Y:w:h:g:asc:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -64,6 +64,7 @@ merctree* merc;
 
 bool arith = FALSE;
 bool arc = FALSE;
+double colorcor = 1.44;
 
 static int mercx2pix(double xp) {
 	return (int)floor(xscale * (xp - xorigin));
@@ -88,6 +89,9 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'c':
+			colorcor = atof(optarg);
+			break;
 		case 's':
 			arc = TRUE;
 			break;
@@ -315,8 +319,8 @@ int main(int argc, char *argv[]) {
 				  pix[2] = min(255, fluximg[3*i + 2]);
 				*/
 				r = fluximg[3*i+0];
-				g = fluximg[3*i+1] * 1.2;
-				b = fluximg[3*i+2] * 1.44;
+				g = fluximg[3*i+1] * sqrt(colorcor); //1.2;
+				b = fluximg[3*i+2] * colorcor; //1.44;
 				I = (r + g + b) / 3;
 				if (I == 0.0) {
 					R = G = B = 0.0;
