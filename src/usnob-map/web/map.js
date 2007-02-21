@@ -330,14 +330,16 @@ map.setCenter(new GLatLng(0,0), 0);
 function parseget() {
 	debug("parseget() running.\n");
 	var get = getGetData();
-	if (("ra" in get) && ("dec" in get) && ("zoom" in get)) {
+	if (("ra" in get) && ("dec" in get)) {
 		var ra = Number(get["ra"]);
 		var dec = Number(get["dec"]);
-		var zoom = Number(get["zoom"]);
-		//document.debugform.debug.value = "ra=" + ra + ", dec=" + dec + ", zoom=" + zoom;
-		map.setZoom(zoom);
 		map.setCenter(new GLatLng(dec,ra));
 	}
+	if ("zoom" in get) {
+		var zoom = Number(get["zoom"]);
+		map.setZoom(zoom);
+	}
+	//document.debugform.debug.value = "ra=" + ra + ", dec=" + dec + ", zoom=" + zoom;
 }
 
 // create a URL with "ra", "dec", and "zoom" GET args, and go there.
