@@ -1,7 +1,7 @@
 <?php
 function loggit($mesg) {
-	error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
-	//error_log($mesg, 3, "/tmp/usnob.log");
+	//error_log($mesg, 3, "/home/gmaps/usnob-map/usnob.log");
+	error_log($mesg, 3, "/tmp/usnob.log");
 }
 
 $path = "/home/gmaps/usnob-map/execs/";
@@ -54,8 +54,8 @@ if (!strlen($rdls_filename)) {
 
 $index_file = $_REQUEST["INDEX_FILE"];
 
-loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
-loggit("SDSS file $sdss_file, field $sdss_field\n");
+//loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay\n");
+//loggit("SDSS file $sdss_file, field $sdss_field\n");
 
 if ($epsg != "EPSG:4326") {
 	loggit("Wrong EPSG: $epsg.\n");
@@ -127,6 +127,13 @@ if (strlen("$index_file")) {
 
 if ($map == "tycho") {
 	$gottycho = 1;
+	$gain = 0;
+	$gainstr = $_REQUEST["gain"];
+	if (strlen($gainstr)) {
+		if (sscanf($gainstr, "%f", $gain) != 1) {
+			loggit("Failed to parse gain: \"" . $gainstr . "\"\n");
+		}
+	}
 }
 
 $transparent = ($_REQUEST["trans"] == "1");
@@ -140,15 +147,15 @@ $layers = explode(" ", $lay);
 		}
 */
 if (in_array("lines10", $layers)) {
-	loggit("Including RA/DEC lines.\n");
+	//loggit("Including RA/DEC lines.\n");
 	$lines = true;
 	$linesize = 10;
 }
 
-loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1.\n");
-loggit("w=$w, h=$h.\n");
-loggit("sdss file=$sdssfile field=$sdssfield.\n");
-loggit("index file=$index_file field=$sdssfield.\n");
+//loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1.\n");
+//loggit("w=$w, h=$h.\n");
+//loggit("sdss file=$sdssfile field=$sdssfield.\n");
+//loggit("index file=$index_file field=$sdssfield.\n");
 if ($lines) {
 	loggit("linesize=$linesize\n");
 }
@@ -167,7 +174,7 @@ if ($gotindex) {
 		$cmd = $cmd . sprintf(" -F %d", $rdls_field);
 	}
 } else if ($gottycho) {
-	$cmd = "tychotile";
+	$cmd = "tychotile" . " -g " . $gain;
 } else {
 	$cmd = "usnobtile";
 	if ($lines) {
