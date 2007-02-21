@@ -34,7 +34,7 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-#define OPTIONS "x:y:X:Y:w:h:"
+#define OPTIONS "x:y:X:Y:w:h:g:"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -79,6 +79,7 @@ int main(int argc, char *argv[]) {
 	double xzoom, yzoom;
 	int zoomlevel;
 	int xpix0, xpix1, ypix0, ypix1;
+	double gain = 0.0;
 
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
@@ -107,6 +108,9 @@ int main(int argc, char *argv[]) {
 		case 'h':
 			h = atoi(optarg);
 			goth = TRUE;
+			break;
+		case 'g':
+			gain = atof(optarg);
 			break;
 		}
 
@@ -291,7 +295,7 @@ int main(int argc, char *argv[]) {
 			// has any flux...
 			//amp = pow(4.0, zoomlevel) * 32.0;
 
-			amp = pow(4.0, min(5, zoomlevel)) * 32.0;
+			amp = pow(4.0, min(5, zoomlevel)) * 32.0 * exp(gain * log(4.0));
 
 			for (i=0; i<(3*w*h); i++)
 				fluximg[i] = pow(fluximg[i] * amp, 0.25) * 255.0;
