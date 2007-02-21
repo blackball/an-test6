@@ -126,12 +126,6 @@ if (("over" in getdata) && (getdata["over"] == "no")) {
 }
 
 var usnob = true;
-/*
-  var tycho = false;
-  if (("map" in getdata) && (getdata["map"] == "tycho")) {
-  tycho = true;
-  }
-*/
 var tycho = true;
 
 map.getMapTypes().length = 0;
@@ -230,13 +224,8 @@ if (rdls && index) {
 	map.addMapType(rdlsIndex);
 }
 
-//if (rdls && gotindex) {
-//	map.addMapType(rdlsIndex);
-//}
-
 map.addControl(new GLargeMapControl());
 map.addControl(new GMapTypeControl());
-//map.addControl(new GScaleControl());
 
 if (overview) {
 	var w = 800;
@@ -318,7 +307,6 @@ function moveCenter() {
 	var dec = document.dummyform.dec_center.value;
 	var zoom = document.dummyform.zoom.value;
 	// jump directly
-	//map.setCenter(new GLatLng(dec, ra), zoom);
 	map.setCenter(new GLatLng(dec, ra));
 	map.setZoom(zoom);
 }
@@ -372,20 +360,22 @@ var sdssQuads = [];
 var sdssTxt  = "SDSS QUAD";
 var sdssQuadState = ("sq" in getdata);
 
-var sdssBoundary = null;
-var sdssBoundaryTxt  = "SDSS BOX";
-var pts=[];
-// HACK!  Hard-code this for now...
-pts.push(new GLatLng(26.884,241.39));
-pts.push(new GLatLng(27.071,241.54));
-pts.push(new GLatLng(26.978,241.69));
-pts.push(new GLatLng(26.791,241.55));
-pts.push(pts[0]);
-sdssBoundary = new GPolyline(pts, "ffc800");
-var sdssBoundaryState = ("sb" in getdata);
-if (sdssBoundaryState) {
-	map.addOverlay(sdssBoundary);
-}
+/*
+  var sdssBoundary = null;
+  var sdssBoundaryTxt  = "SDSS BOX";
+  var pts=[];
+  // HACK!  Hard-code this for now...
+  pts.push(new GLatLng(26.884,241.39));
+  pts.push(new GLatLng(27.071,241.54));
+  pts.push(new GLatLng(26.978,241.69));
+  pts.push(new GLatLng(26.791,241.55));
+  pts.push(pts[0]);
+  sdssBoundary = new GPolyline(pts, "ffc800");
+  var sdssBoundaryState = ("sb" in getdata);
+  if (sdssBoundaryState) {
+  map.addOverlay(sdssBoundary);
+  }
+*/
 
 var sdssFieldQuads = [];
 var sdssFieldTxt  = "FIELD QUAD";
@@ -499,43 +489,45 @@ SdssQuadControl.prototype.setButtonStyle_ = function(button) {
 	}
 }
 
-function SdssBoundaryControl() {}
-SdssBoundaryControl.prototype = new GControl();
-SdssBoundaryControl.prototype.initialize = function(map) {
-	var on = sdssBoundaryState;
-	var container = document.createElement("div");
-	var toggleDiv = document.createElement("div");
-	var txtNode = document.createTextNode(sdssBoundaryTxt);
-	this.setButtonStyle_(toggleDiv);
-	container.appendChild(toggleDiv);
-	toggleDiv.appendChild(txtNode);
-	GEvent.addDomListener(toggleDiv, "click", function(){
-		if (on) {
-			on = false;
-			if (sdssBoundary != null) {
-				map.removeOverlay(sdssBoundary);
-			}
-			buttonStyleOff(toggleDiv);
-		} else {
-			on = true;
-			if (sdssBoundary != null) {
-				map.addOverlay(sdssBoundary);
-			}
-			buttonStyleOn(toggleDiv);
-		}
-	});
-	map.getContainer().appendChild(container);
-	return container;
-}
-SdssBoundaryControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(2*78 + 7, 30));
-}
-SdssBoundaryControl.prototype.setButtonStyle_ = function(button) {
-	buttonStyleCommon(button);
-	if (!sdssBoundaryState) {
-		buttonStyleOff(button);
-	}
-}
+/*
+  function SdssBoundaryControl() {}
+  SdssBoundaryControl.prototype = new GControl();
+  SdssBoundaryControl.prototype.initialize = function(map) {
+  var on = sdssBoundaryState;
+  var container = document.createElement("div");
+  var toggleDiv = document.createElement("div");
+  var txtNode = document.createTextNode(sdssBoundaryTxt);
+  this.setButtonStyle_(toggleDiv);
+  container.appendChild(toggleDiv);
+  toggleDiv.appendChild(txtNode);
+  GEvent.addDomListener(toggleDiv, "click", function(){
+  if (on) {
+  on = false;
+  if (sdssBoundary != null) {
+  map.removeOverlay(sdssBoundary);
+  }
+  buttonStyleOff(toggleDiv);
+  } else {
+  on = true;
+  if (sdssBoundary != null) {
+  map.addOverlay(sdssBoundary);
+  }
+  buttonStyleOn(toggleDiv);
+  }
+  });
+  map.getContainer().appendChild(container);
+  return container;
+  }
+  SdssBoundaryControl.prototype.getDefaultPosition = function() {
+  return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(2*78 + 7, 30));
+  }
+  SdssBoundaryControl.prototype.setButtonStyle_ = function(button) {
+  buttonStyleCommon(button);
+  if (!sdssBoundaryState) {
+  buttonStyleOff(button);
+  }
+  }
+*/
 
 function FieldQuadControl() {}
 FieldQuadControl.prototype = new GControl();
@@ -687,14 +679,18 @@ if (gotquad) {
 if (gotfieldquad) {
 	setTimeout("addfieldquad();", 7);
 }
-if (sdss) {
-	if (sdssBoundaryState) {
-		map.addOverlay(sdssBoundary);
-	}
-	map.addControl(new SdssBoundaryControl());
-}
+/*
+  if (sdss) {
+  if (sdssBoundaryState) {
+  map.addOverlay(sdssBoundary);
+  }
+  map.addControl(new SdssBoundaryControl());
+  }
+*/
 
-var type="";
+// default:
+var type="usnobType";
+
 if ("view" in getdata) {
 	var view = getdata["view"];
 	if (view == "usnob") {
@@ -707,22 +703,13 @@ if ("view" in getdata) {
 		type = "sdssField";
 	} else if (view == "r+i") {
 		type = "rdlsIndex";
+	} else if (view == "r+t") {
+		type = "rdlsTycho";
 	} else if (view == "r+u") {
 		type = "rdlsUsnob";
 	}
 }
 
 if (type.length) {
-	//map.setMapType(type);
 	setTimeout("map.setMapType(" + type + ");", 8);
 }
-
-// DEBUG
-//setTimeout("map.setMapType(sdssField); map.setZoom(2); map.setCenter(new GLatLng(8.41,179.65));", 8);
-//setTimeout("map.setMapType(sdssAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
-//setTimeout("map.setMapType(indexAlone); map.setZoom(12); map.setCenter(new GLatLng(26.92,241.51));", 8);
-
-/*
-  info_html = "<b>testing</b>";
-  document.getElementById("info").innerHTML += info_html;
-*/
