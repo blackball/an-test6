@@ -51,7 +51,7 @@ static void addstar(double xp, double yp, merc_flux* flux);
 char* map_template  = "/home/gmaps/usnob-images/tycho-maps/tycho-zoom%i_%02i_%02i.png";
 char* merc_file     = "/home/gmaps/usnob-images/tycho.mkdt.fits";
 
-float* fluximg;
+float* fluximg; // RGB
 float xscale, yscale;
 int Noob;
 int Nib;
@@ -283,52 +283,25 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%i points inside image bounds.\n", Nib);
 
 		{
-			float rscale, bscale, nscale;
 			float amp = 0.0;
 
 			// This tries to keep to same brightness per unit sky, which
 			// isn't really the right thing to do since fewer and fewer
 			// pixels are filled, so we tend to saturate any pixel that
 			// has any flux...
-			amp = pow(4.0, zoomlevel) * 32.0;
-			//amp = pow(4.0, zoomlevel) * 64.0;
-			//amp = (zoomlevel*2) << 64.0;
-			/*
-			  switch (zoomlevel) {
-			  case 1:
-			  amp = 256.0;
-			  break;
-			  case 2:
-			  amp = 1024.0;
-			  break;
-			  case 3:
-			  amp = 4096.0;
-			  break;
-			  case 4:
-			  default:
-			  amp = 16384.0;
-			  break;
-			  }
-			*/
+			//amp = pow(4.0, zoomlevel) * 32.0;
 
-			for (i=0; i<(w*h); i++) {
-				fluximg[3*i+0] = pow(fluximg[3*i+0] * amp, 0.25);
-				fluximg[3*i+1] = pow(fluximg[3*i+1] * amp, 0.25);
-				fluximg[3*i+2] = pow(fluximg[3*i+2] * amp, 0.25);
-			}
+			amp = pow(4.0, min(5, zoomlevel)) * 32.0;
 
-			rscale = 255.0 / 1.0;
-			bscale = 255.0 / 1.0;
-			nscale = 255.0 / 1.0;
+			for (i=0; i<(3*w*h); i++)
+				fluximg[i] = pow(fluximg[i] * amp, 0.25) * 255.0;
 
 			printf("P6 %d %d %d\n", w, h, 255);
 			for (i=0; i<(w*h); i++) {
 				unsigned char pix[3];
-				// fluximg stored the channels in RBN order.
-				// we want to make N->red, R->green, B->blue
-				pix[0] = min(255, fluximg[3*i + 2] * nscale);
-				pix[1] = min(255, fluximg[3*i + 0] * rscale);
-				pix[2] = min(255, fluximg[3*i + 1] * bscale);
+				pix[0] = min(255, fluximg[3*i + 0]);
+				pix[1] = min(255, fluximg[3*i + 1]);
+				pix[2] = min(255, fluximg[3*i + 2]);
 				fwrite(pix, 1, 3, stdout);
 			}
 		}
