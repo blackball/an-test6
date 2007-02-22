@@ -46,10 +46,10 @@ static void expand_node(kdtree_t* kd, int node);
 static void addstar(double xp, double yp, merc_flux* flux);
 
 /*
-char* merc_file     = "/home/gmaps/usnob-images/tycho.mkdt.fits";
+  char* merc_file     = "/h/260/dstn/local/tycho-maps/tycho.mkdt.fits";
 */
 char* map_template  = "/home/gmaps/usnob-images/tycho-maps/tycho-zoom%i_%02i_%02i.png";
-  char* merc_file     = "/h/260/dstn/local/tycho-maps/tycho.mkdt.fits";
+char* merc_file     = "/home/gmaps/usnob-images/tycho.mkdt.fits";
 
 float* fluximg; // RGB
 float xscale, yscale;

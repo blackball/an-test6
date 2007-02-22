@@ -125,10 +125,16 @@ int main(int argc, char *argv[]) {
 	// Allocate a black image.
 	img = calloc(4 * args.W * args.H, 1);
 
+	// Rescue boneheads.
+	if (!pl_size(layers)) {
+		fprintf(stderr, "Do you maybe want to try rendering some layers?\n");
+	}
+
 	for (i=0; i<pl_size(layers); i++) {
 		int j;
 		int NR = sizeof(layernames) / sizeof(char*);
 		char* layer = pl_get(layers, i);
+		bool gotit = FALSE;
 
 		if (i) {
 			fprintf(stderr, "FIXME: No compositing\n");
@@ -140,8 +146,13 @@ int main(int argc, char *argv[]) {
 				if (renderers[j](img, &args)) {
 					fprintf(stderr, "Renderer \"%s\" failed.\n", layernames[j]);
 				}
+				gotit = TRUE;
 				break;
 			}
+		}
+		// Save a different kind of bonehead.
+		if (!gotit) {
+			fprintf(stderr, "No renderer found for layer \"%s\".\n", layer);
 		}
 	}
 
