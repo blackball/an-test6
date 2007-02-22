@@ -25,6 +25,7 @@ include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
+include $(COMMON)/makefile.libtweak
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -33,14 +34,18 @@ CFLAGS := $(CFLAGS_DEF)
 
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
+CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
+
+CFLAGS += `pkg-config --cflags libpng`
+LDFLAGS := -lm `pkg-config --libs libpng`
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
 USNOBMAP_EXECS := usnobcount usnobtile sdssfieldtile \
 	indexquad sdssquad render-mercator make-merctree rdlstile \
-	indextile indexquad2 tychotile
+	indextile indexquad2 tychotile tilerender
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
 MISC_MAIN_OBJS := $(addsuffix .o,$(MISC_EXECS))
@@ -56,6 +61,9 @@ $(ANUTILS_LIB): $(REMAKE_ANUTILS)
 $(LIBKD_LIB): $(REMAKE_LIBKD)
 
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
+
+tilerender: tilerender.o render_image.o \
+		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
