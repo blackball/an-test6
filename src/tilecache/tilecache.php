@@ -29,79 +29,8 @@
  * already rendered.
  */
 
-/**********************************************
- ******************* backends  ****************
- **********************************************/
-
-/* The ghetto callback registry */
-$layer_render_callbacks = array();
-$getdir_callbacks = array();
-function backend_register($layer_name, $render_callback, $getdir_callback)
-{
-	global $layer_render_callbacks, $getdir_callbacks;
-	$layer_render_callbacks[$layer_name] = $render_callback;
-	$getdir_callbacks[$layer_name] = $getdir_callback;
-}
-
-function backend_exists($layer_name) {
-	global $layer_render_callbacks;
-	return array_key_exists($layer_name, $layer_render_callbacks);
-}
-
-/* ------------------------------------------*/
-/* First start with a showimagetile backend. */
-
-$USERIMAGETILE_CACHEBIN = "/home/gmaps/astrometry/src/gmaps-showimage/execs/showimagetile";
-//$USERIMAGETILE_CACHEDIR = "/home/gmaps/astrometry/src/gmaps-showimage/cache";
-$USERIMAGETILE_CACHEDIR = "/data1/userimagetilecache";
-
-/* each backend maps a tag to a directory where the cached images are stored */
-function userimagetile_getdir($tag) {
-   global $USERIMAGETILE_CACHEDIR;
-	return "$USERIMAGETILE_CACHEDIR/$tag";
-}
-
-// Render a single tile to $outfname
-function userimagetile_render($x0, $x1, $y0, $y1, $w, $h, $tag, $outfname) {
-   global $USERIMAGETILE_CACHEDIR, $USERIMAGETILE_CACHEBIN;
-	$tag = "test_tag"; // fake a tag for now
-	// FIXME check for tag validity
-	$wcs = "$USERIMAGETILE_CACHEDIR/$tag/wcs.000";
-	$userimage = "$USERIMAGETILE_CACHEDIR/$tag/userimage.ppm";
-	$cmd = "$USERIMAGETILE_CACHEBIN -f$userimage -F$wcs";
-	$cmd = $cmd . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
-	$cmd = "$cmd > $outfname";
-	loggit("Userimagetile backend: $cmd\n");
-	system($cmd);
-}
-
-backend_register('userimagetile', 'userimagetile_render', 'userimagetile_getdir');
-
-/* ------------------------------------------*/
-/* First start with a showimagetile backend. */
-
-$USNOB_BIN = "/home/gmaps/usnob-map/execs/usnobtile";
-$USNOB_CACHEDIR = "/data1/usnobcache";
-
-function usnob_getdir($tag) {
-   global $USNOB_CACHEDIR;
-	return $USNOB_CACHEDIR;
-}
-
-function usnob_render($x0, $x1, $y0, $y1, $w, $h, $tag, $outfname) {
-   global $USNOB_CACHEDIR, $USNOB_BIN;
-	$cmd = $USNOB_BIN . sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
-	//$cmd = "$cmd | pnmtopng > $outfname";
-	$cmd = "$cmd > $outfname";
-	loggit("Userimagetile backend: $cmd\n");
-	system($cmd);
-}
-
-backend_register('usnob', 'usnob_render', 'usnob_getdir');
-
-/**********************************************
- ************ main tilecache entry ************
- **********************************************/
+$CACHEDIR = "/data1/tilecache";
+$TILERENDER = "/home/gmaps/usnob-map/execs/tilerender";
 
 // Write a message to the log file.
 function loggit($mesg) {
@@ -114,7 +43,6 @@ function loggit($mesg) {
   256x256 pixels and are specified in terms of the RA,DEC bounding box.
   This script just parses the values and formats a command-line for a C program.
  */
-
 
 loggit("Tile request headers:\n");
 $headers = $_REQUEST;
@@ -140,7 +68,9 @@ $epsg = $_REQUEST["SRS"];
 $lay = $_REQUEST["LAYERS"];
 $tag = $_REQUEST["tag"]; // Note that this may be blank for some layers
 
-loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay, tag=$tag\n");
+$cmdline = $TILERENDER;
+
+//loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay, tag=$tag\n");
 
 // This identifies the projection type.
 if ($epsg != "EPSG:4326") {
@@ -165,45 +95,69 @@ if ((sscanf($ws, "%d", $w) != 1) ||
 	printf("<html><body>Invalid request: failed to parse WIDTH or HEIGHT.</body></html>\n\n");
 	exit;
 }
-loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1, w=$w, h=$h.\n");
+//loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1, w=$w, h=$h.\n");
+$cmdline .= sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 
-// Make sure there is a backend for this layer
-if (!backend_exists($lay))  {
-	$msg = "Invalid backend/layer $lay\n";
-	loggit($msg);
-	header("Content-type: text/html");
-	printf("<html><body>$msg</body></html>\n\n");
-	exit;
+// Layers
+$layers = explode(",", $lay);
+foreach ($layers as $l) {
+	$cmdline .= " -l " . escapeshellarg($l);
+}
+
+// render_image layer: WCS filename.
+$wcs = $_REQUEST["wcs"];
+if ($wcs) {
+	$cmdline .= " -W " . escapeshellarg($wcs);
+}
+
+// render_image layer: Image filename.
+$imgfn = $_REQUEST["imagefn"];
+if ($imgfn) {
+	$cmdline .= " -i " . escapeshellarg($imgfn);
 }
 
 // Get the hash
-$tilestring = "x0=$x0, x1=$x1, y0=$y0, y1=$y1, w=$w, h=$h";
+$tilestring = $cmdline;
 $tilehash = hash('sha256', $tilestring);
 
-$tcb = $getdir_callbacks[$lay];
-//$tilecachedir = $getdir_callbacks[$lay]($tag);
-$tilecachedir = $tcb($tag);
-$tilefile = "$tilecachedir/tile-$tilehash.png";
-if (!file_exists($tilefile)) {
-	$callback = $layer_render_callbacks[$lay];
-	loggit("Missed cache, rendering to ($tilecachedir) $tilefile via $callback\n");
-	$callback($x0, $x1, $y0, $y1, $w, $h, $tag, $tilefile);
-} else {
-	loggit("HIT THE CACHE\n");
-}
-
-// Make sure the file actually rendered
-if (!file_exists($tilefile)) {
-	$msg = "Something bad happened when rendering 'layer:$lay'  tag:$tag... ???\n";
-	loggit($msg);
-	header("Content-type: text/html");
-	printf("<html><body>$msg</body></html>\n\n");
-	exit;
-}
-
-// Slam the file over the wire
+// Here we go...
 header("Content-type: image/png");
-$fp = fopen($tilefile, 'rb');
-fpassthru($fp);
-exit;
+
+if ($tag) {
+	if (!preg_match("[a-zA-Z0-9-]", $tag)) {
+		loggit("Naughty tag: \"" . $tag . "\n");
+		exit;
+	}
+	$tilecachedir = "$CACHEDIR/$tag";
+	if (!file_exists($tilecachedir)) {
+		if (!mkdir($tilecachedir)) {
+			loggit("Failed to create cache dir " . $tilecachedir . "\n");
+			exit;
+		}
+	}
+	$tilefile = "$tilecachedir/tile-$tilehash.png";
+	if (!file_exists($tilefile)) {
+		$rtn = system($cmdline . " > " . $tilefile);
+		if ($rtn) {
+			loggit("Tilerender failed: $rtn.\n");
+		}
+		// Make sure the file actually rendered... paranoia?
+		if (!file_exists($tilefile)) {
+			$msg = "Something bad happened when rendering 'layer:$lay'  tag:$tag... ???\n";
+			loggit($msg);
+			header("Content-type: text/html");
+			printf("<html><body>$msg</body></html>\n\n");
+			exit;
+		}
+	} else {
+		loggit("Cache hit: " . $tilefile . "\n");
+	}
+
+	// Slam the file over the wire
+	$fp = fopen($tilefile, 'rb');
+	fpassthru($fp);
+} else {
+	// No cache, just run it.
+	passthru($cmdline);
+}
 ?> 
