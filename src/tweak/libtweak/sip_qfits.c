@@ -125,6 +125,7 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 	key = "CTYPE1";
 	expect = "RA---TAN-SIP";
 	str = qfits_header_getstr(hdr, key);
+	str = qfits_pretty_string(str);
 	if (!str || strncmp(str, expect, strlen(expect))) {
 		fprintf(stderr, "SIP header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
 		return NULL;
@@ -133,6 +134,7 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 	key = "CTYPE2";
 	expect = "DEC--TAN-SIP";
 	str = qfits_header_getstr(hdr, key);
+	str = qfits_pretty_string(str);
 	if (!str || strncmp(str, expect, strlen(expect))) {
 		fprintf(stderr, "SIP header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
 		return NULL;
@@ -192,6 +194,7 @@ tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 	key = "CTYPE1";
 	expect = "RA---TAN";
 	str = qfits_header_getstr(hdr, key);
+	str = qfits_pretty_string(str);
 	if (!str || strncmp(str, expect, strlen(expect))) {
 		fprintf(stderr, "TAN header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
 		return NULL;
@@ -200,6 +203,7 @@ tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 	key = "CTYPE2";
 	expect = "DEC--TAN";
 	str = qfits_header_getstr(hdr, key);
+	str = qfits_pretty_string(str);
 	if (!str || strncmp(str, expect, strlen(expect))) {
 		fprintf(stderr, "TAN header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
 		return NULL;
