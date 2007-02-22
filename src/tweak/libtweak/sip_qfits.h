@@ -3,6 +3,12 @@
 
 #include "qfits.h"
 #include "sip.h"
+#include "an-bool.h"
+
+/*
+  bool sip_header_has_sip(qfits_header* hdr);
+  bool tan_header_has_tan(qfits_header* hdr);
+*/
 
 qfits_header* sip_create_header(sip_t* sip);
 

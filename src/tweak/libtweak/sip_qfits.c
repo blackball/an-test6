@@ -223,26 +223,6 @@ tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 		}
 	}
 
-	/*
-	  tan.crval[0] = qfits_header_getdouble(hdr, "CRVAL1", nil);
-	  tan.crval[1] = qfits_header_getdouble(hdr, "CRVAL2", nil);
-	  tan.crpix[0] = qfits_header_getdouble(hdr, "CRPIX1", nil);
-	  tan.crpix[1] = qfits_header_getdouble(hdr, "CRPIX2", nil);
-	  tan.cd[0][0] = qfits_header_getdouble(hdr, "CD1_1", nil);
-	  tan.cd[0][1] = qfits_header_getdouble(hdr, "CD1_2", nil);
-	  tan.cd[1][0] = qfits_header_getdouble(hdr, "CD2_1", nil);
-	  tan.cd[1][1] = qfits_header_getdouble(hdr, "CD2_2", nil);
-	  if ((tan.crval[0] == nil) ||
-	  (tan.crval[1] == nil) ||
-	  (tan.crpix[0] == nil) ||
-	  (tan.crpix[1] == nil) ||
-	  (tan.cd[0][0] == nil) ||
-	  (tan.cd[0][1] == nil) ||
-	  (tan.cd[1][0] == nil) ||
-	  (tan.cd[1][1] == nil)) {
-	  }
-	*/
-
 	if (!dest)
 		dest = malloc(sizeof(tan_t));
 	memcpy(dest, &tan, sizeof(tan_t));
