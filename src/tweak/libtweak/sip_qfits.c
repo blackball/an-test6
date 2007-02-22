@@ -1,4 +1,5 @@
 #include "sip_qfits.h"
+#include "an-bool.h"
 
 static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	char val[64];
@@ -93,10 +94,157 @@ qfits_header* tan_create_header(tan_t* tan) {
 	return hdr;
 }
 
-sip_t* sip_read_header(qfits_header* hdr) {
-	return NULL;
+static bool read_polynomial(qfits_header* hdr, char* format,
+							int order, double* data, int datastride) {
+	int i, j;
+	char key[64];
+	double nil = -1e300;
+	double val;
+	for (i=0; i<=order; i++)
+		for (j=0; (i+j)<=order; j++)
+			if (i || j) {
+				sprintf(key, format, i, j);
+				val = qfits_header_getdouble(hdr, key, nil);
+				if (val == nil) {
+					fprintf(stderr, "SIP: key \"%s\" not found.\n", key);
+					return FALSE;
+				}
+				data[i*datastride + j] = val;
+			}
+	return TRUE;
 }
 
-tan_t* tan_read_header(qfits_header* hdr) {
-	return NULL;
+sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
+	sip_t sip;
+	char* str;
+	char* key;
+	char* expect;
+
+	memset(&sip, 0, sizeof(sip_t));
+
+	key = "CTYPE1";
+	expect = "RA---TAN-SIP";
+	str = qfits_header_getstr(hdr, key);
+	if (!str || strncmp(str, expect, strlen(expect))) {
+		fprintf(stderr, "SIP header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
+		return NULL;
+	}
+
+	key = "CTYPE2";
+	expect = "DEC--TAN-SIP";
+	str = qfits_header_getstr(hdr, key);
+	if (!str || strncmp(str, expect, strlen(expect))) {
+		fprintf(stderr, "SIP header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
+		return NULL;
+	}
+
+	if (!tan_read_header(hdr, &sip.wcstan)) {
+		fprintf(stderr, "SIP: failed to read TAN header.\n");
+		return NULL;
+	}
+
+	sip.a_order  = qfits_header_getint(hdr, "A_ORDER", -1);
+	sip.b_order  = qfits_header_getint(hdr, "B_ORDER", -1);
+	sip.ap_order = qfits_header_getint(hdr, "AP_ORDER", -1);
+	sip.bp_order = qfits_header_getint(hdr, "BP_ORDER", -1);
+
+	if ((sip.a_order == -1) || 
+		(sip.b_order == -1) || 
+		(sip.ap_order == -1) || 
+		(sip.bp_order == -1)) {
+		fprintf(stderr, "SIP: failed to read polynomial orders.\n");
+		return NULL;
+	}
+
+	if ((sip.a_order > SIP_MAXORDER) || 
+		(sip.b_order > SIP_MAXORDER) || 
+		(sip.ap_order > SIP_MAXORDER) || 
+		(sip.bp_order > SIP_MAXORDER)) {
+		fprintf(stderr, "SIP: polynomial orders (A=%i, B=%i, AP=%i, BP=%i) exceeds maximum of %i.\n",
+				sip.a_order, sip.b_order, sip.ap_order, sip.bp_order, SIP_MAXORDER);
+		return NULL;
+	}
+
+	if (!read_polynomial(hdr, "A_%i_%i",  sip.a_order,  (double*)sip.a,  SIP_MAXORDER) ||
+		!read_polynomial(hdr, "B_%i_%i",  sip.b_order,  (double*)sip.b,  SIP_MAXORDER) ||
+		!read_polynomial(hdr, "AP_%i_%i", sip.ap_order, (double*)sip.ap, SIP_MAXORDER) ||
+		!read_polynomial(hdr, "BP_%i_%i", sip.bp_order, (double*)sip.bp, SIP_MAXORDER)) {
+		fprintf(stderr, "SIP: failed to read polynomial terms.\n");
+		return NULL;
+	}
+
+	if (!dest)
+		dest = malloc(sizeof(sip_t));
+
+	memcpy(dest, &sip, sizeof(sip_t));
+	return dest;
+}
+
+tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
+	char* str;
+	char* key;
+	char* expect;
+	tan_t tan;
+	double nil = -1e300;
+
+	memset(&tan, 0, sizeof(tan_t));
+
+	key = "CTYPE1";
+	expect = "RA---TAN";
+	str = qfits_header_getstr(hdr, key);
+	if (!str || strncmp(str, expect, strlen(expect))) {
+		fprintf(stderr, "TAN header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
+		return NULL;
+	}
+
+	key = "CTYPE2";
+	expect = "DEC--TAN";
+	str = qfits_header_getstr(hdr, key);
+	if (!str || strncmp(str, expect, strlen(expect))) {
+		fprintf(stderr, "TAN header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
+		return NULL;
+	}
+
+	{
+		char* keys[] = { "CRVAL1", "CRVAL2", "CRPIX1", "CRPIX2",
+						 "CD1_1", "CD1_2", "CD2_1", "CD2_2" };
+		double* vals[] = { &(tan.crval[0]), &(tan.crval[1]),
+						   &(tan.crpix[0]), &(tan.crpix[1]),
+						   &(tan.cd[0][0]), &(tan.cd[0][1]),
+						   &(tan.cd[1][0]), &(tan.cd[1][1]) };
+		int i;
+
+		for (i=0; i<8; i++) {
+			*(vals[i]) = qfits_header_getdouble(hdr, keys[i], nil);
+			if (*(vals[i]) == nil) {
+				fprintf(stderr, "TAN header: invalid value for \"%s\".\n", keys[i]);
+				return NULL;
+			}
+		}
+	}
+
+	/*
+	  tan.crval[0] = qfits_header_getdouble(hdr, "CRVAL1", nil);
+	  tan.crval[1] = qfits_header_getdouble(hdr, "CRVAL2", nil);
+	  tan.crpix[0] = qfits_header_getdouble(hdr, "CRPIX1", nil);
+	  tan.crpix[1] = qfits_header_getdouble(hdr, "CRPIX2", nil);
+	  tan.cd[0][0] = qfits_header_getdouble(hdr, "CD1_1", nil);
+	  tan.cd[0][1] = qfits_header_getdouble(hdr, "CD1_2", nil);
+	  tan.cd[1][0] = qfits_header_getdouble(hdr, "CD2_1", nil);
+	  tan.cd[1][1] = qfits_header_getdouble(hdr, "CD2_2", nil);
+	  if ((tan.crval[0] == nil) ||
+	  (tan.crval[1] == nil) ||
+	  (tan.crpix[0] == nil) ||
+	  (tan.crpix[1] == nil) ||
+	  (tan.cd[0][0] == nil) ||
+	  (tan.cd[0][1] == nil) ||
+	  (tan.cd[1][0] == nil) ||
+	  (tan.cd[1][1] == nil)) {
+	  }
+	*/
+
+	if (!dest)
+		dest = malloc(sizeof(tan_t));
+	memcpy(dest, &tan, sizeof(tan_t));
+	return dest;
 }
