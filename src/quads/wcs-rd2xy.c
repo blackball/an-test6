@@ -36,9 +36,9 @@ void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s\n"
 		   "   -w <WCS input file>\n"
-		   "   -i <xyls input file>\n"
-		   "   -o <rdls output file>\n"
-		   "  [-f <xyls field index>] (default: all)\n"
+		   "   -i <rdls input file>\n"
+		   "   -o <xyls output file>\n"
+		   "  [-f <rdls field index>] (default: all)\n"
 		   "  [-X <x-column-name> -Y <y-column-name>]\n"
 		   "  [-t]: just use TAN projection, even if SIP extension exists.\n"
 		   "\n", progname);
@@ -49,16 +49,16 @@ extern int optind, opterr, optopt;
 
 int main(int argc, char** args) {
 	int c;
-	char* xylsfn = NULL;
-	char* wcsfn = NULL;
 	char* rdlsfn = NULL;
+	char* wcsfn = NULL;
+	char* xylsfn = NULL;
 	char* xcol = NULL;
 	char* ycol = NULL;
 	bool forcetan = FALSE;
 
 	bool hassip = FALSE;
-	rdlist* rdls = NULL;
 	xylist* xyls = NULL;
+	rdlist* rdls = NULL;
 	il* fields;
 	sip_t sip;
 	qfits_header* hdr;
@@ -75,10 +75,10 @@ int main(int argc, char** args) {
 			forcetan = TRUE;
 			break;
 		case 'o':
-			rdlsfn = optarg;
+			xylsfn = optarg;
 			break;
 		case 'i':
-			xylsfn = optarg;
+			rdlsfn = optarg;
 			break;
 		case 'w':
 			wcsfn = optarg;
@@ -100,7 +100,7 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	if (!rdlsfn || !xylsfn || !wcsfn) {
+	if (!xylsfn || !rdlsfn || !wcsfn) {
 		print_help(args[0]);
 		exit(-1);
 	}
@@ -131,31 +131,31 @@ int main(int argc, char** args) {
 		}
 	}
 
-	// read XYLS.
-	xyls = xylist_open(xylsfn);
-	if (!xyls) {
-		fprintf(stderr, "Failed to read an xylist from file %s.\n", xylsfn);
+	// read RDLS.
+	rdls = rdlist_open(rdlsfn);
+	if (!rdls) {
+		fprintf(stderr, "Failed to read an rdlist from file %s.\n", rdlsfn);
 		exit(-1);
 	}
 	if (xcol)
-		xyls->xname = xcol;
+		rdls->xname = xcol;
 	if (ycol)
-		xyls->yname = ycol;
+		rdls->yname = ycol;
 
-	// write RDLS.
-	rdls = rdlist_open_for_writing(rdlsfn);
-	if (!rdls) {
-		fprintf(stderr, "Failed to open file %s to write RDLS.\n", rdlsfn);
+	// write XYLS.
+	xyls = xylist_open_for_writing(xylsfn);
+	if (!xyls) {
+		fprintf(stderr, "Failed to open file %s to write XYLS.\n", xylsfn);
 		exit(-1);
 	}
-	if (rdlist_write_header(rdls)) {
-		fprintf(stderr, "Failed to write header to RDLS file %s.\n", rdlsfn);
+	if (xylist_write_header(xyls)) {
+		fprintf(stderr, "Failed to write header to XYLS file %s.\n", xylsfn);
 		exit(-1);
 	}
 
 	if (!il_size(fields)) {
 		// add all fields.
-		int NF = xylist_n_fields(xyls);
+		int NF = rdlist_n_fields(rdls);
 		for (i=0; i<NF; i++)
 			il_append(fields, i);
 	}
@@ -163,46 +163,46 @@ int main(int argc, char** args) {
 	fprintf(stderr, "Processing %i extensions...\n", il_size(fields));
 	for (i=0; i<il_size(fields); i++) {
 		int fieldind = il_get(fields, i);
-		double* xyvals;
+		double* rdvals;
 		int nvals;
 		int j;
 
-		nvals = xylist_n_entries(xyls, fieldind);
-		xyvals = malloc(2 * nvals * sizeof(double));
-		if (xylist_read_entries(xyls, fieldind, 0, nvals, xyvals)) {
-			fprintf(stderr, "Failed to read xyls data.\n");
+		nvals = rdlist_n_entries(rdls, fieldind);
+		rdvals = malloc(2 * nvals * sizeof(double));
+		if (rdlist_read_entries(rdls, fieldind, 0, nvals, rdvals)) {
+			fprintf(stderr, "Failed to read rdls data.\n");
 			exit(-1);
 		}
 
-		if (rdlist_write_new_field(rdls)) {
-			fprintf(stderr, "Failed to write rdls field header.\n");
+		if (xylist_write_new_field(xyls)) {
+			fprintf(stderr, "Failed to write xyls field header.\n");
 			exit(-1);
 		}
 
 		for (j=0; j<nvals; j++) {
-			double radec[2];
+			double xy[2];
 			if (hassip) {
-				sip_pixelxy2radec(&sip, xyvals[j*2+0], xyvals[j*2+1], &(radec[0]), &(radec[1]));
+				sip_radec2pixelxy(&sip, rdvals[j*2+0], rdvals[j*2+1], &(xy[0]), &(xy[1]));
 			} else {
-				tan_pixelxy2radec(&(sip.wcstan), xyvals[j*2+0], xyvals[j*2+1], &(radec[0]), &(radec[1]));
+				tan_radec2pixelxy(&(sip.wcstan), rdvals[j*2+0], rdvals[j*2+1], &(xy[0]), &(xy[1]));
 			}
 
-			if (rdlist_write_entries(rdls, radec, 1)) {
-				fprintf(stderr, "Failed to write rdls entry.\n");
+			if (xylist_write_entries(xyls, xy, 1)) {
+				fprintf(stderr, "Failed to write xyls entry.\n");
 				exit(-1);
 			}
 		}
-		free(xyvals);
+		free(rdvals);
 
-		if (rdlist_fix_field(rdls)) {
-			fprintf(stderr, "Failed to fix rdls field header.\n");
+		if (xylist_fix_field(xyls)) {
+			fprintf(stderr, "Failed to fix xyls field header.\n");
 			exit(-1);
 		}
 	}
 
-	if (rdlist_write_header(rdls) ||
-		rdlist_close(rdls)) {
-		fprintf(stderr, "Failed to fix header of RDLS file.\n");
+	if (xylist_write_header(xyls) ||
+		xylist_close(xyls)) {
+		fprintf(stderr, "Failed to fix header of XYLS file.\n");
 		exit(-1);
 	}
 

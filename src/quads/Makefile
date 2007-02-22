@@ -72,7 +72,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	solvedserver printsolved xylist2fits printmatch mergesolved rdlsinfo
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar plotxy wcscheck wcs-xy2rd
+	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy
 # HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
 
@@ -134,6 +134,9 @@ wcscheck: wcscheck.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(LIBWCS_LIB)
 
 wcs-xy2rd: wcs-xy2rd.o $(LIBTWEAK_LIB) $(UTIL_OBJS) \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+wcs-rd2xy: wcs-rd2xy.o $(LIBTWEAK_LIB) $(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 noisesim: noisesim.o noise.o $(ANUTILS_LIB)
