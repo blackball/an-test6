@@ -60,6 +60,8 @@ $(ANUTILS_LIB): $(REMAKE_ANUTILS)
 
 $(LIBKD_LIB): $(REMAKE_LIBKD)
 
+$(LIBTWEAK_LIB): $(REMAKE_LIBTWEAK)
+
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 
 tilerender: tilerender.o render_image.o \

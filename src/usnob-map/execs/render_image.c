@@ -28,9 +28,6 @@ int render_image(unsigned char* img, render_args_t* args) {
 	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
 	fprintf(stderr, "got imwid=%d, imheight=%d\n", imw, imh);
 	unsigned char* imbuf = malloc(imw*imh*3);
-//	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
-//	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
-//	fscanf(f, "P6\n%d %d\n255\n", &imw, &imh);
 	fread(imbuf, 1, imw*imh*3, f);
 	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
 
@@ -63,7 +60,8 @@ int render_image(unsigned char* img, render_args_t* args) {
 			int pppx = lround(imagex);
 			int pppy = lround(imagey);
 			uchar* pix = pixel(i, j, img, args);
-			if (in_image(pppx, pppy, args)) {
+			if (pppx >= 0 && pppx < imw &&
+				pppy >= 0 && pppy < imh) {
 				// nearest neighbour. bilinear is for weenies.
 				pix[0] = imbuf[3 * (imw * pppy + pppx) + 0];
 				pix[1] = imbuf[3 * (imw * pppy + pppx) + 1];

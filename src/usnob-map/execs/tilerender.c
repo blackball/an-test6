@@ -113,11 +113,11 @@ int main(int argc, char *argv[]) {
 	args.ymercmin = dec2merc(deg2rad(args.decmin));
 	args.ymercmax = dec2merc(deg2rad(args.decmax));
 
-	args.xmercperpixel = (double)args.W / (args.xmercmax - args.xmercmin);
-	args.ymercperpixel = (double)args.H / (args.ymercmax - args.ymercmin);
+	args.xpixelpermerc = (double)args.W / (args.xmercmax - args.xmercmin);
+	args.ypixelpermerc = (double)args.H / (args.ymercmax - args.ymercmin);
 
-	args.xpixelpermerc = 1.0 / args.xmercperpixel;
-	args.ypixelpermerc = 1.0 / args.ymercperpixel;
+	args.xmercperpixel = 1.0 / args.xpixelpermerc;
+	args.ymercperpixel = 1.0 / args.ypixelpermerc;
 
 	xzoom = args.xpixelpermerc / 256.0;
 	args.zoomlevel = (int)rint(log(xzoom) / log(2.0));
