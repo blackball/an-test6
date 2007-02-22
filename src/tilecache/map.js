@@ -273,6 +273,8 @@ function startup() {
 	}
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
+	passargs = [ "imagefn", "wcsfn" ];
+
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
 	TILE_URL = BASE_URL + "tilecache.php?";
@@ -284,19 +286,24 @@ function startup() {
 	usnobTile.myLayers='usnob';
 	usnobTile.myFormat='image/png';
 	usnobTile.myBaseURL=TILE_URL;
-	usnobTile.myBaseURL=TILE_URL + "&tag=test_tag";
+	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
+
+	TILE_URL = TILE_URL + "&tag=test-tag";
+	for (var i=0; i<passargs.length; i++) {
+		if (passargs[i] in getdata) {
+			TILE_URL = TILE_URL + "&" + passargs[i] + "=" + getdata[passargs[i]];
+		}
+	}
 
 	// Describe the tile server...
 	var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	userimageTile.myLayers='userimagetile';
+	userimageTile.myLayers='image';
 	userimageTile.myFormat='image/png';
 	userimageTile.myBaseURL=TILE_URL;
-	userimageTile.myBaseURL=TILE_URL + "&tag=test_tag";
 	userimageTile.getTileUrl=CustomGetTileUrl;
-
 	var myMapType = new GMapType([usnobTile, userimageTile],
-				G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
+								 G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
 
 	map.getMapTypes().length = 0;
 	map.addMapType(myMapType);

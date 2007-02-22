@@ -105,7 +105,7 @@ foreach ($layers as $l) {
 }
 
 // render_image layer: WCS filename.
-$wcs = $_REQUEST["wcs"];
+$wcs = $_REQUEST["wcsfn"];
 if ($wcs) {
 	$cmdline .= " -W " . escapeshellarg($wcs);
 }
@@ -124,8 +124,8 @@ $tilehash = hash('sha256', $tilestring);
 header("Content-type: image/png");
 
 if ($tag) {
-	if (!preg_match("[a-zA-Z0-9-]", $tag)) {
-		loggit("Naughty tag: \"" . $tag . "\n");
+	if (!preg_match("/[a-zA-Z0-9-]+/", $tag)) {
+		loggit("Naughty tag: \"" . $tag . "\"\n");
 		exit;
 	}
 	$tilecachedir = "$CACHEDIR/$tag";
@@ -149,6 +149,7 @@ if ($tag) {
 			printf("<html><body>$msg</body></html>\n\n");
 			exit;
 		}
+		loggit("Rendered $cmdline to $tilefile\n");
 	} else {
 		loggit("Cache hit: " . $tilefile . "\n");
 	}
