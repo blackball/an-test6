@@ -148,10 +148,14 @@ if ($ok_agree) {
 
 $ok_codetol = array_key_exists("codetol", $headers);
 $ok_nagree  = array_key_exists("nagree" , $headers);
-$ok_tweak   = array_key_exists("tweak"  , $headers);
 $ok_index   = array_key_exists("index"  , $headers);
+// tweak: client only sets tweak=on when it's checked; when unchecked there
+// is no "tweak" entry.
 
-$tweak_val = ($ok_tweak ? $headers["tweak"] : TRUE);
+$tweak_val = TRUE;
+if (array_key_exists("tweak", $headers)) {
+	$tweak_val = ($headers["tweak"] == "on");
+}
 $parity_val = (array_key_exists("parity", $headers) && $headers["parity"] == "1") ? 1 : 0;
 
 function convert_image($imgfilename, $imgtempfilename, $mydir,
@@ -356,7 +360,7 @@ function convert_image($imgfilename, $imgtempfilename, $mydir,
 	return TRUE;
 }
 
-$all_ok = $ok_file && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree & $ok_tweak;
+$all_ok = $ok_file && $ok_x_col && $ok_y_col && $ok_fu_lower && $ok_fu_upper && $ok_verify && $ok_agree && $ok_codetol && $ok_nagree;
 if ($all_ok) {
     // Launch!
 
@@ -482,6 +486,9 @@ if ($all_ok) {
 					  "allsky-31" => array("allsky-31/allsky-31"),
 					  "allsky-32" => array("allsky-32/allsky-32"),
 					  "allsky-33" => array("allsky-33/allsky-33"),
+					  "allsky-34" => array("allsky-34/allsky-34"),
+					  "allsky-35" => array("allsky-35/allsky-35"),
+					  "allsky-36" => array("allsky-36/allsky-36"),
 					  "marshall-30" => array("marshall-30/marshall-30c"));
 
 	$indexes = $indexmap[$headers["index"]];
@@ -787,6 +794,9 @@ Index to use:
 			   array("allsky-31", "30-arcminute Fields"),
 			   array("allsky-32", "1-degree Fields"),
 			   array("allsky-33", "2-degree Fields"),
+			   array("allsky-34", "4-degree Fields"),
+			   array("allsky-35", "8-degree Fields"),
+			   array("allsky-36", "15-degree Fields"),
 			   array("marshall-30", "Wide Fields (eg, Digital Camera)"));
 if ($ok_index) {
     $sel = $headers["index"];
