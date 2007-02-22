@@ -70,8 +70,12 @@ xylist* xylist_open(const char* fn) {
 	return NULL;
 }
 
+int xylist_n_fields(xylist* ls) {
+	return ls->nfields;
+}
+
 static int xylist_find_field(xylist* ls, uint field) {
-	int c;
+	qfits_col* col;
 	if (ls->table && ls->field == field)
 		return 0;
 	if (ls->table) {
@@ -86,31 +90,34 @@ static int xylist_find_field(xylist* ls, uint field) {
 				field+1, ls->fn);
 		return -1;
 	}
-	// find the right column.
-	ls->xcol = -1;
-	ls->ycol = -1;
-	for (c=0; c<ls->table->nc; c++) {
-		qfits_col* col = ls->table->col + c;
-		if ((strcasecmp(col->tlabel, ls->xname) == 0) &&
-			((col->atom_type == TFITS_BIN_TYPE_D) ||
-			 (col->atom_type == TFITS_BIN_TYPE_E)) &&
-			(col->atom_nb == 1)) {
-			ls->xcol = c;
-			ls->xtype = col->atom_type;
-		}
-		if ((strcasecmp(col->tlabel, ls->yname) == 0) &&
-			((col->atom_type == TFITS_BIN_TYPE_D) ||
-			 (col->atom_type == TFITS_BIN_TYPE_E)) &&
-			(col->atom_nb == 1)) {
-			ls->ycol = c;
-			ls->ytype = col->atom_type;
-		}
-	}
-	if ((ls->xcol == -1) || (ls->ycol == -1)){
-		fprintf(stderr, "xylist file %s: field %u: no columns named \"%s\" and \"%s\", type D (double) or E (float), found.\n",
-				ls->fn, field, ls->xname, ls->yname);
+	// find the right columns.
+	ls->xcol = fits_find_column(ls->table, ls->xname);
+	if (ls->xcol == -1) {
+		fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->xname);
 		return -1;
 	}
+	col = ls->table->col + ls->xcol;
+	if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
+		   (col->atom_type == TFITS_BIN_TYPE_E)) &&
+		  (col->atom_nb == 1))) {
+		fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->xname);
+		return -1;
+	}
+	ls->xtype = col->atom_type;
+	ls->ycol = fits_find_column(ls->table, ls->yname);
+	if (ls->ycol == -1) {
+		fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->yname);
+		return -1;
+	}
+	col = ls->table->col + ls->ycol;
+	if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
+		   (col->atom_type == TFITS_BIN_TYPE_E)) &&
+		  (col->atom_nb == 1))) {
+		fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->yname);
+		return -1;
+	}
+	ls->ytype = col->atom_type;
+
 	ls->field = field;
 	return 0;
 }

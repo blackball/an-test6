@@ -79,6 +79,8 @@ typedef struct xylist xylist;
 // after opening but before calling xylist_get_field.
 xylist* xylist_open(const char* fn);
 
+int xylist_n_fields(xylist* ls);
+
 // it's your responsibility to free_xy() this.
 xy* xylist_get_field(xylist* ls, uint field);
 
