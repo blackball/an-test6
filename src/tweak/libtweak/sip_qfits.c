@@ -51,9 +51,7 @@ static void add_polynomial(qfits_header* hdr, char* format,
 }
 
 void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
-	char key[64];
 	char val[64];
-	int i, j;
 
 	qfits_header_add(hdr, "CTYPE1", "RA---TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
 	qfits_header_add(hdr, "CTYPE2", "DEC--TAN-SIP", "TAN (gnomic) projection + SIP distortions", NULL);
@@ -66,33 +64,15 @@ void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
 
 	sprintf(val, "%i", sip->b_order);
 	qfits_header_add(hdr, "B_ORDER", val, "Polynomial order, axis 2", NULL);
-	for (i=0; i<=sip->b_order; i++)
-		for (j=0; (i+j)<=sip->b_order; j++)
-			if (i || j) {
-				sprintf(key, "B_%i_%i", i, j);
-				sprintf(val, "%.12g", sip->b[i][j]);
-				qfits_header_add(hdr, key, val, NULL, NULL);
-			}
+	add_polynomial(hdr, "B_%i_%i", sip->b_order, (double*)sip->b, SIP_MAXORDER);
 
 	sprintf(val, "%i", sip->ap_order);
 	qfits_header_add(hdr, "AP_ORDER", val, "Inv polynomial order, axis 1", NULL);
-	for (i=0; i<=sip->ap_order; i++)
-		for (j=0; (i+j)<=sip->ap_order; j++)
-			if (i || j) {
-				sprintf(key, "AP_%i_%i", i, j);
-				sprintf(val, "%.12g", sip->ap[i][j]);
-				qfits_header_add(hdr, key, val, NULL, NULL);
-			}
+	add_polynomial(hdr, "AP_%i_%i", sip->ap_order, (double*)sip->ap, SIP_MAXORDER);
 
 	sprintf(val, "%i", sip->bp_order);
 	qfits_header_add(hdr, "BP_ORDER", val, "Inv polynomial order, axis 2", NULL);
-	for (i=0; i<=sip->bp_order; i++)
-		for (j=0; (i+j)<=sip->bp_order; j++)
-			if (i || j) {
-				sprintf(key, "BP_%i_%i", i, j);
-				sprintf(val, "%.12g", sip->bp[i][j]);
-				qfits_header_add(hdr, key, val, NULL, NULL);
-			}
+	add_polynomial(hdr, "BP_%i_%i", sip->bp_order, (double*)sip->bp, SIP_MAXORDER);
 }
 
 qfits_header* sip_create_header(sip_t* sip) {
