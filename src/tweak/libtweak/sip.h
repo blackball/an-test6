@@ -1,7 +1,7 @@
 #ifndef ANWCS_H
 #define ANWCS_H
 
-#define MAXORDER 10
+#define SIP_MAXORDER 10
 
 // WCS TAN header.
 typedef struct tan_s {
@@ -69,8 +69,8 @@ typedef struct sip_s {
 	// Note: The convention for indicating that no SIP polynomial is
 	// present is to simply set [ab]_order to zero.
 	int a_order, b_order;
-	double a[MAXORDER][MAXORDER];
-	double b[MAXORDER][MAXORDER];
+	double a[SIP_MAXORDER][SIP_MAXORDER];
+	double b[SIP_MAXORDER][SIP_MAXORDER];
 
 	// Inverse SIP coefficients
 	// To convert from world coordinates back into image coordinates, the
@@ -97,8 +97,8 @@ typedef struct sip_s {
 	// Note: The convention for indicating that no inverse SIP polynomial
 	// is present is to simply set [ab]p_order to zero.
 	int ap_order, bp_order;
-	double ap[MAXORDER][MAXORDER];
-	double bp[MAXORDER][MAXORDER];
+	double ap[SIP_MAXORDER][SIP_MAXORDER];
+	double bp[SIP_MAXORDER][SIP_MAXORDER];
 } sip_t;
 
 sip_t* sip_create(void);

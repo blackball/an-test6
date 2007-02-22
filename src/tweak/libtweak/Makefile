@@ -28,6 +28,7 @@ include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
 
 TWEAK_C_OBJ := sip.o tweak_internal.o
+TWEAK_C_OBJ += sip_qfits.o
 TWEAK_F_OBJ := dgelsd.o
 TWEAK_OBJ := $(TWEAK_C_OBJ) $(TWEAK_F_OBJ)
 
@@ -37,8 +38,6 @@ CFLAGS += $(LIBKD_INC)
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBWCS_INC)
-CFLAGS += -I../../qfits-an/src
-CFLAGS += -I../../qfits-an/
 
 LDFLAGS := $(LDFLAGS_DEF)
 
@@ -46,7 +45,7 @@ LIBTWEAK := libtweak.a
 
 all: $(LIBTWEAK)
 
-$(LIBTWEAK): $(TWEAK_OBJ) $(QFITS_LIB)
+$(LIBTWEAK): $(TWEAK_OBJ)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
@@ -57,23 +56,23 @@ TWEAK_COMMON += $(COMMON)/dualtree_rangesearch.o
 TWEAK_COMMON += $(COMMON)/dualtree.o
 TWEAK_COMMON += $(COMMON)/healpix.o
 TWEAK_COMMON += $(COMMON)/fitsioutils.o
-TWEAK_COMMON += ../qfits-an/src/qfits_header.o
-TWEAK_COMMON += ../qfits-an/src/qfits_table.o
-TWEAK_COMMON += ../qfits-an/src/qfits_tools.o
-TWEAK_COMMON += ../qfits-an/src/qfits_rw.o
-TWEAK_COMMON += ../qfits-an/src/qfits_card.o
-TWEAK_COMMON += ../qfits-an/src/qfits_memory.o
-TWEAK_COMMON += ../qfits-an/src/qfits_error.o
-TWEAK_COMMON += ../qfits-an/src/qfits_byteswap.o
-TWEAK_COMMON += ../qfits-an/src/qfits_time.o
-TWEAK_COMMON += ../qfits-an/src/md5.o
-TWEAK_COMMON += ../qfits-an/src/qfits_md5.o
-TWEAK_COMMON += ../qfits-an/src/qfits_filename.o
-TWEAK_COMMON += ../qfits-an/src/qfits_float.o
-TWEAK_COMMON += ../qfits-an/src/qfits_cache.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_header.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_table.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_tools.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_rw.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_card.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_memory.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_error.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_byteswap.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_time.o
+TWEAK_COMMON += $(QFITS_DIR)/src/md5.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_md5.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_filename.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_float.o
+TWEAK_COMMON += $(QFITS_DIR)/src/qfits_cache.o
 
-libtweak.so: $(TWEAK_OBJ) $(QFITS_LIB) $(TWEAK_COMMON) $(COMMON_LIB) $(LIBKD_LIB)
-	gcc -shared -lf2c -o $@ $^
+libtweak.so: $(TWEAK_OBJ) $(TWEAK_COMMON) $(COMMON_LIB) $(LIBKD_LIB)
+	gcc -shared -ff2c -o $@ $^
 
 .PHONY: clean
 clean:
