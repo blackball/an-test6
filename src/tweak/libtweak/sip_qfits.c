@@ -126,9 +126,13 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 	expect = "RA---TAN-SIP";
 	str = qfits_header_getstr(hdr, key);
 	str = qfits_pretty_string(str);
-	if (!str || strncmp(str, expect, strlen(expect))) {
-		fprintf(stderr, "SIP header: invalid \"%s\": expected \"%s\", got \"%s\".\n", key, expect, str);
+	if (!str) {
+		fprintf(stderr, "SIP header: no %s.\n", key);
 		return NULL;
+	}
+	if (strncmp(str, expect, strlen(expect))) {
+		tan_read_header(hdr, &(sip.wcstan));
+		goto gohome;
 	}
 
 	key = "CTYPE2";
@@ -175,6 +179,7 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 		return NULL;
 	}
 
+ gohome:
 	if (!dest)
 		dest = malloc(sizeof(sip_t));
 
