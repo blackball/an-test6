@@ -52,6 +52,10 @@ Inline rdlist* rdlist_open_for_writing(char* fn) {
 	return rtn;
 }
 
+Inline int rdlist_n_fields(rdlist* ls) {
+	return ls->nfields;
+}
+
 Inline int rdlist_write_header(rdlist* ls) {
 	return xylist_write_header(ls);
 }

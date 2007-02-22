@@ -37,6 +37,8 @@ typedef xy rd;
 
 inline rdlist* rdlist_open(char* fn);
 
+inline int rdlist_n_fields(rdlist* ls);
+
 inline rd* rdlist_get_field(rdlist* ls, uint field);
 
 inline int rdlist_n_entries(rdlist* ls, uint field);
