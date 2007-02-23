@@ -11,7 +11,9 @@
 #include "an-bool.h"
 #include "tilerender.h"
 #include "starutil.h"
+
 #include "render_image.h"
+#include "render_tycho.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -22,11 +24,11 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:"
 
 
-char* layernames[] = { "image" };
-render_func_t renderers[] = { render_image };
+char* layernames[] = { "image", "tycho" };
+render_func_t renderers[] = { render_image, render_tycho };
 
 static void write_png(unsigned char * img, int w, int h);
 
@@ -43,6 +45,10 @@ int main(int argc, char *argv[]) {
 	int i;
 
 	memset(&args, 0, sizeof(render_args_t));
+
+	// default args:
+	args.colorcor = 1.44;
+
 	layers = pl_new(16);
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
@@ -53,6 +59,18 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'W':
 			args.wcsfn = strdup(optarg);
+			break;
+		case 'c':
+			args.colorcor = atof(optarg);
+			break;
+		case 's':
+			args.arc = TRUE;
+			break;
+		case 'a':
+			args.arith = TRUE;
+			break;
+		case 'g':
+			args.gain = atof(optarg);
 			break;
 		case 'l':
 			pl_append(layers, strdup(optarg));
@@ -113,6 +131,11 @@ int main(int argc, char *argv[]) {
 	args.ymercmin = dec2merc(deg2rad(args.decmin));
 	args.ymercmax = dec2merc(deg2rad(args.decmax));
 
+	// The y mercator position can end up *near* but not exactly
+	// equal to the boundary conditions... clamp.
+	args.ymercmin = max(0.0, args.ymercmin);
+	args.ymercmax = min(1.0, args.ymercmax);
+
 	args.xpixelpermerc = (double)args.W / (args.xmercmax - args.xmercmin);
 	args.ypixelpermerc = (double)args.H / (args.ymercmax - args.ymercmin);
 
@@ -131,19 +154,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	for (i=0; i<pl_size(layers); i++) {
-		int j;
+		int j, k;
 		int NR = sizeof(layernames) / sizeof(char*);
 		char* layer = pl_get(layers, i);
 		bool gotit = FALSE;
-
-		if (i) {
-			fprintf(stderr, "FIXME: No compositing\n");
-			exit(-1);
-		}
+		uchar* thisimg = calloc(4 * args.W * args.H, 1);
 
 		for (j=0; j<NR; j++) {
 			if (!strcmp(layer, layernames[j])) {
-				if (renderers[j](img, &args)) {
+				if (renderers[j](thisimg, &args)) {
 					fprintf(stderr, "Renderer \"%s\" failed.\n", layernames[j]);
 				}
 				gotit = TRUE;
@@ -154,6 +173,23 @@ int main(int argc, char *argv[]) {
 		if (!gotit) {
 			fprintf(stderr, "No renderer found for layer \"%s\".\n", layer);
 		}
+
+		// Composite.
+		for (j=0; j<args.H; j++) {
+			for (k=0; k<args.W; k++) {
+				float alpha;
+				uchar* newpix = pixel(k, j, thisimg, &args);
+				uchar* accpix = pixel(k, j, img, &args);
+				alpha = newpix[3] / 255.0;
+
+				accpix[0] = accpix[0]*(1.0 - alpha) + newpix[0] * alpha;
+				accpix[1] = accpix[1]*(1.0 - alpha) + newpix[1] * alpha;
+				accpix[2] = accpix[2]*(1.0 - alpha) + newpix[2] * alpha;
+				accpix[3] = min(255, accpix[3] + newpix[3]);
+			}
+		}
+
+		free(thisimg);
 	}
 
 	write_png(img, args.W, args.H);
@@ -190,6 +226,14 @@ double pixel2ra(double pix, render_args_t* args) {
 double pixel2dec(double pix, render_args_t* args) {
 	double mpy = args->ymercmax - pix * args->ymercperpixel;
 	return rad2deg(merc2dec(mpy));
+}
+
+int xmerc2pixel(double x, render_args_t* args) {
+	return (int)floor(args->xpixelpermerc * (x - args->xmercmin));
+}
+
+int ymerc2pixel(double y, render_args_t* args) {
+	return (args->H-1) - (int)floor(args->ypixelpermerc * (y - args->ymercmin));
 }
 
 // fires an ALPHA png out stdout

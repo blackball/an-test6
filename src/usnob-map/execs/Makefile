@@ -64,8 +64,8 @@ $(LIBTWEAK_LIB): $(REMAKE_LIBTWEAK)
 
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 
-tilerender: tilerender.o render_image.o \
-		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+tilerender: tilerender.o render_image.o render_tycho.o mercrender.o merctree.o \
+		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -86,18 +86,15 @@ tychotile: tychotile.o merctree.o \
 
 sdssfieldtile: sdssfieldtile.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 indextile: indextile.o \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 indexquad: indexquad.o \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 indexquad2: indexquad2.o \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(NETPBM_L)
 
 sdssquad: sdssquad.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)

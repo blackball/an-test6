@@ -3,6 +3,9 @@
 
 #include "starutil.h"
 
+#define max(a, b)  ((a)>(b)?(a):(b))
+#define min(a, b)  ((a)<(b)?(a):(b))
+
 struct render_args {
 	// In degrees
 	double ramin;
@@ -32,6 +35,12 @@ struct render_args {
 	// Args for render_image:
 	char* imagefn;
 	char* wcsfn;
+
+	// Args for render_tycho:
+	double colorcor;
+	bool arc;
+	bool arith;
+	double gain;
 };
 typedef struct render_args render_args_t;
 
@@ -41,17 +50,26 @@ typedef int (*render_func_t)(unsigned char* dest_img, render_args_t* args);
 
 // to RA in degrees
 double pixel2ra(double pix, render_args_t* args);
+
 // to DEC in degrees
 double pixel2dec(double pix, render_args_t* args);
 
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
 double ra2merc(double ra);
+
 // Converts from Mercator X coordinate [0, 1] to RA in radians.
 double merc2ra(double x);
+
 // Converts from DEC in radians to Mercator Y coordinate in [0, 1].
 double dec2merc(double dec);
+
 // Converts from Mercator Y coordinate [0, 1] to DEC in radians.
 double merc2dec(double y);
+
+int xmerc2pixel(double x, render_args_t* args);
+
+int ymerc2pixel(double y, render_args_t* args);
+
 
 int in_image(int x, int y, render_args_t* args);
 
