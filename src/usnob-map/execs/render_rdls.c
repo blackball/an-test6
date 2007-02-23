@@ -63,7 +63,8 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 		/* This is just a hack by using 255.0.... */
 		//fprintf(stderr, "render_rdls: %g %g %d\n", px, py, Nib);
-		Nib += add_star(px, py, 205.0, 355.0, 0.0, fluximg, RENDERSYMBOL_o, args);
+		//Nib += add_star(px, py, 205.0, 355.0, 0.0, fluximg, RENDERSYMBOL_o, args);
+		Nib += add_star(px, py, 255.0, 205.0, 0.0, fluximg, RENDERSYMBOL_o, args);
 	}
 
 	fprintf(stderr, "render_rdls: %i stars inside image bounds.\n", Nib);
@@ -79,7 +80,7 @@ int render_rdls(unsigned char* img, render_args_t* args)
 			pix[3] = 0;
 			// hack; adds a black 'outline' 
 			if (pix[0] || pix[1] || pix[2]) {
-				pix[3] = 255;
+				pix[3] = 95;
 			}
 		}
 	}

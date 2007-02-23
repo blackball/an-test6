@@ -113,8 +113,8 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	               -2, -1,  0,  1,  2 };
 	int dx1[] =  {  0, -1, -2,  1,  2,  1,  2, -1, -2,
 	                1,  0, -1,  2,  3,  2,  3,  0, -1 };
-        int dx2[] =  { -1,  0,  1,  2, -1,  0,  1,  2,
-                       -2, -2, -2, -2,  3,  3,  3,  3 };
+	int dx2[] =  { -1,  0,  1,  2, -1,  0,  1,  2, -2,
+	               -2, -2, -2,  3,  3,  3,  3 };
 
 	int dy0[] = {  -2, -2, -2, -2, -2,
 	               -1, -1, -1, -1, -1,
@@ -122,7 +122,7 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	                1,  1,  1,  1,  1,
 	                2,  2,  2,  2,  2 };
 	int dy1[] = {   0, -1, -2,  1,  2,
-		       -1, -2,  1,  2,  0,
+	               -1, -2,  1,  2,  0,
 	               -1, -2,  1,  2, -1,
 	               -2,  1,  2 };
 	int dy2[] = {  -2, -2, -2, -2,  3,
