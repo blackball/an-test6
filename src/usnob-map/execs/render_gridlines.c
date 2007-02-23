@@ -7,8 +7,8 @@
 int render_gridlines(unsigned char* img, render_args_t* args) {
 	double rastep, decstep;
 	int ind;
-	double steps[] = { 1, 20.0, 10.0, 5.0, 2.0, 0.5, 0.25, 5.0/60.0,
-					   2.0/60.0, 1.0/60.0, 0.5/60.0, 10/3600.0 };
+	double steps[] = { 1, 20.0, 10.0, 6.0, 4.0, 2.5, 1.0, 30./60.0,
+					   15.0/60.0, 10.0/60.0, 5.0/60.0, 2./60.0 };
 	double ra, dec;
 	int i;
 

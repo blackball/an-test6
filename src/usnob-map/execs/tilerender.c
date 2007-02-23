@@ -169,6 +169,7 @@ int main(int argc, char *argv[]) {
 
 	xzoom = args.xpixelpermerc / 256.0;
 	args.zoomlevel = (int)rint(log(xzoom) / log(2.0));
+   fprintf(stderr, "zoomlevel: %d\n", args.zoomlevel);
 
 	// Allocate a black image.
 	img = calloc(4 * args.W * args.H, 1);
