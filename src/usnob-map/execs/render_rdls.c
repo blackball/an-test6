@@ -35,7 +35,7 @@ int render_rdls(unsigned char* img, render_args_t* args)
 	int Nstars = rdlist_n_entries(rdls, args->fieldnum);
 	if (Nstars == -1) {
 		fprintf(stderr, "render_rdls: Failed to read RDLS file.\n");
-		exit(-1);
+		return -1;
 	}
 
 	if (args->Nstars && args->Nstars < Nstars)
@@ -53,7 +53,7 @@ int render_rdls(unsigned char* img, render_args_t* args)
 	float* fluximg = calloc(args->W*args->H*3, sizeof(float));
 	if (!fluximg) {
 		fprintf(stderr, "render_rdls: Failed to allocate flux image.\n");
-		exit(-1);
+		return -1;
 	}
 
 	int Nib = 0;
