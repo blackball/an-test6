@@ -104,16 +104,40 @@ foreach ($layers as $l) {
 	$cmdline .= " -l " . escapeshellarg($l);
 }
 
-// render_image layer: WCS filename.
+// render_image layer: 
+// WCS filename.
 $wcs = $_REQUEST["wcsfn"];
 if ($wcs) {
 	$cmdline .= " -W " . escapeshellarg($wcs);
 }
-
-// render_image layer: Image filename.
+// Image filename.
 $imgfn = $_REQUEST["imagefn"];
 if ($imgfn) {
 	$cmdline .= " -i " . escapeshellarg($imgfn);
+}
+
+// render_tycho layer:
+// Color correction.
+$cc = $_REQUEST["cc"];
+if ($cc) {
+	if (sscanf($cc, "%f", $ccval) == 1) {
+		$cmdline .= " -c " . $ccval;
+	}
+}
+// Arcsinh.
+if (array_key_exists("arcsinh", $_REQUEST)) {
+	$cmdline .= " -s";
+}
+// Arith.
+if (array_key_exists("arith", $_REQUEST)) {
+	$cmdline .= " -a";
+}
+// Gain.
+$gain = $_REQUEST["gain"];
+if ($gain) {
+	if (sscanf($gain, "%f", $gainval) == 1) {
+		$cmdline .= " -g " . $gainval;
+	}
 }
 
 // Get the hash
