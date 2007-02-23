@@ -20,6 +20,8 @@ int render_gridlines(unsigned char* img, render_args_t* args) {
 		 ra <= rastep * ceil(args->ramax / rastep);
 		 ra += rastep) {
 		int x = ra2pixel(ra, args);
+		if (!in_image(x, 0, args))
+			continue;
 		for (i=0; i<args->H; i++) {
 			uchar* pix = pixel(x, i, img, args);
 			pix[0] = 50;
@@ -32,6 +34,8 @@ int render_gridlines(unsigned char* img, render_args_t* args) {
 		 dec <= decstep * ceil(args->decmax / decstep);
 		 dec += decstep) {
 		int y = dec2pixel(dec, args);
+		if (!in_image(0, y, args))
+			continue;
 		for (i=0; i<args->W; i++) {
 			uchar* pix = pixel(i, y, img, args);
 			pix[0] = 50;

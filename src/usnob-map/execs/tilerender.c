@@ -200,12 +200,14 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+// RA in degrees
 int ra2pixel(double ra, render_args_t* args) {
-	return xmerc2pixel(ra2merc(ra), args);
+	return xmerc2pixel(ra2merc(deg2rad(ra)), args);
 }
 
+// DEC in degrees
 int dec2pixel(double dec, render_args_t* args) {
-	return ymerc2pixel(dec2merc(dec), args);
+	return ymerc2pixel(dec2merc(deg2rad(dec)), args);
 }
 
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
