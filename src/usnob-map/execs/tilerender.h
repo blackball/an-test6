@@ -41,6 +41,11 @@ struct render_args {
 	bool arc;
 	bool arith;
 	double gain;
+
+	// Args for render_rdls
+	char* rdlsfn;
+	int Nstars;
+	int fieldnum;
 };
 typedef struct render_args render_args_t;
 

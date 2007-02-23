@@ -67,6 +67,8 @@ all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 tilerender: tilerender.o render_image.o \
 		render_tycho.o mercrender.o merctree.o \
 		render_gridlines.o \
+		render_usnob.o \
+		render_rdls.o \
 		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \

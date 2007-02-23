@@ -10,7 +10,7 @@ typedef struct mercargs mercargs;
 
 static void leaf_node(kdtree_t* kd, int node, mercargs* args);
 static void expand_node(kdtree_t* kd, int node, mercargs* args);
-static void addstar(double xp, double yp, merc_flux* flux, mercargs* args);
+static void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* args);
 
 float* mercrender_file(char* fn, render_args_t* args) {
 	float* fluximg;
@@ -75,7 +75,7 @@ static void expand_node(kdtree_t* kd, int node, mercargs* margs) {
 		yp1 = ymerc2pixel(bbhi[1], margs->args);
 		if (yp1 == yp0) {
 			// This node fits inside a single pixel of the output image.
-			addstar(bblo[0], bblo[1], &(margs->merc->stats[node].flux), margs);
+			add_star_merc(bblo[0], bblo[1], &(margs->merc->stats[node].flux), margs);
 			return;
 		}
 	}
@@ -97,12 +97,13 @@ static void leaf_node(kdtree_t* kd, int node, mercargs* margs) {
 
 		kdtree_copy_data_double(kd, k, 1, pt);
 		flux = margs->merc->flux + k;
-		addstar(pt[0], pt[1], flux, margs);
+		add_star_merc(pt[0], pt[1], flux, margs);
 	}
 }
 
-static void addstar(double xp, double yp,
-					merc_flux* flux, mercargs* margs) {
+int add_star(double xp, double yp, double rflux, double bflux, double nflux,
+		float* fluximg, render_args_t* args)
+{
 	/*
 	  // How to create the "scale" array in Matlab:
 	  x=[-2:2];
@@ -135,16 +136,16 @@ static void addstar(double xp, double yp,
 
 	int i;
 	int x, y;
-	int w = margs->args->W;
-	int h = margs->args->H;
+	int w = args->W;
+	int h = args->H;
 
-	x = xmerc2pixel(xp, margs->args);
+	x = xmerc2pixel(xp, args);
 	if (x+maxdx < 0 || x+mindx >= w) {
-		return;
+		return 0;
 	}
-	y = ymerc2pixel(yp, margs->args);
+	y = ymerc2pixel(yp, args);
 	if (y+maxdy < 0 || y+mindy >= h) {
-		return;
+		return 0;
 	}
 
 	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
@@ -153,9 +154,13 @@ static void addstar(double xp, double yp,
 		if ((ix < 0) || (ix >= w)) continue;
 		iy = y + dy[i];
 		if ((iy < 0) || (iy >= h)) continue;
-		margs->fluximg[3*(iy*w + ix) + 0] += flux->rflux * scale[i];
-		margs->fluximg[3*(iy*w + ix) + 1] += flux->bflux * scale[i];
-		margs->fluximg[3*(iy*w + ix) + 2] += flux->nflux * scale[i];
+		fluximg[3*(iy*w + ix) + 0] += rflux * scale[i];
+		fluximg[3*(iy*w + ix) + 1] += bflux * scale[i];
+		fluximg[3*(iy*w + ix) + 2] += nflux * scale[i];
 	}
+	return 1;
 }
 
+void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* margs) {
+	add_star(xp, yp, flux->rflux, flux->bflux, flux->nflux, margs->fluximg, margs->args);
+}

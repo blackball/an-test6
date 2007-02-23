@@ -15,6 +15,8 @@
 #include "render_image.h"
 #include "render_tycho.h"
 #include "render_gridlines.h"
+#include "render_usnob.h"
+#include "render_rdls.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -25,11 +27,24 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:"
 
 
-char* layernames[] = { "image", "tycho", "grid" };
-render_func_t renderers[] = { render_image, render_tycho, render_gridlines };
+/* All render layers must go in here */
+char* layernames[] = {
+	"image",
+	"tycho",
+	"grid",
+	"usnob",
+	"rdls"
+};
+render_func_t renderers[] = {
+	render_image,
+	render_tycho,
+	render_gridlines,
+	render_usnob,
+	render_rdls
+};
 
 static void write_png(unsigned char * img, int w, int h);
 
@@ -53,8 +68,17 @@ int main(int argc, char *argv[]) {
 	layers = pl_new(16);
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
-    while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
-        switch (argchar) {
+	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+		switch (argchar) {
+		case 'F':
+			args.fieldnum = atoi(optarg);
+			break;
+		case 'N':
+			args.Nstars = atoi(optarg);
+			break;
+		case 'r':
+			args.rdlsfn = strdup(optarg);
+			break;
 		case 'i':
 			args.imagefn = strdup(optarg);
 			break;
