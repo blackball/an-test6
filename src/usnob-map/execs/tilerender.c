@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 		}
 
 	if (!(gotx && goty && gotX && gotY && gotw && goth)) {
-		fprintf(stderr, "Invalid inputs: need ");
+		fprintf(stderr, "tilecache: Invalid inputs: need ");
 		if (!gotx) fprintf(stderr, "-x ");
 		if (!gotX) fprintf(stderr, "-X ");
 		if (!goty) fprintf(stderr, "-y ");
@@ -139,9 +139,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (args.W > 1024 || args.H > 1024) {
-		fprintf(stderr, "Width or height too large (limit 1024)\n");
+		fprintf(stderr, "tilecache: Width or height too large (limit 1024)\n");
 		exit(-1);
 	}
+
+	fprintf(stderr, "tilecache: BEGIN TILECACHE\n");
 
 	// The Google Maps client treat RA as going from -180 to +180; we prefer to
 	// think of it going from 0 to 360.  If the lower-RA value is negative, wrap
@@ -169,14 +171,14 @@ int main(int argc, char *argv[]) {
 
 	xzoom = args.xpixelpermerc / 256.0;
 	args.zoomlevel = (int)rint(log(xzoom) / log(2.0));
-   fprintf(stderr, "zoomlevel: %d\n", args.zoomlevel);
+   fprintf(stderr, "tilecache: zoomlevel: %d\n", args.zoomlevel);
 
 	// Allocate a black image.
 	img = calloc(4 * args.W * args.H, 1);
 
 	// Rescue boneheads.
 	if (!pl_size(layers)) {
-		fprintf(stderr, "Do you maybe want to try rendering some layers?\n");
+		fprintf(stderr, "tilecache: Do you maybe want to try rendering some layers?\n");
 	}
 
 	for (i=0; i<pl_size(layers); i++) {
@@ -189,7 +191,9 @@ int main(int argc, char *argv[]) {
 		for (j=0; j<NR; j++) {
 			if (!strcmp(layer, layernames[j])) {
 				if (renderers[j](thisimg, &args)) {
-					fprintf(stderr, "Renderer \"%s\" failed.\n", layernames[j]);
+					fprintf(stderr, "tilecache: Renderer \"%s\" failed.\n", layernames[j]);
+				} else {
+					fprintf(stderr, "tilecache: Renderer \"%s\" succeeded.\n", layernames[j]);
 				}
 				gotit = TRUE;
 				break;
@@ -197,7 +201,7 @@ int main(int argc, char *argv[]) {
 		}
 		// Save a different kind of bonehead.
 		if (!gotit) {
-			fprintf(stderr, "No renderer found for layer \"%s\".\n", layer);
+			fprintf(stderr, "tilecache: No renderer found for layer \"%s\".\n", layer);
 		}
 
 		// Composite.
@@ -221,6 +225,8 @@ int main(int argc, char *argv[]) {
 	write_png(img, args.W, args.H);
 
 	free(img);
+
+	fprintf(stderr, "tilecache: END TILECACHE\n");
 
 	return 0;
 }

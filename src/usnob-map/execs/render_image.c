@@ -6,7 +6,7 @@
 #include "sip_qfits.h"
 
 int render_image(unsigned char* img, render_args_t* args) {
-	fprintf(stderr, "hello world\n");
+	fprintf(stderr, "render_image: Starting image render\n");
 
 	// READ THE IMAGE
 	// Note: this implementation is STUPID BEYOND WORDS. it is insane to
@@ -14,7 +14,7 @@ int render_image(unsigned char* img, render_args_t* args) {
 	// every tile. nevertheless, slow working code is better than no code!
 	FILE* f = fopen(args->imagefn, "rb");
 	if (!f) {
-		fprintf(stderr, "image didn't open; bailing\n");
+		fprintf(stderr, "render_image: image didn't open; bailing\n");
 		return -1;
 	}
 	int imw, imh;
@@ -23,22 +23,22 @@ int render_image(unsigned char* img, render_args_t* args) {
 	// P6 w h vpp data, but for fscanf we only accept one form, which is
 	// what 'convert' outptus.
 	fscanf(f, "P6");
-	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
+	fprintf(stderr, "render_image: position after fscanf: %ld\n", ftell(f));
 	fscanf(f, "%d %d\n255\n", &imw, &imh);
-	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
-	fprintf(stderr, "got imwid=%d, imheight=%d\n", imw, imh);
+	fprintf(stderr, "render_image: position after fscanf: %ld\n", ftell(f));
+	fprintf(stderr, "render_image: got imwid=%d, imheight=%d\n", imw, imh);
 	unsigned char* imbuf = malloc(imw*imh*3);
 	fread(imbuf, 1, imw*imh*3, f);
-	fprintf(stderr, "position after fscanf: %ld\n", ftell(f));
+	fprintf(stderr, "render_image: position after fscanf: %ld\n", ftell(f));
 
 	// READ THE WCS
 	// read wcs into tan structure. IGNORES SIP.
 	sip_t wcs;
-	fprintf(stderr, "wcsfn: %s\n", args->wcsfn);
+	fprintf(stderr, "render_image: wcsfn: %s\n", args->wcsfn);
 	qfits_header* wcshead = qfits_header_read(args->wcsfn);
 
 	if (!wcshead) {
-		fprintf(stderr, "wcs didn't open; bailing\n");
+		fprintf(stderr, "render_image: wcs didn't open; bailing\n");
 		return -1;
 	}
 
