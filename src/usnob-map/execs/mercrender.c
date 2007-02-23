@@ -102,10 +102,35 @@ static void leaf_node(kdtree_t* kd, int node, mercargs* margs) {
 }
 
 int add_star(double xp, double yp, double rflux, double bflux, double nflux,
-		float* fluximg, render_args_t* args)
+		float* fluximg, int render_symbol, render_args_t* args)
 {
+	// this is stupid
+	int ndrops[] = {25, 18, 16};
+	int dx0[] =  { -2, -1,  0,  1,  2, 
+	               -2, -1,  0,  1,  2, 
+	               -2, -1,  0,  1,  2, 
+	               -2, -1,  0,  1,  2, 
+	               -2, -1,  0,  1,  2 };
+	int dx1[] =  {  0, -1, -2,  1,  2,  1,  2, -1, -2,
+	                1,  0, -1,  2,  3,  2,  3,  0, -1 };
+        int dx2[] =  { -1,  0,  1,  2, -1,  0,  1,  2,
+                       -2, -2, -2, -2,  3,  3,  3,  3 };
+
+	int dy0[] = {  -2, -2, -2, -2, -2,
+	               -1, -1, -1, -1, -1,
+	                0,  0,  0,  0,  0,
+	                1,  1,  1,  1,  1,
+	                2,  2,  2,  2,  2 };
+	int dy1[] = {   0, -1, -2,  1,  2,
+		       -1, -2,  1,  2,  0,
+	               -1, -2,  1,  2, -1,
+	               -2,  1,  2 };
+	int dy2[] = {  -2, -2, -2, -2,  3,
+	                3,  3,  3, -1,  0,
+	                1,  2, -1,  0,  1, 2 };
+
 	/*
-	  // How to create the "scale" array in Matlab:
+	  % How to create the "scale" array in Matlab:
 	  x=[-2:2];
 	  y=[-2:2];
 	  xx=repmat(x, [5,1]);
@@ -113,29 +138,27 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	  E=exp(-(xx.^2 + yy.^2)/(2 * 0.5));
 	  E./sum(sum(E))
 	*/
-	int dx[][] = {
-	              { -2, -1,  0,  1,  2, 
-	                -2, -1,  0,  1,  2, 
-	                -2, -1,  0,  1,  2, 
-	                -2, -1,  0,  1,  2, 
-	                -2, -1,  0,  1,  2 },
-	              {  0, -1, -2,  1,  2,  1,  2, -1, -2,
-	                 1,  0, -1,  2,  3,  2,  3,  0, -1 },
-                 { -1,  0,  1,  2, -1,  0,  1,  2,
-                   -2, -2, -2, -2,  3,  3,  3,  3 },
-	};
-
-	int dy[] = {  -2, -2, -2, -2, -2,
-				  -1, -1, -1, -1, -1,
-				  0,  0,  0,  0,  0,
-				  1,  1,  1,  1,  1,
-				  2,  2,  2,  2,  2 };
-	float scale[] = {
+	float scale5x5gaussian[] = {
 		0.00010678874539,  0.00214490928858,   0.00583046794284,  0.00214490928858,  0.00010678874539,
 		0.00214490928858,  0.04308165471265,  0.11710807914534,  0.04308165471265,  0.00214490928858,
 		0.00583046794284,  0.11710807914534,  0.31833276350651,  0.11710807914534,  0.00583046794284,
 		0.00214490928858,  0.04308165471265,  0.11710807914534,  0.04308165471265,  0.00214490928858,
 		0.00010678874539,  0.00214490928858,  0.00583046794284,  0.00214490928858,  0.00010678874539 };
+
+	// clearly constructing these arrays should be done at runtime
+	int* dxs[] = {dx0, dx1, dx2};
+	int* dys[] = {dy0, dy1, dy2};
+	float* scales[] = {scale5x5gaussian, NULL, NULL};
+
+	if (render_symbol < 0 || render_symbol >= 3) {
+		fprintf(stderr, "tilerender: add_star: invalid render symbol %d\n", render_symbol);
+		return 0;
+	}
+	int*   dx    =    dxs[render_symbol];
+	int*   dy    =    dys[render_symbol];
+	float* scale = scales[render_symbol];
+	int    ndrop = ndrops[render_symbol];
+
 	int mindx = -2;
 	int maxdx = 2;
 	int mindy = -2;
@@ -155,19 +178,24 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 		return 0;
 	}
 
-	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
+	for (i=0; i<ndrop; i++) {
 		int ix, iy;
 		ix = x + dx[i];
-		if ((ix < 0) || (ix >= w)) continue;
+		if ((ix < 0) || (ix >= w))
+			continue;
 		iy = y + dy[i];
-		if ((iy < 0) || (iy >= h)) continue;
-		fluximg[3*(iy*w + ix) + 0] += rflux * scale[i];
-		fluximg[3*(iy*w + ix) + 1] += bflux * scale[i];
-		fluximg[3*(iy*w + ix) + 2] += nflux * scale[i];
+		if ((iy < 0) || (iy >= h))
+			continue;
+		float thisscale = 1.0;
+		if (scale)
+			thisscale = scale[i];
+		fluximg[3*(iy*w + ix) + 0] += rflux * thisscale;
+		fluximg[3*(iy*w + ix) + 1] += bflux * thisscale;
+		fluximg[3*(iy*w + ix) + 2] += nflux * thisscale;
 	}
 	return 1;
 }
 
 void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* margs) {
-	add_star(xp, yp, flux->rflux, flux->bflux, flux->nflux, margs->fluximg, margs->args);
+	add_star(xp, yp, flux->rflux, flux->bflux, flux->nflux, margs->fluximg, RENDERSYMBOL_psf, margs->args);
 }

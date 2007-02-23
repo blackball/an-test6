@@ -63,7 +63,7 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 		/* This is just a hack by using 255.0.... */
 		//fprintf(stderr, "render_rdls: %g %g %d\n", px, py, Nib);
-		Nib += add_star(px, py, 205.0, 355.0, 0.0, fluximg, args);
+		Nib += add_star(px, py, 205.0, 355.0, 0.0, fluximg, RENDERSYMBOL_o, args);
 	}
 
 	fprintf(stderr, "render_rdls: %i stars inside image bounds.\n", Nib);
@@ -89,38 +89,3 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 	return 0;
 }
-
-static int rdls_add_star(float* fluximg, int x, int y, int W, int H) {
-	// X
-	/*
-	  int dx[] = {  0, -1, -2,  1,  2,  1,  2, -1, -2,
-	  1,  0, -1,  2,  3,  2,  3,  0, -1 };
-	  int dy[] = {  0, -1, -2,  1,  2, -1, -2,  1,  2,
-	  0, -1, -2,  1,  2, -1, -2,  1,  2 };
-	*/
-	// O
-	int dx[] = { -1,  0,  1,  2, -1,  0,  1,  2,
-				 -2, -2, -2, -2,  3,  3,  3,  3 };
-	int dy[] = { -2, -2, -2, -2,  3,  3,  3,  3,
-				 -1,  0,  1,  2, -1,  0,  1,  2 };
-
-	float rflux, gflux, bflux;
-	int i;
-	/*
-		rflux = 255.0;
-		gflux = 200.0;
-		bflux = 0.0;
-	*/
-	rflux = 255.0;
-	gflux = 255.0;
-	bflux = 255.0;
-
-	for (i=0; i<sizeof(dx)/sizeof(int); i++) {
-		if ((x + dx[i] < 0) || (x + dx[i] >= W)) continue;
-		if ((y + dy[i] < 0) || (y + dy[i] >= H)) continue;
-		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 0] += rflux;
-		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 1] += gflux;
-		fluximg[3*((y+dy[i])*W+(x+dx[i])) + 2] += bflux;
-	}
-}
-
