@@ -64,7 +64,9 @@ $(LIBTWEAK_LIB): $(REMAKE_LIBTWEAK)
 
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 
-tilerender: tilerender.o render_image.o render_tycho.o mercrender.o merctree.o \
+tilerender: tilerender.o render_image.o \
+		render_tycho.o mercrender.o merctree.o \
+		render_gridlines.o \
 		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \

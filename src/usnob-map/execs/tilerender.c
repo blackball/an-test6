@@ -14,6 +14,7 @@
 
 #include "render_image.h"
 #include "render_tycho.h"
+#include "render_gridlines.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -27,8 +28,8 @@
 #define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:"
 
 
-char* layernames[] = { "image", "tycho" };
-render_func_t renderers[] = { render_image, render_tycho };
+char* layernames[] = { "image", "tycho", "grid" };
+render_func_t renderers[] = { render_image, render_tycho, render_gridlines };
 
 static void write_png(unsigned char * img, int w, int h);
 
@@ -197,6 +198,14 @@ int main(int argc, char *argv[]) {
 	free(img);
 
 	return 0;
+}
+
+int ra2pixel(double ra, render_args_t* args) {
+	return xmerc2pixel(ra2merc(ra), args);
+}
+
+int dec2pixel(double dec, render_args_t* args) {
+	return ymerc2pixel(dec2merc(dec), args);
 }
 
 // Converts from RA in radians to Mercator X coordinate in [0, 1].

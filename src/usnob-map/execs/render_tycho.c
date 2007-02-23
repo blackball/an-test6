@@ -3,10 +3,7 @@
 
 #include "tilerender.h"
 #include "render_tycho.h"
-#include "sip_qfits.h"
 #include "starutil.h"
-#include "kdtree.h"
-#include "healpix.h"
 #include "mathutil.h"
 #include "merctree.h"
 #include "keywords.h"

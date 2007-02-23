@@ -70,6 +70,9 @@ int xmerc2pixel(double x, render_args_t* args);
 
 int ymerc2pixel(double y, render_args_t* args);
 
+int ra2pixel(double ra, render_args_t* args);
+
+int dec2pixel(double dec, render_args_t* args);
 
 int in_image(int x, int y, render_args_t* args);
 
