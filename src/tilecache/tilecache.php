@@ -95,7 +95,7 @@ if ((sscanf($ws, "%d", $w) != 1) ||
 	printf("<html><body>Invalid request: failed to parse WIDTH or HEIGHT.</body></html>\n\n");
 	exit;
 }
-//loggit("x0=$x0, x1=$x1, y0=$y0, y1=$y1, w=$w, h=$h.\n");
+
 $cmdline .= sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
 
 // Layers
@@ -104,7 +104,13 @@ foreach ($layers as $l) {
 	$cmdline .= " -l " . escapeshellarg($l);
 }
 
-// render_image layer: 
+// ***************************************************
+// Collect arguments for the renderer
+// ***************************************************
+
+//////////////////////
+// render_image layer:
+
 // WCS filename.
 $wcs = $_REQUEST["wcsfn"];
 if ($wcs) {
@@ -116,7 +122,9 @@ if ($imgfn) {
 	$cmdline .= " -i " . escapeshellarg($imgfn);
 }
 
+//////////////////////
 // render_tycho layer:
+
 // Color correction.
 $cc = $_REQUEST["cc"];
 if ($cc) {
@@ -139,6 +147,21 @@ if ($gain) {
 		$cmdline .= " -g " . $gainval;
 	}
 }
+
+//////////////////////
+// render_rdls layer:
+
+// rdls file
+$rdlsfn = $_REQUEST["rdlsfn"];
+if ($rdlsfn) {
+	$cmdline .= " -r " . escapeshellarg($rdlsfn);
+}
+
+// missing: -F field number -N number of stars
+
+// ***************************************************
+// Now render it
+// ***************************************************
 
 // Get the hash
 $tilestring = $cmdline;
@@ -173,7 +196,7 @@ if ($tag) {
 			printf("<html><body>$msg</body></html>\n\n");
 			exit;
 		}
-		loggit("Rendered $cmdline to $tilefile\n");
+		loggit("Rendered: $cmdline > $tilefile\n");
 	} else {
 		loggit("Cache hit: " . $tilefile . "\n");
 	}
