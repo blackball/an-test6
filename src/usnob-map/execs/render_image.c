@@ -66,7 +66,7 @@ int render_image(unsigned char* img, render_args_t* args) {
 				pix[0] = imbuf[3 * (imw * pppy + pppx) + 0];
 				pix[1] = imbuf[3 * (imw * pppy + pppx) + 1];
 				pix[2] = imbuf[3 * (imw * pppy + pppx) + 2];
-				pix[3] = 255;
+				pix[3] = 155;
 			} else {
 				// transparent.
 				pix[3] = 0;
