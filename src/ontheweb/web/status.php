@@ -55,7 +55,11 @@ $job_submitted = $input_exists;
 $job_started = file_exists($startfile);
 $job_done = file_exists($donefile);
 $job_queued = $job_submitted && !($job_started);
-
+if ($job_done) {
+	 $didsolve = field_solved($solvedfile, $msg);
+} else {
+	$didsolve = FALSE;
+}
 $do_refresh = !array_key_exists("norefresh", $headers);
 
 if (!$job_submitted) {
@@ -68,6 +72,22 @@ if ($job_done) {
 }
 if ($img) {
 	$do_refresh = 0;
+}
+
+if ($didsolve) {
+	if (file_exists($rdlsinfofile)) {
+		$info = file($rdlsinfofile);
+		foreach ($info as $str) {
+			$words = explode(" ", rtrim($str, "\n"));
+			$infomap[$words[0]] = implode(" ", array_slice($words, 1));
+		}
+		$rac_merc = $infomap["ra_center_merc"];
+		$decc_merc = $infomap["dec_center_merc"];
+		$zoom = $infomap["zoom_merc"];
+		$rac = $infomap["ra_center"];
+		$decc = $infomap["dec_center"];
+		$fieldsize = $infomap["field_size"];
+	}
 }
 ?>
 
@@ -83,6 +103,7 @@ Astrometry.net: Job Status
 table.c {margin-left:auto; margin-right:auto;}
 p.c {margin-left:auto; margin-right:auto; text-align:center;}
 form.c {margin-left:auto; margin-right:auto; text-align:center;}
+h3.c {text-align:center;}
 </style>
 
 <?php
@@ -181,6 +202,13 @@ Astrometry.net: Job Status
 
 <hr />
 
+<?php
+if ($didsolve) {
+	echo "<h3 class=\"c\">Your field is at RA,DEC = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
+	echo "<hr />\n";
+}
+?>
+
 <table cellpadding="3" border="1" class="c">
 
 <tr><td>Job Id:</td><td>
@@ -262,7 +290,6 @@ function field_solved($solvedfile, &$msg) {
 
 if ($job_done) {
 	echo '<tr><td>Field Solved:</td><td>';
-	$didsolve = field_solved($solvedfile, $msg);
 	if (strlen($msg)) {
 		echo $msg;
 	} else if ($didsolve) {
@@ -273,20 +300,6 @@ if ($job_done) {
 	echo "</td></tr>\n";
 
 	if ($didsolve) {
-		if (file_exists($rdlsinfofile)) {
-			$info = file($rdlsinfofile);
-			foreach ($info as $str) {
-				$words = explode(" ", rtrim($str, "\n"));
-				$infomap[$words[0]] = implode(" ", array_slice($words, 1));
-			}
-			$rac_merc = $infomap["ra_center_merc"];
-			$decc_merc = $infomap["dec_center_merc"];
-			$zoom = $infomap["zoom_merc"];
-			$rac = $infomap["ra_center"];
-			$decc = $infomap["dec_center"];
-			$fieldsize = $infomap["field_size"];
-		}
-
 		echo '<tr><td>(RA, DEC) center:</td><td>';
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
@@ -303,6 +316,7 @@ if ($job_done) {
 		print_link($rdlist);
 		echo "</td></tr>\n";
 
+		/*
 		if (file_exists($objsfile)) {
 			echo '<tr><td>Graphical representation:</td><td>';
 			echo "<a href=\"";
@@ -310,6 +324,7 @@ if ($job_done) {
 			echo "\">overlay.png</a>\n";
 			echo "</td></tr>\n";
 		}
+		*/
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";

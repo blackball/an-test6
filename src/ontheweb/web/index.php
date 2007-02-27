@@ -152,7 +152,7 @@ $ok_index   = array_key_exists("index"  , $headers);
 // tweak: client only sets tweak=on when it's checked; when unchecked there
 // is no "tweak" entry.
 
-$tweak_val = TRUE;
+$tweak_val = FALSE;
 if (array_key_exists("tweak", $headers)) {
 	$tweak_val = ($headers["tweak"] == "on");
 }
@@ -565,6 +565,7 @@ if ($all_ok) {
 // first time the page has been loaded.
 $newform = (count($headers) == 0);
 if ($newform) {
+	$tweak_val = TRUE;
 	$redinput = "";
 	$redfont_open   = "";
 	$redfont_close  = "";
