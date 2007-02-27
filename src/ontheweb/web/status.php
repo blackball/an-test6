@@ -317,7 +317,13 @@ if ($job_done) {
 			"&zoom=" . $zoom . "&over=no" .
 			"&rdls=" . $myname . "/field.rd.fits" .
 			"&view=r+u&nr=200";
-		echo "\">browse</a>\n";
+		echo "\">USNOB</a>\n";
+		echo "<a href=\"";
+		echo $gmaps_url . "?ra=" . $rac_merc . "&dec=" . $decc_merc .
+			"&zoom=" . $zoom . "&over=no" .
+			"&rdls=" . $myname . "/field.rd.fits" .
+			"&view=r+t&nr=200&arcsinh&gain=-2";
+		echo "\">Tycho-2</a>\n";
 		echo "</td></tr>\n";
 	}
 }
