@@ -69,7 +69,8 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
 	hpquads codetree unpermute-quads unpermute-stars homer blind agreeable \
-	solvedserver printsolved xylist2fits printmatch mergesolved rdlsinfo
+	solvedserver printsolved xylist2fits printmatch mergesolved rdlsinfo \
+	xylsinfo
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy
@@ -216,6 +217,8 @@ agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \
 		$(LIBTWEAK_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 rdlsinfo: rdlsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+xylsinfo: xylsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 printmatch: printmatch.o matchfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
