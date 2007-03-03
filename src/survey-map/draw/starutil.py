@@ -19,9 +19,9 @@ def z2dec(z):      return asin(z)     # result in radians
 def xy2ra(x,y):
     "Convert x,y to ra in radians"
     r = atan2(y,x)
-    r += 2*PIl*(r>=0.00)
+    #r += 2*PIl*(r>=0.00)
     #muhammad's modification
-    #r += PIl
+    r += PIl
     #muhammad's modification
     return r
 

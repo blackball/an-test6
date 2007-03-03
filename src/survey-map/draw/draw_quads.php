@@ -29,38 +29,43 @@
 	
 	$file = fopen($filename, 'r');
 	
-	$i = 0;
-	$startx=0;
-	$starty=0;
-	$endx = trim(fgets($file)) * $width + $originx;
-	$endy = trim(fgets($file)) * $height + $originy;
-	$firstx= $endx;
-	$firsty= $endy;
+	$i=0;
 	while(!feof($file)) {
-		if ($i == 3) {
-			ImageLine($im, $endx, $endy, $firstx, $firsty, $white);
-		}
-		else {
-			if ($i == 4) {
-				#break;
-				fgets($file);
-				$i = 0;
-				$startx = trim(fgets($file)) * $width + $originx;
-				$starty = trim(fgets($file)) * $height + $originy;
-				$firstx = $startx;
-				$firsty = $starty;
+		# get all 4 points
+		$xs[0] = trim(fgets($file)) * $width + $originx;
+		$ys[0] = trim(fgets($file)) * $height + $originy;
+		$xs[1] = trim(fgets($file)) * $width + $originx;
+		$ys[1] = trim(fgets($file)) * $height + $originy;
+		$xs[2] = trim(fgets($file)) * $width + $originx;
+		$ys[2] = trim(fgets($file)) * $height + $originy;
+		$xs[3] = trim(fgets($file)) * $width + $originx;
+		$ys[3] = trim(fgets($file)) * $height + $originy;
+		
+		# read the next empty line before going onto next loop iteration
+		fgets($file);
+		
+		# draw boundaries
+		for ($j=0; $j<4; $j++) {
+			$next = ($j+1) % 4;
+			
+			# check if tile wraps over to the other side
+			if (abs($xs[$j] - $xs[$next]) > (.75 * $width)) {
+				# this tile wraps over so only draw half of it
+				if ($xs[$next] > $xs[$j]) {
+					ImageLine($im, $xs[$j], $ys[$j], $xs[$next]-$width, $ys[$next], $white);	
+				}
+				else {
+					ImageLine($im, $xs[$j], $ys[$j], $xs[$next]+$width, $ys[$next], $white);
+				}
 			}
 			else {
-				$startx = $endx;
-				$starty = $endy;
+				# just draw a normal line between the two points
+				ImageLine($im, $xs[$j], $ys[$j], $xs[$next], $ys[$next], $white);
 			}
-			$endx = trim(fgets($file)) * $width + $originx;
-			$endy = trim(fgets($file)) * $height + $originy;
-			ImageLine($im, $startx, $starty, $endx, $endy, $white);
 		}
-		$i = $i + 1;
 	}
 	
+	# close file and output image
 	fclose($file);
 	ImagePNG($im);
 ?>
