@@ -118,16 +118,25 @@ int main(int argc, char** args) {
 
 
 			for (j=0; j<5; j++){
-				printf("%g", star->obs[j].mag);
-		  		fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
+				printf("%g, ", star->obs[j].mag);
+		  		//fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
 		  		//fprintf(stderr, "%d ", star->obs[j].field);
-				if(j<4){
-		    		printf(", ");
-		  		}
+				//if(j<4){
+				//printf(", ");
+		  		//}
+			}
+			for (j=0; j<5; j++){
+			  printf("%d, ", star->obs[j].field);
+			}
+			for (j=0; j<5; j++){
+			  printf("%d", star->obs[j].survey);
+			  if(j<4){
+			    printf(", ");
+			  }
 			}
 			
 			printf(";\n");
-			fprintf(stderr, "\n");
+			//fprintf(stderr, "\n");
 		}
 
 	}
