@@ -31,22 +31,32 @@
 	
 	$i=0;
 	while(!feof($file)) {
-		# get all 4 points
-		$xs[0] = trim(fgets($file)) * $width + $originx;
-		$ys[0] = trim(fgets($file)) * $height + $originy;
-		$xs[1] = trim(fgets($file)) * $width + $originx;
-		$ys[1] = trim(fgets($file)) * $height + $originy;
-		$xs[2] = trim(fgets($file)) * $width + $originx;
-		$ys[2] = trim(fgets($file)) * $height + $originy;
-		$xs[3] = trim(fgets($file)) * $width + $originx;
-		$ys[3] = trim(fgets($file)) * $height + $originy;
+		$line = trim(fgets($file));
+		
+		$xs = array();
+		$ys = array();
+		while ($line != "") {
+			$xs[] = $line * $width;
+			$line = trim(fgets($file));
+			$ys[] = $line * $height;
+			$line = trim(fgets($file));
+		}
+// 		# get all 4 points
+// 		$xs[0] = trim(fgets($file)) * $width + $originx;
+// 		$ys[0] = trim(fgets($file)) * $height + $originy;
+// 		$xs[1] = trim(fgets($file)) * $width + $originx;
+// 		$ys[1] = trim(fgets($file)) * $height + $originy;
+// 		$xs[2] = trim(fgets($file)) * $width + $originx;
+// 		$ys[2] = trim(fgets($file)) * $height + $originy;
+// 		$xs[3] = trim(fgets($file)) * $width + $originx;
+// 		$ys[3] = trim(fgets($file)) * $height + $originy;
 		
 		# read the next empty line before going onto next loop iteration
-		fgets($file);
+		#$line = trim(fgets($file));
 		
 		# draw boundaries
-		for ($j=0; $j<4; $j++) {
-			$next = ($j+1) % 4;
+		for ($j=0; $j<count($xs)-1; $j++) {
+			$next = ($j+1); # don't need (j+1)%4 anymore as parse.py repeats first point at the end of the list
 			
 			# check if tile wraps over to the other side
 			if (abs($xs[$j] - $xs[$next]) > (.75 * $width)) {
