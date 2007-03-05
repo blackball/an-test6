@@ -28,6 +28,17 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 					   // output:
 					   tan_t* wcstan);
 
+/*
+  Computes a rigid TAN WCS projection, based on the correspondence
+  between stars and field objects.
+  . starxyz is an array of star positions on the unit sphere.
+  . fieldxy is an array of pixel coordinates.
+  . nobjs   is the number of correspondences; the star at
+  .    (starxyz + i*3) corresponds with the field object at (fieldxy + i*2).
+  
+  If "p_scale" is specified, the scale of the field will be placed in it.
+  It is in units of degrees per pixel, and equals sqrt(abs(det(CD))).
+*/
 void blind_wcs_compute_2(double* starxyz,
 						 double* fieldxy,
 						 int nobjs,

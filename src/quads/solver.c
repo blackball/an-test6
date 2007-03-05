@@ -440,9 +440,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
     for (jj=0; jj<krez->nres; jj++) {
 		double star[12];
-		double starscale;
+		//double starscale;
 		tan_t tan;
 		double scale;
+		double arcsecperpix;
 
 		params->nummatches++;
 
@@ -456,32 +457,40 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		// compute TAN projection from the matching quad alone.
 		blind_wcs_compute_2(star, field, 4, &tan, &scale);
 
-		fprintf(stderr, "AB: %g arcsec, %g pixels\n",
-				distsq2arcsec(distsq(star, star+3, 3)),
-				sqrt(distsq(field, field+2, 2)));
+		/*
+		  fprintf(stderr, "AB: %g arcsec, %g pixels\n",
+		  distsq2arcsec(distsq(star, star+3, 3)),
+		  sqrt(distsq(field, field+2, 2)));
 
-		fprintf(stderr, "AB scale: %g arcsec/pixel\n",
-				distsq2arcsec(distsq(star, star+3, 3)) /
-				sqrt(distsq(field, field+2, 2)));
+		  fprintf(stderr, "AB scale: %g arcsec/pixel\n",
+		  distsq2arcsec(distsq(star, star+3, 3)) /
+		  sqrt(distsq(field, field+2, 2)));
 
-		fprintf(stderr, "Scale: %g, det(CD)=%g\n", scale,
-				tan.cd[0][0]*tan.cd[1][1] - tan.cd[0][1]*tan.cd[1][0]);
+		  fprintf(stderr, "Scale: %g, det(CD)=%g\n", scale,
+		  tan.cd[0][0]*tan.cd[1][1] - tan.cd[0][1]*tan.cd[1][0]);
+		*/
+
+		// FIXME - should there be scale fudge here?
+
+		arcsecperpix = scale * 3600.0;
+		if (arcsecperpix > params->arcsec_per_pixel_upper ||
+			arcsecperpix < params->arcsec_per_pixel_lower)
+			continue;
 
 		// transform the corners of the field...
 		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin);
 		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 1), gety(params->cornerpix, 1), sMax);
 
-		// FIXME - we could check the scale more directly!
-		// FIXME - should there be scale fudge here?
-
 		// check scale
-		starscale  = square(sMax[0] - sMin[0]);
-		starscale += square(sMax[1] - sMin[1]);
-		starscale += square(sMax[2] - sMin[2]);
-		if ((starscale > params->starscale_upper) ||
-			(starscale < params->starscale_lower))
-			// this quad has invalid scale.
-			continue;
+		/*
+		  starscale  = square(sMax[0] - sMin[0]);
+		  starscale += square(sMax[1] - sMin[1]);
+		  starscale += square(sMax[2] - sMin[2]);
+		  if ((starscale > params->starscale_upper) ||
+		  (starscale < params->starscale_lower))
+		  // this quad has invalid scale.
+		  continue;
+		*/
 
 		params->numscaleok++;
 
@@ -495,7 +504,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		memcpy(&(mo->wcstan), &tan, sizeof(tan_t));
 		mo->wcs_valid = TRUE;
 
-		//mo->scale = (starscale
+		mo->scale = arcsecperpix;
 
 		mo->quads_tried   = params->numtries;
 		mo->quads_matched = params->nummatches;

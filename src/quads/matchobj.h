@@ -49,6 +49,9 @@ struct match_struct {
 	bool wcs_valid;
 	tan_t wcstan;
 
+	// arcseconds per pixel; computed: scale=sqrt(abs(det(wcstan.cd)))
+	double scale;
+
 	// proposed location of the center of the field
 	//  = normalize(sMin + sMax);
 	double center[3];

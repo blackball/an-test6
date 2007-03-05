@@ -901,6 +901,12 @@ static void verified(handlehits* hh, MatchObj* mo) {
 static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	bool solved;
 
+	// if verification was specified in pixel units, compute the verification
+	// distance on the unit sphere...
+	if (verify_pix > 0.0) {
+		hits->verify_dist2 = arcsec2distsq(mo->scale * verify_pix);
+	}
+
 	solved = handlehits_add(hits, mo);
 	if (!solved)
 		return 0;
@@ -972,7 +978,7 @@ static void solve_fields() {
 	hits = handlehits_new();
 	hits->agreetol = agreetol;
 	hits->verify_dist2 = verify_dist2;
-	hits->verify_pix = verify_pix;
+	//hits->verify_pix = verify_pix;
 	hits->nagree_toverify = nagree_toverify;
 	hits->overlap_tokeep  = overlap_tokeep;
 	hits->overlap_tosolve = overlap_tosolve;

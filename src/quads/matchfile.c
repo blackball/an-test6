@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 
 #include "matchfile.h"
 #include "fitsioutils.h"
@@ -38,6 +39,10 @@ void matchobj_compute_derived(MatchObj* mo) {
 	for (i=0; i<4; i++)
 		if (mo->field[i] > mx) mx = mo->field[i];
 	mo->objs_tried = mx+1;
+	if (mo->wcs_valid) {
+		mo->scale = sqrt(fabs(mo->wcstan.cd[0][0]*mo->wcstan.cd[1][1] -
+							  mo->wcstan.cd[0][1]*mo->wcstan.cd[1][0]));
+	}
 }
 
 void matchobj_compute_overlap(MatchObj* mo) {

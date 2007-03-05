@@ -55,6 +55,7 @@ struct solver_params {
 	// of the quads to find.
 	double minAB;
 	double maxAB;
+	// Limits on the quad size, in field scale units.
 	double arcsec_per_pixel_lower;
 	double arcsec_per_pixel_upper;
 
