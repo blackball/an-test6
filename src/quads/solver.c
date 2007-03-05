@@ -429,6 +429,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	kdtree_free_query(result);
 }
 
+// "field" contains the xy pixel coordinates of stars A,B,C,D.
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 							uint fA, uint fB, uint fC, uint fD,
 							solver_params* params) {
@@ -441,6 +442,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		double star[12];
 		double starscale;
 		tan_t tan;
+		double scale;
 
 		params->nummatches++;
 
@@ -452,7 +454,14 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		getstarcoord(iD, star + 3*3);
 
 		// compute TAN projection from the matching quad alone.
-		blind_wcs_compute_2(star, field, 4, &tan);
+		blind_wcs_compute_2(star, field, 4, &tan, &scale);
+
+		fprintf(stderr, "AB scale: %g arcsec/pixel\n",
+				distsq2arcsec(distsq(star, star+3, 3)) /
+				sqrt(distsq(field, field+2, 2)));
+
+		fprintf(stderr, "Scale: %g, det(CD)=%g\n", scale,
+				tan.cd[0][0]*tan.cd[1][1] - tan.cd[0][1]*tan.cd[1][0]);
 
 		// transform the corners of the field...
 		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin);
@@ -481,6 +490,8 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		memcpy(&(mo->wcstan), &tan, sizeof(tan_t));
 		mo->wcs_valid = TRUE;
+
+		//mo->scale = (starscale
 
 		mo->quads_tried   = params->numtries;
 		mo->quads_matched = params->nummatches;

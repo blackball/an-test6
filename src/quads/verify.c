@@ -200,7 +200,7 @@ void verify_iterate_wcs(kdtree_t* startree, MatchObj* mo,
 			ncorr++;
 		}
 
-		blind_wcs_compute_2(starxyz, fieldxy, ncorr, &(mo->wcstan));
+		blind_wcs_compute_2(starxyz, fieldxy, ncorr, &(mo->wcstan), NULL);
 
 		verify_hit(startree, mo, field, nfield, verify_dist2,
 				   NULL, NULL, NULL, NULL, NULL, NULL);

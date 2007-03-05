@@ -98,6 +98,7 @@ double agreetol;
 bool do_verify;
 int nagree_toverify;
 double verify_dist2;
+double verify_pix;
 double overlap_toprint;
 double overlap_tokeep;
 double overlap_tosolve;
@@ -202,6 +203,7 @@ int main(int argc, char *argv[]) {
 		agreetol = 0.0;
 		nagree_toverify = 0;
 		verify_dist2 = 0.0;
+		verify_pix = 0.0;
 		overlap_toprint = 0.0;
 		overlap_tokeep = 0.0;
 		overlap_tosolve = 0.0;
@@ -255,6 +257,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "fieldunits_upper %g\n", funits_upper);
 			fprintf(stderr, "agreetol %g\n", agreetol);
 			fprintf(stderr, "verify_dist %g\n", distsq2arcsec(verify_dist2));
+			fprintf(stderr, "verify_pix %g\n", verify_pix);
 			fprintf(stderr, "nagree_toverify %i\n", nagree_toverify);
 			fprintf(stderr, "overlap_toprint %f\n", overlap_toprint);
 			fprintf(stderr, "overlap_tokeep %f\n", overlap_tokeep);
@@ -338,7 +341,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		do_verify = (verify_dist2 > 0.0);
+		do_verify = (verify_dist2 > 0.0) || (verify_pix > 0.0);
 
 		if (rdlsfname) {
 			rdls = rdlist_open_for_writing(rdlsfname);
@@ -636,31 +639,7 @@ static int read_parameters() {
 		}
 
 		if (is_word(buffer, "help", &nextword)) {
-			fprintf(stderr, "Commands:\n"
-					"    index <index-file-name>\n"
-					"    match <match-file-name>\n"
-					"    done <done-file-name>\n"
-					"    start <start-file-name>\n"
-					"    field <field-file-name>\n"
-					"    solved <solved-filename>\n"
-					"    fields [<field-number> or <start range>/<end range>...]\n"
-					"    sdepth <start-field-object>\n"
-					"    depth <end-field-object>\n"
-					"    parity <0 || 1>\n"
-					"    tol <code-tolerance>\n"
-					"    fieldunits_lower <arcsec-per-pixel>\n"
-					"    fieldunits_upper <arcsec-per-pixel>\n"
-					"    agreetol <agreement-tolerance (arcsec)>\n"
-					"    verify_dist <early-verification-dist (arcsec)>\n"
-					"    nagree_toverify <nagree>\n"
-					"    overlap_tosolve <overlap-fraction>\n"
-					"    overlap_tokeep <overlap-fraction>\n"
-					"    quiet    (Print less)\n"
-					"    silent   (Don't print anything)\n"
-					"    run\n"
-					"    help\n"
-					"    quit\n");
-
+			fprintf(stderr, "No help soup for you!\n  (use the source, Luke)\n");
 		} else if (is_word(buffer, "cpulimit ", &nextword)) {
 			cpulimit = atoi(nextword);
 		} else if (is_word(buffer, "timelimit ", &nextword)) {
@@ -669,6 +648,8 @@ static int read_parameters() {
 			agreetol = atof(nextword);
 		} else if (is_word(buffer, "verify_dist ", &nextword)) {
 			verify_dist2 = arcsec2distsq(atof(nextword));
+		} else if (is_word(buffer, "verify_pix ", &nextword)) {
+			verify_pix = atof(nextword);
 		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
 			nagree_toverify = atoi(nextword);
 		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
@@ -991,6 +972,7 @@ static void solve_fields() {
 	hits = handlehits_new();
 	hits->agreetol = agreetol;
 	hits->verify_dist2 = verify_dist2;
+	hits->verify_pix = verify_pix;
 	hits->nagree_toverify = nagree_toverify;
 	hits->overlap_tokeep  = overlap_tokeep;
 	hits->overlap_tosolve = overlap_tosolve;

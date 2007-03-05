@@ -28,6 +28,7 @@ struct handlehits {
 	// params
 	double agreetol;
 	double verify_dist2;
+	double verify_pix;
 	int nagree_toverify;
 	// we assume the "tokeep" parameters are weaker than (or equal to)
 	// the "tosolve" ones, ie, a match must pass "tokeep" before it is

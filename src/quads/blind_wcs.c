@@ -27,7 +27,8 @@ void blind_wcs_compute_2(double* starxyz,
 						 double* fieldxy,
 						 int N,
 						 // output:
-						 tan_t* tan) {
+						 tan_t* tan,
+						 double* p_scale) {
 	int i, j, k;
 	double starcmass[3];
 	double fieldcmass[2];
@@ -133,6 +134,7 @@ void blind_wcs_compute_2(double* starxyz,
 		tan->cd[1][0] = R[0] * scale; // CD2_1
 		tan->cd[1][1] = R[1] * scale; // CD2_2
 	}
+	if (p_scale) *p_scale = scale;
 
 	free(p);
 	free(f);

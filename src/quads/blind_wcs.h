@@ -32,7 +32,8 @@ void blind_wcs_compute_2(double* starxyz,
 						 double* fieldxy,
 						 int nobjs,
 						 // output:
-						 tan_t* wcstan);
+						 tan_t* wcstan,
+						 double* p_scale);
 
 qfits_header* blind_wcs_get_header(tan_t* wcstan);
 
