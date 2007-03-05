@@ -280,6 +280,11 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
+		if (nagree_toverify && (agreetol == 0.0)) {
+			fprintf(stderr, "If you specify 'nagree_toverify', you must also specify 'agreetol'.\n");
+			exit(-1);
+		}
+
 		mf = matchfile_open_for_writing(matchfname);
 		if (!mf) {
 			fprintf(stderr, "Failed to open file %s to write match file.\n", matchfname);
