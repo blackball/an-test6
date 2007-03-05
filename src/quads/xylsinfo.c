@@ -98,6 +98,8 @@ int main(int argc, char** args) {
 		printf("x_max %g\n", xmax);
 		printf("y_min %g\n", ymin);
 		printf("y_max %g\n", ymax);
+		printf("width %g\n", xmax-xmin);
+		printf("height %g\n", ymax-ymin);
 		printf("x_center %g\n", (xmin + xmax) / 2.0);
 		printf("y_center %g\n", (ymin + ymax) / 2.0);
 		printf("diag %g\n", diag);

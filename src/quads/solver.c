@@ -456,6 +456,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		// compute TAN projection from the matching quad alone.
 		blind_wcs_compute_2(star, field, 4, &tan, &scale);
 
+		fprintf(stderr, "AB: %g arcsec, %g pixels\n",
+				distsq2arcsec(distsq(star, star+3, 3)),
+				sqrt(distsq(field, field+2, 2)));
+
 		fprintf(stderr, "AB scale: %g arcsec/pixel\n",
 				distsq2arcsec(distsq(star, star+3, 3)) /
 				sqrt(distsq(field, field+2, 2)));
