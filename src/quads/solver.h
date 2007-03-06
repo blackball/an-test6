@@ -29,6 +29,12 @@ struct solver_params;
 
 typedef int (*handle_hit)(struct solver_params*, MatchObj*);
 
+enum {
+	PARITY_NORMAL,
+	PARITY_FLIP,
+	PARITY_BOTH
+};
+
 struct solver_params {
 
 	// Inputs:
@@ -37,6 +43,8 @@ struct solver_params {
 	kdtree_t* codekd;
 	int startobj;
 	int endobj;
+	// one of PARITY_*
+	int parity;
 	// number of field quads to try
 	int maxtries;
 	// number of quad matches to try

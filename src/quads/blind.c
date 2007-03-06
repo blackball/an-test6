@@ -68,7 +68,7 @@ static void solve_fields();
 static int read_parameters();
 
 #define DEFAULT_CODE_TOL .01
-#define DEFAULT_PARITY_FLIP FALSE
+#define DEFAULT_PARITY PARITY_BOTH
 #define DEFAULT_TWEAK_ABORDER 3
 #define DEFAULT_TWEAK_ABPORDER 3
 
@@ -83,7 +83,7 @@ char *solved_in, *solved_out, *solvedserver;
 char* xcolname, *ycolname;
 char* wcs_template;
 char* fieldid_key;
-bool parity;
+int parity;
 double codetol;
 int startdepth;
 int enddepth;
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
 		fieldid_key = strdup("FIELDID");
 		xcolname = strdup("X");
 		ycolname = strdup("Y");
-		parity = DEFAULT_PARITY_FLIP;
+		parity = DEFAULT_PARITY;
 		codetol = DEFAULT_CODE_TOL;
 		firstfield = lastfield = -1;
 		startdepth = 0;
@@ -311,11 +311,6 @@ int main(int argc, char *argv[]) {
 		if (!silent)
 			fprintf(stderr, "got %u fields.\n", numfields);
 		
-		if (parity) {
-			if (!silent) 
-				fprintf(stderr, "  Flipping parity (swapping row/col image coordinates).\n");
-			xyls->parity = 1;
-		}
 		xyls->xname = xcolname;
 		xyls->yname = ycolname;
 
@@ -764,7 +759,8 @@ static int read_parameters() {
 		} else if (is_word(buffer, "tol ", &nextword)) {
 			codetol = atof(nextword);
 		} else if (is_word(buffer, "parity ", &nextword)) {
-			parity = (atoi(nextword) ? TRUE : FALSE);
+			// FIXME?
+			parity = atoi(nextword);
 		} else if (is_word(buffer, "fieldunits_lower ", &nextword)) {
 			funits_lower = atof(nextword);
 		} else if (is_word(buffer, "fieldunits_upper ", &nextword)) {
@@ -1058,7 +1054,7 @@ static void solve_fields() {
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
-		template.parity = parity;
+		//template.parity = parity;
 		template.fieldfile = fieldid;
 		template.indexid = indexid;
 		template.healpix = healpix;
@@ -1073,6 +1069,7 @@ static void solve_fields() {
 
 		solver.fieldid = fieldid;
 		solver.fieldnum = fieldnum;
+		solver.parity = parity;
 		solver.numtries = 0;
 		solver.nummatches = 0;
 		solver.numscaleok = 0;

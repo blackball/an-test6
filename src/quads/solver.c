@@ -64,9 +64,14 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 						  uint iA, uint iB, uint iC, uint iD,
 						  double *ABCDpix, solver_params* params);
 
+static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
+							uint iA, uint iB, uint iC, uint iD,
+							double *ABCDpix, solver_params* params,
+							bool current_parity);
+
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 							uint fA, uint fB, uint fC, uint fD,
-							solver_params* params);
+							solver_params* params, bool current_parity);
 
 struct potential_quad {
 	bool scale_ok;
@@ -316,6 +321,22 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind) {
 static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 						  uint iA, uint iB, uint iC, uint iD,
 						  double *ABCDpix, solver_params* params) {
+	fprintf(stderr, "code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+	if (params->parity == PARITY_NORMAL ||
+		params->parity == PARITY_BOTH) {
+		
+		try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
+	}
+	if (params->parity == PARITY_FLIP ||
+		params->parity == PARITY_BOTH) {
+		try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, TRUE);
+	}
+}
+
+static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
+							uint iA, uint iB, uint iC, uint iD,
+							double *ABCDpix, solver_params* params,
+							bool current_parity) {
 
     double thequery[4];
     kdtree_qres_t* result = NULL;
@@ -348,7 +369,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
 
 		if (result->nres)
-			resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params);
+			resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params, current_parity);
 		if (params->quitNow)
 			goto quitnow;
 	} else
@@ -371,7 +392,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
 
 		if (result->nres)
-			resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params);
+			resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params, current_parity);
 		if (params->quitNow)
 			goto quitnow;
 	} else
@@ -395,7 +416,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
 
 		if (result->nres)
-			resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params);
+			resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params, current_parity);
 		if (params->quitNow)
 			goto quitnow;
 	} else
@@ -419,7 +440,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 		result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
 
 		if (result->nres)
-			resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params);
+			resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params, current_parity);
 		if (params->quitNow)
 			goto quitnow;
 	} else
@@ -432,7 +453,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 // "field" contains the xy pixel coordinates of stars A,B,C,D.
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 							uint fA, uint fB, uint fC, uint fD,
-							solver_params* params) {
+							solver_params* params, bool current_parity) {
     uint jj, thisquadno;
     uint iA, iB, iC, iD;
     MatchObj *mo;
@@ -504,6 +525,8 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		memcpy(&(mo->wcstan), &tan, sizeof(tan_t));
 		mo->wcs_valid = TRUE;
 
+		mo->parity = current_parity;
+		
 		mo->scale = arcsecperpix;
 
 		mo->quads_tried   = params->numtries;
