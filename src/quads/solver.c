@@ -321,7 +321,7 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind) {
 static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 						  uint iA, uint iB, uint iC, uint iD,
 						  double *ABCDpix, solver_params* params) {
-	fprintf(stderr, "code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+	//fprintf(stderr, "code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
 	if (params->parity == PARITY_NORMAL ||
 		params->parity == PARITY_BOTH) {
 		
@@ -329,7 +329,7 @@ static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 	}
 	if (params->parity == PARITY_FLIP ||
 		params->parity == PARITY_BOTH) {
-		try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, TRUE);
+		try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
 	}
 }
 
