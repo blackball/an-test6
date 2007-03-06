@@ -825,7 +825,10 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	printf("Tweaking!\n");
 
 	twee = tweak_new();
-	twee->jitter = distsq2arcsec(verify_dist2);
+	if (verify_dist2 > 0.0)
+		twee->jitter = distsq2arcsec(verify_dist2);
+	else
+		twee->jitter = mo->scale * verify_pix;
 
 	// pull out the field coordinates.
 	imgx = malloc(p->nfield * sizeof(double));
@@ -979,7 +982,6 @@ static void solve_fields() {
 	hits = handlehits_new();
 	hits->agreetol = agreetol;
 	hits->verify_dist2 = verify_dist2;
-	//hits->verify_pix = verify_pix;
 	hits->nagree_toverify = nagree_toverify;
 	hits->overlap_tokeep  = overlap_tokeep;
 	hits->overlap_tosolve = overlap_tosolve;
