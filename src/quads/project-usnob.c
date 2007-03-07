@@ -29,7 +29,7 @@
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage:\n"
-		   "  %s <usnob-file.fits>\n"
+		   "  %s <usnob-file.fits> <output-dir>\n"
 		   , progname);
 	//-H <healpix> -N <nside> 
 }
@@ -40,28 +40,30 @@ extern int optind, opterr, optopt;
 int main(int argc, char** args) {
     int c;
 	char* infn;
+	char* outpath;
+	char* outfilename;
 	usnob_fits* usnob;
 	int i, j, N;
 	int hp, Nside;
 	double center[3];
 
-    while ((c = getopt(argc, args, OPTIONS)) != -1) {
-        switch (c) {
+	while ((c = getopt(argc, args, OPTIONS)) != -1) {
+		switch (c) {
 		case '?':
-        case 'h':
+		case 'h':
 			print_help(args[0]);
 			exit(0);
 		}
 	}
 
 	// make sure there is one non-option argument: the usnob fits filename.
-	if (optind != (argc-1)) {
+	if (argc <3) {
 		print_help(args[0]);
 		exit(-1);
 	}
 
 	// try to open the file.
-	infn = args[optind];
+	infn = args[1];
 	fprintf(stderr, "Reading USNOB catalog file %s\n", infn);
 	usnob = usnob_fits_open(infn);
 	if (!usnob) {
@@ -83,6 +85,7 @@ int main(int argc, char** args) {
 	// for each star...
 	N = usnob_fits_count_entries(usnob);
 	fprintf(stderr, "File contains %i stars.\n", N);
+
 	/*
 	printf("obs=[\n");
 	for (i=0; i<N; i++) {
@@ -98,49 +101,93 @@ int main(int argc, char** args) {
 	}
 	printf("];\n");
 	*/
-	printf("allstars=[\n");
-	for (i=0; i<N; i++) {
-		double xyz[3];
-		double px, py;
-		usnob_entry* star;
-		// grab the star...
-		star = usnob_fits_read_entry(usnob);
+	
+	outpath = args[2];
+	fprintf(stderr, "Writing .m Files to %s\n", outpath);
 
-		// only output the stars flagged as diffraction spikes
-		// NOTE: to output all stars, set diffraction_only to false 
-		bool diffraction_only = 0;
-		if (!diffraction_only || (diffraction_only && star->diffraction_spike)){
-			// find its xyz position
-			radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
-			// project it around the center
-			star_coords(xyz, center, &px, &py);
-			printf("%g, %g,", px, py);
+	FILE *output_file;
 
+	int splitSize = 500000;
+	int numFiles = (int)((double)N/(double)splitSize+1.0);
+	fprintf(stderr, "Splitting output to %d chunks.\n", numFiles);
+	int split = 1;
+	for (split = 1; split <= numFiles; split++){
+		char sbuffer[3];
+		sprintf(sbuffer, "%i", split);
+		outfilename = malloc(sizeof(char)*(strlen(outpath)+10));
+		strcpy(outfilename, outpath);
+		strcat(outfilename, sbuffer);
+		strcat(outfilename, ".m");
 
-			for (j=0; j<5; j++){
-				printf("%g, ", star->obs[j].mag);
-		  		//fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
-		  		//fprintf(stderr, "%d ", star->obs[j].field);
-				//if(j<4){
-				//printf(", ");
-		  		//}
+		//outfilename = strcat(outfilename, ".m");
+		fprintf(stderr, "Writing File %i to %s\n", split, outfilename);
+		output_file = fopen(outfilename, "w");
+		
+		fprintf(output_file, "allstars=[allstars;\n");
+		
+		for (i=(split-1)*splitSize; i<split*splitSize; i++) {
+			if (i == N)
+				break;
+			double xyz[3];
+			double px, py;
+			usnob_entry* star;
+			// grab the star...
+			star = usnob_fits_read_entry(usnob);
+	
+			// only output the stars flagged as diffraction spikes
+			// NOTE: to output all stars, set diffraction_only to false 
+			bool diffraction_only = 0;
+			if (!diffraction_only || (diffraction_only && star->diffraction_spike)){
+				// find its xyz position
+				radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
+				// project it around the center
+				star_coords(xyz, center, &px, &py);
+				fprintf(output_file, "%g, %g,", px, py);
+	
+				int numMags = 0;
+				double sumMags = 0;
+				for (j=0; j<5; j++){
+				if(star->obs[j].mag > 0){
+				numMags++;
+				sumMags+= star->obs[j].mag;
+				}
+				//printf("%g, ", star->obs[j].mag);
+					//fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
+					//fprintf(stderr, "%d ", star->obs[j].field);
+					//if(j<4){
+					//printf(", ");
+					//}
+				}
+				double meanMag = 0;
+				if (numMags > 0){
+				meanMag = sumMags / (double)numMags;
+				}
+				fprintf(output_file, " %g, ", meanMag);
+				
+				for (j=0; j<5; j++){
+				fprintf(output_file, "%d", star->obs[j].field);
+				if(j<4){
+				fprintf(output_file, ", ");
+				}
+				}
+				
+				/*
+				for (j=0; j<5; j++){
+				printf("%d", star->obs[j].survey);
+				if(j<4){
+				printf(", ");
+				}
+				}
+				*/
+				
+				fprintf(output_file, ";\n");
+				//fprintf(stderr, "\n");
 			}
-			for (j=0; j<5; j++){
-			  printf("%d, ", star->obs[j].field);
-			}
-			for (j=0; j<5; j++){
-			  printf("%d", star->obs[j].survey);
-			  if(j<4){
-			    printf(", ");
-			  }
-			}
-			
-			printf(";\n");
-			//fprintf(stderr, "\n");
+	
 		}
-
+		fprintf(output_file, "];\n");
+		fclose(output_file);
 	}
-	printf("];\n");
 
 	usnob_fits_close(usnob);
 

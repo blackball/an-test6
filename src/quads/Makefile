@@ -113,7 +113,7 @@ rdlstohealpix: rdlstohealpix.o \
 
 xylist2fits: xylist2fits.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
+	$(CC)  $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 
 .PHONY: tags
 tags:
