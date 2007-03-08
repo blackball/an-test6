@@ -66,14 +66,53 @@ body {
                    font-size: 200%;
                    }
 
+#linkhereandresetbox { 
+             padding-top: 3em;
+             clear: both;
+	         /*text-align: center;*/
+             }
+
+#resetbox { 
+	/*	padding-left: 2em;
+	margin-left: 2em;*/
+		 text-align: left;
+			float: right;
+		width: 48%;
+	/*
+	border-style: double;
+	border-color: grey;
+	*/
+             }
+
+#linkherebox { 
+		   text-align: right;
+			float: left;
+		width: 48%;
+	/*
+	border-style: double;
+	border-color: grey;
+	*/
+             }
+
+/*
 #linkherebox { 
              padding-top: 3em;
              clear: both;
              text-align: center;
              }
+*/
+
 #linkherebox input {
-                   font-size: 100%;
+                   font-size: 80%;
                    }
+
+#resetbox input {
+                   font-size: 80%;
+                   }
+
+#clearbox { 
+             clear: both;
+}
 
 .cap { 
        font-size: 80%;

@@ -92,6 +92,8 @@ $form->addElement('submit', 'submit', 'Submit');
 
 $form->addElement('submit', 'linkhere', 'Link to these parameter settings');
 
+$form->addElement('reset', 'reset', "Reset Form");
+
 $form->setMaxFileSize($maxfilesize);
 
 $form->addRule('xysrc', 'You must provide a field to solve!', 'required');
@@ -168,7 +170,7 @@ $template = file_get_contents($index_template);
 // all the "regular" fields.
 $flds = array('imgfile', 'fitsfile', 'imgurl', 'x_col', 'y_col',
 			  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
-			  'poserr', 'index', 'submit', 'linkhere');
+			  'poserr', 'index', 'submit', 'linkhere', 'reset');
 foreach ($flds as $fld) {
 	$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
 }
