@@ -377,6 +377,7 @@ function process_data ($vals) {
 	global $start_fn;
 	global $done_fn;
 	global $log_fn;
+	global $jobdata_fn;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -389,7 +390,7 @@ function process_data ($vals) {
 	$mydir = $resultdir . $myname . "/";
 
 	// Create a database...
-	$dbpath = $mydir . $dbfile;
+	$dbpath = $mydir . $jobdata_fn;
 	if (!create_db($dbpath)) {
 		die("failed to create db.");
 	}
@@ -759,6 +760,7 @@ function process_data ($vals) {
 					  "8degree" => array("allsky-38/allsky-38"),
 					  "15degree" => array("allsky-36/allsky-36"),
 					  //"15degree" => array("allsky-39/allsky-39"),
+					  //"15degree" => array("allsky-40/allsky-40"),
 					  );
 	$indexpaths = array();
 	foreach ($indexes as $i) {

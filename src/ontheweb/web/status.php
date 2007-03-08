@@ -1,4 +1,5 @@
 <?php
+require_once 'MDB2.php';
 
 require 'common.php';
 
@@ -33,6 +34,7 @@ $wcsfile = $mydir . $wcs_fn;
 $objsfile = $mydir . $objs_fn;
 $overlayfile = $mydir . $overlay_fn;
 $rdlsinfofile = $mydir . $rdlsinfo_fn;
+$jobdatafile = $mydir . $jobdata_fn;
 
 if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	// Rename it...
@@ -295,25 +297,94 @@ if ($job_done) {
 		echo "</td></tr>\n";
 
 		$cmd = $modhead . " " . $wcsfile . " CD1_1 | awk '{print $3}'";
-		loggit("Command: " . $cmd . "\n");
+		//loggit("Command: " . $cmd . "\n");
 		$cd11 = (float)rtrim(shell_exec($cmd));
 		$cmd = $modhead . " " . $wcsfile . " CD1_2 | awk '{print $3}'";
-		loggit("Command: " . $cmd . "\n");
+		//loggit("Command: " . $cmd . "\n");
 		$cd12 = (float)rtrim(shell_exec($cmd));
 		$cmd = $modhead . " " . $wcsfile . " CD2_1 | awk '{print $3}'";
-		loggit("Command: " . $cmd . "\n");
+		//loggit("Command: " . $cmd . "\n");
 		$cd21 = (float)rtrim(shell_exec($cmd));
 		$cmd = $modhead . " " . $wcsfile . " CD2_2 | awk '{print $3}'";
-		loggit("Command: " . $cmd . "\n");
+		//loggit("Command: " . $cmd . "\n");
 		$cd22 = (float)rtrim(shell_exec($cmd));
 		loggit("CD: $cd11, $cd12, $cd21, $cd22\n");
 
+		$det = $cd11 * $cd22 - $cd12 * $cd21;
+		$par = ($det > 0) ? 1 : -1;
+		$T = $par * $cd11 + $cd22;
+		$A = $par * $cd21 - $cd12;
+		$orient = -(180/M_PI) * atan2($A, $T);
+		$pixscale = 3600 * sqrt($par * $det);
+
+		/*
+		loggit("det(CD): $det.\n");
+		loggit("parity: $par.\n");
+		loggit("T: $T.\n");
+		loggit("A: $A.\n");
+		loggit("orient: $orient\n");
+		loggit("pixscale: $pixscale\n");
+		*/
+
 		echo '<tr><td>Orientation:</td><td>';
+		printf("%.2f deg E of N\n", $orient);
 		echo "</td></tr>\n";
 
+		echo '<tr><td>Pixel scale:</td><td>';
+		printf("%.2f arcsec/pixel\n", $pixscale);
+		echo "</td></tr>\n";
+
+		echo '<tr><td>Parity:</td><td>';
+		if ($par == 1) {
+			echo "Reverse (\"Left-handed\")";
+		} else {
+			echo "Normal (\"Right-handed\")";
+		}
+		echo "</td></tr>\n";
+
+		$db = connect_db($jobdatafile);
+		if (!$db) {
+			loggit("failed to connect jobdata db.\n");
+		} else {
+			$W = getjobdata($db, "imageW");
+			$H = getjobdata($db, "imageH");
+			$exact = TRUE;
+			if (!($W && $H)) {
+				$exact = FALSE;
+				$W = getjobdata($db, "xylsW");
+				$H = getjobdata($db, "xylsH");
+				if (!($W && $H)) {
+					loggit("Couldn't get xylsW/H.\n");
+				}
+			}
+			if ($W && $H) {
+				$fldw = $pixscale * $W;
+				$fldh = $pixscale * $H;
+				$units = "arcseconds";
+				if (min($fldw, $fldh) > 3600.0) {
+					$fldw /= 3660.0;
+					$fldh /= 3660.0;
+					$units = "degrees";
+				} else if (min($fldw, $fldh) > 60.0) {
+					$fldw /= 60.0;
+					$fldh /= 60.0;
+					$units = "arcminutes";
+				}
+				echo '<tr><td>Field size ';
+				if (!$exact) {
+					echo "(approximately)";
+				}
+				echo ':</td><td>';
+				printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
+				echo "</td></tr>\n";
+			}
+		}
+
+		/*
 		echo '<tr><td>Field size (approx):</td><td>';
 		echo $fieldsize;
 		echo "</td></tr>\n";
+		*/
 
 		echo '<tr><td>WCS file:</td><td>';
 		print_link($wcsfile);

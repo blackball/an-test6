@@ -27,7 +27,7 @@ $wcs_fn   = "wcs.fits";
 $objs_fn  = "objs.png";
 $overlay_fn="overlay.png";
 $rdlsinfo_fn="rdlsinfo";
-$dbfile = "jobdata.db";
+$jobdata_fn = "jobdata.db";
 
 if (strpos($host, "monte") === 0) {
 	$sqlite = "/h/260/dstn/software/sqlite-2.8.17/bin/sqlite";
@@ -70,7 +70,7 @@ $headers = $_REQUEST;
 $ontheweblogfile = "/tmp/ontheweb.log";
 function loggit($mesg) {
 	global $ontheweblogfile;
-	error_log($mesg, 3, $logfile);
+	error_log($mesg, 3, $ontheweblogfile);
 }
 
 function dtime2str($secs) {
