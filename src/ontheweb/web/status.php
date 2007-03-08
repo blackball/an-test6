@@ -243,24 +243,27 @@ if (!$job_submitted) {
 if ($job_submitted) {
 	echo '<tr><td>Submitted:</td><td>';
 	$t = filemtime($inputfile);
+	echo date("c", $t);
 	$dt = dtime2str($now - $t);
-	echo $dt . " ago";
+	echo "<br />(" . $dt . " ago)";
 	echo "</td></tr>\n";
 }
 
 if ($job_started) {
 	echo '<tr><td>Started:</td><td>';
 	$t = filemtime($startfile);
+	echo date("c", $t);
 	$dt = dtime2str($now - $t);
-	echo $dt . " ago";
+	echo "<br />(" . $dt . " ago)";
 	echo "</td></tr>\n";
 }
 
 if ($job_done) {
 	echo '<tr><td>Finished:</td><td>';
 	$t = filemtime($donefile);
+	echo date("c", $t);
 	$dt = dtime2str($now - $t);
-	echo $dt . " ago";
+	echo "<br />" . $dt . " ago)";
 	echo "</td></tr>\n";
 }
 

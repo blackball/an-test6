@@ -965,8 +965,11 @@ function process_data ($vals) {
 					  "1degree" => array("allsky-32/allsky-32"),
 					  "2degree" => array("allsky-37/allsky-37"),
 					  "4degree" => array("allsky-34/allsky-34"),
-					  "8degree" => array("allsky-35/allsky-35"),
-					  "15degree" => array("allsky-36/allsky-36"));
+					  //"8degree" => array("allsky-35/allsky-35"),
+					  "8degree" => array("allsky-38/allsky-38"),
+					  "15degree" => array("allsky-36/allsky-36"),
+					  //"15degree" => array("allsky-39/allsky-39"),
+					  );
 	$indexpaths = array();
 	foreach ($indexes as $i) {
 		$indexpaths = array_merge($indexpaths, $indexmap[$i]);
