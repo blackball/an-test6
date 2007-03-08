@@ -207,6 +207,8 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 Astrometry.net: Web Edition
 </title>
 <link rel="stylesheet" type="text/css" href="index.css" />
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
 

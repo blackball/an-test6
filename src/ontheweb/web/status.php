@@ -106,6 +106,9 @@ if ($do_refresh) {
 }
 ?>
 
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" href="favicon.png">
+
 </head>
 <body>
 
@@ -291,12 +294,19 @@ if ($job_done) {
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
 
-		/*
-	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
-	loggit("Command: " . $cmd . "\n");
-	$W = (int)rtrim(shell_exec($cmd));
-	loggit("naxis1 = " . $W . "\n");
-		*/
+		$cmd = $modhead . " " . $wcsfile . " CD1_1 | awk '{print $3}'";
+		loggit("Command: " . $cmd . "\n");
+		$cd11 = (float)rtrim(shell_exec($cmd));
+		$cmd = $modhead . " " . $wcsfile . " CD1_2 | awk '{print $3}'";
+		loggit("Command: " . $cmd . "\n");
+		$cd12 = (float)rtrim(shell_exec($cmd));
+		$cmd = $modhead . " " . $wcsfile . " CD2_1 | awk '{print $3}'";
+		loggit("Command: " . $cmd . "\n");
+		$cd21 = (float)rtrim(shell_exec($cmd));
+		$cmd = $modhead . " " . $wcsfile . " CD2_2 | awk '{print $3}'";
+		loggit("Command: " . $cmd . "\n");
+		$cd22 = (float)rtrim(shell_exec($cmd));
+		loggit("CD: $cd11, $cd12, $cd21, $cd22\n");
 
 		echo '<tr><td>Orientation:</td><td>';
 		echo "</td></tr>\n";
