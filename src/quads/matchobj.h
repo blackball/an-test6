@@ -39,6 +39,8 @@ struct match_struct {
 	int16_t noverlap;
 	int16_t nconflict;
 	int16_t ninfield;
+	// (not stored)
+	int16_t nindex;
 	// this isn't stored, it's computed from noverlap and ninfield.
 	float overlap;
 

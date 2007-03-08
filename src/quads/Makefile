@@ -238,6 +238,9 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
 plotxy: plotxy.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
+plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) -lgd -lpng -lz -ljpeg -lfreetype -lm
+
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codedensity: codedensity.o codekd.o dualtree_max.o \

@@ -335,6 +335,11 @@ void verify_hit(kdtree_t* startree,
 		return;
 	}
 
+	/*
+	  fprintf(stderr, "Number of field stars: %i\n", NF);
+	  fprintf(stderr, "Number of index stars: %i\n", NI);
+	*/
+
 	// We look at the minimum of the number of stars in the field and the number
 	// of stars in the index in that region.
 	Nmin = imin(NI, NF);
@@ -389,6 +394,7 @@ void verify_hit(kdtree_t* startree,
 	mo->noverlap = matches;
 	mo->nconflict = conflicts;
 	mo->ninfield = Nmin;
+	mo->nindex = NI;
 	matchobj_compute_overlap(mo);
 
 	if (pmatches)

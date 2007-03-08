@@ -129,6 +129,9 @@ handlehits* hits;
 char* rdlsfname;
 rdlist* rdls;
 
+char* indexrdlsfname;
+rdlist* indexrdls;
+
 int cpulimit;
 int timelimit;
 bool* p_quitNow;
@@ -183,6 +186,7 @@ int main(int argc, char *argv[]) {
 		solved_in = NULL;
 		solved_out = NULL;
 		rdlsfname = NULL;
+		indexrdlsfname = NULL;
 		do_tweak = FALSE;
 		solvedserver = NULL;
 		wcs_template = NULL;
@@ -217,6 +221,7 @@ int main(int argc, char *argv[]) {
 		quads = NULL;
 		starkd = NULL;
 		rdls = NULL;
+		indexrdls = NULL;
 		nverified = 0;
 		cpulimit = 0;
 		timelimit = 0;
@@ -354,6 +359,19 @@ int main(int argc, char *argv[]) {
 			} else {
 				fprintf(stderr, "Failed to open RDLS file %s for writing.\n",
 						rdlsfname);
+			}
+		}
+		if (indexrdlsfname) {
+			indexrdls = rdlist_open_for_writing(indexrdlsfname);
+			if (indexrdls) {
+				if (rdlist_write_header(indexrdls)) {
+					fprintf(stderr, "Failed to write index RDLS header.\n");
+					rdlist_close(indexrdls);
+					indexrdls = NULL;
+				}
+			} else {
+				fprintf(stderr, "Failed to open index RDLS file %s for writing.\n",
+						indexrdlsfname);
 			}
 		}
 
@@ -551,6 +569,13 @@ int main(int argc, char *argv[]) {
 			}
 			rdls = NULL;
 		}
+		if (indexrdls) {
+			if (rdlist_fix_header(indexrdls) ||
+				rdlist_close(indexrdls)) {
+				fprintf(stderr, "Failed to close index RDLS file.\n");
+			}
+			indexrdls = NULL;
+		}
 
 		if (donefname) {
 			FILE* batchfid = NULL;
@@ -601,6 +626,7 @@ int main(int argc, char *argv[]) {
 		free(solvedserver);
 		free(matchfname);
 		free(rdlsfname);
+		free(indexrdlsfname);
 		free(xcolname);
 		free(ycolname);
 		free(wcs_template);
@@ -671,6 +697,8 @@ static int read_parameters() {
 			matchfname = strdup(nextword);
 		} else if (is_word(buffer, "rdls ", &nextword)) {
 			rdlsfname = strdup(nextword);
+		} else if (is_word(buffer, "indexrdls ", &nextword)) {
+			indexrdlsfname = strdup(nextword);
 		} else if (is_word(buffer, "solved ", &nextword)) {
 			free(solved_in);
 			free(solved_out);
@@ -1014,6 +1042,11 @@ static void solve_fields() {
 				fprintf(stderr, "Failed to write RDLS field header.\n");
 			}
 		}
+		if (indexrdls) {
+			if (rdlist_write_new_field(indexrdls)) {
+				fprintf(stderr, "Failed to write index RDLS field header.\n");
+			}
+		}
 
 		fieldnum = il_get(fieldlist, fi);
 		if (fieldnum >= nfields) {
@@ -1128,8 +1161,9 @@ static void solve_fields() {
 			sip_t* sip = NULL;
 			// Field solved!
 			if (!silent)
-				fprintf(stderr, "Field %i solved with overlap %g.\n", fieldnum,
-						hits->bestmo->overlap);
+				fprintf(stderr, "Field %i solved with overlap %g (%i matched, %i tried, %i in index).\n", fieldnum,
+						hits->bestmo->overlap,
+						hits->bestmo->noverlap, hits->bestmo->ninfield, hits->bestmo->nindex);
 
 			// Tweak, if requested.
 			if (do_tweak) {
@@ -1189,6 +1223,45 @@ static void solve_fields() {
 				free(radec);
 			}
 
+			if (indexrdls) {
+				kdtree_qres_t* res = NULL;
+				double* starxyz;
+				int nstars;
+				double* radec;
+				int i;
+				double fieldcenter[3];
+				double fieldr2;
+				MatchObj* mo = hits->bestmo;
+				// find all the index stars that are inside the circle that bounds
+				// the field.
+				for (i=0; i<3; i++)
+					fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
+				fieldr2 = distsq(fieldcenter, mo->sMin, 3);
+				// 1.05 is a little safety factor.
+				res = kdtree_rangesearch_options(starkd->tree, fieldcenter,
+												 fieldr2 * 1.05,
+												 KD_OPTIONS_SMALL_RADIUS |
+												 KD_OPTIONS_RETURN_POINTS);
+				if (!res || !res->nres) {
+					fprintf(stderr, "No index stars found!\n");
+				}
+				starxyz = res->results.d;
+				nstars = res->nres;
+
+				radec = malloc(nstars * 2 * sizeof(double));
+				for (i=0; i<nstars; i++)
+					xyzarr2radec(starxyz + i*3, radec+i*2, radec+i*2+1);
+				for (i=0; i<2*nstars; i++)
+					radec[i] = rad2deg(radec[i]);
+
+				if (rdlist_write_entries(indexrdls, radec, nstars)) {
+					fprintf(stderr, "Failed to write index RDLS entry.\n");
+				}
+
+				free(radec);
+				kdtree_free_query(res);
+			}
+
 			if (sip) {
 				sip_free(sip);
 			}
@@ -1228,6 +1301,11 @@ static void solve_fields() {
 		if (rdls) {
 			if (rdlist_fix_field(rdls)) {
 				fprintf(stderr, "Failed to fix RDLS field header.\n");
+			}
+		}
+		if (indexrdls) {
+			if (rdlist_fix_field(indexrdls)) {
+				fprintf(stderr, "Failed to fix index RDLS field header.\n");
 			}
 		}
 	}
