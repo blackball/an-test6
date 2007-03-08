@@ -4,177 +4,22 @@ require_once 'HTML/QuickForm.php';
 require_once 'HTML/QuickForm/Renderer/QuickHtml.php';
 require_once 'PEAR.php';
 
+require 'common.php';
+
 $host  = $_SERVER['HTTP_HOST'];
 
-if (strpos($host, "monte") === 0) {
-	$sqlite = "/h/260/dstn/software/sqlite-2.8.17/bin/sqlite";
-	#$resultdir = "/tmp/ontheweb-data/";
-	#$indexdir = "/tmp/ontheweb-indexes/";
-	$resultdir = "/h/260/dstn/local/ontheweb-results/";
-	$indexdir = "/h/260/dstn/local/ontheweb-indexes/";
-	$fits2xy = "~/an/simplexy/fits2xy";
-	$plotxy = "plotxy";
-	$modhead = "modhead";
-	$tabsort = "tabsort";
-	$tabmerge = "tabmerge";
-	$mergesolved = "mergesolved";
-	//$fitsgetext = "fitsgetext";
-	$rdlsinfo = "rdlsinfo";
-	$xylsinfo = "/h/260/dstn/an/quads/xylsinfo";
-	$printsolved = "printsolved";
-	$wcs_xy2rd = "wcs-xy2rd";
-	$wcs_rd2xy = "wcs-rd2xy";
-} else {
-	$sqlite = "sqlite";
-	$resultdir = "/home/gmaps/ontheweb-data/";
-	$indexdir = "/home/gmaps/ontheweb-indexes/";
-	$fits2xy = "/home/gmaps/simplexy/fits2xy";
-	$plotxy = "/home/gmaps/quads/plotxy";
-	$modhead = "/home/gmaps/quads/modhead";
-	$tabsort = "/home/gmaps/quads/tabsort";
-	$tabmerge = "/home/gmaps/quads/tabmerge";
-	//$fitsgetext = "/home/gmaps/quads/fitsgetext";
-	$mergesolved = "/home/gmaps/quads/mergesolved";
-	$rdlsinfo = "/home/gmaps/quads/rdlsinfo";
-	$xylsinfo = "/home/gmaps/quads/xylsinfo";
-	$printsolved = "/home/gmaps/quads/printsolved";
-	$wcs_xy2rd = "/home/gmaps/quads/wcs-xy2rd";
-	$wcs_rd2xy = "/home/gmaps/quads/wcs-rd2xy";
-}
-$logfile = "/tmp/ontheweb.log";
-
-$index_template = "index-template.html";
-
-$maxtime = 120; // Two minute max!
-$maxquads = 0; // 1000000;
-$maxcpu = 0;
-
-$check_xhtml = 1;
 $debug = 0;
 
-$dbfile = "jobdata.db";
-
 $maxfilesize = 100*1024*1024;
-$headers = $_REQUEST;
 
 umask(0002); // in octal
-
-function loggit($mesg) {
-	global $logfile;
-	error_log($mesg, 3, $logfile);
-}
-
-function create_random_dir($basedir) {
-    while (TRUE) {
-        // Generate a random string.
-        $str = '';
-        for ($i=0; $i<5; $i++) {
-            $str .= chr(mt_rand(0, 255));
-        }
-        // Convert it to hex.
-        $myname = bin2hex($str);
-
-        // See if that dir already exists.
-        $mydir = $basedir . $myname;
-        if (!file_exists($mydir)) {
-			break;
-		}
-    }
-	if (!mkdir($mydir)) {
-		return FALSE;
-	}
-	return $myname;
-}
-
-/*
-"pecl install sqlite" is fscked.
-
-function create_db($dbpath) {
-	$db = new SQLiteDatabase($dbpath, 0664, $error);
-	if ($error) {
-		loggit("Error creating SQLite db: $error\n");
-		return FALSE;
-	}
-	return TRUE;
-}
-*/
-
-function create_db($dbpath) {
-	global $sqlite;
-	// create database.
-	$cmd = $sqlite . " " . $dbpath . " .exit";
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		return FALSE;
-	}
-	return TRUE;
-}
-
-function connect_db($dbpath) {
-	// Connect to database
-	$dsn = array('phptype'  => 'sqlite', 'database' => $dbpath,
-				 'mode'     => '0644', );
-	//$options = array('debug'       => 2, 'portability' => DB_PORTABILITY_ALL,);
-	$options = array();
-	$db =& MDB2::connect($dsn, $options);
-	if (PEAR::isError($db)) {
-		loggit("Error connecting to SQLite db $dbpath: " .
-			   $db->getMessage() . "\n");
-		return FALSE;
-	}
-	return $db;
-}
-
-function create_table($db) {
-	// Create table.
-	$q = "CREATE TABLE jobdata (key UNIQUE, val);";
-	loggit("Query: " . $q . "\n");
-	$res =& $db->exec($q);
-	if (PEAR::isError($res)) {
-		loggit("Error creating table: " . $db->getMessage() . "\n");
-		return FALSE;
-	}
-	//loggit("Created table.\n");
-	return TRUE;
-}
-
-function getjobdata($db, $key) {
-	$res =& $db->query('SELECT val FROM jobdata WHERE key = "' . $key . '"');
-	if (PEAR::isError($res)) {
-		loggit("Database error: " . $res->getMessage() . "\n");
-		return FALSE;
-	}
-	$row = $res->fetchRow();
-	if (!$row) {
-		return FALSE;
-	}
-	return $row[0];
-}
-
-function setjobdata($db, $vals) {
-	foreach ($vals as $key => $val) {
-		$q = 'REPLACE INTO jobdata VALUES ("' . $key . '", "' . $val . '");';
-		loggit("Query: " . $q . "\n");
-		$res =& $db->exec($q);
-		if (PEAR::isError($res)) {
-			loggit("Database error: " . $res->getMessage() . "\n");
-			return FALSE;
-		}
-	}
-	return TRUE;
-}
 
 function printerror($err) {
 	echo $err->getMessage() . "<br>";
 	echo $err->getDebugInfo() . "<br>";
-	//print_r($err);
 	die("error.");
 }
 
-//PEAR::setErrorHandling(PEAR_ERROR_DIE);
 PEAR::setErrorHandling(PEAR_ERROR_CALLBACK, 'printerror');
 
 // Copy GET variables into POST, to allow defaults to be set
@@ -183,7 +28,6 @@ foreach ($_GET as $key=>$val) {
 	if (!array_key_exists($key, $_POST))
 		$_POST[$key]=$val;
 }
-
 
 /***    Describe the HTML form.   ***/
 
@@ -375,7 +219,6 @@ Astrometry.net: Web Edition
 <?php
 // Here's where we render the form...
 echo $renderer->toHtml($template);
-//$form->display();
 ?>
 
 <hr />
@@ -521,31 +364,20 @@ function process_data ($vals) {
 	global $printsolved;
 	global $wcs_xy2rd;
 	global $wcs_rd2xy;
+	global $input_fn;
+	global $inputtmp_fn;
+	global $donescript_fn;
+	global $rdls_fn;
+	global $rdlsinfo_fn;
+	global $match_fn;
+	global $solved_fn;
+	global $wcs_fn;
+	global $start_fn;
+	global $done_fn;
+	global $log_fn;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
-
-	//echo "<html><body>";
-
-	/*
-	echo "<table border=1>\n";
-	echo "<tr><td>Image file uploaded?</td><td>" .
-		($imgfile->isUploadedFile() ? "yes" : "no") .
-		"</td></tr>\n";
-	echo "<tr><td>FITS file uploaded?</td><td>" .
-		($fitsfile->isUploadedFile() ? "yes" : "no") .
-		"</td></tr>\n";
-	foreach ($vals as $key=>$value) {
-		echo "<tr><td>" . $key . "</td><td>" . $value . "</td></tr>";
-	}
-	echo "</table>\n";
-	//</body></html>\n";
-
-	echo "imgfile value: <pre>";
-	print_r($form->exportValue("imgfile"));
-	print_r($imgfile->getValue());
-	echo "</pre>";
-	*/
 
 	// Create a directory for this request.
 	$myname = create_random_dir($resultdir);
@@ -563,7 +395,7 @@ function process_data ($vals) {
 	if (!$db) {
 		die("failed to connect db.");
 	}
-	if (!create_table($db)) {
+	if (!create_jobdata_table($db)) {
 		die("failed to create table.");
 	}
 
@@ -600,10 +432,7 @@ function process_data ($vals) {
 	$imgfilename = "";
 	if ($xysrc == "url") {
 		// Try to retrieve the URL...
-		//echo "<p>Retrieving image from URL: <tt>" . $imgurl . "</tt>...</p>\n";
-		//ob_flush();
 		loggit("retrieving url " . $imgurl . " ...\n");
-
 		$usetype = get_image_type($imgurl, $xtopnm);
 		if (!$usetype) {
 			loggit("unknown image type.\n");
@@ -623,12 +452,6 @@ function process_data ($vals) {
 			die("failed to open output file " . $downloadedimg);
 		}
 
-		//phpinfo();
-		/*
-		echo "file size: " . filesize($imgurl) . "<br />\n";
-		ob_flush();
-		*/
-
 		$nr = 0;
 		$blocksize = 1024;
 		for ($i=0; $i<$maxfilesize/$blocksize; $i++) {
@@ -636,8 +459,6 @@ function process_data ($vals) {
 			if ($block === FALSE) {
 				die("failed to read from URL " . $imgurl);
 			}
-			//echo "read " . strlen($block) . "<br />\n";
-			//ob_flush();
 			if (fwrite($fout, $block) === FALSE) {
 				die("failed to write to output file " . $downloadedimg);
 			}
@@ -646,8 +467,6 @@ function process_data ($vals) {
 
 			if (strlen($block) < $blocksize)
 				if (feof($fin)) {
-					//echo "eof<br />\n";
-					//ob_flush();
 					break;
 				}
 		}
@@ -656,9 +475,6 @@ function process_data ($vals) {
 		}
 		fclose($fin);
 		fclose($fout);
-		//echo "<p>Read " . $nr . " bytes.</p>\n";
-		//ob_flush();
-
 		$imgfilename = $downloadedimg;
 
 	} else if ($xysrc == "img") {
@@ -683,8 +499,6 @@ function process_data ($vals) {
 
 
 	if ($imgfilename) {
-		//echo "<p>Processing image...</p>\n";
-		//ob_flush();
 		if (!convert_image($imgfilename, $mydir, $xtopnm,
 						   $errstr, $W, $H)) {
 			die($errstr);
@@ -719,11 +533,6 @@ function process_data ($vals) {
 			if ($exif === FALSE) {
 				loggit("exif_read_data failed for file " . $imgfilename . "\n");
 			} else {
-				/*
-				echo "<pre>";
-				print_r($exif);
-				echo "</pre>";
-				*/
 				loggit("EXIF data:\n");
 				foreach ($exif as $key => $section) {
 					if (is_array($section)) {
@@ -778,36 +587,32 @@ function process_data ($vals) {
 		die("Failed to chmod xylist " . $xylist);
 	}
 
-	$inputfile = $mydir . "input";
-	$donescript = $mydir . "donescript";
-	$rdlist = $mydir . "field.rd.fits";
-	$rdlsinfofile = $mydir . "rdlsinfo";
-	$matchfile = $mydir . "match.fits";
-	$solvedfile = $mydir . "solved";
-	$wcsfile = $mydir . "wcs.fits";
-	$startfile = $mydir . "start";
-	$donefile = $mydir . "done";
-	$logfile = $mydir . "log";
-	//$rdlists = $mydir . "field%d.rd.fits";
-	//$matchfiles = $mydir . "match%d.fits";
-	//$solvedfiles = $mydir . "solved%d";
+	$inputfile = $mydir . $input_fn;
+	$inputtmpfile = $mydir . $inputtmp_fn;
+	$donescript = $mydir . $donescript_fn;
+	$rdlist = $mydir . $rdls_fn;
+	$rdlsinfofile = $mydir . $rdlsinfo_fn;
+	$matchfile = $mydir . $match_fn;
+	$solvedfile = $mydir . $solved_fn;
+	$wcsfile = $mydir . $wcs_fn;
+	$startfile = $mydir . $start_fn;
+	$donefile = $mydir . $done_fn;
+	$logfile = $mydir . $log_fn;
 
 	$index = $vals["index"];
 	$x_col = $vals["x_col"];
 	$y_col = $vals["y_col"];
 	$parity = $vals["parity"];
 	$tweak = $vals["tweak"];
-
 	$poserr = $vals["poserr"];
 
 	$codetol = 0.01;
 	$nagree = 0;
 
-
 	if ($imgfilename) {
 		// Write to "input.tmp" instead of "input", so we don't trigger
 		// the solver just yet...
-		$inputfile = $inputfile . ".tmp";
+		$inputfile = $inputtmpfile;
 	}
 
 	// MAJOR HACK - pause to let the watcher notice that the
@@ -822,23 +627,6 @@ function process_data ($vals) {
 	fprintf($fdone,
 			"#! /bin/bash\n" .
 			"touch " . $donefile . "\n" .
-			/*
-			 // FIXME - this should probably be replaced by "agreeable"...
-			 // merge solved files
-			"echo Merging solved files...\n" .
-			$mergesolved . " -e -o " . $solvedfile . " " .
-			sprintf($solvedfiles, 0) . " " .
-			sprintf($solvedfiles, 1) . "\n" .
-			// merge match files
-			"echo Merging match files...\n" .
-			"cp " . sprintf($matchfiles, 0) . " " . $matchfile . "\n" .
-			$tabmerge . " " . sprintf($matchfiles, 1) . "+1 " . $matchfile . "+1\n" .
-			// merge rdls files
-			// FIXME - the +1 causes only the first extension to be copied...
-			"echo Merging rdls files...\n" .
-			"cp " . sprintf($rdlists, 0) . " " . $rdlist . "\n" .
-			$tabmerge . " " . sprintf($rdlists, 1) . "+1 " . $rdlist . "+1\n" .
-			*/
 			"if [ `" . $printsolved . " " . $solvedfile . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
 			"  echo \"Field solved.\";\n" .
 			"  echo Running wcs-xy2rd...;\n" .
@@ -1007,11 +795,6 @@ function process_data ($vals) {
 		($tweak ? "tweak\n" : "") .
 		"run\n" .
 		"\n";
-	//loggit("input: $str\n");
-	//"agreetol " . $agree . "\n" .
-	//"done " . $donefile . "\n" .
-	//"rdls " . $rdlist . "\n" .
-	//"verify_dist " . $verify . "\n" .
 	fprintf($fin, $str);
 
 	if (!fclose($fin)) {
@@ -1029,25 +812,6 @@ function process_data ($vals) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	header("Location: http://" . $host . $uri . "/" . $status_url);
-	/*
-	$url = "http://" . $host . $uri . "/" . $status_url;
-	echo "<p><a href=" . $url . ">Continue</a></p>\n";
-	//echo <<<END
-?>
-<p>(You should be redirected in 3 seconds...)</p>
-<script type="text/javascript">
-<!--
-function delayer(){
-	window.location = "<?php
-echo $url;
-?>"
-}
-setTimeout('delayer()', 3000)
-//-->
-</script>
-
-<?php	
-	*/
 	exit;
 }
 
@@ -1089,6 +853,7 @@ function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
 	global $modhead;
 	global $plotxy;
 	global $tabsort;
+	global $objs_fn;
 
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
@@ -1238,7 +1003,7 @@ function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
 		return FALSE;
 	}
 
-	$sumimgpng = $mydir . "objs.png";
+	$sumimgpng = $mydir . $objs_fn;
 	$cmd = "pnmtopng " . $sumimg . " > " . $sumimgpng;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;

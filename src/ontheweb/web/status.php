@@ -1,16 +1,6 @@
 <?php
-$resultdir = "/home/gmaps/ontheweb-data/";
-$gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
-$statuspath = "status/";
-$check_xhtml = 1;
 
-$headers = $_REQUEST;
-
-$logfile = "/tmp/ontheweb.log";
-function loggit($mesg) {
-	global $logfile;
-	error_log($mesg, 3, $logfile);
-}
+require 'common.php';
 
 if (!array_key_exists("job", $headers)) {
 	echo "<h3>No \"job\" argument</h3></body></html>\n";
@@ -27,30 +17,27 @@ $overlay = array_key_exists("overlay", $headers);
 $rp1 = realpath($resultdir);
 $rp2 = realpath($mydir);
 if (substr($rp2, 0, strlen($rp1)) != $rp1) {
-	echo "<h3>Attempted tricky \"job\" argument.  Naughty!</h3>";
-	echo "<pre>" . $rp1 . "\n" . $rp2 . "\n";
-	echo substr($rp2, 0, strlen($rp1)) . "\n</pre></body></html>\n";
-	exit;
+	die("Invalid \"job\" arg.");
 }
 
-$qfile = $resultdir . "queue";
-$inputfile = $mydir . "input";
-$startfile = $mydir . "start";
-$donefile  = $mydir . "done";
-$xylist = $mydir . "field.xy.fits";
-$rdlist = $mydir . "field.rd.fits";
-$blindlogfile = $mydir . "log";
-$solvedfile = $mydir . "solved";
-$wcsfile = $mydir . "wcs.fits";
-$objsfile = $mydir . "objs.png";
-$overlayfile = $mydir . "overlay.png";
-$rdlsinfofile = $mydir . "rdlsinfo";
+$qfile = $resultdir . $q_fn;
+$inputfile = $mydir . $input_fn;
+$inputtmpfile = $mydir . $inputtmp_fn;
+$startfile = $mydir . $start_fn;
+$donefile  = $mydir . $done_fn;
+$xylist = $mydir . $xyls_fn;
+$rdlist = $mydir . $rdls_fn;
+$blindlogfile = $mydir . $log_fn;
+$solvedfile = $mydir . $solved_fn;
+$wcsfile = $mydir . $wcs_fn;
+$objsfile = $mydir . $objs_fn;
+$overlayfile = $mydir . $overlay_fn;
+$rdlsinfofile = $mydir . $rdlsinfo_fn;
 
-if (!$img && !file_exists($inputfile) && file_exists($inputfile . ".tmp")) {
+if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	// Rename it...
-	if (!rename($inputfile . ".tmp", $inputfile)) {
-		echo "<html><body><h3>Failed to move temp file from " . $fitstempfilename . " to " . $newname . "</h3></body></html>";
-		exit;
+	if (!rename($inputtmpfile, $inputfile)) {
+		die("Failed to rename input temp file (" . $inputtmpfile . " to " . $inputfile);
 	}
 	// Hack - pause a moment...
 	sleep(1);
@@ -130,18 +117,6 @@ $uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $statusurl = "http://" . $host . $uri . "/" . $statuspath;
 
 $now = time();
-
-function dtime2str($secs) {
-	if ($secs > 3600*24) {
-		return sprintf("%.1f days", (float)$secs/(float)(3600*24));
-	} else if ($secs > 3600) {
-		return sprintf("%.1f hours", (float)$secs/(float)(3600));
-	} else if ($secs > 60) {
-		return sprintf("%.1f minutes", (float)$secs/(float)(60));
-	} else {
-		return sprintf("%d seconds", $secs);
-	}
-}
 
 function get_url($f) {
 	global $statusurl;
@@ -314,6 +289,16 @@ if ($job_done) {
 	if ($didsolve) {
 		echo '<tr><td>(RA, DEC) center:</td><td>';
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
+		echo "</td></tr>\n";
+
+		/*
+	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
+	loggit("Command: " . $cmd . "\n");
+	$W = (int)rtrim(shell_exec($cmd));
+	loggit("naxis1 = " . $W . "\n");
+		*/
+
+		echo '<tr><td>Orientation:</td><td>';
 		echo "</td></tr>\n";
 
 		echo '<tr><td>Field size (approx):</td><td>';
