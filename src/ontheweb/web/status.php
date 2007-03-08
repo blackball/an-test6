@@ -35,6 +35,10 @@ $objsfile = $mydir . $objs_fn;
 $overlayfile = $mydir . $overlay_fn;
 $rdlsinfofile = $mydir . $rdlsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
+$indexxyls = $mydir . $indexxyls_fn;
+
+// the user's image.
+$pnmimg = $mydir . "image.pnm";
 
 if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	// Rename it...
@@ -84,6 +88,68 @@ if ($didsolve) {
 		$fieldsize = $infomap["field_size"];
 	}
 }
+
+if ($overlay) {
+
+	loggit("overlay image: " . $overlayfile . "\n");
+	loggit("exists? " . (file_exists($overlayfile) ? "yes" : "no") . "\n");
+
+	if (!file_exists($overlayfile)) {
+		// render it!
+		if (!$didsolve) {
+			die("Field didn't solve.");
+		}
+		$db = connect_db($jobdatafile);
+		if (!$db) {
+			die("failed to connect jobdata db.\n");
+		}
+		$W = getjobdata($db, "imageW");
+		$H = getjobdata($db, "imageH");
+		if (!($W && $H)) {
+			die("failed to find image width and height.\n");
+		}
+
+		$xypgm = $mydir . "index.xy.pgm";
+		$redimg = $mydir . "red.pgm";
+		$sumimg = $mydir . "sum.ppm";
+
+		$cmd = $plotxy . " -i " . $indexxyls . " -W " . $W . " -H " . $H . " > " . $xypgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("plotxy failed. retval $retval, res \"" . $res . "\"");
+		}
+
+		$cmd = "pgmtoppm red " . $xypgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pgmtoppm failed.");
+		}
+
+		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $pnmimg . " " . $sumimg;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pnmcomp failed.");
+		}
+
+		$cmd = "pnmtopng " . $sumimg . " > " . $overlayfile;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pnmtopng failed.");
+		}
+	}
+
+	if (file_exists($overlayfile)) {
+		header('Content-type: image/png');
+		readfile($overlayfile);
+		exit;
+	} else
+		die("overlay file does not exist.");
+}
+
 ?>
 
 <!DOCTYPE html 
@@ -99,6 +165,7 @@ table.c {margin-left:auto; margin-right:auto;}
 p.c {margin-left:auto; margin-right:auto; text-align:center;}
 form.c {margin-left:auto; margin-right:auto; text-align:center;}
 h3.c {text-align:center;}
+#overlay { margin-left:auto; margin-right:auto; text-align:center; }
 </style>
 
 <?php
@@ -170,16 +237,6 @@ END;
 	exit;
 }
 
-if ($overlay) {
-	if (!file_exists($overlayfile)) {
-		// render it!
-		// FIXME
-	}
-	header('Content-type: image/png');
-	readfile($overlayfile);
-	exit;
-}
-
 ?>
 
 <h2>
@@ -193,6 +250,21 @@ if ($didsolve) {
 	echo "<h3 class=\"c\">Your field is at RA,DEC = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
 	echo "<hr />\n";
 }
+
+//<?php
+//loggit("didsolve: $didsolve.  pnmimg? " . file_exists($pnmimg) . "\n");
+if ($didsolve && file_exists($pnmimg)) {
+	$host  = $_SERVER['HTTP_HOST'];
+	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+	echo "<div id=\"overlay\">\n";
+	echo "<p>Your field, overplotted with objects from the index.</p>\n";
+	echo "<img src=\"" .
+		"http://" . $host . $uri . "/status.php?job=" . $myname . "&overlay" .
+		"\" />";
+	echo "</div>\n";
+	echo "<hr />\n";
+}
+//?>
 ?>
 
 <table cellpadding="3" border="1" class="c">
@@ -439,6 +511,8 @@ print_link($blindlogfile);
 
 <hr />
 
+<?php
+/* Boo hoo, no grass.
 <table border="1" class="c">
 <tr><td>Log File</td></tr>
 <tr><td>
@@ -455,6 +529,8 @@ if (file_exists($blindlogfile)) {
 </table>
 
 <hr />
+*/
+?>
 
 <?php
 if ($check_xhtml) {

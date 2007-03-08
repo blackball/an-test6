@@ -371,6 +371,8 @@ function process_data ($vals) {
 	global $input_fn;
 	global $inputtmp_fn;
 	global $donescript_fn;
+	global $indexrdls_fn;
+	global $indexxyls_fn;
 	global $rdls_fn;
 	global $rdlsinfo_fn;
 	global $match_fn;
@@ -380,6 +382,7 @@ function process_data ($vals) {
 	global $done_fn;
 	global $log_fn;
 	global $jobdata_fn;
+	global $tabmerge;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -596,6 +599,8 @@ function process_data ($vals) {
 	$inputtmpfile = $mydir . $inputtmp_fn;
 	$donescript = $mydir . $donescript_fn;
 	$rdlist = $mydir . $rdls_fn;
+	$indexrdls = $mydir . $indexrdls_fn;
+	$indexxyls = $mydir . $indexxyls_fn;
 	$rdlsinfofile = $mydir . $rdlsinfo_fn;
 	$matchfile = $mydir . $match_fn;
 	$solvedfile = $mydir . $solved_fn;
@@ -623,37 +628,6 @@ function process_data ($vals) {
 	// MAJOR HACK - pause to let the watcher notice that the
 	// new directory was created.
 	sleep(1);
-
-	// Write the donescript for blind...
-	$fdone = fopen($donescript, "w");
-	if (!$fdone) {
-		die("Failed to write donescript " . $donescript);
-	}
-	fprintf($fdone,
-			"#! /bin/bash\n" .
-			"touch " . $donefile . "\n" .
-			"if [ `" . $printsolved . " " . $solvedfile . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
-			"  echo \"Field solved.\";\n" .
-			"  echo Running wcs-xy2rd...;\n" .
-			"  " . $wcs_xy2rd . " -w " . $wcsfile . " -i " . $xylist . ".fits" . " -o " . $rdlist . " -X " . $x_col . " -Y " . $y_col . ";\n" .
-			"  echo Running rdlsinfo...;\n" .
-			"  " . $rdlsinfo . " " . $rdlist . " > " . $rdlsinfofile . ";\n" .
-			"else\n" .
-			"  echo \"Field did not solve.\";\n" .
-			"fi\n"
-			);
-	if (!fclose($fdone)) {
-		die("Failed to close donescript " . $donescript);
-	}
-	if (!chmod($donescript, 0775)) {
-		die("Failed to chmod donescript " . $donescript);
-	}
-
-	// Write the input file for blind...
-	$fin = fopen($inputfile, "w");
-	if (!$fin) {
-		die("Failed to write input file " . $inputfile);
-	}
 
 	$fsunit = $vals["fsunit"];
 	$fsu = $vals["fsu"];
@@ -770,6 +744,12 @@ function process_data ($vals) {
 	}
 	$indexes = $indexpaths;
 
+	// Write the input file for blind...
+	$fin = fopen($inputfile, "w");
+	if (!$fin) {
+		die("Failed to write input file " . $inputfile);
+	}
+
 	fprintf($fin, "log " . $logfile . "\n");
 	foreach ($indexes as $ind) {
 		fprintf($fin, "index " . $indexdir . $ind . "\n");
@@ -780,6 +760,7 @@ function process_data ($vals) {
 		"solved " . $solvedfile . "\n" .
 		"match " . $matchfile . "\n" .
 		"wcs " . $wcsfile . "\n" .
+		"indexrdls " . $indexrdls . "\n" .
 		"fields 0\n" .
 		"xcol " . $x_col . "\n" .
 		"ycol " . $y_col . "\n" .
@@ -809,6 +790,38 @@ function process_data ($vals) {
 
 	loggit("Wrote blind input file: " . $inputfile . "\n");
 
+	// Write the donescript for blind...
+	$fdone = fopen($donescript, "w");
+	if (!$fdone) {
+		die("Failed to write donescript " . $donescript);
+	}
+	fprintf($fdone,
+			"#! /bin/bash\n" .
+			"touch " . $donefile . "\n" .
+			"if [ `" . $printsolved . " " . $solvedfile . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
+			"  echo \"Field solved.\";\n" .
+			"  echo Running wcs-xy2rd...;\n" .
+			"  " . $wcs_xy2rd . " -w " . $wcsfile . " -i " . $xylist . ".fits" . " -o " . $rdlist . " -X " . $x_col . " -Y " . $y_col . ";\n" .
+			"  echo Running rdlsinfo...;\n" .
+			"  " . $rdlsinfo . " " . $rdlist . " > " . $rdlsinfofile . ";\n" .
+			"  echo Merging index rdls file...\n" .
+			"  cp " . $indexrdls . " " . $indexrdls . ".orig\n" .
+			"  cp " . $indexrdls . " " . $indexrdls . ".tmp\n" .
+			"  for ((i=2; i<=" . count($indexes) . "; i++)); do\n" .
+			"    " . $tabmerge . " " . $indexrdls . "+\$i " . $indexrdls . ".tmp+1\n" .
+			"  done\n" .
+			"  mv " . $indexrdls . ".tmp " . $indexrdls . "\n" .
+			"  " . $wcs_rd2xy . " -w " . $wcsfile . " -i " . $indexrdls . " -o " . $indexxyls . ";\n" .
+			"else\n" .
+			"  echo \"Field did not solve.\";\n" .
+			"fi\n"
+			);
+	if (!fclose($fdone)) {
+		die("Failed to close donescript " . $donescript);
+	}
+	if (!chmod($donescript, 0775)) {
+		die("Failed to chmod donescript " . $donescript);
+	}
 
 	// Redirect the client to the status page...
 	$status_url = "status.php?job=" . $myname;
