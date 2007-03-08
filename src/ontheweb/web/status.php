@@ -6,6 +6,12 @@ $check_xhtml = 1;
 
 $headers = $_REQUEST;
 
+$logfile = "/tmp/ontheweb.log";
+function loggit($mesg) {
+	global $logfile;
+	error_log($mesg, 3, $logfile);
+}
+
 if (!array_key_exists("job", $headers)) {
 	echo "<h3>No \"job\" argument</h3></body></html>\n";
 	exit;
@@ -33,7 +39,7 @@ $startfile = $mydir . "start";
 $donefile  = $mydir . "done";
 $xylist = $mydir . "field.xy.fits";
 $rdlist = $mydir . "field.rd.fits";
-$logfile = $mydir . "log";
+$blindlogfile = $mydir . "log";
 $solvedfile = $mydir . "solved";
 $wcsfile = $mydir . "wcs.fits";
 $objsfile = $mydir . "objs.png";
@@ -263,8 +269,8 @@ if ($job_queued) {
 	$q = @file($qfile);
 	$pos = -1;
 	for ($i=0; $i<count($q); $i++) {
-		$entry = rtrim($q[$i]);
-		if ($entry == $myname) {
+		$entry = explode("/", rtrim($q[$i]));
+		if ($entry[count($entry)-2] == $myname) {
 			$pos = $i;
 			break;
 		}
@@ -284,6 +290,9 @@ if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
 }
 
 function field_solved($solvedfile, &$msg) {
+	if (!file_exists($solvedfile)) {
+		return FALSE;
+	}
 	$contents = file_get_contents($solvedfile);
 	return (strlen($contents) && (ord($contents[0]) == 1));
 }
@@ -328,16 +337,22 @@ if ($job_done) {
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";
-		echo $gmaps_url . "?ra=" . $rac_merc . "&dec=" . $decc_merc .
-			"&zoom=" . $zoom . "&over=no" .
+		echo $gmaps_url . 
+			"?zoom=" . $zoom . 
+			"&ra=" . $rac_merc .
+			"&dec=" . $decc_merc .
+			"&over=no" .
 			"&rdls=" . $myname . "/field.rd.fits" .
 			"&view=r+u&nr=200";
 		echo "\">USNOB</a>\n";
 		echo "<a href=\"";
-		echo $gmaps_url . "?ra=" . $rac_merc . "&dec=" . $decc_merc .
-			"&zoom=" . $zoom . "&over=no" .
+		echo $gmaps_url .
+			"?gain=" . (($zoom <= 6) ? "-2" : "0") .
+			"&zoom=" . $zoom .
+			"&ra=" . $rac_merc . "&dec=" . $decc_merc .
+			"&over=no" .
 			"&rdls=" . $myname . "/field.rd.fits" .
-			"&view=r+t&nr=200&arcsinh&gain=-2";
+			"&view=r+t&nr=200&arcsinh";
 		echo "\">Tycho-2</a>\n";
 		echo "</td></tr>\n";
 	}
@@ -346,7 +361,7 @@ if ($job_done) {
 
 <tr><td>Log file:</td><td>
 <?php
-print_link($logfile);
+print_link($blindlogfile);
 ?>
 </td></tr>
 
@@ -360,8 +375,8 @@ print_link($logfile);
 <tr><td>
 <pre>
 <?php
-if (file_exists($logfile)) {
-	echo file_get_contents($logfile);
+if (file_exists($blindlogfile)) {
+	echo file_get_contents($blindlogfile);
 } else {
 	echo "(not available)";
 }

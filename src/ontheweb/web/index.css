@@ -65,6 +65,16 @@ body {
 #bottombox input {
                    font-size: 200%;
                    }
+
+#linkherebox { 
+             padding-top: 3em;
+             clear: both;
+             text-align: center;
+             }
+#linkherebox input {
+                   font-size: 100%;
+                   }
+
 .cap { 
        font-size: 80%;
        color: #22c;
