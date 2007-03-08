@@ -31,7 +31,7 @@ void print_help(char* progname) {
 	printf("\nUsage:\n"
 		   "  %s <usnob-file.fits> <output-dir>\n"
 		   , progname);
-	//-H <healpix> -N <nside> 
+	//-H <healpix> -N <nside>
 }
 
 extern char *optarg;
@@ -40,7 +40,6 @@ extern int optind, opterr, optopt;
 int main(int argc, char** args) {
     int c;
 	char* infn;
-	char* outpath;
 	char* outfilename;
 	usnob_fits* usnob;
 	int i, j, N;
@@ -101,96 +100,64 @@ int main(int argc, char** args) {
 	}
 	printf("];\n");
 	*/
-	
-	outpath = args[2];
-	fprintf(stderr, "Writing .m Files to %s\n", outpath);
+
+	outfilename = args[2];
+	fprintf(stderr, "Writing to %s\n", outfilename);
 
 	FILE *output_file;
 
-	int splitSize = 500000;
-	int numFiles = (int)((double)N/(double)splitSize+1.0);
-	fprintf(stderr, "Splitting output to %d chunks.\n", numFiles);
-	int split = 1;
-	for (split = 1; split <= numFiles; split++){
-		char sbuffer[3];
-		sprintf(sbuffer, "%i", split);
-		outfilename = malloc(sizeof(char)*(strlen(outpath)+10));
-		strcpy(outfilename, outpath);
-		strcat(outfilename, sbuffer);
-		strcat(outfilename, ".m");
+	output_file = fopen(outfilename, "wb");
 
-		//outfilename = strcat(outfilename, ".m");
-		fprintf(stderr, "Writing File %i to %s\n", split, outfilename);
-		output_file = fopen(outfilename, "w");
-		
-		fprintf(output_file, "allstars=[allstars;\n");
-		
-		for (i=(split-1)*splitSize; i<split*splitSize; i++) {
-			if (i == N)
-				break;
-			double xyz[3];
-			double px, py;
-			usnob_entry* star;
-			// grab the star...
-			star = usnob_fits_read_entry(usnob);
-	
-			// only output the stars flagged as diffraction spikes
-			// NOTE: to output all stars, set diffraction_only to false 
-			bool diffraction_only = 0;
-			if (!diffraction_only || (diffraction_only && star->diffraction_spike)){
-				// find its xyz position
-				radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
-				// project it around the center
-				star_coords(xyz, center, &px, &py);
-				fprintf(output_file, "%g, %g,", px, py);
-	
-				int numMags = 0;
-				double sumMags = 0;
-				for (j=0; j<5; j++){
-				if(star->obs[j].mag > 0){
+	for (i=1; i<N; i++) {
+		double xyz[3];
+		double px, py;
+		int numMags = 0;
+		double sumMags = 0;
+		double buffer[8];
+
+		usnob_entry* star;
+		// grab the star...
+		star = usnob_fits_read_entry(usnob);
+
+		// find its xyz position
+		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
+		// project it around the center
+		star_coords(xyz, center, &px, &py);
+//		fprintf(stderr, "%g, %g,", px, py);
+
+		buffer[0] = px;
+		buffer[1] = py;
+
+		for (j=0; j<5; j++){
+			if(star->obs[j].mag > 0){
 				numMags++;
 				sumMags+= star->obs[j].mag;
-				}
-				//printf("%g, ", star->obs[j].mag);
-					//fprintf(stderr, "%c ", usnob_get_survey_band(star->obs[j].survey));
-					//fprintf(stderr, "%d ", star->obs[j].field);
-					//if(j<4){
-					//printf(", ");
-					//}
-				}
-				double meanMag = 0;
-				if (numMags > 0){
-				meanMag = sumMags / (double)numMags;
-				}
-				fprintf(output_file, " %g, ", meanMag);
-				
-				for (j=0; j<5; j++){
-				fprintf(output_file, "%d", star->obs[j].field);
-				if(j<4){
-				fprintf(output_file, ", ");
-				}
-				}
-				
-				/*
-				for (j=0; j<5; j++){
-				printf("%d", star->obs[j].survey);
-				if(j<4){
-				printf(", ");
-				}
-				}
-				*/
-				
-				fprintf(output_file, ";\n");
-				//fprintf(stderr, "\n");
 			}
-	
 		}
-		fprintf(output_file, "];\n");
-		fclose(output_file);
+
+		if (numMags > 0){
+			buffer[2] = sumMags / (double)numMags;
+		}
+		else{
+			buffer[2] = 0;
+		}
+		//fprintf(stderr, " %g, ", meanMag);
+
+		for (j=0; j<5; j++){
+			buffer[j+3] = star->obs[j].field;
+			//fprintf(stderr, "%d, ", intBuffer[j]);
+		}
+
+		fwrite(buffer, sizeof(double), 8, output_file);
+
+		//fprintf(stderr, "\n");
+
 	}
+	fclose(output_file);
 
 	usnob_fits_close(usnob);
 
 	return 0;
 }
+
 
