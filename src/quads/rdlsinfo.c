@@ -148,7 +148,8 @@ int main(int argc, char** args) {
 		dx = (ra2mercx(ramax) - ra2mercx(ramin));
 		dy = (dec2mercy(decmax) - dec2mercy(decmin));
 		maxd = (dx > dy ? dx : dy);
-		printf("zoom_merc %i\n", 1 + (int)floor(log(1.0 / maxd) / log(2.0)));
+		//printf("zoom_merc %i\n", 1 + (int)floor(log(1.0 / maxd) / log(2.0)));
+		printf("zoom_merc %i\n", (int)floor(log((600.0/256.0) * 1.0 / maxd) / log(2.0)));
 	}
 
 	dl_free(rd);

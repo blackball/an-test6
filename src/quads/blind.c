@@ -827,8 +827,11 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	twee = tweak_new();
 	if (verify_dist2 > 0.0)
 		twee->jitter = distsq2arcsec(verify_dist2);
-	else
+	else {
 		twee->jitter = mo->scale * verify_pix;
+		printf("Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
+		printf("Star jitter: %g arcsec.\n", twee->jitter);
+	}
 
 	// pull out the field coordinates.
 	imgx = malloc(p->nfield * sizeof(double));
