@@ -1,0 +1,247 @@
+
+<div id="tablebox">
+
+<div id="leftbox">
+<h3>Required Information</h3>
+
+<div class="err">
+##xysrc-err##
+</div>
+
+<p>
+Field to solve: select one of the following:
+</p>
+
+<div class="cap">
+In order to solve your field, we need either an image of your
+field (as a FITS, JPEG, GIF, PNG file or a URL); OR a list of star
+positions (as a FITS binary table).
+</div>
+
+<table id="xysrc">
+
+<tr>
+<td>##xysrc-img##</td>
+<td>
+<div class="err" id="imgfile-err">
+##imgfile-err##
+</div>
+Image file:
+##imgfile##
+<div class="cap">
+Your JPEG, GIF, PNG, or FITS image.  Must be less than 100 MB!
+</div>
+</td>
+</tr>
+
+<tr>
+<td>##xysrc-url##</td>
+<td>
+<div class="err" id="imgurl-err">##imgurl-err##</div>
+Image URL:
+##imgurl##
+<div class="cap">
+The URL of a JPEG, GIF, PNG, or FITS image.  Must be less than 100 MB!
+</div>
+</td>
+</tr>
+
+<tr>
+<td>##xysrc-fits##</td>
+<td>FITS binary table:
+<div class="cap">
+Must contain a BINTABLE of detected objects, with X and Y
+pixel positions in "D" (double) or "E" (float) columns, with
+one object per row.
+The rows must be sorted by brightness with 
+the brightest object first.
+</div>
+
+<div class="err" id="fitsfile-err">##fitsfile-err##</div>
+<div class="err" id="x-col-err">##x_col-err##</div>
+<div class="err" id="y-col-err">##y_col-err##</div>
+<ul>
+  <li>FITS file: ##fitsfile##</li>
+  <li>X Column name: ##x_col##</li>
+  <li>Y	Column name: ##y_col##</li>
+</ul>
+</td>
+</tr>
+</table>
+
+
+
+
+<p>
+Scale of the image:
+<div class="cap" id="scalecap">
+We need to know how much of the sky your field covers.
+</div>
+</p>
+
+<ul id="scalelist">
+<li>Units: ##fsunit##
+<div class="cap">
+Choose how you want to describe the scale of your field.
+</div>
+</li>
+
+<div class="err">
+##fs-err##
+</div>
+<li>Values:
+<div class="cap">
+Fill in ONE of the following pairs of values:
+</div>
+
+<table>
+<tr><td>
+
+<div class="fuset" id="lu">
+<div class="err" id="fsl-err">##fsl-err##</div>
+<div class="err" id="fsu-err">##fsu-err##</div>
+<table>
+<tr>
+<td>Lower bound:</td>
+<td>##fsl##</td>
+</tr>
+<tr>
+<td>Upper bound:</td>
+<td>##fsu##</td>
+</tr>
+</table>
+</div>
+
+</td><td>
+
+<div class="fuset" id="ev">
+<div class="err" id="fse-err">##fse-err##</div>
+<div class="err" id="fsv-err">##fsv-err##</div>
+<table>
+<tr>
+<td>Estimate:</td>
+<td>##fse##</td>
+</tr>
+<tr>
+<td>% Error:</td>
+<td>##fsv##</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+</table>
+
+</li>
+</ul>
+
+</div><!-- end leftbox -->
+
+
+<div id="optbox">
+<h3>Optional Settings</h3>
+<p>
+Handedness of your image
+<div class="cap">
+Some images have "East" clockwise from "North"; some have the
+"East" counterclockwise from "North".  If you are certain that
+your image is of one type, you can select it to make the
+solving process faster.
+</div>
+
+<ul id="paritylist">
+<li>##parity-both## Try both simultaneously</li>
+<li>##parity-right## "Right-handed": East is clockwise from North</li>
+<li>##parity-left## "Left-handed": East is counter-clockwise from North</li>
+</ul>
+
+<p>
+Index to use
+<div class="cap">
+We use indexes to solve your fields;
+an index contains "landmarks" for the sky.
+The solving process works best when the "landmarks" are a little
+smaller than the size of the field to be solved.
+We can automatically choose a suitable index, or you can select
+one here.
+</div>
+
+<ul id="indexlist"><li>##index##</li></ul>
+
+<p>
+Star positional error
+<div class="cap">
+When we find a matching "landmark", we check to see how many of
+the stars in your field match up with stars we know about.
+To do this, we need to know how much a star in your field could
+have moved from where it should be.
+</div>
+
+<div class="err" id="poserr">##poserr-err##</div>
+<ul id="poserrlist"><li>Positional error, in pixels: ##poserr##</li></ul>
+
+<p>
+Tweak
+<div class="cap">
+After we find a correct match, we usually run a "Tweak" process
+on it to fine-tune the transformation between field coordinates
+and sky coordinates.
+</div>
+
+<ul id="tweaklist"><li>##tweak## Tweak</li></ul>
+
+</p>
+
+
+</div>
+
+
+
+</div><!-- end tablebox -->
+
+<div id="bottombox">
+<p>
+##submit##
+</p>
+</div>
+
+<hr />
+
+
+<!--
+img: ##xysrc-img## <br>
+url: ##xysrc-url## <br>
+fits: ##xysrc-fits## <br>
+imgfile: ##imgfile## <br>
+fitsfile: ##fitsfile## <br>
+imgurl: ##imgurl## <br>
+x_col: ##x_col## <br>
+y_col: ##y_col## <br>
+tweak: ##tweak## <br>
+fsl: ##fsl## <br>
+fsu: ##fsu## <br>
+fse: ##fse## <br>
+fsv: ##fsv## <br>
+fsunit: ##fsunit## <br>
+parity-both: ##parity-both## <br>
+parity-right: ##parity-right## <br>
+parity-left: ##parity-left## <br>
+poserr: ##poserr## <br>
+index: ##index## <br>
+submit: ##submit## <br>
+
+xysrc-err: ##xysrc-err## <br>
+imgfile-err: ##imgfile-err## <br>
+imgurl-err: ##imgurl-err## <br>
+fitsfile-err: ##fitsfile-err## <br>
+x_col-err: ##x_col-err## <br>
+y_col-err: ##y_col-err## <br>
+fsl-err: ##fsl-err## <br>
+fsu-err: ##fsu-err## <br>
+fse-err: ##fse-err## <br>
+fsv-err: ##fsv-err## <br>
+poserr-err: ##poserr-err## <br>
+fs-err: ##fs-err## <br>
+-->
+
+</p>
