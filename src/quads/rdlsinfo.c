@@ -47,6 +47,9 @@ static double mercy2dec(double y) {
 	return rad2deg(atan(sinh((y - 0.5) * (2.0 * M_PI))));
 }
 
+#define min(a,b) (((a)<(b))?(a):(b))
+#define max(a,b) (((a)>(b))?(a):(b))
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -89,6 +92,8 @@ int main(int argc, char** args) {
 
 	{
 		double ramax, ramin, decmax, decmin;
+		double racenter, deccenter;
+		double ymerccenter;
 		double dx, dy;
 		double maxd;
 		double xyz1[3], xyz2[3];
@@ -106,17 +111,23 @@ int main(int argc, char** args) {
 		}
 		if (ramax - ramin > 180.0) {
 			// probably wrapped around
+			ramax = 0.0;
+			ramin = 360.0;
 			for (i=0; i<(dl_size(rd)/2); i++) {
 				double ra  = dl_get(rd, 2*i);
-				if (ra > 180) ra -= 360;
-				if (ra > ramax) ramax = ra;
-				if (ra < ramin) ramin = ra;
-				/*
-				  if (ra <= 180 && ra > ramax) ramax = ra;
-				  if (ra > 180 ra < ramin) ramin = ra;
-				*/
+				if (ra > 180)
+					ramin = min(ramin, ra);
+				else
+					ramax = max(ramax, ra);
 			}
+			racenter = (ramax - 360 + ramin) / 2.0;
+			if (racenter < 0.0)
+				racenter += 360.0;
+		} else {
+			racenter  = (ramin  + ramax ) / 2.0;
 		}
+		deccenter = (decmin + decmax) / 2.0;
+		ymerccenter = mercy2dec((dec2mercy(decmin) + dec2mercy(decmax))/2.0);
 
 		radec2xyzarr(deg2rad(ramin), deg2rad(decmin), xyz1);
 		radec2xyzarr(deg2rad(ramax), deg2rad(decmax), xyz2);
@@ -126,8 +137,8 @@ int main(int argc, char** args) {
 		printf("ra_max %g\n", ramax);
 		printf("dec_min %g\n", decmin);
 		printf("dec_max %g\n", decmax);
-		printf("ra_center %g\n", (ramin + ramax) / 2.0);
-		printf("dec_center %g\n", (decmin + decmax) / 2.0);
+		printf("ra_center %g\n", racenter);
+		printf("dec_center %g\n", deccenter);
 
 		if (arc >= 1) {
 			printf("field_size %.3g degrees\n", arc);
@@ -142,8 +153,8 @@ int main(int argc, char** args) {
 		}
 
 		// mercator
-		printf("ra_center_merc %g\n", (ramin + ramax)/2.0);
-		printf("dec_center_merc %g\n", mercy2dec((dec2mercy(decmin) + dec2mercy(decmax))/2.0));
+		printf("ra_center_merc %g\n", racenter);
+		printf("dec_center_merc %g\n", ymerccenter);
 		// mercator/gmaps zoomlevel.
 		dx = (ra2mercx(ramax) - ra2mercx(ramin));
 		dy = (dec2mercy(decmax) - dec2mercy(decmin));
