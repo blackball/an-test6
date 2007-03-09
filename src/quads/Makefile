@@ -241,6 +241,12 @@ plotxy: plotxy.o \
 plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) -lgd -lpng -lz -ljpeg -lfreetype -lm
 
+plotquad2.o: plotquad2.c
+	$(CC) $(CFLAGS) `pkg-config --cflags cairo` -c -o $@ $<
+
+plotquad2: plotquad2.o boilerplate.o svn.o $(ANUTILS_LIB)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) `pkg-config --libs cairo`
+
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codedensity: codedensity.o codekd.o dualtree_max.o \
