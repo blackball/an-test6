@@ -269,6 +269,10 @@ form.c {margin-left:auto; margin-right:auto; text-align:center;}
 h3.c {text-align:center;}
 #overlay { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky { margin-left:auto; margin-right:auto; text-align:center; }
+#onsky > a:link { color:white; }
+#onsky > a:visited { color:white; }
+#onsky > a:hover { color:grey; }
+#onsky > a:active { color:yellow; }
 </style>
 
 <?php
@@ -356,13 +360,20 @@ if ($didsolve) {
 
 if ($didsolve) {
 	echo "<div id=\"onsky\">\n";
-	echo "<p>Your field on the sky:</p>\n";
-	echo "<img src=\"" . "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
+	echo "<p>Your field on the sky (click for larger image):</p>\n";
+	$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
 		// "tag=test-tag&" .
-		"LAYERS=tycho,grid,boundary&FORMAT=image/png&SRS=EPSG:4326" .
+		"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
 		"&arcsinh&gain=-0.5" .
-		"&BBOX=0,-85,360,85&WIDTH=512&HEIGHT=512&wcsfn=" . $myname . "/wcs.fits" .
-		"\" />\n";
+		"&BBOX=0,-85,360,85" .
+		"&wcsfn=" . $myname . "/wcs.fits";
+
+	echo "<a href=\"" . $url .
+		"&WIDTH=1024&HEIGHT=1024&lw=5" .
+		"\">";
+	echo "<img src=\"" . $url . 
+		"&WIDTH=512&HEIGHT=512&lw=3" .
+		"\" /></a>\n";
 	echo "</div>\n";
 }
 
