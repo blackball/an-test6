@@ -80,6 +80,7 @@ FILE* logfd;
 int dup_stderr;
 int dup_stdout;
 char *solved_in, *solved_out, *solvedserver;
+char* cancelfname;
 char* xcolname, *ycolname;
 char* wcs_template;
 char* fieldid_key;
@@ -185,6 +186,7 @@ int main(int argc, char *argv[]) {
 		startfname = NULL;
 		solved_in = NULL;
 		solved_out = NULL;
+		cancelfname = NULL;
 		rdlsfname = NULL;
 		indexrdlsfname = NULL;
 		do_tweak = FALSE;
@@ -252,6 +254,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "solved_in %s\n", solved_in);
 			fprintf(stderr, "solved_out %s\n", solved_out);
 			fprintf(stderr, "solvedserver %s\n", solvedserver);
+			fprintf(stderr, "cancel %s\n", cancelfname);
 			fprintf(stderr, "wcs %s\n", wcs_template);
 			fprintf(stderr, "fieldid_key %s\n", fieldid_key);
 			fprintf(stderr, "parity %i\n", parity);
@@ -624,6 +627,7 @@ int main(int argc, char *argv[]) {
 		free(solved_in);
 		free(solved_out);
 		free(solvedserver);
+		free(cancelfname);
 		free(matchfname);
 		free(rdlsfname);
 		free(indexrdlsfname);
@@ -707,6 +711,9 @@ static int read_parameters() {
 		} else if (is_word(buffer, "solved_in ", &nextword)) {
 			free(solved_in);
 			solved_in = strdup(nextword);
+		} else if (is_word(buffer, "cancel ", &nextword)) {
+			free(cancelfname);
+			cancelfname = strdup(nextword);
 		} else if (is_word(buffer, "solved_out ", &nextword)) {
 			free(solved_out);
 			solved_out = strdup(nextword);
@@ -1076,6 +1083,7 @@ static void solve_fields() {
 			}
 		}
 		solver.do_solvedserver = (solvedserver ? TRUE : FALSE);
+		solver.cancelfn = cancelfname;
 
 
 		// Get the field.
@@ -1143,6 +1151,9 @@ static void solve_fields() {
 		if (!silent && maxmatches && solver.nummatches >= maxmatches) {
 			fprintf(stderr, "  exceeded the number of quads to match: %i >= %i.\n",
 					solver.nummatches, maxmatches);
+		}
+		if (!silent && solver.cancelled) {
+			fprintf(stderr, "  cancelled at user request.\n");
 		}
 
 		// Write the keepable hits.

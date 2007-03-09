@@ -22,6 +22,9 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "fileutil.h"
 #include "mathutil.h"
@@ -206,6 +209,15 @@ void solve_field(solver_params* params) {
 					break;
 				}
 				lastcheck = usertime + systime;
+			}
+		}
+		if (params->cancelfn) {
+			struct stat st;
+			if (stat(params->cancelfn, &st) == 0) {
+				params->cancelled = TRUE;
+				params->quitNow = TRUE;
+				fprintf(stderr, "File %s exists: cancelling.\n", params->cancelfn);
+				break;
 			}
 		}
 

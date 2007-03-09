@@ -58,6 +58,8 @@ struct solver_params {
 	double cxdx_margin;
 	bool circle;
 	bool quiet;
+	char* cancelfn;
+	bool cancelled;
 
 	// The limits on the size, in field coordinates,
 	// of the quads to find.
