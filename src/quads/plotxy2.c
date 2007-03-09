@@ -191,7 +191,7 @@ int main(int argc, char *args[]) {
 	for (i=0; i<H; i++) {
 		int j;
 		uint32_t* row = (uint32_t*)(cairo_image_surface_get_data(target) + i*cairo_image_surface_get_stride(target));
-		for (j=0; j<H; j++) {
+		for (j=0; j<W; j++) {
 			unsigned char r = (row[j] >> 16) & 0xff;
 			//printf("%c", r);
 			putchar(r);
