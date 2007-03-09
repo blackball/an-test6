@@ -26,7 +26,7 @@
 
 #define OPTIONS "h" //H:N:"
 
-#define MAXNUMCHUNKS 1000
+#define MAXNUMCHUNKS 10000
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
@@ -123,8 +123,11 @@ int main(int argc, char** args) {
 	point_file = fopen(pointfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
 
-	double pointbuffer[3];
-	unsigned int tilebuffer[5];
+	double pointbuffer[3*MAXNUMCHUNKS];
+	unsigned int tilebuffer[5*MAXNUMCHUNKS];
+
+	int chunkcount = 0;
+
 
 	for (i=1; i<N; i++) {
 		double xyz[3];
@@ -142,8 +145,8 @@ int main(int argc, char** args) {
 		star_coords(xyz, center, &px, &py);
 //		fprintf(stderr, "%g, %g,", px, py);
 
-		pointbuffer[0] = px;
-		pointbuffer[1] = py;
+		pointbuffer[chunkcount*3] = px;
+		pointbuffer[chunkcount*3+1] = py;
 
 		for (j=0; j<5; j++){
 			if(star->obs[j].mag > 0){
@@ -153,24 +156,36 @@ int main(int argc, char** args) {
 		}
 
 		if (numMags > 0){
-			pointbuffer[2] = sumMags / (double)numMags;
+			pointbuffer[chunkcount*3+2] = sumMags / (double)numMags;
 		}
 		else{
-			pointbuffer[2] = 0;
+			pointbuffer[chunkcount*3+2] = 0;
 		}
 		//fprintf(stderr, " %g, ", meanMag);
 
 		for (j=0; j<5; j++){
-			tilebuffer[j] = star->obs[j].field;
+			tilebuffer[chunkcount*5+j] = star->obs[j].field;
 			//fprintf(stderr, "%d, ", intBuffer[j]);
 		}
 
-		fwrite(pointbuffer, sizeof(double), 3, point_file);
-		fwrite(tilebuffer, sizeof(unsigned int), 5, tile_file);
+		chunkcount++;
+
+		if (chunkcount == MAXNUMCHUNKS){
+			fwrite(pointbuffer, sizeof(double), 3*chunkcount, point_file);
+			fwrite(tilebuffer, sizeof(unsigned int), 5*chunkcount, tile_file);
+			chunkcount = 0;
+		}
 
 		//fprintf(stderr, "\n");
 
 	}
+	
+	if (chunkcount > 0){
+		fwrite(pointbuffer, sizeof(double), 3*chunkcount, point_file);
+		fwrite(tilebuffer, sizeof(unsigned int), 5*chunkcount, tile_file);
+		chunkcount = 0;
+	}
+
 
 	fclose(point_file);
 	fclose(tile_file);
