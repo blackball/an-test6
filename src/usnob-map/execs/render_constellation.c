@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
@@ -11,15 +12,16 @@
 
 static char* const_dirs[] = {
 	".",
-	"/home/gmaps/ontheweb-data" // FIXME
+	"/home/gmaps/usnob-map/execs" // FIXME
 };
 
-//static char* hipparcos_fn = "/home/gmaps/somewhere/hipparcos.fab";
-static char* hipparcos_fn = "hipparcos.fab";
+static char* hipparcos_fn = "/home/gmaps/usnob-map/execs/hipparcos.fab";
+//static char* hipparcos_fn = "hipparcos.fab";
 
 int render_constellation(unsigned char* img, render_args_t* args) {
 	int i;
 	FILE* fconst = NULL;
+	srand(0);
 
 	fprintf(stderr, "render_constellation: Starting.\n");
 
@@ -41,7 +43,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
 	FILE* fhip = fopen(hipparcos_fn, "rb");
 	if (!fhip) {
-		fprintf(stderr, "unhip\n");
+		fprintf(stderr, "render_constellation: unhip\n");
 		return -1;
 	}
 
@@ -56,10 +58,10 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		unsigned char* hip;
 
 		if (fread(&nstars, 4, 1, fhip) != 1) {
-			fprintf(stderr, "failed to read nstars.\n");
+			fprintf(stderr, "render_constellation: failed to read nstars.\n");
 			return -1;
 		}
-		fprintf(stderr, "nstars %i\n", nstars);
+		fprintf(stderr, "render_constellation: Found %i Hipparcos stars\n", nstars);
 
 		mapsize = nstars * 15 + 4;
 		map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
@@ -82,6 +84,11 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "failed parse name+nlines\n");
 				return -1;
 			}
+
+	 unsigned char r = (rand() % 128) + 127;
+	 unsigned char g = (rand() % 128) + 127;
+	 unsigned char b = (rand() % 128) + 127;
+
 			for (i=0; i<nlines; i++) {
 				int star1, star2;
 				//uint32_t ival;
@@ -106,6 +113,8 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				px2 = ra2pixel(ra2, args);
 				py1 = dec2pixel(dec1, args);
 				py2 = dec2pixel(dec2, args);
+
+				cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
 
 				cairo_move_to(cairo, px1, py1);
 				cairo_line_to(cairo, px2, py2);
