@@ -17,6 +17,7 @@
 #include "render_gridlines.h"
 #include "render_usnob.h"
 #include "render_rdls.h"
+#include "render_boundary.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -36,14 +37,16 @@ char* layernames[] = {
 	"tycho",
 	"grid",
 	"usnob",
-	"rdls"
+	"rdls",
+	"boundary"
 };
 render_func_t renderers[] = {
 	render_image,
 	render_tycho,
 	render_gridlines,
 	render_usnob,
-	render_rdls
+	render_rdls,
+	render_boundary
 };
 
 static void write_png(unsigned char * img, int w, int h);

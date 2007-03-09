@@ -34,6 +34,7 @@ struct render_args {
 
 	// Args for render_image:
 	char* imagefn;
+	// Shared by render_boundary:
 	char* wcsfn;
 
 	// Args for render_tycho:

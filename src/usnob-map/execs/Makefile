@@ -38,8 +38,12 @@ CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 
-CFLAGS += `pkg-config --cflags libpng`
-LDFLAGS := -lm `pkg-config --libs libpng`
+CFLAGS  += `pkg-config --cflags libpng`
+LDFLAGS += `pkg-config --libs   libpng`
+
+CFLAGS  += `pkg-config --cflags cairo`
+LDFLAGS += `pkg-config --libs   cairo`
+
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
@@ -69,6 +73,7 @@ tilerender: tilerender.o render_image.o \
 		render_gridlines.o \
 		render_usnob.o \
 		render_rdls.o \
+		render_boundary.o \
 		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \
