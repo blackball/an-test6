@@ -26,9 +26,6 @@
 
 #include "an-bool.h"
 
-#include "ppm.h"
-#include "pnm.h"
-
 #include "starutil.h"
 #include "mathutil.h"
 #include "xylist.h"
