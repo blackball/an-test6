@@ -47,6 +47,9 @@ struct render_args {
 	char* rdlsfn;
 	int Nstars;
 	int fieldnum;
+
+	// Args for render_boundary
+	double linewidth;
 };
 typedef struct render_args render_args_t;
 

@@ -28,7 +28,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:"
 
 
 /* All render layers must go in here */
@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
 
 	// default args:
 	args.colorcor = 1.44;
+	args.linewidth = 2.0;
 
 	layers = pl_new(16);
 	gotx = goty = gotX = gotY = gotw = goth = FALSE;
@@ -102,6 +103,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'l':
 			pl_append(layers, strdup(optarg));
+			break;
+		case 'L':
+			args.linewidth = atof(optarg);
 			break;
 		case 'x':
 			args.ramin = atof(optarg);

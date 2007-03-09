@@ -59,16 +59,17 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	{
 		cairo_t* cairo;
 		cairo_surface_t* target;
-		uint32_t* pixels;
-		double lw = 2.0;
-		int i,j;
+		double lw = args->linewidth;
+		int i;
 
-		target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, args->W, args->H);
+		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
+													 args->W, args->H, args->W*4);
 		cairo = cairo_create(target);
 		cairo_set_line_width(cairo, lw);
 		cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
 		cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
 		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+		//cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
 
 		for (i=0; i<4; i++) {
 			int x, y;
@@ -85,21 +86,19 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		cairo_close_path(cairo);
 		cairo_stroke(cairo);
 
-		pixels = (uint32_t*)cairo_image_surface_get_data(target);
-
-		for (i=0; i<args->H; i++) {
-			uint32_t* row = (uint32_t*)((unsigned char*)pixels + i * cairo_image_surface_get_stride(target));
-			for (j=0; j<args->W; j++) {
-				unsigned char a,r,g,b;
-				a = (row[j] >> 24) & 0xff;
-				r = (row[j] >> 16) & 0xff;
-				g = (row[j] >>  8) & 0xff;
-				b = (row[j]      ) & 0xff;
-				img[4*(i*args->W + j) + 3] = a;
-				img[4*(i*args->W + j) + 2] = r;
-				img[4*(i*args->W + j) + 1] = g;
-				img[4*(i*args->W + j) + 0] = b;
-			}
+		// Cairo's uint32 ARGB32 format is a little different than what we need,
+		// which is uchar R,G,B,A.
+		for (i=0; i<(args->H*args->W); i++) {
+			unsigned char r,g,b,a;
+			uint32_t ipix = *((uint32_t*)(img + 4*i));
+			a = (ipix >> 24) & 0xff;
+			r = (ipix >> 16) & 0xff;
+			g = (ipix >>  8) & 0xff;
+			b = (ipix      ) & 0xff;
+			img[4*i + 0] = r;
+			img[4*i + 1] = g;
+			img[4*i + 2] = b;
+			img[4*i + 3] = a;
 		}
 
 		cairo_surface_destroy(target);
