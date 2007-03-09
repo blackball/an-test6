@@ -285,6 +285,14 @@ int ymerc2pixel(double y, render_args_t* args) {
 	return (args->H-1) - (int)floor(args->ypixelpermerc * (y - args->ymercmin));
 }
 
+double xmerc2pixelf(double x, render_args_t* args) {
+	return args->xpixelpermerc * (x - args->xmercmin);
+}
+
+double ymerc2pixelf(double y, render_args_t* args) {
+	return (args->H-1) - (args->ypixelpermerc * (y - args->ymercmin));
+}
+
 // fires an ALPHA png out stdout
 static void write_png(unsigned char * img, int w, int h)
 {

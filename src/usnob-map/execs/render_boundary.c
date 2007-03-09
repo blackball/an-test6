@@ -16,7 +16,6 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	// read wcs.
 	sip_t wcs;
 	int imw, imh;
-	double coords[8];
 	int i;
 
 	fprintf(stderr, "render_boundary: Starting.\n");
@@ -51,16 +50,14 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		return -1;
 	}
 
-	sip_pixelxy2radec(&wcs, 0.0, 0.0, coords+0, coords+1);
-	sip_pixelxy2radec(&wcs, 0.0, imh, coords+2, coords+3);
-	sip_pixelxy2radec(&wcs, imw, imh, coords+4, coords+5);
-	sip_pixelxy2radec(&wcs, imw, 0.0, coords+6, coords+7);
-
 	{
 		cairo_t* cairo;
 		cairo_surface_t* target;
 		double lw = args->linewidth;
 		int i;
+		// the line endpoints.
+		double ends[8] = {0.0, 0.0, 0.0, imh, imw, imh, imw, 0.0};
+		int s, SEGS=10;
 
 		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 													 args->W, args->H, args->W*4);
@@ -71,16 +68,31 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 		//cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
 
+		// Draw the field boundary as a curved line by segmenting it into
+		// SEGS pieces, running the SIP transformation on each point.
 		for (i=0; i<4; i++) {
-			int x, y;
-			double mx = ra2merc(deg2rad(coords[i*2]));
-			double my = dec2merc(deg2rad(coords[i*2+1]));
-			x = xmerc2pixel(mx, args);
-			y = ymerc2pixel(my, args);
-			if (i==0)
-				cairo_move_to(cairo, x, y);
-			else
-				cairo_line_to(cairo, x, y);
+			double* ep1 = ends + i*2;
+			double* ep2 = ends + ((i+1)%4)*2;
+			//fprintf(stderr, "ep1=(%g,%g), ep2=(%g,%g)\n", ep1[0], ep1[1], ep2[0], ep2[1]);
+			for (s=0; s<SEGS; s++) {
+				double x,y,frac;
+				double ra, dec;
+				double mx,my;
+				double px, py;
+				frac = (double)s / (double)(SEGS);
+				x = ep1[0] * (1.0 - frac) + ep2[0] * frac;
+				y = ep1[1] * (1.0 - frac) + ep2[1] * frac;
+				sip_pixelxy2radec(&wcs, x, y, &ra, &dec);
+				mx = ra2merc(deg2rad(ra));
+				my = dec2merc(deg2rad(dec));
+				px = xmerc2pixelf(mx, args);
+				py = ymerc2pixelf(my, args);
+
+				if (i==0 && s==0)
+					cairo_move_to(cairo, px, py);
+				else
+					cairo_line_to(cairo, px, py);
+			}
 		}
 
 		cairo_close_path(cairo);
