@@ -25,6 +25,7 @@
 
 #include "boilerplate.h"
 #include "bl.h"
+#include "permutedsort.h"
 
 #define OPTIONS "hW:H:w:"
 
@@ -103,11 +104,31 @@ int main(int argc, char *args[]) {
 
 	for (i=0; i<nquads; i++) {
 		int j;
+		double theta[4];
+		int perm[4];
+		double cx, cy;
+
+		// Make the quad convex so Sam's eyes don't bleed.
+		cx = cy = 0.0;
+		for (j=0; j<4; j++) {
+			cx += dl_get(coords, i*8 + j*2);
+			cy += dl_get(coords, i*8 + j*2 + 1);
+		}
+		cx /= 4.0;
+		cy /= 4.0;
+		for (j=0; j<4; j++) {
+			theta[j] = atan2(dl_get(coords, i*8 + j*2 + 1)-cy,
+							 dl_get(coords, i*8 + j*2 + 0)-cx);
+			perm[j] = j;
+		}
+		permuted_sort_set_params(theta, sizeof(double), compare_doubles);
+		permuted_sort(perm, 4);
+
 		for (j=0; j<4; j++) {
 			if (j==0)
-				cairo_move_to(cairo, dl_get(coords, i*8), dl_get(coords, i*8+1));
+				cairo_move_to(cairo, dl_get(coords, i*8 + perm[j]*2), dl_get(coords, i*8 + perm[j]*2 + 1));
 			else
-				cairo_line_to(cairo, dl_get(coords, i*8 + j*2), dl_get(coords, i*8 + j*2 + 1));
+				cairo_line_to(cairo, dl_get(coords, i*8 + perm[j]*2), dl_get(coords, i*8 + perm[j]*2 + 1));
 		}
 		cairo_close_path(cairo);
 		cairo_stroke(cairo);
