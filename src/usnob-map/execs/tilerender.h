@@ -50,6 +50,8 @@ struct render_args {
 
 	// Args for render_boundary
 	double linewidth;
+
+	char* constfn;
 };
 typedef struct render_args render_args_t;
 

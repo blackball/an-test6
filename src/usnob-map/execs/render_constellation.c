@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
+#include <sys/mman.h>
 
 #include <cairo/cairo.h>
 
@@ -8,45 +9,39 @@
 #include "render_constellation.h"
 #include "sip_qfits.h"
 
-char* wcs_dirs[] = {
-	"/home/gmaps/ontheweb-data/"
+static char* const_dirs[] = {
+	".",
+	"/home/gmaps/ontheweb-data" // FIXME
 };
 
+//static char* hipparcos_fn = "/home/gmaps/somewhere/hipparcos.fab";
+static char* hipparcos_fn = "hipparcos.fab";
+
 int render_constellation(unsigned char* img, render_args_t* args) {
-	// read wcs.
-	sip_t wcs;
-	int imw, imh;
 	int i;
+	FILE* fconst = NULL;
 
 	fprintf(stderr, "render_constellation: Starting.\n");
 
-	qfits_header* wcshead = NULL;
-	for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
+	if (!args->constfn)
+		args->constfn = "constellationship.fab";
+
+	for (i=0; i<sizeof(const_dirs)/sizeof(char*); i++) {
 		char fn[256];
-		snprintf(fn, sizeof(fn), "%s/%s", wcs_dirs[i], args->wcsfn);
-		fprintf(stderr, "render_constellation: Trying wcs file: %s\n", fn);
-		wcshead = qfits_header_read(fn);
-		if (wcshead) {
-			fprintf(stderr, "render_constellation: wcs opened ok\n");
+		snprintf(fn, sizeof(fn), "%s/%s", const_dirs[i], args->constfn);
+		fprintf(stderr, "render_constellation: Trying file: %s\n", fn);
+		fconst = fopen(fn, "rb");
+		if (fconst)
 			break;
-		} else {
-			fprintf(stderr, "render_constellation: wcs didn't open\n");
-		}
 	}
-	if (!wcshead) {
-		fprintf(stderr, "render_constellation: couldn't open any wcs files\n");
+	if (!fconst) {
+		fprintf(stderr, "render_constellation: couldn't open any constellation files.\n");
 		return -1;
 	}
 
-	if (!sip_read_header(wcshead, &wcs)) {
-		fprintf(stderr, "render_constellation: failed to read WCS file.\n");
-		return -1;
-	}
-
-	imw = qfits_header_getint(wcshead, "IMAGEW", -1);
-	imh = qfits_header_getint(wcshead, "IMAGEH", -1);
-	if ((imw == -1) || (imh == -1)) {
-		fprintf(stderr, "render_constellation: failed to find IMAGE{W,H} in WCS file.\n");
+	FILE* fhip = fopen(hipparcos_fn, "rb");
+	if (!fhip) {
+		fprintf(stderr, "unhip\n");
 		return -1;
 	}
 
@@ -55,9 +50,20 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		cairo_surface_t* target;
 		double lw = args->linewidth;
 		int i;
-		// the line endpoints.
-		double ends[8] = {0.0, 0.0, 0.0, imh, imw, imh, imw, 0.0};
-		int s, SEGS=10;
+		uint32_t nstars;
+		size_t mapsize;
+		void* map;
+		unsigned char* hip;
+
+		if (fread(&nstars, 4, 1, fhip) != 1) {
+			fprintf(stderr, "failed to read nstars.\n");
+			return -1;
+		}
+		fprintf(stderr, "nstars %i\n", nstars);
+
+		mapsize = nstars * 15 + 4;
+		map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
+		hip = ((unsigned char*)map) + 4;
 
 		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 													 args->W, args->H, args->W*4);
@@ -68,35 +74,53 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 		//cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
 
-		// Draw the field constellation as a curved line by segmenting it into
-		// SEGS pieces, running the SIP transformation on each point.
-		for (i=0; i<4; i++) {
-			double* ep1 = ends + i*2;
-			double* ep2 = ends + ((i+1)%4)*2;
-			//fprintf(stderr, "ep1=(%g,%g), ep2=(%g,%g)\n", ep1[0], ep1[1], ep2[0], ep2[1]);
-			for (s=0; s<SEGS; s++) {
-				double x,y,frac;
-				double ra, dec;
-				double mx,my;
-				double px, py;
-				frac = (double)s / (double)(SEGS);
-				x = ep1[0] * (1.0 - frac) + ep2[0] * frac;
-				y = ep1[1] * (1.0 - frac) + ep2[1] * frac;
-				sip_pixelxy2radec(&wcs, x, y, &ra, &dec);
-				mx = ra2merc(deg2rad(ra));
-				my = dec2merc(deg2rad(dec));
-				px = xmerc2pixelf(mx, args);
-				py = ymerc2pixelf(my, args);
-
-				if (i==0 && s==0)
-					cairo_move_to(cairo, px, py);
-				else
-					cairo_line_to(cairo, px, py);
+		while (1) {
+			char shortname[16];
+			int nlines;
+			int i;
+			if (fscanf(fconst, "%s %d ", shortname, &nlines) != 2) {
+				fprintf(stderr, "failed parse name+nlines\n");
+				return -1;
 			}
+			for (i=0; i<nlines; i++) {
+				int star1, star2;
+				//uint32_t ival;
+				float ra1, dec1, ra2, dec2;
+				double px1, py1, px2, py2;
+				if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
+					fprintf(stderr, "failed parse star1+star2\n");
+					return -1;
+				}
+				// FIXME: ENDIAN
+				//ival = *((uint32_t*)(map + 15 * star1));
+				
+				ra1  = *((float*)(hip + 15 * star1));
+				dec1 = *((float*)(hip + 15 * star1 + 4));
+				ra2  = *((float*)(hip + 15 * star2));
+				dec2 = *((float*)(hip + 15 * star2 + 4));
+
+				ra1 *= (360.0 / 24.0);
+				ra2 *= (360.0 / 24.0);
+
+				px1 = ra2pixel(ra1, args);
+				px2 = ra2pixel(ra2, args);
+				py1 = dec2pixel(dec1, args);
+				py2 = dec2pixel(dec2, args);
+
+				cairo_move_to(cairo, px1, py1);
+				cairo_line_to(cairo, px2, py2);
+				cairo_stroke(cairo);
+				
+			}
+			fscanf(fconst, "\n");
+			if (feof(fconst))
+				break;
 		}
 
-		cairo_close_path(cairo);
-		cairo_stroke(cairo);
+		munmap(map, mapsize);
+
+		fclose(fconst);
+		fclose(fhip);
 
 		// Cairo's uint32 ARGB32 format is a little different than what we need,
 		// which is uchar R,G,B,A.
