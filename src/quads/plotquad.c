@@ -52,7 +52,6 @@ int main(int argc, char *args[]) {
 
 	cairo_t* cairo;
 	cairo_surface_t* target;
-	//unsigned char* pixels;
 	uint32_t* pixels;
 
 	coords = dl_new(16);
@@ -91,11 +90,12 @@ int main(int argc, char *args[]) {
 	}
 	nquads = dl_size(coords) / 8;
 
-	//target = cairo_image_surface_create(CAIRO_FORMAT_RGB24, W, H);
 	target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
 
 	cairo = cairo_create(target);
 	cairo_set_line_width(cairo, lw);
+	cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
+	//cairo_set_line_join(cairo, CAIRO_LINE_JOIN_ROUND);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
 
 	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
@@ -119,7 +119,6 @@ int main(int argc, char *args[]) {
 	printf("P6 %d %d %d\n", W, H, 255);
 	for (i=0; i<H; i++) {
 		int j;
-		//unsigned char* row = pixels + i * 4 * cairo_image_surface_get_stride(target);
 		uint32_t* row = (uint32_t*)((unsigned char*)pixels + i * cairo_image_surface_get_stride(target));
 		for (j=0; j<W; j++) {
 			unsigned char r,g,b;
