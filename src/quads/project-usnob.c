@@ -26,6 +26,8 @@
 
 #define OPTIONS "h" //H:N:"
 
+#define MAXNUMCHUNKS 1000
+
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage:\n"
@@ -40,7 +42,9 @@ extern int optind, opterr, optopt;
 int main(int argc, char** args) {
     int c;
 	char* infn;
-	char* outfilename;
+	char* filepath;
+	char pointfilename[255];
+	char tilefilename[255];
 	usnob_fits* usnob;
 	int i, j, N;
 	int hp, Nside;
@@ -101,19 +105,32 @@ int main(int argc, char** args) {
 	printf("];\n");
 	*/
 
-	outfilename = args[2];
-	fprintf(stderr, "Writing to %s\n", outfilename);
 
-	FILE *output_file;
+	filepath = args[2];
 
-	output_file = fopen(outfilename, "wb");
+	strcpy(pointfilename, filepath);
+	strcpy(tilefilename, filepath);
+
+	strcat(pointfilename, "_points.bin");
+	strcat(tilefilename, "_tiles.bin");
+
+	fprintf(stderr, "Writing point info to %s\n", pointfilename);
+	fprintf(stderr, "Writing tile info to %s\n", tilefilename);
+
+	FILE *point_file;
+	FILE *tile_file;
+
+	point_file = fopen(pointfilename, "wb");
+	tile_file = fopen(tilefilename, "wb");
+
+	double pointbuffer[3];
+	unsigned int tilebuffer[5];
 
 	for (i=1; i<N; i++) {
 		double xyz[3];
 		double px, py;
 		int numMags = 0;
 		double sumMags = 0;
-		double buffer[8];
 
 		usnob_entry* star;
 		// grab the star...
@@ -125,8 +142,8 @@ int main(int argc, char** args) {
 		star_coords(xyz, center, &px, &py);
 //		fprintf(stderr, "%g, %g,", px, py);
 
-		buffer[0] = px;
-		buffer[1] = py;
+		pointbuffer[0] = px;
+		pointbuffer[1] = py;
 
 		for (j=0; j<5; j++){
 			if(star->obs[j].mag > 0){
@@ -136,24 +153,27 @@ int main(int argc, char** args) {
 		}
 
 		if (numMags > 0){
-			buffer[2] = sumMags / (double)numMags;
+			pointbuffer[2] = sumMags / (double)numMags;
 		}
 		else{
-			buffer[2] = 0;
+			pointbuffer[2] = 0;
 		}
 		//fprintf(stderr, " %g, ", meanMag);
 
 		for (j=0; j<5; j++){
-			buffer[j+3] = star->obs[j].field;
+			tilebuffer[j] = star->obs[j].field;
 			//fprintf(stderr, "%d, ", intBuffer[j]);
 		}
 
-		fwrite(buffer, sizeof(double), 8, output_file);
+		fwrite(pointbuffer, sizeof(double), 3, point_file);
+		fwrite(tilebuffer, sizeof(unsigned int), 5, tile_file);
 
 		//fprintf(stderr, "\n");
 
 	}
-	fclose(output_file);
+
+	fclose(point_file);
+	fclose(tile_file);
 
 	usnob_fits_close(usnob);
 
