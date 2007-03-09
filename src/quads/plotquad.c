@@ -125,10 +125,14 @@ int main(int argc, char *args[]) {
 			r = (row[j] >> 16) & 0xff;
 			g = (row[j] >>  8) & 0xff;
 			b = (row[j]      ) & 0xff;
-			printf("%c%c%c", r, g, b);
+			//printf("%c%c%c", r, g, b);
+			putchar(r);
+			putchar(g);
+			putchar(b);
 		}
 	}
 
+	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
 
 	return 0;
