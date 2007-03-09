@@ -383,6 +383,7 @@ function process_data ($vals) {
 	global $log_fn;
 	global $jobdata_fn;
 	global $tabmerge;
+	global $modhead;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -674,7 +675,6 @@ function process_data ($vals) {
 		die("Field scale lower or upper bound is zero: " . $fu_lower . ", " . $fu_upper . "\n");
 	}
 
-	// FIXME - AUTO-SELECT INDEX!
 	if ($index == "auto") {
 		// Estimate size of quads we could find:
 		$fmax = 0.5  * min($W, $H) * $fu_upper / 60.0;
@@ -797,6 +797,7 @@ function process_data ($vals) {
 	}
 	fprintf($fdone,
 			"#! /bin/bash\n" .
+			"echo Starting donescript...\n" .
 			"touch " . $donefile . "\n" .
 			"if [ `" . $printsolved . " " . $solvedfile . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
 			"  echo \"Field solved.\";\n" .
@@ -812,9 +813,13 @@ function process_data ($vals) {
 			"  done\n" .
 			"  mv " . $indexrdls . ".tmp " . $indexrdls . "\n" .
 			"  " . $wcs_rd2xy . " -w " . $wcsfile . " -i " . $indexrdls . " -o " . $indexxyls . ";\n" .
+			"  echo Adding image size to WCS file...\n" .
+			"  " . $modhead . " " . $wcsfile . " IMAGEW " . $W . "\n" .
+			"  " . $modhead . " " . $wcsfile . " IMAGEH " . $H . "\n" .
 			"else\n" .
 			"  echo \"Field did not solve.\";\n" .
-			"fi\n"
+			"fi\n" .
+			"echo Donescript finished.\n"
 			);
 	if (!fclose($fdone)) {
 		die("Failed to close donescript " . $donescript);

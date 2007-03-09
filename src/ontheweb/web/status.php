@@ -251,6 +251,7 @@ if ($overlay) {
 	} else
 		die("overlay file does not exist.");
 }
+
 ?>
 
 <!DOCTYPE html 
@@ -267,6 +268,7 @@ p.c {margin-left:auto; margin-right:auto; text-align:center;}
 form.c {margin-left:auto; margin-right:auto; text-align:center;}
 h3.c {text-align:center;}
 #overlay { margin-left:auto; margin-right:auto; text-align:center; }
+#onsky { margin-left:auto; margin-right:auto; text-align:center; }
 </style>
 
 <?php
@@ -352,14 +354,30 @@ if ($didsolve) {
 	echo "<hr />\n";
 }
 
+if ($didsolve) {
+	echo "<div id=\"onsky\">\n";
+	echo "<p>Your field on the sky:</p>\n";
+	echo "<img src=\"" . "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
+		// "tag=test-tag&" .
+		"LAYERS=tycho,grid,boundary&FORMAT=image/png&SRS=EPSG:4326" .
+		"&arcsinh&gain=-0.5" .
+		"&BBOX=0,-85,360,85&WIDTH=512&HEIGHT=512&wcsfn=" . $myname . "/wcs.fits" .
+		"\" />\n";
+	echo "</div>\n";
+}
+
+//http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?&tag=test-tag&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=tycho,image,grid,rdls&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:4326&BBOX=-180,0,0,85.0511287798066&WIDTH=256&HEIGHT=256&reaspect=false
+
 //<?php
 //loggit("didsolve: $didsolve.  pnmimg? " . file_exists($pnmimg) . "\n");
 if ($didsolve && file_exists($pnmimg)) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	echo "<div id=\"overlay\">\n";
-	echo "<p>Red circles: stars from the index, projected to image coordinates.\n";
+	echo "<p>Your field plus our index objects:\n";
+	echo "<br />Red circles: stars from the index, projected to image coordinates.\n";
 	echo "<br />White circles: field objects that were examined.\n";
+	echo "</p>\n";
 	//Your field, overplotted with objects from the index.</p>\n";
 	echo "<img src=\"" .
 		"http://" . $host . $uri . "/status.php?job=" . $myname . "&overlay" .
