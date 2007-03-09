@@ -50,10 +50,11 @@ int main(int argc, char *args[]) {
 	dl* coords;
 
 	gdImagePtr img;
-	int imblack, imwhite;
+	int imblack;
+	int imwhite;
 
-	gdImagePtr brush;
-	int brblack, brwhite;
+	//gdImagePtr brush;
+	//int brblack, brwhite;
 
 	gdPointPtr pts;
 
@@ -93,17 +94,34 @@ int main(int argc, char *args[]) {
 	}
 	nquads = dl_size(coords) / 8;
 
-	img = gdImageCreate(W, H);
+	/*
+	  img = gdImageCreate(W, H);	
+	  imblack = gdImageColorAllocate(img, 0,0,0);
+	  imwhite = gdImageColorAllocate(img, 255,255,255); 
+	*/
+
+	img = gdImageCreateTrueColor(W, H);
+	imblack = gdImageColorAllocateAlpha(img, 0,0,0,127);
+	//imblack = gdImageColorAllocateAlpha(img, 0,0,0,0);
+	imwhite = gdImageColorAllocateAlpha(img, 255,255,255,0); 
+
+	//img = gdImageCreate(W, H);
+	//imblack = gdImageColorAllocateAlpha(img, 0,0,0,0);
+	//imwhite = gdImageColorAllocate(img, 255, 255, 255); 
+	//imwhite = gdImageColorAllocate(img, 255, 255, 255); 
+
 
 	/* Allocate the color black (red, green and blue all minimum).
 	   Since this is the first color in a new image, it will
 	   be the background color. */
-	imblack = gdImageColorAllocate(img, 0, 0, 0);
-	imwhite = gdImageColorAllocate(img, 255, 255, 255); 
+	//imblack = gdImageColorAllocate(img, 0, 0, 0);
+	//imblack = gdImageColorAllocateAlpha(img, 255,255,255,0);
 
-	brush = gdImageCreate(lw*2+1, lw*2+1);
-	brblack = gdImageColorAllocate(brush, 0,0,0);
-	brwhite = gdImageColorAllocate(brush, 255,255,255);
+	/*
+	//brush = gdImageCreate(lw*2+1, lw*2+1);
+	brush = gdImageCreateTrueColor(lw*2+1, lw*2+1);
+	//brblack = gdImageColorAllocate(brush, 0,0,0);
+	//brwhite = gdImageColorAllocate(brush, 255,255,255);
 	{
 		int c = lw;
 		int x, y;
@@ -114,17 +132,19 @@ int main(int argc, char *args[]) {
 		for (y=0; y<=(lw*2); y++) {
 			for (x=0; x<=(lw*2); x++) {
 				double d2 = ((x-c)*(x-c) + (y-c)*(y-c));
-				int val = (int)(255.0 * exp(-d2 / twosig2));
-				int col = gdImageColorAllocate(brush, val,val,val);
+				//int val = (int)(255.0 * exp(-d2 / twosig2));
+				//int col = gdImageColorAllocate(brush, val,val,val);
+				int val = (int)(127.0 * (1.0 - exp(-d2 / twosig2)));
+				int col = gdImageColorAllocateAlpha(brush, 255,255,255, val);
 				gdImageSetPixel(brush, x, y, col);
 			}
 		}
 	}
-
-	gdImageSetThickness(img, lw);
-	gdImageSetAntiAliased(img, imwhite);
-
 	gdImageSetBrush(img, brush);
+	*/
+
+	gdImageSetAntiAliased(img, imwhite);
+	gdImageSetThickness(img, lw);
 
 	pts = malloc(8 * sizeof(gdPoint));
 	for (i=0; i<nquads; i++) {
@@ -133,14 +153,14 @@ int main(int argc, char *args[]) {
 			pts[j].x = dl_get(coords, i*8 + j*2);
 			pts[j].y = dl_get(coords, i*8 + j*2 + 1);
 		}
-		//gdImagePolygon(img, pts, 4, imwhite);
+		gdImagePolygon(img, pts, 4, imwhite);
 		//gdImagePolygon(img, pts, 4, gdAntiAliased);
-		gdImagePolygon(img, pts, 4, gdBrushed);
+		//gdImagePolygon(img, pts, 4, gdBrushed);
 	}
 
 	gdImagePng(img, stdout);
 
-	gdImageDestroy(brush);
+	//gdImageDestroy(brush);
 
 	gdImageDestroy(img);
 
