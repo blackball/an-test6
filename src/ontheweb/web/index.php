@@ -870,7 +870,7 @@ function get_image_type($filename, &$xtopnm) {
 function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
 	global $fits2xy;
 	global $modhead;
-	global $plotxy;
+	global $plotxy2;
 	global $tabsort;
 	global $objs_fn;
 
@@ -963,8 +963,8 @@ function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
 	$Nbright = 100;
 	// -the brightest:
 	$objimg1 = $mydir . "objs1.pgm";
-	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H .
-		" -x 1 -y 1 " . "-N " . $Nbright . " > " . $objimg1;
+	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H .
+		" -x 1 -y 1 -w 1.75 " . "-N " . $Nbright . " > " . $objimg1;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
@@ -975,8 +975,8 @@ function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
 	}
 	// -the rest:
 	$objimg2 = $mydir . "objs2.pgm";
-	$cmd = $plotxy . " -i " . $xylist . " -W " . $W . " -H " . $H .
-		" -x 1 -y 1" . " -n " . $Nbright . " -r 3" . " > " . $objimg2;
+	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H .
+		" -x 1 -y 1" . " -n " . $Nbright . " -r 3 -w 1.75" . " > " . $objimg2;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);

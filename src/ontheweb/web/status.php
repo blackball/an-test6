@@ -31,6 +31,7 @@ $rdlist = $mydir . $rdls_fn;
 $blindlogfile = $mydir . $log_fn;
 $solvedfile = $mydir . $solved_fn;
 $wcsfile = $mydir . $wcs_fn;
+$matchfile = $mydir . $match_fn;
 $objsfile = $mydir . $objs_fn;
 $overlayfile = $mydir . $overlay_fn;
 $rdlsinfofile = $mydir . $rdlsinfo_fn;
@@ -109,32 +110,133 @@ if ($overlay) {
 			die("failed to find image width and height.\n");
 		}
 
+		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
+		//loggit("cmd: " . $cmd . "\n");
+		$output = shell_exec($cmd);
+		loggit("output: " . $output . "\n");
+		if (sscanf($output, " %d %d %d %d %d ", $nil, $fA, $fB, $fC, $fD) != 5) {
+			die("failed to parse field objs.");
+		}
+		$flds = array($fA, $fB, $fC, $fD);
+		$fldobjs = max($flds);
+		loggit("field objs: " . implode(" ", $flds) . "\n");
+
+		for ($i=0; $i<4; $i++)
+			$fldor[$i] = "#row==" . (1+$flds[$i]);
+		$cmd = $tablist . " " . $xylist . "\"[" . implode("||", $fldor) . "][col X;Y]\" | tail -n 4";
+		$output = shell_exec($cmd);
+		$lines = explode("\n", $output);
+		for ($i=0; $i<4; $i++) {
+			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
+				die("failed to parse field objs coords: \"" . $lines[$i] . "\"");
+			}
+			$fldxy[] = $x;
+			$fldxy[] = $y;
+		}
+
+		$quadimg = $mydir . "quad.pgm";
+		$redquad = $mydir . "redquad.pgm";
 		$xypgm = $mydir . "index.xy.pgm";
+		$fldxy1pgm = $mydir . "fldxy1.pgm";
+		//$fldxy2pgm = $mydir . "fldxy2.pgm";
 		$redimg = $mydir . "red.pgm";
 		$sumimg = $mydir . "sum.ppm";
+		$sumimg2 = $mydir . "sum2.ppm";
+		$dimimg = $mydir . "dim.ppm";
 
-		$cmd = $plotxy . " -i " . $indexxyls . " -W " . $W . " -H " . $H . " > " . $xypgm;
+		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
+		loggit("command: $cmd\n");
+		if (system($cmd, $retval) === FALSE) {
+			die("plotquad failed.");
+		}
+
+		$cmd = "pgmtoppm red " . $quadimg . " > " . $redquad;
+		loggit("command: $cmd\n");
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			die("pgmtoppm (quad) failed.");
+		}
+
+		$cmd = $plotxy2 . " -i " . $indexxyls . " -W " . $W . " -H " . $H . " -x 1 -y 1 -w 1.5 > " . $xypgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("plotxy failed. retval $retval, res \"" . $res . "\"");
+			die("plotxy2 failed. retval $retval, res \"" . $res . "\"");
 		}
+
+		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H . " -N " . (1+$fldobjs) . " -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy1pgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
+		}
+
+		/*
+		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H . " -n " . $fldobjs . " > " . $fldxy2pgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("plotxy (fld2) failed. retval $retval, res \"" . $res . "\"");
+		}
+		*/
 
 		$cmd = "pgmtoppm red " . $xypgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pgmtoppm failed.");
+			die("pgmtoppm (xy) failed.");
 		}
 
-		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $pnmimg . " " . $sumimg;
+		$cmd = "ppmdim 0.75 " . $pnmimg . " > " . $dimimg;
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("ppmdim failed.");
+		}
+
+		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
 			die("pnmcomp failed.");
 		}
 
-		$cmd = "pnmtopng " . $sumimg . " > " . $overlayfile;
+		$cmd = "pgmtoppm white " . $fldxy1pgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pgmtoppm (fldxy1) failed.");
+		}
+		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg . " " . $sumimg . " " . $sumimg2;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pnmcomp failed.");
+		}
+		/*
+		$cmd = "pgmtoppm white " . $fldxy2pgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pgmtoppm failed.");
+		}
+		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pnmcomp failed.");
+		}
+		*/
+		$cmd = "mv " . $sumimg2 . " " . $sumimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+
+		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pnmcomp (2) failed.");
+		}
+
+		$cmd = "pnmtopng " . $sumimg2 . " > " . $overlayfile;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -149,7 +251,6 @@ if ($overlay) {
 	} else
 		die("overlay file does not exist.");
 }
-
 ?>
 
 <!DOCTYPE html 
@@ -257,14 +358,15 @@ if ($didsolve && file_exists($pnmimg)) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	echo "<div id=\"overlay\">\n";
-	echo "<p>Your field, overplotted with objects from the index.</p>\n";
+	echo "<p>Red circles: stars from the index, projected to image coordinates.\n";
+	echo "<br />White circles: field objects that were examined.\n";
+	//Your field, overplotted with objects from the index.</p>\n";
 	echo "<img src=\"" .
 		"http://" . $host . $uri . "/status.php?job=" . $myname . "&overlay" .
 		"\" />";
 	echo "</div>\n";
 	echo "<hr />\n";
 }
-//?>
 ?>
 
 <table cellpadding="3" border="1" class="c">

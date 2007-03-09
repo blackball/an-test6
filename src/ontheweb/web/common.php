@@ -38,10 +38,12 @@ if (strpos($host, "monte") === 0) {
 	$resultdir = "/h/260/dstn/local/ontheweb-results/";
 	$indexdir = "/h/260/dstn/local/ontheweb-indexes/";
 	$fits2xy = "~/an/simplexy/fits2xy";
-	$plotxy = "plotxy";
+	$plotxy2 = "plotxy2";
+	$plotquad = "plotquad";
 	$modhead = "modhead";
 	$tabsort = "tabsort";
 	$tabmerge = "tabmerge";
+	$tablist = "tablist";
 	$mergesolved = "mergesolved";
 	//$fitsgetext = "fitsgetext";
 	$rdlsinfo = "rdlsinfo";
@@ -54,9 +56,11 @@ if (strpos($host, "monte") === 0) {
 	$resultdir = "/home/gmaps/ontheweb-data/";
 	$indexdir = "/home/gmaps/ontheweb-indexes/";
 	$fits2xy = "/home/gmaps/simplexy/fits2xy";
-	$plotxy = "/home/gmaps/quads/plotxy";
+	$plotxy2 = "/home/gmaps/quads/plotxy2";
+	$plotquad = "/home/gmaps/quads/plotquad";
 	$modhead = "/home/gmaps/quads/modhead";
 	$tabsort = "/home/gmaps/quads/tabsort";
+	$tablist = "/home/gmaps/quads/tablist";
 	$tabmerge = "/home/gmaps/quads/tabmerge";
 	//$fitsgetext = "/home/gmaps/quads/fitsgetext";
 	$mergesolved = "/home/gmaps/quads/mergesolved";
