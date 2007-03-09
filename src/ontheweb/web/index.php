@@ -377,6 +377,7 @@ function process_data ($vals) {
 	global $rdlsinfo_fn;
 	global $match_fn;
 	global $solved_fn;
+	global $cancel_fn;
 	global $wcs_fn;
 	global $start_fn;
 	global $done_fn;
@@ -605,6 +606,7 @@ function process_data ($vals) {
 	$rdlsinfofile = $mydir . $rdlsinfo_fn;
 	$matchfile = $mydir . $match_fn;
 	$solvedfile = $mydir . $solved_fn;
+	$cancelfile = $mydir . $cancel_fn;
 	$wcsfile = $mydir . $wcs_fn;
 	$startfile = $mydir . $start_fn;
 	$donefile = $mydir . $done_fn;
@@ -758,6 +760,7 @@ function process_data ($vals) {
 		"donescript " . $donescript . "\n" .
 		"field " . $xylist . "\n" .
 		"solved " . $solvedfile . "\n" .
+		"cancel " . $cancelfile . "\n" .
 		"match " . $matchfile . "\n" .
 		"wcs " . $wcsfile . "\n" .
 		"indexrdls " . $indexrdls . "\n" .

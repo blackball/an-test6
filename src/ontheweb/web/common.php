@@ -25,6 +25,7 @@ $indexxyls_fn = "index.xy.fits";
 $match_fn = "match.fits";
 $log_fn   = "log";
 $solved_fn= "solved";
+$cancel_fn= "cancel";
 $wcs_fn   = "wcs.fits";
 $objs_fn  = "objs.png";
 $overlay_fn="overlay.png";

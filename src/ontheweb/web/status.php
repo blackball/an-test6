@@ -13,6 +13,7 @@ $mydir = $resultdir . $myname . "/";
 
 $img = array_key_exists("img", $headers);
 $overlay = array_key_exists("overlay", $headers);
+$cancel = array_key_exists("cancel", $headers);
 
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
@@ -30,6 +31,7 @@ $xylist = $mydir . $xyls_fn;
 $rdlist = $mydir . $rdls_fn;
 $blindlogfile = $mydir . $log_fn;
 $solvedfile = $mydir . $solved_fn;
+$cancelfile = $mydir . $cancel_fn;
 $wcsfile = $mydir . $wcs_fn;
 $matchfile = $mydir . $match_fn;
 $objsfile = $mydir . $objs_fn;
@@ -50,6 +52,13 @@ if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	sleep(1);
 }
 
+if ($cancel) {
+	loggit("cancel requested.\n");
+	if (!touch($cancelfile)) {
+		die("Failed to created cancel file.");
+	}
+}
+
 $input_exists = file_exists($inputfile);
 $job_submitted = $input_exists;
 $job_started = file_exists($startfile);
@@ -60,6 +69,7 @@ if ($job_done) {
 } else {
 	$didsolve = FALSE;
 }
+$didcancel = file_exists($cancelfile);
 $do_refresh = !array_key_exists("norefresh", $headers);
 
 if (!$job_submitted) {
@@ -408,7 +418,9 @@ echo $myname
 
 <tr><td>Status:</td><td>
 <?php
-if (!$job_submitted) {
+if ($didcancel) {
+	echo "Cancelled.";
+} else if (!$job_submitted) {
 	echo "Not submitted";
 } else if ($job_done) {
 	echo "Finished";
@@ -662,6 +674,14 @@ if (file_exists($blindlogfile)) {
 <hr />
 */
 ?>
+
+<form name="dummyform" action="status.php" method="get">
+<p align=center>
+<input type="submit" name="cancel" value="Cancel Job" />
+<input type="hidden" name="job" value="<?php echo $myname; ?>" />
+</p>
+</form>
+<hr />
 
 <?php
 if ($check_xhtml) {

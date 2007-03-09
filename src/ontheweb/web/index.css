@@ -22,6 +22,7 @@ body {
             }
 #leftbox {
            width: 40%;
+           margin-left: 1%;
            /*height: auto;*/
            /*height: 100%;*/
            padding-left: 2em;
@@ -30,10 +31,10 @@ body {
            border-color: grey;
            border-style: double;
            float: left;
-           margin-left: 3%;
            }
 #rightbox {
             width: 40%;
+            margin-right: 1%;
             height: auto;
             padding-left: 2em;
             padding-right: 2em;
@@ -41,7 +42,6 @@ body {
             border-color: grey;
             border-style: double;
             float: right;
-            margin-right: 3%;
             }
 
 #optbox {
