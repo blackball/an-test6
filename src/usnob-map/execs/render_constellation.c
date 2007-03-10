@@ -85,9 +85,9 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				return -1;
 			}
 
-	 unsigned char r = (rand() % 128) + 127;
-	 unsigned char g = (rand() % 128) + 127;
-	 unsigned char b = (rand() % 128) + 127;
+			unsigned char r = (rand() % 128) + 127;
+			unsigned char g = (rand() % 128) + 127;
+			unsigned char b = (rand() % 128) + 127;
 
 			for (i=0; i<nlines; i++) {
 				int star1, star2;
@@ -108,6 +108,14 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
 				ra1 *= (360.0 / 24.0);
 				ra2 *= (360.0 / 24.0);
+
+				// Fix wraparound
+				if (fabs(ra1-ra2) > 50) {
+					double ramin = fmin(ra1,ra2);
+					double ramax = fmin(ra1,ra2);
+					ra1 = ramax - 360.0;
+					ra2 = ramin;
+				}
 
 				px1 = ra2pixel(ra1, args);
 				px2 = ra2pixel(ra2, args);
