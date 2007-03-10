@@ -251,6 +251,16 @@ int dec2pixel(double dec, render_args_t* args) {
 	return ymerc2pixel(dec2merc(deg2rad(dec)), args);
 }
 
+// RA in degrees
+double ra2pixelf(double ra, render_args_t* args) {
+	return xmerc2pixelf(ra2merc(deg2rad(ra)), args);
+}
+
+// DEC in degrees
+double dec2pixelf(double dec, render_args_t* args) {
+	return ymerc2pixelf(dec2merc(deg2rad(dec)), args);
+}
+
 // Converts from RA in radians to Mercator X coordinate in [0, 1].
 double ra2merc(double ra) {
 	return ra / (2.0 * M_PI);

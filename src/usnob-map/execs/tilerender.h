@@ -85,9 +85,17 @@ double xmerc2pixelf(double x, render_args_t* args);
 
 double ymerc2pixelf(double y, render_args_t* args);
 
+// RA in degrees
 int ra2pixel(double ra, render_args_t* args);
 
+// DEC in degrees
 int dec2pixel(double dec, render_args_t* args);
+
+// RA in degrees
+double ra2pixelf(double ra, render_args_t* args);
+
+// DEC in degrees
+double dec2pixelf(double dec, render_args_t* args);
 
 int in_image(int x, int y, render_args_t* args);
 

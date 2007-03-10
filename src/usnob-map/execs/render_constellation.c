@@ -8,15 +8,94 @@
 
 #include "tilerender.h"
 #include "render_constellation.h"
-#include "sip_qfits.h"
+#include "starutil.h"
+#include "mathutil.h"
 
 static char* const_dirs[] = {
 	".",
+	"/usr/share/stellarium/data/sky_cultures/western", // Debian
 	"/home/gmaps/usnob-map/execs" // FIXME
 };
 
-static char* hipparcos_fn = "/home/gmaps/usnob-map/execs/hipparcos.fab";
-//static char* hipparcos_fn = "hipparcos.fab";
+static char* hipparcos_fn = "hipparcos.fab";
+static char* hip_dirs[] = {
+	".",
+	"/usr/share/stellarium/data", // Debian
+	"/home/gmaps/usnob-map/execs"
+};
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define IS_BIG_ENDIAN 1
+#else
+#define IS_BIG_ENDIAN 0
+#endif
+// Stellarium writes things in little-endian format.
+static inline void swap(void* p, int nbytes) {
+#if IS_BIG_ENDIAN
+	int i;
+	unsigned char* c = p;
+	for (i=0; i<(nbytes/2); i++) {
+		unsigned char tmp = c[i];
+		c[i] = c[nbytes-(i+1)];
+		c[nbytes-(i+1)] = tmp;
+	}
+#else
+	return;
+#endif
+}
+static inline void swap_32(void* p) {
+	return swap(p, 4);
+}
+
+// ra,dec in degrees.
+static void draw_segmented_line(double ra1, double dec1,
+								double ra2, double dec2,
+								int SEGS,
+								cairo_t* cairo, render_args_t* args) {
+	int i, s, k;
+	double xyz1[3], xyz2[3];
+	bool wrap;
+
+	radecdeg2xyzarr(ra1, dec1, xyz1);
+	radecdeg2xyzarr(ra2, dec2, xyz2);
+
+	wrap = (fabs(ra1 - ra2) >= 180.0);
+
+	// Draw segmented line.
+	for (i=0; i<(1 + (wrap?1:0)); i++) {
+		for (s=0; s<SEGS; s++) {
+			double xyz[3], frac;
+			double ra, dec;
+			double mx;
+			double px, py;
+			frac = (double)s / (double)(SEGS-1);
+			for (k=0; k<3; k++)
+				xyz[k] = xyz1[k]*(1.0-frac) + xyz2[k]*frac;
+			normalize_3(xyz);
+			xyzarr2radec(xyz, &ra, &dec);
+			mx = ra2merc(ra);
+			if (wrap) {
+				// in the first pass we draw the left side (mx>0.5)
+				if ((i==0) && (mx < 0.5)) mx += 1.0;
+				// in the second pass we draw the right side (wx<0.5)
+				if ((i==1) && (mx > 0.5)) mx -= 1.0;
+			}
+			px = xmerc2pixelf(mx, args);
+			py = dec2pixelf(rad2deg(dec), args);
+
+			if (s==0)
+				cairo_move_to(cairo, px, py);
+			else
+				cairo_line_to(cairo, px, py);
+		}
+	}
+}
+
+
+typedef union {
+	uint32_t i;
+	float    f;
+} intfloat;
 
 int render_constellation(unsigned char* img, render_args_t* args) {
 	int i;
@@ -41,7 +120,15 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		return -1;
 	}
 
-	FILE* fhip = fopen(hipparcos_fn, "rb");
+	FILE* fhip = NULL;
+	for (i=0; i<sizeof(hip_dirs)/sizeof(char*); i++) {
+		char fn[256];
+		snprintf(fn, sizeof(fn), "%s/%s", hip_dirs[i], hipparcos_fn);
+		fprintf(stderr, "render_constellation: Trying hip file: %s\n", fn);
+		fhip = fopen(fn, "rb");
+		if (fhip)
+			break;
+	}
 	if (!fhip) {
 		fprintf(stderr, "render_constellation: unhip\n");
 		return -1;
@@ -57,15 +144,24 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		void* map;
 		unsigned char* hip;
 
+		// size of entries in Stellarium's hipparcos.fab file.
+		int HIP_SIZE = 15;
+		// byte offset to the first element in Stellarium's hipparcos.fab file.
+		int HIP_OFFSET = 4;
+
+		// first 32-bit int: 
 		if (fread(&nstars, 4, 1, fhip) != 1) {
 			fprintf(stderr, "render_constellation: failed to read nstars.\n");
 			return -1;
 		}
+		swap_32(&nstars);
 		fprintf(stderr, "render_constellation: Found %i Hipparcos stars\n", nstars);
 
-		mapsize = nstars * 15 + 4;
+		mapsize = nstars * HIP_SIZE + HIP_OFFSET;
 		map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
-		hip = ((unsigned char*)map) + 4;
+		hip = ((unsigned char*)map) + HIP_OFFSET;
+
+		fprintf(stderr, "mapsize: %i\n", mapsize);
 
 		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 													 args->W, args->H, args->W*4);
@@ -84,6 +180,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "failed parse name+nlines\n");
 				return -1;
 			}
+			fprintf(stderr, "Name: %s.  Nlines %i.\n", shortname, nlines);
 
 			unsigned char r = (rand() % 128) + 127;
 			unsigned char g = (rand() % 128) + 127;
@@ -91,63 +188,39 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
 			for (i=0; i<nlines; i++) {
 				int star1, star2;
-				//uint32_t ival;
 				float ra1, dec1, ra2, dec2;
-				double px1, py1, px2, py2;
+				intfloat ifval;
+				int SEGS=20;
+
 				if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
 					fprintf(stderr, "failed parse star1+star2\n");
 					return -1;
 				}
-				// FIXME: ENDIAN
-				//ival = *((uint32_t*)(map + 15 * star1));
-				
-				ra1  = *((float*)(hip + 15 * star1));
-				dec1 = *((float*)(hip + 15 * star1 + 4));
-				ra2  = *((float*)(hip + 15 * star2));
-				dec2 = *((float*)(hip + 15 * star2 + 4));
+				// RA,DEC are the first two elements: 32-bit floats
+				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1));
+				fprintf(stderr, "read: %x\n", ifval.i);
+				swap_32(&ifval.i);
+				fprintf(stderr, "flip: %x\n", ifval.i);
+				ra1 = ifval.f;
+				fprintf(stderr, "ra: %g\n", ra1);
+				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1 + 4));
+				swap_32(&ifval.i);
+				dec1 = ifval.f;
 
+				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star2));
+				swap_32(&ifval.i);
+				ra2 = ifval.f;
+				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star2 + 4));
+				swap_32(&ifval.i);
+				dec2 = ifval.f;
+
+				// Stellarium stores RA in hours...
 				ra1 *= (360.0 / 24.0);
 				ra2 *= (360.0 / 24.0);
 
-				// Force ra1 < ra2
-				if (ra1 > ra2) {
-					double tmp;
-					tmp = ra1;
-					ra1 = ra2;
-					ra2 = tmp;
-					tmp = dec1;
-					dec1 = dec2;
-					dec2 = tmp;
-				} 
-
-				px1 = ra2pixel(ra1, args);
-				px2 = ra2pixel(ra2, args);
-				py1 = dec2pixel(dec1, args);
-				py2 = dec2pixel(dec2, args);
-
-				// Jimmy RA
-				if (in_image(px1,py1,args) && !in_image(px2,py2,args) && ra2 - ra1 > 50) {
-					ra2 -= 360.0;
-				} else if (in_image(px2,py2,args) && !in_image(px1,py1,args) && ra2 - ra1 > 50) {
-					ra1 += 360.0;
-				}
-
-				// Jimmy again
-				//                .''''''''''''''''''''''''''''''''''''''.
-				//      0    -----| I haunt you from gaim!!!    MUHAHHA  |
-				//    +-|-+       '......................................'
-				//     / \
-				//     | |
-				//     ^ ^
-				px1 = ra2pixel(ra1, args);
-				px2 = ra2pixel(ra2, args);
-
 				cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
-
-				cairo_move_to(cairo, px1, py1);
-				cairo_line_to(cairo, px2, py2);
+				draw_segmented_line(ra1, dec1, ra2, dec2, SEGS, cairo, args);
 				cairo_stroke(cairo);
-				
 			}
 			fscanf(fconst, "\n");
 			if (feof(fconst))
