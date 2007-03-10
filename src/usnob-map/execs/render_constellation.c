@@ -10,6 +10,7 @@
 #include "render_constellation.h"
 #include "starutil.h"
 #include "mathutil.h"
+#include "bl.h"
 
 static char* const_dirs[] = {
 	".",
@@ -23,6 +24,11 @@ static char* hip_dirs[] = {
 	"/usr/share/stellarium/data", // Debian
 	"/home/gmaps/usnob-map/execs"
 };
+
+// size of entries in Stellarium's hipparcos.fab file.
+static int HIP_SIZE = 15;
+// byte offset to the first element in Stellarium's hipparcos.fab file.
+static int HIP_OFFSET = 4;
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define IS_BIG_ENDIAN 1
@@ -91,11 +97,24 @@ static void draw_segmented_line(double ra1, double dec1,
 	}
 }
 
-
 typedef union {
 	uint32_t i;
 	float    f;
 } intfloat;
+
+static void hip_get_radec(unsigned char* hip, int star1,
+						  double* ra, double* dec) {
+	intfloat ifval;
+	ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1));
+	swap_32(&ifval.i);
+	*ra = ifval.f;
+	// Stellarium stores RA in hours...
+	*ra *= (360.0 / 24.0);
+	ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1 + 4));
+	swap_32(&ifval.i);
+	*dec = ifval.f;
+}
+
 
 int render_constellation(unsigned char* img, render_args_t* args) {
 	int i;
@@ -145,11 +164,6 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		unsigned char* hip;
 		int c;
 
-		// size of entries in Stellarium's hipparcos.fab file.
-		int HIP_SIZE = 15;
-		// byte offset to the first element in Stellarium's hipparcos.fab file.
-		int HIP_OFFSET = 4;
-
 		// first 32-bit int: 
 		if (fread(&nstars, 4, 1, fhip) != 1) {
 			fprintf(stderr, "render_constellation: failed to read nstars.\n");
@@ -176,6 +190,11 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			char shortname[16];
 			int nlines;
 			int i;
+			il* uniqstars = il_new(16);
+			double cmass[3];
+			double ra,dec;
+			double px,py;
+
 			if (fscanf(fconst, "%s %d ", shortname, &nlines) != 2) {
 				fprintf(stderr, "failed parse name+nlines\n");
 				return -1;
@@ -188,38 +207,50 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
 			for (i=0; i<nlines; i++) {
 				int star1, star2;
-				float ra1, dec1, ra2, dec2;
-				intfloat ifval;
+				double ra1, dec1, ra2, dec2;
 				int SEGS=20;
 
 				if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
 					fprintf(stderr, "failed parse star1+star2\n");
 					return -1;
 				}
+
+				il_insert_unique_ascending(uniqstars, star1);
+				il_insert_unique_ascending(uniqstars, star2);
+
 				// RA,DEC are the first two elements: 32-bit floats
 				// (little-endian)
-				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1));
-				swap_32(&ifval.i);
-				ra1 = ifval.f;
-				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1 + 4));
-				swap_32(&ifval.i);
-				dec1 = ifval.f;
-
-				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star2));
-				swap_32(&ifval.i);
-				ra2 = ifval.f;
-				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star2 + 4));
-				swap_32(&ifval.i);
-				dec2 = ifval.f;
-
-				// Stellarium stores RA in hours...
-				ra1 *= (360.0 / 24.0);
-				ra2 *= (360.0 / 24.0);
+				hip_get_radec(hip, star1, &ra1, &dec1);
+				hip_get_radec(hip, star2, &ra2, &dec2);
 
 				cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
 				draw_segmented_line(ra1, dec1, ra2, dec2, SEGS, cairo, args);
 				cairo_stroke(cairo);
 			}
+
+			// find center of mass.
+			cmass[0] = cmass[1] = cmass[2] = 0.0;
+			for (i=0; i<il_size(uniqstars); i++) {
+				double xyz[3];
+				hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
+				radecdeg2xyzarr(ra, dec, xyz);
+				cmass[0] += xyz[0];
+				cmass[1] += xyz[1];
+				cmass[2] += xyz[2];
+			}
+			cmass[0] /= il_size(uniqstars);
+			cmass[1] /= il_size(uniqstars);
+			cmass[2] /= il_size(uniqstars);
+			xyzarr2radec(cmass, &ra, &dec);
+			px = ra2pixel(rad2deg(ra), args);
+			py = dec2pixel(rad2deg(dec), args);
+
+			//cairo_select_font_face(cairo, "DejaVuSans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+			cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+			cairo_set_font_size(cairo, 10.0);
+			cairo_move_to(cairo, px, py);
+			cairo_show_text(cairo, shortname);
+
 			fscanf(fconst, "\n");
 			if (feof(fconst))
 				break;
