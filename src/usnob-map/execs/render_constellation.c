@@ -109,18 +109,38 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				ra1 *= (360.0 / 24.0);
 				ra2 *= (360.0 / 24.0);
 
-				// Fix wraparound
-				if (fabs(ra1-ra2) > 50) {
-					double ramin = fmin(ra1,ra2);
-					double ramax = fmin(ra1,ra2);
-					ra1 = ramax - 360.0;
-					ra2 = ramin;
-				}
+				// Force ra1 < ra2
+				if (ra1 > ra2) {
+					double tmp;
+					tmp = ra1;
+					ra1 = ra2;
+					ra2 = tmp;
+					tmp = dec1;
+					dec1 = dec2;
+					dec2 = tmp;
+				} 
 
 				px1 = ra2pixel(ra1, args);
 				px2 = ra2pixel(ra2, args);
 				py1 = dec2pixel(dec1, args);
 				py2 = dec2pixel(dec2, args);
+
+				// Jimmy RA
+				if (in_image(px1,py1,args) && !in_image(px2,py2,args) && ra2 - ra1 > 50) {
+					ra2 -= 360.0;
+				} else if (in_image(px2,py2,args) && !in_image(px1,py1,args) && ra2 - ra1 > 50) {
+					ra1 += 360.0;
+				}
+
+				// Jimmy again
+				//                .''''''''''''''''''''''''''''''''''''''.
+				//      0    -----| I haunt you from gaim!!!    MUHAHHA  |
+				//    +-|-+       '......................................'
+				//     / \
+				//     | |
+				//     ^ ^
+				px1 = ra2pixel(ra1, args);
+				px2 = ra2pixel(ra2, args);
 
 				cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
 
