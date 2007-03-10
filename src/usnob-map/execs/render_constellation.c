@@ -245,9 +245,8 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			px = ra2pixel(rad2deg(ra), args);
 			py = dec2pixel(rad2deg(dec), args);
 
-			//cairo_select_font_face(cairo, "DejaVuSans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-			cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-			cairo_set_font_size(cairo, 10.0);
+			cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+			cairo_set_font_size(cairo, 14.0);
 			cairo_move_to(cairo, px, py);
 			cairo_show_text(cairo, shortname);
 
