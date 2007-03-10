@@ -143,6 +143,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		size_t mapsize;
 		void* map;
 		unsigned char* hip;
+		int c;
 
 		// size of entries in Stellarium's hipparcos.fab file.
 		int HIP_SIZE = 15;
@@ -160,8 +161,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		mapsize = nstars * HIP_SIZE + HIP_OFFSET;
 		map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
 		hip = ((unsigned char*)map) + HIP_OFFSET;
-
-		fprintf(stderr, "mapsize: %i\n", mapsize);
+		//fprintf(stderr, "mapsize: %i\n", mapsize);
 
 		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 													 args->W, args->H, args->W*4);
@@ -172,7 +172,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 		//cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
 
-		while (1) {
+		for (c=0;; c++) {
 			char shortname[16];
 			int nlines;
 			int i;
@@ -180,7 +180,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "failed parse name+nlines\n");
 				return -1;
 			}
-			fprintf(stderr, "Name: %s.  Nlines %i.\n", shortname, nlines);
+			//fprintf(stderr, "Name: %s.  Nlines %i.\n", shortname, nlines);
 
 			unsigned char r = (rand() % 128) + 127;
 			unsigned char g = (rand() % 128) + 127;
@@ -197,12 +197,10 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 					return -1;
 				}
 				// RA,DEC are the first two elements: 32-bit floats
+				// (little-endian)
 				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1));
-				fprintf(stderr, "read: %x\n", ifval.i);
 				swap_32(&ifval.i);
-				fprintf(stderr, "flip: %x\n", ifval.i);
 				ra1 = ifval.f;
-				fprintf(stderr, "ra: %g\n", ra1);
 				ifval.i = *((uint32_t*)(hip + HIP_SIZE * star1 + 4));
 				swap_32(&ifval.i);
 				dec1 = ifval.f;
@@ -226,6 +224,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			if (feof(fconst))
 				break;
 		}
+		fprintf(stderr, "render_constellations: Read %i constellations.\n", c);
 
 		munmap(map, mapsize);
 
