@@ -197,7 +197,7 @@ if ($gotindex) {
 		$cmd = $cmd . sprintf(" -l %f", $linesize);
 	}
 
-	if ($zoom <= 4) {
+	if ($zoom <= 5) {
 		$pngformat = TRUE;
 	}
 }

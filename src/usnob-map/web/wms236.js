@@ -113,7 +113,8 @@ CustomGetTileUrl=function(a,b,c) {
 	lURL+="&WIDTH=256";
 	lURL+="&HEIGHT=256";
 	lURL+="&reaspect=false";
-	lURL+="&zoom="+document.dummyform.zoom.value;
+	//lURL+="&zoom="+document.dummyform.zoom.value;
+	lURL+="&zoom="+map.getZoom();
 	//lURL+="&gain="+document.dummyform.gain.value;
 	return lURL;
 }
