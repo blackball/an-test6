@@ -295,14 +295,16 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		char name[32];
 		int rahrs;
 		double ramins, ra;
-		int dechrs, decmins;
+		int decdegs, decmins;
 		double dec;
 		double mag;
 		char diamstr[32];
-		double diam;
 		double dist;
 		int nchars;
 		int k;
+		char printname[256];
+		double px,py;
+		int nchars_dec;
 
 		if (!fgets(line, sizeof(line), fmess)) {
 			if (feof(fmess))
@@ -338,7 +340,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			return -1;
 		}
 		*rptr = '\0';
-		fprintf(stderr, "conlong: '%s'\n", conlong);
+		//fprintf(stderr, "conlong: '%s'\n", conlong);
 		cptr++;
 
 		if (sscanf(cptr, " %s %s %s %n", conshort, type, subtype, &nchars) != 3) {
@@ -347,69 +349,37 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		}
 		cptr += nchars;
 
-		/*
-		  while (*cptr && isspace(*cptr)) cptr++;
-		rptr = conshort;
-		while (*cptr && !isspace(*cptr)) {
-			*rptr = *cptr;
-			cptr++;
-			rptr++;
-		}
-		if (!*cptr) {
-			fprintf(stderr, "failed parsing short name.\n");
-			return -1;
-		}
-		*rptr = '\0';
-		fprintf(stderr, "conshort: '%s'\n", conshort);
+		//fprintf(stderr, "remainder: '%s'\n", cptr);
 
-		while (*cptr && isspace(*cptr)) cptr++;
-
-		rptr = type;
-		while (*cptr && !isspace(*cptr)) {
-			*rptr = *cptr;
-			cptr++;
-			rptr++;
-		}
-		if (!*cptr) {
-			fprintf(stderr, "failed parsing type.\n");
-			return -1;
-		}
-		*rptr = '\0';
-		fprintf(stderr, "type: '%s'\n", type);
-
-		while (*cptr && isspace(*cptr)) cptr++;
-
-		rptr = subtype;
-		while (*cptr && !isspace(*cptr)) {
-			*rptr = *cptr;
-			cptr++;
-			rptr++;
-		}
-		if (!*cptr) {
-			fprintf(stderr, "failed parsing subtype.\n");
-			return -1;
-		}
-		*rptr = '\0';
-		fprintf(stderr, "subtype: '%s'\n", subtype);
-
-		while (*cptr && isspace(*cptr)) cptr++;
-		*/
-		
-
-		fprintf(stderr, "remainder: '%s'\n", cptr);
-
-		if ((res = sscanf(cptr, "%d %lg %d %d %lg %s %lg %n", &rahrs, &ramins, &dechrs, &decmins, &mag, diamstr, &dist, &nchars)) != 7) {
+		if ((res = sscanf(cptr, "%d %lg %n%d %d %lg %s %lg %n",
+						  &rahrs, &ramins, &nchars_dec, &decdegs, &decmins, &mag, diamstr, &dist, &nchars)) != 7) {
 			fprintf(stderr, "failed parsing remainder: got %i.\n", res);
 			return -1;
 		}
 
-		fprintf(stderr, "ra hrs: %i\n", rahrs);
-		fprintf(stderr, "ra mins: %g\n", ramins);
-		fprintf(stderr, "dec hrs: %i\n", dechrs);
-		fprintf(stderr, "dec mins: %i\n", decmins);
-		fprintf(stderr, "mag: %g\n", mag);
-		fprintf(stderr, "diamstr: %s\n", diamstr);
-		fprintf(stderr, "dist: %g\n", dist);
+		ra = (rahrs + ramins/60.0) * 15.0;
+		if (cptr[nchars_dec] == '+') {
+			dec = (decdegs + decmins/60.0);
+		} else if (cptr[nchars_dec] == '-') {
+			dec = (decdegs - decmins/60.0);
+		} else {
+			fprintf(stderr, "Failed parsing dec.\n");
+			return -1;
+		}
+
+		/*
+		  fprintf(stderr, "ra: %g\n", ra);
+		  fprintf(stderr, "dec: %g\n", dec);
+		*/
+		/*
+		  fprintf(stderr, "ra hrs: %i\n", rahrs);
+		  fprintf(stderr, "ra mins: %g\n", ramins);
+		  fprintf(stderr, "dec degrees: %i\n", decdegs);
+		  fprintf(stderr, "dec mins: %i\n", decmins);
+		  fprintf(stderr, "mag: %g\n", mag);
+		  fprintf(stderr, "diamstr: %s\n", diamstr);
+		  fprintf(stderr, "dist: %g\n", dist);
+		*/
 		for (k=0;; k++) {
 			if ((cptr[nchars + k] == '\n') ||
 				(cptr[nchars + k] == '\0')) {
@@ -418,10 +388,19 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			}
 			name[k] = cptr[nchars+k];
 		}
-		fprintf(stderr, "name: \"%s\"\n", name);
+		//fprintf(stderr, "name: \"%s\"\n", name);
+		//fprintf(stderr, "\n");
 
-		fprintf(stderr, "\n");
+		if (strlen(name)) {
+			sprintf(printname, " M%i (%s)", mess, name);
+		} else {
+			sprintf(printname, " M%i", mess);
+		}
 
+		px = ra2pixel(ra, args);
+		py = dec2pixel(dec, args);
+		cairo_move_to(cairo, px, py);
+		cairo_show_text(cairo, printname);
 	}
 	fclose(fmess);
 
