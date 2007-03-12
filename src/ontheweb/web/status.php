@@ -687,6 +687,10 @@ if (file_exists($blindlogfile)) {
 */
 ?>
 
+<?php
+if (!($job_done || $didcancel)) {
+?>
+
 <form id="dummyform" action="status.php" method="get">
 <p class="c">
 <input type="submit" name="cancel" value="Cancel Job" />
@@ -694,6 +698,10 @@ if (file_exists($blindlogfile)) {
 </p>
 </form>
 <hr />
+
+<?php
+}
+?>
 
 <p>
 <a href="http://validator.w3.org/check?uri=referer"><img
