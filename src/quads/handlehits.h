@@ -56,8 +56,6 @@ struct handlehits {
 
 	// used when nagree_toverify > 1
 	hitlist* hits;
-	// used when nagree_toverify == 1
-	pl* singles;
 
 	// number of times we've run verification
 	int nverified;
@@ -65,7 +63,7 @@ struct handlehits {
 	// best hit that surpasses the "solve" requirements.
 	MatchObj* bestmo;
 	// index in the hitlist of "bestmo" 
-	int bestmoindex;
+	//int bestmoindex;
 	// correspondence vector of "bestmo"
 	int* bestcorr;
 	// MatchObj*s with overlap above the keep threshold

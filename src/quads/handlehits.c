@@ -15,10 +15,10 @@
   along with the Astrometry.net suite ; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
+#include <string.h>
 
 #include "handlehits.h"
 #include "verify.h"
-#include "blind_wcs.h"
 
 handlehits* handlehits_new() {
 	handlehits* hh;
@@ -30,11 +30,11 @@ void handlehits_free_matchobjs(handlehits* hh) {
 	if (!hh) return;
 	if (hh->hits)
 		hitlist_free_matchobjs(hh->hits);
-	if (hh->singles) {
+	if (hh->nagree_toverify == 0) {
 		int i;
-		for (i=0; i<pl_size(hh->singles); i++)
-			free(pl_get(hh->singles, i));
-		pl_remove_all(hh->singles);
+		for (i=0; i<pl_size(hh->keepers); i++)
+			free(pl_get(hh->keepers, i));
+		pl_remove_all(hh->keepers);
 	}
 }
 
@@ -43,15 +43,11 @@ void handlehits_clear(handlehits* hh) {
 		hitlist_clear(hh->hits);
 	hh->nverified = 0;
 	hh->bestmo = NULL;
-	hh->bestmoindex = 0;
 	free(hh->bestcorr);
 	hh->bestcorr = NULL;
 	if (hh->keepers)
 		pl_free(hh->keepers);
 	hh->keepers = NULL;
-	if (hh->singles)
-		pl_free(hh->singles);
-	hh->singles = NULL;
 }
 
 void handlehits_free(handlehits* hh) {
@@ -62,7 +58,7 @@ void handlehits_free(handlehits* hh) {
 	free(hh);
 }
 
-static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
+static bool verify(handlehits* hh, MatchObj* mo, bool* pkeep) {
 	int* corr = NULL;
 
 	// this check is here to handle the "agreeable" case, where the overlap
@@ -107,17 +103,11 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 	if ((mo->overlap < hh->overlap_tokeep) ||
 		(mo->ninfield < hh->ninfield_tokeep)) {
 		free(corr);
+		if (pkeep) *pkeep = FALSE;
 		return FALSE;
 	}
 
-	// This computes a WCS solution that uses all of the stars
-	// that are (supposedly) in correspondence.
-	/*
-	  if (corr) {
-	  blind_wcs_compute(mo, hh->field, hh->nfield, corr, &(mo->wcstan));
-	  mo->wcs_valid = 1;
-	  }
-	*/
+	if (pkeep) *pkeep = TRUE;
 
 	if (!hh->keepers)
 		hh->keepers = pl_new(32);
@@ -131,7 +121,6 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 
 	if (!hh->bestmo || (mo->overlap > hh->bestmo->overlap)) {
 		hh->bestmo = mo;
-		hh->bestmoindex = moindex;
 		free(hh->bestcorr);
 		hh->bestcorr = corr;
 		corr = NULL;
@@ -142,25 +131,19 @@ static bool verify(handlehits* hh, MatchObj* mo, int moindex) {
 }
 
 bool handlehits_add(handlehits* hh, MatchObj* mo) {
-	int moindex;
 	bool solved = FALSE;
 
 	if (hh->nagree_toverify == 0) {
-
-		if (!hh->singles)
-			hh->singles = pl_new(1024);
-
-		// Required?
-		//hitlist_compute_vector(mo);
-
-		moindex = pl_size(hh->singles);
-		pl_append(hh->singles, mo);
-		solved |= verify(hh, mo, moindex);
+		bool keepit = FALSE;
+		solved |= verify(hh, mo, &keepit);
+		if (!keepit)
+			free(mo);
 
 	} else {
 		pl* agreelist;
 		int nagree;
 		il* indlist;
+		int moindex;
 
 		if (!hh->hits)
 			hh->hits = hitlist_new(hh->agreetol, 0);
@@ -183,7 +166,7 @@ bool handlehits_add(handlehits* hh, MatchObj* mo) {
 		if (nagree < hh->nagree_toverify)
 			goto cleanup;
 
-		solved |= verify(hh, mo, moindex);
+		solved |= verify(hh, mo, NULL);
 
 		if (nagree == hh->nagree_toverify) {
 			// run verification on the other matches
@@ -191,8 +174,7 @@ bool handlehits_add(handlehits* hh, MatchObj* mo) {
 			for (j=0; agreelist && j<pl_size(agreelist); j++) {
 				MatchObj* mo1 = pl_get(agreelist, j);
 				if (mo1->overlap == 0.0) {
-					int moind1 = il_get(indlist, j);
-					solved |= verify(hh, mo1, moind1);
+					solved |= verify(hh, mo1, NULL);
 				}
 			}
 		}
