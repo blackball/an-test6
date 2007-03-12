@@ -33,12 +33,13 @@ foreach ($_GET as $key=>$val) {
 
 $form =& new HTML_QuickForm('blindform','post');
 
+$form->removeAttribute('name');
+
 $formDefaults = array('x_col' => 'X',
 					  'y_col' => 'Y',
 					  'parity' => 2,
 					  'index' => 'auto',
 					  'poserr' => 1.0,
-					  //'tweak' => TRUE,
 					  'tweak' => 1,
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
@@ -106,13 +107,11 @@ $form->addFormRule('check_xysrc');
 $form->addFormRule('check_fieldscale');
 $form->addFormRule('check_poserr');
 
-//loggit("linkhere: " . $form->exportValue("linkhere") . "\n");
 if ($form->exportValue("linkhere")) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = $_SERVER['PHP_SELF'];
 	$uri .= "?";
 	$vals = $form->exportValues();
-	//loggit("xysrc: " . $vals["xysrc"] . "\n");
 	$args = "";
 	$flds = array('xysrc', 'fsl', 'fsu', 'fse', 'fsv',
 				  'fsunit', 'parity', 'poserr', 'index');
@@ -130,7 +129,6 @@ if ($form->exportValue("linkhere")) {
 		break;
 	}
 	foreach ($flds as $fld) {
-		//loggit("link-here: field \"$fld\", val \"$vals[$fld]\", default \"$formDefaults[$fld]\"\n");
 		if ($vals[$fld] != $formDefaults[$fld])
 			$args .= "&" . urlencode($fld) . "=" . urlencode($vals[$fld]);
 	}
@@ -162,15 +160,11 @@ $renderer =& new HTML_QuickForm_Renderer_QuickHtml();
 $form->accept($renderer);
 
 $template = file_get_contents($index_template);
-// could also do a heredoc:
-// $template = <<<END
-// ...
-// END;
 
 // all the "regular" fields.
 $flds = array('imgfile', 'fitsfile', 'imgurl', 'x_col', 'y_col',
 			  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
-			  'poserr', 'index', 'submit', 'linkhere', 'reset');
+			  'poserr', 'index', 'submit', 'linkhere', 'reset', 'MAX_FILE_SIZE');
 foreach ($flds as $fld) {
 	$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
 }
@@ -194,6 +188,7 @@ $repl = array("##xysrc-img##" => $renderer->elementToHtml('xysrc', 'img'),
 foreach ($repl as $from => $to) {
 	$template = str_replace($from, $to, $template);
 }
+
 ?>
 <?php
 // Careful with the spacing around this - it must be the first
@@ -209,8 +204,8 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 Astrometry.net: Web Edition
 </title>
 <link rel="stylesheet" type="text/css" href="index.css" />
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+<link rel="icon" type="image/png" href="favicon.png" />
 </head>
 <body>
 
@@ -310,18 +305,11 @@ function check_fieldscale($vals) {
 	$u = (double)$vals["fsu"];
 	$e = (double)$vals["fse"];
 	$v = (double)$vals["fsv"];
-	/*
-	echo $l . "<br>";
-	echo $u . "<br>";
-	echo $e . "<br>";
-	echo $v . "<br>";
-	*/
 	if ($l > 0 && $u > 0)
 		return TRUE;
 	if ($e > 0 && $v > 0)
 		return TRUE;
 	if (!$l && !$u && !$e && !$v)
-		//return array("fs"=>"You must provide either (lower and upper bounds) or (estimate and variance) of the field scale!");
 		return array("fs"=>"You must fill in ONE of the pairs of boxes below!");
 	if ($l < 0)
 		return array("fsl"=>"Lower bound must be positive!");
@@ -412,16 +400,6 @@ function process_data ($vals) {
 	$jobdata = array("maxquads" => $maxquads,
 					 "cpulimit" => $cpulimit,
 					 "timelimit" => $timelimit);
-	/*
-				  "fu_lower" => $fu_lower,
-				  "fu_upper" => $fu_upper,
-				  "verify" => $verify,
-				  "agree" => $agree,
-				  "nagree" => $nagree,
-				  "tweak" => $tweak_val,
-				  "parity" => $parity_val,
-				  "codetol" => $codetol,
-	*/
 
 	$flds = array('xysrc', 'imgfile', 'fitsfile', 'imgurl',
 				  'x_col', 'y_col',

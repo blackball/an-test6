@@ -74,10 +74,10 @@ the brightest object first.
 
 <p>
 Scale of the image:
+</p>
 <div class="cap" id="scalecap">
 We need to know how much of the sky your field covers.
 </div>
-</p>
 
 <ul id="scalelist">
 <li>Units: ##fsunit##
@@ -86,10 +86,11 @@ Choose how you want to describe the scale of your field.
 </div>
 </li>
 
+<li>
 <div class="err">
 ##fs-err##
 </div>
-<li>Values:
+Values:
 <div class="cap">
 Fill in ONE of the following pairs of values:
 </div>
@@ -142,6 +143,7 @@ Fill in ONE of the following pairs of values:
 <h3>Optional Settings</h3>
 <p>
 Handedness of your image
+</p>
 <div class="cap">
 Some images have "East" clockwise from "North"; some have the
 "East" counterclockwise from "North".  If you are certain that
@@ -157,19 +159,21 @@ solving process faster.
 
 <p>
 Index to use
+</p>
 <div class="cap">
 We use indexes to solve your fields;
 an index contains "landmarks" for the sky.
 The solving process works best when the "landmarks" are a little
 smaller than the size of the field to be solved.
-We can automatically choose a suitable index, or you can select
-one here.
+We can automatically choose a suitable index based on your pixel scale estimate,
+or you can select one here.
 </div>
 
 <ul id="indexlist"><li>##index##</li></ul>
 
 <p>
 Star positional error
+</p>
 <div class="cap">
 When we find a matching "landmark", we check to see how many of
 the stars in your field match up with stars we know about.
@@ -182,6 +186,7 @@ have moved from where it should be.
 
 <p>
 Tweak
+</p>
 <div class="cap">
 After we find a correct match, we usually run a "Tweak" process
 on it to fine-tune the transformation between field coordinates
@@ -189,9 +194,6 @@ and sky coordinates.
 </div>
 
 <ul id="tweaklist"><li>##tweak## Tweak</li></ul>
-
-</p>
-
 
 </div>
 
@@ -223,40 +225,7 @@ and sky coordinates.
 <div id="clearbox">
 </div>
 
-<!--
-img: ##xysrc-img## <br>
-url: ##xysrc-url## <br>
-fits: ##xysrc-fits## <br>
-imgfile: ##imgfile## <br>
-fitsfile: ##fitsfile## <br>
-imgurl: ##imgurl## <br>
-x_col: ##x_col## <br>
-y_col: ##y_col## <br>
-tweak: ##tweak## <br>
-fsl: ##fsl## <br>
-fsu: ##fsu## <br>
-fse: ##fse## <br>
-fsv: ##fsv## <br>
-fsunit: ##fsunit## <br>
-parity-both: ##parity-both## <br>
-parity-right: ##parity-right## <br>
-parity-left: ##parity-left## <br>
-poserr: ##poserr## <br>
-index: ##index## <br>
-submit: ##submit## <br>
-
-xysrc-err: ##xysrc-err## <br>
-imgfile-err: ##imgfile-err## <br>
-imgurl-err: ##imgurl-err## <br>
-fitsfile-err: ##fitsfile-err## <br>
-x_col-err: ##x_col-err## <br>
-y_col-err: ##y_col-err## <br>
-fsl-err: ##fsl-err## <br>
-fsu-err: ##fsu-err## <br>
-fse-err: ##fse-err## <br>
-fsv-err: ##fsv-err## <br>
-poserr-err: ##poserr-err## <br>
-fs-err: ##fs-err## <br>
--->
-
-</p>
+<div>
+<!-- the MAX_FILE_SIZE input needs to be in a paragraph, div, etc. -->
+##MAX_FILE_SIZE##
+</div>

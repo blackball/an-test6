@@ -292,8 +292,8 @@ if ($do_refresh) {
 }
 ?>
 
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+<link rel="icon" type="image/png" href="favicon.png" />
 
 </head>
 <body>
@@ -315,7 +315,7 @@ function get_url($f) {
 function print_link($f) {
 	if (file_exists($f)) {
 		$url = get_url($f);
-		echo "<a href=" . $url . ">" .
+		echo "<a href=\"" . $url . "\">" .
 			basename($f) . "</a>";
 	} else {
 		echo "(not available)";
@@ -378,12 +378,12 @@ if ($didsolve) {
 		"&BBOX=0,-85,360,85" .
 		"&wcsfn=" . $myname . "/wcs.fits";
 
-	echo "<a href=\"" . $url .
-		"&WIDTH=1024&HEIGHT=1024&lw=5" .
+	echo "<a href=\"" . htmlentities($url .
+		"&WIDTH=1024&HEIGHT=1024&lw=5") .
 		"\">";
-	echo "<img src=\"" . $url . 
-		"&WIDTH=512&HEIGHT=512&lw=3" .
-		"\" /></a>\n";
+	echo "<img src=\"" . htmlentities($url . 
+		"&WIDTH=512&HEIGHT=512&lw=3") .
+		"\" alt=\"An image of your field shown in an image of the whole sky.\"/></a>\n";
 	echo "</div>\n";
 }
 
@@ -401,8 +401,8 @@ if ($didsolve && file_exists($pnmimg)) {
 	echo "</p>\n";
 	//Your field, overplotted with objects from the index.</p>\n";
 	echo "<img src=\"" .
-		"http://" . $host . $uri . "/status.php?job=" . $myname . "&overlay" .
-		"\" />";
+		"http://" . $host . $uri . htmlentities("/status.php?job=" . $myname . "&overlay") .
+		"\" alt=\"An image of your field, showing sources we extracted from the image and objects from our index.\"/>";
 	echo "</div>\n";
 	echo "<hr />\n";
 }
@@ -435,10 +435,19 @@ if ($didcancel) {
 </td></tr>
 
 <?php
+function get_datestr($t) {
+	// "c" -> 2007-03-12T22:49:53+00:00
+	$datestr = date("c", $t);
+	// Make Hogg happy
+	if (substr($datestr, -6) == "+00:00")
+		$datestr = substr($datestr, 0, strlen($datestr)-6) . "Z";
+	return $datestr;
+}
+
 if ($job_submitted) {
 	echo '<tr><td>Submitted:</td><td>';
 	$t = filemtime($inputfile);
-	echo date("c", $t);
+	echo get_datestr($t);
 	$dt = dtime2str($now - $t);
 	echo "<br />(" . $dt . " ago)";
 	echo "</td></tr>\n";
@@ -447,7 +456,7 @@ if ($job_submitted) {
 if ($job_started) {
 	echo '<tr><td>Started:</td><td>';
 	$t = filemtime($startfile);
-	echo date("c", $t);
+	echo get_datestr($t);
 	$dt = dtime2str($now - $t);
 	echo "<br />(" . $dt . " ago)";
 	echo "</td></tr>\n";
@@ -456,7 +465,7 @@ if ($job_started) {
 if ($job_done) {
 	echo '<tr><td>Finished:</td><td>';
 	$t = filemtime($donefile);
-	echo date("c", $t);
+	echo get_datestr($t);
 	$dt = dtime2str($now - $t);
 	echo "<br />" . $dt . " ago)";
 	echo "</td></tr>\n";
@@ -621,22 +630,22 @@ if ($job_done) {
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";
-		echo $gmaps_url . 
-			"?zoom=" . $zoom . 
-			"&ra=" . $rac_merc .
-			"&dec=" . $decc_merc .
-			"&over=no" .
-			"&rdls=" . $myname . "/field.rd.fits" .
-			"&view=r+u&nr=200";
+		echo htmlentities($gmaps_url . 
+						  "?zoom=" . $zoom . 
+						  "&ra=" . $rac_merc .
+						  "&dec=" . $decc_merc .
+						  "&over=no" .
+						  "&rdls=" . $myname . "/field.rd.fits" .
+						  "&view=r+u&nr=200");
 		echo "\">USNOB</a>\n";
 		echo "<a href=\"";
-		echo $gmaps_url .
-			"?gain=" . (($zoom <= 6) ? "-2" : "0") .
-			"&zoom=" . $zoom .
-			"&ra=" . $rac_merc . "&dec=" . $decc_merc .
-			"&over=no" .
-			"&rdls=" . $myname . "/field.rd.fits" .
-			"&view=r+t&nr=200&arcsinh";
+		echo htmlentities($gmaps_url .
+						  "?gain=" . (($zoom <= 6) ? "-2" : "0") .
+						  "&zoom=" . $zoom .
+						  "&ra=" . $rac_merc . "&dec=" . $decc_merc .
+						  "&over=no" .
+						  "&rdls=" . $myname . "/field.rd.fits" .
+						  "&view=r+t&nr=200&arcsinh");
 		echo "\">Tycho-2</a>\n";
 		echo "</td></tr>\n";
 	}
@@ -675,8 +684,8 @@ if (file_exists($blindlogfile)) {
 */
 ?>
 
-<form name="dummyform" action="status.php" method="get">
-<p align=center>
+<form id="dummyform" action="status.php" method="get">
+<p class="c">
 <input type="submit" name="cancel" value="Cancel Job" />
 <input type="hidden" name="job" value="<?php echo $myname; ?>" />
 </p>
