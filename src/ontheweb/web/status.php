@@ -281,13 +281,13 @@ h3.c {text-align:center;}
 #onsky { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky > a:link { color:white; }
 #onsky > a:visited { color:white; }
-#onsky > a:hover { color:grey; }
+#onsky > a:hover { color:gray; }
 #onsky > a:active { color:yellow; }
 </style>
 
 <?php
 if ($do_refresh) {
-	echo '<meta http-equiv="refresh" content="5">';
+	echo '<meta http-equiv="refresh" content="5" />';
 	// content="5; URL=html-redirect.html"
 }
 ?>
@@ -339,15 +339,18 @@ if ($img) {
 	echo "</form>\n";
 	echo "<hr />\n";
 
-	if ($check_xhtml) {
-		print <<<END
-			<p>
-			<a href="http://validator.w3.org/check?uri=referer"><img
-			src="http://www.w3.org/Icons/valid-xhtml10"
-			alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
-			</p>
+	print <<<END
+		<p>
+		<a href="http://validator.w3.org/check?uri=referer"><img
+		style="border:0"
+		src="http://www.w3.org/Icons/valid-xhtml10"
+		alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+		<a href="http://jigsaw.w3.org/css-validator/check/referer">
+		<img style="border:0;width:88px;height:31px"
+		src="http://jigsaw.w3.org/css-validator/images/vcss" 
+		alt="Valid CSS!" /></a>
+		</p>
 END;
-	}
 
 	echo "</body></html>\n";
 
@@ -692,17 +695,16 @@ if (file_exists($blindlogfile)) {
 </form>
 <hr />
 
-<?php
-if ($check_xhtml) {
-print <<<END
 <p>
-    <a href="http://validator.w3.org/check?uri=referer"><img
-        src="http://www.w3.org/Icons/valid-xhtml10"
-        alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+<a href="http://validator.w3.org/check?uri=referer"><img
+style="border:0"
+src="http://www.w3.org/Icons/valid-xhtml10"
+alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+<a href="http://jigsaw.w3.org/css-validator/check/referer">
+<img style="border:0;width:88px;height:31px"
+src="http://jigsaw.w3.org/css-validator/images/vcss" 
+alt="Valid CSS!" /></a>
 </p>
-END;
-}
-?>  
 
 </body>
 </html>
