@@ -5,8 +5,6 @@
 
 static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	char val[64];
-	double det;
-	double scale;
 
 	// This seemed to be required for libwcs...
 	/*
@@ -16,11 +14,9 @@ static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	*/
 	qfits_header_add(hdr, "WCSAXES", "2", NULL, NULL);
 
-	det = tan_det_cd(tan);
-	scale = sqrt(fabs(det));
-	sprintf(val, "%.12g", scale);
-	qfits_header_add(hdr, "PLATESC", val, "Plate scale [arcsec/pixel]", NULL);
-	qfits_header_add(hdr, "PARITY", (det > 0.0 ? "1.0" : "-1.0"), "Parity = sign(det(CD))", NULL);
+	qfits_header_add(hdr, "EQUINOX", "2000.0", NULL, NULL);
+	qfits_header_add(hdr, "LONPOLE", "180.0", NULL, NULL);
+	qfits_header_add(hdr, "LATPOLE", "0.0", NULL, NULL);
 
 	sprintf(val, "%.12g", tan->crval[0]);
 	qfits_header_add(hdr, "CRVAL1", val, "RA  of reference point", NULL);
