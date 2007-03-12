@@ -32,6 +32,7 @@ static char* hip_dirs[] = {
 static char* messier_fn = "messier.dat";
 static char* mess_dirs[] = {
 	".",
+	"/home/gmaps/usnob-map/execs"
 };
 
 // size of entries in Stellarium's hipparcos.fab file.
