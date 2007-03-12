@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <sys/types.h>
-#include <regex.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include <cairo.h>
 
@@ -284,145 +284,146 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		return -1;
 	}
 
-	{
-		regex_t regex;
-		int res;
 
-		// DEBUG
-		if ((res = regcomp(&regex, "\"([[:alpha:] ]*)\" *([[:alpha:]]*) *([[:alnum:]]*) *([[:alnum:]'_+-]*) *(.*)",
-						   REG_EXTENDED))) {
-			fprintf(stderr, "regcomp failed: %i.\n", res);
+	for (;;) {
+		int res;
+		char line[256];
+		int mess, ngc;
+		char* cptr;
+		char* rptr;
+		char conlong[32], conshort[16], type[16], subtype[16];
+		char name[32];
+		int rahrs;
+		double ramins, ra;
+		int dechrs, decmins;
+		double dec;
+		double mag;
+		char diamstr[32];
+		double diam;
+		double dist;
+		int nchars;
+		int k;
+
+		if (!fgets(line, sizeof(line), fmess)) {
+			if (feof(fmess))
+				break;
+			fprintf(stderr, "render_constellation: error reading from messier file: %s\n", strerror(errno));
+		}
+		if (line[0] == '#')
+			continue;
+
+		//fprintf(stderr, "line:\"%s\"\n", line);
+		cptr = line;
+		if ((res = sscanf(cptr, "%d%*[ ?] %d %n", &mess, &ngc, &nchars)) != 2) {
+			fprintf(stderr, "failed parsing mess, ngc: got %i\n", res);
 			return -1;
 		}
-		fprintf(stderr, "regexp: %i subexpressions.\n", regex.re_nsub);
+		cptr += nchars;
 
-		for (;;) {
-			char line[256];
-			int mess, ngc;
-			char* cptr;
-			char wholematch[256];
-			char conlong[32], conshort[16], type[16], subtype[16];
-			char name[32];
-			int rahrs;
-			double ramins, ra;
-			int dechrs, decmins;
-			double dec;
-			double mag;
-			char diamstr[32];
-			double diam;
-			double dist;
-			int nchars;
-			//regmatch_t matches[6];
-			regmatch_t matches[32];
-			char remainder[256];
-			int k;
+		//fprintf(stderr, "match: \"%s\"\n", cptr);
 
-			if (!fgets(line, sizeof(line), fmess)) {
-				if (feof(fmess))
-					break;
-				fprintf(stderr, "render_constellation: error reading from messier file: %s\n", strerror(errno));
-			}
-			if (line[0] == '#')
-				continue;
-
-			fprintf(stderr, "line:\"%s\"\n", line);
-			cptr = line;
-			if ((res = sscanf(cptr, "%d%*[ ?] %d %n", &mess, &ngc, &nchars)) != 2) {
-				fprintf(stderr, "failed parsing mess, ngc: got %i\n", res);
-				return -1;
-			}
-			cptr += nchars;
-
-			fprintf(stderr, "match: \"%s\"\n", cptr);
-
-			if ((res = regexec(&regex, cptr, sizeof(matches)/sizeof(regmatch_t),
-							   matches, 0))) {
-				fprintf(stderr, "regexec failed: %i\n", res);
-				return -1;
-			}
-
-			if (matches[0].rm_so != -1 && matches[0].rm_eo != -1) {
-				memset(wholematch,  0, sizeof(wholematch));
-				memcpy(conlong,  cptr + matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
-				fprintf(stderr, "wholematch: \"%s\"\n", wholematch);
-			} else {
-				fprintf(stderr, "whole match: %i %i\n", matches[0].rm_so, matches[0].rm_eo);
-			}
-
-			if (matches[1].rm_so != -1 && matches[1].rm_eo != -1) {
-				memset(conlong,  0, sizeof(conlong));
-				memcpy(conlong,  cptr + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
-				fprintf(stderr, "conlong: \"%s\"\n", conlong);
-			} else {
-				fprintf(stderr, "conlong match: %i %i\n", matches[1].rm_so, matches[1].rm_eo);
-			}
-
-			if (matches[2].rm_so != -1 && matches[2].rm_eo != -1) {
-				memset(conshort, 0, sizeof(conshort));
-				memcpy(conshort, cptr + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
-				fprintf(stderr, "conshort: \"%s\"\n", conshort);
-			} else {
-				fprintf(stderr, "conshort match: %i %i\n", matches[2].rm_so, matches[2].rm_eo);
-			}
-
-			if (matches[3].rm_so != -1 && matches[3].rm_eo != -1) {
-				memset(type,     0, sizeof(type));
-				memcpy(type,     cptr + matches[3].rm_so, matches[3].rm_eo - matches[3].rm_so);
-				fprintf(stderr, "type: \"%s\"\n", type);
-			} else {
-				fprintf(stderr, "type match: %i %i\n", matches[3].rm_so, matches[3].rm_eo);
-			}
-
-			if (matches[4].rm_so != -1 && matches[4].rm_eo != -1) {
-				memset(subtype,  0, sizeof(subtype));
-				memcpy(subtype,  cptr + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
-				fprintf(stderr, "subtype: \"%s\"\n", subtype);
-			} else {
-				fprintf(stderr, "type match: %i %i\n", matches[4].rm_so, matches[4].rm_eo);
-			}
-
-			if (matches[5].rm_so != -1 && matches[5].rm_eo != -1) {
-				memset(remainder,  0, sizeof(remainder));
-				memcpy(remainder,  cptr + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
-				fprintf(stderr, "remainder: \"%s\"\n", remainder);
-			} else {
-				fprintf(stderr, "remainder match: %i %i\n", matches[5].rm_so, matches[5].rm_eo);
-				return -1;
-			}
-
-			if ((res = sscanf(remainder, "%d %lg %d %d %lg %s %lg %n", &rahrs, &ramins, &dechrs, &decmins, &mag, diamstr, &dist, &nchars)) != 7) {
-				fprintf(stderr, "failed parsing remainder: got %i.\n", res);
-				return -1;
-			}
-
-			fprintf(stderr, "ra hrs: %i\n", rahrs);
-			fprintf(stderr, "ra mins: %g\n", ramins);
-			fprintf(stderr, "dec hrs: %i\n", dechrs);
-			fprintf(stderr, "dec mins: %i\n", decmins);
-			fprintf(stderr, "mag: %g\n", mag);
-			fprintf(stderr, "diamstr: %s\n", diamstr);
-			fprintf(stderr, "dist: %g\n", dist);
-			/*
-			  fprintf(stderr, "name(2): \"%s\"\n", remainder + nchars);
-			*/
-			for (k=0;; k++) {
-				if ((remainder[nchars + k] == '\n') ||
-					(remainder[nchars + k] == '\0')) {
-					name[k] = '\0';
-					break;
-				}
-				name[k] = remainder[nchars+k];
-			}
-			fprintf(stderr, "name: \"%s\"\n", name);
-
-			fprintf(stderr, "\n");
-
+		if (*cptr != '"') {
+			fprintf(stderr, "failed parsing name.\n");
+			return -1;
 		}
-		fclose(fmess);
+		cptr++;
+		rptr = conlong;
+		while (*cptr && *cptr != '"') {
+			*rptr = *cptr;
+			rptr++;
+			cptr++;
+		}
+		if (!*cptr) {
+			fprintf(stderr, "failed parsing name.\n");
+			return -1;
+		}
+		*rptr = '\0';
+		fprintf(stderr, "conlong: '%s'\n", conlong);
+		cptr++;
 
-		// DEBUG
-		regfree(&regex);
+		if (sscanf(cptr, " %s %s %s %n", conshort, type, subtype, &nchars) != 3) {
+			fprintf(stderr, "failed parsing shortname, type, subtype.\n");
+			return -1;
+		}
+		cptr += nchars;
+
+		/*
+		  while (*cptr && isspace(*cptr)) cptr++;
+		rptr = conshort;
+		while (*cptr && !isspace(*cptr)) {
+			*rptr = *cptr;
+			cptr++;
+			rptr++;
+		}
+		if (!*cptr) {
+			fprintf(stderr, "failed parsing short name.\n");
+			return -1;
+		}
+		*rptr = '\0';
+		fprintf(stderr, "conshort: '%s'\n", conshort);
+
+		while (*cptr && isspace(*cptr)) cptr++;
+
+		rptr = type;
+		while (*cptr && !isspace(*cptr)) {
+			*rptr = *cptr;
+			cptr++;
+			rptr++;
+		}
+		if (!*cptr) {
+			fprintf(stderr, "failed parsing type.\n");
+			return -1;
+		}
+		*rptr = '\0';
+		fprintf(stderr, "type: '%s'\n", type);
+
+		while (*cptr && isspace(*cptr)) cptr++;
+
+		rptr = subtype;
+		while (*cptr && !isspace(*cptr)) {
+			*rptr = *cptr;
+			cptr++;
+			rptr++;
+		}
+		if (!*cptr) {
+			fprintf(stderr, "failed parsing subtype.\n");
+			return -1;
+		}
+		*rptr = '\0';
+		fprintf(stderr, "subtype: '%s'\n", subtype);
+
+		while (*cptr && isspace(*cptr)) cptr++;
+		*/
+		
+
+		fprintf(stderr, "remainder: '%s'\n", cptr);
+
+		if ((res = sscanf(cptr, "%d %lg %d %d %lg %s %lg %n", &rahrs, &ramins, &dechrs, &decmins, &mag, diamstr, &dist, &nchars)) != 7) {
+			fprintf(stderr, "failed parsing remainder: got %i.\n", res);
+			return -1;
+		}
+
+		fprintf(stderr, "ra hrs: %i\n", rahrs);
+		fprintf(stderr, "ra mins: %g\n", ramins);
+		fprintf(stderr, "dec hrs: %i\n", dechrs);
+		fprintf(stderr, "dec mins: %i\n", decmins);
+		fprintf(stderr, "mag: %g\n", mag);
+		fprintf(stderr, "diamstr: %s\n", diamstr);
+		fprintf(stderr, "dist: %g\n", dist);
+		for (k=0;; k++) {
+			if ((cptr[nchars + k] == '\n') ||
+				(cptr[nchars + k] == '\0')) {
+				name[k] = '\0';
+				break;
+			}
+			name[k] = cptr[nchars+k];
+		}
+		fprintf(stderr, "name: \"%s\"\n", name);
+
+		fprintf(stderr, "\n");
+
 	}
+	fclose(fmess);
 
 	// Cairo's uint32 ARGB32 format is a little different than what we need,
 	// which is uchar R,G,B,A.
