@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdint.h>
 
-#include <cairo/cairo.h>
+#include <cairo.h>
 
 #include "tilerender.h"
 #include "render_boundary.h"

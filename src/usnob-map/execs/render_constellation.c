@@ -8,7 +8,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <cairo/cairo.h>
+#include <cairo.h>
 
 #include "tilerender.h"
 #include "render_constellation.h"
@@ -285,14 +285,11 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 	}
 
 	{
-		//int regcomp(regex_t *preg, const char *regex, int cflags);
 		regex_t regex;
+		int res;
 
-		if (regcomp(&regex, "\"([[:alpha:] ]*)\" *([[:alpha:]]*) *([[:alnum:]]*) *([[:alnum:]'-]*) *",
-					REG_EXTENDED)) {
-			fprintf(stderr, "regcomp failed.\n");
-			return -1;
-		}
+
+		fprintf(stderr, "regexp: %i subexpressions.\n", regex.re_nsub);
 
 		for (;;) {
 			char line[256];
@@ -306,10 +303,13 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			int dechrs, decmins;
 			double dec;
 			double mag;
+			char diamstr[32];
 			double diam;
 			double dist;
 			int nchars;
-			regmatch_t matches[4];
+			regmatch_t matches[6];
+			char remainder[256];
+			int k;
 
 			if (!fgets(line, sizeof(line), fmess)) {
 				if (feof(fmess))
@@ -326,9 +326,19 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			}
 			cptr += nchars;
 
-			if (regexec(&regex, cptr, sizeof(matches)/sizeof(regmatch_t),
-						matches, 0)) {
-				fprintf(stderr, "regexec failed.\n");
+			fprintf(stderr, "line:\"%s\"\n", line);
+			fprintf(stderr, "match: \"%s\"\n", cptr);
+
+			// DEBUG
+			if ((res = regcomp(&regex, "\"([[:alpha:] ]*)\" *([[:alpha:]]*) *([[:alnum:]]*) *([[:alnum:]'-]*) *(.*)",
+							   REG_EXTENDED))) {
+				fprintf(stderr, "regcomp failed: %i.\n", res);
+				return -1;
+			}
+
+			if ((res = regexec(&regex, cptr, sizeof(matches)/sizeof(regmatch_t),
+							   matches, 0))) {
+				fprintf(stderr, "regexec failed: %i\n", res);
 				return -1;
 			}
 
@@ -372,11 +382,48 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "type match: %i %i\n", matches[4].rm_so, matches[4].rm_eo);
 			}
 
+			if (matches[5].rm_so != -1 || matches[5].rm_eo != -1) {
+				memset(remainder,  0, sizeof(remainder));
+				memcpy(remainder,  cptr + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
+				fprintf(stderr, "remainder: \"%s\"\n", remainder);
+			} else {
+				fprintf(stderr, "remainder match: %i %i\n", matches[5].rm_so, matches[5].rm_eo);
+				return -1;
+			}
+
+			if (sscanf(remainder, "%i %lg %i %i %lg %s %lg %n", &rahrs, &ramins, &dechrs, &decmins, &mag, diamstr, &dist, &nchars) != 7) {
+				fprintf(stderr, "failed parsing remainder.\n");
+				return -1;
+			}
+
+			fprintf(stderr, "ra hrs: %i\n", rahrs);
+			fprintf(stderr, "ra mins: %g\n", ramins);
+			fprintf(stderr, "dec hrs: %i\n", dechrs);
+			fprintf(stderr, "dec mins: %i\n", decmins);
+			fprintf(stderr, "mag: %g\n", mag);
+			fprintf(stderr, "diamstr: %s\n", diamstr);
+			fprintf(stderr, "dist: %g\n", dist);
+			/*
+			  fprintf(stderr, "name(2): \"%s\"\n", remainder + nchars);
+			*/
+			for (k=0;; k++) {
+				if ((remainder[nchars + k] == '\n') ||
+					(remainder[nchars + k] == '\0')) {
+					name[k] = '\0';
+					break;
+				}
+				name[k] = remainder[nchars+k];
+			}
+			fprintf(stderr, "name: \"%s\"\n", name);
+
 			fprintf(stderr, "\n");
+
+			// DEBUG
+			regfree(&regex);
+
 		}
 		fclose(fmess);
 
-		regfree(&regex);
 	}
 
 	// Cairo's uint32 ARGB32 format is a little different than what we need,
