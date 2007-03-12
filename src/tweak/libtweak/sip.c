@@ -205,9 +205,12 @@ void sip_calc_inv_distortion(sip_t* sip, double U, double V, double* u, double *
 	*v = V + gUV;
 }
 
-double sip_det_cd(sip_t* sip)
-{
-	return (sip->wcstan.cd[0][0]*sip->wcstan.cd[1][1] - sip->wcstan.cd[0][1]*sip->wcstan.cd[1][0]); 
+double tan_det_cd(tan_t* tan) {
+	return (tan->cd[0][0]*tan->cd[1][1] - tan->cd[0][1]*tan->cd[1][0]);
+}
+
+double sip_det_cd(sip_t* sip) {
+	return (sip->wcstan.cd[0][0]*sip->wcstan.cd[1][1] - sip->wcstan.cd[0][1]*sip->wcstan.cd[1][0]);
 }
 
 void sip_print(sip_t* sip)
