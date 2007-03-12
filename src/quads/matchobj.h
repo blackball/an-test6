@@ -29,6 +29,7 @@ struct match_struct {
 	uint star[4];
 	uint field[4];
 	uint64_t ids[4];
+	// actually code error ^2.
     float code_err;
 	double sMin[3];
 	double sMax[3];

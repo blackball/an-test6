@@ -1253,7 +1253,7 @@ static void solve_fields() {
 				fits_add_long_comment(hdr, "quadno: %i", mo->quadno);
 				fits_add_long_comment(hdr, "stars: %i,%i,%i,%i", mo->star[0], mo->star[1], mo->star[2], mo->star[3]);
 				fits_add_long_comment(hdr, "field: %i,%i,%i,%i", mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
-				fits_add_long_comment(hdr, "code error: %g", mo->code_err);
+				fits_add_long_comment(hdr, "code error: %g", sqrt(mo->code_err));
 				fits_add_long_comment(hdr, "noverlap: %i", mo->noverlap);
 				fits_add_long_comment(hdr, "nconflict: %i", mo->nconflict);
 				fits_add_long_comment(hdr, "ninfield: %i", mo->ninfield);

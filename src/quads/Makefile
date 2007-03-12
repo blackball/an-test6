@@ -54,7 +54,8 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-MISC_EXECS := 2masstofits project-usnob diffractionFlag_check
+MISC_EXECS := 2masstofits project-usnob diffractionFlag_check \
+	vossetal2006toan
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
@@ -80,7 +81,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats \
-	rawstartree 
+	rawstartree
 
 OLDEXECS_OBJS := catalog.o histogram.o \
 	verify.o intmap.o tic.o matchfile.o codekd.o idfile.o \
@@ -130,6 +131,9 @@ tags:
 
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
+
+vossetal2006toan: vossetal2006toan.o boilerplate.o svn.o \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 wcscheck: wcscheck.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(LIBWCS_LIB)
