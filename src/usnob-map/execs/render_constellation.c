@@ -288,7 +288,12 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		regex_t regex;
 		int res;
 
-
+		// DEBUG
+		if ((res = regcomp(&regex, "\"([[:alpha:] ]*)\" *([[:alpha:]]*) *([[:alnum:]]*) *([[:alnum:]'_+-]*) *(.*)",
+						   REG_EXTENDED))) {
+			fprintf(stderr, "regcomp failed: %i.\n", res);
+			return -1;
+		}
 		fprintf(stderr, "regexp: %i subexpressions.\n", regex.re_nsub);
 
 		for (;;) {
@@ -307,7 +312,8 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			double diam;
 			double dist;
 			int nchars;
-			regmatch_t matches[6];
+			//regmatch_t matches[6];
+			regmatch_t matches[32];
 			char remainder[256];
 			int k;
 
@@ -319,22 +325,15 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 			if (line[0] == '#')
 				continue;
 
+			fprintf(stderr, "line:\"%s\"\n", line);
 			cptr = line;
-			if (sscanf(cptr, "%d %d %n", &mess, &ngc, &nchars) != 2) {
-				fprintf(stderr, "failed parsing mess, ngc.\n");
+			if ((res = sscanf(cptr, "%d%*[ ?] %d %n", &mess, &ngc, &nchars)) != 2) {
+				fprintf(stderr, "failed parsing mess, ngc: got %i\n", res);
 				return -1;
 			}
 			cptr += nchars;
 
-			fprintf(stderr, "line:\"%s\"\n", line);
 			fprintf(stderr, "match: \"%s\"\n", cptr);
-
-			// DEBUG
-			if ((res = regcomp(&regex, "\"([[:alpha:] ]*)\" *([[:alpha:]]*) *([[:alnum:]]*) *([[:alnum:]'-]*) *(.*)",
-							   REG_EXTENDED))) {
-				fprintf(stderr, "regcomp failed: %i.\n", res);
-				return -1;
-			}
 
 			if ((res = regexec(&regex, cptr, sizeof(matches)/sizeof(regmatch_t),
 							   matches, 0))) {
@@ -391,8 +390,8 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				return -1;
 			}
 
-			if (sscanf(remainder, "%i %lg %i %i %lg %s %lg %n", &rahrs, &ramins, &dechrs, &decmins, &mag, diamstr, &dist, &nchars) != 7) {
-				fprintf(stderr, "failed parsing remainder.\n");
+			if ((res = sscanf(remainder, "%d %lg %d %d %lg %s %lg %n", &rahrs, &ramins, &dechrs, &decmins, &mag, diamstr, &dist, &nchars)) != 7) {
+				fprintf(stderr, "failed parsing remainder: got %i.\n", res);
 				return -1;
 			}
 
@@ -418,12 +417,11 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
 			fprintf(stderr, "\n");
 
-			// DEBUG
-			regfree(&regex);
-
 		}
 		fclose(fmess);
 
+		// DEBUG
+		regfree(&regex);
 	}
 
 	// Cairo's uint32 ARGB32 format is a little different than what we need,
@@ -439,10 +437,10 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		img[4*i + 1] = g;
 		img[4*i + 2] = b;
 		img[4*i + 3] = a;
-
-		cairo_surface_destroy(target);
-		cairo_destroy(cairo);
 	}
+
+	cairo_surface_destroy(target);
+	cairo_destroy(cairo);
 
 	return 0;
 }
