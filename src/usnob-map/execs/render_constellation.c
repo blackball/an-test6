@@ -29,12 +29,6 @@ static char* hip_dirs[] = {
 	"/home/gmaps/usnob-map/execs"
 };
 
-static char* messier_fn = "messier.dat";
-static char* mess_dirs[] = {
-	".",
-	"/home/gmaps/usnob-map/execs"
-};
-
 // size of entries in Stellarium's hipparcos.fab file.
 static int HIP_SIZE = 15;
 // byte offset to the first element in Stellarium's hipparcos.fab file.
@@ -137,7 +131,6 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 	void* map;
 	unsigned char* hip;
 	int c;
-	FILE* fmess = NULL;
 
 	srand(0);
 
@@ -269,141 +262,6 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 
 	fclose(fconst);
 	fclose(fhip);
-
-
-
-	for (i=0; i<sizeof(mess_dirs)/sizeof(char*); i++) {
-		char fn[256];
-		snprintf(fn, sizeof(fn), "%s/%s", mess_dirs[i], messier_fn);
-		fprintf(stderr, "render_constellation: Trying messier file: %s\n", fn);
-		fmess = fopen(fn, "rb");
-		if (fmess)
-			break;
-	}
-	if (!fmess) {
-		fprintf(stderr, "render_constellation: couldn't find messier data file.\n");
-		return -1;
-	}
-
-
-	for (;;) {
-		int res;
-		char line[256];
-		int mess, ngc;
-		char* cptr;
-		char* rptr;
-		char conlong[32], conshort[16], type[16], subtype[16];
-		char name[32];
-		int rahrs;
-		double ramins, ra;
-		int decdegs, decmins;
-		double dec;
-		double mag;
-		char diamstr[32];
-		double dist;
-		int nchars;
-		int k;
-		char printname[256];
-		double px,py;
-		int nchars_dec;
-
-		if (!fgets(line, sizeof(line), fmess)) {
-			if (feof(fmess))
-				break;
-			fprintf(stderr, "render_constellation: error reading from messier file: %s\n", strerror(errno));
-		}
-		if (line[0] == '#')
-			continue;
-
-		//fprintf(stderr, "line:\"%s\"\n", line);
-		cptr = line;
-		if ((res = sscanf(cptr, "%d%*[ ?] %d %n", &mess, &ngc, &nchars)) != 2) {
-			fprintf(stderr, "failed parsing mess, ngc: got %i\n", res);
-			return -1;
-		}
-		cptr += nchars;
-
-		//fprintf(stderr, "match: \"%s\"\n", cptr);
-
-		if (*cptr != '"') {
-			fprintf(stderr, "failed parsing name.\n");
-			return -1;
-		}
-		cptr++;
-		rptr = conlong;
-		while (*cptr && *cptr != '"') {
-			*rptr = *cptr;
-			rptr++;
-			cptr++;
-		}
-		if (!*cptr) {
-			fprintf(stderr, "failed parsing name.\n");
-			return -1;
-		}
-		*rptr = '\0';
-		//fprintf(stderr, "conlong: '%s'\n", conlong);
-		cptr++;
-
-		if (sscanf(cptr, " %s %s %s %n", conshort, type, subtype, &nchars) != 3) {
-			fprintf(stderr, "failed parsing shortname, type, subtype.\n");
-			return -1;
-		}
-		cptr += nchars;
-
-		//fprintf(stderr, "remainder: '%s'\n", cptr);
-
-		if ((res = sscanf(cptr, "%d %lg %n%d %d %lg %s %lg %n",
-						  &rahrs, &ramins, &nchars_dec, &decdegs, &decmins, &mag, diamstr, &dist, &nchars)) != 7) {
-			fprintf(stderr, "failed parsing remainder: got %i.\n", res);
-			return -1;
-		}
-
-		ra = (rahrs + ramins/60.0) * 15.0;
-		if (cptr[nchars_dec] == '+') {
-			dec = (decdegs + decmins/60.0);
-		} else if (cptr[nchars_dec] == '-') {
-			dec = (decdegs - decmins/60.0);
-		} else {
-			fprintf(stderr, "Failed parsing dec.\n");
-			return -1;
-		}
-
-		/*
-		  fprintf(stderr, "ra: %g\n", ra);
-		  fprintf(stderr, "dec: %g\n", dec);
-		*/
-		/*
-		  fprintf(stderr, "ra hrs: %i\n", rahrs);
-		  fprintf(stderr, "ra mins: %g\n", ramins);
-		  fprintf(stderr, "dec degrees: %i\n", decdegs);
-		  fprintf(stderr, "dec mins: %i\n", decmins);
-		  fprintf(stderr, "mag: %g\n", mag);
-		  fprintf(stderr, "diamstr: %s\n", diamstr);
-		  fprintf(stderr, "dist: %g\n", dist);
-		*/
-		for (k=0;; k++) {
-			if ((cptr[nchars + k] == '\n') ||
-				(cptr[nchars + k] == '\0')) {
-				name[k] = '\0';
-				break;
-			}
-			name[k] = cptr[nchars+k];
-		}
-		//fprintf(stderr, "name: \"%s\"\n", name);
-		//fprintf(stderr, "\n");
-
-		if (strlen(name)) {
-			sprintf(printname, " M%i (%s)", mess, name);
-		} else {
-			sprintf(printname, " M%i", mess);
-		}
-
-		px = ra2pixel(ra, args);
-		py = dec2pixel(dec, args);
-		cairo_move_to(cairo, px, py);
-		cairo_show_text(cairo, printname);
-	}
-	fclose(fmess);
 
 	// Cairo's uint32 ARGB32 format is a little different than what we need,
 	// which is uchar R,G,B,A.

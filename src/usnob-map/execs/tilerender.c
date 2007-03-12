@@ -19,6 +19,7 @@
 #include "render_rdls.h"
 #include "render_boundary.h"
 #include "render_constellation.h"
+#include "render_messier.h"
 
 /**
    This program gets called by "tile.php" in response to a client requesting a map
@@ -40,7 +41,8 @@ char* layernames[] = {
 	"usnob",
 	"rdls",
 	"boundary",
-	"constellation"
+	"constellation",
+	"messier"
 };
 render_func_t renderers[] = {
 	render_image,
@@ -49,7 +51,8 @@ render_func_t renderers[] = {
 	render_usnob,
 	render_rdls,
 	render_boundary,
-	render_constellation
+	render_constellation,
+	render_messier
 };
 
 static void write_png(unsigned char * img, int w, int h);

@@ -75,6 +75,7 @@ tilerender: tilerender.o render_image.o \
 		render_rdls.o \
 		render_boundary.o \
 		render_constellation.o \
+		render_messier.o \
 		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \
