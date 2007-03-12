@@ -341,7 +341,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				return -1;
 			}
 
-			if (matches[0].rm_so != -1 || matches[0].rm_eo != -1) {
+			if (matches[0].rm_so != -1 && matches[0].rm_eo != -1) {
 				memset(wholematch,  0, sizeof(wholematch));
 				memcpy(conlong,  cptr + matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
 				fprintf(stderr, "wholematch: \"%s\"\n", wholematch);
@@ -349,7 +349,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "whole match: %i %i\n", matches[0].rm_so, matches[0].rm_eo);
 			}
 
-			if (matches[1].rm_so != -1 || matches[1].rm_eo != -1) {
+			if (matches[1].rm_so != -1 && matches[1].rm_eo != -1) {
 				memset(conlong,  0, sizeof(conlong));
 				memcpy(conlong,  cptr + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
 				fprintf(stderr, "conlong: \"%s\"\n", conlong);
@@ -357,7 +357,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "conlong match: %i %i\n", matches[1].rm_so, matches[1].rm_eo);
 			}
 
-			if (matches[2].rm_so != -1 || matches[2].rm_eo != -1) {
+			if (matches[2].rm_so != -1 && matches[2].rm_eo != -1) {
 				memset(conshort, 0, sizeof(conshort));
 				memcpy(conshort, cptr + matches[2].rm_so, matches[2].rm_eo - matches[2].rm_so);
 				fprintf(stderr, "conshort: \"%s\"\n", conshort);
@@ -365,7 +365,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "conshort match: %i %i\n", matches[2].rm_so, matches[2].rm_eo);
 			}
 
-			if (matches[3].rm_so != -1 || matches[3].rm_eo != -1) {
+			if (matches[3].rm_so != -1 && matches[3].rm_eo != -1) {
 				memset(type,     0, sizeof(type));
 				memcpy(type,     cptr + matches[3].rm_so, matches[3].rm_eo - matches[3].rm_so);
 				fprintf(stderr, "type: \"%s\"\n", type);
@@ -373,7 +373,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "type match: %i %i\n", matches[3].rm_so, matches[3].rm_eo);
 			}
 
-			if (matches[4].rm_so != -1 || matches[4].rm_eo != -1) {
+			if (matches[4].rm_so != -1 && matches[4].rm_eo != -1) {
 				memset(subtype,  0, sizeof(subtype));
 				memcpy(subtype,  cptr + matches[4].rm_so, matches[4].rm_eo - matches[4].rm_so);
 				fprintf(stderr, "subtype: \"%s\"\n", subtype);
@@ -381,7 +381,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 				fprintf(stderr, "type match: %i %i\n", matches[4].rm_so, matches[4].rm_eo);
 			}
 
-			if (matches[5].rm_so != -1 || matches[5].rm_eo != -1) {
+			if (matches[5].rm_so != -1 && matches[5].rm_eo != -1) {
 				memset(remainder,  0, sizeof(remainder));
 				memcpy(remainder,  cptr + matches[5].rm_so, matches[5].rm_eo - matches[5].rm_so);
 				fprintf(stderr, "remainder: \"%s\"\n", remainder);
