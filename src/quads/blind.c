@@ -113,6 +113,8 @@ bool quiet;
 bool silent;
 bool verbose;
 
+char* indexname;
+
 int firstfield, lastfield;
 il* fieldlist;
 
@@ -399,6 +401,7 @@ int main(int argc, char *argv[]) {
 			quadfname = mk_quadfn(fname);
 			idfname = mk_idfn(fname);
 			startreefname = mk_streefn(fname);
+			indexname = fname;
 
 			// Read .ckdt file...
 			if (!silent) {
@@ -1186,6 +1189,8 @@ static void solve_fields() {
 				char wcs_fn[1024];
 				FILE* fout;
 				qfits_header* hdr;
+				char* tm;
+				MatchObj* mo = hits->bestmo;
 
 				sprintf(wcs_fn, wcs_template, fieldnum);
 				fout = fopen(wcs_fn, "ab");
@@ -1203,6 +1208,54 @@ static void solve_fields() {
 
 				boilerplate_add_fits_headers(hdr);
 				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
+				tm = qfits_get_datetime_iso8601();
+				qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
+				fits_add_long_comment(hdr, "-- blind solver parameters: --");
+				fits_add_long_comment(hdr, "Index name: %s", indexname);
+				fits_add_long_comment(hdr, "Field name: %s", fieldfname);
+				fits_add_long_comment(hdr, "X col name: %s", xcolname);
+				fits_add_long_comment(hdr, "Y col name: %s", ycolname);
+				fits_add_long_comment(hdr, "Parity: %i", parity);
+				fits_add_long_comment(hdr, "Codetol: %g", codetol);
+				fits_add_long_comment(hdr, "Start obj: %i", startdepth);
+				fits_add_long_comment(hdr, "End obj: %i", enddepth);
+				fits_add_long_comment(hdr, "Field scale lower: %g arcsec/pixel", funits_lower);
+				fits_add_long_comment(hdr, "Field scale upper: %g arcsec/pixel", funits_upper);
+				fits_add_long_comment(hdr, "Index scale lower: %g arcsec", index_scale_lower);
+				fits_add_long_comment(hdr, "Index scale upper: %g arcsec", index_scale);
+				fits_add_long_comment(hdr, "Nagree: %i", nagree_toverify);
+				if (nagree_toverify > 1) {
+					fits_add_long_comment(hdr, "Agreement tolerance: %g arcsec", agreetol);
+				}
+				fits_add_long_comment(hdr, "Verify distance: %g arcsec", distsq2arcsec(verify_dist2));
+				fits_add_long_comment(hdr, "Verify pixels: %g pix", verify_pix);
+				fits_add_long_comment(hdr, "Overlap to solve: %g", overlap_tosolve);
+				fits_add_long_comment(hdr, "N in field to solve: %i", ninfield_tosolve);
+				fits_add_long_comment(hdr, "Tweak: %s", (do_tweak ? "yes" : "no"));
+				if (do_tweak) {
+					fits_add_long_comment(hdr, "Tweak AB order: %i", tweak_aborder);
+					fits_add_long_comment(hdr, "Tweak ABP order: %i", tweak_abporder);
+				}
+
+				fits_add_long_comment(hdr, "-- properties of the matching quad: --");
+				fits_add_long_comment(hdr, "quadno: %i", mo->quadno);
+				fits_add_long_comment(hdr, "stars: %i,%i,%i,%i", mo->star[0], mo->star[1], mo->star[2], mo->star[3]);
+				fits_add_long_comment(hdr, "field: %i,%i,%i,%i", mo->field[0], mo->field[1], mo->field[2], mo->field[3]);
+				fits_add_long_comment(hdr, "code error: %g", mo->code_err);
+				fits_add_long_comment(hdr, "noverlap: %i", mo->noverlap);
+				fits_add_long_comment(hdr, "nconflict: %i", mo->nconflict);
+				fits_add_long_comment(hdr, "ninfield: %i", mo->ninfield);
+				fits_add_long_comment(hdr, "nindex: %i", mo->nindex);
+				fits_add_long_comment(hdr, "overlap: %g", mo->overlap);
+				fits_add_long_comment(hdr, "scale: %g arcsec/pix", mo->scale);
+				fits_add_long_comment(hdr, "parity: %i", (int)mo->parity);
+				fits_add_long_comment(hdr, "quads tried: %i", mo->quads_tried);
+				fits_add_long_comment(hdr, "quads matched: %i", mo->quads_matched);
+				fits_add_long_comment(hdr, "quads verified: %i", mo->nverified);
+				fits_add_long_comment(hdr, "objs tried: %i", mo->objs_tried);
+				fits_add_long_comment(hdr, "cpu time: %g", mo->timeused);
+				fits_add_long_comment(hdr, "--");
+				
 				if (solver.mo_template && solver.mo_template->fieldname[0])
 					qfits_header_add(hdr, fieldid_key, solver.mo_template->fieldname, "Field name (copied from input field)", NULL);
 				if (qfits_header_dump(hdr, fout)) {

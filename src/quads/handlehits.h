@@ -26,7 +26,7 @@
 
 struct handlehits {
 	// params
-	double agreetol;
+	double agreetol; // in arcsec.
 	double verify_dist2;
 	int nagree_toverify;
 	// we assume the "tokeep" parameters are weaker than (or equal to)
