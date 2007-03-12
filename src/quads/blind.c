@@ -72,6 +72,9 @@ static int read_parameters();
 #define DEFAULT_TWEAK_ABORDER 3
 #define DEFAULT_TWEAK_ABPORDER 3
 
+// Jitter in the index.
+double INDEX_JITTER = 1.0;
+
 // params:
 char *fieldfname, *matchfname, *donefname, *startfname, *logfname;
 char *donescript;
@@ -427,6 +430,15 @@ int main(int argc, char *argv[]) {
 			index_scale_lower = quadfile_get_index_scale_lower_arcsec(quads);
 			indexid = quads->indexid;
 			healpix = quads->healpix;
+
+			// See if index contains JITTER header... if so, set INDEX_JITTER to that value.
+			{
+				double ijitter = qfits_header_getdouble(quads->header, "JITTER", 0.0);
+				if (ijitter > 0.0) {
+					fprintf(stderr, "Setting index jitter to %g arcsec.\n", ijitter);
+					INDEX_JITTER = ijitter;
+				}
+			}
 
 			if (!silent) 
 				fprintf(stderr, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
@@ -866,7 +878,7 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	if (verify_dist2 > 0.0)
 		twee->jitter = distsq2arcsec(verify_dist2);
 	else {
-		twee->jitter = mo->scale * verify_pix;
+		twee->jitter = hypot(mo->scale * verify_pix, INDEX_JITTER);
 		printf("Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
 		printf("Star jitter: %g arcsec.\n", twee->jitter);
 	}
@@ -949,7 +961,7 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	// if verification was specified in pixel units, compute the verification
 	// distance on the unit sphere...
 	if (verify_pix > 0.0) {
-		hits->verify_dist2 = arcsec2distsq(mo->scale * verify_pix);
+		hits->verify_dist2 = arcsec2distsq(hypot(mo->scale * verify_pix, INDEX_JITTER));
 	}
 
 	solved = handlehits_add(hits, mo);
