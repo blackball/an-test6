@@ -25,6 +25,14 @@ int render_messier(unsigned char* img, render_args_t* args) {
 	FILE* fmess = NULL;
 	int i;
 
+	target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
+												 args->W, args->H, args->W*4);
+	cairo = cairo_create(target);
+	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
+	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+	cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+	cairo_set_font_size(cairo, 14.0);
+
 	for (i=0; i<sizeof(mess_dirs)/sizeof(char*); i++) {
 		char fn[256];
 		snprintf(fn, sizeof(fn), "%s/%s", mess_dirs[i], messier_fn);
