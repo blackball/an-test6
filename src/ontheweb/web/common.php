@@ -64,6 +64,7 @@ if (strpos($host, "monte") === 0) {
 	$printsolved = "printsolved";
 	$wcs_xy2rd = "wcs-xy2rd";
 	$wcs_rd2xy = "wcs-rd2xy";
+	$fits_guess_scale = "fits-guess-scale";
 } else {
 	$sqlite = "sqlite";
 	$resultdir = "/home/gmaps/ontheweb-data/";
@@ -82,6 +83,7 @@ if (strpos($host, "monte") === 0) {
 	$printsolved = "/home/gmaps/quads/printsolved";
 	$wcs_xy2rd = "/home/gmaps/quads/wcs-xy2rd";
 	$wcs_rd2xy = "/home/gmaps/quads/wcs-rd2xy";
+	$fits_guess_scale = "/home/gmaps/quads/fits-guess-scale";
 }
 
 $headers = $_REQUEST;
@@ -205,6 +207,45 @@ function setjobdata($db, $vals) {
 		}
 	}
 	return TRUE;
+}
+
+function download_url($url, $dest, $maxfilesize, &$errmsg) {
+	$fin = fopen($url, "rb");
+	if (!$fin) {
+		$errmsg = "failed to open URL " . $url;
+		return FALSE;
+	}
+	$fout = fopen($dest, "wb");
+	if (!$fout) {
+		$errmsg = "failed to open output file " . $dest;
+		return FALSE;
+	}
+
+	$nr = 0;
+	$blocksize = 1024;
+	for ($i=0; $i<$maxfilesize/$blocksize; $i++) {
+		$block = fread($fin, $blocksize);
+		if ($block === FALSE) {
+			$errmsg = "failed to read from URL " . $url;
+			return FALSE;
+		}
+		if (fwrite($fout, $block) === FALSE) {
+			$errmsg = "failed to write to output file " . $dest;
+			return FALSE;
+		}
+		$nr += strlen($block);
+		if (strlen($block) < $blocksize)
+			if (feof($fin)) {
+				break;
+			}
+	}
+	if ($i == $maxfilesize/$blocksize) {
+		$errmsg = "URL was too big to download.\n";
+		return FALSE;
+	}
+	fclose($fin);
+	fclose($fout);
+	return $nr;
 }
 
 ?>

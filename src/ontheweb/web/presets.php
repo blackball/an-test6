@@ -41,6 +41,10 @@ array("apod-2007-03-09" =>
 	  "xysrc=url&fsl=1.8&fsu=1.9&index=1degree&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/rosette_gendler.jpg",
 
+	  "apod-2007-01-04" =>
+	  "xysrc=url&fse=3&fsv=50&tweak=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/gammacyg_parkercarboni720.jpg",
+
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
            http://antwrp.gsfc.nasa.gov/apod/ap070218.html
