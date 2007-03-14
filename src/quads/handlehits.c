@@ -32,9 +32,11 @@ void handlehits_free_matchobjs(handlehits* hh) {
 		hitlist_free_matchobjs(hh->hits);
 	if (hh->nagree_toverify == 0) {
 		int i;
-		for (i=0; i<pl_size(hh->keepers); i++)
-			free(pl_get(hh->keepers, i));
-		pl_remove_all(hh->keepers);
+		if (hh->keepers) {
+			for (i=0; i<pl_size(hh->keepers); i++)
+				free(pl_get(hh->keepers, i));
+			pl_remove_all(hh->keepers);
+		}
 	}
 }
 
