@@ -5,6 +5,7 @@ require_once 'HTML/QuickForm/Renderer/QuickHtml.php';
 require_once 'PEAR.php';
 
 require 'common.php';
+require 'presets.php';
 
 $host  = $_SERVER['HTTP_HOST'];
 
@@ -27,6 +28,17 @@ PEAR::setErrorHandling(PEAR_ERROR_CALLBACK, 'printerror');
 foreach ($_GET as $key=>$val) {
 	if (!array_key_exists($key, $_POST))
 		$_POST[$key]=$val;
+}
+
+$preset = $_GET["preset"];
+if ($preset) {
+	$params = $blind_presets[$preset];
+	if ($params) {
+		// Redirect to this page but with params set.
+		$host  = $_SERVER['HTTP_HOST'];
+		$uri  = $_SERVER['PHP_SELF'];
+		header("Location: http://" . $host . $uri . "?" . $params);
+	}
 }
 
 /***    Describe the HTML form.   ***/
