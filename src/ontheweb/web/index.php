@@ -471,7 +471,7 @@ function process_data ($vals) {
 
 
 	if ($imgfilename) {
-		if (!convert_image($imgfilename, $mydir, $imgtype, $xtopnm,
+		if (!convert_image($imgfilename, $mydir, $usetype, $xtopnm,
 						   $errstr, $W, $H)) {
 			die($errstr);
 		}
@@ -862,10 +862,10 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = shell_exec($cmd);
-	loggit("Pnmfile: " . $res . "\n");
+	//loggit("Pnmfile: " . $res . "\n");
 
 	$ss = strstr($res, "PPM");
-	loggit("strstr: " . $ss . "\n");
+	//loggit("strstr: " . $ss . "\n");
 	if (strlen($ss)) {
 		// reduce to PGM.
 		$pgmimg = $mydir . "image.pgm";
@@ -881,25 +881,26 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 		$pnmimg = $pgmimg;
 	}
 
-	$fitsimg = $mydir . "image.fits";
-	$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to convert image to FITS.";
-		return FALSE;
+	if ($imgtype == "fits") {
+		$fitsimg = $img;
+	} else {
+		$fitsimg = $mydir . "image.fits";
+		$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = FALSE;
+		$res = system($cmd, $retval);
+		if ($retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to convert image to FITS.";
+			return FALSE;
+		}
 	}
 
-	if ($imgtype == "fits") {
-		$real_fitsimg = $img;
-	} else {
-		$real_fitsimg = $fitsimg;
-	}
+	// fits2xy computes the output filename by trimming .fits and adding .xy.fits.
+	$xylist = substr($fitsimg, 0, strlen($fitsimg) - strlen(".fits")) . ".xy.fits";
 
 	$fits2xyout = $mydir . $fits2xyout_fn;
-	$cmd = $fits2xy . " " . $real_fitsimg . " > " . $fits2xyout . " 2>&1";
+	$cmd = $fits2xy . " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
@@ -908,7 +909,6 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 		$errstr = "Failed to perform source extraction.";
 		return FALSE;
 	}
-	$xylist = $mydir . "image.xy.fits";
 
 	// sort by FLUX.
 	$tabsortout = $mydir . "tabsort.out";
