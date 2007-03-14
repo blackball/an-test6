@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 		return (0);
 	}
 
+	fprintf(stderr, "infile=%s\n", argv[1]);
 	if (fits_open_file(&fptr, argv[1], READONLY, &status)) {
 		fprintf(stderr, "Error reading file %s\n", argv[1]);
 		fits_report_error(stderr, status);
@@ -57,7 +58,7 @@ int main(int argc, char *argv[])
 	outfile[fnamelen-5] = '\0';
 	sprintf(outfile, "%s.xy.fits",outfile);
 	fprintf(stderr, "outfile=%s\n",outfile);
-	
+
 	// Create output file
 	if (fits_create_file(&ofptr, outfile, &status)) {
 		fits_report_error(stderr, status);
@@ -108,12 +109,7 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 
-		// OH MY GOD the horror. 
-
-		//if (naxis != 2) {
-		//	fprintf(stderr, "Invalid image: NAXIS is not 2 in HDU %d!\n", kk);
-		//	continue;
-		//}
+		// OH MY GOD the horror.    <-- Keir is easily spooked.
 
 		fits_get_img_size(fptr, 2, naxisn, &status);
 		if (status) {
@@ -131,7 +127,6 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 
-		// FIXME #199 Check and make sure this is float data
 		fits_read_pix(fptr, TFLOAT, fpixel, naxisn[0]*naxisn[1], NULL, thedata,
 			      NULL, &status);
 
@@ -145,6 +140,8 @@ int main(int argc, char *argv[])
 		simplexy( thedata, naxisn[0], naxisn[1],
 				dpsf, plim, dlim, saddle, maxper, maxnpeaks,
 				&sigma, x, y, flux, &npeaks);
+
+		fprintf(stderr, "Found %i peaks.\n", npeaks);
 
 		// The FITS standard specifies that the center of the lower
 		// left pixel is 1,1. Store our xylist according to FITS
