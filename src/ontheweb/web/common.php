@@ -2,7 +2,6 @@
 $resultdir = "/home/gmaps/ontheweb-data/";
 $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
-$check_xhtml = 1;
 
 // blind params
 $maxtime = 120; // Two minute max!
@@ -31,6 +30,19 @@ $objs_fn  = "objs.png";
 $overlay_fn="overlay.png";
 $rdlsinfo_fn="rdlsinfo";
 $jobdata_fn = "jobdata.db";
+
+$valid_blurb = <<<END
+<p>
+<a href="http://validator.w3.org/check?uri=referer"><img
+style="border:0"
+src="valid-xhtml10.png"
+alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
+<a href="http://jigsaw.w3.org/css-validator/check/referer"><img
+style="border:0;width:88px;height:31px"
+src="valid-css.png"
+alt="Valid CSS!" /></a>
+</p>
+END;
 
 if (strpos($host, "monte") === 0) {
 	$sqlite = "/h/260/dstn/software/sqlite-2.8.17/bin/sqlite";

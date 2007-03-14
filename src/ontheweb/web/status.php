@@ -339,18 +339,7 @@ if ($img) {
 	echo "</form>\n";
 	echo "<hr />\n";
 
-	print <<<END
-		<p>
-		<a href="http://validator.w3.org/check?uri=referer"><img
-		style="border:0"
-		src="http://www.w3.org/Icons/valid-xhtml10"
-		alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
-		<a href="http://jigsaw.w3.org/css-validator/check/referer">
-		<img style="border:0;width:88px;height:31px"
-		src="http://jigsaw.w3.org/css-validator/images/vcss" 
-		alt="Valid CSS!" /></a>
-		</p>
-END;
+	echo $valid_blurb;
 
 	echo "</body></html>\n";
 
@@ -422,7 +411,7 @@ echo $myname
 <tr><td>Status:</td><td>
 <?php
 if ($didcancel) {
-	echo "Cancelled.";
+	echo "Cancelled";
 } else if (!$job_submitted) {
 	echo "Not submitted";
 } else if ($job_done) {
@@ -433,6 +422,18 @@ if ($didcancel) {
 	echo "Submitted";
 } else {
 	echo "(unknown)";
+}
+
+if ($job_done) {
+	echo '<tr><td>Field Solved:</td><td>';
+	if (strlen($msg)) {
+		echo $msg;
+	} else if ($didsolve) {
+		echo "Yes";
+	} else {
+		echo "No";
+	}
+	echo "</td></tr>\n";
 }
 ?>
 </td></tr>
@@ -508,16 +509,6 @@ function field_solved($solvedfile, &$msg) {
 }
 
 if ($job_done) {
-	echo '<tr><td>Field Solved:</td><td>';
-	if (strlen($msg)) {
-		echo $msg;
-	} else if ($didsolve) {
-		echo "Yes";
-	} else {
-		echo "No";
-	}
-	echo "</td></tr>\n";
-
 	if ($didsolve) {
 		echo '<tr><td>(RA, DEC) center:</td><td>';
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
@@ -666,15 +657,13 @@ print_link($blindlogfile);
 
 <hr />
 
-<?php
-/* Boo hoo, no grass.
 <table border="1" class="c">
-<tr><td>Log File</td></tr>
+<tr><td>Tail of the Log File</td></tr>
 <tr><td>
 <pre>
 <?php
 if (file_exists($blindlogfile)) {
-	echo file_get_contents($blindlogfile);
+	passthru("tail " . $blindlogfile);
 } else {
 	echo "(not available)";
 }
@@ -684,8 +673,6 @@ if (file_exists($blindlogfile)) {
 </table>
 
 <hr />
-*/
-?>
 
 <?php
 if (!($job_done || $didcancel)) {
@@ -701,18 +688,8 @@ if (!($job_done || $didcancel)) {
 
 <?php
 }
+echo $valid_blurb;
 ?>
-
-<p>
-<a href="http://validator.w3.org/check?uri=referer"><img
-style="border:0"
-src="http://www.w3.org/Icons/valid-xhtml10"
-alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
-<a href="http://jigsaw.w3.org/css-validator/check/referer">
-<img style="border:0;width:88px;height:31px"
-src="http://jigsaw.w3.org/css-validator/images/vcss" 
-alt="Valid CSS!" /></a>
-</p>
 
 </body>
 </html>

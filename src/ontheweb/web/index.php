@@ -232,17 +232,9 @@ MB.  Your browser may fail silently if you try to upload a file that exceeds thi
 
 <hr />
 
-<p>
-    <a href="http://validator.w3.org/check?uri=referer"><img
-style="border:0"
-src="http://www.w3.org/Icons/valid-xhtml10"
-        alt="Valid XHTML 1.0 Strict" height="31" width="88" /></a>
- <a href="http://jigsaw.w3.org/css-validator/check/referer">
-  <img style="border:0;width:88px;height:31px"
-       src="http://jigsaw.w3.org/css-validator/images/vcss" 
-       alt="Valid CSS!" />
- </a>
-</p>
+<?php
+echo $valid_blurb;
+?>
 
 </body>
 </html>
@@ -714,9 +706,9 @@ function process_data ($vals) {
 					  "4degree" => array("allsky-34/allsky-34"),
 					  //"8degree" => array("allsky-35/allsky-35"),
 					  "8degree" => array("allsky-38/allsky-38"),
-					  "15degree" => array("allsky-36/allsky-36"),
+					  //"15degree" => array("allsky-36/allsky-36"),
 					  //"15degree" => array("allsky-39/allsky-39"),
-					  //"15degree" => array("allsky-40/allsky-40"),
+					  "15degree" => array("allsky-40/allsky-40"),
 					  );
 	$indexpaths = array();
 	foreach ($indexes as $i) {
