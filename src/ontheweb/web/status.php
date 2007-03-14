@@ -262,6 +262,20 @@ if ($overlay) {
 		die("overlay file does not exist.");
 }
 
+
+$status = "(unknown)";
+if ($didcancel) {
+	$status = "Cancelled";
+} else if (!$job_submitted) {
+	$status = "Not submitted";
+} else if ($job_done) {
+	$status = "Finished";
+} else if ($job_started) {
+	$status = "Running";
+} else if ($job_queued) {
+	$status = "Submitted";
+}
+
 ?>
 
 <!DOCTYPE html 
@@ -270,7 +284,10 @@ if ($overlay) {
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <title>
-Astrometry.net: Job Status
+Astrometry.net 
+<?php
+echo "(" . $status . ")"
+?>
 </title>
 <style type="text/css">
 table.c {margin-left:auto; margin-right:auto;}
@@ -410,19 +427,7 @@ echo $myname
 
 <tr><td>Status:</td><td>
 <?php
-if ($didcancel) {
-	echo "Cancelled";
-} else if (!$job_submitted) {
-	echo "Not submitted";
-} else if ($job_done) {
-	echo "Finished";
-} else if ($job_started) {
-	echo "Running";
-} else if ($job_queued) {
-	echo "Submitted";
-} else {
-	echo "(unknown)";
-}
+echo $status;
 
 if ($job_done) {
 	echo '<tr><td>Field Solved:</td><td>';
