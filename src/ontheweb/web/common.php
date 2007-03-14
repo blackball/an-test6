@@ -30,6 +30,7 @@ $objs_fn  = "objs.png";
 $overlay_fn="overlay.png";
 $rdlsinfo_fn="rdlsinfo";
 $jobdata_fn = "jobdata.db";
+$fits2xyout_fn = "fits2xy.out";
 
 $valid_blurb = <<<END
 <p>

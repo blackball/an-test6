@@ -286,7 +286,11 @@ if ($didcancel) {
 <title>
 Astrometry.net 
 <?php
-echo "(" . $status . ")"
+if ($img) {
+	echo "(Source extraction)";
+} else {
+	echo "(" . $status . ")";
+}
 ?>
 </title>
 <style type="text/css">
@@ -294,6 +298,7 @@ table.c {margin-left:auto; margin-right:auto;}
 p.c {margin-left:auto; margin-right:auto; text-align:center;}
 form.c {margin-left:auto; margin-right:auto; text-align:center;}
 h3.c {text-align:center;}
+#fits2xylog {margin-left:auto; margin-right:auto; border-color:gray; border-style: double;}
 #overlay { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky > a:link { color:white; }
@@ -355,6 +360,12 @@ if ($img) {
 	echo "</p>\n";
 	echo "</form>\n";
 	echo "<hr />\n";
+	echo "<h3>Log file:</h3>\n";
+	echo "<div id=\"fits2xylog\">\n";
+	echo "<pre>";
+	echo file_get_contents($mydir . $fits2xyout_fn);
+	echo "</pre>";
+	echo "</div>\n";
 
 	echo $valid_blurb;
 

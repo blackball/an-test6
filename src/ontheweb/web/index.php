@@ -471,7 +471,7 @@ function process_data ($vals) {
 
 
 	if ($imgfilename) {
-		if (!convert_image($imgfilename, $mydir, $xtopnm,
+		if (!convert_image($imgfilename, $mydir, $imgtype, $xtopnm,
 						   $errstr, $W, $H)) {
 			die($errstr);
 		}
@@ -837,7 +837,7 @@ function get_image_type($filename, &$xtopnm) {
 	return $usetype;
 }
 
-function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
+function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -892,8 +892,14 @@ function convert_image($img, $mydir, $xtopnm, &$errstr, &$W, &$H) {
 		return FALSE;
 	}
 
-	$fits2xyout = $mydir . "fits2xy.out";
-	$cmd = $fits2xy . " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
+	if ($imgtype == "fits") {
+		$real_fitsimg = $img;
+	} else {
+		$real_fitsimg = $fitsimg;
+	}
+
+	$fits2xyout = $mydir . $fits2xyout_fn;
+	$cmd = $fits2xy . " " . $real_fitsimg . " > " . $fits2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
