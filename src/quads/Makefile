@@ -55,7 +55,9 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
 MISC_EXECS := 2masstofits project-usnob diffractionFlag_check \
-	vossetal2006toan
+	fits-guess-scale
+
+#	vossetal2006toan
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
@@ -131,6 +133,9 @@ tags:
 
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
+
+fits-guess-scale: fits-guess-scale.o \
+		$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 vossetal2006toan: vossetal2006toan.o boilerplate.o svn.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)

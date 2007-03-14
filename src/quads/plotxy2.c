@@ -177,7 +177,7 @@ int main(int argc, char *args[]) {
 	for (i=n; i<Nxy; i++) {
 		switch (shape) {
 		case 'c':
-			cairo_arc(cairo, xyvals[2*i]-xoff, xyvals[2*i+1]-yoff,
+			cairo_arc(cairo, xyvals[2*i]+0.5-xoff, xyvals[2*i+1]+0.5-yoff,
 					  rad, 0.0, 2.0*M_PI);
 			break;
 		}
