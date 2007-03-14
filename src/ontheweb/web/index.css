@@ -167,6 +167,10 @@ body {
             float: right;
             }
 
+#name_email {
+	margin-left: 2em;
+	}
+
 #leftbox > .cap { margin-top: -16px; }
 /*#rightbox > .cap { margin-top: -16px; }*/
 #scalecap { margin-top: -16px; }

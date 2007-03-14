@@ -82,7 +82,6 @@ array("apod-2007-03-09" =>
            http://antwrp.gsfc.nasa.gov/apod/ap070112.html
            http://antwrp.gsfc.nasa.gov/apod/ap070108.html
            http://antwrp.gsfc.nasa.gov/apod/ap070106.html
-           http://antwrp.gsfc.nasa.gov/apod/ap070104.html
            
 	   */
 	  /* A stretch?:

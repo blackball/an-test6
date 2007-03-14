@@ -99,6 +99,9 @@ $indexes = array('auto' => "Automatic (based on image scale)",
 				 "8degree" => "8-degree Fields",
 				 "15degree" => "15-degree Fields");
 
+$form->addElement('text', 'uname', "your name", array('size'=>40));
+$form->addElement('text', 'email', "email address", array('size'=>40));
+
 $form->addElement('select', 'index', 'index', $indexes, null);
 
 $form->addElement('submit', 'submit', 'Submit');
@@ -128,7 +131,8 @@ if ($form->exportValue("linkhere")) {
 	$vals = $form->exportValues();
 	$args = "";
 	$flds = array('xysrc', 'fsl', 'fsu', 'fse', 'fsv',
-				  'fsunit', 'parity', 'poserr', 'index');
+				  'fsunit', 'parity', 'poserr', 'index',
+				  'uname', 'email');
 	switch ($vals["xysrc"]) {
 	case "url":
 		array_push($flds, "imgurl");
@@ -184,8 +188,8 @@ $template = file_get_contents($index_template);
 // all the "regular" fields.
 $flds = array('imgfile', 'fitsfile', 'imgurl', 'x_col', 'y_col',
 			  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
-			  'poserr', 'index', 'submit', 'linkhere', 'imagescale',
-			  'reset', 'MAX_FILE_SIZE');
+			  'poserr', 'index', 'uname', 'email',
+			  'submit', 'linkhere', 'imagescale', 'reset', 'MAX_FILE_SIZE');
 foreach ($flds as $fld) {
 	$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
 }
@@ -421,6 +425,13 @@ function process_data ($vals) {
 
 	foreach ($flds as $fld) {
 		$jobdata[$fld] = $vals[$fld];
+	}
+
+	// optional fields
+	$flds = array('uname', 'email');
+	foreach ($flds as $fld) {
+		if ($vals[$fld])
+			$jobdata[$fld] = $vals[$fld];
 	}
 
 	if (!setjobdata($db, $jobdata)) {
