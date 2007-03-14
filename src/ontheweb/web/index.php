@@ -843,7 +843,7 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	global $plotxy2;
 	global $tabsort;
 	global $objs_fn;
-
+	global $fits2xyout_fn;
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
 	$pnmimg = $mydir . "image.pnm";
