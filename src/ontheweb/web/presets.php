@@ -45,6 +45,14 @@ array("apod-2007-03-09" =>
 	  "xysrc=url&fse=3&fsv=50&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/gammacyg_parkercarboni720.jpg",
 
+	  "apod-2007-01-06" =>
+	  "xysrc=url&fse=5&fsv=50&tweak=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
+
+	  "apod-2007-01-06-fast" =>
+	  "xysrc=url&fse=7&fsv=10&index=4degree&tweak=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
+
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
            http://antwrp.gsfc.nasa.gov/apod/ap070218.html
@@ -81,7 +89,6 @@ array("apod-2007-03-09" =>
            http://antwrp.gsfc.nasa.gov/apod/ap070122.html
            http://antwrp.gsfc.nasa.gov/apod/ap070112.html
            http://antwrp.gsfc.nasa.gov/apod/ap070108.html
-           http://antwrp.gsfc.nasa.gov/apod/ap070106.html
            
 	   */
 	  /* A stretch?:
