@@ -438,7 +438,7 @@ echo $myname
 
 <tr><td>Status:</td><td>
 <?php
-echo $status;
+echo $status . "</td></tr>\n";
 
 if ($job_done) {
 	echo '<tr><td>Field Solved:</td><td>';
@@ -452,7 +452,6 @@ if ($job_done) {
 	echo "</td></tr>\n";
 }
 ?>
-</td></tr>
 
 <?php
 function get_datestr($t) {
