@@ -534,11 +534,16 @@ function process_data ($vals) {
 
 	if ($imgfilename) {
 		if (!convert_image($imgfilename, $mydir, $usetype, $xtopnm,
-						   $errstr, $W, $H)) {
+						   $errstr, $W, $H, $shrink, $dispW, $dispH)) {
 			die($errstr);
 		}
 
-		if (!setjobdata($db, array("imageW"=>$W, "imageH"=>$H, "imagefilename"=>$imgbasename))) {
+		if (!setjobdata($db, array("imageW" => $W,
+								   "imageH" => $H,
+								   "imageshrink" => $shrink,
+								   "displayW" => $dispW,
+								   "displayH" => $dispH,
+								   "imagefilename" => $imgbasename))) {
 			die("failed to save image {filename,W,H} in database.");
 		}
 
@@ -904,7 +909,8 @@ function get_image_type($filename, &$xtopnm) {
 	return $usetype;
 }
 
-function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
+function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$shrink,
+					   &$dispW, &$dispH) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -930,6 +936,39 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	$res = FALSE;
 	$res = shell_exec($cmd);
 	//loggit("Pnmfile: " . $res . "\n");
+
+	/*
+	$words = explode(" ", $res);
+	$nw = count($words);
+	$W = (int)$words[$nw - 5];
+	$H = (int)$words[$nw - 3];
+	for ($i=0; $i<$nw; $i++) {
+		loggit("words[$i]=" . $words[$i] . "\n");
+	}
+	loggit("Image size: " . $W . " x " . $H . "\n");
+	*/
+
+	// eg, "/home/gmaps/ontheweb-data/13a732d8ff/image.pnm: PGM raw, 4096 by 4096  maxval 255"
+	$pat = '/.*P.M .*, ([[:digit:]]*) by ([[:digit:]]*) *maxval [[:digit:]]*/';
+	if (!preg_match($pat, $res, &$matches)) {
+		die("preg_match failed: string is \"" . $res . "\"\n");
+	}
+	$W = (int)$matches[1];
+	$H = (int)$matches[2];
+	/*
+		for ($i=0; $i<count($matches); $i++) {
+			loggit("matches[$i]=" . $matches[$i] . "\n");
+		}
+	*/
+
+	// choose a power-of-two shrink factor that makes the larger dimension <= 800.
+	$maxsz = 800;
+	$bigger = max($W,$H);
+	if ($bigger > $maxsz) {
+		$shrink = pow(2, ceil(log($bigger / $maxsz, 2)));
+	} else {
+		$shrink = 1;
+	}
 
 	$ss = strstr($res, "PPM");
 	//loggit("strstr: " . $ss . "\n");
@@ -992,6 +1031,7 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	$xylist = $sortedlist;
 
 	// Get the image size:
+	/*
 	$cmd = $modhead . " " . $fitsimg . " NAXIS1 | awk '{print $3}'";
 	loggit("Command: " . $cmd . "\n");
 	$W = (int)rtrim(shell_exec($cmd));
@@ -1001,12 +1041,29 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	loggit("Command: " . $cmd . "\n");
 	$H = (int)rtrim(shell_exec($cmd));
 	loggit("naxis2 = " . $H . "\n");
+	*/
+
+	// Size of image to display to the user.
+	$dispW = (int)($W / $shrink);
+	$dispH = (int)($H / $shrink);
+	if ($shrink == 1) {
+		$dispimg = $pnmimg_orig;
+	} else {
+		$dispimg = $mydir . "shrink.pnm";
+		$cmd = "pnmscale -reduce " . $shrink . " " . $pnmimg_orig . " > " . $dispimg;
+		$res = system($cmd, $retval);
+		if ($retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to shrink image file.";
+			return FALSE;
+		}
+	}
 
 	// Plot the extracted objects.
 	$Nbright = 100;
 	// -the brightest:
 	$objimg1 = $mydir . "objs1.pgm";
-	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H .
+	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $dispW . " -H " . $dispH .
 		" -x 1 -y 1 -w 1.75 " . "-N " . $Nbright . " > " . $objimg1;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
@@ -1017,9 +1074,13 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 		return FALSE;
 	}
 	// -the rest:
+	$Nmax = 500;
 	$objimg2 = $mydir . "objs2.pgm";
-	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H .
-		" -x 1 -y 1" . " -n " . $Nbright . " -r 3 -w 1.75" . " > " . $objimg2;
+	// FIXME - interaction between (1,1) offset and scaling is wrong -
+	// we need to offset then scale, not vice versa.
+	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $dispW . " -H " . $dispH .
+		" -x 1 -y 1" . " -n " . $Nbright . " -N " . $Nmax . " -r 3 -w 1.75" .
+		" -S " . (1/$shrink) . " > " . $objimg2;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
@@ -1054,8 +1115,7 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H) {
 	$objimg = $redimg;
 
 	$sumimg = $mydir . "sum.ppm";
-	//$cmd = "pnmarith -max " . $objimg . " " . $pnmimg_orig . " > " . $sumimg;
-	$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " . $pnmimg_orig . " " . $sumimg;
+	$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " . $dispimg . " " . $sumimg;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
