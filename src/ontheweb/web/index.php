@@ -58,15 +58,25 @@ $formDefaults = array('x_col' => 'X',
 					  );
 $form->setDefaults($formDefaults);
 
-$form->addElement('radio','xysrc',"img",null,'img');
-$form->addElement('radio','xysrc',"url",null,'url');
-$form->addElement('radio','xysrc',"fits",null,'fits');
+$xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
+$xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
+$xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
 
-$imgfile  =& $form->addElement('file', 'imgfile', "imgfile");
-$fitsfile =& $form->addElement('file', 'fitsfile', "fitsfile");
-$form->addElement('text', 'x_col', "x column name", array('size'=>5));
-$form->addElement('text', 'y_col', "y column name", array('size'=>5));
-$form->addElement('text', 'imgurl', "imgurl", array('size' => 40));
+$imgfile  =& $form->addElement('file', 'imgfile', "imgfile",
+							   array('onfocus' => "setXysrcImg()",
+									 'onclick' => "setXysrcImg()",));
+$fitsfile =& $form->addElement('file', 'fitsfile', "fitsfile",
+							   array('onfocus' => "setXysrcFits()",
+									 'onclick' => "setXysrcFits()"));
+$form->addElement('text', 'x_col', "x column name",
+				  array('size'=>5,
+						'onfocus' => "setXysrcFits()"));
+$form->addElement('text', 'y_col', "y column name",
+				  array('size'=>5,
+						'onfocus' => "setXysrcFits()"));
+$form->addElement('text', 'imgurl', "imgurl",
+				  array('size' => 40,
+						'onfocus' => "setXysrcUrl()"));
 
 $form->addElement('checkbox', 'tweak', 'tweak', null, null);
 
@@ -194,6 +204,14 @@ foreach ($flds as $fld) {
 	$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
 }
 
+// xysrc radio button IDs.
+$id_url = $xysrc_url ->getAttribute('id');
+$id_img = $xysrc_img ->getAttribute('id');
+$id_fits= $xysrc_fits->getAttribute('id');
+$template = str_replace("##xysrc-url-id##",  $id_url,  $template);
+$template = str_replace("##xysrc-img-id##",  $id_img,  $template);
+$template = str_replace("##xysrc-fits-id##", $id_fits, $template);
+
 // fields (and pseudo-fields) that can have errors 
 $errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile',
 				 'x_col', 'y_col', 'fsl', 'fsu', 'fse', 'fsv',
@@ -231,6 +249,7 @@ Astrometry.net: Web Edition
 <link rel="stylesheet" type="text/css" href="index.css" />
 <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
 <link rel="icon" type="image/png" href="favicon.png" />
+<meta http-equiv="Content-Script-Type" content="text/javascript" />
 </head>
 <body>
 
