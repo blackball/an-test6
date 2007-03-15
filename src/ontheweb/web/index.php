@@ -65,6 +65,9 @@ $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
 $xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
 
+$fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
+$fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
+
 $imgfile  =& $form->addElement('file', 'imgfile', "imgfile",
 							   array('onfocus' => "setXysrcImg()",
 									 'onclick' => "setXysrcImg()",));
@@ -83,10 +86,18 @@ $form->addElement('text', 'imgurl', "imgurl",
 
 $form->addElement('checkbox', 'tweak', 'tweak', null, null);
 
-$form->addElement('text', 'fsl', 'field scale (lower bound)', array('size'=>5));
-$form->addElement('text', 'fsu', 'field scale (upper bound)', array('size'=>5));
-$form->addElement('text', 'fse', 'field scale (estimate)', array('size'=>5));
-$form->addElement('text', 'fsv', 'field scale (variance (%))', array('size'=>5));
+$form->addElement('text', 'fsl', 'field scale (lower bound)',
+				  array('size'=>5,
+						'onfocus' => "setFsUl()"));
+$form->addElement('text', 'fsu', 'field scale (upper bound)',
+				  array('size'=>5,
+						'onfocus' => "setFsUl()"));
+$form->addElement('text', 'fse', 'field scale (estimate)',
+				  array('size'=>5,
+						'onfocus' => "setFsEv()"));
+$form->addElement('text', 'fsv', 'field scale (variance (%))',
+				  array('size'=>5,
+						'onfocus' => "setFsEv()"));
 
 $units = array('arcsecperpix' => "arcseconds per pixel",
 			   'arcminperpix' => "arcminutes per pixel",
@@ -143,7 +154,7 @@ if ($form->exportValue("linkhere")) {
 	$uri .= "?";
 	$vals = $form->exportValues();
 	$args = "";
-	$flds = array('xysrc', 'fsl', 'fsu', 'fse', 'fsv',
+	$flds = array('xysrc', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
 				  'fsunit', 'parity', 'poserr', 'index',
 				  'uname', 'email');
 	switch ($vals["xysrc"]) {
@@ -164,7 +175,7 @@ if ($form->exportValue("linkhere")) {
 			$args .= "&" . urlencode($fld) . "=" . urlencode($vals[$fld]);
 	}
 	if ($vals["tweak"]) {
-		$args .= "&tweak=1";
+		$args = "&tweak=1" . $args;
 	}
 
 	$uri .= substr($args, 1);
@@ -215,9 +226,14 @@ $template = str_replace("##xysrc-url-id##",  $id_url,  $template);
 $template = str_replace("##xysrc-img-id##",  $id_img,  $template);
 $template = str_replace("##xysrc-fits-id##", $id_fits, $template);
 
+$id_ul = $fs_ul ->getAttribute('id');
+$id_ev = $fs_ev ->getAttribute('id');
+$template = str_replace("##fstype-ul-id##", $id_ul, $template);
+$template = str_replace("##fstype-ev-id##", $id_ev, $template);
+
 // fields (and pseudo-fields) that can have errors 
 $errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile',
-				 'x_col', 'y_col', 'fsl', 'fsu', 'fse', 'fsv',
+				 'x_col', 'y_col', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
 				 'poserr', 'fs');
 foreach ($errflds as $fld) {
 	$template = str_replace("##".$fld."-err##", $form->getElementError($fld), $template);
@@ -230,6 +246,8 @@ $repl = array("##xysrc-img##" => $renderer->elementToHtml('xysrc', 'img'),
 			  "##parity-both##" => $renderer->elementToHtml('parity', '2'),
 			  "##parity-left##" => $renderer->elementToHtml('parity', '1'),
 			  "##parity-right##" => $renderer->elementToHtml('parity', '0'),
+			  "##fstype-ul##" => $renderer->elementToHtml('fstype', 'ul'),
+			  "##fstype-ev##" => $renderer->elementToHtml('fstype', 'ev'),
 			  );
 foreach ($repl as $from => $to) {
 	$template = str_replace($from, $to, $template);
@@ -340,31 +358,40 @@ function check_xysrc($vals) {
 }
 
 function check_fieldscale($vals) {
+	$type = $vals["fstype"];
 	$l = (double)$vals["fsl"];
 	$u = (double)$vals["fsu"];
 	$e = (double)$vals["fse"];
 	$v = (double)$vals["fsv"];
-	if ($l > 0 && $u > 0)
-		return TRUE;
-	if ($e > 0 && $v > 0)
-		return TRUE;
-	if (!$l && !$u && !$e && !$v)
-		return array("fs"=>"You must fill in ONE of the pairs of boxes below!");
-	if ($l < 0)
-		return array("fsl"=>"Lower bound must be positive!");
-	if ($u < 0)
-		return array("fsu"=>"Upper bound must be positive!");
-	if ($e < 0)
-		return array("fse"=>"Estimate must be positive!");
-	if ($v < 1 || $v > 99)
-		return array("fsv"=>"% Eror must be between 1 and 99!");
-	if (($l && !$u) || ($u && !$l)) {
-		return array("fsu"=>"You must give BOTH upper and lower bounds.");
+
+	if (!$type) {
+		return array("fstype"=>"You must select one of the checkboxes below");
 	}
-	if (($e && !$v) || ($v && !$e)) {
-		return array("fsu"=>"You must give BOTH an estimate and error.");
+	if ($type == "ul") {
+		if ($l > 0 && $u > 0)
+			return TRUE;
+		if ($l < 0)
+			return array("fsl"=>"Lower bound must be positive!");
+		if ($u < 0)
+			return array("fsu"=>"Upper bound must be positive!");
+		/*
+		if (($l && !$u) || ($u && !$l)) {
+			return array("fsu"=>"You must give BOTH upper and lower bounds.");
+		*/
+	} else if ($type == "ev") {
+		if ($e > 0 && $v > 0)
+			return TRUE;
+		if ($e < 0)
+			return array("fse"=>"Estimate must be positive!");
+		if ($v < 1 || $v > 99)
+			return array("fsv"=>"% Eror must be between 1 and 99!");
+		/*
+		if (($e && !$v) || ($v && !$e)) {
+			return array("fsu"=>"You must give BOTH an estimate and error.");
+		}
+		*/
 	}
-	return TRUE;
+	return array("fstype"=>"Invalid fstype");
 }
 
 function check_poserr($vals) {
@@ -628,14 +655,15 @@ function process_data ($vals) {
 	// new directory was created.
 	sleep(1);
 
+	$fstype = $vals["fstype"];
 	$fsunit = $vals["fsunit"];
 	$fsu = $vals["fsu"];
 	$fsl = $vals["fsl"];
 	$fse = $vals["fse"];
 	$fsv = $vals["fsv"];
 
-	// Estimate/Variance given - convert to lower/upper.
-	if ($fse > 0 && $fsv > 0) {
+	if ($fstype == "ev") {
+		// Estimate/Variance given - convert to lower/upper.
 		// FIXME - is this the right way to do this?
 		$fsu = $fse * (1 + $fsv/100);
 		$fsl = $fse * (1 - $fsv/100);

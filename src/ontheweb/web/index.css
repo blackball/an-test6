@@ -137,6 +137,7 @@ body {
 .err#fsu-err { margin-bottom: 0em; }
 .err#fse-err { margin-bottom: 0em; }
 .err#fsv-err { margin-bottom: 0em; }
+.err#fstype-err { margin-top: 0.5em; margin-bottom: 0em; }
 
 
 

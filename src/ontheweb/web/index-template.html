@@ -13,6 +13,14 @@ function setXysrcFits() {
   var u = document.getElementById("##xysrc-fits-id##");
   u.checked = 1;
 }
+function setFsUl() {
+  var u = document.getElementById("##fstype-ul-id##");
+  u.checked = 1;
+}
+function setFsEv() {
+  var u = document.getElementById("##fstype-ev-id##");
+  u.checked = 1;
+}
 // -->
 </script>
 
@@ -117,6 +125,9 @@ Choose how you want to describe the scale of your field.
 <div class="err">
 ##fs-err##
 </div>
+<div class="err" id="fstype-err">
+##fstype-err##
+</div>
 Values:
 <div class="cap">
 Fill in ONE of the following pairs of values:
@@ -129,6 +140,9 @@ Fill in ONE of the following pairs of values:
 <div class="err" id="fsl-err">##fsl-err##</div>
 <div class="err" id="fsu-err">##fsu-err##</div>
 <table>
+<tr>
+<td colspan="2">##fstype-ul## Bounds</td>
+</tr>
 <tr>
 <td>Lower bound:</td>
 <td>##fsl##</td>
@@ -146,6 +160,9 @@ Fill in ONE of the following pairs of values:
 <div class="err" id="fse-err">##fse-err##</div>
 <div class="err" id="fsv-err">##fsv-err##</div>
 <table>
+<tr>
+<td colspan="2">##fstype-ev## Estimate+Error</td>
+</tr>
 <tr>
 <td>Estimate:</td>
 <td>##fse##</td>

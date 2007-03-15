@@ -2,55 +2,55 @@
 
 $blind_presets = 
 array("apod-2007-03-09" =>
-	  "xysrc=url&fsl=30&fsu=60&poserr=2&" .
+	  "xysrc=url&fstype=ul&fsl=30&fsu=60&poserr=2&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/tle070303_legault_legend.jpg",
 
 	  "apod-2007-03-08" =>
-	  "xysrc=url&fse=1.5&fsv=50&poserr=1&tweak=1&" .
+	  "xysrc=url&fstype=ev&fse=1.5&fsv=50&poserr=1&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/tle_03032007_60_schedler720.jpg",
 
 	  "apod-2007-03-08-fast" =>
-	  "xysrc=url&fse=1.5&fsv=10&poserr=1&index=2degree&tweak=1&" .
+	  "xysrc=url&fstype=ev&fse=1.5&fsv=10&poserr=1&index=2degree&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/tle_03032007_60_schedler720.jpg",
 
 	  "apod-2007-02-26" =>
-	  "xysrc=url&fsl=10&fsu=30&tweak=1&" .
+	  "xysrc=url&fstype=ul&fsl=10&fsu=30&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/debrismovie_mcnaught.jpg",
 
 	  "apod-2007-02-26-fast" =>
-	  "xysrc=url&fsl=10&fsu=30&tweak=1&index=8degree&" .
+	  "xysrc=url&fstype=ul&fsl=10&fsu=30&tweak=1&index=8degree&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/debrismovie_mcnaught.jpg",
 
 	  "apod-2007-02-16" =>
-	  "xysrc=url&fse=20&fsv=50&fsunit=arcminwidth&tweak=1&" .
+	  "xysrc=url&fstype=ev&fse=20&fsv=50&fsunit=arcminwidth&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/NGC2685_crawford720.jpg",
 
 	  "apod-2007-02-28" =>
-	  "xysrc=url&fsl=30&fsu=45&fsunit=arcminwidth&tweak=1&" .
+	  "xysrc=url&fstype=ul&fsl=30&fsu=45&fsunit=arcminwidth&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/ngc2170_croman.jpg",
 
 	  "apod-2007-02-28-fast" =>
-	  "xysrc=url&fsl=35&fsu=40&fsunit=arcminwidth&tweak=1&index=12arcmin&" .
+	  "xysrc=url&fstype=ul&fsl=35&fsu=40&fsunit=arcminwidth&tweak=1&index=12arcmin&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/ngc2170_croman.jpg",
 
 	  "apod-2007-02-14" =>
-	  "xysrc=url&fsl=1&fsu=2&tweak=1&" .
+	  "xysrc=url&fstype=ul&fsl=1&fsu=2&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/rosette_gendler.jpg",
 
 	  "apod-2007-02-14-fast" =>
-	  "xysrc=url&fsl=1.8&fsu=1.9&index=1degree&tweak=1&" .
+	  "xysrc=url&fstype=ul&fsl=1.8&fsu=1.9&index=1degree&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/rosette_gendler.jpg",
 
 	  "apod-2007-01-04" =>
-	  "xysrc=url&fse=3&fsv=50&tweak=1&" .
+	  "xysrc=url&fstype=ev&fse=3&fsv=50&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/gammacyg_parkercarboni720.jpg",
 
 	  "apod-2007-01-06" =>
-	  "xysrc=url&fse=5&fsv=50&tweak=1&" .
+	  "xysrc=url&fstype=ev&fse=5&fsv=50&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
 
 	  "apod-2007-01-06-fast" =>
-	  "xysrc=url&fse=7&fsv=10&index=4degree&tweak=1&" .
+	  "xysrc=url&fstype=ev&fse=7&fsv=10&index=4degree&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
 
 	  /* HST:
@@ -75,6 +75,7 @@ array("apod-2007-03-09" =>
 	  */
 
 	  /* Should be doable:
+           http://antwrp.gsfc.nasa.gov/apod/ap070315.html
            http://antwrp.gsfc.nasa.gov/apod/ap070228.html
            http://antwrp.gsfc.nasa.gov/apod/ap070223.html
            http://antwrp.gsfc.nasa.gov/apod/ap070222.html
