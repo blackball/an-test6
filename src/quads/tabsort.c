@@ -28,9 +28,9 @@
 #include "fitsioutils.h"
 #include "permutedsort.h"
 
-char* OPTIONS = "hc:i:o:d";
+static const char* OPTIONS = "hc:i:o:d";
 
-void printHelp(char* progname) {
+static void printHelp(char* progname) {
 	printf("%s    -i <input-file>\n"
 		   "      -o <output-file>\n"
 		   "      -c <column-name>\n"

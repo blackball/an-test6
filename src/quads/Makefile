@@ -134,6 +134,9 @@ tags:
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
 
+an-fitstopnm: an-fitstopnm.o \
+		$(ANUTILS_LIB) $(QFITS_LIB)
+
 fits-guess-scale: fits-guess-scale.o \
 		$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
