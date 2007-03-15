@@ -55,8 +55,11 @@ $formDefaults = array('x_col' => 'X',
 					  'tweak' => 1,
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
+					  'nopreview' => '',
 					  );
 $form->setDefaults($formDefaults);
+
+$form->addElement('hidden', 'nopreview');
 
 $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
@@ -409,6 +412,7 @@ function process_data ($vals) {
 	global $jobdata_fn;
 	global $tabmerge;
 	global $modhead;
+	global $headers;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -825,7 +829,8 @@ function process_data ($vals) {
 
 	// Redirect the client to the status page...
 	$status_url = "status.php?job=" . $myname;
-	if ($imgfilename) {
+
+	if ($imgfilename && !$headers["nopreview"]) {
 		$status_url .= "&img";
 	}
 	$host  = $_SERVER['HTTP_HOST'];
