@@ -55,11 +55,11 @@ $formDefaults = array('x_col' => 'X',
 					  'tweak' => 1,
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
-					  'nopreview' => '',
+					  'skippreview' => '',
 					  );
 $form->setDefaults($formDefaults);
 
-$form->addElement('hidden', 'nopreview');
+$form->addElement('hidden', 'skippreview');
 
 $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
@@ -859,7 +859,7 @@ function process_data ($vals) {
 	// Redirect the client to the status page...
 	$status_url = "status.php?job=" . $myname;
 
-	if ($imgfilename && !$headers["nopreview"]) {
+	if ($imgfilename && !$headers["skippreview"]) {
 		$status_url .= "&img";
 	}
 	$host  = $_SERVER['HTTP_HOST'];

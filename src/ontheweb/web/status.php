@@ -115,6 +115,10 @@ if ($goback) {
 		$args .= "&" . $k . "=" . $val;
 	}
 
+	if ($headers["skippreview"] == "1") {
+		$args .= "&skippreview=1";
+	}
+
 	$uri .= substr($args, 1);
 	header("Location: http://" . $host . $uri);
 	exit;
@@ -767,10 +771,9 @@ if (!($job_done || $didcancel)) {
 ?>
 
 <form id="gobackform" action="status.php" method="get">
-<!--p class="c" -->
 <table class="c">
 <tr>
-<td rowspan="2">
+<td rowspan="3">
 <input type="hidden" name="job" value="<?php echo $myname; ?>" />
 <input type="submit" name="goback" value="Return to Form" />
 </td>
@@ -781,8 +784,11 @@ if (!($job_done || $didcancel)) {
 <td><input type="radio" name="quick" value="0" /></td>
 <td>Permalink (re-upload the image)</td>
 </tr>
+<tr>
+<td><input type="checkbox" name="skippreview" value="1" checked="checked" /></td>
+<td>Skip source extraction preview</td>
+</tr>
 </table>
-<!--/p-->
 </form>
 <hr />
 
