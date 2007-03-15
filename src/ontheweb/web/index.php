@@ -1068,7 +1068,7 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$sh
 	// -the brightest:
 	$objimg1 = $mydir . "objs1.pgm";
 	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $dispW . " -H " . $dispH .
-		" -x 1 -y 1 -w 1.75 " . "-N " . $Nbright . " > " . $objimg1;
+		" -x 1 -y 1 -w 1.75 -S " . (1/$shrink) . " -N " . $Nbright . " > " . $objimg1;
 	loggit("Command: " . $cmd . "\n");
 	$res = FALSE;
 	$res = system($cmd, $retval);
