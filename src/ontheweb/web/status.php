@@ -41,8 +41,18 @@ $rdlsinfofile = $mydir . $rdlsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
 $indexxyls = $mydir . $indexxyls_fn;
 
+$db = connect_db($jobdatafile);
+if (!$db) {
+	die("failed to connect jobdata db.\n");
+}
+
 // the user's image converted to PNM.
-//$pnmimg = $mydir . "image.pnm";
+$pnmimg = getjobdata($db, "displayImage");
+if (!$pnmimg) {
+	// BACK COMPAT
+	$pnmimg = "image.pnm";
+}
+$pnmimg = $mydir . $pnmimg;
 
 if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	// Rename it...
@@ -175,20 +185,8 @@ if ($overlay) {
 		if (!$didsolve) {
 			die("Field didn't solve.");
 		}
-		$db = connect_db($jobdatafile);
-		if (!$db) {
-			die("failed to connect jobdata db.\n");
-		}
-
-		$pnmimg = getjobdata($db, "displayImage");
-		if (!$pnmimg) {
-			// BACK COMPAT
-			$pnmimg = "image.pnm";
-		}
-		$pnmimg = $mydir . $pnmimg;
-
-		$W = getjobdata($db, "dispW");
-		$H = getjobdata($db, "dispH");
+		$W = getjobdata($db, "displayW");
+		$H = getjobdata($db, "displayH");
 		if (!($W && $H)) {
 			// BACKWARDS COMPATIBILITY.
 			loggit("failed to find image display width and height.\n");
@@ -198,7 +196,7 @@ if ($overlay) {
 				die("failed to find image width and height.\n");
 			}
 		}
-		$shrink = getjobdata($db, "shrink");
+		$shrink = getjobdata($db, "imageshrink");
 		if (!$shrink)
 			$shrink = 1;
 
@@ -222,6 +220,7 @@ if ($overlay) {
 			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
 				die("failed to parse field objs coords: \"" . $lines[$i] . "\"");
 			}
+			// Here's where we scale down the size of the quad:
 			$fldxy[] = $x / $shrink;
 			$fldxy[] = $y / $shrink;
 		}
@@ -230,7 +229,6 @@ if ($overlay) {
 		$redquad = $mydir . "redquad.pgm";
 		$xypgm = $mydir . "index.xy.pgm";
 		$fldxy1pgm = $mydir . "fldxy1.pgm";
-		//$fldxy2pgm = $mydir . "fldxy2.pgm";
 		$redimg = $mydir . "red.pgm";
 		$sumimg = $mydir . "sum.ppm";
 		$sumimg2 = $mydir . "sum2.ppm";
@@ -248,28 +246,21 @@ if ($overlay) {
 			die("pgmtoppm (quad) failed.");
 		}
 
-		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H . " -x 1 -y 1 -w 1.5 > " . $xypgm;
+		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
+			" -x 1 -y 1 -w 1.5 -r 3 > " . $xypgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
 			die("plotxy2 failed. retval $retval, res \"" . $res . "\"");
 		}
 
-		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H . " -N " . (1+$fldobjs) . " -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy1pgm;
+		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
+			" -N " . (1+$fldobjs) . " -r 5 -x 1 -y 1 -w 1.5 > " . $fldxy1pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
 			die("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
 		}
-
-		/*
-		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H . " -n " . $fldobjs . " > " . $fldxy2pgm;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			die("plotxy (fld2) failed. retval $retval, res \"" . $res . "\"");
-		}
-		*/
 
 		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
@@ -303,20 +294,6 @@ if ($overlay) {
 		if ($retval) {
 			die("pnmcomp failed.");
 		}
-		/*
-		$cmd = "pgmtoppm white " . $fldxy2pgm . " > " . $redimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			die("pgmtoppm failed.");
-		}
-		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			die("pnmcomp failed.");
-		}
-		*/
 		$cmd = "mv " . $sumimg2 . " " . $sumimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
@@ -695,12 +672,6 @@ if ($job_done) {
 			}
 		}
 
-		/*
-		echo '<tr><td>Field size (approx):</td><td>';
-		echo $fieldsize;
-		echo "</td></tr>\n";
-		*/
-
 		echo '<tr><td>WCS file:</td><td>';
 		print_link($wcsfile);
 		echo "</td></tr>\n";
@@ -708,16 +679,6 @@ if ($job_done) {
 		echo '<tr><td>RA,DEC list:</td><td>';
 		print_link($rdlist);
 		echo "</td></tr>\n";
-
-		/*
-		if (file_exists($objsfile)) {
-			echo '<tr><td>Graphical representation:</td><td>';
-			echo "<a href=\"";
-			echo "http://" . $host . $uri . "/status.php?job=" . $myname . "&overlay";
-			echo "\">overlay.png</a>\n";
-			echo "</td></tr>\n";
-		}
-		*/
 
 		echo '<tr><td>Google Maps view:</td><td>';
 		echo "<a href=\"";

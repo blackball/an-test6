@@ -75,7 +75,6 @@ array("apod-2007-03-09" =>
 	  */
 
 	  /* Should be doable:
-           http://antwrp.gsfc.nasa.gov/apod/ap070315.html
            http://antwrp.gsfc.nasa.gov/apod/ap070228.html
            http://antwrp.gsfc.nasa.gov/apod/ap070223.html
            http://antwrp.gsfc.nasa.gov/apod/ap070222.html
@@ -90,6 +89,9 @@ array("apod-2007-03-09" =>
            http://antwrp.gsfc.nasa.gov/apod/ap070122.html
            http://antwrp.gsfc.nasa.gov/apod/ap070112.html
            http://antwrp.gsfc.nasa.gov/apod/ap070108.html
+
+         Tried:
+           http://antwrp.gsfc.nasa.gov/apod/ap070315.html
            
 	   */
 	  /* A stretch?:
