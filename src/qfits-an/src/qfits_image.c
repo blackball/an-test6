@@ -124,6 +124,7 @@ int qfitsloader_init(qfitsloader * ql)
         qfits_error("pixio: NULL loader");
         return -1 ;
     }
+
     /* Object must contain a filename */
     if (ql->filename == NULL) {
         qfits_error("pixio: NULL filename in loader");
@@ -317,10 +318,20 @@ int qfitsloader_init(qfitsloader * ql)
         return -1 ;
     }
 
+	ql->pixbuffer = NULL;
+	ql->ibuf = NULL;
+	ql->fbuf = NULL;
+	ql->dbuf = NULL;
+
     /* Everything Ok, fields have been filled along. */
     /* Mark the structure as initialized */
     ql->_init = QFITSLOADERINIT_MAGIC ;
     return 0 ;
+}
+
+void qfitsloader_free_buffers(qfitsloader * ql) {
+	free(ql->pixbuffer);
+	ql->pixbuffer = NULL;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -468,6 +479,7 @@ int qfits_loadpix_window(
     ql->ibuf = NULL ;
     ql->fbuf = NULL ;
     ql->dbuf = NULL ;
+	ql->pixbuffer = NULL;
 
     /*
      * Special cases: mapped file is identical to requested format.
@@ -497,6 +509,7 @@ int qfits_loadpix_window(
                                         ql->bitpix,
                                         ql->bscale,
                                         ql->bzero);
+		ql->pixbuffer = ql->fbuf;
         break ;
 
         case PTYPE_INT:
@@ -505,6 +518,7 @@ int qfits_loadpix_window(
                                     ql->bitpix,
                                     ql->bscale,
                                     ql->bzero);
+		ql->pixbuffer = ql->ibuf;
         break ;
 
         case PTYPE_DOUBLE:
@@ -513,6 +527,7 @@ int qfits_loadpix_window(
                                         ql->bitpix,
                                         ql->bscale,
                                         ql->bzero);
+		ql->pixbuffer = ql->dbuf;
         break ;
     }
    

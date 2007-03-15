@@ -189,6 +189,9 @@ typedef struct qfitsloader {
     /** output: Pointer to pixel buffer loaded as double values */
     double    *    dbuf ;
 
+	// internal: allocated buffer.
+	void* pixbuffer;
+
 } qfitsloader ;
 
 
@@ -261,6 +264,7 @@ typedef struct qfitsdumper {
  -----------------------------------------------------------------------------*/
 
 int qfitsloader_init(qfitsloader *) ;
+void qfitsloader_free_buffers(qfitsloader *) ;
 int qfits_loadpix(qfitsloader *) ;
 int qfits_loadpix_window(qfitsloader *, int, int, int, int) ;
 int qfits_pixdump(qfitsdumper *) ;
