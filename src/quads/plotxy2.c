@@ -26,7 +26,7 @@
 #include "xylist.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:"
+#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
@@ -42,6 +42,7 @@ static void printHelp(char* progname) {
 		   "  [-w <linewidth>]  Linewidth (default: 1.0).\n"
 		   "  [-s <shape>]      Shape of markers (default: c):\n"
 		   "                      c = circle\n"
+		   "  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
 		   "  [-e <extension>]  FITS extension to read (default 0).\n"
 		   "\n", progname);
 }
@@ -64,12 +65,16 @@ int main(int argc, char *args[]) {
 	double* xyvals;
 	int Nxy;
 	int i;
+	double scale = 1.0;
 
 	cairo_t* cairo;
 	cairo_surface_t* target;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'S':
+			scale = atof(optarg);
+			break;
 		case 'i':
 			fname = optarg;
 			break;
@@ -144,6 +149,13 @@ int main(int argc, char *args[]) {
 	if (xylist_read_entries(xyls, ext, 0, Nxy, xyvals)) {
 		fprintf(stderr, "Failed to read XY values from file %s.\n", fname);
 		exit(-1);
+	}
+
+	// Scale xylist entries.
+	if (scale != 1.0) {
+		for (i=0; i<(2*Nxy); i++) {
+			xyvals[i] *= scale;
+		}
 	}
 
 	xylist_close(xyls);
