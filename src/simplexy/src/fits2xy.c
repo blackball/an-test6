@@ -1,8 +1,10 @@
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <assert.h>
+
 #include "fitsio.h"
 #include "dimage.h"
-#include <assert.h>
 
 #define MAXNPEAKS 100000
 
@@ -10,8 +12,41 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
+static const char* OPTIONS = "hp";
+
+void printHelp() {
+	fprintf(stderr,
+			"Usage: fits2xy [-p] fitsname.fits \n"
+			"\n"
+			"Read a FITS file, find objects, and write out \n"
+			"X, Y, FLUX to   fitsname.xy.fits .\n"
+			"\n"
+			"   [-p]  compute image percentiles.\n"
+			"\n"
+			"   fits2xy 'file.fits[1]'   - process first extension.\n"
+			"   fits2xy 'file.fits[2]'   - process second extension \n"
+			"   fits2xy file.fits+2      - same as above \n"
+			"\n");
+}
+
+static int compare_floats(const void* v1, const void* v2) {
+	float f1 = *(float*)v1;
+	float f2 = *(float*)v2;
+	if (f1 < f2)
+		return -1;
+	if (f1 > f2)
+		return 1;
+	return 0;
+}
+
+#define min(a,b) (((a)<(b))?(a):(b))
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 int main(int argc, char *argv[])
 {
+    int argchar;
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
 	fitsfile *ofptr;        /* FITS file pointer to output file */
 	//char card[FLEN_CARD];   /* Standard string lengths defined in fitsio.h */
@@ -23,23 +58,34 @@ int main(int argc, char *argv[])
 	int kk, jj;
 	float *thedata = NULL;
 	float sigma;
+	int percentiles = 0;
+	char* infn;
 
-	if (argc != 2) {
-		fprintf(stderr, "Usage: fits2xy fitsname.fits \n");
-		fprintf(stderr, "\n");
-		fprintf(stderr, "Read a FITS file, find objects, and write out \n");
-		fprintf(stderr, "X, Y, FLUX to stdout. \n");
-		fprintf(stderr, "\n");
-		fprintf(stderr, "   fits2xy 'file.fits[0]'   - list primary array header \n");
-		fprintf(stderr, "   fits2xy 'file.fits[2]'   - list header of 2nd extension \n");
-		fprintf(stderr, "   fits2xy file.fits+2    - same as above \n");
-		fprintf(stderr, "\n");
+	if (!((argc == 2) || (argc == 3))) {
+		printHelp();
 		return (0);
 	}
 
-	fprintf(stderr, "infile=%s\n", argv[1]);
-	if (fits_open_file(&fptr, argv[1], READONLY, &status)) {
-		fprintf(stderr, "Error reading file %s\n", argv[1]);
+    while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
+        switch (argchar) {
+		case 'p':
+			percentiles = 1;
+			break;
+		case '?':
+		case 'h':
+			printHelp();
+			exit(0);
+		}
+
+	if (optind != argc - 1) {
+		printHelp();
+		exit(-1);
+	}
+
+	infn = argv[optind];
+	fprintf(stderr, "infile=%s\n", infn);
+	if (fits_open_file(&fptr, infn, READONLY, &status)) {
+		fprintf(stderr, "Error reading file %s\n", infn);
 		fits_report_error(stderr, status);
 		exit(-1);
 	}
@@ -50,13 +96,8 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
 	// Create xylist filename (by trimming '.fits')
-	int fnamelen = strlen(argv[1]);
 	char outfile[300];
-	assert(argv[1][fnamelen] == '\0');
-	assert(fnamelen > 5);
-	sprintf(outfile, "%s", argv[1]);
-	outfile[fnamelen-5] = '\0';
-	sprintf(outfile, "%s.xy.fits",outfile);
+	snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", strlen(infn)-5, infn);
 	fprintf(stderr, "outfile=%s\n",outfile);
 
 	// Create output file
@@ -141,6 +182,8 @@ int main(int argc, char *argv[])
 				dpsf, plim, dlim, saddle, maxper, maxnpeaks,
 				&sigma, x, y, flux, &npeaks);
 
+		fprintf(stderr, "sigma=%g\n", sigma);
+
 		fprintf(stderr, "Found %i peaks.\n", npeaks);
 
 		// The FITS standard specifies that the center of the lower
@@ -183,7 +226,47 @@ int main(int argc, char *argv[])
 		assert(!status);
 
 
-		fprintf(stderr, "sigma=%f\n", sigma);
+		if (percentiles) {
+			// the number of pixels around the margin of the image to avoid.
+			int margin = 5;
+			// the maximum number of pixels to sample
+			int NPIX = 10000;
+			int nx, ny, n, np;
+			float* pix;
+			int x, y;
+			int i;
+			int pctls[] = { 0, 25, 50, 75, 95, 100 };
+			nx = naxisn[0];
+			ny = naxisn[1];
+			n = (nx - 2*margin) * (ny - 2*margin);
+			np = min(n, NPIX);
+			pix = malloc(np * sizeof(float));
+			if (n < NPIX) {
+				i=0;
+				for (y=margin; y<(ny-margin); y++)
+					for (x=margin; x<(nx-margin); x++) {
+						pix[i] = thedata[y*nx + x];
+						i++;
+					}
+			} else {
+				for (i=0; i<NPIX; i++) {
+					x = margin + (nx - 2*margin) * ( (double)random() / (((double)RAND_MAX)+1.0) );
+					y = margin + (ny - 2*margin) * ( (double)random() / (((double)RAND_MAX)+1.0) );
+					pix[i] = thedata[y*nx + x];
+				}
+			}
+			// just sort it, because I'm lazy.
+			qsort(pix, np, sizeof(float), compare_floats);
+
+			for (i=0; i<(sizeof(pctls)/sizeof(int)); i++) {
+				int j = (int)((pctls[i] * 0.01) * np) - 1;
+				if (j < 0) j = 0;
+				if (j >= np) j = np-1;
+				fprintf(stderr, "percentile%i %g\n", pctls[i], pix[j]);
+			}
+ 
+		}
+
 		free(thedata);
 		free(x);
 		free(y);
