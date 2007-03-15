@@ -42,7 +42,7 @@ $jobdatafile = $mydir . $jobdata_fn;
 $indexxyls = $mydir . $indexxyls_fn;
 
 // the user's image converted to PNM.
-$pnmimg = $mydir . "image.pnm";
+//$pnmimg = $mydir . "image.pnm";
 
 if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	// Rename it...
@@ -179,11 +179,28 @@ if ($overlay) {
 		if (!$db) {
 			die("failed to connect jobdata db.\n");
 		}
-		$W = getjobdata($db, "imageW");
-		$H = getjobdata($db, "imageH");
-		if (!($W && $H)) {
-			die("failed to find image width and height.\n");
+
+		$pnmimg = getjobdata($db, "displayImage");
+		if (!$pnmimg) {
+			// BACK COMPAT
+			$pnmimg = "image.pnm";
 		}
+		$pnmimg = $mydir . $pnmimg;
+
+		$W = getjobdata($db, "dispW");
+		$H = getjobdata($db, "dispH");
+		if (!($W && $H)) {
+			// BACKWARDS COMPATIBILITY.
+			loggit("failed to find image display width and height.\n");
+			$W = getjobdata($db, "imageW");
+			$H = getjobdata($db, "imageH");
+			if (!($W && $H)) {
+				die("failed to find image width and height.\n");
+			}
+		}
+		$shrink = getjobdata($db, "shrink");
+		if (!$shrink)
+			$shrink = 1;
 
 		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
 		//loggit("cmd: " . $cmd . "\n");
@@ -205,8 +222,8 @@ if ($overlay) {
 			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
 				die("failed to parse field objs coords: \"" . $lines[$i] . "\"");
 			}
-			$fldxy[] = $x;
-			$fldxy[] = $y;
+			$fldxy[] = $x / $shrink;
+			$fldxy[] = $y / $shrink;
 		}
 
 		$quadimg = $mydir . "quad.pgm";
@@ -231,14 +248,14 @@ if ($overlay) {
 			die("pgmtoppm (quad) failed.");
 		}
 
-		$cmd = $plotxy2 . " -i " . $indexxyls . " -W " . $W . " -H " . $H . " -x 1 -y 1 -w 1.5 > " . $xypgm;
+		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H . " -x 1 -y 1 -w 1.5 > " . $xypgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
 			die("plotxy2 failed. retval $retval, res \"" . $res . "\"");
 		}
 
-		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $W . " -H " . $H . " -N " . (1+$fldobjs) . " -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy1pgm;
+		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H . " -N " . (1+$fldobjs) . " -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy1pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -254,7 +271,7 @@ if ($overlay) {
 		}
 		*/
 
-		$cmd = "pgmtoppm red " . $xypgm . " > " . $redimg;
+		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -274,7 +291,7 @@ if ($overlay) {
 			die("pnmcomp failed.");
 		}
 
-		$cmd = "pgmtoppm white " . $fldxy1pgm . " > " . $redimg;
+		$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {

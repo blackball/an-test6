@@ -132,7 +132,7 @@ $form->addElement('submit', 'submit', 'Submit');
 
 $form->addElement('submit', 'linkhere', 'Link to these parameter settings');
 
-$form->addElement('submit', 'imagescale', 'Try to guess scale from image');
+$form->addElement('submit', 'imagescale', 'Try to guess scale from image headers');
 
 $form->addElement('reset', 'reset', "Reset Form");
 
@@ -534,7 +534,7 @@ function process_data ($vals) {
 
 	if ($imgfilename) {
 		if (!convert_image($imgfilename, $mydir, $usetype, $xtopnm,
-						   $errstr, $W, $H, $shrink, $dispW, $dispH)) {
+						   $errstr, $W, $H, $shrink, $dispW, $dispH, $dispimgbase)) {
 			die($errstr);
 		}
 
@@ -543,6 +543,7 @@ function process_data ($vals) {
 								   "imageshrink" => $shrink,
 								   "displayW" => $dispW,
 								   "displayH" => $dispH,
+								   "displayImage" => $dispimgbase,
 								   "imagefilename" => $imgbasename))) {
 			die("failed to save image {filename,W,H} in database.");
 		}
@@ -910,7 +911,7 @@ function get_image_type($filename, &$xtopnm) {
 }
 
 function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$shrink,
-					   &$dispW, &$dispH) {
+					   &$dispW, &$dispH, &$dispimgbase) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -919,7 +920,8 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$sh
 	global $fits2xyout_fn;
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
-	$pnmimg = $mydir . "image.pnm";
+	$pnmimg_orig_base = "image.pnm";
+	$pnmimg = $mydir . $pnmimg_orig_base;
 	$pnmimg_orig = $pnmimg;
 	$cmd = $xtopnm . " " . $img . " > " . $pnmimg;
 	loggit("Command: " . $cmd . "\n");
@@ -1048,8 +1050,10 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$sh
 	$dispH = (int)($H / $shrink);
 	if ($shrink == 1) {
 		$dispimg = $pnmimg_orig;
+		$dispimgbase = $pnmimg_orig_base;
 	} else {
-		$dispimg = $mydir . "shrink.pnm";
+		$dispimgbase = "shrink.pnm";
+		$dispimg = $mydir . $dispimgbase;
 		$cmd = "pnmscale -reduce " . $shrink . " " . $pnmimg_orig . " > " . $dispimg;
 		$res = system($cmd, $retval);
 		if ($retval) {
