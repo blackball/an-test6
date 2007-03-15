@@ -37,4 +37,6 @@ void permuted_sort(int* perm, int Nperm);
  */
 int compare_doubles(const void* v1, const void* v2);
 
+int compare_floats(const void* v1, const void* v2);
+
 #endif

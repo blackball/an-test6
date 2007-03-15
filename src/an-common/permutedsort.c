@@ -55,4 +55,14 @@ int compare_doubles(const void* v1, const void* v2) {
 	return 0;
 }
 
+int compare_floats(const void* v1, const void* v2) {
+	float f1 = *(float*)v1;
+	float f2 = *(float*)v2;
+	if (f1 < f2)
+		return -1;
+	if (f1 > f2)
+		return 1;
+	return 0;
+}
+
 
