@@ -53,6 +53,15 @@ array("apod-2007-03-09" =>
 	  "xysrc=url&fstype=ev&fse=7&fsv=10&index=4degree&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
 
+	  "apod-2007-01-08" =>
+	  "xysrc=url&fstype=ul&fsl=20&fsu=90&poserr=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/dippers_lodriguss_labels.jpg",
+
+	  "apod-2007-01-08-fast" =>
+	  "xysrc=url&fstype=ul&fsl=60&fsu=75&poserr=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/dippers_lodriguss_labels.jpg",
+
+
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
            http://antwrp.gsfc.nasa.gov/apod/ap070218.html
@@ -88,7 +97,6 @@ array("apod-2007-03-09" =>
            http://antwrp.gsfc.nasa.gov/apod/ap070124.html
            http://antwrp.gsfc.nasa.gov/apod/ap070122.html
            http://antwrp.gsfc.nasa.gov/apod/ap070112.html
-           http://antwrp.gsfc.nasa.gov/apod/ap070108.html
 
          Tried:
            http://antwrp.gsfc.nasa.gov/apod/ap070315.html
