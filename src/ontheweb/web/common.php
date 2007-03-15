@@ -67,6 +67,7 @@ if (strpos($host, "monte") === 0) {
 	$wcs_xy2rd = "wcs-xy2rd";
 	$wcs_rd2xy = "wcs-rd2xy";
 	$fits_guess_scale = "fits-guess-scale";
+	$an_fitstopnm = "an-fitstopnm";
 } else {
 	$sqlite = "sqlite";
 	$resultdir = "/home/gmaps/ontheweb-data/";
@@ -86,6 +87,7 @@ if (strpos($host, "monte") === 0) {
 	$wcs_xy2rd = "/home/gmaps/quads/wcs-xy2rd";
 	$wcs_rd2xy = "/home/gmaps/quads/wcs-rd2xy";
 	$fits_guess_scale = "/home/gmaps/quads/fits-guess-scale";
+	$an_fitstopnm = "/home/gmaps/quads/an-fitstopnm";
 }
 
 $headers = $_REQUEST;

@@ -869,6 +869,8 @@ function process_data ($vals) {
 }
 
 function get_image_type($filename, &$xtopnm) {
+	global $an_fitstopnm;
+
 	// Xtopnm formats we accept:
 	// normalize filenames
 	$imgtypemap = array("jpg" => "jpeg",
@@ -881,7 +883,8 @@ function get_image_type($filename, &$xtopnm) {
 
 	$xtopnmmap = array("jpeg" => "jpegtopnm",
 					   "png" => "pngtopnm",
-					   "fits" => "fitstopnm",
+					   //"fits" => "fitstopnm",
+					   "fits" => $an_fitstopnm . " -i ",
 					   "gif" => "giftopnm",
 					   "ppm" => "ppmtoppm <", // hack - ppmtoppm takes input from stdin.
 					   );
