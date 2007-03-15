@@ -469,7 +469,7 @@ function process_data ($vals) {
 					 "timelimit" => $timelimit);
 
 	$flds = array('xysrc', 'imgfile', 'fitsfile', 'imgurl',
-				  'x_col', 'y_col',
+				  'x_col', 'y_col', 'fstype',
 				  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
 				  'poserr', 'index', 'submit');
 
@@ -492,6 +492,7 @@ function process_data ($vals) {
 	loggit("xysrc: " . $xysrc . "\n");
 
 	$imgfilename = "";
+	$imgbasename = "";
 	if ($xysrc == "url") {
 		// Try to retrieve the URL...
 		loggit("retrieving url " . $imgurl . " ...\n");
@@ -502,7 +503,8 @@ function process_data ($vals) {
 		}
 		loggit("Assuming image type: " . $usetype . "\n");
 
-		$downloadedimg = $mydir . "downloaded." . $usetype;
+		$imgbasename = "downloaded." . $usetype;
+		$downloadedimg = $mydir . $imgbasename;
 		loggit("Writing to file: " . $downloadedimg . "\n");
 
 		if (download_url($imgurl, $downloadedimg, $maxfilesize, $errmsg) === FALSE) {
@@ -523,13 +525,12 @@ function process_data ($vals) {
 		}
 		loggit("original image file: " . $origname . ", using type: " . $usetype . "\n");
 
-		$imgfilename = $mydir . "uploaded." . $usetype;
-		if (!$imgfile->moveUploadedFile($mydir, "uploaded." . $usetype)) {
+		$imgbasename = "uploaded." . $usetype;
+		$imgfilename = $mydir . $imgbasename;
+		if (!$imgfile->moveUploadedFile($mydir, $imgbasename)) {
 			die("failed to move uploaded file into place.");
 		}
 	}
-
-
 
 	if ($imgfilename) {
 		if (!convert_image($imgfilename, $mydir, $usetype, $xtopnm,
@@ -537,8 +538,8 @@ function process_data ($vals) {
 			die($errstr);
 		}
 
-		if (!setjobdata($db, array("imageW"=>$W, "imageH"=>$H))) {
-			die("failed to save image W,H in database.");
+		if (!setjobdata($db, array("imageW"=>$W, "imageH"=>$H, "imagefilename"=>$imgbasename))) {
+			die("failed to save image {filename,W,H} in database.");
 		}
 
 		$imgtype = exif_imagetype($imgfilename);
@@ -1189,7 +1190,8 @@ function guess_image_scale($vals) {
 
 		if ($maxscale > 0) {
 			if ($maxscale == $minscale) {
-				echo "<input type=\"hidden\" name=\"fse\" value=\"" . $minscale . "\" />\n" .
+				echo "<input type=\"hidden\" name=\"fstype\" value=\"ev\" />\n" .
+					"<input type=\"hidden\" name=\"fse\" value=\"" . $minscale . "\" />\n" .
 					"<input type=\"hidden\" name=\"fsv\" value=\"" . 5 . "\" />\n";
 			} else {
 				// ensure 5% margin.
@@ -1199,7 +1201,8 @@ function guess_image_scale($vals) {
 					$maxscale = $gmean * sqrt(1.05);
 					$minscale = $gmean / sqrt(1.05);
 				}
-				echo "<input type=\"hidden\" name=\"fsl\" value=\"" . $minscale . "\" />\n" .
+				echo "<input type=\"hidden\" name=\"fstype\" value=\"ul\" />\n" .
+					"<input type=\"hidden\" name=\"fsl\" value=\"" . $minscale . "\" />\n" .
 					"<input type=\"hidden\" name=\"fsu\" value=\"" . $maxscale . "\" />\n";
 			}
 

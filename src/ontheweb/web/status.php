@@ -14,6 +14,7 @@ $mydir = $resultdir . $myname . "/";
 $img = array_key_exists("img", $headers);
 $overlay = array_key_exists("overlay", $headers);
 $cancel = array_key_exists("cancel", $headers);
+$goback = array_key_exists("goback", $headers);
 
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
@@ -40,7 +41,7 @@ $rdlsinfofile = $mydir . $rdlsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
 $indexxyls = $mydir . $indexxyls_fn;
 
-// the user's image.
+// the user's image converted to PNM.
 $pnmimg = $mydir . "image.pnm";
 
 if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
@@ -57,6 +58,66 @@ if ($cancel) {
 	if (!touch($cancelfile)) {
 		die("Failed to created cancel file.");
 	}
+}
+
+if ($goback) {
+	$host  = $_SERVER['HTTP_HOST'];
+	$dir   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+	$uri  = $dir . "/index.php?";
+	$args = "";
+
+	$quick = ($headers["quick"] == "1");
+
+	$db = connect_db($jobdatafile);
+	if (!$db) {
+		die("failed to connect jobdata db.\n");
+	}
+	$xysrc = getjobdata($db, "xysrc");
+	$imgdir = "http://" . $host . $dir . "/status/" . $myname . "/";
+	switch ($xysrc) {
+	case "url":
+		$args .= "&xysrc=url";
+		if ($quick) {
+			$userimage = getjobdata($db, "imagefilename");
+			$args .= "&imgurl=" . $imgdir . $userimage;
+		} else {
+			$imgurl = getjobdata($db, "imgurl");
+			$args .= "&imgurl=" . $imgurl;
+		}
+		break;
+	case "img":
+		if ($quick) {
+			$userimage = getjobdata($db, "imagefilename");
+			$args .= "&xysrc=url";
+			$args .= "&imgurl=" . $imgdir . $userimage;
+		} else {
+			$imgfile = getjobdata($db, "imgfile");
+			$args .= "&xysrc=img";
+			$args .= "&imgfile=" . $imgfile;
+		}
+		break;
+	case "fits":
+		$fitsfile = getjobdata($db, "fitsfile");
+		$xcol = getjobdata($db, "x_col");
+		$ycol = getjobdata($db, "y_col");
+		$args .= "&xysrc=fits";
+		$args .= "&fitsfile=" . $fitsfile;
+		$args .= "&x_col=" . $xcol;
+		$args .= "&y_col=" . $ycol;
+		break;
+	}
+	$keys = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit', 'parity', 'poserr',
+				  'index', 'uname', 'email', 'tweak');
+	foreach ($keys as $k) {
+		$val = getjobdata($db, $k);
+		if ($val === FALSE)
+			continue;
+		$args .= "&" . $k . "=" . $val;
+	}
+
+	$uri .= substr($args, 1);
+	header("Location: http://" . $host . $uri);
+	exit;
 }
 
 $input_exists = file_exists($inputfile);
@@ -693,7 +754,7 @@ if (file_exists($blindlogfile)) {
 if (!($job_done || $didcancel)) {
 ?>
 
-<form id="dummyform" action="status.php" method="get">
+<form id="cancelform" action="status.php" method="get">
 <p class="c">
 <input type="submit" name="cancel" value="Cancel Job" />
 <input type="hidden" name="job" value="<?php echo $myname; ?>" />
@@ -702,7 +763,31 @@ if (!($job_done || $didcancel)) {
 <hr />
 
 <?php
-}
+	 } else {
+?>
+
+<form id="gobackform" action="status.php" method="get">
+<!--p class="c" -->
+<table class="c">
+<tr>
+<td rowspan="2">
+<input type="hidden" name="job" value="<?php echo $myname; ?>" />
+<input type="submit" name="goback" value="Return to Form" />
+</td>
+<td><input type="radio" name="quick" value="1" checked="checked" /></td>
+	 <td>Quick (don't re-upload the image)</td>
+</tr>
+<tr>
+<td><input type="radio" name="quick" value="0" /></td>
+<td>Permalink (re-upload the image)</td>
+</tr>
+</table>
+<!--/p-->
+</form>
+<hr />
+
+<?php
+	  }
 echo $valid_blurb;
 ?>
 

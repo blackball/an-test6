@@ -31,6 +31,7 @@ $overlay_fn="overlay.png";
 $rdlsinfo_fn="rdlsinfo";
 $jobdata_fn = "jobdata.db";
 $fits2xyout_fn = "fits2xy.out";
+//$userimage_fn = "userimage";
 
 $valid_blurb = <<<END
 <p>
