@@ -344,3 +344,48 @@ int in_image(int x, int y, render_args_t* args) {
 uchar* pixel(int x, int y, uchar* img, render_args_t* args) {
 	return img + 4*(y*args->W + x);
 }
+
+// ra,dec in degrees.
+void draw_segmented_line(double ra1, double dec1,
+						 double ra2, double dec2,
+						 int SEGS,
+						 cairo_t* cairo, render_args_t* args) {
+	int i, s, k;
+	double xyz1[3], xyz2[3];
+	bool wrap;
+
+	radecdeg2xyzarr(ra1, dec1, xyz1);
+	radecdeg2xyzarr(ra2, dec2, xyz2);
+
+	wrap = (fabs(ra1 - ra2) >= 180.0);
+
+	// Draw segmented line.
+	for (i=0; i<(1 + (wrap?1:0)); i++) {
+		for (s=0; s<SEGS; s++) {
+			double xyz[3], frac;
+			double ra, dec;
+			double mx;
+			double px, py;
+			frac = (double)s / (double)(SEGS-1);
+			for (k=0; k<3; k++)
+				xyz[k] = xyz1[k]*(1.0-frac) + xyz2[k]*frac;
+			normalize_3(xyz);
+			xyzarr2radec(xyz, &ra, &dec);
+			mx = ra2merc(ra);
+			if (wrap) {
+				// in the first pass we draw the left side (mx>0.5)
+				if ((i==0) && (mx < 0.5)) mx += 1.0;
+				// in the second pass we draw the right side (wx<0.5)
+				if ((i==1) && (mx > 0.5)) mx -= 1.0;
+			}
+			px = xmerc2pixelf(mx, args);
+			py = dec2pixelf(rad2deg(dec), args);
+
+			if (s==0)
+				cairo_move_to(cairo, px, py);
+			else
+				cairo_line_to(cairo, px, py);
+		}
+	}
+}
+

@@ -9,7 +9,8 @@
 #include "sip_qfits.h"
 
 char* wcs_dirs[] = {
-	"/home/gmaps/ontheweb-data/"
+	"/home/gmaps/ontheweb-data",
+	"."
 };
 
 int render_boundary(unsigned char* img, render_args_t* args) {
@@ -68,34 +69,19 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 		//cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
 
-		// Draw the field boundary as a curved line by segmenting it into
-		// SEGS pieces, running the SIP transformation on each point.
+		// Four edges...
 		for (i=0; i<4; i++) {
 			double* ep1 = ends + i*2;
 			double* ep2 = ends + ((i+1)%4)*2;
-			//fprintf(stderr, "ep1=(%g,%g), ep2=(%g,%g)\n", ep1[0], ep1[1], ep2[0], ep2[1]);
-			for (s=0; s<SEGS; s++) {
-				double x,y,frac;
-				double ra, dec;
-				double mx,my;
-				double px, py;
-				frac = (double)s / (double)(SEGS);
-				x = ep1[0] * (1.0 - frac) + ep2[0] * frac;
-				y = ep1[1] * (1.0 - frac) + ep2[1] * frac;
-				sip_pixelxy2radec(&wcs, x, y, &ra, &dec);
-				mx = ra2merc(deg2rad(ra));
-				my = dec2merc(deg2rad(dec));
-				px = xmerc2pixelf(mx, args);
-				py = ymerc2pixelf(my, args);
+			double ra1, dec1, ra2, dec2;
 
-				if (i==0 && s==0)
-					cairo_move_to(cairo, px, py);
-				else
-					cairo_line_to(cairo, px, py);
-			}
+			sip_pixelxy2radec(&wcs, ep1[0], ep1[1], &ra1, &dec1);
+			sip_pixelxy2radec(&wcs, ep2[0], ep2[1], &ra2, &dec2);
+
+			draw_segmented_line(ra1, dec1, ra2, dec2, SEGS, cairo, args);
 		}
 
-		cairo_close_path(cairo);
+		//cairo_close_path(cairo);
 		cairo_stroke(cairo);
 
 		// Cairo's uint32 ARGB32 format is a little different than what we need,

@@ -1,7 +1,10 @@
 #ifndef TILERENDER_H
 #define TILERENDER_H
 
+#include <cairo.h>
+
 #include "starutil.h"
+#include "mathutil.h"
 
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
@@ -102,5 +105,10 @@ int in_image(int x, int y, render_args_t* args);
 // void put_pixel(int x, int y, uchar r, uchar g, uchar b, uchar a, render_args_t* args, uchar* img);
 
 uchar* pixel(int x, int y, uchar* img, render_args_t* args);
+
+void draw_segmented_line(double ra1, double dec1,
+						 double ra2, double dec2,
+						 int SEGS,
+						 cairo_t* cairo, render_args_t* args);
 
 #endif
