@@ -273,7 +273,7 @@ function startup() {
 	}
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
-	passargs = [ "imagefn", "wcsfn", "cc", "arcsinh", "arith", "gain", "rdlsfn"];
+	passargs = [ "imagefn", "wcsfn", "cc", "arcsinh", "arith", "gain", "rdlsfn", "dashbox"];
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
@@ -298,6 +298,7 @@ function startup() {
 
 	// Describe the tile server...
 	var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	//userimageTile.myLayers='tycho,image,grid,rdls,constellation';
 	userimageTile.myLayers='tycho,image,grid,rdls';
 	userimageTile.myFormat='image/png';
 	userimageTile.myBaseURL=TILE_URL;

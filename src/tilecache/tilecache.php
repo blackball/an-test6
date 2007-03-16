@@ -51,7 +51,7 @@ foreach ($headers as $header => $value) {
 }
 	
 // The variables we need...
-$needed = array("WIDTH", "HEIGHT", /*"SRS",*/ "BBOX");
+$needed = array("WIDTH", "HEIGHT", "BBOX");
 foreach ($needed as $n => $val) {
 	if (!array_key_exists($val, $_REQUEST)) {
 		loggit("Request doesn't contain $val.\n");
@@ -62,24 +62,10 @@ foreach ($needed as $n => $val) {
 $ws = $_REQUEST["WIDTH"];
 $hs = $_REQUEST["HEIGHT"];
 $bb = $_REQUEST["BBOX"];
-//$epsg = $_REQUEST["SRS"];
 $lay = $_REQUEST["LAYERS"];
 $tag = $_REQUEST["tag"]; // Note that this may be blank for some layers
 
 $cmdline = $TILERENDER;
-
-//loggit("W=$ws, H=$hs, BB=$bb, EPSG=$epsg, LAYERS=$lay, tag=$tag\n");
-
-// This identifies the projection type.
-// We don't really need to be a valid WMS server, since we're writing the client too :)
-/*
-if ($epsg != "EPSG:4326") {
-	loggit("Wrong EPSG: $epsg.\n");
-	header("Content-type: text/html");
-	printf("<html><body>Invalid request: bad EPSG $epsg.</body></html>\n\n");
-	exit;
-}
-*/
 
 // Make sure the bounding box is actually numerical values...
 if (sscanf($bb, "%f,%f,%f,%f", $x0, $y0, $x1, $y1) != 4) {
@@ -168,6 +154,13 @@ $lw = $_REQUEST["lw"];
 if ($lw) {
 	if (sscanf($lw, "%f", $lwval) == 1) {
 		$cmdline .= " -L " . $lwval;
+	}
+}
+
+$box = $_REQUEST["dashbox"];
+if ($box) {
+	if (sscanf($box, "%f", $boxval) == 1) {
+		$cmdline .= " -B " . $boxval;
 	}
 }
 
