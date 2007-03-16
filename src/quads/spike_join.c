@@ -13,7 +13,6 @@ int create_table(FILE* inFid, FILE* outFid){
 
 	// create table header
 	qfits_header* hdr = qfits_table_prim_header_default();
-	qfits_header_add(hdr, "NOBJS", "0", "", NULL);
 	qfits_header_dump(hdr, outFid);
 
 	// create table
@@ -23,16 +22,26 @@ int create_table(FILE* inFid, FILE* outFid){
 	
 	qfits_header* tbl_hdr = qfits_table_ext_header_default(tbl); 
 	qfits_header_dump(tbl_hdr, outFid);
+
 	// fill in content of table
+	int x = 0;
 	while((c = fgetc(inFid)) != EOF){
-		printf("%c", c);
+		// show progress
+		if (x==100000){
+			printf(".");
+			x=0;
+		}else{
+			x++;
+		}
+		//printf("%c", c);
 		fits_write_data_X(outFid,((unsigned char)c));
 		nEntries++;
 	}
 	fits_pad_file(outFid);
-
 	// fix the headers
-	fix_headers(outFid, hdr, tbl_hdr, nEntries);
+	tbl->nr = nEntries;
+	tbl_hdr = qfits_table_ext_header_default(tbl);
+	fix_headers(outFid, hdr, tbl_hdr);
 	
 	qfits_header_destroy(hdr);
 	qfits_header_destroy(tbl_hdr);
@@ -40,13 +49,11 @@ int create_table(FILE* inFid, FILE* outFid){
 	return 0;
 }
 
-int fix_headers(FILE* fId, qfits_header* hdr, qfits_header* tbl_hdr, int nEntries){
+int fix_headers(FILE* fId, qfits_header* hdr, qfits_header* tbl_hdr){
 	char val[32];
 	off_t offset;
 	offset = ftello(fId);
 	fseeko(fId, 0, SEEK_SET);
-	sprintf(val, "%u", nEntries);
-	qfits_header_mod(hdr, "NOBJS", val, "Number of rows");
 
 	// write header
 	qfits_header_dump(hdr, fId);
@@ -61,7 +68,7 @@ int fix_headers(FILE* fId, qfits_header* hdr, qfits_header* tbl_hdr, int nEntrie
 
 int main(int argc, char* argv[]){
 	if (argc==3){
-		printf("%s\n", argv[1]);
+		printf("processing %s ", argv[1]);
 
 		// open files for reading/writing
 		FILE* inFid = fopen(argv[1], "r");
@@ -72,6 +79,7 @@ int main(int argc, char* argv[]){
 
 		fclose(inFid);
 		fclose(outFid);
+		printf(" finished \n");
 	} else {
 		printf("Usage: spike_join inputFile outputFile\n");
 	}
