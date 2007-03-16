@@ -45,12 +45,17 @@ $db = connect_db($jobdatafile);
 if (!$db) {
 	die("failed to connect jobdata db.\n");
 }
+$jd = getalljobdata($db);
+if ($jd === FALSE) {
+	die("failed to get jobdata.\n");
+}
 
 // the user's image converted to PNM.
-$pnmimg = getjobdata($db, "displayImage");
+$pnmimg = $jd["displayImage"];
 if (!$pnmimg) {
 	// BACK COMPAT
 	$pnmimg = "image.pnm";
+	loggit("No \"displayImage\" entry found: using \"" . $pnmimg . "\".\n");
 }
 $pnmimg = $mydir . $pnmimg;
 
@@ -78,48 +83,41 @@ if ($goback) {
 
 	$quick = ($headers["quick"] == "1");
 
-	$db = connect_db($jobdatafile);
-	if (!$db) {
-		die("failed to connect jobdata db.\n");
-	}
-	$xysrc = getjobdata($db, "xysrc");
+	$xysrc = $jd["xysrc"];
 	$imgdir = "http://" . $host . $dir . "/status/" . $myname . "/";
+
+	$keys = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit', 'parity', 'poserr',
+				  'index', 'uname', 'email', 'tweak');
+
 	switch ($xysrc) {
 	case "url":
 		$args .= "&xysrc=url";
 		if ($quick) {
-			$userimage = getjobdata($db, "imagefilename");
+			$userimage = $jd["imagefilename"];
 			$args .= "&imgurl=" . $imgdir . $userimage;
 		} else {
-			$imgurl = getjobdata($db, "imgurl");
-			$args .= "&imgurl=" . $imgurl;
+			array_push($keys, 'imgurl');
 		}
 		break;
 	case "img":
 		if ($quick) {
-			$userimage = getjobdata($db, "imagefilename");
+			$userimage = $jd["imagefilename"];
 			$args .= "&xysrc=url";
 			$args .= "&imgurl=" . $imgdir . $userimage;
 		} else {
-			$imgfile = getjobdata($db, "imgfile");
 			$args .= "&xysrc=img";
-			$args .= "&imgfile=" . $imgfile;
+			array_push($keys, 'imgfile');
 		}
 		break;
 	case "fits":
-		$fitsfile = getjobdata($db, "fitsfile");
-		$xcol = getjobdata($db, "x_col");
-		$ycol = getjobdata($db, "y_col");
 		$args .= "&xysrc=fits";
-		$args .= "&fitsfile=" . $fitsfile;
-		$args .= "&x_col=" . $xcol;
-		$args .= "&y_col=" . $ycol;
+		array_push($keys, 'fitsfile');
+		array_push($keys, 'x_col');
+		array_push($keys, 'y_col');
 		break;
 	}
-	$keys = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit', 'parity', 'poserr',
-				  'index', 'uname', 'email', 'tweak');
 	foreach ($keys as $k) {
-		$val = getjobdata($db, $k);
+		$val = $jd[$k];
 		if ($val === FALSE)
 			continue;
 		$args .= "&" . $k . "=" . $val;
@@ -173,6 +171,47 @@ if ($didsolve) {
 		$decc = $infomap["dec_center"];
 		$fieldsize = $infomap["field_size"];
 	}
+
+	if (!array_key_exists("cd11", $jd)) {
+		$cmd = $wcsinfo . " " . $wcsfile; // . " > " $wcsinfofile;
+		$res = shell_exec($cmd);
+		$lines = explode("\n", $res);
+		foreach ($lines as $ln) {
+			$words = explode(" ", $ln);
+			if (count($words < 2))
+				continue;
+			$wcsvals[$words[0]] = $words[1];
+		}
+		$cd11 = (float)$wcsvals["cd11"];		
+		$cd12 = (float)$wcsvals["cd12"];		
+		$cd21 = (float)$wcsvals["cd21"];		
+		$cd22 = (float)$wcsvals["cd22"];		
+		$det =  (float)$wcsvals["det"];
+		$parity = (int)$wcsvals["parity"];
+		$orient = (float)$wcsvals["orientation"];
+		$pixscale = (float)$wcsvals["pixscale"];
+
+		$setjd = array("cd11" => $cd11,
+					   "cd12" => $cd12,
+					   "cd21" => $cd21,
+					   "cd22" => $cd22,
+					   "det" => $det,
+					   "parity" => $parity,
+					   "orientation" => $orient,
+					   "pixscale" => $pixscale);
+		if (!setjobdata($db, $setjd)) {
+			die("Failed to set WCS-related jobdata entries.");
+		}
+	} else {
+		$cd11 = (float)$jd["cd11"];		
+		$cd12 = (float)$jd["cd12"];		
+		$cd21 = (float)$jd["cd21"];		
+		$cd22 = (float)$jd["cd22"];		
+		$det =  (float)$jd["det"];
+		$parity = (int)$jd["parity"];
+		$orient = (float)$jd["orientation"];
+		$pixscale = (float)$jd["pixscale"];
+	}
 }
 
 if ($overlay) {
@@ -185,25 +224,25 @@ if ($overlay) {
 		if (!$didsolve) {
 			die("Field didn't solve.");
 		}
-		$W = getjobdata($db, "displayW");
-		$H = getjobdata($db, "displayH");
+		$W = $jd["displayW"];
+		$H = $jd["displayH"];
 		if (!($W && $H)) {
 			// BACKWARDS COMPATIBILITY.
 			loggit("failed to find image display width and height.\n");
-			$W = getjobdata($db, "imageW");
-			$H = getjobdata($db, "imageH");
+			$W = $jd["imageW"];
+			$H = $jd["imageH"];
 			if (!($W && $H)) {
 				die("failed to find image width and height.\n");
 			}
 		}
-		$shrink = getjobdata($db, "imageshrink");
+		$shrink = $jd["imageshrink"];
 		if (!$shrink)
 			$shrink = 1;
 
 		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
 		//loggit("cmd: " . $cmd . "\n");
 		$output = shell_exec($cmd);
-		loggit("output: " . $output . "\n");
+		//loggit("output: " . $output . "\n");
 		if (sscanf($output, " %d %d %d %d %d ", $nil, $fA, $fB, $fC, $fD) != 5) {
 			die("failed to parse field objs.");
 		}
@@ -321,6 +360,21 @@ if ($overlay) {
 		die("overlay file does not exist.");
 }
 
+if ($didsolve) {
+	// The size of the full-sized original image.
+	$fullW = $jd["imageW"];
+	$fullH = $jd["imageH"];
+	$exact = TRUE;
+	if (!($fullW && $fullH)) {
+		$exact = FALSE;
+		$fullW = $jd["xylsW"];
+		$fullH = $jd["xylsH"];
+		if (!($fullW && $fullH)) {
+			loggit("Couldn't get xylsW/H.\n");
+		}
+	}
+}
+
 
 $status = "(unknown)";
 if ($didcancel) {
@@ -346,10 +400,11 @@ if ($didcancel) {
 Astrometry.net 
 <?php
 if ($img) {
-	echo "(Source extraction)";
+	echo "(Source extraction for";
 } else {
-	echo "(" . $status . ")";
+	echo "(" . $status;
 }
+echo " job " . $myname . ")";
 ?>
 </title>
 <style type="text/css">
@@ -450,12 +505,20 @@ if ($didsolve) {
 if ($didsolve) {
 	echo "<div id=\"onsky\">\n";
 	echo "<p>Your field on the sky (click for larger image):</p>\n";
+
 	$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
 		// "tag=test-tag&" .
 		"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
 		"&arcsinh&gain=-0.5" .
 		"&BBOX=0,-85,360,85" .
 		"&wcsfn=" . $myname . "/wcs.fits";
+
+	$fldsz = $pixscale * max($fullW, $fullH);
+	if ($fldsz < (3600 * 5)) {
+		echo "<p>(Your field is small so we have drawn a dashed box" .
+			" around your field and zoomed in on that region.)</p>";
+		$url .= "&dashbox=0.1";
+	}
 
 	echo "<a href=\"" . htmlentities($url .
 		"&WIDTH=1024&HEIGHT=1024&lw=5") .
@@ -588,36 +651,6 @@ if ($job_done) {
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
 
-		$cmd = $modhead . " " . $wcsfile . " CD1_1 | awk '{print $3}'";
-		//loggit("Command: " . $cmd . "\n");
-		$cd11 = (float)rtrim(shell_exec($cmd));
-		$cmd = $modhead . " " . $wcsfile . " CD1_2 | awk '{print $3}'";
-		//loggit("Command: " . $cmd . "\n");
-		$cd12 = (float)rtrim(shell_exec($cmd));
-		$cmd = $modhead . " " . $wcsfile . " CD2_1 | awk '{print $3}'";
-		//loggit("Command: " . $cmd . "\n");
-		$cd21 = (float)rtrim(shell_exec($cmd));
-		$cmd = $modhead . " " . $wcsfile . " CD2_2 | awk '{print $3}'";
-		//loggit("Command: " . $cmd . "\n");
-		$cd22 = (float)rtrim(shell_exec($cmd));
-		loggit("CD: $cd11, $cd12, $cd21, $cd22\n");
-
-		$det = $cd11 * $cd22 - $cd12 * $cd21;
-		$par = ($det > 0) ? 1 : -1;
-		$T = $par * $cd11 + $cd22;
-		$A = $par * $cd21 - $cd12;
-		$orient = -(180/M_PI) * atan2($A, $T);
-		$pixscale = 3600 * sqrt($par * $det);
-
-		/*
-		loggit("det(CD): $det.\n");
-		loggit("parity: $par.\n");
-		loggit("T: $T.\n");
-		loggit("A: $A.\n");
-		loggit("orient: $orient\n");
-		loggit("pixscale: $pixscale\n");
-		*/
-
 		echo '<tr><td>Orientation:</td><td>';
 		printf("%.2f deg E of N\n", $orient);
 		echo "</td></tr>\n";
@@ -627,49 +660,33 @@ if ($job_done) {
 		echo "</td></tr>\n";
 
 		echo '<tr><td>Parity:</td><td>';
-		if ($par == 1) {
+		if ($parity == 1) {
 			echo "Reverse (\"Left-handed\")";
 		} else {
 			echo "Normal (\"Right-handed\")";
 		}
 		echo "</td></tr>\n";
 
-		$db = connect_db($jobdatafile);
-		if (!$db) {
-			loggit("failed to connect jobdata db.\n");
-		} else {
-			$W = getjobdata($db, "imageW");
-			$H = getjobdata($db, "imageH");
-			$exact = TRUE;
-			if (!($W && $H)) {
-				$exact = FALSE;
-				$W = getjobdata($db, "xylsW");
-				$H = getjobdata($db, "xylsH");
-				if (!($W && $H)) {
-					loggit("Couldn't get xylsW/H.\n");
-				}
+		if ($fullW && $fullH) {
+			$fldw = $pixscale * $fullW;
+			$fldh = $pixscale * $fullH;
+			$units = "arcseconds";
+			if (min($fldw, $fldh) > 3600.0) {
+				$fldw /= 3660.0;
+				$fldh /= 3660.0;
+				$units = "degrees";
+			} else if (min($fldw, $fldh) > 60.0) {
+				$fldw /= 60.0;
+				$fldh /= 60.0;
+				$units = "arcminutes";
 			}
-			if ($W && $H) {
-				$fldw = $pixscale * $W;
-				$fldh = $pixscale * $H;
-				$units = "arcseconds";
-				if (min($fldw, $fldh) > 3600.0) {
-					$fldw /= 3660.0;
-					$fldh /= 3660.0;
-					$units = "degrees";
-				} else if (min($fldw, $fldh) > 60.0) {
-					$fldw /= 60.0;
-					$fldh /= 60.0;
-					$units = "arcminutes";
-				}
-				echo '<tr><td>Field size ';
-				if (!$exact) {
-					echo "(approximately)";
-				}
-				echo ':</td><td>';
-				printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
-				echo "</td></tr>\n";
+			echo '<tr><td>Field size ';
+			if (!$exact) {
+				echo "(approximately)";
 			}
+			echo ':</td><td>';
+			printf("%.2f x %.2f %s\n", $fldw, $fldh, $units);
+			echo "</td></tr>\n";
 		}
 
 		echo '<tr><td>WCS file:</td><td>';

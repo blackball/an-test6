@@ -30,6 +30,11 @@ foreach ($_GET as $key=>$val) {
 		$_POST[$key]=$val;
 }
 
+loggit("Submitted values:\n");
+foreach ($_POST as $key => $val) {
+	loggit("  \"" . $key . "\" = \"" . $val . "\"\n");
+}
+
 $preset = $_GET["preset"];
 if ($preset) {
 	$params = $blind_presets[$preset];
@@ -192,6 +197,7 @@ if ($form->exportValue("imagescale")) {
 
 /** If the form has been filled out correctly, then process it. */
 
+//if ($form->validate()) {
 if ($form->exportValue("submit") && $form->validate()) {
 	$form->freeze();
 	$form->process('process_data', false);

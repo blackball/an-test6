@@ -63,6 +63,7 @@ if (strpos($host, "monte") === 0) {
 	//$fitsgetext = "fitsgetext";
 	$rdlsinfo = "rdlsinfo";
 	$xylsinfo = "/h/260/dstn/an/quads/xylsinfo";
+	$wcsinfo = "wcsinfo";
 	$printsolved = "printsolved";
 	$wcs_xy2rd = "wcs-xy2rd";
 	$wcs_rd2xy = "wcs-rd2xy";
@@ -83,6 +84,7 @@ if (strpos($host, "monte") === 0) {
 	$mergesolved = "/home/gmaps/quads/mergesolved";
 	$rdlsinfo = "/home/gmaps/quads/rdlsinfo";
 	$xylsinfo = "/home/gmaps/quads/xylsinfo";
+	$wcsinfo = "/home/gmaps/quads/wcsinfo";
 	$printsolved = "/home/gmaps/quads/printsolved";
 	$wcs_xy2rd = "/home/gmaps/quads/wcs-xy2rd";
 	$wcs_rd2xy = "/home/gmaps/quads/wcs-rd2xy";
@@ -198,6 +200,18 @@ function getjobdata($db, $key) {
 		return FALSE;
 	}
 	return $row[0];
+}
+
+function getalljobdata($db) {
+	$res =& $db->query('SELECT key, val FROM jobdata');
+	if (PEAR::isError($res)) {
+		loggit("Database error: " . $res->getMessage() . "\n");
+		return FALSE;
+	}
+	while (($row = $res->fetchRow())) {
+		$jd[$row[0]] = $row[1];
+	}
+	return $jd;
 }
 
 function setjobdata($db, $vals) {
