@@ -58,7 +58,7 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		int i;
 		// the line endpoints.
 		double ends[8] = {0.0, 0.0, 0.0, imh, imw, imh, imw, 0.0};
-		int s, SEGS=10;
+		int SEGS=10;
 
 		target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32,
 													 args->W, args->H, args->W*4);
@@ -75,14 +75,31 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 			double* ep2 = ends + ((i+1)%4)*2;
 			double ra1, dec1, ra2, dec2;
 
-			sip_pixelxy2radec(&wcs, ep1[0], ep1[1], &ra1, &dec1);
+ 			sip_pixelxy2radec(&wcs, ep1[0], ep1[1], &ra1, &dec1);
 			sip_pixelxy2radec(&wcs, ep2[0], ep2[1], &ra2, &dec2);
 
 			draw_segmented_line(ra1, dec1, ra2, dec2, SEGS, cairo, args);
 		}
-
-		//cairo_close_path(cairo);
 		cairo_stroke(cairo);
+
+		if (args->dashbox > 0.0) {
+			double ra, dec;
+			double mx, my;
+			double dm = 0.5 * args->dashbox;
+			double dashes[] = {5, 5};
+			// merc coordinate of field center:
+ 			sip_pixelxy2radec(&wcs, 0.5 * imw, 0.5 * imh, &ra, &dec);
+			mx = ra2merc(deg2rad(ra));
+			my = dec2merc(deg2rad(dec));
+
+			cairo_set_dash(cairo, dashes, sizeof(dashes)/sizeof(double), 0.0);
+			cairo_move_to(cairo, xmerc2pixel(mx - dm, args), ymerc2pixel(my - dm, args));
+			cairo_line_to(cairo, xmerc2pixel(mx - dm, args), ymerc2pixel(my + dm, args));
+			cairo_line_to(cairo, xmerc2pixel(mx + dm, args), ymerc2pixel(my + dm, args));
+			cairo_line_to(cairo, xmerc2pixel(mx + dm, args), ymerc2pixel(my - dm, args));
+			cairo_close_path(cairo);
+			cairo_stroke(cairo);
+		}
 
 		// Cairo's uint32 ARGB32 format is a little different than what we need,
 		// which is uchar R,G,B,A.

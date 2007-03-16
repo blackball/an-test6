@@ -53,6 +53,7 @@ struct render_args {
 
 	// Args for render_boundary
 	double linewidth;
+	double dashbox;
 
 	char* constfn;
 };
