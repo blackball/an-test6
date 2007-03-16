@@ -62,6 +62,7 @@ int main(int argc, char** args) {
 	int imw, imh;
 	qfits_header* wcshead = NULL;
 	double rac, decc;
+	double det, T, A, parity, orient;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -98,14 +99,30 @@ int main(int argc, char** args) {
 		return -1;
 	}
 
+	printf("cd11 %.12g\n", wcs.wcstan.cd[0][0]);
+	printf("cd12 %.12g\n", wcs.wcstan.cd[0][1]);
+	printf("cd21 %.12g\n", wcs.wcstan.cd[1][0]);
+	printf("cd22 %.12g\n", wcs.wcstan.cd[1][1]);
+
+	det = sip_det_cd(&wcs);
+	parity = (det >= 0 ? 1.0 : -1.0);
+	printf("det %.12g\n", det);
+	printf("parity %i\n", (int)parity);
+	printf("pixscale %.12g\n", 3600.0 * sqrt(fabs(det)));
+
+	T = parity * wcs.wcstan.cd[0][0] + wcs.wcstan.cd[1][1];
+	A = parity * wcs.wcstan.cd[1][0] - wcs.wcstan.cd[0][1];
+	orient = -(180.0/M_PI) * atan2(A, T);
+	printf("orientation %.8g\n", orient);
+
 	sip_pixelxy2radec(&wcs, imw/2, imh/2, &rac, &decc);
 
-	printf("ra_center %g\n", rac);
-	printf("dec_center %g\n", decc);
+	printf("ra_center %.12g\n", rac);
+	printf("dec_center %.12g\n", decc);
 
 	// mercator
-	printf("ra_center_merc %g\n", ra2mercx(rac));
-	printf("dec_center_merc %g\n", dec2mercy(decc));
+	printf("ra_center_merc %.8g\n", ra2mercx(rac));
+	printf("dec_center_merc %.8g\n", dec2mercy(decc));
 
 	qfits_header_destroy(wcshead);
 
