@@ -61,10 +61,12 @@ $formDefaults = array('x_col' => 'X',
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
 					  'skippreview' => '',
+					  'justjobid' => '',
 					  );
 $form->setDefaults($formDefaults);
 
 $form->addElement('hidden', 'skippreview');
+$form->addElement('hidden', 'justjobid');
 
 $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
@@ -866,6 +868,12 @@ function process_data ($vals) {
 	}
 	if (!chmod($donescript, 0775)) {
 		die("Failed to chmod donescript " . $donescript);
+	}
+
+	if (array_key_exists("justjobid", $headers)) {
+		header('Content-type: text/plain');
+		echo $myname;
+		exit;
 	}
 
 	// Redirect the client to the status page...
