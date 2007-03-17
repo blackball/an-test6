@@ -175,11 +175,15 @@ if ($didsolve) {
 	if (!array_key_exists("cd11", $jd)) {
 		$cmd = $wcsinfo . " " . $wcsfile; // . " > " $wcsinfofile;
 		$res = shell_exec($cmd);
+		//loggit("wcsinfo: " . $res . "\n");
 		$lines = explode("\n", $res);
 		foreach ($lines as $ln) {
+			//loggit("line " . $ln . "\n");
 			$words = explode(" ", $ln);
-			if (count($words < 2))
+			//loggit("#words: " . count($words) . "\n");
+			if (count($words) < 2)
 				continue;
+			//loggit("words: 0=" . $words[0] . ", 0=" . $words[1] . "\n");
 			$wcsvals[$words[0]] = $words[1];
 		}
 		$cd11 = (float)$wcsvals["cd11"];		
@@ -515,6 +519,7 @@ if ($didsolve) {
 
 	$fldsz = $pixscale * max($fullW, $fullH);
 	if ($fldsz < (3600 * 5)) {
+		//if ($fldsz < ) {
 		echo "<p>(Your field is small so we have drawn a dashed box" .
 			" around your field and zoomed in on that region.)</p>";
 		$url .= "&dashbox=0.1";

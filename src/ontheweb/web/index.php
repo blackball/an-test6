@@ -660,6 +660,7 @@ function process_data ($vals) {
 	$codetol = 0.01;
 	$nagree = 0;
 
+	$inputfile_orig = $inputfile;
 	if ($imgfilename) {
 		// Write to "input.tmp" instead of "input", so we don't trigger
 		// the solver just yet...
@@ -871,6 +872,15 @@ function process_data ($vals) {
 	}
 
 	if (array_key_exists("justjobid", $headers)) {
+		// skip the "source extraction" preview, just start crunching!
+		loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
+		if ($imgfilename) {
+			if (!rename($inputtmpfile, $inputfile_orig)) {
+				die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile_orig);
+			}
+			loggit("renamed $inputtmpfile to $inputfile_orig.\n");
+		}
+
 		header('Content-type: text/plain');
 		echo $myname;
 		exit;
