@@ -72,7 +72,7 @@ static int read_parameters();
 #define DEFAULT_TWEAK_ABORDER 3
 #define DEFAULT_TWEAK_ABPORDER 3
 
-// Jitter in the index.
+// Jitter in the index, in arcseconds.
 double INDEX_JITTER = 1.0;
 
 // params:
@@ -337,19 +337,19 @@ int main(int argc, char *argv[]) {
 				int j;
 				free(fieldlist);
 				if (!silent) 
-					printf("Contacting solvedserver to get field list...\n");
+					fprintf(stderr, "Contacting solvedserver to get field list...\n");
 				fieldlist = solvedclient_get_fields(fieldid, firstfield, lastfield, 0);
 				if (!fieldlist) {
 					fprintf(stderr, "Failed to get field list from solvedserver.\n");
 					exit(-1);
 				}
 				if (!silent) 
-					printf("Got %i fields from solvedserver: ", il_size(fieldlist));
+					fprintf(stderr, "Got %i fields from solvedserver: ", il_size(fieldlist));
 				if (!silent) {
 					for (j=0; j<il_size(fieldlist); j++) {
-						printf("%i ", il_get(fieldlist, j));
+						fprintf(stderr, "%i ", il_get(fieldlist, j));
 					}
-					printf("\n");
+					fprintf(stderr, "\n");
 				}
 			}
 		}
@@ -872,15 +872,15 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	sip_t* sip = NULL;
 
 	fflush(NULL);
-	printf("Tweaking!\n");
+	fprintf(stderr, "Tweaking!\n");
 
 	twee = tweak_new();
 	if (verify_dist2 > 0.0)
 		twee->jitter = distsq2arcsec(verify_dist2);
 	else {
 		twee->jitter = hypot(mo->scale * verify_pix, INDEX_JITTER);
-		printf("Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
-		printf("Star jitter: %g arcsec.\n", twee->jitter);
+		fprintf(stderr, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
+		fprintf(stderr, "Star jitter: %g arcsec.\n", twee->jitter);
 	}
 
 	// pull out the field coordinates.
@@ -890,7 +890,7 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 		imgx[i] = p->field[i*2 + 0];
 		imgy[i] = p->field[i*2 + 1];
 	}
-	printf("Pushing %i image coordinates.\n", p->nfield);
+	fprintf(stderr, "Pushing %i image coordinates.\n", p->nfield);
 	tweak_push_image_xy(twee, imgx, imgy, p->nfield);
 
 	// find all the index stars that are inside the circle that bounds
@@ -907,7 +907,7 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 		goto bailout;
 	starxyz = res->results.d;
 	nstars = res->nres;
-	printf("Pushing %i star coordinates.\n", nstars);
+	fprintf(stderr, "Pushing %i star coordinates.\n", nstars);
 	tweak_push_ref_xyz(twee, starxyz, nstars);
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
@@ -916,17 +916,17 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 
 	//tweak_go_to(TWEAK_HAS_LINEAR_CD);
 
-	printf("Begin advancing...\n");
+	fprintf(stderr, "Begin advancing...\n");
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
-		printf("\n");
+		fprintf(stderr, "\n");
 		unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
 		if (r == -1) {
-			printf("Error!\n");
+			fprintf(stderr, "Error!\n");
 			goto bailout;
 		}
 	}
 
-	printf("Done!\n");
+	fprintf(stderr, "Done!\n");
 	fflush(NULL);
 
 	// Steal the resulting SIP structure
