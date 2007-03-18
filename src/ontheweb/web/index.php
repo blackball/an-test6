@@ -815,8 +815,10 @@ function process_data ($vals) {
 		"tol " . $codetol . "\n" .
 		"verify_pix " . $poserr . "\n" .
 		"nagree_toverify " . $nagree . "\n" .
-		"ninfield_tokeep 50\n" .
-		"ninfield_tosolve 50\n" .
+		//"ninfield_tokeep 50\n" .
+		//"ninfield_tosolve 50\n" .
+		"ninfield_tokeep 25\n" .
+		"ninfield_tosolve 25\n" .
 		"overlap_tokeep 0.25\n" .
 		"overlap_tosolve 0.25\n" .
 		"maxquads " . $maxquads . "\n" .

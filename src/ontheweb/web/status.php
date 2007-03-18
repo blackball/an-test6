@@ -272,6 +272,7 @@ if ($overlay) {
 		$redquad = $mydir . "redquad.pgm";
 		$xypgm = $mydir . "index.xy.pgm";
 		$fldxy1pgm = $mydir . "fldxy1.pgm";
+		$fldxy2pgm = $mydir . "fldxy2.pgm";
 		$redimg = $mydir . "red.pgm";
 		$sumimg = $mydir . "sum.ppm";
 		$sumimg2 = $mydir . "sum2.ppm";
@@ -290,7 +291,7 @@ if ($overlay) {
 		}
 
 		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -x 1 -y 1 -w 1.5 -r 3 > " . $xypgm;
+			" -x 1 -y 1 -w 1.5 -r 4 > " . $xypgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -303,6 +304,14 @@ if ($overlay) {
 		$res = system($cmd, $retval);
 		if ($retval) {
 			die("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
+		}
+
+		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
+			" -n " . (1+$fldobjs) . " -N 100 -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy2pgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("plotxy2 (fld2) failed. retval $retval, res \"" . $res . "\"");
 		}
 
 		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
@@ -337,9 +346,25 @@ if ($overlay) {
 		if ($retval) {
 			die("pnmcomp failed.");
 		}
+
+		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pgmtoppm (fldxy1) failed.");
+		}
+		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			die("pnmcomp failed.");
+		}
+
+		/*
 		$cmd = "mv " . $sumimg2 . " " . $sumimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
+		*/
 
 		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
  		loggit("Command: " . $cmd . "\n");
@@ -543,8 +568,9 @@ if ($didsolve && file_exists($pnmimg)) {
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	echo "<div id=\"overlay\">\n";
 	echo "<p>Your field plus our index objects:\n";
-	echo "<br />Red circles: stars from the index, projected to image coordinates.\n";
-	echo "<br />White circles: field objects that were examined.\n";
+	echo "<br />Green circles: stars from the index, projected to image coordinates.\n";
+	echo "<br />Large red circles: field objects that were examined.\n";
+	echo "<br />Small red circles: field objects that were not examined.\n";
 	echo "</p>\n";
 	//Your field, overplotted with objects from the index.</p>\n";
 	echo "<img src=\"" .
