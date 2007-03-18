@@ -871,7 +871,6 @@ function process_data ($vals) {
 		die("Failed to chmod donescript " . $donescript);
 	}
 
-	//if (array_key_exists("justjobid", $headers)) {
 	if ($headers["justjobid"]) {
 		// skip the "source extraction" preview, just start crunching!
 		loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
@@ -883,7 +882,7 @@ function process_data ($vals) {
 		}
 
 		header('Content-type: text/plain');
-		echo $myname;
+		echo $myname . "\n";
 		exit;
 	}
 
