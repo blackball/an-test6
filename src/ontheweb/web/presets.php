@@ -61,6 +61,9 @@ array("apod-2007-03-09" =>
 	  "xysrc=url&fstype=ul&fsl=60&fsu=75&poserr=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/dippers_lodriguss_labels.jpg",
 
+	  "apod-2007-03-19" =>
+	  "xysrc=url&fstype=ul&fsl=20&fsu=30&poserr=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/hickson44_masil.jpg",
 
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
