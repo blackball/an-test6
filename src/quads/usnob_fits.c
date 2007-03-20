@@ -34,6 +34,7 @@ struct fits_struct_pair {
 	int offset;
 	int size;
 	tfits_type fitstype;
+	bool required;
 };
 typedef struct fits_struct_pair fitstruct;
 
@@ -41,13 +42,14 @@ static fitstruct usnob_fitstruct[USNOB_FITS_COLUMNS];
 static bool usnob_fitstruct_inited = 0;
 static int USNOB_FLAGS_INDEX;
 
-#define SET_FIELDS(A, i, t, n, u, fld) { \
+#define SET_FIELDS(A, i, t, n, u, fld, req) { \
  usnob_entry x; \
  A[i].fieldname=n; \
  A[i].units=u; \
  A[i].offset=offsetof(usnob_entry, fld); \
  A[i].size=sizeof(x.fld); \
  A[i].fitstype=t; \
+ A[i].required=req; \
  i++; \
 }
 
@@ -56,8 +58,8 @@ static void init_usnob_fitstruct() {
 	int i = 0, ob;
 	char* nil = " ";
 
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "degrees", dec);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "degrees", dec, TRUE);
 	USNOB_FLAGS_INDEX = i;
 	fs[i].fieldname = "FLAGS";
 	fs[i].units = nil;
@@ -65,18 +67,18 @@ static void init_usnob_fitstruct() {
 	fs[i].size = 0;
 	fs[i].fitstype = TFITS_BIN_TYPE_UNKNOWN;
 	i++;
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA",  "arcsec", sigma_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC", "arcsec", sigma_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA_FIT",  "arcsec", sigma_ra_fit);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC_FIT", "arcsec", sigma_dec_fit);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH", "yr", epoch);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_PROBABILITY", nil, mu_prob);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_RA",  "arcsec/yr", mu_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_DEC", "arcsec/yr", mu_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_RA",  "arcsec/yr", sigma_mu_ra);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_DEC", "arcsec/yr", sigma_mu_dec);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "NUM_DETECTIONS", nil, ndetections);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "USNOB_ID", nil, usnob_id);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA",  "arcsec", sigma_ra, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC", "arcsec", sigma_dec, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA_FIT",  "arcsec", sigma_ra_fit, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC_FIT", "arcsec", sigma_dec_fit), TRUE;
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH", "yr", epoch, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_PROBABILITY", nil, mu_prob, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_RA",  "arcsec/yr", mu_ra, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_DEC", "arcsec/yr", mu_dec, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_RA",  "arcsec/yr", sigma_mu_ra, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_MU_DEC", "arcsec/yr", sigma_mu_dec, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, "NUM_DETECTIONS", nil, ndetections, TRUE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "USNOB_ID", nil, usnob_id, TRUE);
 
 	for (ob=0; ob<5; ob++) {
 		// note, we will leak the strdup'd memory, because the string value isn't constant
@@ -84,22 +86,23 @@ static void init_usnob_fitstruct() {
 		// no big deal.
 		char field[256];
 		sprintf(field, "MAGNITUDE_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(field), "mag", obs[ob].mag);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(field), "mag", obs[ob].mag, TRUE);
 		sprintf(field, "FIELD_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, strdup(field), nil, obs[ob].field);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, strdup(field), nil, obs[ob].field, TRUE);
 		sprintf(field, "SURVEY_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(field), nil, obs[ob].survey);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(field), nil, obs[ob].survey, TRUE);
 		sprintf(field, "STAR_GALAXY_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(field), nil, obs[ob].star_galaxy);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(field), nil, obs[ob].star_galaxy, TRUE);
 		sprintf(field, "XI_RESIDUAL_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(field), "arcsec", obs[ob].xi_resid);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(field), "arcsec", obs[ob].xi_resid, TRUE);
 		sprintf(field, "ETA_RESIDUAL_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(field), "arcsec", obs[ob].eta_resid);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, strdup(field), "arcsec", obs[ob].eta_resid, TRUE);
 		sprintf(field, "CALIBRATION_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(field), nil, obs[ob].calibration);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_B, strdup(field), nil, obs[ob].calibration, TRUE);
 		sprintf(field, "PMM_%i", ob);
-		SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, strdup(field), nil, obs[ob].pmmscan);
+		SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, strdup(field), nil, obs[ob].pmmscan, TRUE);
 	}
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "AN_DIFFRACTION_SPIKE", nul, 0, FALSE);
 	assert(i == USNOB_FITS_COLUMNS);
 	usnob_fitstruct_inited = 1;
 }

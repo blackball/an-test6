@@ -25,7 +25,7 @@
 #include "usnob.h"
 #include "ioutils.h"
 
-#define USNOB_FITS_COLUMNS 55
+#define USNOB_FITS_COLUMNS 56
 
 struct usnob_fits {
 	qfits_table* table;

@@ -124,6 +124,9 @@ struct usnob_entry {
 	// YS4.0 correlation
 	bool ys4;
 
+	// astrometry.net diffraction detection
+	bool an_diffraction_spike;
+
 	// this is our identifier; it's not in the USNO-B files.
 	// it allows us to point back to the USNO-B source.
 	// top byte: [0,180): south-polar distance slice.
