@@ -12,6 +12,7 @@
  */
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "starutil.h"
 #include "mathutil.h"
@@ -71,6 +72,8 @@ int main(int argc, char** args) {
 
 	dl* rads;
 
+	double *dx, *dy;
+
 	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
 		case 'H':
@@ -89,6 +92,8 @@ int main(int argc, char** args) {
 			ABangle = atof(optarg);
 			break;
 		}
+
+	srand(time(NULL));
 
 	inoise = arcmin2rad(inoise_arcsec / 60.0);
 
@@ -133,6 +138,9 @@ int main(int argc, char** args) {
 	for (k=0; k<dl_size(rads); k++) {
 		printf("rads(%i)=%g;\n", k+1, dl_get(rads, k));
 	}
+
+	dx = calloc(N*dl_size(rads), sizeof(double));
+	dy = calloc(N*dl_size(rads), sizeof(double));
 
 	// field center.
 	ra = 0.0;
@@ -266,12 +274,43 @@ int main(int argc, char** args) {
 			nx = nxy[0];
 			ny = nxy[1];
 
-			printf("d(%i,%i)=%g;\n", j+1, k+1, hypot(x-nx, y-ny));
-			printf("dx(%i,%i)=%g;\n", j+1, k+1, x-nx);
-			printf("dy(%i,%i)=%g;\n", j+1, k+1, y-ny);
+			/*
+			  printf("d(%i,%i)=%g;\n", j+1, k+1, hypot(x-nx, y-ny));
+			  printf("dx(%i,%i)=%g;\n", j+1, k+1, x-nx);
+			  printf("dy(%i,%i)=%g;\n", j+1, k+1, y-ny);
+			*/
+			dx[j*dl_size(rads) + k] = x-nx;
+			dy[j*dl_size(rads) + k] = y-ny;
 		}
 	}
 
+	{
+		double meandx, meandy;
+		double stdx, stdy;
+		int K = dl_size(rads);
+		printf("sx=[];\n");
+		printf("sy=[];\n");
+		for (k=0; k<K; k++) {
+			meandx = meandy = 0;
+			for (j=0; j<N; j++) {
+				meandx += dx[j*K + k];
+				meandy += dy[j*K + k];
+			}
+			meandx /= (double)N;
+			meandy /= (double)N;
+			stdx = stdy = 0;
+			for (j=0; j<N; j++) {
+				stdx += (dx[j*K+k]-meandx)*(dx[j*K+k]-meandx);
+				stdy += (dy[j*K+k]-meandy)*(dy[j*K+k]-meandy);
+			}
+			stdx /= (double)N;
+			stdy /= (double)N;
+			stdx = sqrt(stdx);
+			stdy = sqrt(stdy);
+			printf("sx(%i)=%g;\n", k+1, stdx);
+			printf("sy(%i)=%g;\n", k+1, stdy);
+		}
+	}
 	return 0;
 }
 
