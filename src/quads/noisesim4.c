@@ -19,7 +19,7 @@
 #include "blind_wcs.h"
 #include "sip.h"
 
-const char* OPTIONS = "e:n:ma:u:l:";
+const char* OPTIONS = "e:n:ma:H";
 
 #define xy2ra_nowrap(x,y) atan2(y,x)
 
@@ -27,19 +27,18 @@ int main(int argc, char** args) {
 	int argchar;
 
 	double ABangle = 4.5; // arcminutes
-	double lowerAngle = 4.0;
-	double upperAngle = 5.0;
 	double pixscale = 0.396; // arcsec / pixel
-	//double FWHM = 2 * sqrt(2.0 * log(2.0));
-	//double noise = 1.0 / FWHM; // arcsec
+
 	double W = 2048; // field size in pixels
 	double H = 1500;
-	//double codetol = 0.01;
 
 	// field noise (in pixels)
-	double fnoisedist = 1.0;
+	double fnoise = 1.0;
+
+	// index noise (arcseconds)
+	double inoise_arcsec = 1.0;
 	// index noise (in radians)
-	double inoisedist = arcmin2rad(1.0 / 60.0);
+	double inoise;
 
 	double sCenter[3];
 	// star coords
@@ -56,11 +55,7 @@ int main(int argc, char** args) {
 	double nfield[8];
 	double *nfA, *nfB, *nfC, *nfD;
 
-	//double realcode[4];
-	//double code[4];
-
 	double ra, dec;
-
 	double fieldhyp;
 
 	int j;
@@ -72,16 +67,18 @@ int main(int argc, char** args) {
 	tan_t tan, ntan;
 	double scale, nscale;
 
+	int hyp = FALSE;
+
 	dl* rads;
 
 	while ((argchar = getopt (argc, args, OPTIONS)) != -1)
 		switch (argchar) {
-			/*
-			  case 'e':
-			  noise = atof(optarg);
-			  dl_append(noises, noise);
-			  break;
-			*/
+		case 'H':
+			hyp = TRUE;
+			break;
+		case 'e':
+			fnoise = atof(optarg);
+			break;
 		case 'm':
 			matlab = TRUE;
 			break;
@@ -91,14 +88,13 @@ int main(int argc, char** args) {
 		case 'a':
 			ABangle = atof(optarg);
 			break;
-		case 'l':
-			lowerAngle = atof(optarg);
-			break;
-		case 'u':
-			upperAngle = atof(optarg);
-			break;
 		}
 
+	inoise = arcmin2rad(inoise_arcsec / 60.0);
+
+	printf("fnoise = %g;\n", fnoise);
+	printf("inoise = %g;\n", rad2arcsec(inoise) / pixscale);
+	
 	sA = star;
 	sB = star + 3;
 	sC = star + 6;
@@ -131,7 +127,7 @@ int main(int argc, char** args) {
 	  }
 	*/
 	for (k=0; k<=20; k++) {
-		dl_append(rads, 0.1 * pow(1.2, k));
+		dl_append(rads, k==0 ? 0 : (0.1 * pow(1.2, k-1)));
 	}
 
 	for (k=0; k<dl_size(rads); k++) {
@@ -145,7 +141,6 @@ int main(int argc, char** args) {
 
 	for (j=0; j<N; j++) {
 		double nab;
-		//double ab;
 		double midAB[3];
 		double x,y;
 		// sample A in the field's bounding circle
@@ -202,17 +197,38 @@ int main(int argc, char** args) {
 			break;
 		}
 
+		if (hyp) {
+			// effective field noise
+			double effnoise = hypot(fnoise, rad2arcsec(inoise) / pixscale);
+			fnoise = effnoise;
+			inoise = 0.0;
+		/*
+			// add noise to the field positions.
+			add_field_noise(fA, effnoise, nfA);
+			add_field_noise(fB, effnoise, nfB);
+			add_field_noise(fC, effnoise, nfC);
+			add_field_noise(fD, effnoise, nfD);
+
+			// add (zero) noise to the star positions.
+			add_star_noise(sA, 0, nsA);
+			add_star_noise(sB, 0, nsB);
+			add_star_noise(sC, 0, nsC);
+			add_star_noise(sD, 0, nsD);
+		*/
+		}
+
+
 		// add noise to the field positions.
-		add_field_noise(fA, fnoisedist, nfA);
-		add_field_noise(fB, fnoisedist, nfB);
-		add_field_noise(fC, fnoisedist, nfC);
-		add_field_noise(fD, fnoisedist, nfD);
+		add_field_noise(fA, fnoise, nfA);
+		add_field_noise(fB, fnoise, nfB);
+		add_field_noise(fC, fnoise, nfC);
+		add_field_noise(fD, fnoise, nfD);
 
 		// add noise to the star positions.
-		add_star_noise(sA, inoisedist, nsA);
-		add_star_noise(sB, inoisedist, nsB);
-		add_star_noise(sC, inoisedist, nsC);
-		add_star_noise(sD, inoisedist, nsD);
+		add_star_noise(sA, inoise, nsA);
+		add_star_noise(sB, inoise, nsB);
+		add_star_noise(sC, inoise, nsC);
+		add_star_noise(sD, inoise, nsD);
 
 		// noisy transform
 		blind_wcs_compute_2(nstar, nfield, 4, &ntan, &nscale);
@@ -220,20 +236,17 @@ int main(int argc, char** args) {
 		// true transform
 		blind_wcs_compute_2(star, field, 4, &tan, &scale);
 
-		printf("scalef(%i)=%g;\n", j+1, nscale/scale);
+		//printf("scalef(%i)=%g;\n", j+1, nscale/scale);
 
 		// noisy quad diameter (in arcsec)
 		nab = distsq2arcsec(distsq(nsA, nsB, 3));
 
-		// true quad diameter.
-		//ab = sqrt(
-
 		// sample stars that are some number of quad radii from the quad center.
 		for (k=0; k<dl_size(rads); k++) {
-			//int l;
 			double nx, ny;
 			double s[3];
 			double angle = nab / 2.0 * dl_get(rads, k);
+			double xy[2], nxy[2];
 
 			sample_star_in_ring(midAB, angle/60.0, angle/60.0, s);
 			xyzarr2radec(s, &ra, &dec);
@@ -245,6 +258,13 @@ int main(int argc, char** args) {
 
 			// noisy projection
 			tan_radec2pixelxy(&ntan, ra, dec, &nx, &ny);
+
+			// add field noise
+			xy[0] = nx;
+			xy[1] = ny;
+			add_field_noise(xy, fnoise, nxy);
+			nx = nxy[0];
+			ny = nxy[1];
 
 			printf("d(%i,%i)=%g;\n", j+1, k+1, hypot(x-nx, y-ny));
 			printf("dx(%i,%i)=%g;\n", j+1, k+1, x-nx);
