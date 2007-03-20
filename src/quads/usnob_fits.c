@@ -70,7 +70,7 @@ static void init_usnob_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA",  "arcsec", sigma_ra, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC", "arcsec", sigma_dec, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_RA_FIT",  "arcsec", sigma_ra_fit, TRUE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC_FIT", "arcsec", sigma_dec_fit), TRUE;
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "SIGMA_DEC_FIT", "arcsec", sigma_dec_fit, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "EPOCH", "yr", epoch, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_PROBABILITY", nil, mu_prob, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "MU_RA",  "arcsec/yr", mu_ra, TRUE);
@@ -102,7 +102,7 @@ static void init_usnob_fitstruct() {
 		sprintf(field, "PMM_%i", ob);
 		SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, strdup(field), nil, obs[ob].pmmscan, TRUE);
 	}
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "AN_DIFFRACTION_SPIKE", nul, 0, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "AN_DIFFRACTION_SPIKE", nil, an_diffraction_spike, FALSE);
 	assert(i == USNOB_FITS_COLUMNS);
 	usnob_fitstruct_inited = 1;
 }
