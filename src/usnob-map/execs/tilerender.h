@@ -112,4 +112,8 @@ void draw_segmented_line(double ra1, double dec1,
 						 int SEGS,
 						 cairo_t* cairo, render_args_t* args);
 
+// draw a line in Mercator space, handling wrap-around if necessary.
+void draw_line_merc(double mx1, double my1, double mx2, double my2,
+					cairo_t* cairo, render_args_t* args);
+
 #endif

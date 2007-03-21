@@ -87,17 +87,17 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 			double mx, my;
 			double dm = 0.5 * args->dashbox;
 			double dashes[] = {5, 5};
+
 			// merc coordinate of field center:
  			sip_pixelxy2radec(&wcs, 0.5 * imw, 0.5 * imh, &ra, &dec);
 			mx = ra2merc(deg2rad(ra));
 			my = dec2merc(deg2rad(dec));
 
 			cairo_set_dash(cairo, dashes, sizeof(dashes)/sizeof(double), 0.0);
-			cairo_move_to(cairo, xmerc2pixel(mx - dm, args), ymerc2pixel(my - dm, args));
-			cairo_line_to(cairo, xmerc2pixel(mx - dm, args), ymerc2pixel(my + dm, args));
-			cairo_line_to(cairo, xmerc2pixel(mx + dm, args), ymerc2pixel(my + dm, args));
-			cairo_line_to(cairo, xmerc2pixel(mx + dm, args), ymerc2pixel(my - dm, args));
-			cairo_close_path(cairo);
+			draw_line_merc(mx-dm, my-dm, mx-dm, my+dm, cairo, args);
+			draw_line_merc(mx-dm, my+dm, mx+dm, my+dm, cairo, args);
+			draw_line_merc(mx+dm, my+dm, mx+dm, my-dm, cairo, args);
+			draw_line_merc(mx+dm, my-dm, mx-dm, my-dm, cairo, args);
 			cairo_stroke(cairo);
 		}
 

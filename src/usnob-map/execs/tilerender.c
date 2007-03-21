@@ -348,6 +348,22 @@ uchar* pixel(int x, int y, uchar* img, render_args_t* args) {
 	return img + 4*(y*args->W + x);
 }
 
+
+// draw a line in Mercator space, handling wrap-around if necessary.
+void draw_line_merc(double mx1, double my1, double mx2, double my2,
+					cairo_t* cairo, render_args_t* args) {
+ 	cairo_move_to(cairo, xmerc2pixel(mx1, args), ymerc2pixel(my1, args));
+	cairo_line_to(cairo, xmerc2pixel(mx2, args), ymerc2pixel(my2, args));
+	if (min(mx1,mx2) < 0) {
+		cairo_move_to(cairo, xmerc2pixel(mx1+1, args), ymerc2pixel(my1, args));
+		cairo_line_to(cairo, xmerc2pixel(mx2+1, args), ymerc2pixel(my2, args));
+	}
+	if (max(mx1,mx2) > 1) {
+		cairo_move_to(cairo, xmerc2pixel(mx1-1, args), ymerc2pixel(my1, args));
+		cairo_line_to(cairo, xmerc2pixel(mx2-1, args), ymerc2pixel(my2, args));
+	}
+}
+
 // ra,dec in degrees.
 void draw_segmented_line(double ra1, double dec1,
 						 double ra2, double dec2,
