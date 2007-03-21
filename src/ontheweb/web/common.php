@@ -266,4 +266,21 @@ function download_url($url, $dest, $maxfilesize, &$errmsg) {
 	return $nr;
 }
 
+// RA in degrees
+function ra2merc($ra) {
+	return $ra / 360.0;
+}
+// DEC in degrees
+function dec2merc($dec) {
+	return 0.5 + (asinh(tan($dec * M_PI/180.0)) / (2.0*M_PI));
+}
+// Returns RA in degrees.
+function merc2ra($mx) {
+	return $mx * 360.0;
+}
+// Returns DEC in degrees.
+function merc2dec($my) {
+	return atan(sinh(($my - 0.5) * (2.0*M_PI))) * 180.0/M_PI;
+}
+
 ?>

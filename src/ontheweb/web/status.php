@@ -543,10 +543,12 @@ if ($didsolve) {
 		"&wcsfn=" . $myname . "/wcs.fits";
 
 	$fldsz = $pixscale * max($fullW, $fullH);
-	if ($fldsz < (3600 * 5)) {
-		//if ($fldsz < ) {
+	$zoomin = ($fldsz < (3600*5));
+	$zoomin2 = ($fldsz < (3600*0.5));
+
+	if ($zoomin) {
 		echo "<p>(Your field is small so we have drawn a dashed box" .
-			" around your field and zoomed in on that region.)</p>";
+			" around your field and zoomed in on that region.)</p>\n";
 		$url .= "&dashbox=0.1";
 	}
 
@@ -554,8 +556,63 @@ if ($didsolve) {
 		"&WIDTH=1024&HEIGHT=1024&lw=5") .
 		"\">";
 	echo "<img src=\"" . htmlentities($url . 
-		"&WIDTH=512&HEIGHT=512&lw=3") .
-		"\" alt=\"An image of your field shown in an image of the whole sky.\"/></a>\n";
+		"&WIDTH=300&HEIGHT=300&lw=3") .
+		"\" alt=\"An image of your field shown in an image of the whole sky.\" /></a>\n";
+
+
+	if ($zoomin) {
+		//$rac_merc
+		$xmerc = ra2merc($rac_merc);
+		$ymerc = dec2merc($decc_merc);
+		$dm = 0.05;
+		$ymerc = max($dm, min(1-$dm, $ymerc));
+		$ralo = merc2ra($xmerc - $dm);
+		$rahi = merc2ra($xmerc + $dm);
+		$declo = merc2dec($ymerc - $dm);
+		$dechi = merc2dec($ymerc + $dm);
+
+		$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
+			// "tag=test-tag&" .
+			"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
+			"&arcsinh&gain=-0.25" .
+			"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi .
+			"&wcsfn=" . $myname . "/wcs.fits";
+		if ($zoomin2) {
+			$url .= "&dashbox=0.01";
+		}
+
+		echo "<a href=\"" . htmlentities($url .
+										 "&WIDTH=1024&HEIGHT=1024&lw=5") .
+			"\">";
+		echo "<img src=\"" . htmlentities($url . 
+										  "&WIDTH=300&HEIGHT=300&lw=3") .
+			"\" alt=\"A zoomed-in image of your field on the sky.\" /></a>\n";
+
+		if ($zoomin2) {
+			$dm = 0.005;
+			$ymerc = max($dm, min(1-$dm, $ymerc));
+			$ralo = merc2ra($xmerc - $dm);
+			$rahi = merc2ra($xmerc + $dm);
+			$declo = merc2dec($ymerc - $dm);
+			$dechi = merc2dec($ymerc + $dm);
+
+			$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
+				// "tag=test-tag&" .
+				"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
+				"&arcsinh&gain=0.5" .
+				"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi .
+				"&wcsfn=" . $myname . "/wcs.fits";
+
+			echo "<a href=\"" . htmlentities($url .
+											 "&WIDTH=1024&HEIGHT=1024&lw=5") .
+				"\">";
+			echo "<img src=\"" . htmlentities($url . 
+											  "&WIDTH=300&HEIGHT=300&lw=3") .
+				"\" alt=\"A really zoomed-in image of your field on the sky.\" /></a>\n";
+		}
+
+	}
+
 	echo "</div>\n";
 }
 
