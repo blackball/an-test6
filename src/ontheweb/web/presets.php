@@ -65,6 +65,14 @@ array("apod-2007-03-09" =>
 	  "xysrc=url&fstype=ul&fsl=20&fsu=30&poserr=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/hickson44_masil.jpg",
 
+	  "apod-2007-03-21-fast" =>
+	  "xysrc=url&fstype=ul&fsl=30&fsu=40&fsunit=arcminwidth&poserr=1&index=30arcmin&tweak=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/barnard163_noao.jpg",
+
+	  "apod-2007-03-21" =>
+	  "xysrc=url&fstype=ul&fsl=30&fsu=60&fsunit=arcminwidth&poserr=1&tweak=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/barnard163_noao.jpg",
+
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
            http://antwrp.gsfc.nasa.gov/apod/ap070218.html
