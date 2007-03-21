@@ -145,6 +145,15 @@ $form->addElement('reset', 'reset', "Reset Form");
 
 $form->setMaxFileSize($maxfilesize);
 
+/*
+if (array_key_exists('imgfile', $headers)) {
+	//$headers['imgfile_set'] = $headers['imgfile'];
+	//$imgfile_set =& $form->addElement('text', 'imgfile_set', null, array('size'=>30,'readonly'=>'readonly'));
+	$imgfile_set =& $form->addElement('static', 'imgfile_set', $headers['imgfile']);
+	//$imgfile_set->setValue($headers['imgfile']);
+}
+*/
+
 $form->addRule('xysrc', 'You must provide a field to solve!', 'required');
 $form->addRule('poserr', 'Star positional error must be a number!', 'numeric');
 $form->addRule('fsu', 'Upper bound must be numeric.', 'numeric');
@@ -170,6 +179,11 @@ if ($form->exportValue("linkhere")) {
 		break;
 	case "img":
 		array_push($flds, "imgfile");
+		$imgval = $imgfile->getValue();
+		if ($imgval) {
+			//loggit("image filename: " . $imgval['name'] . "\n");
+			$args .= "&imgfile=" . urlencode($imgval['name']);
+		}
 		break;
 	case "fits":
 		array_push($flds, "fitsfile");
@@ -259,6 +273,21 @@ $repl = array("##xysrc-img##" => $renderer->elementToHtml('xysrc', 'img'),
 			  );
 foreach ($repl as $from => $to) {
 	$template = str_replace($from, $to, $template);
+}
+
+/*
+if ($imgfile_set) {
+	$template = str_replace("##imgfile_set##", $renderer->elementToHtml('imgfile_set'), $template);
+} else {
+	$template = str_replace("##imgfile_set##", "", $template);
+}	
+*/
+
+if (array_key_exists('imgfile', $headers)) {
+	$str = "<tr><td></td><td>Previous value: <tt>" . $headers['imgfile'] . "</tt></td></tr>\n";
+	$template = str_replace("##imgfile_set##", $str, $template);
+} else {
+	$template = str_replace("##imgfile_set##", "", $template);
 }
 
 ?>
@@ -532,6 +561,10 @@ function process_data ($vals) {
 			return FALSE;
 		}
 		loggit("original image file: " . $origname . ", using type: " . $usetype . "\n");
+
+		if (!setjobdata($db, array("image-origname"=>$origname))) {
+			die("failed to update jobdata: image-origname");
+		}
 
 		$imgbasename = "uploaded." . $usetype;
 		$imgfilename = $mydir . $imgbasename;
