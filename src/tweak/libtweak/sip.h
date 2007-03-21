@@ -124,6 +124,9 @@ void   tan_pixelxy2radec(tan_t* wcs_tan, double px, double py, double *ra, doubl
 // RA,Dec in degrees to Pixels.
 void   tan_radec2pixelxy(tan_t* wcs_tan, double ra, double dec, double *px, double *py);
 
+// xyz unit vector to Pixels.
+void   tan_xyzarr2pixelxy(tan_t* wcs_tan, double* xyz, double *px, double *py);
+
 void   sip_print(sip_t*);
 
 #endif

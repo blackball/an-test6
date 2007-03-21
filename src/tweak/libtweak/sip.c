@@ -125,8 +125,8 @@ void sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py
 	*py = v + sip->wcstan.crpix[1];
 }
 
-// RA,Dec in degrees to Pixels.
-void tan_radec2pixelxy(tan_t* tan, double a, double d, double *px, double *py)
+// xyz unit vector to Pixels.
+void   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
 {
 	// Invert CD
 	double cdi[2][2];
@@ -150,8 +150,6 @@ void tan_radec2pixelxy(tan_t* tan, double a, double d, double *px, double *py)
 
 	// FIXME be robust near the poles
 	// Calculate intermediate world coordinates (x,y) on the tangent plane
-	double xyzpt[3];
-	radecdeg2xyzarr(a,d,xyzpt);
 	double xyzcrval[3];
 	radecdeg2xyzarr(tan->crval[0],tan->crval[1],xyzcrval);
 	double x,y;
@@ -168,6 +166,14 @@ void tan_radec2pixelxy(tan_t* tan, double a, double d, double *px, double *py)
 	// Re-add crpix to get pixel coordinates
 	*px = U + tan->crpix[0];
 	*py = V + tan->crpix[1];
+}
+
+// RA,Dec in degrees to Pixels.
+void tan_radec2pixelxy(tan_t* tan, double a, double d, double *px, double *py)
+{
+	double xyzpt[3];
+	radecdeg2xyzarr(a,d,xyzpt);
+	tan_xyzarr2pixelxy(tan, xyzpt, px, py);
 }
 
 void sip_calc_distortion(sip_t* sip, double u, double v, double* U, double *V)
