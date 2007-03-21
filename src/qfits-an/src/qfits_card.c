@@ -249,7 +249,7 @@ char * qfits_getkey(const char * line)
     i-- ;
     /* Equal sign found, now backtrack on blanks */
     while (line[i]==' ' && i>=0) i-- ;
-    if (i<=0) {
+    if (i<0) {
         qfits_error("qfits_getkey: error backtracking on blanks in line: \"%s\"\n", line);
         return NULL ;
     }
