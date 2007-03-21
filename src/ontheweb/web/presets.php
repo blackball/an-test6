@@ -77,6 +77,10 @@ array("apod-2007-03-09" =>
 	  "xysrc=url&fstype=ev&fse=2&fsv=50&poserr=1&tweak=1&" .
 	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/coathanger_barrett.jpg",
 
+	  "apod-2007-01-22" =>
+	  "xysrc=url&fstype=ul&fslu=20&fsu=60&poserr=1&tweak=1&" .
+	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/comet_mcnaught.jpg",
+
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
            http://antwrp.gsfc.nasa.gov/apod/ap070218.html
@@ -110,7 +114,6 @@ array("apod-2007-03-09" =>
            http://antwrp.gsfc.nasa.gov/apod/ap070130.html
            http://antwrp.gsfc.nasa.gov/apod/ap070125.html
            http://antwrp.gsfc.nasa.gov/apod/ap070124.html
-           http://antwrp.gsfc.nasa.gov/apod/ap070122.html
 
          Tried:
            http://antwrp.gsfc.nasa.gov/apod/ap070315.html

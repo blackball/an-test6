@@ -220,8 +220,8 @@ if ($didsolve) {
 
 if ($overlay) {
 
-	loggit("overlay image: " . $overlayfile . "\n");
-	loggit("exists? " . (file_exists($overlayfile) ? "yes" : "no") . "\n");
+	//loggit("overlay image: " . $overlayfile . "\n");
+	//loggit("exists? " . (file_exists($overlayfile) ? "yes" : "no") . "\n");
 
 	if (!file_exists($overlayfile)) {
 		// render it!
@@ -543,6 +543,7 @@ if ($didsolve) {
 		"&wcsfn=" . $myname . "/wcs.fits";
 
 	$fldsz = $pixscale * max($fullW, $fullH);
+	loggit("Field size: " . $fldsz . "\n");
 	$zoomin = ($fldsz < (3600*5));
 	$zoomin2 = ($fldsz < (3600*0.5));
 
