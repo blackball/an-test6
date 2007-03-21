@@ -48,6 +48,9 @@ CFLAGS += $(ANFILES_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(LIBWCS_INC)
 
+CAIRO_INC := $(shell pkg-config --cflags cairo)
+CAIRO_LIB := $(shell pkg-config --libs cairo)
+
 QFITS_UTILS := fitsgetext subtable tabsort
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
@@ -256,16 +259,16 @@ plotxy: plotxy.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 plotquad.o: plotquad.c
-	$(CC) $(CFLAGS) `pkg-config --cflags cairo` -c -o $@ $<
+	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
 plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) `pkg-config --libs cairo`
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
 
 plotxy2.o: plotxy2.c
-	$(CC) $(CFLAGS) `pkg-config --cflags cairo` -c -o $@ $<
+	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
 plotxy2: plotxy2.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) `pkg-config --libs cairo`
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
