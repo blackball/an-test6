@@ -145,15 +145,6 @@ $form->addElement('reset', 'reset', "Reset Form");
 
 $form->setMaxFileSize($maxfilesize);
 
-/*
-if (array_key_exists('imgfile', $headers)) {
-	//$headers['imgfile_set'] = $headers['imgfile'];
-	//$imgfile_set =& $form->addElement('text', 'imgfile_set', null, array('size'=>30,'readonly'=>'readonly'));
-	$imgfile_set =& $form->addElement('static', 'imgfile_set', $headers['imgfile']);
-	//$imgfile_set->setValue($headers['imgfile']);
-}
-*/
-
 $form->addRule('xysrc', 'You must provide a field to solve!', 'required');
 $form->addRule('poserr', 'Star positional error must be a number!', 'numeric');
 $form->addRule('fsu', 'Upper bound must be numeric.', 'numeric');
@@ -178,7 +169,7 @@ if ($form->exportValue("linkhere")) {
 		array_push($flds, "imgurl");
 		break;
 	case "img":
-		array_push($flds, "imgfile");
+		//array_push($flds, "imgfile");
 		$imgval = $imgfile->getValue();
 		if ($imgval) {
 			//loggit("image filename: " . $imgval['name'] . "\n");
@@ -186,7 +177,11 @@ if ($form->exportValue("linkhere")) {
 		}
 		break;
 	case "fits":
-		array_push($flds, "fitsfile");
+		//array_push($flds, "fitsfile");
+		$fitsval = $fitsfile->getValue();
+		if ($fitsval) {
+			$args .= "&fitsfile=" . urlencode($fitsval['name']);
+		}
 		array_push($flds, "x_col");
 		array_push($flds, "y_col");
 		break;
@@ -275,19 +270,20 @@ foreach ($repl as $from => $to) {
 	$template = str_replace($from, $to, $template);
 }
 
-/*
-if ($imgfile_set) {
-	$template = str_replace("##imgfile_set##", $renderer->elementToHtml('imgfile_set'), $template);
-} else {
-	$template = str_replace("##imgfile_set##", "", $template);
-}	
-*/
-
 if (array_key_exists('imgfile', $headers)) {
+	// Hack - we hard-code the table row here instead of having it in the template
+	// (so that if it's empty we don't get an empty table row)
 	$str = "<tr><td></td><td>Previous value: <tt>" . $headers['imgfile'] . "</tt></td></tr>\n";
 	$template = str_replace("##imgfile_set##", $str, $template);
 } else {
 	$template = str_replace("##imgfile_set##", "", $template);
+}
+if (array_key_exists('fitsfile', $headers)) {
+	// Hack - ditto.
+	$str = "<li>Previous value: <tt>" . $headers['fitsfile'] . "</tt></li\n";
+	$template = str_replace("##fitsfile_set##", $str, $template);
+} else {
+	$template = str_replace("##fitsfile_set##", "", $template);
 }
 
 ?>
