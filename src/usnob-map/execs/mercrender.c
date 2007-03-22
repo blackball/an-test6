@@ -8,8 +8,8 @@ struct mercargs {
 };
 typedef struct mercargs mercargs;
 
-static void leaf_node(kdtree_t* kd, int node, mercargs* args);
-static void expand_node(kdtree_t* kd, int node, mercargs* args);
+static void leaf_node(kdtree_t* kd, int node, void* vargs);
+static void expand_node(kdtree_t* kd, int node, void* vargs);
 static void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* args);
 
 float* mercrender_file(char* fn, render_args_t* args) {
@@ -44,19 +44,42 @@ void mercrender(merctree* merc, render_args_t* args,
 	xmargin = 2.0 / args->xpixelpermerc;
 	ymargin = 2.0 / args->ypixelpermerc;
 
-	querylow [0] = max(0.0, args->xmercmin - xmargin);
+ 	querylow [0] = max(0.0, args->xmercmin - xmargin);
 	queryhigh[0] = min(1.0, args->xmercmax + xmargin);
 	querylow [1] = max(0.0, args->ymercmin - ymargin);
 	queryhigh[1] = min(1.0, args->ymercmax + ymargin);
 
 	kdtree_nodes_contained(merc->tree, querylow, queryhigh,
 						   expand_node, leaf_node, &margs);
+
+	// Handle wrap-around requests.
+	if (args->xmercmin < 0) {
+		args->xmercmin += 1.0;
+		args->xmercmax += 1.0;
+		querylow [0] = max(0.0, args->xmercmin - xmargin);
+		queryhigh[0] = min(1.0, args->xmercmax + xmargin);
+		kdtree_nodes_contained(merc->tree, querylow, queryhigh,
+							   expand_node, leaf_node, &margs);
+		args->xmercmin -= 1.0;
+		args->xmercmax -= 1.0;
+	}
+	if (args->xmercmax > 1) {
+		args->xmercmin -= 1.0;
+		args->xmercmax -= 1.0;
+		querylow [0] = max(0.0, args->xmercmin - xmargin);
+		queryhigh[0] = min(1.0, args->xmercmax + xmargin);
+		kdtree_nodes_contained(merc->tree, querylow, queryhigh,
+							   expand_node, leaf_node, &margs);
+		args->xmercmin += 1.0;
+		args->xmercmax += 1.0;
+	}
 }
 
-static void expand_node(kdtree_t* kd, int node, mercargs* margs) {
+static void expand_node(kdtree_t* kd, int node, void* vargs) {
 	int xp0, xp1, yp0, yp1;
 	int D = 2;
 	double bblo[D], bbhi[D];
+	mercargs* margs = vargs;
 
 	if (KD_IS_LEAF(kd, node)) {
 		leaf_node(kd, node, margs);
@@ -84,9 +107,10 @@ static void expand_node(kdtree_t* kd, int node, mercargs* margs) {
 	expand_node(kd, KD_CHILD_RIGHT(node), margs);
 }
 
-static void leaf_node(kdtree_t* kd, int node, mercargs* margs) {
+static void leaf_node(kdtree_t* kd, int node, void* vargs) {
 	int k;
 	int L, R;
+	mercargs* margs = vargs;
 
 	L = kdtree_left(kd, node);
 	R = kdtree_right(kd, node);

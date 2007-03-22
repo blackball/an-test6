@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <stdarg.h>
 
 #include "tilerender.h"
 #include "render_tycho.h"
@@ -12,21 +13,38 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-static char* merc_file     = "/home/gmaps/usnob-images/tycho.mkdt.fits";
-//static char* merc_file     = "/h/260/dstn/local/tycho-maps/tycho.mkdt.fits";
+static char* merc_files[] = {
+	"/home/gmaps/usnob-images/tycho.mkdt.fits",
+	"/h/260/dstn/local/tycho-maps/tycho.mkdt.fits",
+};
+
+static void logmsg(char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	fprintf(stderr, "render_tycho: ");
+	vfprintf(stderr, format, args);
+	va_end(args);
+}
 
 int render_tycho(unsigned char* img, render_args_t* args) {
-	float* fluximg;
+	float* fluximg = NULL;
 	float amp = 0.0;
 	int i, j;
 
-	fprintf(stderr, "hello world\n");
+	logmsg("begin.\n");
 
-	fluximg = mercrender_file(merc_file, args);
+	for (i=0; i<sizeof(merc_files)/sizeof(char*); i++) {
+		logmsg("trying mercfile %s.\n", merc_files[i]);
+		fluximg = mercrender_file(merc_files[i], args);
+		if (fluximg) 
+			break;
+	}
 	if (!fluximg) {
+		logmsg("failed to find Tycho mercfile.\n");
 		return -1;
 	}
 
+	// brightness amplification factor
 	amp = pow(4.0, min(5, args->zoomlevel)) * 32.0 * exp(args->gain * log(4.0));
 
 	for (j=0; j<args->H; j++) {
@@ -74,6 +92,8 @@ int render_tycho(unsigned char* img, render_args_t* args) {
 		}
 	}
 	free(fluximg);
+
+	logmsg("done.\n");
 
 	return 0;
 }
