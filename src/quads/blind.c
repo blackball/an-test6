@@ -125,9 +125,6 @@ struct blind_params {
 	int nagree_toverify;
 	double agreetol;
 
-	// FIXME - verification is NOT OPTIONAL!
-	bool do_verify;
-
 	double verify_dist2;
 	double verify_pix;
 
@@ -165,7 +162,6 @@ struct blind_params {
 	bool* p_quitNow;
 
 	bool do_tweak;
-	// FIXME - these don't do anything.
 	int tweak_aborder;
 	int tweak_abporder;
 };
@@ -380,8 +376,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-
-		bp.do_verify = (bp.verify_dist2 > 0.0) || (bp.verify_pix > 0.0);
 
 		if (bp.rdlsfname) {
 			bp.rdls = rdlist_open_for_writing(bp.rdlsfname);
@@ -940,8 +934,8 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	tweak_push_ref_xyz(twee, starxyz, nstars);
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
-	twee->sip->a_order  = twee->sip->b_order  = 3;
-	twee->sip->ap_order = twee->sip->bp_order = 3;
+	twee->sip->a_order  = twee->sip->b_order  = tweak_aborder;
+	twee->sip->ap_order = twee->sip->bp_order = tweak_abporder;
 
 	fprintf(stderr, "Begin tweaking...\n");
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
