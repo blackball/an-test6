@@ -376,7 +376,8 @@ void draw_segmented_line(double ra1, double dec1,
 	radecdeg2xyzarr(ra1, dec1, xyz1);
 	radecdeg2xyzarr(ra2, dec2, xyz2);
 
-	wrap = (fabs(ra1 - ra2) >= 180.0);
+	wrap = (fabs(ra1 - ra2) >= 180.0) ||
+		(args->ramin < 0) || (args->ramax > 360.0);
 
 	// Draw segmented line.
 	for (i=0; i<(1 + (wrap?1:0)); i++) {
@@ -391,6 +392,7 @@ void draw_segmented_line(double ra1, double dec1,
 			normalize_3(xyz);
 			xyzarr2radec(xyz, &ra, &dec);
 			mx = ra2merc(ra);
+
 			if (wrap) {
 				// in the first pass we draw the left side (mx>0.5)
 				if ((i==0) && (mx < 0.5)) mx += 1.0;
