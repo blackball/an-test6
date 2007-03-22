@@ -934,8 +934,8 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	tweak_push_ref_xyz(twee, starxyz, nstars);
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
-	twee->sip->a_order  = twee->sip->b_order  = tweak_aborder;
-	twee->sip->ap_order = twee->sip->bp_order = tweak_abporder;
+	twee->sip->a_order  = twee->sip->b_order  = bp.tweak_aborder;
+	twee->sip->ap_order = twee->sip->bp_order = bp.tweak_abporder;
 
 	fprintf(stderr, "Begin tweaking...\n");
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
@@ -990,8 +990,6 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 
 	return 1;
 }
-
-//static double iter_wcs_rads[] = { 2, 3, 4, 5, 6, 7, 8, 9 };
 
 static void solve_fields() {
 	solver_params solver;
@@ -1063,13 +1061,6 @@ static void solve_fields() {
 	bp.hits->startree = bp.starkd->tree;
 	bp.hits->do_wcs = (bp.wcs_template ? 1 : 0);
 	bp.hits->verified = verified;
-
-	bp.hits->iter_wcs_steps = 0;
-	/*
-	  bp.hits->iter_wcs_steps = sizeof(iter_wcs_rads)/sizeof(double);
-	  bp.hits->iter_wcs_thresh = 0.05;
-	  bp.hits->iter_wcs_rads = iter_wcs_rads;
-	*/
 
 	nfields = bp.xyls->nfields;
 
