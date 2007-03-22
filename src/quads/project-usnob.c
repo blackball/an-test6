@@ -26,8 +26,6 @@
 
 #define OPTIONS "h" //H:N:"
 
-#define MAXNUMCHUNKS 10000
-
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage:\n"
@@ -89,23 +87,6 @@ int main(int argc, char** args) {
 	N = usnob_fits_count_entries(usnob);
 	fprintf(stderr, "File contains %i stars.\n", N);
 
-	/*
-	printf("obs=[\n");
-	for (i=0; i<N; i++) {
-	  usnob_entry* star;
-	  star = usnob_fits_read_entry(usnob);
-	  for (j=0; j<5; j++){
-	    printf("%g", star->obs[j].mag);
-	    if(j<4){
-	      printf(", ");
-	    }
-	  }
-	  printf(";\n");
-	}
-	printf("];\n");
-	*/
-
-
 	filepath = args[2];
 
 	strcpy(pointfilename, filepath);
@@ -123,70 +104,46 @@ int main(int argc, char** args) {
 	point_file = fopen(pointfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
 
-	double pointbuffer[3*MAXNUMCHUNKS];
-	unsigned int tilebuffer[5*MAXNUMCHUNKS];
+	double pointbuffer[3];
+	unsigned int tilebuffer[5];
 
-	int chunkcount = 0;
-
-
-	for (i=1; i<N; i++) {
-		double xyz[3];
-		double px, py;
-		int numMags = 0;
-		double sumMags = 0;
-
-		usnob_entry* star;
+	double xyz[3];
+	int numMags;
+	usnob_entry* star;
+	for (i=0; i<N; i++) {
+		numMags = 0;
+		pointbuffer[2] = 0.0;
 		// grab the star...
 		star = usnob_fits_read_entry(usnob);
 
 		// find its xyz position
 		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 		// project it around the center
-		star_coords(xyz, center, &px, &py);
+		star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
 //		fprintf(stderr, "%g, %g,", px, py);
 
-		pointbuffer[chunkcount*3] = px;
-		pointbuffer[chunkcount*3+1] = py;
 
 		for (j=0; j<5; j++){
-			if(star->obs[j].mag > 0){
+			if(star->obs[j].mag > 0.0){
 				numMags++;
-				sumMags+= star->obs[j].mag;
+				pointbuffer[2] += star->obs[j].mag;
 			}
 		}
 
 		if (numMags > 0){
-			pointbuffer[chunkcount*3+2] = sumMags / (double)numMags;
-		}
-		else{
-			pointbuffer[chunkcount*3+2] = 0;
+			pointbuffer[2] = pointbuffer[2] / (double)numMags;
 		}
 		//fprintf(stderr, " %g, ", meanMag);
 
 		for (j=0; j<5; j++){
-			tilebuffer[chunkcount*5+j] = star->obs[j].field;
+			tilebuffer[j] = star->obs[j].field;
 			//fprintf(stderr, "%d, ", intBuffer[j]);
 		}
 
-		chunkcount++;
-
-		if (chunkcount == MAXNUMCHUNKS){
-			fwrite(pointbuffer, sizeof(double), 3*chunkcount, point_file);
-			fwrite(tilebuffer, sizeof(unsigned int), 5*chunkcount, tile_file);
-			chunkcount = 0;
-		}
-
-		//fprintf(stderr, "\n");
-
+		fwrite(pointbuffer, sizeof(double), 3, point_file);
+		fwrite(tilebuffer, sizeof(unsigned int), 5, tile_file);
 	}
 	
-	if (chunkcount > 0){
-		fwrite(pointbuffer, sizeof(double), 3*chunkcount, point_file);
-		fwrite(tilebuffer, sizeof(unsigned int), 5*chunkcount, tile_file);
-		chunkcount = 0;
-	}
-
-
 	fclose(point_file);
 	fclose(tile_file);
 
