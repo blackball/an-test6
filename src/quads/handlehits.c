@@ -67,37 +67,12 @@ static bool verify(handlehits* hh, MatchObj* mo, bool* pkeep) {
 	// has already been computed and stored in the matchfile, and we no
 	// longer have access to the startree, etc.
 	if (mo->overlap == 0.0) {
-		tan_t origwcs;
-
-		//if (hh->do_wcs) {
-		if (hh->iter_wcs_steps) {
-			int i;
-			corr = malloc(hh->nfield * sizeof(int));
-			for (i=0; i<hh->nfield; i++)
-				corr[i] = -1;
-
-			// copy the original WCS
-			memcpy(&origwcs, &(mo->wcstan), sizeof(tan_t));
-		}
-
 		verify_hit(hh->startree, mo, hh->field, hh->nfield, hh->verify_dist2,
-				   NULL, NULL, NULL,
-				   NULL, NULL,
-				   corr);
+				   NULL, NULL, NULL, NULL, NULL, corr);
 
 		mo->nverified = hh->nverified++;
 
-		if (hh->iter_wcs_steps &&
-			(mo->overlap >= hh->iter_wcs_thresh)) {
-
-			verify_iterate_wcs(hh->startree, mo, hh->field,
-							   hh->nfield, hh->verify_dist2,
-							   corr,
-							   hh->iter_wcs_steps,
-							   hh->iter_wcs_rads);
-		}
-
-
+		// callback.
 		if (hh->verified)
 			hh->verified(hh, mo);
 	}

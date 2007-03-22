@@ -36,11 +36,4 @@ void verify_hit(kdtree_t* startree, MatchObj* mo, double* field,
 				il* indexstars, dl* bestd2s, int* correspondences);
 
 
-void verify_iterate_wcs(kdtree_t* startree, MatchObj* mo,
-						double* field, int nfield,
-						double verify_dist2,
-						int* corr,
-						int nsteps,
-						double* rads);
-
 #endif
