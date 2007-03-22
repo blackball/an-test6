@@ -206,56 +206,18 @@ int main(int argc, char *argv[]) {
 		int I;
 		tic();
 
-		bp.fieldfname = NULL;
-		bp.matchfname = NULL;
-		bp.logfname = NULL;
-		bp.donescript = NULL;
-		bp.donefname = NULL;
-		bp.startfname = NULL;
-		bp.solved_in = NULL;
-		bp.solved_out = NULL;
-		bp.cancelfname = NULL;
-		bp.rdlsfname = NULL;
-		bp.indexrdlsfname = NULL;
-		bp.do_tweak = FALSE;
-		bp.solvedserver = NULL;
-		bp.wcs_template = NULL;
+		il_remove_all(bp.fieldlist);
+		pl_remove_all(bp.indexes);
+
+		memset(&bp, 0, sizeof(blind_params));
+
 		bp.fieldid_key = strdup("FIELDID");
 		bp.xcolname = strdup("X");
 		bp.ycolname = strdup("Y");
 		bp.parity = DEFAULT_PARITY;
 		bp.codetol = DEFAULT_CODE_TOL;
 		bp.firstfield = bp.lastfield = -1;
-		bp.startdepth = 0;
-		bp.enddepth = 0;
-		bp.funits_lower = 0.0;
-		bp.funits_upper = 0.0;
-		bp.index_scale_upper = 0.0;
-		bp.fieldid = 0;
-		bp.indexid = 0;
 		bp.healpix = -1;
-		bp.agreetol = 0.0;
-		bp.nagree_toverify = 0;
-		bp.verify_dist2 = 0.0;
-		bp.verify_pix = 0.0;
-		bp.overlap_toprint = 0.0;
-		bp.overlap_tokeep = 0.0;
-		bp.overlap_tosolve = 0.0;
-		bp.ninfield_tosolve = 0;
-		bp.ninfield_tokeep = 0;
-		bp.cxdx_margin = 0.0;
-		bp.quiet = FALSE;
-		bp.verbose = FALSE;
-		il_remove_all(bp.fieldlist);
-		pl_remove_all(bp.indexes);
-		bp.quads = NULL;
-		bp.starkd = NULL;
-		bp.rdls = NULL;
-		bp.indexrdls = NULL;
-		bp.nverified = 0;
-		bp.cpulimit = 0;
-		bp.timelimit = 0;
-		bp.p_quitNow = NULL;
 
 		if (read_parameters()) {
 			free(bp.xcolname);
