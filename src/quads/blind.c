@@ -394,6 +394,11 @@ int main(int argc, char *argv[]) {
 		if (bp.rdlsfname) {
 			bp.rdls = rdlist_open_for_writing(bp.rdlsfname);
 			if (bp.rdls) {
+				boilerplate_add_fits_headers(bp.rdls->header);
+				fits_add_long_history(bp.rdls->header, "This \"rdls\" file was created by the program \"blind\"."
+									  "  It contains the RA/DEC of field objects after being transformed by the WCS.");
+				qfits_header_add(bp.rdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+				add_blind_params(&bp, bp.rdls->header);
 				if (rdlist_write_header(bp.rdls)) {
 					logerr(&bp, "Failed to write RDLS header.\n");
 					rdlist_close(bp.rdls);
@@ -407,6 +412,11 @@ int main(int argc, char *argv[]) {
 		if (bp.indexrdlsfname) {
 			bp.indexrdls = rdlist_open_for_writing(bp.indexrdlsfname);
 			if (bp.indexrdls) {
+				boilerplate_add_fits_headers(bp.indexrdls->header);
+				fits_add_long_history(bp.indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
+									  "  It contains the RA/DEC of index objects that were found inside a solved field.");
+				qfits_header_add(bp.indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+				add_blind_params(&bp, bp.indexrdls->header);
 				if (rdlist_write_header(bp.indexrdls)) {
 					logerr(&bp, "Failed to write index RDLS header.\n");
 					rdlist_close(bp.indexrdls);
