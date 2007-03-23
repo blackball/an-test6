@@ -74,7 +74,6 @@ static int read_parameters();
 #define DEFAULT_TWEAK_ABPORDER 3
 #define DEFAULT_INDEX_JITTER 1.0  // arcsec
 
-
 struct blind_params {
 	// Jitter in the index, in arcseconds.
 	double index_jitter;
@@ -170,15 +169,50 @@ typedef struct blind_params blind_params;
 
 static blind_params bp;
 
+static void loglvl(int level, const blind_params* bp, const char* format, va_list va) {
+	// 1=error
+	if (bp->silent && level > 1)
+		return;
+	/*
+	// 2=important
+	if (bp->quiet && level > 2)
+	return;
+	*/
+	// 3=normal
+	if (!bp->verbose && level > 3)
+		return;
+	vfprintf(stderr, format, va);
+	fflush(stderr);
+}
+
+static void logerr(const blind_params* bp, const char* format, ...) {
+	va_list va;
+	va_start(va, format);
+	loglvl(1, bp, format, va);
+	va_end(va);
+}
+static void logmsg(const blind_params* bp, const char* format, ...) {
+	va_list va;
+	va_start(va, format);
+	loglvl(3, bp, format, va);
+	va_end(va);
+}
+static void logverb(const blind_params* bp, const char* format, ...) {
+	va_list va;
+	va_start(va, format);
+	loglvl(4, bp, format, va);
+	va_end(va);
+}
+
 static void cpu_time_limit(int sig) {
-	fprintf(stderr, "CPU time limit reached!\n");
+	logmsg(&bp, "CPU time limit reached!\n");
 	if (bp.p_quitNow) {
 		*bp.p_quitNow = TRUE;
 	}
 }
 
 static void wall_time_limit(int sig) {
-	fprintf(stderr, "Wall-clock time limit reached!\n");
+	logmsg(&bp, "Wall-clock time limit reached!\n");
 	if (bp.p_quitNow) {
 		*bp.p_quitNow = TRUE;
 	}
@@ -227,116 +261,108 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
-		if (!bp.silent) {
-			fprintf(stderr, "%s params:\n", progname);
-			fprintf(stderr, "fields ");
-			for (i=0; i<il_size(bp.fieldlist); i++)
-				fprintf(stderr, "%i ", il_get(bp.fieldlist, i));
-			fprintf(stderr, "\n");
-			fprintf(stderr, "indexes:\n");
-			for (i=0; i<pl_size(bp.indexes); i++)
-				fprintf(stderr, "  %s\n", (char*)pl_get(bp.indexes, i));
-			fprintf(stderr, "fieldfname %s\n", bp.fieldfname);
-			fprintf(stderr, "fieldid %i\n", bp.fieldid);
-			fprintf(stderr, "matchfname %s\n", bp.matchfname);
-			fprintf(stderr, "startfname %s\n", bp.startfname);
-			fprintf(stderr, "donefname %s\n", bp.donefname);
-			fprintf(stderr, "donescript %s\n", bp.donescript);
-			fprintf(stderr, "solved_in %s\n", bp.solved_in);
-			fprintf(stderr, "solved_out %s\n", bp.solved_out);
-			fprintf(stderr, "solvedserver %s\n", bp.solvedserver);
-			fprintf(stderr, "cancel %s\n", bp.cancelfname);
-			fprintf(stderr, "wcs %s\n", bp.wcs_template);
-			fprintf(stderr, "fieldid_key %s\n", bp.fieldid_key);
-			fprintf(stderr, "parity %i\n", bp.parity);
-			fprintf(stderr, "codetol %g\n", bp.codetol);
-			fprintf(stderr, "startdepth %i\n", bp.startdepth);
-			fprintf(stderr, "enddepth %i\n", bp.enddepth);
-			fprintf(stderr, "fieldunits_lower %g\n", bp.funits_lower);
-			fprintf(stderr, "fieldunits_upper %g\n", bp.funits_upper);
-			fprintf(stderr, "agreetol %g\n", bp.agreetol);
-			fprintf(stderr, "verify_dist %g\n", distsq2arcsec(bp.verify_dist2));
-			fprintf(stderr, "verify_pix %g\n", bp.verify_pix);
-			fprintf(stderr, "nagree_toverify %i\n", bp.nagree_toverify);
-			fprintf(stderr, "overlap_toprint %f\n", bp.overlap_toprint);
-			fprintf(stderr, "overlap_tokeep %f\n", bp.overlap_tokeep);
-			fprintf(stderr, "overlap_tosolve %f\n", bp.overlap_tosolve);
-			fprintf(stderr, "ninfield_tokeep %i\n", bp.ninfield_tokeep);
-			fprintf(stderr, "ninfield_tosolve %i\n", bp.ninfield_tosolve);
-			fprintf(stderr, "xcolname %s\n", bp.xcolname);
-			fprintf(stderr, "ycolname %s\n", bp.ycolname);
-			fprintf(stderr, "maxquads %i\n", bp.maxquads);
-			fprintf(stderr, "maxmatches %i\n", bp.maxmatches);
-			fprintf(stderr, "quiet %i\n", bp.quiet);
-			fprintf(stderr, "verbose %i\n", bp.verbose);
-			fprintf(stderr, "logfname %s\n", bp.logfname);
-			fprintf(stderr, "cpulimit %i\n", bp.cpulimit);
-			fprintf(stderr, "timelimit %i\n", bp.timelimit);
-		}
+		logmsg(&bp, "Params:\n");
+		logmsg(&bp, "fields ");
+		logmsg(&bp, "%s params:\n", progname);
+		logmsg(&bp, "fields ");
+		for (i=0; i<il_size(bp.fieldlist); i++)
+			logmsg(&bp, "%i ", il_get(bp.fieldlist, i));
+		logmsg(&bp, "\n");
+		logmsg(&bp, "indexes:\n");
+		for (i=0; i<pl_size(bp.indexes); i++)
+			logmsg(&bp, "  %s\n", (char*)pl_get(bp.indexes, i));
+		logmsg(&bp, "fieldfname %s\n", bp.fieldfname);
+		logmsg(&bp, "fieldid %i\n", bp.fieldid);
+		logmsg(&bp, "matchfname %s\n", bp.matchfname);
+		logmsg(&bp, "startfname %s\n", bp.startfname);
+		logmsg(&bp, "donefname %s\n", bp.donefname);
+		logmsg(&bp, "donescript %s\n", bp.donescript);
+		logmsg(&bp, "solved_in %s\n", bp.solved_in);
+		logmsg(&bp, "solved_out %s\n", bp.solved_out);
+		logmsg(&bp, "solvedserver %s\n", bp.solvedserver);
+		logmsg(&bp, "cancel %s\n", bp.cancelfname);
+		logmsg(&bp, "wcs %s\n", bp.wcs_template);
+		logmsg(&bp, "fieldid_key %s\n", bp.fieldid_key);
+		logmsg(&bp, "parity %i\n", bp.parity);
+		logmsg(&bp, "codetol %g\n", bp.codetol);
+		logmsg(&bp, "startdepth %i\n", bp.startdepth);
+		logmsg(&bp, "enddepth %i\n", bp.enddepth);
+		logmsg(&bp, "fieldunits_lower %g\n", bp.funits_lower);
+		logmsg(&bp, "fieldunits_upper %g\n", bp.funits_upper);
+		logmsg(&bp, "agreetol %g\n", bp.agreetol);
+		logmsg(&bp, "verify_dist %g\n", distsq2arcsec(bp.verify_dist2));
+		logmsg(&bp, "verify_pix %g\n", bp.verify_pix);
+		logmsg(&bp, "nagree_toverify %i\n", bp.nagree_toverify);
+		logmsg(&bp, "overlap_toprint %f\n", bp.overlap_toprint);
+		logmsg(&bp, "overlap_tokeep %f\n", bp.overlap_tokeep);
+		logmsg(&bp, "overlap_tosolve %f\n", bp.overlap_tosolve);
+		logmsg(&bp, "ninfield_tokeep %i\n", bp.ninfield_tokeep);
+		logmsg(&bp, "ninfield_tosolve %i\n", bp.ninfield_tosolve);
+		logmsg(&bp, "xcolname %s\n", bp.xcolname);
+		logmsg(&bp, "ycolname %s\n", bp.ycolname);
+		logmsg(&bp, "maxquads %i\n", bp.maxquads);
+		logmsg(&bp, "maxmatches %i\n", bp.maxmatches);
+		logmsg(&bp, "quiet %i\n", bp.quiet);
+		logmsg(&bp, "verbose %i\n", bp.verbose);
+		logmsg(&bp, "logfname %s\n", bp.logfname);
+		logmsg(&bp, "cpulimit %i\n", bp.cpulimit);
+		logmsg(&bp, "timelimit %i\n", bp.timelimit);
 
 		if (!pl_size(bp.indexes) || !bp.fieldfname || (bp.codetol < 0.0) || !bp.matchfname) {
-			fprintf(stderr, "Invalid params... this message is useless.\n");
+			logerr(&bp, "Invalid params... this message is useless.\n");
 			exit(-1);
 		}
 
 		if (bp.nagree_toverify && (bp.agreetol == 0.0)) {
-			fprintf(stderr, "If you specify 'nagree_toverify', you must also specify 'agreetol'.\n");
+			logerr(&bp, "If you specify 'nagree_toverify', you must also specify 'agreetol'.\n");
 			exit(-1);
 		}
 
 		bp.mf = matchfile_open_for_writing(bp.matchfname);
 		if (!bp.mf) {
-			fprintf(stderr, "Failed to open file %s to write match file.\n", bp.matchfname);
+			logerr(&bp, "Failed to open file %s to write match file.\n", bp.matchfname);
 			exit(-1);
 		}
 		boilerplate_add_fits_headers(bp.mf->header);
 		qfits_header_add(bp.mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
 		if (matchfile_write_header(bp.mf)) {
-			fprintf(stderr, "Failed to write matchfile header.\n");
+			logerr(&bp, "Failed to write matchfile header.\n");
 			exit(-1);
 		}
 		
 		// Read .xyls file...
-		if (!bp.silent) {
-			fprintf(stderr, "Reading fields file %s...", bp.fieldfname);
-			fflush(stderr);
-		}
+		logmsg(&bp, "Reading fields file %s...", bp.fieldfname);
 		bp.xyls = xylist_open(bp.fieldfname);
 		if (!bp.xyls) {
-			fprintf(stderr, "Failed to read xylist.\n");
+			logerr(&bp, "Failed to read xylist.\n");
 			exit(-1);
 		}
 		numfields = bp.xyls->nfields;
-		if (!bp.silent)
-			fprintf(stderr, "got %u fields.\n", numfields);
+		logmsg(&bp, "got %u fields.\n", numfields);
 		
 		bp.xyls->xname = bp.xcolname;
 		bp.xyls->yname = bp.ycolname;
 
 		if (bp.solvedserver) {
 			if (solvedclient_set_server(bp.solvedserver)) {
-				fprintf(stderr, "Error setting solvedserver.\n");
+				logerr(&bp, "Error setting solvedserver.\n");
 				exit(-1);
 			}
 
 			if ((il_size(bp.fieldlist) == 0) && (bp.firstfield != -1) && (bp.lastfield != -1)) {
 				int j;
 				il_free(bp.fieldlist);
-				if (!bp.silent) 
-					fprintf(stderr, "Contacting solvedserver to get field list...\n");
+				logmsg(&bp, "Contacting solvedserver to get field list...\n");
 				bp.fieldlist = solvedclient_get_fields(bp.fieldid, bp.firstfield, bp.lastfield, 0);
 				if (!bp.fieldlist) {
-					fprintf(stderr, "Failed to get field list from solvedserver.\n");
+					logerr(&bp, "Failed to get field list from solvedserver.\n");
 					exit(-1);
 				}
-				if (!bp.silent) 
-					fprintf(stderr, "Got %i fields from solvedserver: ", il_size(bp.fieldlist));
-				if (!bp.silent) {
-					for (j=0; j<il_size(bp.fieldlist); j++) {
-						fprintf(stderr, "%i ", il_get(bp.fieldlist, j));
-					}
-					fprintf(stderr, "\n");
+				logmsg(&bp, "Got %i fields from solvedserver: ", il_size(bp.fieldlist));
+				for (j=0; j<il_size(bp.fieldlist); j++) {
+					logmsg(&bp, "%i ", il_get(bp.fieldlist, j));
 				}
+				logmsg(&bp, "\n");
 			}
 		}
 
@@ -344,12 +370,12 @@ int main(int argc, char *argv[]) {
 			bp.rdls = rdlist_open_for_writing(bp.rdlsfname);
 			if (bp.rdls) {
 				if (rdlist_write_header(bp.rdls)) {
-					fprintf(stderr, "Failed to write RDLS header.\n");
+					logerr(&bp, "Failed to write RDLS header.\n");
 					rdlist_close(bp.rdls);
 					bp.rdls = NULL;
 				}
 			} else {
-				fprintf(stderr, "Failed to open RDLS file %s for writing.\n",
+				logerr(&bp, "Failed to open RDLS file %s for writing.\n",
 						bp.rdlsfname);
 			}
 		}
@@ -357,25 +383,24 @@ int main(int argc, char *argv[]) {
 			bp.indexrdls = rdlist_open_for_writing(bp.indexrdlsfname);
 			if (bp.indexrdls) {
 				if (rdlist_write_header(bp.indexrdls)) {
-					fprintf(stderr, "Failed to write index RDLS header.\n");
+					logerr(&bp, "Failed to write index RDLS header.\n");
 					rdlist_close(bp.indexrdls);
 					bp.indexrdls = NULL;
 				}
 			} else {
-				fprintf(stderr, "Failed to open index RDLS file %s for writing.\n",
+				logerr(&bp, "Failed to open index RDLS file %s for writing.\n",
 						bp.indexrdlsfname);
 			}
 		}
 
 		if (bp.startfname) {
 			FILE* batchfid = NULL;
-			if (!bp.silent)
-				fprintf(stderr, "Writing marker file %s...\n", bp.startfname);
+			logmsg(&bp, "Writing marker file %s...\n", bp.startfname);
 			batchfid = fopen(bp.startfname, "wb");
 			if (batchfid)
 				fclose(batchfid);
 			else
-				fprintf(stderr, "Failed to write marker file %s: %s\n", bp.startfname, strerror(errno));
+				logerr(&bp, "Failed to write marker file %s: %s\n", bp.startfname, strerror(errno));
 		}
 
 		for (I=0; I<pl_size(bp.indexes); I++) {
@@ -391,23 +416,18 @@ int main(int argc, char *argv[]) {
 			bp.indexname = fname;
 
 			// Read .ckdt file...
-			if (!bp.silent) {
-				fprintf(stderr, "Reading code KD tree from %s...\n", treefname);
-				fflush(stderr);
-			}
+			logmsg(&bp, "Reading code KD tree from %s...\n", treefname);
 			bp.codekd = codetree_open(treefname);
 			if (!bp.codekd)
 				exit(-1);
-			if (!bp.silent) 
-				fprintf(stderr, "  (%d quads, %d nodes, dim %d).\n",
-						codetree_N(bp.codekd), codetree_nodes(bp.codekd), codetree_D(bp.codekd));
+			logmsg(&bp, "  (%d quads, %d nodes, dim %d).\n",
+				   codetree_N(bp.codekd), codetree_nodes(bp.codekd), codetree_D(bp.codekd));
 
 			// Read .quad file...
-			if (!bp.silent) 
-				fprintf(stderr, "Reading quads file %s...\n", quadfname);
+			logmsg(&bp, "Reading quads file %s...\n", quadfname);
 			bp.quads = quadfile_open(quadfname, 0);
 			if (!bp.quads) {
-				fprintf(stderr, "Couldn't read quads file %s\n", quadfname);
+				logerr(&bp, "Couldn't read quads file %s\n", quadfname);
 				exit(-1);
 			}
 			bp.index_scale_upper = quadfile_get_index_scale_arcsec(bp.quads);
@@ -423,27 +443,22 @@ int main(int argc, char *argv[]) {
 				} else {
 					bp.index_jitter = DEFAULT_INDEX_JITTER;
 				}
-				fprintf(stderr, "Setting index jitter to %g arcsec.\n", bp.index_jitter);
+				logmsg(&bp, "Setting index jitter to %g arcsec.\n", bp.index_jitter);
 			}
 
-			if (!bp.silent) 
-				fprintf(stderr, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-						bp.index_scale_lower/60.0, bp.index_scale_upper/60.0, bp.index_scale_lower, bp.index_scale_upper);
+			logmsg(&bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+				   bp.index_scale_lower/60.0, bp.index_scale_upper/60.0, bp.index_scale_lower, bp.index_scale_upper);
 
 			// Read .skdt file...
-			if (!bp.silent) {
-				fprintf(stderr, "Reading star KD tree from %s...\n", startreefname);
-				fflush(stderr);
-			}
+			logmsg(&bp, "Reading star KD tree from %s...\n", startreefname);
 			bp.starkd = startree_open(startreefname);
 			if (!bp.starkd) {
-				fprintf(stderr, "Failed to read star kdtree %s\n", startreefname);
+				logerr(&bp, "Failed to read star kdtree %s\n", startreefname);
 				exit(-1);
 			}
 
-			if (!bp.silent) 
-				fprintf(stderr, "  (%d stars, %d nodes, dim %d).\n",
-						startree_N(bp.starkd), startree_nodes(bp.starkd), startree_D(bp.starkd));
+			logmsg(&bp, "  (%d stars, %d nodes, dim %d).\n",
+				   startree_N(bp.starkd), startree_nodes(bp.starkd), startree_D(bp.starkd));
 
 			// If the code kdtree has CXDX set, set cxdx_margin.
 			if (qfits_header_getboolean(bp.codekd->header, "CXDX", 0))
@@ -453,15 +468,14 @@ int main(int argc, char *argv[]) {
 			// check for CIRCLE field in ckdt header...
 			bp.circle = qfits_header_getboolean(bp.codekd->header, "CIRCLE", 0);
 
-			if (!bp.silent) 
-				fprintf(stderr, "ckdt %s the CIRCLE header.\n",
-						(bp.circle ? "contains" : "does not contain"));
+			logmsg(&bp, "ckdt %s the CIRCLE header.\n",
+				   (bp.circle ? "contains" : "does not contain"));
 
 			// Read .id file...
 			bp.id = idfile_open(idfname, 0);
 			if (!bp.id) {
-				fprintf(stderr, "Couldn't open id file %s.\n", idfname);
-				fprintf(stderr, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
+				logmsg(&bp, "Couldn't open id file %s.\n", idfname);
+				logmsg(&bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
 			}
 
 			// Set CPU time limit.
@@ -471,26 +485,26 @@ int main(int argc, char *argv[]) {
 				int sofar;
 
 				if (getrusage(RUSAGE_SELF, &r)) {
-					fprintf(stderr, "Failed to get resource usage: %s\n", strerror(errno));
+					logerr(&bp, "Failed to get resource usage: %s\n", strerror(errno));
 					exit(-1);
 				}
 				sofar = ceil((float)(r.ru_utime.tv_sec + r.ru_stime.tv_sec) +
 							 (float)(1e-6 * r.ru_utime.tv_usec + r.ru_stime.tv_usec));
 
 				if (getrlimit(RLIMIT_CPU, &rlim)) {
-					fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
+					logerr(&bp, "Failed to get CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 				rlim.rlim_cur = bp.cpulimit + sofar;
 
 				if (setrlimit(RLIMIT_CPU, &rlim)) {
-					fprintf(stderr, "Failed to set CPU time limit: %s\n", strerror(errno));
+					logerr(&bp, "Failed to set CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 
 				oldsigcpu = signal(SIGXCPU, cpu_time_limit);
 				if (oldsigcpu == SIG_ERR) {
-					fprintf(stderr, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
+					logerr(&bp, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
 			}
@@ -500,7 +514,7 @@ int main(int argc, char *argv[]) {
 				alarm(bp.timelimit);
 				oldsigalarm = signal(SIGALRM, wall_time_limit);
 				if (oldsigalarm == SIG_ERR) {
-					fprintf(stderr, "Failed to set wall time limit signal handler: %s\n", strerror(errno));
+					logerr(&bp, "Failed to set wall time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
 			}
@@ -512,7 +526,7 @@ int main(int argc, char *argv[]) {
 			if (bp.timelimit) {
 				alarm(0);
 				if (signal(SIGALRM, oldsigalarm) == SIG_ERR) {
-					fprintf(stderr, "Failed to restore wall time limit signal handler: %s\n", strerror(errno));
+					logerr(&bp, "Failed to restore wall time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
 			}
@@ -522,17 +536,17 @@ int main(int argc, char *argv[]) {
 				struct rlimit rlim;
 				// Restore old CPU limit signal handler.
 				if (signal(SIGXCPU, oldsigcpu) == SIG_ERR) {
-					fprintf(stderr, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
+					logerr(&bp, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
 				// Remove CPU limit.
 				if (getrlimit(RLIMIT_CPU, &rlim)) {
-					fprintf(stderr, "Failed to get CPU time limit: %s\n", strerror(errno));
+					logerr(&bp, "Failed to get CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 				rlim.rlim_cur = rlim.rlim_max;
 				if (setrlimit(RLIMIT_CPU, &rlim)) {
-					fprintf(stderr, "Failed to remove CPU time limit: %s\n", strerror(errno));
+					logerr(&bp, "Failed to remove CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 			}
@@ -562,42 +576,40 @@ int main(int argc, char *argv[]) {
 		xylist_close(bp.xyls);
 		if (matchfile_fix_header(bp.mf) ||
 			matchfile_close(bp.mf)) {
-			if (!bp.silent)
-				fprintf(stderr, "Error closing matchfile.\n");
+			logerr(&bp, "Error closing matchfile.\n");
 		}
 
 		if (bp.rdls) {
 			if (rdlist_fix_header(bp.rdls) ||
 				rdlist_close(bp.rdls)) {
-				fprintf(stderr, "Failed to close RDLS file.\n");
+				logerr(&bp, "Failed to close RDLS file.\n");
 			}
 			bp.rdls = NULL;
 		}
 		if (bp.indexrdls) {
 			if (rdlist_fix_header(bp.indexrdls) ||
 				rdlist_close(bp.indexrdls)) {
-				fprintf(stderr, "Failed to close index RDLS file.\n");
+				logerr(&bp, "Failed to close index RDLS file.\n");
 			}
 			bp.indexrdls = NULL;
 		}
 
 		if (bp.donefname) {
 			FILE* batchfid = NULL;
-			if (!bp.silent)
-				fprintf(stderr, "Writing marker file %s...\n", bp.donefname);
+			logmsg(&bp, "Writing marker file %s...\n", bp.donefname);
 			batchfid = fopen(bp.donefname, "wb");
 			if (batchfid)
 				fclose(batchfid);
 			else
-				fprintf(stderr, "Failed to write marker file %s: %s\n", bp.donefname, strerror(errno));
+				logerr(&bp, "Failed to write marker file %s: %s\n", bp.donefname, strerror(errno));
 		}
 
 		if (bp.donescript) {
 			int rtn = system(bp.donescript);
 			if (rtn == -1) {
-				fprintf(stderr, "Donescript failed.\n");
+				logerr(&bp, "Donescript failed.\n");
 			} else {
-				fprintf(stderr, "Donescript returned %i.\n", rtn);
+				logmsg(&bp, "Donescript returned %i.\n", rtn);
 			}
 		}
 
@@ -607,16 +619,16 @@ int main(int argc, char *argv[]) {
 		// Put stdout and stderr back to the way they were!
 		if (bp.logfname) {
 			if (dup2(bp.dup_stdout, fileno(stdout)) == -1) {
-				fprintf(stderr, "Failed to dup2() back to stdout.\n");
+				logerr(&bp, "Failed to dup2() back to stdout.\n");
 			}
 			if (dup2(bp.dup_stderr, fileno(stderr)) == -1) {
-				fprintf(stderr, "Failed to dup2() back to stderr.\n");
+				logerr(&bp, "Failed to dup2() back to stderr.\n");
 			}
 			if (close(bp.dup_stdout) || close(bp.dup_stderr)) {
-				fprintf(stderr, "Failed to close duplicate stdout/stderr: %s\n", strerror(errno));
+				logerr(&bp, "Failed to close duplicate stdout/stderr: %s\n", strerror(errno));
 			}
 			if (fclose(bp.logfd)) {
-				fprintf(stderr, "Failed to close log file: %s\n",
+				logerr(&bp, "Failed to close log file: %s\n",
 						strerror(errno));
 			}
 		}
@@ -662,16 +674,10 @@ static int read_parameters() {
 		while (*line && isspace(*line))
 			line++;
 
-		if (!bp.silent) {
-			fprintf(stderr, "Command: %s\n", line);
-			fflush(stderr);
-		}
+		logmsg(&bp, "Command: %s\n", line);
 
 		if (line[0] == '#') {
-			if (!bp.silent) {
-				fprintf(stderr, "Skipping comment.\n");
-				fflush(stderr);
-			}
+			logmsg(&bp, "Skipping comment.\n");
 			continue;
 		}
 		// skip blank lines.
@@ -679,7 +685,7 @@ static int read_parameters() {
 			continue;
 		}
 		if (is_word(line, "help", &nextword)) {
-			fprintf(stderr, "No help soup for you!\n  (use the source, Luke)\n");
+			logmsg(&bp, "No help soup for you!\n  (use the source, Luke)\n");
 		} else if (is_word(line, "cpulimit ", &nextword)) {
 			bp.cpulimit = atoi(nextword);
 		} else if (is_word(line, "timelimit ", &nextword)) {
@@ -700,7 +706,7 @@ static int read_parameters() {
 			bp.overlap_toprint = atof(nextword);
 		} else if (is_word(line, "min_ninfield ", &nextword)) {
 			// LEGACY
-			fprintf(stderr, "Warning, the \"min_ninfield\" command is deprecated."
+			logmsg(&bp, "Warning, the \"min_ninfield\" command is deprecated."
 					"Use \"ninfield_tokeep\" and \"ninfield_tosolve\" instead.\n");
 			bp.ninfield_tokeep = bp.ninfield_tosolve = atoi(nextword);
 		} else if (is_word(line, "ninfield_tokeep ", &nextword)) {
@@ -732,27 +738,27 @@ static int read_parameters() {
 			bp.logfname = strdup(nextword);
 			bp.logfd = fopen(bp.logfname, "a");
 			if (!bp.logfd) {
-				fprintf(stderr, "Failed to open log file %s: %s\n", bp.logfname, strerror(errno));
+				logerr(&bp, "Failed to open log file %s: %s\n", bp.logfname, strerror(errno));
 				goto bailout;
 			}
 			// Save old stdout/stderr...
 			bp.dup_stdout = dup(fileno(stdout));
 			if (bp.dup_stdout == -1) {
-				fprintf(stderr, "Failed to dup stdout: %s\n", strerror(errno));
+				logerr(&bp, "Failed to dup stdout: %s\n", strerror(errno));
 				goto bailout;
 			}
 			bp.dup_stderr = dup(fileno(stderr));
 			if (bp.dup_stderr == -1) {
-				fprintf(stderr, "Failed to dup stderr: %s\n", strerror(errno));
+				logerr(&bp, "Failed to dup stderr: %s\n", strerror(errno));
 				goto bailout;
 			}
 			// Replace stdout/stderr with logfile...
 			if (dup2(fileno(bp.logfd), fileno(stderr)) == -1) {
-				fprintf(stderr, "Failed to dup2 log file: %s\n", strerror(errno));
+				logerr(&bp, "Failed to dup2 log file: %s\n", strerror(errno));
 				goto bailout;
 			}
 			if (dup2(fileno(bp.logfd), fileno(stdout)) == -1) {
-				fprintf(stderr, "Failed to dup2 log file: %s\n", strerror(errno));
+				logerr(&bp, "Failed to dup2 log file: %s\n", strerror(errno));
 				goto bailout;
 			}
 			continue;
@@ -821,14 +827,14 @@ static int read_parameters() {
 				int fld = strtol(str, &endp, 10);
 				if (str == endp) {
 					// non-numeric value
-					fprintf(stderr, "Couldn't parse: %.20s [etc]\n", str);
+					logerr(&bp, "Couldn't parse: %.20s [etc]\n", str);
 					break;
 				}
 				if (firstfld == -1) {
 					il_insert_unique_ascending(bp.fieldlist, fld);
 				} else {
 					if (firstfld > fld) {
-						fprintf(stderr, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
+						logerr(&bp, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
 					} else {
 						for (i=firstfld+1; i<=fld; i++) {
 							il_insert_unique_ascending(bp.fieldlist, i);
@@ -848,8 +854,7 @@ static int read_parameters() {
 		} else if (is_word(line, "quit", &nextword)) {
 			return 1;
 		} else {
-			fprintf(stderr, "I didn't understand that command.\n");
-			fflush(stderr);
+			logmsg(&bp, "I didn't understand that command.\n");
 		}
 	}
 }
@@ -866,15 +871,15 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 	sip_t* sip = NULL;
 
 	fflush(NULL);
-	fprintf(stderr, "Tweaking!\n");
+	logmsg(&bp, "Tweaking!\n");
 
 	twee = tweak_new();
 	if (bp.verify_dist2 > 0.0)
 		twee->jitter = distsq2arcsec(bp.verify_dist2);
 	else {
 		twee->jitter = hypot(mo->scale * bp.verify_pix, bp.index_jitter);
-		fprintf(stderr, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
-		fprintf(stderr, "Star jitter: %g arcsec.\n", twee->jitter);
+		logmsg(&bp, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
+		logmsg(&bp, "Star jitter: %g arcsec.\n", twee->jitter);
 	}
 
 	// pull out the field coordinates.
@@ -884,7 +889,7 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 		imgx[i] = p->field[i*2 + 0];
 		imgy[i] = p->field[i*2 + 1];
 	}
-	fprintf(stderr, "Pushing %i image coordinates.\n", p->nfield);
+	logmsg(&bp, "Pushing %i image coordinates.\n", p->nfield);
 	tweak_push_image_xy(twee, imgx, imgy, p->nfield);
 
 	// find all the index stars that are inside the circle that bounds
@@ -901,24 +906,23 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 		goto bailout;
 	starxyz = res->results.d;
 	nstars = res->nres;
-	fprintf(stderr, "Pushing %i star coordinates.\n", nstars);
+	logmsg(&bp, "Pushing %i star coordinates.\n", nstars);
 	tweak_push_ref_xyz(twee, starxyz, nstars);
 
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	twee->sip->a_order  = twee->sip->b_order  = bp.tweak_aborder;
 	twee->sip->ap_order = twee->sip->bp_order = bp.tweak_abporder;
 
-	fprintf(stderr, "Begin tweaking...\n");
+	logmsg(&bp, "Begin tweaking...\n");
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
 		unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
 		if (r == -1) {
-			fprintf(stderr, "Error!\n");
+			logerr(&bp, "Tweak error!\n");
 			goto bailout;
 		}
 	}
 
-	fprintf(stderr, "Done!\n");
-	fflush(NULL);
+	logmsg(&bp, "Done tweaking!\n");
 
 	// Steal the resulting SIP structure
 	sip = twee->sip;
@@ -934,15 +938,14 @@ static sip_t* tweak(MatchObj* mo, solver_params* p, startree* starkd) {
 }
 
 static void verified(handlehits* hh, MatchObj* mo) {
-	if (!bp.quiet && !bp.silent && bp.verbose && (mo->overlap >= bp.overlap_toprint)) {
-		fprintf(stderr, "    field %i", mo->fieldnum);
+	if (mo->overlap >= bp.overlap_toprint) {
+		logverb(&bp, "    field %i", mo->fieldnum);
 		if (hh->nagree_toverify)
-			fprintf(stderr, " (%i agree)", mo->nagree);
-		fprintf(stderr, ": overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
+			logverb(&bp, " (%i agree)", mo->nagree);
+		logverb(&bp, ": overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
 				100.0 * mo->overlap,
 				mo->ninfield, mo->noverlap,
 				(mo->ninfield - mo->noverlap - mo->nconflict), mo->nconflict);
-		fflush(stderr);
 	}
 }
 
@@ -1008,17 +1011,14 @@ static void solve_fields() {
 
 		solver.minAB -= scalefudge;
 
-		if (!bp.silent) {
-			fprintf(stderr, "Scale fudge: %g pixels.\n", scalefudge);
-			fprintf(stderr, "Set minAB to %g\n", solver.minAB);
-		}
+		logmsg(&bp, "Scale fudge: %g pixels.\n", scalefudge);
+		logmsg(&bp, "Set minAB to %g\n", solver.minAB);
 	}
 	if (bp.funits_lower != 0.0) {
 		solver.arcsec_per_pixel_lower = bp.funits_lower;
 		solver.maxAB = bp.index_scale_upper / bp.funits_lower;
 		solver.maxAB += scalefudge;
-		if (!bp.silent)
-			fprintf(stderr, "Set maxAB to %g\n", solver.maxAB);
+		logmsg(&bp, "Set maxAB to %g\n", solver.maxAB);
 	}
 
 	bp.hits = handlehits_new();
@@ -1043,19 +1043,18 @@ static void solve_fields() {
 
 		if (bp.rdls) {
 			if (rdlist_write_new_field(bp.rdls)) {
-				fprintf(stderr, "Failed to write RDLS field header.\n");
+				logerr(&bp, "Failed to write RDLS field header.\n");
 			}
 		}
 		if (bp.indexrdls) {
 			if (rdlist_write_new_field(bp.indexrdls)) {
-				fprintf(stderr, "Failed to write index RDLS field header.\n");
+				logerr(&bp, "Failed to write index RDLS field header.\n");
 			}
 		}
 
 		fieldnum = il_get(bp.fieldlist, fi);
 		if (fieldnum >= nfields) {
-			if (!bp.silent)
-				fprintf(stderr, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
+			logerr(&bp, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			goto cleanup;
 		}
 
@@ -1063,8 +1062,7 @@ static void solve_fields() {
 		if (bp.solved_in) {
 			if (solvedfile_get(bp.solved_in, fieldnum)) {
 				// file exists; field has already been solved.
-				if (!bp.silent)
-					fprintf(stderr, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, bp.solved_in);
+				logmsg(&bp, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, bp.solved_in);
 				goto cleanup;
 			}
 			solver.solvedfn = bp.solved_in;
@@ -1074,8 +1072,7 @@ static void solve_fields() {
 		if (bp.solvedserver) {
 			if (solvedclient_get(bp.fieldid, fieldnum) == 1) {
 				// field has already been solved.
-				if (!bp.silent)
-					fprintf(stderr, "Field %i: field has already been solved.\n", fieldnum);
+				logmsg(&bp, "Field %i: field has already been solved.\n", fieldnum);
 				goto cleanup;
 			}
 		}
@@ -1086,12 +1083,12 @@ static void solve_fields() {
 		// Get the field.
 		nfield = xylist_n_entries(bp.xyls, fieldnum);
 		if (nfield == -1) {
-			fprintf(stderr, "Couldn't determine how many objects are in field %i.\n", fieldnum);
+			logerr(&bp, "Couldn't determine how many objects are in field %i.\n", fieldnum);
 			goto cleanup;
 		}
 		field = realloc(field, 2 * nfield * sizeof(double));
 		if (xylist_read_entries(bp.xyls, fieldnum, 0, nfield, field)) {
-			fprintf(stderr, "Failed to read field.\n");
+			logerr(&bp, "Failed to read field.\n");
 			goto cleanup;
 		}
 
@@ -1128,28 +1125,26 @@ static void solve_fields() {
 		bp.hits->field = field;
 		bp.hits->nfield = nfield;
 
-		if (!bp.silent)
-			fprintf(stderr, "\nSolving field %i.\n", fieldnum);
+		logmsg(&bp, "\nSolving field %i.\n", fieldnum);
 
 		// The real thing
 		solve_field(&solver);
 
 		bp.p_quitNow = NULL;
 
-		if (!bp.silent)
-			fprintf(stderr, "field %i: tried %i quads, matched %i codes.\n",
-					fieldnum, solver.numtries, solver.nummatches);
+		logmsg(&bp, "field %i: tried %i quads, matched %i codes.\n",
+			   fieldnum, solver.numtries, solver.nummatches);
 
-		if (!bp.silent && bp.maxquads && solver.numtries >= bp.maxquads) {
-			fprintf(stderr, "  exceeded the number of quads to try: %i >= %i.\n",
+		if (bp.maxquads && solver.numtries >= bp.maxquads) {
+			logmsg(&bp, "  exceeded the number of quads to try: %i >= %i.\n",
 					solver.numtries, bp.maxquads);
 		}
-		if (!bp.silent && bp.maxmatches && solver.nummatches >= bp.maxmatches) {
-			fprintf(stderr, "  exceeded the number of quads to match: %i >= %i.\n",
+		if (bp.maxmatches && solver.nummatches >= bp.maxmatches) {
+			logmsg(&bp, "  exceeded the number of quads to match: %i >= %i.\n",
 					solver.nummatches, bp.maxmatches);
 		}
-		if (!bp.silent && solver.cancelled) {
-			fprintf(stderr, "  cancelled at user request.\n");
+		if (solver.cancelled) {
+			logmsg(&bp, "  cancelled at user request.\n");
 		}
 
 		// Write the keepable hits.
@@ -1158,19 +1153,18 @@ static void solve_fields() {
 			for (i=0; i<pl_size(bp.hits->keepers); i++) {
 				MatchObj* mo = pl_get(bp.hits->keepers, i);
 				if (matchfile_write_match(bp.mf, mo))
-					fprintf(stderr, "Field %i: error writing a match.\n", fieldnum);
+					logmsg(&bp, "Field %i: error writing a match.\n", fieldnum);
 			}
 			if (matchfile_fix_header(bp.mf))
-				fprintf(stderr, "Failed to fix the matchfile header for field %i.\n", fieldnum);
+				logerr(&bp, "Failed to fix the matchfile header for field %i.\n", fieldnum);
 		}
 
 		if (bp.hits->bestmo) {
 			sip_t* sip = NULL;
 			// Field solved!
-			if (!bp.silent)
-				fprintf(stderr, "Field %i solved with overlap %g (%i matched, %i tried, %i in index).\n", fieldnum,
-						bp.hits->bestmo->overlap,
-						bp.hits->bestmo->noverlap, bp.hits->bestmo->ninfield, bp.hits->bestmo->nindex);
+			logmsg(&bp, "Field %i solved with overlap %g (%i matched, %i tried, %i in index).\n", fieldnum,
+				   bp.hits->bestmo->overlap,
+				   bp.hits->bestmo->noverlap, bp.hits->bestmo->ninfield, bp.hits->bestmo->nindex);
 
 			// Tweak, if requested.
 			if (bp.do_tweak) {
@@ -1188,7 +1182,7 @@ static void solve_fields() {
 				sprintf(wcs_fn, bp.wcs_template, fieldnum);
 				fout = fopen(wcs_fn, "ab");
 				if (!fout) {
-					fprintf(stderr, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
+					logerr(&bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
 					exit(-1);
 				}
 
@@ -1252,7 +1246,7 @@ static void solve_fields() {
 				if (solver.mo_template && solver.mo_template->fieldname[0])
 					qfits_header_add(hdr, bp.fieldid_key, solver.mo_template->fieldname, "Field name (copied from input field)", NULL);
 				if (qfits_header_dump(hdr, fout)) {
-					fprintf(stderr, "Failed to write FITS WCS header.\n");
+					logerr(&bp, "Failed to write FITS WCS header.\n");
 					exit(-1);
 				}
 				fits_pad_file(fout);
@@ -1275,7 +1269,7 @@ static void solve_fields() {
 										  radec+i*2, radec+i*2+1);
 				}
 				if (rdlist_write_entries(bp.rdls, radec, nfield)) {
-					fprintf(stderr, "Failed to write RDLS entry.\n");
+					logerr(&bp, "Failed to write RDLS entry.\n");
 				}
 				free(radec);
 			}
@@ -1300,7 +1294,7 @@ static void solve_fields() {
 												 KD_OPTIONS_SMALL_RADIUS |
 												 KD_OPTIONS_RETURN_POINTS);
 				if (!res || !res->nres) {
-					fprintf(stderr, "No index stars found!\n");
+					logmsg(&bp, "No index stars found!\n");
 				}
 				starxyz = res->results.d;
 				nstars = res->nres;
@@ -1312,7 +1306,7 @@ static void solve_fields() {
 					radec[i] = rad2deg(radec[i]);
 
 				if (rdlist_write_entries(bp.indexrdls, radec, nstars)) {
-					fprintf(stderr, "Failed to write index RDLS entry.\n");
+					logerr(&bp, "Failed to write index RDLS entry.\n");
 				}
 
 				free(radec);
@@ -1324,10 +1318,9 @@ static void solve_fields() {
 			}
 			// Record in solved file, or send to solved server.
 			if (bp.solved_out) {
-				if (!bp.silent)
-					fprintf(stderr, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, bp.solved_out);
+				logmsg(&bp, "Field %i solved: writing to file %s to indicate this.\n", fieldnum, bp.solved_out);
 				if (solvedfile_set(bp.solved_out, fieldnum)) {
-					fprintf(stderr, "Failed to write to solvedfile %s.\n", bp.solved_out);
+					logerr(&bp, "Failed to write to solvedfile %s.\n", bp.solved_out);
 				}
 			}
 			if (bp.solvedserver) {
@@ -1336,8 +1329,7 @@ static void solve_fields() {
 
 		} else {
 			// Field unsolved.
-			if (!bp.silent)
-				fprintf(stderr, "Field %i is unsolved.\n", fieldnum);
+			logmsg(&bp, "Field %i is unsolved.\n", fieldnum);
 		}
 
 		handlehits_free_matchobjs(bp.hits);
@@ -1345,10 +1337,9 @@ static void solve_fields() {
 
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
-		if (!bp.silent)
-			fprintf(stderr, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n",
-					(utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
-					millis_between(&last_wtime, &wtime) * 0.001);
+		logmsg(&bp, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n",
+			   (utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
+			   millis_between(&last_wtime, &wtime) * 0.001);
 
 		last_utime = utime;
 		last_stime = stime;
@@ -1357,12 +1348,12 @@ static void solve_fields() {
 	cleanup:
 		if (bp.rdls) {
 			if (rdlist_fix_field(bp.rdls)) {
-				fprintf(stderr, "Failed to fix RDLS field header.\n");
+				logerr(&bp, "Failed to fix RDLS field header.\n");
 			}
 		}
 		if (bp.indexrdls) {
 			if (rdlist_fix_field(bp.indexrdls)) {
-				fprintf(stderr, "Failed to fix index RDLS field header.\n");
+				logerr(&bp, "Failed to fix index RDLS field header.\n");
 			}
 		}
 	}
