@@ -62,9 +62,6 @@ static void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s\n", progname);
 }
 
-static void solve_fields();
-static int read_parameters();
-
 #define DEFAULT_CODE_TOL .01
 #define DEFAULT_PARITY PARITY_BOTH
 #define DEFAULT_TWEAK_ABORDER 3
@@ -164,6 +161,9 @@ struct blind_params {
 };
 typedef struct blind_params blind_params;
 
+static void solve_fields();
+static int read_parameters(blind_params* bp);
+
 static blind_params bp;
 
 static void loglvl(int level, const blind_params* bp, const char* format, va_list va) {
@@ -216,8 +216,8 @@ static void wall_time_limit(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-    uint numfields;
 	char* progname = argv[0];
+    uint numfields;
 	int i;
 
 	if (argc == 2 && strcmp(argv[1],"-s") == 0) {
@@ -230,14 +230,17 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	bp.fieldlist = il_new(256);
-	bp.indexes = pl_new(16);
 	qfits_err_statset(1);
 
+	bp.fieldlist = il_new(256);
+	bp.indexes = pl_new(16);
+
+	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
 		int I;
 		tic();
 
+		// Reset params.
 		il_remove_all(bp.fieldlist);
 		pl_remove_all(bp.indexes);
 
@@ -251,7 +254,7 @@ int main(int argc, char *argv[]) {
 		bp.firstfield = bp.lastfield = -1;
 		bp.healpix = -1;
 
-		if (read_parameters()) {
+		if (read_parameters(&bp)) {
 			free(bp.xcolname);
 			free(bp.ycolname);
 			free(bp.fieldid_key);
@@ -654,7 +657,7 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-static int read_parameters() {
+static int read_parameters(blind_params* bp) {
 	for (;;) {
 		char buffer[10240];
 		char* nextword;
@@ -671,10 +674,10 @@ static int read_parameters() {
 		while (*line && isspace(*line))
 			line++;
 
-		logmsg(&bp, "Command: %s\n", line);
+		logmsg(bp, "Command: %s\n", line);
 
 		if (line[0] == '#') {
-			logmsg(&bp, "Skipping comment.\n");
+			logmsg(bp, "Skipping comment.\n");
 			continue;
 		}
 		// skip blank lines.
@@ -682,140 +685,140 @@ static int read_parameters() {
 			continue;
 		}
 		if (is_word(line, "help", &nextword)) {
-			logmsg(&bp, "No help soup for you!\n  (use the source, Luke)\n");
+			logmsg(bp, "No help soup for you!\n  (use the source, Luke)\n");
 		} else if (is_word(line, "cpulimit ", &nextword)) {
-			bp.cpulimit = atoi(nextword);
+			bp->cpulimit = atoi(nextword);
 		} else if (is_word(line, "timelimit ", &nextword)) {
-			bp.timelimit = atoi(nextword);
+			bp->timelimit = atoi(nextword);
 		} else if (is_word(line, "agreetol ", &nextword)) {
-			bp.agreetol = atof(nextword);
+			bp->agreetol = atof(nextword);
 		} else if (is_word(line, "verify_dist ", &nextword)) {
-			bp.verify_dist2 = arcsec2distsq(atof(nextword));
+			bp->verify_dist2 = arcsec2distsq(atof(nextword));
 		} else if (is_word(line, "verify_pix ", &nextword)) {
-			bp.verify_pix = atof(nextword);
+			bp->verify_pix = atof(nextword);
 		} else if (is_word(line, "nagree_toverify ", &nextword)) {
-			bp.nagree_toverify = atoi(nextword);
+			bp->nagree_toverify = atoi(nextword);
 		} else if (is_word(line, "overlap_tosolve ", &nextword)) {
-			bp.overlap_tosolve = atof(nextword);
+			bp->overlap_tosolve = atof(nextword);
 		} else if (is_word(line, "overlap_tokeep ", &nextword)) {
-			bp.overlap_tokeep = atof(nextword);
+			bp->overlap_tokeep = atof(nextword);
 		} else if (is_word(line, "overlap_toprint ", &nextword)) {
-			bp.overlap_toprint = atof(nextword);
+			bp->overlap_toprint = atof(nextword);
 		} else if (is_word(line, "min_ninfield ", &nextword)) {
 			// LEGACY
-			logmsg(&bp, "Warning, the \"min_ninfield\" command is deprecated."
+			logmsg(bp, "Warning, the \"min_ninfield\" command is deprecated."
 					"Use \"ninfield_tokeep\" and \"ninfield_tosolve\" instead.\n");
-			bp.ninfield_tokeep = bp.ninfield_tosolve = atoi(nextword);
+			bp->ninfield_tokeep = bp->ninfield_tosolve = atoi(nextword);
 		} else if (is_word(line, "ninfield_tokeep ", &nextword)) {
-			bp.ninfield_tokeep = atoi(nextword);
+			bp->ninfield_tokeep = atoi(nextword);
 		} else if (is_word(line, "ninfield_tosolve ", &nextword)) {
-			bp.ninfield_tosolve = atoi(nextword);
+			bp->ninfield_tosolve = atoi(nextword);
 		} else if (is_word(line, "match ", &nextword)) {
-			bp.matchfname = strdup(nextword);
+			bp->matchfname = strdup(nextword);
 		} else if (is_word(line, "rdls ", &nextword)) {
-			bp.rdlsfname = strdup(nextword);
+			bp->rdlsfname = strdup(nextword);
 		} else if (is_word(line, "indexrdls ", &nextword)) {
-			bp.indexrdlsfname = strdup(nextword);
+			bp->indexrdlsfname = strdup(nextword);
 		} else if (is_word(line, "solved ", &nextword)) {
-			free(bp.solved_in);
-			free(bp.solved_out);
-			bp.solved_in = strdup(nextword);
-			bp.solved_out = strdup(nextword);
+			free(bp->solved_in);
+			free(bp->solved_out);
+			bp->solved_in = strdup(nextword);
+			bp->solved_out = strdup(nextword);
 		} else if (is_word(line, "solved_in ", &nextword)) {
-			free(bp.solved_in);
-			bp.solved_in = strdup(nextword);
+			free(bp->solved_in);
+			bp->solved_in = strdup(nextword);
 		} else if (is_word(line, "cancel ", &nextword)) {
-			free(bp.cancelfname);
-			bp.cancelfname = strdup(nextword);
+			free(bp->cancelfname);
+			bp->cancelfname = strdup(nextword);
 		} else if (is_word(line, "solved_out ", &nextword)) {
-			free(bp.solved_out);
-			bp.solved_out = strdup(nextword);
+			free(bp->solved_out);
+			bp->solved_out = strdup(nextword);
 		} else if (is_word(line, "log ", &nextword)) {
 			// Open the log file...
-			bp.logfname = strdup(nextword);
-			bp.logfd = fopen(bp.logfname, "a");
-			if (!bp.logfd) {
-				logerr(&bp, "Failed to open log file %s: %s\n", bp.logfname, strerror(errno));
+			bp->logfname = strdup(nextword);
+			bp->logfd = fopen(bp->logfname, "a");
+			if (!bp->logfd) {
+				logerr(bp, "Failed to open log file %s: %s\n", bp->logfname, strerror(errno));
 				goto bailout;
 			}
 			// Save old stdout/stderr...
-			bp.dup_stdout = dup(fileno(stdout));
-			if (bp.dup_stdout == -1) {
-				logerr(&bp, "Failed to dup stdout: %s\n", strerror(errno));
+			bp->dup_stdout = dup(fileno(stdout));
+			if (bp->dup_stdout == -1) {
+				logerr(bp, "Failed to dup stdout: %s\n", strerror(errno));
 				goto bailout;
 			}
-			bp.dup_stderr = dup(fileno(stderr));
-			if (bp.dup_stderr == -1) {
-				logerr(&bp, "Failed to dup stderr: %s\n", strerror(errno));
+			bp->dup_stderr = dup(fileno(stderr));
+			if (bp->dup_stderr == -1) {
+				logerr(bp, "Failed to dup stderr: %s\n", strerror(errno));
 				goto bailout;
 			}
 			// Replace stdout/stderr with logfile...
-			if (dup2(fileno(bp.logfd), fileno(stderr)) == -1) {
-				logerr(&bp, "Failed to dup2 log file: %s\n", strerror(errno));
+			if (dup2(fileno(bp->logfd), fileno(stderr)) == -1) {
+				logerr(bp, "Failed to dup2 log file: %s\n", strerror(errno));
 				goto bailout;
 			}
-			if (dup2(fileno(bp.logfd), fileno(stdout)) == -1) {
-				logerr(&bp, "Failed to dup2 log file: %s\n", strerror(errno));
+			if (dup2(fileno(bp->logfd), fileno(stdout)) == -1) {
+				logerr(bp, "Failed to dup2 log file: %s\n", strerror(errno));
 				goto bailout;
 			}
 			continue;
 			bailout:
-			if (bp.logfd) fclose(bp.logfd);
-			free(bp.logfname);
-			bp.logfname = NULL;
+			if (bp->logfd) fclose(bp->logfd);
+			free(bp->logfname);
+			bp->logfname = NULL;
 		} else if (is_word(line, "solvedserver ", &nextword)) {
-			bp.solvedserver = strdup(nextword);
+			bp->solvedserver = strdup(nextword);
 		} else if (is_word(line, "silent", &nextword)) {
-			bp.silent = TRUE;
+			bp->silent = TRUE;
 		} else if (is_word(line, "quiet", &nextword)) {
-			bp.quiet = TRUE;
+			bp->quiet = TRUE;
 		} else if (is_word(line, "verbose", &nextword)) {
-			bp.verbose = TRUE;
+			bp->verbose = TRUE;
 		} else if (is_word(line, "tweak", &nextword)) {
-			bp.do_tweak = TRUE;
+			bp->do_tweak = TRUE;
 		} else if (is_word(line, "wcs ", &nextword)) {
-			bp.wcs_template = strdup(nextword);
+			bp->wcs_template = strdup(nextword);
 		} else if (is_word(line, "fieldid_key ", &nextword)) {
-			free(bp.fieldid_key);
-			bp.fieldid_key = strdup(nextword);
+			free(bp->fieldid_key);
+			bp->fieldid_key = strdup(nextword);
 		} else if (is_word(line, "maxquads ", &nextword)) {
-			bp.maxquads = atoi(nextword);
+			bp->maxquads = atoi(nextword);
 		} else if (is_word(line, "maxmatches ", &nextword)) {
-			bp.maxmatches = atoi(nextword);
+			bp->maxmatches = atoi(nextword);
 		} else if (is_word(line, "xcol ", &nextword)) {
-			free(bp.xcolname);
-			bp.xcolname = strdup(nextword);
+			free(bp->xcolname);
+			bp->xcolname = strdup(nextword);
 		} else if (is_word(line, "ycol ", &nextword)) {
-			free(bp.ycolname);
-			bp.ycolname = strdup(nextword);
+			free(bp->ycolname);
+			bp->ycolname = strdup(nextword);
 		} else if (is_word(line, "index ", &nextword)) {
-			pl_append(bp.indexes, strdup(nextword));
+			pl_append(bp->indexes, strdup(nextword));
 		} else if (is_word(line, "field ", &nextword)) {
-			bp.fieldfname = mk_fieldfn(nextword);
+			bp->fieldfname = mk_fieldfn(nextword);
 		} else if (is_word(line, "fieldid ", &nextword)) {
-			bp.fieldid = atoi(nextword);
+			bp->fieldid = atoi(nextword);
 		} else if (is_word(line, "done ", &nextword)) {
-			bp.donefname = strdup(nextword);
+			bp->donefname = strdup(nextword);
 		} else if (is_word(line, "donescript ", &nextword)) {
-			bp.donescript = strdup(nextword);
+			bp->donescript = strdup(nextword);
 		} else if (is_word(line, "start ", &nextword)) {
-			bp.startfname = strdup(nextword);
+			bp->startfname = strdup(nextword);
 		} else if (is_word(line, "sdepth ", &nextword)) {
-			bp.startdepth = atoi(nextword);
+			bp->startdepth = atoi(nextword);
 		} else if (is_word(line, "depth ", &nextword)) {
-			bp.enddepth = atoi(nextword);
+			bp->enddepth = atoi(nextword);
 		} else if (is_word(line, "tol ", &nextword)) {
-			bp.codetol = atof(nextword);
+			bp->codetol = atof(nextword);
 		} else if (is_word(line, "parity ", &nextword)) {
-			bp.parity = atoi(nextword);
+			bp->parity = atoi(nextword);
 		} else if (is_word(line, "fieldunits_lower ", &nextword)) {
-			bp.funits_lower = atof(nextword);
+			bp->funits_lower = atof(nextword);
 		} else if (is_word(line, "fieldunits_upper ", &nextword)) {
-			bp.funits_upper = atof(nextword);
+			bp->funits_upper = atof(nextword);
 		} else if (is_word(line, "firstfield ", &nextword)) {
-			bp.firstfield = atoi(nextword);
+			bp->firstfield = atoi(nextword);
 		} else if (is_word(line, "lastfield ", &nextword)) {
-			bp.lastfield = atoi(nextword);
+			bp->lastfield = atoi(nextword);
 		} else if (is_word(line, "fields ", &nextword)) {
 			char* str = nextword;
 			char* endp;
@@ -824,17 +827,17 @@ static int read_parameters() {
 				int fld = strtol(str, &endp, 10);
 				if (str == endp) {
 					// non-numeric value
-					logerr(&bp, "Couldn't parse: %.20s [etc]\n", str);
+					logerr(bp, "Couldn't parse: %.20s [etc]\n", str);
 					break;
 				}
 				if (firstfld == -1) {
-					il_insert_unique_ascending(bp.fieldlist, fld);
+					il_insert_unique_ascending(bp->fieldlist, fld);
 				} else {
 					if (firstfld > fld) {
-						logerr(&bp, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
+						logerr(bp, "Ranges must be specified as <start>/<end>: %i/%i\n", firstfld, fld);
 					} else {
 						for (i=firstfld+1; i<=fld; i++) {
-							il_insert_unique_ascending(bp.fieldlist, i);
+							il_insert_unique_ascending(bp->fieldlist, i);
 						}
 					}
 					firstfld = -1;
@@ -851,7 +854,7 @@ static int read_parameters() {
 		} else if (is_word(line, "quit", &nextword)) {
 			return 1;
 		} else {
-			logmsg(&bp, "I didn't understand that command.\n");
+			logmsg(bp, "I didn't understand that command.\n");
 		}
 	}
 }
