@@ -33,6 +33,7 @@
 #include <limits.h>
 #include <math.h>
 #include <signal.h>
+#include <ctype.h>
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -648,76 +649,85 @@ static int read_parameters() {
 	for (;;) {
 		char buffer[10240];
 		char* nextword;
+		char* line;
 		if (!fgets(buffer, sizeof(buffer), stdin)) {
 			return -1;
 		}
+		line = buffer;
 		// strip off newline
-		if (buffer[strlen(buffer) - 1] == '\n')
-			buffer[strlen(buffer) - 1] = '\0';
+		if (line[strlen(line) - 1] == '\n')
+			line[strlen(line) - 1] = '\0';
+
+		// skip leading whitespace:
+		while (*line && isspace(*line))
+			line++;
 
 		if (!bp.silent) {
-			fprintf(stderr, "Command: %s\n", buffer);
+			fprintf(stderr, "Command: %s\n", line);
 			fflush(stderr);
 		}
 
-		if (buffer[0] == '#') {
+		if (line[0] == '#') {
 			if (!bp.silent) {
 				fprintf(stderr, "Skipping comment.\n");
 				fflush(stderr);
 			}
 			continue;
 		}
-
-		if (is_word(buffer, "help", &nextword)) {
+		// skip blank lines.
+		if (line[0] == '\0') {
+			continue;
+		}
+		if (is_word(line, "help", &nextword)) {
 			fprintf(stderr, "No help soup for you!\n  (use the source, Luke)\n");
-		} else if (is_word(buffer, "cpulimit ", &nextword)) {
+		} else if (is_word(line, "cpulimit ", &nextword)) {
 			bp.cpulimit = atoi(nextword);
-		} else if (is_word(buffer, "timelimit ", &nextword)) {
+		} else if (is_word(line, "timelimit ", &nextword)) {
 			bp.timelimit = atoi(nextword);
-		} else if (is_word(buffer, "agreetol ", &nextword)) {
+		} else if (is_word(line, "agreetol ", &nextword)) {
 			bp.agreetol = atof(nextword);
-		} else if (is_word(buffer, "verify_dist ", &nextword)) {
+		} else if (is_word(line, "verify_dist ", &nextword)) {
 			bp.verify_dist2 = arcsec2distsq(atof(nextword));
-		} else if (is_word(buffer, "verify_pix ", &nextword)) {
+		} else if (is_word(line, "verify_pix ", &nextword)) {
 			bp.verify_pix = atof(nextword);
-		} else if (is_word(buffer, "nagree_toverify ", &nextword)) {
+		} else if (is_word(line, "nagree_toverify ", &nextword)) {
 			bp.nagree_toverify = atoi(nextword);
-		} else if (is_word(buffer, "overlap_tosolve ", &nextword)) {
+		} else if (is_word(line, "overlap_tosolve ", &nextword)) {
 			bp.overlap_tosolve = atof(nextword);
-		} else if (is_word(buffer, "overlap_tokeep ", &nextword)) {
+		} else if (is_word(line, "overlap_tokeep ", &nextword)) {
 			bp.overlap_tokeep = atof(nextword);
-		} else if (is_word(buffer, "overlap_toprint ", &nextword)) {
+		} else if (is_word(line, "overlap_toprint ", &nextword)) {
 			bp.overlap_toprint = atof(nextword);
-		} else if (is_word(buffer, "min_ninfield ", &nextword)) {
+		} else if (is_word(line, "min_ninfield ", &nextword)) {
 			// LEGACY
 			fprintf(stderr, "Warning, the \"min_ninfield\" command is deprecated."
 					"Use \"ninfield_tokeep\" and \"ninfield_tosolve\" instead.\n");
 			bp.ninfield_tokeep = bp.ninfield_tosolve = atoi(nextword);
-		} else if (is_word(buffer, "ninfield_tokeep ", &nextword)) {
+		} else if (is_word(line, "ninfield_tokeep ", &nextword)) {
 			bp.ninfield_tokeep = atoi(nextword);
-		} else if (is_word(buffer, "ninfield_tosolve ", &nextword)) {
+		} else if (is_word(line, "ninfield_tosolve ", &nextword)) {
 			bp.ninfield_tosolve = atoi(nextword);
-		} else if (is_word(buffer, "match ", &nextword)) {
+		} else if (is_word(line, "match ", &nextword)) {
 			bp.matchfname = strdup(nextword);
-		} else if (is_word(buffer, "rdls ", &nextword)) {
+		} else if (is_word(line, "rdls ", &nextword)) {
 			bp.rdlsfname = strdup(nextword);
-		} else if (is_word(buffer, "indexrdls ", &nextword)) {
+		} else if (is_word(line, "indexrdls ", &nextword)) {
 			bp.indexrdlsfname = strdup(nextword);
-		} else if (is_word(buffer, "solved ", &nextword)) {
+		} else if (is_word(line, "solved ", &nextword)) {
 			free(bp.solved_in);
 			free(bp.solved_out);
 			bp.solved_in = strdup(nextword);
 			bp.solved_out = strdup(nextword);
-		} else if (is_word(buffer, "solved_in ", &nextword)) {
+		} else if (is_word(line, "solved_in ", &nextword)) {
 			free(bp.solved_in);
 			bp.solved_in = strdup(nextword);
-		} else if (is_word(buffer, "cancel ", &nextword)) {
+		} else if (is_word(line, "cancel ", &nextword)) {
 			free(bp.cancelfname);
 			bp.cancelfname = strdup(nextword);
-		} else if (is_word(buffer, "solved_out ", &nextword)) {
+		} else if (is_word(line, "solved_out ", &nextword)) {
 			free(bp.solved_out);
 			bp.solved_out = strdup(nextword);
-		} else if (is_word(buffer, "log ", &nextword)) {
+		} else if (is_word(line, "log ", &nextword)) {
 			// Open the log file...
 			bp.logfname = strdup(nextword);
 			bp.logfd = fopen(bp.logfname, "a");
@@ -750,61 +760,60 @@ static int read_parameters() {
 			if (bp.logfd) fclose(bp.logfd);
 			free(bp.logfname);
 			bp.logfname = NULL;
-		} else if (is_word(buffer, "solvedserver ", &nextword)) {
+		} else if (is_word(line, "solvedserver ", &nextword)) {
 			bp.solvedserver = strdup(nextword);
-		} else if (is_word(buffer, "silent", &nextword)) {
+		} else if (is_word(line, "silent", &nextword)) {
 			bp.silent = TRUE;
-		} else if (is_word(buffer, "quiet", &nextword)) {
+		} else if (is_word(line, "quiet", &nextword)) {
 			bp.quiet = TRUE;
-		} else if (is_word(buffer, "verbose", &nextword)) {
+		} else if (is_word(line, "verbose", &nextword)) {
 			bp.verbose = TRUE;
-		} else if (is_word(buffer, "tweak", &nextword)) {
+		} else if (is_word(line, "tweak", &nextword)) {
 			bp.do_tweak = TRUE;
-		} else if (is_word(buffer, "wcs ", &nextword)) {
+		} else if (is_word(line, "wcs ", &nextword)) {
 			bp.wcs_template = strdup(nextword);
-		} else if (is_word(buffer, "fieldid_key ", &nextword)) {
+		} else if (is_word(line, "fieldid_key ", &nextword)) {
 			free(bp.fieldid_key);
 			bp.fieldid_key = strdup(nextword);
-		} else if (is_word(buffer, "maxquads ", &nextword)) {
+		} else if (is_word(line, "maxquads ", &nextword)) {
 			bp.maxquads = atoi(nextword);
-		} else if (is_word(buffer, "maxmatches ", &nextword)) {
+		} else if (is_word(line, "maxmatches ", &nextword)) {
 			bp.maxmatches = atoi(nextword);
-		} else if (is_word(buffer, "xcol ", &nextword)) {
+		} else if (is_word(line, "xcol ", &nextword)) {
 			free(bp.xcolname);
 			bp.xcolname = strdup(nextword);
-		} else if (is_word(buffer, "ycol ", &nextword)) {
+		} else if (is_word(line, "ycol ", &nextword)) {
 			free(bp.ycolname);
 			bp.ycolname = strdup(nextword);
-		} else if (is_word(buffer, "index ", &nextword)) {
+		} else if (is_word(line, "index ", &nextword)) {
 			pl_append(bp.indexes, strdup(nextword));
-		} else if (is_word(buffer, "field ", &nextword)) {
+		} else if (is_word(line, "field ", &nextword)) {
 			bp.fieldfname = mk_fieldfn(nextword);
-		} else if (is_word(buffer, "fieldid ", &nextword)) {
+		} else if (is_word(line, "fieldid ", &nextword)) {
 			bp.fieldid = atoi(nextword);
-		} else if (is_word(buffer, "done ", &nextword)) {
+		} else if (is_word(line, "done ", &nextword)) {
 			bp.donefname = strdup(nextword);
-		} else if (is_word(buffer, "donescript ", &nextword)) {
+		} else if (is_word(line, "donescript ", &nextword)) {
 			bp.donescript = strdup(nextword);
-		} else if (is_word(buffer, "start ", &nextword)) {
+		} else if (is_word(line, "start ", &nextword)) {
 			bp.startfname = strdup(nextword);
-		} else if (is_word(buffer, "sdepth ", &nextword)) {
+		} else if (is_word(line, "sdepth ", &nextword)) {
 			bp.startdepth = atoi(nextword);
-		} else if (is_word(buffer, "depth ", &nextword)) {
+		} else if (is_word(line, "depth ", &nextword)) {
 			bp.enddepth = atoi(nextword);
-		} else if (is_word(buffer, "tol ", &nextword)) {
+		} else if (is_word(line, "tol ", &nextword)) {
 			bp.codetol = atof(nextword);
-		} else if (is_word(buffer, "parity ", &nextword)) {
-			// FIXME?
+		} else if (is_word(line, "parity ", &nextword)) {
 			bp.parity = atoi(nextword);
-		} else if (is_word(buffer, "fieldunits_lower ", &nextword)) {
+		} else if (is_word(line, "fieldunits_lower ", &nextword)) {
 			bp.funits_lower = atof(nextword);
-		} else if (is_word(buffer, "fieldunits_upper ", &nextword)) {
+		} else if (is_word(line, "fieldunits_upper ", &nextword)) {
 			bp.funits_upper = atof(nextword);
-		} else if (is_word(buffer, "firstfield ", &nextword)) {
+		} else if (is_word(line, "firstfield ", &nextword)) {
 			bp.firstfield = atoi(nextword);
-		} else if (is_word(buffer, "lastfield ", &nextword)) {
+		} else if (is_word(line, "lastfield ", &nextword)) {
 			bp.lastfield = atoi(nextword);
-		} else if (is_word(buffer, "fields ", &nextword)) {
+		} else if (is_word(line, "fields ", &nextword)) {
 			char* str = nextword;
 			char* endp;
 			int i, firstfld = -1;
@@ -834,9 +843,9 @@ static int read_parameters() {
 					break;
 				str = endp + 1;
 			}
-		} else if (is_word(buffer, "run", &nextword)) {
+		} else if (is_word(line, "run", &nextword)) {
 			return 0;
-		} else if (is_word(buffer, "quit", &nextword)) {
+		} else if (is_word(line, "quit", &nextword)) {
 			return 1;
 		} else {
 			fprintf(stderr, "I didn't understand that command.\n");
