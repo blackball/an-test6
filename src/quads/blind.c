@@ -249,9 +249,6 @@ int main(int argc, char *argv[]) {
 		tic();
 
 		// Reset params.
-		il_remove_all(bp.fieldlist);
-		pl_remove_all(bp.indexes);
-
 		memset(&bp, 0, sizeof(blind_params));
 
 		bp.fieldid_key = strdup("FIELDID");
@@ -354,14 +351,22 @@ int main(int argc, char *argv[]) {
 		logmsg(&bp, "Reading fields file %s...", bp.fieldfname);
 		bp.xyls = xylist_open(bp.fieldfname);
 		if (!bp.xyls) {
-			logerr(&bp, "Failed to read xylist.\n");
-			exit(-1);
+			char fn[256];
+			// LEGACY - try appending .fits...
+			logmsg(&bp, "Warning, you should specify the full field filename.\n");
+			snprintf(fn, 256, "%s.fits", bp.fieldfname);
+			bp.xyls = xylist_open(fn);
+			if (!bp.xyls) {
+				logerr(&bp, "Failed to read xylist.\n");
+				exit(-1);
+			}
+			free(bp.fieldfname);
+			bp.fieldfname = strdup(fn);
 		}
-		numfields = bp.xyls->nfields;
-		logmsg(&bp, "got %u fields.\n", numfields);
-		
 		bp.xyls->xname = bp.xcolname;
 		bp.xyls->yname = bp.ycolname;
+		numfields = bp.xyls->nfields;
+		logmsg(&bp, "got %u fields.\n", numfields);
 
 		if (bp.solvedserver) {
 			if (solvedclient_set_server(bp.solvedserver)) {
@@ -656,6 +661,9 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		il_remove_all(bp.fieldlist);
+		pl_remove_all(bp.indexes);
+
 		free(bp.logfname);
 		free(bp.donefname);
 		free(bp.donescript);
@@ -671,7 +679,7 @@ int main(int argc, char *argv[]) {
 		free(bp.ycolname);
 		free(bp.wcs_template);
 		free(bp.fieldid_key);
-		free_fn(bp.fieldfname);
+		free(bp.fieldfname);
 	}
 
 	il_free(bp.fieldlist);
@@ -817,7 +825,8 @@ static int read_parameters(blind_params* bp) {
 		} else if (is_word(line, "index ", &nextword)) {
 			pl_append(bp->indexes, strdup(nextword));
 		} else if (is_word(line, "field ", &nextword)) {
-			bp->fieldfname = mk_fieldfn(nextword);
+			free(bp->fieldfname);
+			bp->fieldfname = strdup(nextword);
 		} else if (is_word(line, "fieldid ", &nextword)) {
 			bp->fieldid = atoi(nextword);
 		} else if (is_word(line, "done ", &nextword)) {
