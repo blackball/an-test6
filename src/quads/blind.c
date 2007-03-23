@@ -316,8 +316,16 @@ int main(int argc, char *argv[]) {
 		logmsg(&bp, "cpulimit %i\n", bp.cpulimit);
 		logmsg(&bp, "timelimit %i\n", bp.timelimit);
 
-		if (!pl_size(bp.indexes) || !bp.fieldfname || (bp.codetol < 0.0) || !bp.matchfname) {
-			logerr(&bp, "Invalid params... this message is useless.\n");
+		if (!pl_size(bp.indexes)) {
+			logerr(&bp, "You must specify an index.\n");
+			exit(-1);
+		}
+		if (!bp.fieldfname) {
+			logerr(&bp, "You must specify a field filename (xylist).\n");
+			exit(-1);
+		}
+		if (bp.codetol < 0.0) {
+			logerr(&bp, "You must specify codetol > 0\n");
 			exit(-1);
 		}
 
@@ -326,19 +334,22 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		bp.mf = matchfile_open_for_writing(bp.matchfname);
-		if (!bp.mf) {
-			logerr(&bp, "Failed to open file %s to write match file.\n", bp.matchfname);
-			exit(-1);
+		if (bp.matchfname) {
+			bp.mf = matchfile_open_for_writing(bp.matchfname);
+			if (!bp.mf) {
+				logerr(&bp, "Failed to open file %s to write match file.\n", bp.matchfname);
+				exit(-1);
+			}
+			boilerplate_add_fits_headers(bp.mf->header);
+			qfits_header_add(bp.mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
+			qfits_header_add(bp.mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+			add_blind_params(&bp, bp.mf->header);
+			if (matchfile_write_header(bp.mf)) {
+				logerr(&bp, "Failed to write matchfile header.\n");
+				exit(-1);
+			}
 		}
-		boilerplate_add_fits_headers(bp.mf->header);
-		qfits_header_add(bp.mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
-		add_blind_params(&bp, bp.mf->header);
-		if (matchfile_write_header(bp.mf)) {
-			logerr(&bp, "Failed to write matchfile header.\n");
-			exit(-1);
-		}
-		
+
 		// Read .xyls file...
 		logmsg(&bp, "Reading fields file %s...", bp.fieldfname);
 		bp.xyls = xylist_open(bp.fieldfname);
@@ -583,9 +594,12 @@ int main(int argc, char *argv[]) {
 		}
 
 		xylist_close(bp.xyls);
-		if (matchfile_fix_header(bp.mf) ||
-			matchfile_close(bp.mf)) {
-			logerr(&bp, "Error closing matchfile.\n");
+
+		if (bp.mf) {
+			if (matchfile_fix_header(bp.mf) ||
+				matchfile_close(bp.mf)) {
+				logerr(&bp, "Error closing matchfile.\n");
+			}
 		}
 
 		if (bp.rdls) {
@@ -1206,7 +1220,7 @@ static void solve_fields() {
 		}
 
 		// Write the keepable hits.
-		if (bp.hits->keepers) {
+		if (bp.hits->keepers && bp.mf) {
 			int i;
 			for (i=0; i<pl_size(bp.hits->keepers); i++) {
 				MatchObj* mo = pl_get(bp.hits->keepers, i);
