@@ -526,43 +526,49 @@ function process_data ($vals) {
 
 	$imgfilename = "";
 	$imgbasename = "";
+	//$origname = "";
 	if ($xysrc == "url") {
 		// Try to retrieve the URL...
 		loggit("retrieving url " . $imgurl . " ...\n");
+		//$origname = $imgurl;
+		/*
 		$usetype = get_image_type($imgurl, $xtopnm);
 		if (!$usetype) {
 			loggit("unknown image type.\n");
 			die("Unknown image type.");
 		}
 		loggit("Assuming image type: " . $usetype . "\n");
-
 		$imgbasename = "downloaded." . $usetype;
-		$downloadedimg = $mydir . $imgbasename;
-		loggit("Writing to file: " . $downloadedimg . "\n");
+		*/
 
+		$imgbasename = "downloaded.";
+		$downloadedimg = $mydir . $imgbasename;
+		$imgfilename = $downloadedimg;
+		loggit("Writing to file: " . $downloadedimg . "\n");
 		if (download_url($imgurl, $downloadedimg, $maxfilesize, $errmsg) === FALSE) {
 			die("Failed to download image: " . $errmsg);
 		}
-		$imgfilename = $downloadedimg;
 
 	} else if ($xysrc == "img") {
 		// If an image was uploaded, move it into place.
 		// The filename on the user's machine:
 		$imgval = $imgfile->getValue();
 		$origname = $imgval["name"];
+		/*
 		$usetype = get_image_type($origname, $xtopnm);
 		if (!$usetype) {
 			loggit("unknown image file type.\n");
-			$errstr = "Unknown image file type.";
+			die("Unknown image type.");
 			return FALSE;
 		}
 		loggit("original image file: " . $origname . ", using type: " . $usetype . "\n");
-
+		*/
 		if (!setjobdata($db, array("image-origname"=>$origname))) {
 			die("failed to update jobdata: image-origname");
 		}
 
-		$imgbasename = "uploaded." . $usetype;
+		//$imgbasename = "uploaded." . $usetype;
+		$imgbasename = "uploaded.";
 		$imgfilename = $mydir . $imgbasename;
 		if (!$imgfile->moveUploadedFile($mydir, $imgbasename)) {
 			die("failed to move uploaded file into place.");
@@ -570,10 +576,18 @@ function process_data ($vals) {
 	}
 
 	if ($imgfilename) {
-		if (!convert_image($imgfilename, $mydir, $usetype, $xtopnm,
+		if (!convert_image($imgfilename, $mydir, $suffix,
 						   $errstr, $W, $H, $shrink, $dispW, $dispH, $dispimgbase)) {
 			die($errstr);
 		}
+
+		$newname = $imgfilename . $suffix;
+		if (!rename($imgfilename, $newname)) {
+			die("failed to rename img file.");
+		}
+		loggit("Renamed image file to " . $newname . "\n");
+		$imgfilename = $newname;
+		$imgbasename .= $suffix;
 
 		if (!setjobdata($db, array("imageW" => $W,
 								   "imageH" => $H,
@@ -585,6 +599,7 @@ function process_data ($vals) {
 			die("failed to save image {filename,W,H} in database.");
 		}
 
+		/*
 		$imgtype = exif_imagetype($imgfilename);
 		if ($imgtype === FALSE) {
 			loggit("Failed to run exif_imagetype on image " . $imgfilename . "\n");
@@ -622,7 +637,7 @@ function process_data ($vals) {
 				}
 			}
 		}
-
+		*/
 	}
 
 	$xylistfilename = "field.xy"; // without .fits
@@ -930,16 +945,37 @@ function process_data ($vals) {
 }
 
 function get_image_type($filename, &$xtopnm) {
+}
+
+/*
+function get_image_type($filename, &$xtopnm) {
 	global $an_fitstopnm;
+
+	$usetype = "cat %s |";
+	$cmd = "";
+
+	foreach ($comptype as $ending => $command) {
+		if (!strcasecmp(substr($filename, -strlen($ending)), $ending)) {
+			$usetype = $type;
+			$cmd = $command;
+			$filename = substr($filename, 0, strlen($filename)-strlen($ending));
+			break;
+		}
+	}
+
+	if ($usetype) {
+		loggit("Found compressed suffix " . $usetype . ", base filename " .
+			   $filename . ", cmd " . $cmd);
+	}
 
 	// Xtopnm formats we accept:
 	// normalize filenames
-	$imgtypemap = array("jpg" => "jpeg",
-						"jpeg" => "jpeg",
-						"png" => "png",
-						"fits" => "fits",
-						"gif" => "gif",
-						"ppm" => "ppm",
+	$imgtypemap = array(".jpg" => "jpeg",
+						".jpeg" => "jpeg",
+						".png" => "png",
+						".fits" => "fits",
+						".gif" => "gif",
+						".ppm" => "ppm",
 						);
 
 	$xtopnmmap = array("jpeg" => "jpegtopnm",
@@ -964,8 +1000,8 @@ function get_image_type($filename, &$xtopnm) {
 	}
 	return $usetype;
 }
-
-function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$shrink,
+*/
+function convert_image($img, $mydir, &$addsuffix, &$errstr, &$W, &$H, &$shrink,
 					   &$dispW, &$dispH, &$dispimgbase) {
 	global $fits2xy;
 	global $modhead;
@@ -973,19 +1009,119 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$sh
 	global $tabsort;
 	global $objs_fn;
 	global $fits2xyout_fn;
+	global $an_fitstopnm;
+
 	loggit("image file: " . filesize($img) . " bytes.\n");
+
+	// handle compressed files.
+	/*
+	$comptype = array(".gz"  => "gunzip  -cd %s > %s",
+					  ".z"   => "gunzip  -cd %s > %s",
+					  ".bz2" => "bunzip2 -cd %s > %s",
+					  ".zip" => "unzip   -c  %s > %s",
+					  );
+
+	//$filename = $img;
+	$filename = $origname;
+	foreach ($comptype as $ending => $command) {
+		if (!strcasecmp(substr($filename, -strlen($ending)), $ending)) {
+			// don't allow conflicting filenames -
+			$newfilename = "XXX" . substr($filename, 0, strlen($filename)-strlen($ending));
+			$cmd = sprintf($command, $filename, $newfilename);
+			loggit("Command: " . $cmd . "\n");
+			if (system($cmd, $retval)) {
+				loggit("Command failed, return value " . $retval . ": " . $cmd);
+				die("failed to decompress image");
+			}
+			$filename = $newfilename;
+			break;
+		}
+	}
+	*/
+	//phpinfo();
+
+	/*
+	loggit("finfo_open\n");
+	$fi = finfo_open(FILEINFO_MIME | FILEINFO_RAW);
+	if (!$fi) {
+		die("failed to finfo_open()");
+	}
+	loggit("finfo_file(" . $filename . ")\n");
+	$type = finfo_file($fi, $filename);
+	loggit("type: " . $type . " for " . $filename . "\n");
+	if ($img != $filename) {
+		loggit("finfo_file(" . $img . ")\n");
+		$type = finfo_file($fi, $img);
+		loggit("type: " . $type . " for " . $img . "\n");
+	}
+	loggit("finfo_close\n");
+	finfo_close($fi);
+	*/
+	$filename = $img;
+	$addsuffix = "";
+
+	$mimetype = shell_exec("file -b -i -k " . $filename);
+	$typestr = shell_exec("file -b -N " . $filename);
+	loggit("type: " . $mimetype . " " . $typestr . " for " . $filename . "\n");
+
+
+	$comptype = array("gzip compressed data"  => array(".gz",  "gunzip  -cd %s > %s"),
+					  "bzip2 compressed data" => array(".bz2", "bunzip2 -cd %s > %s"),
+					  "Zip archive data"      => array(".zip", "unzip   -p  %s > %s"),
+					  );
+
+	foreach ($comptype as $phrase => $lst) {
+		if (strstr($typestr, $phrase)) {
+			$suff    = $lst[0];
+			$command = $lst[1];
+			$newfilename = $mydir . "uncompressed.";
+			$cmd = sprintf($command, $filename, $newfilename);
+			loggit("Command: " . $cmd . "\n");
+			if (system($cmd, $retval)) {
+				loggit("Command failed, return value " . $retval . ": " . $cmd);
+				die("failed to decompress image");
+			}
+			$addsuffix = $suff;
+			$filename = $newfilename;
+			$mimetype = shell_exec("file -b -i -k -L " . $filename);
+			$typestr = shell_exec("file -b -N -L " . $filename);
+			break;
+		}
+	}
+
+	loggit("type: " . $mimetype . " " . $typestr . " for " . $filename . "\n");
+
+	$imgtype = array("FITS image data"  => array("fits", $an_fitstopnm . " -i %s > %s"),
+					 "JPEG image data"  => array("jpg",  "jpegtopnm %s > %s"),
+					 "PNG image data"   => array("png",  "pngtopnm %s > %s"),
+					 "GIF image data"   => array("gif",  "giftopnm %s > %s"),
+					 "Netpbm PPM"       => array("pnm",  "ppmtoppm < %s > %s"),
+					 "Netpbm PGM"       => array("pnm",  "pgmtoppm %s > %s"),
+					 );
 
 	$pnmimg_orig_base = "image.pnm";
 	$pnmimg = $mydir . $pnmimg_orig_base;
 	$pnmimg_orig = $pnmimg;
-	$cmd = $xtopnm . " " . $img . " > " . $pnmimg;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to convert image file.";
-		return FALSE;
+
+	$gotit = FALSE;
+	foreach ($imgtype as $phrase => $lst) {
+		if (strstr($typestr, $phrase)) {
+			$suff    = $lst[0];
+			$command = $lst[1];
+			$newfilename = $pnmimg;
+			$cmd = sprintf($command, $filename, $newfilename);
+			loggit("Command: " . $cmd . "\n");
+			if (system($cmd, $retval)) {
+				loggit("Command failed, return value " . $retval . ": " . $cmd);
+				die("failed to convert image");
+			}
+			$addsuffix = $suff . $addsuffix;
+			$gotit = TRUE;
+			break;
+		}
+	}
+	if (!$gotit) {
+		die("Unknown image type: " . $typestr);
 	}
 
 	$cmd = "pnmfile " . $pnmimg;
@@ -993,17 +1129,6 @@ function convert_image($img, $mydir, $imgtype, $xtopnm, &$errstr, &$W, &$H, &$sh
 	$res = FALSE;
 	$res = shell_exec($cmd);
 	//loggit("Pnmfile: " . $res . "\n");
-
-	/*
-	$words = explode(" ", $res);
-	$nw = count($words);
-	$W = (int)$words[$nw - 5];
-	$H = (int)$words[$nw - 3];
-	for ($i=0; $i<$nw; $i++) {
-		loggit("words[$i]=" . $words[$i] . "\n");
-	}
-	loggit("Image size: " . $W . " x " . $H . "\n");
-	*/
 
 	// eg, "/home/gmaps/ontheweb-data/13a732d8ff/image.pnm: PGM raw, 4096 by 4096  maxval 255"
 	$pat = '/.*P.M .*, ([[:digit:]]*) by ([[:digit:]]*) *maxval [[:digit:]]*/';
