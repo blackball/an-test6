@@ -84,10 +84,9 @@ struct blind_params {
 	char* wcs_template;
 	// Solvedserver ip:port
 	char *solvedserver;
-	// Fields to solve
+	// Indexes to use (base filenames)
 	pl* indexes;
 
-	// FIXME - more sensible logging!
 	// Logfile
 	FILE* logfd;
 	int dup_stderr;
@@ -128,15 +127,15 @@ struct blind_params {
 
 	int ninfield_tokeep;
 	int ninfield_tosolve;
-	int maxquads;
-	int maxmatches;
-	double cxdx_margin;
-
-	int firstfield, lastfield;
-	il* fieldlist;
 
 	// Does index have CIRCLE (codes in the circle, not the box)?
 	bool circle;
+	double cxdx_margin;
+
+	// If using solvedserver, limits of fields to ask for
+	int firstfield, lastfield;
+	// Fields to try
+	il* fieldlist;
 
 	int nverified;
 
@@ -151,6 +150,8 @@ struct blind_params {
 
 	handlehits* hits;
 
+	int maxquads;
+	int maxmatches;
 	int cpulimit;
 	int timelimit;
 	bool* p_quitNow;
@@ -163,6 +164,7 @@ typedef struct blind_params blind_params;
 
 static void solve_fields();
 static int read_parameters(blind_params* bp);
+static void add_blind_params(blind_params* bp, qfits_header* hdr);
 
 static blind_params bp;
 
@@ -182,19 +184,25 @@ static void loglvl(int level, const blind_params* bp, const char* format, va_lis
 	fflush(stderr);
 }
 
-static void logerr(const blind_params* bp, const char* format, ...) {
+static void
+ATTRIB_FORMAT(printf,2,3)
+logerr(const blind_params* bp, const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	loglvl(1, bp, format, va);
 	va_end(va);
 }
-static void logmsg(const blind_params* bp, const char* format, ...) {
+static void
+ATTRIB_FORMAT(printf,2,3)
+logmsg(const blind_params* bp, const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	loglvl(3, bp, format, va);
 	va_end(va);
 }
-static void logverb(const blind_params* bp, const char* format, ...) {
+static void
+ATTRIB_FORMAT(printf,2,3)
+logverb(const blind_params* bp, const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	loglvl(4, bp, format, va);
@@ -325,6 +333,7 @@ int main(int argc, char *argv[]) {
 		}
 		boilerplate_add_fits_headers(bp.mf->header);
 		qfits_header_add(bp.mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
+		add_blind_params(&bp, bp.mf->header);
 		if (matchfile_write_header(bp.mf)) {
 			logerr(&bp, "Failed to write matchfile header.\n");
 			exit(-1);
@@ -965,6 +974,55 @@ static int blind_handle_hit(solver_params* p, MatchObj* mo) {
 	return 1;
 }
 
+static void add_blind_params(blind_params* bp, qfits_header* hdr) {
+	int i;
+	fits_add_long_comment(hdr, "-- blind solver parameters: --");
+	fits_add_long_comment(hdr, "Index name: %s", bp->indexname);
+	for (i=0; i<pl_size(bp->indexes); i++)
+		fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexes, i));
+	fits_add_long_comment(hdr, "Index scale lower: %g arcsec", bp->index_scale_lower);
+	fits_add_long_comment(hdr, "Index scale upper: %g arcsec", bp->index_scale_upper);
+	fits_add_long_comment(hdr, "Index jitter: %g", bp->index_jitter);
+	fits_add_long_comment(hdr, "Index id: %i", bp->indexid);
+	fits_add_long_comment(hdr, "Index healpix: %i", bp->healpix);
+	fits_add_long_comment(hdr, "Circle: %s", bp->circle ? "yes":"no");
+
+	fits_add_long_comment(hdr, "Field name: %s", bp->fieldfname);
+	fits_add_long_comment(hdr, "Field scale lower: %g arcsec/pixel", bp->funits_lower);
+	fits_add_long_comment(hdr, "Field scale upper: %g arcsec/pixel", bp->funits_upper);
+	fits_add_long_comment(hdr, "X col name: %s", bp->xcolname);
+	fits_add_long_comment(hdr, "Y col name: %s", bp->ycolname);
+	fits_add_long_comment(hdr, "Start obj: %i", bp->startdepth);
+	fits_add_long_comment(hdr, "End obj: %i", bp->enddepth);
+
+	fits_add_long_comment(hdr, "Solved_in: %s", bp->solved_in);
+	fits_add_long_comment(hdr, "Solved_out: %s", bp->solved_out);
+	fits_add_long_comment(hdr, "Solvedserver: %s", bp->solvedserver);
+
+	fits_add_long_comment(hdr, "Parity: %i", bp->parity);
+	fits_add_long_comment(hdr, "Codetol: %g", bp->codetol);
+	fits_add_long_comment(hdr, "Cxdx margin: %g\n", bp->cxdx_margin);
+	fits_add_long_comment(hdr, "Nagree: %i", bp->nagree_toverify);
+	if (bp->nagree_toverify > 1)
+		fits_add_long_comment(hdr, "Agreement tolerance: %g arcsec", bp->agreetol);
+	fits_add_long_comment(hdr, "Verify distance: %g arcsec", distsq2arcsec(bp->verify_dist2));
+	fits_add_long_comment(hdr, "Verify pixels: %g pix", bp->verify_pix);
+	fits_add_long_comment(hdr, "Overlap to solve: %g", bp->overlap_tosolve);
+	fits_add_long_comment(hdr, "N in field to solve: %i", bp->ninfield_tosolve);
+
+	fits_add_long_comment(hdr, "Maxquads: %i\n", bp->maxquads);
+	fits_add_long_comment(hdr, "Maxmatches: %i\n", bp->maxmatches);
+	fits_add_long_comment(hdr, "Cpu limit: %i s\n", bp->cpulimit);
+	fits_add_long_comment(hdr, "Time limit: %i s\n", bp->timelimit);
+
+	fits_add_long_comment(hdr, "Tweak: %s", (bp->do_tweak ? "yes" : "no"));
+	if (bp->do_tweak) {
+		fits_add_long_comment(hdr, "Tweak AB order: %i", bp->tweak_aborder);
+		fits_add_long_comment(hdr, "Tweak ABP order: %i", bp->tweak_abporder);
+	}
+	fits_add_long_comment(hdr, "--");
+}
+
 static void solve_fields() {
 	solver_params solver;
 	double last_utime, last_stime;
@@ -1197,32 +1255,8 @@ static void solve_fields() {
 				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
 				tm = qfits_get_datetime_iso8601();
 				qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
-				fits_add_long_comment(hdr, "-- blind solver parameters: --");
-				fits_add_long_comment(hdr, "Index name: %s", bp.indexname);
-				fits_add_long_comment(hdr, "Field name: %s", bp.fieldfname);
-				fits_add_long_comment(hdr, "X col name: %s", bp.xcolname);
-				fits_add_long_comment(hdr, "Y col name: %s", bp.ycolname);
-				fits_add_long_comment(hdr, "Parity: %i", bp.parity);
-				fits_add_long_comment(hdr, "Codetol: %g", bp.codetol);
-				fits_add_long_comment(hdr, "Start obj: %i", bp.startdepth);
-				fits_add_long_comment(hdr, "End obj: %i", bp.enddepth);
-				fits_add_long_comment(hdr, "Field scale lower: %g arcsec/pixel", bp.funits_lower);
-				fits_add_long_comment(hdr, "Field scale upper: %g arcsec/pixel", bp.funits_upper);
-				fits_add_long_comment(hdr, "Index scale lower: %g arcsec", bp.index_scale_lower);
-				fits_add_long_comment(hdr, "Index scale upper: %g arcsec", bp.index_scale_upper);
-				fits_add_long_comment(hdr, "Nagree: %i", bp.nagree_toverify);
-				if (bp.nagree_toverify > 1) {
-					fits_add_long_comment(hdr, "Agreement tolerance: %g arcsec", bp.agreetol);
-				}
-				fits_add_long_comment(hdr, "Verify distance: %g arcsec", distsq2arcsec(bp.verify_dist2));
-				fits_add_long_comment(hdr, "Verify pixels: %g pix", bp.verify_pix);
-				fits_add_long_comment(hdr, "Overlap to solve: %g", bp.overlap_tosolve);
-				fits_add_long_comment(hdr, "N in field to solve: %i", bp.ninfield_tosolve);
-				fits_add_long_comment(hdr, "Tweak: %s", (bp.do_tweak ? "yes" : "no"));
-				if (bp.do_tweak) {
-					fits_add_long_comment(hdr, "Tweak AB order: %i", bp.tweak_aborder);
-					fits_add_long_comment(hdr, "Tweak ABP order: %i", bp.tweak_abporder);
-				}
+
+				add_blind_params(&bp, hdr);
 
 				fits_add_long_comment(hdr, "-- properties of the matching quad: --");
 				fits_add_long_comment(hdr, "quadno: %i", mo->quadno);
