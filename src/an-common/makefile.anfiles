@@ -24,4 +24,4 @@ $(ANFILES_LIB):
 REMAKE_ANFILES := remake-anfiles
 .PHONY: $(REMAKE_ANFILES)
 $(REMAKE_ANFILES):
-	cd $(ANFILES_DIR) && make
+	cd $(ANFILES_DIR) && make libanfiles.a
