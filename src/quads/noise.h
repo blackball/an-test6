@@ -15,9 +15,9 @@ void sample_star_in_ring(double* center,
 void sample_field_in_circle(double* center, double radius,
 							double* point);
 
-void add_star_noise(const double* real, double noisemag, double* noisy);
+void add_star_noise(const double* real, double noisestddev, double* noisy);
 
-void add_field_noise(const double* real, double noisevar, double* noisy);
+void add_field_noise(const double* real, double noisestddev, double* noisy);
 
 void compute_star_code(double* A, double* B, double* C, double* D,
 					   double* code);

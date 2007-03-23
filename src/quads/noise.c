@@ -50,25 +50,32 @@ void sample_star_in_ring(double* center,
 	normalize_3(point);
 }
 
-void add_star_noise(const double* real, double noisevar, double* noisy) {
+void add_star_noise(const double* real, double noisestd, double* noisy) {
 	double va[3], vb[3];
-	double mag1, mag2;
+	double mag, angle, mag1, mag2;
 	int i;
 
 	tan_vectors(real, va, vb);
-	// magnitude of noise in two tangential directions
-	mag1 = gaussian_sample(0.0, noisevar);
-	mag2 = gaussian_sample(0.0, noisevar);
+	// magnitude of noise
+	mag = gaussian_sample(0.0, noisestd);
+	// direction
+	angle = uniform_sample(0.0, 2.0*M_PI);
+	// magnitude in the two tangential directions:
+	mag1 = mag * sin(angle);
+	mag2 = mag * cos(angle);
 	for (i=0; i<3; i++)
 		noisy[i] = real[i] + mag1 * va[i] + mag2 * vb[i];
 	normalize_3(noisy);
 }
 
-void add_field_noise(const double* real, double noisevar, double* noisy) {
-	double mag1, mag2;
+void add_field_noise(const double* real, double noisestd, double* noisy) {
+	double mag, angle, mag1, mag2;
 	// magnitude of noise
-	mag1 = gaussian_sample(0.0, noisevar);
-	mag2 = gaussian_sample(0.0, noisevar);
+	mag = gaussian_sample(0.0, noisestd);
+	// direction
+	angle = uniform_sample(0.0, 2.0*M_PI);
+	mag1 = mag * sin(angle);
+	mag2 = mag * cos(angle);
 	noisy[0] = real[0] + mag1;
 	noisy[1] = real[1] + mag2;
 }
