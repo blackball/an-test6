@@ -23,14 +23,11 @@
  * Output: .match .rdls .wcs
  */
 #include <sys/types.h>
-#include <sys/mman.h>
-#include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <limits.h>
 #include <math.h>
 #include <signal.h>
 #include <ctype.h>
@@ -48,17 +45,17 @@
 #include "idfile.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
-#include "ioutils.h"
 #include "starkd.h"
 #include "codekd.h"
 #include "boilerplate.h"
 #include "fitsioutils.h"
 #include "handlehits.h"
 #include "blind_wcs.h"
+#include "rdlist.h"
+
 #include "qfits_error.h"
 #include "qfits_cache.h"
 #include "tweak_internal.h"
-#include "rdlist.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
