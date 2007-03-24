@@ -557,7 +557,8 @@ function process_data ($vals) {
 
 	if ($imgfilename) {
 		if (!convert_image($imgfilename, $mydir, $suffix,
-						   $errstr, $W, $H, $shrink, $dispW, $dispH, $dispimgbase)) {
+						   $errstr, $W, $H, $shrink, $dispW, $dispH,
+						   $dispimgbase, $dispimgpngbase)) {
 			die($errstr);
 		}
 
@@ -575,6 +576,7 @@ function process_data ($vals) {
 								   "displayW" => $dispW,
 								   "displayH" => $dispH,
 								   "displayImage" => $dispimgbase,
+								   "displayImagePng" => $dispimgpngbase,
 								   "imagefilename" => $imgbasename))) {
 			die("failed to save image {filename,W,H} in database.");
 		}
@@ -890,7 +892,7 @@ function get_image_type($filename, &$xtopnm) {
 
 function convert_image($filename, $mydir,
 					   &$addsuffix, &$errstr, &$W, &$H, &$shrink,
-					   &$dispW, &$dispH, &$dispimgbase) {
+					   &$dispW, &$dispH, &$dispimgbase, &$dispimgpngbase) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -1072,6 +1074,15 @@ function convert_image($filename, $mydir,
 			$errstr = "Failed to shrink image file.";
 			return FALSE;
 		}
+	}
+
+	$dispimgpngbase = substr($dispimgbase, 0, -4) . ".png";
+	$cmd = "pnmtopng " . $dispimg . " > " . $mydir . $dispimgpngbase;
+	$res = system($cmd, $retval);
+	if ($retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to convert image to PNG.";
+		return FALSE;
 	}
 
 	// Plot the extracted objects.

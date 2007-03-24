@@ -176,6 +176,10 @@ function connect_db($dbpath) {
 	return $db;
 }
 
+function disconnect_db($db) {
+	$db->disconnect();
+}
+
 function create_jobdata_table($db) {
 	// Create table.
 	$q = "CREATE TABLE jobdata (key UNIQUE, val);";
@@ -199,7 +203,9 @@ function getjobdata($db, $key) {
 	if (!$row) {
 		return FALSE;
 	}
-	return $row[0];
+	$rtn = $row[0];
+	$res->free();
+	return $rtn;
 }
 
 function getalljobdata($db) {
@@ -281,6 +287,14 @@ function merc2ra($mx) {
 // Returns DEC in degrees.
 function merc2dec($my) {
 	return atan(sinh(($my - 0.5) * (2.0*M_PI))) * 180.0/M_PI;
+}
+
+function field_solved($solvedfile, &$msg) {
+	if (!file_exists($solvedfile)) {
+		return FALSE;
+	}
+	$contents = file_get_contents($solvedfile);
+	return (strlen($contents) && (ord($contents[0]) == 1));
 }
 
 ?>

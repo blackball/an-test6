@@ -726,14 +726,6 @@ if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
 	echo "</td></tr>\n";
 }
 
-function field_solved($solvedfile, &$msg) {
-	if (!file_exists($solvedfile)) {
-		return FALSE;
-	}
-	$contents = file_get_contents($solvedfile);
-	return (strlen($contents) && (ord($contents[0]) == 1));
-}
-
 if ($job_done) {
 	if ($didsolve) {
 		echo '<tr><td>(RA, DEC) center:</td><td>';
