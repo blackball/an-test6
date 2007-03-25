@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
 		tic();
 
 		// Reset params.
-		memset(&bp, 0, sizeof(blind_params));
+		memset(bp, 0, sizeof(blind_params));
 		handlehits_init(&bp->hits);
 		bp->hits.userdata = bp;
 
