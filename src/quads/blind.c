@@ -240,9 +240,6 @@ int main(int argc, char *argv[]) {
 
 	qfits_err_statset(1);
 
-	bp.fieldlist = il_new(256);
-	bp.indexes = pl_new(16);
-
 	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
 		int I;
@@ -251,6 +248,8 @@ int main(int argc, char *argv[]) {
 		// Reset params.
 		memset(&bp, 0, sizeof(blind_params));
 
+		bp.fieldlist = il_new(256);
+		bp.indexes = pl_new(16);
 		bp.fieldid_key = strdup("FIELDID");
 		bp.xcolname = strdup("X");
 		bp.ycolname = strdup("Y");
@@ -671,8 +670,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		il_remove_all(bp.fieldlist);
-		pl_remove_all(bp.indexes);
+		il_free(bp.fieldlist);
+		pl_free(bp.indexes);
 
 		free(bp.logfname);
 		free(bp.donefname);
@@ -692,8 +691,6 @@ int main(int argc, char *argv[]) {
 		free(bp.fieldfname);
 	}
 
-	il_free(bp.fieldlist);
-	pl_free(bp.indexes);
 	qfits_cache_purge(); // for valgrind
 	return 0;
 }
