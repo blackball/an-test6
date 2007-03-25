@@ -1045,7 +1045,7 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 
 	fits_add_long_comment(hdr, "Parity: %i", sp->parity);
 	fits_add_long_comment(hdr, "Codetol: %g", sp->codetol);
-	fits_add_long_comment(hdr, "Cxdx margin: %g\n", sp->cxdx_margin);
+	fits_add_long_comment(hdr, "Cxdx margin: %g", sp->cxdx_margin);
 	fits_add_long_comment(hdr, "Nagree: %i", bp->hits.nagree_toverify);
 	if (bp->hits.nagree_toverify > 1)
 		fits_add_long_comment(hdr, "Agreement tolerance: %g arcsec", bp->hits.agreetol);
@@ -1054,10 +1054,10 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 	fits_add_long_comment(hdr, "Overlap to solve: %g", bp->hits.overlap_tosolve);
 	fits_add_long_comment(hdr, "N in field to solve: %i", bp->hits.ninfield_tosolve);
 
-	fits_add_long_comment(hdr, "Maxquads: %i\n", sp->maxquads);
-	fits_add_long_comment(hdr, "Maxmatches: %i\n", sp->maxmatches);
-	fits_add_long_comment(hdr, "Cpu limit: %i s\n", bp->cpulimit);
-	fits_add_long_comment(hdr, "Time limit: %i s\n", bp->timelimit);
+	fits_add_long_comment(hdr, "Maxquads: %i", sp->maxquads);
+	fits_add_long_comment(hdr, "Maxmatches: %i", sp->maxmatches);
+	fits_add_long_comment(hdr, "Cpu limit: %i s", bp->cpulimit);
+	fits_add_long_comment(hdr, "Time limit: %i s", bp->timelimit);
 
 	fits_add_long_comment(hdr, "Tweak: %s", (bp->do_tweak ? "yes" : "no"));
 	if (bp->do_tweak) {
