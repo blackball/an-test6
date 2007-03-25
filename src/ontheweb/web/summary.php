@@ -79,13 +79,24 @@ $sortlist = array();
 foreach ($joblist as $job) {
 	$sortlist[$job['ctime']] = $job;
 }
-rsort($sortlist);
+$sortedkeys = array_keys($sortlist);
+rsort($sortedkeys);
+$sortedlist = array();
+foreach ($sortedkeys as $k) {
+	array_push($sortedlist, $sortlist[$k]);
+}
+$sortlist = $sortedlist;
+/*
+	foreach ($sortlist as $k => $job) {
+	loggit($job['ctime'] . ": " . date("Y-M-d H:i:s", $job['ctime']) . "\n");
+	}
+*/
 $joblist = array_values($sortlist);
 
 $host  = $_SERVER['HTTP_HOST'];
 $uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 
-foreach ($joblist as $job) {
+foreach ($joblist as $i => $job) {
 	$img = $job['displayImagePng'];
 	if (!$img) {
 		$img = $job['displayImage'];

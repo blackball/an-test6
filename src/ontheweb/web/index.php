@@ -1017,7 +1017,7 @@ function convert_image($filename, $mydir,
 	}
 
 	if ($imgtype == "fits") {
-		$fitsimg = $img;
+		$fitsimg = $filename;
 	} else {
 		$fitsimg = $mydir . "image.fits";
 		$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
