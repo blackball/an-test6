@@ -58,10 +58,8 @@ static inline void sety(double* d, uint ind, double val) {
 void solver_default_params(solver_params* params) {
 	memset(params, 0, sizeof(solver_params));
 	params->maxAB = 1e300;
-	params->arcsec_per_pixel_upper = 1.0e300;
+	params->funits_upper = 1.0e300;
 }
-
-static void find_corners(double *thisfield, int nfield, double *cornerpix);
 
 static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
 						  uint iA, uint iB, uint iC, uint iD,
@@ -149,7 +147,6 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
 void solve_field(solver_params* params) {
     uint numxy, iA, iB, iC, iD, newpoint;
 	int i;
-	double c;
 	double usertime, systime;
 	double lastcheck;
 	pquad* pquads;
@@ -163,16 +160,6 @@ void solve_field(solver_params* params) {
 		return;
 	if (params->endobj && (numxy > params->endobj))
 		numxy = params->endobj;
-
-	find_corners(params->field, params->nfield, params->cornerpix);
-
-	// how many pixels from corner to corner of the field?
-	c  = square(getx(params->cornerpix, 1) - getx(params->cornerpix, 0));
-	c += square(gety(params->cornerpix, 1) - gety(params->cornerpix, 0));
-	params->fieldscale = sqrt(c);
-	// how many arcsec from corner to corner of the field?
-	params->starscale_upper = arcsec2distsq(params->arcsec_per_pixel_upper * params->fieldscale);
-	params->starscale_lower = arcsec2distsq(params->arcsec_per_pixel_lower * params->fieldscale);
 
 	pquads = calloc(numxy * numxy, sizeof(pquad));
 
@@ -196,9 +183,9 @@ void solve_field(solver_params* params) {
 		double ABCDpix[8];
 		// check if the field has already been solved...
 		// FIXME - should only check this if a sufficient time period has passed...
-		if (params->solvedfn && solvedfile_get(params->solvedfn, params->fieldnum)) {
+		if (params->solved_in && solvedfile_get(params->solved_in, params->fieldnum)) {
 			fprintf(stderr, "  field %u: file %s indicates that the field has been solved.\n",
-					params->fieldnum, params->solvedfn);
+					params->fieldnum, params->solved_in);
 			break;
 		}
 		if (params->do_solvedserver) {
@@ -211,12 +198,12 @@ void solve_field(solver_params* params) {
 				lastcheck = usertime + systime;
 			}
 		}
-		if (params->cancelfn) {
+		if (params->cancelfname) {
 			struct stat st;
-			if (stat(params->cancelfn, &st) == 0) {
+			if (stat(params->cancelfname, &st) == 0) {
 				params->cancelled = TRUE;
 				params->quitNow = TRUE;
-				fprintf(stderr, "File %s exists: cancelling.\n", params->cancelfn);
+				fprintf(stderr, "File %s exists: cancelling.\n", params->cancelfname);
 				break;
 			}
 		}
@@ -311,7 +298,7 @@ void solve_field(solver_params* params) {
 					"  field %u, object %u of %u: %i quads tried, %i matched.\n",
 					params->fieldnum, newpoint+1, numxy, params->numtries, params->nummatches);
 
-		if ((params->maxtries   && (params->numtries   >= params->maxtries)) ||
+		if ((params->maxquads   && (params->numtries   >= params->maxquads)) ||
 			(params->maxmatches && (params->nummatches >= params->maxmatches)) ||
 			params->quitNow)
 			break;
@@ -506,13 +493,17 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		// FIXME - should there be scale fudge here?
 
 		arcsecperpix = scale * 3600.0;
-		if (arcsecperpix > params->arcsec_per_pixel_upper ||
-			arcsecperpix < params->arcsec_per_pixel_lower)
+		if (arcsecperpix > params->funits_upper ||
+			arcsecperpix < params->funits_lower)
 			continue;
 
+		params->numscaleok++;
+
 		// transform the corners of the field...
-		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 0), gety(params->cornerpix, 0), sMin);
-		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 1), gety(params->cornerpix, 1), sMax);
+		tan_pixelxy2xyzarr(&tan, params->field_minx, params->field_miny, sMin);
+		tan_pixelxy2xyzarr(&tan, params->field_maxx, params->field_maxy, sMax);
+		tan_pixelxy2xyzarr(&tan, params->field_minx, params->field_maxy, sMinMax);
+		tan_pixelxy2xyzarr(&tan, params->field_maxx, params->field_miny, sMaxMin);
 
 		// check scale
 		/*
@@ -524,11 +515,6 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		  // this quad has invalid scale.
 		  continue;
 		*/
-
-		params->numscaleok++;
-
-		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 2), gety(params->cornerpix, 2), sMinMax);
-		tan_pixelxy2xyzarr(&tan, getx(params->cornerpix, 3), gety(params->cornerpix, 3), sMaxMin);
 
 		mo = mk_MatchObj();
 		if (params->mo_template)
@@ -578,32 +564,3 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
     }
 }
 
-// find min and max coordinates in this field;
-// place them in "cornerpix"
-static void find_corners(double *thisfield, int nfield, double *cornerpix) {
-	double minx, maxx, miny, maxy;
-	double x, y;
-	uint i;
-
-	minx = miny = 1e308;
-	maxx = maxy = -1e308;
-	
-	for (i=0; i<nfield; i++) {
-		x = getx(thisfield, i);
-		y = gety(thisfield, i);
-		if (x < minx) minx = x;
-		if (x > maxx) maxx = x;
-		if (y < miny) miny = y;
-		if (y > maxy) maxy = y;
-	}
-
-    setx(cornerpix, 0, minx);
-    sety(cornerpix, 0, miny);
-    setx(cornerpix, 1, maxx);
-    sety(cornerpix, 1, maxy);
-
-    setx(cornerpix, 2, minx);
-    sety(cornerpix, 2, maxy);
-    setx(cornerpix, 3, maxx);
-    sety(cornerpix, 3, miny);
-}

@@ -26,6 +26,17 @@ handlehits* handlehits_new() {
 	return hh;
 }
 
+void handlehits_init(handlehits* hh) {
+	memset(hh, 0, sizeof(handlehits));
+}
+
+void handlehits_uninit(handlehits* hh) {
+	if (!hh) return;
+	handlehits_clear(hh);
+	if (hh->hits)
+		hitlist_free(hh->hits);
+}
+
 void handlehits_free_matchobjs(handlehits* hh) {
 	if (!hh) return;
 	if (hh->hits)
@@ -45,41 +56,29 @@ void handlehits_clear(handlehits* hh) {
 		hitlist_clear(hh->hits);
 	hh->nverified = 0;
 	hh->bestmo = NULL;
-	free(hh->bestcorr);
-	hh->bestcorr = NULL;
 	if (hh->keepers)
 		pl_free(hh->keepers);
 	hh->keepers = NULL;
 }
 
 void handlehits_free(handlehits* hh) {
-	if (!hh) return;
-	handlehits_clear(hh);
-	if (hh->hits)
-		hitlist_free(hh->hits);
+	handlehits_uninit(hh);
 	free(hh);
 }
 
 static bool verify(handlehits* hh, MatchObj* mo, bool* pkeep) {
-	int* corr = NULL;
-
 	// this check is here to handle the "agreeable" case, where the overlap
 	// has already been computed and stored in the matchfile, and we no
 	// longer have access to the startree, etc.
 	if (mo->overlap == 0.0) {
-		verify_hit(hh->startree, mo, hh->field, hh->nfield, hh->verify_dist2,
-				   NULL, NULL, NULL, NULL, NULL, corr);
+		if (hh->run_verify)
+			hh->run_verify(hh, mo);
 
 		mo->nverified = hh->nverified++;
-
-		// callback.
-		if (hh->verified)
-			hh->verified(hh, mo);
 	}
 
 	if ((mo->overlap < hh->overlap_tokeep) ||
 		(mo->ninfield < hh->ninfield_tokeep)) {
-		free(corr);
 		if (pkeep) *pkeep = FALSE;
 		return FALSE;
 	}
@@ -92,18 +91,13 @@ static bool verify(handlehits* hh, MatchObj* mo, bool* pkeep) {
 
 	if ((mo->overlap < hh->overlap_tosolve) ||
 		(mo->ninfield < hh->ninfield_tosolve)) {
-		free(corr);
 		return FALSE;
 	}
 
 	if (!hh->bestmo || (mo->overlap > hh->bestmo->overlap)) {
 		hh->bestmo = mo;
-		free(hh->bestcorr);
-		hh->bestcorr = corr;
-		corr = NULL;
 	}
 
-	free(corr);
 	return TRUE;
 }
 

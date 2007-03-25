@@ -27,7 +27,6 @@
 struct handlehits {
 	// params
 	double agreetol; // in arcsec.
-	double verify_dist2;
 	int nagree_toverify;
 	// we assume the "tokeep" parameters are weaker than (or equal to)
 	// the "tosolve" ones, ie, a match must pass "tokeep" before it is
@@ -36,14 +35,9 @@ struct handlehits {
 	int ninfield_tokeep;
 	double overlap_tosolve;
 	int ninfield_tosolve;
-	kdtree_t* startree;
-	double* field;
-	int nfield;
-	int do_wcs;
 
-	// callback:
-	// called after verification is run on a match.
-	void (*verified)(struct handlehits* me, MatchObj* mo);
+	// callback to run verification.
+	void (*run_verify)(struct handlehits* me, MatchObj* mo);
 
 	// state:
 
@@ -55,21 +49,20 @@ struct handlehits {
 
 	// best hit that surpasses the "solve" requirements.
 	MatchObj* bestmo;
-	// index in the hitlist of "bestmo" 
-	//int bestmoindex;
-	// correspondence vector of "bestmo"
-	int* bestcorr;
 	// MatchObj*s with overlap above the keep threshold
 	pl* keepers;
+
+	void* userdata;
 };
 typedef struct handlehits handlehits;
+
+void handlehits_init(handlehits* hh);
+
+void handlehits_uninit(handlehits* hh);
 
 handlehits* handlehits_new();
 
 bool handlehits_add(handlehits* hh, MatchObj* mo);
-
-// retrieve the list of MatchObj* with overlap above the "keep" threshold
-//pl* handlehits_get_keepers(handlehits* hh);
 
 // goes through the hitlist and frees MatchObjs.
 void handlehits_free_matchobjs(handlehits* hh);

@@ -36,38 +36,63 @@ enum {
 };
 
 struct solver_params {
-
 	// Inputs:
-	double* field;
-	int nfield;
-	kdtree_t* codekd;
-	int startobj;
-	int endobj;
+	// Jitter in the index, in arcseconds.
+	double index_jitter;
+
+	char* cancelfname;
+	bool cancelled;
+
+	char* solved_in;
+	bool do_solvedserver;
+
+	bool quitNow;
+
 	// one of PARITY_*
 	int parity;
-	// number of field quads to try
-	int maxtries;
-	// number of quad matches to try
-	int maxmatches;
 	double codetol;
-	bool quitNow;
-	int fieldid;
-	int fieldnum;
-	char* solvedfn;
-	bool do_solvedserver;
-	double cxdx_margin;
-	bool circle;
-	bool quiet;
-	char* cancelfn;
-	bool cancelled;
+	int startobj;
+	int endobj;
+
+	// Limits on the quad size, in field scale units.
+	//double arcsec_per_pixel_lower;
+	//double arcsec_per_pixel_upper;
+	double funits_lower;
+	double funits_upper;
 
 	// The limits on the size, in field coordinates,
 	// of the quads to find.
 	double minAB;
 	double maxAB;
-	// Limits on the quad size, in field scale units.
-	double arcsec_per_pixel_lower;
-	double arcsec_per_pixel_upper;
+
+	// Limits of the size of quads in the index.
+	double index_scale_upper;
+	double index_scale_lower;
+
+	// Does index have CIRCLE (codes in the circle, not the box)?
+	bool circle;
+	double cxdx_margin;
+
+	// The field
+	double* field;
+	int nfield;
+
+	// Field limits.
+	double field_minx, field_maxx, field_miny, field_maxy;
+	// distance in pixels across the diagonal of the field
+	double field_diag;
+
+	// The index
+	kdtree_t* codekd;
+
+	// number of field quads to try
+	int maxquads; // maxtries
+	// number of quad matches to try
+	int maxmatches;
+	int fieldid;
+	int fieldnum;
+
+	bool quiet;
 
 	// the MatchObj template: if non-NULL, every MatchObj will be a memcpy
 	// of this one before the other fields are set.
@@ -76,10 +101,6 @@ struct solver_params {
 	handle_hit handlehit;
 	
 	// internal:
-	double cornerpix[8];
-	double fieldscale;
-	double starscale_lower;
-	double starscale_upper;
 	double starttime;
 	double timeused;
 
@@ -89,7 +110,6 @@ struct solver_params {
 	int numtries;
 	int nummatches;
 	int numscaleok;
-	//int mostagree;
 	// this is set to an absolute value.
 	int objsused;
 	// number of quads skipped because of cxdx constraints.
