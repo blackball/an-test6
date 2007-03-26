@@ -833,7 +833,7 @@ function process_data ($vals) {
 			"if [ `" . $printsolved . " " . $solvedfile . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
 			"  echo \"Field solved.\";\n" .
 			"  echo Running wcs-xy2rd...;\n" .
-			"  " . $wcs_xy2rd . " -w " . $wcsfile . " -i " . $xylist . ".fits" . " -o " . $rdlist . " -X " . $x_col . " -Y " . $y_col . ";\n" .
+			"  " . $wcs_xy2rd . " -w " . $wcsfile . " -i " . $xylist . " -o " . $rdlist . " -X " . $x_col . " -Y " . $y_col . ";\n" .
 			"  echo Running rdlsinfo...;\n" .
 			"  " . $rdlsinfo . " " . $rdlist . " > " . $rdlsinfofile . ";\n" .
 			"  echo Merging index rdls file...\n" .
