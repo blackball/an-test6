@@ -10,32 +10,34 @@ if __name__ == '__main__':
 	infile = sys.argv[1];
 	outfile = sys.argv[2];
 
+	# Read input file.
 	fitsin = pyfits.open(infile)
+	# Print out info about input file.
 	fitsin.info()
 
-	fitsin.verify('fix')
-
-	fitsout = pyfits.HDUList()
-	hdr = pyfits.PrimaryHDU()
-	hdr.header = fitsin[0].header;
-	#fitsout.header = fitsin.header;
-	hdr.verify('fix')
-	fitsout.append(hdr)
+	# Create the output HDU
+	outhdu = pyfits.PrimaryHDU()
+	# Fix input primary header
+	fitsin[0].verify('fix');
+	# Copy fixed input header to output
+	outhdu.header = fitsin[0].header;
 	
 	for i, hdu in enumerate(fitsin):
 		if (i == 0 and hdu.data != None) or isinstance(hdu, pyfits.ImageHDU):
-			print hdu.data.shape+(i,)
 			if (i == 0):
 				print 'Image: Primary HDU (number 0) %sx%s' % hdu.data.shape
 			else:
 				print 'Image: Extension HDU (number %s) %sx%s' % tuple((i,)+hdu.data.shape)
 
-			hdu.verify('fix')
-
-			fitsout.append(hdu)
+			# Copy fixed HDU data to output.
+			hdu.verify('fix');
+			outhdu.data = hdu.data;
 			break
 
-
+	# Create output file
+	fitsout = pyfits.HDUList()
+	fitsout.append(outhdu)
+	# Describe output file we're about to write...
 	fitsout.info()
 
 	try:
@@ -45,3 +47,6 @@ if __name__ == '__main__':
 		print 'File %s appears to already exist; deleting!' % outfile
 		os.unlink(outfile)
 		fitsout.writeto(outfile)
+	except VerifyError:
+		print 'Verification of output file failed: your FITS file is probably too broken to automatically fix.';
+		sys.exit(1)
