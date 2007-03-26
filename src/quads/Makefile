@@ -171,7 +171,7 @@ get-healpix: get-healpix.o $(ANUTILS_LIB)
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
 
 fitsverify: ftverify.c fvrf_data.c fvrf_file.c fvrf_head.c fvrf_key.c fvrf_misc.c $(CFITS_LIB)
-	$(CC) -DSTANDALONE -trigraphs -o $@ $^ -lm
+	$(CC) -DSTANDALONE -trigraphs $(CFITS_INC) -o $@ $^ -lm
 
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
