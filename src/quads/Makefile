@@ -302,6 +302,7 @@ DEP_OBJ := $(ALL_OBJ)
 DEP_PREREQS := $(QFITS_LIB)
 
 CFLAGS += $(CFITSIO_CFLAGS)
+CFLAGS += $(CAIRO_INC)
 include $(COMMON)/makefile.deps
 
 allclean: clean

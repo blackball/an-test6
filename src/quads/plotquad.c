@@ -21,7 +21,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <cairo/cairo.h>
+#include <cairo.h>
 
 #include "boilerplate.h"
 #include "bl.h"
