@@ -103,7 +103,7 @@ ALL_OBJ += $(2MASSOBJ)
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) $(REMAKE_LIBTWEAK) \
-	$(PIPELINE) $(PROSPECTUS) $(FITS_UTILS)
+	$(PIPELINE) $(PROSPECTUS) $(FITS_UTILS) fitsverify
 
 .PHONY: pipeline
 pipeline: $(PIPELINE)
@@ -169,6 +169,9 @@ hpgrid: hpgrid.o $(ANUTILS_LIB)
 get-healpix: get-healpix.o $(ANUTILS_LIB)
 
 $(CFITS_UTILS) :: %: %.o $(CFITS_LIB)
+
+fitsverify: ftverify.c fvrf_data.c fvrf_file.c fvrf_head.c fvrf_key.c fvrf_misc.c $(CFITS_LIB)
+	$(CC) -DSTANDALONE -trigraphs -o $@ $^ -lm
 
 $(OLDEXECS) :: %: %.o $(OLDEXECS_OBJS) \
 		$(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
