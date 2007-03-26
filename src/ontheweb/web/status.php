@@ -244,7 +244,7 @@ if ($overlay) {
 			$shrink = 1;
 
 		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
-		//loggit("cmd: " . $cmd . "\n");
+		loggit("Command: " . $cmd . "\n");
 		$output = shell_exec($cmd);
 		//loggit("output: " . $output . "\n");
 		if (sscanf($output, " %d %d %d %d %d ", $nil, $fA, $fB, $fC, $fD) != 5) {
@@ -665,15 +665,6 @@ if ($job_done) {
 ?>
 
 <?php
-function get_datestr($t) {
-	// "c" -> 2007-03-12T22:49:53+00:00
-	$datestr = date("c", $t);
-	// Make Hogg happy
-	if (substr($datestr, -6) == "+00:00")
-		$datestr = substr($datestr, 0, strlen($datestr)-6) . "Z";
-	return $datestr;
-}
-
 if ($job_submitted) {
 	echo '<tr><td>Submitted:</td><td>';
 	$t = filemtime($inputfile);

@@ -86,11 +86,6 @@ foreach ($sortedkeys as $k) {
 	array_push($sortedlist, $sortlist[$k]);
 }
 $sortlist = $sortedlist;
-/*
-	foreach ($sortlist as $k => $job) {
-	loggit($job['ctime'] . ": " . date("Y-M-d H:i:s", $job['ctime']) . "\n");
-	}
-*/
 $joblist = array_values($sortlist);
 
 $host  = $_SERVER['HTTP_HOST'];
@@ -102,8 +97,8 @@ foreach ($joblist as $i => $job) {
 		$img = $job['displayImage'];
 	}
 	echo "<tr>\n" . 
-		//"<td>" . date("r", $job['ctime']) . "</td>\n" .
-		"<td>" . date("Y-M-d H:i:s", $job['ctime']) . "</td>\n" .
+		//"<td>" . date("Y-M-d H:i:s", $job['ctime']) . "</td>\n" .
+		"<td>" . get_datestr($job['ctime']) . "</td>\n" .
 		"<td>" . $job['jobid'] . "</td>\n" .
 		"<td>" . $job['uname'] . " </td>\n" .
 		"<td><a href=\"mailto:" . $job['email'] . "\">" . $job['email'] . "</a> </td>\n" .
@@ -140,14 +135,14 @@ function dir_status($mydir) {
 	if (!file_exists($jobdatafile))
 		return FALSE;
  
-	$db = connect_db($jobdatafile);
+	$db = @connect_db($jobdatafile, TRUE);
 	if (!$db) {
-		loggit("failed to connect jobdata db: " . $jobdatafile . "\n");
+		//loggit("failed to connect jobdata db: " . $jobdatafile . "\n");
 		return FALSE;
 	}
-	$jd = getalljobdata($db);
+	$jd = getalljobdata($db, TRUE);
 	if ($jd === FALSE) {
-		loggit("failed to get jobdata: " . $jobdatafile . "\n");
+		//loggit("failed to get jobdata: " . $jobdatafile . "\n");
 		return FALSE;
 	}
 	disconnect_db($db);

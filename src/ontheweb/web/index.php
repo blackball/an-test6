@@ -582,19 +582,19 @@ function process_data ($vals) {
 		}
 	}
 
-	$xylistfilename = "field.xy"; // without .fits
+	$xylistfilename = "field.xy.fits";
 	$xylist = $mydir . $xylistfilename;
 	$xylsinfofile = $mydir . "xylsinfo";
 
 	if ($xysrc == "fits") {
 		// If a FITS bintable file was uploaded, move it into
 		// place...
-		if (!$fitsfile->moveUploadedFile($mydir, $xylistfilename . ".fits")) {
+		if (!$fitsfile->moveUploadedFile($mydir, $xylistfilename)) {
 			die("failed to move uploaded FITS file into place.");
 		}
 
 		// Try to get the size of the image...
-		$cmd = $xylsinfo . " " . $xylist . ".fits > " . $xylsinfofile;
+		$cmd = $xylsinfo . " " . $xylist . " > " . $xylsinfofile;
 		$res = system($cmd, $retval);
 		if ($retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
@@ -617,7 +617,7 @@ function process_data ($vals) {
 		loggit("found xyls width and height " . $W . ", " . $H . "\n");
 	}
 
-	if (!chmod($xylist . ".fits", 0664)) {
+	if (!chmod($xylist, 0664)) {
 		die("Failed to chmod xylist " . $xylist);
 	}
 

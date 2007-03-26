@@ -100,6 +100,15 @@ function loggit($mesg) {
 	error_log($mesg, 3, $ontheweblogfile);
 }
 
+function get_datestr($t) {
+	// "c" -> 2007-03-12T22:49:53+00:00
+	$datestr = date("c", $t);
+	// Make Hogg happy
+	if (substr($datestr, -6) == "+00:00")
+		$datestr = substr($datestr, 0, strlen($datestr)-6) . "Z";
+	return $datestr;
+}
+
 function dtime2str($secs) {
 	if ($secs > 3600*24) {
 		return sprintf("%.1f days", (float)$secs/(float)(3600*24));
@@ -161,7 +170,7 @@ function create_db($dbpath) {
 	return TRUE;
 }
 
-function connect_db($dbpath) {
+function connect_db($dbpath, $quiet=FALSE) {
 	// Connect to database
 	$dsn = array('phptype'  => 'sqlite', 'database' => $dbpath,
 				 'mode'     => '0644', );
@@ -169,8 +178,9 @@ function connect_db($dbpath) {
 	$options = array();
 	$db =& MDB2::connect($dsn, $options);
 	if (PEAR::isError($db)) {
-		loggit("Error connecting to SQLite db $dbpath: " .
-			   $db->getMessage() . "\n");
+		if (!$quiet) {
+			loggit("Error connecting to SQLite db $dbpath: " . $db->getMessage() . "\n");
+		}
 		return FALSE;
 	}
 	return $db;
@@ -208,10 +218,12 @@ function getjobdata($db, $key) {
 	return $rtn;
 }
 
-function getalljobdata($db) {
+function getalljobdata($db, $quiet=FALSE) {
 	$res =& $db->query('SELECT key, val FROM jobdata');
 	if (PEAR::isError($res)) {
-		loggit("Database error: " . $res->getMessage() . "\n");
+		if (!$quiet) {
+			loggit("Database error: " . $res->getMessage() . "\n");
+		}
 		return FALSE;
 	}
 	while (($row = $res->fetchRow())) {
