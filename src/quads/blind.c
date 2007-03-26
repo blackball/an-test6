@@ -73,6 +73,9 @@ static void printHelp(char* progname) {
 #define DEFAULT_INDEX_JITTER 1.0  // arcsec
 
 struct blind_params {
+	solver_params solver;
+	handlehits hits;
+
 	// Filenames
 	char* indexname;
 	char *fieldfname, *matchfname, *donefname, *startfname, *logfname;
@@ -110,8 +113,6 @@ struct blind_params {
 	int indexid;
 	int healpix;
 
-	solver_params solver;
-
 	double verify_dist2;
 	double verify_pix;
 
@@ -127,8 +128,6 @@ struct blind_params {
 	codetree* codekd;
 	rdlist* rdls;
 	rdlist* indexrdls;
-
-	handlehits hits;
 
 	int cpulimit;
 	int timelimit;
@@ -228,8 +227,10 @@ int main(int argc, char *argv[]) {
 
 		// Reset params.
 		memset(bp, 0, sizeof(blind_params));
+		solver_default_params(&bp->solver);
 		handlehits_init(&bp->hits);
 		bp->hits.userdata = bp;
+		sp->userdata = bp;
 
 		bp->fieldlist = il_new(256);
 		bp->indexes = pl_new(16);
@@ -253,21 +254,6 @@ int main(int argc, char *argv[]) {
 			free(bp->fieldid_key);
 			break;
 		}
-
-		if (sp->field_minx == sp->field_maxx) {
-			for (i=0; i<sp->nfield; i++) {
-				sp->field_minx = min(sp->field_minx, sp->field[2*i+0]);
-				sp->field_maxx = max(sp->field_maxx, sp->field[2*i+0]);
-			}
-		}
-		if (sp->field_miny == sp->field_maxy) {
-			for (i=0; i<sp->nfield; i++) {
-				sp->field_miny = min(sp->field_miny, sp->field[2*i+0]);
-				sp->field_maxy = max(sp->field_maxy, sp->field[2*i+0]);
-			}
-		}
-		sp->field_diag = hypot(sp->field_maxy - sp->field_miny,
-							   sp->field_maxx - sp->field_minx);
 
 		logmsg(bp, "%s params:\n", progname);
 		logmsg(bp, "fields ");
@@ -444,6 +430,7 @@ int main(int argc, char *argv[]) {
 			char* fname = pl_get(bp->indexes, I);
 			sighandler_t oldsigcpu = NULL;
 			sighandler_t oldsigalarm = NULL;
+			double scalefudge = 0.0; // in pixels
 
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
@@ -513,6 +500,39 @@ int main(int argc, char *argv[]) {
 				logmsg(bp, "Couldn't open id file %s.\n", idfname);
 				logmsg(bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
 			}
+
+			// Set index params
+			sp->codekd = bp->codekd->tree;
+			if (sp->funits_upper != 0.0) {
+				sp->minAB = sp->index_scale_lower / sp->funits_upper;
+
+				// compute fudge factor for quad scale: what are the extreme
+				// ranges of quad scales that should be accepted, given the
+				// code tolerance?
+
+				// -what is the maximum number of pixels a C or D star can move
+				//  to singlehandedly exceed the code tolerance?
+				// -largest quad
+				// -smallest arcsec-per-pixel scale
+
+				// -index_scale_upper * 1/sqrt(2) is the side length of
+				//  the unit-square of code space, in arcseconds.
+				// -that times the code tolerance is how far a C/D star
+				//  can move before exceeding the code tolerance, in arcsec.
+				// -that divided by the smallest arcsec-per-pixel scale
+				//  gives the largest motion in pixels.
+				scalefudge = sp->index_scale_upper * M_SQRT1_2 *
+					sp->codetol / sp->funits_upper;
+				sp->minAB -= scalefudge;
+				logmsg(bp, "Scale fudge: %g pixels.\n", scalefudge);
+				logmsg(bp, "Set minAB to %g\n", sp->minAB);
+			}
+			if (sp->funits_lower != 0.0) {
+				sp->maxAB = sp->index_scale_upper / sp->funits_lower;
+				sp->maxAB += scalefudge;
+				logmsg(bp, "Set maxAB to %g\n", sp->maxAB);
+			}
+			bp->hits.run_verify = blind_run_verify;
 
 			// Set CPU time limit.
 			if (bp->cpulimit) {
@@ -672,8 +692,11 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		il_free(bp->fieldlist);
+		for (i=0; i<pl_size(bp->indexes); i++)
+			free(pl_get(bp->indexes, i));
+
 		pl_free(bp->indexes);
+		il_free(bp->fieldlist);
 
 		free(bp->logfname);
 		free(bp->donefname);
@@ -1073,56 +1096,17 @@ static void solve_fields(blind_params* bp) {
 	double utime, stime;
 	struct timeval wtime, last_wtime;
 	int nfields;
-	double* field = NULL;
 	int fi;
-	double scalefudge = 0.0; // in pixels
 
 	get_resource_stats(&last_utime, &last_stime, NULL);
 	gettimeofday(&last_wtime, NULL);
 
-	solver_default_params(&bp->solver);
-	sp->codekd = bp->codekd->tree;
-
-	if (sp->funits_upper != 0.0) {
-		sp->minAB = sp->index_scale_lower / sp->funits_upper;
-
-		// compute fudge factor for quad scale: what are the extreme
-		// ranges of quad scales that should be accepted, given the
-		// code tolerance?
-
-		// -what is the maximum number of pixels a C or D star can move
-		//  to singlehandedly exceed the code tolerance?
-		// -largest quad
-		// -smallest arcsec-per-pixel scale
-
-		// -index_scale_upper * 1/sqrt(2) is the side length of
-		//  the unit-square of code space, in arcseconds.
-		// -that times the code tolerance is how far a C/D star
-		//  can move before exceeding the code tolerance, in arcsec.
-		// -that divided by the smallest arcsec-per-pixel scale
-		//  gives the largest motion in pixels.
-		scalefudge = sp->index_scale_upper * M_SQRT1_2 *
-			sp->codetol / sp->funits_upper;
-
-		sp->minAB -= scalefudge;
-
-		logmsg(bp, "Scale fudge: %g pixels.\n", scalefudge);
-		logmsg(bp, "Set minAB to %g\n", sp->minAB);
-	}
-	if (sp->funits_lower != 0.0) {
-		sp->maxAB = sp->index_scale_upper / sp->funits_lower;
-		sp->maxAB += scalefudge;
-		logmsg(bp, "Set maxAB to %g\n", sp->maxAB);
-	}
-
-	bp->hits.run_verify = blind_run_verify;
-
 	nfields = bp->xyls->nfields;
+	sp->field = NULL;
 
 	for (fi=0; fi<il_size(bp->fieldlist); fi++) {
 		int fieldnum;
 		MatchObj template;
-		int nfield;
 		qfits_header* fieldhdr = NULL;
 
 		if (bp->rdls) {
@@ -1160,18 +1144,35 @@ static void solve_fields(blind_params* bp) {
 		}
 		sp->do_solvedserver = (bp->solvedserver ? TRUE : FALSE);
 
-
 		// Get the field.
-		nfield = xylist_n_entries(bp->xyls, fieldnum);
-		if (nfield == -1) {
+		sp->nfield = xylist_n_entries(bp->xyls, fieldnum);
+		if (sp->nfield == -1) {
 			logerr(bp, "Couldn't determine how many objects are in field %i.\n", fieldnum);
 			goto cleanup;
 		}
-		field = realloc(field, 2 * nfield * sizeof(double));
-		if (xylist_read_entries(bp->xyls, fieldnum, 0, nfield, field)) {
+		sp->field = realloc(sp->field, 2 * sp->nfield * sizeof(double));
+		if (xylist_read_entries(bp->xyls, fieldnum, 0, sp->nfield, sp->field)) {
 			logerr(bp, "Failed to read field.\n");
 			goto cleanup;
 		}
+
+		// FIXME - reset these to their original values when done!!
+		if (sp->field_minx == sp->field_maxx) {
+			int i;
+			for (i=0; i<sp->nfield; i++) {
+				sp->field_minx = min(sp->field_minx, sp->field[2*i+0]);
+				sp->field_maxx = max(sp->field_maxx, sp->field[2*i+0]);
+			}
+		}
+		if (sp->field_miny == sp->field_maxy) {
+			int i;
+			for (i=0; i<sp->nfield; i++) {
+				sp->field_miny = min(sp->field_miny, sp->field[2*i+0]);
+				sp->field_maxy = max(sp->field_maxy, sp->field[2*i+0]);
+			}
+		}
+		sp->field_diag = hypot(sp->field_maxy - sp->field_miny,
+							   sp->field_maxx - sp->field_minx);
 
 		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
@@ -1298,20 +1299,20 @@ static void solve_fields(blind_params* bp) {
 			}
 
 			if (bp->rdls) {
-				double* radec = malloc(nfield * 2 * sizeof(double));
+				double* radec = malloc(sp->nfield * 2 * sizeof(double));
 				int i;
 				if (sip) {
-					for (i=0; i<nfield; i++)
+					for (i=0; i<sp->nfield; i++)
 						sip_pixelxy2radec(sip,
-										  field[i*2], field[i*2+1],
+										  sp->field[i*2], sp->field[i*2+1],
 										  radec+i*2, radec+i*2+1);
 				} else {
-					for (i=0; i<nfield; i++)
+					for (i=0; i<sp->nfield; i++)
 						tan_pixelxy2radec(&(bestmo->wcstan),
-										  field[i*2], field[i*2+1],
+										  sp->field[i*2], sp->field[i*2+1],
 										  radec+i*2, radec+i*2+1);
 				}
-				if (rdlist_write_entries(bp->rdls, radec, nfield)) {
+				if (rdlist_write_entries(bp->rdls, radec, sp->nfield)) {
 					logerr(bp, "Failed to write RDLS entry.\n");
 				}
 				free(radec);
@@ -1400,7 +1401,8 @@ static void solve_fields(blind_params* bp) {
 		}
 	}
 
-	free(field);
+	free(sp->field);
+	sp->field = NULL;
 	handlehits_uninit(&bp->hits);
 }
 

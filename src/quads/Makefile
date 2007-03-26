@@ -73,20 +73,20 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
-PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an startree \
-	hpquads codetree unpermute-quads unpermute-stars homer blind agreeable \
-	solvedserver printsolved xylist2fits printmatch mergesolved rdlsinfo \
-	xylsinfo wcsinfo
+PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
+	startree hpquads codetree unpermute-quads unpermute-stars homer blind \
+	agreeable solvedserver printsolved xylist2fits printmatch mergesolved \
+	rdlsinfo xylsinfo wcsinfo
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy
+	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy plotxy2 \
+	plotquad
 # HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
-	plotquads matchtordls tunematch overlapstats \
-	rawstartree
+	plotquads matchtordls tunematch overlapstats rawstartree
 
 OLDEXECS_OBJS := catalog.o histogram.o \
 	verify.o intmap.o tic.o matchfile.o codekd.o idfile.o \
