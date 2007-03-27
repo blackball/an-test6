@@ -175,7 +175,7 @@ if ($didsolve) {
 	if (!array_key_exists("cd11", $jd)) {
 		$cmd = $wcsinfo . " " . $wcsfile; // . " > " $wcsinfofile;
 		$res = shell_exec($cmd);
-		//loggit("wcsinfo: " . $res . "\n");
+		loggit("wcsinfo: " . $res . "\n");
 		$lines = explode("\n", $res);
 		foreach ($lines as $ln) {
 			//loggit("line " . $ln . "\n");
