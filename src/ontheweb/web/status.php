@@ -38,6 +38,7 @@ $matchfile = $mydir . $match_fn;
 $objsfile = $mydir . $objs_fn;
 $overlayfile = $mydir . $overlay_fn;
 $rdlsinfofile = $mydir . $rdlsinfo_fn;
+$wcsinfofile = $mydir . $wcsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
 $indexxyls = $mydir . $indexxyls_fn;
 
@@ -173,8 +174,16 @@ if ($didsolve) {
 	}
 
 	if (!array_key_exists("cd11", $jd)) {
-		$cmd = $wcsinfo . " " . $wcsfile; // . " > " $wcsinfofile;
-		$res = shell_exec($cmd);
+		$errfile = $mydir . "wcsinfo.err";
+		$cmd = $wcsinfo . " " . $wcsfile . " > " . $wcsinfofile . " 2> " . $errfile;
+		loggit("Command: " . $cmd);
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			loggit("wcsinfo failed: retval " . $retval . ", cmd " . $cmd . "\n");
+			$res = "";
+		} else {
+			$res = file_get_contents($wcsinfofile);
+		}
+		//$res = shell_exec($cmd);
 		loggit("wcsinfo: " . $res . "\n");
 		$lines = explode("\n", $res);
 		foreach ($lines as $ln) {
@@ -200,7 +209,7 @@ if ($didsolve) {
 					   "cd21" => $cd21,
 					   "cd22" => $cd22,
 					   "det" => $det,
-					   "parity" => $parity,
+					   "trueparity" => $parity,
 					   "orientation" => $orient,
 					   "pixscale" => $pixscale);
 		if (!setjobdata($db, $setjd)) {
@@ -212,7 +221,7 @@ if ($didsolve) {
 		$cd21 = (float)$jd["cd21"];		
 		$cd22 = (float)$jd["cd22"];		
 		$det =  (float)$jd["det"];
-		$parity = (int)$jd["parity"];
+		$parity = (int)$jd["trueparity"];
 		$orient = (float)$jd["orientation"];
 		$pixscale = (float)$jd["pixscale"];
 	}

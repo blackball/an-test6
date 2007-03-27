@@ -52,17 +52,6 @@ $form =& new HTML_QuickForm('blindform','post');
 
 $form->removeAttribute('name');
 
-$formDefaults = array('x_col' => 'X',
-					  'y_col' => 'Y',
-					  'parity' => 2,
-					  'index' => 'auto',
-					  'poserr' => 1.0,
-					  'tweak' => 1,
-					  'imgurl' => "http://",
-					  'fsunit' => 'degreewidth',
-					  'skippreview' => '',
-					  'justjobid' => '',
-					  );
 $form->setDefaults($formDefaults);
 
 $form->addElement('hidden', 'skippreview');
@@ -106,14 +95,7 @@ $form->addElement('text', 'fsv', 'field scale (variance (%))',
 				  array('size'=>5,
 						'onfocus' => "setFsEv()"));
 
-$units = array('arcsecperpix' => "arcseconds per pixel",
-			   'arcminperpix' => "arcminutes per pixel",
-			   'arcminwidth' => "width of the field (in arcminutes)", 
-			   'degreewidth' => "width of the field (in degrees)", 
-			   'focalmm' => "focal length of the lens (for 35mm film equivalent sensor)", 
-			   );
-
-$form->addElement('select', 'fsunit', 'units', $units, null);
+$form->addElement('select', 'fsunit', 'units', $unitmap, null);
 
 $form->addElement('radio', 'parity', "Try both handednesses", null, 2);
 $form->addElement('radio', 'parity', "Right-handed image", null, 0);
@@ -158,45 +140,25 @@ $form->addFormRule('check_poserr');
 if ($form->exportValue("linkhere")) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = $_SERVER['PHP_SELF'];
-	$uri .= "?";
 	$vals = $form->exportValues();
-	$args = "";
-	$flds = array('xysrc', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
-				  'fsunit', 'parity', 'poserr', 'index',
-				  'uname', 'email');
 	switch ($vals["xysrc"]) {
-	case "url":
-		array_push($flds, "imgurl");
-		break;
 	case "img":
-		//array_push($flds, "imgfile");
 		$imgval = $imgfile->getValue();
 		if ($imgval) {
-			//loggit("image filename: " . $imgval['name'] . "\n");
-			$args .= "&imgfile=" . urlencode($imgval['name']);
+			$vals['image-origname'] = $imgval['name'];
 		}
 		break;
 	case "fits":
-		//array_push($flds, "fitsfile");
 		$fitsval = $fitsfile->getValue();
 		if ($fitsval) {
-			$args .= "&fitsfile=" . urlencode($fitsval['name']);
+			$vals['fits-origname'] = $fitsval['name'];
 		}
 		array_push($flds, "x_col");
 		array_push($flds, "y_col");
 		break;
 	}
-	foreach ($flds as $fld) {
-		if ($vals[$fld] != $formDefaults[$fld])
-			$args .= "&" . urlencode($fld) . "=" . urlencode($vals[$fld]);
-	}
-	if ($vals["tweak"]) {
-		$args = "&tweak=1" . $args;
-	}
-
-	$uri .= substr($args, 1);
-
-	header("Location: http://" . $host . $uri);
+	$args = format_preset_url($vals, $formDefaults);
+	header("Location: http://" . $host . $uri . $args);
 	exit;
 }
 
@@ -407,10 +369,6 @@ function check_fieldscale($vals) {
 			return array("fsl"=>"Lower bound must be positive!");
 		if ($u < 0)
 			return array("fsu"=>"Upper bound must be positive!");
-		/*
-		if (($l && !$u) || ($u && !$l)) {
-			return array("fsu"=>"You must give BOTH upper and lower bounds.");
-		*/
 	} else if ($type == "ev") {
 		if ($e > 0 && $v > 0)
 			return TRUE;
@@ -418,11 +376,6 @@ function check_fieldscale($vals) {
 			return array("fse"=>"Estimate must be positive!");
 		if ($v < 1 || $v > 99)
 			return array("fsv"=>"% Eror must be between 1 and 99!");
-		/*
-		if (($e && !$v) || ($v && !$e)) {
-			return array("fsu"=>"You must give BOTH an estimate and error.");
-		}
-		*/
 	}
 	return array("fstype"=>"Invalid fstype");
 }
@@ -473,6 +426,7 @@ function process_data ($vals) {
 	global $tabmerge;
 	global $modhead;
 	global $headers;
+	global $formDefaults;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -502,7 +456,7 @@ function process_data ($vals) {
 					 "timelimit" => $timelimit);
 
 	$flds = array('xysrc', 'imgfile', 'fitsfile', 'imgurl',
-				  'x_col', 'y_col', 'fstype',
+				  'x_col', 'y_col', 'fstype', 'parity',
 				  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
 				  'poserr', 'index', 'submit');
 
@@ -552,6 +506,13 @@ function process_data ($vals) {
 		$imgfilename = $mydir . $imgbasename;
 		if (!$imgfile->moveUploadedFile($mydir, $imgbasename)) {
 			die("failed to move uploaded file into place.");
+		}
+	} else if ($xysrc == "fits") {
+		// The filename on the user's machine:
+		$fitsval = $fitsfile->getValue();
+		$origname = $fitsval["name"];
+		if (!setjobdata($db, array("fits-origname"=>$origname))) {
+			die("failed to update jobdata: fits-origname");
 		}
 	}
 
@@ -900,6 +861,7 @@ function convert_image($filename, $mydir,
 	global $objs_fn;
 	global $fits2xyout_fn;
 	global $an_fitstopnm;
+	global $fits_filter;
 
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
@@ -952,11 +914,25 @@ function convert_image($filename, $mydir,
 		if (strstr($typestr, $phrase)) {
 			$suff    = $lst[0];
 			$command = $lst[1];
-			$cmd = sprintf($command, $filename, $pnmimg);
+
+			if ($suff == "fits") {
+				$filtered_fits = $mydir . "filtered.fits";
+				$outfile = $mydir . "fits2fits.out";
+				$cmd = sprintf($fits_filter, $filename, $filtered_fits) . " > " . $outfile . " 2>&1";
+				loggit("Command: " . $cmd . "\n");
+				if ((system($cmd, $retval) === FALSE) || $retval) {
+					loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+					die("failed to fix your FITS file: <pre>" . file_get_contents($outfile) . "</pre>");
+				}
+				$filename = $filtered_fits;
+			}
+
+			$outfile = $mydir . "Xtopnm.out";
+			$cmd = sprintf($command, $filename, $pnmimg) . " 2> " . $outfile;
 			loggit("Command: " . $cmd . "\n");
-			if (system($cmd, $retval)) {
-				loggit("Command failed, return value " . $retval . ": " . $cmd);
-				die("failed to convert image");
+			if ((system($cmd, $retval) === FALSE) || $retval) {
+				loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+				die("failed to convert image: <pre>" . file_get_contents($outfile) . "</pre>");
 			}
 			$addsuffix = $suff . $addsuffix;
 			$imgtype = $suff;
@@ -967,6 +943,7 @@ function convert_image($filename, $mydir,
 	if (!$gotit) {
 		die("Unknown image type: " . $typestr);
 	}
+	loggit("found image type " . $imgtype . "\n");
 
 	// Use "pnmfile" to get the image size.
 	$cmd = "pnmfile " . $pnmimg;

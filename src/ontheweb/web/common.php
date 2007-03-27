@@ -29,9 +29,29 @@ $wcs_fn   = "wcs.fits";
 $objs_fn  = "objs.png";
 $overlay_fn="overlay.png";
 $rdlsinfo_fn="rdlsinfo";
+$wcsinfo_fn="wcsinfo";
 $jobdata_fn = "jobdata.db";
 $fits2xyout_fn = "fits2xy.out";
 //$userimage_fn = "userimage";
+
+$unitmap = array('arcsecperpix' => "arcseconds per pixel",
+				 'arcminperpix' => "arcminutes per pixel",
+				 'arcminwidth' => "width of the field (in arcminutes)", 
+				 'degreewidth' => "width of the field (in degrees)", 
+				 'focalmm' => "focal length of the lens (for 35mm film equivalent sensor)", 
+				 );
+
+$formDefaults = array('x_col' => 'X',
+					  'y_col' => 'Y',
+					  'parity' => 2,
+					  'index' => 'auto',
+					  'poserr' => 1.0,
+					  'tweak' => 1,
+					  'imgurl' => "http://",
+					  'fsunit' => 'degreewidth',
+					  'skippreview' => '',
+					  'justjobid' => '',
+					  );
 
 $valid_blurb = <<<END
 <p>
@@ -90,6 +110,7 @@ if (strpos($host, "monte") === 0) {
 	$wcs_rd2xy = "/home/gmaps/quads/wcs-rd2xy";
 	$fits_guess_scale = "/home/gmaps/quads/fits-guess-scale";
 	$an_fitstopnm = "/home/gmaps/quads/an-fitstopnm";
+	$fits_filter = "/home/gmaps/quads/fits2fits.py %s %s";
 }
 
 $headers = $_REQUEST;
@@ -119,6 +140,88 @@ function dtime2str($secs) {
 	} else {
 		return sprintf("%d seconds", $secs);
 	}
+}
+
+function format_preset_url($jd, $defaults=array()) {
+	$args = "";
+	$flds = array('xysrc', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
+				  'fsunit', 'parity', 'poserr', 'index',
+				  'uname', 'email');
+	switch ($jd["xysrc"]) {
+	case "url":
+		array_push($flds, "imgurl");
+		break;
+	case "img":
+		$imgname = $jd['image-origname'];
+		if ($imgname) {
+			$args .= '&imgfile=' . $imgname;
+		}
+		break;
+	case "fits":
+		$fitsname = $jd['fits-origname'];
+		if ($fitsname) {
+			$args .= '&fitsfile=' . $fitsname;
+		}
+		array_push($flds, "x_col");
+		array_push($flds, "y_col");
+		break;
+	}
+	foreach ($flds as $fld) {
+		if ($jd[$fld] != $defaults[$fld])
+			$args .= "&" . urlencode($fld) . "=" . urlencode($jd[$fld]);
+	}
+	if ($jd['tweak']) {
+		$args = "&tweak=1" . $args;
+	}
+	return "?" . substr($args, 1);
+}
+
+function describe_job($jd) {
+	global $unitmap;
+
+	$strs = array();
+	switch ($jd['xysrc']) {
+	case 'url':
+		$strs['Image URL'] =  $jd['imgurl'];
+		break;
+	case 'img':
+		$strs['Image file'] = $jd['image-origname'];
+		break;
+	case 'fits':
+		$strs['FITS file'] = $jd['fits-origname'];
+		break;
+	}
+	if ($jd['x_col'] != 'X') {
+		$strs['X column name'] = $jd['x_col'];
+	}
+	if ($jd['y_col'] != 'Y') {
+		$strs['Y column name'] = $jd['y_col'];
+	}
+	if ($jd['fsunit']) {
+		$strs['Field size units'] = $unitmap[$jd['fsunit']];
+	}
+	if ($jd['fstype'] == 'ul') {
+		$strs['Field size upper bound'] = $jd['fsu'];
+		$strs['Field size lower bound'] = $jd['fsl'];
+	} else {
+		$strs['Field size estimate'] = $jd['fse'];
+		$strs['Field size error'] = $jd['fsv'] . "%";
+	}
+	$strs['Tweak'] = $jd['tweak'] ? "yes" : "no";
+	$strs['Field Positional Error'] = $jd['poserr'] . " pixels";
+	$strs['Index'] = $jd['index'];
+	switch ($jd['parity']) {
+	case '0':
+		$strs['Parity'] = 'Right-handed';
+		break;
+	case '1':
+		$strs['Parity'] = 'Left-handed';
+		break;
+	case '2':
+		$strs['Parity'] = 'Try both';
+		break;
+	}
+	return $strs;
 }
 
 function create_random_dir($basedir) {
