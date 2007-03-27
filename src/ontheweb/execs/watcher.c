@@ -163,7 +163,7 @@ void file_created(childinfo* info, struct inotify_event* evt, char* path) {
 		q_it = 1;
 	free(pathcopy);
 	if (!q_it) {
-		loggit("Ignoring file %s.\n", path);
+		//loggit("Ignoring file %s.\n", path);
 		return;
 	}
 	//loggit("Queuing file %s.\n", path);
@@ -405,6 +405,7 @@ void* worker_start_routine(void* arg) {
    to run the given command.
  */
 void start_worker(char* path) {
+	pthread_attr_t attribs;
 	pthread_mutex_lock(&condmutex);
 	while (workers_running == nworkers) {
 		// wait for a worker to finish...
@@ -414,12 +415,19 @@ void start_worker(char* path) {
 	loggit("Starting a new worker (now %i running).\n", workers_running);
 	pthread_mutex_unlock(&condmutex);
 
+	// Create a detached (non-joinable) thread so that its resources
+	// are freed when the thread terminates.
+	if (pthread_attr_init(&attribs) ||
+		pthread_attr_setdetachstate(&attribs, PTHREAD_CREATE_DETACHED)) {
+		loggit("Failed to set pthread attributes.\n");
+	}
+
 	pthread_t* wthread = calloc(1, sizeof(pthread_t));
 	if (!wthread) {
 		loggit("Failed to allocate pthread_t for a worker.\n");
 		exit(-1);
 	}
-	if (pthread_create(wthread, NULL, worker_start_routine, path)) {
+	if (pthread_create(wthread, &attribs, worker_start_routine, path)) {
 		loggit("Failed to pthread_create a worker: %s\n", strerror(errno));
 		exit(-1);
 	}
