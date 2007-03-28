@@ -27,6 +27,23 @@
    to handle them.
  */
 
+const char* OPTIONS = "hDl:c:n:";
+
+void printHelp(char* progname) {
+	fprintf(stderr, "Usage:\n\n"
+			"%s [options], where options include:\n"
+			"      [D]: become a daemon; implies logging to the default\n"
+			"           file (\"watcher.log\" in the current directory)\n"
+			"           if logging is not specified with -l.\n"
+			"      [-l <logfile>]: log to the specified file.\n"
+			"      [-c <command>]: run the given command; it should be a printf\n"
+			"           pattern; it will be passed the path of the file.\n"
+			"           default: \"%s\"\n"
+			"      [-n <nthreads>]: number of worker threads to run simultaneously.\n"
+			"           default: 1\n"
+			"\n", progname, blind);
+}
+
 pthread_t childthread;
 pthread_t parentthread;
 
@@ -498,23 +515,6 @@ void* parent_start_routine(void* arg) {
 	int* thepipe = (int*)arg;
 	parent_process(thepipe[0]);
 	return NULL;
-}
-
-const char* OPTIONS = "hDl:c:n:";
-
-void printHelp(char* progname) {
-	fprintf(stderr, "Usage:\n\n"
-			"%s [options], where options include:\n"
-			"      [D]: become a daemon; implies logging to the default\n"
-			"           file (\"watcher.log\" in the current directory)\n"
-			"           if logging is not specified with -l.\n"
-			"      [-l <logfile>]: log to the specified file.\n"
-			"      [-c <command>]: run the given command; it should be a printf\n"
-			"           pattern; it will be passed the path of the file.\n"
-			"           default: \"%s\"\n"
-			"      [-n <nthreads>]: number of worker threads to run simultaneously.\n"
-			"           default: 1\n"
-			"\n", progname, blind);
 }
 
 extern char *optarg;
