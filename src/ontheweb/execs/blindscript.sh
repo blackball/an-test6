@@ -12,5 +12,5 @@ echo $jobdir
 echo $jobid
 
 cd $jobdir
-blind < $inputfile
+blind < $inputfile > "log" 2>&1
 

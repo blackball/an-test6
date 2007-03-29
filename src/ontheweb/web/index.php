@@ -2,13 +2,13 @@
 require 'common.php';
 require 'presets.php';
 
-/*
 $emailver = 0;
 $webver = 1;
-*/
 
+/*
 $emailver = 1;
 $webver = 0;
+*/
 
 if ($emailver) {
 	require 'rfc822.php';

@@ -546,11 +546,11 @@ function process_data ($vals) {
 		"verify_pix " . $poserr . "\n" .
 
 		// DEPRECATED
-		"nagree_toverify 0\n" .
-		"ninfield_tokeep 25\n" .
-		"ninfield_tosolve 25\n" .
-		"overlap_tokeep 0.25\n" .
-		"overlap_tosolve 0.25\n" .
+		//"nagree_toverify 0\n" .
+		//"ninfield_tokeep 25\n" .
+		//"ninfield_tosolve 25\n" .
+		//"overlap_tokeep 0.25\n" .
+		//"overlap_tosolve 0.25\n" .
 
 		// new
 		"nverify 20\n" .
