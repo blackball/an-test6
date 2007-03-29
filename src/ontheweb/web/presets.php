@@ -112,7 +112,6 @@ array("apod-2007-03-09" =>
            http://antwrp.gsfc.nasa.gov/apod/ap070222.html
            http://antwrp.gsfc.nasa.gov/apod/ap070221.html
            http://antwrp.gsfc.nasa.gov/apod/ap070219.html
-           http://antwrp.gsfc.nasa.gov/apod/ap070214.html
            http://antwrp.gsfc.nasa.gov/apod/ap070213.html
            http://antwrp.gsfc.nasa.gov/apod/ap070203.html
            http://antwrp.gsfc.nasa.gov/apod/ap070124.html

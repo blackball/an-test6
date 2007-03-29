@@ -293,7 +293,7 @@ if ($overlay) {
 			die("plotquad failed.");
 		}
 
-		$cmd = "pgmtoppm red " . $quadimg . " > " . $redquad;
+		$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
 		loggit("command: $cmd\n");
 		if ((system($cmd, $retval) === FALSE) || $retval) {
 			die("pgmtoppm (quad) failed.");
@@ -316,7 +316,7 @@ if ($overlay) {
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -n " . (1+$fldobjs) . " -N 100 -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy2pgm;
+			" -n " . (1+$fldobjs) . " -N 200 -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy2pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {

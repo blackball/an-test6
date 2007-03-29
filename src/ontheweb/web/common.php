@@ -1,4 +1,7 @@
 <?php
+require_once 'MDB2.php';
+require_once 'PEAR.php';
+
 $resultdir = "/home/gmaps/ontheweb-data/";
 $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
@@ -9,6 +12,9 @@ $maxquads = 0; // 1000000;
 $maxcpu = 0;
 
 $index_template = "index-template.html";
+$index_header   = "index-header.html";
+$index_tail     = "index-tail.html";
+$submitted_html = "submitted.html";
 
 $q_fn = "queue";
 
@@ -28,6 +34,7 @@ $cancel_fn= "cancel";
 $wcs_fn   = "wcs.fits";
 $objs_fn  = "objs.png";
 $overlay_fn="overlay.png";
+$xylsinfo_fn="xylsinfo";
 $rdlsinfo_fn="rdlsinfo";
 $wcsinfo_fn="wcsinfo";
 $jobdata_fn = "jobdata.db";
@@ -140,6 +147,27 @@ function dtime2str($secs) {
 	} else {
 		return sprintf("%d seconds", $secs);
 	}
+}
+
+function format_preset_url_from_form($formvals, $defaults=array()) {
+	switch ($vals["xysrc"]) {
+	case "img":
+		$imgval = $imgfile->getValue();
+		if ($imgval) {
+			$vals['image-origname'] = $imgval['name'];
+		}
+		break;
+	case "fits":
+		$fitsval = $fitsfile->getValue();
+		if ($fitsval) {
+			$vals['fits-origname'] = $fitsval['name'];
+		}
+		array_push($flds, "x_col");
+		array_push($flds, "y_col");
+		break;
+	}
+	$args = format_preset_url($vals, $defaults);
+	return $args;
 }
 
 function format_preset_url($jd, $defaults=array()) {
