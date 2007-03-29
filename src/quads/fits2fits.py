@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 import pyfits
 import os
 import sys
