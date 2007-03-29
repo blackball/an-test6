@@ -140,7 +140,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	e->dec = vals1[1];
 	e->err_major = vals1[2];
 	e->err_minor = vals1[3];
-	e->err_angle = vals1[4];
+	e->err_angle = (unsigned char)vals1[4];
 
 	printval("ra %g, dec %g, err_major %g, err_minor %g, err_angle %i\n", e->ra, e->dec, e->err_major, e->err_minor, e->err_angle);
 
@@ -427,7 +427,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	if (twomass_is_null_float(val2))
 		e->prox_angle = TWOMASS_ANGLE_NULL;
 	else
-		e->prox_angle = val2;
+		e->prox_angle = (unsigned char)val2;
 
 	printval("proximity_angle %i\n", e->prox_angle);
 
@@ -643,7 +643,7 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 	if (twomass_is_null_float(val2))
 		e->phi_opt = TWOMASS_ANGLE_NULL;
 	else
-		e->phi_opt = val2;
+		e->phi_opt = (unsigned char)val2;
 
 	printval("dist_opt %g, phi_opt %i, b_m_opt %g, vr_m_opt %g.\n", e->dist_opt, e->phi_opt, e->b_m_opt, e->vr_m_opt);
 

@@ -58,6 +58,8 @@
 #include "rdlist.h"
 #include "verify.h"
 
+typedef __sighandler_t sighandler_t;
+
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s\n", progname);

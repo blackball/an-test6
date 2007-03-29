@@ -48,7 +48,7 @@ static bool twomass_fitstruct_inited = 0;
 
 #define SET_ARRAY(A, i, t, n, u, fld, na, nul) { \
  twomass_entry x; \
- if (sizeof(x.fld) != fits_get_atom_size(t)*na) \
+ if ((int)sizeof(x.fld) != fits_get_atom_size(t)*na) \
     fprintf(stderr, "Warning, 2MASS field \"%s\" has size %i in the struct but %i * %i in FITS.\n", \
 	    #fld, (int)sizeof(x.fld), fits_get_atom_size(t), na);	\
  A[i].fieldname=n; \
@@ -270,8 +270,8 @@ twomass_catalog* twomass_catalog_open_for_writing(char* fn) {
 int twomass_catalog_write_headers(twomass_catalog* cat) {
 	qfits_header* table_header;
 	char val[32];
-	assert(cat->fid);
-	assert(cat->header);
+	assert(cat->fid!=NULL);
+	assert(cat->header!=NULL);
 	sprintf(val, "%u", cat->nentries);
 	qfits_header_mod(cat->header, "NOBJS", val, "Number of objects in this catalog.");
 	qfits_header_dump(cat->header, cat->fid);
@@ -359,7 +359,7 @@ int twomass_catalog_read_entries(twomass_catalog* cat, uint offset,
 		init_twomass_fitstruct();
 	for (c=0; c<TWOMASS_FITS_COLUMNS; c++) {
 		assert(cat->columns[c] != -1);
-		assert(cat->table);
+		assert(cat->table!=NULL);
 		assert(cat->table->col[cat->columns[c]].atom_size ==
 			   twomass_fitstruct[c].size / twomass_fitstruct[c].ncopies);
 		qfits_query_column_seq_to_array

@@ -84,7 +84,7 @@ int main(int argc, char** args) {
 	}
 
 	HP = 12 * Nside * Nside;
-	cats = calloc(HP, sizeof(twomass_catalog*));
+	cats = calloc((size_t)HP, sizeof(twomass_catalog*));
 
 	printf("Nside = %i, using %i healpixes.\n", Nside, HP);
 
@@ -94,7 +94,7 @@ int main(int argc, char** args) {
 	startoptind = optind;
 	for (; optind<argc; optind++) {
 		char* infn;
-		gzFile* fiz = NULL;
+		gzFile fiz = NULL;
 		char line[1024];
 		int nentries;
 

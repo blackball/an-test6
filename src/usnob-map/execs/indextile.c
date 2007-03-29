@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
 		xlo2 = xhi2 = 0.0;
 	}
 
-	img = calloc(w*h*3, sizeof(uchar));
+	img = calloc((size_t)w*h*3, sizeof(uchar));
 	if (!img) {
 		fprintf(stderr, "Failed to allocate  image.\n");
 		exit(-1);
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "%i stars inside image bounds.\n", Nib);
 
 	printf("P6 %d %d %d\n", w, h, 255);
-	fwrite(img, 1, 3*w*h, stdout);
+	fwrite(img, 1, (size_t)3*w*h, stdout);
 	free(img);
 	return 0;
 }

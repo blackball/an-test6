@@ -557,7 +557,7 @@ void ransac(tweak_t* t)
 	double besterr = 100000000000000.;
 	int min_data_points = 100;
    int set_size,i;
-   il* maybeinliers,alsoinliers,used_ref_sources,used_image_sources;
+   il  *maybeinliers,*alsoinliers,*used_ref_sources,*used_image_sources;
 
 	sip_t wcs_try, wcs_best;
 	memcpy(&wcs_try, t->sip, sizeof(sip_t));

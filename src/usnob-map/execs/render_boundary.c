@@ -69,10 +69,10 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	ends[0] = 0.0;
 	ends[1] = 0.0;
 	ends[2] = 0.0;
-	ends[3] = imh;
-	ends[4] = imw;
-	ends[5] = imh;
-	ends[6] = imw;
+	ends[3] = (double)imh;
+	ends[4] = (double)imw;
+	ends[5] = (double)imh;
+	ends[6] = (double)imw;
 	ends[7] = 0.0;
 
 	//logmsg("ra: [%g,%g], dec: [%g,%g]\n", args->ramin, args->ramax, args->decmin, args->decmax);

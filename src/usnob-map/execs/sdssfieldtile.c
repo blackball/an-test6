@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
 	if (N && N < Nstars)
 		Nstars = N;
 
-	xy = malloc(Nstars * 2 * sizeof(double));
+	xy = malloc((size_t)Nstars * 2 * sizeof(double));
 	if (xylist_read_entries(xyls, fieldnum, 0, Nstars, xy)) {
 		fprintf(stderr, "Failed to read XYLS file.\n");
 		free(xy);
@@ -254,7 +254,7 @@ int main(int argc, char *argv[]) {
 			wraphigh[0] = wraphigh[1] = wraplow[0] = 0.0;
 		}
 
-		img = calloc(w*h*3, sizeof(float));
+		img = calloc((size_t)w*h*3, sizeof(float));
 		if (!img) {
 			fprintf(stderr, "Failed to allocate flux image.\n");
 			exit(-1);
