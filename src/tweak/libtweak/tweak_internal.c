@@ -736,7 +736,7 @@ double figure_of_merit2(tweak_t* t)
 void invert_sip_polynomial(tweak_t* t)
 {
    int inv_sip_order,ngrid,inv_sip_coeffs,stride;
-	double* A,A2,b,b2;
+	double *A,*A2,*b,*b2;
 	double maxu,maxv,minu,minv;
 	int i,gu, gv;
 
@@ -933,7 +933,7 @@ void invert_sip_polynomial(tweak_t* t)
 void do_linear_tweak(tweak_t* t)
 {
    int sip_order,sip_coeffs,stride;
-   double* A,A2,b,b2;
+   double *A,*A2,*b,*b2;
 	double xyzcrval[3];
 	double cdi[2][2];
    double inv_det;
@@ -1377,7 +1377,7 @@ void my_ransac(tweak_t* t)
 	double besterr = 100000000000000.;
 	int min_data_points = 100;
    int set_size,i;
-	il* maybeinliers,alsoinliers,used_ref_sources,used_image_sources;
+	il *maybeinliers,*alsoinliers,*used_ref_sources,*used_image_sources;
 
 	sip_t wcs_try, wcs_best;
 	memcpy(&wcs_try, t->sip, sizeof(sip_t));
