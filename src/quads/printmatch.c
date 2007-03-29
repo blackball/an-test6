@@ -87,11 +87,6 @@ int main(int argc, char *argv[]) {
 		mo = matchfile_buffered_read_match(matchin);
 		if (!mo)
 			break;
-		if (!mo->transform_valid) {
-			printf("MatchObject transform isn't valid.\n");
-			continue;
-		}
-
 		printf("field: %d ", nsolved);
 		printf("min corner: ");
 		printxyzasradec(mo->sMin);
