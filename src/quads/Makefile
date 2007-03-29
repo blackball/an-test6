@@ -80,14 +80,15 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	#agreeable 
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy plotxy2 \
-	plotquad
+	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy
 # HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats rawstartree
+
+CAIROEXECS := plotquad plotxy2
 
 OLDEXECS_OBJS := catalog.o histogram.o \
 	verify.o intmap.o tic.o matchfile.o codekd.o idfile.o \
@@ -105,6 +106,8 @@ ALL_OBJ += $(2MASSOBJ)
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) $(REMAKE_LIBTWEAK) \
 	$(PIPELINE) $(PROSPECTUS) $(FITS_UTILS) fitsverify
+
+cairo: $(CAIROEXECS)
 
 .PHONY: pipeline
 pipeline: $(PIPELINE)
