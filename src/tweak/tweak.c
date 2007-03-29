@@ -439,6 +439,13 @@ void lm_fit(tweak_t* t)
 	double params[410];
 	double *desired;
 	double *hx;
+	double info[LM_INFO_SZ];
+	int max_iterations = 200;
+	double opts[] = { 0.001*LM_INIT_MU,
+	                  0.001*LM_STOP_THRESH,
+	                  0.001*LM_STOP_THRESH,
+		          0.001*LM_STOP_THRESH,
+	                  0.001*-LM_DIFF_DELTA};
 
 //	t->opt_flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
 //	t->opt_flags = OPT_CRVAL | OPT_CD;
@@ -494,13 +501,6 @@ void lm_fit(tweak_t* t)
 //	assert(hx-desired == 3*il_size(t->image));
 
 //	printf("Starting optimization m=%d n=%d!!!!!!!!!!!\n",m,n);
-	double info[LM_INFO_SZ];
-	int max_iterations = 200;
-	double opts[] = { 0.001*LM_INIT_MU,
-	                  0.001*LM_STOP_THRESH,
-	                  0.001*LM_STOP_THRESH,
-		          0.001*LM_STOP_THRESH,
-	                  0.001*-LM_DIFF_DELTA};
 	dlevmar_dif(cost, params, desired, m, n, max_iterations,
 	            opts, info, NULL, NULL, t);
 
@@ -554,23 +554,24 @@ void ransac(tweak_t* t)
 {
 	int iterations = 0;
 	int maxiter = 40;
+	double besterr = 100000000000000.;
+	int min_data_points = 100;
+   int set_size,i;
+   il* maybeinliers,alsoinliers,used_ref_sources,used_image_sources;
 
 	sip_t wcs_try, wcs_best;
 	memcpy(&wcs_try, t->sip, sizeof(sip_t));
 	memcpy(&wcs_best, t->sip, sizeof(sip_t));
 
-	double besterr = 100000000000000.;
-	int min_data_points = 100;
-	int set_size = il_size(t->image);
-	il* maybeinliers = il_new(4);
-	il* alsoinliers = il_new(4);
+	set_size = il_size(t->image);
+	maybeinliers = il_new(4);
+	alsoinliers = il_new(4);
 
 	// we need to prevent pairing any reference star to multiple image
 	// stars, or multiple reference stars to single image stars
-	il* used_ref_sources = il_new(t->n_ref);
-	il* used_image_sources = il_new(t->n);
+	used_ref_sources = il_new(t->n_ref);
+	used_image_sources = il_new(t->n);
 
-	int i;
 	for (i=0; i<t->n_ref; i++) 
 		il_append(used_ref_sources, 0);
 	for (i=0; i<t->n; i++) 
@@ -610,21 +611,23 @@ void ransac(tweak_t* t)
 		// the random sample set.
 		il_remove_all(alsoinliers);
 		for (i=0; i<il_size(t->included); i++) {
-			if (il_get(t->included, i))
-				continue;
 			double thresh = 2.e-04; // FIXME mystery parameter
 			double image_xyz[3];
 			double ref_xyz[3];
-			int ref_ind = il_get(t->ref, i);
-			int image_ind = il_get(t->image, i);
 			double a,d;
+         double dx,dy,dz,err;
+         int ref_ind,image_ind;
+			if (il_get(t->included, i))
+				continue;
+			ref_ind = il_get(t->ref, i);
+			image_ind = il_get(t->image, i);
 			sip_pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
 			radecdeg2xyzarr(a,d,image_xyz);
 			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
-			double dx = ref_xyz[0] - image_xyz[0];
-			double dy = ref_xyz[1] - image_xyz[1];
-			double dz = ref_xyz[2] - image_xyz[2];
-			double err = dx*dx+dy*dy+dz*dz;
+			dx = ref_xyz[0] - image_xyz[0];
+			dy = ref_xyz[1] - image_xyz[1];
+			dz = ref_xyz[2] - image_xyz[2];
+			err = dx*dx+dy*dy+dz*dz;
 			if (sqrt(err) < thresh)
 				il_append(alsoinliers, i);
 		}
@@ -678,6 +681,7 @@ int main(int argc, char *argv[])
 	char* hppat = NULL;
 	int Nside = 0;
 	char argchar;
+	int nhdus;
 
 	while ((argchar = getopt(argc, argv, "hi:s:o:d:n:")) != -1)
 		switch (argchar) {
@@ -712,7 +716,6 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	int nhdus;
 	if (fits_get_num_hdus(fptr, &nhdus, &status)) {
 		fits_report_error(stderr, status);
 		exit(-1);
@@ -729,6 +732,9 @@ int main(int argc, char *argv[])
 	// Tweak each HDU independently
 	for (kk=1; kk <= nhdus; kk++) {
 		int hdutype;
+      int order = 4;
+		int k;
+      tweak_t tweak;
 		if (fits_movabs_hdu(fptr, kk, &hdutype, &status)) {
 			fits_report_error(stderr, status);
 			exit(-1);
@@ -753,7 +759,6 @@ int main(int argc, char *argv[])
 		}
 
 		// FIXME BREAK HERE into new function
-		tweak_t tweak;
 		tweak_init(&tweak);
 		// set jitter: 6 arcsec.
 		tweak.jitter = 6.0;
@@ -789,13 +794,11 @@ int main(int argc, char *argv[])
 		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 		tweak_dump_ascii(&tweak);
 
-        int order = 4;
-        tweak.sip->a_order = order;
-        tweak.sip->b_order = order;
-        tweak.sip->ap_order = order;
-        tweak.sip->bp_order = order;
+      tweak.sip->a_order = order;
+      tweak.sip->b_order = order;
+      tweak.sip->ap_order = order;
+      tweak.sip->bp_order = order;
 
-		int k;
 		for (k=0; k<6; k++) {
             printf("\n");
             printf("--------------------------------\n");
