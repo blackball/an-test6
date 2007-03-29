@@ -52,12 +52,12 @@ void get_dydx_range(double* ximg, double* yimg, int nimg,
                     double* xcat, double* ycat, int ncat, 
                     double *mindx, double *mindy, double *maxdx, double *maxdy)
 {
+	int i, j;
 	*maxdx = -1e100;
 	*mindx = 1e100;
 	*maxdy = -1e100;
 	*mindy = 1e100;
 
-	int i, j;
 	for (i=0; i<nimg; i++) {
 		for (j=0; j<ncat; j++) {
 			double dx = ximg[i]-xcat[j];
@@ -77,6 +77,7 @@ void get_shift(double* ximg, double* yimg, int nimg,
 {
 
 	int i, j;
+	int themax,themaxind,ys,xs;
 
 	// hough transform 
 	int hsz = 1000; // hough size
@@ -135,10 +136,11 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	  fclose(ff);
 	*/
 	{
-		static char fn[] = "hough#.pgm";
+      FILE *ff;
 		static char c = '1';
+		static char fn[] = "hough#.pgm";
 		fn[5] = c++;
-		FILE* ff = fopen(fn, "wb");
+		ff = fopen(fn, "wb");
 		fprintf(ff, "P5 %i %i 65535\n", hsz, hsz);
 		for (i=0; i<(hsz*hsz); i++) {
 			uint16_t u = htons((hough[i] < 65535) ? hough[i] : 65535);
@@ -147,8 +149,8 @@ void get_shift(double* ximg, double* yimg, int nimg,
 		fclose(ff);
 	}
 
-	int themax = 0;
-	int themaxind = -1;
+	themax = 0;
+	themaxind = -1;
 	for (i=0; i<hsz*hsz; i++) {
 		if (themax < hough[i]) {
 			themaxind = i;
@@ -156,8 +158,8 @@ void get_shift(double* ximg, double* yimg, int nimg,
 		}
 	}
 
-	int ys = themaxind/hsz;
-	int xs = themaxind%hsz;
+	ys = themaxind/hsz;
+	xs = themaxind%hsz;
 
 	printf("xshsz = %d, yshsz=%d\n",xs,ys);
 
@@ -179,18 +181,19 @@ void get_shift(double* ximg, double* yimg, int nimg,
 // better
 sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 {
+   double crpix0,crpix1;
+	double nxref, nyref;
 	sip_t* swcs = malloc(sizeof(sip_t));
 	memcpy(swcs, wcs, sizeof(sip_t));
 
 	// Save
-	double crpix0 = wcs->wcstan.crpix[0];
-	double crpix1 = wcs->wcstan.crpix[1];
+	crpix0 = wcs->wcstan.crpix[0];
+	crpix1 = wcs->wcstan.crpix[1];
 
 	wcs->wcstan.crpix[0] += xs;
 	wcs->wcstan.crpix[1] += ys;
 
 	// now reproject the old crpix[xy] into swcs
-	double nxref, nyref;
 	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
 
 	swcs->wcstan.crval[0] = nxref;
@@ -205,11 +208,12 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 
 sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 {
+   sip_t* swcs;
 	get_shift(t->x, t->y, t->n,
 		  t->x_ref, t->y_ref, t->n_ref,
 		  rho*t->mindx, rho*t->mindy, rho*t->maxdx, rho*t->maxdy,
 		  &t->xs, &t->ys);
-	sip_t* swcs = wcs_shift(t->sip, t->xs, t->ys);
+	swcs = wcs_shift(t->sip, t->xs, t->ys);
 	sip_free(t->sip);
 	t->sip = swcs;
 	printf("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
@@ -308,13 +312,13 @@ void tweak_dump_ascii(tweak_t* t)
 	}
 
 	if (t->image) {
+		int i;
 		USE_FILE("corr_im");
 		cor_im = fopen(fn, "w");
 		USE_FILE("corr_ref");
 		cor_ref = fopen(fn, "w");
 		USE_FILE("corr_delta");
 		cor_delta = fopen(fn, "w");
-		int i;
 		for (i=0; i<il_size(t->image); i++) {
 			double a,d;
 			int im_ind = il_get(t->image, i);
@@ -346,7 +350,11 @@ void get_center_and_radius(double* ra, double* dec, int n,
 {
 	double* xyz = malloc(3*n*sizeof(double));
 	double xyz_mean[3] = {0,0,0};
+	double norm=0;
+	double maxdist2 = 0;
+	int maxind = -1;
 	int i, j;
+
 	for (i=0; i<n; i++) {
 		radec2xyzarr(deg2rad(ra[i]),
 		             deg2rad(dec[i]),
@@ -357,7 +365,6 @@ void get_center_and_radius(double* ra, double* dec, int n,
 		for (j=0; j<3; j++) 
 			xyz_mean[j] += xyz[3*i+j];
 
-	double norm=0;
 	for (j=0; j<3; j++) 
 		norm += xyz_mean[j]*xyz_mean[j];
 	norm = sqrt(norm);
@@ -365,8 +372,6 @@ void get_center_and_radius(double* ra, double* dec, int n,
 	for (j=0; j<3; j++) 
 		xyz_mean[j] /= norm;
 
-	double maxdist2 = 0;
-	int maxind = -1;
 	for (i=0; i<n; i++) {
 		double dist2 = 0;
 		for (j=0; j<3; j++) {
@@ -508,6 +513,9 @@ void tweak_clear_image_xy(tweak_t* t)
 
 void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 {
+   double *ra,*dec;
+	int i;
+
 	tweak_clear_ref_ad(t);
 
 	assert(xyz);
@@ -517,12 +525,11 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 	t->xyz_ref = malloc(sizeof(double)*3*n);
 	memcpy(t->xyz_ref, xyz, 3*n*sizeof(double));
 
-	double *ra = malloc(sizeof(double)*n);
-	double *dec = malloc(sizeof(double)*n);
+	ra = malloc(sizeof(double)*n);
+	dec = malloc(sizeof(double)*n);
 	assert(ra);
 	assert(dec);
 
-	int i;
 	for (i=0; i<n; i++) {
 		double *pt = xyz+3*i;
 		ra[i] = rad2deg(xy2ra(pt[0],pt[1]));
@@ -645,6 +652,9 @@ void get_reference_stars(tweak_t* t)
 	double ra_mean = t->a_bar;
 	double dec_mean = t->d_bar;
 	double radius = t->radius;
+   double radius_factor;
+	double xyz[3];
+   kdtree_qres_t* kq;
 
 	int hp = radectohealpix(deg2rad(ra_mean), deg2rad(dec_mean), t->Nside); 
 	kdtree_t* kd;
@@ -661,15 +671,13 @@ void get_reference_stars(tweak_t* t)
 		kd = cached_kd;
 	}
 
-	double xyz[3];
 	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
 	//radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
 
 	// Fudge radius factor because if the shift is really big, then we
 	// can't actually find the correct astrometry.
-	double radius_factor = 1.3;
-	kdtree_qres_t* kq = kdtree_rangesearch(kd, xyz,
-			radius*radius*radius_factor);
+	radius_factor = 1.3;
+	kq = kdtree_rangesearch(kd, xyz,radius*radius*radius_factor);
 	printf("Did range search got %u stars\n", kq->nres);
 
 	// No stars? That's bad. Run away.
@@ -690,13 +698,13 @@ double figure_of_merit(tweak_t* t)
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
 		double a,d;
+		double xyzpt[3];
+		double xyzpt_ref[3];
+		double xyzerr[3];
 		sip_pixelxy2radec(t->sip, t->x[il_get(t->image, i)],
 				t->y[il_get(t->image, i)], &a, &d);
 		// xref and yref should be intermediate WC's not image x and y!
-		double xyzpt[3];
 		radecdeg2xyzarr(a, d, xyzpt);
-		double xyzpt_ref[3];
-		double xyzerr[3];
 		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)],
 				t->d_ref[il_get(t->ref, i)], xyzpt_ref);
 
@@ -715,10 +723,10 @@ double figure_of_merit2(tweak_t* t)
 	double sqerr = 0.0;
 	int i;
 	for (i=0; i<il_size(t->image); i++) {
-		double x,y;
+		double x,y,dx,dy;
 		sip_radec2pixelxy(t->sip, t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], &x, &y);
-		double dx = t->x[il_get(t->image, i)] - x;
-		double dy = t->y[il_get(t->image, i)] - y;
+		dx = t->x[il_get(t->image, i)] - x;
+		dy = t->y[il_get(t->image, i)] - y;
 		sqerr += dx*dx + dy*dy;
 	}
 	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // arcseconds
@@ -727,6 +735,11 @@ double figure_of_merit2(tweak_t* t)
 // I apologize for the rampant copying and pasting of the polynomial calcs...
 void invert_sip_polynomial(tweak_t* t)
 {
+   int inv_sip_order,ngrid,inv_sip_coeffs,stride;
+	double* A,A2,b,b2;
+	double maxu,maxv,minu,minv;
+	int i,gu, gv;
+
 	printf("INVERTING!!!!!!!!!!\n");
 	assert(t->sip->a_order == t->sip->b_order);
 
@@ -737,22 +750,22 @@ void invert_sip_polynomial(tweak_t* t)
 	*/
 	assert(t->sip->ap_order == t->sip->bp_order);
 
-	int inv_sip_order = t->sip->ap_order;
+	inv_sip_order = t->sip->ap_order;
 
-	int ngrid = 10*(t->sip->ap_order+1);
+	ngrid = 10*(t->sip->ap_order+1);
 
 	// The SIP coefficients form a order x order upper triangular matrix missing
 	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
 	// That's why the computation of the number of SIP terms is calculated by
 	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
 	// The in the end, we drop the p^0q^0 term by integrating it into crpix)
-	int inv_sip_coeffs = (inv_sip_order+1)*(inv_sip_order+2)/2; // upper triangle
+	inv_sip_coeffs = (inv_sip_order+1)*(inv_sip_order+2)/2; // upper triangle
 
-	integer stride = ngrid*ngrid; // Number of rows
-	double* A  = malloc(inv_sip_coeffs*stride*sizeof(double));
-	double* b  = malloc(2*stride*sizeof(double));
-	double* A2 = malloc(inv_sip_coeffs*stride*sizeof(double));
-	double* b2 = malloc(2*stride*sizeof(double));
+	stride = ngrid*ngrid; // Number of rows
+	A  = malloc(inv_sip_coeffs*stride*sizeof(double));
+	b  = malloc(2*stride*sizeof(double));
+	A2 = malloc(inv_sip_coeffs*stride*sizeof(double));
+	b2 = malloc(2*stride*sizeof(double));
 	assert(A);
 	assert(b);
 	assert(A2);
@@ -787,10 +800,9 @@ void invert_sip_polynomial(tweak_t* t)
 	// which recovers the A and B's.
 	
 	// Find image boundaries
-	double maxu,maxv,minu,minv;
 	minu = minv =  1e100;
 	maxu = maxv = -1e100;
-	int i;
+
 	for (i=0; i<t->n; i++) {
 		minu = min(minu, t->x[i] - t->sip->wcstan.crpix[0]);
 		minv = min(minv, t->y[i] - t->sip->wcstan.crpix[1]);
@@ -803,7 +815,6 @@ void invert_sip_polynomial(tweak_t* t)
 	// Fill A in column-major order for fortran dgelsd
 	// We just make a big grid and hope for the best
 	i = 0;
-	int gu, gv;
 	for (gu=0; gu<ngrid; gu++) {
 		for (gv=0; gv<ngrid; gv++) {
 
@@ -811,19 +822,19 @@ void invert_sip_polynomial(tweak_t* t)
 			double u = (gu * (maxu-minu) / ngrid) + minu;
 			double v = (gv * (maxv-minv) / ngrid) + minv;
 
-			double U,V;
+			double U,V,fuv,guv;
+			int p,q,j;
 			sip_calc_distortion(t->sip, u, v, &U, &V);
-			double fuv = U-u;
-			double guv = V-v;
+			fuv = U-u;
+			guv = V-v;
 
 			// Calculate polynomial terms but this time for inverse
-			int p,q;
-			//int j = 0;
+			// j = 0;
 			/*
 			  Maybe we want to explicitly set the (0,0) term to zero...:
 			*/
 			A[i + stride*0] = 0;
-			int j = 1;
+			j = 1;
 			for (p=0; p<=inv_sip_order; p++)
 				for (q=0; q<=inv_sip_order; q++)
 					if (p+q <= inv_sip_order && !(p==0&&q==0)) {
