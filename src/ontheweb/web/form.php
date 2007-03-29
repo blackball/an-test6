@@ -553,6 +553,7 @@ function process_data ($vals) {
 		"overlap_tosolve 0.25\n" .
 
 		// new
+		"nverify 20\n" .
 		"nindex_tokeep 25\n" .
 		"nindex_tosolve 25\n" .
 		"distractors 0.25\n" .
