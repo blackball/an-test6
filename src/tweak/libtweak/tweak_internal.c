@@ -858,6 +858,7 @@ void invert_sip_polynomial(tweak_t* t)
 	memcpy(b2,b,sizeof(double)*stride*2);
 
 	// Allocate work areas and answers
+   {
 	integer N=inv_sip_coeffs;          // nr cols of A
 	doublereal S[N];      // min(N,M); is singular vals of A in dec order
 	doublereal RCOND=-1.; // used to determine effective rank of A; -1
@@ -868,15 +869,16 @@ void invert_sip_polynomial(tweak_t* t)
 	doublereal* work = malloc(lwork*sizeof(double));
 	integer *iwork = malloc(lwork*sizeof(long int));
 	integer info;
+	int p, q, j;
+	double chisq;
 	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 	free(work);
 	free(iwork);
 
 	// Extract the inverted SIP coefficients
-	//int j = 0;
-	int j = 1;
-	int p, q;
+	//j = 0;
+	j = 1;
 	for (p=0; p<=inv_sip_order; p++)
 		for (q=0; q<=inv_sip_order; q++)
 			if (p+q <= inv_sip_order && !(p==0&&q==0)) {
@@ -888,7 +890,7 @@ void invert_sip_polynomial(tweak_t* t)
 	assert(j == inv_sip_coeffs);
 
 	// Calculate chi2 for sanity
-	double chisq=0;
+	chisq=0;
 	for(i=0; i<stride; i++) {
 		double sum=0;
 		int j;
@@ -903,6 +905,7 @@ void invert_sip_polynomial(tweak_t* t)
 	printf("sip_invert_chisq=%lf\n",chisq);
 	printf("sip_invert_chisq/%d=%lf\n",ngrid*ngrid,(chisq/ngrid)/ngrid);
 	printf("sip_invert_sqrt(chisq/%d=%lf)\n",ngrid*ngrid,sqrt((chisq/ngrid)/ngrid));
+	}
 
 	free(A);
 	free(b);
@@ -929,22 +932,30 @@ void invert_sip_polynomial(tweak_t* t)
 // Run a linear tweak; only changes CD matrix
 void do_linear_tweak(tweak_t* t)
 {
-
+   int sip_order,sip_coeffs,stride;
+   double* A,A2,b,b2;
+	double xyzcrval[3];
+	double cdi[2][2];
+   double inv_det;
+	double sU, sV,su,sv;
+	double chisq;
+	sip_t* swcs;
+   int i;
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
-	int sip_order = t->sip->a_order;
+	sip_order = t->sip->a_order;
 	// The SIP coefficients form an (order x order) upper triangular matrix missing
 	// the 0,0 element. We limit ourselves to an order 10 SIP distortion. 
 	// That's why the number of SIP terms is calculated by
 	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
 	// Then in the end, we drop the p^0q^0 term by integrating it into crpix)
-	int sip_coeffs = (sip_order+1)*(sip_order+2)/2; // upper triangle
+	sip_coeffs = (sip_order+1)*(sip_order+2)/2; // upper triangle
 
-	integer stride = il_size(t->image); // number of rows
-	double* A = malloc((2+sip_coeffs)*stride*sizeof(double));
-	double* b = malloc(2*stride*sizeof(double));
-	double* A2 = malloc((2+sip_coeffs)*stride*sizeof(double));
-	double* b2 = malloc(2*stride*sizeof(double));
+	stride = il_size(t->image); // number of rows
+	A = malloc((2+sip_coeffs)*stride*sizeof(double));
+	b = malloc(2*stride*sizeof(double));
+	A2 = malloc((2+sip_coeffs)*stride*sizeof(double));
+	b2 = malloc(2*stride*sizeof(double));
 	assert(A);
 	assert(b);
 	assert(A2);
@@ -1007,10 +1018,12 @@ void do_linear_tweak(tweak_t* t)
 	  Since the terms are stored in column-major order, and "A" has "stride"
 	  rows, term A(i, j) is at address A[i + stride*j].
 	*/
-	double xyzcrval[3];
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
-	int i;
 	for (i=0; i<stride; i++) {
+	   int j,p,q;
+		int refi;
+		double x,y;
+		double xyzpt[3];
 		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
 		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 
@@ -1021,8 +1034,7 @@ void do_linear_tweak(tweak_t* t)
 		// Poly terms for SIP.  Note that this includes the constant
 		// shift parameter (SIP term 0,0) which we extract and apply to
 		// crpix (and don't include in SIP terms)
-		int j = 2;
-		int p, q;
+		j = 2;
 		for (p=0; p<=sip_order; p++)
 			for (q=0; q<=sip_order; q++)
 				if (p+q <= sip_order) {
@@ -1042,9 +1054,7 @@ void do_linear_tweak(tweak_t* t)
 		A[i + stride*2] = 1.0;
 
 		// xref and yref should be intermediate WC's not image x and y!
-		double x,y;
-		double xyzpt[3];
-		int refi = il_get(t->ref, i);
+		refi = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
 		star_coords(xyzpt, xyzcrval, &y, &x);
 
@@ -1057,6 +1067,7 @@ void do_linear_tweak(tweak_t* t)
 	memcpy(b2,b,sizeof(double)*stride*2);
 
 	// Allocate work areas and answers
+   {
 	integer N=2+sip_coeffs;          // nr cols of A
 	doublereal S[N];      // min(N,M); is singular vals of A in dec order
 	doublereal RCOND=-1.; // used to determine effective rank of A; -1
@@ -1071,6 +1082,7 @@ void do_linear_tweak(tweak_t* t)
 			&lwork, iwork, &info);
 	free(work);
 	free(iwork);
+	}
 
 	t->sip->wcstan.cd[0][0] = b[0 + stride*0]; // b is replaced with CD during dgelsd
 	t->sip->wcstan.cd[0][1] = b[1 + stride*0];
@@ -1078,16 +1090,16 @@ void do_linear_tweak(tweak_t* t)
 	t->sip->wcstan.cd[1][1] = b[1 + stride*1];
 
 	// Extract the SIP coefficients
-	double cdi[2][2];
-	double inv_det = 1.0/sip_det_cd(t->sip);
+	inv_det = 1.0/sip_det_cd(t->sip);
 	cdi[0][0] =  t->sip->wcstan.cd[1][1] * inv_det;
 	cdi[0][1] = -t->sip->wcstan.cd[0][1] * inv_det;
 	cdi[1][0] = -t->sip->wcstan.cd[1][0] * inv_det;
 	cdi[1][1] =  t->sip->wcstan.cd[0][0] * inv_det;
 
 	// This magic *3* is here because we skip the (0, 0) term.
-	int j = 3;
-	int p, q;
+   {
+	int p, q, j;
+	j = 3;
 	for (p=0; p<=sip_order; p++)
 		for (q=0; q<=sip_order; q++)
 			if (p+q <= sip_order && !(p==0&&q==0)) {
@@ -1102,10 +1114,10 @@ void do_linear_tweak(tweak_t* t)
 				j++;
 			}
 	assert(j == 2+sip_coeffs);
+	}
 	// Since the linear terms should be zero, and we set the coefficients
 	// that way, we don't know what the optimizer set them to. Thus,
 	// explicitly set them to zero here.
-	
 
 	t->sip->a_order = sip_order;
 	t->sip->b_order = sip_order;
@@ -1117,12 +1129,10 @@ void do_linear_tweak(tweak_t* t)
 	invert_sip_polynomial(t);
 
 	// Apply the shift
-	double sU, sV;
 	sU = cdi[0][0]*b[2 + stride*0] + cdi[0][1]*b[2 + stride*1];
 	sV = cdi[1][0]*b[2 + stride*0] + cdi[1][1]*b[2 + stride*1];
-	double su, sv;
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
-	sip_t* swcs = wcs_shift(t->sip, -su, -sv);
+	swcs = wcs_shift(t->sip, -su, -sv);
 	sip_free(t->sip);
 	t->sip = swcs;
 
@@ -1135,7 +1145,7 @@ void do_linear_tweak(tweak_t* t)
 	//	printf("sqerrxy=%le\n", figure_of_merit2(t));
 
 	// Calculate chi2 for sanity
-	double chisq=0;
+	chisq=0;
 	for(i=0; i<stride; i++) {
 		double sum=0;
 		int j;
@@ -1167,6 +1177,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 	//	tweak_print_the_state(flag);
 	//	printf("\n");
 	want(TWEAK_HAS_IMAGE_AD) {
+		int jj;
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
@@ -1177,7 +1188,6 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		assert(!t->d);
 		t->a = malloc(sizeof(double)*t->n);
 		t->d = malloc(sizeof(double)*t->n);
-		int jj;
 		for (jj=0; jj<t->n; jj++) {
 			sip_pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
 		}
@@ -1196,6 +1206,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 	}
 			
 	want(TWEAK_HAS_REF_XY) {
+		int jj;
 		ensure(TWEAK_HAS_REF_AD);
 
 		//tweak_clear_ref_xy(t);
@@ -1207,7 +1218,6 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		assert(!t->y_ref);
 		t->x_ref = malloc(sizeof(double)*t->n_ref);
 		t->y_ref = malloc(sizeof(double)*t->n_ref);
-		int jj;
 		for (jj=0; jj<t->n_ref; jj++) {
 			sip_radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
 				      t->x_ref+jj, t->y_ref+jj);
@@ -1231,13 +1241,13 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 	}
 
 	want(TWEAK_HAS_IMAGE_XYZ) {
+		int i;
 		ensure(TWEAK_HAS_IMAGE_AD);
 
 		printf("Satisfying TWEAK_HAS_IMAGE_XYZ\n");
 		assert(!t->xyz);
 
 		t->xyz = malloc(3*t->n*sizeof(double));
-		int i;
 		for (i=0; i<t->n; i++) {
 			radec2xyzarr(deg2rad(t->a[i]),
 				     deg2rad(t->d[i]),
@@ -1364,23 +1374,24 @@ void my_ransac(tweak_t* t)
 {
 	int iterations = 0;
 	int maxiter = 40;
+	double besterr = 100000000000000.;
+	int min_data_points = 100;
+   int set_size,i;
+	il* maybeinliers,alsoinliers,used_ref_sources,used_image_sources;
 
 	sip_t wcs_try, wcs_best;
 	memcpy(&wcs_try, t->sip, sizeof(sip_t));
 	memcpy(&wcs_best, t->sip, sizeof(sip_t));
 
-	double besterr = 100000000000000.;
-	int min_data_points = 100;
-	int set_size = il_size(t->image);
-	il* maybeinliers = il_new(4);
-	il* alsoinliers = il_new(4);
+	set_size = il_size(t->image);
+	maybeinliers = il_new(4);
+	alsoinliers = il_new(4);
 
 	// we need to prevent pairing any reference star to multiple image
 	// stars, or multiple reference stars to single image stars
-	il* used_ref_sources = il_new(t->n_ref);
-	il* used_image_sources = il_new(t->n);
+	used_ref_sources = il_new(t->n_ref);
+	used_image_sources = il_new(t->n);
 
-	int i;
 	for (i=0; i<t->n_ref; i++) 
 		il_append(used_ref_sources, 0);
 	for (i=0; i<t->n; i++) 
@@ -1422,21 +1433,23 @@ void my_ransac(tweak_t* t)
 		// the random sample set.
 		il_remove_all(alsoinliers);
 		for (i=0; i<il_size(t->included); i++) {
-			if (il_get(t->included, i))
-				continue;
 			double thresh = 2.e-04; // FIXME mystery parameter
 			double image_xyz[3];
 			double ref_xyz[3];
-			int ref_ind = il_get(t->ref, i);
-			int image_ind = il_get(t->image, i);
 			double a,d;
+         double dx,dy,dz,err;
+         int ref_ind,image_ind;
+			if (il_get(t->included, i))
+				continue;
+			ref_ind = il_get(t->ref, i);
+			image_ind = il_get(t->image, i);
 			sip_pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
 			radecdeg2xyzarr(a,d,image_xyz);
 			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
-			double dx = ref_xyz[0] - image_xyz[0];
-			double dy = ref_xyz[1] - image_xyz[1];
-			double dz = ref_xyz[2] - image_xyz[2];
-			double err = dx*dx+dy*dy+dz*dz;
+			dx = ref_xyz[0] - image_xyz[0];
+			dy = ref_xyz[1] - image_xyz[1];
+			dz = ref_xyz[2] - image_xyz[2];
+			err = dx*dx+dy*dy+dz*dz;
 			if (sqrt(err) < thresh)
 				il_append(alsoinliers, i);
 		}
