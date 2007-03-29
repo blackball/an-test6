@@ -31,7 +31,7 @@
 struct twomass_catalog {
 	qfits_table* table;
 	int columns[TWOMASS_FITS_COLUMNS];
-   uint32_t nentries;
+	unsigned int nentries;
 	// buffered reading
 	bread br;
 	// when writing:
