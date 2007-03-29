@@ -116,7 +116,9 @@ $indexes = array('auto' => "Automatic (based on image scale)",
 				 "2degree" => "2-degree Fields",
 				 "4degree" => "4-degree Fields",
 				 "8degree" => "8-degree Fields",
-				 "15degree" => "15-degree Fields");
+				 "15degree" => "15-degree Fields",
+				 "30degree" => "30-degree Fields",
+				 );
 
 $form->addElement('text', 'uname', "your name", array('size'=>40));
 $form->addElement('text', 'email', "email address", array('size'=>40));
@@ -456,7 +458,8 @@ function process_data ($vals) {
 		loggit("Collecting indexes with quads in range [" . $fmin . ", " . $fmax . "] arcmin.\n");
 		// FIXME - should condense all this index data into one array!
 		// (list largest-to-smallest).
-		$sizemap = array("15degree" => array(200,400),
+		$sizemap = array("30degree" => array(400,900),
+						 "15degree" => array(200,400),
 						 "8degree" => array(120,180),
 						 "4degree" => array(60, 90),
 						 "2degree" => array(32, 40),
@@ -473,7 +476,7 @@ function process_data ($vals) {
 						 "15degree" => array(200,400),
 						 );
 		*/
-		$largest = "15degree";
+		$largest = "30degree";
 		$smallest = "12arcmin";
 
 		$indexes = array();
@@ -510,6 +513,7 @@ function process_data ($vals) {
 					  //"15degree" => array("allsky-36/allsky-36"),
 					  //"15degree" => array("allsky-39/allsky-39"),
 					  "15degree" => array("allsky-40/allsky-40"),
+					  "30degree" => array("allsky-43/allsky-43"),
 					  );
 	$indexpaths = array();
 	foreach ($indexes as $i) {
@@ -544,15 +548,6 @@ function process_data ($vals) {
 		"fieldunits_upper " . $fu_upper . "\n" .
 		"tol " . $codetol . "\n" .
 		"verify_pix " . $poserr . "\n" .
-
-		// DEPRECATED
-		//"nagree_toverify 0\n" .
-		//"ninfield_tokeep 25\n" .
-		//"ninfield_tosolve 25\n" .
-		//"overlap_tokeep 0.25\n" .
-		//"overlap_tosolve 0.25\n" .
-
-		// new
 		"nverify 20\n" .
 		"nindex_tokeep 25\n" .
 		"nindex_tosolve 25\n" .
@@ -564,7 +559,6 @@ function process_data ($vals) {
 		"fieldw " . $W . "\n" .
 		"fieldh " . $H . "\n" .
 		"verbose\n" .
-
 		"maxquads " . $maxquads . "\n" .
 		"cpulimit " . $maxcpu . "\n" .
 		"timelimit " . $maxtime . "\n" .
