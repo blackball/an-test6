@@ -126,6 +126,7 @@ void verify_hit(kdtree_t* startree,
 		matchobj_compute_overlap(mo);
 		mo->logodds = -1e300;
 		kdtree_free_query(res);
+		free(indexpix);
 		return;
 	}
 
