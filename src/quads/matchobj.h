@@ -35,15 +35,13 @@ struct match_struct {
 	double sMax[3];
 	double sMinMax[3];
 	double sMaxMin[3];
-	bool transform_valid;
-	double transform[9];
+
 	int16_t noverlap;
 	int16_t nconflict;
-	int16_t ninfield;
-	// (not stored)
+	int16_t nfield;
 	int16_t nindex;
-	// this isn't stored, it's computed from noverlap and ninfield.
-	float overlap;
+
+	float logodds;
 
 	// how many other matches agreed with this one *at the time it was found*
 	int nagree;
@@ -52,7 +50,7 @@ struct match_struct {
 	bool wcs_valid;
 	tan_t wcstan;
 
-	// arcseconds per pixel; computed: scale=sqrt(abs(det(wcstan.cd)))
+	// arcseconds per pixel; computed: scale=3600*sqrt(abs(det(wcstan.cd)))
 	double scale;
 
 	// proposed location of the center of the field

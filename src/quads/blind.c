@@ -53,7 +53,6 @@
 #include "codekd.h"
 #include "boilerplate.h"
 #include "fitsioutils.h"
-#include "handlehits.h"
 #include "blind_wcs.h"
 #include "rdlist.h"
 #include "verify.h"
@@ -74,7 +73,21 @@ static void printHelp(char* progname) {
 
 struct blind_params {
 	solver_params solver;
-	handlehits hits;
+
+	int nindex_tokeep;
+	int nindex_tosolve;
+
+	double logratio_tokeep;
+	double logratio_tosolve;
+
+	// number of times we've run verification
+	int nverified;
+
+	// best hit that surpasses the "keep" requirements.
+	bool have_bestmo;
+	MatchObj bestmo;
+	// does it also surpass the "solve" requirements?
+	bool bestmo_solves;
 
 	// Filenames
 	char* indexname;
@@ -116,9 +129,13 @@ struct blind_params {
 	double verify_dist2;
 	double verify_pix;
 
-	double overlap_toprint;
+	// proportion of distractors (in [0,1])
+	double distractors;
 
-	int nverified;
+	//double overlap_toprint;
+	double logratio_toprint;
+
+	double logratio_tobail;
 
 	matchfile* mf;
 	idfile* id;
@@ -142,8 +159,6 @@ static void solve_fields(blind_params* bp);
 static int read_parameters(blind_params* bp);
 static void add_blind_params(blind_params* bp, qfits_header* hdr);
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
-static void blind_run_verify(handlehits* hh, MatchObj* mo);
-static void blind_verified(handlehits* hh, MatchObj* mo);
 
 static blind_params my_bp;
 
@@ -227,17 +242,17 @@ int main(int argc, char *argv[]) {
 
 		// Reset params.
 		memset(bp, 0, sizeof(blind_params));
-		solver_default_params(&bp->solver);
-		handlehits_init(&bp->hits);
-		bp->hits.userdata = bp;
+		solver_default_params(&(bp->solver));
 		sp->userdata = bp;
 
+		bp->logratio_tobail = -1e300;
 		bp->fieldlist = il_new(256);
 		bp->indexes = pl_new(16);
 		bp->fieldid_key = strdup("FIELDID");
 		bp->xcolname = strdup("X");
 		bp->ycolname = strdup("Y");
-		bp->firstfield = bp->lastfield = -1;
+		bp->firstfield = -1;
+		bp->lastfield = -1;
 		bp->healpix = -1;
 		sp->field_minx = sp->field_maxx = 0.0;
 		sp->field_miny = sp->field_maxy = 0.0;
@@ -281,15 +296,10 @@ int main(int argc, char *argv[]) {
 		logmsg(bp, "enddepth %i\n", sp->endobj);
 		logmsg(bp, "fieldunits_lower %g\n", sp->funits_lower);
 		logmsg(bp, "fieldunits_upper %g\n", sp->funits_upper);
-		logmsg(bp, "agreetol %g\n", bp->hits.agreetol);
 		logmsg(bp, "verify_dist %g\n", distsq2arcsec(bp->verify_dist2));
 		logmsg(bp, "verify_pix %g\n", bp->verify_pix);
-		logmsg(bp, "nagree_toverify %i\n", bp->hits.nagree_toverify);
-		logmsg(bp, "overlap_toprint %f\n", bp->overlap_toprint);
-		logmsg(bp, "overlap_tokeep %f\n", bp->hits.overlap_tokeep);
-		logmsg(bp, "overlap_tosolve %f\n", bp->hits.overlap_tosolve);
-		logmsg(bp, "ninfield_tokeep %i\n", bp->hits.ninfield_tokeep);
-		logmsg(bp, "ninfield_tosolve %i\n", bp->hits.ninfield_tosolve);
+		logmsg(bp, "nindex_tokeep %i\n", bp->nindex_tokeep);
+		logmsg(bp, "nindex_tosolve %i\n", bp->nindex_tosolve);
 		logmsg(bp, "xcolname %s\n", bp->xcolname);
 		logmsg(bp, "ycolname %s\n", bp->ycolname);
 		logmsg(bp, "maxquads %i\n", sp->maxquads);
@@ -312,9 +322,9 @@ int main(int argc, char *argv[]) {
 			logerr(bp, "You must specify codetol > 0\n");
 			exit(-1);
 		}
-
-		if (bp->hits.nagree_toverify && (bp->hits.agreetol == 0.0)) {
-			logerr(bp, "If you specify 'nagree_toverify', you must also specify 'agreetol'.\n");
+		if ((((bp->verify_pix > 0.0)?1:0) +
+			 ((bp->verify_dist2 > 0.0)?1:0)) != 1) {
+			logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
 			exit(-1);
 		}
 
@@ -338,17 +348,8 @@ int main(int argc, char *argv[]) {
 		logmsg(bp, "Reading fields file %s...", bp->fieldfname);
 		bp->xyls = xylist_open(bp->fieldfname);
 		if (!bp->xyls) {
-			char fn[256];
-			// LEGACY - try appending .fits...
-			logmsg(bp, "Warning, you should specify the full field filename.\n");
-			snprintf(fn, 256, "%s.fits", bp->fieldfname);
-			bp->xyls = xylist_open(fn);
-			if (!bp->xyls) {
-				logerr(bp, "Failed to read xylist.\n");
-				exit(-1);
-			}
-			free(bp->fieldfname);
-			bp->fieldfname = strdup(fn);
+			logerr(bp, "Failed to read xylist.\n");
+			exit(-1);
 		}
 		bp->xyls->xname = bp->xcolname;
 		bp->xyls->yname = bp->ycolname;
@@ -532,7 +533,6 @@ int main(int argc, char *argv[]) {
 				sp->maxAB += scalefudge;
 				logmsg(bp, "Set maxAB to %g\n", sp->maxAB);
 			}
-			bp->hits.run_verify = blind_run_verify;
 
 			// Set CPU time limit.
 			if (bp->cpulimit) {
@@ -754,29 +754,22 @@ static int read_parameters(blind_params* bp) {
 			bp->cpulimit = atoi(nextword);
 		} else if (is_word(line, "timelimit ", &nextword)) {
 			bp->timelimit = atoi(nextword);
-		} else if (is_word(line, "agreetol ", &nextword)) {
-			bp->hits.agreetol = atof(nextword);
 		} else if (is_word(line, "verify_dist ", &nextword)) {
 			bp->verify_dist2 = arcsec2distsq(atof(nextword));
 		} else if (is_word(line, "verify_pix ", &nextword)) {
 			bp->verify_pix = atof(nextword);
-		} else if (is_word(line, "nagree_toverify ", &nextword)) {
-			bp->hits.nagree_toverify = atoi(nextword);
-		} else if (is_word(line, "overlap_tosolve ", &nextword)) {
-			bp->hits.overlap_tosolve = atof(nextword);
-		} else if (is_word(line, "overlap_tokeep ", &nextword)) {
-			bp->hits.overlap_tokeep = atof(nextword);
-		} else if (is_word(line, "overlap_toprint ", &nextword)) {
-			bp->overlap_toprint = atof(nextword);
-		} else if (is_word(line, "min_ninfield ", &nextword)) {
-			// LEGACY
-			logmsg(bp, "Warning, the \"min_ninfield\" command is deprecated."
-					"Use \"ninfield_tokeep\" and \"ninfield_tosolve\" instead.\n");
-			bp->hits.ninfield_tokeep = bp->hits.ninfield_tosolve = atoi(nextword);
-		} else if (is_word(line, "ninfield_tokeep ", &nextword)) {
-			bp->hits.ninfield_tokeep = atoi(nextword);
-		} else if (is_word(line, "ninfield_tosolve ", &nextword)) {
-			bp->hits.ninfield_tosolve = atoi(nextword);
+		} else if (is_word(line, "ratio_tosolve ", &nextword)) {
+			bp->logratio_tosolve = log(atof(nextword));
+		} else if (is_word(line, "ratio_tokeep ", &nextword)) {
+			bp->logratio_tokeep = log(atof(nextword));
+		} else if (is_word(line, "ratio_toprint ", &nextword)) {
+			bp->logratio_toprint = log(atof(nextword));
+		} else if (is_word(line, "ratio_tobail ", &nextword)) {
+			bp->logratio_tobail = log(atof(nextword));
+		} else if (is_word(line, "nindex_tokeep ", &nextword)) {
+			bp->nindex_tokeep = atoi(nextword);
+		} else if (is_word(line, "nindex_tosolve ", &nextword)) {
+			bp->nindex_tosolve = atoi(nextword);
 		} else if (is_word(line, "match ", &nextword)) {
 			bp->matchfname = strdup(nextword);
 		} else if (is_word(line, "rdls ", &nextword)) {
@@ -860,6 +853,12 @@ static int read_parameters(blind_params* bp) {
 		} else if (is_word(line, "field ", &nextword)) {
 			free(bp->fieldfname);
 			bp->fieldfname = strdup(nextword);
+		} else if (is_word(line, "fieldw ", &nextword)) {
+			sp->field_maxx = atof(nextword);
+		} else if (is_word(line, "fieldh ", &nextword)) {
+			sp->field_maxy = atof(nextword);
+		} else if (is_word(line, "distractors ", &nextword)) {
+			bp->distractors = atof(nextword);
 		} else if (is_word(line, "fieldid ", &nextword)) {
 			sp->fieldid = atoi(nextword);
 		} else if (is_word(line, "done ", &nextword)) {
@@ -947,7 +946,7 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 		logmsg(bp, "Star jitter: %g arcsec.\n", twee->jitter);
 	}
 
-	// pull out the field coordinates.
+	// pull out the field coordinates into separate X and Y arrays.
 	imgx = malloc(sp->nfield * sizeof(double));
 	imgy = malloc(sp->nfield * sizeof(double));
 	for (i=0; i<sp->nfield; i++) {
@@ -1002,42 +1001,58 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 	return sip;
 }
 
-static void blind_run_verify(handlehits* hh, MatchObj* mo) {
-	blind_params* bp = hh->userdata;
-	solver_params* sp = &(bp->solver);
-	double d2;
-
-	// if verification was specified in pixel units, compute the verification
-	// distance on the unit sphere...
-	if (bp->verify_pix > 0.0) {
-		d2 = arcsec2distsq(hypot(mo->scale * bp->verify_pix, sp->index_jitter));
-	} else {
-		d2 = bp->verify_dist2 + square(sp->index_jitter);
-	}
-
-	verify_hit(bp->starkd->tree, mo, sp->field, sp->nfield, d2,
-			   NULL, NULL, NULL, NULL, NULL, NULL);
-	blind_verified(hh, mo);
-}
-
-static void blind_verified(handlehits* hh, MatchObj* mo) {
-	blind_params* bp = hh->userdata;
-	if (mo->overlap >= bp->overlap_toprint) {
-		logverb(bp, "    field %i", mo->fieldnum);
-		if (hh->nagree_toverify)
-			logverb(bp, " (%i agree)", mo->nagree);
-		logverb(bp, ": overlap %4.1f%%: %i in field (%im/%iu/%ic)\n",
-				100.0 * mo->overlap,
-				mo->ninfield, mo->noverlap,
-				(mo->ninfield - mo->noverlap - mo->nconflict), mo->nconflict);
+static void blind_verified(blind_params* bp, MatchObj* mo) {
+	if (mo->logodds >= bp->logratio_toprint) {
+		int Nmin = min(mo->nindex, mo->nfield);
+		int ndropout = Nmin - mo->noverlap - mo->nconflict;
+		logverb(bp, "field %i: logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
+				mo->fieldnum, mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
 	}
 }
 
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 	blind_params* bp = sp->userdata;
-	bool solved;
-	solved = handlehits_add(&(bp->hits), mo);
-	return (solved)?TRUE:FALSE;
+	double pixd2;
+
+	// if verification was specified in pixel units, compute the verification
+	// distance on the unit sphere...
+	if (bp->verify_pix > 0.0) {
+		pixd2 = square(bp->verify_pix) + square(sp->index_jitter / mo->scale);
+		//d2 = arcsec2distsq(hypot(mo->scale * bp->verify_pix, sp->index_jitter));
+	} else {
+		pixd2 = (bp->verify_dist2 + square(sp->index_jitter)) / square(mo->scale);
+		//d2 = bp->verify_dist2 + square(sp->index_jitter);
+	}
+
+	verify_hit(bp->starkd->tree, mo, sp->field, sp->nfield, pixd2,
+			   bp->distractors, sp->field_maxx, sp->field_maxy,
+			   bp->logratio_tobail);
+	// FIXME - this is the same an nmatches.
+	mo->nverified = bp->nverified++;
+
+	blind_verified(bp, mo);
+
+	if ((mo->logodds < bp->logratio_tokeep) ||
+		(mo->nindex < bp->nindex_tokeep)) {
+		return FALSE;
+	}
+
+	if (bp->mf) {
+		if (matchfile_write_match(bp->mf, mo)) {
+			logmsg(bp, "Field %i: error writing a match.\n", mo->fieldnum);
+		}
+	}
+
+	if (!bp->have_bestmo || (mo->logodds > bp->bestmo.logodds)) {
+		memcpy(&(bp->bestmo), &mo, sizeof(MatchObj));
+	}
+
+	if ((mo->logodds < bp->logratio_tosolve) ||
+		(mo->nindex < bp->nindex_tosolve)) {
+		return FALSE;
+	}
+	bp->bestmo_solves = TRUE;
+	return TRUE;
 }
 
 static void add_blind_params(blind_params* bp, qfits_header* hdr) {
@@ -1069,13 +1084,9 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 	fits_add_long_comment(hdr, "Parity: %i", sp->parity);
 	fits_add_long_comment(hdr, "Codetol: %g", sp->codetol);
 	fits_add_long_comment(hdr, "Cxdx margin: %g", sp->cxdx_margin);
-	fits_add_long_comment(hdr, "Nagree: %i", bp->hits.nagree_toverify);
-	if (bp->hits.nagree_toverify > 1)
-		fits_add_long_comment(hdr, "Agreement tolerance: %g arcsec", bp->hits.agreetol);
 	fits_add_long_comment(hdr, "Verify distance: %g arcsec", distsq2arcsec(bp->verify_dist2));
 	fits_add_long_comment(hdr, "Verify pixels: %g pix", bp->verify_pix);
-	fits_add_long_comment(hdr, "Overlap to solve: %g", bp->hits.overlap_tosolve);
-	fits_add_long_comment(hdr, "N in field to solve: %i", bp->hits.ninfield_tosolve);
+	fits_add_long_comment(hdr, "N index in field to solve: %i", bp->nindex_tosolve);
 
 	fits_add_long_comment(hdr, "Maxquads: %i", sp->maxquads);
 	fits_add_long_comment(hdr, "Maxmatches: %i", sp->maxmatches);
@@ -1167,8 +1178,8 @@ static void solve_fields(blind_params* bp) {
 		if (sp->field_miny == sp->field_maxy) {
 			int i;
 			for (i=0; i<sp->nfield; i++) {
-				sp->field_miny = min(sp->field_miny, sp->field[2*i+0]);
-				sp->field_maxy = max(sp->field_maxy, sp->field[2*i+0]);
+				sp->field_miny = min(sp->field_miny, sp->field[2*i+1]);
+				sp->field_maxy = max(sp->field_maxy, sp->field[2*i+1]);
 			}
 		}
 		sp->field_diag = hypot(sp->field_maxy - sp->field_miny,
@@ -1194,6 +1205,7 @@ static void solve_fields(blind_params* bp) {
 		sp->numcxdxskipped = 0;
 		sp->quitNow = FALSE;
 		sp->mo_template = &template;
+		sp->fieldnum = fieldnum;
 
 		logmsg(bp, "\nSolving field %i.\n", fieldnum);
 
@@ -1215,25 +1227,27 @@ static void solve_fields(blind_params* bp) {
 			logmsg(bp, "  cancelled at user request.\n");
 		}
 
-		// Write the keepable hits.
-		if (bp->hits.keepers && bp->mf) {
-			int i;
-			for (i=0; i<pl_size(bp->hits.keepers); i++) {
-				MatchObj* mo = pl_get(bp->hits.keepers, i);
-				if (matchfile_write_match(bp->mf, mo))
-					logmsg(bp, "Field %i: error writing a match.\n", fieldnum);
-			}
-			if (matchfile_fix_header(bp->mf))
-				logerr(bp, "Failed to fix the matchfile header for field %i.\n", fieldnum);
+		// Fix the matchfile.
+		if (matchfile_fix_header(bp->mf)) {
+			logerr(bp, "Failed to fix the matchfile header for field %i.\n", fieldnum);
 		}
 
-		if (bp->hits.bestmo) {
-			MatchObj* bestmo = bp->hits.bestmo;
+		if (bp->have_bestmo && !bp->bestmo_solves) {
+			MatchObj* bestmo = &(bp->bestmo);
+			int Nmin = min(bestmo->nindex, bestmo->nfield);
+			int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
+			logmsg(bp, "Field %i did not solved (best odds ratio %g (%i match, %i conflict, %i dropout, %i index)).\n",
+				   fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
+		}
+
+		if (bp->have_bestmo && bp->bestmo_solves) {
+			MatchObj* bestmo = &(bp->bestmo);
 			sip_t* sip = NULL;
+			int Nmin = min(bestmo->nindex, bestmo->nfield);
+			int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
 			// Field solved!
-			logmsg(bp, "Field %i solved with overlap %g (%i matched, %i tried, %i in index).\n", fieldnum,
-				   bestmo->overlap,
-				   bestmo->noverlap, bestmo->ninfield, bestmo->nindex);
+			logmsg(bp, "Field %i solved with odds ratio %g (%i match, %i conflict, %i dropout, %i index).\n",
+				   fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
 
 			// Tweak, if requested.
 			if (bp->do_tweak) {
@@ -1275,9 +1289,8 @@ static void solve_fields(blind_params* bp) {
 				fits_add_long_comment(hdr, "code error: %g", sqrt(bestmo->code_err));
 				fits_add_long_comment(hdr, "noverlap: %i", bestmo->noverlap);
 				fits_add_long_comment(hdr, "nconflict: %i", bestmo->nconflict);
-				fits_add_long_comment(hdr, "ninfield: %i", bestmo->ninfield);
+				fits_add_long_comment(hdr, "nfield: %i", bestmo->nfield);
 				fits_add_long_comment(hdr, "nindex: %i", bestmo->nindex);
-				fits_add_long_comment(hdr, "overlap: %g", bestmo->overlap);
 				fits_add_long_comment(hdr, "scale: %g arcsec/pix", bestmo->scale);
 				fits_add_long_comment(hdr, "parity: %i", (int)bestmo->parity);
 				fits_add_long_comment(hdr, "quads tried: %i", bestmo->quads_tried);
@@ -1328,8 +1341,7 @@ static void solve_fields(blind_params* bp) {
 				double fieldr2;
 				// find all the index stars that are inside the circle that bounds
 				// the field.
-				for (i=0; i<3; i++)
-					fieldcenter[i] = (bestmo->sMin[i] + bestmo->sMax[i]) / 2.0;
+				star_midpoint(fieldcenter, bestmo->sMin, bestmo->sMax);
 				fieldr2 = distsq(fieldcenter, bestmo->sMin, 3);
 				// 1.05 is a little safety factor.
 				res = kdtree_rangesearch_options(bp->starkd->tree, fieldcenter,
@@ -1375,9 +1387,6 @@ static void solve_fields(blind_params* bp) {
 			logmsg(bp, "Field %i is unsolved.\n", fieldnum);
 		}
 
-		handlehits_free_matchobjs(&bp->hits);
-		handlehits_clear(&bp->hits);
-
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
 		logmsg(bp, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n",
@@ -1403,7 +1412,6 @@ static void solve_fields(blind_params* bp) {
 
 	free(sp->field);
 	sp->field = NULL;
-	handlehits_uninit(&bp->hits);
 }
 
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {

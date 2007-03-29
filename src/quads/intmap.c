@@ -123,6 +123,41 @@ int intmap_add(intmap* c, int from, int to) {
 	return 0;
 }
 
+void intmap_update(intmap* map, int from, int to) {
+	int i, len;
+	len = il_size(&map->fromlist);
+	for (i=0; i<len; i++) {
+		int f, t;
+		f = il_get(&map->fromlist, i);
+		t = il_get(&map->tolist  , i);
+		if ((from == f) && (to == t)) {
+			// mapping exists.
+			return;
+		}
+		switch (map->type) {
+		case INTMAP_ONE_TO_ONE:
+			if ((from == f) || (to == t)) {
+				il_set(&map->fromlist, i, from);
+				il_set(&map->tolist, i, to);
+				return;
+			}
+			break;
+		case INTMAP_MANY_TO_ONE:
+			assert(0);  // Why knows what this is supposed to do?
+			exit(-1);
+			/*
+			  if (from == f) {
+			  il_set(&map->fromlist, i, from);
+			  il_set(&map->tolist, i, to);
+			  return;
+			  }
+			*/
+		}
+	}
+	il_append(&map->fromlist, from);
+	il_append(&map->tolist, to);
+}
+
 int intmap_merge(intmap* map1, intmap* map2) {
 	int i, len;
 	int okay = 1;

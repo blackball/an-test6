@@ -29,8 +29,6 @@
 static int find_table(matchfile* mf);
 static qfits_table* matchfile_get_table();
 
-static int transform_index;
-
 void matchobj_compute_derived(MatchObj* mo) {
 	int mx;
 	int i;
@@ -46,20 +44,16 @@ void matchobj_compute_derived(MatchObj* mo) {
 }
 
 void matchobj_compute_overlap(MatchObj* mo) {
-	if (!mo->ninfield) {
-		fprintf(stderr, "Warning: matchobj_compute_overlap: ninfield = 0.\n");
-		mo->overlap = 0.0;
-		return;
-	}
-	if (mo->ninfield < 4) {
-		mo->overlap = 0.0;
-		return;
-	}
-	// at least four should match since the transformation is calculated
-	// based on projecting one quad...
-	mo->overlap = (mo->noverlap - 4) / (double)(mo->ninfield - 4);
-	if (mo->overlap < 0.0)
-		mo->overlap = 0.0;
+	/*
+	  if (!mo->nfield) {
+	  fprintf(stderr, "Warning: matchobj_compute_overlap: nfield = 0.\n");
+	  return;
+	  }
+	  if (mo->ninfield < 4) {
+	  mo->overlap = 0.0;
+	  return;
+	  }
+	*/
 }
 
 static int matchfile_refill_buffer(void* userdata, void* buffer,
@@ -180,11 +174,12 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "maxcorner", nil, sMax, 3, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "noverlap", nil, noverlap, 1, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nconflict", nil, nconflict, 1, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "ninfield", nil, ninfield, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nfield", nil, nfield, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nindex", nil, nindex, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "nagree", nil, nagree, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crval", nil, wcstan.crval, 2, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "crpix", nil, wcstan.crpix, 2, FALSE);
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "CD", nil, wcstan.cd, 4, FALSE); // FIXME: is the order right?
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "CD", nil, wcstan.cd, 4, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_X, "wcs_valid", nil, wcs_valid, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldnum", nil, fieldnum, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "fieldid", nil, fieldfile, 1, FALSE);
@@ -197,8 +192,7 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qscaleok", nil, quads_scaleok, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "nverified", nil, nverified, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "timeused", nil, timeused, 1, FALSE);
-	transform_index = i;
-	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "transform", nil, transform, 9, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "logodds", nil, logodds, 1, FALSE);
 
 	assert(i == MATCHFILE_FITS_COLUMNS);
 	matchfile_fitstruct_inited = 1;
@@ -383,9 +377,11 @@ int matchfile_read_matches(matchfile* mf, MatchObj* mo,
 	}
 	for (i=0; i<n; i++)
 		matchobj_compute_derived(mo + i);
-	if (mf->columns[transform_index] != -1)
-		for (i=0; i<n; i++)
-			mo[i].transform_valid = 1;
+	/* FIXME - should we do this for wcs_valid?
+	   if (mf->columns[transform_index] != -1)
+	   for (i=0; i<n; i++)
+	   mo[i].transform_valid = 1;
+	*/
 	return 0;
 }
 

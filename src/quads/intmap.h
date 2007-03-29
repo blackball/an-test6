@@ -51,6 +51,9 @@ int intmap_conflicts(intmap* map, int from, int to);
 //        -1 if a conflict would have been created.
 int intmap_add(intmap* map, int from, int to);
 
+// like _add but overwrites existing.
+void intmap_update(intmap* map, int from, int to);
+
 // adds all elements in "map2" into "map1".
 // returns 0 if it worked okay, -1 if a conflict would have been created.
 int intmap_merge(intmap* map1, intmap* map2);

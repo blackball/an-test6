@@ -247,6 +247,7 @@ void solve_field(solver_params* params) {
 					dx = getx(pq->xy, iD);
 					dy = gety(pq->xy, iD);
 					params->numtries++;
+					//fprintf(stderr, "1: %i %i %i %i\n", iA, iB, iC, iD);
 					try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
 					if (params->quitNow)
 						break;
@@ -286,6 +287,7 @@ void solve_field(solver_params* params) {
 					cx = getx(pq->xy, iC);
 					cy = gety(pq->xy, iC);
 					params->numtries++;
+					//fprintf(stderr, "2: %i %i %i %i\n", iA, iB, iC, iD);
 					try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
 					if (params->quitNow)
 						break;
@@ -455,13 +457,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 							solver_params* params, bool current_parity) {
     uint jj, thisquadno;
     uint iA, iB, iC, iD;
-    MatchObj *mo;
-	double sMin[3], sMax[3], sMinMax[3], sMaxMin[3];
+    MatchObj mo;
 
     for (jj=0; jj<krez->nres; jj++) {
 		double star[12];
-		//double starscale;
-		tan_t tan;
 		double scale;
 		double arcsecperpix;
 
@@ -475,23 +474,9 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		getstarcoord(iD, star + 3*3);
 
 		// compute TAN projection from the matching quad alone.
-		blind_wcs_compute_2(star, field, 4, &tan, &scale);
-
-		/*
-		  fprintf(stderr, "AB: %g arcsec, %g pixels\n",
-		  distsq2arcsec(distsq(star, star+3, 3)),
-		  sqrt(distsq(field, field+2, 2)));
-
-		  fprintf(stderr, "AB scale: %g arcsec/pixel\n",
-		  distsq2arcsec(distsq(star, star+3, 3)) /
-		  sqrt(distsq(field, field+2, 2)));
-
-		  fprintf(stderr, "Scale: %g, det(CD)=%g\n", scale,
-		  tan.cd[0][0]*tan.cd[1][1] - tan.cd[0][1]*tan.cd[1][0]);
-		*/
+		blind_wcs_compute_2(star, field, 4, &(mo.wcstan), &scale);
 
 		// FIXME - should there be scale fudge here?
-
 		arcsecperpix = scale * 3600.0;
 		if (arcsecperpix > params->funits_upper ||
 			arcsecperpix < params->funits_lower)
@@ -499,62 +484,38 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		params->numscaleok++;
 
-		// transform the corners of the field...
-		tan_pixelxy2xyzarr(&tan, params->field_minx, params->field_miny, sMin);
-		tan_pixelxy2xyzarr(&tan, params->field_maxx, params->field_maxy, sMax);
-		tan_pixelxy2xyzarr(&tan, params->field_minx, params->field_maxy, sMinMax);
-		tan_pixelxy2xyzarr(&tan, params->field_maxx, params->field_miny, sMaxMin);
-
-		// check scale
-		/*
-		  starscale  = square(sMax[0] - sMin[0]);
-		  starscale += square(sMax[1] - sMin[1]);
-		  starscale += square(sMax[2] - sMin[2]);
-		  if ((starscale > params->starscale_upper) ||
-		  (starscale < params->starscale_lower))
-		  // this quad has invalid scale.
-		  continue;
-		*/
-
-		mo = mk_MatchObj();
 		if (params->mo_template)
-			memcpy(mo, params->mo_template, sizeof(MatchObj));
+			memcpy(&mo, params->mo_template, sizeof(MatchObj));
 
-		memcpy(&(mo->wcstan), &tan, sizeof(tan_t));
-		mo->wcs_valid = TRUE;
+		mo.wcs_valid = TRUE;
+		mo.code_err = krez->sdists[jj];
+		mo.scale = arcsecperpix;
+		mo.parity = current_parity;
+		mo.quads_tried   = params->numtries;
+		mo.quads_matched = params->nummatches;
+		mo.quads_scaleok = params->numscaleok;
+		mo.timeused = params->timeused;
+		mo.quadno = thisquadno;
+		mo.star[0] = iA;
+		mo.star[1] = iB;
+		mo.star[2] = iC;
+		mo.star[3] = iD;
+		mo.field[0] = fA;
+		mo.field[1] = fB;
+		mo.field[2] = fC;
+		mo.field[3] = fD;
+		mo.ids[0] = getstarid(iA);
+		mo.ids[1] = getstarid(iB);
+		mo.ids[2] = getstarid(iC);
+		mo.ids[3] = getstarid(iD);
 
-		mo->parity = current_parity;
-		
-		mo->scale = arcsecperpix;
+		// transform the corners of the field...
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_miny, mo.sMin);
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_maxy, mo.sMax);
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_maxy, mo.sMinMax);
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_miny, mo.sMaxMin);
 
-		mo->quads_tried   = params->numtries;
-		mo->quads_matched = params->nummatches;
-		mo->quads_scaleok = params->numscaleok;
-		mo->timeused = params->timeused;
-
-		mo->quadno = thisquadno;
-		mo->star[0] = iA;
-		mo->star[1] = iB;
-		mo->star[2] = iC;
-		mo->star[3] = iD;
-		mo->field[0] = fA;
-		mo->field[1] = fB;
-		mo->field[2] = fC;
-		mo->field[3] = fD;
-
-		memcpy(mo->sMin,    sMin,    3 * sizeof(double));
-		memcpy(mo->sMax,    sMax,    3 * sizeof(double));
-		memcpy(mo->sMinMax, sMinMax, 3 * sizeof(double));
-		memcpy(mo->sMaxMin, sMaxMin, 3 * sizeof(double));
-
-		mo->code_err = krez->sdists[jj];
-
-		mo->ids[0] = getstarid(iA);
-		mo->ids[1] = getstarid(iB);
-		mo->ids[2] = getstarid(iC);
-		mo->ids[3] = getstarid(iD);
-
-		if (params->handlehit(params, mo))
+		if (params->handlehit(params, &mo))
 			params->quitNow = TRUE;
 		// Note - after this call returns, the "mo" may
 		// have been freed!
