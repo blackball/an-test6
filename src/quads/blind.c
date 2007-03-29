@@ -79,6 +79,8 @@ struct blind_params {
 	int nindex_tokeep;
 	int nindex_tosolve;
 
+	int nverify;
+
 	double logratio_tokeep;
 	double logratio_tosolve;
 
@@ -247,6 +249,7 @@ int main(int argc, char *argv[]) {
 		solver_default_params(&(bp->solver));
 		sp->userdata = bp;
 
+		bp->nverify = 20;
 		bp->logratio_tobail = -1e300;
 		bp->fieldlist = il_new(256);
 		bp->indexes = pl_new(16);
@@ -770,6 +773,8 @@ static int read_parameters(blind_params* bp) {
 			bp->logratio_tobail = log(atof(nextword));
 		} else if (is_word(line, "nindex_tokeep ", &nextword)) {
 			bp->nindex_tokeep = atoi(nextword);
+		} else if (is_word(line, "nverify ", &nextword)) {
+			bp->nverify = atoi(nextword);
 		} else if (is_word(line, "nindex_tosolve ", &nextword)) {
 			bp->nindex_tosolve = atoi(nextword);
 		} else if (is_word(line, "match ", &nextword)) {
@@ -960,8 +965,11 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 
 	// find all the index stars that are inside the circle that bounds
 	// the field.
-	for (i=0; i<3; i++)
-		fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
+	/*
+	  for (i=0; i<3; i++)
+	  fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
+	*/
+	star_midpoint(fieldcenter, mo->sMin, mo->sMax);
 	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
 	// 1.05 is a little safety factor.
 	res = kdtree_rangesearch_options(starkd->tree, fieldcenter,
@@ -1004,6 +1012,12 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 }
 
 static void blind_verified(blind_params* bp, MatchObj* mo) {
+	/*{
+	  int Nmin = min(mo->nindex, mo->nfield);
+	  int ndropout = Nmin - mo->noverlap - mo->nconflict;
+	  logverb(bp, "field %i: logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
+	  mo->fieldnum, mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
+	  }*/
 	if (mo->logodds >= bp->logratio_toprint) {
 		int Nmin = min(mo->nindex, mo->nfield);
 		int ndropout = Nmin - mo->noverlap - mo->nconflict;
@@ -1028,7 +1042,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 
 	verify_hit(bp->starkd->tree, mo, sp->field, sp->nfield, pixd2,
 			   bp->distractors, sp->field_maxx, sp->field_maxy,
-			   bp->logratio_tobail);
+			   bp->logratio_tobail, bp->nverify);
 	// FIXME - this is the same an nmatches.
 	mo->nverified = bp->nverified++;
 
@@ -1046,13 +1060,16 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 	}
 
 	if (!bp->have_bestmo || (mo->logodds > bp->bestmo.logodds)) {
-		memcpy(&(bp->bestmo), &mo, sizeof(MatchObj));
+		logmsg(bp, "Got a new best match: logodds %g.\n", mo->logodds);
+		memcpy(&(bp->bestmo), mo, sizeof(MatchObj));
+		bp->have_bestmo = TRUE;
 	}
 
 	if ((mo->logodds < bp->logratio_tosolve) ||
 		(mo->nindex < bp->nindex_tosolve)) {
 		return FALSE;
 	}
+
 	bp->bestmo_solves = TRUE;
 	return TRUE;
 }
@@ -1141,7 +1158,7 @@ static void solve_fields(blind_params* bp) {
 
 		// Has the field already been solved?
 		if (sp->solved_in) {
-			if (solvedfile_get(sp->solved_in, fieldnum)) {
+			if (solvedfile_get(sp->solved_in, fieldnum) == 1) {
 				// file exists; field has already been solved.
 				logmsg(bp, "Field %i: solvedfile %s: field has been solved.\n", fieldnum, sp->solved_in);
 				goto cleanup;

@@ -463,6 +463,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		double star[12];
 		double scale;
 		double arcsecperpix;
+		tan_t wcs;
 
 		params->nummatches++;
 
@@ -474,7 +475,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		getstarcoord(iD, star + 3*3);
 
 		// compute TAN projection from the matching quad alone.
-		blind_wcs_compute_2(star, field, 4, &(mo.wcstan), &scale);
+		blind_wcs_compute_2(star, field, 4, &wcs, &scale);
 
 		// FIXME - should there be scale fudge here?
 		arcsecperpix = scale * 3600.0;
@@ -487,6 +488,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		if (params->mo_template)
 			memcpy(&mo, params->mo_template, sizeof(MatchObj));
 
+		memcpy(&(mo.wcstan), &wcs, sizeof(tan_t));
 		mo.wcs_valid = TRUE;
 		mo.code_err = krez->sdists[jj];
 		mo.scale = arcsecperpix;

@@ -31,6 +31,7 @@ void verify_hit(kdtree_t* startree,
 				double distractors,
 				double fieldW,
 				double fieldH,
-				double logratio_tobail);
+				double logratio_tobail,
+				int min_nfield);
 
 #endif

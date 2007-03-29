@@ -56,7 +56,8 @@ void verify_hit(kdtree_t* startree,
 				double distractors,
 				double fieldW,
 				double fieldH,
-				double logratio_tobail) {
+				double logratio_tobail,
+				int min_nfield) {
 	int i, j;
 	double fieldcenter[3];
 	double fieldr2;
@@ -78,6 +79,9 @@ void verify_hit(kdtree_t* startree,
 
 	double logodds = 0.0;
 	int nmatch, nnomatch, nconflict;
+
+	double bestlogodds;
+	int bestnmatch, bestnnomatch, bestnconflict;
 
 	// FIXME - the value 1.5 is simulation-based.
 	double gamma2 = square(1.5);
@@ -182,6 +186,9 @@ void verify_hit(kdtree_t* startree,
 
 	Nmin = min(NI, NF);
 
+	bestlogodds = -1e300;
+	bestnmatch = bestnnomatch = bestnconflict = -1;
+
 	// For each field star, find the nearest index star.
 	//for (i=0; i<NF; i++) {
 	for (i=0; i<Nmin; i++) {
@@ -210,7 +217,8 @@ void verify_hit(kdtree_t* startree,
 
 		if (ind != -1) {
 			// p(foreground):
-			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * NI)) - (bestd2 / (2.0 * sigma2));
+			//logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * NI)) - (bestd2 / (2.0 * sigma2));
+			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * Nmin)) - (bestd2 / (2.0 * sigma2));
 		}
 
 		debug("\nField obj %i/%i: rad %g quads, sigma %g.\n", i+1, NF, sqrt(R2/rquad2), sqrt(sigma2));
@@ -239,7 +247,8 @@ void verify_hit(kdtree_t* startree,
 					double oldlogprob;
 					oldR2 = distsq(field+oldfieldi*2, qc, 2);
 					oldsigma2 = verify_pix2 * (gamma2 + oldR2/rquad2);
-					oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * NI)) - (oldd2 / (2.0 * oldsigma2));
+					//oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * NI)) - (oldd2 / (2.0 * oldsigma2));
+					oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * Nmin)) - (oldd2 / (2.0 * oldsigma2));
 					debug("Updated logprob from %g to %g.\n", oldlogprob, logprob);
 					logodds -= (oldlogprob - logprob_background);
 					intmap_update(map, starkdind, i);
@@ -256,6 +265,15 @@ void verify_hit(kdtree_t* startree,
 		if (logodds < logratio_tobail) {
 			break;
 		}
+
+		if ((logodds > bestlogodds) &&
+			(i >= min_nfield)) {
+			bestlogodds = logodds;
+			bestnmatch = nmatch;
+			bestnnomatch = nnomatch;
+			bestnconflict = nconflict;
+		}
+
 	}
 
 	/*
@@ -270,10 +288,16 @@ void verify_hit(kdtree_t* startree,
 	kdtree_free(itree);
 	free(indexpix);
 
-	mo->logodds = logodds;
-	mo->noverlap = nmatch;
-	mo->nconflict = nconflict;
-	mo->nfield = NF;
+	mo->logodds = bestlogodds;
+	mo->noverlap = bestnmatch;
+	mo->nconflict = bestnconflict;
+	mo->nfield = bestnmatch + bestnconflict + bestnnomatch;
+	/*
+	  mo->logodds = logodds;
+	  mo->noverlap = nmatch;
+	  mo->nconflict = nconflict;
+	  mo->nfield = NF;
+	*/
 	mo->nindex = NI;
 	matchobj_compute_overlap(mo);
 }
