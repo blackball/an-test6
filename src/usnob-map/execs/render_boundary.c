@@ -66,6 +66,8 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		return -1;
 	}
 
+	// FIXME -- dudes, who frees wcshead??? LEAK??
+
 	ends[0] = 0.0;
 	ends[1] = 0.0;
 	ends[2] = 0.0;

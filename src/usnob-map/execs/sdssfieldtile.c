@@ -193,8 +193,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Failed to open XYLS file.\n");
 		exit(-1);
 	}
-	xyls->xname = "COLC";
-	xyls->yname = "ROWC";
+	xyls->xname = "COLC"; // FIXME -- who frees this string?
+	xyls->yname = "ROWC"; // FIXME -- who frees this string?
 	Nstars = xylist_n_entries(xyls, fieldnum);
 	if (Nstars == -1) {
 		fprintf(stderr, "Failed to read XYLS file.\n");
