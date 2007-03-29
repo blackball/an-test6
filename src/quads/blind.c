@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#define __USE_GNU
 #include <signal.h>
 #include <ctype.h>
 

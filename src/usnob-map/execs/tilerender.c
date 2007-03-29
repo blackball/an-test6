@@ -316,14 +316,16 @@ double ymerc2pixelf(double y, render_args_t* args) {
 static void write_png(unsigned char * img, int w, int h)
 {
 	png_bytepp image_rows;
+	png_structp png_ptr;
+	png_infop png_info;
 	int n;
 
 	image_rows = malloc(sizeof(png_bytep)*h);
 	for (n = 0; n < h; n++)
 		image_rows[n] = (unsigned char *) img + 4*n*w;
 
-	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	png_infop png_info = png_create_info_struct(png_ptr);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_info = png_create_info_struct(png_ptr);
 	png_init_io(png_ptr, stdout);
 	png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
 	png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);

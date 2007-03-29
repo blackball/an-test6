@@ -58,11 +58,12 @@ static void donut_pair_found(void* extra, int x, int y, double dist2) {
 		// add y to x's list.
 		il_insert_unique_ascending(xlist, y);
 	} else {
+	   il* merged;
 		if (xlist == ylist)
 			// they're already in the same list.
 			return;
 		// merge the lists.
-		il* merged = il_merge_ascending(xlist, ylist);
+		merged = il_merge_ascending(xlist, ylist);
 		il_free(xlist);
 		il_free(ylist);
 		pl_set(lists, xlistind, merged);

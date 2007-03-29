@@ -105,7 +105,8 @@ static int parse_cc_flag(char flag, unsigned char* val) {
 #define ensure(c, f) { if (c!='|') { fprintf(stderr, "Expected '|' following field %s in 2MASS line.\n", f); return -1; }}
 
 //#define printval printf
-#define printval(x,...) {}
+//#define printval(s,args...) printf(s,args)
+#define printval(s,args...) {}
 
 int twomass_cc_flag(unsigned char val, unsigned char flag) {
 	return (val == flag);

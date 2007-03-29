@@ -203,11 +203,12 @@ int qidxfile_write_header(qidxfile* qf)
 	int ncols = 1;
 	int nrows = 2 * sizeof(uint) * qf->numstars + 4 * sizeof(uint) * qf->numquads;
 	int tablesize = datasize * nrows * ncols;
+	qfits_header* tablehdr;
 	qfits_table* table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
 	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
 	               "qidx", "", "", "", 0, 0, 0, 0, 0);
 	qfits_header_dump(qf->header, qf->fid);
-	qfits_header* tablehdr = qfits_table_ext_header_default(table);
+	tablehdr = qfits_table_ext_header_default(table);
 	qfits_header_dump(tablehdr, qf->fid);
 	qfits_table_close(table);
 	qfits_header_destroy(tablehdr);

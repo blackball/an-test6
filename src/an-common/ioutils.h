@@ -61,7 +61,7 @@ struct buffered_read_data {
 	int nbuff;
 	int off;
 	int buffind;
-	int (*refill_buffer)(void* userdata, void* buffer, uint offs, uint nelems);
+	int (*refill_buffer)(void* userdata, void* buffer, unsigned int offs, unsigned int nelems);
 	void* userdata;
 };
 typedef struct buffered_read_data bread;

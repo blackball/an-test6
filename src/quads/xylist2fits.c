@@ -221,6 +221,7 @@ xyarray *readxysimple(char* fn) {
 	uint numxy=0;
 	xyarray *thepix = NULL;
 	FILE* fid;
+	int jj;
 
 	fid = fopen(fn, "r");
 	if (!fid) {
@@ -247,7 +248,6 @@ xyarray *readxysimple(char* fn) {
 		free_xyarray(thepix);
 		return NULL;
 	}
-	int jj;
 	for (jj = 0;jj < numxy;jj++) {
 		double tmp1, tmp2;
 		fscanf(fid, "%lf %lf\n", &tmp1, &tmp2);

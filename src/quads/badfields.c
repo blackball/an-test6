@@ -31,9 +31,9 @@ struct badfield {
 };
 typedef struct badfield badfield;
 
-static badfield baddies[] = {
-#include "badfields.inc"
-};
+//static badfield baddies[] = {
+//#include "badfields.inc"
+//};
 
 const char* OPTIONS = "hs:";
 

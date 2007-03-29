@@ -32,6 +32,12 @@
 
 int catalog_write_to_file(catalog* cat, char* fn)
 {
+	qfits_table* table;
+	qfits_header* tablehdr;
+	qfits_header* hdr;
+	uint datasize;
+	uint ncols, nrows, tablesize;
+	char val[256];
 	FILE *catfid = NULL;
 	catfid = fopen(fn, "wb");
 	if (!catfid) {
@@ -41,12 +47,6 @@ int catalog_write_to_file(catalog* cat, char* fn)
 		return -1;
 	}
 
-	char val[256];
-	qfits_table* table;
-	qfits_header* tablehdr;
-	qfits_header* hdr;
-	uint datasize;
-	uint ncols, nrows, tablesize;
 	// the header
 	hdr = qfits_table_prim_header_default();
 	fits_add_endian(hdr);

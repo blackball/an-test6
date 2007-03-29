@@ -48,6 +48,8 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 	// Find this extension in fptr (which should be open to the xylist)
 	int nhdus, hdutype;
 	int status=0;
+	int i, ext=-1;
+	long l;
 
 	if (fits_get_num_hdus(fptr, &nhdus, &status)) {
 		fits_report_error(stderr, status);
@@ -56,7 +58,6 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 	printf("Found %d HDU's\n",nhdus);
 
 	// Search each HDU looking for the one with SRCEXT==hdu
-	int i, ext=-1;
 	for (i=1; i<=nhdus; i++) {
 		if (fits_movabs_hdu(fptr, i, &hdutype, &status)) {
 			fits_report_error(stderr, status);
@@ -86,7 +87,6 @@ int get_xy(fitsfile* fptr, int hdu, float **x, float **y, int *n)
 	assert(hdutype != IMAGE_HDU);
 
 	// Now pull the X and Y columns
-	long l;
 	if (fits_get_num_rows(fptr, &l, &status)) {
 		fits_report_error(stderr, status);
 		exit(-1);
@@ -206,31 +206,35 @@ void dump_data(tweak_t* t)
 {
 	static char s = '1';
 	char fn[] = "scatter_imageN.fits";
+	char fn2[] = "scatter_ref__N.fits";
 	fn[13] = s;
 	ezscatter(fn, t->x,t->y,t->a,t->d,t->n);
 
-	char fn2[] = "scatter_ref__N.fits";
 	fn2[13] = s;
 	ezscatter(fn2, t->x_ref,t->y_ref,t->a_ref,t->d_ref,t->n_ref);
 
 	if (t->image) {
 		double *a, *d, *x, *y;
+		double *a_ref, *d_ref, *x_ref, *y_ref;
+		double *dx, *dy;
+		int i,ref_ind;
+		char fn3[] = "scatter_corIMN.fits";
+		char fn4[] = "scatter_corREN.fits";
+		char fn5[] = "scatter_corVEN.fits";
+
 		a = malloc(sizeof(double)*il_size(t->image));
 		d = malloc(sizeof(double)*il_size(t->image));
 		x = malloc(sizeof(double)*il_size(t->image));
 		y = malloc(sizeof(double)*il_size(t->image));
 
-		double *a_ref, *d_ref, *x_ref, *y_ref;
 		a_ref = malloc(sizeof(double)*il_size(t->image));
 		d_ref = malloc(sizeof(double)*il_size(t->image));
 		x_ref = malloc(sizeof(double)*il_size(t->image));
 		y_ref = malloc(sizeof(double)*il_size(t->image));
 
-		double *dx, *dy;
 		dx = malloc(sizeof(double)*il_size(t->image));
 		dy = malloc(sizeof(double)*il_size(t->image));
 		
-		int i;
 		for (i=0; i<il_size(t->image); i++) {
 			int im_ind = il_get(t->image, i);
 			x[i] = t->x[im_ind];
@@ -239,7 +243,7 @@ void dump_data(tweak_t* t)
 //			a[i] = t->a[im_ind];
 //			d[i] = t->d[im_ind];
 
-			int ref_ind = il_get(t->ref, i);
+			ref_ind = il_get(t->ref, i);
 			a_ref[i] = t->a_ref[ref_ind];
 			d_ref[i] = t->d_ref[ref_ind];
 			// Must recompute ref xy's
@@ -251,9 +255,6 @@ void dump_data(tweak_t* t)
 			dx[i] = x_ref[i] - x[i];
 			dy[i] = y_ref[i] - y[i];
 		}
-		char fn3[] = "scatter_corIMN.fits";
-		char fn4[] = "scatter_corREN.fits";
-		char fn5[] = "scatter_corVEN.fits";
 		fn3[13] = s;
 		fn4[13] = s;
 		fn5[13] = s;
@@ -390,32 +391,35 @@ int pack_params(sip_t* sip, double *parameters, int opt_flags)
 void cost(double *p, double *hx, int m, int n, void *adata)
 {
 	tweak_t* t = adata;
+	double err = 0; // calculate our own sum-squared error
+	int i;
 
 	sip_t sip;
 	memcpy(&sip, t->sip, sizeof(sip_t));
 	unpack_params(&sip, p, t->opt_flags);
 
 	// Run the gauntlet.
-	double err = 0; // calculate our own sum-squared error
-	int i;
 	for (i=0; i<il_size(t->image); i++) {
+		double a, d;
+		double image_xyz[3];
+		double ref_xyz[3];
+		int image_ind,ref_ind;
+		double dx,dy,dz;
+
 		if (!il_get(t->included, i)) 
 			continue;
-		double a, d;
-		int image_ind = il_get(t->image, i);
+		image_ind = il_get(t->image, i);
 		sip_pixelxy2radec(&sip, t->x[image_ind], t->y[image_ind], &a, &d);
-		double image_xyz[3];
 		radecdeg2xyzarr(a, d, image_xyz);
 		*hx++ = image_xyz[0];
 		*hx++ = image_xyz[1];
 		*hx++ = image_xyz[2];
 
-		double ref_xyz[3];
-		int ref_ind = il_get(t->ref, i);
+		ref_ind = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
-		double dx = ref_xyz[0] - image_xyz[0];
-		double dy = ref_xyz[1] - image_xyz[1];
-		double dz = ref_xyz[2] - image_xyz[2];
+		dx = ref_xyz[0] - image_xyz[0];
+		dy = ref_xyz[1] - image_xyz[1];
+		dz = ref_xyz[2] - image_xyz[2];
 		err += dx*dx+dy*dy+dz*dz;
 //		printf("dx=%le, dy=%le, dz=%le\n",dx,dy,dz);
 
@@ -431,7 +435,11 @@ void cost(double *p, double *hx, int m, int n, void *adata)
 //           initial SIP guess   t->sip
 void lm_fit(tweak_t* t)
 {
+   int m,n,i;
 	double params[410];
+	double *desired;
+	double *hx;
+
 //	t->opt_flags = OPT_CRVAL | OPT_CRPIX | OPT_CD;
 //	t->opt_flags = OPT_CRVAL | OPT_CD;
 	t->opt_flags = OPT_CRVAL | OPT_CRPIX | OPT_CD | OPT_SIP;
@@ -460,7 +468,7 @@ void lm_fit(tweak_t* t)
 
 //	print_sip(t->sip);
 
-	int m =  pack_params(t->sip, params, t->opt_flags);
+	m =  pack_params(t->sip, params, t->opt_flags);
 //	printf("REPACKED::::::::::\n");
 //	sip_t sip;
 //	memcpy(&sip, t->sip, sizeof(sip_t));
@@ -468,21 +476,21 @@ void lm_fit(tweak_t* t)
 //	print_sip(&sip);
 
 	// Pack target values
-	double *desired = malloc(sizeof(double)*il_size(t->image)*3);
-	double *hx = desired;
-	int i;
+	desired = malloc(sizeof(double)*il_size(t->image)*3);
+	hx = desired;
 	for (i=0; i<il_size(t->image); i++) {
+	   int ref_ind;
+		double ref_xyz[3];
 		if (!il_get(t->included, i)) 
 			continue;
-		int ref_ind = il_get(t->ref, i);
-		double ref_xyz[3];
+		ref_ind = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[ref_ind], t->d_ref[ref_ind], ref_xyz);
 		*hx++ = ref_xyz[0];
 		*hx++ = ref_xyz[1];
 		*hx++ = ref_xyz[2];
 	}
 
-	int n = hx - desired;
+	n = hx - desired;
 //	assert(hx-desired == 3*il_size(t->image));
 
 //	printf("Starting optimization m=%d n=%d!!!!!!!!!!!\n",m,n);

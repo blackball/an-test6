@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
 	fitsfile *ofptr;        /* FITS file pointer to output file */
 	//char card[FLEN_CARD];   /* Standard string lengths defined in fitsio.h */
+	char outfile[300];
 	int status = 0; // FIXME should have ostatus too
 	int naxis;
 	int maxnpeaks = MAXNPEAKS, npeaks;
@@ -60,6 +61,8 @@ int main(int argc, char *argv[])
 	float sigma;
 	int percentiles = 0;
 	char* infn;
+	int nhdus,maxper,hdutype,nimgs;
+	float dpsf,plim,dlim,saddle;
 
 	if (!((argc == 2) || (argc == 3))) {
 		printHelp();
@@ -91,12 +94,10 @@ int main(int argc, char *argv[])
 	}
 
 	// Are there multiple HDU's?
-	int nhdus;
 	fits_get_num_hdus(fptr, &nhdus, &status);
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
 	// Create xylist filename (by trimming '.fits')
-	char outfile[300];
 	snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", strlen(infn)-5, infn);
 	fprintf(stderr, "outfile=%s\n",outfile);
 
@@ -111,11 +112,11 @@ int main(int argc, char *argv[])
 	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
 	/* Parameters for simplexy; save for debugging */
 	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
-	float dpsf = 1;     /* gaussian psf width; 1 is usually fine */
-	float plim = 8;     /* significance to keep; 8 is usually fine */
-	float dlim = 1;     /* closest two peaks can be; 1 is usually fine */
-	float saddle = 3;   /* saddle difference (in sig); 3 is usually fine */
-	int maxper = 1000;  /* maximum number of peaks per object; 1000 */
+	dpsf = 1;     /* gaussian psf width; 1 is usually fine */
+	plim = 8;     /* significance to keep; 8 is usually fine */
+	dlim = 1;     /* closest two peaks can be; 1 is usually fine */
+	saddle = 3;   /* saddle difference (in sig); 3 is usually fine */
+	maxper = 1000;  /* maximum number of peaks per object; 1000 */
 	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "Gaussian psf width", &status);
 	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "Significance to keep", &status);
 	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "Closest two peaks can be", &status);
@@ -133,11 +134,14 @@ int main(int argc, char *argv[])
 	assert(!status);
 	assert(!status);
 
-	int hdutype;
-	int nimgs = 0;
+	nimgs = 0;
 
 	// Run simplexy on each HDU
 	for (kk=1; kk <= nhdus; kk++) {
+		char* ttype[] = {"X","Y","FLUX"};
+		char* tform[] = {"E","E","E"};
+		char* tunit[] = {"pix","pix","unknown"};
+
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
 
@@ -193,9 +197,6 @@ int main(int argc, char *argv[])
 			y[jj] += 1.0;
 		}
 
-		char* ttype[] = {"X","Y","FLUX"};
-		char* tform[] = {"E","E","E"};
-		char* tunit[] = {"pix","pix","unknown"};
 		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
 				tunit, "SOURCES", &status);
 		fits_write_col(ofptr, TFLOAT, 1, 1, 1, npeaks, x, &status);

@@ -123,10 +123,11 @@ void RadixSort11(real32 *farray, real32 *sorted, uint32 elements)
 	// 1.  parallel histogramming pass
 	//
 	for (i = 0; i < elements; i++) {
+	  uint32 fi;
 		
 		pf(array);
 
-		uint32 fi = FloatFlip((uint32)array[i]);
+		fi = FloatFlip((uint32)array[i]);
 
 		b0[_0(fi)] ++;
 		b1[_1(fi)] ++;
@@ -155,10 +156,11 @@ void RadixSort11(real32 *farray, real32 *sorted, uint32 elements)
 
 	// byte 0: floatflip entire value, read/write histogram, write out flipped
 	for (i = 0; i < elements; i++) {
+      uint32 fi,pos;
 
-		uint32 fi = array[i];
+		fi = array[i];
 		FloatFlipX(&fi);
-		uint32 pos = _0(fi);
+		pos = _0(fi);
 		
 		pf2(array);
 		sort[++b0[pos]] = fi;

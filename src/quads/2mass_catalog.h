@@ -20,6 +20,7 @@
 #define TWOMASS_FITS_H
 
 #include <stdio.h>
+#include <sys/types.h>
 
 #include "qfits.h"
 #include "ioutils.h"
@@ -30,7 +31,7 @@
 struct twomass_catalog {
 	qfits_table* table;
 	int columns[TWOMASS_FITS_COLUMNS];
-	uint nentries;
+   uint32_t nentries;
 	// buffered reading
 	bread br;
 	// when writing:

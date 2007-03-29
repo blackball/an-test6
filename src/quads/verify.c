@@ -44,9 +44,9 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double verify_pix2, double rquad2,
 							   double* field);
 
-//#define debug(...) fprintf(stderr, __VA_ARGS__)
-//#define debug(...) 0
-#define debug(...)
+//#define debug(args...) fprintf(stderr, args)
+//#define debug(args...) 0
+#define debug(args...)
 
 void verify_hit(kdtree_t* startree,
 				MatchObj* mo,

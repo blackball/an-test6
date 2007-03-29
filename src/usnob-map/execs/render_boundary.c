@@ -33,10 +33,10 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 	// the line endpoints.
 	double ends[8];
 	int SEGS=10;
+	qfits_header* wcshead = NULL;
 
 	logmsg("Starting.\n");
 
-	qfits_header* wcshead = NULL;
 	for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
 		char fn[256];
 		snprintf(fn, sizeof(fn), "%s/%s", wcs_dirs[i], args->wcsfn);

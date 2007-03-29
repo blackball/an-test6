@@ -336,9 +336,9 @@ int  fits_endian_string_inited = 0;
 
 static void fits_init_endian_string() {
     if (!fits_endian_string_inited) {
-        fits_endian_string_inited = 1;
-        uint endian = ENDIAN_DETECTOR;
+        uint32_t endian = ENDIAN_DETECTOR;
         unsigned char* cptr = (unsigned char*)&endian;
+        fits_endian_string_inited = 1;
         sprintf(fits_endian_string, "%02x:%02x:%02x:%02x", (uint)cptr[0], (uint)cptr[1], (uint)cptr[2], (uint)cptr[3]);
     }
 }

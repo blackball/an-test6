@@ -746,7 +746,8 @@ void why_not() {
 		fprintf(stderr, "Findable quads:\n");
 		
 		hlhits = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
-		//hlall = hitlist_healpix_new(agreetol /* *sqrt(2.0)*/);
+		//hlall = hitlist_healpix_new(agreetol);
+                                         /* *sqrt(2.0)*/
 		hlhits->do_correspond = do_correspond;
 
 		printf("quads=[");

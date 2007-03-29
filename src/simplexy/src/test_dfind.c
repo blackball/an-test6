@@ -6,10 +6,10 @@ int compare_inputs(int *test_data, int nx, int ny) {
 	int *test_outs_keir = calloc(nx*ny, sizeof(int));
 	int *test_outs_blanton = calloc(nx*ny, sizeof(int));
 	int fail = 0;
+	int ix, iy;
 	dfind2(test_data, nx,ny,test_outs_keir);
 	dfind(test_data, nx,ny,test_outs_blanton);
 
-	int ix, iy;
 	for(iy=0; iy<9; iy++) {
 		for (ix=0; ix<11; ix++) {
 			if (!(test_outs_keir[nx*iy+ix] == test_outs_blanton[nx*iy+ix])) {

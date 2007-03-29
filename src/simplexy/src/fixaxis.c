@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
 	int kk;
 	char* infile = NULL;
 	char argchar;
+	int nhdus,hdutype;
+	int broken;
 
 	while ((argchar = getopt(argc, argv, "hmi:")) != -1)
 		switch (argchar) {
@@ -50,7 +52,6 @@ int main(int argc, char *argv[])
 	}
 
 	// Are there multiple HDU's?
-	int nhdus;
 	fits_get_num_hdus(fptr, &nhdus, &status);
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
@@ -71,12 +72,14 @@ int main(int argc, char *argv[])
 		assert(!status);
 	}
 
-	int hdutype;
 //	int nimgs = 0;
-	int broken = 0; // Correct until proven otherwise!
+	broken = 0; // Correct until proven otherwise!
 
 	// Check axis on each one
 	for (kk=1; kk <= nhdus; kk++) {
+		int naxis_actual = 0;
+		char keyname[10];
+
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
 
@@ -98,8 +101,6 @@ int main(int argc, char *argv[])
 
 
 		// Now find if and how many NAXISN keywords there are
-		int naxis_actual = 0;
-		char keyname[10];
 		while(1) {
 			snprintf(keyname, 10, "NAXIS%d", naxis_actual+1);
 			fits_read_key(fptr, TINT, keyname, naxisn+naxis_actual,

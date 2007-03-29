@@ -37,12 +37,13 @@ void copy_wcs_into_sip(wcs_t* wcs, sip_t* sip)
 
 sip_t* load_sip_from_fitsio(fitsfile* fptr)
 {
+   sip_t* sip;
 	wcs_t* wcs = load_wcs_from_fitsio(fptr);
 
 	if (!wcs) 
 		return NULL;
 
-	sip_t* sip = malloc(sizeof(sip_t));
+	sip = malloc(sizeof(sip_t));
 	memset(sip, 0, sizeof(sip_t));
 	sip->a_order = sip->b_order = 0;
 	sip->ap_order = sip->bp_order = 0;
@@ -56,7 +57,9 @@ wcs_t* load_wcs_from_fitsio(fitsfile* infptr)
 {
 	int mystatus = 0;
 	int* status = &mystatus;
-	int nkeys, ii;
+	int nkeys, ii,n;
+	int tmpbufflen;
+	char* tmpbuff;
 
 	if (ffghsp(infptr, &nkeys, NULL, status) > 0) {
 		fprintf(stderr, "nomem\n");
@@ -65,8 +68,8 @@ wcs_t* load_wcs_from_fitsio(fitsfile* infptr)
 	fprintf(stderr, "nkeys=%d\n",nkeys);
 
 	// Create a memory buffer to hold the header records
-	int tmpbufflen = nkeys*(FLEN_CARD-1)*sizeof(char)+1;
-	char* tmpbuff = malloc(tmpbufflen);
+	tmpbufflen = nkeys*(FLEN_CARD-1)*sizeof(char)+1;
+	tmpbuff = malloc(tmpbufflen);
 	assert(tmpbuff);
 
 	// Read all of the header records in the input HDU
@@ -78,7 +81,7 @@ wcs_t* load_wcs_from_fitsio(fitsfile* infptr)
 		}
 
 		// Stupid hack because ffgrec null terminates
-		int n = strlen(thiscard);
+		n = strlen(thiscard);
 		if (n!=80) {
 			int jj;
 			for(jj=n;jj<80;jj++) 

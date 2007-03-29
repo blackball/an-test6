@@ -736,9 +736,10 @@ int main(int argc, char *argv[]) {
 			char* fn = fns[nfn];
 			dl** fields = lists[nfn];
 			char buf[256];
+			rdlist *rdls;
 			if (!fn) continue;
 			printf("Writing %s...\n", fn);
-			rdlist* rdls = rdlist_open_for_writing(fn);
+			rdls = rdlist_open_for_writing(fn);
 			if (!rdls) {
 				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
 				exit(-1);
@@ -751,8 +752,9 @@ int main(int argc, char *argv[]) {
 			rdlist_write_header(rdls);
 
 			for (bin=0; bin<Nbins; bin++) {
+            dl* list;
 				rdlist_write_new_field(rdls);
-				dl* list = fields[bin];
+				list = fields[bin];
 				if (!list)
 					continue;
 				tmparr = realloc(tmparr, dl_size(list) * sizeof(double));

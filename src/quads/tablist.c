@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
     int firstcol, lastcol = 1, linewidth;
     int elem, firstelem, lastelem = 0, nelems;
     long jj, nrows, kk;
+	int quiet = 0;
 	
     if (argc != 2 && argc != 3) {
 		printf("Usage:  tablist [-r] filename[ext][col filter][row filter] \n");
@@ -65,7 +66,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	int quiet = 0;
 	if (argv[1][0] == '-' && argv[1][1] == 'r') {
 		quiet = 1;
 	}

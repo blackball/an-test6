@@ -87,6 +87,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 	void* map;
 	unsigned char* hip;
 	int c;
+	FILE* fhip = NULL;
 
 	srand(0);
 
@@ -108,7 +109,6 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		return -1;
 	}
 
-	FILE* fhip = NULL;
 	for (i=0; i<sizeof(hip_dirs)/sizeof(char*); i++) {
 		char fn[256];
 		snprintf(fn, sizeof(fn), "%s/%s", hip_dirs[i], hipparcos_fn);
@@ -152,6 +152,7 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		double cmass[3];
 		double ra,dec;
 		double px,py;
+		unsigned char r,g,b;
 
 		if (fscanf(fconst, "%s %d ", shortname, &nlines) != 2) {
 			fprintf(stderr, "failed parse name+nlines\n");
@@ -159,9 +160,9 @@ int render_constellation(unsigned char* img, render_args_t* args) {
 		}
 		//fprintf(stderr, "Name: %s.  Nlines %i.\n", shortname, nlines);
 
-		unsigned char r = (rand() % 128) + 127;
-		unsigned char g = (rand() % 128) + 127;
-		unsigned char b = (rand() % 128) + 127;
+		r = (rand() % 128) + 127;
+		g = (rand() % 128) + 127;
+		b = (rand() % 128) + 127;
 
 		for (i=0; i<nlines; i++) {
 			int star1, star2;

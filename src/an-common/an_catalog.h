@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 typedef uint64_t uint64;
 
@@ -38,7 +39,7 @@ enum an_sources {
 struct an_observation {
 	unsigned char catalog;
 	unsigned char band;
-	uint id;
+	unsigned int id;
 	float mag;
 	float sigma_mag;
 };
@@ -66,7 +67,7 @@ typedef struct an_entry an_entry;
 struct an_catalog {
 	qfits_table* table;
 	int columns[AN_FITS_COLUMNS];
-	uint nentries;
+	unsigned int nentries;
 	// buffered reading
 	bread br;
 	// when writing:

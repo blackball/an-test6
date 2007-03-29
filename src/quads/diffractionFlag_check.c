@@ -49,8 +49,10 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 int main(int argc, char** args) {
-    int c;
+   int c;
 	int i;
+	int fnum = 0, fnum1 = 0, d = 10;
+
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -62,25 +64,23 @@ int main(int argc, char** args) {
 	}
 
 
-	int fnum = 0, fnum1 = 0, d = 10;
-
 	assert(d<180);
 	// checks the first d degrees of the sky (must be less than 180)
 	while (fnum1<d){
-
+ 	   FILE *fid;
+		unsigned char* map; 
+		size_t map_size;
 		char fname[40]; 
 		char *fn = "/w/284/stars284/USNOB10/%03d/b%03d%d.cat";
 		sprintf(fname, fn, fnum1, fnum1,fnum);
 		printf("%s\n", fname);
 
 		// try to open the file.
-		FILE *fid = fopen(fname, "r"); 
+		fid = fopen(fname, "r"); 
 		if (fid == NULL){
 			printf("crap\n");
 			return 1;
 		}
-		unsigned char* map; 
-		size_t map_size;
 	
 		
 		//move to end of file
@@ -112,8 +112,8 @@ int main(int argc, char** args) {
 				//printf(".");
 			}
 			if (entry.diffraction_spike){
-				printf("\ndiffraction spike, entry %d\n", i/USNOB_RECORD_SIZE);
 				uint ival;
+				printf("\ndiffraction spike, entry %d\n", i/USNOB_RECORD_SIZE);
 				// print bytes 12-15 in base 10 of USNOB entry prior to spike
 				ival = from_le32(*((uint*)(map+i+ 12 - USNOB_RECORD_SIZE)));
 				printf("entry prior spike: %010d\n", ival);

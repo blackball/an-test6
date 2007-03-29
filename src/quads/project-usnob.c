@@ -47,6 +47,14 @@ int main(int argc, char** args) {
 	int i, j, N;
 	int hp, Nside;
 	double center[3];
+	FILE *point_file;
+	FILE *tile_file;
+	double pointbuffer[3];
+	unsigned int tilebuffer[5];
+	double xyz[3];
+	int numMags;
+	usnob_entry* star;
+
 
 	while ((c = getopt(argc, args, OPTIONS)) != -1) {
 		switch (c) {
@@ -98,18 +106,9 @@ int main(int argc, char** args) {
 	fprintf(stderr, "Writing point info to %s\n", pointfilename);
 	fprintf(stderr, "Writing tile info to %s\n", tilefilename);
 
-	FILE *point_file;
-	FILE *tile_file;
-
 	point_file = fopen(pointfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
 
-	double pointbuffer[3];
-	unsigned int tilebuffer[5];
-
-	double xyz[3];
-	int numMags;
-	usnob_entry* star;
 	for (i=0; i<N; i++) {
 		numMags = 0;
 		pointbuffer[2] = 0.0;

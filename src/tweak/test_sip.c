@@ -172,13 +172,15 @@ double epsilon = 0.00001;
 void tryad(sip_t* sip, wcs_t* wcs, double a, double d, char* name,
 		double *opx, double *opy)
 {
-	printf("AD -> XY Test: %s\n",name);
-	printf("a =%lf, d =%lf\n", a,d);
 	double px, py;
-	sip_radec2pixelxy(sip, a,d,&px,&py);
-
 	int offscr;
 	double wcspx,wcspy;
+	int fail=0;
+
+	printf("AD -> XY Test: %s\n",name);
+	printf("a =%lf, d =%lf\n", a,d);
+	sip_radec2pixelxy(sip, a,d,&px,&py);
+
 	wcs2pix(wcs, a, d, &wcspx, &wcspy, &offscr);
 
 	if (opx) *opx = wcspx;
@@ -186,7 +188,6 @@ void tryad(sip_t* sip, wcs_t* wcs, double a, double d, char* name,
 
 	printf("px =%lf, py =%lf\n", px,py);
 	printf("wpx=%lf, wpy=%lf, offscr=%d\n", wcspx,wcspy, offscr);
-	int fail=0;
 	if (fabs(px-wcspx) > epsilon) {
 		printf("** FAILURE X wcs -> pix \n");
 		fail++;
@@ -205,14 +206,14 @@ void tryad(sip_t* sip, wcs_t* wcs, double a, double d, char* name,
 
 void tryxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 {
-	printf("XY -> AD Test: %s\n",name);
 	double wcsa, wcsd, a, d;
+	int fail = 0;
+	printf("XY -> AD Test: %s\n",name);
 	printf("TEST px=%lf, py=%lf\n", px,py);
 	sip_pixelxy2radec(sip, px,py, &a, &d);
 	pix2wcs(wcs, px, py, &wcsa, &wcsd);
 	printf("sa=%lf, sd=%lf\n", a,d);
 	printf("wa=%lf, wd=%lf\n", wcsa,wcsd);
-	int fail = 0;
 	if (fabs(a-wcsa) > epsilon) {
 		printf("** FAILURE A on pix -> wcs\n");
 		fail++;
@@ -230,23 +231,24 @@ void tryxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 
 void tryxyadxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 {
+	double a, d;
+	double wcsa, wcsd;
+	double pxp, pyp;
+	int offscr;
+	double wcspx,wcspy;
+
 	printf("//// XY -> AD -> XY Test: %s\n",name);
 	printf("test px=%lf, py=%lf\n", px,py);
 
-	double a, d;
 	sip_pixelxy2radec(sip, px,py, &a, &d);
 
-	double wcsa, wcsd;
 	pix2wcs(wcs, px, py, &wcsa, &wcsd);
 
 	printf("sa=%lf, sd=%lf\n", a,d);
 	printf("wa=%lf, wd=%lf\n", wcsa,wcsd);
 
-	double pxp, pyp;
 	sip_radec2pixelxy(sip, a, d, &pxp, &pyp);
 
-	int offscr;
-	double wcspx,wcspy;
 	wcs2pix(wcs, wcsa, wcsd, &wcspx, &wcspy, &offscr);
 
 	printf("dspx=%lf, dspy=%lf\n", fabs(px-pxp),fabs(py-pyp));
@@ -258,16 +260,17 @@ void tryxyadxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 }
 void grinder(sip_t* sip, wcs_t* wcs, int n, char* name)
 {
+	double xyzcrval[3];
+	int i;
+	double a, d;
+	double norm;
 
 	copy_wcs_into_sip(wcs,sip);
 
-	double xyzcrval[3];
 	radecdeg2xyzarr(sip->crval[0],sip->crval[1],xyzcrval);
 
 	printf("------------------------------------------\n");
 	printf("TEST::::::: %s\n", name);
-	int i;
-	double a, d;
 
 	printf("Make sure pixel origin goes to same place\n");
 	tryxy(sip,wcs,0,0,"  ");
@@ -284,6 +287,7 @@ void grinder(sip_t* sip, wcs_t* wcs, int n, char* name)
 	tryxyadxy(sip,wcs,1000,3000,"  ");
 
 	for (i=0; i<n; i++) {
+		double px,py;
 		double xyz[3];
 		xyz[0] = rand() / (double)RAND_MAX - 0.5;
 		xyz[1] = rand() / (double)RAND_MAX - 0.5;
@@ -293,7 +297,7 @@ void grinder(sip_t* sip, wcs_t* wcs, int n, char* name)
 		//xyz[1] = 0;
 		//xyz[2] = 0;
 
-		double norm = sqrt(xyz[0]*xyz[0]+xyz[1]*xyz[1]+xyz[2]*xyz[2]);
+		norm = sqrt(xyz[0]*xyz[0]+xyz[1]*xyz[1]+xyz[2]*xyz[2]);
 		xyz[0] /= norm;
 		xyz[1] /= norm;
 		xyz[2] /= norm;
@@ -327,7 +331,6 @@ void grinder(sip_t* sip, wcs_t* wcs, int n, char* name)
 
 		//printf("a=%lf, d=%lf\n", a,d);
 
-		double px,py;
 		tryad(sip,wcs,a,d,"...", &px, &py);
 		tryxy(sip,wcs,px,py, "..");
 	}
@@ -337,9 +340,9 @@ void grinder(sip_t* sip, wcs_t* wcs, int n, char* name)
 
 int main()
 {
-	srand(0);
 	int n=2;
 	sip_t* sip = sip_create();
+	srand(0);
 	grinder(sip, get_wcs_from_fits_header(fobj059), n, "fobj059 without TNX");
 	grinder(sip, get_wcs_from_fits_header(simple) , n, "identity transform");
 	grinder(sip, get_wcs_from_fits_header(simple2), n, "non-zero crpix");

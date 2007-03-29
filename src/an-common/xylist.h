@@ -20,6 +20,7 @@
 #define XYLIST_H
 
 #include <stdio.h>
+#include <sys/types.h>
 
 #include "starutil.h"
 #include "qfits.h"
@@ -57,7 +58,7 @@ struct xylist {
 	char* antype; // Astrometry.net filetype string.
 
 	// field we're currently reading/writing
-	uint field;
+	unsigned int field;
 	qfits_table* table;
 
 	// reading
@@ -82,17 +83,17 @@ xylist* xylist_open(const char* fn);
 int xylist_n_fields(xylist* ls);
 
 // it's your responsibility to free_xy() this.
-xy* xylist_get_field(xylist* ls, uint field);
+xy* xylist_get_field(xylist* ls, unsigned int field);
 
 // it's your responsibility to call qfits_header_destroy().
-qfits_header* xylist_get_field_header(xylist* ls, uint field);
+qfits_header* xylist_get_field_header(xylist* ls, unsigned int field);
 
-int xylist_n_entries(xylist* ls, uint field);
+int xylist_n_entries(xylist* ls, unsigned int field);
 
 //double* xylist_read_entry(xylist* ls);
 
-int xylist_read_entries(xylist* ls, uint field,
-						uint offset, uint n,
+int xylist_read_entries(xylist* ls, unsigned int field,
+						unsigned int offset, unsigned int n,
 						double* vals);
 
 xylist* xylist_open_for_writing(char* fn);
@@ -103,7 +104,7 @@ int xylist_fix_header(xylist* ls);
 
 int xylist_write_new_field(xylist* ls);
 
-int xylist_write_entries(xylist* ls, double* vals, uint nvals);
+int xylist_write_entries(xylist* ls, double* vals, unsigned int nvals);
 
 int xylist_fix_field(xylist* ls);
 

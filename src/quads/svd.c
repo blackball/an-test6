@@ -15,7 +15,8 @@
  *  converge at the 'kth' singular value.
  * 
  */
-//#include <malloc.h> /* for array allocation */
+//#include <malloc.h> 
+                       /* for array allocation */
 #include <stdlib.h>
 #include <math.h>    /* for 'fabs'           */
 

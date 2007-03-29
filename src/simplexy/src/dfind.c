@@ -43,6 +43,7 @@ int dfind2(int *image,
 	/* Find blobs and track equivalences */
 	for (iy=0; iy<ny; iy++) {
 		for (ix=0; ix<nx; ix++) {
+		  int thislabel,thislabelmin;
 
 			object[nx*iy+ix] = -1;
 			if (!image[nx*iy+ix])
@@ -58,10 +59,10 @@ int dfind2(int *image,
 				equivs[object[nx*iy+ix]] = object[nx*iy+ix];
 			}
 
-			int thislabel  = object[nx*iy + ix];
+			thislabel  = object[nx*iy + ix];
 
 			/* Compute minimum equivalence label for this pixel */
-			int thislabelmin = thislabel;
+			thislabelmin = thislabel;
 			while (equivs[thislabelmin] != thislabelmin)
 				thislabelmin = equivs[thislabelmin];
 

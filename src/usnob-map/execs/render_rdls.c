@@ -15,8 +15,10 @@ char* rdls_dirs[] = {
 
 int render_rdls(unsigned char* img, render_args_t* args)
 {
-	int i;
+	int i,j,Nstars,Nib;
 	xylist* rdls;
+   double* rdvals;
+   float* fluximg;
 
 	/* Search in the rdls paths */
 	for (i=0; i<sizeof(rdls_dirs)/sizeof(char*); i++) {
@@ -32,7 +34,7 @@ int render_rdls(unsigned char* img, render_args_t* args)
 		return -1;
 	}
 
-	int Nstars = rdlist_n_entries(rdls, args->fieldnum);
+	Nstars = rdlist_n_entries(rdls, args->fieldnum);
 	if (Nstars == -1) {
 		fprintf(stderr, "render_rdls: Failed to read RDLS file.\n");
 		return -1;
@@ -41,7 +43,7 @@ int render_rdls(unsigned char* img, render_args_t* args)
 	if (args->Nstars && args->Nstars < Nstars)
 		Nstars = args->Nstars;
 
-	double* rdvals = malloc(Nstars * 2 * sizeof(double));
+	rdvals = malloc(Nstars * 2 * sizeof(double));
 	if (rdlist_read_entries(rdls, args->fieldnum, 0, Nstars, rdvals)) {
 		fprintf(stderr, "render_rdls: Failed to read RDLS file.\n");
 		free(rdvals);
@@ -50,13 +52,13 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 	fprintf(stderr, "render_rdls: Got %i stars.\n", Nstars);
 
-	float* fluximg = calloc(args->W*args->H*3, sizeof(float));
+	fluximg = calloc(args->W*args->H*3, sizeof(float));
 	if (!fluximg) {
 		fprintf(stderr, "render_rdls: Failed to allocate flux image.\n");
 		return -1;
 	}
 
-	int Nib = 0;
+	Nib = 0;
 	for (i=0; i<Nstars; i++) {
 		double px =  ra2merc(deg2rad(rdvals[i*2+0]));
 		double py = dec2merc(deg2rad(rdvals[i*2+1]));
@@ -69,7 +71,6 @@ int render_rdls(unsigned char* img, render_args_t* args)
 
 	fprintf(stderr, "render_rdls: %i stars inside image bounds.\n", Nib);
 
-	int j;
 	for (j=0; j<args->H; j++) {
 		for (i=0; i<args->W; i++) {
 			unsigned char* pix = pixel(i,j, img, args);

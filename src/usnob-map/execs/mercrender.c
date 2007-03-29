@@ -173,25 +173,27 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	int* dxs[] = {dx0, dx1, dx2};
 	int* dys[] = {dy0, dy1, dy2};
 	float* scales[] = {scale5x5gaussian, NULL, NULL};
+	float *scale;
+	int* dx,dy;
+	int ndrop,mindx,maxdx,mindy,maxdy;
+	int x,y,w,h,i;
 
 	if (render_symbol < 0 || render_symbol >= 3) {
 		fprintf(stderr, "tilerender: add_star: invalid render symbol %d\n", render_symbol);
 		return 0;
 	}
-	int*   dx    =    dxs[render_symbol];
-	int*   dy    =    dys[render_symbol];
-	float* scale = scales[render_symbol];
-	int    ndrop = ndrops[render_symbol];
+	dx    =    dxs[render_symbol];
+	dy    =    dys[render_symbol];
+	scale = scales[render_symbol];
+	ndrop = ndrops[render_symbol];
 
-	int mindx = -2;
-	int maxdx = 2;
-	int mindy = -2;
-	int maxdy = 2;
+	mindx = -2;
+	maxdx = 2;
+	mindy = -2;
+	maxdy = 2;
 
-	int i;
-	int x, y;
-	int w = args->W;
-	int h = args->H;
+	w = args->W;
+	h = args->H;
 
 	x = xmerc2pixel(xp, args);
 	if (x+maxdx < 0 || x+mindx >= w) {
@@ -203,14 +205,15 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	}
 
 	for (i=0; i<ndrop; i++) {
-		int ix, iy;
+      int ix, iy;
+	   float thisscale;
 		ix = x + dx[i];
 		if ((ix < 0) || (ix >= w))
 			continue;
 		iy = y + dy[i];
 		if ((iy < 0) || (iy >= h))
 			continue;
-		float thisscale = 1.0;
+		thisscale = 1.0;
 		if (scale)
 			thisscale = scale[i];
 		fluximg[3*(iy*w + ix) + 0] += rflux * thisscale;

@@ -278,8 +278,8 @@ int find_correspondences(pl* hits, uint* starids, uint* fieldids,
 	N = pl_size(hits);
 	M = 0;
 	for (i=0; i<N; i++) {
-		mo = (MatchObj*)pl_get(hits, i);
 		int k;
+		mo = (MatchObj*)pl_get(hits, i);
 		for (k=0; k<4; k++)
 			add_correspondence(starids, fieldids, mo->star[k], mo->field[k], &M, &ok);
 	}

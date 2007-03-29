@@ -22,8 +22,8 @@
 #include "starutil.h"
 #include "bl.h"
 
-#define debug(...) {}
-//#define debug printf
+//#define debug(args...) printf(args)
+#define debug(args...) {}
 
 struct candidate {
     kdtree_node_t* n;

@@ -21,7 +21,7 @@
 #include "starutil.h"
 #include "fileutil.h"
 #include "kdtree.h"
-#include "kdtree_io.h"
+//#include "kdtree_io.h"
 #include "kdtree_fits_io.h"
 
 #define OPTIONS "hpn:s:z:f:o:w:x:q:r:d:S:"

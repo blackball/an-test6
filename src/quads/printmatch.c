@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
 
 	char* infn = NULL;
 	matchfile* matchin;
+	int nsolved = 0;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -81,7 +82,6 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	int nsolved = 0;
 	for (;;) {
 		MatchObj* mo;
 		mo = matchfile_buffered_read_match(matchin);

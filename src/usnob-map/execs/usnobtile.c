@@ -237,12 +237,13 @@ int main(int argc, char *argv[]) {
 	if (!forcetree && (zoomlevel <= 5)) {
 		char fn[256];
 		int c;
+		FILE *fp;
 
 		// set filename so that correct tile is returned
 		sprintf(fn, map_template, zoomlevel, (ypix0+1)/256, (xpix0+1)/256);
 
 		fprintf(stderr, "Loading image from file %s.\n", fn);
-		FILE *fp = fopen(fn, "r");
+		fp = fopen(fn, "r");
 
 		// write file to stdout
 		while ((c = fgetc(fp)) != EOF)

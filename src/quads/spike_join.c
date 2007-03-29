@@ -10,21 +10,23 @@
 
 int create_table(FILE* inFid, FILE* outFid){
 	int c, nEntries = 0;
+	int x = 0;
+   qfits_table* tbl;
+   qfits_header* tbl_hdr;
 
 	// create table header
 	qfits_header* hdr = qfits_table_prim_header_default();
 	qfits_header_dump(hdr, outFid);
 
 	// create table
-	qfits_table* tbl = qfits_table_new("spikes",QFITS_BINTABLE,1,1,0);
+	tbl = qfits_table_new("spikes",QFITS_BINTABLE,1,1,0);
 	// add column
 	fits_add_column(tbl, 0,TFITS_BIN_TYPE_X, 1, " ", "diffraction spike"); 
 	
-	qfits_header* tbl_hdr = qfits_table_ext_header_default(tbl); 
+	tbl_hdr = qfits_table_ext_header_default(tbl); 
 	qfits_header_dump(tbl_hdr, outFid);
 
 	// fill in content of table
-	int x = 0;
 	while((c = fgetc(inFid)) != EOF){
 		// show progress
 		if (x==100000){
@@ -68,11 +70,13 @@ int fix_headers(FILE* fId, qfits_header* hdr, qfits_header* tbl_hdr){
 
 int main(int argc, char* argv[]){
 	if (argc==3){
+		FILE* inFid,outFid;
+	   
 		printf("processing %s ", argv[1]);
 
 		// open files for reading/writing
-		FILE* inFid = fopen(argv[1], "r");
-		FILE* outFid = fopen(argv[2], "w");
+		inFid = fopen(argv[1], "r");
+		outFid = fopen(argv[2], "w");
 
 		// create table and write to output file
 		create_table(inFid, outFid);
