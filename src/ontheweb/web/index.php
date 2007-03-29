@@ -2,8 +2,17 @@
 require 'common.php';
 require 'presets.php';
 
+/*
 $emailver = 0;
 $webver = 1;
+*/
+
+$emailver = 1;
+$webver = 0;
+
+if ($emailver) {
+	require 'rfc822.php';
+}
 
 require 'form.php';
 
@@ -16,17 +25,19 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	global $inputtmp_fn;
 	global $host;
 	global $myuri;
+	global $submitted_html;
 
 	$inputfile = $mydir . $input_fn;
 	$inputtmpfile = $mydir . $inputtmp_fn;
 
 	if ($webver) {
+		loggit("Web version.\n");
 		if ($headers["justjobid"]) {
 			// skip the "source extraction" preview, just start crunching!
 			loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
 			if ($imgfilename) {
-				if (!rename($inputtmpfile, $inputfile_orig)) {
-					die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile_orig);
+				if (!rename($inputtmpfile, $inputfile)) {
+					die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
 				}
 				loggit("renamed $inputtmpfile to $inputfile_orig.\n");
 			}
@@ -48,6 +59,14 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	}
 
 	if ($emailver) {
+		loggit("Email version.\n");
+
+		// Rename the input file so the watcher grabs it.
+		if (!rename($inputtmpfile, $inputfile)) {
+			die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+		}
+		loggit("Renamed $inputtmpfile to $inputfile.\n");
+
 		// Tell the client we've received their image and will start crunching...
 		$txt = file_get_contents($submitted_html);
 		$txt = str_replace('##jobid##', $myname, $txt);
@@ -94,6 +113,7 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 		if (!mail("", $subject, $message, $headers)) {
 			die("Failed to send email.\n");
 		}
+		loggit("Sent 'submitted' email.\n");
 		exit;
 	}
 }

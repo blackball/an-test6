@@ -30,6 +30,20 @@ function setFsEv() {
 <h3>Required Information</h3>
 
 <div class="err">
+##email-err##
+</div>
+<p>
+Identification
+</p>
+<div class="cap">
+##email-caption##
+</div>
+<table id="name_email">
+<tr><td>Email:</td><td>##email##</td></tr>
+<tr><td>Name:</td><td>##uname##</td></tr>
+</table>
+
+<div class="err">
 ##xysrc-err##
 </div>
 
@@ -69,16 +83,6 @@ Image URL:
 ##imgurl##
 <div class="cap">
 The URL of a JPEG, GIF, PNG, or FITS image.  Must be less than 100 MB!
-</div>
-</td>
-</tr>
-
-<tr>
-<td> </td>
-<td>##imagescale##
-<div class="cap">
-If your image is a JPEG image with an EXIV header, or a FITS image with a WCS header,
-we can try to guess the scale of the image based on information in the image itself.
 </div>
 </td>
 </tr>
@@ -241,17 +245,6 @@ and sky coordinates.
 </div>
 
 <ul id="tweaklist"><li>##tweak## Tweak</li></ul>
-
-<p>
-Identification
-</p>
-<div class="cap">
-These fields are entirely voluntary.
-</div>
-<table id="name_email">
-<tr><td>Name:</td><td>##uname##</td></tr>
-<tr><td>Email:</td><td>##email##</td></tr>
-</table>
 
 </div>
 

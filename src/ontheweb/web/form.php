@@ -7,6 +7,7 @@ umask(0002); // in octal
 
 $host  = $_SERVER['HTTP_HOST'];
 $myuri  = $_SERVER['PHP_SELF'];
+$myuridir = rtrim(dirname($myuri), '/\\');
 $debug = 0;
 
 // Set up PEAR error handling.
@@ -28,7 +29,7 @@ foreach ($_GET as $key=>$val) {
 $scriptname = basename($_SERVER['PHP_SELF']);
 
 // debug - print out the values submitted by the client.
-loggit($scriptname . "submitted values:\n");
+loggit($scriptname . " submitted values:\n");
 foreach ($_POST as $key => $val) {
 	loggit("  \"" . $key . "\" = \"" . $val . "\"\n");
 }
@@ -143,6 +144,10 @@ $form->addFormRule('check_xysrc');
 $form->addFormRule('check_fieldscale');
 $form->addFormRule('check_poserr');
 
+if ($emailver) {
+	$form->addFormRule('check_email');
+}
+
 // Handle "link to here" requests, by formatting an appropriate GET URL and redirecting.
 if ($form->exportValue("linkhere")) {
 	$vals = $form->exportValues();
@@ -210,6 +215,9 @@ function process_data ($vals) {
 	global $modhead;
 	global $headers;
 	global $formDefaults;
+	global $emailver;
+	global $host;
+	global $myuridir;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -598,9 +606,16 @@ function process_data ($vals) {
 			#"  " . $modhead . " " . $wcsfile . " IMAGEH " . $H . "\n" .
 			"else\n" .
 			"  echo \"Field did not solve.\";\n" .
-			"fi\n" .
-			"echo Donescript finished.\n"
+			"fi\n"
 			);
+	if ($emailver) {
+		fprintf($fdone,
+				"echo \"Sending email...\";\n" .
+				"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n" .
+				"echo Donescript finished.\n"
+				);
+	}
+
 	if (!fclose($fdone)) {
 		die("Failed to close donescript " . $donescript);
 	}
@@ -611,9 +626,18 @@ function process_data ($vals) {
 	after_submitted($imgfilename, $myname, $mydir, $vals, $db);
 }
 
-
-
 // Form parameter value checking.
+function check_email($vals) {
+	$email = $vals['email'];
+	if (!$email) {
+		return array('email'=>'You must enter a valid email address.');
+	}
+	if (!is_valid_email_address($email)) {
+		return array('email'=>'A valid email address is required.');
+	}
+	return TRUE;
+}
+
 function check_xysrc($vals) {
     global $imgfile;
     global $fitsfile;
@@ -705,6 +729,8 @@ function render_form($form, $ids, $headers) {
 	global $index_header;
 	global $index_tail;
 	global $valid_blurb;
+	global $emailver;
+	global $webver;
 
 	$maxfilesize = $form->getMaxFileSize();
 	$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
@@ -721,8 +747,15 @@ function render_form($form, $ids, $headers) {
 				  #'imagescale',
 				  'reset', 'MAX_FILE_SIZE');
 	
-	$template = str_replace('##imagescale##', '', $template);
-
+	if ($emailver) {
+		$template = str_replace('##email-caption##',
+								"We need your email address to send you your results.",
+								$template);
+	} else if ($webver) {
+		$template = str_replace('##email-caption##',
+								"These fields are optional.",
+								$template);
+	}
 	foreach ($flds as $fld) {
 		$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
 	}
@@ -735,7 +768,7 @@ function render_form($form, $ids, $headers) {
 	// fields (and pseudo-fields) that can have errors 
 	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile',
 					 'x_col', 'y_col', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
-					 'poserr', 'fs');
+					 'poserr', 'fs', 'email');
 	foreach ($errflds as $fld) {
 		$template = str_replace("##".$fld."-err##", $form->getElementError($fld), $template);
 	}

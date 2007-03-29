@@ -227,6 +227,74 @@ if ($didsolve) {
 	}
 }
 
+if (array_key_exists("email", $headers)) {
+	if ($jd['sent-email'] == 'yes') {
+		die("already sent email.");
+	}
+	if (!setjobdata($db, array('sent-email'=>'yes'))) {
+		die("failed to update jobdata : sent-email.\n");
+	}
+
+	$host  = $_SERVER['HTTP_HOST'];
+	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+	$staturl = "http://" . $host . $uri . "/status.php?job=" . $myname;
+
+	$email = $jd['email'];
+	$uname = $jd['uname'];
+	$headers = 'From: Astrometry.net <alpha@astrometry.net>' . "\r\n" .
+		'Reply-To: dstn@cs.toronto.edu' . "\r\n" .
+		'X-Mailer: PHP/' . phpversion() . "\r\n";
+	if ($didsolve) {
+		$subject = 'Astrometry.net job ' . $myname . ' solved';
+		$message = "Hello again,\n\n" .
+			"We're please to tell you that we solved your field.\n\n" .
+			"You can get the results here:\n" .
+			"  " . $staturl . "\n\n" .
+			"Please let us know if you have any problems retrieving your results " .
+			"or if the solution is wrong.\n\n";
+	} else {
+		$headers .= 'Cc: Dustin Lang <dstn@cs.toronto.edu>' . "\r\n";
+		$subject = 'Astrometry.net job ' . $myname . ' failed';
+		$message = "Hello again,\n\n" .
+			"Sadly, we were unable to solve your field automatically.\n\n" .
+			"We may take a look at it and see if we can get it to solve; in this case " .
+			"we'll send you an email to let you know.  We may contact you to get more " .
+			"details about your field.\n\n";
+	}
+
+	$message .= "Just to remind you, here are the parameters of your job:\n";
+	$jobdesc = describe_job($jd);
+	foreach ($jobdesc as $key => $val) {
+		$message .= "  " . $key . ": " . $val . "\n";
+	}
+	$message .= "\n";
+
+	$message .= "If you want to return to the form with the values you entered " .
+		"already filled in, you can use this link.  Note, however, that your web browser " .
+		"won't let us set a default value for the file upload field, so you may have to " .
+		"cut-n-paste the filename.\n";
+	$host  = $_SERVER['HTTP_HOST'];
+	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\') . "/index.php";
+	$args = format_preset_url($jd, $formDefaults);
+	$message .= "  http://" . $host . $uri . $args . "\n\n";
+
+	$message .= "Thanks for using Astrometry.net!\n\n";
+
+
+	if ($uname) {
+		$headers .= 'To: ' . $uname . ' <' . $email . '>' . "\r\n";
+	} else {
+		$headers .= 'To: ' . $email . "\r\n";
+	}
+
+	if (!mail("", $subject, $message, $headers)) {
+		phpinfo();
+		die("Failed to send email.\n");
+	}
+	echo "Email sent.\n";
+	exit;
+}
+
 if ($overlay) {
 
 	//loggit("overlay image: " . $overlayfile . "\n");
