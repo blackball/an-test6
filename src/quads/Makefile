@@ -235,7 +235,6 @@ blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		$(UTIL_OBJS) \
 		$(LIBTWEAK_LIB) $(LIBWCS_LIB) $(LIBFORTRAN) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
-#$(LEVMAR_LIB) 
 
 agreeable: agreeable.o matchfile.o hitlist.o handlehits.o \
 		solvedfile.o solvedclient.o intmap.o verify.o pnpoly.o \

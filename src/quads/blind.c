@@ -1262,6 +1262,7 @@ static void solve_fields(blind_params* bp) {
 				FILE* fout;
 				qfits_header* hdr;
 				char* tm;
+				char val[32];
 
 				sprintf(wcs_fn, bp->wcs_template, fieldnum);
 				fout = fopen(wcs_fn, "ab");
@@ -1276,6 +1277,11 @@ static void solve_fields(blind_params* bp) {
 					hdr = blind_wcs_get_sip_header(sip);
 				else
 					hdr = blind_wcs_get_header(&(bestmo->wcstan));
+
+				sprintf(val, "%g", sp->field_maxx);
+				qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
+				sprintf(val, "%g", sp->field_maxy);
+				qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
 
 				boilerplate_add_fits_headers(hdr);
 				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
