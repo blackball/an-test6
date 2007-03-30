@@ -18,11 +18,11 @@ $submitted_html = "submitted.html";
 
 $q_fn = "queue";
 
-$input_fn = "input";
+$input_fn = "input"; // note: this must agree with "blindscript.sh"/"watcher".
 $inputtmp_fn = "input.tmp";
 $start_fn = "start";
 $done_fn  = "done";
-$donescript_fn  = "donescript";
+$donescript_fn  = "donescript"; // note: this must agree with "blindscript.sh"
 $xyls_fn  = "field.xy.fits";
 $rdls_fn  = "field.rd.fits";
 $indexrdls_fn = "index.rd.fits";

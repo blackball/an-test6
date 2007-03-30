@@ -393,7 +393,6 @@ function process_data ($vals) {
 	$inputfile = $mydir . $input_fn;
 	$inputtmpfile = $mydir . $inputtmp_fn;
 	$donescript = $mydir . $donescript_fn;
-	$donescript_relpath = "./" . $donescript_fn;
 	$donefile = $mydir . $done_fn;
 
 	$index = $vals["index"];
@@ -544,7 +543,6 @@ function process_data ($vals) {
 		fprintf($fin, "index " . $indexdir . $ind . "\n");
 	}
 	$str = "start " . $start_fn . "\n" .
-		"donescript " . $donescript_relpath . "\n" .
 		"field " . $xyls_fn . "\n" .
 		"solved " . $solved_fn . "\n" .
 		"cancel " . $cancel_fn . "\n" .
@@ -584,7 +582,7 @@ function process_data ($vals) {
 
 	loggit("Wrote blind input file: " . $inputfile . "\n");
 
-	// Write the donescript for blind...
+	// Write the donescript: executed by "watcher" (via blindscript) after blind completes.
 	$fdone = fopen($donescript, "w");
 	if (!$fdone) {
 		die("Failed to write donescript " . $donescript);
@@ -592,7 +590,8 @@ function process_data ($vals) {
 	fprintf($fdone,
 			"#! /bin/bash\n" .
 			"echo Starting donescript...\n" .
-			"if [ `" . $printsolved . " " . $solved_fn . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
+			"if [ -e " . $solved_fn . " -a " .
+			"`" . $printsolved . " " . $solved_fn . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
 			"  echo \"Field solved.\";\n" .
 			"  echo Running wcs-xy2rd...;\n" .
 			"  " . $wcs_xy2rd . " -w " . $wcs_fn . " -i " . $xyls_fn . " -o " . $rdls_fn . ";\n" .
