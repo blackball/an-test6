@@ -200,7 +200,7 @@ int main(int argc, char** args) {
 		}
 	}
 
-	if (rdlist_write_header(rdls) ||
+	if (rdlist_fix_header(rdls) ||
 		rdlist_close(rdls)) {
 		fprintf(stderr, "Failed to fix header of RDLS file.\n");
 		exit(-1);

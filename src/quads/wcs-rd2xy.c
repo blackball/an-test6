@@ -200,7 +200,7 @@ int main(int argc, char** args) {
 		}
 	}
 
-	if (xylist_write_header(xyls) ||
+	if (xylist_fix_header(xyls) ||
 		xylist_close(xyls)) {
 		fprintf(stderr, "Failed to fix header of XYLS file.\n");
 		exit(-1);

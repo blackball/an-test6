@@ -92,6 +92,8 @@ struct blind_params {
 	MatchObj bestmo;
 	// does it also surpass the "solve" requirements?
 	bool bestmo_solves;
+	// best logodds encountered (even if we don't record bestmo)
+	double bestlogodds;
 
 	// Filenames
 	char* indexname;
@@ -249,6 +251,7 @@ int main(int argc, char *argv[]) {
 		solver_default_params(&(bp->solver));
 		sp->userdata = bp;
 
+		bp->bestlogodds = -1e300;
 		bp->nverify = 20;
 		bp->logratio_tobail = -1e300;
 		bp->fieldlist = il_new(256);
@@ -1011,19 +1014,11 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 	return sip;
 }
 
-static void blind_verified(blind_params* bp, MatchObj* mo) {
-	/*{
-	  int Nmin = min(mo->nindex, mo->nfield);
-	  int ndropout = Nmin - mo->noverlap - mo->nconflict;
-	  logverb(bp, "field %i: logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
-	  mo->fieldnum, mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
-	  }*/
-	if (mo->logodds >= bp->logratio_toprint) {
-		int Nmin = min(mo->nindex, mo->nfield);
-		int ndropout = Nmin - mo->noverlap - mo->nconflict;
-		logverb(bp, "field %i: logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
-				mo->fieldnum, mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
-	}
+static void print_match(blind_params* bp, MatchObj* mo) {
+	int Nmin = min(mo->nindex, mo->nfield);
+	int ndropout = Nmin - mo->noverlap - mo->nconflict;
+	logverb(bp, "logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
+			mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
 }
 
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
@@ -1046,7 +1041,13 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 	// FIXME - this is the same an nmatches.
 	mo->nverified = bp->nverified++;
 
-	blind_verified(bp, mo);
+	if (mo->logodds >= bp->logratio_toprint) {
+		print_match(bp, mo);
+	}
+
+	if (mo->logodds >= bp->bestlogodds) {
+		bp->bestlogodds = mo->logodds;
+	}
 
 	if ((mo->logodds < bp->logratio_tokeep) ||
 		(mo->nindex < bp->nindex_tokeep)) {
@@ -1262,11 +1263,15 @@ static void solve_fields(blind_params* bp) {
 		if (bp->have_bestmo && bp->bestmo_solves) {
 			MatchObj* bestmo = &(bp->bestmo);
 			sip_t* sip = NULL;
-			int Nmin = min(bestmo->nindex, bestmo->nfield);
-			int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
+			//int Nmin = min(bestmo->nindex, bestmo->nfield);
+			//int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
 			// Field solved!
-			logmsg(bp, "Field %i solved with odds ratio %g (%i match, %i conflict, %i dropout, %i index).\n",
-				   fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
+			logmsg(bp, "Field %i solved:", fieldnum);
+			print_match(bp, bestmo);
+			/*
+			  with odds ratio %g (%i match, %i conflict, %i dropout, %i index).\n",
+			  fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
+			*/
 
 			// Tweak, if requested.
 			if (bp->do_tweak) {
@@ -1410,6 +1415,12 @@ static void solve_fields(blind_params* bp) {
 		} else {
 			// Field unsolved.
 			logmsg(bp, "Field %i is unsolved.\n", fieldnum);
+			if (bp->have_bestmo) {
+				logmsg(bp, "Best match encountered: ");
+				print_match(bp, &(bp->bestmo));
+			} else {
+				logmsg(bp, "Best odds encountered: %g\n", exp(bp->bestlogodds));
+			}
 		}
 
 		get_resource_stats(&utime, &stime, NULL);

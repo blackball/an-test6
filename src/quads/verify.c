@@ -217,8 +217,8 @@ void verify_hit(kdtree_t* startree,
 
 		if (ind != -1) {
 			// p(foreground):
-			//logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * NI)) - (bestd2 / (2.0 * sigma2));
-			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * Nmin)) - (bestd2 / (2.0 * sigma2));
+			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * NI)) - (bestd2 / (2.0 * sigma2));
+			//logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * Nmin)) - (bestd2 / (2.0 * sigma2));
 		}
 
 		debug("\nField obj %i/%i: rad %g quads, sigma %g.\n", i+1, NF, sqrt(R2/rquad2), sqrt(sigma2));
@@ -247,8 +247,8 @@ void verify_hit(kdtree_t* startree,
 					double oldlogprob;
 					oldR2 = distsq(field+oldfieldi*2, qc, 2);
 					oldsigma2 = verify_pix2 * (gamma2 + oldR2/rquad2);
-					//oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * NI)) - (oldd2 / (2.0 * oldsigma2));
-					oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * Nmin)) - (oldd2 / (2.0 * oldsigma2));
+					oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * NI)) - (oldd2 / (2.0 * oldsigma2));
+					//oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * Nmin)) - (oldd2 / (2.0 * oldsigma2));
 					debug("Updated logprob from %g to %g.\n", oldlogprob, logprob);
 					logodds -= (oldlogprob - logprob_background);
 					intmap_update(map, starkdind, i);
