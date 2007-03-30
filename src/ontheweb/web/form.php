@@ -142,6 +142,7 @@ $form->addRule('fsu', 'Upper bound must be numeric.', 'numeric');
 $form->addRule('fsl', 'Lower bound must be numeric.', 'numeric');
 $form->addRule('fse', 'Estimate must be numeric.', 'numeric');
 $form->addRule('fsv', 'Variance must be numeric.', 'numeric');
+$form->addFormRule('check_xycol');
 $form->addFormRule('check_xysrc');
 $form->addFormRule('check_fieldscale');
 $form->addFormRule('check_poserr');
@@ -221,6 +222,7 @@ function process_data ($vals) {
 	global $host;
 	global $myuridir;
 	global $fitsgetext;
+	global $fitscopy;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -343,8 +345,20 @@ function process_data ($vals) {
 			die("failed to update jobdata: fits-origname");
 		}
 		// -move it into place...
-		if (!$fitsfile->moveUploadedFile($mydir, $xyls_fn)) {
+		$uploaded_fn = "uploaded.fits";
+		$uploaded = $mydir . $uploaded_fn;
+		if (!$fitsfile->moveUploadedFile($mydir, $uploaded_fn)) {
 			die("failed to move uploaded FITS file into place.");
+		}
+		// use "fitscopy" to grab the first extension and rename the
+		// columns from whatever they were to X,Y.
+		$cmd = $fitscopy . " " . $uploaded . "\"[1][col X=" . $jobdata['x_col'] .
+			";Y=" . $jobdata['y_col'] . "]\" " . $mydir . $xyls_fn . " 2> " . $mydir . "fitscopy.err";
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			die("failed to run command: " . $cmd . "\n");
 		}
 
 		// Try to get the size of the image...
@@ -383,8 +397,6 @@ function process_data ($vals) {
 	$donefile = $mydir . $done_fn;
 
 	$index = $vals["index"];
-	$x_col = $vals["x_col"];
-	$y_col = $vals["y_col"];
 	$parity = $vals["parity"];
 	$tweak = $vals["tweak"];
 	$poserr = $vals["poserr"];
@@ -540,8 +552,6 @@ function process_data ($vals) {
 		"wcs " . $wcs_fn . "\n" .
 		"indexrdls " . $indexrdls_fn . "\n" .
 		"fields 0\n" .
-		"xcol " . $x_col . "\n" .
-		"ycol " . $y_col . "\n" .
 		"sdepth 0\n" .
 		"depth 200\n" .
 		"parity " . $parity . "\n" .
@@ -585,7 +595,7 @@ function process_data ($vals) {
 			"if [ `" . $printsolved . " " . $solved_fn . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
 			"  echo \"Field solved.\";\n" .
 			"  echo Running wcs-xy2rd...;\n" .
-			"  " . $wcs_xy2rd . " -w " . $wcs_fn . " -i " . $xyls_fn . " -o " . $rdls_fn . " -X " . $x_col . " -Y " . $y_col . ";\n" .
+			"  " . $wcs_xy2rd . " -w " . $wcs_fn . " -i " . $xyls_fn . " -o " . $rdls_fn . ";\n" .
 			"  echo Running rdlsinfo...;\n" .
 			"  " . $rdlsinfo . " " . $rdls_fn . " > " . $rdlsinfo_fn . ";\n" .
 			"  echo Merging index rdls file...\n" .
@@ -628,6 +638,21 @@ function check_email($vals) {
 	}
 	if (!is_valid_email_address($email)) {
 		return array('email'=>'A valid email address is required.');
+	}
+	return TRUE;
+}
+
+function check_xycol($vals) {
+	$xcol = $vals['x_col'];
+	$ycol = $vals['y_col'];
+	// This is only a FITS Standard "recommendation", but we enforce it
+	// for security reasons.
+	$pat = '/[\w-]+/';
+	if (preg_match($pat, $xcol) != 1) {
+		return array('x_col'=>'FITS column names must be alphanumeric.');
+	}
+	if (preg_match($pat, $ycol) != 1) {
+		return array('y_col'=>'FITS column names must be alphanumeric.');
 	}
 	return TRUE;
 }

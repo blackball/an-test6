@@ -88,6 +88,7 @@ if (strpos($host, "monte") === 0) {
 	$tablist = "tablist";
 	$mergesolved = "mergesolved";
 	$fitsgetext = "fitsgetext";
+	$fitscopy = "fitscopy";
 	$rdlsinfo = "rdlsinfo";
 	$xylsinfo = "/h/260/dstn/an/quads/xylsinfo";
 	$wcsinfo = "wcsinfo";
@@ -108,6 +109,7 @@ if (strpos($host, "monte") === 0) {
 	$tablist = "/home/gmaps/quads/tablist";
 	$tabmerge = "/home/gmaps/quads/tabmerge";
 	$fitsgetext = "/home/gmaps/quads/fitsgetext";
+	$fitscopy = "/home/gmaps/quads/fitscopy";
 	$mergesolved = "/home/gmaps/quads/mergesolved";
 	$rdlsinfo = "/home/gmaps/quads/rdlsinfo";
 	$xylsinfo = "/home/gmaps/quads/xylsinfo";
