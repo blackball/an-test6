@@ -197,8 +197,8 @@ void solve_field(solver_params* params) {
 					continue;
 				pq->xy    = malloc(numxy * 2 * sizeof(double));
 				pq->inbox = malloc(numxy * sizeof(bool));
-				memset(pq->inbox, TRUE, params->startobj-1);
-				pq->ninbox = params->startobj-1;
+				memset(pq->inbox, TRUE, params->startobj);
+				pq->ninbox = params->startobj;
 				pq->inbox[iA] = FALSE;
 				pq->inbox[iB] = FALSE;
 				check_inbox(pq, 0, params);
@@ -277,8 +277,8 @@ void solve_field(solver_params* params) {
 			pq->inbox = malloc(numxy * sizeof(bool));
 			pq->xy    = malloc(numxy * 2 * sizeof(double));
 			// -try all stars up to "newpoint"...
-			memset(pq->inbox, TRUE, newpoint);
-			pq->ninbox = newpoint;
+			memset(pq->inbox, TRUE, newpoint+1);
+			pq->ninbox = newpoint+1;
 			// -except A and B.
 			pq->inbox[iA] = FALSE;
 			pq->inbox[iB] = FALSE;
