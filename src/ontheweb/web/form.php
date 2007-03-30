@@ -188,6 +188,7 @@ function process_data ($vals) {
 	global $resultdir;
 	global $dbfile;
 	global $maxfilesize;
+	global $totaltime;
 	global $maxtime;
 	global $maxquads;
 	global $maxcpu;
@@ -227,6 +228,7 @@ function process_data ($vals) {
 	global $myuridir;
 	global $fitsgetext;
 	global $fitscopy;
+	global $tabsort;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -543,7 +545,6 @@ function process_data ($vals) {
 		die("Failed to write input file " . $inputfile);
 	}
 
-	/*
 	$depths = array(0 => 50,
 					50 => 80,
 					80 => 100,
@@ -552,12 +553,16 @@ function process_data ($vals) {
 					140 => 160,
 					160 => 180,
 					180 => 200);
-	*/
+
+	/*
 	$depths = array(0 => 200);
+	*/
 
 	$stripenum = 1;
 
-	$str = "start " . $start_fn . "\n";
+	$str = "start " . $start_fn . "\n" .
+		"total_timelimit " . $totaltime;
+
 	foreach ($depths as $startdepth => $enddepth) {
 		foreach ($indexes as $ind) {
 			$str .= "index " . $indexdir . $ind . "\n";
@@ -629,13 +634,27 @@ function process_data ($vals) {
 		"    N=\$(( \$(" . $fitsgetext . " -i \$FN | wc -l) - 1 ))\n" .
 		"    echo \"\$FN has \$N extensions.\"\n" .
 		"    for ((i=1; i<N; i++)); do\n" .
+		"      if [ \$i -eq 1 -a \$s -eq 1 ]; then\n" .
+		"        continue;\n" .
+		"      fi\n" .
 		"      " . $tabmerge . " \$FN+\$i " . $indexrdls_fn . ".tmp+1\n" .
 		"    done\n" .
 		"  done\n" .
 		"  mv " . $indexrdls_fn . ".tmp " . $indexrdls_fn . "\n" .
-		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . ";\n" .
+		"  echo Merging match files...\n" .
+		"  " . $fitsgetext . " -e 0 -e 1 -i " . sprintf($match_pat, 1) . " -o " . $match_fn . ".tmp\n" .
+		"  for ((s=1;; s++)); do\n" .
+		"    FN=\$(printf " . $match_pat . " \$s)\n" .
+		"    if [ ! -e \$FN ]; then\n" .
+		"      break;\n" .
+		"    fi\n" .
+		"    " . $tabmerge . " \$FN+1 " . $match_fn . ".tmp+1\n" .
+		"  done\n" .
+		"  echo Sorting match file...\n" .
+		"  " . $tabsort . " -i " . $match_fn . ".tmp -o " . $match_fn . " -c logodds -d\n" .
+		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . "\n" .
 		"else\n" .
-		"  echo \"Field did not solve.\";\n" .
+		"  echo \"Field did not solve.\"\n" .
 		"fi\n" .
 		"touch " . $donefile . "\n";
 	if ($emailver) {

@@ -7,7 +7,9 @@ $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
 
 // blind params
-$maxtime = 120; // Two minute max!
+//$maxtime = 120; // Two minute max!
+$totaltime = 600; // Five minute total max.
+$maxtime = 0;
 $maxquads = 0; // 1000000;
 $maxcpu = 0;
 
