@@ -220,6 +220,7 @@ function process_data ($vals) {
 	global $emailver;
 	global $host;
 	global $myuridir;
+	global $fitsgetext;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -581,7 +582,6 @@ function process_data ($vals) {
 	fprintf($fdone,
 			"#! /bin/bash\n" .
 			"echo Starting donescript...\n" .
-			"touch " . $donefile . "\n" .
 			"if [ `" . $printsolved . " " . $solved_fn . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
 			"  echo \"Field solved.\";\n" .
 			"  echo Running wcs-xy2rd...;\n" .
@@ -590,18 +590,17 @@ function process_data ($vals) {
 			"  " . $rdlsinfo . " " . $rdls_fn . " > " . $rdlsinfo_fn . ";\n" .
 			"  echo Merging index rdls file...\n" .
 			"  cp " . $indexrdls_fn . " " . $indexrdls_fn . ".orig\n" .
-			"  cp " . $indexrdls_fn . " " . $indexrdls_fn . ".tmp\n" .
-			"  for ((i=2; i<=" . count($indexes) . "; i++)); do\n" .
+			"  " . $fitsgetext . " -e 0 -e 1 -i " . $indexrdls_fn . " -o " . $indexrdls_fn . ".tmp\n" .
+			"  N=$(( $(" . $fitsgetext . " -i " . $indexrdls_fn . ".orig | wc -l) - 1 ))\n" .
+			"  for ((i=2; i<\$N; i++)); do\n" .
 			"    " . $tabmerge . " " . $indexrdls_fn . "+\$i " . $indexrdls_fn . ".tmp+1\n" .
 			"  done\n" .
 			"  mv " . $indexrdls_fn . ".tmp " . $indexrdls_fn . "\n" .
 			"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . ";\n" .
-			#"  echo Adding image size to WCS file...\n" .
-			#"  " . $modhead . " " . $wcsfile . " IMAGEW " . $W . "\n" .
-			#"  " . $modhead . " " . $wcsfile . " IMAGEH " . $H . "\n" .
 			"else\n" .
 			"  echo \"Field did not solve.\";\n" .
-			"fi\n"
+			"fi\n" .
+			"touch " . $donefile . "\n"
 			);
 	if ($emailver) {
 		fprintf($fdone,
