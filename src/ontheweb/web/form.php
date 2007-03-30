@@ -956,12 +956,12 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 
 
 	// Rename our copy of the image file to reflect the kind of image we think it is
-	$newname = $filename . $suffix;
+	$newname = $filename . $addsuffix;
 	if (!rename($filename, $newname)) {
 		die("failed to rename img file.");
 	}
 	loggit("Renamed image file to " . $newname . "\n");
-	$basename .= $suffix;
+	$basename .= $addsuffix;
 	$filename = $mydir . $basename;
 	$newjd['imagefilename'] = $basename;
 
