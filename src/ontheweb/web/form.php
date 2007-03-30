@@ -200,13 +200,17 @@ function process_data ($vals) {
 	global $input_fn;
 	global $inputtmp_fn;
 	global $donescript_fn;
-	global $indexrdls_fn;
 	global $indexxyls_fn;
 	global $xyls_fn;
 	global $xylsinfo_fn;
 	global $rdls_fn;
 	global $rdlsinfo_fn;
+
 	global $match_fn;
+	global $match_pat;
+	global $indexrdls_fn;
+	global $indexrdls_pat;
+
 	global $solved_fn;
 	global $cancel_fn;
 	global $wcs_fn;
@@ -539,42 +543,60 @@ function process_data ($vals) {
 		die("Failed to write input file " . $inputfile);
 	}
 
-	foreach ($indexes as $ind) {
-		fprintf($fin, "index " . $indexdir . $ind . "\n");
+	/*
+	$depths = array(0 => 50,
+					50 => 80,
+					80 => 100,
+					100 => 120,
+					120 => 140,
+					140 => 160,
+					160 => 180,
+					180 => 200);
+	*/
+	$depths = array(0 => 200);
+
+	$stripenum = 1;
+
+	$str = "start " . $start_fn . "\n";
+	foreach ($depths as $startdepth => $enddepth) {
+		foreach ($indexes as $ind) {
+			$str .= "index " . $indexdir . $ind . "\n";
+		}
+		$str .= 
+			"field " . $xyls_fn . "\n" .
+			"match " . sprintf($match_pat, $stripenum) . "\n" .
+			"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
+			"solved " . $solved_fn . "\n" .
+			"cancel " . $cancel_fn . "\n" .
+			"wcs " . $wcs_fn . "\n" .
+			"fields 0\n" .
+			"sdepth " . $startdepth . "\n" .
+			"depth " . $enddepth . "\n" .
+			"parity " . $parity . "\n" .
+			"fieldunits_lower " . $fu_lower . "\n" .
+			"fieldunits_upper " . $fu_upper . "\n" .
+			"tol " . $codetol . "\n" .
+			"verify_pix " . $poserr . "\n" .
+			"nverify 20\n" .
+			"nindex_tokeep 25\n" .
+			"nindex_tosolve 25\n" .
+			"distractors 0.25\n" .
+			"ratio_toprint 10\n" .
+			"ratio_tokeep 10\n" .
+			"ratio_tosolve 1e6\n" .
+			"ratio_tobail -1e100\n" .
+			"fieldw " . $W . "\n" .
+			"fieldh " . $H . "\n" .
+			"verbose\n" .
+			"maxquads " . $maxquads . "\n" .
+			"cpulimit " . $maxcpu . "\n" .
+			"timelimit " . $maxtime . "\n" .
+			($tweak ? "tweak\n" : "") .
+			"run\n" .
+			"\n";
+		$stripenum++;
 	}
-	$str = "start " . $start_fn . "\n" .
-		"field " . $xyls_fn . "\n" .
-		"solved " . $solved_fn . "\n" .
-		"cancel " . $cancel_fn . "\n" .
-		"match " . $match_fn . "\n" .
-		"wcs " . $wcs_fn . "\n" .
-		"indexrdls " . $indexrdls_fn . "\n" .
-		"fields 0\n" .
-		"sdepth 0\n" .
-		"depth 200\n" .
-		"parity " . $parity . "\n" .
-		"fieldunits_lower " . $fu_lower . "\n" .
-		"fieldunits_upper " . $fu_upper . "\n" .
-		"tol " . $codetol . "\n" .
-		"verify_pix " . $poserr . "\n" .
-		"nverify 20\n" .
-		"nindex_tokeep 25\n" .
-		"nindex_tosolve 25\n" .
-		"distractors 0.25\n" .
-		"ratio_toprint 10\n" .
-		"ratio_tokeep 10\n" .
-		"ratio_tosolve 1e6\n" .
-		"ratio_tobail -1e100\n" .
-		"fieldw " . $W . "\n" .
-		"fieldh " . $H . "\n" .
-		"verbose\n" .
-		"maxquads " . $maxquads . "\n" .
-		"cpulimit " . $maxcpu . "\n" .
-		"timelimit " . $maxtime . "\n" .
-		($tweak ? "tweak\n" : "") .
-		"run\n" .
-		"\n";
-	fprintf($fin, $str);
+	fprintf($fin, "%s", $str);
 
 	if (!fclose($fin)) {
 		die("failed to write blind input file.");
@@ -587,37 +609,43 @@ function process_data ($vals) {
 	if (!$fdone) {
 		die("Failed to write donescript " . $donescript);
 	}
-	fprintf($fdone,
-			"#! /bin/bash\n" .
-			"echo Starting donescript...\n" .
-			"if [ -e " . $solved_fn . " -a " .
-			"`" . $printsolved . " " . $solved_fn . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
-			"  echo \"Field solved.\";\n" .
-			"  echo Running wcs-xy2rd...;\n" .
-			"  " . $wcs_xy2rd . " -w " . $wcs_fn . " -i " . $xyls_fn . " -o " . $rdls_fn . ";\n" .
-			"  echo Running rdlsinfo...;\n" .
-			"  " . $rdlsinfo . " " . $rdls_fn . " > " . $rdlsinfo_fn . ";\n" .
-			"  echo Merging index rdls file...\n" .
-			"  cp " . $indexrdls_fn . " " . $indexrdls_fn . ".orig\n" .
-			"  " . $fitsgetext . " -e 0 -e 1 -i " . $indexrdls_fn . " -o " . $indexrdls_fn . ".tmp\n" .
-			"  N=$(( $(" . $fitsgetext . " -i " . $indexrdls_fn . ".orig | wc -l) - 1 ))\n" .
-			"  for ((i=2; i<\$N; i++)); do\n" .
-			"    " . $tabmerge . " " . $indexrdls_fn . "+\$i " . $indexrdls_fn . ".tmp+1\n" .
-			"  done\n" .
-			"  mv " . $indexrdls_fn . ".tmp " . $indexrdls_fn . "\n" .
-			"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . ";\n" .
-			"else\n" .
-			"  echo \"Field did not solve.\";\n" .
-			"fi\n" .
-			"touch " . $donefile . "\n"
-			);
+	$str = 
+		"#! /bin/bash\n" .
+		"echo Starting donescript...\n" .
+		"if [ -e " . $solved_fn . " -a " .
+		"`" . $printsolved . " " . $solved_fn . " | grep -v \"File\" | wc -w` -eq 1 ]; then \n" .
+		"  echo \"Field solved.\";\n" .
+		"  echo Running wcs-xy2rd...;\n" .
+		"  " . $wcs_xy2rd . " -w " . $wcs_fn . " -i " . $xyls_fn . " -o " . $rdls_fn . ";\n" .
+		"  echo Running rdlsinfo...;\n" .
+		"  " . $rdlsinfo . " " . $rdls_fn . " > " . $rdlsinfo_fn . ";\n" .
+		"  echo Merging index rdls file...\n" .
+		"  " . $fitsgetext . " -e 0 -e 1 -i " . sprintf($indexrdls_pat, 1) . " -o " . $indexrdls_fn . ".tmp\n" .
+		"  for ((s=1;; s++)); do\n" .
+		"    FN=\$(printf " . $indexrdls_pat . " \$s);\n" .
+		"    if [ ! -e \$FN ]; then\n" .
+		"      break;\n" .
+		"    fi\n" .
+		"    N=\$(( \$(" . $fitsgetext . " -i \$FN | wc -l) - 1 ))\n" .
+		"    echo \"\$FN has \$N extensions.\"\n" .
+		"    for ((i=1; i<N; i++)); do\n" .
+		"      " . $tabmerge . " \$FN+\$i " . $indexrdls_fn . ".tmp+1\n" .
+		"    done\n" .
+		"  done\n" .
+		"  mv " . $indexrdls_fn . ".tmp " . $indexrdls_fn . "\n" .
+		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . ";\n" .
+		"else\n" .
+		"  echo \"Field did not solve.\";\n" .
+		"fi\n" .
+		"touch " . $donefile . "\n";
 	if ($emailver) {
-		fprintf($fdone,
-				"echo \"Sending email...\";\n" .
-				"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n" .
-				"echo Donescript finished.\n"
-				);
+		$str .= 
+			"echo \"Sending email...\";\n" .
+			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n" .
+			"echo Donescript finished.\n";
 	}
+
+	fprintf($fdone, "%s", $str);
 
 	if (!fclose($fdone)) {
 		die("Failed to close donescript " . $donescript);

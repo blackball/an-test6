@@ -25,9 +25,14 @@ $done_fn  = "done";
 $donescript_fn  = "donescript"; // note: this must agree with "blindscript.sh"
 $xyls_fn  = "field.xy.fits";
 $rdls_fn  = "field.rd.fits";
-$indexrdls_fn = "index.rd.fits";
 $indexxyls_fn = "index.xy.fits";
+
+$indexrdls_pat = "index-%d.rd.fits";
+$match_pat = "match-%d.fits";
+
+$indexrdls_fn = "index.rd.fits";
 $match_fn = "match.fits";
+
 $log_fn   = "log";
 $solved_fn= "solved";
 $cancel_fn= "cancel";
