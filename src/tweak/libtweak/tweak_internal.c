@@ -871,8 +871,12 @@ void invert_sip_polynomial(tweak_t* t)
 	integer info;
 	int p, q, j;
 	double chisq;
-	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
+	integer str = stride;
+	integer lda = stride;
+	integer ldb = stride;
+	dgelsd_(&str, &N, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
+	stride = str;
 	free(work);
 	free(iwork);
 
@@ -1078,7 +1082,10 @@ void do_linear_tweak(tweak_t* t)
 	doublereal* work = malloc(lwork*sizeof(doublereal));
 	integer *iwork = malloc(lwork*sizeof(integer));
 	integer info;
-	dgelsd_(&stride, &N, &NRHS, A, &stride, b, &stride, S, &RCOND, &rank, work,
+	integer str = stride;
+	integer lda = stride;
+	integer ldb = stride;
+	dgelsd_(&str, &N, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
 			&lwork, iwork, &info);
 	free(work);
 	free(iwork);
