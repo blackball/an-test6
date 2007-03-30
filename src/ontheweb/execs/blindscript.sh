@@ -17,5 +17,5 @@ echo "running blind..." >> $LOG
 blind < $inputfile >> $LOG 2>&1
 
 echo "running donescript..." >> $LOG
-. donescript
+./donescript >> $LOG 2>&1
 echo "finished donescript." >> $LOG
