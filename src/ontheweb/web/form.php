@@ -310,33 +310,10 @@ function process_data ($vals) {
 
 	// If we got an image, convert it to PNM & FITS.
 	if ($imgfilename) {
-		if (!convert_image($imgfilename, $mydir, $suffix,
-						   $errstr, $W, $H, $shrink, $dispW, $dispH,
-						   $dispimgbase, $dispimgpngbase)) {
+		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db)) {
 			die($errstr);
 		}
-
-		// Rename our copy of the image file to reflect the kind of image
-		// we think it is (based on what "file" thinks it is)
-		$newname = $imgfilename . $suffix;
-		if (!rename($imgfilename, $newname)) {
-			die("failed to rename img file.");
-		}
-		loggit("Renamed image file to " . $newname . "\n");
-		$imgfilename = $newname;
-		$imgbasename .= $suffix;
-
-		// Save all the things we discovered about the img.
-		if (!setjobdata($db, array("imageW" => $W,
-								   "imageH" => $H,
-								   "imageshrink" => $shrink,
-								   "displayW" => $dispW,
-								   "displayH" => $dispH,
-								   "displayImage" => $dispimgbase,
-								   "displayImagePng" => $dispimgpngbase,
-								   "imagefilename" => $imgbasename))) {
-			die("failed to save image {filename,W,H} in database.");
-		}
+		$imgfilename = $mydir . $imgbasename;
 	}
 
 	$xylist = $mydir . $xyls_fn;
@@ -882,9 +859,7 @@ function render_form($form, $ids, $headers) {
 
 }
 
-function convert_image($filename, $mydir,
-					   &$addsuffix, &$errstr, &$W, &$H, &$shrink,
-					   &$dispW, &$dispH, &$dispimgbase, &$dispimgpngbase) {
+function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -893,6 +868,9 @@ function convert_image($filename, $mydir,
 	global $fits2xyout_fn;
 	global $an_fitstopnm;
 	global $fits_filter;
+
+	$filename = $mydir . $basename;
+	$newjd = array();
 
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
@@ -976,6 +954,17 @@ function convert_image($filename, $mydir,
 	}
 	loggit("found image type " . $imgtype . "\n");
 
+
+	// Rename our copy of the image file to reflect the kind of image we think it is
+	$newname = $filename . $suffix;
+	if (!rename($filename, $newname)) {
+		die("failed to rename img file.");
+	}
+	loggit("Renamed image file to " . $newname . "\n");
+	$basename .= $suffix;
+	$filename = $mydir . $basename;
+	$newjd['imagefilename'] = $basename;
+
 	// Use "pnmfile" to get the image size.
 	$cmd = "pnmfile " . $pnmimg;
 	loggit("Command: " . $cmd . "\n");
@@ -998,6 +987,9 @@ function convert_image($filename, $mydir,
 		}
 	*/
 
+	$newjd['imageW'] = $W;
+	$newjd['imageH'] = $H;
+
 	// choose a power-of-two shrink factor that makes the larger dimension <= 800.
 	$maxsz = 800;
 	$bigger = max($W,$H);
@@ -1006,6 +998,8 @@ function convert_image($filename, $mydir,
 	} else {
 		$shrink = 1;
 	}
+
+	$newjd['imageshrink'] = $shrink;
 
 	// Also use the output from "pnmfile" to decide if we need to convert to PGM.
 	$ss = strstr($res, "PPM");
@@ -1093,6 +1087,11 @@ function convert_image($filename, $mydir,
 		return FALSE;
 	}
 
+	$newjd['displayW'] = $dispW;
+	$newjd['displayH'] = $dispH;
+	$newjd['displayImage'] = $dispimgbase;
+	$newjd['displayImagePng'] = $dispimgpngbase;
+
 	// Plot the extracted objects.
 	$Nbright = 100;
 	// -the brightest:
@@ -1168,6 +1167,11 @@ function convert_image($filename, $mydir,
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
 		$errstr = "Failed to convert composite image of extracted sources to PNG.";
 		return FALSE;
+	}
+
+	// Save all the things we discovered about the img.
+	if (!setjobdata($db, $newjd)) {
+		die("failed to save image jobdata.");
 	}
 
 	return TRUE;
