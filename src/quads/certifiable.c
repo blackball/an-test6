@@ -29,8 +29,9 @@
 #include "matchfile.h"
 #include "rdlist.h"
 #include "histogram.h"
+#include "solvedfile.h"
 
-char* OPTIONS = "hR:A:B:n:t:f:L:H:b:C:";
+char* OPTIONS = "hR:A:B:n:t:f:b:C:T:F:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
@@ -41,8 +42,10 @@ void printHelp(char* progname) {
 			"   [-f <false-positive-fields-rdls>]\n"
 			"   [-t <true-positive-fields-rdls>]\n"
 			"   [-b <bin-size>]: histogram overlap %% into bins of this size (default 1)\n"
-			"   [-C <number-of-RDLS-stars-to-compute-center>]\n\n",
-			progname);
+			"   [-C <number-of-RDLS-stars-to-compute-center>]\n"
+			"   [-T <true-positive-solvedfile>]\n"
+			"   [-F <false-positive-solvedfile>]  (note, both of these are per-MATCH, not per-FIELD)\n"
+			"\n", progname);
 }
 
 extern char *optarg;
@@ -88,6 +91,10 @@ int main(int argc, char *argv[]) {
 	double* xyz = NULL;
 	int bin;
 
+	char* fpsolved = NULL;
+	char* tpsolved = NULL;
+	int nfields_total;
+
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
 		case 'h':
@@ -116,6 +123,12 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'n':
 			negfn = optarg;
+			break;
+		case 'T':
+			tpsolved = optarg;
+			break;
+		case 'F':
+			fpsolved = optarg;
 			break;
 		default:
 			return (OPT_ERR);
@@ -166,6 +179,7 @@ int main(int argc, char *argv[]) {
 	incorrects = calloc(sizeof(int), nfields);
 
 	correct = incorrect = warning = 0;
+	nfields_total = 0;
 
 	for (i=0; i<ninputfiles; i++) {
 		matchfile* mf;
@@ -333,8 +347,16 @@ int main(int argc, char *argv[]) {
 
 				if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
 					overlap_lowcorrect = mo->overlap;
+
 			}
 			fflush(stdout);
+
+			if (tpsolved && !err)
+				solvedfile_set(tpsolved, nfields_total);
+			if (fpsolved && err)
+				solvedfile_set(fpsolved, nfields_total);
+
+			nfields_total++;
 		}
 
 		printf("Read %i matches.\n", nread);
@@ -344,6 +366,14 @@ int main(int argc, char *argv[]) {
 
 	printf("%i hits correct, %i warnings, %i errors.\n",
 			correct, warning, incorrect);
+
+	if (tpsolved)
+		solvedfile_setsize(tpsolved, nfields_total);
+	if (fpsolved)
+		solvedfile_setsize(fpsolved, nfields_total);
+
+	// HACK
+	exit(0);
 
 	// here we sort of assume that the hits file has been processed with "agreeable" so that
 	// only agreeing hits are included for each field.

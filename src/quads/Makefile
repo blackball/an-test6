@@ -85,9 +85,9 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 # codedensity 
 
 # old and miscellaneous executables that aren't part of the pipeline.
-OLDEXECS := whynot certifiable findquad findstar matchstats plotmatch \
+OLDEXECS := whynot findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats rawstartree
-
+#certifiable 
 CAIROEXECS := plotquad plotxy2
 
 OLDEXECS_OBJS := catalog.o histogram.o \
@@ -140,6 +140,9 @@ tags:
 
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
+
+certifiable: certifiable.o histogram.o matchfile.o solvedfile.o $(UTILS_LIB) \
+		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 an-fitstopnm: an-fitstopnm.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)

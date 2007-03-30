@@ -29,7 +29,7 @@
 #include "bl.h"
 #include "solvedfile.h"
 
-const char* OPTIONS = "hum:S";
+const char* OPTIONS = "hum:SM:";
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -38,6 +38,7 @@ void printHelp(char* progname) {
 			"    [-m <max-field>]: for unsolved mode, max field number.\n"
 			"    [-S]: for unsolved mode, use Sloan max field numbers, and assume the files are given in order.\n"
 			"    [-w]: format for the wiki.\n"
+			"    [-M <variable-name>]: format for Matlab.\n"
 			"\n", progname);
 }
 
@@ -54,6 +55,7 @@ int main(int argc, char** args) {
 	int maxfield = 0;
 	bool sloan = FALSE;
 	bool wiki = FALSE;
+	char* matlab = NULL;
 
 	int sloanmaxes[] = { 9978, 9980, 9974, 9974, 9965, 9971, 9965, 9979, 9978, 9979,
 						 9981, 9978, 9981, 9977, 9973, 9977, 9981, 9977, 9972, 9975,
@@ -62,6 +64,9 @@ int main(int argc, char** args) {
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'M':
+			matlab = optarg;
+			break;
 		case 'w':
 			wiki = TRUE;
 			break;
@@ -88,6 +93,9 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	if (matlab)
+		printf("%s=[", matlab);
+
 	for (i=0; i<ninputfiles; i++) {
 		FILE* fid;
 		int filesize;
@@ -104,7 +112,8 @@ int main(int argc, char** args) {
 		fseeko(fid, 0, SEEK_END);
 		filesize = ftello(fid);
 		fclose(fid);
-		printf("File %s\n", inputfiles[i]);
+		if (!matlab)
+			printf("File %s\n", inputfiles[i]);
 		if (sloan && (i < (sizeof(sloanmaxes) / sizeof(int))))
 			lim = imin(filesize, sloanmaxes[i]);
 		else if (maxfield)
@@ -133,6 +142,8 @@ int main(int argc, char** args) {
 
 		printf("\n");
 	}
+	if (matlab)
+		printf("];\n");
 
 	return 0;
 }

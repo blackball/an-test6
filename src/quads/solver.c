@@ -78,7 +78,7 @@ struct potential_quad {
 	bool scale_ok;
 	int iA, iB;
 	double costheta, sintheta;
-	int* inbox;
+	bool* inbox;
 	int ninbox;
 	double* xy;
 };
@@ -129,13 +129,13 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
 			// x^2-x + y^2-y           <=   sqrt(2)*codetol + codetol^2
 			double r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
 			if (r > (tol * (M_SQRT2 + tol))) {
-				pq->inbox[i] = 0;
+				pq->inbox[i] = FALSE;
 				continue;
 			}
 		} else {
 			if ((Cx > (1.0 + tol)) || (Cx < (0.0 - tol)) ||
 				(Cy > (1.0 + tol)) || (Cy < (0.0 - tol))) {
-				pq->inbox[i] = 0;
+				pq->inbox[i] = FALSE;
 				continue;
 			}
 		}
@@ -148,12 +148,14 @@ void solve_field(solver_params* params) {
     uint numxy, iA, iB, iC, iD, newpoint;
 	int i;
 	double usertime, systime;
-	double lastcheck;
+	time_t lastcheck_ss;
+	time_t lastcheck_sf;
+	time_t lastcheck_cf;
 	pquad* pquads;
 
 	get_resource_stats(&usertime, &systime, NULL);
 	params->starttime = usertime + systime;
-	lastcheck = params->starttime;
+	lastcheck_ss = lastcheck_sf = lastcheck_cf = time(NULL);
 
 	numxy = params->nfield;
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
@@ -162,6 +164,47 @@ void solve_field(solver_params* params) {
 		numxy = params->endobj;
 
 	pquads = calloc(numxy * numxy, sizeof(pquad));
+
+	/*
+	  We maintain an array of "potential quads" (pquad) structs, where each
+	  struct corresponds to one choice of stars A and B; the struct at
+	  index (B * numxy + A) hold information about quads that could be created
+	  using stars A,B.
+
+	  (We only use the above-diagonal elements of this 2D array because A<B.)
+
+	  For each AB pair, we cache the scale and the rotation parameters,
+	  and we keep an array "inbox" of length "numxy" of booleans, that say
+	  whether that star is eligible to be star C or D of a quad with AB at
+	  the corners.  (Obviously A and B can't).
+
+	  The "ninbox" parameter is somewhat misnamed - it says that "inbox"
+	  in the range [0, ninbox) have been initialized.
+	*/
+
+	/* (See explanatory paragraph below)
+	   If "params->startobj" isn't zero, then we need to initialize the triangle
+	   of "pquads" up to A=startobj-2,B=startobj-1.
+	*/
+	if (params->startobj) {
+		for (iB=0; iB<params->startobj; iB++) {
+			for (iA=0; iA<iB; iA++) {
+				pquad* pq = pquads + iB * numxy + iA;
+				pq->iA = iA;
+				pq->iB = iB;
+				check_scale(pq, params);
+				if (!pq->scale_ok)
+					continue;
+				pq->xy    = malloc(numxy * 2 * sizeof(double));
+				pq->inbox = malloc(numxy * sizeof(bool));
+				memset(pq->inbox, TRUE, params->startobj-1);
+				pq->ninbox = params->startobj-1;
+				pq->inbox[iA] = FALSE;
+				pq->inbox[iB] = FALSE;
+				check_inbox(pq, 0, params);
+			}
+		}
+	}
 
 	/*
 	  Each time through the "for" loop below, we consider a new
@@ -181,30 +224,39 @@ void solve_field(solver_params* params) {
 
 	for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
 		double ABCDpix[8];
-		// check if the field has already been solved...
-		// FIXME - should only check this if a sufficient time period has passed...
-		if (params->solved_in && solvedfile_get(params->solved_in, params->fieldnum)) {
-			fprintf(stderr, "  field %u: file %s indicates that the field has been solved.\n",
-					params->fieldnum, params->solved_in);
-			break;
-		}
-		if (params->do_solvedserver) {
-			get_resource_stats(&usertime, &systime, NULL);
-			if (usertime + systime - lastcheck > 10.0) {
+
+		if ((params->solved_in) ||
+			(params->do_solvedserver) ||
+			(params->cancelfname)) {
+			// check if the field has already been solved...
+			time_t t;
+			t = time(NULL);
+			//get_resource_stats(&usertime, &systime, NULL);
+
+			if (params->solved_in && ((t - lastcheck_sf) > 5)) {
+				if (solvedfile_get(params->solved_in, params->fieldnum)) {
+					fprintf(stderr, "  field %u: file %s indicates that the field has been solved.\n",
+							params->fieldnum, params->solved_in);
+					break;
+				}
+				lastcheck_sf = t;
+			}
+			if (params->do_solvedserver && ((t - lastcheck_ss) > 10)) {
 				if (solvedclient_get(params->fieldid, params->fieldnum)) {
 					fprintf(stderr, "  field %u: field solved; aborting.\n", params->fieldnum);
 					break;
 				}
-				lastcheck = usertime + systime;
+				lastcheck_ss = t;
 			}
-		}
-		if (params->cancelfname) {
-			struct stat st;
-			if (stat(params->cancelfname, &st) == 0) {
-				params->cancelled = TRUE;
-				params->quitNow = TRUE;
-				fprintf(stderr, "File %s exists: cancelling.\n", params->cancelfname);
-				break;
+			if (params->cancelfname && ((t - lastcheck_cf) > 5)) {
+				struct stat st;
+				if (stat(params->cancelfname, &st) == 0) {
+					params->cancelled = TRUE;
+					params->quitNow = TRUE;
+					fprintf(stderr, "File %s exists: cancelling.\n", params->cancelfname);
+					break;
+				}
+				lastcheck_cf = t;
 			}
 		}
 
@@ -214,21 +266,24 @@ void solve_field(solver_params* params) {
 		setx(ABCDpix, 1, getx(params->field, iB));
 		sety(ABCDpix, 1, gety(params->field, iB));
 		for (iA=0; iA<newpoint; iA++) {
+			// initialize the "pquad" struct for this AB combo.
 			pquad* pq = pquads + iB * numxy + iA;
 			pq->iA = iA;
 			pq->iB = iB;
 			check_scale(pq, params);
 			if (!pq->scale_ok)
 				continue;
-			pq->inbox = calloc(numxy, sizeof(int));
+			// initialize the "inbox" array:
+			pq->inbox = malloc(numxy * sizeof(bool));
 			pq->xy    = malloc(numxy * 2 * sizeof(double));
-			for (iC=0; iC<newpoint; iC++) {
-				if ((iC == iA) || (iC == iB))
-					continue;
-				pq->inbox[iC] = 1;
-			}
+			// -try all stars up to "newpoint"...
+			memset(pq->inbox, TRUE, newpoint);
 			pq->ninbox = newpoint;
+			// -except A and B.
+			pq->inbox[iA] = FALSE;
+			pq->inbox[iB] = FALSE;
 			check_inbox(pq, 0, params);
+
 			setx(ABCDpix, 0, getx(params->field, iA));
 			sety(ABCDpix, 0, gety(params->field, iA));
 			for (iC=0; iC<newpoint; iC++) {
@@ -265,10 +320,12 @@ void solve_field(solver_params* params) {
 		for (iA=0; iA<newpoint; iA++) {
 			for (iB=iA+1; iB<newpoint; iB++) {
 				double cx, cy, dx, dy;
+				// grab the "pquad" for this AB combo
 				pquad* pq = pquads + iB * numxy + iA;
 				if (!pq->scale_ok)
 					continue;
-				pq->inbox[iD] = 1;
+				// test if this D is in the box:
+				pq->inbox[iD] = TRUE;
 				pq->ninbox = iD + 1;
 				check_inbox(pq, iD, params);
 				if (!pq->inbox[iD])

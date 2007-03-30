@@ -89,11 +89,11 @@ int main(int argc, char** args) {
 	}
 
 	solved = calloc(N, 1);
-
+	
 	for (i=0; i<ninputfiles; i++) {
 		il* slist;
 		int j;
-		slist = solvedfile_getall(inputfiles[i], 0, N, 0);
+		slist = solvedfile_getall_solved(inputfiles[i], 0, N, 0);
 		for (j=0; j<il_size(slist); j++)
 			solved[il_get(slist, j)] = (char)1;
 		il_free(slist);
