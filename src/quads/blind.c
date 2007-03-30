@@ -155,6 +155,9 @@ struct blind_params {
 	int cpulimit;
 	int timelimit;
 
+	int total_timelimit;
+	bool hit_total_timelimit;
+
 	bool do_tweak;
 	int tweak_aborder;
 	int tweak_abporder;
@@ -222,6 +225,11 @@ static void wall_time_limit(int sig) {
 	quit_now("Wall-clock time limit reached!\n");
 }
 
+static void total_wall_time_limit(int sig) {
+	quit_now("Total wall-clock time limit reached!\n");
+	my_bp.hit_total_timelimit = TRUE;
+}
+
 int main(int argc, char *argv[]) {
 	char* progname = argv[0];
     uint numfields;
@@ -244,6 +252,11 @@ int main(int argc, char *argv[]) {
 	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
 		int I;
+		sighandler_t oldsigalarm_total = NULL;
+
+		if (bp->hit_total_timelimit)
+			break;
+
 		tic();
 
 		// Reset params.
@@ -317,6 +330,7 @@ int main(int argc, char *argv[]) {
 		logmsg(bp, "logfname %s\n", bp->logfname);
 		logmsg(bp, "cpulimit %i\n", bp->cpulimit);
 		logmsg(bp, "timelimit %i\n", bp->timelimit);
+		logmsg(bp, "total_timelimit %i\n", bp->total_timelimit);
 
 		if (!pl_size(bp->indexes)) {
 			logerr(bp, "You must specify an index.\n");
@@ -334,6 +348,18 @@ int main(int argc, char *argv[]) {
 			 ((bp->verify_dist2 > 0.0)?1:0)) != 1) {
 			logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
 			exit(-1);
+		}
+
+		// Set total wall-clock time limit.
+		// Note that we never cancel this alarm, it persists across "run"
+		// boundaries.
+		if (bp->total_timelimit) {
+			alarm(bp->total_timelimit);
+			oldsigalarm_total = signal(SIGALRM, total_wall_time_limit);
+			if (oldsigalarm_total == SIG_ERR) {
+				logerr(bp, "Failed to set total wall time limit signal handler: %s\n", strerror(errno));
+				exit(-1);
+			}
 		}
 
 		if (bp->matchfname) {
@@ -762,6 +788,8 @@ static int read_parameters(blind_params* bp) {
 			bp->cpulimit = atoi(nextword);
 		} else if (is_word(line, "timelimit ", &nextword)) {
 			bp->timelimit = atoi(nextword);
+		} else if (is_word(line, "total_timelimit ", &nextword)) {
+			bp->total_timelimit = atoi(nextword);
 		} else if (is_word(line, "verify_dist ", &nextword)) {
 			bp->verify_dist2 = arcsec2distsq(atof(nextword));
 		} else if (is_word(line, "verify_pix ", &nextword)) {
@@ -1112,6 +1140,7 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 	fits_add_long_comment(hdr, "Maxmatches: %i", sp->maxmatches);
 	fits_add_long_comment(hdr, "Cpu limit: %i s", bp->cpulimit);
 	fits_add_long_comment(hdr, "Time limit: %i s", bp->timelimit);
+	fits_add_long_comment(hdr, "Total time limit: %i s", bp->total_timelimit);
 
 	fits_add_long_comment(hdr, "Tweak: %s", (bp->do_tweak ? "yes" : "no"));
 	if (bp->do_tweak) {
