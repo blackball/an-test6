@@ -118,6 +118,7 @@ $indexes = array('auto' => "Automatic (based on image scale)",
 				 "8degree" => "8-degree Fields",
 				 "15degree" => "15-degree Fields",
 				 "30degree" => "30-degree Fields",
+				 "60degree" => "60-degree Fields",
 				 );
 
 $form->addElement('text', 'uname', "your name", array('size'=>40));
@@ -312,6 +313,7 @@ function process_data ($vals) {
 	}
 
 	// If we got an image, convert it to PNM & FITS.
+	$scaleguess = array();
 	if ($imgfilename) {
 		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db, $scaleguess)) {
 			die($errstr);
@@ -470,7 +472,8 @@ function process_data ($vals) {
 		loggit("Collecting indexes with quads in range [" . $fmin . ", " . $fmax . "] arcmin.\n");
 		// FIXME - should condense all this index data into one array!
 		// (list largest-to-smallest).
-		$sizemap = array("30degree" => array(400,900),
+		$sizemap = array("60degree" => array(900,1800),
+						 "30degree" => array(400,900),
 						 "15degree" => array(200,400),
 						 "8degree" => array(120,180),
 						 "4degree" => array(60, 90),
@@ -488,7 +491,7 @@ function process_data ($vals) {
 						 "15degree" => array(200,400),
 						 );
 		*/
-		$largest = "30degree";
+		$largest = "60degree";
 		$smallest = "12arcmin";
 
 		$indexes = array();
@@ -526,6 +529,7 @@ function process_data ($vals) {
 					  //"15degree" => array("allsky-39/allsky-39"),
 					  "15degree" => array("allsky-40/allsky-40"),
 					  "30degree" => array("allsky-43/allsky-43"),
+					  "60degree" => array("allsky-44/allsky-44"),
 					  );
 	$indexpaths = array();
 	foreach ($indexes as $i) {
