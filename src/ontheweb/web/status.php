@@ -621,8 +621,8 @@ if ($didsolve) {
 
 	$fldsz = $pixscale * max($fullW, $fullH);
 	loggit("Field size: " . $fldsz . "\n");
-	$zoomin = ($fldsz < (3600*5));
-	$zoomin2 = ($fldsz < (3600*0.5));
+	$zoomin = ($fldsz < (3600*18));
+	$zoomin2 = ($fldsz < (3600*1.8));
 
 	if ($zoomin) {
 		echo "<p>(Your field is small so we have drawn a dashed box" .
