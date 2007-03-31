@@ -533,6 +533,7 @@ function process_data ($vals) {
 					  );
 	$indexpaths = array();
 	foreach ($indexes as $i) {
+		//loggit("Index " . $i . "\n");
 		$indexpaths = array_merge($indexpaths, $indexmap[$i]);
 	}
 	$indexes = $indexpaths;
@@ -559,7 +560,7 @@ function process_data ($vals) {
 	$stripenum = 1;
 
 	$str = "start " . $start_fn . "\n" .
-		"total_timelimit " . $totaltime;
+		"total_timelimit " . $totaltime . "\n";
 
 	foreach ($depths as $startdepth => $enddepth) {
 		foreach ($tryscales as $range) {
