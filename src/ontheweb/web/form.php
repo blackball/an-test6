@@ -281,6 +281,9 @@ function process_data ($vals) {
 	$imgbasename = "";
 	//$origname = "";
 
+	// Pixel scales to try.
+	$tryscales = array();
+
 	if ($xysrc == "url") {
 		// Try to retrieve the URL...
 		loggit("retrieving url " . $imgurl . " ...\n");
@@ -310,10 +313,20 @@ function process_data ($vals) {
 
 	// If we got an image, convert it to PNM & FITS.
 	if ($imgfilename) {
-		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db)) {
+		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db, $scaleguess)) {
 			die($errstr);
 		}
 		$imgfilename = $mydir . $imgbasename;
+
+		loggit("Got " . count($scaleguess) . " guesses about the image scale.\n");
+		foreach ($scaleguess as $method => $scale) {
+			loggit("  " . $method . ": " . $scale . "\n");
+		}
+		$uscales = array_unique(array_values($scaleguess));
+		// FIXME - merge overlapping scales...
+		foreach ($uscales as $s) {
+			array_push($tryscales, array($s * 0.95, $s * 1.05));
+		}
 	}
 
 	$xylist = $mydir . $xyls_fn;
@@ -445,6 +458,10 @@ function process_data ($vals) {
 		die("Field scale lower or upper bound is zero: " . $fu_lower . ", " . $fu_upper . "\n");
 	}
 
+
+	array_push($tryscales, array($fu_lower, $fu_upper));
+
+
 	if ($index == "auto") {
 		// Estimate size of quads we could find:
 		$fmax = 0.5  * min($W, $H) * $fu_upper / 60.0;
@@ -541,42 +558,48 @@ function process_data ($vals) {
 		"total_timelimit " . $totaltime;
 
 	foreach ($depths as $startdepth => $enddepth) {
-		foreach ($indexes as $ind) {
-			$str .= "index " . $indexdir . $ind . "\n";
+		foreach ($tryscales as $range) {
+			$fumin = $range[0];
+			$fumax = $range[1];
+
+			foreach ($indexes as $ind) {
+				$str .= "index " . $indexdir . $ind . "\n";
+			}
+
+			$str .= 
+				"field " . $xyls_fn . "\n" .
+				"match " . sprintf($match_pat, $stripenum) . "\n" .
+				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
+				"solved " . $solved_fn . "\n" .
+				"cancel " . $cancel_fn . "\n" .
+				"wcs " . $wcs_fn . "\n" .
+				"fields 0\n" .
+				"sdepth " . $startdepth . "\n" .
+				"depth " . $enddepth . "\n" .
+				"parity " . $parity . "\n" .
+				"fieldunits_lower " . $fumin . "\n" .
+				"fieldunits_upper " . $fumax . "\n" .
+				"tol " . $codetol . "\n" .
+				"verify_pix " . $poserr . "\n" .
+				"nverify 20\n" .
+				"nindex_tokeep 25\n" .
+				"nindex_tosolve 25\n" .
+				"distractors 0.25\n" .
+				"ratio_toprint 10\n" .
+				"ratio_tokeep 1.6\n" .
+				"ratio_tosolve 1e6\n" .
+				"ratio_tobail 1e-100\n" .
+				"fieldw " . $W . "\n" .
+				"fieldh " . $H . "\n" .
+				"verbose\n" .
+				"maxquads " . $maxquads . "\n" .
+				"cpulimit " . $maxcpu . "\n" .
+				"timelimit " . $maxtime . "\n" .
+				($tweak ? "tweak\n" : "") .
+				"run\n" .
+				"\n";
+			$stripenum++;
 		}
-		$str .= 
-			"field " . $xyls_fn . "\n" .
-			"match " . sprintf($match_pat, $stripenum) . "\n" .
-			"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
-			"solved " . $solved_fn . "\n" .
-			"cancel " . $cancel_fn . "\n" .
-			"wcs " . $wcs_fn . "\n" .
-			"fields 0\n" .
-			"sdepth " . $startdepth . "\n" .
-			"depth " . $enddepth . "\n" .
-			"parity " . $parity . "\n" .
-			"fieldunits_lower " . $fu_lower . "\n" .
-			"fieldunits_upper " . $fu_upper . "\n" .
-			"tol " . $codetol . "\n" .
-			"verify_pix " . $poserr . "\n" .
-			"nverify 20\n" .
-			"nindex_tokeep 25\n" .
-			"nindex_tosolve 25\n" .
-			"distractors 0.25\n" .
-			"ratio_toprint 10\n" .
-			"ratio_tokeep 10\n" .
-			"ratio_tosolve 1e6\n" .
-			"ratio_tobail -1e100\n" .
-			"fieldw " . $W . "\n" .
-			"fieldh " . $H . "\n" .
-			"verbose\n" .
-			"maxquads " . $maxquads . "\n" .
-			"cpulimit " . $maxcpu . "\n" .
-			"timelimit " . $maxtime . "\n" .
-			($tweak ? "tweak\n" : "") .
-			"run\n" .
-			"\n";
-		$stripenum++;
 	}
 	fprintf($fin, "%s", $str);
 
@@ -859,7 +882,8 @@ function render_form($form, $ids, $headers) {
 
 }
 
-function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
+function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
+					   &$scaleguess) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -868,6 +892,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 	global $fits2xyout_fn;
 	global $an_fitstopnm;
 	global $fits_filter;
+	global $fits_guess_scale;
 
 	$filename = $mydir . $basename;
 	$newjd = array();
@@ -925,6 +950,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 			$command = $lst[1];
 
 			if ($suff == "fits") {
+				// Run fits2fits.py on it...
 				$filtered_fits = $mydir . "filtered.fits";
 				$outfile = $mydir . "fits2fits.out";
 				$cmd = sprintf($fits_filter, $filename, $filtered_fits) . " > " . $outfile . " 2>&1";
@@ -934,6 +960,23 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 					die("failed to fix your FITS file: <pre>" . file_get_contents($outfile) . "</pre>");
 				}
 				$filename = $filtered_fits;
+
+				// Run fits-guess-scale on it...
+				$cmd = $fits_guess_scale . " " . $filename;
+				loggit("Command: " . $cmd . "\n");
+				$out = shell_exec($cmd);
+				//loggit("Got: " . $out . "\n");
+				$lines = explode("\n", $out);
+				foreach ($lines as $ln) {
+					$words = explode(" ", $ln);
+					if (count($words) < 3)
+						continue;
+					if (!strcmp($words[0], "scale")) {
+						loggit("  " . $words[1] . " => " . $words[2] . "\n");
+						$scaleguess[$words[1]] = (float)$words[2];
+					}
+				}
+
 			}
 
 			$outfile = $mydir . "Xtopnm.out";
@@ -953,17 +996,6 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 		die("Unknown image type: " . $typestr);
 	}
 	loggit("found image type " . $imgtype . "\n");
-
-
-	// Rename our copy of the image file to reflect the kind of image we think it is
-	$newname = $filename . $addsuffix;
-	if (!rename($filename, $newname)) {
-		die("failed to rename img file.");
-	}
-	loggit("Renamed image file to " . $newname . "\n");
-	$basename .= $addsuffix;
-	$filename = $mydir . $basename;
-	$newjd['imagefilename'] = $basename;
 
 	// Use "pnmfile" to get the image size.
 	$cmd = "pnmfile " . $pnmimg;
@@ -1168,6 +1200,16 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db) {
 		$errstr = "Failed to convert composite image of extracted sources to PNG.";
 		return FALSE;
 	}
+
+	// Rename the original uploaded/downloaded image file to reflect the kind of image we think it is
+	$oldname = $mydir . $basename;
+	$newname = $mydir . $basename . $addsuffix;
+	if (!rename($oldname, $newname)) {
+		die("failed to rename img file.");
+	}
+	loggit("Renamed image file " . $oldname . " to " . $newname . "\n");
+	$basename .= $addsuffix;
+	$newjd['imagefilename'] = $basename;
 
 	// Save all the things we discovered about the img.
 	if (!setjobdata($db, $newjd)) {
