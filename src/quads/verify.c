@@ -44,9 +44,12 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double verify_pix2, double rquad2,
 							   double* field);
 
-//#define debug(args...) fprintf(stderr, args)
-//#define debug(args...) 0
+#define DEBUG 0
+#if DEBUG
+#define debug(args...) fprintf(stderr, args)
+#else
 #define debug(args...)
+#endif
 
 void verify_hit(kdtree_t* startree,
 				MatchObj* mo,
@@ -111,6 +114,12 @@ void verify_hit(kdtree_t* startree,
 			continue;
 
 		res->inds[NI] = res->inds[i];
+
+		if (DEBUG)
+			memmove(res->results.d + NI*3,
+					res->results.d + i*3,
+					3*sizeof(double));
+
 		indexpix[NI*2  ] = x;
 		indexpix[NI*2+1] = y;
 		NI++;
@@ -170,19 +179,29 @@ void verify_hit(kdtree_t* startree,
 
 	// "prime" the intmap with the matched quad so that no other field objs
 	// can claim them  (This is to prevent "lucky donuts")
-	for (j=0; j<4; j++)
+	for (j=0; j<4; j++) {
 		intmap_add(map, mo->star[j], mo->field[j]);
-
-	/*
-	for (i=0; i<NI; i++) {
-		int starid = res->inds[itree->perm[i]];
-		for (j=0; j<4; j++)
-			if (starid == mo->star[j]) {
-				intmap_add(map, i, mo->field[j]);
-				debug("Ruling out index star %i\n", i);
+		debug("Priming: %i -> %i.\n", mo->star[j], mo->field[j]);
+		if (DEBUG) {
+			int k;
+			int* invperm = malloc(NI * sizeof(int));
+			int ind = -1;
+			double xy[2];
+			kdtree_inverse_permutation(itree, invperm);
+			for (k=0; k<NI; k++) {
+				if (res->inds[k] == mo->star[j]) {
+					tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + k*3, xy, xy+1);
+					ind = invperm[k];
+					break;
+				}
 			}
+			if ((ind != -1) && DEBUG) {
+				double d2 = distsq(field + mo->field[j]*2, indexpix + ind*2, 2);
+				double d2b = distsq(field + mo->field[j]*2, xy, 2);
+				debug("Dist: %g, %g\n", sqrt(d2), sqrt(d2b));
+			}
+		}
 	}
-	*/
 
 	Nmin = min(NI, NF);
 
@@ -231,32 +250,51 @@ void verify_hit(kdtree_t* startree,
 		} else {
 			int resind = itree->perm[ind];
 			int starkdind = res->inds[resind];
+			debug("NN: %i -> %i\n", starkdind, i);
 			if (intmap_add(map, starkdind, i) == -1) {
 				// a field object already selected star 'ind' as its nearest neighbour.
 				double oldd2;
+				bool partofquad;
 				int oldfieldi = intmap_get(map, starkdind, -1);
+				bool update = FALSE;
 				assert(oldfieldi != -1);
 
-				debug("Conflict (index star %i)\n", ind);
+				debug("Conflict (ind %i, resind %i, starkdind %i)\n",
+					  ind, resind, starkdind);
+
+				partofquad = (starkdind==mo->star[0] ||
+							  starkdind==mo->star[1] ||
+							  starkdind==mo->star[2] ||
+							  starkdind==mo->star[3]);
 
 				// Allow a poor match to be replaced by a better one!
-				oldd2 = distsq(field + oldfieldi*2, indexpix + ind*2, 2);
-				if (bestd2 < oldd2) {
-					double oldR2;
-					double oldsigma2;
-					double oldlogprob;
-					oldR2 = distsq(field+oldfieldi*2, qc, 2);
-					oldsigma2 = verify_pix2 * (gamma2 + oldR2/rquad2);
-					oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * NI)) - (oldd2 / (2.0 * oldsigma2));
-					//oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * Nmin)) - (oldd2 / (2.0 * oldsigma2));
-					debug("Updated logprob from %g to %g.\n", oldlogprob, logprob);
-					logodds -= (oldlogprob - logprob_background);
-					intmap_update(map, starkdind, i);
+				// (except for conflicts with the quad!)
+				if (partofquad) {
+					debug("Conflict with matched quad.\n");
+				} else {
+					oldd2 = distsq(field + oldfieldi*2, indexpix + ind*2, 2);
+					debug("Old dist %g, New dist %g.\n", sqrt(oldd2), sqrt(bestd2));
+					if (bestd2 < oldd2) {
+						double oldR2;
+						double oldsigma2;
+						double oldlogprob;
+						oldR2 = distsq(field+oldfieldi*2, qc, 2);
+						oldsigma2 = verify_pix2 * (gamma2 + oldR2/rquad2);
+						oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * NI)) - (oldd2 / (2.0 * oldsigma2));
+						//oldlogprob = log((1.0 - distractors) / (2.0 * M_PI * oldsigma2 * Nmin)) - (oldd2 / (2.0 * oldsigma2));
+						debug("Updating logprob from %g to %g.\n", oldlogprob, logprob);
+						logodds -= (oldlogprob - logprob_background);
+						intmap_update(map, starkdind, i);
+						update = TRUE;
+					}
 				}
 				nconflict++;
+				if (!update)
+					continue;
+			} else {
+				debug("Match (index star %i), logprob %g\n", ind, logprob);
+				nmatch++;
 			}
-			debug("Match (index star %i), logprob %g\n", ind, logprob);
-			nmatch++;
 		}
 
 		logodds += (logprob - logprob_background);
@@ -267,7 +305,8 @@ void verify_hit(kdtree_t* startree,
 		}
 
 		if ((logodds > bestlogodds) &&
-			(i >= min_nfield)) {
+			((i-nconflict) >= min_nfield)) {
+			//(i >= min_nfield)) {
 			bestlogodds = logodds;
 			bestnmatch = nmatch;
 			bestnnomatch = nnomatch;
