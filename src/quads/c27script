@@ -1,0 +1,23 @@
+#! /bin/bash
+
+# This script gets run via ssh from oven.
+
+# Careful about writing things to stdout - we pipe it to tar on the other end.
+
+# Read jobid
+read -s jobid
+
+# Create our job directory.
+cd /h/260/dstn/raid3/ontheweb
+mkdir -p $jobid
+cd $jobid
+tar xf -
+
+# Index path replacement.
+sed s+/home/gmaps/ontheweb-indexes+/h/260/dstn/raid3/INDEXES+ < input > input.c27
+
+# stderr goes back over the ssh tunnel to the log file on oven.
+blind < input.c27 > blind.stdout
+
+# Send back all the files we generated!
+tar cf - *
