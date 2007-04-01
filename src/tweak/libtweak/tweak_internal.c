@@ -387,6 +387,8 @@ void get_center_and_radius(double* ra, double* dec, int n,
 	*ra_mean = rad2deg(xy2ra(xyz_mean[0],xyz_mean[1]));
 	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
 	//FIXME -- sam says we should free xyz
+	// He's not simon but I think I'll still do what he says...
+	free(xyz);
 }
 
 void tweak_clear_correspondences(tweak_t* t)
