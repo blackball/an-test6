@@ -467,6 +467,9 @@ int main(int argc, char *argv[]) {
 			sighandler_t oldsigalarm = NULL;
 			double scalefudge = 0.0; // in pixels
 
+			if (bp->hit_total_timelimit)
+				break;
+
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			idfname = mk_idfn(fname);
