@@ -163,7 +163,7 @@ void solve_field(solver_params* params) {
 	if (params->endobj && (numxy > params->endobj))
 		numxy = params->endobj;
 
-	if (params->startobj > numxy)
+	if (params->startobj >= numxy)
 		return;
 
 	pquads = calloc(numxy * numxy, sizeof(pquad));
