@@ -149,6 +149,9 @@ void verify_hit(kdtree_t* startree,
 
 	// Find the center of the quad in pixel space. 
 	// FIXME why not take the average of AB? then the radius will be right?
+	// -the WCS tan projection is computed wrt the center of mass, so I
+	//  thought I would use that here as well... it seemed like a good idea
+	//  at the time, but maybe you're right :)
 	qc[0] = qc[1] = 0.0;
 	for (i=0; i<4; i++) {
 		qc[0] += field[2*mo->field[i]];
@@ -180,7 +183,7 @@ void verify_hit(kdtree_t* startree,
 	map = intmap_new(INTMAP_ONE_TO_ONE);
 
 	// "prime" the intmap with the matched quad so that no other field objs
-	// can claim them  (This is to prevent "lucky donuts")
+	// can claim them.  (This is to prevent "lucky donuts")
 	for (j=0; j<4; j++) {
 		intmap_add(map, mo->star[j], mo->field[j]);
 		debug("Priming: %i -> %i.\n", mo->star[j], mo->field[j]);
@@ -197,12 +200,14 @@ void verify_hit(kdtree_t* startree,
 					break;
 				}
 			}
-			if ((ind != -1) && DEBUG) { //FIXME we're in an if(DEBUG) block already, no?
+			if (ind != -1) {
 				double d2 = distsq(field + mo->field[j]*2, indexpix + ind*2, 2);
 				double d2b = distsq(field + mo->field[j]*2, xy, 2);
 				debug("Dist: %g, %g\n", sqrt(d2), sqrt(d2b));
 			}
 			//FIXME umm..should we free invperm?
+			// -- good idea!
+			free(invperm);
 		}
 	}
 
@@ -310,7 +315,6 @@ void verify_hit(kdtree_t* startree,
 
 		if ((logodds > bestlogodds) &&
 			((i-nconflict) >= min_nfield)) {
-			//(i >= min_nfield)) {
 			bestlogodds = logodds;
 			bestnmatch = nmatch;
 			bestnnomatch = nnomatch;
