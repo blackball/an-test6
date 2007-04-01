@@ -291,6 +291,38 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
+		if (!pl_size(bp->indexes)) {
+			logerr(bp, "You must specify an index.\n");
+			exit(-1);
+		}
+		if (!bp->fieldfname) {
+			logerr(bp, "You must specify a field filename (xylist).\n");
+			exit(-1);
+		}
+		if (sp->codetol < 0.0) {
+			logerr(bp, "You must specify codetol > 0\n");
+			exit(-1);
+		}
+		if ((((bp->verify_pix > 0.0)?1:0) +
+			 ((bp->verify_dist2 > 0.0)?1:0)) != 1) {
+			logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
+			exit(-1);
+		}
+
+		// If we're just solving one field, check to see if it's already
+		// solved before doing a bunch of work and spewing tons of output.
+		if ((il_size(bp->fieldlist) == 1) && (sp->solved_in)) {
+			if (solvedfile_get(sp->solved_in, il_get(bp->fieldlist, 0))) {
+				logmsg(bp, "Field %i is already solved.\n", il_get(bp->fieldlist, 0));
+				il_free(bp->fieldlist);
+				pl_free(bp->indexes);
+				free(bp->xcolname);
+				free(bp->ycolname);
+				free(bp->fieldid_key);
+				continue;
+			}
+		}
+
 		logmsg(bp, "%s params:\n", progname);
 		logmsg(bp, "fields ");
 		for (i=0; i<il_size(bp->fieldlist); i++)
@@ -331,24 +363,6 @@ int main(int argc, char *argv[]) {
 		logmsg(bp, "cpulimit %i\n", bp->cpulimit);
 		logmsg(bp, "timelimit %i\n", bp->timelimit);
 		logmsg(bp, "total_timelimit %i\n", bp->total_timelimit);
-
-		if (!pl_size(bp->indexes)) {
-			logerr(bp, "You must specify an index.\n");
-			exit(-1);
-		}
-		if (!bp->fieldfname) {
-			logerr(bp, "You must specify a field filename (xylist).\n");
-			exit(-1);
-		}
-		if (sp->codetol < 0.0) {
-			logerr(bp, "You must specify codetol > 0\n");
-			exit(-1);
-		}
-		if ((((bp->verify_pix > 0.0)?1:0) +
-			 ((bp->verify_dist2 > 0.0)?1:0)) != 1) {
-			logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
-			exit(-1);
-		}
 
 		// Set total wall-clock time limit.
 		// Note that we never cancel this alarm, it persists across "run"
