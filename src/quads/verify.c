@@ -110,7 +110,7 @@ void verify_hit(kdtree_t* startree,
 	for (i=0; i<res->nres; i++) {
 		double x, y;
 		tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y);
-		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH))
+		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH)) // FIXME should this be > not >= ? ref:zzz
 			continue;
 
 		res->inds[NI] = res->inds[i];
@@ -133,6 +133,7 @@ void verify_hit(kdtree_t* startree,
 		// I don't know HOW this happens - at the very least, the four stars
 		// belonging to the quad that generated this hit should lie in the
 		// proposed field - but I've seen it happen!
+	  //  sam has an idea, see ref:zzz above
 		fprintf(stderr, "Freakishly, NI=0.\n");
 		mo->nfield = 0;
 		mo->noverlap = 0;
@@ -146,7 +147,8 @@ void verify_hit(kdtree_t* startree,
 	// Build a tree out of the index stars in pixel space...
 	itree = kdtree_build(NULL, indexpix, NI, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
-	// Find the center of the quad in pixel space.
+	// Find the center of the quad in pixel space. 
+	// FIXME why not take the average of AB? then the radius will be right?
 	qc[0] = qc[1] = 0.0;
 	for (i=0; i<4; i++) {
 		qc[0] += field[2*mo->field[i]];
@@ -195,11 +197,12 @@ void verify_hit(kdtree_t* startree,
 					break;
 				}
 			}
-			if ((ind != -1) && DEBUG) {
+			if ((ind != -1) && DEBUG) { //FIXME we're in an if(DEBUG) block already, no?
 				double d2 = distsq(field + mo->field[j]*2, indexpix + ind*2, 2);
 				double d2b = distsq(field + mo->field[j]*2, xy, 2);
 				debug("Dist: %g, %g\n", sqrt(d2), sqrt(d2b));
 			}
+			//FIXME umm..should we free invperm?
 		}
 	}
 
@@ -229,6 +232,7 @@ void verify_hit(kdtree_t* startree,
 		sigma2 = verify_pix2 * (gamma2 + R2/rquad2);
 
 		// Cutoff distance to nearest neighbour star: p(fg) == p(bg)
+		// OK, I think that should be cutoffd2= -2*sigma2*(logbg - log(2*pi) - .5*log(sigma2))
 		// FIXME - just set it to 10 sigmas.
 		cutoffd2 = 100.0 * sigma2;
 
