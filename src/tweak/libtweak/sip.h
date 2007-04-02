@@ -46,17 +46,17 @@ typedef struct sip_s {
 	// The transformation from relative pixel coordinates to intermediate
 	// world coordinates[1] is:
 	// 
-	//   x  = [cd00 cd01] * (u + f(u,v))
-	//   y    [cd10 cd11]   (v + g(u,v))
-	// 
+	//   x  = [cd00 cd01] * (u + f(u,v))          x,y are intermediate coordinates on the sky (in deg)
+	//   y    [cd10 cd11]   (v + g(u,v))            which are just a "translation" away from final WCS
+	//                                            u,v are original (unwarped) pixel coordinates
 	// where
-	//                           p    q
-	//   f(u,v) = SUM a[p][q] * u  * v  ,  p+q <= a_order
-	//            p,q
-        //
-	//                           p    q
-	//   f(u,v) = SUM b[p][q] * u  * v  ,  p+q <= b_order
-	//            p,q
+	//                                       p    q
+	//   U = u + f(u,v) = u + SUM a[p][q] * u  * v  ,  p+q <= a_order
+  	//                        p,q
+   //
+	//                                       p    q
+	//   V = v + g(u,v) = v + SUM b[p][q] * u  * v  ,  p+q <= b_order
+	//                        p,q
 	// 
 	// [1] The SIP convention for representing distortion in FITS image
 	// headers. D. L. Shupe, M.Moshir, J. Li, D. Makovoz, R. Narron, R. N.

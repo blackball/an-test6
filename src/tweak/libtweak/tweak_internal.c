@@ -30,6 +30,8 @@
 //  Note: USNO has about 1 arcsecond jitter, so don't go tighter than that!
 //  Split fit x/y (i.e. two fits one for x one for y)
 
+#define KERNEL_SIZE 5
+#define KERNEL_MARG ((KERNEL_SIZE-1)/2)
 typedef double doublereal;
 typedef long int integer;
 extern int dgelsd_(integer *m, integer *n, integer *nrhs, doublereal *a,
@@ -80,52 +82,29 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	int themax,themaxind,ys,xs;
 
 	// hough transform 
-	int hsz = 1000; // hough size
-	int *hough = calloc(hsz*hsz, sizeof(int));
-	int kern[] = {0,  2,  3, 2,  0,
-		      2,  7, 12, 7,  2,
-		      3, 12, 20, 12, 3,
-		      2,  7, 12, 7,  2,
-		      0,  2,  3, 2,  0};
+	int hsz = 1000; // hough histogram size (per side)
+	int *hough = calloc(hsz*hsz, sizeof(int)); // allocate bins
+	int kern[] = {0,  2,  3, 2,  0, // approximate gaussian smoother
+					  2,  7, 12, 7,  2,      // should be KERNEL_SIZE x KERNEL_SIZE
+					  3, 12, 20, 12, 3,
+					  2,  7, 12, 7,  2,
+					  0,  2,  3, 2,  0};
 
-	for (i=0; i<nimg; i++) {
+	for (i=0; i<nimg; i++) {    // loop over all pairs of source-catalog objs
 		for (j=0; j<ncat; j++) {
 			double dx = ximg[i]-xcat[j];
 			double dy = yimg[i]-ycat[j];
 			int hszi = hsz-1;
-			int iy = hszi*( (dy-mindy)/(maxdy-mindy) );
-			int ix = hszi*( (dx-mindx)/(maxdx-mindx) );
+			int iy = hszi*( (dy-mindy)/(maxdy-mindy) ); // compute deltay using implicit floor
+			int ix = hszi*( (dx-mindx)/(maxdx-mindx) ); // compute deltax using implicit floor
 
 			// check to make sure the point is in the box
-//			if ( !(iy >=0) || !(ix >=0) || !(iy*hsz+ ix < hsz*hsz))
-//			if ( !(iy >=0) || !(ix >=0) || !(iy*hsz+ ix < hsz*hsz) ||
-//			if ( iy < 0 || ix < 0 || iy > hsz || ix > hsz )
-//				continue;
-//			assert (iy >=0);
-//			assert (ix >=0);
-//			assert (iy*hsz+ ix < hsz*hsz);
-			if (1 < iy && iy < hsz-2 &&
-				1 < ix && ix < hsz-2) {
-				// approx gauss
-				// FIMXE use a better approx: see hogg ticket
+			if (KERNEL_MARG <= iy && iy < hsz-KERNEL_MARG &&
+				 KERNEL_MARG <= ix && ix < hsz-KERNEL_MARG) {
 				int kx, ky;
 				for (ky=-2; ky<=2; ky++)
 					for (kx=-2; kx<=2; kx++)
 						hough[(iy-ky)*hsz + (ix-kx)] += kern[(ky+2)*5+(kx+2)];
-
-
-				// Old version
-				/*
-				hough[(iy-1)*hsz + (ix-1)] += 1;
-				hough[(iy+1)*hsz + (ix+1)] += 1;
-				hough[(iy-1)*hsz + (ix+1)] += 1;
-				hough[(iy+1)*hsz + (ix-1)] += 1;
-				hough[(iy-0)*hsz + (ix-1)] += 4;
-				hough[(iy-1)*hsz + (ix-0)] += 4;
-				hough[(iy+0)*hsz + (ix+1)] += 4;
-				hough[(iy+1)*hsz + (ix+0)] += 4;
-				hough[iy*hsz + ix] += 10;
-				*/
 			}
 		}
 	}
@@ -135,6 +114,8 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	  fwrite(hough, sizeof(int), hsz*hsz, ff);
 	  fclose(ff);
 	*/
+
+	/*
 	{
       FILE *ff;
 		static char c = '1';
@@ -148,25 +129,26 @@ void get_shift(double* ximg, double* yimg, int nimg,
 		}
 		fclose(ff);
 	}
+	*/
 
 	themax = 0;
 	themaxind = -1;
 	for (i=0; i<hsz*hsz; i++) {
-		if (themax < hough[i]) {
+	  if (themax < hough[i]) { // find peak in hough
 			themaxind = i;
 			themax = hough[i];
 		}
 	}
 
-	ys = themaxind/hsz;
+	ys = themaxind/hsz; // where is this best index in x,y space?
 	xs = themaxind%hsz;
 
-	printf("xshsz = %d, yshsz=%d\n",xs,ys);
+	fprintf(stderr,"xshsz = %d, yshsz=%d\n",xs,ys); // FIXME logging
 
 	*yshift = ((double)(themaxind/hsz)/(double)hsz)*(maxdy-mindy)+mindy;
 	*xshift = ((double)(themaxind % hsz)/(double)hsz)*(maxdx-mindx)+mindx;
-	printf("get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
-	printf("get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
+	fprintf(stderr,"get_shift: mindx=%lf, maxdx=%lf, mindy=%lf, maxdy=%lf\n", mindx, maxdx, mindy, maxdy);
+	fprintf(stderr,"get_shift: xs=%lf, ys=%lf\n", *xshift, *yshift);
 
 	/*
 	  static char c = '1';
@@ -177,8 +159,12 @@ void get_shift(double* ximg, double* yimg, int nimg,
 	free(hough);
 }
 
-// Take shift in image plane and do a switcharoo to make the wcs something
-// better
+// Take shift in image plane and do a switcharoo to make the wcs something better
+// in other words, take the shift in pixels and reset the WCS (in WCS coords)
+// so that the new pixel shift would be zero
+// FIXME -- dstn says, why not just  
+// sip_pixelxy2radec(wcs, crpix0 +- xs, crpix1 +- ys, wcs->wcstan.crval+0, wcs->wcstan.crval+1);
+
 sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 {
    double crpix0,crpix1;
@@ -187,20 +173,20 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 	memcpy(swcs, wcs, sizeof(sip_t));
 
 	// Save
-	crpix0 = wcs->wcstan.crpix[0];
+	crpix0 = wcs->wcstan.crpix[0]; // save old crpix
 	crpix1 = wcs->wcstan.crpix[1];
 
-	wcs->wcstan.crpix[0] += xs;
+	wcs->wcstan.crpix[0] += xs; // shift the tangent point
 	wcs->wcstan.crpix[1] += ys;
 
-	// now reproject the old crpix[xy] into swcs
+	// now reproject the old crpix[xy] into shifted wcs
 	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
 
-	swcs->wcstan.crval[0] = nxref;
+	swcs->wcstan.crval[0] = nxref; // RA,DEC coords of new tangent point
 	swcs->wcstan.crval[1] = nyref;
 
 	// Restore
-	wcs->wcstan.crpix[0] = crpix0;
+	wcs->wcstan.crpix[0] = crpix0; // restore old crpix
 	wcs->wcstan.crpix[1] = crpix1;
 
 	return swcs;
@@ -213,27 +199,26 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 		  t->x_ref, t->y_ref, t->n_ref,
 		  rho*t->mindx, rho*t->mindy, rho*t->maxdx, rho*t->maxdy,
 		  &t->xs, &t->ys);
-	swcs = wcs_shift(t->sip, t->xs, t->ys);
+	swcs = wcs_shift(t->sip, t->xs, t->ys); // apply shift
 	sip_free(t->sip);
 	t->sip = swcs;
-	printf("xshift=%lf, yshift=%lf\n", t->xs, t->ys);
+	fprintf(stderr, "xshift=%lf, yshift=%lf\n", t->xs, t->ys);
 	return NULL;
 }
 
 
 /* This function is intended only for initializing newly allocated tweak
- * strurctures, NOT for operating on existing ones.*/
+ * structures, NOT for operating on existing ones.*/
 void tweak_init(tweak_t* t)
 {
-	// This does not really set things properly but whatever, it should
-	// still work
+	// FIXME This does not really set things properly but whatever, it should still work
 	memset(t, 0, sizeof(tweak_t));
 }
 
 tweak_t* tweak_new()
 {
-	tweak_t* t = calloc(1, sizeof(tweak_t));
-	tweak_init(t);
+	tweak_t* t = malloc(sizeof(tweak_t));
+	tweak_init(t); 
 	return t;
 }
 
@@ -269,22 +254,22 @@ void tweak_print4(char* fn, double* x, double* y,
 
 void tweak_print_the_state(unsigned int state)
 {
-	if (state & TWEAK_HAS_SIP            ) printf("TWEAK_HAS_SIP, ");
-	if (state & TWEAK_HAS_IMAGE_XY       ) printf("TWEAK_HAS_IMAGE_XY, ");
-	if (state & TWEAK_HAS_IMAGE_XYZ      ) printf("TWEAK_HAS_IMAGE_XYZ, ");
-	if (state & TWEAK_HAS_IMAGE_AD       ) printf("TWEAK_HAS_IMAGE_AD, ");
-	if (state & TWEAK_HAS_REF_XY         ) printf("TWEAK_HAS_REF_XY, ");
-	if (state & TWEAK_HAS_REF_XYZ        ) printf("TWEAK_HAS_REF_XYZ, ");
-	if (state & TWEAK_HAS_REF_AD         ) printf("TWEAK_HAS_REF_AD, ");
-	if (state & TWEAK_HAS_AD_BAR_AND_R   ) printf("TWEAK_HAS_AD_BAR_AND_R, ");
-	if (state & TWEAK_HAS_CORRESPONDENCES) printf("TWEAK_HAS_CORRESPONDENCES, ");
-	if (state & TWEAK_HAS_RUN_OPT        ) printf("TWEAK_HAS_RUN_OPT, ");
-	if (state & TWEAK_HAS_RUN_RANSAC_OPT ) printf("TWEAK_HAS_RUN_RANSAC_OPT, ");
-	if (state & TWEAK_HAS_COARSLY_SHIFTED) printf("TWEAK_HAS_COARSLY_SHIFTED, ");
-	if (state & TWEAK_HAS_FINELY_SHIFTED ) printf("TWEAK_HAS_FINELY_SHIFTED, ");
-	if (state & TWEAK_HAS_REALLY_FINELY_SHIFTED ) printf("TWEAK_HAS_REALLY_FINELY_SHIFTED, ");
-	if (state & TWEAK_HAS_HEALPIX_PATH   ) printf("TWEAK_HAS_HEALPIX_PATH, ");
-	if (state & TWEAK_HAS_LINEAR_CD      ) printf("TWEAK_HAS_LINEAR_CD, ");
+	if (state & TWEAK_HAS_SIP            ) fprintf(stderr,"TWEAK_HAS_SIP, ");
+	if (state & TWEAK_HAS_IMAGE_XY       ) fprintf(stderr,"TWEAK_HAS_IMAGE_XY, ");
+	if (state & TWEAK_HAS_IMAGE_XYZ      ) fprintf(stderr,"TWEAK_HAS_IMAGE_XYZ, ");
+	if (state & TWEAK_HAS_IMAGE_AD       ) fprintf(stderr,"TWEAK_HAS_IMAGE_AD, ");
+	if (state & TWEAK_HAS_REF_XY         ) fprintf(stderr,"TWEAK_HAS_REF_XY, ");
+	if (state & TWEAK_HAS_REF_XYZ        ) fprintf(stderr,"TWEAK_HAS_REF_XYZ, ");
+	if (state & TWEAK_HAS_REF_AD         ) fprintf(stderr,"TWEAK_HAS_REF_AD, ");
+	if (state & TWEAK_HAS_AD_BAR_AND_R   ) fprintf(stderr,"TWEAK_HAS_AD_BAR_AND_R, ");
+	if (state & TWEAK_HAS_CORRESPONDENCES) fprintf(stderr,"TWEAK_HAS_CORRESPONDENCES, ");
+	if (state & TWEAK_HAS_RUN_OPT        ) fprintf(stderr,"TWEAK_HAS_RUN_OPT, ");
+	if (state & TWEAK_HAS_RUN_RANSAC_OPT ) fprintf(stderr,"TWEAK_HAS_RUN_RANSAC_OPT, ");
+	if (state & TWEAK_HAS_COARSLY_SHIFTED) fprintf(stderr,"TWEAK_HAS_COARSLY_SHIFTED, ");
+	if (state & TWEAK_HAS_FINELY_SHIFTED ) fprintf(stderr,"TWEAK_HAS_FINELY_SHIFTED, ");
+	if (state & TWEAK_HAS_REALLY_FINELY_SHIFTED ) fprintf(stderr,"TWEAK_HAS_REALLY_FINELY_SHIFTED, ");
+	if (state & TWEAK_HAS_HEALPIX_PATH   ) fprintf(stderr,"TWEAK_HAS_HEALPIX_PATH, ");
+	if (state & TWEAK_HAS_LINEAR_CD      ) fprintf(stderr,"TWEAK_HAS_LINEAR_CD, ");
 }
 
 void tweak_print_state(tweak_t* t)
@@ -342,7 +327,7 @@ void tweak_dump_ascii(tweak_t* t)
 		fclose(cor_ref);
 		fclose(cor_delta);
 	}
-	printf("dump=%d\n", dump_nr);
+	fprintf(stderr,"dump=%d\n", dump_nr);
 	dump_nr++;
 }
 void get_center_and_radius(double* ra, double* dec, int n,
@@ -361,18 +346,18 @@ void get_center_and_radius(double* ra, double* dec, int n,
 		             xyz + 3*i);
 	}
 
-	for (i=0; i<n; i++) 
+	for (i=0; i<n; i++)  // dumb average
 		for (j=0; j<3; j++) 
 			xyz_mean[j] += xyz[3*i+j];
 
-	for (j=0; j<3; j++) 
+	for (j=0; j<3; j++)  // reproject onto sphere
 		norm += xyz_mean[j]*xyz_mean[j];
 	norm = sqrt(norm);
 
 	for (j=0; j<3; j++) 
 		xyz_mean[j] /= norm;
 
-	for (i=0; i<n; i++) {
+	for (i=0; i<n; i++) { // find largest distance from average
 		double dist2 = 0;
 		for (j=0; j<3; j++) {
 			double d = xyz_mean[j]-xyz[3*i+j];
@@ -386,8 +371,6 @@ void get_center_and_radius(double* ra, double* dec, int n,
 	*radius = sqrt(maxdist2);
 	*ra_mean = rad2deg(xy2ra(xyz_mean[0],xyz_mean[1]));
 	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
-	//FIXME -- sam says we should free xyz
-	// He's not simon but I think I'll still do what he says...
 	free(xyz);
 }
 
@@ -427,7 +410,7 @@ void tweak_clear_on_sip_change(tweak_t* t)
 
 }
 
-void tweak_clear_ref_xy(tweak_t* t)
+void tweak_clear_ref_xy(tweak_t* t)  // ref_xy are the catalog star positions in image coordinates
 {
 	if (t->state & TWEAK_HAS_REF_XY) {
 		assert(t->x_ref);
@@ -444,7 +427,7 @@ void tweak_clear_ref_xy(tweak_t* t)
 	}
 }
 
-void tweak_clear_ref_ad(tweak_t* t)
+void tweak_clear_ref_ad(tweak_t* t) // radec of catalog stars
 {
 	if (t->state & TWEAK_HAS_REF_AD) {
 		assert(t->a_ref);
@@ -465,7 +448,7 @@ void tweak_clear_ref_ad(tweak_t* t)
 	}
 }
 
-void tweak_clear_image_ad(tweak_t* t)
+void tweak_clear_image_ad(tweak_t* t) // source (image) objs in ra,dec according to current tweak
 {
 	if (t->state & TWEAK_HAS_IMAGE_AD) {
 		assert(t->a);
@@ -514,7 +497,7 @@ void tweak_clear_image_xy(tweak_t* t)
 	}
 }
 
-void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
+void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n) // tell us (from outside tweak) where the catalog stars are
 {
    double *ra,*dec;
 	int i;
@@ -533,7 +516,7 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 	assert(ra);
 	assert(dec);
 
-	for (i=0; i<n; i++) {
+	for (i=0; i<n; i++) { // fill em up
 		double *pt = xyz+3*i;
 		ra[i] = rad2deg(xy2ra(pt[0],pt[1]));
 		dec[i] = rad2deg(z2dec(pt[2]));
@@ -547,7 +530,7 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n)
 	t->state |= TWEAK_HAS_REF_XYZ;
 }
 
-void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
+void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n) // tell us the input dude
 {
 	tweak_clear_image_xy(t);
 
@@ -562,7 +545,7 @@ void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n)
 	t->state |= TWEAK_HAS_IMAGE_XY;
 }
 
-void tweak_push_hppath(tweak_t* t, char* hppath)
+void tweak_push_hppath(tweak_t* t, char* hppath) //healpix path
 {
 	t->hppath = strdup(hppath);
 	t->state |= TWEAK_HAS_HEALPIX_PATH;
@@ -581,7 +564,7 @@ void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 //	double dx = t->x[image_ind] - t->x_ref[ref_ind];
 //	double dy = t->y[image_ind] - t->y_ref[ref_ind];
 
-//	printf("found new one!: dx=%lf, dy=%lf, dist=%lf\n", dx,dy,sqrt(dx*dx+dy*dy));
+//	fprintf(stderr,"found new one!: dx=%lf, dy=%lf, dist=%lf\n", dx,dy,sqrt(dx*dx+dy*dy));
 	il_append(t->image, image_ind);
 	il_append(t->ref, ref_ind);
 	dl_append(t->dist2, dist2);
@@ -603,7 +586,7 @@ double dtrs_dist2_callback(void* p1, void* p2, int D)
 }
 
 // The jitter is in radians
-void find_correspondences(tweak_t* t, double jitter)
+void find_correspondences(tweak_t* t, double jitter)  // actually call the dualtree
 {
 	double* data_image = malloc(sizeof(double)*t->n*3);
 	double* data_ref = malloc(sizeof(double)*t->n_ref*3);
@@ -627,12 +610,12 @@ void find_correspondences(tweak_t* t, double jitter)
 	t->dist2 = dl_new(600);
 	t->included = il_new(600);
 
-	printf("jitter=%lf\n",jitter);
+	fprintf(stderr,"jitter=%lf\n",jitter);
 
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
 	                     RANGESEARCH_NO_LIMIT, jitter, // This min/max dist is in radians
-	                     dtrs_dist2_callback,
+	                     dtrs_dist2_callback,  // specify callback as the above func
 	                     dtrs_match_callback, t,
 	                     NULL, NULL);
 
@@ -643,14 +626,14 @@ void find_correspondences(tweak_t* t, double jitter)
 	free(data_image);
 	free(data_ref);
 
-	printf("correspondences=%d\n", il_size(t->dist2)); 
+	fprintf(stderr,"correspondences=%d\n", il_size(t->dist2)); 
 }
 
 
 kdtree_t* cached_kd = NULL;
 int cached_kd_hp = 0;
 
-void get_reference_stars(tweak_t* t)
+void get_reference_stars(tweak_t* t) // use healpix technology to go get ref stars if they aren't passed from outside
 {
 	double ra_mean = t->a_bar;
 	double dec_mean = t->d_bar;
@@ -664,9 +647,9 @@ void get_reference_stars(tweak_t* t)
 	if (cached_kd_hp != hp || cached_kd == NULL) {
 		char buf[1000];
 		snprintf(buf,1000, t->hppath, hp);
-		printf("opening %s\n",buf);
+		fprintf(stderr,"opening %s\n",buf);
 		kd = kdtree_fits_read(buf, NULL);
-		printf("success\n");
+		fprintf(stderr,"success\n");
 		assert(kd);
 		cached_kd_hp = hp;
 		cached_kd = kd;
@@ -681,25 +664,26 @@ void get_reference_stars(tweak_t* t)
 	// can't actually find the correct astrometry.
 	radius_factor = 1.3;
 	kq = kdtree_rangesearch(kd, xyz,radius*radius*radius_factor);
-	printf("Did range search got %u stars\n", kq->nres);
+	fprintf(stderr,"Did range search got %u stars\n", kq->nres);
 
 	// No stars? That's bad. Run away.
-	if (!kq->nres)
+	if (!kq->nres) {
+	  fprintf(stderr,"Bad news. tweak_internal: Got no stars in get_reference_stars\n");
 		return;
-
+	}
 	tweak_push_ref_xyz(t, kq->results.d, kq->nres);
 
 	kdtree_free_query(kq);
 }
 
-// in arcseconds (chi-sq)
+// in arcseconds^2 on the sky (chi-sq)
 double figure_of_merit(tweak_t* t) 
 {
 
 	// works on the sky
 	double sqerr = 0.0;
 	int i;
-	for (i=0; i<il_size(t->image); i++) {
+	for (i=0; i<il_size(t->image); i++) { // t->image is a list of source objs with current ref correspondences
 		double a,d;
 		double xyzpt[3];
 		double xyzpt_ref[3];
@@ -708,7 +692,7 @@ double figure_of_merit(tweak_t* t)
 				t->y[il_get(t->image, i)], &a, &d);
 		// xref and yref should be intermediate WC's not image x and y!
 		radecdeg2xyzarr(a, d, xyzpt);
-		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)],
+		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)],  // t->ref is a list of ref objs with current source correspn.
 				t->d_ref[il_get(t->ref, i)], xyzpt_ref);
 
 		xyzerr[0] = xyzpt[0]-xyzpt_ref[0];
@@ -720,6 +704,7 @@ double figure_of_merit(tweak_t* t)
 
 }
 
+// in pixels^2 in the image
 double figure_of_merit2(tweak_t* t) 
 {
 	// works on the pixel coordinates
@@ -732,30 +717,28 @@ double figure_of_merit2(tweak_t* t)
 		dy = t->y[il_get(t->image, i)] - y;
 		sqerr += dx*dx + dy*dy;
 	}
-	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // arcseconds
+	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // convert this to units of arcseconds^2, sketchy
 }
 
 // I apologize for the rampant copying and pasting of the polynomial calcs...
 void invert_sip_polynomial(tweak_t* t)
 {
+  // basic idea: lay down a grid in image, for each gridpoint, push through the polynomial 
+  // to get yourself into warped image coordinate (but not yet lifted onto the sky)
+  // then, using the set of warped gridpoints as inputs, fit back to their original grid locations as targets
+
    int inv_sip_order,ngrid,inv_sip_coeffs,stride;
 	double *A,*A2,*b,*b2;
 	double maxu,maxv,minu,minv;
 	int i,gu, gv;
 
-	printf("INVERTING!!!!!!!!!!\n");
 	assert(t->sip->a_order == t->sip->b_order);
-
-	/*
-	  UMMM... this can't be right, can it?
-	  t->sip->ap_order = t->sip->a_order;
-	  t->sip->bp_order = t->sip->ap_order;
-	*/
 	assert(t->sip->ap_order == t->sip->bp_order);
 
 	inv_sip_order = t->sip->ap_order;
 
 	ngrid = 10*(t->sip->ap_order+1);
+	fprintf(stderr,"tweak inversion using %u gridpoints\n",ngrid);
 
 	// The SIP coefficients form a order x order upper triangular matrix missing
 	// the 0,0 element. We limit ourselves to a order 10 SIP distortion. 
@@ -812,43 +795,43 @@ void invert_sip_polynomial(tweak_t* t)
 		maxu = max(maxu, t->x[i] - t->sip->wcstan.crpix[0]);
 		maxv = max(maxv, t->y[i] - t->sip->wcstan.crpix[1]);
 	}
-	printf("maxu=%lf, minu=%lf\n", maxu, minu);
-	printf("maxv=%lf, minv=%lf\n", maxv, minv);
+	fprintf(stderr,"maxu=%lf, minu=%lf\n", maxu, minu);
+	fprintf(stderr,"maxv=%lf, minv=%lf\n", maxv, minv);
 
 	// Fill A in column-major order for fortran dgelsd
 	// We just make a big grid and hope for the best
 	i = 0;
-	for (gu=0; gu<ngrid; gu++) {
-		for (gv=0; gv<ngrid; gv++) {
+	for (gu=0; gu<ngrid; gu++) { 
+	  for (gv=0; gv<ngrid; gv++) {
 
-			// Calculate grid position in original image pixels
-			double u = (gu * (maxu-minu) / ngrid) + minu;
-			double v = (gv * (maxv-minv) / ngrid) + minv;
+		 // Calculate grid position in original image pixels
+		 double u = (gu * (maxu-minu) / ngrid) + minu; // now in pixels
+		 double v = (gv * (maxv-minv) / ngrid) + minv;  // now in pixels
 
-			double U,V,fuv,guv;
-			int p,q,j;
-			sip_calc_distortion(t->sip, u, v, &U, &V);
-			fuv = U-u;
-			guv = V-v;
+		 double U,V,fuv,guv;
+		 int p,q,j;
+		 sip_calc_distortion(t->sip, u, v, &U, &V); // computes U=u+f(u,v) and V=v+g(u,v)
+		 fuv = U-u;
+		 guv = V-v;
 
-			// Calculate polynomial terms but this time for inverse
-			// j = 0;
-			/*
-			  Maybe we want to explicitly set the (0,0) term to zero...:
-			*/
-			A[i + stride*0] = 0;
-			j = 1;
-			for (p=0; p<=inv_sip_order; p++)
-				for (q=0; q<=inv_sip_order; q++)
-					if (p+q <= inv_sip_order && !(p==0&&q==0)) {
-						// we're skipping the (0, 0) term.
-						//assert(j < (inv_sip_coeffs-1));
-						assert(j < inv_sip_coeffs);
-						A[i + stride*j] = pow(U,p)*pow(V,q);
-						j++;
-					}
-			//assert(j == (inv_sip_coeffs-1));
-			assert(j == inv_sip_coeffs);
+		 // Calculate polynomial terms but this time for inverse
+		 // j = 0;
+		 /*
+			Maybe we want to explicitly set the (0,0) term to zero...:
+		 */
+		 A[i + stride*0] = 0;
+		 j = 1;
+		 for (p=0; p<=inv_sip_order; p++)
+			for (q=0; q<=inv_sip_order; q++)
+			  if (p+q <= inv_sip_order && !(p==0&&q==0)) {
+				 // we're skipping the (0, 0) term.
+				 //assert(j < (inv_sip_coeffs-1));
+				 assert(j < inv_sip_coeffs);
+				 A[i + stride*j] = pow(U,p)*pow(V,q);
+				 j++;
+			  }
+		 //assert(j == (inv_sip_coeffs-1));
+		 assert(j == inv_sip_coeffs);
 
 			b[i] = -fuv;
 			b[i+stride] = -guv;
@@ -878,7 +861,7 @@ void invert_sip_polynomial(tweak_t* t)
 	integer lda = stride;
 	integer ldb = stride;
 	dgelsd_(&str, &N, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
-			&lwork, iwork, &info);
+			  &lwork, iwork, &info); // make the jump to lightspeed
 	stride = str;
 	free(work);
 	free(iwork);
@@ -887,31 +870,31 @@ void invert_sip_polynomial(tweak_t* t)
 	//j = 0;
 	j = 1;
 	for (p=0; p<=inv_sip_order; p++)
-		for (q=0; q<=inv_sip_order; q++)
-			if (p+q <= inv_sip_order && !(p==0&&q==0)) {
-				assert(j < inv_sip_coeffs);
-				t->sip->ap[p][q] = b[j];
-				t->sip->bp[p][q] = b[stride+j];
-				j++;
-			}
+	  for (q=0; q<=inv_sip_order; q++)
+		 if (p+q <= inv_sip_order && !(p==0&&q==0)) {
+			assert(j < inv_sip_coeffs);
+			t->sip->ap[p][q] = b[j]; // dgelsd in its wisdom, stores its answer by overwriting your input b (nice!)
+			t->sip->bp[p][q] = b[stride+j];
+			j++;
+		 }
 	assert(j == inv_sip_coeffs);
 
 	// Calculate chi2 for sanity
 	chisq=0;
 	for(i=0; i<stride; i++) {
-		double sum=0;
-		int j;
-		for(j=0; j<inv_sip_coeffs; j++) 
-			sum += A2[i+stride*j]*b[j];
-		chisq += (sum-b2[i])*(sum-b2[i]);
-		sum=0;
-		for(j=0; j<inv_sip_coeffs; j++) 
-			sum += A2[i+stride*j]*b[j+stride];
-		chisq += (sum-b2[i+stride])*(sum-b2[i+stride]);
+	  double sum=0;
+	  int j;
+	  for(j=0; j<inv_sip_coeffs; j++) 
+		 sum += A2[i+stride*j]*b[j];
+	  chisq += (sum-b2[i])*(sum-b2[i]);
+	  sum=0;
+	  for(j=0; j<inv_sip_coeffs; j++) 
+		 sum += A2[i+stride*j]*b[j+stride];
+	  chisq += (sum-b2[i+stride])*(sum-b2[i+stride]);
 	}
-	printf("sip_invert_chisq=%lf\n",chisq);
-	printf("sip_invert_chisq/%d=%lf\n",ngrid*ngrid,(chisq/ngrid)/ngrid);
-	printf("sip_invert_sqrt(chisq/%d=%lf)\n",ngrid*ngrid,sqrt((chisq/ngrid)/ngrid));
+	fprintf(stderr,"sip_invert_chisq=%lf\n",chisq);
+	fprintf(stderr,"sip_invert_chisq/%d=%lf\n",ngrid*ngrid,(chisq/ngrid)/ngrid);
+	fprintf(stderr,"sip_invert_sqrt(chisq/%d=%lf)\n",ngrid*ngrid,sqrt((chisq/ngrid)/ngrid));
 	}
 
 	free(A);
@@ -932,15 +915,11 @@ void invert_sip_polynomial(tweak_t* t)
 //    the correspondences are passed so that we can stick RANSAC around the whole
 //    thing for better estimation.
 
-// column-major array reference macro - NOTE bad behaviour: assume the
-// "stride" variable exists.
-//#define ref(A, i, j)  ((A)[(i) + (stride)*(j)])
-
-// Run a linear tweak; only changes CD matrix
-void do_linear_tweak(tweak_t* t)
+// Run a polynomial tweak
+void do_linear_tweak(tweak_t* t) // bad name for this function
 {
    int sip_order,sip_coeffs,stride;
-   double *A,*A2,*b,*b2;
+   double *UVP,*UVP2,*b,*b2;
 	double xyzcrval[3];
 	double cdi[2][2];
    double inv_det;
@@ -959,18 +938,18 @@ void do_linear_tweak(tweak_t* t)
 	sip_coeffs = (sip_order+1)*(sip_order+2)/2; // upper triangle
 
 	stride = il_size(t->image); // number of rows
-	A = malloc((2+sip_coeffs)*stride*sizeof(double));
+	UVP = malloc((2+sip_coeffs)*stride*sizeof(double));
 	b = malloc(2*stride*sizeof(double));
-	A2 = malloc((2+sip_coeffs)*stride*sizeof(double));
+	UVP2 = malloc((2+sip_coeffs)*stride*sizeof(double));
 	b2 = malloc(2*stride*sizeof(double));
-	assert(A);
+	assert(UVP);
 	assert(b);
-	assert(A2);
+	assert(UVP2);
 	assert(b2);
 
-	printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t));
+	fprintf(stderr,"sqerr=%le [arcsec^2]\n", figure_of_merit(t));
 	sip_print(t->sip);
-	//	printf("sqerrxy=%le\n", figure_of_merit2(t));
+	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
 	// We use a clever trick to estimate CD, A, and B terms in two
 	// seperated least squares fits, then finding A and B by multiplying
@@ -987,44 +966,35 @@ void do_linear_tweak(tweak_t* t)
 	//   |    +--------- Pixel coordinates u and v in PIXELS
 	//   |    |     +--- Polynomial u,v terms in powers of PIXELS
 	//   v    v     v
-	//   x1 = u1 v1 p1 * cd11            : scalar, degrees per pixel
-	//   x2 = u2 v2 p2   cd12            : scalar, degrees per pixel
-	//   x3 = u3 v3 p3   cd11*A + cd12*B : mixture of SIP terms and CD
+	//   x1 = u1 v1 p1 * cd11            : cd11 is a scalar, degrees per pixel
+	//   x2   u2 v2 p2   cd12            : cd12 is a scalar, degrees per pixel
+	//   x3   u3 v3 p3   cd11*A + cd12*B : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
 	//   ...
 	// 
 	// Then find cd21 and cd22 with the y's
 	//
 	//   y1 = u1 v1 p1 * cd21            : scalar, degrees per pixel   
-	//   y2 = u2 v2 p2   cd22            : scalar, degrees per pixel   
-	//   y3 = u3 v3 p3   cd21*A + cd22*B : mixture of SIP terms and CD 
+	//   y2   u2 v2 p2   cd22            : scalar, degrees per pixel   
+	//   y3   u3 v3 p3   cd21*A + cd22*B : mixture of SIP terms and CD 
 	//   ...
 	//
 	// These are both standard least squares problems which we solve by
-	// netlib's dgelsd. i.e. min_b || b - Ax||^2 with b reference, x
+	// netlib's dgelsd. i.e. min_{cd,A,B} || x - [u,v,p]*[cd;cdA+cdB]||^2 with x reference, cd,A,B
 	// unrolled parameters.
 	//
-	// Now, note that 
-	//                 -1
-	//   A = [cd11 cd12]    *  [cd11*A + cd12*B]
-	//   B   [cd21 cd22]       [cd21*A + cd22*B]
+   // after the call to dgelsd, we get back (for x) a vector of optimal [cd11;cd12; cd11*A + cd12*B]
+   // Now we can pull out cd11 and cd12 from the beginning of this vector, 
+	// and call the rest of the vector [cd11*A] + [cd12*B];
+   // similarly for the y fit, we get back a vector of optimal [cd21;cd22; cd21*A + cd22*B]
+   // once we have all those we can figure out A and B as follows
+	//                  -1
+	//   A' = [cd11 cd12]    *  [cd11*A' + cd12*B']
+	//   B'   [cd21 cd22]       [cd21*A' + cd22*B']
 	//
 	// which recovers the A and B's.
 
 
-	/*
-	  Fill "A" in column-major order for fortran dgelsd.
-
-	  "A" contains "sip_coeffs" terms for each of the "stride" points that
-	  are in correspondence.
-
-	  (THE FOLLOWING ISN'T QUITE RIGHT: The linear terms are at the
-	  beginning of the array.)
-
-	  A(i, j) is the j-th SIP coefficient for the i-th point.
-
-	  Since the terms are stored in column-major order, and "A" has "stride"
-	  rows, term A(i, j) is at address A[i + stride*j].
-	*/
+	// fill in the UVP matrix, stride in this case is the number of correspondences
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
 	for (i=0; i<stride; i++) {
 	   int j,p,q;
@@ -1034,53 +1004,52 @@ void do_linear_tweak(tweak_t* t)
 		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
 		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 
-		//ref(A, i, 0) = u;
-		A[i + stride*0] = u;
-		A[i + stride*1] = v;
+		UVP[i + stride*0] = u; // first two cols are special
+		UVP[i + stride*1] = v;
 
 		// Poly terms for SIP.  Note that this includes the constant
 		// shift parameter (SIP term 0,0) which we extract and apply to
 		// crpix (and don't include in SIP terms)
-		j = 2;
+		j = 2;  // we already filled [i+stride*0] with u and [i*stride*1] with v
 		for (p=0; p<=sip_order; p++)
 			for (q=0; q<=sip_order; q++)
 				if (p+q <= sip_order) {
 					assert(2 <= j);
 					assert(j < 2+sip_coeffs);
 					if (p+q != 1) 
-						A[i + stride*j] = pow(u,p) * pow(v,q);
+						UVP[i + stride*j] = pow(u,p) * pow(v,q);
 					else
 						// We don't want repeated
 						// linear terms
-						A[i + stride*j] = 0.0;
+						UVP[i + stride*j] = 0.0;
 					j++;
 				}
 		assert(j == 2+sip_coeffs);
 
 		// DEBUG - Be sure about shift coefficient
-		A[i + stride*2] = 1.0;
+		assert(UVP[i + stride*2] == 1.0);
 
 		// xref and yref should be intermediate WC's not image x and y!
 		refi = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
-		star_coords(xyzpt, xyzcrval, &y, &x);
+		star_coords(xyzpt, xyzcrval, &y, &x); // find tangent in intermediate coords
 
 		b[i + stride*0] = rad2deg(x);
 		b[i + stride*1] = rad2deg(y);
 	}
 
-	// Save A, bx, and by for computing chisq
-	memcpy(A2,A,sizeof(double)*stride*(2+sip_coeffs));
+	// Save UVP, bx, and by for computing chisq
+	memcpy(UVP2,UVP,sizeof(double)*stride*(2+sip_coeffs));
 	memcpy(b2,b,sizeof(double)*stride*2);
 
 	// Allocate work areas and answers
    {
-	integer N=2+sip_coeffs;          // nr cols of A
-	doublereal S[N];      // min(N,M); is singular vals of A in dec order
-	doublereal RCOND=-1.; // used to determine effective rank of A; -1
+	integer N=2+sip_coeffs;          // nr cols of UVP
+	doublereal S[N];      // min(N,M); is singular vals of UVP in dec order
+	doublereal RCOND=-1.; // used to determine effective rank of UVP; -1
 	                      // means use machine precision
 	integer NRHS=2;       // number of right hand sides (one for x and y)
-	integer rank;         // output effective rank of A
+	integer rank;         // output effective rank of UVP
 	integer lwork = 1000*1000; /// FIXME ???
 	doublereal* work = malloc(lwork*sizeof(doublereal));
 	integer *iwork = malloc(lwork*sizeof(integer));
@@ -1088,8 +1057,8 @@ void do_linear_tweak(tweak_t* t)
 	integer str = stride;
 	integer lda = stride;
 	integer ldb = stride;
-	dgelsd_(&str, &N, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
-			&lwork, iwork, &info);
+	dgelsd_(&str, &N, &NRHS, UVP, &lda, b, &ldb, S, &RCOND, &rank, work,
+			  &lwork, iwork, &info); // punch it chewey
 	free(work);
 	free(iwork);
 	}
@@ -1131,14 +1100,16 @@ void do_linear_tweak(tweak_t* t)
 
 	t->sip->a_order = sip_order;
 	t->sip->b_order = sip_order;
-	t->sip->a[0][1] = 0.0;
+	t->sip->a[0][0] = 0.0; // we are going to put the shift into the wcs
+	t->sip->b[0][0] = 0.0;
+	t->sip->a[0][1] = 0.0; // we put the linear terms into CD
 	t->sip->a[1][0] = 0.0;
 	t->sip->b[0][1] = 0.0;
 	t->sip->b[1][0] = 0.0;
 
 	invert_sip_polynomial(t);
 
-	// Apply the shift
+	// Grab the shift, put it into the wcs
 	sU = cdi[0][0]*b[2 + stride*0] + cdi[0][1]*b[2 + stride*1];
 	sV = cdi[1][0]*b[2 + stride*0] + cdi[1][1]*b[2 + stride*1];
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
@@ -1146,13 +1117,13 @@ void do_linear_tweak(tweak_t* t)
 	sip_free(t->sip);
 	t->sip = swcs;
 
-	printf("New sip header:\n");
+	fprintf(stderr,"New sip header:\n");
 	sip_print(t->sip);
-	printf("shiftxun=%le, shiftyun=%le\n",sU, sV);
-	printf("shiftx=%le, shifty=%le\n",su, sv);
-	printf("sqerr=%le\n", figure_of_merit(t));
-	printf("rms=%lf\n", sqrt(figure_of_merit(t)/stride));
-	//	printf("sqerrxy=%le\n", figure_of_merit2(t));
+	fprintf(stderr,"shiftxun=%le, shiftyun=%le\n",sU, sV);
+	fprintf(stderr,"shiftx=%le, shifty=%le\n",su, sv);
+	fprintf(stderr,"sqerr=%le\n", figure_of_merit(t));
+	fprintf(stderr,"rms=%lf\n", sqrt(figure_of_merit(t)/stride));
+	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
 	// Calculate chi2 for sanity
 	chisq=0;
@@ -1160,14 +1131,14 @@ void do_linear_tweak(tweak_t* t)
 		double sum=0;
 		int j;
 		for(j=0; j<6; j++) 
-			sum += A2[i+stride*j]*b[j];
+			sum += UVP2[i+stride*j]*b[j];
 		chisq += (sum-b2[i])*(sum-b2[i]);
 	}
-	//	printf("sqerrxy=%le (CHISQ matrix)\n", chisq);
+	//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
 
-	free(A);
+	free(UVP);
 	free(b);
-	free(A2);
+	free(UVP2);
 	free(b2);
 }
 
@@ -1183,15 +1154,15 @@ void do_linear_tweak(tweak_t* t)
 	}
 
 unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
-	//	printf("WANT: ");
+	//	fprintf(stderr,"WANT: ");
 	//	tweak_print_the_state(flag);
-	//	printf("\n");
+	//	fprintf(stderr,"\n");
 	want(TWEAK_HAS_IMAGE_AD) {
 		int jj;
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
-		printf("Satisfying TWEAK_HAS_IMAGE_AD\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_IMAGE_AD\n");
 
 		// Convert to ra dec
 		assert(!t->a);
@@ -1209,8 +1180,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		ensure(TWEAK_HAS_REF_XYZ);
 
 		// FIXME
-		printf("Satisfying TWEAK_HAS_REF_AD\n");
-		printf("FIXME!\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_REF_AD\n");
+		fprintf(stderr,"FIXME!\n");
 
 		done(TWEAK_HAS_REF_AD);
 	}
@@ -1221,7 +1192,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 
 		//tweak_clear_ref_xy(t);
 
-		printf("Satisfying TWEAK_HAS_REF_XY\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_REF_XY\n");
 		assert(t->state & TWEAK_HAS_REF_AD);
 		assert(t->n_ref);
 		assert(!t->x_ref);
@@ -1239,12 +1210,12 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 	want(TWEAK_HAS_AD_BAR_AND_R) {
 		ensure(TWEAK_HAS_IMAGE_AD);
 
-		printf("Satisfying TWEAK_HAS_AD_BAR_AND_R\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_AD_BAR_AND_R\n");
 
 		assert(t->state & TWEAK_HAS_IMAGE_AD);
 		get_center_and_radius(t->a, t->d, t->n, 
 		                      &t->a_bar, &t->d_bar, &t->radius);
-		printf("a_bar=%lf [deg], d_bar=%lf [deg], radius=%lf [arcmin]\n",
+		fprintf(stderr,"a_bar=%lf [deg], d_bar=%lf [deg], radius=%lf [arcmin]\n",
 				t->a_bar, t->d_bar, rad2arcmin(t->radius));
 
 		done(TWEAK_HAS_AD_BAR_AND_R);
@@ -1254,7 +1225,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		int i;
 		ensure(TWEAK_HAS_IMAGE_AD);
 
-		printf("Satisfying TWEAK_HAS_IMAGE_XYZ\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_IMAGE_XYZ\n");
 		assert(!t->xyz);
 
 		t->xyz = malloc(3*t->n*sizeof(double));
@@ -1269,13 +1240,13 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 	want(TWEAK_HAS_REF_XYZ) {
 		if (t->state & TWEAK_HAS_HEALPIX_PATH) {
 			ensure(TWEAK_HAS_AD_BAR_AND_R);
-			printf("Satisfying TWEAK_HAS_REF_XYZ\n");
+			fprintf(stderr,"Satisfying TWEAK_HAS_REF_XYZ\n");
 			get_reference_stars(t);
 		} else {
 			ensure(TWEAK_HAS_REF_AD);
 
-			printf("Satisfying TWEAK_HAS_REF_XYZ\n");
-			printf("FIXME!\n");
+			fprintf(stderr,"Satisfying TWEAK_HAS_REF_XYZ\n");
+			fprintf(stderr,"FIXME!\n");
 
 			// try a conversion
 			assert(0);
@@ -1378,111 +1349,6 @@ void tweak_go_to(tweak_t* t, unsigned int dest_state)
 {
 	while(! (t->state & dest_state))
 		tweak_advance_to(t, dest_state);
-}
-
-void my_ransac(tweak_t* t)
-{
-	int iterations = 0;
-	int maxiter = 40;
-	double besterr = 100000000000000.;
-	int min_data_points = 100;
-   int set_size,i;
-	il *maybeinliers,*alsoinliers,*used_ref_sources,*used_image_sources;
-
-	sip_t wcs_try, wcs_best;
-	memcpy(&wcs_try, t->sip, sizeof(sip_t));
-	memcpy(&wcs_best, t->sip, sizeof(sip_t));
-
-	set_size = il_size(t->image);
-	maybeinliers = il_new(4);
-	alsoinliers = il_new(4);
-
-	// we need to prevent pairing any reference star to multiple image
-	// stars, or multiple reference stars to single image stars
-	used_ref_sources = il_new(t->n_ref);
-	used_image_sources = il_new(t->n);
-
-	for (i=0; i<t->n_ref; i++) 
-		il_append(used_ref_sources, 0);
-	for (i=0; i<t->n; i++) 
-		il_append(used_image_sources, 0);
-	while (iterations++ < maxiter) {
-		printf("++++++++++ ITERATION %d\n", iterations);
-
-		// select n random pairs to use for the fit
-		il_remove_all(maybeinliers);
-		for (i=0; i<t->n_ref; i++) 
-			il_set(used_ref_sources, i, 0);
-		for (i=0; i<t->n; i++) 
-			il_set(used_image_sources, i, 0);
-		while (il_size(maybeinliers) < min_data_points) {
-			int r = rand()/(double)RAND_MAX * set_size;
-//			printf("eeeeeeeeeeeeeeeee %d\n", r);
-			// check to see if either star in this pairing is
-			// already taken before adding this pairing
-			int ref_ind = il_get(t->ref, r);
-			int image_ind = il_get(t->image, r);
-			if (!il_get(used_ref_sources, ref_ind) &&
-			    !il_get(used_image_sources, image_ind)) {
-				il_insert_unique_ascending(maybeinliers, r);
-				il_set(used_ref_sources, ref_ind, 1);
-				il_set(used_image_sources, image_ind, 1);
-			}
-		}
-		for (i=0; i<il_size(t->included); i++) 
-			il_set(t->included, i, 0);
-		for (i=0; i<il_size(maybeinliers); i++) 
-			il_set(t->included, il_get(maybeinliers,i), 1);
-		
-		// now do a fit with our random sample selection
-//		lm_fit(t);
-		t->state &= ~TWEAK_HAS_LINEAR_CD;
-		tweak_go_to(t, TWEAK_HAS_LINEAR_CD);
-
-		// now find other samples which do well under the model fit by
-		// the random sample set.
-		il_remove_all(alsoinliers);
-		for (i=0; i<il_size(t->included); i++) {
-			double thresh = 2.e-04; // FIXME mystery parameter
-			double image_xyz[3];
-			double ref_xyz[3];
-			double a,d;
-         double dx,dy,dz,err;
-         int ref_ind,image_ind;
-			if (il_get(t->included, i))
-				continue;
-			ref_ind = il_get(t->ref, i);
-			image_ind = il_get(t->image, i);
-			sip_pixelxy2radec(t->sip, t->x[image_ind],t->x[image_ind], &a,&d);
-			radecdeg2xyzarr(a,d,image_xyz);
-			radecdeg2xyzarr(t->a_ref[ref_ind],t->d_ref[ref_ind],ref_xyz);
-			dx = ref_xyz[0] - image_xyz[0];
-			dy = ref_xyz[1] - image_xyz[1];
-			dz = ref_xyz[2] - image_xyz[2];
-			err = dx*dx+dy*dy+dz*dz;
-			if (sqrt(err) < thresh)
-				il_append(alsoinliers, i);
-		}
-
-		// if we found a good number of points which are really close,
-		// then fit both our random sample and the other close points
-		if (10 < il_size(alsoinliers)) { // FIXME mystery parameter
-
-			printf("found extra samples %d\n", il_size(alsoinliers));
-			for (i=0; i<il_size(alsoinliers); i++) 
-				il_set(t->included, il_get(alsoinliers,i), 1);
-			
-			// FIT AGAIN
-			//lm_fit(t);
-			//FIXME
-			if (t->err < besterr) {
-				memcpy(&wcs_best, t->sip, sizeof(sip_t));
-				besterr = t->err;
-				printf("new best error %le\n", besterr);
-			}
-		}
-		printf("error=%le besterror=%le\n", t->err, besterr);
-	}
 }
 
 #define SAFE_FREE(xx) if ((xx)) {free((xx)); xx = NULL;}
