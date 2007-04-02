@@ -260,7 +260,8 @@ usnob_fits* usnob_fits_open(char* fn) {
 
 		good = 1;
 		for (c=0; c<USNOB_FITS_COLUMNS; c++) {
-			if (usnob->columns[c] == -1) {
+			if ((usnob_fitstruct[c].required) && 
+							(usnob->columns[c] == -1)) {
 				good = 0;
 				break;
 			}
@@ -275,7 +276,8 @@ usnob_fits* usnob_fits_open(char* fn) {
 	if (!good) {
 		fprintf(stderr, "usnob_fits: didn't find the following required columns:\n    ");
 		for (c=0; c<USNOB_FITS_COLUMNS; c++)
-			if (usnob->columns[c] == -1)
+			if ((usnob_fitstruct[c].required) &&
+							(usnob->columns[c] == -1))
 				fprintf(stderr, "%s  ", usnob_fitstruct[c].fieldname);
 		fprintf(stderr, "\n");
 
