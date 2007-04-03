@@ -17,7 +17,7 @@ tar xf -
 sed s+/home/gmaps/ontheweb-indexes+/h/260/dstn/raid3/INDEXES+ < input > input.c27
 
 # stderr goes back over the ssh tunnel to the log file on oven.
-blind < input.c27 > blind.stdout
+~/amd-quads/blind < input.c27 > blind.stdout
 
 # Send back all the files we generated!
 tar cf - *
