@@ -2,13 +2,16 @@
 require_once 'MDB2.php';
 require_once 'PEAR.php';
 
+// Are we using a remote compute server?
+$remote = 1;
+
 $resultdir = "/home/gmaps/ontheweb-data/";
 $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
 
 // blind params
 //$maxtime = 120; // Two minute max!
-$totaltime = 600; // Five minute total max.
+$totaltime = 300; // Five minute total max.
 $maxtime = 0;
 $maxquads = 0; // 1000000;
 $maxcpu = 0;

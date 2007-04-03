@@ -74,6 +74,12 @@ if ($cancel) {
 	if (!touch($cancelfile)) {
 		die("Failed to created cancel file.");
 	}
+	if ($remote) {
+		$cmd = "/bin/echo " . $myname . " | ssh c27cancel";
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			loggit("remote cancel failed: retval " . $retval . ", cmd " . $cmd . "\n");
+		}
+	}
 }
 
 if ($goback) {
