@@ -100,7 +100,7 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 
 		$message .= "Thanks for using Astrometry.net!\n\n";
 
-		$subject = 'Astrometry.net job ' . $myname . ' submitted';
+		$subject = 'Astrometry.net job ' . $myname;
 		$headers = 'From: Astrometry.net <alpha@astrometry.net>' . "\r\n" .
 			'Reply-To: dstn@cs.toronto.edu' . "\r\n" .
 			'X-Mailer: PHP/' . phpversion() . "\r\n";

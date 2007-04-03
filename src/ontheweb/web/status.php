@@ -220,8 +220,9 @@ if (array_key_exists("email", $headers)) {
 	$headers = 'From: Astrometry.net <alpha@astrometry.net>' . "\r\n" .
 		'Reply-To: dstn@cs.toronto.edu' . "\r\n" .
 		'X-Mailer: PHP/' . phpversion() . "\r\n";
+	$subject = 'Astrometry.net job ' . $myname;
+
 	if ($didsolve) {
-		$subject = 'Astrometry.net job ' . $myname . ' solved';
 		$message = "Hello again,\n\n" .
 			"We're please to tell you that we solved your field.\n\n" .
 			"You can get the results here:\n" .
@@ -230,7 +231,6 @@ if (array_key_exists("email", $headers)) {
 			"or if the solution is wrong.\n\n";
 	} else {
 		$headers .= 'Cc: Dustin Lang <dstn@cs.toronto.edu>' . "\r\n";
-		$subject = 'Astrometry.net job ' . $myname . ' failed';
 		$message = "Hello again,\n\n" .
 			"Sadly, we were unable to solve your field automatically.\n\n" .
 			"We may take a look at it and see if we can get it to solve; in this case " .
