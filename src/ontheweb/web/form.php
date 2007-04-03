@@ -231,6 +231,8 @@ function process_data ($vals) {
 	global $fitscopy;
 	global $tabsort;
 
+	global $ontheweblogfile;
+
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
 
@@ -240,6 +242,9 @@ function process_data ($vals) {
 		die("Failed to create job directory.");
 	}
 	$mydir = $resultdir . $myname . "/";
+
+	$mylogfile = $mydir . "loggit";
+	$ontheweblogfile = $mylogfile;
 
 	// Create a database...
 	$dbpath = $mydir . $jobdata_fn;
@@ -559,8 +564,7 @@ function process_data ($vals) {
 
 	$stripenum = 1;
 
-	$str = "start " . $start_fn . "\n" .
-		"total_timelimit " . $totaltime . "\n";
+	$str = "total_timelimit " . $totaltime . "\n";
 
 	foreach ($depths as $startdepth => $enddepth) {
 		foreach ($tryscales as $range) {
@@ -591,12 +595,11 @@ function process_data ($vals) {
 				"nindex_tosolve 25\n" .
 				"distractors 0.25\n" .
 				"ratio_toprint 10\n" .
-				"ratio_tokeep 1.6\n" .
-				"ratio_tosolve 1e6\n" .
+				"ratio_tokeep 1.9\n" .
+				"ratio_tosolve 1e9\n" .
 				"ratio_tobail 1e-100\n" .
 				"fieldw " . $W . "\n" .
 				"fieldh " . $H . "\n" .
-				//"verbose\n" .
 				"maxquads " . $maxquads . "\n" .
 				"cpulimit " . $maxcpu . "\n" .
 				"timelimit " . $maxtime . "\n" .

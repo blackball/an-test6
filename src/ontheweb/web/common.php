@@ -10,7 +10,6 @@ $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
 
 // blind params
-//$maxtime = 120; // Two minute max!
 $totaltime = 300; // Five minute total max.
 $maxtime = 0;
 $maxquads = 0; // 1000000;
@@ -51,7 +50,6 @@ $rdlsinfo_fn="rdlsinfo";
 $wcsinfo_fn="wcsinfo";
 $jobdata_fn = "jobdata.db";
 $fits2xyout_fn = "fits2xy.out";
-//$userimage_fn = "userimage";
 
 $unitmap = array('arcsecperpix' => "arcseconds per pixel",
 				 'arcminperpix' => "arcminutes per pixel",
@@ -65,7 +63,6 @@ $formDefaults = array('x_col' => 'X',
 					  'parity' => 2,
 					  'index' => 'auto',
 					  'poserr' => 1.0,
-					  //'tweak' => 1,
 					  'tweak' => 0,
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
@@ -88,8 +85,6 @@ END;
 
 if (strpos($host, "monte") === 0) {
 	$sqlite = "/h/260/dstn/software/sqlite-2.8.17/bin/sqlite";
-	#$resultdir = "/tmp/ontheweb-data/";
-	#$indexdir = "/tmp/ontheweb-indexes/";
 	$resultdir = "/h/260/dstn/local/ontheweb-results/";
 	$indexdir = "/h/260/dstn/local/ontheweb-indexes/";
 	$fits2xy = "~/an/simplexy/fits2xy";
@@ -141,6 +136,11 @@ $ontheweblogfile = "/tmp/ontheweb.log";
 function loggit($mesg) {
 	global $ontheweblogfile;
 	error_log($mesg, 3, $ontheweblogfile);
+}
+
+function fail($msg) {
+	loggit($msg);
+	die($msg);
 }
 
 function get_datestr($t) {

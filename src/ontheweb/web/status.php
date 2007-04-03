@@ -45,13 +45,16 @@ $wcsinfofile = $mydir . $wcsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
 $indexxyls = $mydir . $indexxyls_fn;
 
+$mylogfile = $mydir . "loggit";
+$ontheweblogfile = $mylogfile;
+
 $db = connect_db($jobdatafile);
 if (!$db) {
-	die("failed to connect jobdata db.\n");
+	fail("failed to connect jobdata db.\n");
 }
 $jd = getalljobdata($db);
 if ($jd === FALSE) {
-	die("failed to get jobdata.\n");
+	fail("failed to get jobdata.\n");
 }
 
 // the user's image converted to PNM.
@@ -66,7 +69,7 @@ $pnmimg = $mydir . $pnmimg;
 if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	// Rename it...
 	if (!rename($inputtmpfile, $inputfile)) {
-		die("Failed to rename input temp file (" . $inputtmpfile . " to " . $inputfile);
+		fail("Failed to rename input temp file (" . $inputtmpfile . " to " . $inputfile);
 	}
 	// Hack - pause a moment...
 	sleep(1);
@@ -75,7 +78,7 @@ if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 if ($cancel) {
 	loggit("cancel requested.\n");
 	if (!touch($cancelfile)) {
-		die("Failed to created cancel file.");
+		fail("Failed to created cancel file.");
 	}
 	if ($remote) {
 		$cmd = "/bin/echo " . $myname . " | ssh -T c27cancel";
@@ -189,7 +192,7 @@ if ($didsolve) {
 					   "orientation" => $orient,
 					   "pixscale" => $pixscale);
 		if (!setjobdata($db, $setjd)) {
-			die("Failed to set WCS-related jobdata entries.");
+			fail("Failed to set WCS-related jobdata entries.");
 		}
 	} else {
 		$cd11 = (float)$jd["cd11"];		
@@ -205,10 +208,10 @@ if ($didsolve) {
 
 if (array_key_exists("email", $headers)) {
 	if ($jd['sent-email'] == 'yes') {
-		die("already sent email.");
+		fail("already sent email.");
 	}
 	if (!setjobdata($db, array('sent-email'=>'yes'))) {
-		die("failed to update jobdata : sent-email.\n");
+		fail("failed to update jobdata : sent-email.\n");
 	}
 
 	$host  = $_SERVER['HTTP_HOST'];
@@ -268,7 +271,7 @@ if (array_key_exists("email", $headers)) {
 
 	if (!mail("", $subject, $message, $headers)) {
 		phpinfo();
-		die("Failed to send email.\n");
+		fail("Failed to send email.\n");
 	}
 	echo "Email sent.\n";
 	exit;
@@ -280,7 +283,7 @@ if ($overlay || $bigoverlay) {
 		$big = $bigoverlay;
 		// render it!
 		if (!$didsolve) {
-			die("Field didn't solve.");
+			fail("Field didn't solve.");
 		}
 
 		if ($big) {
@@ -302,7 +305,7 @@ if ($overlay || $bigoverlay) {
 			$W = $jd['imageW'];
 			$H = $jd['imageH'];
 			if (!($W && $H)) {
-				die("failed to find image width and height.\n");
+				fail("failed to find image width and height.\n");
 			}
 		}
 
@@ -311,7 +314,7 @@ if ($overlay || $bigoverlay) {
 		$output = shell_exec($cmd);
 		//loggit("output: " . $output . "\n");
 		if (sscanf($output, " %d %d %d %d %d ", $nil, $fA, $fB, $fC, $fD) != 5) {
-			die("failed to parse field objs.");
+			fail("failed to parse field objs.");
 		}
 		$flds = array($fA, $fB, $fC, $fD);
 		$fldobjs = max($flds);
@@ -324,7 +327,7 @@ if ($overlay || $bigoverlay) {
 		$lines = explode("\n", $output);
 		for ($i=0; $i<4; $i++) {
 			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
-				die("failed to parse field objs coords: \"" . $lines[$i] . "\"");
+				fail("failed to parse field objs coords: \"" . $lines[$i] . "\"");
 			}
 			// Here's where we scale down the size of the quad:
 			$fldxy[] = $x / $shrink;
@@ -349,13 +352,13 @@ if ($overlay || $bigoverlay) {
 		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
 		loggit("command: $cmd\n");
 		if (system($cmd, $retval) === FALSE) {
-			die("plotquad failed.");
+			fail("plotquad failed.");
 		}
 
 		$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
 		loggit("command: $cmd\n");
 		if ((system($cmd, $retval) === FALSE) || $retval) {
-			die("pgmtoppm (quad) failed.");
+			fail("pgmtoppm (quad) failed.");
 		}
 
 		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
@@ -365,7 +368,7 @@ if ($overlay || $bigoverlay) {
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("plotxy2 failed. retval $retval, res \"" . $res . "\"");
+			fail("plotxy2 failed. retval $retval, res \"" . $res . "\"");
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
@@ -374,7 +377,7 @@ if ($overlay || $bigoverlay) {
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
+			fail("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
@@ -383,61 +386,61 @@ if ($overlay || $bigoverlay) {
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("plotxy2 (fld2) failed. retval $retval, res \"" . $res . "\"");
+			fail("plotxy2 (fld2) failed. retval $retval, res \"" . $res . "\"");
 		}
 
 		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pgmtoppm (xy) failed.");
+			fail("pgmtoppm (xy) failed.");
 		}
 
 		$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("ppmdim failed: " . $res);
+			fail("ppmdim failed: " . $res);
 		}
 
 		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pnmcomp failed.");
+			fail("pnmcomp failed.");
 		}
 
 		$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pgmtoppm (fldxy1) failed.");
+			fail("pgmtoppm (fldxy1) failed.");
 		}
 		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg . " " . $sumimg . " " . $sumimg2;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pnmcomp failed.");
+			fail("pnmcomp failed.");
 		}
 
 		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pgmtoppm (fldxy1) failed.");
+			fail("pgmtoppm (fldxy1) failed.");
 		}
 		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pnmcomp failed.");
+			fail("pnmcomp failed.");
 		}
 
 		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pnmcomp (2) failed.");
+			fail("pnmcomp (2) failed.");
 		}
 
 		$cmd = "pnmtopng " . $sumimg2 . " > ";
@@ -449,7 +452,7 @@ if ($overlay || $bigoverlay) {
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("pnmtopng failed.");
+			fail("pnmtopng failed.");
 		}
 	}
 
@@ -462,7 +465,7 @@ if ($overlay || $bigoverlay) {
 		readfile($bigoverlayfile);
 		exit;
 	} else
-		die("(big)overlay file does not exist.");
+		fail("(big)overlay file does not exist.");
 }
 
 if ($didsolve) {
