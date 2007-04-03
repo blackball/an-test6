@@ -407,8 +407,19 @@ function setjobdata($db, $vals) {
 	return TRUE;
 }
 
+function validate_url($url) {
+	$parts = @parse_url($url);
+	if ($parts === FALSE)
+		return FALSE;
+	if (!(($parts['scheme'] == 'http') || ($parts['scheme'] == 'ftp')))
+		return FALSE;
+	if ($parts['fragment'])
+		return FALSE;
+	return TRUE;
+}
+
 function download_url($url, $dest, $maxfilesize, &$errmsg) {
-	$fin = fopen($url, "rb");
+	$fin = @fopen($url, "rb");
 	if (!$fin) {
 		$errmsg = "failed to open URL " . $url;
 		return FALSE;

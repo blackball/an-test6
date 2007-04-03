@@ -236,6 +236,12 @@ function process_data ($vals) {
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
 
+	if ($xysrc == 'url') {
+		if (!validate_url($imgurl)) {
+			die("Invalid url.");
+		}
+	}
+
 	// Create a directory for this request.
 	$myname = create_random_dir($resultdir);
 	if (!$myname) {
@@ -759,7 +765,7 @@ function check_xysrc($vals) {
 		}
 		return TRUE;
 	case 'url':
-		if (@parse_url($vals['imgurl']))
+		if (validate_url($vals['imgurl']))
 			return TRUE;
 		return array("imgurl"=>"You must provide a valid URL.");
 	}
