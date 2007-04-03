@@ -36,8 +36,8 @@
 #include <unistd.h>
 
 #include "qfits_card.h"
-
 #include "qfits_tools.h"
+#include "qfits_error.h"
 
 /*-----------------------------------------------------------------------------
                                    Defines

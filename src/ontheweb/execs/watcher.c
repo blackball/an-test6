@@ -29,6 +29,11 @@
 
 const char* OPTIONS = "hDl:c:n:";
 
+char* blind = "blind < %s";
+char* inputfile = "input";
+char* qfile = "queue";
+char* qtempfile = "queue.tmp";
+
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage:\n\n"
 			"%s [options], where options include:\n"
@@ -50,11 +55,6 @@ pthread_t parentthread;
 int quitNow = 0;
 
 uint32_t eventmask;
-
-char* blind = "blind < %s";
-char* inputfile = "input";
-char* qfile = "queue";
-char* qtempfile = "queue.tmp";
 
 char* qpath = NULL;
 char* qtemppath = NULL;

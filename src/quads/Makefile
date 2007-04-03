@@ -55,8 +55,7 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
-MISC_EXECS := 2masstofits project-usnob diffractionFlag_check \
-	fits-guess-scale
+MISC_EXECS := 2masstofits project-usnob diffractionFlag_check
 
 #	vossetal2006toan
 
@@ -74,7 +73,8 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	startree hpquads codetree unpermute-quads unpermute-stars homer blind \
 	solvedserver printsolved xylist2fits printmatch mergesolved \
-	rdlsinfo xylsinfo wcsinfo
+	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm
+
 	#agreeable 
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \

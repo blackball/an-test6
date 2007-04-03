@@ -87,5 +87,6 @@ tags:
 	etags `find . -name "*.c" -o -name "*.h"`
 
 DEP_OBJ := $(TWEAK_C_OBJ)
+DEP_PREREQS := $(QFITS_LIB)
 
 include $(COMMON)/makefile.deps
