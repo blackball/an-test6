@@ -235,6 +235,9 @@ if (array_key_exists("email", $headers)) {
 			"details about your field.\n\n";
 	}
 
+	$message .= "You can get the details about your job here:\n" .
+		"  " . $staturl . "\n\n";
+
 	$message .= "Just to remind you, here are the parameters of your job:\n";
 	$jobdesc = describe_job($jd);
 	foreach ($jobdesc as $key => $val) {
@@ -690,6 +693,8 @@ if ($didsolve && file_exists($pnmimg)) {
 
 <table cellpadding="3" border="1" class="c">
 
+<tr><th colspan="2">Job Status</th></tr>
+
 <tr><td>Job Id:</td><td>
 <?php
 echo $myname
@@ -854,7 +859,7 @@ print_link($blindlogfile);
 <hr />
 
 <table border="1" class="c">
-<tr><td>Tail of the Log File</td></tr>
+<tr><th>Tail of the Log File</th></tr>
 <tr><td>
 <pre>
 <?php
@@ -867,6 +872,27 @@ if (file_exists($blindlogfile)) {
 </pre>
 </td></tr>
 </table>
+
+<hr />
+
+<?php
+$job = describe_job($jd);
+echo '<table border="1" cellpadding="3" class="c">' . "\n";
+echo '<tr><th colspan=2>Job Parameters</th></tr>' . "\n";
+foreach ($job as $k => $v) {
+	echo '<tr><td>' . $k . '</td><td>';
+	$makelink = ($k == "Image URL");
+	if ($makelink) {
+		echo '<a href="' . $v . '">';
+	}
+	echo $v;
+	if ($makelink) {
+		echo '</a>';
+	}
+	echo '</td></tr>' . "\n";
+}
+echo '</table>' . "\n";
+?>
 
 <hr />
 
