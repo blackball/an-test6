@@ -1073,8 +1073,8 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 static void print_match(blind_params* bp, MatchObj* mo) {
 	int Nmin = min(mo->nindex, mo->nfield);
 	int ndropout = Nmin - mo->noverlap - mo->nconflict;
-	logverb(bp, "logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
-			mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
+	logmsg(bp, "logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
+		   mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
 }
 
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
@@ -1094,7 +1094,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 	verify_hit(bp->starkd->tree, mo, sp->field, sp->nfield, pixd2,
 			   bp->distractors, sp->field_maxx, sp->field_maxy,
 			   bp->logratio_tobail, bp->nverify);
-	// FIXME - this is the same an nmatches.
+	// FIXME - this is the same as nmatches.
 	mo->nverified = bp->nverified++;
 
 	if (mo->logodds >= bp->logratio_toprint) {
@@ -1118,6 +1118,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 
 	if (!bp->have_bestmo || (mo->logodds > bp->bestmo.logodds)) {
 		logmsg(bp, "Got a new best match: logodds %g.\n", mo->logodds);
+		//print_match(bp, mo);
 		memcpy(&(bp->bestmo), mo, sizeof(MatchObj));
 		bp->have_bestmo = TRUE;
 	}
@@ -1320,15 +1321,9 @@ static void solve_fields(blind_params* bp) {
 		if (bp->have_bestmo && bp->bestmo_solves) {
 			MatchObj* bestmo = &(bp->bestmo);
 			sip_t* sip = NULL;
-			//int Nmin = min(bestmo->nindex, bestmo->nfield);
-			//int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
 			// Field solved!
-			logmsg(bp, "Field %i solved:", fieldnum);
+			logmsg(bp, "Field %i solved: ", fieldnum);
 			print_match(bp, bestmo);
-			/*
-			  with odds ratio %g (%i match, %i conflict, %i dropout, %i index).\n",
-			  fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
-			*/
 
 			// Tweak, if requested.
 			if (bp->do_tweak) {

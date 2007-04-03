@@ -256,7 +256,7 @@ void solve_field(solver_params* params) {
 				if (stat(params->cancelfname, &st) == 0) {
 					params->cancelled = TRUE;
 					params->quitNow = TRUE;
-					fprintf(stderr, "File %s exists: cancelling.\n", params->cancelfname);
+					fprintf(stderr, "File \"%s\" exists: cancelling.\n", params->cancelfname);
 					break;
 				}
 				lastcheck_cf = t;
