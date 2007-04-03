@@ -5,8 +5,9 @@
 #include <string.h>
 #include "starutil.h"
 #include "sip.h"
-#include "libwcs/wcs.h"
-#include "libwcs/fitsfile.h"
+// libwcs:
+#include "wcs.h"
+#include "fitsfile.h"
 #include "sip_util.h"
 
 
@@ -267,7 +268,7 @@ void grinder(sip_t* sip, wcs_t* wcs, int n, char* name)
 
 	copy_wcs_into_sip(wcs,sip);
 
-	radecdeg2xyzarr(sip->crval[0],sip->crval[1],xyzcrval);
+	radecdeg2xyzarr(sip->wcstan.crval[0],sip->wcstan.crval[1],xyzcrval);
 
 	printf("------------------------------------------\n");
 	printf("TEST::::::: %s\n", name);

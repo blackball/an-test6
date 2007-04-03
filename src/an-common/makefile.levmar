@@ -14,7 +14,7 @@
 # along with the Astrometry.net suite ; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-LEVMAR_DIR := $(BASEDIR)/levmar
+LEVMAR_DIR := $(BASEDIR)/levmar-2.1.2
 LEVMAR_INC := -I$(LEVMAR_DIR)
 LEVMAR_LIB := $(LEVMAR_DIR)/liblevmar.a
 LEVMAR_CFLAGS := $(CFLAGS_DEF)
@@ -23,5 +23,5 @@ LEVMAR_CFLAGS := $(CFLAGS_DEF)
 #	$(MAKE) -C cfitsio
 
 $(LEVMAR_LIB):
-	cd $(LEVMAR_DIR) && make liblevmar.a
+	$(MAKE) -C $(LEVMAR_DIR) liblevmar.a
 

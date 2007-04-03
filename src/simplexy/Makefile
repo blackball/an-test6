@@ -1,8 +1,8 @@
-BASEDIR := .
-COMMON := an-common
+BASEDIR := ..
+COMMON := $(BASEDIR)/an-common
 
-NO_QFITS := 1
-export NO_QFITS
+#NO_QFITS := 1
+#export NO_QFITS
 
 .PHONY: all
 all:
@@ -15,7 +15,9 @@ LDFLAGS += -lm
 
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(CFITS_INC)
-CFLAGS += -Iver
+# To get ver.h:
+CFLAGS += -I..
+# For Keir's fancy Python binding thingy:
 CFLAGS += -fPIC
 
 SIMPLEXY= src/dallpeaks.o src/dcen3x3.o src/dfind.o \

@@ -1,5 +1,5 @@
-BASEDIR := .
-COMMON := an-common
+BASEDIR := ..
+COMMON := $(BASEDIR)/an-common
 
 .PHONY: all
 all:

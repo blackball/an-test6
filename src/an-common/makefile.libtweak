@@ -14,7 +14,7 @@
 # along with the Astrometry.net suite ; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-LIBTWEAK_DIR := $(BASEDIR)/libtweak
+LIBTWEAK_DIR := $(BASEDIR)/tweak/libtweak
 LIBTWEAK_INC := -I$(LIBTWEAK_DIR)
 LIBTWEAK_LIB := $(LIBTWEAK_DIR)/libtweak.a
 
@@ -24,4 +24,5 @@ $(LIBTWEAK_LIB):
 REMAKE_LIBTWEAK := remake-libtweak
 .PHONY: $(REMAKE_LIBTWEAK)
 $(REMAKE_LIBTWEAK):
-	cd $(LIBTWEAK_DIR) && make
+	make -C $(LIBTWEAK_DIR)
+#	cd $(LIBTWEAK_DIR) && make

@@ -14,13 +14,14 @@
 # along with the Astrometry.net suite ; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-BASEDIR := .
-COMMON := an-common
+BASEDIR := ../..
+COMMON := $(BASEDIR)/an-common
 
-NO_KDTREE := 1
-NO_QFITS := 1
-export NO_KDTREE
-export NO_QFITS
+# If you want a stand-alone version without libkd and qfits dependencies:
+#NO_KDTREE := 1
+#NO_QFITS := 1
+#export NO_KDTREE
+#export NO_QFITS
 
 .PHONY: all
 all:

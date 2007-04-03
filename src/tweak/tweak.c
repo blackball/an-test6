@@ -27,8 +27,14 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <assert.h>
-#include "libwcs/fitsfile.h"
-#include "libwcs/wcs.h"
+
+// libwcs:
+#include "fitsfile.h"
+#include "wcs.h"
+
+// levmar:
+#include "lm.h"
+
 #include "starutil.h"
 #include "fitsio.h"
 #include "kdtree.h"
@@ -39,7 +45,6 @@
 #include "sip.h"
 #include "sip_util.h"
 #include "bl.h"
-#include "lm.h"
 #include "tweak_internal.h"
 
 
