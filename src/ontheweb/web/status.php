@@ -86,55 +86,22 @@ if ($goback) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$dir   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	$uri  = $dir . "/index.php?";
-	$args = "";
 
-	$quick = ($headers["quick"] == "1");
-
-	$xysrc = $jd["xysrc"];
 	$imgdir = "http://" . $host . $dir . "/status/" . $myname . "/";
 
-	$keys = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit', 'parity', 'poserr',
-				  'index', 'uname', 'email', 'tweak');
+	$quick = ($headers["quick"] == "1");
+	if ($quick) {
+		$userimage = $jd["imagefilename"];
+		$jd['xysrc'] = 'url';
+		$jd['imgurl'] = $imgdir . $userimage;
+	}
 
-	switch ($xysrc) {
-	case "url":
-		$args .= "&xysrc=url";
-		if ($quick) {
-			$userimage = $jd["imagefilename"];
-			$args .= "&imgurl=" . $imgdir . $userimage;
-		} else {
-			array_push($keys, 'imgurl');
-		}
-		break;
-	case "img":
-		if ($quick) {
-			$userimage = $jd["imagefilename"];
-			$args .= "&xysrc=url";
-			$args .= "&imgurl=" . $imgdir . $userimage;
-		} else {
-			$args .= "&xysrc=img";
-			array_push($keys, 'imgfile');
-		}
-		break;
-	case "fits":
-		$args .= "&xysrc=fits";
-		array_push($keys, 'fitsfile');
-		array_push($keys, 'x_col');
-		array_push($keys, 'y_col');
-		break;
-	}
-	foreach ($keys as $k) {
-		$val = $jd[$k];
-		if ($val === FALSE)
-			continue;
-		$args .= "&" . $k . "=" . $val;
-	}
+	$args = format_preset_url($jd, $formDefaults);
 
 	if ($headers["skippreview"] == "1") {
 		$args .= "&skippreview=1";
 	}
 
-	$uri .= substr($args, 1);
 	header("Location: http://" . $host . $uri);
 	exit;
 }
