@@ -75,7 +75,7 @@ if ($cancel) {
 		die("Failed to created cancel file.");
 	}
 	if ($remote) {
-		$cmd = "/bin/echo " . $myname . " | ssh c27cancel";
+		$cmd = "/bin/echo " . $myname . " | ssh -T c27cancel";
 		if ((system($cmd, $retval) === FALSE) || $retval) {
 			loggit("remote cancel failed: retval " . $retval . ", cmd " . $cmd . "\n");
 		}
@@ -535,8 +535,7 @@ h3.c {text-align:center;}
 
 <?php
 if ($do_refresh) {
-	echo '<meta http-equiv="refresh" content="5" />';
-	// content="5; URL=html-redirect.html"
+	echo '<meta http-equiv="refresh" content="5; URL=status.php?job=' . $myname . '"/>';
 }
 ?>
 

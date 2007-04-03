@@ -596,7 +596,7 @@ function process_data ($vals) {
 				"ratio_tobail 1e-100\n" .
 				"fieldw " . $W . "\n" .
 				"fieldh " . $H . "\n" .
-				"verbose\n" .
+				//"verbose\n" .
 				"maxquads " . $maxquads . "\n" .
 				"cpulimit " . $maxcpu . "\n" .
 				"timelimit " . $maxtime . "\n" .
