@@ -8,7 +8,8 @@
 read -s jobid
 
 # Go to our job directory.
-cd /h/260/dstn/raid3/ontheweb
+#cd /h/260/dstn/raid3/ontheweb
+cd /nobackup/stars/ontheweb-data
 cd $jobid
 touch cancel
 echo "Cancelled job."
