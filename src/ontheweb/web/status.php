@@ -358,8 +358,10 @@ if ($overlay || $bigoverlay) {
 			die("pgmtoppm (quad) failed.");
 		}
 
-		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -x 1 -y 1 -w 1.5 -r 4 > " . $xypgm;
+		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
+			" -W " . $W . " -H " . $H .
+			" -x " . (1/$shrink) . " -y " . (1/$shrink) .
+			" -w 1.5 -r 4 > " . $xypgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -367,7 +369,8 @@ if ($overlay || $bigoverlay) {
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -N " . (1+$fldobjs) . " -r 5 -x 1 -y 1 -w 1.5 > " . $fldxy1pgm;
+			" -N " . (1+$fldobjs) . " -r 5 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy1pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -375,7 +378,8 @@ if ($overlay || $bigoverlay) {
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -n " . (1+$fldobjs) . " -N 200 -r 3 -x 1 -y 1 -w 1.5 > " . $fldxy2pgm;
+			" -n " . (1+$fldobjs) . " -N 200 -r 3 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy2pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -428,12 +432,6 @@ if ($overlay || $bigoverlay) {
 		if ($retval) {
 			die("pnmcomp failed.");
 		}
-
-		/*
-		$cmd = "mv " . $sumimg2 . " " . $sumimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		*/
 
 		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
  		loggit("Command: " . $cmd . "\n");
