@@ -12,7 +12,7 @@ echo "running blind..." >> $LOG
 
 touch start
 
-(echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27 2>>$LOG | tar xvf - --atime-preserve -m
+(echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27 2>>$LOG | tar xf - --atime-preserve -m -k
 
 echo "running donescript..." >> $LOG
 ./donescript >> $LOG 2>&1
