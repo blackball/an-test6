@@ -1,0 +1,428 @@
+/*
+  This file is part of libkd.
+  Copyright 2006, Dustin Lang and Keir Mierle.
+
+  libkd is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 2.
+
+  libkd is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with libkd; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef KDTREE_H
+#define KDTREE_H
+
+#include <stdio.h>
+#include <stdint.h>
+
+#include "an-bool.h"
+
+#define KDTREE_MAX_LEVELS 1000
+
+#define KDT_INFTY_DOUBLE 1e309
+#define KDT_INFTY_FLOAT  1e39
+
+enum kd_rangesearch_options {
+	KD_OPTIONS_COMPUTE_DISTS    = 0x1,
+	KD_OPTIONS_RETURN_POINTS    = 0x2,
+	KD_OPTIONS_SORT_DISTS       = 0x4,
+	KD_OPTIONS_SMALL_RADIUS     = 0x8,
+	/* If both bounding box and splitting plane are available,
+	   use splitting plane (default is bounding box)... */
+	KD_OPTIONS_USE_SPLIT        = 0x10,
+	/* If the tree is u32 and bounding boxes are being used and the
+	   rangesearch only fits in 64 bits, use doubles instead of u64 in
+	   the distance computation (default is to use u64).
+	   (Likewise for u16/u32)
+	*/
+	KD_OPTIONS_NO_BIG_INT_MATH      = 0x20,
+	/*
+	  In bounding-box trees that also have a "splitdim" array,
+	  do a quick check along the splitting dimension.
+	*/
+	KD_OPTIONS_SPLIT_PRECHECK   = 0x40,
+	/*
+	  In integer bounding-box trees, do an L1 distance pre-check.
+	*/
+	KD_OPTIONS_L1_PRECHECK      = 0x80,
+	/*
+	  Don't resize the kdtree_qres_t* result structure to take only the
+	  space required (assume it's going to be reused and we're letting the
+	  memory usage do the "high water mark" thing).
+	*/
+	KD_OPTIONS_NO_RESIZE_RESULTS = 0x100
+};
+
+enum kd_build_options {
+	KD_BUILD_BBOX           = 0x1,
+	KD_BUILD_SPLIT          = 0x2,
+	/* Only applicable to integer trees: use a separate array to hold the
+	   splitting dimension, rather than packing it into the bottom bits
+	   of the splitting plane location. */
+	KD_BUILD_SPLITDIM  = 0x4
+};
+
+typedef uint64_t u64;
+typedef uint32_t u32;
+typedef uint16_t u16;
+typedef uint8_t  u8;
+//typedef unsigned int uint;
+
+// Legacy kdtree node.
+struct kdtree_node {
+    unsigned int l,r;              /* data(l:r) are coordinates below this node */
+	/* Implicit hyperrectangle 
+	real HR[sizeof(real)*D] Lower
+	real HR[sizeof(real)*D] Upper
+	*/
+};
+typedef struct kdtree_node kdtree_node_t;
+
+enum kd_types {
+	KDT_NULL = 0,   // note, this MUST be 0 because it's used as a boolean value.
+	KDT_DATA_NULL   = 0,
+	KDT_DATA_DOUBLE = 0x1,
+	KDT_DATA_FLOAT  = 0x2,
+	KDT_DATA_U32    = 0x4,
+	KDT_DATA_U16    = 0x8,
+	KDT_TREE_NULL   = 0,
+	KDT_TREE_DOUBLE = 0x100,
+	KDT_TREE_FLOAT  = 0x200,
+	KDT_TREE_U32    = 0x400,
+	KDT_TREE_U16    = 0x800,
+	KDT_CONV_NULL   = 0,
+	KDT_CONV_DOUBLE = 0x10000,
+	KDT_CONV_FLOAT  = 0x20000
+};
+typedef enum kd_types kd_types;
+
+#define KDT_DATA_MASK  0xf
+#define KDT_TREE_MASK  0xf00
+#define KDT_CONV_MASK  0x30000
+
+/*
+  Possible values for the "treetype" member.
+
+  There are three relevant data type: (a) the type of the raw data; (b) the type used in the tree's
+  bounding boxes and splitting planes; (c) the external type.
+
+  These are called the "data", "tree", and "conv" (converted) types.
+
+  Usually "data" and "conv" are the same.  Trees for which this is not the case are called
+  "converted" trees.
+
+  Unconverted trees have the "conv" field equal KDT_NULL.
+ */
+enum kd_tree_types {
+	KDTT_NULL = 0,
+	/* An unconverted tree with data and tree types "double".
+	   "All doubles, all the time". */
+	KDTT_DOUBLE = KDT_DATA_DOUBLE | KDT_TREE_DOUBLE,
+	/* "All floats, all the time". */
+	KDTT_FLOAT  = KDT_DATA_FLOAT  | KDT_TREE_FLOAT ,
+	/* "All u32, all the time." */
+	//KDTT_U32    = KDT_DATA_U32    | KDT_TREE_U32   ,
+	/* "All u16, all the time." */
+	//KDTT_U16    = KDT_DATA_U16    | KDT_TREE_U16   ,
+
+	/* Data are "doubles", tree is u32.  aka inttree. */
+	KDTT_DOUBLE_U32 = KDT_DATA_DOUBLE | KDT_TREE_U32,
+	/* Data are "doubles", tree is u16.  aka shorttree. */
+	KDTT_DOUBLE_U16 = KDT_DATA_DOUBLE | KDT_TREE_U16,
+
+	/* Converted-from-double u32. */
+	KDTT_U32_CONV_DOUBLE = KDT_CONV_DOUBLE | KDT_TREE_U32 | KDT_DATA_U32,
+	/* Converted-from-double u16. */
+	KDTT_U16_CONV_DOUBLE = KDT_CONV_DOUBLE | KDT_TREE_U16 | KDT_DATA_U16
+};
+
+struct kdtree_funcs;
+
+struct kdtree {
+	/*
+	  A bitfield describing the type of this tree.
+	*/
+	u32 treetype;
+
+	// (compatibility mode)
+	kdtree_node_t *nodes;   /* Flat tree storing nodes and HR's */
+
+	//unsigned int* lr;
+	u32* lr;            /* Points owned by leaf nodes, stored and manipulated
+							  in a way that's too complicated to explain in this comment. */
+
+               
+	u32* perm;           /* Permutation index */
+	//unsigned int *perm;    
+
+	/* Bounding box: (kdtype) list of D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
+	union {
+		float* f;
+		double* d;
+		u32* u;
+		u16* s;
+		void* any;
+	} bb;
+
+	/* Split position (& dimension for ints) (kdtype). */
+	union {
+		float* f;
+		double* d;
+		u32* u;
+		u16* s;
+		void* any;
+	} split;
+
+	// Split dimension for floating-point types
+	u8* splitdim;
+
+	// bitmasks for the split dimension and location.
+	u8 dimbits;
+	u32 dimmask;
+	u32 splitmask;
+
+	union {
+		/* Raw coordinate data as xyzxyzxyz */
+		float* f;
+		double* d;
+		u32* u;
+		u16* s;
+		void* any;
+	} data;
+
+	double* minval;
+	double* maxval;
+	double scale;    /* kdtype per real */
+	double invscale; /* real per kdtype */
+
+	unsigned int ndata;     /* Number of items */
+	unsigned int ndim;      /* Number of dimensions */
+	unsigned int nnodes;    /* Number of nodes */
+	unsigned int nbottom;   /* Number of leaf nodes */
+	unsigned int ninterior; /* Number of internal nodes */
+	unsigned int nlevels;
+	void* mmapped;          /* Next two are for mmap'd access */
+	unsigned int mmapped_size;  
+
+	struct kdtree_funcs* fun;
+};
+typedef struct kdtree kdtree_t;
+
+struct kdtree_qres {
+	unsigned int nres;
+	unsigned int capacity; /* Allocated size. */
+	union {
+		double* d;
+		float* f;
+		u32* u;
+		u16* s;
+		void* any;
+	} results;
+	double *sdists;          /* Squared distance from query point */
+	u32 *inds;    /* Indexes into original data set */
+};
+typedef struct kdtree_qres kdtree_qres_t;
+
+struct kdtree_funcs {
+	void* (*get_data)(kdtree_t* kd, int i);
+	void  (*copy_data_double)(kdtree_t* kd, int start, int N, double* dest);
+	int   (*nearest_neighbour)(kdtree_t* kd, void *pt, double* bestd2);
+	int   (*nearest_neighbour_within)(kdtree_t* kd, void *pt, double maxd2, double* bestd2);
+	kdtree_qres_t* (*rangesearch)(kdtree_t* kd, kdtree_qres_t* res, void* pt, double maxd2, int options);
+};
+typedef struct kdtree_funcs kdtree_funcs;
+
+static inline int kdtree_convtype(kdtree_t* kd) {
+	return kd->treetype & KDT_CONV_MASK;
+}
+
+static inline int kdtree_datatype(kdtree_t* kd) {
+	return kd->treetype & KDT_DATA_MASK;
+}
+
+/*
+  What type are my bounding boxes / split planes?
+*/
+static inline int kdtree_treetype(kdtree_t* kd) {
+	return kd->treetype & KDT_TREE_MASK;
+}
+
+kdtree_t* kdtree_new(int N, int D, int Nleaf);
+
+/*
+  Reinitialize the table of function pointers "kd->fun".
+*/
+void kdtree_update_funcs(kdtree_t* kd);
+
+void kdtree_set_limits(kdtree_t* kd, double* low, double* high);
+
+kdtree_t* kdtree_convert_data(kdtree_t* kd, void *data,
+							  int N, int D, int Nleaf, int treetype);
+
+void* kdtree_get_data(kdtree_t* kd, int i);
+
+void kdtree_copy_data_double(kdtree_t* kd, int i, int N, double* dest);
+
+const char* kdtree_kdtype_to_string(int kdtype);
+
+int kdtree_kdtype_parse_data_string(const char* str);
+int kdtree_kdtype_parse_tree_string(const char* str);
+int kdtree_kdtype_parse_conv_string(const char* str);
+
+int kdtree_kdtypes_to_treetype(int convtype, int treetype, int datatype);
+
+/*
+  Compute the inverse permutation of tree->perm and place it in "invperm".
+ */
+void kdtree_inverse_permutation(kdtree_t* tree, int* invperm);
+
+/* Free results */
+void kdtree_free_query(kdtree_qres_t *kd);
+
+/* Free a tree; does not free kd->data */
+void kdtree_free(kdtree_t *kd);
+
+/* The leftmost point owned by this node. */
+int kdtree_left(kdtree_t* kd, int nodeid);
+
+/* The rightmost point owned by this node. */
+int kdtree_right(kdtree_t* kd, int nodeid);
+
+/* How many points are owned by node "nodeid"? */
+int kdtree_npoints(kdtree_t* kd, int nodeid);
+
+/*
+  Returns the node index of the first/last leaf within the subtree
+  rooted at "nodeid".
+*/
+int kdtree_first_leaf(kdtree_t* kd, int nodeid);
+int kdtree_last_leaf(kdtree_t* kd, int nodeid);
+
+/* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
+ * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
+ * (kd->perm[ind]).
+ *
+ * If "bestd2" is non-NULL, the distance-squared to the nearest neighbour
+ * will be placed there.
+ */
+int kdtree_nearest_neighbour(kdtree_t* kd, void *pt, double* bestd2);
+
+/* Nearest neighbour (if within a maximum range): returns the index
+ * _in the kdtree_ of the nearest point, _if_ its distance is less than
+ * maxd2.  (Otherwise, -1).
+ *
+ * If "bestd2" is non-NULL, the distance-squared to the nearest neighbour
+ * will be placed there.
+ */
+int kdtree_nearest_neighbour_within(kdtree_t* kd, void *pt, double maxd2, double* bestd2);
+
+/*
+ * Finds the set of non-leaf nodes that are completely contained
+ * within the given query rectangle, plus the leaf nodes that
+ * overlap with the query.  (In other words, all nodes that overlap
+ * the query, without recursing down to leaf nodes unnecessarily.)
+ * Calls one of two callbacks for fully-contained and
+ * partly-contained nodes.
+ */
+void kdtree_nodes_contained(kdtree_t* kd,
+							void* querylow, void* queryhi,
+							void (*callback_contained)(kdtree_t* kd, int node, void* extra),
+							void (*callback_overlap)(kdtree_t* kd, int node, void* extra),
+							void* cb_extra);
+
+#define KD_IS_LEAF(kd, i)       ((i) >= ((kd)->ninterior))
+#define KD_IS_LEFT_CHILD(i)    ((i) & 1)
+#define KD_PARENT(i)     (((i)-1)/2)
+#define KD_CHILD_LEFT(i)  (2*(i)+1)
+#define KD_CHILD_RIGHT(i)  (2*(i)+2)
+
+/*
+ * Copies the bounding box of the given node into the given arrays,
+ * which are of the external type.
+ *
+ * Returns FALSE if the tree does not have bounding boxes.
+ */
+bool kdtree_get_bboxes(kdtree_t* kd, int node, void* bblo, void* bbhi);
+
+bool kdtree_node_node_mindist2_exceeds(kdtree_t* kd1, int node1,
+									   kdtree_t* kd2, int node2,
+									   double dist2);
+
+bool kdtree_node_node_maxdist2_exceeds(kdtree_t* kd1, int node1,
+									   kdtree_t* kd2, int node2,
+									   double dist2);
+
+bool kdtree_node_point_mindist2_exceeds(kdtree_t* kd, int node, void* pt,
+										double dist2);
+
+bool kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, int node, void* pt,
+										double dist2);
+
+
+/* Sanity-check a tree. 0=okay. */
+int kdtree_check(kdtree_t* t);
+
+#if 0
+/* Range seach using callback */
+void kdtree_rangesearch_callback(kdtree_t *kd, real *pt, real maxdistsquared,
+								 void (*rangesearch_callback)(kdtree_t* kd, real* pt, real maxdist2, real* computed_dist2, int indx, void* extra),
+								 void* extra);
+
+/* Counts points within range. */
+int kdtree_rangecount(kdtree_t* kd, real* pt, real maxdistsquared);
+
+/* Output Graphviz .dot format version of the tree */
+void kdtree_output_dot(FILE* fid, kdtree_t* kd);
+#endif
+
+
+
+// include dimension-generic versions of the dimension-specific code.
+#define KD_DIM_GENERIC 1
+
+#endif /* KDTREE_H */
+
+
+#if defined(KD_DIM) || defined(KD_DIM_GENERIC)
+
+#if defined(KD_DIM)
+  #undef KDID
+  #undef GLUE2
+  #undef GLUE
+
+  #define GLUE2(a, b) a ## b
+  #define GLUE(a, b) GLUE2(a, b)
+  #define KDID(x) GLUE(x ## _, KD_DIM)
+#else
+  #define KDID(x) x
+#endif
+#define KDFUNC(x) KDID(x)
+
+/* Build a tree from an array of data, of size N*D*sizeof(real).
+   "options" is a bitfield of kd_build_options values. */
+kdtree_t* KDFUNC(kdtree_build)
+	 (kdtree_t* kd, void *data, int N, int D, int Nleaf,
+	  int treetype, unsigned int options);
+
+/* Range seach */
+kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, void *pt, double maxd2);
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, void *pt, double maxd2);
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(kdtree_t *kd, void *pt, double maxd2, int options);
+
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options_reuse)(kdtree_t *kd, kdtree_qres_t* res, void *pt, double maxd2, int options);
+
+#if !defined(KD_DIM)
+#undef KD_DIM_GENERIC
+#endif
+
+#endif
+
