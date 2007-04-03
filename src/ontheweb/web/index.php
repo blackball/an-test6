@@ -31,6 +31,8 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	$inputtmpfile = $mydir . $inputtmp_fn;
 
 	if ($webver) {
+		highlevellog("Job " . $myname . ": web edition: wrote scripts.\n");
+
 		loggit("Web version.\n");
 		if ($headers["justjobid"]) {
 			// skip the "source extraction" preview, just start crunching!
@@ -44,6 +46,7 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 			// Just write the jobid.
 			header('Content-type: text/plain');
 			echo $myname . "\n";
+			highlevellog("Job " . $myname . ": skipped source extraction preview; job started.\n");
 			exit;
 		}
 
@@ -66,6 +69,8 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 			die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
 		}
 		loggit("Renamed $inputtmpfile to $inputfile.\n");
+
+		highlevellog("Job " . $myname . ": email edition; job started.\n");
 
 		// Tell the client we've received their image and will start crunching...
 		$txt = file_get_contents($submitted_html);

@@ -283,6 +283,13 @@ function process_data ($vals) {
 	loggit("created db " . $dbpath . "\n");
 	//loggit("xysrc: " . $xysrc . "\n");
 
+	$msg = "Job " . $myname . ": received:\n";
+	$desc = describe_job($jobdata, TRUE);
+	foreach ($desc as $k => $v) {
+		$msg .= "  " . $k . ": " . $v . "\n";
+	}
+	highlevellog($msg);
+
 	$imgfilename = "";
 	$imgbasename = "";
 	//$origname = "";
@@ -1146,7 +1153,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$scale = 1 / $shrink;
 			$prefix = $mydir;
 			$imW = $dispW;
-			$imH = $dispW;
+			$imH = $dispH;
 			$xyoff = 1 / $shrink;
 			$userimg = $dispimg;
 			$outimg = $prefix . $objs_fn;

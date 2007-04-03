@@ -81,7 +81,7 @@ if ($cancel) {
 		fail("Failed to created cancel file.");
 	}
 	if ($remote) {
-		$cmd = "/bin/echo " . $myname . " | ssh -T c27cancel";
+		$cmd = "/bin/echo " . $myname . " | ssh -T c27cancel >> " . $mydir . "cancel.log 2>&1";
 		if ((system($cmd, $retval) === FALSE) || $retval) {
 			loggit("remote cancel failed: retval " . $retval . ", cmd " . $cmd . "\n");
 		}
@@ -213,6 +213,9 @@ if (array_key_exists("email", $headers)) {
 	if (!setjobdata($db, array('sent-email'=>'yes'))) {
 		fail("failed to update jobdata : sent-email.\n");
 	}
+
+	highlevellog("Job " . $myname . ": email edition: job " .
+				 ($didsolve ? "solved" : "failed") . ".\n");
 
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
@@ -495,6 +498,22 @@ if ($didcancel) {
 	$status = "Running";
 } else if ($job_queued) {
 	$status = "Submitted";
+}
+
+if ($job_done || $didcancel) {
+	if (!$jd['checked-done']) {
+		if (!setjobdata($db, array('checked-done'=>$status))) {
+			loggit("failed to set checked-done jobdata\n");
+		}
+		if ($status == "Finished") {
+			if ($didsolve) {
+				$status = "Solved";
+			} else {
+				$status = "Failed";
+			}
+		}
+		highlevellog("Job " . $myname . ": status " . $status . "\n");
+	}
 }
 
 ?>

@@ -109,25 +109,25 @@ if (strpos($host, "monte") === 0) {
 	$sqlite = "sqlite";
 	$resultdir = "/home/gmaps/ontheweb-data/";
 	$indexdir = "/home/gmaps/ontheweb-indexes/";
-	$fits2xy = "/home/gmaps/simplexy/fits2xy";
-	$plotxy2 = "/home/gmaps/quads/plotxy2";
-	$plotquad = "/home/gmaps/quads/plotquad";
-	$modhead = "/home/gmaps/quads/modhead";
-	$tabsort = "/home/gmaps/quads/tabsort";
-	$tablist = "/home/gmaps/quads/tablist";
-	$tabmerge = "/home/gmaps/quads/tabmerge";
-	$fitsgetext = "/home/gmaps/quads/fitsgetext";
-	$fitscopy = "/home/gmaps/quads/fitscopy";
-	$mergesolved = "/home/gmaps/quads/mergesolved";
-	$rdlsinfo = "/home/gmaps/quads/rdlsinfo";
-	$xylsinfo = "/home/gmaps/quads/xylsinfo";
-	$wcsinfo = "/home/gmaps/quads/wcsinfo";
-	$printsolved = "/home/gmaps/quads/printsolved";
-	$wcs_xy2rd = "/home/gmaps/quads/wcs-xy2rd";
-	$wcs_rd2xy = "/home/gmaps/quads/wcs-rd2xy";
-	$fits_guess_scale = "/home/gmaps/quads/fits-guess-scale";
-	$an_fitstopnm = "/home/gmaps/quads/an-fitstopnm";
-	$fits_filter = "/home/gmaps/quads/fits2fits.py %s %s";
+	$fits2xy = "/home/gmaps/an/simplexy/fits2xy";
+	$plotxy2 = "/home/gmaps/an/quads/plotxy2";
+	$plotquad = "/home/gmaps/an/quads/plotquad";
+	$modhead = "/home/gmaps/an/quads/modhead";
+	$tabsort = "/home/gmaps/an/quads/tabsort";
+	$tablist = "/home/gmaps/an/quads/tablist";
+	$tabmerge = "/home/gmaps/an/quads/tabmerge";
+	$fitsgetext = "/home/gmaps/an/quads/fitsgetext";
+	$fitscopy = "/home/gmaps/an/quads/fitscopy";
+	$mergesolved = "/home/gmaps/an/quads/mergesolved";
+	$rdlsinfo = "/home/gmaps/an/quads/rdlsinfo";
+	$xylsinfo = "/home/gmaps/an/quads/xylsinfo";
+	$wcsinfo = "/home/gmaps/an/quads/wcsinfo";
+	$printsolved = "/home/gmaps/an/quads/printsolved";
+	$wcs_xy2rd = "/home/gmaps/an/quads/wcs-xy2rd";
+	$wcs_rd2xy = "/home/gmaps/an/quads/wcs-rd2xy";
+	$fits_guess_scale = "/home/gmaps/an/quads/fits-guess-scale";
+	$an_fitstopnm = "/home/gmaps/an/quads/an-fitstopnm";
+	$fits_filter = "/home/gmaps/an/quads/fits2fits.py %s %s";
 }
 
 $headers = $_REQUEST;
@@ -141,6 +141,12 @@ function loggit($mesg) {
 function fail($msg) {
 	loggit($msg);
 	die($msg);
+}
+
+$highlevellogfile = "/tmp/highlevel.log";
+function highlevellog($msg) {
+	global $highlevellogfile;
+	error_log($msg, 3, $highlevellogfile);
 }
 
 function get_datestr($t) {
@@ -219,10 +225,20 @@ function format_preset_url($jd, $defaults=array()) {
 	return "?" . substr($args, 1);
 }
 
-function describe_job($jd) {
+function describe_job($jd, $user=FALSE) {
 	global $unitmap;
 
 	$strs = array();
+	if ($user) {
+		$uname = $jd['uname'];
+		if ($uname) {
+			$strs['Name'] = $uname;
+		}
+		$email = $jd['email'];
+		if ($email) {
+			$strs['Email'] = $email;
+		}
+	}
 	switch ($jd['xysrc']) {
 	case 'url':
 		$strs['Image URL'] =  $jd['imgurl'];
@@ -244,8 +260,8 @@ function describe_job($jd) {
 		$strs['Field size units'] = $unitmap[$jd['fsunit']];
 	}
 	if ($jd['fstype'] == 'ul') {
-		$strs['Field size upper bound'] = $jd['fsu'];
 		$strs['Field size lower bound'] = $jd['fsl'];
+		$strs['Field size upper bound'] = $jd['fsu'];
 	} else {
 		$strs['Field size estimate'] = $jd['fse'];
 		$strs['Field size error'] = $jd['fsv'] . "%";
