@@ -24,13 +24,7 @@
 #include "mathutil.h"
 #include "intmap.h"
 #include "pnpoly.h"
-
-/*
-  #include "kdtree.h"
-  #define KD_DIM 3
-  #include "kdtree.h"
-  #undef KD_DIM
-*/
+#include "keywords.h"
 
 #define min(a,b) (((a)<(b))?(a):(b))
 
@@ -110,7 +104,7 @@ void verify_hit(kdtree_t* startree,
 	for (i=0; i<res->nres; i++) {
 		double x, y;
 		tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y);
-		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH)) // FIXME should this be > not >= ? ref:zzz
+		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH))
 			continue;
 
 		res->inds[NI] = res->inds[i];
@@ -133,12 +127,11 @@ void verify_hit(kdtree_t* startree,
 		// I don't know HOW this happens - at the very least, the four stars
 		// belonging to the quad that generated this hit should lie in the
 		// proposed field - but I've seen it happen!
-	  //  sam has an idea, see ref:zzz above
 		fprintf(stderr, "Freakishly, NI=0.\n");
 		mo->nfield = 0;
 		mo->noverlap = 0;
 		matchobj_compute_overlap(mo);
-		mo->logodds = -1e300;
+		mo->logodds = -HUGE_VAL;
 		kdtree_free_query(res);
 		free(indexpix);
 		return;
@@ -201,19 +194,17 @@ void verify_hit(kdtree_t* startree,
 				}
 			}
 			if (ind != -1) {
-				double d2 = distsq(field + mo->field[j]*2, indexpix + ind*2, 2);
-				double d2b = distsq(field + mo->field[j]*2, xy, 2);
+				Unused double d2 = distsq(field + mo->field[j]*2, indexpix + ind*2, 2);
+				Unused double d2b = distsq(field + mo->field[j]*2, xy, 2);
 				debug("Dist: %g, %g\n", sqrt(d2), sqrt(d2b));
 			}
-			//FIXME umm..should we free invperm?
-			// -- good idea!
 			free(invperm);
 		}
 	}
 
 	Nmin = min(NI, NF);
 
-	bestlogodds = -1e300;
+	bestlogodds = -HUGE_VAL;
 	bestnmatch = bestnnomatch = bestnconflict = -1;
 
 	// For each field star, find the nearest index star.
@@ -223,7 +214,7 @@ void verify_hit(kdtree_t* startree,
 		double sigma2;
 		double cutoffd2;
 		double R2;
-		double logprob = -1e100;
+		double logprob = -HUGE_VAL;
 		int ind;
 
 		// Skip stars that are part of the quad:
@@ -409,7 +400,7 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 			R2 = distsq(pt, qc, 2);
 			// Variance of a field star at that distance from the quad center:
 			sigma2 = verify_pix2 * ((1.5*1.5) + R2/rquad2);
-			cutoffd2 = 1e100;
+			cutoffd2 = HUGE_VAL;
 			ind = kdtree_nearest_neighbour_within(itree, pt, cutoffd2, &bestd2);
 			// p(foreground):
 			logprob = -log(2.0 * M_PI * sigma2 * NI) -(bestd2 / (2.0 * sigma2));

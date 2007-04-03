@@ -99,8 +99,8 @@ int main(int argc, char** args) {
 		double xyz1[3], xyz2[3];
 		double arc;
 		int i;
-		ramax = decmax = -1e100;
-		ramin = decmin =  1e100;
+		ramax = decmax = -HUGE_VAL;
+		ramin = decmin =  HUGE_VAL;
 		for (i=0; i<(dl_size(rd)/2); i++) {
 			double ra  = dl_get(rd, 2*i);
 			double dec = dl_get(rd, 2*i+1);

@@ -157,10 +157,10 @@ void catalog_compute_radecminmax(catalog* cat)
 {
 	double ramin, ramax, decmin, decmax;
 	int i;
-	ramin = 1e100;
-	ramax = -1e100;
-	decmin = 1e100;
-	decmax = -1e100;
+	ramin = HUGE_VAL;
+	ramax = -HUGE_VAL;
+	decmin = HUGE_VAL;
+	decmax = -HUGE_VAL;
 	for (i = 0; i < cat->numstars; i++) {
 		double* xyz;
 		double ra, dec;

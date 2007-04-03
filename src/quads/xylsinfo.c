@@ -81,8 +81,8 @@ int main(int argc, char** args) {
 		double xmax, xmin, ymax, ymin;
 		double diag;
 		int i;
-		xmax = ymax = -1e100;
-		xmin = ymin =  1e100;
+		xmax = ymax = -HUGE_VAL;
+		xmin = ymin =  HUGE_VAL;
 		for (i=0; i<(dl_size(xy)/2); i++) {
 			double x = dl_get(xy, 2*i);
 			double y = dl_get(xy, 2*i+1);

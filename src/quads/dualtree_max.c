@@ -274,7 +274,7 @@ void dualtree_max(kdtree_t* xtree, kdtree_t* ytree,
 	xroot = kdtree_get_root(xtree);
 
     callbacks->bounds(callbacks->bounds_extra, yroot, xroot,
-					  -1e300, &lower, &upper);
+					  -HUGE_VAL, &lower, &upper);
 
     cand.ynode = yroot;
     cand.n = xroot;

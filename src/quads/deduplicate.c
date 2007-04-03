@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     double duprad = 0.0;
     char *infname = NULL, *outfname = NULL;
     int keep = 0;
-	double ramin = -1e300, decmin = -1e300, ramax = 1e300, decmax = 1e300;
+	double ramin = -HUGE_VAL, decmin = -HUGE_VAL, ramax = HUGE_VAL, decmax = HUGE_VAL;
 	bool radecrange = FALSE;
 	double* thestars;
 	uint64_t* theids;

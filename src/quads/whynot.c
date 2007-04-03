@@ -150,8 +150,8 @@ void find_corners(xy *thisfield, xy *cornerpix) {
 	double x, y;
 	uint i;
 
-	minx = miny = 1e308;
-	maxx = maxy = -1e308;
+	minx = miny = HUGE_VAL;
+	maxx = maxy = -HUGE_VAL;
 	
 	for (i=0; i<xy_size(thisfield); i++) {
 		x = xy_refx(thisfield, i);

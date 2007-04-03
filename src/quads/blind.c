@@ -24,6 +24,7 @@
  */
 #include <sys/types.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
@@ -264,9 +265,9 @@ int main(int argc, char *argv[]) {
 		solver_default_params(&(bp->solver));
 		sp->userdata = bp;
 
-		bp->bestlogodds = -1e300;
+		bp->bestlogodds = -HUGE_VAL;
 		bp->nverify = 20;
-		bp->logratio_tobail = -1e300;
+		bp->logratio_tobail = -HUGE_VAL;
 		bp->fieldlist = il_new(256);
 		bp->indexes = pl_new(16);
 		bp->fieldid_key = strdup("FIELDID");
@@ -314,6 +315,20 @@ int main(int argc, char *argv[]) {
 		if ((il_size(bp->fieldlist) == 1) && (sp->solved_in)) {
 			if (solvedfile_get(sp->solved_in, il_get(bp->fieldlist, 0))) {
 				logmsg(bp, "Field %i is already solved.\n", il_get(bp->fieldlist, 0));
+				il_free(bp->fieldlist);
+				pl_free(bp->indexes);
+				free(bp->xcolname);
+				free(bp->ycolname);
+				free(bp->fieldid_key);
+				continue;
+			}
+		}
+
+		// Early check to see if this job was cancelled.
+		if (sp->cancelfname) {
+			struct stat st;
+			if (stat(sp->cancelfname, &st) == 0) {
+				logmsg(bp, "Run cancelled.\n");
 				il_free(bp->fieldlist);
 				pl_free(bp->indexes);
 				free(bp->xcolname);
@@ -789,10 +804,10 @@ static int read_parameters(blind_params* bp) {
 		while (*line && isspace(*line))
 			line++;
 
-		logmsg(bp, "Command: %s\n", line);
+		logverb(bp, "Command: %s\n", line);
 
 		if (line[0] == '#') {
-			logmsg(bp, "Skipping comment.\n");
+			//logmsg(bp, "Skipping comment.\n");
 			continue;
 		}
 		// skip blank lines.
@@ -973,7 +988,7 @@ static int read_parameters(blind_params* bp) {
 		} else if (is_word(line, "quit", &nextword)) {
 			return 1;
 		} else {
-			logmsg(bp, "I didn't understand that command.\n");
+			logmsg(bp, "I didn't understand this command:\n  \"%s\"", line);
 		}
 	}
 }
@@ -1013,10 +1028,6 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 
 	// find all the index stars that are inside the circle that bounds
 	// the field.
-	/*
-	  for (i=0; i<3; i++)
-	  fieldcenter[i] = (mo->sMin[i] + mo->sMax[i]) / 2.0;
-	*/
 	star_midpoint(fieldcenter, mo->sMin, mo->sMax);
 	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
 	// 1.05 is a little safety factor.

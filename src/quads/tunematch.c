@@ -135,10 +135,10 @@ static void update_matchobj(MatchObj* mo, double* Mall,
 	mo->transform[5] = pw[1];
 	mo->transform[8] = pw[2];
 
-	minu = 1e300;
-	maxu = -1e300;
-	minv = 1e300;
-	maxv = -1e300;
+	minu = HUGE_VAL;
+	maxu = -HUGE_VAL;
+	minv = HUGE_VAL;
+	maxv = -HUGE_VAL;
 	for (i=0; i<NF; i++) {
 		double u = fielduv[i*2+0];
 		double v = fielduv[i*2+1];

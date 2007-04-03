@@ -174,8 +174,8 @@ int main(int argc, char *argv[])
 	free_fn(rdlsfname);
 	if (numFields > 1) {
 		double ramin, ramax, decmin, decmax;
-		decmin = ramin = 1e100;
-		decmax = ramax = -1e100;
+		decmin = ramin = HUGE_VAL;
+		decmax = ramax = -HUGE_VAL;
 		for (i=0; i<starkd->ndata; i++) {
 			double ra, dec;
 			double* xyz = starkd->data + i*DIM_STARS;

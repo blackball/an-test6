@@ -274,7 +274,7 @@ void max_results(void* extra, kdtree_node_t* ynode, kdtree_node_t* xnode,
 	}
 
 	// new pruning threshold for this query point is the smallest of the thresholds.
-	prune = 1e300;
+	prune = HUGE_VAL;
 	for (i = 0; i < N; i++) {
 		if (pruning_threshs[i] < prune) {
 			prune = pruning_threshs[i];
@@ -321,8 +321,8 @@ static void write_histogram(char* fn) {
 		return ;
 	}
 
-	mn = 1e300;
-	mx = -1e300;
+	mn = HUGE_VAL;
+	mx = -HUGE_VAL;
 	for (i = 0; i < Ntotal; i++) {
 		double d = nndists[i];
 		if (d < 0.0)
@@ -391,8 +391,8 @@ static void max_end_results(void* extra, kdtree_node_t* ynode) {
 	free(pruning_threshs);
 	free(bests);
 	if ((Ndone + N) / 10000 > (Ndone / 10000)) {
-		double mn = 1e300;
-		double mx = -1e300;
+		double mn = HUGE_VAL;
+		double mx = -HUGE_VAL;
 		for (i = 0; i < Ntotal; i++) {
 			if (nndists[i] > 0.0) {
 				if (nndists[i] > mx) {
@@ -492,7 +492,7 @@ int main(int argc, char *argv[]) {
 	nndists = malloc(N * sizeof(double));
 	nninds  = malloc(N * sizeof(int));
 	for (i = 0; i < N; i++) {
-		nndists[i] = 1e300;
+		nndists[i] = HUGE_VAL;
 		nninds [i] = -1;
 	}
 	Ndone = 0;
@@ -576,7 +576,7 @@ int main(int argc, char *argv[]) {
 				printf("%i checked.\n", i);
 				fflush(stdout);
 			}
-			best = 1e300;
+			best = HUGE_VAL;
 			bestind = -1;
 			point1 = tree->data + i * D;
 			if (do_perms) {

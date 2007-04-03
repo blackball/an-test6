@@ -57,8 +57,8 @@ static inline void sety(double* d, uint ind, double val) {
 
 void solver_default_params(solver_params* params) {
 	memset(params, 0, sizeof(solver_params));
-	params->maxAB = 1e300;
-	params->funits_upper = 1.0e300;
+	params->maxAB = HUGE_VAL;
+	params->funits_upper = HUGE_VAL;
 }
 
 static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
