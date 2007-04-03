@@ -894,6 +894,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	global $plotxy2;
 	global $tabsort;
 	global $objs_fn;
+	global $bigobjs_fn;
 	global $fits2xyout_fn;
 	global $an_fitstopnm;
 	global $fits_filter;
@@ -1129,81 +1130,94 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$newjd['displayImage'] = $dispimgbase;
 	$newjd['displayImagePng'] = $dispimgpngbase;
 
-	// Plot the extracted objects.
-	$Nbright = 100;
-	// -the brightest:
-	$objimg1 = $mydir . "objs1.pgm";
-	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $dispW . " -H " . $dispH .
-		" -x 1 -y 1 -w 1.75 -S " . (1/$shrink) . " -N " . $Nbright . " > " . $objimg1;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to plot extracted sources.";
-		return FALSE;
-	}
-	// -the rest:
-	$Nmax = 500;
-	$objimg2 = $mydir . "objs2.pgm";
-	// FIXME - interaction between (1,1) offset and scaling is wrong -
-	// we need to offset then scale, not vice versa.
-	$cmd = $plotxy2 . " -i " . $xylist . " -W " . $dispW . " -H " . $dispH .
-		" -x 1 -y 1" . " -n " . $Nbright . " -N " . $Nmax . " -r 3 -w 1.75" .
-		" -S " . (1/$shrink) . " > " . $objimg2;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to plot extracted sources.";
-		return FALSE;
-	}
-	// -the sum:
-	$objimg = $mydir . "objs.pgm";
-	$objimg_orig = $objimg;
-	$cmd = "pnmarith -max " . $objimg1 . " " . $objimg2 . " > " . $objimg;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to plot extracted sources.";
-		return FALSE;
-	}
+	foreach (array('big','small') as $sz) {
+		if ($sz == 'big') {
+			$scale = 1;
+			$prefix = $mydir . "big-";
+			$imW = $W;
+			$imH = $H;
+			$xyoff = 1;
+			$userimg = $pnmimg_orig;
+			$outimg = $mydir . $bigobjs_fn;
+		} else {
+			$scale = 1 / $shrink;
+			$prefix = $mydir;
+			$imW = $dispW;
+			$imH = $dispW;
+			$xyoff = 1 / $shrink;
+			$userimg = $dispimg;
+			$outimg = $prefix . $objs_fn;
+		}
 
-	$redimg = $mydir . "red.pgm";
-	$cmd = "pgmtoppm red " . $objimg . " > " . $redimg;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to create image of extracted sources.";
-		return FALSE;
-	}
-	$objimg = $redimg;
+		// Plot the extracted objects.
+		$Nbright = 100;
+		// -the brightest:
+		$objimg1 = $prefix . "objs1.pgm";
+		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $imW . " -H " . $imH .
+			" -x " . $xyoff . " -y " . $xyoff . " -w 1.75 -S " . $scale .
+			" -N " . $Nbright . " > " . $objimg1;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to plot extracted sources.";
+			return FALSE;
+		}
+		// -the rest:
+		$Nmax = 500;
+		$objimg2 = $prefix . "objs2.pgm";
+		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $imW . " -H " . $imH .
+			" -x " . $xyoff . " -y " . $xyoff . " -n " . $Nbright .
+			" -N " . $Nmax . " -r 3 -w 1.75" . " -S " . $scale . " > " . $objimg2;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to plot extracted sources.";
+			return FALSE;
+		}
+		// -the sum:
+		$objimg = $prefix . "objs.pgm";
+		$objimg_orig = $objimg;
+		$cmd = "pnmarith -max " . $objimg1 . " " . $objimg2 . " > " . $objimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to plot extracted sources.";
+			return FALSE;
+		}
 
-	$sumimg = $mydir . "sum.ppm";
-	$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " . $dispimg . " " . $sumimg;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to composite image of extracted sources.";
-		return FALSE;
-	}
+		$redimg = $prefix . "red.pgm";
+		$cmd = "pgmtoppm red " . $objimg . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to create image of extracted sources.";
+			return FALSE;
+		}
+		$objimg = $redimg;
 
-	$sumimgpng = $mydir . $objs_fn;
-	$cmd = "pnmtopng " . $sumimg . " > " . $sumimgpng;
-	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
-	$res = system($cmd, $retval);
-	if ($retval) {
-		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to convert composite image of extracted sources to PNG.";
-		return FALSE;
+		$sumimg = $prefix . "sum.ppm";
+		$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " .
+			$userimg . " " . $sumimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to composite image of extracted sources.";
+			return FALSE;
+		}
+
+		$cmd = "pnmtopng " . $sumimg . " > " . $outimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			$errstr = "Failed to convert composite image of extracted sources to PNG.";
+			return FALSE;
+		}
 	}
 
 	// Rename the original uploaded/downloaded image file to reflect the kind of image we think it is

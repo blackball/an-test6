@@ -13,6 +13,7 @@ $mydir = $resultdir . $myname . "/";
 
 $img = array_key_exists("img", $headers);
 $overlay = array_key_exists("overlay", $headers);
+$bigoverlay = array_key_exists("overlay-big", $headers);
 $cancel = array_key_exists("cancel", $headers);
 $goback = array_key_exists("goback", $headers);
 
@@ -36,7 +37,9 @@ $cancelfile = $mydir . $cancel_fn;
 $wcsfile = $mydir . $wcs_fn;
 $matchfile = $mydir . $match_fn;
 $objsfile = $mydir . $objs_fn;
+$bigobjsfile = $mydir . $bigobjs_fn;
 $overlayfile = $mydir . $overlay_fn;
+$bigoverlayfile = $mydir . $bigoverlay_fn;
 $rdlsinfofile = $mydir . $rdlsinfo_fn;
 $wcsinfofile = $mydir . $wcsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
@@ -271,30 +274,37 @@ if (array_key_exists("email", $headers)) {
 	exit;
 }
 
-if ($overlay) {
-
-	//loggit("overlay image: " . $overlayfile . "\n");
-	//loggit("exists? " . (file_exists($overlayfile) ? "yes" : "no") . "\n");
-
-	if (!file_exists($overlayfile)) {
+if ($overlay || $bigoverlay) {
+	if (($overlay && !file_exists($overlayfile)) ||
+		($bigoverlay && !file_exists($bigoverlayfile))) {
+		$big = $bigoverlay;
 		// render it!
 		if (!$didsolve) {
 			die("Field didn't solve.");
 		}
-		$W = $jd["displayW"];
-		$H = $jd["displayH"];
+
+		if ($big) {
+			$W = $jd['imageW'];
+			$H = $jd['imageH'];
+			$shrink = 1;
+			$userimg = $mydir . "image.pnm";
+		} else {
+			$W = $jd['displayW'];
+			$H = $jd['displayH'];
+			$shrink = $jd["imageshrink"];
+			if (!$shrink)
+				$shrink = 1;
+			$userimg = $pnmimg;
+		}
 		if (!($W && $H)) {
 			// BACKWARDS COMPATIBILITY.
 			loggit("failed to find image display width and height.\n");
-			$W = $jd["imageW"];
-			$H = $jd["imageH"];
+			$W = $jd['imageW'];
+			$H = $jd['imageH'];
 			if (!($W && $H)) {
 				die("failed to find image width and height.\n");
 			}
 		}
-		$shrink = $jd["imageshrink"];
-		if (!$shrink)
-			$shrink = 1;
 
 		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
 		loggit("Command: " . $cmd . "\n");
@@ -321,15 +331,20 @@ if ($overlay) {
 			$fldxy[] = $y / $shrink;
 		}
 
-		$quadimg = $mydir . "quad.pgm";
-		$redquad = $mydir . "redquad.pgm";
-		$xypgm = $mydir . "index.xy.pgm";
-		$fldxy1pgm = $mydir . "fldxy1.pgm";
-		$fldxy2pgm = $mydir . "fldxy2.pgm";
-		$redimg = $mydir . "red.pgm";
-		$sumimg = $mydir . "sum.ppm";
-		$sumimg2 = $mydir . "sum2.ppm";
-		$dimimg = $mydir . "dim.ppm";
+		$prefix = $mydir;
+		if ($big) {
+			$prefix .= "big-";
+		}
+
+		$quadimg = $prefix . "quad.pgm";
+		$redquad = $prefix . "redquad.pgm";
+		$xypgm = $prefix . "index.xy.pgm";
+		$fldxy1pgm = $prefix . "fldxy1.pgm";
+		$fldxy2pgm = $prefix . "fldxy2.pgm";
+		$redimg = $prefix . "red.pgm";
+		$sumimg = $prefix . "sum.ppm";
+		$sumimg2 = $prefix . "sum2.ppm";
+		$dimimg = $prefix . "dim.ppm";
 
 		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
 		loggit("command: $cmd\n");
@@ -374,10 +389,11 @@ if ($overlay) {
 			die("pgmtoppm (xy) failed.");
 		}
 
-		$cmd = "ppmdim 0.75 " . $pnmimg . " > " . $dimimg;
+		$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
+		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
-			die("ppmdim failed.");
+			die("ppmdim failed: " . $res);
 		}
 
 		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
@@ -426,7 +442,12 @@ if ($overlay) {
 			die("pnmcomp (2) failed.");
 		}
 
-		$cmd = "pnmtopng " . $sumimg2 . " > " . $overlayfile;
+		$cmd = "pnmtopng " . $sumimg2 . " > ";
+		if ($big) {
+			$cmd .= $bigoverlayfile;
+		} else {
+			$cmd .= $overlayfile;
+		}
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($retval) {
@@ -434,12 +455,16 @@ if ($overlay) {
 		}
 	}
 
-	if (file_exists($overlayfile)) {
+	if ($overlay && file_exists($overlayfile)) {
 		header('Content-type: image/png');
 		readfile($overlayfile);
 		exit;
+	} else if ($bigoverlay && file_exists($bigoverlayfile)) {
+		header('Content-type: image/png');
+		readfile($bigoverlayfile);
+		exit;
 	} else
-		die("overlay file does not exist.");
+		die("(big)overlay file does not exist.");
 }
 
 if ($didsolve) {
@@ -496,6 +521,10 @@ form.c {margin-left:auto; margin-right:auto; text-align:center;}
 h3.c {text-align:center;}
 #fits2xylog {margin-left:auto; margin-right:auto; border-color:gray; border-style: double;}
 #overlay { margin-left:auto; margin-right:auto; text-align:center; }
+#overlay > a:link { color:white; }
+#overlay > a:visited { color:white; }
+#overlay > a:hover { color:gray; }
+#overlay > a:active { color:yellow; }
 #onsky { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky > a:link { color:white; }
 #onsky > a:visited { color:white; }
@@ -544,9 +573,17 @@ function print_link($f) {
 if ($img) {
 	echo "<h2>Source extraction:</h2>\n";
 	echo "<hr />\n";
-	echo '<p class="c"><img src="' . get_url($objsfile) . '" ';
-	echo 'alt="Your image, overlayed with the objects extracted" /></p>';
-	echo "<hr />\n";
+	echo '<p class="c">';
+	$big = (file_exists($bigobjsfile));
+	if ($big) {
+		echo '<a href="' . get_url($bigobjsfile) . '">';
+	}
+	echo '<img src="' . get_url($objsfile) . '" ';
+	echo 'alt="Your image, overlayed with the objects extracted" />';
+	if ($big) {
+		echo '</a>';
+	}
+	echo "</p><hr />\n";
 	echo '<form action="status.php" method="get" class="c">';
 	echo "\n";
 	echo "<p class=\"c\">\n";
@@ -681,11 +718,16 @@ if ($didsolve && file_exists($pnmimg)) {
 	echo "<br />Green circles: stars from the index, projected to image coordinates.\n";
 	echo "<br />Large red circles: field objects that were examined.\n";
 	echo "<br />Small red circles: field objects that were not examined.\n";
+	echo "<br />(click for full-size version)\n";
 	echo "</p>\n";
 	//Your field, overplotted with objects from the index.</p>\n";
+	echo "<a href=\"" .
+		"http://" . $host . $uri . htmlentities("/status.php?job=" . $myname . "&overlay-big") .
+		"\">\n";
 	echo "<img src=\"" .
 		"http://" . $host . $uri . htmlentities("/status.php?job=" . $myname . "&overlay") .
 		"\" alt=\"An image of your field, showing sources we extracted from the image and objects from our index.\"/>";
+	echo "</a>\n";
 	echo "</div>\n";
 	echo "<hr />\n";
 }
@@ -766,9 +808,17 @@ if ($job_queued) {
 }
 
 if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
-	echo "<tr><td>Extracted objects:</td><td>\n";
+	echo "<tr><td>Extracted sources:</td><td>\n";
 	print_link($xylist);
 	echo "</td></tr>\n";
+	echo "<tr><td>Source extraction image:</td><td>\n";
+	print_link($objsfile);
+	echo "</td></tr>\n";
+	if (file_exists($bigobjsfile)) {
+		echo "<tr><td>Source extraction image (full size):</td><td>\n";
+		print_link($bigobjsfile);
+		echo "</td></tr>\n";
+	}
 }
 
 if ($job_done) {
