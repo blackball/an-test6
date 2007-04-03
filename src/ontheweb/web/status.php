@@ -85,7 +85,7 @@ if ($cancel) {
 if ($goback) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$dir   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-	$uri  = $dir . "/index.php?";
+	$uri  = $dir . "/index.php";
 
 	$imgdir = "http://" . $host . $dir . "/status/" . $myname . "/";
 
@@ -102,7 +102,7 @@ if ($goback) {
 		$args .= "&skippreview=1";
 	}
 
-	header("Location: http://" . $host . $uri);
+	header("Location: http://" . $host . $uri . $args);
 	exit;
 }
 
