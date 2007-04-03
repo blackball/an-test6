@@ -28,6 +28,7 @@ include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.libtweak
 include $(COMMON)/makefile.libwcs
+include $(COMMON)/makefile.cairo
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -47,9 +48,6 @@ CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(LIBWCS_INC)
-
-CAIRO_INC := $(shell pkg-config --cflags cairo)
-CAIRO_LIB := $(shell pkg-config --libs cairo)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 

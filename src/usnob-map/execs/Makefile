@@ -14,8 +14,8 @@
 # along with the Astrometry.net suite ; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-BASEDIR := .
-COMMON := an-common
+BASEDIR := ../..
+COMMON := $(BASEDIR)/an-common
 
 .PHONY: all
 all:
@@ -26,6 +26,7 @@ include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.libtweak
+include $(COMMON)/makefile.cairo
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -37,13 +38,9 @@ CFLAGS += $(LIBKD_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
+CFLAGS  += $(CAIRO_INC)
 
-CFLAGS  += `pkg-config --cflags libpng`
-LDFLAGS += `pkg-config --libs   libpng`
-
-CFLAGS  += `pkg-config --cflags cairo`
-LDFLAGS += `pkg-config --libs   cairo`
-
+LDFLAGS += $(CAIRO_LIB)
 
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 

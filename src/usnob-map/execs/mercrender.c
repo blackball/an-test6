@@ -174,7 +174,7 @@ int add_star(double xp, double yp, double rflux, double bflux, double nflux,
 	int* dys[] = {dy0, dy1, dy2};
 	float* scales[] = {scale5x5gaussian, NULL, NULL};
 	float *scale;
-	int* dx,dy;
+	int *dx,*dy;
 	int ndrop,mindx,maxdx,mindy,maxdy;
 	int x,y,w,h,i;
 
