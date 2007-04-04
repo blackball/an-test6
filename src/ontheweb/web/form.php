@@ -2,6 +2,8 @@
 require_once 'HTML/QuickForm.php';
 require_once 'HTML/QuickForm/Renderer/QuickHtml.php';
 
+require_once 'svn.php';
+
 $maxfilesize = 100*1024*1024;
 umask(0002); // in octal
 
@@ -339,7 +341,13 @@ function process_data ($vals) {
 		$jobdata['fits-origname'] = $origname;
 	}
 
+	// Original submission date.
 	$jobdata['submit-date'] = get_datestr(time());
+
+	// Original subversion rev.
+	$jobdata['submit-svn-rev'] = get_svn_rev();
+	$jobdata['submit-svn-url'] = get_svn_url();
+	$jobdata['submit-svn-date'] = get_svn_date();
 
 	if (!setjobdata($db, $jobdata)) {
 		submit_failed($db, "Failed to save job parameters.");

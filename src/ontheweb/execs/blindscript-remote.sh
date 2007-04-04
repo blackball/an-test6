@@ -1,5 +1,9 @@
 #! /bin/bash
 
+# This script gets run by "watcher" when we are running in remote-compute-server mode.
+# It bundles up the input files, sends them over an ssh pipe, then extracts the result
+# files when the remote "blind" process is done.
+
 # input is a full path .../ontheweb-data/JOBID/input
 input=$1
 inputfile=$(basename $input)
