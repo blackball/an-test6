@@ -1,13 +1,16 @@
 <?php
 function get_svn_rev() {
-	return "$Revision$";
+	$rev = "$Revision$";
+	return substr($rev, strlen("$Revision: "), -(strlen("$Revision$")));
 }
 
 function get_svn_url() {
-	return "$URL$";
+	$url = "$URL$";
+	return substr($url, strlen("$URL: "), -(strlen("$URL$")));
 }
 
 function get_svn_date() {
-	return "$Date$";
+	$date = "$Date$";
+	return substr($date, strlen("$Date: "), -(strlen("$Date$")));
 }
 ?>
