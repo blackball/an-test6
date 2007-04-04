@@ -159,7 +159,9 @@ $form->addElement('submit', 'linkhere', 'Link to these parameter settings');
 
 //$form->addElement('submit', 'imagescale', 'Try to guess scale from image headers');
 
-$form->addElement('reset', 'reset', "Reset Form");
+//$form->addElement('reset', 'reset', "Reset Form");
+$form->addElement('submit', 'reset', "Reset Form");
+//$form->addElement('button', 'clear', "Clear Form", array(');
 
 $form->setMaxFileSize($maxfilesize);
 
@@ -184,6 +186,12 @@ if ($form->exportValue("linkhere")) {
 	$vals = $form->exportValues();
 	$args = format_preset_url_from_form($vals, $formDefaults);
 	header("Location: http://" . $host . $myuri . $args);
+	exit;
+}
+
+if ($form->exportValue("reset")) {
+	// come back with no args!
+	header("Location: http://" . $host . $myuri);
 	exit;
 }
 
