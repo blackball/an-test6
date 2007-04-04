@@ -767,6 +767,14 @@ echo $myname
 <?php
 echo $status . "</td></tr>\n";
 
+if (!$job_submitted) {
+	// Why?
+	$reason = $jd['submit-failure'];
+	if ($reason) {
+		echo '<tr><td>Failure reason:</td><td>' . $reason . '</td></tr>' . "\n";
+	}
+}
+
 if ($job_done) {
 	echo '<tr><td>Field Solved:</td><td>';
 	if (strlen($msg)) {

@@ -38,10 +38,13 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 			// skip the "source extraction" preview, just start crunching!
 			loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
 			if ($imgfilename) {
+				// HACK - pause for watcher...
+				sleep(1);
 				if (!rename($inputtmpfile, $inputfile)) {
-					die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+					loggit("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+					submit_failed($db, "Failed to rename input file for the blind solver.");
 				}
-				loggit("renamed $inputtmpfile to $inputfile_orig.\n");
+				//loggit("renamed $inputtmpfile to $inputfile_orig.\n");
 			}
 			// Just write the jobid.
 			header('Content-type: text/plain');
@@ -64,9 +67,12 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	if ($emailver) {
 		loggit("Email version.\n");
 
-		// Rename the input file so the watcher grabs it.
+		// Rename the input file so the watcher grabs it...
+		// HACK - after waiting for the watcher.
+		sleep(1);
 		if (!rename($inputtmpfile, $inputfile)) {
-			die("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+			loggit("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+			submit_failed($db, "Failed to rename input file for the blind solver.");
 		}
 		loggit("Renamed $inputtmpfile to $inputfile.\n");
 
@@ -116,7 +122,7 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 		}
 
 		if (!mail("", $subject, $message, $headers)) {
-			die("Failed to send email.\n");
+			submit_failed($db, "Failed to send email.");
 		}
 		loggit("Sent 'submitted' email.\n");
 		exit;

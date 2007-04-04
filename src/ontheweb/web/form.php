@@ -207,6 +207,13 @@ if ($form->exportValue("submit") && $form->validate()) {
 render_form($form, $ids, $headers);
 exit;
 
+function submit_failed($jobdb, $msg) {
+	if (!setjobdata($jobdb, array('submit-failure' => $msg))) {
+		loggit("submit_failed: failed to save submit-failure in jobdb.\n");
+	}
+	loggit("Submit failed: " . $msg . "\n");
+	die("Submit failed: " . $msg);
+}
 
 // Handle a valid submitted form.
 function process_data ($vals) {
@@ -263,12 +270,6 @@ function process_data ($vals) {
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
 
-	if ($xysrc == 'url') {
-		if (!validate_url($imgurl)) {
-			die("Invalid url.");
-		}
-	}
-
 	// Create a directory for this request.
 	$myname = create_random_dir($resultdir);
 	if (!$myname) {
@@ -310,11 +311,21 @@ function process_data ($vals) {
 		if ($vals[$fld])
 			$jobdata[$fld] = $vals[$fld];
 	}
-	if (!setjobdata($db, $jobdata)) {
-		die("failed to set job values.");
+
+	// Filenames on the user's machine of uploaded files.
+	if ($xysrc == 'img') {
+		$imgval = $imgfile->getValue();
+		$origname = $imgval['name'];
+		$jobdata['image-origname'] = $origname;
+	} else if ($xysrc == 'fits') {
+		$fitsval = $fitsfile->getValue();
+		$origname = $fitsval['name'];
+		$jobdata['fits-origname'] = $origname;
 	}
-	loggit("created db " . $dbpath . "\n");
-	//loggit("xysrc: " . $xysrc . "\n");
+
+	if (!setjobdata($db, $jobdata)) {
+		submit_failed($db, "Failed to save job parameters.");
+	}
 
 	$msg = "Job " . $myname . ": received:\n";
 	$desc = describe_job($jobdata, TRUE);
@@ -325,7 +336,6 @@ function process_data ($vals) {
 
 	$imgfilename = "";
 	$imgbasename = "";
-	//$origname = "";
 
 	// Pixel scales to try.
 	$tryscales = array();
@@ -338,21 +348,15 @@ function process_data ($vals) {
 		$imgfilename = $downloadedimg;
 		loggit("Writing to file: " . $downloadedimg . "\n");
 		if (download_url($imgurl, $downloadedimg, $maxfilesize, $errmsg) === FALSE) {
-			die("Failed to download image: " . $errmsg);
+			submit_failed($db, "Failed to download image: " . $errmsg);
 		}
 
 	} else if ($xysrc == "img") {
 		// If an image was uploaded, move it into place.
-		// The filename on the user's machine:
-		$imgval = $imgfile->getValue();
-		$origname = $imgval["name"];
-		if (!setjobdata($db, array("image-origname"=>$origname))) {
-			die("failed to update jobdata: image-origname");
-		}
 		$imgbasename = "uploaded.";
 		$imgfilename = $mydir . $imgbasename;
 		if (!$imgfile->moveUploadedFile($mydir, $imgbasename)) {
-			die("failed to move uploaded file into place.");
+			submit_failed($db, "Failed to move uploaded image into place");
 		}
 
 	}
@@ -361,6 +365,7 @@ function process_data ($vals) {
 	$scaleguess = array();
 	if ($imgfilename) {
 		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db, $scaleguess)) {
+			submit_failed($db, "Failed to run source extraction: " . $errstr);
 			die($errstr);
 		}
 		$imgfilename = $mydir . $imgbasename;
@@ -380,18 +385,11 @@ function process_data ($vals) {
 	$xylsinfofile = $mydir . $xylsinfo_fn;
 
 	if ($xysrc == "fits") {
-		// If a FITS bintable file was uploaded:
-		// -grab the filename it had on the user's machine:
-		$fitsval = $fitsfile->getValue();
-		$origname = $fitsval["name"];
-		if (!setjobdata($db, array("fits-origname"=>$origname))) {
-			die("failed to update jobdata: fits-origname");
-		}
-		// -move it into place...
+		// If a FITS bintable file was uploaded, move it into place...
 		$uploaded_fn = "uploaded.fits";
 		$uploaded = $mydir . $uploaded_fn;
 		if (!$fitsfile->moveUploadedFile($mydir, $uploaded_fn)) {
-			die("failed to move uploaded FITS file into place.");
+			submit_failed($db, "Failed to move uploaded FITS file into place.");
 		}
 		// use "fitscopy" to grab the first extension and rename the
 		// columns from whatever they were to X,Y.
@@ -401,7 +399,7 @@ function process_data ($vals) {
 		$res = system($cmd, $retval);
 		if ($retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			die("failed to run command: " . $cmd . "\n");
+			submit_failed($db, "Failed to extract the pixel coordinate columns from your FITS file.");
 		}
 
 		// Try to get the size of the image...
@@ -410,10 +408,11 @@ function process_data ($vals) {
 		$res = system($cmd, $retval);
 		if ($retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			die("failed to run command: " . $cmd . "\n");
+			submit_failed($db, "Failed to find the bounds of your field.");
 		}
 		if (!file_exists($xylsinfofile)) {
-			die("xylsinfo file " . $xylsinfofile . " does not exist.");
+			loggit("xylsinfo file " . $xylsinfofile . " does not exist.");
+			submit_failed($db, "Failed to find the bounds of your field (2).");
 		}
 		$info = file($xylsinfofile);
 		foreach ($info as $str) {
@@ -423,38 +422,15 @@ function process_data ($vals) {
 		$W = $infomap["width"];
 		$H = $infomap["height"];
 		if (!setjobdata($db, array('xylsW'=>$W, 'xylsH'=>$H))) {
-			die("failed to save xyls W,H in database.");
+			submit_failed($db, "Failed to save the bounds of your field.");
 		}
 		loggit("found xyls width and height " . $W . ", " . $H . "\n");
 	}
 
 	// FIXME - do we need to do this??
 	if (!chmod($xylist, 0664)) {
-		die("Failed to chmod xylist " . $xylist);
+		submit_failed($db, "Failed to chmod xylist.");
 	}
-
-	$inputfile = $mydir . $input_fn;
-	$inputtmpfile = $mydir . $inputtmp_fn;
-	$donescript = $mydir . $donescript_fn;
-	$donefile = $mydir . $done_fn;
-
-	$index = $vals["index"];
-	$parity = $vals["parity"];
-	$tweak = $vals["tweak"];
-	$poserr = $vals["poserr"];
-
-	$codetol = 0.01;
-
-	$inputfile_orig = $inputfile;
-	if ($imgfilename) {
-		// Write to "input.tmp" instead of "input", so we don't trigger
-		// the solver just yet...
-		$inputfile = $inputtmpfile;
-	}
-
-	// MAJOR HACK - pause to let the watcher notice that the
-	// new directory was created.
-	sleep(1);
 
 	$fstype = $vals["fstype"];
 	$fsunit = $vals["fsunit"];
@@ -463,11 +439,10 @@ function process_data ($vals) {
 	$fse = $vals["fse"];
 	$fsv = $vals["fsv"];
 
-	loggit("fsu $fsu, fsl $fsl, fse $fse, fsv $fsv\n");
+	//loggit("fsu $fsu, fsl $fsl, fse $fse, fsv $fsv\n");
 
 	if ($fstype == "ev") {
 		// Estimate/Variance given - convert to lower/upper.
-		// FIXME - is this the right way to do this?
 		$fsu = $fse * (1 + $fsv/100);
 		$fsl = $fse * (1 - $fsv/100);
 	}
@@ -502,16 +477,18 @@ function process_data ($vals) {
 	loggit("Computed field unit bounds [" . $fu_lower . ", " . $fu_upper . "]\n");
 
 	if (($fu_upper == 0.0) || ($fu_lower == 0.0)) {
-		die("Field scale lower or upper bound is zero: " . $fu_lower . ", " . $fu_upper . "\n");
+		submit_failed($db, "Field scale lower or upper bound is zero: " . $fu_lower . ", " . $fu_upper);
 	}
 
 	array_push($tryscales, array($fu_lower, $fu_upper));
+
+	$index = $vals["index"];
 
 	if ($index == 'auto') {
 		// Estimate size of quads we could find:
 		$fmax = 0.5  * min($W, $H) * $fu_upper / 60.0;
 		$fmin = 0.1 * min($W, $H) * $fu_lower / 60.0;
-		loggit("W=$W, H=$H, min(W,H)=" . min($W,$H) . ", fu_upper=$fu_upper.\n");
+		//loggit("W=$W, H=$H, min(W,H)=" . min($W,$H) . ", fu_upper=$fu_upper.\n");
 		loggit("Collecting indexes with quads in range [" . $fmin . ", " . $fmax . "] arcmin.\n");
 
 		foreach ($indexdata as $k => $v) {
@@ -551,6 +528,27 @@ function process_data ($vals) {
 		$indexpaths = array_merge($indexpaths, $indexmap[$i]);
 	}
 	$indexes = $indexpaths;
+
+	$inputfile = $mydir . $input_fn;
+	$inputtmpfile = $mydir . $inputtmp_fn;
+	$donescript = $mydir . $donescript_fn;
+	$donefile = $mydir . $done_fn;
+
+	$parity = $vals["parity"];
+	$tweak = $vals["tweak"];
+	$poserr = $vals["poserr"];
+	$codetol = 0.01;
+
+	$inputfile_orig = $inputfile;
+	if ($imgfilename) {
+		// Write to "input.tmp" instead of "input", so we don't trigger
+		// the solver just yet...
+		$inputfile = $inputtmpfile;
+	} else {
+		// MAJOR HACK - pause to let the watcher notice that the
+		// new directory was created before writing to the input file.
+		sleep(1);
+	}
 
 	// Write the input file for blind...
 	$fin = fopen($inputfile, "w");
@@ -621,7 +619,7 @@ function process_data ($vals) {
 	fprintf($fin, "%s", $str);
 
 	if (!fclose($fin)) {
-		die("failed to write blind input file.");
+		submit_failed($db, "Failed to write input file for the blind solver.");
 	}
 
 	loggit("Wrote blind input file: " . $inputfile . "\n");
@@ -629,7 +627,8 @@ function process_data ($vals) {
 	// Write the donescript: executed by "watcher" (via blindscript) after blind completes.
 	$fdone = fopen($donescript, "w");
 	if (!$fdone) {
-		die("Failed to write donescript " . $donescript);
+		loggit("Failed to write donescript " . $donescript);
+		submit_failed($db, "Failed to write the script for the blind solver.");
 	}
 	$str = 
 		"#! /bin/bash\n" .
@@ -684,10 +683,12 @@ function process_data ($vals) {
 	fprintf($fdone, "%s", $str);
 
 	if (!fclose($fdone)) {
-		die("Failed to close donescript " . $donescript);
+		loggit("Failed to close donescript " . $donescript);
+		submit_failed($db, "Failed to write the script for the blind solver (2).");
 	}
 	if (!chmod($donescript, 0775)) {
-		die("Failed to chmod donescript " . $donescript);
+		loggit("Failed to chmod donescript " . $donescript);
+		submit_failed($db, "Failed to write the script for the blind solver (3).");
 	}
 
 	after_submitted($imgfilename, $myname, $mydir, $vals, $db);
@@ -937,7 +938,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			loggit("Command: " . $cmd . "\n");
 			if (system($cmd, $retval)) {
 				loggit("Command failed, return value " . $retval . ": " . $cmd);
-				die("failed to decompress image");
+				$errstr = "Failed to decompress image (" . $phrase . ")";
+				return FALSE;
 			}
 			$addsuffix = $suff;
 			$filename = $newfilename;
@@ -975,7 +977,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 				loggit("Command: " . $cmd . "\n");
 				if ((system($cmd, $retval) === FALSE) || $retval) {
 					loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
-					die("failed to fix your FITS file: <pre>" . file_get_contents($outfile) . "</pre>");
+					$errstr = "Failed to fix your FITS file: \"" . file_get_contents($outfile) . "\"";
+					return FALSE;
 				}
 				$filename = $filtered_fits;
 
@@ -1002,7 +1005,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			loggit("Command: " . $cmd . "\n");
 			if ((system($cmd, $retval) === FALSE) || $retval) {
 				loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
-				die("failed to convert image: <pre>" . file_get_contents($outfile) . "</pre>");
+				$errstr = "Failed to convert your image: \"" . file_get_contents($outfile) . "\"";
+				return FALSE;
 			}
 			$addsuffix = $suff . $addsuffix;
 			$imgtype = $suff;
@@ -1011,7 +1015,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		}
 	}
 	if (!$gotit) {
-		die("Unknown image type: " . $typestr);
+		$errstr = "Unknown image type: the \"file\" program says: \"" . $typestr . "\"";
+		return FALSE;
 	}
 	loggit("found image type " . $imgtype . "\n");
 
@@ -1020,7 +1025,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	loggit("Command: " . $cmd . "\n");
 	$res = shell_exec($cmd);
 	if (!$res) {
-		die("pnmfile failed.");
+		$errstr = "pnmfile failed.";
+		return FALSE;
 	}
 	//loggit("Pnmfile: " . $res . "\n");
 
@@ -1059,11 +1065,11 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		$pgmimg = $mydir . "image.pgm";
 		$cmd = "ppmtopgm " . $pnmimg . " > " . $pgmimg;
 		loggit("Command: " . $cmd . "\n");
-		$res = FALSE;
 		$res = system($cmd, $retval);
-		if ($retval) {
+		if (($res === FALSE) || $retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			die("Failed to reduce image to grayscale.");
+			$errstr = "Failed to reduce your image to grayscale.";
+			return FALSE;
 		}
 		$pnmimg = $pgmimg;
 	}
@@ -1074,11 +1080,11 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		$fitsimg = $mydir . "image.fits";
 		$cmd = "pnmtofits " . $pnmimg . " > " . $fitsimg;
 		loggit("Command: " . $cmd . "\n");
-		$res = FALSE;
 		$res = system($cmd, $retval);
-		if ($retval) {
+		if (($res === FALSE) || $retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			die("Failed to convert image to FITS.");
+			$errstr = "Failed to convert your image to a FITS image.";
+			return FALSE;
 		}
 	}
 
@@ -1088,11 +1094,10 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$fits2xyout = $mydir . $fits2xyout_fn;
 	$cmd = $fits2xy . " " . $fitsimg . " > " . $fits2xyout . " 2>&1";
 	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
 	$res = system($cmd, $retval);
-	if ($retval) {
+	if (($res === FALSE) || $retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to perform source extraction.";
+		$errstr = "Failed to perform source extraction: \"" . file_get_contents($fits2xyout) . "\"";
 		return FALSE;
 	}
 
@@ -1101,11 +1106,10 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$sortedlist = $mydir . "field.xy.fits";
 	$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
 	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
 	$res = system($cmd, $retval);
-	if ($retval) {
+	if (($res === FALSE) || $retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-		$errstr = "Failed to perform source extraction.";
+		$errstr = "Failed to sort the extracted sources by brightness";
 		return FALSE;
 	}
 	$xylist = $sortedlist;
@@ -1236,7 +1240,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$oldname = $mydir . $basename;
 	$newname = $mydir . $basename . $addsuffix;
 	if (!rename($oldname, $newname)) {
-		die("failed to rename img file.");
+		$errstr = "Failed to rename image file.";
+		return FALSE;
 	}
 	loggit("Renamed image file " . $oldname . " to " . $newname . "\n");
 	$basename .= $addsuffix;
@@ -1244,7 +1249,8 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 	// Save all the things we discovered about the img.
 	if (!setjobdata($db, $newjd)) {
-		die("failed to save image jobdata.");
+		$errstr = "Failed to save image parameters.";
+		return FALSE;
 	}
 
 	return TRUE;

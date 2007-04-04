@@ -396,7 +396,7 @@ function getalljobdata($db, $quiet=FALSE) {
 
 function setjobdata($db, $vals) {
 	foreach ($vals as $key => $val) {
-		$q = 'REPLACE INTO jobdata VALUES ("' . $key . '", "' . $val . '");';
+		$q = "REPLACE INTO jobdata VALUES ('" . $key . "', '" . $db->escape($val, TRUE) . "');";
 		loggit("Query: " . $q . "\n");
 		$res =& $db->exec($q);
 		if (PEAR::isError($res)) {
