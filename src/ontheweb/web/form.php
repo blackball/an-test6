@@ -159,9 +159,7 @@ $form->addElement('submit', 'linkhere', 'Link to these parameter settings');
 
 //$form->addElement('submit', 'imagescale', 'Try to guess scale from image headers');
 
-//$form->addElement('reset', 'reset', "Reset Form");
 $form->addElement('submit', 'reset', "Reset Form");
-//$form->addElement('button', 'clear', "Clear Form", array(');
 
 $form->setMaxFileSize($maxfilesize);
 
@@ -189,6 +187,9 @@ if ($form->exportValue("linkhere")) {
 	exit;
 }
 
+// Handle "reset" button.  (We can't just use a normal HTML reset button because if
+// the URL has GET params, these become the form defaults and a normal Reset button
+// just resets to those values.)
 if ($form->exportValue("reset")) {
 	// come back with no args!
 	header("Location: http://" . $host . $myuri);
