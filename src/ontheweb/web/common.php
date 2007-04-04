@@ -271,10 +271,10 @@ function describe_job($jd, $user=FALSE) {
 	$strs['Index'] = $jd['index'];
 	switch ($jd['parity']) {
 	case '0':
-		$strs['Parity'] = 'Right-handed';
+		$strs['Parity'] = 'Positive';
 		break;
 	case '1':
-		$strs['Parity'] = 'Left-handed';
+		$strs['Parity'] = 'Negative';
 		break;
 	case '2':
 		$strs['Parity'] = 'Try both';

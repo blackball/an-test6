@@ -136,9 +136,9 @@ $form->addElement('text', 'fsv', 'field scale (variance (%))',
 
 $form->addElement('select', 'fsunit', 'units', $unitmap, null);
 
-$form->addElement('radio', 'parity', "Try both handednesses", null, 2);
-$form->addElement('radio', 'parity', "Right-handed image", null, 0);
-$form->addElement('radio', 'parity', "Left-handed image", null, 1);
+$form->addElement('radio', 'parity', "Try both parities", null, 2);
+$form->addElement('radio', 'parity', "Positive parity image", null, 0);
+$form->addElement('radio', 'parity', "Negative parity image", null, 1);
 
 $form->addElement('text', 'poserr', "star positional error (pixels)", array('size' => 5));
 
