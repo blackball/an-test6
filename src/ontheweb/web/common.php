@@ -132,7 +132,7 @@ if (strpos($host, "monte") === 0) {
 
 $headers = $_REQUEST;
 
-$ontheweblogfile = "/tmp/ontheweb.log";
+$ontheweblogfile = "/home/gmaps/ontheweb-data/ontheweb.log";
 function loggit($mesg) {
 	global $ontheweblogfile;
 	error_log($mesg, 3, $ontheweblogfile);
@@ -143,7 +143,7 @@ function fail($msg) {
 	die($msg);
 }
 
-$highlevellogfile = "/tmp/highlevel.log";
+$highlevellogfile = "/home/gmaps/ontheweb-data/highlevel.log";
 function highlevellog($msg) {
 	global $highlevellogfile;
 	error_log($msg, 3, $highlevellogfile);
