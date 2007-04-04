@@ -16,7 +16,7 @@
  * Mike Blanton
  * 1/2006 */
 
-#define PI 3.14159265358979
+#define PI M_PI
 
 #define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 

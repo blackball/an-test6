@@ -23,7 +23,7 @@ float dselip(unsigned long k, unsigned long n, float *arr)
 			free(past_data);
 		past_data = malloc(sizeof(float)*n);
 		high_water_mark = n;
-		printf("dselip watermark=%lu\n",n);
+		//printf("dselip watermark=%lu\n",n);
 	}
 	RadixSort11(arr, past_data, n);
 	return past_data[k];
@@ -45,7 +45,7 @@ float dselip2(unsigned long k, unsigned long n, float *arr)
 		printf("bad input to selip");
 		exit(1);
 	}
-	printf("dselip: k=%lu n=%lu\n",k,n);
+	//printf("dselip: k=%lu n=%lu\n",k,n);
 	isel = malloc(sizeof(unsigned long) * (M + 2));
 	sel = malloc(sizeof(float) * (M + 2));
 	kk = k + 1;

@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <unistd.h>
 
 #include "fitsio.h"
 #include "dimage.h"
@@ -12,7 +16,7 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
-static const char* OPTIONS = "hp";
+static const char* OPTIONS = "hpO";
 
 void printHelp() {
 	fprintf(stderr,
@@ -21,6 +25,7 @@ void printHelp() {
 			"Read a FITS file, find objects, and write out \n"
 			"X, Y, FLUX to   fitsname.xy.fits .\n"
 			"\n"
+			"   [-O]  overwrite existing output file.\n"
 			"   [-p]  compute image percentiles.\n"
 			"\n"
 			"   fits2xy 'file.fits[1]'   - process first extension.\n"
@@ -55,7 +60,6 @@ int main(int argc, char *argv[])
 	int naxis;
 	int maxnpeaks = MAXNPEAKS, npeaks;
 	long naxisn[2];
-	long fpixel[2] = {1L, 1L};
 	int kk, jj;
 	float *thedata = NULL;
 	float sigma;
@@ -63,6 +67,7 @@ int main(int argc, char *argv[])
 	char* infn;
 	int nhdus,maxper,hdutype,nimgs;
 	float dpsf,plim,dlim,saddle;
+	int overwrite = 0;
 
 	if (!((argc == 2) || (argc == 3))) {
 		printHelp();
@@ -73,6 +78,9 @@ int main(int argc, char *argv[])
         switch (argchar) {
 		case 'p':
 			percentiles = 1;
+			break;
+		case 'O':
+			overwrite = 1;
 			break;
 		case '?':
 		case 'h':
@@ -100,6 +108,18 @@ int main(int argc, char *argv[])
 	// Create xylist filename (by trimming '.fits')
 	snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", strlen(infn)-5, infn);
 	fprintf(stderr, "outfile=%s\n",outfile);
+
+	if (overwrite) {
+		struct stat st;		
+		if (stat(outfile, &st) == 0) {
+			fprintf(stderr, "Deleting existing output file \"%s\"...\n", outfile);
+			if (unlink(outfile)) {
+				fprintf(stderr, "Failed to delete existing output file \"%s\": %s\n",
+						outfile, strerror(errno));
+				exit(-1);
+			}
+		}
+	}
 
 	// Create output file
 	if (fits_create_file(&ofptr, outfile, &status)) {
@@ -132,7 +152,6 @@ int main(int argc, char *argv[])
 		"Visit us on the web at http://astrometry.net/",
 		&status);
 	assert(!status);
-	assert(!status);
 
 	nimgs = 0;
 
@@ -141,6 +160,8 @@ int main(int argc, char *argv[])
 		char* ttype[] = {"X","Y","FLUX"};
 		char* tform[] = {"E","E","E"};
 		char* tunit[] = {"pix","pix","unknown"};
+		long* fpixel;
+		int a;
 
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
@@ -166,14 +187,27 @@ int main(int argc, char *argv[])
 
 		fprintf(stderr,"Got naxis=%d,na1=%lu,na2=%lu\n", naxis,naxisn[0],naxisn[1]);
 
+		if (naxis > 2) {
+			fprintf(stderr, "NAXIS > 2: processing the first image plane only.\n");
+		}
+
 		thedata = malloc(naxisn[0] * naxisn[1] * sizeof(float));
 		if (thedata == NULL) {
 			fprintf(stderr, "Failed allocating data array.\n");
 			exit( -1);
 		}
 
+		fpixel = malloc(naxis * sizeof(long));
+		for (a=0; a<naxis; a++)
+			fpixel[a] = 1;
 		fits_read_pix(fptr, TFLOAT, fpixel, naxisn[0]*naxisn[1], NULL, thedata,
-			      NULL, &status);
+					  NULL, &status);
+		free(fpixel);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
 
 		x = malloc(maxnpeaks * sizeof(float));
 		y = malloc(maxnpeaks * sizeof(float));
@@ -182,9 +216,9 @@ int main(int argc, char *argv[])
 			exit( -1);
 		}
 		flux = malloc(maxnpeaks * sizeof(float));
-		simplexy( thedata, naxisn[0], naxisn[1],
-				dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-				&sigma, x, y, flux, &npeaks);
+		simplexy(thedata, naxisn[0], naxisn[1],
+				 dpsf, plim, dlim, saddle, maxper, maxnpeaks,
+				 &sigma, x, y, flux, &npeaks);
 
 		fprintf(stderr, "sigma=%g\n", sigma);
 
@@ -199,33 +233,77 @@ int main(int argc, char *argv[])
 
 		fits_create_tbl(ofptr, BINARY_TBL, npeaks, 3, ttype,tform,
 				tunit, "SOURCES", &status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_write_col(ofptr, TFLOAT, 1, 1, 1, npeaks, x, &status);
-		fits_report_error(stderr, status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_write_col(ofptr, TFLOAT, 2, 1, 1, npeaks, y, &status);
-		fits_report_error(stderr, status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_write_col(ofptr, TFLOAT, 3, 1, 1, npeaks, flux, &status);
-		fits_report_error(stderr, status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
 
 		fits_modify_comment(ofptr, "TTYPE1", "X coordinate", &status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_modify_comment(ofptr, "TTYPE2", "Y coordinate", &status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_modify_comment(ofptr, "TTYPE3", "Flux of source", &status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+
 		fits_write_key(ofptr, TINT, "SRCEXT", &kk,
 				"Extension number in src image", &status);
-		assert(!status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
 		fits_write_key(ofptr, TFLOAT, "ESTSIGMA", &sigma,
 				"Estimated source image variance", &status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
 		fits_write_comment(ofptr,
 			"The X and Y points are specified assuming 1,1 is "
 			"the center of the leftmost bottom pixel of the "
 			"image in accordance with the FITS standard.", &status);
-		assert(!status);
-
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
 
 		if (percentiles) {
 			// the number of pixels around the margin of the image to avoid.
@@ -277,16 +355,26 @@ int main(int argc, char *argv[])
 	fits_movabs_hdu(ofptr, 1, &hdutype, &status);
 	assert(hdutype == IMAGE_HDU);
 	fits_write_key(ofptr, TINT, "NEXTEND", &nimgs, "Number of extensions", &status);
-	assert(!status);
-
 	if (status == END_OF_FILE)
 		status = 0; /* Reset after normal error */
+	if (status) {
+		fits_report_error(stderr, status);
+		assert(!status);
+		exit(-1);
+	}
 
 	fits_close_file(fptr, &status);
+	if (status) {
+		fits_report_error(stderr, status);
+		assert(!status);
+		exit(-1);
+	}
 	fits_close_file(ofptr, &status);
+	if (status) {
+		fits_report_error(stderr, status);
+		assert(!status);
+		exit(-1);
+	}
 
-
-	if (status)
-		fits_report_error(stderr, status); /* print any error message */
-	return (status);
+	return 0;
 }

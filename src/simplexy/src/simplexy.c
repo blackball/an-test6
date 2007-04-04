@@ -20,7 +20,7 @@ static float *simage = NULL;
 static int *oimage = NULL;
 static float *smooth = NULL;
 
-#define PI 3.14159265358979
+#define PI M_PI
 
 #define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
@@ -43,10 +43,10 @@ int simplexy(float *image,
 	float minpeak;
 	int i, j;
 
-    printf("simplexy: nx=%d, ny=%d\n",nx,ny);
-    printf("simplexy: dpsf=%f, plim=%f, dlim=%f\n",dpsf,plim,dlim);
-    printf("simplexy: saddle=%f\n",saddle);
-    printf("simplexy: maxper=%d, maxnpeaks=%d\n",maxper, maxnpeaks);
+    fprintf(stderr, "simplexy: nx=%d, ny=%d\n",nx,ny);
+    fprintf(stderr, "simplexy: dpsf=%f, plim=%f, dlim=%f\n",dpsf,plim,dlim);
+    fprintf(stderr, "simplexy: saddle=%f\n",saddle);
+    fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d\n",maxper, maxnpeaks);
 
 	/* determine sigma */
 	dsigma(image, nx, ny, 5, sigma);
