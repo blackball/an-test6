@@ -409,6 +409,12 @@ function process_data ($vals) {
 		if (!$fitsfile->moveUploadedFile($mydir, $uploaded_fn)) {
 			submit_failed($db, "Failed to move uploaded FITS file into place.");
 		}
+
+		// make original table read-only.
+		if (!chmod($uploaded, 0440)) {
+			loggit("Failed to chmod FITS table " . $uploaded . "\n");
+		}
+
 		// use "fitscopy" to grab the first extension and rename the
 		// columns from whatever they were to X,Y.
 		$cmd = $fitscopy . " " . $uploaded . "\"[1][col X=" . $jobdata['x_col'] .
@@ -447,7 +453,8 @@ function process_data ($vals) {
 
 	// FIXME - do we need to do this??
 	if (!chmod($xylist, 0664)) {
-		submit_failed($db, "Failed to chmod xylist.");
+		//submit_failed($db, "Failed to chmod xylist.");
+		loggit("Failed to chmod xylist " . $xylist . "\n");
 	}
 
 	$fstype = $vals["fstype"];
@@ -1264,6 +1271,11 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	loggit("Renamed image file " . $oldname . " to " . $newname . "\n");
 	$basename .= $addsuffix;
 	$newjd['imagefilename'] = $basename;
+
+	// make original image read-only.
+	if (!chmod($newname, 0440)) {
+		loggit("Failed to chmod image " . $newname . "\n");
+	}
 
 	// Save all the things we discovered about the img.
 	if (!setjobdata($db, $newjd)) {
