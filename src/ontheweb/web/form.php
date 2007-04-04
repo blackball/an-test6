@@ -10,6 +10,39 @@ $myuri  = $_SERVER['PHP_SELF'];
 $myuridir = rtrim(dirname($myuri), '/\\');
 $debug = 0;
 
+$indexdata =
+array('60degree' => array('desc' => '60-degree Fields',
+						  'quadsize' => array(900, 1800),
+						  'paths' => array('allsky-44/allsky-44')),
+	  '30degree' => array('desc' => '30-degree Fields',
+						  'quadsize' => array(400, 900),
+						  'paths' => array('allsky-43/allsky-43')),
+	  '15degree' => array('desc' => '15-degree Fields',
+						  'quadsize' => array(200, 400),
+						  'paths' => array('allsky-40/allsky-40')),
+	  '8degree' => array('desc' => '8-degree Fields',
+						 'quadsize' => array(120, 180),
+						 'paths' => array('allsky-38/allsky-38')),
+	  '4degree' => array('desc' => '4-degree Fields',
+						 'quadsize' => array(60, 90),
+						 'paths' => array('allsky-34/allsky-34')),
+	  '2degree' => array('desc' => '2-degree Fields',
+						 'quadsize' => array(32, 40),
+						 'paths' => array('allsky-37/allsky-37')),
+	  '1degree' => array('desc' => '1-degree Fields',
+						 'quadsize' => array(16, 20),
+						 'paths' => array('allsky-32/allsky-32')),
+	  '30arcmin' => array('desc' => '30-arcminute Fields',
+						  'quadsize' => array(8, 10),
+						  'paths' => array('allsky-31/allsky-31')),
+	  '12arcmin' => array('desc' => '12-arcmin Fields (eg, Sloan Digital Sky Survey)',
+						  'quadsize' => array(4, 5),
+						  'paths' => array('sdss-23/sdss-23-allsky')),
+	  );
+
+$largest_index = '60degree';
+$smallest_index = '12arcmin';
+
 // Set up PEAR error handling.
 function printerror($err) {
 	echo $err->getMessage() . "<br>";
@@ -109,17 +142,11 @@ $form->addElement('radio', 'parity', "Left-handed image", null, 1);
 
 $form->addElement('text', 'poserr', "star positional error (pixels)", array('size' => 5));
 
-$indexes = array('auto' => "Automatic (based on image scale)",
-				 "12arcmin" => "12-arcmin Fields (eg, Sloan Digital Sky Survey)",
-				 "30arcmin" => "30-arcminute Fields",
-				 "1degree" => "1-degree Fields",
-				 "2degree" => "2-degree Fields",
-				 "4degree" => "4-degree Fields",
-				 "8degree" => "8-degree Fields",
-				 "15degree" => "15-degree Fields",
-				 "30degree" => "30-degree Fields",
-				 "60degree" => "60-degree Fields",
-				 );
+// Pull out the descriptions of the indexes.
+$indexes['auto'] = 'Automatic (based on image scale)';
+foreach ($indexdata as $k => $v) {
+	$indexes[$k] = $v['desc'];
+}
 
 $form->addElement('text', 'uname', "your name", array('size'=>40));
 $form->addElement('text', 'email', "email address", array('size'=>40));
@@ -207,12 +234,10 @@ function process_data ($vals) {
 	global $xylsinfo_fn;
 	global $rdls_fn;
 	global $rdlsinfo_fn;
-
 	global $match_fn;
 	global $match_pat;
 	global $indexrdls_fn;
 	global $indexrdls_pat;
-
 	global $solved_fn;
 	global $cancel_fn;
 	global $wcs_fn;
@@ -230,8 +255,10 @@ function process_data ($vals) {
 	global $fitsgetext;
 	global $fitscopy;
 	global $tabsort;
-
 	global $ontheweblogfile;
+	global $indexdata;
+	global $largest_index;
+	global $smallest_index;
 
 	$xysrc = $vals["xysrc"];
 	$imgurl = $vals["imgurl"];
@@ -478,39 +505,18 @@ function process_data ($vals) {
 		die("Field scale lower or upper bound is zero: " . $fu_lower . ", " . $fu_upper . "\n");
 	}
 
-
 	array_push($tryscales, array($fu_lower, $fu_upper));
 
-
-	if ($index == "auto") {
+	if ($index == 'auto') {
 		// Estimate size of quads we could find:
 		$fmax = 0.5  * min($W, $H) * $fu_upper / 60.0;
 		$fmin = 0.1 * min($W, $H) * $fu_lower / 60.0;
 		loggit("W=$W, H=$H, min(W,H)=" . min($W,$H) . ", fu_upper=$fu_upper.\n");
 		loggit("Collecting indexes with quads in range [" . $fmin . ", " . $fmax . "] arcmin.\n");
-		// FIXME - should condense all this index data into one array!
-		// (list largest-to-smallest).
-		$sizemap = array("60degree" => array(900,1800),
-						 "30degree" => array(400,900),
-						 "15degree" => array(200,400),
-						 "8degree" => array(120,180),
-						 "4degree" => array(60, 90),
-						 "2degree" => array(32, 40),
-						 "1degree" => array(16, 20),
-						 "30arcmin" => array(8, 10),
-						 "12arcmin" => array(4, 5),);
-		/*
-		$sizemap = array("12arcmin" => array(4, 5),
-						 "30arcmin" => array(8, 10),
-						 "1degree" => array(16, 20),
-						 "2degree" => array(32, 40),
-						 "4degree" => array(60, 90),
-						 "8degree" => array(120,180),
-						 "15degree" => array(200,400),
-						 );
-		*/
-		$largest = "60degree";
-		$smallest = "12arcmin";
+
+		foreach ($indexdata as $k => $v) {
+			$sizemap[$k] = $v['quadsize'];
+		}
 
 		$indexes = array();
 		foreach ($sizemap as $ind => $size) {
@@ -522,9 +528,9 @@ function process_data ($vals) {
 
 		if (count($indexes) == 0) {
 			// too big, or too little?
-			if ($fmax > $sizemap[$largest][1]) {
+			if ($fmax > $sizemap[$largest_index][1]) {
 				array_push($indexes, $largest);
-			} else if ($fmin < $sizemap[$smallest][0]) {
+			} else if ($fmin < $sizemap[$smallest_index][0]) {
 				array_push($indexes, $smallest);
 			}
 		}
@@ -536,19 +542,9 @@ function process_data ($vals) {
 		$indexes = array($index);
 	}
 	// Compute the index path(s)
-	$indexmap = array("12arcmin" => array("sdss-23/sdss-23-allsky"),
-					  "30arcmin" => array("allsky-31/allsky-31"),
-					  "1degree" => array("allsky-32/allsky-32"),
-					  "2degree" => array("allsky-37/allsky-37"),
-					  "4degree" => array("allsky-34/allsky-34"),
-					  //"8degree" => array("allsky-35/allsky-35"),
-					  "8degree" => array("allsky-38/allsky-38"),
-					  //"15degree" => array("allsky-36/allsky-36"),
-					  //"15degree" => array("allsky-39/allsky-39"),
-					  "15degree" => array("allsky-40/allsky-40"),
-					  "30degree" => array("allsky-43/allsky-43"),
-					  "60degree" => array("allsky-44/allsky-44"),
-					  );
+	foreach ($indexdata as $k => $v) {
+		$indexmap[$k] = $v['paths'];
+	}
 	$indexpaths = array();
 	foreach ($indexes as $i) {
 		//loggit("Index " . $i . "\n");
