@@ -1338,7 +1338,7 @@ static void solve_fields(blind_params* bp) {
 				char* tm;
 				char val[32];
 
-				sprintf(wcs_fn, bp->wcs_template, fieldnum);
+				snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
 				fout = fopen(wcs_fn, "ab");
 				if (!fout) {
 					logerr(bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
@@ -1391,6 +1391,37 @@ static void solve_fields(blind_params* bp) {
 				fits_pad_file(fout);
 				qfits_header_destroy(hdr);
 				fclose(fout);
+
+				// DEBUG - write out some extra stuff for Sam.
+				fprintf(stderr, "fieldquad = [ %g,%g; %g,%g; %g,%g; %g,%g ];\n",
+						sp->field[bestmo->field[0] * 2], sp->field[bestmo->field[0] * 2 + 1],
+						sp->field[bestmo->field[1] * 2], sp->field[bestmo->field[1] * 2 + 1],
+						sp->field[bestmo->field[2] * 2], sp->field[bestmo->field[2] * 2 + 1],
+						sp->field[bestmo->field[3] * 2], sp->field[bestmo->field[3] * 2 + 1]);
+				{
+					double xyz[3];
+					double xyzcm[3];
+					int k;
+					double x,y;
+					fprintf(stderr, "indexquad_xyz = [ ");
+					xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
+					for (k=0; k<4; k++) {
+						getstarcoord(bestmo->star[k], xyz);
+						fprintf(stderr, "%g,%g,%g; ", xyz[0], xyz[1], xyz[2]);
+						xyzcm[0] += 0.25 * xyz[0];
+						xyzcm[1] += 0.25 * xyz[1];
+						xyzcm[2] += 0.25 * xyz[2];
+					}
+					fprintf(stderr, "];\n");
+					// project around center of mass.
+					fprintf(stderr, "indexquad_xy = [");
+					for (k=0; k<4; k++) {
+						getstarcoord(bestmo->star[k], xyz);
+						star_coords(xyz, xyzcm, &x, &y);
+						fprintf(stderr, "%g,%g; ", x, y);
+					}
+					fprintf(stderr, "];\n");
+				}
 			}
 
 			if (bp->rdls) {
