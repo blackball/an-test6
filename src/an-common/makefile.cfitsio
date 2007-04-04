@@ -17,14 +17,15 @@
 CFITS_DIR := $(BASEDIR)/cfitsio
 CFITS_INC := -I$(CFITS_DIR)
 CFITS_LIB := $(CFITS_DIR)/libcfitsio.a
-CFITS_CFLAGS := $(CFLAGS_DEF)
 
+# CFLAGS to pass to CFITSIO's configure.
+CFITS_CONFIG_CFLAGS := $(CFLAGS_DEF)
 
 $(CFITS_LIB): $(wildcard $(CFITS_DIR)/*.c) $(wildcard $(CFITS_DIR)/*.h) $(CFITS_DIR)/Makefile
 	$(MAKE) -C $(CFITS_DIR)
 
 $(CFITS_DIR)/Makefile: $(CFITS_DIR)/Makefile.in
-	cd $(CFITS_DIR) && ./configure
+	cd $(CFITS_DIR) && CFLAGS="$(CFITS_CONFIG_CFLAGS)" CC="$(CC)" ./configure 
 
 REMAKE_CFITSIO := remake-cfitsio
 .PHONY: $(REMAKE_CFITSIO)
