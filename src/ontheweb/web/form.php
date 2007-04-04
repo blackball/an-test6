@@ -339,6 +339,8 @@ function process_data ($vals) {
 		$jobdata['fits-origname'] = $origname;
 	}
 
+	$jobdata['submit-date'] = get_datestr(time());
+
 	if (!setjobdata($db, $jobdata)) {
 		submit_failed($db, "Failed to save job parameters.");
 	}
