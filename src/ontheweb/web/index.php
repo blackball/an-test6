@@ -16,6 +16,32 @@ if ($emailver) {
 
 require 'form.php';
 
+function allow_email($email) {
+	$mode = 'deny';
+	// $mode = 'allow';
+
+	$allow = array('dstn@cs.toronto.edu',
+				   );
+
+	$deny = array('badguy@somewhere.com');
+
+	if ($mode == 'deny') {
+		if (in_array(strtolower($email), $deny)) {
+			loggit("denying email " . $email . "\n");
+			return FALSE;
+		}
+		return TRUE;
+	} else if ($mode == 'allow') {
+		if (in_array(strtolower($email), $allow))
+			return TRUE;
+		loggit("disallowing email " . $email . "\n");
+		return FALSE;
+	} else {
+		loggit("allow_email: invalid mode " . $mode . "\n");
+	}
+	return FALSE;
+}
+
 // Called after the blind input file is written... do user interface stuff.
 function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	global $emailver;

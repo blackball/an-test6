@@ -267,8 +267,15 @@ function process_data ($vals) {
 	global $largest_index;
 	global $smallest_index;
 
-	$xysrc = $vals["xysrc"];
-	$imgurl = $vals["imgurl"];
+	$xysrc = $vals['xysrc'];
+	$imgurl = $vals['imgurl'];
+
+	if ($emailver && !allow_email($vals['email'])) {
+		die("Sorry, the email address you entered (" .
+			$vals['email'] . ") is not authorized.  Please contact " .
+			'<a href="alpha@astrometry.net">alpha@astrometry.net</a> to be added ' .
+			'to our alpha testers list.');
+	}
 
 	// Create a directory for this request.
 	$myname = create_random_dir($resultdir);
