@@ -1201,17 +1201,21 @@ static int kdtree_qsort(dtype *arr, unsigned int *parr, int l, int r, int D, int
           memcpy(arr+(il)*D, arr+(ir)*D, D*sizeof(dtype)); \
           memcpy(arr+(ir)*D, tmpdata,    D*sizeof(dtype)); }}
 #endif
+#define ELEM_ROT(iA, iB, iC) { \
+          tmpperm  = parr[iC]; \
+          parr[iC] = parr[iB]; \
+          parr[iB] = parr[iA]; \
+          parr[iA] = tmpperm;  \
+          assert(tmpperm != -1); \
+          memcpy(tmpdata,    arr+(iC)*D, D*sizeof(dtype)); \
+          memcpy(arr+(iC)*D, arr+(iB)*D, D*sizeof(dtype)); \
+          memcpy(arr+(iB)*D, arr+(iA)*D, D*sizeof(dtype)); \
+          memcpy(arr+(iA)*D, tmpdata,    D*sizeof(dtype)); }
 
 static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, int R, int D, int d) {
-	dtype* tmpdata = alloca(D * sizeof(dtype));
-	dtype midval;
-	int tmpperm = -1, i;
+	int i;
 	int low, high;
 	int median;
-	int middle, ll, hh;
-	int nless, nequal;
-	int equal, greater;
-   int midpos,m;
 
 #if defined(KD_DIM)
 	// tell the compiler this is a constant...
@@ -1226,179 +1230,199 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 	high = R;
 	median = (low + high + 1) / 2;
 	while(1) {
-        if (high <= (low+1))
-            break;
+		dtype vals[3];
+		dtype tmp;
+		dtype pivot;
+		int i,j;
+		int iless, iequal, igreater;
+		int endless, endequal, endgreater;
+		int middle;
+		int nless, nequal;
+		// temp storage for ELEM_SWAP and ELEM_ROT macros.
+		dtype tmpdata[D];
+		int tmpperm;
 
-		/* Find median of low, middle and high items; swap into position low */
+		if (high == low)
+			break;
+
+		/* Choose the pivot: find the median of the values in low, middle, and high
+		   positions. */
 		middle = (low + high) / 2;
-		if (GET(middle) > GET(high))
-			ELEM_SWAP(middle, high);
-		if (GET(low) > GET(high))
-			ELEM_SWAP(low, high);
-		if (GET(middle) > GET(low))
-			ELEM_SWAP(middle, low);
+		vals[0] = GET(low);
+		vals[1] = GET(middle);
+		vals[2] = GET(high);
+		/* (Bubblesort the three elements.) */
+		for (i=0; i<2; i++)
+			for (j=0; j<(2-i); j++)
+				if (vals[j] > vals[j+1]) {
+					tmp = vals[j];
+					vals[j] = vals[j+1];
+					vals[j+1] = tmp;
+				}
+		assert(vals[0] <= vals[1]);
+		assert(vals[1] <= vals[2]);
 
-		assert(L <= low);
-		assert(low <= middle);
-		assert(middle <= high);
-		assert(high <= R);
+		pivot = vals[1];
 
-		/* Swap low item (now in position middle) into position (low+1) */
-		ELEM_SWAP(middle, low + 1);
-
-		midval = GET(low);
-
-		/* Count the number of items in each category. */
+		/* Count the number of items that are less than, and equal to, the pivot. */
 		nless = nequal = 0;
 		for (i=low; i<=high; i++) {
-			if (GET(i) < midval)
+			if (GET(i) < pivot)
 				nless++;
-			else if (GET(i) == midval)
+			else if (GET(i) == pivot)
 				nequal++;
 		}
-		/* "equal" is the index where the items equal to "midval" will be. */
-		equal = low + nless;
-		/* "greater" is the index where the items greater than "midval" will be. */
-		greater = equal + nequal;
 
-		assert(L <= equal  && equal <= R);
-		assert(L <= greater  && greater <= (R+1));
+		/* These are the indices where the <, =, and > entries will start. */
+		iless = low;
+		iequal = low + nless;
+		igreater = low + nless + nequal;
 
-		/* Nibble from each end towards middle, swapping items when stuck */
-		ll = low + 1;
-		hh = high;
-		assert(L <= ll  && ll <= R);
-		assert(L <= hh  && hh <= R);
-		for (;;) {
-			while ((GET(ll) < midval) && (ll <= hh))
-				ll++;
-			while ((GET(hh) >= midval) && (ll <= hh))
-				hh--;
-			if (hh < ll)
+		/* These are the indices where they will end; ie the elements less than the
+		   pivot will live in [iless, endless).  (But note that we'll be incrementing
+		   "iequal" et al in the loop below.) */
+		endless = iequal;
+		endequal = igreater;
+		endgreater = high+1;
+
+		while (1) {
+			/* Find an element in the "less" section that is out of place. */
+			while ( (GET(iless) < pivot) && (iless < endless) )
+				iless++;
+
+			/* Find an element in the "equal" section that is out of place. */
+			while ( (GET(iequal) == pivot) && (iequal < endequal) )
+				iequal++;
+
+			/* Find an element in the "greater" section that is out of place. */
+			while ( (GET(igreater) > pivot) && (igreater < endgreater) )
+				igreater++;
+
+
+			/* We're looking at three positions, and each one has three cases:
+			   we're finished that segment, or the element we're looking at belongs in
+			   one of the other two segments.  This yields 27 cases, but many of them
+			   are ruled out because, eg, if the element at "iequal" belongs in the "less"
+			   segment, then we can't be done the "less" segment.
+
+			   It turns out there are only 6 cases to handle:
+
+			   ---------------------------------------------
+			   case   iless    iequal   igreater    action
+			   ---------------------------------------------
+			   1      D        D        D           done
+			   2      G        ?        L           swap l,g
+			   3      E        L        ?           swap l,e
+			   4      ?        G        E           swap e,g
+			   5      E        G        L           rotate A
+			   6      G        L        E           rotate B
+			   ---------------------------------------------
+
+			   legend:
+			   D: done
+			   ?: don't care
+			   L: (element < pivot)
+			   E: (element == pivot)
+			   G: (element > pivot)
+			*/
+
+			/* case 1: done? */
+			if ((iless == endless) && (iequal == endequal) && (igreater == endgreater))
 				break;
-			ELEM_SWAP(ll, hh);
-			assert(L <= ll  && ll <= R);
-			assert(L <= hh  && hh <= R);
-		}
 
-		/* Swap middle item (in position low) back into correct position */
-		assert(hh == equal);
-		ELEM_SWAP(low, hh);
-
-		/* Assert that "<" values are in the left partition and ">=" values
-		   are in the right partition. */
-		for (i=low; i<equal; i++)
-			assert(GET(i) < midval);
-		for (i=equal; i<=high; i++)
-			assert(GET(i) >= midval);
-
-		/* Collect all items equal to the middle value.
-		   At this point items less than "midval" are in the left part
-		   of the array, and items equal to or greater than "midval" are
-		   in the right side.
-		   Nibble the right side, moving "=" and ">" items into their
-		   respective halves.
-		*/
-		ll = equal;
-		hh = high;
-		assert(L <= ll  && ll <= R);
-		assert(L <= hh  && hh <= R);
-		for (;;) {
-			while ((GET(ll) == midval) && (ll < greater))
-				ll++;
-			while (GET(hh) > midval)
-				hh--;
-			if (hh <= ll)
-				break;
-			ELEM_SWAP(ll, hh);
-			assert(L <= ll  && ll <= R);
-			assert(L <= hh  && hh <= R);
-		}
-
-		/* Assert that "<" values are in the left partition, "=" values are
-		   in the middle partition, and ">" values are in the right part. */
-		for (i=low; i<equal; i++)
-			assert(GET(i) < midval);
-		for (i=equal; i<greater; i++)
-			assert(GET(i) == midval);
-		for (i=greater; i<=high; i++)
-			assert(GET(i) > midval);
-
-		/* You might want to choose some value other than the
-		   median to produce splits of closer to equal size.
-		   This only really helps if there are lots of duplicate values. */
-		if (0) {
-			int nl = equal - L;
-			int nh = R + 1 - greater;
-			//printf("nl=%i, ne=%i, nh=%i.\n", nl, nequal, nh);
-			//printf("greater=%i, high=%i.\n", greater, high);
-			/* "greater <= high" ensures that there is at least one
-			   element in the high partition. */
-			if ((greater <= high) &&
-				(nh > nl) && (nl + nequal >= nh)) {
-				/* The high partition is already bigger, so select
-				   the first value in the high partition, which means
-				   the middle partition will end up to the left of
-				   the new "median". */
-				median = greater;
-				//printf("Changed \"median\" to %i.\n", median);
-				low = greater;
+			/* case 2: swap l,g */
+			if ((iless < endless) && (igreater < endgreater) &&
+				(GET(iless) > pivot) && (GET(igreater) < pivot)) {
+				ELEM_SWAP(iless, igreater);
+				assert(GET(iless) < pivot);
+				assert(GET(igreater) > pivot);
 				continue;
+			}
+
+			/* cases 3,4,5,6 */
+			assert(iequal < endequal);
+			if (GET(iequal) > pivot) {
+				/* cases 4,5: */
+				assert(igreater < endgreater);
+				if (GET(igreater) == pivot) {
+					/* case 4: swap e,g */
+					ELEM_SWAP(iequal, igreater);
+					assert(GET(iequal) == pivot);
+					assert(GET(igreater) > pivot);
+				} else {
+					/* case 5: rotate. */
+					assert(GET(iless) == pivot);
+					assert(GET(iequal) > pivot);
+					assert(GET(igreater) < pivot);
+					ELEM_ROT(iless, iequal, igreater);
+					assert(GET(iless) < pivot);
+					assert(GET(iequal) == pivot);
+					assert(GET(igreater) > pivot);
+				}
+			} else {
+				/* cases 3,6 */
+				assert(GET(iequal) < pivot);
+				assert(iless < endless);
+				if (GET(iless) == pivot) {
+					/* case 3: swap l,e */
+					ELEM_SWAP(iless, iequal);
+					assert(GET(iless) < pivot);
+					assert(GET(iequal) == pivot);
+				} else {
+					/* case 6: rotate. */
+					assert(GET(iless) > pivot);
+					assert(GET(iequal) < pivot);
+					assert(GET(igreater) == pivot);
+					ELEM_ROT(igreater, iequal, iless);
+					assert(GET(iless) < pivot);
+					assert(GET(iequal) == pivot);
+					assert(GET(igreater) > pivot);
+				}
 			}
 		}
 
+		/* Reset the indices of where the segments start. */
+		iless = low;
+		iequal = low + nless;
+		igreater = low + nless + nequal;
+
+		/* Assert that "<" values are in the "less" partition, "=" values are in the
+		   "equal" partition, and ">" values are in the "greater" partition. */
+		for (i=iless; i<iequal; i++)
+			assert(GET(i) < pivot);
+		for (i=iequal; i<igreater; i++)
+			assert(GET(i) == pivot);
+		for (i=igreater; i<=high; i++)
+			assert(GET(i) > pivot);
+
 		/* Is the median in the "<", "=", or ">" partition? */
-		if (median < equal)
-			// median is in the "<" partition.
-			// low is unchanged.
-			high = equal - 1;
-		else if (median < greater) {
+		if (median < iequal)
+			/* median is in the "<" partition.
+			   low is unchanged.
+			*/
+			high = iequal - 1;
+		else if (median < igreater) {
 			/* the median is inside the "=" partition; we're done! */
-			low = high = equal;
 			break;
 		} else
-			// median is in the ">" partition.
-			// high is unchanged.
-			low = greater;
+			/* median is in the ">" partition.
+			   high is unchanged. */
+			low = igreater;
 	}
-
-    if (high == low + 1) {  /* Two elements only */
-        if (GET(low) > GET(high))
-            ELEM_SWAP(low, high);
-    }
-
-	median = low;
-	assert(median != 0);
-	midval = GET(median);
 
 	/* check that it worked. */
 	for (i=L; i<median; i++)
-		assert(GET(i) < midval);
+		assert(GET(i) <= GET(median));
 	for (i=median; i<=R; i++)
-		assert(GET(i) >= midval);
+		assert(GET(i) >= GET(median));
 
-	/* juggle the median position to stay balanced in the case that there are
-	   several values equal to the median. */
-	midpos = L + (R-L)/2;
-	m = median;
-	//	printf("m=%d midpos=%d l=%d r=%d\n",m,midpos,L,R);
-	while (m < midpos && m != R && arr[D*(m+1)+d] == midval) {
-		//		printf("m=%d midpos=%d l=%d r=%d\n",m,midpos,L,R);
-		m++;
-	}
+	assert (L < median);
+	assert (median <= R);
 
-	//assert (L <= m);
-	assert (L < m);
-	assert (m <= R);
-
-	for (i=L; i<m; i++)
-		assert(GET(i) <= midval);
-	for (i=m; i<=R; i++)
-		assert(GET(i) >= midval);
-
-	return m;
+	return median;
 }
 #undef ELEM_SWAP
+#undef ELEM_ROT
 #undef GET
 
 
