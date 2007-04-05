@@ -1391,37 +1391,6 @@ static void solve_fields(blind_params* bp) {
 				fits_pad_file(fout);
 				qfits_header_destroy(hdr);
 				fclose(fout);
-
-				// DEBUG - write out some extra stuff for Sam.
-				fprintf(stderr, "fieldquad = [ %g,%g; %g,%g; %g,%g; %g,%g ];\n",
-						sp->field[bestmo->field[0] * 2], sp->field[bestmo->field[0] * 2 + 1],
-						sp->field[bestmo->field[1] * 2], sp->field[bestmo->field[1] * 2 + 1],
-						sp->field[bestmo->field[2] * 2], sp->field[bestmo->field[2] * 2 + 1],
-						sp->field[bestmo->field[3] * 2], sp->field[bestmo->field[3] * 2 + 1]);
-				{
-					double xyz[3];
-					double xyzcm[3];
-					int k;
-					double x,y;
-					fprintf(stderr, "indexquad_xyz = [ ");
-					xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
-					for (k=0; k<4; k++) {
-						getstarcoord(bestmo->star[k], xyz);
-						fprintf(stderr, "%g,%g,%g; ", xyz[0], xyz[1], xyz[2]);
-						xyzcm[0] += 0.25 * xyz[0];
-						xyzcm[1] += 0.25 * xyz[1];
-						xyzcm[2] += 0.25 * xyz[2];
-					}
-					fprintf(stderr, "];\n");
-					// project around center of mass.
-					fprintf(stderr, "indexquad_xy = [");
-					for (k=0; k<4; k++) {
-						getstarcoord(bestmo->star[k], xyz);
-						star_coords(xyz, xyzcm, &x, &y);
-						fprintf(stderr, "%g,%g; ", x, y);
-					}
-					fprintf(stderr, "];\n");
-				}
 			}
 
 			if (bp->rdls) {
@@ -1476,6 +1445,49 @@ static void solve_fields(blind_params* bp) {
 				if (rdlist_write_entries(bp->indexrdls, radec, nstars)) {
 					logerr(bp, "Failed to write index RDLS entry.\n");
 				}
+
+
+
+				// DEBUG - write out some extra stuff for Sam.
+				fprintf(stderr, "fieldquad = [ %g,%g; %g,%g; %g,%g; %g,%g ];\n",
+						sp->field[bestmo->field[0] * 2], sp->field[bestmo->field[0] * 2 + 1],
+						sp->field[bestmo->field[1] * 2], sp->field[bestmo->field[1] * 2 + 1],
+						sp->field[bestmo->field[2] * 2], sp->field[bestmo->field[2] * 2 + 1],
+						sp->field[bestmo->field[3] * 2], sp->field[bestmo->field[3] * 2 + 1]);
+				{
+					double xyz[3];
+					double xyzcm[3];
+					int k;
+					double x,y;
+					fprintf(stderr, "indexquad_xyz = [ ");
+					xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
+					for (k=0; k<4; k++) {
+						getstarcoord(bestmo->star[k], xyz);
+						fprintf(stderr, "%g,%g,%g; ", xyz[0], xyz[1], xyz[2]);
+						xyzcm[0] += 0.25 * xyz[0];
+						xyzcm[1] += 0.25 * xyz[1];
+						xyzcm[2] += 0.25 * xyz[2];
+					}
+					fprintf(stderr, "];\n");
+					// project around center of mass.
+					fprintf(stderr, "indexquad_xy = [");
+					for (k=0; k<4; k++) {
+						getstarcoord(bestmo->star[k], xyz);
+						star_coords(xyz, xyzcm, &x, &y);
+						fprintf(stderr, "%g,%g; ", x, y);
+					}
+					fprintf(stderr, "];\n");
+
+					fprintf(stderr, "index_all_xy = [");
+					for (i=0; i<nstars; i++) {
+						star_coords(starxyz + i*3, xyzcm, &x, &y);
+						fprintf(stderr, "%g,%g; ", x, y);
+					}
+					fprintf(stderr, "];\n");
+					
+				}
+
+
 
 				free(radec);
 				kdtree_free_query(res);
