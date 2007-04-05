@@ -2070,7 +2070,7 @@ bool MANGLE(kdtree_node_node_maxdist2_exceeds)
 	 (kdtree_t* kd1, int node1,
 	  kdtree_t* kd2, int node2,
 	  double maxd2) {
-	ttype *tlo1, *tlo2, *thi1, *thi2;
+	ttype *tlo1=NULL, *tlo2=NULL, *thi1=NULL, *thi2=NULL;
 	double d2 = 0.0;
 	int d, D = kd1->ndim;
 
