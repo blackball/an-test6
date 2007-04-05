@@ -973,6 +973,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 	$filename = $mydir . $basename;
 	$newjd = array();
+	$todelete = array();
 
 	loggit("image file: " . filesize($img) . " bytes.\n");
 
@@ -1003,6 +1004,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$filename = $newfilename;
 			$typestr = shell_exec("file -b -N -L " . $filename);
 			loggit("type: " . $typestr . " for " . $filename . "\n");
+			array_push($todelete, $newfilename);
 			break;
 		}
 	}
@@ -1130,6 +1132,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			return FALSE;
 		}
 		$pnmimg = $pgmimg;
+		array_push($todelete, $pgmimg);
 	}
 
 	if ($imgtype == "fits") {
@@ -1144,6 +1147,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$errstr = "Failed to convert your image to a FITS image.";
 			return FALSE;
 		}
+		//? array_push($todelete, $fitsimg);
 	}
 
 	// fits2xy computes the output filename by trimming .fits and adding .xy.fits.
@@ -1237,6 +1241,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$errstr = "Failed to plot extracted sources.";
 			return FALSE;
 		}
+		array_push($todelete, $objimg1);
 		// -the rest:
 		$Nmax = 500;
 		$objimg2 = $prefix . "objs2.pgm";
@@ -1250,6 +1255,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$errstr = "Failed to plot extracted sources.";
 			return FALSE;
 		}
+		array_push($todelete, $objimg2);
 		// -the sum:
 		$objimg = $prefix . "objs.pgm";
 		$objimg_orig = $objimg;
@@ -1261,6 +1267,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$errstr = "Failed to plot extracted sources.";
 			return FALSE;
 		}
+		array_push($todelete, $objimg);
 
 		$redimg = $prefix . "red.pgm";
 		$cmd = "pgmtoppm red " . $objimg . " > " . $redimg;
@@ -1272,6 +1279,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			return FALSE;
 		}
 		$objimg = $redimg;
+		array_push($todelete, $redimg);
 
 		$sumimg = $prefix . "sum.ppm";
 		$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " .
@@ -1283,6 +1291,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			$errstr = "Failed to composite image of extracted sources.";
 			return FALSE;
 		}
+		array_push($todelete, $sumimg);
 
 		$cmd = "pnmtopng " . $sumimg . " > " . $outimg;
 		loggit("Command: " . $cmd . "\n");
@@ -1314,6 +1323,15 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	if (!setjobdata($db, $newjd)) {
 		$errstr = "Failed to save image parameters.";
 		return FALSE;
+	}
+
+	// Delete intermediate files.
+	$todelete = array_unique($todelete);
+	foreach ($todelete as $del) {
+		loggit("Deleting temp file " . $del . "\n");
+		if (!unlink($del)) {
+			loggit("Failed to unlink file: \"" . $del . "\"\n");
+		}
 	}
 
 	return TRUE;

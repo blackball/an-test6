@@ -281,6 +281,7 @@ if (array_key_exists("email", $headers)) {
 }
 
 if ($overlay || $bigoverlay) {
+	$todelete = array();
 	if (($overlay && !file_exists($overlayfile)) ||
 		($bigoverlay && !file_exists($bigoverlayfile))) {
 		$big = $bigoverlay;
@@ -351,6 +352,16 @@ if ($overlay || $bigoverlay) {
 		$sumimg = $prefix . "sum.ppm";
 		$sumimg2 = $prefix . "sum2.ppm";
 		$dimimg = $prefix . "dim.ppm";
+
+		array_push($todelete, $quadimg);
+		array_push($todelete, $redquad);
+		array_push($todelete, $xypgm);
+		array_push($todelete, $fldxy1pgm);
+		array_push($todelete, $fldxy2pgm);
+		array_push($todelete, $redimg);
+		array_push($todelete, $sumimg);
+		array_push($todelete, $sumimg2);
+		array_push($todelete, $dimimg);
 
 		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
 		loggit("command: $cmd\n");
@@ -457,6 +468,16 @@ if ($overlay || $bigoverlay) {
 		if ($retval) {
 			fail("pnmtopng failed.");
 		}
+
+		// Delete intermediate files.
+		$todelete = array_unique($todelete);
+		foreach ($todelete as $del) {
+			loggit("Deleting temp file " . $del . "\n");
+			if (!unlink($del)) {
+				loggit("Failed to unlink file: \"" . $del . "\"\n");
+			}
+		}
+
 	}
 
 	if ($overlay && file_exists($overlayfile)) {
