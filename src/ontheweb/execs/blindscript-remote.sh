@@ -12,11 +12,14 @@ jobid=$(basename $jobdir)
 
 cd $jobdir
 LOG=log
+
+echo "running startscript..." >> $LOG
+./startscript >> $LOG 2>&1
+echo "finished startscript." >> $LOG
+
 echo "running blind..." >> $LOG
-
-touch start
-
 (echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27 2>>$LOG | tar xf - --atime-preserve -m --exclude=input >>$LOG 2>&1
+echo "finished blind." >> $LOG
 
 #(echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27 2>>$LOG > results.tar
 #echo "extracting files..." >> $LOG

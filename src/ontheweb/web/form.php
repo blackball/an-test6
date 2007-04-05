@@ -247,6 +247,7 @@ function process_data ($vals) {
 	global $input_fn;
 	global $inputtmp_fn;
 	global $donescript_fn;
+	global $startscript_fn;
 	global $indexxyls_fn;
 	global $xyls_fn;
 	global $xylsinfo_fn;
@@ -277,6 +278,7 @@ function process_data ($vals) {
 	global $indexdata;
 	global $largest_index;
 	global $smallest_index;
+	global $sqlite;
 
 	$xysrc = $vals['xysrc'];
 	$imgurl = $vals['imgurl'];
@@ -459,9 +461,8 @@ function process_data ($vals) {
 		loggit("found xyls width and height " . $W . ", " . $H . "\n");
 	}
 
-	// FIXME - do we need to do this??
+	// FIXME - do we need this??
 	if (!chmod($xylist, 0664)) {
-		//submit_failed($db, "Failed to chmod xylist.");
 		loggit("Failed to chmod xylist " . $xylist . "\n");
 	}
 
@@ -565,6 +566,7 @@ function process_data ($vals) {
 	$inputfile = $mydir . $input_fn;
 	$inputtmpfile = $mydir . $inputtmp_fn;
 	$donescript = $mydir . $donescript_fn;
+	$startscript = $mydir . $startscript_fn;
 	$donefile = $mydir . $done_fn;
 
 	$parity = $vals["parity"];
@@ -630,7 +632,7 @@ function process_data ($vals) {
 				"fieldunits_upper " . $fumax . "\n" .
 				"tol " . $codetol . "\n" .
 				"verify_pix " . $poserr . "\n" .
-				"nverify 20\n" .
+				"nverify 25\n" .
 				"nindex_tokeep 25\n" .
 				"nindex_tosolve 25\n" .
 				"distractors 0.25\n" .
@@ -656,6 +658,27 @@ function process_data ($vals) {
 	}
 
 	loggit("Wrote blind input file: " . $inputfile . "\n");
+
+	// Write the startscript: executed by "watcher" (via blindscript) before blind starts.
+	$fstart = fopen($startscript, "w");
+	if (!$fstart) {
+		loggit("Failed to write startscript " . $startscript);
+		submit_failed($db, "Failed to write the script for the blind solver.");
+	}
+	$str = "#! /bin/bash\n" .
+		"echo Starting startscript...\n" .
+		"touch " . $start_fn . "\n" .
+		$sqlite . " " . $jobdata_fn . " \"REPLACE INTO jobdata VALUES('solve-start', '`date -Iseconds`');\"\n" .
+		"echo Finished startscript.\n";
+	fprintf($fstart, "%s", $str);
+	if (!fclose($fstart)) {
+		loggit("Failed to close startscript " . $startscript);
+		submit_failed($db, "Failed to write the script for the blind solver (2b).");
+	}
+	if (!chmod($startscript, 0775)) {
+		loggit("Failed to chmod startscript " . $startscript);
+		submit_failed($db, "Failed to write the script for the blind solver (3b).");
+	}
 
 	// Write the donescript: executed by "watcher" (via blindscript) after blind completes.
 	$fdone = fopen($donescript, "w");
@@ -705,13 +728,15 @@ function process_data ($vals) {
 		"else\n" .
 		"  echo \"Field did not solve.\"\n" .
 		"fi\n" .
-		"touch " . $donefile . "\n";
+		"touch " . $done_fn . "\n" .
+		$sqlite . " " . $jobdata_fn . " \"REPLACE INTO jobdata VALUES('solve-done', '`date -Iseconds`');\"\n";
+
 	if ($emailver) {
 		$str .= 
 			"echo \"Sending email...\";\n" .
-			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n" .
-			"echo Donescript finished.\n";
+			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n";
 	}
+	$str .=	"echo Finished donescript.\n";
 
 	fprintf($fdone, "%s", $str);
 

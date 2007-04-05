@@ -27,6 +27,7 @@ $inputtmp_fn = "input.tmp";
 $start_fn = "start";
 $done_fn  = "done";
 $donescript_fn  = "donescript"; // note: this must agree with "blindscript.sh"
+$startscript_fn  = "startscript"; // note: this must agree with "blindscript.sh"
 $xyls_fn  = "field.xy.fits";
 $rdls_fn  = "field.rd.fits";
 $indexxyls_fn = "index.xy.fits";
@@ -318,14 +319,15 @@ function create_db($dbpath) {
 }
 */
 
+// FIXME - it's possible that this function doesn't actually cause the db file to be
+// created!!
 function create_db($dbpath) {
 	global $sqlite;
 	// create database.
 	$cmd = $sqlite . " " . $dbpath . " .exit";
 	loggit("Command: " . $cmd . "\n");
-	$res = FALSE;
 	$res = system($cmd, $retval);
-	if ($retval) {
+	if (($res === FALSE) || $retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
 		return FALSE;
 	}
@@ -345,6 +347,12 @@ function connect_db($dbpath, $quiet=FALSE) {
 		}
 		return FALSE;
 	}
+
+	// chmod it!
+	if (!chmod($dbpath, 0664)) {
+		loggit("Failed to chmod database " . $dbpath . "\n");
+	}
+
 	return $db;
 }
 
