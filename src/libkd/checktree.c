@@ -57,7 +57,7 @@ int main(int argc, char** args) {
 
 	printf("Data type:     %s\n", kdtree_kdtype_to_string(kdtree_datatype(kd)));
 	printf("Tree type:     %s\n", kdtree_kdtype_to_string(kdtree_treetype(kd)));
-	printf("External type: %s\n", kdtree_kdtype_to_string(kdtree_convtype(kd)));
+	printf("External type: %s\n", kdtree_kdtype_to_string(kdtree_exttype(kd)));
 
 	printf("N data points:  %i\n", kd->ndata);
 	printf("Dimensions:     %i\n", kd->ndim);
