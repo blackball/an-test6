@@ -1484,6 +1484,12 @@ static void solve_fields(blind_params* bp) {
 						fprintf(stderr, "%g,%g; ", x, y);
 					}
 					fprintf(stderr, "];\n");
+
+					fprintf(stderr, "field_all = [");
+					for (i=0; i<sp->nfield; i++) {
+						fprintf(stderr, "%g,%g; ", sp->field[2*i], sp->field[2*i+1]);
+					}
+					fprintf(stderr, "];\n");
 					
 				}
 
