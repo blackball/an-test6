@@ -386,9 +386,8 @@ int MANGLE(kdtree_write_fits)(kdtree_t* kd, char* fn, qfits_header* hdr, extra_t
 
 	Ne = ext - extras;
 	
-	if (kdtree_convtype(kd))
-		qfits_header_add(hdr, "KDT_EXT", (char*)kdtree_kdtype_to_string(kdtree_convtype(kd)), "kdtree: data was converted from this type", NULL);
-	qfits_header_add(hdr, "KDT_INT", (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
+	qfits_header_add(hdr, "KDT_EXT",  (char*)kdtree_kdtype_to_string(kdtree_exttype(kd)),  "kdtree: external type", NULL);
+	qfits_header_add(hdr, "KDT_INT",  (char*)kdtree_kdtype_to_string(kdtree_treetype(kd)), "kdtree: type of the tree's structures", NULL);
 	qfits_header_add(hdr, "KDT_DATA", (char*)kdtree_kdtype_to_string(kdtree_datatype(kd)), "kdtree: type of the data", NULL);
 
 	rtn = kdtree_fits_common_write(kd, fn, hdr, extras, Ne);

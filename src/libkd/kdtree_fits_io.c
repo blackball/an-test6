@@ -67,7 +67,7 @@ kdtree_t* kdtree_fits_read_extras(char* fn, qfits_header** p_hdr, extra_table* e
 	}
 
 	str = qfits_header_getstr(header, "KDT_EXT");
-	ext_type = kdtree_kdtype_parse_conv_string(qfits_pretty_string(str));
+	ext_type = kdtree_kdtype_parse_ext_string(qfits_pretty_string(str));
 
 	str = qfits_header_getstr(header, "KDT_INT");
 	int_type = kdtree_kdtype_parse_tree_string(qfits_pretty_string(str));
@@ -93,7 +93,13 @@ kdtree_t* kdtree_fits_read_extras(char* fn, qfits_header** p_hdr, extra_table* e
 			// select KDTT_DOUBLE
 			int_type  = KDT_TREE_DOUBLE;
 			data_type = KDT_DATA_DOUBLE;
+			ext_type  = KDT_EXT_DOUBLE;
 		}
+	}
+
+	// default: external world is doubles.
+	if (ext_type == KDT_NULL) {
+		ext_type = KDT_EXT_DOUBLE;
 	}
 
 	qfits_header_destroy(header);

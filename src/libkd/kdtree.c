@@ -93,11 +93,11 @@ const char* kdtree_kdtype_to_string(int kdtype) {
 	switch (kdtype) {
 	case KDT_DATA_DOUBLE:
 	case KDT_TREE_DOUBLE:
-	case KDT_CONV_DOUBLE:
+	case KDT_EXT_DOUBLE:
 		return "double";
 	case KDT_DATA_FLOAT:
 	case KDT_TREE_FLOAT:
-	case KDT_CONV_FLOAT:
+	case KDT_EXT_FLOAT:
 		return "float";
 	case KDT_DATA_U32:
 	case KDT_TREE_U32:
@@ -138,19 +138,19 @@ int kdtree_kdtype_parse_tree_string(const char* str) {
 		return KDT_TREE_NULL;
 }
 
-int kdtree_kdtype_parse_conv_string(const char* str) {
-	if (!str) return KDT_CONV_NULL;
+int kdtree_kdtype_parse_ext_string(const char* str) {
+	if (!str) return KDT_EXT_NULL;
 	if (!strcmp(str, "double")) {
-		return KDT_CONV_DOUBLE;
+		return KDT_EXT_DOUBLE;
 	} else if (!strcmp(str, "float")) {
-		return KDT_CONV_FLOAT;
+		return KDT_EXT_FLOAT;
 	} else
-		return KDT_CONV_NULL;
+		return KDT_EXT_NULL;
 }
 
-int kdtree_kdtypes_to_treetype(int convtype, int treetype, int datatype) {
+int kdtree_kdtypes_to_treetype(int exttype, int treetype, int datatype) {
 	// HACK - asserts here...
-	return convtype | treetype | datatype;
+	return exttype | treetype | datatype;
 }
 
 kdtree_t* kdtree_new(int N, int D, int Nleaf) {
@@ -188,6 +188,8 @@ kdtree_t* kdtree_convert_data(kdtree_t* kd, void *data,
 							  int N, int D, int Nleaf, int treetype) {
 	kdtree_t* res = NULL;
 	KD_DISPATCH(kdtree_convert_data, treetype, res=, (kd, data, N, D, Nleaf));
+	if (res)
+		res->converted_data = TRUE;
 	return res;
 }
 
@@ -287,7 +289,7 @@ void kdtree_free(kdtree_t *kd)
 	free(kd->bb.any);
 	free(kd->split.any);
 	free(kd->splitdim);
-	if (kdtree_convtype(kd))
+	if (kd->converted_data)
 		free(kd->data.any);
 	free(kd->minval);
 	free(kd->maxval);

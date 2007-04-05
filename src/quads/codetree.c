@@ -68,9 +68,10 @@ int main(int argc, char *argv[]) {
 	int rtn;
 	qfits_header* hdr;
 	char val[32];
-	int convtype = KDT_CONV_NULL;
+	int exttype = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
 	int treetype = KDT_TREE_NULL;
+	bool convert = FALSE;
 	int tt;
 	int buildopts = 0;
 	int N, D;
@@ -142,7 +143,7 @@ int main(int argc, char *argv[]) {
 
 	// the outside world works in doubles.
 	if (datatype != KDT_DATA_DOUBLE)
-		convtype = KDT_CONV_DOUBLE;
+		convert = TRUE;
 
     fprintf(stderr, "codetree: building KD tree for %s\n", codefname);
     fprintf(stderr, "       will write KD tree file %s\n", treefname);
@@ -163,7 +164,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	tt = kdtree_kdtypes_to_treetype(convtype, treetype, datatype);
+	tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
 	N = codes->numcodes;
 	D = DIM_CODES;
 	codekd->tree = kdtree_new(N, D, Nleaf);
@@ -183,7 +184,7 @@ int main(int argc, char *argv[]) {
 		}
 		kdtree_set_limits(codekd->tree, low, high);
 	}
-	if (convtype) {
+	if (convert) {
 		fprintf(stderr, "Converting data...\n");
 		fflush(stderr);
 		codekd->tree = kdtree_convert_data(codekd->tree, codes->codearray,
@@ -236,10 +237,4 @@ int main(int argc, char *argv[]) {
     codetree_close(codekd);
 	return 0;
 }
-
-
-
-
-
-
 

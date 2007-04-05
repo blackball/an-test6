@@ -39,9 +39,9 @@ rtn KDMANGLE(func, d, s, s)args
 	switch (tt) { \
 	case KDTT_DOUBLE: rtn KDMANGLE(func, d, d, d)args; break; \
 	case KDTT_FLOAT:  rtn KDMANGLE(func, f, f, f)args; break; \
-	case KDTT_U32_CONV_DOUBLE: \
+	case KDTT_DUU: \
                       rtn KDMANGLE(func, d, u, u)args; break; \
-	case KDTT_U16_CONV_DOUBLE: \
+	case KDTT_DSS: \
                       rtn KDMANGLE(func, d, s, s)args; break; \
 	case KDTT_DOUBLE_U32: \
 					  rtn KDMANGLE(func, d, d, u)args; break; \
@@ -50,11 +50,6 @@ rtn KDMANGLE(func, d, s, s)args
 	default: \
 		fprintf(stderr, #func ": unimplemented treetype %#x.\n", tt); \
 	}
-
-//case KDTT_U16:	  rtn KDMANGLE(func, u16   , u16   )args; break; 
-//case KDTT_U32:    rtn KDMANGLE(func, u32   , u32   )args; break; 
-
-
 
 /* Compute how many levels should be used if you have "N" points and you
    want "Nleaf" points in the leaf nodes.

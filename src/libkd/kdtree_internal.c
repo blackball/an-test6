@@ -32,69 +32,138 @@
 #define MANGLE(x) KDMANGLE(x, ETYPE, DTYPE, TTYPE)
 
 /*
-  Expects the following to be defined:
+  The "external" type is the data type that the outside world works in.
 
-  -   ETYPE         { d, f, i, s }: variable name of etype
-  -   ETYPE_M       name used for symbol-mangling
-  -   etype         the input data type (typedef or preprocessor)
-  ??--  ETYPE_KDT_DATA   { KDT_CONV_DOUBLE | KDT_CONV_FLOAT | KDT_CONV_U32 | KDT_CONV_U16 }
-  -   ETYPE_MIN              etype's min value (as a "etype")
-  -   ETYPE_MAX              etype's max value (as a "etype")
-  -   ETYPE_INTEGER    is etype an integer type? {0,1}
+  The "data" type is the type in which we store the points.
 
-  -   DTYPE         { d, f, i, s }: variable name of dtype
-  -   DTYPE_M       name used for symbol-mangling
-  -   dtype         the input data type (typedef or preprocessor)
-  --  DTYPE_KDT_DATA   { KDT_DATA_DOUBLE | KDT_DATA_FLOAT | KDT_DATA_U32 | KDT_DATA_U16 }
-  -   DTYPE_MIN              dtype's min value (as a "dtype")
-  -   DTYPE_MAX              dtype's max value (as a "dtype")
-  -   DTYPE_INTEGER    is dtype an integer type? {0,1}
+  The "tree" type is the type in which we store the bounding boxes or splitting planes.
 
-  -   TTYPE       { d, f, i, s }
-  -   TTYPE_M       name used for symbol-mangling
-  -   ttype       the kdtree data type
-  -   TTYPE_MIN              ttype's min value (as a "ttype")
-  -   TTYPE_MAX              ttype's max value (as a "ttype")
-  -   TTYPE_SQRT_MAX         sqrt(ttype's max value) (as a "ttype")
-  -   TTYPE_INTEGER          is ttype an integer type? {0,1}
+  Recall that    etype >= dtype >= ttype:
+  .   (etype >= dtype: because there's no point storing more precision than needed by the
+  .                    outside world;
+  .    dtype >= ttype: because there's no point keeping more precision in the splitting
+  .                    plane than exists in the data.)
 
-  -   BIGTTYPE    a type at least as big as ttype (preprocessor)
-  -   bigttype    (ditto)
 
-  -   POINT_RTOK(kd, d, r, func)  converts from "dtype" space to "ttype" space, in dimension "d", applying function "func" if the
-                                  types are not equal.  Typically "func" would be "floor", "ceil", "nearbyint", etc.
-  -   POINT_KTOR(kd, d, r)        converts from "ttype" space to "dtype" space in dimension "d".
+  The following will be defined:
 
-  -   DIST_RTOK(kd, rd, func)       converts a distance from "dtype" space to "ttype" space, possibly applying "func".
+  - etype:           typedef, the "external" type.
+  - ETYPE_INTEGER:   1 if the "external" space is integral (not floating-point)
+  - ETYPE_MIN
+  - ETYPE_MAX:       the limits of the "external" space.
+  - ETYPE:           the "external" type, in a form that the preprocessor can make C
+  .                  identifiers out of it: eg 'd' for double; use this to get to the
+  .                  particular data type in the kdtree unions:
+  .         kdtree_qres_t* query_results = ...;
+  .         etype* mydata = query_results.results.ETYPE;
 
-  -   DISTSQUARE_RTOK(kd, rd, func) converts a distance-square from "dtype" space to "ttype" space, possibly applying "func".
+  - dtype:           typedef, the "data" type.
+  - DTYPE_INTEGER:   1 if the "data" space is integral (not floating-point)
+  - DTYPE_DOUBLE:    1 if the "data" space has type 'double'.
+  - DTYPE_MIN
+  - DTYPE_MAX:       the limits of the "data" space.
+  - DTYPE_KDT_DATA:  eg KDT_DATA_DOUBLE
+  - DTYPE:           the "data" type, in a form that the preprocessor can make C
+  .                  identifiers out of it: eg 'd' for double:
+  .          dtype* mydata = kd->data.DTYPE;
 
-  x -   KDT_INFTY    large "dtype"; (also -KDT_INFTY must work)
-  x -   LOW_HR (kd, D, i)       returns a "ttype*" to the lower hyperrectangle corner, for a D-dimensional tree.
-  x -   HIGH_HR(kd, D, i)       returns a "ttype*" to the upper hyperrectangle corner
+  - ttype:           typedef, the "tree" type.
+  - TTYPE_INTEGER:   1 if the "tree" space is integral (not floating-point)
+  - TTYPE_MIN
+  - TTYPE_MAX:       the limits of the "tree" space.
+  - TTYPE_SQRT_MAX:  the square root of the maximum value of the "tree" space.
+  - TTYPE:           the "tree" type, in a form that the preprocessor can make C
+  .                  identifiers out of it: eg 'd' for double.
+  .          ttype* mybb = kd->bb.TTYPE;
+
+  - bigttype:        typedef, a type that can hold a "ttype" squared.
+  - BIGTTYPE:        #define the bigttype; used for "STRINGIFY" macro.
+  - BIGTTYPE_MAX:    maximum value of a 'bigttype'.
+
+
+  - EQUAL_ED:   1 if "external" and "data" spaces are the same.
+  - EQUAL_DT:   1 if "data" and "tree" spaces are the same.
+  - EQUAL_ET:   1 if "external" and "tree" spaces are the same; implies EQUAL_ED && EQUAL_DT.
+
+
+  - POINT_ED(kd, d, c, func):  d: dimension;
+  .                            c: coordinate in that dimension,
+  .                            func: function to apply (may be empty)
+  .          Converts a coordinate from "external" to "data" space.
+  .          eg      POINT_ED(kd, 0, 0.1, floor);
+  .                  POINT_ED(kd, 1, 0.0, );
+
+  - POINT_DT(kd, d, c, func):
+  .          Converts a coordinate from "data" to "tree" space.
+
+  - POINT_ET(kd, d, c, func):
+  .          Converts a coordinate from "external" to "tree" space.
+
+  - POINT_TD(kd, d, c):
+  .          Converts a coordinate from "tree" to "data" space.
+
+  - POINT_DE(kd, d, c):
+  .          Converts a coordinate from "data" to "external" space.
+
+  - POINT_TE(kd, d, c):
+  .          Converts a coordinate from "tree" to "external" space.
+
+
+  - DIST_ED(kd, dist, func):
+  - DIST2_ED(kd, dist2, func):
+  .          Convert distance or distance-squared from "external" to "data" space,
+  .          optionally applying a function to the result.
+
+  - DIST_DT(kd, dist, func):
+  - DIST2_DT(kd, dist2, func):
+  .          Convert distance or distance-squared from "data" to "tree" space.
+
+  - DIST_ET(kd, dist, func):
+  - DIST2_ET(kd, dist2, func):
+  .          Convert distance or distance-squared from "external" to "tree" space.
+
+  - DIST_TD(kd, dist):
+  - DIST2_TD(kd, dist2):
+  .          Convert distance or distance-squared from "tree" to "data" space.
+
+  - DIST_DE(kd, dist):
+  - DIST2_DE(kd, dist2):
+  .          Convert distance or distance-squared from "data" to "external" space.
+
+  - DIST_TE(kd, dist):
+  - DIST2_TE(kd, dist2):
+  .          Convert distance or distance-squared from "tree" to "external" space.
 */
 
 // Which function do we use for rounding?
 #define KD_ROUND rint
 
+// Get the low corner of the bounding box
 #define LOW_HR( kd, D, i) ((kd)->bb.TTYPE + (2*(i)*(D)))
+
+// Get the high corner of the bounding box
 #define HIGH_HR(kd, D, i) ((kd)->bb.TTYPE + ((2*(i)+1)*(D)))
 
+// Get the splitting-plane position
 #define KD_SPLIT(kd, i) ((kd)->split.TTYPE + (i))
 
+// Get a pointer to the 'i'-th data point.
 #define KD_DATA(kd, D, i) ((kd)->data.DTYPE + ((D)*(i)))
 
+// Get the 'i'-th element of the permutation vector, or 'i' if there is no permutation vector.
 #define KD_PERM(kd, i) ((kd)->perm ? (kd)->perm[i] : i)
 
+// Get the dimension of this tree.
 #if defined(KD_DIM)
 #define DIMENSION(kd)   (KD_DIM)
 #else
 #define DIMENSION(kd)   (kd->ndim)
 #endif
 
+// Get the size of a single point in the tree.
 #define SIZEOF_PT(kd)  (sizeof(dtype)*DIMENSION(kd))
 
-// compatibility macros
+// compatibility macros (for DEPRECATED old-fashioned trees)
 #define COMPAT_NODE_SIZE(kd)    (sizeof(kdtree_node_t) + (SIZEOF_PT(kd) * 2))
 #define COMPAT_HIGH_HR(kd, i)  ((ttype*)(((char*)(kd)->nodes) \
 										  + COMPAT_NODE_SIZE(kd)*(i) \
@@ -1981,33 +2050,15 @@ bool MANGLE(kdtree_node_node_maxdist2_exceeds)
 	double d2 = 0.0;
 	int d, D = kd1->ndim;
 
-	assert(kd1->treetype == kd2->treetype);
+	//assert(kd1->treetype == kd2->treetype);
 	assert(kd1->ndim == kd2->ndim);
 
-	if (kdtree_convtype(kd1))
-		maxd2 = DIST2_CTOR(kd1, maxd2);
-
-	if (kd1->bb.any) {
-		// bb trees
-		tlo1 =  LOW_HR(kd1, D, node1);
-		thi1 = HIGH_HR(kd1, D, node1);
-	} else if (kd1->nodes) {
-		// compat mode
-		tlo1 = COMPAT_LOW_HR (kd1, node1);
-		thi1 = COMPAT_HIGH_HR(kd1, node1);
-	} else {
+	if (!bboxes(kd1, node1, &tlo1, &thi1, D)) {
 		fprintf(stderr, "Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
 		return FALSE;
 	}
-	if (kd2->bb.any) {
-		// bb trees
-		tlo2 =  LOW_HR(kd2, D, node2);
-		thi2 = HIGH_HR(kd2, D, node2);
-	} else if (kd2->nodes) {
-		// compat mode
-		tlo2 = COMPAT_LOW_HR (kd2, node2);
-		thi2 = COMPAT_HIGH_HR(kd2, node2);
-	} else {
+
+	if (!bboxes(kd2, node2, &tlo2, &thi2, D)) {
 		fprintf(stderr, "Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
 		return FALSE;
 	}
@@ -2040,16 +2091,16 @@ bool MANGLE(kdtree_node_node_mindist2_exceeds)
 	double d2 = 0.0;
 	int d, D = kd1->ndim;
 
-	assert(kd1->treetype == kd2->treetype);
+	//assert(kd1->treetype == kd2->treetype);
 	assert(kd1->ndim == kd2->ndim);
-	
+
 	if (!bboxes(kd1, node1, &tlo1, &thi1, D)) {
-		fprintf(stderr, "Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
+		fprintf(stderr, "Error: kdtree_node_node_mindist2_exceeds: kdtree does not have bounding boxes!\n");
 		return FALSE;
 	}
 
 	if (!bboxes(kd2, node2, &tlo2, &thi2, D)) {
-		fprintf(stderr, "Error: kdtree_node_node_maxdist2_exceeds: kdtree does not have bounding boxes!\n");
+		fprintf(stderr, "Error: kdtree_node_node_mindist2_exceeds: kdtree does not have bounding boxes!\n");
 		return FALSE;
 	}
 

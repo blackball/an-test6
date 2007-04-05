@@ -70,9 +70,10 @@ int main(int argc, char *argv[]) {
 	char* progname = argv[0];
 	char val[32];
 
-	int convtype = KDT_CONV_NULL;
+	int exttype  = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
 	int treetype = KDT_TREE_NULL;
+	bool convert = FALSE;
 	int tt;
 	int buildopts = 0;
 	int N, D;
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]) {
 
 	// the outside world works in doubles.
 	if (datatype != KDT_DATA_DOUBLE)
-		convtype = KDT_CONV_DOUBLE;
+		convert = TRUE;
 
     catfname = mk_catfn(basename);
 	treefname = mk_streefn(basename);
@@ -180,7 +181,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	tt = kdtree_kdtypes_to_treetype(convtype, treetype, datatype);
+	tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
 	N = cat->numstars;
 	D = DIM_STARS;
 	starkd->tree = kdtree_new(N, D, Nleaf);
@@ -194,7 +195,7 @@ int main(int argc, char *argv[]) {
 		}
 		kdtree_set_limits(starkd->tree, low, high);
 	}
-	if (convtype) {
+	if (convert) {
 		fprintf(stderr, "Converting data...\n");
 		fflush(stderr);
 		starkd->tree = kdtree_convert_data(starkd->tree, catalog_get_base(cat),

@@ -97,15 +97,15 @@ enum kd_types {
 	KDT_TREE_FLOAT  = 0x200,
 	KDT_TREE_U32    = 0x400,
 	KDT_TREE_U16    = 0x800,
-	KDT_CONV_NULL   = 0,
-	KDT_CONV_DOUBLE = 0x10000,
-	KDT_CONV_FLOAT  = 0x20000
+	KDT_EXT_NULL    = 0,
+	KDT_EXT_DOUBLE  = 0x10000,
+	KDT_EXT_FLOAT   = 0x20000
 };
 typedef enum kd_types kd_types;
 
 #define KDT_DATA_MASK  0xf
 #define KDT_TREE_MASK  0xf00
-#define KDT_CONV_MASK  0x30000
+#define KDT_EXT_MASK   0x30000
 
 /*
   Possible values for the "treetype" member.
@@ -113,34 +113,28 @@ typedef enum kd_types kd_types;
   There are three relevant data type: (a) the type of the raw data; (b) the type used in the tree's
   bounding boxes and splitting planes; (c) the external type.
 
-  These are called the "data", "tree", and "conv" (converted) types.
-
-  Usually "data" and "conv" are the same.  Trees for which this is not the case are called
-  "converted" trees.
-
-  Unconverted trees have the "conv" field equal KDT_NULL.
- */
+  These are called the "data", "tree", and "ext" types.
+*/
 enum kd_tree_types {
 	KDTT_NULL = 0,
-	/* An unconverted tree with data and tree types "double".
-	   "All doubles, all the time". */
-	KDTT_DOUBLE = KDT_DATA_DOUBLE | KDT_TREE_DOUBLE,
+
+	/* "All doubles, all the time". */
+	KDTT_DOUBLE = KDT_EXT_DOUBLE | KDT_DATA_DOUBLE | KDT_TREE_DOUBLE,
+
 	/* "All floats, all the time". */
-	KDTT_FLOAT  = KDT_DATA_FLOAT  | KDT_TREE_FLOAT ,
-	/* "All u32, all the time." */
-	//KDTT_U32    = KDT_DATA_U32    | KDT_TREE_U32   ,
-	/* "All u16, all the time." */
-	//KDTT_U16    = KDT_DATA_U16    | KDT_TREE_U16   ,
+	KDTT_FLOAT  = KDT_EXT_FLOAT | KDT_DATA_FLOAT  | KDT_TREE_FLOAT,
 
 	/* Data are "doubles", tree is u32.  aka inttree. */
-	KDTT_DOUBLE_U32 = KDT_DATA_DOUBLE | KDT_TREE_U32,
-	/* Data are "doubles", tree is u16.  aka shorttree. */
-	KDTT_DOUBLE_U16 = KDT_DATA_DOUBLE | KDT_TREE_U16,
+	KDTT_DOUBLE_U32 = KDT_EXT_DOUBLE | KDT_DATA_DOUBLE | KDT_TREE_U32,
 
-	/* Converted-from-double u32. */
-	KDTT_U32_CONV_DOUBLE = KDT_CONV_DOUBLE | KDT_TREE_U32 | KDT_DATA_U32,
-	/* Converted-from-double u16. */
-	KDTT_U16_CONV_DOUBLE = KDT_CONV_DOUBLE | KDT_TREE_U16 | KDT_DATA_U16
+	/* Data are "doubles", tree is u16.  aka shorttree. */
+	KDTT_DOUBLE_U16 = KDT_EXT_DOUBLE | KDT_DATA_DOUBLE | KDT_TREE_U16,
+
+	/* Data and tree are "u32". */
+	KDTT_DUU = KDT_EXT_DOUBLE | KDT_DATA_U32 | KDT_TREE_U32,
+
+	/* Data and tree are "u16". */
+	KDTT_DSS = KDT_EXT_DOUBLE | KDT_DATA_U16 | KDT_TREE_U16,
 };
 
 struct kdtree_funcs;
@@ -156,13 +150,13 @@ struct kdtree {
 
 	//unsigned int* lr;
 	u32* lr;            /* Points owned by leaf nodes, stored and manipulated
-							  in a way that's too complicated to explain in this comment. */
-
+						   in a way that's too complicated to explain in this comment. */
                
-	u32* perm;           /* Permutation index */
 	//unsigned int *perm;    
+	u32* perm;           /* Permutation index / hairstyle from the 80s */
 
-	/* Bounding box: (kdtype) list of D-dimensional lower hyperrectangle corner followed by D-dimensional upper corner. */
+	/* Bounding box: (ttype) list of D-dimensional lower hyperrectangle corner followed by
+	   D-dimensional upper corner. */
 	union {
 		float* f;
 		double* d;
@@ -171,7 +165,7 @@ struct kdtree {
 		void* any;
 	} bb;
 
-	/* Split position (& dimension for ints) (kdtype). */
+	/* Split position (& dimension for ints) (ttype). */
 	union {
 		float* f;
 		double* d;
@@ -180,22 +174,24 @@ struct kdtree {
 		void* any;
 	} split;
 
-	// Split dimension for floating-point types
+	/* Split dimension for floating-point types */
 	u8* splitdim;
 
-	// bitmasks for the split dimension and location.
+	/* bitmasks for the split dimension and location. */
 	u8 dimbits;
 	u32 dimmask;
 	u32 splitmask;
 
+	/* Raw coordinate data as xyzxyzxyz (dtype) */
 	union {
-		/* Raw coordinate data as xyzxyzxyz */
 		float* f;
 		double* d;
 		u32* u;
 		u16* s;
 		void* any;
 	} data;
+
+	bool converted_data;
 
 	double* minval;
 	double* maxval;
@@ -239,8 +235,8 @@ struct kdtree_funcs {
 };
 typedef struct kdtree_funcs kdtree_funcs;
 
-static inline int kdtree_convtype(kdtree_t* kd) {
-	return kd->treetype & KDT_CONV_MASK;
+static inline int kdtree_exttype(kdtree_t* kd) {
+	return kd->treetype & KDT_EXT_MASK;
 }
 
 static inline int kdtree_datatype(kdtree_t* kd) {
@@ -274,9 +270,9 @@ const char* kdtree_kdtype_to_string(int kdtype);
 
 int kdtree_kdtype_parse_data_string(const char* str);
 int kdtree_kdtype_parse_tree_string(const char* str);
-int kdtree_kdtype_parse_conv_string(const char* str);
+int kdtree_kdtype_parse_ext_string(const char* str);
 
-int kdtree_kdtypes_to_treetype(int convtype, int treetype, int datatype);
+int kdtree_kdtypes_to_treetype(int exttype, int treetype, int datatype);
 
 /*
   Compute the inverse permutation of tree->perm and place it in "invperm".
