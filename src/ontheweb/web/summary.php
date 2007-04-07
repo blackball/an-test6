@@ -48,6 +48,7 @@ Past Jobs:
 <th>Status</th>
 <th>Status Page</th>
 <th>Image</th>
+<th>Index RA,Dec list</th>
 </tr>
 
 <?php
@@ -93,9 +94,14 @@ foreach ($sortedkeys as $ctime) {
 		"<td><a href=\"mailto:" . $props['email'] . "\">" . $props['email'] . "</a> </td>\n" .
 		"<td>" . $props['status'] . "</td>\n" .
 		"<td><a href=\"http://" . $host . $uri . "/status.php?job=" . $jobid . "\">Status</a> </td>\n" .
-		"<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $img . "\">Image</a> </td>\n" .
-		//"<td>" .  . "</td>\n" .
-		"</tr>\n";
+		"<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $img . "\">Image</a> </td>\n";
+	if (file_exists($dir . "/" . $indexrdls_fn)) {
+		echo "<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $indexrdls_fn . "\">Index RDLS</a> </td>\n";
+	} else {
+		echo "<td> </td>\n";
+	}
+	//"<td>" .  . "</td>\n" .
+	echo "</tr>\n";
 }
 ?>
 
