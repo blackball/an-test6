@@ -93,8 +93,12 @@ foreach ($sortedkeys as $ctime) {
 		"<td>" . $props['uname'] . " </td>\n" .
 		"<td><a href=\"mailto:" . $props['email'] . "\">" . $props['email'] . "</a> </td>\n" .
 		"<td>" . $props['status'] . "</td>\n" .
-		"<td><a href=\"http://" . $host . $uri . "/status.php?job=" . $jobid . "\">Status</a> </td>\n" .
-		"<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $img . "\">Image</a> </td>\n";
+		"<td><a href=\"http://" . $host . $uri . "/status.php?job=" . $jobid . "\">Status</a> </td>\n";
+	if (file_exists($dir . "/" . $img)) {
+		echo "<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $img . "\">Image</a> </td>\n";
+	} else {
+		echo "<td> </td>\n";
+	}
 	if (file_exists($dir . "/" . $indexrdls_fn)) {
 		echo "<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $indexrdls_fn . "\">Index RDLS</a> </td>\n";
 	} else {
