@@ -66,11 +66,31 @@ foreach ($lst as $name) {
 		continue;
 	if (!is_dir($dir))
 		continue;
-	
+
+	/*
 	$st = @stat($dir . "/" . $input_fn);
 	if (!$st)
 		continue;
 	$jobtimes[$st['ctime']] = $name;
+	*/
+
+	$jd = $dir . "/" . $jobdata_fn;
+	if (!file_exists($jd)) {
+		loggit("no jd " . $jd . "\n");
+		continue;
+	}
+	$db = connect_db($jd, TRUE);
+	if (!$db) {
+		loggit("no db\n");
+		continue;
+	}
+	$date = getjobdata($db, 'submit-date');
+	disconnect_db($db);
+	if (!$date) {
+		loggit("no date\n");
+		continue;
+	}
+	$jobtimes[$date] = $name;
 }
 
 $sortedkeys = array_keys($jobtimes);
@@ -88,7 +108,8 @@ foreach ($sortedkeys as $ctime) {
 		$img = $props['displayImage'];
 	}
 	echo "<tr>\n" . 
-		"<td>" . get_datestr($ctime) . "</td>\n" .
+		//"<td>" . get_datestr($ctime) . "</td>\n" .
+		"<td>" . $ctime . "</td>\n" .
 		"<td>" . $jobid . "</td>\n" .
 		"<td>" . $props['uname'] . " </td>\n" .
 		"<td><a href=\"mailto:" . $props['email'] . "\">" . $props['email'] . "</a> </td>\n" .
