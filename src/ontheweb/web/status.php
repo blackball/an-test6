@@ -16,6 +16,7 @@ $overlay = array_key_exists("overlay", $headers);
 $bigoverlay = array_key_exists("overlay-big", $headers);
 $cancel = array_key_exists("cancel", $headers);
 $goback = array_key_exists("goback", $headers);
+$addpreset = array_key_exists("addpreset", $headers);
 
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
@@ -110,6 +111,10 @@ if ($goback) {
 
 	header("Location: http://" . $host . $uri . $args);
 	exit;
+}
+
+if ($addpreset) {
+
 }
 
 $input_exists = file_exists($inputfile);
@@ -1031,6 +1036,22 @@ if (!($job_done || $didcancel)) {
 </tr>
 </table>
 </form>
+<hr />
+
+<form id="presetform" action="status.php" method="get">
+<table class="c">
+<tr>
+<td>
+<input type="text" name="preset" size="20" />
+<input type="hidden" name="job" value="<?php echo $myname; ?>" />
+</td>
+<td>
+<input type="submit" name="addpreset" value="Save Preset" />
+</td>
+</tr>
+</table>
+</form>
+
 <hr />
 
 <?php
