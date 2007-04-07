@@ -54,57 +54,44 @@ Past Jobs:
 // search through the $resultdir directory tree, displaying job status
 // for each job found.
 
+$host  = $_SERVER['HTTP_HOST'];
+$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+
 $lst = scandir($resultdir);
-$joblist = array();
+$jobtimes = array();
 foreach ($lst as $name) {
 	$dir = $resultdir . $name;
 	if ($name == "." || $name == "..")
 		continue;
 	if (!is_dir($dir))
 		continue;
+
+	$st = stat($dir);
+	$jobtimes[$st['ctime']] = $name;
+}
+
+$sortedkeys = array_keys($jobtimes);
+rsort($sortedkeys);
+foreach ($sortedkeys as $ctime) {
+	$jobid = $jobtimes[$ctime];
+
+	$dir = $resultdir . $jobid;
 	$props = dir_status($dir . "/");
 	if (!$props)
 		continue;
 
-	$st = stat($dir);
-
-	$props['ctime'] = $st['ctime'];
-	$props['jobid'] = $name;
-
-	array_push($joblist, $props);
-}
-
-// sort
-$sortlist = array();
-foreach ($joblist as $job) {
-	$sortlist[$job['ctime']] = $job;
-}
-$sortedkeys = array_keys($sortlist);
-rsort($sortedkeys);
-$sortedlist = array();
-foreach ($sortedkeys as $k) {
-	array_push($sortedlist, $sortlist[$k]);
-}
-$sortlist = $sortedlist;
-$joblist = array_values($sortlist);
-
-$host  = $_SERVER['HTTP_HOST'];
-$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-
-foreach ($joblist as $i => $job) {
-	$img = $job['displayImagePng'];
+	$img = $props['displayImagePng'];
 	if (!$img) {
-		$img = $job['displayImage'];
+		$img = $props['displayImage'];
 	}
 	echo "<tr>\n" . 
-		//"<td>" . date("Y-M-d H:i:s", $job['ctime']) . "</td>\n" .
-		"<td>" . get_datestr($job['ctime']) . "</td>\n" .
-		"<td>" . $job['jobid'] . "</td>\n" .
-		"<td>" . $job['uname'] . " </td>\n" .
-		"<td><a href=\"mailto:" . $job['email'] . "\">" . $job['email'] . "</a> </td>\n" .
-		"<td>" . $job['status'] . "</td>\n" .
-		"<td><a href=\"http://" . $host . $uri . "/status.php?job=" . $job['jobid'] . "\">Status</a> </td>\n" .
-		"<td><a href=\"http://" . $host . $uri . "/status/" . $job['jobid'] . "/" . $img . "\">Image</a> </td>\n" .
+		"<td>" . get_datestr($ctime) . "</td>\n" .
+		"<td>" . $jobid . "</td>\n" .
+		"<td>" . $props['uname'] . " </td>\n" .
+		"<td><a href=\"mailto:" . $props['email'] . "\">" . $props['email'] . "</a> </td>\n" .
+		"<td>" . $props['status'] . "</td>\n" .
+		"<td><a href=\"http://" . $host . $uri . "/status.php?job=" . $jobid . "\">Status</a> </td>\n" .
+		"<td><a href=\"http://" . $host . $uri . "/status/" . $jobid . "/" . $img . "\">Image</a> </td>\n" .
 		//"<td>" .  . "</td>\n" .
 		"</tr>\n";
 }
@@ -132,19 +119,26 @@ function dir_status($mydir) {
 	$overlayfile = $mydir . $overlay_fn;
 	$inputfile = $mydir . $input_fn;
 
+	loggit("exists\n");
+
 	if (!file_exists($jobdatafile))
 		return FALSE;
+
+	loggit("connect\n");
  
 	$db = @connect_db($jobdatafile, TRUE);
 	if (!$db) {
 		//loggit("failed to connect jobdata db: " . $jobdatafile . "\n");
 		return FALSE;
 	}
+
+	loggit("jd\n");
 	$jd = getalljobdata($db, TRUE);
 	if ($jd === FALSE) {
 		//loggit("failed to get jobdata: " . $jobdatafile . "\n");
 		return FALSE;
 	}
+	loggit("disc\n");
 	disconnect_db($db);
 
 	$keys = array('email', 'uname', 'displayImage', 'displayImagePng',
