@@ -65,8 +65,10 @@ foreach ($lst as $name) {
 		continue;
 	if (!is_dir($dir))
 		continue;
-
-	$st = stat($dir);
+	
+	$st = @stat($dir . "/" . $input_fn);
+	if (!$st)
+		continue;
 	$jobtimes[$st['ctime']] = $name;
 }
 
