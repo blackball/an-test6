@@ -25,18 +25,24 @@ CFLAGS += $(LIBWCS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
-CFLAGS += -I.
+CFLAGS += -I. -g
 
 TWEAK_OBJS := tweak.o ezfits.o sip_util.o
 TEST_SIP_OBJS := test_sip.o sip_util.o ezfits.o
+SANITY_OBJS := sanity_check.o sip_util.o
 
-all: $(REMAKE_LIBTWEAK) tweak test_sip
+
+all: $(REMAKE_LIBTWEAK) tweak test_sip sanity_check
 
 # tweak.c depends on qfits.h existing, which is installed along with the library in the
 # "staging" directory qfits-an/stage.
 tweak.c: $(QFITS_LIB)
 
 tweak: $(TWEAK_OBJS) \
+	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) $(LEVMAR_LIB) \
+	$(LIBWCS_LIB) $(LIBFORTRAN)
+
+sanity_check: $(SANITY_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) $(LEVMAR_LIB) \
 	$(LIBWCS_LIB) $(LIBFORTRAN)
 

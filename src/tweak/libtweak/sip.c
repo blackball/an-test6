@@ -227,38 +227,38 @@ void sip_print(sip_t* sip)
 {
    double det,pixsc;
 
-	printf("SIP Structure:\n");
-	printf("crval[0]=%lf\n", sip->wcstan.crval[0]);
-	printf("crval[1]=%lf\n", sip->wcstan.crval[1]);
-	printf("crpix[0]=%lf\n", sip->wcstan.crpix[0]);
-	printf("crpix[1]=%lf\n", sip->wcstan.crpix[1]);
+	fprintf(stderr,"SIP Structure:\n");
+	fprintf(stderr,"crval[0]=%lf\n", sip->wcstan.crval[0]);
+	fprintf(stderr,"crval[1]=%lf\n", sip->wcstan.crval[1]);
+	fprintf(stderr,"crpix[0]=%lf\n", sip->wcstan.crpix[0]);
+	fprintf(stderr,"crpix[1]=%lf\n", sip->wcstan.crpix[1]);
 
-	printf("cd00=%le\n", sip->wcstan.cd[0][0]);
-	printf("cd01=%le\n", sip->wcstan.cd[0][1]);
-	printf("cd10=%le\n", sip->wcstan.cd[1][0]);
-	printf("cd11=%le\n", sip->wcstan.cd[1][1]);
+	fprintf(stderr,"cd00=%le\n", sip->wcstan.cd[0][0]);
+	fprintf(stderr,"cd01=%le\n", sip->wcstan.cd[0][1]);
+	fprintf(stderr,"cd10=%le\n", sip->wcstan.cd[1][0]);
+	fprintf(stderr,"cd11=%le\n", sip->wcstan.cd[1][1]);
 
 	if (sip->a_order > 0) {
 		int p, q;
 		for (p=0; p<=sip->a_order; p++)
 			for (q=0; q<=sip->a_order; q++)
 				if (p+q <= sip->a_order && !(p==0&&q==0))
-					 printf("a%d%d=%le\n", p,q,sip->a[p][q]);
+					 fprintf(stderr,"a%d%d=%le\n", p,q,sip->a[p][q]);
 	}
 	if (sip->b_order > 0) {
 		int p, q;
 		for (p=0; p<=sip->b_order; p++)
 			for (q=0; q<=sip->b_order; q++)
 				if (p+q <= sip->b_order && !(p==0&&q==0))
-					 printf("b%d%d=%le\n", p,q,sip->b[p][q]);
+					 fprintf(stderr,"b%d%d=%le\n", p,q,sip->b[p][q]);
 	}
 
 	det = sip_det_cd(sip);
 	pixsc = 3600*sqrt(fabs(det));
-	printf("det(CD)=%le [arcsec]\n", det);
-	printf("sqrt(det(CD))=%le [arcsec]\n", pixsc);
+	fprintf(stderr,"det(CD)=%le [arcsec]\n", det);
+	fprintf(stderr,"sqrt(det(CD))=%le [arcsec]\n", pixsc);
 
 
-	printf("\n");
+	fprintf(stderr,"\n");
 }
 

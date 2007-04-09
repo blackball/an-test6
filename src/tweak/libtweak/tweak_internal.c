@@ -188,6 +188,7 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 	// Restore
 	wcs->wcstan.crpix[0] = crpix0; // restore old crpix
 	wcs->wcstan.crpix[1] = crpix1;
+	// FIXME -- hogg says we should fix the rotation in cd matrix in case "north" has changed
 
 	return swcs;
 }
@@ -1202,6 +1203,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		for (jj=0; jj<t->n_ref; jj++) {
 			sip_radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
 				      t->x_ref+jj, t->y_ref+jj);
+			fprintf(stderr,"ref star %04d: %g,%g\n",jj,t->x_ref[jj],t->y_ref[jj]);
 		}
 
 		done(TWEAK_HAS_REF_XY);
@@ -1259,7 +1261,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		ensure(TWEAK_HAS_REF_XY);
 		ensure(TWEAK_HAS_IMAGE_XY);
 
-		printf("Satisfying TWEAK_HAS_COARSLY_SHIFTED\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_COARSLY_SHIFTED\n");
 
 		get_dydx_range(t->x, t->y, t->n,
 		               t->x_ref, t->y_ref, t->n_ref,
@@ -1277,7 +1279,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_COARSLY_SHIFTED);
 
-		printf("Satisfying TWEAK_HAS_FINELY_SHIFTED\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_FINELY_SHIFTED\n");
 
 		// Shrink size of hough box
 		do_entire_shift_operation(t, 0.3);
@@ -1292,7 +1294,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_FINELY_SHIFTED);
 
-		printf("Satisfying TWEAK_HAS_REALLY_FINELY_SHIFTED\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_REALLY_FINELY_SHIFTED\n");
 
 		// Shrink size of hough box
 		do_entire_shift_operation(t, 0.03);
@@ -1306,7 +1308,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		ensure(TWEAK_HAS_REF_XYZ);
 		ensure(TWEAK_HAS_IMAGE_XYZ);
 
-		printf("Satisfying TWEAK_HAS_CORRESPONDENCES\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_CORRESPONDENCES\n");
 
 		find_correspondences(t, arcsec2rad(t->jitter));
 
@@ -1321,7 +1323,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		ensure(TWEAK_HAS_IMAGE_XY);
 		ensure(TWEAK_HAS_CORRESPONDENCES);
 
-		printf("Satisfying TWEAK_HAS_LINEAR_CD\n");
+		fprintf(stderr,"Satisfying TWEAK_HAS_LINEAR_CD\n");
 
 		do_linear_tweak(t);
 
@@ -1330,9 +1332,9 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		done(TWEAK_HAS_LINEAR_CD);
 	}
 
-	printf("die for dependence: "); 
+	fprintf(stderr,"die for dependence: "); 
 	tweak_print_the_state(flag);
-	printf("\n"); 
+	fprintf(stderr,"\n"); 
 	assert(0);
 	return -1;
 }
