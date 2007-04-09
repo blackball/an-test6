@@ -4,7 +4,7 @@ require_once 'common.php';
 
 $preset_db_path = $resultdir . "presets.db";
 
-$preset_cols = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunits',
+$preset_cols = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
 					 'poserr', 'tweak');
 // jobdata => preset
 $preset_special_cols = array('index'  => 'theindex',
@@ -70,12 +70,12 @@ function add_preset($name, $jd) {
 	// Check if this preset name already exists:
 	$q = "SELECT name FROM presets WHERE name = '" . $db->escape($name, TRUE) . "'";
 	loggit("Query: " . $q . "\n");
-	$res =& $db->query($q);
-	if (PEAR::isError($res)) {
-		die("Failed to retrieve preset from database: " . $res->getMessage() . "\n");
+	$res1 =& $db->query($q);
+	if (PEAR::isError($res1)) {
+		die("Failed to retrieve preset from database: " . $res1->getMessage() . "\n");
 		return FALSE;
 	}
-	$row = $res->fetchRow();
+	$row = $res1->fetchRow();
 	if ($row) {
 		// a row exists - this is a duplicate preset name!
 		die("Preset name \"" . $name . "\" has already been taken.  Please choose a " .
@@ -102,6 +102,7 @@ function add_preset($name, $jd) {
 	loggit("Query: " . $q . "\n");
 	$res =& $db->exec($q);
 	if (PEAR::isError($res)) {
+		print_r($res);
 		die("Failed to insert preset into database: " . $res->getMessage() . "\n");
 		return FALSE;
 	}
