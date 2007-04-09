@@ -72,10 +72,12 @@ foreach ($_POST as $key => $val) {
 // Handle "preset="... by looking up the preset and redirecting
 $preset = $_GET["preset"];
 if ($preset) {
-	$params = $blind_presets[$preset];
+	//$params = $blind_presets[$preset];
+	$params = get_preset($preset);
 	if ($params) {
 		// Redirect to this page but with params set.
-		header("Location: http://" . $host . $myuri . "?" . $params);
+		//header("Location: http://" . $host . $myuri . "?" . $params);
+		header("Location: http://" . $host . $myuri . $params);
 	}
 }
 

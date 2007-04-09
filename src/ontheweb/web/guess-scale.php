@@ -1,5 +1,8 @@
 <?php
 
+// Sample JPEG with lots of EXIF info:
+//   http://antwrp.gsfc.nasa.gov/apod/image/0704/aurora1_wikipedia.jpg
+
 // skeleton for guess_image_type
 function get_image_type($filename, &$xtopnm) {
 }

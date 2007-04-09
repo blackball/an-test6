@@ -2,6 +2,7 @@
 require_once 'MDB2.php';
 
 require 'common.php';
+require 'presets.php';
 
 if (!array_key_exists("job", $headers)) {
 	echo "<h3>No \"job\" argument</h3></body></html>\n";
@@ -114,7 +115,18 @@ if ($goback) {
 }
 
 if ($addpreset) {
-
+	$name = $headers['preset'];
+	$patt = '/^[\w-]+$/';
+	if (!preg_match($patt, $name)) {
+		die("Preset name \"" . $name . "\" is invalid: must consist of " .
+			"alphanumeric, '-' and '_' only.");
+	}
+	if ($jd['xysrc'] != 'url') {
+		die("Can only save presets for URL images.");
+	}
+	add_preset($name, $jd);
+	echo "Preset added.\n";
+	exit;
 }
 
 $input_exists = file_exists($inputfile);
