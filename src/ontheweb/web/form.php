@@ -943,6 +943,7 @@ function render_form($form, $ids, $headers) {
 	} else {
 		$template = str_replace("##fitsfile_set##", "", $template);
 	}
+	$template = str_replace('##sizelimit##', sprintf("%d", $maxfilesize/(1024*1024)), $template);
 
 	// Write the HTML header.
 	$head = file_get_contents($index_header);
