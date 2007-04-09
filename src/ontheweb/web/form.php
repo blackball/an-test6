@@ -4,7 +4,7 @@ require_once 'HTML/QuickForm/Renderer/QuickHtml.php';
 
 require_once 'svn.php';
 
-$maxfilesize = 100*1024*1024;
+$maxfilesize = 250*1024*1024;
 umask(0002); // in octal
 
 $host  = $_SERVER['HTTP_HOST'];

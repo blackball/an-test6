@@ -12,7 +12,7 @@ $statuspath = "status/";
 // blind params
 $totaltime = 300; // Five minute total max.
 $maxtime = 0;
-$maxquads = 0; // 1000000;
+$maxquads = 0;
 $maxcpu = 0;
 
 $index_template = "index-template.html";
