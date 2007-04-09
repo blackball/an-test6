@@ -46,11 +46,11 @@ void printHelp(char* progname) {
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-int main(int argc, char** args) {
+int main(int argc, char** args) { 
     int argchar;
 	char* progname = args[0];
 	int i;
-	int NB = sizeof(baddies) / sizeof(badfield);
+	int NB = sizeof(baddies) / sizeof(badfield); // FIXME -- baddies doesn't exist
 	char* solvedtemplate = NULL;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
@@ -88,7 +88,7 @@ int main(int argc, char** args) {
 			continue;
 		}
 		for (i=0; i<NB; i++) {
-			badfield* bad = baddies + i;
+		  badfield* bad = baddies + i; // FIXME -- baddies doesn't exist
 			if (!((run == bad->run) &&
 				  (field >= bad->firstfield) &&
 				  (field <= bad->lastfield)))

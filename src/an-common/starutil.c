@@ -153,6 +153,13 @@ Const inline double distsq2arc(double dist2) {
 	return acos(1.0 - dist2 / 2.0);
 }
 
+
+
+
+/* computes the 2D coordinates (x,y)  that star s would have in a
+   TANGENTIAL PROJECTION defined by (centred at) star r.
+   s and r are both given in xyz coordinates, the parameters are pointers to arrays of size3
+*/
 inline void star_coords(double *s, double *r, double *x, double *y)
 {
 	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];

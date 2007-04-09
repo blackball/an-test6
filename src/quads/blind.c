@@ -385,7 +385,7 @@ int main(int argc, char *argv[]) {
 		if (bp->total_timelimit) {
 			alarm(bp->total_timelimit);
 			oldsigalarm_total = signal(SIGALRM, total_wall_time_limit);
-			if (oldsigalarm_total == SIG_ERR) {
+			if (oldsigalarm_total == SIG_ERR) { // FIXME we are comparing a pointer and a number
 				logerr(bp, "Failed to set total wall time limit signal handler: %s\n", strerror(errno));
 				exit(-1);
 			}
@@ -400,6 +400,7 @@ int main(int argc, char *argv[]) {
 			boilerplate_add_fits_headers(bp->mf->header);
 			qfits_header_add(bp->mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
 			qfits_header_add(bp->mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+			//FIXME who is gonna free the rez of  qfits_get_datetime_iso8601()??
 			add_blind_params(bp, bp->mf->header);
 			if (matchfile_write_header(bp->mf)) {
 				logerr(bp, "Failed to write matchfile header.\n");
@@ -449,6 +450,7 @@ int main(int argc, char *argv[]) {
 				fits_add_long_history(bp->rdls->header, "This \"rdls\" file was created by the program \"blind\"."
 									  "  It contains the RA/DEC of field objects after being transformed by the WCS.");
 				qfits_header_add(bp->rdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+				//FIXME who is gonna free the rez of  qfits_get_datetime_iso8601()??
 				add_blind_params(bp, bp->rdls->header);
 				if (rdlist_write_header(bp->rdls)) {
 					logerr(bp, "Failed to write RDLS header.\n");
@@ -467,6 +469,7 @@ int main(int argc, char *argv[]) {
 				fits_add_long_history(bp->indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
 									  "  It contains the RA/DEC of index objects that were found inside a solved field.");
 				qfits_header_add(bp->indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+				//FIXME who is gonna free the rez of  qfits_get_datetime_iso8601()??
 				add_blind_params(bp, bp->indexrdls->header);
 				if (rdlist_write_header(bp->indexrdls)) {
 					logerr(bp, "Failed to write index RDLS header.\n");
@@ -1361,6 +1364,7 @@ static void solve_fields(blind_params* bp) {
 				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"blind\".", NULL, NULL);
 				tm = qfits_get_datetime_iso8601();
 				qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
+				//FIXME should we free tm??
 
 				add_blind_params(bp, hdr);
 

@@ -19,7 +19,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "CuTest.h"
+//#include "CuTest.h" //where is this file??
 #include "starutil.h"
 #include "healpix.h"
 

@@ -29,7 +29,7 @@
 #include "bl.h"
 #include "matchobj.h"
 #include "catalog.h"
-#include "hitlist_healpix.h"
+//#include "hitlist_healpix.h"
 #include "tic.h"
 #include "quadfile.h"
 #include "idfile.h"

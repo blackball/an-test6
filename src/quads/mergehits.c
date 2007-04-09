@@ -27,7 +27,7 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "matchobj.h"
-#include "hitlist_healpix.h"
+//#include "hitlist_healpix.h"
 #include "matchfile.h"
 
 char* OPTIONS = "hA:B:M:";

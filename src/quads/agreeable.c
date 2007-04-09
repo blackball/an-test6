@@ -33,7 +33,7 @@
 #include "solvedclient.h"
 #include "solvedfile.h"
 #include "boilerplate.h"
-#include "handlehits.h"
+//#include "handlehits.h"
 
 char* OPTIONS = "hA:B:I:J:L:M:m:n:o:f:s:S:Fa";
 
