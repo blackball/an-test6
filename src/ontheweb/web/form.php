@@ -303,6 +303,7 @@ function process_data ($vals) {
 	$mydir = $resultdir . $myreldir;
 
 	$mylogfile = $mydir . "loggit";
+	loggit("Logging to " . $mylogfile . "\n");
 	$ontheweblogfile = $mylogfile;
 
 	// Create a database...
@@ -523,7 +524,7 @@ function process_data ($vals) {
 
 	array_push($tryscales, array($fu_lower, $fu_upper));
 
-	$index = $vals["index"];
+	$index = $vals['index'];
 
 	if ($index == 'auto') {
 		// Estimate size of quads we could find:
@@ -547,9 +548,9 @@ function process_data ($vals) {
 		if (count($indexes) == 0) {
 			// too big, or too little?
 			if ($fmax > $sizemap[$largest_index][1]) {
-				array_push($indexes, $largest);
+				array_push($indexes, $largest_index);
 			} else if ($fmin < $sizemap[$smallest_index][0]) {
-				array_push($indexes, $smallest);
+				array_push($indexes, $smallest_index);
 			}
 		}
 
