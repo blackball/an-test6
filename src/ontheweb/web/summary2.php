@@ -41,7 +41,7 @@ $myuri  = $_SERVER['PHP_SELF'];
 $site = $headers['site'];
 $era = $headers['era'];
 
-if (!$site) {
+if (!$site || !preg_match($sitepat, $site)) {
 	// Show sites
 	echo "<hr />\n" .
 		"<h3>Sites:</h3>\n" .
@@ -54,8 +54,7 @@ if (!$site) {
 			continue;
 		if (!is_dir($dir))
 			continue;
-		$pat = '/^\w{3}$/';
-		if (!preg_match($pat, $name))
+		if (!preg_match($sitepat, $name))
 			continue;
 
 		echo '<tr><td><a href="' . $myuri . "?site=" . $name . '">' .
@@ -67,7 +66,7 @@ if (!$site) {
 		"</body></html>\n";
 	exit;
 }
-if (!$era) {
+if (!$era || !preg_match($erapat, $era)) {
 	// Show eras for this site.
 	echo "<hr />\n" .
 		"<h3>Eras:</h3>\n" .
@@ -83,8 +82,7 @@ if (!$era) {
 			continue;
 		if (!is_dir($dir))
 			continue;
-		$pat = '/^\d{6}$/';
-		if (!preg_match($pat, $name))
+		if (!preg_match($erapat, $name))
 			continue;
 
 		echo '<tr><td><a href="' . $myuri . "?site=" . $site . "&era=" . $name . '">' .

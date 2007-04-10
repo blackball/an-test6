@@ -170,6 +170,10 @@ function create_new_jobid() {
 	return $siteid . "-" . $yrmonth . "-" . $num;
 }
 
+$sitepat = '/^\w{3}$/';
+$erapat = '/^\d{6}$/';
+$numpat = '/^\d{8}$/';
+
 function verify_jobid($jobid) {
 	$pat_old = '/^[0-9a-f]{10}$/';
 	$pat_new = '/^\w{3}-\d{6}-\d{8}$/';
@@ -179,6 +183,10 @@ function verify_jobid($jobid) {
 
 function jobid_to_dir($jobid) {
 	return strtr($jobid, "-", "/");
+}
+
+function dir_to_jobid($dir) {
+	return strtr($jobid, "/", "-");
 }
 
 function get_datestr($t) {
