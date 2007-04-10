@@ -2,10 +2,11 @@
 require_once 'MDB2.php';
 require_once 'PEAR.php';
 
+$siteid = "tor";
+
 // Are we using a remote compute server?
 $remote = 1;
 
-$resultdir = "/home/gmaps/ontheweb-data/";
 $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
 
@@ -148,6 +149,36 @@ $highlevellogfile = "/home/gmaps/ontheweb-data/highlevel.log";
 function highlevellog($msg) {
 	global $highlevellogfile;
 	error_log($msg, 3, $highlevellogfile);
+}
+
+function create_new_jobid() {
+	global $siteid;
+	global $resultdir;
+	$yrmonth = date("Ym", time());
+	$dir = $resultdir . $siteid . "/" . $yrmonth;
+	if (!file_exists($dir)) {
+		if (!mkdir($dir, 0775, TRUE)) {
+			loggit("Failed to create directory " . $dir . "\n");
+			return FALSE;
+		}
+	}
+	$num = create_random_dir_2($dir . "/");
+	if (!$num) {
+		loggit("Failed to create a random directory.  Base dir " . $dir . "\n");
+		return FALSE;
+	}
+	return $siteid . "-" . $yrmonth . "-" . $num;
+}
+
+function verify_jobid($jobid) {
+	$pat_old = '/^[0-9a-f]{10}$/';
+	$pat_new = '/^\w{3}-\d{6}-\d{8}$/';
+	return ((preg_match($pat_new, $jobid) == 1) ||
+			(preg_match($pat_old, $jobid) == 1));
+}
+
+function jobid_to_dir($jobid) {
+	return strtr($jobid, "-", "/");
 }
 
 function get_datestr($t) {
@@ -294,6 +325,23 @@ function create_random_dir($basedir) {
         // Convert it to hex.
         $myname = bin2hex($str);
 
+        // See if that dir already exists.
+        $mydir = $basedir . $myname;
+        if (!file_exists($mydir)) {
+			break;
+		}
+    }
+	if (!mkdir($mydir)) {
+		return FALSE;
+	}
+	return $myname;
+}
+
+function create_random_dir_2($basedir) {
+    while (TRUE) {
+        // Generate a random number with up to 8 digits.
+		$rnd = mt_rand(0, 99999999);
+		$myname = sprintf("%08d", $rnd);
         // See if that dir already exists.
         $mydir = $basedir . $myname;
         if (!file_exists($mydir)) {

@@ -293,11 +293,14 @@ function process_data ($vals) {
 	}
 
 	// Create a directory for this request.
-	$myname = create_random_dir($resultdir);
+	$myname = create_new_jobid();
 	if (!$myname) {
 		die("Failed to create job directory.");
 	}
-	$mydir = $resultdir . $myname . "/";
+	// relative directory
+	$myreldir = jobid_to_dir($myname) . "/";
+	// full directory path
+	$mydir = $resultdir . $myreldir;
 
 	$mylogfile = $mydir . "loggit";
 	$ontheweblogfile = $mylogfile;
@@ -315,7 +318,7 @@ function process_data ($vals) {
 		die("failed to create table.");
 	}
 
-	// Stuff the submitted values into the jobdata db.
+	// Put the submitted values into the jobdata db.
 	$jobdata = array('maxquads' => $maxquads,
 					 'cpulimit' => $maxcpu,
 					 'timelimit' => $maxtime);
@@ -327,14 +330,14 @@ function process_data ($vals) {
 		$jobdata[$fld] = $vals[$fld];
 	}
 
-	// Stuff in optional fields
+	// Add optional fields
 	$flds = array('uname', 'email');
 	foreach ($flds as $fld) {
 		if ($vals[$fld])
 			$jobdata[$fld] = $vals[$fld];
 	}
 
-	// Filenames on the user's machine of uploaded files.
+	// Add filenames on the user's machine of uploaded files.
 	if ($xysrc == 'img') {
 		$imgval = $imgfile->getValue();
 		$origname = $imgval['name'];
@@ -464,6 +467,8 @@ function process_data ($vals) {
 	}
 
 	// FIXME - do we need this??
+	// (I think yes because apache is run by user "www-data" but watcher is run by
+	//  user "gmaps")
 	if (!chmod($xylist, 0664)) {
 		loggit("Failed to chmod xylist " . $xylist . "\n");
 	}
@@ -661,7 +666,8 @@ function process_data ($vals) {
 
 	loggit("Wrote blind input file: " . $inputfile . "\n");
 
-	// Write the startscript: executed by "watcher" (via blindscript) before blind starts.
+	// Write the startscript: executed by "watcher" (via blindscript) 
+	// before blind starts.
 	$fstart = fopen($startscript, "w");
 	if (!$fstart) {
 		loggit("Failed to write startscript " . $startscript);

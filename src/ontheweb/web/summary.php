@@ -55,6 +55,8 @@ Past Jobs:
 // search through the $resultdir directory tree, displaying job status
 // for each job found.
 
+$ontheweblogfile = $resultdir . "summary.log";
+
 $host  = $_SERVER['HTTP_HOST'];
 $uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 
@@ -76,18 +78,18 @@ foreach ($lst as $name) {
 
 	$jd = $dir . "/" . $jobdata_fn;
 	if (!file_exists($jd)) {
-		loggit("no jd " . $jd . "\n");
+		//loggit("no jd " . $jd . "\n");
 		continue;
 	}
 	$db = connect_db($jd, TRUE);
 	if (!$db) {
-		loggit("no db\n");
+		//loggit("no db\n");
 		continue;
 	}
 	$date = getjobdata($db, 'submit-date');
 	disconnect_db($db);
 	if (!$date) {
-		loggit("no date\n");
+		//loggit("no date\n");
 		continue;
 	}
 	$jobtimes[$date] = $name;
@@ -152,12 +154,12 @@ function dir_status($mydir) {
 	$overlayfile = $mydir . $overlay_fn;
 	$inputfile = $mydir . $input_fn;
 
-	loggit("exists\n");
+	//loggit("exists\n");
 
 	if (!file_exists($jobdatafile))
 		return FALSE;
 
-	loggit("connect\n");
+	//loggit("connect\n");
  
 	$db = @connect_db($jobdatafile, TRUE);
 	if (!$db) {
@@ -165,13 +167,13 @@ function dir_status($mydir) {
 		return FALSE;
 	}
 
-	loggit("jd\n");
+	//loggit("jd\n");
 	$jd = getalljobdata($db, TRUE);
 	if ($jd === FALSE) {
 		//loggit("failed to get jobdata: " . $jobdatafile . "\n");
 		return FALSE;
 	}
-	loggit("disc\n");
+	//loggit("disc\n");
 	disconnect_db($db);
 
 	$keys = array('email', 'uname', 'displayImage', 'displayImagePng',

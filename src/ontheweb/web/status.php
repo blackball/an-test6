@@ -5,12 +5,15 @@ require 'common.php';
 require 'presets.php';
 
 if (!array_key_exists("job", $headers)) {
-	echo "<h3>No \"job\" argument</h3></body></html>\n";
-	exit;
+	die("Missing \"job\" argument.");
 }
-
 $myname = $headers["job"];
-$mydir = $resultdir . $myname . "/";
+
+if (!verify_jobid($myname)) {
+	die("Invalid \"job\" argument.");
+}
+$myreldir = jobid_to_dir($myname);
+$mydir = $resultdir . $myreldir . "/";
 
 $img = array_key_exists("img", $headers);
 $overlay = array_key_exists("overlay", $headers);
@@ -604,7 +607,7 @@ if ($do_refresh) {
 
 
 <?php
-$statuspath .= $myname . "/";
+$statuspath .= $myreldir . "/";
 $host  = $_SERVER['HTTP_HOST'];
 $uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $statusurl = "http://" . $host . $uri . "/" . $statuspath;
@@ -687,7 +690,7 @@ if ($didsolve) {
 		"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
 		"&arcsinh&gain=-0.5" .
 		"&BBOX=0,-85,360,85" .
-		"&wcsfn=" . $myname . "/wcs.fits";
+		"&wcsfn=" . $myreldir . "/wcs.fits";
 
 	$fldsz = $pixscale * max($fullW, $fullH);
 	loggit("Field size: " . $fldsz . "\n");
@@ -724,7 +727,7 @@ if ($didsolve) {
 			"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
 			"&arcsinh&gain=-0.25" .
 			"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi .
-			"&wcsfn=" . $myname . "/wcs.fits";
+			"&wcsfn=" . $myreldir . "/wcs.fits";
 		if ($zoomin2) {
 			$url .= "&dashbox=0.01";
 		}
@@ -749,7 +752,7 @@ if ($didsolve) {
 				"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
 				"&arcsinh&gain=0.5" .
 				"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi .
-				"&wcsfn=" . $myname . "/wcs.fits";
+				"&wcsfn=" . $myreldir . "/wcs.fits";
 
 			echo "<a href=\"" . htmlentities($url .
 											 "&WIDTH=1024&HEIGHT=1024&lw=5") .
@@ -946,7 +949,7 @@ if ($job_done) {
 						  "&ra=" . $rac_merc .
 						  "&dec=" . $decc_merc .
 						  "&over=no" .
-						  "&rdls=" . $myname . "/field.rd.fits" .
+						  "&rdls=" . $myreldir . "/field.rd.fits" .
 						  "&view=r+u&nr=200");
 		echo "\">USNOB</a>\n";
 		echo "<a href=\"";
@@ -955,7 +958,7 @@ if ($job_done) {
 						  "&zoom=" . $zoom .
 						  "&ra=" . $rac_merc . "&dec=" . $decc_merc .
 						  "&over=no" .
-						  "&rdls=" . $myname . "/field.rd.fits" .
+						  "&rdls=" . $myreldir . "/field.rd.fits" .
 						  "&view=r+t&nr=200&arcsinh");
 		echo "\">Tycho-2</a>\n";
 		echo "</td></tr>\n";

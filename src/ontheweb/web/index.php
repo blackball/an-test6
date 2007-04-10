@@ -1,6 +1,6 @@
 <?php
-require 'common.php';
-require 'presets.php';
+require_once 'common.php';
+require_once 'presets.php';
 
 $emailver = 0;
 $webver = 1;
@@ -11,10 +11,10 @@ $webver = 0;
 */
 
 if ($emailver) {
-	require 'rfc822.php';
+	require_once 'rfc822.php';
 }
 
-require 'form.php';
+require_once 'form.php';
 
 function allow_email($email) {
 	$mode = 'deny';
