@@ -186,7 +186,7 @@ function jobid_to_dir($jobid) {
 }
 
 function dir_to_jobid($dir) {
-	return strtr($jobid, "/", "-");
+	return strtr($dir, "/", "-");
 }
 
 function get_datestr($t) {
