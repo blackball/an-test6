@@ -732,6 +732,7 @@ function process_data ($vals) {
 		"  done\n" .
 		"  echo Sorting match file...\n" .
 		"  " . $tabsort . " -i " . $match_fn . ".tmp -o " . $match_fn . " -c logodds -d\n" .
+		"  rm " . $match_fn . ".tmp\n" .
 		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . "\n" .
 		"else\n" .
 		"  echo \"Field did not solve.\"\n" .
