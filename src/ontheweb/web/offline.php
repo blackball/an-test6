@@ -1,5 +1,7 @@
 <?php
 /*
+OBSOLETE.
+
  Web page for offline, bulk-processing of many FITS files.
 
  This page will ask for the user's email address and some information

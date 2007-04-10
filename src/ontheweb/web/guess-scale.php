@@ -16,11 +16,14 @@ function guess_image_scale($vals) {
 	$xysrc = $vals["xysrc"];
 
 	// Create a directory for this request.
-	$myname = create_random_dir($resultdir);
+	$myname = create_new_jobid();
 	if (!$myname) {
 		die("Failed to create job directory.");
 	}
-	$mydir = $resultdir . $myname . "/";
+	// relative directory
+	$myreldir = jobid_to_dir($myname) . "/";
+	// full directory path
+	$mydir = $resultdir . $myreldir;
 
 	$imgbase = "";
 	$imgfilename = "";

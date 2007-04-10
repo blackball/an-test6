@@ -162,7 +162,7 @@ function create_new_jobid() {
 			return FALSE;
 		}
 	}
-	$num = create_random_dir_2($dir . "/");
+	$num = create_random_dir($dir . "/");
 	if (!$num) {
 		loggit("Failed to create a random directory.  Base dir " . $dir . "\n");
 		return FALSE;
@@ -316,28 +316,6 @@ function describe_job($jd, $user=FALSE) {
 }
 
 function create_random_dir($basedir) {
-    while (TRUE) {
-        // Generate a random string.
-        $str = '';
-        for ($i=0; $i<5; $i++) {
-            $str .= chr(mt_rand(0, 255));
-        }
-        // Convert it to hex.
-        $myname = bin2hex($str);
-
-        // See if that dir already exists.
-        $mydir = $basedir . $myname;
-        if (!file_exists($mydir)) {
-			break;
-		}
-    }
-	if (!mkdir($mydir)) {
-		return FALSE;
-	}
-	return $myname;
-}
-
-function create_random_dir_2($basedir) {
     while (TRUE) {
         // Generate a random number with up to 8 digits.
 		$rnd = mt_rand(0, 99999999);
