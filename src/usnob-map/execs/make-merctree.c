@@ -65,7 +65,7 @@ int main(int argc, char** args) {
 	int N;
 	int infile;
 	double* xy;
-	int convtype = KDT_CONV_NULL;
+	int exttype  = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
 	int treetype = KDT_TREE_NULL;
 	int tt;
@@ -125,11 +125,7 @@ int main(int argc, char** args) {
 	if (!treetype)
 		treetype = KDT_TREE_U32;
 
-	// the outside world works in doubles.
-	if (datatype != KDT_DATA_DOUBLE)
-		convtype = KDT_CONV_DOUBLE;
-
-	tt = kdtree_kdtypes_to_treetype(convtype, treetype, datatype);
+	tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
 
 	mt = merctree_new();
 	if (!mt) {
@@ -281,7 +277,7 @@ int main(int argc, char** args) {
 		kdtree_set_limits(mt->tree, lo, hi);
 	}
 
-	if (convtype) {
+	if (datatype != exttype) {
 		fprintf(stderr, "Converting data...\n");
 		fflush(stderr);
 		mt->tree = kdtree_convert_data(mt->tree, xy, N, 2, Nleaf, tt);
