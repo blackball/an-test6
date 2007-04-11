@@ -81,9 +81,9 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 # codedensity 
 
 # old and miscellaneous executables that aren't part of the pipeline.
-OLDEXECS := whynot findquad findstar matchstats plotmatch \
+OLDEXECS := findquad findstar matchstats plotmatch \
 	plotquads matchtordls tunematch overlapstats rawstartree
-#certifiable 
+#whynot certifiable 
 CAIROEXECS := plotquad plotxy2
 
 OLDEXECS_OBJS := catalog.o histogram.o \
@@ -137,8 +137,8 @@ tags:
 #badfields.inc: opBadfields.par badfields.awk
 #	awk -f badfields.awk $< > $@
 
-certifiable: certifiable.o histogram.o matchfile.o solvedfile.o $(UTILS_LIB) \
-		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+certifiable: certifiable.o histogram.o matchfile.o solvedfile.o \
+		$(UTILS_LIB) $(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 an-fitstopnm: an-fitstopnm.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
@@ -146,8 +146,8 @@ an-fitstopnm: an-fitstopnm.o \
 fits-guess-scale: fits-guess-scale.o \
 		$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-vossetal2006toan: vossetal2006toan.o boilerplate.o svn.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#vossetal2006toan: vossetal2006toan.o boilerplate.o svn.o \
+#		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 wcscheck: wcscheck.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(LIBWCS_LIB)
@@ -230,7 +230,7 @@ homer: homer.o donuts.o \
 
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
-		hitlist.o intmap.o pnpoly.o blind_wcs.o \
+		intmap.o blind_wcs.o \
 		$(UTIL_OBJS) \
 		$(LIBTWEAK_LIB) $(LIBWCS_LIB) $(LIBFORTRAN) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
@@ -255,8 +255,7 @@ mergesolved: mergesolved.o solvedfile.o $(UTIL_OBJS) \
 solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o \
-		usnob_fits.o usnob.o \
+plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 plotxy: plotxy.o \
