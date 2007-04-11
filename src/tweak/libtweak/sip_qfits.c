@@ -112,8 +112,8 @@ static bool read_polynomial(qfits_header* hdr, char* format,
 				sprintf(key, format, i, j);
 				val = qfits_header_getdouble(hdr, key, nil);
 				if (val == nil) {
-					fprintf(stderr, "SIP: key \"%s\" not found.\n", key);
-					return FALSE;
+					fprintf(stderr, "SIP: warning: key \"%s\" not found; setting to zero.\n", key);
+					val=0.0;
 				}
 				data[i*datastride + j] = val;
 			}
