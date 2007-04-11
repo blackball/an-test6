@@ -28,16 +28,12 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "matchobj.h"
-#include "hitlist.h"
 #include "matchfile.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
 #include "boilerplate.h"
-//#include "handlehits.h"
 
-char* OPTIONS = "hA:B:I:J:L:M:m:n:o:f:s:S:Fa";
-
-#define DEFAULT_AGREE_TOL 10.0
+char* OPTIONS = "hA:B:I:J:L:M:r:f:s:S:Fa";
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -48,18 +44,16 @@ void printHelp(char* progname) {
 			"   [-J last-field-filenum]\n"
 			"   [-L write-leftover-matches-file]\n"
 			"   [-M write-successful-matches-file]\n"
-			"   [-m agreement-tolerance-in-arcsec] (default %g)\n"
- 			"   [-n matches-needed-to-agree] (default 1)\n"
-			"   [-o overlap-needed-to-solve]\n"
+			"   [-r ratio-needed-to-solve]\n"
 			"   [-f minimum-field-objects-needed-to-solve] (default: no minimum)\n"
 			"   (      [-F]: write out the first sufficient match to surpass the solve threshold.\n"
 			"     or   [-a]: write out all matches passing the solve threshold.\n"
-			"          (default is to write out the single best match (largest overlap))\n"
+			"          (default is to write out the single best match (largest ratio))\n"
 			"   )\n"
 			"   [-s <solved-server-address>]\n"
 			"   [-S <solved-file-template>]\n"
 			"   <input-match-file> ...\n"
-			"\n", progname, DEFAULT_AGREE_TOL);
+			"\n", progname);
 }
 
 static void write_field(pl* agreeing,
@@ -67,7 +61,6 @@ static void write_field(pl* agreeing,
 						int fieldfile,
 						int fieldnum);
 
-unsigned int min_matches_to_agree = 1;
 char* leftoverfname = NULL;
 matchfile* leftovermf = NULL;
 char* agreefname = NULL;
@@ -76,8 +69,8 @@ il* solved;
 il* unsolved;
 char* solvedserver = NULL;
 char* solvedfile = NULL;
-double overlap_tokeep = 0.0;
-int ninfield_tokeep = 0;
+double ratio_tosolve = 0.0;
+int ninfield_tosolve = 0;
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -96,19 +89,21 @@ int main(int argc, char *argv[]) {
 	int i;
 	int firstfield=0, lastfield=INT_MAX-1;
 	int firstfieldfile=1, lastfieldfile=INT_MAX-1;
-	bool leftovers = FALSE;
-	bool agree = FALSE;
-	double agreetolarcsec = DEFAULT_AGREE_TOL;
 	matchfile** mfs;
 	MatchObj** mos;
 	bool* eofs;
 	bool* eofieldfile;
 	int nread = 0;
 	int f;
-	handlehits* hits = NULL;
 	int fieldfile;
 	int totalsolved, totalunsolved;
 	int mode = MODE_BEST;
+	double logodds_tosolve;
+	bool agree = FALSE;
+
+	MatchObj* bestmo;
+	bl* keepers;
+	bl* leftovers = NULL;
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1) {
 		switch (argchar) {
@@ -124,14 +119,12 @@ int main(int argc, char *argv[]) {
 		case 'a':
 			mode = MODE_ALL;
 			break;
-		case 'm':
-			agreetolarcsec = atof(optarg);
-			break;
-		case 'o':
-			overlap_tokeep = atof(optarg);
+		case 'r':
+			ratio_tosolve = atof(optarg);
+			logodds_tosolve = log(ratio_tosolve);
 			break;
 		case 'f':
-			ninfield_tokeep = atoi(optarg);
+			ninfield_tosolve = atoi(optarg);
 			break;
 		case 'M':
 			agreefname = optarg;
@@ -150,9 +143,6 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'B':
 			lastfield = atoi(optarg);
-			break;
-		case 'n':
-			min_matches_to_agree = atoi(optarg);
 			break;
 		case 'h':
 		default:
@@ -191,7 +181,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Failed to write leftovers matchfile header.\n");
 			exit(-1);
 		}
-		leftovers = TRUE;
+		leftovers = bl_new(256, sizeof(MatchObj));
 	}
 	if (agreefname) {
 		agreemf = matchfile_open_for_writing(agreefname);
@@ -208,16 +198,10 @@ int main(int argc, char *argv[]) {
 		agree = TRUE;
 	}
 
-	hits = handlehits_new();
-	hits->agreetol = agreetolarcsec;
-	hits->nagree_toverify = min_matches_to_agree;
-	hits->overlap_tokeep  = overlap_tokeep;
-	hits->overlap_tosolve = overlap_tokeep;
-	hits->ninfield_tokeep  = ninfield_tokeep;
-	hits->ninfield_tosolve = ninfield_tokeep;
-
 	solved = il_new(256);
 	unsolved = il_new(256);
+
+	keepers = bl_new(256, sizeof(MatchObj));
 
 	totalsolved = totalunsolved = 0;
 
@@ -245,9 +229,7 @@ int main(int argc, char *argv[]) {
 			int fieldnum = f;
 			bool donefieldfile;
 			bool solved_it;
-			bl* allmatches;
-			pl* writematches = NULL;
-			pl* leftovermatches = NULL;
+			bl* writematches = NULL;
 
 			// quit if we've reached the end of all the input files.
 			alldone = TRUE;
@@ -273,7 +255,7 @@ int main(int argc, char *argv[]) {
 			// start a new field.
 			fprintf(stderr, "File %i, Field %i.\n", fieldfile, f);
 			solved_it = FALSE;
-			allmatches = bl_new(256, sizeof(MatchObj));
+			bestmo = NULL;
 
 			for (i=0; i<ninputfiles; i++) {
 				int nr = 0;
@@ -324,11 +306,17 @@ int main(int argc, char *argv[]) {
 
 					nr++;
 
-					// make a copy of this MatchObj by adding it to our
-					// list, and get a pointer to its copied location.
-					mos[i] = bl_append(allmatches, mos[i]);
+					if ((mos[i]->logodds >= logodds_tosolve)  &&
+						(mos[i]->nindex >= ninfield_tosolve)) {
+						solved_it = TRUE;
+						// (note, we get a pointer to its position in the list)
+						mos[i] = bl_append(keepers, mos[i]);
+						if (!bestmo || mos[i]->logodds > bestmo->logodds)
+							bestmo = mos[i];
+					} else {
+						pl_append(leftovers, mos[i]);
+					}
 
-					solved_it = handlehits_add(hits, mos[i]);
 					mos[i] = NULL;
 
 				}
@@ -338,41 +326,27 @@ int main(int argc, char *argv[]) {
 
 			// which matches do we want to write out?
 			if (agree) {
-				writematches = pl_new(32);
+				writematches = bl_new(32, sizeof(MatchObj));
 
 				switch (mode) {
 				case MODE_BEST:
 				case MODE_FIRST:
-					if (hits->bestmo)
-						pl_append(writematches, hits->bestmo);
+					if (bestmo)
+						bl_append(writematches, bestmo);
 					break;
 				case MODE_ALL:
-					pl_merge_lists(writematches, hits->keepers);
+					bl_append_list(writematches, keepers);
 					break;
 				}
 			}
 
-			if (leftovers) {
-				int i;
-				/* Hack - steal the list directly from the hitlist...
-				   so much for information hiding! */
-				leftovermatches = hits->hits->matchlist;
-				hits->hits->matchlist = NULL;
-				// remove all the "successful" matches.
-				for (i=0; writematches && i<pl_size(writematches); i++)
-					pl_remove_value(leftovermatches,
-									pl_get(writematches, i));
-			}
+			write_field(writematches, leftovers, fieldfile, fieldnum);
 
-			write_field(writematches, leftovermatches, fieldfile, fieldnum);
-
-			if (leftovers)
-				pl_free(leftovermatches);
 			if (agree)
-				pl_free(writematches);
+				bl_free(writematches);
 
-			handlehits_clear(hits);
-			bl_free(allmatches);
+			bl_free(leftovers);
+			bl_free(keepers);
 
 			fprintf(stderr, "This file: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
 			fprintf(stderr, "Grand total: %i solved, %i unsolved.\n", totalsolved + il_size(solved), totalunsolved + il_size(unsolved));
@@ -396,8 +370,6 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "\nRead %i matches.\n", nread);
 	fflush(stderr);
 
-	handlehits_free(hits);
-
 	il_free(solved);
 	il_free(unsolved);
 
@@ -414,13 +386,13 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-static void write_field(pl* agreeing,
-						pl* leftover,
+static void write_field(bl* agreeing,
+						bl* leftover,
 						int fieldfile,
 						int fieldnum) {
 	int i;
 
-	if (!pl_size(agreeing))
+	if (!bl_size(agreeing))
 		il_append(unsolved, fieldnum);
 	else {
 		il_append(solved, fieldnum);
@@ -433,28 +405,20 @@ static void write_field(pl* agreeing,
 		}
 	}
 
-	for (i=0; agreeing && i<pl_size(agreeing); i++) {
-		MatchObj* mo = pl_get(agreeing, i);
+	for (i=0; agreeing && i<bl_size(agreeing); i++) {
+		MatchObj* mo = bl_access(agreeing, i);
 		if (matchfile_write_match(agreemf, mo))
 			fprintf(stderr, "Error writing an agreeing match.");
-		fprintf(stderr, "Field %i: Overlap %f\n", fieldnum, mo->overlap);
+		fprintf(stderr, "Field %i: Logodds %g (%g)\n", fieldnum, mo->logodds, exp(mo->logodds));
 	}
 
-	if (leftover && pl_size(leftover)) {
+	if (leftover && bl_size(leftover)) {
 		fprintf(stderr, "Field %i: writing %i leftovers...\n", fieldnum,
-				pl_size(leftover));
-		for (i=0; i<pl_size(leftover); i++) {
-			MatchObj* mo = pl_get(leftover, i);
+				bl_size(leftover));
+		for (i=0; i<bl_size(leftover); i++) {
+			MatchObj* mo = bl_access(leftover, i);
 			if (matchfile_write_match(leftovermf, mo))
 				fprintf(stderr, "Error writing a leftover match.");
 		}
 	}
-}
-
-
-// HACK - we need a stub for this function because it is linked by
-//   handlehits -> blind_wcs
-void getstarcoord(uint iA, double *star) {
-	fprintf(stderr, "ERROR: getstarcoord() called in agreeable.\n");
-	exit(-1);
 }
