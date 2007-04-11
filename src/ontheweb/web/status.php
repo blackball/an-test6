@@ -832,28 +832,43 @@ if ($job_done) {
 <?php
 if ($job_submitted) {
 	echo '<tr><td>Submitted:</td><td>';
-	$t = filemtime($inputfile);
-	echo get_datestr($t);
-	$dt = dtime2str($now - $t);
-	echo "<br />(" . $dt . " ago)";
+	$date = $jd['submit-date'];
+	$t = isodate_to_timestamp($date);
+	if (!$t) {
+		echo '(error)';
+	} else {
+		echo get_datestr($t);
+		$dt = dtime2str($now - $t);
+		echo "<br />(" . $dt . " ago)";
+	}
 	echo "</td></tr>\n";
 }
 
 if ($job_started) {
 	echo '<tr><td>Started:</td><td>';
-	$t = filemtime($startfile);
-	echo get_datestr($t);
-	$dt = dtime2str($now - $t);
-	echo "<br />(" . $dt . " ago)";
+	$date = $jd['solve-start'];
+	$t = isodate_to_timestamp($date);
+	if (!$t) {
+		echo '(error)';
+	} else {
+		echo get_datestr($t);
+		$dt = dtime2str($now - $t);
+		echo "<br />(" . $dt . " ago)";
+	}
 	echo "</td></tr>\n";
 }
 
 if ($job_done) {
 	echo '<tr><td>Finished:</td><td>';
-	$t = filemtime($donefile);
-	echo get_datestr($t);
-	$dt = dtime2str($now - $t);
-	echo "<br />" . $dt . " ago)";
+	$date = $jd['solve-done'];
+	$t = isodate_to_timestamp($date);
+	if (!$t) {
+		echo '(error)';
+	} else {
+		echo get_datestr($t);
+		$dt = dtime2str($now - $t);
+		echo "<br />(" . $dt . " ago)";
+	}
 	echo "</td></tr>\n";
 }
 

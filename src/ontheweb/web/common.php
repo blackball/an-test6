@@ -154,7 +154,7 @@ function highlevellog($msg) {
 function create_new_jobid() {
 	global $siteid;
 	global $resultdir;
-	$yrmonth = date("Ym", time());
+	$yrmonth = date("Ym");
 	$dir = $resultdir . $siteid . "/" . $yrmonth;
 	if (!file_exists($dir)) {
 		if (!mkdir($dir, 0775, TRUE)) {
@@ -196,6 +196,22 @@ function get_datestr($t) {
 	if (substr($datestr, -6) == "+00:00")
 		$datestr = substr($datestr, 0, strlen($datestr)-6) . "Z";
 	return $datestr;
+}
+
+function isodate_to_timestamp($datestr) {
+	$d = strptime($datestr, '%Y-%m-%dT%H:%M:%S');
+	if (!$d) {
+		return 0;
+	}
+	if ($d['unparsed'] == 'Z') {
+	} else if ($d['unparsed'] == '+0000') {
+	} else {
+		// FIXME
+		loggit("isodate_to_timestamp: unparsed part is " . $d['unparsed'] . "\n");
+	}
+	$t = mktime($d['tm_hour'], $d['tm_min'], $d['tm_sec'], $d['tm_mon']+1,
+				$d['tm_mday'], $d['tm_year'] + 1900);
+	return $t;
 }
 
 function dtime2str($secs) {
