@@ -611,7 +611,8 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 	t->dist2 = dl_new(600);
 	t->included = il_new(600);
 
-	fprintf(stderr,"jitter=%lf\n",jitter);
+	fprintf(stderr,"jitter=%g arcsec / %g arcmin / %g deg\n",
+			rad2arcsec(jitter), rad2arcmin(jitter), rad2deg(jitter));
 
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
