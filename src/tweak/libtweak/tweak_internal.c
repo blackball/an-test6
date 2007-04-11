@@ -1203,7 +1203,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		for (jj=0; jj<t->n_ref; jj++) {
 			sip_radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
 				      t->x_ref+jj, t->y_ref+jj);
-			fprintf(stderr,"ref star %04d: %g,%g\n",jj,t->x_ref[jj],t->y_ref[jj]);
+			//fprintf(stderr,"ref star %04d: %g,%g\n",jj,t->x_ref[jj],t->y_ref[jj]);
 		}
 
 		done(TWEAK_HAS_REF_XY);
