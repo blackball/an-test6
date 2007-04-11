@@ -274,6 +274,8 @@ int main(int argc, char *argv[]) {
 		bp->firstfield = -1;
 		bp->lastfield = -1;
 		bp->healpix = -1;
+		bp->tweak_aborder  = DEFAULT_TWEAK_ABORDER;
+		bp->tweak_abporder = DEFAULT_TWEAK_ABPORDER;
 		sp->field_minx = sp->field_maxx = 0.0;
 		sp->field_miny = sp->field_maxy = 0.0;
 		sp->parity = DEFAULT_PARITY;
