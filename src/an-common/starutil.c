@@ -156,9 +156,12 @@ Const inline double distsq2arc(double dist2) {
 
 
 
-/* computes the 2D coordinates (x,y)  that star s would have in a
-   TANGENTIAL PROJECTION defined by (centred at) star r.
+/* computes the 2D coordinates (x,y) (in units of a celestial sphere of radius 1)
+   that star s would have in a TANGENTIAL PROJECTION defined by (centred at) star r.
    s and r are both given in xyz coordinates, the parameters are pointers to arrays of size3
+	WARNING -- this code assumes s and r are UNIT vectors (ie normalized to have length 1)
+	the resulting x direction is increasing DEC, the resulting y direction is increasing RA
+	which might not be the normal convention
 */
 inline void star_coords(double *s, double *r, double *x, double *y)
 {
@@ -175,7 +178,7 @@ inline void star_coords(double *s, double *r, double *x, double *y)
 	} else {
 		double etax, etay, etaz, xix, xiy, xiz, eta_norm;
 		double inv_en, inv_sdotr;
-		// eta is a vector perpendicular to r
+		// eta is a vector perpendicular to r pointing in the direction of increasing RA
  		etax = -r[1];
 		etay =  r[0];
 		etaz = 0.0;
@@ -183,7 +186,7 @@ inline void star_coords(double *s, double *r, double *x, double *y)
 		inv_en = 1.0 / eta_norm;
 		etax *= inv_en;
 		etay *= inv_en;
-		// xi =  r cross eta
+		// xi =  r cross eta, a vector pointing northwards, in direction of increasing DEC
 		xix = -r[2] * etay;
 		xiy =  r[2] * etax;
 		xiz =  r[0] * etay - r[1] * etax;
