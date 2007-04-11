@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 	int fieldfile;
 	int totalsolved, totalunsolved;
 	int mode = MODE_BEST;
-	double logodds_tosolve;
+	double logodds_tosolve = -HUGE_VAL;
 	bool agree = FALSE;
 
 	MatchObj* bestmo;
@@ -345,8 +345,10 @@ int main(int argc, char *argv[]) {
 			if (agree)
 				bl_free(writematches);
 
-			bl_free(leftovers);
-			bl_free(keepers);
+			if (leftovers)
+				bl_remove_all(leftovers);
+			if (keepers)
+				bl_remove_all(keepers);
 
 			fprintf(stderr, "This file: %i fields solved, %i unsolved.\n", il_size(solved), il_size(unsolved));
 			fprintf(stderr, "Grand total: %i solved, %i unsolved.\n", totalsolved + il_size(solved), totalunsolved + il_size(unsolved));
@@ -369,6 +371,11 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "\nRead %i matches.\n", nread);
 	fflush(stderr);
+
+	if (keepers)
+		bl_free(keepers);
+	if (leftovers)
+		bl_free(leftovers);
 
 	il_free(solved);
 	il_free(unsolved);

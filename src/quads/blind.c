@@ -139,7 +139,6 @@ struct blind_params {
 	// proportion of distractors (in [0,1])
 	double distractors;
 
-	//double overlap_toprint;
 	double logratio_toprint;
 
 	double logratio_tobail;
@@ -265,7 +264,6 @@ int main(int argc, char *argv[]) {
 		solver_default_params(&(bp->solver));
 		sp->userdata = bp;
 
-		bp->bestlogodds = -HUGE_VAL;
 		bp->nverify = 20;
 		bp->logratio_tobail = -HUGE_VAL;
 		bp->fieldlist = il_new(256);
@@ -1284,6 +1282,12 @@ static void solve_fields(blind_params* bp) {
 		sp->quitNow = FALSE;
 		sp->mo_template = &template;
 		sp->fieldnum = fieldnum;
+
+		bp->nverified = 0;
+		bp->have_bestmo = FALSE;
+		memset(&(bp->bestmo), 0, sizeof(MatchObj));
+		bp->bestmo_solves = FALSE;
+		bp->bestlogodds = -HUGE_VAL;
 
 		logmsg(bp, "\nSolving field %i.\n", fieldnum);
 
