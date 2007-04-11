@@ -579,6 +579,7 @@ function process_data ($vals) {
 
 	$parity = $vals["parity"];
 	$tweak = $vals["tweak"];
+	$tweak_order = 2;
 	$poserr = $vals["poserr"];
 	$codetol = 0.01;
 
@@ -653,7 +654,11 @@ function process_data ($vals) {
 				"maxquads " . $maxquads . "\n" .
 				"cpulimit " . $maxcpu . "\n" .
 				"timelimit " . $maxtime . "\n" .
-				($tweak ? "tweak\n" : "") .
+				($tweak ?
+				 "tweak\n" .
+				 "tweak_aborder " . $tweak_order . "\n" . 
+				 "tweak_abporder " . $tweak_order . "\n"
+				 : "") .
 				"run\n" .
 				"\n";
 			$stripenum++;
