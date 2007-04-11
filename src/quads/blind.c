@@ -903,6 +903,10 @@ static int read_parameters(blind_params* bp) {
 			bp->verbose = TRUE;
 		} else if (is_word(line, "tweak", &nextword)) {
 			bp->do_tweak = TRUE;
+		} else if (is_word(line, "tweak_aborder ", &nextword)) {
+			bp->tweak_aborder = atoi(nextword);
+		} else if (is_word(line, "tweak_abporder ", &nextword)) {
+			bp->tweak_abporder = atoi(nextword);
 		} else if (is_word(line, "wcs ", &nextword)) {
 			bp->wcs_template = strdup(nextword);
 		} else if (is_word(line, "fieldid_key ", &nextword)) {
