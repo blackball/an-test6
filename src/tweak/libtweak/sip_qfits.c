@@ -31,7 +31,6 @@ static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	qfits_header_add(hdr, "CUNIT1", "deg", "X pixel scale units", NULL);
 	qfits_header_add(hdr, "CUNIT2", "deg", "Y pixel scale units", NULL);
 
-	// bizarrely, this only seems to work when I swap the rows of R.
 	sprintf(val, "%.12g", tan->cd[0][0]);
 	qfits_header_add(hdr, "CD1_1", val, "Transformation matrix", NULL);
 	sprintf(val, "%.12g", tan->cd[0][1]);
@@ -43,18 +42,21 @@ static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 }
 
 static void add_polynomial(qfits_header* hdr, char* format,
-						   int order, double* data, int datastride) {
+						   int order, double* data, int datastride,
+						   bool drop_linear) {
 	int i, j;
 	char key[64];
 	char val[64];
 	for (i=0; i<=order; i++)
-		for (j=0; (i+j)<=order; j++)
-			if (i || j) {
-				sprintf(key, format, i, j);
-				//sprintf(val, "%.12g", data[i][j]);
-				sprintf(val, "%.12g", data[i*datastride + j]);
-				qfits_header_add(hdr, key, val, NULL, NULL);
-			}
+		for (j=0; (i+j)<=order; j++) {
+			if (i+j < 1)
+				continue;
+			if (drop_linear && (i+j < 2))
+				continue;
+			sprintf(key, format, i, j);
+			sprintf(val, "%.12g", data[i*datastride + j]);
+			qfits_header_add(hdr, key, val, NULL, NULL);
+		}
 }
 
 void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
@@ -67,19 +69,19 @@ void sip_add_to_header(qfits_header* hdr, sip_t* sip) {
 
 	sprintf(val, "%i", sip->a_order);
 	qfits_header_add(hdr, "A_ORDER", val, "Polynomial order, axis 1", NULL);
-	add_polynomial(hdr, "A_%i_%i", sip->a_order, (double*)sip->a, SIP_MAXORDER);
+	add_polynomial(hdr, "A_%i_%i", sip->a_order, (double*)sip->a, SIP_MAXORDER, TRUE);
 
 	sprintf(val, "%i", sip->b_order);
 	qfits_header_add(hdr, "B_ORDER", val, "Polynomial order, axis 2", NULL);
-	add_polynomial(hdr, "B_%i_%i", sip->b_order, (double*)sip->b, SIP_MAXORDER);
+	add_polynomial(hdr, "B_%i_%i", sip->b_order, (double*)sip->b, SIP_MAXORDER, TRUE);
 
 	sprintf(val, "%i", sip->ap_order);
 	qfits_header_add(hdr, "AP_ORDER", val, "Inv polynomial order, axis 1", NULL);
-	add_polynomial(hdr, "AP_%i_%i", sip->ap_order, (double*)sip->ap, SIP_MAXORDER);
+	add_polynomial(hdr, "AP_%i_%i", sip->ap_order, (double*)sip->ap, SIP_MAXORDER, FALSE);
 
 	sprintf(val, "%i", sip->bp_order);
 	qfits_header_add(hdr, "BP_ORDER", val, "Inv polynomial order, axis 2", NULL);
-	add_polynomial(hdr, "BP_%i_%i", sip->bp_order, (double*)sip->bp, SIP_MAXORDER);
+	add_polynomial(hdr, "BP_%i_%i", sip->bp_order, (double*)sip->bp, SIP_MAXORDER, FALSE);
 }
 
 qfits_header* sip_create_header(sip_t* sip) {
@@ -101,22 +103,28 @@ qfits_header* tan_create_header(tan_t* tan) {
 }
 
 static bool read_polynomial(qfits_header* hdr, char* format,
-							int order, double* data, int datastride) {
+							int order, double* data, int datastride,
+							bool skip_linear) {
 	int i, j;
 	char key[64];
 	double nil = -1e300;
 	double val;
 	for (i=0; i<=order; i++)
-		for (j=0; (i+j)<=order; j++)
-			if (i || j) {
-				sprintf(key, format, i, j);
-				val = qfits_header_getdouble(hdr, key, nil);
-				if (val == nil) {
-					fprintf(stderr, "SIP: warning: key \"%s\" not found; setting to zero.\n", key);
-					val=0.0;
-				}
-				data[i*datastride + j] = val;
+		for (j=0; (i+j)<=order; j++) {
+			if (i+j < 1)
+				continue;
+			if (skip_linear && (i+j < 2))
+				continue;
+			sprintf(key, format, i, j);
+			val = qfits_header_getdouble(hdr, key, nil);
+			if (val == nil) {
+				fprintf(stderr, "SIP: warning: key \"%s\" not found; setting to zero.\n", key);
+				val=0.0;
+				//fprintf(stderr, "SIP: key \"%s\" not found.\n", key);
+				//return FALSE;
 			}
+			data[i*datastride + j] = val;
+		}
 	return TRUE;
 }
 
@@ -177,10 +185,10 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 		return NULL;
 	}
 
-	if (!read_polynomial(hdr, "A_%i_%i",  sip.a_order,  (double*)sip.a,  SIP_MAXORDER) ||
-		!read_polynomial(hdr, "B_%i_%i",  sip.b_order,  (double*)sip.b,  SIP_MAXORDER) ||
-		!read_polynomial(hdr, "AP_%i_%i", sip.ap_order, (double*)sip.ap, SIP_MAXORDER) ||
-		!read_polynomial(hdr, "BP_%i_%i", sip.bp_order, (double*)sip.bp, SIP_MAXORDER)) {
+	if (!read_polynomial(hdr, "A_%i_%i",  sip.a_order,  (double*)sip.a,  SIP_MAXORDER, TRUE) ||
+		!read_polynomial(hdr, "B_%i_%i",  sip.b_order,  (double*)sip.b,  SIP_MAXORDER, TRUE) ||
+		!read_polynomial(hdr, "AP_%i_%i", sip.ap_order, (double*)sip.ap, SIP_MAXORDER, FALSE) ||
+		!read_polynomial(hdr, "BP_%i_%i", sip.bp_order, (double*)sip.bp, SIP_MAXORDER, FALSE)) {
 		fprintf(stderr, "SIP: failed to read polynomial terms.\n");
 		return NULL;
 	}
