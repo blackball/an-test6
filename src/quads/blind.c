@@ -1015,6 +1015,9 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 		logmsg(bp, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
 		logmsg(bp, "Star jitter: %g arcsec.\n", twee->jitter);
 	}
+	// Set tweak's jitter to 6 sigmas.
+	twee->jitter *= 6.0;
+	logmsg(bp, "Setting tweak jitter: %g arcsec.\n", twee->jitter);
 
 	// pull out the field coordinates into separate X and Y arrays.
 	imgx = malloc(sp->nfield * sizeof(double));
