@@ -65,7 +65,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 	bt.o catalog.o idfile.o codefile.o \
 	histogram.o tic.o codekd.o svd.o \
 	donuts.o verify.o dualtree_max.o \
-	solver.o matchfile.o solvedclient.o solvedfile.o hitlist.o \
+	solver.o matchfile.o solvedclient.o solvedfile.o \
 	intmap.o pnpoly.o blind_wcs.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
