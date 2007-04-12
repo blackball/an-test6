@@ -378,6 +378,11 @@ int main(int argc, char *argv[]) {
 		logmsg(bp, "cpulimit %i\n", bp->cpulimit);
 		logmsg(bp, "timelimit %i\n", bp->timelimit);
 		logmsg(bp, "total_timelimit %i\n", bp->total_timelimit);
+		logmsg(bp, "tweak %s\n", bp->do_tweak ? "on" : "off");
+		if (bp->do_tweak) {
+			logmsg(bp, "tweak_aborder %i\n", bp->tweak_aborder);
+			logmsg(bp, "tweak_abporder %i\n", bp->tweak_abporder);
+		}
 
 		// Set total wall-clock time limit.
 		// Note that we never cancel this alarm, it persists across "run"
@@ -901,12 +906,12 @@ static int read_parameters(blind_params* bp) {
 			sp->quiet = TRUE;
 		} else if (is_word(line, "verbose", &nextword)) {
 			bp->verbose = TRUE;
-		} else if (is_word(line, "tweak", &nextword)) {
-			bp->do_tweak = TRUE;
 		} else if (is_word(line, "tweak_aborder ", &nextword)) {
 			bp->tweak_aborder = atoi(nextword);
 		} else if (is_word(line, "tweak_abporder ", &nextword)) {
 			bp->tweak_abporder = atoi(nextword);
+		} else if (is_word(line, "tweak", &nextword)) {
+			bp->do_tweak = TRUE;
 		} else if (is_word(line, "wcs ", &nextword)) {
 			bp->wcs_template = strdup(nextword);
 		} else if (is_word(line, "fieldid_key ", &nextword)) {
