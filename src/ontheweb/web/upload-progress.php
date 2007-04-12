@@ -1,8 +1,13 @@
 <?php
-// upload_progress.php
-// When the form is submitted, call this:
-// window.open('/upload_progress.php?id=' + upload_identifier, 'Upload_Meter','width=370,height=115,status=no', true);
-// Where 'upload_identifier' is the value of the hidden element UPLOAD_IDENTIFIER.
+/*
+ This code was taken from the user comments at
+    http://ca.php.net/manual/en/features.file-upload.php .
+
+ When the form is submitted, call this javascript:
+   window.open('/upload_progress.php?id=' + upload_identifier, 'Upload_Meter','width=370,height=115,status=no', true);
+
+ Where 'upload_identifier' is the value of the hidden form element UPLOAD_IDENTIFIER.
+*/
 
 function nice_val($x) {
 	$s = '';
@@ -33,7 +38,7 @@ $url = htmlentities($_SERVER['PHP_SELF']).'?id='.$id.'&e=1'; // URL to redirect 
 $ul_info = uploadprogress_get_info($id);
 if(!$ul_info) {
    if(isset($_GET['e'])) {
-	   $onload = 'window.close()';
+	   $onload = 'window.close();';
 	   $body = "Invalid upload meter ID!";
    } else {
 	   $refresh = 2;   // Wait 2 seconds, give the server time to create the progress file.
@@ -41,7 +46,7 @@ if(!$ul_info) {
    }
 } else {
     if($ul_info['bytes_total'] > 1 && $ul_info['bytes_uploaded'] >= $ul_info['bytes_total'] && $ul_info['est_sec'] == 0) {
-        $onload = 'window.close()';
+        $onload = 'sleep(2); window.close();';
         $body = 'Upload complete.'; // They won't see this if the javascript runs, but just in case they've disabled it.
     } else {
         $body = "Uploading...";
@@ -62,7 +67,6 @@ if(!$ul_info) {
 }
 $pct = $info['meter'];
 ?>
-
 <html>
 <head>
 <?php
@@ -84,35 +88,43 @@ div.c {margin-left:auto; margin-right:auto; text-align:center;}
 #meter_fore  { background-color:lightblue; left:0%; width:<?php echo $pct; ?>%; height:100%; margin:-5px; }
 ?>
 </style>
-
 <?php
 if ($onload) {
-	echo "<script><!--\nonLoad=" . $onload . ";\n// -->\n</script>\n";
+	echo "<script><!--\n" .
+		"onLoad=" . $onload . "\n" .
+		"// -->\n" .
+		"</script>\n";
 }
 ?>
-
 </head>
 <body>
+<p class="c">
 <?php
-echo '<p class="c">' . $body . "</p>";
+echo $body;
+?>
+</p>
+<?php
 if ($info) {
 ?>
 <p class="c">
 <div class="c" id="meter_frame">
 <div id="meter_back">
-<div id="meter_text"><?php echo round($pct); ?>%
+<div id="meter_text">
+<?php
+	 echo round($pct);
+?>%
 </div>
 <div id="meter_fore">
 </div>
 </div>
 </div>
 </p>
-	  <?php
-	  $uv=$info['upl']['val'];
+	  
+<?php
+ $uv=$info['upl']['val'];
  $us=$info['upl']['suff']; 
  $tv=$info['total']['val'];
  $ts=$info['total']['suff']; 
- //echo '<p class="c">';
  echo '<table class="c">';
  echo '<tr><td>';
  if ($us == $ts) {
@@ -121,30 +133,15 @@ if ($info) {
 	 $uv . $us . 'B / ' . $tv . $ts . 'B';
  }
  echo '</td></tr>';
- //echo '</p>';
- //echo '<p class="c">';
- //echo '<br />';
  echo '<tr><td>';
  echo $info['time'] . " so far";
  echo '</td></tr>';
- //echo '<br />';
  echo '<tr><td>';
  echo $info['eta'] . " remaining";
  echo '</td></tr>';
- //echo '</p>';
  echo '</table>';
 }
-
-
-/*
-echo "<pre>";
-print_r($ul_info);
-echo "\n";
-print_r($info);
-echo "</pre>";
-*/
 ?>
-
 </body>
 </html>
 
