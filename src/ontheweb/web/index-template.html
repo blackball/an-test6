@@ -22,6 +22,11 @@ function setFsEv() {
   var u = document.getElementById("##fstype-ev-id##");
   u.checked = 1;
 }
+function showUploadMeter() {
+  var id = '##upload-id##';
+  window.open('upload-progress.php?id=' + id, 'Upload_Meter',
+              'width=400,height=200,status=no', true);
+}
 // -->
 </script>
 

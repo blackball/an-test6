@@ -487,10 +487,10 @@ function write_download_status($id, $stats) {
 		loggit("Failed to open download stats file " . $outfile_tmp . "\n");
 		return FALSE;
 	}
-	loggit("Writing stats to " . $outfile_tmp . ":\n");
+	//loggit("Writing stats to " . $outfile_tmp . ":\n");
 	foreach ($stats as $k => $v) {
 		fprintf($f, "%s", $k . "=" . $v . "\n");
-		loggit("  " . $k . " = " . $v . "\n");
+		//loggit("  " . $k . " = " . $v . "\n");
 	}
 	fclose($f);
 	if (!rename($outfile_tmp, $outfile)) {
@@ -577,6 +577,24 @@ function download_url($url, $dest, $maxfilesize, &$errmsg, $id=FALSE) {
 	}
 	fclose($fin);
 	fclose($fout);
+
+	if ($id) {
+		// update stats.
+		$tnow = time();
+		$bnow = $nr;
+		$stats['time_last'] = $tnow;
+		$stats['bytes_uploaded'] = $bnow;
+		if ($length)
+			$stats['bytes_total'] = $length;
+		if ($length && $bnow)
+			$stats['est_sec'] = ($length - $bnow) * ($tnow - $tstart) / $bnow;
+		$stats['speed_average'] = $bnow / ($tnow - $tstart);
+		$stats['speed_last'] = ($bnow - $blast) / ($tnow - $tlast);
+		$stats['files_uploaded'] = 1;
+		write_download_status($id, $stats);
+		$tlast = $tnow;
+	}
+
 	return $nr;
 }
 

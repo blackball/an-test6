@@ -46,7 +46,7 @@ if(!$ul_info) {
    }
 } else {
     if($ul_info['bytes_total'] > 1 && $ul_info['bytes_uploaded'] >= $ul_info['bytes_total'] && $ul_info['est_sec'] == 0) {
-        $onload = 'sleep(2); window.close();';
+        $onload = 'setTimeout(\'window.close()\', 2000);';
         $body = 'Upload complete.';
     } else {
         $body = "Uploading...";
@@ -86,18 +86,16 @@ div.c {margin-left:auto; margin-right:auto; text-align:center;}
 #meter_back  { background-color:white; padding:5px; }
 #meter_text  { text-align:center; height:0%; }
 #meter_fore  { background-color:lightblue; left:0%; width:<?php echo $pct; ?>%; height:100%; margin:-5px; }
-?>
 </style>
+</head>
+
 <?php
 if ($onload) {
-	echo "<script><!--\n" .
-		"onLoad=" . $onload . "\n" .
-		"// -->\n" .
-		"</script>\n";
+	echo "<body onLoad=\"" . $onload . "\">\n";
+} else {
+	echo "<body>\n";
 }
 ?>
-</head>
-<body>
 <p class="c">
 <?php
 echo $body;

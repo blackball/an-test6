@@ -103,8 +103,7 @@ $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
 $xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
 
-$form->setAttribute('onSubmit', "window.open('upload-progress.php?id=" . $upload_id . "', " .
-					"'Upload_Meter', 'width=400,height=200,status=no', true);");
+$form->setAttribute('onSubmit', 'showUploadMeter()');
 
 $fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
 $fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
@@ -930,6 +929,8 @@ function render_form($form, $ids, $headers) {
 	foreach ($ids as $fld=>$id) {
 		$template = str_replace("##" . $fld . "##",  $id,  $template);
 	}
+
+	$template = str_replace('##upload-id##', $form->exportValue('UPLOAD_IDENTIFIER'), $template);
 
 	// fields (and pseudo-fields) that can have errors 
 	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile',
