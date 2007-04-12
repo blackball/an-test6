@@ -103,13 +103,8 @@ $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
 $xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
 
-$form->setAttribute('onSubmit', "var u=document.getElementById('" .
-					$xysrc_img->getAttribute('id') . "'); " .
-					"var v=document.getElementById('" .
-					$xysrc_fits->getAttribute('id') . "'); " .
-					"if (u.checked || v.checked) {" .
-					"window.open('upload-progress.php?id=" . $upload_id . "', " .
-					"'Upload_Meter', 'width=400,height=200,status=no', true); }");
+$form->setAttribute('onSubmit', "window.open('upload-progress.php?id=" . $upload_id . "', " .
+					"'Upload_Meter', 'width=400,height=200,status=no', true);");
 
 $fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
 $fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
@@ -396,10 +391,10 @@ function process_data ($vals) {
 		$downloadedimg = $mydir . $imgbasename;
 		$imgfilename = $downloadedimg;
 		loggit("Writing to file: " . $downloadedimg . "\n");
-		if (download_url($imgurl, $downloadedimg, $maxfilesize, $errmsg) === FALSE) {
+		if (download_url($imgurl, $downloadedimg, $maxfilesize, $errmsg,
+						 $vals['UPLOAD_IDENTIFIER']) === FALSE) {
 			submit_failed($db, "Failed to download image: " . $errmsg);
 		}
-
 	} else if ($xysrc == "img") {
 		// If an image was uploaded, move it into place.
 		$imgbasename = "uploaded.";
@@ -1006,7 +1001,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$newjd = array();
 	$todelete = array();
 
-	loggit("image file: " . filesize($img) . " bytes.\n");
+	loggit("image file: " . filesize($filename) . " bytes.\n");
 
 	$addsuffix = "";
 

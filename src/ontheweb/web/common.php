@@ -10,6 +10,8 @@ $remote = 1;
 $gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
 $statuspath = "status/";
 
+$upload_progress = "/tmp/upt_%s.txt";
+
 // blind params
 $totaltime = 300; // Five minute total max.
 $maxtime = 0;
@@ -476,7 +478,29 @@ function validate_url($url) {
 	return TRUE;
 }
 
-function download_url($url, $dest, $maxfilesize, &$errmsg) {
+function write_download_status($id, $stats) {
+	global $upload_progress;
+	$outfile = sprintf($upload_progress, $id);
+	$outfile_tmp = $outfile . '.tmp';
+	$f = @fopen($outfile_tmp, "wb");
+	if (!$f) {
+		loggit("Failed to open download stats file " . $outfile_tmp . "\n");
+		return FALSE;
+	}
+	loggit("Writing stats to " . $outfile_tmp . ":\n");
+	foreach ($stats as $k => $v) {
+		fprintf($f, "%s", $k . "=" . $v . "\n");
+		loggit("  " . $k . " = " . $v . "\n");
+	}
+	fclose($f);
+	if (!rename($outfile_tmp, $outfile)) {
+		loggit("Failed to rename download stats file from " . $outfile_tmp . " to " . $outfile . "\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+function download_url($url, $dest, $maxfilesize, &$errmsg, $id=FALSE) {
 	$fin = @fopen($url, "rb");
 	if (!$fin) {
 		$errmsg = "failed to open URL " . $url;
@@ -488,9 +512,50 @@ function download_url($url, $dest, $maxfilesize, &$errmsg) {
 		return FALSE;
 	}
 
+	// For http:// URLs, look for the "Content-Length:" header.
+	$meta_data = stream_get_meta_data($fin);
+	if ($meta_data) {
+		$pat = '/^Content-Length: (\d+)$/';
+		foreach ($meta_data['wrapper_data'] as $k=>$v) {
+			if (preg_match($pat, $v, $matches)) {
+				$length = (int)$matches[1];
+				break;
+			}
+		}
+	}
+	if ($length) {
+		loggit("Found content-length " . $length . "\n");
+	}
+	if ($id) {
+		loggit("Id " . $id . "\n");
+		$tstart = time();
+		$tlast = $tstart;
+		$blast = 0;
+		$stats['time_start'] = $tstart;
+	}
+
 	$nr = 0;
 	$blocksize = 1024;
 	for ($i=0; $i<$maxfilesize/$blocksize; $i++) {
+
+		if ($id) {
+			$tnow = time();
+			if (($tnow - $tlast) > 1) {
+				// update stats.
+				$bnow = $nr;
+				$stats['time_last'] = $tnow;
+				$stats['bytes_uploaded'] = $bnow;
+				if ($length)
+					$stats['bytes_total'] = $length;
+				if ($length && $bnow)
+					$stats['est_sec'] = ($length - $bnow) * ($tnow - $tstart) / $bnow;
+				$stats['speed_average'] = $bnow / ($tnow - $tstart);
+				$stats['speed_last'] = ($bnow - $blast) / ($tnow - $tlast);
+				write_download_status($id, $stats);
+				$tlast = $tnow;
+			}
+		}
+
 		$block = fread($fin, $blocksize);
 		if ($block === FALSE) {
 			$errmsg = "failed to read from URL " . $url;

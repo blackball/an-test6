@@ -47,7 +47,7 @@ if(!$ul_info) {
 } else {
     if($ul_info['bytes_total'] > 1 && $ul_info['bytes_uploaded'] >= $ul_info['bytes_total'] && $ul_info['est_sec'] == 0) {
         $onload = 'sleep(2); window.close();';
-        $body = 'Upload complete.'; // They won't see this if the javascript runs, but just in case they've disabled it.
+        $body = 'Upload complete.';
     } else {
         $body = "Uploading...";
         $refresh = 2;
