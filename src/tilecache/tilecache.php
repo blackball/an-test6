@@ -1,4 +1,4 @@
-<?
+<?php
 
 /*
  * tilecache: a generic google maps v2 tile cache 
