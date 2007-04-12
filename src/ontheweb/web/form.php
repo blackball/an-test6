@@ -108,14 +108,6 @@ $form->setAttribute('onSubmit', 'showUploadMeter()');
 $fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
 $fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
 
-// map element name -> HTML id
-$ids = array('xysrc-url-id'  => $xysrc_url->getAttribute('id'),
-			 'xysrc-img-id'  => $xysrc_img->getAttribute('id'),
-			 'xysrc-fits-id' => $xysrc_fits->getAttribute('id'),
-			 'fstype-ul-id'  => $fs_ul->getAttribute('id'),
-			 'fstype-ev-id'  => $fs_ev->getAttribute('id'),
-			 );
-
 $imgfile  =& $form->addElement('file', 'imgfile', "imgfile",
 							   array('onfocus' => "setXysrcImg()",
 									 'onclick' => "setXysrcImg()",));
@@ -146,6 +138,14 @@ $form->addElement('text', 'fse', 'field scale (estimate)',
 $form->addElement('text', 'fsv', 'field scale (variance (%))',
 				  array('size'=>5,
 						'onfocus' => "setFsEv()"));
+
+// map element name -> HTML id
+$ids = array('xysrc-url-id'  => $xysrc_url->getAttribute('id'),
+			 'xysrc-img-id'  => $xysrc_img->getAttribute('id'),
+			 'xysrc-fits-id' => $xysrc_fits->getAttribute('id'),
+			 'fstype-ul-id'  => $fs_ul->getAttribute('id'),
+			 'fstype-ev-id'  => $fs_ev->getAttribute('id'),
+			 );
 
 $form->addElement('select', 'fsunit', 'units', $unitmap, null);
 
@@ -864,12 +864,12 @@ function check_fieldscale($vals) {
 	if ($type == "ul") {
 		if ($l > 0 && $u > 0)
 			return TRUE;
-		if ($l < 0)
+		if ($l <= 0)
 			return array("fsl"=>"Lower bound must be positive!");
-		if ($u < 0)
+		if ($u <= 0)
 			return array("fsu"=>"Upper bound must be positive!");
 	} else if ($type == "ev") {
-		if ($e < 0)
+		if ($e <= 0)
 			return array("fse"=>"Estimate must be positive!");
 		if ($v < 1 || $v > 99)
 			return array("fsv"=>"% Eror must be between 1 and 99!");

@@ -36,6 +36,7 @@ $refresh = false; // Number of seconds to wait before refreshing the page. false
 $info = false; // Table of information to display
 $url = htmlentities($_SERVER['PHP_SELF']).'?id='.$id.'&e=1'; // URL to redirect to.
 $ul_info = uploadprogress_get_info($id);
+$pct = 0;
 if(!$ul_info) {
    if(isset($_GET['e'])) {
 	   $onload = 'window.close();';
@@ -63,9 +64,9 @@ if(!$ul_info) {
 					  'total' => nice_val($ul_info['bytes_total']),
 					  'time' => sprintf("%02d:%02d", $dt / 60, $dt % 60),
             );
+		$pct = $info['meter'];
     }
 }
-$pct = $info['meter'];
 ?>
 <html>
 <head>

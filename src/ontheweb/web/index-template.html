@@ -22,10 +22,40 @@ function setFsEv() {
   var u = document.getElementById("##fstype-ev-id##");
   u.checked = 1;
 }
+function validate_form() {
+  var u1 = document.getElementById("##xysrc-url-id##");
+  var u2 = document.getElementById("##xysrc-img-id##");
+  var u3 = document.getElementById("##xysrc-fits-id##");
+  if (!(u1.checked || u2.checked || u3.checked))
+    return false;
+  u1 = document.getElementById("##fstype-ul-id##");
+  u2 = document.getElementById("##fstype-ev-id##");
+  if (!(u1.checked || u2.checked))
+    return false;
+  if (u1.checked) {
+	v1 = document.getElementsByName("fsl");
+	v1 = v1[0];
+	v2 = document.getElementsByName("fsu");
+	v2 = v2[0];
+	if (v1.value == '' || v2.value == '')
+	  return false;
+  } else {
+	v1 = document.getElementsByName("fse");
+	v1 = v1[0];
+	v2 = document.getElementsByName("fsv");
+	v2 = v2[0];
+	if (v1.value == '' || v2.value == '')
+	  return false;
+  }
+  return true;
+}
 function showUploadMeter() {
-  var id = '##upload-id##';
-  window.open('upload-progress.php?id=' + id, 'Upload_Meter',
-              'width=400,height=200,status=no', true);
+  // only pop up the progress meter window if the form validates...
+  if (validate_form()) {
+    var id = '##upload-id##';
+	window.open('upload-progress.php?id=' + id, 'Upload_Meter',
+	            'width=400,height=200,status=no', true);
+  }
 }
 // -->
 </script>

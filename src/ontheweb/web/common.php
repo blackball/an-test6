@@ -588,8 +588,10 @@ function download_url($url, $dest, $maxfilesize, &$errmsg, $id=FALSE) {
 			$stats['bytes_total'] = $length;
 		if ($length && $bnow)
 			$stats['est_sec'] = ($length - $bnow) * ($tnow - $tstart) / $bnow;
-		$stats['speed_average'] = $bnow / ($tnow - $tstart);
-		$stats['speed_last'] = ($bnow - $blast) / ($tnow - $tlast);
+		if ($tnow != $tstart)
+			$stats['speed_average'] = $bnow / ($tnow - $tstart);
+		if ($tnow != $tlast)
+			$stats['speed_last'] = ($bnow - $blast) / ($tnow - $tlast);
 		$stats['files_uploaded'] = 1;
 		write_download_status($id, $stats);
 		$tlast = $tnow;
