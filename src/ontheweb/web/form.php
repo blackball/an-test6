@@ -1,9 +1,15 @@
 <?php
 require_once 'HTML/QuickForm.php';
 require_once 'HTML/QuickForm/Renderer/QuickHtml.php';
-
 require_once 'svn.php';
 
+//phpinfo();
+//exit;
+
+/* Note, if you want to change the maximum uploaded file size you must also change:
+  -php.ini: post_max_size
+  -php.ini: upload_max_filesize
+*/
 $maxfilesize = 250*1024*1024;
 umask(0002); // in octal
 
@@ -81,13 +87,19 @@ if ($preset) {
 	}
 }
 
+// a la the suggestion at http://ca.php.net/manual/en/function.uniqid.php:
+$upload_id = md5(uniqid(rand(), TRUE));
+
 // Create the HTML form object...
-$form =& new HTML_QuickForm('blindform','post');
+$form =& new HTML_QuickForm('blindform','post', '', '');
 
 // XHTML compliance:
 $form->removeAttribute('name');
 
 $form->setDefaults($formDefaults);
+
+$upl =& $form->addElement('hidden', 'UPLOAD_IDENTIFIER');
+$upl->setValue($upload_id);
 
 $form->addElement('hidden', 'skippreview');
 $form->addElement('hidden', 'justjobid');
@@ -95,6 +107,11 @@ $form->addElement('hidden', 'justjobid');
 $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
 $xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
+
+$form->setAttribute('onSubmit', "var u = document.getElementById('" .
+					$xysrc_img->getAttribute('id') . "'); if (u.checked) {" .
+					"window.open('upload-progress.php?id=" . $upload_id . "', " .
+					"'Upload_Meter', 'width=400,height=200,status=no', true); }");
 
 $fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
 $fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
@@ -901,7 +918,7 @@ function render_form($form, $ids, $headers) {
 				  'poserr', 'index', 'uname', 'email',
 				  'submit', 'linkhere', 
 				  #'imagescale',
-				  'reset', 'MAX_FILE_SIZE');
+				  'reset', 'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER');
 	
 	if ($emailver) {
 		$template = str_replace('##email-caption##',
