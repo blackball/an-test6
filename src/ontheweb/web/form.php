@@ -3,9 +3,6 @@ require_once 'HTML/QuickForm.php';
 require_once 'HTML/QuickForm/Renderer/QuickHtml.php';
 require_once 'svn.php';
 
-//phpinfo();
-//exit;
-
 /* Note, if you want to change the maximum uploaded file size you must also change:
   -php.ini: post_max_size
   -php.ini: upload_max_filesize
@@ -78,11 +75,9 @@ foreach ($_POST as $key => $val) {
 // Handle "preset="... by looking up the preset and redirecting
 $preset = $_GET["preset"];
 if ($preset) {
-	//$params = $blind_presets[$preset];
 	$params = get_preset($preset);
 	if ($params) {
 		// Redirect to this page but with params set.
-		//header("Location: http://" . $host . $myuri . "?" . $params);
 		header("Location: http://" . $host . $myuri . $params);
 	}
 }
@@ -108,8 +103,11 @@ $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
 $xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
 
-$form->setAttribute('onSubmit', "var u = document.getElementById('" .
-					$xysrc_img->getAttribute('id') . "'); if (u.checked) {" .
+$form->setAttribute('onSubmit', "var u=document.getElementById('" .
+					$xysrc_img->getAttribute('id') . "'); " .
+					"var v=document.getElementById('" .
+					$xysrc_fits->getAttribute('id') . "'); " .
+					"if (u.checked || v.checked) {" .
 					"window.open('upload-progress.php?id=" . $upload_id . "', " .
 					"'Upload_Meter', 'width=400,height=200,status=no', true); }");
 

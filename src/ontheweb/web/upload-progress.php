@@ -50,7 +50,7 @@ if(!$ul_info) {
         $body = 'Upload complete.'; // They won't see this if the javascript runs, but just in case they've disabled it.
     } else {
         $body = "Uploading...";
-        $refresh = 3;
+        $refresh = 2;
         $percent_complete = $ul_info['bytes_uploaded'] * 100 / $ul_info['bytes_total'];
         $kb_per_sec = $ul_info['speed_last'] / 1000;
 		$dt = $ul_info['time_last'] - $ul_info['time_start'];
