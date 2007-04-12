@@ -276,12 +276,17 @@ Tweak
 </p>
 <div class="cap">
 After we find a correct match, we can run a "Tweak" process
-which tries to fine-tune the World Coordinate System transformation.
+which tries to fine-tune the World Coordinate System transformation
+by computing polynomial SIP correction terms.
 Sometimes this process actually makes the solution worse - we are
 working on an improved version.
 </div>
 
-<ul id="tweaklist"><li>##tweak## Tweak</li></ul>
+<div class="err" id="tweakordererr">##tweak_order-err##</div>
+<ul id="tweaklist">
+<li>##tweak## Tweak</li>
+<li>Tweak polynomial order: ##tweak_order##</li>
+</ul>
 
 </div>
 

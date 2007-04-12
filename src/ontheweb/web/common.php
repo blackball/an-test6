@@ -68,6 +68,7 @@ $formDefaults = array('x_col' => 'X',
 					  'index' => 'auto',
 					  'poserr' => 1.0,
 					  'tweak' => 0,
+					  'tweak_order' => 2,
 					  'imgurl' => "http://",
 					  'fsunit' => 'degreewidth',
 					  'skippreview' => '',
@@ -241,8 +242,8 @@ function format_preset_url_from_form($formvals, $defaults=array()) {
 		if ($fitsval) {
 			$vals['fits-origname'] = $fitsval['name'];
 		}
-		array_push($flds, "x_col");
-		array_push($flds, "y_col");
+		array_push($flds, 'x_col');
+		array_push($flds, 'y_col');
 		break;
 	}
 	$args = format_preset_url($vals, $defaults);
@@ -256,7 +257,7 @@ function format_preset_url($jd, $defaults=array()) {
 				  'uname', 'email');
 	switch ($jd["xysrc"]) {
 	case "url":
-		array_push($flds, "imgurl");
+		array_push($flds, 'imgurl');
 		break;
 	case "img":
 		$imgname = $jd['image-origname'];
@@ -269,16 +270,17 @@ function format_preset_url($jd, $defaults=array()) {
 		if ($fitsname) {
 			$args .= '&fitsfile=' . $fitsname;
 		}
-		array_push($flds, "x_col");
-		array_push($flds, "y_col");
+		array_push($flds, 'x_col');
+		array_push($flds, 'y_col');
 		break;
+	}
+	if ($jd['tweak']) {
+		$args = "&tweak=1" . $args;
+		array_push($flds, 'tweak_order');
 	}
 	foreach ($flds as $fld) {
 		if ($jd[$fld] != $defaults[$fld])
 			$args .= "&" . urlencode($fld) . "=" . urlencode($jd[$fld]);
-	}
-	if ($jd['tweak']) {
-		$args = "&tweak=1" . $args;
 	}
 	return "?" . substr($args, 1);
 }
@@ -325,6 +327,9 @@ function describe_job($jd, $user=FALSE) {
 		$strs['Field size error'] = $jd['fsv'] . "%";
 	}
 	$strs['Tweak'] = $jd['tweak'] ? "yes" : "no";
+	if ($jd['tweak'] && strlen($jd['tweak_order'])) {
+		$strs['Tweak Polynomial Order'] = $jd['tweak_order'];
+	}
 	$strs['Field Positional Error'] = $jd['poserr'] . " pixels";
 	$strs['Index'] = $jd['index'];
 	switch ($jd['parity']) {

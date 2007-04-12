@@ -125,6 +125,8 @@ $form->addElement('text', 'imgurl', "imgurl",
 						'onfocus' => "setXysrcUrl()"));
 
 $form->addElement('checkbox', 'tweak', 'tweak', null, null);
+$form->addElement('text', 'tweak_order', 'tweak_order',
+				  array('size'=>5), null);
 
 $form->addElement('text', 'fsl', 'field scale (lower bound)',
 				  array('size'=>5,
@@ -183,10 +185,12 @@ $form->addRule('fsu', 'Upper bound must be numeric.', 'numeric');
 $form->addRule('fsl', 'Lower bound must be numeric.', 'numeric');
 $form->addRule('fse', 'Estimate must be numeric.', 'numeric');
 $form->addRule('fsv', 'Variance must be numeric.', 'numeric');
+$form->addRule('tweak_order', 'Tweak order must be numeric.', 'numeric');
 $form->addFormRule('check_xycol');
 $form->addFormRule('check_xysrc');
 $form->addFormRule('check_fieldscale');
 $form->addFormRule('check_poserr');
+$form->addFormRule('check_tweak');
 
 if ($emailver) {
 	$form->addFormRule('check_email');
@@ -335,7 +339,7 @@ function process_data ($vals) {
 	$flds = array('xysrc', 'imgfile', 'fitsfile', 'imgurl',
 				  'x_col', 'y_col', 'fstype', 'parity',
 				  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
-				  'poserr', 'index', 'submit');
+				  'poserr', 'index', 'submit', 'tweak_order');
 	foreach ($flds as $fld) {
 		$jobdata[$fld] = $vals[$fld];
 	}
@@ -490,8 +494,6 @@ function process_data ($vals) {
 	$fse = $vals["fse"];
 	$fsv = $vals["fsv"];
 
-	//loggit("fsu $fsu, fsl $fsl, fse $fse, fsv $fsv\n");
-
 	if ($fstype == "ev") {
 		// Estimate/Variance given - convert to lower/upper.
 		$fsu = $fse * (1 + $fsv/100);
@@ -539,7 +541,6 @@ function process_data ($vals) {
 		// Estimate size of quads we could find:
 		$fmax = 0.5  * min($W, $H) * $fu_upper / 60.0;
 		$fmin = 0.1 * min($W, $H) * $fu_lower / 60.0;
-		//loggit("W=$W, H=$H, min(W,H)=" . min($W,$H) . ", fu_upper=$fu_upper.\n");
 		loggit("Collecting indexes with quads in range [" . $fmin . ", " . $fmax . "] arcmin.\n");
 
 		foreach ($indexdata as $k => $v) {
@@ -588,7 +589,7 @@ function process_data ($vals) {
 
 	$parity = $vals["parity"];
 	$tweak = $vals["tweak"];
-	$tweak_order = 2;
+	$tweak_order = $vals['tweak_order'];
 	$poserr = $vals["poserr"];
 	$codetol = 0.01;
 
@@ -878,6 +879,22 @@ function check_fieldscale($vals) {
 	return array("fstype"=>"Invalid fstype");
 }
 
+function check_tweak($vals) {
+	if (!$vals['tweak'])
+		return TRUE;
+	if (!strlen($vals['tweak_order'])) {
+		return array('tweak_order' => "Tweak order cannot be empty.");
+	}
+	$o = (int)$vals['tweak_order'];
+	if ($o < 0) {
+		return array('tweak_order' => "Tweak order must be non-negative.");
+	}
+	if ($o > 8) {
+		return array('tweak_order' => "Tweak order must be <= 8.");
+	}
+	return TRUE;
+}
+
 function check_poserr($vals) {
 	if ($vals["poserr"] <= 0) {
 		return array("poserr"=>"Positional error must be positive.");
@@ -906,7 +923,7 @@ function render_form($form, $ids, $headers) {
 
 	// all the "regular" fields.
 	$flds = array('imgfile', 'fitsfile', 'imgurl', 'x_col', 'y_col',
-				  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
+				  'tweak', 'tweak_order', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
 				  'poserr', 'index', 'uname', 'email',
 				  'submit', 'linkhere', 
 				  #'imagescale',
@@ -935,7 +952,7 @@ function render_form($form, $ids, $headers) {
 	// fields (and pseudo-fields) that can have errors 
 	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile',
 					 'x_col', 'y_col', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
-					 'poserr', 'fs', 'email');
+					 'poserr', 'fs', 'email', 'tweak_order');
 	foreach ($errflds as $fld) {
 		$template = str_replace("##".$fld."-err##", $form->getElementError($fld), $template);
 	}

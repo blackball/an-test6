@@ -5,7 +5,7 @@ require_once 'common.php';
 $preset_db_path = $resultdir . "presets.db";
 
 $preset_cols = array('fstype', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
-					 'poserr', 'tweak');
+					 'poserr', 'tweak', 'tweak_order');
 // jobdata => preset
 $preset_special_cols = array('index'  => 'theindex',
 							 'imgurl' => 'url');
@@ -158,93 +158,7 @@ function get_preset($name) {
 	return $args;
 }
 
-/* Old-fashioned presets:
-$blind_presets = 
-array("apod-2007-03-09" =>
-	  "xysrc=url&fstype=ul&fsl=30&fsu=60&poserr=2&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/tle070303_legault_legend.jpg",
 
-	  "apod-2007-03-08" =>
-	  "xysrc=url&fstype=ev&fse=1.5&fsv=50&poserr=1&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/tle_03032007_60_schedler720.jpg",
-
-	  "apod-2007-03-08-fast" =>
-	  "xysrc=url&fstype=ev&fse=1.5&fsv=10&poserr=1&index=2degree&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/tle_03032007_60_schedler720.jpg",
-
-	  "apod-2007-02-26" =>
-	  "xysrc=url&fstype=ul&fsl=10&fsu=30&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/debrismovie_mcnaught.jpg",
-
-	  "apod-2007-02-26-fast" =>
-	  "xysrc=url&fstype=ul&fsl=10&fsu=30&tweak=1&index=8degree&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/debrismovie_mcnaught.jpg",
-
-	  "apod-2007-02-16" =>
-	  "xysrc=url&fstype=ev&fse=20&fsv=50&fsunit=arcminwidth&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/NGC2685_crawford720.jpg",
-
-	  "apod-2007-02-28" =>
-	  "xysrc=url&fstype=ul&fsl=30&fsu=45&fsunit=arcminwidth&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/ngc2170_croman.jpg",
-
-	  "apod-2007-02-28-fast" =>
-	  "xysrc=url&fstype=ul&fsl=35&fsu=40&fsunit=arcminwidth&tweak=1&index=12arcmin&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/ngc2170_croman.jpg",
-
-	  "apod-2007-02-14" =>
-	  "xysrc=url&fstype=ul&fsl=1&fsu=2&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/rosette_gendler.jpg",
-
-	  "apod-2007-02-14-fast" =>
-	  "xysrc=url&fstype=ul&fsl=1.8&fsu=1.9&index=1degree&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0702/rosette_gendler.jpg",
-
-	  "apod-2007-01-04" =>
-	  "xysrc=url&fstype=ev&fse=3&fsv=50&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/gammacyg_parkercarboni720.jpg",
-
-	  "apod-2007-01-06" =>
-	  "xysrc=url&fstype=ev&fse=5&fsv=50&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
-
-	  "apod-2007-01-06-fast" =>
-	  "xysrc=url&fstype=ev&fse=7&fsv=10&index=4degree&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/oriondeepwide_gendler720.jpg",
-
-	  "apod-2007-01-08" =>
-	  "xysrc=url&fstype=ul&fsl=20&fsu=90&poserr=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/dippers_lodriguss_labels.jpg",
-
-	  "apod-2007-01-08-fast" =>
-	  "xysrc=url&fstype=ul&fsl=60&fsu=75&poserr=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/dippers_lodriguss_labels.jpg",
-
-	  "apod-2007-03-19" =>
-	  "xysrc=url&fstype=ul&fsl=20&fsu=30&poserr=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/hickson44_masil.jpg",
-
- 	  "apod-2007-03-21-fast" =>
-	  "xysrc=url&fstype=ul&fsl=30&fsu=40&fsunit=arcminwidth&poserr=1&index=30arcmin&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/barnard163_noao.jpg",
-
-	  "apod-2007-03-21" =>
-	  "xysrc=url&fstype=ul&fsl=30&fsu=60&fsunit=arcminwidth&poserr=1&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0703/barnard163_noao.jpg",
-
-	  "apod-2007-01-12" =>
-	  "xysrc=url&fstype=ev&fse=2&fsv=50&poserr=1&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/coathanger_barrett.jpg",
-
-	  "apod-2007-01-22" =>
-	  "xysrc=url&fstype=ul&fsl=20&fsu=60&poserr=1&tweak=1&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/comet_mcnaught.jpg",
-
-	  "apod-2007-01-25" =>
-	  "xysrc=url&fstype=ev&fse=13&fsv=20&poserr=1&tweak=0&" .
-	  "imgurl=http://antwrp.gsfc.nasa.gov/apod/image/0701/orioncradle_hallas_r780.jpg",
-	  );
-*/
 
 	  /* HST:
            http://antwrp.gsfc.nasa.gov/apod/ap070305.html
