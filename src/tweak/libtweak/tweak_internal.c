@@ -210,9 +210,8 @@ sip_t* do_entire_shift_operation(tweak_t* t, double rho)
 
 /* This function is intended only for initializing newly allocated tweak
  * structures, NOT for operating on existing ones.*/
-void tweak_init(tweak_t* t)
+void tweak_init(tweak_t* t) 
 {
-	// FIXME This does not really set things properly but whatever, it should still work
 	memset(t, 0, sizeof(tweak_t));
 }
 
@@ -550,6 +549,11 @@ void tweak_push_hppath(tweak_t* t, char* hppath) //healpix path
 {
 	t->hppath = strdup(hppath);
 	t->state |= TWEAK_HAS_HEALPIX_PATH;
+}
+
+void tweak_skip_shift(tweak_t* t) {
+	t->state |= (TWEAK_HAS_COARSLY_SHIFTED | TWEAK_HAS_FINELY_SHIFTED |
+				 TWEAK_HAS_REALLY_FINELY_SHIFTED);
 }
 
 // DualTree RangeSearch callback. We want to keep track of correspondences.
@@ -1144,6 +1148,7 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 	free(b2);
 }
 
+// Really what we want is some sort of fancy dependency system... DTDS!
 // Duct-tape dependencey system (DTDS)
 #define done(x) t->state |= x; return x;
 #define want(x) \
@@ -1389,7 +1394,6 @@ void tweak_clear(tweak_t* t)
 }
 
 void tweak_free(tweak_t* t) {
-	// FIXME ...
 	tweak_clear(t);
 	free(t);
 }

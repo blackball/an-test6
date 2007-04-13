@@ -36,7 +36,6 @@ enum tweak_flags {
 };
 // FIXME add a method to print out the state in a readable way
 
-// Really what we want is some sort of fancy dependency system... DTDS!
 typedef struct tweak_s {
 	sip_t* sip;
 	unsigned int state; // bitfield of tweak_flags
@@ -104,6 +103,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag);
 void tweak_clear(tweak_t* t);
 void tweak_dump_ascii(tweak_t* t);
 void tweak_push_image_xy(tweak_t* t, double* x, double *y, int n);
+void tweak_skip_shift(tweak_t* t);
 void tweak_push_hppath(tweak_t* t, char* hppath);
 void tweak_print_state(tweak_t* t);
 void tweak_go_to(tweak_t* t, unsigned int flag);

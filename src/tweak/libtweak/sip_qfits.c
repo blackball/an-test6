@@ -113,6 +113,9 @@ static bool read_polynomial(qfits_header* hdr, char* format,
 		for (j=0; (i+j)<=order; j++) {
 			if (i+j < 1)
 				continue;
+			// FIXME - should we try to read it and not fail if it doesn't exist,
+			// or not read it at all?  Is it reasonable for linear terms to exist
+			// and be non-zero?
 			if (skip_linear && (i+j < 2))
 				continue;
 			sprintf(key, format, i, j);
