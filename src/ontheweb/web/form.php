@@ -662,7 +662,7 @@ function process_data ($vals) {
 				"nindex_tosolve 25\n" .
 				"distractors 0.25\n" .
 				"ratio_toprint 10\n" .
-				"ratio_tokeep 1.9\n" .
+				"ratio_tokeep 1e9\n" .
 				"ratio_tosolve 1e9\n" .
 				"ratio_tobail 1e-100\n" .
 				"fieldw " . $W . "\n" .
@@ -673,7 +673,8 @@ function process_data ($vals) {
 				($tweak ?
 				 "tweak\n" .
 				 "tweak_aborder " . $tweak_order . "\n" . 
-				 "tweak_abporder " . $tweak_order . "\n"
+				 "tweak_abporder " . $tweak_order . "\n" .
+				 "tweak_skipshift\n"
 				 : "") .
 				"run\n" .
 				"\n";
