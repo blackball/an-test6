@@ -907,7 +907,7 @@ static int read_parameters(blind_params* bp) {
 			sp->quiet = TRUE;
 		} else if (is_word(line, "verbose", &nextword)) {
 			bp->verbose = TRUE;
-		} else if (is_word(line, "tweak_noshift", &nextword)) {
+		} else if (is_word(line, "tweak_skipshift", &nextword)) {
 			bp->tweak_skipshift = TRUE;
 		} else if (is_word(line, "tweak_aborder ", &nextword)) {
 			bp->tweak_aborder = atoi(nextword);
