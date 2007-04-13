@@ -161,6 +161,7 @@ struct blind_params {
 	bool do_tweak;
 	int tweak_aborder;
 	int tweak_abporder;
+	bool tweak_skipshift;
 };
 typedef struct blind_params blind_params;
 
@@ -906,6 +907,8 @@ static int read_parameters(blind_params* bp) {
 			sp->quiet = TRUE;
 		} else if (is_word(line, "verbose", &nextword)) {
 			bp->verbose = TRUE;
+		} else if (is_word(line, "tweak_noshift", &nextword)) {
+			bp->tweak_skipshift = TRUE;
 		} else if (is_word(line, "tweak_aborder ", &nextword)) {
 			bp->tweak_aborder = atoi(nextword);
 		} else if (is_word(line, "tweak_abporder ", &nextword)) {
@@ -1057,6 +1060,11 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 	tweak_push_wcs_tan(twee, &(mo->wcstan));
 	twee->sip->a_order  = twee->sip->b_order  = bp->tweak_aborder;
 	twee->sip->ap_order = twee->sip->bp_order = bp->tweak_abporder;
+
+	if (bp->tweak_skipshift) {
+		logmsg(bp, "Skipping shift operation.\n");
+		tweak_skip_shift(twee);
+	}
 
 	logmsg(bp, "Begin tweaking...\n");
 	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
