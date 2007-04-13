@@ -845,17 +845,17 @@ if ($job_submitted) {
 }
 
 if ($job_started) {
-	echo '<tr><td>Started:</td><td>';
 	$date = $jd['solve-start'];
 	$t = isodate_to_timestamp($date);
 	if (!$t) {
-		echo '(error)';
+		//echo '(error)';
 	} else {
+		echo '<tr><td>Started:</td><td>';
 		echo get_datestr($t);
 		$dt = dtime2str($now - $t);
 		echo "<br />(" . $dt . " ago)";
+		echo "</td></tr>\n";
 	}
-	echo "</td></tr>\n";
 }
 
 if ($job_done) {

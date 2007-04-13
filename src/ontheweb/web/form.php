@@ -388,6 +388,12 @@ function process_data ($vals) {
 	$tryscales = array();
 
 	if ($xysrc == "url") {
+		// fix double "http://"
+		if (strstr($imgurl, 'http://http://')) {
+			$imgurl = substr($imgurl, 7);
+			$vals['imgurl'] = $imgurl;
+		}
+
 		// Try to retrieve the URL...
 		loggit("retrieving url " . $imgurl . " ...\n");
 		$imgbasename = "downloaded.";
@@ -845,7 +851,12 @@ function check_xysrc($vals) {
 		}
 		return TRUE;
 	case 'url':
-		if (validate_url($vals['imgurl']))
+		$url = $vals['imgurl'];
+		// allow double "http://"
+		if (strstr($url, 'http://http://')) {
+			$url = substr($url, 7);
+		}
+		if (validate_url($url))
 			return TRUE;
 		return array("imgurl"=>"You must provide a valid URL.");
 	}

@@ -42,12 +42,12 @@ if(!$ul_info) {
 	   $onload = 'window.close();';
 	   $body = "Invalid upload meter ID!";
    } else {
-	   $refresh = 2;   // Wait 2 seconds, give the server time to create the progress file.
+	   $refresh = 1;   // Wait 1 second, give the server time to create the progress file.
 	   $body = "Waiting for upload to begin.";
    }
 } else {
     if($ul_info['bytes_total'] > 1 && $ul_info['bytes_uploaded'] >= $ul_info['bytes_total'] && $ul_info['est_sec'] == 0) {
-        $onload = 'setTimeout(\'window.close()\', 2000);';
+        $onload = 'setTimeout(\'window.close()\', 1000);';
         $body = 'Upload complete.';
     } else {
         $body = "Uploading...";
