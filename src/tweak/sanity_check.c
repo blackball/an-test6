@@ -31,7 +31,10 @@
 #include "tweak_internal.h"
 
 #define NUM_FAKE_OBJS 100
-#define FAKE_IMAGE_EDGESIZE 256
+#define FAKE_IMAGE_EDGESIZE 250
+#define FAKE_IMAGE_DEGREES 1.0
+#define FAKE_IMAGE_RA 100
+#define FAKE_IMAGE_DEC 89
 #define NOISE 0.5
 
 
@@ -47,9 +50,8 @@ void get_fake_xy_data(tweak_t* t, int numobjs)
 	t->n=numobjs;
 
 	// WTF? why won't the next line compile?
-//	tan_pixelxy2xyzarr(&(t->sip.wcstan), 100,100,xyzcentre);
-//
-	tan_pixelxy2xyzarr((tan_t*)t->sip, 100,100,xyzcentre);
+	//	tan_pixelxy2xyzarr(&(t->sip.wcstan), FAKE_IMAGE_EDGESIZE/2,FAKE_IMAGE_EDGESIZE/2,xyzcentre);
+	tan_pixelxy2xyzarr((tan_t*)t->sip, FAKE_IMAGE_EDGESIZE/2,FAKE_IMAGE_EDGESIZE/2,xyzcentre);
 
 	t->x = malloc(sizeof(double)*t->n);
 	t->y = malloc(sizeof(double)*t->n);
@@ -65,7 +67,9 @@ void get_fake_xy_data(tweak_t* t, int numobjs)
 	  double ny = NOISE * (drand48()-0.5);
 	  t->x[jj] = px + nx;
 	  t->y[jj] = py + ny;
-	  fprintf(stderr,"image star %04d: %g,%g\n",jj,t->x[jj],t->y[jj]);
+	  t->x[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES); // add 1arcsec noise
+	  t->y[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES);
+	  //fprintf(stderr,"image star %04d: %g,%g\n",jj,t->x[jj],t->y[jj]);
 	}
 	t->state |= TWEAK_HAS_IMAGE_XY;
 	tweak_push_ref_xyz(t,xyz,t->n);
@@ -97,7 +101,7 @@ int main(int argc, char *argv[])
 
 	tweak.Nside = 0;
 
-	// set jitter: 6 arcsec.
+	// set jitter: 6 arcsec. // FIXME -- THIS IS INSANE. OFTEN OUR PIXELS ARE LIKE 250arcsec themselves
 	tweak.jitter = 6.0;
 
 	while ((argchar = getopt(argc, argv, "h")) != -1)
@@ -158,18 +162,18 @@ sip_t* make_fake_sip(void)
 {
    sip_t* sip;
 	char fakewcs[] ="NAXIS = 2                                                                       "
-	                "NAXIS1 = 256                                                                    "
-	                "NAXIS2 = 256                                                                    "
+	                "NAXIS1 = 250                                                                    "
+	                "NAXIS2 = 250                                                                    "
 	                "CTYPE1 = 'RA---TAN'                                                             "
 	                "CTYPE2 = 'DEC--TAN'                                                             "
-	                "CRPIX1 = 128                                                                    "
-	                "CRPIX2 = 128                                                                    "
-	                "CD1_1  = .004                                                                   "
-	                "CD1_2  = 0                                                                      "
-	                "CD2_1  = 0                                                                      "
-	                "CD2_2  = .004                                                                   "
+	                "CRPIX1 = 124.5                                                                  "
+	                "CRPIX2 = 124.5                                                                  "
+	                "CD1_1  = 0                                                                      "
+	                "CD1_2  = .004                                                                   "
+	                "CD2_1  = .004                                                                   "
+	                "CD2_2  = 0                                                                      "
 	                "CRVAL1 = 100                                                                    "
-	                "CRVAL2 = 100                                                                    ";
+	                "CRVAL2 = 89                                                                     ";
 
 	wcs_t* wcs = wcsinit(fakewcs);
 
