@@ -167,28 +167,50 @@ void get_shift(double* ximg, double* yimg, int nimg,
 
 sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 {
-   double crpix0,crpix1;
-	double nxref, nyref;
+  // UNITS: crpix and xs/ys in pixels, crvals in degrees, nx/nyref and theta in degrees
+   double crpix0,crpix1,crval0,crval1;
+	double nxref, nyref,theta,sintheta,costheta;
+	double newCD[2][2]; //the new CD matrix
 	sip_t* swcs = malloc(sizeof(sip_t));
 	memcpy(swcs, wcs, sizeof(sip_t));
 
 	// Save
 	crpix0 = wcs->wcstan.crpix[0]; // save old crpix
 	crpix1 = wcs->wcstan.crpix[1];
+	crval0 = wcs->wcstan.crval[0]; // save old crval
+	crval1 = wcs->wcstan.crval[1];
 
-	wcs->wcstan.crpix[0] += xs; // shift the tangent point
-	wcs->wcstan.crpix[1] += ys;
+	wcs->wcstan.crpix[0] += xs; // compute the desired projection of the new tangent point by
+	wcs->wcstan.crpix[1] += ys; // shifting the projection of the current tangent point
 
 	// now reproject the old crpix[xy] into shifted wcs
 	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
 
 	swcs->wcstan.crval[0] = nxref; // RA,DEC coords of new tangent point
 	swcs->wcstan.crval[1] = nyref;
+	theta = nxref-crval0; // deltaRA = new minus old RA; 
+	theta *= sin(PIl*nyref/180.0);  // multiply by the sin of the NEW(?) Dec; at equator this correctly evals to zero
+	sintheta = sin(theta);
+	costheta = cos(theta);
 
 	// Restore
 	wcs->wcstan.crpix[0] = crpix0; // restore old crpix
 	wcs->wcstan.crpix[1] = crpix1;
-	// FIXME -- hogg says we should fix the rotation in cd matrix in case "north" has changed
+
+   // Fix the CD matrix since "northwards" has changed due to moving RA
+	newCD[0][0] = costheta* swcs->wcstan.cd[0][0] - sintheta*swcs->wcstan.cd[0][1];
+	newCD[0][1] = sintheta* swcs->wcstan.cd[0][0] + costheta*swcs->wcstan.cd[0][1];
+	newCD[1][0] = costheta* swcs->wcstan.cd[1][0] - sintheta*swcs->wcstan.cd[1][1];
+	newCD[1][1] = sintheta* swcs->wcstan.cd[1][0] + costheta*swcs->wcstan.cd[1][1];
+   swcs->wcstan.cd[0][0] = newCD[0][0];
+   swcs->wcstan.cd[0][1] = newCD[0][1];
+   swcs->wcstan.cd[1][0] = newCD[1][0];
+   swcs->wcstan.cd[1][1] = newCD[1][1];
+
+	// go into sanity_check and try this make something one sq. degree with DEC=89degrees and north up
+	//make xy, convert to to RA/DEC
+	//shift by .5 degrees worth of pixels to the left (in x direction only)
+   //go back, see that it is OK
 
 	return swcs;
 }
