@@ -33,21 +33,23 @@ from under 10&nbsp;arcmin to over 80&nbsp;deg.  We also know that we
 have solved images taken in bandpasses ranging from the near
 ultraviolet to the near infrared.</dd>
 
-<dt>Q: <b>I submitted an image and it didn't solve although it had an almost
-exactly correct WCS header</b>  How can you guys suck so badly that you
-can't even solve an image when I give you the right answer?</dt>
+<dt>Q: <b>I submitted an image and it didn't solve even though it had
+an almost exactly correct WCS header</b> How can you guys suck so
+badly that you can't even solve an image when I give you the right
+answer?</dt>
 
-<dd>A: Currently, astrometry.net has to "verify" any solution by ensuring
-that your field and our all-sky index have a substantial number of
-sources in almost exact correspondence under our proposed alignment
-solution.  The current astrometry.net will use the WCS information, if
-it is there, as an inital guess, but the "verification" of whether we
-think we have solved your image proceeds the same way regardless if we
-solved you image completely blind or using WCS as an initial guess.
-If your image contains very few sources which are known to our index,
-we are not able to verify the solution at high confidence and so we do
-not return a match. But please let us know what jobid failed, and what
-band your image was in, so we can improve our index to cover it.</dd>
+<dd>A: Currently, astrometry.net has to "verify" any solution by
+ensuring that your field and our all-sky index have a substantial
+number of sources in almost exact correspondence under our proposed
+alignment solution.  The current astrometry.net will use the WCS
+information, if it is there, as an inital guess, but the
+"verification" of whether we think we have solved your image proceeds
+the same way regardless if we solved you image completely blind or
+using WCS as an initial guess.  If your image contains very few
+sources which are known to our index, we are not able to verify the
+solution at high confidence and so we do not return a match. But
+please let us know what jobid failed, and what band your image was in,
+so we can improve our index to cover it.</dd>
 
 <dt>Q: <b>My image didn't solve even though I put in a correct
 estimate of the scale and I can see that your source extraction
@@ -55,11 +57,18 @@ correctly extracted many USNO-B stars.</b></dt>
 
 <dd>A: Can you phrase that as a question?  We find that the most
 common error is to put in the scale as 25 but then accidentally pull
-down the tab "size of the image in arcmin" when you meant "size of the
-image in degrees".  If you are sure that you have entered everything
-correctly and that source extraction is sane, and it still isn't
-solving, send us email, because you clearly have a useful image for
-debugging.</dd>
+down the tab "size of the image in degrees" when you meant "size of
+the image in arcmin".  If you are sure that you have entered
+everything correctly and that source extraction is sane, and it still
+isn't solving, send email to "alpha@astrometry.net" with your jobid,
+because you clearly have a useful image for debugging.</dd>
+
+<dt>Q: <b>Why does my submission die silently without returning a
+jobid?</b></dt>
+
+<dd>A: Did your job exceed the 250M size limit?  If so, try gzip (yes,
+we take gz files).  If not, there is a bug; send email to
+"alpha@astrometry.net".</dd>
 
 <dt>Q: <b>I have tons of images I want to solve.</b> Typing my email
 and the size parameters and the image urls into your lame web form
@@ -76,23 +85,18 @@ image. If that's still not good enough, the best we can offer you for
 now is the following hack, which uses wget.  You need to expose your
 image on the web and fill in the info in the first three lines, ie
 your email/name, the url to your image and the size info (which you
-can just copy from the LinkToTheseParameters link). We've split the
-lines to make it more readable but you probably want it all as one
-monster line with no breaks.<br />
-<tt>wget
-&quot;http://live.astrometry.net/index.php?justjobid&amp;email=user@domain.edu&amp;uname=YourName<br>
-&amp;xysrc=url&amp;imgurl=http%3A%2F%2Fwww.astro.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg<br>
-&amp;fstype=ev&amp;fse=1&amp;fsv=50&amp;fsunit=degreewidth&amp;fsu=&amp;fsl=&amp;x_col=X&amp;y_col=Y&amp;parity=2&amp;poserr=1&amp;tweak=1&amp;tweak_order=2<br>
-&amp;index=auto&amp;submit=Submit&quot; -Ojobid_out </tt></dd>
+can just copy from the LinkToTheseParameters link).
+<tt>wget&nbsp;&quot;http://live.astrometry.net/index.php?justjobid&amp;email=user@domain.edu&amp;uname=YourName&amp;xysrc=url&amp;imgurl=http%3A%2F%2Fwww.astro.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg&amp;fstype=ev&amp;fse=1&amp;fsv=50&amp;fsunit=degreewidth&amp;fsu=&amp;fsl=&amp;x_col=X&amp;y_col=Y&amp;parity=2&amp;poserr=1&amp;tweak=1&amp;tweak_order=2&amp;index=auto&amp;submit=Submit&quot;&nbsp;-Ojobid_out</tt></dd>
 
 <dt>Q: I looked at the source extraction preview image on the status
 page for one of my jobs, and <b>your system totally failed to find
 tons of perfectly obvious sources in my image</b>.  What's up?</dt>
 
 <dd>A: We're using a really *dumbass* source extraction algorithm for
-now, since it basically has to Just&nbsp;Work&nbsp;(tm) most of the time.
-We'd like to make it more sophisticated, so please send us the jobid
-on which source extraction did poorly.</dd>
+now, since it basically has to Just&nbsp;Work&nbsp;(tm) most of the
+time.  We'd like to make it more sophisticated, so please send to
+"alpha@astrometry.net" the jobid on which source extraction did
+poorly.</dd>
 
 <dt>Q: <b>Is there a way for me to install the system locally on my
 own machine?</b></dt>
