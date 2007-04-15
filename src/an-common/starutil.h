@@ -47,11 +47,11 @@ typedef unsigned char uchar;
 #define BADC_ORDER 3
 
 #define rad2deg(r) (180.0*(r)/(double)PIl)
-#define deg2rad(d) (d*(double)PIl/180.0)
-#define rad2arcmin(r) (10800.0*r/(double)PIl)
-#define arcmin2rad(a) (a*(double)PIl/10800.0)
-#define rad2arcsec(r) (648000.0*r/(double)PIl)
-#define arcsec2rad(a) (a*(double)PIl/648000.0)
+#define deg2rad(d) ((d)*(double)PIl/180.0)
+#define rad2arcmin(r) (10800.0*(r)/(double)PIl)
+#define arcmin2rad(a) ((a)*(double)PIl/10800.0)
+#define rad2arcsec(r) (648000.0*(r)/(double)PIl)
+#define arcsec2rad(a) ((a)*(double)PIl/648000.0)
 #define radec2x(r,d) (cos(d)*cos(r)) // r,d in radians
 #define radec2y(r,d) (cos(d)*sin(r)) // r,d in radians
 #define radec2z(r,d) (sin(d))        // d in radians
