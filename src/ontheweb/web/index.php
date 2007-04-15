@@ -51,29 +51,29 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	$inputfile = $mydir . $input_fn;
 	$inputtmpfile = $mydir . $inputtmp_fn;
 
+	if (array_key_exists('justjobid', $vals)) {
+		// skip the "source extraction" preview, just start crunching!
+		loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
+		if ($imgfilename) {
+			// HACK - pause for watcher...
+			sleep(1);
+			if (!rename($inputtmpfile, $inputfile)) {
+				loggit("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+				submit_failed($db, "Failed to rename input file for the blind solver.");
+			}
+			//loggit("renamed $inputtmpfile to $inputfile_orig.\n");
+		}
+		// Just write the jobid.
+		header('Content-type: text/plain');
+		echo $myname . "\n";
+		highlevellog("Job " . $myname . ": skipped source extraction preview; job started.\n");
+		exit;
+	}
+
 	if ($webver) {
 		highlevellog("Job " . $myname . ": web edition: wrote scripts.\n");
 
 		loggit("Web version.\n");
-		if ($headers["justjobid"]) {
-			// skip the "source extraction" preview, just start crunching!
-			loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
-			if ($imgfilename) {
-				// HACK - pause for watcher...
-				sleep(1);
-				if (!rename($inputtmpfile, $inputfile)) {
-					loggit("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
-					submit_failed($db, "Failed to rename input file for the blind solver.");
-				}
-				//loggit("renamed $inputtmpfile to $inputfile_orig.\n");
-			}
-			// Just write the jobid.
-			header('Content-type: text/plain');
-			echo $myname . "\n";
-			highlevellog("Job " . $myname . ": skipped source extraction preview; job started.\n");
-			exit;
-		}
-
 		// Redirect the client to the status page...
 		$status_url = "status.php?job=" . $myname;
 
