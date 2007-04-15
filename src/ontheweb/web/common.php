@@ -173,13 +173,13 @@ function create_new_jobid() {
 	return $siteid . "-" . $yrmonth . "-" . $num;
 }
 
-$sitepat = '/^\w{3}$/';
+$sitepat = '/^\w{3,10}$/';
 $erapat = '/^\d{6}$/';
 $numpat = '/^\d{8}$/';
 
 function verify_jobid($jobid) {
 	$pat_old = '/^[0-9a-f]{10}$/';
-	$pat_new = '/^\w{3}-\d{6}-\d{8}$/';
+	$pat_new = '/^\w{3,10}-\d{6}-\d{8}$/';
 	return ((preg_match($pat_new, $jobid) == 1) ||
 			(preg_match($pat_old, $jobid) == 1));
 }
