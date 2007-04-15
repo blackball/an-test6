@@ -182,12 +182,14 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 
 	wcs->wcstan.crpix[0] += xs; // compute the desired projection of the new tangent point by
 	wcs->wcstan.crpix[1] += ys; // shifting the projection of the current tangent point
+fprintf(stderr,"wcs_shift: shifting crpix by (%g,%g)\n",xs,ys);
 
 	// now reproject the old crpix[xy] into shifted wcs
 	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
 
 	swcs->wcstan.crval[0] = nxref; // RA,DEC coords of new tangent point
 	swcs->wcstan.crval[1] = nyref;
+fprintf(stderr,"wcs_shift: crval0: %g->%g    crval1:%g->%g\n",crval0,nxref,crval1,nyref);
 	theta = nxref-crval0; // deltaRA = new minus old RA; 
 	theta *= sin(deg2rad(nyref));  // multiply by the sin of the NEW Dec; at equator this correctly evals to zero
 	sintheta = sin(theta);
