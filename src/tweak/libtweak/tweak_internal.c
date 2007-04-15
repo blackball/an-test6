@@ -189,11 +189,12 @@ fprintf(stderr,"wcs_shift: shifting crpix by (%g,%g)\n",xs,ys);
 
 	swcs->wcstan.crval[0] = nxref; // RA,DEC coords of new tangent point
 	swcs->wcstan.crval[1] = nyref;
-fprintf(stderr,"wcs_shift: crval0: %g->%g    crval1:%g->%g\n",crval0,nxref,crval1,nyref);
-	theta = nxref-crval0; // deltaRA = new minus old RA; 
+	theta = -deg2rad(nxref-crval0); // deltaRA = new minus old RA; 
 	theta *= sin(deg2rad(nyref));  // multiply by the sin of the NEW Dec; at equator this correctly evals to zero
 	sintheta = sin(theta);
 	costheta = cos(theta);
+fprintf(stderr,"wcs_shift: crval0: %g->%g   crval1:%g->%g\ntheta=%g   (sintheta,costheta)=(%g,%g)\n",
+		  crval0,nxref,crval1,nyref,theta,sintheta,costheta);
 
 	// Restore
 	wcs->wcstan.crpix[0] = crpix0; // restore old crpix

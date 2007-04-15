@@ -34,7 +34,7 @@
 #define FAKE_IMAGE_EDGESIZE 250
 #define FAKE_IMAGE_DEGREES 1.0
 #define FAKE_IMAGE_RA 100
-#define FAKE_IMAGE_DEC 89
+#define FAKE_IMAGE_DEC 80
 #define NOISE_PIXELS 0.5 
 
 
@@ -130,15 +130,16 @@ int main(int argc, char *argv[])
 	  sip_t* shifted_wcs;
 
 	  fprintf(stderr,"shifting wcs\n");
-	  shifted_wcs=wcs_shift(tweak.sip,100.0,0.0);
+	  shifted_wcs=wcs_shift(tweak.sip,0.0,100.0);
 	  fprintf(stderr,"\n");
+
+	  sip_print(shifted_wcs);
 
 	  fprintf(stderr,"obj#: (    ra,   dec) (  orig_px,  orig_py) (   new_px,   new_py) (   diff_x,   diff_y)\n"
                     "---------------------------------------------------------------------------------------\n");
 	  for (jj=0; jj<tweak.n; jj++) {
-		 //sip_pixelxy2radec(tweak.sip, tweak.x[jj],tweak.y[jj],&thisra,&thisdec);
+		 sip_pixelxy2radec(tweak.sip, tweak.x[jj],tweak.y[jj],&thisra,&thisdec);
 		 //sip_radec2pixelxy(tweak.sip, thisra,thisdec,&computedx,&computedy);
-		 sip_pixelxy2radec(shifted_wcs, tweak.x[jj],tweak.y[jj],&thisra,&thisdec);
 		 sip_radec2pixelxy(shifted_wcs, thisra,thisdec,&computedx,&computedy);
 		 fprintf(stderr,"%04d: (%6.2f,%6.2f) (%9.5f,%9.5f) (%9.5f,%9.5f) (%9.5f,%9.5f)\n",
 			jj,thisra,thisdec,tweak.x[jj],tweak.y[jj],computedx,computedy,tweak.x[jj]-computedx,tweak.y[jj]-computedy);
@@ -201,7 +202,7 @@ sip_t* make_fake_sip(void)
 	                "CD2_1  = .004                                                                   "
 	                "CD2_2  = 0                                                                      "
 	                "CRVAL1 = 100                                                                    "
-	                "CRVAL2 = 89                                                                     ";
+	                "CRVAL2 = 80                                                                     ";
 
 	wcs_t* wcs = wcsinit(fakewcs);
 
