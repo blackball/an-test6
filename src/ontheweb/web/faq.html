@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <title>
-Astrometry.net: Alpha User FAQ
+Astrometry.net / Alpha FAQ
 </title>
 <link rel="stylesheet" type="text/css" href="faq.css" />
 <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
@@ -47,18 +47,13 @@ an almost exactly correct WCS header.</b> How can you guys suck so
 badly that you can't even solve an image when I give you the right
 answer?</dt>
 
-<dd>A: Currently, astrometry.net has to "verify" any solution by
-ensuring that your field and our all-sky index have a substantial
-number of sources in almost exact correspondence under our proposed
-alignment solution.  The current astrometry.net will use the WCS
-information, if it is there, as an inital guess, but the
-"verification" of whether we think we have solved your image proceeds
-the same way regardless if we solved you image completely blind or
-using WCS as an initial guess.  If your image contains very few
-sources which are known to our index, we are not able to verify the
-solution at high confidence and so we do not return a match. But
-please let us know what jobid failed, and what band your image was in,
-so we can improve our index to cover it.</dd>
+<dd>A: Currently, astrometry.net <i>ignores</i> any existing WCS
+information.  It only does purely <i>blind</i> astrometry.  Eventually
+we plan to perform <q>refinement only</q> WCS services in addition to
+the blind service. The current astrometry.net alpha service uses the
+WCS information, if it is there, to guess the image scale, but beyond
+that all meta-data in the image are ignored.  That is the magic, and
+principal limitation, of the service.</dd>
 
 <dt>Q: <b>My image didn't solve even though I put in a correct
 estimate of the scale and I can see that your source extraction
@@ -66,18 +61,19 @@ correctly extracted many USNO-B stars.</b></dt>
 
 <dd>A: Can you phrase that as a question?  We find that the most
 common error is to put in the scale as 25 but then accidentally pull
-down the tab "size of the image in degrees" when you meant "size of
-the image in arcmin".  If you are sure that you have entered
-everything correctly and that source extraction is sane, and it still
-isn't solving, send email to "alpha@astrometry.net" with your jobid,
-because you clearly have a useful image for debugging.</dd>
+down the tab <q>size of the image in degrees</q> when you meant
+<q>size of the image in arcmin</q>.  If you are sure that you have
+entered everything correctly and that source extraction is sane, and
+it still isn't solving, send email to <q>alpha@astrometry.net</q> with
+your jobid, because you clearly have a useful image for
+debugging.</dd>
 
 <dt>Q: <b>Why does my submission die silently without returning a
 jobid?</b></dt>
 
 <dd>A: Did your job exceed the 250M size limit?  If so, try gzip (yes,
 we take gz files).  If not, there is a bug; send email to
-"alpha@astrometry.net".</dd>
+<q>alpha@astrometry.net</q>.</dd>
 
 <dt>Q: <b>What does the system do with multi-extension files?</b></dt>
 
@@ -108,7 +104,7 @@ tons of perfectly obvious sources in my image</b>.  What's up?</dt>
 <dd>A: We're using a really *dumbass* source extraction algorithm for
 now, since it basically has to Just&nbsp;Work&nbsp;(tm) most of the
 time.  We'd like to make it more sophisticated, so please send to
-"alpha@astrometry.net" the jobid on which source extraction did
+<q>alpha@astrometry.net</q> the jobid on which source extraction did
 poorly.</dd>
 
 <dt>Q: <b>Is there a way for me to install the system locally on my
