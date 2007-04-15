@@ -30,12 +30,12 @@
 #include "bl.h"
 #include "tweak_internal.h"
 
-#define NUM_FAKE_OBJS 100
+#define NUM_FAKE_OBJS 20
 #define FAKE_IMAGE_EDGESIZE 250
 #define FAKE_IMAGE_DEGREES 1.0
 #define FAKE_IMAGE_RA 100
 #define FAKE_IMAGE_DEC 89
-#define NOISE 0.5
+#define NOISE_PIXELS 0.5 
 
 
 void get_fake_xy_data(tweak_t* t, int numobjs);
@@ -46,32 +46,31 @@ void get_fake_xy_data(tweak_t* t, int numobjs)
 	// make numobjs random stars and create both xy and xyz data for them
 	int jj;
 	double *xyz; // this will hold the xyz "reference" coordinates
-	double xyzcentre[3]; // this will hold the xyz of the tangent point
 	t->n=numobjs;
-
-	// WTF? why won't the next line compile?
-	//	tan_pixelxy2xyzarr(&(t->sip.wcstan), FAKE_IMAGE_EDGESIZE/2,FAKE_IMAGE_EDGESIZE/2,xyzcentre);
-	tan_pixelxy2xyzarr((tan_t*)t->sip, FAKE_IMAGE_EDGESIZE/2,FAKE_IMAGE_EDGESIZE/2,xyzcentre);
 
 	t->x = malloc(sizeof(double)*t->n);
 	t->y = malloc(sizeof(double)*t->n);
 	xyz = malloc(sizeof(double)*3*t->n);
 
 	for (jj=0; jj<t->n; jj++) {
-	  double px = FAKE_IMAGE_EDGESIZE * (drand48()-0.5);
-	  double py = FAKE_IMAGE_EDGESIZE * (drand48()-0.5);
+	  // make a random reference star in the image
+	  double px = FAKE_IMAGE_EDGESIZE * (drand48()-0.5) + FAKE_IMAGE_EDGESIZE/2;
+	  double py = FAKE_IMAGE_EDGESIZE * (drand48()-0.5) + FAKE_IMAGE_EDGESIZE/2;
+	  // use the sip header to convert that to a noiseless reference xyz
 	  tan_pixelxy2xyzarr((tan_t*)t->sip, px,py, xyz+3*jj);
 
-	  // add noise in the image; later we can perturb the reference too
-	  double nx = NOISE * (drand48()-0.5);
-	  double ny = NOISE * (drand48()-0.5);
+	  // add noise to its position in the image; later we can perturb the reference too
+	  double nx = NOISE_PIXELS * (drand48()-0.5);
+	  double ny = NOISE_PIXELS * (drand48()-0.5);
 	  t->x[jj] = px + nx;
 	  t->y[jj] = py + ny;
-	  t->x[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES); // add 1arcsec noise
-	  t->y[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES);
+	  //t->x[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES); // add 1arcsec noise
+	  //t->y[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES);
 	  //fprintf(stderr,"image star %04d: %g,%g\n",jj,t->x[jj],t->y[jj]);
 	}
 	t->state |= TWEAK_HAS_IMAGE_XY;
+
+	// push the noiseless refence stars into the structure
 	tweak_push_ref_xyz(t,xyz,t->n);
 	free(xyz);
 }
@@ -119,11 +118,38 @@ int main(int argc, char *argv[])
 	sip_print(tweak.sip);
 	tweak.state = TWEAK_HAS_SIP;
 
-   fprintf(stderr,"getting fake XY list\n");
+   fprintf(stderr,"getting fake XY list\n\n");
 
 	// pretend to get image XY data
 	get_fake_xy_data(&tweak,NUM_FAKE_OBJS); //was get_xy_data
 	//tweak_push_hppath(&tweak, hppat);
+
+	{
+	  int jj;
+	  double thisra,thisdec,computedx,computedy;
+	  sip_t* shifted_wcs;
+
+	  fprintf(stderr,"shifting wcs\n");
+	  shifted_wcs=wcs_shift(tweak.sip,100.0,0.0);
+	  fprintf(stderr,"\n");
+
+	  fprintf(stderr,"obj#: (    ra,   dec) (  orig_px,  orig_py) (   new_px,   new_py) (   diff_x,   diff_y)\n"
+                    "---------------------------------------------------------------------------------------\n");
+	  for (jj=0; jj<tweak.n; jj++) {
+		 //sip_pixelxy2radec(tweak.sip, tweak.x[jj],tweak.y[jj],&thisra,&thisdec);
+		 //sip_radec2pixelxy(tweak.sip, thisra,thisdec,&computedx,&computedy);
+		 sip_pixelxy2radec(shifted_wcs, tweak.x[jj],tweak.y[jj],&thisra,&thisdec);
+		 sip_radec2pixelxy(shifted_wcs, thisra,thisdec,&computedx,&computedy);
+		 fprintf(stderr,"%04d: (%6.2f,%6.2f) (%9.5f,%9.5f) (%9.5f,%9.5f) (%9.5f,%9.5f)\n",
+			jj,thisra,thisdec,tweak.x[jj],tweak.y[jj],computedx,computedy,tweak.x[jj]-computedx,tweak.y[jj]-computedy);
+	  }
+
+
+	}
+
+
+
+	if(0){
 
 	tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
@@ -151,6 +177,8 @@ int main(int argc, char *argv[])
 	//tweak_dump_ascii(&tweak);
 	sip_print(tweak.sip);
 	printf("\n");
+
+	}
 	
 	exit(1);
 }
