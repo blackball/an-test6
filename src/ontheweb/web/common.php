@@ -7,7 +7,7 @@ $siteid = "tor";
 // Are we using a remote compute server?
 $remote = 1;
 
-$gmaps_url = "http://oven.cosmo.fas.nyu.edu/usnob/";
+$gmaps_url = "http://usno.astrometry.net/";
 $statuspath = "status/";
 
 $upload_progress = "/tmp/upt_%s.txt";
