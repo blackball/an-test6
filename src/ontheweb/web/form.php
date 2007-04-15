@@ -15,6 +15,10 @@ $myuri  = $_SERVER['PHP_SELF'];
 $myuridir = rtrim(dirname($myuri), '/\\');
 $debug = 0;
 
+$sdss46paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($sdss46paths, sprintf('sdss-46/sdss-46-%02i', $i));
+
 $indexdata =
 array('60degree' => array('desc' => '60-degree Fields',
 						  'quadsize' => array(900, 1800),
@@ -42,7 +46,8 @@ array('60degree' => array('desc' => '60-degree Fields',
 						  'paths' => array('allsky-31/allsky-31')),
 	  '12arcmin' => array('desc' => '12-arcmin Fields (eg, Sloan Digital Sky Survey)',
 						  'quadsize' => array(4, 5),
-						  'paths' => array('sdss-23/sdss-23-allsky')),
+						  //'paths' => array('sdss-23/sdss-23-allsky')),
+						  'paths' => $sdss46paths),
 	  );
 
 $largest_index = '60degree';
