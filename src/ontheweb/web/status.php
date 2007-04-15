@@ -15,12 +15,17 @@ if (!verify_jobid($myname)) {
 $myreldir = jobid_to_dir($myname);
 $mydir = $resultdir . $myreldir . "/";
 
+$host  = $_SERVER['HTTP_HOST'];
+$myreluri = $_SERVER['PHP_SELF'];
+$myuri = 'http://' . $host . $myreluri;
+
 $img = array_key_exists("img", $headers);
 $overlay = array_key_exists("overlay", $headers);
 $bigoverlay = array_key_exists("overlay-big", $headers);
 $cancel = array_key_exists("cancel", $headers);
 $goback = array_key_exists("goback", $headers);
 $addpreset = array_key_exists("addpreset", $headers);
+$getfile = $headers['get'];
 
 // Make sure the path is legit...
 $rp1 = realpath($resultdir);
@@ -80,6 +85,28 @@ if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	sleep(1);
 }
 
+if ($getfile) {
+	/*
+	$allowedfiles =
+		array('objs.png'=>
+			  array('mime'=>'image/png', 'file'=>'objs.png'),
+			  
+	*/
+	if (strstr($getfile, '/') ||
+		strstr($getfile, '..')) {
+		die("Invalid \"get\" filename.");
+	}
+	$fn = $mydir . $getfile;
+	if (!file_exists($fn)) {
+		die("No such file.");
+	}
+	$cmd = "file -b -i " . escapeshellarg($fn);
+	$mimetype = shell_exec($cmd);
+	header('Content-type: ' . $mimetype);
+	readfile($fn);
+	exit;
+}
+
 if ($cancel) {
 	loggit("cancel requested.\n");
 	if (!touch($cancelfile)) {
@@ -94,22 +121,19 @@ if ($cancel) {
 }
 
 if ($goback) {
-	$host  = $_SERVER['HTTP_HOST'];
 	$dir   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	$uri  = $dir . "/index.php";
 
-	$imgdir = "http://" . $host . $dir . "/status/" . $myname . "/";
-
-	$quick = ($headers["quick"] == "1");
+	$quick = ($headers['quick'] == "1");
 	if ($quick) {
-		$userimage = $jd["imagefilename"];
+		$userimage = $jd['imagefilename'];
 		$jd['xysrc'] = 'url';
-		$jd['imgurl'] = $imgdir . $userimage;
+		$jd['imgurl'] = $myuri . get_status_url_args($myname, $userimage);
 	}
 
 	$args = format_preset_url($jd, $formDefaults);
 
-	if ($headers["skippreview"] == "1") {
+	if ($headers['skippreview'] == "1") {
 		$args .= "&skippreview=1";
 	}
 
@@ -607,21 +631,17 @@ if ($do_refresh) {
 
 
 <?php
-$statuspath .= $myreldir . "/";
-$host  = $_SERVER['HTTP_HOST'];
-$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-$statusurl = "http://" . $host . $uri . "/" . $statuspath;
-
 $now = time();
 
 function get_url($f) {
-	global $statusurl;
-	return $statusurl . basename($f);
+	global $myname;
+	global $myuri;
+	return $myuri . get_status_url_args($myname, $f);
 }
 
 function print_link($f) {
 	if (file_exists($f)) {
-		$url = get_url($f);
+		$url = get_url(basename($f));
 		echo "<a href=\"" . $url . "\">" .
 			basename($f) . "</a>";
 	} else {

@@ -8,7 +8,6 @@ $siteid = "tor";
 $remote = 1;
 
 $gmaps_url = "http://usno.astrometry.net/";
-$statuspath = "status/";
 
 $upload_progress = "/tmp/upt_%s.txt";
 
@@ -190,6 +189,10 @@ function jobid_to_dir($jobid) {
 
 function dir_to_jobid($dir) {
 	return strtr($dir, "/", "-");
+}
+
+function get_status_url_args($jobid, $file) {
+	return '?job=' . $jobid . "&get=" . $file;
 }
 
 function get_datestr($t) {
