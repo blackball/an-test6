@@ -189,7 +189,7 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 	swcs->wcstan.crval[0] = nxref; // RA,DEC coords of new tangent point
 	swcs->wcstan.crval[1] = nyref;
 	theta = nxref-crval0; // deltaRA = new minus old RA; 
-	theta *= sin(PIl*nyref/180.0);  // multiply by the sin of the NEW(?) Dec; at equator this correctly evals to zero
+	theta *= sin(deg2rad(nyref));  // multiply by the sin of the NEW Dec; at equator this correctly evals to zero
 	sintheta = sin(theta);
 	costheta = cos(theta);
 
@@ -207,10 +207,11 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
    swcs->wcstan.cd[1][0] = newCD[1][0];
    swcs->wcstan.cd[1][1] = newCD[1][1];
 
-	// go into sanity_check and try this make something one sq. degree with DEC=89degrees and north up
+	// go into sanity_check and try this:
+   // make something one sq. degree with DEC=89degrees and north up
 	//make xy, convert to to RA/DEC
-	//shift by .5 degrees worth of pixels to the left (in x direction only)
-   //go back, see that it is OK
+   //shift the WCS by .5 degrees of RA (give this in terms of pixels), use this new WCS to convert RA/DEC back to pixels
+   //compare those pixels with pixels that have been shifted by .5 degrees worth of pixels to the left (in x direction only)
 
 	return swcs;
 }
