@@ -657,9 +657,9 @@ if ($img) {
 	echo '<p class="c">';
 	$big = (file_exists($bigobjsfile));
 	if ($big) {
-		echo '<a href="' . get_url($bigobjsfile) . '">';
+		echo '<a href="' . get_url(basename($bigobjsfile)) . '">';
 	}
-	echo '<img src="' . get_url($objsfile) . '" ';
+	echo '<img src="' . get_url(basename($objsfile)) . '" ';
 	echo 'alt="Your image, overlayed with the objects extracted" />';
 	if ($big) {
 		echo '</a>';

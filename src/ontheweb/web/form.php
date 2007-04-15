@@ -108,7 +108,7 @@ $xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
 $xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
 $xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
 
-$form->setAttribute('onSubmit', 'showUploadMeter()');
+$form->setAttribute('onSubmit', 'setTimeout(\'showUploadMeter()\', 3000)');
 
 $fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
 $fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
