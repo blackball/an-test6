@@ -47,13 +47,14 @@ an almost exactly correct WCS header.</b> How can you guys suck so
 badly that you can't even solve an image when I give you the right
 answer?</dt>
 
-<dd>A: Currently, astrometry.net <i>ignores</i> any existing WCS
-information.  It only does purely <i>blind</i> astrometry.  Eventually
-we plan to perform <q>refinement only</q> WCS services in addition to
-the blind service. The current astrometry.net alpha service uses the
-WCS information, if it is there, to guess the image scale, but beyond
-that all meta-data in the image are ignored.  That is the magic, and
-principal limitation, of the service.</dd>
+<dd>A: Currently, astrometry.net <i>ignores</i> any existing image
+meta-data about pointing or rotation.  It only does purely
+<i>blind</i> astrometry.  Eventually we plan to perform <q>refinement
+only</q> WCS services in addition to the blind service. The current
+astrometry.net alpha service may use the input image WCS meta-data, if
+it exists, to guess the image scale, but beyond that all meta-data in
+the image are ignored.  That is the magic, and principal limitation,
+of the service.</dd>
 
 <dt>Q: <b>My image didn't solve even though I put in a correct
 estimate of the scale and I can see that your source extraction
