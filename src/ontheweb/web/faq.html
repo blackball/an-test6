@@ -33,6 +33,18 @@ from under 10&nbsp;arcmin to over 80&nbsp;deg.  We also know that we
 have solved images taken in bandpasses ranging from the near
 ultraviolet to the near infrared.</dd>
 
+<dt>Q: <b>Can I do precision proper-motion analyses with your
+output?</b></dt>
+
+<dd>A: Right now we don't do extremely precise, proper-motion-grade
+astrometric solutions; these require performing simultaneous analyses
+of multiple images from the same instrument and simultaneous analyses
+of multiple images of the same part of the sky.  This is on the
+long-term to-do list, but it ain't happening during the alpha phase.
+If you want precision, multi-image astrometry, we currently recommend
+taking the output of astrometry.net and using it as the input for <a
+href="http://terapix.iap.fr/rubrique.php?id_rubrique=105">SCAMP</a>.</dd>
+
 <dt>Q: <b>I submitted an image and it didn't solve even though it had
 an almost exactly correct WCS header</b> How can you guys suck so
 badly that you can't even solve an image when I give you the right
@@ -69,6 +81,10 @@ jobid?</b></dt>
 <dd>A: Did your job exceed the 250M size limit?  If so, try gzip (yes,
 we take gz files).  If not, there is a bug; send email to
 "alpha@astrometry.net".</dd>
+
+<dt>Q: <b>What does the system do with multi-extension files?</b></dt>
+
+<dd>A: It just looks at the first image-like extension.</dd>
 
 <dt>Q: <b>I have tons of images I want to solve.</b> Typing my email
 and the size parameters and the image urls into your lame web form
