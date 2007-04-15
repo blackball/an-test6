@@ -479,7 +479,7 @@ int main(int argc, char *argv[]) {
 		parity_matrix_xy(MP, P);
 
 		printf("RA,DEC=(%g, %g) degrees, scale=%g arcsec/pixel,",
-			   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60);
+			   rad2deg(ra), rad2deg(dec), rad2arcsec(S));
 		printf("theta=%g, parity=%i.\n",
 			   rad2deg(T), (int)P);
 		printf("Initial overlap: %g\n", mo->overlap);
@@ -658,7 +658,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			printf("Old RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n",
-				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
+				   rad2deg(ra), rad2deg(dec), rad2arcsec(S), rad2deg(T));
 
 			xyz[0] += step * totalxyz[0];
 			xyz[1] += step * totalxyz[1];
@@ -681,7 +681,7 @@ int main(int argc, char *argv[]) {
 			matrix_matrix_3(MR, Mtmp, Mall);
 
 			printf("New RA,DEC=(%g, %g), scale=%g arcsec/pixel, theta=%g degrees.\n\n",
-				   rad2deg(ra), rad2deg(dec), S * 180/M_PI * 60 * 60, rad2deg(T));
+				   rad2deg(ra), rad2deg(dec), rad2arcsec(S), rad2deg(T));
 
 			update_matchobj(mo, Mall, fielduv, NF);
 			{

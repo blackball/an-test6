@@ -295,11 +295,11 @@ int quadfile_write_header(quadfile* qf) {
 }
 
 double quadfile_get_index_scale_arcsec(quadfile* qf) {
-	return qf->index_scale * (180.0 / M_PI) * 60 * 60;
+  return rad2arcsec(qf->index_scale);
 }
 
 double quadfile_get_index_scale_lower_arcsec(quadfile* qf) {
-	return qf->index_scale_lower * (180.0 / M_PI) * 60 * 60;
+	return rad2arcsec(qf->index_scale_lower);
 }
 
 void quadfile_get_starids(quadfile* qf, uint quadid,

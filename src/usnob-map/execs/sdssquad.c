@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
 				y = y * Yscale + Yoffset;
 				// now x,y are in (unit)-Mercator coordinates; un-project.
 				x *= 360.0;
-				y = atan(sinh((y * 2.0 * M_PI) - M_PI)) * 180.0 / M_PI;
+				y = rad2deg(atan(sinh((y * 2.0 * M_PI) - M_PI)));
 				printf(" ra%i=\"%g\" dec%i=\"%g\"", i, x, i, y);
 			}
 			printf("/>\n");

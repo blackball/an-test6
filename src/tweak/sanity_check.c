@@ -34,7 +34,7 @@
 #define FAKE_IMAGE_EDGESIZE 250
 #define FAKE_IMAGE_DEGREES 1.0
 #define FAKE_IMAGE_RA 100
-#define FAKE_IMAGE_DEC 80
+#define FAKE_IMAGE_DEC 0
 #define NOISE_PIXELS 0.5 
 
 
@@ -202,7 +202,7 @@ sip_t* make_fake_sip(void)
 	                "CD2_1  = .004                                                                   "
 	                "CD2_2  = 0                                                                      "
 	                "CRVAL1 = 100                                                                    "
-	                "CRVAL2 = 80                                                                     ";
+	                "CRVAL2 = 0                                                                      ";
 
 	wcs_t* wcs = wcsinit(fakewcs);
 

@@ -112,7 +112,7 @@ int main(int argc, char** args) {
 
 	T = parity * wcs.wcstan.cd[0][0] + wcs.wcstan.cd[1][1];
 	A = parity * wcs.wcstan.cd[1][0] - wcs.wcstan.cd[0][1];
-	orient = -(180.0/M_PI) * atan2(A, T);
+	orient = -rad2deg(atan2(A, T));
 	printf("orientation %.8g\n", orient);
 
 	sip_pixelxy2radec(&wcs, imw/2, imh/2, &rac, &decc);

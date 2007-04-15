@@ -96,8 +96,8 @@ int convert_file(char* fn)
 			ra  = dl_get(points, i*2);
 			dec = dl_get(points, i*2 + 1);
 
-			ra *= M_PI / 180.0;
-			dec *= M_PI / 180.0;
+			ra=deg2rad(ra);
+			dec=deg2rad(dec);
 
 			hp = radectohealpix(ra, dec);
 			if ((hp < 0) || (hp >= 12)) {

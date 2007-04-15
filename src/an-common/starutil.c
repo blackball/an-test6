@@ -135,7 +135,7 @@ Const inline double arc2distsq(double arcInRadians) {
 }
 
 Const inline double arcsec2distsq(double arcInArcSec) {
-	return arc2distsq(arcInArcSec * M_PI / (180.0 * 60.0 * 60.0));
+   return arc2distsq(arcsec2rad(arcInArcSec));
 }
 
 Const inline double distsq2arcsec(double dist2) {

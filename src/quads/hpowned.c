@@ -80,7 +80,7 @@ int main(int argc, char** args) {
 
 	HP = 12 * Nside * Nside;
 	fprintf(stderr, "Nside=%i, number of small healpixes=%i, margin=%c\n", Nside, HP, (margin?'Y':'N'));
-	hparea = 4.0 * M_PI * square(180.0 * 60.0 / M_PI) / (double)HP;
+	hparea = 4.0 * M_PI * square(rad2arcmin(1.0)) / (double)HP;
 	fprintf(stderr, "Small healpix area = %g arcmin^2, length ~ %g arcmin.\n", hparea, sqrt(hparea));
 
 	owned = malloc(HP * sizeof(int));

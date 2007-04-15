@@ -91,13 +91,13 @@ int main(int argc, char** args) {
 		double dec = argvals[1];
 
 		if (degrees) {
-			ra  *= M_PI / 180.0;
-			dec *= M_PI / 180.0;
+			ra=deg2rad(ra);
+			dec=deg2rad(dec);
 		}
 
 		healpix = radectohealpix(ra, dec, Nside);
 	
-		printf("(RA, DEC) = (%g, %g) degrees\n", ra*180/M_PI, dec*180/M_PI);
+		printf("(RA, DEC) = (%g, %g) degrees\n", rad2deg(ra), rad2deg(dec));
 		printf("(RA, DEC) = (%g, %g) radians\n", ra, dec);
 
 		radec2xyzarr(ra, dec, xyz);
