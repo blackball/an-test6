@@ -17,7 +17,7 @@ $debug = 0;
 
 $sdss46paths = array();
 for ($i=0; $i<12; $i++)
-	 array_push($sdss46paths, sprintf('sdss-46/sdss-46-%02i', $i));
+	 array_push($sdss46paths, sprintf('sdss-46/sdss-46-%02d', $i));
 
 $indexdata =
 array('60degree' => array('desc' => '60-degree Fields',
@@ -1006,6 +1006,9 @@ function render_form($form, $ids, $headers) {
 	$template = str_replace('##sizelimit##', sprintf("%d", $maxfilesize/(1024*1024)), $template);
 
 	// Write the HTML header.
+	// (for some reason there seems to be a problem echoing this first
+	// line when it's in the file, so I've just plunked it here.)
+	echo '<' . '?xml version="1.0" encoding="UTF-8"?' . '>';
 	$head = file_get_contents($index_header);
 	echo $head;
 

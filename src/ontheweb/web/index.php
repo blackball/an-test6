@@ -2,8 +2,8 @@
 require_once 'common.php';
 require_once 'presets.php';
 
-$emailver = 1;
-$webver = 0;
+$emailver = 0;
+$webver = 1;
 
 if ($emailver) {
 	require_once 'rfc822.php';
@@ -51,7 +51,7 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	$inputfile = $mydir . $input_fn;
 	$inputtmpfile = $mydir . $inputtmp_fn;
 
-	if (array_key_exists('justjobid', $vals)) {
+	if ($vals['justjobid']) {
 		// skip the "source extraction" preview, just start crunching!
 		loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
 		if ($imgfilename) {
