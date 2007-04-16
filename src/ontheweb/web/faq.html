@@ -30,6 +30,20 @@ from under 10&nbsp;arcmin to over 80&nbsp;deg.  We also know that we
 have solved images taken in bandpasses ranging from the near
 ultraviolet to the near infrared.</dd>
 
+<dt>Q: <b>I submitted an image and it didn't solve even though it had
+an almost exactly correct WCS header to begin.</b> How can you guys
+suck so badly that you can't even solve an image when I give you the
+right answer?</dt>
+
+<dd>A: Currently, astrometry.net <i>ignores</i> any existing image
+meta-data about pointing or rotation.  It only does purely
+<i>blind</i> astrometry.  Eventually we plan to perform <q>refinement
+only</q> WCS services in addition to the blind service. The current
+astrometry.net alpha service may use the input image WCS meta-data, if
+it exists, to guess the image scale, but beyond that all meta-data in
+the image are ignored.  That is the magic, and principal limitation,
+of the service.</dd>
+
 <dt>Q: <b>Can I do precision proper-motion analyses with your
 output?</b></dt>
 
@@ -50,20 +64,6 @@ not performing the most precise possible measurements of camera
 distortions; if you want awesome mosaics, use Bertin's SCAMP and then
 its sister software, SWarp.  Mosaic-quality WCS and automatic
 mosaicing of input data are both on our medium-term to-do lists.</dd>
-
-<dt>Q: <b>I submitted an image and it didn't solve even though it had
-an almost exactly correct WCS header.</b> How can you guys suck so
-badly that you can't even solve an image when I give you the right
-answer?</dt>
-
-<dd>A: Currently, astrometry.net <i>ignores</i> any existing image
-meta-data about pointing or rotation.  It only does purely
-<i>blind</i> astrometry.  Eventually we plan to perform <q>refinement
-only</q> WCS services in addition to the blind service. The current
-astrometry.net alpha service may use the input image WCS meta-data, if
-it exists, to guess the image scale, but beyond that all meta-data in
-the image are ignored.  That is the magic, and principal limitation,
-of the service.</dd>
 
 <dt>Q: <b>My image didn't solve even though I put in a correct
 estimate of the scale and I can see that your source extraction
