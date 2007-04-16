@@ -1,3 +1,6 @@
+/* Note: this file has been modified from its original form by the
+   Astrometry.net team.  For details see http://astrometry.net */
+
 /* $Id: qfits_image.h,v 1.9 2006/02/23 11:04:17 yjung Exp $
  *
  * This file is part of the ESO QFITS Library

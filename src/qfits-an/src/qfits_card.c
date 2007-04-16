@@ -1,3 +1,6 @@
+/* Note: this file has been modified from its original form by the
+   Astrometry.net team.  For details see http://astrometry.net */
+
 /* $Id: qfits_card.c,v 1.8 2006/02/20 09:45:25 yjung Exp $
  *
  * This file is part of the ESO QFITS Library

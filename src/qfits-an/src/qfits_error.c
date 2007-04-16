@@ -1,3 +1,6 @@
+/* Note: this file has been modified from its original form by the
+   Astrometry.net team.  For details see http://astrometry.net */
+
 /* $Id: qfits_error.c,v 1.6 2006/02/17 10:24:52 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
