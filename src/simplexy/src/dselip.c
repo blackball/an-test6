@@ -23,11 +23,12 @@
 #include <math.h>
 #include <assert.h>
 
+#include "common.h"
+
 //#define M 64
 #define M 128
 #define BIG 1.0e30
 
-#define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 #define FREEALL FREEVEC(sel);FREEVEC(isel)
 
 int high_water_mark = 0;

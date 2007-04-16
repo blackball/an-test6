@@ -22,6 +22,8 @@
 #include <string.h>
 #include <math.h>
 
+#include "common.h"
+
 /*
  * dmedsmooth.c
  *
@@ -29,10 +31,6 @@
  *
  * Mike Blanton
  * 1/2006 */
-
-#define PI M_PI
-
-#define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
 static float *arr = NULL;
 static int *xgrid = NULL;

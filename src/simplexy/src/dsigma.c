@@ -22,7 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include "dimage.h"
-//#include "export.h"
+#include "common.h"
 
 /*
  * dsigma.c
@@ -31,10 +31,6 @@
  *
  * Mike Blanton
  * 1/2006 */
-
-#define PI M_PI
-
-#define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
 static float *diff = NULL;
 

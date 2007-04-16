@@ -22,6 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include "dimage.h"
+#include "common.h"
 
 /*
  * dallpeaks.c
@@ -34,10 +35,6 @@
  *
  * Mike Blanton
  * 1/2006 */
-
-#define PI M_PI
-
-#define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
 static int *dobject = NULL;
 static int *indx = NULL;

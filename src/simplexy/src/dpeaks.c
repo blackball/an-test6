@@ -21,7 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "dimage.h"
+#include "common.h"
 
 /*
  * dpeaks.c
@@ -30,10 +32,6 @@
  *
  * Mike Blanton
  * 1/2006 */
-
-#define PI 3.14159265358979
-
-#define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
 
 static float *smooth = NULL;
 static int *peaks = NULL;

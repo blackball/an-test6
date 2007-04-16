@@ -22,6 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include "dimage.h"
+#include "common.h"
 
 /*
  * simplexy.c
@@ -38,11 +39,6 @@ static float *mimage = NULL;
 static float *simage = NULL;
 static int *oimage = NULL;
 static float *smooth = NULL;
-
-#define PI M_PI
-
-#define FREEVEC(a) {if((a)!=NULL) free((char *) (a)); (a)=NULL;}
-
 
 int simplexy(float *image,
              int nx,
