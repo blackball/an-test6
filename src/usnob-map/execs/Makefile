@@ -84,6 +84,9 @@ render-mercator: render-mercator.o \
 make-merctree: make-merctree.o merctree.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
+make-merctree2: make-merctree2.o merctree.o \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+
 usnobcount: usnobcount.o 
 
 usnobtile: usnobtile.o merctree.o \
