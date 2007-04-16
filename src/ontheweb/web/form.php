@@ -621,7 +621,8 @@ function process_data ($vals) {
 		die("Failed to write input file " . $inputfile);
 	}
 
-	$depths = array(0 => 50,
+	$depths = array(0 => 30,
+					30=> 50,
 					50 => 80,
 					80 => 100,
 					100 => 120,
