@@ -16,6 +16,11 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+/*
+  Reads raw NOMAD data files and prints them out in text format to allow
+  verification of our FITS versions.
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
