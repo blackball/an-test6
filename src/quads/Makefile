@@ -54,7 +54,7 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
 MISC_EXECS := 2masstofits nomadtofits project-usnob diffractionFlag_check \
-	hpgrid read_nomad
+	hpgrid read_nomad tycho2tostellarium
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
@@ -246,13 +246,16 @@ codeprojections: codeprojections.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 quadlocations: quadlocations.o catalog.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) \
+		$(QFITS_LIB)
 
 quadscales: quadscales.o histogram.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) \
+		$(QFITS_LIB)
 
 quadsperstar: quadsperstar.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) \
+		$(QFITS_LIB)
 
 fitsgetext: fitsgetext.o $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -260,7 +263,8 @@ subtable: subtable.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 tabsort: tabsort.o $(UTIL_OBJS) $(ANUTILS_LIB) fileutil.o $(QFITS_LIB)
 
-tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+tycho2tostellarium: tycho2tostellarium.o tycho2_fits.o $(UTIL_OBJS) $(ANUTILS_LIB) \
+		$(QFITS_LIB)
 
 DEP_OBJ := $(ALL_OBJ)
 DEP_PREREQS := $(QFITS_LIB)
