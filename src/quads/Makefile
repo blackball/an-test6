@@ -27,7 +27,6 @@ include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.libtweak
-include $(COMMON)/makefile.libwcs
 include $(COMMON)/makefile.cairo
 
 LDFLAGS := $(LDFLAGS_DEF)
@@ -47,7 +46,6 @@ CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 CFLAGS += $(LIBTWEAK_INC)
-CFLAGS += $(LIBWCS_INC)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
@@ -72,7 +70,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable 
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar plotxy wcscheck wcs-xy2rd wcs-rd2xy
+	quadscales quadsperstar plotxy wcs-xy2rd wcs-rd2xy
 # HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
 
@@ -138,9 +136,6 @@ an-fitstopnm: an-fitstopnm.o \
 
 fits-guess-scale: fits-guess-scale.o \
 		$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-wcscheck: wcscheck.o \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(LIBWCS_LIB)
 
 wcs-xy2rd: wcs-xy2rd.o $(LIBTWEAK_LIB) $(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -218,8 +213,7 @@ unpermute-quads: unpermute-quads.o codekd.o \
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		intmap.o blind_wcs.o \
-		$(UTIL_OBJS) \
-		$(LIBTWEAK_LIB) $(LIBWCS_LIB) $(LIBFORTRAN) \
+		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o solvedfile.o solvedclient.o \
