@@ -85,6 +85,8 @@ void verify_hit(kdtree_t* startree,
 
 	int Nmin;
 
+	double crvalxyz[3];
+
 	assert(mo->wcs_valid);
 	assert(startree);
 
@@ -101,8 +103,12 @@ void verify_hit(kdtree_t* startree,
 	// Project index stars into pixel space.
 	indexpix = malloc(res->nres * 2 * sizeof(double));
 	NI = 0;
+	radecdeg2xyzarr(mo->wcstan.crval[0], mo->wcstan.crval[1], crvalxyz);
 	for (i=0; i<res->nres; i++) {
 		double x, y;
+		double dot = dot_product_3(crvalxyz, res->results.d + i*3);
+		if (dot < 0.0)
+			continue;
 		tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y);
 		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH))
 			continue;
