@@ -62,14 +62,14 @@ UTIL_OBJS := fileutil.o boilerplate.o svn.o
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
 	bt.o catalog.o idfile.o codefile.o \
 	histogram.o tic.o codekd.o svd.o \
-	donuts.o verify.o dualtree_max.o \
+	verify.o dualtree_max.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o \
 	intmap.o pnpoly.o blind_wcs.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
-	startree hpquads codetree unpermute-quads unpermute-stars homer blind \
+	startree hpquads codetree unpermute-quads unpermute-stars blind \
 	solvedserver printsolved xylist2fits printmatch mergesolved \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable 
 
@@ -216,9 +216,6 @@ unpermute-stars: unpermute-stars.o idfile.o \
 
 unpermute-quads: unpermute-quads.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-homer: homer.o donuts.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
