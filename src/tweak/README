@@ -1,3 +1,4 @@
+(These are old instructions; "make" should Just Work.)
 
 Levmar, for nonlinear optimization, must be compiled:
 cd ../levmar-2.1.2
