@@ -19,9 +19,10 @@ function allow_email($email) {
 				   'christopher@stumm.ca',
 				   'david.hogg@nyu.edu',
 				   'john.moustakas@gmail.com',
-				   'roweis@cs.toronto.edu',
+				   'munz@physics.muni.cz',
 				   'pjm@physics.ucsb.edu',
-				   );
+				   'roweis@cs.toronto.edu',
+				   'stubbs@physics.harvard.edu');
 
 	$deny = array('badguy@somewhere.com');
 
