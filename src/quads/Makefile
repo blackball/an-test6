@@ -75,7 +75,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 #certifiable
 
 # old and miscellaneous executables that aren't part of the pipeline.
-OLDEXECS := findquad findstar matchstats plotmatch plotquads matchtordls \
+OLDEXECS := matchstats plotmatch plotquads matchtordls \
 	tunematch overlapstats rawstartree checkquads
 #whynot 
 CAIROEXECS := plotquad plotxy2
