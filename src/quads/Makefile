@@ -71,12 +71,13 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable 
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar wcs-xy2rd wcs-rd2xy
+	quadscales quadsperstar wcs-xy2rd wcs-rd2xy 
+#certifiable
 
 # old and miscellaneous executables that aren't part of the pipeline.
-OLDEXECS := findquad findstar matchstats plotmatch \
-	plotquads matchtordls tunematch overlapstats rawstartree
-#whynot certifiable 
+OLDEXECS := findquad findstar matchstats plotmatch plotquads matchtordls \
+	tunematch overlapstats rawstartree checkquads
+#whynot 
 CAIROEXECS := plotquad plotxy2
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \

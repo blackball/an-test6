@@ -16,6 +16,10 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+/*
+  Checks the consistency of "quad" and "qidx" files.
+*/
+
 #include <errno.h>
 #include <string.h>
 
