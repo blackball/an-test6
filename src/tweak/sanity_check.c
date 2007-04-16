@@ -30,12 +30,12 @@
 #include "bl.h"
 #include "tweak_internal.h"
 
-#define NUM_FAKE_OBJS 20
+#define NUM_FAKE_OBJS 200
 #define FAKE_IMAGE_EDGESIZE 250
 #define FAKE_IMAGE_DEGREES 1.0
 #define FAKE_IMAGE_RA 100
-#define FAKE_IMAGE_DEC 0
-#define NOISE_PIXELS 0.5 
+#define FAKE_IMAGE_DEC 80
+#define NOISE_PIXELS 2 
 
 
 void get_fake_xy_data(tweak_t* t, int numobjs);
@@ -62,8 +62,8 @@ void get_fake_xy_data(tweak_t* t, int numobjs)
 	  // add noise to its position in the image; later we can perturb the reference too
 	  double nx = NOISE_PIXELS * (drand48()-0.5);
 	  double ny = NOISE_PIXELS * (drand48()-0.5);
-	  t->x[jj] = px + nx;
-	  t->y[jj] = py + ny;
+	  t->x[jj] = px + nx + 45;
+	  t->y[jj] = py + ny + 3;
 	  //t->x[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES); // add 1arcsec noise
 	  //t->y[jj] += 2*FAKE_IMAGE_EDGESIZE*(drand48()-.05)/(3600*FAKE_IMAGE_DEGREES);
 	  //fprintf(stderr,"image star %04d: %g,%g\n",jj,t->x[jj],t->y[jj]);
@@ -94,14 +94,14 @@ int main(int argc, char *argv[])
 	// the tweak struct
 	tweak_t tweak;
 	// the fitting order
-	int order = 4;
+	int order = 1;
 
 	tweak_init(&tweak);
 
 	tweak.Nside = 0;
 
-	// set jitter: 6 arcsec. // FIXME -- THIS IS INSANE. OFTEN OUR PIXELS ARE LIKE 250arcsec themselves
-	tweak.jitter = 6.0;
+	// set jitter: 20 arcsec. // FIXME -- THIS IS INSANE. OFTEN OUR PIXELS ARE LIKE 250arcsec themselves
+	tweak.jitter = 20.0;
 
 	while ((argchar = getopt(argc, argv, "h")) != -1)
 	  switch (argchar) {
@@ -124,7 +124,12 @@ int main(int argc, char *argv[])
 	get_fake_xy_data(&tweak,NUM_FAKE_OBJS); //was get_xy_data
 	//tweak_push_hppath(&tweak, hppat);
 
-	{
+	//fprintf(stderr,"CURRENT SIP has crvals (%g,%g)\n",tweak.sip->wcstan.crval[0],tweak.sip->wcstan.crval[1]);
+	tweak.sip->wcstan.crval[0]-=.5;
+	tweak.sip->wcstan.crval[1]-=.5;
+
+
+	if(0){
 	  int jj;
 	  double thisra,thisdec,computedx,computedy;
 	  sip_t* shifted_wcs;
@@ -150,7 +155,7 @@ int main(int argc, char *argv[])
 
 
 
-	if(0){
+	{
 
 	tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
@@ -202,7 +207,7 @@ sip_t* make_fake_sip(void)
 	                "CD2_1  = .004                                                                   "
 	                "CD2_2  = 0                                                                      "
 	                "CRVAL1 = 100                                                                    "
-	                "CRVAL2 = 0                                                                      ";
+	                "CRVAL2 = 80                                                                     ";
 
 	wcs_t* wcs = wcsinit(fakewcs);
 

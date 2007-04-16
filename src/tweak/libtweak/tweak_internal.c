@@ -39,12 +39,12 @@ extern int dgelsd_(integer *m, integer *n, integer *nrhs, doublereal *a,
 		doublereal *rcond, integer *rank, doublereal *work, integer
 		*lwork, integer *iwork, integer *info);
 
-double max(double x, double y)
+double dblmax(double x, double y)
 {
 	if (x < y) return y;
 	return x;
 }
-double min(double x, double y)
+double dblmin(double x, double y)
 {
 	if (x < y) return x;
 	return y;
@@ -64,10 +64,10 @@ void get_dydx_range(double* ximg, double* yimg, int nimg,
 		for (j=0; j<ncat; j++) {
 			double dx = ximg[i]-xcat[j];
 			double dy = yimg[i]-ycat[j];
-			*maxdx = max(dx,*maxdx);
-			*maxdy = max(dy,*maxdy);
-			*mindx = min(dx,*mindx);
-			*mindy = min(dy,*mindy);
+			*maxdx = dblmax(dx,*maxdx);
+			*maxdy = dblmax(dy,*maxdy);
+			*mindx = dblmin(dx,*mindx);
+			*mindy = dblmin(dy,*mindy);
 		}
 	}
 }
@@ -182,7 +182,7 @@ sip_t* wcs_shift(sip_t* wcs, double xs, double ys)
 
 	wcs->wcstan.crpix[0] += xs; // compute the desired projection of the new tangent point by
 	wcs->wcstan.crpix[1] += ys; // shifting the projection of the current tangent point
-fprintf(stderr,"wcs_shift: shifting crpix by (%g,%g)\n",xs,ys);
+	//fprintf(stderr,"wcs_shift: shifting crpix by (%g,%g)\n",xs,ys);
 
 	// now reproject the old crpix[xy] into shifted wcs
 	sip_pixelxy2radec(wcs, crpix0, crpix1, &nxref, &nyref);
@@ -190,13 +190,11 @@ fprintf(stderr,"wcs_shift: shifting crpix by (%g,%g)\n",xs,ys);
 	swcs->wcstan.crval[0] = nxref; // RA,DEC coords of new tangent point
 	swcs->wcstan.crval[1] = nyref;
 	theta = -deg2rad(nxref-crval0); // deltaRA = new minus old RA; 
-fprintf(stderr,"theta = %g = -deg2rad(%g)\n",theta,nxref-crval0);
 	theta *= sin(deg2rad(nyref));  // multiply by the sin of the NEW Dec; at equator this correctly evals to zero
-fprintf(stderr,"multiplying by sin(%g)=%g\n",deg2rad(nyref),sin(deg2rad(nyref)));
 	sintheta = sin(theta);
 	costheta = cos(theta);
-fprintf(stderr,"wcs_shift: crval0: %g->%g   crval1:%g->%g\ntheta=%g   (sintheta,costheta)=(%g,%g)\n",
-		  crval0,nxref,crval1,nyref,theta,sintheta,costheta);
+	//fprintf(stderr,"wcs_shift: crval0: %g->%g   crval1:%g->%g\ntheta=%g   (sintheta,costheta)=(%g,%g)\n",
+	//	  crval0,nxref,crval1,nyref,theta,sintheta,costheta);
 
 	// Restore
 	wcs->wcstan.crpix[0] = crpix0; // restore old crpix
@@ -824,10 +822,10 @@ void invert_sip_polynomial(tweak_t* t)
 	maxu = maxv = -1e100;
 
 	for (i=0; i<t->n; i++) {
-		minu = min(minu, t->x[i] - t->sip->wcstan.crpix[0]);
-		minv = min(minv, t->y[i] - t->sip->wcstan.crpix[1]);
-		maxu = max(maxu, t->x[i] - t->sip->wcstan.crpix[0]);
-		maxv = max(maxv, t->y[i] - t->sip->wcstan.crpix[1]);
+		minu = dblmin(minu, t->x[i] - t->sip->wcstan.crpix[0]);
+		minv = dblmin(minv, t->y[i] - t->sip->wcstan.crpix[1]);
+		maxu = dblmax(maxu, t->x[i] - t->sip->wcstan.crpix[0]);
+		maxv = dblmax(maxv, t->y[i] - t->sip->wcstan.crpix[1]);
 	}
 	fprintf(stderr,"maxu=%lf, minu=%lf\n", maxu, minu);
 	fprintf(stderr,"maxv=%lf, minv=%lf\n", maxv, minv);
@@ -861,7 +859,7 @@ void invert_sip_polynomial(tweak_t* t)
 				 // we're skipping the (0, 0) term.
 				 //assert(j < (inv_sip_coeffs-1));
 				 assert(j < inv_sip_coeffs);
-				 A[i + stride*j] = pow(U,p)*pow(V,q);
+				 A[i + stride*j] = pow(U,(double)p)*pow(V,(double)q);
 				 j++;
 			  }
 		 //assert(j == (inv_sip_coeffs-1));
@@ -917,13 +915,13 @@ void invert_sip_polynomial(tweak_t* t)
 	chisq=0;
 	for(i=0; i<stride; i++) {
 	  double sum=0;
-	  int j;
-	  for(j=0; j<inv_sip_coeffs; j++) 
-		 sum += A2[i+stride*j]*b[j];
+	  int j2;
+	  for(j2=0; j2<inv_sip_coeffs; j2++) 
+		 sum += A2[i+stride*j2]*b[j2];
 	  chisq += (sum-b2[i])*(sum-b2[i]);
 	  sum=0;
-	  for(j=0; j<inv_sip_coeffs; j++) 
-		 sum += A2[i+stride*j]*b[j+stride];
+	  for(j2=0; j2<inv_sip_coeffs; j2++) 
+		 sum += A2[i+stride*j2]*b[j2+stride];
 	  chisq += (sum-b2[i+stride])*(sum-b2[i+stride]);
 	}
 	fprintf(stderr,"sip_invert_chisq=%lf\n",chisq);
@@ -1051,7 +1049,7 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 					assert(2 <= j);
 					assert(j < 2+sip_coeffs);
 					if (p+q != 1) 
-						UVP[i + stride*j] = pow(u,p) * pow(v,q);
+						UVP[i + stride*j] = pow(u,(double)p) * pow(v,(double)q);
 					else
 						// We don't want repeated
 						// linear terms
