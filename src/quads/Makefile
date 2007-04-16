@@ -119,15 +119,6 @@ xylist2fits: xylist2fits.o \
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-#badfields: badfields.o solvedfile.o bl.o 
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
-
-#badfields.o: badfields.c badfields.inc
-#	$(CC) $(CFLAGS) -c $< -o $@
-
-#badfields.inc: opBadfields.par badfields.awk
-#	awk -f badfields.awk $< > $@
-
 certifiable: certifiable.o histogram.o matchfile.o solvedfile.o \
 		$(UTILS_LIB) $(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
