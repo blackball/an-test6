@@ -72,8 +72,6 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar wcs-xy2rd wcs-rd2xy
-# HACK - codedensity is broken at the moment (and also not used)...
-# codedensity 
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := findquad findstar matchstats plotmatch \
@@ -215,19 +213,20 @@ rdlsinfo: rdlsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 xylsinfo: xylsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-wcsinfo: wcsinfo.o $(UTIL_OBJS) $(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+wcsinfo: wcsinfo.o $(UTIL_OBJS) $(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) \
+		$(QFITS_LIB)
 
-printsolved: printsolved.o solvedfile.o $(UTIL_OBJS) \
-		$(ANUTILS_LIB) $(QFITS_LIB) 
+printsolved: printsolved.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB) 
 
-mergesolved: mergesolved.o solvedfile.o $(UTIL_OBJS) \
-		$(ANUTILS_LIB) $(QFITS_LIB) 
+mergesolved: mergesolved.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
-solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) \
+		$(QFITS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) \
+		$(QFITS_LIB)
 
 plotquad.o: plotquad.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
@@ -242,9 +241,6 @@ plotxy2: plotxy2.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-
-codedensity: codedensity.o codekd.o dualtree_max.o \
-		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 codeprojections: codeprojections.o codefile.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
