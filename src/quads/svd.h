@@ -1,3 +1,7 @@
+/*
+  Please see the file "svd.c" for copyright information.
+ */
+
 #ifndef SVD_H
 #define SVD_H
 

@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2006-2007, Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 #include <netinet/in.h>
 #include <assert.h>
 #include <stdio.h>
-//#include <endian.h>
-//#include <byteswap.h>
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define IS_BIG_ENDIAN 1

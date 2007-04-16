@@ -1,3 +1,7 @@
+/*
+  This file is part of "fitsverify" and was imported from:
+    http://heasarc.gsfc.nasa.gov/docs/software/ftools/fitsverify/
+ */
 /******************************************************************************
 * Function
 *      wrtout: print messages in the streams of stdout and out.  

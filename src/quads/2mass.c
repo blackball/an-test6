@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2006-2007, Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -15,12 +15,7 @@
   along with the Astrometry.net suite ; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
-
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <math.h>  // to get NAN
-
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -277,92 +272,6 @@ int twomass_parse_entry(struct twomass_entry* e, char* line) {
 		}
 		cursor++;
 	}
-
-	/*
-	  e->j_cc_persistence = e->j_cc_confusion = e->j_cc_diffraction =
-	  e->j_cc_stripe = e->j_cc_bandmerge = 0;
-	  switch (*cursor) {
-	  case 'p':
-	  e->j_cc_persistence = 1;
-	  break;
-	  case 'c':
-	  e->j_cc_confusion = 1;
-	  break;
-	  case 'd':
-	  e->j_cc_diffraction = 1;
-	  break;
-	  case 's':
-	  e->j_cc_stripe = 1;
-	  break;
-	  case 'b':
-	  e->j_cc_bandmerge = 1;
-	  break;
-	  case '0':
-	  break;
-	  default:
-	  assert(0);
-	  }
-	  cursor++;
-
-	  e->h_cc_persistence = e->h_cc_confusion = e->h_cc_diffraction =
-	  e->h_cc_stripe = e->h_cc_bandmerge = 0;
-	  switch (*cursor) {
-	  case 'p':
-	  e->h_cc_persistence = 1;
-	  break;
-	  case 'c':
-	  e->h_cc_confusion = 1;
-	  break;
-	  case 'd':
-	  e->h_cc_diffraction = 1;
-	  break;
-	  case 's':
-	  e->h_cc_stripe = 1;
-	  break;
-	  case 'b':
-	  e->h_cc_bandmerge = 1;
-	  break;
-	  case '0':
-	  break;
-	  default:
-	  assert(0);
-	  }
-	  cursor++;
-
-	  e->k_cc_persistence = e->k_cc_confusion = e->k_cc_diffraction =
-	  e->k_cc_stripe = e->k_cc_bandmerge = 0;
-	  switch (*cursor) {
-	  case 'p':
-	  e->k_cc_persistence = 1;
-	  break;
-	  case 'c':
-	  e->k_cc_confusion = 1;
-	  break;
-	  case 'd':
-	  e->k_cc_diffraction = 1;
-	  break;
-	  case 's':
-	  e->k_cc_stripe = 1;
-	  break;
-	  case 'b':
-	  e->k_cc_bandmerge = 1;
-	  break;
-	  case '0':
-	  break;
-	  default:
-	  assert(0);
-	  }
-	  cursor++;
-	*/
-
-	/*
-	  printval("j_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->j_cc_persistence,
-	  e->j_cc_confusion, e->j_cc_diffraction, e->j_cc_stripe, e->j_cc_bandmerge);
-	  printval("h_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->h_cc_persistence,
-	  e->h_cc_confusion, e->h_cc_diffraction, e->h_cc_stripe, e->h_cc_bandmerge);
-	  printval("k_confusion p=%i, c=%i, d=%i, s=%i, b=%i.\n", e->k_cc_persistence,
-	  e->k_cc_confusion, e->k_cc_diffraction, e->k_cc_stripe, e->k_cc_bandmerge);
-	*/
 
 	printval("j_confusion: p=%i, c=%i, d=%i, s=%i, b=%i.\n",
 			 twomass_cc_flag(e->j_cc, TWOMASS_CC_PERSISTENCE),

@@ -1,3 +1,7 @@
+/*
+  This file is part of "fitsverify" and was imported from:
+    http://heasarc.gsfc.nasa.gov/docs/software/ftools/fitsverify/
+ */
 #include "fverify.h"
 static HduName  **hduname; 
 static int total_err=1;  /* initialzed to 1 in case fail to open file */

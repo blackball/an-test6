@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2006-2007, Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -29,7 +29,6 @@
 #include "bl.h"
 #include "matchobj.h"
 #include "catalog.h"
-//#include "hitlist_healpix.h"
 #include "tic.h"
 #include "quadfile.h"
 #include "idfile.h"

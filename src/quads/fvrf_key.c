@@ -1,3 +1,7 @@
+/*
+  This file is part of "fitsverify" and was imported from:
+    http://heasarc.gsfc.nasa.gov/docs/software/ftools/fitsverify/
+ */
 #include "fverify.h"
 
 int fits_parse_card(FILE *out,		/* output file pointer */

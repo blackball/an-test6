@@ -1,5 +1,5 @@
 # This file is part of the Astrometry.net suite.
-# Copyright 2006, Dustin Lang, Keir Mierle and Sam Roweis.
+# Copyright 2006-2007, Dustin Lang, Keir Mierle and Sam Roweis.
 #
 # The Astrometry.net suite is free software; you can redistribute
 # it and/or modify it under the terms of the GNU General Public License
@@ -56,8 +56,7 @@ CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
 FITS_UTILS := $(QFITS_UTILS) $(CFITS_UTILS)
 
 MISC_EXECS := 2masstofits project-usnob diffractionFlag_check
-
-#	vossetal2006toan
+# vossetal2006toan
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
