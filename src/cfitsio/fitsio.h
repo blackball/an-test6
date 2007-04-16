@@ -34,9 +34,18 @@ SERVICES PROVIDED HEREUNDER."
 #ifndef _FITSIO_H
 #define _FITSIO_H
 
-#define CFITSIO_VERSION 3.006
+#define CFITSIO_VERSION 3.03
 
 #include <stdio.h>
+
+/* the following was provided by Michael Greason (GSFC) to fix a */
+/*  C/Fortran compatibility problem on an SGI Altix system running */
+/*  SGI ProPack 4 [this is a Novell SuSE Enterprise 9 derivative]  */
+/*  and using the Intel C++ and Fortran compilers (version 9.1)  */
+#if defined(__INTEL_COMPILER) && defined(__itanium__)
+#  define mipsFortran 1
+#  define _MIPS_SZLONG 64
+#endif
 
 #if defined(linux) || defined(__APPLE__) || defined(__sgi)
 #  include <sys/types.h>  /* apparently needed on debian linux systems */
@@ -74,7 +83,7 @@ SERVICES PROVIDED HEREUNDER."
     ||  defined(__sparcv9)  \
     ||  defined(__powerpc64__) || defined(__64BIT__) \
     ||  (defined(_MIPS_SZLONG) &&  _MIPS_SZLONG == 64) \
-    ||  defined( _MSC_VER)
+    ||  defined( _MSC_VER)|| defined(__BORLANDC__)
     
 #   define USE_LL_SUFFIX 0
 #else
@@ -87,6 +96,7 @@ SERVICES PROVIDED HEREUNDER."
   older MS Visual C++ compilers before V7.0 use '__int64' instead.
 */
 
+#ifndef LONGLONG_TYPE   /* this may have been previously defined */
 #if defined(_MSC_VER)   /* Microsoft Visual C++ */
 
 #if (_MSC_VER < 1300)   /* versions earlier than V7.0 do not have 'long long' */
@@ -98,7 +108,10 @@ SERVICES PROVIDED HEREUNDER."
 #else
     typedef long long LONGLONG; 
 #endif
+
 #define LONGLONG_TYPE
+#endif  
+
 
 /* ================================================================= */
 
@@ -280,7 +293,9 @@ typedef struct      /* structure used to store basic FITS file information */
          /* the following elements are related to compressed images */
     int request_compress_type;  /* requested image compression algorithm */
     long request_tilesize[MAX_COMPRESS_DIM]; /* requested tiling size */
-    int request_rice_nbits;     /* requested noise bit parameter value */
+    int request_noise_nbits;     /* requested noise bit parameter value */
+    int request_hcomp_scale;    /* requested HCOMPRESS scale factor */
+    int request_hcomp_smooth;    /* requested HCOMPRESS smooth parameter */
 
     int compressimg; /* 1 if HDU contains a compressed image, else 0 */
     char zcmptype[12];      /* compression type string */
@@ -305,7 +320,10 @@ typedef struct      /* structure used to store basic FITS file information */
     int zblank;             /* value for null pixels, if not a column */
 
     int rice_blocksize;     /* first compression parameter */
-    int rice_nbits;         /* second compression parameter */
+    int noise_nbits;        /* floating point noise  parameter */
+    int hcomp_scale;        /* 1st hcompress compression parameter */
+    int hcomp_smooth;       /* 2nd hcompress compression parameter */
+
 } FITSfile;
 
 typedef struct         /* structure used to store basic HDU information */
@@ -442,6 +460,7 @@ int fits_read_wcstab(fitsfile *fptr, int nwtb, wtbarr *wtb, int *status);
 #define KEY_OUT_BOUNDS    203  /* keyword record number is out of bounds */
 #define VALUE_UNDEFINED   204  /* keyword value field is blank */
 #define NO_QUOTE          205  /* string is missing the closing quote */
+#define BAD_INDEX_KEY     206  /* illegal indexed keyword name */
 #define BAD_KEYCHAR       207  /* illegal character in keyword name or card */
 #define BAD_ORDER         208  /* required keywords out of order */
 #define NOT_POS_INT       209  /* keyword value is not a positive integer */
@@ -751,7 +770,8 @@ int ffphtb(fitsfile *fptr, LONGLONG naxis1, LONGLONG naxis2, int tfields, char *
           long *tbcol, char **tform, char **tunit, char *extname, int *status);
 int ffphbn(fitsfile *fptr, LONGLONG naxis2, int tfields, char **ttype,
           char **tform, char **tunit, char *extname, LONGLONG pcount, int *status);
-
+int ffphext( fitsfile *fptr, char *xtension, int bitpix, int naxis, long naxes[],
+            LONGLONG pcount, LONGLONG gcount, int *status);
 /*----------------- write template keywords --------------*/
 int ffpktp(fitsfile *fptr, const char *filename, int *status);
 
@@ -966,6 +986,7 @@ int ffcphd(fitsfile *infptr, fitsfile *outfptr, int *status);
 int ffcpdt(fitsfile *infptr, fitsfile *outfptr, int *status);
 int ffchfl(fitsfile *fptr, int *status);
 int ffcdfl(fitsfile *fptr, int *status);
+int ffwrhdu(fitsfile *fptr, FILE *outstream, int *status);
 
 int ffrdef(fitsfile *fptr, int *status);
 int ffhdef(fitsfile *fptr, int morekeys, int *status);
@@ -1334,7 +1355,10 @@ int ffcmph(fitsfile *fptr, int *status);
 
 int ffgtbb(fitsfile *fptr, LONGLONG firstrow, LONGLONG firstchar, LONGLONG nchars,
            unsigned char *values, int *status);
- 
+
+int ffgextn(fitsfile *fptr, LONGLONG offset, LONGLONG nelem, void *array, int *status);
+int ffpextn(fitsfile *fptr, LONGLONG offset, LONGLONG nelem, void *array, int *status);
+
 /*------------ write primary array or image elements -------------*/
 int ffppx(fitsfile *fptr, int datatype, long *firstpix, LONGLONG nelem,
           void *array, int *status);
@@ -1669,7 +1693,7 @@ int ffhist(fitsfile **fptr, char *outfile, int imagetype, int naxis,
 
 int fits_select_image_section(fitsfile **fptr, char *outfile,
            char *imagesection, int *status);
-int fits_select_section( fitsfile *infptr, fitsfile *outfptr,
+int fits_copy_image_section(fitsfile *infptr, fitsfile *outfile,
            char *imagesection, int *status);
 
 typedef struct
@@ -1724,16 +1748,38 @@ int	fits_execute_template(fitsfile *ff, char *ngp_template, int *status);
 int fits_set_compression_type(fitsfile *fptr, int ctype, int *status);
 int fits_set_tile_dim(fitsfile *fptr, int ndim, long *dims, int *status);
 int fits_set_noise_bits(fitsfile *fptr, int noisebits, int *status);
+int fits_set_hcomp_scale(fitsfile *fptr, int scale, int *status);
+int fits_set_hcomp_smooth(fitsfile *fptr, int smooth, int *status);
 
 int fits_get_compression_type(fitsfile *fptr, int *ctype, int *status);
 int fits_get_tile_dim(fitsfile *fptr, int ndim, long *dims, int *status);
 int fits_get_noise_bits(fitsfile *fptr, int *noisebits, int *status);
+int fits_get_hcomp_scale(fitsfile *fptr, int *scale, int *status);
+int fits_get_hcomp_smooth(fitsfile *fptr, int *smooth, int *status);
 
+int fits_img_compress(fitsfile *infptr, fitsfile *outfptr, int *status);
 int fits_compress_img(fitsfile *infptr, fitsfile *outfptr, int compress_type,
          long *tilesize, int parm1, int parm2, int *status);
 int fits_is_compressed_image(fitsfile *fptr, int *status);
 int fits_decompress_img (fitsfile *infptr, fitsfile *outfptr, int *status);
+int fits_img_decompress (fitsfile *infptr, fitsfile *outfptr, int *status);
 
+/* H-compress routines */
+int fits_hcompress(int *a, int nx, int ny, int scale, char *output, 
+    long *nbytes, int *status);
+int fits_hcompress64(LONGLONG *a, int nx, int ny, int scale, char *output, 
+    long *nbytes, int *status);
+int fits_hdecompress(unsigned char *input, int smooth, int *a, int *nx, 
+       int *ny, int *scale, int *status);
+int fits_hdecompress64(unsigned char *input, int smooth, LONGLONG *a, int *nx, 
+       int *ny, int *scale, int *status);
+int fits_rms_float (float fdata[], int nx, float in_null_value,
+                   double *rms, int *status);
+		   
+int fits_rms_short (short fdata[], int nx, short in_null_value,
+                   double *rms, int *status);
+
+ 
 /*  The following exclusion if __CINT__ is defined is needed for ROOT */
 #ifndef __CINT__
 #ifdef __cplusplus

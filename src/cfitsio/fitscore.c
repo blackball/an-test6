@@ -60,12 +60,15 @@ float ffvers(float *version)  /* IO - version number */
   return the current version number of the FITSIO software
 */
 {
-      *version = (float) 3.006;
+      *version = (float) 3.03;
 
-/*     20 February 2006
+/*     11 Dec 2006
 
 
    Previous releases:
+      *version = 3.02    18 Sep 2006
+      *version = 3.01       May 2006 included in FTOOLS 6.1 release
+      *version = 3.006   20 Feb 2006 
       *version = 3.005   20 Dec 2005 (beta, in heasoft swift release
       *version = 3.004   16 Sep 2005 (beta, in heasoft swift release
       *version = 3.003   28 Jul 2005 (beta, in heasoft swift release
@@ -1753,6 +1756,7 @@ then values of 'n' less than or equal to n_value will match.
 
     /* ===== Pattern match stage */
     for (pat=0; pat < npat; pat++) {
+
       spat = patterns[pat][0];
       
       i1 = 0; j1 = 0; m1 = -1; n1 = -1; a = ' ';  /* Initialize the place-holders */
@@ -1890,7 +1894,7 @@ then values of 'n' less than or equal to n_value will match.
 	  ic ++;
 	}
 	ic --;
-      } else if (s == 'a' && a != ' ') {
+      } else if (s == 'a') {
 	outrec[ic] = a;
       } else {
 	outrec[ic] = s;
@@ -3405,6 +3409,8 @@ int ffgbclll( fitsfile *fptr,   /* I - FITS file pointer                      */
             strcat(dtype, "I");
         else if (abs(colptr->tdatatype) == TLONG)
             strcat(dtype, "J");
+        else if (abs(colptr->tdatatype) == TLONGLONG)
+            strcat(dtype, "K");
         else if (abs(colptr->tdatatype) == TFLOAT)
             strcat(dtype, "E");
         else if (abs(colptr->tdatatype) == TDOUBLE)
@@ -5168,7 +5174,7 @@ int ffcmph(fitsfile *fptr,  /* I -FITS file pointer                         */
         return(*status);
     }
 
-    buffer = malloc(buffsize);  /* allocate initial buffer */
+    buffer = (char *) malloc(buffsize);  /* allocate initial buffer */
     if (!buffer)
     {
         sprintf(message,"Failed to allocate buffer to copy the heap");
@@ -7104,6 +7110,7 @@ int ffgkcl(char *tcard)
                   ZIMAGE, ZCMPTYPE, ZNAMEn, ZVALn, ZTILEn, 
                   ZBITPIX, ZNAXISn, ZSCALE, ZZERO, ZBLANK,
                   EXTNAME = 'COMPRESSED_IMAGE'
+		  ZSIMPLE, ZTENSION, ZEXTEND, ZBLOCKED, ZPCOUNT, ZGCOUNT
 
    TYP_SCAL_KEY:  BSCALE, BZERO, TSCALn, TZEROn
 
@@ -7190,6 +7197,18 @@ int ffgkcl(char *tcard)
 	else if (FSTRNCMP (card1, "ZERO   ", 7) == 0)
 	    return (TYP_CMPRS_KEY);
 	else if (FSTRNCMP (card1, "BLANK  ", 7) == 0)
+	    return (TYP_CMPRS_KEY);
+	else if (FSTRNCMP (card1, "SIMPLE ", 7) == 0)
+	    return (TYP_CMPRS_KEY);
+	else if (FSTRNCMP (card1, "TENSION", 7) == 0)
+	    return (TYP_CMPRS_KEY);
+	else if (FSTRNCMP (card1, "EXTEND ", 7) == 0)
+	    return (TYP_CMPRS_KEY);
+	else if (FSTRNCMP (card1, "BLOCKED", 7) == 0)
+	    return (TYP_CMPRS_KEY);
+	else if (FSTRNCMP (card1, "PCOUNT ", 7) == 0)
+	    return (TYP_CMPRS_KEY);
+	else if (FSTRNCMP (card1, "GCOUNT ", 7) == 0)
 	    return (TYP_CMPRS_KEY);
     }
     else if (*card == ' ')

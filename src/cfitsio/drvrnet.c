@@ -119,12 +119,9 @@
 
    Once the file is closed then the socket is closed.
 
-$Id: drvrnet.c,v 1.1 2006/03/02 21:23:30 roweis Exp $
+$Id: drvrnet.c,v 3.45 2005/12/21 18:18:01 pence Exp $
 
 $Log: drvrnet.c,v $
-Revision 1.1  2006/03/02 21:23:30  roweis
-cfitsio
-
 Revision 3.45  2005/12/21 18:18:01  pence
 New beta 3.005 release.  Contains new cfortran.h to support integer*8
 parameters when calling cfitsio from Fortran tasks.  Also has modified
@@ -172,7 +169,11 @@ Baltimore MD 21218 USA              ¦ http://faxafloi.stsci.edu:4547/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+
+#if defined(unix) || defined(__unix__)  || defined(__unix)
+#include <unistd.h>  
+#endif
+
 #include <signal.h>
 #include <setjmp.h>
 #include "fitsio2.h"

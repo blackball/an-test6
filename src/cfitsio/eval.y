@@ -475,6 +475,9 @@ expr:    LONG
                 { if (FSTRCMP($1,"RANDOM(") == 0) {
                      srand( (unsigned int) time(NULL) );
                      $$ = New_Func( DOUBLE, rnd_fct, 0, 0, 0, 0, 0, 0, 0, 0 );
+		  } else if (FSTRCMP($1,"RANDOMN(") == 0) {
+		     srand( (unsigned int) time(NULL) );
+		     $$ = New_Func( DOUBLE, gasrnd_fct, 0, 0, 0, 0, 0, 0, 0, 0 );
                   } else {
                      yyerror("Function() not supported");
 		     YYERROR;
@@ -601,11 +604,18 @@ expr:    LONG
 			$$ = New_Func( 0, log10_fct, 1, $2, 0, 0, 0, 0, 0, 0 );
 		     else if (FSTRCMP($1,"SQRT(") == 0)
 			$$ = New_Func( 0, sqrt_fct, 1, $2, 0, 0, 0, 0, 0, 0 );
+		     else if (FSTRCMP($1,"ROUND(") == 0)
+			$$ = New_Func( 0, round_fct, 1, $2, 0, 0, 0, 0, 0, 0 );
 		     else if (FSTRCMP($1,"FLOOR(") == 0)
 			$$ = New_Func( 0, floor_fct, 1, $2, 0, 0, 0, 0, 0, 0 );
 		     else if (FSTRCMP($1,"CEIL(") == 0)
 			$$ = New_Func( 0, ceil_fct, 1, $2, 0, 0, 0, 0, 0, 0 );
-		     else {
+		     else if (FSTRCMP($1,"RANDOMP(") == 0) {
+		       srand( (unsigned int) time(NULL) );
+		       $$ = New_Func( 0, poirnd_fct, 1, $2, 
+				      0, 0, 0, 0, 0, 0 );
+		       TYPE($$) = LONG;
+		     } else {
 			yyerror("Function(expr) not supported");
 			YYERROR;
 		     }
@@ -1256,6 +1266,8 @@ static int New_Func( int returnType, funcOp Op, int nNodes,
       this->SubNodes[5] = Node6;
       this->SubNodes[6] = Node7;
       i = constant = nNodes;    /* Functions with zero params are not const */
+      if (Op == poirnd_fct) constant = 0; /* Nor is Poisson deviate */
+
       while( i-- )
          constant = ( constant &&
 		      gParse.Nodes[ this->SubNodes[i] ].operation==CONST_OP );
@@ -3221,6 +3233,108 @@ double angsep_calc(double ra1, double dec1, double ra2, double dec2)
   return acos(cd)/deg;
 }
 
+static double ran1()
+{
+  static double dval = 0.0;
+  double rndVal;
+
+  if (dval == 0.0) {
+    if( rand()<32768 && rand()<32768 )
+      dval =      32768.0;
+    else
+      dval = 2147483648.0;
+  }
+
+  rndVal = (double)rand();
+  while( rndVal > dval ) dval *= 2.0;
+  return rndVal/dval;
+}
+
+/* Gaussian deviate routine from Numerical Recipes */
+static double gasdev()
+{
+  static int iset = 0;
+  static double gset;
+  double fac, rsq, v1, v2;
+
+  if (iset == 0) {
+    do {
+      v1 = 2.0*ran1()-1.0;
+      v2 = 2.0*ran1()-1.0;
+      rsq = v1*v1 + v2*v2;
+    } while (rsq >= 1.0 || rsq == 0.0);
+    fac = sqrt(-2.0*log(rsq)/rsq);
+    gset = v1*fac;
+    iset = 1;
+    return v2*fac;
+  } else {
+    iset = 0;
+    return gset;
+  }
+
+}
+
+/* lgamma function - from Numerical Recipes */
+
+float gammaln(float xx)
+     /* Returns the value ln Gamma[(xx)] for xx > 0. */
+{
+  /* 
+     Internal arithmetic will be done in double precision, a nicety
+     that you can omit if five-figure accuracy is good enough. */
+  double x,y,tmp,ser;
+  static double cof[6]={76.18009172947146,-86.50532032941677,
+			24.01409824083091,-1.231739572450155,
+			0.1208650973866179e-2,-0.5395239384953e-5};
+  int j;
+  y=x=xx;
+  tmp=x+5.5;
+  tmp -= (x+0.5)*log(tmp);
+  ser=1.000000000190015;
+  for (j=0;j<=5;j++) ser += cof[j]/++y;
+  return (float) -tmp+log(2.5066282746310005*ser/x);
+}
+
+/* Poisson deviate - derived from Numerical Recipes */
+static long poidev(double xm)
+{
+  static double sq, alxm, g, oldm = -1.0;
+  static double pi = 0;
+  double em, t, y;
+
+  if (pi == 0) pi = ((double)4)*atan((double)1);
+
+  if (xm < 20.0) {
+    if (xm != oldm) {
+      oldm = xm;
+      g = exp(-xm);
+    }
+    em = -1;
+    t = 1.0;
+    do {
+      em += 1;
+      t *= ran1();
+    } while (t > g);
+  } else {
+    if (xm != oldm) {
+      oldm = xm;
+      sq = sqrt(2.0*xm);
+      alxm = log(xm);
+      g = xm*alxm-gammaln( (float) (xm+1.0));
+    }
+    do {
+      do {
+	y = tan(pi*ran1());
+	em = sq*y+xm;
+      } while (em < 0.0);
+      em = floor(em);
+      t = 0.9*(1.0+y*y)*exp(em*alxm-gammaln( (float) (em+1.0) )-g);
+    } while (ran1() > t);
+  }
+
+  /* Return integer version */
+  return (long int) floor(em+0.5);
+}
 
 static void Do_Func( Node *this )
 {
@@ -3232,7 +3346,6 @@ static void Do_Func( Node *this )
    double dval;
    int  i, valInit;
    long row, elem, nelem;
-   double rndVal;
 
    i = this->nSubNodes;
    allConst = 1;
@@ -3256,6 +3369,7 @@ static void Do_Func( Node *this )
    }
 
    if( this->nSubNodes==0 ) allConst = 0; /* These do produce scalars */
+   if( this->operation == poirnd_fct ) allConst = 0;
 
    if( allConst ) {
 
@@ -3290,6 +3404,14 @@ static void Do_Func( Node *this )
 	    else
 	       this->value.data.dbl = pVals[0].data.dbl;
 	    break;
+
+	 case poirnd_fct:
+	    if( theParams[0]->type==DOUBLE )
+	      this->value.data.lng = poidev(pVals[0].data.dbl);
+	    else
+	      this->value.data.lng = poidev(pVals[0].data.lng);
+	    break;
+
 	 case abs_fct:
 	    if( theParams[0]->type==DOUBLE ) {
 	       dval = pVals[0].data.dbl;
@@ -3524,17 +3646,62 @@ static void Do_Func( Node *this )
             }
 	    break;
 	 case rnd_fct:
-	    if( rand()<32768 && rand()<32768 )
-	       dval =      32768.0;
-	    else
-	       dval = 2147483648.0;
 	    while( row-- ) {
-               rndVal = (double)rand();
-               while( rndVal > dval ) dval *= 2.0;
-	       this->value.data.dblptr[row] = rndVal/dval;
+	       this->value.data.dblptr[row] = ran1();
 	       this->value.undef[row] = 0;
 	    }
 	    break;
+
+	 case gasrnd_fct:
+	    while( row-- ) {
+	       this->value.data.dblptr[row] = gasdev();
+	       this->value.undef[row] = 0;
+	    }
+	    break;
+
+	 case poirnd_fct:
+	   if( theParams[0]->type==DOUBLE ) {
+	      if (theParams[0]->operation == CONST_OP) {
+		while( elem-- ) {
+		  this->value.undef[elem] = (pVals[0].data.dbl < 0);
+		  if (! this->value.undef[elem]) {
+		    this->value.data.lngptr[elem] = poidev(pVals[0].data.dbl);
+		  }
+		} 
+	      } else {
+		while( elem-- ) {
+		  this->value.undef[elem] = theParams[0]->value.undef[elem];
+		  if (theParams[0]->value.data.dblptr[elem] < 0) 
+		    this->value.undef[elem] = 1;
+		  if (! this->value.undef[elem]) {
+		    this->value.data.lngptr[elem] = 
+		      poidev(theParams[0]->value.data.dblptr[elem]);
+		  }
+		} /* while */
+	      } /* ! CONST_OP */
+	   } else {
+	     /* LONG */
+	      if (theParams[0]->operation == CONST_OP) {
+		while( elem-- ) {
+		  this->value.undef[elem] = (pVals[0].data.lng < 0);
+		  if (! this->value.undef[elem]) {
+		    this->value.data.lngptr[elem] = poidev(pVals[0].data.lng);
+		  }
+		} 
+	      } else {
+		while( elem-- ) {
+		  this->value.undef[elem] = theParams[0]->value.undef[elem];
+		  if (theParams[0]->value.data.lngptr[elem] < 0) 
+		    this->value.undef[elem] = 1;
+		  if (! this->value.undef[elem]) {
+		    this->value.data.lngptr[elem] = 
+		      poidev(theParams[0]->value.data.lngptr[elem]);
+		  }
+		} /* while */
+	      } /* ! CONST_OP */
+	   } /* END LONG */
+	   break;
+
 
 	    /* Non-Trig single-argument functions */
 	    
