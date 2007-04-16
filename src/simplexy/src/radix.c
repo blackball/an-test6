@@ -1,9 +1,10 @@
-// Radix.cpp: a fast floating-point radix sort demo
-//
-//   Copyright (C) Herf Consulting LLC 2001.  All Rights Reserved.
-//   Use for anything you want, just tell me what you do with it.
-//   Code provided "as-is" with no liabilities for anything that goes wrong.
-//
+/*
+  Radix.cpp: a fast floating-point radix sort demo
+  
+  Copyright (C) Herf Consulting LLC 2001.  All Rights Reserved.
+  Use for anything you want, just tell me what you do with it.
+  Code provided "as-is" with no liabilities for anything that goes wrong.
+*/
 
 #include <stdio.h>
 #include <string.h>
