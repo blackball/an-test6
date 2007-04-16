@@ -42,6 +42,15 @@ If you want precision, multi-image astrometry, we currently recommend
 taking the output of astrometry.net and using it as the input for <a
 href="http://terapix.iap.fr/rubrique.php?id_rubrique=105">SCAMP</a>.</dd>
 
+<dt>Q: <b>Can I use your output to build panoramic or mosaic images
+from many individual images?</b></dt>
+
+<dd>A: Yes!  However, see our answer to the previous question: We are
+not performing the most precise possible measurements of camera
+distortions; if you want awesome mosaics, use Bertin's SCAMP and then
+it's sister software, SWarp.  Mosaic-quality WCS and automatic
+mosaicing of input data are both on our medium-term to-do lists.</dd>
+
 <dt>Q: <b>I submitted an image and it didn't solve even though it had
 an almost exactly correct WCS header.</b> How can you guys suck so
 badly that you can't even solve an image when I give you the right
@@ -69,6 +78,15 @@ it still isn't solving, send email to <q>alpha@astrometry.net</q> with
 your jobid, because you clearly have a useful image for
 debugging.</dd>
 
+<dt>Q: <b>My HST ACS images won't solve!</b> Can't you even solve a
+perfectly calibrated and highly recognizable piece of astronomical
+data?</dt>
+
+<dd>A: Right now there is a strict limitation that we cannot possibly
+solve any image below about 5&nbsp;arcmin on a side.  Don't even
+bother trying.  We hope to overcome this eventually, but don't hold
+your breath!</dd>
+
 <dt>Q: <b>Why does my submission die silently without returning a
 jobid?</b></dt>
 
@@ -76,9 +94,10 @@ jobid?</b></dt>
 we take gz files).  If not, there is a bug; send email to
 <q>alpha@astrometry.net</q>.</dd>
 
-<dt>Q: <b>What does the system do with multi-extension files?</b></dt>
+<dt>Q: <b>What does the system do with multi-extension FITS
+files?</b></dt>
 
-<dd>A: It just looks at the first image-like extension.</dd>
+<dd>A: It just looks at the first image-like FITS extension.</dd>
 
 <dt>Q: <b>I have tons of images I want to solve.</b> Typing my email
 and the size parameters and the image urls into your lame web form
@@ -91,12 +110,14 @@ For now, you can speed things up by submitting your first image
 manually using the web form and then hitting the LinkToTheseParameters
 button. That will construct a url which pre-fills the form. From then
 on, all you'll need to change is the url or local filename of the
-image. If that's still not good enough, the best we can offer you for
-now is the following hack, which uses wget.  You need to expose your
-image on the web and fill in the info in the first three lines, ie
-your email/name, the url to your image and the size info (which you
-can just copy from the LinkToTheseParameters link).
-<tt>wget&nbsp;&quot;http://live.astrometry.net/index.php?justjobid&amp;email=user@domain.edu&amp;uname=YourName&amp;xysrc=url&amp;imgurl=http%3A%2F%2Fwww.astro.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg&amp;fstype=ev&amp;fse=1&amp;fsv=50&amp;fsunit=degreewidth&amp;fsu=&amp;fsl=&amp;x_col=X&amp;y_col=Y&amp;parity=2&amp;poserr=1&amp;tweak=1&amp;tweak_order=2&amp;index=auto&amp;submit=Submit&quot;&nbsp;-Ojobid_out</tt></dd>
+image. If that's not good enough, the best we can offer you for now is
+the following hack, which uses wget (which you could have just copied
+from the <q>LinkToTheseParameters</q> link):
+<tt>wget&nbsp;&quot;http://live.astrometry.net/index.php?justjobid&amp;email=user@domain.edu&amp;uname=YourName&amp;xysrc=url&amp;imgurl=http%3A%2F%2Fwww.astro.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg&amp;fstype=ev&amp;fse=1&amp;fsv=50&amp;fsunit=degreewidth&amp;fsu=&amp;fsl=&amp;x_col=X&amp;y_col=Y&amp;parity=2&amp;poserr=1&amp;tweak=1&amp;tweak_order=2&amp;index=auto&amp;submit=Submit&quot;&nbsp;-Ojobid_out</tt>
+If <i>that's</i> not good enough, alpha tester Phil Marshall (UCSB)
+has written a csh script for uploading multiple files you can <a
+href="http://www.slac.stanford.edu/~pjm/astrometry/hansel.csh">grab
+here</a>.</dd>
 
 <dt>Q: I looked at the source extraction preview image on the status
 page for one of my jobs, and <b>your system totally failed to find
