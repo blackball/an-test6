@@ -70,7 +70,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable 
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar plotxy wcs-xy2rd wcs-rd2xy
+	quadscales quadsperstar wcs-xy2rd wcs-rd2xy
 # HACK - codedensity is broken at the moment (and also not used)...
 # codedensity 
 
@@ -238,9 +238,6 @@ solvedserver: solvedserver.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LI
 
 plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
-
-plotxy: plotxy.o \
-		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 plotquad.o: plotquad.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
