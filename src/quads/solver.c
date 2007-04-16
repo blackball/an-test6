@@ -23,7 +23,6 @@
 #include <math.h>
 #include <assert.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #include "fileutil.h"
@@ -234,7 +233,6 @@ void solve_field(solver_params* params) {
 			// check if the field has already been solved...
 			time_t t;
 			t = time(NULL);
-			//get_resource_stats(&usertime, &systime, NULL);
 
 			if (params->solved_in && ((t - lastcheck_sf) > 5)) {
 				if (solvedfile_get(params->solved_in, params->fieldnum)) {
@@ -252,8 +250,7 @@ void solve_field(solver_params* params) {
 				lastcheck_ss = t;
 			}
 			if (params->cancelfname && ((t - lastcheck_cf) > 5)) {
-				struct stat st;
-				if (stat(params->cancelfname, &st) == 0) {
+                                if (file_exists(params->cancelfname)) {
 					params->cancelled = TRUE;
 					params->quitNow = TRUE;
 					fprintf(stderr, "File \"%s\" exists: cancelling.\n", params->cancelfname);

@@ -24,7 +24,6 @@
  */
 #include <sys/types.h>
 #include <sys/resource.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
@@ -327,8 +326,7 @@ int main(int argc, char *argv[]) {
 
 		// Early check to see if this job was cancelled.
 		if (sp->cancelfname) {
-			struct stat st;
-			if (stat(sp->cancelfname, &st) == 0) {
+                        if (file_exists(sp->cancelfname)) {
 				logmsg(bp, "Run cancelled.\n");
 				il_free(bp->fieldlist);
 				pl_free(bp->indexes);

@@ -59,11 +59,9 @@ MISC_EXECS := 2masstofits project-usnob diffractionFlag_check
 
 UTIL_OBJS := fileutil.o boilerplate.o svn.o
 
-OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o \
-	bt.o catalog.o idfile.o codefile.o \
-	histogram.o tic.o codekd.o svd.o \
-	verify.o dualtree_max.o \
-	solver.o matchfile.o solvedclient.o solvedfile.o \
+OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
+	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
+	dualtree_max.o solver.o matchfile.o solvedclient.o solvedfile.o \
 	intmap.o pnpoly.o blind_wcs.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
@@ -84,8 +82,8 @@ OLDEXECS := findquad findstar matchstats plotmatch \
 #whynot certifiable 
 CAIROEXECS := plotquad plotxy2
 
-OLDEXECS_OBJS := catalog.o histogram.o \
-	verify.o intmap.o tic.o matchfile.o codekd.o idfile.o \
+OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \
+	codekd.o idfile.o \
 	$(UTIL_OBJS)
 
 PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))

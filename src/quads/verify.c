@@ -23,7 +23,6 @@
 #include "verify.h"
 #include "mathutil.h"
 #include "intmap.h"
-#include "pnpoly.h"
 #include "keywords.h"
 
 #define min(a,b) (((a)<(b))?(a):(b))
