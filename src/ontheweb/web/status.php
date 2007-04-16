@@ -274,7 +274,7 @@ if (array_key_exists("email", $headers)) {
 
 	if ($didsolve) {
 		$message = "Hello again,\n\n" .
-			"We're please to tell you that we solved your field.\n\n" .
+			"We're pleased to tell you that we solved your field.\n\n" .
 			"You can get the results here:\n" .
 			"  " . $staturl . "\n\n" .
 			"Please let us know if you have any problems retrieving your results " .
