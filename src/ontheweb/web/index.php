@@ -2,8 +2,8 @@
 require_once 'common.php';
 require_once 'presets.php';
 
-$emailver = 0;
-$webver = 1;
+$emailver = 1;
+$webver = 0;
 
 if ($emailver) {
 	require_once 'rfc822.php';
@@ -12,10 +12,13 @@ if ($emailver) {
 require_once 'form.php';
 
 function allow_email($email) {
-	$mode = 'deny';
-	// $mode = 'allow';
+	// $mode = 'deny';
+	$mode = 'allow';
 
 	$allow = array('dstn@cs.toronto.edu',
+				   'david.hogg@nyu.edu',
+				   'roweis@cs.toronto.edu',
+				   'pjm@physics.ucsb.edu',
 				   );
 
 	$deny = array('badguy@somewhere.com');
