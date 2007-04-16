@@ -99,7 +99,7 @@
    -XY indexing.  This is arguably the most natural, at least for the
    internal usage of the healpix code.  Within each base healpix, the
    healpixes are numbered starting with 0 for the southmost pixel, then
-   increasing first in the "y" (north-east), then in the "x" (north-west)
+   increasing first in the "y" (north-west), then in the "x" (north-east)
    direction.  In other words, within each base healpix there is a grid
    and we number the pixels "lexicographically" (mod a 135 degree turn).
 
@@ -119,11 +119,19 @@
    .    1   5   9  13
    .    0   4   8  12
 
-   Notice that the numbers first increase from bottom to top, then left to
-   right.
+   Notice that the numbers first increase from bottom to top (y), then left to
+   right (x).
 
    The XY indexing can be decomposed into 'x' and 'y' coordinates
-   (in case that wasn't obvious).
+   (in case that wasn't obvious), where the above figure becomes (x,y):
+
+   .    (0,3)  (1,3)  (2,3)  (3,3)
+   .    (0,2)  (1,2)  (2,2)  (3,2)
+   .    (0,1)  (1,1)  (2,1)  (3,1)
+   .    (0,0)  (1,0)  (2,0)  (3,0)
+
+   Note that "x" increases in the north-east direction, and "y" increases in
+   the north-west direction.
 
    The major advantage to this indexing scheme is that it extends to
    fractional coordinates in a natural way: it is meaningful to talk about
