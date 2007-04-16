@@ -123,9 +123,6 @@ xylist2fits: xylist2fits.o \
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-#homer2: homer2.o label.o xylist.o fitsioutils.o ioutils.o bl.o $(QFITS_LIB)
-#	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^ -lm
-
 #badfields: badfields.o solvedfile.o bl.o 
 #	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $^
 
