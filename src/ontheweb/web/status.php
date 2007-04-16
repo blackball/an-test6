@@ -705,12 +705,16 @@ if ($didsolve) {
 	echo "<div id=\"onsky\">\n";
 	echo "<p>Your field on the sky (click for larger image):</p>\n";
 
-	$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
-		// "tag=test-tag&" .
-		"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
-		"&arcsinh&gain=-0.5" .
-		"&BBOX=0,-85,360,85" .
+	$tileurl = $tiles_url . "?" .
+		"LAYERS=tycho,grid,boundary" .
+		"&FORMAT=image/png" .
+		"&arcsinh" .
 		"&wcsfn=" . $myreldir . "/wcs.fits";
+	// "tag=test-tag&" .
+
+	$url = $tileurl .
+		"&gain=-0.5" .
+		"&BBOX=0,-85,360,85";
 
 	$fldsz = $pixscale * max($fullW, $fullH);
 	loggit("Field size: " . $fldsz . "\n");
@@ -742,12 +746,9 @@ if ($didsolve) {
 		$declo = merc2dec($ymerc - $dm);
 		$dechi = merc2dec($ymerc + $dm);
 
-		$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
-			// "tag=test-tag&" .
-			"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
-			"&arcsinh&gain=-0.25" .
-			"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi .
-			"&wcsfn=" . $myreldir . "/wcs.fits";
+		$url = $tileurl .
+			"&gain=-0.25" .
+			"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
 		if ($zoomin2) {
 			$url .= "&dashbox=0.01";
 		}
@@ -767,12 +768,9 @@ if ($didsolve) {
 			$declo = merc2dec($ymerc - $dm);
 			$dechi = merc2dec($ymerc + $dm);
 
-			$url = "http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?" .
-				// "tag=test-tag&" .
-				"LAYERS=tycho,grid,boundary&FORMAT=image/png" .
-				"&arcsinh&gain=0.5" .
-				"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi .
-				"&wcsfn=" . $myreldir . "/wcs.fits";
+			$url = $tileurl .
+				"&gain=0.5" .
+				"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
 
 			echo "<a href=\"" . htmlentities($url .
 											 "&WIDTH=1024&HEIGHT=1024&lw=5") .

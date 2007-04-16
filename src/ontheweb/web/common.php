@@ -8,7 +8,7 @@ $siteid = "tor";
 $remote = 1;
 
 $gmaps_url = "http://usno.astrometry.net/";
-
+$tiles_url = $gmaps_url . "tilecache/tilecache.php";
 $upload_progress = "/tmp/upt_%s.txt";
 
 // blind params
