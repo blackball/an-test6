@@ -95,7 +95,7 @@ int dpeaks(float *image,
 	indx = (int *) malloc(sizeof(int) * (*npeaks));
 	for (i = 0;i < (*npeaks);i++)
 		indx[i] = i;
-	qsort((void *) indx, (*npeaks), sizeof(int), dpeaks_compare);
+	qsort((void *) indx, (size_t)(*npeaks), sizeof(int), dpeaks_compare);
 	if ((*npeaks) > maxnpeaks)
 		*npeaks = maxnpeaks;
 	fullxcen = (int *) malloc((*npeaks) * sizeof(int));
@@ -131,8 +131,8 @@ int dpeaks(float *image,
 
 		/* look for close peaks */
 		for (j = i - 1;j >= 0;j--) {
-			dx = fullxcen[j] - fullxcen[i];
-			dy = fullycen[j] - fullycen[i];
+			dx = (float)(fullxcen[j] - fullxcen[i]);
+			dy = (float)(fullycen[j] - fullycen[i]);
 			if (dx*dx + dy*dy < dlim*dlim)
 				keep[i] = 0;
 		}

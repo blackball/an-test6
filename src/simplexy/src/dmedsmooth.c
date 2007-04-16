@@ -45,9 +45,9 @@ int dmedsmooth(float *image,
 
 	/* get grids */
 	nxgrid = nx / sp + 2;
-	xlo = (int *) malloc(nxgrid * sizeof(int));
-	xhi = (int *) malloc(nxgrid * sizeof(int));
-	xgrid = (int *) malloc(nxgrid * sizeof(int));
+	xlo = (int *) malloc((size_t)nxgrid * sizeof(int));
+	xhi = (int *) malloc((size_t)nxgrid * sizeof(int));
+	xgrid = (int *) malloc((size_t)nxgrid * sizeof(int));
 	xoff = (nx - 1 - (nxgrid - 3) * sp) / 2;
 	for (i = 1;i < nxgrid - 1;i++)
 		xgrid[i] = (i - 1) * sp + xoff;
@@ -81,9 +81,9 @@ int dmedsmooth(float *image,
 			yhi[i] = ny - 1;
 	}
 
-	grid = (float *) malloc(nxgrid * nygrid * sizeof(float));
+	grid = (float *) malloc((size_t)(nxgrid * nygrid) * sizeof(float));
 
-	arr = (float *) malloc((sp * 2 + 5) * (sp * 2 + 5) * sizeof(float));
+	arr = (float *) malloc((size_t)((sp * 2 + 5) * (sp * 2 + 5)) * sizeof(float));
 
 	for (j = 0;j < nygrid;j++)
 		for (i = 0;i < nxgrid;i++)

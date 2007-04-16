@@ -41,7 +41,7 @@ float dselip2(unsigned long k, unsigned long n, float *arr)
 	unsigned long i, j, jl, jm, ju, kk, mm, nlo, nxtmm, *isel;
 	float ahi, alo, sum, *sel;
 
-	if (k < 1 || k > n || n <= 0) {
+	if (k < 1 || k > n || n == 0) {
 		printf("bad input to selip");
 		exit(1);
 	}
@@ -78,7 +78,7 @@ float dselip2(unsigned long k, unsigned long n, float *arr)
 			FREEALL
 			return ahi;
 		}
-		sel[M + 1 - 1] = sum / mm;
+		sel[M + 1 - 1] = sum / (float)mm;
 		dshell(M + 1, sel);
 		sel[M + 2 - 1] = ahi;
 		for (j = 1;j <= M + 2;j++)
