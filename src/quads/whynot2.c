@@ -51,6 +51,7 @@
 #include "verify.h"
 #include "qidxfile.h"
 #include "intmap.h"
+#include "noise.h"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
@@ -809,8 +810,13 @@ static void solve_fields(blind_params* bp) {
                 il* quadids;
                 int NS;
                 il* goodquads;
+                il* goodstars;
+                il* goodfields;
                 il* starids;
+                il* goodmaxfields;
                 intmap* mapif;
+                int uq;
+                il* quadorder;
 
 		fieldnum = il_get(bp->fieldlist, fi);
 		if (fieldnum >= nfields) {
@@ -865,12 +871,11 @@ static void solve_fields(blind_params* bp) {
                     truecenter[1] += truexyz[i*3+1];
                     truecenter[2] += truexyz[i*3+2];
                 }
-                truecenter[0] /= (double)sp->nfield;
-                truecenter[1] /= (double)sp->nfield;
-                truecenter[2] /= (double)sp->nfield;
+                normalize_3(truecenter);
                 truer2 = 0.0;
                 for (i=0; i<sp->nfield; i++) {
-                    double r2 = distsq(truecenter, truexyz + i*3, 3);
+                    double r2;
+                    r2 = distsq(truecenter, truexyz + i*3, 3);
                     if (r2 > truer2)
                         truer2 = r2;
                 }
@@ -950,31 +955,137 @@ static void solve_fields(blind_params* bp) {
                     logmsg(bp, "Field obj %i / Index star %i is part of %i quads.\n",
                            i, fieldtoind[i], nquads);
                     for (k=0; k<nquads; k++) {
-                        logmsg(bp, "star %i, quad %i\n", fieldtoind[i], quads[k]);
+                        //logmsg(bp, "star %i, quad %i\n", fieldtoind[i], quads[k]);
                         int ind = il_insert_ascending(quadids, quads[k]);
                         il_insert(starids, ind, fieldtoind[i]);
                     }
                 }
 
                 goodquads = il_new(16);
+                goodstars = il_new(16);
 
-                for (i=0; i<il_size(quadids); i++) {
+                uq = 0;
+                for (i=0; i<il_size(quadids);) {
                     int k;
                     int quad = il_get(quadids, i);
                     int nstars;
-
-                    logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, i));
-
+                    uq++;
+                    //logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, i));
                     for (k=i+1; k<il_size(quadids); k++) {
                         if (il_get(quadids, k) != quad)
                             break;
-                        logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, k));
+                        //logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, k));
                     }
                     nstars = k - i;
                     logmsg(bp, "Quad %i has %i matched stars in the field.\n",
                            quad, nstars);
+                    if (nstars == 4) {
+                        il_append(goodquads, quad);
+                        il_append(goodstars, il_get(starids, i));
+                        il_append(goodstars, il_get(starids, i+1));
+                        il_append(goodstars, il_get(starids, i+2));
+                        il_append(goodstars, il_get(starids, i+3));
+                    }
                     i = k;
                 }
+
+                logmsg(bp, "%i quads at least partially contained in the field.\n", uq);
+                logmsg(bp, "%i quads completely contained in the field.\n", il_size(goodquads));
+
+                goodfields = il_new(16);
+                goodmaxfields = il_new(16);
+
+                for (i=0; i<il_size(goodquads); i++) {
+                    int quad = il_get(goodquads, i);
+                    int k;
+                    int maxfld = -1;
+                    for (k=0; k<4; k++) {
+                        int star = il_get(goodstars, i*4 + k);
+                        int fld = intmap_get(mapif, star, -1);
+                        if (fld == -1) {
+                            logerr(bp, "No field obj found for star %i\n", star);
+                            exit(-1);
+                        }
+                        il_append(goodfields, fld);
+                        if (fld > maxfld)
+                            maxfld = fld;
+                    }
+                    il_append(goodmaxfields, maxfld);
+                    logmsg(bp, "Quad %i contains field stars %i, %i, %i, %i (max %i)\n",
+                           quad,
+                           il_get(goodfields, i*4),
+                           il_get(goodfields, i*4+1),
+                           il_get(goodfields, i*4+2),
+                           il_get(goodfields, i*4+3),
+                           maxfld);
+                }
+
+                // sort-of sort them by order they will be found
+                // (just sorted by max field obj, not fully sorted)
+                quadorder = il_new(16);
+                for (i=0; i<sp->nfield; i++) {
+                    int k;
+                    for (k=0; k<il_size(goodmaxfields); k++) {
+                        if (il_get(goodmaxfields, k) == i)
+                            il_append(quadorder, k);
+                    }
+                }
+
+                for (i=0; i<il_size(quadorder); i++) {
+                    int ind = il_get(quadorder, i);
+                    int quad = il_get(goodquads, ind);
+                    int starids[4];
+                    uint starabcd[4];
+                    int fieldabcd[4];
+                    double starcode[4];
+                    double fieldcode[4];
+                    double fieldscale;
+                    double starscale;
+
+                    //double fieldxy[8];
+                    double starxyz[12];
+
+                    double codeerr;
+
+                    int k;
+                    for (k=0; k<4; k++)
+                        starids[k] = il_get(goodstars, ind*4 + k);
+                    logmsg(bp, "Quad %i contains index stars %i, %i, %i, %i\n",
+                           quad, starids[0], starids[1], starids[2], starids[3]);
+                    getquadids(quad, starabcd, starabcd+1, starabcd+2, starabcd+3);
+                    logmsg(bp, "ABCD %i, %i, %i, %i\n",
+                           starabcd[0], starabcd[1], starabcd[2], starabcd[3]);
+                    for (k=0; k<4; k++)
+                        fieldabcd[k] = intmap_get(mapif, starabcd[k], -1);
+                    logmsg(bp, "Field ABCD %i, %i, %i, %i\n",
+                           fieldabcd[0], fieldabcd[1], fieldabcd[2], fieldabcd[3]);
+
+                    compute_field_code(sp->field + fieldabcd[0]*2,
+                                       sp->field + fieldabcd[1]*2,
+                                       sp->field + fieldabcd[2]*2,
+                                       sp->field + fieldabcd[3]*2,
+                                       fieldcode, &fieldscale);
+
+                    for (k=0; k<4; k++)
+                        getstarcoord(starabcd[k], starxyz + k*3);
+
+                    compute_star_code(starxyz,
+                                      starxyz+3,
+                                      starxyz+6,
+                                      starxyz+9,
+                                      starcode);
+
+                    starscale = distsq2arcsec(distsq(starxyz, starxyz+3, 3));
+
+                    codeerr = sqrt(distsq(fieldcode, starcode, 4));
+
+                    logmsg(bp, "Code error: %g\n", codeerr);
+                    logmsg(bp, "Field scale: %g pixels\n", sqrt(fieldscale));
+                    logmsg(bp, "Index scale: %g arcsec\n", starscale);
+                    logmsg(bp, "Scale: %g arcsec/pix\n", starscale/sqrt(fieldscale));
+
+                }
+
 
 
 
