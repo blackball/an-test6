@@ -206,6 +206,12 @@ blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
+whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
+		solvedclient.o solvedfile.o \
+		idfile.o verify.o svd.o intmap.o blind_wcs.o \
+		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+
 agreeable: agreeable.o matchfile.o solvedfile.o solvedclient.o \
 		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
