@@ -2,7 +2,7 @@
 require_once 'MDB2.php';
 require_once 'PEAR.php';
 
-$siteid = "alpha";
+$siteid = "tor";
 
 // Are we using a remote compute server?
 $remote = 1;
