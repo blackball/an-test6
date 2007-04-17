@@ -1109,7 +1109,7 @@ int il_insert_unique_ascending(il* list, int n) {
 	return nskipped + lower + 1;
 }
 
-void   il_insert(il* list, int indx, double data) {
+void   il_insert(il* list, int indx, int data) {
 	bl_insert(list, indx, &data);
 }
 
