@@ -71,8 +71,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable 
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar wcs-xy2rd wcs-rd2xy 
-#certifiable
+	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads

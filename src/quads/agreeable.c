@@ -313,8 +313,8 @@ int main(int argc, char *argv[]) {
 						mos[i] = bl_append(keepers, mos[i]);
 						if (!bestmo || mos[i]->logodds > bestmo->logodds)
 							bestmo = mos[i];
-					} else {
-						pl_append(leftovers, mos[i]);
+					} else if (leftovers) {
+                                            pl_append(leftovers, mos[i]);
 					}
 
 					mos[i] = NULL;

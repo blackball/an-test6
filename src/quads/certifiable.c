@@ -31,7 +31,7 @@
 #include "histogram.h"
 #include "solvedfile.h"
 
-char* OPTIONS = "hR:A:B:n:t:f:b:C:T:F:";
+char* OPTIONS = "hR:A:B:n:t:f:C:T:F:";
 
 void printHelp(char* progname) {
 	fprintf(stderr, "Usage: %s [options] <input-match-file> ...\n"
@@ -41,7 +41,6 @@ void printHelp(char* progname) {
 			"   [-n <negative-fields-rdls>]"
 			"   [-f <false-positive-fields-rdls>]\n"
 			"   [-t <true-positive-fields-rdls>]\n"
-			"   [-b <bin-size>]: histogram overlap %% into bins of this size (default 1)\n"
 			"   [-C <number-of-RDLS-stars-to-compute-center>]\n"
 			"   [-T <true-positive-solvedfile>]\n"
 			"   [-F <false-positive-solvedfile>]  (note, both of these are per-MATCH, not per-FIELD)\n"
@@ -68,28 +67,13 @@ int main(int argc, char *argv[]) {
 	int *incorrects;
 	int *warnings;
 
-	double* fieldcenters;
-
 	char* truefn = NULL;
 	char* fpfn = NULL;
 	char* negfn = NULL;
 
-	il** rightfieldbins;
-	il** wrongfieldbins;
-	il** negfieldbins;
-
-	double overlap_lowcorrect = 1.0;
-	double overlap_highwrong = 0.0;
-
-	double binsize = 1.0;
-	int Nbins;
-	histogram* overlap_hist_right = NULL;
-	histogram* overlap_hist_wrong = NULL;
-
 	int Ncenter = 0;
 
 	double* xyz = NULL;
-	int bin;
 
 	char* fpsolved = NULL;
 	char* tpsolved = NULL;
@@ -100,9 +84,6 @@ int main(int argc, char *argv[]) {
 		case 'h':
 			printHelp(progname);
 			return (HELP_ERR);
-		case 'b':
-			binsize = atof(optarg);
-			break;
 		case 'A':
 			firstfield = atoi(optarg);
 			break;
@@ -146,15 +127,6 @@ int main(int argc, char *argv[]) {
 		printHelp(progname);
 		exit(-1);
 	}
-
-	overlap_hist_right = histogram_new_binsize(0.0, 100.0, binsize);
-	overlap_hist_wrong = histogram_new_binsize(0.0, 100.0, binsize);
-
-	Nbins = overlap_hist_right->Nbins;
-
-	rightfieldbins = calloc(Nbins, sizeof(il*));
-	wrongfieldbins = calloc(Nbins, sizeof(il*));
-	negfieldbins = calloc(Nbins, sizeof(il*));
 
 	printf("Reading rdls file...\n");
 	fflush(stdout);
@@ -284,8 +256,8 @@ int main(int argc, char *argv[]) {
 				if (dist2 > (radius2 * 1.2)) {
 					printf("\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
 							fieldnum, rac, decc, arc);
-					printf("rdls %i is (%g, %g).  Overlap %4.1f%% (%i/%i)\n", j, rad2deg(ra), rad2deg(dec),
-							100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+					printf("rdls %i is (%g, %g).\n", j, rad2deg(ra), rad2deg(dec));
+                                        printf("Logprob %g (%g).\n", mo->logodds, exp(mo->logodds));
 					err = TRUE;
 					break;
 				}
@@ -312,42 +284,17 @@ int main(int argc, char *argv[]) {
 				warn = TRUE;
 			}
 
-			bin = histogram_add(err ? overlap_hist_wrong : overlap_hist_right,
-								100.0 * mo->overlap);
-
 			if (err) {
 				incorrect++;
 				incorrects[fieldnum]++;
-
-				if (!wrongfieldbins[bin])
-					wrongfieldbins[bin] = il_new(256);
-				il_append(wrongfieldbins[bin], fieldnum);
-
-				if (mo->overlap > overlap_highwrong)
-					overlap_highwrong = mo->overlap;
 			} else if (warn) {
 				warning++;
 				warnings[fieldnum]++;
-
-				if (!rightfieldbins[bin])
-					rightfieldbins[bin] = il_new(256);
-				il_append(rightfieldbins[bin], fieldnum);
-
-				if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-					overlap_lowcorrect = mo->overlap;
 			} else {
-				printf("Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, overlap %4.1f%% (%i/%i)\n",
-						fieldnum, rac, decc, arc, 100.0 * mo->overlap, mo->noverlap, mo->ninfield);
+                            printf("Field %5i: correct hit: (%8.3f, %8.3f), scale %6.3f arcmin, logodds %g (%g)\n",
+                                   fieldnum, rac, decc, arc, mo->logodds, exp(mo->logodds));
 				corrects[fieldnum]++;
 				correct++;
-
-				if (!rightfieldbins[bin])
-					rightfieldbins[bin] = il_new(256);
-				il_append(rightfieldbins[bin], fieldnum);
-
-				if ((mo->overlap != 0.0) && (mo->overlap < overlap_lowcorrect))
-					overlap_lowcorrect = mo->overlap;
-
 			}
 			fflush(stdout);
 
@@ -372,253 +319,7 @@ int main(int argc, char *argv[]) {
 	if (fpsolved)
 		solvedfile_setsize(fpsolved, nfields_total);
 
-	// HACK
-	exit(0);
-
-	// here we sort of assume that the hits file has been processed with "agreeable" so that
-	// only agreeing hits are included for each field.
-
-	{
-		int sumright=0, sumwrong=0;
-		int ntotal = lastfield - firstfield + 1;
-		double pct = 100.0 / (double)ntotal;
-		unsigned char* solved = calloc(1, ntotal);
-
-		printf("\n\nTotal of %i fields.\n", ntotal);
-		printf("Threshold%%   #Solved  %%Solved     #Unsolved  %%Unsolved   #FalsePositive\n");
-
-		for (bin=Nbins-1; bin>=0; bin--) {
-			int nright, nwrong, nunsolved;
-			il* list;
-
-			list = rightfieldbins[bin];
-			if (!list)
-				nright = 0;
-			else
-				nright = il_size(list);
-
-			list = wrongfieldbins[bin];
-			if (!list)
-				nwrong = 0;
-			else
-				nwrong = il_size(list);
-
-			sumright += nright;
-			sumwrong += nwrong;
-			nunsolved = ntotal - sumright - sumwrong;
-
-			if (nunsolved) {
-				negfieldbins[bin] = il_new(256);
-				list = rightfieldbins[bin];
-				if (list)
-					for (i=0; i<il_size(list); i++)
-						solved[il_get(list, i) - firstfield] = 1;
-				list = wrongfieldbins[bin];
-				if (list)
-					for (i=0; i<il_size(list); i++)
-						solved[il_get(list, i) - firstfield] = 1;
-				for (i=0; i<ntotal; i++)
-					if (!solved[i])
-						il_append(negfieldbins[bin], i + firstfield);
-			}
-
-			printf("  %5.1f       %4i     %6.2f         %4i      %6.2f          %i\n",
-				   (bin+1)*binsize, sumright, pct*sumright, nunsolved, pct*nunsolved, sumwrong);
-		}
-		printf("\n\n");
-		free(solved);
-	}
-
-	printf("Largest overlap of an incorrect match: %4.1f%%.\n",
-		   100.0 * overlap_highwrong);
-	printf("Smallest overlap of a correct match: %4.1f%%.\n",
-		   100.0 * overlap_lowcorrect);
-
-	printf("\noverlap_hist_wrong = [ ");
-	for (i=0; i<Nbins; i++) {
-		printf("%i, ", overlap_hist_wrong->hist[i]);
-	}
-	printf("]\n");
-
-	printf("overlap_hist_right = [ ");
-	for (i=0; i<Nbins; i++) {
-		printf("%i, ", overlap_hist_right->hist[i]);
-	}
-	printf("]\n\n");
-
-	for (bin=0; bin<Nbins; bin++) {
-		il* list = wrongfieldbins[bin];
-		if (list) {
-			printf("Bin %i (overlap %4.1f to %4.1f %%) wrong [%i]: ",
-				   bin, bin * binsize, (bin+1) * binsize, il_size(list));
-			for (i=0; i<il_size(list); i++)
-				printf("%i ", il_get(list, i));
-			printf("\n");
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-
-	for (bin=0; bin<Nbins; bin++) {
-		il* list = rightfieldbins[bin];
-		if (list) {
-			printf("Bin %i (overlap %4.1f to %4.1f %%) right [%i]: ", bin,
-				   bin * binsize, (bin+1) * binsize, il_size(list));
-			for (i=0; i<il_size(list); i++)
-				printf("%i ", il_get(list, i));
-			printf("\n");
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-
-	for (bin=0; bin<Nbins; bin++) {
-		il* list = negfieldbins[bin];
-		if (list) {
-			printf("Bin %i (overlap %4.1f to %4.1f %%) unsolved [%i]: ", bin,
-				   bin * binsize, (bin+1) * binsize, il_size(list));
-			for (i=0; i<il_size(list); i++)
-				printf("%i ", il_get(list, i));
-			printf("\n");
-		}
-	}
-	printf("\n");
-	fflush(stdout);
-
-	printf("Finding field centers...\n");
-	fflush(stdout);
-	fieldcenters = malloc(2 * nfields * sizeof(double));
-	for (i=0; i<(2*nfields); i++)
-		fieldcenters[i] = -1e6;
-	for (i=firstfield; i<=lastfield; i++) {
-		dl* rdlist;
-		int j, M;
-		double xavg, yavg, zavg;
-		rdlist = rdlist_get_field(rdls, i);
-		if (!rdlist) {
-			printf("Couldn't get RDLS entry for field %i!\n", i);
-			exit(-1);
-		}
-		M = dl_size(rdlist) / 2;
-		if (Ncenter && Ncenter < M)
-			M = Ncenter;
-		xavg = yavg = zavg = 0.0;
-		for (j=0; j<M; j++) {
-			double x, y, z, ra, dec;
-			ra  = dl_get(rdlist, j*2);
-			dec = dl_get(rdlist, j*2 + 1);
-			// in degrees
-			ra  = deg2rad(ra);
-			dec = deg2rad(dec);
-			x = radec2x(ra, dec);
-			y = radec2y(ra, dec);
-			z = radec2z(ra, dec);
-			xavg += x;
-			yavg += y;
-			zavg += z;
-		}
-		xavg /= (double)M;
-		yavg /= (double)M;
-		zavg /= (double)M;
-		fieldcenters[i*2 + 0] = rad2deg(xy2ra(xavg, yavg));
-		fieldcenters[i*2 + 1] = rad2deg(z2dec(zavg));
-		dl_free(rdlist);
-	}
-
-	for (bin=0; bin<Nbins; bin++) {
-		il* list;
-		list = wrongfieldbins[bin];
-		if (!list)
-			continue;
-		printf("Bin %i: false positive field true centers (deg):\n  [ ", bin);
-		for (i=0; i<il_size(list); i++) {
-			int fld = il_get(list, i);
-			printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
-		}
-		printf("];\n");
-	}
-	printf("\n\n");
-
-	for (bin=0; bin<Nbins; bin++) {
-		il* list;
-		list = negfieldbins[bin];
-		if (!list)
-			continue;
-		printf("Bin %i: unsolved field centers (deg):\n  [ ", bin);
-		for (i=0; i<il_size(list); i++) {
-			int fld = il_get(list, i);
-			printf("%7.4f,%7.4f,  ", fieldcenters[fld*2], fieldcenters[fld*2+1]);
-		}
-		printf("];\n");
-	}
-	printf("\n\n");
-
-	{
-		char* fns[3]  = { fpfn,    truefn,    negfn };
-		il** lists[3] = { wrongfieldbins, rightfieldbins, negfieldbins };
-		char* descstrs[3] = {
-			"False positive fields: true locations.",
-			"Correctly solved fields.",
-			"Negative (non-solving) fields."
-		};
-		int nfn;
-		for (nfn=0; nfn<3; nfn++) {
-			char* fn = fns[nfn];
-			il** fields = lists[nfn];
-			char buf[256];
-			rdlist *rdls;
-			if (!fn) continue;
-			rdls = rdlist_open_for_writing(fn);
-			if (!rdls) {
-				fprintf(stderr, "Couldn't open file %s to write rdls.\n", fn);
-				exit(-1);
-			}
-			sprintf(buf, "%.10g", binsize);
-			qfits_header_add(rdls->header, "BINSIZE", buf, NULL, NULL);
-			qfits_header_add(rdls->header, "COMMENT", descstrs[nfn], NULL, NULL);
-			qfits_header_add(rdls->header, "COMMENT", "Extension x holds results for", NULL, NULL);
-			qfits_header_add(rdls->header, "COMMENT", "   bin x.", NULL, NULL);
-			rdlist_write_header(rdls);
-
-			for (bin=0; bin<Nbins; bin++) {
- 			   il* list;
-				rdlist_write_new_field(rdls);
-				list = fields[bin];
-				if (!list)
-					continue;
-				for (i=0; i<il_size(list); i++) {
-					int fld = il_get(list, i);
-					rdlist_write_entries(rdls, fieldcenters+(2*fld), 1);
-				}
-				rdlist_fix_field(rdls);
-			}
-			rdlist_fix_header(rdls);
-			rdlist_close(rdls);
-		}
-	}
-
 	rdlist_close(rdls);
-
-	free(corrects);
-	free(warnings);
-	free(incorrects);
-
-	for (bin=0; bin<Nbins; bin++) {
-		if (rightfieldbins[bin])
-			il_free(rightfieldbins[bin]);
-		if (wrongfieldbins[bin])
-			il_free(wrongfieldbins[bin]);
-		if (negfieldbins[bin])
-			il_free(negfieldbins[bin]);
-	}
-	free(rightfieldbins);
-	free(wrongfieldbins);
-	free(negfieldbins);
-
-	free(fieldcenters);
-
-	histogram_free(overlap_hist_right);
-	histogram_free(overlap_hist_wrong);
 
 	return 0;
 }
