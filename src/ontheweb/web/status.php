@@ -717,7 +717,7 @@ if ($didsolve) {
 		"&BBOX=0,-85,360,85";
 
 	$fldsz = $pixscale * max($fullW, $fullH);
-	loggit("Field size: " . $fldsz . "\n");
+	//loggit("Field size: " . $fldsz . "\n");
 	$zoomin = ($fldsz < (3600*18));
 	$zoomin2 = ($fldsz < (3600*1.8));
 
@@ -1032,7 +1032,6 @@ $job = describe_job($jd);
 echo '<table border="1" cellpadding="3" class="c">' . "\n";
 echo '<tr><th colspan=2>Job Parameters</th></tr>' . "\n";
 foreach ($job as $k => $v) {
-	loggit('Job ' . $k . ' = ' . $v . "\n");
 	echo '<tr><td>' . $k . '</td><td>';
 	$makelink = ($k == 'Image URL');
 	if ($makelink) {
