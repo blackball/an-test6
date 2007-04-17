@@ -46,13 +46,17 @@ if(!$ul_info) {
 	   $body = "Waiting for upload to begin.";
    }
 } else {
-    if($ul_info['bytes_total'] > 1 && $ul_info['bytes_uploaded'] >= $ul_info['bytes_total'] && $ul_info['est_sec'] == 0) {
+    if(($ul_info['files_uploaded'] == 1) ||
+	   ($ul_info['bytes_total'] > 1 && $ul_info['bytes_uploaded'] >= $ul_info['bytes_total'] && $ul_info['est_sec'] == 0)) {
         $onload = 'setTimeout(\'window.close()\', 1000);';
         $body = 'Upload complete.';
     } else {
         $body = "Uploading...";
         $refresh = 2;
-        $percent_complete = $ul_info['bytes_uploaded'] * 100 / $ul_info['bytes_total'];
+		if ($ul_info['bytes_total'] > 0)
+			$percent_complete = $ul_info['bytes_uploaded'] * 100 / $ul_info['bytes_total'];
+		else
+			$percent_complete = 0;
         $kb_per_sec = $ul_info['speed_last'] / 1000;
 		$dt = $ul_info['time_last'] - $ul_info['time_start'];
         $info = array(
