@@ -2,6 +2,7 @@
 import pyfits
 import os
 import sys
+import re
 
 if __name__ == '__main__':
 	if len(sys.argv) != 3:
@@ -18,6 +19,25 @@ if __name__ == '__main__':
 
 	# Create the output HDU
 	outhdu = pyfits.PrimaryHDU()
+
+	# verify() fails when a keywords contains invalid characters,
+	# so go through the primary header and fix them by converting invalid
+	# characters to '_'
+	hdr = fitsin[0].header
+	cards = hdr.ascardlist()
+	# allowed charactors (FITS standard section 5.1.2.1)
+	pat = re.compile(r'[^A-Z0-9_\-]')
+	for c in cards.keys():
+		#print c
+		# new keyword:
+		cnew = pat.sub('_', c)
+		if (c != cnew):
+			print "Replacing illegal keyword ", c, " by ", cnew
+			# add the new header card
+			hdr.update(cnew, cards[c].value, cards[c].comment, after=c)
+			# remove the old one.
+			del hdr[c]
+
 	# Fix input primary header
 	fitsin[0].verify('fix');
 	# Copy fixed input header to output
