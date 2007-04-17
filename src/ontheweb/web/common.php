@@ -87,6 +87,8 @@ alt="Valid CSS!" /></a>
 </p>
 END;
 
+$host  = $_SERVER['HTTP_HOST'];
+
 if (strpos($host, "monte") === 0) {
 	$sqlite = "/h/260/dstn/software/sqlite-2.8.17/bin/sqlite";
 	$resultdir = "/h/260/dstn/local/ontheweb-results/";
@@ -136,8 +138,8 @@ if (strpos($host, "monte") === 0) {
 
 $headers = $_REQUEST;
 
-$ontheweblogfile = "/home/gmaps/ontheweb-data/ontheweb.log";
-//$ontheweblogfile = "/home/gmaps/ontheweb-data/alpha.log";
+$ontheweblogfile = $resultdir . "ontheweb.log";
+//$ontheweblogfile = $resultdir . "alpha.log";
 function loggit($mesg) {
 	global $ontheweblogfile;
 	error_log($mesg, 3, $ontheweblogfile);
@@ -148,7 +150,7 @@ function fail($msg) {
 	die($msg);
 }
 
-$highlevellogfile = "/home/gmaps/ontheweb-data/highlevel.log";
+$highlevellogfile = $resultdir . "highlevel.log";
 function highlevellog($msg) {
 	global $highlevellogfile;
 	error_log($msg, 3, $highlevellogfile);

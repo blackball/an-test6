@@ -10,7 +10,6 @@ require_once 'svn.php';
 $maxfilesize = 250*1024*1024;
 umask(0002); // in octal
 
-$host  = $_SERVER['HTTP_HOST'];
 $myuri  = $_SERVER['PHP_SELF'];
 $myuridir = rtrim(dirname($myuri), '/\\');
 $debug = 0;
@@ -75,6 +74,21 @@ $scriptname = basename($_SERVER['PHP_SELF']);
 loggit($scriptname . " submitted values:\n");
 foreach ($_POST as $key => $val) {
 	loggit("  \"" . $key . "\" = \"" . $val . "\"\n");
+}
+
+// If the "submit" button was pushed, fold in the default values.  This allows
+// "wget" users to specify only the fields they want to change from the defaults.
+if (array_key_exists('submit', $_POST)) {
+    // Plug in the defaults as though the client submitted them.
+    foreach ($formDefaults as $k=>$v) {
+        if (!array_key_exists($k, $_POST)) {
+            $_POST[$k] = $v;
+        }
+    }
+    loggit($scriptname . " all values:\n");
+    foreach ($_POST as $key => $val) {
+	loggit("  \"" . $key . "\" = \"" . $val . "\"\n");
+    }
 }
 
 // Handle "preset="... by looking up the preset and redirecting
@@ -229,8 +243,8 @@ if ($form->exportValue("imagescale")) {
 
 // If the form has been filled out correctly (and the Submit button pressed), process it.
 if ($form->exportValue("submit") && $form->validate()) {
-	$form->freeze();
-	$form->process('process_data', false);
+    $form->freeze();
+    $form->process('process_data', false);
     exit;
 }
 
