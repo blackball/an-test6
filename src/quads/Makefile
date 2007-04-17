@@ -76,7 +76,8 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
-#whynot 
+#whynot
+
 CAIROEXECS := plotquad plotxy2
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \

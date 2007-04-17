@@ -34,7 +34,7 @@ const char* svn_date() {
 		Bizarre. Right out there. Loco.
 	*/
 	const char* datestr = "$Date$";
-	// (I want to trim off the first seven and last two characters.
+	// (I want to trim off the first seven and last two characters.)
 	strncpy(date_rtnval, datestr + 7, strlen(datestr) - 9);
 	return date_rtnval;
 }
