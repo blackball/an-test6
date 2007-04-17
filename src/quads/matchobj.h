@@ -44,7 +44,7 @@ struct match_struct {
 	float logodds;
 
 	// how many other matches agreed with this one *at the time it was found*
-	int nagree;
+	int16_t nagree;
 
 	// WCS params
 	bool wcs_valid;
