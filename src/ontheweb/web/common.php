@@ -305,7 +305,14 @@ function describe_job($jd, $user=FALSE) {
 	}
 	switch ($jd['xysrc']) {
 	case 'url':
-		$strs['Image URL'] =  $jd['imgurl'];
+		//$strs['Image URL'] =  $jd['imgurl'];
+		$url = $jd['imgurl'];
+		loggit($url, "URL: " . $url . "\n");
+		if (strstr($url, 'http://http://')) {
+			$url = substr($url, 7);
+			loggit($url, "double http, now URL: " . $url . "\n");
+		}
+		$strs['Image URL'] = $url;
 		break;
 	case 'img':
 		$strs['Image file'] = $jd['image-origname'];

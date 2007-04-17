@@ -375,6 +375,13 @@ function process_data ($vals) {
 	$jobdata['submit-svn-url'] = get_svn_url();
 	$jobdata['submit-svn-date'] = get_svn_date();
 
+	// fix double "http://"
+	if (($xysrc == "url") && strstr($imgurl, 'http://http://')) {
+		$imgurl = substr($imgurl, 7);
+		$vals['imgurl'] = $imgurl;
+		$jobdata['imgurl'] = $imgurl;
+	}
+
 	if (!setjobdata($db, $jobdata)) {
 		submit_failed($db, "Failed to save job parameters.");
 	}
@@ -393,12 +400,6 @@ function process_data ($vals) {
 	$tryscales = array();
 
 	if ($xysrc == "url") {
-		// fix double "http://"
-		if (strstr($imgurl, 'http://http://')) {
-			$imgurl = substr($imgurl, 7);
-			$vals['imgurl'] = $imgurl;
-		}
-
 		// Try to retrieve the URL...
 		loggit("retrieving url " . $imgurl . " ...\n");
 		$imgbasename = "downloaded.";

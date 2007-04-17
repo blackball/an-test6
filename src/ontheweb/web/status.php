@@ -1032,8 +1032,9 @@ $job = describe_job($jd);
 echo '<table border="1" cellpadding="3" class="c">' . "\n";
 echo '<tr><th colspan=2>Job Parameters</th></tr>' . "\n";
 foreach ($job as $k => $v) {
+	loggit('Job ' . $k . ' = ' . $v . "\n");
 	echo '<tr><td>' . $k . '</td><td>';
-	$makelink = ($k == "Image URL");
+	$makelink = ($k == 'Image URL');
 	if ($makelink) {
 		echo '<a href="' . $v . '">';
 	}
