@@ -173,6 +173,11 @@ int dfind(int *image,
 	matches = (int *) malloc((size_t) nx * ny * 9 * sizeof(int));
 	nmatches = (int *) malloc((size_t) nx * ny * sizeof(int));
 
+        if (!mapgroup || !matches || !nmatches) {
+            fprintf(stderr, "Failed to allocate memory in dfind.c\n");
+            exit(-1);
+        }
+
 	for (k = 0;k < nx*ny;k++)
 		object[k] = -1;
 	for (k = 0;k < nx*ny;k++)
