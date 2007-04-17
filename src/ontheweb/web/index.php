@@ -20,6 +20,7 @@ function allow_email($email) {
 				   'david.hogg@nyu.edu',
 				   'dovip@wise.tau.ac.il',
 				   'john.moustakas@gmail.com',
+				   'leonidas@jpl.nasa.gov',
 				   'munz@physics.muni.cz',
 				   'pjm@physics.ucsb.edu',
 				   'roweis@cs.toronto.edu',
