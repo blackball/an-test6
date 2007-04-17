@@ -12,7 +12,7 @@ $tiles_url = $gmaps_url . "tilecache/tilecache.php";
 $upload_progress = "/tmp/upt_%s.txt";
 
 // blind params
-$totaltime = 300; // Five minute total max.
+$totaltime = 600; // Ten minute compute-time max.
 $maxtime = 0;
 $maxquads = 0;
 $maxcpu = 0;
@@ -136,8 +136,8 @@ if (strpos($host, "monte") === 0) {
 
 $headers = $_REQUEST;
 
-//$ontheweblogfile = "/home/gmaps/ontheweb-data/ontheweb.log";
-$ontheweblogfile = "/home/gmaps/ontheweb-data/alpha.log";
+$ontheweblogfile = "/home/gmaps/ontheweb-data/ontheweb.log";
+//$ontheweblogfile = "/home/gmaps/ontheweb-data/alpha.log";
 function loggit($mesg) {
 	global $ontheweblogfile;
 	error_log($mesg, 3, $ontheweblogfile);
