@@ -99,14 +99,17 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	if ($emailver) {
 		loggit("Email version.\n");
 
-		// Rename the input file so the watcher grabs it...
-		// HACK - after waiting for the watcher.
-		sleep(1);
-		if (!rename($inputtmpfile, $inputfile)) {
-			loggit("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
-			submit_failed($db, "Failed to rename input file for the blind solver.");
+		// HACK - is this necessary?
+		if (file_exists($inputtmpfile) && !file_exists($inputfile)) {
+			// Rename the input file so the watcher grabs it...
+			// HACK - after waiting for the watcher.
+			sleep(1);
+			if (!rename($inputtmpfile, $inputfile)) {
+				loggit("Failed to rename input temp file " . $inputtmpfile . " to " . $inputfile);
+				submit_failed($db, "Failed to rename input file for the blind solver.");
+			}
+			loggit("Renamed $inputtmpfile to $inputfile.\n");
 		}
-		loggit("Renamed $inputtmpfile to $inputfile.\n");
 
 		highlevellog("Job " . $myname . ": email edition; job started.\n");
 

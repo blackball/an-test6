@@ -320,6 +320,7 @@ function process_data ($vals) {
 	global $largest_index;
 	global $smallest_index;
 	global $sqlite;
+	global $webver;
 
 	$xysrc = $vals['xysrc'];
 	$imgurl = $vals['imgurl'];
@@ -658,7 +659,7 @@ function process_data ($vals) {
 	$codetol = 0.01;
 
 	$inputfile_orig = $inputfile;
-	if ($imgfilename) {
+	if ($webver && $imgfilename) {
 		// Write to "input.tmp" instead of "input", so we don't trigger
 		// the solver just yet...
 		$inputfile = $inputtmpfile;
@@ -668,85 +669,8 @@ function process_data ($vals) {
 		sleep(1);
 	}
 
-	// Write the input file for blind...
-	$fin = fopen($inputfile, "w");
-	if (!$fin) {
-		die("Failed to write input file " . $inputfile);
-	}
-
-	$depths = array(0 => 30,
-					30=> 50,
-					50 => 80,
-					80 => 100,
-					100 => 120,
-					120 => 140,
-					140 => 160,
-					160 => 180,
-					180 => 200);
-
-	/*
-	$depths = array(0 => 200);
-	*/
-
-	$stripenum = 1;
-
-	$str = "total_timelimit " . $totaltime . "\n";
-
-	foreach ($depths as $startdepth => $enddepth) {
-		foreach ($tryscales as $range) {
-			$fumin = $range[0];
-			$fumax = $range[1];
-
-			foreach ($indexes as $ind) {
-				$str .= "index " . $indexdir . $ind . "\n";
-			}
-
-			$str .= 
-				"field " . $xyls_fn . "\n" .
-				"match " . sprintf($match_pat, $stripenum) . "\n" .
-				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
-				"solved " . $solved_fn . "\n" .
-				"cancel " . $cancel_fn . "\n" .
-				"wcs " . $wcs_fn . "\n" .
-				"fields 0\n" .
-				"sdepth " . $startdepth . "\n" .
-				"depth " . $enddepth . "\n" .
-				"parity " . $parity . "\n" .
-				"fieldunits_lower " . $fumin . "\n" .
-				"fieldunits_upper " . $fumax . "\n" .
-				"tol " . $codetol . "\n" .
-				"verify_pix " . $poserr . "\n" .
-				"nverify 25\n" .
-				"nindex_tokeep 25\n" .
-				"nindex_tosolve 25\n" .
-				"distractors 0.25\n" .
-				"ratio_toprint 10\n" .
-				"ratio_tokeep 1e9\n" .
-				"ratio_tosolve 1e9\n" .
-				"ratio_tobail 1e-100\n" .
-				"fieldw " . $W . "\n" .
-				"fieldh " . $H . "\n" .
-				"maxquads " . $maxquads . "\n" .
-				"cpulimit " . $maxcpu . "\n" .
-				"timelimit " . $maxtime . "\n" .
-				($tweak ?
-				 "tweak\n" .
-				 "tweak_aborder " . $tweak_order . "\n" . 
-				 "tweak_abporder " . $tweak_order . "\n" .
-				 "tweak_skipshift\n"
-				 : "") .
-				"run\n" .
-				"\n";
-			$stripenum++;
-		}
-	}
-	fprintf($fin, "%s", $str);
-
-	if (!fclose($fin)) {
-		submit_failed($db, "Failed to write input file for the blind solver.");
-	}
-
-	loggit("Wrote blind input file: " . $inputfile . "\n");
+	// Write startscript and donescript before input file because they should
+	// be valid before blind starts!
 
 	// Write the startscript: executed by "watcher" (via blindscript) 
 	// before blind starts.
@@ -821,6 +745,82 @@ function process_data ($vals) {
 		"fi\n" .
 		"touch " . $done_fn . "\n" .
 		$sqlite . " " . $jobdata_fn . " \"REPLACE INTO jobdata VALUES('solve-done', '`date -Iseconds`');\"\n";
+
+	// Write the input file for blind...
+	$fin = fopen($inputfile, "w");
+	if (!$fin) {
+		die("Failed to write input file " . $inputfile);
+	}
+
+	$depths = array(0 => 30,
+					30=> 50,
+					50 => 80,
+					80 => 100,
+					100 => 120,
+					120 => 140,
+					140 => 160,
+					160 => 180,
+					180 => 200);
+
+	$stripenum = 1;
+
+	$str = "total_timelimit " . $totaltime . "\n";
+
+	foreach ($depths as $startdepth => $enddepth) {
+		foreach ($tryscales as $range) {
+			$fumin = $range[0];
+			$fumax = $range[1];
+
+			foreach ($indexes as $ind) {
+				$str .= "index " . $indexdir . $ind . "\n";
+			}
+
+			$str .= 
+				"field " . $xyls_fn . "\n" .
+				"match " . sprintf($match_pat, $stripenum) . "\n" .
+				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
+				"solved " . $solved_fn . "\n" .
+				"cancel " . $cancel_fn . "\n" .
+				"wcs " . $wcs_fn . "\n" .
+				"fields 0\n" .
+				"sdepth " . $startdepth . "\n" .
+				"depth " . $enddepth . "\n" .
+				"parity " . $parity . "\n" .
+				"fieldunits_lower " . $fumin . "\n" .
+				"fieldunits_upper " . $fumax . "\n" .
+				"tol " . $codetol . "\n" .
+				"verify_pix " . $poserr . "\n" .
+				"nverify 25\n" .
+				"nindex_tokeep 25\n" .
+				"nindex_tosolve 25\n" .
+				"distractors 0.25\n" .
+				"ratio_toprint 10\n" .
+				"ratio_tokeep 1e9\n" .
+				"ratio_tosolve 1e9\n" .
+				"ratio_tobail 1e-100\n" .
+				"fieldw " . $W . "\n" .
+				"fieldh " . $H . "\n" .
+				"maxquads " . $maxquads . "\n" .
+				"cpulimit " . $maxcpu . "\n" .
+				"timelimit " . $maxtime . "\n" .
+				($tweak ?
+				 "tweak\n" .
+				 "tweak_aborder " . $tweak_order . "\n" . 
+				 "tweak_abporder " . $tweak_order . "\n" .
+				 "tweak_skipshift\n"
+				 : "") .
+				"run\n" .
+				"\n";
+			$stripenum++;
+		}
+	}
+	fprintf($fin, "%s", $str);
+
+	if (!fclose($fin)) {
+		submit_failed($db, "Failed to write input file for the blind solver.");
+	}
+
+	loggit("Wrote blind input file: " . $inputfile . "\n");
 
 	if ($emailver) {
 		$str .= 
