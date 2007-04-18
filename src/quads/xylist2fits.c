@@ -258,8 +258,8 @@ xyarray *readxysimple(char* fn) {
         while (*cursor && isspace(*cursor))
             cursor++;
         if (!*cursor) {
-            fprintf(stderr, "Premature end-of-line on line: \"%s\"\n", buf);
-            return NULL;
+            // empty line.
+            continue;
         }
         // skip comments
         if (*cursor == '#')
