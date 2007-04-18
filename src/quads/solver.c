@@ -55,9 +55,7 @@ ATTRIB_FORMAT(printf,1,2)
     va_end(va);
 }
 #else
-static void
-ATTRIB_FORMAT(printf,1,2)
-     debug(const char* format, ...) {}
+static void debug(const char* format, ...) {}
 #endif
 
 static inline double getx(const double* d, uint ind) {
