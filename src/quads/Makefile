@@ -110,9 +110,8 @@ fitsutils: $(FITS_UTILS)
 rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 
-xylist2fits: xylist2fits.o \
+xylist2fits: xylist2fits.o boilerplate.o svn.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC)  $(CFLAGS) $^ -o $@ $(LDFLAGS) 
 
 .PHONY: tags
 tags:
