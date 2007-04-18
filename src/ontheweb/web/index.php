@@ -16,6 +16,7 @@ function allow_email($email) {
 	$mode = 'allow';
 
 	$allow = array('dstn@cs.toronto.edu',
+		       'barth@uci.edu',
 				   'christopher@stumm.ca',
 				   'david.hogg@nyu.edu',
 		       'dmink@cfa.harvard.edu',
