@@ -41,6 +41,23 @@
 #include "kdtree.h"
 #undef KD_DIM
 
+#define DEBUGSOLVER 1
+
+#if DEBUGSOLVER
+static void
+ATTRIB_FORMAT(printf,1,2)
+debug(const char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    vfprintf(stderr, format, va);
+    va_end(va);
+}
+#else
+static void
+ATTRIB_FORMAT(printf,1,2)
+debug(const char* format, ...) {}
+#endif
+
 static inline double getx(const double* d, uint ind) {
 	return d[ind*2];
 }
