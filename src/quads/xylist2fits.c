@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <libgen.h>
+#include <ctype.h>
 
 #include "fileutil.h"
 #include "xylist.h"
@@ -51,8 +52,8 @@ typedef pl xyarray;
 #define xya_set(l, i, v)      pl_set((l), (i), (v))
 #define xya_size(l)           pl_size(l)
 
-xyarray *readxy(char* fn);
-xyarray *readxysimple(char* fn);
+static xyarray *readxy(char* fn);
+static xyarray *readxysimple(char* fn);
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -223,12 +224,15 @@ xyarray *readxy(char* fn) {
     return thepix;
 }
 
-// Read a simple xy file; column 1 is x column 2 is y; space seperated.
+// Read a simple xy file; column 1 is x column 2 is y;
+// whitespace/comma seperated.
+// Lines starting with "#" are ignored.
 xyarray *readxysimple(char* fn) {
     uint numxy=0;
     xyarray *thepix = NULL;
     FILE* fid;
     int jj;
+    dl* xylist;
 
     fid = fopen(fn, "r");
     if (!fid) {
@@ -236,16 +240,53 @@ xyarray *readxysimple(char* fn) {
         return NULL;
     }
 
-    // find how many stars there are
+    xylist = dl_new(32);
     while (1) {
+        char buf[1024];
         double x,y;
-        int n = fscanf(fid, "%lf %lf\n", &x, &y);
-        if (n != 2)
+        char* cursor;
+        int nread;
+        if (!fgets(buf, sizeof(buf), fid)) {
+            if (ferror(fid)) {
+                fprintf(stderr, "Error reading from %s: %s\n", fn, strerror(errno));
+                return NULL;
+            }
             break;
+        }
+        cursor = buf;
+        // skip leading whitespace.
+        while (*cursor && isspace(*cursor))
+            cursor++;
+        if (!*cursor) {
+            fprintf(stderr, "Premature end-of-line on line: \"%s\"\n", buf);
+            return NULL;
+        }
+        // skip comments
+        if (*cursor == '#')
+            continue;
+        // parse x
+        if (sscanf(cursor, "%lg%n", &x, &nread) < 1) {
+            fprintf(stderr, "Failed to parse a floating-point number from line: \"%s\"\n", cursor);
+            return NULL;
+        }
+        cursor += nread;
+        // skip whitespace or comma
+        while (*cursor && (isspace(*cursor) || (*cursor == ',')))
+            cursor++;
+        if (!*cursor) {
+            fprintf(stderr, "Premature end-of-line on line: \"%s\"\n", buf);
+            return NULL;
+        }
+        // parse y
+        if (sscanf(cursor, "%lg%n", &y, &nread) < 1) {
+            fprintf(stderr, "Failed to parse a floating-point number from line: \"%s\"\n", cursor);
+            return NULL;
+        }
+        //cursor += nread;
+        dl_append(xylist, x);
+        dl_append(xylist, y);
         numxy++;
     }
-    rewind(fid);
-
     thepix = mk_xyarray(1);
 
     xya_set(thepix, 0, mk_xy(numxy) );
@@ -255,12 +296,10 @@ xyarray *readxysimple(char* fn) {
         free_xyarray(thepix);
         return NULL;
     }
-    for (jj = 0;jj < numxy;jj++) {
-        double tmp1, tmp2;
-        fscanf(fid, "%lf %lf\n", &tmp1, &tmp2);
-        xy_setx(xya_ref(thepix, 0), jj, tmp1);
-        xy_sety(xya_ref(thepix, 0), jj, tmp2);
+    for (jj = 0; jj < numxy; jj++) {
+        xy_setx(xya_ref(thepix, 0), jj, dl_get(xylist, jj*2));
+        xy_sety(xya_ref(thepix, 0), jj, dl_get(xylist, jj*2+1));
     }
-		
+    free(xylist);
     return thepix;
 }
