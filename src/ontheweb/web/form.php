@@ -1277,7 +1277,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$dispimgpngbase = substr($dispimgbase, 0, -4) . ".png";
 	$cmd = "pnmtopng " . $dispimg . " > " . $mydir . $dispimgpngbase;
 	$res = system($cmd, $retval);
-	if ($retval) {
+	if (($res === FALSE) || $retval) {
 		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
 		$errstr = "Failed to convert image to PNG.";
 		return FALSE;
@@ -1287,6 +1287,17 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	$newjd['displayH'] = $dispH;
 	$newjd['displayImage'] = $dispimgbase;
 	$newjd['displayImagePng'] = $dispimgpngbase;
+
+	// Full-size image in PNG.
+	$imagepng = "fullsize.png";
+	$newjd['imagePng'] = $imagepng;
+	$cmd = "pnmtopng " . $pnmimg_orig . " > " . $mydir . $imagepng;
+	$res = system($cmd, $retval);
+	if (($res === FALSE) || $retval) {
+		loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+		$errstr = "Failed to convert full-size image to PNG.";
+		return FALSE;
+	}
 
 	foreach (array('big','small') as $sz) {
 		if ($sz == 'big') {

@@ -699,9 +699,7 @@ Astrometry.net: Job Status
 if ($didsolve) {
 	echo "<h3 class=\"c\">Your field is at RA,DEC = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
 	echo "<hr />\n";
-}
 
-if ($didsolve) {
 	echo "<div id=\"onsky\">\n";
 	echo "<p>Your field on the sky (click for larger image):</p>\n";
 
@@ -787,8 +785,6 @@ if ($didsolve) {
 
 //http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?&tag=test-tag&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=tycho,image,grid,rdls&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:4326&BBOX=-180,0,0,85.0511287798066&WIDTH=256&HEIGHT=256&reaspect=false
 
-//<?php
-//loggit("didsolve: $didsolve.  pnmimg? " . file_exists($pnmimg) . "\n");
 if ($didsolve && file_exists($pnmimg)) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
@@ -907,6 +903,20 @@ if ($job_queued) {
 		echo sprintf("%d of %d", $pos+1, count($q));
 	}
 	echo "</td></tr>\n";
+}
+
+if ($job_submitted) {
+	$imgs = array('imagePng', 'imagefilename', 'displayImagePng');
+	foreach ($imgs as $i) {
+		$fn = $jd[$i];
+		loggit("file: " . $fn . "\n");
+		if ($fn && file_exists($mydir . $fn)) {
+			echo "<tr><td>Image:</td><td>\n";
+			print_link($mydir . $fn);
+			echo "</td></tr>\n";
+			break;
+		}
+	}
 }
 
 if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
