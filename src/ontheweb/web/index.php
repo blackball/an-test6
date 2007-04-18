@@ -62,7 +62,9 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	$inputfile = $mydir . $input_fn;
 	$inputtmpfile = $mydir . $inputtmp_fn;
 
-	if ($vals['justjobid']) {
+	$justjobid = $vals['justjobid'];
+
+	if ($justjobid) {
 		// skip the "source extraction" preview, just start crunching!
 		loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
 		if ($imgfilename) {
@@ -78,11 +80,13 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 		header('Content-type: text/plain');
 		echo $myname . "\n";
 		highlevellog("Job " . $myname . ": skipped source extraction preview; job started.\n");
-		exit;
 	}
 
 	if ($webver) {
 		highlevellog("Job " . $myname . ": web edition: wrote scripts.\n");
+
+		if ($justjobid)
+			exit;
 
 		loggit("Web version.\n");
 		// Redirect the client to the status page...
@@ -113,11 +117,7 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 
 		highlevellog("Job " . $myname . ": email edition; job started.\n");
 
-		// Tell the client we've received their image and will start crunching...
-		$txt = file_get_contents($submitted_html);
-		$txt = str_replace('##jobid##', $myname, $txt);
-		echo $txt;
-
+		// Send email
 		$to = $vals['email'];
 		$name = $vals['uname'];
 
@@ -160,6 +160,15 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 			submit_failed($db, "Failed to send email.");
 		}
 		loggit("Sent 'submitted' email.\n");
+
+		if ($justjobid)
+			exit;
+
+		// Tell the client we've received their image and will start crunching...
+		$txt = file_get_contents($submitted_html);
+		$txt = str_replace('##jobid##', $myname, $txt);
+		echo $txt;
+
 		exit;
 	}
 }
