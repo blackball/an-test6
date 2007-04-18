@@ -24,6 +24,7 @@ function allow_email($email) {
 				   'munz@physics.muni.cz',
 				   'pjm@physics.ucsb.edu',
 				   'roweis@cs.toronto.edu',
+				   'strader@ucolick.org',
 				   'stubbs@physics.harvard.edu');
 
 	$deny = array('badguy@somewhere.com');
