@@ -30,6 +30,23 @@ from under 10&nbsp;arcmin to over 80&nbsp;deg.  We also know that we
 have solved images taken in bandpasses ranging from the near
 ultraviolet to the near infrared.</dd>
 
+<dt>Q: <b>Why didn't my image solve?</b></dt>
+
+<dd>A: There are lots of reasons we can fail.  Here are some debugging
+suggestions: Try looking at the links to the "png" files that show how
+our system automatically detected sources in your image.  Our
+algorithm is stupid (more on this below) and it fails, for example, on
+saturated or bleeding stars).  Try re-inputting your image with a huge
+scale range; try 0.1 to 180 degrees!  The scale range only
+<i>speeds</i> the search; it doesn't make your image more likely to
+solve.  Do you know your image to be tiny?  For fundamental reasons we
+can never solve an image that is smaller than about 5&nbsp;arcmin in
+size.  Does your camera have enormous distortions away from a
+tangent-plane projection?  That can be a problem.  Do you have no
+detectable stars?  That would also be a problem.  However, maybe you
+have detectable stars in differenced or flattened or sky-subtracted
+images?  If so, send <i>those</i> in.</dd>
+
 <dt>Q: <b>I submitted an image and it didn't solve even though it had
 an almost exactly correct WCS header to begin.</b> How can you guys
 suck so badly that you can't even solve an image when I give you the
