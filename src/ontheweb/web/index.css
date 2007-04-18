@@ -126,11 +126,10 @@ body {
        margin-bottom: -1em;
        }
 
-.err#imgfile-err { 
-           margin-bottom: 0em;
-           }
+.err#imgfile-err { margin-bottom: 0em; }
 .err#imgurl-err { margin-bottom: 0em; }
 .err#fitsfile-err { margin-bottom: 0em; }
+.err#textfile-err { margin-bottom: 0em; }
 .err#x-col-err { margin-bottom: 0em; }
 .err#y-col-err { margin-bottom: 0em; }
 .err#fsl-err { margin-bottom: 0em; }

@@ -920,16 +920,22 @@ if ($job_submitted) {
 	}
 }
 
-if ($job_submitted && file_exists($objsfile) && (file_exists($xylist))) {
-	echo "<tr><td>Extracted sources:</td><td>\n";
-	print_link($xylist);
-	echo "</td></tr>\n";
-	echo "<tr><td>Source extraction image:</td><td>\n";
-	print_link($objsfile);
-	echo "</td></tr>\n";
-	if (file_exists($bigobjsfile)) {
-		echo "<tr><td>Source extraction image (full size):</td><td>\n";
-		print_link($bigobjsfile);
+if ($job_submitted && (file_exists($xylist))) {
+	if (file_exists($objsfile)) {
+		echo "<tr><td>Extracted sources:</td><td>\n";
+		print_link($xylist);
+		echo "</td></tr>\n";
+		echo "<tr><td>Source extraction image:</td><td>\n";
+		print_link($objsfile);
+		echo "</td></tr>\n";
+		if (file_exists($bigobjsfile)) {
+			echo "<tr><td>Source extraction image (full size):</td><td>\n";
+			print_link($bigobjsfile);
+			echo "</td></tr>\n";
+		}
+	} else {
+		echo "<tr><td>XY list (FITS table):</td><td>\n";
+		print_link($xylist);
 		echo "</td></tr>\n";
 	}
 }

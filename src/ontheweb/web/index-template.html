@@ -14,6 +14,10 @@ function setXysrcFits() {
   var u = document.getElementById("##xysrc-fits-id##");
   u.checked = 1;
 }
+function setXysrcText() {
+  var u = document.getElementById("##xysrc-text-id##");
+  u.checked = 1;
+}
 function setFsUl() {
   var u = document.getElementById("##fstype-ul-id##");
   u.checked = 1;
@@ -26,7 +30,8 @@ function validate_form() {
   var u1 = document.getElementById("##xysrc-url-id##");
   var u2 = document.getElementById("##xysrc-img-id##");
   var u3 = document.getElementById("##xysrc-fits-id##");
-  if (!(u1.checked || u2.checked || u3.checked))
+  var u4 = document.getElementById("##xysrc-text-id##");
+  if (!(u1.checked || u2.checked || u3.checked || u4.checked))
     return false;
   u1 = document.getElementById("##fstype-ul-id##");
   u2 = document.getElementById("##fstype-ev-id##");
@@ -90,7 +95,7 @@ Field to solve: select one of the following:
 <div class="cap">
 In order to solve your field, we need either an image of your
 field (as a FITS, JPEG, GIF, PNG file or a URL); OR a list of star
-positions (as a FITS binary table).
+positions (as a FITS binary table or text file).
 </div>
 
 <table id="xysrc">
@@ -145,6 +150,23 @@ the brightest object first.
 </ul>
 </td>
 </tr>
+
+##textfile_set##
+
+<tr>
+<td>##xysrc-text##</td>
+<td>
+<div class="err" id="textfile-err">##textfile-err##</div>
+Text file:
+##textfile##
+<div class="cap">
+A text file, containing two columns of digits separated by commas or whitespace,
+listing the X,Y positions of sources, sorted with the brightest sources first.
+</div>
+</td>
+</tr>
+
+
 </table>
 
 

@@ -118,9 +118,10 @@ $upl->setValue($upload_id);
 $form->addElement('hidden', 'skippreview');
 $form->addElement('hidden', 'justjobid');
 
-$xysrc_img =& $form->addElement('radio','xysrc',"img",null,'img');
-$xysrc_url =& $form->addElement('radio','xysrc',"url",null,'url');
-$xysrc_fits=& $form->addElement('radio','xysrc',"fits",null,'fits');
+$xysrc_img =& $form->addElement('radio', 'xysrc', 'img',  null, 'img' );
+$xysrc_url =& $form->addElement('radio', 'xysrc', 'url',  null, 'url' );
+$xysrc_fits=& $form->addElement('radio', 'xysrc', 'fits', null, 'fits');
+$xysrc_text=& $form->addElement('radio', 'xysrc', 'text', null, 'text');
 
 $form->setAttribute('onSubmit', 'setTimeout(\'showUploadMeter()\', 3000)');
 
@@ -133,6 +134,9 @@ $imgfile  =& $form->addElement('file', 'imgfile', "imgfile",
 $fitsfile =& $form->addElement('file', 'fitsfile', "fitsfile",
 							   array('onfocus' => "setXysrcFits()",
 									 'onclick' => "setXysrcFits()"));
+$textfile =& $form->addElement('file', 'textfile', "textfile",
+							   array('onfocus' => "setXysrcText()",
+									 'onclick' => "setXysrcText()"));
 $form->addElement('text', 'x_col', "x column name",
 				  array('size'=>5,
 						'onfocus' => "setXysrcFits()"));
@@ -164,6 +168,7 @@ $form->addElement('text', 'fsv', 'field scale (variance (%))',
 $ids = array('xysrc-url-id'  => $xysrc_url->getAttribute('id'),
 			 'xysrc-img-id'  => $xysrc_img->getAttribute('id'),
 			 'xysrc-fits-id' => $xysrc_fits->getAttribute('id'),
+			 'xysrc-text-id' => $xysrc_text->getAttribute('id'),
 			 'fstype-ul-id'  => $fs_ul->getAttribute('id'),
 			 'fstype-ev-id'  => $fs_ev->getAttribute('id'),
 			 );
@@ -265,6 +270,7 @@ function process_data ($vals) {
 	global $form;
     global $imgfile;
     global $fitsfile;
+    global $textfile;
 	global $resultdir;
 	global $dbfile;
 	global $maxfilesize;
@@ -307,6 +313,7 @@ function process_data ($vals) {
 	global $myuridir;
 	global $fitsgetext;
 	global $fitscopy;
+	global $xylist2fits;
 	global $tabsort;
 	global $ontheweblogfile;
 	global $indexdata;
@@ -355,7 +362,7 @@ function process_data ($vals) {
 	$jobdata = array('maxquads' => $maxquads,
 					 'cpulimit' => $maxcpu,
 					 'timelimit' => $maxtime);
-	$flds = array('xysrc', 'imgfile', 'fitsfile', 'imgurl',
+	$flds = array('xysrc', 'imgfile', 'fitsfile', 'textfile', 'imgurl',
 				  'x_col', 'y_col', 'fstype', 'parity',
 				  'tweak', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
 				  'poserr', 'index', 'submit', 'tweak_order');
@@ -379,6 +386,10 @@ function process_data ($vals) {
 		$fitsval = $fitsfile->getValue();
 		$origname = $fitsval['name'];
 		$jobdata['fits-origname'] = $origname;
+	} else if ($xysrc == 'text') {
+		$textval = $textfile->getValue();
+		$origname = $textval['name'];
+		$jobdata['text-origname'] = $origname;
 	}
 
 	// Original submission date.
@@ -457,30 +468,57 @@ function process_data ($vals) {
 	$xylist = $mydir . $xyls_fn;
 	$xylsinfofile = $mydir . $xylsinfo_fn;
 
-	if ($xysrc == "fits") {
+	$gotfits = FALSE;
+
+	if ($xysrc == 'text') {
+		// If a text xylist was uploaded:
+		// -move it into place.
+		$uploaded_fn = "uploaded.txt";
+		$uploaded = $mydir . $uploaded_fn;
+		if (!$textfile->moveUploadedFile($mydir, $uploaded_fn)) {
+			submit_failed($db, "Failed to move uploaded text file into place.");
+		}
+		// -make it read-only.
+		if (!chmod($uploaded, 0440)) {
+			loggit("Failed to chmod text file " . $uploaded . "\n");
+		}
+		// -try to convert it to FITS.
+		$cmd = $xylist2fits . " -c " . $uploaded . " " . $xylist .
+			" > " . $mydir . "xylist2fits.out" .
+			" 2> " . $mydir . "xylist2fits.err";
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if (($res === FALSE) || $retval) {
+			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+			submit_failed($db, "Failed to convert text XY list to FITS.");
+		}
+		$gotfits = TRUE;
+
+	} else if ($xysrc == 'fits') {
 		// If a FITS bintable file was uploaded, move it into place...
 		$uploaded_fn = "uploaded.fits";
 		$uploaded = $mydir . $uploaded_fn;
 		if (!$fitsfile->moveUploadedFile($mydir, $uploaded_fn)) {
 			submit_failed($db, "Failed to move uploaded FITS file into place.");
 		}
-
 		// make original table read-only.
 		if (!chmod($uploaded, 0440)) {
 			loggit("Failed to chmod FITS table " . $uploaded . "\n");
 		}
-
 		// use "fitscopy" to grab the first extension and rename the
 		// columns from whatever they were to X,Y.
 		$cmd = $fitscopy . " " . $uploaded . "\"[1][col X=" . $jobdata['x_col'] .
-			";Y=" . $jobdata['y_col'] . "]\" " . $mydir . $xyls_fn . " 2> " . $mydir . "fitscopy.err";
+			";Y=" . $jobdata['y_col'] . "]\" " . $xylist . " 2> " . $mydir . "fitscopy.err";
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
-		if ($retval) {
+		if (($res === FALSE) || $retval) {
 			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
 			submit_failed($db, "Failed to extract the pixel coordinate columns from your FITS file.");
 		}
+		$gotfits = TRUE;
+	}
 
+	if ($gotfits) {
 		// Try to get the size of the image...
 		// -run "xylsinfo", and parse the results.
 		$cmd = $xylsinfo . " " . $xylist . " > " . $xylsinfofile;
@@ -835,6 +873,8 @@ function check_xycol($vals) {
 function check_xysrc($vals) {
     global $imgfile;
     global $fitsfile;
+    global $textfile;
+
 	if (!$vals['xysrc']) {
 		return array("xysrc"=>"");
 	}
@@ -870,6 +910,15 @@ function check_xysrc($vals) {
 		$fitsval = $fitsfile->getValue();
 		if ($fitsval["size"] == 0) {
 			return array("fitsfile" => "FITS file is empty.");
+		}
+		return TRUE;
+	case 'text':
+		if (!$textfile->isUploadedFile()) {
+			return array("textfile" => "You must upload a text file!");
+		}
+		$textval = $textfile->getValue();
+		if ($textval["size"] == 0) {
+			return array("textfile" => "The text file you uploaded is empty.");
 		}
 		return TRUE;
 	case 'url':
@@ -955,7 +1004,7 @@ function render_form($form, $ids, $headers) {
 	$template = file_get_contents($index_template);
 
 	// all the "regular" fields.
-	$flds = array('imgfile', 'fitsfile', 'imgurl', 'x_col', 'y_col',
+	$flds = array('imgfile', 'fitsfile', 'textfile', 'imgurl', 'x_col', 'y_col',
 				  'tweak', 'tweak_order', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
 				  'poserr', 'index', 'uname', 'email',
 				  'submit', 'linkhere', 
@@ -983,7 +1032,7 @@ function render_form($form, $ids, $headers) {
 	$template = str_replace('##upload-id##', $form->exportValue('UPLOAD_IDENTIFIER'), $template);
 
 	// fields (and pseudo-fields) that can have errors 
-	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile',
+	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile', 'textfile',
 					 'x_col', 'y_col', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
 					 'poserr', 'fs', 'email', 'tweak_order');
 	foreach ($errflds as $fld) {
@@ -994,6 +1043,7 @@ function render_form($form, $ids, $headers) {
 	$repl = array("##xysrc-img##"    => $renderer->elementToHtml('xysrc', 'img'),
 				  "##xysrc-url##"    => $renderer->elementToHtml('xysrc', 'url'),
 				  "##xysrc-fits##"   => $renderer->elementToHtml('xysrc', 'fits'),
+				  "##xysrc-text##"   => $renderer->elementToHtml('xysrc', 'text'),
 				  "##parity-both##"  => $renderer->elementToHtml('parity', '2'),
 				  "##parity-left##"  => $renderer->elementToHtml('parity', '1'),
 				  "##parity-right##" => $renderer->elementToHtml('parity', '0'),
@@ -1019,6 +1069,14 @@ function render_form($form, $ids, $headers) {
 	} else {
 		$template = str_replace("##fitsfile_set##", "", $template);
 	}
+	if (array_key_exists('textfile', $headers)) {
+		// Hack - ditto again.
+		$str = "<li>Previous value: <tt>" . $headers['textfile'] . "</tt></li\n";
+		$template = str_replace("##textfile_set##", $str, $template);
+	} else {
+		$template = str_replace("##textfile_set##", "", $template);
+	}
+
 	$template = str_replace('##sizelimit##', sprintf("%d", $maxfilesize/(1024*1024)), $template);
 
 	// Write the HTML header.
@@ -1050,6 +1108,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	global $an_fitstopnm;
 	global $fits_filter;
 	global $fits_guess_scale;
+	global $xyls_fn;
 
 	$filename = $mydir . $basename;
 	$newjd = array();
@@ -1245,7 +1304,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 	// sort by FLUX.
 	$tabsortout = $mydir . "tabsort.out";
-	$sortedlist = $mydir . "field.xy.fits";
+	$sortedlist = $mydir . $xyls_fn;
 	$cmd = $tabsort . " -i " . $xylist . " -o " . $sortedlist . " -c FLUX -d > " . $tabsortout;
 	loggit("Command: " . $cmd . "\n");
 	$res = system($cmd, $retval);
