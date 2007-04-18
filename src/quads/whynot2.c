@@ -864,7 +864,7 @@ static void solve_fields(blind_params* bp) {
 
                 // Find the approximate center and radius of the true field.
                 truexyz = malloc(3 * sp->nfield * sizeof(double));
-                truecenter[0] = truecenter[1] = truecenter[2];
+                truecenter[0] = truecenter[1] = truecenter[2] = 0.0;
                 for (i=0; i<sp->nfield; i++) {
                     radecdeg2xyzarr(bp->truerd[i*2], bp->truerd[i*2+1], truexyz + i*3);
                     truecenter[0] += truexyz[i*3+0];
@@ -1065,6 +1065,7 @@ static void solve_fields(blind_params* bp) {
                                        sp->field + fieldabcd[2]*2,
                                        sp->field + fieldabcd[3]*2,
                                        fieldcode, &fieldscale);
+					fieldscale = sqrt(fieldscale);
 
                     for (k=0; k<4; k++)
                         getstarcoord(starabcd[k], starxyz + k*3);
@@ -1077,12 +1078,15 @@ static void solve_fields(blind_params* bp) {
 
                     starscale = distsq2arcsec(distsq(starxyz, starxyz+3, 3));
 
+					logmsg(bp, "Field code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
+						   fieldcode[0], fieldcode[1], fieldcode[2], fieldcode[3]);
+
                     codeerr = sqrt(distsq(fieldcode, starcode, 4));
 
                     logmsg(bp, "Code error: %g\n", codeerr);
-                    logmsg(bp, "Field scale: %g pixels\n", sqrt(fieldscale));
+                    logmsg(bp, "Field scale: %g pixels\n", fieldscale);
                     logmsg(bp, "Index scale: %g arcsec\n", starscale);
-                    logmsg(bp, "Scale: %g arcsec/pix\n", starscale/sqrt(fieldscale));
+                    logmsg(bp, "Scale: %g arcsec/pix\n", starscale/fieldscale);
 
                 }
 
