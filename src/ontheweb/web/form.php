@@ -745,6 +745,24 @@ function process_data ($vals) {
 		"fi\n" .
 		"touch " . $done_fn . "\n" .
 		$sqlite . " " . $jobdata_fn . " \"REPLACE INTO jobdata VALUES('solve-done', '`date -Iseconds`');\"\n";
+	if ($emailver) {
+		$str .= 
+			"echo \"Sending email...\";\n" .
+			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n";
+	}
+	$str .=	"echo Finished donescript.\n";
+
+	fprintf($fdone, "%s", $str);
+
+	if (!fclose($fdone)) {
+		loggit("Failed to close donescript " . $donescript);
+		submit_failed($db, "Failed to write the script for the blind solver (2).");
+	}
+	if (!chmod($donescript, 0775)) {
+		loggit("Failed to chmod donescript " . $donescript);
+		submit_failed($db, "Failed to write the script for the blind solver (3).");
+	}
+
 
 	// Write the input file for blind...
 	$fin = fopen($inputfile, "w");
@@ -821,24 +839,6 @@ function process_data ($vals) {
 	}
 
 	loggit("Wrote blind input file: " . $inputfile . "\n");
-
-	if ($emailver) {
-		$str .= 
-			"echo \"Sending email...\";\n" .
-			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n";
-	}
-	$str .=	"echo Finished donescript.\n";
-
-	fprintf($fdone, "%s", $str);
-
-	if (!fclose($fdone)) {
-		loggit("Failed to close donescript " . $donescript);
-		submit_failed($db, "Failed to write the script for the blind solver (2).");
-	}
-	if (!chmod($donescript, 0775)) {
-		loggit("Failed to chmod donescript " . $donescript);
-		submit_failed($db, "Failed to write the script for the blind solver (3).");
-	}
 
 	after_submitted($imgfilename, $myname, $mydir, $vals, $db);
 }
