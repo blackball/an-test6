@@ -37,8 +37,8 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double verify_pix2, double rquad2,
 							   double* field);
 
-#define DEBUG 0
-#if DEBUG
+#define DEBUGVERIFY 0
+#if DEBUGVERIFY
 #define debug(args...) fprintf(stderr, args)
 #else
 #define debug(args...)
@@ -114,7 +114,7 @@ void verify_hit(kdtree_t* startree,
 
 		res->inds[NI] = res->inds[i];
 
-		if (DEBUG)
+		if (DEBUGVERIFY)
 			memmove(res->results.d + NI*3,
 					res->results.d + i*3,
 					3*sizeof(double));
@@ -185,7 +185,7 @@ void verify_hit(kdtree_t* startree,
 	for (j=0; j<4; j++) {
 		intmap_add(map, mo->star[j], mo->field[j]);
 		debug("Priming: %i -> %i.\n", mo->star[j], mo->field[j]);
-		if (DEBUG) {
+		if (DEBUGVERIFY) {
 			int k;
 			int* invperm = malloc(NI * sizeof(int));
 			int ind = -1;

@@ -292,6 +292,11 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
+                if (bp->distractors == 0) {
+                    logerr(bp, "You must set a \"distractors\" proportion.\n");
+                    exit(-1);
+                }
+
 		if (!pl_size(bp->indexes)) {
 			logerr(bp, "You must specify an index.\n");
 			exit(-1);
@@ -998,7 +1003,7 @@ static int read_parameters(blind_params* bp) {
 		} else if (is_word(line, "quit", &nextword)) {
 			return 1;
 		} else {
-			logmsg(bp, "I didn't understand this command:\n  \"%s\"", line);
+			logmsg(bp, "I didn't understand this command:\n  \"%s\"\n", line);
 		}
 	}
 }

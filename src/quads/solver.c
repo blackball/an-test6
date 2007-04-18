@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "fileutil.h"
 #include "mathutil.h"
@@ -35,15 +36,16 @@
 #include "solvedfile.h"
 #include "svd.h"
 #include "blind_wcs.h"
+#include "keywords.h"
 
 #include "kdtree.h"
 #define KD_DIM 4
 #include "kdtree.h"
 #undef KD_DIM
 
-#define DEBUGSOLVER 1
+#define DEBUGSOLVER 0
 
-#if DEBUGSOLVER
+#if DEBUGSOLVER == 1
 static void
 ATTRIB_FORMAT(printf,1,2)
      debug(const char* format, ...) {
@@ -160,6 +162,20 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
     }
 }
 
+#if defined DEBUGSOLVER
+static void print_inbox(pquad* pq) {
+    int i;
+    debug("[ ");
+    for (i=0; i<pq->ninbox; i++) {
+        if (pq->inbox[i])
+            debug("%i ", i);
+    }
+    debug("] (n %i)\n", pq->ninbox);
+}
+#else
+static void print_inbox(pquad* pq) {}
+#endif
+
 void solve_field(solver_params* params) {
     uint numxy, iA, iB, iC, iD, newpoint;
     int i;
@@ -206,14 +222,18 @@ void solve_field(solver_params* params) {
        of "pquads" up to A=startobj-2,B=startobj-1.
     */
     if (params->startobj) {
+        debug("startobj > 0; priming pquad arrays.\n");
         for (iB=0; iB<params->startobj; iB++) {
             for (iA=0; iA<iB; iA++) {
                 pquad* pq = pquads + iB * numxy + iA;
                 pq->iA = iA;
                 pq->iB = iB;
+                debug("trying A=%i, B=%i\n", iA, iB);
                 check_scale(pq, params);
-                if (!pq->scale_ok)
+                if (!pq->scale_ok) {
+                    debug("  bad scale for A=%i, B=%i\n", iA, iB);
                     continue;
+                }
                 pq->xy    = malloc(numxy * 2 * sizeof(double));
                 pq->inbox = malloc(numxy * sizeof(bool));
                 memset(pq->inbox, TRUE, params->startobj);
@@ -221,6 +241,8 @@ void solve_field(solver_params* params) {
                 pq->inbox[iA] = FALSE;
                 pq->inbox[iB] = FALSE;
                 check_inbox(pq, 0, params);
+                debug("  inbox(A=%i, B=%i): ", iA, iB);
+                print_inbox(pq);
             }
         }
     }
@@ -243,6 +265,8 @@ void solve_field(solver_params* params) {
 
     for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
         double ABCDpix[8];
+
+        debug("Trying newpoint=%i\n", newpoint);
 
         if ((params->solved_in) ||
             (params->do_solvedserver) ||
@@ -282,14 +306,18 @@ void solve_field(solver_params* params) {
         iB = newpoint;
         setx(ABCDpix, 1, getx(params->field, iB));
         sety(ABCDpix, 1, gety(params->field, iB));
+        debug("Trying quads with B=%i\n", newpoint);
         for (iA=0; iA<newpoint; iA++) {
             // initialize the "pquad" struct for this AB combo.
             pquad* pq = pquads + iB * numxy + iA;
             pq->iA = iA;
             pq->iB = iB;
+            debug("  trying A=%i, B=%i\n", iA, iB);
             check_scale(pq, params);
-            if (!pq->scale_ok)
+            if (!pq->scale_ok) {
+                debug("    bad scale for A=%i, B=%i\n", iA, iB);
                 continue;
+            }
             // initialize the "inbox" array:
             pq->inbox = malloc(numxy * sizeof(bool));
             pq->xy    = malloc(numxy * 2 * sizeof(double));
@@ -300,6 +328,8 @@ void solve_field(solver_params* params) {
             pq->inbox[iA] = FALSE;
             pq->inbox[iB] = FALSE;
             check_inbox(pq, 0, params);
+            debug("    inbox(A=%i, B=%i): ", iA, iB);
+            print_inbox(pq);
 
             setx(ABCDpix, 0, getx(params->field, iA));
             sety(ABCDpix, 0, gety(params->field, iA));
@@ -319,7 +349,7 @@ void solve_field(solver_params* params) {
                     dx = getx(pq->xy, iD);
                     dy = gety(pq->xy, iD);
                     params->numtries++;
-                    //fprintf(stderr, "1: %i %i %i %i\n", iA, iB, iC, iD);
+                    debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
                     try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
                     if (params->quitNow)
                         break;
@@ -334,19 +364,25 @@ void solve_field(solver_params* params) {
         iD = newpoint;
         setx(ABCDpix, 3, getx(params->field, iD));
         sety(ABCDpix, 3, gety(params->field, iD));
+        debug("Trying quads with D=%i\n", newpoint);
         for (iA=0; iA<newpoint; iA++) {
             for (iB=iA+1; iB<newpoint; iB++) {
                 double cx, cy, dx, dy;
                 // grab the "pquad" for this AB combo
                 pquad* pq = pquads + iB * numxy + iA;
-                if (!pq->scale_ok)
+                if (!pq->scale_ok) {
+                    debug("  bad scale for A=%i, B=%i\n", iA, iB);
                     continue;
+                }
                 // test if this D is in the box:
                 pq->inbox[iD] = TRUE;
                 pq->ninbox = iD + 1;
                 check_inbox(pq, iD, params);
-                if (!pq->inbox[iD])
+                if (!pq->inbox[iD]) {
+                    debug("  D is not in the box for A=%i, B=%i\n", iA, iB);
                     continue;
+                }
+                debug("  D is in the box for A=%i, B=%i\n", iA, iB);
                 setx(ABCDpix, 0, getx(params->field, iA));
                 sety(ABCDpix, 0, gety(params->field, iA));
                 setx(ABCDpix, 1, getx(params->field, iB));
@@ -361,7 +397,7 @@ void solve_field(solver_params* params) {
                     cx = getx(pq->xy, iC);
                     cy = gety(pq->xy, iC);
                     params->numtries++;
-                    //fprintf(stderr, "2: %i %i %i %i\n", iA, iB, iC, iD);
+                    debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
                     try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
                     if (params->quitNow)
                         break;
@@ -396,14 +432,15 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind) {
 static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
                           uint iA, uint iB, uint iC, uint iD,
                           double *ABCDpix, solver_params* params) {
-    //fprintf(stderr, "code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+    debug("    code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
     if (params->parity == PARITY_NORMAL ||
         params->parity == PARITY_BOTH) {
-		
+        debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
         try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
     }
     if (params->parity == PARITY_FLIP ||
         params->parity == PARITY_BOTH) {
+        debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
         try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
     }
 }
@@ -443,6 +480,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 
         result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
 
+        debug("      trying ABCD = [%i %i %i %i]: %i results.\n", iA, iB, iC, iD, result->nres);
+
         if (result->nres)
             resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params, current_parity);
         if (params->quitNow)
@@ -465,6 +504,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
         set_xy(inorder, 3, ABCDpix, D);
 
         result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+
+        debug("      trying BACD = [%i %i %i %i]: %i results.\n", iB, iA, iC, iD, result->nres);
 
         if (result->nres)
             resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params, current_parity);
@@ -490,6 +531,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 
         result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
 
+        debug("      trying ABDC = [%i %i %i %i]: %i results.\n", iA, iB, iD, iC, result->nres);
+
         if (result->nres)
             resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params, current_parity);
         if (params->quitNow)
@@ -513,6 +556,8 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
         set_xy(inorder, 3, ABCDpix, C);
 
         result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+
+        debug("      trying BADC = [%i %i %i %i]: %i results.\n", iB, iA, iD, iC, result->nres);
 
         if (result->nres)
             resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params, current_parity);
@@ -548,14 +593,18 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         getstarcoord(iC, star + 2*3);
         getstarcoord(iD, star + 3*3);
 
+        debug("        stars [%i %i %i %i]\n", iA, iB, iC, iD);
+
         // compute TAN projection from the matching quad alone.
         blind_wcs_compute_2(star, field, 4, &wcs, &scale);
 
         // FIXME - should there be scale fudge here?
         arcsecperpix = scale * 3600.0;
         if (arcsecperpix > params->funits_upper ||
-            arcsecperpix < params->funits_lower)
+            arcsecperpix < params->funits_lower) {
+            debug("          bad scale.\n");
             continue;
+        }
 
         params->numscaleok++;
 
