@@ -615,6 +615,7 @@ h3.c {text-align:center;}
 #onsky > a:visited { color:white; }
 #onsky > a:hover { color:gray; }
 #onsky > a:active { color:yellow; }
+#sources { margin-left:auto; margin-right:auto; text-align:center; }
 </style>
 
 <?php
@@ -1007,6 +1008,8 @@ if ($job_done) {
 		echo "</td></tr>\n";
 	}
 }
+
+
 ?>
 
 <tr><td>Log file:</td><td>
@@ -1017,6 +1020,27 @@ print_link($blindlogfile);
 
 
 </table>
+
+<?php
+if ($job_done && !$didsolve) {
+	// Failure
+	if (file_exists($objsfile)) {
+		echo "<hr />\n";
+		echo '<div id="sources">';
+		echo "<p>Source extraction:</p>\n";
+		echo '<p>';
+		if (file_exists($bigobjsfile)) {
+			echo '<a href="' . get_url(basename($bigobjsfile)) . '">';
+		}
+		echo '<img src="' . get_url(basename($objsfile)) .
+			'" alt="Source extraction image" />';
+		if (file_exists($bigobjsfile)) {
+			echo '</a>';
+		}
+		echo "</p></div>\n";
+	}
+}
+?>
 
 <hr />
 
