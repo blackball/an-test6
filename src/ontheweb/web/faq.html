@@ -16,9 +16,11 @@ Astrometry.net / Alpha FAQ
 <h2>
 Welcome Alpha Users
 </h2>
-We are very excited that you are helping us test our service.<br/>
-Below are some answers to commonly asked questions, which we'll try to update
-during the alpha testing period.
+
+<p>Thank you for helping to test our service.  Below are some answers
+to commonly asked questions, which we'll try to update during the
+alpha testing period.</p>
+
 <hr />
 
 <dl>
@@ -36,7 +38,7 @@ ultraviolet to the near infrared.</dd>
 suggestions: Try looking at the links to the "png" files that show how
 our system automatically detected sources in your image.  Our
 algorithm is stupid (more on this below) and it fails, for example, on
-saturated or bleeding stars).  Try re-inputting your image with a huge
+saturated or bleeding stars.  Try re-inputting your image with a huge
 scale range; try 0.1 to 180 degrees!  The scale range only
 <i>speeds</i> the search; it doesn't make your image more likely to
 solve.  Do you know your image to be tiny?  For fundamental reasons we
@@ -141,11 +143,14 @@ manually using the web form and then hitting the LinkToTheseParameters
 button. That will construct a url which pre-fills the form. From then
 on, all you'll need to change is the url or local filename of the
 image. If that's not good enough, the best we can offer you for now is
-the following hack, which uses wget (which you could have just copied
-from the <q>LinkToTheseParameters</q> link):
+the following hack, which uses <tt>wget</tt> (which you could have
+just copied from the <q>LinkToTheseParameters</q> link):
 <tt>wget&nbsp;&quot;http://live.astrometry.net/index.php?justjobid&amp;email=user@domain.edu&amp;uname=YourName&amp;xysrc=url&amp;imgurl=http%3A%2F%2Fwww.astro.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg&amp;fstype=ev&amp;fse=1&amp;fsv=50&amp;fsunit=degreewidth&amp;fsu=&amp;fsl=&amp;x_col=X&amp;y_col=Y&amp;parity=2&amp;poserr=1&amp;tweak=1&amp;tweak_order=2&amp;index=auto&amp;submit=Submit&quot;&nbsp;-Ojobid_out</tt>
-If <i>that's</i> not good enough, alpha tester Phil Marshall (UCSB)
-has written a csh script for uploading multiple files you can <a
+or this hack, which uses <tt>curl</tt>:
+<tt>curl&nbsp;-F&nbsp;justjobid=1&nbsp;-F&nbsp;uname="Your&nbsp;Name"&nbsp;-F&nbsp;email=user@domain.edu&nbsp;-F&nbsp;imgurl="http%3A%2F%2Fwww.astr\o.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg"&nbsp;-F&nbsp;xysrc=url&nbsp;-F&nbsp;fstype=ul&nbsp;-F&nbsp;fsl=1.0&nbsp;-F&nbsp;fsu=1.1&nbsp;-F&nbsp;submit=Submit&nbsp;http://live.astrometry.net/</tt>
+If neither of <i>those</i> are good
+enough, alpha tester Phil Marshall (UCSB) has written a csh script for
+uploading multiple files you can <a
 href="http://www.slac.stanford.edu/~pjm/astrometry/hansel.csh">grab
 here</a>.</dd>
 

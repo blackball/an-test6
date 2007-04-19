@@ -17,18 +17,19 @@ function allow_email($email) {
 
 	$allow = array('dstn@cs.toronto.edu',
 		       'barth@uci.edu',
-				   'christopher@stumm.ca',
-				   'david.hogg@nyu.edu',
+		       'christopher@stumm.ca',
+		       'david.hogg@nyu.edu',
 				   'dfinkbeiner@cfa.harvard.edu',
 		       'dmink@cfa.harvard.edu',
-				   'dovip@wise.tau.ac.il',
-				   'john.moustakas@gmail.com',
-				   'leonidas@jpl.nasa.gov',
-				   'munz@physics.muni.cz',
-				   'pjm@physics.ucsb.edu',
-				   'roweis@cs.toronto.edu',
-				   'strader@ucolick.org',
-				   'stubbs@physics.harvard.edu');
+		       'dovip@wise.tau.ac.il',
+		       'eran@astro.caltech.edu',
+		       'john.moustakas@gmail.com',
+		       'leonidas@jpl.nasa.gov',
+		       'munz@physics.muni.cz',
+		       'pjm@physics.ucsb.edu',
+		       'roweis@cs.toronto.edu',
+		       'strader@ucolick.org',
+		       'stubbs@physics.harvard.edu');
 
 	$deny = array('badguy@somewhere.com');
 
