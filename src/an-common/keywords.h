@@ -18,6 +18,8 @@
 
 // borrowed from http://rlove.org/log/2005102601.
 
+#define ATTRIB_FORMAT(style,fmt,start) __attribute__ ((format(style,fmt,start)))
+
 #if __GNUC__ >= 3
 
 //# define Inline		inline __attribute__ ((always_inline))

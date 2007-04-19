@@ -20,8 +20,7 @@
 #define FITSIO_UTILS_H
 
 #include "qfits.h"
-
-#define ATTRIB_FORMAT(style,fmt,start) __attribute__ ((format(style,fmt,start)))
+#include "keywords.h"
 
 int fits_copy_header(qfits_header* src, qfits_header* dest, char* key);
 
