@@ -27,7 +27,10 @@ include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.libtweak
-include $(COMMON)/makefile.cairo
+
+ifeq ($(MAKECMDGOALS),cairo)
+	include $(COMMON)/makefile.cairo
+endif
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
