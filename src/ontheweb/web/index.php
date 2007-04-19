@@ -19,7 +19,7 @@ function allow_email($email) {
 		       'barth@uci.edu',
 		       'christopher@stumm.ca',
 		       'david.hogg@nyu.edu',
-				   'dfinkbeiner@cfa.harvard.edu',
+		       'dfinkbeiner@cfa.harvard.edu',
 		       'dmink@cfa.harvard.edu',
 		       'dovip@wise.tau.ac.il',
 		       'eran@astro.caltech.edu',
