@@ -164,14 +164,14 @@ $form->addElement('text', 'fsv', 'field scale (variance (%))',
 				  array('size'=>5,
 						'onfocus' => "setFsEv()"));
 
-/*$uname_form =&*/ $form->addElement('text', 'uname', null,
-                                 array('size'=>40,
-                                       'id'=>'uname'));
-/*$email_form =&*/ $form->addElement('text', 'email', null,
-                                 array('size'=>40,
-                                       'id'=>'email'));
+$form->addElement('text', 'uname', null,
+				  array('size'=>40,
+						'id'=>'uname'));
+$form->addElement('text', 'email', null,
+				  array('size'=>40,
+						'id'=>'email'));
 
-$form->addElement('checkbox', 'remember', null,
+$form->addElement('checkbox', 'remember', null, null,
                   array('id'=>'remember'));
 
 // map element name -> HTML id
@@ -181,10 +181,6 @@ $ids = array('xysrc-url-id'  => $xysrc_url->getAttribute('id'),
              'xysrc-text-id' => $xysrc_text->getAttribute('id'),
              'fstype-ul-id'  => $fs_ul->getAttribute('id'),
              'fstype-ev-id'  => $fs_ev->getAttribute('id'),
-             /*
-             'uname-id'      => $uname_form->getAttribute('id'),
-             'email-id'      => $uname_form->getAttribute('id'),
-             */
              );
 
 $form->addElement('select', 'fsunit', 'units', $unitmap, null);
