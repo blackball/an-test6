@@ -123,7 +123,7 @@ $xysrc_url =& $form->addElement('radio', 'xysrc', 'url',  null, 'url' );
 $xysrc_fits=& $form->addElement('radio', 'xysrc', 'fits', null, 'fits');
 $xysrc_text=& $form->addElement('radio', 'xysrc', 'text', null, 'text');
 
-$form->setAttribute('onSubmit', 'setTimeout(\'showUploadMeter()\', 3000)');
+$form->setAttribute('onSubmit', 'setTimeout(\'showUploadMeter()\', 3000); checkRemember();');
 
 $fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
 $fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
