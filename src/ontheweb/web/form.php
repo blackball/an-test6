@@ -1001,76 +1001,72 @@ function render_form($form, $headers) {
 	// Load the index-template file and do text replacement on it.
 	$template = file_get_contents($index_template);
 
+	$replace = array();
+
 	// all the "regular" fields.
 	$flds = array('imgfile', 'fitsfile', 'textfile', 'imgurl', 'x_col', 'y_col',
 				  'tweak', 'tweak_order', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
                       'poserr', 'index', 'uname', 'email', 'remember',
-				  'submit', 'linkhere', 
+				  'submit', 'linkhere',
 				  #'imagescale',
-				  'reset', 'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER');
+				  'reset', 'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER',
+				  'justjobid', 'skippreview');
 	
 	if ($emailver) {
-		$template = str_replace('##email-caption##',
-								"We need your email address to send you your results.",
-								$template);
+		$replace['##email-caption##'] = "We need your email address to send you your results.";
 	} else if ($webver) {
-		$template = str_replace('##email-caption##',
-								"These fields are optional.",
-								$template);
+		$replace['##email-caption##'] = "These fields are optional.";
 	}
 	foreach ($flds as $fld) {
-		$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
+		$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
 	}
 
-	$template = str_replace('##upload-id##', $form->exportValue('UPLOAD_IDENTIFIER'), $template);
+	$replace['##upload-id##'] = $form->exportValue('UPLOAD_IDENTIFIER');
+	$replace['##sizelimit##'] = sprintf("%d", $maxfilesize/(1024*1024));
 
 	// fields (and pseudo-fields) that can have errors 
 	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile', 'textfile',
 					 'x_col', 'y_col', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
 					 'poserr', 'fs', 'email', 'tweak_order');
 	foreach ($errflds as $fld) {
-		$template = str_replace("##".$fld."-err##", $form->getElementError($fld), $template);
+		$replace['##' . $fld . '-err##'] = $form->getElementError($fld);
 	}
 
 	// Radio buttons
-	$repl = array("##xysrc-img##"    => $renderer->elementToHtml('xysrc', 'img'),
-				  "##xysrc-url##"    => $renderer->elementToHtml('xysrc', 'url'),
-				  "##xysrc-fits##"   => $renderer->elementToHtml('xysrc', 'fits'),
-				  "##xysrc-text##"   => $renderer->elementToHtml('xysrc', 'text'),
-				  "##parity-both##"  => $renderer->elementToHtml('parity', '2'),
-				  "##parity-left##"  => $renderer->elementToHtml('parity', '1'),
-				  "##parity-right##" => $renderer->elementToHtml('parity', '0'),
-				  "##fstype-ul##"    => $renderer->elementToHtml('fstype', 'ul'),
-				  "##fstype-ev##"    => $renderer->elementToHtml('fstype', 'ev'),
-				  );
-	foreach ($repl as $from => $to) {
-		$template = str_replace($from, $to, $template);
-	}
+	$replace['##xysrc-img##']    = $renderer->elementToHtml('xysrc', 'img');
+	$replace['##xysrc-url##']    = $renderer->elementToHtml('xysrc', 'url');
+	$replace['##xysrc-fits##']   = $renderer->elementToHtml('xysrc', 'fits');
+	$replace['##xysrc-text##']   = $renderer->elementToHtml('xysrc', 'text');
+	$replace['##parity-both##']  = $renderer->elementToHtml('parity', '2');
+	$replace['##parity-left##']  = $renderer->elementToHtml('parity', '1');
+	$replace['##parity-right##'] = $renderer->elementToHtml('parity', '0');
+	$replace['##fstype-ul##']    = $renderer->elementToHtml('fstype', 'ul');
+	$replace['##fstype-ev##']    = $renderer->elementToHtml('fstype', 'ev');
 
 	if (array_key_exists('imgfile', $headers)) {
 		// Hack - we hard-code the table row here instead of having it in the template
 		// (so that if it's empty we don't get an empty table row)
 		$str = "<tr><td></td><td>Previous value: <tt>" . $headers['imgfile'] . "</tt></td></tr>\n";
-		$template = str_replace("##imgfile_set##", $str, $template);
+		$replace['##imgfile_set##'] = $str;
 	} else {
-		$template = str_replace("##imgfile_set##", "", $template);
+		$replace['##imgfile_set##'] = '';
 	}
 	if (array_key_exists('fitsfile', $headers)) {
 		// Hack - ditto.
 		$str = "<li>Previous value: <tt>" . $headers['fitsfile'] . "</tt></li\n";
-		$template = str_replace("##fitsfile_set##", $str, $template);
+		$replace['##fitsfile_set##'] = $str;
 	} else {
-		$template = str_replace("##fitsfile_set##", "", $template);
+		$replace['##fitsfile_set##'] = "";
 	}
 	if (array_key_exists('textfile', $headers)) {
 		// Hack - ditto again.
 		$str = "<li>Previous value: <tt>" . $headers['textfile'] . "</tt></li\n";
-		$template = str_replace("##textfile_set##", $str, $template);
+		$replace['##textfile_set##'] = $str;
 	} else {
-		$template = str_replace("##textfile_set##", "", $template);
+		$replace['##textfile_set##'] = "";
 	}
 
-	$template = str_replace('##sizelimit##', sprintf("%d", $maxfilesize/(1024*1024)), $template);
+	$template = str_replace(array_keys($replace), array_values($replace), $template);
 
 	// Write the HTML header.
 	// (for some reason there seems to be a problem echoing this first
@@ -1083,8 +1079,9 @@ function render_form($form, $headers) {
 	echo $renderer->toHtml($template);
 
 	$tail = file_get_contents($index_tail);
-	$tail = str_replace('##valid-blurb##', $valid_blurb, $tail);
-	$tail = str_replace('##sizelimit##',   sprintf("%d", $maxfilesize/(1024*1024)), $tail);
+	$tail = str_replace(array('##valid-blurb##', '##sizelimit##'),
+						array($valid_blurb, sprintf("%d", $maxfilesize/(1024*1024))),
+						$tail);
 	echo $tail;
 
 }
