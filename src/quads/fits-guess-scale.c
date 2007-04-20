@@ -130,6 +130,11 @@ int main(int argc, char *argv[]) {
 		printf("scale platesc %g\n", val);
 	}
 
+	val = qfits_header_getdouble(hdr, "CCDSCALE", -1.0);
+	if ((val != -1.0) && (val != 0.0)) {
+		printf("scale ccdscale %g\n", val);
+	}
+
 	val = qfits_header_getdouble(hdr, "CDELT1", -1.0);
 	if ((val != -1.0) && (val != 0.0)) {
 		printf("scale cdelt1 %g\n", 3600.0 * fabs(val));
