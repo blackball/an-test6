@@ -77,7 +77,7 @@ merctree* merctree_open(char* fn) {
 
  bailout:
 	if (s->tree)
-	  kdtree_fits_close(s->tree); // FIXME -- does this free s->tree?
+            kdtree_fits_close(s->tree);
  	if (s->header)
 		qfits_header_destroy(s->header);
 	free(s);

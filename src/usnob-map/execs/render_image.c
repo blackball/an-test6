@@ -58,7 +58,7 @@ int render_image(unsigned char* img, render_args_t* args) {
 
 	for (i=0; i<sizeof(image_dirs)/sizeof(char*); i++) {
 		char fn[256];
-		snprintf(fn, sizeof(fn), "%s/%s", image_dirs[i], args->wcsfn);
+		snprintf(fn, sizeof(fn), "%s/%s", image_dirs[i], args->imwcsfn);
 		fprintf(stderr, "render_image: Trying wcs file: %s\n", fn);
 		wcshead = qfits_header_read(fn);
 		if (wcshead) {
@@ -77,6 +77,8 @@ int render_image(unsigned char* img, render_args_t* args) {
 		fprintf(stderr, "render_image: failed to read WCS file.\n");
 		return -1;
 	}
+
+        qfits_header_destroy(wcshead);
 
 	// want to iterate over mercator space 
 	w = args->W;

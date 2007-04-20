@@ -30,7 +30,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:"
 
 
 /* All render layers must go in here */
@@ -97,6 +97,9 @@ int main(int argc, char *argv[]) {
             break;
         case 'W':
             args.wcsfn = strdup(optarg);
+            break;
+        case 'I':
+            args.imwcsfn = strdup(optarg);
             break;
         case 'c':
             args.colorcor = atof(optarg);
@@ -245,6 +248,7 @@ int main(int argc, char *argv[]) {
     free(args.rdlsfn);
     free(args.imagefn);
     free(args.wcsfn);
+    free(args.imwcsfn);
     for (i=0; i<pl_size(layers); i++) {
         char* str = pl_get(layers, i);
         free(str);

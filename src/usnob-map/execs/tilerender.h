@@ -37,8 +37,7 @@ struct render_args {
 
 	// Args for render_image:
 	char* imagefn;
-	// Shared by render_boundary:
-	char* wcsfn;
+    char* imwcsfn;
 
 	// Args for render_tycho:
 	double colorcor;
@@ -52,6 +51,7 @@ struct render_args {
 	int fieldnum;
 
 	// Args for render_boundary
+	char* wcsfn;
 	double linewidth;
 	double dashbox;
 
