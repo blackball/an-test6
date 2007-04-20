@@ -942,6 +942,63 @@ static void solve_fields(blind_params* bp) {
                 }
                 logmsg(bp, "%i index stars are within index jitter of a field obj.\n", NS);
 
+
+                // Compute WCS.
+                if (bp->wcs_template) {
+                    double* starxyz;
+                    double* fieldxy;
+                    int k;
+                    tan_t wcs;
+
+                    char wcs_fn[1024];
+                    FILE* fout;
+                    qfits_header* hdr;
+                    char* tm;
+                    char val[32];
+
+                    starxyz = malloc(NS * 3 * sizeof(double));
+                    fieldxy = malloc(NS * 2 * sizeof(double));
+                    k=0;
+                    for (i=0; i<sp->nfield; i++) {
+                        if (fieldtoind[i] == -1)
+                            continue;
+                        getstarcoord(fieldtoind[i], starxyz + k*3);
+                        fieldxy[k*2] = sp->field[i*2];
+                        fieldxy[k*2+1] = sp->field[i*2+1];
+                        k++;
+                    }
+
+                    blind_wcs_compute_2(starxyz, fieldxy, k, &wcs, NULL);
+
+                    snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
+                    fout = fopen(wcs_fn, "wb");
+                    if (!fout) {
+                        logerr(bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
+                        exit(-1);
+                    }
+
+                    hdr = blind_wcs_get_header(&wcs);
+
+                    sprintf(val, "%g", sp->field_maxx);
+                    qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
+                    sprintf(val, "%g", sp->field_maxy);
+                    qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
+
+                    boilerplate_add_fits_headers(hdr);
+                    qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"whynot2\".", NULL, NULL);
+                    tm = qfits_get_datetime_iso8601();
+                    qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
+
+                    if (qfits_header_dump(hdr, fout)) {
+                        logerr(bp, "Failed to write FITS WCS header.\n");
+                        exit(-1);
+                    }
+                    fits_pad_file(fout);
+                    qfits_header_destroy(hdr);
+                    fclose(fout);
+                }
+
+
                 quadids = il_new(256);
                 starids = il_new(256);
 
@@ -1078,8 +1135,11 @@ static void solve_fields(blind_params* bp) {
 
                     starscale = distsq2arcsec(distsq(starxyz, starxyz+3, 3));
 
-					logmsg(bp, "Field code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
-						   fieldcode[0], fieldcode[1], fieldcode[2], fieldcode[3]);
+                    logmsg(bp, "Field code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
+                           fieldcode[0], fieldcode[1], fieldcode[2], fieldcode[3]);
+
+                    logmsg(bp, "Index code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
+                           starcode[0], starcode[1], starcode[2], starcode[3]);
 
                     codeerr = sqrt(distsq(fieldcode, starcode, 4));
 
