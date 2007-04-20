@@ -2,6 +2,8 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <errno.h>
+#include <string.h>
 
 #include <cairo.h>
 
@@ -39,8 +41,16 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 
 	for (i=0; i<sizeof(wcs_dirs)/sizeof(char*); i++) {
 		char fn[256];
+                char realfn[1024];
 		snprintf(fn, sizeof(fn), "%s/%s", wcs_dirs[i], args->wcsfn);
-		logmsg("Trying wcs file: %s\n", fn);
+                if (!realpath(fn, realfn)) {
+                    logmsg("Failed to get realpath() of wcs file %s: %s\n", fn, strerror(errno));
+                    if (getcwd(realfn, sizeof(realfn))) {
+                        logmsg("(cwd is %s)\n", realfn);
+                    }
+                    continue;
+                }
+		logmsg("Trying wcs file: %s (%s)\n", fn, realfn);
 		wcshead = qfits_header_read(fn);
 		if (wcshead) {
 			logmsg("wcs opened ok\n");
