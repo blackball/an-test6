@@ -208,47 +208,6 @@ function buttonStyleCommon(button) {
 	buttonStyleOn(button);
 }
 
-function PolygonControl() {}
-PolygonControl.prototype = new GControl();
-PolygonControl.prototype.initialize = function(map) {
-	var container = document.createElement("div");
-	var toggleDiv = document.createElement("div");
-	var txtNode = document.createTextNode("POLY");
-	this.setButtonStyle_(toggleDiv);
-	container.appendChild(toggleDiv);
-	toggleDiv.appendChild(txtNode);
-	GEvent.addDomListener(toggleDiv, "click", function(){
-		if (showPolygons) {
-			showPolygons = false;
-			// Remove polygons.
-			for (var i=0; i<visiblePolygons.length; i++) {
-				map.removeOverlay(visiblePolygons[i]);
-			}
-			visiblePolygons.length = 0;
-			buttonStyleOff(toggleDiv);
-		} else {
-			showPolygons = true;
-			// Add polygons.
-			for (var i=0; i<polygons.length; i++) {
-				map.addOverlay(polygons[i]);
-				visiblePolygons.push(polygons[i]);
-			}
-			buttonStyleOn(toggleDiv);
-		}
-	});
-	map.getContainer().appendChild(container);
-	return container;
-}
-PolygonControl.prototype.getDefaultPosition = function() {
-	return new GControlPosition(G_ANCHOR_TOP_RIGHT, new GSize(0*78 + 7, 7));
-}
-PolygonControl.prototype.setButtonStyle_ = function(button) {
-	buttonStyleCommon(button);
-	if (!showPolygons) {
-		buttonStyleOff(button);
-	}
-}
-
 /*
   This function gets called when the page loads.
 */
@@ -273,7 +232,7 @@ function startup() {
 	}
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
-	passargs = [ "imagefn", "wcsfn", "cc", "arcsinh", "arith", "gain", "rdlsfn", "dashbox"];
+	passargs = [ "imagefn", "wcsfn", "cc", "arcsinh", "arith", "gain", "rdlsfn", "dashbox" ];
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
