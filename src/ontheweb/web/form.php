@@ -164,14 +164,28 @@ $form->addElement('text', 'fsv', 'field scale (variance (%))',
 				  array('size'=>5,
 						'onfocus' => "setFsEv()"));
 
+/*$uname_form =&*/ $form->addElement('text', 'uname', null,
+                                 array('size'=>40,
+                                       'id'=>'uname'));
+/*$email_form =&*/ $form->addElement('text', 'email', null,
+                                 array('size'=>40,
+                                       'id'=>'email'));
+
+$form->addElement('checkbox', 'remember', null,
+                  array('id'=>'remember'));
+
 // map element name -> HTML id
 $ids = array('xysrc-url-id'  => $xysrc_url->getAttribute('id'),
-			 'xysrc-img-id'  => $xysrc_img->getAttribute('id'),
-			 'xysrc-fits-id' => $xysrc_fits->getAttribute('id'),
-			 'xysrc-text-id' => $xysrc_text->getAttribute('id'),
-			 'fstype-ul-id'  => $fs_ul->getAttribute('id'),
-			 'fstype-ev-id'  => $fs_ev->getAttribute('id'),
-			 );
+             'xysrc-img-id'  => $xysrc_img->getAttribute('id'),
+             'xysrc-fits-id' => $xysrc_fits->getAttribute('id'),
+             'xysrc-text-id' => $xysrc_text->getAttribute('id'),
+             'fstype-ul-id'  => $fs_ul->getAttribute('id'),
+             'fstype-ev-id'  => $fs_ev->getAttribute('id'),
+             /*
+             'uname-id'      => $uname_form->getAttribute('id'),
+             'email-id'      => $uname_form->getAttribute('id'),
+             */
+             );
 
 $form->addElement('select', 'fsunit', 'units', $unitmap, null);
 
@@ -186,9 +200,6 @@ $indexes['auto'] = 'Automatic (based on image scale)';
 foreach ($indexdata as $k => $v) {
 	$indexes[$k] = $v['desc'];
 }
-
-$form->addElement('text', 'uname', "your name", array('size'=>40));
-$form->addElement('text', 'email', "email address", array('size'=>40));
 
 $form->addElement('select', 'index', 'index', $indexes, null);
 
@@ -1006,7 +1017,7 @@ function render_form($form, $ids, $headers) {
 	// all the "regular" fields.
 	$flds = array('imgfile', 'fitsfile', 'textfile', 'imgurl', 'x_col', 'y_col',
 				  'tweak', 'tweak_order', 'fsl', 'fsu', 'fse', 'fsv', 'fsunit',
-				  'poserr', 'index', 'uname', 'email',
+                      'poserr', 'index', 'uname', 'email', 'remember',
 				  'submit', 'linkhere', 
 				  #'imagescale',
 				  'reset', 'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER');
