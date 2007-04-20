@@ -2225,18 +2225,20 @@ void MANGLE(kdtree_nodes_contained)
 		double q;
 		qlo[d] = q = POINT_ET(kd, d, querylow[d], floor);
 		if (q < TTYPE_MIN) {
-			fprintf(stderr, "Error: query value %g is below the minimum range of the tree %g.\n",
-					q, (double)TTYPE_MIN);
-			assert(0);
-			return;
-		}
+                    //fprintf(stderr, "Error: query value %g is below the minimum range of the tree %g.\n", q, (double)TTYPE_MIN);
+                    qlo[d] = TTYPE_MIN;
+		} else if (q > TTYPE_MAX) {
+                    // query's low position is more than the tree's max: no overlap is possible.
+                    return;
+                }
 		qhi[d] = q = POINT_ET(kd, d, queryhi [d], ceil );
 		if (q > TTYPE_MAX) {
-			fprintf(stderr, "Error: query value %g is above the maximum range of the tree %g.\n",
-					q, (double)TTYPE_MAX);
-			assert(0);
-			return;
-		}
+                    //fprintf(stderr, "Error: query value %g is above the maximum range of the tree %g.\n", q, (double)TTYPE_MAX);
+                    qhi[d] = TTYPE_MAX;
+		} else if (q < TTYPE_MIN) {
+                    // query's high position is less than the tree's min: no overlap is possible.
+                    return;
+                }
 	}
 
 	nodes_contained_rec(kd, 0, qlo, qhi, cb_contained, cb_overlap, cb_extra);
