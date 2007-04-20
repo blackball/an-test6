@@ -118,15 +118,15 @@ $upl->setValue($upload_id);
 $form->addElement('hidden', 'skippreview');
 $form->addElement('hidden', 'justjobid');
 
-$xysrc_img =& $form->addElement('radio', 'xysrc', 'img',  null, 'img' );
-$xysrc_url =& $form->addElement('radio', 'xysrc', 'url',  null, 'url' );
-$xysrc_fits=& $form->addElement('radio', 'xysrc', 'fits', null, 'fits');
-$xysrc_text=& $form->addElement('radio', 'xysrc', 'text', null, 'text');
+$form->addElement('radio', 'xysrc', null, null, 'img' , array('id'=>'xysrc-img') );
+$form->addElement('radio', 'xysrc', null, null, 'url' , array('id'=>'xysrc-url') );
+$form->addElement('radio', 'xysrc', null, null, 'fits', array('id'=>'xysrc-fits'));
+$form->addElement('radio', 'xysrc', null, null, 'text', array('id'=>'xysrc-text'));
 
 $form->setAttribute('onSubmit', 'setTimeout(\'showUploadMeter()\', 3000); checkRemember();');
 
-$fs_ul =& $form->addElement('radio','fstype',null,null,'ul');
-$fs_ev =& $form->addElement('radio','fstype',null,null,'ev');
+$form->addElement('radio', 'fstype', null, null, 'ul', array('id'=>'fstype-ul'));
+$form->addElement('radio', 'fstype', null, null, 'ev', array('id'=>'fstype-ev'));
 
 $imgfile  =& $form->addElement('file', 'imgfile', "imgfile",
 							   array('onfocus' => "setXysrcImg()",
@@ -173,15 +173,6 @@ $form->addElement('text', 'email', null,
 
 $form->addElement('checkbox', 'remember', null, null,
                   array('id'=>'remember'));
-
-// map element name -> HTML id
-$ids = array('xysrc-url-id'  => $xysrc_url->getAttribute('id'),
-             'xysrc-img-id'  => $xysrc_img->getAttribute('id'),
-             'xysrc-fits-id' => $xysrc_fits->getAttribute('id'),
-             'xysrc-text-id' => $xysrc_text->getAttribute('id'),
-             'fstype-ul-id'  => $fs_ul->getAttribute('id'),
-             'fstype-ev-id'  => $fs_ev->getAttribute('id'),
-             );
 
 $form->addElement('select', 'fsunit', 'units', $unitmap, null);
 
@@ -261,7 +252,7 @@ if ($form->exportValue("submit") && $form->validate()) {
 }
 
 // Else render the form.
-render_form($form, $ids, $headers);
+render_form($form, $headers);
 exit;
 
 function submit_failed($jobdb, $msg) {
@@ -995,7 +986,7 @@ function check_poserr($vals) {
 }
 
 // Form rendering
-function render_form($form, $ids, $headers) {
+function render_form($form, $headers) {
 	global $index_template;
 	global $index_header;
 	global $index_tail;
@@ -1029,11 +1020,6 @@ function render_form($form, $ids, $headers) {
 	}
 	foreach ($flds as $fld) {
 		$template = str_replace("##".$fld."##", $renderer->elementToHtml($fld), $template);
-	}
-
-	// Replace -id tokens.
-	foreach ($ids as $fld=>$id) {
-		$template = str_replace("##" . $fld . "##",  $id,  $template);
 	}
 
 	$template = str_replace('##upload-id##', $form->exportValue('UPLOAD_IDENTIFIER'), $template);

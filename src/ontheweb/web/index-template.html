@@ -3,38 +3,38 @@
 <script type="text/javascript">
 <!--
 function setXysrcUrl() {
-  var u = document.getElementById("##xysrc-url-id##");
+  var u = document.getElementById("xysrc-url");
   u.checked = 1;
 }
 function setXysrcImg() {
-  var u = document.getElementById("##xysrc-img-id##");
+  var u = document.getElementById("xysrc-img");
   u.checked = 1;
 }
 function setXysrcFits() {
-  var u = document.getElementById("##xysrc-fits-id##");
+  var u = document.getElementById("xysrc-fits");
   u.checked = 1;
 }
 function setXysrcText() {
-  var u = document.getElementById("##xysrc-text-id##");
+  var u = document.getElementById("xysrc-text");
   u.checked = 1;
 }
 function setFsUl() {
-  var u = document.getElementById("##fstype-ul-id##");
+  var u = document.getElementById("fstype-ul");
   u.checked = 1;
 }
 function setFsEv() {
-  var u = document.getElementById("##fstype-ev-id##");
+  var u = document.getElementById("fstype-ev");
   u.checked = 1;
 }
 function validate_form() {
-  var u1 = document.getElementById("##xysrc-url-id##");
-  var u2 = document.getElementById("##xysrc-img-id##");
-  var u3 = document.getElementById("##xysrc-fits-id##");
-  var u4 = document.getElementById("##xysrc-text-id##");
+  var u1 = document.getElementById("xysrc-url");
+  var u2 = document.getElementById("xysrc-img");
+  var u3 = document.getElementById("xysrc-fits");
+  var u4 = document.getElementById("xysrc-text");
   if (!(u1.checked || u2.checked || u3.checked || u4.checked))
     return false;
-  u1 = document.getElementById("##fstype-ul-id##");
-  u2 = document.getElementById("##fstype-ev-id##");
+  u1 = document.getElementById("fstype-ul");
+  u2 = document.getElementById("fstype-ev");
   if (!(u1.checked || u2.checked))
     return false;
   if (u1.checked) {
