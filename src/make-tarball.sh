@@ -40,3 +40,8 @@ cmd="tar czf $DIR.tar.gz $DIR"
 echo $cmd
 $cmd || exit
 
+echo
+echo
+echo "Created tarball: $DIR.tar.gz"
+echo
+echo
