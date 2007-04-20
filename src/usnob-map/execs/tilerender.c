@@ -30,7 +30,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RM"
 
 
 /* All render layers must go in here */
@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
     render_args_t args;
     pl* layers;
     int i;
+    int inmerc = 0;
 
     memset(&args, 0, sizeof(render_args_t));
 
@@ -80,6 +81,12 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+        case 'M':
+            inmerc = 1;
+            break;
+        case 'R':
+            args.makerawfloatimg = 1;
+            break;
         case 'B':
             args.dashbox = atof(optarg);
             break;
@@ -164,6 +171,16 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "tilecache: BEGIN TILECACHE\n");
 
+    if (inmerc) {
+        // -x -X -y -Y were given in Mercator coordinates - convert to deg.
+        // this is for cases where it's more convenient to specify the coords
+        // in Merc coords (eg prerendering)
+        args.ramin = rad2deg(merc2ra(args.ramin));
+        args.ramax = rad2deg(merc2ra(args.ramax));
+        args.decmin = rad2deg(merc2dec(args.decmin));
+        args.decmax = rad2deg(merc2dec(args.decmax));
+    }
+
     // The Google Maps client treat RA as going from -180 to +180; we prefer to
     // think of it going from 0 to 360.  If the lower-RA value is negative, wrap
     // it around...
@@ -241,7 +258,12 @@ int main(int argc, char *argv[]) {
         free(thisimg);
     }
 
-    write_png(img, args.W, args.H);
+    if (args.makerawfloatimg) {
+        fwrite(args.rawfloatimg, sizeof(float), args.W * args.H * 3, stdout);
+        free(args.rawfloatimg);
+    } else {
+        write_png(img, args.W, args.H);
+    }
 
     free(img);
 

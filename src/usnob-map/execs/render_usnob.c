@@ -58,13 +58,19 @@ int render_usnob(unsigned char* img, render_args_t* args) {
         yhi = tmp;
     }
 
+    logmsg("reading tiles x:[%i, %i], y:[%i, %i]\n", xlo, xhi, ylo, yhi);
+
+    // HACK!
+    if (!args->makerawfloatimg && ((xhi - xlo) * (yhi - ylo) > 4)) {
+        logmsg("Too many files to read, bailing out.\n");
+        return 0;
+    }
+
     fluximg = calloc(args->W * args->H * 3, sizeof(float));
     if (!fluximg) {
         logmsg("Failed to allocate flux image.\n");
         return -1;
     }
-
-    logmsg("reading tiles x:[%i, %i], y:[%i, %i]\n", xlo, xhi, ylo, yhi);
 
     for (i=xlo; i<=xhi; i++) {
         for (j=ylo; j<=yhi; j++) {
@@ -84,6 +90,21 @@ int render_usnob(unsigned char* img, render_args_t* args) {
             mercrender(merc, args, fluximg);
             merctree_close(merc);
         }
+    }
+
+    if (args->makerawfloatimg) {
+        args->rawfloatimg = fluximg;
+        // shuffle channels; see below about RBN order.
+        for (j=0; j<(args->H*args->W); j++) {
+            float r,g,b;
+            r = fluximg[3*j + 2];
+            g = fluximg[3*j + 0];
+            b = fluximg[3*j + 1];
+            fluximg[3*j + 0] = r;
+            fluximg[3*j + 1] = g;
+            fluximg[3*j + 2] = b;
+        }
+        return 0;
     }
 
     amp = pow(4.0, min(5, args->zoomlevel)) * 32.0 * exp(args->gain * log(4.0));

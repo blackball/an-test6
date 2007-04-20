@@ -65,14 +65,16 @@ $(LIBTWEAK_LIB): $(REMAKE_LIBTWEAK)
 
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 
-tilerender: tilerender.o render_image.o \
+TILERENDER_OBJS := tilerender.o render_image.o \
 		render_tycho.o mercrender.o merctree.o \
 		render_gridlines.o \
 		render_usnob.o \
 		render_rdls.o \
 		render_boundary.o \
 		render_constellation.o \
-		render_messier.o \
+		render_messier.o
+
+tilerender: $(TILERENDER_OBJS) \
 		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \
@@ -133,7 +135,8 @@ pnmutils.o: pnmutils.c
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
-ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS) $(MISC_MAIN_OBJS)
+ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS) $(MISC_MAIN_OBJS) \
+	$(TILERENDER_OBJS)
 
 DEP_OBJ := $(ALL_OBJS)
 DEP_PREREQS := $(QFITS_LIB)

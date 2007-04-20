@@ -31,6 +31,10 @@ struct render_args {
 
 	int zoomlevel;
 
+    // Don't render PNG; spit out raw floats.
+    int makerawfloatimg;
+    float* rawfloatimg;
+
 	// Image size in pixels.
 	int W;
 	int H;
