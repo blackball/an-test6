@@ -90,13 +90,13 @@ int main(int argc, char *argv[]) {
             args.Nstars = atoi(optarg);
             break;
         case 'r':
-            args.rdlsfn = strdup(optarg); // FIXME -- who's gonna free that?
+            args.rdlsfn = strdup(optarg);
             break;
         case 'i':
-            args.imagefn = strdup(optarg); // FIXME -- who frees?
+            args.imagefn = strdup(optarg);
             break;
         case 'W':
-            args.wcsfn = strdup(optarg); // FIXME -- who frees?
+            args.wcsfn = strdup(optarg);
             break;
         case 'c':
             args.colorcor = atof(optarg);
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
             args.gain = atof(optarg);
             break;
         case 'l':
-            pl_append(layers, strdup(optarg)); // FIXME -- who frees?
+            pl_append(layers, strdup(optarg));
             break;
         case 'L':
             args.linewidth = atof(optarg);
