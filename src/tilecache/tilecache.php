@@ -99,9 +99,9 @@ foreach ($layers as $l) {
 // render_image layer:
 
 // WCS filename.
-$wcs = $_REQUEST["wcsfn"];
+$wcs = $_REQUEST["imwcsfn"];
 if ($wcs) {
-	$cmdline .= " -W " . escapeshellarg($wcs);
+	$cmdline .= " -I " . escapeshellarg($wcs);
 }
 // Image filename.
 $imgfn = $_REQUEST["imagefn"];
@@ -149,6 +149,11 @@ if ($rdlsfn) {
 //////////////////////
 // render_boundary layer:
 
+// WCS file.
+$wcs = $_REQUEST["wcsfn"];
+if ($wcs) {
+	$cmdline .= " -W " . escapeshellarg($wcs);
+}
 // Line width.
 $lw = $_REQUEST["lw"];
 if ($lw) {
