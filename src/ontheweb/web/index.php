@@ -24,6 +24,7 @@ function allow_email($email) {
 		       'dmink@cfa.harvard.edu',
 		       'dovip@wise.tau.ac.il',
 		       'eran@astro.caltech.edu',
+				   'fitz@tucana.tuc.noao.edu',
 		       'john.moustakas@gmail.com',
 		       'leonidas@jpl.nasa.gov',
 		       'munz@physics.muni.cz',
