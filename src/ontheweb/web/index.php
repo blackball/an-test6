@@ -15,7 +15,7 @@ function allow_email($email) {
 	// $mode = 'deny';
 	$mode = 'allow';
 
-	$allow = array('dstn@cs.toronto.edu',
+	$allow = array(
 		       'barth@uci.edu',
 		       'christopher@stumm.ca',
 		       'ckochanek@astronomy.ohio-state.edu',
@@ -23,8 +23,9 @@ function allow_email($email) {
 		       'dfinkbeiner@cfa.harvard.edu',
 		       'dmink@cfa.harvard.edu',
 		       'dovip@wise.tau.ac.il',
+			   'dstn@cs.toronto.edu',
 		       'eran@astro.caltech.edu',
-				   'fitz@tucana.tuc.noao.edu',
+			   'fitz@tucana.tuc.noao.edu',
 		       'john.moustakas@gmail.com',
 		       'leonidas@jpl.nasa.gov',
 		       'munz@physics.muni.cz',
