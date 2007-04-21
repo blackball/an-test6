@@ -13,7 +13,7 @@ function whoAmI() {
         n[0] = n[0].replace(/^ /g,""); //remove whitespace
         if (n[0]=="uname" || n[0]=="email") {
             count++;
-            document.getElementById(n[0]).value = escape(n[1]);
+            document.getElementById(n[0]).value = n[1];
         }
 
     }	
