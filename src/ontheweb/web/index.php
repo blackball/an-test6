@@ -28,6 +28,7 @@ function allow_email($email) {
 		       'eran@astro.caltech.edu',
 			   'fitz@tucana.tuc.noao.edu',
 		       'john.moustakas@gmail.com',
+		       'jqshenker@gmail.com',
 		       'leonidas@jpl.nasa.gov',
 		       'munz@physics.muni.cz',
 		       'pjm@physics.ucsb.edu',
