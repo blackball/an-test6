@@ -20,6 +20,7 @@ function allow_email($email) {
 		       'barth@uci.edu',
 		       'christopher@stumm.ca',
 		       'ckochanek@astronomy.ohio-state.edu',
+		       'cornell@puck.as.utexas.edu',
 		       'david.hogg@nyu.edu',
 		       'dfinkbeiner@cfa.harvard.edu',
 		       'dmink@cfa.harvard.edu',
