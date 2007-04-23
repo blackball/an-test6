@@ -86,12 +86,6 @@ if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 }
 
 if ($getfile) {
-	/*
-	$allowedfiles =
-		array('objs.png'=>
-			  array('mime'=>'image/png', 'file'=>'objs.png'),
-			  
-	*/
 	if (strstr($getfile, '/') ||
 		strstr($getfile, '..')) {
 		die("Invalid \"get\" filename.");
@@ -102,7 +96,10 @@ if ($getfile) {
 	}
 	$cmd = "file -b -i " . escapeshellarg($fn);
 	$mimetype = shell_exec($cmd);
-	header('Content-type: ' . $mimetype);
+	$sz = filesize($fn);
+	header('Content-Type: ' . $mimetype);
+	header('Content-Disposition: attachment; filename="' . $getfile . '"');
+	header('Content-Length: ' . $sz);
 	readfile($fn);
 	exit;
 }
