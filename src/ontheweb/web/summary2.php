@@ -293,7 +293,7 @@ function dir_status($mydir) {
 		if (file_exists($mydir . $xyls_fn)) {
 			$hash = md5(file_get_contents($mydir . $xyls_fn));
 			$jd['xylist-hash'] = $hash;
-			if (setjobdata($db, array('xylist-hash'=>$hash))) {
+			if (!setjobdata($db, array('xylist-hash'=>$hash))) {
 				loggit("Failed to save xylist-hash: " . $mydir . "\n");
 			}
 		}
