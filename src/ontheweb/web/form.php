@@ -753,7 +753,7 @@ function process_data ($vals) {
 	if ($emailver) {
 		$str .= 
 			"echo \"Sending email...\";\n" .
-			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&email\" -O - > send-email-wget.out 2>&1\n";
+			"wget -q \"http://" . $host . $myuridir . "/status.php?job=" . $myname . "&send-email=1\" -O - > send-email-wget.out 2>&1\n";
 	}
 	$str .=	"echo Finished donescript.\n";
 
