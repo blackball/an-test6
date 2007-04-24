@@ -18,6 +18,10 @@ $sdss46paths = array();
 for ($i=0; $i<12; $i++)
 	 array_push($sdss46paths, sprintf('sdss-46/sdss-46-%02d', $i));
 
+$tiny47paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($tiny47paths, sprintf('tiny-47/tiny-47-%02d', $i));
+
 $indexdata =
 array('60degree' => array('desc' => '60-degree Fields',
 						  'quadsize' => array(900, 1800),
@@ -47,6 +51,9 @@ array('60degree' => array('desc' => '60-degree Fields',
 						  'quadsize' => array(4, 5),
 						  //'paths' => array('sdss-23/sdss-23-allsky')),
 						  'paths' => $sdss46paths),
+	  '6arcmin' => array('desc' => '6-arcmin Fields',
+						 'quadsize' => array(2, 2.8),
+						 'paths' => $tiny47paths),
 	  );
 
 $largest_index = '60degree';
@@ -768,9 +775,12 @@ function process_data ($vals) {
 		die("Failed to write input file " . $inputfile);
 	}
 
-	$depths = array(0 => 30,
-					30=> 50,
-					50 => 80,
+	$depths = array(0  => 30,
+					30 => 40,
+					40 => 50,
+					50 => 60,
+					60 => 70,
+					70 => 80,
 					80 => 100,
 					100 => 120,
 					120 => 140,
@@ -806,9 +816,9 @@ function process_data ($vals) {
 				"fieldunits_upper " . $fumax . "\n" .
 				"tol " . $codetol . "\n" .
 				"verify_pix " . $poserr . "\n" .
-				"nverify 25\n" .
-				"nindex_tokeep 25\n" .
-				"nindex_tosolve 25\n" .
+				"nverify 10\n" .
+				"nindex_tokeep 20\n" .
+				"nindex_tosolve 20\n" .
 				"distractors 0.25\n" .
 				"ratio_toprint 10\n" .
 				"ratio_tokeep 1e9\n" .

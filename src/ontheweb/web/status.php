@@ -4,6 +4,17 @@ require_once 'MDB2.php';
 require 'common.php';
 require 'presets.php';
 
+loggit("status.php: request headers:\n");
+$hdrs = apache_request_headers();
+foreach ($hdrs as $k=>$v) {
+	loggit("  " . $k . " = " . $v . "\n");
+}
+
+loggit("status.php: args:\n");
+foreach ($headers as $k=>$v) {
+	loggit("  " . $k . " = " . $v . "\n");
+}
+
 if (!array_key_exists("job", $headers)) {
 	die("Missing \"job\" argument.");
 }
@@ -289,10 +300,10 @@ if (FALSE && array_key_exists("email", $headers)) {
 			"We may take a look at it and see if we can get it to solve; in this case " .
 			"we'll send you an email to let you know.  We may contact you to get more " .
 			"details about your field.\n\n";
-	}
 
-	$message .= "You can get the details about your job here:\n" .
-		"  " . $staturl . "\n\n";
+		$message .= "You can get the details about your job here:\n" .
+			"  " . $staturl . "\n\n";
+	}
 
 	$message .= "Just to remind you, here are the parameters of your job:\n";
 	$jobdesc = describe_job($jd);
