@@ -247,7 +247,7 @@ if ($didsolve) {
 	}
 }
 
-if (array_key_exists("email", $headers)) {
+if (FALSE && array_key_exists("email", $headers)) {
 	if ($jd['sent-email'] == 'yes') {
 
 		loggit("Already sent email: headers:\n");
