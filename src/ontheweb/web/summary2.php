@@ -39,7 +39,7 @@ $uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $myuri  = $_SERVER['PHP_SELF'];
 
 $site = $headers['site'];
-$era = $headers['era'];
+$epoch = $headers['epoch'];
 
 if (!$site || !preg_match($sitepat, $site)) {
 	// Show sites
@@ -66,10 +66,10 @@ if (!$site || !preg_match($sitepat, $site)) {
 		"</body></html>\n";
 	exit;
 }
-if (!$era || !preg_match($erapat, $era)) {
-	// Show eras for this site.
+if (!$epoch || !preg_match($epochpat, $epoch)) {
+	// Show epochs for this site.
 	echo "<hr />\n" .
-		"<h3>Eras:</h3>\n" .
+		"<h3>Epochs:</h3>\n" .
 		'<table border="1">' . "\n";
 
 	$sitedir = $resultdir . $site;
@@ -82,10 +82,10 @@ if (!$era || !preg_match($erapat, $era)) {
 			continue;
 		if (!is_dir($dir))
 			continue;
-		if (!preg_match($erapat, $name))
+		if (!preg_match($epochpat, $name))
 			continue;
 
-		echo '<tr><td><a href="' . $myuri . "?site=" . $site . "&era=" . $name . '">' .
+		echo '<tr><td><a href="' . $myuri . "?site=" . $site . "&epoch=" . $name . '">' .
 			$name . "</a></td></tr>\n";
 	}
 
@@ -125,7 +125,7 @@ function get_url($jobid, $fn) {
 	return  $statuspage . get_status_url_args($jobid, $fn);
 }
 
-$basedir = $resultdir . $site . "/" . $era . "/";
+$basedir = $resultdir . $site . "/" . $epoch . "/";
 loggit("Getting status in dir " . $basedir . "\n");
 $lst = scandir($basedir);
 $jobtimes = array();
@@ -168,7 +168,7 @@ $sortedkeys = array_keys($jobtimes);
 rsort($sortedkeys);
 foreach ($sortedkeys as $date) {
 	$jobnum = $jobtimes[$date];
-	$jobid = $site . "-" . $era . "-" . $jobnum;
+	$jobid = $site . "-" . $epoch . "-" . $jobnum;
 	$jobdir = jobid_to_dir($jobid);
 
 	$dir = $basedir . $jobnum;
