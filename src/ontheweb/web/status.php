@@ -98,7 +98,7 @@ if ($getfile) {
 	$mimetype = shell_exec($cmd);
 	$sz = filesize($fn);
 	header('Content-Type: ' . $mimetype);
-	header('Content-Disposition: attachment; filename="' . $getfile . '"');
+	header('Content-Disposition: inline; filename="' . $getfile . '"');
 	header('Content-Length: ' . $sz);
 	readfile($fn);
 	exit;
