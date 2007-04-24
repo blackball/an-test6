@@ -128,7 +128,8 @@ function get_url($jobid, $fn) {
 $basedir = $resultdir . $site . "/" . $epoch . "/";
 loggit("Getting status in dir " . $basedir . "\n");
 $lst = scandir($basedir);
-$jobtimes = array();
+//$jobtimes = array();
+$alljobs = array();
 foreach ($lst as $name) {
 	$dir = $basedir . $name;
 	if ($name == "." || $name == "..")
@@ -145,29 +146,70 @@ foreach ($lst as $name) {
 
 	loggit("  " . $name . "\n");
 
-	$jd = $dir . "/" . $jobdata_fn;
-	if (!file_exists($jd)) {
-		loggit("no jd " . $jd . "\n");
+	$dbfile = $dir . "/" . $jobdata_fn;
+	if (!file_exists($dbfile)) {
+		loggit("no db " . $dbfile . "\n");
 		continue;
 	}
-	$db = connect_db($jd, TRUE);
+	$db = connect_db($dbfile, TRUE);
 	if (!$db) {
 		loggit("no db\n");
 		continue;
 	}
-	$date = getjobdata($db, 'submit-date');
+	//$date = getjobdata($db, 'submit-date');
+	$jd = getalljobdata($db, TRUE);
 	disconnect_db($db);
-	if (!$date) {
+	//if (!$date) {
+	if (!$jd) {
 		loggit("no date\n");
 		continue;
 	}
-	$jobtimes[$date] = $name;
+	//$jobtimes[$date] = $name;
+	$jd['dir'] = $name;
+	array_push($alljobs, $jd);
 }
 
-$sortedkeys = array_keys($jobtimes);
-rsort($sortedkeys);
-foreach ($sortedkeys as $date) {
-	$jobnum = $jobtimes[$date];
+$sort1 = $headers['sort'];
+$sort2 = $headers['sort2'];
+$dir1  = $headers['sortdir'];
+$dir2  = $headers['sortdir2'];
+
+if (!$sort1) {
+	$sort1 = 'submit-date';
+	$sort2 = FALSE;
+	$dir1 = 'r';
+}
+
+$keys1 = array();
+$keys2 = array();
+foreach ($alljobs as $j) {
+	$k1 = $j[$sort1];
+	array_push($keys1, $k1);
+	if ($sort2) {
+		$k2 = $j[$sort2];
+		array_push($keys2, $k2);
+	}
+}
+
+if ($dir1 && ($dir1 == 'r')) {
+	$d1 = SORT_DESC;
+} else {
+	$d1 = SORT_ASC;
+}
+if ($dir2 && ($dir2 == 'r')) {
+	$d2 = SORT_DESC;
+} else {
+	$d2 = SORT_ASC;
+}
+
+if ($sort2) {
+	array_multisort($keys1, $d1, $keys2, $d2, $alljobs);
+} else {
+	array_multisort($keys1, $d1, $alljobs);
+}
+
+foreach ($alljobs as $j) {
+	$jobnum = $j['dir'];
 	$jobid = $site . "-" . $epoch . "-" . $jobnum;
 	$jobdir = jobid_to_dir($jobid);
 
@@ -176,12 +218,13 @@ foreach ($sortedkeys as $date) {
 	if (!$props)
 		continue;
 
+	$date = $props['submit-date'];
+
 	$img = $props['displayImagePng'];
 	if (!$img) {
 		$img = $props['displayImage'];
 	}
 	echo "<tr>\n" . 
-		//"<td>" . get_datestr($ctime) . "</td>\n" .
 		"<td>" . $date . "</td>\n" .
 		"<td>" . $jobid . "</td>\n" .
 		"<td>" . $props['uname'] . " </td>\n" .
@@ -198,7 +241,6 @@ foreach ($sortedkeys as $date) {
 	} else {
 		echo "<td> </td>\n";
 	}
-	//"<td>" .  . "</td>\n" .
 	echo "</tr>\n";
 }
 ?>
@@ -215,6 +257,7 @@ function dir_status($mydir) {
 	global $done_fn;
 	global $overlay_fn;
 	global $input_fn;
+	global $xyls_fn;
 
 	$props = array();
 
@@ -245,9 +288,21 @@ function dir_status($mydir) {
 		return FALSE;
 	}
 	//loggit("disc\n");
+
+	if (!$jd['xylist-hash']) {
+		if (file_exists($mydir . $xyls_fn)) {
+			$hash = md5(file_get_contents($mydir . $xyls_fn));
+			$jd['xylist-hash'] = $hash;
+			if (setjobdata($db, array('xylist-hash'=>$hash))) {
+				loggit("Failed to save xylist-hash: " . $mydir . "\n");
+			}
+		}
+	}
+
 	disconnect_db($db);
 
 	$keys = array('email', 'uname', 'displayImage', 'displayImagePng',
+				  'submit-date', 'xylist-hash',
 				  );
 
 	foreach ($keys as $k) {

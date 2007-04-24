@@ -36,20 +36,20 @@ if ($email) {
 		if (!preg_match($sitepat, $site))
 			continue;
 		$sitedir = $resultdir . $site . "/";
-		$eras = scandir($sitedir);
-		foreach ($eras as $era) {
-			if ($era == "." || $era == "..")
+		$epochs = scandir($sitedir);
+		foreach ($epochs as $epoch) {
+			if ($epoch == "." || $epoch == "..")
 				continue;
-			if (!preg_match($erapat, $era))
+			if (!preg_match($epochpat, $epoch))
 				continue;
-			$eradir = $sitedir . $era . "/";
-			$nums = scandir($eradir);
+			$epochdir = $sitedir . $epoch . "/";
+			$nums = scandir($epochdir);
 			foreach ($nums as $num) {
 				if ($num == "." || $num == "..")
 					continue;
 				if (!preg_match($numpat, $num))
 					continue;
-				$numdir = $eradir . $num . "/";
+				$numdir = $epochdir . $num . "/";
 
 				$jd = $numdir . "/" . $jobdata_fn;
 				
@@ -67,7 +67,7 @@ if ($email) {
 					continue;
 				}
 				if (strcmp($jobemail, $email) == 0) {
-					$reldir = $site . "/" . $era . "/" . $num;
+					$reldir = $site . "/" . $epoch . "/" . $num;
 					$jobid = dir_to_jobid($reldir);
 					echo '<tr><td><a href="status.php?job=' . $jobid . '">' .
 						$jobid . "</a></td></tr>\n";
@@ -100,7 +100,7 @@ Job ID:
 <input type="submit" name="submit" value="Find Job" />
 </p>
 <p>
-Valid Job IDs have the form: <b>site-era-number</b>
+Valid Job IDs have the form: <b>site-epoch-number</b>
 </p>
 <p>
 Eg, <b>tor-200704-29154938</b>

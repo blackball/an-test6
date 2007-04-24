@@ -178,7 +178,7 @@ function create_new_jobid() {
 }
 
 $sitepat = '/^\w{3,8}$/';
-$erapat = '/^\d{6}$/';
+$epochpat = '/^\d{6}$/';
 $numpat = '/^\d{8}$/';
 
 function verify_jobid($jobid) {
