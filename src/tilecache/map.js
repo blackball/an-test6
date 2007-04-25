@@ -38,73 +38,6 @@ var QUAD_URL;
 
 var getdata;
 
-// The current polylines.
-var polygons = [];
-// The currently visible polylines.
-var visiblePolygons = [];
-// Show polygons?
-var showPolygons = true;
-
-/*
-  Retrieves a new list of polygons from the server.
-*/
-function getNewPolygons() {
-	// Get the current view...
-	var bounds = map.getBounds();
-	var pixelsize = map.getSize();
-	var zoom = map.getZoom();
-	var center = map.getCenter();
-	var sw = bounds.getSouthWest();
-	var ne = bounds.getNorthEast();
-
-	// Construct the URL for the quad server.
-	url = QUAD_URL
-		+  "ra1=" + sw.lng() + "&dec1=" + sw.lat()
-		+ "&ra2=" + ne.lng() + "&dec2=" + ne.lat()
-		+ "&width=" + pixelsize.width
-		+ "&height=" + pixelsize.height;
-	//+ "&zoom=" + zoom + "&ra=" + center.lng() + "&dec=" + center.lat()
-
-	debug("polygon url: " + url + "\n");
-
-	// Contact the quad server with our current position...
-	GDownloadUrl(url, function(data, responseCode){
-		// Remove old polygons.
-		for (var i=0; i<visiblePolygons.length; i++) {
-			map.removeOverlay(visiblePolygons[i]);
-		}
-		visiblePolygons.length = 0;
-
-		// Parse new polygons
-		var xml = GXml.parse(data);
-		var polys = xml.documentElement.getElementsByTagName("poly");
-		polygons.length = 0;
-		debug("parsing polygons...\n");
-		for (var i=0; i<polys.length; i++) {
-			var points = [];
-			for (var j=0;; j++) {
-				if (!(polys[i].hasAttribute("dec"+j) &&
-					  polys[i].hasAttribute("ra"+j)))
-					break;
-				points.push(new GLatLng(parseFloat(polys[i].getAttribute("dec"+j)),
-										parseFloat(polys[i].getAttribute("ra"+j))));
-			}
-			//points.push(points[0]);
-			debug("  polygon: " + points.length + " points.\n");
-			polygons.push(new GPolyline(points, "#90a8ff"));
-		}
-		debug("got " + polygons.length + " polygons.\n");
-
-		if (showPolygons) {
-			// Show new polygons.
-			for (var i=0; i<polygons.length; i++) {
-				map.addOverlay(polygons[i]);
-				visiblePolygons.push(polygons[i]);
-			}
-		}
-	});
-}
-
 /*
   This function gets called as the user moves the map.
 */
@@ -132,8 +65,6 @@ function mapzoomed(oldzoom, newzoom) {
 */
 function moveended() {
 	mapmoved();
-	// disabled for now
-	//getNewPolygons();
 }
 
 
@@ -236,26 +167,25 @@ function startup() {
 				 'rdlsfn', 'dashbox', 'clean', 'cmap' ];
 
 	// Base URL of the tile and quad servers.
-	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
+	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
 	//BASE_URL = "http://monte.ai.toronto.edu:8080/tilecache/";
 	TILE_URL = BASE_URL + "tilecache.php?";
 	//QUAD_URL = BASE_URL + "quad.php?";
+
+	// Add pass-thru args
+	for (var i=0; i<passargs.length; i++) {
+		if (passargs[i] in getdata) {
+			TILE_URL = TILE_URL + "&" + passargs[i] + "=" + getdata[passargs[i]];
+		}
+	}
 
 	// Describe the tile server...
 	// USNOB underneath
 	var usnobTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	usnobTile.myLayers='usnob';
 	usnobTile.myFormat='image/png';
-	usnobTile.myBaseURL=TILE_URL;
 	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
-
-	//TILE_URL = TILE_URL + "&tag=test-tag";
-	for (var i=0; i<passargs.length; i++) {
-		if (passargs[i] in getdata) {
-			TILE_URL = TILE_URL + "&" + passargs[i] + "=" + getdata[passargs[i]];
-		}
-	}
 
         //layers = 'tycho,grid';
         layers = '';
@@ -281,21 +211,28 @@ function startup() {
         }
 
 
-	// Describe the tile server...
-	var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-	//userimageTile.myLayers='tycho,image,grid,rdls,constellation';
-	//userimageTile.myLayers='tycho,image,grid,rdls';
-        userimageTile.myLayers=layers;
-	userimageTile.myFormat='image/png';
-	userimageTile.myBaseURL=TILE_URL;
-	userimageTile.getTileUrl=CustomGetTileUrl;
-	//var myMapType = new GMapType([usnobTile, userimageTile],
-	var myMapType = new GMapType([userimageTile],
-								 G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
+		/*
+		  var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+		  //userimageTile.myLayers='tycho,image,grid,rdls,constellation';
+		  //userimageTile.myLayers='tycho,image,grid,rdls';
+		  userimageTile.myLayers=layers;
+		  userimageTile.myFormat='image/png';
+		  userimageTile.myBaseURL=TILE_URL;
+		  userimageTile.getTileUrl=CustomGetTileUrl;
+		  var myMapType = new GMapType([userimageTile],
+		  G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
+		*/
+
+		var usnobMapType = new GMapType([usnobTile],
+										G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
 
 	map.getMapTypes().length = 0;
-	map.addMapType(myMapType);
-	map.setMapType(myMapType);
+	/*
+	  map.addMapType(myMapType);
+	  map.setMapType(myMapType);
+	*/
+	map.addMapType(usnobMapType);
+	map.setMapType(usnobMapType);
 
 	// Show an overview map?
 	var overview = true;
@@ -318,7 +255,6 @@ function startup() {
 
 	map.addControl(new GLargeMapControl());
 	map.addControl(new GMapTypeControl());
-	map.addControl(new PolygonControl());
 
 	moveended();
 	mapzoomed(map.getZoom(), map.getZoom());
