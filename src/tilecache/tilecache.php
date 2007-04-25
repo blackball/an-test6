@@ -29,12 +29,12 @@
  * already rendered.
  */
 
-/*
 $CACHEDIR = "/data1/tilecache";
-$TILERENDER = "/home/gmaps/usnob-map/execs/tilerender";
-*/
+$TILERENDER = "/home/gmaps/an/usnob-map/execs/tilerender";
+/*
 $CACHEDIR = "/tmp/tilecache";
 $TILERENDER = "/h/260/dstn/an/usnob-map/execs/tilerender";
+*/
 
 //"/home/gmaps/astrometry/src/tilecache/tilecache.log";
 $LOGFILE = "/tmp/tilecache.log";
@@ -110,6 +110,7 @@ $wcs = $_REQUEST["imwcsfn"];
 if ($wcs) {
     $cmdline .= " -I " . escapeshellarg($wcs);
 }
+
 // Image filename.
 $imgfn = $_REQUEST["imagefn"];
 if ($imgfn) {
@@ -126,14 +127,17 @@ if ($cc) {
         $cmdline .= " -c " . $ccval;
     }
 }
+
 // Arcsinh.
 if (array_key_exists("arcsinh", $_REQUEST)) {
     $cmdline .= " -s";
 }
+
 // Arith.
 if (array_key_exists("arith", $_REQUEST)) {
     $cmdline .= " -a";
 }
+
 // Gain.
 $gain = $_REQUEST["gain"];
 if ($gain) {
@@ -144,10 +148,12 @@ if ($gain) {
 
 //////////////////////
 // render_usnob layer:
+
 // diffraction-spike cleaned version:
 if (array_key_exists('clean', $_REQUEST)) {
 	$cmdline .= " -S";
 }
+
 // color mapping:
 $cmap = $_REQUEST['cmap'];
 if ($cmap) {
@@ -175,6 +181,7 @@ $wcs = $_REQUEST["wcsfn"];
 if ($wcs) {
     $cmdline .= " -W " . escapeshellarg($wcs);
 }
+
 // Line width.
 $lw = $_REQUEST["lw"];
 if ($lw) {
@@ -183,6 +190,7 @@ if ($lw) {
     }
 }
 
+// Dashed box to show zoom-in
 $box = $_REQUEST["dashbox"];
 if ($box) {
     if (sscanf($box, "%f", $boxval) == 1) {

@@ -232,11 +232,12 @@ function startup() {
 	}
 	map.setCenter(new GLatLng(dec, ra), zoom);
 
-	passargs = [ "imagefn", "wcsfn", "cc", "arcsinh", "arith", "gain", "rdlsfn", "dashbox" ];
+	passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
+				 'rdlsfn', 'dashbox', 'clean', 'cmap' ];
 
 	// Base URL of the tile and quad servers.
-	//BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
-	BASE_URL = "http://monte.ai.toronto.edu:8080/tilecache/";
+	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
+	//BASE_URL = "http://monte.ai.toronto.edu:8080/tilecache/";
 	TILE_URL = BASE_URL + "tilecache.php?";
 	//QUAD_URL = BASE_URL + "quad.php?";
 
