@@ -29,34 +29,41 @@
  * already rendered.
  */
 
+/*
 $CACHEDIR = "/data1/tilecache";
 $TILERENDER = "/home/gmaps/usnob-map/execs/tilerender";
+*/
+$CACHEDIR = "/tmp/tilecache";
+$TILERENDER = "/h/260/dstn/an/usnob-map/execs/tilerender";
+
+//"/home/gmaps/astrometry/src/tilecache/tilecache.log";
+$LOGFILE = "/tmp/tilecache.log";
 
 // Write a message to the log file.
 function loggit($mesg) {
-	//error_log($mesg, 3, "/home/gmaps/astrometry/src/tilecache/tilecache.log");
-	error_log($mesg, 3, "/tmp/tilecache.log");
+    global $LOGFILE;
+    error_log($mesg, 3, $LOGFILE);
 }
 
 /*
   This script gets called by the client to request a map tile.  Map tiles are
   256x256 pixels and are specified in terms of the RA,DEC bounding box.
   This script just parses the values and formats a command-line for a C program.
- */
+*/
 
 loggit("Tile request headers:\n");
 $headers = $_REQUEST;
 foreach ($headers as $header => $value) {
-	loggit("  $header: $value\n");
+    loggit("  $header: $value\n");
 }
 	
 // The variables we need...
 $needed = array("WIDTH", "HEIGHT", "BBOX");
 foreach ($needed as $n => $val) {
-	if (!array_key_exists($val, $_REQUEST)) {
-		loggit("Request doesn't contain $val.\n");
-		die("Invalid request: missing $val");
-	}
+    if (!array_key_exists($val, $_REQUEST)) {
+        loggit("Request doesn't contain $val.\n");
+        die("Invalid request: missing $val");
+    }
 }
 
 $ws = $_REQUEST["WIDTH"];
@@ -69,18 +76,18 @@ $cmdline = $TILERENDER;
 
 // Make sure the bounding box is actually numerical values...
 if (sscanf($bb, "%f,%f,%f,%f", $x0, $y0, $x1, $y1) != 4) {
-	loggit("Failed to parse BBOX.\n");
-	header("Content-type: text/html");
-	echo("<html><body>Invalid request: failed to parse BBOX.</body></html>\n\n");
-	exit;
+    loggit("Failed to parse BBOX.\n");
+    header("Content-type: text/html");
+    echo("<html><body>Invalid request: failed to parse BBOX.</body></html>\n\n");
+    exit;
 }
 // Make sure the width and height are numerical...
 if ((sscanf($ws, "%d", $w) != 1) ||
-	(sscanf($hs, "%d", $h) != 1)) {
-	loggit("Failed to parse WIDTH/HEIGHT.\n");
-	header("Content-type: text/html");
-	printf("<html><body>Invalid request: failed to parse WIDTH or HEIGHT.</body></html>\n\n");
-	exit;
+    (sscanf($hs, "%d", $h) != 1)) {
+    loggit("Failed to parse WIDTH/HEIGHT.\n");
+    header("Content-type: text/html");
+    printf("<html><body>Invalid request: failed to parse WIDTH or HEIGHT.</body></html>\n\n");
+    exit;
 }
 
 $cmdline .= sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, $w, $h);
@@ -88,7 +95,7 @@ $cmdline .= sprintf(" -x %f -y %f -X %f -Y %f -w %d -h %d", $x0, $y0, $x1, $y1, 
 // Layers
 $layers = explode(",", $lay);
 foreach ($layers as $l) {
-	$cmdline .= " -l " . escapeshellarg($l);
+    $cmdline .= " -l " . escapeshellarg($l);
 }
 
 // ***************************************************
@@ -101,12 +108,12 @@ foreach ($layers as $l) {
 // WCS filename.
 $wcs = $_REQUEST["imwcsfn"];
 if ($wcs) {
-	$cmdline .= " -I " . escapeshellarg($wcs);
+    $cmdline .= " -I " . escapeshellarg($wcs);
 }
 // Image filename.
 $imgfn = $_REQUEST["imagefn"];
 if ($imgfn) {
-	$cmdline .= " -i " . escapeshellarg($imgfn);
+    $cmdline .= " -i " . escapeshellarg($imgfn);
 }
 
 //////////////////////
@@ -115,23 +122,37 @@ if ($imgfn) {
 // Color correction.
 $cc = $_REQUEST["cc"];
 if ($cc) {
-	if (sscanf($cc, "%f", $ccval) == 1) {
-		$cmdline .= " -c " . $ccval;
-	}
+    if (sscanf($cc, "%f", $ccval) == 1) {
+        $cmdline .= " -c " . $ccval;
+    }
 }
 // Arcsinh.
 if (array_key_exists("arcsinh", $_REQUEST)) {
-	$cmdline .= " -s";
+    $cmdline .= " -s";
 }
 // Arith.
 if (array_key_exists("arith", $_REQUEST)) {
-	$cmdline .= " -a";
+    $cmdline .= " -a";
 }
 // Gain.
 $gain = $_REQUEST["gain"];
 if ($gain) {
-	if (sscanf($gain, "%f", $gainval) == 1) {
-		$cmdline .= " -g " . $gainval;
+    if (sscanf($gain, "%f", $gainval) == 1) {
+        $cmdline .= " -g " . $gainval;
+    }
+}
+
+//////////////////////
+// render_usnob layer:
+// diffraction-spike cleaned version:
+if (array_key_exists('clean', $_REQUEST)) {
+	$cmdline .= " -S";
+}
+// color mapping:
+$cmap = $_REQUEST['cmap'];
+if ($cmap) {
+	if (in_array($cmap, array('rb', 'i'))) {
+		$cmdline .= " -C " . $cmap;
 	}
 }
 
@@ -141,7 +162,7 @@ if ($gain) {
 // rdls file
 $rdlsfn = $_REQUEST["rdlsfn"];
 if ($rdlsfn) {
-	$cmdline .= " -r " . escapeshellarg($rdlsfn);
+    $cmdline .= " -r " . escapeshellarg($rdlsfn);
 }
 
 // missing: -F field number -N number of stars
@@ -152,21 +173,21 @@ if ($rdlsfn) {
 // WCS file.
 $wcs = $_REQUEST["wcsfn"];
 if ($wcs) {
-	$cmdline .= " -W " . escapeshellarg($wcs);
+    $cmdline .= " -W " . escapeshellarg($wcs);
 }
 // Line width.
 $lw = $_REQUEST["lw"];
 if ($lw) {
-	if (sscanf($lw, "%f", $lwval) == 1) {
-		$cmdline .= " -L " . $lwval;
-	}
+    if (sscanf($lw, "%f", $lwval) == 1) {
+        $cmdline .= " -L " . $lwval;
+    }
 }
 
 $box = $_REQUEST["dashbox"];
 if ($box) {
-	if (sscanf($box, "%f", $boxval) == 1) {
-		$cmdline .= " -B " . $boxval;
-	}
+    if (sscanf($box, "%f", $boxval) == 1) {
+        $cmdline .= " -B " . $boxval;
+    }
 }
 
 // ***************************************************
@@ -181,43 +202,44 @@ $tilehash = hash('sha256', $tilestring);
 header("Content-type: image/png");
 
 if ($tag) {
-	if (!preg_match("/[a-zA-Z0-9-]+/", $tag)) {
-		loggit("Naughty tag: \"" . $tag . "\"\n");
-		exit;
-	}
-	$tilecachedir = "$CACHEDIR/$tag";
-	if (!file_exists($tilecachedir)) {
-		if (!mkdir($tilecachedir)) {
-			loggit("Failed to create cache dir " . $tilecachedir . "\n");
-			exit;
-		}
-	}
-	$tilefile = "$tilecachedir/tile-$tilehash.png";
-	if (!file_exists($tilefile)) {
-		loggit("cmdline: " . $cmdline . "\n");
-		$rtn = system($cmdline . " > " . $tilefile);
-		if ($rtn) {
-			loggit("Tilerender failed: $rtn.\n");
-		}
-		// Make sure the file actually rendered... paranoia?
-		if (!file_exists($tilefile)) {
-			$msg = "Something bad happened when rendering 'layer:$lay'  tag:$tag... ???\n";
-			loggit($msg);
-			header("Content-type: text/html");
-			printf("<html><body>$msg</body></html>\n\n");
-			exit;
-		}
-		loggit("Rendered: $cmdline > $tilefile\n");
-	} else {
-		loggit("Cache hit: " . $tilefile . "\n");
-	}
+    if (!preg_match("/[a-zA-Z0-9-]+/", $tag)) {
+        loggit("Naughty tag: \"" . $tag . "\"\n");
+        exit;
+    }
+    $tilecachedir = "$CACHEDIR/$tag";
+    if (!file_exists($tilecachedir)) {
+        if (!mkdir($tilecachedir)) {
+            loggit("Failed to create cache dir " . $tilecachedir . "\n");
+            exit;
+        }
+    }
+    $tilefile = "$tilecachedir/tile-$tilehash.png";
+    if (!file_exists($tilefile)) {
+        $cmdline .= " > " . $tilefile . " 2> " . $LOGFILE;
+        loggit("cmdline: " . $cmdline . "\n");
+        $rtn = system($cmdline);
+        if ($rtn) {
+            loggit("Tilerender failed: $rtn.\n");
+        }
+        // Make sure the file actually rendered... paranoia?
+        if (!file_exists($tilefile)) {
+            $msg = "Something bad happened when rendering 'layer:$lay'  tag:$tag... ???\n";
+            loggit($msg);
+            header("Content-type: text/html");
+            printf("<html><body>$msg</body></html>\n\n");
+            exit;
+        }
+        loggit("Rendered: $cmdline > $tilefile\n");
+    } else {
+        loggit("Cache hit: " . $tilefile . "\n");
+    }
 
-	// Slam the file over the wire
-	$fp = fopen($tilefile, 'rb');
-	fpassthru($fp);
+    // Slam the file over the wire
+    $fp = fopen($tilefile, 'rb');
+    fpassthru($fp);
 } else {
-	loggit("cmdline: " . $cmdline . "\n");
-	// No cache, just run it.
-	passthru($cmdline);
+    loggit("cmdline: " . $cmdline . "\n");
+    // No cache, just run it.
+    passthru($cmdline);
 }
 ?> 
