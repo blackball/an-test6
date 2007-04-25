@@ -29,8 +29,9 @@
  * already rendered.
  */
 
-$CACHEDIR = "/data1/tilecache";
-$TILERENDER = "/home/gmaps/an/usnob-map/execs/tilerender";
+$CACHEDIR = "/data1/tilecache2";
+//$TILERENDER = "/home/gmaps/an/usnob-map/execs/tilerender";
+$TILERENDER = "/home/gmaps/an-test/usnob-map/execs/tilerender";
 /*
 $CACHEDIR = "/tmp/tilecache";
 $TILERENDER = "/h/260/dstn/an/usnob-map/execs/tilerender";

@@ -97,22 +97,22 @@ CustomGetTileUrl=function(a,b,c) {
 		} else {
 	*/
 	var lBbox=lUL.x+","+lUL.y+","+lLR.x+","+lLR.y;
-	var lSRS="EPSG:4326";
+	//var lSRS="EPSG:4326";
 	//} 
 	var lURL=this.myBaseURL;
-	lURL+="&REQUEST=GetMap";
-	lURL+="&SERVICE=WMS";
-	lURL+="&VERSION=1.1.1";
+	//lURL+="&REQUEST=GetMap";
+	//lURL+="&SERVICE=WMS";
+	//lURL+="&VERSION=1.1.1";
 	lURL+="&LAYERS="+this.myLayers;
-	lURL+="&STYLES="+this.myStyles;
-	lURL+="&FORMAT="+this.myFormat;
-	lURL+="&BGCOLOR=0xFFFFFF";
-	lURL+="&TRANSPARENT=TRUE";
-	lURL+="&SRS="+lSRS;
+	//lURL+="&STYLES="+this.myStyles;
+	//lURL+="&FORMAT="+this.myFormat;
+	//lURL+="&BGCOLOR=0xFFFFFF";
+	//lURL+="&TRANSPARENT=TRUE";
+	//lURL+="&SRS="+lSRS;
 	lURL+="&BBOX="+lBbox;
 	lURL+="&WIDTH=256";
 	lURL+="&HEIGHT=256";
-	lURL+="&reaspect=false";
+	//lURL+="&reaspect=false";
 	//document.write(lURL + "<br/>")
 	//alert(" url is " + lURL);
 	return lURL;
