@@ -235,7 +235,8 @@ function startup() {
 	passargs = [ "imagefn", "wcsfn", "cc", "arcsinh", "arith", "gain", "rdlsfn", "dashbox" ];
 
 	// Base URL of the tile and quad servers.
-	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
+	//BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache/";
+	BASE_URL = "http://monte.ai.toronto.edu:8080/tilecache/";
 	TILE_URL = BASE_URL + "tilecache.php?";
 	//QUAD_URL = BASE_URL + "quad.php?";
 
@@ -248,17 +249,42 @@ function startup() {
 	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
 
-	TILE_URL = TILE_URL + "&tag=test-tag";
+	//TILE_URL = TILE_URL + "&tag=test-tag";
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
 			TILE_URL = TILE_URL + "&" + passargs[i] + "=" + getdata[passargs[i]];
 		}
 	}
 
+        //layers = 'tycho,grid';
+        layers = '';
+        if ("usnob" in getdata) {
+            layers += 'usnob';
+        } else {
+            layers += 'tycho';
+        }
+        if ("grid" in getdata) {
+            layers += 'grid';
+        }
+        if (("imagefn" in getdata) && ("imwcsfn" in getdata)) {
+            layers += ',image';
+        }
+        if ("wcsfn" in getdata) {
+            layers += ',boundary';
+        }
+        if ("const" in getdata) {
+            layers += ',constellation';
+        }
+        if ("rdlsfn" in getdata) {
+            layers += ',rdls';
+        }
+
+
 	// Describe the tile server...
 	var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
 	//userimageTile.myLayers='tycho,image,grid,rdls,constellation';
-	userimageTile.myLayers='tycho,image,grid,rdls';
+	//userimageTile.myLayers='tycho,image,grid,rdls';
+        userimageTile.myLayers=layers;
 	userimageTile.myFormat='image/png';
 	userimageTile.myBaseURL=TILE_URL;
 	userimageTile.getTileUrl=CustomGetTileUrl;
