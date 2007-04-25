@@ -19,6 +19,7 @@ function allow_email($email) {
 		       'aconti@stsci.edu',
 		       'alanv@ics.mq.edu.au',
 		       'barth@uci.edu',
+		       'blutch@google.com',
 		       'carolc@stsci.edu',
 		       'christopher@stumm.ca',
 		       'ckochanek@astronomy.ohio-state.edu',
