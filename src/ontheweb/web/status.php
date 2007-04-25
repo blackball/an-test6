@@ -105,11 +105,19 @@ if ($getfile) {
 	if (!file_exists($fn)) {
 		die("No such file.");
 	}
-	$cmd = "file -b -i " . escapeshellarg($fn);
-	$mimetype = shell_exec($cmd);
 	$sz = filesize($fn);
+	$attachments = array('wcs.fits',
+						 );
+	if (in_array($getfile, $attachments)) {
+		$mimetype = 'application/octet-stream';
+		$disp = 'attachment';
+	} else {
+		$cmd = "file -b -i " . escapeshellarg($fn);
+		$mimetype = shell_exec($cmd);
+		$disp = 'inline';
+	}
+	header('Content-Disposition: ' . $disp . '; filename="' . $getfile . '"');
 	header('Content-Type: ' . $mimetype);
-	header('Content-Disposition: inline; filename="' . $getfile . '"');
 	header('Content-Length: ' . $sz);
 	readfile($fn);
 	exit;
