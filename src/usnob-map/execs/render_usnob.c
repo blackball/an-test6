@@ -13,7 +13,8 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-static char* merc_template = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
+static char* merc_template  = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
+static char* clean_template = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
 static char* prerendered_template = "/h/260/dstn/raid3/usnob-prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
 
 // Gridding of Mercator space
@@ -35,17 +36,20 @@ static void map_flux(unsigned char* img, render_args_t* args,
 	unsigned char* pix;
 	double r, g, b, I, f, R, G, B, maxRGB;
 
-	/*
-	  mercrender() orders the flux as R,B,N. (red,blue,infrared)
-	  We want
-	  r = N
-	  g = R
-	  b = B
-	*/
-	r = nflux;
-	g = rflux;
-	b = bflux;
-		
+	// Map R,B,N to RGB
+
+	if (args->cmap && !strcmp(args->cmap, "rb")) {
+		r = rflux;
+		b = bflux;
+		g = sqrt(r * b);
+	} else if (args->cmap && !strcmp(args->cmap, "i")) {
+		r = g = b = nflux;
+	} else {
+		r = nflux;
+		g = rflux;
+		b = bflux;
+	}
+
 	I = (r + g + b) / 3;
 	if (I == 0.0) {
 		R = G = B = 0.0;
@@ -148,7 +152,6 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				logmsg("  merc y step %g (%g for %i pixels)\n", mystep, mystep*WH, WH);
 
 				snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, i, j);
-				//snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, j, i);
 				logmsg("  reading file %s\n", fn);
 				f = fopen(fn, "rb");
 				if (!f) {
@@ -175,13 +178,9 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				for (yp=0; yp<WH; yp++) {
 					int ix, iy;
 					iy = (int)round(ymerc2pixelf(my + mystep * yp, args));
-					//iy = ymerc2pixel(my + mystep * yp, args);
-					//iy = ymerc2pixel(my + mstep * (WH - 1 - yp), args);
-					//iy = ymerc2pixel(my + mstep * (WH - yp), args);
 					for (xp=0; xp<WH; xp++) {
 						double r,b,n;
 
-						//ix = xmerc2pixel(mx + mxstep * xp, args);
 						ix = (int)round(xmerc2pixelf(mx + mxstep * xp, args));
 
 						if (!in_image(ix, iy, args))
@@ -214,8 +213,11 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 
             logmsg("rendering tile %i, %i.\n", i, j);
 
-            //snprintf(fn, sizeof(fn), merc_template, i, j);
-            snprintf(fn, sizeof(fn), merc_template, j, i);
+			if (args->clean) {
+				snprintf(fn, sizeof(fn), clean_template, j, i);
+			} else {
+				snprintf(fn, sizeof(fn), merc_template, j, i);
+			}
             logmsg("reading file %s\n", fn);
             merc = merctree_open(fn);
             if (!merc) {
