@@ -609,7 +609,7 @@ function process_data ($vals) {
 
 	if ($index == 'auto') {
 		// Estimate size of quads we could find:
-		$fmax = 0.5  * min($W, $H) * $fu_upper / 60.0;
+		$fmax = 1.0 * max($W, $H) * $fu_upper / 60.0;
 		$fmin = 0.1 * min($W, $H) * $fu_lower / 60.0;
 		loggit("Collecting indexes with quads in range [" . $fmin . ", " . $fmax . "] arcmin.\n");
 
