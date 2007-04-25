@@ -30,7 +30,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RM"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:Sp"
 
 
 /* All render layers must go in here */
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     render_args_t args;
     pl* layers;
     int i;
-    int inmerc = 0;
+    bool inmerc = 0;
 
     memset(&args, 0, sizeof(render_args_t));
 
@@ -81,8 +81,17 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'p':
+			args.nopre = TRUE;
+			break;
+		case 'S':
+			args.clean = TRUE;
+			break;
+		case 'C':
+			args.cmap = strdup(optarg);
+			break;
         case 'M':
-            inmerc = 1;
+            inmerc = TRUE;
             break;
         case 'R':
             args.makerawfloatimg = 1;
@@ -164,10 +173,12 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
+	/*
     if (args.W > 1024 || args.H > 1024) {
         fprintf(stderr, "tilecache: Width or height too large (limit 1024)\n");
         exit(-1);
     }
+	*/
 
     fprintf(stderr, "tilecache: BEGIN TILECACHE\n");
 
@@ -271,6 +282,7 @@ int main(int argc, char *argv[]) {
     free(args.imagefn);
     free(args.wcsfn);
     free(args.imwcsfn);
+    free(args.cmap);
     for (i=0; i<pl_size(layers); i++) {
         char* str = pl_get(layers, i);
         free(str);

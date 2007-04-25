@@ -49,6 +49,11 @@ struct render_args {
 	bool arith;
 	double gain;
 
+	// Args for render_usnob:
+	char* cmap;
+	bool clean; // diffraction-spike-less version, or original?
+	bool nopre; // don't use pre-rendered tiles (useful when you're trying to *make* pre-rendered tiles)
+
 	// Args for render_rdls
 	char* rdlsfn;
 	int Nstars;
