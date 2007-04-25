@@ -38,6 +38,13 @@ var QUAD_URL;
 
 var getdata;
 
+// are we showing the overview?
+var overview = true;
+
+// args that we pass on.
+var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
+				 'rdlsfn', 'dashbox', 'clean', 'cmap' ];
+
 /*
   This function gets called as the user moves the map.
 */
@@ -66,7 +73,6 @@ function mapzoomed(oldzoom, newzoom) {
 function moveended() {
 	mapmoved();
 }
-
 
 /*
   This function gets called when the mouse is moved.
@@ -105,6 +111,14 @@ function linktohere() {
     if (!overview) {
 		url = url + "&over=no";
     }
+	for (var i=0; i<passargs.length; i++) {
+		if (passargs[i] in getdata) {
+			url = url + "&" + passargs[i];
+			if (getdata[passargs[i]]) {
+				url = url + "=" + getdata[passargs[i]];
+			}
+		}
+	}
 	window.location = url;
 }
 
@@ -162,9 +176,6 @@ function startup() {
 		zoom = Number(getdata["zoom"]);
 	}
 	map.setCenter(new GLatLng(dec, ra), zoom);
-
-	passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
-				 'rdlsfn', 'dashbox', 'clean', 'cmap' ];
 
 	// Base URL of the tile and quad servers.
 	BASE_URL = "http://oven.cosmo.fas.nyu.edu/tilecache2/";
@@ -235,7 +246,6 @@ function startup() {
 	map.setMapType(usnobMapType);
 
 	// Show an overview map?
-	var overview = true;
 	if (("over" in getdata) && (getdata["over"] == "no")) {
 		overview = false;
 	}
