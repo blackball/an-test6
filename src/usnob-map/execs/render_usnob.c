@@ -13,9 +13,14 @@
 #define max(a, b)  ((a)>(b)?(a):(b))
 #define min(a, b)  ((a)<(b)?(a):(b))
 
-static char* merc_template  = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
-static char* clean_template = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
-static char* prerendered_template = "/h/260/dstn/raid3/usnob-prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+/*
+  static char* merc_template  = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
+  static char* clean_template = "/h/260/dstn/raid3/usnob-merctrees/merc_%02i_%02i.mkdt.fits";
+  static char* prerendered_template = "/h/260/dstn/raid3/usnob-prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+*/
+static char* merc_template  = "/data1/usnob-gmaps/merc-orig/merc_%02i_%02i.mkdt.fits";
+static char* clean_template = "/data1/usnob-gmaps/merc-clean/merc_%02i_%02i.mkdt.fits";
+static char* prerendered_template = "/data1/usnob-gmaps/prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
 
 // Gridding of Mercator space
 static int NM = 32;
