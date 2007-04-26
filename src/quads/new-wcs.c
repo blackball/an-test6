@@ -40,26 +40,26 @@ static void printHelp(char* progname) {
 
 static char* exclude_input[] = {
 	// TAN
-	"CTYPE.*",
-	"WCSAXES",
-	"EQUINOX",
-	"LONPOLE",
-	"LATPOLE",
-	"CRVAL.*",
-	"CRPIX.*",
-	"CUNIT.*",
-	"CD[12]_[12]",
+	"^CTYPE.*",
+	"^WCSAXES$",
+	"^EQUINOX$",
+	"^LONPOLE$",
+	"^LATPOLE$",
+	"^CRVAL.*",
+	"^CRPIX.*",
+	"^CUNIT.*",
+	"^CD[12]_[12]$",
 	// SIP
-	"[AB]P?_ORDER",
-	"[AB]P?_[[:digit:]]_[[:digit:]]",
+	"^[AB]P?_ORDER$",
+	"^[AB]P?_[[:digit:]]_[[:digit:]]$",
 };
 static int NE1 = sizeof(exclude_input) / sizeof(char*);
 
 static char* exclude_wcs[] = {
-	"SIMPLE",
-	"BITPIX",
-	"EXTEND",
-	"END",
+	"^SIMPLE$",
+	"^BITPIX$",
+	"^EXTEND$",
+	"^END$",
 };
 static int NE2 = sizeof(exclude_wcs) / sizeof(char*);
 
