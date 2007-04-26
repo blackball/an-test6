@@ -71,7 +71,8 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	startree hpquads codetree unpermute-quads unpermute-stars blind \
 	solvedserver printsolved xylist2fits mergesolved \
-	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable 
+	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable \
+	new-wcs
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable
@@ -109,6 +110,8 @@ prospectus_progs: $(PROSPECTUS)
 
 .PHONY: fitsutils
 fitsutils: $(FITS_UTILS)
+
+new-wcs: new-wcs.o $(QFITS_LIB)
 
 rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
