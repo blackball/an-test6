@@ -43,7 +43,7 @@ var overview = true;
 
 // args that we pass on.
 var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
-				 'rdlsfn', 'dashbox', 'clean', 'cmap' ];
+				 'rdlsfn', 'dashbox', 'cmap' ]; // 'clean'
 
 /*
   This function gets called as the user moves the map.
@@ -198,6 +198,12 @@ function startup() {
 	usnobTile.myBaseURL=TILE_URL + "&tag=usnob";
 	usnobTile.getTileUrl=CustomGetTileUrl;
 
+	var cleanTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	cleanTile.myLayers='usnob';
+	cleanTile.myFormat='image/png';
+	cleanTile.myBaseURL=TILE_URL + "&tag=usnob-clean" + "&clean";
+	cleanTile.getTileUrl=CustomGetTileUrl;
+
         //layers = 'tycho,grid';
         layers = '';
         if ("usnob" in getdata) {
@@ -236,6 +242,8 @@ function startup() {
 
 		var usnobMapType = new GMapType([usnobTile],
 										G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
+		var cleanMapType = new GMapType([cleanTile],
+										G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
 
 	map.getMapTypes().length = 0;
 	/*
@@ -243,6 +251,7 @@ function startup() {
 	  map.setMapType(myMapType);
 	*/
 	map.addMapType(usnobMapType);
+	map.addMapType(cleanMapType);
 	map.setMapType(usnobMapType);
 
 	// Show an overview map?
