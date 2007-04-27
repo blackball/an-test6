@@ -31,7 +31,7 @@
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
-	printf("\nUsage: %s [options] <quads>  > output.png\n"
+	printf("\nUsage: %s [options] <quads>  > output.ppm\n"
 		   "  -W <width>        Width of output image.\n"
 		   "  -H <height>       Height of output image.\n"
 		   "  [-w <width>]      Width of lines to draw (default: 5).\n"

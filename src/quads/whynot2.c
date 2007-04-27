@@ -144,7 +144,9 @@ struct blind_params {
 
     qidxfile* qidx;
     rdlist* truerdls;
-    
+
+	rdlist* indexrdls;
+
     double* truerd;
 
 };
@@ -328,6 +330,20 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		if (bp->indexrdlsfname) {
+			bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
+			if (bp->indexrdls) {
+				if (rdlist_write_header(bp->indexrdls)) {
+					logerr(bp, "Failed to write index RDLS header.\n");
+					rdlist_close(bp->indexrdls);
+					bp->indexrdls = NULL;
+				}
+			} else {
+				logerr(bp, "Failed to open index RDLS file %s for writing.\n",
+					   bp->indexrdlsfname);
+			}
+		}
+
 		for (I=0; I<pl_size(bp->indexes); I++) {
 			char *idfname, *treefname, *quadfname, *startreefname;
 			char* fname = pl_get(bp->indexes, I);
@@ -474,6 +490,14 @@ int main(int argc, char *argv[]) {
 
 		if (bp->truerdls) {
 			rdlist_close(bp->truerdls);
+		}
+
+		if (bp->indexrdls) {
+			if (rdlist_fix_header(bp->indexrdls) ||
+				rdlist_close(bp->indexrdls)) {
+				logerr(bp, "Failed to close index RDLS file.\n");
+			}
+			bp->indexrdls = NULL;
 		}
 
 		if (!bp->silent)
@@ -757,6 +781,12 @@ static void solve_fields(blind_params* bp) {
 		int uq;
 		il* quadorder = NULL;
 
+		if (bp->indexrdls) {
+			if (rdlist_write_new_field(bp->indexrdls)) {
+				logerr(bp, "Failed to write index RDLS field header.\n");
+			}
+		}
+
 		fieldnum = il_get(bp->fieldlist, fi);
 		if (fieldnum >= nfields) {
 			logerr(bp, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
@@ -833,6 +863,19 @@ static void solve_fields(blind_params* bp) {
 		nind = res->nres;
 
 		logmsg(bp, "Found %i index stars in range.\n", nind);
+
+		if (bp->indexrdls) {
+			double* indradec = malloc(2 * nind * sizeof(double));
+			for (i=0; i<nind; i++) {
+				xyzarr2radec(indxyz + i*3, radec+i*2+0, radec+i*2+1);
+				radec[2*i+0] = rad2deg(radec[2*i+0]);
+				radec[2*i+1] = rad2deg(radec[2*i+1]);
+			}
+			if (rdlist_write_entries(bp->indexrdls, indradec, nind)) {
+				logerr(bp, "Failed to write index RDLS entry.\n");
+			}
+			free(indradec);
+		}
 
 		itree = kdtree_build(NULL, indxyz, nind, 3, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
@@ -1095,6 +1138,12 @@ static void solve_fields(blind_params* bp) {
 		}
 
 	cleanup:
+		if (bp->indexrdls) {
+			if (rdlist_fix_field(bp->indexrdls)) {
+				logerr(bp, "Failed to fix index RDLS field header.\n");
+			}
+		}
+
 		free(bp->truerd);
 		bp->truerd = NULL;
 		free(truexyz);
