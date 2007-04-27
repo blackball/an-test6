@@ -29,12 +29,13 @@
 #include "bl.h"
 #include "solvedfile.h"
 
-const char* OPTIONS = "hum:SM:";
+const char* OPTIONS = "hum:SM:j";
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
 	fprintf(stderr, "\nUsage: %s <solved-file> ...\n"
 			"    [-u]: print UNsolved fields\n"
+			"    [-j]: just the field numbers, no headers, etc.\n"
 			"    [-m <max-field>]: for unsolved mode, max field number.\n"
 			"    [-S]: for unsolved mode, use Sloan max field numbers, and assume the files are given in order.\n"
 			"    [-w]: format for the wiki.\n"
@@ -56,6 +57,7 @@ int main(int argc, char** args) {
 	bool sloan = FALSE;
 	bool wiki = FALSE;
 	char* matlab = NULL;
+	bool justnums = FALSE;
 
 	int sloanmaxes[] = { 9978, 9980, 9974, 9974, 9965, 9971, 9965, 9979, 9978, 9979,
 						 9981, 9978, 9981, 9977, 9973, 9977, 9981, 9977, 9972, 9975,
@@ -64,6 +66,9 @@ int main(int argc, char** args) {
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1) {
 		switch (argchar) {
+		case 'j':
+			justnums = TRUE;
+			break;
 		case 'M':
 			matlab = optarg;
 			break;
@@ -112,7 +117,7 @@ int main(int argc, char** args) {
 		fseeko(fid, 0, SEEK_END);
 		filesize = ftello(fid);
 		fclose(fid);
-		if (!matlab)
+		if (!matlab && !justnums)
 			printf("File %s\n", inputfiles[i]);
 		if (sloan && (i < (sizeof(sloanmaxes) / sizeof(int))))
 			lim = imin(filesize, sloanmaxes[i]);
