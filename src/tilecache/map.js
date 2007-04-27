@@ -45,6 +45,9 @@ var overview = true;
 var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
 				 'rdlsfn', 'dashbox', 'cmap' ]; // 'clean'
 
+var usnobMapType;
+var cleanMapType;
+
 /*
   This function gets called as the user moves the map.
 */
@@ -114,11 +117,16 @@ function linktohere() {
 	for (var i=0; i<passargs.length; i++) {
 		if (passargs[i] in getdata) {
 			url = url + "&" + passargs[i];
-			if (getdata[passargs[i]]) {
+			if (getdata[passargs[i]] != undefined) {
 				url = url + "=" + getdata[passargs[i]];
 			}
 		}
 	}
+
+	if (map.getCurrentMapType() == cleanMapType) {
+		url = url + "&clean";
+	}
+
 	window.location = url;
 }
 
@@ -240,10 +248,10 @@ function startup() {
 		  G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
 		*/
 
-		var usnobMapType = new GMapType([usnobTile],
-										G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
-		var cleanMapType = new GMapType([cleanTile],
-										G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
+		usnobMapType = new GMapType([usnobTile],
+									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
+		cleanMapType = new GMapType([cleanTile],
+									G_SATELLITE_MAP.getProjection(), "Clean", G_SATELLITE_MAP);
 
 	map.getMapTypes().length = 0;
 	/*
@@ -252,7 +260,10 @@ function startup() {
 	*/
 	map.addMapType(usnobMapType);
 	map.addMapType(cleanMapType);
-	map.setMapType(usnobMapType);
+	if ('clean' in getdata)
+		map.setMapType(cleanMapType);
+	else
+		map.setMapType(usnobMapType);
 
 	// Show an overview map?
 	if (("over" in getdata) && (getdata["over"] == "no")) {
