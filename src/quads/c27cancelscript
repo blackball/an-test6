@@ -7,8 +7,10 @@
 # Read jobid on stdin
 read -s jobid
 
+# Replace "-" by "/".
+jobid=`echo $jobid | sed s+-+/+g`
+
 # Go to our job directory.
-#cd /h/260/dstn/raid3/ontheweb
 cd /nobackup/stars/ontheweb-data
 cd $jobid
 touch cancel

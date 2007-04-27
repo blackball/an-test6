@@ -7,15 +7,16 @@
 # Read jobid
 read -s jobid
 
+# Replace "-" by "/".
+jobid=`echo "$jobid" | sed s+-+/+g`
+
 # Create our job directory.
-#cd /h/260/dstn/raid3/ontheweb
 cd /nobackup/stars/ontheweb-data
 mkdir -p $jobid
 cd $jobid
 tar xf -
 
 # Index path replacement.
-#sed s+/home/gmaps/ontheweb-indexes+/h/260/dstn/raid3/INDEXES+ < input > input.c27
 sed s+/home/gmaps/ontheweb-indexes+/nobackup/stars/INDEXES+ < input > input.c27
 
 # stderr goes back over the ssh tunnel to the log file on oven.
