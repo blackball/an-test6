@@ -55,7 +55,7 @@ pthread_t parentthread;
 
 int quitNow = 0;
 
-uint32_t eventmask = IN_CLOSE_WRITE | IN_CREATE | IN_MODIFY | IN_MOVED_TO | IN_DELETE_SELF;
+uint32_t eventmask = IN_CLOSE_WRITE | IN_CREATE /*| IN_MODIFY*/ | IN_MOVED_TO | IN_DELETE_SELF;
 
 char* qpath = NULL;
 char* qtemppath = NULL;
