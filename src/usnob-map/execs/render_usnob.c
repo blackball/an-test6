@@ -21,6 +21,7 @@
 static char* merc_template  = "/data1/usnob-gmaps/merc-orig/merc_%02i_%02i.mkdt.fits";
 static char* clean_template = "/data1/usnob-gmaps/merc-clean/merc_%02i_%02i.mkdt.fits";
 static char* prerendered_template = "/data1/usnob-gmaps/prerendered/zoom%i/usnob_z%1$i_%02i_%02i.raw";
+static char* prerendered_clean = "/data1/usnob-gmaps/prerendered-clean/zoom%i/usnob_z%1$i_%02i_%02i.raw";
 
 // Gridding of Mercator space
 static int NM = 32;
@@ -156,7 +157,11 @@ int render_usnob(unsigned char* img, render_args_t* args) {
 				logmsg("  merc x step %g (%g for %i pixels)\n", mxstep, mxstep*WH, WH);
 				logmsg("  merc y step %g (%g for %i pixels)\n", mystep, mystep*WH, WH);
 
-				snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, i, j);
+				if (args->clean) {
+					snprintf(fn, sizeof(fn), prerendered_clean, args->zoomlevel, i, j);
+				} else {
+					snprintf(fn, sizeof(fn), prerendered_template, args->zoomlevel, i, j);
+				}
 				logmsg("  reading file %s\n", fn);
 				f = fopen(fn, "rb");
 				if (!f) {
@@ -227,7 +232,8 @@ int render_usnob(unsigned char* img, render_args_t* args) {
             merc = merctree_open(fn);
             if (!merc) {
                 logmsg("Failed to open merctree %s\n", fn);
-                return -1;
+				continue;
+                //return -1;
             }
             mercrender(merc, args, fluximg);
             merctree_close(merc);
