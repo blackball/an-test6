@@ -27,7 +27,7 @@
    to handle them.
  */
 
-const char* OPTIONS = "hDl:c:n:";
+const char* OPTIONS = "hDl:c:n:w:";
 
 char* blind = "blind < %s";
 char* inputfile = "input";
@@ -46,6 +46,7 @@ void printHelp(char* progname) {
 			"           default: \"%s\"\n"
 			"      [-n <nthreads>]: number of worker threads to run simultaneously.\n"
 			"           default: 1\n"
+			"      [-w <watch-dir>]: watch an additional directory.\n"
 			"\n", progname, blind);
 }
 
@@ -54,7 +55,7 @@ pthread_t parentthread;
 
 int quitNow = 0;
 
-uint32_t eventmask;
+uint32_t eventmask = IN_CLOSE_WRITE | IN_CREATE | IN_MODIFY | IN_MOVED_TO | IN_DELETE_SELF;
 
 char* qpath = NULL;
 char* qtemppath = NULL;
@@ -63,12 +64,13 @@ char* logfile = NULL;
 pl* q;
 pthread_mutex_t qmutex;
 FILE* flog;
-char* cwd = NULL;
 
 pthread_mutex_t condmutex;
 pthread_cond_t  workercond;
 int workers_running = 0;
 int nworkers = 1;
+
+pl* watchpaths = NULL;
 
 void loggit(const char* format, ...) {
 	va_list va;
@@ -190,7 +192,7 @@ void file_created(childinfo* info, struct inotify_event* evt, char* path) {
 }
 
 /**
-   Inotify is delivering an event.  Decide what we need to do anything about it.
+   Inotify is delivering an event.  Decide if we need to do anything about it.
  */
 void handle_event(childinfo* info, struct inotify_event* evt) {
 	int wd;
@@ -223,6 +225,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 
 	snprintf(buf, sizeof(buf), "%s/%s", dir, evt->name);
 	path = buf;
+
 	/*
 	  loggit("Path: %s\n", path);
 	  loggit("Events:");
@@ -259,6 +262,28 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		}
 		il_append(info->wds, wd);
 		pl_append(info->paths, strdup(path));
+	} else if (((evt->mask & (IN_MODIFY | IN_ISDIR)) == (IN_MODIFY | IN_ISDIR)) ||
+			   ((evt->mask & (IN_MOVED_TO | IN_ISDIR)) == (IN_MOVED_TO | IN_ISDIR))) {
+		// a directory was modified/moved.
+		// add a watch, if we're not already watching it.
+		int watching = 0;
+		int i;
+		for (i=0; i<pl_size(info->paths); i++) {
+			if (!strcmp(pl_get(info->paths, i), path)) {
+				watching = 1;
+				break;
+			}
+		}
+		if (!watching) {
+			loggit("Adding watch to directory %s.\n", path);
+			wd = inotify_add_watch(info->inot, path, eventmask);
+			if (wd == -1) {
+				loggit("Failed to add watch to path %s.\n", path);
+				return;
+			}
+			il_append(info->wds, wd);
+			pl_append(info->paths, strdup(path));
+		}
 	} else if ((evt->mask & (IN_CLOSE_WRITE | IN_MOVED_TO)) &&
 			   (!(evt->mask & IN_ISDIR))) {
 		// created a file.
@@ -292,16 +317,16 @@ void child_process(int pipeout) {
 		pthread_exit(NULL);
 	}
 
-	loggit("Watching: %s\n", cwd);
-
-	eventmask = IN_CLOSE_WRITE | IN_CREATE /*| IN_MODIFY*/ | IN_MOVED_TO | IN_DELETE_SELF;
-
-	if ((wd = inotify_add_watch(info.inot, cwd, eventmask)) == -1) {
-		loggit("Failed to add watch to directory %s: %s\n", cwd, strerror(errno));
-		pthread_exit(NULL);
+	for (i=0; i<pl_size(watchpaths); i++) {
+		char* path = pl_get(watchpaths, i);
+		loggit("Watching: %s\n", path);
+		if ((wd = inotify_add_watch(info.inot, path, eventmask)) == -1) {
+			loggit("Failed to add watch to directory %s: %s\n", path, strerror(errno));
+			pthread_exit(NULL);
+		}
+		il_append(info.wds, wd);
+		pl_append(info.paths, strdup(path));
 	}
-	il_append(info.wds, wd);
-	pl_append(info.paths, strdup(cwd));
 
 	for (;;) {
 		ssize_t nr;
@@ -525,11 +550,25 @@ int main(int argc, char** args) {
 	int thepipe[2];
 	int be_daemon = 0;
 	char buf[1024];
+	char* cwd;
+	int i;
 
 	flog = stderr;
 
+	if (!getcwd(buf, sizeof(buf))) {
+		fprintf(stderr, "Failed to getcwd(): %s\n", strerror(errno));
+		exit(-1);
+	}
+	cwd = strdup(buf);
+
+	watchpaths = pl_new(4);
+	pl_append(watchpaths, strdup(cwd));
+
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+		case 'w':
+			pl_append(watchpaths, strdup(optarg));
+			break;
 		case 'D':
 			be_daemon = 1;
 			break;
@@ -581,12 +620,6 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	if (!getcwd(buf, sizeof(buf))) {
-		fprintf(stderr, "Failed to getcwd(): %s\n", strerror(errno));
-		exit(-1);
-	}
-	cwd = strdup(buf);
-
 	if (snprintf(buf, sizeof(buf), "%s/%s", cwd, qtempfile) >= sizeof(buf)) {
 		fprintf(stderr, "Path of queue temp file is too long.\n");
 		exit(-1);
@@ -634,6 +667,12 @@ int main(int argc, char** args) {
 	free(cwd);
 	free(qpath);
 	free(qtemppath);
+
+	for (i=0; i<pl_size(watchpaths); i++) {
+		char* path = pl_get(watchpaths, i);
+		free(path);
+	}
+	pl_free(watchpaths);
 
 	if (logfile) {
 		if (fclose(flog)) {

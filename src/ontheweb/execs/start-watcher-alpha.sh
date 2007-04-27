@@ -6,5 +6,8 @@ Cmd="/home/gmaps/an/ontheweb/execs/blindscript-remote-nice.sh %s"
 
 cd /home/gmaps/ontheweb-data/alpha
 rm queue
-/home/gmaps/an/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd"
+
+Epoch=`pwd`/`date +%Y%m`
+
+/home/gmaps/an/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd" -w $Epoch
 
