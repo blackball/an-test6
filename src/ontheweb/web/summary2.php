@@ -56,15 +56,20 @@ if (!$site || !preg_match($sitepat, $site)) {
 	exit;
 }
 
-$q = file_get_contents($resultdir . $site . '/' . $q_fn);
-if (strlen($q)) {
-	echo "<table border=1>" .
-		"<tr><td>\n" .
-		"<pre>" . $q . "</pre>\n" .
-		"</td></tr>" .
-		"</table>\n";
+$qfile = $resultdir . $site . '/' . $q_fn;
+if (file_exists($qfile)) {
+	$q = file_get_contents($qfile);
+	if (strlen($q)) {
+		echo "<table border=1>" .
+			"<tr><td>\n" .
+			"<pre>" . $q . "</pre>\n" .
+			"</td></tr>" .
+			"</table>\n";
+	} else {
+		echo "<p>(empty)</p>\n";
+	}
 } else {
-	echo "<p>(empty)</p>\n";
+	echo "<p>(no queue)</p>\n";
 }
 
 if (!$epoch || !preg_match($epochpat, $epoch)) {
