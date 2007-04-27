@@ -43,7 +43,10 @@ var overview = true;
 
 // args that we pass on.
 var passargs = [ 'imagefn', 'wcsfn', 'cc', 'arcsinh', 'arith', 'gain',
-				 'rdlsfn', 'dashbox', 'cmap' ]; // 'clean'
+				 'dashbox', 'cmap',
+ 				 'rdlsfn', 'rdlsfield', 'rdlsstyle',
+ 				 'rdlsfn2', 'rdlsfield2', 'rdlsstyle2',
+				 ]; // 'clean'
 
 var usnobMapType;
 var cleanMapType;
@@ -212,41 +215,40 @@ function startup() {
 	cleanTile.myBaseURL=TILE_URL + "&tag=usnob-clean" + "&clean";
 	cleanTile.getTileUrl=CustomGetTileUrl;
 
-        //layers = 'tycho,grid';
-        layers = '';
-        if ("usnob" in getdata) {
-            layers += 'usnob';
-        } else {
-            layers += 'tycho';
-        }
-        if ("grid" in getdata) {
-            layers += 'grid';
-        }
-        if (("imagefn" in getdata) && ("imwcsfn" in getdata)) {
-            layers += ',image';
-        }
-        if ("wcsfn" in getdata) {
-            layers += ',boundary';
-        }
-        if ("const" in getdata) {
-            layers += ',constellation';
-        }
-        if ("rdlsfn" in getdata) {
-            layers += ',rdls';
-        }
+	//layers = 'tycho,grid';
+	lay = [];
+	//if ("usnob" in getdata) {
+	//lay += 'usnob';
+	//} else {
+	//lay += 'tycho';
+	//}
+	if ("tycho" in getdata) {
+		lay.push('tycho') ;
+	}
+	if ("grid" in getdata) {
+		lay.push('grid');
+	}
+	if (("imagefn" in getdata) && ("imwcsfn" in getdata)) {
+		lay.push('image');
+	}
+	if ("wcsfn" in getdata) {
+		lay.push('boundary');
+	}
+	if ("const" in getdata) {
+		lay.push('constellation');
+	}
+	if ("rdlsfn" in getdata) {
+		lay.push('rdls');
+	}
+	layers = lay.join(",");
 
-
-		/*
-		  var userimageTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
-		  //userimageTile.myLayers='tycho,image,grid,rdls,constellation';
-		  //userimageTile.myLayers='tycho,image,grid,rdls';
-		  userimageTile.myLayers=layers;
-		  userimageTile.myFormat='image/png';
-		  userimageTile.myBaseURL=TILE_URL;
-		  userimageTile.getTileUrl=CustomGetTileUrl;
-		  var myMapType = new GMapType([userimageTile],
-		  G_SATELLITE_MAP.getProjection(), "MyTile", G_SATELLITE_MAP);
-		*/
+	var userTile = new GTileLayer(new GCopyrightCollection(""), 1, 17);
+	userTile.myLayers=layers;
+	userTile.myFormat='image/png';
+	userTile.myBaseURL=TILE_URL;
+	userTile.getTileUrl=CustomGetTileUrl;
+	var userUsnobMapType = new GMapType([usnobTile, userTile], G_SATELLITE_MAP.getProjection(), "User+", G_SATELLITE_MAP);
+	var userMapType = new GMapType([userTile], G_SATELLITE_MAP.getProjection(), "User", G_SATELLITE_MAP);
 
 		usnobMapType = new GMapType([usnobTile],
 									G_SATELLITE_MAP.getProjection(), "USNOB", G_SATELLITE_MAP);
@@ -260,6 +262,8 @@ function startup() {
 	*/
 	map.addMapType(usnobMapType);
 	map.addMapType(cleanMapType);
+	map.addMapType(userMapType);
+	map.addMapType(userUsnobMapType);
 	if ('clean' in getdata)
 		map.setMapType(cleanMapType);
 	else
