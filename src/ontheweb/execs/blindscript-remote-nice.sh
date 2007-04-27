@@ -25,7 +25,7 @@ echo "running startscript..." >> $LOG
 echo "finished startscript." >> $LOG
 
 echo "running blind..." >> $LOG
-(echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27 2>>$LOG | tar xf - --atime-preserve -m --exclude=input >>$LOG 2>&1
+(echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27nice 2>>$LOG | tar xf - --atime-preserve -m --exclude=input >>$LOG 2>&1
 echo "finished blind." >> $LOG
 
 #(echo $jobid; tar cf - field.xy.fits input) | ssh -x -T c27 2>>$LOG > results.tar
