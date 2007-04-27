@@ -36,6 +36,7 @@ function allow_email($email) {
 		       'kenwood@stsci.edu',
 		       'landsman@milkyway.gsfc.nasa.gov',
 		       'leonidas@jpl.nasa.gov',
+		       'lmoustakas@gmail.com',
 		       'munz@physics.muni.cz',
 		       'pjm@physics.ucsb.edu',
 		       'roweis@cs.toronto.edu',
