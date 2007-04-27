@@ -30,7 +30,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:Sp"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:Spk:"
 
 
 /* All render layers must go in here */
@@ -76,6 +76,11 @@ int main(int argc, char *argv[]) {
     args.colorcor = 1.44;
     args.linewidth = 2.0;
 
+	args.rdlsfns = pl_new(4);
+	args.rdlscolors = pl_new(4);
+	args.Nstars = il_new(4);
+	args.fieldnums = il_new(4);
+
     layers = pl_new(16);
     gotx = goty = gotX = gotY = gotw = goth = FALSE;
 
@@ -100,13 +105,23 @@ int main(int argc, char *argv[]) {
             args.dashbox = atof(optarg);
             break;
         case 'F':
-            args.fieldnum = atoi(optarg);
+            il_append(args.fieldnums, atoi(optarg));
             break;
         case 'N':
-            args.Nstars = atoi(optarg);
+            il_append(args.Nstars, atoi(optarg));
             break;
         case 'r':
-            args.rdlsfn = strdup(optarg);
+			// Set the other RDLS-related args if they haven't been set already.
+			if (pl_size(args.rdlscolors) < pl_size(args.rdlsfns))
+				pl_append(args.rdlscolors, NULL);
+			if (il_size(args.Nstars) < pl_size(args.rdlsfns))
+				il_append(args.Nstars, 0);
+			if (il_size(args.fieldnums) < pl_size(args.rdlsfns))
+				il_append(args.fieldnums, 0);
+            pl_append(args.rdlsfns, strdup(optarg));
+            break;
+        case 'k':
+            pl_append(args.rdlscolors, strdup(optarg));
             break;
         case 'i':
             args.imagefn = strdup(optarg);
@@ -278,7 +293,19 @@ int main(int argc, char *argv[]) {
 
     free(img);
 
-    free(args.rdlsfn);
+    for (i=0; i<pl_size(args.rdlsfns); i++) {
+        char* str = pl_get(args.rdlsfns, i);
+        free(str);
+	}
+	pl_free(args.rdlsfns);
+    for (i=0; i<pl_size(args.rdlscolors); i++) {
+        char* str = pl_get(args.rdlscolors, i);
+        free(str);
+	}
+	pl_free(args.rdlscolors);
+	il_free(args.Nstars);
+	il_free(args.fieldnums);
+
     free(args.imagefn);
     free(args.wcsfn);
     free(args.imwcsfn);
@@ -391,6 +418,10 @@ static void write_png(unsigned char * img, int w, int h)
 
 int in_image(int x, int y, render_args_t* args) {
     return (x >= 0 && x < args->W && y >=0 && y < args->H);
+}
+
+int in_image_margin(int x, int y, int margin, render_args_t* args) {
+    return (x >= -margin && x < (args->W + margin) && y >= -margin && y < (args->H + margin));
 }
 
 uchar* pixel(int x, int y, uchar* img, render_args_t* args) {

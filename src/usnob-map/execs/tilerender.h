@@ -55,9 +55,16 @@ struct render_args {
 	bool nopre; // don't use pre-rendered tiles (useful when you're trying to *make* pre-rendered tiles)
 
 	// Args for render_rdls
-	char* rdlsfn;
-	int Nstars;
-	int fieldnum;
+	/*
+	  char* rdlsfn;
+	  int Nstars;
+	  int fieldnum;
+	*/
+	pl* rdlsfns;
+	pl* rdlscolors;
+	il* Nstars;
+	il* fieldnums;
+	//dl* rdlslws;
 
 	// Args for render_boundary
 	char* wcsfn;
@@ -111,6 +118,9 @@ double ra2pixelf(double ra, render_args_t* args);
 double dec2pixelf(double dec, render_args_t* args);
 
 int in_image(int x, int y, render_args_t* args);
+
+// Like in_image, but with a margin around the outside.
+int in_image_margin(int x, int y, int margin, render_args_t* args);
 
 // void put_pixel(int x, int y, uchar r, uchar g, uchar b, uchar a, render_args_t* args, uchar* img);
 
