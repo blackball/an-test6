@@ -75,9 +75,11 @@ int render_rdls(unsigned char* img, render_args_t* args)
 				cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 				break;
 
+			case 'p':
 			case '+': // plus-sign
 				style = '+';
 				break;
+			case 'h':
 			case '#': // box
 				style = '#';
 				break;

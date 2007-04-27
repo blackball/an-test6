@@ -57,6 +57,16 @@ render_func_t renderers[] = {
 
 static void write_png(unsigned char * img, int w, int h);
 
+static void default_rdls_args(render_args_t* args) {
+	// Set the other RDLS-related args if they haven't been set already.
+	if (pl_size(args->rdlscolors) < pl_size(args->rdlsfns))
+		pl_append(args->rdlscolors, NULL);
+	if (il_size(args->Nstars) < pl_size(args->rdlsfns))
+		il_append(args->Nstars, 0);
+	if (il_size(args->fieldnums) < pl_size(args->rdlsfns))
+		il_append(args->fieldnums, 0);
+}
+
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -111,13 +121,7 @@ int main(int argc, char *argv[]) {
             il_append(args.Nstars, atoi(optarg));
             break;
         case 'r':
-			// Set the other RDLS-related args if they haven't been set already.
-			if (pl_size(args.rdlscolors) < pl_size(args.rdlsfns))
-				pl_append(args.rdlscolors, NULL);
-			if (il_size(args.Nstars) < pl_size(args.rdlsfns))
-				il_append(args.Nstars, 0);
-			if (il_size(args.fieldnums) < pl_size(args.rdlsfns))
-				il_append(args.fieldnums, 0);
+			default_rdls_args(&args);
             pl_append(args.rdlsfns, strdup(optarg));
             break;
         case 'k':
@@ -187,6 +191,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\n");
         exit(-1);
     }
+
+	default_rdls_args(&args);
 
 	/*
     if (args.W > 1024 || args.H > 1024) {
