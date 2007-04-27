@@ -167,12 +167,31 @@ if ($cmap) {
 // render_rdls layer:
 
 // rdls file
-$rdlsfn = $_REQUEST["rdlsfn"];
+$rdlsfn = $_REQUEST['rdlsfn'];
 if ($rdlsfn) {
     $cmdline .= " -r " . escapeshellarg($rdlsfn);
+	$fld = $_REQUEST['rdlsfield'];
+	if ($fld) {
+		$cmdline .= ' -F ' . (int)$fld;
+	}
+	$sty = $_REQUEST['rdlsstyle'];
+	if ($sty) {
+		$cmdline .= ' -k ' . escapeshellarg($sty);
+	}
 }
 
-// missing: -F field number -N number of stars
+$rdlsfn = $_REQUEST['rdlsfn2'];
+if ($rdlsfn) {
+    $cmdline .= " -r " . escapeshellarg($rdlsfn);
+	$fld = $_REQUEST['rdlsfield2'];
+	if ($fld) {
+		$cmdline .= ' -F ' . (int)$fld;
+	}
+	$sty = $_REQUEST['rdlsstyle2'];
+	if ($sty) {
+		$cmdline .= ' -k ' . escapeshellarg($sty);
+	}
+}
 
 //////////////////////
 // render_boundary layer:
