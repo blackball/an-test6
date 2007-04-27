@@ -21,17 +21,6 @@ Current Job Queue:
 </h3>
 
 <?php
-$q = file_get_contents($resultdir . $q_fn);
-if (strlen($q)) {
-	echo "<table border=1>" .
-		"<tr><td>\n" .
-		"<pre>" . $q . "</pre>\n" .
-		"</td></tr>" .
-		"</table>\n";
-} else {
-	echo "<p>(empty)</p>\n";
-}
-
 $ontheweblogfile = $resultdir . "summary.log";
 
 $host  = $_SERVER['HTTP_HOST'];
@@ -66,6 +55,18 @@ if (!$site || !preg_match($sitepat, $site)) {
 		"</body></html>\n";
 	exit;
 }
+
+$q = file_get_contents($resultdir . $site . '/' . $q_fn);
+if (strlen($q)) {
+	echo "<table border=1>" .
+		"<tr><td>\n" .
+		"<pre>" . $q . "</pre>\n" .
+		"</td></tr>" .
+		"</table>\n";
+} else {
+	echo "<p>(empty)</p>\n";
+}
+
 if (!$epoch || !preg_match($epochpat, $epoch)) {
 	// Show epochs for this site.
 	echo "<hr />\n" .
