@@ -101,67 +101,16 @@ if ($getfile) {
 		die("Invalid \"get\" filename.");
 	}
 
+	$todelete = array();
+
 	if (!strcmp($getfile, 'overlay') ||
 		!strcmp($getfile, 'overlay-big')) {
 		$big = !strcmp($getfile, 'overlay-big');
-		/*
-		if (!$didsolve) {
-			die("Field didn't solve.");
-		}
-		*/
 		render_overlay($mydir, $big, $jd);
-	}
-		
 
-	$todelete = array();
+	} else if (!strcmp($getfile, $newheader_fn)) {
+		render_newheader($fn, $mydir, $jd, $todelete);
 
-	if (!strcmp($getfile, $newheader_fn)) {
-		$imgfile = $jd['imagefilename'];
-		if (!$imgfile) {
-			die("No imagefilename");
-		}
-		$imgfile = $mydir . $imgfile;
-
-		$newfile = tempnam('/tmp', 'uncompressed');
-		if (!$newfile) {
-			die("Failed to create temporary file.");
-		}
-
-		$suff = "";
-		if (!uncompress_file($imgfile, $newfile, $suff)) {
-			die("Failed to decompress image " . $imgfile);
-		}
-		if ($suff) {
-			$imgfile = $newfile;
-			array_push($todelete, $newfile);
-		}
-
-		$typestr = shell_exec("file -b -N -L " . $imgfile);
-		if (!strstr($typestr, "FITS image data")) {
-			die("Not a FITS image: " . $typestr);
-		}
-
-		// Run fits2fits.py on it...
-		$filtered = tempnam('/tmp', 'filtered');
-		$cmd = sprintf($fits_filter, $imgfile, $filtered) . " > /dev/null 2> /dev/null";
-		loggit("Command: " . $cmd . "\n");
-		if ((system($cmd, $retval) === FALSE) || $retval) {
-			loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
-			die("Failed to fix your FITS file.");
-		}
-		array_push($todelete, $filtered);
-
-		// Merge WCS
-		$merged = tempnam('/tmp', 'newheader');
-		$cmd = $new_wcs . " -i " . $filtered . " -w " . $mydir . $wcs_fn .
-			" -o " . $merged . " > /dev/null 2> /dev/null";
-		if ((system($cmd, $retval) === FALSE) || $retval) {
-			loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
-			die("Failed to merge your FITS file.");
-		}
-		array_push($todelete, $merged);
-
-		$fn = $merged;
 	} else {
 		$fn = $mydir . $getfile;
 		if (!file_exists($fn)) {
@@ -866,12 +815,9 @@ if ($job_done) {
 		print_link($wcsfile);
 		echo "</td></tr>\n";
 
-		$usrimg = $jd['imagefilename'];
-		if (strstr($usrimg, '.fits')) {
-			echo '<tr><td>New FITS header:</td><td>';
-			print_link($mydir . $newheader_fn, TRUE);
-			echo "</td></tr>\n";
-		}
+		echo '<tr><td>New FITS header:</td><td>';
+		print_link($mydir . $newheader_fn, TRUE);
+		echo "</td></tr>\n";
 
 		echo '<tr><td>RA,DEC list:</td><td>';
 		print_link($rdlist);
@@ -1036,6 +982,63 @@ echo $valid_blurb;
 </html>
 
 <?php
+function render_newheader(&$fn, $mydir, $jd, &$todelete) {
+	global $wcs_fn;
+	global $fits_filter;
+	global $new_wcs;
+
+	$imgfile = $jd['imagefilename'];
+	if (!$imgfile) {
+		//die("No imagefilename");
+		$fn = $mydir . $wcs_fn;
+		return;
+	}
+	$imgfile = $mydir . $imgfile;
+
+	$newfile = tempnam('/tmp', 'uncompressed');
+	if (!$newfile) {
+		die("Failed to create temporary file.");
+	}
+
+	$suff = "";
+	if (!uncompress_file($imgfile, $newfile, $suff)) {
+		die("Failed to decompress image " . $imgfile);
+	}
+	if ($suff) {
+		$imgfile = $newfile;
+		array_push($todelete, $newfile);
+	}
+
+	$typestr = shell_exec("file -b -N -L " . $imgfile);
+	if (!strstr($typestr, "FITS image data")) {
+		//die("Not a FITS image: " . $typestr);
+		$fn = $mydir . $wcs_fn;
+		return;
+	}
+
+	// Run fits2fits.py on it...
+	$filtered = tempnam('/tmp', 'filtered');
+	$cmd = sprintf($fits_filter, $imgfile, $filtered) . " > /dev/null 2> /dev/null";
+	loggit("Command: " . $cmd . "\n");
+	if ((system($cmd, $retval) === FALSE) || $retval) {
+		loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+		die("Failed to fix your FITS file.");
+	}
+	array_push($todelete, $filtered);
+
+	// Merge WCS
+	$merged = tempnam('/tmp', 'newheader');
+	$cmd = $new_wcs . " -i " . $filtered . " -w " . $mydir . $wcs_fn .
+		" -o " . $merged . " > /dev/null 2> /dev/null";
+	if ((system($cmd, $retval) === FALSE) || $retval) {
+		loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+		die("Failed to merge your FITS file.");
+	}
+	array_push($todelete, $merged);
+
+	$fn = $merged;
+}
+
 function render_overlay($mydir, $big, $jd) {
 	global $overlay_fn;
 	global $bigoverlay_fn;
