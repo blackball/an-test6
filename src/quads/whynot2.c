@@ -780,6 +780,7 @@ static void solve_fields(blind_params* bp) {
 		intmap* mapif = NULL;
 		int uq;
 		il* quadorder = NULL;
+		tan_t wcs;
 
 		if (bp->indexrdls) {
 			if (rdlist_write_new_field(bp->indexrdls)) {
@@ -867,12 +868,14 @@ static void solve_fields(blind_params* bp) {
 		if (bp->indexrdls) {
 			double* indradec = malloc(2 * nind * sizeof(double));
 			for (i=0; i<nind; i++) {
-				xyzarr2radec(indxyz + i*3, radec+i*2+0, radec+i*2+1);
-				radec[2*i+0] = rad2deg(radec[2*i+0]);
-				radec[2*i+1] = rad2deg(radec[2*i+1]);
+				xyzarr2radec(indxyz + i*3, indradec+i*2+0, indradec+i*2+1);
+				indradec[2*i+0] = rad2deg(indradec[2*i+0]);
+				indradec[2*i+1] = rad2deg(indradec[2*i+1]);
 			}
 			if (rdlist_write_entries(bp->indexrdls, indradec, nind)) {
 				logerr(bp, "Failed to write index RDLS entry.\n");
+			} else {
+				logmsg(bp, "Wrote %i index RDLS entries.", nind);
 			}
 			free(indradec);
 		}
@@ -929,17 +932,10 @@ static void solve_fields(blind_params* bp) {
 
 
 		// Compute WCS.
-		if (bp->wcs_template) {
+		{
 			double* starxyz;
 			double* fieldxy;
 			int k;
-			tan_t wcs;
-
-			char wcs_fn[1024];
-			FILE* fout;
-			qfits_header* hdr;
-			char* tm;
-			char val[32];
 
 			starxyz = malloc(NS * 3 * sizeof(double));
 			fieldxy = malloc(NS * 2 * sizeof(double));
@@ -958,32 +954,36 @@ static void solve_fields(blind_params* bp) {
 			free(starxyz);
 			free(fieldxy);
 
-			snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
-			fout = fopen(wcs_fn, "wb");
-			if (!fout) {
-				logerr(bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
-				exit(-1);
+			if (bp->wcs_template) {
+				char wcs_fn[1024];
+				FILE* fout;
+				qfits_header* hdr;
+				char* tm;
+				char val[32];
+
+				snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
+				fout = fopen(wcs_fn, "wb");
+				if (!fout) {
+					logerr(bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
+					exit(-1);
+				}
+				hdr = blind_wcs_get_header(&wcs);
+				sprintf(val, "%g", sp->field_maxx);
+				qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
+				sprintf(val, "%g", sp->field_maxy);
+				qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
+				boilerplate_add_fits_headers(hdr);
+				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"whynot2\".", NULL, NULL);
+				tm = qfits_get_datetime_iso8601();
+				qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
+				if (qfits_header_dump(hdr, fout)) {
+					logerr(bp, "Failed to write FITS WCS header.\n");
+					exit(-1);
+				}
+				fits_pad_file(fout);
+				qfits_header_destroy(hdr);
+				fclose(fout);
 			}
-
-			hdr = blind_wcs_get_header(&wcs);
-
-			sprintf(val, "%g", sp->field_maxx);
-			qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
-			sprintf(val, "%g", sp->field_maxy);
-			qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
-
-			boilerplate_add_fits_headers(hdr);
-			qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"whynot2\".", NULL, NULL);
-			tm = qfits_get_datetime_iso8601();
-			qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
-
-			if (qfits_header_dump(hdr, fout)) {
-				logerr(bp, "Failed to write FITS WCS header.\n");
-				exit(-1);
-			}
-			fits_pad_file(fout);
-			qfits_header_destroy(hdr);
-			fclose(fout);
 		}
 
 		quadids = il_new(256);
@@ -1032,9 +1032,32 @@ static void solve_fields(blind_params* bp) {
 			}
 			i = k;
 		}
-
 		logmsg(bp, "%i quads at least partially contained in the field.\n", uq);
 		logmsg(bp, "%i quads completely contained in the field.\n", il_size(goodquads));
+
+		// Use the WCS we computed to project the quad into field coords.
+		for (i=0; i<il_size(quadids);) {
+			int k;
+			int quad = il_get(quadids, i);
+			uint starabcd[4];
+			int m;
+			for (k=i+1; k<il_size(quadids); k++) {
+				if (il_get(quadids, k) != quad)
+					break;
+			}
+			
+			getquadids(quad, starabcd, starabcd+1, starabcd+2, starabcd+3);
+			logmsg(bp, "Quad FieldXY ");
+			for (m=0; m<4; m++) {
+				double xyz[3];
+				double px, py;
+				getstarcoord(starabcd[m], xyz);
+				tan_xyzarr2pixelxy(&wcs, xyz, &px, &py);
+				logmsg(bp, "%g %g ", px, py);
+			}
+			logmsg(bp, "\n");
+			i = k;
+		}
 
 		goodfields = il_new(16);
 		goodmaxfields = il_new(16);
