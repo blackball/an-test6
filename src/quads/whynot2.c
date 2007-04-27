@@ -174,7 +174,7 @@ static void loglvl(int level, const blind_params* bp, const char* format, va_lis
 
 static void
 ATTRIB_FORMAT(printf,2,3)
-logerr(const blind_params* bp, const char* format, ...) {
+	 logerr(const blind_params* bp, const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	loglvl(1, bp, format, va);
@@ -182,7 +182,7 @@ logerr(const blind_params* bp, const char* format, ...) {
 }
 static void
 ATTRIB_FORMAT(printf,2,3)
-logmsg(const blind_params* bp, const char* format, ...) {
+	 logmsg(const blind_params* bp, const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	loglvl(3, bp, format, va);
@@ -190,7 +190,7 @@ logmsg(const blind_params* bp, const char* format, ...) {
 }
 static void
 ATTRIB_FORMAT(printf,2,3)
-logverb(const blind_params* bp, const char* format, ...) {
+	 logverb(const blind_params* bp, const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	loglvl(4, bp, format, va);
@@ -323,9 +323,9 @@ int main(int argc, char *argv[]) {
 
 		if (bp->truerdlsfname) {
 			bp->truerdls = rdlist_open(bp->truerdlsfname);
-                        if (!bp->truerdls) {
-                            logerr(bp, "Failed to open ground-truth RDLS file %s.\n",
-                                   bp->truerdlsfname);
+			if (!bp->truerdls) {
+				logerr(bp, "Failed to open ground-truth RDLS file %s.\n",
+					   bp->truerdlsfname);
 			}
 		}
 
@@ -334,14 +334,14 @@ int main(int argc, char *argv[]) {
 			char* fname = pl_get(bp->indexes, I);
 			double scalefudge = 0.0; // in pixels
 
-                        char* qidxfname;
+			char* qidxfname;
 
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			idfname = mk_idfn(fname);
 			startreefname = mk_streefn(fname);
 
-                        qidxfname = mk_qidxfn(fname);
+			qidxfname = mk_qidxfn(fname);
 
 			bp->indexname = fname;
 
@@ -408,11 +408,11 @@ int main(int argc, char *argv[]) {
 				logmsg(bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
 			}
 
-                        bp->qidx = qidxfile_open(qidxfname, 0);
-                        if (!bp->qidx) {
-                            logerr(bp, "Failed to read qidxfile %s.\n", qidxfname);
-                            exit(-1);
-                        }
+			bp->qidx = qidxfile_open(qidxfname, 0);
+			if (!bp->qidx) {
+				logerr(bp, "Failed to read qidxfile %s.\n", qidxfname);
+				exit(-1);
+			}
 
 			// Set index params
 			sp->codekd = bp->codekd->tree;
@@ -450,9 +450,9 @@ int main(int argc, char *argv[]) {
 			solve_fields(bp);
 
 			// Clean up this index...
-                        qidxfile_close(bp->qidx);
-                        bp->qidx = NULL;
-                        free_fn(qidxfname);
+			qidxfile_close(bp->qidx);
+			bp->qidx = NULL;
+			free_fn(qidxfname);
 
 			codetree_close(bp->codekd);
 			startree_close(bp->starkd);
@@ -489,7 +489,7 @@ int main(int argc, char *argv[]) {
 			}
 			if (fclose(bp->logfd)) {
 				logerr(bp, "Failed to close log file: %s\n",
-						strerror(errno));
+					   strerror(errno));
 			}
 		}
 
@@ -572,7 +572,7 @@ static int read_parameters(blind_params* bp) {
 		} else if (is_word(line, "match ", &nextword)) {
 			bp->matchfname = strdup(nextword);
 		} else if (is_word(line, "truerdls ", &nextword)) {
-                    bp->truerdlsfname = strdup(nextword);
+			bp->truerdlsfname = strdup(nextword);
 		} else if (is_word(line, "rdls ", &nextword)) {
 			bp->rdlsfname = strdup(nextword);
 		} else if (is_word(line, "indexrdls ", &nextword)) {
@@ -620,7 +620,7 @@ static int read_parameters(blind_params* bp) {
 				goto bailout;
 			}
 			continue;
-			bailout:
+		bailout:
 			if (bp->logfd) fclose(bp->logfd);
 			free(bp->logfname);
 			bp->logfname = NULL;
@@ -797,26 +797,26 @@ static void solve_fields(blind_params* bp) {
 		MatchObj template;
 		qfits_header* fieldhdr = NULL;
 
-                double truecenter[3];
-                double truer2;
-                double* truexyz;
-                kdtree_qres_t* res;
-                double* indxyz;
-                int nind;
-                kdtree_t* itree;
-                int* fieldtoind;
-                int i;
-                int Nleaf = 10;
-                il* quadids;
-                int NS;
-                il* goodquads;
-                il* goodstars;
-                il* goodfields;
-                il* starids;
-                il* goodmaxfields;
-                intmap* mapif;
-                int uq;
-                il* quadorder;
+		double truecenter[3];
+		double truer2;
+		double* truexyz;
+		kdtree_qres_t* res;
+		double* indxyz;
+		int nind;
+		kdtree_t* itree;
+		int* fieldtoind;
+		int i;
+		int Nleaf = 10;
+		il* quadids;
+		int NS;
+		il* goodquads;
+		il* goodstars;
+		il* goodfields;
+		il* starids;
+		il* goodmaxfields;
+		intmap* mapif;
+		int uq;
+		il* quadorder;
 
 		fieldnum = il_get(bp->fieldlist, fi);
 		if (fieldnum >= nfields) {
@@ -855,300 +855,300 @@ static void solve_fields(blind_params* bp) {
 							   sp->field_maxx - sp->field_minx);
 
 
-                // Get the corresponding True RDLS field
-                bp->truerd = malloc(2 * sp->nfield * sizeof(double));
-                if (rdlist_read_entries(bp->truerdls, fieldnum, 0, sp->nfield, bp->truerd)) {
-                    logerr(bp, "Failed to read true RDLS field.\n");
-                    goto cleanup;
-                }
+		// Get the corresponding True RDLS field
+		bp->truerd = malloc(2 * sp->nfield * sizeof(double));
+		if (rdlist_read_entries(bp->truerdls, fieldnum, 0, sp->nfield, bp->truerd)) {
+			logerr(bp, "Failed to read true RDLS field.\n");
+			goto cleanup;
+		}
 
-                // Find the approximate center and radius of the true field.
-                truexyz = malloc(3 * sp->nfield * sizeof(double));
-                truecenter[0] = truecenter[1] = truecenter[2] = 0.0;
-                for (i=0; i<sp->nfield; i++) {
-                    radecdeg2xyzarr(bp->truerd[i*2], bp->truerd[i*2+1], truexyz + i*3);
-                    truecenter[0] += truexyz[i*3+0];
-                    truecenter[1] += truexyz[i*3+1];
-                    truecenter[2] += truexyz[i*3+2];
-                }
-                normalize_3(truecenter);
-                truer2 = 0.0;
-                for (i=0; i<sp->nfield; i++) {
-                    double r2;
-                    r2 = distsq(truecenter, truexyz + i*3, 3);
-                    if (r2 > truer2)
-                        truer2 = r2;
-                }
+		// Find the approximate center and radius of the true field.
+		truexyz = malloc(3 * sp->nfield * sizeof(double));
+		truecenter[0] = truecenter[1] = truecenter[2] = 0.0;
+		for (i=0; i<sp->nfield; i++) {
+			radecdeg2xyzarr(bp->truerd[i*2], bp->truerd[i*2+1], truexyz + i*3);
+			truecenter[0] += truexyz[i*3+0];
+			truecenter[1] += truexyz[i*3+1];
+			truecenter[2] += truexyz[i*3+2];
+		}
+		normalize_3(truecenter);
+		truer2 = 0.0;
+		for (i=0; i<sp->nfield; i++) {
+			double r2;
+			r2 = distsq(truecenter, truexyz + i*3, 3);
+			if (r2 > truer2)
+				truer2 = r2;
+		}
 
-                // Find all index stars in range.
-                res = kdtree_rangesearch_options(bp->starkd->tree, truecenter,
-                                                 truer2 * 1.05,
-                                                 KD_OPTIONS_SMALL_RADIUS |
-                                                 KD_OPTIONS_RETURN_POINTS);
-                if (!res || !res->nres) {
-                    logerr(bp, "No index stars found.\n");
-                    exit(-1);
-                }
+		// Find all index stars in range.
+		res = kdtree_rangesearch_options(bp->starkd->tree, truecenter,
+										 truer2 * 1.05,
+										 KD_OPTIONS_SMALL_RADIUS |
+										 KD_OPTIONS_RETURN_POINTS);
+		if (!res || !res->nres) {
+			logerr(bp, "No index stars found.\n");
+			exit(-1);
+		}
 
-                indxyz = res->results.d;
-                nind = res->nres;
+		indxyz = res->results.d;
+		nind = res->nres;
 
-                logmsg(bp, "Found %i index stars in range.\n", nind);
+		logmsg(bp, "Found %i index stars in range.\n", nind);
 
-                itree = kdtree_build(NULL, indxyz, nind, 3, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
+		itree = kdtree_build(NULL, indxyz, nind, 3, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
-                fieldtoind = malloc(sp->nfield * sizeof(int));
+		fieldtoind = malloc(sp->nfield * sizeof(int));
 
-                // For each obj in the RDLS, see if there is a corresponding
-                // index star.
-                for (i=0; i<sp->nfield; i++) {
-                    kdtree_qres_t* q;
-                    int ind;
-                    fieldtoind[i] = -1;
-                    q = kdtree_rangesearch_options(itree, truexyz + i*3,
-                                                   arcsec2distsq(sp->index_jitter),
-                                                   KD_OPTIONS_SMALL_RADIUS |
-                                                   KD_OPTIONS_RETURN_POINTS |
-                                                   KD_OPTIONS_SORT_DISTS);
-                    if (!q)
-                        continue;
+		// For each obj in the RDLS, see if there is a corresponding
+		// index star.
+		for (i=0; i<sp->nfield; i++) {
+			kdtree_qres_t* q;
+			int ind;
+			fieldtoind[i] = -1;
+			q = kdtree_rangesearch_options(itree, truexyz + i*3,
+										   arcsec2distsq(sp->index_jitter),
+										   KD_OPTIONS_SMALL_RADIUS |
+										   KD_OPTIONS_RETURN_POINTS |
+										   KD_OPTIONS_SORT_DISTS);
+			if (!q)
+				continue;
 
-                    if (q->nres > 1) {
-                        logmsg(bp, "%i search results.\n", q->nres);
-                    }
+			if (q->nres > 1) {
+				logmsg(bp, "%i search results.\n", q->nres);
+			}
 
-                    if (q->nres >= 1) {
-                        ind = res->inds[q->inds[0]];
-                        fieldtoind[i] = ind;
-                    }
-                    kdtree_free_query(q);
+			if (q->nres >= 1) {
+				ind = res->inds[q->inds[0]];
+				fieldtoind[i] = ind;
+			}
+			kdtree_free_query(q);
 
-                    if (fieldtoind[i] != -1) {
-                        double indxyz[3];
-                        getstarcoord(fieldtoind[i], indxyz);
-                        logmsg(bp, "Field obj %i is %g arcsec from index star %i\n",
-                               i, distsq2arcsec(distsq(indxyz, truexyz+i*3, 3)), fieldtoind[i]);
-                    }
-                }
+			if (fieldtoind[i] != -1) {
+				double indxyz[3];
+				getstarcoord(fieldtoind[i], indxyz);
+				logmsg(bp, "Field obj %i is %g arcsec from index star %i\n",
+					   i, distsq2arcsec(distsq(indxyz, truexyz+i*3, 3)), fieldtoind[i]);
+			}
+		}
 
-                mapif = intmap_new(INTMAP_ONE_TO_ONE);
+		mapif = intmap_new(INTMAP_ONE_TO_ONE);
 
-                NS = 0;
-                for (i=0; i<sp->nfield; i++) {
-                    if (fieldtoind[i] != -1) {
-                        NS++;
-                        intmap_add(mapif, fieldtoind[i], i);
-                    }
-                }
-                logmsg(bp, "%i index stars are within index jitter of a field obj.\n", NS);
-
-
-                // Compute WCS.
-                if (bp->wcs_template) {
-                    double* starxyz;
-                    double* fieldxy;
-                    int k;
-                    tan_t wcs;
-
-                    char wcs_fn[1024];
-                    FILE* fout;
-                    qfits_header* hdr;
-                    char* tm;
-                    char val[32];
-
-                    starxyz = malloc(NS * 3 * sizeof(double));
-                    fieldxy = malloc(NS * 2 * sizeof(double));
-                    k=0;
-                    for (i=0; i<sp->nfield; i++) {
-                        if (fieldtoind[i] == -1)
-                            continue;
-                        getstarcoord(fieldtoind[i], starxyz + k*3);
-                        fieldxy[k*2] = sp->field[i*2];
-                        fieldxy[k*2+1] = sp->field[i*2+1];
-                        k++;
-                    }
-
-                    blind_wcs_compute_2(starxyz, fieldxy, k, &wcs, NULL);
-
-                    snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
-                    fout = fopen(wcs_fn, "wb");
-                    if (!fout) {
-                        logerr(bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
-                        exit(-1);
-                    }
-
-                    hdr = blind_wcs_get_header(&wcs);
-
-                    sprintf(val, "%g", sp->field_maxx);
-                    qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
-                    sprintf(val, "%g", sp->field_maxy);
-                    qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
-
-                    boilerplate_add_fits_headers(hdr);
-                    qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"whynot2\".", NULL, NULL);
-                    tm = qfits_get_datetime_iso8601();
-                    qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
-
-                    if (qfits_header_dump(hdr, fout)) {
-                        logerr(bp, "Failed to write FITS WCS header.\n");
-                        exit(-1);
-                    }
-                    fits_pad_file(fout);
-                    qfits_header_destroy(hdr);
-                    fclose(fout);
-                }
+		NS = 0;
+		for (i=0; i<sp->nfield; i++) {
+			if (fieldtoind[i] != -1) {
+				NS++;
+				intmap_add(mapif, fieldtoind[i], i);
+			}
+		}
+		logmsg(bp, "%i index stars are within index jitter of a field obj.\n", NS);
 
 
-                quadids = il_new(256);
-                starids = il_new(256);
+		// Compute WCS.
+		if (bp->wcs_template) {
+			double* starxyz;
+			double* fieldxy;
+			int k;
+			tan_t wcs;
 
-                for (i=0; i<sp->nfield; i++) {
-                    uint* quads;
-                    uint nquads;
-                    int k;
-                    if (fieldtoind[i] == -1)
-                        continue;
-                    qidxfile_get_quads(bp->qidx, fieldtoind[i], &quads, &nquads);
-                    logmsg(bp, "Field obj %i / Index star %i is part of %i quads.\n",
-                           i, fieldtoind[i], nquads);
-                    for (k=0; k<nquads; k++) {
-                        //logmsg(bp, "star %i, quad %i\n", fieldtoind[i], quads[k]);
-                        int ind = il_insert_ascending(quadids, quads[k]);
-                        il_insert(starids, ind, fieldtoind[i]);
-                    }
-                }
+			char wcs_fn[1024];
+			FILE* fout;
+			qfits_header* hdr;
+			char* tm;
+			char val[32];
 
-                goodquads = il_new(16);
-                goodstars = il_new(16);
+			starxyz = malloc(NS * 3 * sizeof(double));
+			fieldxy = malloc(NS * 2 * sizeof(double));
+			k=0;
+			for (i=0; i<sp->nfield; i++) {
+				if (fieldtoind[i] == -1)
+					continue;
+				getstarcoord(fieldtoind[i], starxyz + k*3);
+				fieldxy[k*2] = sp->field[i*2];
+				fieldxy[k*2+1] = sp->field[i*2+1];
+				k++;
+			}
 
-                uq = 0;
-                for (i=0; i<il_size(quadids);) {
-                    int k;
-                    int quad = il_get(quadids, i);
-                    int nstars;
-                    uq++;
-                    //logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, i));
-                    for (k=i+1; k<il_size(quadids); k++) {
-                        if (il_get(quadids, k) != quad)
-                            break;
-                        //logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, k));
-                    }
-                    nstars = k - i;
-                    logmsg(bp, "Quad %i has %i matched stars in the field.\n",
-                           quad, nstars);
-                    if (nstars == 4) {
-                        il_append(goodquads, quad);
-                        il_append(goodstars, il_get(starids, i));
-                        il_append(goodstars, il_get(starids, i+1));
-                        il_append(goodstars, il_get(starids, i+2));
-                        il_append(goodstars, il_get(starids, i+3));
-                    }
-                    i = k;
-                }
+			blind_wcs_compute_2(starxyz, fieldxy, k, &wcs, NULL);
 
-                logmsg(bp, "%i quads at least partially contained in the field.\n", uq);
-                logmsg(bp, "%i quads completely contained in the field.\n", il_size(goodquads));
+			snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
+			fout = fopen(wcs_fn, "wb");
+			if (!fout) {
+				logerr(bp, "Failed to open WCS output file %s: %s\n", wcs_fn, strerror(errno));
+				exit(-1);
+			}
 
-                goodfields = il_new(16);
-                goodmaxfields = il_new(16);
+			hdr = blind_wcs_get_header(&wcs);
 
-                for (i=0; i<il_size(goodquads); i++) {
-                    int quad = il_get(goodquads, i);
-                    int k;
-                    int maxfld = -1;
-                    for (k=0; k<4; k++) {
-                        int star = il_get(goodstars, i*4 + k);
-                        int fld = intmap_get(mapif, star, -1);
-                        if (fld == -1) {
-                            logerr(bp, "No field obj found for star %i\n", star);
-                            exit(-1);
-                        }
-                        il_append(goodfields, fld);
-                        if (fld > maxfld)
-                            maxfld = fld;
-                    }
-                    il_append(goodmaxfields, maxfld);
-                    logmsg(bp, "Quad %i contains field stars %i, %i, %i, %i (max %i)\n",
-                           quad,
-                           il_get(goodfields, i*4),
-                           il_get(goodfields, i*4+1),
-                           il_get(goodfields, i*4+2),
-                           il_get(goodfields, i*4+3),
-                           maxfld);
-                }
+			sprintf(val, "%g", sp->field_maxx);
+			qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
+			sprintf(val, "%g", sp->field_maxy);
+			qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
 
-                // sort-of sort them by order they will be found
-                // (just sorted by max field obj, not fully sorted)
-                quadorder = il_new(16);
-                for (i=0; i<sp->nfield; i++) {
-                    int k;
-                    for (k=0; k<il_size(goodmaxfields); k++) {
-                        if (il_get(goodmaxfields, k) == i)
-                            il_append(quadorder, k);
-                    }
-                }
+			boilerplate_add_fits_headers(hdr);
+			qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"whynot2\".", NULL, NULL);
+			tm = qfits_get_datetime_iso8601();
+			qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
 
-                for (i=0; i<il_size(quadorder); i++) {
-                    int ind = il_get(quadorder, i);
-                    int quad = il_get(goodquads, ind);
-                    int starids[4];
-                    uint starabcd[4];
-                    int fieldabcd[4];
-                    double starcode[4];
-                    double fieldcode[4];
-                    double fieldscale;
-                    double starscale;
+			if (qfits_header_dump(hdr, fout)) {
+				logerr(bp, "Failed to write FITS WCS header.\n");
+				exit(-1);
+			}
+			fits_pad_file(fout);
+			qfits_header_destroy(hdr);
+			fclose(fout);
+		}
 
-                    //double fieldxy[8];
-                    double starxyz[12];
 
-                    double codeerr;
+		quadids = il_new(256);
+		starids = il_new(256);
 
-                    int k;
-                    for (k=0; k<4; k++)
-                        starids[k] = il_get(goodstars, ind*4 + k);
-                    logmsg(bp, "Quad %i contains index stars %i, %i, %i, %i\n",
-                           quad, starids[0], starids[1], starids[2], starids[3]);
-                    getquadids(quad, starabcd, starabcd+1, starabcd+2, starabcd+3);
-                    logmsg(bp, "ABCD %i, %i, %i, %i\n",
-                           starabcd[0], starabcd[1], starabcd[2], starabcd[3]);
-                    for (k=0; k<4; k++)
-                        fieldabcd[k] = intmap_get(mapif, starabcd[k], -1);
-                    logmsg(bp, "Field ABCD %i, %i, %i, %i\n",
-                           fieldabcd[0], fieldabcd[1], fieldabcd[2], fieldabcd[3]);
+		for (i=0; i<sp->nfield; i++) {
+			uint* quads;
+			uint nquads;
+			int k;
+			if (fieldtoind[i] == -1)
+				continue;
+			qidxfile_get_quads(bp->qidx, fieldtoind[i], &quads, &nquads);
+			logmsg(bp, "Field obj %i / Index star %i is part of %i quads.\n",
+				   i, fieldtoind[i], nquads);
+			for (k=0; k<nquads; k++) {
+				//logmsg(bp, "star %i, quad %i\n", fieldtoind[i], quads[k]);
+				int ind = il_insert_ascending(quadids, quads[k]);
+				il_insert(starids, ind, fieldtoind[i]);
+			}
+		}
 
-                    compute_field_code(sp->field + fieldabcd[0]*2,
-                                       sp->field + fieldabcd[1]*2,
-                                       sp->field + fieldabcd[2]*2,
-                                       sp->field + fieldabcd[3]*2,
-                                       fieldcode, &fieldscale);
-					fieldscale = sqrt(fieldscale);
+		goodquads = il_new(16);
+		goodstars = il_new(16);
 
-                    for (k=0; k<4; k++)
-                        getstarcoord(starabcd[k], starxyz + k*3);
+		uq = 0;
+		for (i=0; i<il_size(quadids);) {
+			int k;
+			int quad = il_get(quadids, i);
+			int nstars;
+			uq++;
+			//logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, i));
+			for (k=i+1; k<il_size(quadids); k++) {
+				if (il_get(quadids, k) != quad)
+					break;
+				//logmsg(bp, "quad %i, star %i\n", quad, il_get(starids, k));
+			}
+			nstars = k - i;
+			logmsg(bp, "Quad %i has %i matched stars in the field.\n",
+				   quad, nstars);
+			if (nstars == 4) {
+				il_append(goodquads, quad);
+				il_append(goodstars, il_get(starids, i));
+				il_append(goodstars, il_get(starids, i+1));
+				il_append(goodstars, il_get(starids, i+2));
+				il_append(goodstars, il_get(starids, i+3));
+			}
+			i = k;
+		}
 
-                    compute_star_code(starxyz,
-                                      starxyz+3,
-                                      starxyz+6,
-                                      starxyz+9,
-                                      starcode);
+		logmsg(bp, "%i quads at least partially contained in the field.\n", uq);
+		logmsg(bp, "%i quads completely contained in the field.\n", il_size(goodquads));
 
-                    starscale = distsq2arcsec(distsq(starxyz, starxyz+3, 3));
+		goodfields = il_new(16);
+		goodmaxfields = il_new(16);
 
-                    logmsg(bp, "Field code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
-                           fieldcode[0], fieldcode[1], fieldcode[2], fieldcode[3]);
+		for (i=0; i<il_size(goodquads); i++) {
+			int quad = il_get(goodquads, i);
+			int k;
+			int maxfld = -1;
+			for (k=0; k<4; k++) {
+				int star = il_get(goodstars, i*4 + k);
+				int fld = intmap_get(mapif, star, -1);
+				if (fld == -1) {
+					logerr(bp, "No field obj found for star %i\n", star);
+					exit(-1);
+				}
+				il_append(goodfields, fld);
+				if (fld > maxfld)
+					maxfld = fld;
+			}
+			il_append(goodmaxfields, maxfld);
+			logmsg(bp, "Quad %i contains field stars %i, %i, %i, %i (max %i)\n",
+				   quad,
+				   il_get(goodfields, i*4),
+				   il_get(goodfields, i*4+1),
+				   il_get(goodfields, i*4+2),
+				   il_get(goodfields, i*4+3),
+				   maxfld);
+		}
 
-                    logmsg(bp, "Index code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
-                           starcode[0], starcode[1], starcode[2], starcode[3]);
+		// sort-of sort them by order they will be found
+		// (just sorted by max field obj, not fully sorted)
+		quadorder = il_new(16);
+		for (i=0; i<sp->nfield; i++) {
+			int k;
+			for (k=0; k<il_size(goodmaxfields); k++) {
+				if (il_get(goodmaxfields, k) == i)
+					il_append(quadorder, k);
+			}
+		}
 
-                    codeerr = sqrt(distsq(fieldcode, starcode, 4));
+		for (i=0; i<il_size(quadorder); i++) {
+			int ind = il_get(quadorder, i);
+			int quad = il_get(goodquads, ind);
+			int starids[4];
+			uint starabcd[4];
+			int fieldabcd[4];
+			double starcode[4];
+			double fieldcode[4];
+			double fieldscale;
+			double starscale;
 
-                    logmsg(bp, "Code error: %g\n", codeerr);
-                    logmsg(bp, "Field scale: %g pixels\n", fieldscale);
-                    logmsg(bp, "Index scale: %g arcsec\n", starscale);
-                    logmsg(bp, "Scale: %g arcsec/pix\n", starscale/fieldscale);
+			//double fieldxy[8];
+			double starxyz[12];
 
-                }
+			double codeerr;
+
+			int k;
+			for (k=0; k<4; k++)
+				starids[k] = il_get(goodstars, ind*4 + k);
+			logmsg(bp, "Quad %i contains index stars %i, %i, %i, %i\n",
+				   quad, starids[0], starids[1], starids[2], starids[3]);
+			getquadids(quad, starabcd, starabcd+1, starabcd+2, starabcd+3);
+			logmsg(bp, "ABCD %i, %i, %i, %i\n",
+				   starabcd[0], starabcd[1], starabcd[2], starabcd[3]);
+			for (k=0; k<4; k++)
+				fieldabcd[k] = intmap_get(mapif, starabcd[k], -1);
+			logmsg(bp, "Field ABCD %i, %i, %i, %i\n",
+				   fieldabcd[0], fieldabcd[1], fieldabcd[2], fieldabcd[3]);
+
+			compute_field_code(sp->field + fieldabcd[0]*2,
+							   sp->field + fieldabcd[1]*2,
+							   sp->field + fieldabcd[2]*2,
+							   sp->field + fieldabcd[3]*2,
+							   fieldcode, &fieldscale);
+			fieldscale = sqrt(fieldscale);
+
+			for (k=0; k<4; k++)
+				getstarcoord(starabcd[k], starxyz + k*3);
+
+			compute_star_code(starxyz,
+							  starxyz+3,
+							  starxyz+6,
+							  starxyz+9,
+							  starcode);
+
+			starscale = distsq2arcsec(distsq(starxyz, starxyz+3, 3));
+
+			logmsg(bp, "Field code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
+				   fieldcode[0], fieldcode[1], fieldcode[2], fieldcode[3]);
+
+			logmsg(bp, "Index code: [%6.4f, %6.4f, %6.4f, %6.4f]\n",
+				   starcode[0], starcode[1], starcode[2], starcode[3]);
+
+			codeerr = sqrt(distsq(fieldcode, starcode, 4));
+
+			logmsg(bp, "Code error: %g\n", codeerr);
+			logmsg(bp, "Field scale: %g pixels\n", fieldscale);
+			logmsg(bp, "Index scale: %g arcsec\n", starscale);
+			logmsg(bp, "Scale: %g arcsec/pix\n", starscale/fieldscale);
+
+		}
 
 
 
@@ -1194,11 +1194,11 @@ static void solve_fields(blind_params* bp) {
 
 		if (sp->maxquads && sp->numtries >= sp->maxquads) {
 			logmsg(bp, "  exceeded the number of quads to try: %i >= %i.\n",
-					sp->numtries, sp->maxquads);
+				   sp->numtries, sp->maxquads);
 		}
 		if (sp->maxmatches && sp->nummatches >= sp->maxmatches) {
 			logmsg(bp, "  exceeded the number of quads to match: %i >= %i.\n",
-					sp->nummatches, sp->maxmatches);
+				   sp->nummatches, sp->maxmatches);
 		}
 		if (sp->cancelled) {
 			logmsg(bp, "  cancelled at user request.\n");
@@ -1240,7 +1240,7 @@ static void solve_fields(blind_params* bp) {
 		last_wtime = wtime;
 
 	cleanup:
-                {}
+		{}
 	}
 
 	free(sp->field);
