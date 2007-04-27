@@ -152,7 +152,6 @@ typedef struct blind_params blind_params;
 
 static void solve_fields(blind_params* bp);
 static int read_parameters(blind_params* bp);
-static int blind_handle_hit(solver_params* sp, MatchObj* mo);
 
 static blind_params my_bp;
 
@@ -242,7 +241,7 @@ int main(int argc, char *argv[]) {
 		sp->parity = DEFAULT_PARITY;
 		sp->codetol = DEFAULT_CODE_TOL;
 
-		sp->handlehit = blind_handle_hit;
+		sp->handlehit = NULL;
 
 		if (read_parameters(bp)) {
 			il_free(bp->fieldlist);
@@ -472,6 +471,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		xylist_close(bp->xyls);
+
+		if (bp->truerdls) {
+			rdlist_close(bp->truerdls);
+		}
 
 		if (!bp->silent)
 			toc();
@@ -722,101 +725,37 @@ static int read_parameters(blind_params* bp) {
 	}
 }
 
-static void print_match(blind_params* bp, MatchObj* mo) {
-	int Nmin = min(mo->nindex, mo->nfield);
-	int ndropout = Nmin - mo->noverlap - mo->nconflict;
-	logmsg(bp, "logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
-		   mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
-}
-
-static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
-	blind_params* bp = sp->userdata;
-	double pixd2;
-
-	// if verification was specified in pixel units, compute the verification
-	// distance on the unit sphere...
-	if (bp->verify_pix > 0.0) {
-		pixd2 = square(bp->verify_pix) + square(sp->index_jitter / mo->scale);
-		//d2 = arcsec2distsq(hypot(mo->scale * bp->verify_pix, sp->index_jitter));
-	} else {
-		pixd2 = (bp->verify_dist2 + square(sp->index_jitter)) / square(mo->scale);
-		//d2 = bp->verify_dist2 + square(sp->index_jitter);
-	}
-
-	verify_hit(bp->starkd->tree, mo, sp->field, sp->nfield, pixd2,
-			   bp->distractors, sp->field_maxx, sp->field_maxy,
-			   bp->logratio_tobail, bp->nverify);
-	// FIXME - this is the same as nmatches.
-	mo->nverified = bp->nverified++;
-
-	if (mo->logodds >= bp->logratio_toprint) {
-		print_match(bp, mo);
-	}
-
-	if (mo->logodds >= bp->bestlogodds) {
-		bp->bestlogodds = mo->logodds;
-	}
-
-	if ((mo->logodds < bp->logratio_tokeep) ||
-		(mo->nindex < bp->nindex_tokeep)) {
-		return FALSE;
-	}
-
-	if (!bp->have_bestmo || (mo->logodds > bp->bestmo.logodds)) {
-		logmsg(bp, "Got a new best match: logodds %g.\n", mo->logodds);
-		//print_match(bp, mo);
-		memcpy(&(bp->bestmo), mo, sizeof(MatchObj));
-		bp->have_bestmo = TRUE;
-	}
-
-	if ((mo->logodds < bp->logratio_tosolve) ||
-		(mo->nindex < bp->nindex_tosolve)) {
-		return FALSE;
-	}
-
-	bp->bestmo_solves = TRUE;
-	return TRUE;
-}
-
 static void solve_fields(blind_params* bp) {
 	solver_params* sp = &(bp->solver);
-	double last_utime, last_stime;
-	double utime, stime;
-	struct timeval wtime, last_wtime;
 	int nfields;
 	int fi;
-
-	get_resource_stats(&last_utime, &last_stime, NULL);
-	gettimeofday(&last_wtime, NULL);
 
 	nfields = bp->xyls->nfields;
 	sp->field = NULL;
 
 	for (fi=0; fi<il_size(bp->fieldlist); fi++) {
 		int fieldnum;
-		MatchObj template;
-		qfits_header* fieldhdr = NULL;
 
 		double truecenter[3];
 		double truer2;
-		double* truexyz;
+		double* truexyz = NULL;
 		kdtree_qres_t* res;
 		double* indxyz;
 		int nind;
 		kdtree_t* itree;
-		int* fieldtoind;
+		int* fieldtoind = NULL;
 		int i;
 		int Nleaf = 10;
-		il* quadids;
+		il* quadids = NULL;
 		int NS;
-		il* goodquads;
-		il* goodstars;
-		il* goodfields;
-		il* starids;
-		il* goodmaxfields;
-		intmap* mapif;
+		il* goodquads = NULL;
+		il* goodstars = NULL;
+		il* goodfields = NULL;
+		il* starids = NULL;
+		il* goodmaxfields = NULL;
+		intmap* mapif = NULL;
 		int uq;
-		il* quadorder;
+		il* quadorder = NULL;
 
 		fieldnum = il_get(bp->fieldlist, fi);
 		if (fieldnum >= nfields) {
@@ -887,7 +826,7 @@ static void solve_fields(blind_params* bp) {
 										 KD_OPTIONS_RETURN_POINTS);
 		if (!res || !res->nres) {
 			logerr(bp, "No index stars found.\n");
-			exit(-1);
+			goto cleanup;
 		}
 
 		indxyz = res->results.d;
@@ -931,6 +870,9 @@ static void solve_fields(blind_params* bp) {
 			}
 		}
 
+		kdtree_free(itree);
+		kdtree_free_query(res);
+
 		mapif = intmap_new(INTMAP_ONE_TO_ONE);
 
 		NS = 0;
@@ -970,6 +912,9 @@ static void solve_fields(blind_params* bp) {
 
 			blind_wcs_compute_2(starxyz, fieldxy, k, &wcs, NULL);
 
+			free(starxyz);
+			free(fieldxy);
+
 			snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
 			fout = fopen(wcs_fn, "wb");
 			if (!fout) {
@@ -997,7 +942,6 @@ static void solve_fields(blind_params* bp) {
 			qfits_header_destroy(hdr);
 			fclose(fout);
 		}
-
 
 		quadids = il_new(256);
 		starids = il_new(256);
@@ -1150,97 +1094,27 @@ static void solve_fields(blind_params* bp) {
 
 		}
 
-
-
-
-
-
-
-		memset(&template, 0, sizeof(MatchObj));
-		template.fieldnum = fieldnum;
-		template.fieldfile = sp->fieldid;
-		template.indexid = bp->indexid;
-		template.healpix = bp->healpix;
-
-		fieldhdr = xylist_get_field_header(bp->xyls, fieldnum);
-		if (fieldhdr) {
-			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, bp->fieldid_key));
-			if (idstr)
-				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
-			qfits_header_destroy(fieldhdr);
-		}
-
-		sp->numtries = 0;
-		sp->nummatches = 0;
-		sp->numscaleok = 0;
-		sp->numcxdxskipped = 0;
-		sp->quitNow = FALSE;
-		sp->mo_template = &template;
-		sp->fieldnum = fieldnum;
-
-		bp->nverified = 0;
-		bp->have_bestmo = FALSE;
-		memset(&(bp->bestmo), 0, sizeof(MatchObj));
-		bp->bestmo_solves = FALSE;
-		bp->bestlogodds = -HUGE_VAL;
-
-		logmsg(bp, "\nSolving field %i.\n", fieldnum);
-
-		// The real thing
-		//solve_field(sp);
-
-		logmsg(bp, "field %i: tried %i quads, matched %i codes.\n",
-			   fieldnum, sp->numtries, sp->nummatches);
-
-		if (sp->maxquads && sp->numtries >= sp->maxquads) {
-			logmsg(bp, "  exceeded the number of quads to try: %i >= %i.\n",
-				   sp->numtries, sp->maxquads);
-		}
-		if (sp->maxmatches && sp->nummatches >= sp->maxmatches) {
-			logmsg(bp, "  exceeded the number of quads to match: %i >= %i.\n",
-				   sp->nummatches, sp->maxmatches);
-		}
-		if (sp->cancelled) {
-			logmsg(bp, "  cancelled at user request.\n");
-		}
-
-		if (bp->have_bestmo && !bp->bestmo_solves) {
-			MatchObj* bestmo = &(bp->bestmo);
-			int Nmin = min(bestmo->nindex, bestmo->nfield);
-			int ndropout = Nmin - bestmo->noverlap - bestmo->nconflict;
-			logmsg(bp, "Field %i did not solved (best odds ratio %g (%i match, %i conflict, %i dropout, %i index)).\n",
-				   fieldnum, exp(bestmo->logodds), bestmo->noverlap, bestmo->nconflict, ndropout, bestmo->nindex);
-		}
-
-		if (bp->have_bestmo && bp->bestmo_solves) {
-			MatchObj* bestmo = &(bp->bestmo);
-			// Field solved!
-			logmsg(bp, "Field %i solved: ", fieldnum);
-			print_match(bp, bestmo);
-
-		} else {
-			// Field unsolved.
-			logmsg(bp, "Field %i is unsolved.\n", fieldnum);
-			if (bp->have_bestmo) {
-				logmsg(bp, "Best match encountered: ");
-				print_match(bp, &(bp->bestmo));
-			} else {
-				logmsg(bp, "Best odds encountered: %g\n", exp(bp->bestlogodds));
-			}
-		}
-
-		get_resource_stats(&utime, &stime, NULL);
-		gettimeofday(&wtime, NULL);
-		logmsg(bp, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n",
-			   (utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
-			   millis_between(&last_wtime, &wtime) * 0.001);
-
-		last_utime = utime;
-		last_stime = stime;
-		last_wtime = wtime;
-
 	cleanup:
-		{}
+		free(bp->truerd);
+		bp->truerd = NULL;
+		free(truexyz);
+		free(fieldtoind);
+
+		intmap_free(mapif);
+		if (quadids)
+			il_free(quadids);
+		if (starids)
+			il_free(starids);
+		if (goodquads)
+			il_free(goodquads);
+		if (goodstars)
+			il_free(goodstars);
+		if (goodfields)
+			il_free(goodfields);
+		if (goodmaxfields)
+			il_free(goodmaxfields);
+		if (quadorder)
+			il_free(quadorder);
 	}
 
 	free(sp->field);
