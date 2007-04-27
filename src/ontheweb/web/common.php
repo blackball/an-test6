@@ -180,6 +180,25 @@ function create_new_jobid() {
 	return $siteid . "-" . $yrmonth . "-" . $num;
 }
 
+$sitepat = '/^\w{3,8}$/';
+$epochpat = '/^\d{6}$/';
+$numpat = '/^\d{8}$/';
+
+function verify_jobid($jobid) {
+	$pat_old = '/^[0-9a-f]{10}$/';
+	$pat_new = '/^\w{3,8}-\d{6}-\d{8}$/';
+	return ((preg_match($pat_new, $jobid) == 1) ||
+			(preg_match($pat_old, $jobid) == 1));
+}
+
+function jobid_to_dir($jobid) {
+	return strtr($jobid, "-", "/");
+}
+
+function dir_to_jobid($dir) {
+	return strtr($dir, "/", "-");
+}
+
 // Returns FALSE on error;
 // 
 function uncompress_file($infile, $outfile, &$suffix) {
@@ -208,25 +227,6 @@ function uncompress_file($infile, $outfile, &$suffix) {
 		}
 	}
 	return TRUE;
-}
-
-$sitepat = '/^\w{3,8}$/';
-$epochpat = '/^\d{6}$/';
-$numpat = '/^\d{8}$/';
-
-function verify_jobid($jobid) {
-	$pat_old = '/^[0-9a-f]{10}$/';
-	$pat_new = '/^\w{3,8}-\d{6}-\d{8}$/';
-	return ((preg_match($pat_new, $jobid) == 1) ||
-			(preg_match($pat_old, $jobid) == 1));
-}
-
-function jobid_to_dir($jobid) {
-	return strtr($jobid, "-", "/");
-}
-
-function dir_to_jobid($dir) {
-	return strtr($dir, "/", "-");
 }
 
 function get_status_url_args($jobid, $file) {
