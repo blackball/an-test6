@@ -50,9 +50,12 @@ static char* exclude_input[] = {
 	"^CRPIX.*",
 	"^CUNIT.*",
 	"^CD[12]_[12]$",
+	"^CDELT.*",
 	// SIP
 	"^[AB]P?_ORDER$",
 	"^[AB]P?_[[:digit:]]_[[:digit:]]$",
+	// Other
+	"^PV[[:digit:]]*_[[:digit:]]*.?$",
 	"^END$",
 };
 static int NE1 = sizeof(exclude_input) / sizeof(char*);
@@ -238,6 +241,7 @@ int main(int argc, char *argv[]) {
 	qfits_header_append(outhdr, "END", NULL, NULL, NULL);
 
 	if (qfits_header_dump(outhdr, outfid) ||
+		fits_pad_file(outfid) ||
 		fclose(outfid)) {
 		fprintf(stderr, "Failed to write output header.\n");
 		exit(-1);

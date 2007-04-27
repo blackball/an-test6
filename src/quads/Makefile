@@ -111,7 +111,7 @@ prospectus_progs: $(PROSPECTUS)
 .PHONY: fitsutils
 fitsutils: $(FITS_UTILS)
 
-new-wcs: new-wcs.o $(QFITS_LIB)
+new-wcs: new-wcs.o $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
