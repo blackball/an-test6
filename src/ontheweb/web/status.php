@@ -43,7 +43,10 @@ if (substr($rp2, 0, strlen($rp1)) != $rp1) {
 	die("Invalid \"job\" arg.");
 }
 
-$qfile = $resultdir . $q_fn;
+if (jobid_split($myname, $site, $epoch, $jobnum)) {
+	$qfile = $resultdir . $site . '/' . $q_fn;
+}
+
 $inputfile = $mydir . $input_fn;
 $inputtmpfile = $mydir . $inputtmp_fn;
 $startfile = $mydir . $start_fn;
@@ -763,13 +766,12 @@ if ($job_done) {
 	echo "</td></tr>\n";
 }
 
-if ($job_queued) {
+if ($job_queued && $qfile) {
 	echo '<tr><td>Position in Queue:</td><td>';
 	$q = @file($qfile);
 	$pos = -1;
 	for ($i=0; $i<count($q); $i++) {
-		$entry = explode("/", rtrim($q[$i]));
-		if ($entry[count($entry)-2] == $myname) {
+		if (strstr($q[$i], $myreldir)) {
 			$pos = $i;
 			break;
 		}

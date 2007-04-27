@@ -191,6 +191,18 @@ function verify_jobid($jobid) {
 			(preg_match($pat_old, $jobid) == 1));
 }
 
+function jobid_split($jobid, &$site, &$epoch, &$num) {
+	$pat_new = '/^(\w{3,8})-(\d{6})-(\d{8})$/';
+	if (preg_match($pat_new, $jobid, $matches) != 1)
+		return FALSE;
+	if (count($matches) != 4)
+		return FALSE;
+	$site = $matches[1];
+	$epoch = $matches[1];
+	$num = $matches[1];
+	return TRUE;
+}
+
 function jobid_to_dir($jobid) {
 	return strtr($jobid, "-", "/");
 }
