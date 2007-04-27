@@ -44,6 +44,7 @@ $log_fn   = "log";
 $solved_fn= "solved";
 $cancel_fn= "cancel";
 $wcs_fn   = "wcs.fits";
+$newheader_fn   = "newheader.fits";
 $objs_fn  = "objs.png";
 $bigobjs_fn  = "objs-big.png";
 $overlay_fn="overlay.png";
@@ -112,6 +113,7 @@ if (strpos($host, "monte") === 0) {
 	$wcs_rd2xy = "wcs-rd2xy";
 	$fits_guess_scale = "fits-guess-scale";
 	$an_fitstopnm = "an-fitstopnm";
+	$new_wcs = "new-wcs";
 } else {
 	$sqlite = "sqlite";
 	$resultdir = "/home/gmaps/ontheweb-data/";
@@ -136,6 +138,7 @@ if (strpos($host, "monte") === 0) {
 	$fits_guess_scale = "/home/gmaps/an/quads/fits-guess-scale";
 	$an_fitstopnm = "/home/gmaps/an/quads/an-fitstopnm";
 	$fits_filter = "/home/gmaps/an/quads/fits2fits.py %s %s";
+	$new_wcs = "/home/gmaps/an/quads/new-wcs";
 }
 
 $headers = $_REQUEST;
@@ -175,6 +178,36 @@ function create_new_jobid() {
 		return FALSE;
 	}
 	return $siteid . "-" . $yrmonth . "-" . $num;
+}
+
+// Returns FALSE on error;
+// 
+function uncompress_file($infile, $outfile, &$suffix) {
+	$typestr = shell_exec("file -b -N -L " . $infile);
+	loggit("type: " . $typestr . " for " . $infile . "\n");
+
+	// handle compressed files.
+	$comptype = array("gzip compressed data"  => array(".gz",  "gunzip  -cd %s > %s"),
+					  "bzip2 compressed data" => array(".bz2", "bunzip2 -cd %s > %s"),
+					  "Zip archive data"      => array(".zip", "unzip   -p  %s > %s"),
+					  );
+	// look for key phrases in the output of "file".
+	foreach ($comptype as $phrase => $lst) {
+		if (strstr($typestr, $phrase)) {
+			$suff    = $lst[0];
+			$command = $lst[1];
+			$newfilename = $mydir . "uncompressed.";
+			$cmd = sprintf($command, $filename, $newfilename);
+			loggit("Command: " . $cmd . "\n");
+			if ((system($cmd, $retval) === FALSE) || $retval) {
+				loggit("Command failed, return value " . $retval . ": " . $cmd);
+				return FALSE;
+			}
+			$suffix = $suff;
+			break;
+		}
+	}
+	return TRUE;
 }
 
 $sitepat = '/^\w{3,8}$/';

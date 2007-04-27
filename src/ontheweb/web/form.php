@@ -1118,35 +1118,17 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 	$addsuffix = "";
 
-	$typestr = shell_exec("file -b -N " . $filename);
-	loggit("type: " . $typestr . " for " . $filename . "\n");
-
-	// handle compressed files.
-	$comptype = array("gzip compressed data"  => array(".gz",  "gunzip  -cd %s > %s"),
-					  "bzip2 compressed data" => array(".bz2", "bunzip2 -cd %s > %s"),
-					  "Zip archive data"      => array(".zip", "unzip   -p  %s > %s"),
-					  );
-	// look for key phrases in the output of "file".
-	foreach ($comptype as $phrase => $lst) {
-		if (strstr($typestr, $phrase)) {
-			$suff    = $lst[0];
-			$command = $lst[1];
-			$newfilename = $mydir . "uncompressed.";
-			$cmd = sprintf($command, $filename, $newfilename);
-			loggit("Command: " . $cmd . "\n");
-			if (system($cmd, $retval)) {
-				loggit("Command failed, return value " . $retval . ": " . $cmd);
-				$errstr = "Failed to decompress image (" . $phrase . ")";
-				return FALSE;
-			}
-			$addsuffix = $suff;
-			$filename = $newfilename;
-			$typestr = shell_exec("file -b -N -L " . $filename);
-			loggit("type: " . $typestr . " for " . $filename . "\n");
-			array_push($todelete, $newfilename);
-			break;
-		}
+	$newfilename = $mydir . "uncompressed.";
+	if (!uncompress_file($filename, $newfilename, $suff)) {
+		$errstr = "Failed to decompress image " . $filename;
+		return FALSE;
 	}
+	if ($suff) {
+		$addsuffix = $suff;
+		$filename = $newfilename;
+		array_push($todelete, $newfilename);
+	}
+	$typestr = shell_exec("file -b -N -L " . $filename);
 
 	// Handle different image types
 	$imgtypes = array("FITS image data"  => array("fits", $an_fitstopnm . " -i %s > %s"),

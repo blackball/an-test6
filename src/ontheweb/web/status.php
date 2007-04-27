@@ -31,8 +31,6 @@ $myreluri = $_SERVER['PHP_SELF'];
 $myuri = 'http://' . $host . $myreluri;
 
 $img = array_key_exists("img", $headers);
-$overlay = array_key_exists("overlay", $headers);
-$bigoverlay = array_key_exists("overlay-big", $headers);
 $cancel = array_key_exists("cancel", $headers);
 $goback = array_key_exists("goback", $headers);
 $addpreset = array_key_exists("addpreset", $headers);
@@ -59,8 +57,6 @@ $wcsfile = $mydir . $wcs_fn;
 $matchfile = $mydir . $match_fn;
 $objsfile = $mydir . $objs_fn;
 $bigobjsfile = $mydir . $bigobjs_fn;
-$overlayfile = $mydir . $overlay_fn;
-$bigoverlayfile = $mydir . $bigoverlay_fn;
 $rdlsinfofile = $mydir . $rdlsinfo_fn;
 $wcsinfofile = $mydir . $wcsinfo_fn;
 $jobdatafile = $mydir . $jobdata_fn;
@@ -101,12 +97,76 @@ if ($getfile) {
 		strstr($getfile, '..')) {
 		die("Invalid \"get\" filename.");
 	}
-	$fn = $mydir . $getfile;
-	if (!file_exists($fn)) {
-		die("No such file.");
+
+	if (!strcmp($getfile, 'overlay') ||
+		!strcmp($getfile, 'overlay-big')) {
+		$big = !strcmp($getfile, 'overlay-big');
+		/*
+		if (!$didsolve) {
+			die("Field didn't solve.");
+		}
+		*/
+		render_overlay($mydir, $big, $jd);
+	}
+		
+
+	$todelete = array();
+
+	if (!strcmp($getfile, $newheader_fn)) {
+		$imgfile = $jd['imagefilename'];
+		if (!$imgfile) {
+			die("No imagefilename");
+		}
+		$imgfile = $mydir . $imgfile;
+
+		$newfile = tempnam('/tmp', 'uncompressed');
+		if (!$newfile) {
+			die("Failed to create temporary file.");
+		}
+
+		$suff = "";
+		if (!uncompress_file($imgfile, $newfile, $suff)) {
+			die("Failed to decompress image " . $imgfile);
+		}
+		if ($suff) {
+			$imgfile = $newfile;
+			array_push($todelete, $newfile);
+		}
+
+		$typestr = shell_exec("file -b -N -L " . $imgfile);
+		if (!strstr($typestr, "FITS image data")) {
+			die("Not a FITS image: " . $typestr);
+		}
+
+		// Run fits2fits.py on it...
+		$filtered = tempnam('/tmp', 'filtered');
+		$cmd = sprintf($fits_filter, $imgfile, $filtered) . " > /dev/null 2> /dev/null";
+		loggit("Command: " . $cmd . "\n");
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+			die("Failed to fix your FITS file.");
+		}
+		array_push($todelete, $filtered);
+
+		// Merge WCS
+		$merged = tempnam('/tmp', 'newheader');
+		$cmd = $new_wcs . " -i " . $filtered . " -w " . $mydir . $wcs_fn .
+			" -o " . $merged . " > /dev/null 2> /dev/null";
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			loggit("Command failed, return value " . $retval . ": " . $cmd . "\n");
+			die("Failed to merge your FITS file.");
+		}
+		array_push($todelete, $merged);
+
+		$fn = $merged;
+	} else {
+		$fn = $mydir . $getfile;
+		if (!file_exists($fn)) {
+			die("No such file.");
+		}
 	}
 	$sz = filesize($fn);
-	$attachments = array('wcs.fits',
+	$attachments = array($wcs_fn, $newheader_fn,
 						 );
 	if (in_array($getfile, $attachments)) {
 		$mimetype = 'application/octet-stream';
@@ -120,6 +180,11 @@ if ($getfile) {
 	header('Content-Type: ' . $mimetype);
 	header('Content-Length: ' . $sz);
 	readfile($fn);
+
+	foreach ($todelete as $del) {
+		unlink($del);
+	}
+
 	exit;
 }
 
@@ -346,217 +411,6 @@ if (array_key_exists("send-email", $headers)) {
 	exit;
 }
 
-if ($overlay || $bigoverlay) {
-	$todelete = array();
-	if (($overlay && !file_exists($overlayfile)) ||
-		($bigoverlay && !file_exists($bigoverlayfile))) {
-		$big = $bigoverlay;
-		// render it!
-		if (!$didsolve) {
-			fail("Field didn't solve.");
-		}
-
-		if ($big) {
-			$W = $jd['imageW'];
-			$H = $jd['imageH'];
-			$shrink = 1;
-			$userimg = $mydir . "image.pnm";
-		} else {
-			$W = $jd['displayW'];
-			$H = $jd['displayH'];
-			$shrink = $jd["imageshrink"];
-			if (!$shrink)
-				$shrink = 1;
-			$userimg = $pnmimg;
-		}
-		if (!($W && $H)) {
-			// BACKWARDS COMPATIBILITY.
-			loggit("failed to find image display width and height.\n");
-			$W = $jd['imageW'];
-			$H = $jd['imageH'];
-			if (!($W && $H)) {
-				fail("failed to find image width and height.\n");
-			}
-		}
-
-		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
-		loggit("Command: " . $cmd . "\n");
-		$output = shell_exec($cmd);
-		//loggit("output: " . $output . "\n");
-		if (sscanf($output, " %d %d %d %d %d ", $nil, $fA, $fB, $fC, $fD) != 5) {
-			fail("failed to parse field objs.");
-		}
-		$flds = array($fA, $fB, $fC, $fD);
-		$fldobjs = max($flds);
-		loggit("field objs: " . implode(" ", $flds) . "\n");
-
-		for ($i=0; $i<4; $i++)
-			$fldor[$i] = "#row==" . (1+$flds[$i]);
-		$cmd = $tablist . " " . $xylist . "\"[" . implode("||", $fldor) . "][col X;Y]\" | tail -n 4";
-		$output = shell_exec($cmd);
-		$lines = explode("\n", $output);
-		for ($i=0; $i<4; $i++) {
-			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
-				fail("failed to parse field objs coords: \"" . $lines[$i] . "\"");
-			}
-			// Here's where we scale down the size of the quad:
-			$fldxy[] = $x / $shrink;
-			$fldxy[] = $y / $shrink;
-		}
-
-		$prefix = $mydir;
-		if ($big) {
-			$prefix .= "big-";
-		}
-
-		$quadimg = $prefix . "quad.pgm";
-		$redquad = $prefix . "redquad.pgm";
-		$xypgm = $prefix . "index.xy.pgm";
-		$fldxy1pgm = $prefix . "fldxy1.pgm";
-		$fldxy2pgm = $prefix . "fldxy2.pgm";
-		$redimg = $prefix . "red.pgm";
-		$sumimg = $prefix . "sum.ppm";
-		$sumimg2 = $prefix . "sum2.ppm";
-		$dimimg = $prefix . "dim.ppm";
-
-		array_push($todelete, $quadimg);
-		array_push($todelete, $redquad);
-		array_push($todelete, $xypgm);
-		array_push($todelete, $fldxy1pgm);
-		array_push($todelete, $fldxy2pgm);
-		array_push($todelete, $redimg);
-		array_push($todelete, $sumimg);
-		array_push($todelete, $sumimg2);
-		array_push($todelete, $dimimg);
-
-		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
-		loggit("command: $cmd\n");
-		if (system($cmd, $retval) === FALSE) {
-			fail("plotquad failed.");
-		}
-
-		$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
-		loggit("command: $cmd\n");
-		if ((system($cmd, $retval) === FALSE) || $retval) {
-			fail("pgmtoppm (quad) failed.");
-		}
-
-		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
-			" -W " . $W . " -H " . $H .
-			" -x " . (1/$shrink) . " -y " . (1/$shrink) .
-			" -w 1.5 -r 4 > " . $xypgm;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("plotxy2 failed. retval $retval, res \"" . $res . "\"");
-		}
-
-		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -N " . (1+$fldobjs) . " -r 5 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy1pgm;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
-		}
-
-		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -n " . (1+$fldobjs) . " -N 200 -r 3 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy2pgm;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("plotxy2 (fld2) failed. retval $retval, res \"" . $res . "\"");
-		}
-
-		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pgmtoppm (xy) failed.");
-		}
-
-		$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("ppmdim failed: " . $res);
-		}
-
-		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pnmcomp failed.");
-		}
-
-		$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pgmtoppm (fldxy1) failed.");
-		}
-		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg . " " . $sumimg . " " . $sumimg2;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pnmcomp failed.");
-		}
-
-		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pgmtoppm (fldxy1) failed.");
-		}
-		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pnmcomp failed.");
-		}
-
-		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pnmcomp (2) failed.");
-		}
-
-		$cmd = "pnmtopng " . $sumimg2 . " > ";
-		if ($big) {
-			$cmd .= $bigoverlayfile;
-		} else {
-			$cmd .= $overlayfile;
-		}
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($retval) {
-			fail("pnmtopng failed.");
-		}
-
-		// Delete intermediate files.
-		$todelete = array_unique($todelete);
-		foreach ($todelete as $del) {
-			loggit("Deleting temp file " . $del . "\n");
-			if (!unlink($del)) {
-				loggit("Failed to unlink file: \"" . $del . "\"\n");
-			}
-		}
-
-	}
-
-	if ($overlay && file_exists($overlayfile)) {
-		header('Content-type: image/png');
-		readfile($overlayfile);
-		exit;
-	} else if ($bigoverlay && file_exists($bigoverlayfile)) {
-		header('Content-type: image/png');
-		readfile($bigoverlayfile);
-		exit;
-	} else
-		fail("(big)overlay file does not exist.");
-}
 
 if ($didsolve) {
 	// The size of the full-sized original image.
@@ -662,8 +516,8 @@ function get_url($f) {
 	return $myuri . get_status_url_args($myname, $f);
 }
 
-function print_link($f) {
-	if (file_exists($f)) {
+function print_link($f, $dynamic=FALSE) {
+	if (file_exists($f) || $dynamic) {
 		$url = get_url(basename($f));
 		echo "<a href=\"" . $url . "\">" .
 			basename($f) . "</a>";
@@ -820,10 +674,10 @@ if ($didsolve && file_exists($pnmimg)) {
 	echo "</p>\n";
 	//Your field, overplotted with objects from the index.</p>\n";
 	echo "<a href=\"" .
-		"http://" . $host . $uri . htmlentities("/status.php?job=" . $myname . "&overlay-big") .
+		get_url('overlay-big') . 
 		"\">\n";
 	echo "<img src=\"" .
-		"http://" . $host . $uri . htmlentities("/status.php?job=" . $myname . "&overlay") .
+		get_url('overlay') . 
 		"\" alt=\"An image of your field, showing sources we extracted from the image and objects from our index.\"/>";
 	echo "</a>\n";
 	echo "</div>\n";
@@ -1010,6 +864,13 @@ if ($job_done) {
 		print_link($wcsfile);
 		echo "</td></tr>\n";
 
+		$usrimg = $jd['imagefilename'];
+		if (strstr($usrimg, '.fits')) {
+			echo '<tr><td>New FITS header:</td><td>';
+			print_link($mydir . $newheader_fn, TRUE);
+			echo "</td></tr>\n";
+		}
+
 		echo '<tr><td>RA,DEC list:</td><td>';
 		print_link($rdlist);
 		echo "</td></tr>\n";
@@ -1134,7 +995,7 @@ if (!($job_done || $didcancel)) {
 <input type="submit" name="goback" value="Return to Form" />
 </td>
 <td><input type="radio" name="quick" value="1" checked="checked" /></td>
-	 <td>Quick (don't re-upload the image)</td>
+	 <td>Quick (don<?php echo "'";?>t re-upload the image)</td>
 </tr>
 <tr>
 <td><input type="radio" name="quick" value="0" /></td>
@@ -1171,3 +1032,231 @@ echo $valid_blurb;
 
 </body>
 </html>
+
+<?php
+function render_overlay($mydir, $big, $jd) {
+	global $overlay_fn;
+	global $bigoverlay_fn;
+	global $match_fn;
+	global $xyls_fn;
+	global $indexxyls_fn;
+
+	global $tablist;
+	global $plotquad;
+	global $plotxy2;
+
+	global $pnmimg;
+
+	$overlayfile = $mydir . $overlay_fn;
+	$bigoverlayfile = $mydir . $bigoverlay_fn;
+	$matchfile = $mydir . $match_fn;
+	$xylist = $mydir . $xyls_fn;
+	$indexxyls = $mydir . $indexxyls_fn;
+
+	$todelete = array();
+
+	if ((!$big && !file_exists($overlayfile)) ||
+		($big  && !file_exists($bigoverlayfile))) {
+		if ($big) {
+			$W = $jd['imageW'];
+			$H = $jd['imageH'];
+			$shrink = 1;
+			$userimg = $mydir . "image.pnm";
+		} else {
+			$W = $jd['displayW'];
+			$H = $jd['displayH'];
+			$shrink = $jd["imageshrink"];
+			if (!$shrink)
+				$shrink = 1;
+			$userimg = $pnmimg;
+		}
+		if (!($W && $H)) {
+			// BACKWARDS COMPATIBILITY.
+			loggit("failed to find image display width and height.\n");
+			$W = $jd['imageW'];
+			$H = $jd['imageH'];
+			if (!($W && $H)) {
+				fail("failed to find image width and height.\n");
+			}
+		}
+
+		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
+		loggit("Command: " . $cmd . "\n");
+		$output = shell_exec($cmd);
+		//loggit("output: " . $output . "\n");
+		if (sscanf($output, " %d %d %d %d %d ", $nil, $fA, $fB, $fC, $fD) != 5) {
+			fail("failed to parse field objs.");
+		}
+		$flds = array($fA, $fB, $fC, $fD);
+		$fldobjs = max($flds);
+		loggit("field objs: " . implode(" ", $flds) . "\n");
+
+		for ($i=0; $i<4; $i++)
+			$fldor[$i] = "#row==" . (1+$flds[$i]);
+		$cmd = $tablist . " " . $xylist . "\"[" . implode("||", $fldor) . "][col X;Y]\" | tail -n 4";
+		$output = shell_exec($cmd);
+		$lines = explode("\n", $output);
+		for ($i=0; $i<4; $i++) {
+			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
+				fail("failed to parse field objs coords: \"" . $lines[$i] . "\"");
+			}
+			// Here's where we scale down the size of the quad:
+			$fldxy[] = $x / $shrink;
+			$fldxy[] = $y / $shrink;
+		}
+
+		$prefix = $mydir;
+		if ($big) {
+			$prefix .= "big-";
+		}
+
+		$quadimg = $prefix . "quad.pgm";
+		$redquad = $prefix . "redquad.pgm";
+		$xypgm = $prefix . "index.xy.pgm";
+		$fldxy1pgm = $prefix . "fldxy1.pgm";
+		$fldxy2pgm = $prefix . "fldxy2.pgm";
+		$redimg = $prefix . "red.pgm";
+		$sumimg = $prefix . "sum.ppm";
+		$sumimg2 = $prefix . "sum2.ppm";
+		$dimimg = $prefix . "dim.ppm";
+
+		array_push($todelete, $quadimg);
+		array_push($todelete, $redquad);
+		array_push($todelete, $xypgm);
+		array_push($todelete, $fldxy1pgm);
+		array_push($todelete, $fldxy2pgm);
+		array_push($todelete, $redimg);
+		array_push($todelete, $sumimg);
+		array_push($todelete, $sumimg2);
+		array_push($todelete, $dimimg);
+
+		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
+		loggit("command: $cmd\n");
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			fail("plotquad failed: return value " . $retval);
+		}
+
+		$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
+		loggit("command: $cmd\n");
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			fail("pgmtoppm (quad) failed.");
+		}
+
+		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
+			" -W " . $W . " -H " . $H .
+			" -x " . (1/$shrink) . " -y " . (1/$shrink) .
+			" -w 1.5 -r 4 > " . $xypgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("plotxy2 failed. retval $retval, res \"" . $res . "\"");
+		}
+
+		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
+			" -N " . (1+$fldobjs) . " -r 5 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy1pgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
+		}
+
+		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
+			" -n " . (1+$fldobjs) . " -N 200 -r 3 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy2pgm;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("plotxy2 (fld2) failed. retval $retval, res \"" . $res . "\"");
+		}
+
+		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pgmtoppm (xy) failed.");
+		}
+
+		$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("ppmdim failed: " . $res);
+		}
+
+		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pnmcomp failed.");
+		}
+
+		$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pgmtoppm (fldxy1) failed.");
+		}
+		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg . " " . $sumimg . " " . $sumimg2;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pnmcomp failed.");
+		}
+
+		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pgmtoppm (fldxy1) failed.");
+		}
+
+		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pnmcomp failed.");
+		}
+
+		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pnmcomp (2) failed.");
+		}
+
+		$cmd = "pnmtopng " . $sumimg2 . " > ";
+		if ($big) {
+			$cmd .= $bigoverlayfile;
+		} else {
+			$cmd .= $overlayfile;
+		}
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pnmtopng failed.");
+		}
+
+		// Delete intermediate files.
+		$todelete = array_unique($todelete);
+		foreach ($todelete as $del) {
+			loggit("Deleting temp file " . $del . "\n");
+			if (!unlink($del)) {
+				loggit("Failed to unlink file: \"" . $del . "\"\n");
+			}
+		}
+
+	}
+
+	if (!$big && file_exists($overlayfile)) {
+		header('Content-type: image/png');
+		readfile($overlayfile);
+		exit;
+	} else if ($big && file_exists($bigoverlayfile)) {
+		header('Content-type: image/png');
+		readfile($bigoverlayfile);
+		exit;
+	} else
+		fail("(big)overlay file does not exist.");
+}
+?>
