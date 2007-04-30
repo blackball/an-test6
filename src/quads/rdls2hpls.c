@@ -53,7 +53,7 @@ int convert_file(char* infn, char* outfn)
 	fprintf(hpf, "NumFields=%i\n", numfields);
 
 	for (j = 0; j < numfields; j++) {
-		//int nhp;
+		int first = 1;
 		// Second line and subsequent lines: npoints,ra,dec,ra,dec,...
 		dl* points = rdlist_get_field(rdls, j);
 		if (!points) {
@@ -84,17 +84,13 @@ int convert_file(char* infn, char* outfn)
 			}
 			healpixes[hp] = 1;
 		}
-		/*
-		  nhp = 0;
-		  for (i = 0; i < 12; i++) {
-		  if (healpixes[i])
-		  nhp++;
-		  }
-		  fprintf(hpf, "%i", nhp);
-		*/
 		for (i = 0; i < 12; i++) {
-			if (healpixes[i])
-				fprintf(hpf, ",%i", i);
+			if (healpixes[i]) {
+				if (!first)
+					fprintf(hpf, " ");
+				fprintf(hpf, "%i", i);
+				first = 0;
+			}
 		}
 		fprintf(hpf, "\n");
 		fflush(hpf);
