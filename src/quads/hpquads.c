@@ -22,6 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <limits.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <assert.h>
@@ -44,7 +45,7 @@
 #include "pnpoly.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RH"
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RHL:"
 
 static void print_help(char* progname)
 {
@@ -59,6 +60,8 @@ static void print_help(char* progname)
 		   "     [-x <x-passes>] number of passes in the x direction\n"
 		   "     [-y <y-passes>] number of passes in the y direction\n"
 		   "     [-r <reuse-times>] number of times a star can be used.\n"
+		   "     [-L <max-reuses>] make extra passes through the healpixes, increasing the \"-r\" reuse\n"
+		   "                     limit each time, up to \"max-reuses\".\n"
 		   "     [-R]            make a second pass through healpixes in which quads couldn't be made,\n"
 		   "                     removing the \"-r\" restriction on the number of times a star can be used.\n"
 		   "     [-i <unique-id>] set the unique ID of this index\n\n"
@@ -199,10 +202,10 @@ static void compute_code(quad* q, double* code) {
 }
 
 static Inline void drop_quad(int iA, int iB, int iC, int iD) {
-	nuses[iA]--;
-	nuses[iB]--;
-	nuses[iC]--;
-	nuses[iD]--;
+	nuses[iA]++;
+	nuses[iB]++;
+	nuses[iC]++;
+	nuses[iD]++;
 }
 
 struct potential_quad {
@@ -332,7 +335,8 @@ static int* cq_inbox = NULL;
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy,
-					   double* boxx, double* boxy, bool use_nuses) {
+					   double* boxx, double* boxy,
+					   bool count_uses) {
 	uint iA=0, iB, iC, iD, newpoint;
 	int rtn = 0;
 	int ninbox;
@@ -402,7 +406,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 					q.star[3] = starinds[iD];
 
 					if (add_quad(&q)) {
-						if (use_nuses)
+						if (count_uses)
 							drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 						rtn = 1;
 						goto theend;
@@ -444,7 +448,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 						q.star[3] = starinds[iD];
 
 						if (add_quad(&q)) {
-							if (use_nuses)
+							if (count_uses)
 								drop_quad(q.star[0], q.star[1], q.star[2], q.star[3]);
 							rtn = 1;
 							iA = iAalloc;
@@ -480,7 +484,7 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 								   double* centre, double* vx, double* vy,
 								   double* xpts, double* ypts,
 								   bool* p_failed_nostars,
-								   bool use_nuses) {
+								   int R) {
 	static int Nhighwater = 0;
 	double origin[3];
 	double dx[3];
@@ -522,26 +526,25 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	if (p_yesstars)
 		(*p_yesstars)++;
 
-	if (use_nuses) {
-		// remove stars that have been used up.
-		destind = 0;
-		for (j=0; j<N; j++) {
-			if (!nuses[res->inds[j]])
-				continue;
-			res->inds[destind] = res->inds[j];
-			for (d=0; d<3; d++)
-				res->results.d[destind*3+d] = res->results.d[j*3+d];
-			destind++;
-		}
-		N = destind;
-		if (N < 4) {
-			kdtree_free_query(res);
-			if (p_nounused)
-				(*p_nounused)++;
-			if (p_N) *p_N = N;
-			return FALSE;
-		}
+	// remove stars that have been used up.
+	destind = 0;
+	for (j=0; j<N; j++) {
+		if (nuses[res->inds[j]] >= R)
+			continue;
+		res->inds[destind] = res->inds[j];
+		for (d=0; d<3; d++)
+			res->results.d[destind*3+d] = res->results.d[j*3+d];
+		destind++;
 	}
+	N = destind;
+	if (N < 4) {
+		kdtree_free_query(res);
+		if (p_nounused)
+			(*p_nounused)++;
+		if (p_N) *p_N = N;
+		return FALSE;
+	}
+
 	if (p_nstarstotal)
 		(*p_nstarstotal) += N;
 	if (p_ncounted)
@@ -612,7 +615,6 @@ int main(int argc, char** argv) {
 	int xpasses = 1;
 	int ypasses = 1;
 	bool circle = FALSE;
-	int hp;
 	int Nreuse = 3;
 	double radius2;
 	int lastgrass = 0;
@@ -629,8 +631,20 @@ int main(int argc, char** argv) {
 	dl* noreuse_radec = NULL;
 	dl* noquads_radec = NULL;
 
+	int loosenmax = 0;
+	il** loosenhps;
+
+	double dxfrac, dyfrac;
+	double centre[3];
+	double vx[3], vy[3];
+	double boxx[4], boxy[4];
+	int hp;
+
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'C':
+			loosenmax = atoi(optarg);
+			break;
 		case 'R':
 			noreuse_pass = TRUE;
 			break;
@@ -701,6 +715,9 @@ int main(int argc, char** argv) {
 			fprintf(stderr, "Failed to write header of failed RDLS file.\n");
 		}
 	}
+
+	if (loosenmax)
+		loosenhps = malloc(xpasses * ypasses * sizeof(il*));
 
 	HEALPIXES = 12 * Nside * Nside;
 	printf("Nside=%i.  Nside^2=%i.  Number of healpixes=%i.  Healpix side length ~ %g arcmin.\n",
@@ -814,7 +831,7 @@ int main(int argc, char** argv) {
 	}
 	nuses = mymalloc(startree_N(starkd) * sizeof(unsigned char), __LINE__);
 	for (i=0; i<startree_N(starkd); i++)
-		nuses[i] = Nreuse;
+		nuses[i] = 0;
 
 	hprad = sqrt(0.5 * arcsec2distsq(healpix_side_length_arcmin(Nside) * 60.0));
 	quadscale = 0.5 * sqrt(quad_dist2_upper);
@@ -887,13 +904,13 @@ int main(int argc, char** argv) {
 
 	for (xpass=0; xpass<xpasses; xpass++) {
 		for (ypass=0; ypass<ypasses; ypass++) {
-			double dxfrac, dyfrac;
 			int nthispass;
 			int nnostars;
 			int nyesstars;
 			int nnounused;
 			int nstarstotal = 0;
 			int ncounted = 0;
+			il* loosen = NULL;
 
 			histogram* histnstars = NULL;
 			histogram* histnstars_failed = NULL;
@@ -901,6 +918,10 @@ int main(int argc, char** argv) {
 			if (hists) {
 				histnstars = histogram_new_nbins(0.0, 100.0, 100);
 				histnstars_failed = histogram_new_nbins(0.0, 100.0, 100);
+			}
+
+			if (loosenmax) {
+				loosen = loosenhps[xpass * ypasses + ypass] = il_new(1024);
 			}
 
 			dxfrac = xpass / (double)xpasses;
@@ -920,11 +941,7 @@ int main(int argc, char** argv) {
 			printf("Trying %i healpixes.\n", Nhptotry);
 
 			for (i=0; i<Nhptotry; i++) {
-				double centre[3];
-				double vx[3], vy[3];
-				double boxx[4], boxy[4];
 				double radec[2];
-				int hp;
 				int N;
 				bool ok;
 				bool failed_nostars;
@@ -946,7 +963,7 @@ int main(int argc, char** argv) {
 											&N, centre, vx, vy,
 											boxx, boxy,
 											&failed_nostars,
-											TRUE);
+											Nreuse);
 
 				if (failedrdls) {
 					xyz2radec(centre[0], centre[1], centre[2], radec, radec+1);
@@ -955,6 +972,7 @@ int main(int argc, char** argv) {
 				}
 
 				if (!ok) {
+					// Did we fail because there were no stars?
 					if (failed_nostars) {
 						if (failedrdls) {
 							dl_append(nostars_radec, radec[0]);
@@ -963,6 +981,8 @@ int main(int argc, char** argv) {
 					} else {
 						if (noreuse_pass)
 							il_append(noreuse_hps, hp);
+						if (loosen)
+							il_append(loosen, hp);
 						if (failedrdls) {
 							dl_append(noreuse_radec, radec[0]);
 							dl_append(noreuse_radec, radec[1]);
@@ -981,6 +1001,8 @@ int main(int argc, char** argv) {
 				} else {
 					if (noreuse_pass)
 						il_append(noreuse_hps, hp);
+					if (loosen)
+						il_append(loosen, hp);
 					if (failedrdls) {
 						dl_append(noquads_radec, radec[0]);
 						dl_append(noquads_radec, radec[1]);
@@ -1082,9 +1104,6 @@ int main(int argc, char** argv) {
 					printf("Making a pass with no limit on the number of times a star can be used.\n");
 					printf("Trying %i healpixes.\n", il_size(noreuse_hps));
 					for (i=0; i<il_size(noreuse_hps); i++) {
-						double centre[3];
-						double vx[3], vy[3];
-						double boxx[4], boxy[4];
 						int N;
 						int hp = il_get(noreuse_hps, i);
 
@@ -1099,7 +1118,7 @@ int main(int argc, char** argv) {
 													NULL, NULL, NULL, NULL, NULL,
 													&N, centre, vx, vy,
 													boxx, boxy,
-													NULL, FALSE)) {
+													NULL, INT_MAX)) {
 							nfailed1++;
 							goto failedhp2;
 						}
@@ -1138,11 +1157,11 @@ int main(int argc, char** argv) {
 				}
 			}
 
-
-
-			if ((xpass == xpasses-1) &&
-				(ypass == ypasses-1))
-				break;
+			/*
+			  if ((xpass == xpasses-1) &&
+			  (ypass == ypasses-1))
+			  break;
+			*/
 
 			printf("Merging quads...\n");
 			for (i=0; i<Nquads; i++) {
@@ -1156,6 +1175,69 @@ int main(int argc, char** argv) {
 		}
 	}
 	free(hptotry);
+
+
+	if (loosenmax) {
+		int mx;
+		for (mx=Nreuse+1; mx<=loosenmax; mx++) {
+			int alldone = 1;
+			printf("Loosening reuse maximum to %i...\n", mx);
+			for (xpass=0; xpass<xpasses; xpass++) {
+				for (ypass=0; ypass<ypasses; ypass++) {
+					il* loosen;
+					il* newlist;
+
+					loosen = loosenhps[xpass * ypasses + ypass];
+					if (!loosen)
+						continue;
+
+					alldone = 0;
+					dxfrac = xpass / (double)xpasses;
+					dyfrac = ypass / (double)ypasses;
+
+					printf("Pass %i of %i.\n", xpass * ypasses + ypass + 1, xpasses * ypasses);
+					printf("Trying %i healpixes.\n", il_size(loosen));
+
+					newlist = il_new(1024);
+
+					for (i=0; i<il_size(loosen); i++) {
+						int N;
+						hp = il_get(loosen, i);
+
+						if (!find_stars_and_vectors(hp, Nside, radius2,
+													dxfrac, dyfrac,
+													NULL, NULL, NULL, NULL, NULL,
+													&N, centre, vx, vy,
+													boxx, boxy,
+													NULL, mx)) {
+							il_append(newlist, hp);
+							continue;
+						}
+						if (!create_quad(stars, inds, N, circle,
+										 centre, vx, vy, boxx, boxy, TRUE)) {
+							il_append(newlist, hp);
+							continue;
+						}
+					}
+					il_free(loosen);
+					if (!il_size(newlist)) {
+						il_free(newlist);
+						newlist = NULL;
+					}
+					loosenhps[xpass * ypasses + ypass] = newlist;
+
+					printf("Merging quads...\n");
+					for (i=0; i<Nquads; i++) {
+						quad* q = quadlist + i;
+						bt_insert(bigquadlist, q, FALSE, compare_quads);
+					}
+					Nquads = 0;
+				}
+			}
+			if (alldone)
+				break;
+		}
+	}
 
 	if (failedrdls) {
 		dl_free(nostars_radec);
