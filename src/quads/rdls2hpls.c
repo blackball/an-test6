@@ -27,48 +27,26 @@
 #include "starutil.h"
 #include "rdlist.h"
 
-int convert_file(char* fn)
+int convert_file(char* infn, char* outfn)
 {
-	int i, j, slen, numfields, npoints, healpixes[12];
+	int i, j, numfields, npoints, healpixes[12];
 	FILE* hpf;
 	rdlist* rdls;
-	char* hpfn;
 
-	// Figure out the name of the .hpls file: Yummy string parsing in C!
-	slen = strlen(fn);
-	i = slen - 1;
-	for (;;) {
-		while (i >= 0 && fn[i] != '.')
-			i--;
-		if (i == -1) {
-			fprintf(stderr, "Missing extension on %s? Need .rdls filename\n", fn);
-			return 1;
-		}
-		if (strcmp(fn + i+1, "rdls") == 0)
-			break;
-	}
-	hpfn = malloc(slen + 1);
-	strcpy(hpfn, fn);
-	hpfn[i + 1] = 'h';
-	hpfn[i + 2] = 'p';
-	hpfn[i + 3] = 'l';
-	hpfn[i + 4] = 's';
-	fprintf(stderr, "hpfn: %s\n", hpfn);
+	fprintf(stderr, "Reading input from RDLS file %s, writing output to HPLS file %s.\n", infn, outfn);
 
 	// Open the two files for input and output
-	rdls = rdlist_open(fn);
+	rdls = rdlist_open(infn);
 	if (!rdls) {
-		fprintf(stderr, "Couldn't open RDLS %s.\n", fn);
+		fprintf(stderr, "Couldn't open RDLS %s.\n", infn);
 		return 1;
 	}
 
-	hpf = fopen(hpfn, "w");
+	hpf = fopen(outfn, "w");
 	if (!hpf) {
-		fprintf(stderr, "Couldn't open %s for writing: %s\n", hpfn, strerror(errno));
+		fprintf(stderr, "Couldn't open %s for writing: %s\n", outfn, strerror(errno));
 		return 1;
 	}
-	free(hpfn);
-	hpfn = NULL;
 
 	// First line: numfields
 	numfields = rdlist_n_fields(rdls);
@@ -128,13 +106,13 @@ int convert_file(char* fn)
 int main(int argc, char** args)
 {
 	int i;
-	if (argc == 1) {
-		fprintf(stderr, "Usage: %s <rdls-file> ...\n", args[0]);
+	if (argc == 1 && !(argc % 2)) {
+		fprintf(stderr, "Usage: %s <input-rdls-file> <output-hpls-file> [...]\n", args[0]);
 		return 1;
 	}
 
-	for (i = 1; i < argc; i++)
-		convert_file(args[i]);
+	for (i=1; i+1<argc; i+=2)
+		convert_file(args[i], args[i+1]);
 
 	return 0;
 }
