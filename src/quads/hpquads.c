@@ -41,6 +41,7 @@
 #include "rdlist.h"
 #include "histogram.h"
 #include "starkd.h"
+#include "pnpoly.h"
 #include "boilerplate.h"
 
 #define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RH"
@@ -99,6 +100,8 @@ static int nabok = 0;
 static unsigned char* nuses;
 
 static bool hists = FALSE;
+
+
 
 static void* mymalloc(unsigned int n, int linenum) {
 	void* rtn = malloc(n);
@@ -216,16 +219,15 @@ typedef struct potential_quad pquad;
 
 // is the AB distance right?
 // is the midpoint of AB inside the healpix?
-Noinline
 static void
 check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 						 double* origin, double* vx, double* vy,
-						 double maxdot1, double maxdot2) {
+						 double* boxx, double* boxy) {
 	double *sA, *sB;
 	double Bx, By;
 	double invscale;
 	double ABx, ABy;
-	double dot1, dot2;
+	double px, py;
 	double s2;
 	int d;
 	double avgAB[3];
@@ -245,24 +247,22 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 		return;
 	}
 
-	// avgAB: mean of A,B.  (note, it's NOT on the sphere)
+	// avgAB: mean of A,B.  (note, it's NOT on the sphere, and that's okay
+	// because we're projecting it into the ~tangent plane of the target
+	// healpix)
 	for (d=0; d<3; d++)
 		avgAB[d] = 0.5 * (sA[d] + sB[d]);
 
-	dot1 =
+	px = 
 		(avgAB[0] - origin[0]) * vx[0] +
 		(avgAB[1] - origin[1]) * vx[1] +
 		(avgAB[2] - origin[2]) * vx[2];
-	if (dot1 < 0.0 || dot1 > maxdot1) {
-		pq->scale_ok = 0;
-		nbadcenter++;
-		return;
-	}
-	dot2 =
+	py =
 		(avgAB[0] - origin[0]) * vy[0] +
 		(avgAB[1] - origin[1]) * vy[1] +
 		(avgAB[2] - origin[2]) * vy[2];
-	if (dot2 < 0.0 || dot2 > maxdot2) {
+
+	if (!point_in_poly(boxx, boxy, 4, px, py)) {
 		pq->scale_ok = 0;
 		nbadcenter++;
 		return;
@@ -287,7 +287,6 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 	nabok++;
 }
 
-Noinline
 static int
 check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	int i, ind;
@@ -330,11 +329,10 @@ static int Ncq = 0;
 static pquad* cq_pquads = NULL;
 static int* cq_inbox = NULL;
 
-Noinline
 static int create_quad(double* stars, int* starinds, int Nstars,
 					   bool circle,
 					   double* origin, double* vx, double* vy,
-					   double maxdot1, double maxdot2, bool use_nuses) {
+					   double* boxx, double* boxy, bool use_nuses) {
 	uint iA=0, iB, iC, iD, newpoint;
 	int rtn = 0;
 	int ninbox;
@@ -345,6 +343,8 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 
 	// ensure the arrays are large enough...
 	if (Nstars > Ncq) {
+		// (free and malloc rather than realloc because we don't care about
+		//  the previous contents)
 		free(cq_inbox);
 		free(cq_pquads);
 		Ncq = Nstars;
@@ -379,7 +379,7 @@ static int create_quad(double* stars, int* starinds, int Nstars,
 			pq->iA = iA;
 			pq->iB = iB;
 			check_scale_and_midpoint(pq, stars, starinds, Nstars,
-									 origin, vx, vy, maxdot1, maxdot2);
+									 origin, vx, vy, boxx, boxy);
 			if (!pq->scale_ok)
 				continue;
 
@@ -472,20 +472,20 @@ static int* inds = NULL;
 static double* stars = NULL;
 
 static bool find_stars_and_vectors(int hp, int Nside, double radius2,
+								   double dxfrac, double dyfrac,
 								   int* p_nostars, int* p_yesstars,
 								   int* p_nounused, int* p_nstarstotal,
 								   int* p_ncounted,
 								   int* p_N,
-								   double* centre, double* perp1,
-								   double* perp2,
-								   double* p_maxdot1, double* p_maxdot2,
-								   double dxfrac, double dyfrac,
+								   double* centre, double* vx, double* vy,
+								   double* xpts, double* ypts,
 								   bool* p_failed_nostars,
 								   bool use_nuses) {
 	static int Nhighwater = 0;
 	double origin[3];
-	double vx[3];
-	double vy[3];
+	double dx[3];
+	double dy[3];
+	double dxy[3];
 	double normal[3];
 	int d;
 	kdtree_qres_t* res;
@@ -493,18 +493,21 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	int destind;
 
 	healpix_to_xyzarr(hp, Nside, 0.0, 0.0, origin);
-	healpix_to_xyzarr(hp, Nside, 1.0, 0.0, vx);
-	healpix_to_xyzarr(hp, Nside, 0.0, 1.0, vy);
+	healpix_to_xyzarr(hp, Nside, 1.0, 0.0, dx);
+	healpix_to_xyzarr(hp, Nside, 0.0, 1.0, dy);
+	healpix_to_xyzarr(hp, Nside, 1.0, 1.0, dxy);
 	for (d=0; d<3; d++) {
-		vx[d] -= origin[d];
-		vy[d] -= origin[d];
-		centre[d] = origin[d] + dxfrac*vx[d] + dyfrac*vy[d];
+		dx[d] -= origin[d];
+		dy[d] -= origin[d];
+		dxy[d] -= origin[d];
+		centre[d] = origin[d] + dxfrac*dx[d] + dyfrac*dy[d];
 	}
 
 	res = kdtree_rangesearch_nosort(starkd->tree, centre, radius2);
 
-	// here we could check whether stars are in the box
-	// defined by the healpix boundaries plus quadscale.
+	// here we could check whether stars are in the box defined by the
+	// healpix boundaries plus quad scale, rather than just the circle
+	// containing that box.
 
 	N = res->nres;
 	if (N < 4) {
@@ -571,14 +574,23 @@ static bool find_stars_and_vectors(int hp, int Nside, double radius2,
 	kdtree_free_query(res);
 
 	// compute the projection vectors
-	cross_product(vx, vy, normal);
-	cross_product(normal, vx, perp1);
-	cross_product(vy, normal, perp2);
-	*p_maxdot1 = *p_maxdot2 = 0.0;
-	for (d=0; d<3; d++) {
-		*p_maxdot1 += vy[d] * perp1[d];
-		*p_maxdot2 += vx[d] * perp2[d];
-	}
+	cross_product(dx, dy, normal);
+	normalize_3(normal);
+	cross_product(normal, dx, vy);
+	normalize_3(vy);
+	cross_product(vy, normal, vx);
+	// (this should already be normalized!)
+	normalize_3(vx);
+
+	xpts[0] = 0.0;
+	ypts[0] = 0.0;
+	xpts[1] = dot_product_3(vx, dx);
+	ypts[1] = dot_product_3(vy, dx);
+	xpts[2] = dot_product_3(vx, dxy);
+	ypts[2] = dot_product_3(vy, dxy);
+	xpts[3] = dot_product_3(vx, dy);
+	ypts[3] = dot_product_3(vy, dy);
+
 	if (p_N) *p_N = N;
 	return TRUE;
 }
@@ -588,8 +600,8 @@ int main(int argc, char** argv) {
 	char *quadfname;
 	char *codefname;
 	char *skdtfname;
-	int Nside = 501;
 	int HEALPIXES;
+	int Nside = 501;
 	int i;
 	char* basefnin = NULL;
 	char* basefnout = NULL;
@@ -818,20 +830,23 @@ int main(int argc, char** argv) {
 	// within that healpix and within a small margin around it.
 	// Try fine-grained healpixes that are either within that big healpix
 	// or neighbouring it.  That's not exactly right, since we don't really
-	// know how big the margin is, but in reality it's probably what we want
-	// to do.
+	// know how big the margin is - it could be bigger than the one-healpix
+	// margin we add in this way - but it's probably what we want to do anyway.
 	if (hp != -1) {
 		bool* try = calloc(HEALPIXES, sizeof(bool));
 		for (i=0; i<HEALPIXES; i++) {
 			uint bighp, x, y;
 			healpix_decompose_xy(i, &bighp, &x, &y, Nside);
+			// If this small healpix isn't in the big healpix...
 			if (bighp != hp)
 				continue;
 			try[i] = TRUE;
+			// If this small healpix is on the boundary...
 			if ((x == 0) || (y == 0) || (x == Nside-1) || (y == Nside-1)) {
 				uint neigh[8];
 				uint nneigh;
 				int k;
+				// ... include its neighbours!
 				nneigh = healpix_get_neighbours(i, neigh, Nside);
 				for (k=0; k<nneigh; k++)
 					try[neigh[k]] = TRUE;
@@ -841,6 +856,7 @@ int main(int argc, char** argv) {
 		for (i=0; i<HEALPIXES; i++)
 			if (try[i])
 				Nhptotry++;
+		// Compact the "try" array (gather the TRUE indexes)
 		hptotry = malloc(Nhptotry * sizeof(int));
 		Nhptotry = 0;
 		for (i=0; i<HEALPIXES; i++)
@@ -905,9 +921,8 @@ int main(int argc, char** argv) {
 
 			for (i=0; i<Nhptotry; i++) {
 				double centre[3];
-				double perp1[3];
-				double perp2[3];
-				double maxdot1, maxdot2;
+				double vx[3], vy[3];
+				double boxx[4], boxy[4];
 				double radec[2];
 				int hp;
 				int N;
@@ -924,12 +939,12 @@ int main(int argc, char** argv) {
 
 				failed_nostars = FALSE;
 				ok = find_stars_and_vectors(hp, Nside, radius2,
+											dxfrac, dyfrac,
 											&nnostars, &nyesstars,
 											&nnounused, &nstarstotal,
 											&ncounted,
-											&N, centre, perp1, perp2,
-											&maxdot1, &maxdot2,
-											dxfrac, dyfrac,
+											&N, centre, vx, vy,
+											boxx, boxy,
 											&failed_nostars,
 											TRUE);
 
@@ -959,7 +974,7 @@ int main(int argc, char** argv) {
 				}
 
 				if (create_quad(stars, inds, N, circle,
-								centre, perp1, perp2, maxdot1, maxdot2, TRUE)) {
+								centre, vx, vy, boxx, boxy, TRUE)) {
 					if (histnstars)
 						histogram_add(histnstars, (double)N);
 					nthispass++;
@@ -1068,11 +1083,11 @@ int main(int argc, char** argv) {
 					printf("Trying %i healpixes.\n", il_size(noreuse_hps));
 					for (i=0; i<il_size(noreuse_hps); i++) {
 						double centre[3];
-						double perp1[3];
-						double perp2[3];
-						double maxdot1, maxdot2;
+						double vx[3], vy[3];
+						double boxx[4], boxy[4];
 						int N;
 						int hp = il_get(noreuse_hps, i);
+
 						if ((i * 80 / il_size(noreuse_hps)) != lastgrass) {
 							printf(".");
 							fflush(stdout);
@@ -1080,15 +1095,16 @@ int main(int argc, char** argv) {
 						}
 
 						if (!find_stars_and_vectors(hp, Nside, radius2,
+													dxfrac, dyfrac,
 													NULL, NULL, NULL, NULL, NULL,
-													&N, centre, perp1, perp2,
-													&maxdot1, &maxdot2, 0.0, 0.0,
+													&N, centre, vx, vy,
+													boxx, boxy,
 													NULL, FALSE)) {
 							nfailed1++;
 							goto failedhp2;
 						}
 						if (!create_quad(stars, inds, N, circle,
-										 centre, perp1, perp2, maxdot1, maxdot2, FALSE)) {
+										 centre, vx, vy, boxx, boxy, FALSE)) {
 							nfailed2++;
 							goto failedhp2;
 						}
