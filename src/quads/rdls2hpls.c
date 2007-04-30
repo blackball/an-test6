@@ -25,35 +25,40 @@
 
 #include "healpix.h"
 #include "starutil.h"
-#include "lsfile.h"
+#include "rdlist.h"
 
 int convert_file(char* fn)
 {
 	int i, j, slen, numfields, npoints, healpixes[12];
-	FILE* rdf, *hpf;
+	FILE* hpf;
+	rdlist* rdls;
 	char* hpfn;
 
 	// Figure out the name of the .hpls file: Yummy string parsing in C!
 	slen = strlen(fn);
 	i = slen - 1;
-	while (i >= 0 && fn[i--] != '.')
-		;
-	if (i == -1) {
-		fprintf(stderr, "Missing extension on %s? Need .rdls filename\n", fn);
-		return 1;
+	for (;;) {
+		while (i >= 0 && fn[i] != '.')
+			i--;
+		if (i == -1) {
+			fprintf(stderr, "Missing extension on %s? Need .rdls filename\n", fn);
+			return 1;
+		}
+		if (strcmp(fn + i+1, "rdls") == 0)
+			break;
 	}
 	hpfn = malloc(slen + 1);
 	strcpy(hpfn, fn);
-	hpfn[slen - 1] = 's';
-	hpfn[slen - 2] = 'l';
-	hpfn[slen - 3] = 'p';
-	hpfn[slen - 4] = 'h';
+	hpfn[i + 1] = 'h';
+	hpfn[i + 2] = 'p';
+	hpfn[i + 3] = 'l';
+	hpfn[i + 4] = 's';
 	fprintf(stderr, "hpfn: %s\n", hpfn);
 
 	// Open the two files for input and output
-	rdf = fopen(fn, "r");
-	if (!rdf) {
-		fprintf(stderr, "Couldn't open %s: %s\n", fn, strerror(errno));
+	rdls = rdlist_open(fn);
+	if (!rdls) {
+		fprintf(stderr, "Couldn't open RDLS %s.\n", fn);
 		return 1;
 	}
 
@@ -66,20 +71,15 @@ int convert_file(char* fn)
 	hpfn = NULL;
 
 	// First line: numfields
-	numfields = read_ls_file_header(rdf);
-	if (!numfields == -1) {
-		fprintf(stderr, "parse error in %s: numfields\n", fn);
-		return 1;
-	}
-
+	numfields = rdlist_n_fields(rdls);
 	fprintf(hpf, "NumFields=%i\n", numfields);
 
 	for (j = 0; j < numfields; j++) {
 		int nhp;
 		// Second line and subsequent lines: npoints,ra,dec,ra,dec,...
-		dl* points = read_ls_file_field(rdf, 2);
+		dl* points = rdlist_get_field(rdls, j);
 		if (!points) {
-			fprintf(stderr, "parse error in %s: field %i\n", fn, j);
+			fprintf(stderr, "Failed to read RDLS field %i.\n", j);
 			return 1;
 		}
 
@@ -99,9 +99,9 @@ int convert_file(char* fn)
 			ra=deg2rad(ra);
 			dec=deg2rad(dec);
 
-			hp = radectohealpix(ra, dec);
+			hp = radectohealpix(ra, dec, 1);
 			if ((hp < 0) || (hp >= 12)) {
-				printf("hp=%i\n", hp);
+				//printf("hp=%i\n", hp);
 				continue;
 			}
 			healpixes[hp] = 1;
@@ -120,7 +120,7 @@ int convert_file(char* fn)
 		dl_free(points);
 	}
 
-	fclose(rdf);
+	rdlist_close(rdls);
 	fclose(hpf);
 	return 0;
 }

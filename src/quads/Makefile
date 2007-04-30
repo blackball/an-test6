@@ -113,6 +113,9 @@ fitsutils: $(FITS_UTILS)
 
 new-wcs: new-wcs.o $(ANUTILS_LIB) $(QFITS_LIB)
 
+rdls2hpls: rdls2hpls.o \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
 rdlstohealpix: rdlstohealpix.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 
