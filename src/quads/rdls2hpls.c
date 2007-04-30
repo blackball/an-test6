@@ -79,8 +79,8 @@ int convert_file(char* infn, char* outfn)
 
 			hp = radectohealpix(ra, dec, 1);
 			if ((hp < 0) || (hp >= 12)) {
-				//printf("hp=%i\n", hp);
-				continue;
+				printf("ERROR: hp=%i\n", hp);
+				exit(-1);
 			}
 			healpixes[hp] = 1;
 		}
@@ -94,6 +94,7 @@ int convert_file(char* infn, char* outfn)
 				fprintf(hpf, ",%i", i);
 		}
 		fprintf(hpf, "\n");
+		fflush(hpf);
 
 		dl_free(points);
 	}
