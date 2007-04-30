@@ -1179,13 +1179,17 @@ int main(int argc, char** argv) {
 
 	if (loosenmax) {
 		int mx;
+		// toggle the direction in which we make the passes...
+		int dir = 1;
 		for (mx=Nreuse+1; mx<=loosenmax; mx++) {
 			int alldone = 1;
+			dir = !dir;
 			printf("Loosening reuse maximum to %i...\n", mx);
-			for (xpass=0; xpass<xpasses; xpass++) {
-				for (ypass=0; ypass<ypasses; ypass++) {
+			for (xpass=(dir ? 0 : xpasses-1); (dir ? xpass<xpasses : xpass>=0); (dir ? xpass++ : xpass--)) {
+				for (ypass=(dir ? 0 : ypasses-1); (dir ? ypass<ypasses : ypass>=0); (dir ? ypass++ : ypass--)) {
 					il* loosen;
 					il* newlist;
+					int nmade = 0;
 
 					loosen = loosenhps[xpass * ypasses + ypass];
 					if (!loosen)
@@ -1197,6 +1201,7 @@ int main(int argc, char** argv) {
 
 					printf("Pass %i of %i.\n", xpass * ypasses + ypass + 1, xpasses * ypasses);
 					printf("Trying %i healpixes.\n", il_size(loosen));
+					fflush(stdout);
 
 					newlist = il_new(1024);
 
@@ -1218,6 +1223,7 @@ int main(int argc, char** argv) {
 							il_append(newlist, hp);
 							continue;
 						}
+						nmade++;
 					}
 					il_free(loosen);
 					if (!il_size(newlist)) {
@@ -1226,7 +1232,9 @@ int main(int argc, char** argv) {
 					}
 					loosenhps[xpass * ypasses + ypass] = newlist;
 
+					printf("Made %i quads.\n", nmade);
 					printf("Merging quads...\n");
+					fflush(stdout);
 					for (i=0; i<Nquads; i++) {
 						quad* q = quadlist + i;
 						bt_insert(bigquadlist, q, FALSE, compare_quads);
