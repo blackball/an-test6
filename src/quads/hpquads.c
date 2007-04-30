@@ -632,7 +632,7 @@ int main(int argc, char** argv) {
 	dl* noquads_radec = NULL;
 
 	int loosenmax = 0;
-	il** loosenhps;
+	il** loosenhps = NULL;
 
 	double dxfrac, dyfrac;
 	double centre[3];
@@ -642,7 +642,7 @@ int main(int argc, char** argv) {
 
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
-		case 'C':
+		case 'L':
 			loosenmax = atoi(optarg);
 			break;
 		case 'R':
@@ -1310,6 +1310,9 @@ int main(int argc, char** argv) {
 	}
 
 	bt_free(bigquadlist);
+
+	if (loosenmax)
+		free(loosenhps);
 
 	toc();
 	printf("Done.\n");
