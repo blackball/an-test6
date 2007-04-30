@@ -53,7 +53,7 @@ int convert_file(char* infn, char* outfn)
 	fprintf(hpf, "NumFields=%i\n", numfields);
 
 	for (j = 0; j < numfields; j++) {
-		int nhp;
+		//int nhp;
 		// Second line and subsequent lines: npoints,ra,dec,ra,dec,...
 		dl* points = rdlist_get_field(rdls, j);
 		if (!points) {
@@ -84,11 +84,14 @@ int convert_file(char* infn, char* outfn)
 			}
 			healpixes[hp] = 1;
 		}
-		nhp = 0;
-		for (i = 0; i < 12; i++) {
-			nhp++;
-		}
-		fprintf(hpf, "%i", nhp);
+		/*
+		  nhp = 0;
+		  for (i = 0; i < 12; i++) {
+		  if (healpixes[i])
+		  nhp++;
+		  }
+		  fprintf(hpf, "%i", nhp);
+		*/
 		for (i = 0; i < 12; i++) {
 			if (healpixes[i])
 				fprintf(hpf, ",%i", i);
@@ -107,7 +110,7 @@ int convert_file(char* infn, char* outfn)
 int main(int argc, char** args)
 {
 	int i;
-	if (argc == 1 && !(argc % 2)) {
+	if (argc == 1 || !(argc % 2)) {
 		fprintf(stderr, "Usage: %s <input-rdls-file> <output-hpls-file> [...]\n", args[0]);
 		return 1;
 	}
