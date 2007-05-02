@@ -53,6 +53,8 @@ $startfile = $mydir . $start_fn;
 $donefile  = $mydir . $done_fn;
 $xylist = $mydir . $xyls_fn;
 $rdlist = $mydir . $rdls_fn;
+$indexxylist = $mydir . $indexxyls_fn;
+$indexrdlist = $mydir . $indexrdls_fn;
 $blindlogfile = $mydir . $log_fn;
 $solvedfile = $mydir . $solved_fn;
 $cancelfile = $mydir . $cancel_fn;
@@ -526,7 +528,7 @@ Astrometry.net: Job Status
 
 <?php
 if ($didsolve) {
-	echo "<h3 class=\"c\">Your field is at RA,DEC = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
+	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
 	echo "<hr />\n";
 
 	echo "<div id=\"onsky\">\n";
@@ -769,7 +771,7 @@ if ($job_submitted && (file_exists($xylist))) {
 
 if ($job_done) {
 	if ($didsolve) {
-		echo '<tr><td>(RA, DEC) center:</td><td>';
+		echo '<tr><td>(RA, Dec) center:</td><td>';
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
 
@@ -819,8 +821,16 @@ if ($job_done) {
 		print_link($mydir . $newheader_fn, TRUE);
 		echo "</td></tr>\n";
 
-		echo '<tr><td>RA,DEC list:</td><td>';
+		echo '<tr><td>RA, Dec for extracted sources:</td><td>';
 		print_link($rdlist);
+		echo "</td></tr>\n";
+
+		echo '<tr><td>RA, Dec for index sources:</td><td>';
+		print_link($indexrdlist);
+		echo "</td></tr>\n";
+
+		echo '<tr><td>Image x, y for index sources:</td><td>';
+		print_link($indexxylist);
 		echo "</td></tr>\n";
 
 		echo '<tr><td>Google Maps view:</td><td>';
