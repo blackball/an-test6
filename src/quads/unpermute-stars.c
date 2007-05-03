@@ -139,8 +139,8 @@ int main(int argc, char **args) {
 		nsweep = malloc(Nsweeps * sizeof(int));
 		sum = 0;
 		for (i=0; i<Nsweeps; i++) {
-			sum += il_get(sweeps, i);
 			nsweep[i] = sum;
+			sum += il_get(sweeps, i);
 		}
 		il_free(sweeps);
 	}
@@ -318,7 +318,7 @@ int main(int argc, char **args) {
 
 	if (dosweeps) {
 		int k;
-		// copy sweepX headers...
+		// copy sweepX headers.
 		for (i=1;; i++) {
 			char key[16];
 			int n;
@@ -329,6 +329,7 @@ int main(int argc, char **args) {
 			fits_copy_header(treein->header, treeout->header, key);
 		}
 
+		// compute sweep array.
 		treeout->sweep = malloc(N);
 		for (i=0; i<N; i++) {
 			int ind = treein->tree->perm[i];
