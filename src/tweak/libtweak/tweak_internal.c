@@ -322,7 +322,8 @@ void tweak_print_state(tweak_t* t)
 }
 
 #define BUFSZ 100
-#define USE_FILE(x) snprintf(fn, BUFSZ, x "_%p_%d.dat", (void*)t->state, dump_nr)
+//#define USE_FILE(x) snprintf(fn, BUFSZ, x "_%p_%d.dat", (void*)t->state, dump_nr)
+#define USE_FILE(x) snprintf(fn, BUFSZ, x "_%d.dat", dump_nr)
 void tweak_dump_ascii(tweak_t* t)
 {
 	static int dump_nr = 0;
@@ -1446,9 +1447,9 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		done(TWEAK_HAS_LINEAR_CD);
 	}
 
-	want(TWEAK_HAS_RANSAC) {
-
-	}
+	//want(TWEAK_HAS_RANSAC) {
+	//
+	//}
 
 	fprintf(stderr,"die for dependence: "); 
 	tweak_print_the_state(flag);

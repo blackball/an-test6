@@ -741,6 +741,7 @@ void printHelp(char* progname)
 	        "   -d <database-subst>  pattern for the index\n"
 	        "   -n <healpix-nside>   number of healpixes in index\n"
 	        "   -r <rdfile>          rd file with references (no star tree lookup)\n"
+	        "   -w wcsheader         wcs header file as produced by status page (nb this isn't a fully valid fits)\n"
 	        , progname);
 }
 
