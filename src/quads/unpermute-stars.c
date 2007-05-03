@@ -318,6 +318,8 @@ int main(int argc, char **args) {
 
 	if (dosweeps) {
 		int k;
+		int starspersweep[Nsweeps];
+
 		// copy sweepX headers.
 		for (i=1;; i++) {
 			char key[16];
@@ -329,6 +331,9 @@ int main(int argc, char **args) {
 			fits_copy_header(treein->header, treeout->header, key);
 		}
 
+		for (k=0; k<Nsweeps; k++)
+			starspersweep[k] = 0;
+
 		// compute sweep array.
 		treeout->sweep = malloc(N);
 		for (i=0; i<N; i++) {
@@ -338,7 +343,12 @@ int main(int argc, char **args) {
 					break;
 			}
 			treeout->sweep[i] = k;
+			starspersweep[k]++;
 		}
+
+		for (k=0; k<Nsweeps; k++)
+			fprintf(stderr, "Stars in sweep %i: %i\n", k, starspersweep[k]);
+
 	}
 
 	fn = mk_streefn(baseout);
