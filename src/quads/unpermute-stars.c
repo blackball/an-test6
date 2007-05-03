@@ -139,8 +139,8 @@ int main(int argc, char **args) {
 		nsweep = malloc(Nsweeps * sizeof(int));
 		sum = 0;
 		for (i=0; i<Nsweeps; i++) {
-			nsweep[i] = sum;
 			sum += il_get(sweeps, i);
+			nsweep[i] = sum;
 		}
 		il_free(sweeps);
 	}
@@ -339,7 +339,7 @@ int main(int argc, char **args) {
 		for (i=0; i<N; i++) {
 			int ind = treein->tree->perm[i];
 			for (k=0; k<Nsweeps; k++) {
-				if (ind >= nsweep[k])
+				if (ind < nsweep[k])
 					break;
 			}
 			treeout->sweep[i] = k;
