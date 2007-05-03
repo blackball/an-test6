@@ -26,6 +26,7 @@
 #include "keywords.h"
 
 #define min(a,b) (((a)<(b))?(a):(b))
+#define max(a,b) (((a)>(b))?(a):(b))
 
 #include "solver_callbacks.h"
 #include "blind_wcs.h"
@@ -94,6 +95,13 @@ void verify_hit(kdtree_t* startree,
 	star_midpoint(fieldcenter, mo->sMin, mo->sMax);
 	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
 
+	double fieldr, fieldarcsec;
+	if (DEBUGVERIFY) {
+		fieldr = sqrt(fieldr2);
+		fieldarcsec = distsq2arcsec(fieldr2);
+		debug("%g, %g\n", fieldr, fieldarcsec);
+	}
+
 	// 1.01 is a little safety factor.
 	res = kdtree_rangesearch_options(startree, fieldcenter, fieldr2 * 1.01,
 									 KD_OPTIONS_SMALL_RADIUS);
@@ -109,8 +117,12 @@ void verify_hit(kdtree_t* startree,
 		if (dot < 0.0)
 			continue;
 		tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y);
-		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH))
+		debug("(x,y) = (%g,%g)", x, y);
+		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH)) {
+			debug(" -> reject\n");
 			continue;
+		}
+		debug(" -> good\n");
 
 		res->inds[NI] = res->inds[i];
 
@@ -124,6 +136,20 @@ void verify_hit(kdtree_t* startree,
 		NI++;
 	}
 	indexpix = realloc(indexpix, NI * 2 * sizeof(double));
+
+	if (DEBUGVERIFY) {
+		double minx,maxx,miny,maxy;
+		miny = minx = HUGE_VAL;
+		maxx = maxy = -HUGE_VAL;
+		for (i=0; i<NI; i++) {
+			minx = min(indexpix[i*2  ], minx);
+			maxx = max(indexpix[i*2  ], maxx);
+			miny = min(indexpix[i*2+1], miny);
+			maxy = max(indexpix[i*2+1], maxy);
+		}
+		debug("Range of index objs: x:[%g,%g], y:[%g,%g]\n",
+			  minx, maxx, miny, maxy);
+	}
 
 	debug("Number of field stars: %i\n", NF);
 	debug("Number of index stars: %i\n", NI);
