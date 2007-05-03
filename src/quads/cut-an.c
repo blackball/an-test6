@@ -29,7 +29,7 @@
 #include "fitsioutils.h"
 #include "boilerplate.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZ"
+#define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:"
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
@@ -37,16 +37,17 @@ void print_help(char* progname) {
 		   "   -o <output-objs-template>    (eg, an-sdss-%%02i.objs.fits)\n"
 		   "  [-i <output-id-template>]      (eg, an-sdss-%%02i.id.fits)\n"
 		   "  [-H <big healpix>]  or  [-A] (all-sky)\n"
-		   "  [-m <minimum-magnitude-to-use>]\n"
-		   "  [-M <maximum-magnitude-to-use>]\n"
 		   "  [-n <max-stars-per-fine-healpix-grid>]    (ie, number of sweeps)\n"
-		   "  [-S <max-stars-per-(big)-healpix]         (ie, max number of stars in the cut)\n"
 		   "  [-N <nside>]:   fine healpixelization grid; default 100.\n"
 		   "  [-d <dedup-radius>]: deduplication radius (arcseconds)\n"
 		   "  ( [-R] or [-G] or [-Z] )\n"
 		   "        R: SDSS r-band\n"
 		   "        G: Galex\n"
 		   "        Z: SDSS z-band\n"
+		   "  [-b <boundary-size-in-healpixels>] (default 1) number of healpixes to add around the margins\n"
+		   "  [-m <minimum-magnitude-to-use>]\n"
+		   "  [-M <maximum-magnitude-to-use>]\n"
+		   "  [-S <max-stars-per-(big)-healpix]         (ie, max number of stars in the cut)\n"
 		   "  [-e <Galex-epsilon>]\n"
 		   "  <input-file> [<input-file> ...]\n"
 		   "\n"
@@ -104,6 +105,7 @@ int main(int argc, char** args) {
 	int npix;
 	stardata** stararrays;
 	int* stararrayN;
+	int nmargin = 1;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -111,6 +113,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'b':
+			nmargin = atoi(optarg);
+			break;
 		case 'A':
 			allsky = TRUE;
 			break;
@@ -197,23 +202,52 @@ int main(int argc, char** args) {
 	starlists = calloc(HP, sizeof(bl*));
 
 	// find the set of small healpixes that this big healpix owns
-	// (including a bit of overlap)
+	// and add the margin.
 	if (bighp != -1) {
+		il* q = il_new(32);
+		int hp;
 		owned = calloc(HP, sizeof(bool));
-		for (i=0; i<HP; i++) {
-			uint big, x, y;
-			uint nn, neigh[8], k;
-			healpix_decompose_xy(i, &big, &x, &y, Nside);
-			if (big != bighp)
-				continue;
-			owned[i] = 1;
-			if (x == 0 || y == 0 || (x == Nside-1) || (y == Nside-1)) {
-				// add its neighbours.
-				nn = healpix_get_neighbours(i, neigh, Nside);
-				for (k=0; k<nn; k++)
-					owned[neigh[k]] = 1;
+		// The set of small healpixes in the big healpix is just an
+		// Nside-by-Nside grid:
+		for (i=0; i<Nside; i++) {
+			for (k=0; k<Nside; k++) {
+				hp = healpix_compose_xy(bighp, i, k, Nside);
+				owned[hp] = 1;
 			}
 		}
+		// Prime the queue with the boundaries of the healpix.
+		for (i=0; i<Nside; i++) {
+			hp = healpix_compose_xy(bighp, i, 0, Nside);
+			il_append(q, hp);
+			hp = healpix_compose_xy(bighp, i, Nside-1, Nside);
+			il_append(q, hp);
+			hp = healpix_compose_xy(bighp, 0, i, Nside);
+			il_append(q, hp);
+			hp = healpix_compose_xy(bighp, Nside-1, i, Nside);
+			il_append(q, hp);
+		}
+		// Now we want to add "nmargin" levels of neighbours.
+		for (k=0; k<nmargin; k++) {
+			int Q = il_size(q);
+			for (i=0; i<Q; i++) {
+				uint j;
+				uint nn, neigh[8];
+				hp = il_get(q, i);
+				// grab the neighbours...
+				nn = healpix_get_neighbours(hp, neigh, Nside);
+				for (j=0; j<nn; j++) {
+					// for any neighbour we haven't already looked at,
+					if (!owned[neigh[j]]) {
+						// add it to the queue
+						il_append(q, neigh[j]);
+						// mark it as in
+						owned[neigh[j]] = 1;
+					}
+				}
+			}
+			il_remove_index_range(q, 0, Q);
+		}
+		il_free(q);
 	} else
 		owned = NULL;
 
