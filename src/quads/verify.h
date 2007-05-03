@@ -22,8 +22,9 @@
 #include "kdtree.h"
 #include "matchobj.h"
 #include "bl.h"
+#include "starkd.h"
 
-void verify_hit(kdtree_t* startree,
+void verify_hit(startree* skdt,
 				MatchObj* mo,
 				double* field,
 				int NF,

@@ -1114,7 +1114,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 		//d2 = bp->verify_dist2 + square(sp->index_jitter);
 	}
 
-	verify_hit(bp->starkd->tree, mo, sp->field, sp->nfield, pixd2,
+	verify_hit(bp->starkd, mo, sp->field, sp->nfield, pixd2,
 			   bp->distractors, sp->field_maxx, sp->field_maxy,
 			   bp->logratio_tobail, bp->nverify);
 	// FIXME - this is the same as nmatches.

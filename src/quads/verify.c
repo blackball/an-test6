@@ -45,7 +45,7 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 #define debug(args...)
 #endif
 
-void verify_hit(kdtree_t* startree,
+void verify_hit(startree* skdt,
 				MatchObj* mo,
 				double* field,
 				int NF,
@@ -86,6 +86,7 @@ void verify_hit(kdtree_t* startree,
 	int Nmin;
 
 	double crvalxyz[3];
+	kdtree_t* startree = skdt->tree;
 
 	assert(mo->wcs_valid);
 	assert(startree);
