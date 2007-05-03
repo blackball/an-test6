@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 	bool convert = FALSE;
 	int tt;
 	int buildopts = 0;
-	int N, D;
+	int i, N, D;
 	int checktree = 0;
 
 	qfits_header* catheader = NULL;
@@ -250,6 +250,16 @@ int main(int argc, char *argv[]) {
 	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
 	fits_copy_all_headers(catheader, startree_header(starkd), "HISTORY");
 	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);
+
+	for (i=1;; i++) {
+		char key[16];
+		int n;
+		sprintf(key, "SWEEP%i", i);
+		n = qfits_header_getint(catheader, key, -1);
+		if (n == -1)
+			break;
+		fits_copy_header(catheader, startree_header(starkd), key);
+	}
 
 	if (startree_write_to_file(starkd, treefname)) {
 		fprintf(stderr, "Failed to write star kdtree.\n");
