@@ -318,6 +318,17 @@ int main(int argc, char **args) {
 
 	if (dosweeps) {
 		int k;
+		// copy sweepX headers...
+		for (i=1;; i++) {
+			char key[16];
+			int n;
+			sprintf(key, "SWEEP%i", i);
+			n = qfits_header_getint(treein->header, key, -1);
+			if (n == -1)
+				break;
+			fits_copy_header(treein->header, treeout->header, key);
+		}
+
 		treeout->sweep = malloc(N);
 		for (i=0; i<N; i++) {
 			int ind = treein->tree->perm[i];
