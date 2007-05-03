@@ -48,18 +48,35 @@ qfits_header* startree_header(startree* s) {
 	return s->header;
 }
 
+static void sweep_tablesize(kdtree_t* kd, extra_table* tab) {
+	tab->nitems = kd->ndata;
+}
+
 startree* startree_open(char* fn) {
 	startree* s;
+	extra_table extras[1];
+	extra_table* sweep = extras;
+
+	memset(extras, 0, sizeof(extras));
+
+	sweep->name = "sweep";
+	sweep->datasize = sizeof(unsigned char);
+	sweep->nitems = 0;
+	sweep->required = 0;
+	sweep->compute_tablesize = sweep_tablesize;
 
 	s = startree_alloc();
 	if (!s)
 		return s;
 
-	s->tree = kdtree_fits_read(fn, &s->header);
+	s->tree = kdtree_fits_read_extras(fn, &s->header, extras,
+									  sizeof(extras)/sizeof(extra_table));
 	if (!s->tree) {
 		fprintf(stderr, "Failed to read star kdtree from file %s\n", fn);
 		goto bailout;
 	}
+
+	s->sweep = sweep->ptr;
 
 	return s;
 
@@ -125,6 +142,18 @@ startree* startree_new() {
 }
 
 int startree_write_to_file(startree* s, char* fn) {
-	return kdtree_fits_write(s->tree, fn, s->header);
+	if (s->sweep) {
+		extra_table extras[1];
+		extra_table* sweep = extras;
+		memset(extras, 0, sizeof(extras));
+		sweep->name = "sweep";
+		sweep->datasize = sizeof(unsigned char);
+		sweep->nitems = s->tree->ndata;
+		sweep->ptr = s->sweep;
+		sweep->found = 1;
+		return kdtree_fits_write_extras(s->tree, fn, s->header, extras,
+										sizeof(extras)/sizeof(extra_table));
+	} else
+		return kdtree_fits_write(s->tree, fn, s->header);
 }
 

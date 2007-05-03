@@ -28,6 +28,7 @@ struct startree {
 	kdtree_t* tree;
 	qfits_header* header;
 	int* inverse_perm;
+	unsigned char* sweep;
 };
 typedef struct startree startree;
 
