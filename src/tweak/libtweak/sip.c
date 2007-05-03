@@ -241,6 +241,13 @@ double sip_det_cd(sip_t* sip) {
 	return (sip->wcstan.cd[0][0]*sip->wcstan.cd[1][1] - sip->wcstan.cd[0][1]*sip->wcstan.cd[1][0]);
 }
 
+// returns pixel scale in arcseconds (NOT arcsec^2)
+double sip_pixel_scale(sip_t* sip) {
+	double detcd = deg2arcsec(sqrt(fabs(sip_det_cd(sip))));
+	return detcd;
+}
+
+
 void sip_print(sip_t* sip)
 {
    double det,pixsc;

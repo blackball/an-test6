@@ -541,9 +541,46 @@ void tweak_clear_image_xy(tweak_t* t)
 	}
 }
 
+void tweak_push_ref_ad(tweak_t* t, double* a, double *d, int n) // tell us (from outside tweak) where the catalog stars are
+{
+	tweak_clear_ref_ad(t);
+
+	assert(a);
+	assert(d);
+	assert(n);
+
+	assert(!t->a_ref); // no leaky
+	assert(!t->d_ref); // no leaky
+	t->a_ref = malloc(sizeof(double)*n);
+	t->d_ref = malloc(sizeof(double)*n);
+	memcpy(t->a_ref, a, n*sizeof(double));
+	memcpy(t->d_ref, d, n*sizeof(double));
+
+	t->n_ref = n;
+
+	t->state |= TWEAK_HAS_REF_AD;
+}
+
+void tweak_ref_find_xyz_from_ad(tweak_t* t) // tell us (from outside tweak) where the catalog stars are
+{
+
+	assert(t->state & TWEAK_HAS_REF_AD);
+
+	assert(!t->xyz_ref); // no leaky
+	t->xyz_ref = malloc(sizeof(double)*3*t->n_ref);
+
+	int i;
+	for (i=0; i<t->n_ref; i++) { // fill em up
+		double *pt = t->xyz_ref+3*i;
+		radec2xyzarr(deg2rad(t->a_ref[i]), deg2rad(t->d_ref[i]), pt);
+	}
+
+	t->state |= TWEAK_HAS_REF_XYZ;
+}
+
 void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n) // tell us (from outside tweak) where the catalog stars are
 {
-   double *ra,*dec;
+	double *ra,*dec;
 	int i;
 
 	tweak_clear_ref_ad(t);
@@ -910,6 +947,7 @@ void invert_sip_polynomial(tweak_t* t)
 	integer str = stride;
 	integer lda = stride;
 	integer ldb = stride;
+	printf("INVERSE DGELSD---- ldb=%d\n", ldb);
 	dgelsd_(&str, &N, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
 			  &lwork, iwork, &info); // make the jump to lightspeed
 	stride = str;
@@ -966,17 +1004,17 @@ void invert_sip_polynomial(tweak_t* t)
 //    thing for better estimation.
 
 // Run a polynomial tweak
-void do_linear_tweak(tweak_t* t) // bad name for this function
+void do_sip_tweak(tweak_t* t) // bad name for this function
 {
-   int sip_order,sip_coeffs,stride;
-   double *UVP,*UVP2,*b,*b2;
+	int sip_order,sip_coeffs,stride;
+	double *UVP,*UVP2,*b,*b2;
 	double xyzcrval[3];
 	double cdi[2][2];
-   double inv_det;
+	double inv_det;
 	double sU, sV,su,sv;
 	double chisq;
 	sip_t* swcs;
-   int i;
+	int i;
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
 	sip_order = t->sip->a_order;
@@ -987,7 +1025,14 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 	// Then in the end, we drop the p^0q^0 term by integrating it into crpix)
 	sip_coeffs = (sip_order+1)*(sip_order+2)/2; // upper triangle
 
-	stride = il_size(t->image); // number of rows
+	/* calculate how many points to use based on t->include */
+	stride = 0;
+	for (i=0; i<il_size(t->included); i++) {
+		if (il_get(t->included, i))
+			stride++;
+	}
+	assert(il_size(t->included) == il_size(t->image));
+//	stride = il_size(t->image); // number of rows
 	UVP = malloc((2+sip_coeffs)*stride*sizeof(double));
 	b = malloc(2*stride*sizeof(double));
 	UVP2 = malloc((2+sip_coeffs)*stride*sizeof(double));
@@ -1046,8 +1091,15 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 
 	// fill in the UVP matrix, stride in this case is the number of correspondences
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
-	for (i=0; i<stride; i++) {
-	   int j,p,q;
+	int row;
+	i=-1;
+	for (row=0; row<il_size(t->included); row++) {
+		if (!il_get(t->included, row)) {
+			continue;
+		}
+		i++;
+
+		int j,p,q;
 		int refi;
 		double x,y;
 		double xyzpt[3];
@@ -1087,6 +1139,7 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 		b[i + stride*0] = rad2deg(x);
 		b[i + stride*1] = rad2deg(y);
 	}
+	assert(i+1==stride);
 
 	// Save UVP, bx, and by for computing chisq
 	memcpy(UVP2,UVP,sizeof(double)*stride*(2+sip_coeffs));
@@ -1107,6 +1160,7 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 	integer str = stride;
 	integer lda = stride;
 	integer ldb = stride;
+	printf("FORWARD DGELSD---- ldb=%d\n", ldb);
 	dgelsd_(&str, &N, &NRHS, UVP, &lda, b, &ldb, S, &RCOND, &rank, work,
 			  &lwork, iwork, &info); // punch it chewey
 	free(work);
@@ -1172,7 +1226,9 @@ void do_linear_tweak(tweak_t* t) // bad name for this function
 	fprintf(stderr,"shiftxun=%le, shiftyun=%le\n",sU, sV);
 	fprintf(stderr,"shiftx=%le, shifty=%le\n",su, sv);
 	fprintf(stderr,"sqerr=%le\n", figure_of_merit(t));
-	fprintf(stderr,"rms=%lf\n", sqrt(figure_of_merit(t)/stride));
+	fprintf(stderr,"+++++++++++++++++++++++++++++++++++++\n");
+	fprintf(stderr,"RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t)/stride));
+	fprintf(stderr,"+++++++++++///////////+++++++++++++++\n");
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
 	// Calculate chi2 for sanity
@@ -1209,6 +1265,11 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 	//	tweak_print_the_state(flag);
 	//	fprintf(stderr,"\n");
 	want(TWEAK_HAS_IMAGE_AD) {
+		fprintf(stderr,"////++++-////\n");
+		fprintf(stderr,"////++++-////\n");
+		fprintf(stderr,"////++++-////\n");
+		fprintf(stderr,"////++++-////\n");
+		fprintf(stderr,"////++++-////\n");
 		int jj;
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);
@@ -1222,6 +1283,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 		t->d = malloc(sizeof(double)*t->n);
 		for (jj=0; jj<t->n; jj++) {
 			sip_pixelxy2radec(t->sip, t->x[jj], t->y[jj], t->a+jj, t->d+jj);
+//			printf("i=%4d, x=%10g, y=%10g ==> a=%10g, d=%10g\n", jj, t->x[jj], t->y[jj], t->a[jj], t->d[jj]);
 		}
 
 		done(TWEAK_HAS_IMAGE_AD);
@@ -1294,6 +1356,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 			ensure(TWEAK_HAS_AD_BAR_AND_R);
 			fprintf(stderr,"Satisfying TWEAK_HAS_REF_XYZ\n");
 			get_reference_stars(t);
+		} else if (t->state & TWEAK_HAS_REF_AD) {
+			tweak_ref_find_xyz_from_ad(t);
 		} else {
 			ensure(TWEAK_HAS_REF_AD);
 
@@ -1375,11 +1439,15 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag) {
 
 		fprintf(stderr,"Satisfying TWEAK_HAS_LINEAR_CD\n");
 
-		do_linear_tweak(t);
+		do_sip_tweak(t);
 
 		tweak_clear_on_sip_change(t);
 
 		done(TWEAK_HAS_LINEAR_CD);
+	}
+
+	want(TWEAK_HAS_RANSAC) {
+
 	}
 
 	fprintf(stderr,"die for dependence: "); 

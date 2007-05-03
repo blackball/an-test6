@@ -16,7 +16,9 @@ def line(v1,v2, color='b', style=None, linewidth=None, alpha=None, zorder=None):
     gca().add_line(l)
 
 #suff = '_0xf9ff_0.dat'
-suff = '_0xf9ff_1.dat'
+suff = '_0x397f_0.dat' # untweaked
+suff = '_0xb97f_1.dat' # tweaked
+
 imdat = load('scatter_image'+suff)
 redat = load('scatter_ref'+suff)
 dedat = load('corr_delta'+suff)
@@ -35,6 +37,14 @@ plot(redat[:,t], redat[:,t+1], 'bs', markerfacecolor=None)
 #plot(dedat[:,0], dedat[:,1], 'gd', markeredgecolor='g', markerfacecolor=None, markersize=20)
 for x,y,dx,dy in dedat:
     line([x,y],[x+dx,y+dy])
+
+if t==0:
+    plot(dedat[:,0],dedat[:,1],'gx')
+
+if t==0:
+    title('in image xy space')
+else:
+    title('in sky ra/dec space')
 
 #axis(ax)
 #axis('equal')

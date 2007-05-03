@@ -41,7 +41,7 @@ CFLAGS += $(LIBWCS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
-CFLAGS += -I. -g
+CFLAGS += -I. -g -O0
 
 TWEAK_OBJS := tweak.o ezfits.o sip_util.o
 TEST_SIP_OBJS := test_sip.o sip_util.o ezfits.o
