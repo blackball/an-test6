@@ -43,13 +43,14 @@
 #include "starkd.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hf:o:q:"
+#define OPTIONS "hf:o:q:s"
 
 void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s\n"
 		   "    -f <input-basename>\n"
 		   "   [-q <input-quadfile-basename>]\n"
+		   "   [-s]: store sweep number in output star kdtree file.\n"
 		   "    -o <output-basename>\n"
 		   "\n", progname);
 }
@@ -71,9 +72,13 @@ int main(int argc, char **args) {
 	char* basequadin = NULL;
 	char* fn;
 	int i;
+	int N;
 	int healpix;
 	int starhp;
 	int lastgrass;
+	bool dosweeps = FALSE;
+	int* nsweep = NULL;
+	int Nsweeps = 0;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -85,6 +90,9 @@ int main(int argc, char **args) {
 			break;
         case 'o':
 			baseout = optarg;
+			break;
+		case 's':
+			dosweeps = TRUE;
 			break;
         case '?':
             fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -109,6 +117,34 @@ int main(int argc, char **args) {
 	}
 	free_fn(fn);
 
+	N = startree_N(treein);
+	if (dosweeps) {
+		int sum = 0;
+		il* sweeps = il_new(16);
+		for (i=1;; i++) {
+			char key[16];
+			int n;
+			sprintf(key, "SWEEP%i", i);
+			n = qfits_header_getint(treein->header, key, -1);
+			if (n == -1)
+				break;
+			il_append(sweeps, n);
+			sum += n;
+		}
+		if (sum != N) {
+			fprintf(stderr, "Total number of stars in sweeps != number of stars (%i vs %i)\n", sum, N);
+			exit(-1);
+		}
+		Nsweeps = i-1;
+		nsweep = malloc(Nsweeps * sizeof(int));
+		sum = 0;
+		for (i=0; i<Nsweeps; i++) {
+			sum += il_get(sweeps, i);
+			nsweep[i] = sum;
+		}
+		il_free(sweeps);
+	}
+
 	if (basequadin)
 		fn = mk_quadfn(basequadin);
 	else
@@ -126,7 +162,6 @@ int main(int argc, char **args) {
 	idin = idfile_open(fn, 0);
 	if (!idin) {
 		fprintf(stderr, "Failed to read id file from %s.  Will not generate output id file.\n", fn);
-		//exit(-1);
 	}
 	free_fn(fn);
 
@@ -212,13 +247,13 @@ int main(int argc, char **args) {
 	if (idin) {
 		printf("Writing IDs...\n");
 		lastgrass = 0;
-		for (i=0; i<startree_N(treein); i++) {
+		for (i=0; i<N; i++) {
 			uint64_t id;
 			int ind;
-			if (i*80/startree_N(treein) != lastgrass) {
+			if (i*80/N != lastgrass) {
 				printf(".");
 				fflush(stdout);
-				lastgrass = i*80/startree_N(treein);
+				lastgrass = i*80/N;
 			}
 			ind = treein->tree->perm[i];
 			id = idfile_get_anid(idin, ind);
@@ -281,6 +316,19 @@ int main(int argc, char **args) {
 	if (idin)
 		idfile_close(idin);
 
+	if (dosweeps) {
+		int k;
+		treeout->sweep = malloc(N);
+		for (i=0; i<N; i++) {
+			int ind = treein->tree->perm[i];
+			for (k=0; k<Nsweeps; k++) {
+				if (ind >= nsweep[k])
+					break;
+			}
+			treeout->sweep[i] = k;
+		}
+	}
+
 	fn = mk_streefn(baseout);
 	printf("Writing star kdtree to %s ...\n", fn);
 	if (startree_write_to_file(treeout, fn)) {
@@ -289,7 +337,9 @@ int main(int argc, char **args) {
 	}
 	free_fn(fn);
 	startree_close(treein);
+	free(treeout->sweep);
 	free(treeout);
+	free(nsweep);
 
 	return 0;
 }
