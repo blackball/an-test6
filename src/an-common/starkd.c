@@ -60,7 +60,7 @@ startree* startree_open(char* fn) {
 	memset(extras, 0, sizeof(extras));
 
 	sweep->name = "sweep";
-	sweep->datasize = sizeof(unsigned char);
+	sweep->datasize = sizeof(uint8_t);
 	sweep->nitems = 0;
 	sweep->required = 0;
 	sweep->compute_tablesize = sweep_tablesize;
@@ -147,7 +147,7 @@ int startree_write_to_file(startree* s, char* fn) {
 		extra_table* sweep = extras;
 		memset(extras, 0, sizeof(extras));
 		sweep->name = "sweep";
-		sweep->datasize = sizeof(unsigned char);
+		sweep->datasize = sizeof(uint8_t);
 		sweep->nitems = s->tree->ndata;
 		sweep->ptr = s->sweep;
 		sweep->found = 1;

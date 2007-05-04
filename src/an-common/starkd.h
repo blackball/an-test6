@@ -19,6 +19,7 @@
 #ifndef STAR_KD_H
 #define STAR_KD_H
 
+#include <stdint.h>
 #include "kdtree.h"
 #include "qfits.h"
 
@@ -28,7 +29,7 @@ struct startree {
 	kdtree_t* tree;
 	qfits_header* header;
 	int* inverse_perm;
-	unsigned char* sweep;
+	uint8_t* sweep;
 };
 typedef struct startree startree;
 

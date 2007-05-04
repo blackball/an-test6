@@ -301,13 +301,13 @@ int main(int argc, char **args) {
 		}
 
 		// compute sweep array.
-		treeout->sweep = malloc(N * sizeof(unsigned char));
+		treeout->sweep = malloc(N * sizeof(uint8_t));
 		for (i=0; i<N; i++) {
 			int ind = treein->tree->perm[i];
 			// Stars are sorted first by sweep and then by brightness within
 			// the sweep.  Instead of just storing the sweep number, we can
 			// store a quantization of the total-ordered rank.
-			treeout->sweep[i] = 256 * ind / N;
+			treeout->sweep[i] = (uint8_t)(256 * ind / N);
 		}
 	}
 
