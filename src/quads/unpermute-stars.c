@@ -77,8 +77,6 @@ int main(int argc, char **args) {
 	int starhp;
 	int lastgrass;
 	bool dosweeps = FALSE;
-	int* nsweep = NULL;
-	int Nsweeps = 0;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
@@ -118,32 +116,6 @@ int main(int argc, char **args) {
 	free_fn(fn);
 
 	N = startree_N(treein);
-	if (dosweeps) {
-		int sum = 0;
-		il* sweeps = il_new(16);
-		for (i=1;; i++) {
-			char key[16];
-			int n;
-			sprintf(key, "SWEEP%i", i);
-			n = qfits_header_getint(treein->header, key, -1);
-			if (n == -1)
-				break;
-			il_append(sweeps, n);
-			sum += n;
-		}
-		if (sum != N) {
-			fprintf(stderr, "Total number of stars in sweeps != number of stars (%i vs %i)\n", sum, N);
-			exit(-1);
-		}
-		Nsweeps = i-1;
-		nsweep = malloc(Nsweeps * sizeof(int));
-		sum = 0;
-		for (i=0; i<Nsweeps; i++) {
-			sum += il_get(sweeps, i);
-			nsweep[i] = sum;
-		}
-		il_free(sweeps);
-	}
 
 	if (basequadin)
 		fn = mk_quadfn(basequadin);
@@ -317,10 +289,6 @@ int main(int argc, char **args) {
 		idfile_close(idin);
 
 	if (dosweeps) {
-		int k;
-		int starspersweep[Nsweeps];
-		int sweepstep;
-
 		// copy sweepX headers.
 		for (i=1;; i++) {
 			char key[16];
@@ -332,38 +300,15 @@ int main(int argc, char **args) {
 			fits_copy_header(treein->header, treeout->header, key);
 		}
 
-		for (k=0; k<Nsweeps; k++)
-			starspersweep[k] = 0;
-
 		// compute sweep array.
-		sweepstep = 256 / Nsweeps;
-		treeout->sweep = malloc(N);
+		treeout->sweep = malloc(N * sizeof(unsigned char));
 		for (i=0; i<N; i++) {
 			int ind = treein->tree->perm[i];
-			for (k=0; k<Nsweeps; k++) {
-				if (ind < nsweep[k])
-					break;
-			}
 			// Stars are sorted first by sweep and then by brightness within
 			// the sweep.  Instead of just storing the sweep number, we can
-			// store "sweepstep" times the sweep number, and then quantize
-			// the position within the sweep to an integer fraction of
-			// "sweepstep".
-			//treeout->sweep[i] = k;
-			{
-				int pos = (k * sweepstep) + (sweepstep *
-											 (ind - (k ? nsweep[k-1] : 0))) /
-					(nsweep[k] - (k ? nsweep[k-1] : 0));
-				assert(pos < 256);
-				assert(pos >= 0);
-				treeout->sweep[i] = pos;
-			}
-			starspersweep[k]++;
+			// store a quantization of the total-ordered rank.
+			treeout->sweep[i] = 256 * ind / N;
 		}
-
-		for (k=0; k<Nsweeps; k++)
-			fprintf(stderr, "Stars in sweep %i: %i\n", k, starspersweep[k]);
-
 	}
 
 	fn = mk_streefn(baseout);
@@ -376,7 +321,6 @@ int main(int argc, char **args) {
 	startree_close(treein);
 	free(treeout->sweep);
 	free(treeout);
-	free(nsweep);
 
 	return 0;
 }
