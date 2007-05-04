@@ -92,7 +92,7 @@ void verify_hit(startree* skdt,
 	int s, maxsweep;
 
 	double* fieldcopy;
-	int K;
+	int M;
 
 	assert(mo->wcs_valid);
 	assert(startree);
@@ -126,12 +126,12 @@ void verify_hit(startree* skdt,
 		if (dot < 0.0)
 			continue;
 		tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y);
-		debug("(x,y) = (%g,%g)", x, y);
+		//debug("(x,y) = (%g,%g)", x, y);
 		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH)) {
-			debug(" -> reject\n");
+			//debug(" -> reject\n");
 			continue;
 		}
-		debug(" -> good\n");
+		//debug(" -> good\n");
 
 		// Here we compact the "res" array(s) so that when we're done,
 		// the NI indices that are inside the field are in the bottom
@@ -148,19 +148,21 @@ void verify_hit(startree* skdt,
 	}
 	indexpix = realloc(indexpix, NI * 2 * sizeof(double));
 
-	if (DEBUGVERIFY) {
-		double minx,maxx,miny,maxy;
-		miny = minx = HUGE_VAL;
-		maxx = maxy = -HUGE_VAL;
-		for (i=0; i<NI; i++) {
-			minx = min(indexpix[i*2  ], minx);
-			maxx = max(indexpix[i*2  ], maxx);
-			miny = min(indexpix[i*2+1], miny);
-			maxy = max(indexpix[i*2+1], maxy);
-		}
-		debug("Range of index objs: x:[%g,%g], y:[%g,%g]\n",
-			  minx, maxx, miny, maxy);
-	}
+	/*
+	  if (DEBUGVERIFY) {
+	  double minx,maxx,miny,maxy;
+	  miny = minx = HUGE_VAL;
+	  maxx = maxy = -HUGE_VAL;
+	  for (i=0; i<NI; i++) {
+	  minx = min(indexpix[i*2  ], minx);
+	  maxx = max(indexpix[i*2  ], maxx);
+	  miny = min(indexpix[i*2+1], miny);
+	  maxy = max(indexpix[i*2+1], maxy);
+	  }
+	  debug("Range of index objs: x:[%g,%g], y:[%g,%g]\n",
+	  minx, maxx, miny, maxy);
+	  }
+	*/
 	debug("Number of field stars: %i\n", NF);
 	debug("Number of index stars: %i\n", NI);
 
@@ -185,17 +187,17 @@ void verify_hit(startree* skdt,
 		maxsweep = max(maxsweep, sweeps[i]);
 	}
 
-	// K: number of field objects to use.
-	//K = min(NF, 2*NI);
-	K = NF;
+	// M: number of field objects to use.
+	//M = min(NF, 2*NI);
+	M = NF;
 
 	// Make a copy of the field objects, because we're going to build a
 	// kdtree out of them and that shuffles their order.
-	fieldcopy = malloc(K * 2 * sizeof(double));
-	memcpy(fieldcopy, field, K * 2 * sizeof(double));
+	fieldcopy = malloc(M * 2 * sizeof(double));
+	memcpy(fieldcopy, field, M * 2 * sizeof(double));
 
 	// Build a tree out of the field objects (in pixel space)
-	ftree = kdtree_build(NULL, fieldcopy, K, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
+	ftree = kdtree_build(NULL, fieldcopy, M, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
 	// Find the midpoint of AB of the quad in pixel space.
 	qc[0] = 0.5 * (field[2*mo->field[0]  ] + field[2*mo->field[1]  ]);
@@ -268,7 +270,7 @@ void verify_hit(startree* skdt,
 			ind = kdtree_nearest_neighbour(ftree, indexpix+i*2, &bestd2);
 
 			// Distance from the quad center of this field star:
-			R2 = distsq(field+ftree->perm[i]*2, qc, 2);
+			R2 = distsq(field+ftree->perm[ind]*2, qc, 2);
 
 			// Variance of a field star at that distance from the 
 			// quad center:
@@ -279,15 +281,24 @@ void verify_hit(startree* skdt,
 			//if (bestd2 > 100.0 * sigma2)
 
 			debug("\nIndex star %i (sweep %i): rad %g quads, sigma %g.\n", i, s, sqrt(R2/rquad2), sqrt(sigma2));
+			debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
+				  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
 			debug("NN dist: %5.1f pix, %g sigmas\n", sqrt(bestd2), sqrt(bestd2/sigma2));
 				
-			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * K)) - (bestd2 / (2.0 * sigma2));
+			if (log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)) < logprob_background) {
+				// what's the point?!
+				debug("This Gaussian is nearly uninformative.\n");
+				continue;
+			}
+
+			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)) - (bestd2 / (2.0 * sigma2));
 			if (logprob < logprob_distractor) {
 				debug("Distractor.\n");
 				logprob = logprob_distractor;
 				nnomatch++;
 			} else {
 				debug("Match (field star %i), logprob %g\n", ftree->perm[ind], logprob);
+				logprob = log(exp(logprob) + distractors/(fieldW*fieldH));
 				nmatch++;
 			}
 
