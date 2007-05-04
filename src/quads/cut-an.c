@@ -206,6 +206,7 @@ int main(int argc, char** args) {
 	if (bighp != -1) {
 		il* q = il_new(32);
 		int hp;
+		int nowned = 0;
 		owned = calloc(HP, sizeof(bool));
 		// The set of small healpixes in the big healpix is just an
 		// Nside-by-Nside grid:
@@ -213,6 +214,7 @@ int main(int argc, char** args) {
 			for (k=0; k<Nside; k++) {
 				hp = healpix_compose_xy(bighp, i, k, Nside);
 				owned[hp] = 1;
+				nowned++;
 			}
 		}
 		// Prime the queue with the boundaries of the healpix.
@@ -242,12 +244,17 @@ int main(int argc, char** args) {
 						il_append(q, neigh[j]);
 						// mark it as fair game.
 						owned[neigh[j]] = 1;
+						nowned++;
 					}
 				}
 			}
 			il_remove_index_range(q, 0, Q);
 		}
 		il_free(q);
+
+		printf("%i healpixes in this big healpix, plus %i boundary make %i total.\n",
+			   Nside*Nside, nowned - Nside*Nside, nowned);
+
 	} else
 		owned = NULL;
 

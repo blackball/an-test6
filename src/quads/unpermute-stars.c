@@ -319,6 +319,7 @@ int main(int argc, char **args) {
 	if (dosweeps) {
 		int k;
 		int starspersweep[Nsweeps];
+		int sweepstep;
 
 		// copy sweepX headers.
 		for (i=1;; i++) {
@@ -335,6 +336,7 @@ int main(int argc, char **args) {
 			starspersweep[k] = 0;
 
 		// compute sweep array.
+		sweepstep = 256 / Nsweeps;
 		treeout->sweep = malloc(N);
 		for (i=0; i<N; i++) {
 			int ind = treein->tree->perm[i];
@@ -342,7 +344,20 @@ int main(int argc, char **args) {
 				if (ind < nsweep[k])
 					break;
 			}
-			treeout->sweep[i] = k;
+			// Stars are sorted first by sweep and then by brightness within
+			// the sweep.  Instead of just storing the sweep number, we can
+			// store "sweepstep" times the sweep number, and then quantize
+			// the position within the sweep to an integer fraction of
+			// "sweepstep".
+			//treeout->sweep[i] = k;
+			{
+				int pos = (k * sweepstep) + (sweepstep *
+											 (ind - (k ? nsweep[k-1] : 0))) /
+					(nsweep[k] - (k ? nsweep[k-1] : 0));
+				assert(pos < 256);
+				assert(pos >= 0);
+				treeout->sweep[i] = pos;
+			}
 			starspersweep[k]++;
 		}
 
