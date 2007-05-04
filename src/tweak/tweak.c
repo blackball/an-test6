@@ -1,19 +1,19 @@
 /*
- This file is part of the Astrometry.net suite.
- Copyright 2006-2007, Keir Mierle.
+This file is part of the Astrometry.net suite.
+Copyright 2006-2007, Keir Mierle.
 
- The Astrometry.net suite is free software; you can redistribute
- it and/or modify it under the terms of the GNU General Public License
- as published by the Free Software Foundation, version 2.
+The Astrometry.net suite is free software; you can redistribute
+it and/or modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, version 2.
 
- The Astrometry.net suite is distributed in the hope that it will be
- useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- General Public License for more details.
+The Astrometry.net suite is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with the Astrometry.net suite ; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+You should have received a copy of the GNU General Public License
+along with the Astrometry.net suite ; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
 /*
@@ -157,7 +157,7 @@ int get_ad(fitsfile* fptr, int hdu, double **a, double **d, int *n)
 		fits_report_error(stderr, status);
 		exit( -1);
 	}
-//	assert(hdutype != TABLE_HDU);
+	//	assert(hdutype != TABLE_HDU);
 
 	// Now pull the X and Y columns
 	if (fits_get_num_rows(fptr, &l, &status)) {
@@ -837,7 +837,7 @@ int main(int argc, char *argv[])
 	// Tweak each HDU independently
 	for (kk = 1; kk <= nhdus; kk++) {
 		int hdutype;
-		int order = 2;
+		int order = 0;
 		int k;
 		tweak_t tweak;
 		if (infile) {
@@ -880,8 +880,8 @@ int main(int argc, char *argv[])
 			unsigned char security_hole[200000];
 			FILE* f = fopen(wcsfile, "r");
 			int nr = fread(security_hole, 1, 200000, f);
-//			printf("n=%d\n",nr);
-//			printf("security_whole=\n---\n%s\n---\n",security_hole);
+			//			printf("n=%d\n",nr);
+			//			printf("security_whole=\n---\n%s\n---\n",security_hole);
 			security_hole[nr] = 0;
 			qfits_header* qf = qfits_header_read_hdr_string(security_hole, nr);
 			tan_t* wcstan = tan_read_header(qf, NULL);
@@ -890,18 +890,18 @@ int main(int argc, char *argv[])
 		} else {
 			fprintf(stderr, "no infile or wcsfile; need an initial wcs\n");
 			assert(0);
-			exit(-1);
+			exit( -1);
 		}
 		tweak.state = TWEAK_HAS_SIP;
 
 		// set jitter: in arcsec.
 		double detcd = sip_pixel_scale(tweak.sip);
-		printf("-------\n");
-		sip_print(tweak.sip);
-		printf("------+\n");
+//		printf("-------\n");
+//		sip_print(tweak.sip);
+//		printf("------+\n");
 
-		tweak.jitter = sqrt(detcd*detcd + 1);
-		tweak.jitter *= 5;
+		tweak.jitter = sqrt(detcd * detcd + 1);
+		tweak.jitter *= 6;
 		printf("found pix scale: %g\n", detcd);
 		printf("set jitter: %g\n", tweak.jitter);
 
@@ -945,7 +945,7 @@ int main(int argc, char *argv[])
 		tweak.state |= TWEAK_HAS_COARSLY_SHIFTED;
 		tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
 		tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
-//		tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
+		//		tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 		tweak_dump_ascii(&tweak);
 
@@ -960,10 +960,14 @@ int main(int argc, char *argv[])
 			printf("Iterating linear tweak number %d\n", k);
 			tweak.state &= ~TWEAK_HAS_LINEAR_CD;
 			tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
+			tweak_clear_correspondences(&tweak);
 		}
-		tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
-		tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
-		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
+		tweak_clear_on_sip_change(&tweak);
+//		tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
+//		tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
+//		tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
+//		tweak.jitter *= 2;
+		tweak_go_to(&tweak, TWEAK_HAS_RUN_RANSAC_OPT);
 		printf("final state: ");
 		tweak_print_state(&tweak);
 		tweak_dump_ascii(&tweak);
