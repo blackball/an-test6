@@ -808,11 +808,12 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 }
 
 // in arcseconds^2 on the sky (chi-sq)
-double figure_of_merit(tweak_t* t)
+double figure_of_merit(tweak_t* t, double *rmsX, double *rmsY)
 {
 
 	// works on the sky
 	double sqerr = 0.0;
+//	double sqerr_included = 0.0;
 	int i;
 	for (i = 0; i < il_size(t->image); i++) { // t->image is a list of source objs with current ref correspondences
 		double a, d;
@@ -821,6 +822,7 @@ double figure_of_merit(tweak_t* t)
 		double xyzerr[3];
 		sip_pixelxy2radec(t->sip, t->x[il_get(t->image, i)],
 		                  t->y[il_get(t->image, i)], &a, &d);
+
 		// xref and yref should be intermediate WC's not image x and y!
 		radecdeg2xyzarr(a, d, xyzpt);
 		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)],   // t->ref is a list of ref objs with current source correspn.
@@ -829,10 +831,13 @@ double figure_of_merit(tweak_t* t)
 		xyzerr[0] = xyzpt[0] - xyzpt_ref[0];
 		xyzerr[1] = xyzpt[1] - xyzpt_ref[1];
 		xyzerr[2] = xyzpt[2] - xyzpt_ref[2];
-		sqerr += xyzerr[0] * xyzerr[0] + xyzerr[1] * xyzerr[1] + xyzerr[2] * xyzerr[2];
+		if (il_get(t->included, i)) 
+			sqerr += xyzerr[0] * xyzerr[0] + xyzerr[1] * xyzerr[1] + xyzerr[2] * xyzerr[2];
+//			sqerr_included += xyzerr[0] * xyzerr[0] + xyzerr[1] * xyzerr[1] + xyzerr[2] * xyzerr[2];
+//			*rmsX += xyzerr[0] * xyzerr[0]
+//			*rmsY += xyzerr[1] * xyzerr[1] + xyzerr[2] * xyzerr[2];
 	}
 	return rad2arcsec(1)*rad2arcsec(1)*sqerr;
-
 }
 
 // in pixels^2 in the image
@@ -1052,6 +1057,9 @@ void invert_sip_polynomial(tweak_t* t)
 // Run a polynomial tweak
 void do_sip_tweak(tweak_t* t) // bad name for this function
 {
+//	tan_t tmptan;
+//	memcpy(&tmptan, &(t->sip->wcstan), sizeof(tan_t));
+
 	int sip_order, sip_coeffs, stride;
 	double *UVP, *UVP2, *b, *b2;
 	double xyzcrval[3];
@@ -1172,6 +1180,8 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 						// We don't want repeated
 						// linear terms
 						UVP[i + stride*j] = 0.0;
+//					if (p==0 && q==0)
+//						UVP[i + stride*j] = 0.0;
 					j++;
 				}
 		assert(j == 2 + sip_coeffs);
@@ -1192,6 +1202,29 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	// Save UVP, bx, and by for computing chisq
 	memcpy(UVP2, UVP, sizeof(double)*stride*(2 + sip_coeffs));
 	memcpy(b2, b, sizeof(double)*stride*2);
+
+	{
+		int i,j;
+		printf("uvp=array([\n");
+		for (j=0; j<stride; j++) {
+			printf("[");
+			for (i=0; i<2+sip_coeffs; i++) {
+				printf("%g,", UVP[j + stride*i]);
+			}
+			printf("],\n");
+		}
+		printf("])\n");
+
+		printf("b=array([\n");
+		for (j=0; j<stride; j++) {
+			printf("[");
+			for (i=0; i<2; i++) {
+				printf("%g,", b[j + stride*i]);
+			}
+			printf("],\n");
+		}
+		printf("])\n");
+	}
 
 	// Allocate work areas and answers
 	{
@@ -1222,10 +1255,10 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 
 	// Extract the SIP coefficients
 	inv_det = 1.0 / sip_det_cd(t->sip);
-	cdi[0][0] = t->sip->wcstan.cd[1][1] * inv_det;
+	cdi[0][0] =  t->sip->wcstan.cd[1][1] * inv_det;
 	cdi[0][1] = -t->sip->wcstan.cd[0][1] * inv_det;
 	cdi[1][0] = -t->sip->wcstan.cd[1][0] * inv_det;
-	cdi[1][1] = t->sip->wcstan.cd[0][0] * inv_det;
+	cdi[1][1] =  t->sip->wcstan.cd[0][0] * inv_det;
 
 	// This magic *3* is here because we skip the (0, 0) term.
 	{
@@ -1265,16 +1298,37 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	// Grab the shift, put it into the wcs
 	sU = cdi[0][0] * b[2 + stride * 0] + cdi[0][1] * b[2 + stride * 1];
 	sV = cdi[1][0] * b[2 + stride * 0] + cdi[1][1] * b[2 + stride * 1];
+//	sU = b[2 + stride*0];
+//	sV = b[2 + stride*1];
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
-	swcs = wcs_shift(t->sip, -su, -sv);
-	sip_free(t->sip);
-	t->sip = swcs;
+//	su *= -1;
+//	sv *= -1;
+	printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
+	printf("before cdI b0=%g, b1=%g\n", b[2+stride*0], b[2+stride*1]);
+	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
+	sip_print(t->sip);
+//	swcs = wcs_shift(t->sip, -su, -sv);
+	printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
+//	sip_free(t->sip);
+//	t->sip = swcs;
+//	sip_print(t->sip);
+	
+	t->sip->wcstan.crpix[0] -= su;
+	t->sip->wcstan.crpix[1] -= sv;
 
 	fprintf(stderr, "New sip header:\n");
 	sip_print(t->sip);
 	fprintf(stderr, "shiftxun=%le, shiftyun=%le\n", sU, sV);
 	fprintf(stderr, "shiftx=%le, shifty=%le\n", su, sv);
 	fprintf(stderr, "sqerr=%le\n", figure_of_merit(t));
+		// this data is now wrong
+		tweak_clear_image_ad(t);
+		tweak_clear_ref_xy(t);
+		tweak_clear_image_xyz(t);
+
+		// recalc based on new SIP
+		tweak_go_to(t, TWEAK_HAS_IMAGE_AD);
+		tweak_go_to(t, TWEAK_HAS_REF_XY);
 	fprintf(stderr, "+++++++++++++++++++++++++++++++++++++\n");
 	fprintf(stderr, "RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t) / stride));
 	fprintf(stderr, "+++++++++++///////////+++++++++++++++\n");
@@ -1290,7 +1344,38 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 			sum += UVP2[i + stride * j] * b[j];
 		chisq += (sum - b2[i]) * (sum - b2[i]);
 	}
-	//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
+//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
+	{
+		int k,j;
+		double rmsx=0, rmsy=0;
+		printf("ax_b=array([");
+		for (j=0; j<stride; j++) {
+			printf("[");
+			for (i=0; i<2; i++) {
+				double accum = 0.;
+				for (k=0; k<2+sip_coeffs; k++)
+					accum += UVP2[j + stride*k] * b[k + stride*i];
+				accum -= b2[j + stride*i];
+				printf("%g,",accum);
+				if (i==0) rmsx += accum*accum;
+				else rmsy += accum*accum;
+			}
+			printf("],\n");
+		}
+		printf("])\n");
+
+		printf("dotprod RMSX=%g [arcsec]\n", deg2arcsec(sqrt(rmsx)));
+		printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(sqrt(rmsy)));
+	}
+
+//	t->sip->wcstan.cd[0][0] = tmptan.cd[0][0];
+//	t->sip->wcstan.cd[0][1] = tmptan.cd[0][1];
+//	t->sip->wcstan.cd[1][0] = tmptan.cd[1][0];
+//	t->sip->wcstan.cd[1][1] = tmptan.cd[1][1];
+//	t->sip->wcstan.crval[0] = tmptan.crval[0];
+//	t->sip->wcstan.crval[1] = tmptan.crval[1];
+//	t->sip->wcstan.crpix[0] = tmptan.crpix[0];
+//	t->sip->wcstan.crpix[1] = tmptan.crpix[1];
 
 	free(UVP);
 	free(b);
@@ -1344,7 +1429,7 @@ void do_ransac(tweak_t* t)
 	double besterr = 100000000000000.;
 	int sorder = t->sip->a_order;
 	int num_free_coeffs = sorder*(sorder+1) + 4 + 2; // CD and CRVAL
-	int min_data_points = num_free_coeffs/2 + 2;
+	int min_data_points = num_free_coeffs/2 + 5;
 //	min_data_points *= 2;
 //	min_data_points *= 2;
 	printf("/--------------------\n");

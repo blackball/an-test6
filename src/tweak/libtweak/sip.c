@@ -280,7 +280,7 @@ void sip_print(sip_t* sip)
 
 	det = sip_det_cd(sip);
 	pixsc = 3600*sqrt(fabs(det));
-	fprintf(stderr,"det(CD)=%le [arcsec]\n", det);
+	fprintf(stderr,"det(CD)=%le\n", det);
 	fprintf(stderr,"sqrt(det(CD))=%le [arcsec]\n", pixsc);
 
 
