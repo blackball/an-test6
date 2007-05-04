@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "verify.h"
 #include "mathutil.h"
@@ -87,7 +88,7 @@ void verify_hit(startree* skdt,
 
 	double crvalxyz[3];
 	kdtree_t* startree = skdt->tree;
-	unsigned char* sweeps = NULL;
+	uint8_t* sweeps = NULL;
 	int s, maxsweep;
 
 	double* fieldcopy;
@@ -177,7 +178,7 @@ void verify_hit(startree* skdt,
 		return;
 	}
 
-	sweeps = malloc(NI * sizeof(unsigned char));
+	sweeps = malloc(NI * sizeof(uint8_t));
 	maxsweep = 0;
 	for (i=0; i<NI; i++) {
 		sweeps[i] = skdt->sweep[res->inds[i]];
