@@ -236,11 +236,11 @@ int main(int argc, char** args) {
 				// grab the neighbours...
 				nn = healpix_get_neighbours(hp, neigh, Nside);
 				for (j=0; j<nn; j++) {
-					// for any neighbour we haven't already looked at,
+					// for any neighbour we haven't already looked at...
 					if (!owned[neigh[j]]) {
 						// add it to the queue
 						il_append(q, neigh[j]);
-						// mark it as in
+						// mark it as fair game.
 						owned[neigh[j]] = 1;
 					}
 				}
@@ -486,16 +486,20 @@ int main(int argc, char** args) {
 			npix++;
 		}
 	starlists = realloc(starlists, npix * sizeof(bl*));
-	// (reuse the bl* storage as stardata* storage)
+	// (reuse the bl* storage as stardata* storage; see below)
 	stararrays = (stardata**)starlists;
+
 	stararrayN = malloc(npix * sizeof(int));
 
 	for (i=0; i<npix; i++) {
 		bl* list;
 		int n;
+		// reusing storage: here we save the bl*
 		list = starlists[i];
 		n = bl_size(list);
+		// then store the stardata* in it.
 		stararrays[i] = malloc(n * sizeof(stardata));
+		// the copy the bl's data.
 		bl_copy(list, 0, n, stararrays[i]);
 		bl_free(list);
 		stararrayN[i] = n;
@@ -582,7 +586,4 @@ int main(int argc, char** args) {
 
 	return 0;
 }
-
-
-
 
