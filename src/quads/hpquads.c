@@ -45,7 +45,7 @@
 #include "pnpoly.h"
 #include "boilerplate.h"
 
-#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RHL:"
+#define OPTIONS "hf:u:l:n:o:i:cr:x:y:F:RHL:b"
 
 static void print_help(char* progname)
 {
@@ -54,6 +54,7 @@ static void print_help(char* progname)
 	       "      -f <input-filename-base>    (ie, the .skdt.fits file without the .skdt.fits suffix)\n"
 		   "      -o <output-filename-base>   (ie, the .*.fits output filenames, without the .*.fits suffixes)\n"
 		   "     [-c]            allow quads in the circle, not the box, defined by AB\n"
+		   "     [-b]            try to make any quads outside the bounds of this big healpix.\n"
 	       "     [-n <nside>]    healpix nside (default 501)\n"
 	       "     [-u <scale>]    upper bound of quad scale (arcmin)\n"
 	       "     [-l <scale>]    lower bound of quad scale (arcmin)\n"
@@ -640,8 +641,13 @@ int main(int argc, char** argv) {
 	double boxx[4], boxy[4];
 	int hp;
 
+	bool boundary = FALSE;
+	
 	while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'b':
+			boundary = TRUE;
+			break;
 		case 'L':
 			loosenmax = atoi(optarg);
 			break;
@@ -858,15 +864,17 @@ int main(int argc, char** argv) {
 			if (bighp != hp)
 				continue;
 			try[i] = TRUE;
-			// If this small healpix is on the boundary...
-			if ((x == 0) || (y == 0) || (x == Nside-1) || (y == Nside-1)) {
-				uint neigh[8];
-				uint nneigh;
-				int k;
-				// ... include its neighbours!
-				nneigh = healpix_get_neighbours(i, neigh, Nside);
-				for (k=0; k<nneigh; k++)
-					try[neigh[k]] = TRUE;
+			if (boundary) {
+				// If this small healpix is on the boundary...
+				if ((x == 0) || (y == 0) || (x == Nside-1) || (y == Nside-1)) {
+					uint neigh[8];
+					uint nneigh;
+					int k;
+					// ... include its neighbours!
+					nneigh = healpix_get_neighbours(i, neigh, Nside);
+					for (k=0; k<nneigh; k++)
+						try[neigh[k]] = TRUE;
+				}
 			}
 		}
 		Nhptotry = 0;
