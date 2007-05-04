@@ -149,8 +149,13 @@ int main(int argc, char** args) {
 	  dl_append(rads, 0.1 * k);
 	  }
 	*/
-	for (k=0; k<=20; k++) {
-		dl_append(rads, k==0 ? 0 : (0.1 * pow(1.2, k-1)));
+	/*
+	  for (k=0; k<=20; k++) {
+	  dl_append(rads, k==0 ? 0 : (0.1 * pow(1.2, k-1)));
+	  }
+	*/
+	for (k=0; k<=50; k++) {
+		dl_append(rads, k==0 ? 0 : (0.1 * pow(1.1, k-1)));
 	}
 
 	for (k=0; k<dl_size(rads); k++) {
@@ -297,11 +302,17 @@ int main(int argc, char** args) {
 			  printf("dx(%i,%i)=%g;\n", j+1, k+1, x-nx);
 			  printf("dy(%i,%i)=%g;\n", j+1, k+1, y-ny);
 			*/
-			dx[j*dl_size(rads) + k] = x-nx;
-			dy[j*dl_size(rads) + k] = y-ny;
+			/*
+			  dx[j*dl_size(rads) + k] = x-nx;
+			  dy[j*dl_size(rads) + k] = y-ny;
+			*/
+			printf("d(%i,%i)=%g;\n", j+1, k+1, hypot(x-nx, y-ny));
+
+			//printf("dx(%i,%i) = %g;\n", 
 		}
 	}
 
+/*
 	{
 		double meandx, meandy;
 		double stdx, stdy;
@@ -329,6 +340,7 @@ int main(int argc, char** args) {
 			printf("sy(%i)=%g;\n", k+1, stdy);
 		}
 	}
+*/
 	return 0;
 }
 

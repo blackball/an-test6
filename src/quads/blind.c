@@ -1335,7 +1335,7 @@ static void solve_fields(blind_params* bp) {
 		}
 
 		// Fix the matchfile.
-		if (matchfile_fix_header(bp->mf)) {
+		if (bp->mf && matchfile_fix_header(bp->mf)) {
 			logerr(bp, "Failed to fix the matchfile header for field %i.\n", fieldnum);
 		}
 
