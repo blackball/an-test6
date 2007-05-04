@@ -1287,15 +1287,15 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 
 		while (1) {
 			/* Find an element in the "less" section that is out of place. */
-			while ( (GET(iless) < pivot) && (iless < endless) )
+			while ( (iless < endless) && (GET(iless) < pivot) )
 				iless++;
 
 			/* Find an element in the "equal" section that is out of place. */
-			while ( (GET(iequal) == pivot) && (iequal < endequal) )
+			while ( (iequal < endequal) && (GET(iequal) == pivot) )
 				iequal++;
 
 			/* Find an element in the "greater" section that is out of place. */
-			while ( (GET(igreater) > pivot) && (igreater < endgreater) )
+			while ( (igreater < endgreater) && (GET(igreater) > pivot)  )
 				igreater++;
 
 
