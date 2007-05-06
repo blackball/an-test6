@@ -41,7 +41,8 @@ function allow_email($email) {
 		       'pjm@physics.ucsb.edu',
 		       'roweis@cs.toronto.edu',
 		       'strader@ucolick.org',
-		       'stubbs@physics.harvard.edu');
+		       'stubbs@physics.harvard.edu',
+		       'tim@chaos.org.uk');
 
 	$deny = array('badguy@somewhere.com');
 
