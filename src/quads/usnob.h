@@ -47,6 +47,7 @@ struct observation {
 	unsigned short field;
 
 	// the original survey. (S:1)
+	// (eg USNOB_SURVEY_POSS_I_O)
 	unsigned char survey;
 
 	// star/galaxy estimate.  0=galaxy, 11=star. 19=no value computed.
@@ -115,8 +116,12 @@ struct usnob_entry {
 	float epoch;
 
 	// number of detections; (M:1)
-	// M=0 means Tycho-2 star.
+	// M=0 means Tycho-2 star.  In this case, NONE of the other fields
+	//                          in the struct can be trusted!  The USNOB
+	//                          compilers used a different (and undocumented)
+	//                          format to store Tycho-2 stars.
 	// M=1 means it's a reject USNOB star.
+	// M>=2 means it's a valid USNOB star.
 	unsigned char ndetections;
 
 	bool diffraction_spike;
@@ -133,6 +138,14 @@ struct usnob_entry {
 	// bottom 24 bits: [0, 12,271,141): index within slice.
 	uint usnob_id;
 
+	// the observations for this object.  These are stored in a fixed
+	// order (same as the raw USNOB data):
+	//   obs[OBS_BLUE1] is the "first-epoch (old) blue" observation,
+	//   obs[OBS_RED2]  is the "second-epoch (new) red" observation
+	//
+	// Note that many objects have fewer than five observations.  To check
+	// whether an observation exists, check the "field" value: all valid
+	// observations have non-zero values.
 	struct observation obs[5];
 };
 typedef struct usnob_entry usnob_entry;
