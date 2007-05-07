@@ -207,5 +207,7 @@ int main(int argc, char **args) {
 	codetree_close(treein);
 	free(treeout);
 
+	printf("Done!\n");
+
 	return 0;
 }

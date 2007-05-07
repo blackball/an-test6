@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
 						if (!bestmo || mos[i]->logodds > bestmo->logodds)
 							bestmo = mos[i];
 					} else if (leftovers) {
-                                            pl_append(leftovers, mos[i]);
+						bl_append(leftovers, mos[i]);
 					}
 
 					mos[i] = NULL;
@@ -326,7 +326,7 @@ int main(int argc, char *argv[]) {
 
 			// which matches do we want to write out?
 			if (agree) {
-				writematches = bl_new(32, sizeof(MatchObj));
+				writematches = bl_new(256, sizeof(MatchObj));
 
 				switch (mode) {
 				case MODE_BEST:
