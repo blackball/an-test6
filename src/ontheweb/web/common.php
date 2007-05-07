@@ -227,8 +227,7 @@ function uncompress_file($infile, $outfile, &$suffix) {
 		if (strstr($typestr, $phrase)) {
 			$suff    = $lst[0];
 			$command = $lst[1];
-			$newfilename = $mydir . "uncompressed.";
-			$cmd = sprintf($command, $filename, $newfilename);
+			$cmd = sprintf($command, $infile, $outfile);
 			loggit("Command: " . $cmd . "\n");
 			if ((system($cmd, $retval) === FALSE) || $retval) {
 				loggit("Command failed, return value " . $retval . ": " . $cmd);
