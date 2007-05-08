@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
                     if (distsq_exceeds(xyz, xyzc, 3, r2 * 1.2)) {
                         printf("\nError: Field %i: match says center (%g, %g), scale %g arcmin, but\n",
                                fieldnum, rac, decc, arc);
-                        printf("rdls %i is (%g, %g).\n", k, rad2deg(rd[k*2]), rad2deg(rd[k*2+1]));
+                        printf("rdls %i is (%g, %g).\n", k, rd[k*2], rd[k*2+1]);
                         printf("Logprob %g (%g).\n", mo->logodds, exp(mo->logodds));
                         err = TRUE;
                         break;
