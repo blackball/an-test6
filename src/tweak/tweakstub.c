@@ -29,6 +29,8 @@ int main(void)
   nidx=tinyfitsread(idxfptr,&idxdata,TYPE_IDX);
   nxy=tinyfitsread(xyfptr,&xydata,TYPE_XY);
 
+  fprintf(stderr,"Read %d index and %d field objects.\n",nidx,nxy);
+
   if(nidx<=0) fprintf(stderr,"Could not read index objects from ./index.rd.fits\n");
   if(nxy<=0) fprintf(stderr,"Could not read field objects from ./field.xy.fits\n");
 
@@ -53,8 +55,9 @@ int main(void)
 int tinyfitsread(FILE *fileptr, double **thedata, int fitstype) 
 {
   // thedata: we will alloc but caller must free 
-  int counter,lines,thechar,hdus,endofblock;
+  int counter,lines,thechar,hdus,endofblock,numread,jj;
   unsigned int naxis2=0;
+  unsigned char *cptr,tmp;
   unsigned char printline[LINECHARS+1];
   for(hdus=0;hdus<2;hdus++) {
 	 endofblock=0;
@@ -82,11 +85,20 @@ int tinyfitsread(FILE *fileptr, double **thedata, int fitstype)
   }
 
   if(fitstype==TYPE_IDX) {
+	 double *dataptr;
 	 *thedata = (double*)malloc(2*naxis2*sizeof(double));
-	 return fread(*thedata,sizeof(double),2*naxis2,fileptr);
+	 numread=fread(*thedata,sizeof(double),2*naxis2,fileptr);
+	 dataptr=*thedata;
+	 for(jj=0;jj<numread;jj++) {
+		cptr = (unsigned char *)(dataptr+jj); // byte swap madness
+		tmp = cptr[0];cptr[0] = cptr[7]; cptr[7] = tmp;tmp = cptr[1];	
+		cptr[1] = cptr[6];cptr[6] = tmp;	tmp = cptr[2];cptr[2] = cptr[5];
+		cptr[5] =tmp;tmp = cptr[3];	cptr[3] = cptr[4];cptr[4] = tmp;
+	 } 
+	 return(naxis2);
   }
+
   if(fitstype==TYPE_XY) {
-	 int jj,numread;
 	 double *dataptr;
 	 float *tmpdata;
 	 *thedata = (double*)malloc(3*naxis2*sizeof(double));
@@ -94,10 +106,14 @@ int tinyfitsread(FILE *fileptr, double **thedata, int fitstype)
 	 numread=fread(tmpdata,sizeof(float),3*naxis2,fileptr);
 	 dataptr=*thedata;
 	 for(jj=0;jj<numread;jj++) {
+		cptr = (unsigned char *)(tmpdata+jj); // byte swap madness
+		tmp = cptr[0];cptr[0] = cptr[3];cptr[3] =tmp;tmp = cptr[1];cptr[1] = cptr[2];cptr[2] = tmp;
 		dataptr[jj]=(double)tmpdata[jj];
 	 }
-	 return(numread);
+	 return(naxis2);
   }
+
   fprintf(stderr,"unrecognized fits type in tinyfitsread\n");
   return(-1);
+
 }
