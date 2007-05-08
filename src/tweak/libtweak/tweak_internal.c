@@ -28,6 +28,7 @@
 #include "healpix.h"
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
+#include "mathutil.h"
 
 // TODO:
 //
@@ -411,7 +412,6 @@ void get_center_and_radius(double* ra, double* dec, int n,
 {
 	double* xyz = malloc(3 * n * sizeof(double));
 	double xyz_mean[3] = {0, 0, 0};
-	double norm = 0;
 	double maxdist2 = 0;
 	int maxind = -1;
 	int i, j;
@@ -426,27 +426,17 @@ void get_center_and_radius(double* ra, double* dec, int n,
 		for (j = 0; j < 3; j++)
 			xyz_mean[j] += xyz[3 * i + j];
 
-	for (j = 0; j < 3; j++)  // reproject onto sphere
-		norm += xyz_mean[j] * xyz_mean[j];
-	norm = sqrt(norm);
-
-	for (j = 0; j < 3; j++)
-		xyz_mean[j] /= norm;
+	normalize_3(xyz_mean);
 
 	for (i = 0; i < n; i++) { // find largest distance from average
-		double dist2 = 0;
-		for (j = 0; j < 3; j++) {
-			double d = xyz_mean[j] - xyz[3 * i + j];
-			dist2 += d * d;
-		}
+		double dist2 = distsq(xyz_mean, xyz + 3*i, 3);
 		if (maxdist2 < dist2) {
 			maxdist2 = dist2;
 			maxind = i;
 		}
 	}
 	*radius = sqrt(maxdist2);
-	*ra_mean = rad2deg(xy2ra(xyz_mean[0], xyz_mean[1]));
-	*dec_mean = rad2deg(z2dec(xyz_mean[2]));
+	xyzarr2radecdeg(xyz_mean, ra_mean, dec_mean);
 	free(xyz);
 }
 
@@ -611,7 +601,7 @@ void tweak_ref_find_xyz_from_ad(tweak_t* t) // tell us (from outside tweak) wher
 	for (i = 0; i < t->n_ref; i++)
 	{ // fill em up
 		double *pt = t->xyz_ref + 3 * i;
-		radec2xyzarr(deg2rad(t->a_ref[i]), deg2rad(t->d_ref[i]), pt);
+		radecdeg2xyzarr(t->a_ref[i], t->d_ref[i], pt);
 	}
 
 	t->state |= TWEAK_HAS_REF_XYZ;
@@ -639,8 +629,7 @@ void tweak_push_ref_xyz(tweak_t* t, double* xyz, int n) // tell us (from outside
 	for (i = 0; i < n; i++)
 	{ // fill em up
 		double *pt = xyz + 3 * i;
-		ra[i] = rad2deg(xy2ra(pt[0], pt[1]));
-		dec[i] = rad2deg(z2dec(pt[2]));
+		xyzarr2radecdeg(pt, ra+i, dec+i);
 	}
 
 	t->a_ref = ra;
@@ -702,14 +691,8 @@ void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 // with real dualtree rangesearch.
 double dtrs_dist2_callback(void* p1, void* p2, int D)
 {
-	double accum = 0;
 	double* pp1 = p1, *pp2 = p2;
-	int i;
-	for (i = 0; i < D; i++) {
-		double delta = pp1[i] - pp2[i];
-		accum += delta * delta;
-	}
-	return accum;
+	return distsq(pp1, pp2, D);
 }
 
 // The jitter is in radians
@@ -770,7 +753,7 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 	double xyz[3];
 	kdtree_qres_t* kq;
 
-	int hp = radectohealpix(deg2rad(ra_mean), deg2rad(dec_mean), t->Nside);
+	int hp = radecdegtohealpix(ra_mean, dec_mean, t->Nside);
 	kdtree_t* kd;
 	if (cached_kd_hp != hp || cached_kd == NULL)
 	{
@@ -787,7 +770,7 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 		kd = cached_kd;
 	}
 
-	radec2xyzarr(deg2rad(ra_mean), deg2rad(dec_mean), xyz);
+	radecdeg2xyzarr(ra_mean, dec_mean, xyz);
 	//radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
 
 	// Fudge radius factor because if the shift is really big, then we
@@ -1097,7 +1080,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	assert(UVP2);
 	assert(b2);
 
-	fprintf(stderr, "sqerr=%le [arcsec^2]\n", figure_of_merit(t));
+	fprintf(stderr, "sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
 	sip_print(t->sip);
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
@@ -1320,7 +1303,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	sip_print(t->sip);
 	fprintf(stderr, "shiftxun=%le, shiftyun=%le\n", sU, sV);
 	fprintf(stderr, "shiftx=%le, shifty=%le\n", su, sv);
-	fprintf(stderr, "sqerr=%le\n", figure_of_merit(t));
+	fprintf(stderr, "sqerr=%le\n", figure_of_merit(t,NULL,NULL));
 		// this data is now wrong
 		tweak_clear_image_ad(t);
 		tweak_clear_ref_xy(t);
@@ -1330,7 +1313,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		tweak_go_to(t, TWEAK_HAS_IMAGE_AD);
 		tweak_go_to(t, TWEAK_HAS_REF_XY);
 	fprintf(stderr, "+++++++++++++++++++++++++++++++++++++\n");
-	fprintf(stderr, "RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t) / stride));
+	fprintf(stderr, "RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t,NULL,NULL) / stride));
 	fprintf(stderr, "+++++++++++///////////+++++++++++++++\n");
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
@@ -1495,7 +1478,7 @@ void do_ransac(tweak_t* t)
 		tweak_go_to(t, TWEAK_HAS_IMAGE_XYZ);
 
 		// rms arcsec
-		double thiserr = sqrt(figure_of_merit(t) / il_size(t->ref));
+		double thiserr = sqrt(figure_of_merit(t,NULL,NULL) / il_size(t->ref));
 		if (thiserr < besterr) {
 			besterr = thiserr;
 			tweak_dump_ascii(t);
@@ -1648,9 +1631,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		t->xyz = malloc(3 * t->n * sizeof(double));
 		for (i = 0; i < t->n; i++) {
-			radec2xyzarr(deg2rad(t->a[i]),
-			             deg2rad(t->d[i]),
-			             t->xyz + 3*i);
+			radecdeg2xyzarr(t->a[i], t->d[i], t->xyz + 3*i);
 		}
 		done(TWEAK_HAS_IMAGE_XYZ);
 	}
@@ -1786,7 +1767,6 @@ void tweak_clear(tweak_t* t)
 	if (cached_kd)
 		kdtree_fits_close(cached_kd);
 
-	// FIXME this should free stuff
 	if (!t)
 		return ;
 	SAFE_FREE(t->a);
