@@ -41,7 +41,7 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double* field);
 */
 
-#define DEBUGVERIFY 0
+#define DEBUGVERIFY 1
 #if DEBUGVERIFY
 #define debug(args...) fprintf(stderr, args)
 #else
@@ -101,6 +101,13 @@ void verify_hit(startree* skdt,
 	// find the center and radius of the field in xyz space.
 	star_midpoint(fieldcenter, mo->sMin, mo->sMax);
 	fieldr2 = distsq(fieldcenter, mo->sMin, 3);
+
+	debug("\nVerifying a match.\n");
+	debug("Quad field stars: [%i, %i, %i, %i]\n",
+		  mo->field[0],
+		  mo->field[1],
+		  mo->field[2],
+		  mo->field[3]);
 
 	double fieldr, fieldarcsec;
 	if (DEBUGVERIFY) {
@@ -280,11 +287,16 @@ void verify_hit(startree* skdt,
 			// don't bother computing the logprob if it's tiny...
 			//if (bestd2 > 100.0 * sigma2)
 
-			debug("\nIndex star %i (sweep %i): rad %g quads, sigma %g.\n", i, s, sqrt(R2/rquad2), sqrt(sigma2));
-			debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
-				  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
-			debug("NN dist: %5.1f pix, %g sigmas\n", sqrt(bestd2), sqrt(bestd2/sigma2));
-				
+			if (DEBUGVERIFY) {
+				double ra,dec;
+				debug("\nIndex star %i (sweep %i): rad %g quads, sigma %g.\n", i, s, sqrt(R2/rquad2), sqrt(sigma2));
+				debug("Index star is at (%g,%g) pixels.\n", indexpix[i*2], indexpix[i*2+1]);
+				xyzarr2radecdeg(res->results.d + i*3, &ra, &dec);
+				debug("Index star RA,Dec (%.8g,%.8g) deg\n", ra, dec);
+				debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
+					  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
+				debug("NN dist: %5.1f pix, %g sigmas\n", sqrt(bestd2), sqrt(bestd2/sigma2));
+			}
 			if (log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)) < logprob_background) {
 				// what's the point?!
 				debug("This Gaussian is nearly uninformative.\n");
