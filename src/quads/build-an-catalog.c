@@ -215,6 +215,7 @@ int main(int argc, char** args) {
 		if (usnob) {
 			usnob_entry* entry;
 			int N = usnob_fits_count_entries(usnob);
+			int spikesFound = 0;
 			printf("Reading %i entries from USNO-B catalog file %s\n", N, infn);
 			usnob->br.blocksize = BLOCK;
 			for (i=0; i<N; i++) {
@@ -235,6 +236,10 @@ int main(int argc, char** args) {
 				if (entry->diffraction_spike)
 					// may be a diffraction spike.  Ignore it.
 					continue;
+				if (entry->an_diffraction_spike=='1'){
+					spikesFound++;
+					continue;
+				}
 
 				memset(&an, 0, sizeof(an));
 
@@ -274,6 +279,7 @@ int main(int argc, char** args) {
 			}
 			usnob_fits_close(usnob);
 			printf("\n");
+			fprintf(stderr, "spikes found %d\n", spikesFound);
 
 		} else if (tycho) {
 			tycho2_entry* entry;
