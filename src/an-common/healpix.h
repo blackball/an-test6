@@ -206,6 +206,11 @@ Const uint healpix_compose_xy(uint bighp, uint x, uint y, uint Nside);
 Const uint radectohealpix(double ra, double dec, uint Nside);
 
 /**
+   Converts (RA, DEC) coordinates (in degrees) to healpix index.
+*/
+Const uint radecdegtohealpix(double ra, double dec, uint Nside);
+
+/**
    Converts (x,y,z) coordinates on the unit sphere into a healpix index.
  */
 Const uint xyztohealpix(double x, double y, double z, uint Nside);

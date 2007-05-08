@@ -64,6 +64,7 @@ double mag2flux(double mag);
 inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec);
 inline void xyzarr2radec(double* xyz, double *ra, double *dec);
+inline void xyzarr2radecdeg(double* xyz, double *ra, double *dec);
 inline void radec2xyzarr(double ra, double dec, double* xyz);
 inline void radecdeg2xyzarr(double ra, double dec, double* xyz);
 inline void radec2xyzarrmany(double *ra, double *dec, double* xyz, int n);

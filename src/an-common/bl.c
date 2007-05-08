@@ -380,10 +380,12 @@ void bl_append_list(bl* list1, bl* list2) {
 	list1->last_access_n = 0;
 	if (list1->datasize != list2->datasize) {
 		printf("Error: cannot append bls with different data sizes!\n");
+		assert(0);
 		exit(0);
 	}
 	if (list1->blocksize != list2->blocksize) {
 		printf("Error: cannot append bls with different block sizes!\n");
+		assert(0);
 		exit(0);
 	}
 

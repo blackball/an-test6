@@ -752,6 +752,10 @@ uint radectohealpix(double ra, double dec, uint Nside) {
 	return xyztohealpix(x, y, z, Nside);
 }
 
+Const uint radecdegtohealpix(double ra, double dec, uint Nside) {
+	return radectohealpix(rad2deg(ra), rad2deg(dec), Nside);
+}
+
 uint xyzarrtohealpix(double* xyz, uint Nside) {
 	return xyztohealpix(xyz[0], xyz[1], xyz[2], Nside);
 }
