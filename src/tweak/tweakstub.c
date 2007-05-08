@@ -36,10 +36,10 @@ int main(void)
 
   // HOGG -- do stuff here, for example
   for(jj=0;jj<nidx;jj++) {
-	 printf("index object (ra,dec) = (%g,%g)\n",idxdata[2*jj],idxdata[2*jj+1]);
+	 printf("index object %d : (ra,dec) = (%g,%g)\n",jj+1,idxdata[2*jj],idxdata[2*jj+1]);
   }
   for(jj=0;jj<nxy;jj++) {
-	 printf("field object (x,y,flux) = (%g,%g,%g)\n",xydata[3*jj],xydata[3*jj+1],xydata[3*jj+2]);
+	 printf("field object %d : (x,y,flux) = (%g,%g,%g)\n",jj+1,xydata[3*jj],xydata[3*jj+1],xydata[3*jj+2]);
   }
 
   // free memory and close files
