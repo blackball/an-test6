@@ -76,9 +76,9 @@ static int sort_stardata_mag(const void* v1, const void* v2) {
 	return 1;
 }
 
-static bool check_for_duplicate(stardata* sd, int hp, int Nside,
-						 bl** starlists, double dedupr2,
-						 int* duphp, int* dupindex) {
+static bool find_duplicate(stardata* sd, int hp, int Nside,
+						   bl** starlists, double dedupr2,
+						   int* duphp, int* dupindex) {
 	double xyz[3];
 	uint neigh[8];
 	uint nn;
@@ -139,7 +139,7 @@ int main(int argc, char** args) {
 	int nwritten;
 	int BLOCK = 100000;
 	double deduprad = 0.0;
-	double dedupr2;
+	double dedupr2 = 0.0;
 	double epsilon = 0.0;
 	bool sdss = FALSE;
 	bool galex = FALSE;
@@ -503,14 +503,16 @@ int main(int argc, char** args) {
 			if (dedupr2 > 0.0) {
 				int duphp, dupindex;
 				stardata* dupsd;
-				if (check_for_duplicate(&sd, hp, Nside, starlists,
-										dedupr2, &duphp, &dupindex)) {
+				if (find_duplicate(&sd, hp, Nside, starlists,
+								   dedupr2, &duphp, &dupindex)) {
 					nduplicates++;
 					// Which one is brighter?
 					dupsd = bl_access(starlists[duphp], dupindex);
-					if (dupsd->mag > sd.mag)
+					if (dupsd->mag <= sd.mag)
+						// The existing star is brighter; just skip this star.
 						continue;
 					else
+						// Remove the old star.
 						bl_remove_index(starlists[duphp], dupindex);
 				}
 			}

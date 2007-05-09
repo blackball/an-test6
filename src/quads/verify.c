@@ -41,7 +41,7 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double* field);
 */
 
-#define DEBUGVERIFY 1
+#define DEBUGVERIFY 0
 #if DEBUGVERIFY
 #define debug(args...) fprintf(stderr, args)
 #else
