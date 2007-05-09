@@ -74,7 +74,7 @@ extern int optind, opterr, optopt;
 int main(int argc, char *argv[])
 {
 	char argchar;
-	int k;
+	//int k;
 
 	// the tweak struct
 	tweak_t tweak;
@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
 
 	double x[Nstars], y[Nstars];
 	double xyz[3 * Nstars];
+	double ra[Nstars], dec[Nstars];
 	sip_t* sip;
 
 	tan_t* wcs;
@@ -134,6 +135,9 @@ int main(int argc, char *argv[])
 	memcpy(y,   true_y,   Nstars * sizeof(double));
 	memcpy(xyz, true_xyz, 3 * Nstars * sizeof(double));
 
+	for (i=0; i<Nstars; i++)
+		xyzarr2radecdeg(xyz + 3*i, ra + i, dec + i);
+
 	// Stuff the observed values into tweak.
 	tweak_init(&tweak);
 	tweak.Nside = 0;
@@ -141,12 +145,20 @@ int main(int argc, char *argv[])
 
 	tweak_push_wcs_tan(&tweak, &(sip->wcstan));
 	tweak_push_ref_xyz(&tweak, xyz, Nstars);
+	tweak_push_ref_ad(&tweak, ra, dec, Nstars);
 	tweak_push_image_xy(&tweak, x, y, Nstars);
+
+	tweak.sip->a_order = tweak.sip->b_order = 1;
+	tweak.sip->ap_order = tweak.sip->bp_order = 3;
 
 	/*
 	  tweak.sip->wcstan.crval[0]-=.5;
 	  tweak.sip->wcstan.crval[1]-=.5;
 	*/
+
+	// Avoid shift.
+	tweak.state |= TWEAK_HAS_REALLY_FINELY_SHIFTED;
+	
 
 	tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
@@ -154,6 +166,7 @@ int main(int argc, char *argv[])
 	tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 	//tweak_dump_ascii(&tweak);
 
+	/*
 	//for (k=0; k<6; k++) {
 	printf("\n");
 	printf("--------------------------------\n");
@@ -161,6 +174,7 @@ int main(int argc, char *argv[])
 	tweak.state &= ~TWEAK_HAS_LINEAR_CD;
 	tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 	//}
+	*/
 	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
 	tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
 	tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);

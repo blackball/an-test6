@@ -1396,10 +1396,10 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	//	sv *= -1;
 	printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
 	//printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
-	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
+	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
 	sip_print(t->sip);
 	//	swcs = wcs_shift(t->sip, -su, -sv);
-	printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
+	printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
 	//	sip_free(t->sip);
 	//	t->sip = swcs;
 	//	sip_print(t->sip);
