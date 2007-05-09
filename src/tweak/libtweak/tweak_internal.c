@@ -1043,17 +1043,17 @@ void invert_sip_polynomial(tweak_t* t)
 // Run a polynomial tweak
 void do_sip_tweak(tweak_t* t) // bad name for this function
 {
-//	tan_t tmptan;
-//	memcpy(&tmptan, &(t->sip->wcstan), sizeof(tan_t));
-
 	int sip_order, sip_coeffs, stride;
-	double *UVP, *UVP2, *b, *b2;
+	double *UVP, *UVP2, *B, *B2;
+	double *X;
 	double xyzcrval[3];
 	double cdinv[2][2];
 	double sU, sV, su, sv;
 	double chisq;
 	sip_t* swcs;
 	int i;
+	int M, N, R;
+
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
 	sip_order = t->sip->a_order;
@@ -1073,14 +1073,21 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	}
 	assert(il_size(t->included) == il_size(t->image));
 	//	stride = il_size(t->image); // number of rows
-	UVP = malloc((2 + sip_coeffs) * stride * sizeof(double));
-	b = malloc(2 * stride * sizeof(double));
-	UVP2 = malloc((2 + sip_coeffs) * stride * sizeof(double));
-	b2 = malloc(2 * stride * sizeof(double));
+
+	M = stride;
+	N = 2 + sip_coeffs;
+	R = 2;
+
+	assert(M >= N);
+
+	UVP  = malloc(N * M * sizeof(double));
+	B    = malloc(M * R * sizeof(double));
+	UVP2 = malloc(N * M * sizeof(double));
+	B2   = malloc(M * R * sizeof(double));
 	assert(UVP);
-	assert(b);
+	assert(B);
 	assert(UVP2);
-	assert(b2);
+	assert(B2);
 
 	fprintf(stderr, "sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
 	sip_print(t->sip);
@@ -1228,91 +1235,102 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 				if (p + q > sip_order)
 					continue;
 				assert(2 <= j);
-				assert(j < 2 + sip_coeffs);
+				assert(j < N);
 				if (p + q == 1)
-					// We don't want repeated linear terms
+					// We don't want repeated linear terms; we've already
+					// put them in directly as "u" and "v".
 					set(UVP, i, j) = 0.0;
 				else
 					set(UVP, i, j) = pow(u, (double)p) * pow(v, (double)q);
 				j++;
 			}
-		assert(j == 2 + sip_coeffs);
+		assert(j == N);
 
-		// DEBUG - Be sure about shift coefficient
+		// The shift - aka (0,0) - SIP coefficient must be 1.
 		assert(get(UVP, i, 2) == 1.0);
 
-		// xref and yref should be intermediate WC's not image x and y!
+		// B contains Intermediate World Coordinates (in degrees)
 		refi = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
-		star_coords(xyzpt, xyzcrval, &y, &x); // find tangent in intermediate coords
-
-		set(b, i, 0) = rad2deg(x);
-		set(b, i, 1) = rad2deg(y);
+		star_coords(xyzpt, xyzcrval, &y, &x); // tangent-plane projection
+		set(B, i, 0) = rad2deg(x);
+		set(B, i, 1) = rad2deg(y);
 	}
-	assert(i + 1 == stride);
+	assert(i + 1 == M);
 
-	// Save UVP, bx, and by for computing chisq
-	memcpy(UVP2, UVP, sizeof(double)*stride*(2 + sip_coeffs));
-	memcpy(b2, b, sizeof(double)*stride*2);
+	// Save UVP and B for computing chisq
+	memcpy(UVP2, UVP, M * N * sizeof(double));
+	memcpy(B2,   B,   M * R * sizeof(double));
 
 	{
-		int i,j;
+		int r,c;
 		printf("uvp=array([\n");
-		for (j=0; j<stride; j++) {
+		for (r=0; r<M; r++) {
 			printf("[");
-			for (i=0; i<2+sip_coeffs; i++) {
-				printf("%g,", get(UVP, j, i));
+			for (c=0; c<N; c++) {
+				printf("%g,", get(UVP, r, c));
 			}
 			printf("],\n");
 		}
 		printf("])\n");
 
 		printf("b=array([\n");
-		for (j=0; j<stride; j++) {
+		for (r=0; r<M; r++) {
 			printf("[");
-			for (i=0; i<2; i++) {
-				printf("%g,", get(b, j, i));
+			// (c<R looks wrong but it isn't.)
+			for (c=0; c<R; c++) {
+				printf("%g,", get(B, r, c));
 			}
 			printf("],\n");
 		}
 		printf("])\n");
 	}
 
-	// Allocate work areas and answers
 	{
-		integer N = 2 + sip_coeffs;          // nr cols of UVP
-		doublereal S[N];      // min(N,M); is singular vals of UVP in dec order
-		doublereal RCOND = -1.; // used to determine effective rank of UVP; -1
-		// means use machine precision
-		integer NRHS = 2;       // number of right hand sides (one for x and y)
-		integer rank;         // output effective rank of UVP
-		integer lwork = 1000 * 1000; /// FIXME ???
-		doublereal* work = malloc(lwork * sizeof(doublereal));
-		integer *iwork = malloc(lwork * sizeof(integer));
+		integer NN = N;
+		integer MM = M;
+		integer LDA = M;
+		integer LDB = M;
+		// number of right hand sides.
+		integer NRHS = R;
+		// min(N,M); is singular vals of UVP in descending order
+		doublereal S[NN];
+		// used to determine effective rank of UVP; -1 means use machine precision
+		doublereal RCOND = -1.;
+		// output: effective rank of UVP
+		integer rank;
+		/// FIXME ???
+		integer lwork = 1000 * 1000;
+		doublereal *work = malloc(lwork * sizeof(doublereal));
+		integer   *iwork = malloc(lwork * sizeof(integer));
 		integer info;
-		integer str = stride;
-		integer lda = stride;
-		integer ldb = stride;
-//		printf("FORWARD DGELSD---- ldb=%d\n", ldb);
-		dgelsd_(&str, &N, &NRHS, UVP, &lda, b, &ldb, S, &RCOND, &rank, work,
+		dgelsd_(&MM, &NN, &NRHS, UVP, &LDA, B, &LDB, S, &RCOND, &rank, work,
 		        &lwork, iwork, &info); // punch it chewey
 		free(work);
 		free(iwork);
 	}
 
-	// b is replaced with CD during dgelsd
-	t->sip->wcstan.cd[0][0] = get(b, 0, 0);
-	t->sip->wcstan.cd[0][1] = get(b, 1, 0);
-	t->sip->wcstan.cd[1][0] = get(b, 0, 1);
-	t->sip->wcstan.cd[1][1] = get(b, 1, 1);
+	// dgelsd trashes UVP and B, and places the answer in B.
+	// We rename it X for clarity.
+	X = B;
 
-	// Extract the SIP coefficients
+	// The first two pairs of terms are the new CD matrix.
+	// FIXME - check this transpose.
+	t->sip->wcstan.cd[0][0] = get(X, 0, 0);
+	t->sip->wcstan.cd[0][1] = get(X, 1, 0);
+	t->sip->wcstan.cd[1][0] = get(X, 0, 1);
+	t->sip->wcstan.cd[1][1] = get(X, 1, 1);
+
+	// Compute inv(CD)
 	i = invert_2by2(t->sip->wcstan.cd, cdinv);
 	assert(i == 0);
 
-	// This magic *3* is here because we skip the (0, 0) term.
+	// Extract the SIP coefficients
 	{
 		int p, q, j;
+		// This magic _3_ is here because the first two terms are the CD
+		// matrix and the third term is the (0,0) "shift" term, and the normal
+		// SIP coefficients start after that.
 		j = 3;
 		for (p = 0; p <= sip_order; p++)
 			for (q = 0; q <= sip_order; q++) {
@@ -1321,19 +1339,20 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 				if (p + q == 0)
 					continue;
 				assert(2 <= j);
-				assert(j < 2 + sip_coeffs);
+				assert(j < N);
 
 				t->sip->a[p][q] =
-					cdinv[0][0] * get(b, j, 0) +
-					cdinv[0][1] * get(b, j, 1);
+					cdinv[0][0] * get(X, j, 0) +
+					cdinv[0][1] * get(X, j, 1);
 
 				t->sip->b[p][q] =
-					cdinv[1][0] * get(b, j, 0) +
-					cdinv[1][1] * get(b, j, 1);
+					cdinv[1][0] * get(X, j, 0) +
+					cdinv[1][1] * get(X, j, 1);
 				j++;
 			}
-		assert(j == 2 + sip_coeffs);
+		assert(j == N);
 	}
+
 	// Since the linear terms should be zero, and we set the coefficients
 	// that way, we don't know what the optimizer set them to. Thus,
 	// explicitly set them to zero here.
@@ -1350,15 +1369,19 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	invert_sip_polynomial(t);
 
 	// Grab the shift, put it into the wcs
-	sU = cdinv[0][0] * get(b, 2, 0) + cdinv[0][1] * get(b, 2, 1);
-	sV = cdinv[1][0] * get(b, 2, 0) + cdinv[1][1] * get(b, 2, 1);
-	//	sU = get(b, 2, 0);
-	//	sV = get(b, 2, 1);
+	sU =
+		cdinv[0][0] * get(X, 2, 0) +
+		cdinv[0][1] * get(X, 2, 1);
+	sV =
+		cdinv[1][0] * get(X, 2, 0) +
+		cdinv[1][1] * get(X, 2, 1);
+	//	sU = get(X, 2, 0);
+	//	sV = get(X, 2, 1);
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
 	//	su *= -1;
 	//	sv *= -1;
 	printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
-	printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
+	//printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
 	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
 	sip_print(t->sip);
 	//	swcs = wcs_shift(t->sip, -su, -sv);
@@ -1392,36 +1415,44 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 
 	// Calculate chi2 for sanity
 	chisq = 0;
-	for (i = 0; i < stride; i++)
-	{
-		double sum = 0;
-		int j;
-		for (j = 0; j < 6; j++)
-			sum += UVP2[i + stride * j] * b[j];
-		chisq += (sum - b2[i]) * (sum - b2[i]);
+	for (i=0; i<M; i++) {
+		int k;
+		for (k=0; k<R; k++) {
+			double sum = 0;
+			int j;
+			for (j=0; j<N; j++)
+				sum += get(UVP2, i, j) * get(X, j, k);
+			chisq += square(sum - get(B2, i, k));
+		}
 	}
 	//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
 	{
-		int k,j;
+		int i,j,k;
 		double rmsx=0, rmsy=0;
 		printf("ax_b=array([");
-		for (j=0; j<stride; j++) {
+		for (j=0; j<M; j++) {
 			printf("[");
-			for (i=0; i<2; i++) {
-				double accum = 0.;
-				for (k=0; k<2+sip_coeffs; k++)
-					accum += UVP2[j + stride*k] * b[k + stride*i];
-				accum -= b2[j + stride*i];
-				printf("%g,",accum);
-				if (i==0) rmsx += accum*accum;
-				else rmsy += accum*accum;
+			for (k=0; k<2; k++) {
+				double acc = 0.0;
+				for (i=0; i<N; i++)
+					acc += get(UVP2, j, i) * get(X, i, k);
+				acc -= get(B2, j, k);
+				printf("%g,", acc);
+
+				if (k == 0)
+					rmsx += square(acc);
+				else
+					rmsy += square(acc);
 			}
 			printf("],\n");
 		}
 		printf("])\n");
 
-		printf("dotprod RMSX=%g [arcsec]\n", deg2arcsec(sqrt(rmsx)));
-		printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(sqrt(rmsy)));
+		rmsx = sqrt(rmsx / (double)M);
+		rmsy = sqrt(rmsy / (double)M);
+
+		printf("dotprod RMSX=%g [arcsec]\n", deg2arcsec(rmsx));
+		printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(rmsy));
 	}
 
 	//	t->sip->wcstan.cd[0][0] = tmptan.cd[0][0];
@@ -1434,9 +1465,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	//	t->sip->wcstan.crpix[1] = tmptan.crpix[1];
 
 	free(UVP);
-	free(b);
+	free(B);
 	free(UVP2);
-	free(b2);
+	free(B2);
 }
 
 #undef set
