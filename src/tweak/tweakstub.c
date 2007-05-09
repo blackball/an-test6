@@ -1,3 +1,13 @@
+// ----------------------------------------------------------------------
+// name:
+//   tweakstub
+// purpose:
+//   testbed for Hogg and Sam to work on tweak
+// revision history:
+//   2007-05-08  started - Sam
+//   2007-05-09  added outline of tweak ops - Hogg
+// ----------------------------------------------------------------------
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -5,11 +15,6 @@
 #define HDULINES 36
 #define TYPE_IDX 0
 #define TYPE_XY 1
-
-
-// reads in the two files index.rd.fits and field.xy.fits into two double arrays
-// designed as a debugging stub to help get tweak started
-
 
 int tinyfitsread(FILE *fileptr, double **thedata, int fitstype);
 
@@ -19,38 +24,88 @@ int main(void)
   unsigned int nxy,nidx,jj;
   FILE *idxfptr,*xyfptr;
 
-  // open the files
+  // open the files with coordinates
   idxfptr = fopen("index.rd.fits","r");
   if(idxfptr==NULL) {fprintf(stderr,"Unable to open file ./index.rd.fits\n"); return(-1); }
   xyfptr = fopen("field.xy.fits","r");
   if(xyfptr==NULL) {fprintf(stderr,"Unable to open file ./field.xy.fits\n"); fclose(idxfptr); return(-1); }
 
-  // read the data from them
+  // read data from the files
   nidx=tinyfitsread(idxfptr,&idxdata,TYPE_IDX);
+  if(nidx<=0) fprintf(stderr,"Read nothing from ./index.rd.fits\n");
   nxy=tinyfitsread(xyfptr,&xydata,TYPE_XY);
-
+  if(nxy<=0) fprintf(stderr,"Read nothing from ./field.xy.fits\n");
   fprintf(stderr,"Read %d index and %d field objects.\n",nidx,nxy);
 
-  if(nidx<=0) fprintf(stderr,"Could not read index objects from ./index.rd.fits\n");
-  if(nxy<=0) fprintf(stderr,"Could not read field objects from ./field.xy.fits\n");
+  // open the files with WCS information
+  // [tbd]
 
-  // HOGG -- do stuff here, for example
+  // stuff WCS information into keir+dstn SIP structure
+  // [tbd]
+
+  // transform index objects to x,y
   for(jj=0;jj<nidx;jj++) {
-	 printf("index object %d : (ra,dec) = (%g,%g)\n",jj+1,idxdata[2*jj],idxdata[2*jj+1]);
+    printf("index object %d : (ra,dec) = (%g,%g)\n",
+	   jj+1,idxdata[2*jj],idxdata[2*jj+1]);
+    // [tbd]
   }
+
+  // transform field objects to ra,dec
   for(jj=0;jj<nxy;jj++) {
-	 printf("field object %d : (x,y,flux) = (%g,%g,%g)\n",jj+1,xydata[3*jj],xydata[3*jj+1],xydata[3*jj+2]);
+    printf("field object %d : (x,y,flux) = (%g,%g,%g)\n",
+	   jj+1,xydata[3*jj],xydata[3*jj+1],xydata[3*jj+2]);
+    // [tbd]
   }
+
+  // do super-slow double loop, finding correspondences
+  // - this double-loop can be replaced with KD-tree fu by dstn+keir later
+  // - hard-coded hard tolerance is bad but okay for now
+  // - check that it doesn't matter if we do the correspondences in the
+  //   image or on the sky.
+  // [tbd]
+
+  // begin loop over ransac trials
+
+  // choose five (?) correspondences at random
+  // [tbd]
+
+  // pack data into matrices in preparation for linear fitting
+  // [tbd]
+
+  // perform linear fit with matrix fu
+  // [tbd]
+
+  // apply result to all correspondences and ask how many are inliers
+  // - just counting inliers with hard tolerance
+  // - replace with EM fu later
+  // [tbd]
+
+  // if this is the best ransac trial so far, save the result
+  // [tbd]
+
+  // end loop over ransac trials
+
+  // choose / gather / reload inliers at the best ransac trial
+  // [tbd]
+
+  // fit using best-ransac inliers
+  // - this repeats the matrix fu: pack matrices and then decomp them
+  // [tbd]
+
+  // pack fit into WCS
+  // - this step is non-trivial
+  // - need to do some QA / asserts here
+  // [tbd]
+
+  // write out WCS as a new FITS header
+  // - can probably use dstn/keir WCS fu here
+  // [tbd]
 
   // free memory and close files
   free(xydata); free(idxdata);
   fclose(xyfptr); fclose(idxfptr);
-
   return(0);
-
 }
-
-
 
 int tinyfitsread(FILE *fileptr, double **thedata, int fitstype) 
 {
