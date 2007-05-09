@@ -62,6 +62,7 @@ typedef unsigned char uchar;
 double mag2flux(double mag);
 
 inline void radec2xyz(double ra, double dec, double* x, double* y, double* z);
+inline void radecdeg2xyz(double ra, double dec, double* x, double* y, double* z);
 inline void xyz2radec(double x, double y, double z, double *ra, double *dec);
 inline void xyzarr2radec(double* xyz, double *ra, double *dec);
 inline void xyzarr2radecdeg(double* xyz, double *ra, double *dec);

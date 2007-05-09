@@ -58,6 +58,11 @@ inline void radec2xyz(double ra, double dec,
 	*z = sin(dec);
 }
 
+inline void radecdeg2xyz(double ra, double dec,
+						 double* x, double* y, double* z) {
+	radec2xyz(deg2rad(ra), deg2rad(dec), x, y, z);
+}
+
 inline void radec2xyzarr(double ra, double dec, double* xyz) {
 	xyz[0] = cos(dec) * cos(ra);
 	xyz[1] = cos(dec) * sin(ra);
