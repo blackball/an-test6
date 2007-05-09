@@ -42,14 +42,17 @@ int main(int argc, char** args) {
 	char* infn;
 	char* filepath;
 	char pointfilename[255];
+	char bandfilename[255];
 	char tilefilename[255];
 	usnob_fits* usnob;
 	int i, j, N;
 	int hp, Nside;
 	double center[3];
 	FILE *point_file;
+	FILE *band_file;
 	FILE *tile_file;
 	double pointbuffer[3];
+	double bandbuffer[5];
 	unsigned int tilebuffer[5];
 	double xyz[3];
 	int numMags;
@@ -98,15 +101,19 @@ int main(int argc, char** args) {
 	filepath = args[2];
 
 	strcpy(pointfilename, filepath);
+	strcpy(bandfilename, filepath);
 	strcpy(tilefilename, filepath);
 
 	strcat(pointfilename, "_points.bin");
+	strcat(bandfilename, "_bands.bin");
 	strcat(tilefilename, "_tiles.bin");
 
 	fprintf(stderr, "Writing point info to %s\n", pointfilename);
+	fprintf(stderr, "Writing band info to %s\n", bandfilename);
 	fprintf(stderr, "Writing tile info to %s\n", tilefilename);
 
 	point_file = fopen(pointfilename, "wb");
+	band_file = fopen(bandfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
 
 	for (i=0; i<N; i++) {
@@ -120,30 +127,30 @@ int main(int argc, char** args) {
 		// project it around the center
 		star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
 //		fprintf(stderr, "%g, %g,", px, py);
-
-
+		
 		for (j=0; j<5; j++){
 			if(star->obs[j].mag > 0.0){
 				numMags++;
 				pointbuffer[2] += star->obs[j].mag;
+				tilebuffer[j] = star->obs[j].field;
 			}
+			else{
+				tilebuffer[j] = -1;
+			}
+			bandbuffer[j] = star->obs[j].mag;
 		}
-
+		
 		if (numMags > 0){
 			pointbuffer[2] = pointbuffer[2] / (double)numMags;
 		}
-		//fprintf(stderr, " %g, ", meanMag);
-
-		for (j=0; j<5; j++){
-			tilebuffer[j] = star->obs[j].field;
-			//fprintf(stderr, "%d, ", intBuffer[j]);
-		}
-
+		
 		fwrite(pointbuffer, sizeof(double), 3, point_file);
-		fwrite(tilebuffer, sizeof(unsigned int), 5, tile_file);
+		fwrite(bandbuffer, sizeof(double), 5, band_file);
+		fwrite(tilebuffer, sizeof(int), 5, tile_file);
 	}
 	
 	fclose(point_file);
+	fclose(band_file);
 	fclose(tile_file);
 
 	usnob_fits_close(usnob);
