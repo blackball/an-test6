@@ -123,7 +123,9 @@ int usnob_fits_read_entries(usnob_fits* usnob, uint offset,
 		init_usnob_fitstruct();
 
 	for (c=0; c<USNOB_FITS_COLUMNS; c++) {
-		assert(usnob->columns[c] != -1);
+		if(usnob_fitstruct[c].required==FALSE)
+			continue;
+		assert(usnob_fitstruct[c].required && usnob->columns[c] != -1);
 		assert(usnob->table);
 
 		if (c == USNOB_FLAGS_INDEX) {
