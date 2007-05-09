@@ -48,7 +48,7 @@ TEST_SIP_OBJS := test_sip.o sip_util.o ezfits.o
 SANITY_OBJS := sanity_check.o sip_util.o
 
 
-all: $(REMAKE_LIBTWEAK) tweak test_sip sanity_check
+all: $(REMAKE_LIBTWEAK) tweak test_sip sanity_check sanity_check2
 
 # tweak.c depends on qfits.h existing, which is installed along with the library in the
 # "staging" directory qfits-an/stage.
@@ -61,6 +61,13 @@ tweak: $(TWEAK_OBJS) \
 sanity_check: $(SANITY_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) \
 	$(LIBWCS_LIB) $(LIBFORTRAN)
+
+SC2 := sanity_check2.o \
+	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
+	$(LIBFORTRAN)
+
+sanity_check2: $(REMAKE_LIBTWEAK) $(SC2)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SC2)
 
 test_sip: $(TEST_SIP_OBJS) \
 	$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(CFITS_LIB) $(LIBWCS_LIB)
