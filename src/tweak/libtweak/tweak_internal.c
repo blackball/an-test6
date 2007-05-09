@@ -1095,7 +1095,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	assert(B2);
 
 	printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
-	sip_print(t->sip);
+	sip_print_to(t->sip, stdout);
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
 	/*
@@ -1397,18 +1397,18 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
 	//printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
 	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
-	sip_print(t->sip);
+	sip_print_to(t->sip, stdout);
 	//	swcs = wcs_shift(t->sip, -su, -sv);
 	printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
 	//	sip_free(t->sip);
 	//	t->sip = swcs;
-	//	sip_print(t->sip);
+	//	sip_print_to(t->sip, stdout);
 	
 	t->sip->wcstan.crpix[0] -= su;
 	t->sip->wcstan.crpix[1] -= sv;
 
 	printf("New sip header:\n");
-	sip_print(t->sip);
+	sip_print_to(t->sip, stdout);
 	printf("shiftxun=%le, shiftyun=%le\n", sU, sV);
 	printf("shiftx=%le, shifty=%le\n", su, sv);
 	printf("sqerr=%le\n", figure_of_merit(t,NULL,NULL));

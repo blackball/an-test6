@@ -250,42 +250,43 @@ double sip_pixel_scale(sip_t* sip) {
 	return detcd;
 }
 
-
-void sip_print(sip_t* sip)
-{
+void sip_print_to(sip_t* sip, FILE* f) {
    double det,pixsc;
 
-	fprintf(stderr,"SIP Structure:\n");
-	fprintf(stderr,"crval[0]=%lf\n", sip->wcstan.crval[0]);
-	fprintf(stderr,"crval[1]=%lf\n", sip->wcstan.crval[1]);
-	fprintf(stderr,"crpix[0]=%lf\n", sip->wcstan.crpix[0]);
-	fprintf(stderr,"crpix[1]=%lf\n", sip->wcstan.crpix[1]);
+	fprintf(f,"SIP Structure:\n");
+	fprintf(f,"crval[0]=%lf\n", sip->wcstan.crval[0]);
+	fprintf(f,"crval[1]=%lf\n", sip->wcstan.crval[1]);
+	fprintf(f,"crpix[0]=%lf\n", sip->wcstan.crpix[0]);
+	fprintf(f,"crpix[1]=%lf\n", sip->wcstan.crpix[1]);
 
-	fprintf(stderr,"cd00=%le\n", sip->wcstan.cd[0][0]);
-	fprintf(stderr,"cd01=%le\n", sip->wcstan.cd[0][1]);
-	fprintf(stderr,"cd10=%le\n", sip->wcstan.cd[1][0]);
-	fprintf(stderr,"cd11=%le\n", sip->wcstan.cd[1][1]);
+	fprintf(f,"cd00=%le\n", sip->wcstan.cd[0][0]);
+	fprintf(f,"cd01=%le\n", sip->wcstan.cd[0][1]);
+	fprintf(f,"cd10=%le\n", sip->wcstan.cd[1][0]);
+	fprintf(f,"cd11=%le\n", sip->wcstan.cd[1][1]);
 
 	if (sip->a_order > 0) {
 		int p, q;
 		for (p=0; p<=sip->a_order; p++)
 			for (q=0; q<=sip->a_order; q++)
 				if (p+q <= sip->a_order && p+q > 0)
-					 fprintf(stderr,"a%d%d=%le\n", p,q,sip->a[p][q]);
+					 fprintf(f,"a%d%d=%le\n", p,q,sip->a[p][q]);
 	}
 	if (sip->b_order > 0) {
 		int p, q;
 		for (p=0; p<=sip->b_order; p++)
 			for (q=0; q<=sip->b_order; q++)
 				if (p+q <= sip->b_order && p+q > 0)
-					fprintf(stderr,"b%d%d=%le\n", p,q,sip->b[p][q]);
+					fprintf(f,"b%d%d=%le\n", p,q,sip->b[p][q]);
 	}
 
 	det = sip_det_cd(sip);
 	pixsc = 3600*sqrt(fabs(det));
-	fprintf(stderr,"det(CD)=%le\n", det);
-	fprintf(stderr,"sqrt(det(CD))=%le [arcsec]\n", pixsc);
+	fprintf(f,"det(CD)=%le\n", det);
+	fprintf(f,"sqrt(det(CD))=%le [arcsec]\n", pixsc);
 
-	fprintf(stderr,"\n");
+	fprintf(f,"\n");
 }
 
+void sip_print(sip_t* sip) {
+	sip_print_to(sip, stderr);
+}

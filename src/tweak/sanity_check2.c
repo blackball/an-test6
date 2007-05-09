@@ -56,15 +56,18 @@ double y_center = 750;
 double W = 2048;
 double H = 1489;
 
-//double rot = 45;
+//double rot = 30;
 double rot = 0;
 
 int Nstars = 20;
+
+static char* OPTIONS = "ht:";
 
 static void printHelp(char* progname)
 {
 	fprintf(stderr, "%s usage:\n"
 	        "   -h print this help\n"
+			"   [-t <test-number>]: run a particular test.\n"
 	        , progname);
 }
 
@@ -91,12 +94,19 @@ int main(int argc, char *argv[])
 	tan_t* wcs;
 	int i;
 
-	while ((argchar = getopt(argc, argv, "h")) != -1)
+	int test = 0;
+
+	while ((argchar = getopt(argc, argv, OPTIONS)) != -1)
 		switch (argchar) {
 		case 'h':
 			printHelp(argv[0]);
 			exit(0);
+		case 't':
+			test = atoi(optarg);
+			break;
 		}
+
+	printf("Running test %i\n", test);
 
 	true_sip = sip_create();
 	wcs = &(true_sip->wcstan);
@@ -125,8 +135,6 @@ int main(int argc, char *argv[])
 	printf("True SIP:\n");
 	sip_print(true_sip);
 
-
-
 	sip = sip_create();
 
 	// Set observed values = True values.
@@ -137,6 +145,20 @@ int main(int argc, char *argv[])
 
 	for (i=0; i<Nstars; i++)
 		xyzarr2radecdeg(xyz + 3*i, ra + i, dec + i);
+
+	if (test == 1) {
+		// Offset the pixel values by (-20, 100).
+		for (i=0; i<Nstars; i++) {
+			x[i] += -20;
+			y[i] += 100;
+		}
+	} else if (test == 2) {
+		// Offset the pixel values by (-1, 2);
+		for (i=0; i<Nstars; i++) {
+			x[i] += -1;
+			y[i] +=  2;
+		}
+	}
 
 	// Stuff the observed values into tweak.
 	tweak_init(&tweak);
@@ -158,7 +180,6 @@ int main(int argc, char *argv[])
 
 	// Avoid shift.
 	tweak.state |= TWEAK_HAS_REALLY_FINELY_SHIFTED;
-	
 
 	tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
 	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);

@@ -19,6 +19,8 @@
 #ifndef ANWCS_H
 #define ANWCS_H
 
+#include <stdio.h>
+
 #define SIP_MAXORDER 10
 
 // WCS TAN header.
@@ -150,5 +152,7 @@ void   tan_radec2pixelxy(tan_t* wcs_tan, double ra, double dec, double *px, doub
 void   tan_xyzarr2pixelxy(tan_t* wcs_tan, double* xyz, double *px, double *py);
 
 void   sip_print(sip_t*);
+
+void   sip_print_to(sip_t*, FILE* fid);
 
 #endif
