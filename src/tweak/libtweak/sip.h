@@ -125,6 +125,9 @@ void   sip_free(sip_t* sip);
 // Pixels to RA,Dec in degrees.
 void   sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d);
 
+// Pixels to XYZ unit vector.
+void   sip_pixelxy2xyzarr(sip_t* tan, double px, double py, double *xyz);
+
 // RA,Dec in degrees to Pixels.
 void   sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 

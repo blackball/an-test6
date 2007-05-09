@@ -53,15 +53,19 @@ void sip_pixelxy2radec(sip_t* sip, double px, double py,
 	tan_pixelxy2radec(&(sip->wcstan), U, V, ra, dec);
 }
 
+// Pixels to XYZ unit vector.
+void sip_pixelxy2xyzarr(sip_t* sip, double px, double py, double *xyz) {
+	double ra, dec;
+	sip_pixelxy2radec(sip, px, py, &ra, &dec);
+	radecdeg2xyzarr(ra, dec, xyz);
+}
+
 // Pixels to RA,Dec in degrees.
 void tan_pixelxy2radec(tan_t* tan, double px, double py, double *ra, double *dec)
 {
 	double xyz[3];
 	tan_pixelxy2xyzarr(tan, px, py, xyz);
-	// We're done!
-	xyzarr2radec(xyz, ra,dec);
-	*ra = rad2deg(*ra);
-	*dec = rad2deg(*dec);
+	xyzarr2radecdeg(xyz, ra,dec);
 }
 
 // Pixels to XYZ unit vector.
@@ -86,7 +90,7 @@ void tan_pixelxy2xyzarr(tan_t* tan, double px, double py, double *xyz)
 	y = -deg2rad(y);
 
 	// Take r to be the threespace vector of crval
-	radec2xyz(deg2rad(tan->crval[0]), deg2rad(tan->crval[1]), &rx, &ry, &rz);
+	radecdeg2xyz(tan->crval[0], tan->crval[1], &rx, &ry, &rz);
 	//	printf("rx=%lf ry=%lf rz=%lf\n",rx,ry,rz);
 
 	// Form i = r cross north pole, which is in direction of z
@@ -152,13 +156,12 @@ void   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
 {
 	double x,y,U,V;
 	double xyzcrval[3];
-	// Invert CD
 	double cdi[2][2];
-	double inv_det = 1.0/(tan->cd[0][0]*tan->cd[1][1] - tan->cd[0][1]*tan->cd[1][0]); 
-	cdi[0][0] =  tan->cd[1][1] * inv_det;
-	cdi[0][1] = -tan->cd[0][1] * inv_det;
-	cdi[1][0] = -tan->cd[1][0] * inv_det;
-	cdi[1][1] =  tan->cd[0][0] * inv_det;
+	int r;
+
+	// Invert CD
+	r = invert_2by2(tan->cd, cdi);
+	assert(r == 0);
 
 	/*
 	printf(":: %lf\n",  (tan->cd[0][0]*cdi[0][0] + tan->cd[0][1]*cdi[1][0] ));
@@ -238,7 +241,7 @@ double tan_det_cd(tan_t* tan) {
 }
 
 double sip_det_cd(sip_t* sip) {
-	return (sip->wcstan.cd[0][0]*sip->wcstan.cd[1][1] - sip->wcstan.cd[0][1]*sip->wcstan.cd[1][0]);
+	return tan_det_cd(&(sip->wcstan));
 }
 
 // returns pixel scale in arcseconds (NOT arcsec^2)
@@ -267,22 +270,21 @@ void sip_print(sip_t* sip)
 		int p, q;
 		for (p=0; p<=sip->a_order; p++)
 			for (q=0; q<=sip->a_order; q++)
-				if (p+q <= sip->a_order && !(p==0&&q==0))
+				if (p+q <= sip->a_order && p+q > 0)
 					 fprintf(stderr,"a%d%d=%le\n", p,q,sip->a[p][q]);
 	}
 	if (sip->b_order > 0) {
 		int p, q;
 		for (p=0; p<=sip->b_order; p++)
 			for (q=0; q<=sip->b_order; q++)
-				if (p+q <= sip->b_order && !(p==0&&q==0))
-					 fprintf(stderr,"b%d%d=%le\n", p,q,sip->b[p][q]);
+				if (p+q <= sip->b_order && p+q > 0)
+					fprintf(stderr,"b%d%d=%le\n", p,q,sip->b[p][q]);
 	}
 
 	det = sip_det_cd(sip);
 	pixsc = 3600*sqrt(fabs(det));
 	fprintf(stderr,"det(CD)=%le\n", det);
 	fprintf(stderr,"sqrt(det(CD))=%le [arcsec]\n", pixsc);
-
 
 	fprintf(stderr,"\n");
 }
