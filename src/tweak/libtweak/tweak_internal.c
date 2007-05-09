@@ -1086,49 +1086,115 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	sip_print(t->sip);
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
-	// We use a clever trick to estimate CD, A, and B terms in two
-	// seperated least squares fits, then finding A and B by multiplying
-	// the found parameters by CD inverse.
-	//
-	// Rearranging the SIP equations (see sip.h) we get the following
-	// matrix operation to compute x and y in world intermediate
-	// coordinates, which is convienently written in a way which allows
-	// least squares estimation of CD and terms related to A and B.
-	//
-	// First use the x's to find the first set of parametetrs
-	//
-	//    +-------------- Intermediate world coordinates in DEGREES
-	//    |        +--------- Pixel coordinates u and v in PIXELS
-	//    |        |     +--- Polynomial u,v terms in powers of PIXELS
-	//    v        v     v
-	//  ( x1 )   ( u1 v1 p1 )   (cd11            ) : cd11 is a scalar, degrees per pixel
-	//  ( x2 ) = ( u2 v2 p2 ) * (cd12            ) : cd12 is a scalar, degrees per pixel
-	//  ( x3 )   ( u3 v3 p3 )   (cd11*A + cd12*B ) : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
-	//  ( ...)   (   ...    )
-	//
-	// Then find cd21 and cd22 with the y's
-	//
-	//   ( y1 )   ( u1 v1 p1 )   ( cd21            ) : scalar, degrees per pixel
-	//   ( y2 ) = ( u2 v2 p2 ) * ( cd22            ) : scalar, degrees per pixel
-	//   ( y3 )   ( u3 v3 p3 )   ( cd21*A + cd22*B ) : mixture of SIP terms and CD
-	//   ( ...)   (   ...    )
-	//
-	// These are both standard least squares problems which we solve by
-	// netlib's dgelsd. i.e. min_{cd,A,B} || x - [u,v,p]*[cd;cdA+cdB]||^2 with
-	// x reference, cd,A,B unrolled parameters.
-	//
-	// after the call to dgelsd, we get back (for x) a vector of optimal
-	//   [cd11;cd12; cd11*A + cd12*B]
-	// Now we can pull out cd11 and cd12 from the beginning of this vector,
-	// and call the rest of the vector [cd11*A] + [cd12*B];
-	// similarly for the y fit, we get back a vector of optimal
-	//   [cd21;cd22; cd21*A + cd22*B]
-	// once we have all those we can figure out A and B as follows
-	//                  -1
-	//   A' = [cd11 cd12]    *  [cd11*A' + cd12*B']
-	//   B'   [cd21 cd22]       [cd21*A' + cd22*B']
-	//
-	// which recovers the A and B's.
+	/*
+	*  We use a clever trick to estimate CD, A, and B terms in two
+	*  seperated least squares fits, then finding A and B by multiplying
+	*  the found parameters by CD inverse.
+	* 
+	*  Rearranging the SIP equations (see sip.h) we get the following
+	*  matrix operation to compute x and y in world intermediate
+	*  coordinates, which is convienently written in a way which allows
+	*  least squares estimation of CD and terms related to A and B.
+	* 
+	*  First use the x's to find the first set of parametetrs
+	* 
+	*     +-------------- Intermediate world coordinates in DEGREES
+	*     |        +--------- Pixel coordinates u and v in PIXELS
+	*     |        |     +--- Polynomial u,v terms in powers of PIXELS
+	*     v        v     v
+	*   ( x1 )   ( u1 v1 p1 )   (cd11            ) : cd11 is a scalar, degrees per pixel
+	*   ( x2 ) = ( u2 v2 p2 ) * (cd12            ) : cd12 is a scalar, degrees per pixel
+	*   ( x3 )   ( u3 v3 p3 )   (cd11*A + cd12*B ) : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
+	*   ( ...)   (   ...    )
+	* 
+	*  Then find cd21 and cd22 with the y's
+	* 
+	*    ( y1 )   ( u1 v1 p1 )   ( cd21            ) : scalar, degrees per pixel
+	*    ( y2 ) = ( u2 v2 p2 ) * ( cd22            ) : scalar, degrees per pixel
+	*    ( y3 )   ( u3 v3 p3 )   ( cd21*A + cd22*B ) : mixture of SIP terms and CD
+	*    ( ...)   (   ...    )
+	* 
+	*  These are both standard least squares problems which we solve by
+	*  netlib's dgelsd. i.e. min_{cd,A,B} || x - [u,v,p]*[cd;cdA+cdB]||^2 with
+	*  x reference, cd,A,B unrolled parameters.
+	* 
+	*  after the call to dgelsd, we get back (for x) a vector of optimal
+	*    [cd11;cd12; cd11*A + cd12*B]
+	*  Now we can pull out cd11 and cd12 from the beginning of this vector,
+	*  and call the rest of the vector [cd11*A] + [cd12*B];
+	*  similarly for the y fit, we get back a vector of optimal
+	*    [cd21;cd22; cd21*A + cd22*B]
+	*  once we have all those we can figure out A and B as follows
+	*                   -1
+	*    A' = [cd11 cd12]    *  [cd11*A' + cd12*B']
+	*    B'   [cd21 cd22]       [cd21*A' + cd22*B']
+	* 
+	*  which recovers the A and B's.
+	*
+	*
+	*/
+
+	/*
+	* 
+	*  DGESLD allows simultaneous fits ("multiple right hand sides") as follows.
+	* 
+	*  Normally you want to solve:
+	* 
+	*     min || b[M-by-1] - A[M-by-N] x[N-by-1] ||_2
+	* 
+	*  With multiple right-hand sides, this becomes:
+	* 
+	*     min || B[M-by-R] - A[M-by-N] X[N-by-R] ||_2
+	* 
+	*  We are solving the "x" and "y" values as two different "right-hand sides",
+	*  so:
+	* 
+	*  R = 2
+	*  M = the number of correspondences.
+	*  N = 2 + the number of SIP terms.
+	*
+	* And we want an overdetermined system, so M >= N.
+	* 
+	* 
+	*  Since the name "A" is already used to refer to one set of SIP
+	*  coefficients, we use the variable "UVP" instead:
+	*           [ u1   v1   [p1] ]
+	*    UVP =  [ u2   v2   [p2] ]
+	*           [    ......      ]
+	*  where [pI] are the set of SIP polynomial terms at (uI,vI).
+	*  
+	*        [ x1   y1 ]
+	*    B = [ x2   y2 ]
+	*        [   ...   ]
+	* 
+	*  And the answer X is:
+	*        [ cd11                cd21              ]
+	*    X = [ cd12                cd22              ]
+	*        [ [cd11*A + cd12*B]   [cd21*A + cd22*B] ]
+	* 
+	*  (where A and B are actually tall vectors)
+	*
+	*
+	*
+	*  We are using Fortran DGELSD to solve this equation, so the matrices have
+	*  to be in crazy Fortran order.
+	*
+	* DGELSD takes A and B as inputs, and trashes A and puts the answer in B.
+	* (Isn't Fortran great.)  It also takes as arguments LDA and LDB, which are
+	* the "leading dimensions" of A and B.  LDA >= M, and LDB >= max(M, N).
+	*
+	* For us, LDA = M and LDB = M.
+	*
+	* Because Fortran stores its matrices sideways, 
+	*
+	*     A(r,c) is at  A + c*LDA + r
+	*
+	* So for the input/output matrix B (which has size M-by-R on input and
+	* N-by-R on output) it sticks the output in
+	*
+	*     X([0:M-1], [0:R-1])  ->   B + [0:R-1]*LDB + [0:M-1]
+	*
+	*/
 
 
 	// fill in the UVP matrix, stride in this case is the number of correspondences
