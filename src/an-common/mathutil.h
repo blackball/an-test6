@@ -28,6 +28,8 @@
 */
 void tan_vectors(const double* pt, double* vec1, double* vec2);
 
+int invert_2by2(double A[2][2], double Ainv[2][2]);
+
 int is_power_of_two(unsigned int x);
 
 void matrix_matrix_3(double* m1, double* m2, double* result);

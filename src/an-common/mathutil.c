@@ -32,6 +32,20 @@ static Inline unsigned int my_hweight32(unsigned int w) {
 	return (res & 0x0000FFFF) + ((res >> 16) & 0x0000FFFF);
 }
 
+int invert_2by2(double A[2][2], double Ainv[2][2]) {
+	double det;
+	double inv_det;
+	det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+	if (det == 0.0)
+		return -1;
+	inv_det = 1.0 / det;
+	Ainv[0][0] =  A[1][1] * inv_det;
+	Ainv[0][1] = -A[0][1] * inv_det;
+	Ainv[1][0] = -A[1][0] * inv_det;
+	Ainv[1][1] =  A[0][0] * inv_det;
+	return 0;
+}
+
 void tan_vectors(const double* pt, double* vec1, double* vec2) {
 	double etax, etay, etaz, xix, xiy, xiz, eta_norm;
 	double inv_en;
