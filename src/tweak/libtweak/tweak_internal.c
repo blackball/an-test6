@@ -793,7 +793,6 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 // in arcseconds^2 on the sky (chi-sq)
 double figure_of_merit(tweak_t* t, double *rmsX, double *rmsY)
 {
-
 	// works on the sky
 	double sqerr = 0.0;
 //	double sqerr_included = 0.0;
@@ -821,6 +820,31 @@ double figure_of_merit(tweak_t* t, double *rmsX, double *rmsY)
 //			*rmsY += xyzerr[1] * xyzerr[1] + xyzerr[2] * xyzerr[2];
 	}
 	return rad2arcsec(1)*rad2arcsec(1)*sqerr;
+}
+
+double correspondences_rms_arcsec(tweak_t* t) {
+	double err2 = 0.0;
+	int i;
+	int N = 0;
+	for (i=0; i<il_size(t->image); i++) {
+		double xyzpt[3];
+		double xyzpt_ref[3];
+
+		if (!il_get(t->included, i))
+			continue;
+		N++;
+		sip_pixelxy2xyzarr(t->sip,
+						   t->x[il_get(t->image, i)],
+						   t->y[il_get(t->image, i)],
+						   xyzpt);
+
+		radecdeg2xyzarr(t->a_ref[il_get(t->ref, i)],
+		                t->d_ref[il_get(t->ref, i)],
+						xyzpt_ref);
+
+		err2 += distsq(xyzpt, xyzpt_ref, 3);
+	}
+	return distsq2arcsec( err2 / (double)N );
 }
 
 // in pixels^2 in the image
@@ -1094,9 +1118,13 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	assert(UVP2);
 	assert(B2);
 
-	printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
+	//printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
+	printf("do_sip_tweak starting.\n");
 	sip_print_to(t->sip, stdout);
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
+
+	printf("RMS error of correspondences: %g arcsec\n",
+		   correspondences_rms_arcsec(t));
 
 	/*
 	*  We use a clever trick to estimate CD, A, and B terms in two
@@ -1276,7 +1304,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	memcpy(UVP2, UVP, M * N * sizeof(double));
 	memcpy(B2,   B,   M * R * sizeof(double));
 
-	{
+	if (0) {
 		int r, c;
 		printf("uvp=array([\n");
 		for (r=0; r<M; r++) {
@@ -1327,6 +1355,25 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	// dgelsd trashes UVP and B, and places the answer in B.
 	// We rename it X for clarity.
 	X = B;
+
+	// Print rms(AX - B)
+	{
+		int i,j,k;
+		double rms=0;
+		for (j=0; j<M; j++) {
+			for (k=0; k<2; k++) {
+				double acc = 0.0;
+				for (i=0; i<N; i++)
+					acc += get(UVP2, j, i) * get(X, i, k);
+				acc -= get(B2, j, k);
+				rms += square(acc);
+			}
+		}
+		rms = sqrt(rms / (double)M);
+
+		printf("rms(AX-B) = %g\n", rms);
+	}
+
 
 	// Row 0 of X are the shift (p=0, q=0) terms.
 	// Row 1 of X are the terms that multiply "u".
@@ -1394,24 +1441,37 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
 	//	su *= -1;
 	//	sv *= -1;
-	printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
+	//printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
 	//printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
-	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
+	//printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
+
+	printf("sx = %g, sy = %g\n", sx, sy);
+	printf("sU = %g, sV = %g\n", sU, sV);
+	printf("su = %g, sv = %g\n", su, sv);
+
+	printf("Before applying shift:\n");
 	sip_print_to(t->sip, stdout);
+
+	printf("RMS error of correspondences: %g arcsec\n",
+		   correspondences_rms_arcsec(t));
+
 	//	swcs = wcs_shift(t->sip, -su, -sv);
-	printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
+	//printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
 	//	sip_free(t->sip);
 	//	t->sip = swcs;
 	//	sip_print_to(t->sip, stdout);
-	
+
 	t->sip->wcstan.crpix[0] -= su;
 	t->sip->wcstan.crpix[1] -= sv;
 
-	printf("New sip header:\n");
+	printf("After applying shift:\n");
 	sip_print_to(t->sip, stdout);
-	printf("shiftxun=%le, shiftyun=%le\n", sU, sV);
-	printf("shiftx=%le, shifty=%le\n", su, sv);
-	printf("sqerr=%le\n", figure_of_merit(t,NULL,NULL));
+
+	/*
+	  printf("shiftxun=%le, shiftyun=%le\n", sU, sV);
+	  printf("shiftx=%le, shifty=%le\n", su, sv);
+	  printf("sqerr=%le\n", figure_of_merit(t,NULL,NULL));
+	*/
 
 	// this data is now wrong
 	tweak_clear_image_ad(t);
@@ -1422,52 +1482,60 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	tweak_go_to(t, TWEAK_HAS_IMAGE_AD);
 	tweak_go_to(t, TWEAK_HAS_REF_XY);
 
-	printf("+++++++++++++++++++++++++++++++++++++\n");
-	printf("RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t,NULL,NULL) / stride));
-	printf("+++++++++++///////////+++++++++++++++\n");
-	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
+	/*
+	  printf("+++++++++++++++++++++++++++++++++++++\n");
+	  printf("RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t,NULL,NULL) / stride));
+	  printf("+++++++++++///////////+++++++++++++++\n");
+	  //	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
+	  */
 
-	// Calculate chi2 for sanity
-	chisq = 0;
-	for (i=0; i<M; i++) {
-		int k;
-		for (k=0; k<R; k++) {
-			double sum = 0;
-			int j;
-			for (j=0; j<N; j++)
-				sum += get(UVP2, i, j) * get(X, j, k);
-			chisq += square(sum - get(B2, i, k));
-		}
-	}
-	//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
-	{
-		int i,j,k;
-		double rmsx=0, rmsy=0;
-		printf("ax_b=array([");
-		for (j=0; j<M; j++) {
-			printf("[");
-			for (k=0; k<2; k++) {
-				double acc = 0.0;
-				for (i=0; i<N; i++)
-					acc += get(UVP2, j, i) * get(X, i, k);
-				acc -= get(B2, j, k);
-				printf("%g,", acc);
+	printf("RMS error of correspondences: %g arcsec\n",
+		   correspondences_rms_arcsec(t));
 
-				if (k == 0)
-					rmsx += square(acc);
-				else
-					rmsy += square(acc);
+	if (0) {
+		// Calculate chi2 for sanity
+		chisq = 0;
+		for (i=0; i<M; i++) {
+			int k;
+			for (k=0; k<R; k++) {
+				double sum = 0;
+				int j;
+				for (j=0; j<N; j++)
+					sum += get(UVP2, i, j) * get(X, j, k);
+				chisq += square(sum - get(B2, i, k));
 			}
-			printf("],\n");
 		}
-		printf("])\n");
+		//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
+		{
+			int i,j,k;
+			double rmsx=0, rmsy=0;
+			printf("ax_b=array([");
+			for (j=0; j<M; j++) {
+				printf("[");
+				for (k=0; k<2; k++) {
+					double acc = 0.0;
+					for (i=0; i<N; i++)
+						acc += get(UVP2, j, i) * get(X, i, k);
+					acc -= get(B2, j, k);
+					printf("%g,", acc);
+					
+					if (k == 0)
+						rmsx += square(acc);
+					else
+						rmsy += square(acc);
+				}
+				printf("],\n");
+			}
+			printf("])\n");
+			
+			rmsx = sqrt(rmsx / (double)M);
+			rmsy = sqrt(rmsy / (double)M);
 
-		rmsx = sqrt(rmsx / (double)M);
-		rmsy = sqrt(rmsy / (double)M);
-
-		printf("dotprod RMSX=%g [arcsec]\n", deg2arcsec(rmsx));
-		printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(rmsy));
+			printf("dotprod RMSX=%g [arcsec]\n", deg2arcsec(rmsx));
+			printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(rmsy));
+		}
 	}
+
 
 	//	t->sip->wcstan.cd[0][0] = tmptan.cd[0][0];
 	//	t->sip->wcstan.cd[0][1] = tmptan.cd[0][1];
@@ -1674,11 +1742,7 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 	//	tweak_print_the_state(flag);
 	//	fprintf(stderr,"\n");
 	want(TWEAK_HAS_IMAGE_AD) {
-		printf("////++++-////\n");
-		printf("////++++-////\n");
-		printf("////++++-////\n");
-		printf("////++++-////\n");
-		printf("////++++-////\n");
+		//printf("////++++-////\n");
 		int jj;
 		ensure(TWEAK_HAS_SIP);
 		ensure(TWEAK_HAS_IMAGE_XY);

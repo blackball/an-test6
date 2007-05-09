@@ -56,8 +56,8 @@ double y_center = 750;
 double W = 2048;
 double H = 1489;
 
-//double rot = 30;
-double rot = 0;
+double rot = 30;
+//double rot = 0;
 
 int Nstars = 20;
 
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("True SIP:\n");
-	sip_print(true_sip);
+	sip_print_to(true_sip, stdout);
 
 	sip = sip_create();
 
@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
 		}
 	} else if (test == 2) {
 		// Offset the pixel values by (-1, 2);
+		printf("Adding (-1, 2) pixels to field objects.\n");
 		for (i=0; i<Nstars; i++) {
 			x[i] += -1;
 			y[i] +=  2;
@@ -201,9 +202,9 @@ int main(int argc, char *argv[])
 	tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 
 	printf("final state: ");
-	tweak_print_state(&tweak);
+	//tweak_print_state(&tweak);
 	//tweak_dump_ascii(&tweak);
-	sip_print(tweak.sip);
+	sip_print_to(tweak.sip, stdout);
 
 	printf("\n");
 

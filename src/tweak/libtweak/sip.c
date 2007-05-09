@@ -254,37 +254,40 @@ void sip_print_to(sip_t* sip, FILE* f) {
    double det,pixsc;
 
 	fprintf(f,"SIP Structure:\n");
-	fprintf(f,"crval[0]=%lf\n", sip->wcstan.crval[0]);
-	fprintf(f,"crval[1]=%lf\n", sip->wcstan.crval[1]);
-	fprintf(f,"crpix[0]=%lf\n", sip->wcstan.crpix[0]);
-	fprintf(f,"crpix[1]=%lf\n", sip->wcstan.crpix[1]);
-
-	fprintf(f,"cd00=%le\n", sip->wcstan.cd[0][0]);
-	fprintf(f,"cd01=%le\n", sip->wcstan.cd[0][1]);
-	fprintf(f,"cd10=%le\n", sip->wcstan.cd[1][0]);
-	fprintf(f,"cd11=%le\n", sip->wcstan.cd[1][1]);
+	fprintf(f,"  crval=(%lf, %lf)\n", sip->wcstan.crval[0], sip->wcstan.crval[1]);
+	fprintf(f,"  crpix=(%lf, %lf)\n", sip->wcstan.crpix[0], sip->wcstan.crpix[1]);
+	fprintf(f,"  CD = ( %10.3g   %10.3g )\n", sip->wcstan.cd[0][0], sip->wcstan.cd[0][1]);
+	fprintf(f,"       ( %10.3g   %10.3g )\n", sip->wcstan.cd[1][0], sip->wcstan.cd[1][1]);
 
 	if (sip->a_order > 0) {
 		int p, q;
-		for (p=0; p<=sip->a_order; p++)
+		for (p=0; p<=sip->a_order; p++) {
+			fprintf(f, (p ? "      " : "  A = "));
 			for (q=0; q<=sip->a_order; q++)
-				if (p+q <= sip->a_order && p+q > 0)
-					 fprintf(f,"a%d%d=%le\n", p,q,sip->a[p][q]);
+				if (p+q <= sip->a_order)
+					//fprintf(f,"a%d%d=%le\n", p,q,sip->a[p][q]);
+					fprintf(f,"%10.3g", sip->a[p][q]);
+			fprintf(f,"\n");
+		}
 	}
 	if (sip->b_order > 0) {
 		int p, q;
-		for (p=0; p<=sip->b_order; p++)
+		for (p=0; p<=sip->b_order; p++) {
+			fprintf(f, (p ? "      " : "  B = "));
 			for (q=0; q<=sip->b_order; q++)
-				if (p+q <= sip->b_order && p+q > 0)
-					fprintf(f,"b%d%d=%le\n", p,q,sip->b[p][q]);
+				if (p+q <= sip->a_order)
+					fprintf(f,"%10.3g", sip->b[p][q]);
+			//if (p+q <= sip->b_order && p+q > 0)
+			//fprintf(f,"b%d%d=%le\n", p,q,sip->b[p][q]);
+			fprintf(f,"\n");
+		}
 	}
 
 	det = sip_det_cd(sip);
 	pixsc = 3600*sqrt(fabs(det));
-	fprintf(f,"det(CD)=%le\n", det);
-	fprintf(f,"sqrt(det(CD))=%le [arcsec]\n", pixsc);
-
-	fprintf(f,"\n");
+	fprintf(f,"  det(CD)=%le\n", det);
+	fprintf(f,"  sqrt(det(CD))=%le [arcsec]\n", pixsc);
+	//fprintf(f,"\n");
 }
 
 void sip_print(sip_t* sip) {
