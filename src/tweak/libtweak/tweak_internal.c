@@ -1097,30 +1097,32 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	//
 	// First use the x's to find the first set of parametetrs
 	//
-	//   +-------------- Intermediate world coordinates in DEGREES
-	//   |    +--------- Pixel coordinates u and v in PIXELS
-	//   |    |     +--- Polynomial u,v terms in powers of PIXELS
-	//   v    v     v
-	//   x1 = u1 v1 p1 * cd11            : cd11 is a scalar, degrees per pixel
-	//   x2   u2 v2 p2   cd12            : cd12 is a scalar, degrees per pixel
-	//   x3   u3 v3 p3   cd11*A + cd12*B : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
-	//   ...
+	//    +-------------- Intermediate world coordinates in DEGREES
+	//    |        +--------- Pixel coordinates u and v in PIXELS
+	//    |        |     +--- Polynomial u,v terms in powers of PIXELS
+	//    v        v     v
+	//  ( x1 )   ( u1 v1 p1 )   (cd11            ) : cd11 is a scalar, degrees per pixel
+	//  ( x2 ) = ( u2 v2 p2 ) * (cd12            ) : cd12 is a scalar, degrees per pixel
+	//  ( x3 )   ( u3 v3 p3 )   (cd11*A + cd12*B ) : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
+	//  ( ...)   (   ...    )
 	//
 	// Then find cd21 and cd22 with the y's
 	//
-	//   y1 = u1 v1 p1 * cd21            : scalar, degrees per pixel
-	//   y2   u2 v2 p2   cd22            : scalar, degrees per pixel
-	//   y3   u3 v3 p3   cd21*A + cd22*B : mixture of SIP terms and CD
-	//   ...
+	//   ( y1 )   ( u1 v1 p1 )   ( cd21            ) : scalar, degrees per pixel
+	//   ( y2 ) = ( u2 v2 p2 ) * ( cd22            ) : scalar, degrees per pixel
+	//   ( y3 )   ( u3 v3 p3 )   ( cd21*A + cd22*B ) : mixture of SIP terms and CD
+	//   ( ...)   (   ...    )
 	//
 	// These are both standard least squares problems which we solve by
-	// netlib's dgelsd. i.e. min_{cd,A,B} || x - [u,v,p]*[cd;cdA+cdB]||^2 with x reference, cd,A,B
-	// unrolled parameters.
+	// netlib's dgelsd. i.e. min_{cd,A,B} || x - [u,v,p]*[cd;cdA+cdB]||^2 with
+	// x reference, cd,A,B unrolled parameters.
 	//
-	// after the call to dgelsd, we get back (for x) a vector of optimal [cd11;cd12; cd11*A + cd12*B]
+	// after the call to dgelsd, we get back (for x) a vector of optimal
+	//   [cd11;cd12; cd11*A + cd12*B]
 	// Now we can pull out cd11 and cd12 from the beginning of this vector,
 	// and call the rest of the vector [cd11*A] + [cd12*B];
-	// similarly for the y fit, we get back a vector of optimal [cd21;cd22; cd21*A + cd22*B]
+	// similarly for the y fit, we get back a vector of optimal
+	//   [cd21;cd22; cd21*A + cd22*B]
 	// once we have all those we can figure out A and B as follows
 	//                  -1
 	//   A' = [cd11 cd12]    *  [cd11*A' + cd12*B']
