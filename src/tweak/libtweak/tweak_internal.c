@@ -1048,11 +1048,11 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	double *X;
 	double xyzcrval[3];
 	double cdinv[2][2];
-	double sU, sV, su, sv;
+	double sx, sy, sU, sV, su, sv;
 	double chisq;
 	sip_t* swcs;
-	int i;
 	int M, N, R;
+	int i, j, p, q, order;
 
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
@@ -1105,39 +1105,38 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	* 
 	*  First use the x's to find the first set of parametetrs
 	* 
-	*     +-------------- Intermediate world coordinates in DEGREES
-	*     |        +--------- Pixel coordinates u and v in PIXELS
-	*     |        |     +--- Polynomial u,v terms in powers of PIXELS
-	*     v        v     v
-	*   ( x1 )   ( u1 v1 p1 )   (cd11            ) : cd11 is a scalar, degrees per pixel
-	*   ( x2 ) = ( u2 v2 p2 ) * (cd12            ) : cd12 is a scalar, degrees per pixel
-	*   ( x3 )   ( u3 v3 p3 )   (cd11*A + cd12*B ) : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
-	*   ( ...)   (   ...    )
+	*     +--------------------- Intermediate world coordinates in DEGREES
+	*     |          +--------- Pixel coordinates u and v in PIXELS
+	*     |          |     +--- Polynomial u,v terms in powers of PIXELS
+	*     v          v     v
+	*   ( x1 )   ( 1 u1 v1 p1 )   (sx              )
+	*   ( x2 ) = ( 1 u2 v2 p2 ) * (cd11            ) : cd11 is a scalar, degrees per pixel
+	*   ( x3 )   ( 1 u3 v3 p3 )   (cd12            ) : cd12 is a scalar, degrees per pixel
+	*   ( ...)   (   ...    )     (cd11*A + cd12*B ) : cd11*A and cs12*B are mixture of SIP terms (A,B) and CD matrix (cd11,cd12)
 	* 
 	*  Then find cd21 and cd22 with the y's
 	* 
-	*    ( y1 )   ( u1 v1 p1 )   ( cd21            ) : scalar, degrees per pixel
-	*    ( y2 ) = ( u2 v2 p2 ) * ( cd22            ) : scalar, degrees per pixel
-	*    ( y3 )   ( u3 v3 p3 )   ( cd21*A + cd22*B ) : mixture of SIP terms and CD
-	*    ( ...)   (   ...    )
+	*   ( y1 )   ( 1 u1 v1 p1 )   (sy              )
+	*   ( y2 ) = ( 1 u2 v2 p2 ) * (cd21            ) : scalar, degrees per pixel
+	*   ( y3 )   ( 1 u3 v3 p3 )   (cd22            ) : scalar, degrees per pixel
+	*   ( ...)   (   ...    )     (cd21*A + cd22*B ) : mixture of SIP terms (A,B) and CD matrix (cd21,cd22)
 	* 
 	*  These are both standard least squares problems which we solve by
-	*  netlib's dgelsd. i.e. min_{cd,A,B} || x - [u,v,p]*[cd;cdA+cdB]||^2 with
+	*  netlib's dgelsd. i.e. min_{cd,A,B} || x - [1,u,v,p]*[s;cd;cdA+cdB]||^2 with
 	*  x reference, cd,A,B unrolled parameters.
 	* 
 	*  after the call to dgelsd, we get back (for x) a vector of optimal
-	*    [cd11;cd12; cd11*A + cd12*B]
-	*  Now we can pull out cd11 and cd12 from the beginning of this vector,
+	*    [sx;cd11;cd12; cd11*A + cd12*B]
+	*  Now we can pull out sx, cd11 and cd12 from the beginning of this vector,
 	*  and call the rest of the vector [cd11*A] + [cd12*B];
 	*  similarly for the y fit, we get back a vector of optimal
-	*    [cd21;cd22; cd21*A + cd22*B]
+	*    [sy;cd21;cd22; cd21*A + cd22*B]
 	*  once we have all those we can figure out A and B as follows
 	*                   -1
 	*    A' = [cd11 cd12]    *  [cd11*A' + cd12*B']
 	*    B'   [cd21 cd22]       [cd21*A' + cd22*B']
 	* 
 	*  which recovers the A and B's.
-	*
 	*
 	*/
 
@@ -1165,9 +1164,11 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	* 
 	*  Since the name "A" is already used to refer to one set of SIP
 	*  coefficients, we use the variable "UVP" instead:
-	*           [ u1   v1   [p1] ]
-	*    UVP =  [ u2   v2   [p2] ]
-	*           [    ......      ]
+	*
+	*           [ 1  u1   v1  u1^2  u1v1  v1^2  ... ]
+	*    UVP =  [ 1  u2   v2  u2^2  u2v2  v2^2  ... ]
+	*           [           ......                  ]
+	*
 	*  where [pI] are the set of SIP polynomial terms at (uI,vI).
 	*  
 	*        [ x1   y1 ]
@@ -1175,6 +1176,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	*        [   ...   ]
 	* 
 	*  And the answer X is:
+	*        [ sx                  sy                ]
 	*        [ cd11                cd21              ]
 	*    X = [ cd12                cd22              ]
 	*        [ [cd11*A + cd12*B]   [cd21*A + cd22*B] ]
@@ -1215,39 +1217,46 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		}
 		i++;
 
-		int j, p, q;
 		int refi;
 		double x, y;
 		double xyzpt[3];
 		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
 		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 
-		// the first two columns are special...
-		set(UVP, i, 0) = u;
-		set(UVP, i, 1) = v;
+		assert(i >= 0);
+		assert(i < M);
 
-		// Poly terms for SIP.  Note that this includes the constant
-		// shift parameter (SIP term 0,0) which we extract and apply to
-		// crpix (and don't include in SIP terms)
-		j = 2;  // we already filled (i,0) with u and (i,1) with v
-		for (p = 0; p <= sip_order; p++)
-			for (q = 0; q <= sip_order; q++) {
-				if (p + q > sip_order)
-					continue;
-				assert(2 <= j);
+		j = 0;
+		for (order=0; order<=sip_order; order++) {
+			for (q=0; q<=order; q++) {
+				p = order - q;
+
+				assert(j >= 0);
 				assert(j < N);
-				if (p + q == 1)
-					// We don't want repeated linear terms; we've already
-					// put them in directly as "u" and "v".
-					set(UVP, i, j) = 0.0;
-				else
-					set(UVP, i, j) = pow(u, (double)p) * pow(v, (double)q);
+				assert(p >= 0);
+				assert(q >= 0);
+				assert(p + q <= sip_order);
+
+				set(UVP, i, j) = pow(u, (double)p) * pow(v, (double)q);
 				j++;
 			}
+		}
 		assert(j == N);
 
+		//  p q
+		// (0,0) = 1     <- order 0
+		// (1,0) = u     <- order 1
+		// (0,1) = v
+		// (2,0) = u^2   <- order 2
+		// (1,1) = uv
+		// (0,2) = v^2
+		// ...
+
 		// The shift - aka (0,0) - SIP coefficient must be 1.
-		assert(get(UVP, i, 2) == 1.0);
+		assert(get(UVP, i, 0) == 1.0);
+		// The linear terms.
+		assert(get(UVP, i, 1) == u);
+		assert(get(UVP, i, 2) == v);
 
 		// B contains Intermediate World Coordinates (in degrees)
 		refi = il_get(t->ref, i);
@@ -1263,7 +1272,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	memcpy(B2,   B,   M * R * sizeof(double));
 
 	{
-		int r,c;
+		int r, c;
 		printf("uvp=array([\n");
 		for (r=0; r<M; r++) {
 			printf("[");
@@ -1314,67 +1323,67 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	// We rename it X for clarity.
 	X = B;
 
-	// The first two pairs of terms are the new CD matrix.
-	// FIXME - check this transpose.
-	t->sip->wcstan.cd[0][0] = get(X, 0, 0);
-	t->sip->wcstan.cd[0][1] = get(X, 1, 0);
-	t->sip->wcstan.cd[1][0] = get(X, 0, 1);
-	t->sip->wcstan.cd[1][1] = get(X, 1, 1);
+	// Row 0 of X are the shift (p=0, q=0) terms.
+	// Row 1 of X are the terms that multiply "u".
+	// Row 2 of X are the terms that multiply "v".
+
+	// Grab CD.
+	t->sip->wcstan.cd[0][0] = get(X, 1, 0);
+	t->sip->wcstan.cd[1][0] = get(X, 1, 1);
+	t->sip->wcstan.cd[0][1] = get(X, 2, 0);
+	t->sip->wcstan.cd[1][1] = get(X, 2, 1);
 
 	// Compute inv(CD)
 	i = invert_2by2(t->sip->wcstan.cd, cdinv);
 	assert(i == 0);
 
-	// Extract the SIP coefficients
-	{
-		int p, q, j;
-		// This magic _3_ is here because the first two terms are the CD
-		// matrix and the third term is the (0,0) "shift" term, and the normal
-		// SIP coefficients start after that.
-		j = 3;
-		for (p = 0; p <= sip_order; p++)
-			for (q = 0; q <= sip_order; q++) {
-				if (p + q > sip_order)
-					continue;
-				if (p + q == 0)
-					continue;
-				assert(2 <= j);
-				assert(j < N);
+	// Grab the shift.
+	sx = get(X, 0, 0);
+	sy = get(X, 0, 1);
+	sU =
+		cdinv[0][0] * sx +
+		cdinv[0][1] * sy;
+	sV =
+		cdinv[1][0] * sx +
+		cdinv[1][1] * sy;
 
-				t->sip->a[p][q] =
-					cdinv[0][0] * get(X, j, 0) +
-					cdinv[0][1] * get(X, j, 1);
+	// Extract the SIP coefficients.
+	//  (this includes the 0 and 1 order terms, which we later overwrite)
+	j = 0;
+	for (order=0; order<=sip_order; order++) {
+		for (q=0; q<=order; q++) {
+			p = order - q;
+			assert(j >= 0);
+			assert(j < N);
+			assert(p >= 0);
+			assert(q >= 0);
+			assert(p + q <= sip_order);
 
-				t->sip->b[p][q] =
-					cdinv[1][0] * get(X, j, 0) +
-					cdinv[1][1] * get(X, j, 1);
-				j++;
-			}
-		assert(j == N);
+			t->sip->a[p][q] =
+				cdinv[0][0] * get(X, j, 0) +
+				cdinv[0][1] * get(X, j, 1);
+
+			t->sip->b[p][q] =
+				cdinv[1][0] * get(X, j, 0) +
+				cdinv[1][1] * get(X, j, 1);
+			j++;
+		}
 	}
+	assert(j == N);
 
-	// Since the linear terms should be zero, and we set the coefficients
-	// that way, we don't know what the optimizer set them to. Thus,
-	// explicitly set them to zero here.
-
+	// We have already dealt with the shift and linear terms, so zero them out
+	// in the SIP coefficient matrix.
 	t->sip->a_order = sip_order;
 	t->sip->b_order = sip_order;
-	t->sip->a[0][0] = 0.0; // we are going to put the shift into the wcs
+	t->sip->a[0][0] = 0.0;
 	t->sip->b[0][0] = 0.0;
-	t->sip->a[0][1] = 0.0; // we put the linear terms into CD
+	t->sip->a[0][1] = 0.0;
 	t->sip->a[1][0] = 0.0;
 	t->sip->b[0][1] = 0.0;
 	t->sip->b[1][0] = 0.0;
 
 	invert_sip_polynomial(t);
 
-	// Grab the shift, put it into the wcs
-	sU =
-		cdinv[0][0] * get(X, 2, 0) +
-		cdinv[0][1] * get(X, 2, 1);
-	sV =
-		cdinv[1][0] * get(X, 2, 0) +
-		cdinv[1][1] * get(X, 2, 1);
 	//	sU = get(X, 2, 0);
 	//	sV = get(X, 2, 1);
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
