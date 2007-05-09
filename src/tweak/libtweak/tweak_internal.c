@@ -1037,6 +1037,9 @@ void invert_sip_polynomial(tweak_t* t)
 //    the correspondences are passed so that we can stick RANSAC around the whole
 //    thing for better estimation.
 
+#define set(A, i, j)  ((A)[(i) + ((stride)*(j))])
+#define get(A, i, j)  ((A)[(i) + ((stride)*(j))])
+
 // Run a polynomial tweak
 void do_sip_tweak(tweak_t* t) // bad name for this function
 {
@@ -1046,8 +1049,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	int sip_order, sip_coeffs, stride;
 	double *UVP, *UVP2, *b, *b2;
 	double xyzcrval[3];
-	double cdi[2][2];
-	double inv_det;
+	double cdinv[2][2];
 	double sU, sV, su, sv;
 	double chisq;
 	sip_t* swcs;
@@ -1145,40 +1147,39 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
 		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 
-		UVP[i + stride*0] = u; // first two cols are special
-		UVP[i + stride*1] = v;
+		// the first two columns are special...
+		set(UVP, i, 0) = u;
+		set(UVP, i, 1) = v;
 
 		// Poly terms for SIP.  Note that this includes the constant
 		// shift parameter (SIP term 0,0) which we extract and apply to
 		// crpix (and don't include in SIP terms)
-		j = 2;  // we already filled [i+stride*0] with u and [i*stride*1] with v
+		j = 2;  // we already filled (i,0) with u and (i,1) with v
 		for (p = 0; p <= sip_order; p++)
-			for (q = 0; q <= sip_order; q++)
-				if (p + q <= sip_order) {
-					assert(2 <= j);
-					assert(j < 2 + sip_coeffs);
-					if (p + q != 1)
-						UVP[i + stride*j] = pow(u, (double)p) * pow(v, (double)q);
-					else
-						// We don't want repeated
-						// linear terms
-						UVP[i + stride*j] = 0.0;
-//					if (p==0 && q==0)
-//						UVP[i + stride*j] = 0.0;
-					j++;
-				}
+			for (q = 0; q <= sip_order; q++) {
+				if (p + q > sip_order)
+					continue;
+				assert(2 <= j);
+				assert(j < 2 + sip_coeffs);
+				if (p + q == 1)
+					// We don't want repeated linear terms
+					set(UVP, i, j) = 0.0;
+				else
+					set(UVP, i, j) = pow(u, (double)p) * pow(v, (double)q);
+				j++;
+			}
 		assert(j == 2 + sip_coeffs);
 
 		// DEBUG - Be sure about shift coefficient
-		assert(UVP[i + stride*2] == 1.0);
+		assert(get(UVP, i, 2) == 1.0);
 
 		// xref and yref should be intermediate WC's not image x and y!
 		refi = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
 		star_coords(xyzpt, xyzcrval, &y, &x); // find tangent in intermediate coords
 
-		b[i + stride*0] = rad2deg(x);
-		b[i + stride*1] = rad2deg(y);
+		set(b, i, 0) = rad2deg(x);
+		set(b, i, 1) = rad2deg(y);
 	}
 	assert(i + 1 == stride);
 
@@ -1192,7 +1193,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		for (j=0; j<stride; j++) {
 			printf("[");
 			for (i=0; i<2+sip_coeffs; i++) {
-				printf("%g,", UVP[j + stride*i]);
+				printf("%g,", get(UVP, j, i));
 			}
 			printf("],\n");
 		}
@@ -1202,7 +1203,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		for (j=0; j<stride; j++) {
 			printf("[");
 			for (i=0; i<2; i++) {
-				printf("%g,", b[j + stride*i]);
+				printf("%g,", get(b, j, i));
 			}
 			printf("],\n");
 		}
@@ -1231,36 +1232,38 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		free(iwork);
 	}
 
-	t->sip->wcstan.cd[0][0] = b[0 + stride * 0]; // b is replaced with CD during dgelsd
-	t->sip->wcstan.cd[0][1] = b[1 + stride * 0];
-	t->sip->wcstan.cd[1][0] = b[0 + stride * 1];
-	t->sip->wcstan.cd[1][1] = b[1 + stride * 1];
+	// b is replaced with CD during dgelsd
+	t->sip->wcstan.cd[0][0] = get(b, 0, 0);
+	t->sip->wcstan.cd[0][1] = get(b, 1, 0);
+	t->sip->wcstan.cd[1][0] = get(b, 0, 1);
+	t->sip->wcstan.cd[1][1] = get(b, 1, 1);
 
 	// Extract the SIP coefficients
-	inv_det = 1.0 / sip_det_cd(t->sip);
-	cdi[0][0] =  t->sip->wcstan.cd[1][1] * inv_det;
-	cdi[0][1] = -t->sip->wcstan.cd[0][1] * inv_det;
-	cdi[1][0] = -t->sip->wcstan.cd[1][0] * inv_det;
-	cdi[1][1] =  t->sip->wcstan.cd[0][0] * inv_det;
+	i = invert_2by2(t->sip->wcstan.cd, cdinv);
+	assert(i == 0);
 
 	// This magic *3* is here because we skip the (0, 0) term.
 	{
 		int p, q, j;
 		j = 3;
 		for (p = 0; p <= sip_order; p++)
-			for (q = 0; q <= sip_order; q++)
-				if (p + q <= sip_order && !(p == 0 && q == 0))
-				{
-					assert(2 <= j);
-					assert(j < 2 + sip_coeffs);
-					t->sip->a[p][q] =
-					    cdi[0][0] * b[j + stride * 0] +
-					    cdi[0][1] * b[j + stride * 1];
-					t->sip->b[p][q] =
-					    cdi[1][0] * b[j + stride * 0] +
-					    cdi[1][1] * b[j + stride * 1];
-					j++;
-				}
+			for (q = 0; q <= sip_order; q++) {
+				if (p + q > sip_order)
+					continue;
+				if (p + q == 0)
+					continue;
+				assert(2 <= j);
+				assert(j < 2 + sip_coeffs);
+
+				t->sip->a[p][q] =
+					cdinv[0][0] * get(b, j, 0) +
+					cdinv[0][1] * get(b, j, 1);
+
+				t->sip->b[p][q] =
+					cdinv[1][0] * get(b, j, 0) +
+					cdinv[1][1] * get(b, j, 1);
+				j++;
+			}
 		assert(j == 2 + sip_coeffs);
 	}
 	// Since the linear terms should be zero, and we set the coefficients
@@ -1279,22 +1282,22 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	invert_sip_polynomial(t);
 
 	// Grab the shift, put it into the wcs
-	sU = cdi[0][0] * b[2 + stride * 0] + cdi[0][1] * b[2 + stride * 1];
-	sV = cdi[1][0] * b[2 + stride * 0] + cdi[1][1] * b[2 + stride * 1];
-//	sU = b[2 + stride*0];
-//	sV = b[2 + stride*1];
+	sU = cdinv[0][0] * get(b, 2, 0) + cdinv[0][1] * get(b, 2, 1);
+	sV = cdinv[1][0] * get(b, 2, 0) + cdinv[1][1] * get(b, 2, 1);
+	//	sU = get(b, 2, 0);
+	//	sV = get(b, 2, 1);
 	sip_calc_inv_distortion(t->sip, sU, sV, &su, &sv);
-//	su *= -1;
-//	sv *= -1;
+	//	su *= -1;
+	//	sv *= -1;
 	printf("sU=%g, su=%g, sV=%g, sv=%g\n", sU, su, sV, sv);
-	printf("before cdI b0=%g, b1=%g\n", b[2+stride*0], b[2+stride*1]);
+	printf("before cdinv b0=%g, b1=%g\n", get(b, 2, 0), get(b, 2, 1));
 	printf("BEFORE crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
 	sip_print(t->sip);
-//	swcs = wcs_shift(t->sip, -su, -sv);
+	//	swcs = wcs_shift(t->sip, -su, -sv);
 	printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[0]);
-//	sip_free(t->sip);
-//	t->sip = swcs;
-//	sip_print(t->sip);
+	//	sip_free(t->sip);
+	//	t->sip = swcs;
+	//	sip_print(t->sip);
 	
 	t->sip->wcstan.crpix[0] -= su;
 	t->sip->wcstan.crpix[1] -= sv;
@@ -1304,14 +1307,16 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	fprintf(stderr, "shiftxun=%le, shiftyun=%le\n", sU, sV);
 	fprintf(stderr, "shiftx=%le, shifty=%le\n", su, sv);
 	fprintf(stderr, "sqerr=%le\n", figure_of_merit(t,NULL,NULL));
-		// this data is now wrong
-		tweak_clear_image_ad(t);
-		tweak_clear_ref_xy(t);
-		tweak_clear_image_xyz(t);
 
-		// recalc based on new SIP
-		tweak_go_to(t, TWEAK_HAS_IMAGE_AD);
-		tweak_go_to(t, TWEAK_HAS_REF_XY);
+	// this data is now wrong
+	tweak_clear_image_ad(t);
+	tweak_clear_ref_xy(t);
+	tweak_clear_image_xyz(t);
+
+	// recalc based on new SIP
+	tweak_go_to(t, TWEAK_HAS_IMAGE_AD);
+	tweak_go_to(t, TWEAK_HAS_REF_XY);
+
 	fprintf(stderr, "+++++++++++++++++++++++++++++++++++++\n");
 	fprintf(stderr, "RMS=%lf [arcsec on sky]\n", sqrt(figure_of_merit(t,NULL,NULL) / stride));
 	fprintf(stderr, "+++++++++++///////////+++++++++++++++\n");
@@ -1327,7 +1332,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 			sum += UVP2[i + stride * j] * b[j];
 		chisq += (sum - b2[i]) * (sum - b2[i]);
 	}
-//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
+	//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
 	{
 		int k,j;
 		double rmsx=0, rmsy=0;
@@ -1351,20 +1356,24 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(sqrt(rmsy)));
 	}
 
-//	t->sip->wcstan.cd[0][0] = tmptan.cd[0][0];
-//	t->sip->wcstan.cd[0][1] = tmptan.cd[0][1];
-//	t->sip->wcstan.cd[1][0] = tmptan.cd[1][0];
-//	t->sip->wcstan.cd[1][1] = tmptan.cd[1][1];
-//	t->sip->wcstan.crval[0] = tmptan.crval[0];
-//	t->sip->wcstan.crval[1] = tmptan.crval[1];
-//	t->sip->wcstan.crpix[0] = tmptan.crpix[0];
-//	t->sip->wcstan.crpix[1] = tmptan.crpix[1];
+	//	t->sip->wcstan.cd[0][0] = tmptan.cd[0][0];
+	//	t->sip->wcstan.cd[0][1] = tmptan.cd[0][1];
+	//	t->sip->wcstan.cd[1][0] = tmptan.cd[1][0];
+	//	t->sip->wcstan.cd[1][1] = tmptan.cd[1][1];
+	//	t->sip->wcstan.crval[0] = tmptan.crval[0];
+	//	t->sip->wcstan.crval[1] = tmptan.crval[1];
+	//	t->sip->wcstan.crpix[0] = tmptan.crpix[0];
+	//	t->sip->wcstan.crpix[1] = tmptan.crpix[1];
 
 	free(UVP);
 	free(b);
 	free(UVP2);
 	free(b2);
 }
+
+#undef set
+#undef get
+
 // RANSAC from Wikipedia:
 // Given:
 //     data - a set of observed data points
