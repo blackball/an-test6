@@ -1369,7 +1369,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 				rms += square(acc);
 			}
 		}
-		rms = sqrt(rms / (double)M);
+		rms = sqrt(rms / (double)(M*2));
 
 		printf("rms(AX-B) = %g\n", rms);
 	}
@@ -1455,14 +1455,17 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	printf("RMS error of correspondences: %g arcsec\n",
 		   correspondences_rms_arcsec(t));
 
-	//	swcs = wcs_shift(t->sip, -su, -sv);
-	//printf("AFTER  crval=(%.12g,%.12g)\n", t->sip->wcstan.crval[0], t->sip->wcstan.crval[1]);
-	//	sip_free(t->sip);
-	//	t->sip = swcs;
-	//	sip_print_to(t->sip, stdout);
+	swcs = wcs_shift(t->sip, -su, -sv);
+	memcpy(t->sip, swcs, sizeof(sip_t));
+	sip_free(swcs);
 
-	t->sip->wcstan.crpix[0] -= su;
-	t->sip->wcstan.crpix[1] -= sv;
+	//sip_free(t->sip);
+	//t->sip = swcs;
+
+	/*
+	  t->sip->wcstan.crpix[0] -= su;
+	  t->sip->wcstan.crpix[1] -= sv;
+	*/
 
 	printf("After applying shift:\n");
 	sip_print_to(t->sip, stdout);

@@ -159,6 +159,30 @@ int main(int argc, char *argv[])
 			x[i] += -1;
 			y[i] +=  2;
 		}
+	} else if (test == 3) {
+		// Add some pixel noise.
+		printf("Adding 2 pixels noise to field objects.\n");
+		for (i=0; i<Nstars; i++) {
+			x[i] += 2.0 * gaussian_sample(0.0, 1.0);
+			y[i] += 2.0 * gaussian_sample(0.0, 1.0);
+		}
+	} else if (test == 4) {
+		// Add some second-order distortion.
+		double xu2, xuv, xv2;
+		double yu2, yuv, yv2;
+		xu2 = 1e-5;
+		xv2 = 1e-5;
+		xuv = -1e-5;
+		yu2 = 0.0;
+		yuv = 0.0;
+		yv2 = 0.0;
+		printf("Adding second-order distortion.\n");
+		for (i=0; i<Nstars; i++) {
+			double dx = x[i] - sip->wcstan.crpix[0];
+			double dy = y[i] - sip->wcstan.crpix[1];
+			x[i] += (dx*dx*xu2 + dx*dy*xuv + dy*dy*xv2);
+			y[i] += (dx*dx*yu2 + dx*dy*yuv + dy*dy*yv2);
+		}
 	}
 
 	// Stuff the observed values into tweak.
@@ -174,10 +198,9 @@ int main(int argc, char *argv[])
 	tweak.sip->a_order = tweak.sip->b_order = 1;
 	tweak.sip->ap_order = tweak.sip->bp_order = 3;
 
-	/*
-	  tweak.sip->wcstan.crval[0]-=.5;
-	  tweak.sip->wcstan.crval[1]-=.5;
-	*/
+	if (test == 4) {
+		tweak.sip->a_order = tweak.sip->b_order = 2;
+	}
 
 	// Avoid shift.
 	tweak.state |= TWEAK_HAS_REALLY_FINELY_SHIFTED;
@@ -186,28 +209,11 @@ int main(int argc, char *argv[])
 	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
 	tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
 	tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
-	//tweak_dump_ascii(&tweak);
-
-	/*
-	//for (k=0; k<6; k++) {
-	printf("\n");
-	printf("--------------------------------\n");
-	printf("Iterating linear tweak number %d\n", k);
-	tweak.state &= ~TWEAK_HAS_LINEAR_CD;
-	tweak_go_to(&tweak, TWEAK_HAS_LINEAR_CD);
-	//}
-	*/
-	tweak_go_to(&tweak, TWEAK_HAS_REF_XY);
-	tweak_go_to(&tweak, TWEAK_HAS_IMAGE_AD);
-	tweak_go_to(&tweak, TWEAK_HAS_CORRESPONDENCES);
 
 	printf("final state: ");
-	//tweak_print_state(&tweak);
-	//tweak_dump_ascii(&tweak);
 	sip_print_to(tweak.sip, stdout);
-
 	printf("\n");
 
-	exit(1);
+	exit(0);
 }
 
