@@ -187,11 +187,21 @@ int main(int argc, char *args[]) {
 
 	// Draw markers.
 	for (i=n; i<Nxy; i++) {
+		double x = xyvals[2*i] + 0.5 - xoff;
+		double y = xyvals[2*i+1] + 0.5 - yoff;
 		switch (shape) {
 		case 'c':
-			cairo_arc(cairo, xyvals[2*i]+0.5-xoff, xyvals[2*i+1]+0.5-yoff,
-					  rad, 0.0, 2.0*M_PI);
+			cairo_arc(cairo, x, y, rad, 0.0, 2.0*M_PI);
 			break;
+		case '+':
+			cairo_move_to(cairo, x - rad, y);
+			cairo_line_to(cairo, x - rad*0.5, y);
+			cairo_move_to(cairo, x + rad, y);
+			cairo_line_to(cairo, x + rad*0.5, y);
+			cairo_move_to(cairo, x, y + rad);
+			cairo_line_to(cairo, x, y + rad*0.5);
+			cairo_move_to(cairo, x, y - rad);
+			cairo_line_to(cairo, x, y - rad*0.5);
 		}
 		cairo_stroke(cairo);
 	}
