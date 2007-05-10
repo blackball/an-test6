@@ -256,8 +256,8 @@ void sip_print_to(sip_t* sip, FILE* f) {
 	fprintf(f,"SIP Structure:\n");
 	fprintf(f,"  crval=(%lf, %lf)\n", sip->wcstan.crval[0], sip->wcstan.crval[1]);
 	fprintf(f,"  crpix=(%lf, %lf)\n", sip->wcstan.crpix[0], sip->wcstan.crpix[1]);
-	fprintf(f,"  CD = ( %10.3g   %10.3g )\n", sip->wcstan.cd[0][0], sip->wcstan.cd[0][1]);
-	fprintf(f,"       ( %10.3g   %10.3g )\n", sip->wcstan.cd[1][0], sip->wcstan.cd[1][1]);
+	fprintf(f,"  CD = ( %12.5g   %12.5g )\n", sip->wcstan.cd[0][0], sip->wcstan.cd[0][1]);
+	fprintf(f,"       ( %12.5g   %12.5g )\n", sip->wcstan.cd[1][0], sip->wcstan.cd[1][1]);
 
 	if (sip->a_order > 0) {
 		int p, q;
@@ -266,7 +266,7 @@ void sip_print_to(sip_t* sip, FILE* f) {
 			for (q=0; q<=sip->a_order; q++)
 				if (p+q <= sip->a_order)
 					//fprintf(f,"a%d%d=%le\n", p,q,sip->a[p][q]);
-					fprintf(f,"%10.3g", sip->a[p][q]);
+					fprintf(f,"%12.5g", sip->a[p][q]);
 			fprintf(f,"\n");
 		}
 	}
@@ -276,7 +276,7 @@ void sip_print_to(sip_t* sip, FILE* f) {
 			fprintf(f, (p ? "      " : "  B = "));
 			for (q=0; q<=sip->b_order; q++)
 				if (p+q <= sip->a_order)
-					fprintf(f,"%10.3g", sip->b[p][q]);
+					fprintf(f,"%12.5g", sip->b[p][q]);
 			//if (p+q <= sip->b_order && p+q > 0)
 			//fprintf(f,"b%d%d=%le\n", p,q,sip->b[p][q]);
 			fprintf(f,"\n");

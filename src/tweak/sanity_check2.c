@@ -34,13 +34,6 @@
 #include "bl.h"
 #include "tweak_internal.h"
 
-#define NUM_FAKE_OBJS 200
-#define FAKE_IMAGE_EDGESIZE 250
-#define FAKE_IMAGE_DEGREES 1.0
-#define FAKE_IMAGE_RA 100
-#define FAKE_IMAGE_DEC 80
-#define NOISE_PIXELS 2 
-
 // pixel error
 double pixjitter = 1.0;
 
@@ -182,6 +175,21 @@ int main(int argc, char *argv[])
 			double dy = y[i] - sip->wcstan.crpix[1];
 			x[i] += (dx*dx*xu2 + dx*dy*xuv + dy*dy*xv2);
 			y[i] += (dx*dx*yu2 + dx*dy*yuv + dy*dy*yv2);
+		}
+	} else if (test == 5) {
+		// Add some first-order distortion.
+		double xu, xv;
+		double yu, yv;
+		xu = 0;
+		xv = 1e-3;
+		yu = 0;
+		yv = -1e-3;
+		printf("Adding first-order distortion.\n");
+		for (i=0; i<Nstars; i++) {
+			double dx = x[i] - sip->wcstan.crpix[0];
+			double dy = y[i] - sip->wcstan.crpix[1];
+			x[i] += dx*xu + dy*xv;
+			y[i] += dx*yu + dy*yv;
 		}
 	}
 
