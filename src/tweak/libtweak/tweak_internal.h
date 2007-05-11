@@ -110,6 +110,10 @@ typedef struct tweak_s {
 	int Nside;
 	// star jitter, in arcseconds.
 	double jitter;
+
+	// Weighted or unweighted fit?
+	int weighted_fit;
+
 } tweak_t;
 
 tweak_t* tweak_new();
@@ -126,6 +130,7 @@ void tweak_push_ref_ad(tweak_t* t, double* a, double *d, int n);
 void tweak_print_state(tweak_t* t);
 void tweak_go_to(tweak_t* t, unsigned int flag);
 void tweak_clear_correspondences(tweak_t* t);
+void tweak_clear_on_sip_change(tweak_t* t);
 void tweak_clear_image_ad(tweak_t* t);
 void tweak_clear_ref_xy(tweak_t* t);
 void tweak_clear_image_xyz(tweak_t* t);

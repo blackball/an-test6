@@ -698,6 +698,7 @@ double dtrs_dist2_callback(void* p1, void* p2, int D)
 // The jitter is in radians
 void find_correspondences(tweak_t* t, double jitter)  // actually call the dualtree
 {
+	double dist;
 	double* data_image = malloc(sizeof(double) * t->n * 3);
 	double* data_ref = malloc(sizeof(double) * t->n_ref * 3);
 
@@ -723,9 +724,12 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 	printf("jitter=%g arcsec / %g arcmin / %g deg\n",
 	        rad2arcsec(jitter), rad2arcmin(jitter), rad2deg(jitter));
 
+	dist = sqrt(arc2distsq(jitter));
+	printf("jitter distance on the unit sphere: %g\n", dist);
+
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
-	                     RANGESEARCH_NO_LIMIT, jitter,  // This min/max dist is in radians
+	                     RANGESEARCH_NO_LIMIT, dist,
 	                     dtrs_dist2_callback,   // specify callback as the above func
 	                     dtrs_match_callback, t,
 	                     NULL, NULL);
@@ -737,7 +741,7 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 	free(data_image);
 	free(data_ref);
 
-	printf("correspondences=%d\n", il_size(t->dist2));
+	printf("correspondences=%d\n", dl_size(t->dist2));
 }
 
 
@@ -1077,6 +1081,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	sip_t* swcs;
 	int M, N, R;
 	int i, j, p, q, order;
+	double dist2sigma;
 
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
@@ -1239,25 +1244,44 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	*/
 
 
+	// HACK!!!
+	dist2sigma = (1.0/(6.0*6.0)) * arcsec2distsq(t->jitter);
+	if (t->weighted_fit) {
+		printf("Using sigma = %g (distance on unit sphere)\n", sqrt(dist2sigma));
+	}
+
 	// fill in the UVP matrix, stride in this case is the number of correspondences
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
 	int row;
+	double totalweight = 0.0;
 	i = -1;
 	for (row = 0; row < il_size(t->included); row++)
 	{
+		int refi;
+		double x, y;
+		double xyzpt[3];
+		double weight = 1.0;
+		double u;
+		double v;
+
 		if (!il_get(t->included, row)) {
 			continue;
 		}
 		i++;
 
-		int refi;
-		double x, y;
-		double xyzpt[3];
-		double u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
-		double v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
-
 		assert(i >= 0);
 		assert(i < M);
+
+		u = t->x[il_get(t->image, i)] - t->sip->wcstan.crpix[0];
+		v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
+
+		if (t->weighted_fit) {
+			double dist2 = dl_get(t->dist2, i);
+			weight = exp(-dist2 / (2.0 * dist2sigma));
+			assert(weight >= 0.0);
+			assert(weight <= 1.0);
+			totalweight += weight;
+		}
 
 		j = 0;
 		for (order=0; order<=sip_order; order++) {
@@ -1270,7 +1294,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 				assert(q >= 0);
 				assert(p + q <= sip_order);
 
-				set(UVP, i, j) = pow(u, (double)p) * pow(v, (double)q);
+				set(UVP, i, j) = weight * pow(u, (double)p) * pow(v, (double)q);
 				j++;
 			}
 		}
@@ -1286,19 +1310,24 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		// ...
 
 		// The shift - aka (0,0) - SIP coefficient must be 1.
-		assert(get(UVP, i, 0) == 1.0);
+		assert(get(UVP, i, 0) == 1.0 * weight);
 		// The linear terms.
-		assert(get(UVP, i, 1) == u);
-		assert(get(UVP, i, 2) == v);
+		//assert(get(UVP, i, 1) == u * weight);
+		//assert(get(UVP, i, 2) == v * weight);
+		assert(fabs(get(UVP, i, 1) - u * weight) < 1e-12);
+		assert(fabs(get(UVP, i, 2) - v * weight) < 1e-12);
 
 		// B contains Intermediate World Coordinates (in degrees)
 		refi = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
 		star_coords(xyzpt, xyzcrval, &y, &x); // tangent-plane projection
-		set(B, i, 0) = rad2deg(x);
-		set(B, i, 1) = rad2deg(y);
+		set(B, i, 0) = weight * rad2deg(x);
+		set(B, i, 1) = weight * rad2deg(y);
 	}
 	assert(i + 1 == M);
+
+	if (t->weighted_fit)
+		printf("Total weight: %g\n", totalweight);
 
 	// Save UVP and B for computing chisq
 	memcpy(UVP2, UVP, M * N * sizeof(double));
@@ -1449,11 +1478,12 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	printf("sU = %g, sV = %g\n", sU, sV);
 	printf("su = %g, sv = %g\n", su, sv);
 
-	printf("Before applying shift:\n");
-	sip_print_to(t->sip, stdout);
-
-	printf("RMS error of correspondences: %g arcsec\n",
-		   correspondences_rms_arcsec(t));
+	/*
+	  printf("Before applying shift:\n");
+	  sip_print_to(t->sip, stdout);
+	  printf("RMS error of correspondences: %g arcsec\n",
+	  correspondences_rms_arcsec(t));
+	*/
 
 	swcs = wcs_shift(t->sip, -su, -sv);
 	memcpy(t->sip, swcs, sizeof(sip_t));
