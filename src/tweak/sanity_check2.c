@@ -196,7 +196,8 @@ int main(int argc, char *argv[])
 	// Stuff the observed values into tweak.
 	tweak_init(&tweak);
 	tweak.Nside = 0;
-	tweak.jitter = 6.0 * pixscale * pixjitter;
+	//tweak.jitter = 6.0 * pixscale * pixjitter;
+	tweak.jitter = pixscale * pixjitter;
 
 	tweak_push_wcs_tan(&tweak, &(sip->wcstan));
 	tweak_push_ref_xyz(&tweak, xyz, Nstars);

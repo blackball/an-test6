@@ -901,7 +901,7 @@ int main(int argc, char *argv[])
 //		printf("------+\n");
 
 		tweak.jitter = sqrt(detcd * detcd + 1);
-		tweak.jitter *= 6;
+		//tweak.jitter *= 6;
 		printf("found pix scale: %g\n", detcd);
 		printf("set jitter: %g\n", tweak.jitter);
 

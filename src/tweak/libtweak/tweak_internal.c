@@ -453,18 +453,23 @@ void tweak_clear_correspondences(tweak_t* t)
 		il_free(t->image);
 		il_free(t->ref);
 		dl_free(t->dist2);
+		if (t->weight)
+			dl_free(t->weight);
 		t->image = NULL;
 		t->ref = NULL;
 		t->dist2 = NULL;
+		t->weight = NULL;
 		t->state &= ~TWEAK_HAS_CORRESPONDENCES;
 	} else {
 		assert(!t->image);
 		assert(!t->ref);
 		assert(!t->dist2);
+		assert(!t->weight);
 	}
 	assert(!t->image);
 	assert(!t->ref);
 	assert(!t->dist2);
+	assert(!t->weight);
 }
 
 void tweak_clear_on_sip_change(tweak_t* t)
@@ -685,6 +690,10 @@ void dtrs_match_callback(void* extra, int image_ind, int ref_ind, double dist2)
 	il_append(t->ref, ref_ind);
 	dl_append(t->dist2, dist2);
 	il_append(t->included, 1);
+
+	if (t->weight)
+		dl_append(t->weight, exp(-dist2 / (2.0 * t->jitterd2)));
+
 }
 
 // Dualtree rangesearch callback for distance calc. this should be integrated
@@ -719,13 +728,15 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 	t->image = il_new(600);
 	t->ref = il_new(600);
 	t->dist2 = dl_new(600);
+	if (t->weighted_fit)
+		t->weight = dl_new(600);
 	t->included = il_new(600);
 
-	printf("jitter=%g arcsec / %g arcmin / %g deg\n",
+	printf("search radius = %g arcsec / %g arcmin / %g deg\n",
 	        rad2arcsec(jitter), rad2arcmin(jitter), rad2deg(jitter));
 
-	dist = sqrt(arc2distsq(jitter));
-	printf("jitter distance on the unit sphere: %g\n", dist);
+	dist = rad2dist(jitter);
+	printf("distance on the unit sphere: %g\n", dist);
 
 	// Find closest neighbours
 	dualtree_rangesearch(t->kd_image, t->kd_ref,
@@ -742,6 +753,34 @@ void find_correspondences(tweak_t* t, double jitter)  // actually call the dualt
 	free(data_ref);
 
 	printf("correspondences=%d\n", dl_size(t->dist2));
+
+	// find objs with multiple correspondences.
+	/*{
+	  int* nci;
+	  int* ncr;
+	  int i;
+	  nci = calloc(t->n, sizeof(int));
+	  ncr = calloc(t->n_ref, sizeof(int));
+	  for (i=0; i<il_size(t->image); i++) {
+	  nci[il_get(t->image, i)]++;
+	  ncr[il_get(t->ref, i)]++;
+	  }
+	  for (i=0; i<t->n; i++) {
+	  if (nci[i] > 1) {
+	  printf("Image object %i matched %i reference objs.\n",
+	  i, nci[i]);
+	  }
+	  }
+	  for (i=0; i<t->n_ref; i++) {
+	  if (ncr[i] > 1) {
+	  printf("Reference object %i matched %i image objs.\n",
+	  i, ncr[i]);
+	  }
+	  }
+	  free(nci);
+	  free(ncr);
+	  }*/
+
 }
 
 
@@ -826,17 +865,25 @@ double figure_of_merit(tweak_t* t, double *rmsX, double *rmsY)
 	return rad2arcsec(1)*rad2arcsec(1)*sqerr;
 }
 
-double correspondences_rms_arcsec(tweak_t* t) {
+double correspondences_rms_arcsec(tweak_t* t, int weighted) {
 	double err2 = 0.0;
 	int i;
-	int N = 0;
+	double totalweight = 0.0;
 	for (i=0; i<il_size(t->image); i++) {
 		double xyzpt[3];
 		double xyzpt_ref[3];
+		double weight;
 
 		if (!il_get(t->included, i))
 			continue;
-		N++;
+
+		if (weighted && t->weight) {
+			weight = dl_get(t->weight, i);
+		} else {
+			weight = 1.0;
+		}
+		totalweight += weight;
+
 		sip_pixelxy2xyzarr(t->sip,
 						   t->x[il_get(t->image, i)],
 						   t->y[il_get(t->image, i)],
@@ -846,9 +893,9 @@ double correspondences_rms_arcsec(tweak_t* t) {
 		                t->d_ref[il_get(t->ref, i)],
 						xyzpt_ref);
 
-		err2 += distsq(xyzpt, xyzpt_ref, 3);
+		err2 += weight * distsq(xyzpt, xyzpt_ref, 3);
 	}
-	return distsq2arcsec( err2 / (double)N );
+	return distsq2arcsec( err2 / totalweight );
 }
 
 // in pixels^2 in the image
@@ -1081,7 +1128,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	sip_t* swcs;
 	int M, N, R;
 	int i, j, p, q, order;
-	double dist2sigma;
 
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
@@ -1129,7 +1175,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	//	fprintf(stderr,"sqerrxy=%le\n", figure_of_merit2(t));
 
 	printf("RMS error of correspondences: %g arcsec\n",
-		   correspondences_rms_arcsec(t));
+		   correspondences_rms_arcsec(t, 0));
+	printf("Weighted RMS error of correspondences: %g arcsec\n",
+		   correspondences_rms_arcsec(t, 1));
 
 	/*
 	*  We use a clever trick to estimate CD, A, and B terms in two
@@ -1244,12 +1292,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	*/
 
 
-	// HACK!!!
-	dist2sigma = (1.0/(6.0*6.0)) * arcsec2distsq(t->jitter);
-	if (t->weighted_fit) {
-		printf("Using sigma = %g (distance on unit sphere)\n", sqrt(dist2sigma));
-	}
-
 	// fill in the UVP matrix, stride in this case is the number of correspondences
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
 	int row;
@@ -1276,8 +1318,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		v = t->y[il_get(t->image, i)] - t->sip->wcstan.crpix[1];
 
 		if (t->weighted_fit) {
-			double dist2 = dl_get(t->dist2, i);
-			weight = exp(-dist2 / (2.0 * dist2sigma));
+			//double dist2 = dl_get(t->dist2, i);
+			//exp(-dist2 / (2.0 * dist2sigma));
+			weight = dl_get(t->weight, i);
 			assert(weight >= 0.0);
 			assert(weight <= 1.0);
 			totalweight += weight;
@@ -1523,7 +1566,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	  */
 
 	printf("RMS error of correspondences: %g arcsec\n",
-		   correspondences_rms_arcsec(t));
+		   correspondences_rms_arcsec(t, 0));
+	printf("Weighted RMS error of correspondences: %g arcsec\n",
+		   correspondences_rms_arcsec(t, 1));
 
 	if (0) {
 		// Calculate chi2 for sanity
@@ -1928,7 +1973,8 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 
 		printf("Satisfying TWEAK_HAS_CORRESPONDENCES\n");
 
-		find_correspondences(t, arcsec2rad(t->jitter));
+		t->jitterd2 = arcsec2distsq(t->jitter);
+		find_correspondences(t, 6.0 * arcsec2rad(t->jitter));
 
 		done(TWEAK_HAS_CORRESPONDENCES);
 	}
@@ -2005,9 +2051,18 @@ void tweak_clear(tweak_t* t)
 	il_free(t->image);
 	il_free(t->ref);
 	dl_free(t->dist2);
+	if (t->weight)
+		dl_free(t->weight);
 	il_free(t->maybeinliers);
 	il_free(t->bestinliers);
 	il_free(t->included);
+	t->image = NULL;
+	t->ref = NULL;
+	t->dist2 = NULL;
+	t->weight = NULL;
+	t->maybeinliers = NULL;
+	t->bestinliers = NULL;
+	t->included = NULL;
 	kdtree_free(t->kd_image);
 	kdtree_free(t->kd_ref);
 	SAFE_FREE(t->hppath);

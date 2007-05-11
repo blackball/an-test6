@@ -82,6 +82,7 @@ typedef struct tweak_s {
 	il* image;
 	il* ref;
 	dl* dist2;
+	dl* weight;
 
 	// Correspondence subsets for RANSAC
 	il* maybeinliers;
@@ -110,6 +111,9 @@ typedef struct tweak_s {
 	int Nside;
 	// star jitter, in arcseconds.
 	double jitter;
+
+	// (computed from jitter); star jitter in distance-squared on the unit sphere.
+	double jitterd2;
 
 	// Weighted or unweighted fit?
 	int weighted_fit;
