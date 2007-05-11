@@ -1031,7 +1031,7 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 		logmsg(bp, "Star jitter: %g arcsec.\n", twee->jitter);
 	}
 	// Set tweak's jitter to 6 sigmas.
-	twee->jitter *= 6.0;
+	//twee->jitter *= 6.0;
 	logmsg(bp, "Setting tweak jitter: %g arcsec.\n", twee->jitter);
 
 	// pull out the field coordinates into separate X and Y arrays.
@@ -1070,13 +1070,44 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 	}
 
 	logmsg(bp, "Begin tweaking...\n");
-	while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
-		unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
-		if (r == -1) {
-			logerr(bp, "Tweak error!\n");
-			goto bailout;
+	/*
+	  while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
+	  unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
+	  if (r == -1) {
+	  logerr(bp, "Tweak error!\n");
+	  goto bailout;
+	  }
+	  }
+	*/
+
+	twee->weighted_fit = 1;
+
+	{
+		int order;
+		int k;
+		for (order=1; order<=imax(1, bp->tweak_aborder); order++) {
+			printf("\n");
+			printf("--------------------------------\n");
+			printf("Order %i\n", order);
+			printf("--------------------------------\n");
+
+			twee->sip->a_order  = twee->sip->b_order  = order;
+			twee->sip->ap_order = twee->sip->bp_order = order;
+			tweak_go_to(twee, TWEAK_HAS_CORRESPONDENCES);
+
+			for (k=0; k<5; k++) {
+				printf("\n");
+				printf("--------------------------------\n");
+				printf("Iterating tweak: order %i, step %i\n", order, k);
+				twee->state &= ~TWEAK_HAS_LINEAR_CD;
+				tweak_go_to(twee, TWEAK_HAS_LINEAR_CD);
+				tweak_clear_correspondences(twee);
+			}
 		}
 	}
+	fflush(stdout);
+	fflush(stderr);
+
 
 	logmsg(bp, "Done tweaking!\n");
 
