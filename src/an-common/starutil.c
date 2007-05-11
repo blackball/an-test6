@@ -145,12 +145,28 @@ Const inline double arc2distsq(double arcInRadians) {
 	return 2.0 * (1.0 - cos(arcInRadians));
 }
 
+Const inline double rad2distsq(double arcInRadians) {
+	return arc2distsq(arcInRadians);
+}
+
+Const inline double rad2dist(double arcInRadians) {
+	return sqrt(rad2distsq(arcInRadians));
+}
+
 Const inline double arcsec2distsq(double arcInArcSec) {
    return arc2distsq(arcsec2rad(arcInArcSec));
 }
 
+Const inline double arcsec2dist(double arcInArcSec) {
+   return sqrt(arcsec2distsq(arcInArcSec));
+}
+
 Const inline double distsq2arcsec(double dist2) {
 	return rad2arcsec(distsq2arc(dist2));
+}
+
+Const inline double dist2arcsec(double dist) {
+	return distsq2arcsec(dist*dist);
 }
 
 Const inline double distsq2arc(double dist2) {
@@ -162,6 +178,14 @@ Const inline double distsq2arc(double dist2) {
 	// 1 - (dist2 / 2) = cos C
 	// C = acos(1 - dist2 / 2)
 	return acos(1.0 - dist2 / 2.0);
+}
+
+Const inline double distsq2rad(double dist2) {
+	return distsq2arc(dist2);
+}
+
+Const inline double dist2rad(double dist) {
+	return distsq2arc(dist*dist);
 }
 
 

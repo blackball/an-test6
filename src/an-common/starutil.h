@@ -82,15 +82,36 @@ inline void project_equal_area(double x, double y, double z, double* projx, doub
 // radians.
 Const inline double distsq2arc(double dist2);
 
+// Distance^2 on the unit sphere to radians.
+// (alias of distsq2arc)
+Const inline double distsq2rad(double dist2);
+
+// Distance on the unit sphere to radians.
+Const inline double dist2rad(double dist);
+
+// Distance^2 on the unit sphere to arcseconds.
 Const inline double distsq2arcsec(double dist2);
+
+// Distance on the unit sphere to arcseconds
+Const inline double dist2arcsec(double dist);
 
 // Converts an angle (in radians) into the distance-squared
 // between two points on the unit sphere separated by that angle.
 Const inline double arc2distsq(double arcInRadians);
 
+// Radians to distance^2 on the unit sphere.
+// (alias of arc2distsq)
+Const inline double rad2distsq(double arcInRadians);
+
+// Radians to distance on the unit sphere.
+Const inline double rad2dist(double arcInRadians);
+
 // Converts an angle (in arcseconds) into the distance-squared
 // between two points on the unit sphere separated by that angle.
 Const inline double arcsec2distsq(double arcInArcSec);
+
+// Arcseconds to distance on the unit sphere.
+Const inline double arcsec2dist(double arcInArcSec);
 
 #define HELP_ERR -101
 #define OPT_ERR -201
