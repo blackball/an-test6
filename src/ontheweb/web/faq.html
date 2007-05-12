@@ -5,14 +5,30 @@
 <title>
 Astrometry.net / Alpha FAQ
 </title>
-<link rel="stylesheet" type="text/css" href="faq.css" />
+<link rel="stylesheet" type="text/css" href="http://astrometry.net/astrometry.css" />
 <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
 <link rel="icon" type="image/png" href="favicon.png" />
 </head>
 <body>
+<div id="container">
+<div id="header">
+<h1 id="title">astrometry.net</h1>&nbsp;
+</div>
 
+<div class="menu">
 <hr />
-<img src="trac_banner.png" align="right" alt="astrometry.net logo" />
+<a href="index.html">home</a> |
+<a href="news.html">news</a> | 
+<a href="summary.html">project summary </a> | 
+<a href="people.html">people</a> | 
+<a href="biblio.html">bibliography</a> | 
+<a href="related.html">related links</a> | 
+<a href="http://trac.astrometry.net">internal pages</a> | 
+<a href="code.html">download</a> | 
+<a href="use.html">use</a>
+<hr />
+</div>
+
 <h2>
 Welcome Alpha Users
 </h2>
@@ -24,17 +40,17 @@ alpha testing period.</p>
 <hr />
 
 <dl>
-<dt>Q: <b>What kinds of images will solve?</b></dt>
+<dt class="qanda">Q: <b>What kinds of images will solve?</b></dt>
 
-<dd>A: We don't know!  That's why you are testing the service.  What
+<dd class="qanda">A: We don't know!  That's why you are testing the service.  What
 we <i>do</i> know is that we have solved images that range in size
 from under 10&nbsp;arcmin to over 80&nbsp;deg.  We also know that we
 have solved images taken in bandpasses ranging from the near
 ultraviolet to the near infrared.</dd>
 
-<dt>Q: <b>Why didn't my image solve?</b></dt>
+<dt class="qanda">Q: <b>Why didn't my image solve?</b></dt>
 
-<dd>A: There are lots of reasons we can fail.  Here are some debugging
+<dd class="qanda">A: There are lots of reasons we can fail.  Here are some debugging
 suggestions: Try looking at the links to the "png" files that show how
 our system automatically detected sources in your image.  Our
 algorithm is stupid (more on this below) and it fails, for example, on
@@ -49,12 +65,12 @@ detectable stars?  That would also be a problem.  However, maybe you
 have detectable stars in differenced or flattened or sky-subtracted
 images?  If so, send <i>those</i> in.</dd>
 
-<dt>Q: <b>I submitted an image and it didn't solve even though it had
+<dt class="qanda">Q: <b>I submitted an image and it didn't solve even though it had
 an almost exactly correct WCS header to begin.</b> How can you guys
 suck so badly that you can't even solve an image when I give you the
 right answer?</dt>
 
-<dd>A: Currently, astrometry.net <i>ignores</i> any existing image
+<dd class="qanda">A: Currently, astrometry.net <i>ignores</i> any existing image
 meta-data about pointing or rotation.  It only does purely
 <i>blind</i> astrometry.  Eventually we plan to perform <q>refinement
 only</q> WCS services in addition to the blind service. The current
@@ -63,10 +79,10 @@ it exists, to guess the image scale, but beyond that all meta-data in
 the image are ignored.  That is the magic, and principal limitation,
 of the service.</dd>
 
-<dt>Q: <b>Can I do precision proper-motion analyses with your
+<dt class="qanda">Q: <b>Can I do precision proper-motion analyses with your
 output?</b></dt>
 
-<dd>A: Right now we don't do extremely precise, proper-motion-grade
+<dd class="qanda">A: Right now we don't do extremely precise, proper-motion-grade
 astrometric solutions; these require performing simultaneous analyses
 of multiple images from the same instrument and simultaneous analyses
 of multiple images of the same part of the sky.  This is on the
@@ -75,19 +91,19 @@ If you want precision, multi-image astrometry, we currently recommend
 taking the output of astrometry.net and using it as the input for <a
 href="http://terapix.iap.fr/rubrique.php?id_rubrique=105">SCAMP</a>.</dd>
 
-<dt>Q: <b>Can I use your output to build panoramic or mosaic images
+<dt class="qanda">Q: <b>Can I use your output to build panoramic or mosaic images
 from many individual images?</b></dt>
 
-<dd>A: Yes!  However, see our answer to the previous question: We are
+<dd class="qanda">A: Yes!  However, see our answer to the previous question: We are
 not performing the most precise possible measurements of camera
 distortions; if you want awesome mosaics, use Bertin's SCAMP and then
 its sister software, SWarp.  Mosaic-quality WCS and automatic
 mosaicing of input data are both on our medium-term to-do lists.</dd>
 
-<dt>Q: <b>I have no idea about the scale of my image.</b> What do I
+<dt class="qanda">Q: <b>I have no idea about the scale of my image.</b> What do I
 do?</dt>
 
-<dd>A: Your estimate of the plate scale is not really necessary, it only
+<dd class="qanda">A: Your estimate of the plate scale is not really necessary, it only
 <i>speeds</i> the process, so just put in a huge range, for example
 0.1 deg to 120 deg, for the width of the image, and be prepared to
 wait for your answer.  Of course, you probably know the scale better
@@ -97,11 +113,11 @@ about 2&nbsp;deg.  Eventually we plan to fully parallelize the
 service; when this happens no estimate of scale will be necessary for
 a fast result.</dd>
 
-<dt>Q: <b>My image didn't solve even though I put in a correct
+<dt class="qanda">Q: <b>My image didn't solve even though I put in a correct
 estimate of the scale and I can see that your source extraction
 correctly extracted many USNO-B stars.</b></dt>
 
-<dd>A: Can you phrase that as a question?  We find that the most
+<dd class="qanda">A: Can you phrase that as a question?  We find that the most
 common error is to put in the scale as 25 but then accidentally pull
 down the tab <q>size of the image in degrees</q> when you meant
 <q>size of the image in arcmin</q>.  If you are sure that you have
@@ -110,33 +126,33 @@ it still isn't solving, send email to <q>alpha@astrometry.net</q> with
 your jobid, because you clearly have a useful image for
 debugging.</dd>
 
-<dt>Q: <b>My HST ACS images won't solve!</b> Can't you even solve a
+<dt class="qanda">Q: <b>My HST ACS images won't solve!</b> Can't you even solve a
 perfectly calibrated and highly recognizable piece of astronomical
 data?</dt>
 
-<dd>A: Right now there is a strict limitation that we cannot possibly
+<dd class="qanda">A: Right now there is a strict limitation that we cannot possibly
 solve any image below about 5&nbsp;arcmin on a side.  Don't even
 bother trying.  We hope to overcome this eventually, but don't hold
 your breath!</dd>
 
-<dt>Q: <b>Why does my submission die silently without returning a
+<dt class="qanda">Q: <b>Why does my submission die silently without returning a
 jobid?</b></dt>
 
-<dd>A: Did your job exceed the 250M size limit?  If so, try gzip (yes,
+<dd class="qanda">A: Did your job exceed the 250M size limit?  If so, try gzip (yes,
 we take gz files).  If not, there is a bug; send email to
 <q>alpha@astrometry.net</q>.</dd>
 
-<dt>Q: <b>What does the system do with multi-extension FITS
+<dt class="qanda">Q: <b>What does the system do with multi-extension FITS
 files?</b></dt>
 
-<dd>A: It just looks at the first image-like FITS extension.</dd>
+<dd class="qanda">A: It just looks at the first image-like FITS extension.</dd>
 
-<dt>Q: <b>I have tons of images I want to solve.</b> Typing my email
+<dt class="qanda">Q: <b>I have tons of images I want to solve.</b> Typing my email
 and the size parameters and the image urls into your lame web form
 over and over again is driving me crazy. Aren't you guys real
 scientists? Can't you give me a high-throughput option?</dt>
 
-<dd>A: In the future there will be a command line client as well as
+<dd class="qanda">A: In the future there will be a command line client as well as
 the option for you to install the entire system locally at your site.
 For now, you can speed things up by submitting your first image
 manually using the web form and then hitting the LinkToTheseParameters
@@ -154,11 +170,11 @@ uploading multiple files you can <a
 href="http://www.slac.stanford.edu/~pjm/astrometry/hansel.csh">grab
 here</a>.</dd>
 
-<dt>Q: I looked at the source extraction preview image on the status
+<dt class="qanda">Q: I looked at the source extraction preview image on the status
 page for one of my jobs, and <b>your system totally failed to find
 tons of perfectly obvious sources in my image</b>.  What's up?</dt>
 
-<dd>A: We're using a really *dumbass* source extraction algorithm for
+<dd class="qanda">A: We're using a really *dumbass* source extraction algorithm for
 now, since it basically has to Just&nbsp;Work&nbsp;(tm) most of the
 time.  We'd like to make it more sophisticated, so please send to
 <q>alpha@astrometry.net</q> the jobid on which source extraction did
@@ -169,10 +185,10 @@ simple FITS file which you upload to the web form. If you want an
 example of the format, you can download the FITS file of the sources
 as we extracted them.</dd>
 
-<dt>Q: <b>Is there a way for me to install the system locally on my
+<dt class="qanda">Q: <b>Is there a way for me to install the system locally on my
 own machine?</b></dt>
 
-<dd>A: Not yet. But after we incorporate the feedback, improvements,
+<dd class="qanda">A: Not yet. But after we incorporate the feedback, improvements,
 and bug-fixes we get during the alpha testing phase (that's you!) we
 will release a complete source package and the data files necessary to
 reproduce a complete local installation. We use such local
@@ -180,15 +196,36 @@ installations for our own science so we totally understand how useful
 they can be. Please email us and let us know you are interested and
 we'll notify you when the code comes out.</dd>
 
-<dt>Q: Speaking of releasing code, <b>when will you release the
+<dt class="qanda">Q: Speaking of releasing code, <b>when will you release the
 code?</b> I want to look at the source!</dt>
 
-<dd>A: Yeah, right. Sure you do. But seriously, we will be releasing
+<dd class="qanda">A: Yeah, right. Sure you do. But seriously, we will be releasing
 code, right after the alpha test. Email code@astrometry.net and we'll
 put you on the list. If you are super-keen you can browse the source
 off of our trac pages: trac.astrometry.net</dd>
-
 </dl>
 
+<div class="menu">
+<hr />
+<a href="index.html">home</a> |
+<a href="news.html">news</a> | 
+<a href="summary.html">project summary </a> | 
+<a href="people.html">people</a> | 
+<a href="biblio.html">bibliography</a> | 
+<a href="related.html">related links</a> | 
+<a href="http://trac.astrometry.net">internal pages</a> | 
+<a href="code.html">download</a> | 
+<a href="use.html">use</a>
+<hr />
+</div>
+
+<div id="footer">    
+<p class="disclaimer">This project is partially supported by the
+      US National Science Foundation under NSF ITR Grant AST-0428465
+      <i>Automated Astrometry for Time-Domain and Distributed
+      Astrophysics.</i> None of the views expressed on this site
+      represent those of the NSF.</p>
+</div>
+</div>
 </body>
 </html>
