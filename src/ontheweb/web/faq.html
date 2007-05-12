@@ -162,7 +162,7 @@ image. If that's not good enough, the best we can offer you for now is
 the following hack, which uses <code>wget</code> (which you could have
 just copied from the <q>LinkToTheseParameters</q> link): <br />
 <code>wget&nbsp;&quot;http://live.astrometry.net/index.php?justjobid&amp;email=user@domain.edu&amp;uname=YourName&amp;xysrc=url&amp;imgurl=http%3A%2F%2Fwww.astro.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg&amp;fstype=ev&amp;fse=1&amp;fsv=50&amp;fsunit=degreewidth&amp;fsu=&amp;fsl=&amp;x_col=X&amp;y_col=Y&amp;parity=2&amp;poserr=1&amp;tweak=1&amp;tweak_order=2&amp;index=auto&amp;submit=Submit&quot;&nbsp;-Ojobid_out</code>
-or this hack, which uses <code>curl<code>:<br />
+or this hack, which uses <code>curl</code>:<br />
 <code>curl&nbsp;-F&nbsp;justjobid=1&nbsp;-F&nbsp;uname="Your&nbsp;Name"&nbsp;-F&nbsp;email=user@domain.edu&nbsp;-F&nbsp;imgurl="http%3A%2F%2Fwww.astr\o.domain.edu%2Fuser%2Foutbox%2Fmyfield.jpg"&nbsp;-F&nbsp;xysrc=url&nbsp;-F&nbsp;fstype=ul&nbsp;-F&nbsp;fsl=1.0&nbsp;-F&nbsp;fsu=1.1&nbsp;-F&nbsp;submit=Submit&nbsp;http://live.astrometry.net/</code>
 If neither of <i>those</i> are good
 enough, alpha tester Phil Marshall (UCSB) has written a csh script for
