@@ -40,13 +40,18 @@
 int fdatasync(int fd) { return 0; }
 #endif
 
-#define OPTIONS "ho:N:"
+#define OPTIONS "ho:N:H:"
 
 static void print_help(char* progname) {
 	boilerplate_help_header(stdout);
     printf("\nUsage: %s\n"
 		   "   -o <output-filename-template>     (eg, an_hp%%03i.fits)\n"
 		   "  [-N <healpix-nside>]  (default = 9)\n"
+		   "  [-H <allowed-healpix>] [[-H <allowed-healpix] ...]\n"
+		   "      only create Astrometry.net catalogs for the given list\n"
+		   "      of healpix numbers: range [0, 12*Nside*Nside-1].\n"
+		   "      Default is to create catalogs for any healpix that contains\n"
+		   "      stars in the input files.\n"
 		   "  <input-file> [<input-file> ...]\n"
 		   "\n"
 		   "\nThe input files should be USNO-B1.0 and Tycho-2 files in FITS format.\n"
@@ -103,13 +108,14 @@ int main(int argc, char** args) {
 	int c;
 	int startoptind;
 	int Nside = 9;
-	int i, HP;
+	int i, hp, HP;
 	an_catalog** cats;
 	int64_t starid;
 	int version = 0;
 	int nusnob = 0, ntycho = 0;
 	int n2mass = 0;
 	int BLOCK = 100000;
+	il* allowed_hps = NULL;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -117,6 +123,11 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'H':
+			if (!allowed_hps)
+				allowed_hps = il_new(16);
+			il_append(allowed_hps, atoi(optarg));
+			break;
 		case 'N':
 			Nside = atoi(optarg);
 			break;
@@ -138,6 +149,17 @@ int main(int argc, char** args) {
 	}
 
 	HP = 12 * Nside * Nside;
+
+	// check that "allowed" healpixes (-H) are within range.
+	if (allowed_hps) {
+		for (i=0; i<il_size(allowed_hps); i++) {
+			hp = il_get(allowed_hps, i);
+			if (hp >= HP) {
+				fprintf(stderr, "Healpix %i is larger than 12*Nside*Nside-1 (%i).\n", hp, HP);
+				exit(-1);
+			}
+		}
+	}
 
 	cats = calloc(HP, sizeof(an_catalog*));
 
@@ -241,6 +263,10 @@ int main(int argc, char** args) {
 					continue;
 				}
 
+				hp = radecdegtohealpix(entry->ra, entry->dec, Nside);
+				if (allowed_hps && !il_contains(allowed_hps, hp))
+					continue;
+
 				memset(&an, 0, sizeof(an));
 
 				an.ra = entry->ra;
@@ -257,7 +283,6 @@ int main(int argc, char** args) {
 
 				ob = 0;
 				for (j=0; j<5; j++) {
-					//if (entry.obs[j].mag == 0.0)
 					if (entry->obs[j].field == 0)
 						continue;
 					an.obs[ob].mag = entry->obs[j].mag;
@@ -270,10 +295,10 @@ int main(int argc, char** args) {
 				}
 				an.nobs = ob;
 
-				hp = radectohealpix(deg2rad(an.ra), deg2rad(an.dec), Nside);
-				if (!cats[hp]) {
+				if (!cats[hp])
+					// write the header for this healpix's catalog...
 					init_catalog(cats, outfn, hp, Nside, argc, args);
-				}
+
 				an_catalog_write_entry(cats[hp], &an);
 				nusnob++;
 			}
@@ -297,6 +322,10 @@ int main(int argc, char** args) {
 					fprintf(stderr, "Failed to read Tycho-2 entry.\n");
 					exit(-1);
 				}
+
+				hp = radecdegtohealpix(entry->RA, entry->DEC, Nside);
+				if (allowed_hps && !il_contains(allowed_hps, hp))
+					continue;
 
 				memset(&an, 0, sizeof(an));
 
@@ -343,10 +372,9 @@ int main(int argc, char** args) {
 					continue;
 				}
 
-				hp = radectohealpix(deg2rad(an.ra), deg2rad(an.dec), Nside);
-				if (!cats[hp]) {
+				if (!cats[hp])
 					init_catalog(cats, outfn, hp, Nside, argc, args);
-				}
+
 				an_catalog_write_entry(cats[hp], &an);
 				ntycho++;
 			}
@@ -373,6 +401,9 @@ int main(int argc, char** args) {
 				if (entry->minor_planet)
 					continue;
 				
+				hp = radecdegtohealpix(entry->ra, entry->dec, Nside);
+				if (allowed_hps && !il_contains(allowed_hps, hp))
+					continue;
 
 				memset(&an, 0, sizeof(an));
 
@@ -422,10 +453,9 @@ int main(int argc, char** args) {
 					continue;
 				}
 
-				hp = radectohealpix(deg2rad(an.ra), deg2rad(an.dec), Nside);
-				if (!cats[hp]) {
+				if (!cats[hp])
 					init_catalog(cats, outfn, hp, Nside, argc, args);
-				}
+
 				an_catalog_write_entry(cats[hp], &an);
 				n2mass++;
 			}
@@ -463,6 +493,9 @@ int main(int argc, char** args) {
 		}
 	}
 	free(cats);
+
+	if (allowed_hps)
+		il_free(allowed_hps);
 
 	return 0;
 }
