@@ -28,6 +28,9 @@ GSL_LIB := $(GSL_DIR)/libgsl-an.a
 #$(GSL_LIB): $(GSL_DIR)/Makefile
 #	cd $(GSL_DIR) && make
 
+$(GSL_LIB):
+	cd $(GSL_DIR) && make
+
 REMAKE_GSL := remake-gsl
 .PHONY: $(REMAKE_GSL)
 $(REMAKE_GSL):
