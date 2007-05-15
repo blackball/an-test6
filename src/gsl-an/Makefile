@@ -1,5 +1,33 @@
+# This file is part of the Astrometry.net suite.
+# Copyright 2006-2007 Dustin Lang, Keir Mierle and Sam Roweis.
+#
+# The Astrometry.net suite is free software; you can redistribute
+# it and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, version 2.
+#
+# The Astrometry.net suite is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with the Astrometry.net suite ; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-all: qr-demo chol-demo
+BASEDIR := ..
+COMMON := $(BASEDIR)/an-common
+
+all:
+
+include $(COMMON)/makefile.common
+
+GSL_LIB := libgsl-an.a
+
+all: $(GSL_LIB) qr-demo chol-demo
+
+CFLAGS := $(CFLAGS_DEF)
+CFLAGS += -I.
+CFLAGS += -DHAVE_INLINE
 
 BLAS := \
 dtrmm.o \
@@ -112,26 +140,38 @@ dsdot.o
 
 CBLAS := $(addprefix cblas/,$(BLAS))
 
-QR := qr-demo.o linalg/qr.o linalg/householder.o \
+QR_DEPS := linalg/qr.o linalg/householder.o \
 		matrix/matrix.o matrix/rowcol.o matrix/init.o matrix/submatrix.o \
 		vector/vector.o vector/subvector.o vector/copy.o vector/init.o \
 		block/block.o block/init.o \
 		err/error.o err/stream.o sys/infnan.o sys/fdiv.o \
 		blas/blas.o $(CBLAS)
 
-qr-demo: $(QR)
+qr-demo: qr-demo.o $(GSL_LIB) #$(QR_DEPS)
 	gcc -o $@ $^ -lm
 
-CHOL := chol-demo.o linalg/cholesky.o matrix/matrix.o matrix/rowcol.o \
+CHOL_DEPS := linalg/cholesky.o matrix/matrix.o matrix/rowcol.o \
 		vector/vector.o vector/subvector.o vector/copy.o \
 		err/error.o err/stream.o sys/infnan.o sys/fdiv.o \
 		blas/blas.o $(CBLAS)
 
-chol-demo: $(CHOL)
+chol-demo: chol-demo.o $(GSL_LIB) #$(CHOL_DEPS)
 	gcc -o $@ $^ -lm
 
-%.o: %.c
-	gcc -Wall -o $@ -c $< -I. -DHAVE_INLINE
+#%.o: %.c
+#	gcc -Wall -o $@ -c $< -I. -DHAVE_INLINE
+
+# "sort" removes duplicates.
+GSL_DEPS := $(sort $(QR_DEPS) $(CHOL_DEPS))
+
+$(GSL_LIB): $(GSL_DEPS)
+	$(AR) rc $@ $^
+	$(RANLIB) $@
+
+DEP_OBJ := $(GSL_DEPS)
+include $(COMMON)/makefile.deps
 
 clean:
-	-rm -f qr-demo chol-demo $(QR) $(CHOL)
+	-rm -f qr-demo chol-demo $(QR_DEPS) $(CHOL_DEPS) \
+		$(DEPS) deps $(GSL_LIB)
+
