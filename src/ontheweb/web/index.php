@@ -28,6 +28,7 @@ function allow_email($email) {
 		       'dfinkbeiner@cfa.harvard.edu',
 		       'dmink@cfa.harvard.edu',
 		       'dovip@wise.tau.ac.il',
+			   'dsand@as.arizona.edu',
 			   'dstn@cs.toronto.edu',
 		       'eran@astro.caltech.edu',
 			   'fitz@tucana.tuc.noao.edu',
