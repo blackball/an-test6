@@ -164,9 +164,15 @@ chol-demo: chol-demo.o $(GSL_LIB) #$(CHOL_DEPS)
 # "sort" removes duplicates.
 GSL_DEPS := $(sort $(QR_DEPS) $(CHOL_DEPS))
 
-$(GSL_LIB): $(GSL_DEPS)
+$(GSL_LIB): config.h $(GSL_DEPS)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
+
+config.h: configure
+	./configure --enable-shared=no --prefix=`pwd`/stage
+
+#        CFLAGS="$(CFLAGS)" \
+#        LDFLAGS="$(GSL_LDFLAGS)"
 
 DEP_OBJ := $(GSL_DEPS)
 include $(COMMON)/makefile.deps
