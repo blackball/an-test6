@@ -1,0 +1,39 @@
+Index: index.php
+===================================================================
+--- index.php	(revision 4006)
++++ index.php	(working copy)
+@@ -2,8 +2,8 @@
+ require_once 'common.php';
+ require_once 'presets.php';
+ 
+-$emailver = 0;
+-$webver = 1;
++$emailver = 1;
++$webver = 0;
+ 
+ if ($emailver) {
+ 	require_once 'rfc822.php';
+Index: common.php
+===================================================================
+--- common.php	(revision 4006)
++++ common.php	(working copy)
+@@ -2,7 +2,7 @@
+ require_once 'MDB2.php';
+ require_once 'PEAR.php';
+ 
+-$siteid = "tor";
++$siteid = "alpha";
+ 
+ // Are we using a remote compute server?
+ $remote = 1;
+@@ -143,8 +143,8 @@
+ 
+ $headers = $_REQUEST;
+ 
+-$ontheweblogfile = $resultdir . "ontheweb.log";
+-//$ontheweblogfile = $resultdir . "alpha.log";
++//$ontheweblogfile = $resultdir . "ontheweb.log";
++$ontheweblogfile = $resultdir . "alpha.log";
+ function loggit($mesg) {
+ 	global $ontheweblogfile;
+ 	error_log($mesg, 3, $ontheweblogfile);
