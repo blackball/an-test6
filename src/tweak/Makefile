@@ -24,6 +24,7 @@ include $(COMMON)/makefile.common
 include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
+include $(COMMON)/makefile.gsl
 include $(COMMON)/makefile.levmar
 include $(COMMON)/makefile.libwcs
 include $(COMMON)/makefile.libkd
@@ -36,6 +37,7 @@ CFLAGS := $(CFLAGS_DEF)
 
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(QFITS_INC)
+CFLAGS += $(GSL_INC)
 CFLAGS += $(LEVMAR_INC)
 CFLAGS += $(LIBWCS_INC)
 CFLAGS += $(LIBKD_INC)
@@ -56,7 +58,7 @@ tweak.c: $(QFITS_LIB)
 
 tweak: $(TWEAK_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) \
-	$(LEVMAR_LIB) $(LIBWCS_LIB) $(LIBFORTRAN)
+	$(GSL_LIB) $(LEVMAR_LIB) $(LIBWCS_LIB) $(LIBFORTRAN)
 
 sanity_check: $(SANITY_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) \
