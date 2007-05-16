@@ -27,6 +27,7 @@ include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.libtweak
+include $(COMMON)/makefile.gsl
 
 ifeq ($(MAKECMDGOALS),cairo)
 	include $(COMMON)/makefile.cairo
@@ -49,6 +50,7 @@ CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 CFLAGS += $(LIBTWEAK_INC)
+CFLAGS += $(GSL_INC)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
@@ -212,7 +214,7 @@ blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
 		intmap.o blind_wcs.o \
 		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
-		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB) $(GSL_LIB)
 
 whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o \
