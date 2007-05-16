@@ -746,7 +746,7 @@ function process_data ($vals) {
 		"  rm " . $match_fn . ".tmp\n" .
 		"  " . $wcs_rd2xy . " -w " . $wcs_fn . " -i " . $indexrdls_fn . " -o " . $indexxyls_fn . "\n" .
 		"  echo Adding jobid to FITS headers...\n" .
-		"  for x in " . implode(" ", array($match_fn, $indexxyls_fn, $indexrdls_fn, $wcs_fn, $xyls_fn, $rdls_fn)) . " ; do\n"
+		"  for x in " . implode(" ", array($match_fn, $indexxyls_fn, $indexrdls_fn, $wcs_fn, $xyls_fn, $rdls_fn)) . " ; do\n" .
 		"    " . $modhead . " \$x AN_JOBID " . $myname . " \"Astrometry.net job ID\"" . "\n" .
 		"  done\n" .
 		"else\n" .
