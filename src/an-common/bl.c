@@ -1260,6 +1260,10 @@ void pl_set(pl* list, int index, void* data) {
 	bl_set(list, index, &data);
 }
 
+void  pl_insert(pl* list, int indx, void* data) {
+	bl_insert(list, indx, &data);
+}
+
 void pl_append(pl* list, void* data) {
     bl_append(list, &data);
 }

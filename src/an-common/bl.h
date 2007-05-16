@@ -171,6 +171,7 @@ void  pl_free(pl* list);
 int   pl_size(pl* list);
 void* pl_get(pl* list, int n);
 void  pl_set(pl* list, int ind, void* data);
+void  pl_insert(pl* list, int indx, void* data);
 void  pl_append(pl* list, void* data);
 void  pl_copy(pl* list, int start, int length, void** dest);
 pl*   pl_dup(pl* list);
