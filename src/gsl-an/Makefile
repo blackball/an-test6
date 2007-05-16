@@ -142,6 +142,7 @@ CBLAS := $(addprefix cblas/,$(BLAS))
 
 QR_DEPS := linalg/qr.o linalg/householder.o \
 		matrix/matrix.o matrix/rowcol.o matrix/init.o matrix/submatrix.o \
+		matrix/copy.o \
 		vector/vector.o vector/subvector.o vector/copy.o vector/init.o \
 		block/block.o block/init.o \
 		err/error.o err/stream.o sys/infnan.o sys/fdiv.o \
