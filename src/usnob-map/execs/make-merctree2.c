@@ -31,7 +31,7 @@
 #include "mathutil.h"
 #include "healpix.h"
 
-#define OPTIONS "ho:l:m:t:d:bsScM:N:i:H:"
+#define OPTIONS "ho:l:m:t:d:bsScM:N:i:H:I"
 
 void printHelp(char* progname) {
 	fprintf(stderr, "%s usage:\n"
@@ -48,6 +48,7 @@ void printHelp(char* progname) {
 			"    OR [-s]: build splitting planes   )\n"
 			"  [-S]: include separate splitdim array\n"
 			"  [-c]: run kdtree_check on the resulting tree\n"
+			"  [-I]: ignore input files that don't exist.\n"
 			"\n"
 			"    (Input files are Astrometry.net catalogs.)\n"
 			"\n", progname);
@@ -92,11 +93,15 @@ int main(int argc, char** args) {
 	int mercgrid = -1;
 	int HP;
 	il* hps;
+	bool ignore = FALSE;
 
 	start = time(NULL);
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+		case 'I':
+			ignore = TRUE;
+			break;
 		case 'h':
 			printHelp(progname);
 			exit(0);
@@ -242,6 +247,8 @@ int main(int argc, char** args) {
 		cat = an_catalog_open(fn);
 		if (!cat) {
 			fprintf(stderr, "Failed to open catalog %s.\n", fn);
+			if (ignore)
+				continue;
 			exit(-1);
 		}
 		fprintf(stderr, "  %i points in %s\n", cat->nentries, fn);
@@ -271,6 +278,8 @@ int main(int argc, char** args) {
 		cat = an_catalog_open(fn);
 		if (!cat) {
 			fprintf(stderr, "Failed to open catalog %s.\n", fn);
+			if (ignore)
+				continue;
 			exit(-1);
 		}
 
