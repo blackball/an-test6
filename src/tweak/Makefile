@@ -62,11 +62,11 @@ tweak: $(TWEAK_OBJS) \
 
 sanity_check: $(SANITY_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) \
-	$(LIBWCS_LIB) $(LIBFORTRAN)
+	$(LIBWCS_LIB) $(LIBFORTRAN) $(GSL_LIB)
 
 SC2 := sanity_check2.o \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
-	$(LIBFORTRAN)
+	$(LIBFORTRAN) $(GSL_LIB)
 
 sanity_check2: $(REMAKE_LIBTWEAK) $(SC2)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SC2)

@@ -26,6 +26,7 @@ include $(COMMON)/makefile.libwcs
 include $(COMMON)/makefile.libkd
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
+include $(COMMON)/makefile.gsl
 
 TWEAK_C_OBJ := sip.o tweak_internal.o
 TWEAK_C_OBJ += sip_qfits.o
@@ -38,6 +39,7 @@ CFLAGS += $(LIBKD_INC)
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBWCS_INC)
+CFLAGS += $(GSL_INC)
 
 LDFLAGS := $(LDFLAGS_DEF)
 
