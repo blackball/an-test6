@@ -1,4 +1,17 @@
 /*
+  This file was downloaded from the CFITSIO utilities web page:
+    http://heasarc.gsfc.nasa.gov/docs/software/fitsio/cexamples.html
+
+  That page contains this text:
+    You may freely modify, reuse, and redistribute these programs as you wish.
+
+  We assume it was originally written by the CFITSIO authors (primarily William
+  D. Pence).
+
+  We (the Astrometry.net team) have modified it slightly, and we hereby place
+  our modifications under the GPLv2.
+*/
+/*
   This file is part of the Astrometry.net suite.
   Copyright 2006-2007, Dustin Lang, Keir Mierle and Sam Roweis.
 
