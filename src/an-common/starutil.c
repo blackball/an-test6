@@ -50,6 +50,10 @@ inline void xyzarr2radecdeg(double* xyz, double *ra, double *dec) {
 	*dec = rad2deg(*dec);
 }
 
+inline void xyzarr2radecdegarr(double* xyz, double *radec) {
+	xyzarr2radecdeg(xyz, radec, radec+1);
+}
+
 inline void radec2xyz(double ra, double dec,
 					  double* x, double* y, double* z) {
 	double cosdec = cos(dec);
