@@ -177,17 +177,16 @@ static int get_magnitude(an_entry* an,
 			}
 		}
 
-		if (sdss && !nred)
-			return 1;
-
 		if (nred)
 			redmag /= (double)nred;
 		if (nblue)
 			bluemag /= (double)nblue;
 
-		if (sdss && nred)
+		if (sdss) {
+			if (!nred)
+				return 1;
 			mag = redmag;
-		else if (galex) {
+		} else if (galex) {
 			if (nred) {
 				mag = redmag;
 				if (epsilon > 0 && nblue)
@@ -196,8 +195,7 @@ static int get_magnitude(an_entry* an,
 				mag = bluemag;
 			else
 				return 1;
-		} else
-			return 1;
+		}
 
 	} else if (zband) {
 		bool gotit = FALSE;
@@ -211,12 +209,12 @@ static int get_magnitude(an_entry* an,
 		}
 		if (!gotit)
 			return 1;
-	}
+	} else
+		return -1;
 
 	if (p_mag)
 		*p_mag = mag;
-
-	return -1;
+	return 0;
 }
 
 int main(int argc, char** args) {
