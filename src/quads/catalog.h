@@ -33,9 +33,12 @@ struct catalog {
 	double* stars;
 	int healpix;
 
+	// optional table: star magnitudes.
+	float* mags;
+
 	FILE* fid;
-	void* mmap_cat;
-	size_t mmap_cat_size;
+	void* mmap_ptr;
+	size_t mmap_size;
 	qfits_header* header;
 	off_t header_end;
 };
@@ -63,5 +66,12 @@ int catalog_write_header(catalog* cat);
 int catalog_fix_header(catalog* cat);
 
 int catalog_write_to_file(catalog* cat, char* fn);
+
+/*
+  This should be called after writing all the star positions and
+  calling catalog_fix_header().  It appends the data in "cat->mags"
+  to the file as an extra FITS table.
+ */
+int catalog_write_mags(catalog* cat);
 
 #endif

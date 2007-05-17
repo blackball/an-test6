@@ -144,7 +144,7 @@ int catalog_fix_header(catalog* cat)
 
 	if (old_header_end != cat->header_end) {
 		fflush(stdout);
-		fprintf(stderr, "Warning: objfile header used to end at %lu, "
+		fprintf(stderr, "Warning: catalog header used to end at %lu, "
 		        "now it ends at %lu.\n", (unsigned long)old_header_end,
 				(unsigned long)cat->header_end);
 		return -1;
@@ -194,6 +194,8 @@ catalog* catalog_open(char* catfn, int modifiable)
 	int mode, flags;
 	int offxyz = -1;
 	int sizexyz;
+	int offmags = -1;
+	int sizemags;
 
 	cat = calloc(1, sizeof(catalog));
 	if (!cat) {
@@ -242,12 +244,24 @@ catalog* catalog_open(char* catfn, int modifiable)
 
 	if (fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS) != sizexyz) {
 		fflush(stdout);
-		fprintf(stderr, "Number of stars promised does jive with the xyz table size: %u vs %u.\n",
-			fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS), sizexyz);
+		fprintf(stderr, "Number of stars promised doesn't jive with the xyz table size: %u vs %u.\n",
+				fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS), sizexyz);
 		goto bail;
 	}
 
-	cat->mmap_cat_size = offxyz + sizexyz;
+	if (fits_find_table_column(catfn, "mags", &offmags, &sizemags)) {
+		offmags = 0;
+		sizemags = 0;
+	} else {
+		if (fits_blocks_needed(cat->numstars * sizeof(float)) != sizemags) {
+			fflush(stdout);
+			fprintf(stderr, "Number of stars doesn't jive with the \"mags\" table size: %u vs %u.\n",
+					fits_blocks_needed(cat->numstars * sizeof(float)), sizemags);
+			goto bail;
+		}
+	}
+
+	cat->mmap_size = imax(offxyz + sizexyz, offmags + sizemags);
 
 	if (modifiable) {
 		mode = PROT_READ | PROT_WRITE;
@@ -256,15 +270,20 @@ catalog* catalog_open(char* catfn, int modifiable)
 		mode = PROT_READ;
 		flags = MAP_SHARED;
 	}
-	cat->mmap_cat = mmap(0, cat->mmap_cat_size, mode, flags, fileno(catfid), 0);
-	if (cat->mmap_cat == MAP_FAILED) {
+	cat->mmap_ptr = mmap(0, cat->mmap_size, mode, flags, fileno(catfid), 0);
+	if (cat->mmap_ptr == MAP_FAILED) {
 		fflush(stdout);
 		fprintf(stderr, "Failed to mmap catalogue file: %s\n", strerror(errno));
 		goto bail;
 	}
 	fclose(catfid);
 
-	cat->stars = (double*)(((char*)cat->mmap_cat) + offxyz);
+	cat->stars = (double*)(((char*)cat->mmap_ptr) + offxyz);
+	if (offmags) {
+		cat->mags = (float*)(((char*)cat->mmap_ptr) + offmags);
+	} else {
+		cat->mags = NULL;
+	}
 
 	return cat;
 bail:
@@ -296,7 +315,7 @@ catalog* catalog_open_for_writing(char* fn)
 	qf->header = qfits_table_prim_header_default();
 	fits_add_endian(qf->header);
 	fits_add_double_size(qf->header);
-	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars used.", NULL);
+	qfits_header_add(qf->header, "NSTARS", "0", "Number of stars in this file.", NULL);
 	qfits_header_add(qf->header, "AN_FILE", "OBJS", "This file has a list of object positions.", NULL);
 	qfits_header_add(qf->header, "HEALPIX", "-1", "Healpix covered by this catalog.", NULL);
 	qfits_header_add(qf->header, "COMMENT", "This is a flat array of XYZ for each catalog star.", NULL, NULL);
@@ -345,6 +364,47 @@ int catalog_write_star(catalog* cat, double* star)
 	return 0;
 }
 
+int catalog_write_mags(catalog* cat) {
+	uint datasize;
+	uint ncols, nrows, tablesize;
+	qfits_table* table;
+	qfits_header* tablehdr;
+
+	if (fits_pad_file(cat->fid)) {
+		fflush(stdout);
+		fprintf(stderr, "Failed to pad catalog FITS file.\n");
+		return -1;
+	}
+
+	// first table: the star locations.
+	datasize = sizeof(float);
+	ncols = 1;
+	nrows = cat->numstars;
+	tablesize = datasize * nrows * ncols;
+	table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+	qfits_col_fill(table->col, datasize, 0, 1, TFITS_BIN_TYPE_A,
+	               "mags", "", "", "", 0, 0, 0, 0, 0);
+	tablehdr = qfits_table_ext_header_default(table);
+	qfits_header_dump(tablehdr, cat->fid);
+	qfits_table_close(table);
+	qfits_header_destroy(tablehdr);
+
+	if (fwrite(cat->mags, sizeof(float), cat->numstars, cat->fid) !=
+		cat->numstars) {
+		fflush(stdout);
+		fprintf(stderr, "Failed to write catalog magnitudes: %s.\n",
+		        strerror(errno));
+		return -1;
+	}
+
+	if (fits_pad_file(cat->fid)) {
+		fflush(stdout);
+		fprintf(stderr, "Failed to pad catalog FITS file.\n");
+		return -1;
+	}
+	return 0;
+}
+
 int catalog_close(catalog* cat)
 {
 	int rtn = 0;
@@ -362,8 +422,8 @@ int catalog_close(catalog* cat)
 	}
 	if (cat->header)
 		qfits_header_destroy(cat->header);
-	if (cat->mmap_cat) {
-		if (munmap(cat->mmap_cat, cat->mmap_cat_size)) {
+	if (cat->mmap_ptr) {
+		if (munmap(cat->mmap_ptr, cat->mmap_size)) {
 			fflush(stdout);
 			fprintf(stderr, "Failed to munmap catalog file.\n");
 			rtn = -1;

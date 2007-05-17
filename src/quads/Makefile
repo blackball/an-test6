@@ -192,7 +192,7 @@ build-an-catalog: build-an-catalog.o usnob_fits.o tycho2_fits.o \
 		tycho2.o usnob.o 2mass_catalog.o 2mass.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-cut-an: cut-an.o catalog.o idfile.o \
+cut-an: cut-an.o catalog.o idfile.o usnob.o \
 		$(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 startree: startree.o catalog.o \

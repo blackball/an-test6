@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "an_catalog.h"
+#include "usnob.h"
 #include "catalog.h"
 #include "idfile.h"
 #include "healpix.h"
@@ -29,12 +30,13 @@
 #include "fitsioutils.h"
 #include "boilerplate.h"
 
-#define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:"
+#define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:g"
 
 static void print_help(char* progname) {
 	boilerplate_help_header(stdout);
     printf("\nUsage: %s\n"
 		   "   -o <output-objs-template>    (eg, an-sdss-%%02i.objs.fits)\n"
+		   "  [-g]: write magnitudes to .objs file\n"
 		   "  [-i <output-id-template>]      (eg, an-sdss-%%02i.id.fits)\n"
 		   "  [-H <big healpix>]  or  [-A] (all-sky)\n"
 		   "  [-n <max-stars-per-fine-healpix-grid>]    (ie, number of sweeps)\n"
@@ -51,7 +53,7 @@ static void print_help(char* progname) {
 		   "  [-e <Galex-epsilon>]\n"
 		   "  <input-file> [<input-file> ...]\n"
 		   "\n"
-		   "Input files must be Astrometry.net catalogs.\n"
+		   "Input files must be Astrometry.net catalogs OR objs.fits catalogs with magnitude information.\n"
 		   "If no ID filename template is given, ID files will not be written.\n"
 		   "\n", progname);
 }
@@ -66,6 +68,13 @@ struct stardata {
 	float mag;
 };
 typedef struct stardata stardata;
+
+// globals used by get_magnitude().
+static bool sdss = FALSE;
+static bool galex = FALSE;
+static bool zband = FALSE;
+static double epsilon = 0.0;
+
 
 static int sort_stardata_mag(const void* v1, const void* v2) {
 	const stardata* d1 = v1;
@@ -118,6 +127,98 @@ static bool find_duplicate(stardata* sd, int hp, int Nside,
 	return FALSE;
 }
 
+static int get_magnitude(an_entry* an,
+						 float* p_mag) {
+	float redmag = 0.0;
+	int nred = 0;
+	float bluemag = 0.0;
+	int nblue = 0;
+	int j;
+	float mag = 1e6;
+
+	// dumbass magnitude averaging!
+
+	if (sdss || galex) {
+		if (sdss) {
+			for (j=0; j<an->nobs; j++) {
+				unsigned char band = an->obs[j].band;
+				if (an->obs[j].catalog == AN_SOURCE_USNOB) {
+					if (usnob_is_band_red(band)) {
+						redmag += an->obs[j].mag;
+						nred++;
+					}
+				} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
+					if (band == 'V' || band == 'H') {
+						redmag += an->obs[j].mag;
+						nred++;
+					}
+				}
+			}
+		} else if (galex) {
+			for (j=0; j<an->nobs; j++) {
+				unsigned char band = an->obs[j].band;
+				if (an->obs[j].catalog == AN_SOURCE_USNOB) {
+					if (usnob_is_band_blue(band)) {
+						bluemag += an->obs[j].mag;
+						nblue++;
+					} else if (usnob_is_band_red(band)) {
+						redmag += an->obs[j].mag;
+						nred++;
+					}
+				} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
+					if (band == 'B' || band == 'H') {
+						bluemag += an->obs[j].mag;
+						nblue++;
+					} else if (band == 'V') {
+						redmag += an->obs[j].mag;
+						nred++;
+					}
+				}
+			}
+		}
+
+		if (sdss && !nred)
+			return 1;
+
+		if (nred)
+			redmag /= (double)nred;
+		if (nblue)
+			bluemag /= (double)nblue;
+
+		if (sdss && nred)
+			mag = redmag;
+		else if (galex) {
+			if (nred) {
+				mag = redmag;
+				if (epsilon > 0 && nblue)
+					mag += epsilon * (bluemag - redmag);
+			} else if (nblue)
+				mag = bluemag;
+			else
+				return 1;
+		} else
+			return 1;
+
+	} else if (zband) {
+		bool gotit = FALSE;
+		for (j=0; j<an->nobs; j++) {
+			if ((an->obs[j].catalog == AN_SOURCE_2MASS) &&
+				(an->obs[j].band == 'J')) {
+				gotit = TRUE;
+				mag = an->obs[j].mag;
+				break;
+			}
+		}
+		if (!gotit)
+			return 1;
+	}
+
+	if (p_mag)
+		*p_mag = mag;
+
+	return -1;
+}
+
 int main(int argc, char** args) {
 	char* outfn = NULL;
 	char* idfn = NULL;
@@ -140,16 +241,15 @@ int main(int argc, char** args) {
 	int BLOCK = 100000;
 	double deduprad = 0.0;
 	double dedupr2 = 0.0;
-	double epsilon = 0.0;
-	bool sdss = FALSE;
-	bool galex = FALSE;
-	bool zband = FALSE;
 	bool allsky = FALSE;
 	stardata* sweeplist;
 	int npix;
 	stardata** stararrays;
 	int* stararrayN;
 	int nmargin = 1;
+	bool domags = FALSE;
+	float* mags = NULL;
+	int mi = 0;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -157,6 +257,9 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'g':
+			domags = TRUE;
+			break;
 		case 'b':
 			nmargin = atoi(optarg);
 			break;
@@ -372,19 +475,57 @@ int main(int argc, char** args) {
 	for (; optind<argc; optind++) {
 		char* infn;
 		int i, N;
-		an_catalog* ancat;
+		an_catalog* ancat = NULL;
+		catalog* cat = NULL;
 		int ndiscarded;
 		int nduplicates;
+		qfits_header* hdr;
+		char* key;
+		char* valstr;
 
 		infn = args[optind];
-		ancat = an_catalog_open(infn);
-		if (!ancat) {
-			fflush(stdout);
-			fprintf(stderr, "Couldn't open Astrometry.net catalog %s.\n", infn);
+
+		hdr = qfits_header_read(infn);
+		if (!hdr) {
+			fprintf(stderr, "Couldn't read FITS header from file %s.\n", infn);
 			exit(-1);
 		}
-		ancat->br.blocksize = BLOCK;
-		N = an_catalog_count_entries(ancat);
+		// look for AN_FILE (Astrometry.net filetype) in the FITS header.
+		valstr = qfits_pretty_string(qfits_header_getstr(hdr, "AN_FILE"));
+		if (valstr &&
+			(strncasecmp(valstr, AN_FILETYPE_CATALOG, strlen(AN_FILETYPE_CATALOG)) == 0)) {
+			fprintf(stderr, "Looks like a catalog.\n");
+			cat = catalog_open(infn, 0);
+			if (!cat) {
+				fprintf(stderr, "Couldn't open catalog.\n");
+				exit(-1);
+			}
+			if (!cat->mags) {
+				fprintf(stderr, "Catalog doesn't contain magnitudes!\n");
+				exit(-1);
+			}
+			N = cat->numstars;
+		} else {
+			// "AN_CATALOG" gets truncated...
+			key = qfits_header_findmatch(hdr, "AN_CAT");
+			if (key &&
+				qfits_header_getboolean(hdr, key, 0)) {
+				fprintf(stderr, "File has AN_CATALOG = T header.\n");
+				ancat = an_catalog_open(infn);
+				if (!ancat) {
+					fprintf(stderr, "Couldn't open Astrometry.net catalog.\n");
+					exit(-1);
+				}
+				N = ancat->nentries;
+				ancat->br.blocksize = BLOCK;
+			}
+		}
+
+		if (!(ancat || cat)) {
+			fflush(stdout);
+			fprintf(stderr, "Couldn't open input file %s.\n", infn);
+			exit(-1);
+		}
 		printf("Reading   %i entries from %s...\n", N, infn);
 		fflush(stdout);
 		ndiscarded = 0;
@@ -392,96 +533,36 @@ int main(int argc, char** args) {
 
 		for (i=0; i<N; i++) {
 			stardata sd;
-			int j;
-			double redmag;
 			int hp;
-			int nred;
-			double bluemag;
-			int nblue;
 			an_entry* an;
 
-			an = an_catalog_read_entry(ancat);
-			if (!an) {
-				fflush(stdout);
-				fprintf(stderr, "Failed to read Astrometry.net catalog entry.\n");
-				exit(-1);
+			if (ancat) {
+				an = an_catalog_read_entry(ancat);
+				if (!an) {
+					fflush(stdout);
+					fprintf(stderr, "Failed to read Astrometry.net catalog entry.\n");
+					exit(-1);
+				}
+				sd.ra = an->ra;
+				sd.dec = an->dec;
+				sd.id = an->id;
+			} else {
+				double* xyz;
+				xyz = catalog_get_star(cat, i);
+				xyzarr2radecdeg(xyz, &sd.ra, &sd.dec);
+				sd.mag = cat->mags[i];
+				sd.id = 0;
 			}
 
-			hp = radecdegtohealpix(an->ra, an->dec, Nside);
+			hp = radecdegtohealpix(sd.ra, sd.dec, Nside);
 
 			if (owned && !owned[hp]) {
 				ndiscarded++;
 				continue;
 			}
 
-			sd.ra = an->ra;
-			sd.dec = an->dec;
-			sd.id = an->id;
-
-			// dumbass magnitude averaging!
-			if (sdss || galex) {
-				redmag = 0.0;
-				nred = 0;
-				bluemag = 0.0;
-				nblue = 0;
-				if (sdss) {
-					for (j=0; j<an->nobs; j++) {
-						if (an->obs[j].catalog == AN_SOURCE_USNOB) {
-							if (an->obs[j].band == 'E' || an->obs[j].band == 'F') {
-								redmag += an->obs[j].mag;
-								nred++;
-							}
-						} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
-							if (an->obs[j].band == 'V' || an->obs[j].band == 'H') {
-								redmag += an->obs[j].mag;
-								nred++;
-							}
-						}
-					}
-				} else if (galex) {
-					for (j=0; j<an->nobs; j++) {
-						if (an->obs[j].catalog == AN_SOURCE_USNOB) {
-							if (an->obs[j].band == 'O' || an->obs[j].band == 'J') {
-								bluemag += an->obs[j].mag;
-								nblue++;
-							} else if (an->obs[j].band == 'E' || an->obs[j].band == 'F') {
-								redmag += an->obs[j].mag;
-								nred++;
-							}
-						} else if (an->obs[j].catalog == AN_SOURCE_TYCHO2) {
-							if (an->obs[j].band == 'B' || an->obs[j].band == 'H') {
-								bluemag += an->obs[j].mag;
-								nblue++;
-							} else if (an->obs[j].band == 'V') {
-								redmag += an->obs[j].mag;
-								nred++;
-							}
-						}
-					}
-				}
-				if (!nred)
-					continue;
-
-				redmag /= (double)nred;
-				sd.mag = redmag;
-
-				if (galex && epsilon>0) {
-					if (nblue) {
-						bluemag /= (double)nblue;
-						sd.mag += epsilon * (bluemag - redmag);
-					}
-				}
-			} else if (zband) {
-				bool gotit = FALSE;
-				for (j=0; j<an->nobs; j++) {
-					if ((an->obs[j].catalog == AN_SOURCE_2MASS) &&
-						(an->obs[j].band == 'J')) {
-						gotit = TRUE;
-						sd.mag = an->obs[j].mag;
-						break;
-					}
-				}
-				if (!gotit)
+			if (ancat) {
+				if (get_magnitude(an, &sd.mag))
 					continue;
 			}
 
@@ -535,7 +616,11 @@ int main(int argc, char** args) {
 				bl_remove_index_range(starlists[i], nkeep, size-nkeep);
 			}
 
-		an_catalog_close(ancat);
+		if (ancat)
+			an_catalog_close(ancat);
+		else
+			catalog_close(cat);
+			
 	}
 	free(owned);
 
@@ -562,15 +647,22 @@ int main(int argc, char** args) {
 			n = sweeps;
 		// then store the stardata* in it.
 		stararrays[i] = malloc(n * sizeof(stardata));
-		// the copy the bl's data.
+		// then copy the bl's data.
 		bl_copy(list, 0, n, stararrays[i]);
 		bl_free(list);
 		stararrayN[i] = n;
 	}
 
 	sweeplist = malloc(npix * sizeof(stardata));
+	if (domags) {
+		mags = malloc(sweeps * npix * sizeof(float));
+		if (!mags) {
+			fprintf(stderr, "Failed to allocate memory for \"mags\" array.\n");
+		}
+	}
 
 	// sweep through the healpixes...
+	mi = 0;
 	for (k=0;; k++) {
 		char key[64];
 		char val[64];
@@ -609,6 +701,10 @@ int main(int argc, char** args) {
 				fprintf(stderr, "Failed to write star to catalog.  Possible cause: %s\n", strerror(errno));
 				exit(-1);
 			}
+			if (mags) {
+				mags[mi] = sd->mag;
+				mi++;
+			}
 
 			nwritten++;
 			if (nwritten == maxperbighp)
@@ -638,8 +734,17 @@ int main(int argc, char** args) {
 		free(stararrays[i]);
 	free(stararrays);
 
-	if (catalog_fix_header(cat) ||
-		catalog_close(cat) ||
+	if (catalog_fix_header(cat)) {
+		fprintf(stderr, "Failed to fix catalog header.\n");
+		exit(-1);
+	}
+	if (mags) {
+		cat->mags = mags;
+		if (catalog_write_mags(cat)) {
+			fprintf(stderr, "Failed to write magnitudes.\n");
+		}
+	}
+	if (catalog_close(cat) ||
 		(id && (idfile_fix_header(id) ||
 				idfile_close(id)))) {
 		fflush(stdout);
