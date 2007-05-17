@@ -103,6 +103,38 @@ unsigned char usnob_get_survey_band(int survey) {
 	}
 }
 
+bool usnob_is_usnob_star(usnob_entry* entry) {
+	return (entry->ndetections >= 2);
+}
+
+bool usnob_is_observation_valid(struct observation* obs) {
+	return (obs->field > 0);
+}
+
+bool usnob_is_band_blue(unsigned char band) {
+	return (band == 'O' || band == 'J');
+}
+
+bool usnob_is_band_red(unsigned char band) {
+	return (band == 'E' || band == 'F');
+}
+
+bool usnob_is_band_ir(unsigned char band) {
+	return (band == 'N');
+}
+
+bool usnob_is_observation_blue(struct observation* obs) {
+	return usnob_is_band_blue(usnob_get_survey_band(obs->survey));
+}
+
+bool usnob_is_observation_red(struct observation* obs) {
+	return usnob_is_band_red(usnob_get_survey_band(obs->survey));
+}
+
+bool usnob_is_observation_ir(struct observation* obs) {
+	return usnob_is_band_ir(usnob_get_survey_band(obs->survey));
+}
+
 int usnob_get_slice(usnob_entry* entry) {
 	return (entry->usnob_id >> 24) & 0xFF;
 }

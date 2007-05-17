@@ -163,4 +163,40 @@ unsigned char usnob_get_survey_band(int survey);
 //        -1 on error.
 int unsob_get_survey_epoch(int survey, int obsnum);
 
+/*
+  Returns TRUE if this entry is a true USNOB star, not a Tycho-2 or reject.
+  (This doesn't check diffraction flags, just the "M" / "ndetection" field).
+ */
+bool usnob_is_usnob_star(usnob_entry* entry);
+
+/*
+  Returns TRUE if the given observation contains real data.
+  (Note that "usnob_is_usnob_star" must pass for this to be valid)
+*/
+bool usnob_is_observation_valid(struct observation* obs);
+
+/*
+  Returns TRUE if the given bandpass (emulsion) is "blue" (band is 'O' or 'J').
+*/
+bool usnob_is_band_blue(unsigned char band);
+
+/* Returns TRUE if the given observation comes from a blue emulsion. */
+bool usnob_is_observation_blue(struct observation* obs);
+
+/*
+  Returns TRUE if the given bandpass (emulsion) is "red" (band is 'E' or 'F').
+*/
+bool usnob_is_band_red(unsigned char band);
+
+/* Returns TRUE if the given observation comes from a red emulsion. */
+bool usnob_is_observation_red(struct observation* obs);
+
+/*
+  Returns TRUE if the given bandpass (emulsion) is "infrared" (band is 'N')
+*/
+bool usnob_is_band_ir(unsigned char band);
+
+/* Returns TRUE if the given observation comes from an infrared emulsion. */
+bool usnob_is_observation_ir(struct observation* obs);
+
 #endif
