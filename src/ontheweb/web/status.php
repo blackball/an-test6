@@ -1160,7 +1160,7 @@ function render_overlay($mydir, $big, $jd) {
 		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
 			" -W " . $W . " -H " . $H .
 			" -x " . (1/$shrink) . " -y " . (1/$shrink) .
-			" -w 1.5 -r 4 > " . $xypgm;
+			" -w 2 -r 8 -s + > " . $xypgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
@@ -1168,8 +1168,8 @@ function render_overlay($mydir, $big, $jd) {
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -N " . (1+$fldobjs) . " -r 5 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy1pgm;
+			" -N " . (1+$fldobjs) . " -r 6 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 2 > " . $fldxy1pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
@@ -1177,8 +1177,8 @@ function render_overlay($mydir, $big, $jd) {
 		}
 
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -n " . (1+$fldobjs) . " -N 200 -r 3 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 1.5 > " . $fldxy2pgm;
+			" -n " . (1+$fldobjs) . " -N 200 -r 4 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 2 > " . $fldxy2pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
