@@ -32,6 +32,7 @@ function allow_email($email) {
 			   'dstn@cs.toronto.edu',
 		       'eran@astro.caltech.edu',
 			   'fitz@tucana.tuc.noao.edu',
+		       'fvkastro@xs4all.nl',
 		       'john.moustakas@gmail.com',
 		       'jqshenker@gmail.com',
 		       'kenwood@stsci.edu',
