@@ -1,7 +1,7 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006-2007, Michael Blanton, Keir Mierle, David Hogg, Sam Roweis
-  and Dustin Lang.
+  Copyright 2006-2007, Michael Blanton, Keir Mierle, David W. Hogg,
+  Sam Roweis and Dustin Lang.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -73,7 +73,6 @@ int main(int argc, char *argv[])
     int argchar;
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
 	fitsfile *ofptr;        /* FITS file pointer to output file */
-	//char card[FLEN_CARD];   /* Standard string lengths defined in fitsio.h */
 	char outfile[300];
 	int status = 0; // FIXME should have ostatus too
 	int naxis;
@@ -84,7 +83,7 @@ int main(int argc, char *argv[])
 	float sigma;
 	int percentiles = 0;
 	char* infn;
-	int nhdus,maxper,hdutype,nimgs;
+	int nhdus,maxper,maxsize,skybox,hdutype,nimgs;
 	float dpsf,plim,dlim,saddle;
 	int overwrite = 0;
 
@@ -151,17 +150,21 @@ int main(int argc, char *argv[])
 	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
 	/* Parameters for simplexy; save for debugging */
 	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
-	dpsf = 1;     /* gaussian psf width; 1 is usually fine */
-	plim = 8;     /* significance to keep; 8 is usually fine */
-	dlim = 1;     /* closest two peaks can be; 1 is usually fine */
-	saddle = 3;   /* saddle difference (in sig); 3 is usually fine */
-	maxper = 1000;  /* maximum number of peaks per object; 1000 */
-	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "Gaussian psf width", &status);
-	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "Significance to keep", &status);
-	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "Closest two peaks can be", &status);
-	fits_write_key(ofptr, TFLOAT, "SADDLE", &saddle, "Saddle difference (in sig)", &status);
-	fits_write_key(ofptr, TINT, "MAXPER", &maxper, "Max num of peaks per object", &status);
-	fits_write_key(ofptr, TINT, "MAXPEAKS", &maxnpeaks, "Max num of peaks total", &status);
+	dpsf = 1;        /* gaussian psf width */
+	plim = 8;        /* significance to keep */
+	dlim = 1;        /* closest two peaks can be */
+	saddle = 3;      /* saddle difference (in sig) */
+	maxper = 1000;   /* maximum number of peaks per object */
+	maxsize = 10000; /* maximum size for extended objects */
+	skybox = 50;     /* size for sliding sky median box */
+	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "fits2xy Assumed gaussian psf width", &status);
+	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "fits2xy Significance to keep", &status);
+	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "fits2xy Closest two peaks can be", &status);
+	fits_write_key(ofptr, TFLOAT, "SADDLE", &saddle, "fits2xy Saddle difference (in sig)", &status);
+	fits_write_key(ofptr, TINT, "MAXPER", &maxper, "fits2xy Max num of peaks per object", &status);
+	fits_write_key(ofptr, TINT, "MAXPEAKS", &maxnpeaks, "fits2xy Max num of peaks total", &status);
+	fits_write_key(ofptr, TINT, "MAXSIZE", &maxsize, "fits2xy Max size for extended objects", &status);
+	fits_write_key(ofptr, TINT, "SKYBOX", &skybox, "fits2xy Size for sliding sky box", &status);
 
 	fits_write_history(ofptr, 
 		"Created by astrometry.net's simplexy v1.0.4rc2 alpha-3+4",
@@ -237,7 +240,7 @@ int main(int argc, char *argv[])
 		flux = malloc(maxnpeaks * sizeof(float));
 		simplexy(thedata, naxisn[0], naxisn[1],
 				 dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-				 &sigma, x, y, flux, &npeaks);
+				 maxsize, skybox, &sigma, x, y, flux, &npeaks);
 
 		fprintf(stderr, "sigma=%g\n", sigma);
 

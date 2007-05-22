@@ -1,5 +1,5 @@
 # This file is part of the Astrometry.net suite.
-# Copyright 2006-2007, Keir Mierle.
+# Copyright 2007, Keir Mierle and David W. Hogg.
 #
 # The Astrometry.net suite is free software; you can redistribute
 # it and/or modify it under the terms of the GNU General Public License
@@ -30,6 +30,8 @@ INPUTS:
       saddle    - saddle difference (in sig); 3 is usually fine (default)
       maxper    - maximum number of peaks per object; 1000
       maxnpeaks - maximum number of peaks total; 100000
+      maxsize   - maximum size of extended objects to consider; 10000
+      skybox    - size for sliding sky estimation box
 
 OPTIONAL INPUTS:
       None yet
@@ -43,14 +45,13 @@ OUTPUTS:
           sigma - noise estimated in the image
 
 COMMENTS:
-   - This is a ctypes wrapping of the simplexy C code originally from Blanton,
-     which uses parts of Numerical Recipes in C.
+   - This is a ctypes wrapping of the simplexy C code originally from Blanton.
 
 BUGS:
-   - The 
 
 MODIFICATION HISTORY:
     K. Mierle, 2007-Jan-23 - Original version
+    Hogg, 2007-May-20 - simplexy options change
 """
 
 import ctypes
@@ -76,6 +77,7 @@ simplexy_fn.argtypes = [POINTER(c_float),
                         c_float,       # saddle
                         c_int,         # max peaks per object
                         c_int,         # max peaks total
+                        c_int,         # max extended source size
                         POINTER(c_float),     # sigma  OUT
                         POINTER(c_float),
                         POINTER(c_float),
@@ -87,7 +89,7 @@ simplexy_fn.argtypes = [POINTER(c_float),
                        ]
 
 def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
-             maxnpeaks=100000):
+             maxnpeaks=100000, maxsize=10000, skybox=50):
 
     x = numpy.zeros(maxnpeaks, dtype=numpy.float32)
     y = numpy.zeros(maxnpeaks, dtype=numpy.float32)
@@ -102,6 +104,7 @@ def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
                           image.shape[1],
                           image.shape[0],
                           dpsf, plim, dlim, saddle, maxper, maxnpeaks,
+                          maxsize, skybox,
                           byref(sigma),
                           x.ctypes.data_as(POINTER(c_float)),
                           y.ctypes.data_as(POINTER(c_float)),

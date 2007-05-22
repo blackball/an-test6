@@ -1,7 +1,7 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006-2007, Michael Blanton, Keir Mierle, David Hogg, Sam Roweis
-  and Dustin Lang.
+  Copyright 2006-2007, Michael Blanton, Keir Mierle, David W. Hogg,
+  Sam Roweis and Dustin Lang.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -74,10 +74,7 @@ int main(int argc, char *argv[])
 	fits_get_num_hdus(fptr, &nhdus, &status);
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
-	/* Parameters for simplexy; save for debugging */
 	if (fix) {
-		//fits_write_key(fptr, TINT, "SVNVER", &maxnpeaks, "Max num of peaks total", &status);
-
 		fits_write_history(fptr, 
 			"Edited by astrometry.net's fixaxis",
 			&status);

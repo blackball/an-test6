@@ -1,5 +1,5 @@
 # This file is part of the Astrometry.net suite.
-# Copyright 2006-2007, Keir Mierle.
+# Copyright 2007 Keir Mierle and David W. Hogg.
 #
 # The Astrometry.net suite is free software; you can redistribute
 # it and/or modify it under the terms of the GNU General Public License
@@ -36,6 +36,7 @@ COMMENTS:
 
 MODIFICATION HISTORY:
        K. Mierle, 2007-Jan - Initial version based on fits2xy.c
+       Hogg, 2007-May - simplexy options change
 """
 
 # You need ctypes and a recent (1.0) numpy for this to work. I've included
@@ -55,6 +56,8 @@ dlim = 1.0
 saddle = 3.0
 maxper = 1000
 maxnpeaks = 100000
+maxsize = 10000
+skybox= 50
 
 def extract(infile):
     fitsfile = pyfits.open(infile)
@@ -71,6 +74,8 @@ def extract(infile):
     outfile[0].header.update('saddle', saddle, 'Saddle in difference (in sig)')
     outfile[0].header.update('maxper', maxper, 'Max num of peaks per object')
     outfile[0].header.update('maxpeaks', maxnpeaks, 'Max num of peaks total')
+    outfile[0].header.update('maxsize', maxsize, 'Max size of extended objects')
+    outfile[0].header.update('skybox', skybox, 'Size of sliding sky window')
     outfile[0].header.add_comment('Extracted by fits2xy.py')
     outfile[0].header.add_comment('on %s %s' % (time.ctime(), time.tzname[0]))
 
@@ -84,7 +89,8 @@ def extract(infile):
 
             x,y,flux,sigma = simplexy(hdu.data, dpsf=dpsf, plim=plim,
                                       dlim=dlim, saddle=saddle, maxper=maxper,
-                                      maxnpeaks=maxnpeaks)
+                                      maxnpeaks=maxnpeaks, maxsize=maxsize,
+                                      skybox=skybox)
 
             cx = pyfits.Column(name='X', format='E', array=x, unit='pix')
             cy = pyfits.Column(name='Y', format='E', array=y, unit='pix')
