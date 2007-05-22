@@ -480,6 +480,7 @@ int main(int argc, char** args) {
 		qfits_header* hdr;
 		char* key;
 		char* valstr;
+		int lastgrass;
 
 		infn = args[optind];
 
@@ -529,10 +530,17 @@ int main(int argc, char** args) {
 		ndiscarded = 0;
 		nduplicates = 0;
 
+		lastgrass = 0;
 		for (i=0; i<N; i++) {
 			stardata sd;
 			int hp;
 			an_entry* an;
+
+			if ((i * 80 / N) != lastgrass) {
+				printf(".");
+				fflush(stdout);
+				lastgrass = i * 80 / N;
+			}
 
 			if (ancat) {
 				an = an_catalog_read_entry(ancat);
@@ -597,6 +605,7 @@ int main(int argc, char** args) {
 			}
 			bl_insert_sorted(starlists[hp], &sd, sort_stardata_mag);
 		}
+		printf("\n");
 
 		if (bighp != -1)
 			printf("Discarded %i stars not in this big healpix.\n", ndiscarded);
