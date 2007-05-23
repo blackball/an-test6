@@ -543,8 +543,14 @@ function process_data ($vals) {
 			$words = explode(" ", rtrim($str, "\n"));
 			$infomap[$words[0]] = implode(" ", array_slice($words, 1));
 		}
-		$W = $infomap['width'];
-		$H = $infomap['height'];
+		// If FITS file contains "IMAGEW" and "IMAGEH" headers, use those.
+		if ($infomap['imagew'] && $infomap['imageh']) {
+			$W = infomap['imagew'];
+			$H = infomap['imageh'];
+		} else {
+			$W = $infomap['width'];
+			$H = $infomap['height'];
+		}
 		$shrink = get_shrink_factor($W, $H);
 		// Size of image to display to the user.
 		$dispW = (int)($W / $shrink);
