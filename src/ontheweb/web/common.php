@@ -407,6 +407,18 @@ function describe_job($jd, $user=FALSE) {
 	return $strs;
 }
 
+function get_shrink_factor($W, $H) {
+	// choose a power-of-two shrink factor that makes the larger dimension <= 800.
+	$maxsz = 800;
+	$bigger = max($W,$H);
+	if ($bigger > $maxsz) {
+		$shrink = pow(2, ceil(log($bigger / $maxsz, 2)));
+	} else {
+		$shrink = 1;
+	}
+	return $shrink;
+}
+
 function create_random_dir($basedir) {
     while (TRUE) {
         // Generate a random number with up to 8 digits.

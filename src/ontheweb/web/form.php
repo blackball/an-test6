@@ -543,17 +543,26 @@ function process_data ($vals) {
 			$words = explode(" ", rtrim($str, "\n"));
 			$infomap[$words[0]] = implode(" ", array_slice($words, 1));
 		}
-		$W = $infomap["width"];
-		$H = $infomap["height"];
-		if (!setjobdata($db, array('xylsW'=>$W, 'xylsH'=>$H))) {
+		$W = $infomap['width'];
+		$H = $infomap['height'];
+		$shrink = get_shrink_factor($W, $H);
+		// Size of image to display to the user.
+		$dispW = (int)($W / $shrink);
+		$dispH = (int)($H / $shrink);
+
+		if (!setjobdata($db, array('xylsW' => $W,
+								   'xylsH' => $H,
+								   'imageshrink' => $shrink,
+								   'displayW' => $dispW,
+								   'displayH' => $dispH))) {
 			submit_failed($db, "Failed to save the bounds of your field.");
 		}
 		loggit("found xyls width and height " . $W . ", " . $H . "\n");
 	}
 
 	// FIXME - do we need this??
-	// (I think yes because apache is run by user "www-data" but watcher is run by
-	//  user "gmaps")
+	// (I think yes because apache is run by user "www-data" but watcher is
+	//  run by user "gmaps")
 	if (!chmod($xylist, 0664)) {
 		loggit("Failed to chmod xylist " . $xylist . "\n");
 	}
@@ -1229,18 +1238,10 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		}
 	*/
 
+	$shrink = get_shrink_factor($W, $H);
+
 	$newjd['imageW'] = $W;
 	$newjd['imageH'] = $H;
-
-	// choose a power-of-two shrink factor that makes the larger dimension <= 800.
-	$maxsz = 800;
-	$bigger = max($W,$H);
-	if ($bigger > $maxsz) {
-		$shrink = pow(2, ceil(log($bigger / $maxsz, 2)));
-	} else {
-		$shrink = 1;
-	}
-
 	$newjd['imageshrink'] = $shrink;
 
 	// Also use the output from "pnmfile" to decide if we need to convert to PGM.

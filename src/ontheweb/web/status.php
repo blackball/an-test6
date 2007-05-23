@@ -616,24 +616,31 @@ if ($didsolve) {
 
 //http://oven.cosmo.fas.nyu.edu/tilecache/tilecache.php?&tag=test-tag&REQUEST=GetMap&SERVICE=WMS&VERSION=1.1.1&LAYERS=tycho,image,grid,rdls&STYLES=&FORMAT=image/png&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&SRS=EPSG:4326&BBOX=-180,0,0,85.0511287798066&WIDTH=256&HEIGHT=256&reaspect=false
 
-if ($didsolve && file_exists($pnmimg)) {
+if ($didsolve) {
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 	echo "<div id=\"overlay\">\n";
 	echo "<p>Your field plus our index objects:\n";
 	echo "<br />Green circles: stars from the index, projected to image coordinates.\n";
-	echo "<br />Large red circles: field objects that were examined.\n";
-	echo "<br />Small red circles: field objects that were not examined.\n";
-	echo "<br />(click for full-size version)\n";
+	echo "<br />Red circles: field objects.\n";
+	//echo "<br />Large red circles: field objects that were examined.\n";
+	//echo "<br />Small red circles: field objects that were not examined.\n";
+	$linktobig = ($jd['imageshrink'] > 1);
+	if ($linktobig) {
+		echo "<br />(click for full-size version)\n";
+	}
 	echo "</p>\n";
-	//Your field, overplotted with objects from the index.</p>\n";
-	echo "<a href=\"" .
-		get_url('overlay-big') . 
-		"\">\n";
+	if ($linktobig) {
+		echo "<a href=\"" .
+			get_url('overlay-big') . 
+			"\">\n";
+	}
 	echo "<img src=\"" .
 		get_url('overlay') . 
 		"\" alt=\"An image of your field, showing sources we extracted from the image and objects from our index.\"/>";
-	echo "</a>\n";
+	if ($linktobig) {
+		echo "</a>\n";
+	}
 	echo "</div>\n";
 	echo "<hr />\n";
 }
@@ -1072,27 +1079,51 @@ function render_overlay($mydir, $big, $jd) {
 
 	if ((!$big && !file_exists($overlayfile)) ||
 		($big  && !file_exists($bigoverlayfile))) {
-		if ($big) {
-			$W = $jd['imageW'];
-			$H = $jd['imageH'];
-			$shrink = 1;
-			$userimg = $mydir . "image.pnm";
-		} else {
-			$W = $jd['displayW'];
-			$H = $jd['displayH'];
-			$shrink = $jd["imageshrink"];
-			if (!$shrink)
+		switch ($jd['xysrc']) {
+		case 'fits':
+		case 'text':
+			if ($big) {
+				$W = $jd['xylsW'];
+				$H = $jd['xylsH'];
 				$shrink = 1;
-			$userimg = $pnmimg;
-		}
-		if (!($W && $H)) {
-			// BACKWARDS COMPATIBILITY.
-			loggit("failed to find image display width and height.\n");
-			$W = $jd['imageW'];
-			$H = $jd['imageH'];
-			if (!($W && $H)) {
-				fail("failed to find image width and height.\n");
+			} else {
+				$W = $jd['displayW'];
+				$H = $jd['displayH'];
+				$shrink = $jd["imageshrink"];
+				if (!$shrink)
+					$shrink = 1;
+				// Backwards compatibility:
+				if (!$W || !$H) {
+					$W = $jd['xylsW'];
+					$H = $jd['xylsH'];
+				}
 			}
+			break;
+		case 'img':
+		case 'url':
+			if ($big) {
+				$W = $jd['imageW'];
+				$H = $jd['imageH'];
+				$shrink = 1;
+				$userimg = $mydir . "image.pnm";
+			} else {
+				$W = $jd['displayW'];
+				$H = $jd['displayH'];
+				$shrink = $jd['imageshrink'];
+				if (!$shrink)
+					$shrink = 1;
+				$userimg = $pnmimg;
+			}
+			if (!($W && $H)) {
+				// BACKWARDS COMPATIBILITY.
+				loggit("failed to find image display width and height.\n");
+				$W = $jd['imageW'];
+				$H = $jd['imageH'];
+				if (!($W && $H)) {
+					fail("failed to find image width and height.\n");
+				}
+			}
+			break;
 		}
 
 		$cmd = $tablist . " " . $matchfile . "\"[col fieldobjs]\" | tail -n 1";
@@ -1131,6 +1162,8 @@ function render_overlay($mydir, $big, $jd) {
 		$fldxy1pgm = $prefix . "fldxy1.pgm";
 		$fldxy2pgm = $prefix . "fldxy2.pgm";
 		$redimg = $prefix . "red.pgm";
+		$redimg2 = $prefix . "red2.pgm";
+		$redimg3 = $prefix . "red3.pgm";
 		$sumimg = $prefix . "sum.ppm";
 		$sumimg2 = $prefix . "sum2.ppm";
 		$dimimg = $prefix . "dim.ppm";
@@ -1141,9 +1174,10 @@ function render_overlay($mydir, $big, $jd) {
 		array_push($todelete, $fldxy1pgm);
 		array_push($todelete, $fldxy2pgm);
 		array_push($todelete, $redimg);
+		array_push($todelete, $redimg2);
+		array_push($todelete, $redimg3);
 		array_push($todelete, $sumimg);
 		array_push($todelete, $sumimg2);
-		array_push($todelete, $dimimg);
 
 		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
 		loggit("command: $cmd\n");
@@ -1196,42 +1230,53 @@ function render_overlay($mydir, $big, $jd) {
 			fail("pgmtoppm (xy) failed.");
 		}
 
-		$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
-			fail("ppmdim failed: " . $res);
-		}
-
-		$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
-			fail("pnmcomp failed.");
-		}
-
-		$cmd = "pgmtoppm rgbi:1/0/0.2 " . $fldxy1pgm . " > " . $redimg;
-		//$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
-			fail("pgmtoppm (fldxy1) failed.");
-		}
-		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg . " " . $sumimg . " " . $sumimg2;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
-			fail("pnmcomp failed.");
-		}
-
-		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg;
+		$cmd = "pgmtoppm rgbi:1/0/0.2 " . $fldxy1pgm . " > " . $redimg2;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
 			fail("pgmtoppm (fldxy1) failed.");
 		}
 
-		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg . " " . $sumimg2 . " " . $sumimg;
+		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg3;
+		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pgmtoppm (fldxy2) failed.");
+		}
+
+		if ($userimg) {
+			$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
+			loggit("Command: " . $cmd . "\n");
+			$res = system($cmd, $retval);
+			if ($res === FALSE || $retval) {
+				fail("ppmdim failed: " . $res);
+			}
+			array_push($todelete, $dimimg);
+
+			$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
+			loggit("Command: " . $cmd . "\n");
+			$res = system($cmd, $retval);
+			if ($res === FALSE || $retval) {
+				fail("pnmcomp failed.");
+			}
+		} else {
+			// xylist
+			$cmd = "cp " . $redimg . " " . $sumimg;
+			loggit("Command: " . $cmd . "\n");
+			$res = system($cmd, $retval);
+			if ($res === FALSE || $retval) {
+				fail("cp failed.");
+			}
+		}
+
+		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg2 . " " . $sumimg . " " . $sumimg2;
+ 		loggit("Command: " . $cmd . "\n");
+		$res = system($cmd, $retval);
+		if ($res === FALSE || $retval) {
+			fail("pnmcomp failed.");
+		}
+
+		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg3 . " " . $sumimg2 . " " . $sumimg;
  		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
