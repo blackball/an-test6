@@ -545,8 +545,8 @@ function process_data ($vals) {
 		}
 		// If FITS file contains "IMAGEW" and "IMAGEH" headers, use those.
 		if ($infomap['imagew'] && $infomap['imageh']) {
-			$W = infomap['imagew'];
-			$H = infomap['imageh'];
+			$W = $infomap['imagew'];
+			$H = $infomap['imageh'];
 		} else {
 			$W = $infomap['x_max'];
 			$H = $infomap['y_max'];
