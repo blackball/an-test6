@@ -21,7 +21,7 @@
 #
 
 DATE=`date "+%Y-%m-%d"`
-oDIR=astrometry.net-snapshot-$DATE
+DIR=astrometry.net-snapshot-$DATE
 SVN="svn+ssh://astrometry.net/svn/trunk/src"
 
 echo "Checking out code in directory $DIR..."
