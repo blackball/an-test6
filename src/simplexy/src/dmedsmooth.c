@@ -98,12 +98,8 @@ int dmedsmooth(float *image,
 
 	arr = (float *) malloc((size_t)((sp * 2 + 5) * (sp * 2 + 5)) * sizeof(float));
 
-	for (j = 0;j < nygrid;j++)
-		for (i = 0;i < nxgrid;i++)
-			grid[i + j*nxgrid] = 0.;
-
 	for (j = 0;j < nygrid;j++) {
-		printf("j=%d over nygrid\n", j);
+//		printf("j=%d over nygrid\n", j);
 		jst = ylo[j];
 		jnd = yhi[j];
 		nyt = jnd - jst + 1;

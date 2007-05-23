@@ -72,6 +72,7 @@ int simplexy(float *image,
 		for (i = 0;i < nx;i++)
 			invvar[i + j*nx] = 1. / ((*sigma) * (*sigma));
 	minpeak = (*sigma);
+	fprintf(stderr, "simplexy: dsigma() found sigma=%g.\n", *sigma);
 
 	/* median smooth */
 	/* NB: over-write simage to save malloc */
@@ -80,23 +81,25 @@ int simplexy(float *image,
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
 			simage[i + j*nx] = image[i + j*nx] - simage[i + j*nx];
+	fprintf(stderr, "simplexy: finished dmedsmooth().\n");
+	FREEVEC(invvar);
 
 	/* find objects */
 	smooth = (float *) malloc(nx * ny * sizeof(float));
 	oimage = (int *) malloc(nx * ny * sizeof(int));
 	dobjects(simage, smooth, nx, ny, dpsf, plim, oimage);
+	fprintf(stderr, "simplexy: finished dobjects().\n");
+	FREEVEC(smooth);
 
 	/* find all peaks within each object */
 	dallpeaks(simage, nx, ny, oimage, x, y, npeaks, (*sigma), dlim, saddle,
 	          maxper, maxnpeaks, minpeak, maxsize);
+	fprintf(stderr, "simplexy: dallpeaks() found %i peaks.\n", *npeaks);
+	FREEVEC(oimage);
 
 	for (i = 0;i < (*npeaks);i++)
-		flux[i] = simage[((int) (x[i]+0.5)) + ((int) (y[i]+0.5)) * nx];
-
-	FREEVEC(invvar);
+	  flux[i] = simage[((int) (x[i]+0.5)) + ((int) (y[i]+0.5))*nx];
 	FREEVEC(simage);
-	FREEVEC(oimage);
-	FREEVEC(smooth);
 
 	return (1);
 } /* end dmedsmooth */
