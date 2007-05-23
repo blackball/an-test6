@@ -124,7 +124,8 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
 	// Create xylist filename (by trimming '.fits')
-	snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", strlen(infn)-5, infn);
+	snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", (int) (strlen(infn)-5),
+		 infn);
 	fprintf(stderr, "outfile=%s\n",outfile);
 
 	if (overwrite) {
