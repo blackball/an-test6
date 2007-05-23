@@ -20,3 +20,9 @@
 all:
 	$(MAKE) -C quads
 	$(MAKE) -C simplexy
+
+TAGS:
+	etags -I `find . -name "*.c" -o -name "*.h"`
+
+tags:
+	ctags -I `find . -name "*.c" -o -name "*.h"`
