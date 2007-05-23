@@ -115,30 +115,34 @@ if (strpos($host, "monte") === 0) {
 	$an_fitstopnm = "an-fitstopnm";
 	$new_wcs = "new-wcs";
 } else {
+	$base = "/home/gmaps/an-2/";
+	$quads = $base . "quads/";
+	$simplexy = $base . "simplexy/"
+
 	$sqlite = "sqlite";
 	$resultdir = "/home/gmaps/ontheweb-data/";
 	$indexdir = "/home/gmaps/ontheweb-indexes/";
-	$fits2xy = "/home/gmaps/an/simplexy/fits2xy";
-	$plotxy2 = "/home/gmaps/an/quads/plotxy2";
-	$plotquad = "/home/gmaps/an/quads/plotquad";
-	$modhead = "/home/gmaps/an/quads/modhead";
-	$tabsort = "/home/gmaps/an/quads/tabsort";
-	$tablist = "/home/gmaps/an/quads/tablist";
-	$tabmerge = "/home/gmaps/an/quads/tabmerge";
-	$fitsgetext = "/home/gmaps/an/quads/fitsgetext";
-	$fitscopy = "/home/gmaps/an/quads/fitscopy";
-	$xylist2fits = "/home/gmaps/an/quads/xylist2fits";
-	$mergesolved = "/home/gmaps/an/quads/mergesolved";
-	$rdlsinfo = "/home/gmaps/an/quads/rdlsinfo";
-	$xylsinfo = "/home/gmaps/an/quads/xylsinfo";
-	$wcsinfo = "/home/gmaps/an/quads/wcsinfo";
-	$printsolved = "/home/gmaps/an/quads/printsolved";
-	$wcs_xy2rd = "/home/gmaps/an/quads/wcs-xy2rd";
-	$wcs_rd2xy = "/home/gmaps/an/quads/wcs-rd2xy";
-	$fits_guess_scale = "/home/gmaps/an/quads/fits-guess-scale";
-	$an_fitstopnm = "/home/gmaps/an/quads/an-fitstopnm";
-	$fits_filter = "/home/gmaps/an/quads/fits2fits.py %s %s";
-	$new_wcs = "/home/gmaps/an/quads/new-wcs";
+	$fits2xy = $simplexy . "fits2xy";
+	$plotxy2 = $quads . "plotxy2";
+	$plotquad = $quads . "plotquad";
+	$modhead = $quads . "modhead";
+	$tabsort = $quads . "tabsort";
+	$tablist = $quads . "tablist";
+	$tabmerge = $quads . "tabmerge";
+	$fitsgetext = $quads . "fitsgetext";
+	$fitscopy = $quads . "fitscopy";
+	$xylist2fits = $quads . "xylist2fits";
+	$mergesolved = $quads . "mergesolved";
+	$rdlsinfo = $quads . "rdlsinfo";
+	$xylsinfo = $quads . "xylsinfo";
+	$wcsinfo = $quads . "wcsinfo";
+	$printsolved = $quads . "printsolved";
+	$wcs_xy2rd = $quads . "wcs-xy2rd";
+	$wcs_rd2xy = $quads . "wcs-rd2xy";
+	$fits_guess_scale = $quads . "fits-guess-scale";
+	$an_fitstopnm = $quads . "an-fitstopnm";
+	$fits_filter = $quads . "fits2fits.py %s %s";
+	$new_wcs = $quads . "new-wcs";
 }
 
 $headers = $_REQUEST;
