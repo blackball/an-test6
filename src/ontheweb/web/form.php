@@ -229,6 +229,7 @@ if ($emailver) {
 if ($form->exportValue("linkhere")) {
 	$vals = $form->exportValues();
 	$args = format_preset_url_from_form($vals, $formDefaults);
+	loggit("Location: http://" . $host . $myuri . $args . "\n");
 	header("Location: http://" . $host . $myuri . $args);
 	exit;
 }

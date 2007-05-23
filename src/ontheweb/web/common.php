@@ -286,23 +286,24 @@ function dtime2str($secs) {
 }
 
 function format_preset_url_from_form($formvals, $defaults=array()) {
-	switch ($vals["xysrc"]) {
-	case "img":
+	global $fitsfile;
+	global $imgfile;
+
+	switch ($formvals['xysrc']) {
+	case 'img':
 		$imgval = $imgfile->getValue();
 		if ($imgval) {
-			$vals['image-origname'] = $imgval['name'];
+			$formvals['image-origname'] = $imgval['name'];
 		}
 		break;
-	case "fits":
+	case 'fits':
 		$fitsval = $fitsfile->getValue();
 		if ($fitsval) {
 			$vals['fits-origname'] = $fitsval['name'];
 		}
-		array_push($flds, 'x_col');
-		array_push($flds, 'y_col');
 		break;
 	}
-	$args = format_preset_url($vals, $defaults);
+	$args = format_preset_url($formvals, $defaults);
 	return $args;
 }
 
