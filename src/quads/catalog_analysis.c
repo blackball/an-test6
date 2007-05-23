@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006-2007, David Warde-Farley, Dustin Lang, Keir Mierle
+  Copyright 2006, 2007 David Warde-Farley, Dustin Lang, Keir Mierle
   and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute

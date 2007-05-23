@@ -1,6 +1,0 @@
-This is a subset of the gsl-1.9 package, containing the files required to provide Cholesky and QR 
-decompositions.
-
-We have not modified any of the source files, though we have 
-
-[FIXME...]

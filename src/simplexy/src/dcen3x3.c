@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006-2007, Michael Blanton, Keir Mierle, David W. Hogg,
+  Copyright 2006, 2007 Michael Blanton, Keir Mierle, David W. Hogg,
   Sam Roweis and Dustin Lang.
 
   The Astrometry.net suite is free software; you can redistribute it
