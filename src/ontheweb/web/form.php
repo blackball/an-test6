@@ -824,7 +824,7 @@ function process_data ($vals) {
 				"nindex_tokeep 20\n" .
 				"nindex_tosolve 20\n" .
 				"distractors 0.25\n" .
-				"ratio_toprint 10\n" .
+				"ratio_toprint 1e3\n" .
 				"ratio_tokeep 1e9\n" .
 				"ratio_tosolve 1e9\n" .
 				"ratio_tobail 1e-100\n" .

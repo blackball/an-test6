@@ -117,7 +117,7 @@ if (strpos($host, "monte") === 0) {
 } else {
 	$base = "/home/gmaps/an-2/";
 	$quads = $base . "quads/";
-	$simplexy = $base . "simplexy/"
+	$simplexy = $base . "simplexy/";
 
 	$sqlite = "sqlite";
 	$resultdir = "/home/gmaps/ontheweb-data/";
