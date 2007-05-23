@@ -1157,16 +1157,19 @@ function render_overlay($mydir, $big, $jd) {
 			fail("pgmtoppm (quad) failed.");
 		}
 
+		// Plot index objects (green circles)
 		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
 			" -W " . $W . " -H " . $H .
 			" -x " . (1/$shrink) . " -y " . (1/$shrink) .
-			" -w 2 -r 8 -s + > " . $xypgm;
+			" -w 1.8 -r 4 > " . $xypgm;
+		// -s +
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
 			fail("plotxy2 failed. retval $retval, res \"" . $res . "\"");
 		}
 
+		// Plot first N field objects (big red circles)
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
 			" -N " . (1+$fldobjs) . " -r 6 " .
 			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 2 > " . $fldxy1pgm;
@@ -1176,9 +1179,10 @@ function render_overlay($mydir, $big, $jd) {
 			fail("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
 		}
 
+		// Plot remaining field objects (small red circles)
 		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -n " . (1+$fldobjs) . " -N 200 -r 4 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 2 > " . $fldxy2pgm;
+			" -n " . (1+$fldobjs) . " -N 200 -w 2 -r 6 " .
+			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " > " . $fldxy2pgm;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
@@ -1206,7 +1210,8 @@ function render_overlay($mydir, $big, $jd) {
 			fail("pnmcomp failed.");
 		}
 
-		$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
+		$cmd = "pgmtoppm rgbi:1/0/0.2 " . $fldxy1pgm . " > " . $redimg;
+		//$cmd = "pgmtoppm red " . $fldxy1pgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if ($res === FALSE || $retval) {
