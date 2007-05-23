@@ -160,16 +160,17 @@ int dallpeaks(float *image,
 				 yc[i] > 1 && yc[i] < ony - 2) {
 			
 			/* try to get centroid in the 5 x 5 box */
+			/* FIXME: Hogg check index logic here (2s) */
 			for (oi = -2;oi <= 2;oi+=2)
 			  for (oj = -2;oj <= 2;oj+=2)
 			    three[oi + 1 + (oj + 1)*3] =
 			      simage[oi + xc[i] + (oj + yc[i]) * onx];
 			if (dcen3x3(three, &tmpxc, &tmpyc)) {
-			  xcen[imore + (*npeaks)] = tmpxc
-			    + 2.0 * ((float)(xc[i] + xmin - 1));
-			  ycen[imore + (*npeaks)] = tmpyc
-			    + 2.0 * ((float)(yc[i] + ymin - 1));
-			  
+			  xcen[imore + (*npeaks)] = 2.0*tmpxc
+			    + (float)(xc[i] + xmin - 2);
+			  ycen[imore + (*npeaks)] = 2.0*tmpyc
+			    + (float)(yc[i] + ymin - 2);
+
 			}
 		      }
 		      imore++;

@@ -57,7 +57,7 @@ saddle = 3.0
 maxper = 1000
 maxnpeaks = 100000
 maxsize = 10000
-skybox= 50
+halfbox= 50
 
 def extract(infile):
     fitsfile = pyfits.open(infile)
@@ -75,7 +75,7 @@ def extract(infile):
     outfile[0].header.update('maxper', maxper, 'Max num of peaks per object')
     outfile[0].header.update('maxpeaks', maxnpeaks, 'Max num of peaks total')
     outfile[0].header.update('maxsize', maxsize, 'Max size of extended objects')
-    outfile[0].header.update('skybox', skybox, 'Size of sliding sky window')
+    outfile[0].header.update('halfbox', halfbox, 'Half-size of sliding sky window')
     outfile[0].header.add_comment('Extracted by fits2xy.py')
     outfile[0].header.add_comment('on %s %s' % (time.ctime(), time.tzname[0]))
 
@@ -90,7 +90,7 @@ def extract(infile):
             x,y,flux,sigma = simplexy(hdu.data, dpsf=dpsf, plim=plim,
                                       dlim=dlim, saddle=saddle, maxper=maxper,
                                       maxnpeaks=maxnpeaks, maxsize=maxsize,
-                                      skybox=skybox)
+                                      halfbox=halfbox)
 
             cx = pyfits.Column(name='X', format='E', array=x, unit='pix')
             cy = pyfits.Column(name='Y', format='E', array=y, unit='pix')

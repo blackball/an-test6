@@ -35,7 +35,6 @@
  * 1/2006 */
 
 static float *invvar = NULL;
-static float *mimage = NULL;
 static float *simage = NULL;
 static int *oimage = NULL;
 static float *smooth = NULL;
@@ -50,7 +49,7 @@ int simplexy(float *image,
              int maxper,    /* maximum number of peaks per object; 1000 */
              int maxnpeaks, /* maximum number of peaks total; 100000 */
              int maxsize,   /* maximum size for extended objects: 150 */
-	     int skybox,    /* size for sliding sky estimation box */
+	     int halfbox,    /* size for sliding sky estimation box */
              float *sigma,
              float *x,
              float *y,
@@ -63,8 +62,8 @@ int simplexy(float *image,
     fprintf(stderr, "simplexy: nx=%d, ny=%d\n",nx,ny);
     fprintf(stderr, "simplexy: dpsf=%f, plim=%f, dlim=%f, saddle=%f\n",
 	    dpsf,plim,dlim,saddle);
-    fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d, maxsize=%d, skybox=%d\n",
-	    maxper,maxnpeaks,maxsize,skybox);
+    fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d, maxsize=%d, halfbox=%d\n",
+	    maxper,maxnpeaks,maxsize,halfbox);
 
 	/* determine sigma */
 	dsigma(image, nx, ny, 5, sigma);
@@ -75,12 +74,12 @@ int simplexy(float *image,
 	minpeak = (*sigma);
 
 	/* median smooth */
-	mimage = (float *) malloc(nx * ny * sizeof(float));
+	/* NB: over-write simage to save malloc */
 	simage = (float *) malloc(nx * ny * sizeof(float));
-	dmedsmooth(image, invvar, nx, ny, skybox, mimage);
+	dmedsmooth(image, invvar, nx, ny, halfbox, simage);
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
-			simage[i + j*nx] = image[i + j * nx] - mimage[i + j * nx];
+			simage[i + j*nx] = image[i + j*nx] - simage[i + j*nx];
 
 	/* find objects */
 	smooth = (float *) malloc(nx * ny * sizeof(float));
@@ -95,7 +94,6 @@ int simplexy(float *image,
 		flux[i] = simage[((int) (x[i]+0.5)) + ((int) (y[i]+0.5)) * nx];
 
 	FREEVEC(invvar);
-	FREEVEC(mimage);
 	FREEVEC(simage);
 	FREEVEC(oimage);
 	FREEVEC(smooth);

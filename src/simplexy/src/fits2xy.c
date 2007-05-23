@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 	float sigma;
 	int percentiles = 0;
 	char* infn;
-	int nhdus,maxper,maxsize,skybox,hdutype,nimgs;
+	int nhdus,maxper,maxsize,halfbox,hdutype,nimgs;
 	float dpsf,plim,dlim,saddle;
 	int overwrite = 0;
 
@@ -151,13 +151,13 @@ int main(int argc, char *argv[])
 	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
 	/* Parameters for simplexy; save for debugging */
 	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
-	dpsf = 1;        /* gaussian psf width */
-	plim = 8;        /* significance to keep */
-	dlim = 1;        /* closest two peaks can be */
-	saddle = 3;      /* saddle difference (in sig) */
+	dpsf = 1.0;      /* gaussian psf width */
+	plim = 8.0;      /* significance to keep */
+	dlim = 2.0;      /* closest two peaks can be */
+	saddle = 3.0;    /* saddle difference (in sig) */
 	maxper = 1000;   /* maximum number of peaks per object */
 	maxsize = 10000; /* maximum size for extended objects */
-	skybox = 50;     /* size for sliding sky median box */
+	halfbox = 200;    /* half-width for sliding sky median box */
 	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "fits2xy Assumed gaussian psf width", &status);
 	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "fits2xy Significance to keep", &status);
 	fits_write_key(ofptr, TFLOAT, "DLIM", &dlim, "fits2xy Closest two peaks can be", &status);
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 	fits_write_key(ofptr, TINT, "MAXPER", &maxper, "fits2xy Max num of peaks per object", &status);
 	fits_write_key(ofptr, TINT, "MAXPEAKS", &maxnpeaks, "fits2xy Max num of peaks total", &status);
 	fits_write_key(ofptr, TINT, "MAXSIZE", &maxsize, "fits2xy Max size for extended objects", &status);
-	fits_write_key(ofptr, TINT, "SKYBOX", &skybox, "fits2xy Size for sliding sky box", &status);
+	fits_write_key(ofptr, TINT, "HALFBOX", &halfbox, "fits2xy Half-size for sliding sky window", &status);
 
 	fits_write_history(ofptr, 
 		"Created by astrometry.net's simplexy v1.0.4rc2 alpha-3+4",
@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
 		flux = malloc(maxnpeaks * sizeof(float));
 		simplexy(thedata, naxisn[0], naxisn[1],
 				 dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-				 maxsize, skybox, &sigma, x, y, flux, &npeaks);
+				 maxsize, halfbox, &sigma, x, y, flux, &npeaks);
 
 		fprintf(stderr, "sigma=%g\n", sigma);
 

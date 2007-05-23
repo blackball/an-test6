@@ -31,7 +31,7 @@ INPUTS:
       maxper    - maximum number of peaks per object; 1000
       maxnpeaks - maximum number of peaks total; 100000
       maxsize   - maximum size of extended objects to consider; 10000
-      skybox    - size for sliding sky estimation box
+      halfbox    - size for sliding sky estimation box
 
 OPTIONAL INPUTS:
       None yet
@@ -89,7 +89,7 @@ simplexy_fn.argtypes = [POINTER(c_float),
                        ]
 
 def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
-             maxnpeaks=100000, maxsize=10000, skybox=50):
+             maxnpeaks=100000, maxsize=10000, halfbox=50):
 
     x = numpy.zeros(maxnpeaks, dtype=numpy.float32)
     y = numpy.zeros(maxnpeaks, dtype=numpy.float32)
@@ -104,7 +104,7 @@ def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
                           image.shape[1],
                           image.shape[0],
                           dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-                          maxsize, skybox,
+                          maxsize, halfbox,
                           byref(sigma),
                           x.ctypes.data_as(POINTER(c_float)),
                           y.ctypes.data_as(POINTER(c_float)),

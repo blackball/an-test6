@@ -47,7 +47,7 @@ int dmedsmooth(float *image,
                float *invvar,
                int nx,
                int ny,
-               int box,
+               int halfbox,
                float *smooth)
 {
 	int i, j, ip, jp, ist, jst, nxt, nyt, nb, ind, jnd, sp;
@@ -55,12 +55,8 @@ int dmedsmooth(float *image,
 	int ypsize, ymsize, xpsize, xmsize;
 	float dx, dy, xkernel, ykernel;
 
-//	printf("entering dmedsmooth nx=%d ny=%d box=%d\n", nx,ny,box);
-
-	/* guarantee odd */
-	sp = box;
-
 	/* get grids */
+	sp = halfbox;
 	nxgrid = nx / sp + 2;
 	xlo = (int *) malloc((size_t)nxgrid * sizeof(int));
 	xhi = (int *) malloc((size_t)nxgrid * sizeof(int));
@@ -107,10 +103,10 @@ int dmedsmooth(float *image,
 			grid[i + j*nxgrid] = 0.;
 
 	for (j = 0;j < nygrid;j++) {
+		printf("j=%d over nygrid\n", j);
 		jst = ylo[j];
 		jnd = yhi[j];
 		nyt = jnd - jst + 1;
-//		printf("j=%d over nygrid\n", j);
 		for (i = 0;i < nxgrid;i++) {
 //			printf("i=%d over nxgrid\n", i);
 			ist = xlo[i];
