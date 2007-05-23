@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
 		char* tunit[] = {"pix","pix","unknown"};
 		long* fpixel;
 		int a;
+		int w, h;
 
 		fits_movabs_hdu(fptr, kk, &hdutype, &status);
 		fits_get_hdu_type(fptr, &hdutype, &status);
@@ -305,6 +306,22 @@ int main(int argc, char *argv[])
 
 		fits_write_key(ofptr, TINT, "SRCEXT", &kk,
 				"Extension number in src image", &status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+		w = naxisn[0];
+		h = naxisn[1];
+		fits_write_key(ofptr, TINT, "IMAGEW", &w,
+					   "Input image width", &status);
+		if (status) {
+			fits_report_error(stderr, status);
+			assert(!status);
+			exit(-1);
+		}
+		fits_write_key(ofptr, TINT, "IMAGEH", &h,
+					   "Input image height", &status);
 		if (status) {
 			fits_report_error(stderr, status);
 			assert(!status);
