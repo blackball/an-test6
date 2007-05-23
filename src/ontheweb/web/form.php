@@ -548,8 +548,8 @@ function process_data ($vals) {
 			$W = infomap['imagew'];
 			$H = infomap['imageh'];
 		} else {
-			$W = $infomap['width'];
-			$H = $infomap['height'];
+			$W = $infomap['x_max'];
+			$H = $infomap['y_max'];
 		}
 		$shrink = get_shrink_factor($W, $H);
 		// Size of image to display to the user.
