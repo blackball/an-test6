@@ -80,6 +80,7 @@ int main(int argc, char** args) {
 	{
 		double xmax, xmin, ymax, ymin;
 		double diag;
+		int imw, imh;
 		int i;
 		xmax = ymax = -HUGE_VAL;
 		xmin = ymin =  HUGE_VAL;
@@ -93,6 +94,13 @@ int main(int argc, char** args) {
 		}
  
 		diag = hypot(xmax-xmin, ymax-ymin);
+
+		imw = qfits_header_getint(xyls->header, "IMAGEW", -1);
+		imh = qfits_header_getint(xyls->header, "IMAGEH", -1);
+		if (imw > -1)
+			printf("imagew %i\n", imw);
+		if (imh > -1)
+			printf("imageh %i\n", imh);
 
 		printf("x_min %g\n", xmin);
 		printf("x_max %g\n", xmax);
