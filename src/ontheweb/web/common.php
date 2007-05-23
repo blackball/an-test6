@@ -2,7 +2,7 @@
 require_once 'MDB2.php';
 require_once 'PEAR.php';
 
-$siteid = "tor";
+$siteid = "alpha";
 
 // Are we using a remote compute server?
 $remote = 1;
@@ -115,7 +115,7 @@ if (strpos($host, "monte") === 0) {
 	$an_fitstopnm = "an-fitstopnm";
 	$new_wcs = "new-wcs";
 } else {
-	$base = "/home/gmaps/an-2/";
+	$base = "/home/gmaps/an/";
 	$quads = $base . "quads/";
 	$simplexy = $base . "simplexy/";
 
@@ -147,8 +147,8 @@ if (strpos($host, "monte") === 0) {
 
 $headers = $_REQUEST;
 
-$ontheweblogfile = $resultdir . "ontheweb.log";
-//$ontheweblogfile = $resultdir . "alpha.log";
+//$ontheweblogfile = $resultdir . "ontheweb.log";
+$ontheweblogfile = $resultdir . "alpha.log";
 function loggit($mesg) {
 	global $ontheweblogfile;
 	error_log($mesg, 3, $ontheweblogfile);

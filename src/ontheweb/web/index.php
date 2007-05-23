@@ -2,8 +2,8 @@
 require_once 'common.php';
 require_once 'presets.php';
 
-$emailver = 0;
-$webver = 1;
+$emailver = 1;
+$webver = 0;
 
 if ($emailver) {
 	require_once 'rfc822.php';

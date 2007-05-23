@@ -1,6 +1,6 @@
 Index: index.php
 ===================================================================
---- index.php	(revision 4006)
+--- index.php	(revision 4061)
 +++ index.php	(working copy)
 @@ -2,8 +2,8 @@
  require_once 'common.php';
@@ -15,7 +15,7 @@ Index: index.php
  	require_once 'rfc822.php';
 Index: common.php
 ===================================================================
---- common.php	(revision 4006)
+--- common.php	(revision 4061)
 +++ common.php	(working copy)
 @@ -2,7 +2,7 @@
  require_once 'MDB2.php';
@@ -26,7 +26,16 @@ Index: common.php
  
  // Are we using a remote compute server?
  $remote = 1;
-@@ -143,8 +143,8 @@
+@@ -115,7 +115,7 @@
+ 	$an_fitstopnm = "an-fitstopnm";
+ 	$new_wcs = "new-wcs";
+ } else {
+-	$base = "/home/gmaps/an-2/";
++	$base = "/home/gmaps/an/";
+ 	$quads = $base . "quads/";
+ 	$simplexy = $base . "simplexy/";
+ 
+@@ -147,8 +147,8 @@
  
  $headers = $_REQUEST;
  
