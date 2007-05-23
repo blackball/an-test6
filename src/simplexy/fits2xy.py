@@ -52,12 +52,12 @@ from simplexy import simplexy
 # Default settings
 dpsf = 1.0
 plim = 8.0
-dlim = 1.0
-saddle = 3.0
+dlim = dpsf
+saddle = 5.0
 maxper = 1000
 maxnpeaks = 100000
 maxsize = 10000
-halfbox= 50
+halfbox= 100
 
 def extract(infile):
     fitsfile = pyfits.open(infile)
