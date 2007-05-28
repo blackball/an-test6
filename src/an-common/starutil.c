@@ -202,10 +202,11 @@ Const inline double dist2rad(double dist) {
 	the resulting x direction is increasing DEC, the resulting y direction is increasing RA
 	which might not be the normal convention
 */
-inline void star_coords(double *s, double *r, double *x, double *y)
+inline bool star_coords(double *s, double *r, double *x, double *y)
 {
 	double sdotr = s[0] * r[0] + s[1] * r[1] + s[2] * r[2];
-	assert(sdotr > 0.0);
+	if (sdotr <= 0.0)
+		return FALSE;
 	if (unlikely(r[2] == 1.0)) {
 		double inv_s2 = 1.0 / s[2];
 		*x = s[0] * inv_s2;
@@ -233,6 +234,7 @@ inline void star_coords(double *s, double *r, double *x, double *y)
 		*x = (s[0] * xix + s[1] * xiy + s[2] * xiz) * inv_sdotr;
 		*y = (s[0] * etax + s[1] * etay) * inv_sdotr;
 	}
+	return TRUE;
 }
 
 inline void star_midpoint(double* mid, double* A, double* B) {
