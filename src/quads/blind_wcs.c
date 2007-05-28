@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 #include <math.h>
+#include <assert.h>
 
 #include "blind_wcs.h"
 #include "solver_callbacks.h"
@@ -62,8 +63,10 @@ void blind_wcs_compute_2(double* starxyz,
 	j = 0;
 
 	for (i=0; i<N; i++) {
+		bool ok;
 		// -project the stars around the quad center of mass
-		star_coords(starxyz + i*3, star_cm, p + 2*i, p + 2*i + 1);
+		ok = star_coords(starxyz + i*3, star_cm, p + 2*i, p + 2*i + 1);
+		assert(ok);
 		// -grab the corresponding field coords
 		f[2*i+0] = fieldxy[2*i+0] - field_cm[0];
 		f[2*i+1] = fieldxy[2*i+1] - field_cm[1];
@@ -202,6 +205,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 	double* f;
 	double pcm[2];
 	double fcm[2];
+	bool ok;
 
 	// compute a simple WCS transformation:
 	// -get field & star positions of the matching quad.
@@ -239,7 +243,8 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 		// just use the four stars that compose the quad.
 		for (i=0; i<4; i++) {
 			getstarcoord(mo->star[i], xyz);
-			star_coords(xyz, starcmass, p + 2*i, p + 2*i + 1);
+			ok = star_coords(xyz, starcmass, p + 2*i, p + 2*i + 1);
+			assert(ok);
 			f[2*i+0] = field[mo->field[i] * 2 + 0];
 			f[2*i+1] = field[mo->field[i] * 2 + 1];
 		}
@@ -249,7 +254,8 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 			if (corr[i] != -1) {
 				// -project the stars around the quad center
 				getstarcoord(corr[i], xyz);
-				star_coords(xyz, starcmass, p + 2*j, p + 2*j + 1);
+				ok = star_coords(xyz, starcmass, p + 2*j, p + 2*j + 1);
+				assert(ok);
 				// -grab the corresponding field coords.
 				f[2*j+0] = field[2*i+0];
 				f[2*j+1] = field[2*i+1];

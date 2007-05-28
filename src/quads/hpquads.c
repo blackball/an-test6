@@ -164,6 +164,7 @@ static void compute_code(quad* q, double* code) {
 	double midAB[3];
 	double Ax, Ay;
 	double costheta, sintheta;
+	bool ok;
 
 	if (startree_get(starkd, q->star[0], sA) ||
 		startree_get(starkd, q->star[1], sB) ||
@@ -174,8 +175,10 @@ static void compute_code(quad* q, double* code) {
 	}
 
 	star_midpoint(midAB, sA, sB);
-	star_coords(sA, midAB, &Ax, &Ay);
+	ok = star_coords(sA, midAB, &Ax, &Ay);
+	assert(ok);
 	star_coords(sB, midAB, &Bx, &By);
+	assert(ok);
 	ABx = Bx - Ax;
 	ABy = By - Ay;
 	scale = (ABx * ABx) + (ABy * ABy);
@@ -184,7 +187,8 @@ static void compute_code(quad* q, double* code) {
 	sintheta = (ABy - ABx) * invscale;
 
 	starpos = sC;
-	star_coords(starpos, midAB, &Dx, &Dy);
+	ok = star_coords(starpos, midAB, &Dx, &Dy);
+	assert(ok);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
 	x =  ADx * costheta + ADy * sintheta;
@@ -193,7 +197,8 @@ static void compute_code(quad* q, double* code) {
 	code[1] = y;
 
 	starpos = sD;
-	star_coords(starpos, midAB, &Dx, &Dy);
+	ok = star_coords(starpos, midAB, &Dx, &Dy);
+	assert(ok);
 	ADx = Dx - Ax;
 	ADy = Dy - Ay;
 	x =  ADx * costheta + ADy * sintheta;
@@ -236,6 +241,7 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 	int d;
 	double avgAB[3];
 	double invlen;
+	bool ok;
 
 	sA = stars + pq->iA * 3;
 	sB = stars + pq->iB * 3;
@@ -280,8 +286,10 @@ check_scale_and_midpoint(pquad* pq, double* stars, int* starids, int Nstars,
 	pq->midAB[0] = avgAB[0] * invlen;
 	pq->midAB[1] = avgAB[1] * invlen;
 	pq->midAB[2] = avgAB[2] * invlen;
-	star_coords(sA, pq->midAB, &pq->Ax, &pq->Ay);
-	star_coords(sB, pq->midAB, &Bx, &By);
+	ok = star_coords(sA, pq->midAB, &pq->Ax, &pq->Ay);
+	assert(ok);
+	ok = star_coords(sB, pq->midAB, &Bx, &By);
+	assert(ok);
 	ABx = Bx - pq->Ax;
 	ABy = By - pq->Ay;
 	invscale = 1.0 / (ABx*ABx + ABy*ABy);
@@ -299,10 +307,13 @@ check_inbox(pquad* pq, int* inds, int ninds, double* stars, bool circle) {
 	double ADx, ADy;
 	double x, y;
 	int destind = 0;
+	bool ok;
 	for (i=0; i<ninds; i++) {
 		ind = inds[i];
 		starpos = stars + ind*3;
-		star_coords(starpos, pq->midAB, &Dx, &Dy);
+		ok = star_coords(starpos, pq->midAB, &Dx, &Dy);
+		if (!ok)
+			continue;
 		ADx = Dx - pq->Ax;
 		ADy = Dy - pq->Ay;
 		x =  ADx * pq->costheta + ADy * pq->sintheta;
