@@ -182,9 +182,19 @@ int main(int argc, char** args) {
 		for (j=0; j<nvals; j++) {
 			double xy[2];
 			if (hassip) {
-				sip_radec2pixelxy(&sip, rdvals[j*2+0], rdvals[j*2+1], &(xy[0]), &(xy[1]));
+				if (!sip_radec2pixelxy(&sip, rdvals[j*2+0], rdvals[j*2+1],
+									   &(xy[0]), &(xy[1]))) {
+					fprintf(stderr, "Point RA,Dec = (%g,%g) projects to the opposite side of the sphere.\n",
+							rdvals[j*2+0], rdvals[j*2+1]);
+					continue;
+				}
 			} else {
-				tan_radec2pixelxy(&(sip.wcstan), rdvals[j*2+0], rdvals[j*2+1], &(xy[0]), &(xy[1]));
+				if (!tan_radec2pixelxy(&(sip.wcstan), rdvals[j*2+0], rdvals[j*2+1],
+									   &(xy[0]), &(xy[1]))) {
+					fprintf(stderr, "Point RA,Dec = (%g,%g) projects to the opposite side of the sphere.\n",
+							rdvals[j*2+0], rdvals[j*2+1]);
+					continue;
+				}
 			}
 
 			if (xylist_write_entries(xyls, xy, 1)) {

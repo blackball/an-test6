@@ -1519,6 +1519,7 @@ static void solve_fields(blind_params* bp) {
 					double xyzcm[3];
 					int k;
 					double x,y;
+					bool ok;
 					fprintf(stderr, "indexquad_xyz = [ ");
 					xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
 					for (k=0; k<4; k++) {
@@ -1533,14 +1534,16 @@ static void solve_fields(blind_params* bp) {
 					fprintf(stderr, "indexquad_xy = [");
 					for (k=0; k<4; k++) {
 						getstarcoord(bestmo->star[k], xyz);
-						star_coords(xyz, xyzcm, &x, &y);
+						ok = star_coords(xyz, xyzcm, &x, &y);
+						assert(ok);
 						fprintf(stderr, "%g,%g; ", x, y);
 					}
 					fprintf(stderr, "];\n");
 
 					fprintf(stderr, "index_all_xy = [");
 					for (i=0; i<nstars; i++) {
-						star_coords(starxyz + i*3, xyzcm, &x, &y);
+						ok = star_coords(starxyz + i*3, xyzcm, &x, &y);
+						assert(ok);
 						fprintf(stderr, "%g,%g; ", x, y);
 					}
 					fprintf(stderr, "];\n");

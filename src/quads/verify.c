@@ -129,10 +129,8 @@ void verify_hit(startree* skdt,
 	radecdeg2xyzarr(mo->wcstan.crval[0], mo->wcstan.crval[1], crvalxyz);
 	for (i=0; i<res->nres; i++) {
 		double x, y;
-		double dot = dot_product_3(crvalxyz, res->results.d + i*3);
-		if (dot < 0.0)
+		if (!tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y))
 			continue;
-		tan_xyzarr2pixelxy(&(mo->wcstan), res->results.d + i*3, &x, &y);
 		//debug("(x,y) = (%g,%g)", x, y);
 		if ((x < 0) || (y < 0) || (x >= fieldW) || (y >= fieldH)) {
 			//debug(" -> reject\n");
