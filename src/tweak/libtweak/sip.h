@@ -20,6 +20,8 @@
 #define ANWCS_H
 
 #include <stdio.h>
+#include "an-bool.h"
+#include "keywords.h"
 
 #define SIP_MAXORDER 10
 
@@ -131,7 +133,10 @@ void   sip_pixelxy2radec(sip_t* sip, double px, double py, double *a, double *d)
 void   sip_pixelxy2xyzarr(sip_t* tan, double px, double py, double *xyz);
 
 // RA,Dec in degrees to Pixels.
-void   sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
+// Returns FALSE if the point is on the opposite side of the sphere (and hence the point
+// does not project onto the tangent plane)
+WarnUnusedResult
+bool sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 
 double tan_det_cd(tan_t* tan);
 double sip_det_cd(sip_t* sip);
@@ -146,10 +151,13 @@ void   tan_pixelxy2xyzarr(tan_t* tan, double px, double py, double *xyz);
 void   tan_pixelxy2radec(tan_t* wcs_tan, double px, double py, double *ra, double *dec);
 
 // RA,Dec in degrees to Pixels.
-void   tan_radec2pixelxy(tan_t* wcs_tan, double ra, double dec, double *px, double *py);
+// Returns FALSE if the point is on the opposite side of the sphere.
+WarnUnusedResult
+bool   tan_radec2pixelxy(tan_t* wcs_tan, double ra, double dec, double *px, double *py);
 
 // xyz unit vector to Pixels.
-void   tan_xyzarr2pixelxy(tan_t* wcs_tan, double* xyz, double *px, double *py);
+WarnUnusedResult
+bool   tan_xyzarr2pixelxy(tan_t* wcs_tan, double* xyz, double *px, double *py);
 
 void   sip_print(sip_t*);
 

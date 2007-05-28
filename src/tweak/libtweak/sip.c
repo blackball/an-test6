@@ -127,12 +127,13 @@ void tan_pixelxy2xyzarr(tan_t* tan, double px, double py, double *xyz)
 }
 
 // RA,Dec in degrees to Pixels.
-void sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py)
+bool sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py)
 {
 	double u, v;
 	double U, V;
 
-	tan_radec2pixelxy(&(sip->wcstan), ra, dec, px, py);
+	if (!tan_radec2pixelxy(&(sip->wcstan), ra, dec, px, py))
+		return FALSE;
 
 	// Subtract crpix, invert SIP distortion, add crpix.
 
@@ -149,10 +150,11 @@ void sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py
 
 	*px = u + sip->wcstan.crpix[0];
 	*py = v + sip->wcstan.crpix[1];
+	return TRUE;
 }
 
 // xyz unit vector to Pixels.
-void   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
+bool   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
 {
 	double x,y,U,V;
 	double xyzcrval[3];
@@ -178,7 +180,8 @@ void   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
 	// FIXME be robust near the poles
 	// Calculate intermediate world coordinates (x,y) on the tangent plane
 	radecdeg2xyzarr(tan->crval[0],tan->crval[1],xyzcrval);
-	star_coords(xyzpt, xyzcrval, &y, &x);
+	if (!star_coords(xyzpt, xyzcrval, &y, &x))
+		return FALSE;
 
 	// Switch intermediate world coordinates into degrees
 	x = rad2deg(x);
@@ -191,14 +194,15 @@ void   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
 	// Re-add crpix to get pixel coordinates
 	*px = U + tan->crpix[0];
 	*py = V + tan->crpix[1];
+	return TRUE;
 }
 
 // RA,Dec in degrees to Pixels.
-void tan_radec2pixelxy(tan_t* tan, double a, double d, double *px, double *py)
+bool tan_radec2pixelxy(tan_t* tan, double a, double d, double *px, double *py)
 {
 	double xyzpt[3];
 	radecdeg2xyzarr(a,d,xyzpt);
-	tan_xyzarr2pixelxy(tan, xyzpt, px, py);
+	return tan_xyzarr2pixelxy(tan, xyzpt, px, py);
 }
 
 void sip_calc_distortion(sip_t* sip, double u, double v, double* U, double *V)
