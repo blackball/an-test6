@@ -216,6 +216,10 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	if (rdlist_close(rdls)) {
+		fprintf(stderr, "Failed to close RDLS file.\n");
+	}
+
 	fprintf(stderr, "Done!\n");
 
 	return 0;

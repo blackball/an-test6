@@ -206,6 +206,10 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
+	if (xylist_close(xyls)) {
+		fprintf(stderr, "Failed to close XYLS file.\n");
+	}
+
 	fprintf(stderr, "Done!\n");
 
 	return 0;
