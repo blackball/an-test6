@@ -36,6 +36,7 @@
 # define likely(x)	__builtin_expect (!!(x), 1)
 # define unlikely(x)	__builtin_expect (!!(x), 0)
 # define Noinline __attribute__ ((noinline))
+# define WarnUnusedResult __attribute__ ((warn_unused_result))
 #else
 
 # define Inline
@@ -51,5 +52,6 @@
 # define likely(x)	(x)
 # define unlikely(x)	(x)
 # define Noinline
+# define WarnUnusedResult
 
 #endif

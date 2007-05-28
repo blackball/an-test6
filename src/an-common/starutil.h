@@ -122,7 +122,7 @@ void make_rand_star(double* star, double ramin, double ramax,
 
 /* computes the 2D coordinates (x,y)  that star s would have in a
    TANGENTIAL PROJECTION defined by (centred at) star r.     */
-inline bool star_coords(double *s, double *r, double *x, double *y);
+WarnUnusedResult inline bool star_coords(double *s, double *r, double *x, double *y);
 
 inline void star_midpoint(double* mid, double* A, double* B);
 
