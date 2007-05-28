@@ -23,6 +23,7 @@
 #include <string.h>
 #include <limits.h>
 #include <sys/mman.h>
+#include <assert.h>
 
 #define TRUE 1
 #include "ppm.h"
@@ -99,7 +100,9 @@ int main(int argc, char *argv[]) {
 		star_midpoint(xyz0, xyzABCD + 3*0, xyzABCD + 3*1);
 		for (i=0; i<4; i++) {
 			double x, y;
-			star_coords(xyzABCD + 3*i, xyz0, &x, &y);
+			bool ok;
+			ok = star_coords(xyzABCD + 3*i, xyz0, &x, &y);
+			assert(ok);
 			theta[i] = atan2(y, x);
 			perm[i] = i;
 		}

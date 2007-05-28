@@ -23,12 +23,9 @@
 #include <string.h>
 #include <limits.h>
 #include <sys/mman.h>
+#include <assert.h>
 
 #include "an-bool.h"
-
-#include "ppm.h"
-#include "pnm.h"
-
 #include "starkd.h"
 #include "kdtree.h"
 #include "starutil.h"
@@ -231,7 +228,9 @@ int main(int argc, char *argv[]) {
 			// polygon doesn't self-intersect.
 			for (s=0; s<4; s++) {
 				double x, y;
-				star_coords(xyzs + 3*s, midab, &x, &y);
+				bool ok;
+				ok = star_coords(xyzs + 3*s, midab, &x, &y);
+				assert(ok);
 				theta[s] = atan2(y, x);
 				perm[s] = s;
 			}

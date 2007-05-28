@@ -88,7 +88,11 @@ int render_image(unsigned char* img, render_args_t* args) {
 			uchar* pix;
 			ra = pixel2ra(i, args);
 			dec = pixel2dec(j, args);
-			sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey);
+			if (!sip_radec2pixelxy(&wcs, ra, dec, &imagex, &imagey)) {
+				// transparent.
+				pix[3] = 0;
+				continue;
+			}
 			pppx = lround(imagex);
 			pppy = lround(imagey);
 			pix = pixel(i, j, img, args);
