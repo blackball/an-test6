@@ -910,7 +910,9 @@ double figure_of_merit2(tweak_t* t)
 	int i;
 	for (i = 0; i < il_size(t->image); i++) {
 		double x, y, dx, dy;
-		sip_radec2pixelxy(t->sip, t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], &x, &y);
+		bool ok;
+		ok = sip_radec2pixelxy(t->sip, t->a_ref[il_get(t->ref, i)], t->d_ref[il_get(t->ref, i)], &x, &y);
+		assert(ok);
 		dx = t->x[il_get(t->image, i)] - x;
 		dy = t->y[il_get(t->image, i)] - y;
 		sqerr += dx * dx + dy * dy;
@@ -1309,6 +1311,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		double weight = 1.0;
 		double u;
 		double v;
+		bool ok;
 
 		if (!il_get(t->included, row)) {
 			continue;
@@ -1367,7 +1370,8 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		// B contains Intermediate World Coordinates (in degrees)
 		refi = il_get(t->ref, i);
 		radecdeg2xyzarr(t->a_ref[refi], t->d_ref[refi], xyzpt);
-		star_coords(xyzpt, xyzcrval, &y, &x); // tangent-plane projection
+		ok = star_coords(xyzpt, xyzcrval, &y, &x); // tangent-plane projection
+		assert(ok);
 		set(B, i, 0) = weight * rad2deg(x);
 		set(B, i, 1) = weight * rad2deg(y);
 	}
@@ -1949,8 +1953,10 @@ unsigned int tweak_advance_to(tweak_t* t, unsigned int flag)
 		t->x_ref = malloc(sizeof(double) * t->n_ref);
 		t->y_ref = malloc(sizeof(double) * t->n_ref);
 		for (jj = 0; jj < t->n_ref; jj++) {
-			sip_radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
-			                  t->x_ref + jj, t->y_ref + jj);
+			bool ok;
+			ok = sip_radec2pixelxy(t->sip, t->a_ref[jj], t->d_ref[jj],
+								   t->x_ref + jj, t->y_ref + jj);
+			assert(ok);
 			//fprintf(stderr,"ref star %04d: %g,%g\n",jj,t->x_ref[jj],t->y_ref[jj]);
 		}
 
