@@ -177,7 +177,7 @@ static void compute_code(quad* q, double* code) {
 	star_midpoint(midAB, sA, sB);
 	ok = star_coords(sA, midAB, &Ax, &Ay);
 	assert(ok);
-	star_coords(sB, midAB, &Bx, &By);
+	ok = star_coords(sB, midAB, &Bx, &By);
 	assert(ok);
 	ABx = Bx - Ax;
 	ABy = By - Ay;

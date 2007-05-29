@@ -14,7 +14,9 @@
 # along with the Astrometry.net suite ; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-CC := gcc
+# only set CC if it hasn't already been set
+# (this allows the user to override it)
+CC ?= gcc
 
 LIBFORTRAN :=
 WHICHG77 := $(shell which g77)

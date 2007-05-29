@@ -75,4 +75,4 @@ test_sip: $(TEST_SIP_OBJS) \
 	$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(CFITS_LIB) $(LIBWCS_LIB)
 
 clean :
-	rm tweak test_sip $(TWEAK_OBJS) $(TEST_SIP_OBJS)
+	-rm tweak test_sip $(TWEAK_OBJS) $(TEST_SIP_OBJS)

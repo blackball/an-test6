@@ -21,6 +21,16 @@ all:
 	$(MAKE) -C quads
 	$(MAKE) -C simplexy
 
+clean:
+	$(MAKE) -C an-common clean
+	$(MAKE) -C cfitsio clean
+	$(MAKE) -C qfits-an clean
+	$(MAKE) -C gsl-an clean
+	$(MAKE) -C libkd clean
+	$(MAKE) -C simplexy clean
+	$(MAKE) -C quads clean
+	$(MAKE) -C tweak clean
+
 TAGS:
 	etags -I `find . -name "*.c" -o -name "*.h"`
 
