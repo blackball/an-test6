@@ -1,0 +1,26 @@
+#! /bin/bash
+
+# This script gets run on cluster27 via ssh from oven.
+
+# Careful about writing things to stdout - we pipe it to tar on the other end.
+
+# Read jobid
+read -s jobid
+
+# Replace "-" by "/".
+jobid=`echo "$jobid" | sed s+-+/+g`
+
+# Create our job directory.
+cd /nobackup/stars/ontheweb-data
+mkdir -p $jobid
+cd $jobid
+tar xf -
+
+# Index path replacement.
+sed s+/home/gmaps/ontheweb-indexes+/p/learning/stars/raid3/INDEXES+ < input > input.c27
+
+# stderr goes back over the ssh tunnel to the log file on oven.
+nice ~/amd-an-2/quads/blind < input.c27 > blind.stdout
+
+# Send back all the files we generated!
+tar cf - *

@@ -14,6 +14,85 @@ $myuri  = $_SERVER['PHP_SELF'];
 $myuridir = rtrim(dirname($myuri), '/\\');
 $debug = 0;
 
+$index57paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($index57paths, sprintf('index-57/index-57-%02d', $i));
+$index58paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($index58paths, sprintf('index-58/index-58-%02d', $i));
+$index59paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($index59paths, sprintf('index-59/index-59-%02d', $i));
+$index60paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($index60paths, sprintf('index-60/index-60-%02d', $i));
+
+$indexdata =
+array('90degree' => array('desc' => '90-degree Fields',
+						  'quadsize' => array(1400, 2000),
+						  'paths' => array('index-76/index-76')),
+	  '60degree' => array('desc' => '60-degree Fields',
+						  'quadsize' => array(1000, 1400),
+						  'paths' => array('index-75/index-75')),
+	  '45degree' => array('desc' => '45-degree Fields',
+						  'quadsize' => array(680, 1000),
+						  'paths' => array('index-74/index-74')),
+	  '30degree' => array('desc' => '30-degree Fields',
+						  'quadsize' => array(480, 680),
+						  'paths' => array('index-73/index-73')),
+	  '25degree' => array('desc' => '25-degree Fields',
+						  'quadsize' => array(340, 480),
+						  'paths' => array('index-72/index-72')),
+	  '15degree' => array('desc' => '15-degree Fields',
+						  'quadsize' => array(240, 340),
+						  'paths' => array('index-71/index-71')),
+	  '10degree' => array('desc' => '10-degree Fields',
+						  'quadsize' => array(170, 240),
+						  'paths' => array('index-70/index-70')),
+	  '8degree' => array('desc' => '8-degree Fields',
+						  'quadsize' => array(120, 170),
+						  'paths' => array('index-69/index-69')),
+	  '5degree' => array('desc' => '5-degree Fields',
+						  'quadsize' => array(85, 120),
+						  'paths' => array('index-68/index-68')),
+	  '4degree' => array('desc' => '4-degree Fields',
+						  'quadsize' => array(60, 86),
+						  'paths' => array('index-67/index-67')),
+	  '2.5degree' => array('desc' => '2.5-degree Fields',
+						  'quadsize' => array(42, 60),
+						  'paths' => array('index-66/index-66')),
+	  '2degree' => array('desc' => '2-degree Fields',
+						  'quadsize' => array(30, 42),
+						  'paths' => array('index-65/index-65')),
+	  '1.5degree' => array('desc' => '1.5-degree Fields',
+						  'quadsize' => array(22, 30),
+						  'paths' => array('index-64/index-64')),
+	  '1degree' => array('desc' => '1-degree Fields',
+						  'quadsize' => array(16, 22),
+						  'paths' => array('index-63/index-63')),
+	  '40arcmin' => array('desc' => '40-arcmin Fields',
+						  'quadsize' => array(11, 16),
+						  'paths' => array('index-62/index-62')),
+	  '30arcmin' => array('desc' => '30-arcmin Fields',
+						  'quadsize' => array(8, 11),
+						  'paths' => array('index-61/index-61')),
+	  '20arcmin' => array('desc' => '20-arcmin Fields',
+						  'quadsize' => array(5.6, 8.0),
+						  'paths' => $index60paths),
+	  '15arcmin' => array('desc' => '15-arcmin Fields (eg, Sloan Digital Sky Survey)',
+						  'quadsize' => array(4.0, 5.6),
+						  'paths' => $index59paths),
+	  '10arcmin' => array('desc' => '10-arcmin Fields',
+						  'quadsize' => array(2.8, 4.0),
+						  'paths' => $index58paths),
+	  '8arcmin' => array('desc' => '8-arcmin Fields',
+						  'quadsize' => array(2.0, 2.8),
+						  'paths' => $index57paths),
+
+$largest_index = '90degree';
+$smallest_index = '8arcmin';
+
+	 /*
 $sdss46paths = array();
 for ($i=0; $i<12; $i++)
 	 array_push($sdss46paths, sprintf('sdss-46/sdss-46-%02d', $i));
@@ -58,6 +137,7 @@ array('60degree' => array('desc' => '60-degree Fields',
 
 $largest_index = '60degree';
 $smallest_index = '12arcmin';
+	 */
 
 // Set up PEAR error handling.
 function printerror($err) {
