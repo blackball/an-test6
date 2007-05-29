@@ -26,6 +26,9 @@ for ($i=0; $i<12; $i++)
 $index60paths = array();
 for ($i=0; $i<12; $i++)
 	 array_push($index60paths, sprintf('index-60/index-60-%02d', $i));
+$index61paths = array();
+for ($i=0; $i<12; $i++)
+	 array_push($index61paths, sprintf('index-61/index-61-%02d', $i));
 
 $indexdata =
 array('90degree' => array('desc' => '90-degree Fields',
@@ -75,7 +78,7 @@ array('90degree' => array('desc' => '90-degree Fields',
 						  'paths' => array('index-62/index-62')),
 	  '30arcmin' => array('desc' => '30-arcmin Fields',
 						  'quadsize' => array(8, 11),
-						  'paths' => array('index-61/index-61')),
+						  'paths' => $index61paths),
 	  '20arcmin' => array('desc' => '20-arcmin Fields',
 						  'quadsize' => array(5.6, 8.0),
 						  'paths' => $index60paths),
@@ -88,11 +91,12 @@ array('90degree' => array('desc' => '90-degree Fields',
 	  '8arcmin' => array('desc' => '8-arcmin Fields',
 						  'quadsize' => array(2.0, 2.8),
 						  'paths' => $index57paths),
+	  );
 
 $largest_index = '90degree';
 $smallest_index = '8arcmin';
 
-	 /*
+/*
 $sdss46paths = array();
 for ($i=0; $i<12; $i++)
 	 array_push($sdss46paths, sprintf('sdss-46/sdss-46-%02d', $i));
@@ -137,7 +141,7 @@ array('60degree' => array('desc' => '60-degree Fields',
 
 $largest_index = '60degree';
 $smallest_index = '12arcmin';
-	 */
+*/
 
 // Set up PEAR error handling.
 function printerror($err) {
@@ -1456,7 +1460,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		// -the brightest:
 		$objimg1 = $prefix . "objs1.pgm";
 		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $imW . " -H " . $imH .
-			" -x " . $xyoff . " -y " . $xyoff . " -w 1.75 -S " . $scale .
+			" -x " . $xyoff . " -y " . $xyoff . " -w 2 -r 6 -S " . $scale .
 			" -N " . $Nbright . " > " . $objimg1;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
@@ -1471,7 +1475,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 		$objimg2 = $prefix . "objs2.pgm";
 		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $imW . " -H " . $imH .
 			" -x " . $xyoff . " -y " . $xyoff . " -n " . $Nbright .
-			" -N " . $Nmax . " -r 3 -w 1.75" . " -S " . $scale . " > " . $objimg2;
+			" -N " . $Nmax . " -r 4 -w 2" . " -S " . $scale . " > " . $objimg2;
 		loggit("Command: " . $cmd . "\n");
 		$res = system($cmd, $retval);
 		if (($res === FALSE) || $retval) {
