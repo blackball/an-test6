@@ -67,6 +67,7 @@ int dallpeaks(float *image,
               float *xcen,
               float *ycen,
               int *npeaks,
+	      float dpsf,
               float sigma,
               float dlim,
               float saddle,
@@ -83,7 +84,7 @@ int dallpeaks(float *image,
 	dobject = (int *) malloc(sizeof(int) * (nx * ny + 1));
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
-			dobject[i + j*nx] = objects[i + j * nx];
+			dobject[i + j*nx] = objects[i + j*nx];
 	for (i = 0;i < nx*ny;i++)
 		indx[i] = i;
 	qsort((void *) indx, (size_t) nx*ny, sizeof(int), objects_compare);
@@ -131,9 +132,9 @@ int dallpeaks(float *image,
 			oimage[oi + oj*onx] = image[i + j * nx];
 		      }
 		    }
-		  
+
 		  /* find peaks in cutout */
-		  dsmooth(oimage, onx, ony, 2, simage);
+		  dsmooth(oimage, onx, ony, dpsf, simage);
 		  dpeaks(simage, onx, ony, &nc, xc, yc,
 			 sigma, dlim, saddle, maxper, 0, 1, minpeak);
 		  imore = 0;

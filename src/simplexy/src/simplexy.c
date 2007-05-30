@@ -92,8 +92,8 @@ int simplexy(float *image,
 	FREEVEC(smooth);
 
 	/* find all peaks within each object */
-	dallpeaks(simage, nx, ny, oimage, x, y, npeaks, (*sigma), dlim, saddle,
-	          maxper, maxnpeaks, minpeak, maxsize);
+	dallpeaks(simage, nx, ny, oimage, x, y, npeaks, dpsf,
+		  (*sigma), dlim, saddle, maxper, maxnpeaks, minpeak, maxsize);
 	fprintf(stderr, "simplexy: dallpeaks() found %i peaks.\n", *npeaks);
 	FREEVEC(oimage);
 
@@ -102,4 +102,4 @@ int simplexy(float *image,
 	FREEVEC(simage);
 
 	return (1);
-} /* end dmedsmooth */
+}

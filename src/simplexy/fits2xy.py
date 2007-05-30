@@ -55,8 +55,8 @@ plim = 8.0
 dlim = dpsf
 saddle = 5.0
 maxper = 1000
-maxnpeaks = 100000
-maxsize = 10000
+maxnpeaks = 10000
+maxsize = 1000
 halfbox= 100
 
 def extract(infile):

@@ -46,7 +46,8 @@ int dsigma(float *image, int nx, int ny, int sp, float *sigma);
 int dmedsmooth(float *image, float *invvar, int nx, int ny, int halfbox,
                float *smooth);
 int dallpeaks(float *image, int nx, int ny, int *objects, float *xcen,
-              float *ycen, int *npeaks, float sigma, float dlim, float saddle,
+              float *ycen, int *npeaks, float dpsf, float sigma,
+	      float dlim, float saddle,
               int maxper, int maxnpeaks, float minpeak, int maxsize);
 int simplexy(float *image, int nx, int ny, float dpsf, float plim,
              float dlim, float saddle, int maxper, int maxnpeaks,

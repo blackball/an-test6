@@ -29,7 +29,7 @@
 #include "fitsio.h"
 #include "dimage.h"
 
-#define MAXNPEAKS 100000
+#define MAXNPEAKS 10000
 
 static float *x = NULL;
 static float *y = NULL;
@@ -151,12 +151,12 @@ int main(int argc, char *argv[])
 	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
 	/* Parameters for simplexy; save for debugging */
 	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
-	dpsf = 1.0;       /* gaussian psf width */
+	dpsf = 1.0;       /* gaussian psf width (pix) */
 	plim = 8.0;       /* significance to keep */
 	dlim = dpsf;      /* closest two peaks can be */
 	saddle = 5.0;     /* saddle difference (in sig) */
-	maxper = 10000;   /* maximum number of peaks per object */
-	maxsize = 10000;  /* maximum size for extended objects */
+	maxper = 1000;    /* maximum number of peaks per object */
+	maxsize = 1000;   /* maximum size for extended objects */
 	halfbox = 100;    /* half-width for sliding sky median box */
 	fits_write_key(ofptr, TFLOAT, "DPSF", &dpsf, "fits2xy Assumed gaussian psf width", &status);
 	fits_write_key(ofptr, TFLOAT, "PLIM", &plim, "fits2xy Significance to keep", &status);
