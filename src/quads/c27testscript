@@ -11,16 +11,19 @@ read -s jobid
 jobid=`echo "$jobid" | sed s+-+/+g`
 
 # Create our job directory.
-cd /nobackup/stars/ontheweb-data
+#cd /nobackup/stars/ontheweb-data
+cd /nobackup/dstn/ontheweb-data
 mkdir -p $jobid
 cd $jobid
 tar xf -
 
 # Index path replacement.
-sed s+/home/gmaps/ontheweb-indexes+/p/learning/stars/raid3/INDEXES+ < input > input.c27
+#sed s+/home/gmaps/ontheweb-indexes+/p/learning/stars/raid3/INDEXES+ < input > input.c27
+sed s+/home/gmaps/ontheweb-indexes+/nobackup/dstn/INDEXES+ < input > input.c27
 
 # stderr goes back over the ssh tunnel to the log file on oven.
-nice ~/amd-an-2/quads/blind < input.c27 > blind.stdout
+#nice ~/amd-an-2/quads/blind < input.c27 > blind.stdout
+~/amd-an-2/quads/blind < input.c27 > blind.stdout
 
 # Send back all the files we generated!
 tar cf - *
