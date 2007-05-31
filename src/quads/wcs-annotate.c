@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 
 #include "sip_qfits.h"
 #include "an-bool.h"
@@ -31,12 +32,13 @@
 #include "ngc2000.h"
 
 
-const char* OPTIONS = "hw:";
+const char* OPTIONS = "hw:p";
 
 void print_help(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s\n"
 		   "   -w <WCS input file>\n"
+		   "   [-p]: give pixel locations\n"
 		   "\n", progname);
 }
 
@@ -54,6 +56,7 @@ int main(int argc, char** args) {
 	int W, H;
 	double scale;
 	double imsize;
+	bool pix = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -62,6 +65,9 @@ int main(int argc, char** args) {
 			exit(0);
 		case 'w':
 			wcsfn = optarg;
+			break;
+		case 'p':
+			pix = TRUE;
 			break;
 		}
 	}
@@ -158,6 +164,8 @@ int main(int argc, char** args) {
 				printf(" / %s", (char*)pl_get(names, n));
 			pl_free(names);
 		}
+		if (pix)
+			printf(" near pixel (%i, %i)\n", (int)round(x), (int)round(y));
 		printf("\n");
 	}
 
