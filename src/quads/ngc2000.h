@@ -2,6 +2,7 @@
 #define NGC2000_H
 
 #include "an-bool.h"
+#include "bl.h"
 
 /*
   The NGC2000 catalog can be found at:
@@ -35,7 +36,9 @@ struct ngc_entry {
 typedef struct ngc_entry ngc_entry;
 
 // find the common of the given ngc_entry, if it has one.
-char* ngc_get_name(ngc_entry* entry);
+char* ngc_get_name(ngc_entry* entry, int num);
+
+pl* ngc_get_names(ngc_entry* entry);
 
 extern ngc_entry ngc_entries[];
 

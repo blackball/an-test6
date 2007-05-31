@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "ngc2000.h"
+#include "bl.h"
 
 struct ngc_name {
 	bool is_ngc;
@@ -31,14 +32,30 @@ ngc_entry* ngc_get_entry(int i) {
 	return ngc_entries + i;
 }
 
-char* ngc_get_name(ngc_entry* entry) {
+char* ngc_get_name(ngc_entry* entry, int num) {
 	int i;
 	for (i=0; i<sizeof(ngc_names)/sizeof(ngc_name); i++) {
 		if ((entry->is_ngc == ngc_names[i].is_ngc) &&
 			(entry->id == ngc_names[i].id)) {
-			return ngc_names[i].name;
+			if (num == 0)
+				return ngc_names[i].name;
+			else
+				num--;
 		}
 	}
 	return NULL;
 }
 
+pl* ngc_get_names(ngc_entry* entry) {
+	int i;
+	pl* list = NULL;
+	for (i=0; i<sizeof(ngc_names)/sizeof(ngc_name); i++) {
+		if ((entry->is_ngc == ngc_names[i].is_ngc) &&
+			(entry->id == ngc_names[i].id)) {
+			if (!list)
+				list = pl_new(16);
+			pl_append(list, ngc_names[i].name);
+		}
+	}
+	return list;
+}

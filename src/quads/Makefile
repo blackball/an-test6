@@ -77,7 +77,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	new-wcs
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable
+	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
@@ -144,6 +144,10 @@ an-fitstopnm: an-fitstopnm.o \
 
 fits-guess-scale: fits-guess-scale.o \
 		$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+wcs-annotate: wcs-annotate.o ngc2000.o \
+		$(LIBTWEAK_LIB) $(UTIL_OBJS) \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 wcs-xy2rd: wcs-xy2rd.o $(LIBTWEAK_LIB) $(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
