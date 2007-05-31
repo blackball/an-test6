@@ -124,6 +124,14 @@ rdlstohealpix: rdlstohealpix.o \
 xylist2fits: xylist2fits.o boilerplate.o svn.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
+ngc2000.o: ngc2000.c ngc2000names.c ngc2000entries.c
+
+ngc2000names.c: parse-ngc2000names.awk ngc2000names.dat
+	awk -f parse-ngc2000names.awk < ngc2000names.dat  > $@
+
+ngc2000entries.c: parse-ngc2000.awk ngc2000.dat
+	awk -f parse-ngc2000.awk < ngc2000.dat  > $@
+
 .PHONY: tags
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
