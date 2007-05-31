@@ -90,60 +90,37 @@ END;
 
 $host  = $_SERVER['HTTP_HOST'];
 
-if (strpos($host, "monte") === 0) {
-	$sqlite = "/h/260/dstn/software/sqlite-2.8.17/bin/sqlite";
-	$resultdir = "/h/260/dstn/local/ontheweb-results/";
-	$indexdir = "/h/260/dstn/local/ontheweb-indexes/";
-	$fits2xy = "~/an/simplexy/fits2xy";
-	$plotxy2 = "plotxy2";
-	$plotquad = "plotquad";
-	$modhead = "modhead";
-	$tabsort = "tabsort";
-	$tabmerge = "tabmerge";
-	$tablist = "tablist";
-	$mergesolved = "mergesolved";
-	$fitsgetext = "fitsgetext";
-	$fitscopy = "fitscopy";
-	$xylist2fits = "xylist2fits";
-	$rdlsinfo = "rdlsinfo";
-	$xylsinfo = "/h/260/dstn/an/quads/xylsinfo";
-	$wcsinfo = "wcsinfo";
-	$printsolved = "printsolved";
-	$wcs_xy2rd = "wcs-xy2rd";
-	$wcs_rd2xy = "wcs-rd2xy";
-	$fits_guess_scale = "fits-guess-scale";
-	$an_fitstopnm = "an-fitstopnm";
-	$new_wcs = "new-wcs";
-} else {
-	$base = "/home/gmaps/an-2/";
-	$quads = $base . "quads/";
-	$simplexy = $base . "simplexy/";
+$base = "/home/gmaps/an-2/";
+$quads = $base . "quads/";
+$simplexy = $base . "simplexy/";
 
-	$sqlite = "sqlite";
-	$resultdir = "/home/gmaps/ontheweb-data/";
-	$indexdir = "/home/gmaps/ontheweb-indexes/";
-	$fits2xy = $simplexy . "fits2xy";
-	$plotxy2 = $quads . "plotxy2";
-	$plotquad = $quads . "plotquad";
-	$modhead = $quads . "modhead";
-	$tabsort = $quads . "tabsort";
-	$tablist = $quads . "tablist";
-	$tabmerge = $quads . "tabmerge";
-	$fitsgetext = $quads . "fitsgetext";
-	$fitscopy = $quads . "fitscopy";
-	$xylist2fits = $quads . "xylist2fits";
-	$mergesolved = $quads . "mergesolved";
-	$rdlsinfo = $quads . "rdlsinfo";
-	$xylsinfo = $quads . "xylsinfo";
-	$wcsinfo = $quads . "wcsinfo";
-	$printsolved = $quads . "printsolved";
-	$wcs_xy2rd = $quads . "wcs-xy2rd";
-	$wcs_rd2xy = $quads . "wcs-rd2xy";
-	$fits_guess_scale = $quads . "fits-guess-scale";
-	$an_fitstopnm = $quads . "an-fitstopnm";
-	$fits_filter = $quads . "fits2fits.py %s %s";
-	$new_wcs = $quads . "new-wcs";
-}
+$resultdir = "/home/gmaps/ontheweb-data/";
+$indexdir = "/home/gmaps/ontheweb-indexes/";
+
+$sqlite = "sqlite";
+
+$fits2xy = $simplexy . "fits2xy";
+$plotxy2 = $quads . "plotxy2";
+$plotquad = $quads . "plotquad";
+$modhead = $quads . "modhead";
+$tabsort = $quads . "tabsort";
+$tablist = $quads . "tablist";
+$tabmerge = $quads . "tabmerge";
+$fitsgetext = $quads . "fitsgetext";
+$fitscopy = $quads . "fitscopy";
+$xylist2fits = $quads . "xylist2fits";
+$mergesolved = $quads . "mergesolved";
+$rdlsinfo = $quads . "rdlsinfo";
+$xylsinfo = $quads . "xylsinfo";
+$wcsinfo = $quads . "wcsinfo";
+$printsolved = $quads . "printsolved";
+$wcs_xy2rd = $quads . "wcs-xy2rd";
+$wcs_rd2xy = $quads . "wcs-rd2xy";
+$fits_guess_scale = $quads . "fits-guess-scale";
+$an_fitstopnm = $quads . "an-fitstopnm";
+$fits_filter = $quads . "fits2fits.py %s %s";
+$new_wcs = $quads . "new-wcs";
+$wcs_annotate = $quads . "wcs-annotate";
 
 $headers = $_REQUEST;
 

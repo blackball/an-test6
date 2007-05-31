@@ -446,9 +446,13 @@ h3.c {text-align:center;}
 #onsky > a:hover { color:gray; }
 #onsky > a:active { color:yellow; }
 #sources { margin-left:auto; margin-right:auto; text-align:center; }
+#objs {margin-left:auto; margin-right:auto; width:100%; }
+#objs2 {width:40%; margin-left:auto; margin-right:auto; }
 </style>
 
 <?php
+//#objs {margin-left:auto; margin-right:auto; text-align:center;}
+
 if ($do_refresh) {
 	echo '<meta http-equiv="refresh" content="5; URL=status.php?job=' . $myname . '"/>';
 }
@@ -473,7 +477,7 @@ function get_url($f) {
 function print_link($f, $dynamic=FALSE) {
 	if (file_exists($f) || $dynamic) {
 		$url = get_url(basename($f));
-		echo "<a href=\"" . $url . "\">" .
+		echo "<a href=\"" . htmlentities($url) . "\">" .
 			basename($f) . "</a>";
 	} else {
 		echo "(not available)";
@@ -530,6 +534,27 @@ Astrometry.net: Job Status
 if ($didsolve) {
 	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
 	echo "<hr />\n";
+
+	$cmd = $wcs_annotate . " -w " . $wcsfile . " 2> /dev/null";
+	loggit("Command: " . $cmd . "\n");
+	$res = shell_exec($cmd);
+	if ($res) {
+		echo "<div id=\"objs\">\n";
+		echo "<div id=\"objs2\">\n";
+		echo "<p>Your field contains:</p>\n";
+		echo "<ul>\n";
+		$lines = explode("\n", $res);
+		foreach ($lines as $ln) {
+			if (!$ln)
+				continue;
+			echo "<li>" . $ln . "</li>\n";
+		}
+		echo "</ul>\n";
+		//echo "</p>\n";
+		echo "</div>";
+		echo "</div>";
+		echo "<hr />\n";
+	}
 
 	echo "<div id=\"onsky\">\n";
 	echo "<p>Your field on the sky (click for larger image):</p>\n";
@@ -632,11 +657,11 @@ if ($didsolve) {
 	echo "</p>\n";
 	if ($linktobig) {
 		echo "<a href=\"" .
-			get_url('overlay-big') . 
+			htmlentities(get_url('overlay-big')) . 
 			"\">\n";
 	}
 	echo "<img src=\"" .
-		get_url('overlay') . 
+		htmlentities(get_url('overlay')) . 
 		"\" alt=\"An image of your field, showing sources we extracted from the image and objects from our index.\"/>";
 	if ($linktobig) {
 		echo "</a>\n";
@@ -918,7 +943,7 @@ if (file_exists($blindlogfile)) {
 <?php
 $job = describe_job($jd);
 echo '<table border="1" cellpadding="3" class="c">' . "\n";
-echo '<tr><th colspan=2>Job Parameters</th></tr>' . "\n";
+echo '<tr><th colspan="2">Job Parameters</th></tr>' . "\n";
 foreach ($job as $k => $v) {
 	echo '<tr><td>' . $k . '</td><td>';
 	$makelink = ($k == 'Image URL');
