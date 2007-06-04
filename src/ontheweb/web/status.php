@@ -36,10 +36,7 @@ $goback = array_key_exists("goback", $headers);
 $addpreset = array_key_exists("addpreset", $headers);
 $getfile = $headers['get'];
 
-// Make sure the path is legit...
-$rp1 = realpath($resultdir);
-$rp2 = realpath($mydir);
-if (substr($rp2, 0, strlen($rp1)) != $rp1) {
+if (!is_dir($mydir)) {
 	die("Invalid \"job\" arg.");
 }
 
@@ -570,10 +567,13 @@ if ($didsolve) {
 		"&gain=-0.5" .
 		"&BBOX=0,-85,360,85";
 
-	$fldsz = $pixscale * max($fullW, $fullH);
+	//$fldsz = $pixscale * max($fullW, $fullH);
+	$fldsz = $pixscale * sqrt($fullW * $fullH);
 	//loggit("Field size: " . $fldsz . "\n");
 	$zoomin = ($fldsz < (3600*18));
 	$zoomin2 = ($fldsz < (3600*1.8));
+	//$zoomin3 = ($fldsz < (3600*0.36));
+	$zoomin3 = FALSE;
 
 	if ($zoomin) {
 		echo "<p>(Your field is small so we have drawn a dashed box" .
@@ -632,6 +632,26 @@ if ($didsolve) {
 			echo "<img src=\"" . htmlentities($url . 
 											  "&WIDTH=300&HEIGHT=300&lw=3") .
 				"\" alt=\"A really zoomed-in image of your field on the sky.\" /></a>\n";
+
+			if ($zoomin3) {
+				$dm = 0.0005;
+				$ymerc = max($dm, min(1-$dm, $ymerc));
+				$ralo = merc2ra($xmerc - $dm);
+				$rahi = merc2ra($xmerc + $dm);
+				$declo = merc2dec($ymerc - $dm);
+				$dechi = merc2dec($ymerc + $dm);
+
+				$url = $tileurl .
+					"&gain=1" .
+					"&BBOX=" . $ralo . "," . $declo . "," . $rahi . "," . $dechi;
+
+				echo "<a href=\"" . htmlentities($url .
+												 "&WIDTH=1024&HEIGHT=1024&lw=5") .
+					"\">";
+				echo "<img src=\"" . htmlentities($url . 
+												  "&WIDTH=300&HEIGHT=300&lw=3") .
+					"\" alt=\"A really-really zoomed-in image of your field on the sky.\" /></a>\n";
+			}
 		}
 
 	}
