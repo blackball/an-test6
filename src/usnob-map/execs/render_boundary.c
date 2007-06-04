@@ -129,6 +129,28 @@ int render_boundary(unsigned char* img, render_args_t* args) {
 		draw_line_merc(mx+dm, my+dm, mx+dm, my-dm, cairo, args);
 		draw_line_merc(mx+dm, my-dm, mx-dm, my-dm, cairo, args);
 		cairo_stroke(cairo);
+
+		if (args->zoomright) {
+			cairo_set_line_width(cairo, lw/2.0);
+
+			// draw lines from the left edge of the dashed box to the
+			// right-hand edge of the image.
+			cairo_set_dash(cairo, dashes, 0, 0.0);
+			draw_line_merc(mx-dm, my-dm, args->xmercmax, args->ymercmin,
+						   cairo, args);
+			draw_line_merc(mx-dm, my+dm, args->xmercmax, args->ymercmax,
+						   cairo, args);
+			cairo_stroke(cairo);
+		}
+		if (args->zoomdown) {
+			cairo_set_line_width(cairo, lw/2.0);
+			cairo_set_dash(cairo, dashes, 0, 0.0);
+			draw_line_merc(mx-dm, my+dm, args->xmercmin, args->ymercmin,
+						   cairo, args);
+			draw_line_merc(mx+dm, my+dm, args->xmercmax, args->ymercmin,
+						   cairo, args);
+			cairo_stroke(cairo);
+		}
 	}
 
 	// Cairo's uint32 ARGB32 format is a little different than what we need,

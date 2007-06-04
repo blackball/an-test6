@@ -30,7 +30,7 @@
    The width and height in pixels are  -w <width> -h <height>
 */
 
-#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:Spk:"
+#define OPTIONS "x:y:X:Y:w:h:l:i:W:c:sag:r:N:F:L:B:I:RMC:Spk:zd"
 
 
 /* All render layers must go in here */
@@ -96,6 +96,12 @@ int main(int argc, char *argv[]) {
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
+		case 'z':
+			args.zoomright = TRUE;
+			break;
+		case 'd':
+			args.zoomdown = TRUE;
+			break;
 		case 'p':
 			args.nopre = TRUE;
 			break;

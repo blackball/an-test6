@@ -70,6 +70,8 @@ struct render_args {
 	char* wcsfn;
 	double linewidth;
 	double dashbox;
+	bool zoomright;
+	bool zoomdown;
 
 	char* constfn;
 };
