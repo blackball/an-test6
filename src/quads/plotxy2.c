@@ -202,6 +202,12 @@ int main(int argc, char *args[]) {
 			cairo_line_to(cairo, x, y + rad*0.5);
 			cairo_move_to(cairo, x, y - rad);
 			cairo_line_to(cairo, x, y - rad*0.5);
+		case 's':
+			cairo_move_to(cairo, x - rad, y - rad);
+			cairo_line_to(cairo, x - rad, y + rad);
+			cairo_line_to(cairo, x + rad, y + rad);
+			cairo_line_to(cairo, x + rad, y - rad);
+			cairo_line_to(cairo, x - rad, y - rad);
 		}
 		cairo_stroke(cairo);
 	}
