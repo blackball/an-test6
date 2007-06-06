@@ -512,6 +512,7 @@ int main(int argc, char *argv[]) {
 		sp->nindexes = pl_size(bp->indexes);
 
 		if (bp->verify_wcsfn) {
+			logmsg(bp, "Reading WCS header to verify from file %s\n", bp->verify_wcsfn);
 			qfits_header* hdr = qfits_header_read(bp->verify_wcsfn);
 			if (!hdr) {
 				logerr(bp, "Failed to read FITS header from file %s\n", bp->verify_wcsfn);
@@ -519,6 +520,7 @@ int main(int argc, char *argv[]) {
 			}
 			bp->verify_wcs = sip_read_header(hdr, NULL);
 			qfits_header_destroy(hdr);
+			//logmsg(bp, "verify_wcs = %p\n", bp->verify_wcs);
 			if (!bp->verify_wcs) {
 				logerr(bp, "Failed to parse WCS header from file %s\n", bp->verify_wcsfn);
 				goto doneverify;

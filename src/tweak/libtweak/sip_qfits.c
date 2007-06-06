@@ -160,7 +160,10 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 		return NULL;
 	}
 	if (strncmp(str, expect, strlen(expect))) {
-		tan_read_header(hdr, &(sip.wcstan));
+		if (!tan_read_header(hdr, &(sip.wcstan))) {
+			fprintf(stderr, "SIP: failed to read TAN header.\n");
+			return NULL;
+		}
 		goto gohome;
 	}
 
@@ -255,7 +258,7 @@ tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 		for (i=0; i<8; i++) {
 			*(vals[i]) = qfits_header_getdouble(hdr, keys[i], nil);
 			if (*(vals[i]) == nil) {
-				fprintf(stderr, "TAN header: invalid value for \"%s\".\n", keys[i]);
+				fprintf(stderr, "TAN header: missing or invalid value for \"%s\".\n", keys[i]);
 				return NULL;
 			}
 		}
