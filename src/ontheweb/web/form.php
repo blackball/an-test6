@@ -539,7 +539,7 @@ function process_data ($vals) {
 	// If we got an image, convert it to PNM & FITS.
 	$scaleguess = array();
 	if ($imgfilename) {
-		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db, $scaleguess)) {
+		if (!convert_image($imgbasename, $mydir, $errstr, $W, $H, $db, $scaleguess, $inwcsfile)) {
 			submit_failed($db, "Failed to run source extraction: " . $errstr);
 			die($errstr);
 		}
@@ -607,6 +607,7 @@ function process_data ($vals) {
 			submit_failed($db, "Failed to extract the pixel coordinate columns from your FITS file.");
 		}
 		$gotfits = TRUE;
+		$inwcsfile = $xylist;
 	}
 
 	if ($gotfits) {
@@ -920,9 +921,11 @@ function process_data ($vals) {
 				"fieldunits_upper " . $fumax . "\n" .
 				"tol " . $codetol . "\n" .
 				"verify_pix " . $poserr . "\n" .
+				/*
 				"nverify 10\n" .
 				"nindex_tokeep 20\n" .
 				"nindex_tosolve 20\n" .
+				*/
 				"distractors 0.25\n" .
 				"ratio_toprint 1e3\n" .
 				"ratio_tokeep 1e9\n" .
@@ -932,13 +935,27 @@ function process_data ($vals) {
 				"fieldh " . $H . "\n" .
 				"maxquads " . $maxquads . "\n" .
 				"cpulimit " . $maxcpu . "\n" .
-				"timelimit " . $maxtime . "\n" .
-				($tweak ?
-				 "tweak\n" .
-				 "tweak_aborder " . $tweak_order . "\n" . 
-				 "tweak_abporder " . $tweak_order . "\n" .
-				 "tweak_skipshift\n"
-				 : "") .
+				"timelimit " . $maxtime . "\n";
+
+			if ($tweak) {
+				$str .=
+					"tweak\n" .
+					"tweak_aborder " . $tweak_order . "\n" . 
+					"tweak_abporder " . $tweak_order . "\n" .
+					"tweak_skipshift\n";
+			}
+
+			if ($inwcsfile) {
+				$verify_fn = 'verify.fits';
+				if (!copy($inwcsfile, $mydir . $verify_fn)) {
+					loggit("Failed to copy WCS file to verify.\n");
+				} else {
+					$str .=
+						"verify " . $verify_fn . "\n";
+				}
+			}
+
+			$str .=
 				"run\n" .
 				"\n";
 			$stripenum++;
@@ -1201,7 +1218,7 @@ function render_form($form, $headers) {
 }
 
 function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
-					   &$scaleguess) {
+					   &$scaleguess, &$fitsimg) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
