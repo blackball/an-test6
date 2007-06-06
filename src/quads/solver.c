@@ -403,10 +403,15 @@ void solve_field(solver_params* params) {
             }
         }
 
-        if (!params->quiet)
-            fprintf(stderr,
-                    "  field %u, object %u of %u: %i quads tried, %i matched.\n",
-                    params->fieldnum, newpoint+1, numxy, params->numtries, params->nummatches);
+        if (!params->quiet) {
+			if (params->nindexes > 1)
+				fprintf(stderr, "index %i of %i, ", params->indexnum + 1, params->nindexes);
+			if (params->nfields > 1)
+				fprintf(stderr, "field %u, ", params->fieldnum);
+			fprintf(stderr,
+                    "object %u of %u: %i quads tried, %i matched.\n",
+                    newpoint+1, numxy, params->numtries, params->nummatches);
+		}
 
         if ((params->maxquads   && (params->numtries   >= params->maxquads)) ||
             (params->maxmatches && (params->nummatches >= params->maxmatches)) ||

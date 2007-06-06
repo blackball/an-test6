@@ -85,7 +85,7 @@ quadfile* quadfile_open(char* fn, int modifiable) {
 		fprintf(stderr, "Couldn't find NQUADS or NSTARS or SCALE_U or SCALE_L entries in FITS header.");
         goto bailout;
 	}
-	fprintf(stderr, "nquads %u, nstars %u.\n", qf->numquads, qf->numstars);
+	//fprintf(stderr, "nquads %u, nstars %u.\n", qf->numquads, qf->numstars);
 
     if (fits_find_table_column(fn, "quads", &offquads, &sizequads)) {
         fprintf(stderr, "Couldn't find \"quads\" column in FITS file.");

@@ -142,6 +142,8 @@ struct blind_params {
 
 	double logratio_tobail;
 
+	bool use_idfile;
+
 	matchfile* mf;
 	idfile* id;
 	quadfile* quads;
@@ -156,6 +158,8 @@ struct blind_params {
 
 	int total_timelimit;
 	bool hit_total_timelimit;
+
+	bool single_field_solved;
 
 	bool do_tweak;
 	int tweak_aborder;
@@ -498,6 +502,8 @@ int main(int argc, char *argv[]) {
 				logerr(bp, "Failed to write marker file %s: %s\n", bp->startfname, strerror(errno));
 		}
 
+		sp->nindexes = pl_size(bp->indexes);
+
 		for (I=0; I<pl_size(bp->indexes); I++) {
 			char *idfname, *treefname, *quadfname, *startreefname;
 			char* fname = pl_get(bp->indexes, I);
@@ -508,6 +514,10 @@ int main(int argc, char *argv[]) {
 			if (bp->hit_total_timelimit)
 				break;
 
+			if (bp->single_field_solved)
+				break;
+
+			sp->indexnum = I;
 			treefname = mk_ctreefn(fname);
 			quadfname = mk_quadfn(fname);
 			idfname = mk_idfn(fname);
@@ -519,8 +529,7 @@ int main(int argc, char *argv[]) {
 			bp->codekd = codetree_open(treefname);
 			if (!bp->codekd)
 				exit(-1);
-			logmsg(bp, "  (%d quads, %d nodes, dim %d).\n",
-				   codetree_N(bp->codekd), codetree_nodes(bp->codekd), codetree_D(bp->codekd));
+			logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(bp->codekd), codetree_nodes(bp->codekd));
 
 			// Read .quad file...
 			logmsg(bp, "Reading quads file %s...\n", quadfname);
@@ -545,6 +554,8 @@ int main(int argc, char *argv[]) {
 				logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->index_jitter);
 			}
 
+			logmsg(bp, "Stars: %i, Quads: %i.\n", bp->quads->numstars, bp->quads->numquads);
+
 			logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
 				   sp->index_scale_lower/60.0, sp->index_scale_upper/60.0, sp->index_scale_lower, sp->index_scale_upper);
 
@@ -555,9 +566,7 @@ int main(int argc, char *argv[]) {
 				logerr(bp, "Failed to read star kdtree %s\n", startreefname);
 				exit(-1);
 			}
-
-			logmsg(bp, "  (%d stars, %d nodes, dim %d).\n",
-				   startree_N(bp->starkd), startree_nodes(bp->starkd), startree_D(bp->starkd));
+			logverb(bp, "  (%d stars, %d nodes, dim %d).\n", startree_N(bp->starkd), startree_nodes(bp->starkd), startree_D(bp->starkd));
 
 			// If the code kdtree has CXDX set, set cxdx_margin.
 			if (qfits_header_getboolean(bp->codekd->header, "CXDX", 0))
@@ -567,14 +576,16 @@ int main(int argc, char *argv[]) {
 			// check for CIRCLE field in ckdt header...
 			sp->circle = qfits_header_getboolean(bp->codekd->header, "CIRCLE", 0);
 
-			logmsg(bp, "ckdt %s the CIRCLE header.\n",
-				   (sp->circle ? "contains" : "does not contain"));
+			logverb(bp, "ckdt %s the CIRCLE header.\n", (sp->circle ? "contains" : "does not contain"));
 
-			// Read .id file...
-			bp->id = idfile_open(idfname, 0);
-			if (!bp->id) {
-				logmsg(bp, "Couldn't open id file %s.\n", idfname);
-				logmsg(bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
+			if (bp->use_idfile) {
+				// Read .id file...
+				bp->id = idfile_open(idfname, 0);
+				if (!bp->id) {
+					logmsg(bp, "Couldn't open id file %s.\n", idfname);
+					exit(-1);
+					//logmsg(bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
+				}
 			}
 
 			// Set index params
@@ -600,14 +611,17 @@ int main(int argc, char *argv[]) {
 				scalefudge = sp->index_scale_upper * M_SQRT1_2 *
 					sp->codetol / sp->funits_upper;
 				sp->minAB -= scalefudge;
-				logmsg(bp, "Scale fudge: %g pixels.\n", scalefudge);
-				logmsg(bp, "Set minAB to %g\n", sp->minAB);
+				logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
+				//logmsg(bp, "Set minAB to %g\n", sp->minAB);
 			}
 			if (sp->funits_lower != 0.0) {
 				sp->maxAB = sp->index_scale_upper / sp->funits_lower;
 				sp->maxAB += scalefudge;
-				logmsg(bp, "Set maxAB to %g\n", sp->maxAB);
+				//logmsg(bp, "Set maxAB to %g\n", sp->maxAB);
 			}
+
+			if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
+				logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sp->minAB, sp->maxAB);
 
 			// Set CPU time limit.
 			if (bp->cpulimit) {
@@ -825,6 +839,8 @@ static int read_parameters(blind_params* bp) {
 		}
 		if (is_word(line, "help", &nextword)) {
 			logmsg(bp, "No help soup for you!\n  (use the source, Luke)\n");
+		} else if (is_word(line, "idfile", &nextword)) {
+			bp->use_idfile = TRUE;
 		} else if (is_word(line, "cpulimit ", &nextword)) {
 			bp->cpulimit = atoi(nextword);
 		} else if (is_word(line, "timelimit ", &nextword)) {
@@ -1027,7 +1043,7 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 		twee->jitter = distsq2arcsec(bp->verify_dist2);
 	else {
 		twee->jitter = hypot(mo->scale * bp->verify_pix, sp->index_jitter);
-		logmsg(bp, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
+		//logmsg(bp, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
 		logmsg(bp, "Star jitter: %g arcsec.\n", twee->jitter);
 	}
 	// Set tweak's jitter to 6 sigmas.
@@ -1127,7 +1143,7 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 static void print_match(blind_params* bp, MatchObj* mo) {
 	int Nmin = min(mo->nindex, mo->nfield);
 	int ndropout = Nmin - mo->noverlap - mo->nconflict;
-	logmsg(bp, "logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
+	logmsg(bp, "  logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
 		   mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
 }
 
@@ -1246,6 +1262,7 @@ static void solve_fields(blind_params* bp) {
 
 	nfields = bp->xyls->nfields;
 	sp->field = NULL;
+	sp->nfields = il_size(bp->fieldlist);
 
 	for (fi=0; fi<il_size(bp->fieldlist); fi++) {
 		int fieldnum;
@@ -1350,7 +1367,7 @@ static void solve_fields(blind_params* bp) {
 		// The real thing
 		solve_field(sp);
 
-		logmsg(bp, "field %i: tried %i quads, matched %i codes.\n",
+		logmsg(bp, "Field %i: tried %i quads, matched %i codes.\n",
 			   fieldnum, sp->numtries, sp->nummatches);
 
 		if (sp->maxquads && sp->numtries >= sp->maxquads) {
@@ -1384,6 +1401,7 @@ static void solve_fields(blind_params* bp) {
 			// Field solved!
 			logmsg(bp, "Field %i solved: ", fieldnum);
 			print_match(bp, bestmo);
+			logmsg(bp, "Pixel scale: %g arcsec/pix.\n", bestmo->scale);
 
 			// Tweak, if requested.
 			if (bp->do_tweak) {
@@ -1509,53 +1527,51 @@ static void solve_fields(blind_params* bp) {
 
 
 				// DEBUG - write out some extra stuff for Sam.
-				fprintf(stderr, "fieldquad = [ %g,%g; %g,%g; %g,%g; %g,%g ];\n",
-						sp->field[bestmo->field[0] * 2], sp->field[bestmo->field[0] * 2 + 1],
-						sp->field[bestmo->field[1] * 2], sp->field[bestmo->field[1] * 2 + 1],
-						sp->field[bestmo->field[2] * 2], sp->field[bestmo->field[2] * 2 + 1],
-						sp->field[bestmo->field[3] * 2], sp->field[bestmo->field[3] * 2 + 1]);
-				{
-					double xyz[3];
-					double xyzcm[3];
-					int k;
-					double x,y;
-					bool ok;
-					fprintf(stderr, "indexquad_xyz = [ ");
-					xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
-					for (k=0; k<4; k++) {
-						getstarcoord(bestmo->star[k], xyz);
-						fprintf(stderr, "%g,%g,%g; ", xyz[0], xyz[1], xyz[2]);
-						xyzcm[0] += 0.25 * xyz[0];
-						xyzcm[1] += 0.25 * xyz[1];
-						xyzcm[2] += 0.25 * xyz[2];
-					}
-					fprintf(stderr, "];\n");
-					// project around center of mass.
-					fprintf(stderr, "indexquad_xy = [");
-					for (k=0; k<4; k++) {
-						getstarcoord(bestmo->star[k], xyz);
-						ok = star_coords(xyz, xyzcm, &x, &y);
-						assert(ok);
-						fprintf(stderr, "%g,%g; ", x, y);
-					}
-					fprintf(stderr, "];\n");
-
-					fprintf(stderr, "index_all_xy = [");
-					for (i=0; i<nstars; i++) {
-						ok = star_coords(starxyz + i*3, xyzcm, &x, &y);
-						assert(ok);
-						fprintf(stderr, "%g,%g; ", x, y);
-					}
-					fprintf(stderr, "];\n");
-
-					fprintf(stderr, "field_all = [");
-					for (i=0; i<sp->nfield; i++) {
-						fprintf(stderr, "%g,%g; ", sp->field[2*i], sp->field[2*i+1]);
-					}
-					fprintf(stderr, "];\n");
-					
-				}
-
+				/*
+				  fprintf(stderr, "fieldquad = [ %g,%g; %g,%g; %g,%g; %g,%g ];\n",
+				  sp->field[bestmo->field[0] * 2], sp->field[bestmo->field[0] * 2 + 1],
+				  sp->field[bestmo->field[1] * 2], sp->field[bestmo->field[1] * 2 + 1],
+				  sp->field[bestmo->field[2] * 2], sp->field[bestmo->field[2] * 2 + 1],
+				  sp->field[bestmo->field[3] * 2], sp->field[bestmo->field[3] * 2 + 1]);
+				  {
+				  double xyz[3];
+				  double xyzcm[3];
+				  int k;
+				  double x,y;
+				  bool ok;
+				  fprintf(stderr, "indexquad_xyz = [ ");
+				  xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
+				  for (k=0; k<4; k++) {
+				  getstarcoord(bestmo->star[k], xyz);
+				  fprintf(stderr, "%g,%g,%g; ", xyz[0], xyz[1], xyz[2]);
+				  xyzcm[0] += 0.25 * xyz[0];
+				  xyzcm[1] += 0.25 * xyz[1];
+				  xyzcm[2] += 0.25 * xyz[2];
+				  }
+				  fprintf(stderr, "];\n");
+				  // project around center of mass.
+				  fprintf(stderr, "indexquad_xy = [");
+				  for (k=0; k<4; k++) {
+				  getstarcoord(bestmo->star[k], xyz);
+				  ok = star_coords(xyz, xyzcm, &x, &y);
+				  assert(ok);
+				  fprintf(stderr, "%g,%g; ", x, y);
+				  }
+				  fprintf(stderr, "];\n");
+				  fprintf(stderr, "index_all_xy = [");
+				  for (i=0; i<nstars; i++) {
+				  ok = star_coords(starxyz + i*3, xyzcm, &x, &y);
+				  assert(ok);
+				  fprintf(stderr, "%g,%g; ", x, y);
+				  }
+				  fprintf(stderr, "];\n");
+				  fprintf(stderr, "field_all = [");
+				  for (i=0; i<sp->nfield; i++) {
+				  fprintf(stderr, "%g,%g; ", sp->field[2*i], sp->field[2*i+1]);
+				  }
+				  fprintf(stderr, "];\n");
+				  }
+				*/
 
 
 				free(radec);
@@ -1576,6 +1592,10 @@ static void solve_fields(blind_params* bp) {
 				solvedclient_set(sp->fieldid, fieldnum);
 			}
 
+			// If we're just solving a single field, and we solved it...
+			if (il_size(bp->fieldlist) == 1)
+				bp->single_field_solved = TRUE;
+
 		} else {
 			// Field unsolved.
 			logmsg(bp, "Field %i is unsolved.\n", fieldnum);
@@ -1589,7 +1609,7 @@ static void solve_fields(blind_params* bp) {
 
 		get_resource_stats(&utime, &stime, NULL);
 		gettimeofday(&wtime, NULL);
-		logmsg(bp, "  Spent %g s user, %g s system, %g s total, %g s wall time.\n",
+		logmsg(bp, "Spent %g s user, %g s system, %g s total, %g s wall time.\n",
 			   (utime - last_utime), (stime - last_stime), (stime - last_stime + utime - last_utime),
 			   millis_between(&last_wtime, &wtime) * 0.001);
 

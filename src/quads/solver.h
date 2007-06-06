@@ -92,6 +92,9 @@ struct solver_params {
 	int fieldid;
 	int fieldnum;
 
+	// number of fields we're going to try.
+	int nfields;
+
 	bool quiet;
 
 	// the MatchObj template: if non-NULL, every MatchObj will be a memcpy
@@ -103,6 +106,10 @@ struct solver_params {
 	// internal:
 	double starttime;
 	double timeused;
+
+	// for printing "index %i of %i"
+	int indexnum;
+	int nindexes;
 
 	// Outputs:
 	// NOTE: these are only incremented, not initialized.  It's up to
