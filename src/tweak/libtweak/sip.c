@@ -248,10 +248,14 @@ double sip_det_cd(sip_t* sip) {
 	return tan_det_cd(&(sip->wcstan));
 }
 
+double tan_pixel_scale(tan_t* tan) {
+	double scale = deg2arcsec(sqrt(fabs(tan_det_cd(tan))));
+	return scale;
+}
+
 // returns pixel scale in arcseconds (NOT arcsec^2)
 double sip_pixel_scale(sip_t* sip) {
-	double detcd = deg2arcsec(sqrt(fabs(sip_det_cd(sip))));
-	return detcd;
+	return tan_pixel_scale(&(sip->wcstan));
 }
 
 void sip_print_to(sip_t* sip, FILE* f) {

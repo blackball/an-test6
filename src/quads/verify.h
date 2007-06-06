@@ -33,6 +33,7 @@ void verify_hit(startree* skdt,
 				double fieldW,
 				double fieldH,
 				double logratio_tobail,
-				int min_nfield);
+				int min_nfield,
+				bool do_gamma);
 
 #endif

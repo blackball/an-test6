@@ -35,6 +35,7 @@
 #include "qfits_error.h"
 #include "qfits_cache.h"
 #include "tweak_internal.h"
+#include "sip_qfits.h"
 
 #include "starutil.h"
 #include "fileutil.h"
@@ -105,6 +106,10 @@ struct blind_params {
 	// filename template (sprintf format with %i for field number)
 	char* wcs_template;
 
+	// WCS file to load and verify.
+	char* verify_wcsfn;
+	sip_t* verify_wcs;
+
 	char *solved_out;
 	// Solvedserver ip:port
 	char *solvedserver;
@@ -161,6 +166,8 @@ struct blind_params {
 
 	bool single_field_solved;
 
+	bool do_gamma;
+
 	bool do_tweak;
 	int tweak_aborder;
 	int tweak_abporder;
@@ -168,7 +175,7 @@ struct blind_params {
 };
 typedef struct blind_params blind_params;
 
-static void solve_fields(blind_params* bp);
+static void solve_fields(blind_params* bp, bool just_verify);
 static int read_parameters(blind_params* bp);
 static void add_blind_params(blind_params* bp, qfits_header* hdr);
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
@@ -504,6 +511,54 @@ int main(int argc, char *argv[]) {
 
 		sp->nindexes = pl_size(bp->indexes);
 
+		if (bp->verify_wcsfn) {
+			qfits_header* hdr = qfits_header_read(bp->verify_wcsfn);
+			if (!hdr) {
+				logerr(bp, "Failed to read FITS header from file %s\n", bp->verify_wcsfn);
+				goto doneverify;
+			}
+			bp->verify_wcs = sip_read_header(hdr, NULL);
+			qfits_header_destroy(hdr);
+			if (!bp->verify_wcs) {
+				logerr(bp, "Failed to parse WCS header from file %s\n", bp->verify_wcsfn);
+				goto doneverify;
+			}
+
+			for (I=0; I<pl_size(bp->indexes); I++) {
+				char *startreefname;
+				char* fname = pl_get(bp->indexes, I);
+
+				if (bp->single_field_solved)
+					break;
+				sp->indexnum = I;
+				startreefname = mk_streefn(fname);
+				bp->indexname = fname;
+
+				// FIXME - hard-code index jitter.
+				sp->index_jitter = DEFAULT_INDEX_JITTER;
+				logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->index_jitter);
+
+				// Read .skdt file...
+				logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
+				bp->starkd = startree_open(startreefname);
+				if (!bp->starkd) {
+					logerr(bp, "Failed to read star kdtree %s\n", startreefname);
+					exit(-1);
+				}
+
+				// Do it!
+				solve_fields(bp, TRUE);
+
+				// Clean up this index...
+				startree_close(bp->starkd);
+				bp->starkd = NULL;
+				free_fn(startreefname);
+			}
+			sip_free(bp->verify_wcs);
+			bp->verify_wcs = NULL;
+		}
+	doneverify:
+
 		for (I=0; I<pl_size(bp->indexes); I++) {
 			char *idfname, *treefname, *quadfname, *startreefname;
 			char* fname = pl_get(bp->indexes, I);
@@ -665,7 +720,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			// Do it!
-			solve_fields(bp);
+			solve_fields(bp, FALSE);
 
 			// Cancel wall-clock time limit.
 			if (bp->timelimit) {
@@ -803,6 +858,7 @@ int main(int argc, char *argv[]) {
 		free(bp->wcs_template);
 		free(bp->fieldid_key);
 		free(bp->fieldfname);
+		free(bp->verify_wcsfn);
 	}
 
 	qfits_cache_purge(); // for valgrind
@@ -841,6 +897,9 @@ static int read_parameters(blind_params* bp) {
 			logmsg(bp, "No help soup for you!\n  (use the source, Luke)\n");
 		} else if (is_word(line, "idfile", &nextword)) {
 			bp->use_idfile = TRUE;
+		} else if (is_word(line, "verify ", &nextword)) {
+			free(bp->verify_wcsfn);
+			bp->verify_wcsfn = strdup(nextword);
 		} else if (is_word(line, "cpulimit ", &nextword)) {
 			bp->cpulimit = atoi(nextword);
 		} else if (is_word(line, "timelimit ", &nextword)) {
@@ -1163,7 +1222,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
 
 	verify_hit(bp->starkd, mo, sp->field, sp->nfield, pixd2,
 			   bp->distractors, sp->field_maxx, sp->field_maxy,
-			   bp->logratio_tobail, bp->nverify);
+			   bp->logratio_tobail, bp->nverify, bp->do_gamma);
 	// FIXME - this is the same as nmatches.
 	mo->nverified = bp->nverified++;
 
@@ -1249,7 +1308,7 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 	fits_add_long_comment(hdr, "--");
 }
 
-static void solve_fields(blind_params* bp) {
+static void solve_fields(blind_params* bp, bool verify_only) {
 	solver_params* sp = &(bp->solver);
 	double last_utime, last_stime;
 	double utime, stime;
@@ -1362,24 +1421,48 @@ static void solve_fields(blind_params* bp) {
 		bp->bestmo_solves = FALSE;
 		bp->bestlogodds = -HUGE_VAL;
 
-		logmsg(bp, "\nSolving field %i.\n", fieldnum);
+		if (verify_only) {
+			// fabricate a match...
+			MatchObj mo;
+			memcpy(&mo, &template, sizeof(MatchObj));
+			memcpy(&(mo.wcstan), &(bp->verify_wcs->wcstan), sizeof(tan_t));
+			mo.wcs_valid = TRUE;
+			mo.scale = sip_pixel_scale(bp->verify_wcs);
+			sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_minx, sp->field_miny, mo.sMin);
+			sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_maxx, sp->field_maxy, mo.sMax);
+			sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_minx, sp->field_maxy, mo.sMinMax);
+			sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_maxx, sp->field_miny, mo.sMaxMin);
+			bp->do_gamma = FALSE;
 
-		// The real thing
-		solve_field(sp);
+			logmsg(bp, "\nVerifying WCS of field %i with index %i of %i\n", fieldnum,
+				   sp->indexnum + 1, sp->nindexes);
 
-		logmsg(bp, "Field %i: tried %i quads, matched %i codes.\n",
-			   fieldnum, sp->numtries, sp->nummatches);
+			blind_handle_hit(sp, &mo);
 
-		if (sp->maxquads && sp->numtries >= sp->maxquads) {
-			logmsg(bp, "  exceeded the number of quads to try: %i >= %i.\n",
-					sp->numtries, sp->maxquads);
-		}
-		if (sp->maxmatches && sp->nummatches >= sp->maxmatches) {
-			logmsg(bp, "  exceeded the number of quads to match: %i >= %i.\n",
-					sp->nummatches, sp->maxmatches);
-		}
-		if (sp->cancelled) {
-			logmsg(bp, "  cancelled at user request.\n");
+			if (mo.logodds < bp->logratio_toprint)
+				print_match(bp, &mo);
+
+		} else {
+			logmsg(bp, "\nSolving field %i.\n", fieldnum);
+
+			bp->do_gamma = TRUE;
+			// The real thing
+			solve_field(sp);
+
+			logmsg(bp, "Field %i: tried %i quads, matched %i codes.\n",
+				   fieldnum, sp->numtries, sp->nummatches);
+
+			if (sp->maxquads && sp->numtries >= sp->maxquads) {
+				logmsg(bp, "  exceeded the number of quads to try: %i >= %i.\n",
+					   sp->numtries, sp->maxquads);
+			}
+			if (sp->maxmatches && sp->nummatches >= sp->maxmatches) {
+				logmsg(bp, "  exceeded the number of quads to match: %i >= %i.\n",
+					   sp->nummatches, sp->maxmatches);
+			}
+			if (sp->cancelled) {
+				logmsg(bp, "  cancelled at user request.\n");
+			}
 		}
 
 		// Fix the matchfile.

@@ -57,7 +57,8 @@ void verify_hit(startree* skdt,
 				double fieldW,
 				double fieldH,
 				double logratio_tobail,
-				int min_nfield) {
+				int min_nfield,
+				bool do_gamma) {
 	int i;
 	double fieldcenter[3];
 	double fieldr2;
@@ -204,11 +205,13 @@ void verify_hit(startree* skdt,
 	// Build a tree out of the field objects (in pixel space)
 	ftree = kdtree_build(NULL, fieldcopy, M, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
-	// Find the midpoint of AB of the quad in pixel space.
-	qc[0] = 0.5 * (field[2*mo->field[0]  ] + field[2*mo->field[1]  ]);
-	qc[1] = 0.5 * (field[2*mo->field[0]+1] + field[2*mo->field[1]+1]);
-	// Find the radius-squared of the quad = distsq(qc, A)
-	rquad2 = distsq(field + 2*mo->field[0], qc, 2);
+	if (do_gamma) {
+		// Find the midpoint of AB of the quad in pixel space.
+		qc[0] = 0.5 * (field[2*mo->field[0]  ] + field[2*mo->field[1]  ]);
+		qc[1] = 0.5 * (field[2*mo->field[0]+1] + field[2*mo->field[1]+1]);
+		// Find the radius-squared of the quad = distsq(qc, A)
+		rquad2 = distsq(field + 2*mo->field[0], qc, 2);
+	}
 
 	// p(background) = 1/(W*H) of the image.
 	logprob_background = -log(fieldW * fieldH);
@@ -274,13 +277,16 @@ void verify_hit(startree* skdt,
 			// Find nearest field star.
 			ind = kdtree_nearest_neighbour(ftree, indexpix+i*2, &bestd2);
 
-			// Distance from the quad center of this field star:
-			R2 = distsq(field+ftree->perm[ind]*2, qc, 2);
+			if (do_gamma) {
+				// Distance from the quad center of this field star:
+				R2 = distsq(field+ftree->perm[ind]*2, qc, 2);
 
-			// Variance of a field star at that distance from the 
-			// quad center:
-			// FIXME!
-			sigma2 = verify_pix2 * (1.0 + R2/rquad2);
+				// Variance of a field star at that distance from the 
+				// quad center:
+				// FIXME!
+				sigma2 = verify_pix2 * (1.0 + R2/rquad2);
+			} else
+				sigma2 = verify_pix2;
 
 			// don't bother computing the logprob if it's tiny...
 			//if (bestd2 > 100.0 * sigma2)
