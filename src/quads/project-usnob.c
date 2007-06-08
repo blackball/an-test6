@@ -133,7 +133,7 @@ int main(int argc, char** args) {
 		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 		// project it around the center
 		star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
-		fprintf(stderr, "%g, %g,", px, py);
+		//		fprintf(stderr, "%g, %g,", px, py);
 	
 		
 		for (j=0; j<5; j++){
@@ -166,8 +166,8 @@ int main(int argc, char** args) {
 	fclose(point_file);
 	fclose(band_file);
 	fclose(tile_file);
-
 	fclose(galaxy_file);
+
 	usnob_fits_close(usnob);
 
 	return 0;
