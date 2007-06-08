@@ -41,6 +41,7 @@ int main(int argc, char** args) {
     int c;
 	char* infn;
 	char* filepath;
+	char galaxyfilename[255];
 	char pointfilename[255];
 	char bandfilename[255];
 	char tilefilename[255];
@@ -48,9 +49,12 @@ int main(int argc, char** args) {
 	int i, j, N;
 	int hp, Nside;
 	double center[3];
+	int starGal;
+	FILE *galaxy_file;
 	FILE *point_file;
 	FILE *band_file;
 	FILE *tile_file;
+	int galaxyBuffer[5];
 	double pointbuffer[3];
 	double bandbuffer[5];
 	unsigned int tilebuffer[5];
@@ -100,10 +104,12 @@ int main(int argc, char** args) {
 
 	filepath = args[2];
 
+	strcpy(galaxyfilename, filepath);
 	strcpy(pointfilename, filepath);
 	strcpy(bandfilename, filepath);
 	strcpy(tilefilename, filepath);
 
+	strcat(galaxyfilename, "_galaxy.bin");
 	strcat(pointfilename, "_points.bin");
 	strcat(bandfilename, "_bands.bin");
 	strcat(tilefilename, "_tiles.bin");
@@ -112,6 +118,7 @@ int main(int argc, char** args) {
 	fprintf(stderr, "Writing band info to %s\n", bandfilename);
 	fprintf(stderr, "Writing tile info to %s\n", tilefilename);
 
+	galaxy_file = fopen(galaxyfilename, "wb");
 	point_file = fopen(pointfilename, "wb");
 	band_file = fopen(bandfilename, "wb");
 	tile_file = fopen(tilefilename, "wb");
@@ -126,9 +133,17 @@ int main(int argc, char** args) {
 		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
 		// project it around the center
 		star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
-//		fprintf(stderr, "%g, %g,", px, py);
+		fprintf(stderr, "%g, %g,", px, py);
+	
 		
 		for (j=0; j<5; j++){
+		starGal = star->obs[j].star_galaxy;
+
+		if(starGal<0 || starGal>11){
+			galaxyBuffer[j] = -1;
+		} else {	
+			galaxyBuffer[j] = star->obs[j].star_galaxy;
+		}
 			if(star->obs[j].mag > 0.0){
 				numMags++;
 				pointbuffer[2] += star->obs[j].mag;
@@ -139,20 +154,20 @@ int main(int argc, char** args) {
 			}
 			bandbuffer[j] = star->obs[j].mag;
 		}
-		
 		if (numMags > 0){
 			pointbuffer[2] = pointbuffer[2] / (double)numMags;
 		}
-		
+		fwrite(galaxyBuffer, sizeof(int),5,galaxy_file);
 		fwrite(pointbuffer, sizeof(double), 3, point_file);
 		fwrite(bandbuffer, sizeof(double), 5, band_file);
 		fwrite(tilebuffer, sizeof(int), 5, tile_file);
 	}
-	
+
 	fclose(point_file);
 	fclose(band_file);
 	fclose(tile_file);
 
+	fclose(galaxy_file);
 	usnob_fits_close(usnob);
 
 	return 0;
