@@ -214,6 +214,47 @@ static Inline void drop_quad(int iA, int iB, int iC, int iD) {
 	nuses[iD]++;
 }
 
+static void write_quad(codefile* codes, quadfile* quads,
+					   quad* q) {
+	double code[4];
+
+	compute_code(q, code);
+
+	// here we add the invariant that cx + dx <= 1.
+	if (code[0] + code[2] > 1.0) {
+		// swap the labels of A,B.
+		uint tmp = q->star[0];
+		q->star[0] = q->star[1];
+		q->star[1] = tmp;
+
+		// rotate the code 180 degrees.
+		code[0] = 1.0 - code[0];
+		code[1] = 1.0 - code[1];
+		code[2] = 1.0 - code[2];
+		code[3] = 1.0 - code[3];
+	}
+
+	// here we add the invariant that cx <= dx.
+	if (code[0] <= code[2]) {
+		double dtmp;
+		// swap the labels of C,D.
+		uint tmp = q->star[2];
+		q->star[2] = q->star[3];
+		q->star[3] = tmp;
+
+		// switch the code values.
+		dtmp = code[0];
+		code[0] = code[2];
+		code[2] = dtmp;
+		dtmp = code[1];
+		code[1] = code[3];
+		code[3] = dtmp;
+	}
+
+	codefile_write_code(codes, code[0], code[1], code[2], code[3]);
+	quadfile_write_quad(quads, q->star[0], q->star[1], q->star[2], q->star[3]);
+}
+
 struct potential_quad {
 	double midAB[3];
 	double Ax, Ay;
@@ -805,6 +846,9 @@ int main(int argc, char** argv) {
 	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 
+	qfits_header_add(quads->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
+	qfits_header_add(codes->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
+
 	qfits_header_add(quads->header, "CIRCLE", (circle ? "T" : "F"), 
 					 (circle ? "Stars C,D live in the circle defined by AB."
 					  :        "Stars C,D live in the box defined by AB."), NULL);
@@ -1287,31 +1331,13 @@ int main(int argc, char** argv) {
 	// add the quads from the big-quadlist
 	nquads = bt_size(bigquadlist);
 	for (i=0; i<nquads; i++) {
-		double code[4];
 		quad* q = bt_access(bigquadlist, i);
-		compute_code(q, code);
-		// here we add the invariant cx <= dx.
-		if (code[0] <= code[2]) {
-			codefile_write_code(codes, code[0], code[1], code[2], code[3]);
-			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[2], q->star[3]);
-		} else {
-			codefile_write_code(codes, code[2], code[3], code[0], code[1]);
-			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[3], q->star[2]);
-		}
+		write_quad(codes, quads, q);
 	}
 	// add the quads that were made during the final round.
 	for (i=0; i<Nquads; i++) {
-		double code[4];
 		quad* q = quadlist + i;
-		compute_code(q, code);
-		// here we add the invariant cx <= dx.
-		if (code[0] <= code[2]) {
-			codefile_write_code(codes, code[0], code[1], code[2], code[3]);
-			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[2], q->star[3]);
-		} else {
-			codefile_write_code(codes, code[2], code[3], code[0], code[1]);
-			quadfile_write_quad(quads, q->star[0], q->star[1], q->star[3], q->star[2]);
-		}
+		write_quad(codes, quads, q);
 	}
 	free(quadlist);
 
