@@ -25,10 +25,11 @@
 #include "starutil.h"
 #include "mathutil.h"
 
-#define OPTIONS "hdN:np"
+#define OPTIONS "hdN:npH:"
 
 void print_help(char* progname) {
     printf("usage:\n"
+		   "  [-H <healpix>]: take healpix number as input and print center as output.\n"
 		   "  %s [-d] ra dec\n"
 		   "     (-d means values are in degree; by default they're in radians)\n"
 		   "  %s x y z\n\n"
@@ -50,6 +51,7 @@ int main(int argc, char** args) {
 	bool neighbours = FALSE;
 	bool project = FALSE;
 	double xyz[3];
+	bool fromhp = FALSE;
 
     if (argc == 1) {
 		print_help(args[0]);
@@ -62,6 +64,10 @@ int main(int argc, char** args) {
         case 'h':
 			print_help(args[0]);
 			exit(0);
+		case 'H':
+			fromhp = TRUE;
+			healpix = atoi(optarg);
+			break;
 		case 'd':
 			degrees = TRUE;
 			break;
@@ -77,41 +83,43 @@ int main(int argc, char** args) {
     }
 
     nargs = argc - optind;
-    if (!((nargs == 2) || (nargs == 3))) {
-		print_help(args[0]);
-		exit(-1);
-    }
 
     for (i=0; i<nargs; i++) {
 		argvals[i] = atof(args[optind + i]);
     }
 
-    if (nargs == 2) {
-		double ra = argvals[0];
-		double dec = argvals[1];
-
-		if (degrees) {
-			ra=deg2rad(ra);
-			dec=deg2rad(dec);
+	if (!fromhp) {
+		if (!((nargs == 2) || (nargs == 3))) {
+			print_help(args[0]);
+			exit(-1);
 		}
+		
+		if (nargs == 2) {
+			double ra = argvals[0];
+			double dec = argvals[1];
 
-		healpix = radectohealpix(ra, dec, Nside);
+			if (degrees) {
+				ra=deg2rad(ra);
+				dec=deg2rad(dec);
+			}
+			
+			healpix = radectohealpix(ra, dec, Nside);
 	
-		printf("(RA, DEC) = (%g, %g) degrees\n", rad2deg(ra), rad2deg(dec));
-		printf("(RA, DEC) = (%g, %g) radians\n", ra, dec);
+			printf("(RA, DEC) = (%g, %g) degrees\n", rad2deg(ra), rad2deg(dec));
+			printf("(RA, DEC) = (%g, %g) radians\n", ra, dec);
 
-		radec2xyzarr(ra, dec, xyz);
+			radec2xyzarr(ra, dec, xyz);
 
-    } else if (nargs == 3) {
-		xyz[0] = argvals[0];
-		xyz[1] = argvals[1];
-		xyz[2] = argvals[2];
+		} else if (nargs == 3) {
+			xyz[0] = argvals[0];
+			xyz[1] = argvals[1];
+			xyz[2] = argvals[2];
 
-		healpix = xyzarrtohealpix(xyz, Nside);
+			healpix = xyzarrtohealpix(xyz, Nside);
 
-		printf("(x, y, z) = (%g, %g, %g)\n", xyz[0], xyz[1], xyz[2]);
-    }
-
+			printf("(x, y, z) = (%g, %g, %g)\n", xyz[0], xyz[1], xyz[2]);
+		}
+	}
 	{
 		uint ri;
 		uint ringnum, longind;
@@ -129,7 +137,7 @@ int main(int argc, char** args) {
 			printf("  healpix=%i in the NESTED scheme.\n", ni);
 		}
 		healpix_to_radecarr(healpix, Nside, 0.5, 0.5, center);
-		printf("Healpix center is (%g, %g) degrees\n",
+		printf("Healpix center is (%.8g, %.8g) degrees\n",
 			   rad2deg(center[0]), rad2deg(center[1]));
 	}
 
@@ -143,7 +151,10 @@ int main(int argc, char** args) {
 		printf("]\n");
 	}
 
-	if (project) {
+	printf("Healpix scale is %g arcsec.\n", 60*healpix_side_length_arcmin(Nside));
+
+
+	if (!fromhp && project) {
 		double origin[3];
 		double vx[3];
 		double vy[3];
@@ -180,8 +191,6 @@ int main(int argc, char** args) {
 		}
 
 		printf("Projects to [%g, %g]\n", dot1/max1, dot2/max2);
-
-		printf("Healpix scale is %g arcsec.\n", 60*healpix_side_length_arcmin(Nside));
 
 		// which boundary is it closest to?
 		bdydir = vx;

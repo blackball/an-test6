@@ -77,7 +77,8 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	new-wcs
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
-	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate
+	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate \
+	get-healpix
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
