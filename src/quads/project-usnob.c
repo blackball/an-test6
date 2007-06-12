@@ -49,7 +49,6 @@ int main(int argc, char** args) {
 	int i, j, N;
 	int hp, Nside;
 	double center[3];
-	int starGal;
 	FILE *galaxy_file;
 	FILE *point_file;
 	FILE *band_file;
@@ -117,6 +116,7 @@ int main(int argc, char** args) {
 	fprintf(stderr, "Writing point info to %s\n", pointfilename);
 	fprintf(stderr, "Writing band info to %s\n", bandfilename);
 	fprintf(stderr, "Writing tile info to %s\n", tilefilename);
+	fprintf(stderr, "Writing galaxy info to %s\n", galaxyfilename);
 
 	galaxy_file = fopen(galaxyfilename, "wb");
 	point_file = fopen(pointfilename, "wb");
@@ -124,45 +124,46 @@ int main(int argc, char** args) {
 	tile_file = fopen(tilefilename, "wb");
 
 	for (i=0; i<N; i++) {
-		numMags = 0;
-		pointbuffer[2] = 0.0;
-		// grab the star...
-		star = usnob_fits_read_entry(usnob);
+	  numMags = 0;
+	  pointbuffer[2] = 0.0;
+	  // grab the star...
+	  star = usnob_fits_read_entry(usnob);
+	  
+	  // find its xyz position
+	  radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
+	  // project it around the center
+	  star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
+	  //		fprintf(stderr, "%g, %g,", px, py);
+	  
+	  
+	  for (j=0; j<5; j++){
+	    if(star->obs[j].mag <= 0 || star->obs[j].star_galaxy < 0 || star->obs[j].star_galaxy > 11){
+	      galaxyBuffer[j] = -1;
+	    }
+	    else {	
+	      galaxyBuffer[j] = star->obs[j].star_galaxy;
+	    }
+	    
+	    if(star->obs[j].mag > 0.0){
+	      numMags++;
+	      pointbuffer[2] += star->obs[j].mag;
+	      tilebuffer[j] = star->obs[j].field;
+	    }
+	    else{
+	      tilebuffer[j] = -1;
+	    }
+	    bandbuffer[j] = star->obs[j].mag;
+	  }
 
-		// find its xyz position
-		radec2xyzarr(deg2rad(star->ra), deg2rad(star->dec), xyz);
-		// project it around the center
-		star_coords(xyz, center, &pointbuffer[0], &pointbuffer[1]);
-		//		fprintf(stderr, "%g, %g,", px, py);
-	
-		
-		for (j=0; j<5; j++){
-		starGal = star->obs[j].star_galaxy;
-
-		if(starGal<0 || starGal>11){
-			galaxyBuffer[j] = -1;
-		} else {	
-			galaxyBuffer[j] = star->obs[j].star_galaxy;
-		}
-			if(star->obs[j].mag > 0.0){
-				numMags++;
-				pointbuffer[2] += star->obs[j].mag;
-				tilebuffer[j] = star->obs[j].field;
-			}
-			else{
-				tilebuffer[j] = -1;
-			}
-			bandbuffer[j] = star->obs[j].mag;
-		}
-		if (numMags > 0){
-			pointbuffer[2] = pointbuffer[2] / (double)numMags;
-		}
-		fwrite(galaxyBuffer, sizeof(int),5,galaxy_file);
-		fwrite(pointbuffer, sizeof(double), 3, point_file);
-		fwrite(bandbuffer, sizeof(double), 5, band_file);
-		fwrite(tilebuffer, sizeof(int), 5, tile_file);
+	  if (numMags > 0){
+	    pointbuffer[2] = pointbuffer[2] / (double)numMags;
+	  }
+	  fwrite(galaxyBuffer, sizeof(int),5,galaxy_file);
+	  fwrite(pointbuffer, sizeof(double), 3, point_file);
+	  fwrite(bandbuffer, sizeof(double), 5, band_file);
+	  fwrite(tilebuffer, sizeof(int), 5, tile_file);
 	}
-
+	
 	fclose(point_file);
 	fclose(band_file);
 	fclose(tile_file);
