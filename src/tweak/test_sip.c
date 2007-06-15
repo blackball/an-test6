@@ -195,10 +195,12 @@ void tryad(sip_t* sip, wcs_t* wcs, double a, double d, char* name,
 	int offscr;
 	double wcspx,wcspy;
 	int fail=0;
+	bool ok;
 
 	printf("AD -> XY Test: %s\n",name);
 	printf("a =%lf, d =%lf\n", a,d);
-	sip_radec2pixelxy(sip, a,d,&px,&py);
+	ok = sip_radec2pixelxy(sip, a,d,&px,&py);
+	assert(ok);
 
 	wcs2pix(wcs, a, d, &wcspx, &wcspy, &offscr);
 
@@ -255,6 +257,7 @@ void tryxyadxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 	double pxp, pyp;
 	int offscr;
 	double wcspx,wcspy;
+	bool ok;
 
 	printf("//// XY -> AD -> XY Test: %s\n",name);
 	printf("test px=%lf, py=%lf\n", px,py);
@@ -266,7 +269,8 @@ void tryxyadxy(sip_t* sip, wcs_t* wcs, double px, double py, char* name)
 	printf("sa=%lf, sd=%lf\n", a,d);
 	printf("wa=%lf, wd=%lf\n", wcsa,wcsd);
 
-	sip_radec2pixelxy(sip, a, d, &pxp, &pyp);
+	ok = sip_radec2pixelxy(sip, a, d, &pxp, &pyp);
+	assert(ok);
 
 	wcs2pix(wcs, wcsa, wcsd, &wcspx, &wcspy, &offscr);
 

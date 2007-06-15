@@ -600,13 +600,13 @@ void tweak_push_ref_ad(tweak_t* t, double* a, double *d, int n) // tell us (from
 
 void tweak_ref_find_xyz_from_ad(tweak_t* t) // tell us (from outside tweak) where the catalog stars are
 {
+	int i;
 
 	assert(t->state & TWEAK_HAS_REF_AD);
 
 	assert(!t->xyz_ref); // no leaky
 	t->xyz_ref = malloc(sizeof(double) * 3 * t->n_ref);
 
-	int i;
 	for (i = 0; i < t->n_ref; i++)
 	{ // fill em up
 		double *pt = t->xyz_ref + 3 * i;
@@ -920,6 +920,11 @@ double figure_of_merit2(tweak_t* t)
 	return 3600*3600*sqerr*fabs(sip_det_cd(t->sip)); // convert this to units of arcseconds^2, sketchy
 }
 
+
+
+#define set(A, i, j)  ((A)[(i) + ((stride)*(j))])
+#define get(A, i, j)  ((A)[(i) + ((stride)*(j))])
+
 // I apologize for the rampant copying and pasting of the polynomial calcs...
 void invert_sip_polynomial(tweak_t* t)
 {
@@ -928,16 +933,17 @@ void invert_sip_polynomial(tweak_t* t)
 	// then, using the set of warped gridpoints as inputs, fit back to their original grid locations as targets
 
 	int inv_sip_order, ngrid, inv_sip_coeffs, stride;
-	double *A, *A2, *b, *b2;
+	double *A, *A2, *b, *b2, *X;
 	double maxu, maxv, minu, minv;
 	int i, gu, gv;
+	int N, M, R;
 
 	assert(t->sip->a_order == t->sip->b_order);
 	assert(t->sip->ap_order == t->sip->bp_order);
 
 	inv_sip_order = t->sip->ap_order;
 
-	ngrid = 10 * (t->sip->ap_order + 1);
+	ngrid = 10 * (inv_sip_order + 1);
 	printf("tweak inversion using %u gridpoints\n", ngrid);
 
 	// The SIP coefficients form a order x order upper triangular matrix missing
@@ -948,10 +954,15 @@ void invert_sip_polynomial(tweak_t* t)
 	inv_sip_coeffs = (inv_sip_order + 1) * (inv_sip_order + 2) / 2; // upper triangle
 
 	stride = ngrid * ngrid; // Number of rows
-	A = malloc(inv_sip_coeffs * stride * sizeof(double));
-	b = malloc(2 * stride * sizeof(double));
-	A2 = malloc(inv_sip_coeffs * stride * sizeof(double));
-	b2 = malloc(2 * stride * sizeof(double));
+
+	M = stride;
+	N = inv_sip_coeffs;
+	R = 2;
+
+	A  = malloc(N * M * sizeof(double));
+	b  = malloc(M * R * sizeof(double));
+	A2 = malloc(N * M * sizeof(double));
+	b2 = malloc(M * R * sizeof(double));
 	assert(A);
 	assert(b);
 	assert(A2);
@@ -1019,37 +1030,35 @@ void invert_sip_polynomial(tweak_t* t)
 			/*
 			Maybe we want to explicitly set the (0,0) term to zero...:
 			*/
-			A[i + stride*0] = 0;
+			set(A, i, 0) = 0.0;
 			j = 1;
 			for (p = 0; p <= inv_sip_order; p++)
 				for (q = 0; q <= inv_sip_order; q++)
-					if (p + q <= inv_sip_order && !(p == 0 && q == 0)) {
-						// we're skipping the (0, 0) term.
-						//assert(j < (inv_sip_coeffs-1));
+					if ((p + q > 0) &&
+						(p + q <= inv_sip_order)) {
 						assert(j < inv_sip_coeffs);
-						A[i + stride*j] = pow(U, (double)p) * pow(V, (double)q);
+						set(A, i, j) = pow(U, (double)p) * pow(V, (double)q);
 						j++;
 					}
-			//assert(j == (inv_sip_coeffs-1));
 			assert(j == inv_sip_coeffs);
 
-			b[i] = -fuv;
-			b[i + stride] = -guv;
+			set(b, i, 0) = -fuv;
+			set(b, i, 1) = -guv;
 			i++;
 		}
 	}
 
 	// Save for sanity check
-	memcpy(A2, A, sizeof(double)*stride*inv_sip_coeffs);
-	memcpy(b2, b, sizeof(double)*stride*2);
+	memcpy(A2, A, N * M * sizeof(double));
+	memcpy(b2, b, M * R * sizeof(double));
 
 	// Allocate work areas and answers
 	{
-		integer N = inv_sip_coeffs;          // nr cols of A
-		doublereal S[N];      // min(N,M); is singular vals of A in dec order
-		doublereal RCOND = -1.; // used to determine effective rank of A; -1
+		integer NN = N;          // nr cols of A
+		doublereal S[NN];         // min(N,M); is singular vals of A in dec order
+		doublereal RCOND = -1.;  // used to determine effective rank of A; -1
 		// means use machine precision
-		integer NRHS = 2;       // number of right hand sides (one for x and y)
+		integer NRHS = R;       // number of right hand sides (one for x and y)
 		integer rank;         // output effective rank of A
 		integer lwork = 1000 * 1000; /// FIXME ???
 		doublereal* work = malloc(lwork * sizeof(double));
@@ -1060,40 +1069,44 @@ void invert_sip_polynomial(tweak_t* t)
 		integer str = stride;
 		integer lda = stride;
 		integer ldb = stride;
-//		printf("INVERSE DGELSD---- ldb=%d\n", ldb);
-		dgelsd_(&str, &N, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
+		//		printf("INVERSE DGELSD---- ldb=%d\n", ldb);
+		dgelsd_(&str, &NN, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
 		        &lwork, iwork, &info); // make the jump to lightspeed
 		stride = str;
 		free(work);
 		free(iwork);
 
+		// dgelsd in its wisdom, stores its answer by overwriting your input b
+		// (nice!)
+		// we rename it X for clarity.
+		X = b;
+
 		// Extract the inverted SIP coefficients
-		//j = 0;
+		// here we're ignoring the (0,0) term.
 		j = 1;
 		for (p = 0; p <= inv_sip_order; p++)
 			for (q = 0; q <= inv_sip_order; q++)
-				if (p + q <= inv_sip_order && !(p == 0 && q == 0))
-				{
+				if ((p + q > 0) &&
+					(p + q <= inv_sip_order)) {
 					assert(j < inv_sip_coeffs);
-					t->sip->ap[p][q] = b[j]; // dgelsd in its wisdom, stores its answer by overwriting your input b (nice!)
-					t->sip->bp[p][q] = b[stride + j];
+					t->sip->ap[p][q] = get(X, j, 0);
+					t->sip->bp[p][q] = get(X, j, 1);
 					j++;
 				}
 		assert(j == inv_sip_coeffs);
 
 		// Calculate chi2 for sanity
 		chisq = 0;
-		for (i = 0; i < stride; i++)
-		{
+		for (i = 0; i < M; i++) {
 			double sum = 0;
 			int j2;
-			for (j2 = 0; j2 < inv_sip_coeffs; j2++)
-				sum += A2[i + stride * j2] * b[j2];
-			chisq += (sum - b2[i]) * (sum - b2[i]);
+			for (j2 = 0; j2 < N; j2++)
+				sum += get(A2, i, j2) * get(X, j2, 0);
+			chisq += square(sum - get(b2, i, 0));
 			sum = 0;
-			for (j2 = 0; j2 < inv_sip_coeffs; j2++)
-				sum += A2[i + stride * j2] * b[j2 + stride];
-			chisq += (sum - b2[i + stride]) * (sum - b2[i + stride]);
+			for (j2 = 0; j2 < N; j2++)
+				sum += get(A2, i, j2) * get(X, j2, 1);
+			chisq += square(sum - get(b2, i, 1));
 		}
 		printf("sip_invert_chisq=%lf\n", chisq);
 		printf("sip_invert_chisq/%d=%lf\n", ngrid*ngrid, (chisq / ngrid) / ngrid);
@@ -1106,6 +1119,8 @@ void invert_sip_polynomial(tweak_t* t)
 	free(b2);
 }
 
+#undef set
+#undef get
 
 
 // FIXME: adapt this function to take as input the correspondences to use VVVVV
@@ -1134,6 +1149,8 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	sip_t* swcs;
 	int M, N, R;
 	int i, j, p, q, order;
+	int row;
+	double totalweight;
 
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
@@ -1300,8 +1317,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 
 	// fill in the UVP matrix, stride in this case is the number of correspondences
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
-	int row;
-	double totalweight = 0.0;
+	totalweight = 0.0;
 	i = -1;
 	for (row = 0; row < il_size(t->included); row++)
 	{
