@@ -1113,6 +1113,89 @@ void invert_sip_polynomial(tweak_t* t)
 		printf("sip_invert_sqrt(chisq/%d=%lf)\n", ngrid*ngrid, sqrt((chisq / ngrid) / ngrid));
 	}
 
+	// Do it again, only more different.
+	{
+		gsl_matrix* mA;
+		gsl_matrix* QR;
+		gsl_vector* tau;
+		gsl_vector* gb1;
+		gsl_vector* gb2;
+		gsl_vector* resid1;
+		gsl_vector* resid2;
+		gsl_vector *x1, *x2;
+		int ret;
+
+		int i,j,k;
+		double rms=0;
+		double rmsB=0;
+		double rmsX = 0;
+
+		mA = gsl_matrix_alloc(M, N);
+		gb1 = gsl_vector_alloc(M);
+		gb2 = gsl_vector_alloc(M);
+		x1 = gsl_vector_alloc(N);
+		x2 = gsl_vector_alloc(N);
+		resid1 = gsl_vector_alloc(M);
+		resid2 = gsl_vector_alloc(M);
+
+		for (i=0; i<M; i++)
+			for (j=0; j<N; j++)
+				gsl_matrix_set(mA, i, j, get(A, i, j));
+
+		for (i=0; i<M; i++) {
+			gsl_vector_set(gb1, i, get(b2, i, 0));
+			gsl_vector_set(gb2, i, get(b2, i, 1));
+		}
+
+		tau = gsl_vector_alloc(imin(M, N));
+
+		ret = gsl_linalg_QR_decomp(mA, tau);
+		// mA,tau now contains a packed version of Q,R.
+		QR = mA;
+
+		ret = gsl_linalg_QR_lssolve(QR, tau, gb1, x1, resid1);
+		ret = gsl_linalg_QR_lssolve(QR, tau, gb2, x2, resid2);
+
+		// Print rms(AX - B)
+		for (j=0; j<M; j++) {
+			for (k=0; k<2; k++) {
+				double acc = 0.0;
+				for (i=0; i<N; i++)
+					acc += get(A2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
+				acc -= get(b2, j, k);
+				rms += square(acc);
+			}
+		}
+		rms = sqrt(rms / (double)(M*2));
+
+		for (j=0; j<M; j++) {
+			rmsB += square(gsl_vector_get(resid1, j));
+			rmsB += square(gsl_vector_get(resid2, j));
+		}
+		rmsB = sqrt(rmsB / (double)(M*2));
+
+		for (j=0; j<N; j++) {
+			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
+			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
+		}
+		rmsX = sqrt(rmsX / (double)(N*2));
+
+		printf("gsl rms(AX-B) = %g\n", rms);
+		printf("gsl rmsB      = %g\n", rmsB);
+		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
+
+		gsl_vector_free(tau);
+		gsl_matrix_free(mA);
+		gsl_vector_free(gb1);
+		gsl_vector_free(gb2);
+		gsl_vector_free(x1);
+		gsl_vector_free(x2);
+		gsl_vector_free(resid1);
+		gsl_vector_free(resid2);
+	}
+
+
+
 	free(A);
 	free(b);
 	free(A2);
