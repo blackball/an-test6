@@ -22,10 +22,43 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "ioutils.h"
 
 unsigned int ENDIAN_DETECTOR = 0x01020304;
+
+static int oldsigbus_valid = 0;
+static struct sigaction oldsigbus;
+static void sigbus_handler(int sig) {
+	fprintf(stderr, "\n\n"
+			"SIGBUS (Bus error) signal received.\n"
+			"One reason this can happen is that an I/O error is encountered\n"
+			"on a file that we are reading with \"mmap\".\n\n"
+			"Bailing out now.\n\n");
+	fflush(stderr);
+	exit(-1);
+}
+
+void add_sigbus_mmap_warning() {
+	struct sigaction sigbus;
+	memset(&sigbus, 0, sizeof(struct sigaction));
+	sigbus.sa_handler = sigbus_handler;
+	if (sigaction(SIGBUS, &sigbus, &oldsigbus)) {
+		fprintf(stderr, "Failed to change SIGBUS handler: %s\n", strerror(errno));
+		return;
+	}
+	oldsigbus_valid = 1;
+}
+
+void reset_sigbus_mmap_warning() {
+	if (oldsigbus_valid) {
+		if (sigaction(SIGBUS, &oldsigbus, NULL)) {
+			fprintf(stderr, "Failed to restore SIGBUS handler: %s\n", strerror(errno));
+			return;
+		}
+	}
+}
 
 int is_word(char* cmdline, char* keyword, char** cptr) {
 	int len = strlen(keyword);

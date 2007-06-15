@@ -28,6 +28,7 @@
 #include "starutil.h"
 #include "mathutil.h"
 #include "fitsioutils.h"
+#include "ioutils.h"
 #include "boilerplate.h"
 
 #define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:g"
@@ -404,6 +405,8 @@ int main(int argc, char** args) {
 		owned = NULL;
 
 	nwritten = 0;
+
+	add_sigbus_mmap_warning();
 
 	sprintf(fn, outfn, bighp);
 	cat = catalog_open_for_writing(fn);

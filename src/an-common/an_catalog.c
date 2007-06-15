@@ -182,7 +182,10 @@ an_catalog* an_catalog_open(char* fn) {
 		if (!qfits_is_table(fn, i))
 			continue;
 		table = qfits_table_open(fn, i);
-
+		if (!table) {
+			fprintf(stderr, "an_catalog: error reading table from extension %i of file %s.\n",
+					i, fn);
+		}
 		good = 1;
 		for (c=0; c<AN_FITS_COLUMNS; c++) {
 			cat->columns[c] = fits_find_column(table, an_fitstruct[c].fieldname);

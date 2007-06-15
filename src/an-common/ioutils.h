@@ -29,6 +29,9 @@ extern unsigned int ENDIAN_DETECTOR;
  */
 int is_word(char* cmdline, char* keyword, char** p_next_word);
 
+void add_sigbus_mmap_warning();
+void reset_sigbus_mmap_warning();
+
 int write_u8(FILE* fout, unsigned char val);
 int write_u16(FILE* fout, unsigned int val);
 int write_u32(FILE* fout, unsigned int val);
