@@ -58,8 +58,6 @@
 #include "rdlist.h"
 #include "verify.h"
 
-typedef __sighandler_t sighandler_t;
-
 static void printHelp(char* progname) {
 	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s\n", progname);
@@ -263,7 +261,7 @@ int main(int argc, char *argv[]) {
 	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
 		int I;
-		sighandler_t oldsigalarm_total = NULL;
+		struct sigaction oldsigalarm_total;
 
 		if (bp->hit_total_timelimit)
 			break;
@@ -403,9 +401,11 @@ int main(int argc, char *argv[]) {
 		// Note that we never cancel this alarm, it persists across "run"
 		// boundaries.
 		if (bp->total_timelimit) {
+			struct sigaction newalarm;
 			alarm(bp->total_timelimit);
-			oldsigalarm_total = signal(SIGALRM, total_wall_time_limit);
-			if (oldsigalarm_total == SIG_ERR) {
+			memset(&newalarm, 0, sizeof(struct sigaction));
+			newalarm.sa_handler = total_wall_time_limit;
+			if (sigaction(SIGALRM, &newalarm, &oldsigalarm_total)) {
 				logerr(bp, "Failed to set total wall time limit signal handler: %s\n", strerror(errno));
 				exit(-1);
 			}
@@ -564,8 +564,8 @@ int main(int argc, char *argv[]) {
 		for (I=0; I<pl_size(bp->indexes); I++) {
 			char *idfname, *treefname, *quadfname, *startreefname;
 			char* fname = pl_get(bp->indexes, I);
-			sighandler_t oldsigcpu = NULL;
-			sighandler_t oldsigalarm = NULL;
+			struct sigaction oldsigcpu;
+			struct sigaction oldsigalarm;
 			double scalefudge = 0.0; // in pixels
 
 			if (bp->hit_total_timelimit)
@@ -684,6 +684,7 @@ int main(int argc, char *argv[]) {
 			if (bp->cpulimit) {
 				struct rusage r;
 				struct rlimit rlim;
+				struct sigaction newsigcpu;
 				int sofar;
 
 				if (getrusage(RUSAGE_SELF, &r)) {
@@ -704,8 +705,9 @@ int main(int argc, char *argv[]) {
 					exit(-1);
 				}
 
-				oldsigcpu = signal(SIGXCPU, cpu_time_limit);
-				if (oldsigcpu == SIG_ERR) {
+				memset(&newsigcpu, 0, sizeof(struct sigaction));
+				newsigcpu.sa_handler = cpu_time_limit;
+				if (sigaction(SIGXCPU, &newsigcpu, &oldsigcpu)) {
 					logerr(bp, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
@@ -713,9 +715,11 @@ int main(int argc, char *argv[]) {
 
 			// Set wall-clock time limit.
 			if (bp->timelimit) {
+				struct sigaction newsigalarm;
 				alarm(bp->timelimit);
-				oldsigalarm = signal(SIGALRM, wall_time_limit);
-				if (oldsigalarm == SIG_ERR) {
+				memset(&newsigalarm, 0, sizeof(struct sigaction));
+				newsigalarm.sa_handler = wall_time_limit;
+				if (sigaction(SIGALRM, &newsigalarm, &oldsigalarm)) {
 					logerr(bp, "Failed to set wall time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
@@ -727,7 +731,7 @@ int main(int argc, char *argv[]) {
 			// Cancel wall-clock time limit.
 			if (bp->timelimit) {
 				alarm(0);
-				if (signal(SIGALRM, oldsigalarm) == SIG_ERR) {
+				if (sigaction(SIGALRM, &oldsigalarm, NULL)) {
 					logerr(bp, "Failed to restore wall time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
@@ -737,7 +741,7 @@ int main(int argc, char *argv[]) {
 			if (bp->cpulimit) {
 				struct rlimit rlim;
 				// Restore old CPU limit signal handler.
-				if (signal(SIGXCPU, oldsigcpu) == SIG_ERR) {
+				if (sigaction(SIGXCPU, &oldsigcpu, NULL)) {
 					logerr(bp, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
