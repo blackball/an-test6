@@ -137,24 +137,24 @@ int main(int argc, char** args) {
 	  
 	  
 	  for (j=0; j<5; j++){
-	    if(star->obs[j].mag <= 0 || star->obs[j].star_galaxy < 0 || star->obs[j].star_galaxy > 11){
-	      galaxyBuffer[j] = -1;
-	    }
-	    else {	
+	    if(usnob_is_observation_valid(&star->obs[j])){
 	      galaxyBuffer[j] = star->obs[j].star_galaxy;
 	    }
-	    
-	    if(star->obs[j].mag > 0.0){
+	    else{
+	      galaxyBuffer[j] = -1;
+	    }
+
+	    if(usnob_is_observation_valid(&star->obs[j]) || !usnob_is_usnob_star(star)){
 	      numMags++;
 	      pointbuffer[2] += star->obs[j].mag;
 	      tilebuffer[j] = star->obs[j].field;
 	    }
 	    else{
-	      tilebuffer[j] = -1;
+	      tilebuffer[j] = -1;;
 	    }
+	    
 	    bandbuffer[j] = star->obs[j].mag;
 	  }
-
 	  if (numMags > 0){
 	    pointbuffer[2] = pointbuffer[2] / (double)numMags;
 	  }
