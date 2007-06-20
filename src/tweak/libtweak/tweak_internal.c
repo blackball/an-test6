@@ -55,12 +55,6 @@
 
 #define KERNEL_SIZE 5
 #define KERNEL_MARG ((KERNEL_SIZE-1)/2)
-typedef double doublereal;
-typedef long int integer;
-extern int dgelsd_(integer *m, integer *n, integer *nrhs, doublereal *a,
-	                   integer *lda, doublereal *b, integer *ldb, doublereal *s,
-	                   doublereal *rcond, integer *rank, doublereal *work, integer
-	                   *lwork, integer *iwork, integer *info);
 
 double dblmax(double x, double y)
 {
@@ -1019,7 +1013,6 @@ void invert_sip_polynomial(tweak_t* t)
 	//printf("maxu=%lf, minu=%lf\n", maxu, minu);
 	//printf("maxv=%lf, minv=%lf\n", maxv, minv);
 
-	// Fill A in column-major order for fortran dgelsd
 	// We just make a big grid and hope for the best
 	i = 0;
 	for (gu = 0; gu < ngrid; gu++) {
