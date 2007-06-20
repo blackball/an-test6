@@ -917,58 +917,49 @@ double figure_of_merit2(tweak_t* t)
 // I apologize for the rampant copying and pasting of the polynomial calcs...
 void invert_sip_polynomial(tweak_t* t)
 {
-	// basic idea: lay down a grid in image, for each gridpoint, push through the polynomial
-	// to get yourself into warped image coordinate (but not yet lifted onto the sky)
-	// then, using the set of warped gridpoints as inputs, fit back to their original grid locations as targets
+	/*
+	  basic idea: lay down a grid in image, for each gridpoint, push through
+	  the polynomial to get yourself into warped image coordinate (but not yet 
+	  lifted onto the sky).  Then, using the set of warped gridpoints as
+	  inputs, fit back to their original grid locations as targets.
+	*/
 
-	int inv_sip_order, ngrid, inv_sip_coeffs, stride;
+	int inv_sip_order, ngrid, inv_sip_coeffs;
 
 	double maxu, maxv, minu, minv;
-	int i, gu, gv;
-	int N, M, R;
+	int i, j, p, q, gu, gv;
+	int N, M;
+	double u, v, U, V;
 
-	gsl_matrix* mA;
-	gsl_matrix* QR;
-	gsl_vector* tau;
-	gsl_vector* gb1;
-	gsl_vector* gb2;
-	gsl_vector* resid1;
-	gsl_vector* resid2;
-	gsl_vector *x1, *x2;
-	int ret;
+	gsl_matrix *mA, *QR;
+	gsl_vector *b1, *b2, *x1, *x2;
 
 	assert(t->sip->a_order == t->sip->b_order);
 	assert(t->sip->ap_order == t->sip->bp_order);
 
 	inv_sip_order = t->sip->ap_order;
 
+	// Number of grid points to use:
 	ngrid = 10 * (inv_sip_order + 1);
 	printf("tweak inversion using %u gridpoints\n", ngrid);
 
-	// The SIP coefficients form a order x order upper triangular matrix missing
-	// the 0,0 element. We limit ourselves to a order 10 SIP distortion.
-	// That's why the computation of the number of SIP terms is calculated by
-	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
-	// The in the end, we drop the p^0q^0 term by integrating it into crpix)
+	// We only compute the upper triangle polynomial terms, and we exclude the
+	// 0,0 element.
 	inv_sip_coeffs = (inv_sip_order + 1) * (inv_sip_order + 2) / 2 - 1;
-	// upper triangle, missing (0,0) element
 
-	stride = ngrid * ngrid; // Number of rows
-
-	M = stride;
+	// Number of samples to fit.
+	M = ngrid * ngrid;
+	// Number of coefficients to solve for.
 	N = inv_sip_coeffs;
-	R = 2;
 
 	mA = gsl_matrix_alloc(M, N);
-	gb1 = gsl_vector_alloc(M);
-	gb2 = gsl_vector_alloc(M);
+	b1 = gsl_vector_alloc(M);
+	b2 = gsl_vector_alloc(M);
 	x1 = gsl_vector_alloc(N);
 	x2 = gsl_vector_alloc(N);
-	resid1 = gsl_vector_alloc(M);
-	resid2 = gsl_vector_alloc(M);
 	assert(mA);
-	assert(gb1);
-	assert(gb2);
+	assert(b1);
+	assert(b2);
 	assert(x1);
 	assert(x2);
 
@@ -1013,56 +1004,57 @@ void invert_sip_polynomial(tweak_t* t)
 	//printf("maxu=%lf, minu=%lf\n", maxu, minu);
 	//printf("maxv=%lf, minv=%lf\n", maxv, minv);
 
-	// We just make a big grid and hope for the best
+	// Sample grid locations.
 	i = 0;
 	for (gu = 0; gu < ngrid; gu++) {
 		for (gv = 0; gv < ngrid; gv++) {
-
 			// Calculate grid position in original image pixels
-			double u = (gu * (maxu - minu) / ngrid) + minu; // now in pixels
-			double v = (gv * (maxv - minv) / ngrid) + minv;  // now in pixels
-
-			double U, V, fuv, guv;
-			int p, q, j;
-			sip_calc_distortion(t->sip, u, v, &U, &V); // computes U=u+f(u,v) and V=v+g(u,v)
+			u = (gu * (maxu - minu) / ngrid) + minu; // now in pixels
+			v = (gv * (maxv - minv) / ngrid) + minv;  // now in pixels
+			double fuv, guv;
+			// compute U=u+f(u,v) and V=v+g(u,v)
+			sip_calc_distortion(t->sip, u, v, &U, &V);
 			fuv = U - u;
 			guv = V - v;
 
-			// Calculate polynomial terms but this time for inverse
+			// Polynomial terms...
 			j = 0;
 			for (p = 0; p <= inv_sip_order; p++)
 				for (q = 0; q <= inv_sip_order; q++)
 					if ((p + q > 0) &&
 						(p + q <= inv_sip_order)) {
 						assert(j < N);
-
 						gsl_matrix_set(mA, i, j, pow(U, (double)p) * pow(V, (double)q));
-
 						j++;
 					}
 			assert(j == N);
-
-			gsl_vector_set(gb1, i, -fuv);
-			gsl_vector_set(gb2, i, -guv);
-
+			gsl_vector_set(b1, i, -fuv);
+			gsl_vector_set(b2, i, -guv);
 			i++;
 		}
 	}
 
+	// Solve the linear equation.
 	{
 		double rmsB=0;
-		int j;
+		gsl_vector *tau, *resid1, *resid2;
+		int ret;
 
 		tau = gsl_vector_alloc(imin(M, N));
+		resid1 = gsl_vector_alloc(M);
+		resid2 = gsl_vector_alloc(M);
+		assert(tau);
+		assert(resid1);
+		assert(resid2);
 
 		ret = gsl_linalg_QR_decomp(mA, tau);
 		assert(ret == 0);
 		// mA,tau now contains a packed version of Q,R.
 		QR = mA;
 
-		ret = gsl_linalg_QR_lssolve(QR, tau, gb1, x1, resid1);
+		ret = gsl_linalg_QR_lssolve(QR, tau, b1, x1, resid1);
 		assert(ret == 0);
-		ret = gsl_linalg_QR_lssolve(QR, tau, gb2, x2, resid2);
+		ret = gsl_linalg_QR_lssolve(QR, tau, b2, x2, resid2);
 		assert(ret == 0);
 
 		// RMS of (AX-B).
@@ -1075,49 +1067,41 @@ void invert_sip_polynomial(tweak_t* t)
 		printf("gsl rms                = %g\n", rmsB);
 
 		gsl_vector_free(tau);
+		gsl_vector_free(resid1);
+		gsl_vector_free(resid2);
 	}
 
-	{
-		int p, q, j;
+	// Extract the coefficients
+	j = 0;
+	for (p = 0; p <= inv_sip_order; p++)
+		for (q = 0; q <= inv_sip_order; q++)
+			if ((p + q > 0) &&
+				(p + q <= inv_sip_order)) {
+				assert(j < N);
+				t->sip->ap[p][q] = gsl_vector_get(x1, j);
+				t->sip->bp[p][q] = gsl_vector_get(x2, j);
+				j++;
+			}
+	assert(j == N);
 
-		// Extract the inverted SIP coefficients
-		j = 0;
-		for (p = 0; p <= inv_sip_order; p++)
-			for (q = 0; q <= inv_sip_order; q++)
-				if ((p + q > 0) &&
-					(p + q <= inv_sip_order)) {
-					assert(j < N);
-
-					t->sip->ap[p][q] = gsl_vector_get(x1, j);
-					t->sip->bp[p][q] = gsl_vector_get(x2, j);
-
-					j++;
-				}
-		assert(j == N);
-	}
-
-
-	// Check that we found values that actually invert the polynomial
-	// the error should be particularly small at the grid points.
+	// Check that we found values that actually invert the polynomial.
+	// The error should be particularly small at the grid points.
 	{
 		// rms error accumulators:
 		double sumdu = 0;
 		double sumdv = 0;
-		int i, Z;
+		int Z;
 
 		for (gu = 0; gu < ngrid; gu++) {
 			for (gv = 0; gv < ngrid; gv++) {
 				// Calculate grid position in original image pixels
-				double u = (gu * (maxu - minu) / ngrid) + minu;
-				double v = (gv * (maxv - minv) / ngrid) + minv;
-				double U, V;
+				u = (gu * (maxu - minu) / ngrid) + minu;
+				v = (gv * (maxv - minv) / ngrid) + minv;
 				double newu, newv;
-
 				sip_calc_distortion(t->sip, u, v, &U, &V);
 				sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
 				sumdu += square(u - newu);
 				sumdv += square(v - newv);
-
 			}
 		}
 		sumdu /= (ngrid*ngrid);
@@ -1127,25 +1111,19 @@ void invert_sip_polynomial(tweak_t* t)
 		printf("  du: %g\n", sqrt(sumdu));
 		printf("  dv: %g\n", sqrt(sumdu));
 		printf("  dist: %g\n", sqrt(sumdu + sumdv));
-
 		fflush(stdout);
 
 		sumdu = 0;
 		sumdv = 0;
-
 		Z = 1000;
-
 		for (i=0; i<Z; i++) {
-			double u = uniform_sample(minu, maxu);
-			double v = uniform_sample(minv, maxv);
-			double U, V;
+			u = uniform_sample(minu, maxu);
+			v = uniform_sample(minv, maxv);
 			double newu, newv;
-
 			sip_calc_distortion(t->sip, u, v, &U, &V);
 			sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
 			sumdu += square(u - newu);
 			sumdv += square(v - newv);
-
 		}
 		fflush(stderr);
 		sumdu /= Z;
@@ -1154,17 +1132,14 @@ void invert_sip_polynomial(tweak_t* t)
 		printf("  du: %g\n", sqrt(sumdu));
 		printf("  dv: %g\n", sqrt(sumdu));
 		printf("  dist: %g\n", sqrt(sumdu + sumdv));
-
 		fflush(stdout);
 	}
 
 	gsl_matrix_free(mA);
-	gsl_vector_free(gb1);
-	gsl_vector_free(gb2);
+	gsl_vector_free(b1);
+	gsl_vector_free(b2);
 	gsl_vector_free(x1);
 	gsl_vector_free(x2);
-	gsl_vector_free(resid1);
-	gsl_vector_free(resid2);
 }
 
 // FIXME: adapt this function to take as input the correspondences to use VVVVV
@@ -1185,20 +1160,14 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	double cdinv[2][2];
 	double sx, sy, sU, sV, su, sv;
 	sip_t* swcs;
-	int M, N, R;
+	int M, N;
 	int i, j, p, q, order;
 	int row;
 	double totalweight;
 
-	gsl_matrix* mA;
-	gsl_matrix* QR;
-	gsl_vector* b1;
-	gsl_vector* b2;
-	gsl_vector* resid1;
-	gsl_vector* resid2;
-	gsl_vector *x1, *x2;
-	int ret;
-	
+	gsl_matrix *mA, *QR;
+	gsl_vector *b1, *b2, *x1, *x2;
+
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
 	sip_order = t->sip->a_order;
@@ -1207,26 +1176,19 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	if (sip_order < 1)
 		sip_order = 1;
 
-	// The SIP coefficients form an (order x order) upper triangular matrix missing
-	// the 0,0 element. We limit ourselves to an order 10 SIP distortion.
-	// That's why the number of SIP terms is calculated by
-	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
-	// Then in the end, we drop the p^0q^0 term by integrating it into crpix)
-	sip_coeffs = (sip_order + 1) * (sip_order + 2) / 2; // upper triangle
+	// The SIP coefficients form an (order x order) upper triangular
+	// matrix missing the 0,0 element.
+	sip_coeffs = (sip_order + 1) * (sip_order + 2) / 2;
 
 	/* calculate how many points to use based on t->include */
 	stride = 0;
 	for (i = 0; i < il_size(t->included); i++)
-	{
 		if (il_get(t->included, i))
 			stride++;
-	}
 	assert(il_size(t->included) == il_size(t->image));
-	//	stride = il_size(t->image); // number of rows
 
 	M = stride;
 	N = sip_coeffs;
-	R = 2;
 
 	assert(M >= N);
 
@@ -1235,8 +1197,11 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	b2 = gsl_vector_alloc(M);
 	x1 = gsl_vector_alloc(N);
 	x2 = gsl_vector_alloc(N);
-	resid1 = gsl_vector_alloc(M);
-	resid2 = gsl_vector_alloc(M);
+	assert(mA);
+	assert(b1);
+	assert(b2);
+	assert(x1);
+	assert(x2);
 
 	//printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
 	printf("do_sip_tweak starting.\n");
@@ -1276,11 +1241,12 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	*   ( y3 )   ( 1 u3 v3 p3 )   (cd22            ) : scalar, degrees per pixel
 	*   ( ...)   (   ...    )     (cd21*A + cd22*B ) : mixture of SIP terms (A,B) and CD matrix (cd21,cd22)
 	* 
-	*  These are both standard least squares problems which we solve by
-	*  netlib's dgelsd. i.e. min_{cd,A,B} || x - [1,u,v,p]*[s;cd;cdA+cdB]||^2 with
+	*  These are both standard least squares problems which we solve with
+	*  QR decomposition, ie
+	*      min_{cd,A,B} || x - [1,u,v,p]*[s;cd;cdA+cdB]||^2 with
 	*  x reference, cd,A,B unrolled parameters.
 	* 
-	*  after the call to dgelsd, we get back (for x) a vector of optimal
+	*  We get back (for x) a vector of optimal
 	*    [sx;cd11;cd12; cd11*A + cd12*B]
 	*  Now we can pull out sx, cd11 and cd12 from the beginning of this vector,
 	*  and call the rest of the vector [cd11*A] + [cd12*B];
@@ -1297,71 +1263,44 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 
 	/*
 	* 
-	*  DGESLD allows simultaneous fits ("multiple right hand sides") as follows.
-	* 
-	*  Normally you want to solve:
+	*  We want to solve:
 	* 
 	*     min || b[M-by-1] - A[M-by-N] x[N-by-1] ||_2
 	* 
-	*  With multiple right-hand sides, this becomes:
-	* 
-	*     min || B[M-by-R] - A[M-by-N] X[N-by-R] ||_2
-	* 
-	*  We are solving the "x" and "y" values as two different "right-hand sides",
-	*  so:
-	* 
-	*  R = 2
 	*  M = the number of correspondences.
 	*  N = the number of SIP terms.
 	*
 	* And we want an overdetermined system, so M >= N.
 	* 
-	* 
-	*  Since the name "A" is already used to refer to one set of SIP
-	*  coefficients, we use the variable "UVP" instead:
-	*
 	*           [ 1  u1   v1  u1^2  u1v1  v1^2  ... ]
-	*    UVP =  [ 1  u2   v2  u2^2  u2v2  v2^2  ... ]
+	*    mA  =  [ 1  u2   v2  u2^2  u2v2  v2^2  ... ]
 	*           [           ......                  ]
 	*
-	*  where [pI] are the set of SIP polynomial terms at (uI,vI).
-	*  
-	*        [ x1   y1 ]
-	*    B = [ x2   y2 ]
-	*        [   ...   ]
-	* 
-	*  And the answer X is:
-	*        [ sx                  sy                ]
-	*        [ cd11                cd21              ]
-	*    X = [ cd12                cd22              ]
-	*        [ [cd11*A + cd12*B]   [cd21*A + cd22*B] ]
-	* 
+	*         [ x1 ]
+	*    b1 = [ x2 ]
+	*         [ ...]
+	*
+	*         [ y1 ]
+	*    b2 = [ y2 ]
+	*         [ ...]
+	*
+	*  And the answers are:
+	*
+	*         [ sx              ]
+	*    x1 = [ cd11            ]
+	*         [ cd12            ]
+	*         [ cd11*A + cd12*B ]
+	*
+	*         [ sy              ]
+	*    x2 = [ cd21            ]
+	*         [ cd22            ]
+	*         [ cd21*A + cd22*B ]
+	*
 	*  (where A and B are actually tall vectors)
-	*
-	*
-	*
-	*  We are using Fortran DGELSD to solve this equation, so the matrices have
-	*  to be in crazy Fortran order.
-	*
-	* DGELSD takes A and B as inputs, and trashes A and puts the answer in B.
-	* (Isn't Fortran great.)  It also takes as arguments LDA and LDB, which are
-	* the "leading dimensions" of A and B.  LDA >= M, and LDB >= max(M, N).
-	*
-	* For us, LDA = M and LDB = M.
-	*
-	* Because Fortran stores its matrices sideways, 
-	*
-	*     A(r,c) is at  A + c*LDA + r
-	*
-	* So for the input/output matrix B (which has size M-by-R on input and
-	* N-by-R on output) it sticks the output in
-	*
-	*     X([0:M-1], [0:R-1])  ->   B + [0:R-1]*LDB + [0:M-1]
 	*
 	*/
 
-
-	// fill in the UVP matrix, stride in this case is the number of correspondences
+	// Fill in matrix mA:
 	radecdeg2xyzarr(t->sip->wcstan.crval[0], t->sip->wcstan.crval[1], xyzcrval);
 	totalweight = 0.0;
 	i = -1;
@@ -1436,17 +1375,23 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		gsl_vector_set(b1, i, weight * rad2deg(x));
 		gsl_vector_set(b2, i, weight * rad2deg(y));
 	}
-	assert(i + 1 == M);
+	assert(i == M - 1);
 
 	if (t->weighted_fit)
 		printf("Total weight: %g\n", totalweight);
 
+	// Solve the equation.
 	{
-		gsl_vector* tau;
-
+		gsl_vector *tau, *resid1, *resid2;
+		int ret;
 		double rmsB=0;
 
 		tau = gsl_vector_alloc(imin(M, N));
+		resid1 = gsl_vector_alloc(M);
+		resid2 = gsl_vector_alloc(M);
+		assert(tau);
+		assert(resid1);
+		assert(resid2);
 
 		ret = gsl_linalg_QR_decomp(mA, tau);
 		assert(ret == 0);
@@ -1458,7 +1403,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		ret = gsl_linalg_QR_lssolve(QR, tau, b2, x2, resid2);
 		assert(ret == 0);
 
-
 		// Find RMS of (AX - B)
 		for (j=0; j<M; j++) {
 			rmsB += square(gsl_vector_get(resid1, j));
@@ -1469,6 +1413,8 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		printf("gsl rms                = %g\n", rmsB);
 
 		gsl_vector_free(tau);
+		gsl_vector_free(resid1);
+		gsl_vector_free(resid2);
 	}
 
 	// Row 0 of X are the shift (p=0, q=0) terms.
@@ -1611,8 +1557,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	gsl_vector_free(b2);
 	gsl_vector_free(x1);
 	gsl_vector_free(x2);
-	gsl_vector_free(resid1);
-	gsl_vector_free(resid2);
 }
 
 // RANSAC from Wikipedia:
