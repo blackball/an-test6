@@ -920,15 +920,6 @@ double figure_of_merit2(tweak_t* t)
 }
 
 
-#define ENABLE_LSD_INV 0
-#define ENABLE_GSL_INV 1
-
-
-#if ENABLE_LSD_INV
-#define set(A, i, j)  ((A)[(i) + ((stride)*(j))])
-#define get(A, i, j)  ((A)[(i) + ((stride)*(j))])
-#endif
-
 // I apologize for the rampant copying and pasting of the polynomial calcs...
 void invert_sip_polynomial(tweak_t* t)
 {
@@ -938,14 +929,10 @@ void invert_sip_polynomial(tweak_t* t)
 
 	int inv_sip_order, ngrid, inv_sip_coeffs, stride;
 
-#if ENABLE_LSD_INV
-	double *A, *A2, *b, *b2, *X;
-#endif
 	double maxu, maxv, minu, minv;
 	int i, gu, gv;
 	int N, M, R;
 
-#if ENABLE_GSL_INV
 	gsl_matrix* mA;
 	gsl_matrix* QR;
 	gsl_vector* tau;
@@ -955,9 +942,6 @@ void invert_sip_polynomial(tweak_t* t)
 	gsl_vector* resid2;
 	gsl_vector *x1, *x2;
 	int ret;
-#endif
-
-	assert(ENABLE_LSD_INV || ENABLE_GSL_INV);
 
 	assert(t->sip->a_order == t->sip->b_order);
 	assert(t->sip->ap_order == t->sip->bp_order);
@@ -981,18 +965,6 @@ void invert_sip_polynomial(tweak_t* t)
 	N = inv_sip_coeffs;
 	R = 2;
 
-#if ENABLE_LSD_INV
-	A  = malloc(N * M * sizeof(double));
-	b  = malloc(M * R * sizeof(double));
-	A2 = malloc(N * M * sizeof(double));
-	b2 = malloc(M * R * sizeof(double));
-	assert(A);
-	assert(b);
-	assert(A2);
-	assert(b2);
-#endif
-
-#if ENABLE_GSL_INV
 	mA = gsl_matrix_alloc(M, N);
 	gb1 = gsl_vector_alloc(M);
 	gb2 = gsl_vector_alloc(M);
@@ -1005,8 +977,6 @@ void invert_sip_polynomial(tweak_t* t)
 	assert(gb2);
 	assert(x1);
 	assert(x2);
-#endif
-
 
 	// Rearranging formula (4), (5), and (6) from the SIP paper gives the
 	// following equations:
@@ -1073,68 +1043,19 @@ void invert_sip_polynomial(tweak_t* t)
 						(p + q <= inv_sip_order)) {
 						assert(j < N);
 
-#if ENABLE_LSD_INV
-						set(A, i, j) = pow(U, (double)p) * pow(V, (double)q);
-#endif
-#if ENABLE_GSL_INV
 						gsl_matrix_set(mA, i, j, pow(U, (double)p) * pow(V, (double)q));
-#endif
 
 						j++;
 					}
 			assert(j == N);
 
-#if ENABLE_LSD_INV
-			set(b, i, 0) = -fuv;
-			set(b, i, 1) = -guv;
-#endif
-#if ENABLE_GSL_INV
 			gsl_vector_set(gb1, i, -fuv);
 			gsl_vector_set(gb2, i, -guv);
-#endif
 
 			i++;
 		}
 	}
 
-#if ENABLE_LSD_INV
-	// Save for sanity check
-	memcpy(A2, A, N * M * sizeof(double));
-	memcpy(b2, b, M * R * sizeof(double));
-#endif
-
-#if ENABLE_LSD_INV
-	// Allocate work areas and answers
-	{
-		integer NN = N;          // nr cols of A
-		doublereal S[NN];         // min(N,M); is singular vals of A in dec order
-		doublereal RCOND = -1.;  // used to determine effective rank of A; -1
-		// means use machine precision
-		integer NRHS = R;       // number of right hand sides (one for x and y)
-		integer rank;         // output effective rank of A
-		integer lwork = 1000 * 1000; /// FIXME ???
-		doublereal* work = malloc(lwork * sizeof(double));
-		integer *iwork = malloc(lwork * sizeof(long int));
-		integer info;
-		integer str = stride;
-		integer lda = stride;
-		integer ldb = stride;
-		//		printf("INVERSE DGELSD---- ldb=%d\n", ldb);
-		dgelsd_(&str, &NN, &NRHS, A, &lda, b, &ldb, S, &RCOND, &rank, work,
-		        &lwork, iwork, &info); // make the jump to lightspeed
-		stride = str;
-		free(work);
-		free(iwork);
-
-		// dgelsd in its wisdom, stores its answer by overwriting your input b
-		// (nice!)
-		// we rename it X for clarity.
-		X = b;
-	}
-#endif
-
-#if ENABLE_GSL_INV
-	// Do it again, only more different.
 	{
 		double rmsB=0;
 		int j;
@@ -1162,13 +1083,9 @@ void invert_sip_polynomial(tweak_t* t)
 
 		gsl_vector_free(tau);
 	}
-#endif
 
 	{
 		int p, q, j;
-#if ENABLE_LSD_INV
-		double chisq;
-#endif
 
 		// Extract the inverted SIP coefficients
 		j = 0;
@@ -1178,67 +1095,14 @@ void invert_sip_polynomial(tweak_t* t)
 					(p + q <= inv_sip_order)) {
 					assert(j < N);
 
-#if ENABLE_LSD_INV
-					t->sip->ap[p][q] = get(X, j, 0);
-					t->sip->bp[p][q] = get(X, j, 1);
-#endif
-#if ENABLE_GSL_INV
 					t->sip->ap[p][q] = gsl_vector_get(x1, j);
 					t->sip->bp[p][q] = gsl_vector_get(x2, j);
-#endif
 
 					j++;
 				}
 		assert(j == N);
-
-#if ENABLE_LSD_INV
-		// Calculate chi2 for sanity
-		chisq = 0;
-		for (i = 0; i < M; i++) {
-			double sum = 0;
-			int j2;
-			for (j2 = 0; j2 < N; j2++)
-				sum += get(A2, i, j2) * get(X, j2, 0);
-			chisq += square(sum - get(b2, i, 0));
-			sum = 0;
-			for (j2 = 0; j2 < N; j2++)
-				sum += get(A2, i, j2) * get(X, j2, 1);
-			chisq += square(sum - get(b2, i, 1));
-		}
-		//printf("sip_invert_chisq=%lf\n", chisq);
-		//printf("sip_invert_chisq/%d=%lf\n", ngrid*ngrid, (chisq / ngrid) / ngrid);
-		printf("sip_invert_sqrt(chisq/%d=%lf)\n", ngrid*ngrid, sqrt((chisq / ngrid) / ngrid));
-#endif
 	}
 
-
-	// Compare GSL vs Fortran.
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-	{
-		int j;
-		double rmsX = 0;
-		double relrms = 0;
-
-		// RMS of (GSL - FORTRAN)
-		for (j=0; j<N; j++) {
-			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
-			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
-		}
-		if (N > 0)
-			rmsX = sqrt(rmsX / (double)(N*2));
-
-		// RMS of ((GSL - Fortran) / Fortran)
-		for (j=0; j<N; j++) {
-			relrms += square((get(X, j, 0) - gsl_vector_get(x1, j)) / get(X,j,0));
-			relrms += square((get(X, j, 1) - gsl_vector_get(x2, j)) / get(X,j,1));
-		}
-		if (N > 0)
-			relrms = sqrt(relrms / (double)(N*2));
-
-		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
-		printf("rms((X_fortran - X_gsl) / X_fortran) = %g\n", relrms);
-	}
-#endif
 
 	// Check that we found values that actually invert the polynomial
 	// the error should be particularly small at the grid points.
@@ -1247,29 +1111,6 @@ void invert_sip_polynomial(tweak_t* t)
 		double sumdu = 0;
 		double sumdv = 0;
 		int i, Z;
-
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-		double gsl_sumdu = 0;
-		double gsl_sumdv = 0;
-		sip_t gsl_sip;
-		int p,q,j;
-
-		memcpy(&gsl_sip, t->sip, sizeof(sip_t));
-		memset(&gsl_sip.ap, 0, sizeof(gsl_sip.ap));
-		memset(&gsl_sip.bp, 0, sizeof(gsl_sip.bp));
-		// Extract the inverted SIP coefficients
-		j = 0;
-		for (p = 0; p <= inv_sip_order; p++)
-			for (q = 0; q <= inv_sip_order; q++)
-				if ((p + q > 0) &&
-					(p + q <= inv_sip_order)) {
-					assert(j < N);
-					gsl_sip.ap[p][q] = gsl_vector_get(x1, j);
-					gsl_sip.bp[p][q] = gsl_vector_get(x2, j);
-					j++;
-				}
-		assert(j == N);
-#endif
 
 		for (gu = 0; gu < ngrid; gu++) {
 			for (gv = 0; gv < ngrid; gv++) {
@@ -1284,12 +1125,6 @@ void invert_sip_polynomial(tweak_t* t)
 				sumdu += square(u - newu);
 				sumdv += square(v - newv);
 
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-				sip_calc_distortion(&gsl_sip, u, v, &U, &V);
-				sip_calc_inv_distortion(&gsl_sip, U, V, &newu, &newv);
-				gsl_sumdu += square(u - newu);
-				gsl_sumdv += square(v - newv);
-#endif
 			}
 		}
 		sumdu /= (ngrid*ngrid);
@@ -1300,23 +1135,10 @@ void invert_sip_polynomial(tweak_t* t)
 		printf("  dv: %g\n", sqrt(sumdu));
 		printf("  dist: %g\n", sqrt(sumdu + sumdv));
 
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-		gsl_sumdu /= (ngrid*ngrid);
-		gsl_sumdv /= (ngrid*ngrid);
-		printf("GSL: RMS error of inverting a distortion (at the grid points):\n");
-		printf("  du: %g\n", sqrt(gsl_sumdu));
-		printf("  dv: %g\n", sqrt(gsl_sumdu));
-		printf("  dist: %g\n", sqrt(gsl_sumdu + gsl_sumdv));
-#endif
-
 		fflush(stdout);
 
 		sumdu = 0;
 		sumdv = 0;
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-		gsl_sumdu = 0;
-		gsl_sumdv = 0;
-#endif
 
 		Z = 1000;
 
@@ -1331,12 +1153,6 @@ void invert_sip_polynomial(tweak_t* t)
 			sumdu += square(u - newu);
 			sumdv += square(v - newv);
 
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-			sip_calc_distortion(&gsl_sip, u, v, &U, &V);
-			sip_calc_inv_distortion(&gsl_sip, U, V, &newu, &newv);
-			gsl_sumdu += square(u - newu);
-			gsl_sumdv += square(v - newv);
-#endif
 		}
 		fflush(stderr);
 		sumdu /= Z;
@@ -1346,26 +1162,9 @@ void invert_sip_polynomial(tweak_t* t)
 		printf("  dv: %g\n", sqrt(sumdu));
 		printf("  dist: %g\n", sqrt(sumdu + sumdv));
 
-#if (ENABLE_LSD_INV && ENABLE_GSL_INV)
-		gsl_sumdu /= Z;
-		gsl_sumdv /= Z;
-		printf("GSL: RMS error of inverting a distortion (at random points):\n");
-		printf("  du: %g\n", sqrt(gsl_sumdu));
-		printf("  dv: %g\n", sqrt(gsl_sumdu));
-		printf("  dist: %g\n", sqrt(gsl_sumdu + gsl_sumdv));
-#endif
-
 		fflush(stdout);
 	}
 
-#if ENABLE_LSD_INV
-	free(A);
-	free(b);
-	free(A2);
-	free(b2);
-#endif
-
-#if ENABLE_GSL_INV
 	gsl_matrix_free(mA);
 	gsl_vector_free(gb1);
 	gsl_vector_free(gb2);
@@ -1373,14 +1172,7 @@ void invert_sip_polynomial(tweak_t* t)
 	gsl_vector_free(x2);
 	gsl_vector_free(resid1);
 	gsl_vector_free(resid2);
-#endif
 }
-
-#if ENABLE_LSD_INV
-#undef set
-#undef get
-#endif
-
 
 // FIXME: adapt this function to take as input the correspondences to use VVVVV
 //    wic is World Intermediate Coordinates, either along ra or dec
@@ -1391,14 +1183,6 @@ void invert_sip_polynomial(tweak_t* t)
 //    siporder is the sip order up to MAXORDER (defined in sip.h)
 //    the correspondences are passed so that we can stick RANSAC around the whole
 //    thing for better estimation.
-
-#define ENABLE_LSD_SIP 0
-#define ENABLE_GSL_SIP 1
-
-#if ENABLE_LSD_SIP
-#define set(A, i, j)  ((A)[(i) + ((stride)*(j))])
-#define get(A, i, j)  ((A)[(i) + ((stride)*(j))])
-#endif
 
 // Run a polynomial tweak
 void do_sip_tweak(tweak_t* t) // bad name for this function
@@ -1413,12 +1197,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	int row;
 	double totalweight;
 
-#if ENABLE_LSD_SIP
-	double *UVP, *UVP2, *B, *B2, *X;
-	int k;
-	double chisq;
-#endif
-#if ENABLE_GSL_SIP
 	gsl_matrix* mA;
 	gsl_matrix* QR;
 	gsl_vector* b1;
@@ -1427,9 +1205,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	gsl_vector* resid2;
 	gsl_vector *x1, *x2;
 	int ret;
-#endif
-
-	assert(ENABLE_LSD_SIP || ENABLE_GSL_SIP);
 	
 	// a_order and b_order should be the same!
 	assert(t->sip->a_order == t->sip->b_order);
@@ -1462,17 +1237,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 
 	assert(M >= N);
 
-#if ENABLE_LSD_SIP
-	UVP  = malloc(N * M * sizeof(double));
-	B    = malloc(M * R * sizeof(double));
-	UVP2 = malloc(N * M * sizeof(double));
-	B2   = malloc(M * R * sizeof(double));
-	assert(UVP);
-	assert(B);
-	assert(UVP2);
-	assert(B2);
-#endif
-#if ENABLE_GSL_SIP
 	mA = gsl_matrix_alloc(M, N);
 	b1 = gsl_vector_alloc(M);
 	b2 = gsl_vector_alloc(M);
@@ -1480,7 +1244,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	x2 = gsl_vector_alloc(N);
 	resid1 = gsl_vector_alloc(M);
 	resid2 = gsl_vector_alloc(M);
-#endif
 
 	//printf("sqerr=%le [arcsec^2]\n", figure_of_merit(t,NULL,NULL));
 	printf("do_sip_tweak starting.\n");
@@ -1650,12 +1413,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 				assert(q >= 0);
 				assert(p + q <= sip_order);
 
-#if ENABLE_LSD_SIP
-				set(UVP, i, j) = weight * pow(u, (double)p) * pow(v, (double)q);
-#endif
-#if ENABLE_GSL_SIP
 				gsl_matrix_set(mA, i, j, weight * pow(u, (double)p) * pow(v, (double)q));
-#endif
 
 				j++;
 			}
@@ -1672,19 +1430,9 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		// ...
 
 		// The shift - aka (0,0) - SIP coefficient must be 1.
-#if ENABLE_LSD_SIP
-		assert(get(UVP, i, 0) == 1.0 * weight);
-		// The linear terms.
-		//assert(get(UVP, i, 1) == u * weight);
-		//assert(get(UVP, i, 2) == v * weight);
-		assert(fabs(get(UVP, i, 1) - u * weight) < 1e-12);
-		assert(fabs(get(UVP, i, 2) - v * weight) < 1e-12);
-#endif
-#if ENABLE_GSL_SIP
 		assert(gsl_matrix_get(mA, i, 0) == 1.0 * weight);
 		assert(fabs(gsl_matrix_get(mA, i, 1) - u * weight) < 1e-12);
 		assert(fabs(gsl_matrix_get(mA, i, 2) - v * weight) < 1e-12);
-#endif
 
 		// B contains Intermediate World Coordinates (in degrees)
 		refi = il_get(t->ref, i);
@@ -1692,101 +1440,14 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		ok = star_coords(xyzpt, xyzcrval, &y, &x); // tangent-plane projection
 		assert(ok);
 
-#if ENABLE_LSD_SIP
-		set(B, i, 0) = weight * rad2deg(x);
-		set(B, i, 1) = weight * rad2deg(y);
-#endif
-#if ENABLE_GSL_SIP
 		gsl_vector_set(b1, i, weight * rad2deg(x));
 		gsl_vector_set(b2, i, weight * rad2deg(y));
-#endif
 	}
 	assert(i + 1 == M);
 
 	if (t->weighted_fit)
 		printf("Total weight: %g\n", totalweight);
 
-#if ENABLE_LSD_SIP
-	// Save UVP and B for computing chisq
-	memcpy(UVP2, UVP, M * N * sizeof(double));
-	memcpy(B2,   B,   M * R * sizeof(double));
-
-	if (0) {
-		int r, c;
-		printf("uvp=array([\n");
-		for (r=0; r<M; r++) {
-			printf("[");
-			for (c=0; c<N; c++) {
-				printf("%g,", get(UVP, r, c));
-			}
-			printf("],\n");
-		}
-		printf("])\n");
-
-		printf("b=array([\n");
-		for (r=0; r<M; r++) {
-			printf("[");
-			// (c<R looks wrong but it isn't.)
-			for (c=0; c<R; c++) {
-				printf("%g,", get(B, r, c));
-			}
-			printf("],\n");
-		}
-		printf("])\n");
-	}
-#endif
-
-#if ENABLE_LSD_SIP
-	// Use LSD.
-	{
-		integer NN = N;
-		integer MM = M;
-		integer LDA = M;
-		integer LDB = M;
-		// number of right hand sides.
-		integer NRHS = R;
-		// min(N,M); is singular vals of UVP in descending order
-		doublereal S[NN];
-		// used to determine effective rank of UVP; -1 means use machine precision
-		doublereal RCOND = -1.;
-		// output: effective rank of UVP
-		integer rank;
-		/// FIXME ???
-		integer lwork = 1000 * 1000;
-		doublereal *work = malloc(lwork * sizeof(doublereal));
-		integer   *iwork = malloc(lwork * sizeof(integer));
-		integer info;
-		dgelsd_(&MM, &NN, &NRHS, UVP, &LDA, B, &LDB, S, &RCOND, &rank, work,
-		        &lwork, iwork, &info); // punch it chewey
-		free(work);
-		free(iwork);
-		
-		// dgelsd trashes UVP and B, and places the answer in B.
-		// We rename it X for clarity.
-		X = B;
-	}
-
-	// Print rms(AX - B)
-	{
-		double rms=0;
-
-		for (j=0; j<M; j++) {
-			for (k=0; k<2; k++) {
-				double acc = 0.0;
-				for (i=0; i<N; i++)
-					acc += get(UVP2, j, i) * get(X, i, k);
-				acc -= get(B2, j, k);
-				rms += square(acc);
-			}
-		}
-		rms = sqrt(rms / (double)(M*2));
-
-		printf("rms(AX-B)     = %g\n", rms);
-	}
-#endif
-
-#if ENABLE_GSL_SIP
-	// Do it again, only more different.
 	{
 		gsl_vector* tau;
 
@@ -1817,84 +1478,23 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		gsl_vector_free(tau);
 	}
 
-
-
-#endif
-
-
-#if (ENABLE_LSD_SIP && ENABLE_GSL_SIP)
-	{
-		double rmsX = 0;
-		double relrms = 0;
-		double relrmsB = 0;
-
-		// Find RMS of ((AX - B) / (AX))
-		for (j=0; j<M; j++) {
-			for (k=0; k<2; k++) {
-				double acc = 0.0;
-				for (i=0; i<N; i++)
-					acc += get(UVP2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
-				acc -= get(B2, j, k);
-				relrmsB += square(acc / get(B2, j, k));
-			}
-		}
-		if (M > 0)
-			relrmsB = sqrt(relrmsB / (double)(M*2));
-		printf("relative rms           = %g\n", relrmsB);
-
-		// Find RMS of (GSL - Fortran)
-		for (j=0; j<N; j++) {
-			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
-			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
-		}
-		if (N > 0)
-			rmsX = sqrt(rmsX / (double)(N*2));
-
-		// Find RMS of ((GSL - Fortran) / Fortran)
-		for (j=0; j<N; j++) {
-			relrms += square((get(X, j, 0) - gsl_vector_get(x1, j)) / get(X,j,0));
-			relrms += square((get(X, j, 1) - gsl_vector_get(x2, j)) / get(X,j,1));
-		}
-		if (N > 0)
-			relrms = sqrt(relrms / (double)(N*2));
-
-		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
-		printf("rms((X_fortran - X_gsl) / X_fortran) = %g\n", relrms);
-	}
-#endif
-
-
 	// Row 0 of X are the shift (p=0, q=0) terms.
 	// Row 1 of X are the terms that multiply "u".
 	// Row 2 of X are the terms that multiply "v".
 
 	// Grab CD.
-#if ENABLE_LSD_SIP
-	t->sip->wcstan.cd[0][0] = get(X, 1, 0);
-	t->sip->wcstan.cd[1][0] = get(X, 1, 1);
-	t->sip->wcstan.cd[0][1] = get(X, 2, 0);
-	t->sip->wcstan.cd[1][1] = get(X, 2, 1);
-#endif
-#if ENABLE_GSL_SIP
 	t->sip->wcstan.cd[0][0] = gsl_vector_get(x1, 1);
 	t->sip->wcstan.cd[1][0] = gsl_vector_get(x2, 1);
 	t->sip->wcstan.cd[0][1] = gsl_vector_get(x1, 2);
 	t->sip->wcstan.cd[1][1] = gsl_vector_get(x2, 2);
-#endif
 
 	// Compute inv(CD)
 	i = invert_2by2(t->sip->wcstan.cd, cdinv);
 	assert(i == 0);
 
 	// Grab the shift.
-#if ENABLE_LSD_SIP
-	sx = get(X, 0, 0);
-	sy = get(X, 0, 1);
-#endif
-#if ENABLE_GSL_SIP
 	sx = gsl_vector_get(x1, 0);
 	sy = gsl_vector_get(x2, 0);
-#endif
 
 	sU =
 		cdinv[0][0] * sx +
@@ -1915,16 +1515,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 			assert(q >= 0);
 			assert(p + q <= sip_order);
 
-#if ENABLE_LSD_SIP
-			t->sip->a[p][q] =
-				cdinv[0][0] * get(X, j, 0) +
-				cdinv[0][1] * get(X, j, 1);
-
-			t->sip->b[p][q] =
-				cdinv[1][0] * get(X, j, 0) +
-				cdinv[1][1] * get(X, j, 1);
-#endif
-#if ENABLE_GSL_SIP
 			t->sip->a[p][q] =
 				cdinv[0][0] * gsl_vector_get(x1, j) +
 				cdinv[0][1] * gsl_vector_get(x2, j);
@@ -1932,8 +1522,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 			t->sip->b[p][q] =
 				cdinv[1][0] * gsl_vector_get(x1, j) +
 				cdinv[1][1] * gsl_vector_get(x2, j);
-#endif
-
 
 			j++;
 		}
@@ -2016,51 +1604,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		   correspondences_rms_arcsec(t, 1));
 
 
-#if ENABLE_LSD_SIP
-	if (0) {
-		// Calculate chi2 for sanity
-		chisq = 0;
-		for (i=0; i<M; i++) {
-			int k;
-			for (k=0; k<R; k++) {
-				double sum = 0;
-				int j;
-				for (j=0; j<N; j++)
-					sum += get(UVP2, i, j) * get(X, j, k);
-				chisq += square(sum - get(B2, i, k));
-			}
-		}
-		//	fprintf(stderr,"sqerrxy=%le (CHISQ matrix)\n", chisq);
-		{
-			double rmsx=0, rmsy=0;
-			printf("ax_b=array([");
-			for (j=0; j<M; j++) {
-				printf("[");
-				for (k=0; k<2; k++) {
-					double acc = 0.0;
-					for (i=0; i<N; i++)
-						acc += get(UVP2, j, i) * get(X, i, k);
-					acc -= get(B2, j, k);
-					printf("%g,", acc);
-					
-					if (k == 0)
-						rmsx += square(acc);
-					else
-						rmsy += square(acc);
-				}
-				printf("],\n");
-			}
-			printf("])\n");
-			
-			rmsx = sqrt(rmsx / (double)M);
-			rmsy = sqrt(rmsy / (double)M);
-
-			printf("dotprod RMSX=%g [arcsec]\n", deg2arcsec(rmsx));
-			printf("dotprod RMSY=%g [arcsec]\n", deg2arcsec(rmsy));
-		}
-	}
-#endif
-
 	//	t->sip->wcstan.cd[0][0] = tmptan.cd[0][0];
 	//	t->sip->wcstan.cd[0][1] = tmptan.cd[0][1];
 	//	t->sip->wcstan.cd[1][0] = tmptan.cd[1][0];
@@ -2070,14 +1613,6 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	//	t->sip->wcstan.crpix[0] = tmptan.crpix[0];
 	//	t->sip->wcstan.crpix[1] = tmptan.crpix[1];
 
-#if ENABLE_LSD_SIP
-	free(UVP);
-	free(B);
-	free(UVP2);
-	free(B2);
-#endif
-
-#if ENABLE_GSL_SIP
 	gsl_matrix_free(mA);
 	gsl_vector_free(b1);
 	gsl_vector_free(b2);
@@ -2085,14 +1620,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 	gsl_vector_free(x2);
 	gsl_vector_free(resid1);
 	gsl_vector_free(resid2);
-#endif
-
 }
-
-#if ENABLE_LSD_SIP
-#undef set
-#undef get
-#endif
 
 // RANSAC from Wikipedia:
 // Given:
