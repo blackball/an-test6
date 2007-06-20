@@ -938,6 +938,9 @@ void invert_sip_polynomial(tweak_t* t)
 	int i, gu, gv;
 	int N, M, R;
 
+	// DEBUG
+	sip_t gsl_sip;
+
 	assert(t->sip->a_order == t->sip->b_order);
 	assert(t->sip->ap_order == t->sip->bp_order);
 
@@ -951,7 +954,8 @@ void invert_sip_polynomial(tweak_t* t)
 	// That's why the computation of the number of SIP terms is calculated by
 	// Gauss's arithmetic sum: sip_terms = (sip_order+1)*(sip_order+2)/2
 	// The in the end, we drop the p^0q^0 term by integrating it into crpix)
-	inv_sip_coeffs = (inv_sip_order + 1) * (inv_sip_order + 2) / 2; // upper triangle
+	inv_sip_coeffs = (inv_sip_order + 1) * (inv_sip_order + 2) / 2 - 1;
+	// upper triangle, missing (0,0) element
 
 	stride = ngrid * ngrid; // Number of rows
 
@@ -1006,8 +1010,8 @@ void invert_sip_polynomial(tweak_t* t)
 		maxu = dblmax(maxu, t->x[i] - t->sip->wcstan.crpix[0]);
 		maxv = dblmax(maxv, t->y[i] - t->sip->wcstan.crpix[1]);
 	}
-	printf("maxu=%lf, minu=%lf\n", maxu, minu);
-	printf("maxv=%lf, minv=%lf\n", maxv, minv);
+	//printf("maxu=%lf, minu=%lf\n", maxu, minu);
+	//printf("maxv=%lf, minv=%lf\n", maxv, minv);
 
 	// Fill A in column-major order for fortran dgelsd
 	// We just make a big grid and hope for the best
@@ -1026,21 +1030,16 @@ void invert_sip_polynomial(tweak_t* t)
 			guv = V - v;
 
 			// Calculate polynomial terms but this time for inverse
-			// j = 0;
-			/*
-			Maybe we want to explicitly set the (0,0) term to zero...:
-			*/
-			set(A, i, 0) = 0.0;
-			j = 1;
+			j = 0;
 			for (p = 0; p <= inv_sip_order; p++)
 				for (q = 0; q <= inv_sip_order; q++)
 					if ((p + q > 0) &&
 						(p + q <= inv_sip_order)) {
-						assert(j < inv_sip_coeffs);
+						assert(j < N);
 						set(A, i, j) = pow(U, (double)p) * pow(V, (double)q);
 						j++;
 					}
-			assert(j == inv_sip_coeffs);
+			assert(j == N);
 
 			set(b, i, 0) = -fuv;
 			set(b, i, 1) = -guv;
@@ -1082,18 +1081,17 @@ void invert_sip_polynomial(tweak_t* t)
 		X = b;
 
 		// Extract the inverted SIP coefficients
-		// here we're ignoring the (0,0) term.
-		j = 1;
+		j = 0;
 		for (p = 0; p <= inv_sip_order; p++)
 			for (q = 0; q <= inv_sip_order; q++)
 				if ((p + q > 0) &&
 					(p + q <= inv_sip_order)) {
-					assert(j < inv_sip_coeffs);
+					assert(j < N);
 					t->sip->ap[p][q] = get(X, j, 0);
 					t->sip->bp[p][q] = get(X, j, 1);
 					j++;
 				}
-		assert(j == inv_sip_coeffs);
+		assert(j == N);
 
 		// Calculate chi2 for sanity
 		chisq = 0;
@@ -1108,8 +1106,8 @@ void invert_sip_polynomial(tweak_t* t)
 				sum += get(A2, i, j2) * get(X, j2, 1);
 			chisq += square(sum - get(b2, i, 1));
 		}
-		printf("sip_invert_chisq=%lf\n", chisq);
-		printf("sip_invert_chisq/%d=%lf\n", ngrid*ngrid, (chisq / ngrid) / ngrid);
+		//printf("sip_invert_chisq=%lf\n", chisq);
+		//printf("sip_invert_chisq/%d=%lf\n", ngrid*ngrid, (chisq / ngrid) / ngrid);
 		printf("sip_invert_sqrt(chisq/%d=%lf)\n", ngrid*ngrid, sqrt((chisq / ngrid) / ngrid));
 	}
 
@@ -1126,9 +1124,10 @@ void invert_sip_polynomial(tweak_t* t)
 		int ret;
 
 		int i,j,k;
-		double rms=0;
+		//double rms=0;
 		double rmsB=0;
 		double rmsX = 0;
+		int p,q;
 
 		mA = gsl_matrix_alloc(M, N);
 		gb1 = gsl_vector_alloc(M);
@@ -1140,7 +1139,7 @@ void invert_sip_polynomial(tweak_t* t)
 
 		for (i=0; i<M; i++)
 			for (j=0; j<N; j++)
-				gsl_matrix_set(mA, i, j, get(A, i, j));
+				gsl_matrix_set(mA, i, j, get(A2, i, j));
 
 		for (i=0; i<M; i++) {
 			gsl_vector_set(gb1, i, get(b2, i, 0));
@@ -1150,39 +1149,73 @@ void invert_sip_polynomial(tweak_t* t)
 		tau = gsl_vector_alloc(imin(M, N));
 
 		ret = gsl_linalg_QR_decomp(mA, tau);
+		assert(ret == 0);
 		// mA,tau now contains a packed version of Q,R.
 		QR = mA;
 
 		ret = gsl_linalg_QR_lssolve(QR, tau, gb1, x1, resid1);
+		assert(ret == 0);
 		ret = gsl_linalg_QR_lssolve(QR, tau, gb2, x2, resid2);
+		assert(ret == 0);
 
 		// Print rms(AX - B)
-		for (j=0; j<M; j++) {
-			for (k=0; k<2; k++) {
-				double acc = 0.0;
-				for (i=0; i<N; i++)
-					acc += get(A2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
-				acc -= get(b2, j, k);
-				rms += square(acc);
-			}
-		}
-		rms = sqrt(rms / (double)(M*2));
+		/*
+		  for (j=0; j<M; j++) {
+		  for (k=0; k<2; k++) {
+		  double acc = 0.0;
+		  for (i=0; i<N; i++)
+		  acc += get(A2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
+		  acc -= get(b2, j, k);
+		  rms += square(acc);
+		  }
+		  }
+		  rms = sqrt(rms / (double)(M*2));
+		*/
 
 		for (j=0; j<M; j++) {
 			rmsB += square(gsl_vector_get(resid1, j));
 			rmsB += square(gsl_vector_get(resid2, j));
 		}
-		rmsB = sqrt(rmsB / (double)(M*2));
+		if (M > 0)
+			rmsB = sqrt(rmsB / (double)(M*2));
 
 		for (j=0; j<N; j++) {
 			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
 			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
 		}
-		rmsX = sqrt(rmsX / (double)(N*2));
+		if (N > 0)
+			rmsX = sqrt(rmsX / (double)(N*2));
+		/*
+		  for (j=1; j<N; j++) {
+		  rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
+		  rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
+		  }
+		  if (N > 0)
+		  rmsX = sqrt(rmsX / (double)((N-1)*2));
+		*/
 
-		printf("gsl rms(AX-B) = %g\n", rms);
-		printf("gsl rmsB      = %g\n", rmsB);
+		//printf("gsl rms(AX-B) = %g\n", rms);
+		printf("gsl rms       = %g\n", rmsB);
 		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
+
+		// DEBUG
+		memcpy(&gsl_sip, t->sip, sizeof(sip_t));
+		memset(&gsl_sip.ap, 0, sizeof(gsl_sip.ap));
+		memset(&gsl_sip.bp, 0, sizeof(gsl_sip.bp));
+
+		// Extract the inverted SIP coefficients
+		// here we're ignoring the (0,0) term.
+		j = 0;
+		for (p = 0; p <= inv_sip_order; p++)
+			for (q = 0; q <= inv_sip_order; q++)
+				if ((p + q > 0) &&
+					(p + q <= inv_sip_order)) {
+					assert(j < N);
+					gsl_sip.ap[p][q] = gsl_vector_get(x1, j);
+					gsl_sip.bp[p][q] = gsl_vector_get(x2, j);
+					j++;
+				}
+		assert(j == N);
 
 		gsl_vector_free(tau);
 		gsl_matrix_free(mA);
@@ -1193,6 +1226,103 @@ void invert_sip_polynomial(tweak_t* t)
 		gsl_vector_free(resid1);
 		gsl_vector_free(resid2);
 	}
+
+
+	// Check that we found values that actually invert the polynomial
+	// the error should be particularly small at the grid points.
+	{
+		// rms error accumulators:
+		double sumdu = 0;
+		double sumdv = 0;
+
+		double gsl_sumdu = 0;
+		double gsl_sumdv = 0;
+		int i, Z;
+
+		for (gu = 0; gu < ngrid; gu++) {
+			for (gv = 0; gv < ngrid; gv++) {
+				// Calculate grid position in original image pixels
+				double u = (gu * (maxu - minu) / ngrid) + minu;
+				double v = (gv * (maxv - minv) / ngrid) + minv;
+				double U, V;
+				double newu, newv;
+
+				sip_calc_distortion(t->sip, u, v, &U, &V);
+				sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
+				sumdu += square(u - newu);
+				sumdv += square(v - newv);
+
+				sip_calc_distortion(&gsl_sip, u, v, &U, &V);
+				sip_calc_inv_distortion(&gsl_sip, U, V, &newu, &newv);
+				gsl_sumdu += square(u - newu);
+				gsl_sumdv += square(v - newv);
+
+			}
+		}
+		sumdu /= (ngrid*ngrid);
+		sumdv /= (ngrid*ngrid);
+
+		fflush(stderr);
+
+		printf("RMS error of inverting a distortion (at the grid points):\n");
+		printf("  du: %g\n", sqrt(sumdu));
+		printf("  dv: %g\n", sqrt(sumdu));
+		printf("  dist: %g\n", sqrt(sumdu + sumdv));
+
+		gsl_sumdu /= (ngrid*ngrid);
+		gsl_sumdv /= (ngrid*ngrid);
+		printf("GSL: RMS error of inverting a distortion (at the grid points):\n");
+		printf("  du: %g\n", sqrt(gsl_sumdu));
+		printf("  dv: %g\n", sqrt(gsl_sumdu));
+		printf("  dist: %g\n", sqrt(gsl_sumdu + gsl_sumdv));
+
+		fflush(stdout);
+
+
+		sumdu = 0;
+		sumdv = 0;
+		gsl_sumdu = 0;
+		gsl_sumdv = 0;
+
+		Z = 1000;
+
+		for (i=0; i<Z; i++) {
+			double u = uniform_sample(minu, maxu);
+			double v = uniform_sample(minv, maxv);
+			double U, V;
+			double newu, newv;
+
+			sip_calc_distortion(t->sip, u, v, &U, &V);
+			sip_calc_inv_distortion(t->sip, U, V, &newu, &newv);
+			sumdu += square(u - newu);
+			sumdv += square(v - newv);
+
+			sip_calc_distortion(&gsl_sip, u, v, &U, &V);
+			sip_calc_inv_distortion(&gsl_sip, U, V, &newu, &newv);
+			gsl_sumdu += square(u - newu);
+			gsl_sumdv += square(v - newv);
+		}
+		sumdu /= Z;
+		sumdv /= Z;
+
+		fflush(stderr);
+
+		printf("RMS error of inverting a distortion (at random points):\n");
+		printf("  du: %g\n", sqrt(sumdu));
+		printf("  dv: %g\n", sqrt(sumdu));
+		printf("  dist: %g\n", sqrt(sumdu + sumdv));
+
+		gsl_sumdu /= Z;
+		gsl_sumdv /= Z;
+		printf("GSL: RMS error of inverting a distortion (at random points):\n");
+		printf("  du: %g\n", sqrt(gsl_sumdu));
+		printf("  dv: %g\n", sqrt(gsl_sumdu));
+		printf("  dist: %g\n", sqrt(gsl_sumdu + gsl_sumdv));
+
+		fflush(stdout);
+
+	}
+
 
 
 
@@ -1550,7 +1680,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		}
 		rms = sqrt(rms / (double)(M*2));
 
-		printf("rms(AX-B) = %g\n", rms);
+		printf("rms(AX-B)     = %g\n", rms);
 	}
 
 	// Do it again, only more different.
@@ -1566,7 +1696,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		int ret;
 
 		int i,j,k;
-		double rms=0;
+		//double rms=0;
 		double rmsB=0;
 		double rmsX = 0;
 
@@ -1590,38 +1720,45 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		tau = gsl_vector_alloc(imin(M, N));
 
 		ret = gsl_linalg_QR_decomp(mA, tau);
+		assert(ret == 0);
 		// mA,tau now contains a packed version of Q,R.
 		QR = mA;
 
 		ret = gsl_linalg_QR_lssolve(QR, tau, b1, x1, resid1);
+		assert(ret == 0);
 		ret = gsl_linalg_QR_lssolve(QR, tau, b2, x2, resid2);
+		assert(ret == 0);
 
 		// Print rms(AX - B)
-		for (j=0; j<M; j++) {
-			for (k=0; k<2; k++) {
-				double acc = 0.0;
-				for (i=0; i<N; i++)
-					acc += get(UVP2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
-				acc -= get(B2, j, k);
-				rms += square(acc);
-			}
-		}
-		rms = sqrt(rms / (double)(M*2));
+		/*
+		  for (j=0; j<M; j++) {
+		  for (k=0; k<2; k++) {
+		  double acc = 0.0;
+		  for (i=0; i<N; i++)
+		  acc += get(UVP2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
+		  acc -= get(B2, j, k);
+		  rms += square(acc);
+		  }
+		  }
+		  rms = sqrt(rms / (double)(M*2));
+		*/
 
 		for (j=0; j<M; j++) {
 			rmsB += square(gsl_vector_get(resid1, j));
 			rmsB += square(gsl_vector_get(resid2, j));
 		}
-		rmsB = sqrt(rmsB / (double)(M*2));
+		if (M > 0)
+			rmsB = sqrt(rmsB / (double)(M*2));
 
 		for (j=0; j<N; j++) {
 			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
 			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
 		}
-		rmsX = sqrt(rmsX / (double)(N*2));
+		if (N > 0)
+			rmsX = sqrt(rmsX / (double)(N*2));
 
-		printf("gsl rms(AX-B) = %g\n", rms);
-		printf("gsl rmsB      = %g\n", rmsB);
+		//printf("gsl rms(AX-B) = %g\n", rms);
+		printf("gsl rms       = %g\n", rmsB);
 		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
 
 		gsl_vector_free(tau);

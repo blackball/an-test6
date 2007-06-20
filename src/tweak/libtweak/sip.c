@@ -214,11 +214,11 @@ void sip_calc_distortion(sip_t* sip, double u, double v, double* U, double *V)
 	double guv=0.;
 	for (p=0; p<=sip->a_order; p++)
 		for (q=0; q<=sip->a_order; q++)
-			if (p+q <= sip->a_order && !(p==0&&q==0))
+			if ((p+q > 0) && (p+q <= sip->a_order))
 				fuv += sip->a[p][q]*pow(u,p)*pow(v,q);
 	for (p=0; p<=sip->b_order; p++) 
 		for (q=0; q<=sip->b_order; q++) 
-			if (p+q <= sip->b_order && !(p==0&&q==0)) 
+			if ((p+q > 0) && (p+q <= sip->b_order))
 				guv += sip->b[p][q]*pow(u,p)*pow(v,q);
 	*U = u + fuv;
 	*V = v + guv;
