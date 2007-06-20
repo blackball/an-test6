@@ -920,7 +920,7 @@ double figure_of_merit2(tweak_t* t)
 }
 
 
-#define ENABLE_LSD_INV 1
+#define ENABLE_LSD_INV 0
 #define ENABLE_GSL_INV 1
 
 
@@ -1392,7 +1392,7 @@ void invert_sip_polynomial(tweak_t* t)
 //    the correspondences are passed so that we can stick RANSAC around the whole
 //    thing for better estimation.
 
-#define ENABLE_LSD_SIP 1
+#define ENABLE_LSD_SIP 0
 #define ENABLE_GSL_SIP 1
 
 #if ENABLE_LSD_SIP
