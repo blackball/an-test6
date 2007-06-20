@@ -18,16 +18,6 @@
 # (this allows the user to override it)
 CC ?= gcc
 
-LIBFORTRAN :=
-WHICHG77 := $(shell which g77)
-ifeq ($(WHICHG77),)
-  FC := gfortran
-  LIBFORTRAN := $(shell gfortran -print-file-name=libgfortran.a)
-else
-  FC := g77
-  LIBFORTRAN := $(shell g77 -print-file-name=libg2c.a)
-endif
-
 RANLIB := ranlib
 
 AWK := awk
