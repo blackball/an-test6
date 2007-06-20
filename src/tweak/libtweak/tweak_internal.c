@@ -818,7 +818,6 @@ void get_reference_stars(tweak_t* t) // use healpix technology to go get ref sta
 	}
 
 	radecdeg2xyzarr(ra_mean, dec_mean, xyz);
-	//radec2xyzarr(deg2rad(158.70829), deg2rad(51.919442), xyz);
 
 	// Fudge radius factor because if the shift is really big, then we
 	// can't actually find the correct astrometry.
@@ -1123,10 +1122,10 @@ void invert_sip_polynomial(tweak_t* t)
 		gsl_vector *x1, *x2;
 		int ret;
 
-		int i,j,k;
-		//double rms=0;
+		int i,j;
 		double rmsB=0;
 		double rmsX = 0;
+		double relrms = 0;
 		int p,q;
 
 		mA = gsl_matrix_alloc(M, N);
@@ -1158,20 +1157,7 @@ void invert_sip_polynomial(tweak_t* t)
 		ret = gsl_linalg_QR_lssolve(QR, tau, gb2, x2, resid2);
 		assert(ret == 0);
 
-		// Print rms(AX - B)
-		/*
-		  for (j=0; j<M; j++) {
-		  for (k=0; k<2; k++) {
-		  double acc = 0.0;
-		  for (i=0; i<N; i++)
-		  acc += get(A2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
-		  acc -= get(b2, j, k);
-		  rms += square(acc);
-		  }
-		  }
-		  rms = sqrt(rms / (double)(M*2));
-		*/
-
+		// RMS of (AX-B).
 		for (j=0; j<M; j++) {
 			rmsB += square(gsl_vector_get(resid1, j));
 			rmsB += square(gsl_vector_get(resid2, j));
@@ -1179,32 +1165,31 @@ void invert_sip_polynomial(tweak_t* t)
 		if (M > 0)
 			rmsB = sqrt(rmsB / (double)(M*2));
 
+		// RMS of (GSL - FORTRAN)
 		for (j=0; j<N; j++) {
 			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
 			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
 		}
 		if (N > 0)
 			rmsX = sqrt(rmsX / (double)(N*2));
-		/*
-		  for (j=1; j<N; j++) {
-		  rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
-		  rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
-		  }
-		  if (N > 0)
-		  rmsX = sqrt(rmsX / (double)((N-1)*2));
-		*/
 
-		//printf("gsl rms(AX-B) = %g\n", rms);
-		printf("gsl rms       = %g\n", rmsB);
+		// RMS of ((GSL - Fortran) / Fortran)
+		for (j=0; j<N; j++) {
+			relrms += square((get(X, j, 0) - gsl_vector_get(x1, j)) / get(X,j,0));
+			relrms += square((get(X, j, 1) - gsl_vector_get(x2, j)) / get(X,j,1));
+		}
+		if (N > 0)
+			relrms = sqrt(relrms / (double)(N*2));
+
+		printf("gsl rms                = %g\n", rmsB);
 		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
+		printf("rms((X_fortran - X_gsl) / X_fortran) = %g\n", relrms);
 
 		// DEBUG
 		memcpy(&gsl_sip, t->sip, sizeof(sip_t));
 		memset(&gsl_sip.ap, 0, sizeof(gsl_sip.ap));
 		memset(&gsl_sip.bp, 0, sizeof(gsl_sip.bp));
-
 		// Extract the inverted SIP coefficients
-		// here we're ignoring the (0,0) term.
 		j = 0;
 		for (p = 0; p <= inv_sip_order; p++)
 			for (q = 0; q <= inv_sip_order; q++)
@@ -1696,9 +1681,10 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		int ret;
 
 		int i,j,k;
-		//double rms=0;
 		double rmsB=0;
 		double rmsX = 0;
+		double relrms = 0;
+		double relrmsB = 0;
 
 		mA = gsl_matrix_alloc(M, N);
 		b1 = gsl_vector_alloc(M);
@@ -1729,20 +1715,20 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		ret = gsl_linalg_QR_lssolve(QR, tau, b2, x2, resid2);
 		assert(ret == 0);
 
-		// Print rms(AX - B)
-		/*
-		  for (j=0; j<M; j++) {
-		  for (k=0; k<2; k++) {
-		  double acc = 0.0;
-		  for (i=0; i<N; i++)
-		  acc += get(UVP2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
-		  acc -= get(B2, j, k);
-		  rms += square(acc);
-		  }
-		  }
-		  rms = sqrt(rms / (double)(M*2));
-		*/
+		// Find RMS of ((AX - B) / (AX))
+		for (j=0; j<M; j++) {
+			for (k=0; k<2; k++) {
+				double acc = 0.0;
+				for (i=0; i<N; i++)
+					acc += get(UVP2, j, i) * gsl_vector_get((k==0 ? x1 : x2), i); //get(X, i, k);
+				acc -= get(B2, j, k);
+				relrmsB += square(acc / get(B2, j, k));
+			}
+		}
+		if (M > 0)
+			relrmsB = sqrt(relrmsB / (double)(M*2));
 
+		// Find RMS of (AX - B)
 		for (j=0; j<M; j++) {
 			rmsB += square(gsl_vector_get(resid1, j));
 			rmsB += square(gsl_vector_get(resid2, j));
@@ -1750,6 +1736,7 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		if (M > 0)
 			rmsB = sqrt(rmsB / (double)(M*2));
 
+		// Find RMS of (GSL - Fortran)
 		for (j=0; j<N; j++) {
 			rmsX += square(get(X, j, 0) - gsl_vector_get(x1, j));
 			rmsX += square(get(X, j, 1) - gsl_vector_get(x2, j));
@@ -1757,9 +1744,18 @@ void do_sip_tweak(tweak_t* t) // bad name for this function
 		if (N > 0)
 			rmsX = sqrt(rmsX / (double)(N*2));
 
-		//printf("gsl rms(AX-B) = %g\n", rms);
-		printf("gsl rms       = %g\n", rmsB);
+		// Find RMS of ((GSL - Fortran) / Fortran)
+		for (j=0; j<N; j++) {
+			relrms += square((get(X, j, 0) - gsl_vector_get(x1, j)) / get(X,j,0));
+			relrms += square((get(X, j, 1) - gsl_vector_get(x2, j)) / get(X,j,1));
+		}
+		if (N > 0)
+			relrms = sqrt(relrms / (double)(N*2));
+
+		printf("relative rms           = %g\n", relrmsB);
+		printf("gsl rms                = %g\n", rmsB);
 		printf("rms(X_fortran - X_gsl) = %g\n", rmsX);
+		printf("rms((X_fortran - X_gsl) / X_fortran) = %g\n", relrms);
 
 		gsl_vector_free(tau);
 		gsl_matrix_free(mA);
