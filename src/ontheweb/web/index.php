@@ -47,6 +47,7 @@ function allow_email($email) {
 		       'munz@physics.muni.cz',
 		       'pjm@physics.ucsb.edu',
 		       'roweis@cs.toronto.edu',
+		       'simon.krughoff@gmail.com',
 		       'strader@ucolick.org',
 		       'stubbs@physics.harvard.edu',
 		       'tim@chaos.org.uk');
