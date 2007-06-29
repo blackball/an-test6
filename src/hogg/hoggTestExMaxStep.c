@@ -1,8 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 #include "hoggTweak.h"
-int hoggTestEM()
+int hoggTestExMaxStep()
 {
-  printf("hoggTestEM: doing nothing\n");
+  printf("hoggTestExMaxStep: doing nothing\n");
   return 0;
 }

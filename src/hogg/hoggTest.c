@@ -10,6 +10,8 @@ int main()
   if (status != 0) return(status);
   status= hoggTestLogGaussian();
   if (status != 0) return(status);
+  status= hoggTestExMaxStep();
+  if (status != 0) return(status);
   printf("hoggTest: all tests passed.\n");
   return 0;
 }
