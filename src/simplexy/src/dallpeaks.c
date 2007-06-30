@@ -159,8 +159,9 @@ int dallpeaks(float *image,
 			  + (float)(yc[i] + ymin - 1);
 			
 		      } else if (xc[i] > 1 && xc[i] < onx - 2 &&
-				 yc[i] > 1 && yc[i] < ony - 2) {
-			
+				 yc[i] > 1 && yc[i] < ony - 2 &&
+				 imore < (maxnpeaks - (*npeaks))) {
+
 			/* try to get centroid in the 5 x 5 box */
 			/* FIXME: Hogg check index logic here (2s) */
 			for (oi = -1;oi <= 1;oi++)
