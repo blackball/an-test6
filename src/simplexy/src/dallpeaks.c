@@ -58,7 +58,6 @@ int objects_compare(const void *first, const void *second)
 
 /* Finds all peaks in the image by cutting a bounding box out around each one
  * */
-//FIXME -- sam says why is there a parameter maxnpeaks?
 
 int dallpeaks(float *image,
               int nx,
@@ -118,7 +117,8 @@ int dallpeaks(float *image,
 		}
 
 		if (xmax - xmin > 2 && xmax - xmin < maxsize && 
-		    ymax - ymin > 2 && ymax - ymin < maxsize) {
+		    ymax - ymin > 2 && ymax - ymin < maxsize &&
+		    *npeaks < maxnpeaks) {
 
 		  /* make object cutout (if it is 3x3 or bigger) */
 		  onx = xmax - xmin + 1;
