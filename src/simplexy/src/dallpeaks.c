@@ -139,43 +139,44 @@ int dallpeaks(float *image,
 			 sigma, dlim, saddle, maxper, 0, 1, minpeak);
 		  imore = 0;
 		  for (i = 0;i < nc;i++) {
-			  if (xc[i] > 0 && xc[i] < onx - 1 &&
-				  yc[i] > 0 && yc[i] < ony - 1) {
+		    if (xc[i] > 0 && xc[i] < onx - 1 &&
+			yc[i] > 0 && yc[i] < ony - 1 &&
+			imore < (maxnpeaks - (*npeaks))) {
 		      
-				  /* install default centroid to begin */
-				  xcen[imore + (*npeaks)] = (float)(xc[i] + xmin);
-				  ycen[imore + (*npeaks)] = (float)(yc[i] + ymin);
+		      /* install default centroid to begin */
+		      xcen[imore + (*npeaks)] = (float)(xc[i] + xmin);
+		      ycen[imore + (*npeaks)] = (float)(yc[i] + ymin);
  
-				  /* try to get centroid in the 3 x 3 box */
-				  for (oi = -1;oi <= 1;oi++)
-					  for (oj = -1;oj <= 1;oj++)
-						  three[oi + 1 + (oj + 1)*3] =
-							  simage[oi + xc[i] + (oj + yc[i]) * onx];
-				  if (dcen3x3(three, &tmpxc, &tmpyc)) {
-					  xcen[imore + (*npeaks)] = tmpxc
-						  + (float)(xc[i] + xmin - 1);
-					  ycen[imore + (*npeaks)] = tmpyc
-						  + (float)(yc[i] + ymin - 1);
+		      /* try to get centroid in the 3 x 3 box */
+		      for (oi = -1;oi <= 1;oi++)
+			for (oj = -1;oj <= 1;oj++)
+			  three[oi + 1 + (oj + 1)*3] =
+			    simage[oi + xc[i] + (oj + yc[i]) * onx];
+		      if (dcen3x3(three, &tmpxc, &tmpyc)) {
+			xcen[imore + (*npeaks)] = tmpxc
+			  + (float)(xc[i] + xmin - 1);
+			ycen[imore + (*npeaks)] = tmpyc
+			  + (float)(yc[i] + ymin - 1);
 			
-				  } else if (xc[i] > 1 && xc[i] < onx - 2 &&
-							 yc[i] > 1 && yc[i] < ony - 2) {
+		      } else if (xc[i] > 1 && xc[i] < onx - 2 &&
+				 yc[i] > 1 && yc[i] < ony - 2) {
 			
-					  /* try to get centroid in the 5 x 5 box */
-					  /* FIXME: Hogg check index logic here (2s) */
-					  for (oi = -1;oi <= 1;oi++)
-						  for (oj = -1;oj <= 1;oj++)
-							  three[oi + 1 + (oj + 1)*3] =
-								  simage[2*oi + xc[i] + (2*oj + yc[i]) * onx];
-					  if (dcen3x3(three, &tmpxc, &tmpyc)) {
-						  xcen[imore + (*npeaks)] = 2.0*tmpxc
-							  + (float)(xc[i] + xmin - 2);
-						  ycen[imore + (*npeaks)] = 2.0*tmpyc
-							  + (float)(yc[i] + ymin - 2);
-						  
-					  }
-				  }
-				  imore++;
-			  }
+			/* try to get centroid in the 5 x 5 box */
+			/* FIXME: Hogg check index logic here (2s) */
+			for (oi = -1;oi <= 1;oi++)
+			  for (oj = -1;oj <= 1;oj++)
+			    three[oi + 1 + (oj + 1)*3] =
+			      simage[2*oi + xc[i] + (2*oj + yc[i]) * onx];
+			if (dcen3x3(three, &tmpxc, &tmpyc)) {
+			  xcen[imore + (*npeaks)] = 2.0*tmpxc
+			    + (float)(xc[i] + xmin - 2);
+			  ycen[imore + (*npeaks)] = 2.0*tmpyc
+			    + (float)(yc[i] + ymin - 2);
+			  
+			}
+		      }
+		      imore++;
+		    }
 		  }
 		  (*npeaks) += imore;
 		}
