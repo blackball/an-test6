@@ -5,7 +5,7 @@
 int hoggTestLeastSquareFit()
 {
   int ii;
-  double yy[3],xx[6],aa[1],diff;
+  double yy[3],xx[6],aa[2],diff;
   printf("hoggTestLeastSquareFit: starting one-d test\n");
   for (ii=0; ii < 3; ii++) yy[ii]= (double) ii;
   for (ii=0; ii < 3; ii++) xx[ii]= 1.0;
