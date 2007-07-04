@@ -190,6 +190,42 @@ function dir_to_jobid($dir) {
 	return strtr($dir, "/", "-");
 }
 
+function fmod_positive($val, $divisor) {
+	$val = fmod($val, $divisor);
+	while ($val < 0)
+		$val += $divisor;
+	while ($val > $divisor)
+		$val -= $divisor;
+}
+
+function ra_deg2hms($ra, &$h, &$m, &$s) {
+	$ra = fmod_positive($ra, 360);
+	$hrs = $ra / 15.0;
+	$h = floor($hrs);
+	// remaining hours:
+	$hrs -= $h;
+	$mins = $hrs * 60.0;
+	$m = floor($mins);
+	// remaining minutes:
+	$mins -= $m;
+	$secs = $m * 60.0;
+	$s = $secs;
+}
+
+function dec_deg2dms($dec, &$d, &$m, &$s) {
+	$sign = ($dec >= 0) ? 1 : -1;
+	$dec = $dec * $sign;
+	$d = $sign * floor($dec);
+	// remaining degrees:
+	$dec -= $abs($d);
+	$mins = $dec * 60.0;
+	$m = floor($mins);
+	// remaining minutes:
+	$mins -= $m;
+	$secs = $mins * 60.0;
+	$s = $secs;
+}
+
 // Returns FALSE on error;
 // 
 function uncompress_file($infile, $outfile, &$suffix) {

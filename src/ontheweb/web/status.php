@@ -827,6 +827,12 @@ if ($job_done) {
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
 
+		echo '<tr><td>(RA, Dec) center (H:M:S, D:M):</td><td>';
+		ra_deg2hms($rac, $rah, $ram, $ras);
+		dec_deg2dms($decc, $decd, $decm, $decs);
+		echo "(" . $rah . ":" . $ram . ":" . $ras . ", " . $decd . ":" . $decm . ":" . $decs . ")\n";
+		echo "</td></tr>\n";
+
 		echo '<tr><td>Orientation:</td><td>';
 		printf("%.2f deg E of N\n", $orient);
 		echo "</td></tr>\n";
@@ -848,8 +854,8 @@ if ($job_done) {
 			$fldh = $pixscale * $fullH;
 			$units = "arcseconds";
 			if (min($fldw, $fldh) > 3600.0) {
-				$fldw /= 3660.0;
-				$fldh /= 3660.0;
+				$fldw /= 3600.0;
+				$fldh /= 3600.0;
 				$units = "degrees";
 			} else if (min($fldw, $fldh) > 60.0) {
 				$fldw /= 60.0;
