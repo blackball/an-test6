@@ -21,7 +21,7 @@ deps: $(DEP_PREREQS) $(DEPS)
 	cat $(DEPS) > deps
 
 %.dep : %.c
-	$(CC) -MM $(CFLAGS) -c $< > $@
+	$(CC) -MM $(CFLAGS) -c $< -MF $@ -MG -MP
 
 ifneq ($(MAKECMDGOALS),clean)
   ifneq ($(MAKECMDGOALS),realclean)
