@@ -4,13 +4,13 @@
 # waits for new jobs to arrive, and runs a script on each one.
 
 Nthreads=4
-Cmd="/home/gmaps/alpha/ontheweb/execs/blindscript-remote.sh %s"
+Cmd="/home/gmaps/test/ontheweb/execs/blindscript-remote-testing.sh %s"
 
-cd /home/gmaps/ontheweb-data/alpha
+cd /home/gmaps/ontheweb-data/test
 rm queue
 
 # We have to tell it to watch the current epoch's directory; new epochs
 # will automatically be watched when their directories appear.
 Epoch=`pwd`/`date +%Y%m`
-/home/gmaps/alpha/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd" -w $Epoch
+/home/gmaps/test/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd" -w $Epoch
 

@@ -1,13 +1,16 @@
 #! /bin/bash
 
-# Hoo-ah!
+# Use this script to start the "watcher" program, which watches a directory,
+# waits for new jobs to arrive, and runs a script on each one.
+
 Nthreads=10
-Cmd="/home/gmaps/an/ontheweb/execs/blindscript-remote.sh %s"
+Cmd="/home/gmaps/alpha/ontheweb/execs/blindscript-remote.sh %s"
 
 cd /home/gmaps/ontheweb-data/demo
 rm queue
 
+# We have to tell it to watch the current epoch's directory; new epochs
+# will automatically be watched when their directories appear.
 Epoch=`pwd`/`date +%Y%m`
-
-/home/gmaps/an/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd" -w $Epoch
+/home/gmaps/alpha/ontheweb/execs/watcher -D -n $Nthreads -c "$Cmd" -w $Epoch
 
