@@ -21,7 +21,6 @@ COMMON := $(BASEDIR)/an-common
 all:
 
 include $(COMMON)/makefile.common
-#include $(COMMON)/makefile.fortran
 include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
@@ -35,7 +34,6 @@ LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
 
 CFLAGS := $(CFLAGS_DEF)
-
 CFLAGS += $(CFITS_INC)
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(GSL_INC)
@@ -44,12 +42,11 @@ CFLAGS += $(LIBWCS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
-CFLAGS += -I. -g -O0
+CFLAGS += -I.
 
 TWEAK_OBJS := tweak.o ezfits.o sip_util.o
 TEST_SIP_OBJS := test_sip.o sip_util.o ezfits.o
 SANITY_OBJS := sanity_check.o sip_util.o
-
 
 all: $(REMAKE_LIBTWEAK) tweak test_sip sanity_check sanity_check2
 
@@ -59,15 +56,15 @@ tweak.c: $(QFITS_LIB)
 
 tweak: $(TWEAK_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) \
-	$(GSL_LIB) $(LEVMAR_LIB) $(LIBWCS_LIB) $(LIBFORTRAN)
+	$(GSL_LIB) $(LEVMAR_LIB) $(LIBWCS_LIB)
 
 sanity_check: $(SANITY_OBJS) \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) $(CFITS_LIB) \
-	$(LIBWCS_LIB) $(LIBFORTRAN) $(GSL_LIB)
+	$(LIBWCS_LIB) $(GSL_LIB)
 
 SC2 := sanity_check2.o \
 	$(LIBTWEAK_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB) \
-	$(LIBFORTRAN) $(GSL_LIB)
+	$(GSL_LIB)
 
 sanity_check2: $(REMAKE_LIBTWEAK) $(SC2)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SC2)
@@ -76,4 +73,5 @@ test_sip: $(TEST_SIP_OBJS) \
 	$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(CFITS_LIB) $(LIBWCS_LIB)
 
 clean :
-	-rm tweak test_sip $(TWEAK_OBJS) $(TEST_SIP_OBJS)
+	-rm tweak test_sip $(TWEAK_OBJS) $(TEST_SIP_OBJS) \
+		sanity_check $(SANITY_OBJS) sanity_check2 sanity_check2.o

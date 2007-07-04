@@ -28,10 +28,8 @@ include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.gsl
 
-TWEAK_C_OBJ := sip.o tweak_internal.o
-TWEAK_C_OBJ += sip_qfits.o
-# TWEAK_F_OBJ := dgelsd.o
-TWEAK_OBJ := $(TWEAK_C_OBJ) $(TWEAK_F_OBJ)
+TWEAK_OBJ := sip.o tweak_internal.o
+TWEAK_OBJ += sip_qfits.o
 
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(ANUTILS_INC)
@@ -73,13 +71,12 @@ TWEAK_COMMON += $(QFITS_DIR)/src/qfits_filename.o
 TWEAK_COMMON += $(QFITS_DIR)/src/qfits_float.o
 TWEAK_COMMON += $(QFITS_DIR)/src/qfits_cache.o
 
-libtweak.so: $(TWEAK_OBJ) $(TWEAK_COMMON) $(COMMON_LIB) $(LIBKD_LIB)
-	gcc -shared -ff2c -o $@ $^
+libtweak.so: $(TWEAK_OBJ) $(TWEAK_COMMON) $(LIBKD_LIB)
+	gcc -shared -o $@ $^
 
 .PHONY: clean
 clean:
-	-rm $(LIBTWEAK) $(TWEAK_OBJ) \
-		deps $(DEPS)
+	-rm $(LIBTWEAK) $(TWEAK_OBJ) deps $(DEPS)
 
 realclean: clean
 	-rm *~ *.dep
@@ -88,7 +85,7 @@ realclean: clean
 tags:
 	etags `find . -name "*.c" -o -name "*.h"`
 
-DEP_OBJ := $(TWEAK_C_OBJ)
+DEP_OBJ := $(TWEAK_OBJ)
 DEP_PREREQS := $(QFITS_LIB)
 
 include $(COMMON)/makefile.deps
