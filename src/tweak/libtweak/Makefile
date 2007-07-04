@@ -30,7 +30,7 @@ include $(COMMON)/makefile.gsl
 
 TWEAK_C_OBJ := sip.o tweak_internal.o
 TWEAK_C_OBJ += sip_qfits.o
-TWEAK_F_OBJ := dgelsd.o
+# TWEAK_F_OBJ := dgelsd.o
 TWEAK_OBJ := $(TWEAK_C_OBJ) $(TWEAK_F_OBJ)
 
 CFLAGS := $(CFLAGS_DEF)

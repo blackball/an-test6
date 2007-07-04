@@ -26,21 +26,71 @@
 
   inputs:
     yy    - nn array of data points
-    xx    - nn x mm matrix of model functions evaluated at points
+    AA    - nn x mm matrix of model functions evaluated at points (read
+            source for the element order)
     nn    - number of data points
     mm    - number of parameters
 
   outputs:
     [return value] - chi-squared
-    aa             - mm array fit parameters
+    xx             - mm array fit parameters
 
   comments:
+    - Uses gsl library in a very clunky way.
     - Doesn't allow for points to have different weights.
     - Doesn't allow for points to have different errors.
     - Doesn't allow for nontrivial covariance matrix.
+    - Doesn't do anything for you if are running very similar LSFs
+      over and over again (ie, it keeps allocing and de-allocing, and
+      it keeps stuffing and unstuffing vectors and matrices).
 */
 #include <math.h>
-double hoggLeastSquareFit(double *yy, double *xx, double *aa, int nn, int mm)
+#include <assert.h>
+#include "../gsl-an/gsl_linalg.h"
+#include "../gsl-an/gsl_matrix.h"
+#include "../gsl-an/gsl_vector.h"
+#include "../gsl-an/gsl_matrix_double.h"
+#include "../gsl-an/gsl_vector_double.h"
+#include "../gsl-an/gsl_blas.h"
+double hoggLeastSquareFit(double *yy, double *AA, double *xx, int nn, int mm)
 {
-  return 0.0;
+  int status, ii, jj, kk;
+  double chisq=0.0, foo, bar;
+  gsl_vector *RR, *BB, *XX, *resid;
+  gsl_matrix *QQ;
+  /* allocate space */
+  RR = gsl_vector_alloc(mm);
+  BB = gsl_vector_alloc(mm);
+  XX = gsl_vector_alloc(mm);
+  resid = gsl_vector_alloc(nn);
+  QQ = gsl_matrix_alloc(mm, mm);
+  /* pack matrices */
+  for (ii=0; ii<mm; ii++){
+    foo = 0.0;
+    for(kk=0; kk<nn; kk++) foo += AA[kk+nn*ii]*yy[kk];
+    gsl_vector_set(BB, ii, foo);
+    for (jj=0; jj<mm; jj++){
+      foo = 0.0;
+      for(kk=0; kk<nn; kk++) foo += AA[kk+nn*ii]*AA[kk+nn*jj];
+      gsl_matrix_set(QQ, ii, jj, foo);
+    }
+  }
+  /* solve equations */
+  status = gsl_linalg_QR_decomp(QQ, RR);
+  status = gsl_linalg_QR_lssolve(QQ, RR, BB, XX, resid);
+  /* unpack matrices */
+  for (ii=0; ii<mm; ii++) xx[ii] = gsl_matrix_get(XX,ii);
+  /* compute chisq */
+  for (kk=0; kk<nn; kk++){
+    foo = yy[kk];
+    for (ii=0; ii<mm; ii++) foo -= xx[ii]*AA[kk+nn*ii];
+    chisq += square(foo);
+  }
+  /* free space and return */
+  gsl_vector_free(RR);
+  gsl_vector_free(BB);
+  gsl_vector_free(XX);
+  gsl_vector_free(resid);
+  gsl_matrix_free(QQ);
+  return chisq;
 }

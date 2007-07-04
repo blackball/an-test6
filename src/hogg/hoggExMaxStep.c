@@ -46,9 +46,8 @@ double hoggExMaxStep(double *xx, double *varin, int nn, double varout,
 		     double *logpin)
 {
   int ii;
-  double logpout, thisloglike, loglike, two[2], numerator;
+  double logpout, thisloglike, loglike=0.0, two[2], numerator;
   logpout= log(1.0-exp(*logpin));
-  loglike= 0.0;
   for (ii= 0; ii < nn; ii++){
     two[0]= *logpin+hoggLogGaussian(xx[ii],varin[ii]);
     two[1]= logpout+hoggLogGaussian(xx[ii],varout);
