@@ -273,7 +273,9 @@ int main(int argc, char **args) {
 	memcpy(treeout->tree, treein->tree, sizeof(kdtree_t));
 	treeout->tree->perm = NULL;
 
-	fits_copy_header(qfin->header, startree_header(treeout), "HEALPIX");
+	fits_copy_header(startree_header(treein), startree_header(treeout), "HEALPIX");
+	fits_copy_header(startree_header(treein), startree_header(treeout), "ALLSKY");
+	fits_copy_header(startree_header(treein), startree_header(treeout), "JITTER");
 	qfits_header_add(startree_header(treeout), "HISTORY", "unpermute-stars command line:", NULL, NULL);
 	fits_add_args(startree_header(treeout), args, argc);
 	qfits_header_add(startree_header(treeout), "HISTORY", "(end of unpermute-stars command line)", NULL, NULL);
