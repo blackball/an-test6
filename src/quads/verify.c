@@ -69,6 +69,8 @@ void verify_hit(startree* skdt,
 	int Nleaf = 5;
 	double* indexpix;
 
+	double* bestprob = NULL;
+
 	// quad center and radius
 	double qc[2];
 	double rquad2;
@@ -77,10 +79,10 @@ void verify_hit(startree* skdt,
 	double logprob_background;
 
 	double logodds = 0.0;
-	int nmatch, nnomatch;
+	int nmatch, nnomatch, nconflict;
 
 	double bestlogodds;
-	int bestnmatch, bestnnomatch;
+	int bestnmatch, bestnnomatch, bestnconflict;
 
 	// FIXME - the value 1.5 is simulation-based.
 	//double gamma2 = square(1.5);
@@ -94,6 +96,7 @@ void verify_hit(startree* skdt,
 
 	double* fieldcopy;
 	int M;
+	double fieldr, fieldarcsec;
 
 	assert(mo->wcs_valid);
 	assert(startree);
@@ -110,7 +113,6 @@ void verify_hit(startree* skdt,
 		  mo->field[2],
 		  mo->field[3]);
 
-	double fieldr, fieldarcsec;
 	if (DEBUGVERIFY) {
 		fieldr = sqrt(fieldr2);
 		fieldarcsec = distsq2arcsec(fieldr2);
@@ -205,6 +207,15 @@ void verify_hit(startree* skdt,
 	// Build a tree out of the field objects (in pixel space)
 	ftree = kdtree_build(NULL, fieldcopy, M, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
 
+	bestprob = malloc(M * sizeof(double));
+	for (i=0; i<M; i++)
+		bestprob[i] = -HUGE_VAL;
+	for (i=0; i<4; i++) {
+		assert(mo->field[i] >= 0);
+		assert(mo->field[i] < M);
+		bestprob[mo->field[i]] = HUGE_VAL;
+	}
+
 	if (do_gamma) {
 		// Find the midpoint of AB of the quad in pixel space.
 		qc[0] = 0.5 * (field[2*mo->field[0]  ] + field[2*mo->field[1]  ]);
@@ -230,13 +241,11 @@ void verify_hit(startree* skdt,
 	  }
 	*/
 
-	nmatch = 0;
-	nnomatch = 0;
-
 	Nmin = min(NI, NF);
 
 	bestlogodds = -HUGE_VAL;
-	bestnmatch = bestnnomatch = -1;
+	bestnmatch = bestnnomatch = bestnconflict = -1;
+	nmatch = nnomatch = nconflict = 0;
 
 	// Add index stars, in sweeps.
 	for (s=0; s<=maxsweep; s++) {
@@ -247,6 +256,7 @@ void verify_hit(startree* skdt,
 			double R2;
 			double logprob = -HUGE_VAL;
 			int ind;
+			int fldind;
 
 			if (sweeps[i] != s)
 				continue;
@@ -277,9 +287,13 @@ void verify_hit(startree* skdt,
 			// Find nearest field star.
 			ind = kdtree_nearest_neighbour(ftree, indexpix+i*2, &bestd2);
 
+			fldind = ftree->perm[ind];
+			assert(fldind >= 0);
+			assert(fldind < M);
+
 			if (do_gamma) {
 				// Distance from the quad center of this field star:
-				R2 = distsq(field+ftree->perm[ind]*2, qc, 2);
+				R2 = distsq(field+fldind*2, qc, 2);
 
 				// Variance of a field star at that distance from the 
 				// quad center:
@@ -313,9 +327,29 @@ void verify_hit(startree* skdt,
 				logprob = logprob_distractor;
 				nnomatch++;
 			} else {
-				debug("Match (field star %i), logprob %g\n", ftree->perm[ind], logprob);
+				double oldprob;
+				debug("Match (field star %i), logprob %g\n", fldind, logprob);
 				logprob = log(exp(logprob) + distractors/(fieldW*fieldH));
-				nmatch++;
+
+				oldprob = bestprob[fldind];
+				if (oldprob != -HUGE_VAL) {
+					nconflict++;
+					// There was a previous match to this field object.
+					if (oldprob == HUGE_VAL) {
+						debug("Conflicting match to one of the stars in the quad.\n");
+					} else {
+						debug("Conflict: odds was %g, now %g.\n", oldprob, logprob);
+					}
+					// Allow an improved match (except to the stars composing the quad, because they are initialized to HUGE_VAL)
+					if (logprob > oldprob) {
+						oldprob = logprob;
+						logodds += (logprob - oldprob);
+					}
+					continue;
+				} else {
+					bestprob[fldind] = logprob;
+					nmatch++;
+				}
 			}
 
 			logodds += (logprob - logprob_background);
@@ -333,19 +367,21 @@ void verify_hit(startree* skdt,
 			bestlogodds = logodds;
 			bestnmatch = nmatch;
 			bestnnomatch = nnomatch;
+			bestnconflict = nconflict;
 		}
 	}
 
 	kdtree_free_query(res);
 	kdtree_free(ftree);
+	free(bestprob);
 	free(fieldcopy);
 	free(sweeps);
 	free(indexpix);
 
 	mo->logodds = bestlogodds;
 	mo->noverlap = bestnmatch;
-	mo->nconflict = 0;
-	mo->nfield = bestnmatch + bestnnomatch;
+	mo->nconflict = bestnconflict;
+	mo->nfield = bestnmatch + bestnnomatch + bestnconflict;
 	mo->nindex = NI;
 	matchobj_compute_overlap(mo);
 }
