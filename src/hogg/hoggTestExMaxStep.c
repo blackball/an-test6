@@ -19,17 +19,17 @@ int hoggTestExMaxStep()
   like1= hoggExMaxStep(xx,varin,4,varout,&logpin);
   like2= hoggExMaxStep(xx,varin,4,varout,&logpin);
   diff= like2-like1;
-  printf("hoggTestExMaxStep: first iteration diff = %lf\n",diff);
+  printf("hoggTestExMaxStep: first iteration diff = %e\n",diff);
   if (diff <= 0.0) return 1;
   like1= like2;
   for (ii=0;ii<100;ii++) like2= hoggExMaxStep(xx,varin,4,varout,&logpin);
   diff= like2-like1;
-  printf("hoggTestExMaxStep: next 100 iterations diff = %lf\n",diff);
+  printf("hoggTestExMaxStep: next 100 iterations diff = %e\n",diff);
   if (diff <= 0.0) return 1;
   like1= like2;
   like2= hoggExMaxStep(xx,varin,4,varout,&logpin);
   diff= like2-like1;
-  printf("hoggTestExMaxStep: 101st iteration diff = %lf\n",diff);
+  printf("hoggTestExMaxStep: 101st iteration diff = %e\n",diff);
   if (diff < 0.0) return 1;
   return 0;
 }

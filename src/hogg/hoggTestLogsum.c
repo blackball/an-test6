@@ -11,7 +11,7 @@ int hoggTestLogsum()
   list[2]= log(0.000001);
   list[3]= log(0.000000001);
   diff= fabs(log(1.001001001)-hoggLogsum(list,4));
-  printf("hoggTestLogsum: got diff = %lf\n",diff);
+  printf("hoggTestLogsum: got diff = %e\n",diff);
   if (diff > 1e-16) return 1;
   return 0;
 }

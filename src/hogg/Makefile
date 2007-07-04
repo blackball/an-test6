@@ -21,12 +21,13 @@ COMMON := $(BASEDIR)/an-common
 include $(COMMON)/makefile.gsl
 
 CC= gcc
-LDFLAGS= -lm
+CFLAGS= $(GSL_INC)
+LDFLAGS= -lm 
 RM= /bin/rm -fv
 TOUCH= touch
 
 TWEAK= hoggTweak.h hoggMath.h hoggLogsum.o hoggLogGaussian.o hoggExMaxStep.o \
-	hoggLeastSquareFit.o
+	hoggLeastSquareFit.o $(GSL_LIB)
 TEST= hoggTest.o hoggTestLogsum.o hoggTestLogGaussian.o hoggTestExMaxStep.o \
 	hoggTestLeastSquareFit.o
 

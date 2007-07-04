@@ -46,12 +46,13 @@
 */
 #include <math.h>
 #include <assert.h>
-#include "../gsl-an/gsl_linalg.h"
-#include "../gsl-an/gsl_matrix.h"
-#include "../gsl-an/gsl_vector.h"
-#include "../gsl-an/gsl_matrix_double.h"
-#include "../gsl-an/gsl_vector_double.h"
-#include "../gsl-an/gsl_blas.h"
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix_double.h>
+#include <gsl/gsl_vector_double.h>
+#include <gsl/gsl_blas.h>
+#include "hoggMath.h"
 double hoggLeastSquareFit(double *yy, double *AA, double *xx, int nn, int mm)
 {
   int status, ii, jj, kk;
@@ -60,26 +61,20 @@ double hoggLeastSquareFit(double *yy, double *AA, double *xx, int nn, int mm)
   gsl_matrix *QQ;
   /* allocate space */
   RR = gsl_vector_alloc(mm);
-  BB = gsl_vector_alloc(mm);
+  BB = gsl_vector_alloc(nn);
   XX = gsl_vector_alloc(mm);
   resid = gsl_vector_alloc(nn);
-  QQ = gsl_matrix_alloc(mm, mm);
+  QQ = gsl_matrix_alloc(nn, mm);
   /* pack matrices */
-  for (ii=0; ii<mm; ii++){
-    foo = 0.0;
-    for(kk=0; kk<nn; kk++) foo += AA[kk+nn*ii]*yy[kk];
-    gsl_vector_set(BB, ii, foo);
-    for (jj=0; jj<mm; jj++){
-      foo = 0.0;
-      for(kk=0; kk<nn; kk++) foo += AA[kk+nn*ii]*AA[kk+nn*jj];
-      gsl_matrix_set(QQ, ii, jj, foo);
-    }
+  for (kk=0; kk<nn; kk++){
+    gsl_vector_set(BB, kk, yy[kk]);
+    for (ii=0; ii<mm; ii++) gsl_matrix_set(QQ, kk, ii, AA[kk+nn*ii]);
   }
   /* solve equations */
   status = gsl_linalg_QR_decomp(QQ, RR);
   status = gsl_linalg_QR_lssolve(QQ, RR, BB, XX, resid);
   /* unpack matrices */
-  for (ii=0; ii<mm; ii++) xx[ii] = gsl_matrix_get(XX,ii);
+  for (ii=0; ii<mm; ii++) xx[ii] = gsl_vector_get(XX,ii);
   /* compute chisq */
   for (kk=0; kk<nn; kk++){
     foo = yy[kk];
