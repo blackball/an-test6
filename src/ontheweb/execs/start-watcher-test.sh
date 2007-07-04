@@ -4,7 +4,7 @@
 # waits for new jobs to arrive, and runs a script on each one.
 
 Nthreads=4
-Cmd="/home/gmaps/test/ontheweb/execs/blindscript-remote-testing.sh %s"
+Cmd="/home/gmaps/test/ontheweb/execs/blindscript-remote.sh c27test %s"
 
 cd /home/gmaps/ontheweb-data/test
 rm queue
