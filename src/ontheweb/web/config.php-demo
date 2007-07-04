@@ -1,0 +1,19 @@
+<?php
+
+// Site id.
+$siteid = "demo";
+
+// Path to executables.
+$base = "/home/gmaps/demo/";
+
+// Log file name.
+$logfile = "demo.log";
+
+// High-level-log file name.
+$highlevelfile = "demo-highlevel.log";
+
+// Email or Interactive?
+$emailver = 0;
+$webver = !$emailver;
+
+?>

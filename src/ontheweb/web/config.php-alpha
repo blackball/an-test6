@@ -1,0 +1,19 @@
+<?php
+
+// Site id.
+$siteid = "alpha";
+
+// Path to executables.
+$base = "/home/gmaps/alpha/";
+
+// Log file name.
+$logfile = "alpha.log";
+
+// High-level-log file name.
+$highlevelfile = "alpha-highlevel.log";
+
+// Email or Interactive?
+$emailver = 1;
+$webver = !$emailver;
+
+?>

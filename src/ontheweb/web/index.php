@@ -2,9 +2,6 @@
 require_once 'common.php';
 require_once 'presets.php';
 
-$emailver = 0;
-$webver = 1;
-
 if ($emailver) {
 	require_once 'rfc822.php';
 }
@@ -90,7 +87,8 @@ function after_submitted($imgfilename, $myname, $mydir, $vals, $db) {
 	if ($justjobid) {
 		// skip the "source extraction" preview, just start crunching!
 		loggit("justjobid set.  imgfilename=" . $imgfilename . "\n");
-		if ($imgfilename) {
+		if (file_exists($inputtmpfile) && !file_exists($inputfile)) {
+			//if ($imgfilename) {
 			// HACK - pause for watcher...
 			sleep(1);
 			if (!rename($inputtmpfile, $inputfile)) {

@@ -2,7 +2,7 @@
 require_once 'MDB2.php';
 require_once 'PEAR.php';
 
-$siteid = "tor";
+require_once 'config.php';
 
 // Are we using a remote compute server?
 $remote = 1;
@@ -90,7 +90,6 @@ END;
 
 $host  = $_SERVER['HTTP_HOST'];
 
-$base = "/home/gmaps/an-2/";
 $quads = $base . "quads/";
 $simplexy = $base . "simplexy/";
 
@@ -124,8 +123,7 @@ $wcs_annotate = $quads . "wcs-annotate";
 
 $headers = $_REQUEST;
 
-$ontheweblogfile = $resultdir . "ontheweb.log";
-//$ontheweblogfile = $resultdir . "alpha.log";
+$ontheweblogfile = $resultdir . $logfile;
 function loggit($mesg) {
 	global $ontheweblogfile;
 	error_log($mesg, 3, $ontheweblogfile);
@@ -136,7 +134,7 @@ function fail($msg) {
 	die($msg);
 }
 
-$highlevellogfile = $resultdir . "highlevel.log";
+$highlevellogfile = $resultdir . $highlevelfile;
 function highlevellog($msg) {
 	global $highlevellogfile;
 	error_log($msg, 3, $highlevellogfile);
