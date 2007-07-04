@@ -581,6 +581,8 @@ int main(int argc, char *argv[]) {
 			startreefname = mk_streefn(fname);
 			bp->indexname = fname;
 
+			logmsg(bp, "\n\nTrying index %s...\n", bp->indexname);
+
 			// Read .ckdt file...
 			logmsg(bp, "Reading code KD tree from %s...\n", treefname);
 			bp->codekd = codetree_open(treefname);
@@ -1449,7 +1451,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 				print_match(bp, &mo);
 
 		} else {
-			logmsg(bp, "\nSolving field %i.\n", fieldnum);
+			logmsg(bp, "Solving field %i.\n", fieldnum);
 
 			bp->do_gamma = TRUE;
 			// The real thing
@@ -1717,6 +1719,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 				logerr(bp, "Failed to fix index RDLS field header.\n");
 			}
 		}
+		logmsg(bp, "\n");
 	}
 
 	free(sp->field);
