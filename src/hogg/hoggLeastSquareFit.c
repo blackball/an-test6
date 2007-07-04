@@ -76,11 +76,7 @@ double hoggLeastSquareFit(double *yy, double *AA, double *xx, int nn, int mm)
   /* unpack matrices */
   for (ii=0; ii<mm; ii++) xx[ii] = gsl_vector_get(XX,ii);
   /* compute chisq */
-  for (kk=0; kk<nn; kk++){
-    foo = yy[kk];
-    for (ii=0; ii<mm; ii++) foo -= xx[ii]*AA[kk+nn*ii];
-    chisq += square(foo);
-  }
+  for (kk=0; kk<nn; kk++) chisq += square(gsl_vector_get(resid, kk));
   /* free space and return */
   gsl_vector_free(RR);
   gsl_vector_free(BB);
