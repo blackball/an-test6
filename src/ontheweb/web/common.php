@@ -196,6 +196,7 @@ function fmod_positive($val, $divisor) {
 		$val += $divisor;
 	while ($val > $divisor)
 		$val -= $divisor;
+	return $val;
 }
 
 function ra_deg2hms($ra, &$h, &$m, &$s) {
@@ -208,7 +209,7 @@ function ra_deg2hms($ra, &$h, &$m, &$s) {
 	$m = floor($mins);
 	// remaining minutes:
 	$mins -= $m;
-	$secs = $m * 60.0;
+	$secs = $mins * 60.0;
 	$s = $secs;
 }
 
@@ -217,7 +218,7 @@ function dec_deg2dms($dec, &$d, &$m, &$s) {
 	$dec = $dec * $sign;
 	$d = $sign * floor($dec);
 	// remaining degrees:
-	$dec -= $abs($d);
+	$dec -= abs($d);
 	$mins = $dec * 60.0;
 	$m = floor($mins);
 	// remaining minutes:

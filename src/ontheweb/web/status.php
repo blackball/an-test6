@@ -827,10 +827,12 @@ if ($job_done) {
 		echo "(" . $rac . ", " . $decc . ") degrees\n";
 		echo "</td></tr>\n";
 
-		echo '<tr><td>(RA, Dec) center (H:M:S, D:M):</td><td>';
+		echo '<tr><td>(RA, Dec) center (H:M:S, D:M:S):</td><td>';
 		ra_deg2hms($rac, $rah, $ram, $ras);
 		dec_deg2dms($decc, $decd, $decm, $decs);
-		echo "(" . $rah . ":" . $ram . ":" . $ras . ", " . $decd . ":" . $decm . ":" . $decs . ")\n";
+		//echo "(" . $rah . ":" . $ram . ":" . $ras . ", " . $decd . ":" . $decm . ":" . $decs . ")\n";
+		printf("(%02d:%02d:%2.3f, %+02d:%02d:%2.3f)",
+			   $rah, $ram, $ras, $decd, $decm, $decs);
 		echo "</td></tr>\n";
 
 		echo '<tr><td>Orientation:</td><td>';
