@@ -21,7 +21,6 @@ COMMON := $(BASEDIR)/an-common
 all:
 
 include $(COMMON)/makefile.common
-#include $(COMMON)/makefile.fortran
 include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
