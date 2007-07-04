@@ -3,8 +3,8 @@
 // Site id.
 $siteid = "demo";
 
-// Path to executables.
-$base = "/home/gmaps/demo/";
+// Path to executables.  Share executables with alpha.
+$base = "/home/gmaps/alpha/";
 
 // Log file name.
 $logfile = "demo.log";
