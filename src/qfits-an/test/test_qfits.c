@@ -1,4 +1,4 @@
-/* $Id: test_qfits.c,v 1.14 2006/02/23 11:33:15 yjung Exp $
+/* $Id: test_qfits.c,v 1.15 2007/01/10 12:29:58 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -20,9 +20,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/23 11:33:15 $
- * $Revision: 1.14 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2007/01/10 12:29:58 $
+ * $Revision: 1.15 $
+ * $Name: qfits-6_2_0 $
  */
 
 /*-----------------------------------------------------------------------------
@@ -481,7 +481,7 @@ int test_qfits_filecreate_ext(char * filename)
     qfits_header*    qh ;
     qfitsdumper        qd ;
     FILE        *    out ;
-    char        *    sig ;
+    const char  *    sig ;
 
     say("-----> File with multiple extensions");
     /* Create minimal FITS header for main */

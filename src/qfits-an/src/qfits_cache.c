@@ -1,7 +1,7 @@
 /* Note: this file has been modified from its original form by the
    Astrometry.net team.  For details see http://astrometry.net */
 
-/* $Id: qfits_cache.c,v 1.10 2006/02/23 10:52:20 yjung Exp $
+/* $Id: qfits_cache.c,v 1.12 2006/12/04 15:34:48 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -23,9 +23,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/23 10:52:20 $
- * $Revision: 1.10 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2006/12/04 15:34:48 $
+ * $Revision: 1.12 $
+ * $Name: qfits-6_2_0 $
  */
 
 /*-----------------------------------------------------------------------------
@@ -74,7 +74,7 @@
  * grow much larger than a predictable value, the best solution is to
  * implement a dynamic memory allocation in qfits_cache_add.
  */
-#define QFITS_MAX_EXTS            128
+#define QFITS_MAX_EXTS            10192
 
 /*-----------------------------------------------------------------------------
                                    New types
@@ -671,6 +671,11 @@ static int qfits_cache_add(const char * filename)
     /* Close file */
     fclose(in);
 
+    /* Check last */
+    if (last >= QFITS_MAX_EXTS) {
+        return -1 ;
+    }
+    
     /* Allocate buffers in cache */
     qc->ohdr = qfits_malloc(last * sizeof(int));
     qc->data = qfits_malloc(last * sizeof(int));

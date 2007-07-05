@@ -1,4 +1,4 @@
-/* $Id: qfits_md5.h,v 1.5 2006/02/20 09:45:25 yjung Exp $
+/* $Id: qfits_md5.h,v 1.6 2007/01/10 08:53:45 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -20,9 +20,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/20 09:45:25 $
- * $Revision: 1.5 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2007/01/10 08:53:45 $
+ * $Revision: 1.6 $
+ * $Name: qfits-6_2_0 $
  */
 
 #ifndef QFITS_MD5_H
@@ -40,6 +40,6 @@
                         Function ANSI prototypes
  -----------------------------------------------------------------------------*/
 
-char * qfits_datamd5(const char *) ;
+const char * qfits_datamd5(const char *) ;
 
 #endif

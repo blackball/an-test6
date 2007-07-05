@@ -22,7 +22,7 @@
  * $Author: yjung $
  * $Date: 2006/02/20 09:45:25 $
  * $Revision: 1.7 $
- * $Name: qfits-6_1_0 $
+ * $Name: qfits-6_2_0 $
  */
 
 #ifndef QFITS_FILENAME_H

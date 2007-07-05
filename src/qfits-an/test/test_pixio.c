@@ -1,4 +1,4 @@
-/* $Id: test_pixio.c,v 1.8 2006/02/23 11:33:15 yjung Exp $
+/* $Id: test_pixio.c,v 1.9 2007/01/10 12:29:58 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -20,9 +20,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/23 11:33:15 $
- * $Revision: 1.8 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2007/01/10 12:29:58 $
+ * $Revision: 1.9 $
+ * $Name: qfits-6_2_0 $
  */
 
 /*---------------------------------------------------------------------------
@@ -161,7 +161,7 @@ static int test_dumpdatasets(void)
     char        *   ptype_name ;
     qfitsdumper     qd ;
     int             i ;
-    char        *   datamd5 ;
+    const char  *   datamd5 ;
 
     err = 0 ;
     qd.npix  = TEST_NPIX ;

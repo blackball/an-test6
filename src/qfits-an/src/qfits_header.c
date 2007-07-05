@@ -1,7 +1,7 @@
 /* Note: this file has been modified from its original form by the
    Astrometry.net team.  For details see http://astrometry.net */
 
-/* $Id: qfits_header.c,v 1.9 2006/02/23 10:59:03 yjung Exp $
+/* $Id: qfits_header.c,v 1.10 2006/11/22 13:33:42 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -23,9 +23,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/23 10:59:03 $
- * $Revision: 1.9 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2006/11/22 13:33:42 $
+ * $Revision: 1.10 $
+ * $Name: qfits-6_2_0 $
  */
 
 /*-----------------------------------------------------------------------------
@@ -187,6 +187,10 @@ qfits_header * qfits_header_new(void)
     h->first = NULL ;
     h->last  = NULL ;
     h->n = 0 ;
+
+    h->current = NULL ;
+    h->current_idx = -1 ;
+
     return h;
 }
 
@@ -649,19 +653,32 @@ int qfits_header_getitem(
         char                *   com,
         char                *   lin)
 {
-    keytuple    *    k ;
-    int                count ;
+    keytuple    *   k ;
+    int             count ;
 
     if (hdr==NULL) return -1 ;
     if (key==NULL && val==NULL && com==NULL && lin==NULL) return 0 ;
     if (idx<0 || idx>hdr->n) return -1 ;
 
-    count=0 ;
-    k = (keytuple*)hdr->first ;
-    while (count<idx) {
-        k = k->next ;
-        count++ ;
-    }
+    /* Get pointer to keytuple */
+    if (idx == 0) {
+	    ((qfits_header *)hdr)->current_idx = 0 ;
+	    ((qfits_header *)hdr)->current = hdr->first ;
+	    k = hdr->current ;
+	} else if (idx == hdr->current_idx + 1) {
+	    ((qfits_header *)hdr)->current = ((keytuple*) (hdr->current))->next ;
+	    ((qfits_header *)hdr)->current_idx++ ;
+	    k = hdr->current ;
+	} else {
+	    count=0 ;
+	    k = (keytuple*)hdr->first ;
+	    while (count<idx) {
+            k = k->next ;
+            count++ ;
+        }
+	}
+
+    /* Fill return values */
     if (key!=NULL) strcpy(key, k->key);
     if (val!=NULL) {
         if (k->val!=NULL) strcpy(val, k->val);

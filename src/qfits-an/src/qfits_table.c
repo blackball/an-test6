@@ -1,7 +1,7 @@
 /* Note: this file has been modified from its original form by the
    Astrometry.net team.  For details see http://astrometry.net */
 
-/* $Id: qfits_table.c,v 1.19 2006/03/15 15:13:15 yjung Exp $
+/* $Id: qfits_table.c,v 1.20 2007/01/10 12:24:45 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -23,9 +23,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/03/15 15:13:15 $
- * $Revision: 1.19 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2007/01/10 12:24:45 $
+ * $Revision: 1.20 $
+ * $Name: qfits-6_2_0 $
  */
 
 /*-----------------------------------------------------------------------------
@@ -1626,9 +1626,9 @@ int qfits_save_table_hdrdump(
         const qfits_table   *   table,
         const qfits_header  *   fh)
 {
-    FILE    *    outfile ;
-    char    *    md5hash ;
-    char        md5card[81];
+    FILE        *   outfile ;
+    const char  *   md5hash ;
+    char            md5card[81];
 
     /* Open the destination file */
     if ((outfile = fopen(table->filename, "w")) == NULL) {

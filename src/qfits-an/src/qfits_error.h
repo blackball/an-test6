@@ -25,7 +25,7 @@
  * $Author: yjung $
  * $Date: 2006/02/17 10:24:52 $
  * $Revision: 1.4 $
- * $Name: qfits-6_1_0 $
+ * $Name: qfits-6_2_0 $
  */
 
 #ifndef QFITS_ERROR_H

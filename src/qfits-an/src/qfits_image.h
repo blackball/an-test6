@@ -25,7 +25,7 @@
  * $Author: yjung $
  * $Date: 2006/02/23 11:04:17 $
  * $Revision: 1.9 $
- * $Name: qfits-6_1_0 $
+ * $Name: qfits-6_2_0 $
  */
 
 #ifndef QFITS_IMAGE_H

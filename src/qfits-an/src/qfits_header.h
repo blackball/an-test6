@@ -1,7 +1,7 @@
 /* Note: this file has been modified from its original form by the
    Astrometry.net team.  For details see http://astrometry.net */
 
-/* $Id: qfits_header.h,v 1.7 2006/02/20 09:45:25 yjung Exp $
+/* $Id: qfits_header.h,v 1.8 2006/11/22 13:33:42 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -23,9 +23,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/20 09:45:25 $
- * $Revision: 1.7 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2006/11/22 13:33:42 $
+ * $Revision: 1.8 $
+ * $Name: qfits-6_2_0 $
  */
 
 #ifndef QFITS_HEADER_H
@@ -55,9 +55,12 @@
  */
 /*----------------------------------------------------------------------------*/
 typedef struct qfits_header {
-    void *    first ;        /* Pointer to list start */
-    void *    last ;        /* Pointer to list end */
-    int            n ;            /* Number of cards in list */
+    void    *   first ;         /* Pointer to list start */
+    void    *   last ;          /* Pointer to list end */
+    int         n ;             /* Number of cards in list */
+    /* For efficient looping internally */
+    void    *   current ;
+    int         current_idx ;
 } qfits_header ;
 
 /*-----------------------------------------------------------------------------

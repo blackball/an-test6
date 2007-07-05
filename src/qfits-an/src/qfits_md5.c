@@ -1,4 +1,4 @@
-/* $Id: qfits_md5.c,v 1.8 2006/02/20 09:45:25 yjung Exp $
+/* $Id: qfits_md5.c,v 1.9 2007/01/10 08:53:45 yjung Exp $
  *
  * This file is part of the ESO QFITS Library
  * Copyright (C) 2001-2004 European Southern Observatory
@@ -20,9 +20,9 @@
 
 /*
  * $Author: yjung $
- * $Date: 2006/02/20 09:45:25 $
- * $Revision: 1.8 $
- * $Name: qfits-6_1_0 $
+ * $Date: 2007/01/10 08:53:45 $
+ * $Revision: 1.9 $
+ * $Name: qfits-6_2_0 $
  */
 
 /*-----------------------------------------------------------------------------
@@ -78,7 +78,7 @@
   of error.
  */
 /*----------------------------------------------------------------------------*/
-char * qfits_datamd5(const char * filename)
+const char * qfits_datamd5(const char * filename)
 {
     static char         datamd5[MD5HASHSZ+1] ;
     struct MD5Context    ctx ;

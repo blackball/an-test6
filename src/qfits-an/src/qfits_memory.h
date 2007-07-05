@@ -25,7 +25,7 @@
  * $Author: yjung $
  * $Date: 2006/02/23 14:15:13 $
  * $Revision: 1.3 $
- * $Name: qfits-6_1_0 $
+ * $Name: qfits-6_2_0 $
  */
 
 #ifndef QFITS_MEMORY_H
