@@ -1,5 +1,8 @@
 <?php
 
+// Which set of indices do we use?
+require_once 'config-index100.php';
+
 // Site id.
 $siteid = "demo";
 
