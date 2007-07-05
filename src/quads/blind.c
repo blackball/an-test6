@@ -324,6 +324,22 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
+		if ((sp->fieldunits_lower != 0.0) && (sp->fieldunits_upper != 0.0) &&
+			(sp->fieldunits_lower > sp->fieldunits_upper)) {
+			logerr(bp, "fieldunits_lower MUST be less than fieldunits_upper.\n");
+			logerr(bp, "\n(in other words, the lower-bound of scale estimate must "
+				   "be less than the upper-bound!)\n\n");
+			exit(-1);
+			/*
+			// just swap them...
+			double tmp;
+			logmsg(bp, "Swapping fieldunits_lower and fieldunits_upper, you goofball.\n");
+			tmp = sp->fieldunits_lower;
+			sp->fieldunits_lower = sp->fieldunits_upper;
+			sp->fieldunits_upper = tmp;
+			*/
+		}
+
 		// If we're just solving one field, check to see if it's already
 		// solved before doing a bunch of work and spewing tons of output.
 		if ((il_size(bp->fieldlist) == 1) && (sp->solved_in)) {

@@ -234,6 +234,7 @@ static void write_quad(codefile* codes, quadfile* quads,
 		code[3] = 1.0 - code[3];
 	}
 
+	// FIXME - this is backwards.
 	// here we add the invariant that cx <= dx.
 	if (code[0] <= code[2]) {
 		double dtmp;
