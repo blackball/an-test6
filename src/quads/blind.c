@@ -324,8 +324,8 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 
-		if ((sp->fieldunits_lower != 0.0) && (sp->fieldunits_upper != 0.0) &&
-			(sp->fieldunits_lower > sp->fieldunits_upper)) {
+		if ((sp->funits_lower != 0.0) && (sp->funits_upper != 0.0) &&
+			(sp->funits_lower > sp->funits_upper)) {
 			logerr(bp, "fieldunits_lower MUST be less than fieldunits_upper.\n");
 			logerr(bp, "\n(in other words, the lower-bound of scale estimate must "
 				   "be less than the upper-bound!)\n\n");
