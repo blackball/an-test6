@@ -237,6 +237,7 @@ function process_data ($vals) {
 	global $dbfile;
 	global $maxfilesize;
 	global $totaltime;
+	global $totalcpu;
 	global $maxtime;
 	global $maxquads;
 	global $maxcpu;

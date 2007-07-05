@@ -12,7 +12,8 @@ $tiles_url = $gmaps_url . "tilecache/tilecache.php";
 $upload_progress = "/tmp/upt_%s.txt";
 
 // blind params
-$totaltime = 600; // Ten minute compute-time max.
+$totaltime = 0;
+$totalcpu = 600; // Ten minute compute-time max.
 $maxtime = 0;
 $maxquads = 0;
 $maxcpu = 0;
