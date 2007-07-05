@@ -162,6 +162,9 @@ struct blind_params {
 	int total_timelimit;
 	bool hit_total_timelimit;
 
+	int total_cpulimit;
+	bool hit_total_cpulimit;
+
 	bool single_field_solved;
 
 	bool do_gamma;
@@ -221,6 +224,45 @@ logverb(const blind_params* bp, const char* format, ...) {
 	va_end(va);
 }
 
+// Set a CPU usage limit, *relative* to the current usage.
+// Set seconds=-1 to cancel a previous CPU limit.
+static void set_cpu_limit(blind_params* bp, int seconds) {
+	struct rusage r;
+	struct rlimit rlim;
+	int sofar;
+
+	if (seconds >= 0) {
+		if (getrusage(RUSAGE_SELF, &r)) {
+			logerr(bp, "Failed to get resource usage: %s\n", strerror(errno));
+			exit(-1);
+		}
+		sofar = ceil((float)(r.ru_utime.tv_sec + r.ru_stime.tv_sec) +
+					 (float)(1e-6 * r.ru_utime.tv_usec + r.ru_stime.tv_usec));
+
+		if (getrlimit(RLIMIT_CPU, &rlim)) {
+			logerr(bp, "Failed to get CPU time limit: %s\n", strerror(errno));
+			exit(-1);
+		}
+		rlim.rlim_cur = seconds + sofar;
+
+		if (setrlimit(RLIMIT_CPU, &rlim)) {
+			logerr(bp, "Failed to set CPU time limit: %s\n", strerror(errno));
+			exit(-1);
+		}
+	} else if (seconds == -1) {
+		// Remove CPU limit.
+		if (getrlimit(RLIMIT_CPU, &rlim)) {
+			logerr(bp, "Failed to get CPU time limit: %s\n", strerror(errno));
+			exit(-1);
+		}
+		rlim.rlim_cur = rlim.rlim_max;
+		if (setrlimit(RLIMIT_CPU, &rlim)) {
+			logerr(bp, "Failed to remove CPU time limit: %s\n", strerror(errno));
+			exit(-1);
+		}
+	}
+}
+
 static void quit_now(char* msg) {
 	logmsg(&my_bp, msg);
 	my_bp.solver.quitNow = TRUE;
@@ -237,6 +279,11 @@ static void wall_time_limit(int sig) {
 static void total_wall_time_limit(int sig) {
 	quit_now("Total wall-clock time limit reached!\n");
 	my_bp.hit_total_timelimit = TRUE;
+}
+
+static void total_cpu_time_limit(int sig) {
+	quit_now("Total CPU time limit reached!\n");
+	my_bp.hit_total_cpulimit = TRUE;
 }
 
 int main(int argc, char *argv[]) {
@@ -261,9 +308,12 @@ int main(int argc, char *argv[]) {
 	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
 		int I;
-		struct sigaction oldsigalarm_total;
+		struct sigaction oldsig_totaltime;
+		struct sigaction oldsig_totalcpu;
 
 		if (bp->hit_total_timelimit)
+			break;
+		if (bp->hit_total_cpulimit)
 			break;
 
 		tic();
@@ -407,6 +457,7 @@ int main(int argc, char *argv[]) {
 		logmsg(bp, "cpulimit %i\n", bp->cpulimit);
 		logmsg(bp, "timelimit %i\n", bp->timelimit);
 		logmsg(bp, "total_timelimit %i\n", bp->total_timelimit);
+		logmsg(bp, "total_cpulimit %i\n", bp->total_cpulimit);
 		logmsg(bp, "tweak %s\n", bp->do_tweak ? "on" : "off");
 		if (bp->do_tweak) {
 			logmsg(bp, "tweak_aborder %i\n", bp->tweak_aborder);
@@ -418,13 +469,26 @@ int main(int argc, char *argv[]) {
 		// boundaries.
 		if (bp->total_timelimit) {
 			struct sigaction newalarm;
-			alarm(bp->total_timelimit);
 			memset(&newalarm, 0, sizeof(struct sigaction));
 			newalarm.sa_handler = total_wall_time_limit;
-			if (sigaction(SIGALRM, &newalarm, &oldsigalarm_total)) {
+			if (sigaction(SIGALRM, &newalarm, &oldsig_totaltime)) {
 				logerr(bp, "Failed to set total wall time limit signal handler: %s\n", strerror(errno));
 				exit(-1);
 			}
+			alarm(bp->total_timelimit);
+		}
+
+		// Set total CPU time limit.
+		// This also persists across run boundaries.
+		if (bp->total_cpulimit) {
+			struct sigaction newsigcpu;
+			memset(&newsigcpu, 0, sizeof(struct sigaction));
+			newsigcpu.sa_handler = total_cpu_time_limit;
+			if (sigaction(SIGXCPU, &newsigcpu, &oldsig_totalcpu)) {
+				logerr(bp, "Failed to set total CPU time limit signal handler: %s\n", strerror(errno));
+				exit(-1);
+			}
+			set_cpu_limit(bp, bp->total_cpulimit);
 		}
 
 		if (bp->matchfname) {
@@ -584,7 +648,7 @@ int main(int argc, char *argv[]) {
 			struct sigaction oldsigalarm;
 			double scalefudge = 0.0; // in pixels
 
-			if (bp->hit_total_timelimit)
+			if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
 				break;
 
 			if (bp->single_field_solved)
@@ -703,47 +767,26 @@ int main(int argc, char *argv[]) {
 
 			// Set CPU time limit.
 			if (bp->cpulimit) {
-				struct rusage r;
-				struct rlimit rlim;
 				struct sigaction newsigcpu;
-				int sofar;
-
-				if (getrusage(RUSAGE_SELF, &r)) {
-					logerr(bp, "Failed to get resource usage: %s\n", strerror(errno));
-					exit(-1);
-				}
-				sofar = ceil((float)(r.ru_utime.tv_sec + r.ru_stime.tv_sec) +
-							 (float)(1e-6 * r.ru_utime.tv_usec + r.ru_stime.tv_usec));
-
-				if (getrlimit(RLIMIT_CPU, &rlim)) {
-					logerr(bp, "Failed to get CPU time limit: %s\n", strerror(errno));
-					exit(-1);
-				}
-				rlim.rlim_cur = bp->cpulimit + sofar;
-
-				if (setrlimit(RLIMIT_CPU, &rlim)) {
-					logerr(bp, "Failed to set CPU time limit: %s\n", strerror(errno));
-					exit(-1);
-				}
-
 				memset(&newsigcpu, 0, sizeof(struct sigaction));
 				newsigcpu.sa_handler = cpu_time_limit;
 				if (sigaction(SIGXCPU, &newsigcpu, &oldsigcpu)) {
 					logerr(bp, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
+				set_cpu_limit(bp, bp->cpulimit);
 			}
 
 			// Set wall-clock time limit.
 			if (bp->timelimit) {
 				struct sigaction newsigalarm;
-				alarm(bp->timelimit);
 				memset(&newsigalarm, 0, sizeof(struct sigaction));
 				newsigalarm.sa_handler = wall_time_limit;
 				if (sigaction(SIGALRM, &newsigalarm, &oldsigalarm)) {
 					logerr(bp, "Failed to set wall time limit signal handler: %s\n", strerror(errno));
 					exit(-1);
 				}
+				alarm(bp->timelimit);
 			}
 
 			// Do it!
@@ -760,20 +803,10 @@ int main(int argc, char *argv[]) {
 
 			// Restore CPU time limit.
 			if (bp->cpulimit) {
-				struct rlimit rlim;
+				set_cpu_limit(bp, -1);
 				// Restore old CPU limit signal handler.
 				if (sigaction(SIGXCPU, &oldsigcpu, NULL)) {
 					logerr(bp, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
-					exit(-1);
-				}
-				// Remove CPU limit.
-				if (getrlimit(RLIMIT_CPU, &rlim)) {
-					logerr(bp, "Failed to get CPU time limit: %s\n", strerror(errno));
-					exit(-1);
-				}
-				rlim.rlim_cur = rlim.rlim_max;
-				if (setrlimit(RLIMIT_CPU, &rlim)) {
-					logerr(bp, "Failed to remove CPU time limit: %s\n", strerror(errno));
 					exit(-1);
 				}
 			}
@@ -933,6 +966,8 @@ static int read_parameters(blind_params* bp) {
 			bp->timelimit = atoi(nextword);
 		} else if (is_word(line, "total_timelimit ", &nextword)) {
 			bp->total_timelimit = atoi(nextword);
+		} else if (is_word(line, "total_cpulimit ", &nextword)) {
+			bp->total_cpulimit = atoi(nextword);
 		} else if (is_word(line, "verify_dist ", &nextword)) {
 			bp->verify_dist2 = arcsec2distsq(atof(nextword));
 		} else if (is_word(line, "verify_pix ", &nextword)) {
@@ -1326,6 +1361,7 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 	fits_add_long_comment(hdr, "Cpu limit: %i s", bp->cpulimit);
 	fits_add_long_comment(hdr, "Time limit: %i s", bp->timelimit);
 	fits_add_long_comment(hdr, "Total time limit: %i s", bp->total_timelimit);
+	fits_add_long_comment(hdr, "Total CPU limit: %i s", bp->total_cpulimit);
 
 	fits_add_long_comment(hdr, "Tweak: %s", (bp->do_tweak ? "yes" : "no"));
 	if (bp->do_tweak) {
