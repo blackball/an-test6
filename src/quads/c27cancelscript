@@ -11,7 +11,7 @@ read -s jobid
 jobid=`echo $jobid | sed s+-+/+g`
 
 # Go to our job directory.
-cd /nobackup/stars/ontheweb-data
-cd $jobid
-touch cancel
+cd /nobackup/stars/ontheweb-data/$jobid && touch cancel
+cd /nobackup/dstn/ontheweb-data/$jobid && touch cancel
+
 echo "Cancelled job."

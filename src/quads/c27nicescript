@@ -1,13 +1,17 @@
 #! /bin/bash
 
-# This script gets run via ssh from oven.
+# This script gets run on clusterX via ssh from oven.
 
 # Careful about writing things to stdout - we pipe it to tar on the other end.
+
+# Assume that we start in the directory containing the "blind" executable.
+PWD=`pwd`
+BLIND="$PWD/blind"
 
 # Read jobid
 read -s jobid
 
-# Replace "-" by "/".
+# Replace "-" by "/" in the jobid.
 jobid=`echo "$jobid" | sed s+-+/+g`
 
 # Create our job directory.
@@ -20,7 +24,7 @@ tar xf -
 sed s+/home/gmaps/ontheweb-indexes+/nobackup/stars/INDEXES+ < input > input.c27
 
 # stderr goes back over the ssh tunnel to the log file on oven.
-nice ~/amd-an/quads/blind < input.c27 > blind.stdout
+nice $BLIND < input.c27 > blind.stdout
 
 # Send back all the files we generated!
 tar cf - *
