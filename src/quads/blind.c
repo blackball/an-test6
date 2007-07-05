@@ -632,6 +632,9 @@ int main(int argc, char *argv[]) {
 				// 1.5 = sqrt(2) + fudge factor.
 				sp->cxdx_margin = 1.5 * sp->codetol;
 
+			// HACK- compensate for a typo in hpquads that flipped cx <= dx to cx >= dx.
+			sp->cxdx_margin = 0.0;
+
 			// check for CIRCLE field in ckdt header...
 			sp->circle = qfits_header_getboolean(bp->codekd->header, "CIRCLE", 0);
 
