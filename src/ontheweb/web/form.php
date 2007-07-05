@@ -775,7 +775,9 @@ function process_data ($vals) {
 
 	$stripenum = 1;
 
-	$str = "total_timelimit " . $totaltime . "\n";
+	$str =
+		"total_timelimit " . $totaltime . "\n" .
+		"total_cpulimit " . $totalcpu . "\n";
 
 	foreach ($depths as $startdepth => $enddepth) {
 		foreach ($tryscales as $range) {
@@ -801,11 +803,6 @@ function process_data ($vals) {
 				"fieldunits_upper " . $fumax . "\n" .
 				"tol " . $codetol . "\n" .
 				"verify_pix " . $poserr . "\n" .
-				/*
-				"nverify 10\n" .
-				"nindex_tokeep 20\n" .
-				"nindex_tosolve 20\n" .
-				*/
 				"distractors 0.25\n" .
 				"ratio_toprint 1e3\n" .
 				"ratio_tokeep 1e9\n" .
