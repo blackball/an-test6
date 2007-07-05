@@ -704,6 +704,13 @@ function process_data ($vals) {
 		submit_failed($db, "Field scale lower or upper bound is zero: " . $fu_lower . ", " . $fu_upper);
 	}
 
+	if ($fu_lower > $fu_upper) {
+		loggit("Swapping reversed lower/upper bounds.\n");
+		$tmp = $fu_lower;
+		$fu_lower = $fu_upper;
+		$fu_upper = $tmp;
+	}
+
 	array_push($tryscales, array($fu_lower, $fu_upper));
 
 	$index = $vals['index'];
