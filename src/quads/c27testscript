@@ -1,10 +1,10 @@
 #! /bin/bash
 
-# This script gets run on cluster27 via ssh from oven.
+# This script gets run on clusterX via ssh from oven.
 
 # Careful about writing things to stdout - we pipe it to tar on the other end.
 
-# We assume that we start in the directory containing the "blind" executable.
+# Assume that we start in the directory containing the "blind" executable.
 PWD=`pwd`
 BLIND="$PWD/blind"
 
