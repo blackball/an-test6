@@ -1,9 +1,8 @@
 <div>
-##UPLOAD_IDENTIFIER##
 ##MAX_FILE_SIZE##
-##justjobid##
-##skippreview##
 <input name="xysrc" value="url" type="hidden" />
+<input name="tweak" value="1" type="hidden" />
+<input name="skippreview" value="1" type="hidden" />
 </div>
 
 <script type="text/javascript">
@@ -12,12 +11,7 @@ function validate_form() {
   return true;
 }
 function showUploadMeter() {
-  // only pop up the progress meter window if the form validates...
-  if (validate_form()) {
-    var id = '##upload-id##';
-	window.open('upload-progress.php?id=' + id, 'Upload_Meter',
-	            'width=400,height=200,status=no', true);
-  }
+  // Sam hates popups...
 }
 // -->
 </script>

@@ -1012,9 +1012,7 @@ function render_form($form, $headers) {
 	if (array_key_exists('simple', $headers)) {
 		$template = file_get_contents($index_template_simple);
 		$replace = array();
-		$flds = array('imgurl', 'submit',
-					  'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER',
-					  'justjobid', 'skippreview');
+		$flds = array('imgurl', 'submit', 'MAX_FILE_SIZE');
 		foreach ($flds as $fld) {
 			$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
 		}
@@ -1025,11 +1023,14 @@ function render_form($form, $headers) {
 			$replace['##' . $fld . '-err##'] = $form->getElementError($fld);
 		}
 		$template = str_replace(array_keys($replace), array_values($replace), $template);
+
+		// lie to the renderer and tell it we've already rendered these form
+		// elements by calling "elementToHtml".
 		$dummyflds = array('imgfile', 'fitsfile', 'textfile', 'x_col',
 						   'y_col', 'tweak', 'tweak_order', 'fsl', 'fsu',
 						   'fse', 'fsv', 'fsunit', 'poserr', 'index',
 						   'uname', 'email', 'remember', 'linkhere',
-						   'reset');
+						   'reset', 'justjobid', 'skippreview');
 		foreach ($dummyflds as $fld) {
 			$renderer->elementToHtml($fld);
 		}
