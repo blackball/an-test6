@@ -16,7 +16,14 @@
 
 # only set CC if it hasn't already been set
 # (this allows the user to override it)
-CC ?= gcc
+# CC ?= gcc  ## can't use this because CC gets a default value ("cc")
+ifeq ($(origin CC), default)
+  CC := gcc
+endif
+
+whichcc:
+	@echo $(CC)
+	@echo $(origin CC)
 
 RANLIB := ranlib
 
