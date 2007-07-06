@@ -1,0 +1,34 @@
+<div>
+##UPLOAD_IDENTIFIER##
+##MAX_FILE_SIZE##
+##justjobid##
+##skippreview##
+<input name="xysrc" value="url" type="hidden" />
+</div>
+
+<script type="text/javascript">
+<!--
+function validate_form() {
+  return true;
+}
+function showUploadMeter() {
+  // only pop up the progress meter window if the form validates...
+  if (validate_form()) {
+    var id = '##upload-id##';
+	window.open('upload-progress.php?id=' + id, 'Upload_Meter',
+	            'width=400,height=200,status=no', true);
+  }
+}
+// -->
+</script>
+
+<div class="err" id="imgurl-err">##imgurl-err##</div>
+
+<p>
+Image URL: ##imgurl## ##submit##
+</p>
+
+
+<div id="clearbox">
+</div>
+

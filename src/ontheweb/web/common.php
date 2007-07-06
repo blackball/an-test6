@@ -18,6 +18,7 @@ $maxtime = 0;
 $maxquads = 0;
 $maxcpu = 0;
 
+$index_template_simple = "index-template-simple.html";
 $index_template = "index-template.html";
 $index_header   = "index-header.html";
 $index_tail     = "index-tail.html";

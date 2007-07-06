@@ -997,6 +997,7 @@ function check_poserr($vals) {
 // Form rendering
 function render_form($form, $headers) {
 	global $index_template;
+	global $index_template_simple;
 	global $index_header;
 	global $index_tail;
 	global $valid_blurb;
@@ -1006,6 +1007,65 @@ function render_form($form, $headers) {
 	$maxfilesize = $form->getMaxFileSize();
 	$renderer =& new HTML_QuickForm_Renderer_QuickHtml();
 	$form->accept($renderer);
+
+	//if ($headers['simple']) {
+	if (array_key_exists('simple', $headers)) {
+		$template = file_get_contents($index_template_simple);
+		$replace = array();
+		$flds = array('imgurl', 'submit',
+					  'MAX_FILE_SIZE', 'UPLOAD_IDENTIFIER',
+					  'justjobid', 'skippreview');
+		foreach ($flds as $fld) {
+			$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
+		}
+		$replace['##upload-id##'] = $form->exportValue('UPLOAD_IDENTIFIER');
+		$replace['##sizelimit##'] = sprintf("%d", $maxfilesize/(1024*1024));
+		$errflds = array('imgurl');
+		foreach ($errflds as $fld) {
+			$replace['##' . $fld . '-err##'] = $form->getElementError($fld);
+		}
+		$template = str_replace(array_keys($replace), array_values($replace), $template);
+		$dummyflds = array('imgfile', 'fitsfile', 'textfile', 'x_col',
+						   'y_col', 'tweak', 'tweak_order', 'fsl', 'fsu',
+						   'fse', 'fsv', 'fsunit', 'poserr', 'index',
+						   'uname', 'email', 'remember', 'linkhere',
+						   'reset');
+		foreach ($dummyflds as $fld) {
+			$renderer->elementToHtml($fld);
+		}
+		$renderer->elementToHtml('xysrc', 'img');
+		$renderer->elementToHtml('xysrc', 'url');
+		$renderer->elementToHtml('xysrc', 'fits');
+		$renderer->elementToHtml('xysrc', 'text');
+		$renderer->elementToHtml('parity', '2');
+		$renderer->elementToHtml('parity', '1');
+		$renderer->elementToHtml('parity', '0');
+		$renderer->elementToHtml('fstype', 'ul');
+		$renderer->elementToHtml('fstype', 'ev');
+
+		echo '<' . '?xml version="1.0" encoding="UTF-8"?' . '>';
+		$head = file_get_contents($index_header);
+		echo $head;
+		// Render the form.
+		echo $renderer->toHtml($template);
+		$tail = file_get_contents($index_tail);
+		$tail = str_replace(array('##valid-blurb##', '##sizelimit##'),
+							array($valid_blurb, sprintf("%d", $maxfilesize/(1024*1024))),
+							$tail);
+		echo $tail;
+		return;
+	}
+
+	$replace['##upload-id##'] = $form->exportValue('UPLOAD_IDENTIFIER');
+	$replace['##sizelimit##'] = sprintf("%d", $maxfilesize/(1024*1024));
+
+	// fields (and pseudo-fields) that can have errors 
+	$errflds = array('xysrc', 'imgfile', 'imgurl', 'fitsfile', 'textfile',
+					 'x_col', 'y_col', 'fstype', 'fsl', 'fsu', 'fse', 'fsv',
+					 'poserr', 'fs', 'email', 'tweak_order');
+	foreach ($errflds as $fld) {
+		$replace['##' . $fld . '-err##'] = $form->getElementError($fld);
+	}
 
 	// Load the index-template file and do text replacement on it.
 	$template = file_get_contents($index_template);
