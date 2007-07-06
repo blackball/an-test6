@@ -25,6 +25,8 @@
 #include "matchfile.h"
 #include "fitsioutils.h"
 #include "ioutils.h"
+#include "sip.h"
+#include "mathutil.h"
 
 static int find_table(matchfile* mf);
 static qfits_table* matchfile_get_table();
@@ -37,10 +39,10 @@ void matchobj_compute_derived(MatchObj* mo) {
 	for (i=0; i<4; i++)
 		if (mo->field[i] > mx) mx = mo->field[i];
 	mo->objs_tried = mx+1;
-	if (mo->wcs_valid) {
-		mo->scale = sqrt(fabs(mo->wcstan.cd[0][0]*mo->wcstan.cd[1][1] -
-							  mo->wcstan.cd[0][1]*mo->wcstan.cd[1][0]));
-	}
+	if (mo->wcs_valid)
+		mo->scale = tan_pixel_scale(&(mo->wcstan));
+	star_midpoint(mo->center, mo->sMin, mo->sMax);
+	mo->radius = sqrt(distsq(mo->center, mo->sMin, 3));
 }
 
 void matchobj_compute_overlap(MatchObj* mo) {

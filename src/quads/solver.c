@@ -643,6 +643,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_maxy, mo.sMinMax);
         tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_miny, mo.sMaxMin);
 
+		// center and radius...
+		star_midpoint(mo.center, mo.sMin, mo.sMax);
+		mo.radius = sqrt(distsq(mo.center, mo.sMin, 3));
+
         if (params->handlehit(params, &mo))
             params->quitNow = TRUE;
         // Note - after this call returns, the "mo" may

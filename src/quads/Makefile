@@ -236,7 +236,7 @@ whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o solvedfile.o solvedclient.o \
-		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(LIBTWEAK_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlsinfo: rdlsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 

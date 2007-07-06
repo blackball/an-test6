@@ -56,6 +56,8 @@ struct match_struct {
 	// proposed location of the center of the field
 	//  = normalize(sMin + sMax);
 	double center[3];
+	// radius of the bounding circle, in distance on the unit sphere.
+	double radius;
 
 	int fieldnum;
 	int fieldfile;
