@@ -234,9 +234,8 @@ static void write_quad(codefile* codes, quadfile* quads,
 		code[3] = 1.0 - code[3];
 	}
 
-	// FIXME - this is backwards.
 	// here we add the invariant that cx <= dx.
-	if (code[0] <= code[2]) {
+	if (code[0] > code[2]) {
 		double dtmp;
 		// swap the labels of C,D.
 		uint tmp = q->star[2];
@@ -846,6 +845,9 @@ int main(int argc, char** argv) {
 
 	qfits_header_add(quads->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
 	qfits_header_add(codes->header, "CXDX", "T", "All codes have the property cx<=dx.", NULL);
+
+	qfits_header_add(quads->header, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
+	qfits_header_add(codes->header, "CXDXLT1", "T", "All codes have the property cx+dx<=1.", NULL);
 
 	qfits_header_add(quads->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);
 	qfits_header_add(codes->header, "MIDHALF", "T", "All codes have the property cx+dx<=1.", NULL);

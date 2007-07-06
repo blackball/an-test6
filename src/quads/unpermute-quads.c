@@ -149,6 +149,7 @@ int main(int argc, char **args) {
 	fits_copy_all_headers(quadin->header, quadout->header, "COMMENT");
 	qfits_header_add(quadout->header, "COMMENT", "** unpermute-quads: end of comments from input.", NULL, NULL);
 	fits_copy_header(quadin->header, quadout->header, "CXDX");
+	fits_copy_header(quadin->header, quadout->header, "CXDXLT1");
 	fits_copy_header(quadin->header, quadout->header, "CIRCLE");
 
 	if (quadfile_write_header(quadout)) {
@@ -191,6 +192,7 @@ int main(int argc, char **args) {
 	fits_copy_all_headers(codehdr, hdr, "COMMENT");
 	qfits_header_add(hdr, "COMMENT", "** unpermute-quads: end of comments from input ckdt.", NULL, NULL);
 	fits_copy_header(codehdr, hdr, "CXDX");
+	fits_copy_header(codehdr, hdr, "CXDXLT1");
 	fits_copy_header(codehdr, hdr, "CIRCLE");
 
 	quadfile_close(quadin);

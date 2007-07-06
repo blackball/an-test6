@@ -214,6 +214,7 @@ int main(int argc, char *argv[]) {
 	fits_copy_header(codes->header, hdr, "INDEXID");
 	fits_copy_header(codes->header, hdr, "HEALPIX");
 	fits_copy_header(codes->header, hdr, "CXDX");
+	fits_copy_header(codes->header, hdr, "CXDXLT1");
 	fits_copy_header(codes->header, hdr, "CIRCLE");
 
 	boilerplate_add_fits_headers(hdr);
