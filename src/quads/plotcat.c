@@ -35,16 +35,17 @@
 #include "boilerplate.h"
 #include "starkd.h"
 
-#define OPTIONS "bhgN:f:ts"
+#define OPTIONS "bhgN:f:tsS"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s [-b] [-h] [-g] [-N imsize]"
 		   " <filename> [<filename> ...] > outfile.pgm\n"
 		   "  -h sets Hammer-Aitoff (default is an equal-area, positive-Z projection)\n"
+	       "  -S squishes Hammer-Aitoff projection to make an ellipse; height becomes N/2.\n"
 		   "  -b sets reverse (negative-Z projection)\n"
 		   "  -g adds RA,DEC grid\n"
-		   "  -N sets edge size of output image\n"
+		   "  -N sets edge size (width) of output image\n"
 		   "  [-s]: write two-byte-per-pixel PGM (default is one-byte-per-pixel)\n"
 		   "  [-f <field-num>]: for RA,Dec lists (rdls), which field to use (default: all)\n\n"
 		   "  [-L <field-range-low>]\n"
@@ -56,28 +57,51 @@ static void printHelp(char* progname) {
 		   "\n", progname);
 }
 		   
-double *projection;
 extern char *optarg;
 extern int optind, opterr, optopt;
 
 #define PI M_PI
 
-Inline void getxy(double px, double py, int N,
+Inline void getxy(double px, double py, int W, int H,
 				  int* X, int* Y) {
 	px = 0.5 + (px - 0.5) * 0.99;
 	py = 0.5 + (py - 0.5) * 0.99;
-	*X = (int)nearbyint(px * N);
-	*Y = (int)nearbyint(py * N);
+	*X = (int)nearbyint(px * W);
+	*Y = (int)nearbyint(py * H);
+}
+
+void add_ink(double* xyz, int hammer, int reverse,
+	     int* backside, int W, int H,
+	     double* projection, int value) {
+  double px, py;
+  int X,Y;
+  if (!hammer) {
+    double z = xyz[2];
+    if ((z <= 0 && !reverse) || (z >= 0 && reverse)) {
+      (*backside)++;
+      return;
+    }
+    if (reverse)
+      z = -z;
+    project_equal_area(xyz[0], xyz[1], z, &px, &py);
+  } else {
+    /* Hammer-Aitoff projection */
+    project_hammer_aitoff_x(xyz[0], xyz[1], xyz[2], &px, &py);
+  }
+  getxy(px, py, W, H, &X, &Y);
+  if (value)
+    projection[X+W*Y] = value;
+  else
+    projection[X+W*Y]++;
 }
 
 int main(int argc, char *argv[])
 {
+  double *projection;
 	char* progname = argv[0];
 	uint ii,jj,numstars=0;
 	int reverse=0, hammer=0, grid=0;
-	double x=0,y=0,z=0;
 	int maxval;
-	int X,Y;
 	char* fname = NULL;
 	int argchar;
 	FILE* fid;
@@ -92,14 +116,15 @@ int main(int argc, char *argv[])
 	dl* rdls;
 	il* fields;
 	int backside = 0;
-	double px, py;
-	int N=3000;
+	int W = 3000, H;
 	unsigned char* img;
+	  double xyz[3];
 
 	int fieldslow = -1;
 	int fieldshigh = -1;
 	int notycho = 1;
 	int imgmax = 255;
+	int squish = 0;
 
 	fields = il_new(32);
 
@@ -108,6 +133,9 @@ int main(int argc, char *argv[])
 		case 's':
 			imgmax = 65535;
 			break;
+		case 'S':
+		  squish = 1;
+		  break;
 		case 'b':
 			reverse = 1;
 			break;
@@ -118,7 +146,7 @@ int main(int argc, char *argv[])
 			grid = 1;
 			break;
 		case 'N':
-		  N=(int)strtoul(optarg, NULL, 0);
+		  W=(int)strtoul(optarg, NULL, 0);
 		  break;
 		case 'f':
 			il_append(fields, atoi(optarg));
@@ -154,7 +182,12 @@ int main(int argc, char *argv[])
 			il_append(fields, f);
 	}
 
-	projection=calloc(sizeof(double), N*N);
+	if (squish)
+	  H = W/2;
+	else
+	  H = W;
+
+	projection=calloc(sizeof(double), W*H);
 
 	for (; optind<argc; optind++) {
 		int i;
@@ -291,60 +324,36 @@ int main(int argc, char *argv[])
 			}
 
 			if (cat) {
-				double* xyz;
-				xyz = catalog_get_star(cat, i);
-				x = xyz[0];
-				y = xyz[1];
-				z = xyz[2];
+			  double* sxyz;
+			  sxyz = catalog_get_star(cat, i);
+			  xyz[0] = sxyz[0];
+			  xyz[1] = sxyz[1];
+			  xyz[2] = sxyz[2];
 			} else if (skdt) {
-				double xyz[3];
 				if (startree_get(skdt, i, xyz)) {
 					fprintf(stderr, "Failed to read star %i from star kdtree.\n", i);
 					exit(-1);
 				}
-				x = xyz[0];
-				y = xyz[1];
-				z = xyz[2];
 			} else if (rdls) {
 				double ra, dec;
 				ra  = dl_get(rdls, 2*i);
 				dec = dl_get(rdls, 2*i+1);
-				x = radec2x(deg2rad(ra), deg2rad(dec));
-				y = radec2y(deg2rad(ra), deg2rad(dec));
-				z = radec2z(deg2rad(ra), deg2rad(dec));
+				radecdeg2xyzarr(ra, dec, xyz);
 			} else if (ancat) {
-				an_entry* entry = an_catalog_read_entry(ancat);
-				x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
-				y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
-				z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
+			  an_entry* entry = an_catalog_read_entry(ancat);
+			  radecdeg2xyzarr(entry->ra, entry->dec, xyz);
 			} else if (usnob) {
-				usnob_entry* entry = usnob_fits_read_entry(usnob);
-				if (notycho && (entry->ndetections == 0))
-					continue;
-				x = radec2x(deg2rad(entry->ra), deg2rad(entry->dec));
-				y = radec2y(deg2rad(entry->ra), deg2rad(entry->dec));
-				z = radec2z(deg2rad(entry->ra), deg2rad(entry->dec));
+			  usnob_entry* entry = usnob_fits_read_entry(usnob);
+			  if (notycho && (entry->ndetections == 0))
+			    continue;
+			  radecdeg2xyzarr(entry->ra, entry->dec, xyz);
 			} else if (tycho) {
-				tycho2_entry* entry = tycho2_fits_read_entry(tycho);
-				x = radec2x(deg2rad(entry->RA), deg2rad(entry->DEC));
-				y = radec2y(deg2rad(entry->RA), deg2rad(entry->DEC));
-				z = radec2z(deg2rad(entry->RA), deg2rad(entry->DEC));
+			  tycho2_entry* entry = tycho2_fits_read_entry(tycho);
+			  radecdeg2xyzarr(entry->RA, entry->DEC, xyz);
 			}
 
-			if (!hammer) {
-				if ((z <= 0 && !reverse) || (z >= 0 && reverse)) {
-					backside++;
-					continue;
-				}
-				if (reverse)
-					z = -z;
-				project_equal_area(x, y, z, &px, &py);
-			} else {
-				/* Hammer-Aitoff projection */
-				project_hammer_aitoff_x(x, y, z, &px, &py);
-			}
-			getxy(px, py, N, &X, &Y);
-			projection[X+N*Y]++;
+			add_ink(xyz, hammer, reverse, &backside, W, H, projection, 0);
+
 		}
 
 		if (cat)
@@ -362,7 +371,7 @@ int main(int argc, char *argv[])
 	}
 
 	maxval = 0;
-	for (ii = 0; ii < (N*N); ii++)
+	for (ii = 0; ii < (W*H); ii++)
 		if (projection[ii] > maxval)
 			maxval = projection[ii];
 
@@ -375,22 +384,9 @@ int main(int argc, char *argv[])
 
 				double ra = deg2rad(ii);
 				double dec = jj/(double)RES * PI/2.0;
-				x = radec2x(ra,dec);
-				y = radec2y(ra,dec);
-				z = radec2z(ra,dec);
+				radec2xyzarr(ra, dec, xyz);
 
-				if (!hammer) {
-					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
-						continue;
-					if (reverse)
-						z = -z;
-					project_equal_area(x, y, z, &px, &py);
-				} else {
-					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &px, &py);
-				}
-				getxy(px, py, N, &X, &Y);
-				projection[X+N*Y] = maxval;
+				add_ink(xyz, hammer, reverse, &backside, W, H, projection, maxval);
 			}
 		}
 		/* Draw a line for dec=-80...+80 in 10 degree sections */
@@ -401,44 +397,31 @@ int main(int argc, char *argv[])
 
 				double ra = jj/(double)RES * PI;
 				double dec = deg2rad(ii);
-				x = radec2x(ra,dec);
-				y = radec2y(ra,dec);
-				z = radec2z(ra,dec);
+				radec2xyzarr(ra, dec, xyz);
 
-				if (!hammer) {
-					if ((z <= 0 && !reverse) || (z >= 0 && reverse)) 
-						continue;
-					if (reverse)
-						z = -z;
-					project_equal_area(x, y, z, &px, &py);
-				} else {
-					/* Hammer-Aitoff projection */
-					project_hammer_aitoff_x(x, y, z, &px, &py);
-				}
-				getxy(px, py, N, &X, &Y);
-				projection[X+N*Y] = maxval;
+				add_ink(xyz, hammer, reverse, &backside, W, H, projection, maxval);
 			}
 		}
 	}
 
 	// Output PGM format
-	printf("P5 %d %d %d\n",N, N, imgmax);
+	printf("P5 %d %d %d\n", W, H, imgmax);
 	// hack - we reuse the "projection" storage to store the image data:
 	if (imgmax == 255) {
 		img = (unsigned char*)projection;
-		for (ii=0; ii<(N*N); ii++)
+		for (ii=0; ii<(W*H); ii++)
 			img[ii] = (int)((double)imgmax * projection[ii] / (double)maxval);
-		if (fwrite(img, 1, N*N, stdout) != (N*N)) {
+		if (fwrite(img, 1, W*H, stdout) != (W*H)) {
 			fprintf(stderr, "Failed to write image: %s\n", strerror(errno));
 			exit(-1);
 		}
 	} else {
 		uint16_t* img = (uint16_t*)projection;
-		for (ii=0; ii<(N*N); ii++) {
+		for (ii=0; ii<(W*H); ii++) {
 			img[ii] = (int)((double)imgmax * projection[ii] / (double)maxval);
 			img[ii] = htons(img[ii]);
 		}
-		if (fwrite(img, 2, N*N, stdout) != (N*N)) {
+		if (fwrite(img, 2, W*H, stdout) != (W*H)) {
 			fprintf(stderr, "Failed to write image: %s\n", strerror(errno));
 			exit(-1);
 		}
