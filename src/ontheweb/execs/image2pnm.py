@@ -7,9 +7,7 @@ Author: Keir Mierle 2007
 import sys
 import os
 
-AN_FITSTOPNM = 'anfits2pnm'
-
-imgcmds = {"FITS image data"  : ("fits", AN_FITSTOPNM + " -i %s > %s"),
+imgcmds = {"FITS image data"  : ("fits", "an-fitstopnm -i %s > %s"),
            "JPEG image data"  : ("jpg",  "jpegtopnm %s > %s"),
            "PNG image data"   : ("png",  "pngtopnm %s > %s"),
            "GIF image data"   : ("gif",  "giftopnm %s > %s"),
@@ -21,55 +19,86 @@ compcmds = {"gzip compressed data"    : ("gz",  "gunzip -c %s > %s"),
             "bzip2 compressed data"   : ("bz2", "bunzip2 -k -c %s > %s")
            }
 
+def log(*x):
+    print >> sys.stderr, 'image2pnm:', ' '.join(x)
+
 def do_command(cmd):
     if os.system(cmd) != 0:
         print >>sys.stderr, 'Command failed: %s' % cmd
-        return -1
+        sys.exit(-1)
 
-def convert_image(input, output):
-    # FIXME does not fits2fits
-    filein, fileout = os.popen2('file -b -N -L %s' % input)
+def convert_image(infile, outfile, uncompressed, sanitized):
+    filein, fileout = os.popen2('file -b -N -L %s' % infile)
     typeinfo = fileout.read()
 
-    print 'OLD:',typeinfo
+    log('file output:', typeinfo.strip())
     
     # Trim extra data after the ,
     comma_pos = typeinfo.find(',')
     if comma_pos != -1:
         typeinfo = typeinfo[:comma_pos]
 
-    print 'NEW:',typeinfo
+    # If it's a FITS file we want to filter it first because of the many
+    # misbehaved FITS files around. fits2fits is a sanitizer.
+    if typeinfo == 'FITS image data':
+        assert sanitized != infile
+        new_infile = sanitized
+        do_command('fits2fits.py %s %s' % (infile, new_infile))
+        infile = new_infile
 
     # Recurse if we're compressed
     if typeinfo in compcmds:
-        new_input = output + '.raw'
-        print 'Compressed file, dumping to:',new_input
-        do_command(compcmds[typeinfo][1] % (input, new_input))
-        return convert_image(new_input, output)
+        assert uncompressed != infile
+        new_infile = uncompressed
+        log('compressed file, dumping to:', new_infile)
+        do_command(compcmds[typeinfo][1] % (infile, new_infile))
+        return convert_image(new_infile, outfile, uncompressed, sanitized)
 
     if not typeinfo in imgcmds:
-        print 'ERROR: image type not recognized:', typeinfo
+        log('ERROR: image type not recognized:', typeinfo)
         return -1
 
     # Do the actual conversion
-    output_pnmfile = output + '.pnm'
-    do_command(imgcmds[typeinfo][1] % (input, output_pnmfile))
+    ext, cmd = imgcmds[typeinfo]
+    do_command(cmd % (infile, outfile))
+    print ext
 
-def help():
-    print (
-        "convert most image types (including gzip'd compressed images) to pnm\n"
-        "usage: %s <input-file> <output-prefix>\n"
-        "outputs <output-prefix>.inext and <out-prefix>.pnm\n"
-        "if the file is compressed, a output.raw file containing\n"
-        "the uncompressed file is also produced." % sys.argv[0])
+    # Success
+    return 0
 
 def main():
-    if len(sys.argv) != 3:
-        print "ERROR incorrect usage"
-        help()
-        return 1
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("-i", "--infile",
+                      dest="infile",
+                      help="input image FILE", metavar="FILE")
+    parser.add_option("-u", "--uncompressed-outfile",
+                      dest="uncompressed_outfile",
+                      help="uncompressed temporary FILE", metavar="FILE",
+                      default='')
+    parser.add_option("-s", "--sanitized-fits-outfile",
+                      dest="sanitized_outfile",
+                      help="sanitized temporary fits FILE", metavar="FILE",
+                      default='')
+    parser.add_option("-o", "--outfile",
+                      dest="outfile",
+                      help="output pnm image FILE", metavar="FILE")
 
-    return convert_image(sys.argv[1], sys.argv[2])
+    (options, args) = parser.parse_args()
+
+    if not options.infile:
+        parser.error('required argument missing: infile')
+    if not options.outfile:
+        parser.error('required argument missing: outfile')
+
+    if not options.uncompressed_outfile:
+        options.uncompressed_outfile = options.infile+'.raw'
+    if not options.sanitized_outfile:
+        options.sanitized_outfile = options.infile+'.sanitized.fits'
+
+    return convert_image(options.infile, options.outfile,
+                         options.uncompressed_outfile,
+                         options.sanitized_outfile)
 
 if __name__ == '__main__':
     sys.exit(main())
