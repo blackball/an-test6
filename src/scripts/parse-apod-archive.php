@@ -15,10 +15,6 @@ if (!$str) {
 
 //echo "Got:\n" . substr($str, 0, 256) . "\n.....\n\n";
 
-//$pat = "|^\w* \w* \w*: <a href=\"(ap\d{6}.html)\">(.*?)</a><br>$|";
-//$pat = "|^\w* \w* \w*:\s*<a href=\"(.*?)\">(.*?)</a>(<br>)?$|m";
-//$pat = "|^\w* \w* \w*: (.*)?$|m";
-//$pat = "|\w* \w* \w*: (.*?)<a href=(.*?)>(.*?)</a>?|s";
 $pat = "|\w* \w* \w*:\s*<a href=\"(ap(\d{6}).html)\">(.*?)</a>(<br>)?|s";
 
 if (!preg_match_all($pat, $str, $matches, PREG_SET_ORDER)) {
@@ -35,12 +31,6 @@ foreach ($matches as $m) {
 	echo "  " . $url . "\n";
 	echo "  " . $m[2] . "\n";
 	echo "  " . $m[3] . "\n";
-	/*
-	$pat = "|\w* \w* \w*:\s*<a href=\"(.*?)\">(.*?)</a>(<br>)?|s";
-	if (!preg_match($pat, $m[0])) {
-		echo "Failed match: " . $m[0] . "\n";
-	}
-	*/
 
 	/*
 	sscanf($date, "%d", $datenum);
@@ -55,7 +45,6 @@ foreach ($matches as $m) {
 
 	$pat = "|<a href=\"(image/.*?)\">\s*<IMG SRC=\"(image/.*?\\.(.*?))\".*?>\s*</a>|s";
 	if (!preg_match($pat, $str, $match)) {
-		//die("No match.\n");
 		echo "-- No match found for " . $date . " --\n";
 		continue;
 	}
@@ -74,8 +63,6 @@ foreach ($matches as $m) {
 	if (!file_put_contents($date . "." . $suffix, $img)) {
 		die("Couldn't write image: " . $imgurl);
 	}
-
-	//break;
 }
 
 ?>
