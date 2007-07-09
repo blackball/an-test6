@@ -17,25 +17,6 @@ Astrometry.net: Job Summary
 <hr />
 
 <h3>
-Current Job Queue:
-</h3>
-
-<?php
-$q = file_get_contents($resultdir . $q_fn);
-if (strlen($q)) {
-	echo "<table border=1>" .
-		"<tr><td>\n" .
-		"<pre>" . $q . "</pre>\n" .
-		"</td></tr>" .
-		"</table>\n";
-} else {
-	echo "<p>(empty)</p>\n";
-}
-?>
-
-<hr />
-
-<h3>
 Past Jobs:
 </h3>
 
