@@ -42,8 +42,9 @@ depths = ( 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200 );
 
 totaltime = 0;
 totalcpu = 600;
-
-
+codetol = 0.01
+distractors = 0.25
+solved = "solved"
 
 
 
@@ -70,10 +71,10 @@ def get_val_nothrow(fitshdr, key):
         return None
 
 def solve_field(xylist):
-    for v in indexes:
-        ql = v['quadl']
-        qu = v['quadu']
-        paths = v['paths']
+    #for v in indexes:
+        #ql = v['quadl']
+        #qu = v['quadu']
+        #paths = v['paths']
         #print ql, qu
         #for p in paths:
         #print p
@@ -99,13 +100,13 @@ def solve_field(xylist):
         #die('Failed to read FITS input file %s' % xylist)
 
     # Print out info about input file.
-    fitsin.info()
+    #fitsin.info()
 
     # First FITS extension...
     hdr = fitsin[1].header
     hdrcards = hdr.ascardlist()
-    print hdrcards
-    print
+    #log hdrcards
+    #log
     
     W = hdr['IMAGEW']
     H = hdr['IMAGEH']
@@ -130,20 +131,15 @@ def solve_field(xylist):
     while True:
         keyl = 'ANAPPL%d' % i
         keyu = 'ANAPPU%d' % i
-        print keyl, keyu
-        #if not((keyl in hdr) and (keyu in hdr)):
-        #    break;
-        #print hdr[keyl], hdr[keyu]
-        #ful = float(hdr[keyl])
-        #fuu = float(hdr[keyu])
+        #log keyl, keyu
         ful = get_val_nothrow(hdr, keyl)
         fuu = get_val_nothrow(hdr, keyu)
         if not(ful and fuu):
             break
-        print ful, fuu
+        #log ful, fuu
         ful = float(ful)
         fuu = float(fuu)
-        print ful, fuu
+        #log ful, fuu
         if (ful == 0 or fuu == 0):
             break
         # Estimate size of quads we could find:
@@ -172,28 +168,24 @@ def solve_field(xylist):
         i+=1
 
 
-    print 'Image size: %d x %d' % (W, H)
-    print 'Parity: %d' % parity
-    print 'Poserr: %f' % poserr
+    log 'Image size: %d x %d' % (W, H)
+    log 'Parity: %d' % parity
+    log 'Poserr: %f' % poserr
 
     if matchfile:
-        print 'Match file: ' + matchfile
+        log 'Match file: ' + matchfile
     if rdlsfile:
-        print 'RDLS file: ' + rdlsfile
+        log 'RDLS file: ' + rdlsfile
     if wcsfile:
-        print 'WCS file: ' + wcsfile
+        log 'WCS file: ' + wcsfile
 
-    for s in scales:
-        ful = s['ful']
-        fuu = s['fuu']
-        inds = s['indices']
-        print 'Scale: %f to %f' % (ful, fuu)
-        for i in inds:
-            print '  ', i
-
-    codetol = 0.01
-    distractors = 0.25
-    solved = "solved"
+    #for s in scales:
+    #    ful = s['ful']
+    #    fuu = s['fuu']
+    #    inds = s['indices']
+    #    log 'Scale: %f to %f' % (ful, fuu)
+    #    for i in inds:
+    #        log '  ', i
 
     instr = "total_timelimit " + str(totaltime) + "\n" + \
             "total_cpulimit " + str(totalcpu) + "\n\n"
@@ -237,7 +229,6 @@ def solve_field(xylist):
             instr += "fields 0" + "\n"
             instr += "run" + "\n\n"
             stripe += 1
-
 
     print instr
 
