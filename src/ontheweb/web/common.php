@@ -245,18 +245,19 @@ function uncompress_file($infile, $outfile, &$suffix) {
 					  );
 	// look for key phrases in the output of "file".
 	foreach ($comptype as $phrase => $lst) {
-		if (strstr($typestr, $phrase)) {
-			$suff    = $lst[0];
-			$command = $lst[1];
-			$cmd = sprintf($command, $infile, $outfile);
-			loggit("Command: " . $cmd . "\n");
-			if ((system($cmd, $retval) === FALSE) || $retval) {
-				loggit("Command failed, return value " . $retval . ": " . $cmd);
-				return FALSE;
-			}
-			$suffix = $suff;
-			break;
+		if (!strstr($typestr, $phrase)) {
+			continue;
 		}
+		$suff    = $lst[0];
+		$command = $lst[1];
+		$cmd = sprintf($command, $infile, $outfile);
+		loggit("Command: " . $cmd . "\n");
+		if ((system($cmd, $retval) === FALSE) || $retval) {
+			loggit("Command failed, return value " . $retval . ": " . $cmd);
+			return FALSE;
+		}
+		$suffix = $suff;
+		break;
 	}
 	return TRUE;
 }
