@@ -70,7 +70,17 @@ def get_val_nothrow(fitshdr, key):
     except KeyError:
         return None
 
-def solve_field(xylist):
+def solve_field(xyfile):
+    # Read input file.
+    try:
+        fitsin = pyfits.open(xyfile)
+    except IOError:
+        log('Failed to read FITS input file "%s".  Exception is:' % xylist)
+        raise
+        #die('Failed to read FITS input file %s' % xylist)
+    return solve_field(xyfile, fitsin)
+
+def solve_field(xyfile, xyfits):
     #for v in indexes:
         #ql = v['quadl']
         #qu = v['quadu']
@@ -91,19 +101,11 @@ def solve_field(xylist):
     # -rdls  filename (out)
     # -wcs   filename (out)
 
-    # Read input file.
-    try:
-        fitsin = pyfits.open(xylist)
-    except IOError:
-        log('Failed to read FITS input file "%s".  Exception is:' % xylist)
-        raise
-        #die('Failed to read FITS input file %s' % xylist)
-
     # Print out info about input file.
     #fitsin.info()
 
     # First FITS extension...
-    hdr = fitsin[1].header
+    hdr = xyfits[1].header
     hdrcards = hdr.ascardlist()
     #log hdrcards
     #log
@@ -120,11 +122,17 @@ def solve_field(xylist):
     if (not poserr) or (float(poserr) <= 0):
         poserr = 1.0
 
-    # ANTWEAK, ANTWEAKO
-
     matchfile = get_val_nothrow(hdr, 'ANMATCH')
     rdlsfile  = get_val_nothrow(hdr, 'ANRDLS')
     wcsfile   = get_val_nothrow(hdr, 'ANWCS')
+    canfile   = get_val_nothrow(hdr, 'ANCANCEL')
+
+    tweak     = get_val_nothrow(hdr, 'ANTWEAK')
+    dotweak = (tweak == 'T')
+    if dotweak:
+        tweako    = get_val_nothrow(hdr, 'ANTWEAKO')
+        if tweako:
+            tweakorder = int(tweako)
 
     scales = []
     i = 0
@@ -178,6 +186,8 @@ def solve_field(xylist):
         log 'RDLS file: ' + rdlsfile
     if wcsfile:
         log 'WCS file: ' + wcsfile
+    if canfile:
+        log 'Cancel file: ' + canfile
 
     #for s in scales:
     #    ful = s['ful']
@@ -202,7 +212,7 @@ def solve_field(xylist):
             for i in inds:
                 instr += "index " + i + "\n"
 
-            instr += "field " + xylist + "\n" + \
+            instr += "field " + xyfile + "\n" + \
                      "fieldw " + str(W) + "\n" + \
                      "fieldh " + str(H) + "\n" + \
                      "sdepth " + str(startd) + "\n" + \
@@ -218,12 +228,21 @@ def solve_field(xylist):
                      "ratio_tosolve 1e9\n" + \
                      "ratio_tobail 1e-100\n"
 
+            if dotweak:
+                instr += "tweak\n"
+                if tweakorder:
+                    instr += "tweak_aborder " + str(tweakorder) + "\n" + \
+                             "tweak_abporder " + str(tweakorder) + "\n" + \
+                             "tweak_skipshift" + "\n"
+
             if matchfile:
                 instr += "match " + matchfile + "-" + str(stripe) + "\n"
             if rdlsfile:
-                instr += "rdls " + rdlsfile + "-" + str(stripe) + "\n"
+                instr += "indexrdls " + rdlsfile + "-" + str(stripe) + "\n"
             if wcsfile:
                 instr += "wcs " + wcsfile + "-" + str(stripe) + "\n"
+            if canfile:
+                instr += "cancel " + canfile + "\n"
 
             instr += "solved " + solved + "\n"
             instr += "fields 0" + "\n"
