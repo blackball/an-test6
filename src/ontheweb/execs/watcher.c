@@ -257,7 +257,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 		// add a watch.
 		wd = inotify_add_watch(info->inot, path, eventmask);
 		if (wd == -1) {
-			loggit("Failed to add watch to path %s.\n", path);
+			loggit("Failed to add watch to path %s: %s\n", path, strerror(errno));
 			return;
 		}
 		il_append(info->wds, wd);
@@ -278,7 +278,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
 			loggit("Adding watch to directory %s.\n", path);
 			wd = inotify_add_watch(info->inot, path, eventmask);
 			if (wd == -1) {
-				loggit("Failed to add watch to path %s.\n", path);
+				loggit("Failed to add watch to path %s: %s\n", path, strerror(errno));
 				return;
 			}
 			il_append(info->wds, wd);
