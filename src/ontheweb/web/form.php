@@ -1000,7 +1000,9 @@ function render_form($form, $headers) {
 	global $index_template;
 	global $index_template_simple;
 	global $index_header;
+	global $index_header_simple;
 	global $index_tail;
+	global $index_tail_simple;
 	global $valid_blurb;
 	global $emailver;
 	global $webver;
@@ -1013,7 +1015,7 @@ function render_form($form, $headers) {
 	if (array_key_exists('simple', $headers)) {
 		$template = file_get_contents($index_template_simple);
 		$replace = array();
-		$flds = array('imgurl', 'submit', 'MAX_FILE_SIZE');
+		$flds = array('imgurl', 'submit', 'MAX_FILE_SIZE', 'skippreview');
 		foreach ($flds as $fld) {
 			$replace['##' . $fld . '##'] = $renderer->elementToHtml($fld);
 		}
@@ -1031,7 +1033,7 @@ function render_form($form, $headers) {
 						   'y_col', 'tweak', 'tweak_order', 'fsl', 'fsu',
 						   'fse', 'fsv', 'fsunit', 'poserr', 'index',
 						   'uname', 'email', 'remember', 'linkhere',
-						   'reset', 'justjobid', 'skippreview');
+						   'reset', 'justjobid');
 		foreach ($dummyflds as $fld) {
 			$renderer->elementToHtml($fld);
 		}
@@ -1046,11 +1048,11 @@ function render_form($form, $headers) {
 		$renderer->elementToHtml('fstype', 'ev');
 
 		echo '<' . '?xml version="1.0" encoding="UTF-8"?' . '>';
-		$head = file_get_contents($index_header);
+		$head = file_get_contents($index_header_simple);
 		echo $head;
 		// Render the form.
 		echo $renderer->toHtml($template);
-		$tail = file_get_contents($index_tail);
+		$tail = file_get_contents($index_tail_simple);
 		$tail = str_replace(array('##valid-blurb##', '##sizelimit##'),
 							array($valid_blurb, sprintf("%d", $maxfilesize/(1024*1024))),
 							$tail);
@@ -1158,7 +1160,7 @@ function render_form($form, $headers) {
 }
 
 function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
-					   &$scaleguess, &$fitsimg) {
+					   &$scaleguess, &$wcsfile) {
 	global $fits2xy;
 	global $modhead;
 	global $plotxy2;
@@ -1307,6 +1309,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 	}
 
 	if ($imgtype == "fits") {
+		$wcsfile = $filename;
 		$fitsimg = $filename;
 	} else {
 		// Run pnmtofits...

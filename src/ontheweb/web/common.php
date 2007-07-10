@@ -21,7 +21,9 @@ $maxcpu = 0;
 $index_template_simple = "index-template-simple.html";
 $index_template = "index-template.html";
 $index_header   = "index-header.html";
+$index_header_simple = "index-header-simple.html";
 $index_tail     = "index-tail.html";
+$index_tail_simple = "index-tail-simple.html";
 $submitted_html = "submitted.html";
 
 $q_fn = "queue";
