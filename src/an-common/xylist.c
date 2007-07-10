@@ -238,6 +238,7 @@ xylist* xylist_open_for_writing(char* fn) {
 int xylist_write_header(xylist* ls) {
 	assert(ls->fid);
 	assert(ls->header);
+        // note, qfits_header_dump pads the file to the next FITS block.
 	qfits_header_dump(ls->header, ls->fid);
 	ls->data_offset = ftello(ls->fid);
 	ls->table = xylist_get_table(ls);
@@ -267,7 +268,6 @@ int xylist_fix_header(xylist* ls) {
 
 int xylist_new_field(xylist* ls) {
 	char val[32];
-	ls->table_offset = ftello(ls->fid);
 	ls->table->nr = 0;
         if (ls->fieldheader)
           qfits_header_destroy(ls->fieldheader);
@@ -281,8 +281,9 @@ int xylist_new_field(xylist* ls) {
 int xylist_write_field_header(xylist* ls) {
 	assert(ls->fid);
 	assert(ls->fieldheader);
+	ls->table_offset = ftello(ls->fid);
 	qfits_header_dump(ls->fieldheader, ls->fid);
-	fits_pad_file(ls->fid);
+        ls->end_table_offset = ftello(ls->fid);
 	return 0;
 }
 
@@ -315,12 +316,20 @@ int xylist_write_entries(xylist* ls, double* vals, uint nvals) {
 int xylist_fix_field(xylist* ls) {
 	off_t offset;
         char val[16];
+        off_t new_end;
 	offset = ftello(ls->fid);
 	fseeko(ls->fid, ls->table_offset, SEEK_SET);
         // update NAXIS2 to reflect the number of rows written.
         sprintf(val, "%i", ls->table->nr);
         fits_update_value(ls->fieldheader, "NAXIS2", val);
 	qfits_header_dump(ls->fieldheader, ls->fid);
+	new_end = ftello(ls->fid);
+        if (new_end != ls->end_table_offset) {
+            fprintf(stderr, "xylist_fix_field: file %s: table header used to end at %i, now it ends at %i.  Table data may have been overwritten!\n",
+                    ls->fn, (int)ls->end_table_offset, (int)new_end);
+            return -1;
+        }
+        // go back to where we were...
 	fseeko(ls->fid, offset, SEEK_SET);
 	return 0;
 }

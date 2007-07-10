@@ -60,7 +60,7 @@ struct xylist {
 	// field we're currently reading/writing
 	unsigned int field;
 	qfits_table* table;
-  qfits_header* fieldheader;
+    qfits_header* fieldheader;
 
 	// reading
 	int xcol;
@@ -74,6 +74,7 @@ struct xylist {
 	FILE* fid;
 	off_t data_offset;
 	off_t table_offset;
+    off_t end_table_offset;
 };
 typedef struct xylist xylist;
 
