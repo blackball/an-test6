@@ -37,9 +37,12 @@ static uint32_t ENDIAN_DETECTOR = 0x01020304;
 
 int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue) {
   char oldcomment[FITS_LINESZ + 1];
-  if (!qfits_header_getcom(hdr, key)) {
+  char* c = qfits_header_getcom(hdr, key);
+  if (!c) {
     return -1;
   }
+  // hmm, not sure I need to copy this...
+  strncpy(oldcomment, c, FITS_LINESZ);
   qfits_header_mod(hdr, key, newvalue, oldcomment);
 }
 
