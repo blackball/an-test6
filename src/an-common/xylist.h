@@ -60,6 +60,7 @@ struct xylist {
 	// field we're currently reading/writing
 	unsigned int field;
 	qfits_table* table;
+  qfits_header* fieldheader;
 
 	// reading
 	int xcol;
@@ -98,15 +99,27 @@ int xylist_read_entries(xylist* ls, unsigned int field,
 
 xylist* xylist_open_for_writing(char* fn);
 
+// Write the header for the whole file
 int xylist_write_header(xylist* ls);
 
+// Fix the header for the whole file
 int xylist_fix_header(xylist* ls);
 
+// Start a new field and write its header.
 int xylist_write_new_field(xylist* ls);
 
-int xylist_write_entries(xylist* ls, double* vals, unsigned int nvals);
+// Just start a new field (you might want to use this instead of xylist_write_new_field
+// if you want to add something to the header).
+int xylist_new_field(xylist* ls);
 
+// Write the current field's header.
+int xylist_write_field_header(xylist* ls);
+
+// Fix the header for the current field.  Call this after writing all data points.
 int xylist_fix_field(xylist* ls);
+
+// Write a set of data points
+int xylist_write_entries(xylist* ls, double* vals, unsigned int nvals);
 
 int xylist_close(xylist* ls);
 

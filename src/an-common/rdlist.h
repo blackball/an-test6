@@ -55,6 +55,10 @@ inline int rdlist_fix_header(rdlist* ls);
 
 inline int rdlist_write_new_field(rdlist* ls);
 
+int rdlist_new_field(rdlist* ls);
+
+int rdlist_write_field_header(rdlist* ls);
+
 inline int rdlist_write_entries(rdlist* ls, double* vals, uint nvals);
 
 inline int rdlist_fix_field(rdlist* ls);

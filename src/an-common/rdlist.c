@@ -64,6 +64,14 @@ Inline int rdlist_fix_header(rdlist* ls) {
 	return xylist_fix_header(ls);
 }
 
+Inline int rdlist_new_field(rdlist* ls) {
+  return xylist_new_field(ls);
+}
+
+Inline int rdlist_write_field_header(rdlist* ls) {
+  return xylist_write_field_header(ls);
+}
+
 Inline int rdlist_write_new_field(rdlist* ls) {
 	return xylist_write_new_field(ls);
 }

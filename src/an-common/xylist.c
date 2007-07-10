@@ -265,18 +265,29 @@ int xylist_fix_header(xylist* ls) {
 	return 0;
 }
 
-int xylist_write_new_field(xylist* ls) {
+int xylist_new_field(xylist* ls) {
 	char val[32];
-	qfits_header* table_header;
 	ls->table_offset = ftello(ls->fid);
 	ls->table->nr = 0;
-	table_header = qfits_table_ext_header_default(ls->table);
+        if (ls->fieldheader)
+          qfits_header_destroy(ls->fieldheader);
+        ls->fieldheader = qfits_table_ext_header_default(ls->table);
 	sprintf(val, "%u", ls->nfields);
-	qfits_header_add(table_header, "FIELDNUM", val, "This table is field number...", NULL);
-	qfits_header_dump(table_header, ls->fid);
-	qfits_header_destroy(table_header);
+	qfits_header_add(ls->fieldheader, "FIELDNUM", val, "This table is field number...", NULL);
 	ls->nfields++;
 	return 0;
+}
+
+int xylist_write_field_header(xylist* ls) {
+	assert(ls->fid);
+	assert(ls->fieldheader);
+	qfits_header_dump(ls->fieldheader, ls->fid);
+	fits_pad_file(ls->fid);
+	return 0;
+}
+
+int xylist_write_new_field(xylist* ls) {
+  return xylist_new_field(ls) || xylist_write_field_header(ls);
 }
 
 int xylist_write_entries(xylist* ls, double* vals, uint nvals) {
@@ -303,17 +314,14 @@ int xylist_write_entries(xylist* ls, double* vals, uint nvals) {
 
 int xylist_fix_field(xylist* ls) {
 	off_t offset;
-	char val[32];
-	qfits_header* table_header;
+        char val[16];
 	offset = ftello(ls->fid);
 	fseeko(ls->fid, ls->table_offset, SEEK_SET);
-	table_header = qfits_table_ext_header_default(ls->table);
-	sprintf(val, "%u", ls->nfields - 1);
-	qfits_header_add(table_header, "FIELDNUM", val, "This table is field number...", NULL);
-	qfits_header_dump(table_header, ls->fid);
-	qfits_header_destroy(table_header);
+        // update NAXIS2 to reflect the number of rows written.
+        sprintf(val, "%i", ls->table->nr);
+        fits_update_value(ls->fieldheader, "NAXIS2", val);
+	qfits_header_dump(ls->fieldheader, ls->fid);
 	fseeko(ls->fid, offset, SEEK_SET);
-	fits_pad_file(ls->fid);
 	return 0;
 }
 
@@ -326,6 +334,8 @@ int xylist_close(xylist* ls) {
 	}
 	if (ls->table)
 		qfits_table_close(ls->table);
+        if (ls->fieldheader)
+          qfits_header_destroy(ls->fieldheader);
 	if (ls->header)
 		qfits_header_destroy(ls->header);
 	free(ls->fn);
