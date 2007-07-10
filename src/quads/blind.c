@@ -1194,7 +1194,7 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
 		tweak_skip_shift(twee);
 	}
 
-	logmsg(bp, "Begin tweaking...\n");
+	logmsg(bp, "Begin tweaking (to order %i)...\n", bp->tweak_aborder);
 	/*
 	  while (!(twee->state & TWEAK_HAS_LINEAR_CD)) {
 	  unsigned int r = tweak_advance_to(twee, TWEAK_HAS_LINEAR_CD);
