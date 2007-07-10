@@ -108,8 +108,11 @@ int xylist_fix_header(xylist* ls);
 // Start a new field and write its header.
 int xylist_write_new_field(xylist* ls);
 
-// Just start a new field (you might want to use this instead of xylist_write_new_field
-// if you want to add something to the header).
+/*
+  Just start a new field (you might want to use this function plus
+  xylist_write_field_header instead of xylist_write_new_field
+  if you want to add something to the header before writing it out).
+*/
 int xylist_new_field(xylist* ls);
 
 // Write the current field's header.
