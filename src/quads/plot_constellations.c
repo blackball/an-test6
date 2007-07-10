@@ -169,6 +169,8 @@ int main(int argc, char** args) {
 	// circle radius.
 	double crad = endgap;
 
+	double fontsize = 14.0;
+
     uint32_t nstars;
     size_t mapsize;
     void* map;
@@ -221,6 +223,13 @@ int main(int argc, char** args) {
         print_help(args[0]);
         exit(-1);
     }
+
+	// adjust for scaling...
+	lw /= scale;
+	cw /= scale;
+	crad /= scale;
+	endgap /= scale;
+	fontsize /= scale;
 
     if (infn) {
         int x,y;
@@ -431,7 +440,7 @@ int main(int argc, char** args) {
             continue;
 
         cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-        cairo_set_font_size(cairo, 14.0);
+        cairo_set_font_size(cairo, fontsize);
         cairo_move_to(cairo, px, py);
         cairo_show_text(cairo, shortname);
     }

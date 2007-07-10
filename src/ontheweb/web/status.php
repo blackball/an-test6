@@ -1216,6 +1216,9 @@ function render_const_overlay($mydir, $big, $jd) {
 		} else {
 			$cmd .= " -W " . $W . " -H " . $H;
 		}
+		if (!$big) {
+			$cmd .= " -s " . (1.0 / $shrink);
+		}
 		$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
  		loggit("Command: " . $cmd . "\n");
 		run_command($cmd, "pnmtopng");
