@@ -22,6 +22,8 @@
 #include "qfits.h"
 #include "keywords.h"
 
+int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue);
+
 int fits_copy_header(qfits_header* src, qfits_header* dest, char* key);
 
 int fits_copy_all_headers(qfits_header* src, qfits_header* dest, char* targetkey);

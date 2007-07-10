@@ -35,6 +35,14 @@
 
 static uint32_t ENDIAN_DETECTOR = 0x01020304;
 
+int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue) {
+  char oldcomment[FITS_LINESZ + 1];
+  if (!qfits_header_getcom(hdr, key)) {
+    return -1;
+  }
+  qfits_header_mod(hdr, key, newvalue, oldcomment);
+}
+
 static int add_long_line(qfits_header* hdr, char* keyword, const char* indent, const char* format, va_list lst) {
 	const int charsperline = 60;
 	char* origstr = NULL;
