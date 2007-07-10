@@ -238,7 +238,10 @@ def solve_fits(xyfile, xyfits):
             if matchfile:
                 instr += "match " + matchfile + "-" + str(stripe) + "\n"
             if rdlsfile:
-                instr += "indexrdls " + rdlsfile + "-" + str(stripe) + "\n"
+                #instr += "indexrdls " + rdlsfile + "-" + str(stripe) + "\n"
+                instr += "indexrdls " + rdlsfile + "\n" + \
+                         "indexrdls_solvedonly" + "\n"
+                
             if wcsfile:
                 instr += "wcs " + wcsfile + "-" + str(stripe) + "\n"
             if canfile:
@@ -250,6 +253,21 @@ def solve_fits(xyfile, xyfits):
             stripe += 1
 
     print instr
+
+    # run blind
+
+    # if solved:
+    #   merge rdls  files
+    #   merge match files
+
+
+    # move to frontend:
+    # if solved:
+    #   wcs-xy2rd field.xy.fits
+    #   rdlsinfo field.rd.fits
+    #   sort match file by logodds
+    #   wcs-rd2xy index.rd.fits
+    #   add AN_JOBID
 
     # Success
     return 0
