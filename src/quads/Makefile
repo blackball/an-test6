@@ -33,6 +33,11 @@ ifeq ($(MAKECMDGOALS),cairo)
 	include $(COMMON)/makefile.cairo
 endif
 
+# HACK
+ifeq ($(MAKECMDGOALS),plot_constellations)
+	include $(COMMON)/makefile.cairo
+endif
+
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
 
@@ -261,6 +266,12 @@ plotquad.o: plotquad.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
 plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
+
+plot_constellations.o: plot_constellations.c
+	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
+
+plot_constellations: plot_constellations.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
 
 plotxy2.o: plotxy2.c
