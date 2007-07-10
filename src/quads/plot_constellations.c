@@ -31,6 +31,8 @@
 
 #include <png.h>
 
+#include <ppm.h>
+
 #include "sip_qfits.h"
 #include "an-bool.h"
 #include "qfits.h"
@@ -207,6 +209,51 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
+    if (infn) {
+        int r;
+        int R, C, format;
+        pixval maxval;
+        pixel* pixelrow;
+        FILE* fin;
+
+        fin = fopen(infn, "rb");
+        if (!fin) {
+            fprintf(stderr, "Failed to read input image %s: %s\n", infn, strerror(errno));
+            exit(-1);
+        }
+        ppm_init(&argc, args);
+        ppm_readppminit(fin, &C, &R, &maxval, &format);
+        pixelrow = ppm_allocrow(C);
+
+        printf("%i x %i, maxval %i, format 0x%x\n", C, R, maxval, format);
+
+        // Allocate image.
+        W = C;
+        H = R;
+        img = malloc(4 * W * H);
+
+        for (r=0; r<R; r++) {
+            int c;
+            ppm_readppmrow(fin, pixelrow, C, maxval, format);
+            for (c=0; c<C; c++) {
+                pixel p;
+                if (maxval == 255)
+                    p = pixelrow[c];
+                else
+                    PPM_DEPTH(p, pixelrow[c], maxval, 255);
+                // Cairo ARGB
+                img[4 * (r * C + c) + 0] = 255;
+                img[4 * (r * C + c) + 1] = PPM_GETR(p);
+                img[4 * (r * C + c) + 2] = PPM_GETG(p);
+                img[4 * (r * C + c) + 3] = PPM_GETB(p);
+            }
+        }
+        ppm_freerow(pixelrow);
+    } else {
+        // Allocate a black image.
+        img = calloc(4 * W * H, 1);
+    }
+
     // read WCS.
     hdr = qfits_header_read(wcsfn);
     if (!hdr) {
@@ -265,9 +312,6 @@ int main(int argc, char** args) {
     map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
     hip = ((unsigned char*)map) + HIP_OFFSET;
     //fprintf(stderr, "mapsize: %i\n", mapsize);
-
-    // Allocate a black image.
-    img = calloc(4 * W * H, 1);
 
     target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
     cairo = cairo_create(target);

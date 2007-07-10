@@ -57,6 +57,9 @@ CFLAGS += $(ANFILES_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(GSL_INC)
 
+NETPBM_I :=
+NETPBM_L := -L. -lnetpbm
+
 QFITS_UTILS := fitsgetext subtable tabsort
 
 CFITS_UTILS := tablist modhead fitscopy tabmerge fitstomatlab liststruc listhead
@@ -269,10 +272,10 @@ plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
 
 plot_constellations.o: plot_constellations.c
-	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
 plot_constellations: plot_constellations.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB) $(NETPBM_L)
 
 plotxy2.o: plotxy2.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
