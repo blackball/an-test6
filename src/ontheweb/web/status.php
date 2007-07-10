@@ -107,6 +107,11 @@ if ($getfile) {
 		$big = !strcmp($getfile, 'overlay-big');
 		render_overlay($mydir, $big, $jd);
 
+	} else if (!strcmp($getfile, 'const-overlay') ||
+		!strcmp($getfile, 'const-overlay-big')) {
+		$big = !strcmp($getfile, 'const-overlay-big');
+		render_const_overlay($mydir, $big, $jd);
+
 	} else if (!strcmp($getfile, $newheader_fn)) {
 		render_newheader($fn, $mydir, $jd, $todelete);
 
@@ -437,6 +442,11 @@ h3.c {text-align:center;}
 #overlay > a:visited { color:white; }
 #overlay > a:hover { color:gray; }
 #overlay > a:active { color:yellow; }
+#const-overlay { margin-left:auto; margin-right:auto; text-align:center; }
+#const-overlay > a:link { color:white; }
+#const-overlay > a:visited { color:white; }
+#const-overlay > a:hover { color:gray; }
+#const-overlay > a:active { color:yellow; }
 #onsky { margin-left:auto; margin-right:auto; text-align:center; }
 #onsky > a:link { color:white; }
 #onsky > a:visited { color:white; }
@@ -683,6 +693,27 @@ if ($didsolve) {
 	echo "<img src=\"" .
 		htmlentities(get_url('overlay')) . 
 		"\" alt=\"An image of your field, showing sources we extracted from the image and objects from our index.\"/>";
+	if ($linktobig) {
+		echo "</a>\n";
+	}
+	echo "</div>\n";
+	echo "<hr />\n";
+
+
+	echo "<div id=\"const-overlay\">\n";
+	echo "<p>Your field plus the constellations:\n";
+	if ($linktobig) {
+		echo "<br />(click for full-size version)\n";
+	}
+	echo "</p>\n";
+	if ($linktobig) {
+		echo "<a href=\"" .
+			htmlentities(get_url('const-overlay-big')) . 
+			"\">\n";
+	}
+	echo "<img src=\"" .
+		htmlentities(get_url('const-overlay')) . 
+		"\" alt=\"An image of your field with constellations overlaid.\"/>";
 	if ($linktobig) {
 		echo "</a>\n";
 	}
@@ -1114,6 +1145,92 @@ function run_command($cmd, $briefname) {
 	if ((system($cmd, $retval) === FALSE) || $retval) {
 		fail($briefname . " failed: command \"" . $cmd . "\", return value " . $retval);
 	}
+}
+
+function render_const_overlay($mydir, $big, $jd) {
+	global $const_overlay_fn;
+	global $const_bigoverlay_fn;
+	global $wcs_fn;
+	global $plot_constellations;
+	global $pnmimg;
+
+	$overlayfile = $mydir . $const_overlay_fn;
+	$bigoverlayfile = $mydir . $const_bigoverlay_fn;
+	$wcsfile = $mydir . $wcs_fn;
+
+	if ((!$big && !file_exists($overlayfile)) ||
+		($big  && !file_exists($bigoverlayfile))) {
+
+		// UglY!
+		switch ($jd['xysrc']) {
+		case 'fits':
+		case 'text':
+			if ($big) {
+				$W = $jd['xylsW'];
+				$H = $jd['xylsH'];
+				$shrink = 1;
+			} else {
+				$W = $jd['displayW'];
+				$H = $jd['displayH'];
+				$shrink = $jd["imageshrink"];
+				if (!$shrink)
+					$shrink = 1;
+				// Backwards compatibility:
+				if (!$W || !$H) {
+					$W = $jd['xylsW'];
+					$H = $jd['xylsH'];
+				}
+			}
+			break;
+		case 'img':
+		case 'url':
+			if ($big) {
+				$W = $jd['imageW'];
+				$H = $jd['imageH'];
+				$shrink = 1;
+				$userimg = $mydir . "image.pnm";
+			} else {
+				$W = $jd['displayW'];
+				$H = $jd['displayH'];
+				$shrink = $jd['imageshrink'];
+				if (!$shrink)
+					$shrink = 1;
+				$userimg = $pnmimg;
+			}
+			if (!($W && $H)) {
+				// BACKWARDS COMPATIBILITY.
+				loggit("failed to find image display width and height.\n");
+				$W = $jd['imageW'];
+				$H = $jd['imageH'];
+				if (!($W && $H)) {
+					fail("failed to find image width and height.\n");
+				}
+			}
+			break;
+		}
+
+		$cmd = $plot_constellations . " -w " . $wcsfile
+			. " -o " . ($big ? $bigoverlayfile : $overlayfile);
+		if ($userimg) {
+			$cmd .= " -i " . $userimg;
+		} else {
+			$cmd .= " -W " . $W . " -H " . $H;
+		}
+		$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
+ 		loggit("Command: " . $cmd . "\n");
+		run_command($cmd, "pnmtopng");
+	}
+
+	if (!$big && file_exists($overlayfile)) {
+		header('Content-type: image/png');
+		readfile($overlayfile);
+		exit;
+	} else if ($big && file_exists($bigoverlayfile)) {
+		header('Content-type: image/png');
+		readfile($bigoverlayfile);
+		exit;
+	} else
+		fail("(big)overlay file does not exist.");
 }
 
 function render_overlay($mydir, $big, $jd) {
