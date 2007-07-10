@@ -823,7 +823,8 @@ function process_data ($vals) {
 					"tweak_skipshift\n";
 			}
 
-			if ($inwcsfile) {
+			// Only do "verify-only" on the first pass.
+			if (($stripenum == 1) && $inwcsfile) {
 				$verify_fn = 'verify.fits';
 				if (!copy($inwcsfile, $mydir . $verify_fn)) {
 					loggit("Failed to copy WCS file to verify.\n");
