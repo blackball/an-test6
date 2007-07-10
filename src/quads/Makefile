@@ -274,7 +274,7 @@ plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
 plot_constellations.o: plot_constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
-plot_constellations: plot_constellations.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
+plot_constellations: plot_constellations.o ngc2000.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB) $(NETPBM_L)
 
 plotxy2.o: plotxy2.c

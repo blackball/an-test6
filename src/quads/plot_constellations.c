@@ -41,8 +41,10 @@
 #include "xylist.h"
 #include "rdlist.h"
 #include "boilerplate.h"
+#include "ngc2000.h"
+#include "mathutil.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:";
+const char* OPTIONS = "hi:o:w:W:H:s:N";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -52,6 +54,7 @@ void print_help(char* progname) {
            "   (  [-i <PPM input file>]\n"
            "   OR [-W <width> -H <height>] )\n"
 		   "   [-s <scale>]: scale image coordinates by this value before plotting.\n"
+		   "   [-N]: plot NGC objects.\n"
            "\n", progname);
 }
 
@@ -171,6 +174,8 @@ int main(int argc, char** args) {
 
 	double fontsize = 14.0;
 
+	double label_offset = 15.0;
+
     uint32_t nstars;
     size_t mapsize;
     void* map;
@@ -182,11 +187,16 @@ int main(int argc, char** args) {
     qfits_header* hdr;
     int i;
 
+	bool NGC = FALSE;
+
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
         case 'h':
             print_help(args[0]);
             exit(0);
+		case 'N':
+			NGC = TRUE;
+			break;
 		case 's':
 			scale = atof(optarg);
 			break;
@@ -230,6 +240,7 @@ int main(int argc, char** args) {
 	crad /= scale;
 	endgap /= scale;
 	fontsize /= scale;
+	label_offset /= scale;
 
     if (infn) {
         int x,y;
@@ -450,6 +461,70 @@ int main(int argc, char** args) {
 
     fclose(fconst);
     fclose(fhip);
+
+	if (NGC) {
+		int i, N;
+		double imscale;
+		double imsize;
+		double dy;
+		cairo_font_extents_t extents;
+
+		cairo_font_extents(cairo, &extents);
+		dy = extents.ascent * 0.5;
+
+		// Code stolen from wcs-annotate.c
+		// arcsec/pixel
+		imscale = sip_pixel_scale(&sip);
+		// arcmin
+		imsize = imscale * imin(W, H) / 60.0;
+		N = ngc_num_entries();
+		for (i=0; i<N; i++) {
+			ngc_entry* ngc = ngc_get_entry(i);
+			double px, py;
+			char str[256];
+			char* buf;
+			int len;
+			int nwritten;
+			pl* names;
+			double pixsize;
+
+			if (!ngc)
+				break;
+			if (ngc->size < imsize * 0.05)
+				continue;
+			if (!sip_radec2pixelxy(&sip, ngc->ra, ngc->dec, &px, &py))
+				continue;
+			if (px < 0 || py < 0 || px*scale > W || py*scale > H)
+				continue;
+
+			len = sizeof(str);
+			buf = str;
+			nwritten = snprintf(buf, len, "%s %i", (ngc->is_ngc ? "NGC" : "IC"), ngc->id);
+			buf += nwritten;
+			len -= nwritten;
+
+			names = ngc_get_names(ngc);
+			if (names) {
+				int n;
+				for (n=0; n<pl_size(names); n++) {
+					snprintf(buf, len, " / %s", (char*)pl_get(names, n));
+					buf += nwritten;
+					len -= nwritten;
+				}
+			}
+			pl_free(names);
+
+			cairo_move_to(cairo, px + label_offset, py + dy);
+			cairo_show_text(cairo, str);
+
+			pixsize = ngc->size * 60.0 / imscale;
+			cairo_move_to(cairo, px + pixsize/2.0, py);
+			cairo_arc(cairo, px, py, pixsize/2.0, 0.0, 2.0*M_PI);
+			//fprintf(stderr, "size: %f arcsec, pixsize: %f pixels\n", ngc->size, pixsize);
+
+			cairo_stroke(cairo);
+		}
+	}
 
     // Cairo's uint32 ARGB32 format is a little different than what we need
 	// for PNG output: uchar R,G,B,A.

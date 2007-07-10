@@ -1209,7 +1209,7 @@ function render_const_overlay($mydir, $big, $jd) {
 			break;
 		}
 
-		$cmd = $plot_constellations . " -w " . $wcsfile
+		$cmd = $plot_constellations . " -N " . " -w " . $wcsfile
 			. " -o " . ($big ? $bigoverlayfile : $overlayfile);
 		if ($userimg) {
 			$cmd .= " -i " . $userimg;

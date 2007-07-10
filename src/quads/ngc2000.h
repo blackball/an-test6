@@ -18,7 +18,7 @@ struct ngc_entry {
 
 	char classification[4];
 
-	// RA,Dec in B2000.0
+	// RA,Dec in B2000.0 degrees
 	float ra;
 	float dec;
 
