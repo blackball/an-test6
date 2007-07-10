@@ -281,6 +281,8 @@ int xylist_new_field(xylist* ls) {
 int xylist_write_field_header(xylist* ls) {
 	assert(ls->fid);
 	assert(ls->fieldheader);
+        // add padding.
+        fits_pad_file(ls->fid);
 	ls->table_offset = ftello(ls->fid);
 	qfits_header_dump(ls->fieldheader, ls->fid);
         ls->end_table_offset = ftello(ls->fid);
@@ -329,8 +331,10 @@ int xylist_fix_field(xylist* ls) {
                     ls->fn, (int)ls->end_table_offset, (int)new_end);
             return -1;
         }
-        // go back to where we were...
+        // go back to where we were (ie, probably the end of the data array)...
 	fseeko(ls->fid, offset, SEEK_SET);
+        // add padding.
+        fits_pad_file(ls->fid);
 	return 0;
 }
 
