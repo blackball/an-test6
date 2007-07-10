@@ -152,6 +152,7 @@ struct blind_params {
 	xylist* xyls;
 	startree* starkd;
 	codetree* codekd;
+  bool indexrdls_solvedonly;
 	rdlist* indexrdls;
 
 	int cpulimit;
@@ -282,6 +283,32 @@ static void total_wall_time_limit(int sig) {
 static void total_cpu_time_limit(int sig) {
 	quit_now("Total CPU time limit reached!\n");
 	my_bp.hit_total_cpulimit = TRUE;
+}
+
+static void indexrdls_write_header(blind_params* bp) {
+  boilerplate_add_fits_headers(bp->indexrdls->header);
+  fits_add_long_history(bp->indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
+                        "  It contains the RA/DEC of index objects that were found inside a solved field.");
+  qfits_header_add(bp->indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+  add_blind_params(bp, bp->indexrdls->header);
+  if (rdlist_write_header(bp->indexrdls)) {
+    logerr(bp, "Failed to write index RDLS header.\n");
+    rdlist_close(bp->indexrdls);
+    bp->indexrdls = NULL;
+  }
+}
+
+static void indexrdls_write_new_field(blind_params* bp, char* fieldname) {
+  if (rdlist_new_field(bp->indexrdls))
+    goto err;
+  if (fieldname && strlen(fieldname))
+    qfits_header_add(bp->indexrdls->fieldheader, "FIELDID", fieldname, "Name of this field", NULL);
+  if (rdlist_write_field_header(bp->indexrdls)) {
+    goto err;
+  }
+  return;
+ err:
+  logerr(bp, "Failed to write index RDLS field header.\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -542,21 +569,13 @@ int main(int argc, char *argv[]) {
 
 		if (bp->indexrdlsfname) {
 			bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
-			if (bp->indexrdls) {
-				boilerplate_add_fits_headers(bp->indexrdls->header);
-				fits_add_long_history(bp->indexrdls->header, "This \"indexrdls\" file was created by the program \"blind\"."
-									  "  It contains the RA/DEC of index objects that were found inside a solved field.");
-				qfits_header_add(bp->indexrdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
-				add_blind_params(bp, bp->indexrdls->header);
-				if (rdlist_write_header(bp->indexrdls)) {
-					logerr(bp, "Failed to write index RDLS header.\n");
-					rdlist_close(bp->indexrdls);
-					bp->indexrdls = NULL;
-				}
-			} else {
-				logerr(bp, "Failed to open index RDLS file %s for writing.\n",
-						bp->indexrdlsfname);
-			}
+                        if (!bp->indexrdls) {
+                          logerr(bp, "Failed to open index RDLS file %s for writing.\n",
+                                 bp->indexrdlsfname);
+                        }
+                        //if (!bp->indexrdls_solvedonly) {
+                        indexrdls_write_header(bp);
+                        //}
 		}
 
 		if (bp->startfname) {
@@ -959,6 +978,8 @@ static int read_parameters(blind_params* bp) {
 			bp->matchfname = strdup(nextword);
 		} else if (is_word(line, "indexrdls ", &nextword)) {
 			bp->indexrdlsfname = strdup(nextword);
+		} else if (is_word(line, "indexrdls_solvedonly", &nextword)) {
+			bp->indexrdls_solvedonly = TRUE;
 		} else if (is_word(line, "solved ", &nextword)) {
 			free(bp->solver.solved_in);
 			free(bp->solved_out);
@@ -1358,16 +1379,24 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 		MatchObj template;
 		qfits_header* fieldhdr = NULL;
 
-		if (bp->indexrdls) {
-			if (rdlist_write_new_field(bp->indexrdls)) {
-				logerr(bp, "Failed to write index RDLS field header.\n");
-			}
-		}
-
 		fieldnum = il_get(bp->fieldlist, fi);
 		if (fieldnum >= nfields) {
 			logerr(bp, "Field %i does not exist (nfields=%i).\n", fieldnum, nfields);
 			goto cleanup;
+		}
+
+                // Get the FIELDID
+		memset(&template, 0, sizeof(MatchObj));
+		fieldhdr = xylist_get_field_header(bp->xyls, fieldnum);
+		if (fieldhdr) {
+			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, bp->fieldid_key));
+			if (idstr)
+				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
+			qfits_header_destroy(fieldhdr);
+		}
+
+		if (bp->indexrdls && !bp->indexrdls_solvedonly) {
+                  indexrdls_write_new_field(bp, template.fieldname);
 		}
 
 		// Has the field already been solved?
@@ -1418,19 +1447,10 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 		sp->field_diag = hypot(sp->field_maxy - sp->field_miny,
 							   sp->field_maxx - sp->field_minx);
 
-		memset(&template, 0, sizeof(MatchObj));
 		template.fieldnum = fieldnum;
 		template.fieldfile = sp->fieldid;
 		template.indexid = bp->indexid;
 		template.healpix = bp->healpix;
-
-		fieldhdr = xylist_get_field_header(bp->xyls, fieldnum);
-		if (fieldhdr) {
-			char* idstr = qfits_pretty_string(qfits_header_getstr(fieldhdr, bp->fieldid_key));
-			if (idstr)
-				strncpy(template.fieldname, idstr, sizeof(template.fieldname)-1);
-			qfits_header_destroy(fieldhdr);
-		}
 
 		sp->numtries = 0;
 		sp->nummatches = 0;
@@ -1587,6 +1607,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 				int i;
 				double fieldcenter[3];
 				double fieldr2;
+
 				// find all the index stars that are inside the circle that bounds
 				// the field.
 				star_midpoint(fieldcenter, bestmo->sMin, bestmo->sMax);
@@ -1608,11 +1629,19 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 				for (i=0; i<2*nstars; i++)
 					radec[i] = rad2deg(radec[i]);
 
+                                if (bp->indexrdls_solvedonly) {
+                                  indexrdls_write_new_field(bp, template.fieldname);
+                                }
+
 				if (rdlist_write_entries(bp->indexrdls, radec, nstars)) {
 					logerr(bp, "Failed to write index RDLS entry.\n");
 				}
 
-
+                                if (bp->indexrdls_solvedonly) {
+                                  if (rdlist_fix_field(bp->indexrdls)) {
+                                    logerr(bp, "Failed to fix index RDLS field header.\n");
+                                  }
+                                }
 
 				// DEBUG - write out some extra stuff for Sam.
 				/*
@@ -1661,7 +1690,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 				  }
 				*/
 
-
 				free(radec);
 				kdtree_free_query(res);
 			}
@@ -1706,7 +1734,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 		last_wtime = wtime;
 
 	cleanup:
-		if (bp->indexrdls) {
+		if (bp->indexrdls && !bp->indexrdls_solvedonly) {
 			if (rdlist_fix_field(bp->indexrdls)) {
 				logerr(bp, "Failed to fix index RDLS field header.\n");
 			}
