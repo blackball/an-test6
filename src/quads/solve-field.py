@@ -78,9 +78,9 @@ def solve_field(xyfile):
         log('Failed to read FITS input file "%s".  Exception is:' % xylist)
         raise
         #die('Failed to read FITS input file %s' % xylist)
-    return solve_field(xyfile, fitsin)
+    return solve_fits(xyfile, fitsin)
 
-def solve_field(xyfile, xyfits):
+def solve_fits(xyfile, xyfits):
     #for v in indexes:
         #ql = v['quadl']
         #qu = v['quadu']
@@ -176,18 +176,18 @@ def solve_field(xyfile, xyfits):
         i+=1
 
 
-    log 'Image size: %d x %d' % (W, H)
-    log 'Parity: %d' % parity
-    log 'Poserr: %f' % poserr
+    log('Image size: %d x %d' % (W, H))
+    log('Parity: %d' % parity)
+    log('Poserr: %f' % poserr)
 
     if matchfile:
-        log 'Match file: ' + matchfile
+        log('Match file: ' + matchfile)
     if rdlsfile:
-        log 'RDLS file: ' + rdlsfile
+        log('RDLS file: ' + rdlsfile)
     if wcsfile:
-        log 'WCS file: ' + wcsfile
+        log('WCS file: ', wcsfile)
     if canfile:
-        log 'Cancel file: ' + canfile
+        log('Cancel file: ', canfile)
 
     #for s in scales:
     #    ful = s['ful']
