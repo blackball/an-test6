@@ -42,7 +42,7 @@
 #include "rdlist.h"
 #include "boilerplate.h"
 
-const char* OPTIONS = "hi:o:w:W:H:";
+const char* OPTIONS = "hi:o:w:W:H:s:";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -51,6 +51,7 @@ void print_help(char* progname) {
            "   -o <PNG output file>\n"
            "   (  [-i <PPM input file>]\n"
            "   OR [-W <width> -H <height>] )\n"
+		   "   [-s <scale>]: scale image coordinates by this value before plotting.\n"
            "\n", progname);
 }
 
@@ -154,11 +155,20 @@ int main(int argc, char** args) {
     char* infn = NULL;
     sip_t sip;
     FILE* fout;
+	double scale = 1.0;
 
     FILE* fconst = NULL;
     cairo_t* cairo;
     cairo_surface_t* target;
     double lw = 2.0;
+	// circle linewidth.
+    double cw = 2.0;
+
+	// leave a gap short of connecting the points.
+	double endgap = 5.0;
+	// circle radius.
+	double crad = endgap;
+
     uint32_t nstars;
     size_t mapsize;
     void* map;
@@ -175,6 +185,9 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+		case 's':
+			scale = atof(optarg);
+			break;
         case 'o':
             outfn = optarg;
             break;
@@ -210,7 +223,7 @@ int main(int argc, char** args) {
     }
 
     if (infn) {
-        int r;
+        int x,y;
         int R, C, format;
         pixval maxval;
         pixel* pixelrow;
@@ -232,20 +245,23 @@ int main(int argc, char** args) {
         H = R;
         img = malloc(4 * W * H);
 
-        for (r=0; r<R; r++) {
-            int c;
+        for (y=0; y<H; y++) {
             ppm_readppmrow(fin, pixelrow, C, maxval, format);
-            for (c=0; c<C; c++) {
+            for (x=0; x<W; x++) {
+				unsigned char a,r,g,b;
+				uint32_t* ipix;
                 pixel p;
                 if (maxval == 255)
-                    p = pixelrow[c];
+                    p = pixelrow[x];
                 else
-                    PPM_DEPTH(p, pixelrow[c], maxval, 255);
-                // Cairo ARGB
-                img[4 * (r * C + c) + 0] = 255;
-                img[4 * (r * C + c) + 1] = PPM_GETR(p);
-                img[4 * (r * C + c) + 2] = PPM_GETG(p);
-                img[4 * (r * C + c) + 3] = PPM_GETB(p);
+                    PPM_DEPTH(p, pixelrow[x], maxval, 255);
+                // Cairo uses packed-uint32 ARGB.
+				a = 255;
+				r = PPM_GETR(p);
+				g = PPM_GETG(p);
+				b = PPM_GETB(p);
+				ipix = (uint32_t*)(img + 4 * (y*W + x));
+				*ipix = (a << 24) | (r << 16) | (g << 8) | b;
             }
         }
         ppm_freerow(pixelrow);
@@ -268,7 +284,6 @@ int main(int argc, char** args) {
         fprintf(stderr, "Failed to parse SIP/TAN header from %s.\n", wcsfn);
         exit(-1);
     }
-
 
     srand(0);
 
@@ -315,10 +330,11 @@ int main(int argc, char** args) {
 
     target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
     cairo = cairo_create(target);
-    cairo_set_line_width(cairo, lw);
     cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
     cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
     cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+
+	cairo_scale(cairo, scale, scale);
 
     for (c=0;; c++) {
         char shortname[16];
@@ -345,10 +361,15 @@ int main(int argc, char** args) {
         g = (rand() % 128) + 127;
         b = (rand() % 128) + 127;
 
+		cairo_set_line_width(cairo, lw);
+
         for (i=0; i<nlines; i++) {
             int star1, star2;
             double ra1, dec1, ra2, dec2;
             double px1, px2, py1, py2;
+			double dx, dy;
+			double dist;
+			double gapfrac;
 
             if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
                 fprintf(stderr, "failed parse star1+star2\n");
@@ -365,18 +386,31 @@ int main(int argc, char** args) {
 
             cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
 
-            //draw_segmented_line(ra1, dec1, ra2, dec2, SEGS, cairo, args);
-
             if (!sip_radec2pixelxy(&sip, ra1, dec1, &px1, &py1) ||
                 !sip_radec2pixelxy(&sip, ra2, dec2, &px2, &py2))
                 continue;
 
-            cairo_move_to(cairo, px1, py1);
-            cairo_line_to(cairo, px2, py2);
+			dx = px2 - px1;
+			dy = py2 - py1;
+			dist = hypot(dx, dy);
+			gapfrac = endgap / dist;
+			cairo_move_to(cairo, px1 + dx*gapfrac, py1 + dy*gapfrac);
+			cairo_line_to(cairo, px1 + dx*(1.0-gapfrac), py1 + dy*(1.0-gapfrac));
 
             cairo_stroke(cairo);
         }
         fscanf(fconst, "\n");
+
+		// Draw circles around each star.
+		cairo_set_line_width(cairo, cw);
+        for (i=0; i<il_size(uniqstars); i++) {
+			double ra, dec, px, py;
+            hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
+            if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
+				continue;
+			cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
+			cairo_stroke(cairo);
+		}
 
         // find center of mass.
         cmass[0] = cmass[1] = cmass[2] = 0.0;
@@ -408,8 +442,8 @@ int main(int argc, char** args) {
     fclose(fconst);
     fclose(fhip);
 
-    // Cairo's uint32 ARGB32 format is a little different than what we need,
-    // which is uchar R,G,B,A.
+    // Cairo's uint32 ARGB32 format is a little different than what we need
+	// for PNG output: uchar R,G,B,A.
     for (i=0; i<(H*W); i++) {
         unsigned char r,g,b,a;
         uint32_t ipix = *((uint32_t*)(img + 4*i));
