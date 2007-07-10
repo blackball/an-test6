@@ -1190,18 +1190,22 @@ function render_overlay($mydir, $big, $jd) {
 		$fldobjs = max($flds);
 		loggit("field objs: " . implode(" ", $flds) . "\n");
 
-		for ($i=0; $i<4; $i++)
-			$fldor[$i] = "#row==" . (1+$flds[$i]);
-		$cmd = $tablist . " " . $xylist . "\"[" . implode("||", $fldor) . "][col X;Y]\" | tail -n 4";
-		$output = shell_exec($cmd);
-		$lines = explode("\n", $output);
-		for ($i=0; $i<4; $i++) {
-			if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
-				fail("failed to parse field objs coords: \"" . $lines[$i] . "\"");
+		// In just-verify mode the match file contains a "fake" match - no quad was used to generate
+		// the match - so the fieldobjs are all zero.
+		if ($fldobjs) {
+			for ($i=0; $i<4; $i++)
+				$fldor[$i] = "#row==" . (1+$flds[$i]);
+			$cmd = $tablist . " " . $xylist . "\"[" . implode("||", $fldor) . "][col X;Y]\" | tail -n 4";
+			$output = shell_exec($cmd);
+			$lines = explode("\n", $output);
+			for ($i=0; $i<4; $i++) {
+				if (sscanf($lines[$i], " %d %f %f ", $nil, $x, $y) != 3) {
+					fail("failed to parse field objs coords: \"" . $lines[$i] . "\"");
+				}
+				// Here's where we scale down the size of the quad:
+				$fldxy[] = $x / $shrink;
+				$fldxy[] = $y / $shrink;
 			}
-			// Here's where we scale down the size of the quad:
-			$fldxy[] = $x / $shrink;
-			$fldxy[] = $y / $shrink;
 		}
 
 		$prefix = $mydir;
@@ -1221,8 +1225,6 @@ function render_overlay($mydir, $big, $jd) {
 		$sumimg2 = $prefix . "sum2.ppm";
 		$dimimg = $prefix . "dim.ppm";
 
-		array_push($todelete, $quadimg);
-		array_push($todelete, $redquad);
 		array_push($todelete, $xypgm);
 		array_push($todelete, $fldxy1pgm);
 		array_push($todelete, $fldxy2pgm);
@@ -1232,16 +1234,20 @@ function render_overlay($mydir, $big, $jd) {
 		array_push($todelete, $sumimg);
 		array_push($todelete, $sumimg2);
 
-		$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
-		loggit("command: $cmd\n");
-		if ((system($cmd, $retval) === FALSE) || $retval) {
-			fail("plotquad failed: return value " . $retval);
-		}
+		if ($fldobjs) {
+			$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
+			loggit("command: $cmd\n");
+			if ((system($cmd, $retval) === FALSE) || $retval) {
+				fail("plotquad failed: return value " . $retval);
+			}
 
-		$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
-		loggit("command: $cmd\n");
-		if ((system($cmd, $retval) === FALSE) || $retval) {
-			fail("pgmtoppm (quad) failed.");
+			$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
+			loggit("command: $cmd\n");
+			if ((system($cmd, $retval) === FALSE) || $retval) {
+				fail("pgmtoppm (quad) failed.");
+			}
+			array_push($todelete, $quadimg);
+			array_push($todelete, $redquad);
 		}
 
 		// Plot index objects (green circles)
@@ -1251,8 +1257,7 @@ function render_overlay($mydir, $big, $jd) {
 			" -w 1.8 -r 4 > " . $xypgm;
 		// -s +
 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("plotxy2 failed. retval $retval, res \"" . $res . "\"");
 		}
 
@@ -1261,8 +1266,7 @@ function render_overlay($mydir, $big, $jd) {
 			" -N " . (1+$fldobjs) . " -r 6 " .
 			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 2 > " . $fldxy1pgm;
 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("plotxy2 (fld1) failed. retval $retval, res \"" . $res . "\"");
 		}
 
@@ -1271,87 +1275,80 @@ function render_overlay($mydir, $big, $jd) {
 			" -n " . (1+$fldobjs) . " -N 200 -w 2 -r 6 " .
 			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " > " . $fldxy2pgm;
 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("plotxy2 (fld2) failed. retval $retval, res \"" . $res . "\"");
 		}
 
 		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("pgmtoppm (xy) failed.");
 		}
 
 		$cmd = "pgmtoppm rgbi:1/0/0.2 " . $fldxy1pgm . " > " . $redimg2;
 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("pgmtoppm (fldxy1) failed.");
 		}
 
 		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg3;
 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("pgmtoppm (fldxy2) failed.");
 		}
 
 		if ($userimg) {
 			$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
 			loggit("Command: " . $cmd . "\n");
-			$res = system($cmd, $retval);
-			if ($res === FALSE || $retval) {
+			if ((system($cmd, $retval) === FALSE) || $retval) {
 				fail("ppmdim failed: " . $res);
 			}
 			array_push($todelete, $dimimg);
 
 			$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
 			loggit("Command: " . $cmd . "\n");
-			$res = system($cmd, $retval);
-			if ($res === FALSE || $retval) {
+			if ((system($cmd, $retval) === FALSE) || $retval) {
 				fail("pnmcomp failed.");
 			}
 		} else {
 			// xylist
 			$cmd = "cp " . $redimg . " " . $sumimg;
 			loggit("Command: " . $cmd . "\n");
-			$res = system($cmd, $retval);
-			if ($res === FALSE || $retval) {
+			if ((system($cmd, $retval) === FALSE) || $retval) {
 				fail("cp failed.");
 			}
 		}
 
 		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg2 . " " . $sumimg . " " . $sumimg2;
  		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("pnmcomp failed.");
 		}
 
 		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg3 . " " . $sumimg2 . " " . $sumimg;
  		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("pnmcomp failed.");
 		}
 
-		$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
- 		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
-			fail("pnmcomp (2) failed.");
-		}
+		if ($fldobjs) {
+			$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
+			loggit("Command: " . $cmd . "\n");
+			if ((system($cmd, $retval) === FALSE) || $retval) {
+				fail("pnmcomp (2) failed.");
+			}
+			$finalimg = $sumimg2;
+		} else
+			$finalimg = $sumimg;
 
-		$cmd = "pnmtopng " . $sumimg2 . " > ";
+		$cmd = "pnmtopng " . $finalimg . " > ";
 		if ($big) {
 			$cmd .= $bigoverlayfile;
 		} else {
 			$cmd .= $overlayfile;
 		}
  		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if ($res === FALSE || $retval) {
+		if ((system($cmd, $retval) === FALSE) || $retval) {
 			fail("pnmtopng failed.");
 		}
 
