@@ -98,7 +98,6 @@ struct blind_params {
 	char* indexname;
 	char *fieldfname, *matchfname, *donefname, *startfname, *logfname;
 	char *donescript;
-	char* rdlsfname;
 	char* indexrdlsfname;
 
 	// filename template (sprintf format with %i for field number)
@@ -153,7 +152,6 @@ struct blind_params {
 	xylist* xyls;
 	startree* starkd;
 	codetree* codekd;
-	rdlist* rdls;
 	rdlist* indexrdls;
 
 	int cpulimit;
@@ -542,24 +540,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (bp->rdlsfname) {
-			bp->rdls = rdlist_open_for_writing(bp->rdlsfname);
-			if (bp->rdls) {
-				boilerplate_add_fits_headers(bp->rdls->header);
-				fits_add_long_history(bp->rdls->header, "This \"rdls\" file was created by the program \"blind\"."
-									  "  It contains the RA/DEC of field objects after being transformed by the WCS.");
-				qfits_header_add(bp->rdls->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
-				add_blind_params(bp, bp->rdls->header);
-				if (rdlist_write_header(bp->rdls)) {
-					logerr(bp, "Failed to write RDLS header.\n");
-					rdlist_close(bp->rdls);
-					bp->rdls = NULL;
-				}
-			} else {
-				logerr(bp, "Failed to open RDLS file %s for writing.\n",
-						bp->rdlsfname);
-			}
-		}
 		if (bp->indexrdlsfname) {
 			bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
 			if (bp->indexrdls) {
@@ -839,13 +819,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (bp->rdls) {
-			if (rdlist_fix_header(bp->rdls) ||
-				rdlist_close(bp->rdls)) {
-				logerr(bp, "Failed to close RDLS file.\n");
-			}
-			bp->rdls = NULL;
-		}
 		if (bp->indexrdls) {
 			if (rdlist_fix_header(bp->indexrdls) ||
 				rdlist_close(bp->indexrdls)) {
@@ -908,7 +881,6 @@ int main(int argc, char *argv[]) {
 		free(bp->solvedserver);
 		free(sp->cancelfname);
 		free(bp->matchfname);
-		free(bp->rdlsfname);
 		free(bp->indexrdlsfname);
 		free(bp->xcolname);
 		free(bp->ycolname);
@@ -985,8 +957,6 @@ static int read_parameters(blind_params* bp) {
 			bp->nindex_tosolve = atoi(nextword);
 		} else if (is_word(line, "match ", &nextword)) {
 			bp->matchfname = strdup(nextword);
-		} else if (is_word(line, "rdls ", &nextword)) {
-			bp->rdlsfname = strdup(nextword);
 		} else if (is_word(line, "indexrdls ", &nextword)) {
 			bp->indexrdlsfname = strdup(nextword);
 		} else if (is_word(line, "solved ", &nextword)) {
@@ -1388,11 +1358,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 		MatchObj template;
 		qfits_header* fieldhdr = NULL;
 
-		if (bp->rdls) {
-			if (rdlist_write_new_field(bp->rdls)) {
-				logerr(bp, "Failed to write RDLS field header.\n");
-			}
-		}
 		if (bp->indexrdls) {
 			if (rdlist_write_new_field(bp->indexrdls)) {
 				logerr(bp, "Failed to write index RDLS field header.\n");
@@ -1614,26 +1579,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 				fclose(fout);
 			}
 
-			if (bp->rdls) {
-				double* radec = malloc(sp->nfield * 2 * sizeof(double));
-				int i;
-				if (sip) {
-					for (i=0; i<sp->nfield; i++)
-						sip_pixelxy2radec(sip,
-										  sp->field[i*2], sp->field[i*2+1],
-										  radec+i*2, radec+i*2+1);
-				} else {
-					for (i=0; i<sp->nfield; i++)
-						tan_pixelxy2radec(&(bestmo->wcstan),
-										  sp->field[i*2], sp->field[i*2+1],
-										  radec+i*2, radec+i*2+1);
-				}
-				if (rdlist_write_entries(bp->rdls, radec, sp->nfield)) {
-					logerr(bp, "Failed to write RDLS entry.\n");
-				}
-				free(radec);
-			}
-
 			if (bp->indexrdls) {
 				kdtree_qres_t* res = NULL;
 				double* starxyz;
@@ -1761,11 +1706,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 		last_wtime = wtime;
 
 	cleanup:
-		if (bp->rdls) {
-			if (rdlist_fix_field(bp->rdls)) {
-				logerr(bp, "Failed to fix RDLS field header.\n");
-			}
-		}
 		if (bp->indexrdls) {
 			if (rdlist_fix_field(bp->indexrdls)) {
 				logerr(bp, "Failed to fix index RDLS field header.\n");
