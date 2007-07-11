@@ -44,7 +44,7 @@
 #include "ngc2000.h"
 #include "mathutil.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:N";
+const char* OPTIONS = "hi:o:w:W:H:s:NC";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -54,7 +54,8 @@ void print_help(char* progname) {
            "   (  [-i <PPM input file>]\n"
            "   OR [-W <width> -H <height>] )\n"
 		   "   [-s <scale>]: scale image coordinates by this value before plotting.\n"
-		   "   [-N]: plot NGC objects.\n"
+		   "   [-N]: plot NGC objects\n"
+		   "   [-C]: plot constellations\n"
            "\n", progname);
 }
 
@@ -187,7 +188,7 @@ int main(int argc, char** args) {
     qfits_header* hdr;
     int i;
 
-	bool NGC = FALSE;
+	bool NGC = FALSE, constell = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -196,6 +197,9 @@ int main(int argc, char** args) {
             exit(0);
 		case 'N':
 			NGC = TRUE;
+			break;
+		case 'C':
+			constell = TRUE;
 			break;
 		case 's':
 			scale = atof(optarg);
@@ -233,6 +237,12 @@ int main(int argc, char** args) {
         print_help(args[0]);
         exit(-1);
     }
+
+	if (!(NGC || constell)) {
+		fprintf(stderr, "Neither constellations nor NGC overlays selected!\n");
+        print_help(args[0]);
+		exit(-1);
+	}
 
 	// adjust for scaling...
 	lw /= scale;
@@ -307,160 +317,158 @@ int main(int argc, char** args) {
 
     srand(0);
 
-    fprintf(stderr, "render_constellation: Starting.\n");
-
-    for (i=0; i<sizeof(const_dirs)/sizeof(char*); i++) {
-        char fn[256];
-        snprintf(fn, sizeof(fn), "%s/%s", const_dirs[i], constfn);
-        fprintf(stderr, "render_constellation: Trying file: %s\n", fn);
-        fconst = fopen(fn, "rb");
-        if (fconst)
-            break;
-    }
-    if (!fconst) {
-        fprintf(stderr, "render_constellation: couldn't open any constellation files.\n");
-        return -1;
-    }
-
-    for (i=0; i<sizeof(hip_dirs)/sizeof(char*); i++) {
-        char fn[256];
-        snprintf(fn, sizeof(fn), "%s/%s", hip_dirs[i], hipparcos_fn);
-        fprintf(stderr, "render_constellation: Trying hip file: %s\n", fn);
-        fhip = fopen(fn, "rb");
-        if (fhip)
-            break;
-    }
-    if (!fhip) {
-        fprintf(stderr, "render_constellation: unhip\n");
-        return -1;
-    }
-
-    // first 32-bit int: 
-    if (fread(&nstars, 4, 1, fhip) != 1) {
-        fprintf(stderr, "render_constellation: failed to read nstars.\n");
-        return -1;
-    }
-    swap_32(&nstars);
-    fprintf(stderr, "render_constellation: Found %i Hipparcos stars\n", nstars);
-
-    mapsize = nstars * HIP_SIZE + HIP_OFFSET;
-    map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
-    hip = ((unsigned char*)map) + HIP_OFFSET;
-    //fprintf(stderr, "mapsize: %i\n", mapsize);
-
-    target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
-    cairo = cairo_create(target);
-    cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
-    cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
-    cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-
+	target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
+	cairo = cairo_create(target);
+	cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
+	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
+	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 	cairo_scale(cairo, scale, scale);
+	cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+	cairo_set_font_size(cairo, fontsize);
 
-    for (c=0;; c++) {
-        char shortname[16];
-        int nlines;
-        int i;
-        il* uniqstars = il_new(16);
-        double cmass[3];
-        double ra,dec;
-        double px,py;
-        unsigned char r,g,b;
-
-        if (feof(fconst))
-            break;
-
-        if (fscanf(fconst, "%s %d ", shortname, &nlines) != 2) {
-            fprintf(stderr, "failed parse name+nlines (constellation %i)\n", c);
-            fprintf(stderr, "file offset: %i (%x)\n",
-                    (int)ftello(fconst), (int)ftello(fconst));
-            return -1;
-        }
-        //fprintf(stderr, "Name: %s.  Nlines %i.\n", shortname, nlines);
-
-        r = (rand() % 128) + 127;
-        g = (rand() % 128) + 127;
-        b = (rand() % 128) + 127;
-
-		cairo_set_line_width(cairo, lw);
-
-        for (i=0; i<nlines; i++) {
-            int star1, star2;
-            double ra1, dec1, ra2, dec2;
-            double px1, px2, py1, py2;
-			double dx, dy;
-			double dist;
-			double gapfrac;
-
-            if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
-                fprintf(stderr, "failed parse star1+star2\n");
-                return -1;
-            }
-
-            il_insert_unique_ascending(uniqstars, star1);
-            il_insert_unique_ascending(uniqstars, star2);
-
-            // RA,DEC are the first two elements: 32-bit floats
-            // (little-endian)
-            hip_get_radec(hip, star1, &ra1, &dec1);
-            hip_get_radec(hip, star2, &ra2, &dec2);
-
-            cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
-
-            if (!sip_radec2pixelxy(&sip, ra1, dec1, &px1, &py1) ||
-                !sip_radec2pixelxy(&sip, ra2, dec2, &px2, &py2))
-                continue;
-
-			dx = px2 - px1;
-			dy = py2 - py1;
-			dist = hypot(dx, dy);
-			gapfrac = endgap / dist;
-			cairo_move_to(cairo, px1 + dx*gapfrac, py1 + dy*gapfrac);
-			cairo_line_to(cairo, px1 + dx*(1.0-gapfrac), py1 + dy*(1.0-gapfrac));
-
-            cairo_stroke(cairo);
-        }
-        fscanf(fconst, "\n");
-
-		// Draw circles around each star.
-		cairo_set_line_width(cairo, cw);
-        for (i=0; i<il_size(uniqstars); i++) {
-			double ra, dec, px, py;
-            hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
-            if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
-				continue;
-			cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
-			cairo_stroke(cairo);
+	if (constell) {
+		for (i=0; i<sizeof(const_dirs)/sizeof(char*); i++) {
+			char fn[256];
+			snprintf(fn, sizeof(fn), "%s/%s", const_dirs[i], constfn);
+			fprintf(stderr, "render_constellation: Trying file: %s\n", fn);
+			fconst = fopen(fn, "rb");
+			if (fconst)
+				break;
+		}
+		if (!fconst) {
+			fprintf(stderr, "render_constellation: couldn't open any constellation files.\n");
+			return -1;
 		}
 
-        // find center of mass.
-        cmass[0] = cmass[1] = cmass[2] = 0.0;
-        for (i=0; i<il_size(uniqstars); i++) {
-            double xyz[3];
-            hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
-            radecdeg2xyzarr(ra, dec, xyz);
-            cmass[0] += xyz[0];
-            cmass[1] += xyz[1];
-            cmass[2] += xyz[2];
-        }
-        cmass[0] /= il_size(uniqstars);
-        cmass[1] /= il_size(uniqstars);
-        cmass[2] /= il_size(uniqstars);
-        xyzarr2radecdeg(cmass, &ra, &dec);
+		for (i=0; i<sizeof(hip_dirs)/sizeof(char*); i++) {
+			char fn[256];
+			snprintf(fn, sizeof(fn), "%s/%s", hip_dirs[i], hipparcos_fn);
+			fprintf(stderr, "render_constellation: Trying hip file: %s\n", fn);
+			fhip = fopen(fn, "rb");
+			if (fhip)
+				break;
+		}
+		if (!fhip) {
+			fprintf(stderr, "render_constellation: unhip\n");
+			return -1;
+		}
 
-        if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
-            continue;
+		// first 32-bit int: 
+		if (fread(&nstars, 4, 1, fhip) != 1) {
+			fprintf(stderr, "render_constellation: failed to read nstars.\n");
+			return -1;
+		}
+		swap_32(&nstars);
+		fprintf(stderr, "render_constellation: Found %i Hipparcos stars\n", nstars);
 
-        cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-        cairo_set_font_size(cairo, fontsize);
-        cairo_move_to(cairo, px, py);
-        cairo_show_text(cairo, shortname);
-    }
-    fprintf(stderr, "render_constellations: Read %i constellations.\n", c);
+		mapsize = nstars * HIP_SIZE + HIP_OFFSET;
+		map = mmap(0, mapsize, PROT_READ, MAP_SHARED, fileno(fhip), 0);
+		hip = ((unsigned char*)map) + HIP_OFFSET;
+		//fprintf(stderr, "mapsize: %i\n", mapsize);
 
-    munmap(map, mapsize);
+		for (c=0;; c++) {
+			char shortname[16];
+			int nlines;
+			int i;
+			il* uniqstars = il_new(16);
+			double cmass[3];
+			double ra,dec;
+			double px,py;
+			unsigned char r,g,b;
 
-    fclose(fconst);
-    fclose(fhip);
+			if (feof(fconst))
+				break;
+
+			if (fscanf(fconst, "%s %d ", shortname, &nlines) != 2) {
+				fprintf(stderr, "failed parse name+nlines (constellation %i)\n", c);
+				fprintf(stderr, "file offset: %i (%x)\n",
+						(int)ftello(fconst), (int)ftello(fconst));
+				return -1;
+			}
+			//fprintf(stderr, "Name: %s.  Nlines %i.\n", shortname, nlines);
+
+			r = (rand() % 128) + 127;
+			g = (rand() % 128) + 127;
+			b = (rand() % 128) + 127;
+
+			cairo_set_line_width(cairo, lw);
+
+			for (i=0; i<nlines; i++) {
+				int star1, star2;
+				double ra1, dec1, ra2, dec2;
+				double px1, px2, py1, py2;
+				double dx, dy;
+				double dist;
+				double gapfrac;
+
+				if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
+					fprintf(stderr, "failed parse star1+star2\n");
+					return -1;
+				}
+
+				il_insert_unique_ascending(uniqstars, star1);
+				il_insert_unique_ascending(uniqstars, star2);
+
+				// RA,DEC are the first two elements: 32-bit floats
+				// (little-endian)
+				hip_get_radec(hip, star1, &ra1, &dec1);
+				hip_get_radec(hip, star2, &ra2, &dec2);
+
+				cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
+
+				if (!sip_radec2pixelxy(&sip, ra1, dec1, &px1, &py1) ||
+					!sip_radec2pixelxy(&sip, ra2, dec2, &px2, &py2))
+					continue;
+
+				dx = px2 - px1;
+				dy = py2 - py1;
+				dist = hypot(dx, dy);
+				gapfrac = endgap / dist;
+				cairo_move_to(cairo, px1 + dx*gapfrac, py1 + dy*gapfrac);
+				cairo_line_to(cairo, px1 + dx*(1.0-gapfrac), py1 + dy*(1.0-gapfrac));
+				cairo_stroke(cairo);
+			}
+			fscanf(fconst, "\n");
+
+			// Draw circles around each star.
+			cairo_set_line_width(cairo, cw);
+			for (i=0; i<il_size(uniqstars); i++) {
+				double ra, dec, px, py;
+				hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
+				if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
+					continue;
+				cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
+				cairo_stroke(cairo);
+			}
+
+			// find center of mass and draw the label there.
+			cmass[0] = cmass[1] = cmass[2] = 0.0;
+			for (i=0; i<il_size(uniqstars); i++) {
+				double xyz[3];
+				hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
+				radecdeg2xyzarr(ra, dec, xyz);
+				cmass[0] += xyz[0];
+				cmass[1] += xyz[1];
+				cmass[2] += xyz[2];
+			}
+			cmass[0] /= il_size(uniqstars);
+			cmass[1] /= il_size(uniqstars);
+			cmass[2] /= il_size(uniqstars);
+			xyzarr2radecdeg(cmass, &ra, &dec);
+
+			if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
+				continue;
+
+			cairo_move_to(cairo, px, py);
+			cairo_show_text(cairo, shortname);
+		}
+		fprintf(stderr, "render_constellations: Read %i constellations.\n", c);
+
+		munmap(map, mapsize);
+
+		fclose(fconst);
+		fclose(fhip);
+	}
 
 	if (NGC) {
 		int i, N;
@@ -468,6 +476,8 @@ int main(int argc, char** args) {
 		double imsize;
 		double dy;
 		cairo_font_extents_t extents;
+
+		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 
 		cairo_font_extents(cairo, &extents);
 		dy = extents.ascent * 0.5;
@@ -507,7 +517,7 @@ int main(int argc, char** args) {
 			if (names) {
 				int n;
 				for (n=0; n<pl_size(names); n++) {
-					snprintf(buf, len, " / %s", (char*)pl_get(names, n));
+					nwritten = snprintf(buf, len, " / %s", (char*)pl_get(names, n));
 					buf += nwritten;
 					len -= nwritten;
 				}

@@ -92,7 +92,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 OLDEXECS := plotquads rawstartree checkquads
 #whynot
 
-CAIROEXECS := plotquad plotxy2
+CAIROEXECS := plotquad plotxy2 plot_constellations
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \
 	codekd.o idfile.o \
