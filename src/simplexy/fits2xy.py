@@ -59,25 +59,51 @@ maxnpeaks = 10000
 maxsize = 1000
 halfbox= 100
 
-def extract(infile):
-    fitsfile = pyfits.open(infile)
+def source_extract(image_data, srcext=None):
+
+
+    x,y,flux,sigma = simplexy(image_data, dpsf=dpsf, plim=plim,
+                              dlim=dlim, saddle=saddle, maxper=maxper,
+                              maxnpeaks=maxnpeaks, maxsize=maxsize,
+                              halfbox=halfbox)
+
+    print 'simplexy: shapes',x.shape, y.shape
+
+    cx = pyfits.Column(name='X', format='E', array=x, unit='pix')
+    cy = pyfits.Column(name='Y', format='E', array=y, unit='pix')
+    cflux = pyfits.Column(name='FLUX', format='E', array=flux)
+
+    tbhdu = pyfits.new_table([cx, cy, cflux])
+    h = tbhdu.header
+    h.add_comment('Parameters used in source extraction')
+    h.update('dpsf',     dpsf, 'Gaussian psf width')
+    h.update('plim',     plim, 'Significance to keep')
+    h.update('dlim',     dlim, 'Closest two peaks can be')
+    h.update('saddle',   saddle, 'Saddle in difference (in sig)')
+    h.update('maxper',   maxper, 'Max num of peaks per object')
+    h.update('maxpeaks', maxnpeaks, 'Max num of peaks total')
+    h.update('maxsize',  maxsize, 'Max size of extended objects')
+    h.update('halfbox',  halfbox, 'Half-size of sliding sky window')
+    if srcext != None:
+        h.update('srcext', i, 'Extension number in src image')
+    h.update('estsigma', sigma, 'Estimated source image variance')
+    h.add_comment('The X and Y points are specified assuming 1,1 is ')
+    h.add_comment('the center of the leftmost bottom pixel of the ')
+    h.add_comment('image in accordance with the FITS standard.')
+    h.add_comment('Extracted by fits2xy.py')
+    h.add_comment('on %s %s' % (time.ctime(), time.tzname[0]))
+    cards = tbhdu.header.ascardlist()
+    cards['TTYPE1'].comment = 'X coordinate'
+    cards['TTYPE2'].comment = 'Y coordinate'
+    cards['TTYPE3'].comment = 'Flux of source'
+
+    return tbhdu
+
+def extract(fitsfile):
     outfile = pyfits.HDUList()
 
     # Make empty HDU; no image
     outfile.append(pyfits.PrimaryHDU()) 
-
-    outfile[0].header.update('srcfn', infile, 'Source image')
-    outfile[0].header.add_comment('Parameters used in source extraction')
-    outfile[0].header.update('dpsf', dpsf, 'Gaussian psf width')
-    outfile[0].header.update('plim', plim, 'Significance to keep')
-    outfile[0].header.update('dlim', dlim, 'Closest two peaks can be')
-    outfile[0].header.update('saddle', saddle, 'Saddle in difference (in sig)')
-    outfile[0].header.update('maxper', maxper, 'Max num of peaks per object')
-    outfile[0].header.update('maxpeaks', maxnpeaks, 'Max num of peaks total')
-    outfile[0].header.update('maxsize', maxsize, 'Max size of extended objects')
-    outfile[0].header.update('halfbox', halfbox, 'Half-size of sliding sky window')
-    outfile[0].header.add_comment('Extracted by fits2xy.py')
-    outfile[0].header.add_comment('on %s %s' % (time.ctime(), time.tzname[0]))
 
     for i, hdu in enumerate(fitsfile):
         if (i == 0 and hdu.data != None) or isinstance(hdu, pyfits.ImageHDU):
@@ -87,42 +113,25 @@ def extract(infile):
             else:
                 print 'Image: Extension HDU (number %s) %sx%s' % tuple((i,)+hdu.data.shape)
 
-            x,y,flux,sigma = simplexy(hdu.data, dpsf=dpsf, plim=plim,
-                                      dlim=dlim, saddle=saddle, maxper=maxper,
-                                      maxnpeaks=maxnpeaks, maxsize=maxsize,
-                                      halfbox=halfbox)
-
-            cx = pyfits.Column(name='X', format='E', array=x, unit='pix')
-            cy = pyfits.Column(name='Y', format='E', array=y, unit='pix')
-            cflux = pyfits.Column(name='FLUX', format='E', array=flux)
-            tbhdu = pyfits.new_table([cx, cy, cflux])
-            tbhdu.header.update('srcext', i, 'Extension number in src image')
-            tbhdu.header.update('estsigma', sigma, 'Estimated source image variance')
-            tbhdu.header.add_comment(
-                    'The X and Y points are specified assuming 1,1 is '
-                    'the center of the leftmost bottom pixel of the '
-                    'image in accordance with the FITS standard.')
-            cards = tbhdu.header.ascardlist()
-            cards['TTYPE1'].comment = 'X coordinate'
-            cards['TTYPE2'].comment = 'Y coordinate'
-            cards['TTYPE3'].comment = 'Flux of source'
+            tbhdu = source_extract(image_data)
 
             outfile.append(tbhdu)
 
-    newfile = infile.replace('.fits','.xy.fits')
-    try:
-        outfile.writeto(newfile)
-    except IOError:
-        # File probably exists
-        print 'File %s appears to already exist; deleting!' % newfile
-        import os
-        os.unlink(newfile)
-        outfile.writeto(newfile)
-
-    return x,y,flux,sigma
+    return x,y,flux,sigma, outfile
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print "Usage: fits2xy.py image.fits"
     else:
-        x,y,flux,sigma = extract(sys.argv[1])
+        infile = sys.argv[1]
+        fitsfile = pyfits.open(infile)
+        x,y,flux,sigma, outfile = extract(fitsfile)
+        newfile = infile.replace('.fits','.xy.fits')
+        try:
+            outfile.writeto(newfile)
+        except IOError:
+            # File probably exists
+            print 'File %s appears to already exist; deleting!' % newfile
+            import os
+            os.unlink(newfile)
+            outfile.writeto(newfile)

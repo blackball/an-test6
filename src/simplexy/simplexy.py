@@ -78,6 +78,7 @@ simplexy_fn.argtypes = [POINTER(c_float),
                         c_int,         # max peaks per object
                         c_int,         # max peaks total
                         c_int,         # max extended source size
+                        c_int,         # size for sliding sky estimation box
                         POINTER(c_float),     # sigma  OUT
                         POINTER(c_float),
                         POINTER(c_float),
@@ -99,12 +100,11 @@ def simplexy(image, dpsf=1.0, plim=8.0, dlim=1.0, saddle=3.0, maxper=1000,
 
 #    print repr(image)
     imf32 = image.astype(numpy.float32)
-    success = simplexy_fn(
-                          imf32.ctypes.data_as(POINTER(c_float)),
+    success = simplexy_fn(imf32.ctypes.data_as(POINTER(c_float)),
                           image.shape[1],
                           image.shape[0],
-                          dpsf, plim, dlim, saddle, maxper, maxnpeaks,
-                          maxsize, halfbox,
+                          dpsf, plim, dlim, saddle,
+                          maxper, maxnpeaks, maxsize, halfbox,
                           byref(sigma),
                           x.ctypes.data_as(POINTER(c_float)),
                           y.ctypes.data_as(POINTER(c_float)),

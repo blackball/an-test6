@@ -46,16 +46,11 @@ codetol = 0.01
 distractors = 0.25
 solved = "solved"
 
-
-
-
-paritymap = { 'POS' : 0, 'NEG' : 1, 'BOTH' : 2 }
-
 def log(*x):
-    print >> sys.stderr, 'solve-field:', ' '.join(x)
+    print >> sys.stderr, 'solve-field:', ' '.join(str(y) for y in x)
 
 def die(*x):
-    print >> sys.stderr, 'solve-field:', ' '.join(x)
+    print >> sys.stderr, 'solve-field:', ' '.join(str(y) for y in x)
     sys.exit(-1)
 
 def do_command(cmd):
@@ -77,18 +72,10 @@ def solve_field(xyfile):
     except IOError:
         log('Failed to read FITS input file "%s".  Exception is:' % xylist)
         raise
-        #die('Failed to read FITS input file %s' % xylist)
     return solve_fits(xyfile, fitsin)
 
-def solve_fits(xyfile, xyfits):
-    #for v in indexes:
-        #ql = v['quadl']
-        #qu = v['quadu']
-        #paths = v['paths']
-        #print ql, qu
-        #for p in paths:
-        #print p
-
+# FIXME UNFINISHED
+def extract_solver_parameters(xyfile, xyfits):
     # get from input file:
     # -image W, H
     # -scale ranges
@@ -107,32 +94,21 @@ def solve_fits(xyfile, xyfits):
     # First FITS extension...
     hdr = xyfits[1].header
     hdrcards = hdr.ascardlist()
-    #log hdrcards
-    #log
+    # FIXME log hdrcards
     
-    W = hdr['IMAGEW']
-    H = hdr['IMAGEH']
+    width = hdr['IMAGEW']
+    height = hdr['IMAGEH']
 
-    paritystr = get_val_nothrow(hdr, 'ANPARITY')
-    if (not paritystr) or (not paritystr in paritymap):
-        paritystr = 'BOTH'
-    parity = paritymap[paritystr]
-
-    poserr = get_val_nothrow(hdr, 'ANPOSERR')
-    if (not poserr) or (float(poserr) <= 0):
+    parity = dict(POS=0, NEG=1, BOTH=2)[hdr.get('ANPARITY', 'BOTH')]
+    poserr = float(hdr.get('ANPOSERR', 1.0))
+    if poserr <= 0:
         poserr = 1.0
-
-    matchfile = get_val_nothrow(hdr, 'ANMATCH')
-    rdlsfile  = get_val_nothrow(hdr, 'ANRDLS')
-    wcsfile   = get_val_nothrow(hdr, 'ANWCS')
-    canfile   = get_val_nothrow(hdr, 'ANCANCEL')
-
-    tweak     = get_val_nothrow(hdr, 'ANTWEAK')
-    dotweak = (tweak == 'T')
-    if dotweak:
-        tweako    = get_val_nothrow(hdr, 'ANTWEAKO')
-        if tweako:
-            tweakorder = int(tweako)
+    matchfile  = hdr.get('ANMATCH')
+    rdlsfile   = hdr.get('ANRDLS')
+    wcsfile    = hdr.get('ANWCS')
+    canfile    = hdr.get('ANCANCEL')
+    tweak      = bool(hdr.get('ANTWEAK'))
+    tweakorder = int(hdr.get('ANTWEAKO', 2))
 
     scales = []
     i = 0
@@ -140,119 +116,109 @@ def solve_fits(xyfile, xyfits):
         keyl = 'ANAPPL%d' % i
         keyu = 'ANAPPU%d' % i
         #log keyl, keyu
-        ful = get_val_nothrow(hdr, keyl)
-        fuu = get_val_nothrow(hdr, keyu)
-        if not(ful and fuu):
+
+        ful = hdr.get(keyl)
+        fuu = hdr.get(keyu)
+        if not ful or not fuu:
             break
-        #log ful, fuu
+
         ful = float(ful)
         fuu = float(fuu)
-        #log ful, fuu
-        if (ful == 0 or fuu == 0):
+        if ful == 0 or fuu == 0:
             break
+
+        #log ful, fuu
+
         # Estimate size of quads we could find:
-        fmax = 1.0 * max(W, H) * fuu / 60.0;
-        fmin = 0.1 * min(W, H) * ful / 60.0;
+        fmax = 1.0 * max(width, height) * fuu / 60.0;
+        fmin = 0.1 * min(width, height) * ful / 60.0;
 
         # Collect indices with overlapping scales:
         inds = []
         for v in indexes:
             ql = v['quadl']
             qu = v['quadu']
-            if (not((fmin > qu) or (fmax < ql))):
+            if fmin <= qu and ql >= fmax:
                 inds += v['paths']
 
         if len(inds) == 0:
             # bigger than the biggest?
             v = indexes[0]
-            if (fmin > v['quadu']):
+            if fmin > v['quadu']:
                 inds += v['paths']
             # smaller than the smallest?
-            v = indexes[len(indexes)-1];
-            if (fmax < v['quadl']):
+            v = indexes[-1]
+            if fmax < v['quadl']:
                 inds += v['paths']
 
-        scales.append({ 'ful':ful, 'fuu':fuu, 'indices':inds})
-        i+=1
+        scales.append((ful, fuu, inds))
+        i += 1
 
+# FIXME UNFINISHED
+def make_blind_input_file(width, height, parity, poserr, codetol, distractors,
+                          xyfile, matchfile, rdlsfile, wcsfile, canfile,
+                          totaltime, totalcpu,
+                          solved, depths)
 
-    log('Image size: %d x %d' % (W, H))
-    log('Parity: %d' % parity)
-    log('Poserr: %f' % poserr)
-
+    log('Image size: %d x %d' % (width, height))
+    log('Parity:', parity)
+    log('Poserr:', poserr)
     if matchfile:
-        log('Match file: ' + matchfile)
+        log('Match file:', matchfile)
     if rdlsfile:
-        log('RDLS file: ' + rdlsfile)
+        log('RDLS file:', rdlsfile)
     if wcsfile:
-        log('WCS file: ', wcsfile)
+        log('WCS file:', wcsfile)
     if canfile:
-        log('Cancel file: ', canfile)
+        log('Cancel file:', canfile)
 
-    #for s in scales:
-    #    ful = s['ful']
-    #    fuu = s['fuu']
-    #    inds = s['indices']
-    #    log 'Scale: %f to %f' % (ful, fuu)
-    #    for i in inds:
-    #        log '  ', i
+    input_file = []
+    def blind_add(*x)
+        input_file.append(' '.join((str(y) for y in x)))
 
-    instr = "total_timelimit " + str(totaltime) + "\n" + \
-            "total_cpulimit " + str(totalcpu) + "\n\n"
+    blind_add('total_timelimit', totaltime)
+    blind_add('total_cpulimit', totalcpu)
+    blind_add()
     stripe = 0
     for d in range(len(depths) - 1):
-        startd = depths[d]
-        endd = depths[d+1]
-
-        for s in scales:
-            ful = s['ful']
-            fuu = s['fuu']
-            inds = s['indices']
-
+        for ful, fuu, inds in scales:
             for i in inds:
-                instr += "index " + i + "\n"
-
-            instr += "field " + xyfile + "\n" + \
-                     "fieldw " + str(W) + "\n" + \
-                     "fieldh " + str(H) + "\n" + \
-                     "sdepth " + str(startd) + "\n" + \
-                     "depth " + str(endd) + "\n" + \
-                     "parity " + str(parity) + "\n" + \
-                     "fieldunits_lower " + str(ful) + "\n" + \
-                     "fieldunits_upper " + str(fuu) + "\n" + \
-                     "tol " + str(codetol) + "\n" + \
-                     "distractors " + str(distractors) + "\n" + \
-                     "verify_pix " + str(poserr) + "\n" + \
-                     "ratio_toprint 1e3\n" + \
-                     "ratio_tokeep 1e9\n" + \
-                     "ratio_tosolve 1e9\n" + \
-                     "ratio_tobail 1e-100\n"
-
-            if dotweak:
-                instr += "tweak\n"
-                if tweakorder:
-                    instr += "tweak_aborder " + str(tweakorder) + "\n" + \
-                             "tweak_abporder " + str(tweakorder) + "\n" + \
-                             "tweak_skipshift" + "\n"
-
+                blind_add('index', i)
+            blind_add('field',             xyfile)
+            blind_add('fieldw',            width)
+            blind_add('fieldh',            height)
+            blind_add('sdepth',            depths[d])
+            blind_add('depth',             depths[d+1])
+            blind_add('parity',            parity)
+            blind_add('fieldunits_lower',  ful)
+            blind_add('fieldunits_upper',  fuu)
+            blind_add('tol',               codetol)
+            blind_add('distractors',       distractors)
+            blind_add('verify_pix',        poserr)
+            blind_add('ratio_toprint       1e3')
+            blind_add('ratio_tokeep        1e9')
+            blind_add('ratio_tosolve       1e9')
+            blind_add('ratio_tobail        1e-100')
+            if tweak:
+                blind_add('tweak')
+                blind_add('tweak_aborder',  tweakorder)
+                blind_add('tweak_abporder', tweakorder)
+                blind_add('tweak_skipshift')
             if matchfile:
-                instr += "match " + matchfile + "-" + str(stripe) + "\n"
+                blind_add('match', '%s-%s'%(matchfile, stripe))
             if rdlsfile:
-                #instr += "indexrdls " + rdlsfile + "-" + str(stripe) + "\n"
-                instr += "indexrdls " + rdlsfile + "\n" + \
-                         "indexrdls_solvedonly" + "\n"
-                
+                blind_add('indexrdls', rdlsfile)
+                blind_add('indexrdls_solvedonly')
             if wcsfile:
-                instr += "wcs " + wcsfile + "-" + str(stripe) + "\n"
+                blind_add('wcs', '%s-%s'%(wcsfile, stripe))
             if canfile:
-                instr += "cancel " + canfile + "\n"
-
-            instr += "solved " + solved + "\n"
-            instr += "fields 0" + "\n"
-            instr += "run" + "\n\n"
+                blind_add('cancel', canfile)
+            blind_add('solved', solved)
+            blind_add('fields 0')
+            blind_add('run')
             stripe += 1
 
-    print instr
+    return '\n'.join(input_file)
 
     # run blind
 
