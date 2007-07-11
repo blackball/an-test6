@@ -826,6 +826,9 @@ int main(int argc, char *argv[]) {
 			free_fn(quadfname);
 			free_fn(idfname);
 			free_fn(startreefname);
+
+                        if (sp->cancelled)
+                            break;
 		}
 
 		if (bp->solvedserver) {
