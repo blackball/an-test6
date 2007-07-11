@@ -1,6 +1,6 @@
 /*
   This file is part of the Astrometry.net suite.
-  Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+  Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
 
   The Astrometry.net suite is free software; you can redistribute
   it and/or modify it under the terms of the GNU General Public License
@@ -479,6 +479,8 @@ int main(int argc, char** args) {
 		double dy;
 		cairo_font_extents_t extents;
 
+		//il *ngcids, *icids;
+
 		cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
 
 		cairo_font_extents(cairo, &extents);
@@ -490,6 +492,9 @@ int main(int argc, char** args) {
 		// arcmin
 		imsize = imscale * imin(W, H) / 60.0;
 		N = ngc_num_entries();
+
+		//ngcids = il_new(16);
+		//icids = il_new(16);
 		for (i=0; i<N; i++) {
 			ngc_entry* ngc = ngc_get_entry(i);
 			double px, py;
@@ -503,7 +508,7 @@ int main(int argc, char** args) {
 
 			if (!ngc)
 				break;
-			if (ngc->size < imsize * 0.05)
+			if (ngc->size < imsize * 0.02)
 				continue;
 
 			if (ngcic_accurate_get_radec(ngc->is_ngc, ngc->id, &ara, &adec) == 0) {
