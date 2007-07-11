@@ -141,6 +141,11 @@ ngc2000names.c: parse-ngc2000names.awk ngc2000names.dat
 ngc2000entries.c: parse-ngc2000.awk ngc2000.dat
 	awk -f parse-ngc2000.awk < ngc2000.dat  > $@
 
+ngcic-accurate.c: ngcic-accurate.h ngcic-accurate-entries.c
+
+ngcic-accurate-entries.c: parse-ngcic-accurate.awk ngc2000_pos.txt ic2000_pos.txt
+	cat ngc2000_pos.txt ic2000_pos.txt | awk -f parse-ngcic-accurate.awk > $@
+
 .PHONY: tags
 tags:
 	etags `find . -name "*.h" -o -name "*.c"`
@@ -274,7 +279,7 @@ plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
-plot-constellations: plot-constellations.o ngc2000.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
+plot-constellations: plot-constellations.o ngc2000.o ngcic-accurate.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB) $(NETPBM_L)
 
 plotxy2.o: plotxy2.c

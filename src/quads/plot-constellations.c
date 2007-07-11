@@ -41,8 +41,10 @@
 #include "xylist.h"
 #include "rdlist.h"
 #include "boilerplate.h"
-#include "ngc2000.h"
 #include "mathutil.h"
+
+#include "ngc2000.h"
+#include "ngcic-accurate.h"
 
 const char* OPTIONS = "hi:o:w:W:H:s:NC";
 
@@ -497,16 +499,22 @@ int main(int argc, char** args) {
 			int nwritten;
 			pl* names;
 			double pixsize;
+			float ara, adec;
 
 			if (!ngc)
 				break;
 			if (ngc->size < imsize * 0.05)
 				continue;
+
+			if (ngcic_accurate_get_radec(ngc->is_ngc, ngc->id, &ara, &adec) == 0) {
+			  ngc->ra = ara;
+			  ngc->dec = adec;
+			}
+
 			if (!sip_radec2pixelxy(&sip, ngc->ra, ngc->dec, &px, &py))
 				continue;
 			if (px < 0 || py < 0 || px*scale > W || py*scale > H)
 				continue;
-
 			len = sizeof(str);
 			buf = str;
 			nwritten = snprintf(buf, len, "%s %i", (ngc->is_ngc ? "NGC" : "IC"), ngc->id);
