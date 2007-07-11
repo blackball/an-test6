@@ -497,7 +497,7 @@ int main(int argc, char** args) {
         // arcsec/pixel
         imscale = sip_pixel_scale(&sip);
         // arcmin
-        imsize = imscale * imin(W, H) / 60.0;
+        imsize = imscale * imin(W, H) * scale / 60.0;
         N = ngc_num_entries();
 
         //ngcids = il_new(16);
