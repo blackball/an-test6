@@ -384,12 +384,15 @@ int main(int argc, char** args) {
             double ra,dec;
             double px,py;
             unsigned char r,g,b;
+			il* stars;
+			int Ninbounds;
+			cairo_text_extents_t textents;
 
             if (feof(fconst))
                 break;
 
             if (fscanf(fconst, "%s %d ", shortname, &nlines) != 2) {
-                fprintf(stderr, "failed parse name+nlines (constellation %i)\n", c);
+                fprintf(stderr, "failed to parse name+nlines (constellation %i)\n", c);
                 fprintf(stderr, "file offset: %i (%x)\n",
                         (int)ftello(fconst), (int)ftello(fconst));
                 return -1;
@@ -402,13 +405,10 @@ int main(int argc, char** args) {
 
             cairo_set_line_width(cairo, lw);
 
+			stars = il_new(16);
+
             for (i=0; i<nlines; i++) {
                 int star1, star2;
-                double ra1, dec1, ra2, dec2;
-                double px1, px2, py1, py2;
-                double dx, dy;
-                double dist;
-                double gapfrac;
 
                 if (fscanf(fconst, " %d %d", &star1, &star2) != 2) {
                     fprintf(stderr, "failed parse star1+star2\n");
@@ -418,12 +418,47 @@ int main(int argc, char** args) {
                 il_insert_unique_ascending(uniqstars, star1);
                 il_insert_unique_ascending(uniqstars, star2);
 
-                // RA,DEC are the first two elements: 32-bit floats
-                // (little-endian)
+				il_append(stars, star1);
+				il_append(stars, star2);
+			}
+            fscanf(fconst, "\n");
+
+			// Count the number of unique stars belonging to this contellation
+			// that are within the image bounds
+			Ninbounds = 0;
+            for (i=0; i<il_size(uniqstars); i++) {
+                double ra, dec, px, py;
+                hip_get_radec(hip, il_get(uniqstars, i), &ra, &dec);
+                if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
+                    continue;
+				if (px < 0 || py < 0 || px*scale > W || py*scale > H)
+					continue;
+				Ninbounds++;
+			}
+
+			// Only draw this constellation if at least 2 of its stars
+			// are within the image bounds.
+			if (Ninbounds < 2) {
+				il_free(stars);
+				il_free(uniqstars);
+				continue;
+			}
+
+			cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
+
+			for (i=0; i<il_size(stars)/2; i++) {
+                int star1, star2;
+                double ra1, dec1, ra2, dec2;
+                double px1, px2, py1, py2;
+                double dx, dy;
+                double dist;
+                double gapfrac;
+
+				star1 = il_get(stars, i*2);
+				star2 = il_get(stars, i*2+1);
+
                 hip_get_radec(hip, star1, &ra1, &dec1);
                 hip_get_radec(hip, star2, &ra2, &dec2);
-
-                cairo_set_source_rgba(cairo, r/255.0,g/255.0,b/255.0,0.8);
 
                 if (!sip_radec2pixelxy(&sip, ra1, dec1, &px1, &py1) ||
                     !sip_radec2pixelxy(&sip, ra2, dec2, &px2, &py2))
@@ -436,8 +471,8 @@ int main(int argc, char** args) {
                 cairo_move_to(cairo, px1 + dx*gapfrac, py1 + dy*gapfrac);
                 cairo_line_to(cairo, px1 + dx*(1.0-gapfrac), py1 + dy*(1.0-gapfrac));
                 cairo_stroke(cairo);
-            }
-            fscanf(fconst, "\n");
+			}
+			il_free(stars);
 
             // Draw circles around each star.
             cairo_set_line_width(cairo, cw);
@@ -465,8 +500,23 @@ int main(int argc, char** args) {
             cmass[2] /= il_size(uniqstars);
             xyzarr2radecdeg(cmass, &ra, &dec);
 
+			il_free(uniqstars);
+
             if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
                 continue;
+
+			fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
+
+			// If the label will be off-screen, move it back on.
+			cairo_text_extents(cairo, shortname, &textents);
+			if (px < 0)
+				px = 0;
+			if (py < textents.height)
+				py = textents.height;
+			if ((px + textents.width)*scale > W)
+				px = W/scale - textents.width;
+			if ((py+textents.height)*scale > H)
+				py = H/scale - textents.height;
 
             cairo_move_to(cairo, px, py);
             cairo_show_text(cairo, shortname);
@@ -497,7 +547,7 @@ int main(int argc, char** args) {
         // arcsec/pixel
         imscale = sip_pixel_scale(&sip);
         // arcmin
-        imsize = imscale * imin(W, H) * scale / 60.0;
+        imsize = imscale * (imin(W, H) / scale) / 60.0;
         N = ngc_num_entries();
 
         //ngcids = il_new(16);
