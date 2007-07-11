@@ -92,7 +92,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 OLDEXECS := plotquads rawstartree checkquads
 #whynot
 
-CAIROEXECS := plotquad plotxy2 plot_constellations
+CAIROEXECS := plotquad plotxy2 plot-constellations
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \
 	codekd.o idfile.o \
@@ -271,10 +271,10 @@ plotquad.o: plotquad.c
 plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
 
-plot_constellations.o: plot_constellations.c
+plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
-plot_constellations: plot_constellations.o ngc2000.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
+plot-constellations: plot-constellations.o ngc2000.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB) $(NETPBM_L)
 
 plotxy2.o: plotxy2.c
