@@ -634,6 +634,9 @@ int main(int argc, char *argv[]) {
 				startree_close(bp->starkd);
 				bp->starkd = NULL;
 				free_fn(startreefname);
+
+                                if (sp->cancelled)
+                                    break;
 			}
 			sip_free(bp->verify_wcs);
 			bp->verify_wcs = NULL;
