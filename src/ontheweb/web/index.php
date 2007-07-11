@@ -19,6 +19,7 @@ function allow_email($email) {
 		       'align.them@gmail.com',
 		       'anthony@astro.ufl.edu',
 		       'barth@uci.edu',
+		       'birkmann@mpia-hd.mpg.de',
 		       'blutch@google.com',
 		       'carolc@stsci.edu',
 		       'christopher@stumm.ca',

@@ -30,14 +30,7 @@
  */
 
 $CACHEDIR = "/data1/tilecache2";
-//$TILERENDER = "/home/gmaps/an/usnob-map/execs/tilerender";
-$TILERENDER = "/home/gmaps/an-test/usnob-map/execs/tilerender";
-/*
-$CACHEDIR = "/tmp/tilecache";
-$TILERENDER = "/h/260/dstn/an/usnob-map/execs/tilerender";
-*/
-
-//"/home/gmaps/astrometry/src/tilecache/tilecache.log";
+$TILERENDER = "/home/gmaps/alpha/usnob-map/execs/tilerender";
 $LOGFILE = "/tmp/tilecache.log";
 
 // Write a message to the log file.
