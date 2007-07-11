@@ -27,6 +27,8 @@
 #include <errno.h>
 #include <ctype.h>
 
+#include "an-bool.h"
+
 #include <cairo.h>
 
 #include <png.h>
@@ -34,7 +36,6 @@
 #include <ppm.h>
 
 #include "sip_qfits.h"
-#include "an-bool.h"
 #include "qfits.h"
 #include "starutil.h"
 #include "bl.h"
@@ -46,13 +47,14 @@
 #include "ngc2000.h"
 #include "ngcic-accurate.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NC";
+const char* OPTIONS = "hi:o:w:W:H:s:NCp";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
     printf("\nUsage: %s\n"
            "   -w <WCS input file>\n"
-           "   -o <PNG output file>\n"
+           "   -o <image output file; \"-\" for stdout>\n"
+           "   [-p]: write PPM output - default is PNG\n"
            "   (  [-i <PPM input file>]\n"
            "   OR [-W <width> -H <height>] )\n"
 		   "   [-s <scale>]: scale image coordinates by this value before plotting.\n"
@@ -162,6 +164,8 @@ int main(int argc, char** args) {
     sip_t sip;
     FILE* fout;
 	double scale = 1.0;
+        bool pngformat = TRUE;
+        bool outstdout;
 
     FILE* fconst = NULL;
     cairo_t* cairo;
@@ -203,6 +207,9 @@ int main(int argc, char** args) {
 		case 'C':
 			constell = TRUE;
 			break;
+        case 'p':
+            pngformat = FALSE;
+            break;
 		case 's':
 			scale = atof(optarg);
 			break;
@@ -564,19 +571,40 @@ int main(int argc, char** args) {
         img[4*i + 3] = a;
     }
 
-    fout = fopen(outfn, "wb");
-    if (!fout) {
-        fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
-        exit(-1);
+    // are we outputting to stdout?
+    outstdout = !strcmp(outfn, "-");
+    if (outstdout) {
+        fout = stdout;
+    } else {
+        fout = fopen(outfn, "wb");
+        if (!fout) {
+            fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
+            exit(-1);
+        }
     }
-    write_png(img, W, H, fout);
-    if (fclose(fout)) {
-        fprintf(stderr, "Failed to close output file %s: %s\n", outfn, strerror(errno));
-        exit(-1);
+    if (pngformat) {
+        write_png(img, W, H, fout);
+    } else {
+        // PPM...
+        fprintf(fout, "P6 %i %i %i\n", W, H, 255);
+        for (i=0; i<(H*W); i++) {
+            unsigned char* pix = img + 4*i;
+            if (fwrite(pix, 1, 3, fout) != 3) {
+                fprintf(stderr, "Failed to write pixels for PPM output.\n");
+                exit(-1);
+            }
+        }
+    }
+    if (!outstdout) {
+        if (fclose(fout)) {
+            fprintf(stderr, "Failed to close output file %s: %s\n", outfn, strerror(errno));
+            exit(-1);
+        }
     }
 
     cairo_surface_destroy(target);
     cairo_destroy(cairo);
+    free(img);
 
     return 0;
 }
