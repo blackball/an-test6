@@ -19,4 +19,7 @@ $highlevelfile = "alpha-highlevel.log";
 $emailver = 1;
 $webver = !$emailver;
 
+// Script to cancel a job.
+$cancelscript = $base . "ontheweb/execs/cancel-job-alpha.sh";
+
 ?>

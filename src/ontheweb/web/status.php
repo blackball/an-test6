@@ -94,6 +94,19 @@ if (!$img && !file_exists($inputfile) && file_exists($inputtmpfile)) {
 	sleep(1);
 }
 
+// The size of the full-sized original image.
+$fullW = $jd["imageW"];
+$fullH = $jd["imageH"];
+$exact = TRUE;
+if (!($fullW && $fullH)) {
+	$exact = FALSE;
+	$fullW = $jd["xylsW"];
+	$fullH = $jd["xylsH"];
+	if (!($fullW && $fullH)) {
+		loggit("Couldn't get xylsW/H.\n");
+	}
+}
+
 if ($getfile) {
 	if (strstr($getfile, '/') ||
 		strstr($getfile, '..')) {
@@ -110,7 +123,9 @@ if ($getfile) {
 	} else if (!strcmp($getfile, 'const-overlay') ||
 		!strcmp($getfile, 'const-overlay-big')) {
 		$big = !strcmp($getfile, 'const-overlay-big');
-		render_const_overlay($mydir, $big, $jd);
+		$pixscale = $jd['pixscale'];
+		$fldsz = $pixscale * sqrt($fullW * $fullH);
+		render_const_overlay($mydir, $big, $jd, $fldsz);
 
 	} else if (!strcmp($getfile, $newheader_fn)) {
 		render_newheader($fn, $mydir, $jd, $todelete);
@@ -146,14 +161,10 @@ if ($getfile) {
 
 if ($cancel) {
 	loggit("cancel requested.\n");
-	if (!touch($cancelfile)) {
-		fail("Failed to created cancel file.");
-	}
-	if ($remote) {
-		$cmd = "/bin/echo " . $myname . " | ssh -T c27cancel >> " . $mydir . "cancel.log 2>&1";
-		if ((system($cmd, $retval) === FALSE) || $retval) {
-			loggit("remote cancel failed: retval " . $retval . ", cmd " . $cmd . "\n");
-		}
+
+	$cmd = $cancelscript . " " . $resultdir . " " . $myreldir . " >> " . $mydir . "cancel.log 2>&1";
+	if ((system($cmd, $retval) === FALSE) || $retval) {
+		loggit("cancel failed: retval " . $retval . ", cmd " . $cmd . "\n");
 	}
 }
 
@@ -366,23 +377,6 @@ if (array_key_exists("send-email", $headers)) {
 	echo "Email sent.\n";
 	exit;
 }
-
-
-if ($didsolve) {
-	// The size of the full-sized original image.
-	$fullW = $jd["imageW"];
-	$fullH = $jd["imageH"];
-	$exact = TRUE;
-	if (!($fullW && $fullH)) {
-		$exact = FALSE;
-		$fullW = $jd["xylsW"];
-		$fullH = $jd["xylsH"];
-		if (!($fullW && $fullH)) {
-			loggit("Couldn't get xylsW/H.\n");
-		}
-	}
-}
-
 
 $status = "(unknown)";
 if ($didcancel) {
@@ -1147,7 +1141,7 @@ function run_command($cmd, $briefname) {
 	}
 }
 
-function render_const_overlay($mydir, $big, $jd) {
+function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 	global $const_overlay_fn;
 	global $const_bigoverlay_fn;
 	global $wcs_fn;
@@ -1211,6 +1205,9 @@ function render_const_overlay($mydir, $big, $jd) {
 
 		$cmd = $plot_constellations . " -N " . " -w " . $wcsfile
 			. " -o " . ($big ? $bigoverlayfile : $overlayfile);
+		if ($fieldsize > 3600 * 5) {
+			$cmd .= " -C";
+		}
 		if ($userimg) {
 			$cmd .= " -i " . $userimg;
 		} else {
