@@ -185,7 +185,8 @@ void solve_field(solver_params* params) {
 
     get_resource_stats(&usertime, &systime, NULL);
     params->starttime = usertime + systime;
-    lastcheck_ss = lastcheck_sf = lastcheck_cf = time(NULL);
+    lastcheck_ss = lastcheck_sf = time(NULL);
+    lastcheck_cf = 0;
 
     numxy = params->nfield;
     if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
@@ -288,7 +289,7 @@ void solve_field(solver_params* params) {
                 }
                 lastcheck_ss = t;
             }
-            if (params->cancelfname && ((t - lastcheck_cf) > 5)) {
+            if (params->cancelfname && ((t - lastcheck_cf) > 3)) {
                 if (file_exists(params->cancelfname)) {
                     params->cancelled = TRUE;
                     params->quitNow = TRUE;
