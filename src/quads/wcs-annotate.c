@@ -134,7 +134,7 @@ int main(int argc, char** args) {
 
 		// If the image is way bigger than the NGC object...
 		// (I think NGC objects that don't actually exist have size=0.)
-		if (ngc->size < imsize * 0.05)
+		if (ngc->size < imsize * 0.02)
 			continue;
 
 		ra = ngc->ra;
