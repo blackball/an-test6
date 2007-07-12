@@ -51,6 +51,8 @@ int dcen3(float f0, float f1, float f2, float *xcen)
 
 	aa = f1 + 0.5 * s * s / d;
 	sod = s / d;
+	if (!isnormal(aa) || !isnormal(s))
+		return 0;
 	(*xcen) = sod * (1. + kk * (0.25 * d / aa) * (1. - 4. * sod * sod)) + 1.;
 
 	return (1);
