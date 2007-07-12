@@ -695,7 +695,7 @@ if ($didsolve) {
 
 
 	echo "<div id=\"const-overlay\">\n";
-	echo "<p>Your field plus the constellations:\n";
+	echo "<p>Your field plus annotations:\n";
 	if ($linktobig) {
 		echo "<br />(click for full-size version)\n";
 	}
@@ -707,7 +707,7 @@ if ($didsolve) {
 	}
 	echo "<img src=\"" .
 		htmlentities(get_url('const-overlay')) . 
-		"\" alt=\"An image of your field with constellations overlaid.\"/>";
+		"\" alt=\"An image of your field with annotations overlaid.\"/>";
 	if ($linktobig) {
 		echo "</a>\n";
 	}
