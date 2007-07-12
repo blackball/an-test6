@@ -49,9 +49,9 @@ ANUTILS_LIB := libanutils.a
 
 all: $(ANUTILS_LIB) $(ANFILES_LIB)
 
-ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o
+ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
 ifndef NO_QFITS
-ANUTILS_OBJ := $(ANUTILS_OBJ) fitsioutils.o
+ANUTILS_OBJ := $(ANUTILS_OBJ) fitsioutils.o sip_qfits.o
 endif
 ifndef NO_KDTREE
 ANUTILS_OBJ := $(ANUTILS_OBJ) dualtree.o dualtree_rangesearch.o

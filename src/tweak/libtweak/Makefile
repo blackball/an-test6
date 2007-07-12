@@ -28,8 +28,7 @@ include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.gsl
 
-TWEAK_OBJ := sip.o tweak_internal.o
-TWEAK_OBJ += sip_qfits.o
+TWEAK_OBJ := tweak_internal.o
 
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(ANUTILS_INC)
@@ -56,6 +55,8 @@ TWEAK_COMMON += $(COMMON)/dualtree_rangesearch.o
 TWEAK_COMMON += $(COMMON)/dualtree.o
 TWEAK_COMMON += $(COMMON)/healpix.o
 TWEAK_COMMON += $(COMMON)/fitsioutils.o
+TWEAK_COMMON += $(COMMON)/sip.o
+TWEAK_COMMON += $(COMMON)/sip_qfits.o
 TWEAK_COMMON += $(QFITS_DIR)/src/qfits_header.o
 TWEAK_COMMON += $(QFITS_DIR)/src/qfits_table.o
 TWEAK_COMMON += $(QFITS_DIR)/src/qfits_tools.o
@@ -72,7 +73,7 @@ TWEAK_COMMON += $(QFITS_DIR)/src/qfits_float.o
 TWEAK_COMMON += $(QFITS_DIR)/src/qfits_cache.o
 
 libtweak.so: $(TWEAK_OBJ) $(TWEAK_COMMON) $(LIBKD_LIB)
-	gcc -shared -o $@ $^
+	$(CC) $(SHAREDLIBFLAGS_DEF) -o $@ $^
 
 .PHONY: clean
 clean:

@@ -151,23 +151,28 @@ tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
 certifiable: certifiable.o histogram.o matchfile.o solvedfile.o \
-		$(UTILS_LIB) $(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTILS_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB) 
 
 an-fitstopnm: an-fitstopnm.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 
 fits-guess-scale: fits-guess-scale.o \
-		$(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB) 
 
 wcs-annotate: wcs-annotate.o ngc2000.o \
-		$(LIBTWEAK_LIB) $(UTIL_OBJS) \
+		$(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB)
 
-wcs-xy2rd: wcs-xy2rd.o $(LIBTWEAK_LIB) $(UTIL_OBJS) \
+wcs-xy2rd: wcs-xy2rd.o $(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB) 
 
-wcs-rd2xy: wcs-rd2xy.o $(LIBTWEAK_LIB) $(UTIL_OBJS) \
+wcs-rd2xy: wcs-rd2xy.o $(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB)
 
 noisesim: noisesim.o noise.o $(ANUTILS_LIB)
 
@@ -176,7 +181,8 @@ noisesim2: noisesim2.o noise.o $(ANUTILS_LIB)
 noisesim3: noisesim3.o noise.o $(ANUTILS_LIB)
 
 noisesim4: noisesim4.o blind_wcs.o noise.o svd.o \
-		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB)
 
 hpgrid: hpgrid.o $(ANUTILS_LIB)
 
@@ -245,19 +251,21 @@ blind: blind.o solver.o codekd.o matchfile.o tic.o \
 whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o \
 		idfile.o verify.o svd.o intmap.o blind_wcs.o noise.o \
-		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
+		$(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB) 
 
 agreeable: agreeable.o matchfile.o solvedfile.o solvedclient.o \
-		$(LIBTWEAK_LIB) $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
+#$(LIBTWEAK_LIB) 
 
 rdlsinfo: rdlsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 xylsinfo: xylsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-wcsinfo: wcsinfo.o $(UTIL_OBJS) $(LIBTWEAK_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) \
+wcsinfo: wcsinfo.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) \
 		$(QFITS_LIB)
-
+#$(LIBTWEAK_LIB) 
 printsolved: printsolved.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB) 
 
 mergesolved: mergesolved.o solvedfile.o $(UTIL_OBJS) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -279,8 +287,10 @@ plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
-plot-constellations: plot-constellations.o ngc2000.o ngcic-accurate.o boilerplate.o svn.o $(LIBTWEAK_LIB) $(ANUTILS_LIB)
+plot-constellations: plot-constellations.o ngc2000.o ngcic-accurate.o boilerplate.o svn.o \
+		$(ANUTILS_LIB)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB) $(NETPBM_L)
+#$(LIBTWEAK_LIB) 
 
 plotxy2.o: plotxy2.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
