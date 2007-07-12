@@ -19,9 +19,9 @@ LIBKD_INC := -I$(LIBKD_DIR)
 LIBKD_LIB := $(LIBKD_DIR)/libkd.a
 
 $(LIBKD_LIB):
-	cd $(LIBKD_DIR) && make
+	cd $(LIBKD_DIR) && $(MAKE)
 
 REMAKE_LIBKD := remake-libkd
 .PHONY: $(REMAKE_LIBKD)
 $(REMAKE_LIBKD):
-	cd $(LIBKD_DIR) && make
+	cd $(LIBKD_DIR) && $(MAKE)

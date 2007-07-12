@@ -20,5 +20,5 @@ LIBWCS_LIB := $(LIBWCS_DIR)/libwcs.a
 LIBWCS_CFLAGS := $(CFLAGS_DEF)
 
 $(LIBWCS_LIB):
-	cd $(LIBWCS_DIR) && make
+	cd $(LIBWCS_DIR) && $(MAKE)
 

@@ -19,10 +19,10 @@ LIBTWEAK_INC := -I$(LIBTWEAK_DIR)
 LIBTWEAK_LIB := $(LIBTWEAK_DIR)/libtweak.a
 
 $(LIBTWEAK_LIB):
-	cd $(LIBTWEAK_DIR) && make
+	cd $(LIBTWEAK_DIR) && $(MAKE)
 
 REMAKE_LIBTWEAK := remake-libtweak
 .PHONY: $(REMAKE_LIBTWEAK)
 $(REMAKE_LIBTWEAK):
-	make -C $(LIBTWEAK_DIR)
-#	cd $(LIBTWEAK_DIR) && make
+	cd $(LIBTWEAK_DIR) && $(MAKE)
+

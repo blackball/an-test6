@@ -19,9 +19,9 @@ ANFILES_INC := -I$(ANFILES_DIR)
 ANFILES_LIB := $(ANFILES_DIR)/libanfiles.a
 
 $(ANFILES_LIB):
-	cd $(ANFILES_DIR) && make
+	cd $(ANFILES_DIR) && $(MAKE)
 
 REMAKE_ANFILES := remake-anfiles
 .PHONY: $(REMAKE_ANFILES)
 $(REMAKE_ANFILES):
-	cd $(ANFILES_DIR) && make libanfiles.a
+	cd $(ANFILES_DIR) && $(MAKE) libanfiles.a

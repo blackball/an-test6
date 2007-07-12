@@ -15,11 +15,12 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 
-# Top-level Makefile: just go into some subdirs and make there.
+# Top-level Makefile: just go into the subdirs and make there.
 
 all:
 	$(MAKE) -C quads
 	$(MAKE) -C simplexy
+
 
 clean:
 	$(MAKE) -C an-common clean

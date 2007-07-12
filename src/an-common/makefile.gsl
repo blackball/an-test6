@@ -18,20 +18,10 @@ GSL_DIR := $(BASEDIR)/gsl-an
 GSL_INC := -I$(GSL_DIR)
 GSL_LIB := $(GSL_DIR)/libgsl-an.a
 
-#GSL_CFLAGS := $(CFLAGS_DEF)
-#GSL_LDFLAGS := $(LDFLAGS_DEF)
-#GSL_CONFIGURE_FLAGS := --enable-shared=no \
-#	--prefix=`pwd`/stage \
-#	CFLAGS="$(GSL_CFLAGS)" \
-#	LDFLAGS="$(GSL_LDFLAGS)"
-
-#$(GSL_LIB): $(GSL_DIR)/Makefile
-#	cd $(GSL_DIR) && make
-
 $(GSL_LIB):
-	cd $(GSL_DIR) && make
+	cd $(GSL_DIR) && $(MAKE)
 
 REMAKE_GSL := remake-gsl
 .PHONY: $(REMAKE_GSL)
 $(REMAKE_GSL):
-	cd $(GSL_DIR) && make
+	cd $(GSL_DIR) && $(MAKE)
