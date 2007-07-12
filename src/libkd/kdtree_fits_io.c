@@ -285,7 +285,6 @@ int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extr
     qfits_header* tablehdr;
     FILE* fid;
     void* dataptr;
-    char val[256];
 	int i;
 
     fid = fopen(fn, "wb");
@@ -298,12 +297,9 @@ int kdtree_fits_common_write(kdtree_t* kdtree, char* fn, qfits_header* hdr, extr
     // we create a new header and copy in the user's header items.
     header = qfits_table_prim_header_default();
     fits_add_endian(header);
-    sprintf(val, "%i", kdtree->ndata);
-    qfits_header_add(header, "NDATA", val, "kdtree: number of data points", NULL);
-    sprintf(val, "%i", kdtree->ndim);
-    qfits_header_add(header, "NDIM", val, "kdtree: number of dimensions", NULL);
-    sprintf(val, "%i", kdtree->nnodes);
-    qfits_header_add(header, "NNODES", val, "kdtree: number of nodes", NULL);
+    fits_header_add_int(header, "NDATA", kdtree->ndata, "kdtree: number of data points");
+    fits_header_add_int(header, "NDIM", kdtree->ndim, "kdtree: number of dimensions");
+    fits_header_add_int(header, "NNODES", kdtree->nnodes, "kdtree: number of nodes");
 
 	if (hdr) {
 		int i;

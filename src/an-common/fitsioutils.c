@@ -35,6 +35,46 @@
 
 static uint32_t ENDIAN_DETECTOR = 0x01020304;
 
+void fits_header_addf(qfits_header* hdr, const char* key, const char* comment,
+                      const char* format, ...) {
+    char buf[FITS_LINESZ + 1];
+    va_list lst;
+    va_start(lst, format);
+    vsnprintf(buf, sizeof(buf), format, lst);
+    qfits_header_add(hdr, key, buf, comment, NULL);
+    va_end(lst);
+}
+
+void fits_header_modf(qfits_header* hdr, const char* key, const char* comment,
+                      const char* format, ...) {
+    char buf[FITS_LINESZ + 1];
+    va_list lst;
+    va_start(lst, format);
+    vsnprintf(buf, sizeof(buf), format, lst);
+    qfits_header_mod(hdr, key, buf, comment);
+    va_end(lst);
+}
+
+void fits_header_add_double(qfits_header* hdr, const char* key, double val,
+                            const char* comment) {
+    fits_header_addf(hdr, key, comment, "%.12G", val);
+}
+
+void fits_header_mod_double(qfits_header* hdr, const char* key, double val,
+                            const char* comment) {
+    fits_header_modf(hdr, key, comment, "%.12G", val);
+}
+
+void fits_header_mod_int(qfits_header* hdr, const char* key, int val,
+                         const char* comment) {
+    fits_header_modf(hdr, key, comment, "%i", val);
+}
+
+void fits_header_add_int(qfits_header* hdr, const char* key, int val,
+                         const char* comment) {
+    fits_header_addf(hdr, key, comment, "%i", val);
+}
+
 int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue) {
   char oldcomment[FITS_LINESZ + 1];
   char* c = qfits_header_getcom(hdr, key);
@@ -44,6 +84,7 @@ int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue) 
   // hmm, not sure I need to copy this...
   strncpy(oldcomment, c, FITS_LINESZ);
   qfits_header_mod(hdr, key, newvalue, oldcomment);
+  return 0;
 }
 
 static int add_long_line(qfits_header* hdr, char* keyword, const char* indent, const char* format, va_list lst) {

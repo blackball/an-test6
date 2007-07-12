@@ -68,7 +68,6 @@ int main(int argc, char *argv[]) {
     char* treefname = NULL;
     char* catfname = NULL;
 	char* progname = argv[0];
-	char val[32];
 
 	int exttype  = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
@@ -233,21 +232,16 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "Writing output to %s ...\n", treefname);
 	fflush(stderr);
-	sprintf(val, "%u", Nleaf);
-	qfits_header_add(startree_header(starkd), "NLEAF", val, "Target number of points in leaves.", NULL);
-	sprintf(val, "%u", nkeep);
-	qfits_header_add(startree_header(starkd), "KEEP", val, "Number of stars kept (0=no limit).", NULL);
-
+	fits_header_add_int(startree_header(starkd), "NLEAF", Nleaf, "Target number of points in leaves.");
+	fits_header_add_int(startree_header(starkd), "KEEP", nkeep, "Number of stars kept (0=no limit).");
 	fits_copy_header(catheader, startree_header(starkd), "HEALPIX");
 	fits_copy_header(catheader, startree_header(starkd), "ALLSKY");
 	fits_copy_header(catheader, startree_header(starkd), "JITTER");
-
 	boilerplate_add_fits_headers(startree_header(starkd));
 	qfits_header_add(startree_header(starkd), "HISTORY", "This file was created by the program \"startree\".", NULL, NULL);
 	qfits_header_add(startree_header(starkd), "HISTORY", "startree command line:", NULL, NULL);
 	fits_add_args(startree_header(starkd), argv, argc);
 	qfits_header_add(startree_header(starkd), "HISTORY", "(end of startree command line)", NULL, NULL);
-
 	qfits_header_add(startree_header(starkd), "HISTORY", "** History entries copied from the input file:", NULL, NULL);
 	fits_copy_all_headers(catheader, startree_header(starkd), "HISTORY");
 	qfits_header_add(startree_header(starkd), "HISTORY", "** End of history entries.", NULL, NULL);

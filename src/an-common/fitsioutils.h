@@ -22,6 +22,28 @@
 #include "qfits.h"
 #include "keywords.h"
 
+void
+ATTRIB_FORMAT(printf,4,5)
+fits_header_addf(qfits_header* hdr, const char* key, const char* comment,
+                 const char* format, ...);
+
+void
+ATTRIB_FORMAT(printf,4,5)
+fits_header_modf(qfits_header* hdr, const char* key, const char* comment,
+                 const char* format, ...);
+
+void fits_header_add_int(qfits_header* hdr, const char* key, int val,
+                         const char* comment);
+
+void fits_header_add_double(qfits_header* hdr, const char* key, double val,
+                            const char* comment);
+
+void fits_header_mod_int(qfits_header* hdr, const char* key, int val,
+                         const char* comment);
+
+void fits_header_mod_double(qfits_header* hdr, const char* key, double val,
+                            const char* comment);
+
 int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue);
 
 int fits_copy_header(qfits_header* src, qfits_header* dest, char* key);

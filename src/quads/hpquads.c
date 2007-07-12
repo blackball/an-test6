@@ -1114,11 +1114,9 @@ int main(int argc, char** argv) {
 
 			{
 				char key[64];
-				char val[64];
 				sprintf(key, "PASS%i", xpass * ypasses + ypass + 1);
-				sprintf(val, "%i", nthispass);
-				qfits_header_mod(codes->header, key, val, "quads created in this pass");
-				qfits_header_mod(quads->header, key, val, "quads created in this pass");
+				fits_header_mod_int(codes->header, key, nthispass, "quads created in this pass");
+				fits_header_mod_int(quads->header, key, nthispass, "quads created in this pass");
 			}
 
 			// HACK -

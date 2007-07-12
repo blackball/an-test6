@@ -64,7 +64,6 @@ extern int optind, opterr, optopt;
 
 static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int argc, char** args) {
 	char fn[256];
-	char val[256];
 	sprintf(fn, outfn, hp);
 	cats[hp] = an_catalog_open_for_writing(fn);
 	if (!cats[hp]) {
@@ -72,13 +71,9 @@ static void init_catalog(an_catalog** cats, char* outfn, int hp, int Nside, int 
 		exit(-1);
 	}
 	// header remarks...
-	sprintf(val, "%u", hp);
-	qfits_header_add(cats[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-	sprintf(val, "%u", Nside);
-	qfits_header_add(cats[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-
+	fits_header_add_int(cats[hp]->header, "HEALPIX", hp, "The healpix number of this catalog.");
+	fits_header_add_int(cats[hp]->header, "NSIDE", Nside, "The healpix resolution.");
 	boilerplate_add_fits_headers(cats[hp]->header);
-
 	qfits_header_add(cats[hp]->header, "HISTORY", "Created by the program \"build-an-catalog\"", NULL, NULL);
 	qfits_header_add(cats[hp]->header, "HISTORY", "build_an_catalog command line:", NULL, NULL);
 	fits_add_args(cats[hp]->header, args, argc);
@@ -483,10 +478,8 @@ int main(int argc, char** args) {
 		   nusnob, ntycho, n2mass);
 
 	for (i=0; i<HP; i++) {
-		char val[32];
 		if (!cats[i]) continue;
-		sprintf(val, "%u", cats[i]->nentries);
-		qfits_header_mod(cats[i]->header, "NOBJS", val, "Number of objects in this catalog.");
+		fits_header_mod_int(cats[i]->header, "NOBJS", cats[i]->nentries, "Number of objects in this catalog.");
 		if (an_catalog_fix_headers(cats[i]) ||
 			an_catalog_close(cats[i])) {
 			fprintf(stderr, "Error fixing the header or closing AN catalog for healpix %i.\n", i);

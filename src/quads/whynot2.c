@@ -958,7 +958,6 @@ static void solve_fields(blind_params* bp) {
 				char wcs_fn[1024];
 				FILE* fout;
 				qfits_header* hdr;
-				char* tm;
 				char val[32];
 
 				snprintf(wcs_fn, sizeof(wcs_fn), bp->wcs_template, fieldnum);
@@ -968,14 +967,11 @@ static void solve_fields(blind_params* bp) {
 					exit(-1);
 				}
 				hdr = blind_wcs_get_header(&wcs);
-				sprintf(val, "%g", sp->field_maxx);
-				qfits_header_add(hdr, "IMAGEW", val, "Width of the image used to solve this WCS.", NULL);
-				sprintf(val, "%g", sp->field_maxy);
-				qfits_header_add(hdr, "IMAGEH", val, "Height of the image used to solve this WCS.", NULL);
+				fits_header_add_double(hdr, "IMAGEW", sp->field_maxx, "Width of the image used to solve this WCS.", NULL);
+				fits_header_add_double(hdr, "IMAGEH", sp->field_maxy, "Height of the image used to solve this WCS.", NULL);
 				boilerplate_add_fits_headers(hdr);
 				qfits_header_add(hdr, "HISTORY", "This WCS header was created by the program \"whynot2\".", NULL, NULL);
-				tm = qfits_get_datetime_iso8601();
-				qfits_header_add(hdr, "DATE", tm, "Date this file was created.", NULL);
+				qfits_header_add(hdr, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
 				if (qfits_header_dump(hdr, fout)) {
 					logerr(bp, "Failed to write FITS WCS header.\n");
 					exit(-1);

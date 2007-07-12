@@ -187,7 +187,6 @@ int main(int argc, char** args) {
 
 			if (!usnobs[hp]) {
 				char fn[256];
-				char val[256];
 				sprintf(fn, outfn, hp);
 				usnobs[hp] = usnob_fits_open_for_writing(fn);
 				if (!usnobs[hp]) {
@@ -196,14 +195,9 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
-				sprintf(val, "%u", hp);
-				qfits_header_add(usnobs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-				sprintf(val, "%u", Nside);
-				qfits_header_add(usnobs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-				// etc...
-
+				fits_header_add_int(usnobs[hp]->header, "HEALPIX", hp, "The healpix number of this catalog.");
+				fits_header_add_int(usnobs[hp]->header, "NSIDE", Nside, "The healpix resolution.");
 				boilerplate_add_fits_headers(usnobs[hp]->header);
-
 				qfits_header_add(usnobs[hp]->header, "HISTORY", "Created by the program \"usnobtofits\"", NULL, NULL);
 				qfits_header_add(usnobs[hp]->header, "HISTORY", "usnobtofits command line:", NULL, NULL);
 				fits_add_args(usnobs[hp]->header, args, argc);

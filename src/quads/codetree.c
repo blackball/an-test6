@@ -67,7 +67,6 @@ int main(int argc, char *argv[]) {
     codefile* codes;
 	int rtn;
 	qfits_header* hdr;
-	char val[32];
 	int exttype = KDT_EXT_DOUBLE;
 	int datatype = KDT_DATA_NULL;
 	int treetype = KDT_TREE_NULL;
@@ -209,8 +208,7 @@ int main(int argc, char *argv[]) {
     fflush(stderr);
 
 	hdr = codetree_header(codekd);
-	sprintf(val, "%u", Nleaf);
-	qfits_header_add(hdr, "NLEAF", val, "Target number of points in leaves.", NULL);
+	fits_header_add_int(hdr, "NLEAF", Nleaf, "Target number of points in leaves.");
 	fits_copy_header(codes->header, hdr, "INDEXID");
 	fits_copy_header(codes->header, hdr, "HEALPIX");
 	fits_copy_header(codes->header, hdr, "CXDX");

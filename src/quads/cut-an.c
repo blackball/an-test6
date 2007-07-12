@@ -251,7 +251,6 @@ int main(int argc, char** args) {
 	float* mags = NULL;
 	int mi = 0;
 	double jitter = 1.0;
-	char val[64];
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -440,8 +439,7 @@ int main(int argc, char** args) {
 		fits_add_args(id->header, args, argc);
 		qfits_header_add(id->header, "HISTORY", "(end of cut-an command line)", NULL, NULL);
 
-		sprintf(val, "%f", jitter);
-		qfits_header_add(id->header, "JITTER", val, "Positional error [arcsec]", NULL);
+		fits_header_add_double(id->header, "JITTER", jitter, "Positional error [arcsec]");
 	}
 
 	cat->healpix = bighp;
@@ -454,8 +452,7 @@ int main(int argc, char** args) {
 	fits_add_args(cat->header, args, argc);
 	qfits_header_add(cat->header, "HISTORY", "(end of cut-an command line)", NULL, NULL);
 
-	sprintf(val, "%f", jitter);
-	qfits_header_add(cat->header, "JITTER", val, "Positional error [arcsec]", NULL);
+	fits_header_add_double(cat->header, "JITTER", jitter, "Positional error [arcsec]");
 
 	// add placeholders...
 	for (k=0; k< (sweeps ? sweeps : 100); k++) {
@@ -738,7 +735,7 @@ int main(int argc, char** args) {
 			sprintf(key, "SWEEP%i", (k+1));
 			sprintf(val, "%i", nsweep);
 			if (id)
-				qfits_header_mod(id->header , key, val, "");
+                            qfits_header_mod(id->header , key, val, "");
 			qfits_header_mod(cat->header, key, val, "");
 		}
 

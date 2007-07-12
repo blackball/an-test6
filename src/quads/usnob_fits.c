@@ -315,12 +315,10 @@ usnob_fits* usnob_fits_open_for_writing(char* fn) {
 }
 
 int usnob_fits_write_headers(usnob_fits* usnob) {
-	char val[256];
 	qfits_header* table_header;
 	assert(usnob->fid);
 	assert(usnob->header);
-	sprintf(val, "%u", usnob->nentries);
-	qfits_header_mod(usnob->header, "NOBJS", val, "Number of objects in this catalog.");
+	fits_header_mod_int(usnob->header, "NOBJS", usnob->nentries, "Number of objects in this catalog.");
 	qfits_header_dump(usnob->header, usnob->fid);
 	usnob->table->nr = usnob->nentries;
 	table_header = qfits_table_ext_header_default(usnob->table);

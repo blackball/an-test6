@@ -172,7 +172,6 @@ int main(int argc, char** args) {
 
 			if (!tycs[hp]) {
 				char fn[256];
-				char val[256];
 				sprintf(fn, outfn, hp);
 				tycs[hp] = tycho2_fits_open_for_writing(fn);
 				if (!tycs[hp]) {
@@ -183,10 +182,8 @@ int main(int argc, char** args) {
 				// header remarks...
 				qfits_header_add(tycs[hp]->header, "HEALPIXD", (do_hp ? "T" : "F"), "Is this catalog healpixified?", NULL);
 				if (do_hp) {
-					sprintf(val, "%u", hp);
-					qfits_header_add(tycs[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-					sprintf(val, "%u", Nside);
-					qfits_header_add(tycs[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
+					fits_header_add_int(tycs[hp]->header, "HEALPIX", hp, "The healpix number of this catalog.");
+					fits_header_add_int(tycs[hp]->header, "NSIDE", Nside, "The healpix resolution.");
 				}
 
 				boilerplate_add_fits_headers(tycs[hp]->header);

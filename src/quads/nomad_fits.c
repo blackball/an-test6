@@ -329,8 +329,7 @@ int nomad_fits_write_headers(nomad_fits* nomad) {
 	char val[32];
 	assert(nomad->fid);
 	assert(nomad->header);
-	sprintf(val, "%u", nomad->nentries);
-	qfits_header_mod(nomad->header, "NOBJS", val, "Number of objects in this catalog.");
+	fits_header_mod_int(nomad->header, "NOBJS", nomad->nentries, "Number of objects in this catalog.");
 	qfits_header_dump(nomad->header, nomad->fid);
 	nomad->table->nr = nomad->nentries;
 	table_header = qfits_table_ext_header_default(nomad->table);

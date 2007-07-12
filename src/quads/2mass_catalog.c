@@ -269,11 +269,9 @@ twomass_catalog* twomass_catalog_open_for_writing(char* fn) {
 
 int twomass_catalog_write_headers(twomass_catalog* cat) {
 	qfits_header* table_header;
-	char val[32];
 	assert(cat->fid!=NULL);
 	assert(cat->header!=NULL);
-	sprintf(val, "%u", cat->nentries);
-	qfits_header_mod(cat->header, "NOBJS", val, "Number of objects in this catalog.");
+	fits_header_mod_int(cat->header, "NOBJS", cat->nentries, "Number of objects in this catalog.");
 	qfits_header_dump(cat->header, cat->fid);
 	cat->table->nr = cat->nentries;
 	table_header = qfits_table_ext_header_default(cat->table);

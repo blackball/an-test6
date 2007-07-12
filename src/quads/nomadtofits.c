@@ -195,13 +195,9 @@ int main(int argc, char** args) {
 				}
 
 				// header remarks...
-				sprintf(val, "%u", hp);
-				qfits_header_add(nomads[hp]->header, "HEALPIX", val, "The healpix number of this catalog.", NULL);
-				sprintf(val, "%u", Nside);
-				qfits_header_add(nomads[hp]->header, "NSIDE", val, "The healpix resolution.", NULL);
-
+				fits_header_add_int(nomads[hp]->header, "HEALPIX", hp, "The healpix number of this catalog.");
+				fits_header_add_int(nomads[hp]->header, "NSIDE", Nside, "The healpix resolution.");
 				boilerplate_add_fits_headers(nomads[hp]->header);
-
 				qfits_header_add(nomads[hp]->header, "HISTORY", "Created by the program \"nomadtofits\"", NULL, NULL);
 				qfits_header_add(nomads[hp]->header, "HISTORY", "nomadtofits command line:", NULL, NULL);
 				fits_add_args(nomads[hp]->header, args, argc);

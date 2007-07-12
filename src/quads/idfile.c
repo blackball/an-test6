@@ -217,7 +217,6 @@ int idfile_fix_header(idfile* id)
 	off_t new_header_end;
 	qfits_table* table;
 	qfits_header* tablehdr;
-	char val[256];
 	void* dataptr;
 	uint datasize;
 	uint ncols, nrows, tablesize;
@@ -233,10 +232,8 @@ int idfile_fix_header(idfile* id)
 	fseeko(id->fid, 0, SEEK_SET);
 
 	// fill in the real values...
-	sprintf(val, "%u", id->numstars);
-	qfits_header_mod(id->header, "NSTARS", val, "Number of stars.");
-	sprintf(val, "%i", id->healpix);
-	qfits_header_mod(id->header, "HEALPIX", val, "Healpix covered by this file.");
+	fits_header_mod_int(id->header, "NSTARS", id->numstars, "Number of stars.");
+	fits_header_mod_int(id->header, "HEALPIX", id->healpix, "Healpix covered by this file.");
 
 	dataptr = NULL;
 	datasize = sizeof(uint64_t);

@@ -203,7 +203,6 @@ bailout:
 int codefile_write_header(codefile* cf) {
 	qfits_table* table;
 	qfits_header* tablehdr;
-	char val[256];
 	uint datasize;
 	uint ncols, nrows, tablesize;
 	char* fn;
@@ -212,18 +211,12 @@ int codefile_write_header(codefile* cf) {
 		return -1;
 
 	// fill in the real values...
-	sprintf(val, "%u", cf->numcodes);
-	qfits_header_mod(cf->header, "NCODES", val, "Number of codes.");
-	sprintf(val, "%u", cf->numstars);
-	qfits_header_mod(cf->header, "NSTARS", val, "Number of stars.");
-	sprintf(val, "%.10f", cf->index_scale);
-	qfits_header_mod(cf->header, "SCALE_U", val, "Upper-bound index scale (radians).");
-	sprintf(val, "%.10f", cf->index_scale_lower);
-	qfits_header_mod(cf->header, "SCALE_L", val, "Lower-bound index scale (radians).");
-	sprintf(val, "%i", cf->indexid);
-	qfits_header_mod(cf->header, "INDEXID", val, "Index unique ID.");
-	sprintf(val, "%i", cf->healpix);
-	qfits_header_mod(cf->header, "HEALPIX", val, "Healpix of this index.");
+	fits_header_mod_int(cf->header, "NCODES", cf->numcodes, "Number of codes.");
+	fits_header_mod_int(cf->header, "NSTARS", cf->numstars, "Number of stars.");
+	fits_header_mod_double(cf->header, "SCALE_U", cf->index_scale, "Upper-bound index scale (radians).");
+	fits_header_mod_double(cf->header, "SCALE_L", cf->index_scale_lower, "Lower-bound index scale (radians).");
+	fits_header_mod_int(cf->header, "INDEXID", cf->indexid, "Index unique ID.");
+	fits_header_mod_int(cf->header, "HEALPIX", cf->healpix, "Healpix of this index.");
 
 	datasize = DIM_CODES * sizeof(double);
 	ncols = 1;
