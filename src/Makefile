@@ -18,6 +18,7 @@
 # Top-level Makefile: just go into the subdirs and make there.
 
 all:
+	$(MAKE) -C an-common
 	$(MAKE) -C quads
 	$(MAKE) -C simplexy
 
