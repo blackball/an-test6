@@ -25,3 +25,4 @@ REMAKE_ANUTILS := remake-anutils
 .PHONY: $(REMAKE_ANUTILS)
 $(REMAKE_ANUTILS):
 	cd $(ANUTILS_DIR) && $(MAKE) libanutils.a
+

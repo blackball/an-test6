@@ -44,7 +44,7 @@ LDFLAGS += -lm
 
 LIBKD := libkd.a
 
-all: $(LIBKD) checktree
+all: $(LIBKD) $(REMAKE_ANUTILS) checktree
 
 $(INTERNALS): kdtree_internal.c kdtree_internal_fits.c
 
