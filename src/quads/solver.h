@@ -35,11 +35,17 @@ enum {
     PARITY_BOTH
 };
 
-struct solver_params {
-    // Variables relating to a particular index:
-    //////////
+// Per-index parameters.
+struct solver_index_params {
+    // The index
+    kdtree_t* codekd;
+
     // Jitter in the index, in arcseconds.
     double index_jitter;
+
+    // Does index have CIRCLE (codes in the circle, not the box)?
+    bool circle;
+    double cxdx_margin;
 
     // Limits of the size of quads in the index.
     double index_scale_upper;
@@ -49,18 +55,15 @@ struct solver_params {
     // of the quads to find.  Derived from index_scale_* and funits_*.
     double minAB;
     double maxAB;
+};
+typedef struct solver_index_params solver_index_params;
 
-    // Does index have CIRCLE (codes in the circle, not the box)?
-    bool circle;
-    double cxdx_margin;
+struct solver_params {
+    solver_index_params* sips;
 
     // for printing "index %i of %i"
     int indexnum;
     int nindexes;
-
-    // The index
-    kdtree_t* codekd;
-    //////////
 
     // Inputs:
 

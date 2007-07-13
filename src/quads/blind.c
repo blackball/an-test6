@@ -72,11 +72,8 @@ static void printHelp(char* progname) {
 #define DEFAULT_TWEAK_ABPORDER 3
 #define DEFAULT_INDEX_JITTER 1.0  // arcsec
 
-struct blind_params {
-    solver_params solver;
-
-    // Variables related to a particular index:
-    //////////
+// Per-index parameters.
+struct blind_index_params {
     // name of the current index.
     char *indexname;
     int indexid;
@@ -86,7 +83,13 @@ struct blind_params {
     quadfile* quads;
     startree* starkd;
     codetree* codekd;
-    //////////
+};
+typedef struct blind_index_params blind_index_params;
+
+struct blind_params {
+    solver_params solver;
+
+    blind_index_params* bips;
 
     int nindex_tokeep;
     int nindex_tosolve;
@@ -185,6 +188,8 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr);
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
 
 static blind_params my_bp;
+// FIXME - temporary...
+static blind_index_params my_bips;
 
 static void loglvl(int level, const blind_params* bp, const char* format, va_list va) {
     // 1=error
@@ -321,6 +326,7 @@ int main(int argc, char *argv[]) {
     int i;
     blind_params* bp = &my_bp;
     solver_params* sp = &(bp->solver);
+    bp->bips = &my_bips;
 
     if (argc == 2 && strcmp(argv[1],"-s") == 0) {
         bp->silent = TRUE;
@@ -361,7 +367,7 @@ int main(int argc, char *argv[]) {
         bp->ycolname = strdup("Y");
         bp->firstfield = -1;
         bp->lastfield = -1;
-        bp->healpix = -1;
+        bp->bips->healpix = -1;
         bp->tweak_aborder  = DEFAULT_TWEAK_ABORDER;
         bp->tweak_abporder = DEFAULT_TWEAK_ABPORDER;
         sp->field_minx = sp->field_maxx = 0.0;
@@ -617,26 +623,25 @@ int main(int argc, char *argv[]) {
                     break;
                 sp->indexnum = I;
                 startreefname = mk_streefn(fname);
-                bp->indexname = fname;
-
-                // FIXME - hard-code index jitter.
-                sp->index_jitter = DEFAULT_INDEX_JITTER;
-                logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->index_jitter);
+                bp->bips->indexname = fname;
 
                 // Read .skdt file...
                 logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
-                bp->starkd = startree_open(startreefname);
-                if (!bp->starkd) {
+                bp->bips->starkd = startree_open(startreefname);
+                if (!bp->bips->starkd) {
                     logerr(bp, "Failed to read star kdtree %s\n", startreefname);
                     exit(-1);
                 }
+
+                sp->sips->index_jitter = qfits_header_getdouble(bp->bips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
+                logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->sips->index_jitter);
 
                 // Do it!
                 solve_fields(bp, TRUE);
 
                 // Clean up this index...
-                startree_close(bp->starkd);
-                bp->starkd = NULL;
+                startree_close(bp->bips->starkd);
+                bp->bips->starkd = NULL;
                 free_fn(startreefname);
 
                 if (sp->cancelled)
@@ -665,68 +670,62 @@ int main(int argc, char *argv[]) {
             quadfname = mk_quadfn(fname);
             idfname = mk_idfn(fname);
             startreefname = mk_streefn(fname);
-            bp->indexname = fname;
+            bp->bips->indexname = fname;
 
-            logmsg(bp, "\n\nTrying index %s...\n", bp->indexname);
+            logmsg(bp, "\n\nTrying index %s...\n", bp->bips->indexname);
 
             // Read .ckdt file...
             logmsg(bp, "Reading code KD tree from %s...\n", treefname);
-            bp->codekd = codetree_open(treefname);
-            if (!bp->codekd)
+            bp->bips->codekd = codetree_open(treefname);
+            if (!bp->bips->codekd)
                 exit(-1);
-            logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(bp->codekd), codetree_nodes(bp->codekd));
+            logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(bp->bips->codekd), codetree_nodes(bp->bips->codekd));
 
             // Read .quad file...
             logmsg(bp, "Reading quads file %s...\n", quadfname);
-            bp->quads = quadfile_open(quadfname, 0);
-            if (!bp->quads) {
+            bp->bips->quads = quadfile_open(quadfname, 0);
+            if (!bp->bips->quads) {
                 logerr(bp, "Couldn't read quads file %s\n", quadfname);
                 exit(-1);
             }
-            sp->index_scale_upper = quadfile_get_index_scale_arcsec(bp->quads);
-            sp->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bp->quads);
-            bp->indexid = bp->quads->indexid;
-            bp->healpix = bp->quads->healpix;
+            sp->sips->index_scale_upper = quadfile_get_index_scale_arcsec(bp->bips->quads);
+            sp->sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bp->bips->quads);
+            bp->bips->indexid = bp->bips->quads->indexid;
+            bp->bips->healpix = bp->bips->quads->healpix;
 
-            // See if index contains JITTER header... if so, set index_jitter to that value.
-            {
-                double ijitter = qfits_header_getdouble(bp->quads->header, "JITTER", 0.0);
-                if (ijitter > 0.0) {
-                    sp->index_jitter = ijitter;
-                } else {
-                    sp->index_jitter = DEFAULT_INDEX_JITTER;
-                }
-                logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->index_jitter);
-            }
-
-            logmsg(bp, "Stars: %i, Quads: %i.\n", bp->quads->numstars, bp->quads->numquads);
+            logmsg(bp, "Stars: %i, Quads: %i.\n", bp->bips->quads->numstars, bp->bips->quads->numquads);
 
             logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-                   sp->index_scale_lower/60.0, sp->index_scale_upper/60.0, sp->index_scale_lower, sp->index_scale_upper);
+                   sp->sips->index_scale_lower/60.0, sp->sips->index_scale_upper/60.0, sp->sips->index_scale_lower, sp->sips->index_scale_upper);
 
             // Read .skdt file...
             logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
-            bp->starkd = startree_open(startreefname);
-            if (!bp->starkd) {
+            bp->bips->starkd = startree_open(startreefname);
+            if (!bp->bips->starkd) {
                 logerr(bp, "Failed to read star kdtree %s\n", startreefname);
                 exit(-1);
             }
-            logverb(bp, "  (%d stars, %d nodes, dim %d).\n", startree_N(bp->starkd), startree_nodes(bp->starkd), startree_D(bp->starkd));
+            logverb(bp, "  (%d stars, %d nodes, dim %d).\n", startree_N(bp->bips->starkd), startree_nodes(bp->bips->starkd), startree_D(bp->bips->starkd));
+
+            // See if index contains JITTER header... if so, set index_jitter to that value.
+            //sp->sips->index_jitter = qfits_header_getdouble(bp->bips->quads->header, "JITTER", DEFAULT_INDEX_JITTER);
+            sp->sips->index_jitter = qfits_header_getdouble(bp->bips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
+            logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->sips->index_jitter);
 
             // If the code kdtree has CXDX set, set cxdx_margin.
-            if (qfits_header_getboolean(bp->codekd->header, "CXDX", 0))
+            if (qfits_header_getboolean(bp->bips->codekd->header, "CXDX", 0))
                 // 1.5 = sqrt(2) + fudge factor.
-                sp->cxdx_margin = 1.5 * sp->codetol;
+                sp->sips->cxdx_margin = 1.5 * sp->codetol;
 
             // check for CIRCLE field in ckdt header...
-            sp->circle = qfits_header_getboolean(bp->codekd->header, "CIRCLE", 0);
+            sp->sips->circle = qfits_header_getboolean(bp->bips->codekd->header, "CIRCLE", 0);
 
-            logverb(bp, "ckdt %s the CIRCLE header.\n", (sp->circle ? "contains" : "does not contain"));
+            logverb(bp, "ckdt %s the CIRCLE header.\n", (sp->sips->circle ? "contains" : "does not contain"));
 
             if (bp->use_idfile) {
                 // Read .id file...
-                bp->id = idfile_open(idfname, 0);
-                if (!bp->id) {
+                bp->bips->id = idfile_open(idfname, 0);
+                if (!bp->bips->id) {
                     logmsg(bp, "Couldn't open id file %s.\n", idfname);
                     exit(-1);
                     //logmsg(bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
@@ -734,9 +733,9 @@ int main(int argc, char *argv[]) {
             }
 
             // Set index params
-            sp->codekd = bp->codekd->tree;
+            sp->sips->codekd = bp->bips->codekd->tree;
             if (sp->funits_upper != 0.0) {
-                sp->minAB = sp->index_scale_lower / sp->funits_upper;
+                sp->sips->minAB = sp->sips->index_scale_lower / sp->funits_upper;
 
                 // compute fudge factor for quad scale: what are the extreme
                 // ranges of quad scales that should be accepted, given the
@@ -753,20 +752,20 @@ int main(int argc, char *argv[]) {
                 //  can move before exceeding the code tolerance, in arcsec.
                 // -that divided by the smallest arcsec-per-pixel scale
                 //  gives the largest motion in pixels.
-                scalefudge = sp->index_scale_upper * M_SQRT1_2 *
+                scalefudge = sp->sips->index_scale_upper * M_SQRT1_2 *
                     sp->codetol / sp->funits_upper;
-                sp->minAB -= scalefudge;
+                sp->sips->minAB -= scalefudge;
                 logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
-                //logmsg(bp, "Set minAB to %g\n", sp->minAB);
+                //logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
             }
             if (sp->funits_lower != 0.0) {
-                sp->maxAB = sp->index_scale_upper / sp->funits_lower;
-                sp->maxAB += scalefudge;
-                //logmsg(bp, "Set maxAB to %g\n", sp->maxAB);
+                sp->sips->maxAB = sp->sips->index_scale_upper / sp->funits_lower;
+                sp->sips->maxAB += scalefudge;
+                //logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
             }
 
             if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
-                logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sp->minAB, sp->maxAB);
+                logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sp->sips->minAB, sp->sips->maxAB);
 
             // Set CPU time limit.
             if (bp->cpulimit) {
@@ -815,16 +814,16 @@ int main(int argc, char *argv[]) {
             }
 
             // Clean up this index...
-            codetree_close(bp->codekd);
-            startree_close(bp->starkd);
-            if (bp->id)
-                idfile_close(bp->id);
-            quadfile_close(bp->quads);
+            codetree_close(bp->bips->codekd);
+            startree_close(bp->bips->starkd);
+            if (bp->bips->id)
+                idfile_close(bp->bips->id);
+            quadfile_close(bp->bips->quads);
 
-            bp->codekd = NULL;
-            bp->starkd = NULL;
-            bp->id = NULL;
-            bp->quads = NULL;
+            bp->bips->codekd = NULL;
+            bp->bips->starkd = NULL;
+            bp->bips->id = NULL;
+            bp->bips->quads = NULL;
 
             free_fn(treefname);
             free_fn(quadfname);
@@ -1161,7 +1160,7 @@ static sip_t* tweak(blind_params* bp, MatchObj* mo, startree* starkd) {
     if (bp->verify_dist2 > 0.0)
         twee->jitter = distsq2arcsec(bp->verify_dist2);
     else {
-        twee->jitter = hypot(mo->scale * bp->verify_pix, sp->index_jitter);
+        twee->jitter = hypot(mo->scale * bp->verify_pix, sp->sips->index_jitter);
         //logmsg(bp, "Pixel scale implied by this quad: %g arcsec/pix.\n", mo->scale);
         logmsg(bp, "Star jitter: %g arcsec.\n", twee->jitter);
     }
@@ -1270,17 +1269,20 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
     blind_params* bp = sp->userdata;
     double pixd2;
 
+    mo->indexid = bp->bips->indexid;
+    mo->healpix = bp->bips->healpix;
+
     // if verification was specified in pixel units, compute the verification
     // distance on the unit sphere...
     if (bp->verify_pix > 0.0) {
-        pixd2 = square(bp->verify_pix) + square(sp->index_jitter / mo->scale);
-        //d2 = arcsec2distsq(hypot(mo->scale * bp->verify_pix, sp->index_jitter));
+        pixd2 = square(bp->verify_pix) + square(sp->sips->index_jitter / mo->scale);
+        //d2 = arcsec2distsq(hypot(mo->scale * bp->verify_pix, sp->sips->index_jitter));
     } else {
-        pixd2 = (bp->verify_dist2 + square(sp->index_jitter)) / square(mo->scale);
-        //d2 = bp->verify_dist2 + square(sp->index_jitter);
+        pixd2 = (bp->verify_dist2 + square(sp->sips->index_jitter)) / square(mo->scale);
+        //d2 = bp->verify_dist2 + square(sp->sips->index_jitter);
     }
 
-    verify_hit(bp->starkd, mo, sp->field, sp->nfield, pixd2,
+    verify_hit(bp->bips->starkd, mo, sp->field, sp->nfield, pixd2,
                bp->distractors, sp->field_maxx, sp->field_maxy,
                bp->logratio_tobail, bp->nverify, bp->do_gamma);
     // FIXME - this is the same as nmatches.
@@ -1325,15 +1327,15 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
     solver_params* sp = &(bp->solver);
     int i;
     fits_add_long_comment(hdr, "-- blind solver parameters: --");
-    fits_add_long_comment(hdr, "Index name: %s", bp->indexname);
+    fits_add_long_comment(hdr, "Index name: %s", bp->bips->indexname);
     for (i=0; i<pl_size(bp->indexes); i++)
         fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexes, i));
-    fits_add_long_comment(hdr, "Index scale lower: %g arcsec", sp->index_scale_lower);
-    fits_add_long_comment(hdr, "Index scale upper: %g arcsec", sp->index_scale_upper);
-    fits_add_long_comment(hdr, "Index jitter: %g", sp->index_jitter);
-    fits_add_long_comment(hdr, "Index id: %i", bp->indexid);
-    fits_add_long_comment(hdr, "Index healpix: %i", bp->healpix);
-    fits_add_long_comment(hdr, "Circle: %s", sp->circle ? "yes":"no");
+    fits_add_long_comment(hdr, "Index scale lower: %g arcsec", sp->sips->index_scale_lower);
+    fits_add_long_comment(hdr, "Index scale upper: %g arcsec", sp->sips->index_scale_upper);
+    fits_add_long_comment(hdr, "Index jitter: %g", sp->sips->index_jitter);
+    fits_add_long_comment(hdr, "Index id: %i", bp->bips->indexid);
+    fits_add_long_comment(hdr, "Index healpix: %i", bp->bips->healpix);
+    fits_add_long_comment(hdr, "Circle: %s", sp->sips->circle ? "yes":"no");
 
     fits_add_long_comment(hdr, "Field name: %s", bp->fieldfname);
     fits_add_long_comment(hdr, "Field scale lower: %g arcsec/pixel", sp->funits_lower);
@@ -1349,7 +1351,7 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 
     fits_add_long_comment(hdr, "Parity: %i", sp->parity);
     fits_add_long_comment(hdr, "Codetol: %g", sp->codetol);
-    fits_add_long_comment(hdr, "Cxdx margin: %g", sp->cxdx_margin);
+    fits_add_long_comment(hdr, "Cxdx margin: %g", sp->sips->cxdx_margin);
     fits_add_long_comment(hdr, "Verify distance: %g arcsec", distsq2arcsec(bp->verify_dist2));
     fits_add_long_comment(hdr, "Verify pixels: %g pix", bp->verify_pix);
     fits_add_long_comment(hdr, "N index in field to solve: %i", bp->nindex_tosolve);
@@ -1459,8 +1461,10 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 
         template.fieldnum = fieldnum;
         template.fieldfile = sp->fieldid;
-        template.indexid = bp->indexid;
-        template.healpix = bp->healpix;
+        /*
+          template.indexid = bp->bips->indexid;
+          template.healpix = bp->bips->healpix;
+        */
 
         sp->numtries = 0;
         sp->nummatches = 0;
@@ -1543,7 +1547,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 
             // Tweak, if requested.
             if (bp->do_tweak) {
-                sip = tweak(bp, bestmo, bp->starkd);
+                sip = tweak(bp, bestmo, bp->bips->starkd);
             }
 
             // Write WCS, if requested.
@@ -1620,7 +1624,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
                 star_midpoint(fieldcenter, bestmo->sMin, bestmo->sMax);
                 fieldr2 = distsq(fieldcenter, bestmo->sMin, 3);
                 // 1.05 is a little safety factor.
-                res = kdtree_rangesearch_options(bp->starkd->tree, fieldcenter,
+                res = kdtree_rangesearch_options(bp->bips->starkd->tree, fieldcenter,
                                                  fieldr2 * 1.05,
                                                  KD_OPTIONS_SMALL_RADIUS |
                                                  KD_OPTIONS_RETURN_POINTS);
@@ -1754,15 +1758,15 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 }
 
 void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
-    quadfile_get_starids(my_bp.quads, thisquad, iA, iB, iC, iD);
+    quadfile_get_starids(my_bp.bips->quads, thisquad, iA, iB, iC, iD);
 }
 
 void getstarcoord(uint iA, double *sA) {
-    startree_get(my_bp.starkd, iA, sA);
+    startree_get(my_bp.bips->starkd, iA, sA);
 }
 
 uint64_t getstarid(uint iA) {
-    if (my_bp.id)
-        return idfile_get_anid(my_bp.id, iA);
+    if (my_bp.bips->id)
+        return idfile_get_anid(my_bp.bips->id, iA);
     return 0;
 }

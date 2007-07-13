@@ -73,7 +73,7 @@ static inline void sety(double* d, uint ind, double val) {
 
 void solver_default_params(solver_params* params) {
     memset(params, 0, sizeof(solver_params));
-    params->maxAB = HUGE_VAL;
+    params->sips->maxAB = HUGE_VAL;
     params->funits_upper = HUGE_VAL;
 }
 
@@ -109,8 +109,8 @@ static void check_scale(pquad* pq, solver_params* params) {
     dx = Bx - Ax;
     dy = By - Ay;
     scale = dx*dx + dy*dy;
-    if ((scale < square(params->minAB)) ||
-        (scale > square(params->maxAB))) {
+    if ((scale < square(params->sips->minAB)) ||
+        (scale > square(params->sips->maxAB))) {
         pq->scale_ok = FALSE;
         return;
     }
@@ -136,7 +136,7 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
         xxtmp = Cx;
         Cx =     Cx * pq->costheta + Cy * pq->sintheta;
         Cy = -xxtmp * pq->sintheta + Cy * pq->costheta;
-        if (params->circle) {
+        if (params->sips->circle) {
             // make sure it's in the circle centered at (0.5, 0.5)
             // with radius 1/sqrt(2) (plus codetol for fudge):
             // (x-1/2)^2 + (y-1/2)^2   <=   (r + codetol)^2
@@ -474,15 +474,15 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = Dx;
     thequery[3] = Dy;
 
-    if ((params->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->cxdx_margin))) {
+    if ((params->sips->cxdx_margin == 0.0) ||
+        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
         set_xy(inorder, 0, ABCDpix, A);
         set_xy(inorder, 1, ABCDpix, B);
         set_xy(inorder, 2, ABCDpix, C);
         set_xy(inorder, 3, ABCDpix, D);
 
-        result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
 
         debug("      trying ABCD = [%i %i %i %i]: %i results.\n", iA, iB, iC, iD, result->nres);
 
@@ -499,15 +499,15 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = 1.0 - Dx;
     thequery[3] = 1.0 - Dy;
 
-    if ((params->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->cxdx_margin))) {
+    if ((params->sips->cxdx_margin == 0.0) ||
+        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
         set_xy(inorder, 0, ABCDpix, B);
         set_xy(inorder, 1, ABCDpix, A);
         set_xy(inorder, 2, ABCDpix, C);
         set_xy(inorder, 3, ABCDpix, D);
 
-        result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
 
         debug("      trying BACD = [%i %i %i %i]: %i results.\n", iB, iA, iC, iD, result->nres);
 
@@ -525,15 +525,15 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = Cx;
     thequery[3] = Cy;
 
-    if ((params->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->cxdx_margin))) {
+    if ((params->sips->cxdx_margin == 0.0) ||
+        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
         set_xy(inorder, 0, ABCDpix, A);
         set_xy(inorder, 1, ABCDpix, B);
         set_xy(inorder, 2, ABCDpix, D);
         set_xy(inorder, 3, ABCDpix, C);
 
-        result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
 
         debug("      trying ABDC = [%i %i %i %i]: %i results.\n", iA, iB, iD, iC, result->nres);
 
@@ -551,15 +551,15 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
     thequery[2] = 1.0 - Cx;
     thequery[3] = 1.0 - Cy;
 
-    if ((params->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->cxdx_margin))) {
+    if ((params->sips->cxdx_margin == 0.0) ||
+        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
         set_xy(inorder, 0, ABCDpix, B);
         set_xy(inorder, 1, ABCDpix, A);
         set_xy(inorder, 2, ABCDpix, D);
         set_xy(inorder, 3, ABCDpix, C);
 
-        result = kdtree_rangesearch_options_reuse(params->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
 
         debug("      trying BADC = [%i %i %i %i]: %i results.\n", iB, iA, iD, iC, result->nres);
 
