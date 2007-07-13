@@ -493,7 +493,7 @@ static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
         if ((pq->scale < square(sips->minAB)) ||
             (pq->scale > square(sips->maxAB)))
             continue;
-        params->indexindex = 0;
+        params->indexindex = i;
         if (params->switchindex) {
             params->switchindex(params, params->indexindex);
         }
