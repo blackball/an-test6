@@ -128,7 +128,7 @@ struct blind_params {
     int firstfield, lastfield;
 
     // Indexes to use (base filenames)
-    pl* indexes;
+    pl* indexnames;
 
     // Logfile
     FILE* logfd;
@@ -457,7 +457,7 @@ int main(int argc, char *argv[]) {
         bp->nverify = 20;
         bp->logratio_tobail = -HUGE_VAL;
         bp->fieldlist = il_new(256);
-        bp->indexes = pl_new(16);
+        bp->indexnames = pl_new(16);
         bp->fieldid_key = strdup("FIELDID");
         bp->xcolname = strdup("X");
         bp->ycolname = strdup("Y");
@@ -483,7 +483,7 @@ int main(int argc, char *argv[]) {
             exit(-1);
         }
 
-        if (!pl_size(bp->indexes)) {
+        if (!pl_size(bp->indexnames)) {
             logerr(bp, "You must specify an index.\n");
             exit(-1);
         }
@@ -542,8 +542,8 @@ int main(int argc, char *argv[]) {
             logmsg(bp, "%i ", il_get(bp->fieldlist, i));
         logmsg(bp, "\n");
         logmsg(bp, "indexes:\n");
-        for (i=0; i<pl_size(bp->indexes); i++)
-            logmsg(bp, "  %s\n", (char*)pl_get(bp->indexes, i));
+        for (i=0; i<pl_size(bp->indexnames); i++)
+            logmsg(bp, "  %s\n", (char*)pl_get(bp->indexnames, i));
         logmsg(bp, "fieldfname %s\n", bp->fieldfname);
         logmsg(bp, "verify %s\n", bp->verify_wcsfn);
         logmsg(bp, "fieldid %i\n", sp->fieldid);
@@ -683,7 +683,7 @@ int main(int argc, char *argv[]) {
                 logerr(bp, "Failed to write marker file %s: %s\n", bp->startfname, strerror(errno));
         }
 
-        sp->nindexes = pl_size(bp->indexes);
+        sp->nindexes = pl_size(bp->indexnames);
 
         if (bp->verify_wcsfn) {
             logmsg(bp, "Reading WCS header to verify from file %s\n", bp->verify_wcsfn);
@@ -700,7 +700,7 @@ int main(int argc, char *argv[]) {
                 goto doneverify;
             }
 
-            for (I=0; I<pl_size(bp->indexes); I++) {
+            for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
 
                 if (bp->single_field_solved)
@@ -708,7 +708,7 @@ int main(int argc, char *argv[]) {
                 if (sp->cancelled)
                     break;
 
-                fname = pl_get(bp->indexes, I);
+                fname = pl_get(bp->indexnames, I);
                 if (load_index(fname, TRUE, bp, sp, bp->bips, sp->sips)) {
                     exit(-1);
                 }
@@ -726,7 +726,7 @@ int main(int argc, char *argv[]) {
         }
     doneverify:
 
-        for (I=0; I<pl_size(bp->indexes); I++) {
+        for (I=0; I<pl_size(bp->indexnames); I++) {
             char* fname;
             struct sigaction oldsigcpu;
             struct sigaction oldsigalarm;
@@ -740,7 +740,7 @@ int main(int argc, char *argv[]) {
             if (sp->cancelled)
                 break;
 
-            fname = pl_get(bp->indexes, I);
+            fname = pl_get(bp->indexnames, I);
             if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
                 exit(-1);
             }
@@ -879,9 +879,9 @@ static void cleanup_parameters(blind_params* bp,
                                solver_params* sp) {
     int i;
     il_free(bp->fieldlist);
-    for (i=0; i<pl_size(bp->indexes); i++)
-        free(pl_get(bp->indexes, i));
-    pl_free(bp->indexes);
+    for (i=0; i<pl_size(bp->indexnames); i++)
+        free(pl_get(bp->indexnames, i));
+    pl_free(bp->indexnames);
 
     free(sp->cancelfname);
     free(bp->donefname);
@@ -902,7 +902,7 @@ static void cleanup_parameters(blind_params* bp,
 
     /*
       bp->fieldlist = NULL;
-      bp->indexes = NULL;
+      bp->indexnames = NULL;
       bp->xcolname = NULL;
       bp->ycolname = NULL;
       bp->fieldid_key = NULL;
@@ -1061,7 +1061,7 @@ static int read_parameters(blind_params* bp) {
             free(bp->ycolname);
             bp->ycolname = strdup(nextword);
         } else if (is_word(line, "index ", &nextword)) {
-            pl_append(bp->indexes, strdup(nextword));
+            pl_append(bp->indexnames, strdup(nextword));
         } else if (is_word(line, "field ", &nextword)) {
             free(bp->fieldfname);
             bp->fieldfname = strdup(nextword);
@@ -1324,8 +1324,8 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
     int i;
     fits_add_long_comment(hdr, "-- blind solver parameters: --");
     fits_add_long_comment(hdr, "Index name: %s", bp->bips->indexname);
-    for (i=0; i<pl_size(bp->indexes); i++)
-        fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexes, i));
+    for (i=0; i<pl_size(bp->indexnames); i++)
+        fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexnames, i));
     fits_add_long_comment(hdr, "Index scale lower: %g arcsec", sp->sips->index_scale_lower);
     fits_add_long_comment(hdr, "Index scale upper: %g arcsec", sp->sips->index_scale_upper);
     fits_add_long_comment(hdr, "Index jitter: %g", sp->sips->index_jitter);
