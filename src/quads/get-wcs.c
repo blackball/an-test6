@@ -34,10 +34,11 @@
 #include "fitsioutils.h"
 #include "starutil.h"
 
-static char* OPTIONS = "h";
+static char* OPTIONS = "ho:";
 
 static void printHelp(char* progname) {
-    printf("%s  <input-file>\n"
+    printf("%s <input-file>\n"
+           "   [-o <output-file>]\n"
            "\n", progname);
 }
 
@@ -48,6 +49,7 @@ int main(int argc, char *argv[]) {
     char* progname = argv[0];
     int argchar;
     char* infn = NULL;
+    char* outfn = NULL;
     qfits_header* hdr;
     tan_t wcs;
 
@@ -57,6 +59,9 @@ int main(int argc, char *argv[]) {
         case 'h':
             printHelp(progname);
             return 0;
+        case 'o':
+            outfn = optarg;
+            break;
         default:
             return -1;
         }
@@ -78,8 +83,10 @@ int main(int argc, char *argv[]) {
     // This sucks :)
 
     if (!tan_read_header(hdr, &wcs)) {
+        // Couldn't get a wcs from this file.
         return 0;
     }
+    qfits_header_destroy(hdr);
 
     printf("crval1 %g\n", wcs.crval[0]);
     printf("crval2 %g\n", wcs.crval[1]);
@@ -90,7 +97,35 @@ int main(int argc, char *argv[]) {
     printf("cd21 %g\n", wcs.cd[1][0]);
     printf("cd22 %g\n", wcs.cd[1][1]);
 
-    qfits_header_destroy(hdr);
+    if (outfn) {
+        FILE* fout;
+        bool tostdout;
+        tostdout =  !strcmp(outfn, "-");
+        if (tostdout)
+            fout = stdout;
+        else {
+            fout = fopen(outfn, "wb");
+            if (!fout) {
+                fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
+                exit(-1);
+            }
+        }
+        hdr = tan_create_header(&wcs);
+        if (!hdr) {
+            fprintf(stderr, "Failed to create WCS header.\n");
+            exit(-1);
+        }
+        if (qfits_header_dump(hdr, fout)) {
+            fprintf(stderr, "Failed to write WCS header.\n");
+            exit(-1);
+        }
+        if (!tostdout) {
+            if (fclose(fout)) {
+                fprintf(stderr, "Failed to close output file %s: %s\n", outfn, strerror(errno));
+                exit(-1);
+            }
+        }
+    }
 
     return 0;
 }
