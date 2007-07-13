@@ -494,6 +494,9 @@ static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
             (pq->scale > square(sips->maxAB)))
             continue;
         params->indexindex = 0;
+        if (params->switchindex) {
+            params->switchindex(params, params->indexindex);
+        }
 
         if (params->parity == PARITY_NORMAL ||
             params->parity == PARITY_BOTH) {

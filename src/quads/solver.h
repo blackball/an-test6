@@ -27,7 +27,8 @@
 
 struct solver_params;
 
-typedef int (*handle_hit)(struct solver_params*, MatchObj*);
+typedef int  (*handle_hit)(struct solver_params*, MatchObj*);
+typedef void (*switch_index)(struct solver_params*, int indind);
 
 enum {
     PARITY_NORMAL,
@@ -123,7 +124,8 @@ struct solver_params {
     MatchObj* mo_template;
 
     handle_hit handlehit;
-	
+    switch_index switchindex;
+
     // internal:
     double starttime;
     double timeused;

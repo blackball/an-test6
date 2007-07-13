@@ -197,7 +197,9 @@ static void solve_fields(blind_params* bp, bool just_verify);
 static int read_parameters(blind_params* bp);
 static void cleanup_parameters(blind_params* bp, solver_params* sp);
 static void add_blind_params(blind_params* bp, qfits_header* hdr);
+
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
+static void blind_switch_index(solver_params* sp, int indexindex);
 
 static blind_params my_bp;
 
@@ -365,10 +367,6 @@ static int load_index(char* indexname,
     if (!bips->quads) {
         logerr(bp, "Couldn't read quads file %s\n", quadfname);
         free_fn(quadfname);
-
-        // DEBUG
-        sleep(60);
-
         return -1;
     }
     free_fn(quadfname);
@@ -424,11 +422,6 @@ static int load_index(char* indexname,
 
     return 0;
 }
-
-/*
-  static void run_indexes(blind_params* bp) {
-  }
-*/
 
 int main(int argc, char *argv[]) {
     char* progname = argv[0];
@@ -487,6 +480,7 @@ int main(int argc, char *argv[]) {
         sp->parity = DEFAULT_PARITY;
         sp->codetol = DEFAULT_CODE_TOL;
         sp->handlehit = blind_handle_hit;
+        sp->switchindex = blind_switch_index;
         sp->indexes = bl_new(16, sizeof(solver_index_params));
 
         if (read_parameters(bp)) {
@@ -1400,6 +1394,13 @@ static void print_match(blind_params* bp, MatchObj* mo) {
     int ndropout = Nmin - mo->noverlap - mo->nconflict;
     logmsg(bp, "  logodds ratio %g (%g), %i match, %i conflict, %i dropout, %i index.\n",
            mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
+}
+
+static void blind_switch_index(solver_params* sp, int indexindex) {
+    blind_params* bp = sp->userdata;
+    assert(bl_size(bp->indexes) == bl_size(sp->indexes));
+    assert(indexindex < bl_size(bp->indexes));
+    bp->bips = bl_access(bp->indexes, indexindex);
 }
 
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
