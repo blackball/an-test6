@@ -47,7 +47,7 @@ SIMPLEXY_SHARED= src/simplexy.o src/dsigma.o src/dmedsmooth.o \
 
 FIXAXIS= src/fixaxis.o
 
-all: $(REMAKE_CFITSIO) simplexy fixaxis simplexy_shared
+all: $(REMAKE_CFITSIO) simplexy fixaxis
 
 simplexy: fits2xy
 
