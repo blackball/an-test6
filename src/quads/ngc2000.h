@@ -25,6 +25,8 @@
 /*
   The NGC2000 catalog can be found at:
     ftp://cdsarc.u-strasbg.fr/cats/VII/118/
+
+  The "ReadMe" file associated with the catalog is ngc2000-readme.txt
 */
 
 struct ngc_entry {
