@@ -184,12 +184,14 @@ typedef struct blind_params blind_params;
 
 static void solve_fields(blind_params* bp, bool just_verify);
 static int read_parameters(blind_params* bp);
+static void cleanup_parameters(blind_params* bp, solver_params* sp);
 static void add_blind_params(blind_params* bp, qfits_header* hdr);
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
 
 static blind_params my_bp;
 // FIXME - temporary...
 static blind_index_params my_bips;
+static solver_index_params my_sips;
 
 static void loglvl(int level, const blind_params* bp, const char* format, va_list va) {
     // 1=error
@@ -320,13 +322,134 @@ static void indexrdls_write_new_field(blind_params* bp, char* fieldname) {
     logerr(bp, "Failed to write index RDLS field header.\n");
 }
 
+static int load_index(char* indexname,
+                      bool skdt_only,
+                      blind_params* bp,
+                      solver_params* sp,
+                      blind_index_params* bips,
+                      solver_index_params* sips) {
+    char *idfname, *treefname, *quadfname, *startreefname;
+    double scalefudge = 0.0; // in pixels
+
+    bips->indexname = indexname;
+
+    // Read .skdt file...
+    startreefname = mk_streefn(indexname);
+    logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
+    bips->starkd = startree_open(startreefname);
+    if (!bips->starkd) {
+        logerr(bp, "Failed to read star kdtree %s\n", startreefname);
+        free_fn(startreefname);
+        return -1;
+    }
+    free_fn(startreefname);
+    logverb(bp, "  (%d stars, %d nodes).\n", startree_N(bips->starkd), startree_nodes(bips->starkd));
+
+    sips->index_jitter = qfits_header_getdouble(bips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
+    logmsg(bp, "Setting index jitter to %g arcsec.\n", sips->index_jitter);
+
+    if (skdt_only)
+        return 0;
+
+    // Read .ckdt file...
+    treefname = mk_ctreefn(indexname);
+    logmsg(bp, "Reading code KD tree from %s...\n", treefname);
+    bips->codekd = codetree_open(treefname);
+    if (!bips->codekd) {
+        logerr(bp, "Failed to read code kdtree %s\n", treefname);
+        free_fn(treefname);
+        return -1;
+    }
+    logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(bips->codekd), codetree_nodes(bips->codekd));
+    free_fn(treefname);
+
+    // If the code kdtree has CXDX set, set cxdx_margin.
+    if (qfits_header_getboolean(bips->codekd->header, "CXDX", 0))
+        // 1.5 = sqrt(2) + fudge factor.
+        sips->cxdx_margin = 1.5 * sp->codetol;
+
+    // check for CIRCLE field in ckdt header...
+    sips->circle = qfits_header_getboolean(bips->codekd->header, "CIRCLE", 0);
+    logverb(bp, "ckdt %s the CIRCLE header.\n", (sips->circle ? "contains" : "does not contain"));
+
+    // Read .quad file...
+    quadfname = mk_quadfn(indexname);
+    logmsg(bp, "Reading quads file %s...\n", quadfname);
+    bips->quads = quadfile_open(quadfname, 0);
+    if (!bips->quads) {
+        logerr(bp, "Couldn't read quads file %s\n", quadfname);
+        free_fn(quadfname);
+        return -1;
+    }
+    free_fn(quadfname);
+    sips->index_scale_upper = quadfile_get_index_scale_arcsec(bips->quads);
+    sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bips->quads);
+    bips->indexid = bips->quads->indexid;
+    bips->healpix = bips->quads->healpix;
+
+    logmsg(bp, "Stars: %i, Quads: %i.\n", bips->quads->numstars, bips->quads->numquads);
+
+    logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+           sips->index_scale_lower/60.0, sips->index_scale_upper/60.0,
+           sips->index_scale_lower,      sips->index_scale_upper);
+
+    if (bp->use_idfile) {
+        idfname = mk_idfn(indexname);
+        // Read .id file...
+        bips->id = idfile_open(idfname, 0);
+        if (!bips->id) {
+            logmsg(bp, "Couldn't open id file %s.\n", idfname);
+            free_fn(idfname);
+            return -1;
+        }
+        free_fn(idfname);
+    }
+
+
+
+    // Set index params
+    sips->codekd = bips->codekd->tree;
+    if (sp->funits_upper != 0.0) {
+        sips->minAB = sips->index_scale_lower / sp->funits_upper;
+
+        // compute fudge factor for quad scale: what are the extreme
+        // ranges of quad scales that should be accepted, given the
+        // code tolerance?
+
+        // -what is the maximum number of pixels a C or D star can move
+        //  to singlehandedly exceed the code tolerance?
+        // -largest quad
+        // -smallest arcsec-per-pixel scale
+
+        // -index_scale_upper * 1/sqrt(2) is the side length of
+        //  the unit-square of code space, in arcseconds.
+        // -that times the code tolerance is how far a C/D star
+        //  can move before exceeding the code tolerance, in arcsec.
+        // -that divided by the smallest arcsec-per-pixel scale
+        //  gives the largest motion in pixels.
+        scalefudge = sips->index_scale_upper * M_SQRT1_2 *
+            sp->codetol / sp->funits_upper;
+        sips->minAB -= scalefudge;
+        logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
+        //logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
+    }
+    if (sp->funits_lower != 0.0) {
+        sips->maxAB = sips->index_scale_upper / sp->funits_lower;
+        sips->maxAB += scalefudge;
+        //logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
+    }
+    if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
+        logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sips->minAB, sips->maxAB);
+
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     char* progname = argv[0];
     uint numfields;
     int i;
     blind_params* bp = &my_bp;
     solver_params* sp = &(bp->solver);
-    bp->bips = &my_bips;
 
     if (argc == 2 && strcmp(argv[1],"-s") == 0) {
         bp->silent = TRUE;
@@ -355,8 +478,12 @@ int main(int argc, char *argv[]) {
 
         // Reset params.
         memset(bp, 0, sizeof(blind_params));
-        solver_default_params(&(bp->solver));
+        solver_default_params(sp);
         sp->userdata = bp;
+        
+        sp->sips = &my_sips;
+        bp->bips = &my_bips;
+        solver_default_index_params(sp->sips);
 
         bp->nverify = 20;
         bp->logratio_tobail = -HUGE_VAL;
@@ -378,11 +505,7 @@ int main(int argc, char *argv[]) {
         sp->handlehit = blind_handle_hit;
 
         if (read_parameters(bp)) {
-            il_free(bp->fieldlist);
-            pl_free(bp->indexes);
-            free(bp->xcolname);
-            free(bp->ycolname);
-            free(bp->fieldid_key);
+            cleanup_parameters(bp, sp);
             break;
         }
 
@@ -430,11 +553,7 @@ int main(int argc, char *argv[]) {
         if ((il_size(bp->fieldlist) == 1) && (sp->solved_in)) {
             if (solvedfile_get(sp->solved_in, il_get(bp->fieldlist, 0))) {
                 logmsg(bp, "Field %i is already solved.\n", il_get(bp->fieldlist, 0));
-                il_free(bp->fieldlist);
-                pl_free(bp->indexes);
-                free(bp->xcolname);
-                free(bp->ycolname);
-                free(bp->fieldid_key);
+                cleanup_parameters(bp, sp);
                 continue;
             }
         }
@@ -443,11 +562,7 @@ int main(int argc, char *argv[]) {
         if (sp->cancelfname) {
             if (file_exists(sp->cancelfname)) {
                 logmsg(bp, "Run cancelled.\n");
-                il_free(bp->fieldlist);
-                pl_free(bp->indexes);
-                free(bp->xcolname);
-                free(bp->ycolname);
-                free(bp->fieldid_key);
+                cleanup_parameters(bp, sp);
                 continue;
             }
         }
@@ -461,6 +576,7 @@ int main(int argc, char *argv[]) {
         for (i=0; i<pl_size(bp->indexes); i++)
             logmsg(bp, "  %s\n", (char*)pl_get(bp->indexes, i));
         logmsg(bp, "fieldfname %s\n", bp->fieldfname);
+        logmsg(bp, "verify %s\n", bp->verify_wcsfn);
         logmsg(bp, "fieldid %i\n", sp->fieldid);
         logmsg(bp, "matchfname %s\n", bp->matchfname);
         logmsg(bp, "startfname %s\n", bp->startfname);
@@ -616,25 +732,18 @@ int main(int argc, char *argv[]) {
             }
 
             for (I=0; I<pl_size(bp->indexes); I++) {
-                char *startreefname;
-                char* fname = pl_get(bp->indexes, I);
+                char* fname;
 
                 if (bp->single_field_solved)
                     break;
-                sp->indexnum = I;
-                startreefname = mk_streefn(fname);
-                bp->bips->indexname = fname;
+                if (sp->cancelled)
+                    break;
 
-                // Read .skdt file...
-                logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
-                bp->bips->starkd = startree_open(startreefname);
-                if (!bp->bips->starkd) {
-                    logerr(bp, "Failed to read star kdtree %s\n", startreefname);
+                fname = pl_get(bp->indexes, I);
+                if (load_index(fname, TRUE, bp, sp, bp->bips, sp->sips)) {
                     exit(-1);
                 }
-
-                sp->sips->index_jitter = qfits_header_getdouble(bp->bips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
-                logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->sips->index_jitter);
+                sp->indexnum = I;
 
                 // Do it!
                 solve_fields(bp, TRUE);
@@ -642,10 +751,6 @@ int main(int argc, char *argv[]) {
                 // Clean up this index...
                 startree_close(bp->bips->starkd);
                 bp->bips->starkd = NULL;
-                free_fn(startreefname);
-
-                if (sp->cancelled)
-                    break;
             }
             sip_free(bp->verify_wcs);
             bp->verify_wcs = NULL;
@@ -653,11 +758,9 @@ int main(int argc, char *argv[]) {
     doneverify:
 
         for (I=0; I<pl_size(bp->indexes); I++) {
-            char *idfname, *treefname, *quadfname, *startreefname;
-            char* fname = pl_get(bp->indexes, I);
+            char* fname;
             struct sigaction oldsigcpu;
             struct sigaction oldsigalarm;
-            double scalefudge = 0.0; // in pixels
 
             if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
                 break;
@@ -665,107 +768,16 @@ int main(int argc, char *argv[]) {
             if (bp->single_field_solved)
                 break;
 
+            if (sp->cancelled)
+                break;
+
+            fname = pl_get(bp->indexes, I);
+            if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
+                exit(-1);
+            }
             sp->indexnum = I;
-            treefname = mk_ctreefn(fname);
-            quadfname = mk_quadfn(fname);
-            idfname = mk_idfn(fname);
-            startreefname = mk_streefn(fname);
-            bp->bips->indexname = fname;
 
             logmsg(bp, "\n\nTrying index %s...\n", bp->bips->indexname);
-
-            // Read .ckdt file...
-            logmsg(bp, "Reading code KD tree from %s...\n", treefname);
-            bp->bips->codekd = codetree_open(treefname);
-            if (!bp->bips->codekd)
-                exit(-1);
-            logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(bp->bips->codekd), codetree_nodes(bp->bips->codekd));
-
-            // Read .quad file...
-            logmsg(bp, "Reading quads file %s...\n", quadfname);
-            bp->bips->quads = quadfile_open(quadfname, 0);
-            if (!bp->bips->quads) {
-                logerr(bp, "Couldn't read quads file %s\n", quadfname);
-                exit(-1);
-            }
-            sp->sips->index_scale_upper = quadfile_get_index_scale_arcsec(bp->bips->quads);
-            sp->sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bp->bips->quads);
-            bp->bips->indexid = bp->bips->quads->indexid;
-            bp->bips->healpix = bp->bips->quads->healpix;
-
-            logmsg(bp, "Stars: %i, Quads: %i.\n", bp->bips->quads->numstars, bp->bips->quads->numquads);
-
-            logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-                   sp->sips->index_scale_lower/60.0, sp->sips->index_scale_upper/60.0, sp->sips->index_scale_lower, sp->sips->index_scale_upper);
-
-            // Read .skdt file...
-            logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
-            bp->bips->starkd = startree_open(startreefname);
-            if (!bp->bips->starkd) {
-                logerr(bp, "Failed to read star kdtree %s\n", startreefname);
-                exit(-1);
-            }
-            logverb(bp, "  (%d stars, %d nodes, dim %d).\n", startree_N(bp->bips->starkd), startree_nodes(bp->bips->starkd), startree_D(bp->bips->starkd));
-
-            // See if index contains JITTER header... if so, set index_jitter to that value.
-            //sp->sips->index_jitter = qfits_header_getdouble(bp->bips->quads->header, "JITTER", DEFAULT_INDEX_JITTER);
-            sp->sips->index_jitter = qfits_header_getdouble(bp->bips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
-            logmsg(bp, "Setting index jitter to %g arcsec.\n", sp->sips->index_jitter);
-
-            // If the code kdtree has CXDX set, set cxdx_margin.
-            if (qfits_header_getboolean(bp->bips->codekd->header, "CXDX", 0))
-                // 1.5 = sqrt(2) + fudge factor.
-                sp->sips->cxdx_margin = 1.5 * sp->codetol;
-
-            // check for CIRCLE field in ckdt header...
-            sp->sips->circle = qfits_header_getboolean(bp->bips->codekd->header, "CIRCLE", 0);
-
-            logverb(bp, "ckdt %s the CIRCLE header.\n", (sp->sips->circle ? "contains" : "does not contain"));
-
-            if (bp->use_idfile) {
-                // Read .id file...
-                bp->bips->id = idfile_open(idfname, 0);
-                if (!bp->bips->id) {
-                    logmsg(bp, "Couldn't open id file %s.\n", idfname);
-                    exit(-1);
-                    //logmsg(bp, "(Note, this won't cause trouble; you just won't get star IDs for matching quads.)\n");
-                }
-            }
-
-            // Set index params
-            sp->sips->codekd = bp->bips->codekd->tree;
-            if (sp->funits_upper != 0.0) {
-                sp->sips->minAB = sp->sips->index_scale_lower / sp->funits_upper;
-
-                // compute fudge factor for quad scale: what are the extreme
-                // ranges of quad scales that should be accepted, given the
-                // code tolerance?
-
-                // -what is the maximum number of pixels a C or D star can move
-                //  to singlehandedly exceed the code tolerance?
-                // -largest quad
-                // -smallest arcsec-per-pixel scale
-
-                // -index_scale_upper * 1/sqrt(2) is the side length of
-                //  the unit-square of code space, in arcseconds.
-                // -that times the code tolerance is how far a C/D star
-                //  can move before exceeding the code tolerance, in arcsec.
-                // -that divided by the smallest arcsec-per-pixel scale
-                //  gives the largest motion in pixels.
-                scalefudge = sp->sips->index_scale_upper * M_SQRT1_2 *
-                    sp->codetol / sp->funits_upper;
-                sp->sips->minAB -= scalefudge;
-                logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
-                //logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
-            }
-            if (sp->funits_lower != 0.0) {
-                sp->sips->maxAB = sp->sips->index_scale_upper / sp->funits_lower;
-                sp->sips->maxAB += scalefudge;
-                //logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
-            }
-
-            if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
-                logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sp->sips->minAB, sp->sips->maxAB);
 
             // Set CPU time limit.
             if (bp->cpulimit) {
@@ -824,14 +836,6 @@ int main(int argc, char *argv[]) {
             bp->bips->starkd = NULL;
             bp->bips->id = NULL;
             bp->bips->quads = NULL;
-
-            free_fn(treefname);
-            free_fn(quadfname);
-            free_fn(idfname);
-            free_fn(startreefname);
-
-            if (sp->cancelled)
-                break;
         }
 
         if (bp->solvedserver) {
@@ -894,32 +898,47 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        for (i=0; i<pl_size(bp->indexes); i++)
-            free(pl_get(bp->indexes, i));
+        cleanup_parameters(bp, sp);
 
-        pl_free(bp->indexes);
-        il_free(bp->fieldlist);
-
-        free(bp->logfname);
-        free(bp->donefname);
-        free(bp->donescript);
-        free(bp->startfname);
-        free(sp->solved_in);
-        free(bp->solved_out);
-        free(bp->solvedserver);
-        free(sp->cancelfname);
-        free(bp->matchfname);
-        free(bp->indexrdlsfname);
-        free(bp->xcolname);
-        free(bp->ycolname);
-        free(bp->wcs_template);
-        free(bp->fieldid_key);
-        free(bp->fieldfname);
-        free(bp->verify_wcsfn);
     }
 
     qfits_cache_purge(); // for valgrind
     return 0;
+}
+
+static void cleanup_parameters(blind_params* bp,
+                               solver_params* sp) {
+    int i;
+    il_free(bp->fieldlist);
+    for (i=0; i<pl_size(bp->indexes); i++)
+        free(pl_get(bp->indexes, i));
+    pl_free(bp->indexes);
+
+    free(sp->cancelfname);
+    free(bp->donefname);
+    free(bp->donescript);
+    free(bp->fieldfname);
+    free(bp->fieldid_key);
+    free(bp->indexrdlsfname);
+    free(bp->logfname);
+    free(bp->matchfname);
+    free(bp->solvedserver);
+    free(sp->solved_in);
+    free(bp->solved_out);
+    free(bp->startfname);
+    free(bp->verify_wcsfn);
+    free(bp->wcs_template);
+    free(bp->xcolname);
+    free(bp->ycolname);
+
+    /*
+      bp->fieldlist = NULL;
+      bp->indexes = NULL;
+      bp->xcolname = NULL;
+      bp->ycolname = NULL;
+      bp->fieldid_key = NULL;
+      bp->fieldfname = NULL;
+    */
 }
 
 static int read_parameters(blind_params* bp) {
@@ -984,8 +1003,10 @@ static int read_parameters(blind_params* bp) {
         } else if (is_word(line, "nindex_tosolve ", &nextword)) {
             bp->nindex_tosolve = atoi(nextword);
         } else if (is_word(line, "match ", &nextword)) {
+            free(bp->matchfname);
             bp->matchfname = strdup(nextword);
         } else if (is_word(line, "indexrdls ", &nextword)) {
+            free(bp->indexrdlsfname);
             bp->indexrdlsfname = strdup(nextword);
         } else if (is_word(line, "indexrdls_solvedonly", &nextword)) {
             bp->indexrdls_solvedonly = TRUE;
@@ -997,14 +1018,15 @@ static int read_parameters(blind_params* bp) {
         } else if (is_word(line, "solved_in ", &nextword)) {
             free(bp->solver.solved_in);
             bp->solver.solved_in = strdup(nextword);
-        } else if (is_word(line, "cancel ", &nextword)) {
-            free(sp->cancelfname);
-            sp->cancelfname = strdup(nextword);
         } else if (is_word(line, "solved_out ", &nextword)) {
             free(bp->solved_out);
             bp->solved_out = strdup(nextword);
+        } else if (is_word(line, "cancel ", &nextword)) {
+            free(sp->cancelfname);
+            sp->cancelfname = strdup(nextword);
         } else if (is_word(line, "log ", &nextword)) {
             // Open the log file...
+            free(bp->logfname);
             bp->logfname = strdup(nextword);
             bp->logfd = fopen(bp->logfname, "a");
             if (!bp->logfd) {
@@ -1037,6 +1059,7 @@ static int read_parameters(blind_params* bp) {
             free(bp->logfname);
             bp->logfname = NULL;
         } else if (is_word(line, "solvedserver ", &nextword)) {
+            free(bp->solvedserver);
             bp->solvedserver = strdup(nextword);
         } else if (is_word(line, "silent", &nextword)) {
             bp->silent = TRUE;
@@ -1053,6 +1076,7 @@ static int read_parameters(blind_params* bp) {
         } else if (is_word(line, "tweak", &nextword)) {
             bp->do_tweak = TRUE;
         } else if (is_word(line, "wcs ", &nextword)) {
+            free(bp->wcs_template);
             bp->wcs_template = strdup(nextword);
         } else if (is_word(line, "fieldid_key ", &nextword)) {
             free(bp->fieldid_key);
@@ -1080,12 +1104,15 @@ static int read_parameters(blind_params* bp) {
             bp->distractors = atof(nextword);
         } else if (is_word(line, "fieldid ", &nextword)) {
             sp->fieldid = atoi(nextword);
+        } else if (is_word(line, "start ", &nextword)) {
+            free(bp->startfname);
+            bp->startfname = strdup(nextword);
         } else if (is_word(line, "done ", &nextword)) {
+            free(bp->donefname);
             bp->donefname = strdup(nextword);
         } else if (is_word(line, "donescript ", &nextword)) {
+            free(bp->donescript);
             bp->donescript = strdup(nextword);
-        } else if (is_word(line, "start ", &nextword)) {
-            bp->startfname = strdup(nextword);
         } else if (is_word(line, "sdepth ", &nextword)) {
             sp->startobj = atoi(nextword);
         } else if (is_word(line, "depth ", &nextword)) {

@@ -71,9 +71,13 @@ static inline void sety(double* d, uint ind, double val) {
     d[ind*2 + 1] = val;
 }
 
+void solver_default_index_params(solver_index_params* sips) {
+    memset(sips, 0, sizeof(solver_index_params));
+    sips->maxAB = HUGE_VAL;
+}
+
 void solver_default_params(solver_params* params) {
     memset(params, 0, sizeof(solver_params));
-    params->sips->maxAB = HUGE_VAL;
     params->funits_upper = HUGE_VAL;
 }
 
