@@ -57,6 +57,9 @@ struct solver_params {
     // for printing "index %i of %i"
     int indexnum;
     int nindexes;
+
+    // The index
+    kdtree_t* codekd;
     //////////
 
     // Inputs:
@@ -87,9 +90,6 @@ struct solver_params {
     double field_minx, field_maxx, field_miny, field_maxy;
     // distance in pixels across the diagonal of the field
     double field_diag;
-
-    // The index
-    kdtree_t* codekd;
 
     // number of field quads to try
     int maxquads;
