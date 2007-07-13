@@ -126,6 +126,7 @@ $printsolved = $quads . "printsolved";
 $wcs_xy2rd = $quads . "wcs-xy2rd";
 $wcs_rd2xy = $quads . "wcs-rd2xy";
 $fits_guess_scale = $quads . "fits-guess-scale";
+$get_wcs = $quads . "get-wcs";
 $an_fitstopnm = $quads . "an-fitstopnm";
 $fits_filter = $quads . "fits2fits.py %s %s";
 $new_wcs = $quads . "new-wcs";

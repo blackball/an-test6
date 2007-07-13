@@ -247,6 +247,7 @@ function process_data ($vals) {
 	global $printsolved;
 	global $wcs_xy2rd;
 	global $wcs_rd2xy;
+	global $get_wcs;
 	global $input_fn;
 	global $inputtmp_fn;
 	global $donescript_fn;
@@ -826,8 +827,9 @@ function process_data ($vals) {
 			// Only do "verify-only" on the first pass.
 			if (($stripenum == 1) && $inwcsfile) {
 				$verify_fn = 'verify.fits';
-				if (!copy($inwcsfile, $mydir . $verify_fn)) {
-					loggit("Failed to copy WCS file to verify.\n");
+				$cmd = $get_wcs . " -o " . $mydir . $verify_fn . " " . $inwcsfile . " >/dev/null 2>&1";
+				if ((system($cmd, $retval) === FALSE) || $retval) {
+					loggit("Failed to run get-wcs: " . $cmd . ", return val " . $retval . "\n");
 				} else {
 					$str .=
 						"verify " . $verify_fn . "\n";
