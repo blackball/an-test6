@@ -116,6 +116,9 @@ struct blind_params {
     // best logodds encountered (even if we don't record bestmo)
     double bestlogodds;
 
+    blind_index_params* bestbips;
+    solver_index_params* bestsips;
+
     // Filenames
     char *fieldfname, *verify_wcsfn;
     char *matchfname, *indexrdlsfname;
@@ -753,6 +756,9 @@ int main(int argc, char *argv[]) {
     doneverify:
 
         if (bp->indexes_inparallel) {
+
+            sp->nindexes = 0;
+            sp->indexnum = 0;
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
@@ -1401,6 +1407,7 @@ static void blind_switch_index(solver_params* sp, int indexindex) {
     assert(bl_size(bp->indexes) == bl_size(sp->indexes));
     assert(indexindex < bl_size(bp->indexes));
     bp->bips = bl_access(bp->indexes, indexindex);
+    //logmgs(bp, "switching to index %i.\n", indexindex);
 }
 
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
@@ -1455,6 +1462,8 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
         //print_match(bp, mo);
         memcpy(&(bp->bestmo), mo, sizeof(MatchObj));
         bp->have_bestmo = TRUE;
+        bp->bestbips = bp->bips;
+        bp->bestsips = sp->sips;
     }
 
     if ((mo->logodds < bp->logratio_tosolve) ||
@@ -1691,6 +1700,9 @@ static void solve_fields(blind_params* bp, bool verify_only) {
             logmsg(bp, "Field %i solved: ", fieldnum);
             print_match(bp, bestmo);
             logmsg(bp, "Pixel scale: %g arcsec/pix.\n", bestmo->scale);
+
+            bp->bips = bp->bestbips;
+            sp->sips = bp->bestsips;
 
             // Tweak, if requested.
             if (bp->do_tweak) {
