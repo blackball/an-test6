@@ -188,6 +188,11 @@ struct blind_params {
 };
 typedef struct blind_params blind_params;
 
+static void blind_default_index_params(blind_index_params* bips) {
+    memset(bips, 0, sizeof(blind_index_params));
+    bips->healpix = -1;
+}
+
 static void solve_fields(blind_params* bp, bool just_verify);
 static int read_parameters(blind_params* bp);
 static void cleanup_parameters(blind_params* bp, solver_params* sp);
@@ -195,9 +200,6 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr);
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
 
 static blind_params my_bp;
-// FIXME - temporary...
-static blind_index_params my_bips;
-static solver_index_params my_sips;
 
 static void loglvl(int level, const blind_params* bp, const char* format, va_list va) {
     // 1=error
@@ -363,6 +365,10 @@ static int load_index(char* indexname,
     if (!bips->quads) {
         logerr(bp, "Couldn't read quads file %s\n", quadfname);
         free_fn(quadfname);
+
+        // DEBUG
+        sleep(60);
+
         return -1;
     }
     free_fn(quadfname);
@@ -464,10 +470,6 @@ int main(int argc, char *argv[]) {
         solver_default_params(sp);
         sp->userdata = bp;
         
-        sp->sips = &my_sips;
-        bp->bips = &my_bips;
-        solver_default_index_params(sp->sips);
-
         bp->nverify = 20;
         bp->logratio_tobail = -HUGE_VAL;
         bp->fieldlist = il_new(256);
@@ -478,7 +480,6 @@ int main(int argc, char *argv[]) {
         bp->ycolname = strdup("Y");
         bp->firstfield = -1;
         bp->lastfield = -1;
-        bp->bips->healpix = -1;
         bp->tweak_aborder  = DEFAULT_TWEAK_ABORDER;
         bp->tweak_abporder = DEFAULT_TWEAK_ABPORDER;
         sp->field_minx = sp->field_maxx = 0.0;
@@ -717,17 +718,21 @@ int main(int argc, char *argv[]) {
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
+                blind_index_params bips;
+                solver_index_params sips;
 
                 if (bp->single_field_solved)
                     break;
                 if (sp->cancelled)
                     break;
 
-                // HACK!
-                bp->bips = &my_bips;
-                sp->sips = &my_sips;
-
                 fname = pl_get(bp->indexnames, I);
+
+                bp->bips = &bips;
+                sp->sips = &sips;
+                solver_default_index_params(sp->sips);
+                blind_default_index_params(bp->bips);
+
                 if (load_index(fname, TRUE, bp, sp, bp->bips, sp->sips)) {
                     exit(-1);
                 }
@@ -745,6 +750,8 @@ int main(int argc, char *argv[]) {
 
                 bl_remove_all(sp->indexes);
                 bl_remove_all(bp->indexes);
+                bp->bips = NULL;
+                sp->sips = NULL;
             }
             sip_free(bp->verify_wcs);
             bp->verify_wcs = NULL;
@@ -755,8 +762,16 @@ int main(int argc, char *argv[]) {
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
+                blind_index_params bips;
+                solver_index_params sips;
+
+                bp->bips = &bips;
+                sp->sips = &sips;
+                solver_default_index_params(sp->sips);
+                blind_default_index_params(bp->bips);
+
                 fname = pl_get(bp->indexnames, I);
-                logmsg(bp, "Loading index %s...\n", fname);
+                logmsg(bp, "\nLoading index %s...\n", fname);
                 if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
                     exit(-1);
                 }
@@ -828,11 +843,15 @@ int main(int argc, char *argv[]) {
 
             bl_remove_all(sp->indexes);
             bl_remove_all(bp->indexes);
+            bp->bips = NULL;
+            sp->sips = NULL;
 
         } else {
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
+                blind_index_params bips;
+                solver_index_params sips;
 
                 if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
                     break;
@@ -843,9 +862,10 @@ int main(int argc, char *argv[]) {
                 if (sp->cancelled)
                     break;
 
-                // HACK!
-                bp->bips = &my_bips;
-                sp->sips = &my_sips;
+                bp->bips = &bips;
+                sp->sips = &sips;
+                solver_default_index_params(sp->sips);
+                blind_default_index_params(bp->bips);
 
                 fname = pl_get(bp->indexnames, I);
                 if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
@@ -918,6 +938,8 @@ int main(int argc, char *argv[]) {
 
                 bl_remove_all(sp->indexes);
                 bl_remove_all(bp->indexes);
+                bp->bips = NULL;
+                sp->sips = NULL;
             }
         }
 
@@ -1447,15 +1469,20 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
     solver_params* sp = &(bp->solver);
     int i;
     fits_add_long_comment(hdr, "-- blind solver parameters: --");
-    fits_add_long_comment(hdr, "Index name: %s", bp->bips->indexname);
+    if (bp->bips) {
+        fits_add_long_comment(hdr, "Index name: %s", bp->bips->indexname);
+        fits_add_long_comment(hdr, "Index id: %i", bp->bips->indexid);
+        fits_add_long_comment(hdr, "Index healpix: %i", bp->bips->healpix);
+    }
     for (i=0; i<pl_size(bp->indexnames); i++)
         fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexnames, i));
-    fits_add_long_comment(hdr, "Index scale lower: %g arcsec", sp->sips->index_scale_lower);
-    fits_add_long_comment(hdr, "Index scale upper: %g arcsec", sp->sips->index_scale_upper);
-    fits_add_long_comment(hdr, "Index jitter: %g", sp->sips->index_jitter);
-    fits_add_long_comment(hdr, "Index id: %i", bp->bips->indexid);
-    fits_add_long_comment(hdr, "Index healpix: %i", bp->bips->healpix);
-    fits_add_long_comment(hdr, "Circle: %s", sp->sips->circle ? "yes":"no");
+    if (sp->sips) {
+        fits_add_long_comment(hdr, "Index scale lower: %g arcsec", sp->sips->index_scale_lower);
+        fits_add_long_comment(hdr, "Index scale upper: %g arcsec", sp->sips->index_scale_upper);
+        fits_add_long_comment(hdr, "Index jitter: %g", sp->sips->index_jitter);
+        fits_add_long_comment(hdr, "Circle: %s", sp->sips->circle ? "yes":"no");
+        fits_add_long_comment(hdr, "Cxdx margin: %g", sp->sips->cxdx_margin);
+    }
 
     fits_add_long_comment(hdr, "Field name: %s", bp->fieldfname);
     fits_add_long_comment(hdr, "Field scale lower: %g arcsec/pixel", sp->funits_lower);
@@ -1471,7 +1498,6 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
 
     fits_add_long_comment(hdr, "Parity: %i", sp->parity);
     fits_add_long_comment(hdr, "Codetol: %g", sp->codetol);
-    fits_add_long_comment(hdr, "Cxdx margin: %g", sp->sips->cxdx_margin);
     fits_add_long_comment(hdr, "Verify distance: %g arcsec", distsq2arcsec(bp->verify_dist2));
     fits_add_long_comment(hdr, "Verify pixels: %g pix", bp->verify_pix);
     fits_add_long_comment(hdr, "N index in field to solve: %i", bp->nindex_tosolve);
