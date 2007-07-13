@@ -329,7 +329,6 @@ static int load_index(char* indexname,
                       blind_index_params* bips,
                       solver_index_params* sips) {
     char *idfname, *treefname, *quadfname, *startreefname;
-    double scalefudge = 0.0; // in pixels
 
     bips->indexname = indexname;
 
@@ -372,6 +371,12 @@ static int load_index(char* indexname,
     sips->circle = qfits_header_getboolean(bips->codekd->header, "CIRCLE", 0);
     logverb(bp, "ckdt %s the CIRCLE header.\n", (sips->circle ? "contains" : "does not contain"));
 
+    sips->codekd = bips->codekd->tree;
+    solver_compute_quad_range(sp, sips);
+
+    if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
+        logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sips->minAB, sips->maxAB);
+
     // Read .quad file...
     quadfname = mk_quadfn(indexname);
     logmsg(bp, "Reading quads file %s...\n", quadfname);
@@ -404,42 +409,6 @@ static int load_index(char* indexname,
         }
         free_fn(idfname);
     }
-
-
-
-    // Set index params
-    sips->codekd = bips->codekd->tree;
-    if (sp->funits_upper != 0.0) {
-        sips->minAB = sips->index_scale_lower / sp->funits_upper;
-
-        // compute fudge factor for quad scale: what are the extreme
-        // ranges of quad scales that should be accepted, given the
-        // code tolerance?
-
-        // -what is the maximum number of pixels a C or D star can move
-        //  to singlehandedly exceed the code tolerance?
-        // -largest quad
-        // -smallest arcsec-per-pixel scale
-
-        // -index_scale_upper * 1/sqrt(2) is the side length of
-        //  the unit-square of code space, in arcseconds.
-        // -that times the code tolerance is how far a C/D star
-        //  can move before exceeding the code tolerance, in arcsec.
-        // -that divided by the smallest arcsec-per-pixel scale
-        //  gives the largest motion in pixels.
-        scalefudge = sips->index_scale_upper * M_SQRT1_2 *
-            sp->codetol / sp->funits_upper;
-        sips->minAB -= scalefudge;
-        logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
-        //logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
-    }
-    if (sp->funits_lower != 0.0) {
-        sips->maxAB = sips->index_scale_upper / sp->funits_lower;
-        sips->maxAB += scalefudge;
-        //logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
-    }
-    if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
-        logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sips->minAB, sips->maxAB);
 
     return 0;
 }

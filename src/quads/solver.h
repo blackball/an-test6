@@ -135,6 +135,8 @@ void solver_default_params(solver_params* params);
 
 void solver_default_index_params(solver_index_params* sips);
 
+void solver_compute_quad_range(solver_params* sp, solver_index_params* sips);
+
 void solve_field(solver_params* params);
 
 #endif
