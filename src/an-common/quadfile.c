@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <assert.h>
 
 #include "qfits.h"
 #include "fitsioutils.h"
@@ -309,6 +310,7 @@ void quadfile_get_starids(quadfile* qf, uint quadid,
 	if (quadid >= qf->numquads) {
 		fprintf(stderr, "Requested quadid %i, but number of quads is %i.\n",
 				quadid, qf->numquads);
+                assert(0);
 		return;
 	}
 

@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "starkd.h"
 #include "kdtree_fits_io.h"
@@ -119,6 +120,7 @@ int startree_get(startree* s, uint starid, double* posn) {
 	}
 	if (starid >= Ndata(s)) {
 		fprintf(stderr, "Invalid star ID: %u >= %u.\n", starid, Ndata(s));
+                assert(0);
 		return -1;
 	}
 	if (s->inverse_perm) {
