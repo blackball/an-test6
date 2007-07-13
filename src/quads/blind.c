@@ -89,7 +89,13 @@ typedef struct blind_index_params blind_index_params;
 struct blind_params {
     solver_params solver;
 
+    // the current index we're dealing with
     blind_index_params* bips;
+
+    // the set of indices
+    bl* indexes;
+
+    bool indexes_inparallel;
 
     int nindex_tokeep;
     int nindex_tosolve;
@@ -350,6 +356,27 @@ static int load_index(char* indexname,
     if (skdt_only)
         return 0;
 
+    // Read .quad file...
+    quadfname = mk_quadfn(indexname);
+    logmsg(bp, "Reading quads file %s...\n", quadfname);
+    bips->quads = quadfile_open(quadfname, 0);
+    if (!bips->quads) {
+        logerr(bp, "Couldn't read quads file %s\n", quadfname);
+        free_fn(quadfname);
+        return -1;
+    }
+    free_fn(quadfname);
+    sips->index_scale_upper = quadfile_get_index_scale_arcsec(bips->quads);
+    sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bips->quads);
+    bips->indexid = bips->quads->indexid;
+    bips->healpix = bips->quads->healpix;
+
+    logmsg(bp, "Stars: %i, Quads: %i.\n", bips->quads->numstars, bips->quads->numquads);
+
+    logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+           sips->index_scale_lower/60.0, sips->index_scale_upper/60.0,
+           sips->index_scale_lower,      sips->index_scale_upper);
+
     // Read .ckdt file...
     treefname = mk_ctreefn(indexname);
     logmsg(bp, "Reading code KD tree from %s...\n", treefname);
@@ -377,27 +404,6 @@ static int load_index(char* indexname,
     if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
         logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sips->minAB, sips->maxAB);
 
-    // Read .quad file...
-    quadfname = mk_quadfn(indexname);
-    logmsg(bp, "Reading quads file %s...\n", quadfname);
-    bips->quads = quadfile_open(quadfname, 0);
-    if (!bips->quads) {
-        logerr(bp, "Couldn't read quads file %s\n", quadfname);
-        free_fn(quadfname);
-        return -1;
-    }
-    free_fn(quadfname);
-    sips->index_scale_upper = quadfile_get_index_scale_arcsec(bips->quads);
-    sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bips->quads);
-    bips->indexid = bips->quads->indexid;
-    bips->healpix = bips->quads->healpix;
-
-    logmsg(bp, "Stars: %i, Quads: %i.\n", bips->quads->numstars, bips->quads->numquads);
-
-    logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-           sips->index_scale_lower/60.0, sips->index_scale_upper/60.0,
-           sips->index_scale_lower,      sips->index_scale_upper);
-
     if (bp->use_idfile) {
         idfname = mk_idfn(indexname);
         // Read .id file...
@@ -412,6 +418,11 @@ static int load_index(char* indexname,
 
     return 0;
 }
+
+/*
+  static void run_indexes(blind_params* bp) {
+  }
+*/
 
 int main(int argc, char *argv[]) {
     char* progname = argv[0];
@@ -438,6 +449,9 @@ int main(int argc, char *argv[]) {
         struct sigaction oldsig_totaltime;
         struct sigaction oldsig_totalcpu;
 
+        struct sigaction oldsigcpu;
+        struct sigaction oldsigalarm;
+
         if (bp->hit_total_timelimit)
             break;
         if (bp->hit_total_cpulimit)
@@ -458,6 +472,7 @@ int main(int argc, char *argv[]) {
         bp->logratio_tobail = -HUGE_VAL;
         bp->fieldlist = il_new(256);
         bp->indexnames = pl_new(16);
+        bp->indexes = bl_new(16, sizeof(blind_index_params));
         bp->fieldid_key = strdup("FIELDID");
         bp->xcolname = strdup("X");
         bp->ycolname = strdup("Y");
@@ -470,8 +485,8 @@ int main(int argc, char *argv[]) {
         sp->field_miny = sp->field_maxy = 0.0;
         sp->parity = DEFAULT_PARITY;
         sp->codetol = DEFAULT_CODE_TOL;
-
         sp->handlehit = blind_handle_hit;
+        sp->indexes = bl_new(16, sizeof(solver_index_params));
 
         if (read_parameters(bp)) {
             cleanup_parameters(bp, sp);
@@ -708,11 +723,18 @@ int main(int argc, char *argv[]) {
                 if (sp->cancelled)
                     break;
 
+                // HACK!
+                bp->bips = &my_bips;
+                sp->sips = &my_sips;
+
                 fname = pl_get(bp->indexnames, I);
                 if (load_index(fname, TRUE, bp, sp, bp->bips, sp->sips)) {
                     exit(-1);
                 }
                 sp->indexnum = I;
+
+                bl_append(sp->indexes, sp->sips);
+                bl_append(bp->indexes, bp->bips);
 
                 // Do it!
                 solve_fields(bp, TRUE);
@@ -720,33 +742,27 @@ int main(int argc, char *argv[]) {
                 // Clean up this index...
                 startree_close(bp->bips->starkd);
                 bp->bips->starkd = NULL;
+
+                bl_remove_all(sp->indexes);
+                bl_remove_all(bp->indexes);
             }
             sip_free(bp->verify_wcs);
             bp->verify_wcs = NULL;
         }
     doneverify:
 
-        for (I=0; I<pl_size(bp->indexnames); I++) {
-            char* fname;
-            struct sigaction oldsigcpu;
-            struct sigaction oldsigalarm;
+        if (bp->indexes_inparallel) {
 
-            if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
-                break;
-
-            if (bp->single_field_solved)
-                break;
-
-            if (sp->cancelled)
-                break;
-
-            fname = pl_get(bp->indexnames, I);
-            if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
-                exit(-1);
+            for (I=0; I<pl_size(bp->indexnames); I++) {
+                char* fname;
+                fname = pl_get(bp->indexnames, I);
+                logmsg(bp, "Loading index %s...\n", fname);
+                if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
+                    exit(-1);
+                }
+                bl_append(sp->indexes, sp->sips);
+                bl_append(bp->indexes, bp->bips);
             }
-            sp->indexnum = I;
-
-            logmsg(bp, "\n\nTrying index %s...\n", bp->bips->indexname);
 
             // Set CPU time limit.
             if (bp->cpulimit) {
@@ -794,17 +810,115 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            // Clean up this index...
-            codetree_close(bp->bips->codekd);
-            startree_close(bp->bips->starkd);
-            if (bp->bips->id)
-                idfile_close(bp->bips->id);
-            quadfile_close(bp->bips->quads);
+            for (I=0; I<bl_size(bp->indexes); I++) {
+                bp->bips = bl_access(bp->indexes, I);
 
-            bp->bips->codekd = NULL;
-            bp->bips->starkd = NULL;
-            bp->bips->id = NULL;
-            bp->bips->quads = NULL;
+                // Clean up this index...
+                codetree_close(bp->bips->codekd);
+                startree_close(bp->bips->starkd);
+                if (bp->bips->id)
+                    idfile_close(bp->bips->id);
+                quadfile_close(bp->bips->quads);
+
+                bp->bips->codekd = NULL;
+                bp->bips->starkd = NULL;
+                bp->bips->id = NULL;
+                bp->bips->quads = NULL;
+            }
+
+            bl_remove_all(sp->indexes);
+            bl_remove_all(bp->indexes);
+
+        } else {
+
+            for (I=0; I<pl_size(bp->indexnames); I++) {
+                char* fname;
+
+                if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
+                    break;
+
+                if (bp->single_field_solved)
+                    break;
+
+                if (sp->cancelled)
+                    break;
+
+                // HACK!
+                bp->bips = &my_bips;
+                sp->sips = &my_sips;
+
+                fname = pl_get(bp->indexnames, I);
+                if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
+                    exit(-1);
+                }
+                sp->indexnum = I;
+
+                logmsg(bp, "\n\nTrying index %s...\n", bp->bips->indexname);
+
+                // Set CPU time limit.
+                if (bp->cpulimit) {
+                    struct sigaction newsigcpu;
+                    memset(&newsigcpu, 0, sizeof(struct sigaction));
+                    newsigcpu.sa_handler = cpu_time_limit;
+                    if (sigaction(SIGXCPU, &newsigcpu, &oldsigcpu)) {
+                        logerr(bp, "Failed to set CPU time limit signal handler: %s\n", strerror(errno));
+                        exit(-1);
+                    }
+                    set_cpu_limit(bp, bp->cpulimit);
+                }
+
+                // Set wall-clock time limit.
+                if (bp->timelimit) {
+                    struct sigaction newsigalarm;
+                    memset(&newsigalarm, 0, sizeof(struct sigaction));
+                    newsigalarm.sa_handler = wall_time_limit;
+                    if (sigaction(SIGALRM, &newsigalarm, &oldsigalarm)) {
+                        logerr(bp, "Failed to set wall time limit signal handler: %s\n", strerror(errno));
+                        exit(-1);
+                    }
+                    alarm(bp->timelimit);
+                }
+
+                bl_append(sp->indexes, sp->sips);
+                bl_append(bp->indexes, bp->bips);
+
+                // Do it!
+                solve_fields(bp, FALSE);
+
+                // Cancel wall-clock time limit.
+                if (bp->timelimit) {
+                    alarm(0);
+                    if (sigaction(SIGALRM, &oldsigalarm, NULL)) {
+                        logerr(bp, "Failed to restore wall time limit signal handler: %s\n", strerror(errno));
+                        exit(-1);
+                    }
+                }
+
+                // Restore CPU time limit.
+                if (bp->cpulimit) {
+                    set_cpu_limit(bp, -1);
+                    // Restore old CPU limit signal handler.
+                    if (sigaction(SIGXCPU, &oldsigcpu, NULL)) {
+                        logerr(bp, "Failed to restore CPU time limit signal handler: %s\n", strerror(errno));
+                        exit(-1);
+                    }
+                }
+
+                // Clean up this index...
+                codetree_close(bp->bips->codekd);
+                startree_close(bp->bips->starkd);
+                if (bp->bips->id)
+                    idfile_close(bp->bips->id);
+                quadfile_close(bp->bips->quads);
+
+                bp->bips->codekd = NULL;
+                bp->bips->starkd = NULL;
+                bp->bips->id = NULL;
+                bp->bips->quads = NULL;
+
+                bl_remove_all(sp->indexes);
+                bl_remove_all(bp->indexes);
+            }
         }
 
         if (bp->solvedserver) {
@@ -882,6 +996,9 @@ static void cleanup_parameters(blind_params* bp,
     for (i=0; i<pl_size(bp->indexnames); i++)
         free(pl_get(bp->indexnames, i));
     pl_free(bp->indexnames);
+    bl_free(bp->indexes);
+
+    bl_free(sp->indexes);
 
     free(sp->cancelfname);
     free(bp->donefname);
@@ -1062,6 +1179,8 @@ static int read_parameters(blind_params* bp) {
             bp->ycolname = strdup(nextword);
         } else if (is_word(line, "index ", &nextword)) {
             pl_append(bp->indexnames, strdup(nextword));
+        } else if (is_word(line, "indexes_inparallel", &nextword)) {
+            bp->indexes_inparallel = TRUE;
         } else if (is_word(line, "field ", &nextword)) {
             free(bp->fieldfname);
             bp->fieldfname = strdup(nextword);
@@ -1264,6 +1383,11 @@ static void print_match(blind_params* bp, MatchObj* mo) {
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
     blind_params* bp = sp->userdata;
     double pixd2;
+
+    assert(bl_size(bp->indexes) == bl_size(sp->indexes));
+    assert(sp->indexindex < bl_size(bp->indexes));
+
+    bp->bips = bl_access(bp->indexes, sp->indexindex);
 
     mo->indexid = bp->bips->indexid;
     mo->healpix = bp->bips->healpix;

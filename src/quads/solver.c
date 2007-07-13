@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/param.h>
 #include <errno.h>
 #include <string.h>
 #include <math.h>
@@ -115,7 +116,18 @@ void solver_compute_quad_range(solver_params* sp, solver_index_params* sips) {
     }
 }
 
-static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
+struct potential_quad {
+    bool scale_ok;
+    int iA, iB;
+    double scale;
+    double costheta, sintheta;
+    bool* inbox;
+    int ninbox;
+    double* xy;
+};
+typedef struct potential_quad pquad;
+
+static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
                           uint iA, uint iB, uint iC, uint iD,
                           double *ABCDpix, solver_params* params);
 
@@ -128,32 +140,22 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
                             uint fA, uint fB, uint fC, uint fD,
                             solver_params* params, bool current_parity);
 
-struct potential_quad {
-    bool scale_ok;
-    int iA, iB;
-    double costheta, sintheta;
-    bool* inbox;
-    int ninbox;
-    double* xy;
-};
-typedef struct potential_quad pquad;
-
 static void check_scale(pquad* pq, solver_params* params) {
-    double Ax, Ay, Bx, By, dx, dy, scale;
+    double Ax, Ay, Bx, By, dx, dy;
     Ax = getx(params->field, pq->iA);
     Ay = gety(params->field, pq->iA);
     Bx = getx(params->field, pq->iB);
     By = gety(params->field, pq->iB);
     dx = Bx - Ax;
     dy = By - Ay;
-    scale = dx*dx + dy*dy;
-    if ((scale < square(params->sips->minAB)) ||
-        (scale > square(params->sips->maxAB))) {
+    pq->scale = dx*dx + dy*dy;
+    if ((pq->scale < square(params->minminAB)) ||
+        (pq->scale > square(params->maxmaxAB))) {
         pq->scale_ok = FALSE;
         return;
     }
-    pq->costheta = (dy + dx) / scale;
-    pq->sintheta = (dy - dx) / scale;
+    pq->costheta = (dy + dx) / pq->scale;
+    pq->sintheta = (dy - dx) / pq->scale;
     pq->scale_ok = TRUE;
 }
 
@@ -235,6 +237,15 @@ void solve_field(solver_params* params) {
     if (params->startobj >= numxy)
         return;
 
+    params->minminAB =  HUGE_VAL;
+    params->maxmaxAB = -HUGE_VAL;
+    for (i=0; i<bl_size(params->indexes); i++) {
+        solver_index_params* sips = bl_access(params->indexes, i);
+        params->minminAB = MIN(params->minminAB, sips->minAB);
+        params->maxmaxAB = MAX(params->maxmaxAB, sips->maxAB);
+    }
+    fprintf(stderr, "extreme scale range: [%g, %g]\n", params->minminAB, params->maxmaxAB);
+
     pquads = calloc(numxy * numxy, sizeof(pquad));
 
     /*
@@ -314,7 +325,7 @@ void solve_field(solver_params* params) {
 
             if (params->solved_in && ((t - lastcheck_sf) > 5)) {
                 if (solvedfile_get(params->solved_in, params->fieldnum)) {
-                    fprintf(stderr, "  field %u: file %s indicates that the field has been solved.\n",
+                    fprintf(stderr, "  field %u: file \"%s\" indicates that the field has been solved.\n",
                             params->fieldnum, params->solved_in);
                     break;
                 }
@@ -387,7 +398,7 @@ void solve_field(solver_params* params) {
                     dy = gety(pq->xy, iD);
                     params->numtries++;
                     debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-                    try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
+                    try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
                     if (params->quitNow)
                         break;
                 }
@@ -435,7 +446,7 @@ void solve_field(solver_params* params) {
                     cy = gety(pq->xy, iC);
                     params->numtries++;
                     debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-                    try_all_codes(cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
+                    try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
                     if (params->quitNow)
                         break;
                 }
@@ -443,14 +454,14 @@ void solve_field(solver_params* params) {
         }
 
         if (!params->quiet) {
-			if (params->nindexes > 1)
-				fprintf(stderr, "index %i of %i, ", params->indexnum + 1, params->nindexes);
-			if (params->nfields > 1)
-				fprintf(stderr, "field %u, ", params->fieldnum);
-			fprintf(stderr,
+            if (params->nindexes > 1)
+                fprintf(stderr, "index %i of %i, ", params->indexnum + 1, params->nindexes);
+            if (params->nfields > 1)
+                fprintf(stderr, "field %u, ", params->fieldnum);
+            fprintf(stderr,
                     "object %u of %u: %i quads tried, %i matched.\n",
                     newpoint+1, numxy, params->numtries, params->nummatches);
-		}
+        }
 
         if ((params->maxquads   && (params->numtries   >= params->maxquads)) ||
             (params->maxmatches && (params->nummatches >= params->maxmatches)) ||
@@ -471,19 +482,29 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind) {
     sety(dest, destind, gety(src, srcind));
 }
 
-static void try_all_codes(double Cx, double Cy, double Dx, double Dy,
+static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
                           uint iA, uint iB, uint iC, uint iD,
                           double *ABCDpix, solver_params* params) {
+    int i;
     debug("    code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
-    if (params->parity == PARITY_NORMAL ||
-        params->parity == PARITY_BOTH) {
-        debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
-        try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
-    }
-    if (params->parity == PARITY_FLIP ||
-        params->parity == PARITY_BOTH) {
-        debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
-        try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
+
+    for (i=0; i<bl_size(params->indexes); i++) {
+        solver_index_params* sips = bl_access(params->indexes, i);
+        if ((pq->scale < square(sips->minAB)) ||
+            (pq->scale > square(sips->maxAB)))
+            continue;
+        params->indexindex = 0;
+
+        if (params->parity == PARITY_NORMAL ||
+            params->parity == PARITY_BOTH) {
+            debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+            try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
+        }
+        if (params->parity == PARITY_FLIP ||
+            params->parity == PARITY_BOTH) {
+            debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
+            try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
+        }
     }
 }
 
@@ -682,14 +703,12 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_maxy, mo.sMinMax);
         tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_miny, mo.sMaxMin);
 
-		// center and radius...
-		star_midpoint(mo.center, mo.sMin, mo.sMax);
-		mo.radius = sqrt(distsq(mo.center, mo.sMin, 3));
+        // center and radius...
+        star_midpoint(mo.center, mo.sMin, mo.sMax);
+        mo.radius = sqrt(distsq(mo.center, mo.sMin, 3));
 
         if (params->handlehit(params, &mo))
             params->quitNow = TRUE;
-        // Note - after this call returns, the "mo" may
-        // have been freed!
 
         if (params->quitNow)
             return;

@@ -59,7 +59,19 @@ struct solver_index_params {
 typedef struct solver_index_params solver_index_params;
 
 struct solver_params {
+
+    // the index we're currently dealing with.
     solver_index_params* sips;
+
+    // the set of indices.
+    bl* indexes;
+
+    // the index in indexes of the index we're currently trying (phew!)
+    int indexindex;
+
+    // the extreme limits of quad size, for all indexes.
+    double minminAB;
+    double maxmaxAB;
 
     // for printing "index %i of %i"
     int indexnum;
