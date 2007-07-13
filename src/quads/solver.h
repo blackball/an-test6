@@ -30,99 +30,101 @@ struct solver_params;
 typedef int (*handle_hit)(struct solver_params*, MatchObj*);
 
 enum {
-	PARITY_NORMAL,
-	PARITY_FLIP,
-	PARITY_BOTH
+    PARITY_NORMAL,
+    PARITY_FLIP,
+    PARITY_BOTH
 };
 
 struct solver_params {
-	// Inputs:
-	// Jitter in the index, in arcseconds.
-	double index_jitter;
+    // Variables relating to a particular index:
+    //////////
+    // Jitter in the index, in arcseconds.
+    double index_jitter;
 
-	char* cancelfname;
-	bool cancelled;
+    // Limits of the size of quads in the index.
+    double index_scale_upper;
+    double index_scale_lower;
 
-	char* solved_in;
-	bool do_solvedserver;
+    // The limits on the size, in field coordinates,
+    // of the quads to find.  Derived from index_scale_* and funits_*.
+    double minAB;
+    double maxAB;
 
-	bool quitNow;
+    // Does index have CIRCLE (codes in the circle, not the box)?
+    bool circle;
+    double cxdx_margin;
 
-	// one of PARITY_*
-	int parity;
-	double codetol;
-	int startobj;
-	int endobj;
+    // for printing "index %i of %i"
+    int indexnum;
+    int nindexes;
+    //////////
 
-	// Limits on the quad size, in field scale units.
-	//double arcsec_per_pixel_lower;
-	//double arcsec_per_pixel_upper;
-	double funits_lower;
-	double funits_upper;
+    // Inputs:
 
-	// The limits on the size, in field coordinates,
-	// of the quads to find.
-	double minAB;
-	double maxAB;
+    char* cancelfname;
+    bool cancelled;
 
-	// Limits of the size of quads in the index.
-	double index_scale_upper;
-	double index_scale_lower;
+    char* solved_in;
+    bool do_solvedserver;
 
-	// Does index have CIRCLE (codes in the circle, not the box)?
-	bool circle;
-	double cxdx_margin;
+    bool quitNow;
 
-	// The field
-	double* field;
-	int nfield;
+    // one of PARITY_*
+    int parity;
+    double codetol;
+    int startobj;
+    int endobj;
 
-	// Field limits.
-	double field_minx, field_maxx, field_miny, field_maxy;
-	// distance in pixels across the diagonal of the field
-	double field_diag;
+    // Limits on the quad size, in field scale units.
+    double funits_lower;
+    double funits_upper;
 
-	// The index
-	kdtree_t* codekd;
+    // The field
+    double* field;
+    int nfield;
 
-	// number of field quads to try
-	int maxquads; // maxtries
-	// number of quad matches to try
-	int maxmatches;
-	int fieldid;
-	int fieldnum;
+    // Field limits.
+    double field_minx, field_maxx, field_miny, field_maxy;
+    // distance in pixels across the diagonal of the field
+    double field_diag;
 
-	// number of fields we're going to try.
-	int nfields;
+    // The index
+    kdtree_t* codekd;
 
-	bool quiet;
+    // number of field quads to try
+    int maxquads;
+    // number of quad matches to try
+    int maxmatches;
+    int fieldid;
+    int fieldnum;
 
-	// the MatchObj template: if non-NULL, every MatchObj will be a memcpy
-	// of this one before the other fields are set.
-	MatchObj* mo_template;
+    // number of fields we're going to try.
+    int nfields;
 
-	handle_hit handlehit;
+    bool quiet;
+
+    // the MatchObj template: if non-NULL, every MatchObj will be a memcpy
+    // of this one before the other fields are set.
+    MatchObj* mo_template;
+
+    handle_hit handlehit;
 	
-	// internal:
-	double starttime;
-	double timeused;
+    // internal:
+    double starttime;
+    double timeused;
 
-	// for printing "index %i of %i"
-	int indexnum;
-	int nindexes;
+    // Outputs:
+    // NOTE: these are only incremented, not initialized.  It's up to
+    // you to set them to zero before calling, if you're starting from scratch.
+    int numtries;
+    int nummatches;
+    int numscaleok;
+    // this is set to an absolute value.
+    int objsused;
+    // number of quads skipped because of cxdx constraints.
+    int numcxdxskipped;
 
-	// Outputs:
-	// NOTE: these are only incremented, not initialized.  It's up to
-	// you to set them to zero before calling, if you're starting from scratch.
-	int numtries;
-	int nummatches;
-	int numscaleok;
-	// this is set to an absolute value.
-	int objsused;
-	// number of quads skipped because of cxdx constraints.
-	int numcxdxskipped;
-
-	void* userdata;
+    void* userdata;
 };
 typedef struct solver_params solver_params;
 

@@ -75,6 +75,19 @@ static void printHelp(char* progname) {
 struct blind_params {
     solver_params solver;
 
+    // Variables related to a particular index:
+    //////////
+    // name of the current index.
+    char *indexname;
+    int indexid;
+    int healpix;
+
+    idfile* id;
+    quadfile* quads;
+    startree* starkd;
+    codetree* codekd;
+    //////////
+
     int nindex_tokeep;
     int nindex_tosolve;
 
@@ -98,9 +111,6 @@ struct blind_params {
     char *fieldfname, *verify_wcsfn;
     char *matchfname, *indexrdlsfname;
     char *startfname, *donefname, *donescript, *logfname;
-
-    // name of the current index.
-    char *indexname;
 
     // filename template (sprintf format with %i for field number)
     char* wcs_template;
@@ -132,9 +142,6 @@ struct blind_params {
     // FITS keyword to copy from xylist to matchfile.
     char *fieldid_key;
 
-    int indexid;
-    int healpix;
-
     double verify_dist2;
     double verify_pix;
 
@@ -147,14 +154,10 @@ struct blind_params {
 
     bool use_idfile;
 
-    matchfile* mf;
-    idfile* id;
-    quadfile* quads;
     xylist* xyls;
-    startree* starkd;
-    codetree* codekd;
-    bool indexrdls_solvedonly;
+    matchfile* mf;
     rdlist* indexrdls;
+    bool indexrdls_solvedonly;
 
     int cpulimit;
     int timelimit;
