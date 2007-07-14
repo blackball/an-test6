@@ -164,8 +164,9 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
     double Ax, Ay;
     Ax = getx(params->field, pq->iA);
     Ay = gety(params->field, pq->iA);
-    // check which C, D points are inside the square/circle.
+    // check which C, D points are inside the circle.
     for (i=start; i<pq->ninbox; i++) {
+		double r;
         double Cx, Cy, xxtmp;
         double tol = params->codetol;
         if (!pq->inbox[i]) continue;
@@ -176,25 +177,18 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
         xxtmp = Cx;
         Cx =     Cx * pq->costheta + Cy * pq->sintheta;
         Cy = -xxtmp * pq->sintheta + Cy * pq->costheta;
-        if (params->sips->circle) {
-            // make sure it's in the circle centered at (0.5, 0.5)
-            // with radius 1/sqrt(2) (plus codetol for fudge):
-            // (x-1/2)^2 + (y-1/2)^2   <=   (r + codetol)^2
-            // x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2) + codetol)^2
-            // x^2-x + y^2-y + 1/2     <=   1/2 + sqrt(2)*codetol + codetol^2
-            // x^2-x + y^2-y           <=   sqrt(2)*codetol + codetol^2
-            double r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
-            if (r > (tol * (M_SQRT2 + tol))) {
-                pq->inbox[i] = FALSE;
-                continue;
-            }
-        } else {
-            if ((Cx > (1.0 + tol)) || (Cx < (0.0 - tol)) ||
-                (Cy > (1.0 + tol)) || (Cy < (0.0 - tol))) {
-                pq->inbox[i] = FALSE;
-                continue;
-            }
-        }
+
+		// make sure it's in the circle centered at (0.5, 0.5)
+		// with radius 1/sqrt(2) (plus codetol for fudge):
+		// (x-1/2)^2 + (y-1/2)^2   <=   (r + codetol)^2
+		// x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2) + codetol)^2
+		// x^2-x + y^2-y + 1/2     <=   1/2 + sqrt(2)*codetol + codetol^2
+		// x^2-x + y^2-y           <=   sqrt(2)*codetol + codetol^2
+		r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
+		if (r > (tol * (M_SQRT2 + tol))) {
+			pq->inbox[i] = FALSE;
+			continue;
+		}
         setx(pq->xy, i, Cx);
         sety(pq->xy, i, Cy);
     }
@@ -305,7 +299,7 @@ void solve_field(solver_params* params) {
       For each AB pair, we have a "potential_quad" or "pquad" struct.
       This caches the computation we need to do: deciding whether the
       scale is acceptable, computing the transformation to code
-      coordinates, and deciding which C,D stars are in the box/circle.
+      coordinates, and deciding which C,D stars are in the circle.
 
       We keep the invariants that iA < iB and iC < iD.
       The A<->B and C<->D permutations will be tried in try_all_codes.

@@ -379,17 +379,19 @@ static int load_index(char* indexname,
         free_fn(treefname);
         return -1;
     }
-    logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(sips->codekd), codetree_nodes(sips->codekd));
     free_fn(treefname);
+    // check for CIRCLE field in ckdt header...
+    sips->circle = qfits_header_getboolean(sips->codekd->header, "CIRCLE", 0);
+	if (!sips->circle) {
+        logerr(bp, "Code kdtree does not contain the CIRCLE header.\n");
+		return -1;
+	}
+    logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(sips->codekd), codetree_nodes(sips->codekd));
 
     // If the code kdtree has CXDX set, set cxdx_margin.
     if (qfits_header_getboolean(sips->codekd->header, "CXDX", 0))
         // 1.5 = sqrt(2) + fudge factor.
         sips->cxdx_margin = 1.5 * sp->codetol;
-
-    // check for CIRCLE field in ckdt header...
-    sips->circle = qfits_header_getboolean(sips->codekd->header, "CIRCLE", 0);
-    logverb(bp, "ckdt %s the CIRCLE header.\n", (sips->circle ? "contains" : "does not contain"));
 
     solver_compute_quad_range(sp, sips);
 
