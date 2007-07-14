@@ -27,11 +27,11 @@
 #include "idfile.h"
 #include "quadfile.h"
 #include "starkd.h"
+#include "codekd.h"
 
 struct solver_params;
 
 typedef int  (*handle_hit)(struct solver_params*, MatchObj*);
-typedef void (*switch_index)(struct solver_params*, int indind);
 
 enum {
     PARITY_NORMAL,
@@ -41,9 +41,15 @@ enum {
 
 // Per-index parameters.
 struct solver_index_params {
-    // The index
-    kdtree_t* codekd;
+    // name of the current index.
+    char *indexname;
 
+	// unique id for this index.
+    int indexid;
+    int healpix;
+
+    // The index
+    codetree* codekd;
 	idfile* idfile;
     quadfile* quads;
     startree* starkd;
@@ -73,9 +79,6 @@ struct solver_params {
 
     // the set of indices.
     bl* indexes;
-
-    // the index in indexes of the index we're currently trying (phew!)
-    int indexindex;
 
     // the extreme limits of quad size, for all indexes.
     double minminAB;
@@ -131,7 +134,6 @@ struct solver_params {
     MatchObj* mo_template;
 
     handle_hit handlehit;
-    switch_index switchindex;
 
     // internal:
     double starttime;

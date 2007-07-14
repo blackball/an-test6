@@ -71,24 +71,8 @@ static void printHelp(char* progname) {
 #define DEFAULT_TWEAK_ABPORDER 3
 #define DEFAULT_INDEX_JITTER 1.0  // arcsec
 
-// Per-index parameters.
-struct blind_index_params {
-    // name of the current index.
-    char *indexname;
-    int indexid;
-    int healpix;
-    codetree* codekd;
-};
-typedef struct blind_index_params blind_index_params;
-
 struct blind_params {
     solver_params solver;
-
-    // the current index we're dealing with
-    blind_index_params* bips;
-
-    // the set of indices
-    bl* indexes;
 
     bool indexes_inparallel;
 
@@ -111,7 +95,6 @@ struct blind_params {
     // best logodds encountered (even if we don't record bestmo)
     double bestlogodds;
 
-    blind_index_params* bestbips;
     solver_index_params* bestsips;
 
     // Filenames
@@ -186,18 +169,12 @@ struct blind_params {
 };
 typedef struct blind_params blind_params;
 
-static void blind_default_index_params(blind_index_params* bips) {
-    memset(bips, 0, sizeof(blind_index_params));
-    bips->healpix = -1;
-}
-
 static void solve_fields(blind_params* bp, bool just_verify);
 static int read_parameters(blind_params* bp);
 static void cleanup_parameters(blind_params* bp, solver_params* sp);
 static void add_blind_params(blind_params* bp, qfits_header* hdr);
 
 static int blind_handle_hit(solver_params* sp, MatchObj* mo);
-static void blind_switch_index(solver_params* sp, int indexindex);
 
 static blind_params my_bp;
 
@@ -334,11 +311,10 @@ static int load_index(char* indexname,
                       bool skdt_only,
                       blind_params* bp,
                       solver_params* sp,
-                      blind_index_params* bips,
                       solver_index_params* sips) {
     char *idfname, *treefname, *quadfname, *startreefname;
 
-    bips->indexname = indexname;
+    sips->indexname = indexname;
 
     // Read .skdt file...
     startreefname = mk_streefn(indexname);
@@ -370,8 +346,8 @@ static int load_index(char* indexname,
     free_fn(quadfname);
     sips->index_scale_upper = quadfile_get_index_scale_arcsec(sips->quads);
     sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(sips->quads);
-    bips->indexid = sips->quads->indexid;
-    bips->healpix = sips->quads->healpix;
+    sips->indexid = sips->quads->indexid;
+    sips->healpix = sips->quads->healpix;
 
     logmsg(bp, "Stars: %i, Quads: %i.\n", sips->quads->numstars, sips->quads->numquads);
 
@@ -382,25 +358,24 @@ static int load_index(char* indexname,
     // Read .ckdt file...
     treefname = mk_ctreefn(indexname);
     logmsg(bp, "Reading code KD tree from %s...\n", treefname);
-    bips->codekd = codetree_open(treefname);
-    if (!bips->codekd) {
+    sips->codekd = codetree_open(treefname);
+    if (!sips->codekd) {
         logerr(bp, "Failed to read code kdtree %s\n", treefname);
         free_fn(treefname);
         return -1;
     }
-    logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(bips->codekd), codetree_nodes(bips->codekd));
+    logverb(bp, "  (%d quads, %d nodes).\n", codetree_N(sips->codekd), codetree_nodes(sips->codekd));
     free_fn(treefname);
 
     // If the code kdtree has CXDX set, set cxdx_margin.
-    if (qfits_header_getboolean(bips->codekd->header, "CXDX", 0))
+    if (qfits_header_getboolean(sips->codekd->header, "CXDX", 0))
         // 1.5 = sqrt(2) + fudge factor.
         sips->cxdx_margin = 1.5 * sp->codetol;
 
     // check for CIRCLE field in ckdt header...
-    sips->circle = qfits_header_getboolean(bips->codekd->header, "CIRCLE", 0);
+    sips->circle = qfits_header_getboolean(sips->codekd->header, "CIRCLE", 0);
     logverb(bp, "ckdt %s the CIRCLE header.\n", (sips->circle ? "contains" : "does not contain"));
 
-    sips->codekd = bips->codekd->tree;
     solver_compute_quad_range(sp, sips);
 
     if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
@@ -465,7 +440,6 @@ int main(int argc, char *argv[]) {
         bp->logratio_tobail = -HUGE_VAL;
         bp->fieldlist = il_new(256);
         bp->indexnames = pl_new(16);
-        bp->indexes = bl_new(16, sizeof(blind_index_params));
         bp->fieldid_key = strdup("FIELDID");
         bp->xcolname = strdup("X");
         bp->ycolname = strdup("Y");
@@ -478,7 +452,6 @@ int main(int argc, char *argv[]) {
         sp->parity = DEFAULT_PARITY;
         sp->codetol = DEFAULT_CODE_TOL;
         sp->handlehit = blind_handle_hit;
-        sp->switchindex = blind_switch_index;
         sp->indexes = bl_new(16, sizeof(solver_index_params));
 
         if (read_parameters(bp)) {
@@ -710,7 +683,6 @@ int main(int argc, char *argv[]) {
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
-                blind_index_params bips;
                 solver_index_params sips;
 
                 if (bp->single_field_solved)
@@ -720,18 +692,15 @@ int main(int argc, char *argv[]) {
 
                 fname = pl_get(bp->indexnames, I);
 
-                bp->bips = &bips;
                 sp->sips = &sips;
                 solver_default_index_params(sp->sips);
-                blind_default_index_params(bp->bips);
 
-                if (load_index(fname, TRUE, bp, sp, bp->bips, sp->sips)) {
+                if (load_index(fname, TRUE, bp, sp, sp->sips)) {
                     exit(-1);
                 }
                 sp->indexnum = I;
 
                 bl_append(sp->indexes, sp->sips);
-                bl_append(bp->indexes, bp->bips);
 
                 // Do it!
                 solve_fields(bp, TRUE);
@@ -741,8 +710,6 @@ int main(int argc, char *argv[]) {
                 sp->sips->starkd = NULL;
 
                 bl_remove_all(sp->indexes);
-                bl_remove_all(bp->indexes);
-                bp->bips = NULL;
                 sp->sips = NULL;
             }
             sip_free(bp->verify_wcs);
@@ -757,21 +724,17 @@ int main(int argc, char *argv[]) {
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
-                blind_index_params bips;
                 solver_index_params sips;
 
-                bp->bips = &bips;
                 sp->sips = &sips;
                 solver_default_index_params(sp->sips);
-                blind_default_index_params(bp->bips);
 
                 fname = pl_get(bp->indexnames, I);
                 logmsg(bp, "\nLoading index %s...\n", fname);
-                if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
+                if (load_index(fname, FALSE, bp, sp, sp->sips)) {
                     exit(-1);
                 }
                 bl_append(sp->indexes, sp->sips);
-                bl_append(bp->indexes, bp->bips);
             }
 
             // Set CPU time limit.
@@ -820,32 +783,23 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            for (I=0; I<bl_size(bp->indexes); I++) {
-                bp->bips = bl_access(bp->indexes, I);
-
+            for (I=0; I<bl_size(sp->indexes); I++) {
+                solver_index_params* sips;
+				sips = bl_access(sp->indexes, I);
                 // Clean up this index...
-                codetree_close(bp->bips->codekd);
-                startree_close(sp->sips->starkd);
-                if (sp->sips->idfile)
-                    idfile_close(sp->sips->idfile);
-                quadfile_close(sp->sips->quads);
-
-                bp->bips->codekd = NULL;
-                sp->sips->starkd = NULL;
-                sp->sips->quads = NULL;
-                sp->sips->idfile = NULL;
+                codetree_close(sips->codekd);
+                startree_close(sips->starkd);
+                if (sips->idfile)
+                    idfile_close(sips->idfile);
+                quadfile_close(sips->quads);
             }
-
             bl_remove_all(sp->indexes);
-            bl_remove_all(bp->indexes);
-            bp->bips = NULL;
             sp->sips = NULL;
 
         } else {
 
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
-                blind_index_params bips;
                 solver_index_params sips;
 
                 if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
@@ -857,18 +811,16 @@ int main(int argc, char *argv[]) {
                 if (sp->cancelled)
                     break;
 
-                bp->bips = &bips;
                 sp->sips = &sips;
                 solver_default_index_params(sp->sips);
-                blind_default_index_params(bp->bips);
 
                 fname = pl_get(bp->indexnames, I);
-                if (load_index(fname, FALSE, bp, sp, bp->bips, sp->sips)) {
+                if (load_index(fname, FALSE, bp, sp, sp->sips)) {
                     exit(-1);
                 }
                 sp->indexnum = I;
 
-                logmsg(bp, "\n\nTrying index %s...\n", bp->bips->indexname);
+                logmsg(bp, "\n\nTrying index %s...\n", sp->sips->indexname);
 
                 // Set CPU time limit.
                 if (bp->cpulimit) {
@@ -895,7 +847,6 @@ int main(int argc, char *argv[]) {
                 }
 
                 bl_append(sp->indexes, sp->sips);
-                bl_append(bp->indexes, bp->bips);
 
                 // Do it!
                 solve_fields(bp, FALSE);
@@ -920,20 +871,18 @@ int main(int argc, char *argv[]) {
                 }
 
                 // Clean up this index...
-                codetree_close(bp->bips->codekd);
+                codetree_close(sp->sips->codekd);
                 startree_close(sp->sips->starkd);
                 if (sp->sips->idfile)
                     idfile_close(sp->sips->idfile);
                 quadfile_close(sp->sips->quads);
 
-                bp->bips->codekd = NULL;
+                sp->sips->codekd = NULL;
                 sp->sips->starkd = NULL;
                 sp->sips->quads = NULL;
                 sp->sips->idfile = NULL;
 
                 bl_remove_all(sp->indexes);
-                bl_remove_all(bp->indexes);
-                bp->bips = NULL;
                 sp->sips = NULL;
             }
         }
@@ -1013,7 +962,6 @@ static void cleanup_parameters(blind_params* bp,
     for (i=0; i<pl_size(bp->indexnames); i++)
         free(pl_get(bp->indexnames, i));
     pl_free(bp->indexnames);
-    bl_free(bp->indexes);
 
     bl_free(sp->indexes);
 
@@ -1033,15 +981,6 @@ static void cleanup_parameters(blind_params* bp,
     free(bp->wcs_template);
     free(bp->xcolname);
     free(bp->ycolname);
-
-    /*
-      bp->fieldlist = NULL;
-      bp->indexnames = NULL;
-      bp->xcolname = NULL;
-      bp->ycolname = NULL;
-      bp->fieldid_key = NULL;
-      bp->fieldfname = NULL;
-    */
 }
 
 static int read_parameters(blind_params* bp) {
@@ -1397,25 +1336,12 @@ static void print_match(blind_params* bp, MatchObj* mo) {
            mo->logodds, exp(mo->logodds), mo->noverlap, mo->nconflict, ndropout, mo->nindex);
 }
 
-static void blind_switch_index(solver_params* sp, int indexindex) {
-    blind_params* bp = sp->userdata;
-    assert(bl_size(bp->indexes) == bl_size(sp->indexes));
-    assert(indexindex < bl_size(bp->indexes));
-    bp->bips = bl_access(bp->indexes, indexindex);
-    //logmgs(bp, "switching to index %i.\n", indexindex);
-}
-
 static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
     blind_params* bp = sp->userdata;
     double pixd2;
 
-    assert(bl_size(bp->indexes) == bl_size(sp->indexes));
-    assert(sp->indexindex < bl_size(bp->indexes));
-
-    bp->bips = bl_access(bp->indexes, sp->indexindex);
-
-    mo->indexid = bp->bips->indexid;
-    mo->healpix = bp->bips->healpix;
+    mo->indexid = sp->sips->indexid;
+    mo->healpix = sp->sips->healpix;
 
     // if verification was specified in pixel units, compute the verification
     // distance on the unit sphere...
@@ -1457,7 +1383,6 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
         //print_match(bp, mo);
         memcpy(&(bp->bestmo), mo, sizeof(MatchObj));
         bp->have_bestmo = TRUE;
-        bp->bestbips = bp->bips;
         bp->bestsips = sp->sips;
     }
 
@@ -1474,20 +1399,18 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
     solver_params* sp = &(bp->solver);
     int i;
     fits_add_long_comment(hdr, "-- blind solver parameters: --");
-    if (bp->bips) {
-        fits_add_long_comment(hdr, "Index name: %s", bp->bips->indexname);
-        fits_add_long_comment(hdr, "Index id: %i", bp->bips->indexid);
-        fits_add_long_comment(hdr, "Index healpix: %i", bp->bips->healpix);
-    }
-    for (i=0; i<pl_size(bp->indexnames); i++)
-        fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexnames, i));
     if (sp->sips) {
+        fits_add_long_comment(hdr, "Index name: %s", sp->sips->indexname);
+        fits_add_long_comment(hdr, "Index id: %i", sp->sips->indexid);
+        fits_add_long_comment(hdr, "Index healpix: %i", sp->sips->healpix);
         fits_add_long_comment(hdr, "Index scale lower: %g arcsec", sp->sips->index_scale_lower);
         fits_add_long_comment(hdr, "Index scale upper: %g arcsec", sp->sips->index_scale_upper);
         fits_add_long_comment(hdr, "Index jitter: %g", sp->sips->index_jitter);
         fits_add_long_comment(hdr, "Circle: %s", sp->sips->circle ? "yes":"no");
         fits_add_long_comment(hdr, "Cxdx margin: %g", sp->sips->cxdx_margin);
     }
+    for (i=0; i<pl_size(bp->indexnames); i++)
+        fits_add_long_comment(hdr, "Index(%i): %s", i, (char*)pl_get(bp->indexnames, i));
 
     fits_add_long_comment(hdr, "Field name: %s", bp->fieldfname);
     fits_add_long_comment(hdr, "Field scale lower: %g arcsec/pixel", sp->funits_lower);
@@ -1613,8 +1536,8 @@ static void solve_fields(blind_params* bp, bool verify_only) {
         template.fieldnum = fieldnum;
         template.fieldfile = sp->fieldid;
         /*
-          template.indexid = bp->bips->indexid;
-          template.healpix = bp->bips->healpix;
+          template.indexid = sp->sips->indexid;
+          template.healpix = sp->sips->healpix;
         */
 
         sp->numtries = 0;
@@ -1696,7 +1619,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
             print_match(bp, bestmo);
             logmsg(bp, "Pixel scale: %g arcsec/pix.\n", bestmo->scale);
 
-            bp->bips = bp->bestbips;
             sp->sips = bp->bestsips;
 
             // Tweak, if requested.

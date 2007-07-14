@@ -74,6 +74,7 @@ static inline void sety(double* d, uint ind, double val) {
 void solver_default_index_params(solver_index_params* sips) {
     memset(sips, 0, sizeof(solver_index_params));
     sips->maxAB = HUGE_VAL;
+    sips->healpix = -1;
 }
 
 void solver_default_params(solver_params* params) {
@@ -492,11 +493,7 @@ static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
         if ((pq->scale < square(sips->minAB)) ||
             (pq->scale > square(sips->maxAB)))
             continue;
-        params->indexindex = i;
         params->sips = sips;
-        if (params->switchindex) {
-            params->switchindex(params, params->indexindex);
-        }
 
         if (params->parity == PARITY_NORMAL ||
             params->parity == PARITY_BOTH) {
@@ -544,7 +541,7 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
         set_xy(inorder, 2, ABCDpix, C);
         set_xy(inorder, 3, ABCDpix, D);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
         debug("      trying ABCD = [%i %i %i %i]: %i results.\n", iA, iB, iC, iD, result->nres);
 
@@ -569,7 +566,7 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
         set_xy(inorder, 2, ABCDpix, C);
         set_xy(inorder, 3, ABCDpix, D);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
         debug("      trying BACD = [%i %i %i %i]: %i results.\n", iB, iA, iC, iD, result->nres);
 
@@ -595,7 +592,7 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
         set_xy(inorder, 2, ABCDpix, D);
         set_xy(inorder, 3, ABCDpix, C);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
         debug("      trying ABDC = [%i %i %i %i]: %i results.\n", iA, iB, iD, iC, result->nres);
 
@@ -621,7 +618,7 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
         set_xy(inorder, 2, ABCDpix, D);
         set_xy(inorder, 3, ABCDpix, C);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd, result, thequery, tol, options);
+        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
         debug("      trying BADC = [%i %i %i %i]: %i results.\n", iB, iA, iD, iC, result->nres);
 
