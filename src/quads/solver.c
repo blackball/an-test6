@@ -375,29 +375,40 @@ void solve_field(solver_params* params) {
 
             setx(ABCDpix, 0, getx(params->field, iA));
             sety(ABCDpix, 0, gety(params->field, iA));
-            for (iC=0; iC<newpoint; iC++) {
-                double cx, cy, dx, dy;
-                if (!pq->inbox[iC])
-                    continue;
-                setx(ABCDpix, 2, getx(params->field, iC));
-                sety(ABCDpix, 2, gety(params->field, iC));
-                cx = getx(pq->xy, iC);
-                cy = gety(pq->xy, iC);
-                for (iD=iC+1; iD<newpoint; iD++) {
-                    if (!pq->inbox[iD])
-                        continue;
-                    setx(ABCDpix, 3, getx(params->field, iD));
-                    sety(ABCDpix, 3, gety(params->field, iD));
-                    dx = getx(pq->xy, iD);
-                    dy = gety(pq->xy, iD);
-                    params->numtries++;
-                    debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-                    try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
-                    if (params->quitNow)
-                        break;
-                }
-            }
-        }
+
+			for (i=0; i<bl_size(params->indexes); i++) {
+				solver_index_params* sips = bl_access(params->indexes, i);
+				if ((pq->scale < square(sips->minAB)) ||
+					(pq->scale > square(sips->maxAB)))
+					continue;
+				params->sips = sips;
+
+				for (iC=0; iC<newpoint; iC++) {
+					double cx, cy, dx, dy;
+					if (!pq->inbox[iC])
+						continue;
+					setx(ABCDpix, 2, getx(params->field, iC));
+					sety(ABCDpix, 2, gety(params->field, iC));
+					cx = getx(pq->xy, iC);
+					cy = gety(pq->xy, iC);
+					for (iD=iC+1; iD<newpoint; iD++) {
+						if (!pq->inbox[iD])
+							continue;
+						setx(ABCDpix, 3, getx(params->field, iD));
+						sety(ABCDpix, 3, gety(params->field, iD));
+						dx = getx(pq->xy, iD);
+						dy = gety(pq->xy, iD);
+						params->numtries++;
+						debug("    trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
+						try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
+						if (params->quitNow)
+							break;
+					}
+				}
+				if (params->quitNow)
+					break;
+			}
+		}
 
         if (params->quitNow)
             break;
@@ -431,19 +442,30 @@ void solve_field(solver_params* params) {
                 sety(ABCDpix, 1, gety(params->field, iB));
                 dx = getx(pq->xy, iD);
                 dy = gety(pq->xy, iD);
-                for (iC=0; iC<newpoint; iC++) {
-                    if (!pq->inbox[iC])
-                        continue;
-                    setx(ABCDpix, 2, getx(params->field, iC));
-                    sety(ABCDpix, 2, gety(params->field, iC));
-                    cx = getx(pq->xy, iC);
-                    cy = gety(pq->xy, iC);
-                    params->numtries++;
-                    debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
-                    try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
-                    if (params->quitNow)
-                        break;
-                }
+
+				for (i=0; i<bl_size(params->indexes); i++) {
+					solver_index_params* sips = bl_access(params->indexes, i);
+					if ((pq->scale < square(sips->minAB)) ||
+						(pq->scale > square(sips->maxAB)))
+						continue;
+					params->sips = sips;
+
+					for (iC=0; iC<newpoint; iC++) {
+						if (!pq->inbox[iC])
+							continue;
+						setx(ABCDpix, 2, getx(params->field, iC));
+						sety(ABCDpix, 2, gety(params->field, iC));
+						cx = getx(pq->xy, iC);
+						cy = gety(pq->xy, iC);
+						params->numtries++;
+						debug("  trying quad [%i %i %i %i]\n", iA, iB, iC, iD);
+						try_all_codes(pq, cx, cy, dx, dy, iA, iB, iC, iD, ABCDpix, params);
+						if (params->quitNow)
+							break;
+					}
+					if (params->quitNow)
+						break;
+				}
             }
         }
 
@@ -479,27 +501,18 @@ static inline void set_xy(double* dest, int destind, double* src, int srcind) {
 static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
                           uint iA, uint iB, uint iC, uint iD,
                           double *ABCDpix, solver_params* params) {
-    int i;
     debug("    code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
 
-    for (i=0; i<bl_size(params->indexes); i++) {
-        solver_index_params* sips = bl_access(params->indexes, i);
-        if ((pq->scale < square(sips->minAB)) ||
-            (pq->scale > square(sips->maxAB)))
-            continue;
-        params->sips = sips;
-
-        if (params->parity == PARITY_NORMAL ||
-            params->parity == PARITY_BOTH) {
-            debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
-            try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
-        }
-        if (params->parity == PARITY_FLIP ||
-            params->parity == PARITY_BOTH) {
-            debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
-            try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
-        }
-    }
+	if (params->parity == PARITY_NORMAL ||
+		params->parity == PARITY_BOTH) {
+		debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+		try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
+	}
+	if (params->parity == PARITY_FLIP ||
+		params->parity == PARITY_BOTH) {
+		debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
+		try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
+	}
 }
 
 static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
