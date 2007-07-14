@@ -19,7 +19,6 @@
 #include <assert.h>
 
 #include "blind_wcs.h"
-#include "solver_callbacks.h"
 #include "mathutil.h"
 #include "svd.h"
 #include "sip.h"
@@ -189,8 +188,7 @@ void blind_wcs_compute_2(double* starxyz,
 
 
 void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
-					   int* corr,
-					   tan_t* tan) {
+					   startree* starkd, int* corr, tan_t* tan) {
 	double xyz[3];
 	double starcmass[3];
 	double fieldcmass[2];
@@ -214,7 +212,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 	for (j=0; j<2; j++)
 		fieldcmass[j] = 0.0;
 	for (i=0; i<4; i++) {
-		getstarcoord(mo->star[i], xyz);
+		startree_get(starkd, mo->star[i], xyz);
 		for (j=0; j<3; j++)
 			starcmass[j] += xyz[j];
 		for (j=0; j<2; j++)
@@ -242,7 +240,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 	if (!corr) {
 		// just use the four stars that compose the quad.
 		for (i=0; i<4; i++) {
-			getstarcoord(mo->star[i], xyz);
+			startree_get(starkd, mo->star[i], xyz);
 			ok = star_coords(xyz, starcmass, p + 2*i, p + 2*i + 1);
 			assert(ok);
 			f[2*i+0] = field[mo->field[i] * 2 + 0];
@@ -253,7 +251,7 @@ void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
 		for (i=0; i<nfield; i++)
 			if (corr[i] != -1) {
 				// -project the stars around the quad center
-				getstarcoord(corr[i], xyz);
+				startree_get(starkd, corr[i], xyz);
 				ok = star_coords(xyz, starcmass, p + 2*j, p + 2*j + 1);
 				assert(ok);
 				// -grab the corresponding field coords.

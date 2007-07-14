@@ -31,7 +31,6 @@
 #include "mathutil.h"
 #include "matchobj.h"
 #include "solver.h"
-#include "solver_callbacks.h"
 #include "tic.h"
 #include "solvedclient.h"
 #include "solvedfile.h"
@@ -654,11 +653,12 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         params->nummatches++;
 
         thisquadno = (uint)krez->inds[jj];
-        getquadids(thisquadno, &iA, &iB, &iC, &iD);
-        getstarcoord(iA, star + 0*3);
-        getstarcoord(iB, star + 1*3);
-        getstarcoord(iC, star + 2*3);
-        getstarcoord(iD, star + 3*3);
+
+		quadfile_get_starids(params->sips->quads, thisquadno, &iA, &iB, &iC, &iD);
+		startree_get(params->sips->starkd, iA, star + 0*3);
+		startree_get(params->sips->starkd, iB, star + 1*3);
+		startree_get(params->sips->starkd, iC, star + 2*3);
+		startree_get(params->sips->starkd, iD, star + 3*3);
 
         debug("        stars [%i %i %i %i]\n", iA, iB, iC, iD);
 
@@ -696,10 +696,17 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
         mo.field[1] = fB;
         mo.field[2] = fC;
         mo.field[3] = fD;
-        mo.ids[0] = getstarid(iA);
-        mo.ids[1] = getstarid(iB);
-        mo.ids[2] = getstarid(iC);
-        mo.ids[3] = getstarid(iD);
+		if (params->sips->idfile) {
+			mo.ids[0] = idfile_get_anid(params->sips->idfile, iA);
+			mo.ids[1] = idfile_get_anid(params->sips->idfile, iB);
+			mo.ids[2] = idfile_get_anid(params->sips->idfile, iC);
+			mo.ids[3] = idfile_get_anid(params->sips->idfile, iD);
+		} else {
+			mo.ids[0] = 0;
+			mo.ids[1] = 0;
+			mo.ids[2] = 0;
+			mo.ids[3] = 0;
+		}
 
         // transform the corners of the field...
         tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_miny, mo.sMin);

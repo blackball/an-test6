@@ -29,7 +29,6 @@
 #define min(a,b) (((a)<(b))?(a):(b))
 #define max(a,b) (((a)>(b))?(a):(b))
 
-#include "solver_callbacks.h"
 #include "blind_wcs.h"
 
 // FOR TESTING

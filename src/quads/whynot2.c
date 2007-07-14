@@ -36,7 +36,6 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "solver.h"
-#include "solver_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
 #include "tic.h"

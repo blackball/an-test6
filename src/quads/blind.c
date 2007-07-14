@@ -42,7 +42,6 @@
 #include "mathutil.h"
 #include "bl.h"
 #include "solver.h"
-#include "solver_callbacks.h"
 #include "matchobj.h"
 #include "matchfile.h"
 #include "tic.h"
@@ -78,10 +77,6 @@ struct blind_index_params {
     char *indexname;
     int indexid;
     int healpix;
-
-    idfile* id;
-    quadfile* quads;
-    startree* starkd;
     codetree* codekd;
 };
 typedef struct blind_index_params blind_index_params;
@@ -348,16 +343,16 @@ static int load_index(char* indexname,
     // Read .skdt file...
     startreefname = mk_streefn(indexname);
     logmsg(bp, "Reading star KD tree from %s...\n", startreefname);
-    bips->starkd = startree_open(startreefname);
-    if (!bips->starkd) {
+    sips->starkd = startree_open(startreefname);
+    if (!sips->starkd) {
         logerr(bp, "Failed to read star kdtree %s\n", startreefname);
         free_fn(startreefname);
         return -1;
     }
     free_fn(startreefname);
-    logverb(bp, "  (%d stars, %d nodes).\n", startree_N(bips->starkd), startree_nodes(bips->starkd));
+    logverb(bp, "  (%d stars, %d nodes).\n", startree_N(sips->starkd), startree_nodes(sips->starkd));
 
-    sips->index_jitter = qfits_header_getdouble(bips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
+    sips->index_jitter = qfits_header_getdouble(sips->starkd->header, "JITTER", DEFAULT_INDEX_JITTER);
     logmsg(bp, "Setting index jitter to %g arcsec.\n", sips->index_jitter);
 
     if (skdt_only)
@@ -366,19 +361,19 @@ static int load_index(char* indexname,
     // Read .quad file...
     quadfname = mk_quadfn(indexname);
     logmsg(bp, "Reading quads file %s...\n", quadfname);
-    bips->quads = quadfile_open(quadfname, 0);
-    if (!bips->quads) {
+    sips->quads = quadfile_open(quadfname, 0);
+    if (!sips->quads) {
         logerr(bp, "Couldn't read quads file %s\n", quadfname);
         free_fn(quadfname);
         return -1;
     }
     free_fn(quadfname);
-    sips->index_scale_upper = quadfile_get_index_scale_arcsec(bips->quads);
-    sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(bips->quads);
-    bips->indexid = bips->quads->indexid;
-    bips->healpix = bips->quads->healpix;
+    sips->index_scale_upper = quadfile_get_index_scale_arcsec(sips->quads);
+    sips->index_scale_lower = quadfile_get_index_scale_lower_arcsec(sips->quads);
+    bips->indexid = sips->quads->indexid;
+    bips->healpix = sips->quads->healpix;
 
-    logmsg(bp, "Stars: %i, Quads: %i.\n", bips->quads->numstars, bips->quads->numquads);
+    logmsg(bp, "Stars: %i, Quads: %i.\n", sips->quads->numstars, sips->quads->numquads);
 
     logmsg(bp, "Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
            sips->index_scale_lower/60.0, sips->index_scale_upper/60.0,
@@ -414,8 +409,8 @@ static int load_index(char* indexname,
     if (bp->use_idfile) {
         idfname = mk_idfn(indexname);
         // Read .id file...
-        bips->id = idfile_open(idfname, 0);
-        if (!bips->id) {
+        sips->idfile = idfile_open(idfname, 0);
+        if (!sips->idfile) {
             logmsg(bp, "Couldn't open id file %s.\n", idfname);
             free_fn(idfname);
             return -1;
@@ -742,8 +737,8 @@ int main(int argc, char *argv[]) {
                 solve_fields(bp, TRUE);
 
                 // Clean up this index...
-                startree_close(bp->bips->starkd);
-                bp->bips->starkd = NULL;
+                startree_close(sp->sips->starkd);
+                sp->sips->starkd = NULL;
 
                 bl_remove_all(sp->indexes);
                 bl_remove_all(bp->indexes);
@@ -830,15 +825,15 @@ int main(int argc, char *argv[]) {
 
                 // Clean up this index...
                 codetree_close(bp->bips->codekd);
-                startree_close(bp->bips->starkd);
-                if (bp->bips->id)
-                    idfile_close(bp->bips->id);
-                quadfile_close(bp->bips->quads);
+                startree_close(sp->sips->starkd);
+                if (sp->sips->idfile)
+                    idfile_close(sp->sips->idfile);
+                quadfile_close(sp->sips->quads);
 
                 bp->bips->codekd = NULL;
-                bp->bips->starkd = NULL;
-                bp->bips->id = NULL;
-                bp->bips->quads = NULL;
+                sp->sips->starkd = NULL;
+                sp->sips->quads = NULL;
+                sp->sips->idfile = NULL;
             }
 
             bl_remove_all(sp->indexes);
@@ -926,15 +921,15 @@ int main(int argc, char *argv[]) {
 
                 // Clean up this index...
                 codetree_close(bp->bips->codekd);
-                startree_close(bp->bips->starkd);
-                if (bp->bips->id)
-                    idfile_close(bp->bips->id);
-                quadfile_close(bp->bips->quads);
+                startree_close(sp->sips->starkd);
+                if (sp->sips->idfile)
+                    idfile_close(sp->sips->idfile);
+                quadfile_close(sp->sips->quads);
 
                 bp->bips->codekd = NULL;
-                bp->bips->starkd = NULL;
-                bp->bips->id = NULL;
-                bp->bips->quads = NULL;
+                sp->sips->starkd = NULL;
+                sp->sips->quads = NULL;
+                sp->sips->idfile = NULL;
 
                 bl_remove_all(sp->indexes);
                 bl_remove_all(bp->indexes);
@@ -1432,7 +1427,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo) {
         //d2 = bp->verify_dist2 + square(sp->sips->index_jitter);
     }
 
-    verify_hit(bp->bips->starkd, mo, sp->field, sp->nfield, pixd2,
+    verify_hit(sp->sips->starkd, mo, sp->field, sp->nfield, pixd2,
                bp->distractors, sp->field_maxx, sp->field_maxy,
                bp->logratio_tobail, bp->nverify, bp->do_gamma);
     // FIXME - this is the same as nmatches.
@@ -1706,7 +1701,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 
             // Tweak, if requested.
             if (bp->do_tweak) {
-                sip = tweak(bp, bestmo, bp->bips->starkd);
+                sip = tweak(bp, bestmo, sp->sips->starkd);
             }
 
             // Write WCS, if requested.
@@ -1783,7 +1778,7 @@ static void solve_fields(blind_params* bp, bool verify_only) {
                 star_midpoint(fieldcenter, bestmo->sMin, bestmo->sMax);
                 fieldr2 = distsq(fieldcenter, bestmo->sMin, 3);
                 // 1.05 is a little safety factor.
-                res = kdtree_rangesearch_options(bp->bips->starkd->tree, fieldcenter,
+                res = kdtree_rangesearch_options(sp->sips->starkd->tree, fieldcenter,
                                                  fieldr2 * 1.05,
                                                  KD_OPTIONS_SMALL_RADIUS |
                                                  KD_OPTIONS_RETURN_POINTS);
@@ -1916,16 +1911,3 @@ static void solve_fields(blind_params* bp, bool verify_only) {
     sp->field = NULL;
 }
 
-void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD) {
-    quadfile_get_starids(my_bp.bips->quads, thisquad, iA, iB, iC, iD);
-}
-
-void getstarcoord(uint iA, double *sA) {
-    startree_get(my_bp.bips->starkd, iA, sA);
-}
-
-uint64_t getstarid(uint iA) {
-    if (my_bp.bips->id)
-        return idfile_get_anid(my_bp.bips->id, iA);
-    return 0;
-}

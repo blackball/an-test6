@@ -24,6 +24,9 @@
 #include "kdtree.h"
 #include "bl.h"
 #include "matchobj.h"
+#include "idfile.h"
+#include "quadfile.h"
+#include "starkd.h"
 
 struct solver_params;
 
@@ -40,6 +43,10 @@ enum {
 struct solver_index_params {
     // The index
     kdtree_t* codekd;
+
+	idfile* idfile;
+    quadfile* quads;
+    startree* starkd;
 
     // Jitter in the index, in arcseconds.
     double index_jitter;

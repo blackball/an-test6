@@ -22,9 +22,10 @@
 #include "qfits.h"
 #include "matchobj.h"
 #include "sip.h"
+#include "starkd.h"
 
 void blind_wcs_compute(MatchObj* mo, double* field, int nfield,
-					   int* correspondences,
+					   startree* starkd, int* correspondences,
 					   // output:
 					   tan_t* wcstan);
 

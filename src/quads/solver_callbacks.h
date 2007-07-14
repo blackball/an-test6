@@ -26,10 +26,10 @@
 /**
    You have to define these three functions!
 */
-void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD);
+//void getquadids(uint thisquad, uint *iA, uint *iB, uint *iC, uint *iD);
 
-void getstarcoord(uint iA, double *star);
+//void getstarcoord(uint iA, double *star);
 
-uint64_t getstarid(uint iA);
+//uint64_t getstarid(uint iA);
 
 #endif
