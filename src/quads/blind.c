@@ -307,6 +307,21 @@ static void indexrdls_write_new_field(blind_params* bp, char* fieldname) {
     logerr(bp, "Failed to write index RDLS field header.\n");
 }
 
+static void close_index(solver_index_params* sips) {
+	if (sips->starkd)
+		startree_close(sips->starkd);
+	if (sips->codekd)
+		codetree_close(sips->codekd);
+	if (sips->idfile)
+		idfile_close(sips->idfile);
+	if (sips->quads)
+		quadfile_close(sips->quads);
+	sips->starkd = NULL;
+	sips->codekd = NULL;
+	sips->idfile = NULL;
+	sips->quads = NULL;
+}
+
 static int load_index(char* indexname,
                       bool skdt_only,
                       blind_params* bp,
@@ -690,24 +705,20 @@ int main(int argc, char *argv[]) {
                 if (sp->cancelled)
                     break;
 
+                solver_default_index_params(&sips);
                 fname = pl_get(bp->indexnames, I);
-
-                sp->sips = &sips;
-                solver_default_index_params(sp->sips);
-
-                if (load_index(fname, TRUE, bp, sp, sp->sips)) {
+                if (load_index(fname, TRUE, bp, sp, &sips)) {
                     exit(-1);
                 }
                 sp->indexnum = I;
 
-                bl_append(sp->indexes, sp->sips);
+                bl_append(sp->indexes, &sips);
 
                 // Do it!
                 solve_fields(bp, TRUE);
 
                 // Clean up this index...
-                startree_close(sp->sips->starkd);
-                sp->sips->starkd = NULL;
+				close_index(&sips);
 
                 bl_remove_all(sp->indexes);
                 sp->sips = NULL;
@@ -726,15 +737,13 @@ int main(int argc, char *argv[]) {
                 char* fname;
                 solver_index_params sips;
 
-                sp->sips = &sips;
-                solver_default_index_params(sp->sips);
-
+                solver_default_index_params(&sips);
                 fname = pl_get(bp->indexnames, I);
                 logmsg(bp, "\nLoading index %s...\n", fname);
-                if (load_index(fname, FALSE, bp, sp, sp->sips)) {
+                if (load_index(fname, FALSE, bp, sp, &sips)) {
                     exit(-1);
                 }
-                bl_append(sp->indexes, sp->sips);
+                bl_append(sp->indexes, &sips);
             }
 
             // Set CPU time limit.
@@ -783,15 +792,11 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+			// Clean up the indices...
             for (I=0; I<bl_size(sp->indexes); I++) {
                 solver_index_params* sips;
 				sips = bl_access(sp->indexes, I);
-                // Clean up this index...
-                codetree_close(sips->codekd);
-                startree_close(sips->starkd);
-                if (sips->idfile)
-                    idfile_close(sips->idfile);
-                quadfile_close(sips->quads);
+				close_index(sips);
             }
             bl_remove_all(sp->indexes);
             sp->sips = NULL;
@@ -804,23 +809,19 @@ int main(int argc, char *argv[]) {
 
                 if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
                     break;
-
                 if (bp->single_field_solved)
                     break;
-
                 if (sp->cancelled)
                     break;
 
-                sp->sips = &sips;
-                solver_default_index_params(sp->sips);
-
+                solver_default_index_params(&sips);
                 fname = pl_get(bp->indexnames, I);
-                if (load_index(fname, FALSE, bp, sp, sp->sips)) {
+                if (load_index(fname, FALSE, bp, sp, &sips)) {
                     exit(-1);
                 }
                 sp->indexnum = I;
 
-                logmsg(bp, "\n\nTrying index %s...\n", sp->sips->indexname);
+                logmsg(bp, "\n\nTrying index %s...\n", fname);
 
                 // Set CPU time limit.
                 if (bp->cpulimit) {
@@ -846,7 +847,7 @@ int main(int argc, char *argv[]) {
                     alarm(bp->timelimit);
                 }
 
-                bl_append(sp->indexes, sp->sips);
+                bl_append(sp->indexes, &sips);
 
                 // Do it!
                 solve_fields(bp, FALSE);
@@ -871,16 +872,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 // Clean up this index...
-                codetree_close(sp->sips->codekd);
-                startree_close(sp->sips->starkd);
-                if (sp->sips->idfile)
-                    idfile_close(sp->sips->idfile);
-                quadfile_close(sp->sips->quads);
-
-                sp->sips->codekd = NULL;
-                sp->sips->starkd = NULL;
-                sp->sips->quads = NULL;
-                sp->sips->idfile = NULL;
+				close_index(&sips);
 
                 bl_remove_all(sp->indexes);
                 sp->sips = NULL;
@@ -1535,10 +1527,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
 
         template.fieldnum = fieldnum;
         template.fieldfile = sp->fieldid;
-        /*
-          template.indexid = sp->sips->indexid;
-          template.healpix = sp->sips->healpix;
-        */
 
         sp->numtries = 0;
         sp->nummatches = 0;
@@ -1729,53 +1717,6 @@ static void solve_fields(blind_params* bp, bool verify_only) {
                         logerr(bp, "Failed to fix index RDLS field header.\n");
                     }
                 }
-
-                // DEBUG - write out some extra stuff for Sam.
-                /*
-                  fprintf(stderr, "fieldquad = [ %g,%g; %g,%g; %g,%g; %g,%g ];\n",
-                  sp->field[bestmo->field[0] * 2], sp->field[bestmo->field[0] * 2 + 1],
-                  sp->field[bestmo->field[1] * 2], sp->field[bestmo->field[1] * 2 + 1],
-                  sp->field[bestmo->field[2] * 2], sp->field[bestmo->field[2] * 2 + 1],
-                  sp->field[bestmo->field[3] * 2], sp->field[bestmo->field[3] * 2 + 1]);
-                  {
-                  double xyz[3];
-                  double xyzcm[3];
-                  int k;
-                  double x,y;
-                  bool ok;
-                  fprintf(stderr, "indexquad_xyz = [ ");
-                  xyzcm[0] = xyzcm[1] = xyzcm[2] = 0.0;
-                  for (k=0; k<4; k++) {
-                  getstarcoord(bestmo->star[k], xyz);
-                  fprintf(stderr, "%g,%g,%g; ", xyz[0], xyz[1], xyz[2]);
-                  xyzcm[0] += 0.25 * xyz[0];
-                  xyzcm[1] += 0.25 * xyz[1];
-                  xyzcm[2] += 0.25 * xyz[2];
-                  }
-                  fprintf(stderr, "];\n");
-                  // project around center of mass.
-                  fprintf(stderr, "indexquad_xy = [");
-                  for (k=0; k<4; k++) {
-                  getstarcoord(bestmo->star[k], xyz);
-                  ok = star_coords(xyz, xyzcm, &x, &y);
-                  assert(ok);
-                  fprintf(stderr, "%g,%g; ", x, y);
-                  }
-                  fprintf(stderr, "];\n");
-                  fprintf(stderr, "index_all_xy = [");
-                  for (i=0; i<nstars; i++) {
-                  ok = star_coords(starxyz + i*3, xyzcm, &x, &y);
-                  assert(ok);
-                  fprintf(stderr, "%g,%g; ", x, y);
-                  }
-                  fprintf(stderr, "];\n");
-                  fprintf(stderr, "field_all = [");
-                  for (i=0; i<sp->nfield; i++) {
-                  fprintf(stderr, "%g,%g; ", sp->field[2*i], sp->field[2*i+1]);
-                  }
-                  fprintf(stderr, "];\n");
-                  }
-                */
 
                 free(radec);
                 kdtree_free_query(res);
