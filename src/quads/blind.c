@@ -716,6 +716,8 @@ int main(int argc, char *argv[]) {
 
                 bl_append(sp->indexes, &sips);
 
+				sp->sips = &sips;
+
                 // Do it!
                 solve_fields(bp, TRUE);
 
