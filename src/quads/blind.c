@@ -106,7 +106,8 @@ struct blind_params {
     char* wcs_template;
 
     // WCS read from verify_wcsfn.
-    sip_t* verify_wcs;
+    //sip_t* verify_wcs;
+	bl* verify_wcs_list;
 
     char *solved_out;
     // Solvedserver ip:port
@@ -169,7 +170,7 @@ struct blind_params {
 };
 typedef struct blind_params blind_params;
 
-static void solve_fields(blind_params* bp, bool just_verify);
+static void solve_fields(blind_params* bp, tan_t* verify_wcs);
 static int read_parameters(blind_params* bp);
 static void cleanup_parameters(blind_params* bp, solver_params* sp);
 static void add_blind_params(blind_params* bp, qfits_header* hdr);
@@ -457,6 +458,7 @@ int main(int argc, char *argv[]) {
         bp->logratio_tobail = -HUGE_VAL;
         bp->fieldlist = il_new(256);
         bp->indexnames = pl_new(16);
+		bp->verify_wcs_list = bl_new(1, sizeof(tan_t));
         bp->fieldid_key = strdup("FIELDID");
         bp->xcolname = strdup("X");
         bp->ycolname = strdup("Y");
@@ -683,23 +685,28 @@ int main(int argc, char *argv[]) {
 
         sp->nindexes = pl_size(bp->indexnames);
 
+		// FIXME - allow multiple "verify_wcsfn" entries
+		// FIXME - properly iterate through them!
+
         if (bp->verify_wcsfn) {
+			tan_t wcs;
             logmsg(bp, "Reading WCS header to verify from file %s\n", bp->verify_wcsfn);
             qfits_header* hdr = qfits_header_read(bp->verify_wcsfn);
             if (!hdr) {
                 logerr(bp, "Failed to read FITS header from file %s\n", bp->verify_wcsfn);
                 goto doneverify;
             }
-            bp->verify_wcs = sip_read_header(hdr, NULL);
-            qfits_header_destroy(hdr);
-            //logmsg(bp, "verify_wcs = %p\n", bp->verify_wcs);
-            if (!bp->verify_wcs) {
+			if (!tan_read_header(hdr, &wcs)) {
                 logerr(bp, "Failed to parse WCS header from file %s\n", bp->verify_wcsfn);
                 goto doneverify;
-            }
-
+			}
+			bl_append(bp->verify_wcs_list, &wcs);
+            qfits_header_destroy(hdr);
+		}
+		if (bl_size(bp->verify_wcs_list)) {
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
+				int w;
                 solver_index_params sips;
 
                 if (bp->single_field_solved)
@@ -712,23 +719,21 @@ int main(int argc, char *argv[]) {
                 if (load_index(fname, TRUE, bp, sp, &sips)) {
                     exit(-1);
                 }
+                bl_append(sp->indexes, &sips);
+				sp->sips = &sips;
                 sp->indexnum = I;
 
-                bl_append(sp->indexes, &sips);
-
-				sp->sips = &sips;
-
-                // Do it!
-                solve_fields(bp, TRUE);
+				for (w=0; w<bl_size(bp->verify_wcs_list); w++) {
+					tan_t* wcs = bl_access(bp->verify_wcs_list, w);
+					// Do it!
+					solve_fields(bp, wcs);
+				}
 
                 // Clean up this index...
 				close_index(&sips);
-
                 bl_remove_all(sp->indexes);
                 sp->sips = NULL;
             }
-            sip_free(bp->verify_wcs);
-            bp->verify_wcs = NULL;
         }
     doneverify:
 
@@ -775,7 +780,7 @@ int main(int argc, char *argv[]) {
             }
 
             // Do it!
-            solve_fields(bp, FALSE);
+            solve_fields(bp, NULL);
 
             // Cancel wall-clock time limit.
             if (bp->timelimit) {
@@ -854,7 +859,7 @@ int main(int argc, char *argv[]) {
                 bl_append(sp->indexes, &sips);
 
                 // Do it!
-                solve_fields(bp, FALSE);
+                solve_fields(bp, NULL);
 
                 // Cancel wall-clock time limit.
                 if (bp->timelimit) {
@@ -958,7 +963,7 @@ static void cleanup_parameters(blind_params* bp,
     for (i=0; i<pl_size(bp->indexnames); i++)
         free(pl_get(bp->indexnames, i));
     pl_free(bp->indexnames);
-
+	bl_free(bp->verify_wcs_list);
     bl_free(sp->indexes);
 
     free(sp->cancelfname);
@@ -1014,7 +1019,18 @@ static int read_parameters(blind_params* bp) {
         } else if (is_word(line, "verify ", &nextword)) {
             free(bp->verify_wcsfn);
             bp->verify_wcsfn = strdup(nextword);
-        } else if (is_word(line, "cpulimit ", &nextword)) {
+        } else if (is_word(line, "verify_wcs ", &nextword)) {
+			tan_t wcs;
+			if (sscanf(nextword, "%lg %lg %lg %lg %lg %lg %lg %lg",
+					   &(wcs.crval[0]), &(wcs.crval[1]),
+					   &(wcs.crpix[0]), &(wcs.crpix[1]),
+					   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
+					   &(wcs.cd[1][0]), &(wcs.cd[1][1])) != 8) {
+				logerr(bp, "Failed to parse verify_wcs entry.\n");
+				goto bailout;
+			}
+			bl_append(bp->verify_wcs_list, &wcs);
+		} else if (is_word(line, "cpulimit ", &nextword)) {
             bp->cpulimit = atoi(nextword);
         } else if (is_word(line, "timelimit ", &nextword)) {
             bp->timelimit = atoi(nextword);
@@ -1441,7 +1457,7 @@ static void add_blind_params(blind_params* bp, qfits_header* hdr) {
     fits_add_long_comment(hdr, "--");
 }
 
-static void solve_fields(blind_params* bp, bool verify_only) {
+static void solve_fields(blind_params* bp, tan_t* verify_wcs) {
     solver_params* sp = &(bp->solver);
     double last_utime, last_stime;
     double utime, stime;
@@ -1546,17 +1562,17 @@ static void solve_fields(blind_params* bp, bool verify_only) {
         bp->bestmo_solves = FALSE;
         bp->bestlogodds = -HUGE_VAL;
 
-        if (verify_only) {
+        if (verify_wcs) {
             // fabricate a match...
             MatchObj mo;
             memcpy(&mo, &template, sizeof(MatchObj));
-            memcpy(&(mo.wcstan), &(bp->verify_wcs->wcstan), sizeof(tan_t));
+            memcpy(&(mo.wcstan), verify_wcs, sizeof(tan_t));
             mo.wcs_valid = TRUE;
-            mo.scale = sip_pixel_scale(bp->verify_wcs);
-            sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_minx, sp->field_miny, mo.sMin);
-            sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_maxx, sp->field_maxy, mo.sMax);
-            sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_minx, sp->field_maxy, mo.sMinMax);
-            sip_pixelxy2xyzarr(bp->verify_wcs, sp->field_maxx, sp->field_miny, mo.sMaxMin);
+            mo.scale = tan_pixel_scale(verify_wcs);
+            tan_pixelxy2xyzarr(verify_wcs, sp->field_minx, sp->field_miny, mo.sMin);
+            tan_pixelxy2xyzarr(verify_wcs, sp->field_maxx, sp->field_maxy, mo.sMax);
+            tan_pixelxy2xyzarr(verify_wcs, sp->field_minx, sp->field_maxy, mo.sMinMax);
+            tan_pixelxy2xyzarr(verify_wcs, sp->field_maxx, sp->field_miny, mo.sMaxMin);
             bp->do_gamma = FALSE;
 
             logmsg(bp, "\nVerifying WCS of field %i with index %i of %i\n", fieldnum,

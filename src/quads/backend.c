@@ -255,7 +255,7 @@ WCS to verify: if the image already has a WCS that you want to verify, convert i
     * ANW#CD22 CD2_2 
 */
 
-void job_write_blind_input(job_t* job, FILE* fout) {
+void job_write_blind_input(job_t* job, FILE* fout, pl* indexes) {
 	int i, j, k;
 	fprintf(fout, "timelimit %i\n", job->timelimit);
 	fprintf(fout, "cpulimit %i\n", job->cpulimit);
@@ -276,7 +276,24 @@ void job_write_blind_input(job_t* job, FILE* fout) {
 		if (endobj)
 			fprintf(fout, "depth %i\n", endobj);
 
-		fprintf(fout, "\n");
+		for (j=0; j<dl_size(job->scales)/2; j++) {
+			fprintf(fout, "fieldunits_lower %g\n", dl_get(job->scales, i*2));
+			fprintf(fout, "fieldunits_upper %g\n", dl_get(job->scales, i*2+1));
+
+			// FIXME - select the indices that should be checked.
+			for (k=0; k<pl_size(indexes); k++) {
+				fprintf(fout, "index %s\n", (char*)pl_get(indexes, k));
+			}
+
+			// FIXME - Keir isn't going to like this...
+			/*
+			  mkstemp(
+			  fprintf(fout, "
+			*/
+
+			fprintf(fout, "run\n\n");
+		}
+
 	}
 }
 
@@ -285,8 +302,8 @@ int main(int argc, char** args) {
 	int c;
 	char* configfn = "backend.cfg";
 	FILE* fconf;
-	pl* indexes;
 	int i;
+	pl* indexes;
 
 	while (1) {
 		int option_index = 0;
@@ -370,8 +387,9 @@ int main(int argc, char** args) {
 
 		job->imagew = qfits_header_getdouble(hdr, "IMAGEW", dnil);
 		job->imageh = qfits_header_getdouble(hdr, "IMAGEH", dnil);
-		if ((job->imagew == dnil) || (job->imageh == dnil)) {
-			printf("Must specify \"IMAGEW\" and \"IMAGEH\".\n");
+		if ((job->imagew == dnil) || (job->imageh == dnil) ||
+			(job->imagew <= 0.0) || (job->imageh <= 0.0)) {
+			printf("Must specify positive \"IMAGEW\" and \"IMAGEH\".\n");
 			exit(-1);
 		}
 		job->run = qfits_header_getboolean(hdr, "ANRUN", 0);
@@ -478,16 +496,28 @@ int main(int argc, char** args) {
 			n++;
 		}
 
+		// Add some defaults:
+
 		// Default: solve first field.
 		if (job->run && !il_size(job->fields)) {
 			il_append(job->fields, 0);
+		}
+
+		// Default: image width 0.1 - 180 degrees.
+		// FIXME - this should depend on the available indices!
+		if (!dl_size(job->scales)) {
+			double arcsecperpix;
+			arcsecperpix = deg2arcsec(0.1) / job->imagew;
+			dl_append(job->scales, arcsecperpix);
+			arcsecperpix = deg2arcsec(180) / job->imagew;
+			dl_append(job->scales, arcsecperpix);
 		}
 
 		// Go!
 		printf("Running job:\n");
 		job_print(job);
 
-		job_write_blind_input(job, stdout);
+		job_write_blind_input(job, stdout, indexes);
 
 
 
