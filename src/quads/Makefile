@@ -82,7 +82,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 	startree hpquads codetree unpermute-quads unpermute-stars blind \
 	solvedserver printsolved xylist2fits mergesolved \
 	rdlsinfo xylsinfo wcsinfo fits-guess-scale an-fitstopnm agreeable \
-	new-wcs get-wcs
+	new-wcs get-wcs backend
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate \
@@ -238,6 +238,8 @@ unpermute-stars: unpermute-stars.o idfile.o \
 
 unpermute-quads: unpermute-quads.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+
+backend: backend.o $(ANUTILS_LIB) $(QFITS_LIB)
 
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
