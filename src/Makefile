@@ -22,6 +22,11 @@ all:
 	$(MAKE) -C quads
 	$(MAKE) -C simplexy
 
+# Targets that require extra libraries or which are otherwise tricky.
+extra:
+	$(MAKE) -C quads cairo
+	$(MAKE) -C usnob-map/execs
+	$(MAKE) -C ontheweb/execs
 
 clean:
 	$(MAKE) -C an-common clean
