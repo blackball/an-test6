@@ -65,8 +65,10 @@ static int parse_config_file(FILE* fconf, pl* indexes) {
         char* line;
 		if (feof(fconf))
 			break;
-        if (!fgets(buffer, sizeof(buffer), fconf))
+        if (!fgets(buffer, sizeof(buffer), fconf)) {
+			printf("Failed to read a line from the config file: %s\n", strerror(errno));
             return -1;
+		}
         line = buffer;
         // strip off newline
         if (line[strlen(line) - 1] == '\n')
@@ -455,7 +457,7 @@ int main(int argc, char** args) {
 		printf("Running job:\n");
 		job_print(job);
 
-	cleanup:
+		//cleanup:
 		job_free(job);
 		qfits_header_destroy(hdr);
 	}
