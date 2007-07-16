@@ -63,9 +63,9 @@ static int parse_config_file(FILE* fconf, pl* indexes) {
         char buffer[10240];
         char* nextword;
         char* line;
-		if (feof(fconf))
-			break;
         if (!fgets(buffer, sizeof(buffer), fconf)) {
+			if (feof(fconf))
+				break;
 			printf("Failed to read a line from the config file: %s\n", strerror(errno));
             return -1;
 		}
@@ -255,6 +255,31 @@ WCS to verify: if the image already has a WCS that you want to verify, convert i
     * ANW#CD22 CD2_2 
 */
 
+void job_write_blind_input(job_t* job, FILE* fout) {
+	int i, j, k;
+	fprintf(fout, "timelimit %i\n", job->timelimit);
+	fprintf(fout, "cpulimit %i\n", job->cpulimit);
+	for (i=0;; i++) {
+		int startobj, endobj;
+		if (il_size(job->depths) < 2) {
+			if (i > 0)
+				break;
+			startobj = 0;
+			endobj = 0;
+		} else {
+			if (i >= il_size(job->depths)-1)
+				break;
+			startobj = il_get(job->depths, i);
+			endobj = il_get(job->depths, i+1);
+		}
+		fprintf(fout, "sdepth %i\n", startobj);
+		if (endobj)
+			fprintf(fout, "depth %i\n", endobj);
+
+		fprintf(fout, "\n");
+	}
+}
+
    
 int main(int argc, char** args) {
 	int c;
@@ -389,7 +414,7 @@ int main(int argc, char** args) {
 			depth = qfits_header_getint(hdr, key, -1);
 			if (depth == -1)
 				break;
-			dl_append(job->depths, depth);
+			il_append(job->depths, depth);
 			n++;
 		}
 		n = 1;
@@ -440,8 +465,8 @@ int main(int argc, char** args) {
 			int bail = 0;
 			for (j=0; j<8; j++) {
 				sprintf(key, keys[j], n);
-				*(vals[i]) = qfits_header_getdouble(hdr, key, dnil);
-				if (*(vals[i]) == dnil) {
+				*(vals[j]) = qfits_header_getdouble(hdr, key, dnil);
+				if (*(vals[j]) == dnil) {
 					bail = 1;
 					break;
 				}
@@ -453,9 +478,19 @@ int main(int argc, char** args) {
 			n++;
 		}
 
+		// Default: solve first field.
+		if (job->run && !il_size(job->fields)) {
+			il_append(job->fields, 0);
+		}
+
 		// Go!
 		printf("Running job:\n");
 		job_print(job);
+
+		job_write_blind_input(job, stdout);
+
+
+
 
 		//cleanup:
 		job_free(job);
