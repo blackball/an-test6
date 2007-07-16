@@ -22,6 +22,8 @@
 #include "qfits.h"
 #include "keywords.h"
 
+char* fits_get_dupstring(qfits_header* hdr, const char* key);
+
 void
 ATTRIB_FORMAT(printf,4,5)
 fits_header_addf(qfits_header* hdr, const char* key, const char* comment,

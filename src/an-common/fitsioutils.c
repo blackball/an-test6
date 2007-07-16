@@ -35,6 +35,10 @@
 
 static uint32_t ENDIAN_DETECTOR = 0x01020304;
 
+char* fits_get_dupstring(qfits_header* hdr, const char* key) {
+	return strdup(qfits_pretty_string(qfits_header_getstr(hdr, key)));
+}
+
 void fits_header_addf(qfits_header* hdr, const char* key, const char* comment,
                       const char* format, ...) {
     char buf[FITS_LINESZ + 1];
