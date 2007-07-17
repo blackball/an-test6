@@ -1,19 +1,19 @@
 /*
-  This file is part of the Astrometry.net suite.
-  Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+ This file is part of the Astrometry.net suite.
+ Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
 
-  The Astrometry.net suite is free software; you can redistribute
-  it and/or modify it under the terms of the GNU General Public License
-  as published by the Free Software Foundation, version 2.
+ The Astrometry.net suite is free software; you can redistribute
+ it and/or modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation, version 2.
 
-  The Astrometry.net suite is distributed in the hope that it will be
-  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+ The Astrometry.net suite is distributed in the hope that it will be
+ useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with the Astrometry.net suite ; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ You should have received a copy of the GNU General Public License
+ along with the Astrometry.net suite ; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
 /**
@@ -47,28 +47,30 @@
 static int help_flag;
 
 static struct option long_options[] =
-	{
-		// flags
-		{"help",    no_argument,       &help_flag,    1},
-		{"config",  optional_argument,   0, 'c'},
-		{"input",   optional_argument,   0, 'i'},
-		{0, 0, 0, 0}
-	};
+    {
+	    // flags
+	    {"help", no_argument, &help_flag, 1},
+	    {"config", optional_argument, 0, 'c'},
+	    {"input", optional_argument, 0, 'i'},
+	    {0, 0, 0, 0}
+    };
 
 static const char* OPTIONS = "hc:i:";
 
-static void print_help(const char* progname) {
+static void print_help(const char* progname)
+{
 	printf("Usage:   %s [options] <augmented xylist>\n"
-		   "   [-c <backend config file>]  (default \"backend.cfg\")\n"
-		   "   [-i <blind input filename>]: save the input file used for blind.\n"
-		   "\n", progname);
+	       "   [-c <backend config file>]  (default \"backend.cfg\")\n"
+	       "   [-i <blind input filename>]: save the input file used for blind.\n"
+	       "\n", progname);
 }
 
 
 static const char* default_blind_command = "blind";
 
 
-struct indexinfo {
+struct indexinfo
+{
 	char* indexname;
 	// quad size
 	double losize;
@@ -77,7 +79,8 @@ struct indexinfo {
 typedef struct indexinfo indexinfo_t;
 
 // This should really be named something like "backend_t"...
-struct backend {
+struct backend
+{
 	bl* indexinfos;
 	int ibiggest;
 	int ismallest;
@@ -91,34 +94,36 @@ struct backend {
 typedef struct backend backend_t;
 
 static int get_index_scales(const char* indexname,
-							double* losize, double* hisize) {
-    char *quadfname;
+                            double* losize, double* hisize)
+{
+	char *quadfname;
 	quadfile* quads;
 	double hi, lo;
 
-    quadfname = mk_quadfn(indexname);
-    printf("Reading quads file %s...\n", quadfname);
-    quads = quadfile_open(quadfname, 0);
-    if (!quads) {
-        printf("Couldn't read quads file %s\n", quadfname);
-        free_fn(quadfname);
-        return -1;
-    }
-    free_fn(quadfname);
+	quadfname = mk_quadfn(indexname);
+	printf("Reading quads file %s...\n", quadfname);
+	quads = quadfile_open(quadfname, 0);
+	if (!quads) {
+		printf("Couldn't read quads file %s\n", quadfname);
+		free_fn(quadfname);
+		return -1;
+	}
+	free_fn(quadfname);
 	lo = quadfile_get_index_scale_lower_arcsec(quads);
 	hi = quadfile_get_index_scale_arcsec(quads);
 	if (losize)
 		*losize = lo;
 	if (hisize)
 		*hisize = hi;
-    printf("Stars: %i, Quads: %i.\n", quads->numstars, quads->numquads);
-    printf("Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
-           lo/60.0, hi/60.0, lo, hi);
+	printf("Stars: %i, Quads: %i.\n", quads->numstars, quads->numquads);
+	printf("Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+	       lo / 60.0, hi / 60.0, lo, hi);
 	quadfile_close(quads);
 	return 0;
 }
 
-static int add_index(backend_t* backend, char* index) {
+static int add_index(backend_t* backend, char* index)
+{
 	double lo, hi;
 	indexinfo_t ii;
 	if (get_index_scales(index, &lo, &hi)) {
@@ -131,39 +136,40 @@ static int add_index(backend_t* backend, char* index) {
 	bl_append(backend->indexinfos, &ii);
 	if (ii.losize < backend->sizesmallest) {
 		backend->sizesmallest = ii.losize;
-		backend->ismallest = bl_size(backend->indexinfos)-1;
+		backend->ismallest = bl_size(backend->indexinfos) - 1;
 	}
 	if (ii.hisize > backend->sizebiggest) {
 		backend->sizebiggest = ii.hisize;
-		backend->ibiggest = bl_size(backend->indexinfos)-1;
+		backend->ibiggest = bl_size(backend->indexinfos) - 1;
 	}
 	return 0;
 }
 
-static int parse_config_file(FILE* fconf, backend_t* backend) {
+static int parse_config_file(FILE* fconf, backend_t* backend)
+{
 	while (1) {
-        char buffer[10240];
-        char* nextword;
-        char* line;
-        if (!fgets(buffer, sizeof(buffer), fconf)) {
+		char buffer[10240];
+		char* nextword;
+		char* line;
+		if (!fgets(buffer, sizeof(buffer), fconf)) {
 			if (feof(fconf))
 				break;
 			printf("Failed to read a line from the config file: %s\n", strerror(errno));
-            return -1;
+			return -1;
 		}
-        line = buffer;
-        // strip off newline
-        if (line[strlen(line) - 1] == '\n')
-            line[strlen(line) - 1] = '\0';
-        // skip leading whitespace:
-        while (*line && isspace(*line))
-            line++;
+		line = buffer;
+		// strip off newline
+		if (line[strlen(line) - 1] == '\n')
+			line[strlen(line) - 1] = '\0';
+		// skip leading whitespace:
+		while (*line && isspace(*line))
+			line++;
 		// skip comments
-        if (line[0] == '#')
-            continue;
-        // skip blank lines.
-        if (line[0] == '\0')
-            continue;
+		if (line[0] == '#')
+			continue;
+		// skip blank lines.
+		if (line[0] == '\0')
+			continue;
 
 		if (is_word(line, "index ", &nextword)) {
 			if (add_index(backend, nextword)) {
@@ -186,7 +192,8 @@ static int parse_config_file(FILE* fconf, backend_t* backend) {
 	return 0;
 }
 
-struct job_t {
+struct job_t
+{
 	char* fieldfile;
 	double imagew;
 	double imageh;
@@ -216,7 +223,8 @@ struct job_t {
 };
 typedef struct job_t job_t;
 
-static job_t* job_new() {
+static job_t* job_new()
+{
 	job_t* job = calloc(1, sizeof(job_t));
 	if (!job) {
 		printf("Failed to allocate a new job_t.\n");
@@ -241,9 +249,10 @@ static job_t* job_new() {
 	return job;
 }
 
-static void job_free(job_t* job) {
+static void job_free(job_t* job)
+{
 	if (!job)
-		return;
+		return ;
 	free(job->solvedfile);
 	free(job->matchfile);
 	free(job->rdlsfile);
@@ -256,7 +265,8 @@ static void job_free(job_t* job) {
 	free(job);
 }
 
-static void job_print(job_t* job) {
+static void job_print(job_t* job)
+{
 	int i;
 	printf("Image size: %g x %g\n", job->imagew, job->imageh);
 	printf("Positional error: %g pix\n", job->poserr);
@@ -268,8 +278,8 @@ static void job_print(job_t* job) {
 	printf("Time limit: %i sec\n", job->timelimit);
 	printf("CPU limit: %i sec\n", job->cpulimit);
 	printf("Parity: %s\n", (job->parity == PARITY_NORMAL ? "pos" :
-							(job->parity == PARITY_FLIP ? "neg" :
-							 (job->parity == PARITY_BOTH ? "both" : "(unknown)"))));
+	                        (job->parity == PARITY_FLIP ? "neg" :
+	                         (job->parity == PARITY_BOTH ? "both" : "(unknown)"))));
 	printf("Tweak: %s\n", (job->tweak ? "yes" : "no"));
 	printf("Tweak order: %i\n", job->tweakorder);
 	printf("Odds to print: %g\n", job->odds_toprint);
@@ -279,23 +289,23 @@ static void job_print(job_t* job) {
 	printf("Distractor fraction: %g\n", job->distractor_fraction);
 	printf("Code tolerance: %g\n", job->codetol);
 	printf("Scale ranges:\n");
-	for (i=0; i<dl_size(job->scales)/2; i++) {
+	for (i = 0; i < dl_size(job->scales) / 2; i++) {
 		double lo, hi;
-		lo = dl_get(job->scales, i*2);
-		hi = dl_get(job->scales, i*2+1);
+		lo = dl_get(job->scales, i * 2);
+		hi = dl_get(job->scales, i * 2 + 1);
 		printf("  [%g, %g] arcsec/pix\n", lo, hi);
 	}
 	printf("Depths:");
-	for (i=0; i<il_size(job->depths); i++) {
+	for (i = 0; i < il_size(job->depths); i++) {
 		int depth = il_get(job->depths, i);
 		printf(" %i", depth);
 	}
 	printf("\n");
 	printf("Fields:");
-	for (i=0; i<il_size(job->fields)/2; i++) {
+	for (i = 0; i < il_size(job->fields) / 2; i++) {
 		int lo, hi;
-		lo = il_get(job->fields, i*2);
-		hi = il_get(job->fields, i*2+1);
+		lo = il_get(job->fields, i * 2);
+		hi = il_get(job->fields, i * 2 + 1);
 		if (lo == hi)
 			printf(" %i", lo);
 		else
@@ -303,7 +313,7 @@ static void job_print(job_t* job) {
 	}
 	printf("\n");
 	printf("Verify WCS:\n");
-	for (i=0; i<bl_size(job->verify_wcs); i++) {
+	for (i = 0; i < bl_size(job->verify_wcs); i++) {
 		tan_t* wcs = bl_access(job->verify_wcs, i);
 		printf("  crpix (%g, %g)\n", wcs->crpix[0], wcs->crpix[1]);
 		printf("  crval (%g, %g)\n", wcs->crval[0], wcs->crval[1]);
@@ -321,12 +331,13 @@ do {\
   } \
 } while(0)
 
-static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
+static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
+{
 	int i, j, k;
 	bool firsttime = TRUE;
 	WRITE(fout, "timelimit %i\n", job->timelimit);
 	WRITE(fout, "cpulimit %i\n", job->cpulimit);
-	for (i=0;; i++) {
+	for (i = 0;; i++) {
 		int startobj, endobj;
 		if (il_size(job->depths) < 2) {
 			if (i > 0)
@@ -334,13 +345,13 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 			startobj = 0;
 			endobj = 0;
 		} else {
-			if (i >= il_size(job->depths)-1)
+			if (i >= il_size(job->depths) - 1)
 				break;
 			startobj = il_get(job->depths, i);
-			endobj = il_get(job->depths, i+1);
+			endobj = il_get(job->depths, i + 1);
 		}
 
-		for (j=0; j<dl_size(job->scales)/2; j++) {
+		for (j = 0; j < dl_size(job->scales) / 2; j++) {
 			double fmin, fmax;
 			double app_max, app_min;
 			int nused;
@@ -349,8 +360,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 			if (endobj)
 				WRITE(fout, "depth %i\n", endobj);
 			// arcsec per pixel range
-			app_min = dl_get(job->scales, j*2);
-			app_max = dl_get(job->scales, j*2+1);
+			app_min = dl_get(job->scales, j * 2);
+			app_max = dl_get(job->scales, j * 2 + 1);
 			WRITE(fout, "fieldunits_lower %g\n", app_min);
 			WRITE(fout, "fieldunits_upper %g\n", app_max);
 
@@ -361,7 +372,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 
 			// Select the indices that should be checked.
 			nused = 0;
-			for (k=0; k<bl_size(backend->indexinfos); k++) {
+			for (k = 0; k < bl_size(backend->indexinfos); k++) {
 				indexinfo_t* ii = bl_access(backend->indexinfos, k);
 				if ((fmin > ii->hisize) || (fmax < ii->losize))
 					continue;
@@ -384,9 +395,9 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 				WRITE(fout, "indexes_inparallel\n");
 
 			WRITE(fout, "fields");
-			for (k=0; k<il_size(job->fields)/2; k++) {
-				int lo = il_get(job->fields, k*2);
-				int hi = il_get(job->fields, k*2+1);
+			for (k = 0; k < il_size(job->fields) / 2; k++) {
+				int lo = il_get(job->fields, k * 2);
+				int hi = il_get(job->fields, k * 2 + 1);
 				if (lo == hi)
 					WRITE(fout, " %i", lo);
 				else
@@ -423,13 +434,13 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 				WRITE(fout, "cancel %s\n", job->cancelfile);
 
 			if (firsttime) {
-				for (k=0; k<bl_size(job->verify_wcs); k++) {
+				for (k = 0; k < bl_size(job->verify_wcs); k++) {
 					tan_t* wcs = bl_access(job->verify_wcs, k);
 					WRITE(fout, "verify_wcs %g %g %g %g %g %g %g %g\n",
-							wcs->crval[0], wcs->crval[1],
-							wcs->crpix[0], wcs->crpix[1],
-							wcs->cd[0][0], wcs->cd[0][1],
-							wcs->cd[1][0], wcs->cd[1][1]);
+					      wcs->crval[0], wcs->crval[1],
+					      wcs->crpix[0], wcs->crpix[1],
+					      wcs->cd[0][0], wcs->cd[0][1],
+					      wcs->cd[1][0], wcs->cd[1][1]);
 				}
 				firsttime = FALSE;
 			}
@@ -441,7 +452,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 	return 0;
 }
 
-static int run_blind(job_t* job, backend_t* backend) {
+static int run_blind(job_t* job, backend_t* backend)
+{
 	int thepipe[2];
 	pid_t pid;
 
@@ -465,17 +477,17 @@ static int run_blind(job_t* job, backend_t* backend) {
 		old_stdin = dup(STDIN_FILENO);
 		if (old_stdin == -1) {
 			fprintf(stderr, "Failed to save stdin: %s\n", strerror(errno));
-			_exit(-1);
+			_exit( -1);
 		}
 		if (dup2(thepipe[0], STDIN_FILENO) == -1) {
 			fprintf(stderr, "Failed to dup2 stdin: %s\n", strerror(errno));
-			_exit(-1);
+			_exit( -1);
 		}
 
 		// or should I use system() ?
 		if (execlp(backend->blind, basename(backend->blind), (char*)NULL)) {
 			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
-			_exit(-1);
+			_exit( -1);
 		}
 		// execlp doesn't return.
 	} else {
@@ -523,7 +535,8 @@ static int run_blind(job_t* job, backend_t* backend) {
 	return 0;
 }
 
-int main(int argc, char** args) {
+int main(int argc, char** args)
+{
 	int c;
 	char* configfn = "backend.cfg";
 	char* inputfn = NULL;
@@ -558,7 +571,7 @@ int main(int argc, char** args) {
 		case '?':
 			break;
 		default:
-			exit(-1);
+			exit( -1);
 		}
 	}
 
@@ -585,25 +598,25 @@ int main(int argc, char** args) {
 	fconf = fopen(configfn, "r");
 	if (!fconf) {
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
-		exit(-1);
+		exit( -1);
 	}
 	if (parse_config_file(fconf, &backend)) {
 		printf("Failed to parse config file.\n");
-		exit(-1);
+		exit( -1);
 	}
 	fclose(fconf);
 
 	if (!pl_size(backend.indexinfos)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
-		exit(-1);
+		exit( -1);
 	}
 
 	if (backend.minwidth <= 0.0 || backend.maxwidth <= 0.0) {
 		fprintf(stderr, "\"minwidth\" and \"maxwidth\" must be positive!\n");
-		exit(-1);
+		exit( -1);
 	}
 
-	for (i=optind; i<argc; i++) {
+	for (i = optind; i < argc; i++) {
 		char* jobfn;
 		qfits_header* hdr;
 		job_t* job = NULL;
@@ -617,22 +630,22 @@ int main(int argc, char** args) {
 		hdr = qfits_header_read(jobfn);
 		if (!hdr) {
 			printf("Failed to parse FITS header from file \"%s\".\n", jobfn);
-			exit(-1);
+			exit( -1);
 		}
 
 		job = job_new();
 		if (!job) {
 			printf("Failed to allocate a job struct.\n");
-			exit(-1);
+			exit( -1);
 		}
 
 		job->fieldfile = jobfn;
 		job->imagew = qfits_header_getdouble(hdr, "IMAGEW", dnil);
 		job->imageh = qfits_header_getdouble(hdr, "IMAGEH", dnil);
 		if ((job->imagew == dnil) || (job->imageh == dnil) ||
-			(job->imagew <= 0.0) || (job->imageh <= 0.0)) {
+		        (job->imagew <= 0.0) || (job->imageh <= 0.0)) {
 			printf("Must specify positive \"IMAGEW\" and \"IMAGEH\".\n");
-			exit(-1);
+			exit( -1);
 		}
 		job->run = qfits_header_getboolean(hdr, "ANRUN", 0);
 		job->poserr = qfits_header_getdouble(hdr, "ANPOSERR", job->poserr);
@@ -707,7 +720,7 @@ int main(int argc, char** args) {
 			n++;
 		}
 		job->odds_toprint = qfits_header_getdouble(hdr, "ANODDSPR", job->odds_toprint);
-		job->odds_tokeep  = qfits_header_getdouble(hdr, "ANODDSKP", job->odds_tokeep);
+		job->odds_tokeep = qfits_header_getdouble(hdr, "ANODDSKP", job->odds_tokeep);
 		job->odds_tosolve = qfits_header_getdouble(hdr, "ANODDSSL", job->odds_tosolve);
 		job->image_fraction = qfits_header_getdouble(hdr, "ANIMFRAC", job->image_fraction);
 		job->codetol = qfits_header_getdouble(hdr, "ANCTOL", job->codetol);
@@ -717,14 +730,14 @@ int main(int argc, char** args) {
 			char key[64];
 			tan_t wcs;
 			char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
-							 "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
+			                 "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
 			double* vals[] = { &(wcs. crval[0]), &(wcs.crval[1]),
-							   &(wcs.crpix[0]), &(wcs.crpix[1]),
-							   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
-							   &(wcs.cd[1][0]), &(wcs.cd[1][1]) };
+			                   &(wcs.crpix[0]), &(wcs.crpix[1]),
+			                   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
+			                   &(wcs.cd[1][0]), &(wcs.cd[1][1]) };
 			int j;
 			int bail = 0;
-			for (j=0; j<8; j++) {
+			for (j = 0; j < 8; j++) {
 				sprintf(key, keys[j], n);
 				*(vals[j]) = qfits_header_getdouble(hdr, key, dnil);
 				if (*(vals[j]) == dnil) {
@@ -767,13 +780,13 @@ int main(int argc, char** args) {
 			FILE* f = fopen(inputfn, "a");
 			if (!f) {
 				fprintf(stderr, "Failed to open file \"%s\" to save the input sent to blind: %s.\n",
-						inputfn, strerror(errno));
-				exit(-1);
+				        inputfn, strerror(errno));
+				exit( -1);
 			}
 			if (job_write_blind_input(job, f, &backend) ||
-				fclose(f)) {
+			        fclose(f)) {
 				fprintf(stderr, "Failed to save the blind input file to \"%s\": %s.\n", inputfn, strerror(errno));
-				exit(-1);
+				exit( -1);
 			}
 		}
 
@@ -785,7 +798,7 @@ int main(int argc, char** args) {
 		job_free(job);
 	}
 
-	for (i=0; i<bl_size(backend.indexinfos); i++) {
+	for (i = 0; i < bl_size(backend.indexinfos); i++) {
 		indexinfo_t* ii = bl_access(backend.indexinfos, i);
 		free(ii->indexname);
 	}
