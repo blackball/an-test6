@@ -27,17 +27,17 @@
    to handle them.
  */
 
-const char* OPTIONS = "hDl:c:n:w:";
+static const char* OPTIONS = "hDl:c:n:w:";
 
-char* blind = "blind < %s";
-char* inputfile = "input";
-char* qfile = "queue";
-char* qtempfile = "queue.tmp";
+static char* blind = "blind < %s";
+static char* inputfile = "input";
+static char* qfile = "queue";
+static char* qtempfile = "queue.tmp";
 
-void printHelp(char* progname) {
+static void printHelp(char* progname) {
 	fprintf(stderr, "Usage:\n\n"
 			"%s [options], where options include:\n"
-			"      [D]: become a daemon; implies logging to the default\n"
+			"      [-D]: become a daemon; implies logging to the default\n"
 			"           file (\"watcher.log\" in the current directory)\n"
 			"           if logging is not specified with -l.\n"
 			"      [-l <logfile>]: log to the specified file.\n"
@@ -50,29 +50,29 @@ void printHelp(char* progname) {
 			"\n", progname, blind);
 }
 
-pthread_t childthread;
-pthread_t parentthread;
+static pthread_t childthread;
+static pthread_t parentthread;
 
-int quitNow = 0;
+static int quitNow = 0;
 
-uint32_t eventmask = IN_CLOSE_WRITE | IN_CREATE /*| IN_MODIFY*/ | IN_MOVED_TO | IN_DELETE_SELF;
+static uint32_t eventmask = IN_CLOSE_WRITE | IN_CREATE /*| IN_MODIFY*/ | IN_MOVED_TO | IN_DELETE_SELF;
 
-char* qpath = NULL;
-char* qtemppath = NULL;
+static char* qpath = NULL;
+static char* qtemppath = NULL;
 
-char* logfile = NULL;
-pl* q;
-pthread_mutex_t qmutex;
-FILE* flog;
+static char* logfile = NULL;
+static pl* q;
+static pthread_mutex_t qmutex;
+static FILE* flog;
 
-pthread_mutex_t condmutex;
-pthread_cond_t  workercond;
-int workers_running = 0;
-int nworkers = 1;
+static pthread_mutex_t condmutex;
+static pthread_cond_t  workercond;
+static int workers_running = 0;
+static int nworkers = 1;
 
-pl* watchpaths = NULL;
+static pl* watchpaths = NULL;
 
-void loggit(const char* format, ...) {
+static void loggit(const char* format, ...) {
 	va_list va;
 	va_start(va, format);
 	vfprintf(flog, format, va);
@@ -86,7 +86,7 @@ void loggit(const char* format, ...) {
 
    Called while holding the "qmutex".
  */
-void write_queue() {
+static void write_queue() {
 	int i;
 	FILE* fid;
 	fid = fopen(qtemppath, "w");
@@ -112,7 +112,7 @@ void write_queue() {
 /**
    Pushes an item to the queue and updates the queue file.
  */
-void queue_append(char* str) {
+static void queue_append(char* str) {
 	pthread_mutex_lock(&qmutex);
 	loggit("Queuing %s\n", str);
 	pl_append(q, strdup(str));
@@ -123,7 +123,7 @@ void queue_append(char* str) {
 /**
    Pops an item from the queue and updates the queue file.
  */
-void queue_pop(char* str) {
+static void queue_pop(char* str) {
 	int i;
 	pthread_mutex_lock(&qmutex);
 	loggit("Popping %s\n", str);
@@ -141,7 +141,7 @@ void queue_pop(char* str) {
 
 #define PRINT_EVT(val, tst, fid) 	if ((val) & (tst)) { fprintf(fid, " " #tst); }
 
-void print_events(FILE* fid, uint32_t val) {
+static void print_events(FILE* fid, uint32_t val) {
 	PRINT_EVT(val, IN_ACCESS       , fid);
 	PRINT_EVT(val, IN_ATTRIB       , fid);
 	PRINT_EVT(val, IN_CLOSE_WRITE  , fid);
@@ -172,7 +172,8 @@ typedef struct childinfo childinfo;
 /**
    A valid input file was created.  Enqueue it!
  */
-void file_created(childinfo* info, struct inotify_event* evt, char* path) {
+static void file_created(childinfo* info, struct inotify_event* evt,
+						 char* path) {
 	char* pathcopy;
 	char* base;
 	int q_it = 0;
@@ -194,7 +195,7 @@ void file_created(childinfo* info, struct inotify_event* evt, char* path) {
 /**
    Inotify is delivering an event.  Decide if we need to do anything about it.
  */
-void handle_event(childinfo* info, struct inotify_event* evt) {
+static void handle_event(childinfo* info, struct inotify_event* evt) {
 	int wd;
 	char buf[1024];
 	char* dir;
@@ -295,7 +296,7 @@ void handle_event(childinfo* info, struct inotify_event* evt) {
    The child thread: listen for Inotify events, maintain the queue and write new
    filenames to the parent.
  */
-void child_process(int pipeout) {
+static void child_process(int pipeout) {
 	childinfo info;
 	char buf[1024];
 	int wd;
@@ -367,7 +368,8 @@ void child_process(int pipeout) {
 
 	loggit("Child process finished.\n");
 }
-void* child_start_routine(void* arg) {
+
+static void* child_start_routine(void* arg) {
 	int* thepipe = (int*)arg;
 	child_process(thepipe[1]);
 	return NULL;
@@ -376,7 +378,7 @@ void* child_start_routine(void* arg) {
 /**
    Run an input file.  Called by the parent (if single-threaded) or by a worker thread.
  */
-void run(char* path) {
+static void run(char* path) {
 	char* pathcopy;
 	char* dir;
 	char cmdline[1024];
@@ -423,7 +425,7 @@ void run(char* path) {
    A worker thread.  Runs the given task, then signals the parent that it has
    finished.
  */
-void* worker_start_routine(void* arg) {
+static void* worker_start_routine(void* arg) {
 	char* path = (char*)arg;
 	char* pathcopy;
 
@@ -446,7 +448,7 @@ void* worker_start_routine(void* arg) {
    Wait for one of the worker threads to finish, then create a new worker thread
    to run the given command.
  */
-void start_worker(char* path) {
+static void start_worker(char* path) {
 	pthread_attr_t attribs;
 	pthread_mutex_lock(&condmutex);
 	while (workers_running == nworkers) {
@@ -480,7 +482,7 @@ void start_worker(char* path) {
    the command (if single-threaded) or wait for a worker thread to become available
    and launch it.
  */
-void parent_process(int pipein) {
+static void parent_process(int pipein) {
 	FILE* fin;
 	loggit("Parent process started.\n");
 	// parent:
@@ -512,14 +514,26 @@ void parent_process(int pipein) {
 
 		loggit("Got: %s\n", str);
 		if (!strcmp(str, "quit")) {
-			loggit("Parent thread waiting for workers to finish...\n");
+			int lastnworkers;
+			pthread_mutex_lock(&condmutex);
+			lastnworkers = workers_running;
+			pthread_mutex_unlock(&condmutex);
+
+			if (lastnworkers)
+				loggit("Parent thread: waiting for %i workers to finish...\n", lastnworkers);
+
 			pthread_mutex_lock(&condmutex);
 			while (workers_running) {
 				pthread_cond_wait(&workercond, &condmutex);
+				if (workers_running && workers_running != lastnworkers) {
+					lastnworkers = workers_running;
+					loggit("Parent thread: now waiting for %i workers to finish...\n", lastnworkers);
+				}
 			}
 			pthread_mutex_unlock(&condmutex);
 
-			loggit("Parent thread quitting.\n");
+			loggit("Parent thread: all workers have finished; quitting.\n");
+			// Bye bye!
 			pthread_exit(NULL);
 		}
 		loggit("Processing %s...\n", str);
@@ -532,11 +546,10 @@ void parent_process(int pipein) {
 		queue_pop(str);
 	}
 
-
 	loggit("Parent thread finished.\n");
 }
 
-void* parent_start_routine(void* arg) {
+static void* parent_start_routine(void* arg) {
 	int* thepipe = (int*)arg;
 	parent_process(thepipe[0]);
 	return NULL;
