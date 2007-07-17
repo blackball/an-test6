@@ -535,6 +535,161 @@ static int run_blind(job_t* job, backend_t* backend)
 	return 0;
 }
 
+// FIXME need to return FALSE when required headers are missing.
+job_t* parse_job_from_qfits_header(qfits_header* hdr)
+{
+	double dnil = -HUGE_VAL;
+	job_t* job = job_new();
+
+	job->imagew = qfits_header_getdouble(hdr, "IMAGEW", dnil);
+	job->imageh = qfits_header_getdouble(hdr, "IMAGEH", dnil);
+	if ((job->imagew == dnil) || (job->imageh == dnil) ||
+		(job->imagew <= 0.0) || (job->imageh <= 0.0)) {
+		printf("Must specify positive \"IMAGEW\" and \"IMAGEH\".\n");
+		exit( -1);
+	}
+	job->run = qfits_header_getboolean(hdr, "ANRUN", 0);
+	job->poserr = qfits_header_getdouble(hdr, "ANPOSERR", job->poserr);
+	job->solvedfile = fits_get_dupstring(hdr, "ANSOLVED");
+	job->matchfile = fits_get_dupstring(hdr, "ANMATCH");
+	job->rdlsfile = fits_get_dupstring(hdr, "ANRDLS");
+	job->wcsfile = fits_get_dupstring(hdr, "ANWCS");
+	job->cancelfile = fits_get_dupstring(hdr, "ANCANCEL");
+	job->timelimit = qfits_header_getint(hdr, "ANTLIM", job->timelimit);
+	job->cpulimit = qfits_header_getint(hdr, "ANCLIM", job->cpulimit);
+
+	char *pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
+	if (pstr && !strcmp(pstr, "NEG")) {
+		job->parity = PARITY_FLIP;
+	} else if (pstr && !strcmp(pstr, "POS")) {
+		job->parity = PARITY_NORMAL;
+	}
+	job->tweak = qfits_header_getboolean(hdr, "ANTWEAK", job->tweak);
+	job->tweakorder = qfits_header_getint(hdr, "ANTWEAKO", job->tweakorder);
+	int n = 1;
+	while (1) {
+		char key[64];
+		double lo, hi;
+		sprintf(key, "ANAPPL%i", n);
+		lo = qfits_header_getdouble(hdr, key, dnil);
+		if (lo == dnil)
+			break;
+		sprintf(key, "ANAPPU%i", n);
+		hi = qfits_header_getdouble(hdr, key, dnil);
+		if (hi == dnil)
+			break;
+		dl_append(job->scales, lo);
+		dl_append(job->scales, hi);
+		n++;
+	}
+	n = 1;
+	while (1) {
+		char key[64];
+		int depth;
+		sprintf(key, "ANDEPTH%i", n);
+		depth = qfits_header_getint(hdr, key, -1);
+		if (depth == -1)
+			break;
+		il_append(job->depths, depth);
+		n++;
+	}
+	n = 1;
+	while (1) {
+		char key[64];
+		int lo, hi;
+		sprintf(key, "ANFDL%i", n);
+		lo = qfits_header_getint(hdr, key, -1);
+		if (lo == -1)
+			break;
+		sprintf(key, "ANFDU%i", n);
+		hi = qfits_header_getint(hdr, key, -1);
+		if (hi == -1)
+			break;
+		il_append(job->fields, lo);
+		il_append(job->fields, hi);
+		n++;
+	}
+	n = 1;
+	while (1) {
+		char key[64];
+		int fld;
+		sprintf(key, "ANFD%i", n);
+		fld = qfits_header_getint(hdr, key, -1);
+		if (fld == -1)
+			break;
+		il_append(job->fields, fld);
+		il_append(job->fields, fld);
+		n++;
+	}
+	job->odds_toprint = qfits_header_getdouble(hdr, "ANODDSPR", job->odds_toprint);
+	job->odds_tokeep = qfits_header_getdouble(hdr, "ANODDSKP", job->odds_tokeep);
+	job->odds_tosolve = qfits_header_getdouble(hdr, "ANODDSSL", job->odds_tosolve);
+	job->image_fraction = qfits_header_getdouble(hdr, "ANIMFRAC", job->image_fraction);
+	job->codetol = qfits_header_getdouble(hdr, "ANCTOL", job->codetol);
+	job->distractor_fraction = qfits_header_getdouble(hdr, "ANDISTR", job->distractor_fraction);
+	n = 1;
+	while (1) {
+		char key[64];
+		tan_t wcs;
+		char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
+				 "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
+		double* vals[] = { &(wcs. crval[0]), &(wcs.crval[1]),
+				   &(wcs.crpix[0]), &(wcs.crpix[1]),
+				   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
+				   &(wcs.cd[1][0]), &(wcs.cd[1][1]) };
+		int j;
+		int bail = 0;
+		for (j = 0; j < 8; j++) {
+			sprintf(key, keys[j], n);
+			*(vals[j]) = qfits_header_getdouble(hdr, key, dnil);
+			if (*(vals[j]) == dnil) {
+				bail = 1;
+				break;
+			}
+		}
+		if (bail)
+			break;
+
+		bl_append(job->verify_wcs, &wcs);
+		n++;
+	}
+
+	// Default: solve first field.
+	if (job->run && !il_size(job->fields)) {
+		il_append(job->fields, 0);
+	}
+
+	return job;
+}
+
+backend_t* backend_new()
+{
+	backend_t* backend = calloc(1, sizeof(backend_t));
+	backend->indexinfos = bl_new(16, sizeof(indexinfo_t));
+	backend->sizesmallest = HUGE_VAL;
+	backend->sizebiggest = -HUGE_VAL;
+	backend->blind = strdup(default_blind_command);
+
+	// Default scale estimate: field width, in degrees:
+	backend->minwidth = 0.1;
+	backend->maxwidth = 180.0;
+	return backend;
+}
+
+void backend_free(backend_t* backend)
+{
+	int i;
+	if (backend->indexinfos) {
+		for (i = 0; i < bl_size(backend->indexinfos); i++) {
+			indexinfo_t* ii = bl_access(backend->indexinfos, i);
+			free(ii->indexname);
+		}
+		bl_free(backend->indexinfos);
+	}
+	if (backend->blind)
+		free(backend->blind);
+}
+
 int main(int argc, char** args)
 {
 	int c;
@@ -542,7 +697,7 @@ int main(int argc, char** args)
 	char* inputfn = NULL;
 	FILE* fconf;
 	int i;
-	backend_t backend;
+	backend_t* backend;
 
 	while (1) {
 		int option_index = 0;
@@ -585,14 +740,7 @@ int main(int argc, char** args)
 		exit(0);
 	}
 
-	memset(&backend, 0, sizeof(backend_t));
-	backend.indexinfos = bl_new(16, sizeof(indexinfo_t));
-	backend.sizesmallest = HUGE_VAL;
-	backend.sizebiggest = -HUGE_VAL;
-	backend.blind = strdup(default_blind_command);
-	// Default scale estimate: field width, in degrees:
-	backend.minwidth = 0.1;
-	backend.maxwidth = 180.0;
+	backend = backend_new();
 
 	// Read config file.
 	fconf = fopen(configfn, "r");
@@ -600,18 +748,18 @@ int main(int argc, char** args)
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit( -1);
 	}
-	if (parse_config_file(fconf, &backend)) {
+	if (parse_config_file(fconf, backend)) {
 		printf("Failed to parse config file.\n");
 		exit( -1);
 	}
 	fclose(fconf);
 
-	if (!pl_size(backend.indexinfos)) {
+	if (!pl_size(backend->indexinfos)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
 		exit( -1);
 	}
 
-	if (backend.minwidth <= 0.0 || backend.maxwidth <= 0.0) {
+	if (backend->minwidth <= 0.0 || backend->maxwidth <= 0.0) {
 		fprintf(stderr, "\"minwidth\" and \"maxwidth\" must be positive!\n");
 		exit( -1);
 	}
@@ -620,9 +768,6 @@ int main(int argc, char** args)
 		char* jobfn;
 		qfits_header* hdr;
 		job_t* job = NULL;
-		double dnil = -HUGE_VAL;
-		char* pstr;
-		int n;
 
 		jobfn = args[i];
 
@@ -632,149 +777,22 @@ int main(int argc, char** args)
 			printf("Failed to parse FITS header from file \"%s\".\n", jobfn);
 			exit( -1);
 		}
-
-		job = job_new();
-		if (!job) {
-			printf("Failed to allocate a job struct.\n");
-			exit( -1);
-		}
-
+		job = parse_job_from_qfits_header(hdr);
 		job->fieldfile = jobfn;
-		job->imagew = qfits_header_getdouble(hdr, "IMAGEW", dnil);
-		job->imageh = qfits_header_getdouble(hdr, "IMAGEH", dnil);
-		if ((job->imagew == dnil) || (job->imageh == dnil) ||
-		        (job->imagew <= 0.0) || (job->imageh <= 0.0)) {
-			printf("Must specify positive \"IMAGEW\" and \"IMAGEH\".\n");
-			exit( -1);
-		}
-		job->run = qfits_header_getboolean(hdr, "ANRUN", 0);
-		job->poserr = qfits_header_getdouble(hdr, "ANPOSERR", job->poserr);
-		job->solvedfile = fits_get_dupstring(hdr, "ANSOLVED");
-		job->matchfile = fits_get_dupstring(hdr, "ANMATCH");
-		job->rdlsfile = fits_get_dupstring(hdr, "ANRDLS");
-		job->wcsfile = fits_get_dupstring(hdr, "ANWCS");
-		job->cancelfile = fits_get_dupstring(hdr, "ANCANCEL");
-		job->timelimit = qfits_header_getint(hdr, "ANTLIM", job->timelimit);
-		job->cpulimit = qfits_header_getint(hdr, "ANCLIM", job->cpulimit);
-		pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
-		if (pstr && !strcmp(pstr, "NEG")) {
-			job->parity = PARITY_FLIP;
-		} else if (pstr && !strcmp(pstr, "POS")) {
-			job->parity = PARITY_NORMAL;
-		}
-		job->tweak = qfits_header_getboolean(hdr, "ANTWEAK", job->tweak);
-		job->tweakorder = qfits_header_getint(hdr, "ANTWEAKO", job->tweakorder);
-		n = 1;
-		while (1) {
-			char key[64];
-			double lo, hi;
-			sprintf(key, "ANAPPL%i", n);
-			lo = qfits_header_getdouble(hdr, key, dnil);
-			if (lo == dnil)
-				break;
-			sprintf(key, "ANAPPU%i", n);
-			hi = qfits_header_getdouble(hdr, key, dnil);
-			if (hi == dnil)
-				break;
-			dl_append(job->scales, lo);
-			dl_append(job->scales, hi);
-			n++;
-		}
-		n = 1;
-		while (1) {
-			char key[64];
-			int depth;
-			sprintf(key, "ANDEPTH%i", n);
-			depth = qfits_header_getint(hdr, key, -1);
-			if (depth == -1)
-				break;
-			il_append(job->depths, depth);
-			n++;
-		}
-		n = 1;
-		while (1) {
-			char key[64];
-			int lo, hi;
-			sprintf(key, "ANFDL%i", n);
-			lo = qfits_header_getint(hdr, key, -1);
-			if (lo == -1)
-				break;
-			sprintf(key, "ANFDU%i", n);
-			hi = qfits_header_getint(hdr, key, -1);
-			if (hi == -1)
-				break;
-			il_append(job->fields, lo);
-			il_append(job->fields, hi);
-			n++;
-		}
-		n = 1;
-		while (1) {
-			char key[64];
-			int fld;
-			sprintf(key, "ANFD%i", n);
-			fld = qfits_header_getint(hdr, key, -1);
-			if (fld == -1)
-				break;
-			il_append(job->fields, fld);
-			il_append(job->fields, fld);
-			n++;
-		}
-		job->odds_toprint = qfits_header_getdouble(hdr, "ANODDSPR", job->odds_toprint);
-		job->odds_tokeep = qfits_header_getdouble(hdr, "ANODDSKP", job->odds_tokeep);
-		job->odds_tosolve = qfits_header_getdouble(hdr, "ANODDSSL", job->odds_tosolve);
-		job->image_fraction = qfits_header_getdouble(hdr, "ANIMFRAC", job->image_fraction);
-		job->codetol = qfits_header_getdouble(hdr, "ANCTOL", job->codetol);
-		job->distractor_fraction = qfits_header_getdouble(hdr, "ANDISTR", job->distractor_fraction);
-		n = 1;
-		while (1) {
-			char key[64];
-			tan_t wcs;
-			char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
-			                 "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
-			double* vals[] = { &(wcs. crval[0]), &(wcs.crval[1]),
-			                   &(wcs.crpix[0]), &(wcs.crpix[1]),
-			                   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
-			                   &(wcs.cd[1][0]), &(wcs.cd[1][1]) };
-			int j;
-			int bail = 0;
-			for (j = 0; j < 8; j++) {
-				sprintf(key, keys[j], n);
-				*(vals[j]) = qfits_header_getdouble(hdr, key, dnil);
-				if (*(vals[j]) == dnil) {
-					bail = 1;
-					break;
-				}
-			}
-			if (bail)
-				break;
-
-			bl_append(job->verify_wcs, &wcs);
-			n++;
+		if (!dl_size(job->scales)) {
+			double arcsecperpix;
+			arcsecperpix = deg2arcsec(backend->minwidth) / job->imagew;
+			dl_append(job->scales, arcsecperpix);
+			arcsecperpix = deg2arcsec(backend->maxwidth) / job->imagew;
+			dl_append(job->scales, arcsecperpix);
 		}
 		qfits_header_destroy(hdr);
 
-		// Add some defaults:
-
-		// Default: solve first field.
-		if (job->run && !il_size(job->fields)) {
-			il_append(job->fields, 0);
-		}
-
-		if (!dl_size(job->scales)) {
-			double arcsecperpix;
-			arcsecperpix = deg2arcsec(backend.minwidth) / job->imagew;
-			dl_append(job->scales, arcsecperpix);
-			arcsecperpix = deg2arcsec(backend.maxwidth) / job->imagew;
-			dl_append(job->scales, arcsecperpix);
-		}
-
-		// Go!
 		printf("Running job:\n");
 		job_print(job);
-
 		printf("\n");
 		printf("Input file for blind:\n\n");
-		job_write_blind_input(job, stdout, &backend);
+		job_write_blind_input(job, stdout, backend);
 
 		if (inputfn) {
 			FILE* f = fopen(inputfn, "a");
@@ -783,14 +801,14 @@ int main(int argc, char** args)
 				        inputfn, strerror(errno));
 				exit( -1);
 			}
-			if (job_write_blind_input(job, f, &backend) ||
+			if (job_write_blind_input(job, f, backend) ||
 			        fclose(f)) {
 				fprintf(stderr, "Failed to save the blind input file to \"%s\": %s.\n", inputfn, strerror(errno));
 				exit( -1);
 			}
 		}
 
-		if (run_blind(job, &backend)) {
+		if (run_blind(job, backend)) {
 			fprintf(stderr, "Failed to run_blind.\n");
 		}
 
@@ -798,12 +816,7 @@ int main(int argc, char** args)
 		job_free(job);
 	}
 
-	for (i = 0; i < bl_size(backend.indexinfos); i++) {
-		indexinfo_t* ii = bl_access(backend.indexinfos, i);
-		free(ii->indexname);
-	}
-	bl_free(backend.indexinfos);
-	free(backend.blind);
+	backend_free(backend);
 
 	exit(0);
 }
