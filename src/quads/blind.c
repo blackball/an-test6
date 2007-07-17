@@ -98,12 +98,14 @@ struct blind_params {
     solver_index_params* bestsips;
 
     // Filenames
-    char *fieldfname, *verify_wcsfn;
+    char *fieldfname;
     char *matchfname, *indexrdlsfname;
     char *startfname, *donefname, *donescript, *logfname;
 
     // filename template (sprintf format with %i for field number)
     char* wcs_template;
+
+	pl* verify_wcsfiles;
 
     // WCS read from verify_wcsfn.
     //sip_t* verify_wcs;
@@ -459,6 +461,7 @@ int main(int argc, char *argv[]) {
         bp->fieldlist = il_new(256);
         bp->indexnames = pl_new(16);
 		bp->verify_wcs_list = bl_new(1, sizeof(tan_t));
+		bp->verify_wcsfiles = pl_new(1);
         bp->fieldid_key = strdup("FIELDID");
         bp->xcolname = strdup("X");
         bp->ycolname = strdup("Y");
@@ -545,8 +548,9 @@ int main(int argc, char *argv[]) {
         for (i=0; i<pl_size(bp->indexnames); i++)
             logmsg(bp, "  %s\n", (char*)pl_get(bp->indexnames, i));
         logmsg(bp, "fieldfname %s\n", bp->fieldfname);
-        logmsg(bp, "verify %s\n", bp->verify_wcsfn);
-        logmsg(bp, "fieldid %i\n", sp->fieldid);
+        for (i=0; i<pl_size(bp->verify_wcsfiles); i++)
+			logmsg(bp, "verify %s\n", (char*)pl_get(bp->verify_wcsfiles, i));
+		logmsg(bp, "fieldid %i\n", sp->fieldid);
         logmsg(bp, "matchfname %s\n", bp->matchfname);
         logmsg(bp, "startfname %s\n", bp->startfname);
         logmsg(bp, "donefname %s\n", bp->donefname);
@@ -685,20 +689,20 @@ int main(int argc, char *argv[]) {
 
         sp->nindexes = pl_size(bp->indexnames);
 
-		// FIXME - allow multiple "verify_wcsfn" entries
-		// FIXME - properly iterate through them!
-
-        if (bp->verify_wcsfn) {
+		for (i=0; i<pl_size(bp->verify_wcsfiles); i++) {
 			tan_t wcs;
-            logmsg(bp, "Reading WCS header to verify from file %s\n", bp->verify_wcsfn);
-            qfits_header* hdr = qfits_header_read(bp->verify_wcsfn);
+            qfits_header* hdr;
+			char* fn = pl_get(bp->verify_wcsfiles, i);
+            logmsg(bp, "Reading WCS header to verify from file %s\n", fn);
+			hdr = qfits_header_read(fn);
             if (!hdr) {
-                logerr(bp, "Failed to read FITS header from file %s\n", bp->verify_wcsfn);
-                goto doneverify;
+                logerr(bp, "Failed to read FITS header from file %s\n", fn);
+				continue;
             }
 			if (!tan_read_header(hdr, &wcs)) {
-                logerr(bp, "Failed to parse WCS header from file %s\n", bp->verify_wcsfn);
-                goto doneverify;
+                logerr(bp, "Failed to parse WCS header from file %s\n", fn);
+				qfits_header_destroy(hdr);
+				continue;
 			}
 			bl_append(bp->verify_wcs_list, &wcs);
             qfits_header_destroy(hdr);
@@ -735,7 +739,7 @@ int main(int argc, char *argv[]) {
                 sp->sips = NULL;
             }
         }
-    doneverify:
+		// verification of existing wcs is done - on to regular solving!
 
         if (bp->indexes_inparallel) {
 
@@ -963,6 +967,9 @@ static void cleanup_parameters(blind_params* bp,
     for (i=0; i<pl_size(bp->indexnames); i++)
         free(pl_get(bp->indexnames, i));
     pl_free(bp->indexnames);
+    for (i=0; i<pl_size(bp->verify_wcsfiles); i++)
+        free(pl_get(bp->verify_wcsfiles, i));
+    pl_free(bp->verify_wcsfiles);
 	bl_free(bp->verify_wcs_list);
     bl_free(sp->indexes);
 
@@ -978,7 +985,6 @@ static void cleanup_parameters(blind_params* bp,
     free(sp->solved_in);
     free(bp->solved_out);
     free(bp->startfname);
-    free(bp->verify_wcsfn);
     free(bp->wcs_template);
     free(bp->xcolname);
     free(bp->ycolname);
@@ -1017,8 +1023,7 @@ static int read_parameters(blind_params* bp) {
         } else if (is_word(line, "idfile", &nextword)) {
             bp->use_idfile = TRUE;
         } else if (is_word(line, "verify ", &nextword)) {
-            free(bp->verify_wcsfn);
-            bp->verify_wcsfn = strdup(nextword);
+			pl_append(bp->verify_wcsfiles, strdup(nextword));
         } else if (is_word(line, "verify_wcs ", &nextword)) {
 			tan_t wcs;
 			if (sscanf(nextword, "%lg %lg %lg %lg %lg %lg %lg %lg",
