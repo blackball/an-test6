@@ -74,51 +74,17 @@ struct indexinfo {
 };
 typedef struct indexinfo indexinfo_t;
 
+// This should really be named something like "backend_t"...
 struct indexset {
 	bl* indexinfos;
 	int ibiggest;
 	int ismallest;
 	double sizesmallest;
 	double sizebiggest;
+	bool inparallel;
+	char* blind;
 };
 typedef struct indexset indexset_t;
-
-static int parse_config_file(FILE* fconf, pl* indexes, char** pblind) {
-	while (1) {
-        char buffer[10240];
-        char* nextword;
-        char* line;
-        if (!fgets(buffer, sizeof(buffer), fconf)) {
-			if (feof(fconf))
-				break;
-			printf("Failed to read a line from the config file: %s\n", strerror(errno));
-            return -1;
-		}
-        line = buffer;
-        // strip off newline
-        if (line[strlen(line) - 1] == '\n')
-            line[strlen(line) - 1] = '\0';
-        // skip leading whitespace:
-        while (*line && isspace(*line))
-            line++;
-		// skip comments
-        if (line[0] == '#')
-            continue;
-        // skip blank lines.
-        if (line[0] == '\0')
-            continue;
-
-		if (is_word(line, "index ", &nextword)) {
-			pl_append(indexes, strdup(nextword));
-		} else if (is_word(line, "blind ", &nextword)) {
-			*pblind = strdup(nextword);
-		} else {
-			printf("Didn't understand this config file line: \"%s\"\n", line);
-		}
-
-	}
-	return 0;
-}
 
 static int get_index_scales(const char* indexname,
 							double* losize, double* hisize) {
@@ -145,6 +111,70 @@ static int get_index_scales(const char* indexname,
     printf("Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
            lo/60.0, hi/60.0, lo, hi);
 	quadfile_close(quads);
+	return 0;
+}
+
+static int add_index(indexset_t* indexset, char* index) {
+	double lo, hi;
+	indexinfo_t ii;
+	if (get_index_scales(index, &lo, &hi)) {
+		printf("Failed to get the range of quad scales for index \"%s\".\n", index);
+		return -1;
+	}
+	ii.indexname = strdup(index);
+	ii.losize = lo;
+	ii.hisize = hi;
+	bl_append(indexset->indexinfos, &ii);
+	if (ii.losize < indexset->sizesmallest) {
+		indexset->sizesmallest = ii.losize;
+		indexset->ismallest = bl_size(indexset->indexinfos)-1;
+	}
+	if (ii.hisize > indexset->sizebiggest) {
+		indexset->sizebiggest = ii.hisize;
+		indexset->ibiggest = bl_size(indexset->indexinfos)-1;
+	}
+	return 0;
+}
+
+static int parse_config_file(FILE* fconf, indexset_t* indexset) {
+	while (1) {
+        char buffer[10240];
+        char* nextword;
+        char* line;
+        if (!fgets(buffer, sizeof(buffer), fconf)) {
+			if (feof(fconf))
+				break;
+			printf("Failed to read a line from the config file: %s\n", strerror(errno));
+            return -1;
+		}
+        line = buffer;
+        // strip off newline
+        if (line[strlen(line) - 1] == '\n')
+            line[strlen(line) - 1] = '\0';
+        // skip leading whitespace:
+        while (*line && isspace(*line))
+            line++;
+		// skip comments
+        if (line[0] == '#')
+            continue;
+        // skip blank lines.
+        if (line[0] == '\0')
+            continue;
+
+		if (is_word(line, "index ", &nextword)) {
+			if (add_index(indexset, nextword)) {
+				return -1;
+			}
+		} else if (is_word(line, "blind ", &nextword)) {
+			free(indexset->blind);
+			indexset->blind = strdup(nextword);
+		} else if (is_word(line, "inparallel", &nextword)) {
+			indexset->inparallel = TRUE;
+		} else {
+			printf("Didn't understand this config file line: \"%s\"\n", line);
+		}
+
+	}
 	return 0;
 }
 
@@ -342,6 +372,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
 				}
 				WRITE(fout, "index %s\n", ii->indexname);
 			}
+			if (indexset->inparallel)
+				WRITE(fout, "indexes_inparallel\n");
 
 			WRITE(fout, "fields");
 			for (k=0; k<il_size(job->fields)/2; k++) {
@@ -485,9 +517,7 @@ int main(int argc, char** args) {
 	char* configfn = "backend.cfg";
 	FILE* fconf;
 	int i;
-	pl* indexnames;
 	indexset_t indexset;
-	char* blind;
 
 	while (1) {
 		int option_index = 0;
@@ -527,8 +557,11 @@ int main(int argc, char** args) {
 		exit(0);
 	}
 
-	indexnames = pl_new(16);
-	blind = NULL;
+	memset(&indexset, 0, sizeof(indexset_t));
+	indexset.indexinfos = bl_new(16, sizeof(indexinfo_t));
+	indexset.sizesmallest = HUGE_VAL;
+	indexset.sizebiggest = -HUGE_VAL;
+	indexset.blind = strdup(default_blind_command);
 
 	// Read config file.
 	fconf = fopen(configfn, "r");
@@ -536,45 +569,16 @@ int main(int argc, char** args) {
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit(-1);
 	}
-	if (parse_config_file(fconf, indexnames, &blind)) {
+	if (parse_config_file(fconf, &indexset)) {
 		printf("Failed to parse config file.\n");
 		exit(-1);
 	}
 	fclose(fconf);
 
-	if (!blind)
-		blind = strdup(default_blind_command);
-
-	if (!pl_size(indexnames)) {
+	if (!pl_size(indexset.indexinfos)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
 		exit(-1);
 	}
-
-	indexset.indexinfos = bl_new(16, sizeof(indexinfo_t));
-	indexset.sizesmallest = HUGE_VAL;
-	indexset.sizebiggest = -HUGE_VAL;
-	for (i=0; i<pl_size(indexnames); i++) {
-		double lo, hi;
-		indexinfo_t ii;
-		char* index = pl_get(indexnames, i);
-		if (get_index_scales(index, &lo, &hi)) {
-			printf("Failed to get the range of quad scales for index \"%s\".\n", index);
-			exit(-1);
-		}
-		ii.indexname = index;
-		ii.losize = lo;
-		ii.hisize = hi;
-		bl_append(indexset.indexinfos, &ii);
-		if (ii.losize < indexset.sizesmallest) {
-			indexset.sizesmallest = ii.losize;
-			indexset.ismallest = bl_size(indexset.indexinfos)-1;
-		}
-		if (ii.hisize > indexset.sizebiggest) {
-			indexset.sizebiggest = ii.hisize;
-			indexset.ibiggest = bl_size(indexset.indexinfos)-1;
-		}
-	}
-	pl_free(indexnames);
 
 	for (i=optind; i<argc; i++) {
 		char* jobfn;
@@ -739,7 +743,7 @@ int main(int argc, char** args) {
 		printf("Input file for blind:\n\n");
 		job_write_blind_input(job, stdout, &indexset);
 
-		if (run_blind(blind, job, &indexset)) {
+		if (run_blind(indexset.blind, job, &indexset)) {
 			fprintf(stderr, "Failed to run_blind.\n");
 		}
 
@@ -747,13 +751,12 @@ int main(int argc, char** args) {
 		job_free(job);
 	}
 
-
 	for (i=0; i<bl_size(indexset.indexinfos); i++) {
 		indexinfo_t* ii = bl_access(indexset.indexinfos, i);
 		free(ii->indexname);
 	}
 	bl_free(indexset.indexinfos);
-	free(blind);
+	free(indexset.blind);
 
 	exit(0);
 }
