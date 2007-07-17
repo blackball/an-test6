@@ -484,8 +484,8 @@ static int run_blind(job_t* job, backend_t* backend)
 			_exit( -1);
 		}
 
-		// or should I use system() ?
-		if (execlp(backend->blind, basename(backend->blind), (char*)NULL)) {
+		// Use a "system"-like command to allow fancier "blind" commands.
+		if (execlp("/bin/sh", "/bin/sh", "-c", backend->blind, (char*)NULL)) {
 			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
 			_exit( -1);
 		}
