@@ -431,6 +431,34 @@ static int load_index(char* indexname,
 	return 0;
 }
 
+void init_parameters(blind_params* bp, solver_params* sp)
+{
+	// Reset params.
+	memset(bp, 0, sizeof(blind_params));
+	solver_default_params(sp);
+	sp->userdata = bp;
+
+	bp->nverify = 20;
+	bp->logratio_tobail = -HUGE_VAL;
+	bp->fieldlist = il_new(256);
+	bp->indexnames = pl_new(16);
+	bp->verify_wcs_list = bl_new(1, sizeof(tan_t));
+	bp->verify_wcsfiles = pl_new(1);
+	bp->fieldid_key = strdup("FIELDID");
+	bp->xcolname = strdup("X");
+	bp->ycolname = strdup("Y");
+	bp->firstfield = -1;
+	bp->lastfield = -1;
+	bp->tweak_aborder = DEFAULT_TWEAK_ABORDER;
+	bp->tweak_abporder = DEFAULT_TWEAK_ABPORDER;
+	sp->field_minx = sp->field_maxx = 0.0;
+	sp->field_miny = sp->field_maxy = 0.0;
+	sp->parity = DEFAULT_PARITY;
+	sp->codetol = DEFAULT_CODE_TOL;
+	sp->handlehit = blind_handle_hit;
+	sp->indexes = bl_new(16, sizeof(solver_index_params));
+}
+
 int main(int argc, char *argv[])
 {
 	char* progname = argv[0];
@@ -467,30 +495,7 @@ int main(int argc, char *argv[])
 
 		tic();
 
-		// Reset params.
-		memset(bp, 0, sizeof(blind_params));
-		solver_default_params(sp);
-		sp->userdata = bp;
-
-		bp->nverify = 20;
-		bp->logratio_tobail = -HUGE_VAL;
-		bp->fieldlist = il_new(256);
-		bp->indexnames = pl_new(16);
-		bp->verify_wcs_list = bl_new(1, sizeof(tan_t));
-		bp->verify_wcsfiles = pl_new(1);
-		bp->fieldid_key = strdup("FIELDID");
-		bp->xcolname = strdup("X");
-		bp->ycolname = strdup("Y");
-		bp->firstfield = -1;
-		bp->lastfield = -1;
-		bp->tweak_aborder = DEFAULT_TWEAK_ABORDER;
-		bp->tweak_abporder = DEFAULT_TWEAK_ABPORDER;
-		sp->field_minx = sp->field_maxx = 0.0;
-		sp->field_miny = sp->field_maxy = 0.0;
-		sp->parity = DEFAULT_PARITY;
-		sp->codetol = DEFAULT_CODE_TOL;
-		sp->handlehit = blind_handle_hit;
-		sp->indexes = bl_new(16, sizeof(solver_index_params));
+		init_parameters(bp, sp);
 
 		if (read_parameters(bp)) {
 			cleanup_parameters(bp, sp);
