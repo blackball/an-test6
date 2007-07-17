@@ -85,6 +85,8 @@ struct backend {
 	double sizebiggest;
 	bool inparallel;
 	char* blind;
+	double minwidth;
+	double maxwidth;
 };
 typedef struct backend backend_t;
 
@@ -172,6 +174,10 @@ static int parse_config_file(FILE* fconf, backend_t* backend) {
 			backend->blind = strdup(nextword);
 		} else if (is_word(line, "inparallel", &nextword)) {
 			backend->inparallel = TRUE;
+		} else if (is_word(line, "minwidth ", &nextword)) {
+			backend->minwidth = atof(nextword);
+		} else if (is_word(line, "maxwidth ", &nextword)) {
+			backend->maxwidth = atof(nextword);
 		} else {
 			printf("Didn't understand this config file line: \"%s\"\n", line);
 		}
@@ -571,6 +577,9 @@ int main(int argc, char** args) {
 	backend.sizesmallest = HUGE_VAL;
 	backend.sizebiggest = -HUGE_VAL;
 	backend.blind = strdup(default_blind_command);
+	// Default scale estimate: field width, in degrees:
+	backend.minwidth = 0.1;
+	backend.maxwidth = 180.0;
 
 	// Read config file.
 	fconf = fopen(configfn, "r");
@@ -586,6 +595,11 @@ int main(int argc, char** args) {
 
 	if (!pl_size(backend.indexinfos)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
+		exit(-1);
+	}
+
+	if (backend.minwidth <= 0.0 || backend.maxwidth <= 0.0) {
+		fprintf(stderr, "\"minwidth\" and \"maxwidth\" must be positive!\n");
 		exit(-1);
 	}
 
@@ -733,14 +747,11 @@ int main(int argc, char** args) {
 			il_append(job->fields, 0);
 		}
 
-		// Default: image width 0.1 - 180 degrees.
-		// FIXME - this should depend on the available indices - or be
-		// specified in the config file.
 		if (!dl_size(job->scales)) {
 			double arcsecperpix;
-			arcsecperpix = deg2arcsec(0.1) / job->imagew;
+			arcsecperpix = deg2arcsec(backend.minwidth) / job->imagew;
 			dl_append(job->scales, arcsecperpix);
-			arcsecperpix = deg2arcsec(180) / job->imagew;
+			arcsecperpix = deg2arcsec(backend.maxwidth) / job->imagew;
 			dl_append(job->scales, arcsecperpix);
 		}
 
