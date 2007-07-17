@@ -57,7 +57,7 @@ struct solver_index_params {
     // Jitter in the index, in arcseconds.
     double index_jitter;
 
-    // Does index have CIRCLE (codes in the circle, not the box)?
+    // Does the index have the CIRCLE header - (codes live in the circle, not the box)?
     bool circle;
     double cxdx_margin;
 
@@ -65,8 +65,8 @@ struct solver_index_params {
     double index_scale_upper;
     double index_scale_lower;
 
-    // The limits on the size, in field coordinates,
-    // of the quads to find.  Derived from index_scale_* and funits_*.
+    // The limits on the size of quads, in field coordinates (pixels),
+    // Derived from index_scale_* and funits_*.
     double minAB;
     double maxAB;
 };

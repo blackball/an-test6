@@ -107,8 +107,7 @@ struct blind_params {
 
 	pl* verify_wcsfiles;
 
-    // WCS read from verify_wcsfn.
-    //sip_t* verify_wcs;
+    // WCS instances to verify.  (tan_t structs)
 	bl* verify_wcs_list;
 
     char *solved_out;
@@ -485,7 +484,6 @@ int main(int argc, char *argv[]) {
             logerr(bp, "You must set a \"distractors\" proportion.\n");
             exit(-1);
         }
-
         if (!pl_size(bp->indexnames)) {
             logerr(bp, "You must specify an index.\n");
             exit(-1);
@@ -503,21 +501,12 @@ int main(int argc, char *argv[]) {
             logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
             exit(-1);
         }
-
         if ((sp->funits_lower != 0.0) && (sp->funits_upper != 0.0) &&
             (sp->funits_lower > sp->funits_upper)) {
             logerr(bp, "fieldunits_lower MUST be less than fieldunits_upper.\n");
             logerr(bp, "\n(in other words, the lower-bound of scale estimate must "
                    "be less than the upper-bound!)\n\n");
             exit(-1);
-            /*
-            // just swap them...
-            double tmp;
-            logmsg(bp, "Swapping fieldunits_lower and fieldunits_upper, you goofball.\n");
-            tmp = sp->fieldunits_lower;
-            sp->fieldunits_lower = sp->fieldunits_upper;
-            sp->fieldunits_upper = tmp;
-            */
         }
 
         // If we're just solving one field, check to see if it's already
@@ -529,7 +518,6 @@ int main(int argc, char *argv[]) {
                 continue;
             }
         }
-
         // Early check to see if this job was cancelled.
         if (sp->cancelfname) {
             if (file_exists(sp->cancelfname)) {
@@ -588,6 +576,102 @@ int main(int argc, char *argv[]) {
             logmsg(bp, "tweak_abporder %i\n", bp->tweak_abporder);
         }
 
+		// Contact the solvedserver, if required.
+        if (bp->solvedserver) {
+            if (solvedclient_set_server(bp->solvedserver)) {
+                logerr(bp, "Error setting solvedserver.\n");
+                exit(-1);
+            }
+
+            if ((il_size(bp->fieldlist) == 0) && (bp->firstfield != -1) && (bp->lastfield != -1)) {
+                int j;
+                il_free(bp->fieldlist);
+                logmsg(bp, "Contacting solvedserver to get field list...\n");
+                bp->fieldlist = solvedclient_get_fields(sp->fieldid, bp->firstfield, bp->lastfield, 0);
+                if (!bp->fieldlist) {
+                    logerr(bp, "Failed to get field list from solvedserver.\n");
+                    exit(-1);
+                }
+                logmsg(bp, "Got %i fields from solvedserver: ", il_size(bp->fieldlist));
+                for (j=0; j<il_size(bp->fieldlist); j++) {
+                    logmsg(bp, "%i ", il_get(bp->fieldlist, j));
+                }
+                logmsg(bp, "\n");
+            }
+        }
+
+		// Parse WCS files submitted for verification.
+		for (i=0; i<pl_size(bp->verify_wcsfiles); i++) {
+			tan_t wcs;
+            qfits_header* hdr;
+			char* fn = pl_get(bp->verify_wcsfiles, i);
+            logmsg(bp, "Reading WCS header to verify from file %s\n", fn);
+			hdr = qfits_header_read(fn);
+            if (!hdr) {
+                logerr(bp, "Failed to read FITS header from file %s\n", fn);
+				continue;
+            }
+			if (!tan_read_header(hdr, &wcs)) {
+                logerr(bp, "Failed to parse WCS header from file %s\n", fn);
+				qfits_header_destroy(hdr);
+				continue;
+			}
+			bl_append(bp->verify_wcs_list, &wcs);
+            qfits_header_destroy(hdr);
+		}
+
+		// Initialize output files...
+        if (bp->matchfname) {
+            bp->mf = matchfile_open_for_writing(bp->matchfname);
+            if (!bp->mf) {
+                logerr(bp, "Failed to open file %s to write match file.\n", bp->matchfname);
+                exit(-1);
+            }
+            boilerplate_add_fits_headers(bp->mf->header);
+            qfits_header_add(bp->mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
+            qfits_header_add(bp->mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
+            add_blind_params(bp, bp->mf->header);
+            if (matchfile_write_header(bp->mf)) {
+                logerr(bp, "Failed to write matchfile header.\n");
+                exit(-1);
+            }
+        }
+        if (bp->indexrdlsfname) {
+            bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
+            if (!bp->indexrdls) {
+                logerr(bp, "Failed to open index RDLS file %s for writing.\n",
+                       bp->indexrdlsfname);
+            }
+            //if (!bp->indexrdls_solvedonly) {
+            indexrdls_write_header(bp);
+            //}
+        }
+
+        // Read .xyls file...
+        logmsg(bp, "Reading fields file %s...", bp->fieldfname);
+        bp->xyls = xylist_open(bp->fieldfname);
+        if (!bp->xyls) {
+            logerr(bp, "Failed to read xylist.\n");
+            exit(-1);
+        }
+        bp->xyls->xname = bp->xcolname;
+        bp->xyls->yname = bp->ycolname;
+        numfields = bp->xyls->nfields;
+        logmsg(bp, "got %u fields.\n", numfields);
+
+		// Write the start file.
+        if (bp->startfname) {
+            FILE* fstart = NULL;
+            logmsg(bp, "Writing marker file %s...\n", bp->startfname);
+            fstart = fopen(bp->startfname, "wb");
+            if (fstart)
+                fclose(fstart);
+            else
+                logerr(bp, "Failed to write marker file %s: %s\n", bp->startfname, strerror(errno));
+        }
+
+        sp->nindexes = pl_size(bp->indexnames);
+
         // Set total wall-clock time limit.
         // Note that we never cancel this alarm, it persists across "run"
         // boundaries.
@@ -615,98 +699,7 @@ int main(int argc, char *argv[]) {
             set_cpu_limit(bp, bp->total_cpulimit);
         }
 
-        if (bp->matchfname) {
-            bp->mf = matchfile_open_for_writing(bp->matchfname);
-            if (!bp->mf) {
-                logerr(bp, "Failed to open file %s to write match file.\n", bp->matchfname);
-                exit(-1);
-            }
-            boilerplate_add_fits_headers(bp->mf->header);
-            qfits_header_add(bp->mf->header, "HISTORY", "This file was created by the program \"blind\".", NULL, NULL);
-            qfits_header_add(bp->mf->header, "DATE", qfits_get_datetime_iso8601(), "Date this file was created.", NULL);
-            add_blind_params(bp, bp->mf->header);
-            if (matchfile_write_header(bp->mf)) {
-                logerr(bp, "Failed to write matchfile header.\n");
-                exit(-1);
-            }
-        }
-
-        // Read .xyls file...
-        logmsg(bp, "Reading fields file %s...", bp->fieldfname);
-        bp->xyls = xylist_open(bp->fieldfname);
-        if (!bp->xyls) {
-            logerr(bp, "Failed to read xylist.\n");
-            exit(-1);
-        }
-        bp->xyls->xname = bp->xcolname;
-        bp->xyls->yname = bp->ycolname;
-        numfields = bp->xyls->nfields;
-        logmsg(bp, "got %u fields.\n", numfields);
-
-        if (bp->solvedserver) {
-            if (solvedclient_set_server(bp->solvedserver)) {
-                logerr(bp, "Error setting solvedserver.\n");
-                exit(-1);
-            }
-
-            if ((il_size(bp->fieldlist) == 0) && (bp->firstfield != -1) && (bp->lastfield != -1)) {
-                int j;
-                il_free(bp->fieldlist);
-                logmsg(bp, "Contacting solvedserver to get field list...\n");
-                bp->fieldlist = solvedclient_get_fields(sp->fieldid, bp->firstfield, bp->lastfield, 0);
-                if (!bp->fieldlist) {
-                    logerr(bp, "Failed to get field list from solvedserver.\n");
-                    exit(-1);
-                }
-                logmsg(bp, "Got %i fields from solvedserver: ", il_size(bp->fieldlist));
-                for (j=0; j<il_size(bp->fieldlist); j++) {
-                    logmsg(bp, "%i ", il_get(bp->fieldlist, j));
-                }
-                logmsg(bp, "\n");
-            }
-        }
-
-        if (bp->indexrdlsfname) {
-            bp->indexrdls = rdlist_open_for_writing(bp->indexrdlsfname);
-            if (!bp->indexrdls) {
-                logerr(bp, "Failed to open index RDLS file %s for writing.\n",
-                       bp->indexrdlsfname);
-            }
-            //if (!bp->indexrdls_solvedonly) {
-            indexrdls_write_header(bp);
-            //}
-        }
-
-        if (bp->startfname) {
-            FILE* batchfid = NULL;
-            logmsg(bp, "Writing marker file %s...\n", bp->startfname);
-            batchfid = fopen(bp->startfname, "wb");
-            if (batchfid)
-                fclose(batchfid);
-            else
-                logerr(bp, "Failed to write marker file %s: %s\n", bp->startfname, strerror(errno));
-        }
-
-        sp->nindexes = pl_size(bp->indexnames);
-
-		for (i=0; i<pl_size(bp->verify_wcsfiles); i++) {
-			tan_t wcs;
-            qfits_header* hdr;
-			char* fn = pl_get(bp->verify_wcsfiles, i);
-            logmsg(bp, "Reading WCS header to verify from file %s\n", fn);
-			hdr = qfits_header_read(fn);
-            if (!hdr) {
-                logerr(bp, "Failed to read FITS header from file %s\n", fn);
-				continue;
-            }
-			if (!tan_read_header(hdr, &wcs)) {
-                logerr(bp, "Failed to parse WCS header from file %s\n", fn);
-				qfits_header_destroy(hdr);
-				continue;
-			}
-			bl_append(bp->verify_wcs_list, &wcs);
-            qfits_header_destroy(hdr);
-		}
+		// Verify any WCS estimates we have.
 		if (bl_size(bp->verify_wcs_list)) {
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
@@ -739,13 +732,14 @@ int main(int argc, char *argv[]) {
                 sp->sips = NULL;
             }
         }
-		// verification of existing wcs is done - on to regular solving!
 
+		// Start solving...
         if (bp->indexes_inparallel) {
 
             sp->nindexes = 0;
             sp->indexnum = 0;
 
+			// Read all the indices...
             for (I=0; I<pl_size(bp->indexnames); I++) {
                 char* fname;
                 solver_index_params sips;
@@ -827,13 +821,14 @@ int main(int argc, char *argv[]) {
                 if (sp->cancelled)
                     break;
 
-                solver_default_index_params(&sips);
+				// Load the index...
                 fname = pl_get(bp->indexnames, I);
+                solver_default_index_params(&sips);
                 if (load_index(fname, FALSE, bp, sp, &sips)) {
                     exit(-1);
                 }
+                bl_append(sp->indexes, &sips);
                 sp->indexnum = I;
-
                 logmsg(bp, "\n\nTrying index %s...\n", fname);
 
                 // Set CPU time limit.
@@ -860,8 +855,6 @@ int main(int argc, char *argv[]) {
                     alarm(bp->timelimit);
                 }
 
-                bl_append(sp->indexes, &sips);
-
                 // Do it!
                 solve_fields(bp, NULL);
 
@@ -886,25 +879,26 @@ int main(int argc, char *argv[]) {
 
                 // Clean up this index...
 				close_index(&sips);
-
                 bl_remove_all(sp->indexes);
                 sp->sips = NULL;
             }
         }
 
+		// Clean up.
+
+        xylist_close(bp->xyls);
+
         if (bp->solvedserver) {
             solvedclient_set_server(NULL);
         }
 
-        xylist_close(bp->xyls);
-
+		// Finalize output files.
         if (bp->mf) {
             if (matchfile_fix_header(bp->mf) ||
                 matchfile_close(bp->mf)) {
                 logerr(bp, "Error closing matchfile.\n");
             }
         }
-
         if (bp->indexrdls) {
             if (rdlist_fix_header(bp->indexrdls) ||
                 rdlist_close(bp->indexrdls)) {
@@ -914,11 +908,11 @@ int main(int argc, char *argv[]) {
         }
 
         if (bp->donefname) {
-            FILE* batchfid = NULL;
+            FILE* fdone = NULL;
             logmsg(bp, "Writing marker file %s...\n", bp->donefname);
-            batchfid = fopen(bp->donefname, "wb");
-            if (batchfid)
-                fclose(batchfid);
+            fdone = fopen(bp->donefname, "wb");
+            if (fdone)
+                fclose(fdone);
             else
                 logerr(bp, "Failed to write marker file %s: %s\n", bp->donefname, strerror(errno));
         }
