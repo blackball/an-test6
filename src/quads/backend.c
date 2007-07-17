@@ -779,6 +779,9 @@ int main(int argc, char** args)
 		}
 		job = parse_job_from_qfits_header(hdr);
 		job->fieldfile = jobfn;
+
+		// If the job has no scale estimate, search everything provided
+		// by the backend
 		if (!dl_size(job->scales)) {
 			double arcsecperpix;
 			arcsecperpix = deg2arcsec(backend->minwidth) / job->imagew;
