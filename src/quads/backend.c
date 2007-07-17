@@ -94,6 +94,7 @@ static int parse_config_file(FILE* fconf, pl* indexes) {
 }
 
 struct job_t {
+	char* fieldfile;
 	double imagew;
 	double imageh;
 	bool run;
@@ -102,6 +103,7 @@ struct job_t {
 	char* matchfile;
 	char* rdlsfile;
 	char* wcsfile;
+	char* cancelfile;
 	int timelimit;
 	int cpulimit;
 	int parity;
@@ -116,6 +118,7 @@ struct job_t {
 	double image_fraction;
 	double codetol;
 	double distractor_fraction;
+	// Contains tan_t structs.
 	bl* verify_wcs;
 };
 typedef struct job_t job_t;
@@ -163,6 +166,7 @@ void job_print(job_t* job) {
 	printf("Match file: %s\n", job->matchfile);
 	printf("RDLS file: %s\n", job->rdlsfile);
 	printf("WCS file: %s\n", job->wcsfile);
+	printf("Cancel file: %s\n", job->cancelfile);
 	printf("Time limit: %i sec\n", job->timelimit);
 	printf("CPU limit: %i sec\n", job->cpulimit);
 	printf("Parity: %s\n", (job->parity == PARITY_NORMAL ? "pos" :
@@ -225,6 +229,7 @@ Optional keywords:
     * ANMATCH - Output filename for match file. FITS table describing the quad match that solved the field.
     * ANRDLS - Output filename for index RDLS file. The (RA,Dec) of index stars that overlap the field.
     * ANWCS - Output filename for WCS file. A FITS header containing the header cards required to specify the solved WCS.
+	* ANCANCEL - Input filename - if this file exists, the job is cancelled.
     * ANTLIM - Wall-clock time limit, in seconds (default inf)
     * ANCLIM - CPU time limit, in seconds (default inf)
     * ANPARITY - "BOTH", "POS", "NEG" (default "BOTH")
@@ -257,6 +262,7 @@ WCS to verify: if the image already has a WCS that you want to verify, convert i
 
 void job_write_blind_input(job_t* job, FILE* fout, pl* indexes) {
 	int i, j, k;
+	bool firsttime = TRUE;
 	fprintf(fout, "timelimit %i\n", job->timelimit);
 	fprintf(fout, "cpulimit %i\n", job->cpulimit);
 	for (i=0;; i++) {
@@ -272,24 +278,69 @@ void job_write_blind_input(job_t* job, FILE* fout, pl* indexes) {
 			startobj = il_get(job->depths, i);
 			endobj = il_get(job->depths, i+1);
 		}
-		fprintf(fout, "sdepth %i\n", startobj);
-		if (endobj)
-			fprintf(fout, "depth %i\n", endobj);
 
 		for (j=0; j<dl_size(job->scales)/2; j++) {
-			fprintf(fout, "fieldunits_lower %g\n", dl_get(job->scales, i*2));
-			fprintf(fout, "fieldunits_upper %g\n", dl_get(job->scales, i*2+1));
+			fprintf(fout, "sdepth %i\n", startobj);
+			if (endobj)
+				fprintf(fout, "depth %i\n", endobj);
+			fprintf(fout, "fieldunits_lower %g\n", dl_get(job->scales, j*2));
+			fprintf(fout, "fieldunits_upper %g\n", dl_get(job->scales, j*2+1));
 
 			// FIXME - select the indices that should be checked.
 			for (k=0; k<pl_size(indexes); k++) {
 				fprintf(fout, "index %s\n", (char*)pl_get(indexes, k));
 			}
 
-			// FIXME - Keir isn't going to like this...
-			/*
-			  mkstemp(
-			  fprintf(fout, "
-			*/
+			fprintf(fout, "fields");
+			for (k=0; k<il_size(job->fields)/2; k++) {
+				int lo = il_get(job->fields, k*2);
+				int hi = il_get(job->fields, k*2+1);
+				if (lo == hi)
+					fprintf(fout, " %i", lo);
+				else
+					fprintf(fout, " %i/%i", lo, hi);
+			}
+			fprintf(fout, "\n");
+
+			fprintf(fout, "parity %i\n", job->parity);
+			fprintf(fout, "verify_pix %g\n", job->poserr);
+			fprintf(fout, "tol %g\n", job->codetol);
+			fprintf(fout, "distractors %g\n", job->distractor_fraction);
+			fprintf(fout, "ratio_toprint %g\n", job->odds_toprint);
+			fprintf(fout, "ratio_tokeep %g\n", job->odds_tokeep);
+			fprintf(fout, "ratio_tosolve %g\n", job->odds_tosolve);
+			fprintf(fout, "ratio_tobail %g\n", 1e-100);
+
+			if (job->tweak) {
+				fprintf(fout, "tweak\n");
+				fprintf(fout, "tweak_aborder %i\n", job->tweakorder);
+				fprintf(fout, "tweak_abporder %i\n", job->tweakorder);
+				fprintf(fout, "tweak_skipshift\n");
+			}
+
+			fprintf(fout, "field %s\n", job->fieldfile);
+			if (job->solvedfile)
+				fprintf(fout, "solved %s\n", job->solvedfile);
+			if (job->matchfile)
+				fprintf(fout, "match %s\n", job->matchfile);
+			if (job->rdlsfile)
+				fprintf(fout, "indexrdls %s\n", job->rdlsfile);
+			if (job->wcsfile)
+				fprintf(fout, "wcs %s\n", job->wcsfile);
+			if (job->cancelfile)
+				fprintf(fout, "cancel %s\n", job->cancelfile);
+
+			if (firsttime) {
+				for (k=0; k<bl_size(job->verify_wcs); k++) {
+					tan_t* wcs = bl_access(job->verify_wcs, k);
+					fprintf(fout, "verify_wcs %g %g %g %g %g %g %g %g\n",
+							wcs->crval[0], wcs->crval[1],
+							wcs->crpix[0], wcs->crpix[1],
+							wcs->cd[0][0], wcs->cd[0][1],
+							wcs->cd[1][0], wcs->cd[1][1]);
+				}
+				firsttime = FALSE;
+			}
 
 			fprintf(fout, "run\n\n");
 		}
@@ -385,6 +436,7 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 
+		job->fieldfile = jobfn;
 		job->imagew = qfits_header_getdouble(hdr, "IMAGEW", dnil);
 		job->imageh = qfits_header_getdouble(hdr, "IMAGEH", dnil);
 		if ((job->imagew == dnil) || (job->imageh == dnil) ||
@@ -398,6 +450,7 @@ int main(int argc, char** args) {
 		job->matchfile = fits_get_dupstring(hdr, "ANMATCH");
 		job->rdlsfile = fits_get_dupstring(hdr, "ANRDLS");
 		job->wcsfile = fits_get_dupstring(hdr, "ANWCS");
+		job->cancelfile = fits_get_dupstring(hdr, "ANCANCEL");
 		job->timelimit = qfits_header_getint(hdr, "ANTLIM", job->timelimit);
 		job->cpulimit = qfits_header_getint(hdr, "ANCLIM", job->cpulimit);
 		pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
@@ -475,7 +528,7 @@ int main(int argc, char** args) {
 			tan_t wcs;
 			char* keys[] = { "ANW%iPIX1", "ANW%iPIX2", "ANW%iVAL1", "ANW%iVAL2",
 							 "ANW%iCD11", "ANW%iCD12", "ANW%iCD21", "ANW%iCD22" };
-			double* vals[] = { &(wcs.crval[0]), &(wcs.crval[1]),
+			double* vals[] = { &(wcs. crval[0]), &(wcs.crval[1]),
 							   &(wcs.crpix[0]), &(wcs.crpix[1]),
 							   &(wcs.cd[0][0]), &(wcs.cd[0][1]),
 							   &(wcs.cd[1][0]), &(wcs.cd[1][1]) };
