@@ -29,6 +29,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include <getopt.h>
 
@@ -60,6 +62,10 @@ static void print_help(const char* progname) {
 		   "\n", progname);
 }
 
+
+static const char* default_blind_command = "blind";
+
+
 struct indexinfo {
 	char* indexname;
 	// quad size
@@ -77,7 +83,7 @@ struct indexset {
 };
 typedef struct indexset indexset_t;
 
-static int parse_config_file(FILE* fconf, pl* indexes) {
+static int parse_config_file(FILE* fconf, pl* indexes, char** pblind) {
 	while (1) {
         char buffer[10240];
         char* nextword;
@@ -104,6 +110,8 @@ static int parse_config_file(FILE* fconf, pl* indexes) {
 
 		if (is_word(line, "index ", &nextword)) {
 			pl_append(indexes, strdup(nextword));
+		} else if (is_word(line, "blind ", &nextword)) {
+			*pblind = strdup(nextword);
 		} else {
 			printf("Didn't understand this config file line: \"%s\"\n", line);
 		}
@@ -267,56 +275,19 @@ static void job_print(job_t* job) {
 	printf("Run: %s\n", (job->run ? "yes" : "no"));
 }
 
-/*
-Required keywords:
+#define WRITE(f, x, ...) \
+do {\
+  if (fprintf(f, x, ##__VA_ARGS__) < 0) { \
+    fprintf(stderr, "Failed to write: %s\n", strerror(errno)); \
+    return -1; \
+  } \
+} while(0)
 
-    * IMAGEW - Image width. Positive real
-    * IMAGEH - Image height. Positive real
-    * ANRUN - the "Go" button. 
-
-Optional keywords:
-
-    * ANPOSERR - Field positional error, in pixels. Positive real. Default 1.
-    * ANSOLVED - Output filename for solved file. One byte per field, with value 0x1 if the field solved, 0x0 otherwise. The file is only created if at least one field solves.
-    * ANMATCH - Output filename for match file. FITS table describing the quad match that solved the field.
-    * ANRDLS - Output filename for index RDLS file. The (RA,Dec) of index stars that overlap the field.
-    * ANWCS - Output filename for WCS file. A FITS header containing the header cards required to specify the solved WCS.
-	* ANCANCEL - Input filename - if this file exists, the job is cancelled.
-    * ANTLIM - Wall-clock time limit, in seconds (default inf)
-    * ANCLIM - CPU time limit, in seconds (default inf)
-    * ANPARITY - "BOTH", "POS", "NEG" (default "BOTH")
-    * ANTWEAK - FITS Boolean ie 'T' or 'F' (default 'T')
-    * ANTWEAKO - Tweak order. Integer in [1, 10], default=3. Why 3? Radial distortion requires 4.
-    * ANAPPL# - Lower bound on scale (in arcseconds per pixel) for field#, # = 1, 2, ... (default determined by the backend.)
-    * ANAPPU# - Upper bound on scale (in arcseconds per pixel) for field#, # = 1, 2, ... (default determined by the backend.)
-    * ANDEPTH# - The deepening strategy. # = 1, 2, ... and is the depth (number of field objects) to examine in round #. Eg, ANDEPTH1=20, ANDEPTH2=40 means look up to field object 20 in all indices at all scales, then proceed up to object 40 in all indices at all scales.
-    * ANFDL#/ANFDU# - Add fields to be solved, specified in inclusive table HDU ranges starting from 1. The ANFD'''L'''/ANFD'''U''' stands for Upper and Lower. Defaults to all HDU's, but if a single ANFD[LU]# is specified, then only the fields explicitly listed are used. Multiple ANFD[LU]#'s can be present and the solved field are the union of the specified ranges. Only valid in the primary header.
-    * ANFD#### - Add single fields to be solved. Only valid in the primary header.
-    * ANODDSPR - Odds ratio required before to printing a solution. Default 1e3.
-    * ANODDSKP - Odds ratio required before to keep a solution. Default 1e9.
-    * ANODDSSL - Odds ratio required before to consider a solution solved. Default 1e9.
-    * ANIMFRAC - Fraction of the rectangular image that the field actually occupies (eg for round fields). Real in (0, 1], default 1.
-    * ANCTOL - Code tolerance. Units of distance in 4-D code space. Real > 0, default 0.01.
-    * ANDISTR - Distractor fraction. Real in (0, 1). Default is 0.25.
-    * ANINTRLV - The interleaving strategy to use. Will be a string. 
-
-WCS to verify: if the image already has a WCS that you want to verify, convert it to TAN format and specify it using these headers. If there are multiple WCS instances to try, list them all, using increasing # values for each one. The first one should have #=1, the second one #=2, etc.
-
-    * ANW#PIX1 CRPIX1
-    * ANW#PIX2 CRPIX2
-    * ANW#VAL1 CRVAL1
-    * ANW#VAL2 CRVAL2
-    * ANW#CD11 CD1_1
-    * ANW#CD12 CD1_2
-    * ANW#CD21 CD2_1
-    * ANW#CD22 CD2_2 
-*/
-
-static void job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
+static int job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
 	int i, j, k;
 	bool firsttime = TRUE;
-	fprintf(fout, "timelimit %i\n", job->timelimit);
-	fprintf(fout, "cpulimit %i\n", job->cpulimit);
+	WRITE(fout, "timelimit %i\n", job->timelimit);
+	WRITE(fout, "cpulimit %i\n", job->cpulimit);
 	for (i=0;; i++) {
 		int startobj, endobj;
 		if (il_size(job->depths) < 2) {
@@ -336,14 +307,14 @@ static void job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) 
 			double app_max, app_min;
 			int nused;
 
-			fprintf(fout, "sdepth %i\n", startobj);
+			WRITE(fout, "sdepth %i\n", startobj);
 			if (endobj)
-				fprintf(fout, "depth %i\n", endobj);
+				WRITE(fout, "depth %i\n", endobj);
 			// arcsec per pixel range
 			app_min = dl_get(job->scales, j*2);
 			app_max = dl_get(job->scales, j*2+1);
-			fprintf(fout, "fieldunits_lower %g\n", app_min);
-			fprintf(fout, "fieldunits_upper %g\n", app_max);
+			WRITE(fout, "fieldunits_lower %g\n", app_min);
+			WRITE(fout, "fieldunits_upper %g\n", app_max);
 
 			// range of quad sizes that could be found in the field,
 			// in arcsec.
@@ -356,7 +327,7 @@ static void job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) 
 				indexinfo_t* ii = bl_access(indexset->indexinfos, k);
 				if ((fmin > ii->hisize) || (fmax < ii->losize))
 					continue;
-				fprintf(fout, "index %s\n", ii->indexname);
+				WRITE(fout, "index %s\n", ii->indexname);
 				nused++;
 			}
 			// Use the smallest or largest index if no other one fits.
@@ -369,52 +340,52 @@ static void job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) 
 				} else {
 					assert(0);
 				}
-				fprintf(fout, "index %s\n", ii->indexname);
+				WRITE(fout, "index %s\n", ii->indexname);
 			}
 
-			fprintf(fout, "fields");
+			WRITE(fout, "fields");
 			for (k=0; k<il_size(job->fields)/2; k++) {
 				int lo = il_get(job->fields, k*2);
 				int hi = il_get(job->fields, k*2+1);
 				if (lo == hi)
-					fprintf(fout, " %i", lo);
+					WRITE(fout, " %i", lo);
 				else
-					fprintf(fout, " %i/%i", lo, hi);
+					WRITE(fout, " %i/%i", lo, hi);
 			}
-			fprintf(fout, "\n");
+			WRITE(fout, "\n");
 
-			fprintf(fout, "parity %i\n", job->parity);
-			fprintf(fout, "verify_pix %g\n", job->poserr);
-			fprintf(fout, "tol %g\n", job->codetol);
-			fprintf(fout, "distractors %g\n", job->distractor_fraction);
-			fprintf(fout, "ratio_toprint %g\n", job->odds_toprint);
-			fprintf(fout, "ratio_tokeep %g\n", job->odds_tokeep);
-			fprintf(fout, "ratio_tosolve %g\n", job->odds_tosolve);
-			fprintf(fout, "ratio_tobail %g\n", 1e-100);
+			WRITE(fout, "parity %i\n", job->parity);
+			WRITE(fout, "verify_pix %g\n", job->poserr);
+			WRITE(fout, "tol %g\n", job->codetol);
+			WRITE(fout, "distractors %g\n", job->distractor_fraction);
+			WRITE(fout, "ratio_toprint %g\n", job->odds_toprint);
+			WRITE(fout, "ratio_tokeep %g\n", job->odds_tokeep);
+			WRITE(fout, "ratio_tosolve %g\n", job->odds_tosolve);
+			WRITE(fout, "ratio_tobail %g\n", 1e-100);
 
 			if (job->tweak) {
-				fprintf(fout, "tweak\n");
-				fprintf(fout, "tweak_aborder %i\n", job->tweakorder);
-				fprintf(fout, "tweak_abporder %i\n", job->tweakorder);
-				fprintf(fout, "tweak_skipshift\n");
+				WRITE(fout, "tweak\n");
+				WRITE(fout, "tweak_aborder %i\n", job->tweakorder);
+				WRITE(fout, "tweak_abporder %i\n", job->tweakorder);
+				WRITE(fout, "tweak_skipshift\n");
 			}
 
-			fprintf(fout, "field %s\n", job->fieldfile);
+			WRITE(fout, "field %s\n", job->fieldfile);
 			if (job->solvedfile)
-				fprintf(fout, "solved %s\n", job->solvedfile);
+				WRITE(fout, "solved %s\n", job->solvedfile);
 			if (job->matchfile)
-				fprintf(fout, "match %s\n", job->matchfile);
+				WRITE(fout, "match %s\n", job->matchfile);
 			if (job->rdlsfile)
-				fprintf(fout, "indexrdls %s\n", job->rdlsfile);
+				WRITE(fout, "indexrdls %s\n", job->rdlsfile);
 			if (job->wcsfile)
-				fprintf(fout, "wcs %s\n", job->wcsfile);
+				WRITE(fout, "wcs %s\n", job->wcsfile);
 			if (job->cancelfile)
-				fprintf(fout, "cancel %s\n", job->cancelfile);
+				WRITE(fout, "cancel %s\n", job->cancelfile);
 
 			if (firsttime) {
 				for (k=0; k<bl_size(job->verify_wcs); k++) {
 					tan_t* wcs = bl_access(job->verify_wcs, k);
-					fprintf(fout, "verify_wcs %g %g %g %g %g %g %g %g\n",
+					WRITE(fout, "verify_wcs %g %g %g %g %g %g %g %g\n",
 							wcs->crval[0], wcs->crval[1],
 							wcs->crpix[0], wcs->crpix[1],
 							wcs->cd[0][0], wcs->cd[0][1],
@@ -423,13 +394,92 @@ static void job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) 
 				firsttime = FALSE;
 			}
 
-			fprintf(fout, "run\n\n");
+			WRITE(fout, "run\n\n");
 		}
 
 	}
+	return 0;
 }
 
-   
+static int run_blind(char* blind, job_t* job, indexset_t* indexset) {
+	int thepipe[2];
+	pid_t pid;
+
+	if (pipe(thepipe) == -1) {
+		fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
+		return -1;
+	}
+
+	pid = fork();
+	if (pid == -1) {
+		fprintf(stderr, "Error fork()ing: %s\n", strerror(errno));
+		return -1;
+	} else if (pid == 0) {
+		int old_stdin;
+		// Child process.
+		close(thepipe[1]);
+		// bind stdin to thepipe[0].
+		old_stdin = dup(STDIN_FILENO);
+		if (old_stdin == -1) {
+			fprintf(stderr, "Failed to save stdin: %s\n", strerror(errno));
+			_exit(-1);
+		}
+		if (dup2(thepipe[0], STDIN_FILENO) == -1) {
+			fprintf(stderr, "Failed to dup2 stdin: %s\n", strerror(errno));
+			_exit(-1);
+		}
+
+		// or should I use system() ?
+		if (execlp(blind, basename(blind), (char*)NULL)) {
+			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
+			_exit(-1);
+		}
+		// execlp doesn't return.
+	} else {
+		FILE* fpipe;
+		int status;
+		// Parent process.
+		close(thepipe[0]);
+		fpipe = fdopen(thepipe[1], "a");
+		if (!fpipe) {
+			fprintf(stderr, "Failed to fdopen pipe: %s\n", strerror(errno));
+			return -1;
+		}
+		// Write input to blind.
+		if (job_write_blind_input(job, fpipe, indexset)) {
+			fprintf(stderr, "Failed to write input file to blind: %s\n", strerror(errno));
+			return -1;
+		}
+		fclose(fpipe);
+
+		// Wait for blind to finish.
+		printf("Waiting for blind to finish (PID %i).\n", (int)pid);
+		do {
+			if (waitpid(pid, &status, 0) == -1) {
+				fprintf(stderr, "Failed to waitpid() for blind: %s.\n", strerror(errno));
+				return -1;
+			}
+			if (WIFSIGNALED(status)) {
+				// (WTERMSIG(status) == SIGINT || WTERMSIG(status) == SIGQUIT)) {
+				//fprintf(stderr, "Blind was killed.\n");
+				fprintf(stderr, "Blind was killed by signal %i.\n", WTERMSIG(status));
+				return -1;
+			} else {
+				int exitval = WEXITSTATUS(status);
+				if (exitval == 127) {
+					fprintf(stderr, "Blind executable not found.\n");
+					return -1;
+				} else if (exitval) {
+					fprintf(stderr, "Blind executable failed: return value %i.\n", exitval);
+					return -1;
+				}
+			}
+		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+		printf("Blind finished successfully.\n");
+	}
+	return 0;
+}
+
 int main(int argc, char** args) {
 	int c;
 	char* configfn = "backend.cfg";
@@ -437,6 +487,7 @@ int main(int argc, char** args) {
 	int i;
 	pl* indexnames;
 	indexset_t indexset;
+	char* blind;
 
 	while (1) {
 		int option_index = 0;
@@ -477,6 +528,7 @@ int main(int argc, char** args) {
 	}
 
 	indexnames = pl_new(16);
+	blind = NULL;
 
 	// Read config file.
 	fconf = fopen(configfn, "r");
@@ -484,11 +536,14 @@ int main(int argc, char** args) {
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit(-1);
 	}
-	if (parse_config_file(fconf, indexnames)) {
+	if (parse_config_file(fconf, indexnames, &blind)) {
 		printf("Failed to parse config file.\n");
 		exit(-1);
 	}
 	fclose(fconf);
+
+	if (!blind)
+		blind = strdup(default_blind_command);
 
 	if (!pl_size(indexnames)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
@@ -656,6 +711,7 @@ int main(int argc, char** args) {
 			bl_append(job->verify_wcs, &wcs);
 			n++;
 		}
+		qfits_header_destroy(hdr);
 
 		// Add some defaults:
 
@@ -665,7 +721,8 @@ int main(int argc, char** args) {
 		}
 
 		// Default: image width 0.1 - 180 degrees.
-		// FIXME - this should depend on the available indices!
+		// FIXME - this should depend on the available indices - or be
+		// specified in the config file.
 		if (!dl_size(job->scales)) {
 			double arcsecperpix;
 			arcsecperpix = deg2arcsec(0.1) / job->imagew;
@@ -678,14 +735,16 @@ int main(int argc, char** args) {
 		printf("Running job:\n");
 		job_print(job);
 
+		printf("\n");
+		printf("Input file for blind:\n\n");
 		job_write_blind_input(job, stdout, &indexset);
 
-
-
+		if (run_blind(blind, job, &indexset)) {
+			fprintf(stderr, "Failed to run_blind.\n");
+		}
 
 		//cleanup:
 		job_free(job);
-		qfits_header_destroy(hdr);
 	}
 
 
@@ -694,6 +753,7 @@ int main(int argc, char** args) {
 		free(ii->indexname);
 	}
 	bl_free(indexset.indexinfos);
+	free(blind);
 
 	exit(0);
 }

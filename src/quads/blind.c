@@ -1093,22 +1093,22 @@ static int read_parameters(blind_params* bp) {
                 goto bailout;
             }
             // Save old stdout/stderr...
-            bp->dup_stdout = dup(fileno(stdout));
+            bp->dup_stdout = dup(STDOUT_FILENO);
             if (bp->dup_stdout == -1) {
                 logerr(bp, "Failed to dup stdout: %s\n", strerror(errno));
                 goto bailout;
             }
-            bp->dup_stderr = dup(fileno(stderr));
+            bp->dup_stderr = dup(STDERR_FILENO);
             if (bp->dup_stderr == -1) {
                 logerr(bp, "Failed to dup stderr: %s\n", strerror(errno));
                 goto bailout;
             }
             // Replace stdout/stderr with logfile...
-            if (dup2(fileno(bp->logfd), fileno(stderr)) == -1) {
+            if (dup2(fileno(bp->logfd), STDERR_FILENO) == -1) {
                 logerr(bp, "Failed to dup2 log file: %s\n", strerror(errno));
                 goto bailout;
             }
-            if (dup2(fileno(bp->logfd), fileno(stdout)) == -1) {
+            if (dup2(fileno(bp->logfd), STDOUT_FILENO) == -1) {
                 logerr(bp, "Failed to dup2 log file: %s\n", strerror(errno));
                 goto bailout;
             }
