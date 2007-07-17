@@ -16,6 +16,11 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+/*
+  Parses Tycho-2 data files, which are available here:
+    http://www.astro.ku.dk/~cf/CD/data/
+*/
+
 #ifndef TYCHO2_H
 #define TYCHO2_H
 

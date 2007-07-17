@@ -30,6 +30,7 @@
 #include "fitsioutils.h"
 #include "ioutils.h"
 #include "boilerplate.h"
+#include "fileutil.h"
 
 #define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:gj:"
 
@@ -499,6 +500,8 @@ int main(int argc, char** args) {
 		hdr = qfits_header_read(infn);
 		if (!hdr) {
 			fprintf(stderr, "Couldn't read FITS header from file %s.\n", infn);
+			if (!file_exists(infn))
+				fprintf(stderr, "(file \"%s\" doesn't exist)\n", infn);
 			exit(-1);
 		}
 		// look for AN_FILE (Astrometry.net filetype) in the FITS header.
@@ -508,11 +511,12 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Looks like a catalog.\n");
 			cat = catalog_open(infn, 0);
 			if (!cat) {
-				fprintf(stderr, "Couldn't open catalog.\n");
+				fprintf(stderr, "Couldn't open file \"%s\" as a catalog.\n", infn);
 				exit(-1);
 			}
 			if (!cat->mags) {
-				fprintf(stderr, "Catalog doesn't contain magnitudes!\n");
+				fprintf(stderr, "Catalog file \"%s\" doesn't contain magnitudes!  "
+						"These are required (use \"-g\" to include them).\n", infn);
 				exit(-1);
 			}
 			N = cat->numstars;
@@ -524,17 +528,20 @@ int main(int argc, char** args) {
 				fprintf(stderr, "File has AN_CATALOG = T header.\n");
 				ancat = an_catalog_open(infn);
 				if (!ancat) {
-					fprintf(stderr, "Couldn't open Astrometry.net catalog.\n");
+					fprintf(stderr, "Couldn't open file \"%s\" as an Astrometry.net catalog.\n", infn);
 					exit(-1);
 				}
 				N = ancat->nentries;
 				ancat->br.blocksize = BLOCK;
+			} else {
+				fprintf(stderr, "File \"%s\": doesn't seem to be an Astrometry.net "
+						"catalog or a cut catalog (.objs.fits file).\n", infn);
 			}
 		}
 
 		if (!(ancat || cat)) {
 			fflush(stdout);
-			fprintf(stderr, "Couldn't open input file %s.\n", infn);
+			fprintf(stderr, "Couldn't open input file \"%s\".\n", infn);
 			exit(-1);
 		}
 		printf("Reading   %i entries from %s...\n", N, infn);
