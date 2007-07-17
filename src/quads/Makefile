@@ -239,7 +239,7 @@ unpermute-stars: unpermute-stars.o idfile.o \
 unpermute-quads: unpermute-quads.o codekd.o \
 		$(UTIL_OBJS) $(LIBKD_LIB) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-backend: backend.o $(ANUTILS_LIB) $(QFITS_LIB)
+backend: backend.o fileutil.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \

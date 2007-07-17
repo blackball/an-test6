@@ -28,6 +28,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #include <getopt.h>
 
@@ -37,6 +38,7 @@
 #include "solver.h"
 #include "math.h"
 #include "fitsioutils.h"
+#include "fileutil.h"
 
 #include "qfits.h"
 
@@ -45,7 +47,6 @@ static int help_flag;
 static struct option long_options[] =
 	{
 		// flags
-		//{"verbose", no_argument,       &verbose_flag, 1},
 		{"help",    no_argument,       &help_flag,    1},
 		{"config",  optional_argument,   0, 'c'},
 		{0, 0, 0, 0}
@@ -55,8 +56,26 @@ static const char* OPTIONS = "hc:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options] <augmented xylist>\n"
+		   "   [-c <backend config file>]  (default \"backend.cfg\")\n"
 		   "\n", progname);
 }
+
+struct indexinfo {
+	char* indexname;
+	// quad size
+	double losize;
+	double hisize;
+};
+typedef struct indexinfo indexinfo_t;
+
+struct indexset {
+	bl* indexinfos;
+	int ibiggest;
+	int ismallest;
+	double sizesmallest;
+	double sizebiggest;
+};
+typedef struct indexset indexset_t;
 
 static int parse_config_file(FILE* fconf, pl* indexes) {
 	while (1) {
@@ -93,6 +112,34 @@ static int parse_config_file(FILE* fconf, pl* indexes) {
 	return 0;
 }
 
+static int get_index_scales(const char* indexname,
+							double* losize, double* hisize) {
+    char *quadfname;
+	quadfile* quads;
+	double hi, lo;
+
+    quadfname = mk_quadfn(indexname);
+    printf("Reading quads file %s...\n", quadfname);
+    quads = quadfile_open(quadfname, 0);
+    if (!quads) {
+        printf("Couldn't read quads file %s\n", quadfname);
+        free_fn(quadfname);
+        return -1;
+    }
+    free_fn(quadfname);
+	lo = quadfile_get_index_scale_lower_arcsec(quads);
+	hi = quadfile_get_index_scale_arcsec(quads);
+	if (losize)
+		*losize = lo;
+	if (hisize)
+		*hisize = hi;
+    printf("Stars: %i, Quads: %i.\n", quads->numstars, quads->numquads);
+    printf("Index scale: [%g, %g] arcmin, [%g, %g] arcsec\n",
+           lo/60.0, hi/60.0, lo, hi);
+	quadfile_close(quads);
+	return 0;
+}
+
 struct job_t {
 	char* fieldfile;
 	double imagew;
@@ -123,7 +170,7 @@ struct job_t {
 };
 typedef struct job_t job_t;
 
-job_t* job_new() {
+static job_t* job_new() {
 	job_t* job = calloc(1, sizeof(job_t));
 	if (!job) {
 		printf("Failed to allocate a new job_t.\n");
@@ -148,9 +195,14 @@ job_t* job_new() {
 	return job;
 }
 
-void job_free(job_t* job) {
+static void job_free(job_t* job) {
 	if (!job)
 		return;
+	free(job->solvedfile);
+	free(job->matchfile);
+	free(job->rdlsfile);
+	free(job->wcsfile);
+	free(job->cancelfile);
 	dl_free(job->scales);
 	il_free(job->depths);
 	il_free(job->fields);
@@ -158,7 +210,7 @@ void job_free(job_t* job) {
 	free(job);
 }
 
-void job_print(job_t* job) {
+static void job_print(job_t* job) {
 	int i;
 	printf("Image size: %g x %g\n", job->imagew, job->imageh);
 	printf("Positional error: %g pix\n", job->poserr);
@@ -260,7 +312,7 @@ WCS to verify: if the image already has a WCS that you want to verify, convert i
     * ANW#CD22 CD2_2 
 */
 
-void job_write_blind_input(job_t* job, FILE* fout, pl* indexes) {
+static void job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
 	int i, j, k;
 	bool firsttime = TRUE;
 	fprintf(fout, "timelimit %i\n", job->timelimit);
@@ -280,15 +332,44 @@ void job_write_blind_input(job_t* job, FILE* fout, pl* indexes) {
 		}
 
 		for (j=0; j<dl_size(job->scales)/2; j++) {
+			double fmin, fmax;
+			double app_max, app_min;
+			int nused;
+
 			fprintf(fout, "sdepth %i\n", startobj);
 			if (endobj)
 				fprintf(fout, "depth %i\n", endobj);
-			fprintf(fout, "fieldunits_lower %g\n", dl_get(job->scales, j*2));
-			fprintf(fout, "fieldunits_upper %g\n", dl_get(job->scales, j*2+1));
+			// arcsec per pixel range
+			app_min = dl_get(job->scales, j*2);
+			app_max = dl_get(job->scales, j*2+1);
+			fprintf(fout, "fieldunits_lower %g\n", app_min);
+			fprintf(fout, "fieldunits_upper %g\n", app_max);
 
-			// FIXME - select the indices that should be checked.
-			for (k=0; k<pl_size(indexes); k++) {
-				fprintf(fout, "index %s\n", (char*)pl_get(indexes, k));
+			// range of quad sizes that could be found in the field,
+			// in arcsec.
+			fmax = 1.0 * MAX(job->imagew, job->imageh) * app_max;
+			fmin = 0.1 * MIN(job->imagew, job->imageh) * app_min;
+
+			// Select the indices that should be checked.
+			nused = 0;
+			for (k=0; k<bl_size(indexset->indexinfos); k++) {
+				indexinfo_t* ii = bl_access(indexset->indexinfos, k);
+				if ((fmin > ii->hisize) || (fmax < ii->losize))
+					continue;
+				fprintf(fout, "index %s\n", ii->indexname);
+				nused++;
+			}
+			// Use the smallest or largest index if no other one fits.
+			if (!nused) {
+				indexinfo_t* ii;
+				if (fmin > indexset->sizebiggest) {
+					ii = bl_access(indexset->indexinfos, indexset->ibiggest);
+				} else if (fmax < indexset->sizesmallest) {
+					ii = bl_access(indexset->indexinfos, indexset->ismallest);
+				} else {
+					assert(0);
+				}
+				fprintf(fout, "index %s\n", ii->indexname);
 			}
 
 			fprintf(fout, "fields");
@@ -354,7 +435,8 @@ int main(int argc, char** args) {
 	char* configfn = "backend.cfg";
 	FILE* fconf;
 	int i;
-	pl* indexes;
+	pl* indexnames;
+	indexset_t indexset;
 
 	while (1) {
 		int option_index = 0;
@@ -394,7 +476,7 @@ int main(int argc, char** args) {
 		exit(0);
 	}
 
-	indexes = pl_new(16);
+	indexnames = pl_new(16);
 
 	// Read config file.
 	fconf = fopen(configfn, "r");
@@ -402,16 +484,42 @@ int main(int argc, char** args) {
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit(-1);
 	}
-	if (parse_config_file(fconf, indexes)) {
+	if (parse_config_file(fconf, indexnames)) {
 		printf("Failed to parse config file.\n");
 		exit(-1);
 	}
 	fclose(fconf);
 
-	if (!pl_size(indexes)) {
+	if (!pl_size(indexnames)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
 		exit(-1);
 	}
+
+	indexset.indexinfos = bl_new(16, sizeof(indexinfo_t));
+	indexset.sizesmallest = HUGE_VAL;
+	indexset.sizebiggest = -HUGE_VAL;
+	for (i=0; i<pl_size(indexnames); i++) {
+		double lo, hi;
+		indexinfo_t ii;
+		char* index = pl_get(indexnames, i);
+		if (get_index_scales(index, &lo, &hi)) {
+			printf("Failed to get the range of quad scales for index \"%s\".\n", index);
+			exit(-1);
+		}
+		ii.indexname = index;
+		ii.losize = lo;
+		ii.hisize = hi;
+		bl_append(indexset.indexinfos, &ii);
+		if (ii.losize < indexset.sizesmallest) {
+			indexset.sizesmallest = ii.losize;
+			indexset.ismallest = bl_size(indexset.indexinfos)-1;
+		}
+		if (ii.hisize > indexset.sizebiggest) {
+			indexset.sizebiggest = ii.hisize;
+			indexset.ibiggest = bl_size(indexset.indexinfos)-1;
+		}
+	}
+	pl_free(indexnames);
 
 	for (i=optind; i<argc; i++) {
 		char* jobfn;
@@ -570,7 +678,7 @@ int main(int argc, char** args) {
 		printf("Running job:\n");
 		job_print(job);
 
-		job_write_blind_input(job, stdout, indexes);
+		job_write_blind_input(job, stdout, &indexset);
 
 
 
@@ -581,9 +689,11 @@ int main(int argc, char** args) {
 	}
 
 
-	for (i=0; i<pl_size(indexes); i++)
-		free(pl_get(indexes, i));
-	pl_free(indexes);
+	for (i=0; i<bl_size(indexset.indexinfos); i++) {
+		indexinfo_t* ii = bl_access(indexset.indexinfos, i);
+		free(ii->indexname);
+	}
+	bl_free(indexset.indexinfos);
 
 	exit(0);
 }
