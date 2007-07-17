@@ -75,7 +75,7 @@ struct indexinfo {
 typedef struct indexinfo indexinfo_t;
 
 // This should really be named something like "backend_t"...
-struct indexset {
+struct backend {
 	bl* indexinfos;
 	int ibiggest;
 	int ismallest;
@@ -84,7 +84,7 @@ struct indexset {
 	bool inparallel;
 	char* blind;
 };
-typedef struct indexset indexset_t;
+typedef struct backend backend_t;
 
 static int get_index_scales(const char* indexname,
 							double* losize, double* hisize) {
@@ -114,7 +114,7 @@ static int get_index_scales(const char* indexname,
 	return 0;
 }
 
-static int add_index(indexset_t* indexset, char* index) {
+static int add_index(backend_t* backend, char* index) {
 	double lo, hi;
 	indexinfo_t ii;
 	if (get_index_scales(index, &lo, &hi)) {
@@ -124,19 +124,19 @@ static int add_index(indexset_t* indexset, char* index) {
 	ii.indexname = strdup(index);
 	ii.losize = lo;
 	ii.hisize = hi;
-	bl_append(indexset->indexinfos, &ii);
-	if (ii.losize < indexset->sizesmallest) {
-		indexset->sizesmallest = ii.losize;
-		indexset->ismallest = bl_size(indexset->indexinfos)-1;
+	bl_append(backend->indexinfos, &ii);
+	if (ii.losize < backend->sizesmallest) {
+		backend->sizesmallest = ii.losize;
+		backend->ismallest = bl_size(backend->indexinfos)-1;
 	}
-	if (ii.hisize > indexset->sizebiggest) {
-		indexset->sizebiggest = ii.hisize;
-		indexset->ibiggest = bl_size(indexset->indexinfos)-1;
+	if (ii.hisize > backend->sizebiggest) {
+		backend->sizebiggest = ii.hisize;
+		backend->ibiggest = bl_size(backend->indexinfos)-1;
 	}
 	return 0;
 }
 
-static int parse_config_file(FILE* fconf, indexset_t* indexset) {
+static int parse_config_file(FILE* fconf, backend_t* backend) {
 	while (1) {
         char buffer[10240];
         char* nextword;
@@ -162,14 +162,14 @@ static int parse_config_file(FILE* fconf, indexset_t* indexset) {
             continue;
 
 		if (is_word(line, "index ", &nextword)) {
-			if (add_index(indexset, nextword)) {
+			if (add_index(backend, nextword)) {
 				return -1;
 			}
 		} else if (is_word(line, "blind ", &nextword)) {
-			free(indexset->blind);
-			indexset->blind = strdup(nextword);
+			free(backend->blind);
+			backend->blind = strdup(nextword);
 		} else if (is_word(line, "inparallel", &nextword)) {
-			indexset->inparallel = TRUE;
+			backend->inparallel = TRUE;
 		} else {
 			printf("Didn't understand this config file line: \"%s\"\n", line);
 		}
@@ -313,7 +313,7 @@ do {\
   } \
 } while(0)
 
-static int job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
+static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend) {
 	int i, j, k;
 	bool firsttime = TRUE;
 	WRITE(fout, "timelimit %i\n", job->timelimit);
@@ -353,8 +353,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
 
 			// Select the indices that should be checked.
 			nused = 0;
-			for (k=0; k<bl_size(indexset->indexinfos); k++) {
-				indexinfo_t* ii = bl_access(indexset->indexinfos, k);
+			for (k=0; k<bl_size(backend->indexinfos); k++) {
+				indexinfo_t* ii = bl_access(backend->indexinfos, k);
 				if ((fmin > ii->hisize) || (fmax < ii->losize))
 					continue;
 				WRITE(fout, "index %s\n", ii->indexname);
@@ -363,16 +363,16 @@ static int job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
 			// Use the smallest or largest index if no other one fits.
 			if (!nused) {
 				indexinfo_t* ii;
-				if (fmin > indexset->sizebiggest) {
-					ii = bl_access(indexset->indexinfos, indexset->ibiggest);
-				} else if (fmax < indexset->sizesmallest) {
-					ii = bl_access(indexset->indexinfos, indexset->ismallest);
+				if (fmin > backend->sizebiggest) {
+					ii = bl_access(backend->indexinfos, backend->ibiggest);
+				} else if (fmax < backend->sizesmallest) {
+					ii = bl_access(backend->indexinfos, backend->ismallest);
 				} else {
 					assert(0);
 				}
 				WRITE(fout, "index %s\n", ii->indexname);
 			}
-			if (indexset->inparallel)
+			if (backend->inparallel)
 				WRITE(fout, "indexes_inparallel\n");
 
 			WRITE(fout, "fields");
@@ -433,7 +433,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, indexset_t* indexset) {
 	return 0;
 }
 
-static int run_blind(char* blind, job_t* job, indexset_t* indexset) {
+static int run_blind(job_t* job, backend_t* backend) {
 	int thepipe[2];
 	pid_t pid;
 
@@ -462,7 +462,7 @@ static int run_blind(char* blind, job_t* job, indexset_t* indexset) {
 		}
 
 		// or should I use system() ?
-		if (execlp(blind, basename(blind), (char*)NULL)) {
+		if (execlp(backend->blind, basename(backend->blind), (char*)NULL)) {
 			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
 			_exit(-1);
 		}
@@ -478,7 +478,7 @@ static int run_blind(char* blind, job_t* job, indexset_t* indexset) {
 			return -1;
 		}
 		// Write input to blind.
-		if (job_write_blind_input(job, fpipe, indexset)) {
+		if (job_write_blind_input(job, fpipe, backend)) {
 			fprintf(stderr, "Failed to write input file to blind: %s\n", strerror(errno));
 			return -1;
 		}
@@ -517,7 +517,7 @@ int main(int argc, char** args) {
 	char* configfn = "backend.cfg";
 	FILE* fconf;
 	int i;
-	indexset_t indexset;
+	backend_t backend;
 
 	while (1) {
 		int option_index = 0;
@@ -557,11 +557,11 @@ int main(int argc, char** args) {
 		exit(0);
 	}
 
-	memset(&indexset, 0, sizeof(indexset_t));
-	indexset.indexinfos = bl_new(16, sizeof(indexinfo_t));
-	indexset.sizesmallest = HUGE_VAL;
-	indexset.sizebiggest = -HUGE_VAL;
-	indexset.blind = strdup(default_blind_command);
+	memset(&backend, 0, sizeof(backend_t));
+	backend.indexinfos = bl_new(16, sizeof(indexinfo_t));
+	backend.sizesmallest = HUGE_VAL;
+	backend.sizebiggest = -HUGE_VAL;
+	backend.blind = strdup(default_blind_command);
 
 	// Read config file.
 	fconf = fopen(configfn, "r");
@@ -569,13 +569,13 @@ int main(int argc, char** args) {
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit(-1);
 	}
-	if (parse_config_file(fconf, &indexset)) {
+	if (parse_config_file(fconf, &backend)) {
 		printf("Failed to parse config file.\n");
 		exit(-1);
 	}
 	fclose(fconf);
 
-	if (!pl_size(indexset.indexinfos)) {
+	if (!pl_size(backend.indexinfos)) {
 		printf("You must list at least one index in the config file (%s)\n", configfn);
 		exit(-1);
 	}
@@ -741,9 +741,9 @@ int main(int argc, char** args) {
 
 		printf("\n");
 		printf("Input file for blind:\n\n");
-		job_write_blind_input(job, stdout, &indexset);
+		job_write_blind_input(job, stdout, &backend);
 
-		if (run_blind(indexset.blind, job, &indexset)) {
+		if (run_blind(job, &backend)) {
 			fprintf(stderr, "Failed to run_blind.\n");
 		}
 
@@ -751,12 +751,12 @@ int main(int argc, char** args) {
 		job_free(job);
 	}
 
-	for (i=0; i<bl_size(indexset.indexinfos); i++) {
-		indexinfo_t* ii = bl_access(indexset.indexinfos, i);
+	for (i=0; i<bl_size(backend.indexinfos); i++) {
+		indexinfo_t* ii = bl_access(backend.indexinfos, i);
 		free(ii->indexname);
 	}
-	bl_free(indexset.indexinfos);
-	free(indexset.blind);
+	bl_free(backend.indexinfos);
+	free(backend.blind);
 
 	exit(0);
 }
