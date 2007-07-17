@@ -51,14 +51,16 @@ static struct option long_options[] =
 		// flags
 		{"help",    no_argument,       &help_flag,    1},
 		{"config",  optional_argument,   0, 'c'},
+		{"input",   optional_argument,   0, 'i'},
 		{0, 0, 0, 0}
 	};
 
-static const char* OPTIONS = "hc:";
+static const char* OPTIONS = "hc:i:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options] <augmented xylist>\n"
 		   "   [-c <backend config file>]  (default \"backend.cfg\")\n"
+		   "   [-i <blind input filename>]: save the input file used for blind.\n"
 		   "\n", progname);
 }
 
@@ -442,6 +444,9 @@ static int run_blind(job_t* job, backend_t* backend) {
 		return -1;
 	}
 
+	fflush(stdout);
+	fflush(stderr);
+
 	pid = fork();
 	if (pid == -1) {
 		fprintf(stderr, "Error fork()ing: %s\n", strerror(errno));
@@ -515,6 +520,7 @@ static int run_blind(job_t* job, backend_t* backend) {
 int main(int argc, char** args) {
 	int c;
 	char* configfn = "backend.cfg";
+	char* inputfn = NULL;
 	FILE* fconf;
 	int i;
 	backend_t backend;
@@ -539,6 +545,9 @@ int main(int argc, char** args) {
 			break;
 		case 'c':
 			configfn = optarg;
+			break;
+		case 'i':
+			inputfn = optarg;
 			break;
 		case '?':
 			break;
@@ -742,6 +751,20 @@ int main(int argc, char** args) {
 		printf("\n");
 		printf("Input file for blind:\n\n");
 		job_write_blind_input(job, stdout, &backend);
+
+		if (inputfn) {
+			FILE* f = fopen(inputfn, "a");
+			if (!f) {
+				fprintf(stderr, "Failed to open file \"%s\" to save the input sent to blind: %s.\n",
+						inputfn, strerror(errno));
+				exit(-1);
+			}
+			if (job_write_blind_input(job, f, &backend) ||
+				fclose(f)) {
+				fprintf(stderr, "Failed to save the blind input file to \"%s\": %s.\n", inputfn, strerror(errno));
+				exit(-1);
+			}
+		}
 
 		if (run_blind(job, &backend)) {
 			fprintf(stderr, "Failed to run_blind.\n");
