@@ -23,10 +23,22 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <assert.h>
 
 #include "ioutils.h"
 
-unsigned int ENDIAN_DETECTOR = 0x01020304;
+uint32_t ENDIAN_DETECTOR = 0x01020304;
+
+char* strdup_safe(const char* str) {
+	char* rtn;
+	if (!str) return NULL;
+	rtn = strdup(str);
+	if (!rtn) {
+		fprintf(stderr, "Failed to strdup: %s\n", strerror(errno));
+		assert(0);
+	}
+	return rtn;
+}
 
 static int oldsigbus_valid = 0;
 static struct sigaction oldsigbus;

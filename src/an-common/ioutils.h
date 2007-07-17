@@ -20,14 +20,17 @@
 #define IOUTILS_H
 
 #include <stdio.h>
+#include <stdint.h>
 
-extern unsigned int ENDIAN_DETECTOR;
+extern uint32_t ENDIAN_DETECTOR;
 
 /**
    If "cmdline" starts with "keyword", returns 1 and places the address of
    the start of the next word in "p_next_word".
  */
 int is_word(char* cmdline, char* keyword, char** p_next_word);
+
+char* strdup_safe(const char* str);
 
 void add_sigbus_mmap_warning();
 void reset_sigbus_mmap_warning();
