@@ -424,9 +424,9 @@ function process_data ($vals) {
 			loggit("  " . $method . ": " . $scale . "\n");
 		}
 		$uscales = array_unique(array_values($scaleguess));
-		// FIXME - merge overlapping scales...
 		foreach ($uscales as $s) {
-			array_push($tryscales, array($s * 0.95, $s * 1.05));
+			// Add 1% margin.
+			array_push($tryscales, array($s * 0.99, $s * 1.01));
 		}
 	}
 
@@ -586,6 +586,47 @@ function process_data ($vals) {
 	}
 
 	array_push($tryscales, array($fu_lower, $fu_upper));
+
+	// Merge overlapping scale estimates.
+	// first sort them by the lower bound.
+	foreach ($tryscales as $s) {
+		//loggit("Scale estimate: [" . $s[0] . ", " . $s[1] . "]\n");
+		$sorted["" . $s[0]] = $s[1];
+	}
+	ksort($sorted, SORT_NUMERIC);
+	//loggit("Sorted:\n");
+	foreach ($sorted as $lo => $hi) {
+		//loggit("Scale estimate: [" . $lo . ", " . $hi . "]\n");
+	}
+	$merged = array();
+	$sk = array_keys($sorted);
+	$sv = array_values($sorted);
+	for ($i=0; $i<count($sk);) {
+		$thislo = $sk[$i];
+		$thishi = $sv[$i];
+		//loggit("Range: " . $i . ": [" . $thislo . ", " . $thishi . "]\n");
+		for ($j=$i+1; $j<count($sorted); $j++) {
+			$nextlo = $sk[$j];
+			$nexthi = $sv[$j];
+			//loggit("Next Range (" . $j . "): [" . $nextlo . ", " . $nexthi . "]\n");
+			if ($nextlo <= $thishi) {
+				// Merge.
+				$thishi = $nexthi;
+				//loggit("Merged to produce: [" . $thislo . ", " . $thishi . "]\n");
+			} else {
+				//loggit("No overlap.\n");
+				break;
+			}
+		}
+		$i = $j;
+		//loggit("Adding range: [" . $thislo . ", " . $thishi . "]\n");
+		array_push($merged, array($thislo, $thishi));
+	}
+	loggit("Merged scales:\n");
+	foreach ($merged as $s) {
+		loggit("  [" . $s[0] . ", " . $s[1] . "]\n");
+	}
+	$tryscales = $merged;
 
 	$index = $vals['index'];
 
@@ -775,6 +816,13 @@ function process_data ($vals) {
 					160 => 180,
 					180 => 200);
 
+	
+	// If there's only one scale estimate, there's no need to do
+	// striping!
+	if (count($tryscales) == 1) {
+		$depths = array(0 => 200);
+	}
+
 	$stripenum = 1;
 
 	$str =
@@ -785,6 +833,8 @@ function process_data ($vals) {
 		foreach ($tryscales as $range) {
 			$fumin = $range[0];
 			$fumax = $range[1];
+
+			$str .= "indexes_inparallel\n";
 
 			foreach ($indexes as $ind) {
 				$str .= "index " . $indexdir . $ind . "\n";
