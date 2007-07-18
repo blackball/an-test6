@@ -796,6 +796,7 @@ int main(int argc, char *argv[])
 			sp->indexnum = 0;
 
 			// Read all the indices...
+			// FIXME avoid re-reading indicies!!!
 			for (I = 0; I < pl_size(bp->indexnames); I++) {
 				char* fname;
 				solver_index_params sips;
