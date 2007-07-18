@@ -241,7 +241,7 @@ static void set_cpu_limit(blind_params* bp, int seconds)
 			exit( -1);
 		}
 		sofar = ceil((float)(r.ru_utime.tv_sec + r.ru_stime.tv_sec) +
-		             (float)(1e-6 * r.ru_utime.tv_usec + r.ru_stime.tv_usec));
+		             (float)(1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec)));
 
 		if (getrlimit(RLIMIT_CPU, &rlim)) {
 			logerr(bp, "Failed to get CPU time limit: %s\n", strerror(errno));
