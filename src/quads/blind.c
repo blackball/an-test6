@@ -459,6 +459,113 @@ void init_parameters(blind_params* bp, solver_params* sp)
 	sp->indexes = bl_new(16, sizeof(solver_index_params));
 }
 
+int parameters_are_sane(blind_params* bp, solver_params* sp)
+{
+	if (bp->distractors == 0) {
+		logerr(bp, "You must set a \"distractors\" proportion.\n");
+		return 0;
+	}
+	if (!pl_size(bp->indexnames)) {
+		logerr(bp, "You must specify an index.\n");
+		return 0;
+	}
+	if (!bp->fieldfname) {
+		logerr(bp, "You must specify a field filename (xylist).\n");
+		return 0;
+	}
+	if (sp->codetol < 0.0) {
+		logerr(bp, "You must specify codetol > 0\n");
+		return 0;
+	}
+	if ((((bp->verify_pix > 0.0) ? 1 : 0) +
+		((bp->verify_dist2 > 0.0) ? 1 : 0)) != 1) {
+		logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
+		return 0;
+	}
+	if ((sp->funits_lower != 0.0) && (sp->funits_upper != 0.0) &&
+		(sp->funits_lower > sp->funits_upper)) {
+		logerr(bp, "fieldunits_lower MUST be less than fieldunits_upper.\n");
+		logerr(bp, "\n(in other words, the lower-bound of scale estimate must "
+		       "be less than the upper-bound!)\n\n");
+		return 0;
+	}
+	return 1;
+}
+
+int run_obsolete(blind_params* bp, solver_params* sp)
+{
+
+	// If we're just solving one field, check to see if it's already
+	// solved before doing a bunch of work and spewing tons of output.
+	if ((il_size(bp->fieldlist) == 1) && (sp->solved_in)) {
+		if (solvedfile_get(sp->solved_in, il_get(bp->fieldlist, 0))) {
+			logmsg(bp, "Field %i is already solved.\n", il_get(bp->fieldlist, 0));
+			return 1;
+		}
+	}
+	// Early check to see if this job was cancelled.
+	if (sp->cancelfname) {
+		if (file_exists(sp->cancelfname)) {
+			logmsg(bp, "Run cancelled.\n");
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+void log_run_parameters(blind_params* bp, solver_params* sp)
+{
+	logmsg(bp, "fields ");
+	int i;
+	for (i = 0; i < il_size(bp->fieldlist); i++)
+		logmsg(bp, "%i ", il_get(bp->fieldlist, i));
+	logmsg(bp, "\n");
+	logmsg(bp, "indexes:\n");
+	for (i = 0; i < pl_size(bp->indexnames); i++)
+		logmsg(bp, "  %s\n", (char*)pl_get(bp->indexnames, i));
+	logmsg(bp, "fieldfname %s\n", bp->fieldfname);
+	for (i = 0; i < pl_size(bp->verify_wcsfiles); i++)
+		logmsg(bp, "verify %s\n", (char*)pl_get(bp->verify_wcsfiles, i));
+	logmsg(bp, "fieldid %i\n", sp->fieldid);
+	logmsg(bp, "matchfname %s\n", bp->matchfname);
+	logmsg(bp, "startfname %s\n", bp->startfname);
+	logmsg(bp, "donefname %s\n", bp->donefname);
+	logmsg(bp, "donescript %s\n", bp->donescript);
+	logmsg(bp, "solved_in %s\n", sp->solved_in);
+	logmsg(bp, "solved_out %s\n", bp->solved_out);
+	logmsg(bp, "solvedserver %s\n", bp->solvedserver);
+	logmsg(bp, "cancel %s\n", sp->cancelfname);
+	logmsg(bp, "wcs %s\n", bp->wcs_template);
+	logmsg(bp, "fieldid_key %s\n", bp->fieldid_key);
+	logmsg(bp, "parity %i\n", sp->parity);
+	logmsg(bp, "codetol %g\n", sp->codetol);
+	logmsg(bp, "startdepth %i\n", sp->startobj);
+	logmsg(bp, "enddepth %i\n", sp->endobj);
+	logmsg(bp, "fieldunits_lower %g\n", sp->funits_lower);
+	logmsg(bp, "fieldunits_upper %g\n", sp->funits_upper);
+	logmsg(bp, "verify_dist %g\n", distsq2arcsec(bp->verify_dist2));
+	logmsg(bp, "verify_pix %g\n", bp->verify_pix);
+	logmsg(bp, "nindex_tokeep %i\n", bp->nindex_tokeep);
+	logmsg(bp, "nindex_tosolve %i\n", bp->nindex_tosolve);
+	logmsg(bp, "xcolname %s\n", bp->xcolname);
+	logmsg(bp, "ycolname %s\n", bp->ycolname);
+	logmsg(bp, "maxquads %i\n", sp->maxquads);
+	logmsg(bp, "maxmatches %i\n", sp->maxmatches);
+	logmsg(bp, "quiet %i\n", sp->quiet);
+	logmsg(bp, "verbose %i\n", bp->verbose);
+	logmsg(bp, "logfname %s\n", bp->logfname);
+	logmsg(bp, "cpulimit %i\n", bp->cpulimit);
+	logmsg(bp, "timelimit %i\n", bp->timelimit);
+	logmsg(bp, "total_timelimit %i\n", bp->total_timelimit);
+	logmsg(bp, "total_cpulimit %i\n", bp->total_cpulimit);
+	logmsg(bp, "tweak %s\n", bp->do_tweak ? "on" : "off");
+	if (bp->do_tweak) {
+		logmsg(bp, "tweak_aborder %i\n", bp->tweak_aborder);
+		logmsg(bp, "tweak_abporder %i\n", bp->tweak_abporder);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	char* progname = argv[0];
@@ -502,101 +609,18 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		if (bp->distractors == 0) {
-			logerr(bp, "You must set a \"distractors\" proportion.\n");
-			exit( -1);
-		}
-		if (!pl_size(bp->indexnames)) {
-			logerr(bp, "You must specify an index.\n");
-			exit( -1);
-		}
-		if (!bp->fieldfname) {
-			logerr(bp, "You must specify a field filename (xylist).\n");
-			exit( -1);
-		}
-		if (sp->codetol < 0.0) {
-			logerr(bp, "You must specify codetol > 0\n");
-			exit( -1);
-		}
-		if ((((bp->verify_pix > 0.0) ? 1 : 0) +
-		        ((bp->verify_dist2 > 0.0) ? 1 : 0)) != 1) {
-			logerr(bp, "You must specify either verify_pix or verify_dist2.\n");
-			exit( -1);
-		}
-		if ((sp->funits_lower != 0.0) && (sp->funits_upper != 0.0) &&
-		        (sp->funits_lower > sp->funits_upper)) {
-			logerr(bp, "fieldunits_lower MUST be less than fieldunits_upper.\n");
-			logerr(bp, "\n(in other words, the lower-bound of scale estimate must "
-			       "be less than the upper-bound!)\n\n");
-			exit( -1);
+		if (!parameters_are_sane(bp, sp)) {
+			exit(-1);
 		}
 
-		// If we're just solving one field, check to see if it's already
-		// solved before doing a bunch of work and spewing tons of output.
-		if ((il_size(bp->fieldlist) == 1) && (sp->solved_in)) {
-			if (solvedfile_get(sp->solved_in, il_get(bp->fieldlist, 0))) {
-				logmsg(bp, "Field %i is already solved.\n", il_get(bp->fieldlist, 0));
-				cleanup_parameters(bp, sp);
-				continue;
-			}
-		}
-		// Early check to see if this job was cancelled.
-		if (sp->cancelfname) {
-			if (file_exists(sp->cancelfname)) {
-				logmsg(bp, "Run cancelled.\n");
-				cleanup_parameters(bp, sp);
-				continue;
-			}
+		if (run_obsolete(bp, sp)) {
+			cleanup_parameters(bp, sp);
+			continue;
 		}
 
+		// Log this run's parameters
 		logmsg(bp, "%s params:\n", progname);
-		logmsg(bp, "fields ");
-		for (i = 0; i < il_size(bp->fieldlist); i++)
-			logmsg(bp, "%i ", il_get(bp->fieldlist, i));
-		logmsg(bp, "\n");
-		logmsg(bp, "indexes:\n");
-		for (i = 0; i < pl_size(bp->indexnames); i++)
-			logmsg(bp, "  %s\n", (char*)pl_get(bp->indexnames, i));
-		logmsg(bp, "fieldfname %s\n", bp->fieldfname);
-		for (i = 0; i < pl_size(bp->verify_wcsfiles); i++)
-			logmsg(bp, "verify %s\n", (char*)pl_get(bp->verify_wcsfiles, i));
-		logmsg(bp, "fieldid %i\n", sp->fieldid);
-		logmsg(bp, "matchfname %s\n", bp->matchfname);
-		logmsg(bp, "startfname %s\n", bp->startfname);
-		logmsg(bp, "donefname %s\n", bp->donefname);
-		logmsg(bp, "donescript %s\n", bp->donescript);
-		logmsg(bp, "solved_in %s\n", sp->solved_in);
-		logmsg(bp, "solved_out %s\n", bp->solved_out);
-		logmsg(bp, "solvedserver %s\n", bp->solvedserver);
-		logmsg(bp, "cancel %s\n", sp->cancelfname);
-		logmsg(bp, "wcs %s\n", bp->wcs_template);
-		logmsg(bp, "fieldid_key %s\n", bp->fieldid_key);
-		logmsg(bp, "parity %i\n", sp->parity);
-		logmsg(bp, "codetol %g\n", sp->codetol);
-		logmsg(bp, "startdepth %i\n", sp->startobj);
-		logmsg(bp, "enddepth %i\n", sp->endobj);
-		logmsg(bp, "fieldunits_lower %g\n", sp->funits_lower);
-		logmsg(bp, "fieldunits_upper %g\n", sp->funits_upper);
-		logmsg(bp, "verify_dist %g\n", distsq2arcsec(bp->verify_dist2));
-		logmsg(bp, "verify_pix %g\n", bp->verify_pix);
-		logmsg(bp, "nindex_tokeep %i\n", bp->nindex_tokeep);
-		logmsg(bp, "nindex_tosolve %i\n", bp->nindex_tosolve);
-		logmsg(bp, "xcolname %s\n", bp->xcolname);
-		logmsg(bp, "ycolname %s\n", bp->ycolname);
-		logmsg(bp, "maxquads %i\n", sp->maxquads);
-		logmsg(bp, "maxmatches %i\n", sp->maxmatches);
-		logmsg(bp, "quiet %i\n", sp->quiet);
-		logmsg(bp, "verbose %i\n", bp->verbose);
-		logmsg(bp, "logfname %s\n", bp->logfname);
-		logmsg(bp, "cpulimit %i\n", bp->cpulimit);
-		logmsg(bp, "timelimit %i\n", bp->timelimit);
-		logmsg(bp, "total_timelimit %i\n", bp->total_timelimit);
-		logmsg(bp, "total_cpulimit %i\n", bp->total_cpulimit);
-		logmsg(bp, "tweak %s\n", bp->do_tweak ? "on" : "off");
-		if (bp->do_tweak) {
-			logmsg(bp, "tweak_aborder %i\n", bp->tweak_aborder);
-			logmsg(bp, "tweak_abporder %i\n", bp->tweak_abporder);
-		}
+		log_run_parameters(bp, sp);
 
 		// Contact the solvedserver, if required.
 		if (bp->solvedserver) {
