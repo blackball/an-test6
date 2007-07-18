@@ -1,19 +1,19 @@
 /*
-  This file is part of the Astrometry.net suite.
-  Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+ This file is part of the Astrometry.net suite.
+ Copyright 2006, 2007 Dustin Lang, Keir Mierle and Sam Roweis.
 
-  The Astrometry.net suite is free software; you can redistribute
-  it and/or modify it under the terms of the GNU General Public License
-  as published by the Free Software Foundation, version 2.
+ The Astrometry.net suite is free software; you can redistribute
+ it and/or modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation, version 2.
 
-  The Astrometry.net suite is distributed in the hope that it will be
-  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+ The Astrometry.net suite is distributed in the hope that it will be
+ useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with the Astrometry.net suite ; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ You should have received a copy of the GNU General Public License
+ along with the Astrometry.net suite ; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
 #include <stdio.h>
@@ -47,83 +47,93 @@
 
 #if DEBUGSOLVER == 1
 static void
-ATTRIB_FORMAT(printf,1,2)
-     debug(const char* format, ...) {
-    va_list va;
-    va_start(va, format);
-    vfprintf(stderr, format, va);
-    va_end(va);
+ATTRIB_FORMAT(printf, 1, 2)
+debug(const char* format, ...)
+{
+	va_list va;
+	va_start(va, format);
+	vfprintf(stderr, format, va);
+	va_end(va);
 }
 #else
-static void debug(const char* format, ...) {}
+static void debug(const char* format, ...)
+{}
 #endif
 
-static inline double getx(const double* d, uint ind) {
-    return d[ind*2];
+static inline double getx(const double* d, uint ind)
+{
+	return d[ind*2];
 }
-static inline double gety(const double* d, uint ind) {
-    return d[ind*2 + 1];
+static inline double gety(const double* d, uint ind)
+{
+	return d[ind*2 + 1];
 }
-static inline void setx(double* d, uint ind, double val) {
-    d[ind*2] = val;
+static inline void setx(double* d, uint ind, double val)
+{
+	d[ind*2] = val;
 }
-static inline void sety(double* d, uint ind, double val) {
-    d[ind*2 + 1] = val;
-}
-
-void solver_default_index_params(solver_index_params* sips) {
-    memset(sips, 0, sizeof(solver_index_params));
-    sips->maxAB = HUGE_VAL;
-    sips->healpix = -1;
+static inline void sety(double* d, uint ind, double val)
+{
+	d[ind*2 + 1] = val;
 }
 
-void solver_default_params(solver_params* params) {
-    memset(params, 0, sizeof(solver_params));
-    params->funits_upper = HUGE_VAL;
+void solver_default_index_params(solver_index_params* sips)
+{
+	memset(sips, 0, sizeof(solver_index_params));
+	sips->maxAB = HUGE_VAL;
+	sips->healpix = -1;
 }
 
-void solver_compute_quad_range(solver_params* sp, solver_index_params* sips) {
-    double scalefudge = 0.0; // in pixels
-
-    if (sp->funits_upper != 0.0) {
-        sips->minAB = sips->index_scale_lower / sp->funits_upper;
-
-        // compute fudge factor for quad scale: what are the extreme
-        // ranges of quad scales that should be accepted, given the
-        // code tolerance?
-
-        // -what is the maximum number of pixels a C or D star can move
-        //  to singlehandedly exceed the code tolerance?
-        // -largest quad
-        // -smallest arcsec-per-pixel scale
-
-        // -index_scale_upper * 1/sqrt(2) is the side length of
-        //  the unit-square of code space, in arcseconds.
-        // -that times the code tolerance is how far a C/D star
-        //  can move before exceeding the code tolerance, in arcsec.
-        // -that divided by the smallest arcsec-per-pixel scale
-        //  gives the largest motion in pixels.
-        scalefudge = sips->index_scale_upper * M_SQRT1_2 *
-            sp->codetol / sp->funits_upper;
-        sips->minAB -= scalefudge;
-        //logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
-        //logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
-    }
-    if (sp->funits_lower != 0.0) {
-        sips->maxAB = sips->index_scale_upper / sp->funits_lower;
-        sips->maxAB += scalefudge;
-        //logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
-    }
+void solver_default_params(solver_params* params)
+{
+	memset(params, 0, sizeof(solver_params));
+	params->funits_upper = HUGE_VAL;
 }
 
-struct potential_quad {
-    bool scale_ok;
-    int iA, iB;
-    double scale;
-    double costheta, sintheta;
-    bool* inbox;
-    int ninbox;
-    double* xy;
+void solver_compute_quad_range(solver_params* sp, solver_index_params* sips)
+{
+	double scalefudge = 0.0; // in pixels
+
+	if (sp->funits_upper != 0.0) {
+		sips->minAB = sips->index_scale_lower / sp->funits_upper;
+
+		// compute fudge factor for quad scale: what are the extreme
+		// ranges of quad scales that should be accepted, given the
+		// code tolerance?
+
+		// -what is the maximum number of pixels a C or D star can move
+		//  to singlehandedly exceed the code tolerance?
+		// -largest quad
+		// -smallest arcsec-per-pixel scale
+
+		// -index_scale_upper * 1/sqrt(2) is the side length of
+		//  the unit-square of code space, in arcseconds.
+		// -that times the code tolerance is how far a C/D star
+		//  can move before exceeding the code tolerance, in arcsec.
+		// -that divided by the smallest arcsec-per-pixel scale
+		//  gives the largest motion in pixels.
+		scalefudge = sips->index_scale_upper * M_SQRT1_2 *
+		             sp->codetol / sp->funits_upper;
+		sips->minAB -= scalefudge;
+		//logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
+		//logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
+	}
+	if (sp->funits_lower != 0.0) {
+		sips->maxAB = sips->index_scale_upper / sp->funits_lower;
+		sips->maxAB += scalefudge;
+		//logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
+	}
+}
+
+struct potential_quad
+{
+	bool scale_ok;
+	int iA, iB;
+	double scale;
+	double costheta, sintheta;
+	bool* inbox;
+	int ninbox;
+	double* xy;
 };
 typedef struct potential_quad pquad;
 
@@ -140,43 +150,46 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
                             uint fA, uint fB, uint fC, uint fD,
                             solver_params* params, bool current_parity);
 
-static void check_scale(pquad* pq, solver_params* params) {
-    double Ax, Ay, Bx, By, dx, dy;
-    Ax = getx(params->field, pq->iA);
-    Ay = gety(params->field, pq->iA);
-    Bx = getx(params->field, pq->iB);
-    By = gety(params->field, pq->iB);
-    dx = Bx - Ax;
-    dy = By - Ay;
-    pq->scale = dx*dx + dy*dy;
-    if ((pq->scale < square(params->minminAB)) ||
-        (pq->scale > square(params->maxmaxAB))) {
-        pq->scale_ok = FALSE;
-        return;
-    }
-    pq->costheta = (dy + dx) / pq->scale;
-    pq->sintheta = (dy - dx) / pq->scale;
-    pq->scale_ok = TRUE;
+static void check_scale(pquad* pq, solver_params* params)
+{
+	double Ax, Ay, Bx, By, dx, dy;
+	Ax = getx(params->field, pq->iA);
+	Ay = gety(params->field, pq->iA);
+	Bx = getx(params->field, pq->iB);
+	By = gety(params->field, pq->iB);
+	dx = Bx - Ax;
+	dy = By - Ay;
+	pq->scale = dx * dx + dy * dy;
+	if ((pq->scale < square(params->minminAB)) ||
+	        (pq->scale > square(params->maxmaxAB))) {
+		pq->scale_ok = FALSE;
+		return ;
+	}
+	pq->costheta = (dy + dx) / pq->scale;
+	pq->sintheta = (dy - dx) / pq->scale;
+	pq->scale_ok = TRUE;
 }
 
-static void check_inbox(pquad* pq, int start, solver_params* params) {
-    int i;
-    double Ax, Ay;
-    Ax = getx(params->field, pq->iA);
-    Ay = gety(params->field, pq->iA);
-    // check which C, D points are inside the circle.
-    for (i=start; i<pq->ninbox; i++) {
+static void check_inbox(pquad* pq, int start, solver_params* params)
+{
+	int i;
+	double Ax, Ay;
+	Ax = getx(params->field, pq->iA);
+	Ay = gety(params->field, pq->iA);
+	// check which C, D points are inside the circle.
+	for (i = start; i < pq->ninbox; i++) {
 		double r;
-        double Cx, Cy, xxtmp;
-        double tol = params->codetol;
-        if (!pq->inbox[i]) continue;
-        Cx = getx(params->field, i);
-        Cy = gety(params->field, i);
-        Cx -= Ax;
-        Cy -= Ay;
-        xxtmp = Cx;
-        Cx =     Cx * pq->costheta + Cy * pq->sintheta;
-        Cy = -xxtmp * pq->sintheta + Cy * pq->costheta;
+		double Cx, Cy, xxtmp;
+		double tol = params->codetol;
+		if (!pq->inbox[i])
+			continue;
+		Cx = getx(params->field, i);
+		Cy = gety(params->field, i);
+		Cx -= Ax;
+		Cy -= Ay;
+		xxtmp = Cx;
+		Cx = Cx * pq->costheta + Cy * pq->sintheta;
+		Cy = -xxtmp * pq->sintheta + Cy * pq->costheta;
 
 		// make sure it's in the circle centered at (0.5, 0.5)
 		// with radius 1/sqrt(2) (plus codetol for fudge):
@@ -184,206 +197,209 @@ static void check_inbox(pquad* pq, int start, solver_params* params) {
 		// x^2-x+1/4 + y^2-y+1/4   <=   (1/sqrt(2) + codetol)^2
 		// x^2-x + y^2-y + 1/2     <=   1/2 + sqrt(2)*codetol + codetol^2
 		// x^2-x + y^2-y           <=   sqrt(2)*codetol + codetol^2
-		r = (Cx*Cx - Cx) + (Cy*Cy - Cy);
+		r = (Cx * Cx - Cx) + (Cy * Cy - Cy);
 		if (r > (tol * (M_SQRT2 + tol))) {
 			pq->inbox[i] = FALSE;
 			continue;
 		}
-        setx(pq->xy, i, Cx);
-        sety(pq->xy, i, Cy);
-    }
+		setx(pq->xy, i, Cx);
+		sety(pq->xy, i, Cy);
+	}
 }
 
 #if defined DEBUGSOLVER
-static void print_inbox(pquad* pq) {
-    int i;
-    debug("[ ");
-    for (i=0; i<pq->ninbox; i++) {
-        if (pq->inbox[i])
-            debug("%i ", i);
-    }
-    debug("] (n %i)\n", pq->ninbox);
+static void print_inbox(pquad* pq)
+{
+	int i;
+	debug("[ ");
+	for (i = 0; i < pq->ninbox; i++) {
+		if (pq->inbox[i])
+			debug("%i ", i);
+	}
+	debug("] (n %i)\n", pq->ninbox);
 }
 #else
-static void print_inbox(pquad* pq) {}
+static void print_inbox(pquad* pq)
+{}
 #endif
 
-void solve_field(solver_params* params) {
-    uint numxy, iA, iB, iC, iD, newpoint;
-    int i;
-    double usertime, systime;
-    time_t lastcheck_ss;
-    time_t lastcheck_sf;
-    time_t lastcheck_cf;
-    pquad* pquads;
+void solve_field(solver_params* params)
+{
+	uint numxy, iA, iB, iC, iD, newpoint;
+	int i;
+	double usertime, systime;
+	time_t lastcheck_ss;
+	time_t lastcheck_sf;
+	time_t lastcheck_cf;
+	pquad* pquads;
 
-    get_resource_stats(&usertime, &systime, NULL);
-    params->starttime = usertime + systime;
-    lastcheck_ss = lastcheck_sf = time(NULL);
-    lastcheck_cf = 0;
+	get_resource_stats(&usertime, &systime, NULL);
+	params->starttime = usertime + systime;
+	lastcheck_ss = lastcheck_sf = time(NULL);
+	lastcheck_cf = 0;
 
-    numxy = params->nfield;
-    if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
-        return;
-    if (params->endobj && (numxy > params->endobj))
-        numxy = params->endobj;
+	numxy = params->nfield;
+	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
+		return ;
+	if (params->endobj && (numxy > params->endobj))
+		numxy = params->endobj;
 
-    if (params->startobj >= numxy)
-        return;
+	if (params->startobj >= numxy)
+		return ;
 
-    params->minminAB =  HUGE_VAL;
-    params->maxmaxAB = -HUGE_VAL;
-    for (i=0; i<bl_size(params->indexes); i++) {
-        solver_index_params* sips = bl_access(params->indexes, i);
-        params->minminAB = MIN(params->minminAB, sips->minAB);
-        params->maxmaxAB = MAX(params->maxmaxAB, sips->maxAB);
-    }
-    fprintf(stderr, "extreme scale range: [%g, %g]\n", params->minminAB, params->maxmaxAB);
+	params->minminAB = HUGE_VAL;
+	params->maxmaxAB = -HUGE_VAL;
+	for (i = 0; i < bl_size(params->indexes); i++) {
+		solver_index_params* sips = bl_access(params->indexes, i);
+		params->minminAB = MIN(params->minminAB, sips->minAB);
+		params->maxmaxAB = MAX(params->maxmaxAB, sips->maxAB);
+	}
+	fprintf(stderr, "extreme scale range: [%g, %g]\n", params->minminAB, params->maxmaxAB);
 
-    pquads = calloc(numxy * numxy, sizeof(pquad));
+	pquads = calloc(numxy * numxy, sizeof(pquad));
 
-    /*
-      We maintain an array of "potential quads" (pquad) structs, where each
-      struct corresponds to one choice of stars A and B; the struct at
-      index (B * numxy + A) hold information about quads that could be created
-      using stars A,B.
+	/*
+	  We maintain an array of "potential quads" (pquad) structs, where each
+	  struct corresponds to one choice of stars A and B; the struct at
+	  index (B * numxy + A) hold information about quads that could be created
+	  using stars A,B.
 
-      (We only use the above-diagonal elements of this 2D array because A<B.)
+	  (We only use the above-diagonal elements of this 2D array because A<B.)
 
-      For each AB pair, we cache the scale and the rotation parameters,
-      and we keep an array "inbox" of length "numxy" of booleans, that say
-      whether that star is eligible to be star C or D of a quad with AB at
-      the corners.  (Obviously A and B can't).
+	  For each AB pair, we cache the scale and the rotation parameters,
+	  and we keep an array "inbox" of length "numxy" of booleans, that say
+	  whether that star is eligible to be star C or D of a quad with AB at
+	  the corners.  (Obviously A and B can't).
 
-      The "ninbox" parameter is somewhat misnamed - it says that "inbox"
-      in the range [0, ninbox) have been initialized.
-    */
+	  The "ninbox" parameter is somewhat misnamed - it says that "inbox"
+	  in the range [0, ninbox) have been initialized.
+	*/
 
-    /* (See explanatory paragraph below)
-       If "params->startobj" isn't zero, then we need to initialize the triangle
-       of "pquads" up to A=startobj-2,B=startobj-1.
-    */
-    if (params->startobj) {
-        debug("startobj > 0; priming pquad arrays.\n");
-        for (iB=0; iB<params->startobj; iB++) {
-            for (iA=0; iA<iB; iA++) {
-                pquad* pq = pquads + iB * numxy + iA;
-                pq->iA = iA;
-                pq->iB = iB;
-                debug("trying A=%i, B=%i\n", iA, iB);
-                check_scale(pq, params);
-                if (!pq->scale_ok) {
-                    debug("  bad scale for A=%i, B=%i\n", iA, iB);
-                    continue;
-                }
-                pq->xy    = malloc(numxy * 2 * sizeof(double));
-                pq->inbox = malloc(numxy * sizeof(bool));
-                memset(pq->inbox, TRUE, params->startobj);
-                pq->ninbox = params->startobj;
-                pq->inbox[iA] = FALSE;
-                pq->inbox[iB] = FALSE;
-                check_inbox(pq, 0, params);
-                debug("  inbox(A=%i, B=%i): ", iA, iB);
-                print_inbox(pq);
-            }
-        }
-    }
+	/* (See explanatory paragraph below)
+	   If "params->startobj" isn't zero, then we need to initialize the triangle
+	   of "pquads" up to A=startobj-2,B=startobj-1.
+	*/
+	if (params->startobj) {
+		debug("startobj > 0; priming pquad arrays.\n");
+		for (iB = 0; iB < params->startobj; iB++) {
+			for (iA = 0; iA < iB; iA++) {
+				pquad* pq = pquads + iB * numxy + iA;
+				pq->iA = iA;
+				pq->iB = iB;
+				debug("trying A=%i, B=%i\n", iA, iB);
+				check_scale(pq, params);
+				if (!pq->scale_ok) {
+					debug("  bad scale for A=%i, B=%i\n", iA, iB);
+					continue;
+				}
+				pq->xy = malloc(numxy * 2 * sizeof(double));
+				pq->inbox = malloc(numxy * sizeof(bool));
+				memset(pq->inbox, TRUE, params->startobj);
+				pq->ninbox = params->startobj;
+				pq->inbox[iA] = FALSE;
+				pq->inbox[iB] = FALSE;
+				check_inbox(pq, 0, params);
+				debug("  inbox(A=%i, B=%i): ", iA, iB);
+				print_inbox(pq);
+			}
+		}
+	}
 
-    /*
-      Each time through the "for" loop below, we consider a new
-      star ("newpoint").  First, we try building all quads that
-      have the new star on the diagonal (star B).  Then, we try
-      building all quads that have the star not on the diagonal
-      (star D).
+	/*
+	  Each time through the "for" loop below, we consider a new
+	  star ("newpoint").  First, we try building all quads that
+	  have the new star on the diagonal (star B).  Then, we try
+	  building all quads that have the star not on the diagonal
+	  (star D).
 
-      For each AB pair, we have a "potential_quad" or "pquad" struct.
-      This caches the computation we need to do: deciding whether the
-      scale is acceptable, computing the transformation to code
-      coordinates, and deciding which C,D stars are in the circle.
+	  For each AB pair, we have a "potential_quad" or "pquad" struct.
+	  This caches the computation we need to do: deciding whether the
+	  scale is acceptable, computing the transformation to code
+	  coordinates, and deciding which C,D stars are in the circle.
 
-      We keep the invariants that iA < iB and iC < iD.
-      The A<->B and C<->D permutations will be tried in try_all_codes.
-    */
+	  We keep the invariants that iA < iB and iC < iD.
+	  The A<->B and C<->D permutations will be tried in try_all_codes.
+	*/
 
-    for (newpoint=params->startobj; newpoint<numxy; newpoint++) {
-        double ABCDpix[8];
+	for (newpoint = params->startobj; newpoint < numxy; newpoint++) {
+		double ABCDpix[8];
 
-        debug("Trying newpoint=%i\n", newpoint);
+		debug("Trying newpoint=%i\n", newpoint);
 
-        if ((params->solved_in) ||
-            (params->do_solvedserver) ||
-            (params->cancelfname)) {
-            // check if the field has already been solved...
-            time_t t;
-            t = time(NULL);
+		if ((params->solved_in) ||
+		        (params->do_solvedserver) ||
+		        (params->cancelfname)) {
+			// check if the field has already been solved...
+			time_t t;
+			t = time(NULL);
 
-            if (params->solved_in && ((t - lastcheck_sf) > 5)) {
-                if (solvedfile_get(params->solved_in, params->fieldnum)) {
-                    fprintf(stderr, "  field %u: file \"%s\" indicates that the field has been solved.\n",
-                            params->fieldnum, params->solved_in);
-                    break;
-                }
-                lastcheck_sf = t;
-            }
-            if (params->do_solvedserver && ((t - lastcheck_ss) > 10)) {
-                if (solvedclient_get(params->fieldid, params->fieldnum)) {
-                    fprintf(stderr, "  field %u: field solved; aborting.\n", params->fieldnum);
-                    break;
-                }
-                lastcheck_ss = t;
-            }
-            if (params->cancelfname && ((t - lastcheck_cf) > 3)) {
-                if (file_exists(params->cancelfname)) {
-                    params->cancelled = TRUE;
-                    params->quitNow = TRUE;
-                    fprintf(stderr, "File \"%s\" exists: cancelling.\n", params->cancelfname);
-                    break;
-                }
-                lastcheck_cf = t;
-            }
-        }
+			if (params->solved_in && ((t - lastcheck_sf) > 5)) {
+				if (solvedfile_get(params->solved_in, params->fieldnum)) {
+					fprintf(stderr, "  field %u: file \"%s\" indicates that the field has been solved.\n",
+					        params->fieldnum, params->solved_in);
+					break;
+				}
+				lastcheck_sf = t;
+			}
+			if (params->do_solvedserver && ((t - lastcheck_ss) > 10)) {
+				if (solvedclient_get(params->fieldid, params->fieldnum)) {
+					fprintf(stderr, "  field %u: field solved; aborting.\n", params->fieldnum);
+					break;
+				}
+				lastcheck_ss = t;
+			}
+			if (params->cancelfname && ((t - lastcheck_cf) > 3)) {
+				if (file_exists(params->cancelfname)) {
+					params->cancelled = TRUE;
+					params->quitNow = TRUE;
+					fprintf(stderr, "File \"%s\" exists: cancelling.\n", params->cancelfname);
+					break;
+				}
+				lastcheck_cf = t;
+			}
+		}
 
-        params->objsused = newpoint;
-        // quads with the new star on the diagonal:
-        iB = newpoint;
-        setx(ABCDpix, 1, getx(params->field, iB));
-        sety(ABCDpix, 1, gety(params->field, iB));
-        debug("Trying quads with B=%i\n", newpoint);
-        for (iA=0; iA<newpoint; iA++) {
-            // initialize the "pquad" struct for this AB combo.
-            pquad* pq = pquads + iB * numxy + iA;
-            pq->iA = iA;
-            pq->iB = iB;
-            debug("  trying A=%i, B=%i\n", iA, iB);
-            check_scale(pq, params);
-            if (!pq->scale_ok) {
-                debug("    bad scale for A=%i, B=%i\n", iA, iB);
-                continue;
-            }
-            // initialize the "inbox" array:
-            pq->inbox = malloc(numxy * sizeof(bool));
-            pq->xy    = malloc(numxy * 2 * sizeof(double));
-            // -try all stars up to "newpoint"...
-            memset(pq->inbox, TRUE, newpoint+1);
-            pq->ninbox = newpoint+1;
-            // -except A and B.
-            pq->inbox[iA] = FALSE;
-            pq->inbox[iB] = FALSE;
-            check_inbox(pq, 0, params);
-            debug("    inbox(A=%i, B=%i): ", iA, iB);
-            print_inbox(pq);
+		params->objsused = newpoint;
+		// quads with the new star on the diagonal:
+		iB = newpoint;
+		setx(ABCDpix, 1, getx(params->field, iB));
+		sety(ABCDpix, 1, gety(params->field, iB));
+		debug("Trying quads with B=%i\n", newpoint);
+		for (iA = 0; iA < newpoint; iA++) {
+			// initialize the "pquad" struct for this AB combo.
+			pquad* pq = pquads + iB * numxy + iA;
+			pq->iA = iA;
+			pq->iB = iB;
+			debug("  trying A=%i, B=%i\n", iA, iB);
+			check_scale(pq, params);
+			if (!pq->scale_ok) {
+				debug("    bad scale for A=%i, B=%i\n", iA, iB);
+				continue;
+			}
+			// initialize the "inbox" array:
+			pq->inbox = malloc(numxy * sizeof(bool));
+			pq->xy = malloc(numxy * 2 * sizeof(double));
+			// -try all stars up to "newpoint"...
+			memset(pq->inbox, TRUE, newpoint + 1);
+			pq->ninbox = newpoint + 1;
+			// -except A and B.
+			pq->inbox[iA] = FALSE;
+			pq->inbox[iB] = FALSE;
+			check_inbox(pq, 0, params);
+			debug("    inbox(A=%i, B=%i): ", iA, iB);
+			print_inbox(pq);
 
-            setx(ABCDpix, 0, getx(params->field, iA));
-            sety(ABCDpix, 0, gety(params->field, iA));
+			setx(ABCDpix, 0, getx(params->field, iA));
+			sety(ABCDpix, 0, gety(params->field, iA));
 
-			for (i=0; i<bl_size(params->indexes); i++) {
+			for (i = 0; i < bl_size(params->indexes); i++) {
 				solver_index_params* sips = bl_access(params->indexes, i);
 				if ((pq->scale < square(sips->minAB)) ||
-					(pq->scale > square(sips->maxAB)))
+				        (pq->scale > square(sips->maxAB)))
 					continue;
 				params->sips = sips;
 
-				for (iC=0; iC<newpoint; iC++) {
+				for (iC = 0; iC < newpoint; iC++) {
 					double cx, cy, dx, dy;
 					if (!pq->inbox[iC])
 						continue;
@@ -391,7 +407,7 @@ void solve_field(solver_params* params) {
 					sety(ABCDpix, 2, gety(params->field, iC));
 					cx = getx(pq->xy, iC);
 					cy = gety(pq->xy, iC);
-					for (iD=iC+1; iD<newpoint; iD++) {
+					for (iD = iC + 1; iD < newpoint; iD++) {
 						if (!pq->inbox[iD])
 							continue;
 						setx(ABCDpix, 3, getx(params->field, iD));
@@ -410,47 +426,47 @@ void solve_field(solver_params* params) {
 			}
 		}
 
-        if (params->quitNow)
-            break;
+		if (params->quitNow)
+			break;
 
-        // quads with the new star not on the diagonal:
-        iD = newpoint;
-        setx(ABCDpix, 3, getx(params->field, iD));
-        sety(ABCDpix, 3, gety(params->field, iD));
-        debug("Trying quads with D=%i\n", newpoint);
-        for (iA=0; iA<newpoint; iA++) {
-            for (iB=iA+1; iB<newpoint; iB++) {
-                double cx, cy, dx, dy;
-                // grab the "pquad" for this AB combo
-                pquad* pq = pquads + iB * numxy + iA;
-                if (!pq->scale_ok) {
-                    debug("  bad scale for A=%i, B=%i\n", iA, iB);
-                    continue;
-                }
-                // test if this D is in the box:
-                pq->inbox[iD] = TRUE;
-                pq->ninbox = iD + 1;
-                check_inbox(pq, iD, params);
-                if (!pq->inbox[iD]) {
-                    debug("  D is not in the box for A=%i, B=%i\n", iA, iB);
-                    continue;
-                }
-                debug("  D is in the box for A=%i, B=%i\n", iA, iB);
-                setx(ABCDpix, 0, getx(params->field, iA));
-                sety(ABCDpix, 0, gety(params->field, iA));
-                setx(ABCDpix, 1, getx(params->field, iB));
-                sety(ABCDpix, 1, gety(params->field, iB));
-                dx = getx(pq->xy, iD);
-                dy = gety(pq->xy, iD);
+		// quads with the new star not on the diagonal:
+		iD = newpoint;
+		setx(ABCDpix, 3, getx(params->field, iD));
+		sety(ABCDpix, 3, gety(params->field, iD));
+		debug("Trying quads with D=%i\n", newpoint);
+		for (iA = 0; iA < newpoint; iA++) {
+			for (iB = iA + 1; iB < newpoint; iB++) {
+				double cx, cy, dx, dy;
+				// grab the "pquad" for this AB combo
+				pquad* pq = pquads + iB * numxy + iA;
+				if (!pq->scale_ok) {
+					debug("  bad scale for A=%i, B=%i\n", iA, iB);
+					continue;
+				}
+				// test if this D is in the box:
+				pq->inbox[iD] = TRUE;
+				pq->ninbox = iD + 1;
+				check_inbox(pq, iD, params);
+				if (!pq->inbox[iD]) {
+					debug("  D is not in the box for A=%i, B=%i\n", iA, iB);
+					continue;
+				}
+				debug("  D is in the box for A=%i, B=%i\n", iA, iB);
+				setx(ABCDpix, 0, getx(params->field, iA));
+				sety(ABCDpix, 0, gety(params->field, iA));
+				setx(ABCDpix, 1, getx(params->field, iB));
+				sety(ABCDpix, 1, gety(params->field, iB));
+				dx = getx(pq->xy, iD);
+				dy = gety(pq->xy, iD);
 
-				for (i=0; i<bl_size(params->indexes); i++) {
+				for (i = 0; i < bl_size(params->indexes); i++) {
 					solver_index_params* sips = bl_access(params->indexes, i);
 					if ((pq->scale < square(sips->minAB)) ||
-						(pq->scale > square(sips->maxAB)))
+					        (pq->scale > square(sips->maxAB)))
 						continue;
 					params->sips = sips;
 
-					for (iC=0; iC<newpoint; iC++) {
+					for (iC = 0; iC < newpoint; iC++) {
 						if (!pq->inbox[iC])
 							continue;
 						setx(ABCDpix, 2, getx(params->field, iC));
@@ -466,50 +482,52 @@ void solve_field(solver_params* params) {
 					if (params->quitNow)
 						break;
 				}
-            }
-        }
+			}
+		}
 
-        if (!params->quiet) {
-            if (params->nindexes > 1)
-                fprintf(stderr, "index %i of %i, ", params->indexnum + 1, params->nindexes);
-            if (params->nfields > 1)
-                fprintf(stderr, "field %u, ", params->fieldnum);
-            fprintf(stderr,
-                    "object %u of %u: %i quads tried, %i matched.\n",
-                    newpoint+1, numxy, params->numtries, params->nummatches);
-        }
+		if (!params->quiet) {
+			if (params->nindexes > 1)
+				fprintf(stderr, "index %i of %i, ", params->indexnum + 1, params->nindexes);
+			if (params->nfields > 1)
+				fprintf(stderr, "field %u, ", params->fieldnum);
+			fprintf(stderr,
+			        "object %u of %u: %i quads tried, %i matched.\n",
+			        newpoint + 1, numxy, params->numtries, params->nummatches);
+		}
 
-        if ((params->maxquads   && (params->numtries   >= params->maxquads)) ||
-            (params->maxmatches && (params->nummatches >= params->maxmatches)) ||
-            params->quitNow)
-            break;
-    }
+		if ((params->maxquads && (params->numtries >= params->maxquads)) ||
+		        (params->maxmatches && (params->nummatches >= params->maxmatches)) ||
+		        params->quitNow)
+			break;
+	}
 
-    for (i=0; i<(numxy*numxy); i++) {
-        pquad* pq = pquads + i;
-        free(pq->inbox);
-        free(pq->xy);
-    }
-    free(pquads);
+	for (i = 0; i < (numxy*numxy); i++) {
+		pquad* pq = pquads + i;
+		free(pq->inbox);
+		free(pq->xy);
+	}
+	free(pquads);
 }
 
-static inline void set_xy(double* dest, int destind, double* src, int srcind) {
-    setx(dest, destind, getx(src, srcind));
-    sety(dest, destind, gety(src, srcind));
+static inline void set_xy(double* dest, int destind, double* src, int srcind)
+{
+	setx(dest, destind, getx(src, srcind));
+	sety(dest, destind, gety(src, srcind));
 }
 
 static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
                           uint iA, uint iB, uint iC, uint iD,
-                          double *ABCDpix, solver_params* params) {
-    debug("    code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
+                          double *ABCDpix, solver_params* params)
+{
+	debug("    code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
 
 	if (params->parity == PARITY_NORMAL ||
-		params->parity == PARITY_BOTH) {
+	        params->parity == PARITY_BOTH) {
 		debug("    trying normal parity: code=[%g,%g,%g,%g].\n", Cx, Cy, Dx, Dy);
 		try_all_codes_2(Cx, Cy, Dx, Dy, iA, iB, iC, iD, ABCDpix, params, FALSE);
 	}
 	if (params->parity == PARITY_FLIP ||
-		params->parity == PARITY_BOTH) {
+	        params->parity == PARITY_BOTH) {
 		debug("    trying reverse parity: code=[%g,%g,%g,%g].\n", Cy, Cx, Dy, Dx);
 		try_all_codes_2(Cy, Cx, Dy, Dx, iA, iB, iC, iD, ABCDpix, params, TRUE);
 	}
@@ -518,145 +536,147 @@ static void try_all_codes(pquad* pq, double Cx, double Cy, double Dx, double Dy,
 static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
                             uint iA, uint iB, uint iC, uint iD,
                             double *ABCDpix, solver_params* params,
-                            bool current_parity) {
+                            bool current_parity)
+{
 
-    double thequery[4];
-    kdtree_qres_t* result = NULL;
-    double tol = square(params->codetol);
-    double inorder[8];
-    int A=0, B=1, C=2, D=3;
-    double usertime, systime;
-    int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
-        KD_OPTIONS_NO_RESIZE_RESULTS;
+	double thequery[4];
+	kdtree_qres_t* result = NULL;
+	double tol = square(params->codetol);
+	double inorder[8];
+	int A = 0, B = 1, C = 2, D = 3;
+	double usertime, systime;
+	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
+	              KD_OPTIONS_NO_RESIZE_RESULTS;
 
-    get_resource_stats(&usertime, &systime, NULL);
-    params->timeused = (usertime + systime) - params->starttime;
-    if (params->timeused < 0.0)
-        params->timeused = 0.0;
+	get_resource_stats(&usertime, &systime, NULL);
+	params->timeused = (usertime + systime) - params->starttime;
+	if (params->timeused < 0.0)
+		params->timeused = 0.0;
 
-    // ABCD
-    thequery[0] = Cx;
-    thequery[1] = Cy;
-    thequery[2] = Dx;
-    thequery[3] = Dy;
+	// ABCD
+	thequery[0] = Cx;
+	thequery[1] = Cy;
+	thequery[2] = Dx;
+	thequery[3] = Dy;
 
-    if ((params->sips->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
+	if ((params->sips->cxdx_margin == 0.0) ||
+	        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
-        set_xy(inorder, 0, ABCDpix, A);
-        set_xy(inorder, 1, ABCDpix, B);
-        set_xy(inorder, 2, ABCDpix, C);
-        set_xy(inorder, 3, ABCDpix, D);
+		set_xy(inorder, 0, ABCDpix, A);
+		set_xy(inorder, 1, ABCDpix, B);
+		set_xy(inorder, 2, ABCDpix, C);
+		set_xy(inorder, 3, ABCDpix, D);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
+		result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
-        debug("      trying ABCD = [%i %i %i %i]: %i results.\n", iA, iB, iC, iD, result->nres);
+		debug("      trying ABCD = [%i %i %i %i]: %i results.\n", iA, iB, iC, iD, result->nres);
 
-        if (result->nres)
-            resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params, current_parity);
-        if (params->quitNow)
-            goto quitnow;
-    } else
-        params->numcxdxskipped++;
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iA, iB, iC, iD, params, current_parity);
+		if (params->quitNow)
+			goto quitnow;
+	} else
+		params->numcxdxskipped++;
 
-    // BACD
-    thequery[0] = 1.0 - Cx;
-    thequery[1] = 1.0 - Cy;
-    thequery[2] = 1.0 - Dx;
-    thequery[3] = 1.0 - Dy;
+	// BACD
+	thequery[0] = 1.0 - Cx;
+	thequery[1] = 1.0 - Cy;
+	thequery[2] = 1.0 - Dx;
+	thequery[3] = 1.0 - Dy;
 
-    if ((params->sips->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
+	if ((params->sips->cxdx_margin == 0.0) ||
+	        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
-        set_xy(inorder, 0, ABCDpix, B);
-        set_xy(inorder, 1, ABCDpix, A);
-        set_xy(inorder, 2, ABCDpix, C);
-        set_xy(inorder, 3, ABCDpix, D);
+		set_xy(inorder, 0, ABCDpix, B);
+		set_xy(inorder, 1, ABCDpix, A);
+		set_xy(inorder, 2, ABCDpix, C);
+		set_xy(inorder, 3, ABCDpix, D);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
+		result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
-        debug("      trying BACD = [%i %i %i %i]: %i results.\n", iB, iA, iC, iD, result->nres);
+		debug("      trying BACD = [%i %i %i %i]: %i results.\n", iB, iA, iC, iD, result->nres);
 
-        if (result->nres)
-            resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params, current_parity);
-        if (params->quitNow)
-            goto quitnow;
-    } else
-        params->numcxdxskipped++;
-
-
-    // ABDC
-    thequery[0] = Dx;
-    thequery[1] = Dy;
-    thequery[2] = Cx;
-    thequery[3] = Cy;
-
-    if ((params->sips->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
-
-        set_xy(inorder, 0, ABCDpix, A);
-        set_xy(inorder, 1, ABCDpix, B);
-        set_xy(inorder, 2, ABCDpix, D);
-        set_xy(inorder, 3, ABCDpix, C);
-
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
-
-        debug("      trying ABDC = [%i %i %i %i]: %i results.\n", iA, iB, iD, iC, result->nres);
-
-        if (result->nres)
-            resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params, current_parity);
-        if (params->quitNow)
-            goto quitnow;
-    } else
-        params->numcxdxskipped++;
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iB, iA, iC, iD, params, current_parity);
+		if (params->quitNow)
+			goto quitnow;
+	} else
+		params->numcxdxskipped++;
 
 
-    // BADC
-    thequery[0] = 1.0 - Dx;
-    thequery[1] = 1.0 - Dy;
-    thequery[2] = 1.0 - Cx;
-    thequery[3] = 1.0 - Cy;
+	// ABDC
+	thequery[0] = Dx;
+	thequery[1] = Dy;
+	thequery[2] = Cx;
+	thequery[3] = Cy;
 
-    if ((params->sips->cxdx_margin == 0.0) ||
-        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
+	if ((params->sips->cxdx_margin == 0.0) ||
+	        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
 
-        set_xy(inorder, 0, ABCDpix, B);
-        set_xy(inorder, 1, ABCDpix, A);
-        set_xy(inorder, 2, ABCDpix, D);
-        set_xy(inorder, 3, ABCDpix, C);
+		set_xy(inorder, 0, ABCDpix, A);
+		set_xy(inorder, 1, ABCDpix, B);
+		set_xy(inorder, 2, ABCDpix, D);
+		set_xy(inorder, 3, ABCDpix, C);
 
-        result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
+		result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
 
-        debug("      trying BADC = [%i %i %i %i]: %i results.\n", iB, iA, iD, iC, result->nres);
+		debug("      trying ABDC = [%i %i %i %i]: %i results.\n", iA, iB, iD, iC, result->nres);
 
-        if (result->nres)
-            resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params, current_parity);
-        if (params->quitNow)
-            goto quitnow;
-    } else
-        params->numcxdxskipped++;
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iA, iB, iD, iC, params, current_parity);
+		if (params->quitNow)
+			goto quitnow;
+	} else
+		params->numcxdxskipped++;
 
- quitnow:
-    kdtree_free_query(result);
+
+	// BADC
+	thequery[0] = 1.0 - Dx;
+	thequery[1] = 1.0 - Dy;
+	thequery[2] = 1.0 - Cx;
+	thequery[3] = 1.0 - Cy;
+
+	if ((params->sips->cxdx_margin == 0.0) ||
+	        (thequery[0] <= (thequery[2] + params->sips->cxdx_margin))) {
+
+		set_xy(inorder, 0, ABCDpix, B);
+		set_xy(inorder, 1, ABCDpix, A);
+		set_xy(inorder, 2, ABCDpix, D);
+		set_xy(inorder, 3, ABCDpix, C);
+
+		result = kdtree_rangesearch_options_reuse(params->sips->codekd->tree, result, thequery, tol, options);
+
+		debug("      trying BADC = [%i %i %i %i]: %i results.\n", iB, iA, iD, iC, result->nres);
+
+		if (result->nres)
+			resolve_matches(result, thequery, inorder, iB, iA, iD, iC, params, current_parity);
+		if (params->quitNow)
+			goto quitnow;
+	} else
+		params->numcxdxskipped++;
+
+quitnow:
+	kdtree_free_query(result);
 }
 
 // "field" contains the xy pixel coordinates of stars A,B,C,D.
 static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
                             uint fA, uint fB, uint fC, uint fD,
-                            solver_params* params, bool current_parity) {
-    uint jj, thisquadno;
-    uint iA, iB, iC, iD;
-    MatchObj mo;
+                            solver_params* params, bool current_parity)
+{
+	uint jj, thisquadno;
+	uint iA, iB, iC, iD;
+	MatchObj mo;
 
-    for (jj=0; jj<krez->nres; jj++) {
-        double star[12];
-        double scale;
-        double arcsecperpix;
-        tan_t wcs;
+	for (jj = 0; jj < krez->nres; jj++) {
+		double star[12];
+		double scale;
+		double arcsecperpix;
+		tan_t wcs;
 
-        params->nummatches++;
+		params->nummatches++;
 
-        thisquadno = (uint)krez->inds[jj];
+		thisquadno = (uint)krez->inds[jj];
 
 		quadfile_get_starids(params->sips->quads, thisquadno, &iA, &iB, &iC, &iD);
 		startree_get(params->sips->starkd, iA, star + 0*3);
@@ -664,42 +684,42 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		startree_get(params->sips->starkd, iC, star + 2*3);
 		startree_get(params->sips->starkd, iD, star + 3*3);
 
-        debug("        stars [%i %i %i %i]\n", iA, iB, iC, iD);
+		debug("        stars [%i %i %i %i]\n", iA, iB, iC, iD);
 
-        // compute TAN projection from the matching quad alone.
-        blind_wcs_compute_2(star, field, 4, &wcs, &scale);
+		// compute TAN projection from the matching quad alone.
+		blind_wcs_compute_2(star, field, 4, &wcs, &scale);
 
-        // FIXME - should there be scale fudge here?
-        arcsecperpix = scale * 3600.0;
-        if (arcsecperpix > params->funits_upper ||
-            arcsecperpix < params->funits_lower) {
-            debug("          bad scale.\n");
-            continue;
-        }
+		// FIXME - should there be scale fudge here?
+		arcsecperpix = scale * 3600.0;
+		if (arcsecperpix > params->funits_upper ||
+		        arcsecperpix < params->funits_lower) {
+			debug("          bad scale.\n");
+			continue;
+		}
 
-        params->numscaleok++;
+		params->numscaleok++;
 
-        if (params->mo_template)
-            memcpy(&mo, params->mo_template, sizeof(MatchObj));
+		if (params->mo_template)
+			memcpy(&mo, params->mo_template, sizeof(MatchObj));
 
-        memcpy(&(mo.wcstan), &wcs, sizeof(tan_t));
-        mo.wcs_valid = TRUE;
-        mo.code_err = krez->sdists[jj];
-        mo.scale = arcsecperpix;
-        mo.parity = current_parity;
-        mo.quads_tried   = params->numtries;
-        mo.quads_matched = params->nummatches;
-        mo.quads_scaleok = params->numscaleok;
-        mo.timeused = params->timeused;
-        mo.quadno = thisquadno;
-        mo.star[0] = iA;
-        mo.star[1] = iB;
-        mo.star[2] = iC;
-        mo.star[3] = iD;
-        mo.field[0] = fA;
-        mo.field[1] = fB;
-        mo.field[2] = fC;
-        mo.field[3] = fD;
+		memcpy(&(mo.wcstan), &wcs, sizeof(tan_t));
+		mo.wcs_valid = TRUE;
+		mo.code_err = krez->sdists[jj];
+		mo.scale = arcsecperpix;
+		mo.parity = current_parity;
+		mo.quads_tried = params->numtries;
+		mo.quads_matched = params->nummatches;
+		mo.quads_scaleok = params->numscaleok;
+		mo.timeused = params->timeused;
+		mo.quadno = thisquadno;
+		mo.star[0] = iA;
+		mo.star[1] = iB;
+		mo.star[2] = iC;
+		mo.star[3] = iD;
+		mo.field[0] = fA;
+		mo.field[1] = fB;
+		mo.field[2] = fC;
+		mo.field[3] = fD;
 		if (params->sips->idfile) {
 			mo.ids[0] = idfile_get_anid(params->sips->idfile, iA);
 			mo.ids[1] = idfile_get_anid(params->sips->idfile, iB);
@@ -712,21 +732,21 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 			mo.ids[3] = 0;
 		}
 
-        // transform the corners of the field...
-        tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_miny, mo.sMin);
-        tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_maxy, mo.sMax);
-        tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_maxy, mo.sMinMax);
-        tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_miny, mo.sMaxMin);
+		// transform the corners of the field...
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_miny, mo.sMin);
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_maxy, mo.sMax);
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_minx, params->field_maxy, mo.sMinMax);
+		tan_pixelxy2xyzarr(&(mo.wcstan), params->field_maxx, params->field_miny, mo.sMaxMin);
 
-        // center and radius...
-        star_midpoint(mo.center, mo.sMin, mo.sMax);
-        mo.radius = sqrt(distsq(mo.center, mo.sMin, 3));
+		// center and radius...
+		star_midpoint(mo.center, mo.sMin, mo.sMax);
+		mo.radius = sqrt(distsq(mo.center, mo.sMin, 3));
 
-        if (params->handlehit(params, &mo))
-            params->quitNow = TRUE;
+		if (params->handlehit(params, &mo))
+			params->quitNow = TRUE;
 
-        if (params->quitNow)
-            return;
-    }
+		if (params->quitNow)
+			return ;
+	}
 }
 
