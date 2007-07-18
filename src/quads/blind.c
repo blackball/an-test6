@@ -514,6 +514,56 @@ int run_obsolete(blind_params* bp, solver_params* sp)
 	return 0;
 }
 
+void get_fields_from_solvedserver(blind_params* bp, solver_params* sp)
+{
+	if (bp->solvedserver) {
+		if (solvedclient_set_server(bp->solvedserver)) {
+			logerr(bp, "Error setting solvedserver.\n");
+			exit( -1);
+		}
+
+		if ((il_size(bp->fieldlist) == 0) && (bp->firstfield != -1) && (bp->lastfield != -1)) {
+			int j;
+			il_free(bp->fieldlist);
+			logmsg(bp, "Contacting solvedserver to get field list...\n");
+			bp->fieldlist = solvedclient_get_fields(sp->fieldid, bp->firstfield, bp->lastfield, 0);
+			if (!bp->fieldlist) {
+				logerr(bp, "Failed to get field list from solvedserver.\n");
+				exit( -1);
+			}
+			logmsg(bp, "Got %i fields from solvedserver: ", il_size(bp->fieldlist));
+			for (j = 0; j < il_size(bp->fieldlist); j++) {
+				logmsg(bp, "%i ", il_get(bp->fieldlist, j));
+			}
+			logmsg(bp, "\n");
+		}
+	}
+}
+
+void load_and_parse_wcsfiles(blind_params* bp, solver_params* sp)
+{
+	int i;
+	for (i = 0; i < pl_size(bp->verify_wcsfiles); i++) {
+		tan_t wcs;
+		qfits_header* hdr;
+		char* fn = pl_get(bp->verify_wcsfiles, i);
+		logmsg(bp, "Reading WCS header to verify from file %s\n", fn);
+		hdr = qfits_header_read(fn);
+		if (!hdr) {
+			logerr(bp, "Failed to read FITS header from file %s\n", fn);
+			continue;
+		}
+		if (!tan_read_header(hdr, &wcs)) {
+			logerr(bp, "Failed to parse WCS header from file %s\n", fn);
+			qfits_header_destroy(hdr);
+			continue;
+		}
+		bl_append(bp->verify_wcs_list, &wcs);
+		qfits_header_destroy(hdr);
+	}
+}
+
+
 void log_run_parameters(blind_params* bp, solver_params* sp)
 {
 	logmsg(bp, "fields ");
@@ -570,7 +620,6 @@ int main(int argc, char *argv[])
 {
 	char* progname = argv[0];
 	uint numfields;
-	int i;
 	blind_params* bp = &my_bp;
 	solver_params* sp = &(bp->solver);
 
@@ -622,49 +671,10 @@ int main(int argc, char *argv[])
 		logmsg(bp, "%s params:\n", progname);
 		log_run_parameters(bp, sp);
 
-		// Contact the solvedserver, if required.
-		if (bp->solvedserver) {
-			if (solvedclient_set_server(bp->solvedserver)) {
-				logerr(bp, "Error setting solvedserver.\n");
-				exit( -1);
-			}
-
-			if ((il_size(bp->fieldlist) == 0) && (bp->firstfield != -1) && (bp->lastfield != -1)) {
-				int j;
-				il_free(bp->fieldlist);
-				logmsg(bp, "Contacting solvedserver to get field list...\n");
-				bp->fieldlist = solvedclient_get_fields(sp->fieldid, bp->firstfield, bp->lastfield, 0);
-				if (!bp->fieldlist) {
-					logerr(bp, "Failed to get field list from solvedserver.\n");
-					exit( -1);
-				}
-				logmsg(bp, "Got %i fields from solvedserver: ", il_size(bp->fieldlist));
-				for (j = 0; j < il_size(bp->fieldlist); j++) {
-					logmsg(bp, "%i ", il_get(bp->fieldlist, j));
-				}
-				logmsg(bp, "\n");
-			}
-		}
+		get_fields_from_solvedserver(bp, sp);
 
 		// Parse WCS files submitted for verification.
-		for (i = 0; i < pl_size(bp->verify_wcsfiles); i++) {
-			tan_t wcs;
-			qfits_header* hdr;
-			char* fn = pl_get(bp->verify_wcsfiles, i);
-			logmsg(bp, "Reading WCS header to verify from file %s\n", fn);
-			hdr = qfits_header_read(fn);
-			if (!hdr) {
-				logerr(bp, "Failed to read FITS header from file %s\n", fn);
-				continue;
-			}
-			if (!tan_read_header(hdr, &wcs)) {
-				logerr(bp, "Failed to parse WCS header from file %s\n", fn);
-				qfits_header_destroy(hdr);
-				continue;
-			}
-			bl_append(bp->verify_wcs_list, &wcs);
-			qfits_header_destroy(hdr);
-		}
+		load_and_parse_wcsfiles(bp, sp);
 
 		// Initialize output files...
 		if (bp->matchfname) {
