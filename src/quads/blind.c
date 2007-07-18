@@ -247,7 +247,10 @@ static void set_cpu_limit(blind_params* bp, int seconds)
 			logerr(bp, "Failed to get CPU time limit: %s\n", strerror(errno));
 			exit( -1);
 		}
+		logmsg(bp, "Old CPU limits: soft %i, hard %i.\n", (int)rlim.rlim_cur, (int)rlim.rlim_max);
 		rlim.rlim_cur = seconds + sofar;
+		logmsg(bp, "Used %i seconds of CPU time so far; adding %i seconds to get new limit of %i.\n",
+			   sofar, seconds, (int)rlim.rlim_cur);
 
 		if (setrlimit(RLIMIT_CPU, &rlim)) {
 			logerr(bp, "Failed to set CPU time limit: %s\n", strerror(errno));
