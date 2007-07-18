@@ -37,6 +37,7 @@ function allow_email($email) {
 			   'fitz@tucana.tuc.noao.edu',
 		       'fvkastro@xs4all.nl',
 		       'gizis@udel.edu',
+		       'hurt@ipac.caltech.edu',
 		       'jdshaw@udel.edu',
 		       'jeremy.d.brewer@gmail.com',
 		       'john.moustakas@gmail.com',
