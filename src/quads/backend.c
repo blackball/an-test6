@@ -381,7 +381,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			}
 			// Use the smallest or largest index if no other one fits.
 			if (!nused) {
-				indexinfo_t* ii;
+				indexinfo_t* ii = NULL;
 				if (fmin > backend->sizebiggest) {
 					ii = bl_access(backend->indexinfos, backend->ibiggest);
 				} else if (fmax < backend->sizesmallest) {
