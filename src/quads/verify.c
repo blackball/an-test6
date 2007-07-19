@@ -38,7 +38,7 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double* field);
 */
 
-#define HISTNINDEX 1
+#define HISTNINDEX 0
 
 #if HISTNINDEX
 #include "histogram.h"
