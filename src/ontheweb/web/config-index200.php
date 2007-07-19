@@ -26,6 +26,8 @@
 19: nside 3, quad size 1400 to 2000, dedup 1200
 */
 
+// FIXME - these ones aren't done yet...
+/*
 $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-200-%02d', $i));
@@ -40,6 +42,23 @@ $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-202-%02d', $i));
 $index102paths = $ip;
+*/
+$ip = array();
+for ($i=0; $i<12; $i++)
+	 array_push($ip, sprintf('100/index-100-%02d', $i));
+$index100paths = $ip;
+
+$ip = array();
+for ($i=0; $i<12; $i++)
+	 array_push($ip, sprintf('100/index-101-%02d', $i));
+$index101paths = $ip;
+
+$ip = array();
+for ($i=0; $i<12; $i++)
+	 array_push($ip, sprintf('100/index-102-%02d', $i));
+$index102paths = $ip;
+
+
 
 $ip = array();
 for ($i=0; $i<12; $i++)
