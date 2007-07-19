@@ -24,17 +24,28 @@
 #include "bl.h"
 #include "starkd.h"
 
+struct verify_field_t {
+    double* field;
+    double* fieldcopy;
+    int NF;
+    kdtree_t* ftree;
+};
+typedef struct verify_field_t verify_field_t;
+
 void verify_hit(startree* skdt,
-				MatchObj* mo,
-				double* field,
-				int NF,
-				double verify_pix2,
-				double distractors,
-				double fieldW,
-				double fieldH,
-				double logratio_tobail,
-				int min_nfield,
-				bool do_gamma);
+                MatchObj* mo,
+                verify_field_t* vf,
+                double verify_pix2,
+                double distractors,
+                double fieldW,
+                double fieldH,
+                double logratio_tobail,
+                int min_nfield,
+                bool do_gamma);
+
+verify_field_t* verify_field_preprocess(double* field, int NF);
+
+void verify_field_free(verify_field_t* vf);
 
 void verify_init();
 

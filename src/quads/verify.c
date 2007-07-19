@@ -38,7 +38,7 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double* field);
 */
 
-#define HISTNFIELD 1
+#define HISTNFIELD 0
 
 #if HISTNFIELD
 #include "histogram.h"
@@ -80,32 +80,67 @@ void verify_cleanup() {
 #define debug(args...)
 #endif
 
+verify_field_t* verify_field_preprocess(double* field, int NF) {
+    verify_field_t* vf;
+    int Nleaf = 5;
+
+    vf = malloc(sizeof(verify_field_t));
+    if (!vf) {
+        fprintf(stderr, "Failed to allocate space for a verify_field_t().\n");
+        return NULL;
+    }
+
+    vf->NF = NF;
+    vf->field = field;
+
+    // Make a copy of the field objects, because we're going to build a
+    // kdtree out of them and that shuffles their order.
+    vf->fieldcopy = malloc(NF * 2 * sizeof(double));
+    if (!vf->fieldcopy) {
+        fprintf(stderr, "Failed to copy the field.\n");
+        free(vf);
+        return NULL;
+    }
+    memcpy(vf->fieldcopy, field, NF * 2 * sizeof(double));
+
+    // Build a tree out of the field objects (in pixel space)
+    vf->ftree = kdtree_build(NULL, vf->fieldcopy, NF, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
+
+    return vf;
+}
+
+void verify_field_free(verify_field_t* vf) {
+    if (!vf)
+        return;
+    kdtree_free(vf->ftree);
+    free(vf->fieldcopy);
+    free(vf);
+    return;
+}
+
 void verify_hit(startree* skdt,
-				MatchObj* mo,
-				double* field,
-				int NF,
-				double verify_pix2,
-				double distractors,
-				double fieldW,
-				double fieldH,
-				double logratio_tobail,
-				int min_nfield,
-				bool do_gamma) {
+                MatchObj* mo,
+                verify_field_t* vf,
+                double verify_pix2,
+                double distractors,
+                double fieldW,
+                double fieldH,
+                double logratio_tobail,
+                int min_nfield,
+                bool do_gamma) {
 	int i;
 	double fieldcenter[3];
 	double fieldr2;
 	kdtree_qres_t* res;
 	// number of stars in the index that are within the bounds of the field.
 	int NI;
-	kdtree_t* ftree;
-	int Nleaf = 5;
 	double* indexpix;
 
 	double* bestprob = NULL;
 
 	// quad center and radius
 	double qc[2];
-	double rquad2;
+	double rquad2 = 0.0;
 
 	double logprob_distractor;
 	double logprob_background;
@@ -126,8 +161,6 @@ void verify_hit(startree* skdt,
 	uint8_t* sweeps = NULL;
 	int s, maxsweep;
 
-	double* fieldcopy;
-	int M;
 	double fieldr, fieldarcsec;
 
 	assert(mo->wcs_valid);
@@ -203,7 +236,7 @@ void verify_hit(startree* skdt,
 	  minx, maxx, miny, maxy);
 	  }
 	*/
-	debug("Number of field stars: %i\n", NF);
+	debug("Number of field stars: %i\n", vf->NF);
 	debug("Number of index stars: %i\n", NI);
 
 	if (!NI) {
@@ -227,39 +260,28 @@ void verify_hit(startree* skdt,
 		maxsweep = MAX(maxsweep, sweeps[i]);
 	}
 
-	// M: number of field objects to use.
-	//M = min(NF, 2*NI);
-	M = NF;
-
-	// Make a copy of the field objects, because we're going to build a
-	// kdtree out of them and that shuffles their order.
-	fieldcopy = malloc(M * 2 * sizeof(double));
-	memcpy(fieldcopy, field, M * 2 * sizeof(double));
-
 #if HISTNFIELD
         if (hist) {
-            histogram_add(hist, M);
+            histogram_add(hist, vf->NF);
         }
 #endif
 
-	// Build a tree out of the field objects (in pixel space)
-	ftree = kdtree_build(NULL, fieldcopy, M, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
-
-	bestprob = malloc(M * sizeof(double));
-	for (i=0; i<M; i++)
+        // Prime the array where we store conflicting-match info.
+	bestprob = malloc(vf->NF * sizeof(double));
+	for (i=0; i<vf->NF; i++)
 		bestprob[i] = -HUGE_VAL;
 	for (i=0; i<4; i++) {
 		assert(mo->field[i] >= 0);
-		assert(mo->field[i] < M);
+		assert(mo->field[i] < vf->NF);
 		bestprob[mo->field[i]] = HUGE_VAL;
 	}
 
 	if (do_gamma) {
-		// Find the midpoint of AB of the quad in pixel space.
-		qc[0] = 0.5 * (field[2*mo->field[0]  ] + field[2*mo->field[1]  ]);
-		qc[1] = 0.5 * (field[2*mo->field[0]+1] + field[2*mo->field[1]+1]);
-		// Find the radius-squared of the quad = distsq(qc, A)
-		rquad2 = distsq(field + 2*mo->field[0], qc, 2);
+            // Find the midpoint of AB of the quad in pixel space.
+            qc[0] = 0.5 * (vf->field[2*mo->field[0]  ] + vf->field[2*mo->field[1]  ]);
+            qc[1] = 0.5 * (vf->field[2*mo->field[0]+1] + vf->field[2*mo->field[1]+1]);
+            // Find the radius-squared of the quad = distsq(qc, A)
+            rquad2 = distsq(vf->field + 2*mo->field[0], qc, 2);
 	}
 
 	// p(background) = 1/(W*H) of the image.
@@ -279,7 +301,7 @@ void verify_hit(startree* skdt,
 	  }
 	*/
 
-	Nmin = MIN(NI, NF);
+	Nmin = MIN(NI, vf->NF);
 
 	bestlogodds = -HUGE_VAL;
 	bestnmatch = bestnnomatch = bestnconflict = -1;
@@ -323,22 +345,22 @@ void verify_hit(startree* skdt,
 
 
 			// Find nearest field star.
-			ind = kdtree_nearest_neighbour(ftree, indexpix+i*2, &bestd2);
+			ind = kdtree_nearest_neighbour(vf->ftree, indexpix+i*2, &bestd2);
 
-			fldind = ftree->perm[ind];
+			fldind = vf->ftree->perm[ind];
 			assert(fldind >= 0);
-			assert(fldind < M);
+			assert(fldind < vf->NF);
 
 			if (do_gamma) {
-				// Distance from the quad center of this field star:
-				R2 = distsq(field+fldind*2, qc, 2);
+                            // Distance from the quad center of this field star:
+                            R2 = distsq(vf->field+fldind*2, qc, 2);
 
-				// Variance of a field star at that distance from the 
-				// quad center:
-				// FIXME!
-				sigma2 = verify_pix2 * (1.0 + R2/rquad2);
+                            // Variance of a field star at that distance from the 
+                            // quad center:
+                            // FIXME!
+                            sigma2 = verify_pix2 * (1.0 + R2/rquad2);
 			} else
-				sigma2 = verify_pix2;
+                            sigma2 = verify_pix2;
 
 			// don't bother computing the logprob if it's tiny...
 			//if (bestd2 > 100.0 * sigma2)
@@ -353,13 +375,13 @@ void verify_hit(startree* skdt,
 					  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
 				debug("NN dist: %5.1f pix, %g sigmas\n", sqrt(bestd2), sqrt(bestd2/sigma2));
 			}
-			if (log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)) < logprob_background) {
+			if (log((1.0 - distractors) / (2.0 * M_PI * sigma2 * vf->NF)) < logprob_background) {
 				// what's the point?!
 				debug("This Gaussian is nearly uninformative.\n");
 				continue;
 			}
 
-			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)) - (bestd2 / (2.0 * sigma2));
+			logprob = log((1.0 - distractors) / (2.0 * M_PI * sigma2 * vf->NF)) - (bestd2 / (2.0 * sigma2));
 			if (logprob < logprob_distractor) {
 				debug("Distractor.\n");
 				logprob = logprob_distractor;
@@ -410,9 +432,7 @@ void verify_hit(startree* skdt,
 	}
 
 	kdtree_free_query(res);
-	kdtree_free(ftree);
 	free(bestprob);
-	free(fieldcopy);
 	free(sweeps);
 	free(indexpix);
 

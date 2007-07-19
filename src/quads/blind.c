@@ -76,6 +76,8 @@ struct blind_params
 {
 	solver_params solver;
 
+    verify_field_t* vf;
+
 	bool indexes_inparallel;
 
 	int nindex_tokeep;
@@ -1434,7 +1436,7 @@ static int blind_handle_hit(solver_params* sp, MatchObj* mo)
 		//d2 = bp->verify_dist2 + square(sp->sips->index_jitter);
 	}
 
-	verify_hit(sp->sips->starkd, mo, sp->field, sp->nfield, pixd2,
+	verify_hit(sp->sips->starkd, mo, bp->vf, pixd2,
 	           bp->distractors, sp->field_maxx, sp->field_maxy,
 	           bp->logratio_tobail, bp->nverify, bp->do_gamma);
 	// FIXME - this is the same as nmatches.
@@ -1661,9 +1663,14 @@ static void solve_fields(blind_params* bp, tan_t* verify_wcs)
 		} else {
 			logmsg(bp, "Solving field %i.\n", fieldnum);
 
+                        bp->vf = verify_field_preprocess(sp->field, sp->nfield);
+
 			bp->do_gamma = TRUE;
 			// The real thing
 			solve_field(sp);
+
+                        verify_field_free(bp->vf);
+                        bp->vf = NULL;
 
 			logmsg(bp, "Field %i: tried %i quads, matched %i codes.\n",
 			       fieldnum, sp->numtries, sp->nummatches);
