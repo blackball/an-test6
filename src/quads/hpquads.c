@@ -1306,8 +1306,10 @@ int main(int argc, char** argv) {
 					Nquads = 0;
 				}
 			}
-			if (alldone)
+			if (alldone) {
+				printf("Made quads in all healpixes - no need to loosen further.\n");
 				break;
+			}
 		}
 	}
 
