@@ -26,49 +26,30 @@
 19: nside 3, quad size 1400 to 2000, dedup 1200
 */
 
-// FIXME - these ones aren't done yet...
-/*
 $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-200-%02d', $i));
-$index100paths = $ip;
+$index200paths = $ip;
 
 $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-201-%02d', $i));
-$index101paths = $ip;
+$index201paths = $ip;
 
 $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-202-%02d', $i));
-$index102paths = $ip;
-*/
-$ip = array();
-for ($i=0; $i<12; $i++)
-	 array_push($ip, sprintf('100/index-100-%02d', $i));
-$index100paths = $ip;
-
-$ip = array();
-for ($i=0; $i<12; $i++)
-	 array_push($ip, sprintf('100/index-101-%02d', $i));
-$index101paths = $ip;
-
-$ip = array();
-for ($i=0; $i<12; $i++)
-	 array_push($ip, sprintf('100/index-102-%02d', $i));
-$index102paths = $ip;
-
-
+$index202paths = $ip;
 
 $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-203-%02d', $i));
-$index103paths = $ip;
+$index203paths = $ip;
 
 $ip = array();
 for ($i=0; $i<12; $i++)
 	 array_push($ip, sprintf('200/index-204-%02d', $i));
-$index104paths = $ip;
+$index204paths = $ip;
 
 $indexdata =
 array('90degree' => array('desc' => '90-degree Fields',
@@ -118,22 +99,25 @@ array('90degree' => array('desc' => '90-degree Fields',
 						  'paths' => array('200/index-205')),
 	  '30arcmin' => array('desc' => '30-arcmin Fields',
 						  'quadsize' => array(8, 11),
-						  'paths' => $index104paths),
+						  'paths' => $index204paths),
 	  '20arcmin' => array('desc' => '20-arcmin Fields',
 						  'quadsize' => array(5.6, 8),
-						  'paths' => $index103paths),
+						  'paths' => $index203paths),
 	  '15arcmin' => array('desc' => '15-arcmin Fields (eg, Sloan Digital Sky Survey)',
 						  'quadsize' => array(4, 5.6),
-						  'paths' => $index102paths),
+						  'paths' => $index202paths),
+	  /*
 	  '10arcmin' => array('desc' => '10-arcmin Fields',
 						  'quadsize' => array(2.8, 4),
-						  'paths' => $index101paths),
+						  'paths' => $index201paths),
 	  '8arcmin' => array('desc' => '8-arcmin Fields',
 						 'quadsize' => array(2, 2.8),
-						 'paths' => $index100paths),
+						 'paths' => $index200paths),
+	  */
 	  );
 
 $largest_index = '90degree';
-$smallest_index = '8arcmin';
+//$smallest_index = '8arcmin';
+$smallest_index = '15arcmin';
 
 ?>
