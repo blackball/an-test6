@@ -32,6 +32,34 @@
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
+char* file_get_contents(char* fn) {
+    struct stat st;
+    char* buf;
+    FILE* fid;
+    off_t size;
+    if (stat(fn, &st)) {
+        fprintf(stderr, "file_get_contents: failed to stat file \"%s\"", fn);
+        return NULL;
+    }
+    size = st.size;
+    fid = fopen(fn, "rb");
+    if (!fid) {
+        fprintf(stderr, "file_get_contents: failed to open file \"%s\": %s\n", fn, strerror(errno));
+        return NULL;
+    }
+    buf = malloc(size);
+    if (!buf) {
+        fprintf(stderr, "file_get_contents: couldn't malloc %lu bytes.\n", (long)size);
+        return NULL;
+    }
+    if (fread(buf, 1, size, fid) != size) {
+        fprintf(stderr, "file_get_contents: failed to read %lu bytes: %s\n", (long)size, strerror(errno));
+        free(buf);
+        return NULL;
+    }
+    return buf;
+}
+
 void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap) {
 	int ps = getpagesize();
 	int gap = start % ps;

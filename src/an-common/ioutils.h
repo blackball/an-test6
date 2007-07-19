@@ -30,6 +30,8 @@ void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
 
 bool file_exists(char* fn);
 
+char* file_get_contents(char* fn);
+
 /**
    If "cmdline" starts with "keyword", returns 1 and places the address of
    the start of the next word in "p_next_word".
