@@ -38,15 +38,15 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double* field);
 */
 
-#define HISTNFIELD 0
+#define HISTNINDEX 1
 
-#if HISTNFIELD
+#if HISTNINDEX
 #include "histogram.h"
 static histogram* hist = NULL;
 #endif
 
 void verify_init() {
-#if HISTNFIELD
+#if HISTNINDEX
     if (hist)
         histogram_free(hist);
     hist = histogram_new_binsize(0.0, 1000.0, 10.0);
@@ -54,16 +54,16 @@ void verify_init() {
 }
 
 void verify_cleanup() {
-#if HISTNFIELD
+#if HISTNINDEX
     fflush(stdout);
     fflush(stderr);
     printf("\n\n");
-    printf("Number of field objects from which kdtrees are built:\n");
-    printf("NF=");
+    printf("Number of index objects in the field:\n");
+    printf("NI=");
     histogram_print_matlab(hist, stdout);
     printf("\n\n");
     printf("Bin centers:\n");
-    printf("NFbins=");
+    printf("NIbins=");
     histogram_print_matlab_bin_centers(hist, stdout);
     printf("\n\n");
     if (hist)
@@ -280,9 +280,9 @@ void verify_hit(startree* skdt,
 		maxsweep = MAX(maxsweep, sweeps[i]);
 	}
 
-#if HISTNFIELD
+#if HISTNINDEX
         if (hist) {
-            histogram_add(hist, vf->NF);
+            histogram_add(hist, NI);
         }
 #endif
 
