@@ -24,7 +24,7 @@
 #include <sys/mman.h>
 
 #include "qfits.h"
-#include "fileutil.h"
+#include "ioutils.h"
 #include "fitsioutils.h"
 #include "permutedsort.h"
 

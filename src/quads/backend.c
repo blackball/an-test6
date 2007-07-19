@@ -34,13 +34,13 @@
 
 #include <getopt.h>
 
+#include "fileutil.h"
 #include "ioutils.h"
 #include "bl.h"
 #include "an-bool.h"
 #include "solver.h"
 #include "math.h"
 #include "fitsioutils.h"
-#include "fileutil.h"
 
 #include "qfits.h"
 

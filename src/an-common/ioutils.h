@@ -22,7 +22,13 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "an-bool.h"
+
 extern uint32_t ENDIAN_DETECTOR;
+
+void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
+
+bool file_exists(char* fn);
 
 /**
    If "cmdline" starts with "keyword", returns 1 and places the address of

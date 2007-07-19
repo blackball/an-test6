@@ -19,15 +19,32 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "ioutils.h"
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
+
+void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap) {
+	int ps = getpagesize();
+	int gap = start % ps;
+	// start must be a multiple of pagesize.
+	*mapstart = start - gap;
+	*mapsize  = size  + gap;
+	*pgap = gap;
+}
+
+bool file_exists(char* fn) {
+	struct stat st;
+	return (stat(fn, &st) == 0);
+}
 
 char* strdup_safe(const char* str) {
 	char* rtn;

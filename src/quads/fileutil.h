@@ -27,10 +27,6 @@
 #define FOPEN_ERR -301
 #define READ_FAIL -1
 
-void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
-
-bool file_exists(char* fn);
-
 void fopenout(char* fn, FILE** pfid);
 
 #define free_fn(n) {free(n);}

@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 
-#include "fileutil.h"
+#include "ioutils.h"
 #include "mathutil.h"
 #include "matchobj.h"
 #include "solver.h"

@@ -30,7 +30,6 @@
 #include "fitsioutils.h"
 #include "ioutils.h"
 #include "boilerplate.h"
-#include "fileutil.h"
 
 #define OPTIONS "ho:i:N:n:m:M:H:d:e:ARGZb:gj:"
 

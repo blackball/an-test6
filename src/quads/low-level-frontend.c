@@ -82,7 +82,6 @@
 #include "solver.h"
 #include "math.h"
 #include "fitsioutils.h"
-#include "fileutil.h"
 
 #include "qfits.h"
 

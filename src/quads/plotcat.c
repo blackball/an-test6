@@ -24,7 +24,6 @@
 #include <netinet/in.h>
 
 #include "keywords.h"
-#include "fileutil.h"
 #include "starutil.h"
 #include "catalog.h"
 #include "an_catalog.h"

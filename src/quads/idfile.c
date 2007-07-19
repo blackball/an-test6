@@ -26,7 +26,6 @@
 #include "fitsioutils.h"
 #include "idfile.h"
 #include "starutil.h"
-#include "fileutil.h"
 #include "ioutils.h"
 
 static idfile* new_idfile()
