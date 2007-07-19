@@ -41,7 +41,7 @@ char* file_get_contents(char* fn) {
         fprintf(stderr, "file_get_contents: failed to stat file \"%s\"", fn);
         return NULL;
     }
-    size = st.size;
+    size = st.st_size;
     fid = fopen(fn, "rb");
     if (!fid) {
         fprintf(stderr, "file_get_contents: failed to open file \"%s\": %s\n", fn, strerror(errno));
