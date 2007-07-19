@@ -8,12 +8,12 @@
 
   The Astrometry.net suite is distributed in the hope that it will be
   useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
   General Public License for more details.
 
   You should have received a copy of the GNU General Public License
   along with the Astrometry.net suite ; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA	 02110-1301 USA
 */
 
 /**
@@ -87,75 +87,75 @@
 #include "qfits.h"
 
 static struct option long_options[] = {
-    {"help",        optional_argument, 0, 'h'},
-    {"guess-scale", optional_argument, 0, 'g'},
-    {"image",       optional_argument, 0, 'i'},
-    {"scale-low",   optional_argument, 0, 'L'},
-    {"scale-high",  optional_argument, 0, 'H'},
-    {"scale-units", optional_argument, 0, 'u'},
-    {"tweak-order", optional_argument, 0, 't'},
-    {"out",         required_argument, 0, 'o'},
-    {"noplot",      optional_argument, 0, 'p'},
-    {"nordls",      optional_argument, 0, 'r'},
-    {"xylist",      optional_argument, 0, 'x'},
-    {0, 0, 0, 0}
+	{"help",		optional_argument, 0, 'h'},
+	{"guess-scale", optional_argument, 0, 'g'},
+	{"image",		optional_argument, 0, 'i'},
+	{"scale-low",	optional_argument, 0, 'L'},
+	{"scale-high",	optional_argument, 0, 'H'},
+	{"scale-units", optional_argument, 0, 'u'},
+	{"tweak-order", optional_argument, 0, 't'},
+	{"out",			required_argument, 0, 'o'},
+	{"noplot",		optional_argument, 0, 'p'},
+	{"nordls",		optional_argument, 0, 'r'},
+	{"xylist",		optional_argument, 0, 'x'},
+	{0, 0, 0, 0}
 };
 
 static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:";
 
 static void print_help(const char* progname) {
-    printf("Usage:   %s [options] -o <output augmented xylist filename>\n"
-           "\n", progname);
+	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
+		   "\n", progname);
 }
 
 int main(int argc, char** args) {
-    int c;
-    int help_flag = 0;
+	int c;
+	int help_flag = 0;
 
-    while (1) {
-        int option_index = 0;
-        c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 0:
-            /* If this option set a flag, do nothing else now. */
-            if (long_options[option_index].flag != 0)
-                break;
-            break;
-        case 'h':
-            help_flag = 1;
-            break;
-        case '?':
-            break;
-        default:
-            exit( -1);
-        }
-    }
+	while (1) {
+		int option_index = 0;
+		c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 0:
+			/* If this option set a flag, do nothing else now. */
+			if (long_options[option_index].flag != 0)
+				break;
+			break;
+		case 'h':
+			help_flag = 1;
+			break;
+		case '?':
+			break;
+		default:
+			exit( -1);
+		}
+	}
 
-    if (optind != argc) {
-        printf("Extra arguments...\n");
-        help_flag = 1;
-    }
-    if (help_flag) {
-        print_help(args[0]);
-        exit(0);
-    }
-
-
+	if (optind != argc) {
+		printf("Extra arguments...\n");
+		help_flag = 1;
+	}
+	if (help_flag) {
+		print_help(args[0]);
+		exit(0);
+	}
 
 
-    // if --image is given:
-    //   -run image2pnm.py
-    //   -if it's a FITS image, keep the original (well, sanitized version)
-    //   -otherwise, run ppmtopgm (if necessary) and pnmtofits.
-    //   -run fits2xy to generate xylist
-
-    // if --xylist is given:
-    //   -fits2fits.py?
-
-    // start piling FITS headers in there.
 
 
-    return 0;
+	// if --image is given:
+	//	 -run image2pnm.py
+	//	 -if it's a FITS image, keep the original (well, sanitized version)
+	//	 -otherwise, run ppmtopgm (if necessary) and pnmtofits.
+	//	 -run fits2xy to generate xylist
+
+	// if --xylist is given:
+	//	 -fits2fits.py?
+
+	// start piling FITS headers in there.
+
+
+	return 0;
 }
