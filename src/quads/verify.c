@@ -20,14 +20,12 @@
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/param.h>
 
 #include "verify.h"
 #include "mathutil.h"
 #include "intmap.h"
 #include "keywords.h"
-
-#define min(a,b) (((a)<(b))?(a):(b))
-#define max(a,b) (((a)>(b))?(a):(b))
 
 #include "blind_wcs.h"
 
@@ -39,6 +37,41 @@ static void write_prob_terrain(kdtree_t* itree, int NF, int NI,
 							   double verify_pix2, double rquad2,
 							   double* field);
 */
+
+#define HISTNFIELD 1
+
+#if HISTNFIELD
+#include "histogram.h"
+static histogram* hist = NULL;
+#endif
+
+void verify_init() {
+#if HISTNFIELD
+    if (hist)
+        histogram_free(hist);
+    hist = histogram_new_binsize(0.0, 1000.0, 10.0);
+#endif
+}
+
+void verify_cleanup() {
+#if HISTNFIELD
+    fflush(stdout);
+    fflush(stderr);
+    printf("\n\n");
+    printf("Number of field objects from which kdtrees are built:\n");
+    printf("NF=");
+    histogram_print_matlab(hist, stdout);
+    printf("\n\n");
+    printf("Bin centers:\n");
+    printf("NFbins=");
+    histogram_print_matlab_bin_centers(hist, stdout);
+    printf("\n\n");
+    if (hist)
+        histogram_free(hist);
+#endif
+}
+
+
 
 #define DEBUGVERIFY 0
 #if DEBUGVERIFY
@@ -191,7 +224,7 @@ void verify_hit(startree* skdt,
 	maxsweep = 0;
 	for (i=0; i<NI; i++) {
 		sweeps[i] = skdt->sweep[res->inds[i]];
-		maxsweep = max(maxsweep, sweeps[i]);
+		maxsweep = MAX(maxsweep, sweeps[i]);
 	}
 
 	// M: number of field objects to use.
@@ -202,6 +235,12 @@ void verify_hit(startree* skdt,
 	// kdtree out of them and that shuffles their order.
 	fieldcopy = malloc(M * 2 * sizeof(double));
 	memcpy(fieldcopy, field, M * 2 * sizeof(double));
+
+#if HISTNFIELD
+        if (hist) {
+            histogram_add(hist, M);
+        }
+#endif
 
 	// Build a tree out of the field objects (in pixel space)
 	ftree = kdtree_build(NULL, fieldcopy, M, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_BBOX);
@@ -240,7 +279,7 @@ void verify_hit(startree* skdt,
 	  }
 	*/
 
-	Nmin = min(NI, NF);
+	Nmin = MIN(NI, NF);
 
 	bestlogodds = -HUGE_VAL;
 	bestnmatch = bestnnomatch = bestnconflict = -1;

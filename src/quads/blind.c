@@ -679,6 +679,18 @@ int main(int argc, char *argv[])
 		// Parse WCS files submitted for verification.
 		load_and_parse_wcsfiles(bp, sp);
 
+		// Read .xyls file...
+		logmsg(bp, "Reading fields file %s...", bp->fieldfname);
+		bp->xyls = xylist_open(bp->fieldfname);
+		if (!bp->xyls) {
+			logerr(bp, "Failed to read xylist.\n");
+			exit( -1);
+		}
+		bp->xyls->xname = bp->xcolname;
+		bp->xyls->yname = bp->ycolname;
+		numfields = bp->xyls->nfields;
+		logmsg(bp, "got %u fields.\n", numfields);
+
 		// Initialize output files...
 		if (bp->matchfname) {
 			bp->mf = matchfile_open_for_writing(bp->matchfname);
@@ -706,18 +718,6 @@ int main(int argc, char *argv[])
 			//}
 		}
 
-		// Read .xyls file...
-		logmsg(bp, "Reading fields file %s...", bp->fieldfname);
-		bp->xyls = xylist_open(bp->fieldfname);
-		if (!bp->xyls) {
-			logerr(bp, "Failed to read xylist.\n");
-			exit( -1);
-		}
-		bp->xyls->xname = bp->xcolname;
-		bp->xyls->yname = bp->ycolname;
-		numfields = bp->xyls->nfields;
-		logmsg(bp, "got %u fields.\n", numfields);
-
 		// Write the start file.
 		if (bp->startfname) {
 			FILE* fstart = NULL;
@@ -728,8 +728,6 @@ int main(int argc, char *argv[])
 			else
 				logerr(bp, "Failed to write marker file %s: %s\n", bp->startfname, strerror(errno));
 		}
-
-		sp->nindexes = pl_size(bp->indexnames);
 
 		// Set total wall-clock time limit.
 		// Note that we never cancel this alarm, it persists across "run"
@@ -757,6 +755,8 @@ int main(int argc, char *argv[])
 			}
 			set_cpu_limit(bp, bp->total_cpulimit);
 		}
+
+		sp->nindexes = pl_size(bp->indexnames);
 
 		// Verify any WCS estimates we have.
 		if (bl_size(bp->verify_wcs_list)) {
@@ -792,6 +792,8 @@ int main(int argc, char *argv[])
 			}
 		}
 
+                verify_init();
+
 		// Start solving...
 		if (bp->indexes_inparallel) {
 
@@ -799,7 +801,7 @@ int main(int argc, char *argv[])
 			sp->indexnum = 0;
 
 			// Read all the indices...
-			// FIXME avoid re-reading indicies!!!
+			// FIXME avoid re-reading indices!!!
 			for (I = 0; I < pl_size(bp->indexnames); I++) {
 				char* fname;
 				solver_index_params sips;
@@ -943,6 +945,8 @@ int main(int argc, char *argv[])
 				sp->sips = NULL;
 			}
 		}
+
+                verify_cleanup();
 
 		// Clean up.
 

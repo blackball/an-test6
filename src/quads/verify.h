@@ -36,4 +36,8 @@ void verify_hit(startree* skdt,
 				int min_nfield,
 				bool do_gamma);
 
+void verify_init();
+
+void verify_cleanup();
+
 #endif

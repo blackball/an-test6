@@ -105,12 +105,17 @@ static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
+		   "  (    -i <image-input-file>\n"
+		   "   OR  -x <xylist-input-file>  )\n"
 		   "\n", progname);
 }
 
 int main(int argc, char** args) {
 	int c;
 	int help_flag = 0;
+	char* outfn = NULL;
+	char* imagefn = NULL;
+	char* xylsfn = NULL;
 
 	while (1) {
 		int option_index = 0;
@@ -126,6 +131,15 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+		case 'o':
+			outfn = optarg;
+			break;
+		case 'i':
+			imagefn = optarg;
+			break;
+		case 'x':
+			xylsfn = optarg;
+			break;
 		case '?':
 			break;
 		default:
@@ -137,22 +151,61 @@ int main(int argc, char** args) {
 		printf("Extra arguments...\n");
 		help_flag = 1;
 	}
+	if (!outfn) {
+		printf("Output filename (-o / --out) is required.\n");
+		help_flag = 1;
+	}
+	if (!(imagefn || xylsfn)) {
+		printf("Require either an image (-i / --image) or an XYlist (-x / --xylist) input file.\n");
+		help_flag = 1;
+	}
 	if (help_flag) {
 		print_help(args[0]);
 		exit(0);
 	}
 
+	if (imagefn) {
+		// if --image is given:
+		//	 -run image2pnm.py
+		//	 -if it's a FITS image, keep the original (well, sanitized version)
+		//	 -otherwise, run ppmtopgm (if necessary) and pnmtofits.
+		//	 -run fits2xy to generate xylist
+		char cmd[1024];
+                char *uncompressedfn;
+                char *sanitizedfn;
+                char *pnmfn;                
+                char *image2pnmout;
+                int rtn;
 
+                uncompressedfn = "/tmp/uncompressed";
+                sanitizedfn = "/tmp/sanitized";
+                pnmfn = "/tmp/pnm";
+                image2pnmout = "/tmp/image2pnm.out";
 
+		snprintf(cmd, sizeof(cmd),
+                         "image2pnm.py --infile \"%s\""
+                         "  --uncompressed-outfile \"%s\""
+                         "  --sanitized-fits-outfile \"%s\""
+                         "  --outfile \"%s\" > \"%s\"",
+                         imagefn, uncompressedfn, sanitizedfn, pnmfn, image2pnmout);
 
-	// if --image is given:
-	//	 -run image2pnm.py
-	//	 -if it's a FITS image, keep the original (well, sanitized version)
-	//	 -otherwise, run ppmtopgm (if necessary) and pnmtofits.
-	//	 -run fits2xy to generate xylist
+                printf("Running: %s\n", cmd);
+                rtn = system(cmd);
+                if (rtn == -1) {
+                    fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
+                    exit(-1);
+                }
+                if (WEXITSTATUS(rtn)) {
+                    fprintf(stderr, "image2pnm failed: status %i.\n", WEXITSTATUS(rtn));
+                    exit(-1);
+                }
 
-	// if --xylist is given:
-	//	 -fits2fits.py?
+	} else {
+		// xylist.
+		// if --xylist is given:
+		//	 -fits2fits.py?
+	}
+
 
 	// start piling FITS headers in there.
 
