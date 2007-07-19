@@ -32,6 +32,7 @@ const char* svn_date() {
 		the file.  Like this. Or this. Ok, this is getting silly. Very.
 		Nuts, really. Absurd. Wacky. Ridiculous. Preposterous. Spectacular.
 		Bizarre. Right out there. Loco. Homer-licking-a-hallucinogenic-toad-ish.
+		Like-we-should-call-it-svnlsd.
 	*/
 	const char* datestr = "$Date$";
 	// (I want to trim off the first seven and last two characters.)
