@@ -40,7 +40,7 @@ enum {
 };
 
 // Per-index parameters.
-struct solver_index_params {
+struct index_params {
 	// name of the current index.
 	char *indexname;
 
@@ -64,18 +64,13 @@ struct solver_index_params {
 	// Limits of the size of quads in the index.
 	double index_scale_upper;
 	double index_scale_lower;
-
-	// The limits on the size of quads, in field coordinates (pixels),
-	// Derived from index_scale_* and funits_*.
-	double minAB;
-	double maxAB;
 };
-typedef struct solver_index_params solver_index_params;
+typedef struct index_params index_params;
 
 struct solver_params {
 
 	// the index we're currently dealing with.
-	solver_index_params* sips;
+	index_params* sips;
 
 	// the set of indices.
 	bl* indexes;
@@ -156,9 +151,9 @@ typedef struct solver_params solver_params;
 
 void solver_default_params(solver_params* params);
 
-void solver_default_index_params(solver_index_params* sips);
+void default_index_params(index_params* sips);
 
-void solver_compute_quad_range(solver_params* sp, solver_index_params* sips);
+void solver_compute_quad_range(solver_params* sp, index_params* sips, double*, double*);
 
 void solve_field(solver_params* params);
 

@@ -99,7 +99,7 @@ struct blind_params
 	// best logodds encountered (even if we don't record bestmo)
 	double bestlogodds;
 
-	solver_index_params* bestsips;
+	index_params* bestsips;
 
 	// Filenames
 	char *fieldfname;
@@ -328,7 +328,7 @@ err:
 	logerr(bp, "Failed to write index RDLS field header.\n");
 }
 
-static void close_index(solver_index_params* sips)
+static void close_index(index_params* sips)
 {
 	if (sips->starkd)
 		startree_close(sips->starkd);
@@ -348,7 +348,7 @@ static int load_index(char* indexname,
                       bool skdt_only,
                       blind_params* bp,
                       solver_params* sp,
-                      solver_index_params* sips)
+                      index_params* sips)
 {
 	char *idfname, *treefname, *quadfname, *startreefname;
 
@@ -416,10 +416,11 @@ static int load_index(char* indexname,
 		// 1.5 = sqrt(2) + fudge factor.
 		sips->cxdx_margin = 1.5 * sp->codetol;
 
-	solver_compute_quad_range(sp, sips);
+  double minAB, maxAB;
+	solver_compute_quad_range(sp, sips, &minAB, &maxAB);
 
 	if (sp->funits_upper != 0.0 && sp->funits_lower != 0.0)
-		logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", sips->minAB, sips->maxAB);
+		logmsg(bp, "Looking for quads with pixel size [%g, %g]\n", minAB, maxAB);
 
 	if (bp->use_idfile) {
 		idfname = mk_idfn(indexname);
@@ -461,7 +462,7 @@ void init_parameters(blind_params* bp, solver_params* sp)
 	sp->parity = DEFAULT_PARITY;
 	sp->codetol = DEFAULT_CODE_TOL;
 	sp->handlehit = blind_handle_hit;
-	sp->indexes = bl_new(16, sizeof(solver_index_params));
+	sp->indexes = bl_new(16, sizeof(index_params));
 }
 
 int parameters_are_sane(blind_params* bp, solver_params* sp)
@@ -765,14 +766,14 @@ int main(int argc, char *argv[])
 			for (I = 0; I < pl_size(bp->indexnames); I++) {
 				char* fname;
 				int w;
-				solver_index_params sips;
+				index_params sips;
 
 				if (bp->single_field_solved)
 					break;
 				if (sp->cancelled)
 					break;
 
-				solver_default_index_params(&sips);
+				default_index_params(&sips);
 				fname = pl_get(bp->indexnames, I);
 				if (load_index(fname, TRUE, bp, sp, &sips)) {
 					exit( -1);
@@ -806,9 +807,9 @@ int main(int argc, char *argv[])
 			// FIXME avoid re-reading indices!!!
 			for (I = 0; I < pl_size(bp->indexnames); I++) {
 				char* fname;
-				solver_index_params sips;
+				index_params sips;
 
-				solver_default_index_params(&sips);
+				default_index_params(&sips);
 				fname = pl_get(bp->indexnames, I);
 				logmsg(bp, "\nLoading index %s...\n", fname);
 				if (load_index(fname, FALSE, bp, sp, &sips)) {
@@ -865,7 +866,7 @@ int main(int argc, char *argv[])
 
 			// Clean up the indices...
 			for (I = 0; I < bl_size(sp->indexes); I++) {
-				solver_index_params* sips;
+				index_params* sips;
 				sips = bl_access(sp->indexes, I);
 				close_index(sips);
 			}
@@ -876,7 +877,7 @@ int main(int argc, char *argv[])
 
 			for (I = 0; I < pl_size(bp->indexnames); I++) {
 				char* fname;
-				solver_index_params sips;
+				index_params sips;
 
 				if (bp->hit_total_timelimit || bp->hit_total_cpulimit)
 					break;
@@ -887,7 +888,7 @@ int main(int argc, char *argv[])
 
 				// Load the index...
 				fname = pl_get(bp->indexnames, I);
-				solver_default_index_params(&sips);
+				default_index_params(&sips);
 				if (load_index(fname, FALSE, bp, sp, &sips)) {
 					exit( -1);
 				}

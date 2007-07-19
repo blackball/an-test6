@@ -77,10 +77,9 @@ static inline void sety(double* d, uint ind, double val)
 	d[ind*2 + 1] = val;
 }
 
-void solver_default_index_params(solver_index_params* sips)
+void default_index_params(index_params* sips)
 {
-	memset(sips, 0, sizeof(solver_index_params));
-	sips->maxAB = HUGE_VAL;
+	memset(sips, 0, sizeof(index_params));
 	sips->healpix = -1;
 }
 
@@ -90,12 +89,13 @@ void solver_default_params(solver_params* params)
 	params->funits_upper = HUGE_VAL;
 }
 
-void solver_compute_quad_range(solver_params* sp, solver_index_params* sips)
+void solver_compute_quad_range(solver_params* sp, index_params* index,
+		double* minAB, double* maxAB)
 {
 	double scalefudge = 0.0; // in pixels
 
 	if (sp->funits_upper != 0.0) {
-		sips->minAB = sips->index_scale_lower / sp->funits_upper;
+		*minAB = index->index_scale_lower / sp->funits_upper;
 
 		// compute fudge factor for quad scale: what are the extreme
 		// ranges of quad scales that should be accepted, given the
@@ -112,15 +112,15 @@ void solver_compute_quad_range(solver_params* sp, solver_index_params* sips)
 		//  can move before exceeding the code tolerance, in arcsec.
 		// -that divided by the smallest arcsec-per-pixel scale
 		//  gives the largest motion in pixels.
-		scalefudge = sips->index_scale_upper * M_SQRT1_2 *
+		scalefudge = index->index_scale_upper * M_SQRT1_2 *
 		             sp->codetol / sp->funits_upper;
-		sips->minAB -= scalefudge;
+		*minAB -= scalefudge;
 		//logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
 		//logmsg(bp, "Set minAB to %g\n", sp->sips->minAB);
 	}
 	if (sp->funits_lower != 0.0) {
-		sips->maxAB = sips->index_scale_upper / sp->funits_lower;
-		sips->maxAB += scalefudge;
+		*maxAB = index->index_scale_upper / sp->funits_lower;
+		*maxAB += scalefudge;
 		//logmsg(bp, "Set maxAB to %g\n", sp->sips->maxAB);
 	}
 }
@@ -247,12 +247,18 @@ void solve_field(solver_params* params)
 	if (params->startobj >= numxy)
 		return ;
 
+	uint num_indexes = bl_size(params->indexes);
+	double minABs[num_indexes];
+	double maxABs[num_indexes];
 	params->minminAB = HUGE_VAL;
 	params->maxmaxAB = -HUGE_VAL;
-	for (i = 0; i < bl_size(params->indexes); i++) {
-		solver_index_params* sips = bl_access(params->indexes, i);
-		params->minminAB = MIN(params->minminAB, sips->minAB);
-		params->maxmaxAB = MAX(params->maxmaxAB, sips->maxAB);
+	for (i = 0; i < num_indexes; i++) {
+		index_params* sips = bl_access(params->indexes, i);
+		// The limits on the size of quads, in field coordinates (pixels),
+		// Derived from index_scale_* and funits_*.
+		solver_compute_quad_range(params, sips, minABs+i, maxABs+i);
+		params->minminAB = MIN(params->minminAB, minABs[i]);
+		params->maxmaxAB = MAX(params->maxmaxAB, maxABs[i]);
 	}
 	fprintf(stderr, "extreme scale range: [%g, %g]\n", params->minminAB, params->maxmaxAB);
 
@@ -392,10 +398,10 @@ void solve_field(solver_params* params)
 			setx(ABCDpix, 0, getx(params->field, iA));
 			sety(ABCDpix, 0, gety(params->field, iA));
 
-			for (i = 0; i < bl_size(params->indexes); i++) {
-				solver_index_params* sips = bl_access(params->indexes, i);
-				if ((pq->scale < square(sips->minAB)) ||
-				        (pq->scale > square(sips->maxAB)))
+			for (i = 0; i < num_indexes; i++) {
+				index_params* sips = bl_access(params->indexes, i);
+				if ((pq->scale < square(minABs[i])) ||
+				        (pq->scale > square(maxABs[i])))
 					continue;
 				params->sips = sips;
 
@@ -460,9 +466,9 @@ void solve_field(solver_params* params)
 				dy = gety(pq->xy, iD);
 
 				for (i = 0; i < bl_size(params->indexes); i++) {
-					solver_index_params* sips = bl_access(params->indexes, i);
-					if ((pq->scale < square(sips->minAB)) ||
-					        (pq->scale > square(sips->maxAB)))
+					index_params* sips = bl_access(params->indexes, i);
+					if ((pq->scale < square(minABs[i])) ||
+					        (pq->scale > square(maxABs[i])))
 						continue;
 					params->sips = sips;
 
