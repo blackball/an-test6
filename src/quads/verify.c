@@ -95,35 +95,36 @@ verify_field_t* verify_field_preprocess(double* field, int NF) {
 
 
     // kdtree type;
-    {
-        int exttype = KDT_EXT_DOUBLE;
-        int datatype = KDT_DATA_U32;
-        int treetype = KDT_TREE_U32;
-        int tt;
-        tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
-	if (datatype != KDT_DATA_DOUBLE) {
-
-            vf->fieldcopy = NULL;
-
-            // convert data
-            vf->ftree = kdtree_convert_data(NULL, vf->field, NF, 2, Nleaf, tt);
-            vf->ftree = kdtree_build(vf->ftree, vf->ftree->data.any, NF, 2, Nleaf, tt, KD_BUILD_SPLIT);
-
-        } else {
-            // Make a copy of the field objects, because we're going to build a
-            // kdtree out of them and that shuffles their order.
-            vf->fieldcopy = malloc(NF * 2 * sizeof(double));
-            if (!vf->fieldcopy) {
-                fprintf(stderr, "Failed to copy the field.\n");
-                free(vf);
-                return NULL;
-            }
-            memcpy(vf->fieldcopy, field, NF * 2 * sizeof(double));
-
-            // Build a tree out of the field objects (in pixel space)
-            vf->ftree = kdtree_build(NULL, vf->fieldcopy, NF, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_SPLIT);
-        }
+    // (this turned out to be marginally slower; I didn't try U16 because we need a fair bit
+    //  of accuracy here...)
+    /*
+      {
+      int exttype = KDT_EXT_DOUBLE;
+      int datatype = KDT_DATA_U32;
+      int treetype = KDT_TREE_U32;
+      int tt;
+      tt = kdtree_kdtypes_to_treetype(exttype, treetype, datatype);
+      if (datatype != KDT_DATA_DOUBLE) {
+      vf->fieldcopy = NULL;
+      // convert data
+      vf->ftree = kdtree_convert_data(NULL, vf->field, NF, 2, Nleaf, tt);
+      vf->ftree = kdtree_build(vf->ftree, vf->ftree->data.any, NF, 2, Nleaf, tt, KD_BUILD_SPLIT);
+      } else {
+      }
+    */
+    
+    // Make a copy of the field objects, because we're going to build a
+    // kdtree out of them and that shuffles their order.
+    vf->fieldcopy = malloc(NF * 2 * sizeof(double));
+    if (!vf->fieldcopy) {
+        fprintf(stderr, "Failed to copy the field.\n");
+        free(vf);
+        return NULL;
     }
+    memcpy(vf->fieldcopy, field, NF * 2 * sizeof(double));
+
+    // Build a tree out of the field objects (in pixel space)
+    vf->ftree = kdtree_build(NULL, vf->fieldcopy, NF, 2, Nleaf, KDTT_DOUBLE, KD_BUILD_SPLIT);
 
     return vf;
 }
