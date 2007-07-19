@@ -145,9 +145,16 @@ int main(int argc, char** args) {
 
 
 
-    // if --image is given, run image2pnm.py
-    
+    // if --image is given:
+    //   -run image2pnm.py
+    //   -if it's a FITS image, keep the original (well, sanitized version)
+    //   -otherwise, run ppmtopgm (if necessary) and pnmtofits.
+    //   -run fits2xy to generate xylist
 
+    // if --xylist is given:
+    //   -fits2fits.py?
+
+    // start piling FITS headers in there.
 
 
     return 0;
