@@ -816,10 +816,12 @@ function process_data ($vals) {
 					160 => 180,
 					180 => 200);
 
+	$inparallel = 1;
 	
 	// If there's only one scale estimate, there's no need to do
 	// striping!
-	if (count($tryscales) == 1) {
+	if ((count($tryscales) == 1) &&
+		($inparallel || (count($indexes) == 1))) {
 		$depths = array(0 => 200);
 	}
 
@@ -834,7 +836,8 @@ function process_data ($vals) {
 			$fumin = $range[0];
 			$fumax = $range[1];
 
-			$str .= "indexes_inparallel\n";
+			if ($inparallel)
+				$str .= "indexes_inparallel\n";
 
 			foreach ($indexes as $ind) {
 				$str .= "index " . $indexdir . $ind . "\n";
