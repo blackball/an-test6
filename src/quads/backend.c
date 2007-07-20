@@ -220,6 +220,7 @@ struct job_t
 	double distractor_fraction;
 	// Contains tan_t structs.
 	bl* verify_wcs;
+    bool include_default_scales;
 };
 typedef struct job_t job_t;
 
@@ -557,6 +558,7 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	job->cancelfile = fits_get_dupstring(hdr, "ANCANCEL");
 	job->timelimit = qfits_header_getint(hdr, "ANTLIM", job->timelimit);
 	job->cpulimit = qfits_header_getint(hdr, "ANCLIM", job->cpulimit);
+    job->include_default_scales = qfits_header_getboolean(hdr, "ANAPPDEF", 0);
 
 	char *pstr = qfits_pretty_string(qfits_header_getstr(hdr, "ANPARITY"));
 	if (pstr && !strcmp(pstr, "NEG")) {
@@ -656,6 +658,7 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 
 	// Default: solve first field.
 	if (job->run && !il_size(job->fields)) {
+		il_append(job->fields, 0);
 		il_append(job->fields, 0);
 	}
 
@@ -782,7 +785,7 @@ int main(int argc, char** args)
 
 		// If the job has no scale estimate, search everything provided
 		// by the backend
-		if (!dl_size(job->scales)) {
+		if (!dl_size(job->scales) || job->include_default_scales) {
 			double arcsecperpix;
 			arcsecperpix = deg2arcsec(backend->minwidth) / job->imagew;
 			dl_append(job->scales, arcsecperpix);

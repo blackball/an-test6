@@ -92,6 +92,7 @@ static struct option long_options[] = {
 	{"help",		optional_argument, 0, 'h'},
 	{"guess-scale", optional_argument, 0, 'g'},
 	{"image",		optional_argument, 0, 'i'},
+	{"pnm",	        optional_argument, 0, 'P'},
     {"width",       optional_argument, 0, 'w'},
     {"height",      optional_argument, 0, 'e'},
 	{"scale-low",	optional_argument, 0, 'L'},
@@ -107,7 +108,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:P:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -234,6 +235,11 @@ int main(int argc, char** args) {
     int tweak_order = 0;
     int orig_nheaders;
     FILE* fout;
+    char* savepnmfn = NULL;
+    bool guess_scale = FALSE;
+    dl* scales;
+    int i;
+    bool guessed_scale = FALSE;
 
 	while (1) {
 		int option_index = 0;
@@ -279,6 +285,12 @@ int main(int argc, char** args) {
         case 'O':
             tweak_order = atoi(optarg);
             break;
+        case 'P':
+            savepnmfn = optarg;
+            break;
+        case 'g':
+            guess_scale = TRUE;
+            break;
 		case '?':
 			break;
 		default:
@@ -314,6 +326,8 @@ int main(int argc, char** args) {
 		exit(0);
 	}
 
+    scales = dl_new(16);
+
 	if (imagefn) {
 		// if --image is given:
 		//	 -run image2pnm.py
@@ -324,17 +338,20 @@ int main(int argc, char** args) {
 		char *sanitizedfn;
 		char *pnmfn;				
 		pl* lines;
-		int i;
 		bool isfits;
 		char *fitsimgfn;
         char* line;
         char pnmtype;
         int maxval;
         char typestr[256];
+        char* sortedxylsfn;
 
 		uncompressedfn = "/tmp/uncompressed";
 		sanitizedfn = "/tmp/sanitized";
-		pnmfn = "/tmp/pnm";
+        if (savepnmfn)
+            pnmfn = savepnmfn;
+        else
+            pnmfn = "/tmp/pnm";
 
 		snprintf(cmd, sizeof(cmd),
 				 "image2pnm.py --infile \"%s\""
@@ -380,13 +397,32 @@ int main(int argc, char** args) {
             exit(-1);
         }
 
-		// FIXME - Do something with the PNM?
-
 		if (isfits) {
-
-			// FIXME - guess scale, if required.
-
 			fitsimgfn = sanitizedfn;
+
+            if (guess_scale) {
+                snprintf(cmd, sizeof(cmd), "fits-guess-scale \"%s\"", fitsimgfn);
+                if (run_command_get_outputs(cmd, &lines, NULL)) {
+                    fprintf(stderr, "Failed to run fits-guess-scale: %s\n", strerror(errno));
+                    exit(-1);
+                }
+
+                for (i=0; i<pl_size(lines); i++) {
+                    char type[256];
+                    double scale;
+                    line = pl_get(lines, i);
+                    if (sscanf(line, "scale %255s %lg", type, &scale) == 2) {
+                        printf("Scale estimate: %g\n", scale);
+                        dl_append(scales, scale * 0.99);
+                        dl_append(scales, scale * 1.01);
+                        guessed_scale = TRUE;
+                    }
+                }
+
+                pl_free_elements(lines);
+                pl_free(lines);
+
+            }
 
 		} else {
 			fitsimgfn = "/tmp/fits";
@@ -421,6 +457,20 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to run fits2xy.\n");
 			exit(-1);
 		}
+
+		printf("Running tabsort...\n");
+
+        sortedxylsfn = "/tmp/sorted";
+
+        // sort the table by FLUX.
+        snprintf(cmd, sizeof(cmd),
+                 "tabsort -i \"%s\" -o \"%s\" -c FLUX -d", xylsfn, sortedxylsfn);
+		printf("Command: %s\n", cmd);
+		if (run_command_get_outputs(cmd, NULL, NULL)) {
+			fprintf(stderr, "Failed to run tabsort.\n");
+			exit(-1);
+		}
+        xylsfn = sortedxylsfn;
 
 	} else {
 		// xylist.
@@ -475,9 +525,20 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 
-        fits_header_add_double(hdr, "ANAPPL1", appl, "scale: arcsec/pixel min");
-        fits_header_add_double(hdr, "ANAPPU1", appu, "scale: arcsec/pixel max");
+        dl_append(scales, appl);
+        dl_append(scales, appu);
 	}
+
+    if ((dl_size(scales) > 0) && guessed_scale) {
+        qfits_header_add(hdr, "ANAPPDEF", "T", "try the default scale range too.", NULL);
+    }
+    for (i=0; i<dl_size(scales)/2; i++) {
+        char key[64];
+        sprintf(key, "ANAPPL%i", i+1);
+        fits_header_add_double(hdr, key, dl_get(scales, i*2), "scale: arcsec/pixel min");
+        sprintf(key, "ANAPPU%i", i+1);
+        fits_header_add_double(hdr, key, dl_get(scales, i*2+1), "scale: arcsec/pixel max");
+    }
 
     qfits_header_add(hdr, "ANTWEAK", (tweak ? "T" : "F"), (tweak ? "Tweak: yes please!" : "Tweak: no, thanks."), NULL);
     if (tweak && tweak_order) {
@@ -500,7 +561,6 @@ int main(int argc, char** args) {
         FILE* fin;
         char block[FITS_BLOCK_SIZE];
         int startblock;
-        int i;
         int nblocks;
         struct stat st;
         startblock = fits_blocks_needed(orig_nheaders * FITS_LINESZ);
@@ -518,7 +578,7 @@ int main(int argc, char** args) {
             fprintf(stderr, "Failed to seek in xyls file \"%s\": %s\n", xylsfn, strerror(errno));
             exit(-1);
         }
-        printf("Copying FITS blocks %i to %i from xyls to output.\n", startblock, nblocks);
+        //printf("Copying FITS blocks %i to %i from xyls to output.\n", startblock, nblocks);
         for (i=startblock; i<nblocks; i++) {
             if (fread(block, 1, FITS_BLOCK_SIZE, fin) != FITS_BLOCK_SIZE) {
                 fprintf(stderr, "Failed to read xyls file \"%s\": %s\n", xylsfn, strerror(errno));
