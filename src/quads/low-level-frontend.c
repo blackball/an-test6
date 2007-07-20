@@ -303,6 +303,7 @@ int main(int argc, char** args) {
         char* line;
         char pnmtype;
         int maxval;
+        char typestr[256];
 
 		uncompressedfn = "/tmp/uncompressed";
 		sanitizedfn = "/tmp/sanitized";
@@ -346,8 +347,8 @@ int main(int argc, char** args) {
             exit(-1);
         }
         line += strlen(pnmfn) + 1;
-        if (sscanf(line, " P%cM %s, %d by %d maxval %d",
-                   &pnmtype, &W, &H, &maxval) != 4) {
+        if (sscanf(line, " P%cM %255s, %d by %d maxval %d",
+                   &pnmtype, typestr, &W, &H, &maxval) != 5) {
             fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
             exit(-1);
         }
@@ -361,21 +362,9 @@ int main(int argc, char** args) {
 			fitsimgfn = sanitizedfn;
 
 		} else {
-            bool isppm = (pnmtype == 'P');
-			bool isppm;
-			// do we need to convert from PPM to PGM?
-			// PPM starts with "P6"
-			char* buf = file_get_contents_offset(pnmfn, 0, 2);
-			if (!buf) {
-				fprintf(stderr, "Failed to read PNM file \"%s\".\n", pnmfn);
-				exit(-1);
-			}
-			isppm = ((strncmp(buf, "P6", 2) == 0) || (strncmp(buf, "P3", 2) == 0));
-			free(buf);
-
 			fitsimgfn = "/tmp/fits";
 
-			if (isppm) {
+			if (pnmtype == 'P') {
 				printf("Converting PPM image to FITS...\n");
 				snprintf(cmd, sizeof(cmd),
 						 "ppmtopgm \"%s\" | pnmtofits > \"%s\"", pnmfn, fitsimgfn);
@@ -431,9 +420,15 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	fits_header_add_int(hdr, "IMAGEW", W, "image width");
-	fits_header_add_int(hdr, "IMAGEH", H, "image height");
-	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!");
+    if (!(W && H)) {
+        // If an xylist was given, look for existing IMAGEW, IMAGEH headers.
+        
+    }
+    if (W && H) {
+        fits_header_add_int(hdr, "IMAGEW", W, "image width");
+        fits_header_add_int(hdr, "IMAGEH", H, "image height");
+    }
+	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!", NULL);
 
 	if (scalelo > 0.0 && scalehi > 0.0) {
 		double appu, appl;
