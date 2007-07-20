@@ -276,7 +276,6 @@ int main(int argc, char** args) {
 		char *uncompressedfn;
 		char *sanitizedfn;
 		char *pnmfn;                
-		//char *image2pnmout;
 		pl* lines;
 		int i;
 		bool isfits;
@@ -284,33 +283,6 @@ int main(int argc, char** args) {
 		uncompressedfn = "/tmp/uncompressed";
 		sanitizedfn = "/tmp/sanitized";
 		pnmfn = "/tmp/pnm";
-		//image2pnmout = "/tmp/image2pnm.out";
-
-		/*
-		snprintf(cmd, sizeof(cmd),
-				 "image2pnm.py --infile \"%s\""
-				 "  --uncompressed-outfile \"%s\""
-				 "  --sanitized-fits-outfile \"%s\""
-				 "  --outfile \"%s\" > \"%s\"",
-				 imagefn, uncompressedfn, sanitizedfn, pnmfn, image2pnmout);
-
-		printf("Running: %s\n", cmd);
-		rtn = system(cmd);
-		if (rtn == -1) {
-			fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
-			exit(-1);
-		}
-		if (WEXITSTATUS(rtn)) {
-			fprintf(stderr, "image2pnm failed: status %i.\n", WEXITSTATUS(rtn));
-			exit(-1);
-		}
-		// read the file type.
-		lines = file_get_lines(image2pnmout, FALSE);
-		if (!lines) {
-			fprintf(stderr, "failed to read image2pnm output: %s\n", strerror(errno));
-			exit(-1);
-		}
-		 */
 
 		snprintf(cmd, sizeof(cmd),
 				 "image2pnm.py --infile \"%s\""
@@ -325,7 +297,6 @@ int main(int argc, char** args) {
 		}
 
 		isfits = FALSE;
-		//printf("%i lines:\n", pl_size(lines));
 		for (i=0; i<pl_size(lines); i++) {
 			printf("  %s\n", (char*)pl_get(lines, i));
 			if (!strcmp("fits", (char*)pl_get(lines, i)))
@@ -336,13 +307,31 @@ int main(int argc, char** args) {
 
 		if (isfits) {
 		} else {
-			// do we need to convert from PPM to PNM?
+			char* pgmfn;
+			bool isppm;
+			// do we need to convert from PPM to PGM?
 			// PPM starts with "P6"
 			char* buf = file_get_contents_offset(pnmfn, 0, 2);
 			if (!buf) {
 				fprintf(stderr, "Failed to read PNM file \"%s\".\n", pnmfn);
 				exit(-1);
 			}
+			isppm = ((strncmp(buf, "P6", 2) == 0) || (strncmp(buf, "P3", 2) == 0));
+			free(buf);
+
+			if (isppm) {
+				// convert to PGM.
+				pgmfn = "/tmp/pgm";
+				snprintf(cmd, sizeof(cmd),
+						 "ppmtopgm \"%s\" > \"%s\"", pnmfn, pgmfn);
+				if (run_command_get_outputs(cmd, NULL, NULL)) {
+					fprintf(stderr, "Failed to convert PPM to PGM.\n");
+					exit(-1);
+				}
+			} else {
+				pgmfn = pnmfn;
+			}
+
 		}
 
 	} else {
