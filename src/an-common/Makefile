@@ -49,29 +49,40 @@ ANUTILS_LIB := libanutils.a
 
 all: $(ANUTILS_LIB) $(ANFILES_LIB)
 
+# Things that it depends on but which aren't linked in
+ANUTILS_DEPS :=
+
 ANUTILS_OBJ := starutil.o mathutil.o bl.o healpix.o permutedsort.o ioutils.o sip.o
 ifndef NO_QFITS
 ANUTILS_OBJ := $(ANUTILS_OBJ) fitsioutils.o sip_qfits.o
+ANUTILS_DEPS += $(QFITS_LIB)
 endif
 ifndef NO_KDTREE
 ANUTILS_OBJ := $(ANUTILS_OBJ) dualtree.o dualtree_rangesearch.o
 endif
 
+# Things that it depends on but which aren't linked in
+ANFILES_DEPS :=
+
 ANFILES_OBJ := 
 ifndef NO_QFITS
 ANFILES_OBJ := $(ANFILES_OBJ) starkd.o rdlist.o xylist.o an_catalog.o \
 	qidxfile.o quadfile.o
+ANFILES_DEPS += $(QFITS_LIB)
 endif
 
-$(ANUTILS_LIB): $(ANUTILS_OBJ)
-	$(AR) rc $@ $^
+$(ANUTILS_LIB): $(ANUTILS_OBJ) $(ANUTILS_DEPS)
+	$(AR) rc $@ $(ANUTILS_OBJ)
 	$(RANLIB) $@
 
-$(ANFILES_LIB): $(ANFILES_OBJ)
-	$(AR) rc $@ $^
+$(ANFILES_LIB): $(ANFILES_OBJ) $(ANFILES_DEPS)
+	$(AR) rc $@ $(ANFILES_OBJ)
 	$(RANLIB) $@
 
 DEP_OBJ := $(ANUTILS_OBJ) $(ANFILES_OBJ)
+ifndef NO_QFITS
+DEP_PREREQS := $(QFITS_LIB)
+endif
 include $(COMMON)/makefile.deps
 
 clean:
