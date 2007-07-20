@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include "an-bool.h"
+#include "bl.h"
 
 extern uint32_t ENDIAN_DETECTOR;
 
@@ -31,6 +32,12 @@ void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
 bool file_exists(char* fn);
 
 char* file_get_contents(char* fn);
+
+char* file_get_contents_offset(char* fn, int offset, int length);
+
+pl* file_get_lines(char* fn, bool include_newlines);
+
+pl* fid_get_lines(FILE* fid, bool include_newlines);
 
 /**
    If "cmdline" starts with "keyword", returns 1 and places the address of
@@ -62,7 +69,8 @@ int read_u32(FILE* fin, unsigned int* val);
 int read_double(FILE* fin, double* val);
 int read_fixed_length_string(FILE* fin, char* s, int length);
 char* read_string(FILE* fin);
-char* read_string_terminated(FILE* fin, char* terminators, int nterminators);
+char* read_string_terminated(FILE* fin, char* terminators, int nterminators,
+							 bool include_terminator);
 
 int read_u32_portable(FILE* fin, unsigned int* val);
 int read_u32s_portable(FILE* fin, unsigned int* val, int n);

@@ -1167,6 +1167,13 @@ int bl_compare_pointers_ascending(const void* v1, const void* v2) {
     else return 0;
 }
 
+void  pl_free_elements(pl* list) {
+	int i;
+	for (i=0; i<pl_size(list); i++) {
+		free(pl_get(list, i));
+	}
+}
+
 pl*   pl_dup(pl* list) {
 	pl* newlist = pl_new(list->blocksize);
 	bl_node* newnode;

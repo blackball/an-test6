@@ -1024,13 +1024,10 @@ int main(int argc, char *argv[])
 static void cleanup_parameters(blind_params* bp,
                                solver_params* sp)
 {
-	int i;
 	il_free(bp->fieldlist);
-	for (i = 0; i < pl_size(bp->indexnames); i++)
-		free(pl_get(bp->indexnames, i));
+	pl_free_elements(bp->indexnames);
 	pl_free(bp->indexnames);
-	for (i = 0; i < pl_size(bp->verify_wcsfiles); i++)
-		free(pl_get(bp->verify_wcsfiles, i));
+	pl_free_elements(bp->verify_wcsfiles);
 	pl_free(bp->verify_wcsfiles);
 	bl_free(bp->verify_wcs_list);
 	bl_free(sp->indexes);

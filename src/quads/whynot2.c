@@ -519,9 +519,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		for (i=0; i<pl_size(bp->indexes); i++)
-			free(pl_get(bp->indexes, i));
-
+		pl_free_elements(bp->indexes);
 		pl_free(bp->indexes);
 		il_free(bp->fieldlist);
 

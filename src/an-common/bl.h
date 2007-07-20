@@ -168,6 +168,7 @@ int il_check_sorted_descending(il* list, int isunique);
 typedef bl pl;
 pl*   pl_new(int blocksize);
 void  pl_free(pl* list);
+void  pl_free_elements(pl* list);
 int   pl_size(pl* list);
 void* pl_get(pl* list, int n);
 void  pl_set(pl* list, int ind, void* data);

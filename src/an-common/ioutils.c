@@ -32,6 +32,66 @@
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
+pl* file_get_lines(char* fn, bool include_newlines) {
+    FILE* fid;
+	pl* list;
+    fid = fopen(fn, "r");
+    if (!fid) {
+        fprintf(stderr, "file_get_lines: failed to open file \"%s\": %s\n", fn, strerror(errno));
+        return NULL;
+    }
+	list = fid_get_lines(fid, include_newlines);
+	fclose(fid);
+	return list;
+}
+
+pl* fid_get_lines(FILE* fid, bool include_newlines) {
+	pl* list;
+	list = pl_new(256);
+	while (1) {
+		char* line = read_string_terminated(fid, "\n\r\0", 3, include_newlines);
+		if (!line) {
+			// error.
+			fprintf(stderr, "fid_get_lines: failed to read a line.\n");
+			pl_free_elements(list);
+			pl_free(list);
+			return NULL;
+		}
+		pl_append(list, line);
+		if (feof(fid))
+			break;
+	}
+	return list;
+}
+
+char* file_get_contents_offset(char* fn, int offset, int size) {
+    char* buf;
+    FILE* fid;
+    fid = fopen(fn, "rb");
+    if (!fid) {
+        fprintf(stderr, "file_get_contents_offset: failed to open file \"%s\": %s\n", fn, strerror(errno));
+        return NULL;
+    }
+    buf = malloc(size);
+    if (!buf) {
+        fprintf(stderr, "file_get_contents_offset: couldn't malloc %lu bytes.\n", (long)size);
+        return NULL;
+    }
+	if (offset) {
+		if (fseeko(fid, offset, SEEK_SET)) {
+			fprintf(stderr, "file_get_contents_offset: failed to fseeko: %s.\n", strerror(errno));
+			return NULL;
+		}
+	}
+	if (fread(buf, 1, size, fid) != size) {
+        fprintf(stderr, "file_get_contents_offset: failed to read %lu bytes: %s\n", (long)size, strerror(errno));
+        free(buf);
+        return NULL;
+    }
+	fclose(fid);
+    return buf;
+}
+
 char* file_get_contents(char* fn) {
     struct stat st;
     char* buf;
@@ -57,6 +117,7 @@ char* file_get_contents(char* fn) {
         free(buf);
         return NULL;
     }
+	fclose(fid);
     return buf;
 }
 
@@ -215,10 +276,27 @@ int read_fixed_length_string(FILE* fin, char* s, int length) {
 }
 
 char* read_string(FILE* fin) {
-	return read_string_terminated(fin, "\0", 1);
+	return read_string_terminated(fin, "\0", 1, FALSE);
 }
 
-char* read_string_terminated(FILE* fin, char* terminators, int nterminators) {
+static char* growable_buffer_add(char* buf, int index, char c, int* size, int* sizestep, int* maxstep) {
+	if (index == *size) {
+		// expand
+		*size += *sizestep;
+		buf = (char*)realloc(buf, *size);
+		if (!buf) {
+			fprintf(stderr, "Couldn't allocate buffer: %i.\n", *size);
+			return NULL;
+		}
+		if (*sizestep < *maxstep)
+			*sizestep *= 2;
+	}
+	buf[index] = c;
+	return buf;
+}
+
+char* read_string_terminated(FILE* fin, char* terminators, int nterminators,
+							 bool include_terminator) {
 	int step = 1024;
 	int maxstep = 1024*1024;
 	int i = 0;
@@ -226,45 +304,38 @@ char* read_string_terminated(FILE* fin, char* terminators, int nterminators) {
 	char* rtn = NULL;
 	for (;;) {
 		int c = fgetc(fin);
-		if (i == size) {
-			// expand
-			size += step;
-			rtn = (char*)realloc(rtn, size);
-			if (!rtn) {
-				fprintf(stderr, "Couldn't allocate buffer: %i.\n", size+step);
-				return rtn;
-			}
-			if (step < maxstep)
-				step *= 2;
-		}
-		// treat end-of-file like end-of-string.
 		if (c == EOF)
-			c = '\0';
-		rtn[i] = (char)c;
-		i++;
-
-		if (memchr(terminators, c, nterminators))
 			break;
-		/*
-		  if (!c)
-		  break;
-		*/
+		rtn = growable_buffer_add(rtn, i, c, &size, &step, &maxstep);
+		if (!rtn)
+			return NULL;
+		i++;
+		if (memchr(terminators, c, nterminators)) {
+			if (!include_terminator)
+				i--;
+			break;
+		}
 	}
 	if (ferror(fin)) {
 		read_complain(fin, "string");
 		free(rtn);
 		return NULL;
 	}
-	if (rtn[i-1] != '\0') {
-		// add \0 if it isn't already there...
+	// add \0 if it isn't already there;
+	// return "\0" if nothing was read.
+	if (i==0 || (rtn[i-1] != '\0')) {
+		rtn = growable_buffer_add(rtn, i, '\0', &size, &step, &maxstep);
+		if (!rtn)
+			return NULL;
 		i++;
 	}
-	rtn = (char*)realloc(rtn, i);
-	// shouldn't happen - we're shrinking.
-	if (!rtn) {
-		fprintf(stderr, "Couldn't realloc buffer: %i\n", i);
+	if (i < size) {
+		rtn = (char*)realloc(rtn, i);
+		// shouldn't happen - we're shrinking.
+		if (!rtn) {
+			fprintf(stderr, "Couldn't realloc buffer: %i\n", i);
+		}
 	}
-	rtn[i-1] = '\0';
 	return rtn;
 }
 

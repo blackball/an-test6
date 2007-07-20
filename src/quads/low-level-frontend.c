@@ -1,20 +1,20 @@
 /*
-  This file is part of the Astrometry.net suite.
-  Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
+ This file is part of the Astrometry.net suite.
+ Copyright 2007 Dustin Lang, Keir Mierle and Sam Roweis.
 
-  The Astrometry.net suite is free software; you can redistribute
-  it and/or modify it under the terms of the GNU General Public License
-  as published by the Free Software Foundation, version 2.
+ The Astrometry.net suite is free software; you can redistribute
+ it and/or modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation, version 2.
 
-  The Astrometry.net suite is distributed in the hope that it will be
-  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
-  General Public License for more details.
+ The Astrometry.net suite is distributed in the hope that it will be
+ useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
+ General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with the Astrometry.net suite ; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA	 02110-1301 USA
-*/
+ You should have received a copy of the GNU General Public License
+ along with the Astrometry.net suite ; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA	 02110-1301 USA
+ */
 
 /**
  * Accepts an xylist and command-line options, and produces an augmented
@@ -63,7 +63,7 @@
  * ANW#CD21 CD2_1
  * ANW#CD22 CD2_2 
 
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +107,109 @@ static void print_help(const char* progname) {
 		   "  (    -i <image-input-file>\n"
 		   "   OR  -x <xylist-input-file>  )\n"
 		   "\n", progname);
+}
+
+static int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines) {
+	int outpipe[2];
+	int errpipe[2];
+	pid_t pid;
+
+	if (outlines) {
+		if (pipe(outpipe) == -1) {
+			fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+	if (errlines) {
+		if (pipe(errpipe) == -1) {
+			fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+
+	pid = fork();
+	if (pid == -1) {
+		fprintf(stderr, "Error fork()ing: %s\n", strerror(errno));
+		return -1;
+	} else if (pid == 0) {
+		// Child process.
+		if (outlines) {
+			close(outpipe[0]);
+			// bind stdout to the pipe.
+			if (dup2(outpipe[1], STDOUT_FILENO) == -1) {
+				fprintf(stderr, "Failed to dup2 stdout: %s\n", strerror(errno));
+				_exit( -1);
+			}
+		}
+		if (errlines) {
+			close(errpipe[0]);
+			// bind stdout to the pipe.
+			if (dup2(errpipe[1], STDERR_FILENO) == -1) {
+				fprintf(stderr, "Failed to dup2 stdout: %s\n", strerror(errno));
+				_exit( -1);
+			}
+		}
+		// Use a "system"-like command to allow fancier commands.
+		if (execlp("/bin/sh", "/bin/sh", "-c", cmd, (char*)NULL)) {
+			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
+			_exit( -1);
+		}
+		// execlp doesn't return.
+	} else {
+		FILE *fout, *ferr;
+		int status;
+		// Parent process.
+		if (outlines) {
+			close(outpipe[1]);
+			fout = fdopen(outpipe[0], "r");
+			if (!fout) {
+				fprintf(stderr, "Failed to fdopen pipe: %s\n", strerror(errno));
+				return -1;
+			}
+		}
+		if (errlines) {
+			close(errpipe[1]);
+			ferr = fdopen(errpipe[0], "r");
+			if (!ferr) {
+				fprintf(stderr, "Failed to fdopen pipe: %s\n", strerror(errno));
+				return -1;
+			}
+		}
+		// Wait for command to finish.
+		// FIXME - do we need to read from the pipes to prevent the command
+		// from blocking?
+		//printf("Waiting for blind to finish (PID %i).\n", (int)pid);
+		do {
+			if (waitpid(pid, &status, 0) == -1) {
+				fprintf(stderr, "Failed to waitpid(): %s.\n", strerror(errno));
+				return -1;
+			}
+			if (WIFSIGNALED(status)) {
+				fprintf(stderr, "Command was killed by signal %i.\n", WTERMSIG(status));
+				return -1;
+			} else {
+				int exitval = WEXITSTATUS(status);
+				if (exitval == 127) {
+					fprintf(stderr, "Command not found.\n");
+					return exitval;
+				} else if (exitval) {
+					fprintf(stderr, "Command failed: return value %i.\n", exitval);
+					return exitval;
+				}
+			}
+		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+		//printf("Blind finished successfully.\n");
+
+		if (outlines) {
+			*outlines = fid_get_lines(fout, FALSE);
+			fclose(fout);
+		}
+		if (errlines) {
+			*errlines = fid_get_lines(ferr, FALSE);
+			fclose(ferr);
+		}
+	}
+	return 0;
 }
 
 int main(int argc, char** args) {
@@ -170,34 +273,77 @@ int main(int argc, char** args) {
 		//	 -otherwise, run ppmtopgm (if necessary) and pnmtofits.
 		//	 -run fits2xy to generate xylist
 		char cmd[1024];
-                char *uncompressedfn;
-                char *sanitizedfn;
-                char *pnmfn;                
-                char *image2pnmout;
-                int rtn;
+		char *uncompressedfn;
+		char *sanitizedfn;
+		char *pnmfn;                
+		//char *image2pnmout;
+		pl* lines;
+		int i;
+		bool isfits;
 
-                uncompressedfn = "/tmp/uncompressed";
-                sanitizedfn = "/tmp/sanitized";
-                pnmfn = "/tmp/pnm";
-                image2pnmout = "/tmp/image2pnm.out";
+		uncompressedfn = "/tmp/uncompressed";
+		sanitizedfn = "/tmp/sanitized";
+		pnmfn = "/tmp/pnm";
+		//image2pnmout = "/tmp/image2pnm.out";
+
+		/*
+		snprintf(cmd, sizeof(cmd),
+				 "image2pnm.py --infile \"%s\""
+				 "  --uncompressed-outfile \"%s\""
+				 "  --sanitized-fits-outfile \"%s\""
+				 "  --outfile \"%s\" > \"%s\"",
+				 imagefn, uncompressedfn, sanitizedfn, pnmfn, image2pnmout);
+
+		printf("Running: %s\n", cmd);
+		rtn = system(cmd);
+		if (rtn == -1) {
+			fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
+			exit(-1);
+		}
+		if (WEXITSTATUS(rtn)) {
+			fprintf(stderr, "image2pnm failed: status %i.\n", WEXITSTATUS(rtn));
+			exit(-1);
+		}
+		// read the file type.
+		lines = file_get_lines(image2pnmout, FALSE);
+		if (!lines) {
+			fprintf(stderr, "failed to read image2pnm output: %s\n", strerror(errno));
+			exit(-1);
+		}
+		 */
 
 		snprintf(cmd, sizeof(cmd),
-                         "image2pnm.py --infile \"%s\""
-                         "  --uncompressed-outfile \"%s\""
-                         "  --sanitized-fits-outfile \"%s\""
-                         "  --outfile \"%s\" > \"%s\"",
-                         imagefn, uncompressedfn, sanitizedfn, pnmfn, image2pnmout);
+				 "image2pnm.py --infile \"%s\""
+				 "  --uncompressed-outfile \"%s\""
+				 "  --sanitized-fits-outfile \"%s\""
+				 "  --outfile \"%s\"",
+				 imagefn, uncompressedfn, sanitizedfn, pnmfn);
+		printf("Running: %s\n", cmd);
+		if (run_command_get_outputs(cmd, &lines, NULL)) {
+			fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
+			exit(-1);
+		}
 
-                printf("Running: %s\n", cmd);
-                rtn = system(cmd);
-                if (rtn == -1) {
-                    fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
-                    exit(-1);
-                }
-                if (WEXITSTATUS(rtn)) {
-                    fprintf(stderr, "image2pnm failed: status %i.\n", WEXITSTATUS(rtn));
-                    exit(-1);
-                }
+		isfits = FALSE;
+		//printf("%i lines:\n", pl_size(lines));
+		for (i=0; i<pl_size(lines); i++) {
+			printf("  %s\n", (char*)pl_get(lines, i));
+			if (!strcmp("fits", (char*)pl_get(lines, i)))
+				isfits = TRUE;
+		}
+		pl_free_elements(lines);
+		pl_free(lines);
+
+		if (isfits) {
+		} else {
+			// do we need to convert from PPM to PNM?
+			// PPM starts with "P6"
+			char* buf = file_get_contents_offset(pnmfn, 0, 2);
+			if (!buf) {
+				fprintf(stderr, "Failed to read PNM file \"%s\".\n", pnmfn);
+				exit(-1);
+			}
+		}
 
 	} else {
 		// xylist.
