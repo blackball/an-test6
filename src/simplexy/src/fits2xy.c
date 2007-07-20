@@ -40,7 +40,7 @@ static const char* OPTIONS = "hpOo:";
 
 void printHelp() {
 	fprintf(stderr,
-			"Usage: fits2xy [-p] fitsname.fits \n"
+			"Usage: fits2xy [options] fitsname.fits \n"
 			"\n"
 			"Read a FITS file, find objects, and write out \n"
 			"X, Y, FLUX to   fitsname.xy.fits .\n"
@@ -87,11 +87,6 @@ int main(int argc, char *argv[])
 	int nhdus,maxper,maxsize,halfbox,hdutype,nimgs;
 	float dpsf,plim,dlim,saddle;
 	int overwrite = 0;
-
-	if (!((argc == 2) || (argc == 3))) {
-		printHelp();
-		return (0);
-	}
 
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
