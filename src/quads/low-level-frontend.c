@@ -27,32 +27,32 @@
  --scale-units arcsecperpix --fields 1-9999 --noplots --nordls \
  --out sdss.axy
 
- * IMAGEW - Image width. Positive real
- * IMAGEH - Image height. Positive real
+ * IMAGEW - Image width.
+ * IMAGEH - Image height.
  * ANRUN - the "Go" button. 
 
- * ANPOSERR - Field positional error, in pixels. Positive real. Default 1.
- * ANSOLVED - Output filename for solved file. One byte per field, with value 0x1 if the field solved, 0x0 otherwise. The file is only created if at least one field solves.
- * ANMATCH - Output filename for match file. FITS table describing the quad match that solved the field.
- * ANRDLS - Output filename for index RDLS file. The (RA,Dec) of index stars that overlap the field.
- * ANWCS - Output filename for WCS file. A FITS header containing the header cards required to specify the solved WCS.
+ * ANPOSERR - Field positional error, in pixels.
+ * ANSOLVED - Output filename for solved file.
+ * ANMATCH - Output filename for match file.
+ * ANRDLS - Output filename for index RDLS file.
+ * ANWCS - Output filename for WCS file.
  * ANCANCEL - Input filename - if this file exists, the job is cancelled.
- * ANTLIM - Wall-clock time limit, in seconds (default inf)
- * ANCLIM - CPU time limit, in seconds (default inf)
+ * ANTLIM - Wall-clock time limit, in seconds
+ * ANCLIM - CPU time limit, in seconds
  * ANPARITY - "BOTH", "POS", "NEG" (default "BOTH")
  * ANTWEAK - FITS Boolean ie 'T' or 'F' (default 'T')
- * ANTWEAKO - Tweak order. Integer in [1, 10], default=3. Why 3? Radial distortion requires 4.
- * ANAPPL# - Lower bound on scale (in arcseconds per pixel) for field#, # = 1, 2, ... (default determined by the backend.)
- * ANAPPU# - Upper bound on scale (in arcseconds per pixel) for field#, # = 1, 2, ... (default determined by the backend.)
- * ANDEPTH# - The deepening strategy. # = 1, 2, ... and is the depth (number of field objects) to examine in round #. Eg, ANDEPTH1=20, ANDEPTH2=40 means look up to field object 20 in all indices at all scales, then proceed up to object 40 in all indices at all scales.
+ * ANTWEAKO - Tweak order.
+ * ANAPPL# - Lower bound on scale (in arcseconds per pixel)
+ * ANAPPU# - Upper bound on scale (in arcseconds per pixel)
+ * ANDEPTH# - The deepening strategy.
  * ANFDL#/ANFDU# - Add fields to be solved, specified in inclusive table HDU ranges starting from 1. The ANFD'''L'''/ANFD'''U''' stands for Upper and Lower. Defaults to all HDU's, but if a single ANFD[LU]# is specified, then only the fields explicitly listed are used. Multiple ANFD[LU]#'s can be present and the solved field are the union of the specified ranges. Only valid in the primary header.
  * ANFD#### - Add single fields to be solved. Only valid in the primary header.
- * ANODDSPR - Odds ratio required before to printing a solution. Default 1e3.
- * ANODDSKP - Odds ratio required before to keep a solution. Default 1e9.
- * ANODDSSL - Odds ratio required before to consider a solution solved. Default 1e9.
+ * ANODDSPR - Odds ratio required before to printing a solution.
+ * ANODDSKP - Odds ratio required before to keep a solution.
+ * ANODDSSL - Odds ratio required before to consider a solution solved.
  * ANIMFRAC - Fraction of the rectangular image that the field actually occupies (eg for round fields). Real in (0, 1], default 1.
- * ANCTOL - Code tolerance. Units of distance in 4-D code space. Real > 0, default 0.01.
- * ANDISTR - Distractor fraction. Real in (0, 1). Default is 0.25.
+ * ANCTOL - Code tolerance.
+ * ANDISTR - Distractor fraction.
 
  * ANW#PIX1 CRPIX1
  * ANW#PIX2 CRPIX2
@@ -89,28 +89,35 @@
 #include "qfits.h"
 
 static struct option long_options[] = {
-	{"help",		optional_argument, 0, 'h'},
-	{"guess-scale", optional_argument, 0, 'g'},
-	{"image",		optional_argument, 0, 'i'},
-	{"pnm",	        optional_argument, 0, 'P'},
-    {"width",       optional_argument, 0, 'w'},
-    {"height",      optional_argument, 0, 'e'},
-	{"scale-low",	optional_argument, 0, 'L'},
-	{"scale-high",	optional_argument, 0, 'H'},
-	{"scale-units", optional_argument, 0, 'u'},
-	{"tweak-order", optional_argument, 0, 't'},
+	{"help",		no_argument,       0, 'h'},
+	{"guess-scale", no_argument,       0, 'g'},
+    {"cancel",      required_argument, 0, 'C'},
+    {"solved",      required_argument, 0, 'S'},
+    {"match",       required_argument, 0, 'M'},
+    {"rdls",        required_argument, 0, 'R'},
+    {"wcs",         required_argument, 0, 'W'},
+    //{"out-dir",     required_argument, 0, 'D'},
+	{"image",		required_argument, 0, 'i'},
+	{"pnm",	        required_argument, 0, 'P'},
+    {"width",       required_argument, 0, 'w'},
+    {"height",      required_argument, 0, 'e'},
+	{"scale-low",	required_argument, 0, 'L'},
+	{"scale-high",	required_argument, 0, 'H'},
+	{"scale-units", required_argument, 0, 'u'},
+	{"tweak-order", required_argument, 0, 't'},
 	{"out",         required_argument, 0, 'o'},
-	{"noplot",		optional_argument, 0, 'p'},
-	{"nordls",		optional_argument, 0, 'r'},
-	{"xylist",		optional_argument, 0, 'x'},
-    {"no-tweak",    optional_argument, 0, 'T'},
-    {"tweak-order", optional_argument, 0, 'O'},
+	{"noplot",		no_argument,       0, 'p'},
+	{"nordls",		no_argument,       0, 'r'},
+	{"xylist",		required_argument, 0, 'x'},
+    {"no-tweak",    no_argument,       0, 'T'},
+    {"tweak-order", required_argument, 0, 'O'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:P:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:P:S:R:W:M:C:"; // D:
 
 static void print_help(const char* progname) {
+    // FIXME - add rest of args!
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
 		   "  (	   -i <image-input-file>\n"
 		   "   OR  -x <xylist-input-file>  )\n"
@@ -240,6 +247,12 @@ int main(int argc, char** args) {
     dl* scales;
     int i;
     bool guessed_scale = FALSE;
+    //char* basedir = NULL;
+    char* cancelfile = NULL;
+    char* solvedfile = NULL;
+    char* matchfile = NULL;
+    char* rdlsfile = NULL;
+    char* wcsfile = NULL;
 
 	while (1) {
 		int option_index = 0;
@@ -291,6 +304,26 @@ int main(int argc, char** args) {
         case 'g':
             guess_scale = TRUE;
             break;
+            /*
+             case 'D':
+             basedir = optarg;
+             break;
+             */
+        case 'S':
+            solvedfile = optarg;
+            break;
+        case 'C':
+            cancelfile = optarg;
+            break;
+        case 'M':
+            matchfile = optarg;
+            break;
+        case 'R':
+            rdlsfile = optarg;
+            break;
+        case 'W':
+            wcsfile = optarg;
+            break;
 		case '?':
 			break;
 		default:
@@ -299,7 +332,12 @@ int main(int argc, char** args) {
 	}
 
 	if (optind != argc) {
-		printf("Extra arguments...\n");
+        int i;
+		printf("Unknown arguments:\n  ");
+        for (i=optind; i<argc; i++) {
+            printf("%s ", args[i]);
+        }
+        printf("\n");
 		help_flag = 1;
 	}
 	if (!outfn) {
@@ -544,6 +582,17 @@ int main(int argc, char** args) {
     if (tweak && tweak_order) {
         fits_header_add_int(hdr, "ANTWEAKO", tweak_order, "Tweak order");
     }
+
+    if (solvedfile)
+        qfits_header_add(hdr, "ANSOLVED", solvedfile, "output filename", NULL);
+    if (cancelfile)
+        qfits_header_add(hdr, "ANCANCEL", cancelfile, "output filename", NULL);
+    if (matchfile)
+        qfits_header_add(hdr, "ANMATCH", matchfile, "output filename", NULL);
+    if (rdlsfile)
+        qfits_header_add(hdr, "ANRDLS", rdlsfile, "output filename", NULL);
+    if (wcsfile)
+        qfits_header_add(hdr, "ANWCS", wcsfile, "output filename", NULL);
 
     fout = fopen(outfn, "wb");
     if (!fout) {
