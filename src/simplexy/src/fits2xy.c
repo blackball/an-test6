@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -35,7 +36,7 @@ static float *x = NULL;
 static float *y = NULL;
 static float *flux = NULL;
 
-static const char* OPTIONS = "hpO";
+static const char* OPTIONS = "hpOo:";
 
 void printHelp() {
 	fprintf(stderr,
@@ -46,6 +47,7 @@ void printHelp() {
 			"\n"
 			"   [-O]  overwrite existing output file.\n"
 			"   [-p]  compute image percentiles.\n"
+			"   [-o <output-filename>]  write XYlist to given filename.\n"
 			"\n"
 			"   fits2xy 'file.fits[1]'   - process first extension.\n"
 			"   fits2xy 'file.fits[2]'   - process second extension \n"
@@ -63,8 +65,6 @@ static int compare_floats(const void* v1, const void* v2) {
 	return 0;
 }
 
-#define min(a,b) (((a)<(b))?(a):(b))
-
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
 	fitsfile *fptr;         /* FITS file pointer, defined in fitsio.h */
 	fitsfile *ofptr;        /* FITS file pointer to output file */
 	char outfile[300];
+	char* outfn = NULL;
 	int status = 0; // FIXME should have ostatus too
 	int naxis;
 	int maxnpeaks = MAXNPEAKS, npeaks;
@@ -100,6 +101,9 @@ int main(int argc, char *argv[])
 		case 'O':
 			overwrite = 1;
 			break;
+		case 'o':
+			outfn = optarg;
+			break;
 		case '?':
 		case 'h':
 			printHelp();
@@ -123,32 +127,34 @@ int main(int argc, char *argv[])
 	fits_get_num_hdus(fptr, &nhdus, &status);
 	fprintf(stderr, "nhdus=%d\n", nhdus);
 
-	// Create xylist filename (by trimming '.fits')
-	snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", (int) (strlen(infn)-5),
-		 infn);
-	fprintf(stderr, "outfile=%s\n",outfile);
+	if (!outfn) {
+		outfn = outfile;
+		// Create xylist filename (by trimming '.fits')
+		snprintf(outfile, sizeof(outfile), "%.*s.xy.fits", (int) (strlen(infn)-5), infn);
+		fprintf(stderr, "outfile=%s\n",outfile);
+	}
 
 	if (overwrite) {
 		struct stat st;		
-		if (stat(outfile, &st) == 0) {
-			fprintf(stderr, "Deleting existing output file \"%s\"...\n", outfile);
-			if (unlink(outfile)) {
+		if (stat(outfn, &st) == 0) {
+			fprintf(stderr, "Deleting existing output file \"%s\"...\n", outfn);
+			if (unlink(outfn)) {
 				fprintf(stderr, "Failed to delete existing output file \"%s\": %s\n",
-						outfile, strerror(errno));
+						outfn, strerror(errno));
 				exit(-1);
 			}
 		}
 	}
 
 	// Create output file
-	if (fits_create_file(&ofptr, outfile, &status)) {
+	if (fits_create_file(&ofptr, outfn, &status)) {
 		fits_report_error(stderr, status);
 		exit( -1);
 	}
 	fits_create_img(ofptr, 8, 0, NULL, &status);
 	assert(!status);
 
-	fits_write_key(ofptr, TSTRING, "SRCFN", outfile, "Source image", &status);
+	fits_write_key(ofptr, TSTRING, "SRCFN", outfn, "Source image", &status);
 	/* Parameters for simplexy; save for debugging */
 	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
 	dpsf = 1.0;       /* gaussian psf width (pix) */
@@ -354,7 +360,7 @@ int main(int argc, char *argv[])
 			nx = naxisn[0];
 			ny = naxisn[1];
 			n = (nx - 2*margin) * (ny - 2*margin);
-			np = min(n, NPIX);
+			np = MIN(n, NPIX);
 			pix = malloc(np * sizeof(float));
 			if (n < NPIX) {
 				i=0;
