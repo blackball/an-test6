@@ -46,6 +46,7 @@ function allow_email($email) {
 		       'landsman@milkyway.gsfc.nasa.gov',
 		       'leonidas@jpl.nasa.gov',
 		       'lmoustakas@gmail.com',
+		       'martin@mpia-hd.mpg.de',
 			   'mierle@gmail.com',
 		       'mperrin@astro.berkeley.edu',
 		       'munz@physics.muni.cz',
