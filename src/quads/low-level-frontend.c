@@ -89,37 +89,37 @@
 #include "qfits.h"
 
 static struct option long_options[] = {
-	{"help",		no_argument,       0, 'h'},
-	{"guess-scale", no_argument,       0, 'g'},
-    {"cancel",      required_argument, 0, 'C'},
-    {"solved",      required_argument, 0, 'S'},
-    {"match",       required_argument, 0, 'M'},
-    {"rdls",        required_argument, 0, 'R'},
-    {"wcs",         required_argument, 0, 'W'},
-    //{"out-dir",     required_argument, 0, 'D'},
+	{"help",		no_argument,	   0, 'h'},
+	{"guess-scale", no_argument,	   0, 'g'},
+	{"cancel",		required_argument, 0, 'C'},
+	{"solved",		required_argument, 0, 'S'},
+	{"match",		required_argument, 0, 'M'},
+	{"rdls",		required_argument, 0, 'R'},
+	{"wcs",			required_argument, 0, 'W'},
+	//{"out-dir",	  required_argument, 0, 'D'},
 	{"image",		required_argument, 0, 'i'},
-	{"pnm",	        required_argument, 0, 'P'},
-    {"width",       required_argument, 0, 'w'},
-    {"height",      required_argument, 0, 'e'},
+	{"pnm",				required_argument, 0, 'P'},
+	{"width",		required_argument, 0, 'w'},
+	{"height",		required_argument, 0, 'e'},
 	{"scale-low",	required_argument, 0, 'L'},
 	{"scale-high",	required_argument, 0, 'H'},
 	{"scale-units", required_argument, 0, 'u'},
 	{"tweak-order", required_argument, 0, 't'},
-	{"out",         required_argument, 0, 'o'},
-	{"noplot",		no_argument,       0, 'p'},
-	{"nordls",		no_argument,       0, 'r'},
+	{"out",			required_argument, 0, 'o'},
+	{"noplot",		no_argument,	   0, 'p'},
+	{"nordls",		no_argument,	   0, 'r'},
 	{"xylist",		required_argument, 0, 'x'},
-    {"no-tweak",    no_argument,       0, 'T'},
-    {"tweak-order", required_argument, 0, 'O'},
+	{"no-tweak",	no_argument,	   0, 'T'},
+	{"tweak-order", required_argument, 0, 'O'},
 	{0, 0, 0, 0}
 };
 
 static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:P:S:R:W:M:C:"; // D:
 
 static void print_help(const char* progname) {
-    // FIXME - add rest of args!
+	// FIXME - add rest of args!
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
-		   "  (	   -i <image-input-file>\n"
+		   "  (				   -i <image-input-file>\n"
 		   "   OR  -x <xylist-input-file>  )\n"
 		   "\n", progname);
 }
@@ -238,21 +238,21 @@ int main(int argc, char** args) {
 	double scalelo = 0.0, scalehi = 0.0;
 	char* scaleunits = NULL;
 	qfits_header* hdr;
-    bool tweak = TRUE;
-    int tweak_order = 0;
-    int orig_nheaders;
-    FILE* fout;
-    char* savepnmfn = NULL;
-    bool guess_scale = FALSE;
-    dl* scales;
-    int i;
-    bool guessed_scale = FALSE;
-    //char* basedir = NULL;
-    char* cancelfile = NULL;
-    char* solvedfile = NULL;
-    char* matchfile = NULL;
-    char* rdlsfile = NULL;
-    char* wcsfile = NULL;
+	bool tweak = TRUE;
+	int tweak_order = 0;
+	int orig_nheaders;
+	FILE* fout;
+	char* savepnmfn = NULL;
+	bool guess_scale = FALSE;
+	dl* scales;
+	int i;
+	bool guessed_scale = FALSE;
+	//char* basedir = NULL;
+	char* cancelfile = NULL;
+	char* solvedfile = NULL;
+	char* matchfile = NULL;
+	char* rdlsfile = NULL;
+	char* wcsfile = NULL;
 
 	while (1) {
 		int option_index = 0;
@@ -286,44 +286,44 @@ int main(int argc, char** args) {
 		case 'u':
 			scaleunits = optarg;
 			break;
-        case 'w':
-            W = atoi(optarg);
-            break;
-        case 'e':
-            H = atoi(optarg);
-            break;
-        case 'T':
-            tweak = FALSE;
-            break;
-        case 'O':
-            tweak_order = atoi(optarg);
-            break;
-        case 'P':
-            savepnmfn = optarg;
-            break;
-        case 'g':
-            guess_scale = TRUE;
-            break;
-            /*
-             case 'D':
-             basedir = optarg;
-             break;
-             */
-        case 'S':
-            solvedfile = optarg;
-            break;
-        case 'C':
-            cancelfile = optarg;
-            break;
-        case 'M':
-            matchfile = optarg;
-            break;
-        case 'R':
-            rdlsfile = optarg;
-            break;
-        case 'W':
-            wcsfile = optarg;
-            break;
+		case 'w':
+			W = atoi(optarg);
+			break;
+		case 'e':
+			H = atoi(optarg);
+			break;
+		case 'T':
+			tweak = FALSE;
+			break;
+		case 'O':
+			tweak_order = atoi(optarg);
+			break;
+		case 'P':
+			savepnmfn = optarg;
+			break;
+		case 'g':
+			guess_scale = TRUE;
+			break;
+			/*
+			 case 'D':
+			 basedir = optarg;
+			 break;
+			 */
+		case 'S':
+			solvedfile = optarg;
+			break;
+		case 'C':
+			cancelfile = optarg;
+			break;
+		case 'M':
+			matchfile = optarg;
+			break;
+		case 'R':
+			rdlsfile = optarg;
+			break;
+		case 'W':
+			wcsfile = optarg;
+			break;
 		case '?':
 			break;
 		default:
@@ -332,12 +332,12 @@ int main(int argc, char** args) {
 	}
 
 	if (optind != argc) {
-        int i;
+		int i;
 		printf("Unknown arguments:\n  ");
-        for (i=optind; i<argc; i++) {
-            printf("%s ", args[i]);
-        }
-        printf("\n");
+		for (i=optind; i<argc; i++) {
+			printf("%s ", args[i]);
+		}
+		printf("\n");
 		help_flag = 1;
 	}
 	if (!outfn) {
@@ -349,22 +349,22 @@ int main(int argc, char** args) {
 		help_flag = 1;
 	}
 	if (!((!scaleunits) ||
-          (!strcasecmp(scaleunits, "degwidth")) ||
-          (!strcasecmp(scaleunits, "arcminwidth")) ||
-          (!strcasecmp(scaleunits, "arcsecperpix")))) {
+		  (!strcasecmp(scaleunits, "degwidth")) ||
+		  (!strcasecmp(scaleunits, "arcminwidth")) ||
+		  (!strcasecmp(scaleunits, "arcsecperpix")))) {
 		printf("Unknown scale units \"%s\".\n", scaleunits);
 		help_flag = 1;
 	}
-    if (xylsfn && !(W && H)) {
-        printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
+	if (xylsfn && !(W && H)) {
+		printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
 		help_flag = 1;
-    }
+	}
 	if (help_flag) {
 		print_help(args[0]);
 		exit(0);
 	}
 
-    scales = dl_new(16);
+	scales = dl_new(16);
 
 	if (imagefn) {
 		// if --image is given:
@@ -378,18 +378,18 @@ int main(int argc, char** args) {
 		pl* lines;
 		bool isfits;
 		char *fitsimgfn;
-        char* line;
-        char pnmtype;
-        int maxval;
-        char typestr[256];
-        char* sortedxylsfn;
+		char* line;
+		char pnmtype;
+		int maxval;
+		char typestr[256];
+		char* sortedxylsfn;
 
 		uncompressedfn = "/tmp/uncompressed";
 		sanitizedfn = "/tmp/sanitized";
-        if (savepnmfn)
-            pnmfn = savepnmfn;
-        else
-            pnmfn = "/tmp/pnm";
+		if (savepnmfn)
+			pnmfn = savepnmfn;
+		else
+			pnmfn = "/tmp/pnm";
 
 		snprintf(cmd, sizeof(cmd),
 				 "image2pnm.py --infile \"%s\""
@@ -418,49 +418,49 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to run pnmfile: %s\n", strerror(errno));
 			exit(-1);
 		}
-        if (pl_size(lines) == 0) {
-            fprintf(stderr, "No output from pnmfile.\n");
-            exit(-1);
-        }
-        line = pl_get(lines, 0);
-        // eg   "/tmp/pnm:       PPM raw, 800 by 510  maxval 255"
-        if (strlen(pnmfn) + 1 >= strlen(line)) {
-            fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
-            exit(-1);
-        }
-        line += strlen(pnmfn) + 1;
-        if (sscanf(line, " P%cM %255s %d by %d maxval %d",
-                   &pnmtype, typestr, &W, &H, &maxval) != 5) {
-            fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
-            exit(-1);
-        }
+		if (pl_size(lines) == 0) {
+			fprintf(stderr, "No output from pnmfile.\n");
+			exit(-1);
+		}
+		line = pl_get(lines, 0);
+		// eg	"/tmp/pnm:	 PPM raw, 800 by 510  maxval 255"
+		if (strlen(pnmfn) + 1 >= strlen(line)) {
+			fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
+			exit(-1);
+		}
+		line += strlen(pnmfn) + 1;
+		if (sscanf(line, " P%cM %255s %d by %d maxval %d",
+				   &pnmtype, typestr, &W, &H, &maxval) != 5) {
+			fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
+			exit(-1);
+		}
 
 		if (isfits) {
 			fitsimgfn = sanitizedfn;
 
-            if (guess_scale) {
-                snprintf(cmd, sizeof(cmd), "fits-guess-scale \"%s\"", fitsimgfn);
-                if (run_command_get_outputs(cmd, &lines, NULL)) {
-                    fprintf(stderr, "Failed to run fits-guess-scale: %s\n", strerror(errno));
-                    exit(-1);
-                }
+			if (guess_scale) {
+				snprintf(cmd, sizeof(cmd), "fits-guess-scale \"%s\"", fitsimgfn);
+				if (run_command_get_outputs(cmd, &lines, NULL)) {
+					fprintf(stderr, "Failed to run fits-guess-scale: %s\n", strerror(errno));
+					exit(-1);
+				}
 
-                for (i=0; i<pl_size(lines); i++) {
-                    char type[256];
-                    double scale;
-                    line = pl_get(lines, i);
-                    if (sscanf(line, "scale %255s %lg", type, &scale) == 2) {
-                        printf("Scale estimate: %g\n", scale);
-                        dl_append(scales, scale * 0.99);
-                        dl_append(scales, scale * 1.01);
-                        guessed_scale = TRUE;
-                    }
-                }
+				for (i=0; i<pl_size(lines); i++) {
+					char type[256];
+					double scale;
+					line = pl_get(lines, i);
+					if (sscanf(line, "scale %255s %lg", type, &scale) == 2) {
+						printf("Scale estimate: %g\n", scale);
+						dl_append(scales, scale * 0.99);
+						dl_append(scales, scale * 1.01);
+						guessed_scale = TRUE;
+					}
+				}
 
-                pl_free_elements(lines);
-                pl_free(lines);
+				pl_free_elements(lines);
+				pl_free(lines);
 
-            }
+			}
 
 		} else {
 			fitsimgfn = "/tmp/fits";
@@ -498,17 +498,17 @@ int main(int argc, char** args) {
 
 		printf("Running tabsort...\n");
 
-        sortedxylsfn = "/tmp/sorted";
+		sortedxylsfn = "/tmp/sorted";
 
-        // sort the table by FLUX.
-        snprintf(cmd, sizeof(cmd),
-                 "tabsort -i \"%s\" -o \"%s\" -c FLUX -d", xylsfn, sortedxylsfn);
+		// sort the table by FLUX.
+		snprintf(cmd, sizeof(cmd),
+				 "tabsort -i \"%s\" -o \"%s\" -c FLUX -d", xylsfn, sortedxylsfn);
 		printf("Command: %s\n", cmd);
 		if (run_command_get_outputs(cmd, NULL, NULL)) {
 			fprintf(stderr, "Failed to run tabsort.\n");
 			exit(-1);
 		}
-        xylsfn = sortedxylsfn;
+		xylsfn = sortedxylsfn;
 
 	} else {
 		// xylist.
@@ -535,15 +535,15 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-    orig_nheaders = hdr->n;
+	orig_nheaders = hdr->n;
 
-    /*
-     if (!(W && H)) {
-     // FIXME - if an xylist was given, look for existing IMAGEW, IMAGEH headers.
-     }
-     */
-    fits_header_add_int(hdr, "IMAGEW", W, "image width");
-    fits_header_add_int(hdr, "IMAGEH", H, "image height");
+	/*
+	 if (!(W && H)) {
+	 // FIXME - if an xylist was given, look for existing IMAGEW, IMAGEH headers.
+	 }
+	 */
+	fits_header_add_int(hdr, "IMAGEW", W, "image width");
+	fits_header_add_int(hdr, "IMAGEH", H, "image height");
 	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!", NULL);
 
 	if (scalelo > 0.0 && scalehi > 0.0) {
@@ -563,86 +563,86 @@ int main(int argc, char** args) {
 			exit(-1);
 		}
 
-        dl_append(scales, appl);
-        dl_append(scales, appu);
+		dl_append(scales, appl);
+		dl_append(scales, appu);
 	}
 
-    if ((dl_size(scales) > 0) && guessed_scale) {
-        qfits_header_add(hdr, "ANAPPDEF", "T", "try the default scale range too.", NULL);
-    }
-    for (i=0; i<dl_size(scales)/2; i++) {
-        char key[64];
-        sprintf(key, "ANAPPL%i", i+1);
-        fits_header_add_double(hdr, key, dl_get(scales, i*2), "scale: arcsec/pixel min");
-        sprintf(key, "ANAPPU%i", i+1);
-        fits_header_add_double(hdr, key, dl_get(scales, i*2+1), "scale: arcsec/pixel max");
-    }
+	if ((dl_size(scales) > 0) && guessed_scale) {
+		qfits_header_add(hdr, "ANAPPDEF", "T", "try the default scale range too.", NULL);
+	}
+	for (i=0; i<dl_size(scales)/2; i++) {
+		char key[64];
+		sprintf(key, "ANAPPL%i", i+1);
+		fits_header_add_double(hdr, key, dl_get(scales, i*2), "scale: arcsec/pixel min");
+		sprintf(key, "ANAPPU%i", i+1);
+		fits_header_add_double(hdr, key, dl_get(scales, i*2+1), "scale: arcsec/pixel max");
+	}
 
-    qfits_header_add(hdr, "ANTWEAK", (tweak ? "T" : "F"), (tweak ? "Tweak: yes please!" : "Tweak: no, thanks."), NULL);
-    if (tweak && tweak_order) {
-        fits_header_add_int(hdr, "ANTWEAKO", tweak_order, "Tweak order");
-    }
+	qfits_header_add(hdr, "ANTWEAK", (tweak ? "T" : "F"), (tweak ? "Tweak: yes please!" : "Tweak: no, thanks."), NULL);
+	if (tweak && tweak_order) {
+		fits_header_add_int(hdr, "ANTWEAKO", tweak_order, "Tweak order");
+	}
 
-    if (solvedfile)
-        qfits_header_add(hdr, "ANSOLVED", solvedfile, "output filename", NULL);
-    if (cancelfile)
-        qfits_header_add(hdr, "ANCANCEL", cancelfile, "output filename", NULL);
-    if (matchfile)
-        qfits_header_add(hdr, "ANMATCH", matchfile, "output filename", NULL);
-    if (rdlsfile)
-        qfits_header_add(hdr, "ANRDLS", rdlsfile, "output filename", NULL);
-    if (wcsfile)
-        qfits_header_add(hdr, "ANWCS", wcsfile, "output filename", NULL);
+	if (solvedfile)
+		qfits_header_add(hdr, "ANSOLVED", solvedfile, "output filename", NULL);
+	if (cancelfile)
+		qfits_header_add(hdr, "ANCANCEL", cancelfile, "output filename", NULL);
+	if (matchfile)
+		qfits_header_add(hdr, "ANMATCH", matchfile, "output filename", NULL);
+	if (rdlsfile)
+		qfits_header_add(hdr, "ANRDLS", rdlsfile, "output filename", NULL);
+	if (wcsfile)
+		qfits_header_add(hdr, "ANWCS", wcsfile, "output filename", NULL);
 
-    fout = fopen(outfn, "wb");
-    if (!fout) {
-        fprintf(stderr, "Failed to open output file: %s\n", strerror(errno));
-        exit(-1);
-    }
+	fout = fopen(outfn, "wb");
+	if (!fout) {
+		fprintf(stderr, "Failed to open output file: %s\n", strerror(errno));
+		exit(-1);
+	}
 
-    if (qfits_header_dump(hdr, fout)) {
-        fprintf(stderr, "Failed to write FITS header.\n");
-        exit(-1);
-    }
+	if (qfits_header_dump(hdr, fout)) {
+		fprintf(stderr, "Failed to write FITS header.\n");
+		exit(-1);
+	}
 
-    // copy blocks from xyls to output.
-    {
-        FILE* fin;
-        char block[FITS_BLOCK_SIZE];
-        int startblock;
-        int nblocks;
-        struct stat st;
-        startblock = fits_blocks_needed(orig_nheaders * FITS_LINESZ);
-        if (stat(xylsfn, &st)) {
-            fprintf(stderr, "Failed to stat() xyls file \"%s\": %s\n", xylsfn, strerror(errno));
-            exit(-1);
-        }
-        nblocks = st.st_size / FITS_BLOCK_SIZE;
-        fin = fopen(xylsfn, "rb");
-        if (!fin) {
-            fprintf(stderr, "Failed to open xyls file \"%s\": %s\n", xylsfn, strerror(errno));
-            exit(-1);
-        }
-        if (fseeko(fin, startblock * FITS_BLOCK_SIZE, SEEK_SET)) {
-            fprintf(stderr, "Failed to seek in xyls file \"%s\": %s\n", xylsfn, strerror(errno));
-            exit(-1);
-        }
-        //printf("Copying FITS blocks %i to %i from xyls to output.\n", startblock, nblocks);
-        for (i=startblock; i<nblocks; i++) {
-            if (fread(block, 1, FITS_BLOCK_SIZE, fin) != FITS_BLOCK_SIZE) {
-                fprintf(stderr, "Failed to read xyls file \"%s\": %s\n", xylsfn, strerror(errno));
-                exit(-1);
-            }
-            if (fwrite(block, 1, FITS_BLOCK_SIZE, fout) != FITS_BLOCK_SIZE) {
-                fprintf(stderr, "Failed to write output file: %s\n", strerror(errno));
-                exit(-1);
-            }
-        }
-        fclose(fin);
-    }
+	// copy blocks from xyls to output.
+	{
+		FILE* fin;
+		char block[FITS_BLOCK_SIZE];
+		int startblock;
+		int nblocks;
+		struct stat st;
+		startblock = fits_blocks_needed(orig_nheaders * FITS_LINESZ);
+		if (stat(xylsfn, &st)) {
+			fprintf(stderr, "Failed to stat() xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+			exit(-1);
+		}
+		nblocks = st.st_size / FITS_BLOCK_SIZE;
+		fin = fopen(xylsfn, "rb");
+		if (!fin) {
+			fprintf(stderr, "Failed to open xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+			exit(-1);
+		}
+		if (fseeko(fin, startblock * FITS_BLOCK_SIZE, SEEK_SET)) {
+			fprintf(stderr, "Failed to seek in xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+			exit(-1);
+		}
+		//printf("Copying FITS blocks %i to %i from xyls to output.\n", startblock, nblocks);
+		for (i=startblock; i<nblocks; i++) {
+			if (fread(block, 1, FITS_BLOCK_SIZE, fin) != FITS_BLOCK_SIZE) {
+				fprintf(stderr, "Failed to read xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+				exit(-1);
+			}
+			if (fwrite(block, 1, FITS_BLOCK_SIZE, fout) != FITS_BLOCK_SIZE) {
+				fprintf(stderr, "Failed to write output file: %s\n", strerror(errno));
+				exit(-1);
+			}
+		}
+		fclose(fin);
+	}
 
-    fclose(fout);
-    qfits_header_destroy(hdr);
+	fclose(fout);
+	qfits_header_destroy(hdr);
 
 	return 0;
 }
