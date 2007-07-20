@@ -27,9 +27,8 @@ RM= /bin/rm -fv
 TOUCH= touch
 
 TWEAK= hoggTweak.h hoggMath.h hoggLogsum.o hoggLogGaussian.o hoggExMaxStep.o \
-	hoggLeastSquareFit.o $(GSL_LIB)
-TEST= hoggTest.o hoggTestLogsum.o hoggTestLogGaussian.o hoggTestExMaxStep.o \
-	hoggTestLeastSquareFit.o
+	hoggLeastSquareFit.o hoggRansacFit.o $(GSL_LIB)
+TEST = $(patsubst %.c,%.o,$(wildcard hoggTest*.c))
 
 hoggTest: $(TWEAK) $(TEST)
 	$(RM) ./hoggTestPassed
