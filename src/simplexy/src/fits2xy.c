@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 	fits_create_img(ofptr, 8, 0, NULL, &status);
 	assert(!status);
 
-	fits_write_key(ofptr, TSTRING, "SRCFN", outfn, "Source image", &status);
+	fits_write_key(ofptr, TSTRING, "SRCFN", infn, "Source image", &status);
 	/* Parameters for simplexy; save for debugging */
 	fits_write_comment(ofptr, "Parameters used for source extraction", &status);
 	dpsf = 1.0;       /* gaussian psf width (pix) */
