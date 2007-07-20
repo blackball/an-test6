@@ -48,8 +48,10 @@ typedef unsigned char uchar;
 
 #define rad2deg(r) (180.0*(r)/(double)PIl)
 #define deg2rad(d) ((d)*(double)PIl/180.0)
-#define deg2arcsec(d) rad2arcsec(deg2rad(d))
+#define deg2arcsec(d) ((d) * 3600.0)
 #define arcsec2deg(a) ((a) / 3600.0)
+#define arcsec2arcmin(a) ((a) / 60.0)
+#define arcmin2arcsec(a) ((a) * 60.0)
 #define rad2arcmin(r) (10800.0*(r)/(double)PIl)
 #define arcmin2rad(a) ((a)*(double)PIl/10800.0)
 #define rad2arcsec(r) (648000.0*(r)/(double)PIl)
