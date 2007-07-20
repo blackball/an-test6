@@ -93,7 +93,7 @@ static struct option long_options[] = {
 	{"scale-high",	optional_argument, 0, 'H'},
 	{"scale-units", optional_argument, 0, 'u'},
 	{"tweak-order", optional_argument, 0, 't'},
-	{"out",			required_argument, 0, 'o'},
+	{"out",				required_argument, 0, 'o'},
 	{"noplot",		optional_argument, 0, 'p'},
 	{"nordls",		optional_argument, 0, 'r'},
 	{"xylist",		optional_argument, 0, 'x'},
@@ -104,7 +104,7 @@ static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
-		   "  (    -i <image-input-file>\n"
+		   "  (	   -i <image-input-file>\n"
 		   "   OR  -x <xylist-input-file>  )\n"
 		   "\n", progname);
 }
@@ -218,6 +218,11 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	char* imagefn = NULL;
 	char* xylsfn = NULL;
+	char cmd[1024];
+	int W, H;
+	double scalelo = 0.0, scalehi = 0.0;
+	char* scaleunits = NULL;
+	qfits_header* hdr;
 
 	while (1) {
 		int option_index = 0;
@@ -242,6 +247,15 @@ int main(int argc, char** args) {
 		case 'x':
 			xylsfn = optarg;
 			break;
+		case 'L':
+			scalelo = atof(optarg);
+			break;
+		case 'H':
+			scalehi = atof(optarg);
+			break;
+		case 'u':
+			scaleunits = optarg;
+			break;
 		case '?':
 			break;
 		default:
@@ -261,6 +275,13 @@ int main(int argc, char** args) {
 		printf("Require either an image (-i / --image) or an XYlist (-x / --xylist) input file.\n");
 		help_flag = 1;
 	}
+	if (!scaleunits ||
+		(!strcasecmp(scaleunits, "degwidth")) ||
+		(!strcasecmp(scaleunits, "arcminwidth")) ||
+		(!strcasecmp(scaleunits, "arcsecperpix"))) {
+		fprintf(stderr, "Unknown scale units \"%s\".\n", scaleunits);
+		help_flag = 1;
+	}
 	if (help_flag) {
 		print_help(args[0]);
 		exit(0);
@@ -272,13 +293,16 @@ int main(int argc, char** args) {
 		//	 -if it's a FITS image, keep the original (well, sanitized version)
 		//	 -otherwise, run ppmtopgm (if necessary) and pnmtofits.
 		//	 -run fits2xy to generate xylist
-		char cmd[1024];
 		char *uncompressedfn;
 		char *sanitizedfn;
-		char *pnmfn;                
+		char *pnmfn;				
 		pl* lines;
 		int i;
 		bool isfits;
+		char *fitsimgfn;
+        char* line;
+        char pnmtype;
+        int maxval;
 
 		uncompressedfn = "/tmp/uncompressed";
 		sanitizedfn = "/tmp/sanitized";
@@ -286,9 +310,9 @@ int main(int argc, char** args) {
 
 		snprintf(cmd, sizeof(cmd),
 				 "image2pnm.py --infile \"%s\""
-				 "  --uncompressed-outfile \"%s\""
-				 "  --sanitized-fits-outfile \"%s\""
-				 "  --outfile \"%s\"",
+				 "	--uncompressed-outfile \"%s\""
+				 "	--sanitized-fits-outfile \"%s\""
+				 "	--outfile \"%s\"",
 				 imagefn, uncompressedfn, sanitizedfn, pnmfn);
 		printf("Running: %s\n", cmd);
 		if (run_command_get_outputs(cmd, &lines, NULL)) {
@@ -305,9 +329,39 @@ int main(int argc, char** args) {
 		pl_free_elements(lines);
 		pl_free(lines);
 
+		// Get image W, H, depth.
+		snprintf(cmd, sizeof(cmd), "pnmfile \"%s\"", pnmfn);
+		if (run_command_get_outputs(cmd, &lines, NULL)) {
+			fprintf(stderr, "Failed to run pnmfile: %s\n", strerror(errno));
+			exit(-1);
+		}
+        if (pl_size(lines) == 0) {
+            fprintf(stderr, "No output from pnmfile.\n");
+            exit(-1);
+        }
+        line = pl_get(lines, 0);
+        // eg   "/tmp/pnm:       PPM raw, 800 by 510  maxval 255"
+        if (strlen(pnmfn) + 1 < strlen(line)) {
+            fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
+            exit(-1);
+        }
+        line += strlen(pnmfn) + 1;
+        if (sscanf(line, " P%cM %s, %d by %d maxval %d",
+                   &pnmtype, &W, &H, &maxval) != 4) {
+            fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
+            exit(-1);
+        }
+
+		// FIXME - Do something with the PNM?
+
 		if (isfits) {
+
+			// FIXME - guess scale, if required.
+
+			fitsimgfn = sanitizedfn;
+
 		} else {
-			char* pgmfn;
+            bool isppm = (pnmtype == 'P');
 			bool isppm;
 			// do we need to convert from PPM to PGM?
 			// PPM starts with "P6"
@@ -319,30 +373,85 @@ int main(int argc, char** args) {
 			isppm = ((strncmp(buf, "P6", 2) == 0) || (strncmp(buf, "P3", 2) == 0));
 			free(buf);
 
+			fitsimgfn = "/tmp/fits";
+
 			if (isppm) {
-				// convert to PGM.
-				pgmfn = "/tmp/pgm";
+				printf("Converting PPM image to FITS...\n");
 				snprintf(cmd, sizeof(cmd),
-						 "ppmtopgm \"%s\" > \"%s\"", pnmfn, pgmfn);
+						 "ppmtopgm \"%s\" | pnmtofits > \"%s\"", pnmfn, fitsimgfn);
 				if (run_command_get_outputs(cmd, NULL, NULL)) {
-					fprintf(stderr, "Failed to convert PPM to PGM.\n");
+					fprintf(stderr, "Failed to convert PPM to FITS.\n");
 					exit(-1);
 				}
 			} else {
-				pgmfn = pnmfn;
+				printf("Converting PGM image to FITS...\n");
+				snprintf(cmd, sizeof(cmd),
+						 "pnmtofits %s > \"%s\"", pnmfn, fitsimgfn);
+				if (run_command_get_outputs(cmd, NULL, NULL)) {
+					fprintf(stderr, "Failed to convert PGM to FITS.\n");
+					exit(-1);
+				}
 			}
+		}
 
+		printf("Running fits2xy...\n");
+
+		xylsfn = "/tmp/xyls";
+
+		snprintf(cmd, sizeof(cmd),
+				 "fits2xy -O -o \"%s\" \"%s\"", xylsfn, fitsimgfn);
+		printf("Command: %s\n", cmd);
+		if (run_command_get_outputs(cmd, NULL, NULL)) {
+			fprintf(stderr, "Failed to run fits2xy.\n");
+			exit(-1);
 		}
 
 	} else {
 		// xylist.
 		// if --xylist is given:
-		//	 -fits2fits.py?
+		//	 -fits2fits.py sanitize
+		char* sanexylsfn;
+
+		sanexylsfn = "/tmp/sanexyls";
+		snprintf(cmd, sizeof(cmd),
+				 "fits2fits.py \"%s\" \"%s\"", xylsfn, sanexylsfn);
+		printf("Command: %s\n", cmd);
+		if (run_command_get_outputs(cmd, NULL, NULL)) {
+			fprintf(stderr, "Failed to run fits2fits.py\n");
+			exit(-1);
+		}
+		xylsfn = sanexylsfn;
+
 	}
 
-
 	// start piling FITS headers in there.
+	hdr = qfits_header_read(xylsfn);
+	if (!hdr) {
+		fprintf(stderr, "Failed to read FITS header from file %s.\n", xylsfn);
+		exit(-1);
+	}
 
+	fits_header_add_int(hdr, "IMAGEW", W, "image width");
+	fits_header_add_int(hdr, "IMAGEH", H, "image height");
+	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!");
+
+	if (scalelo > 0.0 && scalehi > 0.0) {
+		double appu, appl;
+		if (!scaleunits)
+			scaleunits = "degwide";
+		if (!strcasecmp(scaleunits, "degwidth")) {
+			appl = deg2arcsec(scalelo) / (double)W;
+			appu = deg2arcsec(scalehi) / (double)W;
+		} else if (!strcasecmp(scaleunits, "arcminwidth")) {
+			appl = arcmin2arcsec(scalelo) / (double)W;
+			appu = arcmin2arcsec(scalehi) / (double)W;
+		} else if (!strcasecmp(scaleunits, "arcsecperpix")) {
+			appl = scalelo;
+			appu = scalehi;
+		} else {
+			exit(-1);
+		}
+	}
 
 	return 0;
 }
