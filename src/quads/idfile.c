@@ -95,10 +95,10 @@ idfile* idfile_open(char* fn, int modifiable)
 		goto bailout;
 	}
 
-	if (fits_blocks_needed(id->numstars * sizeof(uint64_t)) != sizeanids) {
+	if (fits_bytes_needed(id->numstars * sizeof(uint64_t)) != sizeanids) {
 		fflush(stdout);
 		fprintf(stderr, "Number of stars promised does jive with the table size: %u vs %u.\n",
-		        fits_blocks_needed(id->numstars * sizeof(uint64_t)), sizeanids);
+		        fits_bytes_needed(id->numstars * sizeof(uint64_t)), sizeanids);
 		goto bailout;
 	}
 

@@ -85,10 +85,10 @@ qidxfile* qidxfile_open(char* fn, int modifiable) {
 		goto bailout;
 	}
 
-	if (fits_blocks_needed(qf->numstars * 2 * sizeof(uint) +
+	if (fits_bytes_needed(qf->numstars * 2 * sizeof(uint) +
 						   qf->numquads * 4 * sizeof(uint)) != datasize) {
 		fprintf(stderr, "Number of qidx entries promised does jive with the table size: %u vs %u.\n",
-		        fits_blocks_needed(qf->numstars * 2 * sizeof(uint) +
+		        fits_bytes_needed(qf->numstars * 2 * sizeof(uint) +
 								   qf->numquads * 4 * sizeof(uint)),
 				datasize);
 		goto bailout;

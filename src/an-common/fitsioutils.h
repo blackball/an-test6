@@ -65,6 +65,8 @@ fits_add_long_history(qfits_header* dst, const char* format, ...);
 // how many FITS blocks are required to hold 'size' bytes?
 int fits_blocks_needed(int size);
 
+int fits_bytes_needed(int size);
+
 int fits_pad_file(FILE* fid);
 
 void fits_fill_endian_string(char* str);

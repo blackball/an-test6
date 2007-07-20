@@ -380,10 +380,13 @@ int fits_write_data(FILE* fid, void* pvalue, tfits_type type) {
 	return -1;
 }
 
-// how many FITS blocks are required to hold 'size' bytes?
-int fits_blocks_needed(int size) {
+int fits_bytes_needed(int size) {
 	size += FITS_BLOCK_SIZE - 1;
 	return size - (size % FITS_BLOCK_SIZE);
+}
+
+int fits_blocks_needed(int size) {
+	return (size + FITS_BLOCK_SIZE - 1) / FITS_BLOCK_SIZE;
 }
 
 char fits_endian_string[16];

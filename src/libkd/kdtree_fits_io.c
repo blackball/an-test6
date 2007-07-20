@@ -244,9 +244,9 @@ kdtree_t* kdtree_fits_common_read(char* fn, qfits_header** p_hdr, unsigned int t
 		qfits_table_close(table);
 
 		tablesize = tab->datasize * tab->nitems;
-		if (fits_blocks_needed(tablesize) != tab->size) {
+		if (fits_bytes_needed(tablesize) != tab->size) {
 			fprintf(stderr, "The size of table %s in file %s doesn't jive with what's expected: %i vs %i.\n",
-					tab->name, fn, fits_blocks_needed(tablesize), tab->size);
+					tab->name, fn, fits_bytes_needed(tablesize), tab->size);
 			free(kdtree);
 			return NULL;
 		}

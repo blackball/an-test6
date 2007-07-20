@@ -235,10 +235,10 @@ catalog* catalog_open(char* catfn, int modifiable)
 		goto bail;
 	}
 
-	if (fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS) != sizexyz) {
+	if (fits_bytes_needed(cat->numstars * sizeof(double) * DIM_STARS) != sizexyz) {
 		fflush(stdout);
 		fprintf(stderr, "Number of stars promised doesn't jive with the xyz table size: %u vs %u.\n",
-				fits_blocks_needed(cat->numstars * sizeof(double) * DIM_STARS), sizexyz);
+				fits_bytes_needed(cat->numstars * sizeof(double) * DIM_STARS), sizexyz);
 		goto bail;
 	}
 
@@ -246,10 +246,10 @@ catalog* catalog_open(char* catfn, int modifiable)
 		offmags = 0;
 		sizemags = 0;
 	} else {
-		if (fits_blocks_needed(cat->numstars * sizeof(float)) != sizemags) {
+		if (fits_bytes_needed(cat->numstars * sizeof(float)) != sizemags) {
 			fflush(stdout);
 			fprintf(stderr, "Number of stars doesn't jive with the \"mags\" table size: %u vs %u.\n",
-					fits_blocks_needed(cat->numstars * sizeof(float)), sizemags);
+					fits_bytes_needed(cat->numstars * sizeof(float)), sizemags);
 			goto bail;
 		}
 	}

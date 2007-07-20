@@ -73,6 +73,9 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <getopt.h>
 
@@ -89,18 +92,22 @@ static struct option long_options[] = {
 	{"help",		optional_argument, 0, 'h'},
 	{"guess-scale", optional_argument, 0, 'g'},
 	{"image",		optional_argument, 0, 'i'},
+    {"width",       optional_argument, 0, 'w'},
+    {"height",      optional_argument, 0, 'e'},
 	{"scale-low",	optional_argument, 0, 'L'},
 	{"scale-high",	optional_argument, 0, 'H'},
 	{"scale-units", optional_argument, 0, 'u'},
 	{"tweak-order", optional_argument, 0, 't'},
-	{"out",				required_argument, 0, 'o'},
+	{"out",         required_argument, 0, 'o'},
 	{"noplot",		optional_argument, 0, 'p'},
 	{"nordls",		optional_argument, 0, 'r'},
 	{"xylist",		optional_argument, 0, 'x'},
+    {"no-tweak",    optional_argument, 0, 'T'},
+    {"tweak-order", optional_argument, 0, 'O'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:";
 
 static void print_help(const char* progname) {
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
@@ -223,6 +230,10 @@ int main(int argc, char** args) {
 	double scalelo = 0.0, scalehi = 0.0;
 	char* scaleunits = NULL;
 	qfits_header* hdr;
+    bool tweak = TRUE;
+    int tweak_order = 0;
+    int orig_nheaders;
+    FILE* fout;
 
 	while (1) {
 		int option_index = 0;
@@ -256,6 +267,18 @@ int main(int argc, char** args) {
 		case 'u':
 			scaleunits = optarg;
 			break;
+        case 'w':
+            W = atoi(optarg);
+            break;
+        case 'e':
+            H = atoi(optarg);
+            break;
+        case 'T':
+            tweak = FALSE;
+            break;
+        case 'O':
+            tweak_order = atoi(optarg);
+            break;
 		case '?':
 			break;
 		default:
@@ -275,13 +298,17 @@ int main(int argc, char** args) {
 		printf("Require either an image (-i / --image) or an XYlist (-x / --xylist) input file.\n");
 		help_flag = 1;
 	}
-	if (!scaleunits ||
-		(!strcasecmp(scaleunits, "degwidth")) ||
-		(!strcasecmp(scaleunits, "arcminwidth")) ||
-		(!strcasecmp(scaleunits, "arcsecperpix"))) {
-		fprintf(stderr, "Unknown scale units \"%s\".\n", scaleunits);
+	if (!((!scaleunits) ||
+          (!strcasecmp(scaleunits, "degwidth")) ||
+          (!strcasecmp(scaleunits, "arcminwidth")) ||
+          (!strcasecmp(scaleunits, "arcsecperpix")))) {
+		printf("Unknown scale units \"%s\".\n", scaleunits);
 		help_flag = 1;
 	}
+    if (xylsfn && !(W && H)) {
+        printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
+		help_flag = 1;
+    }
 	if (help_flag) {
 		print_help(args[0]);
 		exit(0);
@@ -342,12 +369,12 @@ int main(int argc, char** args) {
         }
         line = pl_get(lines, 0);
         // eg   "/tmp/pnm:       PPM raw, 800 by 510  maxval 255"
-        if (strlen(pnmfn) + 1 < strlen(line)) {
+        if (strlen(pnmfn) + 1 >= strlen(line)) {
             fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
             exit(-1);
         }
         line += strlen(pnmfn) + 1;
-        if (sscanf(line, " P%cM %255s, %d by %d maxval %d",
+        if (sscanf(line, " P%cM %255s %d by %d maxval %d",
                    &pnmtype, typestr, &W, &H, &maxval) != 5) {
             fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
             exit(-1);
@@ -420,14 +447,15 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-    if (!(W && H)) {
-        // If an xylist was given, look for existing IMAGEW, IMAGEH headers.
-        
-    }
-    if (W && H) {
-        fits_header_add_int(hdr, "IMAGEW", W, "image width");
-        fits_header_add_int(hdr, "IMAGEH", H, "image height");
-    }
+    orig_nheaders = hdr->n;
+
+    /*
+     if (!(W && H)) {
+     // FIXME - if an xylist was given, look for existing IMAGEW, IMAGEH headers.
+     }
+     */
+    fits_header_add_int(hdr, "IMAGEW", W, "image width");
+    fits_header_add_int(hdr, "IMAGEH", H, "image height");
 	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!", NULL);
 
 	if (scalelo > 0.0 && scalehi > 0.0) {
@@ -446,7 +474,66 @@ int main(int argc, char** args) {
 		} else {
 			exit(-1);
 		}
+
+        fits_header_add_double(hdr, "ANAPPL1", appl, "scale: arcsec/pixel min");
+        fits_header_add_double(hdr, "ANAPPU1", appu, "scale: arcsec/pixel max");
 	}
+
+    qfits_header_add(hdr, "ANTWEAK", (tweak ? "T" : "F"), (tweak ? "Tweak: yes please!" : "Tweak: no, thanks."), NULL);
+    if (tweak && tweak_order) {
+        fits_header_add_int(hdr, "ANTWEAKO", tweak_order, "Tweak order");
+    }
+
+    fout = fopen(outfn, "wb");
+    if (!fout) {
+        fprintf(stderr, "Failed to open output file: %s\n", strerror(errno));
+        exit(-1);
+    }
+
+    if (qfits_header_dump(hdr, fout)) {
+        fprintf(stderr, "Failed to write FITS header.\n");
+        exit(-1);
+    }
+
+    // copy blocks from xyls to output.
+    {
+        FILE* fin;
+        char block[FITS_BLOCK_SIZE];
+        int startblock;
+        int i;
+        int nblocks;
+        struct stat st;
+        startblock = fits_blocks_needed(orig_nheaders * FITS_LINESZ);
+        if (stat(xylsfn, &st)) {
+            fprintf(stderr, "Failed to stat() xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+            exit(-1);
+        }
+        nblocks = st.st_size / FITS_BLOCK_SIZE;
+        fin = fopen(xylsfn, "rb");
+        if (!fin) {
+            fprintf(stderr, "Failed to open xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+            exit(-1);
+        }
+        if (fseeko(fin, startblock * FITS_BLOCK_SIZE, SEEK_SET)) {
+            fprintf(stderr, "Failed to seek in xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+            exit(-1);
+        }
+        printf("Copying FITS blocks %i to %i from xyls to output.\n", startblock, nblocks);
+        for (i=startblock; i<nblocks; i++) {
+            if (fread(block, 1, FITS_BLOCK_SIZE, fin) != FITS_BLOCK_SIZE) {
+                fprintf(stderr, "Failed to read xyls file \"%s\": %s\n", xylsfn, strerror(errno));
+                exit(-1);
+            }
+            if (fwrite(block, 1, FITS_BLOCK_SIZE, fout) != FITS_BLOCK_SIZE) {
+                fprintf(stderr, "Failed to write output file: %s\n", strerror(errno));
+                exit(-1);
+            }
+        }
+        fclose(fin);
+    }
+
+    fclose(fout);
+    qfits_header_destroy(hdr);
 
 	return 0;
 }

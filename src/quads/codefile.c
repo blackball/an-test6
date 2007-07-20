@@ -123,9 +123,9 @@ codefile* codefile_open(char* fn, int modifiable)
 		goto bailout;
 	}
 
-	if (fits_blocks_needed(cf->numcodes * sizeof(double) * DIM_CODES) != sizecodes) {
+	if (fits_bytes_needed(cf->numcodes * sizeof(double) * DIM_CODES) != sizecodes) {
 		fprintf(stderr, "Number of codes promised does jive with the table size: %u vs %u.\n",
-		        fits_blocks_needed(cf->numcodes * sizeof(double) * DIM_CODES), sizecodes);
+		        fits_bytes_needed(cf->numcodes * sizeof(double) * DIM_CODES), sizecodes);
 		goto bailout;
 	}
 
