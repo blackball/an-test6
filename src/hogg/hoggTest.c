@@ -14,7 +14,7 @@ int main()
   if (status != 0) return(status);
   status= hoggTestLeastSquareFit();
   if (status != 0) return(status);
-  status= hoggTestRansacFit();
+  status= hoggTestRansacTrial();
   if (status != 0) return(status);
   printf("hoggTest: all tests passed.\n");
   return 0;

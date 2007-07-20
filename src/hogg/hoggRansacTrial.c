@@ -18,7 +18,7 @@
     02110-1301 USA
 
   name:
-    hoggRansacFit
+    hoggRansacTrial
 
   bugs:
     comment header not written.
@@ -26,8 +26,8 @@
 #include <math.h>
 #include "hoggMath.h"
 #include "hoggTweak.h"
-double hoggRansacFit(double *yy, double *AA, double *xx, int nn, int mm,
-		     int *use)
+double hoggRansacTrial(double *yy, double *AA, double *xx, int nn, int mm,
+		       int *use)
 {
   return 0.0;
 }
