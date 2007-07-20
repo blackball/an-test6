@@ -124,109 +124,6 @@ static void print_help(const char* progname) {
 		   "\n", progname);
 }
 
-static int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines) {
-	int outpipe[2];
-	int errpipe[2];
-	pid_t pid;
-
-	if (outlines) {
-		if (pipe(outpipe) == -1) {
-			fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
-			return -1;
-		}
-	}
-	if (errlines) {
-		if (pipe(errpipe) == -1) {
-			fprintf(stderr, "Error creating pipe: %s\n", strerror(errno));
-			return -1;
-		}
-	}
-
-	pid = fork();
-	if (pid == -1) {
-		fprintf(stderr, "Error fork()ing: %s\n", strerror(errno));
-		return -1;
-	} else if (pid == 0) {
-		// Child process.
-		if (outlines) {
-			close(outpipe[0]);
-			// bind stdout to the pipe.
-			if (dup2(outpipe[1], STDOUT_FILENO) == -1) {
-				fprintf(stderr, "Failed to dup2 stdout: %s\n", strerror(errno));
-				_exit( -1);
-			}
-		}
-		if (errlines) {
-			close(errpipe[0]);
-			// bind stdout to the pipe.
-			if (dup2(errpipe[1], STDERR_FILENO) == -1) {
-				fprintf(stderr, "Failed to dup2 stdout: %s\n", strerror(errno));
-				_exit( -1);
-			}
-		}
-		// Use a "system"-like command to allow fancier commands.
-		if (execlp("/bin/sh", "/bin/sh", "-c", cmd, (char*)NULL)) {
-			fprintf(stderr, "Failed to execlp blind: %s\n", strerror(errno));
-			_exit( -1);
-		}
-		// execlp doesn't return.
-	} else {
-		FILE *fout, *ferr;
-		int status;
-		// Parent process.
-		if (outlines) {
-			close(outpipe[1]);
-			fout = fdopen(outpipe[0], "r");
-			if (!fout) {
-				fprintf(stderr, "Failed to fdopen pipe: %s\n", strerror(errno));
-				return -1;
-			}
-		}
-		if (errlines) {
-			close(errpipe[1]);
-			ferr = fdopen(errpipe[0], "r");
-			if (!ferr) {
-				fprintf(stderr, "Failed to fdopen pipe: %s\n", strerror(errno));
-				return -1;
-			}
-		}
-		// Wait for command to finish.
-		// FIXME - do we need to read from the pipes to prevent the command
-		// from blocking?
-		//printf("Waiting for blind to finish (PID %i).\n", (int)pid);
-		do {
-			if (waitpid(pid, &status, 0) == -1) {
-				fprintf(stderr, "Failed to waitpid(): %s.\n", strerror(errno));
-				return -1;
-			}
-			if (WIFSIGNALED(status)) {
-				fprintf(stderr, "Command was killed by signal %i.\n", WTERMSIG(status));
-				return -1;
-			} else {
-				int exitval = WEXITSTATUS(status);
-				if (exitval == 127) {
-					fprintf(stderr, "Command not found.\n");
-					return exitval;
-				} else if (exitval) {
-					fprintf(stderr, "Command failed: return value %i.\n", exitval);
-					return exitval;
-				}
-			}
-		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
-		//printf("Blind finished successfully.\n");
-
-		if (outlines) {
-			*outlines = fid_get_lines(fout, FALSE);
-			fclose(fout);
-		}
-		if (errlines) {
-			*errlines = fid_get_lines(ferr, FALSE);
-			fclose(ferr);
-		}
-	}
-	return 0;
-}
-
 int main(int argc, char** args) {
 	int c;
 	int help_flag = 0;
@@ -253,6 +150,7 @@ int main(int argc, char** args) {
 	char* matchfile = NULL;
 	char* rdlsfile = NULL;
 	char* wcsfile = NULL;
+    char* errmsg = NULL;
 
 	while (1) {
 		int option_index = 0;
@@ -398,7 +296,8 @@ int main(int argc, char** args) {
 				 "	--outfile \"%s\"",
 				 imagefn, uncompressedfn, sanitizedfn, pnmfn);
 		printf("Running: %s\n", cmd);
-		if (run_command_get_outputs(cmd, &lines, NULL)) {
+		if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+            fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
 			exit(-1);
 		}
@@ -414,7 +313,8 @@ int main(int argc, char** args) {
 
 		// Get image W, H, depth.
 		snprintf(cmd, sizeof(cmd), "pnmfile \"%s\"", pnmfn);
-		if (run_command_get_outputs(cmd, &lines, NULL)) {
+		if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+            fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run pnmfile: %s\n", strerror(errno));
 			exit(-1);
 		}
@@ -440,7 +340,8 @@ int main(int argc, char** args) {
 
 			if (guess_scale) {
 				snprintf(cmd, sizeof(cmd), "fits-guess-scale \"%s\"", fitsimgfn);
-				if (run_command_get_outputs(cmd, &lines, NULL)) {
+				if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+                    fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to run fits-guess-scale: %s\n", strerror(errno));
 					exit(-1);
 				}
@@ -469,7 +370,8 @@ int main(int argc, char** args) {
 				printf("Converting PPM image to FITS...\n");
 				snprintf(cmd, sizeof(cmd),
 						 "ppmtopgm \"%s\" | pnmtofits > \"%s\"", pnmfn, fitsimgfn);
-				if (run_command_get_outputs(cmd, NULL, NULL)) {
+				if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+                    fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to convert PPM to FITS.\n");
 					exit(-1);
 				}
@@ -477,7 +379,8 @@ int main(int argc, char** args) {
 				printf("Converting PGM image to FITS...\n");
 				snprintf(cmd, sizeof(cmd),
 						 "pnmtofits %s > \"%s\"", pnmfn, fitsimgfn);
-				if (run_command_get_outputs(cmd, NULL, NULL)) {
+				if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+                    fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to convert PGM to FITS.\n");
 					exit(-1);
 				}
@@ -491,7 +394,8 @@ int main(int argc, char** args) {
 		snprintf(cmd, sizeof(cmd),
 				 "fits2xy -O -o \"%s\" \"%s\"", xylsfn, fitsimgfn);
 		printf("Command: %s\n", cmd);
-		if (run_command_get_outputs(cmd, NULL, NULL)) {
+		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+            fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run fits2xy.\n");
 			exit(-1);
 		}
@@ -504,7 +408,8 @@ int main(int argc, char** args) {
 		snprintf(cmd, sizeof(cmd),
 				 "tabsort -i \"%s\" -o \"%s\" -c FLUX -d", xylsfn, sortedxylsfn);
 		printf("Command: %s\n", cmd);
-		if (run_command_get_outputs(cmd, NULL, NULL)) {
+		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+            fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run tabsort.\n");
 			exit(-1);
 		}
@@ -520,7 +425,8 @@ int main(int argc, char** args) {
 		snprintf(cmd, sizeof(cmd),
 				 "fits2fits.py \"%s\" \"%s\"", xylsfn, sanexylsfn);
 		printf("Command: %s\n", cmd);
-		if (run_command_get_outputs(cmd, NULL, NULL)) {
+		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+            fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run fits2fits.py\n");
 			exit(-1);
 		}

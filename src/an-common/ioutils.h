@@ -27,6 +27,8 @@
 
 extern uint32_t ENDIAN_DETECTOR;
 
+int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines, char** errormsg);
+
 void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
 
 bool file_exists(char* fn);

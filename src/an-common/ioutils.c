@@ -32,6 +32,108 @@
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
+int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines, char** errormsg) {
+	int outpipe[2];
+	int errpipe[2];
+	pid_t pid;
+
+	if (outlines) {
+		if (pipe(outpipe) == -1) {
+			if (errormsg) *errormsg = "Error creating pipe";
+			return -1;
+		}
+	}
+	if (errlines) {
+		if (pipe(errpipe) == -1) {
+			if (errormsg) *errormsg = "Error creating pipe";
+			return -1;
+		}
+	}
+
+	pid = fork();
+	if (pid == -1) {
+		if (errormsg) *errormsg = "Error fork()ing";
+		return -1;
+	} else if (pid == 0) {
+		// Child process.
+		if (outlines) {
+			close(outpipe[0]);
+			// bind stdout to the pipe.
+			if (dup2(outpipe[1], STDOUT_FILENO) == -1) {
+				fprintf(stderr, "Failed to dup2 stdout: %s\n", strerror(errno));
+				_exit( -1);
+			}
+		}
+		if (errlines) {
+			close(errpipe[0]);
+			// bind stdout to the pipe.
+			if (dup2(errpipe[1], STDERR_FILENO) == -1) {
+				fprintf(stderr, "Failed to dup2 stdout: %s\n", strerror(errno));
+				_exit( -1);
+			}
+		}
+		// Use a "system"-like command to allow fancier commands.
+		if (execlp("/bin/sh", "/bin/sh", "-c", cmd, (char*)NULL)) {
+			fprintf(stderr, "Failed to execlp: %s\n", strerror(errno));
+			_exit( -1);
+		}
+		// execlp doesn't return.
+	} else {
+		FILE *fout, *ferr;
+		int status;
+		// Parent process.
+		if (outlines) {
+			close(outpipe[1]);
+			fout = fdopen(outpipe[0], "r");
+			if (!fout) {
+				if (errormsg) *errormsg = "Failed to fdopen() pipe";
+				return -1;
+			}
+		}
+		if (errlines) {
+			close(errpipe[1]);
+			ferr = fdopen(errpipe[0], "r");
+			if (!ferr) {
+				if (errormsg) *errormsg = "Failed to fdopen() pipe";
+				return -1;
+			}
+		}
+		// Wait for command to finish.
+		// FIXME - do we need to read from the pipes to prevent the command
+		// from blocking?
+		//printf("Waiting for command to finish (PID %i).\n", (int)pid);
+		do {
+			if (waitpid(pid, &status, 0) == -1) {
+				if (errormsg) *errormsg = "Failed to waitpid()";
+				return -1;
+			}
+			if (WIFSIGNALED(status)) {
+				if (errormsg) *errormsg = "Command was killed by signal"; // %i.\n", WTERMSIG(status));
+				return -1;
+			} else {
+				int exitval = WEXITSTATUS(status);
+				if (exitval == 127) {
+					if (errormsg) *errormsg = "Command not found";
+					return exitval;
+				} else if (exitval) {
+					if (errormsg) *errormsg = "Command failed"; //: return value %i.\n", exitval);
+					return exitval;
+				}
+			}
+		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+
+		if (outlines) {
+			*outlines = fid_get_lines(fout, FALSE);
+			fclose(fout);
+		}
+		if (errlines) {
+			*errlines = fid_get_lines(ferr, FALSE);
+			fclose(ferr);
+		}
+	}
+	return 0;
+}
+
 pl* file_get_lines(char* fn, bool include_newlines) {
     FILE* fid;
 	pl* list;
