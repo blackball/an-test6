@@ -246,10 +246,11 @@ low-level-frontend: low-level-frontend.o fileutil.o \
 
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
-		intmap.o blind_wcs.o \
-	histogram.o \
+		intmap.o blind_wcs.o histogram.o \
 		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB) $(GSL_LIB)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@.tmp $^
+	mv $@.tmp $@
 
 whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o \
