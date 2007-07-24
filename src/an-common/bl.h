@@ -183,6 +183,7 @@ void  pl_remove(pl* list, int ind);
 int   pl_remove_value(pl* list, void* value);
 void  pl_remove_all(pl* list);
 void  pl_merge_lists(pl* list1, pl* list2);
+#define pl_clear pl_remove_all
 
 ///////////////////////////////////////////////
 // special-case functions for double lists. //
