@@ -49,9 +49,9 @@ static int help_flag;
 static struct option long_options[] =
     {
 	    // flags
-	    {"help", no_argument, &help_flag, 1},
-	    {"config", optional_argument, 0, 'c'},
-	    {"input", optional_argument, 0, 'i'},
+	    {"help",   no_argument, &help_flag, 1},
+	    {"config", required_argument, 0, 'c'},
+	    {"input",  required_argument, 0, 'i'},
 	    {0, 0, 0, 0}
     };
 
@@ -69,8 +69,7 @@ static void print_help(const char* progname)
 static const char* default_blind_command = "blind";
 
 
-struct indexinfo
-{
+struct indexinfo {
 	char* indexname;
 	// quad size
 	double losize;
@@ -78,9 +77,7 @@ struct indexinfo
 };
 typedef struct indexinfo indexinfo_t;
 
-// This should really be named something like "backend_t"...
-struct backend
-{
+struct backend {
 	bl* indexinfos;
 	int ibiggest;
 	int ismallest;
@@ -536,7 +533,6 @@ static int run_blind(job_t* job, backend_t* backend)
 	return 0;
 }
 
-// FIXME need to return FALSE when required headers are missing.
 job_t* parse_job_from_qfits_header(qfits_header* hdr)
 {
 	double dnil = -HUGE_VAL;
@@ -547,7 +543,7 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	if ((job->imagew == dnil) || (job->imageh == dnil) ||
 		(job->imagew <= 0.0) || (job->imageh <= 0.0)) {
 		printf("Must specify positive \"IMAGEW\" and \"IMAGEH\".\n");
-		exit( -1);
+		goto bailout;
 	}
 	job->run = qfits_header_getboolean(hdr, "ANRUN", 0);
 	job->poserr = qfits_header_getdouble(hdr, "ANPOSERR", job->poserr);
@@ -663,6 +659,10 @@ job_t* parse_job_from_qfits_header(qfits_header* hdr)
 	}
 
 	return job;
+
+ bailout:
+	job_free(job);
+	return NULL;
 }
 
 backend_t* backend_new()

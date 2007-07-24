@@ -110,11 +110,10 @@ static struct option long_options[] = {
 	{"nordls",		no_argument,	   0, 'r'},
 	{"xylist",		required_argument, 0, 'x'},
 	{"no-tweak",	no_argument,	   0, 'T'},
-	{"tweak-order", required_argument, 0, 'O'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TO:P:S:R:W:M:C:"; // D:
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:"; // D:
 
 static void print_help(const char* progname) {
 	// FIXME - add rest of args!
@@ -193,7 +192,7 @@ int main(int argc, char** args) {
 		case 'T':
 			tweak = FALSE;
 			break;
-		case 'O':
+		case 't':
 			tweak_order = atoi(optarg);
 			break;
 		case 'P':
