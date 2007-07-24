@@ -31,6 +31,7 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <libgen.h>
 
 #include <getopt.h>
 
@@ -52,7 +53,7 @@ static struct option long_options[] =
 	    {"help",   no_argument, &help_flag, 1},
 	    {"config", required_argument, 0, 'c'},
 	    {"input",  required_argument, 0, 'i'},
-        //{"cd",     no_argument,       0, 'C'},
+        {"cd",     no_argument,       0, 'C'},
 	    {0, 0, 0, 0}
     };
 
@@ -63,7 +64,7 @@ static void print_help(const char* progname)
 	printf("Usage:   %s [options] <augmented xylist>\n"
 	       "   [-c <backend config file>]  (default \"backend.cfg\")\n"
 	       "   [-i <blind input filename>]: save the input file used for blind.\n"
-           //"   [-C]: change to the directory containing the xylist before running blind.\n"
+           "   [-C]: change to the directory containing the xylist before running blind.\n"
 	       "\n", progname);
 }
 
@@ -452,7 +453,7 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 	return 0;
 }
 
-static int run_blind(job_t* job, backend_t* backend)
+static int run_blind(job_t* job, backend_t* backend, char* dir)
 {
 	int thepipe[2];
 	pid_t pid;
@@ -703,6 +704,7 @@ int main(int argc, char** args)
 	FILE* fconf;
 	int i;
 	backend_t* backend;
+    bool cd = FALSE;
 
 	while (1) {
 		int option_index = 0;
@@ -728,6 +730,9 @@ int main(int argc, char** args)
 		case 'i':
 			inputfn = optarg;
 			break;
+        case 'C':
+            cd = TRUE;
+            break;
 		case '?':
 			break;
 		default:
@@ -773,6 +778,7 @@ int main(int argc, char** args)
 		char* jobfn;
 		qfits_header* hdr;
 		job_t* job = NULL;
+        char* dir;
 
 		jobfn = args[i];
 
@@ -816,9 +822,19 @@ int main(int argc, char** args)
 			}
 		}
 
-		if (run_blind(job, backend)) {
+        if (cd) {
+            char* cpy;
+            cpy = strdup(jobfn);
+            dir = strdup(dirname(cpy));
+            free(cpy);
+            
+        } else {
+            dir = NULL;
+        }
+		if (run_blind(job, backend, dir)) {
 			fprintf(stderr, "Failed to run_blind.\n");
 		}
+        free(dir);
 
 		//cleanup:
 		job_free(job);
