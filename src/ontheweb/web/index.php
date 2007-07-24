@@ -41,6 +41,7 @@ function allow_email($email) {
 		       'jdshaw@udel.edu',
 		       'jeremy.d.brewer@gmail.com',
 		       'john.moustakas@gmail.com',
+		       'jonbarron@gmail.com',
 		       'jqshenker@gmail.com',
 		       'kenwood@stsci.edu',
 		       'landsman@milkyway.gsfc.nasa.gov',
