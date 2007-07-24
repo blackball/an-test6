@@ -50,6 +50,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include <getopt.h>
 
@@ -76,6 +77,20 @@ static void print_help(const char* progname) {
 	       "\n", progname);
 }
 
+static void add_file_arg(pl* args, char* argname, char* file, char* dir) {
+    char* addpath;
+    pl_append(args, argname);
+    // HACK - we leak this strdup()'d memory...
+    if (dir) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%s/%s", dir, file);
+        addpath = strdup(path);
+    } else {
+        addpath = strdup(file);
+    }
+    pl_append(args, addpath);
+}
+
 int main(int argc, char** args) {
 	int c;
 	bool help = FALSE;
@@ -84,7 +99,6 @@ int main(int argc, char** args) {
 	char* image = NULL;
 	char* cpy;
 	char* base;
-	char relaxy[1024];
 	char axy[1024];
 	char cmd[1024];
 	char* buf;
@@ -92,9 +106,7 @@ int main(int argc, char** args) {
 	int i;
 	int rtn;
     pl* backendargs;
-    pl* outlines;
     char* errmsg;
-    char* backend;
 
 	lowlevelargs = pl_new(16);
 	pl_append(lowlevelargs, "low-level-frontend");
@@ -177,22 +189,15 @@ int main(int argc, char** args) {
 		snprintf(axy, sizeof(axy), "%s/%s.axy", outdir, base);
     else
 		snprintf(axy, sizeof(axy), "%s.axy", base);
-    snprintf(relaxy, sizeof(relaxy), "%s.axy", base);
+	free(base);
 
 	pl_append(lowlevelargs, "--out");
 	pl_append(lowlevelargs, axy);
 
-	pl_append(lowlevelargs, "--match");
-	pl_append(lowlevelargs, "match.fits");
-
-	pl_append(lowlevelargs, "--rdls");
-	pl_append(lowlevelargs, "rdls.fits");
-
-	pl_append(lowlevelargs, "--wcs");
-	pl_append(lowlevelargs, "wcs.fits");
-
-	pl_append(lowlevelargs, "--solved");
-	pl_append(lowlevelargs, "solved");
+    add_file_arg(lowlevelargs, "--match",  "match.fits", outdir);
+    add_file_arg(lowlevelargs, "--rdls",   "rdls.fits",  outdir);
+    add_file_arg(lowlevelargs, "--solved", "solved",     outdir);
+    add_file_arg(lowlevelargs, "--wcs",    "wcs.fits",   outdir);
 
 	pl_append(lowlevelargs, "--guess-scale");
 
@@ -226,42 +231,8 @@ int main(int argc, char** args) {
 
     backendargs = pl_new(16);
 
-    // find the "backend" executable before "cd"ing...
-    if (outdir) {
-        if (run_command_get_outputs("which backend", &outlines, NULL, &errmsg)) {
-            fprintf(stderr, "Couldn't find \"backend\": %s\n", errmsg);
-            exit(-1);
-        }
-        if (pl_size(outlines) == 0) {
-            fprintf(stderr, "Couldn't find \"backend\"");
-            exit(-1);
-        }
-        backend = pl_get(outlines, 0);
-        backend = canonicalize_file_name(backend);
-        pl_free_elements(outlines);
-        pl_free(outlines);
-    } else {
-        backend = "backend";
-    }
-    pl_append(backendargs, backend);
-
-    //backend --cd mypic-results/mypic.axy
-    /*
-     pl_append(backendargs, "backend");
-     if (outdir) {
-     pl_append(backendargs, "--cd");
-     }
-     //pl_append(backendargs, axy);
-     */
-
-    pl_append(backendargs, relaxy);
-
-    if (outdir) {
-        if (chdir(outdir)) {
-            fprintf(stderr, "Failed to chdir to output directory %s: %s\n", outdir, strerror(errno));
-            exit(-1);
-        }
-    }
+    pl_append(backendargs, "backend");
+    pl_append(backendargs, axy);
 
 	buf = cmd;
 	len = sizeof(cmd);
@@ -282,7 +253,6 @@ int main(int argc, char** args) {
     }
 
     pl_free(backendargs);
-	free(base);
 
 	return 0;
 }
