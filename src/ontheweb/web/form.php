@@ -611,7 +611,7 @@ function process_data ($vals) {
 			//loggit("Next Range (" . $j . "): [" . $nextlo . ", " . $nexthi . "]\n");
 			if ($nextlo <= $thishi) {
 				// Merge.
-				$thishi = $nexthi;
+				$thishi = max($thishi, $nexthi);
 				//loggit("Merged to produce: [" . $thislo . ", " . $thishi . "]\n");
 			} else {
 				//loggit("No overlap.\n");
