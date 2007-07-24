@@ -106,18 +106,16 @@ array('90degree' => array('desc' => '90-degree Fields',
 	  '15arcmin' => array('desc' => '15-arcmin Fields (eg, Sloan Digital Sky Survey)',
 						  'quadsize' => array(4, 5.6),
 						  'paths' => $index202paths),
-	  /*
 	  '10arcmin' => array('desc' => '10-arcmin Fields',
 						  'quadsize' => array(2.8, 4),
 						  'paths' => $index201paths),
 	  '8arcmin' => array('desc' => '8-arcmin Fields',
 						 'quadsize' => array(2, 2.8),
 						 'paths' => $index200paths),
-	  */
 	  );
 
 $largest_index = '90degree';
-//$smallest_index = '8arcmin';
-$smallest_index = '15arcmin';
+$smallest_index = '8arcmin';
+//$smallest_index = '15arcmin';
 
 ?>
