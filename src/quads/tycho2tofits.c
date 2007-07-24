@@ -135,17 +135,17 @@ int main(int argc, char** args) {
 		printf("File %s: supplement format: %s\n", infn, (supplement ? "Yes" : "No"));
 
 		if (supplement) {
-			recsize = TYCHO_SUPPLEMENT_RECORD_SIZE;
+			recsize = TYCHO_SUPPLEMENT_RECORD_SIZE_RAW;
 		} else {
-			recsize = TYCHO_RECORD_SIZE;
+			recsize = TYCHO_RECORD_SIZE_RAW;
 		}
 
-		if (map_size % recsize) {
-			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-byte records.\n",
-				infn, (uint)map_size, recsize);
+		if ((map_size % recsize) && (map_size % (recsize+1)) && (map_size % (recsize+2))) {
+			fprintf(stderr, "Warning, input file %s has size %u which is not divisible into %i-, %i-, or %i-byte records.\n",
+				infn, (uint)map_size, recsize, recsize+1, recsize+2);
 		}
 
-		for (i=0; i<map_size; i+=recsize) {
+		for (i=0; i<map_size;) {
 			tycho2_entry entry;
 			int hp;
 
@@ -163,6 +163,12 @@ int main(int argc, char** args) {
 				}
 			}
 			//printf("RA, DEC (%g, %g)\n", entry.RA, entry.DEC);
+
+			i += recsize;
+			// skip past "\r" and "\n".
+			while ((i < map_size) &&
+			       ((map[i] == '\r') || (map[i] == '\n')))
+				i++;
 
 			if (do_hp) {
 				hp = radectohealpix(deg2rad(entry.RA), deg2rad(entry.DEC), Nside);

@@ -49,8 +49,8 @@ static int parse_double(char* src, int n, double* data) {
 
 static int parse_optional_double(char* src, int n, double* data, double defaultval) {
 	char buf[256];
-	grab_substring(buf, src, n);
 	int i;
+	grab_substring(buf, src, n);
 	for (i=0; i<n; i++)
 		if (buf[i] != ' ')
 			break;
