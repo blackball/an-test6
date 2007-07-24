@@ -32,7 +32,10 @@
 		--out mypic-results/mypic.axy \
         --match match.fits --solved solved --rdls rdls.fits \
 		--wcs wcs.fits
-   cd mypic-results && backend mypic.axy
+
+   backend --cd mypic-results/mypic.axy
+
+   ?? cd mypic-results && backend mypic.axy
 
    ?? render-job --dir mypic-results
  */
@@ -44,12 +47,15 @@
 #include <errno.h>
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include <getopt.h>
 
 #include "an-bool.h"
 #include "bl.h"
+#include "ioutils.h"
 
 static struct option long_options[] = {
 	// flags
@@ -78,12 +84,17 @@ int main(int argc, char** args) {
 	char* image = NULL;
 	char* cpy;
 	char* base;
+	char relaxy[1024];
 	char axy[1024];
 	char cmd[1024];
 	char* buf;
 	int len;
 	int i;
 	int rtn;
+    pl* backendargs;
+    pl* outlines;
+    char* errmsg;
+    char* backend;
 
 	lowlevelargs = pl_new(16);
 	pl_append(lowlevelargs, "low-level-frontend");
@@ -136,6 +147,26 @@ int main(int argc, char** args) {
 		exit(0);
 	}
 
+    if (outdir) {
+        snprintf(cmd, sizeof(cmd), "mkdir -p %s", outdir);
+        rtn = system(cmd);
+        if (rtn == -1) {
+            fprintf(stderr, "Failed to system() mkdir.\n");
+            exit(-1);
+        }
+        rtn = WEXITSTATUS(rtn);
+        if (rtn) {
+            fprintf(stderr, "mkdir failed: status %i.\n", rtn);
+            exit(-1);
+        }
+        /*
+         struct stat st;
+         if (stat(outdir, &st)) {
+         if (errno == ENOENT) {
+         // try to mkdir it.
+         */
+    }
+
 	pl_append(lowlevelargs, "--image");
 	pl_append(lowlevelargs, image);
 
@@ -144,9 +175,9 @@ int main(int argc, char** args) {
 	free(cpy);
 	if (outdir)
 		snprintf(axy, sizeof(axy), "%s/%s.axy", outdir, base);
-	else
+    else
 		snprintf(axy, sizeof(axy), "%s.axy", base);
-	free(base);
+    snprintf(relaxy, sizeof(relaxy), "%s.axy", base);
 
 	pl_append(lowlevelargs, "--out");
 	pl_append(lowlevelargs, axy);
@@ -193,8 +224,65 @@ int main(int argc, char** args) {
 
 	pl_free(lowlevelargs);
 
+    backendargs = pl_new(16);
 
+    // find the "backend" executable before "cd"ing...
+    if (outdir) {
+        if (run_command_get_outputs("which backend", &outlines, NULL, &errmsg)) {
+            fprintf(stderr, "Couldn't find \"backend\": %s\n", errmsg);
+            exit(-1);
+        }
+        if (pl_size(outlines) == 0) {
+            fprintf(stderr, "Couldn't find \"backend\"");
+            exit(-1);
+        }
+        backend = pl_get(outlines, 0);
+        backend = canonicalize_file_name(backend);
+        pl_free_elements(outlines);
+        pl_free(outlines);
+    } else {
+        backend = "backend";
+    }
+    pl_append(backendargs, backend);
 
+    //backend --cd mypic-results/mypic.axy
+    /*
+     pl_append(backendargs, "backend");
+     if (outdir) {
+     pl_append(backendargs, "--cd");
+     }
+     //pl_append(backendargs, axy);
+     */
+
+    pl_append(backendargs, relaxy);
+
+    if (outdir) {
+        if (chdir(outdir)) {
+            fprintf(stderr, "Failed to chdir to output directory %s: %s\n", outdir, strerror(errno));
+            exit(-1);
+        }
+    }
+
+	buf = cmd;
+	len = sizeof(cmd);
+	for (i=0; i<pl_size(backendargs); i++) {
+		int nw = snprintf(buf, len, "%s%s", (i ? " " : ""),
+						  (char*)pl_get(backendargs, i));
+		if (nw > len) {
+			fprintf(stderr, "Command line too long.\n");
+			exit(-1);
+		}
+		buf += nw;
+		len -= nw;
+	}
+
+    if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+        fprintf(stderr, "Couldn't run \"backend\": %s\n", errmsg);
+        exit(-1);
+    }
+
+    pl_free(backendargs);
+	free(base);
 
 	return 0;
 }

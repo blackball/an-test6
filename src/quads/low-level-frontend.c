@@ -297,7 +297,7 @@ int main(int argc, char** args) {
 		printf("Running: %s\n", cmd);
 		if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
             fprintf(stderr, "%s\n", errmsg);
-			fprintf(stderr, "Failed to run image2pnm: %s\n", strerror(errno));
+			fprintf(stderr, "Failed to run image2pnm.\n");
 			exit(-1);
 		}
 

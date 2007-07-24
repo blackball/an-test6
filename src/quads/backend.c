@@ -52,6 +52,7 @@ static struct option long_options[] =
 	    {"help",   no_argument, &help_flag, 1},
 	    {"config", required_argument, 0, 'c'},
 	    {"input",  required_argument, 0, 'i'},
+        //{"cd",     no_argument,       0, 'C'},
 	    {0, 0, 0, 0}
     };
 
@@ -62,6 +63,7 @@ static void print_help(const char* progname)
 	printf("Usage:   %s [options] <augmented xylist>\n"
 	       "   [-c <backend config file>]  (default \"backend.cfg\")\n"
 	       "   [-i <blind input filename>]: save the input file used for blind.\n"
+           //"   [-C]: change to the directory containing the xylist before running blind.\n"
 	       "\n", progname);
 }
 
