@@ -32,12 +32,8 @@
 		--out mypic-results/mypic.axy \
         --match match.fits --solved solved --rdls rdls.fits \
 		--wcs wcs.fits
-
-   backend --cd mypic-results/mypic.axy
-
-   ?? cd mypic-results && backend mypic.axy
-
-   ?? render-job --dir mypic-results
+   backend mypic-results/mypic.axy
+   render-job mypic-results/mypic.axy
  */
 
 #include <stdio.h>
