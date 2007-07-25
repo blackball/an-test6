@@ -274,7 +274,7 @@ int main(int argc, char** args) {
 		char *uncompressedfn;
 		char *sanitizedfn;
 		char *pnmfn;				
-		pl* lines;
+		sl* lines;
 		bool isfits;
 		char *fitsimgfn;
 		char* line;
@@ -304,13 +304,12 @@ int main(int argc, char** args) {
 		}
 
 		isfits = FALSE;
-		for (i=0; i<pl_size(lines); i++) {
-			printf("  %s\n", (char*)pl_get(lines, i));
-			if (!strcmp("fits", (char*)pl_get(lines, i)))
+		for (i=0; i<sl_size(lines); i++) {
+			printf("  %s\n", sl_get(lines, i));
+			if (!strcmp("fits", sl_get(lines, i)))
 				isfits = TRUE;
 		}
-		pl_free_elements(lines);
-		pl_free(lines);
+		sl_free(lines);
 
 		// Get image W, H, depth.
 		snprintf(cmd, sizeof(cmd), "pnmfile \"%s\"", pnmfn);
@@ -319,11 +318,11 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to run pnmfile: %s\n", strerror(errno));
 			exit(-1);
 		}
-		if (pl_size(lines) == 0) {
+		if (sl_size(lines) == 0) {
 			fprintf(stderr, "No output from pnmfile.\n");
 			exit(-1);
 		}
-		line = pl_get(lines, 0);
+		line = sl_get(lines, 0);
 		// eg	"/tmp/pnm:	 PPM raw, 800 by 510  maxval 255"
 		if (strlen(pnmfn) + 1 >= strlen(line)) {
 			fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
@@ -335,6 +334,7 @@ int main(int argc, char** args) {
 			fprintf(stderr, "Failed to parse output from pnmfile: %s\n", line);
 			exit(-1);
 		}
+		sl_free(lines);
 
 		if (isfits) {
 			fitsimgfn = sanitizedfn;
@@ -347,10 +347,10 @@ int main(int argc, char** args) {
 					exit(-1);
 				}
 
-				for (i=0; i<pl_size(lines); i++) {
+				for (i=0; i<sl_size(lines); i++) {
 					char type[256];
 					double scale;
-					line = pl_get(lines, i);
+					line = sl_get(lines, i);
 					if (sscanf(line, "scale %255s %lg", type, &scale) == 2) {
 						printf("Scale estimate: %g\n", scale);
 						dl_append(scales, scale * 0.99);
@@ -359,8 +359,7 @@ int main(int argc, char** args) {
 					}
 				}
 
-				pl_free_elements(lines);
-				pl_free(lines);
+				sl_free(lines);
 
 			}
 
