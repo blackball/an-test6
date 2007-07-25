@@ -41,8 +41,7 @@ typedef dl xy;
 
 /*
   One table per field.
-  One column.
-  One row per entry.
+  One row per star.
 */
 struct xylist {
 	char* fn;

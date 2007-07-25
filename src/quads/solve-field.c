@@ -58,21 +58,26 @@ static struct option long_options[] = {
 	// flags
 	{"help",        no_argument,       0, 'h'},
 	{"image",       required_argument, 0, 'i'},
+	{"xyls",        required_argument, 0, 'x'},
+	{"width",       required_argument, 0, 'W'},
+	{"height",      required_argument, 0, 'H'},
 	{"scale-low",	required_argument, 0, 'L'},
-	{"scale-high",	required_argument, 0, 'H'},
+	{"scale-high",	required_argument, 0, 'U'},
 	{"scale-units", required_argument, 0, 'u'},
 	{"no-tweak",    no_argument,       0, 'T'},
+	{"no-guess-scale", no_argument,       0, 'G'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"dir",         required_argument, 0, 'd'},
 	{"backend-config", required_argument, 0, 'c'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hi:L:H:u:t:d:c:T";
+static const char* OPTIONS = "hi:L:U:u:t:d:c:Tx:W:H:G";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
-		   "  --image <filename>   the image to solve   (-i)\n"
+		   "  (   --image <filename>   the image to solve   (-i)\n"
+		   "   OR --xyls  <filename> ) FITS table of source positions to solve   (-l)\n"
 		   "  [--dir <directory>]: place all output files in this directory\n"
 		   "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 		   "     choices:  \"degwidth\"    : width of the image, in degrees\n"
@@ -80,7 +85,10 @@ static void print_help(const char* progname) {
 		   "               \"arcsecperpix\": arcseconds per pixel\n"
 		   "  [--scale-low  <number>]: lower bound of image scale estimate   (-L)\n"
 		   "  [--scale-high <number>]: upper bound of image scale estimate   (-U)\n"
+		   "  [--width  <number>]: (mostly for xyls inputs): the original image width   (-W)\n"
+		   "  [--height <number>]: (mostly for xyls inputs): the original image height  (-H)\n"
 		   "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial\n"
+		   "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
 		   "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
 		   "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
 		   //"  [-h / --help]: print this help.\n"
@@ -107,6 +115,8 @@ int main(int argc, char** args) {
 	pl* lowlevelargs;
 	char* outdir = NULL;
 	char* image = NULL;
+	char* xyls = NULL;
+	char* infn;
 	char* cpy;
 	char* base;
 	char axy[1024];
@@ -117,6 +127,8 @@ int main(int argc, char** args) {
 	int rtn;
     pl* backendargs;
     char* errmsg;
+	bool guess_scale = TRUE;
+	int width = 0, height = 0;
 
 	lowlevelargs = pl_new(16);
 	pl_append(lowlevelargs, "low-level-frontend");
@@ -138,6 +150,15 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+		case 'G':
+			guess_scale = FALSE;
+			break;
+		case 'W':
+			width = atoi(optarg);
+			break;
+		case 'H':
+			height = atoi(optarg);
+			break;
 		case 'T':
 			pl_append(lowlevelargs, "--no-tweak");
 			break;
@@ -145,7 +166,7 @@ int main(int argc, char** args) {
 			pl_append(lowlevelargs, "--scale-low");
 			pl_append(lowlevelargs, optarg);
 			break;
-		case 'H':
+		case 'U':
 			pl_append(lowlevelargs, "--scale-high");
 			pl_append(lowlevelargs, optarg);
 			break;
@@ -167,11 +188,14 @@ int main(int argc, char** args) {
 		case 'i':
 			image = optarg;
 			break;
+		case 'x':
+			xyls = optarg;
+			break;
 		}
 	}
 
-	if (!image) {
-		fprintf(stderr, "You must specify an image file.\n");
+	if (!(image || xyls)) {
+		fprintf(stderr, "You must specify an image or xyls file.\n");
 		help = 1;
 	}
 	if (help) {
@@ -199,10 +223,29 @@ int main(int argc, char** args) {
          */
     }
 
-	pl_append(lowlevelargs, "--image");
-	pl_append(lowlevelargs, image);
+	if (image) {
+		pl_append(lowlevelargs, "--image");
+		pl_append(lowlevelargs, image);
+		infn = image;
+	} else {
+		pl_append(lowlevelargs, "--xyls");
+		pl_append(lowlevelargs, xyls);
+		infn = xyls;
+	}
 
-	cpy = strdup(image);
+	if (width) {
+		// HACK - memleak
+		asprintf(&buf, "%i", width);
+		pl_append(lowlevelargs, "--width");
+		pl_append(lowlevelargs, buf);
+	}
+	if (height) {
+		asprintf(&buf, "%i", height);
+		pl_append(lowlevelargs, "--height");
+		pl_append(lowlevelargs, buf);
+	}
+
+	cpy = strdup(infn);
 	base = strdup(basename(cpy));
 	free(cpy);
 	if (outdir)
@@ -219,7 +262,8 @@ int main(int argc, char** args) {
     add_file_arg(lowlevelargs, "--solved", "solved",     outdir);
     add_file_arg(lowlevelargs, "--wcs",    "wcs.fits",   outdir);
 
-	pl_append(lowlevelargs, "--guess-scale");
+	if (guess_scale)
+		pl_append(lowlevelargs, "--guess-scale");
 
 	// pnm?
 
