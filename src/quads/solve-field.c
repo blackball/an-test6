@@ -96,24 +96,19 @@ static void print_help(const char* progname) {
 	       "\n", progname);
 }
 
-static void add_file_arg(pl* args, char* argname, char* file, char* dir) {
-    char* addpath;
-    pl_append(args, argname);
-    // HACK - we leak this strdup()'d memory...
-    if (dir) {
-        char path[1024];
-        snprintf(path, sizeof(path), "%s/%s", dir, file);
-        addpath = strdup(path);
-    } else {
-        addpath = strdup(file);
-    }
-    pl_append(args, addpath);
+static void add_file_arg(sl* args, const char* argname, const char* file,
+						 const char* dir) {
+    sl_append(args, argname);
+	if (dir)
+		sl_appendf(args, "%s/%s", dir, file);
+	else
+		sl_append(args, file);
 }
 
 int main(int argc, char** args) {
 	int c;
 	bool help = FALSE;
-	pl* lowlevelargs;
+	sl* lowlevelargs;
 	char* outdir = NULL;
 	char* image = NULL;
 	char* xyls = NULL;
@@ -121,22 +116,20 @@ int main(int argc, char** args) {
 	char* cpy;
 	char* base;
 	char axy[1024];
-	char cmd[1024];
-	char* buf;
-	int len;
+	char* cmd;
 	int i;
 	int rtn;
-    pl* backendargs;
+    sl* backendargs;
     char* errmsg;
 	bool guess_scale = TRUE;
 	int width = 0, height = 0;
 	//xylist* xy;
 
-	lowlevelargs = pl_new(16);
-	pl_append(lowlevelargs, "low-level-frontend");
+	lowlevelargs = sl_new(16);
+	sl_append(lowlevelargs, "low-level-frontend");
 
-    backendargs = pl_new(16);
-    pl_append(backendargs, "backend");
+    backendargs = sl_new(16);
+    sl_append(backendargs, "backend");
 
 	while (1) {
 		int option_index = 0;
@@ -162,27 +155,27 @@ int main(int argc, char** args) {
 			height = atoi(optarg);
 			break;
 		case 'T':
-			pl_append(lowlevelargs, "--no-tweak");
+			sl_append(lowlevelargs, "--no-tweak");
 			break;
 		case 'L':
-			pl_append(lowlevelargs, "--scale-low");
-			pl_append(lowlevelargs, optarg);
+			sl_append(lowlevelargs, "--scale-low");
+			sl_append(lowlevelargs, optarg);
 			break;
 		case 'U':
-			pl_append(lowlevelargs, "--scale-high");
-			pl_append(lowlevelargs, optarg);
+			sl_append(lowlevelargs, "--scale-high");
+			sl_append(lowlevelargs, optarg);
 			break;
 		case 'u':
-			pl_append(lowlevelargs, "--scale-units");
-			pl_append(lowlevelargs, optarg);
+			sl_append(lowlevelargs, "--scale-units");
+			sl_append(lowlevelargs, optarg);
 			break;
 		case 't':
-			pl_append(lowlevelargs, "--tweak-order");
-			pl_append(lowlevelargs, optarg);
+			sl_append(lowlevelargs, "--tweak-order");
+			sl_append(lowlevelargs, optarg);
 			break;
 		case 'c':
-			pl_append(backendargs, "--config");
-			pl_append(backendargs, optarg);
+			sl_append(backendargs, "--config");
+			sl_append(backendargs, optarg);
 			break;
 		case 'd':
 			outdir = optarg;
@@ -217,8 +210,9 @@ int main(int argc, char** args) {
 	}
 
     if (outdir) {
-        snprintf(cmd, sizeof(cmd), "mkdir -p %s", outdir);
+		asprintf(&cmd, "mkdir -p %s", outdir);
         rtn = system(cmd);
+		free(cmd);
         if (rtn == -1) {
             fprintf(stderr, "Failed to system() mkdir.\n");
             exit(-1);
@@ -237,12 +231,12 @@ int main(int argc, char** args) {
     }
 
 	if (image) {
-		pl_append(lowlevelargs, "--image");
-		pl_append(lowlevelargs, image);
+		sl_append(lowlevelargs, "--image");
+		sl_append(lowlevelargs, image);
 		infn = image;
 	} else {
-		pl_append(lowlevelargs, "--xylist");
-		pl_append(lowlevelargs, xyls);
+		sl_append(lowlevelargs, "--xylist");
+		sl_append(lowlevelargs, xyls);
 		infn = xyls;
 		/*
 		  if (!width || !height) {
@@ -252,15 +246,12 @@ int main(int argc, char** args) {
 	}
 
 	if (width) {
-		// HACK - memleak
-		asprintf(&buf, "%i", width);
-		pl_append(lowlevelargs, "--width");
-		pl_append(lowlevelargs, buf);
+		sl_append(lowlevelargs, "--width");
+		sl_appendf(lowlevelargs, "%i", width);
 	}
 	if (height) {
-		asprintf(&buf, "%i", height);
-		pl_append(lowlevelargs, "--height");
-		pl_append(lowlevelargs, buf);
+		sl_append(lowlevelargs, "--height");
+		sl_appendf(lowlevelargs, "%i", height);
 	}
 
 	cpy = strdup(infn);
@@ -272,8 +263,8 @@ int main(int argc, char** args) {
 		snprintf(axy, sizeof(axy), "%s.axy", base);
 	free(base);
 
-	pl_append(lowlevelargs, "--out");
-	pl_append(lowlevelargs, axy);
+	sl_append(lowlevelargs, "--out");
+	sl_append(lowlevelargs, axy);
 
     add_file_arg(lowlevelargs, "--match",  "match.fits", outdir);
     add_file_arg(lowlevelargs, "--rdls",   "rdls.fits",  outdir);
@@ -281,25 +272,16 @@ int main(int argc, char** args) {
     add_file_arg(lowlevelargs, "--wcs",    "wcs.fits",   outdir);
 
 	if (guess_scale)
-		pl_append(lowlevelargs, "--guess-scale");
+		sl_append(lowlevelargs, "--guess-scale");
 
 	// pnm?
 
-	buf = cmd;
-	len = sizeof(cmd);
-	for (i=0; i<pl_size(lowlevelargs); i++) {
-		int nw = snprintf(buf, len, "%s%s", (i ? " " : ""),
-						  (char*)pl_get(lowlevelargs, i));
-		if (nw > len) {
-			fprintf(stderr, "Command line too long.\n");
-			exit(-1);
-		}
-		buf += nw;
-		len -= nw;
-	}
+	sl_print(lowlevelargs);
 
+	cmd = sl_implode(lowlevelargs, " ");
 	printf("Running low-level-frontend:\n  %s\n", cmd);
 	rtn = system(cmd);
+	free(cmd);
 	if (rtn == -1) {
 		fprintf(stderr, "Failed to system() low-level-frontend: %s\n", strerror(errno));
 		exit(-1);
@@ -309,31 +291,19 @@ int main(int argc, char** args) {
 		exit(-1);
 	}
 
-	pl_free(lowlevelargs);
+	sl_free(lowlevelargs);
 
-    pl_append(backendargs, axy);
+    sl_append(backendargs, axy);
 
-	buf = cmd;
-	len = sizeof(cmd);
-	for (i=0; i<pl_size(backendargs); i++) {
-		int nw = snprintf(buf, len, "%s%s", (i ? " " : ""),
-						  (char*)pl_get(backendargs, i));
-		if (nw > len) {
-			fprintf(stderr, "Command line too long.\n");
-			exit(-1);
-		}
-		buf += nw;
-		len -= nw;
-	}
-
+	cmd = sl_implode(backendargs, " ");
 	printf("Running backend:\n  %s\n", cmd);
-
     if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
         fprintf(stderr, "Couldn't run \"backend\": %s\n", errmsg);
         exit(-1);
     }
+	free(cmd);
 
-    pl_free(backendargs);
+    sl_free(backendargs);
 
 	return 0;
 }
