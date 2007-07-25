@@ -31,44 +31,7 @@ LDFLAGS += -lm
 
 CFLAGS := $(CFLAGS_DEF)
 CFLAGS += $(CFITS_INC)
-# To get ver.h:
-CFLAGS += -I..
-# For Keir's fancy Python bindings:
-CFLAGS += -fPIC
-
-SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
-
-SIMPLEXY := src/dallpeaks.o src/dcen3x3.o src/dfind.o \
-	src/dmedsmooth.o src/dobjects.o src/dpeaks.o src/dselip.o \
-	src/dsigma.o src/dsmooth.o src/fits2xy.o src/simplexy.o \
-	src/radix.o
-
-SIMPLEXY_SHARED := src/simplexy.o src/dsigma.o src/dmedsmooth.o \
-	src/dallpeaks.o src/dpeaks.o src/dobjects.o src/dselip.o \
-	src/dsmooth.o src/dcen3x3.o src/dfind.o src/radix.o
-
-FIXAXIS := src/fixaxis.o
-
-TEST_DFIND := src/dfind.o src/test_dfind.o
-
 all: $(REMAKE_CFITSIO) simplexy fixaxis
-
-simplexy: fits2xy
-.PHONY: simplexy
-
-test_dfind: $(TEST_DFIND)
-
-fits2xy: $(SIMPLEXY) $(CFITS_LIB)
-	$(CC) $(LDFLAGS) -o $@ $^
-
-fixaxis: $(FIXAXIS) $(CFITS_LIB)
-	$(CC) $(LDFLAGS) -o $@ $^
-
-simplexy_shared: _simplexy.so
-.PHONY: simplexy_shared
-
-_simplexy.so: $(SIMPLEXY_SHARED)
-	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
 
 DEP_OBJ := $(SIMPLEXY) $(SIMPLEXY_SHARED) $(FIXAXIS) $(TEST_DFIND)
 

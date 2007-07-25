@@ -57,6 +57,13 @@ CFLAGS += $(ANFILES_INC)
 CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(GSL_INC)
 
+# To get ver.h:
+CFLAGS += -I..
+# For Keir's fancy Python bindings:
+CFLAGS += -fPIC
+
+SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
+
 NETPBM_I :=
 NETPBM_L := -L. -lnetpbm
 
@@ -102,14 +109,26 @@ PIPELINE_MAIN_OBJ := $(addsuffix .o,$(PIPELINE))
 PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
 FITS_UTILS_MAIN_OBJ := $(addsuffix .o,$(FITS_UTILS))
 
+SIMPLEXY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
+	dselip.o dsigma.o dsmooth.o fits2xy.o simplexy.o radix.o
+
+SIMPLEXY_SHARED_OBJ := simplexy.o dsigma.o dmedsmooth.o dallpeaks.o dpeaks.o \
+	dobjects.o dselip.o dsmooth.o dcen3x3.o dfind.o radix.o
+
+FIXAXIS_OBJ := fixaxis.o
+
+TEST_DFIND_OBJ := dfind.o test_dfind.o
+
+FITS2XY := fits2xy fixaxis test_dfind
+
 ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 	$(PIPELINE_MAIN_OBJ) $(PROSPECTUS_MAIN_OBJ) $(FITS_UTILS_MAIN_OBJ) \
-	$(OTHER_OBJS)
-ALL_OBJ += $(2MASSOBJ)
+	$(OTHER_OBJS) $(2MASSOBJ) $(SIMPLEXY_OBJ) $(SIMPLEXY_SHARED_OBJ) $(FIXAXIS_OBJ) \
+	$(TEST_DFIND_OBJ)
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
 	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) $(REMAKE_LIBTWEAK) \
-	$(PIPELINE) $(PROSPECTUS) $(FITS_UTILS) fitsverify
+	$(PIPELINE) $(PROSPECTUS) $(FITS2XY) $(FITS_UTILS) fitsverify
 
 cairo: $(CAIROEXECS)
 
@@ -121,6 +140,25 @@ prospectus_progs: $(PROSPECTUS)
 
 .PHONY: fitsutils
 fitsutils: $(FITS_UTILS)
+
+simplexy: fits2xy
+.PHONY: simplexy
+
+test_dfind: $(TEST_DFIND_OBJ)
+
+fits2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
+
+#	$(CC) $(LDFLAGS) -o $@ $^
+
+fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
+
+#	$(CC) $(LDFLAGS) -o $@ $^
+
+simplexy_shared: _simplexy.so
+.PHONY: simplexy_shared
+
+_simplexy.so: $(SIMPLEXY_SHARED_OBJ)
+	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
 
 new-wcs: new-wcs.o $(ANUTILS_LIB) $(QFITS_LIB)
 
@@ -340,5 +378,5 @@ allclean: clean
 
 clean:
 	rm -f $(EXECS) $(EXTRA_EXECS) $(SOLVER_EXECS) $(MISC_EXECS) \
-		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ)
+		$(PIPELINE) $(PROSPECTUS) $(DEPS) deps $(FITS_UTILS) $(ALL_OBJ) $(FITS2XY)
 
