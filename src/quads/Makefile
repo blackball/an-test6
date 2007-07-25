@@ -148,11 +148,7 @@ test_dfind: $(TEST_DFIND_OBJ)
 
 fits2xy: $(SIMPLEXY_OBJ) $(CFITS_LIB)
 
-#	$(CC) $(LDFLAGS) -o $@ $^
-
 fixaxis: $(FIXAXIS_OBJ) $(CFITS_LIB)
-
-#	$(CC) $(LDFLAGS) -o $@ $^
 
 simplexy_shared: _simplexy.so
 .PHONY: simplexy_shared
