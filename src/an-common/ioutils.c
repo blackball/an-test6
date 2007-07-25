@@ -33,7 +33,7 @@
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
-int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines, char** errormsg) {
+int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, char** errormsg) {
 	int outpipe[2];
 	int errpipe[2];
 	pid_t pid;
@@ -135,9 +135,9 @@ int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines, char** erro
 	return 0;
 }
 
-pl* file_get_lines(char* fn, bool include_newlines) {
+sl* file_get_lines(char* fn, bool include_newlines) {
     FILE* fid;
-	pl* list;
+	sl* list;
     fid = fopen(fn, "r");
     if (!fid) {
         fprintf(stderr, "file_get_lines: failed to open file \"%s\": %s\n", fn, strerror(errno));
@@ -148,19 +148,18 @@ pl* file_get_lines(char* fn, bool include_newlines) {
 	return list;
 }
 
-pl* fid_get_lines(FILE* fid, bool include_newlines) {
-	pl* list;
-	list = pl_new(256);
+sl* fid_get_lines(FILE* fid, bool include_newlines) {
+	sl* list;
+	list = sl_new(256);
 	while (1) {
 		char* line = read_string_terminated(fid, "\n\r\0", 3, include_newlines);
 		if (!line) {
 			// error.
 			fprintf(stderr, "fid_get_lines: failed to read a line.\n");
-			pl_free_elements(list);
-			pl_free(list);
+			sl_free(list);
 			return NULL;
 		}
-		pl_append(list, line);
+		sl_append_nocopy(list, line);
 		if (feof(fid))
 			break;
 	}

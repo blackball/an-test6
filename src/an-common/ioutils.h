@@ -27,7 +27,7 @@
 
 extern uint32_t ENDIAN_DETECTOR;
 
-int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines, char** errormsg);
+int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, char** errormsg);
 
 void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
 
@@ -37,9 +37,9 @@ char* file_get_contents(char* fn);
 
 char* file_get_contents_offset(char* fn, int offset, int length);
 
-pl* file_get_lines(char* fn, bool include_newlines);
+sl* file_get_lines(char* fn, bool include_newlines);
 
-pl* fid_get_lines(FILE* fid, bool include_newlines);
+sl* fid_get_lines(FILE* fid, bool include_newlines);
 
 /**
    If "cmdline" starts with "keyword", returns 1 and places the address of
