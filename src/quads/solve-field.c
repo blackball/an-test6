@@ -77,7 +77,7 @@ static const char* OPTIONS = "hi:L:U:u:t:d:c:Tx:W:H:G";
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
 		   "  (   --image <filename>   the image to solve   (-i)\n"
-		   "   OR --xyls  <filename> ) FITS table of source positions to solve   (-l)\n"
+		   "   OR --xyls  <filename>  FITS table of source positions to solve   (-l)\n"
 		   "  [--dir <directory>]: place all output files in this directory\n"
 		   "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 		   "     choices:  \"degwidth\"    : width of the image, in degrees\n"
@@ -194,8 +194,10 @@ int main(int argc, char** args) {
 		}
 	}
 
+	rtn = 0;
 	if (!(image || xyls)) {
 		fprintf(stderr, "You must specify an image or xyls file.\n");
+		rtn = -1;
 		help = 1;
 	}
 	if (optind != argc) {
@@ -204,11 +206,12 @@ int main(int argc, char** args) {
 			fprintf(stderr, "  %s\n", args[i]);
 		}
 		fprintf(stderr, "\n");
+		rtn = -1;
 		help = 1;
 	}
 	if (help) {
 		print_help(args[0]);
-		exit(0);
+		exit(rtn);
 	}
 
     if (outdir) {
@@ -236,7 +239,7 @@ int main(int argc, char** args) {
 		pl_append(lowlevelargs, image);
 		infn = image;
 	} else {
-		pl_append(lowlevelargs, "--xyls");
+		pl_append(lowlevelargs, "--xylist");
 		pl_append(lowlevelargs, xyls);
 		infn = xyls;
 	}

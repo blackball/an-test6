@@ -96,7 +96,6 @@ static struct option long_options[] = {
 	{"match",		required_argument, 0, 'M'},
 	{"rdls",		required_argument, 0, 'R'},
 	{"wcs",			required_argument, 0, 'W'},
-	//{"out-dir",	  required_argument, 0, 'D'},
 	{"image",		required_argument, 0, 'i'},
 	{"pnm",				required_argument, 0, 'P'},
 	{"width",		required_argument, 0, 'w'},
@@ -113,7 +112,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:"; // D:
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:";
 
 static void print_help(const char* progname) {
 	// FIXME - add rest of args!
@@ -125,6 +124,7 @@ static void print_help(const char* progname) {
 
 int main(int argc, char** args) {
 	int c;
+	int rtn;
 	int help_flag = 0;
 	char* outfn = NULL;
 	char* imagefn = NULL;
@@ -143,7 +143,6 @@ int main(int argc, char** args) {
 	dl* scales;
 	int i;
 	bool guessed_scale = FALSE;
-	//char* basedir = NULL;
 	char* cancelfile = NULL;
 	char* solvedfile = NULL;
 	char* matchfile = NULL;
@@ -201,11 +200,6 @@ int main(int argc, char** args) {
 		case 'g':
 			guess_scale = TRUE;
 			break;
-			/*
-			 case 'D':
-			 basedir = optarg;
-			 break;
-			 */
 		case 'S':
 			solvedfile = optarg;
 			break;
@@ -228,6 +222,7 @@ int main(int argc, char** args) {
 		}
 	}
 
+	rtn = 0;
 	if (optind != argc) {
 		int i;
 		printf("Unknown arguments:\n  ");
@@ -236,14 +231,17 @@ int main(int argc, char** args) {
 		}
 		printf("\n");
 		help_flag = 1;
+		rtn = -1;
 	}
 	if (!outfn) {
 		printf("Output filename (-o / --out) is required.\n");
 		help_flag = 1;
+		rtn = -1;
 	}
 	if (!(imagefn || xylsfn)) {
 		printf("Require either an image (-i / --image) or an XYlist (-x / --xylist) input file.\n");
 		help_flag = 1;
+		rtn = -1;
 	}
 	if (!((!scaleunits) ||
 		  (!strcasecmp(scaleunits, "degwidth")) ||
@@ -251,14 +249,16 @@ int main(int argc, char** args) {
 		  (!strcasecmp(scaleunits, "arcsecperpix")))) {
 		printf("Unknown scale units \"%s\".\n", scaleunits);
 		help_flag = 1;
+		rtn = -1;
 	}
 	if (xylsfn && !(W && H)) {
 		printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
 		help_flag = 1;
+		rtn = -1;
 	}
 	if (help_flag) {
 		print_help(args[0]);
-		exit(0);
+		exit(rtn);
 	}
 
 	scales = dl_new(16);
