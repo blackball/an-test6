@@ -23,7 +23,7 @@
 #include <math.h>
 #include <assert.h>
 
-#include "common.h"
+#include "simplexy-common.h"
 
 //#define M 64
 #define M 128

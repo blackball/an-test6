@@ -23,7 +23,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "common.h"
+#include "simplexy-common.h"
 
 /*
  * dcen3x3.c

@@ -23,7 +23,7 @@
 #include <math.h>
 
 #include "dimage.h"
-#include "common.h"
+#include "simplexy-common.h"
 
 /*
  * dobjects.c

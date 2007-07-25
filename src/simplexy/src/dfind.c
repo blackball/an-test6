@@ -21,8 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <sys/param.h>
 
-#include "common.h"
+#include "simplexy-common.h"
 
 /*
  * dfind.c
@@ -37,15 +38,6 @@
 static int *matches = NULL;
 static int *nmatches = NULL;
 static int *mapgroup = NULL;
-
-int min(x,y) {
-	if (x < y) return x;
-	return y;
-}
-int max(x,y) {
-	if (x > y) return x;
-	return y;
-}
 
 int dfind2(int *image,
           int nx,
@@ -85,7 +77,7 @@ int dfind2(int *image,
 				thislabelmin = equivs[thislabelmin];
 
 			if (iy) {
-				for (i=max(0,ix-1); i<min(ix+2,nx); i++) {
+				for (i=MAX(0,ix-1); i<MIN(ix+2,nx); i++) {
 					if (image[nx*(iy-1)+i]) {
 						int otherlabel = object[nx*(iy-1) + i];
 
@@ -96,8 +88,8 @@ int dfind2(int *image,
 
 						/* Merge groups if necessary */
 						if (thislabelmin != otherlabelmin) {
-							int oldlabelmin = max(thislabelmin, otherlabelmin);
-							int newlabelmin = min(thislabelmin, otherlabelmin);
+							int oldlabelmin = MAX(thislabelmin, otherlabelmin);
+							int newlabelmin = MIN(thislabelmin, otherlabelmin);
 							printf("RELABEL:\n");
 							for (j=0; j<maxlabel; j++) 
 								if (equivs[j] == oldlabelmin) {

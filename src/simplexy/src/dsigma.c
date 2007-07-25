@@ -21,8 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "dimage.h"
-#include "common.h"
+#include "simplexy-common.h"
 
 /*
  * dsigma.c
