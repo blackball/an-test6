@@ -552,7 +552,7 @@ int main(int argc, char** args) {
 		for (i=0; i<N; i++) {
 			stardata sd;
 			int hp;
-			an_entry* an;
+			an_entry* an = NULL;
 
 			if ((i * 80 / N) != lastgrass) {
 				printf(".");
