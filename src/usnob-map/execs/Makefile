@@ -25,7 +25,6 @@ include $(COMMON)/makefile.utils
 include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.libkd
-include $(COMMON)/makefile.libtweak
 include $(COMMON)/makefile.cairo
 
 LDFLAGS := $(LDFLAGS_DEF)
@@ -35,7 +34,6 @@ CFLAGS := $(CFLAGS_DEF)
 
 CFLAGS += $(QFITS_INC)
 CFLAGS += $(LIBKD_INC)
-CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
 CFLAGS  += $(CAIRO_INC)
@@ -61,8 +59,6 @@ $(ANUTILS_LIB): $(REMAKE_ANUTILS)
 
 $(LIBKD_LIB): $(REMAKE_LIBKD)
 
-$(LIBTWEAK_LIB): $(REMAKE_LIBTWEAK)
-
 all: $(USNOBMAP_EXECS) $(MISC_EXECS)
 
 TILERENDER_OBJS := tilerender.o render_image.o \
@@ -75,7 +71,7 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_messier.o
 
 tilerender: $(TILERENDER_OBJS) \
-		$(LIBTWEAK_LIB) $(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 rdlstile: rdlstile.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
