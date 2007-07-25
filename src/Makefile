@@ -34,7 +34,6 @@ clean:
 	$(MAKE) -C gsl-an clean
 	$(MAKE) -C libkd clean
 	$(MAKE) -C quads clean
-	$(MAKE) -C tweak clean
 
 TAGS:
 	etags -I `find . -name "*.c" -o -name "*.h"`

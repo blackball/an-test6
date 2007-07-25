@@ -30,7 +30,7 @@ cmd="svn export -N $SVN $DIR"
 echo $cmd
 $cmd || exit
 
-for x in cfitsio qfits-an an-common libkd tweak gsl-an quads; do
+for x in cfitsio qfits-an an-common libkd gsl-an quads; do
     cmd="svn export $SVN/$x $DIR/$x"
     echo $cmd
     $cmd || exit
