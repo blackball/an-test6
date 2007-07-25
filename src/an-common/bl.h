@@ -50,17 +50,27 @@ struct bl {
 typedef struct bl bl;
 
 
+Malloc bl*  bl_new(int blocksize, int datasize);
+void bl_init(bl* l, int blocksize, int datasize);
+void bl_free(bl* list);
+void  bl_remove_all(bl* list);
+Pure Inline int  bl_size(const bl* list);
+/** Appends an element, returning the location whereto it was copied. */
+void* bl_append(bl* list, const void* data);
+// Copies the nth element into the destination location.
+void  bl_get(bl* list, int n, void* dest);
+// Returns a pointer to the nth element.
+void* bl_access(bl* list, int n);
+
+void* bl_push(bl* list, const void* data);
+// Pops a data item into the given "into" memory.
+void  bl_pop(bl* list, void* into);
+
 /**
    Removes elements from \c split
    to the end of the list from \c src and appends them to \c dest.
  */
 void bl_split(bl* src, bl* dest, int split);
-Malloc bl*  bl_new(int blocksize, int datasize);
-Pure Inline int  bl_size(const bl* list);
-void bl_init(bl* l, int blocksize, int datasize);
-void bl_free(bl* list);
-/** Appends an element, returning the location whereto it was copied. */
-void* bl_append(bl* list, void* data);
 
 /*
  * Appends "list2" to the end of "list1", and removes all elements
@@ -68,7 +78,7 @@ void* bl_append(bl* list, void* data);
  */
 void bl_append_list(bl* list1, bl* list2);
 void bl_insert(bl* list, int indx, void* data);
-void bl_set(bl* list, int indx, void* data);
+void bl_set(bl* list, int indx, const void* data);
 /**
  * Inserts the given datum into the list in such a way that the list
  * stays sorted in ascending order according to the given comparison
@@ -96,13 +106,8 @@ int bl_insert_unique_sorted(bl* list, void* data,
 
 void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2));
 
-// Copies the nth element into the destination location.
-void  bl_get(bl* list, int n, void* dest);
 void  bl_print_structure(bl* list);
-// Returns a pointer to the nth element.
-void* bl_access(bl* list, int n);
 void  bl_copy(bl* list, int start, int length, void* vdest);
-void  bl_remove_all(bl* list);
 /*
   Removes all the elements, but doesn't free the first block, which makes
   it slightly faster for the case when you're going to add more elements
@@ -167,13 +172,16 @@ int il_check_sorted_descending(il* list, int isunique);
 ///////////////////////////////////////////////
 typedef bl pl;
 pl*   pl_new(int blocksize);
+void  pl_init(pl* l, int blocksize);
 void  pl_free(pl* list);
 void  pl_free_elements(pl* list);
 int   pl_size(pl* list);
 void* pl_get(pl* list, int n);
 void  pl_set(pl* list, int ind, void* data);
 void  pl_insert(pl* list, int indx, void* data);
-void  pl_append(pl* list, void* data);
+void  pl_append(pl* list, const void* data);
+void  pl_push(pl* list, const void* data);
+void* pl_pop(pl* list);
 void  pl_copy(pl* list, int start, int length, void** dest);
 pl*   pl_dup(pl* list);
 void  pl_print(pl* list);
@@ -205,5 +213,50 @@ void   dl_insert(dl* list, int indx, double data);
 void   dl_remove_all(dl* list);
 void   dl_merge_lists(dl* list1, dl* list2);
 void   dl_print(dl* list);
+
+///////////////////////////////////////////////
+// special-case functions for string lists.  //
+///////////////////////////////////////////////
+/*
+  sl makes a copy of the string using strdup().
+  It will be freed when the string is removed from the list or the list is
+  freed.
+*/
+typedef bl sl;
+sl*    sl_new(int blocksize);
+void   sl_init(sl* list, int blocksize);
+// free this list and all the strings it contains.
+void   sl_free(sl* list);
+// just free the list structure, not the strings in it.
+void   sl_free_nonrecursive(sl* list);
+int    sl_size(sl* list);
+// copies the string and enqueues it; returns the newly-allocate string.
+char*  sl_append(sl* list, const char* string);
+// appends the string; doesn't copy it.
+void   sl_append_nocopy(sl* list, const char* string);
+// copies the string and pushes the copy.  Returns the copy.
+char*  sl_push(sl* list, const char* data);
+// returns the last string: it's your responsibility to free it.
+char*  sl_pop(sl* list);
+char*  sl_get(sl* list, int n);
+// sets the string at the given index to the given value.
+// if there is already a string at that index, frees it.
+char*  sl_set(sl* list, int n, const char* val);
+int    sl_check_consistency(sl* list);
+// inserts a copy of the given string.
+char*  sl_insert(sl* list, int indx, const char* str);
+// frees all the strings and removes them from the list.
+void   sl_remove_all(sl* list);
+void   sl_merge_lists(sl* list1, sl* list2);
+void   sl_print(sl* list);
+
+// Like the PHP function implode(), joins each element in the list with the given
+// "join" string.  The result is a newly-allocate string containing:
+//   sl_get(list, 0) + join + sl_get(list, 1) + join + ... + join + sl_get(list, N-1)
+char*  sl_implode(sl* list, const char* join);
+
+char*
+ATTRIB_FORMAT(printf,2,3)
+sl_appendf(sl* list, const char* format, ...);
 
 #endif

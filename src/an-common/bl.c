@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <assert.h>
 
 #include "bl.h"
@@ -452,7 +453,7 @@ static void bl_append_node(bl* list, bl_node* node) {
  *
  * Returns the location where the new item was copied.
  */
-void* bl_node_append(bl* list, bl_node* node, void* data) {
+void* bl_node_append(bl* list, bl_node* node, const void* data) {
 	void* dest;
 	if (node->N == list->blocksize) {
 		// create a new node and insert it after the current node.
@@ -472,12 +473,21 @@ void* bl_node_append(bl* list, bl_node* node, void* data) {
 	return dest;
 }
 
-void* bl_append(bl* list, void* data) {
+void* bl_append(bl* list, const void* data) {
 	if (!list->tail)
 		// empty list; create a new node.
 		bl_append_node(list, bl_new_node(list));
 	// append the item to the tail.  if the tail node is full, a new tail node may be created.
 	return bl_node_append(list, list->tail, data);
+}
+
+void* bl_push(bl* list, const void* data) {
+	return bl_append(list, data);
+}
+
+void bl_pop(bl* list, void* into) {
+	bl_get(list, list->N-1, into);
+    bl_remove_index(list, list->N-1);
 }
 
 void bl_print_structure(bl* list) {
@@ -618,7 +628,7 @@ int bl_insert_unique_sorted(bl* list, void* data,
 	return lower+1;
 }
 
-void bl_set(bl* list, int index, void* data) {
+void bl_set(bl* list, int index, const void* data) {
 	bl_node* node;
 	int nskipped;
 	void* dataloc;
@@ -1221,6 +1231,10 @@ pl* pl_new(int blocksize) {
     return bl_new(blocksize, sizeof(void*));
 }
 
+void  pl_init(pl* l, int blocksize) {
+    return bl_init(l, blocksize, sizeof(void*));
+}
+
 void pl_free(pl* list) {
     bl_free(list);
 }
@@ -1271,8 +1285,18 @@ void  pl_insert(pl* list, int indx, void* data) {
 	bl_insert(list, indx, &data);
 }
 
-void pl_append(pl* list, void* data) {
+void pl_append(pl* list, const void* data) {
     bl_append(list, &data);
+}
+
+void pl_push(pl* list, const void* data) {
+	pl_append(list, data);
+}
+
+void* pl_pop(pl* list) {
+	void* rtn = pl_get(list, list->N-1);
+	bl_remove_index(list, list->N-1);
+	return rtn;
 }
 
 void* pl_get(pl* list, int n) {
@@ -1386,5 +1410,149 @@ void dl_print(dl* list) {
 			printf("%lf, ", NODE_DOUBLEDATA(n)[i]);
 		printf("] ");
 	}
+}
+
+
+
+
+
+sl* sl_new(int blocksize) {
+	return pl_new(blocksize);
+}
+
+void sl_init(sl* list, int blocksize) {
+	pl_init(list, blocksize);
+}
+
+void sl_free(sl* list) {
+	int i;
+	if (!list) return;
+	for (i=0; i<sl_size(list); i++)
+		free(sl_get(list, i));
+	bl_free(list);
+}
+
+void sl_free_nonrecursive(sl* list) {
+	bl_free(list);
+}
+
+int   sl_size(sl* list) {
+	return bl_size(list);
+}
+
+char* sl_append(sl* list, const char* data) {
+	char* copy = strdup(data);
+	pl_append(list, copy);
+	return copy;
+}
+
+void sl_append_nocopy(sl* list, const char* data) {
+	pl_append(list, data);
+}
+
+char* sl_push(sl* list, const char* data) {
+	char* copy = strdup(data);
+	pl_push(list, copy);
+	return copy;
+}
+
+char* sl_pop(sl* list) {
+	return pl_pop(list);
+}
+
+char* sl_get(sl* list, int n) {
+	return pl_get(list, n);
+}
+
+char* sl_set(sl* list, int index, const char* value) {
+	char* copy;
+	assert(index >= 0);
+	copy = strdup(value);
+	if (index < list->N) {
+		// we're replacing an existing value - free it!
+		free(sl_get(list, index));
+		bl_set(list, index, &copy);
+	} else {
+		// pad
+		int i;
+		for (i=list->N; i<index; i++)
+			sl_append_nocopy(list, NULL);
+		sl_append(list, copy);
+	}
+	return copy;
+}
+
+int sl_check_consistency(sl* list) {
+	return bl_check_consistency(list);
+}
+
+char* sl_insert(sl* list, int indx, const char* data) {
+	char* copy = strdup(data);
+	bl_insert(list, indx, &copy);
+	return copy;
+}
+
+void  sl_remove_all(sl* list) {
+	int i;
+	if (!list) return;
+	for (i=0; i<sl_size(list); i++)
+		free(pl_get(list, i));
+	bl_remove_all(list);
+}
+
+void   sl_merge_lists(sl* list1, sl* list2) {
+	bl_append_list(list1, list2);
+}
+
+void sl_print(sl* list) {
+	bl_node* n;
+	int i;
+	for (n=list->head; n; n=n->next) {
+		printf("[\n");
+		for (i=0; i<n->N; i++)
+			printf("  \"%s\"\n", ((char**)NODE_DATA(n))[i]);
+		printf("]\n");
+	}
+}
+
+char*  sl_implode(sl* list, const char* join) {
+	int len = 0;
+	int i, N;
+	char* rtn;
+	int offset;
+	int JL;
+	JL = strlen(join);
+	N = sl_size(list);
+	for (i=0; i<N; i++)
+		len += strlen(sl_get(list, i));
+	len += ((N-1) * JL);
+	rtn = malloc(len + 1);
+	if (!rtn)
+		return rtn;
+	offset = 0;
+	for (i=0; i<N; i++) {
+		char* str = sl_get(list, i);
+		int L = strlen(str);
+		if (i) {
+			memcpy(rtn + offset, join, JL);
+			offset += JL;
+		}
+		memcpy(rtn + offset, str, L);
+		offset += L;
+	}
+	assert(offset == len);
+	rtn[offset] = '\0';
+	return rtn;
+}
+
+char* sl_appendf(sl* list, const char* format, ...) {
+    va_list lst;
+	char* str;
+    va_start(lst, format);
+    if (vasprintf(&str, format, lst) == -1)
+		return NULL;
+	sl_append_nocopy(list, str);
+    va_end(lst);
+	return str;
 }
 
