@@ -53,6 +53,7 @@
 #include "an-bool.h"
 #include "bl.h"
 #include "ioutils.h"
+//#include "xylist.h"
 
 static struct option long_options[] = {
 	// flags
@@ -129,6 +130,7 @@ int main(int argc, char** args) {
     char* errmsg;
 	bool guess_scale = TRUE;
 	int width = 0, height = 0;
+	//xylist* xy;
 
 	lowlevelargs = pl_new(16);
 	pl_append(lowlevelargs, "low-level-frontend");
@@ -242,6 +244,11 @@ int main(int argc, char** args) {
 		pl_append(lowlevelargs, "--xylist");
 		pl_append(lowlevelargs, xyls);
 		infn = xyls;
+		/*
+		  if (!width || !height) {
+		  // Load the xylist and compute the min/max.
+		  }
+		*/
 	}
 
 	if (width) {

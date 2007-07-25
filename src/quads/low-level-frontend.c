@@ -251,11 +251,13 @@ int main(int argc, char** args) {
 		help_flag = 1;
 		rtn = -1;
 	}
-	if (xylsfn && !(W && H)) {
-		printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
-		help_flag = 1;
-		rtn = -1;
-	}
+	/*
+	  if (xylsfn && !(W && H)) {
+	  printf("If you give an xylist, you must also specify the image width and height (-w / --width) and (-e / --height).\n");
+	  help_flag = 1;
+	  rtn = -1;
+	  }
+	*/
 	if (help_flag) {
 		print_help(args[0]);
 		exit(rtn);
