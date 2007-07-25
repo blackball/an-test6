@@ -34,7 +34,7 @@
 
 #include "qfits_error.h"
 #include "qfits_cache.h"
-#include "tweak_internal.h"
+#include "tweak.h"
 #include "sip_qfits.h"
 
 #include "starutil.h"

@@ -26,7 +26,6 @@ include $(COMMON)/makefile.anfiles
 include $(COMMON)/makefile.qfits
 include $(COMMON)/makefile.cfitsio
 include $(COMMON)/makefile.libkd
-include $(COMMON)/makefile.libtweak
 include $(COMMON)/makefile.gsl
 
 ifeq ($(MAKECMDGOALS),cairo)
@@ -54,7 +53,6 @@ CFLAGS += $(CFITS_INC)
 CFLAGS += $(LIBKD_INC)
 CFLAGS += $(ANUTILS_INC)
 CFLAGS += $(ANFILES_INC)
-CFLAGS += $(LIBTWEAK_INC)
 CFLAGS += $(GSL_INC)
 
 # To get ver.h:
@@ -81,7 +79,7 @@ UTIL_OBJS := fileutil.o boilerplate.o svn.o
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
-	blind_wcs.o
+	blind_wcs.o tweak.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -127,7 +125,7 @@ ALL_OBJ := $(UTIL_OBJS) $(KDTREE_OBJS) $(QFITS_OBJ) \
 	$(TEST_DFIND_OBJ)
 
 all: $(QFITS_LIB) $(CFITS_LIB) $(LIBKD_LIB) \
-	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) $(REMAKE_LIBTWEAK) \
+	$(REMAKE_LIBKD) $(REMAKE_ANUTILS) $(REMAKE_ANFILES) \
 	$(PIPELINE) $(PROSPECTUS) $(FITS2XY) $(FITS_UTILS) fitsverify
 
 cairo: $(CAIROEXECS)
@@ -283,8 +281,8 @@ low-level-frontend: low-level-frontend.o fileutil.o \
 
 blind: blind.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o idfile.o verify.o svd.o \
-		intmap.o blind_wcs.o histogram.o \
-		$(UTIL_OBJS) $(LIBTWEAK_LIB) $(LIBFORTRAN) \
+		intmap.o blind_wcs.o histogram.o tweak.o \
+		$(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB) $(GSL_LIB)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@.tmp $^
 	mv $@.tmp $@

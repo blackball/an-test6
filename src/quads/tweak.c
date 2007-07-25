@@ -28,7 +28,7 @@
 #include <gsl/gsl_vector_double.h>
 #include <gsl/gsl_blas.h>
 
-#include "tweak_internal.h"
+#include "tweak.h"
 #include "healpix.h"
 #include "dualtree_rangesearch.h"
 #include "kdtree_fits_io.h"
