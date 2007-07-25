@@ -134,6 +134,8 @@ int dpeaks(float *image,
 			level = (smooth[ fullxcen[i] + fullycen[i] * nx] - saddle * sigma);
 			if (level < sigma)
 				level = sigma;
+			if (level > 0.99*smooth[ fullxcen[i] + fullycen[i] * nx]) 
+				level= 0.99*smooth[ fullxcen[i] + fullycen[i] * nx]; 
 			for (jp = 0;jp < ny;jp++)
 				for (ip = 0;ip < nx;ip++)
 					mask[ip + jp*nx] = smooth[ip + jp * nx] > level;
