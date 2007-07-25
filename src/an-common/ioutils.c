@@ -80,7 +80,7 @@ int run_command_get_outputs(char* cmd, pl** outlines, pl** errlines, char** erro
 		}
 		// execlp doesn't return.
 	} else {
-		FILE *fout, *ferr;
+		FILE *fout = NULL, *ferr = NULL;
 		int status;
 		// Parent process.
 		if (outlines) {
