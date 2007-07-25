@@ -70,10 +70,10 @@ simplexy_shared: _simplexy.so
 _simplexy.so: $(SIMPLEXY_SHARED)
 	$(CC) $(SHAREDLIBFLAGS) -o $@ $^
 
-clean :
-	-rm $(SIMPLEXY) $(FIXAXIS) fits2xy fixaxis _simplexy.so
-
-
 DEP_OBJ := $(SIMPLEXY) $(SIMPLEXY_SHARED) $(FIXAXIS) $(TEST_DFIND)
 
 include $(COMMON)/makefile.deps
+
+clean :
+	-rm $(SIMPLEXY) $(FIXAXIS) fits2xy fixaxis _simplexy.so $(DEPS) deps
+
