@@ -101,14 +101,13 @@ END;
 $host  = $_SERVER['HTTP_HOST'];
 
 $quads = $base . "quads/";
-$simplexy = $base . "simplexy/";
 
 $resultdir = "/home/gmaps/ontheweb-data/";
 $indexdir = "/home/gmaps/ontheweb-indexes/";
 
 $sqlite = "sqlite";
 
-$fits2xy = $simplexy . "fits2xy";
+$fits2xy = $quads . "fits2xy";
 $plotxy2 = $quads . "plotxy2";
 $plotquad = $quads . "plotquad";
 $plot_constellations = $quads . "plot-constellations";
