@@ -198,6 +198,14 @@ int main(int argc, char** args) {
 		fprintf(stderr, "You must specify an image or xyls file.\n");
 		help = 1;
 	}
+	if (optind != argc) {
+		fprintf(stderr, "You specified arguments that I didn't understand:\n");
+		for (i=optind; i<argc; i++) {
+			fprintf(stderr, "  %s\n", args[i]);
+		}
+		fprintf(stderr, "\n");
+		help = 1;
+	}
 	if (help) {
 		print_help(args[0]);
 		exit(0);
