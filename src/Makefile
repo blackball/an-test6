@@ -20,7 +20,6 @@
 all:
 	$(MAKE) -C an-common
 	$(MAKE) -C quads
-	$(MAKE) -C simplexy
 
 # Targets that require extra libraries or which are otherwise tricky.
 extra:
@@ -34,7 +33,6 @@ clean:
 	$(MAKE) -C qfits-an clean
 	$(MAKE) -C gsl-an clean
 	$(MAKE) -C libkd clean
-	$(MAKE) -C simplexy clean
 	$(MAKE) -C quads clean
 	$(MAKE) -C tweak clean
 
