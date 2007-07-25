@@ -33,6 +33,7 @@ INTERNALS := \
 
 KD := kdtree.o kdtree_dim.o $(INTERNALS)
 KD_FITS := kdtree_fits_io.o
+INTERNAL_SOURCES := kdtree_internal.c kdtree_internal_fits.c
 
 CFLAGS := $(CFLAGS_DEF)
 # CFLAGS += -DKDTREE_NO_FITS
@@ -44,21 +45,18 @@ LDFLAGS += -lm
 
 LIBKD := libkd.a
 
-all: $(LIBKD) $(REMAKE_ANUTILS) checktree
-
-$(INTERNALS): kdtree_internal.c kdtree_internal_fits.c
+all: $(REMAKE_ANUTILS) $(LIBKD) checktree
 
 $(LIBKD): $(KD) $(KD_FITS)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
 
 checktree: checktree.o $(LIBKD) $(ANUTILS_LIB) $(QFITS_LIB)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ -lm
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 .PHONY: clean
 clean:
-	-rm $(LIBKD) checktree $(KD) $(KD_FITS) deps $(DEPS) \
-		checktree.o
+	-rm $(LIBKD) checktree $(KD) $(KD_FITS) deps $(DEPS) checktree.o
 
 realclean: clean
 	-rm *~ *.dep
@@ -67,6 +65,7 @@ realclean: clean
 tags:
 	etags `find . -name "*.c" -o -name "*.h"`
 
-DEP_OBJ := $(KD)
+DEP_OBJ := $(KD) $(KD_FITS)
+DEP_PREREQS := $(QFITS_LIB)
 
 include $(COMMON)/makefile.deps
