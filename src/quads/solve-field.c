@@ -61,16 +61,29 @@ static struct option long_options[] = {
 	{"scale-low",	required_argument, 0, 'L'},
 	{"scale-high",	required_argument, 0, 'H'},
 	{"scale-units", required_argument, 0, 'u'},
+	{"no-tweak",    no_argument,       0, 'T'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"dir",         required_argument, 0, 'd'},
 	{"backend-config", required_argument, 0, 'c'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hi:L:H:u:t:d:c:";
+static const char* OPTIONS = "hi:L:H:u:t:d:c:T";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
+		   "  --image <filename>   the image to solve   (-i)\n"
+		   "  [--dir <directory>]: place all output files in this directory\n"
+		   "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
+		   "     choices:  \"degwidth\"    : width of the image, in degrees\n"
+		   "               \"arcminwidth\" : width of the image, in arcminutes\n"
+		   "               \"arcsecperpix\": arcseconds per pixel\n"
+		   "  [--scale-low  <number>]: lower bound of image scale estimate   (-L)\n"
+		   "  [--scale-high <number>]: upper bound of image scale estimate   (-U)\n"
+		   "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial\n"
+		   "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
+		   "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
+		   //"  [-h / --help]: print this help.\n"
 	       "\n", progname);
 }
 
@@ -124,6 +137,9 @@ int main(int argc, char** args) {
 			break;
 		case 'h':
 			help = TRUE;
+			break;
+		case 'T':
+			pl_append(lowlevelargs, "--no-tweak");
 			break;
 		case 'L':
 			pl_append(lowlevelargs, "--scale-low");
