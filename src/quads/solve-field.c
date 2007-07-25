@@ -63,10 +63,11 @@ static struct option long_options[] = {
 	{"scale-units", required_argument, 0, 'u'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"dir",         required_argument, 0, 'd'},
+	{"backend-config", required_argument, 0, 'c'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hi:L:H:u:t:d:";
+static const char* OPTIONS = "hi:L:H:u:t:d:c:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -107,6 +108,9 @@ int main(int argc, char** args) {
 	lowlevelargs = pl_new(16);
 	pl_append(lowlevelargs, "low-level-frontend");
 
+    backendargs = pl_new(16);
+    pl_append(backendargs, "backend");
+
 	while (1) {
 		int option_index = 0;
 		c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
@@ -136,6 +140,10 @@ int main(int argc, char** args) {
 		case 't':
 			pl_append(lowlevelargs, "--tweak-order");
 			pl_append(lowlevelargs, optarg);
+			break;
+		case 'c':
+			pl_append(backendargs, "--config");
+			pl_append(backendargs, optarg);
 			break;
 		case 'd':
 			outdir = optarg;
@@ -225,9 +233,6 @@ int main(int argc, char** args) {
 
 	pl_free(lowlevelargs);
 
-    backendargs = pl_new(16);
-
-    pl_append(backendargs, "backend");
     pl_append(backendargs, axy);
 
 	buf = cmd;
@@ -242,6 +247,8 @@ int main(int argc, char** args) {
 		buf += nw;
 		len -= nw;
 	}
+
+	printf("Running backend:\n  %s\n", cmd);
 
     if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
         fprintf(stderr, "Couldn't run \"backend\": %s\n", errmsg);
