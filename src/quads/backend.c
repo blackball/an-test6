@@ -365,6 +365,9 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			WRITE(fout, "fieldunits_lower %g\n", app_min);
 			WRITE(fout, "fieldunits_upper %g\n", app_max);
 
+			WRITE(fout, "fieldw %g\n", job->imagew);
+			WRITE(fout, "fieldh %g\n", job->imageh);
+
 			// range of quad sizes that could be found in the field,
 			// in arcsec.
 			fmax = 1.0 * MAX(job->imagew, job->imageh) * app_max;
