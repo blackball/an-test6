@@ -45,7 +45,7 @@ CFLAGS += $(ANUTILS_INC)
 CFLAGS += -I.
 
 TWEAK_OBJS := tweak.o ezfits.o sip_util.o
-TEST_SIP_OBJS := test_sip.o sip_util.o ezfits.o
+TEST_SIP_OBJS := test_sip.o sip_util.o
 SANITY_OBJS := sanity_check.o sip_util.o
 
 all: $(REMAKE_LIBTWEAK) tweak test_sip sanity_check sanity_check2
