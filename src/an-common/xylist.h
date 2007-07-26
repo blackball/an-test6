@@ -77,6 +77,9 @@ struct xylist {
 };
 typedef struct xylist xylist;
 
+// Is the given filename an xylist?
+int xylist_is_file_xylist(const char* fn);
+
 // you can change the parameters (ie, xname, yname) 
 // after opening but before calling xylist_get_field.
 xylist* xylist_open(const char* fn);

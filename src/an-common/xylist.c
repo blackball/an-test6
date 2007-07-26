@@ -23,6 +23,61 @@
 #include "xylist.h"
 #include "fitsioutils.h"
 
+// Is the given filename an xylist?
+int xylist_is_file_xylist(const char* fn) {
+	qfits_header* header;
+	qfits_table* table;
+	qfits_col* col;
+
+    // Is it FITS?
+	if (!qfits_is_fits(fn))
+        return 0;
+
+    // Read the primary header.
+	header = qfits_header_read(fn);
+	if (!header)
+        return 0;
+    qfits_header_destroy(header);
+
+    // Read the first extension - it should be a BINTABLE.
+	table = qfits_table_open(fn, 1);
+	if (!table)
+        return 0;
+
+    fprintf(stderr, "FIXME: xylist_is_file_xylist() isn't done yet.\n");
+ 
+	// Find columns.
+    /*
+     ls->xcol = fits_find_column(ls->table, ls->xname);
+     if (ls->xcol == -1) {
+     fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->xname);
+     return -1;
+     }
+     col = ls->table->col + ls->xcol;
+     if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
+     (col->atom_type == TFITS_BIN_TYPE_E)) &&
+     (col->atom_nb == 1))) {
+     fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->xname);
+     return -1;
+     }
+     ls->xtype = col->atom_type;
+     ls->ycol = fits_find_column(ls->table, ls->yname);
+     if (ls->ycol == -1) {
+     fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->yname);
+     return -1;
+     }
+     col = ls->table->col + ls->ycol;
+     if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
+     (col->atom_type == TFITS_BIN_TYPE_E)) &&
+     (col->atom_nb == 1))) {
+     fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->yname);
+     return -1;
+     }
+     ls->ytype = col->atom_type;
+     */
+    return 1;
+}
+
 static xylist* xylist_new() {
 	xylist* ls;
 	ls = calloc(1, sizeof(xylist));
