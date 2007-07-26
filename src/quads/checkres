@@ -1,9 +1,0 @@
-#!/bin/sh
-#------------------------------------------------------------------------------
-# name:
-# purpose:
-# bugs:
-#   - Adds 1 to all coordinates because of stupid FITS convention
-#     obeyed by DS9.
-# -----------------------------------------------------------------------------
-tablist -r "$1[col X;Y]" |awk '{printf(" image; cross point %f %f\n",$1,$2)}' |xpaset ds9 regions
