@@ -34,6 +34,57 @@
 		--wcs wcs.fits
    backend mypic-results/mypic.axy
    render-job mypic-results/mypic.axy
+
+
+TODO:
+
+(0) To me, it is important that if you type:
+"solve-field myfile.png" and NOTHING else, it should Just Work.
+
+(1) it assumes you have "." in your path, which I never do.
+
+> Right, so what should it do: look at args[0] to figure out where the other
+> executables are?
+
+(2) It assumes you have netpbm tools installed which the main build
+doesn't require.
+
+> I think it will only complain if it needs one of the netpbm programs to do
+> its work - and it cannot do anything sensible (except print a friendly
+> error message) if they don't exist.
+
+(3) Ok - maybe if you don't specify any filenames it can expect to read them
+> on stdin - that way you can pipe it up with find:
+>
+> find dir | solve-field
+> cat filelist | solve-field
+
+ (4) What should do if one of the files already exists - bail out, but have a
+> command-line flag that makes it overwrite them if they already exist?
+
+I'd say overwrite it, unless a flag --noclobber is activated
+
+(5) by default, we produce:
+- thumbnails myfile-objs.png (source extraction)
+- myfile-idx.png (sources we used to solve and index objects we found)
+- myfile-ngc.png (ngc labels)
+   -- but there should be a flag (e.g --pngs=off) to supress this
+- myfile.wcs.fits fits header
+
+* by default, we do not produce an entirely new fits file but this can
+be turned on
+
+ (6) * by default, the output files corresponding to each source file go in
+the same directory as the source file, but you can invoke a flag to
+dump them somewhere else
+
+(7) * by default, we output to stdout a single line for each file something like:
+myimage.png: unsolved using X field objects
+or
+myimage.png: solved using X field objects, RA=rr,DEC=dd, size=AxB
+pixels=UxV arcmin
+
+
  */
 
 #include <stdio.h>
