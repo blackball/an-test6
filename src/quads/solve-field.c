@@ -426,7 +426,6 @@ int main(int argc, char** args) {
 
         sl_append(plotargs, "|");
 
-        sl_append(backendargs, axyfn);
         sl_append(plotargs, "plotxy");
         sl_append(plotargs, "-i");
         sl_append(plotargs, axyfn);
@@ -447,8 +446,9 @@ int main(int argc, char** args) {
             fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
             exit(-1);
         }
+        sl_free(plotargs);
 
-
+        sl_append(backendargs, axyfn);
         sl_print(backendargs);
         cmd = sl_implode(backendargs, " ");
         //printf("Running backend:\n  %s\n", cmd);
