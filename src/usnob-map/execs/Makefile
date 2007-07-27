@@ -84,6 +84,7 @@ make-merctree: make-merctree.o merctree.o \
 
 make-merctree2: make-merctree2.o merctree.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+	$(CC) -o $@ $^ $(LDFLAGS_DEF) -lm
 
 usnobcount: usnobcount.o 
 
