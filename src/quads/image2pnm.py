@@ -13,6 +13,7 @@ imgcmds = {"FITS image data"  : ("fits", "an-fitstopnm -i %s > %s"),
            "PNG image data"   : ("png",  "pngtopnm %s > %s"),
            "GIF image data"   : ("gif",  "giftopnm %s > %s"),
            "Netpbm PPM"       : ("pnm",  "ppmtoppm < %s > %s"),
+           "Netpbm PPM \"rawbits\" image data" : ("pnm",  "cp %s %s"),
            "Netpbm PGM"       : ("pnm",  "pgmtoppm %s > %s"),
            }
 
@@ -30,8 +31,8 @@ def do_command(cmd):
 
 def convert_image(infile, outfile, uncompressed, sanitized, force_ppm):
     filein, fileout = os.popen2('file -b -N -L %s' % infile)
-    typeinfo = fileout.read()
-    log('file output:', typeinfo.strip())
+    typeinfo = fileout.read().strip()
+    log('file output:', typeinfo)
     
     # Trim extra data after the ,
     comma_pos = typeinfo.find(',')
