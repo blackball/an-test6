@@ -108,7 +108,7 @@ $indexdir = "/home/gmaps/ontheweb-indexes/";
 $sqlite = "sqlite";
 
 $fits2xy = $quads . "fits2xy";
-$plotxy2 = $quads . "plotxy2";
+$plotxy = $quads . "plotxy";
 $plotquad = $quads . "plotquad";
 $plot_constellations = $quads . "plot-constellations";
 $modhead = $quads . "modhead";

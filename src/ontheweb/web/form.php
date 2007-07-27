@@ -1218,7 +1218,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 					   &$scaleguess, &$wcsfile) {
 	global $fits2xy;
 	global $modhead;
-	global $plotxy2;
+	global $plotxy;
 	global $tabsort;
 	global $objs_fn;
 	global $bigobjs_fn;
@@ -1474,80 +1474,21 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 
 		// Plot the extracted objects.
 		$Nbright = 100;
-		// -the brightest:
-		$objimg1 = $prefix . "objs1.pgm";
-		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $imW . " -H " . $imH .
-			" -x " . $xyoff . " -y " . $xyoff . " -w 2 -r 6 -S " . $scale .
-			" -N " . $Nbright . " > " . $objimg1;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if (($res === FALSE) || $retval) {
-			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			$errstr = "Failed to plot extracted sources.";
-			return FALSE;
-		}
-		array_push($todelete, $objimg1);
-		// -the rest:
-		$Nmax = 500;
-		$objimg2 = $prefix . "objs2.pgm";
-		$cmd = $plotxy2 . " -i " . $xylist . " -W " . $imW . " -H " . $imH .
-			" -x " . $xyoff . " -y " . $xyoff . " -n " . $Nbright .
-			" -N " . $Nmax . " -r 4 -w 2" . " -S " . $scale . " > " . $objimg2;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if (($res === FALSE) || $retval) {
-			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			$errstr = "Failed to plot extracted sources.";
-			return FALSE;
-		}
-		array_push($todelete, $objimg2);
-		// -the sum:
-		$objimg = $prefix . "objs.pgm";
-		$objimg_orig = $objimg;
-		$cmd = "pnmarith -max " . $objimg1 . " " . $objimg2 . " > " . $objimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if (($res === FALSE) || $retval) {
-			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			$errstr = "Failed to plot extracted sources.";
-			return FALSE;
-		}
-		array_push($todelete, $objimg);
+        $Nmax = 500;
+        $commonargs = " -i " . $xylist . " -W " . $imW . " -H " . $imH .
+			" -x " . $xyoff . " -y " . $xyoff . " -w 2 -S " . $scale . " -C red";
 
-		// Make the overlaid circles red.
-		$redimg = $prefix . "red.pgm";
-		$cmd = "pgmtoppm red " . $objimg . " > " . $redimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if (($res === FALSE) || $retval) {
-			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			$errstr = "Failed to create image of extracted sources.";
-			return FALSE;
-		}
-		$objimg = $redimg;
-		array_push($todelete, $redimg);
-
-		// Overlay.
-		$sumimg = $prefix . "sum.ppm";
-		$cmd = "pnmcomp -alpha=" . $objimg_orig . " " . $redimg . " " .
-			$userimg . " " . $sumimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if (($res === FALSE) || $retval) {
-			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			$errstr = "Failed to composite image of extracted sources.";
-			return FALSE;
-		}
-		array_push($todelete, $sumimg);
-
-		$cmd = "pnmtopng " . $sumimg . " > " . $outimg;
-		loggit("Command: " . $cmd . "\n");
-		$res = system($cmd, $retval);
-		if (($res === FALSE) || $retval) {
-			loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
-			$errstr = "Failed to convert composite image of extracted sources to PNG.";
-			return FALSE;
-		}
+        $cmd = $plotxy . " -I " . $userimg . $commonargs . " -r 6" .
+            " -N " . $Nbright . " -P";
+        $cmd .=  " | " . $plotxy . " -I . " . $commonargs . " -r 4" .
+            " -n " . $Nbright . " -N " . $Nmax . " > " . $outimg;
+        loggit("Command: " . $cmd . "\n");
+        $res = system($cmd, $retval);
+        if (($res === FALSE) || $retval) {
+            loggit("Command failed: return val " . $retval . ", str " . $res . "\n");
+            $errstr = "Failed to plot extracted sources.";
+            return FALSE;
+        }
 	}
 
 	// Rename the original uploaded/downloaded image file to reflect the kind of image we think it is

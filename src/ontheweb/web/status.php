@@ -1242,7 +1242,7 @@ function render_overlay($mydir, $big, $jd) {
 
 	global $tablist;
 	global $plotquad;
-	global $plotxy2;
+	global $plotxy;
 
 	global $pnmimg;
 
@@ -1337,100 +1337,38 @@ function render_overlay($mydir, $big, $jd) {
 			$prefix .= "big-";
 		}
 
-		$quadimg = $prefix . "quad.pgm";
-		$redquad = $prefix . "redquad.pgm";
-		$xypgm = $prefix . "index.xy.pgm";
-		$fldxy1pgm = $prefix . "fldxy1.pgm";
-		$fldxy2pgm = $prefix . "fldxy2.pgm";
-		$redimg = $prefix . "red.pgm";
-		$redimg2 = $prefix . "red2.pgm";
-		$redimg3 = $prefix . "red3.pgm";
-		$sumimg = $prefix . "sum.ppm";
-		$sumimg2 = $prefix . "sum2.ppm";
 		$dimimg = $prefix . "dim.ppm";
 
-		array_push($todelete, $xypgm);
-		array_push($todelete, $fldxy1pgm);
-		array_push($todelete, $fldxy2pgm);
-		array_push($todelete, $redimg);
-		array_push($todelete, $redimg2);
-		array_push($todelete, $redimg3);
-		array_push($todelete, $sumimg);
-		array_push($todelete, $sumimg2);
-
-		if ($fldobjs) {
-			$cmd = $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " | ppmtopgm > " . $quadimg;
-			run_command($cmd, "plotquad");
-			$cmd = "pgmtoppm green " . $quadimg . " > " . $redquad;
-			run_command($cmd, "pgmtoppm (quad)");
-
-			array_push($todelete, $quadimg);
-			array_push($todelete, $redquad);
-		}
-
-		// Plot index objects (green circles)
-		$cmd = $plotxy2 . " -i " . $indexxyls . " -S " . (1/$shrink) .
-			" -W " . $W . " -H " . $H .
-			" -x " . (1/$shrink) . " -y " . (1/$shrink) .
-			" -w 1.8 -r 4 > " . $xypgm;
-		// -s +
-		run_command($cmd, "plotxy2");
-
-		// Plot first N field objects (big red circles)
-		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -N " . (1+$fldobjs) . " -r 6 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " -w 2 > " . $fldxy1pgm;
-		run_command($cmd, "plotxy2 (field1)");
-
-		// Plot remaining field objects (small red circles)
-		$cmd = $plotxy2 . " -i " . $xylist . " -S " . (1/$shrink) . " -W " . $W . " -H " . $H .
-			" -n " . (1+$fldobjs) . " -N 200 -w 2 -r 6 " .
-			"-x " . (1/$shrink) . " -y " . (1/$shrink) . " > " . $fldxy2pgm;
-		run_command($cmd, "plotxy2 (field2)");
-
-		$cmd = "pgmtoppm green " . $xypgm . " > " . $redimg;
-		run_command($cmd, "pgmtoppm (xy)");
-
-		$cmd = "pgmtoppm rgbi:1/0/0.2 " . $fldxy1pgm . " > " . $redimg2;
-		run_command($cmd, "pgmtoppm (fieldxy1)");
-
-		$cmd = "pgmtoppm red " . $fldxy2pgm . " > " . $redimg3;
-		run_command($cmd, "pgmtoppm (fieldxy2)");
-
+        // Red-green plot.
 		if ($userimg) {
 			$cmd = "ppmdim 0.75 " . $userimg . " > " . $dimimg;
 			run_command($cmd, "ppmdim");
 			array_push($todelete, $dimimg);
-
-			$cmd = "pnmcomp -alpha=" . $xypgm . " " . $redimg . " " . $dimimg . " " . $sumimg;
-			run_command($cmd, "pnmcomp");
+            $infile = " -I " . $dimimg;
 		} else {
 			// xylist
-			$cmd = "cp " . $redimg . " " . $sumimg;
-			run_command($cmd, "cp");
+            $infile = "";
 		}
-
-		$cmd = "pnmcomp -alpha=" . $fldxy1pgm . " " . $redimg2 . " " . $sumimg . " " . $sumimg2;
-		run_command($cmd, "pnmcomp");
-
-		$cmd = "pnmcomp -alpha=" . $fldxy2pgm . " " . $redimg3 . " " . $sumimg2 . " " . $sumimg;
-		run_command($cmd, "pnmcomp (2)");
-
-		if ($fldobjs) {
-			$cmd = "pnmcomp -alpha=" . $quadimg . " " . $redquad . " " . $sumimg . " " . $sumimg2;
-			run_command($cmd, "pnmcomp (3)");
-			$finalimg = $sumimg2;
-		} else
-			$finalimg = $sumimg;
-
-		$cmd = "pnmtopng " . $finalimg . " > ";
+        $commonargs = " -S " . (1/$shrink) . " -W " . $W . " -H " . $H . " -x " . (1/$shrink) . " -y " . (1/$shrink);
+		// Plot index objects (green circles)
+        $cmd = $plotxy . $infile . " -i " . $indexxyls . $commonargs . " -w 1.8 -r 4 -C green -P";
+        if ($fldobjs) {
+            // Plot quad.
+            $cmd .= " | " . $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " -C green -P";
+        }
+		// Plot first N field objects (big red circles)
+		$cmd .= " | " . $plotxy . " -I -" . " -i " . $xylist . $commonargs .
+			" -N " . (1+$fldobjs) . " -r 6 -w 2 -C brightred -P";
+		// Plot remaining field objects (small red circles)
+		$cmd .= " | " . $plotxy . " -I -" . " -i " . $xylist . $commonargs .
+			" -n " . (1+$fldobjs) . " -N 200 -r 6 -w 2 -C red > ";
 		if ($big) {
 			$cmd .= $bigoverlayfile;
 		} else {
 			$cmd .= $overlayfile;
 		}
  		loggit("Command: " . $cmd . "\n");
-		run_command($cmd, "pnmtopng");
+		run_command($cmd);
 
 		// Delete intermediate files.
 		$todelete = array_unique($todelete);
