@@ -1368,7 +1368,7 @@ function render_overlay($mydir, $big, $jd) {
 			$cmd .= $overlayfile;
 		}
  		loggit("Command: " . $cmd . "\n");
-		run_command($cmd);
+		run_command($cmd, "plotxy,plotquad");
 
 		// Delete intermediate files.
 		$todelete = array_unique($todelete);
