@@ -104,32 +104,28 @@ pixels=UxV arcmin
 #include "an-bool.h"
 #include "bl.h"
 #include "ioutils.h"
-//#include "xylist.h"
+#include "xylist.h"
 
 static struct option long_options[] = {
 	// flags
 	{"help",        no_argument,       0, 'h'},
-	{"image",       required_argument, 0, 'i'},
-	{"xyls",        required_argument, 0, 'x'},
 	{"width",       required_argument, 0, 'W'},
 	{"height",      required_argument, 0, 'H'},
 	{"scale-low",	required_argument, 0, 'L'},
 	{"scale-high",	required_argument, 0, 'U'},
 	{"scale-units", required_argument, 0, 'u'},
 	{"no-tweak",    no_argument,       0, 'T'},
-	{"no-guess-scale", no_argument,       0, 'G'},
+	{"no-guess-scale", no_argument,    0, 'G'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"dir",         required_argument, 0, 'd'},
 	{"backend-config", required_argument, 0, 'c'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hi:L:U:u:t:d:c:Tx:W:H:G";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:G";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
-		   "  (   --image <filename>   the image to solve   (-i)\n"
-		   "   OR --xyls  <filename>  FITS table of source positions to solve   (-l)\n"
 		   "  [--dir <directory>]: place all output files in this directory\n"
 		   "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
 		   "     choices:  \"degwidth\"    : width of the image, in degrees\n"
@@ -143,7 +139,8 @@ static void print_help(const char* progname) {
 		   "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
 		   "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
 		   "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
-		   //"  [-h / --help]: print this help.\n"
+           "\n"
+           "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
 }
 
@@ -168,13 +165,14 @@ int main(int argc, char** args) {
 	char* base;
 	char axy[1024];
 	char* cmd;
-	int i;
+	int i, f;
 	int rtn;
     sl* backendargs;
     char* errmsg;
 	bool guess_scale = TRUE;
 	int width = 0, height = 0;
-	//xylist* xy;
+    int nllargs;
+    int nbeargs;
 
 	lowlevelargs = sl_new(16);
 	sl_append(lowlevelargs, "low-level-frontend");
@@ -185,14 +183,8 @@ int main(int argc, char** args) {
 	while (1) {
 		int option_index = 0;
 		c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
-		if (c == -1)
-			break;
 		switch (c) {
-		case 0:
-			/* If this option set a flag, do nothing else now. */
-			if (long_options[option_index].flag != 0)
-				break;
-			break;
+        case -1:
 		case 'h':
 			help = TRUE;
 			break;
@@ -231,30 +223,9 @@ int main(int argc, char** args) {
 		case 'd':
 			outdir = optarg;
 			break;
-		case 'i':
-			image = optarg;
-			break;
-		case 'x':
-			xyls = optarg;
-			break;
 		}
 	}
-
 	rtn = 0;
-	if (!(image || xyls)) {
-		fprintf(stderr, "You must specify an image or xyls file.\n");
-		rtn = -1;
-		help = 1;
-	}
-	if (optind != argc) {
-		fprintf(stderr, "You specified arguments that I didn't understand:\n");
-		for (i=optind; i<argc; i++) {
-			fprintf(stderr, "  %s\n", args[i]);
-		}
-		fprintf(stderr, "\n");
-		rtn = -1;
-		help = 1;
-	}
 	if (help) {
 		print_help(args[0]);
 		exit(rtn);
@@ -281,79 +252,106 @@ int main(int argc, char** args) {
          */
     }
 
-	if (image) {
-		sl_append(lowlevelargs, "--image");
-		sl_append(lowlevelargs, image);
-		infn = image;
-	} else {
-		sl_append(lowlevelargs, "--xylist");
-		sl_append(lowlevelargs, xyls);
-		infn = xyls;
-		/*
-		  if (!width || !height) {
-		  // Load the xylist and compute the min/max.
-		  }
-		*/
-	}
-
-	if (width) {
-		sl_append(lowlevelargs, "--width");
-		sl_appendf(lowlevelargs, "%i", width);
-	}
-	if (height) {
-		sl_append(lowlevelargs, "--height");
-		sl_appendf(lowlevelargs, "%i", height);
-	}
-
-	cpy = strdup(infn);
-	base = strdup(basename(cpy));
-	free(cpy);
-	if (outdir)
-		snprintf(axy, sizeof(axy), "%s/%s.axy", outdir, base);
-    else
-		snprintf(axy, sizeof(axy), "%s.axy", base);
-	free(base);
-
-	sl_append(lowlevelargs, "--out");
-	sl_append(lowlevelargs, axy);
-
-    add_file_arg(lowlevelargs, "--match",  "match.fits", outdir);
-    add_file_arg(lowlevelargs, "--rdls",   "rdls.fits",  outdir);
-    add_file_arg(lowlevelargs, "--solved", "solved",     outdir);
-    add_file_arg(lowlevelargs, "--wcs",    "wcs.fits",   outdir);
-
-	if (guess_scale)
-		sl_append(lowlevelargs, "--guess-scale");
-
+    if (guess_scale)
+        sl_append(lowlevelargs, "--guess-scale");
 	// pnm?
 
-	sl_print(lowlevelargs);
+    // number of low-level and backend args (not specific to a particular file)
+    nllargs = sl_size(lowlevelargs);
+    nbeargs = sl_size(backendargs);
 
-	cmd = sl_implode(lowlevelargs, " ");
-	printf("Running low-level-frontend:\n  %s\n", cmd);
-	rtn = system(cmd);
-	free(cmd);
-	if (rtn == -1) {
-		fprintf(stderr, "Failed to system() low-level-frontend: %s\n", strerror(errno));
-		exit(-1);
-	}
-	if (WEXITSTATUS(rtn)) {
-		fprintf(stderr, "low-level-frontend exited with exit status %i.\n", WEXITSTATUS(rtn));
-		exit(-1);
-	}
+    for (f=optind; f<argc; f++) {
+        char* infile = args[f];
+        bool isxyls;
+        char* reason;
 
-	sl_free(lowlevelargs);
+        sl_remove_from(lowlevelargs, nllargs);
+        sl_remove_from(backendargs,  nbeargs);
 
-    sl_append(backendargs, axy);
+        printf("Checking if file \"%s\" is xylist or image: ", infile);
+        isxyls = xylist_is_file_xylist(image, NULL, NULL, &reason);
+        printf(isxyls ? "xyls\n" : "image\n");
+        if (!isxyls)
+            printf("  (%s)\n", reason);
 
-	cmd = sl_implode(backendargs, " ");
-	printf("Running backend:\n  %s\n", cmd);
-    if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
-        fprintf(stderr, "Couldn't run \"backend\": %s\n", errmsg);
-        exit(-1);
+        if (isxyls) {
+            xyls = infile;
+            image = NULL;
+        } else {
+            xyls = NULL;
+            image = infile;
+        }
+
+        if (image) {
+            sl_append(lowlevelargs, "--image");
+            sl_append(lowlevelargs, image);
+            infn = image;
+        } else {
+            sl_append(lowlevelargs, "--xylist");
+            sl_append(lowlevelargs, xyls);
+            infn = xyls;
+            /*
+             if (!width || !height) {
+             // Load the xylist and compute the min/max.
+             }
+             */
+        }
+
+        if (width) {
+            sl_append(lowlevelargs, "--width");
+            sl_appendf(lowlevelargs, "%i", width);
+        }
+        if (height) {
+            sl_append(lowlevelargs, "--height");
+            sl_appendf(lowlevelargs, "%i", height);
+        }
+
+        cpy = strdup(infn);
+        base = strdup(basename(cpy));
+        free(cpy);
+        if (outdir)
+            snprintf(axy, sizeof(axy), "%s/%s.axy", outdir, base);
+        else
+            snprintf(axy, sizeof(axy), "%s.axy", base);
+        free(base);
+
+        sl_append(lowlevelargs, "--out");
+        sl_append(lowlevelargs, axy);
+
+        add_file_arg(lowlevelargs, "--match",  "match.fits", outdir);
+        add_file_arg(lowlevelargs, "--rdls",   "rdls.fits",  outdir);
+        add_file_arg(lowlevelargs, "--solved", "solved",     outdir);
+        add_file_arg(lowlevelargs, "--wcs",    "wcs.fits",   outdir);
+
+        sl_print(lowlevelargs);
+
+        cmd = sl_implode(lowlevelargs, " ");
+        printf("Running low-level-frontend:\n  %s\n", cmd);
+        rtn = system(cmd);
+        free(cmd);
+        if (rtn == -1) {
+            fprintf(stderr, "Failed to system() low-level-frontend: %s\n", strerror(errno));
+            exit(-1);
+        }
+        if (WEXITSTATUS(rtn)) {
+            fprintf(stderr, "low-level-frontend exited with exit status %i.\n", WEXITSTATUS(rtn));
+            exit(-1);
+        }
+
+        sl_append(backendargs, axy);
+
+        sl_print(backendargs);
+
+        cmd = sl_implode(backendargs, " ");
+        //printf("Running backend:\n  %s\n", cmd);
+        if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+            fprintf(stderr, "Couldn't run \"backend\": %s\n", errmsg);
+            exit(-1);
+        }
+        free(cmd);
     }
-	free(cmd);
 
+    sl_free(lowlevelargs);
     sl_free(backendargs);
 
 	return 0;
