@@ -430,6 +430,7 @@ table.c {margin-left:auto; margin-right:auto;}
 p.c {margin-left:auto; margin-right:auto; text-align:center;}
 form.c {margin-left:auto; margin-right:auto; text-align:center;}
 h3.c {text-align:center;}
+td {border-width: 0;}
 #fits2xylog {margin-left:auto; margin-right:auto; border-color:gray; border-style: double;}
 #overlay { margin-left:auto; margin-right:auto; text-align:center; }
 #overlay > a:link { color:white; }
