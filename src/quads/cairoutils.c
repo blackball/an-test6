@@ -16,6 +16,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#include <stdint.h>
+
 #include <cairo.h>
 #include <png.h>
 #include <ppm.h>
@@ -84,14 +86,15 @@ static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm
             return -1;
         }
     }
+	return 0;
 }
 
 int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H) {
-    writeout(outfn, img, W, H, 1);
+    return writeout(outfn, img, W, H, 1);
 }
 
 int cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H) {
-    writeout(outfn, img, W, H, 0);
+    return writeout(outfn, img, W, H, 0);
 }
 
 void cairoutils_argb32_to_rgba(unsigned char* img, int W, int H) {
@@ -126,7 +129,7 @@ void cairoutils_rgba_to_argb32(unsigned char* img, int W, int H) {
 
 unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH) {
     int x,y;
-    int R, C, format;
+    int W, H, format;
     pixval maxval;
     pixel* pixelrow;
     FILE* fin;
@@ -143,22 +146,20 @@ unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH) {
     } else {
         fin = stdin;
     }
-    ppm_readppminit(fin, &C, &R, &maxval, &format);
-    pixelrow = ppm_allocrow(C);
+    ppm_readppminit(fin, &W, &H, &maxval, &format);
+    pixelrow = ppm_allocrow(W);
     //printf("%i x %i, maxval %i, format 0x%x\n", C, R, maxval, format);
-    // Allocate image.
-    W = C;
-    H = R;
     if (pW) *pW = W;
     if (pH) *pH = H;
 
+    // Allocate image.
     img = malloc(4 * W * H);
     if (!img) {
         fprintf(stderr, "Failed to allocate an image of size %ix%i x 4\n", W, H);
         return NULL;
     }
     for (y=0; y<H; y++) {
-        ppm_readppmrow(fin, pixelrow, C, maxval, format);
+        ppm_readppmrow(fin, pixelrow, W, maxval, format);
         for (x=0; x<W; x++) {
             unsigned char a,r,g,b;
             pixel p;

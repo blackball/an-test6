@@ -27,9 +27,9 @@ void cairoutils_rgba_to_argb32(unsigned char* img, int W, int H);
 // You must call ppm_init()
 unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH);
 
-void cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H);
+int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H);
 
-void cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H);
+int cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H);
 
 #endif
 

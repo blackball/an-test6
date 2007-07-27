@@ -268,7 +268,7 @@ int main(int argc, char** args) {
             fprintf(stderr, "Failed to read input image %s.\n", infn);
             exit(-1);
         }
-        cairo_rgba_to_argb32(img, W, H);
+        cairoutils_rgba_to_argb32(img, W, H);
     } else {
         // Allocate a black image.
         img = calloc(4 * W * H, 1);
