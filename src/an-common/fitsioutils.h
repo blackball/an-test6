@@ -85,7 +85,7 @@ void fits_add_uint_size(qfits_header* header);
 
 void fits_add_double_size(qfits_header* header);
 
-int fits_find_column(qfits_table* table, char* colname);
+int fits_find_column(const qfits_table* table, const char* colname);
 
 int fits_get_atom_size(tfits_type type);
 

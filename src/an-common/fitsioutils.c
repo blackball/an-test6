@@ -477,7 +477,7 @@ int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
     return -1;
 }
 
-int fits_find_column(qfits_table* table, char* colname) {
+int fits_find_column(const qfits_table* table, const char* colname) {
 	int c;
 	for (c=0; c<table->nc; c++) {
 		qfits_col* col = table->col + c;
