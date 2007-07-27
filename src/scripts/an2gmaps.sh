@@ -3,7 +3,7 @@
 # Convert an Astrometry.net catalog to merctrees to be used in the Google Maps interface.
 
 # input filename pattern
-IN=/nobackup2/dstn/stumm/spike_free/an_clean_hp%03i.fits
+IN=/nobackup2/dstn/stumm/stars/an_clean_hp%03i.fits
 
 # output filename pattern
 OUT=merc_%02i_%02i.mkdt.fits
