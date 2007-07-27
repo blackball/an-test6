@@ -1492,6 +1492,23 @@ char* sl_insert(sl* list, int indx, const char* data) {
 	return copy;
 }
 
+void sl_remove_from(sl* list, int start) {
+    sl_remove_index_range(list, start, sl_size(list) - start);
+}
+
+void sl_remove_index_range(sl* list, int start, int length) {
+    int i;
+    assert(list);
+    assert(start + length <= list->N);
+    assert(start >= 0);
+    assert(length >= 0);
+    for (i=0; i<length; i++) {
+        char* str = sl_get(list, start + i);
+        free(str);
+    }
+    bl_remove_index_range(list, start, length);
+}
+
 void  sl_remove_all(sl* list) {
 	int i;
 	if (!list) return;

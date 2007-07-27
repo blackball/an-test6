@@ -247,6 +247,12 @@ int    sl_check_consistency(sl* list);
 char*  sl_insert(sl* list, int indx, const char* str);
 // frees all the strings and removes them from the list.
 void   sl_remove_all(sl* list);
+
+void sl_remove_index_range(sl* list, int start, int length);
+
+// remove all elements starting from "start" to the end of the list.
+void sl_remove_from(sl* list, int start);
+
 void   sl_merge_lists(sl* list1, sl* list2);
 void   sl_print(sl* list);
 
