@@ -1347,14 +1347,14 @@ function render_overlay($mydir, $big, $jd) {
             $infile = " -I " . $dimimg;
 		} else {
 			// xylist
-            $infile = "";
+            $infile = " -W " . $W . " -H " . $H;
 		}
-        $commonargs = " -S " . (1/$shrink) . " -W " . $W . " -H " . $H . " -x " . (1/$shrink) . " -y " . (1/$shrink);
+        $commonargs = " -S " . (1/$shrink) . " -x " . (1/$shrink) . " -y " . (1/$shrink);
 		// Plot index objects (green circles)
         $cmd = $plotxy . $infile . " -i " . $indexxyls . $commonargs . " -w 1.8 -r 4 -C green -P";
         if ($fldobjs) {
             // Plot quad.
-            $cmd .= " | " . $plotquad . " -W " . $W . " -H " . $H . " -w 3 " . implode(" ", $fldxy) . " -C green -P";
+            $cmd .= " | " . $plotquad . " -I - " . " -w 3 " . implode(" ", $fldxy) . " -C green -P";
         }
 		// Plot first N field objects (big red circles)
 		$cmd .= " | " . $plotxy . " -I -" . " -i " . $xylist . $commonargs .
