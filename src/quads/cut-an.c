@@ -484,7 +484,7 @@ int main(int argc, char** args) {
 	startoptind = optind;
 	for (; optind<argc; optind++) {
 		char* infn;
-		int i, N;
+		int i, N = 0;
 		an_catalog* ancat = NULL;
 		catalog* cat = NULL;
 		int ndiscarded;
@@ -606,7 +606,7 @@ int main(int argc, char** args) {
 					continue;
 			}
 			if (dedupr2 > 0.0) {
-				int duphp, dupindex;
+				int duphp=-1, dupindex=-1;
 				stardata* dupsd;
 				if (find_duplicate(&sd, hp, Nside, starlists,
 								   dedupr2, &duphp, &dupindex)) {

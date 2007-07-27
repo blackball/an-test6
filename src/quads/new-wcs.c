@@ -106,6 +106,12 @@ int main(int argc, char *argv[]) {
 	regex_t re2[NE2];
 	qfits_header *inhdr, *outhdr, *wcshdr;
 
+    char key[FITS_LINESZ + 1];
+    char newkey[FITS_LINESZ + 1];
+    char val[FITS_LINESZ + 1];
+    char comment[FITS_LINESZ + 1];
+    int imatch = -1;
+
     while ((argchar = getopt (argc, argv, OPTIONS)) != -1)
         switch (argchar) {
         case 'i':
@@ -182,11 +188,6 @@ int main(int argc, char *argv[]) {
 
 	N = inhdr->n;
 	for (i=0; i<N; i++) {
-		char key[FITS_LINESZ + 1];
-		char val[FITS_LINESZ + 1];
-		char comment[FITS_LINESZ + 1];
-		int imatch;
-
 		if (qfits_header_getitem(inhdr, i, key, val, comment, NULL)) {
 			fprintf(stderr, "Failed to read FITS header card %i from input file.\n", i);
 			exit(-1);
@@ -194,7 +195,6 @@ int main(int argc, char *argv[]) {
 
 		if (key_matches(key, re1, exclude_input, NE1, &imatch)) {
 			printf("Regular expression matched: \"%s\", key \"%s\".\n", exclude_input[imatch], key);
-			char newkey[FITS_LINESZ + 1];
 			snprintf(newkey, FITS_LINESZ+1, "Original key: \"%s\"", key);
 			qfits_header_append(outhdr, "COMMENT", newkey, NULL, NULL);
 			snprintf(newkey, FITS_LINESZ+1, "_%.7s", key);
@@ -212,11 +212,6 @@ int main(int argc, char *argv[]) {
 
 	N = wcshdr->n;
 	for (i=0; i<N; i++) {
-		char key[FITS_LINESZ + 1];
-		char val[FITS_LINESZ + 1];
-		char comment[FITS_LINESZ + 1];
-		int imatch;
-
 		if (qfits_header_getitem(wcshdr, i, key, val, comment, NULL)) {
 			fprintf(stderr, "Failed to read FITS header card %i from WCS file.\n", i);
 			exit(-1);
@@ -224,7 +219,6 @@ int main(int argc, char *argv[]) {
 
 		if (key_matches(key, re2, exclude_wcs, NE2, &imatch)) {
 			printf("Regular expression matched: \"%s\", key \"%s\".\n", exclude_wcs[imatch], key);
-			char newkey[FITS_LINESZ + 1];
 			snprintf(newkey, FITS_LINESZ+1, "Original WCS key: \"%s\"", key);
 			qfits_header_append(outhdr, "COMMENT", newkey, NULL, NULL);
 			snprintf(newkey, FITS_LINESZ+1, "_%.7s", key);
