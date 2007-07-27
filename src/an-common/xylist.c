@@ -24,57 +24,62 @@
 #include "fitsioutils.h"
 
 // Is the given filename an xylist?
-int xylist_is_file_xylist(const char* fn) {
+int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
+                          char** reason) {
 	qfits_header* header;
 	qfits_table* table;
-	qfits_col* col;
+	qfits_col *xcol, *ycol;
+    int ix, iy;
 
     // Is it FITS?
-	if (!qfits_is_fits(fn))
+	if (!qfits_is_fits(fn)) {
+        if (reason) *reason = "File is not in FITS format.";
         return 0;
+    }
 
     // Read the primary header.
 	header = qfits_header_read(fn);
-	if (!header)
+	if (!header) {
+        if (reason) *reason = "Failed to read FITS header.";
         return 0;
+    }
     qfits_header_destroy(header);
 
     // Read the first extension - it should be a BINTABLE.
 	table = qfits_table_open(fn, 1);
-	if (!table)
+	if (!table) {
+        if (reason) *reason = "Failed to find a FITS BINTABLE in the first extension.";
         return 0;
+    }
 
-    fprintf(stderr, "FIXME: xylist_is_file_xylist() isn't done yet.\n");
- 
 	// Find columns.
-    /*
-     ls->xcol = fits_find_column(ls->table, ls->xname);
-     if (ls->xcol == -1) {
-     fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->xname);
-     return -1;
-     }
-     col = ls->table->col + ls->xcol;
-     if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
-     (col->atom_type == TFITS_BIN_TYPE_E)) &&
-     (col->atom_nb == 1))) {
-     fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->xname);
-     return -1;
-     }
-     ls->xtype = col->atom_type;
-     ls->ycol = fits_find_column(ls->table, ls->yname);
-     if (ls->ycol == -1) {
-     fprintf(stderr, "xylist %s: no column named \"%s\".\n", ls->fn, ls->yname);
-     return -1;
-     }
-     col = ls->table->col + ls->ycol;
-     if (!(((col->atom_type == TFITS_BIN_TYPE_D) ||
-     (col->atom_type == TFITS_BIN_TYPE_E)) &&
-     (col->atom_nb == 1))) {
-     fprintf(stderr, "xylist %s: column \"%s\" is not of type D or E (double/float).\n", ls->fn, ls->yname);
-     return -1;
-     }
-     ls->ytype = col->atom_type;
-     */
+    if (!xcolumn)
+        xcolumn = "X";
+    if (!ycolumn)
+        ycolumn = "Y";
+    ix = fits_find_column(table, xcolumn);
+    iy = fits_find_column(table, ycolumn);
+    // Columns exist?
+    if ((ix == -1) || (iy == -1)) {
+        if (reason) *reason = "Failed to find FITS table columns with the expected names.";
+        qfits_table_close(table);
+        return 0;
+    }
+    xcol = table->col + ix;
+    ycol = table->col + iy;
+
+    // Columns have right data types?
+    if (!(((xcol->atom_type == TFITS_BIN_TYPE_D) ||
+           (xcol->atom_type == TFITS_BIN_TYPE_E)) &&
+          (xcol->atom_nb == 1) &&
+          (((ycol->atom_type == TFITS_BIN_TYPE_D) ||
+            (ycol->atom_type == TFITS_BIN_TYPE_E)) &&
+           (ycol->atom_nb == 1)))) {
+        if (reason) *reason = "Failed to find FITS table columns with the right data type (D or E).";
+        qfits_table_close(table);
+        return 0;
+    }
+    qfits_table_close(table);
     return 1;
 }
 
