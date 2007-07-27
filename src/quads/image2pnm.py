@@ -60,7 +60,9 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm):
 
     if force_ppm:
         original_outfile = outfile
-        filehandle, outfile = tempfile.mkstemp('pnm', 'image2pnm')
+        outfile_dir, outfile_file = os.path.split(outfile)
+        filehandle, outfile = tempfile.mkstemp('pnm', outfile_file, outfile_dir)
+        log('temporary output file: ', outfile)
 
     # Do the actual conversion
     ext, cmd = imgcmds[typeinfo]
