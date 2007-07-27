@@ -1479,7 +1479,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 			" -x " . $xyoff . " -y " . $xyoff . " -w 2 -S " . $scale . " -C red";
         $cmd = $plotxy . " -I " . $userimg . $commonargs . " -r 6" .
             " -N " . $Nbright . " -P";
-        $cmd .=  " | " . $plotxy . " -I . " . $commonargs . " -r 4" .
+        $cmd .=  " | " . $plotxy . " -I - " . $commonargs . " -r 4" .
             " -n " . $Nbright . " -N " . $Nmax . " > " . $outimg;
         loggit("Command: " . $cmd . "\n");
         $res = system($cmd, $retval);
