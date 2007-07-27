@@ -255,7 +255,7 @@ int main(int argc, char** args) {
         char* cpy;
         char* base;
         char *matchfn, *rdlsfn, *solvedfn, *wcsfn, *axyfn, *objsfn, *redgreenfn;
-        char *ngcfn, *ppmfn;
+        char *ngcfn, *ppmfn, *indxylsfn;
         sl* outfiles;
         bool nextfile;
         int fid;
@@ -336,14 +336,15 @@ int main(int argc, char** args) {
         // Compute the output filenames.
         outfiles = sl_new(16);
 
-        axyfn      = sl_appendf(outfiles, "%s.axy",      base);
-        matchfn    = sl_appendf(outfiles, "%s.match",    base);
-        rdlsfn     = sl_appendf(outfiles, "%s.rdls",     base);
-        solvedfn   = sl_appendf(outfiles, "%s.solved",   base);
-        wcsfn      = sl_appendf(outfiles, "%s.wcs",      base);
-        objsfn     = sl_appendf(outfiles, "%s-objs.png", base);
-        redgreenfn = sl_appendf(outfiles, "%s-indx.png", base);
-        ngcfn      = sl_appendf(outfiles, "%s-ngc.png",  base);
+        axyfn      = sl_appendf(outfiles, "%s.axy",       base);
+        matchfn    = sl_appendf(outfiles, "%s.match",     base);
+        rdlsfn     = sl_appendf(outfiles, "%s.rdls",      base);
+        solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
+        wcsfn      = sl_appendf(outfiles, "%s.wcs",       base);
+        objsfn     = sl_appendf(outfiles, "%s-objs.png",  base);
+        redgreenfn = sl_appendf(outfiles, "%s-indx.png",  base);
+        ngcfn      = sl_appendf(outfiles, "%s-ngc.png",   base);
+        indxylsfn  = sl_appendf(outfiles, "%s-indx.xyls", base);
         free(base);
         base = NULL;
 
@@ -429,7 +430,7 @@ int main(int argc, char** args) {
         sl_append(plotargs, "plotxy");
         sl_append(plotargs, "-i");
         sl_append(plotargs, axyfn);
-        sl_append(plotargs, "-I - -w 2 -r 3 -C red -n 50 -x 1 -y 1");
+        sl_append(plotargs, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
         sl_append(plotargs, ">");
         sl_append(plotargs, objsfn);
@@ -458,9 +459,76 @@ int main(int argc, char** args) {
         }
         free(cmd);
 
-        // sources + index overlay
-        // ngc/constellations overlay
-        // rdls?
+        if (!file_exists(solvedfn)) {
+            // boo.
+            printf("Field didn't solve.\n");
+        } else {
+            plotargs = sl_new(16);
+
+            // index rdls to xyls.
+            sl_append(plotargs, "wcs-rd2xy");
+            sl_append(plotargs, "-w");
+            sl_append(plotargs, wcsfn);
+            sl_append(plotargs, "-i");
+            sl_append(plotargs, rdlsfn);
+            sl_append(plotargs, "-o");
+            sl_append(plotargs, indxylsfn);
+
+            cmd = sl_implode(plotargs, " ");
+            printf("Running command:\n  %s\n", cmd);
+            rtn = system(cmd);
+            free(cmd);
+            if (rtn == -1) {
+                fprintf(stderr, "Failed to run wcs-rd2xy command: %s\n", strerror(errno));
+                exit(-1);
+            }
+            if (WEXITSTATUS(rtn)) {
+                fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
+                exit(-1);
+            }
+
+            sl_remove_all(plotargs);
+
+            // sources + index overlay
+            sl_append(plotargs, "plotxy");
+            sl_append(plotargs, "-i");
+            sl_append(plotargs, axyfn);
+            if (image) {
+                sl_append(plotargs, "-I");
+                sl_append(plotargs, ppmfn);
+            }
+            sl_append(plotargs, "-P");
+            sl_append(plotargs, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
+            sl_append(plotargs, "|");
+            sl_append(plotargs, "plotxy");
+            sl_append(plotargs, "-i");
+            sl_append(plotargs, indxylsfn);
+            sl_append(plotargs, "-I - -w 2 -r 4 -C green -x 1 -y 1");
+            /*
+             sl_append(plotargs, " -P |");
+             sl_append(plotargs, "plotquad");
+             */
+            sl_append(plotargs, ">");
+            sl_append(plotargs, redgreenfn);
+
+            cmd = sl_implode(plotargs, " ");
+            printf("Running plot command:\n  %s\n", cmd);
+            rtn = system(cmd);
+            free(cmd);
+            if (rtn == -1) {
+                fprintf(stderr, "Failed to run plot command: %s\n", strerror(errno));
+                exit(-1);
+            }
+            if (WEXITSTATUS(rtn)) {
+                fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
+                exit(-1);
+            }
+            sl_free(plotargs);
+
+            // ngc/constellations overlay
+            // create field rdls?
+        }
+
         sl_free(outfiles);
     }
 
