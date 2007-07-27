@@ -21,22 +21,36 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <cairo.h>
+#include "an-bool.h"
 
+#include <cairo.h>
+#include <ppm.h>
+
+#include "cairoutils.h"
 #include "boilerplate.h"
 #include "bl.h"
 #include "permutedsort.h"
 
-#define OPTIONS "hW:H:w:"
+#define OPTIONS "hW:H:w:I:C:P"
 
 static void printHelp(char* progname) {
+    int i;
 	boilerplate_help_header(stdout);
-	printf("\nUsage: %s [options] <quads>  > output.ppm\n"
-		   "  -W <width>        Width of output image.\n"
-		   "  -H <height>       Height of output image.\n"
+	printf("\nUsage: %s [options] <quads>  > output.png\n"
+           "  [-I <input-image>]  Input image (PPM format) to plot over.\n"
+           "  [-P]              Write PPM output instead of PNG.\n"
+           "  [-C <color>]      Color to plot in: (default: white)\n",
+           progname);
+    for (i=0;; i++) {
+        char* color = cairoutils_get_color_name(i);
+        if (!color) break;
+        printf("                       %s\n", color);
+    }
+    printf("  [-W <width> ]       Width of output image.\n"
+		   "  [-H <height>]       Height of output image.\n"
 		   "  [-w <width>]      Width of lines to draw (default: 5).\n"
 		   "  <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4> [...]\n"
-		   "\n", progname);
+		   "\n");
 }
 
 extern char *optarg;
@@ -50,15 +64,30 @@ int main(int argc, char *args[]) {
 	int nquads;
 	int i;
 	dl* coords;
+    char* infn = NULL;
+    bool pngformat = TRUE;
 
+    unsigned char* img;
 	cairo_t* cairo;
 	cairo_surface_t* target;
-	uint32_t* pixels;
+    float r=1.0, g=1.0, b=1.0;
 
 	coords = dl_new(16);
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'C':
+            if (cairoutils_parse_color(optarg, &r, &g, &b)) {
+                fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
+                exit(-1);
+            }
+            break;
+        case 'I':
+            infn = optarg;
+            break;
+        case 'P':
+            pngformat = FALSE;
+            break;
 		case 'W':
 			W = atoi(optarg);
 			break;
@@ -80,10 +109,15 @@ int main(int argc, char *args[]) {
 		exit(-1);
 	}
 
-	if (!(W && H)) {
+	if (!((W && H) || infn)) {
 		printHelp(progname);
 		exit(-1);
 	}
+    if (infn && (W || H)) {
+        printf("Error: if you specify an input file, you can't give -W or -H (width or height) arguments.\n\n");
+        printHelp(progname);
+        exit(-1);
+    }
 
 	for (i=optind; i<argc; i++) {
 		double pos = atof(args[i]);
@@ -91,16 +125,27 @@ int main(int argc, char *args[]) {
 	}
 	nquads = dl_size(coords) / 8;
 
-	target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
+    if (infn) {
+        ppm_init(&argc, args);
+        img = cairoutils_read_ppm(infn, &W, &H);
+        if (!img) {
+            fprintf(stderr, "Failed to read input image %s.\n", infn);
+            exit(-1);
+        }
+        cairoutils_rgba_to_argb32(img, W, H);
+    } else {
+        // Allocate a black image.
+        img = calloc(4 * W * H, 1);
+    }
 
+    target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
 	cairo = cairo_create(target);
 	cairo_set_line_width(cairo, lw);
 	cairo_set_line_join(cairo, CAIRO_LINE_JOIN_BEVEL);
 	//cairo_set_line_join(cairo, CAIRO_LINE_JOIN_ROUND);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
 
-	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
-	//cairo_set_source_rgba(cairo, 1.0, 1.0, 1.0, 1.0);
+	cairo_set_source_rgb(cairo, r, g, b);
 
 	for (i=0; i<nquads; i++) {
 		int j;
@@ -134,27 +179,24 @@ int main(int argc, char *args[]) {
 		cairo_stroke(cairo);
 	}
 
-	pixels = (uint32_t*)cairo_image_surface_get_data(target);
+    // Convert image for output...
+    cairoutils_argb32_to_rgba(img, W, H);
 
-	// PPM
-	printf("P6 %d %d %d\n", W, H, 255);
-	for (i=0; i<H; i++) {
-		int j;
-		uint32_t* row = (uint32_t*)((unsigned char*)pixels + i * cairo_image_surface_get_stride(target));
-		for (j=0; j<W; j++) {
-			unsigned char r,g,b;
-			r = (row[j] >> 16) & 0xff;
-			g = (row[j] >>  8) & 0xff;
-			b = (row[j]      ) & 0xff;
-			//printf("%c%c%c", r, g, b);
-			putchar(r);
-			putchar(g);
-			putchar(b);
-		}
-	}
+    if (pngformat) {
+        if (cairoutils_stream_png(stdout, img, W, H)) {
+            fprintf(stderr, "Failed to write PNG.\n");
+            exit(-1);
+        }
+    } else {
+        if (cairoutils_stream_ppm(stdout, img, W, H)) {
+            fprintf(stderr, "Failed to write PPM.\n");
+            exit(-1);
+        }
+    }
 
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
+    free(img);
 
 	return 0;
 }

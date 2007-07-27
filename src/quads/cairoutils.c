@@ -22,6 +22,32 @@
 #include <png.h>
 #include <ppm.h>
 
+char* cairoutils_get_color_name(int i) {
+    switch (i) {
+    case 0: return "red";
+    case 1: return "green";
+    case 2: return "brightred";
+    }
+    return NULL;
+}
+
+int cairoutils_parse_color(const char* color, float* r, float* g, float* b) {
+    if (!strcmp(optarg, "red")) {
+        *r = 1.0;
+        *g = *b = 0.0;
+    } else if (!strcmp(optarg, "brightred")) {
+        *r = 1.0;
+        *g = 0.0;
+        *b = 0.2;
+    } else if (!strcmp(optarg, "green")) {
+        *r = *b = 0.0;
+        *g = 1.0;
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
 // fires an ALPHA png out to fout
 static void write_png(unsigned char * img, int w, int h, FILE* fout)
 {

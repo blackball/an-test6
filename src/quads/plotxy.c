@@ -31,6 +31,7 @@
 #define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:"
 
 static void printHelp(char* progname) {
+    int i;
 	boilerplate_help_header(stdout);
 	printf("\nUsage: %s [options] > output.png\n"
 		   "  -i <input-file>   Input file (xylist)\n"
@@ -46,12 +47,16 @@ static void printHelp(char* progname) {
 		   "  [-w <linewidth>]  Linewidth (default: 1.0).\n"
 		   "  [-s <shape>]      Shape of markers (default: c):\n"
 		   "                      c = circle\n"
-           "  [-C <color>]      Color to plot in: (default: white)\n"
-           "                       red\n"
-           "                       green\n"
-		   "  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
+           "  [-C <color>]      Color to plot in: (default: white)\n",
+           progname);
+    for (i=0;; i++) {
+        char* color = cairoutils_get_color_name(i);
+        if (!color) break;
+        printf("                       %s\n", color);
+    }
+    printf("  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
 		   "  [-e <extension>]  FITS extension to read (default 0).\n"
-		   "\n", progname);
+		   "\n");
 }
 
 extern char *optarg;
@@ -83,15 +88,7 @@ int main(int argc, char *args[]) {
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
         case 'C':
-            if (!strcmp(optarg, "red")) {
-                r = 1.0;
-                g = b = 0.0;
-                break;
-            } else if (!strcmp(optarg, "green")) {
-                r = b = 0.0;
-                g = 1.0;
-                break;
-            } else {
+            if (cairoutils_parse_color(optarg, &r, &g, &b)) {
                 fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
                 exit(-1);
             }
@@ -149,7 +146,11 @@ int main(int argc, char *args[]) {
 		printHelp(progname);
 		exit(-1);
 	}
-
+    if (infn && (W || H)) {
+        printf("Error: if you specify an input file, you can't give -W or -H (width or height) arguments.\n\n");
+        printHelp(progname);
+        exit(-1);
+    }
 	if (!fname) {
 		printHelp(progname);
 		exit(-1);
@@ -191,14 +192,14 @@ int main(int argc, char *args[]) {
 	xylist_close(xyls);
 
 	// if required, scan data for max X,Y
-	if (!(infn || W)) {
+	if (!W) {
 		double maxX = 0.0;
 		for (i=n; i<Nxy; i++)
 			if (xyvals[2*i] > maxX)
 				maxX = xyvals[2*i];
 		W = ceil(maxX + rad - xoff);
 	}
-	if (!(infn || H)) {
+	if (!H) {
 		double maxY = 0.0;
 		for (i=n; i<Nxy; i++)
 			if (xyvals[2*i+1] > maxY)

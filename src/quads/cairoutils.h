@@ -36,5 +36,9 @@ int cairoutils_stream_ppm(FILE* fout, unsigned char* img, int W, int H);
 
 int cairoutils_stream_png(FILE* fout, unsigned char* img, int W, int H);
 
+int cairoutils_parse_color(const char* color, float* r, float* g, float* b);
+
+char* cairoutils_get_color_name(int i);
+
 #endif
 

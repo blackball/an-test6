@@ -324,8 +324,8 @@ plotcat: plotcat.o catalog.o tycho2_fits.o tycho2.o usnob_fits.o usnob.o \
 plotquad.o: plotquad.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
-plotquad: plotquad.o boilerplate.o svn.o $(ANUTILS_LIB)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
+plotquad: plotquad.o cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB) 
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_L)
 
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
