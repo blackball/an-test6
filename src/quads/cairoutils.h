@@ -19,6 +19,7 @@
 #ifndef CAIRO_UTILS_H
 #define CAIRO_UTILS_H
 
+#include <stdio.h>
 
 void cairoutils_argb32_to_rgba(unsigned char* img, int W, int H);
 
@@ -30,6 +31,10 @@ unsigned char* cairoutils_read_ppm(const char* infn, int* pW, int* pH);
 int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H);
 
 int cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H);
+
+int cairoutils_stream_ppm(FILE* fout, unsigned char* img, int W, int H);
+
+int cairoutils_stream_png(FILE* fout, unsigned char* img, int W, int H);
 
 #endif
 

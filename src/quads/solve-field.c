@@ -404,6 +404,7 @@ int main(int argc, char** args) {
         }
 
         // source extraction overlay
+        // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
 
         sl_append(backendargs, axyfn);
 

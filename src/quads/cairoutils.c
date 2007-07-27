@@ -52,19 +52,7 @@ static void write_png(unsigned char * img, int w, int h, FILE* fout)
     png_destroy_write_struct(&png_ptr, &png_info);
 }
 
-static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm) {
-    FILE* fout;
-    int outstdout = !strcmp(outfn, "-");
-    if (outstdout) {
-        fout = stdout;
-    } else {
-        fout = fopen(outfn, "wb");
-        if (!fout) {
-            fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
-            return -1;
-        }
-    }
-
+static int streamout(FILE* fout, unsigned char* img, int W, int H, int ppm) {
     if (ppm) {
         int i;
         // PPM...
@@ -79,6 +67,26 @@ static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm
     } else {
         write_png(img, W, H, fout);
     }
+    return 0;
+}
+
+static int writeout(const char* outfn, unsigned char* img, int W, int H, int ppm) {
+    FILE* fout;
+    int rtn;
+    int outstdout = !strcmp(outfn, "-");
+    if (outstdout) {
+        fout = stdout;
+    } else {
+        fout = fopen(outfn, "wb");
+        if (!fout) {
+            fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
+            return -1;
+        }
+    }
+
+    rtn = streamout(fout, img, W, H, ppm);
+    if (rtn)
+        return rtn;
 
     if (!outstdout) {
         if (fclose(fout)) {
@@ -95,6 +103,14 @@ int cairoutils_write_ppm(const char* outfn, unsigned char* img, int W, int H) {
 
 int cairoutils_write_png(const char* outfn, unsigned char* img, int W, int H) {
     return writeout(outfn, img, W, H, 0);
+}
+
+int cairoutils_stream_ppm(FILE* fout, unsigned char* img, int W, int H) {
+    return streamout(fout, img, W, H, 1);
+}
+
+int cairoutils_stream_png(FILE* fout, unsigned char* img, int W, int H) {
+    return streamout(fout, img, W, H, 0);
 }
 
 void cairoutils_argb32_to_rgba(unsigned char* img, int W, int H) {

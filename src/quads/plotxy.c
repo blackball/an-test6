@@ -22,16 +22,20 @@
 #include <stdint.h>
 
 #include <cairo.h>
+#include <ppm.h>
 
 #include "xylist.h"
 #include "boilerplate.h"
+#include "cairoutils.h"
 
-#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:"
+#define OPTIONS "hW:H:n:N:r:s:i:e:x:y:w:S:I:PC:"
 
 static void printHelp(char* progname) {
 	boilerplate_help_header(stdout);
-	printf("\nUsage: %s [options] > output.pgm\n"
+	printf("\nUsage: %s [options] > output.png\n"
 		   "  -i <input-file>   Input file (xylist)\n"
+           "  [-I <image>   ]   Input image on which plotting will occur; PPM format.\n"
+           "  [-P]              Write PPM output instead of PNG.\n"
 		   "  [-W <width>   ]   Width of output image (default: data-dependent).\n"
 		   "  [-H <height>  ]   Height of output image (default: data-dependent).\n"
 		   "  [-x <x-offset>]   X offset: position of the bottom-left pixel.\n"
@@ -42,6 +46,9 @@ static void printHelp(char* progname) {
 		   "  [-w <linewidth>]  Linewidth (default: 1.0).\n"
 		   "  [-s <shape>]      Shape of markers (default: c):\n"
 		   "                      c = circle\n"
+           "  [-C <color>]      Color to plot in: (default: white)\n"
+           "                       red\n"
+           "                       green\n"
 		   "  [-S <scale-factor>]  Scale xylist entries by this value before plotting.\n"
 		   "  [-e <extension>]  FITS extension to read (default 0).\n"
 		   "\n", progname);
@@ -53,6 +60,7 @@ extern int optind, opterr, optopt;
 int main(int argc, char *args[]) {
 	int argchar;
 	char* progname = args[0];
+    char* infn = NULL;
 	char* fname = NULL;
 	int W = 0, H = 0;
 	int n = 0, N = 0;
@@ -66,12 +74,34 @@ int main(int argc, char *args[]) {
 	int Nxy;
 	int i;
 	double scale = 1.0;
-
+    bool pngformat = TRUE;
+    unsigned char* img;
 	cairo_t* cairo;
 	cairo_surface_t* target;
+    float r=1.0, g=1.0, b=1.0;
 
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
+        case 'C':
+            if (!strcmp(optarg, "red")) {
+                r = 1.0;
+                g = b = 0.0;
+                break;
+            } else if (!strcmp(optarg, "green")) {
+                r = b = 0.0;
+                g = 1.0;
+                break;
+            } else {
+                fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
+                exit(-1);
+            }
+            break;
+        case 'P':
+            pngformat = FALSE;
+            break;
+        case 'I':
+            infn = optarg;
+            break;
 		case 'S':
 			scale = atof(optarg);
 			break;
@@ -161,14 +191,14 @@ int main(int argc, char *args[]) {
 	xylist_close(xyls);
 
 	// if required, scan data for max X,Y
-	if (!W) {
+	if (!(infn || W)) {
 		double maxX = 0.0;
 		for (i=n; i<Nxy; i++)
 			if (xyvals[2*i] > maxX)
 				maxX = xyvals[2*i];
 		W = ceil(maxX + rad - xoff);
 	}
-	if (!H) {
+	if (!(infn || H)) {
 		double maxY = 0.0;
 		for (i=n; i<Nxy; i++)
 			if (xyvals[2*i+1] > maxY)
@@ -176,14 +206,27 @@ int main(int argc, char *args[]) {
 		H = ceil(maxY + rad - yoff);
 	}
 
+    if (infn) {
+        ppm_init(&argc, args);
+        img = cairoutils_read_ppm(infn, &W, &H);
+        if (!img) {
+            fprintf(stderr, "Failed to read input image %s.\n", infn);
+            exit(-1);
+        }
+        cairoutils_rgba_to_argb32(img, W, H);
+    } else {
+        // Allocate a black image.
+        img = calloc(4 * W * H, 1);
+    }
+
 	fprintf(stderr, "Image size %i x %i.\n", W, H);
 
 	// Allocate image.
-	target = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W, H);
+    target = cairo_image_surface_create_for_data(img, CAIRO_FORMAT_ARGB32, W, H, W*4);
 	cairo = cairo_create(target);
 	cairo_set_line_width(cairo, lw);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
-	cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+	cairo_set_source_rgb(cairo, r, g, b);
 
 	// Draw markers.
 	for (i=n; i<Nxy; i++) {
@@ -214,20 +257,24 @@ int main(int argc, char *args[]) {
 
 	free(xyvals);
 
-	// Write pgm img.
-	printf("P5 %d %d %d\n", W, H, 255);
-	for (i=0; i<H; i++) {
-		int j;
-		uint32_t* row = (uint32_t*)(cairo_image_surface_get_data(target) + i*cairo_image_surface_get_stride(target));
-		for (j=0; j<W; j++) {
-			unsigned char r = (row[j] >> 16) & 0xff;
-			//printf("%c", r);
-			putchar(r);
-		}
-	}
+    // Convert image for output...
+    cairoutils_argb32_to_rgba(img, W, H);
+
+    if (pngformat) {
+        if (cairoutils_stream_png(stdout, img, W, H)) {
+            fprintf(stderr, "Failed to write PNG.\n");
+            exit(-1);
+        }
+    } else {
+        if (cairoutils_stream_ppm(stdout, img, W, H)) {
+            fprintf(stderr, "Failed to write PPM.\n");
+            exit(-1);
+        }
+    }
 
 	cairo_surface_destroy(target);
 	cairo_destroy(cairo);
+    free(img);
 
 	return 0;
 }

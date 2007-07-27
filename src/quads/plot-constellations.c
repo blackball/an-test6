@@ -30,9 +30,6 @@
 #include "an-bool.h"
 
 #include <cairo.h>
-
-#include <png.h>
-
 #include <ppm.h>
 
 #include "sip_qfits.h"

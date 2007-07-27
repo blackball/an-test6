@@ -36,6 +36,9 @@ endif
 ifeq ($(MAKECMDGOALS),plot-constellations)
 	include $(COMMON)/makefile.cairo
 endif
+ifeq ($(MAKECMDGOALS),plotxy)
+	include $(COMMON)/makefile.cairo
+endif
 
 LDFLAGS := $(LDFLAGS_DEF)
 LDFLAGS += -lm
@@ -100,7 +103,7 @@ PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 OLDEXECS := plotquads rawstartree checkquads
 #whynot
 
-CAIROEXECS := plotquad plotxy2 plot-constellations
+CAIROEXECS := plotquad plotxy plot-constellations
 
 OLDEXECS_OBJS := catalog.o histogram.o verify.o intmap.o tic.o matchfile.o \
 	codekd.o idfile.o \
@@ -331,11 +334,11 @@ plot-constellations: plot-constellations.o cairoutils.o ngc2000.o ngcic-accurate
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_L) $(PNG_LIB)
 
-plotxy2.o: plotxy2.c
+plotxy.o: plotxy.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<
 
-plotxy2: plotxy2.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB)
+plotxy: plotxy.o cairoutils.o boilerplate.o svn.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
+	$(CC) -o $@ $^ $(LDFLAGS) $(CAIRO_LIB) $(PNG_LIB) $(NETPBM_L)
 
 quadidx: quadidx.o $(UTIL_OBJS) $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
