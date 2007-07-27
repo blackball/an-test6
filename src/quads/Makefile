@@ -33,7 +33,7 @@ ifeq ($(MAKECMDGOALS),cairo)
 endif
 
 # HACK
-ifeq ($(MAKECMDGOALS),plot_constellations)
+ifeq ($(MAKECMDGOALS),plot-constellations)
 	include $(COMMON)/makefile.cairo
 endif
 
@@ -64,6 +64,9 @@ SHAREDLIBFLAGS := $(SHAREDLIBFLAGS_DEF)
 
 NETPBM_I :=
 NETPBM_L := -L. -lnetpbm
+
+PNG_INC := $(shell pkg-config --cflags libpng 2>/dev/null)
+PNG_LIB := $(shell pkg-config --libs libpng 2>/dev/null)
 
 QFITS_UTILS := fitsgetext subtable tabsort
 
@@ -325,8 +328,8 @@ plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
 plot-constellations: plot-constellations.o cairoutils.o ngc2000.o ngcic-accurate.o boilerplate.o svn.o \
-		$(ANUTILS_LIB)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(QFITS_LIB) $(CAIRO_LIB) $(NETPBM_L)
+		$(ANUTILS_LIB) $(QFITS_LIB)
+	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_L) $(PNG_LIB)
 
 plotxy2.o: plotxy2.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) -c -o $@ $<

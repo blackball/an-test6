@@ -123,36 +123,6 @@ static void hip_get_radec(unsigned char* hip, int star1,
     *dec = ifval.f;
 }
 
-// fires an ALPHA png out to fout
-static void write_png(unsigned char * img, int w, int h, FILE* fout)
-{
-    png_bytepp image_rows;
-    png_structp png_ptr;
-    png_infop png_info;
-    int n;
-
-    image_rows = malloc(sizeof(png_bytep)*h);
-    for (n = 0; n < h; n++)
-        image_rows[n] = (unsigned char *) img + 4*n*w;
-
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    png_info = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, fout);
-    png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
-    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-
-    png_set_IHDR(png_ptr, png_info, w, h, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-    png_write_info(png_ptr, png_info);
-
-    png_write_image(png_ptr, image_rows);
-    png_write_end(png_ptr, png_info);
-
-    free(image_rows);
-
-    png_destroy_write_struct(&png_ptr, &png_info);
-}
-
 extern char *optarg;
 extern int optind, opterr, optopt;
 
@@ -162,10 +132,8 @@ int main(int argc, char** args) {
     char* outfn = NULL;
     char* infn = NULL;
     sip_t sip;
-    FILE* fout;
     double scale = 1.0;
     bool pngformat = TRUE;
-    bool outstdout;
 
     FILE* fconst = NULL;
     cairo_t* cairo;
