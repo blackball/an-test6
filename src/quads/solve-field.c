@@ -53,12 +53,6 @@ doesn't require.
 > its work - and it cannot do anything sensible (except print a friendly
 > error message) if they don't exist.
 
-(3) Ok - maybe if you don't specify any filenames it can expect to read them
-> on stdin - that way you can pipe it up with find:
->
-> find dir | solve-field
-> cat filelist | solve-field
-
  (4) What should do if one of the files already exists - bail out, but have a
 > command-line flag that makes it overwrite them if they already exist?
 
@@ -119,10 +113,11 @@ static struct option long_options[] = {
 	{"tweak-order", required_argument, 0, 't'},
 	{"dir",         required_argument, 0, 'd'},
 	{"backend-config", required_argument, 0, 'c'},
+	{"overwrite",   no_argument,       0, 'O'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:G";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GO";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -139,18 +134,10 @@ static void print_help(const char* progname) {
 		   "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
 		   "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
 		   "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
+           "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
            "\n"
            "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
-}
-
-static void add_file_arg(sl* args, const char* argname, const char* file,
-						 const char* dir) {
-    sl_append(args, argname);
-	if (dir)
-		sl_appendf(args, "%s/%s", dir, file);
-	else
-		sl_append(args, file);
 }
 
 int main(int argc, char** args) {
@@ -160,10 +147,6 @@ int main(int argc, char** args) {
 	char* outdir = NULL;
 	char* image = NULL;
 	char* xyls = NULL;
-	char* infn;
-	char* cpy;
-	char* base;
-	char axy[1024];
 	char* cmd;
 	int i, f;
 	int rtn;
@@ -173,7 +156,8 @@ int main(int argc, char** args) {
 	int width = 0, height = 0;
     int nllargs;
     int nbeargs;
-    bool fromstdin;
+    bool fromstdin = FALSE;
+    bool overwrite = FALSE;
 
 	lowlevelargs = sl_new(16);
 	sl_append(lowlevelargs, "low-level-frontend");
@@ -190,6 +174,9 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'O':
+            overwrite = TRUE;
+            break;
 		case 'G':
 			guess_scale = FALSE;
 			break;
@@ -272,9 +259,15 @@ int main(int argc, char** args) {
         char* infile = NULL;
         bool isxyls;
         char* reason;
+        int len;
+        char* cpy;
+        char* base;
+        char *matchfn, *rdlsfn, *solvedfn, *wcsfn, *axyfn, *objsfn, *redgreenfn;
+        char *ngcfn;
+        sl* outfiles;
+        bool nextfile;
 
         if (fromstdin) {
-            int len;
             if (!fgets(fnbuf, sizeof(fnbuf), stdin)) {
                 if (ferror(stdin))
                     fprintf(stderr, "Failed to read a filename!\n");
@@ -311,11 +304,9 @@ int main(int argc, char** args) {
         if (image) {
             sl_append(lowlevelargs, "--image");
             sl_append(lowlevelargs, image);
-            infn = image;
         } else {
             sl_append(lowlevelargs, "--xylist");
             sl_append(lowlevelargs, xyls);
-            infn = xyls;
             /*
              if (!width || !height) {
              // Load the xylist and compute the min/max.
@@ -332,22 +323,70 @@ int main(int argc, char** args) {
             sl_appendf(lowlevelargs, "%i", height);
         }
 
-        cpy = strdup(infn);
-        base = strdup(basename(cpy));
-        free(cpy);
+        // Choose the base path/filename for output files.
+        cpy = strdup(infile);
         if (outdir)
-            snprintf(axy, sizeof(axy), "%s/%s.axy", outdir, base);
+            asprintf(&base, "%s/%s", outdir, basename(cpy));
         else
-            snprintf(axy, sizeof(axy), "%s.axy", base);
+            base = strdup(basename(cpy));
+        free(cpy);
+        len = strlen(base);
+        // trim .xxx / .xxxx
+        if (len > 4) {
+            if (base[len - 4] == '.')
+                base[len-4] = '\0';
+            if (base[len - 5] == '.')
+                base[len-5] = '\0';
+        }
+
+        // Compute the output filenames.
+        outfiles = sl_new(16);
+
+        axyfn      = sl_appendf(outfiles, "%s.axy",      base);
+        matchfn    = sl_appendf(outfiles, "%s.match",    base);
+        rdlsfn     = sl_appendf(outfiles, "%s.rdls",     base);
+        solvedfn   = sl_appendf(outfiles, "%s.solved",   base);
+        wcsfn      = sl_appendf(outfiles, "%s.wcs",      base);
+        objsfn     = sl_appendf(outfiles, "%s-objs.png", base);
+        redgreenfn = sl_appendf(outfiles, "%s-indx.png", base);
+        ngcfn      = sl_appendf(outfiles, "%s-ngc.png",  base);
         free(base);
+        base = NULL;
+
+        // Check for existing output filenames.
+        nextfile = FALSE;
+        for (i=0; i<sl_size(outfiles); i++) {
+            char* fn = sl_get(outfiles,i);
+            if (!file_exists(fn))
+                continue;
+            if (overwrite) {
+                if (unlink(fn)) {
+                    printf("Failed to delete an already-existing output file: \"%s\": %s\n", fn, strerror(errno));
+                    exit(-1);
+                }
+            } else {
+                printf("Output file \"%s\" already exists.  Bailing out.  "
+                       "Use the --overwrite flag to overwrite existing files.\n", fn);
+                printf("Continuing to next input file.\n");
+                nextfile = TRUE;
+                break;
+            }
+        }
+        if (nextfile) {
+            sl_free(outfiles);
+            continue;
+        }
 
         sl_append(lowlevelargs, "--out");
-        sl_append(lowlevelargs, axy);
-
-        add_file_arg(lowlevelargs, "--match",  "match.fits", outdir);
-        add_file_arg(lowlevelargs, "--rdls",   "rdls.fits",  outdir);
-        add_file_arg(lowlevelargs, "--solved", "solved",     outdir);
-        add_file_arg(lowlevelargs, "--wcs",    "wcs.fits",   outdir);
+        sl_append(lowlevelargs, axyfn);
+        sl_append(lowlevelargs, "--match");
+        sl_append(lowlevelargs, matchfn);
+        sl_append(lowlevelargs, "--rdls");
+        sl_append(lowlevelargs, rdlsfn);
+        sl_append(lowlevelargs, "--solved");
+        sl_append(lowlevelargs, solvedfn);
+        sl_append(lowlevelargs, "--wcs");
+        sl_append(lowlevelargs, wcsfn);
 
         sl_print(lowlevelargs);
 
@@ -364,7 +403,9 @@ int main(int argc, char** args) {
             exit(-1);
         }
 
-        sl_append(backendargs, axy);
+        // source extraction overlay
+
+        sl_append(backendargs, axyfn);
 
         sl_print(backendargs);
 
@@ -375,6 +416,11 @@ int main(int argc, char** args) {
             exit(-1);
         }
         free(cmd);
+
+        // sources + index overlay
+        // ngc/constellations overlay
+        // rdls?
+        sl_free(outfiles);
     }
 
     sl_free(lowlevelargs);
