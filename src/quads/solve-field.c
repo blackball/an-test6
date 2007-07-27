@@ -173,6 +173,7 @@ int main(int argc, char** args) {
 	int width = 0, height = 0;
     int nllargs;
     int nbeargs;
+    bool fromstdin;
 
 	lowlevelargs = sl_new(16);
 	sl_append(lowlevelargs, "low-level-frontend");
@@ -183,8 +184,9 @@ int main(int argc, char** args) {
 	while (1) {
 		int option_index = 0;
 		c = getopt_long(argc, args, OPTIONS, long_options, &option_index);
+        if (c == -1)
+            break;
 		switch (c) {
-        case -1:
 		case 'h':
 			help = TRUE;
 			break;
@@ -230,6 +232,10 @@ int main(int argc, char** args) {
 		print_help(args[0]);
 		exit(rtn);
 	}
+    if (optind == argc) {
+        printf("\nYou didn't specify any files to process, so I'm going to read a list of files on standard input...\n\n");
+        fromstdin = TRUE;
+    }
 
     if (outdir) {
 		asprintf(&cmd, "mkdir -p %s", outdir);
@@ -260,10 +266,30 @@ int main(int argc, char** args) {
     nllargs = sl_size(lowlevelargs);
     nbeargs = sl_size(backendargs);
 
-    for (f=optind; f<argc; f++) {
-        char* infile = args[f];
+    f = optind;
+    while (1) {
+        char fnbuf[1024];
+        char* infile = NULL;
         bool isxyls;
         char* reason;
+
+        if (fromstdin) {
+            int len;
+            if (!fgets(fnbuf, sizeof(fnbuf), stdin)) {
+                if (ferror(stdin))
+                    fprintf(stderr, "Failed to read a filename!\n");
+                break;
+            }
+            len = strlen(fnbuf);
+            if (fnbuf[len-1] == '\n')
+                fnbuf[len-1] = '\0';
+            infile = fnbuf;
+        } else {
+            if (f == argc)
+                break;
+            infile = args[f];
+            f++;
+        }
 
         sl_remove_from(lowlevelargs, nllargs);
         sl_remove_from(backendargs,  nbeargs);
