@@ -43,7 +43,7 @@
 #include "rdlist.h"
 #include "boilerplate.h"
 #include "mathutil.h"
-
+#include "cairoutils.h"
 #include "ngc2000.h"
 #include "ngcic-accurate.h"
 
@@ -262,48 +262,13 @@ int main(int argc, char** args) {
     label_offset /= scale;
 
     if (infn) {
-        int x,y;
-        int R, C, format;
-        pixval maxval;
-        pixel* pixelrow;
-        FILE* fin;
-
-        fin = fopen(infn, "rb");
-        if (!fin) {
-            fprintf(stderr, "Failed to read input image %s: %s\n", infn, strerror(errno));
+        ppm_init(&argc, args);
+        img = cairoutils_read_ppm(infn, &W, &H);
+        if (!img) {
+            fprintf(stderr, "Failed to read input image %s.\n", infn);
             exit(-1);
         }
-        ppm_init(&argc, args);
-        ppm_readppminit(fin, &C, &R, &maxval, &format);
-        pixelrow = ppm_allocrow(C);
-
-        printf("%i x %i, maxval %i, format 0x%x\n", C, R, maxval, format);
-
-        // Allocate image.
-        W = C;
-        H = R;
-        img = malloc(4 * W * H);
-
-        for (y=0; y<H; y++) {
-            ppm_readppmrow(fin, pixelrow, C, maxval, format);
-            for (x=0; x<W; x++) {
-                unsigned char a,r,g,b;
-                uint32_t* ipix;
-                pixel p;
-                if (maxval == 255)
-                    p = pixelrow[x];
-                else
-                    PPM_DEPTH(p, pixelrow[x], maxval, 255);
-                // Cairo uses packed-uint32 ARGB.
-                a = 255;
-                r = PPM_GETR(p);
-                g = PPM_GETG(p);
-                b = PPM_GETB(p);
-                ipix = (uint32_t*)(img + 4 * (y*W + x));
-                *ipix = (a << 24) | (r << 16) | (g << 8) | b;
-            }
-        }
-        ppm_freerow(pixelrow);
+        cairo_rgba_to_argb32(img, W, H);
     } else {
         // Allocate a black image.
         img = calloc(4 * W * H, 1);
@@ -606,48 +571,17 @@ int main(int argc, char** args) {
         }
     }
 
-    // Cairo's uint32 ARGB32 format is a little different than what we need
-    // for PNG output: uchar R,G,B,A.
-    for (i=0; i<(H*W); i++) {
-        unsigned char r,g,b,a;
-        uint32_t ipix = *((uint32_t*)(img + 4*i));
-        a = (ipix >> 24) & 0xff;
-        r = (ipix >> 16) & 0xff;
-        g = (ipix >>  8) & 0xff;
-        b = (ipix      ) & 0xff;
-        img[4*i + 0] = r;
-        img[4*i + 1] = g;
-        img[4*i + 2] = b;
-        img[4*i + 3] = a;
-    }
+    // Convert image for output...
+    cairoutils_argb32_to_rgba(img, W, H);
 
-    // are we outputting to stdout?
-    outstdout = !strcmp(outfn, "-");
-    if (outstdout) {
-        fout = stdout;
-    } else {
-        fout = fopen(outfn, "wb");
-        if (!fout) {
-            fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
+    if (pngformat) {
+        if (cairoutils_write_png(outfn, img, W, H)) {
+            fprintf(stderr, "Failed to write PNG.\n");
             exit(-1);
         }
-    }
-    if (pngformat) {
-        write_png(img, W, H, fout);
     } else {
-        // PPM...
-        fprintf(fout, "P6 %i %i %i\n", W, H, 255);
-        for (i=0; i<(H*W); i++) {
-            unsigned char* pix = img + 4*i;
-            if (fwrite(pix, 1, 3, fout) != 3) {
-                fprintf(stderr, "Failed to write pixels for PPM output.\n");
-                exit(-1);
-            }
-        }
-    }
-    if (!outstdout) {
-        if (fclose(fout)) {
-            fprintf(stderr, "Failed to close output file %s: %s\n", outfn, strerror(errno));
+        if (cairoutils_write_ppm(outfn, img, W, H)) {
+            fprintf(stderr, "Failed to write PPM.\n");
             exit(-1);
         }
     }
