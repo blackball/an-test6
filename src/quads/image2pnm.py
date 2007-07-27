@@ -6,6 +6,7 @@ Author: Keir Mierle 2007
 """
 import sys
 import os
+import tempfile
 
 imgcmds = {"FITS image data"  : ("fits", "an-fitstopnm -i %s > %s"),
            "JPEG image data"  : ("jpg",  "jpegtopnm %s > %s"),
@@ -27,10 +28,9 @@ def do_command(cmd):
         print >>sys.stderr, 'Command failed: %s' % cmd
         sys.exit(-1)
 
-def convert_image(infile, outfile, uncompressed, sanitized):
+def convert_image(infile, outfile, uncompressed, sanitized, force_ppm):
     filein, fileout = os.popen2('file -b -N -L %s' % infile)
     typeinfo = fileout.read()
-
     log('file output:', typeinfo.strip())
     
     # Trim extra data after the ,
@@ -52,16 +52,31 @@ def convert_image(infile, outfile, uncompressed, sanitized):
         new_infile = uncompressed
         log('compressed file, dumping to:', new_infile)
         do_command(compcmds[typeinfo][1] % (infile, new_infile))
-        return convert_image(new_infile, outfile, uncompressed, sanitized)
+        return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm)
 
     if not typeinfo in imgcmds:
         log('ERROR: image type not recognized:', typeinfo)
         return -1
 
+    if force_ppm:
+        original_outfile = outfile
+        filehandle, outfile = tempfile.mkstemp('pnm', 'image2pnm')
+
     # Do the actual conversion
     ext, cmd = imgcmds[typeinfo]
     do_command(cmd % (infile, outfile))
     print ext
+
+    if force_ppm:
+        filein, fileout = os.popen2('file -b -N -L %s' % outfile)
+        typeinfo = fileout.read()
+        typeinfo.strip()
+        if (typeinfo.startswith("Netpbm PGM")):
+            # Convert to PPM.
+            do_command("pgmtoppm white %s > %s" % (outfile, original_outfile))
+            os.unlink(outfile)
+        else:
+            os.rename(outfile, original_outfile)
 
     # Success
     return 0
@@ -83,6 +98,9 @@ def main():
     parser.add_option("-o", "--outfile",
                       dest="outfile",
                       help="output pnm image FILE", metavar="FILE")
+    parser.add_option("-p", "--ppm",
+                      action="store_true", dest="force_ppm",
+                      help="convert the output to PPM");
 
     (options, args) = parser.parse_args()
 
@@ -98,7 +116,8 @@ def main():
 
     return convert_image(options.infile, options.outfile,
                          options.uncompressed_outfile,
-                         options.sanitized_outfile)
+                         options.sanitized_outfile,
+                         options.force_ppm)
 
 if __name__ == '__main__':
     sys.exit(main())
