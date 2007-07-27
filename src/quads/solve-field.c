@@ -53,11 +53,6 @@ doesn't require.
 > its work - and it cannot do anything sensible (except print a friendly
 > error message) if they don't exist.
 
- (4) What should do if one of the files already exists - bail out, but have a
-> command-line flag that makes it overwrite them if they already exist?
-
-I'd say overwrite it, unless a flag --noclobber is activated
-
 (5) by default, we produce:
 - thumbnails myfile-objs.png (source extraction)
 - myfile-idx.png (sources we used to solve and index objects we found)
@@ -67,10 +62,6 @@ I'd say overwrite it, unless a flag --noclobber is activated
 
 * by default, we do not produce an entirely new fits file but this can
 be turned on
-
- (6) * by default, the output files corresponding to each source file go in
-the same directory as the source file, but you can invoke a flag to
-dump them somewhere else
 
 (7) * by default, we output to stdout a single line for each file something like:
 myimage.png: unsolved using X field objects
@@ -256,6 +247,7 @@ int main(int argc, char** args) {
     f = optind;
     while (1) {
         char fnbuf[1024];
+        char tmpfn[1024];
         char* infile = NULL;
         bool isxyls;
         char* reason;
@@ -263,9 +255,11 @@ int main(int argc, char** args) {
         char* cpy;
         char* base;
         char *matchfn, *rdlsfn, *solvedfn, *wcsfn, *axyfn, *objsfn, *redgreenfn;
-        char *ngcfn;
+        char *ngcfn, *ppmfn;
         sl* outfiles;
         bool nextfile;
+        int fid;
+        sl* plotargs;
 
         if (fromstdin) {
             if (!fgets(fnbuf, sizeof(fnbuf), stdin)) {
@@ -377,6 +371,20 @@ int main(int argc, char** args) {
             continue;
         }
 
+        if (image) {
+            sprintf(tmpfn, "/tmp/tmp.solve-fieldXXXXXX");
+            fid = mkstemp(tmpfn);
+            if (fid == -1) {
+                fprintf(stderr, "Failed to create temp file: %s\n", strerror(errno));
+                exit(-1);
+            }
+            ppmfn = sl_append(outfiles, tmpfn);
+
+            sl_append(lowlevelargs, "--pnm");
+            sl_append(lowlevelargs, ppmfn);
+            sl_append(lowlevelargs, "--force-ppm");
+        }
+
         sl_append(lowlevelargs, "--out");
         sl_append(lowlevelargs, axyfn);
         sl_append(lowlevelargs, "--match");
@@ -405,11 +413,43 @@ int main(int argc, char** args) {
 
         // source extraction overlay
         // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
+        plotargs = sl_new(16);
+        sl_append(plotargs, "plotxy");
+        sl_append(plotargs, "-i");
+        sl_append(plotargs, axyfn);
+        if (image) {
+            sl_append(plotargs, "-I");
+            sl_append(plotargs, ppmfn);
+        }
+        sl_append(plotargs, "-P");
+        sl_append(plotargs, "-C red -w 2 -N 50 -x 1 -y 1");
+
+        sl_append(plotargs, "|");
 
         sl_append(backendargs, axyfn);
+        sl_append(plotargs, "plotxy");
+        sl_append(plotargs, "-i");
+        sl_append(plotargs, axyfn);
+        sl_append(plotargs, "-I - -w 2 -r 3 -C red -n 50 -x 1 -y 1");
+
+        sl_append(plotargs, ">");
+        sl_append(plotargs, objsfn);
+
+        cmd = sl_implode(plotargs, " ");
+        printf("Running plot command:\n  %s\n", cmd);
+        rtn = system(cmd);
+        free(cmd);
+        if (rtn == -1) {
+            fprintf(stderr, "Failed to run plot command: %s\n", strerror(errno));
+            exit(-1);
+        }
+        if (WEXITSTATUS(rtn)) {
+            fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
+            exit(-1);
+        }
+
 
         sl_print(backendargs);
-
         cmd = sl_implode(backendargs, " ");
         //printf("Running backend:\n  %s\n", cmd);
         if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {

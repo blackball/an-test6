@@ -97,7 +97,8 @@ static struct option long_options[] = {
 	{"rdls",		required_argument, 0, 'R'},
 	{"wcs",			required_argument, 0, 'W'},
 	{"image",		required_argument, 0, 'i'},
-	{"pnm",				required_argument, 0, 'P'},
+	{"pnm",			required_argument, 0, 'P'},
+	{"force-ppm",	no_argument,       0, 'f'},
 	{"width",		required_argument, 0, 'w'},
 	{"height",		required_argument, 0, 'e'},
 	{"scale-low",	required_argument, 0, 'L'},
@@ -112,7 +113,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:f";
 
 static void print_help(const char* progname) {
 	// FIXME - add rest of args!
@@ -139,6 +140,7 @@ int main(int argc, char** args) {
 	int orig_nheaders;
 	FILE* fout;
 	char* savepnmfn = NULL;
+    bool force_ppm = FALSE;
 	bool guess_scale = FALSE;
 	dl* scales;
 	int i;
@@ -197,6 +199,9 @@ int main(int argc, char** args) {
 		case 'P':
 			savepnmfn = optarg;
 			break;
+        case 'f':
+            force_ppm = TRUE;
+            break;
 		case 'g':
 			guess_scale = TRUE;
 			break;
@@ -294,8 +299,9 @@ int main(int argc, char** args) {
 				 "image2pnm.py --infile \"%s\""
 				 "	--uncompressed-outfile \"%s\""
 				 "	--sanitized-fits-outfile \"%s\""
-				 "	--outfile \"%s\"",
-				 imagefn, uncompressedfn, sanitizedfn, pnmfn);
+				 "	--outfile \"%s\"%s",
+				 imagefn, uncompressedfn, sanitizedfn, pnmfn,
+                 (force_ppm ? " --ppm" : ""));
 		printf("Running: %s\n", cmd);
 		if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
             fprintf(stderr, "%s\n", errmsg);
