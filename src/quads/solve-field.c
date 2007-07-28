@@ -38,8 +38,8 @@
 
 TODO:
 
-(0) To me, it is important that if you type:
-"solve-field myfile.png" and NOTHING else, it should Just Work.
+-add quad to base-idx.png
+-depending on image size, do or don't plot constellations (plot-constellations -C)
 
 (1) it assumes you have "." in your path, which I never do.
 
@@ -54,12 +54,8 @@ doesn't require.
 > error message) if they don't exist.
 
 (5) by default, we produce:
-- thumbnails myfile-objs.png (source extraction)
-- myfile-idx.png (sources we used to solve and index objects we found)
 - myfile-ngc.png (ngc labels)
    -- but there should be a flag (e.g --pngs=off) to supress this
-- myfile.wcs.fits fits header
-
 * by default, we do not produce an entirely new fits file but this can
 be turned on
 
@@ -68,7 +64,6 @@ myimage.png: unsolved using X field objects
 or
 myimage.png: solved using X field objects, RA=rr,DEC=dd, size=AxB
 pixels=UxV arcmin
-
 
  */
 
@@ -259,7 +254,7 @@ int main(int argc, char** args) {
         sl* outfiles;
         bool nextfile;
         int fid;
-        sl* plotargs;
+        sl* cmdline;
 
         if (fromstdin) {
             if (!fgets(fnbuf, sizeof(fnbuf), stdin)) {
@@ -414,28 +409,28 @@ int main(int argc, char** args) {
 
         // source extraction overlay
         // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
-        plotargs = sl_new(16);
-        sl_append(plotargs, "plotxy");
-        sl_append(plotargs, "-i");
-        sl_append(plotargs, axyfn);
+        cmdline = sl_new(16);
+        sl_append(cmdline, "plotxy");
+        sl_append(cmdline, "-i");
+        sl_append(cmdline, axyfn);
         if (image) {
-            sl_append(plotargs, "-I");
-            sl_append(plotargs, ppmfn);
+            sl_append(cmdline, "-I");
+            sl_append(cmdline, ppmfn);
         }
-        sl_append(plotargs, "-P");
-        sl_append(plotargs, "-C red -w 2 -N 50 -x 1 -y 1");
+        sl_append(cmdline, "-P");
+        sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
 
-        sl_append(plotargs, "|");
+        sl_append(cmdline, "|");
 
-        sl_append(plotargs, "plotxy");
-        sl_append(plotargs, "-i");
-        sl_append(plotargs, axyfn);
-        sl_append(plotargs, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
+        sl_append(cmdline, "plotxy");
+        sl_append(cmdline, "-i");
+        sl_append(cmdline, axyfn);
+        sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
-        sl_append(plotargs, ">");
-        sl_append(plotargs, objsfn);
+        sl_append(cmdline, ">");
+        sl_append(cmdline, objsfn);
 
-        cmd = sl_implode(plotargs, " ");
+        cmd = sl_implode(cmdline, " ");
         printf("Running plot command:\n  %s\n", cmd);
         rtn = system(cmd);
         free(cmd);
@@ -447,7 +442,7 @@ int main(int argc, char** args) {
             fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
             exit(-1);
         }
-        sl_free(plotargs);
+        sl_free(cmdline);
 
         sl_append(backendargs, axyfn);
         sl_print(backendargs);
@@ -463,18 +458,18 @@ int main(int argc, char** args) {
             // boo.
             printf("Field didn't solve.\n");
         } else {
-            plotargs = sl_new(16);
+            cmdline = sl_new(16);
 
             // index rdls to xyls.
-            sl_append(plotargs, "wcs-rd2xy");
-            sl_append(plotargs, "-w");
-            sl_append(plotargs, wcsfn);
-            sl_append(plotargs, "-i");
-            sl_append(plotargs, rdlsfn);
-            sl_append(plotargs, "-o");
-            sl_append(plotargs, indxylsfn);
+            sl_append(cmdline, "wcs-rd2xy");
+            sl_append(cmdline, "-w");
+            sl_append(cmdline, wcsfn);
+            sl_append(cmdline, "-i");
+            sl_append(cmdline, rdlsfn);
+            sl_append(cmdline, "-o");
+            sl_append(cmdline, indxylsfn);
 
-            cmd = sl_implode(plotargs, " ");
+            cmd = sl_implode(cmdline, " ");
             printf("Running command:\n  %s\n", cmd);
             rtn = system(cmd);
             free(cmd);
@@ -486,32 +481,31 @@ int main(int argc, char** args) {
                 fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
                 exit(-1);
             }
-
-            sl_remove_all(plotargs);
+            sl_remove_all(cmdline);
 
             // sources + index overlay
-            sl_append(plotargs, "plotxy");
-            sl_append(plotargs, "-i");
-            sl_append(plotargs, axyfn);
+            sl_append(cmdline, "plotxy");
+            sl_append(cmdline, "-i");
+            sl_append(cmdline, axyfn);
             if (image) {
-                sl_append(plotargs, "-I");
-                sl_append(plotargs, ppmfn);
+                sl_append(cmdline, "-I");
+                sl_append(cmdline, ppmfn);
             }
-            sl_append(plotargs, "-P");
-            sl_append(plotargs, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
-            sl_append(plotargs, "|");
-            sl_append(plotargs, "plotxy");
-            sl_append(plotargs, "-i");
-            sl_append(plotargs, indxylsfn);
-            sl_append(plotargs, "-I - -w 2 -r 4 -C green -x 1 -y 1");
+            sl_append(cmdline, "-P");
+            sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
+            sl_append(cmdline, "|");
+            sl_append(cmdline, "plotxy");
+            sl_append(cmdline, "-i");
+            sl_append(cmdline, indxylsfn);
+            sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
             /*
-             sl_append(plotargs, " -P |");
-             sl_append(plotargs, "plotquad");
+             sl_append(cmdline, " -P |");
+             sl_append(cmdline, "plotquad");
              */
-            sl_append(plotargs, ">");
-            sl_append(plotargs, redgreenfn);
+            sl_append(cmdline, ">");
+            sl_append(cmdline, redgreenfn);
 
-            cmd = sl_implode(plotargs, " ");
+            cmd = sl_implode(cmdline, " ");
             printf("Running plot command:\n  %s\n", cmd);
             rtn = system(cmd);
             free(cmd);
@@ -523,7 +517,35 @@ int main(int argc, char** args) {
                 fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
                 exit(-1);
             }
-            sl_free(plotargs);
+            sl_remove_all(cmdline);
+
+            if (image) {
+				sl_append(cmdline, "plot-constellations");
+				sl_append(cmdline, "-w");
+				sl_append(cmdline, wcsfn);
+                sl_append(cmdline, "-i");
+                sl_append(cmdline, ppmfn);
+				sl_append(cmdline, "-N");
+				sl_append(cmdline, "-C");
+				sl_append(cmdline, ">");
+                sl_append(cmdline, ngcfn);
+
+				cmd = sl_implode(cmdline, " ");
+				printf("Running command:\n  %s\n", cmd);
+				rtn = system(cmd);
+				free(cmd);
+				if (rtn == -1) {
+					fprintf(stderr, "Failed to run command: %s\n", strerror(errno));
+					exit(-1);
+				}
+				if (WEXITSTATUS(rtn)) {
+					fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
+					exit(-1);
+				}
+				sl_remove_all(cmdline);
+            }
+
+            sl_free(cmdline);
 
             // ngc/constellations overlay
             // create field rdls?
