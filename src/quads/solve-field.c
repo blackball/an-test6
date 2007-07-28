@@ -527,7 +527,7 @@ int main(int argc, char** args) {
                 sl_append(cmdline, ppmfn);
 				sl_append(cmdline, "-N");
 				sl_append(cmdline, "-C");
-				sl_append(cmdline, ">");
+				sl_append(cmdline, "-o");
                 sl_append(cmdline, ngcfn);
 
 				cmd = sl_implode(cmdline, " ");
