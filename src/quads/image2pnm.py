@@ -15,6 +15,7 @@ imgcmds = {"FITS image data"  : ("fits", "an-fitstopnm -i %s > %s"),
            "Netpbm PPM"       : ("pnm",  "ppmtoppm < %s > %s"),
            "Netpbm PPM \"rawbits\" image data" : ("pnm",  "cp %s %s"),
            "Netpbm PGM"       : ("pnm",  "pgmtoppm %s > %s"),
+           "Netpbm PGM \"rawbits\" image data" : ("pnm",  "pgmtoppm %s > %s"),
            }
 
 compcmds = {"gzip compressed data"    : ("gz",  "gunzip -c %s > %s"),
