@@ -216,12 +216,19 @@ int main(int argc, char** args) {
 
 	printf("static const int constellations_N = %i;\n", sl_size(shortnames));
 
-	for (c=0; c<sl_size(shortnames); c++) {
-		printf("static const char* shortname_%i = \"%s\";\n", c, sl_get(shortnames, c));
-	}
+	/*
+	  for (c=0; c<sl_size(shortnames); c++) {
+	  printf("static const char* shortname_%i = \"%s\";\n", c, sl_get(shortnames, c));
+	  }
+	  printf("static const char* shortnames[] = {");
+	  for (c=0; c<sl_size(shortnames); c++) {
+	  printf("shortname_%i,", c);
+	  }
+	  printf("};\n");
+	*/
 	printf("static const char* shortnames[] = {");
 	for (c=0; c<sl_size(shortnames); c++) {
-		printf("shortname_%i,", c);
+		printf("\"%s\",", sl_get(shortnames, c));
 	}
 	printf("};\n");
 

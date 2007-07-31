@@ -16,6 +16,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#include <assert.h>
+
 #include "constellations.h"
 
 #include "stellarium-constellations.c"
@@ -24,17 +26,17 @@ int constellations_n() {
 	return constellations_N;
 }
 
-static int check_const_num(int i) {
+static void check_const_num(int i) {
 	assert(i >= 0);
 	assert(i < constellations_N);
 }
 
-static int check_star_num(int i) {
+static void check_star_num(int i) {
 	assert(i >= 0);
 	assert(i < stars_N);
 }
 
-char* constellations_get_shortname(int c) {
+const char* constellations_get_shortname(int c) {
 	check_const_num(c);
 	return shortnames[c];
 }
@@ -46,20 +48,32 @@ int constellations_get_nlines(int c) {
 
 il* constellations_get_lines(int c) {
 	il* list;
-	int* lines;
+	const int* lines;
 	int i;
 	check_const_num(c);
 	list = il_new(16);
 	lines = constellation_lines[c];
-	for (i=0; i<constellation_nlines[c]; i++) {
+	for (i=0; i<2*constellation_nlines[c]; i++) {
 		il_append(list, lines[i]);
 	}
 	return list;
 }
 
-void constellations_get_line(int c, int i, int* ep1, int* ep2) {
-	int* lines;
+il* constellations_get_unique_stars(int c) {
+	il* uniq;
+	const int* lines;
 	int i;
+	check_const_num(c);
+	uniq = il_new(16);
+	lines = constellation_lines[c];
+	for (i=0; i<2*constellation_nlines[c]; i++) {
+		il_insert_unique_ascending(uniq, lines[i]);
+	}
+	return uniq;
+}
+
+void constellations_get_line(int c, int i, int* ep1, int* ep2) {
+	const int* lines;
 	check_const_num(c);
 	assert(i >= 0);
 	assert(i < constellation_nlines[c]);
@@ -70,14 +84,14 @@ void constellations_get_line(int c, int i, int* ep1, int* ep2) {
 
 dl* constellations_get_lines_radec(int c) {
 	dl* list;
-	int* lines;
+	const int* lines;
 	int i;
 	check_const_num(c);
 	list = dl_new(16);
 	lines = constellation_lines[c];
 	for (i=0; i<constellation_nlines[c]; i++) {
 		int star = lines[i];
-		double* radec = star_positions + star*2;
+		const double* radec = star_positions + star*2;
 		dl_append(list, radec[0]);
 		dl_append(list, radec[1]);
 	}
@@ -85,7 +99,7 @@ dl* constellations_get_lines_radec(int c) {
 }
 
 void constellations_get_star_radec(int s, double* ra, double* dec) {
-	double* radec;
+	const double* radec;
 	check_star_num(s);
 	radec = star_positions + s*2;
 	*ra = radec[0];

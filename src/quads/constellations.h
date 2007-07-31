@@ -23,11 +23,13 @@
 
 int constellations_n();
 
-char* constellations_get_shortname(int constellation_num);
+const char* constellations_get_shortname(int constellation_num);
 
 int constellations_get_nlines(int constellation_num);
 
 il* constellations_get_lines(int constellation_num);
+
+il* constellations_get_unique_stars(int constellation_num);
 
 void constellations_get_line(int constellation_num, int line_num,
 							 int* ep1, int* ep2);
