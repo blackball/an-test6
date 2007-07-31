@@ -1072,7 +1072,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 				// 1.05 is a little safety factor.
 				factor = 1.05;
 				if (bp->indexrdls_expand > 0.0)
-					factor *= indexrdls_expand;
+					factor *= bp->indexrdls_expand;
 				res = kdtree_rangesearch_options(sp->index->starkd->tree, fieldcenter,
 				                                 fieldr2 * factor,
 				                                 KD_OPTIONS_SMALL_RADIUS |
