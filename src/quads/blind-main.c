@@ -34,9 +34,8 @@ static void printHelp(char* progname) {
 
 static int read_parameters(blind_t* bp);
 
-static blind_t my_bp;
-
 int main(int argc, char *argv[]) {
+	blind_t my_bp;
 	char* progname = argv[0];
 	blind_t* bp = &my_bp;
 	solver_t* sp = &(bp->solver);
