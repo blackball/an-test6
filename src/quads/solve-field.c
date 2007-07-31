@@ -85,6 +85,7 @@ pixels=UxV arcmin
 #include "bl.h"
 #include "ioutils.h"
 #include "xylist.h"
+#include "matchfile.h"
 
 static struct option long_options[] = {
 	// flags
@@ -124,6 +125,24 @@ static void print_help(const char* progname) {
            "\n"
            "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
+}
+
+static int run_command(const char* cmd) {
+	int rtn;
+	printf("Running command:\n  %s\n", cmd);
+	rtn = system(cmd);
+	if (rtn == -1) {
+		fprintf(stderr, "Failed to run command: %s\n", strerror(errno));
+		return -1;
+	}
+	if (WIFSIGNALED(rtn)) {
+		return -1;
+	}
+	rtn = WEXITSTATUS(rtn);
+	if (rtn) {
+		fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
+	}
+	return rtn;
 }
 
 int main(int argc, char** args) {
@@ -396,16 +415,9 @@ int main(int argc, char** args) {
 
         cmd = sl_implode(lowlevelargs, " ");
         printf("Running low-level-frontend:\n  %s\n", cmd);
-        rtn = system(cmd);
-        free(cmd);
-        if (rtn == -1) {
-            fprintf(stderr, "Failed to system() low-level-frontend: %s\n", strerror(errno));
-            exit(-1);
-        }
-        if (WEXITSTATUS(rtn)) {
-            fprintf(stderr, "low-level-frontend exited with exit status %i.\n", WEXITSTATUS(rtn));
-            exit(-1);
-        }
+		if (run_command(cmd))
+			exit(-1);
+		free(cmd);
 
         // source extraction overlay
         // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
@@ -432,16 +444,9 @@ int main(int argc, char** args) {
 
         cmd = sl_implode(cmdline, " ");
         printf("Running plot command:\n  %s\n", cmd);
-        rtn = system(cmd);
-        free(cmd);
-        if (rtn == -1) {
-            fprintf(stderr, "Failed to run plot command: %s\n", strerror(errno));
-            exit(-1);
-        }
-        if (WEXITSTATUS(rtn)) {
-            fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
-            exit(-1);
-        }
+		if (run_command(cmd))
+			exit(-1);
+		free(cmd);
         sl_free(cmdline);
 
         sl_append(backendargs, axyfn);
@@ -458,8 +463,10 @@ int main(int argc, char** args) {
             // boo.
             printf("Field didn't solve.\n");
         } else {
-            cmdline = sl_new(16);
-
+			matchfile* mf;
+            MatchObj* mo;
+			cmdline = sl_new(16);
+ 
             // index rdls to xyls.
             sl_append(cmdline, "wcs-rd2xy");
             sl_append(cmdline, "-w");
@@ -471,16 +478,9 @@ int main(int argc, char** args) {
 
             cmd = sl_implode(cmdline, " ");
             printf("Running command:\n  %s\n", cmd);
-            rtn = system(cmd);
-            free(cmd);
-            if (rtn == -1) {
-                fprintf(stderr, "Failed to run wcs-rd2xy command: %s\n", strerror(errno));
-                exit(-1);
-            }
-            if (WEXITSTATUS(rtn)) {
-                fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
-                exit(-1);
-            }
+			if (run_command(cmd))
+				exit(-1);
+			free(cmd);
             sl_remove_all(cmdline);
 
             // sources + index overlay
@@ -498,25 +498,34 @@ int main(int argc, char** args) {
             sl_append(cmdline, "-i");
             sl_append(cmdline, indxylsfn);
             sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
-            /*
-             sl_append(cmdline, " -P |");
-             sl_append(cmdline, "plotquad");
-             */
+
+			mf = matchfile_open(matchfn);
+			if (!mf) {
+				fprintf(stderr, "Failed to read matchfile %s.\n", matchfn);
+				exit(-1);
+			}
+			// just read the first match...
+			mo = matchfile_buffered_read_match(mf);
+			if (!mo) {
+				fprintf(stderr, "Failed to read a match from matchfile %s.\n", matchfn);
+				exit(-1);
+			}
+
+			sl_append(cmdline, " -P |");
+			sl_append(cmdline, "plotquad -I -");
+			for (i=0; i<8; i++)
+				sl_appendf(cmdline, " %g", mo->quadpix[i]);
+
+			matchfile_close(mf);
+			
             sl_append(cmdline, ">");
             sl_append(cmdline, redgreenfn);
 
             cmd = sl_implode(cmdline, " ");
             printf("Running plot command:\n  %s\n", cmd);
-            rtn = system(cmd);
-            free(cmd);
-            if (rtn == -1) {
-                fprintf(stderr, "Failed to run plot command: %s\n", strerror(errno));
-                exit(-1);
-            }
-            if (WEXITSTATUS(rtn)) {
-                fprintf(stderr, "plot command exited with exit status %i.\n", WEXITSTATUS(rtn));
-                exit(-1);
-            }
+			if (run_command(cmd))
+				exit(-1);
+			free(cmd);
             sl_remove_all(cmdline);
 
             if (image) {
@@ -532,22 +541,14 @@ int main(int argc, char** args) {
 
 				cmd = sl_implode(cmdline, " ");
 				printf("Running command:\n  %s\n", cmd);
-				rtn = system(cmd);
+				if (run_command(cmd))
+					exit(-1);
 				free(cmd);
-				if (rtn == -1) {
-					fprintf(stderr, "Failed to run command: %s\n", strerror(errno));
-					exit(-1);
-				}
-				if (WEXITSTATUS(rtn)) {
-					fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
-					exit(-1);
-				}
 				sl_remove_all(cmdline);
             }
 
             sl_free(cmdline);
 
-            // ngc/constellations overlay
             // create field rdls?
         }
 
