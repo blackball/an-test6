@@ -36,6 +36,11 @@ struct match_struct {
 	double sMinMax[3];
 	double sMaxMin[3];
 
+	// Pixel positions of the quad stars.
+	double quadpix[8];
+	// Star positions of the quad stars.
+	double quadxyz[12];
+
 	int16_t noverlap;
 	int16_t nconflict;
 	int16_t nfield;

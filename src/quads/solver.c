@@ -665,6 +665,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		mo.field[1] = fB;
 		mo.field[2] = fC;
 		mo.field[3] = fD;
+
+		memcpy(mo.quadpix, field, 8 * sizeof(double));
+		memcpy(mo.quadxyz, star, 12 * sizeof(double));
+
 		if (solver->index->idfile) {
 			mo.ids[0] = idfile_get_anid(solver->index->idfile, iA);
 			mo.ids[1] = idfile_get_anid(solver->index->idfile, iB);
