@@ -184,7 +184,7 @@ void blind_run(blind_t* bp) {
 			if (bp->cancelled)
 				break;
 
-			fname = pl_get(bp->indexnames, I);
+			fname = sl_get(bp->indexnames, I);
 			index = index_load(fname, 0);
 			if (!index) 
 				exit( -1);
