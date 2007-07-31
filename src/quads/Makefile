@@ -85,7 +85,7 @@ UTIL_OBJS := fileutil.o boilerplate.o svn.o
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
-	blind_wcs.o index.o tweak.o log.o
+	blind_wcs.o index.o tweak.o log.o blind-main.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -279,7 +279,7 @@ unpermute-quads: unpermute-quads.o codekd.o \
 
 backend: backend.o fileutil.o $(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
-solve-field: solve-field.o fileutil.o \
+solve-field: solve-field.o matchfile.o fileutil.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
 
 low-level-frontend: low-level-frontend.o fileutil.o \
