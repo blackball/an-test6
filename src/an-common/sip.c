@@ -153,6 +153,12 @@ bool sip_radec2pixelxy(sip_t* sip, double ra, double dec, double *px, double *py
 	return TRUE;
 }
 
+bool sip_xyzarr2pixelxy(sip_t* sip, const double* xyz, double *px, double *py) {
+	double ra, dec;
+	xyzarr2radecdeg(xyz, &ra, &dec);
+	return sip_radec2pixelxy(sip, ra, dec, px, py);
+}
+
 // xyz unit vector to Pixels.
 bool   tan_xyzarr2pixelxy(tan_t* tan, double* xyzpt, double *px, double *py)
 {

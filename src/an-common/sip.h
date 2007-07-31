@@ -138,8 +138,12 @@ void   sip_pixelxy2xyzarr(sip_t* tan, double px, double py, double *xyz);
 WarnUnusedResult
 bool sip_radec2pixelxy(sip_t* sip, double a, double d, double *px, double *py);
 
+WarnUnusedResult
+bool sip_xyzarr2pixelxy(sip_t* sip, const double* xyz, double *px, double *py);
+
 double tan_det_cd(tan_t* tan);
 double sip_det_cd(sip_t* sip);
+// returns pixel scale in arcseconds/pixel (NOT arcsec^2)
 double tan_pixel_scale(tan_t* tn);
 double sip_pixel_scale(sip_t* sip);
 void   sip_calc_inv_distortion(sip_t* sip, double U, double V, double* u, double *v);
