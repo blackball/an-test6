@@ -43,6 +43,7 @@
 #include "cairoutils.h"
 #include "ngc2000.h"
 #include "ngcic-accurate.h"
+#include "constellations.h"
 
 const char* OPTIONS = "hi:o:w:W:H:s:NCp";
 

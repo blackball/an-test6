@@ -85,7 +85,8 @@ UTIL_OBJS := fileutil.o boilerplate.o svn.o
 OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
-	blind_wcs.o index.o tweak.o log.o blind-main.o
+	blind_wcs.o index.o tweak.o log.o blind-main.o \
+	plot-constellations.o constellations.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -147,6 +148,12 @@ fitsutils: $(FITS_UTILS)
 
 simplexy: fits2xy
 .PHONY: simplexy
+
+stellarium-constellations.c: grab-stellarium-constellations
+	./grab-stellarium-constellations > $@
+
+grab-stellarium-constellations: grab-stellarium-constellations.o \
+		boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB)
 
 test_dfind: $(TEST_DFIND_OBJ)
 
@@ -330,7 +337,7 @@ plotquad: plotquad.o cairoutils.o boilerplate.o svn.o $(ANUTILS_LIB) $(QFITS_LIB
 plot-constellations.o: plot-constellations.c
 	$(CC) $(CFLAGS) $(CAIRO_INC) $(NETPBM_I) -c -o $@ $<
 
-plot-constellations: plot-constellations.o cairoutils.o ngc2000.o ngcic-accurate.o boilerplate.o svn.o \
+plot-constellations: plot-constellations.o constellations.o cairoutils.o ngc2000.o ngcic-accurate.o boilerplate.o svn.o \
 		$(ANUTILS_LIB) $(QFITS_LIB)
 	$(CC) $(LDFLAGS) $^ -o $@ $(CAIRO_LIB) $(NETPBM_L) $(PNG_LIB)
 
