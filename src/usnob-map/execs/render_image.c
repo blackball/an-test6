@@ -7,7 +7,8 @@
 
 char* image_dirs[] = {
 	"/home/gmaps/gmaps-rdls/",
-	"/home/gmaps/ontheweb-data/"
+	"/home/gmaps/ontheweb-data/",
+	"."
 };
 
 int render_image(unsigned char* img, render_args_t* args) {
@@ -93,8 +94,8 @@ int render_image(unsigned char* img, render_args_t* args) {
 				pix[3] = 0;
 				continue;
 			}
-			pppx = lround(imagex);
-			pppy = lround(imagey);
+			pppx = lround(imagex-1); // The -1 is because FITS uses 1-indexing for pixels. DOH
+			pppy = lround(imagey-1);
 			pix = pixel(i, j, img, args);
 			if (pppx >= 0 && pppx < imw &&
 				pppy >= 0 && pppy < imh) {
@@ -102,7 +103,8 @@ int render_image(unsigned char* img, render_args_t* args) {
 				pix[0] = imbuf[3 * (imw * pppy + pppx) + 0];
 				pix[1] = imbuf[3 * (imw * pppy + pppx) + 1];
 				pix[2] = imbuf[3 * (imw * pppy + pppx) + 2];
-				pix[3] = min(255, pix[0]+pix[1]+pix[2]);
+//				pix[3] = min(255, pix[0]+pix[1]+pix[2]);
+				pix[3] = 255;
 			} else {
 				// transparent.
 				pix[3] = 0;
