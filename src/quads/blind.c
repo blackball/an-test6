@@ -1063,14 +1063,18 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 				int i;
 				double fieldcenter[3];
 				double fieldr2;
+				double factor;
 
 				// find all the index stars that are inside the circle that bounds
 				// the field.
 				star_midpoint(fieldcenter, bestmo->sMin, bestmo->sMax);
 				fieldr2 = distsq(fieldcenter, bestmo->sMin, 3);
 				// 1.05 is a little safety factor.
+				factor = 1.05;
+				if (bp->indexrdls_expand > 0.0)
+					factor *= indexrdls_expand;
 				res = kdtree_rangesearch_options(sp->index->starkd->tree, fieldcenter,
-				                                 fieldr2 * 1.05,
+				                                 fieldr2 * factor,
 				                                 KD_OPTIONS_SMALL_RADIUS |
 				                                 KD_OPTIONS_RETURN_POINTS);
 				if (!res || !res->nres) {

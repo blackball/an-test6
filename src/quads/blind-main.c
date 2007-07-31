@@ -175,6 +175,8 @@ static int read_parameters(blind_t* bp)
 			bp->indexrdlsfname = strdup(nextword);
 		} else if (is_word(line, "indexrdls_solvedonly", &nextword)) {
 			bp->indexrdls_solvedonly = TRUE;
+		} else if (is_word(line, "indexrdls_expand ", &nextword)) {
+			bp->indexrdls_expand = atof(nextword);
 		} else if (is_word(line, "solved ", &nextword)) {
 			free(bp->solved_in);
 			free(bp->solved_out);

@@ -93,6 +93,7 @@ struct blind_params {
 	matchfile* mf;
 	rdlist* indexrdls;
 	bool indexrdls_solvedonly;
+	double indexrdls_expand;
 
 	int cpulimit;
 	int cpu_start;
