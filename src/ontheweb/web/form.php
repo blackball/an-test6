@@ -847,6 +847,8 @@ function process_data ($vals) {
 				"field " . $xyls_fn . "\n" .
 				"match " . sprintf($match_pat, $stripenum) . "\n" .
 				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
+				# Science paper
+				"indexrdls_expand 3\n" .
 				"solved " . $solved_fn . "\n" .
 				"cancel " . $cancel_fn . "\n" .
 				"wcs " . $wcs_fn . "\n" .
