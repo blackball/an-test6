@@ -1417,7 +1417,9 @@ void dl_print(dl* list) {
 
 
 sl* sl_new(int blocksize) {
-	return pl_new(blocksize);
+	pl* lst = pl_new(blocksize);
+	assert(lst);
+	return lst;
 }
 
 void sl_init(sl* list, int blocksize) {
@@ -1442,6 +1444,7 @@ int   sl_size(sl* list) {
 
 char* sl_append(sl* list, const char* data) {
 	char* copy = strdup(data);
+	assert(copy);
 	pl_append(list, copy);
 	return copy;
 }
