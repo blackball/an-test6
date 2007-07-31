@@ -98,7 +98,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate \
-	get-healpix
+	get-healpix whynot
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
@@ -303,6 +303,12 @@ blind: blind-main.o blind.o solver.o codekd.o matchfile.o tic.o \
 whynot2: whynot2.o solver.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o \
 		idfile.o verify.o svd.o intmap.o blind_wcs.o noise.o \
+		$(UTIL_OBJS) \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+
+whynot: whynot.o index.o codekd.o matchfile.o tic.o \
+		solvedclient.o solvedfile.o \
+		idfile.o verify.o svd.o intmap.o blind_wcs.o log.o \
 		$(UTIL_OBJS) \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
