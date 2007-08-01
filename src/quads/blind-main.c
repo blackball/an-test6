@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
 	qfits_err_statset(1);
 
-	memset(&bp, 0, sizeof(blind_t));
+	memset(bp, 0, sizeof(blind_t));
 
 	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
