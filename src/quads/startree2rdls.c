@@ -49,7 +49,6 @@ void print_help(char* progname)
 
 int main(int argc, char** args) {
     int argchar;
-	char* basename;
 	char* outfn = NULL;
 	char* fn;
     rdlist* rdls;
@@ -98,7 +97,7 @@ int main(int argc, char** args) {
         }
 
 		printf("Reading stars...\n");
-		for (i=0; i<N; i++) {
+		for (i=0; i<Nstars; i++) {
             double xyz[3];
             double radec[2];
 			if (!(i % 200000)) {
