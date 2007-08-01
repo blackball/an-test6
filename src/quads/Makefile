@@ -87,7 +87,7 @@ OTHER_OBJS := usnob.o usnob_fits.o tycho2.o tycho2_fits.o bt.o catalog.o \
 	idfile.o codefile.o histogram.o tic.o codekd.o svd.o verify.o \
 	solver.o matchfile.o solvedclient.o solvedfile.o intmap.o pnpoly.o \
 	blind_wcs.o index.o tweak.o log.o blind-main.o \
-	plot-constellations.o constellations.o
+	plot-constellations.o constellations.o quadcenters.o
 
 2MASSOBJ := 2masstofits.o 2mass_catalog.o 2mass.o
 
@@ -99,7 +99,7 @@ PIPELINE := usnobtofits tycho2tofits build-an-catalog hpowned cut-an \
 
 PROSPECTUS := plotcat quadidx codeprojections quadlocations \
 	quadscales quadsperstar wcs-xy2rd wcs-rd2xy certifiable wcs-annotate \
-	get-healpix whynot
+	get-healpix whynot quadcenters
 
 # old and miscellaneous executables that aren't part of the pipeline.
 OLDEXECS := plotquads rawstartree checkquads
@@ -311,6 +311,9 @@ whynot: whynot.o index.o codekd.o matchfile.o tic.o \
 		solvedclient.o solvedfile.o \
 		idfile.o verify.o svd.o intmap.o blind_wcs.o log.o \
 		$(UTIL_OBJS) \
+		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
+
+quadcenters: quadcenters.o fileutil.o boilerplate.o svn.o \
 		$(ANFILES_LIB) $(ANUTILS_LIB) $(LIBKD_LIB) $(QFITS_LIB)
 
 agreeable: agreeable.o matchfile.o solvedfile.o solvedclient.o \
