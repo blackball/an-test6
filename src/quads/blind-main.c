@@ -157,6 +157,8 @@ static int read_parameters(blind_t* bp)
 			bp->verify_dist2 = arcsec2distsq(atof(nextword));
 		} else if (is_word(line, "verify_pix ", &nextword)) {
 			sp->verify_pix = atof(nextword);
+		} else if (is_word(line, "nsolves ", &nextword)) {
+			bp->nsolves = atoi(nextword);
 		} else if (is_word(line, "ratio_tosolve ", &nextword)) {
 			bp->logratio_tosolve = log(atof(nextword));
 		} else if (is_word(line, "ratio_tokeep ", &nextword)) {

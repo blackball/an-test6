@@ -35,6 +35,10 @@ struct blind_params {
 	double logratio_tokeep;
 	double logratio_tosolve;
 
+    // How many solving quads are required before we stop?
+    int nsolves;
+    int nsolves_sofar;
+
 	// Filenames
 	char *fieldfname;
 	char *matchfname, *indexrdlsfname;

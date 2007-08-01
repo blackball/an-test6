@@ -422,6 +422,7 @@ void blind_init(blind_t* bp) {
 	bp->lastfield = -1;
 	bp->tweak_aborder = DEFAULT_TWEAK_ABORDER;
 	bp->tweak_abporder = DEFAULT_TWEAK_ABPORDER;
+    bp->nsolves = 1;
 
 	sp->userdata = bp;
 	sp->record_match_callback = record_match_callback;
@@ -752,8 +753,14 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 		logmsg("Field %i: error writing a match.\n", mo->fieldnum);
 	}
 
-	if (mo->logodds >= bp->logratio_tosolve)
-		return TRUE;
+	if (mo->logodds >= bp->logratio_tosolve) {
+        bp->nsolves_sofar++;
+        if (bp->nsolves_sofar >= bp->nsolves)
+            return TRUE;
+        else
+            logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
+                   bp->nsolves_sofar, bp->nsolves);
+    }
 
 	return FALSE;
 }
@@ -921,6 +928,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		solver_reset_best_match(sp);
 
 		bp->fieldnum = fieldnum;
+        bp->nsolves_sofar = 0;
 
 		if (verify_wcs) {
 			// fabricate a match...
