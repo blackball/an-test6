@@ -333,7 +333,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Found %i correspondences for stars involved in quads (partially contained).\n",
 				il_size(corrstars));
 
-		// For each index star, find the quads of which it is a part.
+		// Find quads built only from stars with correspondences.
 		corrquads = il_new(16);
 		corruniqquads = il_new(16);
 		for (j=0; j<il_size(corrstars); j++) {
@@ -345,11 +345,22 @@ int main(int argc, char** args) {
 			}
 			//fprintf(stderr, "star %i is involved in %i quads.\n", starnum, nquads);
 			for (k=0; k<nquads; k++) {
+				/* Don't need this - since we'll only get "full" quads if all four are in the "corr" set.
+				  uint sA, sB, sC, sD;
+				  int quad = quads[k];
+				  quadfile_get_starids(indx->quads, quad, &sA, &sB, &sC, &sD);
+				  if (!(il_contains(corrstars, sA) &&
+				  il_contains(corrstars, sB) &&
+				  il_contains(corrstars, sC) &&
+				  il_contains(corrstars, sD)))
+				  continue;
+				*/
 				il_insert_ascending(corrquads, quads[k]);
 				il_insert_unique_ascending(corruniqquads, quads[k]);
 			}
 		}
-		fprintf(stderr, "Found %i quads built from stars with correspondences.\n", il_size(corruniqquads));
+		// This number doesn't mean anything :)
+		//fprintf(stderr, "Found %i quads built from stars with correspondences.\n", il_size(corruniqquads));
 
 		// Find quads that are fully contained in the image.
 		corrfullquads = il_new(16);
@@ -364,6 +375,22 @@ int main(int argc, char** args) {
 		}
 		fprintf(stderr, "Found %i quads built from stars with correspondencs, fully contained in the field.\n", il_size(corrfullquads));
 
+		for (j=0; j<il_size(corrfullquads); j++) {
+			uint stars[4];
+			int k;
+			int ind;
+			double px,py;
+			int quad = il_get(corrfullquads, j);
+			quadfile_get_starids(indx->quads, quad, stars+0, stars+1, stars+2, stars+3);
+			// Gah! map...
+			for (k=0; k<4; k++) {
+				ind = il_index_of(starlist, stars[k]);
+				px = dl_get(starxylist, ind*2+0);
+				py = dl_get(starxylist, ind*2+1);
+				printf("%g %g ", px, py);
+			}
+			printf("\n");
+		}
 
 		il_free(fullquadlist);
 		il_free(uniqquadlist);

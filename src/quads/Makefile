@@ -33,6 +33,7 @@ ifeq ($(MAKECMDGOALS),cairo)
 endif
 
 # HACK
+include $(COMMON)/makefile.cairo
 ifeq ($(MAKECMDGOALS),plot-constellations)
 	include $(COMMON)/makefile.cairo
 endif
