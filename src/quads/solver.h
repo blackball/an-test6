@@ -174,6 +174,7 @@ void      solver_set_default_values(solver_t* solver);
 void      solver_free(solver_t*);
 void      solver_compute_quad_range(solver_t* solver, index_t* index, double*, double*);
 void      solver_run(solver_t* solver);
+void solver_reset_best_match(solver_t* sp);
 
 void      solver_transform_corners(solver_t* solver, MatchObj* mo);
 void      solver_inject_match(solver_t* solver, MatchObj* mo);

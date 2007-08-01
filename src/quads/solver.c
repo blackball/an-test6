@@ -74,6 +74,15 @@ static double field_gety(solver_t* sp, int index) {
 	return sp->field[2*index+1];
 }
 
+void solver_reset_best_match(solver_t* sp) {
+	sp->best_logodds = -HUGE_VAL;
+	memset(&(sp->best_match), 0, sizeof(MatchObj));
+	sp->best_index = NULL;
+	sp->best_index_num = 0;
+	sp->best_match_solves = FALSE;
+	sp->have_best_match = FALSE;
+}
+
 void solver_init(solver_t* sp)
 {
 	memset(sp, 0, sizeof(solver_t));

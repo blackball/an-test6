@@ -918,6 +918,8 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		sp->quit_now = FALSE;
 		sp->mo_template = &template ;
 
+		solver_reset_best_match(sp);
+
 		bp->fieldnum = fieldnum;
 
 		if (verify_wcs) {
