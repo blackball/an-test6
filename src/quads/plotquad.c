@@ -31,7 +31,7 @@
 #include "bl.h"
 #include "permutedsort.h"
 
-#define OPTIONS "hW:H:w:I:C:P"
+#define OPTIONS "hW:H:w:I:C:PRo:"
 
 static void printHelp(char* progname) {
     int i;
@@ -49,6 +49,8 @@ static void printHelp(char* progname) {
     printf("  [-W <width> ]       Width of output image.\n"
 		   "  [-H <height>]       Height of output image.\n"
 		   "  [-w <width>]      Width of lines to draw (default: 5).\n"
+		   "  [-R]:  Read quads from stdin.\n"
+		   "  [-o <opacity>]\n"
 		   "  <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4> [...]\n"
 		   "\n");
 }
@@ -66,6 +68,9 @@ int main(int argc, char *args[]) {
 	dl* coords;
     char* infn = NULL;
     bool pngformat = TRUE;
+	bool fromstdin = FALSE;
+	bool randomcolor = FALSE;
+	float a = 1.0;
 
     unsigned char* img;
 	cairo_t* cairo;
@@ -77,11 +82,19 @@ int main(int argc, char *args[]) {
 	while ((argchar = getopt(argc, args, OPTIONS)) != -1)
 		switch (argchar) {
         case 'C':
-            if (cairoutils_parse_color(optarg, &r, &g, &b)) {
+			if (!strcasecmp(optarg, "random"))
+				randomcolor = TRUE;
+            else if (cairoutils_parse_color(optarg, &r, &g, &b)) {
                 fprintf(stderr, "I didn't understand color \"%s\".\n", optarg);
                 exit(-1);
             }
             break;
+		case 'o':
+			a = atof(optarg);
+			break;
+		case 'R':
+			fromstdin = TRUE;
+			break;
         case 'I':
             infn = optarg;
             break;
@@ -104,11 +117,10 @@ int main(int argc, char *args[]) {
 			exit(-1);
 		}
 
-	if ((argc - optind) % 8) {
+	if (!fromstdin && ((argc - optind) % 8)) {
 		printHelp(progname);
 		exit(-1);
 	}
-
 	if (!((W && H) || infn)) {
 		printHelp(progname);
 		exit(-1);
@@ -122,6 +134,20 @@ int main(int argc, char *args[]) {
 	for (i=optind; i<argc; i++) {
 		double pos = atof(args[i]);
 		dl_append(coords, pos);
+	}
+	if (fromstdin) {
+		for (;;) {
+			double p[8];
+			if (feof(stdin))
+				break;
+			if (fscanf(stdin, "%lg %lg %lg %lg %lg %lg %lg %lg ",
+					   p+0, p+1, p+2, p+3, p+4, p+5, p+6, p+7) != 8) {
+				fprintf(stderr, "Failed to read a quad from stdin.\n");
+				exit(-1);
+			}
+			for (i=0; i<8; i++)
+				dl_append(coords, p[i]);
+		}
 	}
 	nquads = dl_size(coords) / 8;
 
@@ -145,7 +171,8 @@ int main(int argc, char *args[]) {
 	//cairo_set_line_join(cairo, CAIRO_LINE_JOIN_ROUND);
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
 
-	cairo_set_source_rgb(cairo, r, g, b);
+	if (!randomcolor)
+		cairo_set_source_rgba(cairo, r, g, b, a);
 
 	for (i=0; i<nquads; i++) {
 		int j;
@@ -168,6 +195,13 @@ int main(int argc, char *args[]) {
 		}
 		permuted_sort_set_params(theta, sizeof(double), compare_doubles);
 		permuted_sort(perm, 4);
+
+		if (randomcolor) {
+			r = ((rand() % 128) + 127) / 255.0;
+			g = ((rand() % 128) + 127) / 255.0;
+			b = ((rand() % 128) + 127) / 255.0;
+			cairo_set_source_rgba(cairo, r, g, b, a);
+		}
 
 		for (j=0; j<4; j++) {
 			if (j==0)
