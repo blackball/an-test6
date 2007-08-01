@@ -125,12 +125,12 @@ void solver_compute_quad_range(solver_t* sp, index_t* index,
 		             sp->codetol / sp->funits_upper;
 		*minAB -= scalefudge;
 		//logverb(bp, "Scale fudge: %g pixels.\n", scalefudge);
-		logmsg("Set minAB to %g\n", *minAB);
+		//logmsg("Set minAB to %g\n", *minAB);
 	}
 	if (sp->funits_lower != 0.0) {
 		*maxAB = index->index_scale_upper / sp->funits_lower;
 		*maxAB += scalefudge;
-		logmsg("Set maxAB to %g\n", *maxAB);
+		//logmsg("Set maxAB to %g\n", *maxAB);
 	}
 }
 
@@ -294,7 +294,7 @@ void solver_run(solver_t* solver)
 			// FIXME die horribly the indexes have differing cx_less_than_dx
 		}
 	}
-	logmsg("extreme scale range: [%g, %g] pixels\n", sqrt(solver->minminAB2), sqrt(solver->maxmaxAB2));
+	logmsg("Quad scale range: [%g, %g] pixels\n", sqrt(solver->minminAB2), sqrt(solver->maxmaxAB2));
 
 	pquads = calloc(numxy * numxy, sizeof(pquad));
 
