@@ -23,7 +23,6 @@
 #include <math.h>
 #include <assert.h>
 
-#include "quadfile.h"
 #include "kdtree.h"
 #include "fileutil.h"
 #include "starutil.h"
@@ -43,8 +42,8 @@ void print_help(char* progname)
 	fprintf(stderr, "Usage: %s\n"
 			"   -r <rdls-output-file>\n"
 			"   [-h]: help\n"
-			"   <base-name> [<base-name> ...]\n\n"
-			"Reads .quad and .skdt files.  Writes an RDLS containing the quad centers (midpoints of AB), one field per input file.\n\n",
+			"   <skdt> [<skdt> ...]\n\n"
+			"Reads .skdt files.  Writes an RDLS containing the star locations.\n",
 	        progname);
 }
 
@@ -53,7 +52,6 @@ int main(int argc, char** args) {
 	char* basename;
 	char* outfn = NULL;
 	char* fn;
-	quadfile* qf;
     rdlist* rdls;
 	startree* skdt = NULL;
 	int i;
@@ -85,18 +83,7 @@ int main(int argc, char** args) {
 
 	for (; optind<argc; optind++) {
 		int Nstars;
-		basename = args[optind];
-		printf("Reading files with basename %s\n", basename);
-
-		fn = mk_quadfn(basename);
-		qf = quadfile_open(fn, 0);
-		if (!qf) {
-			fprintf(stderr, "Failed to open quad file %s.\n", fn);
-            exit(-1);
-		}
-		free_fn(fn);
-
-        fn = mk_streefn(basename);
+        fn = args[optind];
         printf("Trying to open star kdtree %s...\n", fn);
         skdt = startree_open(fn);
         if (!skdt) {
@@ -110,22 +97,16 @@ int main(int argc, char** args) {
             exit(-1);
         }
 
-		printf("Reading quads...\n");
-		for (i=0; i<qf->numquads; i++) {
-			uint stars[4];
-            double axyz[3], bxyz[3];
-            double midab[3];
+		printf("Reading stars...\n");
+		for (i=0; i<N; i++) {
+            double xyz[3];
             double radec[2];
 			if (!(i % 200000)) {
 				printf(".");
 				fflush(stdout);
 			}
-			quadfile_get_starids(qf, i, stars, stars+1, stars+2, stars+3);
-            startree_get(skdt, stars[0], axyz);
-            startree_get(skdt, stars[1], bxyz);
-            star_midpoint(midab, axyz, bxyz);
-            xyzarr2radecdegarr(midab, radec);
-
+            startree_get(skdt, i, xyz);
+            xyzarr2radecdegarr(xyz, radec);
             if (rdlist_write_entries(rdls, radec, 1)) {
                 fprintf(stderr, "Failed to write a RA,Dec entry.\n");
                 exit(-1);
@@ -134,7 +115,6 @@ int main(int argc, char** args) {
 		printf("\n");
 
         startree_close(skdt);
-		quadfile_close(qf);
 
         if (rdlist_fix_field(rdls)) {
             fprintf(stderr, "Failed to fix RDLS field header.\n");
@@ -150,3 +130,4 @@ int main(int argc, char** args) {
 
 	return 0;
 }
+
