@@ -757,7 +757,7 @@ function process_data ($vals) {
 		"  mv " . $indexrdls_fn . ".tmp " . $indexrdls_fn . "\n" .
 		"  echo Merging match files...\n" .
 		"  " . $fitsgetext . " -e 0 -e 1 -i " . sprintf($match_pat, 1) . " -o " . $match_fn . ".tmp\n" .
-		"  for ((s=1;; s++)); do\n" .
+		"  for ((s=2;; s++)); do\n" .
 		"    FN=\$(printf " . $match_pat . " \$s)\n" .
 		"    if [ ! -e \$FN ]; then\n" .
 		"      break;\n" .
