@@ -54,15 +54,8 @@ int main(int argc, char *argv[]) {
 
 	qfits_err_statset(1);
 
-	memset(bp, 0, sizeof(blind_t));
-
 	// Read input settings until "run" is encountered; repeat.
 	for (;;) {
-		if (bp->hit_total_timelimit)
-			break;
-		if (bp->hit_total_cpulimit)
-			break;
-
 		tic();
 
 		blind_init(bp);
@@ -94,8 +87,12 @@ int main(int argc, char *argv[]) {
 
 		blind_restore_logging(bp);
 
-		blind_cleanup(bp);
+		if (bp->hit_total_timelimit)
+			break;
+		if (bp->hit_total_cpulimit)
+			break;
 
+		blind_cleanup(bp);
 	}
 
 	qfits_cache_purge(); // for valgrind
