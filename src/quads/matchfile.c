@@ -194,6 +194,7 @@ static void init_matchfile_fitstruct() {
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qtried", nil, quads_tried, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qmatched", nil, quads_matched, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "qscaleok", nil, quads_scaleok, 1, FALSE);
+	SET_FIELDS(fs, i, TFITS_BIN_TYPE_I, "qpeers", nil, quad_npeers, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "nverified", nil, nverified, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "timeused", nil, timeused, 1, FALSE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_E, "logodds", nil, logodds, 1, FALSE);

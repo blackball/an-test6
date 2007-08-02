@@ -27,12 +27,14 @@
 #include "kdtree.h"
 #include "fileutil.h"
 #include "starutil.h"
+#include "mathutil.h"
+#include "fitsioutils.h"
 #include "bl.h"
 #include "starkd.h"
 #include "boilerplate.h"
 #include "rdlist.h"
 
-#define OPTIONS "hr:"
+#define OPTIONS "hr:R"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -42,6 +44,7 @@ void print_help(char* progname)
 	boilerplate_help_header(stderr);
 	fprintf(stderr, "Usage: %s\n"
 			"   -r <rdls-output-file>\n"
+            "   [-R]: add quad radius to RDLS file.\n"
 			"   [-h]: help\n"
 			"   <base-name> [<base-name> ...]\n\n"
 			"Reads .quad and .skdt files.  Writes an RDLS containing the quad centers (midpoints of AB), one field per input file.\n\n",
@@ -56,10 +59,14 @@ int main(int argc, char** args) {
 	quadfile* qf;
     rdlist* rdls;
 	startree* skdt = NULL;
+    bool addradius = FALSE;
 	int i;
 
     while ((argchar = getopt (argc, args, OPTIONS)) != -1)
         switch (argchar) {
+        case 'R':
+            addradius = TRUE;
+            break;
 		case 'r':
 			outfn = optarg;
 			break;
@@ -81,6 +88,22 @@ int main(int argc, char** args) {
     if (rdlist_write_header(rdls)) {
         fprintf(stderr, "Failed to write RDLS header.\n");
         exit(-1);
+    }
+
+    if (addradius) {
+        // HACK!
+        uint ncols, nrows, tablesize;
+        qfits_table* table;
+        char* nil = " ";
+        ncols = 3;
+        nrows = 0;
+        tablesize = 0;
+        table = qfits_table_new("", QFITS_BINTABLE, tablesize, ncols, nrows);
+        fits_add_column(table, 0, rdls->xtype, 1, (rdls->xunits ? rdls->xunits : nil), rdls->xname);
+        fits_add_column(table, 1, rdls->ytype, 1, (rdls->yunits ? rdls->yunits : nil), rdls->yname);
+        fits_add_column(table, 2, TFITS_BIN_TYPE_D, 1, "deg", "QUADRADIUS");
+        table->tab_w = qfits_compute_table_width(table);
+        rdls->table = table;
     }
 
 	for (; optind<argc; optind++) {
@@ -129,6 +152,14 @@ int main(int argc, char** args) {
             if (rdlist_write_entries(rdls, radec, 1)) {
                 fprintf(stderr, "Failed to write a RA,Dec entry.\n");
                 exit(-1);
+            }
+
+            if (addradius) {
+                double rad = arcsec2deg(distsq2arcsec(distsq(midab, axyz, 3)));
+                if (fits_write_data_D(rdls->fid, rad)) {
+                    fprintf(stderr, "Failed to write quad radius.\n");
+                    exit(-1);
+                }
             }
 		}
 		printf("\n");

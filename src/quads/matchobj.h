@@ -41,6 +41,10 @@ struct match_struct {
 	// Star positions of the quad stars.
 	double quadxyz[12];
 
+    // How many quads were matched to this single quad (not a running total)
+    // (only counts a single ABCD permutation)
+    int16_t quad_npeers;
+
 	int16_t noverlap;
 	int16_t nconflict;
 	int16_t nfield;
