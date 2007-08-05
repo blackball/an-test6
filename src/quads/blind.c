@@ -754,13 +754,15 @@ static bool record_match_callback(MatchObj* mo, void* userdata) {
 	}
 
 	if (mo->logodds >= bp->logratio_tosolve) {
-        bp->nsolves_sofar++;
-        if (bp->nsolves_sofar >= bp->nsolves)
-            return TRUE;
-        else
-            logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
-                   bp->nsolves_sofar, bp->nsolves);
-    }
+		bp->nsolves_sofar++;
+		if (bp->nsolves_sofar >= bp->nsolves) {
+			logmsg("Solved field with index %s\n", bp->solver.index->indexname); // FIXME blatent encapsulation violation
+			return TRUE;
+		} else {
+			logmsg("Found a quad that solves the image; that makes %i of %i required.\n",
+					bp->nsolves_sofar, bp->nsolves);
+		}
+	}
 
 	return FALSE;
 }
