@@ -1,0 +1,77 @@
+Research Code Snapshot (August 2007) for Astrometry.net
+=========================================================
+Copyright 2006, 2007 David W. Hogg, Dustin Lang, Keir Mierle and Sam Roweis.
+
+   This code is meant as an accompanyment for an upcoming paper and its main
+   purpose is to allow reproduction of the results in that paper.
+
+   This is research code only and is not intended for scientific use in reducing
+   data or other analyses.
+
+   This release includes a snapshot of all of the components of our current
+   research code, including routines to:
+
+     * Convert raw USNO and Tycho2 into FITS format for easier use
+     * Uniformize, deduplicate, and cut the FITSified catalogs
+     * A simple but powerful HEALPIX implementation
+     * QFITS library with several modifications
+     * libkd, a compact and high-performance kdtree library
+
+   In principle, the code in the tarball is sufficient to reproduce our entire
+   astrometry system and replicate our blind astrometry results (e.g. on the
+   SDSS fields). However, this requires the entire USNO-B 1.0 catalogue which
+   is about 80GB in size. Unfortunately, we can't distribute our pre-built
+   indexes at this time; contact us for more information. This will change soon
+   and we will redistribute our pre-cooked indexes (about 30GB of data). They
+   are the same indexes used by our online solving system.
+
+QUICKSTART
+----------
+
+   To compile, you will need to get the cairo includes, netpbm and stellarium;
+   $ sudo apt-get install libcairo2-dev libnetpbm10-dev netpbm stellarium-data
+
+   Then build the solving system along with plotting extras
+   $ make extra
+
+   Finally, solve a field
+   $ cd quads
+   $ ./solve-field my_field.jpg
+
+   That should solve the field, and produce a number of outputs named
+   'my_field.*'. The one of interest to most astronomers is my_field.wcs, which is
+   a snippet of FITS header which contains a WCS for the image in question.
+
+PROBLEMS COMPILING?
+-------------------
+
+I run a hip 90's era unix derivative and cairo doesn't work.
+
+   If you don't have or can't get cairo, you won't be able to get pretty overlay
+   plots of the solutions, but the solver should still work. To build the
+   solver components minus plotting, run 'make' instead of 'make extra'.
+
+I can't find stellarium-data!
+
+   The stellarium-data package is needed for constellations; if for whatever
+   reason the package isn't available, you'll have to get an (old) version of
+   stellarium from the following url:
+   http://sourceforge.net/project/downloading.php?group_id=48857&filename=stellarium-0.7.1.tar.gz
+   and copy 'hipparcos.fab' and 'constellationship.fab' into the quads/ directory
+   of the astrometry sourcebase; i.e.
+   $ tar xzf stellarium-0.7.1.tar.gz
+   $ cd stellarium-0.7.1
+   $ cp data/sky_cultures/western/constellationship.fab data/hipparcos.fab <path-to-quads-dir>
+   where path-to-quads-dir is the whereever you extracted the sources to.
+
+   We haven't updated our code to use the new stellarium data files, which is
+   why you need to get an older version.
+
+LICENSE
+-------
+   The Astrometry.net suite is free software licensed under the GNU GPL,
+   version 2.  See the file LICENSE for the full terms of the GNU GPL.
+
+CONTACT
+-------
+   Please send inquires/bug reports to code@astrometry.net
