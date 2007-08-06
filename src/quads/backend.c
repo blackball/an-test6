@@ -79,6 +79,7 @@ typedef struct indexinfo indexinfo_t;
 
 struct backend {
 	bl* indexinfos;
+	sl* index_paths;
 	int ibiggest;
 	int ismallest;
 	double sizesmallest;
@@ -119,11 +120,23 @@ static int get_index_scales(const char* indexname,
 	return 0;
 }
 
+#define BUFSZ 300
 static int add_index(backend_t* backend, char* index)
 {
 	double lo, hi;
 	indexinfo_t ii;
-	if (get_index_scales(index, &lo, &hi)) {
+	bool found_index = FALSE;
+	int i = 0;
+	char full_index_path[BUFSZ];
+	for (i=0; i<sl_size(backend->index_paths); i++) {
+		char* index_path = sl_get(backend->index_paths, i);
+		snprintf(full_index_path, BUFSZ, "%s/%s", index_path, index);
+		if (get_index_scales(full_index_path, &lo, &hi) == 0) {
+			found_index = TRUE;
+			break;
+		}
+	}
+	if (!found_index) {
 		printf("Failed to get the range of quad scales for index \"%s\".\n", index);
 		return -1;
 	}
@@ -181,8 +194,11 @@ static int parse_config_file(FILE* fconf, backend_t* backend)
 			backend->minwidth = atof(nextword);
 		} else if (is_word(line, "maxwidth ", &nextword)) {
 			backend->maxwidth = atof(nextword);
+		} else if (is_word(line, "add_path ", &nextword)) {
+			sl_append(backend->index_paths, strdup(nextword));
 		} else {
 			printf("Didn't understand this config file line: \"%s\"\n", line);
+			return -1; // unknown config line is a firing offense
 		}
 
 	}
@@ -672,6 +688,7 @@ backend_t* backend_new()
 {
 	backend_t* backend = calloc(1, sizeof(backend_t));
 	backend->indexinfos = bl_new(16, sizeof(indexinfo_t));
+	backend->index_paths = sl_new(10);
 	backend->sizesmallest = HUGE_VAL;
 	backend->sizebiggest = -HUGE_VAL;
 	backend->blind = strdup(default_blind_command);
