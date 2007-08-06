@@ -32,10 +32,15 @@ QUICKSTART
    $ sudo apt-get install libcairo2-dev libnetpbm10-dev netpbm stellarium-data
 
    Then build the solving system along with plotting extras
+   $ make
    $ make extra
 
-   Finally, solve a field
+   Configure the backend by editing backend.cfg, and adding the path to the
+   indexes you have.
    $ cd quads
+   $ vim backend.cfg
+
+   Finally, solve a field
    $ ./solve-field my_field.jpg
 
    That should solve the field, and produce a number of outputs named
@@ -50,6 +55,9 @@ I run a hip 90's era unix derivative and cairo doesn't work.
    If you don't have or can't get cairo, you won't be able to get pretty overlay
    plots of the solutions, but the solver should still work. To build the
    solver components minus plotting, run 'make' instead of 'make extra'.
+
+   solve-field will fail when it tries to plot stuff, but it should produce a
+   wcs file and other useful stuff.
 
 I can't find stellarium-data!
 
@@ -66,6 +74,10 @@ I can't find stellarium-data!
 
    We haven't updated our code to use the new stellarium data files, which is
    why you need to get an older version.
+
+   If you built the sources, but only then realized you were missing the data
+   files, you'll need to do a make clean before re-trying because of makefile
+   stupidity.
 
 LICENSE
 -------
