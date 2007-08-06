@@ -39,6 +39,10 @@ QUICKSTART
    indexes you have.
    $ cd quads
    $ vim backend.cfg
+   Change the 'add_path' line to point to where your copy of the index is.
+
+   The astrometry solver is composed of many executables, add them to your path:
+   $ export PATH=$PATH:"`pwd`"
 
    Finally, solve a field
    $ ./solve-field my_field.jpg
@@ -69,8 +73,10 @@ I can't find stellarium-data!
    of the astrometry sourcebase; i.e.
    $ tar xzf stellarium-0.7.1.tar.gz
    $ cd stellarium-0.7.1
-   $ cp data/sky_cultures/western/constellationship.fab data/hipparcos.fab <path-to-quads-dir>
-   where path-to-quads-dir is the whereever you extracted the sources to.
+   $ cp data/sky_cultures/western/constellationship.fab <path-to-quads-dir>
+   $ cp data/hipparcos.fab <path-to-quads-dir>
+   where path-to-quads-dir is the whereever you extracted the sources to with
+   quads/ at the end.
 
    We haven't updated our code to use the new stellarium data files, which is
    why you need to get an older version.
