@@ -88,12 +88,23 @@ pixels=UxV arcmin
 #include "matchfile.h"
 
 static struct option long_options[] = {
-	// flags
-	{"help",        no_argument,       0, 'h'
-	}, {"width",       required_argument, 0, 'W'}, {"height",      required_argument, 0, 'H'}, {"scale-low",	required_argument, 0, 'L'}, {"scale-high",	required_argument, 0, 'U'}, {"scale-units", required_argument, 0, 'u'}, {"no-tweak",    no_argument,       0, 'T'}, {"no-guess-scale", no_argument,    0, 'G'}, {"tweak-order", required_argument, 0, 't'}, {"dir",         required_argument, 0, 'd'}, {"backend-config", required_argument, 0, 'c'}, {"overwrite",   no_argument,       0, 'O'}, {0, 0, 0, 0}
+	{"help",           no_argument,       0, 'h'},
+	{"width",          required_argument, 0, 'W'},
+	{"height",         required_argument, 0, 'H'},
+	{"scale-low",      required_argument, 0, 'L'},
+	{"scale-high",	   required_argument, 0, 'U'},
+	{"scale-units",    required_argument, 0, 'u'},
+	{"no-tweak",       no_argument,       0, 'T'},
+	{"no-guess-scale", no_argument,       0, 'G'},
+	{"tweak-order",    required_argument, 0, 't'},
+	{"dir",            required_argument, 0, 'd'},
+	{"backend-config", required_argument, 0, 'c'},
+	{"files-on-stdin", no_argument,       0, 'f'},
+	{"overwrite",      no_argument,       0, 'O'},
+	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GO";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOf";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -111,6 +122,7 @@ static void print_help(const char* progname) {
 	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
 	       "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
+	       "  [--files-on-stdin]: read files to solve on stdin, one per line (-f)\n"
 	       "\n"
 	       "  [<image-file-1> <image-file-2> ...] [<xyls-file-1> <xyls-file-2> ...]\n"
 	       "\n", progname);
@@ -206,16 +218,21 @@ int main(int argc, char** args) {
 		case 'd':
 			outdir = optarg;
 			break;
+		case 'f':
+			fromstdin = TRUE;
+			break;
 		}
 	}
+
+	if (optind == argc) {
+		printf("ERROR: You didn't specify any files to process.\n");
+		help = TRUE;
+	}
+
 	rtn = 0;
 	if (help) {
 		print_help(args[0]);
 		exit(rtn);
-	}
-	if (optind == argc) {
-		printf("\nYou didn't specify any files to process, so I'm going to read a list of files on standard input...\n\n");
-		fromstdin = TRUE;
 	}
 
 	if (outdir) {
@@ -233,8 +250,8 @@ int main(int argc, char** args) {
 		}
 		/*
 		 struct stat st;
-		 if (stat(outdir, &st)) {
-		 if (errno == ENOENT) {
+		 if (stat(outdir, &st)) 
+		 if (errno == ENOENT) 
 		 // try to mkdir it.
 		 */
 	}
@@ -258,7 +275,7 @@ int main(int argc, char** args) {
 		char* cpy;
 		char* base;
 		char *matchfn, *rdlsfn, *solvedfn, *wcsfn, *axyfn, *objsfn, *redgreenfn;
-		char *ngcfn, *ppmfn, *indxylsfn;
+		char *ngcfn, *ppmfn=NULL, *indxylsfn;
 		sl* outfiles;
 		bool nextfile;
 		int fid;
@@ -287,8 +304,9 @@ int main(int argc, char** args) {
 		printf("Checking if file \"%s\" is xylist or image: ", infile);
 		isxyls = xylist_is_file_xylist(image, NULL, NULL, &reason);
 		printf(isxyls ? "xyls\n" : "image\n");
-		if (!isxyls)
+		if (!isxyls) {
 			printf("  (%s)\n", reason);
+		}
 
 		if (isxyls) {
 			xyls = infile;
