@@ -140,7 +140,8 @@ static int add_index(backend_t* backend, char* index)
 		printf("Failed to get the range of quad scales for index \"%s\".\n", index);
 		return -1;
 	}
-	ii.indexname = strdup(index);
+	printf("Found index: %s\n", full_index_path);
+	ii.indexname = strdup(full_index_path);
 	ii.losize = lo;
 	ii.hisize = hi;
 	bl_append(backend->indexinfos, &ii);
