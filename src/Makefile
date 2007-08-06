@@ -23,7 +23,9 @@ all:
 
 # Targets that require extra libraries or which are otherwise tricky.
 extra:
+	$(MAKE) -C an-common
 	$(MAKE) -C quads cairo
+web:
 	$(MAKE) -C usnob-map/execs
 	$(MAKE) -C ontheweb/execs
 
