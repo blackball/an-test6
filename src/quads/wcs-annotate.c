@@ -123,7 +123,7 @@ int main(int argc, char** args) {
 	N = ngc_num_entries();
 	for (i=0; i<N; i++) {
 		ngc_entry* ngc;
-		pl* names;
+		sl* names;
 		double ra, dec;
 		double x,y;
 		int n;
@@ -160,9 +160,9 @@ int main(int argc, char** args) {
 
 		names = ngc_get_names(ngc);
 		if (names) {
-			for (n=0; n<pl_size(names); n++)
-				printf(" / %s", (char*)pl_get(names, n));
-			pl_free(names);
+			for (n=0; n<sl_size(names); n++)
+				printf(" / %s", sl_get(names, n));
+			sl_free(names);
 		}
 		if (pix)
 			printf(" near pixel (%i, %i)\n", (int)round(x), (int)round(y));

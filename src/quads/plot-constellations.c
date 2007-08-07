@@ -207,6 +207,7 @@ int main(int argc, char** args) {
 			const char* shortname;
 			il* lines;
             il* uniqstars;
+			il* inboundstars;
 			int i;
             double ra,dec;
             double px,py;
@@ -217,6 +218,7 @@ int main(int argc, char** args) {
 
 			shortname = constellations_get_shortname(c);
 			uniqstars = constellations_get_unique_stars(c);
+			inboundstars = il_new(16);
 
 			//fprintf(stderr, "%s: %i unique stars.\n", shortname, il_size(uniqstars));
 
@@ -225,19 +227,22 @@ int main(int argc, char** args) {
 			Ninbounds = 0;
             for (i=0; i<il_size(uniqstars); i++) {
                 double ra, dec, px, py;
-				constellations_get_star_radec(il_get(uniqstars, i), &ra, &dec);
+				int star;
+				star = il_get(uniqstars, i);
+				constellations_get_star_radec(star, &ra, &dec);
 				//fprintf(stderr, "star %i: ra,dec (%g,%g)\n", il_get(uniqstars, i), ra, dec);
                 if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
                     continue;
 				if (px < 0 || py < 0 || px*scale > W || py*scale > H)
 					continue;
 				Ninbounds++;
+				il_append(inboundstars, star);
 			}
+			il_free(uniqstars);
 			//fprintf(stderr, "%i are in-bounds.\n", Ninbounds);
 			// Only draw this constellation if at least 2 of its stars
 			// are within the image bounds.
 			if (Ninbounds < 2) {
-				il_free(uniqstars);
 				continue;
 			}
 
@@ -250,29 +255,32 @@ int main(int argc, char** args) {
             cairo_set_line_width(cairo, cw);
             // Also find center of mass.
             cmass[0] = cmass[1] = cmass[2] = 0.0;
-            for (i=0; i<il_size(uniqstars); i++) {
+            for (i=0; i<il_size(inboundstars); i++) {
                 double xyz[3];
                 double ra, dec, px, py;
-				constellations_get_star_radec(il_get(uniqstars, i), &ra, &dec);
+				int star = il_get(inboundstars, i);
+				constellations_get_star_radec(star, &ra, &dec);
                 if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
                     continue;
+				if (px < 0 || py < 0 || px*scale > W || py*scale > H)
+					continue;
                 cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
                 cairo_stroke(cairo);
-
                 radecdeg2xyzarr(ra, dec, xyz);
                 cmass[0] += xyz[0];
                 cmass[1] += xyz[1];
                 cmass[2] += xyz[2];
             }
-            cmass[0] /= il_size(uniqstars);
-            cmass[1] /= il_size(uniqstars);
-            cmass[2] /= il_size(uniqstars);
+            cmass[0] /= il_size(inboundstars);
+            cmass[1] /= il_size(inboundstars);
+            cmass[2] /= il_size(inboundstars);
             xyzarr2radecdeg(cmass, &ra, &dec);
 
-			il_free(uniqstars);
+			il_free(inboundstars);
 
             if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
                 continue;
+
 			fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
 
 			// If the label will be off-screen, move it back on.
@@ -285,9 +293,11 @@ int main(int argc, char** args) {
 				px = W/scale - textents.width;
 			if ((py+textents.height)*scale > H)
 				py = H/scale - textents.height;
+			fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
 
             cairo_move_to(cairo, px, py);
             cairo_show_text(cairo, shortname);
+			cairo_stroke(cairo);
 
 			// Draw the lines.
             cairo_set_line_width(cairo, lw);
@@ -342,7 +352,7 @@ int main(int argc, char** args) {
             ngc_entry* ngc = ngc_get_entry(i);
             double px, py;
 			sl* str;
-            pl* names;
+            sl* names;
             double pixsize;
             float ara, adec;
 			char* text;
@@ -366,14 +376,13 @@ int main(int argc, char** args) {
 			sl_appendf(str, "%s %i", (ngc->is_ngc ? "NGC" : "IC"), ngc->id);
 
             names = ngc_get_names(ngc);
-			// FIXME - make ngc_get_names() return an sl.
             if (names) {
                 int n;
-                for (n=0; n<pl_size(names); n++) {
-					sl_appendf(str, " / %s", (char*)pl_get(names, n));
+                for (n=0; n<sl_size(names); n++) {
+					sl_appendf(str, " / %s", sl_get(names, n));
                 }
             }
-            pl_free(names);
+            sl_free(names);
 
 			text = sl_implode(str, "");
             cairo_move_to(cairo, px + label_offset, py + dy);

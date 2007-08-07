@@ -58,7 +58,7 @@ typedef struct ngc_entry ngc_entry;
 // find the common of the given ngc_entry, if it has one.
 char* ngc_get_name(ngc_entry* entry, int num);
 
-pl* ngc_get_names(ngc_entry* entry);
+sl* ngc_get_names(ngc_entry* entry);
 
 extern ngc_entry ngc_entries[];
 

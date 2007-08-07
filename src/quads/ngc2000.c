@@ -64,15 +64,15 @@ char* ngc_get_name(ngc_entry* entry, int num) {
 	return NULL;
 }
 
-pl* ngc_get_names(ngc_entry* entry) {
+sl* ngc_get_names(ngc_entry* entry) {
 	int i;
-	pl* list = NULL;
+	sl* list = NULL;
 	for (i=0; i<sizeof(ngc_names)/sizeof(ngc_name); i++) {
 		if ((entry->is_ngc == ngc_names[i].is_ngc) &&
 			(entry->id == ngc_names[i].id)) {
 			if (!list)
-				list = pl_new(16);
-			pl_append(list, ngc_names[i].name);
+				list = sl_new(4);
+			sl_append(list, ngc_names[i].name);
 		}
 	}
 	return list;
