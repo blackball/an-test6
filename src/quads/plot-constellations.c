@@ -44,8 +44,9 @@
 #include "ngc2000.h"
 #include "ngcic-accurate.h"
 #include "constellations.h"
+#include "brightstars.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCp";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBp";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -58,6 +59,7 @@ void print_help(char* progname) {
            "   [-s <scale>]: scale image coordinates by this value before plotting.\n"
            "   [-N]: plot NGC objects\n"
            "   [-C]: plot constellations\n"
+		   "   [-B]: plot named bright stars\n"
            "\n", progname);
 }
 
@@ -94,12 +96,16 @@ int main(int argc, char** args) {
     qfits_header* hdr;
 
     bool NGC = FALSE, constell = FALSE;
+	bool bright = FALSE;
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
         case 'h':
             print_help(args[0]);
             exit(0);
+		case 'B':
+			bright = TRUE;
+			break;
         case 'N':
             NGC = TRUE;
             break;
@@ -397,6 +403,43 @@ int main(int argc, char** args) {
             cairo_stroke(cairo);
         }
     }
+
+	if (bright) {
+		int i;
+		int N;
+        double dy;
+        cairo_font_extents_t extents;
+
+        cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+        cairo_font_extents(cairo, &extents);
+        dy = extents.ascent * 0.5;
+
+		N = bright_stars_n();
+		for (i=0; i<N; i++) {
+			double px, py;
+			char* text;
+			const brightstar_t* bs = bright_stars_get(i);
+            if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
+                continue;
+            if (px < 0 || py < 0 || px*scale > W || py*scale > H)
+                continue;
+			if (!(bs->name && strlen(bs->name)))
+				continue;
+
+			if (bs->common_name && strlen(bs->common_name))
+				asprintf(&text, "%s (%s)", bs->name, bs->common_name);
+			else
+				text = strdup(bs->name);
+            cairo_move_to(cairo, px + label_offset, py + dy);
+            cairo_show_text(cairo, text);
+			cairo_stroke(cairo);
+			free(text);
+
+            cairo_set_line_width(cairo, cw);
+			cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
+			cairo_stroke(cairo);
+		}
+	}
 
     // Convert image for output...
     cairoutils_argb32_to_rgba(img, W, H);
