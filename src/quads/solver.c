@@ -74,6 +74,14 @@ static double field_gety(solver_t* sp, int index) {
 	return sp->field[2*index+1];
 }
 
+static void update_timeused(solver_t* sp) {
+	double usertime, systime;
+	get_resource_stats(&usertime, &systime, NULL);
+	sp->timeused = (usertime + systime) - sp->starttime;
+	if (sp->timeused < 0.0)
+		sp->timeused = 0.0;
+}
+
 void solver_reset_best_match(solver_t* sp) {
 	sp->best_logodds = -HUGE_VAL;
 	memset(&(sp->best_match), 0, sizeof(MatchObj));
@@ -562,14 +570,10 @@ static void try_all_codes_2(double Cx, double Cy, double Dx, double Dy,
 	double tol = square(solver->codetol);
 	double inorder[8];
 	int A = 0, B = 1, C = 2, D = 3;
-	double usertime, systime;
 	int options = KD_OPTIONS_SMALL_RADIUS | KD_OPTIONS_COMPUTE_DISTS |
 	              KD_OPTIONS_NO_RESIZE_RESULTS;
 
-	get_resource_stats(&usertime, &systime, NULL);
-	solver->timeused = (usertime + systime) - solver->starttime;
-	if (solver->timeused < 0.0)
-		solver->timeused = 0.0;
+	update_timeused(solver);
 
 	double thequeries[4][4] = {
 		{   Cx,    Cy,    Dx,    Dy}, 
@@ -707,10 +711,12 @@ void solver_inject_match(solver_t* solver, MatchObj* mo) {
 
 static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 {
+	double match_distance_in_pixels2;
+
 	mo->indexid = sp->index->indexid;
 	mo->healpix = sp->index->healpix;
 
-	double match_distance_in_pixels2 = square(sp->verify_pix) +
+	match_distance_in_pixels2 = square(sp->verify_pix) +
 		square(sp->index->index_jitter / mo->scale);
 
 	verify_hit(sp->index->starkd, mo, sp->vf, match_distance_in_pixels2,
@@ -734,6 +740,9 @@ static int solver_handle_hit(solver_t* sp, MatchObj* mo)
 	if (mo->logodds < sp->logratio_record_threshold) {
 		return FALSE;
 	}
+
+	update_timeused(sp);
+	mo->timeused = sp->timeused;
 
 	bool bail = sp->record_match_callback(mo, sp->userdata);
 

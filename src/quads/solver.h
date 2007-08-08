@@ -152,7 +152,7 @@ struct solver_t {
 	// can't be in the index?
 	double cxdx_margin;
 
-	// How long has this been going on?
+	// How long has this been going on? (CPU time)
 	double starttime;
 	double timeused;
 
