@@ -1260,6 +1260,7 @@ function convert_image(&$basename, $mydir, &$errstr, &$W, &$H, $db,
 					  "GIF image data"   => array("gif",  "giftopnm %s > %s"),
 					  "Netpbm PPM"       => array("pnm",  "ppmtoppm < %s > %s"),
 					  "Netpbm PGM"       => array("pnm",  "pgmtoppm %s > %s"),
+					  "TIFF image data"  => array("tiff", "tifftopnm %s > %s"),
 					  );
 
 	$pnmimg_orig_base = "image.pnm";
