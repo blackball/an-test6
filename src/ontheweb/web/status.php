@@ -1209,7 +1209,7 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 		if ($fieldsize > 3600 * 5) {
 			$cmd .= " -C";
 		}
-		$cmd .= " -B";
+		$cmd .= " -B -b 5";
 		if ($userimg) {
 			$cmd .= " -i " . $userimg;
 		} else {
