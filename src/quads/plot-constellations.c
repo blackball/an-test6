@@ -437,7 +437,7 @@ int main(int argc, char** args) {
         cairo_font_extents_t extents;
 		pl* brightstars = pl_new(16);
 
-        cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
+		cairo_set_source_rgba(cairo, 0.75, 0.75, 0.75, 0.8);
         cairo_font_extents(cairo, &extents);
         dy = extents.ascent * 0.5;
 
