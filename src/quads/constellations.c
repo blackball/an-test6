@@ -22,6 +22,114 @@
 
 #include "stellarium-constellations.c"
 
+struct shortlong {
+	char* shortname;
+	char* longname;
+}
+typedef struct shortlong shortlong_t;
+
+/* 
+   lynx -dump -nolist \
+   http://www.astro.wisc.edu/~dolan/constellations/abbrevs.html \
+   | awk '{L=""; for (i=3;i<=NF;i++) L=L (i>3?" ":"") $i;
+   print "{ \"" $2 "\", \"" L "\"},"}'
+*/
+
+/*
+  Note, these are in alphabetical order, while the Stellarium
+  constellations are listed in some other order.
+ */
+shortlong_t shortlongmap[] = {
+	{ "And", "Andromeda"},
+	{ "Ant", "Antlia"},
+	{ "Aps", "Apus"},
+	{ "Aqr", "Aquarius"},
+	{ "Aql", "Aquila"},
+	{ "Ara", "Ara"},
+	{ "Ari", "Aries"},
+	{ "Aur", "Auriga"},
+	{ "Boo", "Bootes"},
+	{ "Cae", "Caelum"},
+	{ "Cam", "Camelopardalis"},
+	{ "Cnc", "Cancer"},
+	{ "CVn", "Canes Venatici"},
+	{ "CMa", "Canis Major"},
+	{ "CMi", "Canis Minor"},
+	{ "Cap", "Capricornus"},
+	{ "Car", "Carina"},
+	{ "Cas", "Cassiopeia"},
+	{ "Cen", "Centaurus"},
+	{ "Cep", "Cepheus"},
+	{ "Cet", "Cetus"},
+	{ "Cha", "Chamaeleon"},
+	{ "Cir", "Circinus"},
+	{ "Col", "Columba"},
+	{ "Com", "Coma Berenices"},
+	{ "CrA", "Corona Austrina"},
+	{ "CrB", "Corona Borealis"},
+	{ "Crv", "Corvus"},
+	{ "Crt", "Crater"},
+	{ "Cru", "Crux"},
+	{ "Cyg", "Cygnus"},
+	{ "Del", "Delphinus"},
+	{ "Dor", "Dorado"},
+	{ "Dra", "Draco"},
+	{ "Equ", "Equuleus"},
+	{ "Eri", "Eridanus"},
+	{ "For", "Fornax"},
+	{ "Gem", "Gemini"},
+	{ "Gru", "Grus"},
+	{ "Her", "Hercules"},
+	{ "Hor", "Horologium"},
+	{ "Hya", "Hydra"},
+	{ "Hyi", "Hydrus"},
+	{ "Ind", "Indus"},
+	{ "Lac", "Lacerta"},
+	{ "Leo", "Leo"},
+	{ "LMi", "Leo Minor"},
+	{ "Lep", "Lepus"},
+	{ "Lib", "Libra"},
+	{ "Lup", "Lupus"},
+	{ "Lyn", "Lynx"},
+	{ "Lyr", "Lyra"},
+	{ "Men", "Mensa"},
+	{ "Mic", "Microscopium"},
+	{ "Mon", "Monoceros"},
+	{ "Mus", "Musca"},
+	{ "Nor", "Norma"},
+	{ "Oct", "Octans"},
+	{ "Oph", "Ophiuchus"},
+	{ "Ori", "Orion"},
+	{ "Pav", "Pavo"},
+	{ "Peg", "Pegasus"},
+	{ "Per", "Perseus"},
+	{ "Phe", "Phoenix"},
+	{ "Pic", "Pictor"},
+	{ "Psc", "Pisces"},
+	{ "PsA", "Piscis Austrinus"},
+	{ "Pup", "Puppis"},
+	{ "Pyx", "Pyxis"},
+	{ "Ret", "Reticulum"},
+	{ "Sge", "Sagitta"},
+	{ "Sgr", "Sagittarius"},
+	{ "Sco", "Scorpius"},
+	{ "Scl", "Sculptor"},
+	{ "Sct", "Scutum"},
+	{ "Ser", "Serpens"},
+	{ "Sex", "Sextans"},
+	{ "Tau", "Taurus"},
+	{ "Tel", "Telescopium"},
+	{ "Tri", "Triangulum"},
+	{ "TrA", "Triangulum Australe"},
+	{ "Tuc", "Tucana"},
+	{ "UMa", "Ursa Major"},
+	{ "UMi", "Ursa Minor"},
+	{ "Vel", "Vela"},
+	{ "Vir", "Virgo"},
+	{ "Vol", "Volans"},
+	{ "Vul", "Vulpecula"},
+};
+
 int constellations_n() {
 	return constellations_N;
 }
@@ -34,6 +142,19 @@ static void check_const_num(int i) {
 static void check_star_num(int i) {
 	assert(i >= 0);
 	assert(i < stars_N);
+}
+
+const char* constellations_get_longname(const char* shortname) {
+	int NL = sizeof(shortlongmap) / sizeof(shortlong_t);
+	for (i=0; i<NL; i++)
+		if (!strcmp(shortname, shortlongmap[i].shortname))
+			return shortlongmap[i].longname;
+	return NULL;
+}
+
+const char* constellations_get_longname(int c) {
+	check_const_num(c);
+	return constellations_get_longname(shortnames[c]);
 }
 
 const char* constellations_get_shortname(int c) {

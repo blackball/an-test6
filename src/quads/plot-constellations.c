@@ -211,6 +211,7 @@ int main(int argc, char** args) {
 		fprintf(stderr, "Checking %i constellations.\n", Nconst);
 		for (c=0; c<Nconst; c++) {
 			const char* shortname;
+			const char* longname;
 			il* lines;
             il* uniqstars;
 			il* inboundstars;
@@ -222,7 +223,6 @@ int main(int argc, char** args) {
 			cairo_text_extents_t textents;
             double cmass[3];
 
-			shortname = constellations_get_shortname(c);
 			uniqstars = constellations_get_unique_stars(c);
 			inboundstars = il_new(16);
 
@@ -259,7 +259,7 @@ int main(int argc, char** args) {
 
             // Draw circles around each star.
             cairo_set_line_width(cairo, cw);
-            // Also find center of mass.
+            // Also find center of mass (of the in-bounds stars)
             cmass[0] = cmass[1] = cmass[2] = 0.0;
             for (i=0; i<il_size(inboundstars); i++) {
                 double xyz[3];
@@ -287,7 +287,11 @@ int main(int argc, char** args) {
             if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
                 continue;
 
-			fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
+			shortname = constellations_get_shortname(c);
+			longname = constellations_get_longname(c);
+			assert(shortname && longname);
+
+			fprintf(stderr, "%s at (%g, %g)\n", longname, px, py);
 
 			// If the label will be off-screen, move it back on.
 			cairo_text_extents(cairo, shortname, &textents);
@@ -299,10 +303,11 @@ int main(int argc, char** args) {
 				px = W/scale - textents.width;
 			if ((py+textents.height)*scale > H)
 				py = H/scale - textents.height;
-			fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
+			//fprintf(stderr, "%s at (%g, %g)\n", shortname, px, py);
 
             cairo_move_to(cairo, px, py);
-            cairo_show_text(cairo, shortname);
+            //cairo_show_text(cairo, shortname);
+            cairo_show_text(cairo, longname);
 			cairo_stroke(cairo);
 
 			// Draw the lines.
