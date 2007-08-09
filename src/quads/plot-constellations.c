@@ -47,7 +47,7 @@
 #include "constellations.h"
 #include "brightstars.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:c";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:cj";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -63,6 +63,7 @@ void print_help(char* progname) {
 		   "   [-B]: plot named bright stars\n"
 		   "   [-b <number-of-bright-stars>]: just plot the <N> brightest stars\n"
 		   "   [-c]: only plot bright stars that have common names.\n"
+		   "   [-j]: if a bright star has a common name, only print that\n"
            "\n", progname);
 }
 
@@ -111,6 +112,7 @@ int main(int argc, char** args) {
     bool NGC = FALSE, constell = FALSE;
 	bool bright = FALSE;
 	bool common_only = FALSE;
+	bool print_common_only = FALSE;
 	int Nbright = 0;
 
 	double ra, dec, px, py;
@@ -121,6 +123,9 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+		case 'j':
+			print_common_only = TRUE;
+			break;
 		case 'c':
 			common_only = TRUE;
 			break;
@@ -466,7 +471,7 @@ int main(int argc, char** args) {
             if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
                 continue;
 			if (bs->common_name && strlen(bs->common_name))
-				if (common_only)
+				if (print_common_only || common_only)
 					text = strdup(bs->common_name);
 				else
 					asprintf(&text, "%s (%s)", bs->common_name, bs->name);
