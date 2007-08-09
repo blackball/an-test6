@@ -27,7 +27,6 @@
 #include <errno.h>
 #include <ctype.h>
 #include <assert.h>
-//#include <locale.h>
 
 #include "an-bool.h"
 
@@ -102,14 +101,6 @@ int main(int argc, char** args) {
 
 	double ra, dec, px, py;
 	int i, N;
-
-	/*
-	  if (!setlocale(LC_CTYPE, "")) {
-	  fprintf(stderr, "Can't set the specified locale! "
-	  "Check LANG, LC_CTYPE, LC_ALL.\n");
-	  return 1;
-	  }
-	*/
 
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
@@ -431,11 +422,8 @@ int main(int argc, char** args) {
 			char* text;
 			const brightstar_t* bs = bright_stars_get(i);
 
-			//printf("bright star %i / %i: %s (%s), radec (%g,%g)\n", i, N, bs->name, bs->common_name, bs->ra, bs->dec);
-
             if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
                 continue;
-			//printf("projects to (%g,%g)\n", px, py);
             if (px < 0 || py < 0 || px*scale > W || py*scale > H)
                 continue;
 			if (!(bs->name && strlen(bs->name)))
@@ -456,8 +444,6 @@ int main(int argc, char** args) {
 
 			cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
 			cairo_stroke(cairo);
-
-			//printf("cairo status: %s\n", cairo_status_to_string(cairo_status(cairo)));
 		}
 	}
 
