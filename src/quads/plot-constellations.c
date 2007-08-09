@@ -47,7 +47,7 @@
 #include "constellations.h"
 #include "brightstars.h"
 
-const char* OPTIONS = "hi:o:w:W:H:s:NCBp";
+const char* OPTIONS = "hi:o:w:W:H:s:NCBpb:";
 
 void print_help(char* progname) {
     boilerplate_help_header(stdout);
@@ -61,11 +61,22 @@ void print_help(char* progname) {
            "   [-N]: plot NGC objects\n"
            "   [-C]: plot constellations\n"
 		   "   [-B]: plot named bright stars\n"
+		   "   [-b <number-of-bright-stars>]: just plot the <N> brightest stars\n"
            "\n", progname);
 }
 
 extern char *optarg;
 extern int optind, opterr, optopt;
+
+int sort_by_mag(const void* v1, const void* v2) {
+	const brightstar_t* s1 = v1;
+	const brightstar_t* s2 = v2;
+	if (s1->Vmag > s2->Vmag)
+		return 1;
+	if (s1->Vmag == s2->Vmag)
+		return 0;
+	return -1;
+}
 
 int main(int argc, char** args) {
     int c;
@@ -98,6 +109,7 @@ int main(int argc, char** args) {
 
     bool NGC = FALSE, constell = FALSE;
 	bool bright = FALSE;
+	int Nbright = 0;
 
 	double ra, dec, px, py;
 	int i, N;
@@ -107,6 +119,9 @@ int main(int argc, char** args) {
         case 'h':
             print_help(args[0]);
             exit(0);
+		case 'b':
+			Nbright = atoi(optarg);
+			break;
 		case 'B':
 			bright = TRUE;
 			break;
@@ -410,6 +425,7 @@ int main(int argc, char** args) {
 	if (bright) {
         double dy;
         cairo_font_extents_t extents;
+		pl* brightstars = pl_new(16);
 
         cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
         cairo_font_extents(cairo, &extents);
@@ -419,7 +435,6 @@ int main(int argc, char** args) {
 
 		N = bright_stars_n();
 		for (i=0; i<N; i++) {
-			char* text;
 			const brightstar_t* bs = bright_stars_get(i);
 
             if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
@@ -429,13 +444,27 @@ int main(int argc, char** args) {
 			if (!(bs->name && strlen(bs->name)))
 				continue;
 
+			pl_append(brightstars, bs);
+		}
+
+		if (Nbright && (pl_size(brightstars) > Nbright)) {
+			pl_sort(brightstars, sort_by_mag);
+			pl_remove_index_range(brightstars, Nbright, pl_size(brightstars)-Nbright);
+		}
+
+		for (i=0; i<pl_size(brightstars); i++) {
+			char* text;
+			const brightstar_t* bs = pl_get(brightstars, i);
+
+            if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
+                continue;
 			if (bs->common_name && strlen(bs->common_name))
 				asprintf(&text, "%s (%s)", bs->name, bs->common_name);
 			else
 				text = strdup(bs->name);
 
 			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
-			printf("%s at (%i, %i)\n", text, (int)(px + label_offset), (int)(py + dy));
+			fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
 
             cairo_move_to(cairo, px + label_offset, py + dy);
             cairo_show_text(cairo, text);

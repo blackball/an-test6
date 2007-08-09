@@ -25,6 +25,7 @@ struct brightstar {
 	char* common_name;
 	double ra;
 	double dec;
+	double Vmag;
 };
 typedef struct brightstar brightstar_t;
 
