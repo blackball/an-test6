@@ -149,7 +149,7 @@ const char* constellations_short_to_longname(const char* shortname) {
 	int i;
 	int NL = sizeof(shortlongmap) / sizeof(shortlong_t);
 	for (i=0; i<NL; i++)
-		if (!strcmp(shortname, shortlongmap[i].shortname))
+		if (!strcasecmp(shortname, shortlongmap[i].shortname))
 			return shortlongmap[i].longname;
 	return NULL;
 }
