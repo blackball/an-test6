@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <assert.h>
+//#include <locale.h>
 
 #include "an-bool.h"
 
@@ -99,6 +100,17 @@ int main(int argc, char** args) {
     bool NGC = FALSE, constell = FALSE;
 	bool bright = FALSE;
 
+	double ra, dec, px, py;
+	int i, N;
+
+	/*
+	  if (!setlocale(LC_CTYPE, "")) {
+	  fprintf(stderr, "Can't set the specified locale! "
+	  "Check LANG, LC_CTYPE, LC_ALL.\n");
+	  return 1;
+	  }
+	*/
+
     while ((c = getopt(argc, args, OPTIONS)) != -1) {
         switch (c) {
         case 'h':
@@ -153,8 +165,8 @@ int main(int argc, char** args) {
         exit(-1);
     }
 
-    if (!(NGC || constell)) {
-        fprintf(stderr, "Neither constellations nor NGC overlays selected!\n");
+    if (!(NGC || constell || bright)) {
+        fprintf(stderr, "Neither constellations, bright stars, nor NGC overlays selected!\n");
         print_help(args[0]);
         exit(-1);
     }
@@ -203,22 +215,20 @@ int main(int argc, char** args) {
     cairo_set_antialias(cairo, CAIRO_ANTIALIAS_GRAY);
     cairo_set_source_rgb(cairo, 1.0, 1.0, 1.0);
     cairo_scale(cairo, scale, scale);
-    cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    //cairo_select_font_face(cairo, "helvetica", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_select_font_face(cairo, "DejaVu Sans Mono Book", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
     cairo_set_font_size(cairo, fontsize);
 
     if (constell) {
-		int Nconst = constellations_n();
+		N = constellations_n();
 
-		fprintf(stderr, "Checking %i constellations.\n", Nconst);
-		for (c=0; c<Nconst; c++) {
+		fprintf(stderr, "Checking %i constellations.\n", N);
+		for (c=0; c<N; c++) {
 			const char* shortname;
 			const char* longname;
 			il* lines;
             il* uniqstars;
 			il* inboundstars;
-			int i;
-            double ra,dec;
-            double px,py;
             unsigned char r,g,b;
 			int Ninbounds;
 			cairo_text_extents_t textents;
@@ -233,7 +243,6 @@ int main(int argc, char** args) {
 			// that are within the image bounds
 			Ninbounds = 0;
             for (i=0; i<il_size(uniqstars); i++) {
-                double ra, dec, px, py;
 				int star;
 				star = il_get(uniqstars, i);
 				constellations_get_star_radec(star, &ra, &dec);
@@ -264,7 +273,6 @@ int main(int argc, char** args) {
             cmass[0] = cmass[1] = cmass[2] = 0.0;
             for (i=0; i<il_size(inboundstars); i++) {
                 double xyz[3];
-                double ra, dec, px, py;
 				int star = il_get(inboundstars, i);
 				constellations_get_star_radec(star, &ra, &dec);
                 if (!sip_radec2pixelxy(&sip, ra, dec, &px, &py))
@@ -342,7 +350,6 @@ int main(int argc, char** args) {
     }
 
     if (NGC) {
-        int i, N;
         double imscale;
         double imsize;
         double dy;
@@ -362,7 +369,6 @@ int main(int argc, char** args) {
 
         for (i=0; i<N; i++) {
             ngc_entry* ngc = ngc_get_entry(i);
-            double px, py;
 			sl* str;
             sl* names;
             double pixsize;
@@ -411,8 +417,6 @@ int main(int argc, char** args) {
     }
 
 	if (bright) {
-		int i;
-		int N;
         double dy;
         cairo_font_extents_t extents;
 
@@ -420,13 +424,18 @@ int main(int argc, char** args) {
         cairo_font_extents(cairo, &extents);
         dy = extents.ascent * 0.5;
 
+		cairo_set_line_width(cairo, cw);
+
 		N = bright_stars_n();
 		for (i=0; i<N; i++) {
-			double px, py;
 			char* text;
 			const brightstar_t* bs = bright_stars_get(i);
+
+			//printf("bright star %i / %i: %s (%s), radec (%g,%g)\n", i, N, bs->name, bs->common_name, bs->ra, bs->dec);
+
             if (!sip_radec2pixelxy(&sip, bs->ra, bs->dec, &px, &py))
                 continue;
+			//printf("projects to (%g,%g)\n", px, py);
             if (px < 0 || py < 0 || px*scale > W || py*scale > H)
                 continue;
 			if (!(bs->name && strlen(bs->name)))
@@ -436,14 +445,19 @@ int main(int argc, char** args) {
 				asprintf(&text, "%s (%s)", bs->name, bs->common_name);
 			else
 				text = strdup(bs->name);
+
+			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
+			printf("%s at (%i, %i)\n", text, (int)(px + label_offset), (int)(py + dy));
+
             cairo_move_to(cairo, px + label_offset, py + dy);
             cairo_show_text(cairo, text);
 			cairo_stroke(cairo);
 			free(text);
 
-            cairo_set_line_width(cairo, cw);
 			cairo_arc(cairo, px, py, crad, 0.0, 2.0*M_PI);
 			cairo_stroke(cairo);
+
+			//printf("cairo status: %s\n", cairo_status_to_string(cairo_status(cairo)));
 		}
 	}
 
