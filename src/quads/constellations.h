@@ -27,7 +27,7 @@ const char* constellations_get_shortname(int constellation_num);
 
 const char* constellations_get_longname(int constellation_num);
 
-const char* constellations_get_longname(const char* shortname);
+const char* constellations_short_to_longname(const char* shortname);
 
 int constellations_get_nlines(int constellation_num);
 

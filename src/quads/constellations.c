@@ -17,6 +17,7 @@
 */
 
 #include <assert.h>
+#include <string.h>
 
 #include "constellations.h"
 
@@ -25,7 +26,7 @@
 struct shortlong {
 	char* shortname;
 	char* longname;
-}
+};
 typedef struct shortlong shortlong_t;
 
 /* 
@@ -144,7 +145,8 @@ static void check_star_num(int i) {
 	assert(i < stars_N);
 }
 
-const char* constellations_get_longname(const char* shortname) {
+const char* constellations_short_to_longname(const char* shortname) {
+	int i;
 	int NL = sizeof(shortlongmap) / sizeof(shortlong_t);
 	for (i=0; i<NL; i++)
 		if (!strcmp(shortname, shortlongmap[i].shortname))
@@ -154,7 +156,7 @@ const char* constellations_get_longname(const char* shortname) {
 
 const char* constellations_get_longname(int c) {
 	check_const_num(c);
-	return constellations_get_longname(shortnames[c]);
+	return constellations_short_to_longname(shortnames[c]);
 }
 
 const char* constellations_get_shortname(int c) {
