@@ -849,7 +849,7 @@ function process_data ($vals) {
 				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
 				## Science paper
 				"indexrdls_expand 3\n" .
-                "nsolves 2\n" .
+                #"nsolves 2\n" .
                 ##
 				"solved " . $solved_fn . "\n" .
 				"cancel " . $cancel_fn . "\n" .
