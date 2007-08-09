@@ -34,8 +34,13 @@ static void bl_free_node(bl_node* node);
 #define NODE_INTDATA(node) ((int*)(((bl_node*)(node)) + 1))
 #define NODE_DOUBLEDATA(node) ((double*)(((bl_node*)(node)) + 1))
 
+static void bl_sort_with_userdata(bl* list,
+								  int (*compare)(const void* v1, const void* v2, const void* userdata),
+								  void* userdata);
+
 static void bl_sort_rec(bl* list, void* pivot,
-						int (*compare)(const void* v1, const void* v2)) {
+						int (*compare)(const void* v1, const void* v2, const void* userdata),
+						void* userdata) {
 	bl* less;
 	bl* equal;
 	bl* greater;
@@ -49,7 +54,7 @@ static void bl_sort_rec(bl* list, void* pivot,
 	for (node=list->head; node;) {
 		char* data = NODE_CHARDATA(node);
 		for (i=0; i<node->N; i++) {
-			int val = compare(data, pivot);
+			int val = compare(data, pivot, userdata);
 			if (val < 0)
 				bl_append(less, data);
 			else if (val > 0)
@@ -66,8 +71,8 @@ static void bl_sort_rec(bl* list, void* pivot,
 	list->tail = NULL;
 	list->N = 0;
 
-	bl_sort(less, compare);
-	bl_sort(greater, compare);
+	bl_sort_with_userdata(less, compare, userdata);
+	bl_sort_with_userdata(greater, compare, userdata);
 
 	if (less->N) {
 		list->head = less->head;
@@ -100,7 +105,9 @@ static void bl_sort_rec(bl* list, void* pivot,
 	free(greater);
 }
 
-void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2)) {
+static void bl_sort_with_userdata(bl* list,
+								  int (*compare)(const void* v1, const void* v2, const void* userdata),
+								  void* userdata) {
 	int ind;
 	int N = list->N;
 	if (N <= 1)
@@ -109,8 +116,17 @@ void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2)) {
 	//printf("bl_sort: implement me!\n");
 	// should do median-of-3/5/... to select pivot when N is large.
 	ind = rand() % N;
-	bl_sort_rec(list, bl_access(list, ind), compare);
+	bl_sort_rec(list, bl_access(list, ind), compare, userdata);
 	//assert(0);
+}
+
+static int sort_helper_bl(const void* v1, const void* v2, const void* userdata) {
+	int (*compare)(const void* v1, const void* v2) = userdata;
+	return compare(v1, v2);
+}
+
+void bl_sort(bl* list, int (*compare)(const void* v1, const void* v2)) {
+	bl_sort_with_userdata(list, sort_helper_bl, compare);
 }
 
 void bl_split(bl* src, bl* dest, int split) {
@@ -1203,6 +1219,21 @@ void  pl_merge_lists(pl* list1, pl* list2) {
 
 int pl_insert_unique_ascending(bl* list, void* p) {
     return bl_insert_unique_sorted(list, &p, bl_compare_pointers_ascending);
+}
+
+static int sort_helper_pl(const void* v1, const void* v2, const void* userdata) {
+	const void* p1 = *((const void**)v1);
+	const void* p2 = *((const void**)v2);
+	int (*compare)(const void* p1, const void* p2) = userdata;
+	return compare(p1, p2);
+}
+
+void  pl_sort(pl* list, int (*compare)(const void* v1, const void* v2)) {
+	return bl_sort_with_userdata(list, sort_helper_pl, compare);
+}
+
+void  pl_remove_index_range(pl* list, int start, int length) {
+	bl_remove_index_range(list, start, length);
 }
 
 int pl_insert_sorted(pl* list, void* data, int (*compare)(const void* v1, const void* v2)) {
