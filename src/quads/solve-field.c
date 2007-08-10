@@ -88,23 +88,25 @@ pixels=UxV arcmin
 #include "matchfile.h"
 
 static struct option long_options[] = {
-	{"help",           no_argument,       0, 'h'},
-	{"width",          required_argument, 0, 'W'},
-	{"height",         required_argument, 0, 'H'},
-	{"scale-low",      required_argument, 0, 'L'},
-	{"scale-high",	   required_argument, 0, 'U'},
-	{"scale-units",    required_argument, 0, 'u'},
-	{"no-tweak",       no_argument,       0, 'T'},
-	{"no-guess-scale", no_argument,       0, 'G'},
-	{"tweak-order",    required_argument, 0, 't'},
-	{"dir",            required_argument, 0, 'd'},
+	{"help",        no_argument,       0, 'h'},
+	{"width",       required_argument, 0, 'W'},
+	{"height",      required_argument, 0, 'H'},
+	{"scale-low",	required_argument, 0, 'L'},
+	{"scale-high",	required_argument, 0, 'U'},
+	{"scale-units", required_argument, 0, 'u'},
+	{"depth",       required_argument, 0, 'D'},
+	{"no-tweak",    no_argument,       0, 'T'},
+	{"no-guess-scale", no_argument,    0, 'G'},
+	{"tweak-order", required_argument, 0, 't'},
+	{"dir",         required_argument, 0, 'd'},
 	{"backend-config", required_argument, 0, 'c'},
 	{"files-on-stdin", no_argument,       0, 'f'},
 	{"overwrite",      no_argument,       0, 'O'},
+	{"no-plots",    no_argument,       0, 'P'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOf";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:f";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -117,8 +119,10 @@ static void print_help(const char* progname) {
 	       "  [--scale-high <number>]: upper bound of image scale estimate   (-U)\n"
 	       "  [--width  <number>]: (mostly for xyls inputs): the original image width   (-W)\n"
 	       "  [--height <number>]: (mostly for xyls inputs): the original image height  (-H)\n"
+		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial\n"
 	       "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
+           "  [--no-plots]: don't create any PNG plots.\n"
 	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
 	       "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
@@ -164,6 +168,7 @@ int main(int argc, char** args) {
 	int nbeargs;
 	bool fromstdin = FALSE;
 	bool overwrite = FALSE;
+    bool makeplots = TRUE;
 
 	lowlevelargs = sl_new(16);
 	sl_append(lowlevelargs, "low-level-frontend");
@@ -180,9 +185,16 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
-		case 'O':
-			overwrite = TRUE;
-			break;
+        case 'D':
+            sl_append(lowlevelargs, "--depth");
+            sl_appendf(lowlevelargs, "%i", atoi(optarg));
+            break;
+        case 'P':
+            makeplots = FALSE;
+            break;
+        case 'O':
+            overwrite = TRUE;
+            break;
 		case 'G':
 			guess_scale = FALSE;
 			break;
@@ -426,35 +438,37 @@ int main(int argc, char** args) {
 			exit(-1);
 		free(cmd);
 
-		// source extraction overlay
-		// plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
-		cmdline = sl_new(16);
-		sl_append(cmdline, "plotxy");
-		sl_append(cmdline, "-i");
-		sl_append(cmdline, axyfn);
-		if (image) {
-			sl_append(cmdline, "-I");
-			sl_append(cmdline, ppmfn);
-		}
-		sl_append(cmdline, "-P");
-		sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
+        if (makeplots) {
+            // source extraction overlay
+            // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
+            cmdline = sl_new(16);
+            sl_append(cmdline, "plotxy");
+            sl_append(cmdline, "-i");
+            sl_append(cmdline, axyfn);
+            if (image) {
+                sl_append(cmdline, "-I");
+                sl_append(cmdline, ppmfn);
+            }
+            sl_append(cmdline, "-P");
+            sl_append(cmdline, "-C red -w 2 -N 50 -x 1 -y 1");
+            
+            sl_append(cmdline, "|");
 
-		sl_append(cmdline, "|");
+            sl_append(cmdline, "plotxy");
+            sl_append(cmdline, "-i");
+            sl_append(cmdline, axyfn);
+            sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
 
-		sl_append(cmdline, "plotxy");
-		sl_append(cmdline, "-i");
-		sl_append(cmdline, axyfn);
-		sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
+            sl_append(cmdline, ">");
+            sl_append(cmdline, objsfn);
 
-		sl_append(cmdline, ">");
-		sl_append(cmdline, objsfn);
-
-		cmd = sl_implode(cmdline, " ");
-		printf("Running plot command:\n  %s\n", cmd);
-		if (run_command(cmd))
-			exit(-1);
-		free(cmd);
-		sl_free(cmdline);
+            cmd = sl_implode(cmdline, " ");
+            printf("Running plot command:\n  %s\n", cmd);
+            if (run_command(cmd))
+                exit(-1);
+            free(cmd);
+            sl_free(cmdline);
+        }
 
 		sl_append(backendargs, axyfn);
 		sl_print(backendargs);
@@ -490,52 +504,54 @@ int main(int argc, char** args) {
 			free(cmd);
 			sl_remove_all(cmdline);
 
-			// sources + index overlay
-			sl_append(cmdline, "plotxy");
-			sl_append(cmdline, "-i");
-			sl_append(cmdline, axyfn);
-			if (image) {
-				sl_append(cmdline, "-I");
-				sl_append(cmdline, ppmfn);
-			}
-			sl_append(cmdline, "-P");
-			sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
-			sl_append(cmdline, "|");
-			sl_append(cmdline, "plotxy");
-			sl_append(cmdline, "-i");
-			sl_append(cmdline, indxylsfn);
-			sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
+            if (makeplots) {
+                // sources + index overlay
+                sl_append(cmdline, "plotxy");
+                sl_append(cmdline, "-i");
+                sl_append(cmdline, axyfn);
+                if (image) {
+                    sl_append(cmdline, "-I");
+                    sl_append(cmdline, ppmfn);
+                }
+                sl_append(cmdline, "-P");
+                sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
+                sl_append(cmdline, "|");
+                sl_append(cmdline, "plotxy");
+                sl_append(cmdline, "-i");
+                sl_append(cmdline, indxylsfn);
+                sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
 
-			mf = matchfile_open(matchfn);
-			if (!mf) {
-				fprintf(stderr, "Failed to read matchfile %s.\n", matchfn);
-				exit(-1);
-			}
-			// just read the first match...
-			mo = matchfile_buffered_read_match(mf);
-			if (!mo) {
-				fprintf(stderr, "Failed to read a match from matchfile %s.\n", matchfn);
-				exit(-1);
-			}
+                mf = matchfile_open(matchfn);
+                if (!mf) {
+                    fprintf(stderr, "Failed to read matchfile %s.\n", matchfn);
+                    exit(-1);
+                }
+                // just read the first match...
+                mo = matchfile_buffered_read_match(mf);
+                if (!mo) {
+                    fprintf(stderr, "Failed to read a match from matchfile %s.\n", matchfn);
+                    exit(-1);
+                }
 
-			sl_append(cmdline, " -P |");
-			sl_append(cmdline, "plotquad -I -");
-			for (i = 0; i < 8; i++)
-				sl_appendf(cmdline, " %g", mo->quadpix[i]);
+                sl_append(cmdline, " -P |");
+                sl_append(cmdline, "plotquad -I -");
+                for (i=0; i<8; i++)
+                    sl_appendf(cmdline, " %g", mo->quadpix[i]);
+                
+                matchfile_close(mf);
+			
+                sl_append(cmdline, ">");
+                sl_append(cmdline, redgreenfn);
 
-			matchfile_close(mf);
+                cmd = sl_implode(cmdline, " ");
+                printf("Running plot command:\n  %s\n", cmd);
+                if (run_command(cmd))
+                    exit(-1);
+                free(cmd);
+                sl_remove_all(cmdline);
+            }
 
-			sl_append(cmdline, ">");
-			sl_append(cmdline, redgreenfn);
-
-			cmd = sl_implode(cmdline, " ");
-			printf("Running plot command:\n  %s\n", cmd);
-			if (run_command(cmd))
-				exit(-1);
-			free(cmd);
-			sl_remove_all(cmdline);
-
-			if (image) {
+            if (image && makeplots) {
 				sl_append(cmdline, "plot-constellations");
 				sl_append(cmdline, "-w");
 				sl_append(cmdline, wcsfn);
