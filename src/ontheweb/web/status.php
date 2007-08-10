@@ -126,7 +126,10 @@ if ($getfile) {
 		$big = !strcmp($getfile, 'const-overlay-big');
 		$pixscale = $jd['pixscale'];
 		$fldsz = $pixscale * sqrt($fullW * $fullH);
-		render_const_overlay($mydir, $big, $jd, $fldsz);
+		$fn = render_const_overlay($mydir, $big, $jd, $fldsz);
+		header('Content-type: image/png');
+		readfile($fn);
+		exit;
 
 	} else if (!strcmp($getfile, $newheader_fn)) {
 		render_newheader($fn, $mydir, $jd, $todelete);
@@ -1158,91 +1161,80 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 	$listfile = $mydir . $const_list_fn;
 	$wcsfile = $mydir . $wcs_fn;
 
-	if ((!$big && !file_exists($overlayfile)) ||
-		($big  && !file_exists($bigoverlayfile))) {
-
-		// UglY!
-		switch ($jd['xysrc']) {
-		case 'fits':
-		case 'text':
-			if ($big) {
-				$W = $jd['xylsW'];
-				$H = $jd['xylsH'];
-				$shrink = 1;
-			} else {
-				$W = $jd['displayW'];
-				$H = $jd['displayH'];
-				$shrink = $jd["imageshrink"];
-				if (!$shrink)
-					$shrink = 1;
-				// Backwards compatibility:
-				if (!$W || !$H) {
-					$W = $jd['xylsW'];
-					$H = $jd['xylsH'];
-				}
-			}
-			break;
-		case 'img':
-		case 'url':
-			if ($big) {
-				$W = $jd['imageW'];
-				$H = $jd['imageH'];
-				$shrink = 1;
-				$userimg = $mydir . "image.pnm";
-			} else {
-				$W = $jd['displayW'];
-				$H = $jd['displayH'];
-				$shrink = $jd['imageshrink'];
-				if (!$shrink)
-					$shrink = 1;
-				$userimg = $pnmimg;
-			}
-			if (!($W && $H)) {
-				// BACKWARDS COMPATIBILITY.
-				loggit("failed to find image display width and height.\n");
-				$W = $jd['imageW'];
-				$H = $jd['imageH'];
-				if (!($W && $H)) {
-					fail("failed to find image width and height.\n");
-				}
-			}
-			break;
-		}
-
-		$cmd = $plot_constellations . " -N " . " -w " . $wcsfile
-			. " -o " . ($big ? $bigoverlayfile : $overlayfile);
-		if ($fieldsize > 3600 * 5) {
-			$cmd .= " -C";
-		}
-		$cmd .= " -B -b 10 -j";
-		if ($userimg) {
-			$cmd .= " -i " . $userimg;
-		} else {
-			$cmd .= " -W " . $W . " -H " . $H;
-		}
-		if (!$big) {
-			$cmd .= " -s " . (1.0 / $shrink);
-		}
-
-		if ($big) {
-			$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
-		} else {
-			$cmd .= " > " . $listfile . " 2>> " . $mydir . "plot-const.log";
- 		}
- 		loggit("Command: " . $cmd . "\n");
-		run_command($cmd, "pnmtopng");
+	if ($big && file_exists($bigoverlayfile)) {
+		return $bigoverlayfile;
+	}
+	if (!$big && file_exists($overlayfile) && file_exists($listfile)) {
+		return $overlayfile;
 	}
 
-	if (!$big && file_exists($overlayfile)) {
-		header('Content-type: image/png');
-		readfile($overlayfile);
-		exit;
-	} else if ($big && file_exists($bigoverlayfile)) {
-		header('Content-type: image/png');
-		readfile($bigoverlayfile);
-		exit;
-	} else
-		fail("(big)overlay file does not exist.");
+	// UglY!
+	switch ($jd['xysrc']) {
+	case 'fits':
+	case 'text':
+		if ($big) {
+			$W = $jd['xylsW'];
+			$H = $jd['xylsH'];
+			$shrink = 1;
+		} else {
+			$W = $jd['displayW'];
+			$H = $jd['displayH'];
+			$shrink = $jd["imageshrink"];
+			if (!$shrink)
+				$shrink = 1;
+			// Backwards compatibility:
+			die("Please email dstn@cs.toronto.edu if you see this message (1).");
+		}
+		break;
+	case 'img':
+	case 'url':
+		if ($big) {
+			$W = $jd['imageW'];
+			$H = $jd['imageH'];
+			$shrink = 1;
+			$userimg = $mydir . "image.pnm";
+		} else {
+			$W = $jd['displayW'];
+			$H = $jd['displayH'];
+			$shrink = $jd['imageshrink'];
+			if (!$shrink)
+				$shrink = 1;
+			$userimg = $pnmimg;
+		}
+		if (!($W && $H)) {
+			// BACKWARDS COMPATIBILITY.
+			die("Please email dstn@cs.toronto.edu if you see this message (2).");
+		}
+		break;
+	}
+
+	$cmd = $plot_constellations . " -N " . " -w " . $wcsfile
+		. " -o " . ($big ? $bigoverlayfile : $overlayfile);
+	if ($fieldsize > 3600 * 5) {
+		$cmd .= " -C";
+	}
+	$cmd .= " -B -b 10 -j";
+	if ($userimg) {
+		$cmd .= " -i " . $userimg;
+	} else {
+		$cmd .= " -W " . $W . " -H " . $H;
+	}
+	if (!$big) {
+		$cmd .= " -s " . (1.0 / $shrink);
+	}
+
+	if ($big) {
+		$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
+	} else {
+		$cmd .= " > " . $listfile . " 2>> " . $mydir . "plot-const.log";
+	}
+	loggit("Command: " . $cmd . "\n");
+	run_command($cmd, "plot-constellations");
+
+	if ($big)
+		return $bigoverlayfile;
+	else
+		return $overlayfile;
 }
 
 function render_overlay($mydir, $big, $jd) {
