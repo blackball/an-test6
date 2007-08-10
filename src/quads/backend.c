@@ -358,7 +358,8 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 			if (i > 0)
 				break;
 			startobj = 0;
-			endobj = 0;
+			//endobj = 0;
+            endobj = il_get(job->depths, i);
 		} else {
 			if (i >= il_size(job->depths) - 1)
 				break;

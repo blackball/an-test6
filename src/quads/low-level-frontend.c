@@ -104,6 +104,7 @@ static struct option long_options[] = {
 	{"scale-low",	required_argument, 0, 'L'},
 	{"scale-high",	required_argument, 0, 'H'},
 	{"scale-units", required_argument, 0, 'u'},
+	{"depth",		required_argument, 0, 'd'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"out",			required_argument, 0, 'o'},
 	{"noplot",		no_argument,	   0, 'p'},
@@ -113,7 +114,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:f";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:fd:";
 
 static void print_help(const char* progname) {
 	// FIXME - add rest of args!
@@ -151,6 +152,7 @@ int main(int argc, char** args) {
 	char* rdlsfile = NULL;
 	char* wcsfile = NULL;
     char* errmsg = NULL;
+    il* depths = il_new(4);
 
 	while (1) {
 		int option_index = 0;
@@ -166,6 +168,9 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 'd':
+            il_append(depths, atoi(optarg));
+            break;
 		case 'o':
 			outfn = optarg;
 			break;
@@ -505,6 +510,13 @@ int main(int argc, char** args) {
 		qfits_header_add(hdr, "ANRDLS", rdlsfile, "output filename", NULL);
 	if (wcsfile)
 		qfits_header_add(hdr, "ANWCS", wcsfile, "output filename", NULL);
+
+    for (i=0; i<il_size(depths); i++) {
+        int depth = il_get(depths, i);
+        char key[64];
+        sprintf(key, "ANDEPTH%i", (i+1));
+		fits_header_addf(hdr, key, "", "%i", depth);
+    }
 
 	fout = fopen(outfn, "wb");
 	if (!fout) {
