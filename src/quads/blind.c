@@ -192,6 +192,9 @@ void blind_run(blind_t* bp) {
 			sp->index_num = I;
 			sp->index = index;
 
+			logmsg("Verifying WCS with index %i of %i\n", 
+				   I + 1, pl_size(bp->indexnames));
+
 			for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
 				tan_t* wcs = bl_access(bp->verify_wcs_list, w);
 				// Do it!
@@ -951,8 +954,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 			sp->distance_from_quad_bonus = FALSE;
 
-			logmsg("\nVerifying WCS of field %i with index %i of %i\n", fieldnum,
-			       sp->index_num + 1, pl_size(sp->indexes));
+			logmsg("Verifying WCS of field %i.\n", fieldnum);
 
 			solver_inject_match(sp, &mo);
 
