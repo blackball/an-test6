@@ -189,6 +189,8 @@ void blind_run(blind_t* bp) {
 			if (!index) 
 				exit( -1);
 			pl_append(sp->indexes, index);
+			sp->index_num = I;
+			sp->index = index;
 
 			for (w = 0; w < bl_size(bp->verify_wcs_list); w++) {
 				tan_t* wcs = bl_access(bp->verify_wcs_list, w);
