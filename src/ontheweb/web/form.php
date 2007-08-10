@@ -848,7 +848,7 @@ function process_data ($vals) {
 				"match " . sprintf($match_pat, $stripenum) . "\n" .
 				"indexrdls " . sprintf($indexrdls_pat, $stripenum) . "\n" .
 				## Science paper
-				"indexrdls_expand 3\n" .
+				#"indexrdls_expand 3\n" .
                 #"nsolves 2\n" .
                 ##
 				"solved " . $solved_fn . "\n" .
