@@ -176,6 +176,11 @@ void      solver_compute_quad_range(solver_t* solver, index_t* index, double*, d
 void      solver_run(solver_t* solver);
 void solver_reset_best_match(solver_t* sp);
 
+// Call this before solver_inject_match() or solver_run().
+void solver_preprocess_field(solver_t* sp);
+// Call this after solver_inject_match() or solver_run().
+void solver_free_field(solver_t* sp);
+
 void      solver_transform_corners(solver_t* solver, MatchObj* mo);
 void      solver_inject_match(solver_t* solver, MatchObj* mo);
 

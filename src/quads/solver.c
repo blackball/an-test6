@@ -264,6 +264,16 @@ static void find_field_boundaries(solver_t* solver) {
 	                       solver->field_maxx - solver->field_minx);
 }
 
+void solver_preprocess_field(solver_t* solver) {
+	// precompute a kdtree over the field itself
+	solver->vf = verify_field_preprocess(solver->field, solver->nfield);
+	find_field_boundaries(solver);
+}
+
+void solver_free_field(solver_t* solver) {
+	verify_field_free(solver->vf);
+}
+
 // The real deal-- this is what makes it all happen
 void solver_run(solver_t* solver)
 {
@@ -279,16 +289,10 @@ void solver_run(solver_t* solver)
 	numxy = solver->nfield;
 	if (numxy < DIM_QUADS) //if there are<4 objects in field, forget it
 		return ;
-
 	if (solver->endobj && (numxy > solver->endobj))
 		numxy = solver->endobj;
-
 	if (solver->startobj >= numxy)
 		return ;
-
-	// precompute a kdtree over the field itself
-	solver->vf = verify_field_preprocess(solver->field, solver->nfield);
-	find_field_boundaries(solver);
 
 	uint num_indexes = bl_size(solver->indexes);
 	double minAB2s[num_indexes];
@@ -532,7 +536,6 @@ void solver_run(solver_t* solver)
 		free(pq->inbox);
 		free(pq->xy);
 	}
-	verify_field_free(solver->vf);
 	free(pquads);
 }
 

@@ -932,6 +932,12 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		bp->fieldnum = fieldnum;
         bp->nsolves_sofar = 0;
 
+		sp->logratio_record_threshold = MIN(bp->logratio_tokeep, bp->logratio_toprint);
+		sp->record_match_callback = record_match_callback;
+		sp->userdata = bp;
+
+		solver_preprocess_field(sp);
+
 		if (verify_wcs) {
 			// fabricate a match...
 			MatchObj mo;
@@ -940,6 +946,7 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 			mo.wcs_valid = TRUE;
 			mo.scale = tan_pixel_scale(verify_wcs);
 			solver_transform_corners(sp, &mo);
+
 			sp->distance_from_quad_bonus = FALSE;
 
 			logmsg("\nVerifying WCS of field %i with index %i of %i\n", fieldnum,
@@ -956,9 +963,6 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 
 			// push some parameters over from blind
 			sp->distance_from_quad_bonus = TRUE;
-			sp->logratio_record_threshold = MIN(bp->logratio_tokeep, bp->logratio_toprint);
-			sp->record_match_callback = record_match_callback;
-			sp->userdata = bp;
 			
 			// The real thing
 			solver_run(sp);
@@ -978,6 +982,8 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 				logmsg("  cancelled at user request.\n");
 			}
 		}
+
+		solver_free_field(sp);
 
 		// Fix the matchfile.
 		if (bp->mf && matchfile_fix_header(bp->mf)) {
