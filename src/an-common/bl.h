@@ -263,6 +263,7 @@ void   sl_print(sl* list);
 //   sl_get(list, 0) + join + sl_get(list, 1) + join + ... + join + sl_get(list, N-1)
 char*  sl_implode(sl* list, const char* join);
 
+// Appends the (newly-allocated) formatted string and returns it.
 char*
 ATTRIB_FORMAT(printf,2,3)
 sl_appendf(sl* list, const char* format, ...);
