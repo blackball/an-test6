@@ -492,7 +492,10 @@ int main(int argc, char** args) {
 			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
 			fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
 
-			printf("The star %s\n", text);
+			if (bs->common_name && strlen(bs->common_name))
+				printf("The star %s (%s)\n", bs->common_name, bs->name);
+			else
+				printf("The star %s\n", bs->name);
 
             cairo_move_to(cairo, px + label_offset, py + dy);
             cairo_show_text(cairo, text);
