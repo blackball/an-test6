@@ -55,6 +55,7 @@ $overlay_fn="overlay.png";
 $bigoverlay_fn="overlay-big.png";
 $const_overlay_fn="const-overlay.png";
 $const_bigoverlay_fn="const-overlay-big.png";
+$const_list_fn = "const-list.txt";
 $xylsinfo_fn="xylsinfo";
 $rdlsinfo_fn="rdlsinfo";
 $wcsinfo_fn="wcsinfo";
@@ -130,7 +131,6 @@ $get_wcs = $quads . "get-wcs";
 $an_fitstopnm = $quads . "an-fitstopnm";
 $fits_filter = $quads . "fits2fits.py %s %s";
 $new_wcs = $quads . "new-wcs";
-$wcs_annotate = $quads . "wcs-annotate";
 
 $headers = $_REQUEST;
 

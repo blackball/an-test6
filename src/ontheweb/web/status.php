@@ -107,6 +107,7 @@ if (!($fullW && $fullH)) {
 	}
 }
 
+
 if ($getfile) {
 	if (strstr($getfile, '/') ||
 		strstr($getfile, '..')) {
@@ -537,22 +538,24 @@ if ($didsolve) {
 	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
 	echo "<hr />\n";
 
-	$cmd = $wcs_annotate . " -w " . $wcsfile . " 2> /dev/null";
-	loggit("Command: " . $cmd . "\n");
-	$res = shell_exec($cmd);
-	if ($res) {
+	if (!file_exists($const_list_fn)) {
+		$pixscale = $jd['pixscale'];
+		$fldsz = $pixscale * sqrt($fullW * $fullH);
+		render_const_overlay($mydir, FALSE, $jd, $fldsz);
+	}
+	// Read the list of objects that can be found in the field.
+	$lines = file($const_list_fn);
+	if ($lines) {
 		echo "<div id=\"objs\">\n";
 		echo "<div id=\"objs2\">\n";
 		echo "<p>Your field contains:</p>\n";
 		echo "<ul>\n";
-		$lines = explode("\n", $res);
 		foreach ($lines as $ln) {
 			if (!$ln)
 				continue;
 			echo "<li>" . $ln . "</li>\n";
 		}
 		echo "</ul>\n";
-		//echo "</p>\n";
 		echo "</div>";
 		echo "</div>";
 		echo "<hr />\n";
@@ -1143,6 +1146,7 @@ function run_command($cmd, $briefname) {
 }
 
 function render_const_overlay($mydir, $big, $jd, $fieldsize) {
+	global $const_list_fn;
 	global $const_overlay_fn;
 	global $const_bigoverlay_fn;
 	global $wcs_fn;
@@ -1151,6 +1155,7 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 
 	$overlayfile = $mydir . $const_overlay_fn;
 	$bigoverlayfile = $mydir . $const_bigoverlay_fn;
+	$listfile = $mydir . $const_list_fn;
 	$wcsfile = $mydir . $wcs_fn;
 
 	if ((!$big && !file_exists($overlayfile)) ||
@@ -1218,7 +1223,12 @@ function render_const_overlay($mydir, $big, $jd, $fieldsize) {
 		if (!$big) {
 			$cmd .= " -s " . (1.0 / $shrink);
 		}
-		$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
+
+		if ($big) {
+			$cmd .= " >> " . $mydir . "plot-const.log 2>&1";
+		} else {
+			$cmd .= " > " . $listfile . " 2>> " . $mydir . "plot-const.log";
+ 		}
  		loggit("Command: " . $cmd . "\n");
 		run_command($cmd, "pnmtopng");
 	}
