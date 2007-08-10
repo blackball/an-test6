@@ -541,13 +541,14 @@ if ($didsolve) {
 	echo "<h3 class=\"c\">Your field is at RA,Dec = (" . $rac . ", " . $decc . ") degrees.</h3>\n";
 	echo "<hr />\n";
 
-	if (!file_exists($const_list_fn)) {
+	$listfile = $mydir . $const_list_fn;
+	if (!file_exists($listfile)) {
 		$pixscale = $jd['pixscale'];
 		$fldsz = $pixscale * sqrt($fullW * $fullH);
 		render_const_overlay($mydir, FALSE, $jd, $fldsz);
 	}
 	// Read the list of objects that can be found in the field.
-	$lines = file($const_list_fn);
+	$lines = file($listfile);
 	if ($lines) {
 		echo "<div id=\"objs\">\n";
 		echo "<div id=\"objs2\">\n";
