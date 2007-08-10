@@ -702,32 +702,21 @@ function process_data ($vals) {
 
 	// Write the startscript: executed by "watcher" (via blindscript) 
 	// before blind starts.
-	$fstart = fopen($startscript, "w");
-	if (!$fstart) {
-		loggit("Failed to write startscript " . $startscript);
-		submit_failed($db, "Failed to write the script for the blind solver.");
-	}
 	$str = "#! /bin/bash\n" .
 		"echo Starting startscript...\n" .
 		"touch " . $start_fn . "\n" .
 		$sqlite . " " . $jobdata_fn . " \"REPLACE INTO jobdata VALUES('solve-start', '`date -Iseconds`');\"\n" .
 		"echo Finished startscript.\n";
-	fprintf($fstart, "%s", $str);
-	if (!fclose($fstart)) {
-		loggit("Failed to close startscript " . $startscript);
-		submit_failed($db, "Failed to write the script for the blind solver (2b).");
+	if (file_put_contents($startscript, $str) === FALSE) {
+		loggit("Failed to write startscript " . $startscript);
+		submit_failed($db, "Failed to write the script for the blind solver.");
 	}
 	if (!chmod($startscript, 0775)) {
 		loggit("Failed to chmod startscript " . $startscript);
-		submit_failed($db, "Failed to write the script for the blind solver (3b).");
+		submit_failed($db, "Failed to chmod the startscript for the blind solver.");
 	}
 
 	// Write the donescript: executed by "watcher" (via blindscript) after blind completes.
-	$fdone = fopen($donescript, "w");
-	if (!$fdone) {
-		loggit("Failed to write donescript " . $donescript);
-		submit_failed($db, "Failed to write the script for the blind solver.");
-	}
 	$str = 
 		"#! /bin/bash\n" .
 		"echo Starting donescript...\n" .
@@ -784,24 +773,17 @@ function process_data ($vals) {
 	}
 	$str .=	"echo Finished donescript.\n";
 
-	fprintf($fdone, "%s", $str);
-
-	if (!fclose($fdone)) {
-		loggit("Failed to close donescript " . $donescript);
-		submit_failed($db, "Failed to write the script for the blind solver (2).");
+	if (file_put_contents($donescript, $str) === FALSE) {
+		loggit("Failed to write donescript " . $donescript);
+		submit_failed($db, "Failed to write the \"donescript\" for the blind solver.");
 	}
 	if (!chmod($donescript, 0775)) {
 		loggit("Failed to chmod donescript " . $donescript);
-		submit_failed($db, "Failed to write the script for the blind solver (3).");
+		submit_failed($db, "Failed to chmod the donescript for the blind solver.");
 	}
 
 
 	// Write the input file for blind...
-	$fin = fopen($inputfile, "w");
-	if (!$fin) {
-		die("Failed to write input file " . $inputfile);
-	}
-
 	$depths = array(0  => 20,
 					20 => 30,
 					30 => 40,
@@ -828,8 +810,8 @@ function process_data ($vals) {
 	$stripenum = 1;
 
 	$str =
-		"total_timelimit " . $totaltime . "\n" .
-		"total_cpulimit " . $totalcpu . "\n";
+		(($totaltime > 0) ? "total_timelimit " . $totaltime . "\n" : "") .
+		(($totalcpu  > 0) ? "total_cpulimit " . $totalcpu . "\n" : "");
 
 	foreach ($depths as $startdepth => $enddepth) {
 		foreach ($tryscales as $range) {
@@ -863,15 +845,15 @@ function process_data ($vals) {
 				"tol " . $codetol . "\n" .
 				"verify_pix " . $poserr . "\n" .
 				"distractors 0.25\n" .
-				"ratio_toprint 1e3\n" .
+				"ratio_toprint 1e4\n" .
 				"ratio_tokeep 1e9\n" .
 				"ratio_tosolve 1e9\n" .
 				"ratio_tobail 1e-100\n" .
 				"fieldw " . $W . "\n" .
 				"fieldh " . $H . "\n" .
-				"maxquads " . $maxquads . "\n" .
-				"cpulimit " . $maxcpu . "\n" .
-				"timelimit " . $maxtime . "\n";
+				(($maxquads > 0) ? "maxquads " . $maxquads . "\n" : "") .
+				(($cpulimit > 0) ? "cpulimit " . $maxcpu . "\n" : "") .
+				(($maxtime  > 0) ? "timelimit " . $maxtime . "\n" : "");
 
 			if ($tweak) {
 				$str .=
@@ -899,12 +881,10 @@ function process_data ($vals) {
 			$stripenum++;
 		}
 	}
-	fprintf($fin, "%s", $str);
 
-	if (!fclose($fin)) {
-		submit_failed($db, "Failed to write input file for the blind solver.");
+	if (file_put_contents($inputfile, $str) === FALSE) {
+		die("Failed to write input file " . $inputfile);
 	}
-
 	loggit("Wrote blind input file: " . $inputfile . "\n");
 
 	after_submitted($imgfilename, $myname, $mydir, $vals, $db);
