@@ -14,6 +14,7 @@ function allow_email($email) {
 
 	$allow = array(
 		       'aconti@stsci.edu',
+		       'agamick@ipac.caltech.edu',
 		       'agoodman@cfa.harvard.edu',
 		       'alanv@ics.mq.edu.au',
 		       'align.them@gmail.com',
