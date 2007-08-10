@@ -247,12 +247,14 @@ int main(int argc, char** args) {
 			il* inboundstars;
             unsigned char r,g,b;
 			int Ninbounds;
+			int Nunique;
 			cairo_text_extents_t textents;
             double cmass[3];
 
 			uniqstars = constellations_get_unique_stars(c);
 			inboundstars = il_new(16);
 
+			Nunique = il_size(uniqstars);
 			//fprintf(stderr, "%s: %i unique stars.\n", shortname, il_size(uniqstars));
 
 			// Count the number of unique stars belonging to this contellation
@@ -275,6 +277,7 @@ int main(int argc, char** args) {
 			// Only draw this constellation if at least 2 of its stars
 			// are within the image bounds.
 			if (Ninbounds < 2) {
+				il_free(inboundstars);
 				continue;
 			}
 
@@ -317,6 +320,12 @@ int main(int argc, char** args) {
 			assert(shortname && longname);
 
 			fprintf(stderr, "%s at (%g, %g)\n", longname, px, py);
+
+			if (Ninbounds == Nunique) {
+				printf("The constellation %s (%s)\n", longname, shortname);
+			} else {
+				printf("Part of the constellation %s (%s)\n", longname, shortname);
+			}
 
 			// If the label will be off-screen, move it back on.
 			cairo_text_extents(cairo, shortname, &textents);
@@ -417,8 +426,10 @@ int main(int argc, char** args) {
                 }
             }
             sl_free(names);
-
 			text = sl_implode(str, "");
+
+			printf("%s\n", text);
+
             cairo_move_to(cairo, px + label_offset, py + dy);
             cairo_show_text(cairo, text);
 			free(text);
@@ -480,6 +491,8 @@ int main(int argc, char** args) {
 
 			//printf("Bright star %i/%i: %s, radec (%g,%g), pixel (%g,%g)\n", i, N, text, bs->ra, bs->dec, px, py);
 			fprintf(stderr, "%s at (%g, %g)\n", text, px + label_offset, py + dy);
+
+			printf("The star %s\n", text);
 
             cairo_move_to(cairo, px + label_offset, py + dy);
             cairo_show_text(cairo, text);
