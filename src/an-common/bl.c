@@ -923,6 +923,9 @@ void bl_reverse(bl* list) {
 	node = list->head;
 	list->head = list->tail;
 	list->tail = node;
+
+	list->last_access = NULL;
+	list->last_access_n = 0;
 }
 
 
