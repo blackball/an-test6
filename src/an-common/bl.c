@@ -917,6 +917,8 @@ void bl_reverse(bl* list) {
 			lastnode->next = node;
 		lastnode = node;
 	}
+	if (lastnode)
+		lastnode->next = NULL;
 	pl_free(blocks);
 
 	// swap head and tail
