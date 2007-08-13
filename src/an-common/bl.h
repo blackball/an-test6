@@ -41,9 +41,13 @@ typedef struct bl_node bl_node;
 struct bl {
   bl_node* head;
   bl_node* tail;
+	// the total number of data elements
   int N;
+	// the number of elements per block
   int blocksize;
+	// the size in bytes of each data element
   int datasize;
+	// rapid accessors for "jumping in" at the last block accessed
   bl_node* last_access;
   int last_access_n;
 };
@@ -71,6 +75,8 @@ void  bl_pop(bl* list, void* into);
    to the end of the list from \c src and appends them to \c dest.
  */
 void bl_split(bl* src, bl* dest, int split);
+
+void bl_reverse(bl* list);
 
 /*
  * Appends "list2" to the end of "list1", and removes all elements
@@ -134,6 +140,7 @@ Malloc il*  il_new(int blocksize);
 Pure Inline int il_size(const il* list);
 void il_new_existing(il* list, int blocksize);
 void il_init(il* list, int blocksize);
+void il_reverse(il* list);
 void il_remove_all(il* list);
 void il_remove_all_reuse(il* list);
 void il_free(il* list);
@@ -178,6 +185,7 @@ void  pl_free_elements(pl* list);
 int   pl_size(pl* list);
 void* pl_get(pl* list, int n);
 void  pl_set(pl* list, int ind, void* data);
+void pl_reverse(pl* list);
 void  pl_insert(pl* list, int indx, void* data);
 void  pl_append(pl* list, const void* data);
 void  pl_push(pl* list, const void* data);
@@ -203,6 +211,7 @@ dl*    dl_new(int blocksize);
 void   dl_init(dl* list, int blocksize);
 void   dl_free(dl* list);
 int    dl_size(dl* list);
+void dl_reverse(dl* list);
 double* dl_append(dl* list, double data);
 void   dl_push(dl* list, double data);
 double dl_pop(dl* list);

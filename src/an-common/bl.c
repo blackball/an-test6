@@ -112,12 +112,9 @@ static void bl_sort_with_userdata(bl* list,
 	int N = list->N;
 	if (N <= 1)
 		return;
-	//int iequal, igreater;
-	//printf("bl_sort: implement me!\n");
 	// should do median-of-3/5/... to select pivot when N is large.
 	ind = rand() % N;
 	bl_sort_rec(list, bl_access(list, ind), compare, userdata);
-	//assert(0);
 }
 
 static int sort_helper_bl(const void* v1, const void* v2, const void* userdata) {
@@ -521,7 +518,8 @@ void bl_get(bl* list, int n, void* dest) {
 }
 
 /* find the node in which element "n" can be found. */
-static Inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
+static Inline bl_node* bl_find_node(bl* list, int n,
+									int* p_nskipped) {
 	bl_node* node;
 	int nskipped;
 	if (list->last_access && n >= list->last_access_n) {
@@ -542,8 +540,8 @@ static Inline bl_node* bl_find_node(bl* list, int n, int* rtn_nskipped) {
 
 	assert(node);
 
-	if (rtn_nskipped)
-		*rtn_nskipped = nskipped;
+	if (p_nskipped)
+		*p_nskipped = nskipped;
 
 	return node;
 }
@@ -879,7 +877,60 @@ int bl_compare_ints_descending(const void* v1, const void* v2) {
     else return 0;
 }
 
+static void memswap(void* v1, void* v2, int len) {
+	unsigned char tmp;
+	unsigned char* c1 = v1;
+	unsigned char* c2 = v2;
+	int i;
+	for (i=0; i<len; i++) {
+		tmp = *c1;
+		*c1 = *c2;
+		*c2 = tmp;
+		c1++;
+		c2++;
+	}
+}
+
+void bl_reverse(bl* list) {
+	// reverse each block, and reverse the order of the blocks.
+	pl* blocks;
+	bl_node* node;
+	bl_node* lastnode;
+	int i;
+
+	// reverse each block
+	blocks = pl_new(256);
+	for (node=list->head; node; node=node->next) {
+		for (i=0; i<(node->N/2); i++) {
+			memswap(NODE_CHARDATA(node) + i * list->datasize,
+					NODE_CHARDATA(node) + (node->N - 1 - i) * list->datasize,
+					list->datasize);
+		}
+		pl_append(blocks, node);
+	}
+
+	// reverse the blocks
+	lastnode = NULL;
+	for (i=pl_size(blocks)-1; i>=0; i--) {
+		node = pl_get(blocks, i);
+		if (lastnode)
+			lastnode->next = node;
+		lastnode = node;
+	}
+	pl_free(blocks);
+
+	// swap head and tail
+	node = list->head;
+	list->head = list->tail;
+	list->tail = node;
+}
+
+
 // integer list functions:
+
+void il_reverse(il* list) {
+	bl_reverse(list);
+}
 
 il* il_merge_ascending(il* list1, il* list2) {
 	il* res;
@@ -1200,6 +1251,10 @@ void  pl_free_elements(pl* list) {
 	}
 }
 
+void pl_reverse(pl* list) {
+	bl_reverse(list);
+}
+
 pl*   pl_dup(pl* list) {
 	pl* newlist = pl_new(list->blocksize);
 	bl_node* newnode;
@@ -1359,6 +1414,10 @@ void  dl_remove_all(dl* list) {
 	bl_remove_all(list);
 }
 
+void dl_reverse(dl* list) {
+	bl_reverse(list);
+}
+
 void dl_init(dl* list, int blocksize) {
 	bl_init(list, blocksize, sizeof(double));
 }
@@ -1471,6 +1530,10 @@ void sl_free_nonrecursive(sl* list) {
 
 int   sl_size(sl* list) {
 	return bl_size(list);
+}
+
+void sl_reverse(sl* list) {
+	bl_reverse(list);
 }
 
 char* sl_append(sl* list, const char* data) {
