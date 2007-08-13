@@ -93,6 +93,10 @@ struct blind_params {
 	// The fields to solve!
 	xylist* xyls;
 
+	// How finely to uniformize the field.
+	int field_uniform_NX;
+	int field_uniform_NY;
+
 	// Output files
 	matchfile* mf;
 	rdlist* indexrdls;

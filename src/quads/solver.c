@@ -45,6 +45,8 @@
 #include "kdtree.h"
 #undef KD_DIM
 
+static void find_field_boundaries(solver_t* solver);
+
 static inline double getx(const double* d, uint ind)
 {
 	return d[ind*2];
@@ -102,6 +104,97 @@ void solver_init(solver_t* sp)
 	sp->parity = DEFAULT_PARITY;
 	sp->codetol = DEFAULT_CODE_TOL;
 	sp->record_match_callback = NULL;
+}
+
+/*
+  Reorder the field stars by placing a grid over the field, sorting by
+  brightness within each grid cell, then making sweeps over the grid, taking
+  the Nth brightest star in each cell in the Nth sweep.  (And sort the stars
+  within a sweep by their absolute brightness.)
+ */
+void solver_uniformize_field(solver_t* solver, int NX, int NY) {
+	il** lists;
+	int i, ix, iy;
+	double xstep, ystep;
+	double* newfield;
+	//il* templist;
+	int Ntotal;
+
+	// compute {min,max}{x,y}
+	find_field_boundaries(solver);
+
+	assert(NX > 0);
+	assert(NY > 0);
+	lists = malloc(NX * NY * sizeof(il*));
+	for (i=0; i<(NX*NY); i++)
+		lists[i] = il_new(16);
+	newfield = calloc(solver->nfield * 2, sizeof(double));
+
+	// grid cell size
+	xstep = (solver->field_maxx - solver->field_minx) / (double)NX;
+	ystep = (solver->field_maxy - solver->field_miny) / (double)NY;
+	assert(xstep > 0.0);
+	assert(ystep > 0.0);
+
+	// place stars in grid cells.
+	for (i=0; i<solver->nfield; i++) {
+		ix = floor((field_getx(solver, i) - solver->field_minx) / xstep);
+		iy = floor((field_gety(solver, i) - solver->field_miny) / ystep);
+		assert(ix >= 0);
+		assert(iy >= 0);
+		assert(ix < NX);
+		assert(iy < NY);
+		il_append(lists[iy * NX + ix], i);
+	}
+	// since the stars were originally sorted by brightness, each grid
+	// cell is also sorted by brightness.
+
+	// reverse each list so that we can pop() bright stars off the back.
+	for (i=0; i<(NX*NY); i++) {
+		il_reverse(lists[i]);
+		/*
+		  int j;
+		  templist = il_new(16);
+		  for (j=il_size(lists[i])-1; j>=0; j--)
+		  il_append(templist, il_get(lists[i], j));
+		  il_free(lists[i]);
+		  lists[i] = templist;
+		*/
+	}
+
+	// sweep through the cells...
+	Ntotal = 0;
+	for (;;) {
+		bool allempty = TRUE;
+		il* thissweep = il_new(16);
+
+		for (i=0; i<(NX*NY); i++) {
+			if (!il_size(lists[i]))
+				continue;
+			allempty = FALSE;
+			il_insert_ascending(thissweep, il_pop(lists[i]));
+		}
+
+		for (i=0; i<il_size(thissweep); i++) {
+			int ind = il_get(thissweep, i);
+			setx(newfield, Ntotal, field_getx(solver, ind));
+			sety(newfield, Ntotal, field_gety(solver, ind));
+			Ntotal++;
+		}
+
+		il_free(thissweep);
+		if (allempty)
+			break;
+	}
+
+	assert(Ntotal == solver->nfield);
+
+	for (i=0; i<(NX*NY); i++)
+		il_free(lists[i]);
+	free(lists);
+
+	memcpy(solver->field, newfield, solver->nfield * 2 * sizeof(double));
+	free(newfield);
 }
 
 void solver_transform_corners(solver_t* solver, MatchObj* mo) {

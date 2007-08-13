@@ -941,6 +941,10 @@ static void solve_fields(blind_t* bp, tan_t* verify_wcs) {
 		sp->record_match_callback = record_match_callback;
 		sp->userdata = bp;
 
+		if (bp->field_uniform_NX && bp->field_uniform_NY) {
+			solver_uniformize_field(sp, bp->field_uniform_NX, bp->field_uniform_NY);
+		}
+
 		solver_preprocess_field(sp);
 
 		if (verify_wcs) {
