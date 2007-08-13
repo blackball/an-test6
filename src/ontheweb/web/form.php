@@ -855,6 +855,13 @@ function process_data ($vals) {
 				(($cpulimit > 0) ? "cpulimit " . $maxcpu . "\n" : "") .
 				(($maxtime  > 0) ? "timelimit " . $maxtime . "\n" : "");
 
+			// uniformize into about 16 grid cells, but make them about 1:1
+			// aspect ratio.
+			$ngrid = 16;
+			$nx = ceil(sqrt($ngrid) * $W / $H);
+			$ny = ceil(sqrt($ngrid) * $H / $W);
+			$str .= "uniformize " . $nx . " " . $ny . "\n";
+
 			if ($tweak) {
 				$str .=
 					"tweak\n" .
