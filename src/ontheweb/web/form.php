@@ -857,10 +857,12 @@ function process_data ($vals) {
 
 			// uniformize into grid cells, but make them have about 1:1
 			// aspect ratio.
+			/*
 			$ngrid = 4;
-			$nx = ceil(sqrt($ngrid) * $W / $H);
+ 			$nx = ceil(sqrt($ngrid) * $W / $H);
 			$ny = ceil(sqrt($ngrid) * $H / $W);
 			$str .= "uniformize " . $nx . " " . $ny . "\n";
+			*/
 
 			if ($tweak) {
 				$str .=
