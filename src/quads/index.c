@@ -27,6 +27,9 @@ index_t* index_load(char* indexname, int flags)
 	index_t* index = calloc(1, sizeof(index_t));
 	index->indexname = indexname;
 
+	if (flags & INDEX_ONLY_LOAD_METADATA)
+		logmsg("Loading only metadata for %s...\n", indexname);
+
 	// Read .skdt file...
 	startreefname = mk_streefn(indexname);
 	logmsg("Reading star KD tree from %s...\n", startreefname);
@@ -101,6 +104,10 @@ index_t* index_load(char* indexname, int flags)
 			return NULL;
 		}
 		free_fn(idfname);
+	}
+
+	if (flags & INDEX_ONLY_LOAD_METADATA) {
+		index_close(index);
 	}
 
 	return index;

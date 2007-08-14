@@ -44,6 +44,7 @@ struct index_s {
 typedef struct index_s index_t;
 
 #define INDEX_USE_IDFILE 1
+#define INDEX_ONLY_LOAD_METADATA 2
 
 /**
  * Load an index from disk
@@ -56,6 +57,8 @@ typedef struct index_s index_t;
  *
  *   flags     - Either 0 or INDEX_USE_IDFILE. If INDEX_USE_IDFILE is
  *               specified, then the idfile will be loaded also.
+ *               If INDEX_ONLY_LOAD_METADATA, then only metadata will be
+ *               loaded.
  *
  * Returns:
  *
