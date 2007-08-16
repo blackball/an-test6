@@ -158,4 +158,3 @@ int startree_write_to_file(startree* s, char* fn) {
 	} else
 		return kdtree_fits_write(s->tree, fn, s->header);
 }
-

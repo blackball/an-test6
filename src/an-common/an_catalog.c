@@ -16,6 +16,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include <assert.h>
 #include <stddef.h>
 #include <errno.h>
@@ -43,8 +46,8 @@ static bool an_fitstruct_inited = 0;
 
 #define SET_FIELDS(A, i, t, n, u, fld) { \
  an_entry x; \
- A[i].fieldname=n; \
- A[i].units=u; \
+ A[i].fieldname=(char*)n; \
+ A[i].units=(char*)u; \
  A[i].offset=offsetof(an_entry, fld); \
  A[i].size=sizeof(x.fld); \
  A[i].fitstype=t; \
@@ -54,7 +57,7 @@ static bool an_fitstruct_inited = 0;
 static void init_an_fitstruct() {
 	fitstruct* fs = an_fitstruct;
 	int i = 0, ob;
-	char* nil = " ";
+	const char* nil = " ";
 
  	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "RA",  "degrees", ra);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_D, "DEC", "degrees", dec);
@@ -327,6 +330,3 @@ int64_t an_catalog_get_id(int catversion, int64_t starid) {
 	id = (starid & mask) | catv;
 	return id;
 }
-
-
-

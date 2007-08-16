@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <math.h>
 #include <errno.h>
@@ -219,7 +220,7 @@ int idfile_fix_header(idfile* id)
 	void* dataptr;
 	uint datasize;
 	uint ncols, nrows, tablesize;
-	char* fn;
+	const char* fn;
 
 	if (!id->fid) {
 		fflush(stdout);
@@ -299,4 +300,3 @@ uint64_t idfile_get_anid(idfile* id, uint starid)
 	}
 	return id->anidarray[starid];
 }
-

@@ -779,11 +779,11 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 		memcpy(mo.quadpix, field, 8 * sizeof(double));
 		memcpy(mo.quadxyz, star, 12 * sizeof(double));
 
-		if (solver->index->idfile) {
-			mo.ids[0] = idfile_get_anid(solver->index->idfile, iA);
-			mo.ids[1] = idfile_get_anid(solver->index->idfile, iB);
-			mo.ids[2] = idfile_get_anid(solver->index->idfile, iC);
-			mo.ids[3] = idfile_get_anid(solver->index->idfile, iD);
+		if (solver->index->id_file) {
+			mo.ids[0] = idfile_get_anid(solver->index->id_file, iA);
+			mo.ids[1] = idfile_get_anid(solver->index->id_file, iB);
+			mo.ids[2] = idfile_get_anid(solver->index->id_file, iC);
+			mo.ids[3] = idfile_get_anid(solver->index->id_file, iD);
 		} else {
 			mo.ids[0] = 0;
 			mo.ids[1] = 0;

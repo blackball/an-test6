@@ -89,12 +89,12 @@ int fits_find_column(const qfits_table* table, const char* colname);
 
 int fits_get_atom_size(tfits_type type);
 
-int fits_find_table_column(char* fn, char* colname, int* start, int* size);
+int fits_find_table_column(const char* fn, const char* colname, int* start, int* size);
 
-qfits_table* fits_get_table_column(char* fn, char* colname, int* pcol);
+qfits_table* fits_get_table_column(const char* fn, const char* colname, int* pcol);
 
 int fits_add_column(qfits_table* table, int column, tfits_type type,
-					int ncopies, char* units, char* label);
+					int ncopies, const char* units, const char* label);
 
 // write single column fields:
 int fits_write_data_A(FILE* fid, unsigned char value);
@@ -109,4 +109,3 @@ int fits_write_data_X(FILE* fid, unsigned char value);
 int fits_write_data(FILE* fid, void* pvalue, tfits_type type);
 
 #endif
-

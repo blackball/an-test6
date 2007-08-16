@@ -26,7 +26,7 @@ struct index_s {
 
 	// The index
 	codetree* codekd;
-	idfile* idfile;
+	idfile* id_file;
 	quadfile* quads;
 	startree* starkd;
 

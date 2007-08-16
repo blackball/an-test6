@@ -21,8 +21,8 @@
 Inline rdlist* rdlist_open(char* fn) {
 	rdlist* rtn = xylist_open(fn);
 	if (!rtn) return NULL;
-	rtn->xname = "RA";
-	rtn->yname = "DEC";
+	rtn->xname = (char*)"RA";
+	rtn->yname = (char*)"DEC";
 	return rtn;
 }
 
@@ -42,11 +42,11 @@ Inline int rdlist_read_entries(rdlist* ls, uint field,
 
 Inline rdlist* rdlist_open_for_writing(char* fn) {
 	rdlist* rtn = xylist_open_for_writing(fn);
-	rtn->antype = AN_FILETYPE_RDLS;
-	rtn->xname = "RA";
-	rtn->yname = "DEC";
-	rtn->xunits = "degrees";
-	rtn->yunits = "degrees";
+	rtn->antype = (char*)AN_FILETYPE_RDLS;
+	rtn->xname = (char*)"RA";
+	rtn->yname = (char*)"DEC";
+	rtn->xunits = (char*)"degrees";
+	rtn->yunits = (char*)"degrees";
 	rtn->xtype = TFITS_BIN_TYPE_D;
 	rtn->ytype = TFITS_BIN_TYPE_D;
 	return rtn;

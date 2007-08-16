@@ -251,4 +251,3 @@ inline void star_midpoint(double* mid, double* A, double* B) {
 	mid[1] *= invlen;
 	mid[2] *= invlen;
 }
-

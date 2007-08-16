@@ -16,6 +16,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <assert.h>
 #include <stddef.h>
 #include <errno.h>
@@ -151,8 +153,8 @@ static bool matchfile_fitstruct_inited = 0;
 
 #define SET_FIELDS(A, i, t, n, u, fld, nc, req) { \
  MatchObj x; \
- A[i].fieldname=n; \
- A[i].units=u; \
+ A[i].fieldname=(char*)n; \
+ A[i].units=(char*)u; \
  A[i].offset=offsetof(MatchObj, fld); \
  A[i].size=sizeof(x.fld); \
  A[i].ncopies=nc; \
@@ -165,7 +167,7 @@ static void init_matchfile_fitstruct() {
 	MatchObj mo;
 	fitstruct* fs = matchfile_fitstruct;
 	int i = 0;
-	char* nil = " ";
+	const char* nil = " ";
 
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "quad", nil, quadno, 1, TRUE);
 	SET_FIELDS(fs, i, TFITS_BIN_TYPE_J, "stars", nil, star, 4, TRUE);
@@ -417,4 +419,3 @@ int matchfile_buffered_read_pushback(matchfile* mf) {
 	buffered_read_pushback(&mf->br);
 	return 0;
 }
-

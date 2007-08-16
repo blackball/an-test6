@@ -16,9 +16,11 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
 
@@ -1674,4 +1676,3 @@ char* sl_appendf(sl* list, const char* format, ...) {
     va_end(lst);
 	return str;
 }
-

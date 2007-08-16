@@ -53,7 +53,7 @@ static void wcs_hdr_common(qfits_header* hdr, tan_t* tan) {
 	qfits_header_add(hdr, "CD2_2", val, " ", NULL);
 }
 
-static void add_polynomial(qfits_header* hdr, char* format,
+static void add_polynomial(qfits_header* hdr, const char* format,
 						   int order, double* data, int datastride,
 						   bool drop_linear) {
 	int i, j;
@@ -114,7 +114,7 @@ qfits_header* tan_create_header(tan_t* tan) {
 	return hdr;
 }
 
-static bool read_polynomial(qfits_header* hdr, char* format,
+static bool read_polynomial(qfits_header* hdr, const char* format,
 							int order, double* data, int datastride,
 							bool skip_linear) {
 	int i, j;
@@ -146,8 +146,8 @@ static bool read_polynomial(qfits_header* hdr, char* format,
 sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 	sip_t sip;
 	char* str;
-	char* key;
-	char* expect;
+	const char* key;
+	const char* expect;
 
 	memset(&sip, 0, sizeof(sip_t));
 
@@ -221,8 +221,8 @@ sip_t* sip_read_header(qfits_header* hdr, sip_t* dest) {
 
 tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 	char* str;
-	char* key;
-	char* expect;
+	const char* key;
+	const char* expect;
 	tan_t tan;
 	double nil = -1e300;
 
@@ -247,7 +247,7 @@ tan_t* tan_read_header(qfits_header* hdr, tan_t* dest) {
 	}
 
 	{
-		char* keys[] = { "CRVAL1", "CRVAL2", "CRPIX1", "CRPIX2",
+		const char* keys[] = { "CRVAL1", "CRVAL2", "CRPIX1", "CRPIX2",
 						 "CD1_1", "CD1_2", "CD2_1", "CD2_2" };
 		double* vals[] = { &(tan.crval[0]), &(tan.crval[1]),
 						   &(tan.crpix[0]), &(tan.crpix[1]),

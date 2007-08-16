@@ -16,6 +16,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
@@ -25,7 +28,7 @@
 
 // Is the given filename an xylist?
 int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
-                          char** reason) {
+                          const char** reason) {
 	qfits_header* header;
 	qfits_table* table;
 	qfits_col *xcol, *ycol;
@@ -260,7 +263,7 @@ int xylist_read_entries(xylist* ls, uint field, uint offset, uint n,
 static qfits_table* xylist_get_table(xylist* ls) {
 	uint ncols, nrows, tablesize;
 	qfits_table* table;
-	char* nil = " ";
+	const char* nil = " ";
 	ncols = 2;
 	nrows = 0;
 	tablesize = 0;
@@ -415,4 +418,3 @@ int xylist_close(xylist* ls) {
 	free(ls);
 	return 0;
 }
-

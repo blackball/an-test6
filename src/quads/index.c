@@ -97,8 +97,8 @@ index_t* index_load(char* indexname, int flags)
 		logerr("BLAH:%d\n",flags);
 		idfname = mk_idfn(indexname);
 		// Read .id file...
-		index->idfile = idfile_open(idfname, 0);
-		if (!index->idfile) {
+		index->id_file = idfile_open(idfname, 0);
+		if (!index->id_file) {
 			logerr("Couldn't open id file %s.\n", idfname);
 			free_fn(idfname);
 			return NULL;
@@ -119,13 +119,12 @@ void index_close(index_t* index)
 		startree_close(index->starkd);
 	if (index->codekd)
 		codetree_close(index->codekd);
-	if (index->idfile)
-		idfile_close(index->idfile);
+	if (index->id_file)
+		idfile_close(index->id_file);
 	if (index->quads)
 		quadfile_close(index->quads);
 	index->starkd = NULL;
 	index->codekd = NULL;
-	index->idfile = NULL;
+	index->id_file = NULL;
 	index->quads = NULL;
 }
-

@@ -16,6 +16,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
@@ -141,7 +144,7 @@ fits_add_long_comment(qfits_header* dst, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(dst, "COMMENT", "  ", format, lst);
+	rtn = add_long_line(dst, (char*)"COMMENT", "  ", format, lst);
 	va_end(lst);
 	return rtn;
 }
@@ -151,7 +154,7 @@ fits_add_long_history(qfits_header* dst, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(dst, "HISTORY", "  ", format, lst);
+	rtn = add_long_line(dst, (char*)"HISTORY", "  ", format, lst);
 	va_end(lst);
 	return rtn;
 }
@@ -161,7 +164,7 @@ int fits_add_args(qfits_header* hdr, char** args, int argc) {
 	for (i=0; i<argc; i++) {
 		char* str = args[i];
 		int rtn;
-		rtn = add_long_line_b(hdr, "HISTORY", "  ", "%s", str);
+		rtn = add_long_line_b(hdr, (char*)"HISTORY", "  ", "%s", str);
 		if (rtn)
 			return rtn;
 	}
@@ -242,7 +245,7 @@ int fits_get_atom_size(tfits_type type) {
 }
 
 int fits_add_column(qfits_table* table, int column, tfits_type type,
-					int ncopies, char* units, char* label) {
+					int ncopies, const char* units, const char* label) {
 	int atomsize;
 	int colsize;
 
@@ -417,7 +420,7 @@ void fits_add_endian(qfits_header* header) {
 	// (don't make this a COMMENT because that makes it get separated from the ENDIAN header line.)
 }
 
-qfits_table* fits_get_table_column(char* fn, char* colname, int* pcol) {
+qfits_table* fits_get_table_column(const char* fn, const char* colname, int* pcol) {
     int i, nextens, start, size;
 
 	nextens = qfits_query_n_ext(fn);
@@ -446,7 +449,7 @@ qfits_table* fits_get_table_column(char* fn, char* colname, int* pcol) {
 	return NULL;
 }
 
-int fits_find_table_column(char* fn, char* colname, int* pstart, int* psize) {
+int fits_find_table_column(const char* fn, const char* colname, int* pstart, int* psize) {
     int i, nextens, start, size;
 
 	nextens = qfits_query_n_ext(fn);
@@ -535,6 +538,3 @@ int fits_check_endian(qfits_header* header) {
 	}
     return 0;
 }
-
-
-

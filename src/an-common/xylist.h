@@ -49,12 +49,12 @@ struct xylist {
 	int parity;
 	tfits_type xtype;
 	tfits_type ytype;
-	char* xname; // default "X"
-	char* yname; // default "Y"
-	char* xunits; // default null
-	char* yunits; // default null
+	const char* xname; // default "X"
+	const char* yname; // default "Y"
+	const char* xunits; // default null
+	const char* yunits; // default null
 
-	char* antype; // Astrometry.net filetype string.
+	const char* antype; // Astrometry.net filetype string.
 
 	// field we're currently reading/writing
 	unsigned int field;
@@ -79,7 +79,7 @@ typedef struct xylist xylist;
 
 // Is the given filename an xylist?
 int xylist_is_file_xylist(const char* fn, const char* xcolumn, const char* ycolumn,
-                          char** reason);
+                          const char** reason);
 
 // you can change the parameters (ie, xname, yname) 
 // after opening but before calling xylist_get_field.

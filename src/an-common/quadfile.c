@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <math.h>
 #include <errno.h>
@@ -39,7 +40,7 @@ static quadfile* new_quadfile() {
 	return qf;
 }
 
-quadfile* quadfile_open(char* fn, int modifiable) {
+quadfile* quadfile_open(const char* fn, int modifiable) {
 	FILE* fid = NULL;
 	qfits_header* header = NULL;
     quadfile* qf = NULL;
@@ -219,7 +220,7 @@ int quadfile_fix_header(quadfile* qf) {
 	void* dataptr;
 	uint datasize;
 	uint ncols, nrows, tablesize;
-	char* fn;
+	const char* fn;
 
 	if (!qf->fid) {
 		fprintf(stderr, "quadfile_fits_fix_header: fid is null.\n");
@@ -319,5 +320,3 @@ void quadfile_get_starids(quadfile* qf, uint quadid,
 	*starC = qf->quadarray[quadid * DIM_QUADS + 2];
 	*starD = qf->quadarray[quadid * DIM_QUADS + 3];
 }
-
-

@@ -27,7 +27,7 @@
 
 extern uint32_t ENDIAN_DETECTOR;
 
-int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, char** errormsg);
+int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, const char** errormsg);
 
 void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
 
@@ -71,7 +71,7 @@ int read_u32(FILE* fin, unsigned int* val);
 int read_double(FILE* fin, double* val);
 int read_fixed_length_string(FILE* fin, char* s, int length);
 char* read_string(FILE* fin);
-char* read_string_terminated(FILE* fin, char* terminators, int nterminators,
+char* read_string_terminated(FILE* fin, const char* terminators, int nterminators,
 							 bool include_terminator);
 
 int read_u32_portable(FILE* fin, unsigned int* val);

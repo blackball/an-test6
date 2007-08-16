@@ -16,6 +16,9 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
@@ -33,7 +36,7 @@
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
-int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, char** errormsg) {
+int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, const char** errormsg) {
 	int outpipe[2];
 	int errpipe[2];
 	pid_t pid;
@@ -288,7 +291,7 @@ int is_word(char* cmdline, char* keyword, char** cptr) {
 	return 1;
 }
 
-void read_complain(FILE* fin, char* attempted) {
+void read_complain(FILE* fin, const char* attempted) {
 	if (feof(fin)) {
 		fprintf(stderr, "Couldn't read %s: end-of-file.\n", attempted);
 	} else if (ferror(fin)) {
@@ -397,7 +400,7 @@ static char* growable_buffer_add(char* buf, int index, char c, int* size, int* s
 	return buf;
 }
 
-char* read_string_terminated(FILE* fin, char* terminators, int nterminators,
+char* read_string_terminated(FILE* fin, const char* terminators, int nterminators,
 							 bool include_terminator) {
 	int step = 1024;
 	int maxstep = 1024*1024;

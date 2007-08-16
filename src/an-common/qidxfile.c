@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <math.h>
 #include <errno.h>
@@ -255,4 +256,3 @@ int qidxfile_get_quads(qidxfile* qf, uint starid, uint** quads, uint* nquads) {
 	*quads = qf->heap + heapindex;
 	return 0;
 }
-
