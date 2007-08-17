@@ -24,8 +24,8 @@
 #include "qfits.h"
 
 struct quadfile {
-	uint numquads;
-	uint numstars;
+	unsigned int numquads;
+	unsigned int numstars;
 	// upper bound
 	double index_scale;
 	// lower bound
@@ -40,7 +40,7 @@ struct quadfile {
 	// when reading:
 	void*  mmap_quad;
 	size_t mmap_quad_size;
-	uint*   quadarray;
+	unsigned int*   quadarray;
 
 	// when writing:
 	FILE* fid;
@@ -50,11 +50,11 @@ typedef struct quadfile quadfile;
 
 int quadfile_close(quadfile* qf);
 
-void quadfile_get_starids(quadfile* qf, uint quadid,
-						  uint* starA, uint* starB,
-						  uint* starC, uint* starD);
+void quadfile_get_starids(quadfile* qf, unsigned int quadid,
+						  unsigned int* starA, unsigned int* starB,
+						  unsigned int* starC, unsigned int* starD);
 
-int quadfile_write_quad(quadfile* qf, uint iA, uint iB, uint iC, uint iD);
+int quadfile_write_quad(quadfile* qf, unsigned int iA, unsigned int iB, unsigned int iC, unsigned int iD);
 
 int quadfile_fix_header(quadfile* qf);
 

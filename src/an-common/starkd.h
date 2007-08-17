@@ -44,7 +44,7 @@ int startree_D(startree* s);
 
 qfits_header* startree_header(startree* s);
 
-int startree_get(startree* s, uint starid, double* posn);
+int startree_get(startree* s, unsigned int starid, double* posn);
 
 int startree_close(startree* s);
 
