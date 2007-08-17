@@ -99,7 +99,7 @@ void codetree_compute_inverse_perm(codetree* s) {
 	kdtree_inverse_permutation(s->tree, s->inverse_perm);
 }
 
-int codetree_get(codetree* s, uint codeid, double* code) {
+int codetree_get(codetree* s, unsigned int codeid, double* code) {
 	if (s->tree->perm && !s->inverse_perm) {
 		codetree_compute_inverse_perm(s);
 		if (!s->inverse_perm)
@@ -131,4 +131,3 @@ codetree* codetree_new() {
 int codetree_write_to_file(codetree* s, char* fn) {
 	return kdtree_fits_write(s->tree, fn, s->header);
 }
-

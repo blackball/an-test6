@@ -25,9 +25,9 @@
 #include "sip.h"
 
 struct match_struct {
-    uint quadno;
-	uint star[4];
-	uint field[4];
+    unsigned int quadno;
+	unsigned int star[4];
+	unsigned int field[4];
 	uint64_t ids[4];
 	// actually code error ^2.
     float code_err;

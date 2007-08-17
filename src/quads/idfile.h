@@ -26,7 +26,7 @@
 #include "qfits.h"
 
 struct idfile {
-	uint numstars;
+	unsigned int numstars;
 	int healpix;
 
 	// when reading:
@@ -47,7 +47,7 @@ idfile* idfile_open_for_writing(char* quadfname);
 
 int idfile_close(idfile* qf);
 
-uint64_t idfile_get_anid(idfile* qf, uint starid);
+uint64_t idfile_get_anid(idfile* qf, unsigned int starid);
 
 int idfile_write_anid(idfile* qf, uint64_t anid /* astrometry.net id */ );
 

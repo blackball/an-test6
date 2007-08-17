@@ -34,7 +34,7 @@ typedef struct codetree codetree;
 
 codetree* codetree_open(char* fn);
 
-int codetree_get(codetree* s, uint codeid, double* code);
+int codetree_get(codetree* s, unsigned int codeid, double* code);
 
 int codetree_N(codetree* s);
 
