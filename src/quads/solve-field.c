@@ -161,7 +161,7 @@ int main(int argc, char** args) {
 	int i, f;
 	int rtn;
 	sl* backendargs;
-	char* errmsg;
+	const char* errmsg;
 	bool guess_scale = TRUE;
 	int width = 0, height = 0;
 	int nllargs;
@@ -282,7 +282,7 @@ int main(int argc, char** args) {
 		char tmpfn[1024];
 		char* infile = NULL;
 		bool isxyls;
-		char* reason;
+		const char* reason;
 		int len;
 		char* cpy;
 		char* base;
