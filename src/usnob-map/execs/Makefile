@@ -43,7 +43,7 @@ LDFLAGS += $(CAIRO_LIB)
 MISC_EXECS := ppmnormrgb whitebalance zoomout
 
 USNOBMAP_EXECS := usnobcount usnobtile sdssfieldtile \
-	indexquad sdssquad render-mercator make-merctree rdlstile \
+	indexquad sdssquad render-mercator make-merctree make-merctree2 rdlstile \
 	indextile indexquad2 tychotile tilerender
 
 USNOBMAP_MAIN_OBJS := $(addsuffix .o,$(USNOBMAP_EXECS))
@@ -69,6 +69,8 @@ TILERENDER_OBJS := tilerender.o render_image.o \
 		render_boundary.o \
 		render_constellation.o \
 		render_messier.o
+
+MISC_OBJS := merctree.o pnmutils.o
 
 tilerender: $(TILERENDER_OBJS) \
 		$(ANFILES_LIB) $(LIBKD_LIB) $(ANUTILS_LIB) $(QFITS_LIB)
@@ -133,7 +135,7 @@ tags:
 	etags `find . -name "*.h" -o -name "*.c"`
 
 ALL_OBJS := $(KDTREE_OBJS) $(USNOBMAP_MAIN_OBJS) $(MISC_MAIN_OBJS) \
-	$(TILERENDER_OBJS)
+	$(TILERENDER_OBJS) $(MISC_OBJS)
 
 DEP_OBJ := $(ALL_OBJS)
 DEP_PREREQS := $(QFITS_LIB)

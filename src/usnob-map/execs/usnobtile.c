@@ -99,8 +99,8 @@ static void addstar(float* fluximg, int x, int y, int W, int H,
 	}
 }
 
-static bool do_boxes_overlap(double* lo1, double* hi1,
-							 double* lo2, double* hi2, int D) {
+static bool do_boxes_overlap(const double* lo1, const double* hi1,
+							 const double* lo2, const double* hi2, int D) {
 	int d;
 	for (d=0; d<D; d++) {
 		if (lo1[d] > hi2[d])
