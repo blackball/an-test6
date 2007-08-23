@@ -148,7 +148,7 @@ QR_DEPS := linalg/qr.o linalg/householder.o \
 		err/error.o err/stream.o sys/infnan.o sys/fdiv.o \
 		blas/blas.o $(CBLAS)
 
-qr-demo: qr-demo.o $(GSL_LIB) #$(QR_DEPS)
+qr-demo: qr-demo.o $(GSL_LIB)
 	gcc -o $@ $^ -lm
 
 CHOL_DEPS := linalg/cholesky.o matrix/matrix.o matrix/rowcol.o \
@@ -156,11 +156,8 @@ CHOL_DEPS := linalg/cholesky.o matrix/matrix.o matrix/rowcol.o \
 		err/error.o err/stream.o sys/infnan.o sys/fdiv.o \
 		blas/blas.o $(CBLAS)
 
-chol-demo: chol-demo.o $(GSL_LIB) #$(CHOL_DEPS)
+chol-demo: chol-demo.o $(GSL_LIB)
 	gcc -o $@ $^ -lm
-
-#%.o: %.c
-#	gcc -Wall -o $@ -c $< -I. -DHAVE_INLINE
 
 # "sort" removes duplicates.
 GSL_DEPS := $(sort $(QR_DEPS) $(CHOL_DEPS))
@@ -172,13 +169,10 @@ $(GSL_LIB): config.h $(GSL_DEPS)
 config.h: configure
 	./configure --enable-shared=no --prefix=`pwd`/stage
 
-#        CFLAGS="$(CFLAGS)" \
-#        LDFLAGS="$(GSL_LDFLAGS)"
-
 DEP_OBJ := $(GSL_DEPS)
 include $(COMMON)/makefile.deps
 
 clean:
 	-rm -f qr-demo chol-demo $(QR_DEPS) $(CHOL_DEPS) \
-		$(DEPS) deps $(GSL_LIB)
+		$(DEPS) deps $(GSL_LIB) qr-demo.o chol-demo.o
 
