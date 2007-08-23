@@ -86,6 +86,7 @@ pixels=UxV arcmin
 #include "ioutils.h"
 #include "xylist.h"
 #include "matchfile.h"
+#include "qfits_error.h"
 
 static struct option long_options[] = {
 	{"help",        no_argument,       0, 'h'},
@@ -321,7 +322,9 @@ int main(int argc, char** args) {
 		sl_remove_from(backendargs,  nbeargs);
 
 		printf("Checking if file \"%s\" is xylist or image: ", infile);
-		isxyls = xylist_is_file_xylist(image, NULL, NULL, &reason);
+        // turn on QFITS error reporting.
+        qfits_err_statset(1);
+		isxyls = xylist_is_file_xylist(infile, NULL, NULL, &reason);
 		printf(isxyls ? "xyls\n" : "image\n");
 		if (!isxyls) {
 			printf("  (%s)\n", reason);
