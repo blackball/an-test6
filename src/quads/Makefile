@@ -118,7 +118,7 @@ PROSPECTUS_MAIN_OBJ := $(addsuffix .o,$(PROSPECTUS))
 FITS_UTILS_MAIN_OBJ := $(addsuffix .o,$(FITS_UTILS))
 
 SIMPLEXY_OBJ := dallpeaks.o dcen3x3.o dfind.o dmedsmooth.o dobjects.o dpeaks.o \
-	dselip.o dsigma.o dsmooth.o fits2xy.o simplexy.o radix.o
+	dselip.o dsigma.o dsmooth.o fits2xy.o simplexy.o radix.o qsort_reentrant.o
 
 SIMPLEXY_SHARED_OBJ := simplexy.o dsigma.o dmedsmooth.o dallpeaks.o dpeaks.o \
 	dobjects.o dselip.o dsmooth.o dcen3x3.o dfind.o radix.o
