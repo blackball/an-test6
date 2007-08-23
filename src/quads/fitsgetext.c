@@ -23,13 +23,14 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include "an-bool.h"
 #include "qfits.h"
 #include "bl.h"
 
 char* OPTIONS = "he:i:o:ba";
 
 void printHelp(char* progname) {
-	printf("%s    -i <input-file>\n"
+	fprintf(stderr, "%s    -i <input-file>\n"
 		   "      -o <output-file>\n"
 		   "      [-a]: write out ALL extensions; the output filename should be\n"
 		   "            a \"sprintf\" pattern such as  \"extension-%%04i\".\n"
@@ -46,6 +47,7 @@ int main(int argc, char *argv[]) {
 
 	char* infn = NULL;
 	char* outfn = NULL;
+    bool tostdout = FALSE;
 	FILE* fin = NULL;
 	FILE* fout = NULL;
 	il* exts;
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Couldn't determine how many extensions are in file %s.\n", infn);
 			exit(-1);
 		} else {
-			printf("File %s contains %i FITS extensions.\n", infn, Next);
+			fprintf(stderr, "File %s contains %i FITS extensions.\n", infn, Next);
 		}
 	}
 
@@ -103,11 +105,11 @@ int main(int argc, char *argv[]) {
 				exit(-1);
 			}
 			if (inblocks) {
-				printf("Extension %i : header start %i , length %i ; data start %i , length %i blocks.\n",
+				fprintf(stderr, "Extension %i : header start %i , length %i ; data start %i , length %i blocks.\n",
 					   i, hdrstart/FITS_BLOCK_SIZE, hdrlen/FITS_BLOCK_SIZE,
 					   datastart/FITS_BLOCK_SIZE, datalen/FITS_BLOCK_SIZE);
 			} else {
-				printf("Extension %i : header start %i , length %i ; data start %i , length %i .\n",
+				fprintf(stderr, "Extension %i : header start %i , length %i ; data start %i , length %i .\n",
 					   i, hdrstart, hdrlen, datastart, datalen);
 			}
 		}
@@ -119,6 +121,14 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+    if (!strcmp(outfn, "-")) {
+        tostdout = TRUE;
+        if (allexts) {
+            fprintf(stderr, "Specify all extensions (-a) and outputting to stdout (-o -) doesn't make much sense...\n");
+            exit(-1);
+        }
+    }
+
 	if (infn) {
 		fin = fopen(infn, "rb");
 		if (!fin) {
@@ -127,15 +137,21 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (!allexts) {
-		fout = fopen(outfn, "wb");
-		if (!fout) {
-			fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
-			exit(-1);
-		}
-	} else
-		for (i=0; i<=Next; i++)
-			il_append(exts, i);
+    if (tostdout)
+        fout = stdout;
+    else {
+        if (allexts)
+            for (i=0; i<=Next; i++)
+                il_append(exts, i);
+        else {
+            // open the (single) output file.
+            fout = fopen(outfn, "wb");
+            if (!fout) {
+                fprintf(stderr, "Failed to open output file %s: %s\n", outfn, strerror(errno));
+                exit(-1);
+            }
+        }
+    }
 
 	fseeko(fin, 0, SEEK_END);
 	mapsize = ftello(fin);
@@ -153,7 +169,7 @@ int main(int argc, char *argv[]) {
 
 		if (allexts) {
 			char fn[256];
-			sprintf(fn, outfn, ext);
+			snprintf(fn, sizeof(fn), outfn, ext);
 			fout = fopen(fn, "wb");
 			if (!fout) {
 				fprintf(stderr, "Failed to open output file %s: %s\n", fn, strerror(errno));
@@ -167,10 +183,10 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 		}
 		if (inblocks)
-			printf("Writing extension %i: header start %i, length %i, data start %i, length %i blocks.\n",
+			fprintf(stderr, "Writing extension %i: header start %i, length %i, data start %i, length %i blocks.\n",
 				   ext, hdrstart/FITS_BLOCK_SIZE, hdrlen/FITS_BLOCK_SIZE, datastart/FITS_BLOCK_SIZE, datalen/FITS_BLOCK_SIZE);
 		else
-			printf("Writing extension %i: header start %i, length %i, data start %i, length %i.\n",
+			fprintf(stderr, "Writing extension %i: header start %i, length %i, data start %i, length %i.\n",
 				   ext, hdrstart, hdrlen, datastart, datalen);
 		
 		if ((hdrlen  && (fwrite(map + hdrstart , 1, hdrlen , fout) != hdrlen )) ||
@@ -187,7 +203,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	munmap(map, mapsize);
-	if (!allexts)
+	if (!allexts && !tostdout)
 		fclose(fout);
 	il_free(exts);
 	return 0;
