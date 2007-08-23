@@ -546,10 +546,15 @@ int main(int argc, char** args) {
         int lo = il_get(depths, 2*i);
         int hi = il_get(depths, 2*i + 1);
         char key[64];
-        sprintf(key, "ANFDL%i", (i+1));
-		fits_header_add_int(hdr, key, lo, "field range: low");
-        sprintf(key, "ANFDU%i", (i+1));
-		fits_header_add_int(hdr, key, hi, "field range: high");
+        if (lo == hi) {
+            sprintf(key, "ANFD%i", (i+1));
+            fits_header_add_int(hdr, key, lo, "field to solve");
+        } else {
+            sprintf(key, "ANFDL%i", (i+1));
+            fits_header_add_int(hdr, key, lo, "field range: low");
+            sprintf(key, "ANFDU%i", (i+1));
+            fits_header_add_int(hdr, key, hi, "field range: high");
+        }
     }
 
 	fout = fopen(outfn, "wb");
