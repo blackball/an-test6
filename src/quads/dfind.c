@@ -35,10 +35,6 @@
 
 #define MAX_GROUPS 10000
 
-static int *matches = NULL;
-static int *nmatches = NULL;
-static int *mapgroup = NULL;
-
 int dfind2(int *image,
           int nx,
           int ny,
@@ -161,9 +157,9 @@ int dfind(int *image,
 	int i, ip, j, jp, k, kp, l, ist, ind, jst, jnd, igroup, minearly, checkearly, tmpearly;
 	int ngroups;
 
-	mapgroup = (int *) malloc((size_t) nx * ny * sizeof(int));
-	matches = (int *) malloc((size_t) nx * ny * 9 * sizeof(int));
-	nmatches = (int *) malloc((size_t) nx * ny * sizeof(int));
+	int* mapgroup = (int *) malloc((size_t) nx * ny * sizeof(int));
+	int* matches = (int *) malloc((size_t) nx * ny * 9 * sizeof(int));
+	int* nmatches = (int *) malloc((size_t) nx * ny * sizeof(int));
 
         if (!mapgroup || !matches || !nmatches) {
             fprintf(stderr, "Failed to allocate memory in dfind.c\n");

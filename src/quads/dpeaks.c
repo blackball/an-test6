@@ -23,6 +23,7 @@
 #include <math.h>
 
 #include "dimage.h"
+#include "qsort_reentrant.h"
 #include "simplexy-common.h"
 
 /*
@@ -33,20 +34,18 @@
  * Mike Blanton
  * 1/2006 */
 
-static float *smooth = NULL;
-static int *peaks = NULL;
-static int *indx = NULL;
-static int *object = NULL;
-static int *keep = NULL;
-static int *mask = NULL;
-static int *fullxcen = NULL;
-static int *fullycen = NULL;
 
-int dpeaks_compare(const void *first, const void *second)
+struct dpeaks_cmp_data_s {
+  int* peaks;
+  float* smooth;
+};
+
+int dpeaks_compare(void* data_ptr, const void *first, const void *second)
 {
+        struct dpeaks_cmp_data_s* data = data_ptr;
 	float v1, v2;
-	v1 = smooth[peaks[*((int *) first)]];
-	v2 = smooth[peaks[*((int *) second)]];
+	v1 = data->smooth[data->peaks[*((int *) first)]];
+	v2 = data->smooth[data->peaks[*((int *) second)]];
 	if (v1 > v2)
 		return ( -1);
 	if (v1 < v2)
@@ -74,6 +73,15 @@ int dpeaks(float *image,
 {
 	int i, j, ip, jp, ist, jst, ind, jnd, highest, tmpnpeaks;
 	float dx, dy, level;
+        
+        float *smooth = NULL;
+        int *peaks = NULL;
+        int *indx = NULL;
+        int *object = NULL;
+        int *keep = NULL;
+        int *mask = NULL;
+        int *fullxcen = NULL;
+        int *fullycen = NULL;
 
 	/* 1. smooth image */
 	smooth = (float *) malloc(sizeof(float) * nx * ny);
@@ -112,7 +120,10 @@ int dpeaks(float *image,
 	indx = (int *) malloc(sizeof(int) * (*npeaks));
 	for (i = 0;i < (*npeaks);i++)
 		indx[i] = i;
-	qsort((void *) indx, (size_t)(*npeaks), sizeof(int), dpeaks_compare);
+        struct dpeaks_cmp_data_s cmpdata;
+        cmpdata.peaks = peaks;
+        cmpdata.smooth = smooth;
+	qsort_r((void *) indx, (size_t)(*npeaks), sizeof(int), &cmpdata, dpeaks_compare);
 	if ((*npeaks) > maxnpeaks)
 		*npeaks = maxnpeaks;
 	fullxcen = (int *) malloc((*npeaks) * sizeof(int));

@@ -32,14 +32,6 @@
  * Mike Blanton
  * 1/2006 */
 
-static float *arr = NULL;
-static int *xgrid = NULL;
-static int *ygrid = NULL;
-static float *grid = NULL;
-static int *xlo = NULL;
-static int *xhi = NULL;
-static int *ylo = NULL;
-static int *yhi = NULL;
 
 float dselip(unsigned long k, unsigned long n, float *arr);
 
@@ -54,6 +46,15 @@ int dmedsmooth(float *image,
 	int xoff, yoff, nm, nxgrid, nygrid;
 	int ypsize, ymsize, xpsize, xmsize;
 	float dx, dy, xkernel, ykernel;
+
+        float *arr = NULL;
+        int *xgrid = NULL;
+        int *ygrid = NULL;
+        float *grid = NULL;
+        int *xlo = NULL;
+        int *xhi = NULL;
+        int *ylo = NULL;
+        int *yhi = NULL;
 
 	/* get grids */
 	sp = halfbox;

@@ -20,7 +20,7 @@
 #include "fileutil.h"
 #include "log.h"
 
-index_t* index_load(char* indexname, int flags)
+index_t* index_load(const char* indexname, int flags)
 {
 	char *idfname, *treefname, *quadfname, *startreefname;
 

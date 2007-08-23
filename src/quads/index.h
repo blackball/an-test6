@@ -18,7 +18,7 @@
  */
 struct index_s {
 	// name of the current index.
-	char *indexname;
+	const char *indexname;
 
 	// unique id for this index.
 	int indexid;
@@ -65,7 +65,7 @@ typedef struct index_s index_t;
  *   A pointer to an index_t structure or NULL on error.
  *
  */
-index_t* index_load(char* indexname, int flags);
+index_t* index_load(const char* indexname, int flags);
 
 /**
  * Close an index and free associated data structures

@@ -32,8 +32,6 @@
  * Mike Blanton
  * 1/2006 */
 
-static float *kernel = NULL;
-
 int dsmooth(float *image,
             int nx,
             int ny,
@@ -46,7 +44,7 @@ int dsmooth(float *image,
 	/* make kernel */
 	npix = 2 * ((int) ceilf(3. * sigma)) + 1;
 	half = npix / 2;
-	kernel = (float *) malloc(npix * npix * sizeof(float));
+	float* kernel =  malloc(npix * npix * sizeof(float));
 	invvar = 1. / sigma / sigma;
 	for (i = 0;i < npix;i++)
 		for (j = 0;j < npix;j++) {

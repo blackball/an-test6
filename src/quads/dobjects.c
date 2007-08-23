@@ -33,8 +33,6 @@
  * Mike Blanton
  * 1/2006 */
 
-static int *mask = NULL;
-
 int dobjects(float *image,
              float *smooth,
              int nx,
@@ -51,7 +49,7 @@ int dobjects(float *image,
 	dsigma(smooth, nx, ny, (int)(10*dpsf), &sigma);
 	limit = sigma * plim;
 
-	mask = (int *) malloc(nx * ny * sizeof(int));
+	int* mask = (int *) malloc(nx * ny * sizeof(int));
 	for (j = 0;j < ny;j++)
 		for (i = 0;i < nx;i++)
 			mask[i + j*nx] = 0;

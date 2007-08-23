@@ -33,7 +33,6 @@
  * Mike Blanton
  * 1/2006 */
 
-static float *diff = NULL;
 
 float dselip(unsigned long k, unsigned long n, float *arr);
 
@@ -43,6 +42,7 @@ int dsigma(float *image,
            int sp,
            float *sigma)
 {
+	float *diff = NULL;
 	float tot;
 	int i, j, dx, dy, ndiff;
 

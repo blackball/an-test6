@@ -35,11 +35,9 @@
  * Mike Blanton
  * 1/2006 */
 
-static float *invvar = NULL;
-static float *simage = NULL;
-static int *oimage = NULL;
-static float *smooth = NULL;
-
+// Note: To make simplexy() reentrant, do the following:
+// #define SIMPLEXY_REENTRANT
+// Or compile all the simplexy files with -DSIMPLEXY_REENTRANT
 int simplexy(float *image,
              int nx,
              int ny,
@@ -50,21 +48,25 @@ int simplexy(float *image,
              int maxper,    /* maximum number of peaks per object; 1000 */
              int maxnpeaks, /* maximum number of peaks total; 100000 */
              int maxsize,   /* maximum size for extended objects: 150 */
-	     int halfbox,    /* size for sliding sky estimation box */
+             int halfbox,    /* size for sliding sky estimation box */
              float *sigma,
              float *x,
              float *y,
              float *flux,
-             int *npeaks)
-{
+             int *npeaks) {
 	float minpeak;
 	int i, j;
 
-    fprintf(stderr, "simplexy: nx=%d, ny=%d\n",nx,ny);
-    fprintf(stderr, "simplexy: dpsf=%f, plim=%f, dlim=%f, saddle=%f\n",
-	    dpsf,plim,dlim,saddle);
-    fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d, maxsize=%d, halfbox=%d\n",
-	    maxper,maxnpeaks,maxsize,halfbox);
+	float *invvar = NULL;
+	float *simage = NULL;
+	int *oimage = NULL;
+	float *smooth = NULL;
+
+	fprintf(stderr, "simplexy: nx=%d, ny=%d\n", nx, ny);
+	fprintf(stderr, "simplexy: dpsf=%f, plim=%f, dlim=%f, saddle=%f\n",
+	        dpsf, plim, dlim, saddle);
+	fprintf(stderr, "simplexy: maxper=%d, maxnpeaks=%d, maxsize=%d, halfbox=%d\n",
+	        maxper, maxnpeaks, maxsize, halfbox);
 
 	/* determine sigma */
 	dsigma(image, nx, ny, 5, sigma);
@@ -94,12 +96,12 @@ int simplexy(float *image,
 
 	/* find all peaks within each object */
 	dallpeaks(simage, nx, ny, oimage, x, y, npeaks, dpsf,
-		  (*sigma), dlim, saddle, maxper, maxnpeaks, minpeak, maxsize);
+	          (*sigma), dlim, saddle, maxper, maxnpeaks, minpeak, maxsize);
 	fprintf(stderr, "simplexy: dallpeaks() found %i peaks.\n", *npeaks);
 	FREEVEC(oimage);
 
 	for (i = 0;i < (*npeaks);i++)
-	  flux[i] = simage[((int) (x[i]+0.5)) + ((int) (y[i]+0.5))*nx];
+		flux[i] = simage[((int) (x[i] + 0.5)) + ((int) (y[i] + 0.5)) * nx];
 	FREEVEC(simage);
 
 	return (1);
