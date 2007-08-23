@@ -130,7 +130,7 @@ static int add_long_line(qfits_header* hdr, const char* keyword, const char* ind
 }
 
 static int 
-add_long_line_b(qfits_header* hdr, char* keyword, const char* indent, const char* format, ...) {
+add_long_line_b(qfits_header* hdr, const char* keyword, const char* indent, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
