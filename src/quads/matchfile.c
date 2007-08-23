@@ -138,8 +138,8 @@ int matchfile_fix_header(matchfile* mf) {
 
 // mapping between a struct field and FITS field.
 struct fits_struct_pair {
-	char* fieldname;
-	char* units;
+	const char* fieldname;
+	const char* units;
 	int offset;
 	int size;
 	int ncopies;
@@ -153,8 +153,8 @@ static bool matchfile_fitstruct_inited = 0;
 
 #define SET_FIELDS(A, i, t, n, u, fld, nc, req) { \
  MatchObj x; \
- A[i].fieldname=(char*)n; \
- A[i].units=(char*)u; \
+ A[i].fieldname=n; \
+ A[i].units=u; \
  A[i].offset=offsetof(MatchObj, fld); \
  A[i].size=sizeof(x.fld); \
  A[i].ncopies=nc; \

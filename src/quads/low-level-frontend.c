@@ -151,7 +151,7 @@ int main(int argc, char** args) {
 	char* matchfile = NULL;
 	char* rdlsfile = NULL;
 	char* wcsfile = NULL;
-    char* errmsg = NULL;
+    const char* errmsg = NULL;
     il* depths = il_new(4);
 
 	while (1) {
