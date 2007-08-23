@@ -104,6 +104,7 @@ static struct option long_options[] = {
 	{"scale-low",	required_argument, 0, 'L'},
 	{"scale-high",	required_argument, 0, 'H'},
 	{"scale-units", required_argument, 0, 'u'},
+    {"fields",      required_argument, 0, 'F'},
 	{"depth",		required_argument, 0, 'd'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"out",			required_argument, 0, 'o'},
@@ -114,7 +115,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:fd:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:fd:F:";
 
 static void print_help(const char* progname) {
 	// FIXME - add rest of args!
@@ -152,7 +153,13 @@ int main(int argc, char** args) {
 	char* rdlsfile = NULL;
 	char* wcsfile = NULL;
     const char* errmsg = NULL;
-    il* depths = il_new(4);
+    il* depths;
+    // contains ranges of fields as pairs of ints.
+    il* fields;
+    int lo, hi;
+
+    depths = il_new(4);
+    fields = il_new(16);
 
 	while (1) {
 		int option_index = 0;
@@ -168,6 +175,23 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case 'F':
+            if (sscanf(optarg, "%d/%d", &lo, &hi) == 2) {
+                if (hi < lo) {
+                    fprintf(stderr, "Error parsing range of fields \"%s\".\n", optarg);
+                    exit(-1);
+                }
+                il_append(fields, lo);
+                il_append(fields, hi);
+            } else if (sscanf(optarg, "%i", &lo) == 1) {
+                // hi == lo
+                il_append(fields, lo);
+                il_append(fields, lo);
+            } else {
+                fprintf(stderr, "Error parsing fields specification \"%s\".\n", optarg);
+                exit(-1);
+            }
+            break;
         case 'd':
             il_append(depths, atoi(optarg));
             break;
@@ -518,6 +542,16 @@ int main(int argc, char** args) {
 		fits_header_addf(hdr, key, "", "%i", depth);
     }
 
+    for (i=0; i<il_size(depths)/2; i++) {
+        int lo = il_get(depths, 2*i);
+        int hi = il_get(depths, 2*i + 1);
+        char key[64];
+        sprintf(key, "ANFDL%i", (i+1));
+		fits_header_add_int(hdr, key, lo, "field range: low");
+        sprintf(key, "ANFDU%i", (i+1));
+		fits_header_add_int(hdr, key, hi, "field range: high");
+    }
+
 	fout = fopen(outfn, "wb");
 	if (!fout) {
 		fprintf(stderr, "Failed to open output file: %s\n", strerror(errno));
@@ -564,6 +598,9 @@ int main(int argc, char** args) {
 		}
 		fclose(fin);
 	}
+
+    il_free(depths);
+    il_free(fields);
 
 	fclose(fout);
 	qfits_header_destroy(hdr);

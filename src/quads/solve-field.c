@@ -94,6 +94,7 @@ static struct option long_options[] = {
 	{"scale-low",	required_argument, 0, 'L'},
 	{"scale-high",	required_argument, 0, 'U'},
 	{"scale-units", required_argument, 0, 'u'},
+    {"fields",      required_argument, 0, 'F'},
 	{"depth",       required_argument, 0, 'D'},
 	{"no-tweak",    no_argument,       0, 'T'},
 	{"no-guess-scale", no_argument,    0, 'G'},
@@ -106,7 +107,7 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:f";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -117,6 +118,8 @@ static void print_help(const char* progname) {
 	       "               \"arcsecperpix\": arcseconds per pixel\n"
 	       "  [--scale-low  <number>]: lower bound of image scale estimate   (-L)\n"
 	       "  [--scale-high <number>]: upper bound of image scale estimate   (-U)\n"
+           "  [--fields <number>]: specify a field (ie, FITS extension) to solve\n"
+           "  [--fields <min>/<max>]: specify a range of fields (FITS extensions) to solve; inclusive\n"
 	       "  [--width  <number>]: (mostly for xyls inputs): the original image width   (-W)\n"
 	       "  [--height <number>]: (mostly for xyls inputs): the original image height  (-H)\n"
 		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
@@ -185,6 +188,10 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case 'F':
+            sl_append(lowlevelargs, "--fields");
+            sl_appendf(lowlevelargs, optarg);
+            break;
         case 'D':
             sl_append(lowlevelargs, "--depth");
             sl_appendf(lowlevelargs, "%i", atoi(optarg));
