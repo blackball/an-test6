@@ -33,8 +33,8 @@ static an_catalog* an_catalog_new();
 
 // mapping between a struct field and FITS field.
 struct fits_struct_pair {
-	char* fieldname;
-	char* units;
+	const char* fieldname;
+	const char* units;
 	int offset;
 	int size;
 	tfits_type fitstype;
@@ -46,8 +46,8 @@ static bool an_fitstruct_inited = 0;
 
 #define SET_FIELDS(A, i, t, n, u, fld) { \
  an_entry x; \
- A[i].fieldname=(char*)n; \
- A[i].units=(char*)u; \
+ A[i].fieldname=n; \
+ A[i].units=u; \
  A[i].offset=offsetof(an_entry, fld); \
  A[i].size=sizeof(x.fld); \
  A[i].fitstype=t; \
