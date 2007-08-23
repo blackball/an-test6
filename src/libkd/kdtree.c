@@ -33,7 +33,7 @@ void kdtree_update_funcs(kdtree_t* kd) {
 	KD_DISPATCH(kdtree_update_funcs, kd->treetype,, (kd));
 }
 
-void* kdtree_get_data(kdtree_t* kd, int i) {
+void* kdtree_get_data(const kdtree_t* kd, int i) {
 	switch (kdtree_datatype(kd)) {
 	case KDT_DATA_DOUBLE:
 		return kd->data.d + kd->ndim * i;
@@ -49,7 +49,7 @@ void* kdtree_get_data(kdtree_t* kd, int i) {
 	}
 }
 
-void kdtree_copy_data_double(kdtree_t* kd, int start, int N, double* dest) {
+void kdtree_copy_data_double(const kdtree_t* kd, int start, int N, double* dest) {
 	int i;
 	int d, D;
 	D = kd->ndim;
@@ -78,7 +78,7 @@ void kdtree_copy_data_double(kdtree_t* kd, int start, int N, double* dest) {
 	}
 }
 
-void kdtree_inverse_permutation(kdtree_t* tree, int* invperm) {
+void kdtree_inverse_permutation(const kdtree_t* tree, int* invperm) {
 	int i;
 	if (!tree->perm) {
 		for (i=0; i<tree->ndata; i++)
@@ -203,7 +203,7 @@ int kdtree_compute_levels(int N, int Nleaf) {
 	return maxlevel;
 }
 
-static inline u8 node_level(kdtree_t* kd, int nodeid) {
+static inline u8 node_level(const kdtree_t* kd, int nodeid) {
 	int val = (nodeid + 1) >> 1;
 	u8 level = 0;
 	while (val) {
@@ -213,7 +213,7 @@ static inline u8 node_level(kdtree_t* kd, int nodeid) {
 	return level;
 }
 
-int kdtree_first_leaf(kdtree_t* kd, int nodeid) {
+int kdtree_first_leaf(const kdtree_t* kd, int nodeid) {
 	int dlevel, twodl, nodeid_twodl;
 	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
 	twodl = (1 << dlevel);
@@ -221,7 +221,7 @@ int kdtree_first_leaf(kdtree_t* kd, int nodeid) {
 	return (nodeid_twodl + twodl - 1) - kd->ninterior;
 }
 
-int kdtree_last_leaf(kdtree_t* kd, int nodeid) {
+int kdtree_last_leaf(const kdtree_t* kd, int nodeid) {
 	int dlevel, twodl, nodeid_twodl;
 	dlevel = (kd->nlevels - 1) - node_level(kd, nodeid);
 	twodl = (1 << dlevel);
@@ -229,7 +229,7 @@ int kdtree_last_leaf(kdtree_t* kd, int nodeid) {
 	return (nodeid_twodl + (twodl - 1)*2) - kd->ninterior;
 }
 
-int kdtree_left(kdtree_t* kd, int nodeid) {
+int kdtree_left(const kdtree_t* kd, int nodeid) {
 	if (kd->nodes) {
 		// assume old "real" = "double".
 		kdtree_node_t* node = (kdtree_node_t*)
@@ -249,7 +249,7 @@ int kdtree_left(kdtree_t* kd, int nodeid) {
 	}
 }
 
-int kdtree_right(kdtree_t* kd, int nodeid) {
+int kdtree_right(const kdtree_t* kd, int nodeid) {
 	if (kd->nodes) {
 		// assume old "real" = "double".
 		kdtree_node_t* node = (kdtree_node_t*)
@@ -267,7 +267,7 @@ int kdtree_right(kdtree_t* kd, int nodeid) {
 	}
 }
 
-int kdtree_npoints(kdtree_t* kd, int nodeid) {
+int kdtree_npoints(const kdtree_t* kd, int nodeid) {
 	return 1 + kdtree_right(kd, nodeid) - kdtree_left(kd, nodeid);
 }
 
@@ -297,21 +297,21 @@ void kdtree_free(kdtree_t *kd)
 	free(kd);
 }
 
-int kdtree_nearest_neighbour(kdtree_t* kd, void* pt, double* p_mindist2) {
-	return kdtree_nearest_neighbour_within(kd, pt, 1e300, p_mindist2);
+int kdtree_nearest_neighbour(const kdtree_t* kd, const void* pt, double* p_mindist2) {
+	return kdtree_nearest_neighbour_within(kd, pt, HUGE_VAL, p_mindist2);
 }
 
-KD_DECLARE(kdtree_check, int, (kdtree_t* kd));
+KD_DECLARE(kdtree_check, int, (const kdtree_t* kd));
 
-int kdtree_check(kdtree_t* kd) {
+int kdtree_check(const kdtree_t* kd) {
 	int res = -1;
 	KD_DISPATCH(kdtree_check, kd->treetype, res=, (kd));
 	return res;
 }
 
-KD_DECLARE(kdtree_nn, void, (kdtree_t* kd, void* data, double* bestd2, int* pbest));
+KD_DECLARE(kdtree_nn, void, (const kdtree_t* kd, const void* data, double* bestd2, int* pbest));
 
-int kdtree_nearest_neighbour_within(kdtree_t* kd, void *pt, double maxd2,
+int kdtree_nearest_neighbour_within(const kdtree_t* kd, const void *pt, double maxd2,
 									double* p_mindist2) {
 	double bestd2 = maxd2;
 	int ibest = -1;
@@ -323,62 +323,62 @@ int kdtree_nearest_neighbour_within(kdtree_t* kd, void *pt, double maxd2,
 	return ibest;
 }
 
-KD_DECLARE(kdtree_node_node_mindist2_exceeds, bool, (kdtree_t* kd1, int node1, kdtree_t* kd2, int node2, double maxd2));
+KD_DECLARE(kdtree_node_node_mindist2_exceeds, bool, (const kdtree_t* kd1, int node1, const kdtree_t* kd2, int node2, double maxd2));
 
-bool kdtree_node_node_mindist2_exceeds(kdtree_t* kd1, int node1,
-									   kdtree_t* kd2, int node2,
+bool kdtree_node_node_mindist2_exceeds(const kdtree_t* kd1, int node1,
+									   const kdtree_t* kd2, int node2,
 									   double dist2) {
 	bool res = FALSE;
 	KD_DISPATCH(kdtree_node_node_mindist2_exceeds, kd1->treetype, res=, (kd1, node1, kd2, node2, dist2));
 	return res;
 }
 
-KD_DECLARE(kdtree_node_node_maxdist2_exceeds, bool, (kdtree_t* kd1, int node1, kdtree_t* kd2, int node2, double maxd2));
+KD_DECLARE(kdtree_node_node_maxdist2_exceeds, bool, (const kdtree_t* kd1, int node1, const kdtree_t* kd2, int node2, double maxd2));
 
-bool kdtree_node_node_maxdist2_exceeds(kdtree_t* kd1, int node1,
-									   kdtree_t* kd2, int node2,
+bool kdtree_node_node_maxdist2_exceeds(const kdtree_t* kd1, int node1,
+									   const kdtree_t* kd2, int node2,
 									   double dist2) {
 	bool res = FALSE;
 	KD_DISPATCH(kdtree_node_node_maxdist2_exceeds, kd1->treetype, res=, (kd1, node1, kd2, node2, dist2));
 	return res;
 }
 
-KD_DECLARE(kdtree_node_point_mindist2_exceeds, bool, (kdtree_t* kd, int node, void* query, double maxd2));
+KD_DECLARE(kdtree_node_point_mindist2_exceeds, bool, (const kdtree_t* kd, int node, const void* query, double maxd2));
 
-bool kdtree_node_point_mindist2_exceeds(kdtree_t* kd, int node, void* pt,
+bool kdtree_node_point_mindist2_exceeds(const kdtree_t* kd, int node, const void* pt,
 										double dist2) {
 	bool res = FALSE;
 	KD_DISPATCH(kdtree_node_point_mindist2_exceeds, kd->treetype, res=, (kd, node, pt, dist2));
 	return res;
 }
 
-KD_DECLARE(kdtree_node_point_maxdist2_exceeds, bool, (kdtree_t* kd, int node, void* query, double maxd2));
+KD_DECLARE(kdtree_node_point_maxdist2_exceeds, bool, (const kdtree_t* kd, int node, const void* query, double maxd2));
 
-bool kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, int node, void* pt,
+bool kdtree_node_point_maxdist2_exceeds(const kdtree_t* kd, int node, const void* pt,
 										double dist2) {
 	bool res = FALSE;
 	KD_DISPATCH(kdtree_node_point_maxdist2_exceeds, kd->treetype, res=, (kd, node, pt, dist2));
 	return res;
 }
 
-KD_DECLARE(kdtree_nodes_contained, void, (kdtree_t* kd,
-										  void* querylow, void* queryhi,
-										  void (*callback_contained)(kdtree_t* kd, int node, void* extra),
-										  void (*callback_overlap)(kdtree_t* kd, int node, void* extra),
+KD_DECLARE(kdtree_nodes_contained, void, (const kdtree_t* kd,
+										  const void* querylow, const void* queryhi,
+										  void (*callback_contained)(const kdtree_t* kd, int node, void* extra),
+										  void (*callback_overlap)(const kdtree_t* kd, int node, void* extra),
 										  void* cb_extra));
 
-void kdtree_nodes_contained(kdtree_t* kd,
-							void* querylow, void* queryhi,
-							void (*callback_contained)(kdtree_t* kd, int node, void* extra),
-							void (*callback_overlap)(kdtree_t* kd, int node, void* extra),
+void kdtree_nodes_contained(const kdtree_t* kd,
+							const void* querylow, const void* queryhi,
+							void (*callback_contained)(const kdtree_t* kd, int node, void* extra),
+							void (*callback_overlap)(const kdtree_t* kd, int node, void* extra),
 							void* cb_extra) {
 	KD_DISPATCH(kdtree_nodes_contained, kd->treetype,, (kd, querylow, queryhi, callback_contained, callback_overlap, cb_extra));
 }
 
-KD_DECLARE(kdtree_get_bboxes, bool, (kdtree_t* kd, int node,
+KD_DECLARE(kdtree_get_bboxes, bool, (const kdtree_t* kd, int node,
 									 void* bblo, void* bbhi));
 
-bool kdtree_get_bboxes(kdtree_t* kd, int node, void* bblo, void* bbhi) {
+bool kdtree_get_bboxes(const kdtree_t* kd, int node, void* bblo, void* bbhi) {
 	bool res = FALSE;
 	KD_DISPATCH(kdtree_get_bboxes, kd->treetype, res=, (kd,node, bblo, bbhi));
 	return res;

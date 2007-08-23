@@ -18,7 +18,7 @@
 
 
 static bool DIST_FUNC_MANGLE(bb_point_mindist2_exceeds, FUNC_SUFFIX)
-	 (PTYPE* lo, PTYPE* hi, PTYPE* point, int dim, DISTTYPE maxd2)
+	 (const PTYPE* lo, const PTYPE* hi, const PTYPE* point, int dim, DISTTYPE maxd2)
 {
 	DISTTYPE d2 = 0;
 	DISTTYPE newd2;
@@ -50,7 +50,7 @@ static bool DIST_FUNC_MANGLE(bb_point_mindist2_exceeds, FUNC_SUFFIX)
 }
 
 static void DIST_FUNC_MANGLE(bb_point_mindist2_bailout, FUNC_SUFFIX)
-	 (PTYPE* lo, PTYPE* hi, PTYPE* point, int dim, DISTTYPE maxd2,
+	 (const PTYPE* lo, const PTYPE* hi, const PTYPE* point, int dim, DISTTYPE maxd2,
 	  bool* bailedout, DISTTYPE* p_d2)
 {
 	DISTTYPE d2 = 0;
@@ -89,7 +89,7 @@ static void DIST_FUNC_MANGLE(bb_point_mindist2_bailout, FUNC_SUFFIX)
 }
 
 static bool DIST_FUNC_MANGLE(bb_point_maxdist2_exceeds, FUNC_SUFFIX)
-	 (PTYPE* lo, PTYPE* hi, PTYPE* point, int dim, DISTTYPE maxd2) {
+	 (const PTYPE* lo, const PTYPE* hi, const PTYPE* point, int dim, DISTTYPE maxd2) {
 	DISTTYPE d2 = 0;
 	DISTTYPE newd2;
 	PTYPE delta1, delta2;

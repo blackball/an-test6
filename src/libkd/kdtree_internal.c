@@ -227,7 +227,7 @@ typedef u32 bigint;
 
 #undef CAN_OVERFLOW
 
-static bool bboxes(kdtree_t* kd, int node,
+static bool bboxes(const kdtree_t* kd, int node,
 				   ttype** p_tlo, ttype** p_thi, int D) {
 	if (kd->bb.any) {
 		// bb trees
@@ -248,7 +248,7 @@ static bool bboxes(kdtree_t* kd, int node,
 	}
 }
 
-static inline double dist2(kdtree_t* kd, etype* q, dtype* p, int D) {
+static inline double dist2(const kdtree_t* kd, const etype* q, const dtype* p, int D) {
 	int d;
 	double d2 = 0.0;
 #if defined(KD_DIM)
@@ -270,7 +270,8 @@ static inline double dist2(kdtree_t* kd, etype* q, dtype* p, int D) {
 	return d2;
 }
 
-static inline void dist2_bailout(kdtree_t* kd, etype* q, dtype* p, int D, double maxd2, bool* bailedout, double* d2res) {
+static inline void dist2_bailout(const kdtree_t* kd, const etype* q, const dtype* p,
+                                 int D, double maxd2, bool* bailedout, double* d2res) {
 	int d;
 	double d2 = 0.0;
 #if defined(KD_DIM)
@@ -296,7 +297,7 @@ static inline void dist2_bailout(kdtree_t* kd, etype* q, dtype* p, int D, double
 	*d2res = d2;
 }
 
-static inline bool dist2_exceeds(kdtree_t* kd, etype* q, dtype* p, int D, double maxd2) {
+static inline bool dist2_exceeds(const kdtree_t* kd, const etype* q, const dtype* p, int D, double maxd2) {
 	int d;
 	double d2 = 0.0;
 #if defined(KD_DIM)
@@ -438,7 +439,7 @@ bool resize_results(kdtree_qres_t* res, int newsize, int D,
 }
 
 static
-bool add_result(kdtree_t* kd, kdtree_qres_t* res, double sdist, unsigned int ind, dtype* pt,
+bool add_result(const kdtree_t* kd, kdtree_qres_t* res, double sdist, unsigned int ind, const dtype* pt,
 				int D, bool do_dists, bool do_points) {
 	if (do_dists)
 		res->sdists[res->nres] = sdist;
@@ -458,8 +459,10 @@ bool add_result(kdtree_t* kd, kdtree_qres_t* res, double sdist, unsigned int ind
 
 /*
   Can the query be represented as a ttype?
+
+ If so, place the converted value in "tquery".
 */
-static bool ttype_query(kdtree_t* kd, etype* query, ttype* tquery) {
+static bool ttype_query(const kdtree_t* kd, const etype* query, ttype* tquery) {
    etype val;
 	int d, D=kd->ndim;
 	for (d=0; d<D; d++) {
@@ -471,7 +474,7 @@ static bool ttype_query(kdtree_t* kd, etype* query, ttype* tquery) {
 	return TRUE;
 }
 
-void MANGLE(kdtree_nn)(kdtree_t* kd, etype* query,
+void MANGLE(kdtree_nn)(const kdtree_t* kd, const etype* query,
 					   double* p_bestd2, int* p_ibest) {
 	int nodestack[100];
 	double dist2stack[100];
@@ -710,7 +713,9 @@ void MANGLE(kdtree_nn)(kdtree_t* kd, etype* query,
 	*p_ibest = ibest;
 }
 
-kdtree_qres_t* MANGLE(kdtree_rangesearch_options)(kdtree_t* kd, kdtree_qres_t* res, etype* query, double maxd2, int options)
+kdtree_qres_t* MANGLE(kdtree_rangesearch_options)
+     (const kdtree_t* kd, kdtree_qres_t* res, const etype* query,
+      double maxd2, int options)
 {
 	int nodestack[100];
 	int stackpos = 0;
@@ -1052,11 +1057,11 @@ kdtree_qres_t* MANGLE(kdtree_rangesearch_options)(kdtree_t* kd, kdtree_qres_t* r
 }
 
 
-static void* get_data(kdtree_t* kd, int i) {
+static void* get_data(const kdtree_t* kd, int i) {
 	return KD_DATA(kd, kd->ndim, i);
 }
 
-static void copy_data_double(kdtree_t* kd, int start, int N,
+static void copy_data_double(const kdtree_t* kd, int start, int N,
 							 double* dest) {
 	UNUSED int i, j, d;
 	int D;
@@ -1080,7 +1085,7 @@ static void copy_data_double(kdtree_t* kd, int start, int N,
 #endif
 }
 
-static int nearest_neighbour_within(kdtree_t* kd, void *pt,
+static int nearest_neighbour_within(const kdtree_t* kd, const void *pt,
 									double maxd2, double* p_bestd2) {
 	double bestd2 = maxd2;
 	int ibest = -1;
@@ -1089,13 +1094,13 @@ static int nearest_neighbour_within(kdtree_t* kd, void *pt,
 	return ibest;
 }
 
-static int nearest_neighbour(kdtree_t* kd, void* pt,
+static int nearest_neighbour(const kdtree_t* kd, const void* pt,
 							 double* p_mindist2) {
-	return nearest_neighbour_within(kd, pt, 1e300, p_mindist2);
+	return nearest_neighbour_within(kd, pt, HUGE_VAL, p_mindist2);
 }
 
-static kdtree_qres_t* rangesearch(kdtree_t* kd, kdtree_qres_t* res,
-								  void* pt, double maxd2, int options) {
+static kdtree_qres_t* rangesearch(const kdtree_t* kd, kdtree_qres_t* res,
+								  const void* pt, double maxd2, int options) {
 	return MANGLE(kdtree_rangesearch_options)(kd, res, (etype*)pt, maxd2, options);
 }
 
@@ -1427,7 +1432,7 @@ static int kdtree_quickselect_partition(dtype *arr, unsigned int *parr, int L, i
 
 
 
-static int kdtree_check_node(kdtree_t* kd, int nodeid) {
+static int kdtree_check_node(const kdtree_t* kd, int nodeid) {
 	int sum, i;
 	int D = kd->ndim;
 	int L, R;
@@ -1612,7 +1617,7 @@ static int kdtree_check_node(kdtree_t* kd, int nodeid) {
 	return 0;
 }
 
-int MANGLE(kdtree_check)(kdtree_t* kd) {
+int MANGLE(kdtree_check)(const kdtree_t* kd) {
 	int i;
 	for (i=0; i<kd->nnodes; i++) {
 		if (kdtree_check_node(kd, i))
@@ -1995,7 +2000,7 @@ kdtree_t* MANGLE(kdtree_build)
 }
 
 bool MANGLE(kdtree_node_point_mindist2_exceeds)
-	 (kdtree_t* kd, int node, etype* query, double maxd2) {
+	 (const kdtree_t* kd, int node, const etype* query, double maxd2) {
 	int D = kd->ndim;
 	int d;
 	ttype* tlo, *thi;
@@ -2036,7 +2041,7 @@ bool MANGLE(kdtree_node_point_mindist2_exceeds)
 }
 
 bool MANGLE(kdtree_node_point_maxdist2_exceeds)
-	 (kdtree_t* kd, int node, etype* query, double maxd2) {
+	 (const kdtree_t* kd, int node, const etype* query, double maxd2) {
 	int D = kd->ndim;
 	int d;
 	ttype* tlo=NULL, *thi=NULL;
@@ -2067,8 +2072,8 @@ bool MANGLE(kdtree_node_point_maxdist2_exceeds)
 }
 
 bool MANGLE(kdtree_node_node_maxdist2_exceeds)
-	 (kdtree_t* kd1, int node1,
-	  kdtree_t* kd2, int node2,
+	 (const kdtree_t* kd1, int node1,
+	  const kdtree_t* kd2, int node2,
 	  double maxd2) {
 	ttype *tlo1=NULL, *tlo2=NULL, *thi1=NULL, *thi2=NULL;
 	double d2 = 0.0;
@@ -2108,8 +2113,8 @@ bool MANGLE(kdtree_node_node_maxdist2_exceeds)
 }
 
 bool MANGLE(kdtree_node_node_mindist2_exceeds)
-	 (kdtree_t* kd1, int node1,
-	  kdtree_t* kd2, int node2,
+	 (const kdtree_t* kd1, int node1,
+	  const kdtree_t* kd2, int node2,
 	  double maxd2) {
 	ttype *tlo1=NULL, *tlo2=NULL, *thi1=NULL, *thi2=NULL;
 	double d2 = 0.0;
@@ -2150,8 +2155,8 @@ bool MANGLE(kdtree_node_node_mindist2_exceeds)
 	return FALSE;
 }
 
-static bool do_boxes_overlap(ttype* lo1, ttype* hi1,
-							 ttype* lo2, ttype* hi2, int D) {
+static bool do_boxes_overlap(const ttype* lo1, const ttype* hi1,
+							 const ttype* lo2, const ttype* hi2, int D) {
 	int d;
 	for (d=0; d<D; d++) {
 		if (lo1[d] > hi2[d])
@@ -2163,8 +2168,8 @@ static bool do_boxes_overlap(ttype* lo1, ttype* hi1,
 }
 
 /* Is the first box contained within the second? */
-static bool is_box_contained(ttype* lo1, ttype* hi1,
-							 ttype* lo2, ttype* hi2, int D) {
+static bool is_box_contained(const ttype* lo1, const ttype* hi1,
+							 const ttype* lo2, const ttype* hi2, int D) {
 	int d;
 	for (d=0; d<D; d++) {
 		if (lo1[d] < lo2[d])
@@ -2175,11 +2180,11 @@ static bool is_box_contained(ttype* lo1, ttype* hi1,
 	return TRUE;
 }
 
-static void nodes_contained_rec(kdtree_t* kd,
+static void nodes_contained_rec(const kdtree_t* kd,
 								int nodeid,
-								ttype* qlo, ttype* qhi,
-								void (*cb_contained)(kdtree_t* kd, int node, void* extra),
-								void (*cb_overlap)(kdtree_t* kd, int node, void* extra),
+								const ttype* qlo, const ttype* qhi,
+								void (*cb_contained)(const kdtree_t* kd, int node, void* extra),
+								void (*cb_overlap)(const kdtree_t* kd, int node, void* extra),
 								void* cb_extra) {
 	ttype *tlo=NULL, *thi=NULL;
 	int D = kd->ndim;
@@ -2210,16 +2215,16 @@ static void nodes_contained_rec(kdtree_t* kd,
 }
 
 void MANGLE(kdtree_nodes_contained)
-	 (kdtree_t* kd,
-	  void* vquerylow, void* vqueryhi,
-	  void (*cb_contained)(kdtree_t* kd, int node, void* extra),
-	  void (*cb_overlap)(kdtree_t* kd, int node, void* extra),
+	 (const kdtree_t* kd,
+	  const void* vquerylow, const void* vqueryhi,
+	  void (*cb_contained)(const kdtree_t* kd, int node, void* extra),
+	  void (*cb_overlap)(const kdtree_t* kd, int node, void* extra),
 	  void* cb_extra) {
 	int D = kd->ndim;
 	int d;
 	ttype qlo[D], qhi[D];
-	etype* querylow = vquerylow;
-	etype* queryhi = vqueryhi;
+	const etype* querylow = vquerylow;
+	const etype* queryhi = vqueryhi;
 
 	for (d=0; d<D; d++) {
 		double q;
@@ -2244,7 +2249,7 @@ void MANGLE(kdtree_nodes_contained)
 	nodes_contained_rec(kd, 0, qlo, qhi, cb_contained, cb_overlap, cb_extra);
 }
 
-bool MANGLE(kdtree_get_bboxes)(kdtree_t* kd, int node,
+bool MANGLE(kdtree_get_bboxes)(const kdtree_t* kd, int node,
 							   void* vbblo, void* vbbhi) {
 	etype* bblo = vbblo;
 	etype* bbhi = vbbhi;

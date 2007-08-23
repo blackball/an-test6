@@ -45,24 +45,24 @@ kdtree_t* KDFUNC(kdtree_build)
 
 /* Range seach */
 kdtree_qres_t* KDFUNC(kdtree_rangesearch)
-	 (kdtree_t *kd, void *pt, double maxd2) {
+	 (const kdtree_t *kd, const void *pt, double maxd2) {
 	return KDFUNC(kdtree_rangesearch_options_reuse)(kd, NULL, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS | KD_OPTIONS_SORT_DISTS);
 }
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)
-	 (kdtree_t *kd, void *pt, double maxd2) {
+	 (const kdtree_t *kd, const void *pt, double maxd2) {
 	return KDFUNC(kdtree_rangesearch_options_reuse)(kd, NULL, pt, maxd2, KD_OPTIONS_COMPUTE_DISTS);
 }
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)
-	 (kdtree_t *kd, void *pt, double maxd2, int options) {
+	 (const kdtree_t *kd, const void *pt, double maxd2, int options) {
 	return KDFUNC(kdtree_rangesearch_options_reuse)(kd, NULL, pt, maxd2, options);
 }
 
-KD_DECLARE(kdtree_rangesearch_options, kdtree_qres_t*, (kdtree_t* kd, kdtree_qres_t* res, void* pt, double maxd2, int options));
+KD_DECLARE(kdtree_rangesearch_options, kdtree_qres_t*, (const kdtree_t* kd, kdtree_qres_t* res, const void* pt, double maxd2, int options));
 
 kdtree_qres_t* KDFUNC(kdtree_rangesearch_options_reuse)
-	 (kdtree_t *kd, kdtree_qres_t* res, void *pt, double maxd2, int options) {
+	 (const kdtree_t *kd, kdtree_qres_t* res, const void *pt, double maxd2, int options) {
 	kdtree_qres_t* theres = NULL;
 
 	KD_DISPATCH(kdtree_rangesearch_options, kd->treetype, theres =, (kd, res, pt, maxd2, options));

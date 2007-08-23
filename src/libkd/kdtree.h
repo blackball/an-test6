@@ -227,26 +227,26 @@ struct kdtree_qres {
 typedef struct kdtree_qres kdtree_qres_t;
 
 struct kdtree_funcs {
-	void* (*get_data)(kdtree_t* kd, int i);
-	void  (*copy_data_double)(kdtree_t* kd, int start, int N, double* dest);
-	int   (*nearest_neighbour)(kdtree_t* kd, void *pt, double* bestd2);
-	int   (*nearest_neighbour_within)(kdtree_t* kd, void *pt, double maxd2, double* bestd2);
-	kdtree_qres_t* (*rangesearch)(kdtree_t* kd, kdtree_qres_t* res, void* pt, double maxd2, int options);
+	void* (*get_data)(const kdtree_t* kd, int i);
+	void  (*copy_data_double)(const kdtree_t* kd, int start, int N, double* dest);
+	int   (*nearest_neighbour)(const kdtree_t* kd, const void *pt, double* bestd2);
+	int   (*nearest_neighbour_within)(const kdtree_t* kd, const void *pt, double maxd2, double* bestd2);
+	kdtree_qres_t* (*rangesearch)(const kdtree_t* kd, kdtree_qres_t* res, const void* pt, double maxd2, int options);
 };
 typedef struct kdtree_funcs kdtree_funcs;
 
-static inline int kdtree_exttype(kdtree_t* kd) {
+static inline int kdtree_exttype(const kdtree_t* kd) {
 	return kd->treetype & KDT_EXT_MASK;
 }
 
-static inline int kdtree_datatype(kdtree_t* kd) {
+static inline int kdtree_datatype(const kdtree_t* kd) {
 	return kd->treetype & KDT_DATA_MASK;
 }
 
 /*
   What type are my bounding boxes / split planes?
 */
-static inline int kdtree_treetype(kdtree_t* kd) {
+static inline int kdtree_treetype(const kdtree_t* kd) {
 	return kd->treetype & KDT_TREE_MASK;
 }
 
@@ -262,9 +262,9 @@ void kdtree_set_limits(kdtree_t* kd, double* low, double* high);
 kdtree_t* kdtree_convert_data(kdtree_t* kd, void *data,
 							  int N, int D, int Nleaf, int treetype);
 
-void* kdtree_get_data(kdtree_t* kd, int i);
+void* kdtree_get_data(const kdtree_t* kd, int i);
 
-void kdtree_copy_data_double(kdtree_t* kd, int i, int N, double* dest);
+void kdtree_copy_data_double(const kdtree_t* kd, int i, int N, double* dest);
 
 const char* kdtree_kdtype_to_string(int kdtype);
 
@@ -277,7 +277,7 @@ int kdtree_kdtypes_to_treetype(int exttype, int treetype, int datatype);
 /*
   Compute the inverse permutation of tree->perm and place it in "invperm".
  */
-void kdtree_inverse_permutation(kdtree_t* tree, int* invperm);
+void kdtree_inverse_permutation(const kdtree_t* tree, int* invperm);
 
 /* Free results */
 void kdtree_free_query(kdtree_qres_t *kd);
@@ -286,20 +286,20 @@ void kdtree_free_query(kdtree_qres_t *kd);
 void kdtree_free(kdtree_t *kd);
 
 /* The leftmost point owned by this node. */
-int kdtree_left(kdtree_t* kd, int nodeid);
+int kdtree_left(const kdtree_t* kd, int nodeid);
 
 /* The rightmost point owned by this node. */
-int kdtree_right(kdtree_t* kd, int nodeid);
+int kdtree_right(const kdtree_t* kd, int nodeid);
 
 /* How many points are owned by node "nodeid"? */
-int kdtree_npoints(kdtree_t* kd, int nodeid);
+int kdtree_npoints(const kdtree_t* kd, int nodeid);
 
 /*
   Returns the node index of the first/last leaf within the subtree
   rooted at "nodeid".
 */
-int kdtree_first_leaf(kdtree_t* kd, int nodeid);
-int kdtree_last_leaf(kdtree_t* kd, int nodeid);
+int kdtree_first_leaf(const kdtree_t* kd, int nodeid);
+int kdtree_last_leaf(const kdtree_t* kd, int nodeid);
 
 /* Nearest neighbour: returns the index _in the kdtree_ of the nearest point;
  * the point is at  (kd->data + ind * kd->ndim)  and its permuted index is
@@ -308,7 +308,7 @@ int kdtree_last_leaf(kdtree_t* kd, int nodeid);
  * If "bestd2" is non-NULL, the distance-squared to the nearest neighbour
  * will be placed there.
  */
-int kdtree_nearest_neighbour(kdtree_t* kd, void *pt, double* bestd2);
+int kdtree_nearest_neighbour(const kdtree_t* kd, const void *pt, double* bestd2);
 
 /* Nearest neighbour (if within a maximum range): returns the index
  * _in the kdtree_ of the nearest point, _if_ its distance is less than
@@ -317,7 +317,8 @@ int kdtree_nearest_neighbour(kdtree_t* kd, void *pt, double* bestd2);
  * If "bestd2" is non-NULL, the distance-squared to the nearest neighbour
  * will be placed there.
  */
-int kdtree_nearest_neighbour_within(kdtree_t* kd, void *pt, double maxd2, double* bestd2);
+int kdtree_nearest_neighbour_within(const kdtree_t* kd, const void *pt,
+                                    double maxd2, double* bestd2);
 
 /*
  * Finds the set of non-leaf nodes that are completely contained
@@ -327,10 +328,10 @@ int kdtree_nearest_neighbour_within(kdtree_t* kd, void *pt, double maxd2, double
  * Calls one of two callbacks for fully-contained and
  * partly-contained nodes.
  */
-void kdtree_nodes_contained(kdtree_t* kd,
-							void* querylow, void* queryhi,
-							void (*callback_contained)(kdtree_t* kd, int node, void* extra),
-							void (*callback_overlap)(kdtree_t* kd, int node, void* extra),
+void kdtree_nodes_contained(const kdtree_t* kd,
+							const void* querylow, const void* queryhi,
+							void (*callback_contained)(const kdtree_t* kd, int node, void* extra),
+							void (*callback_overlap)(const kdtree_t* kd, int node, void* extra),
 							void* cb_extra);
 
 #define KD_IS_LEAF(kd, i)       ((i) >= ((kd)->ninterior))
@@ -345,25 +346,25 @@ void kdtree_nodes_contained(kdtree_t* kd,
  *
  * Returns FALSE if the tree does not have bounding boxes.
  */
-bool kdtree_get_bboxes(kdtree_t* kd, int node, void* bblo, void* bbhi);
+bool kdtree_get_bboxes(const kdtree_t* kd, int node, void* bblo, void* bbhi);
 
-bool kdtree_node_node_mindist2_exceeds(kdtree_t* kd1, int node1,
-									   kdtree_t* kd2, int node2,
+bool kdtree_node_node_mindist2_exceeds(const kdtree_t* kd1, int node1,
+									   const kdtree_t* kd2, int node2,
 									   double dist2);
 
-bool kdtree_node_node_maxdist2_exceeds(kdtree_t* kd1, int node1,
-									   kdtree_t* kd2, int node2,
+bool kdtree_node_node_maxdist2_exceeds(const kdtree_t* kd1, int node1,
+									   const kdtree_t* kd2, int node2,
 									   double dist2);
 
-bool kdtree_node_point_mindist2_exceeds(kdtree_t* kd, int node, void* pt,
-										double dist2);
+bool kdtree_node_point_mindist2_exceeds(const kdtree_t* kd, int node,
+                                        const void* pt, double dist2);
 
-bool kdtree_node_point_maxdist2_exceeds(kdtree_t* kd, int node, void* pt,
-										double dist2);
+bool kdtree_node_point_maxdist2_exceeds(const kdtree_t* kd, int node,
+                                        const void* pt, double dist2);
 
 
 /* Sanity-check a tree. 0=okay. */
-int kdtree_check(kdtree_t* t);
+int kdtree_check(const kdtree_t* t);
 
 #if 0
 /* Range seach using callback */
@@ -408,13 +409,13 @@ kdtree_t* KDFUNC(kdtree_build)
 	  int treetype, unsigned int options);
 
 /* Range seach */
-kdtree_qres_t* KDFUNC(kdtree_rangesearch)(kdtree_t *kd, void *pt, double maxd2);
+kdtree_qres_t* KDFUNC(kdtree_rangesearch)(const kdtree_t *kd, const void *pt, double maxd2);
 
-kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(kdtree_t *kd, void *pt, double maxd2);
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_nosort)(const kdtree_t *kd, const void *pt, double maxd2);
 
-kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(kdtree_t *kd, void *pt, double maxd2, int options);
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options)(const kdtree_t *kd, const void *pt, double maxd2, int options);
 
-kdtree_qres_t* KDFUNC(kdtree_rangesearch_options_reuse)(kdtree_t *kd, kdtree_qres_t* res, void *pt, double maxd2, int options);
+kdtree_qres_t* KDFUNC(kdtree_rangesearch_options_reuse)(const kdtree_t *kd, kdtree_qres_t* res, const void *pt, double maxd2, int options);
 
 #if !defined(KD_DIM)
 #undef KD_DIM_GENERIC
