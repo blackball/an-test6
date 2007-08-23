@@ -93,7 +93,7 @@ int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue) 
   return 0;
 }
 
-static int add_long_line(qfits_header* hdr, char* keyword, const char* indent, const char* format, va_list lst) {
+static int add_long_line(qfits_header* hdr, const char* keyword, const char* indent, const char* format, va_list lst) {
 	const int charsperline = 60;
 	char* origstr = NULL;
 	char* str;
@@ -144,7 +144,7 @@ fits_add_long_comment(qfits_header* dst, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(dst, (char*)"COMMENT", "  ", format, lst);
+	rtn = add_long_line(dst, "COMMENT", "  ", format, lst);
 	va_end(lst);
 	return rtn;
 }
@@ -154,24 +154,24 @@ fits_add_long_history(qfits_header* dst, const char* format, ...) {
 	va_list lst;
 	int rtn;
 	va_start(lst, format);
-	rtn = add_long_line(dst, (char*)"HISTORY", "  ", format, lst);
+	rtn = add_long_line(dst, "HISTORY", "  ", format, lst);
 	va_end(lst);
 	return rtn;
 }
 
 int fits_add_args(qfits_header* hdr, char** args, int argc) {
-	int i;
+    int i;
 	for (i=0; i<argc; i++) {
-		char* str = args[i];
+		const char* str = args[i];
 		int rtn;
-		rtn = add_long_line_b(hdr, (char*)"HISTORY", "  ", "%s", str);
+		rtn = add_long_line_b(hdr, "HISTORY", "  ", "%s", str);
 		if (rtn)
 			return rtn;
 	}
 	return 0;
 }
 
-int fits_copy_header(qfits_header* src, qfits_header* dest, char* key) {
+int fits_copy_header(const qfits_header* src, qfits_header* dest, char* key) {
 	char* str = qfits_header_getstr(src, key);
 	if (!str) {
 		// header not found, or other problem.
@@ -182,7 +182,7 @@ int fits_copy_header(qfits_header* src, qfits_header* dest, char* key) {
 	return 0;
 }
 
-int fits_copy_all_headers(qfits_header* src, qfits_header* dest, char* targetkey) {
+int fits_copy_all_headers(const qfits_header* src, qfits_header* dest, char* targetkey) {
 	int i;
 	char key[FITS_LINESZ+1];
 	char val[FITS_LINESZ+1];
@@ -502,7 +502,7 @@ void fits_add_double_size(qfits_header* header) {
 	qfits_header_add(header, "DUBL_SZ", val, "sizeof(double)", NULL);
 }
 
-int fits_check_uint_size(qfits_header* header) {
+int fits_check_uint_size(const qfits_header* header) {
   int uintsz;
   uintsz = qfits_header_getint(header, "UINT_SZ", -1);
   if (sizeof(uint) != uintsz) {
@@ -513,7 +513,7 @@ int fits_check_uint_size(qfits_header* header) {
     return 0;
 }
 
-int fits_check_double_size(qfits_header* header) {
+int fits_check_double_size(const qfits_header* header) {
     int doublesz;
     doublesz = qfits_header_getint(header, "DUBL_SZ", -1);
     if (sizeof(double) != doublesz) {
@@ -524,7 +524,7 @@ int fits_check_double_size(qfits_header* header) {
     return 0;
 }
 
-int fits_check_endian(qfits_header* header) {
+int fits_check_endian(const qfits_header* header) {
 	char endian[256];
     char* str;
 	snprintf(endian, sizeof(endian), "%s", qfits_header_getstr(header, "ENDIAN"));

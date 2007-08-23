@@ -48,9 +48,9 @@ void fits_header_mod_double(qfits_header* hdr, const char* key, double val,
 
 int fits_update_value(qfits_header* hdr, const char* key, const char* newvalue);
 
-int fits_copy_header(qfits_header* src, qfits_header* dest, char* key);
+int fits_copy_header(const qfits_header* src, qfits_header* dest, char* key);
 
-int fits_copy_all_headers(qfits_header* src, qfits_header* dest, char* targetkey);
+int fits_copy_all_headers(const qfits_header* src, qfits_header* dest, char* targetkey);
 
 int fits_add_args(qfits_header* src, char** args, int argc);
 
@@ -73,11 +73,11 @@ void fits_fill_endian_string(char* str);
 
 char* fits_get_endian_string();
 
-int fits_check_endian(qfits_header* header);
+int fits_check_endian(const qfits_header* header);
 
-int fits_check_uint_size(qfits_header* header);
+int fits_check_uint_size(const qfits_header* header);
 
-int fits_check_double_size(qfits_header* header);
+int fits_check_double_size(const qfits_header* header);
 
 void fits_add_endian(qfits_header* header);
 
