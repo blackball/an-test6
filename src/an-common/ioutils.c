@@ -388,7 +388,7 @@ static char* growable_buffer_add(char* buf, int index, char c, int* size, int* s
 	if (index == *size) {
 		// expand
 		*size += *sizestep;
-		buf = (char*)realloc(buf, *size);
+		buf = realloc(buf, *size);
 		if (!buf) {
 			fprintf(stderr, "Couldn't allocate buffer: %i.\n", *size);
 			return NULL;
@@ -435,7 +435,7 @@ char* read_string_terminated(FILE* fin, const char* terminators, int nterminator
 		i++;
 	}
 	if (i < size) {
-		rtn = (char*)realloc(rtn, i);
+		rtn = realloc(rtn, i);
 		// shouldn't happen - we're shrinking.
 		if (!rtn) {
 			fprintf(stderr, "Couldn't realloc buffer: %i\n", i);
