@@ -111,7 +111,7 @@ static bool do_boxes_overlap(const double* lo1, const double* hi1,
 	return TRUE;
 }
 
-static void add_node(kdtree_t* kd, int nodeid, void* extra) {
+static void add_node(const kdtree_t* kd, int nodeid, void* extra) {
 	il* nodelist = extra;
 	il_append(nodelist, nodeid);
 }

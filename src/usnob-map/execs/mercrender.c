@@ -8,8 +8,8 @@ struct mercargs {
 };
 typedef struct mercargs mercargs;
 
-static void leaf_node(kdtree_t* kd, int node, void* vargs);
-static void expand_node(kdtree_t* kd, int node, void* vargs);
+static void leaf_node(const kdtree_t* kd, int node, void* vargs);
+static void expand_node(const kdtree_t* kd, int node, void* vargs);
 static void add_star_merc(double xp, double yp, merc_flux* flux, mercargs* args);
 
 float* mercrender_file(char* fn, render_args_t* args) {
@@ -75,7 +75,7 @@ void mercrender(merctree* merc, render_args_t* args,
 	}
 }
 
-static void expand_node(kdtree_t* kd, int node, void* vargs) {
+static void expand_node(const kdtree_t* kd, int node, void* vargs) {
 	int xp0, xp1, yp0, yp1;
 	int D = 2;
 	double bblo[D], bbhi[D];
@@ -107,7 +107,7 @@ static void expand_node(kdtree_t* kd, int node, void* vargs) {
 	expand_node(kd, KD_CHILD_RIGHT(node), margs);
 }
 
-static void leaf_node(kdtree_t* kd, int node, void* vargs) {
+static void leaf_node(const kdtree_t* kd, int node, void* vargs) {
 	int k;
 	int L, R;
 	mercargs* margs = vargs;

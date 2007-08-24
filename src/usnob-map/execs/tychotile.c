@@ -39,10 +39,10 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-static void node_contained(kdtree_t* kd, int node, void* extra);
-static void node_overlaps(kdtree_t* kd, int node, void* extra);
-static void leaf_node(kdtree_t* kd, int node);
-static void expand_node(kdtree_t* kd, int node);
+static void node_contained(const kdtree_t* kd, int node, void* extra);
+static void node_overlaps(const kdtree_t* kd, int node, void* extra);
+static void leaf_node(const kdtree_t* kd, int node);
+static void expand_node(const kdtree_t* kd, int node);
 static void addstar(double xp, double yp, merc_flux* flux);
 
 /*
@@ -355,16 +355,16 @@ int main(int argc, char *argv[]) {
 }
 
 // Non-leaf nodes that are fully contained within the query rectangle.
-static void node_contained(kdtree_t* kd, int node, void* extra) {
+static void node_contained(const kdtree_t* kd, int node, void* extra) {
 	expand_node(kd, node);
 }
 
 // Leaf nodes that overlap the query rectangle.
-static void node_overlaps(kdtree_t* kd, int node, void* extra) {
+static void node_overlaps(const kdtree_t* kd, int node, void* extra) {
 	leaf_node(kd, node);
 }
 
-static void expand_node(kdtree_t* kd, int node) {
+static void expand_node(const kdtree_t* kd, int node) {
 	int xp0, xp1, yp0, yp1;
 	int D = 2;
 	double bblo[D], bbhi[D];
@@ -395,7 +395,7 @@ static void expand_node(kdtree_t* kd, int node) {
 	expand_node(kd, KD_CHILD_RIGHT(node));
 }
 
-static void leaf_node(kdtree_t* kd, int node) {
+static void leaf_node(const kdtree_t* kd, int node) {
 	int k;
 	int L, R;
 
