@@ -136,7 +136,7 @@ static void print_help(const char* progname) {
 	       "\n", progname);
 }
 
-static int run_command(const char* cmd) {
+static int run_command(const char* cmd, bool* ctrlc) {
 	int rtn;
 	printf("Running command:\n  %s\n", cmd);
 	rtn = system(cmd);
@@ -145,6 +145,8 @@ static int run_command(const char* cmd) {
 		return -1;
 	}
 	if (WIFSIGNALED(rtn)) {
+        if (ctrlc && (WTERMSIG(rtn) == SIGTERM))
+            *ctrlc = TRUE;
 		return -1;
 	}
 	rtn = WEXITSTATUS(rtn);
@@ -300,6 +302,7 @@ int main(int argc, char** args) {
 		bool nextfile;
 		int fid;
 		sl* cmdline;
+        bool ctrlc = FALSE;
 
 		if (fromstdin) {
 			if (!fgets(fnbuf, sizeof(fnbuf), stdin)) {
@@ -322,6 +325,7 @@ int main(int argc, char** args) {
 		sl_remove_from(backendargs,  nbeargs);
 
 		printf("Checking if file \"%s\" is xylist or image: ", infile);
+        fflush(NULL);
         // turn on QFITS error reporting.
         qfits_err_statset(1);
 		isxyls = xylist_is_file_xylist(infile, NULL, NULL, &reason);
@@ -329,6 +333,7 @@ int main(int argc, char** args) {
 		if (!isxyls) {
 			printf("  (%s)\n", reason);
 		}
+        fflush(NULL);
 
 		if (isxyls) {
 			xyls = infile;
@@ -444,8 +449,13 @@ int main(int argc, char** args) {
 
 		cmd = sl_implode(lowlevelargs, " ");
 		printf("Running low-level-frontend:\n  %s\n", cmd);
-		if (run_command(cmd))
+        fflush(NULL);
+		if (run_command(cmd, &ctrlc)) {
+            fflush(NULL);
+            fprintf(stderr, "low-level-frontend %s; exiting.\n",
+                    (ctrlc ? "was cancelled" : "failed"));
 			exit(-1);
+        }
 		free(cmd);
 
         if (makeplots) {
@@ -474,8 +484,13 @@ int main(int argc, char** args) {
 
             cmd = sl_implode(cmdline, " ");
             printf("Running plot command:\n  %s\n", cmd);
-            if (run_command(cmd))
+            fflush(NULL);
+            if (run_command(cmd, &ctrlc)) {
+                fflush(NULL);
+                fprintf(stderr, "Plotting command %s; exiting.\n",
+                        (ctrlc ? "was cancelled" : "failed"));
                 exit(-1);
+            }
             free(cmd);
             sl_free(cmdline);
         }
@@ -483,12 +498,16 @@ int main(int argc, char** args) {
 		sl_append(backendargs, axyfn);
 		sl_print(backendargs);
 		cmd = sl_implode(backendargs, " ");
-		//printf("Running backend:\n  %s\n", cmd);
+		printf("Running backend:\n  %s\n", cmd);
+        fflush(NULL);
 		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
-			fprintf(stderr, "Couldn't run \"backend\": %s\n", errmsg);
+            fflush(NULL);
+			fprintf(stderr, "backend failed: %s\n", errmsg);
+			fprintf(stderr, "exiting.\n");
 			exit(-1);
 		}
 		free(cmd);
+        fflush(NULL);
 
 		if (!file_exists(solvedfn)) {
 			// boo.
@@ -508,9 +527,14 @@ int main(int argc, char** args) {
 			sl_append(cmdline, indxylsfn);
 
 			cmd = sl_implode(cmdline, " ");
-			printf("Running command:\n  %s\n", cmd);
-			if (run_command(cmd))
+			printf("Running wcs-rd2xy:\n  %s\n", cmd);
+            fflush(NULL);
+			if (run_command(cmd, &ctrlc)) {
+                fflush(NULL);
+                fprintf(stderr, "wcs-rd2xy %s; exiting.\n",
+                        (ctrlc ? "was cancelled" : "failed"));
 				exit(-1);
+            }
 			free(cmd);
 			sl_remove_all(cmdline);
 
@@ -555,8 +579,13 @@ int main(int argc, char** args) {
 
                 cmd = sl_implode(cmdline, " ");
                 printf("Running plot command:\n  %s\n", cmd);
-                if (run_command(cmd))
+                fflush(NULL);
+                if (run_command(cmd, &ctrlc)) {
+                    fflush(NULL);
+                    fprintf(stderr, "Plotting commands %s; exiting.\n",
+                            (ctrlc ? "were cancelled" : "failed"));
                     exit(-1);
+                }
                 free(cmd);
                 sl_remove_all(cmdline);
             }
@@ -573,9 +602,14 @@ int main(int argc, char** args) {
 				sl_append(cmdline, ngcfn);
 
 				cmd = sl_implode(cmdline, " ");
-				printf("Running command:\n  %s\n", cmd);
-				if (run_command(cmd))
-					exit(-1);
+				printf("Running plot-constellations:\n  %s\n", cmd);
+                fflush(NULL);
+				if (run_command(cmd, &ctrlc)) {
+                    fflush(NULL);
+                    fprintf(stderr, "plot-constellations %s; exiting.\n",
+                            (ctrlc ? "was cancelled" : "failed"));
+                    exit(-1);
+                }
 				free(cmd);
 				sl_remove_all(cmdline);
 			}
@@ -584,6 +618,8 @@ int main(int argc, char** args) {
 
 			// create field rdls?
 		}
+
+        fflush(NULL);
 
 		sl_free(outfiles);
 	}
