@@ -753,9 +753,10 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		solver->numscaleok++;
 
-		memset(&mo, 0, sizeof(MatchObj));
 		if (solver->mo_template)
 			memcpy(&mo, solver->mo_template, sizeof(MatchObj));
+        else
+            memset(&mo, 0, sizeof(MatchObj));
 
 		memcpy(&(mo.wcstan), &wcs, sizeof(tan_t));
 		mo.wcs_valid = TRUE;
