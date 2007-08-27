@@ -198,10 +198,14 @@ int main(int argc, char** args) {
     bool nof2f = FALSE;
     char* me = args[0];
     char* tempdir = "/tmp";
+    char* tmpfn;
+    // this is just to avoid leaking temp filenames...
+    sl* tempfiles;
 
     depths = il_new(4);
     fields = il_new(16);
     cmd = sl_new(16);
+    tempfiles = sl_new(4);
 
 	while (1) {
 		int option_index = 0;
@@ -364,11 +368,15 @@ int main(int argc, char** args) {
 
         uncompressedfn = create_temp_file("uncompressed", tempdir);
 		sanitizedfn = create_temp_file("sanitized", tempdir);
+        sl_append_nocopy(tempfiles, uncompressedfn);
+        sl_append_nocopy(tempfiles, sanitizedfn);
 
 		if (savepnmfn)
 			pnmfn = savepnmfn;
-		else
+		else {
             pnmfn = create_temp_file("pnm", tempdir);
+            sl_append_nocopy(tempfiles, pnmfn);
+        }
 
         sl_append_nocopy(cmd, get_path("image2pnm.py", me));
         if (nof2f)
@@ -461,7 +469,8 @@ int main(int argc, char** args) {
 
 		} else {
 			fitsimgfn = create_temp_file("fits", tempdir);
-
+            sl_append_nocopy(tempfiles, fitsimgfn);
+            
 			if (pnmtype == 'P') {
 				printf("Converting PPM image to FITS...\n");
 				snprintf(cmdbuf, sizeof(cmdbuf),
@@ -486,6 +495,7 @@ int main(int argc, char** args) {
 		printf("Running fits2xy...\n");
 
 		xylsfn = create_temp_file("xyls", tempdir);
+        sl_append_nocopy(tempfiles, xylsfn);
 
         sl_append_nocopy(cmd, get_path("fits2xy", me));
         sl_append(cmd, "-O");
@@ -507,6 +517,7 @@ int main(int argc, char** args) {
 		printf("Running tabsort...\n");
 
 		sortedxylsfn = create_temp_file("sorted", tempdir);
+        sl_append_nocopy(tempfiles, sortedxylsfn);
 
 		// sort the table by FLUX.
         sl_append_nocopy(cmd, get_path("tabsort", me));
@@ -536,6 +547,7 @@ int main(int argc, char** args) {
             char* sanexylsfn;
 
             sanexylsfn = create_temp_file("sanexyls", tempdir);
+            sl_append_nocopy(tempfiles, sanexylsfn);
 
             sl_append_nocopy(cmd, get_path("fits2fits.py", me));
             sl_appendf(cmd, "\"%s\"", xylsfn);
@@ -695,6 +707,7 @@ int main(int argc, char** args) {
     il_free(depths);
     il_free(fields);
     sl_free(cmd);
+    sl_free(tempfiles);
 
 	fclose(fout);
 	qfits_header_destroy(hdr);
