@@ -596,13 +596,18 @@ int main(int argc, char** args) {
 
 	orig_nheaders = hdr->n;
 
-	/*
-	 if (!(W && H)) {
-	 // FIXME - if an xylist was given, look for existing IMAGEW, IMAGEH headers.
-	 }
-	 */
-	fits_header_add_int(hdr, "IMAGEW", W, "image width");
-	fits_header_add_int(hdr, "IMAGEH", H, "image height");
+    if (!(W && H)) {
+        // If an xylist was given, look for existing IMAGEW, IMAGEH headers.  Otherwise die.
+        W = qfits_header_getint(hdr, "IMAGEW", 0);
+        H = qfits_header_getint(hdr, "IMAGEH", 0);
+        if (!(W && H)) {
+            fprintf(stderr, "Error: image width and height must be specified for XYLS inputs.\n");
+            exit(-1);
+        }
+    } else {
+        fits_header_add_int(hdr, "IMAGEW", W, "image width");
+        fits_header_add_int(hdr, "IMAGEH", H, "image height");
+    }
 	qfits_header_add(hdr, "ANRUN", "T", "Solve this field!", NULL);
 
 	if (scalelo > 0.0 && scalehi > 0.0) {
