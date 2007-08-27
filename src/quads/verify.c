@@ -16,7 +16,6 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
-#define _GNU_SOURCE
 #include <assert.h>
 #include <math.h>
 #include <string.h>
@@ -391,8 +390,8 @@ void verify_hit(startree* skdt,
 				debug("Index star is at (%g,%g) pixels.\n", indexpix[i*2], indexpix[i*2+1]);
 				xyzarr2radecdeg(res->results.d + i*3, &ra, &dec);
 				debug("Index star RA,Dec (%.8g,%.8g) deg\n", ra, dec);
-				debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
-					  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
+//				debug("Peak of this Gaussian has value %g (log %g)\n", (1.0 - distractors) / (2.0 * M_PI * sigma2 * M),
+//					  log((1.0 - distractors) / (2.0 * M_PI * sigma2 * M)));
 				debug("NN dist: %5.1f pix, %g sigmas\n", sqrt(bestd2), sqrt(bestd2/sigma2));
 			}
 			if (log((1.0 - distractors) / (2.0 * M_PI * sigma2 * vf->NF)) < logprob_background) {

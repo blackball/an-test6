@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 */
 
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -754,6 +753,7 @@ static void resolve_matches(kdtree_qres_t* krez, double *query, double *field,
 
 		solver->numscaleok++;
 
+		memset(&mo, 0, sizeof(MatchObj));
 		if (solver->mo_template)
 			memcpy(&mo, solver->mo_template, sizeof(MatchObj));
 
