@@ -1,0 +1,12 @@
+Some notes about issues that may be a hassle for those porting our code to other
+environments.
+
+-we define _GNU_SOURCE in the Makefile, which yields some GNU-specific extensions
+
+-asprintf(), vasprintf() are GNU extensions.
+
+-basename(): although _GNU_SOURCE defines some different behaviour, we do not depend
+  on this.  (solve-field.c)
+
+-canonicalize_file_name(): a GNU extension meant to address problems with realpath().
+
