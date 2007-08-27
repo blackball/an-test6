@@ -170,11 +170,18 @@ static char* get_path(const char* prog, const char* me) {
     free(cpy);
     asprintf_safe(&path, "%s/%s", dir, prog);
     free(dir);
+    if (file_executable(path))
+        return path;
 
-    if (!path) {
-        fprintf(stderr, "Failed to find executable \"%s\".\n", prog);
-        exit(-1);
-    }
+    // Otherwise, let the normal PATH-search machinery find it...
+    free(path);
+    path = strdup(prog);
+    /*
+     if (!path) {
+     fprintf(stderr, "Failed to find executable \"%s\".\n", prog);
+     exit(-1);
+     }
+     */
     return path;
 }
 
@@ -345,6 +352,8 @@ int main(int argc, char** args) {
 		char* base;
 		char *matchfn, *rdlsfn, *solvedfn, *wcsfn, *axyfn, *objsfn, *redgreenfn;
 		char *ngcfn, *ppmfn=NULL, *indxylsfn;
+        char* downloadfn;
+        char* suffix = NULL;
 		sl* outfiles;
 		bool nextfile;
 		int fid;
@@ -368,9 +377,97 @@ int main(int argc, char** args) {
 			f++;
 		}
 
+        cmdline = sl_new(16);
+
         // Remove arguments that might have been added in previous trips through this loop
 		sl_remove_from(lowlevelargs, nllargs);
 		sl_remove_from(backendargs,  nbeargs);
+
+		// Choose the base path/filename for output files.
+		cpy = strdup(infile);
+		if (outdir)
+			asprintf(&base, "%s/%s", outdir, basename(cpy));
+		else
+			base = strdup(basename(cpy));
+		free(cpy);
+		len = strlen(base);
+		// trim .xxx / .xxxx
+		if (len > 4) {
+			if (base[len - 4] == '.') {
+				base[len-4] = '\0';
+                suffix = base + len - 3;
+            }
+			if (base[len - 5] == '.') {
+				base[len-5] = '\0';
+                suffix = base + len - 4;
+            }
+		}
+
+		// the output filenames.
+		outfiles = sl_new(16);
+
+		axyfn      = sl_appendf(outfiles, "%s.axy",       base);
+		matchfn    = sl_appendf(outfiles, "%s.match",     base);
+		rdlsfn     = sl_appendf(outfiles, "%s.rdls",      base);
+		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
+		wcsfn      = sl_appendf(outfiles, "%s.wcs",       base);
+		objsfn     = sl_appendf(outfiles, "%s-objs.png",  base);
+		redgreenfn = sl_appendf(outfiles, "%s-indx.png",  base);
+		ngcfn      = sl_appendf(outfiles, "%s-ngc.png",   base);
+		indxylsfn  = sl_appendf(outfiles, "%s-indx.xyls", base);
+        if (suffix)
+            downloadfn = sl_appendf(outfiles, "%s-downloaded.%s", base, suffix);
+        else
+            downloadfn = sl_appendf(outfiles, "%s-downloaded", base);
+		free(base);
+		base = NULL;
+
+		// Check for existing output filenames.
+		nextfile = FALSE;
+		for (i = 0; i < sl_size(outfiles); i++) {
+			char* fn = sl_get(outfiles, i);
+			if (!file_exists(fn))
+				continue;
+			if (overwrite) {
+				if (unlink(fn)) {
+					printf("Failed to delete an already-existing output file: \"%s\": %s\n", fn, strerror(errno));
+					exit(-1);
+				}
+			} else {
+				printf("Output file \"%s\" already exists.  Bailing out.  "
+				       "Use the --overwrite flag to overwrite existing files.\n", fn);
+				printf("Continuing to next input file.\n");
+				nextfile = TRUE;
+				break;
+			}
+		}
+		if (nextfile) {
+			sl_free(outfiles);
+			continue;
+		}
+
+        // Download URL...
+        if ((strncasecmp(infile, "http://", 7) == 0) ||
+            (strncasecmp(infile, "ftp://", 6) == 0)) {
+            sl_append(cmdline, "wget");
+            sl_appendf(cmdline, "-O \"%s\"", downloadfn);
+            sl_appendf(cmdline, "\"%s\"", infile);
+
+            cmd = sl_implode(cmdline, " ");
+            sl_remove_all(cmdline);
+
+            printf("Running:\n  %s\n", cmd);
+            fflush(NULL);
+            if (run_command(cmd, &ctrlc)) {
+                fflush(NULL);
+                fprintf(stderr, "wget command %s; exiting.\n",
+                        (ctrlc ? "was cancelled" : "failed"));
+                exit(-1);
+            }
+            free(cmd);
+
+            infile = downloadfn;
+        }
 
 		printf("Checking if file \"%s\" is xylist or image: ", infile);
         fflush(NULL);
@@ -413,63 +510,8 @@ int main(int argc, char** args) {
 			sl_appendf(lowlevelargs, "%i", height);
 		}
 
-		// Choose the base path/filename for output files.
-		cpy = strdup(infile);
-		if (outdir)
-			asprintf(&base, "%s/%s", outdir, basename(cpy));
-		else
-			base = strdup(basename(cpy));
-		free(cpy);
-		len = strlen(base);
-		// trim .xxx / .xxxx
-		if (len > 4) {
-			if (base[len - 4] == '.')
-				base[len-4] = '\0';
-			if (base[len - 5] == '.')
-				base[len-5] = '\0';
-		}
-
-		// Compute the output filenames.
-		outfiles = sl_new(16);
-
-		axyfn      = sl_appendf(outfiles, "%s.axy",       base);
-		matchfn    = sl_appendf(outfiles, "%s.match",     base);
-		rdlsfn     = sl_appendf(outfiles, "%s.rdls",      base);
-		solvedfn   = sl_appendf(outfiles, "%s.solved",    base);
-		wcsfn      = sl_appendf(outfiles, "%s.wcs",       base);
-		objsfn     = sl_appendf(outfiles, "%s-objs.png",  base);
-		redgreenfn = sl_appendf(outfiles, "%s-indx.png",  base);
-		ngcfn      = sl_appendf(outfiles, "%s-ngc.png",   base);
-		indxylsfn  = sl_appendf(outfiles, "%s-indx.xyls", base);
-		free(base);
-		base = NULL;
-
-		// Check for existing output filenames.
-		nextfile = FALSE;
-		for (i = 0; i < sl_size(outfiles); i++) {
-			char* fn = sl_get(outfiles, i);
-			if (!file_exists(fn))
-				continue;
-			if (overwrite) {
-				if (unlink(fn)) {
-					printf("Failed to delete an already-existing output file: \"%s\": %s\n", fn, strerror(errno));
-					exit(-1);
-				}
-			} else {
-				printf("Output file \"%s\" already exists.  Bailing out.  "
-				       "Use the --overwrite flag to overwrite existing files.\n", fn);
-				printf("Continuing to next input file.\n");
-				nextfile = TRUE;
-				break;
-			}
-		}
-		if (nextfile) {
-			sl_free(outfiles);
-			continue;
-		}
-
 		if (image) {
-			sprintf(tmpfn, "/tmp/tmp.solve-fieldXXXXXX");
+			sprintf(tmpfn, "/tmp/tmp.solve-field.XXXXXX");
 			fid = mkstemp(tmpfn);
 			if (fid == -1) {
 				fprintf(stderr, "Failed to create temp file: %s\n", strerror(errno));
@@ -507,7 +549,6 @@ int main(int argc, char** args) {
         if (makeplots) {
             // source extraction overlay
             // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
-            cmdline = sl_new(16);
             sl_append_nocopy(cmdline, get_path("plotxy", me));
             //sl_append(cmdline, "plotxy");
             sl_append(cmdline, "-i");
@@ -531,6 +572,8 @@ int main(int argc, char** args) {
             sl_append(cmdline, objsfn);
 
             cmd = sl_implode(cmdline, " ");
+            sl_remove_all(cmdline);
+
             printf("Running plot command:\n  %s\n", cmd);
             fflush(NULL);
             if (run_command(cmd, &ctrlc)) {
@@ -540,7 +583,6 @@ int main(int argc, char** args) {
                 exit(-1);
             }
             free(cmd);
-            sl_free(cmdline);
         }
 
 		sl_append(backendargs, axyfn);
@@ -562,7 +604,6 @@ int main(int argc, char** args) {
 		} else {
 			matchfile* mf;
 			MatchObj* mo;
-			cmdline = sl_new(16);
 
 			// index rdls to xyls.
             sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
@@ -575,6 +616,7 @@ int main(int argc, char** args) {
 			sl_append(cmdline, indxylsfn);
 
 			cmd = sl_implode(cmdline, " ");
+			sl_remove_all(cmdline);
 			printf("Running wcs-rd2xy:\n  %s\n", cmd);
             fflush(NULL);
 			if (run_command(cmd, &ctrlc)) {
@@ -584,7 +626,6 @@ int main(int argc, char** args) {
 				exit(-1);
             }
 			free(cmd);
-			sl_remove_all(cmdline);
 
             if (makeplots) {
                 // sources + index overlay
@@ -621,6 +662,8 @@ int main(int argc, char** args) {
                 sl_append_nocopy(cmdline, get_path("plotquad", me));
                 //sl_append(cmdline, "plotquad");
                 sl_append(cmdline, "-I -");
+                sl_append(cmdline, "-C green");
+                sl_append(cmdline, "-w 2");
                 for (i=0; i<8; i++)
                     sl_appendf(cmdline, " %g", mo->quadpix[i]);
                 
@@ -630,6 +673,7 @@ int main(int argc, char** args) {
                 sl_append(cmdline, redgreenfn);
 
                 cmd = sl_implode(cmdline, " ");
+                sl_remove_all(cmdline);
                 printf("Running plot command:\n  %s\n", cmd);
                 fflush(NULL);
                 if (run_command(cmd, &ctrlc)) {
@@ -639,7 +683,6 @@ int main(int argc, char** args) {
                     exit(-1);
                 }
                 free(cmd);
-                sl_remove_all(cmdline);
             }
 
             if (image && makeplots) {
@@ -655,6 +698,7 @@ int main(int argc, char** args) {
 				sl_append(cmdline, ngcfn);
 
 				cmd = sl_implode(cmdline, " ");
+				sl_remove_all(cmdline);
 				printf("Running plot-constellations:\n  %s\n", cmd);
                 fflush(NULL);
 				if (run_command(cmd, &ctrlc)) {
@@ -664,16 +708,14 @@ int main(int argc, char** args) {
                     exit(-1);
                 }
 				free(cmd);
-				sl_remove_all(cmdline);
 			}
-
-			sl_free(cmdline);
 
 			// create field rdls?
 		}
 
         fflush(NULL);
 
+        sl_free(cmdline);
 		sl_free(outfiles);
 	}
 

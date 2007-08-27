@@ -65,10 +65,6 @@ static void print_help(const char* progname)
 	       "\n", progname);
 }
 
-
-static const char* default_blind_command = "blind";
-
-
 struct indexinfo {
 	char* indexname;
 	// quad size
@@ -120,28 +116,29 @@ static int get_index_scales(const char* indexname,
 	return 0;
 }
 
-#define BUFSZ 300
 static int add_index(backend_t* backend, char* index)
 {
 	double lo, hi;
 	indexinfo_t ii;
 	bool found_index = FALSE;
 	int i = 0;
-	char full_index_path[BUFSZ];
+	char* full_index_path;
 	for (i=0; i<sl_size(backend->index_paths); i++) {
 		char* index_path = sl_get(backend->index_paths, i);
-		snprintf(full_index_path, BUFSZ, "%s/%s", index_path, index);
-		if (get_index_scales(full_index_path, &lo, &hi) == 0) {
+        asprintf_safe(&full_index_path, "%s/%s", index_path, index);
+        if (get_index_scales(full_index_path, &lo, &hi) == 0) {
 			found_index = TRUE;
 			break;
 		}
+        free(full_index_path);
 	}
 	if (!found_index) {
-		printf("Failed to get the range of quad scales for index \"%s\".\n", index);
+		//printf("Failed to get the range of quad scales for index \"%s\".\n", index);
+		printf("Failed to find the index \"%s\".\n", index);
 		return -1;
 	}
 	printf("Found index: %s\n", full_index_path);
-	ii.indexname = strdup(full_index_path);
+	ii.indexname = full_index_path;
 	ii.losize = lo;
 	ii.hisize = hi;
 	bl_append(backend->indexinfos, &ii);
@@ -445,8 +442,10 @@ static int job_write_blind_input(job_t* job, FILE* fout, backend_t* backend)
 				WRITE(fout, "solved %s\n", job->solvedfile);
 			if (job->matchfile)
 				WRITE(fout, "match %s\n", job->matchfile);
-			if (job->rdlsfile)
+			if (job->rdlsfile) {
 				WRITE(fout, "indexrdls %s\n", job->rdlsfile);
+				WRITE(fout, "indexrdls_solvedonly\n");
+            }
 			if (job->wcsfile)
 				WRITE(fout, "wcs %s\n", job->wcsfile);
 			if (job->cancelfile)
@@ -693,7 +692,6 @@ backend_t* backend_new()
 	backend->index_paths = sl_new(10);
 	backend->sizesmallest = HUGE_VAL;
 	backend->sizebiggest = -HUGE_VAL;
-	backend->blind = strdup(default_blind_command);
 
 	// Default scale estimate: field width, in degrees:
 	backend->minwidth = 0.1;
@@ -717,13 +715,16 @@ void backend_free(backend_t* backend)
 
 int main(int argc, char** args)
 {
-	int c;
     char* default_configfn = "backend.cfg";
+    char* default_blind_command = "blind";
+
+	int c;
 	char* configfn = NULL;
 	char* inputfn = NULL;
 	FILE* fconf;
 	int i;
 	backend_t* backend;
+    char* mydir;
 
 	while (1) {
 		int option_index = 0;
@@ -768,6 +769,14 @@ int main(int argc, char** args)
 
 	backend = backend_new();
 
+    // directory containing the 'backend' executable:
+    {
+        char* me;
+        me = strdup(args[0]);
+        mydir = strdup(dirname(me));
+        free(me);
+    }
+
 	// Read config file
     if (!configfn) {
         if (file_exists(default_configfn)) {
@@ -776,13 +785,7 @@ int main(int argc, char** args)
             // if config file not found in current directory, try the dir containing the
             // backend executable.
             char* tryfn;
-            char* me;
-            char* mydir;
-            me = strdup(args[0]);
-            mydir = strdup(dirname(me));
-            free(me);
             asprintf_safe(&tryfn, "%s/%s", mydir, default_configfn);
-            free(mydir);
             if (!file_exists(tryfn)) {
                 fprintf(stderr, "Couldn't find config file \"%s\".\n", default_configfn);
                 fprintf(stderr, "(tried %s, %s)\n", default_configfn, tryfn);
@@ -797,6 +800,18 @@ int main(int argc, char** args)
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
 		exit( -1);
 	}
+
+    // add the directory containing the config file to the index search path...
+    /*{
+     char* cpy;
+     char* dir;
+     cpy = strdup(configfn);
+     dir = strdup(dirname(cpy));
+     free(cpy);
+     sl_append_nocopy(backend->index_paths, dir);
+     }
+     */
+
 	if (parse_config_file(fconf, backend)) {
 		printf("Failed to parse config file.\n");
 		exit( -1);
@@ -813,12 +828,22 @@ int main(int argc, char** args)
 		exit( -1);
 	}
 
+    if (!backend->blind) {
+        // default "blind": relative to backend.
+        char* blindcmd;
+        asprintf_safe(&blindcmd, "%s/%s", mydir, default_blind_command);
+        backend->blind = blindcmd;
+    }
+
 	for (i = optind; i < argc; i++) {
 		char* jobfn;
 		qfits_header* hdr;
 		job_t* job = NULL;
 
 		jobfn = args[i];
+
+        printf("Reading job file \"%s\"...\n", jobfn);
+        fflush(NULL);
 
 		// Read primary header.
 		hdr = qfits_header_read(jobfn);
@@ -869,6 +894,7 @@ int main(int argc, char** args)
 	}
 
 	backend_free(backend);
+    free(mydir);
 
 	exit(0);
 }

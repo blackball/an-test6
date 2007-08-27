@@ -76,7 +76,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <libgen.h>
 #include <getopt.h>
 
 #include "ioutils.h"
@@ -129,11 +129,22 @@ static void print_help(const char* progname) {
 }
 
 static char* get_path(const char* prog, const char* me) {
-    char* path = find_executable(prog, me);
-    if (!path) {
-        fprintf(stderr, "Failed to find executable \"%s\".\n", prog);
-        exit(-1);
-    }
+    char* cpy;
+    char* dir;
+    char* path;
+
+    // First look for it in solve-field's directory.
+    cpy = strdup(me);
+    dir = strdup(dirname(cpy));
+    free(cpy);
+    asprintf_safe(&path, "%s/%s", dir, prog);
+    free(dir);
+    if (file_executable(path))
+        return path;
+
+    // Otherwise, let the normal PATH-search machinery find it...
+    free(path);
+    path = strdup(prog);
     return path;
 }
 
@@ -176,6 +187,7 @@ int main(int argc, char** args) {
 
     depths = il_new(4);
     fields = il_new(16);
+    cmd = sl_new(16);
 
 	while (1) {
 		int option_index = 0;
@@ -343,8 +355,6 @@ int main(int argc, char** args) {
 		else
 			pnmfn = "/tmp/pnm";
 
-        cmd = sl_new(16);
-
         sl_append_nocopy(cmd, get_path("image2pnm.py", me));
         if (nof2f)
             sl_append(cmd, "--no-fits2fits");
@@ -360,7 +370,8 @@ int main(int argc, char** args) {
             sl_append(cmd, "--ppm");
 
         cmdstr = sl_implode(cmd, " ");
-        sl_free(cmd);
+        sl_remove_all(cmd);
+
 		printf("Running: %s\n", cmdstr);
 		if (run_command_get_outputs(cmdstr, &lines, NULL, &errmsg)) {
             free(cmdstr);
@@ -409,8 +420,10 @@ int main(int argc, char** args) {
 			if (guess_scale) {
                 sl_append_nocopy(cmd, get_path("fits-guess-scale", me));
                 sl_appendf(cmd, "\"%s\"", fitsimgfn);
+
                 cmdstr = sl_implode(cmd, " ");
-                sl_free(cmd);
+                sl_remove_all(cmd);
+
 				if (run_command_get_outputs(cmdstr, &lines, NULL, &errmsg)) {
                     free(cmdstr);
                     fprintf(stderr, "%s\n", errmsg);
@@ -467,8 +480,10 @@ int main(int argc, char** args) {
         sl_append(cmd, "-O");
         sl_appendf(cmd, "-o \"%s\"", xylsfn);
         sl_appendf(cmd, "\"%s\"", fitsimgfn);
+
         cmdstr = sl_implode(cmd, " ");
-        sl_free(cmd);
+        sl_remove_all(cmd);
+
 		printf("Command: %s\n", cmdstr);
 		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
             free(cmdstr);
@@ -488,8 +503,10 @@ int main(int argc, char** args) {
         sl_appendf(cmd, "-o \"%s\"", sortedxylsfn);
         sl_append(cmd, "-c FLUX");
         sl_append(cmd, "-d");
+
         cmdstr = sl_implode(cmd, " ");
-        sl_free(cmd);
+        sl_remove_all(cmd);
+
 		printf("Command: %s\n", cmdstr);
 		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
             free(cmdstr);
@@ -509,13 +526,12 @@ int main(int argc, char** args) {
 
             sanexylsfn = "/tmp/sanexyls";
 
-            cmd = sl_new(16);
             sl_append_nocopy(cmd, get_path("fits2fits.py", me));
             sl_appendf(cmd, "\"%s\"", xylsfn);
             sl_appendf(cmd, "\"%s\"", sanexylsfn);
 
             cmdstr = sl_implode(cmd, " ");
-            sl_free(cmd);
+            sl_remove_all(cmd);
             printf("Command: %s\n", cmdstr);
 
             if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
@@ -603,9 +619,9 @@ int main(int argc, char** args) {
 		fits_header_addf(hdr, key, "", "%i", depth);
     }
 
-    for (i=0; i<il_size(depths)/2; i++) {
-        int lo = il_get(depths, 2*i);
-        int hi = il_get(depths, 2*i + 1);
+    for (i=0; i<il_size(fields)/2; i++) {
+        int lo = il_get(fields, 2*i);
+        int hi = il_get(fields, 2*i + 1);
         char key[64];
         if (lo == hi) {
             sprintf(key, "ANFD%i", (i+1));
@@ -667,6 +683,7 @@ int main(int argc, char** args) {
 
     il_free(depths);
     il_free(fields);
+    sl_free(cmd);
 
 	fclose(fout);
 	qfits_header_destroy(hdr);
