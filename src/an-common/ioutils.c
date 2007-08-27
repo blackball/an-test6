@@ -17,7 +17,6 @@
 */
 
 #include <stdio.h>
-
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
@@ -30,12 +29,89 @@
 #include <signal.h>
 #include <assert.h>
 #include <unistd.h>
+#include <stdarg.h>
+#include <libgen.h>
 
 #include "ioutils.h"
 
 uint32_t ENDIAN_DETECTOR = 0x01020304;
 
-int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, const char** errormsg) {
+void asprintf_safe(char** strp, const char* format, ...) {
+	va_list lst;
+	int rtn;
+	va_start(lst, format);
+    rtn = vasprintf(strp, format, lst);
+    if (rtn == -1) {
+        fprintf(stderr, "Error, vasprintf() failed: %s\n", strerror(errno));
+        fprintf(stderr, "  (format: \"%s\")\n", format);
+        assert(0);
+        *strp = NULL;
+    }
+	va_end(lst);
+}
+
+char* find_executable(const char* progname, const char* sibling) {
+    char* sib;
+    char* sibdir;
+    char* path;
+    char* pathenv;
+
+    // 1. Check relative to "sibling".
+
+    if (sibling) {
+        // dirname() overwrites its arguments, so make a copy...
+        sib = strdup(sibling);
+        sibdir = strdup(dirname(sib));
+        free(sib);
+
+        asprintf_safe(&path, "%s/%s", sibdir, progname);
+        free(sibdir);
+
+        if (file_executable(path))
+            return path;
+
+        free(path);
+    }
+
+    // 2. Check in current directory.
+
+    //path = canonicalize_file_name(progname);
+    //if (path && file_executable(path))
+    asprintf_safe(&path, "./%s", progname);
+    if (file_executable(path))
+        return path;
+
+    free(path);
+
+    // 3. Search PATH.
+    pathenv = getenv("PATH");
+    while (1) {
+        char* colon;
+        int len;
+        if (!strlen(pathenv))
+            break;
+        colon = strchr(pathenv, ':');
+        if (colon)
+            len = colon - pathenv;
+        else
+            len = strlen(pathenv);
+        if (pathenv[len - 1] == '/')
+            len--;
+        asprintf_safe(&path, "%.*s/%s", len, pathenv, progname);
+        if (file_executable(path))
+            return path;
+        free(path);
+        if (colon)
+            pathenv = colon + 1;
+        else
+            break;
+    }
+
+    // 4. not found.
+    return NULL;
+}
+
+int run_command_get_outputs(const char* cmd, sl** outlines, sl** errlines, const char** errormsg) {
 	int outpipe[2];
 	int errpipe[2];
 	pid_t pid;
@@ -137,7 +213,7 @@ int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, const char*
 	return 0;
 }
 
-sl* file_get_lines(char* fn, bool include_newlines) {
+sl* file_get_lines(const char* fn, bool include_newlines) {
     FILE* fid;
 	sl* list;
     fid = fopen(fn, "r");
@@ -168,7 +244,7 @@ sl* fid_get_lines(FILE* fid, bool include_newlines) {
 	return list;
 }
 
-char* file_get_contents_offset(char* fn, int offset, int size) {
+char* file_get_contents_offset(const char* fn, int offset, int size) {
     char* buf;
     FILE* fid;
     fid = fopen(fn, "rb");
@@ -196,7 +272,7 @@ char* file_get_contents_offset(char* fn, int offset, int size) {
     return buf;
 }
 
-char* file_get_contents(char* fn) {
+char* file_get_contents(const char* fn) {
     struct stat st;
     char* buf;
     FILE* fid;
@@ -234,9 +310,12 @@ void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap) 
 	*pgap = gap;
 }
 
-bool file_exists(char* fn) {
-	struct stat st;
-	return (stat(fn, &st) == 0);
+bool file_exists(const char* fn) {
+    return (access(fn, F_OK) == 0);
+}
+
+bool file_executable(const char* fn) {
+    return (access(fn, X_OK) == 0);
 }
 
 char* strdup_safe(const char* str) {
@@ -282,11 +361,11 @@ void reset_sigbus_mmap_warning() {
 	}
 }
 
-int is_word(char* cmdline, char* keyword, char** cptr) {
+int is_word(const char* cmdline, const char* keyword, char** cptr) {
 	int len = strlen(keyword);
 	if (strncmp(cmdline, keyword, len))
 		return 0;
-	*cptr = cmdline + len;
+	*cptr = (char*)(cmdline + len);
 	return 1;
 }
 

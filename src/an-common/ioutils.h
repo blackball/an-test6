@@ -27,17 +27,28 @@
 
 extern uint32_t ENDIAN_DETECTOR;
 
-int run_command_get_outputs(char* cmd, sl** outlines, sl** errlines, const char** errormsg);
+/*
+ It's not really _safe_ as such, it just prints an error message if it fails...
+ */
+void
+ATTRIB_FORMAT(printf,2,3)
+asprintf_safe(char** strp, const char* format, ...);
+
+int run_command_get_outputs(const char* cmd, sl** outlines, sl** errlines, const char** errormsg);
 
 void get_mmap_size(int start, int size, int* mapstart, int* mapsize, int* pgap);
 
-bool file_exists(char* fn);
+char* find_executable(const char* progname, const char* sibling);
 
-char* file_get_contents(char* fn);
+bool file_exists(const char* fn);
 
-char* file_get_contents_offset(char* fn, int offset, int length);
+bool file_executable(const char* fn);
 
-sl* file_get_lines(char* fn, bool include_newlines);
+char* file_get_contents(const char* fn);
+
+char* file_get_contents_offset(const char* fn, int offset, int length);
+
+sl* file_get_lines(const char* fn, bool include_newlines);
 
 sl* fid_get_lines(FILE* fid, bool include_newlines);
 
@@ -45,7 +56,7 @@ sl* fid_get_lines(FILE* fid, bool include_newlines);
    If "cmdline" starts with "keyword", returns 1 and places the address of
    the start of the next word in "p_next_word".
  */
-int is_word(char* cmdline, char* keyword, char** p_next_word);
+int is_word(const char* cmdline, const char* keyword, char** p_next_word);
 
 char* strdup_safe(const char* str);
 
