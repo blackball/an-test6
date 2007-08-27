@@ -8,7 +8,9 @@ import sys
 import os
 import tempfile
 
-imgcmds = {"FITS image data"  : ("fits", "an-fitstopnm -i %s > %s"),
+fitstype = "FITS image data"
+
+imgcmds = {fitstype : ("fits", "an-fitstopnm -i %s > %s"),
            "JPEG image data"  : ("jpg",  "jpegtopnm %s > %s"),
            "PNG image data"   : ("png",  "pngtopnm %s > %s"),
            "GIF image data"   : ("gif",  "giftopnm %s > %s"),
@@ -31,7 +33,8 @@ def do_command(cmd):
         print >>sys.stderr, 'Command failed: %s' % cmd
         sys.exit(-1)
 
-def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits):
+def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits,
+                  mydir):
     filein, fileout = os.popen2('file -b -N -L %s' % infile)
     typeinfo = fileout.read().strip()
     log('file output:', typeinfo)
@@ -43,10 +46,14 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2f
 
     # If it's a FITS file we want to filter it first because of the many
     # misbehaved FITS files around. fits2fits is a sanitizer.
-    if (typeinfo == 'FITS image data') and (not no_fits2fits):
+    if (typeinfo == fitstype) and (not no_fits2fits):
         assert sanitized != infile
         new_infile = sanitized
-        do_command('fits2fits.py %s %s' % (infile, new_infile))
+        cmd = 'fits2fits.py %s %s' % (infile, new_infile)
+        if mydir:
+            # add path...
+            cmd = mydir + cmd
+        do_command(cmd)
         infile = new_infile
 
     # Recurse if we're compressed
@@ -55,7 +62,7 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2f
         new_infile = uncompressed
         log('compressed file, dumping to:', new_infile)
         do_command(compcmds[typeinfo][1] % (infile, new_infile))
-        return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits)
+        return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits, mydir)
 
     if not typeinfo in imgcmds:
         log('ERROR: image type not recognized:', typeinfo)
@@ -69,6 +76,9 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2f
 
     # Do the actual conversion
     ext, cmd = imgcmds[typeinfo]
+    # an-fitstopnm: add path...
+    if (typeinfo == fitstype) and mydir:
+        cmd = mydir + cmd
     do_command(cmd % (infile, outfile))
     print ext
 
@@ -122,11 +132,17 @@ def main():
     if not options.sanitized_outfile:
         options.sanitized_outfile = options.infile+'.sanitized.fits'
 
+    # Find the path to this executable and use it to find other Astrometry.net
+    # executables.
+    if (len(sys.argv) > 0):
+        mydir = os.path.dirname(sys.argv[0]) + "/"
+
     return convert_image(options.infile, options.outfile,
                          options.uncompressed_outfile,
                          options.sanitized_outfile,
                          options.force_ppm,
-                         options.no_fits2fits)
+                         options.no_fits2fits,
+                         mydir)
 
 if __name__ == '__main__':
     sys.exit(main())
