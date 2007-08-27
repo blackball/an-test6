@@ -500,7 +500,6 @@ int main(int argc, char** args) {
         }
 
 		sl_append(backendargs, axyfn);
-		sl_print(backendargs);
 		cmd = sl_implode(backendargs, " ");
 		printf("Running backend:\n  %s\n", cmd);
         fflush(NULL);

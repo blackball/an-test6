@@ -475,18 +475,29 @@ int main(int argc, char** args) {
 		// xylist.
 		// if --xylist is given:
 		//	 -fits2fits.py sanitize
-		char* sanexylsfn;
+        if (!nof2f) {
+            char* sanexylsfn;
 
-		sanexylsfn = "/tmp/sanexyls";
-		snprintf(cmdbuf, sizeof(cmdbuf),
-				 "fits2fits.py \"%s\" \"%s\"", xylsfn, sanexylsfn);
-		printf("Command: %s\n", cmdbuf);
-		if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
-            fprintf(stderr, "%s\n", errmsg);
-			fprintf(stderr, "Failed to run fits2fits.py\n");
-			exit(-1);
-		}
-		xylsfn = sanexylsfn;
+            sanexylsfn = "/tmp/sanexyls";
+
+            cmd = sl_new(16);
+            sl_append(cmd, "fits2fits.py");
+            sl_appendf(cmd, "\"%s\"", xylsfn);
+            sl_appendf(cmd, "\"%s\"", sanexylsfn);
+
+            cmdstr = sl_implode(cmd, " ");
+            sl_free(cmd);
+            printf("Command: %s\n", cmdstr);
+
+            if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
+                free(cmdstr);
+                fprintf(stderr, "%s\n", errmsg);
+                fprintf(stderr, "Failed to run fits2fits.py\n");
+                exit(-1);
+            }
+            free(cmdstr);
+            xylsfn = sanexylsfn;
+        }
 
 	}
 
