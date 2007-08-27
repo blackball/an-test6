@@ -153,7 +153,7 @@ static int run_command(const char* cmd, bool* ctrlc) {
 	}
 	rtn = WEXITSTATUS(rtn);
 	if (rtn) {
-		fprintf(stderr, "Command exited with exit status %i.\n", WEXITSTATUS(rtn));
+		fprintf(stderr, "Command exited with exit status %i.\n", rtn);
 	}
 	return rtn;
 }
