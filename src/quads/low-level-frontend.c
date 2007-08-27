@@ -108,20 +108,23 @@ static struct option long_options[] = {
 	{"depth",		required_argument, 0, 'd'},
 	{"tweak-order", required_argument, 0, 't'},
 	{"out",			required_argument, 0, 'o'},
-	{"noplot",		no_argument,	   0, 'p'},
-	{"nordls",		no_argument,	   0, 'r'},
+	{"no-plot",		no_argument,	   0, 'p'},
+	{"no-rdls",		no_argument,	   0, 'r'},
 	{"xylist",		required_argument, 0, 'x'},
 	{"no-tweak",	no_argument,	   0, 'T'},
+	{"no-fits2fits",    no_argument,       0, '2'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:fd:F:";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:fd:F:2";
 
 static void print_help(const char* progname) {
 	// FIXME - add rest of args!
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
 		   "  (				   -i <image-input-file>\n"
 		   "   OR  -x <xylist-input-file>  )\n"
+	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
+           "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane.  (-2)\n"
 		   "\n", progname);
 }
 
@@ -132,7 +135,9 @@ int main(int argc, char** args) {
 	char* outfn = NULL;
 	char* imagefn = NULL;
 	char* xylsfn = NULL;
-	char cmd[1024];
+    sl* cmd;
+    char* cmdstr;
+    char cmdbuf[1024];
 	int W, H;
 	double scalelo = 0.0, scalehi = 0.0;
 	char* scaleunits = NULL;
@@ -157,6 +162,7 @@ int main(int argc, char** args) {
     // contains ranges of fields as pairs of ints.
     il* fields;
     int lo, hi;
+    bool nof2f = FALSE;
 
     depths = il_new(4);
     fields = il_new(16);
@@ -175,6 +181,9 @@ int main(int argc, char** args) {
 		case 'h':
 			help_flag = 1;
 			break;
+        case '2':
+            nof2f = TRUE;
+            break;
         case 'F':
             if (sscanf(optarg, "%d/%d", &lo, &hi) == 2) {
                 if (hi < lo) {
@@ -324,19 +333,31 @@ int main(int argc, char** args) {
 		else
 			pnmfn = "/tmp/pnm";
 
-		snprintf(cmd, sizeof(cmd),
-				 "image2pnm.py --infile \"%s\""
-				 "	--uncompressed-outfile \"%s\""
-				 "	--sanitized-fits-outfile \"%s\""
-				 "	--outfile \"%s\"%s",
-				 imagefn, uncompressedfn, sanitizedfn, pnmfn,
-                 (force_ppm ? " --ppm" : ""));
-		printf("Running: %s\n", cmd);
-		if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+        cmd = sl_new(16);
+        sl_append(cmd, "image2pnm.py");
+        if (nof2f)
+            sl_append(cmd, "--no-fits2fits");
+        sl_append(cmd, "--infile");
+        sl_appendf(cmd, "\"%s\"", imagefn);
+        sl_append(cmd, "--uncompressed-outfile");
+        sl_appendf(cmd, "\"%s\"", uncompressedfn);
+        sl_append(cmd, "--sanitized-fits-outfile");
+        sl_appendf(cmd, "\"%s\"", sanitizedfn);
+        sl_append(cmd, "--outfile");
+        sl_appendf(cmd, "\"%s\"", pnmfn);
+        if (force_ppm)
+            sl_append(cmd, "--ppm");
+
+        cmdstr = sl_implode(cmd, " ");
+        sl_free(cmd);
+		printf("Running: %s\n", cmdstr);
+		if (run_command_get_outputs(cmdstr, &lines, NULL, &errmsg)) {
+            free(cmdstr);
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run image2pnm.\n");
 			exit(-1);
 		}
+        free(cmdstr);
 
 		isfits = FALSE;
 		for (i=0; i<sl_size(lines); i++) {
@@ -347,8 +368,8 @@ int main(int argc, char** args) {
 		sl_free(lines);
 
 		// Get image W, H, depth.
-		snprintf(cmd, sizeof(cmd), "pnmfile \"%s\"", pnmfn);
-		if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+		snprintf(cmdbuf, sizeof(cmdbuf), "pnmfile \"%s\"", pnmfn);
+		if (run_command_get_outputs(cmdbuf, &lines, NULL, &errmsg)) {
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run pnmfile: %s\n", strerror(errno));
 			exit(-1);
@@ -375,8 +396,8 @@ int main(int argc, char** args) {
 			fitsimgfn = sanitizedfn;
 
 			if (guess_scale) {
-				snprintf(cmd, sizeof(cmd), "fits-guess-scale \"%s\"", fitsimgfn);
-				if (run_command_get_outputs(cmd, &lines, NULL, &errmsg)) {
+				snprintf(cmdbuf, sizeof(cmdbuf), "fits-guess-scale \"%s\"", fitsimgfn);
+				if (run_command_get_outputs(cmdbuf, &lines, NULL, &errmsg)) {
                     fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to run fits-guess-scale: %s\n", strerror(errno));
 					exit(-1);
@@ -403,18 +424,18 @@ int main(int argc, char** args) {
 
 			if (pnmtype == 'P') {
 				printf("Converting PPM image to FITS...\n");
-				snprintf(cmd, sizeof(cmd),
+				snprintf(cmdbuf, sizeof(cmdbuf),
 						 "ppmtopgm \"%s\" | pnmtofits > \"%s\"", pnmfn, fitsimgfn);
-				if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+				if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
                     fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to convert PPM to FITS.\n");
 					exit(-1);
 				}
 			} else {
 				printf("Converting PGM image to FITS...\n");
-				snprintf(cmd, sizeof(cmd),
+				snprintf(cmdbuf, sizeof(cmdbuf),
 						 "pnmtofits %s > \"%s\"", pnmfn, fitsimgfn);
-				if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+				if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
                     fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to convert PGM to FITS.\n");
 					exit(-1);
@@ -426,10 +447,10 @@ int main(int argc, char** args) {
 
 		xylsfn = "/tmp/xyls";
 
-		snprintf(cmd, sizeof(cmd),
+		snprintf(cmdbuf, sizeof(cmdbuf),
 				 "fits2xy -O -o \"%s\" \"%s\"", xylsfn, fitsimgfn);
-		printf("Command: %s\n", cmd);
-		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+		printf("Command: %s\n", cmdbuf);
+		if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run fits2xy.\n");
 			exit(-1);
@@ -440,10 +461,10 @@ int main(int argc, char** args) {
 		sortedxylsfn = "/tmp/sorted";
 
 		// sort the table by FLUX.
-		snprintf(cmd, sizeof(cmd),
+		snprintf(cmdbuf, sizeof(cmdbuf),
 				 "tabsort -i \"%s\" -o \"%s\" -c FLUX -d", xylsfn, sortedxylsfn);
-		printf("Command: %s\n", cmd);
-		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+		printf("Command: %s\n", cmdbuf);
+		if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run tabsort.\n");
 			exit(-1);
@@ -457,10 +478,10 @@ int main(int argc, char** args) {
 		char* sanexylsfn;
 
 		sanexylsfn = "/tmp/sanexyls";
-		snprintf(cmd, sizeof(cmd),
+		snprintf(cmdbuf, sizeof(cmdbuf),
 				 "fits2fits.py \"%s\" \"%s\"", xylsfn, sanexylsfn);
-		printf("Command: %s\n", cmd);
-		if (run_command_get_outputs(cmd, NULL, NULL, &errmsg)) {
+		printf("Command: %s\n", cmdbuf);
+		if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run fits2fits.py\n");
 			exit(-1);

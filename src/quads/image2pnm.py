@@ -31,7 +31,7 @@ def do_command(cmd):
         print >>sys.stderr, 'Command failed: %s' % cmd
         sys.exit(-1)
 
-def convert_image(infile, outfile, uncompressed, sanitized, force_ppm):
+def convert_image(infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits):
     filein, fileout = os.popen2('file -b -N -L %s' % infile)
     typeinfo = fileout.read().strip()
     log('file output:', typeinfo)
@@ -43,7 +43,7 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm):
 
     # If it's a FITS file we want to filter it first because of the many
     # misbehaved FITS files around. fits2fits is a sanitizer.
-    if typeinfo == 'FITS image data':
+    if (typeinfo == 'FITS image data') and (not no_fits2fits):
         assert sanitized != infile
         new_infile = sanitized
         do_command('fits2fits.py %s %s' % (infile, new_infile))
@@ -55,7 +55,7 @@ def convert_image(infile, outfile, uncompressed, sanitized, force_ppm):
         new_infile = uncompressed
         log('compressed file, dumping to:', new_infile)
         do_command(compcmds[typeinfo][1] % (infile, new_infile))
-        return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm)
+        return convert_image(new_infile, outfile, uncompressed, sanitized, force_ppm, no_fits2fits)
 
     if not typeinfo in imgcmds:
         log('ERROR: image type not recognized:', typeinfo)
@@ -106,6 +106,9 @@ def main():
     parser.add_option("-p", "--ppm",
                       action="store_true", dest="force_ppm",
                       help="convert the output to PPM");
+    parser.add_option("-2", "--no-fits2fits",
+                      action="store_true", dest="no_fits2fits",
+                      help="don't sanitize FITS files");
 
     (options, args) = parser.parse_args()
 
@@ -122,7 +125,8 @@ def main():
     return convert_image(options.infile, options.outfile,
                          options.uncompressed_outfile,
                          options.sanitized_outfile,
-                         options.force_ppm)
+                         options.force_ppm,
+                         options.no_fits2fits)
 
 if __name__ == '__main__':
     sys.exit(main())

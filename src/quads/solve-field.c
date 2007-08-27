@@ -105,10 +105,11 @@ static struct option long_options[] = {
 	{"files-on-stdin", no_argument,       0, 'f'},
 	{"overwrite",      no_argument,       0, 'O'},
 	{"no-plots",    no_argument,       0, 'P'},
+	{"no-fits2fits",    no_argument,       0, '2'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:";
+static const char* OPTIONS = "hL:U:u:t:d:c:TW:H:GOPD:fF:2";
 
 static void print_help(const char* progname) {
 	printf("Usage:   %s [options]\n"
@@ -124,11 +125,12 @@ static void print_help(const char* progname) {
 	       "  [--width  <number>]: (mostly for xyls inputs): the original image width   (-W)\n"
 	       "  [--height <number>]: (mostly for xyls inputs): the original image height  (-H)\n"
 		   "  [--depth <number>]: number of field objects to look at   (-D)\n"
-	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial\n"
+	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
 	       "  [--no-guess-scale]: don't try to guess the image scale from the FITS headers  (-G)\n"
-           "  [--no-plots]: don't create any PNG plots.\n"
-	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections\n"
-	       "  [--backend-config <filename>]: use this config file for the \"backend\" program\n"
+           "  [--no-plots]: don't create any PNG plots.  (-P)\n"
+           "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane.  (-2)\n"
+	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections.  (-t <#>)\n"
+	       "  [--backend-config <filename>]: use this config file for the \"backend\" program.  (-c <file>)\n"
 	       "  [--overwrite]: overwrite output files if they already exist.  (-O)\n"
 	       "  [--files-on-stdin]: read files to solve on stdin, one per line (-f)\n"
 	       "\n"
@@ -191,6 +193,9 @@ int main(int argc, char** args) {
 		case 'h':
 			help = TRUE;
 			break;
+        case '2':
+            sl_append(lowlevelargs, "--no-fits2fits");
+            break;
         case 'F':
             sl_append(lowlevelargs, "--fields");
             sl_appendf(lowlevelargs, optarg);
@@ -321,6 +326,7 @@ int main(int argc, char** args) {
 			f++;
 		}
 
+        // Remove arguments that might have been added in previous trips through this loop
 		sl_remove_from(lowlevelargs, nllargs);
 		sl_remove_from(backendargs,  nbeargs);
 
@@ -444,8 +450,6 @@ int main(int argc, char** args) {
 		sl_append(lowlevelargs, solvedfn);
 		sl_append(lowlevelargs, "--wcs");
 		sl_append(lowlevelargs, wcsfn);
-
-		sl_print(lowlevelargs);
 
 		cmd = sl_implode(lowlevelargs, " ");
 		printf("Running low-level-frontend:\n  %s\n", cmd);
