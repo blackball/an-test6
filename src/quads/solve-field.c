@@ -158,6 +158,15 @@ static int run_command(const char* cmd, bool* ctrlc) {
 	return rtn;
 }
 
+static char* get_path(const char* prog, const char* me) {
+    char* path = find_executable(prog, me);
+    if (!path) {
+        fprintf(stderr, "Failed to find executable \"%s\" executable.\n", prog);
+        exit(-1);
+    }
+    return path;
+}
+
 int main(int argc, char** args) {
 	int c;
 	bool help = FALSE;
@@ -177,12 +186,13 @@ int main(int argc, char** args) {
 	bool fromstdin = FALSE;
 	bool overwrite = FALSE;
     bool makeplots = TRUE;
+    char* me = args[0];
 
 	lowlevelargs = sl_new(16);
-	sl_append(lowlevelargs, "low-level-frontend");
+	sl_append_nocopy(lowlevelargs, get_path("low-level-frontend", me));
 
 	backendargs = sl_new(16);
-	sl_append(backendargs, "backend");
+	sl_append_nocopy(backendargs, get_path("backend", me));
 
 	while (1) {
 		int option_index = 0;
@@ -466,7 +476,7 @@ int main(int argc, char** args) {
             // source extraction overlay
             // plotxy -i harvard.axy -I /tmp/pnm -C red -P -w 2 -N 50 | plotxy -w 2 -r 3 -I - -i harvard.axy -C red -n 50 > harvard-objs.png
             cmdline = sl_new(16);
-            sl_append(cmdline, "plotxy");
+            sl_append_nocopy(cmdline, get_path("plotxy", me));
             sl_append(cmdline, "-i");
             sl_append(cmdline, axyfn);
             if (image) {
@@ -478,7 +488,7 @@ int main(int argc, char** args) {
             
             sl_append(cmdline, "|");
 
-            sl_append(cmdline, "plotxy");
+            sl_append_nocopy(cmdline, get_path("plotxy", me));
             sl_append(cmdline, "-i");
             sl_append(cmdline, axyfn);
             sl_append(cmdline, "-I - -w 2 -r 3 -C red -n 50 -N 200 -x 1 -y 1");
@@ -521,7 +531,7 @@ int main(int argc, char** args) {
 			cmdline = sl_new(16);
 
 			// index rdls to xyls.
-			sl_append(cmdline, "wcs-rd2xy");
+            sl_append_nocopy(cmdline, get_path("wcs-rd2xy", me));
 			sl_append(cmdline, "-w");
 			sl_append(cmdline, wcsfn);
 			sl_append(cmdline, "-i");
@@ -543,7 +553,7 @@ int main(int argc, char** args) {
 
             if (makeplots) {
                 // sources + index overlay
-                sl_append(cmdline, "plotxy");
+                sl_append_nocopy(cmdline, get_path("plotxy", me));
                 sl_append(cmdline, "-i");
                 sl_append(cmdline, axyfn);
                 if (image) {
@@ -553,7 +563,7 @@ int main(int argc, char** args) {
                 sl_append(cmdline, "-P");
                 sl_append(cmdline, "-C red -w 2 -r 6 -N 200 -x 1 -y 1");
                 sl_append(cmdline, "|");
-                sl_append(cmdline, "plotxy");
+                sl_append_nocopy(cmdline, get_path("plotxy", me));
                 sl_append(cmdline, "-i");
                 sl_append(cmdline, indxylsfn);
                 sl_append(cmdline, "-I - -w 2 -r 4 -C green -x 1 -y 1");
@@ -571,7 +581,8 @@ int main(int argc, char** args) {
                 }
 
                 sl_append(cmdline, " -P |");
-                sl_append(cmdline, "plotquad -I -");
+                sl_append_nocopy(cmdline, get_path("plotquad", me));
+                sl_append(cmdline, "-I -");
                 for (i=0; i<8; i++)
                     sl_appendf(cmdline, " %g", mo->quadpix[i]);
                 
@@ -594,7 +605,7 @@ int main(int argc, char** args) {
             }
 
             if (image && makeplots) {
-				sl_append(cmdline, "plot-constellations");
+                sl_append_nocopy(cmdline, get_path("plot-constellations", me));
 				sl_append(cmdline, "-w");
 				sl_append(cmdline, wcsfn);
 				sl_append(cmdline, "-i");
