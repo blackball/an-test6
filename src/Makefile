@@ -29,6 +29,9 @@ web:
 	$(MAKE) -C usnob-map/execs
 	$(MAKE) -C ontheweb/execs
 
+tarball:
+	./make-tarball.sh
+
 clean:
 	$(MAKE) -C an-common clean
 	$(MAKE) -C cfitsio clean
