@@ -90,13 +90,14 @@
 
 static struct option long_options[] = {
 	{"help",		no_argument,	   0, 'h'},
+	{"image",		required_argument, 0, 'i'},
+	{"xylist",		required_argument, 0, 'x'},
 	{"guess-scale", no_argument,	   0, 'g'},
 	{"cancel",		required_argument, 0, 'C'},
 	{"solved",		required_argument, 0, 'S'},
 	{"match",		required_argument, 0, 'M'},
 	{"rdls",		required_argument, 0, 'R'},
 	{"wcs",			required_argument, 0, 'W'},
-	{"image",		required_argument, 0, 'i'},
 	{"pnm",			required_argument, 0, 'P'},
 	{"force-ppm",	no_argument,       0, 'f'},
 	{"width",		required_argument, 0, 'w'},
@@ -109,22 +110,40 @@ static struct option long_options[] = {
 	{"tweak-order", required_argument, 0, 't'},
 	{"out",			required_argument, 0, 'o'},
 	{"no-plot",		no_argument,	   0, 'p'},
-	{"no-rdls",		no_argument,	   0, 'r'},
-	{"xylist",		required_argument, 0, 'x'},
 	{"no-tweak",	no_argument,	   0, 'T'},
-	{"no-fits2fits",    no_argument,       0, '2'},
+	{"no-fits2fits", no_argument,      0, '2'},
 	{0, 0, 0, 0}
 };
 
-static const char* OPTIONS = "hg:i:L:H:u:t:o:prx:w:e:TP:S:R:W:M:C:fd:F:2";
+static const char* OPTIONS = "hg:i:L:H:u:t:o:px:w:e:TP:S:R:W:M:C:fd:F:2";
 
 static void print_help(const char* progname) {
-	// FIXME - add rest of args!
 	printf("Usage:	 %s [options] -o <output augmented xylist filename>\n"
-		   "  (				   -i <image-input-file>\n"
+		   "  (    -i <image-input-file>\n"
 		   "   OR  -x <xylist-input-file>  )\n"
+	       "  [--guess-scale]: try to guess the image scale from the FITS headers  (-g)\n"
+           "  [--cancel <filename>]: filename whose creation signals the process to stop  (-C)\n"
+           "  [--solved <filename>]: output filename for solved file  (-S)\n"
+           "  [--match  <filename>]: output filename for match file   (-M)\n"
+           "  [--rdls   <filename>]: output filename for RDLS file    (-R)\n"
+           "  [--wcs    <filename>]: output filename for WCS file     (-W)\n"
+           "  [--pnm <filename>]: save the PNM file in <filename>  (-P)\n"
+           "  [--force-ppm]: force the PNM file to be a PPM  (-f)\n"
+           "  [--width  <int>]: specify the image width  (for xyls inputs)  (-w)\n"
+           "  [--height <int>]: specify the image height (for xyls inputs)  (-e)\n"
+	       "  [--scale-units <units>]: in what units are the lower and upper bound specified?   (-u)\n"
+	       "     choices:  \"degwidth\"    : width of the image, in degrees\n"
+	       "               \"arcminwidth\" : width of the image, in arcminutes\n"
+	       "               \"arcsecperpix\": arcseconds per pixel\n"
+	       "  [--scale-low  <number>]: lower bound of image scale estimate   (-L)\n"
+	       "  [--scale-high <number>]: upper bound of image scale estimate   (-H)\n"
+           "  [--fields <number>]: specify a field (ie, FITS extension) to solve  (-F)\n"
+           "  [--fields <min>/<max>]: specify a range of fields (FITS extensions) to solve; inclusive  (-F)\n"
+		   "  [--depth <number>]: number of field objects to look at   (-d)\n"
+	       "  [--tweak-order <integer>]: polynomial order of SIP WCS corrections  (-t)\n"
+           "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane  (-2)\n"
 	       "  [--no-tweak]: don't fine-tune WCS by computing a SIP polynomial  (-T)\n"
-           "  [--no-fits2fits]: don't sanitize FITS files; assume they're already sane.  (-2)\n"
+           "  [--no-plots]: don't create any PNG plots  (-p)\n"
 		   "\n", progname);
 }
 
@@ -198,7 +217,6 @@ int main(int argc, char** args) {
     bool nof2f = FALSE;
     char* me = args[0];
     char* tempdir = "/tmp";
-    char* tmpfn;
     // this is just to avoid leaking temp filenames...
     sl* tempfiles;
 
