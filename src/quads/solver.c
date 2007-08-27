@@ -405,7 +405,7 @@ void solver_run(solver_t* solver)
 
 		if (index->cx_less_than_dx) {
 			solver->cxdx_margin = 1.5 * solver->codetol;
-			// FIXME die horribly the indexes have differing cx_less_than_dx
+			// FIXME die horribly if the indexes have differing cx_less_than_dx
 		}
 	}
 	logmsg("Quad scale range: [%g, %g] pixels\n", sqrt(solver->minminAB2), sqrt(solver->maxmaxAB2));
