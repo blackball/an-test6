@@ -148,6 +148,19 @@ static char* get_path(const char* prog, const char* me) {
     return path;
 }
 
+static char* create_temp_file(char* fn, char* dir) {
+    char* tempfile;
+    int fid;
+    asprintf_safe(&tempfile, "%s/tmp.%s.XXXXXX", dir, fn);
+    fid = mkstemp(tempfile);
+    if (fid == -1) {
+        fprintf(stderr, "Failed to create temp file: %s\n", strerror(errno));
+        exit(-1);
+    }
+    close(fid);
+    return tempfile;
+}
+
 int main(int argc, char** args) {
 	int c;
 	int rtn;
@@ -184,6 +197,7 @@ int main(int argc, char** args) {
     int lo, hi;
     bool nof2f = FALSE;
     char* me = args[0];
+    char* tempdir = "/tmp";
 
     depths = il_new(4);
     fields = il_new(16);
@@ -348,24 +362,21 @@ int main(int argc, char** args) {
 		char typestr[256];
 		char* sortedxylsfn;
 
-		uncompressedfn = "/tmp/uncompressed";
-		sanitizedfn = "/tmp/sanitized";
+        uncompressedfn = create_temp_file("uncompressed", tempdir);
+		sanitizedfn = create_temp_file("sanitized", tempdir);
+
 		if (savepnmfn)
 			pnmfn = savepnmfn;
 		else
-			pnmfn = "/tmp/pnm";
+            pnmfn = create_temp_file("pnm", tempdir);
 
         sl_append_nocopy(cmd, get_path("image2pnm.py", me));
         if (nof2f)
             sl_append(cmd, "--no-fits2fits");
-        sl_append(cmd, "--infile");
-        sl_appendf(cmd, "\"%s\"", imagefn);
-        sl_append(cmd, "--uncompressed-outfile");
-        sl_appendf(cmd, "\"%s\"", uncompressedfn);
-        sl_append(cmd, "--sanitized-fits-outfile");
-        sl_appendf(cmd, "\"%s\"", sanitizedfn);
-        sl_append(cmd, "--outfile");
-        sl_appendf(cmd, "\"%s\"", pnmfn);
+        sl_appendf(cmd, "--infile \"%s\"", imagefn);
+        sl_appendf(cmd, "--uncompressed-outfile \"%s\"", uncompressedfn);
+        sl_appendf(cmd, "--sanitized-fits-outfile \"%s\"", sanitizedfn);
+        sl_appendf(cmd, "--outfile \"%s\"", pnmfn);
         if (force_ppm)
             sl_append(cmd, "--ppm");
 
@@ -449,7 +460,7 @@ int main(int argc, char** args) {
 			}
 
 		} else {
-			fitsimgfn = "/tmp/fits";
+			fitsimgfn = create_temp_file("fits", tempdir);
 
 			if (pnmtype == 'P') {
 				printf("Converting PPM image to FITS...\n");
@@ -474,7 +485,7 @@ int main(int argc, char** args) {
 
 		printf("Running fits2xy...\n");
 
-		xylsfn = "/tmp/xyls";
+		xylsfn = create_temp_file("xyls", tempdir);
 
         sl_append_nocopy(cmd, get_path("fits2xy", me));
         sl_append(cmd, "-O");
@@ -495,7 +506,7 @@ int main(int argc, char** args) {
 
 		printf("Running tabsort...\n");
 
-		sortedxylsfn = "/tmp/sorted";
+		sortedxylsfn = create_temp_file("sorted", tempdir);
 
 		// sort the table by FLUX.
         sl_append_nocopy(cmd, get_path("tabsort", me));
@@ -524,7 +535,7 @@ int main(int argc, char** args) {
         if (!nof2f) {
             char* sanexylsfn;
 
-            sanexylsfn = "/tmp/sanexyls";
+            sanexylsfn = create_temp_file("sanexyls", tempdir);
 
             sl_append_nocopy(cmd, get_path("fits2fits.py", me));
             sl_appendf(cmd, "\"%s\"", xylsfn);
