@@ -72,8 +72,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (blind_is_run_obsolete(bp, sp)) {
-			blind_cleanup(bp);
-			continue;
+            goto clean;
 		}
 
 		// Log this run's parameters
@@ -92,6 +91,7 @@ int main(int argc, char *argv[]) {
 		if (bp->hit_total_cpulimit)
 			break;
 
+    clean:
 		blind_cleanup(bp);
 	}
 

@@ -31,7 +31,7 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <libgen.h>
 #include <getopt.h>
 
 #include "fileutil.h"
@@ -60,7 +60,7 @@ static const char* OPTIONS = "hc:i:";
 static void print_help(const char* progname)
 {
 	printf("Usage:   %s [options] <augmented xylist>\n"
-	       "   [-c <backend config file>]  (default \"backend.cfg\")\n"
+	       "   [-c <backend config file>]  (default: \"backend.cfg\", first in current directory, then in directory containing the \"backend\" executable)\n"
 	       "   [-i <blind input filename>]: save the input file used for blind.\n"
 	       "\n", progname);
 }
@@ -718,7 +718,8 @@ void backend_free(backend_t* backend)
 int main(int argc, char** args)
 {
 	int c;
-	char* configfn = "backend.cfg";
+    char* default_configfn = "backend.cfg";
+	char* configfn = NULL;
 	char* inputfn = NULL;
 	FILE* fconf;
 	int i;
@@ -767,7 +768,30 @@ int main(int argc, char** args)
 
 	backend = backend_new();
 
-	// Read config file.
+	// Read config file
+    if (!configfn) {
+        if (file_exists(default_configfn)) {
+            configfn = default_configfn;
+        } else {
+            // if config file not found in current directory, try the dir containing the
+            // backend executable.
+            char* tryfn;
+            char* me;
+            char* mydir;
+            me = strdup(args[0]);
+            mydir = strdup(dirname(me));
+            free(me);
+            asprintf_safe(&tryfn, "%s/%s", mydir, default_configfn);
+            free(mydir);
+            if (!file_exists(tryfn)) {
+                fprintf(stderr, "Couldn't find config file \"%s\".\n", default_configfn);
+                fprintf(stderr, "(tried %s, %s)\n", default_configfn, tryfn);
+                exit(-1);
+            }
+            configfn = tryfn;
+            // MEMLEAK: tryfn
+        }
+    }
 	fconf = fopen(configfn, "r");
 	if (!fconf) {
 		printf("Failed to open config file \"%s\": %s.\n", configfn, strerror(errno));
