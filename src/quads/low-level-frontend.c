@@ -128,6 +128,15 @@ static void print_help(const char* progname) {
 		   "\n", progname);
 }
 
+static char* get_path(const char* prog, const char* me) {
+    char* path = find_executable(prog, me);
+    if (!path) {
+        fprintf(stderr, "Failed to find executable \"%s\".\n", prog);
+        exit(-1);
+    }
+    return path;
+}
+
 int main(int argc, char** args) {
 	int c;
 	int rtn;
@@ -163,6 +172,7 @@ int main(int argc, char** args) {
     il* fields;
     int lo, hi;
     bool nof2f = FALSE;
+    char* me = args[0];
 
     depths = il_new(4);
     fields = il_new(16);
@@ -334,7 +344,8 @@ int main(int argc, char** args) {
 			pnmfn = "/tmp/pnm";
 
         cmd = sl_new(16);
-        sl_append(cmd, "image2pnm.py");
+
+        sl_append_nocopy(cmd, get_path("image2pnm.py", me));
         if (nof2f)
             sl_append(cmd, "--no-fits2fits");
         sl_append(cmd, "--infile");
@@ -396,12 +407,17 @@ int main(int argc, char** args) {
 			fitsimgfn = sanitizedfn;
 
 			if (guess_scale) {
-				snprintf(cmdbuf, sizeof(cmdbuf), "fits-guess-scale \"%s\"", fitsimgfn);
-				if (run_command_get_outputs(cmdbuf, &lines, NULL, &errmsg)) {
+                sl_append_nocopy(cmd, get_path("fits-guess-scale", me));
+                sl_appendf(cmd, "\"%s\"", fitsimgfn);
+                cmdstr = sl_implode(cmd, " ");
+                sl_free(cmd);
+				if (run_command_get_outputs(cmdstr, &lines, NULL, &errmsg)) {
+                    free(cmdstr);
                     fprintf(stderr, "%s\n", errmsg);
 					fprintf(stderr, "Failed to run fits-guess-scale: %s\n", strerror(errno));
 					exit(-1);
 				}
+                free(cmdstr);
 
 				for (i=0; i<sl_size(lines); i++) {
 					char type[256];
@@ -447,28 +463,41 @@ int main(int argc, char** args) {
 
 		xylsfn = "/tmp/xyls";
 
-		snprintf(cmdbuf, sizeof(cmdbuf),
-				 "fits2xy -O -o \"%s\" \"%s\"", xylsfn, fitsimgfn);
-		printf("Command: %s\n", cmdbuf);
-		if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
+        sl_append_nocopy(cmd, get_path("fits2xy", me));
+        sl_append(cmd, "-O");
+        sl_appendf(cmd, "-o \"%s\"", xylsfn);
+        sl_appendf(cmd, "\"%s\"", fitsimgfn);
+        cmdstr = sl_implode(cmd, " ");
+        sl_free(cmd);
+		printf("Command: %s\n", cmdstr);
+		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
+            free(cmdstr);
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run fits2xy.\n");
 			exit(-1);
 		}
+        free(cmdstr);
 
 		printf("Running tabsort...\n");
 
 		sortedxylsfn = "/tmp/sorted";
 
 		// sort the table by FLUX.
-		snprintf(cmdbuf, sizeof(cmdbuf),
-				 "tabsort -i \"%s\" -o \"%s\" -c FLUX -d", xylsfn, sortedxylsfn);
-		printf("Command: %s\n", cmdbuf);
-		if (run_command_get_outputs(cmdbuf, NULL, NULL, &errmsg)) {
+        sl_append_nocopy(cmd, get_path("tabsort", me));
+        sl_appendf(cmd, "-i \"%s\"", xylsfn);
+        sl_appendf(cmd, "-o \"%s\"", sortedxylsfn);
+        sl_append(cmd, "-c FLUX");
+        sl_append(cmd, "-d");
+        cmdstr = sl_implode(cmd, " ");
+        sl_free(cmd);
+		printf("Command: %s\n", cmdstr);
+		if (run_command_get_outputs(cmdstr, NULL, NULL, &errmsg)) {
+            free(cmdstr);
             fprintf(stderr, "%s\n", errmsg);
 			fprintf(stderr, "Failed to run tabsort.\n");
 			exit(-1);
 		}
+        free(cmdstr);
 		xylsfn = sortedxylsfn;
 
 	} else {
@@ -481,7 +510,7 @@ int main(int argc, char** args) {
             sanexylsfn = "/tmp/sanexyls";
 
             cmd = sl_new(16);
-            sl_append(cmd, "fits2fits.py");
+            sl_append_nocopy(cmd, get_path("fits2fits.py", me));
             sl_appendf(cmd, "\"%s\"", xylsfn);
             sl_appendf(cmd, "\"%s\"", sanexylsfn);
 
